@@ -851,21 +851,21 @@ val beta_CR = store_thm(
   "beta_CR",
   ``CR beta``,
   PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]);
- 
+
 val bnf_triangle = store_thm(
   "bnf_triangle",
   ``M -b->* N /\ M -b->* N' /\ bnf N ==> N' -b->* N``,
-  STRIP_TAC THEN 
+  STRIP_TAC THEN
   `?Z. N -b->* Z /\ N' -b->* Z`
-     by METIS_TAC [beta_CR, diamond_property_def, CR_def] THEN 
+     by METIS_TAC [beta_CR, diamond_property_def, CR_def] THEN
   METIS_TAC [bnf_reduction_to_self]);
 
 val Omega_starloops = Store_thm(
-  "Omega_starloops",  
+  "Omega_starloops",
   ``Omega -b->* N <=> (N = Omega)``,
-  Q_TAC SUFF_TAC `!M N. M -b->* N ==> (M = Omega) ==> (N = Omega)` 
+  Q_TAC SUFF_TAC `!M N. M -b->* N ==> (M = Omega) ==> (N = Omega)`
      THEN1 METIS_TAC [relationTheory.RTC_RULES] THEN
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN 
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [ccbeta_rwt, Omega_def]);
 
 val lameq_betaconversion = store_thm(
@@ -925,19 +925,19 @@ val has_bnf_thm = store_thm(
   "has_bnf_thm",
   ``has_bnf M <=> ?N. M -b->* N /\ bnf N``,
   EQ_TAC THENL [
-    METIS_TAC [lameq_betaconversion, chap2Theory.has_bnf_def, theorem3_13, 
+    METIS_TAC [lameq_betaconversion, chap2Theory.has_bnf_def, theorem3_13,
                beta_CR, beta_normal_form_bnf, corollary3_2_1],
-    SRW_TAC [][chap2Theory.has_bnf_def, lameq_betaconversion] THEN 
+    SRW_TAC [][chap2Theory.has_bnf_def, lameq_betaconversion] THEN
     METIS_TAC [relationTheory.RTC_EQC]
   ]);
 
 val Omega_reachable_no_bnf = store_thm(
   "Omega_reachable_no_bnf",
   ``M -b->* Omega ==> ~has_bnf M``,
-  REPEAT STRIP_TAC THEN 
-  FULL_SIMP_TAC (srw_ss()) [has_bnf_thm] THEN 
-  `Omega -b->* N` by METIS_TAC [bnf_triangle] THEN 
-  `N = Omega` by FULL_SIMP_TAC (srw_ss()) [] THEN 
+  REPEAT STRIP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [has_bnf_thm] THEN
+  `Omega -b->* N` by METIS_TAC [bnf_triangle] THEN
+  `N = Omega` by FULL_SIMP_TAC (srw_ss()) [] THEN
   FULL_SIMP_TAC (srw_ss()) []);
 
 val weak_diamond_def =

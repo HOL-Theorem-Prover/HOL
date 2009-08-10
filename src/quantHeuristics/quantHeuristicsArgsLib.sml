@@ -55,7 +55,7 @@ quietdec := false;
    fun P v (t:term) = SOME (enumerate_pair v)
  *)
 
-fun enumerate_pair v = 
+fun enumerate_pair v =
 let
    val (vn,vt) = dest_var v
    val tL = pairSyntax.strip_prod vt;
@@ -73,7 +73,7 @@ fun QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR_GEN P (sys:quant_heuristic) fv v t 
 let
    (*check whether something should be done*)
    val _ = pairSyntax.dest_prod (type_of v) handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-   val vars = case (P v t) of NONE => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp 
+   val vars = case (P v t) of NONE => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
                             | some => valOf some;
 
    (*do it*)
@@ -89,16 +89,16 @@ let
    val thm1 = GEN v (DISCH precond (CCONTR t thm0))
    val thm2 = GEN v (DISCH precond (CCONTR (mk_neg t) thm0))
 
-   val i = pairSyntax.list_mk_pair vars   
+   val i = pairSyntax.list_mk_pair vars
    val g1 = guess_others_satisfied (i,vars, SOME (fn () => thm1));
    val g2 = guess_others_not_possible (i,vars, SOME (fn () => thm2));
 in
    guess_list2collection ([], [g1,g2])
-end 
+end
 
 
 
-fun split_pair___FST_SND___pred v t = 
+fun split_pair___FST_SND___pred v t =
 let
    val t1 = pairSyntax.mk_fst v;
    val t2 = pairSyntax.mk_snd v;
@@ -113,7 +113,7 @@ end;
    val t = ``(\ (a,b,c). P a b c) ^v``
  *)
 local
-   fun is_var_pabs v t = 
+   fun is_var_pabs v t =
    let
       val (b,v') = dest_comb t;
    in
@@ -121,7 +121,7 @@ local
    end handle HOL_ERR _ => false;
 in
 
-fun split_pair___PABS___pred v t = 
+fun split_pair___PABS___pred v t =
 let
    val p = hd (find_terms (is_var_pabs v) t);
    val vars = pairSyntax.strip_pair (fst (pairSyntax.dest_pabs (fst (dest_comb p))))
@@ -149,10 +149,10 @@ val QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR =
 
 
 val pair_qhca =
-  {distinct_thms = [], 
-   cases_thms =    [], 
+  {distinct_thms = [],
+   cases_thms =    [],
    rewrite_thms =  [PAIR_EQ_EXPAND, pairTheory.FST, pairTheory.SND],
-   convs =         [], 
+   convs =         [],
    heuristics =    [QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR],
    final_rewrite_thms = [pairTheory.FST,  pairTheory.SND,
                          PAIR_EQ_SIMPLE_EXPAND]
@@ -160,23 +160,23 @@ val pair_qhca =
 
 
 (*
-val PAIR_QUANT_INSTANTIATE_CONV = SEXT_PURE_QUANT_INSTANTIATE_CONV 
+val PAIR_QUANT_INSTANTIATE_CONV = SEXT_PURE_QUANT_INSTANTIATE_CONV
    [pairs_combine_argument]
 
-val t = ``!p. (x = FST p) ==> Q p`` 
+val t = ``!p. (x = FST p) ==> Q p``
 val thm = PAIR_QUANT_INSTANTIATE_CONV t;
 
-val t = ``!p. ?t. ((f t = FST p) /\ Z x) ==> Q p`` 
+val t = ``!p. ?t. ((f t = FST p) /\ Z x) ==> Q p``
 val thm = PAIR_QUANT_INSTANTIATE_CONV t
 
 
-val t = ``?p. ((SND p) = 7) /\ Q p`` 
+val t = ``?p. ((SND p) = 7) /\ Q p``
 val thm = PAIR_QUANT_INSTANTIATE_CONV t
 
-val t = ``?v. (v,X) = Z`` 
+val t = ``?v. (v,X) = Z``
 val thm = PAIR_QUANT_INSTANTIATE_CONV t
 
-val t = ``?v. (v,X) = (a,9)`` 
+val t = ``?v. (v,X) = (a,9)``
 val thm = PAIR_QUANT_INSTANTIATE_CONV t
 
 val t = ``!x. a /\ (\ (a1, t3, a2). P a1 a2 t3) x /\ b x``
@@ -195,12 +195,12 @@ val TypeBase_qhca = quantHeuristicsLib.TypeBase_qhca;
  *******************************************************************)
 
 val option_qhca =
-  {distinct_thms      = [optionTheory.NOT_NONE_SOME], 
-   cases_thms         = [optionTheory.option_nchotomy], 
+  {distinct_thms      = [optionTheory.NOT_NONE_SOME],
+   cases_thms         = [optionTheory.option_nchotomy],
    rewrite_thms       = [optionTheory.SOME_11, optionTheory.IS_NONE_EQ_NONE,
                          optionTheory.IS_NONE_EQ_NONE,
                          IS_SOME_EQ_NOT_NONE],
-   convs              = [], 
+   convs              = [],
    heuristics         = [],
    final_rewrite_thms = [optionTheory.option_CLAUSES]
   }:quant_heuristic_combine_argument
@@ -212,12 +212,12 @@ val option_qhca =
  *******************************************************************)
 
 val num_qhca =
-  {distinct_thms = [prim_recTheory.SUC_ID, numTheory.NOT_SUC], 
-   cases_thms =    [arithmeticTheory.num_CASES], 
+  {distinct_thms = [prim_recTheory.SUC_ID, numTheory.NOT_SUC],
+   cases_thms =    [arithmeticTheory.num_CASES],
    rewrite_thms =  [prim_recTheory.INV_SUC_EQ,
       arithmeticTheory.EQ_ADD_RCANCEL,arithmeticTheory.EQ_ADD_LCANCEL,
       arithmeticTheory.ADD_CLAUSES],
-   convs =         [], 
+   convs =         [],
    heuristics =    [],
    final_rewrite_thms = []
   }:quant_heuristic_combine_argument
@@ -229,13 +229,13 @@ val num_qhca =
  *******************************************************************)
 
 val list_qhca =
-  {distinct_thms = [rich_listTheory.NOT_CONS_NIL], 
+  {distinct_thms = [rich_listTheory.NOT_CONS_NIL],
    cases_thms =    [listTheory.list_CASES],
    rewrite_thms =  [listTheory.CONS_11,
                     listTheory.NULL_EQ,
                     listTheory.APPEND_11,
                     listTheory.APPEND_eq_NIL],
-   convs =         [], 
+   convs =         [],
    heuristics =    [],
    final_rewrite_thms = [listTheory.NULL_DEF,
                          rich_listTheory.NOT_CONS_NIL,

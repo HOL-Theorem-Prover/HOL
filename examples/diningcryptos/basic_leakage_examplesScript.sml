@@ -52,7 +52,7 @@ val lem4 = prove
 	    ++ RW_TAC std_ss []);
 
 val lem5 = prove
-  (``!(m1:num)(m2:num)(n2:num). 
+  (``!(m1:num)(m2:num)(n2:num).
 	((\s'. (if s' = "h2" then m1 else 0)) =
  	 (\s'. (if s' = "h2" then m2 else (if s' = "h1" then n2 else 0)))) =
 	((n2=0)/\(m1=m2))``,
@@ -93,14 +93,14 @@ val lem7 = prove
 	    ++ RW_TAC std_ss []);
 
 val lem8 = prove
-  (``!(n1:num) (n2:num) (n3:num) (m1:num) (m2:num) (m3:num). 
+  (``!(n1:num) (n2:num) (n3:num) (m1:num) (m2:num) (m3:num).
 	((\s'. (if (s' = "out") then [n1;n2] else
 		(if (s' = "low") then [n3] else []))) =
 	 (\s'. (if (s' = "out") then [m1;m2] else
 		(if (s' = "low") then [m3] else [])))) =
 		      ((n1 = m1) /\ (n2 = m2) /\ (n3 = m3))``,
 	REPEAT STRIP_TAC ++ EQ_TAC
-	    >> (RW_TAC list_ss [FUN_EQ_THM] 
+	    >> (RW_TAC list_ss [FUN_EQ_THM]
 		<< [POP_ASSUM (MP_TAC o Q.SPEC `"out"`) ++ RW_TAC std_ss [],
 		    POP_ASSUM (MP_TAC o Q.SPEC `"out"`) ++ RW_TAC std_ss [],
 		    POP_ASSUM (MP_TAC o Q.SPEC `"low"`) ++ RW_TAC string_ss []])
@@ -134,7 +134,7 @@ val leakage_example1 = store_thm
 CONV_TAC (RATOR_CONV (RAND_CONV (
 	LEAKAGE_COMPUTE_CONV (``high (SUC (SUC (SUC 0)))``,
 			      ``low (SUC (SUC (SUC 0)))``,
-			      ``random``) 
+			      ``random``)
 			[high, low, random, lem1, lem2, lem3]
 			[M1, H_def, L_def, FST, SND]
 			example1_conv example1_conv example1_conv
@@ -167,11 +167,11 @@ val leakage_example2 = store_thm
 CONV_TAC (RATOR_CONV (RAND_CONV (
 	LEAKAGE_COMPUTE_CONV (``high (SUC (SUC (SUC 0)))``,
 			      ``low (SUC (SUC (SUC 0)))``,
-			      ``random``) 
+			      ``random``)
 			[high, low, random, lem1, lem2, lem3, w2n_11]
 			[M2, H_def, L_def, FST, SND]
 			example2_input_conv example2_input_conv example2_input_conv
-			example2_input_conv example2_input_conv example2_input_conv 
+			example2_input_conv example2_input_conv example2_input_conv
 			example2_output_conv)))
 ++ SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER]
 ++ `lg 4 = 2`
@@ -218,21 +218,21 @@ val example3_h_conv = SIMP_CONV arith_ss [lem1, lem2, lem3, lem4, lem5, lem6, w2
 val example3_lr_conv = SIMP_CONV arith_ss [lem1, lem2, lem3, lem4, lem5, lem6];
 
 val example3_h_input_conv = SIMP_CONV set_ss [high, h1, h2]
-THENC  (FIND_CONV ``x UNION y`` 
+THENC  (FIND_CONV ``x UNION y``
 			(UNION_CONV (SIMP_CONV set_ss [lem1, lem2, lem3, lem4, lem5, lem6])));
 
-val example3_lr_input_conv = SIMP_CONV set_ss [low, random]; 
+val example3_lr_input_conv = SIMP_CONV set_ss [low, random];
 
 val leakage_example3 = store_thm
   ("leakage_example3",
    ``leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) low random) M3 = 2``,
 CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (``high (SUC (SUC (SUC 0)))``,
 			      ``low``,
-			      ``random``) 
+			      ``random``)
 			[high, low, random, h1, h2, lem1, lem2, lem3, lem4, lem5, lem6, w2n_11]
 			[M3, H_def, L_def, FST, SND, w2n_11]
 			example3_h_input_conv example3_lr_input_conv example3_lr_input_conv
-			example3_h_conv example3_lr_conv example3_lr_conv 
+			example3_h_conv example3_lr_conv example3_lr_conv
 			example3_output_conv)))
 ++ RW_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER, lg_mul, lg_2]
 ++ `lg 4 = 2`
@@ -257,21 +257,21 @@ val example4_output_conv = SIMP_CONV string_ss [lem1, lem2, lem3, lem4, lem5, le
 val example4_dup_conv = SIMP_CONV arith_ss [lem1, lem2, lem3, lem4, lem5, lem6];
 
 val example4_h_input_conv = SIMP_CONV set_ss [high, h1, h2]
-THENC  (FIND_CONV ``x UNION y`` 
+THENC  (FIND_CONV ``x UNION y``
 			(UNION_CONV (SIMP_CONV set_ss [lem1, lem2, lem3, lem4, lem5, lem6])));
 
-val example4_lr_input_conv = SIMP_CONV set_ss [low, random]; 
+val example4_lr_input_conv = SIMP_CONV set_ss [low, random];
 
 val leakage_example4 = store_thm
   ("leakage_example4",
    ``leakage (unif_prog_space ((high (SUC (SUC (SUC 0))))) low random) M4 = inv 16 * (52 - 6 * lg 3)``,
 CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (``high (SUC (SUC (SUC 0)))``,
 			      ``low``,
-			      ``random``) 
+			      ``random``)
 			[high, low, random, h1, h2, lem1, lem2, lem3, lem4, lem5, lem6]
 			[M4, H_def, L_def, FST, SND, w2n_11]
 			example4_h_input_conv example4_lr_input_conv example4_lr_input_conv
-			example4_dup_conv example4_dup_conv example4_dup_conv 
+			example4_dup_conv example4_dup_conv example4_dup_conv
 			example4_output_conv)))
 ++ RW_TAC real_ss [lg_1, lg_mul, lg_2, lg_inv, GSYM REAL_INV_1OVER, real_div]
 ++ `lg 8 = 3` by (`8 = 2 pow 3` by RW_TAC real_ss [pow] ++ POP_ORW ++ RW_TAC std_ss [lg_pow])
@@ -318,12 +318,12 @@ val leakage_example5 = store_thm
    ``leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) (low (SUC (SUC (SUC 0)))) random) M5 = 0``,
 CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (``high (SUC (SUC (SUC 0)))``,
 			      ``low (SUC (SUC (SUC 0)))``,
-			      ``random``) 
+			      ``random``)
 			[high, low, random, lem1, lem2, lem3]
 			[M5, assign1, assign2, H_def, L_def, FST, SND]
 			example5_conv example5_conv example5_conv
 
-			example5_conv example5_conv example5_conv 
+			example5_conv example5_conv example5_conv
 			example5_output_conv)))
 ++ RW_TAC real_ss [REAL_DIV_REFL, lg_1]);
 
@@ -371,11 +371,11 @@ val leakage_example5' = store_thm
 PURE_REWRITE_TAC [M5', state_update, state_append, assign1, assign2]
 ++ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (``high (SUC (SUC (SUC 0)))``,
 			      ``low (SUC (SUC (SUC 0)))``,
-			      ``random``) 
+			      ``random``)
 			[high, low, random, lem7, lem8, APPEND]
 			[H_def, L_def, FST, SND, APPEND]
 			example5'_conv example5'_conv example5'_conv
-			example5'_output_conv example5'_output_conv example5'_output_conv 
+			example5'_output_conv example5'_output_conv example5'_output_conv
 			example5'_output_conv)))
 ++ RW_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER]
 ++ `lg 4 = 2` by (`4 = 2 pow 2` by RW_TAC real_ss [pow] ++ POP_ORW ++ RW_TAC std_ss [lg_pow])
@@ -416,11 +416,11 @@ val leakage_example8 = store_thm
    ``leakage (unif_prog_space (high (SUC (SUC (SUC 0)))) low (random (SUC (SUC (SUC 0))))) M8 = 0``,
 CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (``high (SUC (SUC (SUC 0)))``,
 			      ``low``,
-			      ``random (SUC (SUC (SUC 0)))``) 
+			      ``random (SUC (SUC (SUC 0)))``)
 			[high, low, random, lem1,lem2]
 			[M8, H_def, R_def, FST, SND, lem1,lem2, lem3]
 			example8_conv example8_conv example8_conv
-			example8_output_conv example8_conv example8_output_conv 
+			example8_output_conv example8_conv example8_output_conv
 			example8_output_conv)))
 ++ RW_TAC real_ss [lg_mul, lg_2, lg_1, lg_inv, GSYM REAL_INV_1OVER]
 ++ `lg 4 = 2`
@@ -436,14 +436,14 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (``high (SUC (SUC (SUC 0))
 (* *********************************** *)
 
 val high_thm = prove
-   (``!n. high n = if (n=0) then 
+   (``!n. high n = if (n=0) then
    	     	{(\s:string. if s = "high" then 0 else 0)}
  	     else
 		(\s:string. if s = "high" then n else 0)INSERT(high (n-1))``,
      Induct ++ RW_TAC arith_ss [high]);
 
 val random_thm = prove
-   (``!n. random n = if (n=0) then 
+   (``!n. random n = if (n=0) then
    	     	{(\s:string. if s = "random" then 0 else 0)}
  	     else
 		(\s:string. if s = "random" then n else 0)INSERT(random (n-1))``,
@@ -471,13 +471,13 @@ val leakage_example8' = store_thm
 ++ RW_TAC set_ss [CROSS_EQNS, lem1, lem2]
 ++ CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [lem1,lem2])))
 ++ RW_TAC set_ss [CROSS_EQNS, lem1, lem2, M8, H_def, R_def]
-++ CONV_TAC (FIND_CONV ``x UNION y`` 
+++ CONV_TAC (FIND_CONV ``x UNION y``
 			(UNION_CONV (SIMP_CONV set_ss [lem1,lem2, w2n_11]
 				     THENC (FIND_CONV ``(a ?? b) = (c ?? d)`` WORD_EVAL_CONV))))
 ++ CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
-		      THENC (FIND_CONV ``x DELETE y`` 
+		      THENC (FIND_CONV ``x DELETE y``
 					(DELETE_CONV (SIMP_CONV arith_ss [PAIR_EQ,lem1,lem2,lem3, w2n_11]
-						      THENC (FIND_CONV ``(a ?? b) = (c ?? d)`` 
+						      THENC (FIND_CONV ``(a ?? b) = (c ?? d)``
 									WORD_EVAL_CONV))))
 		      THENC (SIMP_CONV arith_ss [lem1,lem2,lem3, w2n_11]))
 	     THENC (FIND_CONV ``(a ?? b) = (c ?? d)`` WORD_EVAL_CONV))
@@ -501,7 +501,7 @@ val hidden_flip_example = store_thm
    ``leakage (unif_prog_space {(\s:string. s = "h");(\s:string.F)}
 			      {(\s:string. s = "l");(\s:string.F)}
 			      {(\s:string. s = "r");(\s:string.F)}) M = 3/2 - (3 * lg 3)/4``,
-`~ ({(\s:string. s = "h");(\s:string.F)} CROSS 
+`~ ({(\s:string. s = "h");(\s:string.F)} CROSS
 	{(\s:string. s = "l");(\s:string.F)} CROSS
 	{(\s:string. s = "r");(\s:string.F)} = {})`
 	by (RW_TAC set_ss [Once EXTENSION]
@@ -514,7 +514,7 @@ val hidden_flip_example = store_thm
 ++ RW_TAC set_ss [CROSS_EQNS, lem1, M, H_def, L_def, R_def]
 ++ CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [flip_example_lem, lem1])))
 ++ CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
-		      THENC (FIND_CONV ``x DELETE y`` 
+		      THENC (FIND_CONV ``x DELETE y``
 					(DELETE_CONV (SIMP_CONV arith_ss [PAIR_EQ, flip_example_lem])))
 		      THENC SIMP_CONV arith_ss [flip_example_lem]))
 ++ SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER, lg_2, REAL_MUL_LINV]
@@ -542,7 +542,7 @@ val visible_flip_example = store_thm
    ``visible_leakage (unif_prog_space {(\s:string. s = "h");(\s:string.F)}
 			      {(\s:string. s = "l");(\s:string.F)}
 			      {(\s:string. s = "r");(\s:string.F)}) M = 1/2``,
-`~ ({(\s:string. s = "h");(\s:string.F)} CROSS 
+`~ ({(\s:string. s = "h");(\s:string.F)} CROSS
 	{(\s:string. s = "l");(\s:string.F)} CROSS
 	{(\s:string. s = "r");(\s:string.F)} = {})`
 	by (RW_TAC set_ss [Once EXTENSION]
@@ -555,7 +555,7 @@ val visible_flip_example = store_thm
 ++ RW_TAC set_ss [CROSS_EQNS, lem1, M, H_def, L_def, R_def]
 ++ CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [flip_example_lem])))
 ++ CONV_TAC (REPEATC (SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]
-		      THENC (FIND_CONV ``x DELETE y`` 
+		      THENC (FIND_CONV ``x DELETE y``
 					(DELETE_CONV (SIMP_CONV arith_ss [PAIR_EQ, flip_example_lem])))
 		      THENC SIMP_CONV arith_ss [flip_example_lem]))
 ++ SIMP_TAC real_ss [lg_1, lg_inv, GSYM REAL_INV_1OVER, lg_2, REAL_MUL_LINV]

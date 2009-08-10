@@ -246,7 +246,7 @@ in
   fun decode_thms nums insts =
      List.concat (map (fn i => map (THUMB_DECODE i) nums) insts);
 end;
-       
+
 val thrms =
   (decode_thms [``15``,``14``,``13``,``12``,``11``,``10``,``9``,``8``] insts) @
   (decode_thms [``7``,``6``] (List.take(List.drop(insts, 11), 16))) @
@@ -392,7 +392,7 @@ val thumb_to_arm_enc = Tactical.store_thm("thumb_to_arm_enc",
          options_encode_def, options_encode2_def,
          ZERO_SHIFT, SHIFT_ZERO, WORD_OR_CLAUSES, GSYM LSL_BITWISE, LSL_ADD,
          WORD_EXTRACT_COMP_THM, GSYM WORD_EXTRACT_OVER_BITWISE,
-         GSYM WORD_w2w_OVER_BITWISE, WORD_EXTRACT_LSL, WORD_EXTRACT_ZERO, 
+         GSYM WORD_w2w_OVER_BITWISE, WORD_EXTRACT_LSL, WORD_EXTRACT_ZERO,
          WORD_EXTRACT_ZERO3, EXTRACT_ALL_BITS,
          word_extract_w2w, extract_w2w_0, extract_w2w_w2w_, w2w_id,
          word_lsl_n2w, word_or_n2w, word_modify_n2w, word_extract_n2w,

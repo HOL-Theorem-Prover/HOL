@@ -1,4 +1,4 @@
-signature buildutils = 
+signature buildutils =
 sig
 
   val normPath : string -> string
@@ -7,9 +7,9 @@ sig
   val die : string -> 'a
   val warn : string -> unit
 
-  val read_buildsequence : 
-      (string -> Substring.substring) -> (TextIO.instream -> string option) -> 
+  val read_buildsequence :
+      (string -> Substring.substring) -> (TextIO.instream -> string option) ->
       string -> (string * int) list
-                           
+
 
 end

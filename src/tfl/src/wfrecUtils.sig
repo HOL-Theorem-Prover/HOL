@@ -23,7 +23,7 @@ sig
   val func_of_cond_eqn  : term -> term
   val vary              : term list -> hol_type -> term
   val match_type        :'a -> hol_type -> hol_type -> (hol_type,hol_type)subst
-  val match_term        : 'a -> term -> term 
+  val match_term        : 'a -> term -> term
                             -> (term,term) subst * (hol_type,hol_type) subst
 
 end;

@@ -18,12 +18,12 @@
 ******************************************************************************)
 (*
 quietdec := true;
-loadPath 
- := 
+loadPath
+ :=
  "../official-semantics" :: "../../regexp" :: "../../path" :: !loadPath;
-map load 
- ["UnclockedSemanticsTheory", 
-  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", 
+map load
+ ["UnclockedSemanticsTheory",
+  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory",
   "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory","LemmasTheory"];
 open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
@@ -47,7 +47,7 @@ open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      ClockedSemanticsTheory LemmasTheory;
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers 
+* Set default parsing to natural numbers rather than integers
 ******************************************************************************)
 val _ = intLib.deprecate_int();
 
@@ -63,7 +63,7 @@ val _ = new_theory "RewritesProperties";
 (******************************************************************************
 * A simpset fragment to rewrite away quantifiers restricted with :: (a to b)
 ******************************************************************************)
-val resq_SS = 
+val resq_SS =
  simpLib.merge_ss
   [res_quanTools.resq_SS,
    rewrites
@@ -78,14 +78,14 @@ val US_SEM_BOOL_REWRITE_LEMMA =
  store_thm
   ("US_SEM_BOOL_REWRITE_LEMMA",
    ``US_SEM v (S_CAT (S_REPEAT (S_BOOL (B_NOT c)),S_BOOL (B_AND (c,b)))) =
-      LENGTH v > 0 /\ 
+      LENGTH v > 0 /\
       B_SEM (ELEM v (LENGTH v - 1)) b /\
       B_SEM (ELEM v (LENGTH v - 1)) c /\
       !i. i < LENGTH v - 1 ==> B_SEM (ELEM v i) (B_NOT c)``,
    RW_TAC  (std_ss++resq_SS) [US_SEM_def,LENGTH1]
     THEN EQ_TAC
     THEN RW_TAC list_ss [LENGTH_APPEND]
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [ELEM_def,RESTN_def,HEAD_def,B_SEM_def,LENGTH_APPEND,RESTN_APPEND]
     THENL
      [Cases_on `x`
@@ -93,14 +93,14 @@ val US_SEM_BOOL_REWRITE_LEMMA =
       Cases_on `x`
        THEN FULL_SIMP_TAC list_ss [B_SEM_def],
       FULL_SIMP_TAC list_ss [EVERY_EL,EL_APPEND1,HD_RESTN]
-       THEN `(LENGTH (CONCAT vlist) = LENGTH vlist) /\ i < LENGTH vlist` 
+       THEN `(LENGTH (CONCAT vlist) = LENGTH vlist) /\ i < LENGTH vlist`
             by PROVE_TAC[EVERY_EL_SINGLETON_LENGTH]
        THEN `CONCAT vlist = MAP HD vlist` by  PROVE_TAC[EVERY_EL_SINGLETON]
        THEN RW_TAC list_ss [EL_MAP]
        THEN PROVE_TAC[HD],
       FULL_SIMP_TAC list_ss [EVERY_EL,EL_APPEND1,HD_RESTN]
        THEN Q.EXISTS_TAC `BUTLAST v`
-       THEN Q.EXISTS_TAC `[LAST v]` 
+       THEN Q.EXISTS_TAC `[LAST v]`
        THEN RW_TAC list_ss []
        THEN RW_TAC list_ss [APPEND_BUTLAST_LAST,LENGTH_NIL_LEMMA]
        THEN `LENGTH v >= 1` by DECIDE_TAC
@@ -205,51 +205,51 @@ end;
 val PATH_LENGTH_RESTN_0 =
  store_thm
   ("PATH_LENGTH_RESTN_0",
-   ``!k v. 
-       k <= LENGTH v 
+   ``!k v.
+       k <= LENGTH v
        ==>
        ((LENGTH(RESTN v k) = XNUM 0) = (LENGTH v = XNUM k))``,
    REPEAT GEN_TAC
     THEN Cases_on `v`
     THEN RW_TAC list_ss [LENGTH_RESTN_INFINITE,LENGTH_def,LE]
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [xnum_11,LENGTH_NIL,RESTN_def,LENGTH_def,
            RESTN_FINITE,RESTN_NIL_LENGTH]);
 
 val PATH_FINITE_LENGTH_RESTN_0 =
  store_thm
   ("PATH_FINITE_LENGTH_RESTN_0",
-   ``!k v. 
-       k <= LENGTH v 
+   ``!k v.
+       k <= LENGTH v
        ==>
-       ((LENGTH(RESTN v k) = XNUM 0) = 
+       ((LENGTH(RESTN v k) = XNUM 0) =
         ?l. (LENGTH l = k) /\ (v = FINITE l))``,
    REPEAT GEN_TAC
     THEN Cases_on `v`
     THEN RW_TAC list_ss [LENGTH_RESTN_INFINITE,LENGTH_def,LE]
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [xnum_11,LENGTH_NIL,RESTN_def,LENGTH_def,
            RESTN_FINITE,RESTN_NIL_LENGTH]);
 
 val LIST_LENGTH_RESTN_0 =
  store_thm
   ("LIST_LENGTH_RESTN_0",
-   ``!k l. 
-       k <= LENGTH l 
+   ``!k l.
+       k <= LENGTH l
        ==>
        ((LENGTH(RESTN l k) = 0) = (LENGTH l = k))``,
    RW_TAC list_ss [LENGTH_RESTN_INFINITE,LENGTH_def,LE]
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [LENGTH_NIL,RESTN_def,LENGTH_def,
            RESTN_FINITE,RESTN_NIL_LENGTH]);
 
 val PATH_FINITE_LENGTH_RESTN_0_COR =
  store_thm
   ("PATH_FINITE_LENGTH_RESTN_0_COR",
-   ``!k v. 
-       k < LENGTH v 
+   ``!k v.
+       k < LENGTH v
        ==>
-       ((LENGTH(RESTN v k) = XNUM 0) = 
+       ((LENGTH(RESTN v k) = XNUM 0) =
         ?l. (LENGTH l = k) /\ (v = FINITE l))``,
    PROVE_TAC[LS_LE_X,PATH_FINITE_LENGTH_RESTN_0]);
 
@@ -259,9 +259,9 @@ val PATH_FINITE_LENGTH_RESTN_0_COR =
 val UF_SEM_F_U_CLOCK =
  store_thm
   ("UF_SEM_F_U_CLOCK",
-   ``UF_SEM v (F_U_CLOCK c f) = 
-      ?j :: LESS(LENGTH v). 
-        UF_SEM (RESTN v j) (F_AND(F_WEAK_BOOL c,f)) /\ 
+   ``UF_SEM v (F_U_CLOCK c f) =
+      ?j :: LESS(LENGTH v).
+        UF_SEM (RESTN v j) (F_AND(F_WEAK_BOOL c,f)) /\
         !i. i < j ==> B_SEM (ELEM v i) (B_NOT c)``,
    RW_TAC (arith_ss ++ resq_SS)
     [F_U_CLOCK_def,ELEM_RESTN,UF_SEM_def,CLOCK_TICK_def,LENGTH_SEL]
@@ -282,7 +282,7 @@ val UF_SEM_F_U_CLOCK =
        THEN IMP_RES_TAC LS_TRANS_X
        THEN IMP_RES_TAC LS_LE_X
        THEN IMP_RES_TAC PATH_FINITE_LENGTH_RESTN_0
-       THEN RW_TAC std_ss []       
+       THEN RW_TAC std_ss []
        THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS],
      Q.EXISTS_TAC `j`
        THEN RW_TAC std_ss [],
@@ -315,7 +315,7 @@ val COMPLEMENT_COMPLEMENT =
   ("COMPLEMENT_COMPLEMENT",
    ``COMPLEMENT(COMPLEMENT l) = l``,
    Cases_on `l`
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [COMPLEMENT_def,MAP_I,MAP_MAP_o,
            COMPLEMENT_LETTER_COMPLEMENT_LETTER_o]
     THEN ONCE_REWRITE_TAC[combinTheory.o_ASSOC]
@@ -327,7 +327,7 @@ val LENGTH_COMPLEMENT =
   ("LENGTH_COMPLEMENT",
    ``LENGTH(COMPLEMENT v) = LENGTH v``,
    Cases_on `v`
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [COMPLEMENT_def,LENGTH_def,LENGTH_MAP]);
 
 val HD_MAP =
@@ -366,18 +366,18 @@ val RESTN_COMPLEMENT =  (* Harder to prove than expected *)
        THEN RES_TAC
        THEN RW_TAC list_ss [],
       ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `REST(INFINITE f)` (el 2 thl)))
-       THEN FULL_SIMP_TAC list_ss 
+       THEN FULL_SIMP_TAC list_ss
              [LENGTH_def,LS,COMPLEMENT_def,REST_def,combinTheory.o_DEF]]);
 
 val RESTN_COMPLEMENT_COR =
  save_thm
   ("RESTN_COMPLEMENT_COR",
-   SIMP_RULE 
-    std_ss 
+   SIMP_RULE
+    std_ss
     [LENGTH_def,LS]
     (ISPECL[``n:num``,``FINITE(l:'a letter list)``]RESTN_COMPLEMENT));
 
-val ELEM_COMPLEMENT =  
+val ELEM_COMPLEMENT =
  store_thm
   ("ELEM_COMPLEMENT",
   ``!n v. n < LENGTH v ==> (ELEM (COMPLEMENT v) n = COMPLEMENT_LETTER(ELEM v n))``,
@@ -401,15 +401,15 @@ val ELEM_COMPLEMENT =
        THEN IMP_RES_TAC(Q.ISPEC `COMPLEMENT_LETTER` TL_MAP)
        THEN RW_TAC std_ss [],
       ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `REST(INFINITE f)` (el 2 thl)))
-       THEN FULL_SIMP_TAC list_ss 
+       THEN FULL_SIMP_TAC list_ss
              [LENGTH_def,LS,COMPLEMENT_def,REST_def,combinTheory.o_DEF,
               RESTN_def,COMPLEMENT_def,REST_def,ELEM_def,HEAD_def]]);
 
 val ELEM_COMPLEMENT_COR =
  save_thm
   ("ELEM_COMPLEMENT_COR",
-   SIMP_RULE 
-    std_ss 
+   SIMP_RULE
+    std_ss
     [LENGTH_def,LS]
     (ISPECL[``n:num``,``FINITE(l:'a letter list)``]ELEM_COMPLEMENT));
 
@@ -444,9 +444,9 @@ val UF_SEM_F_IMPLIES =
 val UF_SEM_RESTN_F_WEAK_BOOL =
  store_thm
   ("UF_SEM_RESTN_F_WEAK_BOOL",
-   ``!j v. 
-      j < LENGTH v 
-      ==> 
+   ``!j v.
+      j < LENGTH v
+      ==>
       (UF_SEM (RESTN v j) (F_WEAK_BOOL b) = B_SEM (ELEM v j) b)``,
    RW_TAC list_ss [UF_SEM_def,ELEM_RESTN]
     THEN EQ_TAC
@@ -459,8 +459,8 @@ val UF_SEM_RESTN_F_WEAK_BOOL =
 val UF_SEM_RESTN_F_WEAK_BOOL_COR =
  store_thm
   ("UF_SEM_RESTN_F_WEAK_BOOL_COR",
-   ``!j v. 
-      j < LENGTH v /\ UF_SEM (RESTN v j) (F_WEAK_BOOL b) = 
+   ``!j v.
+      j < LENGTH v /\ UF_SEM (RESTN v j) (F_WEAK_BOOL b) =
       j < LENGTH v /\ B_SEM (ELEM v j) b``,
    PROVE_TAC[UF_SEM_RESTN_F_WEAK_BOOL]);
 
@@ -487,10 +487,10 @@ val UF_SEM_F_F_IMP =
 val UF_SEM_F_F =
  store_thm
   ("UF_SEM_F_F",
-   ``UF_SEM v (F_F f) = 
-      ?i :: LESS(LENGTH v). 
-        UF_SEM (RESTN v i) f 
-        /\ 
+   ``UF_SEM v (F_F f) =
+      ?i :: LESS(LENGTH v).
+        UF_SEM (RESTN v i) f
+        /\
         !j :: LESS i. (ELEM v j = BOTTOM) ==> (LENGTH v = XNUM j)``,
    RW_TAC (arith_ss ++ resq_SS) [UF_SEM_def,F_F_def,B_SEM_def]
     THEN Cases_on `v`
@@ -535,7 +535,7 @@ val UF_SEM_F_F =
        THEN RW_TAC std_ss [B_SEM_def]]);
 
 (******************************************************************************
-* Globally: G f 
+* Globally: G f
 ******************************************************************************)
 val UF_SEM_F_G_LEMMA =
  SIMP_CONV  (arith_ss ++ resq_SS)
@@ -546,8 +546,8 @@ val UF_SEM_F_G_LEMMA =
 val UF_SEM_F_G =
  store_thm
   ("UF_SEM_F_G",
-   ``UF_SEM v (F_G f) = 
-      !i :: LESS(LENGTH v). 
+   ``UF_SEM v (F_G f) =
+      !i :: LESS(LENGTH v).
         UF_SEM (RESTN v i) f
         \/
         ?j :: LESS i. (ELEM v j = TOP) /\ ~(LENGTH v = XNUM j)``,
@@ -571,7 +571,7 @@ val UF_SEM_F_G =
        THEN PROVE_TAC[COMPLEMENT_COMPLEMENT],
       DISJ2_TAC
        THEN Q.EXISTS_TAC `j`
-       THEN RW_TAC arith_ss []        
+       THEN RW_TAC arith_ss []
        THEN `j < LENGTH v` by PROVE_TAC[LS_TRANS_X]
        THEN IMP_RES_TAC ELEM_COMPLEMENT
        THEN RW_TAC std_ss [COMPLEMENT_LETTER_def]]);
@@ -588,10 +588,10 @@ val UF_SEM_F_W_CLOCK_LEMMA =
 val UF_SEM_F_W_CLOCK =
  store_thm
   ("UF_SEM_F_W_CLOCK",
-   ``UF_SEM v (F_W_CLOCK c f) = 
-      UF_SEM v (F_U_CLOCK c f) 
-      \/ 
-      !i :: LESS(LENGTH v). 
+   ``UF_SEM v (F_W_CLOCK c f) =
+      UF_SEM v (F_U_CLOCK c f)
+      \/
+      !i :: LESS(LENGTH v).
         B_SEM (ELEM v i) (B_NOT c) \/ ?j :: LESS i. ELEM v j = TOP``,
    RW_TAC (arith_ss ++ resq_SS)
     [F_W_CLOCK_def,UF_SEM_def,UF_SEM_F_W_CLOCK_LEMMA]
@@ -632,7 +632,7 @@ val F_STRONG_BOOL_CLOCK_COMP =
   ("F_STRONG_BOOL_CLOCK_COMP",
    ``!b v c. F_SEM v c (F_STRONG_BOOL b) =
               UF_SEM v (F_CLOCK_COMP c (F_STRONG_BOOL b))``,
-   RW_TAC (arith_ss  ++ resq_SS) 
+   RW_TAC (arith_ss  ++ resq_SS)
     [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,UF_SEM_F_U_CLOCK,
      CLOCK_TICK_def,LENGTH_SEL,ELEM_EL]
     THEN EQ_TAC
@@ -675,13 +675,13 @@ val th =
      F_W_CLOCK_def,ELEM_RESTN,UF_SEM_def,CLOCK_TICK_def,LENGTH_SEL,
      F_W_def,F_F_def,F_G_def,UF_SEM_F_OR,UF_SEM_F_U_CLOCK,LENGTH_COMPLEMENT,
      ELEM_EL,RESTN_def,RESTN_FINITE,ELEM_def,COMPLEMENT_def,LS,
-     DECIDE ``m < 1 = (m=0)``, DECIDE ``m < 2 = (m=0) \/ (m=1)``, 
+     DECIDE ``m < 1 = (m=0)``, DECIDE ``m < 2 = (m=0) \/ (m=1)``,
      COMPLEMENT_LETTER_def,FinitePathTheory.RESTN_def,
      HEAD_def,B_SEM_def,xnum_11,HD_SEL]
   ``F_SEM (FINITE[BOTTOM]) c (F_WEAK_BOOL b) =
      UF_SEM (FINITE[BOTTOM]) (F_CLOCK_COMP c (F_WEAK_BOOL b))``;
 *)
-       
+
 val WOP_EQ =
  prove
   (``!P. (?n:num. P n) = ?n. P n /\ !m. m < n ==> ~P m``,
@@ -691,9 +691,9 @@ val WOP_IMP =
  prove
   (``!P n. P(n:num) ==> ?n. P n /\ !m. m < n ==> ~P m``,
    PROVE_TAC[WOP]);
-       
 
-(* 
+
+(*
 Lemma below is one of the most messy proofs I've ever done!  There is
 a frequented repeated well-foundedness argument, that occurrs several
 times inlined, which needs to be extracted into a lemma.
@@ -711,14 +711,14 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
    ``!b v c. F_SEM v c (F_WEAK_BOOL b) ==>
               UF_SEM v (F_CLOCK_COMP c (F_WEAK_BOOL b))``,
    SIMP_TAC (arith_ss  ++ resq_SS) [F_SEM_def]
-    THEN SIMP_TAC (list_ss ++ resq_SS) 
+    THEN SIMP_TAC (list_ss ++ resq_SS)
           [CLOCK_TICK_def,LENGTH_SEL,ELEM_EL,
            EL_SEL_LEMMA1,EL_SEL_LEMMA2]
-    THEN SIMP_TAC (list_ss ++ resq_SS) 
+    THEN SIMP_TAC (list_ss ++ resq_SS)
           [F_CLOCK_COMP_def,UF_SEM_F_W_CLOCK,UF_SEM_F_U_CLOCK,UF_SEM_F_AND]
     THEN ONCE_REWRITE_TAC
           [DECIDE ``A /\ (B /\ C) /\ D = A /\ ((A /\ B) /\ (A /\ C)) /\ D``]
-    THEN SIMP_TAC (list_ss ++ resq_SS) 
+    THEN SIMP_TAC (list_ss ++ resq_SS)
           [UF_SEM_RESTN_F_WEAK_BOOL_COR]
     THEN ONCE_REWRITE_TAC
           [DECIDE ``A /\ ((A /\ B) /\ (A /\ C)) /\ D = A /\ B /\ C /\ D``]
@@ -730,7 +730,7 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
     THENL
      [POP_ASSUM STRIP_ASSUME_TAC
        THEN RES_TAC
-       THEN Cases_on 
+       THEN Cases_on
              `!i. i < LENGTH v ==>
                   B_SEM (ELEM v i) (B_NOT c) \/ ?j. j < i /\ (ELEM v j = TOP)`
        THEN RW_TAC std_ss []
@@ -749,7 +749,7 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
           THEN IMP_RES_TAC ELEM_COMPLEMENT
           THENL
            [`ELEM (COMPLEMENT v) i' = TOP`
-              by PROVE_TAC[COMPLEMENT_LETTER_def] 
+              by PROVE_TAC[COMPLEMENT_LETTER_def]
              THEN ASSUM_LIST(fn thl => FULL_SIMP_TAC std_ss [el 1 thl])
              THEN `B_SEM (COMPLEMENT_LETTER BOTTOM) c` by
                    SIMP_TAC std_ss [B_SEM_def,COMPLEMENT_LETTER_def]
@@ -760,7 +760,7 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
             `B_SEM (STATE f) (B_NOT c)` by PROVE_TAC[COMPLEMENT_LETTER_def]
               THEN FULL_SIMP_TAC std_ss [B_SEM_def]]],
       FULL_SIMP_TAC std_ss [NOT_EXISTS_THM]
-       THEN FULL_SIMP_TAC std_ss 
+       THEN FULL_SIMP_TAC std_ss
              [DECIDE ``~A \/ ~B \/ C = A ==> B ==> C``]
        THEN DISJ2_TAC
        THEN RW_TAC std_ss []
@@ -776,7 +776,7 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
          ASSUM_LIST
           (fn thl =>
             STRIP_ASSUME_TAC
-             (SIMP_RULE std_ss 
+             (SIMP_RULE std_ss
                [el 1 thl,el 4 thl,ELEM_COMPLEMENT,COMPLEMENT_LETTER_def,B_SEM_def]
                (Q.SPEC `i` (el 5 thl))))
           THEN `i' < LENGTH v` by PROVE_TAC [LS_TRANS_X]
@@ -788,12 +788,12 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
              THEN ASSUM_LIST
                    (fn thl =>
                      STRIP_ASSUME_TAC
-                      (SIMP_RULE std_ss 
+                      (SIMP_RULE std_ss
                         [el 2 thl,el 3 thl,ELEM_COMPLEMENT,
                          COMPLEMENT_LETTER_def,B_SEM_def]
                         (el 5 thl))),
             POP_ASSUM
-             (fn th => 
+             (fn th =>
                ASSUME_TAC
                 (EXISTS(mk_exists(``f:'a -> bool``,concl th),``f:'a -> bool``)th))
             THEN ASSUM_LIST
@@ -801,7 +801,7 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
                     ASSUME_TAC
                      (LIST_CONJ[el 1 thl,el 3 thl,el 4 thl]))
             THEN POP_ASSUM
-                   (fn th => 
+                   (fn th =>
                      STRIP_ASSUME_TAC
                       (MP
                         (BETA_RULE
@@ -811,11 +811,11 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
             THEN `ELEM (COMPLEMENT v) n = STATE f`
                   by PROVE_TAC[ELEM_COMPLEMENT,COMPLEMENT_LETTER_def]
             THEN ASSUM_LIST
-                  (fn thl => 
+                  (fn thl =>
                     ASSUME_TAC(SIMP_RULE std_ss [el 1 thl,B_SEM_def](el 5 thl)))
             THEN `B_SEM (ELEM (COMPLEMENT v) n) c` by PROVE_TAC[]
             THEN ASSUM_LIST
-                  (fn thl => 
+                  (fn thl =>
                     STRIP_ASSUME_TAC
                       (SIMP_RULE std_ss [el 1 thl,el 4 thl](Q.SPEC `n` (el 17 thl))))
             THEN `i'' < i` by DECIDE_TAC
@@ -828,16 +828,16 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
                THEN ASSUM_LIST
                      (fn thl =>
                        STRIP_ASSUME_TAC
-                        (SIMP_RULE std_ss 
+                        (SIMP_RULE std_ss
                           [el 4 thl,el 7 thl,ELEM_COMPLEMENT,
                            COMPLEMENT_LETTER_def,B_SEM_def]
                           (el 9 thl))),
               RES_TAC]],
            `B_SEM (ELEM v i) c` by PROVE_TAC[B_SEM_def]
-            THEN `B_SEM (ELEM (COMPLEMENT v) i) c` 
+            THEN `B_SEM (ELEM (COMPLEMENT v) i) c`
                    by PROVE_TAC[ELEM_COMPLEMENT,COMPLEMENT_LETTER_def]
             THEN ASSUM_LIST
-                  (fn thl => 
+                  (fn thl =>
                     STRIP_ASSUME_TAC(SIMP_RULE std_ss
                      [el 1 thl,el 6 thl](Q.SPEC `i` (el 7 thl))))
             THEN Cases_on `ELEM v i'`
@@ -849,7 +849,7 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
                THEN ASSUM_LIST
                      (fn thl =>
                        STRIP_ASSUME_TAC
-                        (SIMP_RULE std_ss 
+                        (SIMP_RULE std_ss
                           [el 2 thl,el 4 thl,
                            COMPLEMENT_LETTER_def,B_SEM_def]
                           (el 5 thl))),
@@ -857,7 +857,7 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
                THEN `ELEM (COMPLEMENT v) i' = STATE f'`
                      by PROVE_TAC[ELEM_COMPLEMENT,COMPLEMENT_LETTER_def]
             THEN ASSUM_LIST
-                  (fn thl => 
+                  (fn thl =>
                     ASSUME_TAC
                      (EXISTS
                       (mk_exists
@@ -867,7 +867,7 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
                     ASSUME_TAC
                      (LIST_CONJ[el 1 thl,el 5 thl,el 6 thl]))
             THEN POP_ASSUM
-                   (fn th => 
+                   (fn th =>
                      STRIP_ASSUME_TAC
                       (MP
                         (BETA_RULE
@@ -882,7 +882,7 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
                THEN ASSUM_LIST
                      (fn thl =>
                        STRIP_ASSUME_TAC
-                        (SIMP_RULE std_ss 
+                        (SIMP_RULE std_ss
                           [el 3 thl,el 5 thl,
                            COMPLEMENT_LETTER_def,B_SEM_def]
                           (el 9 thl))),
@@ -890,18 +890,18 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
                THEN ASSUM_LIST
                      (fn thl =>
                        STRIP_ASSUME_TAC
-                        (SIMP_RULE std_ss 
+                        (SIMP_RULE std_ss
                           [el 3 thl,el 5 thl,
                            COMPLEMENT_LETTER_def,B_SEM_def]
                           (el 9 thl)))
                THEN `B_SEM (ELEM (COMPLEMENT v) n) c` by PROVE_TAC[COMPLEMENT_LETTER_def]
                THEN ASSUM_LIST
-                     (fn thl => 
+                     (fn thl =>
                        STRIP_ASSUME_TAC(SIMP_RULE std_ss
                         [el 1 thl,el 8 thl](Q.SPEC `n` (el 24 thl))))
                THEN `i'' < i` by DECIDE_TAC
                THEN ASSUM_LIST
-                     (fn thl => 
+                     (fn thl =>
                        STRIP_ASSUME_TAC(SIMP_RULE std_ss
                         [el 2 thl,el 3 thl,el 11 thl](Q.SPEC `i''` (el 12 thl))))
             THEN Cases_on `ELEM v i''`
@@ -913,7 +913,7 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
                THEN ASSUM_LIST
                      (fn thl =>
                        STRIP_ASSUME_TAC
-                        (SIMP_RULE std_ss 
+                        (SIMP_RULE std_ss
                           [el 1 thl,el 3 thl,
                            COMPLEMENT_LETTER_def,B_SEM_def]
                           (el 6 thl))),
@@ -929,14 +929,14 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP2 =
    ``!b v c. UF_SEM v (F_CLOCK_COMP c (F_WEAK_BOOL b)) ==>
               F_SEM v c (F_WEAK_BOOL b)``,
    SIMP_TAC (arith_ss  ++ resq_SS) [F_SEM_def]
-    THEN SIMP_TAC (list_ss ++ resq_SS) 
+    THEN SIMP_TAC (list_ss ++ resq_SS)
           [CLOCK_TICK_def,LENGTH_SEL,ELEM_EL,
            EL_SEL_LEMMA1,EL_SEL_LEMMA2]
-    THEN SIMP_TAC (list_ss ++ resq_SS) 
+    THEN SIMP_TAC (list_ss ++ resq_SS)
           [F_CLOCK_COMP_def,UF_SEM_F_W_CLOCK,UF_SEM_F_U_CLOCK,UF_SEM_F_AND]
     THEN ONCE_REWRITE_TAC
           [DECIDE ``A /\ (B /\ C) /\ D = A /\ ((A /\ B) /\ (A /\ C)) /\ D``]
-    THEN SIMP_TAC (list_ss ++ resq_SS) 
+    THEN SIMP_TAC (list_ss ++ resq_SS)
           [UF_SEM_RESTN_F_WEAK_BOOL_COR]
     THEN ONCE_REWRITE_TAC
           [DECIDE ``A /\ ((A /\ B) /\ (A /\ C)) /\ D = A /\ B /\ C /\ D``]
@@ -1008,20 +1008,20 @@ val EL_SEL_THM =
 val F_NEXT_CLOCK_COMP_IMP1 =
  store_thm
   ("F_NEXT_CLOCK_COMP_IMP1",
-   ``!f. 
+   ``!f.
        (!v c.
          F_SEM v c f = UF_SEM v (F_CLOCK_COMP c f))
        ==>
-       !v c. 
+       !v c.
          F_SEM v c (F_NEXT f) ==> UF_SEM v (F_CLOCK_COMP c (F_NEXT f))``,
     SIMP_TAC (arith_ss++resq_SS)
        [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,CLOCK_TICK_def]
-       THEN SIMP_TAC (arith_ss++resq_SS) 
+       THEN SIMP_TAC (arith_ss++resq_SS)
              [UF_SEM_F_U_CLOCK,RESTN_RESTN,LENGTH_SEL,UF_SEM_F_AND,
               EL_SEL_LEMMA1,EL_SEL_LEMMA2,ELEM_EL]
        THEN ONCE_REWRITE_TAC
              [DECIDE ``A /\ (B /\ C) /\ D = A /\ ((A /\ B) /\ (A /\ C)) /\ D``]
-       THEN SIMP_TAC (list_ss ++ resq_SS) 
+       THEN SIMP_TAC (list_ss ++ resq_SS)
              [UF_SEM_RESTN_F_WEAK_BOOL_COR]
        THEN ONCE_REWRITE_TAC
              [DECIDE ``A /\ ((A /\ B) /\ (A /\ C)) /\ D = A /\ B /\ C /\ D``]
@@ -1032,7 +1032,7 @@ val F_NEXT_CLOCK_COMP_IMP1 =
        THEN RW_TAC list_ss []
        THENL
         [Cases_on `v`
-          THEN RW_TAC list_ss 
+          THEN RW_TAC list_ss
                 [GT,LENGTH_RESTN_INFINITE,
                  IS_FINITE_def,LENGTH_RESTN,LENGTH_def,SUB]
           THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS],
@@ -1046,7 +1046,7 @@ val F_NEXT_CLOCK_COMP_IMP1 =
           THEN RW_TAC list_ss []
           THENL
            [Cases_on `v`
-             THEN RW_TAC list_ss 
+             THEN RW_TAC list_ss
                    [GT,LENGTH_RESTN_INFINITE,RESTN_FINITE,
                     IS_FINITE_def,LENGTH_RESTN,LENGTH_def,SUB]
              THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS]
@@ -1064,12 +1064,12 @@ val F_NEXT_CLOCK_COMP_IMP2 =
          !v c. UF_SEM v (F_CLOCK_COMP c (F_NEXT f)) ==> F_SEM v c (F_NEXT f)``,
       SIMP_TAC (arith_ss++resq_SS)
        [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,CLOCK_TICK_def]
-       THEN SIMP_TAC (arith_ss++resq_SS) 
+       THEN SIMP_TAC (arith_ss++resq_SS)
              [UF_SEM_F_U_CLOCK,RESTN_RESTN,LENGTH_SEL,UF_SEM_F_AND,
               EL_SEL_LEMMA1,EL_SEL_LEMMA2,ELEM_EL]
        THEN ONCE_REWRITE_TAC
              [DECIDE ``A /\ (B /\ C) /\ D = A /\ ((A /\ B) /\ (A /\ C)) /\ D``]
-       THEN SIMP_TAC (list_ss ++ resq_SS) 
+       THEN SIMP_TAC (list_ss ++ resq_SS)
              [UF_SEM_RESTN_F_WEAK_BOOL_COR]
        THEN ONCE_REWRITE_TAC
              [DECIDE ``A /\ ((A /\ B) /\ (A /\ C)) /\ D = A /\ B /\ C /\ D``]
@@ -1083,27 +1083,27 @@ val F_NEXT_CLOCK_COMP_IMP2 =
           THEN RW_TAC list_ss []
           THENL
            [Cases_on `v`
-             THEN RW_TAC list_ss 
+             THEN RW_TAC list_ss
                    [GT,LENGTH_RESTN_INFINITE,RESTN_FINITE,
                     IS_FINITE_def,LENGTH_RESTN,LENGTH_def,SUB]
              THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS,RESTN_FINITE,xnum_11,GT]
-             THEN `LENGTH(RESTN l j) = LENGTH l - j` 
+             THEN `LENGTH(RESTN l j) = LENGTH l - j`
                    by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
              THEN `j + 1 < LENGTH l` by DECIDE_TAC
-             THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)` 
+             THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)`
                    by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
              THEN DECIDE_TAC,
             RW_TAC list_ss [EL_SEL_THM]
              THEN `j + (j' + 1) < LENGTH v`
-                  by (Cases_on `v` 
+                  by (Cases_on `v`
                        THEN RW_TAC std_ss [LS,LENGTH_def]
-                       THEN FULL_SIMP_TAC list_ss 
+                       THEN FULL_SIMP_TAC list_ss
                              [LENGTH_def,LS,RESTN_FINITE,xnum_11,GT])
              THENL
-              [`LENGTH(RESTN l j) = LENGTH l - j` 
+              [`LENGTH(RESTN l j) = LENGTH l - j`
                 by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
                 THEN `j + 1 < LENGTH l` by DECIDE_TAC
-                THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)` 
+                THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)`
                       by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
                 THEN DECIDE_TAC,
                `?l. (LENGTH l = j + (j' + 1)) /\ (v = FINITE l)`
@@ -1112,15 +1112,15 @@ val F_NEXT_CLOCK_COMP_IMP2 =
                 THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS]],
             RW_TAC list_ss [EL_SEL_THM]
              THEN `j + (j' + 1) < LENGTH v`
-                  by (Cases_on `v` 
+                  by (Cases_on `v`
                        THEN RW_TAC std_ss [LS,LENGTH_def]
-                       THEN FULL_SIMP_TAC list_ss 
+                       THEN FULL_SIMP_TAC list_ss
                              [LENGTH_def,LS,RESTN_FINITE,xnum_11,GT])
              THENL
-              [`LENGTH(RESTN l j) = LENGTH l - j` 
+              [`LENGTH(RESTN l j) = LENGTH l - j`
                 by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
                 THEN `j + 1 < LENGTH l` by DECIDE_TAC
-                THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)` 
+                THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)`
                       by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
                 THEN DECIDE_TAC,
                `?l. (LENGTH l = j + (j' + 1)) /\ (v = FINITE l)`
@@ -1133,14 +1133,14 @@ val F_NEXT_CLOCK_COMP_IMP2 =
           THEN RW_TAC list_ss []
           THENL
            [Cases_on `v`
-             THEN RW_TAC list_ss 
+             THEN RW_TAC list_ss
                    [GT,LENGTH_RESTN_INFINITE,RESTN_FINITE,
                     IS_FINITE_def,LENGTH_RESTN,LENGTH_def,SUB]
              THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS,RESTN_FINITE,xnum_11,GT]
-             THEN `LENGTH(RESTN l j) = LENGTH l - j` 
+             THEN `LENGTH(RESTN l j) = LENGTH l - j`
                    by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
              THEN `j + 1 < LENGTH l` by DECIDE_TAC
-             THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)` 
+             THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)`
                    by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
              THEN DECIDE_TAC,
             FULL_SIMP_TAC list_ss [ELEM_RESTN]
@@ -1159,21 +1159,21 @@ val F_NEXT_CLOCK_COMP =
 val F_UNTIL_CLOCK_COMP_IMP1 =
  store_thm
   ("F_UNTIL_CLOCK_COMP_IMP1",
-   ``!f1 f2. 
+   ``!f1 f2.
        (!v c. F_SEM v c f1 = UF_SEM v (F_CLOCK_COMP c f1))
        /\
        (!v c. F_SEM v c f2 = UF_SEM v (F_CLOCK_COMP c f2))
        ==>
-       !v c. F_SEM v c (F_UNTIL(f1,f2)) 
+       !v c. F_SEM v c (F_UNTIL(f1,f2))
              ==> UF_SEM v (F_CLOCK_COMP c (F_UNTIL(f1,f2)))``,
     SIMP_TAC (arith_ss++resq_SS)
        [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,CLOCK_TICK_def]
-       THEN SIMP_TAC (arith_ss++resq_SS) 
+       THEN SIMP_TAC (arith_ss++resq_SS)
              [UF_SEM_F_U_CLOCK,RESTN_RESTN,LENGTH_SEL,UF_SEM_F_AND,
               EL_SEL_LEMMA1,EL_SEL_LEMMA2,ELEM_EL]
        THEN ONCE_REWRITE_TAC
              [DECIDE ``A /\ (B /\ C) /\ D = A /\ ((A /\ B) /\ (A /\ C)) /\ D``]
-       THEN SIMP_TAC (list_ss ++ resq_SS) 
+       THEN SIMP_TAC (list_ss ++ resq_SS)
              [UF_SEM_RESTN_F_WEAK_BOOL_COR]
        THEN ONCE_REWRITE_TAC
              [DECIDE ``A /\ ((A /\ B) /\ (A /\ C)) /\ D = A /\ B /\ C /\ D``]
@@ -1197,7 +1197,7 @@ val F_UNTIL_CLOCK_COMP_IMP1 =
 val F_UNTIL_CLOCK_COMP_IMP2 =
  store_thm
   ("F_UNTIL_CLOCK_COMP_IMP2",
-   ``!f1 f2. 
+   ``!f1 f2.
        (!v c. F_SEM v c f1 = UF_SEM v (F_CLOCK_COMP c f1))
        /\
        (!v c. F_SEM v c f2 = UF_SEM v (F_CLOCK_COMP c f2))
@@ -1206,12 +1206,12 @@ val F_UNTIL_CLOCK_COMP_IMP2 =
              ==> F_SEM v c (F_UNTIL(f1,f2))``,
     SIMP_TAC (arith_ss++resq_SS)
        [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,CLOCK_TICK_def]
-       THEN SIMP_TAC (arith_ss++resq_SS) 
+       THEN SIMP_TAC (arith_ss++resq_SS)
              [UF_SEM_F_U_CLOCK,RESTN_RESTN,LENGTH_SEL,UF_SEM_F_AND,
               EL_SEL_LEMMA1,EL_SEL_LEMMA2,ELEM_EL]
        THEN ONCE_REWRITE_TAC
              [DECIDE ``A /\ (B /\ C) /\ D = A /\ ((A /\ B) /\ (A /\ C)) /\ D``]
-       THEN SIMP_TAC (list_ss ++ resq_SS) 
+       THEN SIMP_TAC (list_ss ++ resq_SS)
              [UF_SEM_RESTN_F_WEAK_BOOL_COR]
        THEN ONCE_REWRITE_TAC
              [DECIDE ``A /\ ((A /\ B) /\ (A /\ C)) /\ D = A /\ B /\ C /\ D``]
@@ -1233,16 +1233,16 @@ val F_UNTIL_CLOCK_COMP_IMP2 =
           THEN `j < LENGTH v` by PROVE_TAC[LS_TRANS_X]
           THEN IMP_RES_TAC RESTN_COMPLEMENT
           THEN ASSUM_LIST
-                (fn thl => 
+                (fn thl =>
                   ASSUME_TAC(SIMP_RULE arith_ss [GSYM(el 2 thl)] (el 5 thl)))
           THEN FULL_SIMP_TAC arith_ss[ELEM_RESTN]]);
 
 val F_UNTIL_CLOCK_COMP =
  store_thm
   ("F_UNTIL_CLOCK_COMP",
-   ``!f1 f2. 
+   ``!f1 f2.
        (!v c. F_SEM v c f1 = UF_SEM v (F_CLOCK_COMP c f1)) /\
-       (!v c. F_SEM v c f2 = UF_SEM v (F_CLOCK_COMP c f2)) 
+       (!v c. F_SEM v c f2 = UF_SEM v (F_CLOCK_COMP c f2))
        ==>
        !v c. F_SEM v c (F_UNTIL(f1,f2)) =
               UF_SEM v (F_CLOCK_COMP c (F_UNTIL(f1,f2)))``,
@@ -1254,7 +1254,7 @@ val F_UNTIL_CLOCK_COMP =
       IMP_RES_TAC F_UNTIL_CLOCK_COMP_IMP2]);
 
 val AUX_TAC2 =
- RW_TAC (arith_ss  ++ resq_SS) 
+ RW_TAC (arith_ss  ++ resq_SS)
   [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,CLOCK_TICK_def];
 
 val F_CLOCK_COMP_CORRECT =
@@ -1271,10 +1271,10 @@ val F_CLOCK_COMP_CORRECT =
       AUX_TAC2,
       (* F_AND (f1,f2) *)
       AUX_TAC2,
-      (* F_STRONG_SERE s *)      
+      (* F_STRONG_SERE s *)
       AUX_TAC2
        THEN PROVE_TAC[S_CLOCK_COMP_CORRECT],
-      (* F_WEAK_SERE s *)      
+      (* F_WEAK_SERE s *)
       AUX_TAC2
        THEN PROVE_TAC[S_CLOCK_COMP_CORRECT],
       (* F_NEXT f *)

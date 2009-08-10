@@ -17,7 +17,7 @@ fun new_history {obj, limit} = HISTORY{obj=obj, past=[], orig=obj, limit=limit}
 
 local fun chop n alist = fst (split_after n alist) handle _ => alist
 in
-fun apply f (HISTORY{obj, past, orig, limit}) = 
+fun apply f (HISTORY{obj, past, orig, limit}) =
       HISTORY{obj=f obj, past=chop limit (obj::past), orig=orig, limit=limit}
 
 fun set_limit (HISTORY{obj,past,orig,limit}) n =

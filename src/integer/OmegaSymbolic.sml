@@ -492,7 +492,7 @@ exception NotFound
 
 fun variable_information vs t = let
   val table = ref (Redblackmap.mkDict Term.compare)
-  fun ins_initial_recs v = 
+  fun ins_initial_recs v =
     table := Redblackmap.insert (!table, v, new_varinfo())
   val _ = app ins_initial_recs vs
   fun examine_cv t = let

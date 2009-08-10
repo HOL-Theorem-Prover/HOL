@@ -2,7 +2,7 @@ signature modelCheckLib =
 sig
 
 (*These lib is an interface to modelcheckers. The translationLib is
-  used to translate several model checking problems to a check for the 
+  used to translate several model checking problems to a check for the
   existance of a fair path through a kripke structure. Then a model checker
   is used to check these properties. At the moment SMV and temporalLib by
   Klaus Schneider are used. Thus, temporalLib has to work correctly, to
@@ -40,7 +40,7 @@ val model_check___ltl_equivalent : Abbrev.term -> Abbrev.term -> Abbrev.thm opti
 
 (*model_check___ltl_ks_sem f M
 checks that the given kripke_structure M models the ltl-formula f.
-M has to be given in the form 
+M has to be given in the form
 
 symbolic_kripke_structure S0 R
 

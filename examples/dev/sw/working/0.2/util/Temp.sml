@@ -1,4 +1,4 @@
-signature Temp = 
+signature Temp =
 sig
   eqtype temp
   val newtemp : unit -> temp

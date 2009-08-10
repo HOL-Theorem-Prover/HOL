@@ -10,19 +10,19 @@
 * Load theories
 * (commented out for compilation)
 ******************************************************************************)
-(* 
+(*
 quietdec := true;
 (* show_assums := true; *)
 map load  ["metisLib","TotalDefn","jrhUtils"];
 open arithmeticTheory metisLib TotalDefn jrhUtils;
 quietdec := false;
-*) 
+*)
 
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
 
-open HolKernel Parse boolLib bossLib metisLib arithmeticTheory; 
+open HolKernel Parse boolLib bossLib metisLib arithmeticTheory;
 
 (******************************************************************************
 * Open theories
@@ -86,7 +86,7 @@ The output done being true indicates the device is available (i.e. no
 computation is in progress). If done is true at time t and there is a
 posedge on load at the next cycle (i.e. POSEDGE load (t+1)), then inp
 is sampled at t+1 and at some strictly later time t' the value
-f(inp(t+1)) is output at out. 
+f(inp(t+1)) is output at out.
 
 During the computation -- i.e. during [t+1..t') -- done is F, but at
 time t' it goes to T (so POSEDGE done t').
@@ -98,11 +98,11 @@ load.
 val SAFE_DEV_def =
  Define
   `SAFE_DEV f (load,inp,done,out) =
-    (!t. done t /\ POSEDGE load (t+1) 
-         ==> 
-         ?t'. t' > t+1            /\ 
-              HOLDF (t+1,t') done /\ 
-              done t'             /\ 
+    (!t. done t /\ POSEDGE load (t+1)
+         ==>
+         ?t'. t' > t+1            /\
+              HOLDF (t+1,t') done /\
+              done t'             /\
               (out t' = f(inp(t+1))))
     /\
     (!t. done t /\ ~(POSEDGE load (t+1)) ==> done(t+1))`;
@@ -128,7 +128,7 @@ Combinational (i.e. zero-delay) conponent with input inp and output out
 which computes a function f.
 *)
 val COMB_def =
- Define `COMB f (inp,out) = !t. out t = f(inp t)`;   
+ Define `COMB f (inp,out) = !t. out t = f(inp t)`;
 
 (*
 Component that constantly outputs T at out.
@@ -160,12 +160,12 @@ Combinational NOT-gate (i.e. inverter), with inputs inp and output out.
 val NOT_def =
  Define `NOT(inp,out) = !t. out t = ~(inp t)`;
 
-(* 
+(*
 Combinational multiplexer, with select input sel that connects input
 in1 to output out if T and connects input in2 to output out if F.
 *)
 val MUX_def =
- Define 
+ Define
   `MUX(sel,in1,in2,out) = !t. out t = if sel t then in1 t else in2 t`
 
 (*
@@ -203,7 +203,7 @@ val DELF_def =
     c0 |        |
        |        |
     |-----|     |
-    | NOT |     | 
+    | NOT |     |
     |-----|     |
        |        |
     c1 |        |
@@ -215,7 +215,7 @@ val DELF_def =
            |
           out
 
-POSEDGE_IMP implements POSEDGE in the sense that 
+POSEDGE_IMP implements POSEDGE in the sense that
 
  |- POSEDGE_IMP(inp,out) ==> !t. out(t+1) = POSEDGE inp (t+1)
 
@@ -231,8 +231,8 @@ val POSEDGE_IMP_def =
 (* Implementation of an atomic handshaking device.                           *)
 (*****************************************************************************)
 
-(* 
-        
+(*
+
         load            inp
          |               |
          |               |
@@ -260,12 +260,12 @@ to compute a given function f. The implementation satisfies:
 which is proved as theorem ATM below.
 *)
 
-val ATM_def = 
+val ATM_def =
  Define
   `ATM f (load,inp,done,out) =
-    ?c0 c1. POSEDGE_IMP(load,c0) /\ 
+    ?c0 c1. POSEDGE_IMP(load,c0) /\
             NOT(c0,done)         /\
-            COMB f (inp,c1)      /\ 
+            COMB f (inp,c1)      /\
             DEL(c1,out)`;
 
 (*****************************************************************************)
@@ -323,7 +323,7 @@ val ATM_def =
                       done         out
 
 Sequential composition of handshaking devices.  The feedback c2 is to
-disable any posedges on load whilst SAFE_DEV g is still computing 
+disable any posedges on load whilst SAFE_DEV g is still computing
 (this prevents any pipelining). The correctness of the composition
 is given by:
 
@@ -334,13 +334,13 @@ is given by:
 which is proved as theorem SEQ below.
 *)
 
-(* 
-Sequential composition of devices d1 and d2 
+(*
+Sequential composition of devices d1 and d2
 *)
 val SEQ_def =
  Define
   `SEQ d1 d2  (load,inp,done,out) =
-    ?not_c2 c0 c1 c2 data. 
+    ?not_c2 c0 c1 c2 data.
      NOT(c2,not_c2)     /\
      OR(not_c2,load,c0) /\
      d1(c0,inp,c1,data) /\
@@ -351,9 +351,9 @@ val SEQ_def =
 (*****************************************************************************)
 (* Data flip-flop                                                            *)
 (*****************************************************************************)
-val DFF_def = 
- Define 
-  `DFF (d,sel,q) = 
+val DFF_def =
+ Define
+  `DFF (d,sel,q) =
     !t. q (t+1) = if POSEDGE sel (t+1) then d (t+1) else q t`;
 
 
@@ -373,7 +373,7 @@ val PAR_def = Define `PAR f g (load,inp,done,out) =
 
 (*
                    load               done
-                    |         |--------------------| 
+                    |         |--------------------|
                     |         |                    |
                     |         |                    |
            |-------------| |-----|                 |
@@ -384,7 +384,7 @@ val PAR_def = Define `PAR f g (load,inp,done,out) =
                     |         |                    |
                   |-------------|                  |
                   |     AND     |                  |
-                  |-------------|                  | 
+                  |-------------|                  |
                           |                        |
                           | start                  |
           inp             |              inp       |
@@ -396,7 +396,7 @@ val PAR_def = Define `PAR f g (load,inp,done,out) =
          |--------------|    |--------------|      |
            |          |        |          |        |
      data' |   done'  |        | done''   | data'' |
-           |          |        |          |        | 
+           |          |        |          |        |
          |--------|   |        |   |--------|      |
          | d      |   |        |   |      d |      |
          | q  sel |---|        |---| sel  q |      |
@@ -415,9 +415,9 @@ val PAR_def = Define `PAR f g (load,inp,done,out) =
 (*****************************************************************************)
 (* The conditional                                                           *)
 (*****************************************************************************)
-val ITE_def = 
+val ITE_def =
    Define `ITE e f g (load,inp,done,out) =
-      ?c0 c1 c2 start start' done_e data_e q not_e 
+      ?c0 c1 c2 start start' done_e data_e q not_e
        data_f data_g sel done_f done_g start_f start_g.
         POSEDGE_IMP(load,c0) /\
         DEL(done,c1) /\ AND(c0,c1,start) /\
@@ -425,7 +425,7 @@ val ITE_def =
         POSEDGE_IMP(done_e,start') /\
         DFF(data_e,done_e,sel) /\
         DFF(inp,start,q) /\
-        AND(start',data_e,start_f) /\ 
+        AND(start',data_e,start_f) /\
         NOT(data_e,not_e) /\ AND(start',not_e,start_g) /\
         f(start_f,q,done_f,data_f) /\
         g(start_g,q,done_g,data_g) /\
@@ -439,23 +439,23 @@ val ITE_def =
 (* TAILREC f1 f2 f3 = \x. if (f1 x) then (f2 x) else TAILREC f1 f2 f3 (f3 x) *)
 (*****************************************************************************)
 
-val TOTAL_def = 
- Define 
-   `TOTAL(f1,f2,f3) = 
+val TOTAL_def =
+ Define
+   `TOTAL(f1,f2,f3) =
       ?variant. !x. ~(f1 x) ==> (variant (f3 x)) < (variant x)`;
 
-val TAILREC_def = 
+val TAILREC_def =
  TotalDefn.DefineSchema `TAILREC x = if f1 x then f2 x else TAILREC (f3 x)`;
 
 val TAILREC_THM = Q.prove
-(`!f1 f2 f3 x. 
-    (?R. WF R /\ !x. ~f1 x ==> R (f3 x) x) ==> 
+(`!f1 f2 f3 x.
+    (?R. WF R /\ !x. ~f1 x ==> R (f3 x) x) ==>
     (TAILREC f1 f2 f3 x = if f1 x then f2 x else TAILREC f1 f2 f3 (f3 x))`,
   METIS_TAC [DISCH_ALL TAILREC_def]);
 
 val TOTAL_LEMMA = Q.store_thm
 ("TOTAL_LEMMA",
- `TOTAL(f1,f2,f3) ==> 
+ `TOTAL(f1,f2,f3) ==>
    !x. (TAILREC f1 f2 f3) x =
           if f1 x then f2 x else TAILREC f1 f2 f3 (f3 x)`,
  RW_TAC std_ss [TOTAL_def]
@@ -472,7 +472,7 @@ val TOTAL_LEMMA = Q.store_thm
 val SELECT_def = Define `SELECT (done_e,data_e,start_f,start_g) =
       ?start' not_e.
         POSEDGE_IMP(done_e,start') /\
-        AND(start',data_e,start_f) /\ 
+        AND(start',data_e,start_f) /\
         NOT(data_e,not_e) /\ AND(not_e,start',start_g)`;
 val FINISH_def = Define `FINISH (done_e,done_f,done_g,done) =
        ?c2 c3 c4. DEL (done_g,c3) /\ AND (done_g,c3,c4) /\
@@ -482,17 +482,17 @@ val CALL_def = Define `CALL (load,inp,done,done_g,data_g,start_e,inp_e) =
         POSEDGE_IMP(load,c0) /\
         DEL(done,c1) /\ AND(c0,c1,start) /\
         OR(start,sel,start_e) /\
-        POSEDGE_IMP(done_g,sel) /\ 
+        POSEDGE_IMP(done_g,sel) /\
         MUX(sel,data_g,inp,inp_e)`;
 
 val REC_def = Define `REC e f g (load,inp,done,out) =
-      ?done_g data_g start_e q done_e 
+      ?done_g data_g start_e q done_e
        data_e start_f start_g inp_e done_f.
         CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
         DFF(inp_e,start_e,q) /\
         e (start_e,inp_e,done_e,data_e) /\
         SELECT (done_e,data_e,start_f,start_g) /\
-        f (start_f,q,done_f,out) /\ 
+        f (start_f,q,done_f,out) /\
         g (start_g,q,done_g,data_g) /\
         FINISH (done_e,done_f,done_g,done)`;
 
@@ -556,7 +556,7 @@ val ATM_IMP =
                     NOT_def,MUX_def,DEL_def,COMB_def]
     THEN RW_TAC std_ss []
     THEN Cases_on `done t`
-    THEN IMP_RES_TAC POSEDGE_IMPL 
+    THEN IMP_RES_TAC POSEDGE_IMPL
     THEN RW_TAC arith_ss [POSEDGE_def]
     THEN PROVE_TAC[]);
 
@@ -581,9 +581,9 @@ val HOLDF_NOT =
   ("HOLDF_NOT",
     `c1 t                /\
      c2 t                /\
-     t' > t+1            /\ 
+     t' > t+1            /\
      HOLDF (t + 1,t') c1 /\
-     (!t. c2 t /\ ~POSEDGE c1 (t+1) ==> c2 (t + 1)) 
+     (!t. c2 t /\ ~POSEDGE c1 (t+1) ==> c2 (t + 1))
      ==> c2(t'-1)`,
    Induct_on `t'`
     THEN RW_TAC arith_ss [HOLDF_def]
@@ -635,7 +635,7 @@ val HOLDF_INTERVAL_LEMMA =
     THEN RW_TAC arith_ss []
     THENL
      [ASSUM_LIST
-       (fn thl => ASSUME_TAC(SIMP_RULE arith_ss [el 4 thl,el 5 thl,POSEDGE_def] 
+       (fn thl => ASSUME_TAC(SIMP_RULE arith_ss [el 4 thl,el 5 thl,POSEDGE_def]
                                        (Q.SPEC `t'` (el 3 thl))))
        THEN PROVE_TAC[DECIDE`t'<=t' /\ t' < t'+1`],
    `t'' > t'` by DECIDE_TAC
@@ -663,9 +663,9 @@ val SAFE_SEQ =
        THEN `POSEDGE c1 t'` by PROVE_TAC[HOLDF_POSEDGE]
        THEN `c2 (t' - 1)` by PROVE_TAC[HOLDF_NOT]
        THEN ASSUM_LIST
-             (fn thl => 
+             (fn thl =>
                STRIP_ASSUME_TAC
-                (SIMP_RULE arith_ss 
+                (SIMP_RULE arith_ss
                   [el 1 thl, el 2 thl, el 3 thl](Q.SPEC `t'-1` (el 18 thl))))
        THEN `HOLDF (t+1,t') done` by PROVE_TAC[HOLDF_def]
        THEN `HOLDF (t',t'') done` by PROVE_TAC[HOLDF_def]
@@ -690,9 +690,9 @@ val SAFE_SEQ =
 
 
 val DFF_SUC = Q.store_thm("DFF_SUC",
-              `DFF (d,sel,q) ==> 
+              `DFF (d,sel,q) ==>
                 (!t. t > 0 ==> (q t = if POSEDGE sel t then d t else q (t-1)))`,
-              RW_TAC arith_ss [] 
+              RW_TAC arith_ss []
               THEN Cases_on `t`
               THENL [(* `~(0 > 0)` by RW_TAC arith_ss [],*)
                      FULL_SIMP_TAC arith_ss [],
@@ -702,8 +702,8 @@ val DFF_SUC = Q.store_thm("DFF_SUC",
 
 
 val DFF_INTERVAL = Q.store_thm("DFF_INTERVAL",
-     `(DFF(d,sel,q) /\ POSEDGE sel t0 /\ 
-       (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> sel t)) ==>  
+     `(DFF(d,sel,q) /\ POSEDGE sel t0 /\
+       (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> sel t)) ==>
        (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> (q t = d t0))`,
       STRIP_TAC
       THEN `sel t0` by PROVE_TAC [POSEDGE_def]
@@ -712,7 +712,7 @@ val DFF_INTERVAL = Q.store_thm("DFF_INTERVAL",
         THENL [PROVE_TAC [],
           `0 < t0 /\ t0 < t /\ t <= t1` by RW_TAC arith_ss []
            THEN PROVE_TAC []],
-          `!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(POSEDGE sel t)` by 
+          `!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(POSEDGE sel t)` by
                RW_TAC arith_ss [POSEDGE_def]
           THEN Induct_on `t1`
           THENL [RW_TAC arith_ss [], (* base *)
@@ -724,11 +724,11 @@ val DFF_INTERVAL = Q.store_thm("DFF_INTERVAL",
             THEN `q (t1+1) = q t1` by PROVE_TAC [DFF_def]
             THEN Cases_on `t0 < t1`
             THENL [`t0 < t1 /\ t1 <= t1` by RW_TAC arith_ss []
-              THEN `!t. t0 < t /\ t <= t1 ==> 
+              THEN `!t. t0 < t /\ t <= t1 ==>
                    ~POSEDGE sel t` by RW_TAC arith_ss []
-              THEN `!t. t0 <= t /\ t <= t1 ==> sel t` 
+              THEN `!t. t0 <= t /\ t <= t1 ==> sel t`
                    by RW_TAC arith_ss []
-              THEN `!t. t0 < t /\ t <= t1 ==> sel t` 
+              THEN `!t. t0 < t /\ t <= t1 ==> sel t`
                    by RW_TAC arith_ss []
               THEN `!t. (t0 < t /\ t <= t1) ==> (q t = d t0)`
                    by PROVE_TAC []
@@ -743,17 +743,17 @@ val DFF_INTERVAL = Q.store_thm("DFF_INTERVAL",
                 THEN PROVE_TAC [DFF_def, DFF_SUC]
                 ]
               ]
-           ] 
+           ]
         ]
      ]);
 
 
 val DFF_INTERVAL2 = Q.store_thm("DFF_INTERVAL2",
-     `(DFF(d,sel,q) /\ POSEDGE sel t0 /\ 
-       (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(sel t))) ==>  
+     `(DFF(d,sel,q) /\ POSEDGE sel t0 /\
+       (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(sel t))) ==>
        (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> (q t = d t0))`,
           STRIP_TAC
-          THEN `!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(POSEDGE sel t)` by 
+          THEN `!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(POSEDGE sel t)` by
                RW_TAC arith_ss [POSEDGE_def]
           THEN Induct_on `t1`
           THENL [RW_TAC arith_ss [], (* base *)
@@ -765,7 +765,7 @@ val DFF_INTERVAL2 = Q.store_thm("DFF_INTERVAL2",
             THEN `q (t1+1) = q t1` by PROVE_TAC [DFF_def]
             THEN Cases_on `t0 < t1`
             THENL [`t0 < t1 /\ t1 <= t1` by RW_TAC arith_ss []
-              THEN `!t. t0 < t /\ t <= t1 ==> 
+              THEN `!t. t0 < t /\ t <= t1 ==>
                    ~POSEDGE sel t` by RW_TAC arith_ss []
               THEN `!t. t0 < t /\ t <= t1 ==> ~(sel t)`
                    by RW_TAC arith_ss []
@@ -782,7 +782,7 @@ val DFF_INTERVAL2 = Q.store_thm("DFF_INTERVAL2",
                 THEN PROVE_TAC [DFF_def, DFF_SUC]
                 ]
               ]
-           ] 
+           ]
         ]);
 
 
@@ -815,15 +815,15 @@ val HOLDF_SUC = Q.store_thm("HOLD_SUC",
       RW_TAC arith_ss [HOLDF_def]);
 
 
-val SAFE_PAR = 
+val SAFE_PAR =
   Q.store_thm("SAFE_PAR",
     `PAR (SAFE_DEV f) (SAFE_DEV g) (load,inp,done,out) ==>
       SAFE_DEV (\x.(f x,g x)) (load,inp,done,out)`,
     RW_TAC arith_ss [PAR_def, SAFE_DEV_def]             (* POSEDGE start (t+1) *)
-    THENL [ 
+    THENL [
       (* data computation *)
       `~(start t) /\ (start (t+1)) /\ (done' t) /\ (done'' t)`
-           by (IMP_RES_TAC POSEDGE_IMPL THEN 
+           by (IMP_RES_TAC POSEDGE_IMPL THEN
                PROVE_TAC [AND_def, DEL_def, POSEDGE, POSEDGE_IMP_def])
       THEN `POSEDGE start (t+1)` by PROVE_TAC [POSEDGE]
       THEN (* tf and tg are the termination time for f and g, respectively *)
@@ -845,21 +845,21 @@ val SAFE_PAR =
               by PROVE_TAC [POSEDGE_def]
         THEN `!tt. tf < tt /\ tt <= tg ==> ~(POSEDGE start tt)`
               by RW_TAC arith_ss []
-        THEN `!tt. tt <= tg ==> tf < tt ==> done' tt` 
+        THEN `!tt. tt <= tg ==> tf < tt ==> done' tt`
              by IMP_RES_TAC DONE_INTERVAL
         THEN `done' tg` by RW_TAC arith_ss []
         THEN `done tg` by PROVE_TAC [AND_def]
         (* out' = f... /\ out'' = g... *)
         THEN `!tt. tf < tt /\ tt <= tg ==> done' tt` by RW_TAC arith_ss []
         THEN `POSEDGE done' tf` by PROVE_TAC [HOLDF_POSEDGE]
-        THEN `!tt. tf < tt /\ tt <= tg ==> (out' tt = data' tf)` 
+        THEN `!tt. tf < tt /\ tt <= tg ==> (out' tt = data' tf)`
              by PROVE_TAC [DFF_INTERVAL]
         THEN `out' tg = f (inp (t+1))` by RW_TAC arith_ss []
         THEN `POSEDGE done'' tg` by PROVE_TAC [HOLDF_POSEDGE]
         THEN `t+1 <= (tg-1) /\ (tg-1) < tg` by RW_TAC arith_ss []
         THEN `~(done (tg-1))` by FULL_SIMP_TAC arith_ss [HOLDF_def,AND_def]
         THEN `(tg-1)+1 = tg` by RW_TAC arith_ss []
-        THEN `~(POSEDGE start tg)`  by PROVE_TAC [POSEDGE, POSEDGE_IMPL, 
+        THEN `~(POSEDGE start tg)`  by PROVE_TAC [POSEDGE, POSEDGE_IMPL,
              POSEDGE_IMP_def, DEL_def, AND_def]
         THEN `out'' tg = g (inp (t+1))` by PROVE_TAC [DFF_def]
         THEN PROVE_TAC [],
@@ -880,19 +880,19 @@ val SAFE_PAR =
            THEN `!t. t <= tf ==> tg < t ==> done'' t` by IMP_RES_TAC DONE_INTERVAL
            THEN `done'' tf` by RW_TAC arith_ss []
            THEN `done tf` by PROVE_TAC [AND_def]
- 
+
            (* out' = f... /\ out'' = g... *)
            THEN `!tt. tg < tt /\ tt <= tf ==> done'' tt` by RW_TAC arith_ss []
            THEN `POSEDGE done'' tg` by PROVE_TAC [HOLDF_POSEDGE]
-           THEN `!tt. tg < tt /\ tt <= tf ==> (out'' tt = data'' tg)` 
+           THEN `!tt. tg < tt /\ tt <= tf ==> (out'' tt = data'' tg)`
                 by PROVE_TAC [DFF_INTERVAL]
            THEN `out'' tf = g (inp (t+1))` by RW_TAC arith_ss []
            THEN `POSEDGE done' tf` by PROVE_TAC [HOLDF_POSEDGE]
            THEN `t+1 <= (tf-1) /\ (tf-1) < tf` by RW_TAC arith_ss []
            THEN `~(done (tf-1))` by FULL_SIMP_TAC arith_ss [HOLDF_def,AND_def]
            THEN `(tf-1)+1 = tf` by RW_TAC arith_ss []
-           THEN `~(POSEDGE start tf)` 
-                by PROVE_TAC [POSEDGE, POSEDGE_IMPL, POSEDGE_IMP_def, 
+           THEN `~(POSEDGE start tf)`
+                by PROVE_TAC [POSEDGE, POSEDGE_IMPL, POSEDGE_IMP_def,
                    DEL_def, AND_def]
            THEN `out' tf = f (inp (t+1))` by PROVE_TAC [DFF_def]
            THEN PROVE_TAC [],
@@ -921,7 +921,7 @@ val SAFE_PAR =
 val POSEDGE_LEMMA =  Q.store_thm
 ("POSEDGE_LEMMA",
  `t > 0 /\ POSEDGE_IMP (inp,out) /\ POSEDGE inp t ==> POSEDGE out t`,
- Cases_on `t` THEN 
+ Cases_on `t` THEN
  RW_TAC arith_ss [POSEDGE_IMP_def, POSEDGE_def,AND_def, DELT_def, NOT_def]
  THEN RW_TAC arith_ss [] THEN PROVE_TAC [ADD1]);
 
@@ -970,7 +970,7 @@ val HOLDT_NOT_POSEDGE = Q.store_thm("HOLDT_NOT_POSEDGE",
 val POSEDGE_IMP_INTERVAL = Q.store_thm ("POSEDGE_IMP_INTERVAL",
     `(POSEDGE_IMP(inp,out) /\ (!t. t0 < t /\ t <= t1 ==> ~POSEDGE inp t)) ==>
       (!t. t0 < t /\ t <= t1 ==> ~(out t))`,
-   RW_TAC arith_ss [] 
+   RW_TAC arith_ss []
    THEN Induct_on `t1`
    THENL [RW_TAC arith_ss [],
           `SUC t1 = t1 + 1` by RW_TAC arith_ss []
@@ -985,10 +985,10 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
      SAFE_DEV (\x. if (e x) then (f x) else (g x))
           (load,inp,done, out)`,
    RW_TAC arith_ss [SAFE_DEV_def,ITE_def]
-   THENL 
+   THENL
       [
       (* POSEDGE start (t+1) *)
-      `~(start t) /\ (start (t+1))` by (IMP_RES_TAC POSEDGE_IMPL THEN 
+      `~(start t) /\ (start (t+1))` by (IMP_RES_TAC POSEDGE_IMPL THEN
                PROVE_TAC [AND_def, DEL_def, POSEDGE, POSEDGE_IMP_def])
       THEN `POSEDGE start (t+1)` by PROVE_TAC [POSEDGE_def, POSEDGE]
       THEN (Q.PAT_ASSUM `~(start t)` kill) THEN (Q.PAT_ASSUM `start (t+1)` kill)
@@ -1005,7 +1005,7 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
       THEN (Q.PAT_ASSUM `te > 0` kill)
 
       (* 1. instatiate tf and tg *)
-      THEN `done_f t /\ done_g t` 
+      THEN `done_f t /\ done_g t`
             by (FULL_SIMP_TAC std_ss [AND_def] THEN PROVE_TAC [])
 
       (* 1.1 done_f tte /\ done_g tte *)
@@ -1018,10 +1018,10 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
             by PROVE_TAC [POSEDGE_def, POSEDGE_IMP_def,AND_def]
       THEN `t < tte` by RW_TAC arith_ss []
       THEN `tte <= tte ==> done_f tte` by IMP_RES_TAC DONE_INTERVAL
-      THEN `tte <= tte ==> done_g tte` by IMP_RES_TAC DONE_INTERVAL 
+      THEN `tte <= tte ==> done_g tte` by IMP_RES_TAC DONE_INTERVAL
       THEN `done_f tte /\ done_g tte` by RW_TAC arith_ss []
 
-      THEN Q.PAT_ASSUM `!t0 t1 s. HOLDF (t0 + 1,t1) s ==> 
+      THEN Q.PAT_ASSUM `!t0 t1 s. HOLDF (t0 + 1,t1) s ==>
                !t. t0 < t /\ t <= t1 - 1 ==> ~s t` kill
       THEN Q.PAT_ASSUM `t < tte` kill
       THEN REPEAT (Q.PAT_ASSUM `tte <= tte ==> X tte` kill)
@@ -1053,9 +1053,9 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
          THEN `!tt. te < tt /\ tt <= tf ==> ~(POSEDGE start tt)`
               by RW_TAC arith_ss []
          THEN `te < tf` by RW_TAC arith_ss []
-         THEN `!t. te < t /\ t <= tf ==> done_e t` 
-            by (Q.UNDISCH_THEN `te = tte+1` (K ALL_TAC) 
-                THEN MATCH_MP_TAC 
+         THEN `!t. te < t /\ t <= tf ==> done_e t`
+            by (Q.UNDISCH_THEN `te = tte+1` (K ALL_TAC)
+                THEN MATCH_MP_TAC
                       (Q.SPECL [`done_e`, `start`,`te`, `tf`] DONE_INTERVAL))
          THEN ASM_REWRITE_TAC []
          THEN `done_e tf` by RW_TAC arith_ss []
@@ -1064,20 +1064,20 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
          THEN Q.PAT_ASSUM `te < tf` kill
 
          (* done_g tf *)
-         THEN `!tt. te <= tt /\ tt <= tf ==> done_e tt` 
+         THEN `!tt. te <= tt /\ tt <= tf ==> done_e tt`
                by PROVE_TAC [CONJUNCT1 INTERVAL_LEMMA]
-         THEN `!tt. te < tt /\ tt <= tf ==> ~(POSEDGE done_e tt)` 
+         THEN `!tt. te < tt /\ tt <= tf ==> ~(POSEDGE done_e tt)`
               by PROVE_TAC [HOLDT_NOT_POSEDGE]
-         THEN `!tt. te < tt /\ tt <= tf ==> ~start' tt`  
+         THEN `!tt. te < tt /\ tt <= tf ==> ~start' tt`
               by (IMP_RES_TAC POSEDGE_IMP_INTERVAL
                    THEN PROVE_TAC [])
          THEN `~(start_g te)` by FULL_SIMP_TAC arith_ss [AND_def,NOT_def]
          THEN `!tt. te < tt /\ tt <= tf ==> ~(start_g tt)` by FULL_SIMP_TAC arith_ss [AND_def]
-         THEN `!tt. te <= tt /\ tt <= tf ==> ~(start_g tt)` 
+         THEN `!tt. te <= tt /\ tt <= tf ==> ~(start_g tt)`
               by PROVE_TAC [CONJUNCT1(CONJUNCT2 INTERVAL_LEMMA)]
-         THEN `!tt. te <= tt /\ tt <= tf ==> ~(POSEDGE start_g tt)` 
+         THEN `!tt. te <= tt /\ tt <= tf ==> ~(POSEDGE start_g tt)`
               by PROVE_TAC [POSEDGE_def]
-         THEN `!tt. tte < tt /\ tt <= tf ==> ~(POSEDGE start_g tt)` 
+         THEN `!tt. tte < tt /\ tt <= tf ==> ~(POSEDGE start_g tt)`
               by RW_TAC arith_ss []
          THEN `tte < tf` by RW_TAC arith_ss []
          THEN `tf <= tf ==> done_g tf` by IMP_RES_TAC DONE_INTERVAL
@@ -1097,7 +1097,7 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
          THEN `HOLDF (te,tf) done` by RW_TAC arith_ss [HOLDF_def]
          THEN `HOLDF (t+1,tf) done` by PROVE_TAC [HOLDF_TRANS]
          THEN Q.PAT_ASSUM `HOLDF (tte+1,tf) done` kill
-         THEN Q.PAT_ASSUM `HOLDF (te,tf) done` kill 
+         THEN Q.PAT_ASSUM `HOLDF (te,tf) done` kill
          THEN TRY (Q.PAT_ASSUM `(done:(num->bool)) (t:num)` kill)
          THEN TRY (Q.PAT_ASSUM `(done_e:(num->bool)) (t:num)` kill)
          THEN Q.PAT_ASSUM `HOLDF (t + 1,te) done_e` kill
@@ -1122,7 +1122,7 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
 
          (* !tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(start tt)` *)
          THEN `!tt. (t+1+1) <= tt /\ tt < (te+1) ==> ~(c1 tt)`
-              by (IMP_RES_TAC HOLDF_DEL THEN 
+              by (IMP_RES_TAC HOLDF_DEL THEN
                   FULL_SIMP_TAC arith_ss [HOLDF_def])
          THEN `!tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(c1 tt)` by RW_TAC arith_ss []
          THEN `!tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(start tt)`
@@ -1136,18 +1136,18 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
               by PROVE_TAC [DFF_INTERVAL2]
          THEN `data_f tf = f (inp (t+1))` by RW_TAC arith_ss []
          THEN Q.PAT_ASSUM `!tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(start tt)` kill
-         THEN Q.PAT_ASSUM `!tt. (0 < (t+1) /\ (t+1) < tt /\ tt <= te) ==> 
+         THEN Q.PAT_ASSUM `!tt. (0 < (t+1) /\ (t+1) < tt /\ tt <= te) ==>
                (q tt = inp (t+1))` kill
 
          (* sel tf = e (inp (t+1)) *)
          THEN `!tt. 0 < te /\ te < tt /\ tt <= tf ==> done_e tt`
               by RW_TAC arith_ss []
-         THEN `!t. ((0 < te) /\ (te < t) /\ (t <= tf)) ==> (sel t = data_e te)` 
+         THEN `!t. ((0 < te) /\ (te < t) /\ (t <= tf)) ==> (sel t = data_e te)`
               by PROVE_TAC [DFF_INTERVAL]
          THEN `sel tf = data_e te` by RW_TAC arith_ss []
          THEN `sel tf = e (inp (t+1))` by PROVE_TAC []
          THEN Q.PAT_ASSUM `!tt. 0 < te /\ te < tt /\ tt <= tf ==> done_e tt` kill
-         THEN Q.PAT_ASSUM `!t. ((0 < te) /\ (te < t) /\ (t <= tf)) ==> 
+         THEN Q.PAT_ASSUM `!t. ((0 < te) /\ (te < t) /\ (t <= tf)) ==>
                    (sel t = data_e te)` kill
 
          (* out tf = f (inp (t+1)) *)
@@ -1172,7 +1172,7 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
          THEN `!tt. te < tt /\ tt <= tg ==> ~(POSEDGE start tt)`
                by RW_TAC arith_ss []
          THEN `te < tg` by RW_TAC arith_ss []
-         THEN `!t. te < t /\ t <= tg ==> done_e t` 
+         THEN `!t. te < t /\ t <= tg ==> done_e t`
                  by (IMP_RES_TAC DONE_INTERVAL THEN PROVE_TAC [])
          THEN `done_e tg` by RW_TAC arith_ss []
          THEN REPEAT (Q.PAT_ASSUM `HOLDF (tte+1+1,tg+1) Z` kill)
@@ -1180,19 +1180,19 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
          THEN Q.PAT_ASSUM `te < tg` kill
 
          (* done_f tf *)
-         THEN `!tt. te <= tt /\ tt <= tg ==> done_e tt` 
+         THEN `!tt. te <= tt /\ tt <= tg ==> done_e tt`
                by (IMP_RES_TAC (CONJUNCT1 INTERVAL_LEMMA) THEN PROVE_TAC [])
-         THEN `!tt. te < tt /\ tt <= tg ==> ~(POSEDGE done_e tt)` 
+         THEN `!tt. te < tt /\ tt <= tg ==> ~(POSEDGE done_e tt)`
               by PROVE_TAC [HOLDT_NOT_POSEDGE]
-         THEN `!tt. te < tt /\ tt <= tg ==> ~(start' tt)`  
+         THEN `!tt. te < tt /\ tt <= tg ==> ~(start' tt)`
               by (IMP_RES_TAC POSEDGE_IMP_INTERVAL THEN PROVE_TAC[])
          THEN `~start_f te` by FULL_SIMP_TAC std_ss [AND_def,NOT_def]
-         THEN `!tt. te < tt /\ tt <= tg ==> ~(start_f tt)` 
+         THEN `!tt. te < tt /\ tt <= tg ==> ~(start_f tt)`
               by FULL_SIMP_TAC std_ss [AND_def]
-         THEN `!tt. te <= tt /\ tt <= tg ==> ~(start_f tt)` 
+         THEN `!tt. te <= tt /\ tt <= tg ==> ~(start_f tt)`
                by (IMP_RES_TAC (CONJUNCT1 (CONJUNCT2 INTERVAL_LEMMA))
                    THEN PROVE_TAC [])
-         THEN `!tt. te <= tt /\ tt <= tg ==> ~(POSEDGE start_f tt)` 
+         THEN `!tt. te <= tt /\ tt <= tg ==> ~(POSEDGE start_f tt)`
               by PROVE_TAC [POSEDGE_def]
          THEN `!tt. tte < tt /\ tt <= tg ==> ~(POSEDGE start_f tt)` by RW_TAC arith_ss []
          THEN `tte < tg` by RW_TAC arith_ss []
@@ -1237,10 +1237,10 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
          (* (out tg = if e (inp (t + 1)) then ... else g (inp (t + 1)))) *)
 
          (* !tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(start tt)` *)
-         THEN `!tt. (t+1+1) <= tt /\ tt < (te+1) ==> ~(c1 tt)` 
+         THEN `!tt. (t+1+1) <= tt /\ tt < (te+1) ==> ~(c1 tt)`
               by (IMP_RES_TAC HOLDF_DEL THEN PROVE_TAC [HOLDF_def])
          THEN `!tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(c1 tt)` by RW_TAC arith_ss []
-         THEN `!tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(start tt)` 
+         THEN `!tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(start tt)`
                by FULL_SIMP_TAC std_ss [AND_def]
          THEN Q.PAT_ASSUM `!tt. (t+1+1) <= tt /\ tt < (te+1) ==> ~(c1 tt)` kill
          THEN Q.PAT_ASSUM `!tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(c1 tt)` kill
@@ -1251,17 +1251,17 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
               by PROVE_TAC [DFF_INTERVAL2]
          THEN `data_g tg = g (inp (t+1))` by RW_TAC arith_ss []
          THEN Q.PAT_ASSUM `!tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(start tt)` kill
-         THEN Q.PAT_ASSUM `!tt. (0 < (t+1) /\ (t+1) < tt /\ tt <= te) ==> 
+         THEN Q.PAT_ASSUM `!tt. (0 < (t+1) /\ (t+1) < tt /\ tt <= te) ==>
                           (q tt = inp (t+1))` kill
 
          (* sel tg = e (inp (t+1)) *)
          THEN `!tt. 0 < te /\ te < tt /\ tt <= tg ==> done_e tt` by RW_TAC arith_ss []
-         THEN `!t. ((0 < te) /\ (te < t) /\ (t <= tg)) ==> (sel t = data_e te)` 
+         THEN `!t. ((0 < te) /\ (te < t) /\ (t <= tg)) ==> (sel t = data_e te)`
                by PROVE_TAC [DFF_INTERVAL]
          THEN `sel tg = data_e te` by RW_TAC arith_ss []
          THEN `sel tg = e (inp (t+1))` by PROVE_TAC []
          THEN Q.PAT_ASSUM `!tt. 0 < te /\ te < tt /\ tt <= tg ==> done_e tt` kill
-         THEN Q.PAT_ASSUM `!t. ((0 < te) /\ (te < t) /\ (t <= tg)) ==> 
+         THEN Q.PAT_ASSUM `!t. ((0 < te) /\ (te < t) /\ (t <= tg)) ==>
                    (sel t = data_e te)` kill
 
          (* out tg = g (inp (t+1)) *)
@@ -1269,14 +1269,14 @@ val SAFE_ITE = Q.store_thm("SAFE_ITE",
          THEN PROVE_TAC []
          ]
       , (* the done (t+1) *)
-     `~POSEDGE start (t+1)` 
+     `~POSEDGE start (t+1)`
            by (IMP_RES_TAC POSEDGE_IMPL
                THEN PROVE_TAC [POSEDGE_def, POSEDGE_IMP_def, AND_def])
       THEN `done_e (t+1)` by PROVE_TAC [AND_def]
       THEN `done_e t` by PROVE_TAC [AND_def]
       THEN `~(POSEDGE done_e (t+1))` by PROVE_TAC [POSEDGE]
-      THEN `done_g (t+1) /\ done_f (t+1)` 
-           by (IMP_RES_TAC POSEDGE_IMPL THEN 
+      THEN `done_g (t+1) /\ done_f (t+1)`
+           by (IMP_RES_TAC POSEDGE_IMPL THEN
                PROVE_TAC [POSEDGE_IMP_def, POSEDGE, AND_def])
       THEN FULL_SIMP_TAC std_ss [AND_def]
       ]);
@@ -1288,21 +1288,21 @@ val CALL_POSEDGE = Q.store_thm
   FINISH (done_e,done_f,done_g,done) /\ done t /\
   POSEDGE load (t + 1) ==> POSEDGE start_e (t + 1)`,
  RW_TAC arith_ss [CALL_def,FINISH_def]
-   THEN `~(start t) /\ start (t+1)` 
+   THEN `~(start t) /\ start (t+1)`
          by PROVE_TAC [AND_def, DEL_def, POSEDGE,POSEDGE_IMP_def,POSEDGE_IMPL]
-   THEN `~sel t` by RW_TAC arith_ss [] THENL 
-   [Cases_on `t=0` THENL 
+   THEN `~sel t` by RW_TAC arith_ss [] THENL
+   [Cases_on `t=0` THENL
     [PROVE_TAC [POSEDGE_IMPL,POSEDGE,POSEDGE_IMP_def],
      `?x. t = x+1` by PROVE_TAC [num_CASES,ADD1] THEN RW_TAC arith_ss []
        THEN POP_ASSUM (K ALL_TAC)
-       THEN `done_g x /\ done_g (x+1)` by 
+       THEN `done_g x /\ done_g (x+1)` by
             (FULL_SIMP_TAC std_ss [AND_def, DEL_def] THEN PROVE_TAC [])
        THEN PROVE_TAC [POSEDGE_IMPL,POSEDGE,POSEDGE_IMP_def]],
     PROVE_TAC [POSEDGE,OR_def]
   ]);
 
 val SIMP_SAFE_DEV = Q.store_thm("SIMP_SAFE_DEV",
-       `SAFE_DEV f (load,inp,done,out) = 
+       `SAFE_DEV f (load,inp,done,out) =
         (!t. done t /\ POSEDGE load (t + 1) ==> COMPUTE (t,f,inp,done,out)) /\
         (!t. done t /\ ~POSEDGE load (t + 1) ==> done (t + 1))`,
         RW_TAC arith_ss [SAFE_DEV_def, COMPUTE_def]);
@@ -1312,7 +1312,7 @@ val EXT_CALL = Q.store_thm ("EXT_CALL",
            FINISH (done_e,done_f,done_g,done) /\
            done t /\ POSEDGE load (t + 1) ==>
            (inp_e (t + 1) = inp (t + 1))`,
-        RW_TAC arith_ss [CALL_def,FINISH_def] 
+        RW_TAC arith_ss [CALL_def,FINISH_def]
         THEN `~sel (t+1)` by PROVE_TAC [POSEDGE,POSEDGE_IMPL,
                                         POSEDGE_IMP_def,AND_def,DEL_def]
         THEN PROVE_TAC [MUX_def]);
@@ -1320,7 +1320,7 @@ val EXT_CALL = Q.store_thm ("EXT_CALL",
 
 (*****************************************************
  BASE_LEMMA
- when the base case is busy, cond and step remain idle 
+ when the base case is busy, cond and step remain idle
 *****************************************************)
 
 val BASE_LEMMA = Q.store_thm("BASE_LEMMA",
@@ -1373,7 +1373,7 @@ val BASE_LEMMA = Q.store_thm("BASE_LEMMA",
      THENL [
      PROVE_TAC []
      ,
-     `te < (tf-1) /\ (tf-1) < tf` by RW_TAC arith_ss [] 
+     `te < (tf-1) /\ (tf-1) < tf` by RW_TAC arith_ss []
      THEN `tf - 1 <= tf ==> done_g (tf - 1)` by RES_TAC
      THEN RW_TAC arith_ss []
      ]
@@ -1480,7 +1480,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
             by RW_TAC arith_ss [HOLDF_def]
      THEN `!tt. t < tt /\ tt <= (te-1) ==> ~POSEDGE start_f tt`
            by PROVE_TAC [POSEDGE_def, POSEDGE_IMP_def, AND_def]  (* slow *)
-     THEN `!tt. ((t+1) < tt /\ tt <= (te-1) ==> ~(POSEDGE start_f tt))` 
+     THEN `!tt. ((t+1) < tt /\ tt <= (te-1) ==> ~(POSEDGE start_f tt))`
           by RW_TAC arith_ss []
      THEN `t + 1 < te - 1 ==> !t'. t + 1 < t' ==> t' <= te - 1 ==> done_f t'`
           by IMP_RES_TAC DONE_INTERVAL
@@ -1495,22 +1495,22 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      `!tt. (t+1) < tt /\ tt <= te ==> ~(sel tt)` by ASM_REWRITE_TAC []
      THENL [
      `!tt. (t+1) <= tt /\ tt < te ==> ~(done_e tt)` by FULL_SIMP_TAC std_ss [HOLDF_def]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start' tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start' tt)`
           by PROVE_TAC [POSEDGE_def, POSEDGE,POSEDGE_IMPL]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start_g tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start_g tt)`
           by FULL_SIMP_TAC std_ss [AND_def]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(POSEDGE start_g tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(POSEDGE start_g tt)`
           by FULL_SIMP_TAC std_ss [POSEDGE_def]
      THEN `!tt. (t+1) < tt /\ tt < te ==> ~(POSEDGE start_g tt)` by RW_TAC arith_ss []
-     THEN `~(POSEDGE start_g te)` 
+     THEN `~(POSEDGE start_g te)`
           by FULL_SIMP_TAC std_ss [NOT_def,AND_def,POSEDGE_def]
-     THEN `!tt. (t+1) < tt /\ tt <= te ==> ~(POSEDGE start_g tt)` 
+     THEN `!tt. (t+1) < tt /\ tt <= te ==> ~(POSEDGE start_g tt)`
           by (MATCH_MP_TAC (el 3 (CONJUNCTS INTERVAL_LEMMA))
               THEN ASM_REWRITE_TAC [])
-     THEN `t + 1 < te ==> !t'. t' <= te ==> t + 1 < t' ==> done_g t'` 
+     THEN `t + 1 < te ==> !t'. t' <= te ==> t + 1 < t' ==> done_g t'`
           by IMP_RES_TAC DONE_INTERVAL
      THEN `!tt. (t+1) < tt /\ tt <= te ==> done_g tt` by RW_TAC arith_ss []
-     THEN `!tt. (t+1) <= tt /\ tt <= te ==> done_g tt` 
+     THEN `!tt. (t+1) <= tt /\ tt <= te ==> done_g tt`
           by (MATCH_MP_TAC (CONJUNCT1 INTERVAL_LEMMA) THEN ASM_REWRITE_TAC [])
      THEN `!tt. t + 1 < tt ==> tt <= te ==> ~POSEDGE done_g tt`
           by IMP_RES_TAC HOLDT_NOT_POSEDGE
@@ -1522,7 +1522,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THENL [
      `HOLDF (t+1,te) done` by FULL_SIMP_TAC std_ss [HOLDF_def,AND_def]
      THEN `HOLDF ((t+1)+1,te+1) c1` by IMP_RES_TAC HOLDF_DEL
-     THEN `!tt. t + 1 +1 <= tt /\ tt < (te+1) ==> ~(c1 tt)` 
+     THEN `!tt. t + 1 +1 <= tt /\ tt < (te+1) ==> ~(c1 tt)`
           by PROVE_TAC [HOLDF_def]
      THEN `!tt. t + 1 < tt /\ tt <= te ==> ~(c1 tt)` by RW_TAC arith_ss []
      THEN `!tt. t + 1 < tt /\ tt <= te ==> ~(c1 tt)` by RW_TAC arith_ss []
@@ -1533,7 +1533,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THEN `0 < t + 1 ==> !tt. (t+1) < tt ==> tt <= te ==> (q tt = inp_e (t + 1))`
           by IMP_RES_TAC DFF_INTERVAL2
      THEN `0 < (t+1)` by RW_TAC arith_ss []
-     THEN `!tt. t + 1 < tt ==> tt <= te ==> (q tt = (inp_e (t + 1)))` 
+     THEN `!tt. t + 1 < tt ==> tt <= te ==> (q tt = (inp_e (t + 1)))`
           by RW_TAC arith_ss []
      THEN RW_TAC arith_ss []
      ]
@@ -1567,41 +1567,41 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      `done_g te` by ASM_REWRITE_TAC []
      THENL [
      `!tt. (t+1) <= tt /\ tt < te ==> ~(done_e tt)` by PROVE_TAC [HOLDF_def]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start' tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start' tt)`
           by PROVE_TAC [POSEDGE_def, POSEDGE,POSEDGE_IMPL]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start_g tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start_g tt)`
           by FULL_SIMP_TAC std_ss [AND_def]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(POSEDGE start_g tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(POSEDGE start_g tt)`
           by RW_TAC std_ss [POSEDGE_def]
      THEN `!tt. (t+1) < tt /\ tt < te ==> ~(POSEDGE start_g tt)` by RW_TAC arith_ss []
-     THEN `~(POSEDGE start_g te)` 
+     THEN `~(POSEDGE start_g te)`
           by FULL_SIMP_TAC std_ss [NOT_def,AND_def,POSEDGE_def]
-     THEN `!tt. (t+1) < tt /\ tt <= te ==> ~(POSEDGE start_g tt)` 
+     THEN `!tt. (t+1) < tt /\ tt <= te ==> ~(POSEDGE start_g tt)`
           by (MATCH_MP_TAC (el 3 (CONJUNCTS INTERVAL_LEMMA))
               THEN ASM_REWRITE_TAC[])
-     THEN `t + 1 < te ==> !t'. t' <= te ==> t + 1 < t' ==> done_g t'` 
+     THEN `t + 1 < te ==> !t'. t' <= te ==> t + 1 < t' ==> done_g t'`
           by IMP_RES_TAC DONE_INTERVAL
      THEN RW_TAC arith_ss []
      ,
      (* done_g te prvd *)
      `done_g (te-1)` by REWRITE_TAC []
      THENL [
-     `!tt. (t+1) <= tt /\ tt < te ==> ~(done_e tt)` 
+     `!tt. (t+1) <= tt /\ tt < te ==> ~(done_e tt)`
            by FULL_SIMP_TAC std_ss [HOLDF_def]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start' tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start' tt)`
            by PROVE_TAC [POSEDGE_def, POSEDGE,POSEDGE_IMPL]
      THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start_g tt)` by FULL_SIMP_TAC std_ss [AND_def]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(POSEDGE start_g tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(POSEDGE start_g tt)`
           by RW_TAC std_ss [POSEDGE_def]
      THEN `!tt. (t+1) < tt /\ tt < te ==> ~(POSEDGE start_g tt)` by RW_TAC arith_ss []
      THEN `~(POSEDGE start_g te)` by FULL_SIMP_TAC std_ss [NOT_def,AND_def,POSEDGE_def]
-     THEN `!tt. (t+1) < tt /\ tt <= te ==> ~(POSEDGE start_g tt)` 
+     THEN `!tt. (t+1) < tt /\ tt <= te ==> ~(POSEDGE start_g tt)`
           by (MATCH_MP_TAC (el 3 (CONJUNCTS INTERVAL_LEMMA))
               THEN ASM_REWRITE_TAC[])
-     THEN `t + 1 < te ==> !t'. t' <= te ==> t + 1 < t' ==> done_g t'` 
+     THEN `t + 1 < te ==> !t'. t' <= te ==> t + 1 < t' ==> done_g t'`
           by IMP_RES_TAC DONE_INTERVAL
      THEN `!tt. (t+1) < tt /\ tt <= te ==> done_g tt` by RW_TAC arith_ss []
-     THEN `!tt. (t+1) <= tt /\ tt <= te ==> done_g tt` 
+     THEN `!tt. (t+1) <= tt /\ tt <= te ==> done_g tt`
           by (MATCH_MP_TAC (el 1 (CONJUNCTS INTERVAL_LEMMA))
               THEN ASM_REWRITE_TAC[])
      THEN `done_g (te-1)` by RW_TAC arith_ss []
@@ -1645,14 +1645,14 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
         ?t'. t' > t + 1 /\ HOLDF (t + 1,t') done_f /\ done_f t' /\
               (out t' = (f2 (q (t + 1))))` by RW_TAC arith_ss []
      THEN `SAFE_DEV f2 (start_f,q,done_f,out)` by IMP_RES_TAC SAFE_DEV_def
-     THEN `SAFE_DEV f3 (start_g,q,done_g,data_g)` by IMP_RES_TAC SAFE_DEV_def 
+     THEN `SAFE_DEV f3 (start_g,q,done_g,data_g)` by IMP_RES_TAC SAFE_DEV_def
      THEN REPEAT (Q.PAT_ASSUM `!(t:num). X` kill)
      THEN TRY (Q.PAT_ASSUM `data_e (te:num) = X` kill)
      THEN Q.PAT_ASSUM `!(x:'a). ~f1 x ==> X` kill
      THEN Q.PAT_ASSUM `out (tf:num) = X` kill
      THEN Q.PAT_ASSUM `(v:num) = variant (inp_e (t + 1))` kill
      (* end of cleaning *)
-     THEN `!tt. te < tt /\ tt <= tf ==> done_g tt` 
+     THEN `!tt. te < tt /\ tt <= tf ==> done_g tt`
           by (MATCH_MP_TAC (GEN_ALL(DISCH_ALL (Q.GEN `tt`
                   (MATCH_MP (DECIDE `(a ==> b /\ c) ==> (a ==> b)`)
                             (SPEC_ALL (UNDISCH BASE_LEMMA))))))
@@ -1665,7 +1665,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THENL [
      `done_g tf` by RW_TAC arith_ss []
      THEN `done_g (tte+1)` by RW_TAC arith_ss []
-     THEN `!tt. tte + 1 <= tt /\ tt <= tf ==> done_g tt` 
+     THEN `!tt. tte + 1 <= tt /\ tt <= tf ==> done_g tt`
          by (MATCH_MP_TAC (CONJUNCT1 INTERVAL_LEMMA)
              THEN ASM_REWRITE_TAC [])
      THEN `done_g (tf-1)` by RW_TAC arith_ss []
@@ -1677,10 +1677,10 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      `!tt. te < tt /\ tt <= tf ==> ~(sel tt)` by REWRITE_TAC []
      THENL [
      `!tt. te < tt /\ tt <= tf ==> done_g tt` by RW_TAC arith_ss []
-     THEN `!tt. te <= tt /\ tt <= tf ==> done_g tt` 
+     THEN `!tt. te <= tt /\ tt <= tf ==> done_g tt`
           by (MATCH_MP_TAC (CONJUNCT1 INTERVAL_LEMMA)
               THEN RW_TAC std_ss [])
-     THEN `!tt. te < tt /\ tt <= tf ==> ~POSEDGE done_g tt` 
+     THEN `!tt. te < tt /\ tt <= tf ==> ~POSEDGE done_g tt`
           by PROVE_TAC [HOLDT_NOT_POSEDGE]
      THEN PROVE_TAC [POSEDGE_def,POSEDGE_IMPL,POSEDGE]
      ,
@@ -1688,16 +1688,16 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      `!tt. te < tt /\ tt <= tf ==> ~(c1 tt)` by REWRITE_TAC []
      THENL [
      `HOLDF (t+1+1,tf+1) c1` by IMP_RES_TAC HOLDF_DEL
-     THEN `!tt. (t+1+1) <= tt /\ tt < (tf+1) ==> ~(c1 tt)` 
+     THEN `!tt. (t+1+1) <= tt /\ tt < (tf+1) ==> ~(c1 tt)`
           by FULL_SIMP_TAC std_ss [HOLDF_def]
      THEN `!tt. (t+1+1) < tt /\ tt <= tf ==> ~(c1 tt)` by RW_TAC arith_ss []
      THEN RW_TAC arith_ss []
      ,
      (* !tt. te < tt /\ tt <= tf ==> ~(c1 tt) prvd *)
      `!tt. te < tt /\ tt <= tf ==> ~(start_e tt)` by FULL_SIMP_TAC std_ss [AND_def,OR_def]
-     THEN `!tt. te < tt /\ tt <= tf ==> ~(POSEDGE start_e tt)` 
+     THEN `!tt. te < tt /\ tt <= tf ==> ~(POSEDGE start_e tt)`
           by RW_TAC std_ss [POSEDGE_def]
-     THEN `te < tf ==> !t. t <= tf ==> te < t ==> done_e t` 
+     THEN `te < tf ==> !t. t <= tf ==> te < t ==> done_e t`
           by IMP_RES_TAC DONE_INTERVAL
      THEN RW_TAC arith_ss []
      ]]
@@ -1757,18 +1757,18 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THENL [
      `!tt. (t+1) < tt /\ tt <= te ==> ~(sel tt)` by ASM_REWRITE_TAC []
      THENL [
-     `t + 1 < (te-1) ==> !tt. tt <= (te-1) ==> t + 1 < tt ==> done_g tt` 
+     `t + 1 < (te-1) ==> !tt. tt <= (te-1) ==> t + 1 < tt ==> done_g tt`
           by ASM_REWRITE_TAC []
      THENL [
      `!tt. (t+1) <= tt /\ tt < te ==> ~(done_e tt)` by PROVE_TAC [HOLDF_def]
      THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start' tt)`
           by PROVE_TAC [POSEDGE_def, POSEDGE,POSEDGE_IMPL]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start_g tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start_g tt)`
           by FULL_SIMP_TAC std_ss [AND_def]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(POSEDGE start_g tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(POSEDGE start_g tt)`
           by FULL_SIMP_TAC std_ss [POSEDGE_def]
      THEN `!tt. (t+1) < tt /\ tt < te ==> ~(POSEDGE start_g tt)` by RW_TAC arith_ss []
-     THEN `!tt. (t+1) < tt /\ tt <= (te-1) ==> ~(POSEDGE start_g tt)` 
+     THEN `!tt. (t+1) < tt /\ tt <= (te-1) ==> ~(POSEDGE start_g tt)`
          by RW_TAC arith_ss []
      THEN IMP_RES_TAC DONE_INTERVAL
      ,
@@ -1782,7 +1782,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
           by IMP_RES_TAC HOLDT_NOT_POSEDGE
      THEN `!tt. tt <= te - 1 ==> t + 1 < tt ==> ~(sel tt)`
           by PROVE_TAC [POSEDGE_def,POSEDGE,POSEDGE_IMPL]
-     THEN `!tt. te <= tt /\ tt < tg ==> ~(done_g tt)` 
+     THEN `!tt. te <= tt /\ tt < tg ==> ~(done_g tt)`
           by FULL_SIMP_TAC std_ss [HOLDF_def]
      THEN `~(done_g te)` by RW_TAC arith_ss []
      THEN `~(sel te)` by PROVE_TAC [POSEDGE_def,POSEDGE,POSEDGE_IMPL]
@@ -1798,13 +1798,13 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THEN `~(done_g (tte+1))` by RW_TAC arith_ss []
      THEN PROVE_TAC [POSEDGE_def,POSEDGE,POSEDGE_IMPL]
      ]]
-     , 
+     ,
      (* !tt. (t+1) < tt /\ tt <= te ==> ~(sel tt) pvrd *)
      `!tt. t + 1 < tt /\ tt <= te ==> ~(start_e tt)` by ASM_REWRITE_TAC []
      THENL [
      `HOLDF (t+1,te) done` by FULL_SIMP_TAC std_ss [HOLDF_def,AND_def]
      THEN `HOLDF ((t+1)+1,te+1) c1` by IMP_RES_TAC HOLDF_DEL
-     THEN `!tt. t + 1 +1 <= tt /\ tt < (te+1) ==> ~(c1 tt)` 
+     THEN `!tt. t + 1 +1 <= tt /\ tt < (te+1) ==> ~(c1 tt)`
           by FULL_SIMP_TAC std_ss [HOLDF_def]
      THEN `!tt. t + 1 < tt /\ tt <= te ==> ~(c1 tt)` by RW_TAC arith_ss []
      THEN FULL_SIMP_TAC std_ss [AND_def,OR_def]
@@ -1812,7 +1812,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      (* !tt. t + 1 < tt /\ tt <= te ==> ~(start_e tt) prvd *)
      `!tt. 0 < (t+1) /\ (t+1) < tt /\ tt <= te ==> ~(start_e tt)` by RW_TAC arith_ss []
      THEN `0 < t + 1 ==> !tt. (t+1) < tt ==> tt <= te ==> (q tt = (inp_e (t + 1)))`
-          by IMP_RES_TAC DFF_INTERVAL2 
+          by IMP_RES_TAC DFF_INTERVAL2
      THEN RW_TAC arith_ss []
      ]]
      ,
@@ -1835,7 +1835,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THEN `HOLDF (te,tg) done` by  FULL_SIMP_TAC std_ss [HOLDF_def,AND_def]
      THEN `HOLDF (t+1,tg) done` by IMP_RES_TAC HOLDF_TRANS
      THEN `HOLDF (t+1+1,tg+1) c1` by IMP_RES_TAC HOLDF_DEL
-     THEN `!tt. t+1+1 <= tt /\ tt < tg+1 ==> ~(c1 tt)` 
+     THEN `!tt. t+1+1 <= tt /\ tt < tg+1 ==> ~(c1 tt)`
           by FULL_SIMP_TAC std_ss [HOLDF_def]
      THEN `~(c1 (tg-1))` by RW_TAC arith_ss []
      THEN FULL_SIMP_TAC std_ss [AND_def,OR_def,POSEDGE_def]
@@ -1846,10 +1846,10 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      Q.PAT_ASSUM `!(m:num). m < X ==> Y` kill
      THEN Cases_on `te < (tg-1)`
      THENL [
-     `!tt. te <= tt /\ tt < tg ==> ~(done_g tt)` 
+     `!tt. te <= tt /\ tt < tg ==> ~(done_g tt)`
         by FULL_SIMP_TAC std_ss [HOLDF_def]
      THEN `!tt. te <= tt /\ tt <= (tg-1) ==> ~(done_g tt)` by RW_TAC arith_ss []
-     THEN `!tt. te <= tt /\ tt <= (tg-1) ==> ~(sel tt)` 
+     THEN `!tt. te <= tt /\ tt <= (tg-1) ==> ~(sel tt)`
           by PROVE_TAC [POSEDGE,POSEDGE_def,POSEDGE_IMPL]
      THEN `HOLDF (te,tg) done` by  FULL_SIMP_TAC std_ss [HOLDF_def,AND_def]
      THEN `HOLDF (te+1,tg+1) c1` by IMP_RES_TAC HOLDF_DEL
@@ -1857,7 +1857,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THEN `!tt. te < tt /\ tt <= (tg-1) ==> ~(c1 tt)` by RW_TAC arith_ss []
      THEN `!tt. te < tt /\ tt <= (tg-1) ==> ~(sel tt)` by RW_TAC arith_ss []
      THEN `!tt. te < tt /\ tt <= (tg-1) ==> ~(start tt)` by FULL_SIMP_TAC std_ss [AND_def]
-     THEN `!tt. te < tt /\ tt <= (tg-1) ==> ~(POSEDGE start_e tt)` 
+     THEN `!tt. te < tt /\ tt <= (tg-1) ==> ~(POSEDGE start_e tt)`
           by  FULL_SIMP_TAC std_ss [OR_def,POSEDGE_def]
      THEN `!tt. tt <= tg - 1 ==> te < tt ==> done_e tt` by IMP_RES_TAC DONE_INTERVAL
      THEN `done_e (tg-1)` by RW_TAC arith_ss []
@@ -1874,14 +1874,14 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THEN `!tt. (t+1) <= tt /\ tt <= te ==> ~(POSEDGE start_f tt)` by ASM_REWRITE_TAC []
      THENL [
      `~(POSEDGE start_f te)` by FULL_SIMP_TAC std_ss [AND_def,POSEDGE_def]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(done_e tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(done_e tt)`
           by FULL_SIMP_TAC std_ss [HOLDF_def]
      THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(start' tt)`
           by PROVE_TAC [POSEDGE_def,POSEDGE,POSEDGE_IMPL]
-     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(POSEDGE start_f tt)` 
+     THEN `!tt. (t+1) <= tt /\ tt < te ==> ~(POSEDGE start_f tt)`
           by FULL_SIMP_TAC std_ss [AND_def,POSEDGE_def]
      THEN `!tt. t < tt /\ tt < te ==> ~(POSEDGE start_f tt)` by RW_TAC arith_ss []
-     THEN `!tt. t < tt ==> tt <= te ==> ~(POSEDGE start_f tt)` 
+     THEN `!tt. t < tt ==> tt <= te ==> ~(POSEDGE start_f tt)`
           by IMP_RES_TAC INTERVAL_LEMMA
      THEN RW_TAC arith_ss []
      ,
@@ -1892,7 +1892,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THENL [
      `!tt. te <= tt /\ tt < tg ==> ~(done_g tt)` by FULL_SIMP_TAC std_ss [HOLDF_def]
      THEN `!tt. te <= tt /\ tt <= (tg-1) ==> ~(done_g tt)` by RW_TAC arith_ss []
-     THEN `!tt. te <= tt /\ tt <= (tg-1) ==> ~(sel tt)` 
+     THEN `!tt. te <= tt /\ tt <= (tg-1) ==> ~(sel tt)`
           by PROVE_TAC [POSEDGE,POSEDGE_def,POSEDGE_IMPL]
      THEN `HOLDF (te,tg) done` by  FULL_SIMP_TAC std_ss [HOLDF_def,AND_def]
      THEN `HOLDF (te+1,tg+1) c1` by IMP_RES_TAC HOLDF_DEL
@@ -1900,22 +1900,22 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THEN `!tt. te < tt /\ tt <= (tg-1) ==> ~(c1 tt)` by RW_TAC arith_ss []
      THEN `!tt. te < tt /\ tt <= (tg-1) ==> ~(sel tt)` by RW_TAC arith_ss []
      THEN `!tt. te < tt /\ tt <= (tg-1) ==> ~(start tt)` by FULL_SIMP_TAC std_ss [AND_def]
-     THEN `!tt. te < tt /\ tt <= (tg-1) ==> ~(POSEDGE start_e tt)` 
+     THEN `!tt. te < tt /\ tt <= (tg-1) ==> ~(POSEDGE start_e tt)`
           by FULL_SIMP_TAC std_ss [OR_def,POSEDGE_def]
      THEN `!tt. tt <= tg - 1 ==> te < tt ==> done_e tt` by IMP_RES_TAC DONE_INTERVAL
      THEN `!tt. (te+1) <= tt /\ tt <= tg-1 ==> done_e tt` by RW_TAC arith_ss []
-     THEN `!tt. (te+1) < tt ==> tt <= (tg-1) ==> ~POSEDGE done_e tt` 
+     THEN `!tt. (te+1) < tt ==> tt <= (tg-1) ==> ~POSEDGE done_e tt`
           by IMP_RES_TAC HOLDT_NOT_POSEDGE
      THEN `!tt. (te+1) < tt /\ tt <= (tg-1) ==> ~POSEDGE done_e tt` by RW_TAC arith_ss []
-     THEN `!tt. (te+1) < tt /\ tt <= (tg-1) ==> ~(start' tt)` 
+     THEN `!tt. (te+1) < tt /\ tt <= (tg-1) ==> ~(start' tt)`
           by PROVE_TAC [POSEDGE_def,POSEDGE,POSEDGE_IMPL]
-     THEN `!tt. (te+1) < tt /\ tt <= (tg-1) ==> ~(POSEDGE start_f tt)` 
+     THEN `!tt. (te+1) < tt /\ tt <= (tg-1) ==> ~(POSEDGE start_f tt)`
           by FULL_SIMP_TAC std_ss [AND_def,POSEDGE_def]
      THEN `~(POSEDGE start_f te)` by FULL_SIMP_TAC std_ss [AND_def,POSEDGE_def]
      THEN `~(POSEDGE done_e (te+1))` by FULL_SIMP_TAC std_ss [POSEDGE]
      THEN `~(start' (te+1))` by PROVE_TAC [POSEDGE_def,POSEDGE,POSEDGE_IMPL]
      THEN `~(POSEDGE start_f (te+1))` by FULL_SIMP_TAC std_ss [AND_def,POSEDGE_def]
-     THEN `!tt. te + 1 <= tt ==> tt <= tg - 1 ==> ~POSEDGE start_f tt` 
+     THEN `!tt. te + 1 <= tt ==> tt <= tg - 1 ==> ~POSEDGE start_f tt`
           by IMP_RES_TAC INTERVAL_LEMMA
      THEN RW_TAC arith_ss []
      ,
@@ -1941,7 +1941,7 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      `!tt. te + 1 <= tt /\ tt <= tg ==> ~POSEDGE start_f tt` by ASM_REWRITE_TAC []
      THENL [
      `!tt. te < tt /\ tt < tg ==> ~(POSEDGE start_f tt)` by RW_TAC arith_ss []
-     THEN `!tt. te < tt /\ tt <= tg ==> ~(POSEDGE start_f tt)` 
+     THEN `!tt. te < tt /\ tt <= tg ==> ~(POSEDGE start_f tt)`
           by (MATCH_MP_TAC (el 3 (CONJUNCTS INTERVAL_LEMMA))
               THEN ASM_REWRITE_TAC [])
      THEN RW_TAC arith_ss []
@@ -1987,15 +1987,15 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
      THEN PROVE_TAC []
      ,
      (* variant (f3 (inp_e (t+1))) < v prvd *)
-     Q.PAT_ASSUM `!(m:num). (m < v) ==> X` (fn th => ASSUME_TAC 
+     Q.PAT_ASSUM `!(m:num). (m < v) ==> X` (fn th => ASSUME_TAC
         (Q.SPEC `((variant:'a->num) ((f3:'a->'a) ((inp_e:num->'a) (t+1)))):num` th))
      THEN ASSUM_LIST (fn thl => ASSUME_TAC(MP (el 1 thl) (el 2 thl)))
      THEN Q.PAT_ASSUM `variant X < Y ==> Z` kill
-     THEN Q.PAT_ASSUM `!(variant':'a->num) (inp_e':num->'a) (t':num). X` 
+     THEN Q.PAT_ASSUM `!(variant':'a->num) (inp_e':num->'a) (t':num). X`
          (fn th => ASSUME_TAC (Q.SPEC `variant:'a->num` th))
-     THEN Q.PAT_ASSUM `!(inp_e':num->'a) (t':num). X` 
+     THEN Q.PAT_ASSUM `!(inp_e':num->'a) (t':num). X`
          (fn th => ASSUME_TAC (Q.SPEC `inp_e:num->'a` th))
-     THEN Q.PAT_ASSUM `!(t':num). X` 
+     THEN Q.PAT_ASSUM `!(t':num). X`
          (fn th => ASSUME_TAC (Q.SPEC `ttg:num` th))
      THEN `variant (f3 (inp_e (t+1))) = variant ((inp_e (ttg+1)))`
           by REWRITE_TAC []
@@ -2054,14 +2054,14 @@ val REC_LEMMA = Q.store_thm("REC_LEMMA",
 (******************** SAFE_REC  ******************)
 
 val SAFE_REC = Q.store_thm ("SAFE_REC",
-  `TOTAL(f1,f2,f3) /\ 
+  `TOTAL(f1,f2,f3) /\
    REC (SAFE_DEV f1) (SAFE_DEV f2) (SAFE_DEV f3) (load,inp,done,out)
    ==>
    SAFE_DEV (TAILREC f1 f2 f3) (load,inp,done,out)`,
-   ASM_REWRITE_TAC [REC_def,SIMP_SAFE_DEV,TOTAL_def] THEN (REPEAT STRIP_TAC)  
+   ASM_REWRITE_TAC [REC_def,SIMP_SAFE_DEV,TOTAL_def] THEN (REPEAT STRIP_TAC)
      THENL [
      `inp_e (t+1) = inp (t+1)` by IMP_RES_TAC EXT_CALL
-     THEN `done_e t /\ done_f (t+1) /\ done_g (t+1) /\ POSEDGE start_e (t+1)` 
+     THEN `done_e t /\ done_f (t+1) /\ done_g (t+1) /\ POSEDGE start_e (t+1)`
           by RW_TAC arith_ss []
      THENL [
      FULL_SIMP_TAC std_ss [AND_def,FINISH_def] THEN PROVE_TAC[]
@@ -2073,7 +2073,7 @@ val SAFE_REC = Q.store_thm ("SAFE_REC",
           by PROVE_TAC [SELECT_def, AND_def, POSEDGE,POSEDGE_IMPL,POSEDGE_IMP_def]
      THEN `~(POSEDGE start_f (t+1)) /\ ~(POSEDGE start_g (t+1))`
           by PROVE_TAC [SELECT_def, AND_def, POSEDGE,POSEDGE_IMPL,POSEDGE_IMP_def]
-     THEN `done_f t /\ done_g t` 
+     THEN `done_f t /\ done_g t`
           by (FULL_SIMP_TAC std_ss [FINISH_def,AND_def] THEN PROVE_TAC[])
      THEN PROVE_TAC []
      ,
@@ -2084,7 +2084,7 @@ val SAFE_REC = Q.store_thm ("SAFE_REC",
           by PROVE_TAC [SELECT_def, AND_def, POSEDGE,POSEDGE_IMPL,POSEDGE_IMP_def]
      THEN `~(POSEDGE start_f (t+1)) /\ ~(POSEDGE start_g (t+1))`
           by PROVE_TAC [SELECT_def, AND_def, POSEDGE,POSEDGE_IMPL,POSEDGE_IMP_def]
-     THEN `done_f t /\ done_g t` 
+     THEN `done_f t /\ done_g t`
           by (FULL_SIMP_TAC std_ss [FINISH_def,AND_def] THEN PROVE_TAC [])
      THEN PROVE_TAC []
      ,
@@ -2094,7 +2094,7 @@ val SAFE_REC = Q.store_thm ("SAFE_REC",
      `SAFE_DEV f1 (start_e,inp_e,done_e,data_e)` by IMP_RES_TAC SIMP_SAFE_DEV
      THEN `SAFE_DEV f2 (start_f,q,done_f,out)` by IMP_RES_TAC SIMP_SAFE_DEV
      THEN `SAFE_DEV f3 (start_g,q,done_g,data_g)` by IMP_RES_TAC SIMP_SAFE_DEV
-     THEN Q.PAT_ASSUM `!(t:num). done_e t /\ 
+     THEN Q.PAT_ASSUM `!(t:num). done_e t /\
                          ~POSEDGE start_e (t + 1) ==> done_e (t + 1)` kill
      THEN Q.PAT_ASSUM `!(t:num). done_e t /\ POSEDGE start_e (t + 1) ==>
                        COMPUTE (t,f1,inp_e,done_e,data_e)` kill
@@ -2102,9 +2102,9 @@ val SAFE_REC = Q.store_thm ("SAFE_REC",
                          COMPUTE (t,f2,q,done_f,out)` kill
      THEN Q.PAT_ASSUM `!(t:num).  done_g t /\ POSEDGE start_g (t + 1) ==>
                          COMPUTE (t,f3,q,done_g,data_g)` kill
-     THEN Q.PAT_ASSUM `!(t:num). done_f t /\ ~POSEDGE start_f (t + 1) ==> 
+     THEN Q.PAT_ASSUM `!(t:num). done_f t /\ ~POSEDGE start_f (t + 1) ==>
                          done_f (t + 1)` kill
-     THEN Q.PAT_ASSUM `!(t:num). done_g t /\ ~POSEDGE start_g (t + 1) ==> 
+     THEN Q.PAT_ASSUM `!(t:num). done_g t /\ ~POSEDGE start_g (t + 1) ==>
                          done_g (t + 1)` kill
      THEN `COMPUTE (t,TAILREC f1 f2 f3,inp_e,done,out)` by IMP_RES_TAC REC_LEMMA
      THEN REWRITE_TAC [COMPUTE_def]
@@ -2114,11 +2114,11 @@ val SAFE_REC = Q.store_thm ("SAFE_REC",
      ]
      ,
      (* goal: done (t+1) *)
-     `done_e t /\ done_f t /\ done_g t` 
+     `done_e t /\ done_f t /\ done_g t`
       by (FULL_SIMP_TAC std_ss [FINISH_def,AND_def] THEN PROVE_TAC [])
-     THEN `~(POSEDGE done_g (t+1))` 
+     THEN `~(POSEDGE done_g (t+1))`
           by (FULL_SIMP_TAC arith_ss [FINISH_def,AND_def, POSEDGE_def] THEN PROVE_TAC[])
-     THEN `~(start_e (t+1))` by 
+     THEN `~(start_e (t+1))` by
            (FULL_SIMP_TAC std_ss [CALL_def,OR_def,AND_def]
              THEN REPEAT (Q.PAT_ASSUM `DEL x` (K ALL_TAC))
              THEN Q.PAT_ASSUM `!x. ~f1 x ==> y` (K ALL_TAC)
@@ -2130,7 +2130,7 @@ val SAFE_REC = Q.store_thm ("SAFE_REC",
              THEN PROVE_TAC [POSEDGE_def,AND_def,POSEDGE_IMP_def])
      THEN `~(POSEDGE start_e (t+1))` by RW_TAC std_ss [POSEDGE_def]
      THEN `done_e (t+1)` by PROVE_TAC []
-     THEN `~(POSEDGE start_f (t+1)) /\ ~(POSEDGE start_g (t+1))` 
+     THEN `~(POSEDGE start_f (t+1)) /\ ~(POSEDGE start_g (t+1))`
          by (FULL_SIMP_TAC std_ss [SELECT_def]
               THEN IMP_RES_TAC POSEDGE_IMPL
               THEN PROVE_TAC [POSEDGE, AND_def,POSEDGE_IMP_def])

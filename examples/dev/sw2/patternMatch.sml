@@ -65,10 +65,10 @@ fun match_constr(Constr x, v) = x = v
  |  match_constr(_, v) = true
 
 fun relevant_indices(test_set, rule) =
-  let 
+  let
     val test_list = S.listItems(test_set)
     val relevant_list =
-      List.filter (fn (index,name) => 
+      List.filter (fn (index,name) =>
          (index = fst rule) andalso
          not (match_constr (List.nth(snd rule, index), name))) test_list
   in
@@ -76,7 +76,7 @@ fun relevant_indices(test_set, rule) =
   end
 
 fun next_indices (test_set, rules) =
-  let 
+  let
       fun first_index(remaining_rules) =
         if length remaining_rules = 0 then
           []
@@ -87,7 +87,7 @@ fun next_indices (test_set, rules) =
               else
                 v
           end
-   in 
+   in
       first_index(rev rules)
    end
 
@@ -99,18 +99,18 @@ fun zip ([],[]) = []
  |  zip (x1::l1,x2::l2) = (x1,x2)::zip(l1,l2)
 
 fun elim_redundant_rules rules =
-  let 
+  let
     fun cover rule1 rule2 =
-      List.all (fn (t1,t2) => 
-                  case t1 of 
+      List.all (fn (t1,t2) =>
+                  case t1 of
                       Constr x =>
-                       (case t2 of 
+                       (case t2 of
                            Constr y => x = y
                          | ConS s => S.listItems s = [x]
                          | _ => false        (* Wildcard or variables *)
                        )
-                    | ConS s1 => 
-		       (case t2 of 
+                    | ConS s1 =>
+		       (case t2 of
                            Constr y => S.member(s1, y)
                          | ConS s2 => S.isSubset(s2,s1)
                          | _ => false        (* Wildcard or variables *)
@@ -121,7 +121,7 @@ fun elim_redundant_rules rules =
     List.foldl (fn (rule2, r_rules) =>
                  if List.exists (fn rule1 => cover (snd rule1) (snd rule2)) r_rules     (* rule1 consumes rule2 *)
                  then r_rules
-                 else r_rules @ [rule2]   
+                 else r_rules @ [rule2]
                )
                [] rules
   end
@@ -130,28 +130,28 @@ fun elim_redundant_rules rules =
 (* Modify the rule by instantializing it with constructor information.                   *)
 (*****************************************************************************************)
 
-fun inst_rule (rule : rule_type, index, subterm) = 
+fun inst_rule (rule : rule_type, index, subterm) =
   (#1(rule), List.take(#2 rule, index) @ [subterm] @ List.drop(#2 rule, index + 1))
 
 fun inst_rules(rules : rule_type list, test_set) =
   let val l = S.listItems test_set
       val index = fst (hd (l))
-      val constr_set = S.addList(S.empty strOrder, List.map snd l) 
+      val constr_set = S.addList(S.empty strOrder, List.map snd l)
   in
      List.foldl (fn (rule, r_rules) =>
-         case List.nth(#2 rule, index) of 
-            Constr x => if S.member(constr_set, x) 
+         case List.nth(#2 rule, index) of
+            Constr x => if S.member(constr_set, x)
                         then r_rules @ [inst_rule(rule, index, Constr x)]
                         else r_rules
           | ConS s => let val sub_s = S.intersection(constr_set, s) in
                           if S.isEmpty sub_s then r_rules
-                          else if S.numItems s = 1 then 
+                          else if S.numItems s = 1 then
 			    r_rules @ [inst_rule(rule, index, Constr (hd (S.listItems s)))]
-                          else 
+                          else
 			    r_rules @ [inst_rule(rule, index, ConS constr_set)]
                       end
-          | _ => r_rules @ [inst_rule(rule, index, 
-			    if S.numItems constr_set = 1 
+          | _ => r_rules @ [inst_rule(rule, index,
+			    if S.numItems constr_set = 1
                             then Constr (hd (S.listItems constr_set))
                             else ConS constr_set)]
           )
@@ -176,16 +176,16 @@ fun inst_rules(rules : rule_type list, test_set) =
 fun build_tree(test_set, rules) =
   let
      val indices = next_indices (test_set, rules)
-  in 
+  in
      if null indices then
        Leaf rules
      else
        let
          val test = hd indices
          val left_set = S.add(S.empty testOrder, test)
-         val right_set = S.addList(S.empty testOrder, List.filter (fn (n,x) => n = fst test) 
+         val right_set = S.addList(S.empty testOrder, List.filter (fn (n,x) => n = fst test)
                          (S.listItems(S.delete(test_set, test))))
-         val next_set = S.delete(test_set, test)    
+         val next_set = S.delete(test_set, test)
 
          val left_rules = elim_redundant_rules(inst_rules(rules, left_set))
          val right_rules = elim_redundant_rules(inst_rules(rules, right_set))
@@ -199,7 +199,7 @@ fun build_tree(test_set, rules) =
       end
   end
 
-(* val test_set = S.addList(S.empty testOrder, 
+(* val test_set = S.addList(S.empty testOrder,
          [(0,"nil"), (0,"cons"), (1,"nil"), (1,"cons")]);
    val rules = [(0, [Constr "nil", Var ""]), (1, [Var "", Constr "nil"])];
 
@@ -216,12 +216,12 @@ fun build_tree(test_set, rules) =
 fun select_index(test_set, indices) =
   if length indices = 1 then
     hd indices
-  else 
-    let 
+  else
+    let
       val test_list = S.listItems test_set
-      val (min_index, min_value) = 
-        List.foldl 
-          (fn ((index,name), (i,j)) => 
+      val (min_index, min_value) =
+        List.foldl
+          (fn ((index,name), (i,j)) =>
              let val n = length (List.filter (fn (n,x) => n = i) test_list)
 	     in  if n < j then (index, n)
                  else (i,j)
@@ -232,9 +232,9 @@ fun select_index(test_set, indices) =
        valOf (List.find (fn(index,name) => index = min_index) indices)
     end
 
-(* val test_set = S.addList(S.empty testOrder, 
+(* val test_set = S.addList(S.empty testOrder,
          [(0,"true"), (0,"false"), (1,"red"), (1,"blue"), (1,"green")]);
-   val test_set = S.addList(S.empty testOrder, 
+   val test_set = S.addList(S.empty testOrder,
          [(0,"true"), (0,"false"), (1,"green"), (1,"red/blue")]);
    val rules = [(0, [Constr "true", Constr "green"]), (1, [Constr "false", Constr "green"])];
 
@@ -244,7 +244,7 @@ fun select_index(test_set, indices) =
 
 end
 
-(* 
+(*
 Define `(f 0 _ = 0) /\
           (f (SUC i) 0 = i) /\
           (f (SUC i) (SUC j) = i + j)

@@ -6,7 +6,7 @@ sig
   val zero        : num
   val one         : num
   val two         : num
- 
+
   val times2      : num -> num
   val div2        : num -> num
   val mod2        : num -> num

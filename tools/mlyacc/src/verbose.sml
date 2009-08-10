@@ -3,7 +3,7 @@
  *)
 type int = Int.int
 
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/22 07:40:27  michaeln
@@ -20,7 +20,7 @@ type int = Int.int
  *
  * Revision 1.1.1.1  1996/01/31  16:01:47  george
  * Version 109
- * 
+ *
  *)
 
 functor mkVerbose(structure Errs : LR_ERRS) : VERBOSE =
@@ -92,7 +92,7 @@ struct
 		(print "warning: rule <";
 		 printRule i;
 		 print "> will never be reduced\n")
-	 | START i => 
+	 | START i =>
 	        (print "warning: start symbol appears on the rhs of ";
 	         print "<";
 	         printRule i;
@@ -105,7 +105,7 @@ struct
 	         printRule i;
 		 print ">\n")
       end
-   structure PairList : sig 
+   structure PairList : sig
                           val app : ('a * 'b -> unit) -> ('a,'b) pairlist -> unit
                           val length : ('a,'b) pairlist -> int
                         end
@@ -125,7 +125,7 @@ struct
    val printVerbose =
 	fn {termToString,nontermToString,table,stateErrs,entries:int,
 	    print,printRule,errs,printCores} =>
-	   let 
+	   let
 		val printTerm = print o termToString
 		val printNonterm = print o nontermToString
 
@@ -141,12 +141,12 @@ struct
 
                 val gotoTableSize = ref 0
                 val actionTableSize = ref 0
-		
-		val _ = if length errs > 0 
+
+		val _ = if length errs > 0
 			   then (printSummary print errs;
 			         print "\n";
 				 app printError errs)
-			   else ()  
+			   else ()
 		fun loop i =
 		  if i=states then ()
 		  else let val s = STATE i
@@ -166,7 +166,7 @@ struct
 			                      PairList.length gotoList;
 			       actionTableSize := (!actionTableSize) +
 			                       PairList.length actionList + 1
-			       ) 
+			       )
 			   end;
 			   loop (i+1))
 			end

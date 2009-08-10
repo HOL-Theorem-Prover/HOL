@@ -199,13 +199,13 @@ val empty_simpls = RW{thms = [[]],  congs = [[]],
                       cong_net = Net.empty};
 
 fun dest_simpls (RW{thms, congs,...}) =
-   {rws = rev(flatten thms), 
+   {rws = rev(flatten thms),
     congs = rev(flatten congs)};
 
 
 fun add_rws (RW{thms,rw_net,congs, cong_net}) thl =
  RW{thms   = thl::thms,
-    congs  = congs, 
+    congs  = congs,
   cong_net = cong_net,
     rw_net = itlist Net.insert
              (map (fn th => let val left = lhs(#2(strip_imp_only(concl th)))
@@ -462,7 +462,7 @@ fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
      let val outcome =
          if aconv lhs rhs then NO_CHANGE (L,lhs)
          else let val cps' =
-                case L 
+                case L
                  of []  => cps
                   |  _   => {context = (map ASSUME L @ cntxt,b),
                              prover  = prover,
@@ -494,11 +494,11 @@ let val ant_frees = free_vars ant
     val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn')
     val outcome =
      if aconv lhs rhs then NO_CHANGE (L,lhs) else
-     let val lhs_beta_maybe = 
+     let val lhs_beta_maybe =
                Conv.DEPTH_CONV GEN_BETA_CONV lhs handle HOL_ERR _ => REFL lhs
          val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
          val cps' = case L of [] => cps
-                    | otherwise => 
+                    | otherwise =>
                        {context = (map ASSUME L @ cntxt,b),
                         prover  = prover,
                         simpls  = add_cntxt b simpls (map ASSUME L)}

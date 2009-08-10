@@ -1,10 +1,10 @@
 open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory 
+     markerTheory pairTheory arithmeticTheory
      wordsTheory Serpent_Reference_UtilityTheory wordsLib;
 
 val _ = new_theory "Serpent_Reference_Permutation";
 
-(*initial/inverse final permutation table*)            
+(*initial/inverse final permutation table*)
 val IPTable_def = Define
 `IPTable =
  [  0; 32; 64; 96;  1; 33; 65; 97;  2; 34; 66; 98;  3; 35; 67; 99;
@@ -18,7 +18,7 @@ val IPTable_def = Define
 
 (*final/inverse initial permutation table*)
 val FPTable_def = Define
-`FPTable = 
+`FPTable =
  [  0;  4;  8; 12; 16; 20; 24; 28; 32; 36; 40; 44; 48; 52; 56; 60;
    64; 68; 72; 76; 80; 84; 88; 92; 96;100;104;108;112;116;120;124;
     1;  5;  9; 13; 17; 21; 25; 29; 33; 37; 41; 45; 49; 53; 57; 61;
@@ -29,12 +29,12 @@ val FPTable_def = Define
    67; 71; 75; 79; 83; 87; 91; 95; 99;103;107;111;115;119;123;127]`;
 
 val IPFun_def = Define
-`IPFun x = EL x IPTable`; 
+`IPFun x = EL x IPTable`;
 
 val FPFun_def = Define
 `FPFun x = EL x FPTable`;
 
-(*precomputed to speed things up*) 
+(*precomputed to speed things up*)
 
 val IPFunVal = save_thm(
  "IPFunVal",
@@ -48,59 +48,59 @@ val FPFunVal = save_thm(
 
 (*permutation *)
 val permu_def = Define
-`(permu 0 permFun (block:word128) 
+`(permu 0 permFun (block:word128)
   = let sourceBit = block ' (permFun 0)
     in
-    if sourceBit 
+    if sourceBit
        then (1w:word128)
-       else (0w:word128))  
+       else (0w:word128))
  /\
- (permu (SUC i) permFun  block 
+ (permu (SUC i) permFun  block
  = let sourceBit = block ' (permFun (SUC i))
    in
-   let maskedWord = if sourceBit 
+   let maskedWord = if sourceBit
                        then (1w:word128) << (SUC i)
                       else (0w:word128)
    in
-   maskedWord !! (permu i permFun  block))`;  
+   maskedWord !! (permu i permFun  block))`;
 
-(*for evaluation*)  
+(*for evaluation*)
 val permuEval = Q.store_thm(
 "permuEval",
 `!m (block:word128).
-    permu m permFun (block:word128) 
-    = if m = 0 
+    permu m permFun (block:word128)
+    = if m = 0
          then let sourceBit = block ' (permFun 0)
               in
-          if sourceBit 
+          if sourceBit
              then (1w:word128)
              else (0w:word128)
              else let sourceBit = block ' (permFun m)
               in
-          let maskedWord = if sourceBit 
+          let maskedWord = if sourceBit
                            then (1w:word128) << m
                            else (0w:word128)
            in
-          maskedWord !! (permu (m-1) permFun  block) `,    
+          maskedWord !! (permu (m-1) permFun  block) `,
  RW_TAC  list_ss [permu_def,LET_THM] THENL [
     Cases_on `m` THEN
     RW_TAC list_ss [permu_def,LET_THM],
     Cases_on `m` THEN
     RW_TAC list_ss [permu_def,LET_THM]]);
 
-(*desired properties of permu *)    
+(*desired properties of permu *)
 val perm_recur_inv1_w128 = Q.store_thm(
 "perm_recur_inv1_w128",
 `!permFun block from to d.
     (!x. x < 128 ==> permFun x < 128) /\
     (d < 128) /\
     (to < 128) /\
-    (permFun to = from) /\  
+    (permFun to = from) /\
     to > d
     ==>
     ~((permu d permFun block) ' to)`,
- Induct_on `d` THEN 
- SRW_TAC [ARITH_ss] [permu_def,LET_THM] THEN 
+ Induct_on `d` THEN
+ SRW_TAC [ARITH_ss] [permu_def,LET_THM] THEN
  SRW_TAC [WORD_BIT_EQ_ss] []);
 
 val perm_recur_inv2_w128 = Q.store_thm(
@@ -109,25 +109,25 @@ val perm_recur_inv2_w128 = Q.store_thm(
     (!x. x < 128 ==> permFun x < 128) /\
     (d < 128) /\
     (to < 128) /\
-    (permFun to = from) /\  
-    to <= d 
+    (permFun to = from) /\
+    to <= d
     ==>
-    ((permu d permFun block) ' to = block ' from)`, 
+    ((permu d permFun block) ' to = block ' from)`,
  Induct_on `d` THEN
- SRW_TAC [ARITH_ss] [permu_def,LET_THM] THEN  
+ SRW_TAC [ARITH_ss] [permu_def,LET_THM] THEN
  SRW_TAC [WORD_BIT_EQ_ss] [] THEN
  Cases_on `to <= d`  THEN Cases_on `to = d` THEN
  SRW_TAC [WORD_BIT_EQ_ss] [] THEN
  FULL_SIMP_TAC arith_ss [] THEN
  `to > d /\ (to = SUC d)` by DECIDE_TAC THEN
  ASM_SIMP_TAC arith_ss [perm_recur_inv1_w128]);
-        
-(*composite of 2 permutations*)        
+
+(*composite of 2 permutations*)
 val permu_compose_w128 = Q.store_thm(
 "permu_compose_w128",
 `!permFun1 permFun2 block i.
     i < 128  /\
-    (!x. x < 128 ==> permFun1 x < 128) /\     
+    (!x. x < 128 ==> permFun1 x < 128) /\
     (!x. x < 128 ==> permFun2 x < 128)
      ==>
     ((permu 127 permFun2 (permu 127 permFun1 block)) ' i =
@@ -137,25 +137,25 @@ val permu_compose_w128 = Q.store_thm(
    (permu 127 permFun1 block) ' (permFun2 i)`
     by FULL_SIMP_TAC arith_ss [perm_recur_inv2_w128] THEN
   `(permu 127 (permFun1 o permFun2) block) ' i =
-    block ' ((permFun1 o permFun2) i)` 
+    block ' ((permFun1 o permFun2) i)`
     by FULL_SIMP_TAC arith_ss [perm_recur_inv2_w128] THEN
   `permFun2 i < 128` by METIS_TAC [] THEN
   `(permu 127 permFun1 block)' (permFun2 i) =
-    block ' (permFun1 ( permFun2 i))` 
+    block ' (permFun1 ( permFun2 i))`
     by FULL_SIMP_TAC arith_ss [perm_recur_inv2_w128] THEN
   RW_TAC std_ss []);
 
-(*two permutations cancel each other*)            
+(*two permutations cancel each other*)
 val permu_comp_reverse_w128 = Q.store_thm(
 "permu_comp_reverse_w128",
 `!permFun1 permFun2 block.
-    (!x. x < 128 ==> permFun1 x < 128) /\     
+    (!x. x < 128 ==> permFun1 x < 128) /\
     (!x. x < 128 ==> permFun2 x < 128) /\
     (!x. x < 128 ==> ((permFun1 o permFun2) x = x)) ==>
-    (permu 127 permFun2 (permu 127 permFun1 block) = block)`,    
+    (permu 127 permFun2 (permu 127 permFun1 block) = block)`,
   SRW_TAC [] [] THEN
     SRW_TAC [WORD_BIT_EQ_ss] [permu_compose_w128, perm_recur_inv2_w128]);
-            
+
 val IP_def = Define `IP w128 = permu 127 IPFun w128`;
 val FP_def = Define `FP w128 = permu 127 FPFun w128`;
 
@@ -167,20 +167,20 @@ val IP_FP_fact = Q.store_thm(
 `!x.
     x < 128 ==> ((IPFun x < 128) /\
     (FPFun x < 128) /\
-    ((FPFun o IPFun) x = x) /\ 
+    ((FPFun o IPFun) x = x) /\
     ((IPFun o FPFun) x = x))`,
  FULL_SIMP_TAC arith_ss [BOUNDED_FORALL_THM,IPFunVal,FPFunVal]);
 
-(*permutations using given IP and FP tables cancel*) 
+(*permutations using given IP and FP tables cancel*)
 val invFP_FP_cancel = Q.store_thm(
 "invFP_FP_cancel",
-`!block. 
+`!block.
     invFP (FP block) = block`,
  SIMP_TAC std_ss [invFP_def,IP_def,FP_def,permu_comp_reverse_w128,IP_FP_fact]);
 
 val invIP_IP_cancel = Q.store_thm(
 "invIP_IP_cancel",
-`!block. 
+`!block.
     invIP (IP block)= block`,
  SIMP_TAC std_ss [invIP_def,IP_def,FP_def,permu_comp_reverse_w128,IP_FP_fact]);
 

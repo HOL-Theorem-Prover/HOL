@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
@@ -71,9 +71,9 @@ val CTL_STAR_SEM_PATH_TIME_def =
    (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_PSNEXT f) p = (t > 0 /\ CTL_STAR_SEM_PATH_TIME (PRE t) M f p)) /\
    (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_E f) p = (?p'. (p' 0 = p t) /\
     IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p' /\ CTL_STAR_SEM_PATH_TIME 0 M f p')) /\
-   (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_SUNTIL(f1,f2)) p = (?k. k >= t /\ CTL_STAR_SEM_PATH_TIME k M f2 p /\ 
+   (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_SUNTIL(f1,f2)) p = (?k. k >= t /\ CTL_STAR_SEM_PATH_TIME k M f2 p /\
       (!j. (t <= j /\ j < k) ==> CTL_STAR_SEM_PATH_TIME j M f1 p ))) /\
-   (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_PSUNTIL(f1,f2)) p = (?k. k <= t /\ CTL_STAR_SEM_PATH_TIME k M f2 p /\ 
+   (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_PSUNTIL(f1,f2)) p = (?k. k <= t /\ CTL_STAR_SEM_PATH_TIME k M f2 p /\
       (!j. (k < j /\ j <= t) ==> CTL_STAR_SEM_PATH_TIME j M f1 p )))`;
 
 
@@ -160,9 +160,9 @@ val FINITE___CTL_STAR_USED_VARS =
 val IS_CTL_STAR_PROP_FORMULA___IS_PATH_STATE_FORMULA =
   store_thm
     ("IS_CTL_STAR_PROP_FORMULA___IS_PATH_STATE_FORMULA",
-      
+
      ``!f. IS_CTL_STAR_PROP_FORMULA f = (IS_CTL_STAR_STATE_FORMULA f /\ IS_CTL_STAR_PATH_FORMULA f)``,
-    
+
     INDUCT_THEN ctl_star_induct ASSUME_TAC THEN
     FULL_SIMP_TAC std_ss [IS_CTL_STAR_STATE_FORMULA_def,
       IS_CTL_STAR_PATH_FORMULA_def, IS_CTL_STAR_PROP_FORMULA_def] THEN
@@ -173,13 +173,13 @@ val IS_CTL_STAR_PROP_FORMULA___IS_PATH_STATE_FORMULA =
 val IS_CTL_STAR_STATE_FORMULA___SEM =
   store_thm
     ("IS_CTL_STAR_STATE_FORMULA___SEM",
-      
-     ``!f t M p s. (IS_CTL_STAR_STATE_FORMULA f /\ (p t = s)) ==> 
+
+     ``!f t M p s. (IS_CTL_STAR_STATE_FORMULA f /\ (p t = s)) ==>
                  (CTL_STAR_SEM_STATE M f s = CTL_STAR_SEM_PATH_TIME t M f p)``,
-    
+
     INDUCT_THEN ctl_star_induct ASSUME_TAC THEN
     FULL_SIMP_TAC std_ss [IS_CTL_STAR_STATE_FORMULA_def,
-      CTL_STAR_SEM_STATE_def, CTL_STAR_SEM_PATH_def, 
+      CTL_STAR_SEM_STATE_def, CTL_STAR_SEM_PATH_def,
       CTL_STAR_SEM_PATH_TIME_def]);
 
 
@@ -191,9 +191,9 @@ val CTL_STAR_SEM_NO_MODEL_PATH_TIME_def =
    (CTL_STAR_SEM_NO_MODEL_PATH_TIME t (CTL_STAR_AND(f1,f2)) p = CTL_STAR_SEM_NO_MODEL_PATH_TIME t f1 p /\ CTL_STAR_SEM_NO_MODEL_PATH_TIME t f2 p) /\
    (CTL_STAR_SEM_NO_MODEL_PATH_TIME t (CTL_STAR_NEXT f) p = CTL_STAR_SEM_NO_MODEL_PATH_TIME (SUC t) f p) /\
    (CTL_STAR_SEM_NO_MODEL_PATH_TIME t (CTL_STAR_PSNEXT f) p = (t > 0 /\ CTL_STAR_SEM_NO_MODEL_PATH_TIME (PRE t) f p)) /\
-   (CTL_STAR_SEM_NO_MODEL_PATH_TIME t (CTL_STAR_SUNTIL(f1,f2)) p = (?k. k >= t /\ CTL_STAR_SEM_NO_MODEL_PATH_TIME k f2 p /\ 
+   (CTL_STAR_SEM_NO_MODEL_PATH_TIME t (CTL_STAR_SUNTIL(f1,f2)) p = (?k. k >= t /\ CTL_STAR_SEM_NO_MODEL_PATH_TIME k f2 p /\
       (!j. (t <= j /\ j < k) ==> CTL_STAR_SEM_NO_MODEL_PATH_TIME j f1 p ))) /\
-   (CTL_STAR_SEM_NO_MODEL_PATH_TIME t (CTL_STAR_PSUNTIL(f1,f2)) p = (?k. k <= t /\ CTL_STAR_SEM_NO_MODEL_PATH_TIME k f2 p /\ 
+   (CTL_STAR_SEM_NO_MODEL_PATH_TIME t (CTL_STAR_PSUNTIL(f1,f2)) p = (?k. k <= t /\ CTL_STAR_SEM_NO_MODEL_PATH_TIME k f2 p /\
       (!j. (k < j /\ j <= t) ==> CTL_STAR_SEM_NO_MODEL_PATH_TIME j f1 p)))`;
 
 val CTL_STAR_SEM_NO_MODEL_PATH_def =
@@ -204,11 +204,11 @@ val CTL_STAR_SEM_NO_MODEL_PATH_def =
 val IS_CTL_STAR_PATH_FORMULA___NO_MODEL_SEM =
   store_thm
     ("IS_CTL_STAR_PATH_FORMULA___NO_MODEL_SEM",
-      
-     ``!f t M p. IS_CTL_STAR_PATH_FORMULA f ==> 
+
+     ``!f t M p. IS_CTL_STAR_PATH_FORMULA f ==>
                  (CTL_STAR_SEM_PATH_TIME t M f p =
                   CTL_STAR_SEM_NO_MODEL_PATH_TIME t f p)``,
-    
+
     INDUCT_THEN ctl_star_induct ASSUME_TAC THEN
     FULL_SIMP_TAC std_ss [IS_CTL_STAR_PATH_FORMULA_def,
       CTL_STAR_SEM_PATH_TIME_def, CTL_STAR_SEM_NO_MODEL_PATH_TIME_def] THEN
@@ -272,34 +272,34 @@ val CTL_STAR_PSWHILE_def = Define `CTL_STAR_PSWHILE(f1,f2) = CTL_STAR_PSUNTIL(CT
 
 val CTL_STAR_FAIRNESS_def =
  Define
-  `(CTL_STAR_FAIRNESS [] = (CTL_STAR_PROP (P_TRUE))) /\ 
+  `(CTL_STAR_FAIRNESS [] = (CTL_STAR_PROP (P_TRUE))) /\
    (CTL_STAR_FAIRNESS (f::FC) = (CTL_STAR_AND (CTL_STAR_ALWAYS(CTL_STAR_EVENTUAL (CTL_STAR_PROP f)), CTL_STAR_FAIRNESS FC)))`;
 
 val CTL_STAR_FAIR_E_def = Define `CTL_STAR_FAIR_E FC f = (CTL_STAR_E (CTL_STAR_AND(f, CTL_STAR_FAIRNESS FC)))`;
 val CTL_STAR_FAIR_A_def = Define `CTL_STAR_FAIR_A FC f = (CTL_STAR_A (CTL_STAR_IMPL(CTL_STAR_FAIRNESS FC, f)))`;
 
 
-val CTL_STAR_SEM___PROP_CASES = 
-    prove (``!M f1 f2 p s t. 
-      (CTL_STAR_SEM_PATH M (CTL_STAR_OR(f1, f2)) p = 
+val CTL_STAR_SEM___PROP_CASES =
+    prove (``!M f1 f2 p s t.
+      (CTL_STAR_SEM_PATH M (CTL_STAR_OR(f1, f2)) p =
        (CTL_STAR_SEM_PATH M f1 p \/ CTL_STAR_SEM_PATH M f2 p)) /\
-      (CTL_STAR_SEM_PATH M (CTL_STAR_IMPL(f1, f2)) p = 
+      (CTL_STAR_SEM_PATH M (CTL_STAR_IMPL(f1, f2)) p =
        (CTL_STAR_SEM_PATH M f1 p ==> CTL_STAR_SEM_PATH M f2 p)) /\
-      (CTL_STAR_SEM_PATH M (CTL_STAR_EQUIV(f1, f2)) p = 
+      (CTL_STAR_SEM_PATH M (CTL_STAR_EQUIV(f1, f2)) p =
        (CTL_STAR_SEM_PATH M f1 p = CTL_STAR_SEM_PATH M f2 p)) /\
-      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_OR(f1, f2)) p = 
+      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_OR(f1, f2)) p =
        (CTL_STAR_SEM_PATH_TIME t M f1 p \/ CTL_STAR_SEM_PATH_TIME t M f2 p)) /\
-      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_IMPL(f1, f2)) p = 
+      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_IMPL(f1, f2)) p =
        (CTL_STAR_SEM_PATH_TIME t M f1 p ==> CTL_STAR_SEM_PATH_TIME t M f2 p)) /\
-      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_EQUIV(f1, f2)) p = 
+      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_EQUIV(f1, f2)) p =
        (CTL_STAR_SEM_PATH_TIME t M f1 p = CTL_STAR_SEM_PATH_TIME t M f2 p)) /\
-      (CTL_STAR_SEM_STATE M (CTL_STAR_OR(f1, f2)) s = 
+      (CTL_STAR_SEM_STATE M (CTL_STAR_OR(f1, f2)) s =
        (CTL_STAR_SEM_STATE M f1 s \/ CTL_STAR_SEM_STATE M f2 s)) /\
-      (CTL_STAR_SEM_STATE M (CTL_STAR_IMPL(f1, f2)) s = 
+      (CTL_STAR_SEM_STATE M (CTL_STAR_IMPL(f1, f2)) s =
        (CTL_STAR_SEM_STATE M f1 s ==> CTL_STAR_SEM_STATE M f2 s)) /\
-      (CTL_STAR_SEM_STATE M (CTL_STAR_EQUIV(f1, f2)) s = 
+      (CTL_STAR_SEM_STATE M (CTL_STAR_EQUIV(f1, f2)) s =
        (CTL_STAR_SEM_STATE M f1 s = CTL_STAR_SEM_STATE M f2 s))``,
-    
+
     REPEAT GEN_TAC THEN
     SIMP_TAC std_ss [CTL_STAR_SEM_PATH_def, CTL_STAR_SEM_PATH_TIME_def, CTL_STAR_SEM_STATE_def,
       CTL_STAR_OR_def, CTL_STAR_IMPL_def, CTL_STAR_EQUIV_def,
@@ -307,25 +307,25 @@ val CTL_STAR_SEM___PROP_CASES =
     METIS_TAC[]);
 
 
-val CTL_STAR_SEM___EVENTUAL_ALWAYS = 
-    prove (``!M t f p. 
-      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_EVENTUAL f) p = 
+val CTL_STAR_SEM___EVENTUAL_ALWAYS =
+    prove (``!M t f p.
+      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_EVENTUAL f) p =
        (?k. k >= t /\ CTL_STAR_SEM_PATH_TIME k M f p)) /\
-      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_ALWAYS f) p = 
+      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_ALWAYS f) p =
        (!k. k >= t ==> CTL_STAR_SEM_PATH_TIME k M f p)) /\
-      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_PEVENTUAL f) p = 
+      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_PEVENTUAL f) p =
        (?k. k <= t /\ CTL_STAR_SEM_PATH_TIME k M f p)) /\
-      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_PALWAYS f) p = 
+      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_PALWAYS f) p =
        (!k. k <= t ==> CTL_STAR_SEM_PATH_TIME k M f p))``,
-    
+
     SIMP_TAC std_ss [CTL_STAR_SEM_PATH_TIME_def, CTL_STAR_EVENTUAL_def,
       CTL_STAR_ALWAYS_def, P_SEM_THM, CTL_STAR_PALWAYS_def, CTL_STAR_PEVENTUAL_def] THEN
     PROVE_TAC[]);
 
 
 
-val CTL_STAR_SEM___CTL_STAR_A = 
-    prove (``!M f p s t. 
+val CTL_STAR_SEM___CTL_STAR_A =
+    prove (``!M f p s t.
    (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_A f) p = (!p'. ((p' 0 = p t) /\
     IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p') ==> CTL_STAR_SEM_PATH M f p')) /\
    (CTL_STAR_SEM_STATE M (CTL_STAR_A f) s = (!p'. ((p' 0 = s) /\
@@ -339,14 +339,14 @@ val CTL_STAR_SEM___CTL_STAR_A =
 
 val CTL_STAR_SEM___FAIRNESS =
   store_thm ("CTL_STAR_SEM___FAIRNESS",
-    ``!M FC p t. 
-      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_FAIRNESS FC) p = 
+    ``!M FC p t.
+      (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_FAIRNESS FC) p =
        (!b. MEM b FC ==> !t0. ?t. t >= t0 /\ P_SEM (p t) b))``,
 
     Induct_on `FC` THENL [
       SIMP_TAC list_ss [CTL_STAR_FAIRNESS_def, CTL_STAR_SEM_PATH_TIME_def, P_SEM_THM],
 
-      SIMP_TAC list_ss [CTL_STAR_FAIRNESS_def, CTL_STAR_SEM_PATH_TIME_def, 
+      SIMP_TAC list_ss [CTL_STAR_FAIRNESS_def, CTL_STAR_SEM_PATH_TIME_def,
         CTL_STAR_SEM___EVENTUAL_ALWAYS, P_SEM_THM,
         DISJ_IMP_THM, FORALL_AND_THM, PATH_RESTN_def] THEN
       REPEAT GEN_TAC THEN
@@ -358,7 +358,7 @@ val CTL_STAR_SEM___FAIRNESS =
             EXISTS_TAC ``t:num`` THEN
             ASM_SIMP_TAC arith_ss [],
 
-            EXISTS_TAC ``SUC t0`` THEN            
+            EXISTS_TAC ``SUC t0`` THEN
             FULL_SIMP_TAC arith_ss []
           ]
         ) THEN
@@ -375,8 +375,8 @@ val CTL_STAR_SEM___FAIRNESS =
     ]);
 
 
-val CTL_STAR_SEM___FAIR_E_FAIR_A = 
-    prove (``!M f t FC p s. 
+val CTL_STAR_SEM___FAIR_E_FAIR_A =
+    prove (``!M f t FC p s.
    (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_FAIR_E FC f) p = (?p'. (p' 0 = p t) /\
     IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p' /\ CTL_STAR_SEM_PATH M f p')) /\
    (CTL_STAR_SEM_STATE M (CTL_STAR_FAIR_E FC f) s = (?p'. (p' 0 = s) /\
@@ -395,8 +395,8 @@ val CTL_STAR_SEM___FAIR_E_FAIR_A =
 
 
 
-val CTL_STAR_SEM___EMPTY_FAIRNESS = 
-    prove (``!M t f p s. 
+val CTL_STAR_SEM___EMPTY_FAIRNESS =
+    prove (``!M t f p s.
    (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_FAIR_E [] f) p = CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_E f) p) /\
    (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_FAIR_A [] f) p = CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_A f) p) /\
    (CTL_STAR_SEM_STATE M (CTL_STAR_FAIR_E [] f) s = CTL_STAR_SEM_STATE M (CTL_STAR_E f) s) /\
@@ -486,7 +486,7 @@ val LTL_TO_CTL_STAR_THM =
         CTL_STAR_SEM_PATH_TIME t M (LTL_TO_CTL_STAR l) p = (LTL_SEM_TIME t p l)``,
 
     INDUCT_THEN ltl_induct ASSUME_TAC THEN
-    FULL_SIMP_TAC arith_ss [LTL_TO_CTL_STAR_def, 
+    FULL_SIMP_TAC arith_ss [LTL_TO_CTL_STAR_def,
       LTL_SEM_THM, CTL_STAR_SEM_THM] THEN
     PROVE_TAC[]);
 
@@ -508,7 +508,7 @@ val LTL_TO_CTL_STAR_NO_MODEL_THM =
 val LTL_KS_SEM___TO___CTL_STAR_KS_SEM =
   store_thm ("LTL_KS_SEM___TO___CTL_STAR_KS_SEM",
     ``!M f. CTL_STAR_KS_SEM M (CTL_STAR_A (LTL_TO_CTL_STAR f)) = LTL_KS_SEM M f``,
-    
+
     SIMP_TAC std_ss [LTL_KS_SEM_def, CTL_STAR_KS_SEM_def,
       LTL_TO_CTL_STAR_THM, CTL_STAR_SEM_THM, LTL_SEM_def,
       IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def] THEN
@@ -569,7 +569,7 @@ val FAIR_CTL_KS_SEM_def =
 val FAIR_CTL_KS_SEM___TO___CTL_STAR_KS_SEM =
   store_thm ("FAIR_CTL_KS_SEM___TO___CTL_STAR_KS_SEM",
     ``!M f. FAIR_CTL_KS_SEM M f = CTL_STAR_KS_SEM M (FAIR_CTL_TO_CTL_STAR f)``,
-    
+
     SIMP_TAC std_ss [FAIR_CTL_KS_SEM_def, CTL_STAR_KS_SEM_def,
       FAIR_CTL_SEM_def]);
 
@@ -626,14 +626,14 @@ val FAIR_CTL_SEM_THM___BASIC_CASES = prove(
 
    (FAIR_CTL_SEM M (FAIR_CTL_IMPL(f1,f2)) s = FAIR_CTL_SEM M f1 s ==> FAIR_CTL_SEM M f2 s) /\
 
-   (FAIR_CTL_SEM M (FAIR_CTL_E_NEXT FC f) s = (?p. IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\ 
+   (FAIR_CTL_SEM M (FAIR_CTL_E_NEXT FC f) s = (?p. IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
       (p 0 = s) /\ FAIR_CTL_SEM M f (p 1))) /\
 
-   (FAIR_CTL_SEM M (FAIR_CTL_E_SUNTIL FC (f1, f2)) s = (?p. IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\ 
+   (FAIR_CTL_SEM M (FAIR_CTL_E_SUNTIL FC (f1, f2)) s = (?p. IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
       (p 0 = s) /\ (?k. FAIR_CTL_SEM M f2 (p k) /\ (!j. j < k ==> FAIR_CTL_SEM M f1 (p j))))) /\
 
-   (FAIR_CTL_SEM M (FAIR_CTL_E_UNTIL FC (f1, f2)) s = (?p. IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\ 
-      (p 0 = s) /\ 
+   (FAIR_CTL_SEM M (FAIR_CTL_E_UNTIL FC (f1, f2)) s = (?p. IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
+      (p 0 = s) /\
       ((?k. FAIR_CTL_SEM M f2 (p k) /\ (!j. j < k ==> FAIR_CTL_SEM M f1 (p j))) \/
        (!j. FAIR_CTL_SEM M f1 (p j)))))``,
 
@@ -647,7 +647,7 @@ val FAIR_CTL_SEM_THM___BASIC_CASES = prove(
 
 val FAIR_CTL_SEM_THM___A_NEXT = prove(
     ``!M f FC s.
-      FAIR_CTL_SEM M (FAIR_CTL_A_NEXT FC f) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\ 
+      FAIR_CTL_SEM M (FAIR_CTL_A_NEXT FC f) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
                                     (p 0 = s)) ==> FAIR_CTL_SEM M f (p 1))``,
 
     SIMP_TAC std_ss [FAIR_CTL_SEM_THM___BASIC_CASES, FAIR_CTL_TO_CTL_STAR_def,
@@ -659,9 +659,9 @@ val FAIR_CTL_SEM_THM___A_NEXT = prove(
 val FAIR_CTL_SEM_THM___E_EVENTUAL_ALWAYS = prove(
     ``!M f FC s.
 
-   (FAIR_CTL_SEM M (FAIR_CTL_E_EVENTUAL FC f) s = (?p. IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\ 
+   (FAIR_CTL_SEM M (FAIR_CTL_E_EVENTUAL FC f) s = (?p. IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
                                     (p 0 = s) /\ ?k. FAIR_CTL_SEM M f (p k))) /\
-   (FAIR_CTL_SEM M (FAIR_CTL_E_ALWAYS FC f) s = (?p. IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\ 
+   (FAIR_CTL_SEM M (FAIR_CTL_E_ALWAYS FC f) s = (?p. IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
                                     (p 0 = s) /\ !k. FAIR_CTL_SEM M f (p k)))``,
 
     SIMP_TAC std_ss [FAIR_CTL_SEM_def, FAIR_CTL_TO_CTL_STAR_def,
@@ -676,9 +676,9 @@ val FAIR_CTL_SEM_THM___E_EVENTUAL_ALWAYS = prove(
 val FAIR_CTL_SEM_THM___A_EVENTUAL_ALWAYS = prove(
     ``!M f FC s.
 
-   (FAIR_CTL_SEM M (FAIR_CTL_A_EVENTUAL FC f) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\ 
+   (FAIR_CTL_SEM M (FAIR_CTL_A_EVENTUAL FC f) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
                                     (p 0 = s)) ==> ?k. FAIR_CTL_SEM M f (p k))) /\
-   (FAIR_CTL_SEM M (FAIR_CTL_A_ALWAYS FC f) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\ 
+   (FAIR_CTL_SEM M (FAIR_CTL_A_ALWAYS FC f) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
                                     (p 0 = s)) ==> (!k. FAIR_CTL_SEM M f (p k))))``,
 
     SIMP_TAC std_ss [FAIR_CTL_SEM_THM___BASIC_CASES, FAIR_CTL_A_EVENTUAL_def, FAIR_CTL_A_ALWAYS_def,
@@ -689,7 +689,7 @@ val FAIR_CTL_SEM_THM___A_EVENTUAL_ALWAYS = prove(
 
 val FAIR_CTL_SEM_THM___A_SUNTIL = prove(
     ``!M f1 f2 FC s.
-   (FAIR_CTL_SEM M (FAIR_CTL_A_SUNTIL FC (f1, f2)) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\ 
+   (FAIR_CTL_SEM M (FAIR_CTL_A_SUNTIL FC (f1, f2)) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
       (p 0 = s)) ==> (?k. FAIR_CTL_SEM M f2 (p k) /\ (!j. j < k ==> FAIR_CTL_SEM M f1 (p j)))))``,
 
 
@@ -701,7 +701,7 @@ val FAIR_CTL_SEM_THM___A_SUNTIL = prove(
     REPEAT BOOL_EQ_STRIP_TAC THEN
     Cases_on `?k. FAIR_CTL_SEM M f2 (p k)` THENL [
       POP_NO_ASSUM 0 (fn x=> (ASSUME_TAC (CONV_RULE EXISTS_LEAST_CONV x))),
-      METIS_TAC[] 
+      METIS_TAC[]
     ] THEN
     CLEAN_ASSUMPTIONS_TAC THEN
     EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -732,7 +732,7 @@ val FAIR_CTL_SEM_THM___A_SUNTIL = prove(
 
 val FAIR_CTL_SEM_THM___A_UNTIL = prove(
     ``!M f1 f2 FC s.
-   (FAIR_CTL_SEM M (FAIR_CTL_A_UNTIL FC (f1, f2)) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\ 
+   (FAIR_CTL_SEM M (FAIR_CTL_A_UNTIL FC (f1, f2)) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
       (p 0 = s)) ==> ((?k. FAIR_CTL_SEM M f2 (p k) /\ (!j. j < k ==> FAIR_CTL_SEM M f1 (p j))) \/
                       (!j. FAIR_CTL_SEM M f1 (p j)))))``,
 
@@ -753,7 +753,7 @@ val FAIR_CTL_SEM_THM___A_UNTIL = prove(
       SPECL_NO_ASSUM 0 [``j:num``] THEN
       FULL_SIMP_TAC std_ss [] THENL [
         PROVE_TAC[],
-      
+
         EXISTS_TAC ``j:num`` THEN
         ASM_REWRITE_TAC[] THEN
         REPEAT STRIP_TAC THEN
@@ -765,7 +765,7 @@ val FAIR_CTL_SEM_THM___A_UNTIL = prove(
         REPEAT STRIP_TAC THEN
         RIGHT_DISJ_TAC THEN
         `j'' < j` by DECIDE_TAC THEN
-        FULL_SIMP_TAC std_ss []        
+        FULL_SIMP_TAC std_ss []
       ],
 
 
@@ -788,7 +788,7 @@ val FAIR_CTL_SEM_THM___A_UNTIL = prove(
 
 val FAIR_CTL_SEM_THM =
   save_thm
-    ("FAIR_CTL_SEM_THM", 
+    ("FAIR_CTL_SEM_THM",
     SIMP_RULE std_ss [FORALL_AND_THM]
     (LIST_CONJ [FAIR_CTL_SEM_THM___BASIC_CASES,
                FAIR_CTL_SEM_THM___A_NEXT,
@@ -862,7 +862,7 @@ val CTL_KS_FAIR_SEM_def =
 val CTL_KS_SEM___TO___FAIR_CTL_KS_SEM =
   store_thm ("CTL_KS_SEM___TO___FAIR_CTL_KS_SEM",
     ``!M f. CTL_KS_SEM M f = FAIR_CTL_KS_SEM M (CTL_TO_FAIR_CTL [] f)``,
-    
+
     SIMP_TAC std_ss [CTL_KS_SEM_def, FAIR_CTL_KS_SEM_def,
       CTL_SEM_def]);
 
@@ -870,7 +870,7 @@ val CTL_KS_SEM___TO___FAIR_CTL_KS_SEM =
 val CTL_KS_FAIR_SEM___TO___FAIR_CTL_KS_SEM =
   store_thm ("CTL_KS_FAIR_SEM___TO___FAIR_CTL_KS_SEM",
     ``!M f fc. CTL_KS_FAIR_SEM M f fc = FAIR_CTL_KS_SEM M (CTL_TO_FAIR_CTL fc f)``,
-    
+
     SIMP_TAC std_ss [CTL_KS_FAIR_SEM_def, FAIR_CTL_KS_SEM_def,
       CTL_FAIR_SEM_def]);
 
@@ -906,7 +906,7 @@ val CTL_A_SWHILE_def = Define `CTL_A_SWHILE(f1,f2) = CTL_NOT(CTL_E_UNTIL(CTL_NOT
 
 
 
-val CTL_TO_FAIR_CTL_THM = 
+val CTL_TO_FAIR_CTL_THM =
   store_thm ("CTL_TO_FAIR_CTL_THM",
     ``!b f f1 f2.
         (CTL_TO_FAIR_CTL fc (CTL_PROP b) = (FAIR_CTL_PROP b)) /\
@@ -950,44 +950,44 @@ val CTL_SEM_THM = store_thm ("CTL_SEM_THM",
 
    (CTL_SEM M (CTL_AND(f1,f2)) s = CTL_SEM M f1 s /\ CTL_SEM M f2 s) /\
 
-   (CTL_SEM M (CTL_E_NEXT f) s = (?p. IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\ 
+   (CTL_SEM M (CTL_E_NEXT f) s = (?p. IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
       (p 0 = s) /\ CTL_SEM M f (p 1))) /\
 
-   (CTL_SEM M (CTL_E_SUNTIL(f1, f2)) s = (?p. IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\ 
+   (CTL_SEM M (CTL_E_SUNTIL(f1, f2)) s = (?p. IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
       (p 0 = s) /\ (?k. CTL_SEM M f2 (p k) /\ (!j. j < k ==> CTL_SEM M f1 (p j))))) /\
 
-   (CTL_SEM M (CTL_E_UNTIL(f1, f2)) s = (?p. IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\ 
-      (p 0 = s) /\ 
+   (CTL_SEM M (CTL_E_UNTIL(f1, f2)) s = (?p. IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
+      (p 0 = s) /\
       ((?k. CTL_SEM M f2 (p k) /\ (!j. j < k ==> CTL_SEM M f1 (p j))) \/
        (!j. CTL_SEM M f1 (p j))))) /\
-   
-   (CTL_SEM M (CTL_A_NEXT f) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\ 
+
+   (CTL_SEM M (CTL_A_NEXT f) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
                                     (p 0 = s)) ==> CTL_SEM M f (p 1))) /\
 
-   (CTL_SEM M (CTL_E_EVENTUAL f) s = (?p. IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\ 
+   (CTL_SEM M (CTL_E_EVENTUAL f) s = (?p. IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
                                     (p 0 = s) /\ ?k. CTL_SEM M f (p k))) /\
-   (CTL_SEM M (CTL_E_ALWAYS f) s = (?p. IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\ 
+   (CTL_SEM M (CTL_E_ALWAYS f) s = (?p. IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
                                     (p 0 = s) /\ !k. CTL_SEM M f (p k))) /\
 
-   (CTL_SEM M (CTL_A_EVENTUAL f) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\ 
+   (CTL_SEM M (CTL_A_EVENTUAL f) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
                                     (p 0 = s)) ==> ?k. CTL_SEM M f (p k))) /\
-   (CTL_SEM M (CTL_A_ALWAYS f) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\ 
+   (CTL_SEM M (CTL_A_ALWAYS f) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
                                     (p 0 = s)) ==> (!k. CTL_SEM M f (p k)))) /\
 
-   (CTL_SEM M (CTL_A_SUNTIL(f1, f2)) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\ 
+   (CTL_SEM M (CTL_A_SUNTIL(f1, f2)) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
       (p 0 = s)) ==> (?k. CTL_SEM M f2 (p k) /\ (!j. j < k ==> CTL_SEM M f1 (p j))))) /\
 
-   (CTL_SEM M (CTL_A_UNTIL(f1, f2)) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\ 
+   (CTL_SEM M (CTL_A_UNTIL(f1, f2)) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
       (p 0 = s)) ==> ((?k. CTL_SEM M f2 (p k) /\ (!j. j < k ==> CTL_SEM M f1 (p j))) \/
                       (!j. CTL_SEM M f1 (p j)))))``,
 
-  
+
    SIMP_TAC std_ss [CTL_SEM_def, CTL_TO_FAIR_CTL_THM, FAIR_CTL_SEM_THM,
     IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___EMPTY_FAIRNESS,
     CTL_TRUE_def, CTL_FALSE_def, P_SEM_THM]);
 
 
-val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___TO___CTL_KS_FAIR_SEM = 
+val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___TO___CTL_KS_FAIR_SEM =
   store_thm ("IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___TO___CTL_KS_FAIR_SEM",
     ``!M fc. IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE M fc =
              CTL_KS_FAIR_SEM M (CTL_A_EVENTUAL CTL_FALSE) fc``,

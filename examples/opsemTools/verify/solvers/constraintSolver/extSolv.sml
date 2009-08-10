@@ -38,8 +38,8 @@ fun readFileToString file_name =
   contents
  end;
 
-(* 
-Parse a solutions file -- very ad hoc and no error checking! 
+(*
+Parse a solutions file -- very ad hoc and no error checking!
 
  getSolutions : string -> (string * string) list list * real
  getSolutions file_name = ([[("x1","m1"),...,],...,[("y1","n1"),...]], time)
@@ -48,15 +48,15 @@ If the solver returns "No solution" then the first component of the
 returned pair (a list of lists) is empty.
 
 *)
-local 
+local
 
 (* If p(xi)=false (for 1<=i<=n) and p(x)=true, then:
-   splitUntil p [x1,...,xn,x,y1,...ym] = ([x1,...,xn],[y1,...,ym])  
+   splitUntil p [x1,...,xn,x,y1,...ym] = ([x1,...,xn],[y1,...,ym])
 *)
 val splitUntil =
   let fun splitUntilAux acc p [] = (rev acc,[])
-|  splitUntilAux acc p (x::l) = 
-  if p(x) then (rev acc,l) 
+|  splitUntilAux acc p (x::l) =
+  if p(x) then (rev acc,l)
   else splitUntilAux (x::acc) p l
   in
   splitUntilAux ([] : string list)
@@ -65,21 +65,21 @@ end;
 
 (* dest_string_int_pair "(x,n)" --> ("x","n") *)
 fun dest_string_int_pair str =
-  let val [x,n] = 
+  let val [x,n] =
     String.tokens (fn c => mem c [#"(",#")",#","]) str
   in
   (x, n)
 end
 
 (* Group each solution into a list, returning a list of lists:
-   sol_extract 
+   sol_extract
    [...,"Solution #2",...,"Solution #3",...,"Solution #4",...]
    -->
    [[...],[...],[...],[...]]
  *)
 fun sol_extract [] = []
 |  sol_extract l  = let val (l1,l2) = splitUntil (String.isPrefix "Solution: ") l
-in 
+in
   l1 :: sol_extract l2
 end
 
@@ -90,16 +90,16 @@ in
 (* function to read a solution *)
 (* --------------------------- *)
 fun getSolutions file_name =
-  let val lines = String.tokens (fn c => c = #"\n") 
+  let val lines = String.tokens (fn c => c = #"\n")
                    (readFileToString file_name)
-val solutions = 
+val solutions =
   if hd lines = "No solution"
   then []
-  else 
+  else
      if hd lines = "Timeout"
      then [[("Timeout","Timeout")]]
-     else map 
-            (map dest_string_int_pair) 
+     else map
+            (map dest_string_int_pair)
             (sol_extract(tl(butlast lines)))
 val sol_time_str = String.extract(last lines, (String.size "Resolution time: "),
 				  NONE)
@@ -135,16 +135,16 @@ end;
                ("a_0",Scalar ~32768))))`` : term
 Value of a_i must be set into the array a
 *)
-fun makeErrorState name st = 
+fun makeErrorState name st =
    let val (sol,_) =  getSolutions (ilogPath ^ "results/" ^ name ^ ".res")
-   in 
+   in
      stateTools.finiteMapSol (hd sol) st
    end;
 
 
 
 
-(* to know if the value returned by getSolutions is a 
+(* to know if the value returned by getSolutions is a
    timeout *)
 fun isSolverTimeout l =
   let val listSol = fst(l)
@@ -157,17 +157,17 @@ end;
 
 
 
-(* ============================================================ 
-   Functions to call the solver 
+(* ============================================================
+   Functions to call the solver
    ============================================================ *)
 
 (* Path to ILOG executable *)
 exception ILOG_EXECUndefinedError;
 
-fun getILOG_EXEC() = 
+fun getILOG_EXEC() =
  case Portable.getEnv "ILOG_EXEC" of
     SOME path_name => path_name
-  | NONE           => (print "Environment variable ILOG_EXEC undefined.\n"; 
+  | NONE           => (print "Environment variable ILOG_EXEC undefined.\n";
                        print "Add:\n setenv ILOG_EXEC \"<path to ILOG executable>\" \nto ~/.shrc\n";
                        raise ILOG_EXECUndefinedError);
 
@@ -176,18 +176,18 @@ fun getILOG_EXEC() =
 (* -----------------------------------------------------
    To launch the Java program that searches solutions of constraint
    system built from XML trees.
-   The variable domains are [-2^(f-1)..(2^(f-1))-1] where f is 
+   The variable domains are [-2^(f-1)..(2^(f-1))-1] where f is
    the format of integers.
    If the xml tree is a disjunction, successively consider each case
    of the disjunction.
    The search stops as soon as a first solution has been found.
    Used to test if a path is feasible.
 *)
-val sixteenBit = 16; 
+val sixteenBit = 16;
 
 fun execPathFormat name f =
  let val exec = ("java -cp " ^ getILOG_EXEC() ^ ":" ^ ilogPath ^ "java/classes"
-                 ^ " validation.ValidationLauncher " ^ ilogPath 
+                 ^ " validation.ValidationLauncher " ^ ilogPath
                  ^ " " ^ name ^ " " ^ int_to_string(f));
   in
     (print exec;Portable.system(exec))
@@ -200,7 +200,7 @@ end;
 *)
 fun limitedExecPathFormat name n f =
   let val exec = "java -cp " ^ getILOG_EXEC() ^ ":" ^ ilogPath ^ "java/classes"
-                  ^ " validation.ValidationLauncher "  ^ ilogPath 
+                  ^ " validation.ValidationLauncher "  ^ ilogPath
                   ^ " "  ^ name ^ " " ^ int_to_string(f)
                   ^ " -timeout " ^ int_to_string(n);
    in
@@ -252,7 +252,7 @@ fun extSolv name tm =
   print_term bdy; print "\n";
   printXML_to_file(name,bdy);
   execPath name;
-  let val (sol,time) = 
+  let val (sol,time) =
        getSolutions(ilogPath ^ "results/" ^ name ^ ".res");
       val th =
        if null sol
@@ -260,7 +260,7 @@ fun extSolv name tm =
         else EQT_INTRO(mk_oracle_thm name ([],tm))
   in
    if (null sol)
-   then  
+   then
      (print "======================\n";
       print (term_to_string bdy ^ "\n");
       print "has no solutions:\n";
@@ -268,10 +268,10 @@ fun extSolv name tm =
       print "\n======================\n";
       th
      )
-   else 
+   else
      (print "======================\n";
       print(term_to_string tm ^ "\n");
-      print("has " ^ Int.toString(length sol) ^ " solution" ^ 
+      print("has " ^ Int.toString(length sol) ^ " solution" ^
             (if length sol > 1 then "s\n" else "\n"));
       print_thm th;
       print "\n======================\n";
@@ -289,11 +289,11 @@ fun extSolv name tm =
 
 exception ExtSolverTimeout;
 
-local 
+local
 
 (* Prove a term is satisfiable using a supplied solution  *)
 
-(* 
+(*
    Obscure code to convert a string to a HOL integer, e.g.:
    string_to_int_term "37"  = ``37``
    string_to_int_term "~37" = ``~37``
@@ -310,12 +310,12 @@ fun lookupSolution soln var =
     if ty=``:int`` then string_to_int_term v
     else (if v="0" then ``F`` else ``T``)
 end;
-                                                                             
-            
+
+
 (*
    proveSat tm soln existentially quantifies all variables in tm and then
    proves the result using soln (which is assumed to have been supplied
-   by invoking a solver). 
+   by invoking a solver).
  *)
 fun proveSat tm soln =
   let val frees = free_vars tm
@@ -336,13 +336,13 @@ in
    a theorem as an oracle
    If the solver finds solutions then uses the values that have
    been found and DECIDE_TAC to return a HOL theorem *)
-(* no printing because printing are supposed to be done 
+(* no printing because printing are supposed to be done
    in functions that call the external solver *)
 
 (* return a pair (thm,time) where thm is the theorem
    and the time is the time taken by the solver *)
 
-(* if timeout has been reached by the solver, then 
+(* if timeout has been reached by the solver, then
    raise exception ExtSolverTimeout                  *)
 
 (* use default format for integers: 16 bits          *)
@@ -352,20 +352,20 @@ fun extSolvTimeout name tm n =
  let val (vars,bdy) = strip_exists tm
  in
  (print("Calling external solver with timeout on:\n");
-  print_term bdy; 
+  print_term bdy;
   print "\n";
   printXML_to_file(name,bdy);
   limitedExecPath name n;
-  let val (sol,time) = 
+  let val (sol,time) =
        getSolutions(ilogPath ^ "results/" ^ name ^ ".res");
   in
    if isSolverTimeout(sol,time)
    then raise ExtSolverTimeout
    else
       if (null sol)
-      then  
+      then
 	  (EQF_INTRO(mk_oracle_thm name ([], mk_neg tm)),time)
-      else 
+      else
 	  (EQT_INTRO(mk_oracle_thm name ([],tm)),time)
           (*(EQT_INTRO(proveSat bdy (hd sol)),time)*)
   end)
@@ -378,11 +378,11 @@ fun extSolvTimeoutFormat name tm n f =
  let val (vars,bdy) = strip_exists tm
  in
  (print("Calling external solver with timeout on:\n");
-  print_term bdy; 
+  print_term bdy;
   print "\n";
   printXML_to_file(name,bdy);
   limitedExecPathFormat name n f;
-  let val (sol,time) = 
+  let val (sol,time) =
        getSolutions(ilogPath ^ "results/" ^ name ^ ".res");
      val tag = "CSPSolver:" ^name ^ ":" ^int_to_string(f)
   in
@@ -390,9 +390,9 @@ fun extSolvTimeoutFormat name tm n f =
    then raise ExtSolverTimeout
    else
       if (null sol)
-      then  
+      then
 	  (EQF_INTRO(mk_oracle_thm tag ([], mk_neg tm)),time)
-      else 
+      else
 	  (EQT_INTRO(mk_oracle_thm tag ([],tm)),time)
           (*(EQT_INTRO(proveSat bdy (hd sol)),time)*)
   end)

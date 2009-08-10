@@ -17,7 +17,7 @@ val set_ss = (simpLib.++ (arith_ss, PRED_SET_ss));
 
 val Suff = PARSE_TAC SUFF_TAC;
 
-fun REPEAT_SAFE_EVAL tm = 
+fun REPEAT_SAFE_EVAL tm =
 	let val t = EVAL tm in
 	if (snd (dest_thm t)) = (mk_eq (tm,tm)) then
 		ALL_CONV tm
@@ -54,7 +54,7 @@ fun T_F_UNCHANGED_CONV (conv:term->thm) tm =
 
 val CROSS_NON_EMPTY_IMP = prove
    (``!P Q. FINITE P /\ FINITE Q /\ ~(P={}) /\ ~(Q={}) ==> ~(P CROSS Q = {})``,
-    REPEAT STRIP_TAC 
+    REPEAT STRIP_TAC
     THEN (MP_TAC o Q.SPEC `P`) SET_CASES
     THEN RW_TAC std_ss []
     THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC
@@ -78,7 +78,7 @@ fun LEAKAGE_COMPUTE_PROVE_FINITE (t:term) (tl:Abbrev.thm list) =
 	(prove ((mk_comb ((inst [alpha |-> fst(dom_rng(type_of t))]``FINITE``),t)),
 	        CONV_TAC (SIMP_CONV set_ss tl)));
 
-fun LEAKAGE_COMPUTE_FINITE_HLR ((h:term),(l:term),(r:term)) (tl:Abbrev.thm list) = 
+fun LEAKAGE_COMPUTE_FINITE_HLR ((h:term),(l:term),(r:term)) (tl:Abbrev.thm list) =
    [LEAKAGE_COMPUTE_PROVE_FINITE h tl, LEAKAGE_COMPUTE_PROVE_FINITE l tl, LEAKAGE_COMPUTE_PROVE_FINITE r tl];
 
 fun LEAKAGE_COMPUTE_CROSS_NOT_EMPTY ((h:term),(l:term),(r:term)) (tl:Abbrev.thm list) =
@@ -167,7 +167,7 @@ fun LEAKAGE_COMPUTE_IMAGE_HLR_CROSS ((h:term),(l:term),(r:term)) (tl:Abbrev.thm 
 		ONCE_REWRITE_CONV [lg_times_compute_simp_lem]
 		THENC (FIND_CONV r (r_expand_conv THENC
 			SIMP_CONV bool_ss [CROSS_EQNS, PAIR_EQ, IMAGE_UNION, IMAGE_INSERT, IMAGE_EMPTY, UNION_EMPTY]
-				    THENC (FIND_CONV ``x UNION y`` 
+				    THENC (FIND_CONV ``x UNION y``
 						(UNION_CONV (SIMP_CONV bool_ss [] THENC r_dups_conv)))))))))));
 
 fun RECURSIVE_UNWIND_SUM (dups_conv:Abbrev.term->Abbrev.thm) (item_conv:Abbrev.term->Abbrev.thm) (tm:term) =
@@ -176,7 +176,7 @@ fun RECURSIVE_UNWIND_SUM (dups_conv:Abbrev.term->Abbrev.thm) (item_conv:Abbrev.t
 					  let val f = snd(dest_comb (fst(dest_comb tm))) in
 				   	  let val fin_thm = prove (mk_comb((inst [alpha |-> fst(dom_rng(type_of s))] ``FINITE``),s),
 							    	   CONV_TAC (SIMP_CONV set_ss [])) in
-						REWRITE_CONV [REWRITE_RULE [fin_thm] 
+						REWRITE_CONV [REWRITE_RULE [fin_thm]
 						(ISPEC s ((CONV_RULE SWAP_VARS_CONV) (CONJUNCT2 (ISPEC f REAL_SUM_IMAGE_THM))))] tm
 					  end
 				   	  end
@@ -218,7 +218,7 @@ fun LEAKAGE_COMPUTE_UNWIND_INNER_SUM ((h:term),(r:term)) (tl:Abbrev.thm list) (p
 						beta |-> (fst(dom_rng(type_of r)))] ``$CROSS``),h),r))
 	in
 		RAND_CONV (RATOR_CONV(RAND_CONV (FIND_CONV ``REAL_SUM_IMAGE f s`` (
-				RECURSIVE_UNWIND_SUM r_dups_conv 
+				RECURSIVE_UNWIND_SUM r_dups_conv
 						     ((TRY_CONV BETA_CONV) THENC
 	RATOR_CONV (RATOR_CONV (RAND_CONV (LHS_CONV (SIMP_CONV bool_ss prog_tl THENC (TRY_CONV PairRules.PBETA_CONV)) THENC o_dups_conv)))
 	   THENC SIMP_CONV bool_ss []))))
@@ -227,9 +227,9 @@ fun LEAKAGE_COMPUTE_UNWIND_INNER_SUM ((h:term),(r:term)) (tl:Abbrev.thm list) (p
 				RECURSIVE_UNWIND_SUM (SIMP_CONV bool_ss [PAIR_EQ] THENC
 						      (TRY_CONV h_dups_conv) THENC
 						      (TRY_CONV r_dups_conv))
-						     ((TRY_CONV PairRules.PBETA_CONV) THENC 
+						     ((TRY_CONV PairRules.PBETA_CONV) THENC
 	RATOR_CONV (RATOR_CONV (RAND_CONV (LHS_CONV (SIMP_CONV bool_ss prog_tl THENC (TRY_CONV PairRules.PBETA_CONV)) THENC o_dups_conv)))
-	   THENC SIMP_CONV bool_ss []))))) THENC REWRITE_CONV [REAL_ADD_RID]	
+	   THENC SIMP_CONV bool_ss []))))) THENC REWRITE_CONV [REAL_ADD_RID]
 	end;
 
 fun LEAKAGE_COMPUTE_CONV ((h:term),(l:term),(r:term)) (tl:Abbrev.thm list) (prog_tl:Abbrev.thm list)
@@ -239,7 +239,7 @@ fun LEAKAGE_COMPUTE_CONV ((h:term),(l:term),(r:term)) (tl:Abbrev.thm list) (prog
 	(h_dups_conv:Abbrev.term->Abbrev.thm)
 	(l_dups_conv:Abbrev.term->Abbrev.thm)
 	(r_dups_conv:Abbrev.term->Abbrev.thm)
-	(o_dups_conv:Abbrev.term->Abbrev.thm) = 
+	(o_dups_conv:Abbrev.term->Abbrev.thm) =
 	LEAKAGE_COMPUTE_REDUCE_CARDS (h,l,r) tl h_expand_conv l_expand_conv r_expand_conv h_dups_conv l_dups_conv r_dups_conv
 	THENC LEAKAGE_COMPUTE_IMAGE_HLR_CROSS (h,l,r) tl prog_tl h_expand_conv l_expand_conv r_expand_conv h_dups_conv l_dups_conv r_dups_conv
 	THENC LEAKAGE_COMPUTE_UNWIND_OUTER_SUM h_dups_conv l_dups_conv o_dups_conv

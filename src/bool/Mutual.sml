@@ -291,7 +291,7 @@ and GALPHA tm =
 (* the list l into sublists of lengths given by nl.                      *)
 (* --------------------------------------------------------------------- *)
 
-fun mapshape [] _ _ =  [] 
+fun mapshape [] _ _ =  []
   | mapshape (n1::nums) (f1::funcs) args =
       let val (f1_args,args') = Lib.split_after n1 args
       in f1 f1_args::mapshape nums funcs args'
@@ -349,7 +349,7 @@ fun MUTUAL_INDUCT_THEN1 th =
       let val ts = strip_conj t
           val lams = map (snd o dest_comb) ts
           val ts' = map (findt ts) vs
-          val ts_thm = Tactical.prove 
+          val ts_thm = Tactical.prove
                  (mk_eq(list_mk_conj ts',list_mk_conj ts),
                    REWRITE_TAC[] THEN
                    EQ_TAC THEN STRIP_TAC THEN
@@ -385,7 +385,7 @@ fun MUTUAL_INDUCT_THEN1 th =
       in
       (Lib.flatten gll, pf)
       end
-      handle HOL_ERR _ 
+      handle HOL_ERR _
        => raise ERR "MUTUAL_INDUCT_THEN" "tactic application error"
    end
    handle (e as HOL_ERR

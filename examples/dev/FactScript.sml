@@ -30,7 +30,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
  * Open theories. Batch mode.
  ******************************************************************************)
-open arithmeticTheory pairLib pairTheory PairRules combinTheory 
+open arithmeticTheory pairLib pairTheory PairRules combinTheory
      composeTheory compile vsynth;
 infixr 3 THENR;
 infixr 3 ORELSER;
@@ -80,7 +80,7 @@ val FactIterRecThm =  (* proof from KXS *)
    `!n acc. SND(FactIter (n,acc)) = acc * FACT n`,
     recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter,FACT]
-      THEN Cases_on `n` 
+      THEN Cases_on `n`
       THEN RW_TAC std_ss [FACT, AC MULT_ASSOC MULT_SYM]);
 
 (*****************************************************************************)
@@ -128,7 +128,7 @@ val MultIterRecThm =  (* proof adapted from similar one from KXS *)
    `!m n acc. SND(SND(MultIter (m,n,acc))) = (m * n) + acc`,
     recInduct MultIter_ind THEN RW_TAC std_ss []
       THEN RW_TAC arith_ss [Once MultIter]
-      THEN Cases_on `m` 
+      THEN Cases_on `m`
       THEN FULL_SIMP_TAC arith_ss [MULT]);
 
 (*****************************************************************************)
@@ -226,8 +226,8 @@ val _ = PRINT_VERILOG FACT_cir;  (* N.B. FACT.vl overwritten by stuff below! *)
 (*****************************************************************************)
 
 (*
- iverilog -o FACT.vvp FACT.vl; 
- vvp FACT.vvp; 
+ iverilog -o FACT.vvp FACT.vl;
+ vvp FACT.vvp;
  gtkwave FACT.vcd
 *)
 

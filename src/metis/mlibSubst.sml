@@ -105,7 +105,7 @@ in
   fun term_subst    env tm = if null env then tm else always (tm_subst env) tm;
   fun formula_subst env fm = fm_subst env fm;
 end;
-  
+
 fun norm (sub as mlibSubst dict) =
   let
     fun check (a, b, (c, d)) =

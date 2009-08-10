@@ -21,9 +21,9 @@ struct
   exception Symbol
   val nextsym = ref 0
   val sizeHint = 128
-  val hashtable : (string,int) H.hash_table = 
+  val hashtable : (string,int) H.hash_table =
 		H.mkTable(H.hash, op = ) (sizeHint,Symbol)
-  
+
   fun newSymbol name =
       case H.peek hashtable name
        of SOME i => (name,i)
@@ -32,7 +32,7 @@ struct
 		      H.insert hashtable (name,i);
 		      (name,i)
 		  end
-  fun mkSymbol name index = 
+  fun mkSymbol name index =
 	(name,index) : symbol
 
   fun name(s,n) = s

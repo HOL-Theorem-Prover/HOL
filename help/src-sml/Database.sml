@@ -5,12 +5,12 @@ structure Database :> Database = struct
 (* For unknown reasons, BinIO.inputN is raising Subscript exceptions *)
 local
 fun myInputN' (is, 0) = []
-  | myInputN' (is, n) = 
+  | myInputN' (is, n) =
   case BinIO.input1 is of
     NONE => []
   | SOME v => v :: myInputN' (is, n-1);
 in
-fun myInputN (is, n) = Word8Vector.fromList (myInputN' (is, n)) 
+fun myInputN (is, n) = Word8Vector.fromList (myInputN' (is, n))
 end;
 
 fun writeInt32 os i =

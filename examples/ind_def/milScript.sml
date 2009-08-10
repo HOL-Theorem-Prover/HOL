@@ -27,8 +27,8 @@ val _ = new_theory "mil";
 (* Combinatory logic types and type judgements.				 *)
 (* ===================================================================== *)
 
-val _ = 
- Hol_datatype `ty = G  of 'a  
+val _ =
+ Hol_datatype `ty = G  of 'a
                   | -> of ty => ty`;
 
 val _ = set_fixity "->" (Infixr 800);
@@ -55,7 +55,7 @@ val TYrules = CONJUNCTS TYrules;
 (* inductively by the proof rules for the logic.			    *)
 (* ======================================================================== *)
 
-val (THMrules, THMind, THMcases) = 
+val (THMrules, THMind, THMcases) =
  Hol_reln
     `(!A B.    THM (A -> B -> A))
  /\  (!A B C.  THM ((A -> B -> C) -> (A -> B) -> (A -> C)))

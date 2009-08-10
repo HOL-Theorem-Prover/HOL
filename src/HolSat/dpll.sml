@@ -4,8 +4,8 @@
 (* on trivial problems.                         *)
 (* Ultimate entry-point is DPLL_TAUT            *)
 
-structure dpll = 
-struct 
+structure dpll =
+struct
 
 open HolKernel Parse boolLib def_cnf satCommonTools satTools
 
@@ -62,7 +62,7 @@ in
           handle Binarymap.NotFound => boolSyntax.T)
 end
 
-fun CoreDPLL initial_th = let (* [ci] |- cnf *) 
+fun CoreDPLL initial_th = let (* [ci] |- cnf *)
    fun recurse th = let (* [assigns, ci] |- curr *)
     val c = concl th (* current *)
   in
@@ -75,12 +75,12 @@ fun CoreDPLL initial_th = let (* [ci] |- cnf *)
         val (l,r) = casesplit v th (*[assigns,v=T,ci]|- curr[T/v],[assigns,v=F,ci]|- curr[F/v]*)
       in
         case recurse l of
-          Unsat l_false => 
+          Unsat l_false =>
           (case recurse r of
                Unsat r_false =>
                Unsat (DISJ_CASES (SPEC v BOOL_CASES_AX) l_false r_false)
 	       (* [assignsr\v,assignsl\v,ci] |- F *)
-            | x => x)          
+            | x => x)
         | x => x
       end
   end
@@ -96,25 +96,25 @@ fun doCNF neg_tm =  (* clauses is (ci,[~t] |- ci') pairs, where ci' is expanded 
     in (cnfv,cnf_thm,lfn,clauses) end
 
 fun undoCNF lfn clauses th = (* th is [ci] |-  F *)
-    let val insts = RBM.foldl (fn (v,t,insts) => (v |-> t)::insts) [] lfn 
+    let val insts = RBM.foldl (fn (v,t,insts) => (v |-> t)::insts) [] lfn
 	val inst_th = INST insts th
 	val th0 = List.foldl (fn ((_,cth),th) => PROVE_HYP cth th) inst_th clauses (* ~t |- F *)
-    in th0 end 
+    in th0 end
 
-fun mk_model_thm cnfv lfn t f = 
+fun mk_model_thm cnfv lfn t f =
     if isSome cnfv then let
 	    val fvs = List.map fst (RBM.listItems lfn)
 	    val model = List.map (fn v => if is_T (f v) then v else mk_neg v) fvs
-	    val model2 = mapfilter (fn l => let val x = hd(free_vars l) 
-						val y = rbapply lfn x 
-					    in if is_var y then subst [x|->y] l 
-					       else failwith"" end) model 
+	    val model2 = mapfilter (fn l => let val x = hd(free_vars l)
+						val y = rbapply lfn x
+					    in if is_var y then subst [x|->y] l
+					       else failwith"" end) model
 	in satCheck model2 (mk_neg t) end else
     let val fvs = free_vars t
 	val model = List.map (fn v => if is_T (f v) then v else mk_neg v) fvs
     in satCheck model (mk_neg t) end
 
-fun DPLL_TAUT t = let  
+fun DPLL_TAUT t = let
   val (cnfv,cnf_thm,lfn,clauses) = doCNF (mk_neg t) (* cnf_thm is [ci] |- dCNF(~t) *)
 in
   case CoreDPLL cnf_thm of

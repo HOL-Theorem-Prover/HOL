@@ -99,7 +99,7 @@ local
   fun munge_lit (n, Atom (Fn (p, a))) = Atom (Fn (munge p n, a))
     | munge_lit (n, Not (Atom (Fn (p, a)))) = Not (Atom (Fn (munge p n, a)))
     | munge_lit _ = raise Bug "munge_lit: bad literal";
-  fun distinctivize fms = map munge_lit (enumerate 0 fms);    
+  fun distinctivize fms = map munge_lit (enumerate 0 fms);
   fun advance NONE s = (SOME NONE, s)
     | advance (SOME ths) s =
     let

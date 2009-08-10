@@ -48,19 +48,19 @@ in cmp_set end;
 
 val ARM_ASSEMBLE_CONV = let open instructionTheory
   val compset = add_rws wordsLib.words_compset
-       [transfer_options_accessors, transfer_options_updates_eq_literal, 
-        transfer_options_accfupds, transfer_options_fupdfupds, 
-        transfer_options_literal_11, transfer_options_fupdfupds_comp, 
-        transfer_options_fupdcanon, transfer_options_fupdcanon_comp, 
-        arm_instruction_case_def, thumb_instruction_case_def, 
+       [transfer_options_accessors, transfer_options_updates_eq_literal,
+        transfer_options_accfupds, transfer_options_fupdfupds,
+        transfer_options_literal_11, transfer_options_fupdfupds_comp,
+        transfer_options_fupdcanon, transfer_options_fupdcanon_comp,
+        arm_instruction_case_def, thumb_instruction_case_def,
         instruction_encode_def, thumb_encode_def,
-        condition2num_thm, addr_mode1_case_def, 
-        addr_mode2_case_def, addr_mode3_case_def, 
-        msr_mode_case_def, condition_encode_def, 
-        shift_encode_def, addr_mode1_encode_def, 
-        addr_mode2_encode_def, addr_mode3_encode_def, 
-        msr_mode_encode_def, msr_psr_encode_def, 
-        options_encode_def, options_encode2_def, 
+        condition2num_thm, addr_mode1_case_def,
+        addr_mode2_case_def, addr_mode3_case_def,
+        msr_mode_case_def, condition_encode_def,
+        shift_encode_def, addr_mode1_encode_def,
+        addr_mode2_encode_def, addr_mode3_encode_def,
+        msr_mode_encode_def, msr_psr_encode_def,
+        options_encode_def, options_encode2_def,
         data_proc_encode_def, K_THM, concat_thumb_def,
         SET_NZCV_def, SET_IFTM_def, mode_num_def, mode_case_def]
 in
@@ -595,7 +595,7 @@ local
     | mk_links (h::r) ht n =
        ((case h of
            Data.Label s =>
-             ht := Redblackmap.insert 
+             ht := Redblackmap.insert
                            (!ht, s, "0x" ^ Arbnum.toHexString (mul2 n))
              (*Polyhash.insert ht (s, "0x" ^ Arbnum.toHexString (mul2 n))*)
          | _ => ());
@@ -613,7 +613,7 @@ local
   fun br_to_term i ht n =
         let val (xi, label) = x_label i
             val s = assembler_to_string NONE xi NONE
-            val address = 
+            val address =
               Redblackmap.find (!ht, label)
               handle Redblackmap.NotFound =>
                 raise (HOL_ERR {message = "Cannot find ARM label\n",

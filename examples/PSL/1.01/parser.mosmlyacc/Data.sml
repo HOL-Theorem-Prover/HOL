@@ -25,9 +25,9 @@ datatype bexp =
 type range = int * int option;
 
 (******************************************************************************
-* Sequential Extended Regular Expressions (SEREs) 
+* Sequential Extended Regular Expressions (SEREs)
 ******************************************************************************)
-datatype sere = 
+datatype sere =
     S_BOOL               of bexp                  (* boolean expression      *)
   | S_CAT                of sere * sere           (* r1 ;  r2                *)
   | S_FUSION             of sere * sere           (* r1 :  r2                *)
@@ -46,7 +46,7 @@ datatype sere =
 (******************************************************************************
 * Formulas of the Foundation Language (FL)
 ******************************************************************************)
-datatype fl = 
+datatype fl =
     F_BOOL              of bexp                   (* boolean expression      *)
   | F_NOT               of fl                     (* \neg f                  *)
   | F_AND               of fl * fl                (* f1 \wedge f2            *)
@@ -93,9 +93,9 @@ datatype fl =
                         of bexp * int * fl        (* next_event!(b)[i](f)    *)
   | F_NUM_WEAK_NEXT_EVENT
                         of bexp * int * fl        (* next_event(b)[i](f)     *)
-  | F_NUM_STRONG_NEXT_EVENT_A 
+  | F_NUM_STRONG_NEXT_EVENT_A
                         of bexp * range  * fl     (* next_event_a!(b)[i](f)  *)
-  | F_NUM_WEAK_NEXT_EVENT_A 
+  | F_NUM_WEAK_NEXT_EVENT_A
                         of bexp * range  * fl     (* next_event_a(b)[i](f)   *)
   | F_NUM_STRONG_NEXT_EVENT_E
                         of bexp * range  * fl     (* next_event_e!(b)[i](f)  *)
@@ -113,7 +113,7 @@ datatype fl =
   | F_WEAK_WITHIN_INC   of sere * bexp * sere     (* within_(r1,b)r2         *)
   | F_STRONG_WHILENOT   of bexp * sere            (* whilenot!(b)r           *)
   | F_WEAK_WHILENOT     of bexp * sere            (* whilenot(b)r            *)
-  | F_STRONG_WHILENOT_INC 
+  | F_STRONG_WHILENOT_INC
                         of bexp * sere            (* whilenot!_(b)r          *)
   | F_WEAK_WHILENOT_INC of bexp * sere            (* whilenot_(b)r           *)
 ;
@@ -122,7 +122,7 @@ datatype fl =
 (******************************************************************************
 * Formulas of the Optional Branching Extension (OBE)
 ******************************************************************************)
-datatype obe = 
+datatype obe =
     O_BOOL        of bexp                        (* boolean expression       *)
   | O_NOT         of obe                         (* \neg f                   *)
   | O_AND         of obe * obe                   (* f1 \wedge f2             *)

@@ -3,7 +3,7 @@ app load ["bossLib"];
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib 
+open HolKernel Parse boolLib
      Num_conv arithmeticTheory bossLib;
 
 (*
@@ -33,7 +33,7 @@ val POWER_LT_0 = store_thm("POWER_LT_0",
 
 val LT_MULT_RIGHT = store_thm("LT_MULT_RIGHT",
                          Term `!x y. 0<y ==> x <= x*y`,
-                        Cases_on `y` THEN ARW[] 
+                        Cases_on `y` THEN ARW[]
                         THEN ONCE_REWRITE_TAC[MULT_SYM]
                         THEN ARW[MULT_CLAUSES]);
 
@@ -55,7 +55,7 @@ val POWER_LE_1 = store_thm("POWER_LE_1",
 
 val POWER_MULT = store_thm("POWER_MULT",
                         Term `!x n m. $EXP x n * $EXP x m = $EXP x (n+m)`,
-                        Induct_on `n` 
+                        Induct_on `n`
                          THEN RW_TAC std_ss [POWER, ADD_CLAUSES, GSYM MULT_ASSOC]);
 
 val POWER_POWER = store_thm("POWER_POWER",

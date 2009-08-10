@@ -1,4 +1,4 @@
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/22 07:40:27  michaeln
@@ -10,7 +10,7 @@
  *
  * Revision 1.1.1.1  1996/01/31  16:01:45  george
  * Version 109
- * 
+ *
  *)
 local
 

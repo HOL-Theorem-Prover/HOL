@@ -50,7 +50,7 @@ val defs = map DEFN
    prim_recTheory.measure_thm]
 
 val _ = EmitML.reshape_thm_hook :=
-    (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o 
+    (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o
      !EmitML.reshape_thm_hook);
 
 val _ = eSML "num"
@@ -274,7 +274,7 @@ val _ = eSML "num"
 
 val _ = eCAML "num"
   (DATATYPE (`num = ZERO | BIT1 of num | BIT2 of num`)
-  :: map MLSTRUCT 
+  :: map MLSTRUCT
     ["let num_size x = x",
        "let _NUMERAL x = x",
        "let _ONE = BIT1 ZERO",

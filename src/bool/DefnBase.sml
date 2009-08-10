@@ -100,13 +100,13 @@ end;
 (*---------------------------------------------------------------------------
     Congruence rules for termination condition extraction. Before
     t.c. extraction is performed, the theorems in "non_datatype_congs"
-    are added to the congruence rules arising from datatype definitions, 
+    are added to the congruence rules arising from datatype definitions,
     which are held in the TypeBase.
  ---------------------------------------------------------------------------*)
 
 
 local open boolTheory
-      val non_datatype_congs = 
+      val non_datatype_congs =
         ref [LET_CONG, COND_CONG, IMP_CONG, literal_case_CONG]
 in
   fun read_congs() = !non_datatype_congs
@@ -118,7 +118,7 @@ fun add_cong thm = write_congs (thm :: read_congs());
 fun drop_cong c =
  let open boolSyntax
      val P = same_const c
-     val (cong,rst) = 
+     val (cong,rst) =
          pluck (fn th => P (fst(strip_comb(lhs(snd
                              (strip_imp(snd(strip_forall(concl th)))))))))
                (read_congs())
@@ -129,7 +129,7 @@ fun drop_cong c =
  handle e => raise wrap_exn "DefnBase.drop_cong"
     (case total dest_thy_const c
       of NONE => "expected a constant"
-       | SOME{Thy,Name,...} => 
+       | SOME{Thy,Name,...} =>
            ("congruence rule for "
             ^Lib.quote(Thy^"$"^Name)
             ^" was not found")) e;

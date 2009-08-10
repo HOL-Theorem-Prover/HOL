@@ -1,7 +1,7 @@
 structure primeScript =
 struct
 
-open HolKernel Parse boolLib 
+open HolKernel Parse boolLib
      Num_conv arithmeticTheory bossLib dividesTheory ;
 
 infix THEN THENC THENL;

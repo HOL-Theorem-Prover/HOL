@@ -4,7 +4,7 @@ sig
 	type thm = Thm.thm
 	type goal = Abbrev.goal
 	type conv = Abbrev.conv
-	type tactic = Abbrev.tactic 
+	type tactic = Abbrev.tactic
 
 	val dest_rat : term -> term * term list
 	val extract_rat : term -> term list

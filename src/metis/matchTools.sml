@@ -102,7 +102,7 @@ local
 in
   fun raw_match_ty sub ty1 ty2 = raw_match_term sub (mk_tm ty1) (mk_tm ty2);
 end;
-    
+
 val finalize_subst = norm_subst;
 
 (* ------------------------------------------------------------------------- *)

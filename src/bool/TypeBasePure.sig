@@ -12,7 +12,7 @@ sig
    datatype shared_thm = ORIG of thm
                        | COPY of (string * string) * thm
 
-   val mk_datatype_info 
+   val mk_datatype_info
            : {ax        : shared_thm,
               induction : shared_thm,
               case_def  : thm,
@@ -29,8 +29,8 @@ sig
 
    val gen_datatype_info : {ax:thm,ind:thm,case_defs:thm list} -> tyinfo list
 
-   val mk_nondatatype_info 
-           : hol_type * 
+   val mk_nondatatype_info
+           : hol_type *
              {nchotomy : thm option,
               size     : (term * thm) option,
               encode   : (term * thm) option} -> tyinfo

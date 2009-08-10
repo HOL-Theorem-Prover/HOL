@@ -1,13 +1,13 @@
 signature holCheckLib =
 sig
-    
-    
+
+
 type term_bdd = PrimitiveBddRules.term_bdd
 type model = modelTools.model
 
 val holCheck : model -> model
 
-val mk_state :  Term.term -> (string * Term.term) list -> Term.term 
+val mk_state :  Term.term -> (string * Term.term) list -> Term.term
 
 val empty_model : model
 
@@ -21,7 +21,7 @@ val set_props :  (string * Term.term) list -> model -> model
 val set_flag_abs : bool -> model -> model
 
 val get_init : model -> Term.term
-val get_trans : model -> (string * Term.term) list 
+val get_trans : model -> (string * Term.term) list
 val get_flag_ric : model -> bool
 val get_name : model -> string option
 val get_vord : model -> string list option

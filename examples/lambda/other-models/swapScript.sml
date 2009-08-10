@@ -428,7 +428,7 @@ val lemma =
     (SIMP_RULE bool_ss [FUN_EQ_THM, ABS_DEF, fresh_new_subst0,
                         ASSUME ``FINITE (X:string set)``,
                         ASSUME ``!p:'b. FINITE (pFV p : string set)``] o
-     Q.INST [`lam'` |-> `lam`] o 
+     Q.INST [`lam'` |-> `lam`] o
      Q.INST [`lam` |->
              `\r t p.
                  let v = NEW (FV (ABS t) UNION pFV p UNION X)
@@ -628,8 +628,8 @@ val swap_RECURSION_generic = save_thm(
   "swap_RECURSION_generic",
   (SIMP_RULE (srw_ss()) [null_swapping, exists_fn_dom_one, swapfn_def,
                          forall_fn_dom_one, forall_one_one] o
-   Q.INST [`var'` |-> `var`, `con'` |-> `con`, `app'` |-> `app`, 
-           `lam'` |-> `lam`] o 
+   Q.INST [`var'` |-> `var`, `con'` |-> `con`, `app'` |-> `app`,
+           `lam'` |-> `lam`] o
    Q.INST [`pFV` |-> `K {}`,
            `pswap` |-> `\x y u. u`,
            `var` |-> `\s p. var' s`,

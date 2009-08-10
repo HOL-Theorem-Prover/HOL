@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
@@ -86,7 +86,7 @@ val RLTL_SEM_def =
 
 val RLTL_KS_SEM_def =
  Define
-   `RLTL_KS_SEM M f = 
+   `RLTL_KS_SEM M f =
       !p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==> RLTL_SEM p f`;
 
 
@@ -614,7 +614,7 @@ val RLTL_EQUIV_PATH___SUC =
 val RLTL_EQUIV_PATH_STRONG___INITIAL =
  store_thm
   ("RLTL_EQUIV_PATH_STRONG___INITIAL",
-   ``!v1 v2 t a r. (RLTL_EQUIV_PATH_STRONG t v1 v2 a r) ==> 
+   ``!v1 v2 t a r. (RLTL_EQUIV_PATH_STRONG t v1 v2 a r) ==>
       (((P_SEM (v1 t) a) = (P_SEM (v2 t) a)) /\
        ((P_SEM (v1 t) r) = (P_SEM (v2 t) r)))``,
 
@@ -622,7 +622,7 @@ val RLTL_EQUIV_PATH_STRONG___INITIAL =
    REPEAT GEN_TAC THEN STRIP_TAC THEN (
      Cases_on `k = t` THENL [
        PROVE_TAC[],
-  
+
        `t < k` by DECIDE_TAC THEN
        PROVE_TAC[LESS_EQ_REFL]
      ]
@@ -632,7 +632,7 @@ val RLTL_EQUIV_PATH_STRONG___INITIAL =
 val RLTL_EQUIV_PATH___INITIAL =
  store_thm
   ("RLTL_EQUIV_PATH___INITIAL",
-   ``!v1 v2 t a r. (RLTL_EQUIV_PATH t v1 v2 a r) ==> 
+   ``!v1 v2 t a r. (RLTL_EQUIV_PATH t v1 v2 a r) ==>
       (((P_SEM (v1 t) a) = (P_SEM (v2 t) a)) /\
        ((P_SEM (v1 t) r) = (P_SEM (v2 t) r)))``,
 
@@ -826,7 +826,7 @@ val RLTL_EQUIV_PATH_STRONG_THM =
         EXISTS_TAC ``l:num`` THEN
         `l >= t` by DECIDE_TAC THEN
         ASM_REWRITE_TAC [] THEN
-        REPEAT STRIP_TAC 
+        REPEAT STRIP_TAC
       ) THENL [
         `(l = k) \/ (l = k')` by METIS_TAC[MIN_DEF] THENL [
             METIS_TAC[RLTL_ACCEPT_REJECT_THM],
@@ -897,7 +897,7 @@ val RLTL_SEM_TIME___ACCEPT_BEFORE_ON_PATH =
          `?k'. t <= k' /\ k' <= k /\ P_SEM (v k') a1` by METIS_TAC[] THEN
 
          SUBGOAL_TAC `?u. (P_SEM (v u) a1 /\ t <= u) /\ !l'. (t <= l' /\ l' < u) ==> ~(P_SEM (v l') a1)` THEN1 (
-            ASSUME_TAC (EXISTS_LEAST_CONV ``?u. (P_SEM (v u) a1) /\  t <= u``) THEN            
+            ASSUME_TAC (EXISTS_LEAST_CONV ``?u. (P_SEM (v u) a1) /\  t <= u``) THEN
             METIS_TAC[]
          ) THEN
 
@@ -1086,7 +1086,7 @@ val RLTL_WEAK_UNTIL___ALTERNATIVE_DEF =
          SIMP_ASSUMPTIONS_TAC std_ss [] THEN
          SUBGOAL_TAC `?k. (k >= (t:num) /\ ~RLTL_SEM_TIME k v a r f1) /\ !k'. k' < k ==> ~(k' >= t /\ ~RLTL_SEM_TIME k' v a r f1)` THEN1 (
             ASSUME_TAC (EXISTS_LEAST_CONV ``?k. k >= (t:num) /\ ~RLTL_SEM_TIME k (v:num -> 'a set) a r f1``) THEN
-            RES_TAC THEN 
+            RES_TAC THEN
             PROVE_TAC[]
          ) THEN
          SUBGOAL_TAC `?l:num. l >= (t:num) /\ l <= (k':num) /\ RLTL_SEM_TIME l v a r f2` THEN1 (
@@ -1159,10 +1159,10 @@ val RLTL_VAR_RENAMING_def=
 val RLTL_SEM_TIME___VAR_RENAMING =
  store_thm
   ("RLTL_SEM_TIME___VAR_RENAMING",
-   ``!f' t v a r f. (INJ f (PATH_USED_VARS v UNION RLTL_USED_VARS f' UNION P_USED_VARS a UNION P_USED_VARS r) UNIV) ==> ((RLTL_SEM_TIME t v a r f') = (RLTL_SEM_TIME t 
+   ``!f' t v a r f. (INJ f (PATH_USED_VARS v UNION RLTL_USED_VARS f' UNION P_USED_VARS a UNION P_USED_VARS r) UNIV) ==> ((RLTL_SEM_TIME t v a r f') = (RLTL_SEM_TIME t
     (PATH_VAR_RENAMING f v) (P_VAR_RENAMING f a) (P_VAR_RENAMING f r) (RLTL_VAR_RENAMING f f')))``,
 
-   
+
    INDUCT_THEN rltl_induct ASSUME_TAC THENL [
       SIMP_TAC std_ss [RLTL_SEM_TIME_def,
         RLTL_VAR_RENAMING_def, PATH_VAR_RENAMING_def,
@@ -1176,11 +1176,11 @@ val RLTL_SEM_TIME___VAR_RENAMING =
       REPEAT STRIP_TAC THEN
       UNDISCH_HD_TAC THEN
       MATCH_MP_TAC INJ_SUBSET THEN
-      REWRITE_TAC [SUBSET_DEF, IN_UNION, RLTL_USED_VARS_def, 
+      REWRITE_TAC [SUBSET_DEF, IN_UNION, RLTL_USED_VARS_def,
         GSYM PATH_USED_VARS_THM] THEN
       PROVE_TAC[],
 
-      
+
       SIMP_TAC std_ss [RLTL_SEM_TIME_def, RLTL_USED_VARS_def,
         RLTL_VAR_RENAMING_def] THEN
       REPEAT STRIP_TAC THEN
@@ -1222,7 +1222,7 @@ val RLTL_SEM_TIME___VAR_RENAMING =
       MATCH_MP_TAC INJ_SUBSET THEN
       SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, GSYM PATH_USED_VARS_THM] THEN
       PROVE_TAC[],
-      
+
 
       SIMP_TAC std_ss [RLTL_SEM_TIME_def, RLTL_USED_VARS_def,
         RLTL_VAR_RENAMING_def] THEN
@@ -1244,8 +1244,8 @@ val RLTL_SEM_TIME___VAR_RENAMING =
 
 
       SIMP_TAC std_ss [RLTL_SEM_TIME_def, RLTL_USED_VARS_def,
-        RLTL_VAR_RENAMING_def, GSYM P_VAR_RENAMING_def, P_OR_def] THEN  
-      REPEAT STRIP_TAC THEN    
+        RLTL_VAR_RENAMING_def, GSYM P_VAR_RENAMING_def, P_OR_def] THEN
+      REPEAT STRIP_TAC THEN
       REMAINS_TAC `INJ f (PATH_USED_VARS v UNION RLTL_USED_VARS f' UNION
                           P_USED_VARS (P_NOT (P_AND (P_NOT a,P_NOT (P_AND (p_2,P_NOT r))))) UNION P_USED_VARS r) UNIV` THEN1 (
         RES_TAC THEN
@@ -1263,7 +1263,7 @@ val RLTL_SEM_TIME___VAR_RENAMING =
 val RLTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT =
  store_thm
   ("RLTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT",
-   ``!f' t v a r f. (INJ f (RLTL_USED_VARS f' UNION P_USED_VARS a UNION P_USED_VARS r) UNIV) ==> ((RLTL_SEM_TIME t v a r f') = (RLTL_SEM_TIME t 
+   ``!f' t v a r f. (INJ f (RLTL_USED_VARS f' UNION P_USED_VARS a UNION P_USED_VARS r) UNIV) ==> ((RLTL_SEM_TIME t v a r f') = (RLTL_SEM_TIME t
     (PATH_VAR_RENAMING f (PATH_RESTRICT v (RLTL_USED_VARS f' UNION P_USED_VARS a UNION P_USED_VARS r))) (P_VAR_RENAMING f a) (P_VAR_RENAMING f r) (RLTL_VAR_RENAMING f f')))``,
 
    REPEAT STRIP_TAC THEN
@@ -1279,7 +1279,7 @@ val RLTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT =
 val RLTL_SEM___VAR_RENAMING___PATH_RESTRICT =
  store_thm
   ("RLTL_SEM___VAR_RENAMING___PATH_RESTRICT",
-   ``!f' v f. (INJ f (RLTL_USED_VARS f') UNIV) ==> ((RLTL_SEM v f') = (RLTL_SEM 
+   ``!f' v f. (INJ f (RLTL_USED_VARS f') UNIV) ==> ((RLTL_SEM v f') = (RLTL_SEM
     (PATH_VAR_RENAMING f (PATH_RESTRICT v (RLTL_USED_VARS f'))) (RLTL_VAR_RENAMING f f')))``,
 
    REPEAT STRIP_TAC THEN

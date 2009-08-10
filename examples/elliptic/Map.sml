@@ -297,7 +297,7 @@ in
       else Map (cmp, treeIntersect cmp f t1 t2);
 end;
 
-(*      
+(*
 val intersect =
     fn f => fn t1 => fn t2 =>
     checkWellformed
@@ -319,7 +319,7 @@ local
 in
   fun delete (Map (cmp,tree)) key = Map (cmp, treeDelete cmp tree key);
 end;
- 
+
 (*
 val delete =
     fn t => fn x =>

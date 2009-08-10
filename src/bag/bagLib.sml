@@ -1,4 +1,4 @@
-structure bagLib :> bagLib = 
+structure bagLib :> bagLib =
 struct
 
 local open bagTheory in end

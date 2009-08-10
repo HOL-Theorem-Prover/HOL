@@ -130,7 +130,7 @@ val ABELIAN_GORD_GCD_1 = store_thm
        ++ ASM_REWRITE_TAC []
        ++ PROVE_TAC [])
    ++ G_TAC [GORD_GINV]);
-  
+
 (* The structure theorem *)
 
 val STRUCTURE_LEMMA = store_thm

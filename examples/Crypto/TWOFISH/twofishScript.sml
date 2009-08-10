@@ -33,17 +33,17 @@ val _ = new_theory "twofish";
 val _ = type_abbrev("block", ``:word32 # word32 # word32 # word32``);
 val _ = type_abbrev("key",   ``:word32 # word32``);
 
-val _ = type_abbrev("initkeys", 
+val _ = type_abbrev("initkeys",
         ``:word8 # word8 # word8 # word8 # word8 # word8 # word8 # word8 #
            word8 # word8 # word8 # word8 # word8 # word8 # word8 # word8 #
            word8 # word8 # word8 # word8 # word8 # word8 # word8 # word8 #
            word8 # word8 # word8 # word8 # word8 # word8 # word8 # word8``);
 
-val _ = type_abbrev("keysched", 
+val _ = type_abbrev("keysched",
    ``:word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 #
-      word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-      word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-      word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+      word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+      word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+      word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 #
       word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32``);
 
 (*---------------------------------------------------------------------------*)
@@ -51,7 +51,7 @@ val _ = type_abbrev("keysched",
 (*---------------------------------------------------------------------------*)
 
 val FORALL_BLOCK = Q.store_thm
-  ("FORALL_BLOCK", 
+  ("FORALL_BLOCK",
     `(!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)`,
     SIMP_TAC std_ss [FORALL_PROD]);
 
@@ -72,7 +72,7 @@ val _ = wordsLib.guess_lengths();
 
 (* Conversion between word8*word8*word8*word8 and word32 *)
 
-val toLarge_def = Define`toLarge (a3:word8,a2:word8,a1:word8,a0:word8) = 
+val toLarge_def = Define`toLarge (a3:word8,a2:word8,a1:word8,a0:word8) =
    a3 @@ a2 @@ a1 @@ a0`;
 
 val fromLarge_def = Define`fromLarge (a:word32) =
@@ -146,9 +146,9 @@ val RSMul_def = Define`RSMul(m0,m1,m2,m3,m4,m5,m6,m7) =
 
 (* The 4-bit S-boxes For the permutation q0 *)
 
-val t00_def = Define` 
-  t00 (x:word8) = 
-    case x of 
+val t00_def = Define`
+  t00 (x:word8) =
+    case x of
     0w -> 0x8w || 1w -> 0x1w || 2w -> 0x7w || 3w -> 0xDw ||
     4w -> 0x6w || 5w -> 0xFw || 6w -> 0x3w || 7w -> 0x2w ||
     8w -> 0x0w || 9w -> 0xBw || 10w -> 0x5w || 11w -> 0x9w ||
@@ -374,7 +374,7 @@ val FORALL_KEYSCHEDS = Q.prove(
 (*---------------------------------------------------------------------------*)
 
 val toList_def = Define`
-  toList (k:keysched) = 
+  toList (k:keysched) =
   (let (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,
         k17,k18,k19,k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,
         k32,k33,k34,k35,k36,k37,k38,k39) = k
@@ -443,7 +443,7 @@ val InvRound_Op_def = Define`
   let R0' = (R0 #<< 1) ?? F0 in
   let R1' = (R1 ?? F1) #>> 1
   in (R2, R3, R0', R1')`;
-                      
+
 val (de_rnd_def, de_rnd_ind) = Defn.tprove (
     Hol_defn "de_rnd"
     `de_rnd i (b:block) k ss =
@@ -468,7 +468,7 @@ val Round_Inversion = Q.store_thm("Round_Inversion",
   `!b k s. InvRound_Op(Round_Op(b,k,s),k,s) = b`,
   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEY]
     THEN SRW_TAC [boolSimps.LET_ss,PBETA_ss] [Round_Op_def,InvRound_Op_def]);
- 
+
 val [Round_Op] = decls "Round_Op";
 val [InvRound_Op] = decls "InvRound_Op";
 
@@ -535,7 +535,7 @@ val TWOFISH_LEMMA = Q.store_thm("TWOFISH_LEMMA",
 (*---------------------------------------------------------------------------*)
 
 val TWOFISH_def = Define`
-  TWOFISH (keys) = 
+  TWOFISH (keys) =
   (TwofishEncrypt keys,  TwofishDecrypt keys)`;
 
 val TWOFISH_CORRECT = Q.store_thm("TWOFISH_CORRECT",

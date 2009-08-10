@@ -67,7 +67,7 @@ val let_lin_lemma = store_thm
 val wp_assign = store_thm
   ("wp_assign",
   ``!v s postE.
-	wp (Assign v s) postE = 
+	wp (Assign v s) postE =
     (\s'. postE (\w. (if w = v then s s' else s' w)))``,
    RW_TAC std_ss [wp_def, assign_eta]);
 
@@ -133,13 +133,13 @@ val lt_trans = store_thm
    ``!(x:posreal) (y:posreal) (z:posreal). (x<y) /\ (y < z) ==> x < z``,
    REPEAT STRIP_TAC
    ++ `(x = 0) \/ (x = infty) \/
-       ~(x = 0) /\ ?x'. ~(x' = 0) /\ 0 <= x' /\ (x = preal x')` 
+       ~(x = 0) /\ ?x'. ~(x' = 0) /\ 0 <= x' /\ (x = preal x')`
 	by METIS_TAC [posreal_trich]
    ++ `(y = 0) \/ (y = infty) \/
-       ~(y = 0) /\ ?y'. ~(y' = 0) /\ 0 <= y' /\ (y = preal y')` 
+       ~(y = 0) /\ ?y'. ~(y' = 0) /\ 0 <= y' /\ (y = preal y')`
 	by METIS_TAC [posreal_trich]
    ++ `(z = 0) \/ (z = infty) \/
-       ~(z = 0) /\ ?z'. ~(z' = 0) /\ 0 <= z' /\ (z = preal z')` 
+       ~(z = 0) /\ ?z'. ~(z' = 0) /\ 0 <= z' /\ (z = preal z')`
 	by METIS_TAC [posreal_trich]
    ++ FULL_SIMP_TAC posreal_ss [preal_lt_def, zero_le, le_infty]
    ++ Suff `preal x' < preal z'` >> METIS_TAC [preal_lt_def]
@@ -156,7 +156,7 @@ val max_swap = store_thm
 
 val mul_operands_le1_le1 = store_thm
   ("mul_operands_le1_le1",
-   ``!(x:posreal)(y:posreal). 
+   ``!(x:posreal)(y:posreal).
 	(x<=1) /\ (y<=1) ==>
 	(x*y <= 1)``,
    RW_TAC posreal_ss []
@@ -177,7 +177,7 @@ val mul_operands_le1_le1 = store_thm
 	by (`preal (one' * one') = preal one' * preal one'`
 		by METIS_TAC [preal_mul]
 	    ++ `preal (one' * one') = (1:posreal)`
-		by (`(1:posreal)*(1:posreal)=(1:posreal)` 
+		by (`(1:posreal)*(1:posreal)=(1:posreal)`
 			by RW_TAC posreal_ss []
 		    ++ METIS_TAC [])
 	    ++ MATCH_MP_TAC preal_inj
@@ -198,7 +198,7 @@ val operand_le_one_imp_mul_le_one = store_thm
 	(x <= 1) ==>
 	(x*y <= y)``,
    METIS_TAC [le_mul2, le_refl, mul_lone]);
-   
+
 
 val mul_nonzero_operands_imp_nonzero_result = store_thm
   ("mul_nonzero_operands_imp_nonzero_result",
@@ -304,7 +304,7 @@ RW_TAC std_ss []
         (wp (body :'a command)
            (\(s :'a state).
               (if Inv s /\ Var s < N then (1 :posreal) else (0 :posreal))))`
-	by (GEN_TAC 
+	by (GEN_TAC
 	    ++ `wp (body :'a command)
       (\(s :'a state).
          (if
@@ -448,7 +448,7 @@ RW_TAC std_ss []
        (0 :
      posreal)) =
     (1 :
-    posreal)` 
+    posreal)`
 				by RW_TAC posreal_ss []
 			    ++ `(if
        (L :int) <= (Var :'a state -> int) (s :'a state) /\ Var s < (H :int)
@@ -459,7 +459,7 @@ RW_TAC std_ss []
        (0 :
      posreal)) =
     (0 :
-    posreal)` 
+    posreal)`
 				by (RW_TAC posreal_ss []
 	    		            ++ FULL_SIMP_TAC int_ss [int_le])
 			    ++ `~((1:posreal)<=(0:posreal))`
@@ -1180,7 +1180,7 @@ RW_TAC std_ss []
           else
             (1 :
           posreal))) =
-    wp (While (\(s :'a state). g s) body) (One :'a state expect)` 
+    wp (While (\(s :'a state). g s) body) (One :'a state expect)`
 			by RW_TAC posreal_ss [wp_def, cond_eta, One_def]
 		    ++ ASM_REWRITE_TAC []
 		    ++ POP_ASSUM (K ALL_TAC)
@@ -1345,7 +1345,7 @@ RW_TAC std_ss []
      posreal)
      else
        (0 :
-     posreal))` 
+     posreal))`
 						by METIS_TAC []
 				       ++ SPOSE_NOT_THEN STRIP_ASSUME_TAC
 				       ++ FULL_SIMP_TAC posreal_ss [])
@@ -1476,7 +1476,7 @@ val variant_rule2 = store_thm
              (\(s :'a state).
                 (if Inv s then (1 :posreal) else (0 :posreal)))
              (wp (While g body) (One :'a state expect))``,
-   RW_TAC posreal_ss [] 
+   RW_TAC posreal_ss []
    ++ `Leq
       (\(s :'a state).
          (if (Inv :'a state -> bool) s then
@@ -1485,7 +1485,7 @@ val variant_rule2 = store_thm
             (0 :
           posreal)))
       (wp (While (g :'a state -> bool) (body :'a command))
-         (One :'a state expect))` 
+         (One :'a state expect))`
 	by (`(0 :posreal) < (1 :posreal)` by RW_TAC posreal_ss []
    	    ++ `(1:posreal) <= (1:posreal)` by RW_TAC posreal_ss [le_refl]
 	    ++ METIS_TAC [variant_rule])
@@ -1688,7 +1688,7 @@ REPEAT GEN_TAC
 		by (RW_TAC posreal_ss [FUN_EQ_THM]
 		    ++ `int_of_value ((s :value state) (n :string)) -
     (int_of_value (s (i :string)) + (1 :int)) =
-    int_of_value (s n) - int_of_value (s i) + ((0 :int) - (1 :int))` 
+    int_of_value (s n) - int_of_value (s i) + ((0 :int) - (1 :int))`
 				by (`int_of_value ((s :value state) (n :string)) =
     int_of_value (s n) + (0 :int)` by RW_TAC int_ss []
 				    ++ METIS_TAC [INT_ADD2_SUB2])
@@ -1712,7 +1712,7 @@ REPEAT GEN_TAC
         (wp (loopbody :value command)
            (\(s :value state).
               (if Inv s /\ Var s < N then (1 :posreal) else (0 :posreal))))`
-	by (GEN_TAC 
+	by (GEN_TAC
 	    ++ `wp (loopbody :value command)
       (\(s :value state).
          (if
@@ -2674,7 +2674,7 @@ REPEAT GEN_TAC
           else
             (1 :
           posreal))) =
-    wp (While (\(s :value state). g s) loopbody) (One :value state expect)` 
+    wp (While (\(s :value state). g s) loopbody) (One :value state expect)`
 			by RW_TAC posreal_ss [wp_def, cond_eta, One_def]
 		    ++ ASM_REWRITE_TAC []
 		    ++ POP_ASSUM (K ALL_TAC)
@@ -3097,7 +3097,7 @@ val bool_Inv_rule = store_thm
    ++ ONCE_REWRITE_TAC [while_unwind_lemma]
    ++ RW_TAC posreal_ss [Leq_def]
    ++ Cases_on `~(g s)`
-   >> (FULL_SIMP_TAC bool_ss [] 
+   >> (FULL_SIMP_TAC bool_ss []
        ++ RW_TAC posreal_ss [bool_exp_def]
        ++ METIS_TAC [])
    ++ FULL_SIMP_TAC bool_ss []
@@ -3113,7 +3113,7 @@ val bool_Inv_rule = store_thm
           posreal)
           else
             (0 :
-          posreal))) (s :'a state)` 
+          posreal))) (s :'a state)`
 	by METIS_TAC [le_refl, zero_le]
    ++ `Leq
       (\(s :'a state).
@@ -3132,7 +3132,7 @@ val bool_Inv_rule = store_thm
              posreal)
              else
                (0 :
-             posreal))))` 
+             posreal))))`
 	by (RW_TAC std_ss [Leq_def]
     	    ++ RW_TAC posreal_ss [zero_le, le_refl]
     	    ++ METIS_TAC [zero_le, le_refl])
@@ -3156,7 +3156,7 @@ val bool_Inv_rule = store_thm
             posreal)
             else
               (0 :
-            posreal))) s` 
+            posreal))) s`
 	by ASM_SIMP_TAC std_ss []
    ++`!(s :'a state).
       wp (body :'a command)
@@ -3313,7 +3313,7 @@ val while_reverse_unwind_part1 = store_thm
 		by (Q.ABBREV_TAC `g = (\(s :value state).
                 int_of_value (s (i :string)) < (& (n :num) :int))`
 	  	    ++ METIS_TAC [while_unwind_lemma])
-   	    ++ Q.ABBREV_TAC `foo = 
+   	    ++ Q.ABBREV_TAC `foo =
 			     (\(s :value state).
                 (if
                    (\(s :value state).

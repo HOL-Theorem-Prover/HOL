@@ -8,7 +8,7 @@
 
 (*
 quietdec := true;                                    (* Switch off output    *)
-map load 
+map load
  [LTLTheory];
 open
  pred_setTheory stringLib finite_mapTheory LTLTheory;
@@ -45,9 +45,9 @@ val _ = hide "S";
 
 (******************************************************************************
 * An equation is represented by a pair (v,e) where v is a string (the LHS)
-* and E an expression (the LHS) as defined below. 
+* and E an expression (the LHS) as defined below.
 * For example,
-*  "x = (y + 3) - SUC q " 
+*  "x = (y + 3) - SUC q "
 * would be represented by:
 *  ``("x", BINOP $- (BINOP $+ (VAR "y", CONST 3), UNOP SUC (VAR "q")))``
 * The dollar ($) is an escape telling the HOL parser not to parse as an infix.
@@ -61,31 +61,31 @@ val exp_def =
        | BINOP of ('val -> 'val -> 'val) => (exp # exp)`;
 
 (******************************************************************************
-* 
+*
 * A system (similar to a "synchronous circuit" in the book "Model
 * Checking" by Clarke et al.) has a state defined by a mapping from a
 * finite set of state variables (which we will represent by strings), a
 * set of initial states and a transition relation defined by equations
 * giving the possible values of the each variable in the next state.
-* 
+*
 * The equations are represented by a set of pairs (v,e) where v is a
 * string (the LHS of the equation) and e is an expression (the RHS).  If
 * the same variable is the LHS or more than one equation, then the
 * system is non-deterministic. A deterministic system is one in which
 * each state variable is the LHS of at most one equation.
-* 
+*
 * A system is thus a pair (I,E) where I is a set of initial states,
 * represented as a value of type (string |-> 'val)set and E is the set
 * of equations, represented as a value of type (string#exp)set, as
 * described above. The state variables are the variables in I and E.
-* 
+*
 * The function MAKE_MODEL constructs a Kripke structure model from a
-* system (I,E). The states are finite maps from strings to values 
-* (represented by type variable 'val) and atomic propositions are 
+* system (I,E). The states are finite maps from strings to values
+* (represented by type variable 'val) and atomic propositions are
 * predicates on states. Thus the type of MAKE_MODEL is:
-* 
+*
 *   ((string |-> 'val)set # (string # ('val)exp)set))
-*   -> 
+*   ->
 *   (((string |-> 'val) -> bool), (string |-> 'val))model
 *
 ******************************************************************************)
@@ -130,7 +130,7 @@ val MAKE_MODEL_def =
  Define
   `MAKE_MODEL(I,E) : ((string |-> 'val)set, (string |-> 'val))model =
     <| S  := {s | T};
-       R  := \(s,s'). 
+       R  := \(s,s').
               !v. (v IN VARS(I,E)) ==> ?e. (v,e) IN E /\ (s' ' v = EXP_SEM s e);
        L  := \s. {p | p s};
        S0 :=  I |>`;
@@ -159,7 +159,7 @@ val _ = computeLib.add_persistent_funs (* Tell EVAL about finite maps *)
           ("listTheory.LIST_TO_SET_THM",listTheory.LIST_TO_SET_THM)
          ];
 
-val sys = 
+val sys =
  ``({(FEMPTY |++ [("x",0);("y",1);("p",3);("q",4)]);
      (FEMPTY |++ [("x",10);("y",11)])},
     {("x", CONST 0);
@@ -167,7 +167,7 @@ val sys =
      ("y", BINOP $+ (VAR "x", BINOP $* (VAR "p", VAR "y")))})``
 
 
- ``FEMPTY |++ 
+ ``FEMPTY |++
     [("x", {CONST 0; UNOP SUC (VAR "x")});
      ("y", {BINOP $+ (VAR "x", BINOP $* (VAR "p", VAR "y"))});
      ("q", {})]``;

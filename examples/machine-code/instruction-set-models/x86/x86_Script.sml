@@ -2,7 +2,7 @@
 open HolKernel boolLib bossLib Parse;
 open wordsTheory bit_listTheory;
 
-open x86_coretypesTheory x86_astTheory x86_opsemTheory; 
+open x86_coretypesTheory x86_astTheory x86_opsemTheory;
 open x86_seq_monadTheory x86_decoderTheory x86_icacheTheory;
 
 val _ = new_theory "x86_";
@@ -23,7 +23,7 @@ val x86_execute_some_def = Define `
   x86_execute_some i w s = option_apply (x86_execute iiid_dummy i w s) (\t. SOME (SND t))`;
 
 val X86_NEXT_def = Define `
-  X86_NEXT s = 
+  X86_NEXT s =
     let e = XREAD_EIP s in                                     (* read eip *)
     let xs = MAP THE (XREAD_INSTR_BYTES 20 e s) in             (* read next 20 bytes *)
     let m = x86_decode_bytes xs in                             (* attempt to decode *)
@@ -31,7 +31,7 @@ val X86_NEXT_def = Define `
         let (i,w) = THE m in                                   (* otherwise extract content *)
         let n = 20 - (LENGTH w DIV 8) in                       (* calc length of instruction *)
           if EVERY (\x. ~(x = NONE)) (XREAD_INSTR_BYTES n e s) (* check that the memory is there *)
-          then x86_execute_some i (n2w n) s else NONE          (* execute the instruction *)`; 
+          then x86_execute_some i (n2w n) s else NONE          (* execute the instruction *)`;
 
 val X86_NEXT_REL_def = Define `
   X86_NEXT_REL s t = ?u. X86_ICACHE s u /\ (X86_NEXT u = SOME t)`;
@@ -48,5 +48,5 @@ val X86_NEXT_THM = store_thm("X86_NEXT_THM",
   SIMP_TAC std_ss [X86_NEXT_def,LET_DEF,XREAD_REG_def,x86_decode_bytes_def,
     x86_execute_some_def,option_apply_def]);
 
-  
+
 val _ = export_theory ();

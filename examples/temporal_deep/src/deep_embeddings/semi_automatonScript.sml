@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
@@ -65,7 +65,7 @@ val IS_WELL_FORMED_SEMI_AUTOMATON_def =
 val IS_RUN_THROUGH_SEMI_AUTOMATON_def =
  Define
   `IS_RUN_THROUGH_SEMI_AUTOMATON A i w =
-    ((!n. w n IN A.S) /\ 
+    ((!n. w n IN A.S) /\
      ((w 0, (i 0) INTER A.I) IN A.S0) /\
     (!n. (w n, (i n) INTER A.I, w (SUC n), (i (SUC n)) INTER A.I) IN A.R))`;
 
@@ -73,7 +73,7 @@ val IS_RUN_THROUGH_SEMI_AUTOMATON_def =
 val IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE_def =
  Define
   `IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE A i w s m =
-    ((!n. n <= m ==> (w n IN A.S)) /\ 
+    ((!n. n <= m ==> (w n IN A.S)) /\
      ((w 0, (i 0) INTER A.I) IN A.S0) /\ (w m = s) /\
     (!n. n < m ==> ((w n, (i n) INTER A.I, w (SUC n), (i (SUC n)) INTER A.I) IN A.R)))`;
 
@@ -93,8 +93,8 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
     ``!A. (IS_DET_TOTAL_SEMI_AUTOMATON A /\
     IS_WELL_FORMED_SEMI_AUTOMATON A) ==>
     (!i. ?!w. IS_RUN_THROUGH_SEMI_AUTOMATON A i w)``,
-    
-    
+
+
     SIMP_TAC std_ss [IS_RUN_THROUGH_SEMI_AUTOMATON_def,
                     EXISTS_UNIQUE_DEF,
                     IS_DET_TOTAL_SEMI_AUTOMATON_def,
@@ -104,7 +104,7 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
             METIS_TAC[FST, SND, PAIR])
     ] THEN
     REPEAT GEN_TAC THEN STRIP_TAC THEN
-    GEN_TAC THEN 
+    GEN_TAC THEN
     Q_SPEC_NO_ASSUM 5 `i 0` THEN
     SIMP_ALL_TAC std_ss [] THEN
     REPEAT STRIP_TAC THENL [
@@ -113,12 +113,12 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
         Induct_on `n` THENL [
           ASM_SIMP_TAC std_ss [CHOOSEN_PATH_def, IN_SING] THEN
           PROVE_TAC[FST],
-    
+
           ASM_SIMP_TAC std_ss [CHOOSEN_PATH_def] THEN
           GSYM_NO_TAC 1 THEN
           ASM_REWRITE_TAC[] THEN
           SIMP_TAC std_ss [GSPECIFICATION] THEN
-          SELECT_ELIM_TAC THEN 
+          SELECT_ELIM_TAC THEN
           REPEAT STRIP_TAC THENL [
             Q_SPECL_NO_ASSUM 8 [`w n`, `i n INTER A.I`, `(i (SUC n)) INTER A.I`] THEN
             UNDISCH_HD_TAC THEN
@@ -128,11 +128,11 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
           ]
         ]
       ) THEN
-    
-      Q_TAC EXISTS_TAC `w` THEN 
+
+      Q_TAC EXISTS_TAC `w` THEN
       REPEAT STRIP_TAC THENL [
         PROVE_TAC[],
-  
+
         REMAINS_TAC `w 0 = x` THEN1 ASM_REWRITE_TAC[] THEN
         ASM_REWRITE_TAC [CHOOSEN_PATH_def, IN_SING] THEN
         SIMP_TAC std_ss [],
@@ -148,12 +148,12 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
       ],
 
 
-    
+
       ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
       GEN_TAC THEN
       Induct_on `x''` THENL [
         PROVE_TAC[],
-    
+
         Q_SPECL_NO_ASSUM 13 [`y x''`, `i x'' INTER A.I`, `i (SUC x'') INTER A.I`] THEN
         UNDISCH_HD_TAC THEN
         ASM_SIMP_TAC std_ss [IN_INTER] THEN
@@ -195,7 +195,7 @@ val SEMI_AUTOMATON_STATE_VAR_RENAMING___RUN =
 SIMP_TAC std_ss [IS_RUN_THROUGH_SEMI_AUTOMATON_def,
                  SEMI_AUTOMATON_STATE_VAR_RENAMING_def,
                  semi_automaton_REWRITES, IN_IMAGE,
-                 PATH_MAP_def, 
+                 PATH_MAP_def,
                  IS_WELL_FORMED_SEMI_AUTOMATON_def,
                  INJ_DEF, SUBSET_DEF, IN_CROSS,
   prove(``!P x1 x2 x3 x4. (x1, x2, x3, x4) IN (\(x1,x2,x3,x4). P x1 x2 x3 x4) = (P x1 x2 x3 x4)``,

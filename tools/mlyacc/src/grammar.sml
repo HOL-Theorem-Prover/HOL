@@ -1,4 +1,4 @@
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/22 07:40:27  michaeln
@@ -15,21 +15,21 @@
  *
  * Revision 1.1.1.1  1996/01/31  16:01:45  george
  * Version 109
- * 
+ *
  *)
 
 structure Grammar : GRAMMAR =
 	struct
 
 		(* define types term and nonterm using those in LrTable
-		   datatype term = T of int 
+		   datatype term = T of int
 		   datatype nonterm = NT of int *)
 
 		open LrTable
 		datatype symbol = TERM of term | NONTERM of nonterm
 		datatype grammar = GRAMMAR of
 				{rules: {lhs: nonterm,
-				 	 rhs: symbol list, 
+				 	 rhs: symbol list,
 				 	 precedence: int option,
 				 	 rulenum: int} list,
 				noshift : term list,
@@ -53,7 +53,7 @@ structure IntGrammar : INTGRAMMAR =
 				 num: int,(* internal # assigned by coreutils *)
 				 rulenum: int,
 				 precedence: int option}
-		
+
 		val eqTerm = (op =)
 		val gtTerm = fn (T i,T j) => i>j
 
@@ -95,7 +95,7 @@ structure IntGrammar : INTGRAMMAR =
 					())
 			else ())
 		   end
-			
+
 		val prGrammar =
 			 fn (a as (symbolToString,nontermToString,print)) =>
 			     fn (GRAMMAR {rules,terms,nonterms,start,...}) =>

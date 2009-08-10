@@ -20,10 +20,10 @@ val MAIN_def =
         (Assign "i"
           (Const 0)
         )
-        (While 
-          (Less 
+        (While
+          (Less
             (Var "i")
-            (Sub 
+            (Sub
               (Var "aLength")
               (Const 1)
             )
@@ -33,11 +33,11 @@ val MAIN_def =
               (Const 0)
             )
             (Seq
-              (While 
-                (Less 
+              (While
+                (Less
                   (Var "j")
-                  (Sub 
-                    (Sub 
+                  (Sub
+                    (Sub
                       (Var "aLength")
                       (Var "i")
                     )
@@ -45,10 +45,10 @@ val MAIN_def =
                   )
                 )
                 (Seq
-                  (Cond 
-                    (Less 
+                  (Cond
+                    (Less
                       (Arr "a"
-                        (Plus 
+                        (Plus
                           (Var "j")
                           (Const 1)
                         )
@@ -67,14 +67,14 @@ val MAIN_def =
                         (ArrayAssign "a"
                           (Var "j")
                           (Arr "a"
-                            (Plus 
+                            (Plus
                               (Var "j")
                               (Const 1)
                             )
                           )
                         )
                         (ArrayAssign "a"
-                          (Plus 
+                          (Plus
                             (Var "j")
                             (Const 1)
                           )
@@ -85,7 +85,7 @@ val MAIN_def =
                     Skip
                   )
                   (Assign "j"
-                    (Plus 
+                    (Plus
                       (Var "j")
                       (Const 1)
                     )
@@ -93,7 +93,7 @@ val MAIN_def =
                 )
               )
               (Assign "i"
-                (Plus 
+                (Plus
                   (Var "i")
                   (Const 1)
                 )

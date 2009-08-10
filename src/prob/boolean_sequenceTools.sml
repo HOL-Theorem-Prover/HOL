@@ -2,7 +2,7 @@
 (* Some miscellaneous tools for reasoning about boolean sequences.           *)
 (* ------------------------------------------------------------------------- *)
 
-structure boolean_sequenceTools :> boolean_sequenceTools = 
+structure boolean_sequenceTools :> boolean_sequenceTools =
 struct
 
 open HolKernel Parse boolLib;

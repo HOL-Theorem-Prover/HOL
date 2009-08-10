@@ -16,8 +16,8 @@ val (th,d_def) = time (DERIVE_SEP_TOTAL_SPEC "d") ``
 
 val d1_lemma = prove(
   ``!n:num a. d1_pre (a, 2 * (& n)) /\ (d1 (a, 2 * (& n)) = ((& n) + a, 0))``,
-  Induct_on `n` THEN ONCE_REWRITE_TAC [d_def] 
-  THEN1 ASM_SIMP_TAC int_ss [LET_DEF] 
+  Induct_on `n` THEN ONCE_REWRITE_TAC [d_def]
+  THEN1 ASM_SIMP_TAC int_ss [LET_DEF]
   THEN ASM_SIMP_TAC std_ss [LET_DEF,INT,COOPER_PROVE ``(~(2 * & n + 2 = 0)) /\ (2*1 = 2)``,INT_LDISTRIB,
     ONCE_REWRITE_RULE [INT_ADD_COMM] INT_ADD_SUB] THEN COOPER_TAC);
 
@@ -235,7 +235,7 @@ val (th,FindMin_def) = time (DERIVE_SEP_SPEC "FindMin") ``
        (Seq (Assign "min" (Arr "a" (Var "j")))
           (While (Less (Var "i") (Var "j"))
              (Seq (Assign "j" (Sub (Var "j") (Const 1)))
-                  (Cond (Less (Arr "a" (Var "j")) (Var "min")) 
+                  (Cond (Less (Arr "a" (Var "j")) (Var "min"))
                         (Assign "min" (Arr "a" (Var "j"))) Skip))))``;
 
 

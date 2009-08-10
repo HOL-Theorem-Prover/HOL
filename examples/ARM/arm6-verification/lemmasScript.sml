@@ -301,7 +301,7 @@ val UP_DOWN_THM = store_thm("UP_DOWN_THM",
 val DECODE_INST_NOT_UNEXEC = store_thm("DECODE_INST_NOT_UNEXEC",
   `!n. ~(DECODE_INST n = unexec)`, RW_TAC std_ss [DECODE_INST_def]);
 
-val tac = Cases 
+val tac = Cases
   \\ RW_TAC bool_ss [combinTheory.o_THM,MIN_DEF,DECODE_INST_def,BITS_COMP_THM2,
        MOD_DIMINDEX,w2w_def,w2n_n2w,word_extract_def,word_bits_n2w]
   \\ FULL_SIMP_TAC (fcp_ss++SIZES_ss++ARITH_ss)

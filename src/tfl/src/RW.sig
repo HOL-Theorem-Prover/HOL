@@ -1,4 +1,4 @@
-signature RW = 
+signature RW =
 sig
   include Abbrev
 
@@ -37,11 +37,11 @@ sig
                prover:simpls -> 'a -> term -> thm}
                -> term -> thm
 
-  type cntxt_solver = {context:thm list * context_policy, 
+  type cntxt_solver = {context:thm list * context_policy,
                        simpls:simpls,
                        prover:simpls -> thm list -> term -> thm};
 
-  type strategy = (cntxt_solver -> term -> thm) 
+  type strategy = (cntxt_solver -> term -> thm)
                -> (cntxt_solver -> term -> thm)
 
   val DEPTH   : strategy
@@ -53,8 +53,8 @@ sig
   val ABST  : strategy
 
   datatype repetitions = Once | Fully | Special of strategy
-  datatype rules   = Default of thm list 
-                   | Pure of thm list 
+  datatype rules   = Default of thm list
+                   | Pure of thm list
                    | Simpls of simpls * thm list
   datatype context = Context of thm list * context_policy
   datatype congs   = Congs of thm list

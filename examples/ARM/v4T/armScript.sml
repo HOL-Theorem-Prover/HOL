@@ -875,7 +875,7 @@ val THUMB_TO_ARM_def = Define`
           ((let Rd = (2 >< 0) ireg and H1 = (7 >< 7) ireg in
              case (_9,_8) of
 (* ADD(4) *)    (F,F) -> 0xE0800000w !! H1 << 19 !! Rd << 16 !!
-                                        H1 << 15 !! Rd << 12 
+                                        H1 << 15 !! Rd << 12
 (* CMP(3) *) || (F,T) -> 0xE1500000w !! H1 << 19 !! Rd << 16
 (* MOV(3) *) || (T,F) -> 0xE1A00000w !! H1 << 15 !! Rd << 12
              || (T,T) -> ARB) !! (6 >< 6) ireg << 3 !! (5 >< 3) ireg)
@@ -930,7 +930,7 @@ val THUMB_TO_ARM_def = Define`
               (21 :+ (_11 ==> ~(ireg ' (w2n Rn))))
               ((if _11 then 0xE8900000w else 0xE8A00000w) !!
               Rn << 16 !! (7 >< 0) ireg))
-      || (T,T,F, T , T , T , T, F) -> 
+      || (T,T,F, T , T , T , T, F) ->
 (* UND *)   0xE6000010w
       || (T,T,F, T , T , T , T, T) ->
 (* SWI *)   0xEF000000w !! (7 >< 0) ireg
@@ -1069,7 +1069,7 @@ val OUT_ARM_def = Define`
    let mode = DECODE_MODE m in
      if ~rst /\ (state.exception = software) /\ CONDITION_PASSED nzcv ireg then
        let ic = DECODE_ARM ireg in
-         <| transfers := 
+         <| transfers :=
             (case ic of
                 ldr_str   -> OUTL (LDR_STR r t (CARRY nzcv) mode ireg NONE)
              || ldrh_strh -> OUTL (LDRH_STRH r t mode ireg NONE)

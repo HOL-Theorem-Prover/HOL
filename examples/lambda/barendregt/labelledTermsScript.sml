@@ -245,12 +245,12 @@ val rawfinite_support = prove(
                       fn t pi)`
         THEN1 PROVE_TAC [] THEN
   Induct THENL [
-    SRW_TAC [][fnpm_def] THEN 
+    SRW_TAC [][fnpm_def] THEN
     `(!s. apm [(x,y)] (vr s) = vr (perm_of [(x,y)] s))`
         by (MATCH_MP_TAC support_freshf THEN SRW_TAC [][]) THEN
     SRW_TAC [][swapstr_perm_of, is_perm_sing_inv],
 
-    SRW_TAC [][fnpm_def] THEN 
+    SRW_TAC [][fnpm_def] THEN
     `!a b pi. apm pi (ap a b) =
               fnpm apm apm pi (ap a) (apm pi b)`
         by SRW_TAC [][fnpm_def, is_perm_inverse] THEN
@@ -259,8 +259,8 @@ val rawfinite_support = prove(
         by (MATCH_MP_TAC support_freshf THEN SRW_TAC [][]) THEN
     SRW_TAC [][],
 
-    ASM_SIMP_TAC (srw_ss()) [fnpm_def] THEN 
-    Q.X_GEN_TAC `s` THEN SRW_TAC [][] THEN 
+    ASM_SIMP_TAC (srw_ss()) [fnpm_def] THEN
+    Q.X_GEN_TAC `s` THEN SRW_TAC [][] THEN
     Q.MATCH_ABBREV_TAC `apm [(x,y)] (fresh apm g) = fresh apm h` THEN
     `h = fnpm perm_of apm [(x,y)] g`
        by (MAP_EVERY Q.UNABBREV_TAC [`g`, `h`] THEN
@@ -310,7 +310,7 @@ val rawfinite_support = prove(
       SRW_TAC [][] THEN METIS_TAC []
     ],
 
-    Q.X_GEN_TAC `s` THEN SRW_TAC [][fnpm_def] THEN 
+    Q.X_GEN_TAC `s` THEN SRW_TAC [][fnpm_def] THEN
     Q.MATCH_ABBREV_TAC
       `apm [(x,y)] (fresh (fnpm apm apm) g arg1) =
        fresh (fnpm apm apm) h arg2` THEN
@@ -379,13 +379,13 @@ val eqperms_ok = prove(
   STRIP_TAC THEN Induct THENL [
     FULL_SIMP_TAC (srw_ss()) [permeq_def],
     METIS_TAC [],
-    MAP_EVERY Q.X_GEN_TAC [`s`, `p1`, `p2`] THEN SRW_TAC [][] THEN 
+    MAP_EVERY Q.X_GEN_TAC [`s`, `p1`, `p2`] THEN SRW_TAC [][] THEN
     Q_TAC SUFF_TAC `!a. fn t (p1 ++ [(a,s)]) = fn t (p2 ++ [(a,s)])` THEN1
           SRW_TAC [][] THEN
     GEN_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
     MATCH_MP_TAC app_permeq_monotone THEN
     SRW_TAC [][permeq_refl],
-    MAP_EVERY Q.X_GEN_TAC [`s`, `n`, `p1`, `p2`] THEN SRW_TAC [][] THEN 
+    MAP_EVERY Q.X_GEN_TAC [`s`, `n`, `p1`, `p2`] THEN SRW_TAC [][] THEN
     Q_TAC SUFF_TAC `(!a. fn t (p1 ++ [(a,s)]) = fn t (p2 ++ [(a,s)])) /\
                     (fn t' p1 = fn t' p2)` THEN1 SIMP_TAC (srw_ss()) [] THEN
     SRW_TAC [][] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
@@ -420,9 +420,9 @@ val perms_move = prove(
     !t p1 p2. fn (ptpm p2 t) p1 = fn t (p1 ++ p2)``,
   STRIP_TAC THEN Induct THEN
   TRY (SRW_TAC [][lswapstr_APPEND] THEN
-       SRW_TAC [][GSYM lswapstr_APPEND] THEN NO_TAC) 
+       SRW_TAC [][GSYM lswapstr_APPEND] THEN NO_TAC)
   THENL [
-    MAP_EVERY Q.X_GEN_TAC [`s`, `p1`, `p2`] THEN SRW_TAC [][] THEN 
+    MAP_EVERY Q.X_GEN_TAC [`s`, `p1`, `p2`] THEN SRW_TAC [][] THEN
     Q.MATCH_ABBREV_TAC `fresh apm f = fresh apm g` THEN
     `support (fnpm ptpm (fnpm (cpmpm) apm)) fn A`
        by (MATCH_MP_TAC rawfinite_support THEN SRW_TAC [][] THEN
@@ -484,7 +484,7 @@ val perms_move = prove(
     `~(b IN patoms p2)` by FULL_SIMP_TAC (srw_ss()) [Abbr`bigS`] THEN
     SRW_TAC [][perm_of_unchanged],
 
-    MAP_EVERY Q.X_GEN_TAC [`s`, `n`, `p1`, `p2`] THEN SRW_TAC [][] THEN 
+    MAP_EVERY Q.X_GEN_TAC [`s`, `n`, `p1`, `p2`] THEN SRW_TAC [][] THEN
     AP_THM_TAC THEN
     Q.MATCH_ABBREV_TAC `fresh (fnpm apm apm) f = fresh (fnpm apm apm) g` THEN
     `support (fnpm ptpm (fnpm (cpmpm) apm)) fn A`
@@ -1003,15 +1003,15 @@ val lterm_bvc_induction = store_thm(
   Q_TAC SUFF_TAC `!t pi. P (ltpm pi t)` THEN1 METIS_TAC [ltpm_NIL] THEN
   HO_MATCH_MP_TAC simple_lterm_induction THEN
   REPEAT CONJ_TAC THEN TRY (SRW_TAC [][] THEN NO_TAC) THENL [
-    Q.X_GEN_TAC `t` THEN STRIP_TAC THEN 
-    MAP_EVERY Q.X_GEN_TAC [`s`, `pi`] THEN 
+    Q.X_GEN_TAC `t` THEN STRIP_TAC THEN
+    MAP_EVERY Q.X_GEN_TAC [`s`, `pi`] THEN
     Q_TAC (NEW_TAC "z") `perm_of pi s INSERT FV (ltpm pi t) UNION X` THEN
     Q_TAC SUFF_TAC `LAM (perm_of pi s) (ltpm pi t) =
                     LAM z (ltpm [(z,perm_of pi s)] (ltpm pi t))`
           THEN1 SRW_TAC [][GSYM ltpm_APPEND] THEN
     SRW_TAC [][ltpm_ALPHA],
-    MAP_EVERY Q.X_GEN_TAC [`t1`, `t2`] THEN STRIP_TAC THEN 
-    MAP_EVERY Q.X_GEN_TAC [`s`, `n`, `pi`] THEN 
+    MAP_EVERY Q.X_GEN_TAC [`t1`, `t2`] THEN STRIP_TAC THEN
+    MAP_EVERY Q.X_GEN_TAC [`s`, `n`, `pi`] THEN
     Q_TAC (NEW_TAC "z")
           `perm_of pi s INSERT FV (ltpm pi t2) UNION X
            UNION FV (ltpm pi t1)` THEN
@@ -1052,8 +1052,8 @@ val l15a = store_thm(
 
 val ltm_precursion_ex =
   (UNDISCH o
-   Q.INST [`VR` |-> `vr`, `AP` |-> `ap`, `LM` |-> `lm`, `LI` |-> `li`, 
-           `APM` |-> `apm`] o 
+   Q.INST [`VR` |-> `vr`, `AP` |-> `ap`, `LM` |-> `lm`, `LI` |-> `li`,
+           `APM` |-> `apm`] o
    SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def, pairpm_def,
                          pairTheory.FORALL_PROD,
                          ASSUME ``is_perm (APM: 'a pm)``] o

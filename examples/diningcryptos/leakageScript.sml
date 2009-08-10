@@ -8,13 +8,13 @@
 (* ------------------------------------------------------------------------- *)
 (*
 
-app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory", 
-          "listTheory", "state_transformerTheory", "probabilityTheory", 
-	  "formalizeUseful", "combinTheory", "pairTheory", "realTheory", 
+app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory",
+          "listTheory", "state_transformerTheory", "probabilityTheory",
+	  "formalizeUseful", "combinTheory", "pairTheory", "realTheory",
 	  "realLib", "extra_boolTheory", "jrhUtils", "extra_pred_setTheory", "extra_listTheory",
-	  "realSimps", "extra_realTheory", "measureTheory", "numTheory", 
-	  "simpLib", "seqTheory", "subtypeTheory", "transcTheory", 
-	  "limTheory", "stringTheory", "rich_listTheory", "stringSimps", 
+	  "realSimps", "extra_realTheory", "measureTheory", "numTheory",
+	  "simpLib", "seqTheory", "subtypeTheory", "transcTheory",
+	  "limTheory", "stringTheory", "rich_listTheory", "stringSimps",
 	  "listSimps", "lebesgueTheory", "informationTheory",
 	  "extra_stringTheory", "extra_stringLib"];
 
@@ -28,7 +28,7 @@ open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
      simpLib seqTheory subtypeTheory extra_listTheory
      transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps
      lebesgueTheory informationTheory extra_stringTheory extra_stringLib;
-     
+
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)
 (* ------------------------------------------------------------------------- *)
@@ -89,8 +89,8 @@ val random_state_def = Define `R (s:(('a,'b,'c) prog_state)) = SND s`;
 
 val leakage_def = Define
    `leakage p (f:('a,'b,'c,'d) prog) =
-	conditional_mutual_information 2 p 
-		((IMAGE f (p_space p)), POW (IMAGE f (p_space p))) 
+	conditional_mutual_information 2 p
+		((IMAGE f (p_space p)), POW (IMAGE f (p_space p)))
 		((IMAGE H (p_space p)), POW (IMAGE H (p_space p)))
 		((IMAGE L (p_space p)), POW (IMAGE L (p_space p)))
 		f H L`;
@@ -98,9 +98,9 @@ val leakage_def = Define
 val visible_leakage_def = Define
    `visible_leakage p (f:('a,'b,'c,'d) prog) =
 	conditional_mutual_information 2 p
-		((IMAGE f (p_space p)), POW (IMAGE f (p_space p))) 
+		((IMAGE f (p_space p)), POW (IMAGE f (p_space p)))
 		((IMAGE H (p_space p)), POW (IMAGE H (p_space p)))
-		((IMAGE (\s:('a,'b,'c) prog_state. (L s, R s)) (p_space p)), 
+		((IMAGE (\s:('a,'b,'c) prog_state. (L s, R s)) (p_space p)),
 		 POW (IMAGE (\s:('a,'b,'c) prog_state. (L s, R s)) (p_space p)))
 		 f H (\s:('a,'b,'c) prog_state. (L s, R s))`;
 
@@ -114,13 +114,13 @@ val visible_leakage_def = Define
 
 val unif_prog_dist_def = Define
    `unif_prog_dist high low random =
-	(\s. if s IN (high CROSS low) CROSS random then 
+	(\s. if s IN (high CROSS low) CROSS random then
 	     1/(&(CARD ((high CROSS low) CROSS random))) else 0)`;
 
 
 val unif_prog_space_def = Define
    `unif_prog_space high low random =
-	((high CROSS low) CROSS random, 
+	((high CROSS low) CROSS random,
 	 POW ((high CROSS low) CROSS random),
 	 (\s. SIGMA (unif_prog_dist high low random) s))`;
 
@@ -222,7 +222,7 @@ val unif_prog_space_low_distribution = store_thm
    ++ RW_TAC std_ss [(Q.SPECL [`(\(x :'a state # 'c state). ((FST x,(l :'b state)),SND x))`,
       	     	    	       	`((high :'a state -> bool) CROSS (random :'c state -> bool))`,
 				`(IMAGE (\(x :'a state # 'c state). ((FST x,l),SND x))
-           			 (high CROSS random))`] o 
+           			 (high CROSS random))`] o
 			INST_TYPE [``:'b`` |-> ``:('a state # 'b state) # 'c state``,
 				   ``:'a`` |-> ``:'a state # 'c state``]) CARD_IMAGE, FINITE_CROSS]
    ++ RW_TAC std_ss [CARD_CROSS, GSYM REAL_MUL]
@@ -266,7 +266,7 @@ val unif_prog_space_highlow_distribution = store_thm
    ++ RW_TAC std_ss [(Q.SPECL [`(\(x :'c state). (((h:'a state),(l :'b state)),x))`,
       	     	    	       	`(random :'c state -> bool)`,
 				`(IMAGE (\(x :'c state). (((h:'a state),(l :'b state)),x))
-           			 random)`] o 
+           			 random)`] o
 			INST_TYPE [``:'b`` |-> ``:('a state # 'b state) # 'c state``,
 				   ``:'a`` |-> ``:'c state``]) CARD_IMAGE]
    ++ RW_TAC std_ss [CARD_CROSS, GSYM REAL_MUL]
@@ -310,7 +310,7 @@ val unif_prog_space_lowrandom_distribution = store_thm
    ++ RW_TAC std_ss [(Q.SPECL [`(\(x :'a state). (((x:'a state),(l :'b state)),(r:'c state)))`,
       	     	    	       	`(high :'a state -> bool)`,
 				`(IMAGE (\(x :'a state). (((x:'a state),(l :'b state)),(r:'c state)))
-           			 high)`] o 
+           			 high)`] o
 			INST_TYPE [``:'b`` |-> ``:('a state # 'b state) # 'c state``,
 				   ``:'a`` |-> ``:'a state``]) CARD_IMAGE]
    ++ RW_TAC std_ss [CARD_CROSS, GSYM REAL_MUL]
@@ -355,7 +355,7 @@ val unif_prog_space_leakage_reduce = store_thm
 	   (leakage (unif_prog_space high low random) f =
 	    SIGMA (\x. (\(x,y,z).
 	    	  joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
-        	  lg (joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} * 
+        	  lg (joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
 	    	      & (CARD high * CARD low))) x)
   	          (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random)) -
 	    SIGMA (\x. (\(x,z).
@@ -367,7 +367,7 @@ val unif_prog_space_leakage_reduce = store_thm
    ++ Q.ABBREV_TAC `foo =
       		  SIGMA (\x. (\(x,y,z).
 	    	  joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
-        	  lg (joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} * 
+        	  lg (joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
 	    	      & (CARD high * CARD low))) x)
   	          (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random)) -
 	    	  SIGMA (\x. (\(x,z).
@@ -439,7 +439,7 @@ val unif_prog_space_leakage_reduce = store_thm
 	    ++ RW_TAC std_ss [] ++ RW_TAC std_ss [FST,SND]
 	    ++ METIS_TAC [])
    ++ POP_ORW
-   ++ `DISJOINT 
+   ++ `DISJOINT
        (IMAGE (\s. (f s,SND (FST s))) (high CROSS low CROSS random))
        ((IMAGE f (high CROSS low CROSS random) CROSS low) DIFF
         (IMAGE (\s. (f s,SND (FST s))) (high CROSS low CROSS random)))`
@@ -507,7 +507,7 @@ val unif_prog_space_leakage_reduce = store_thm
 	    ++ RW_TAC std_ss [] ++ RW_TAC std_ss [FST,SND]
 	    ++ METIS_TAC [])
    ++ POP_ORW
-   ++ `DISJOINT 
+   ++ `DISJOINT
        (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random))
        ((IMAGE f (high CROSS low CROSS random) CROSS (high CROSS low)) DIFF
         (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random)))`
@@ -724,7 +724,7 @@ SIGMA
 	    ++ RW_TAC std_ss [] ++ RW_TAC std_ss [FST,SND]
 	    ++ METIS_TAC [])
    ++ POP_ORW
-   ++ `DISJOINT 
+   ++ `DISJOINT
        (IMAGE (\s. (f s,(SND (FST s),SND s))) (high CROSS low CROSS random))
        ((IMAGE f (high CROSS low CROSS random) CROSS (low CROSS random)) DIFF
         (IMAGE (\s. (f s,(SND (FST s),SND s))) (high CROSS low CROSS random)))`
@@ -795,7 +795,7 @@ SIGMA
 	    ++ RW_TAC std_ss [] ++ RW_TAC std_ss [FST,SND]
 	    ++ METIS_TAC [])
    ++ POP_ORW
-   ++ `DISJOINT 
+   ++ `DISJOINT
        (IMAGE (\s. (f s,(FST(FST s),(SND(FST s),SND s)))) (high CROSS low CROSS random))
        ((IMAGE f (high CROSS low CROSS random) CROSS (high CROSS (low CROSS random))) DIFF
         (IMAGE (\s. (f s,(FST(FST s),(SND(FST s),SND s)))) (high CROSS low CROSS random)))`
@@ -943,7 +943,7 @@ val unif_prog_space_leakage_lemma1 = store_thm
             	 (\x. (\(x,z). 1 / & (CARD high * CARD low * CARD random) *
               	 SIGMA (\(h,r). (if f ((h,z),r) = x then 1 else 0)) (high CROSS random) *
               	 lg (1 / & (CARD high * CARD low * CARD random) *
-                 SIGMA (\(h,r). (if f ((h,z),r) = x then 1 else 0)) (high CROSS random) * 
+                 SIGMA (\(h,r). (if f ((h,z),r) = x then 1 else 0)) (high CROSS random) *
 		       & (CARD low))) x) x else 0))`
    >> RW_TAC std_ss []
    ++ ONCE_REWRITE_TAC [FUN_EQ_THM] ++ RW_TAC std_ss [IN_IMAGE, IN_CROSS]
@@ -1087,7 +1087,7 @@ val unif_prog_space_visible_leakage_lemma1 = store_thm
             	 (\x. (\(x,z). 1 / & (CARD high * CARD low * CARD random) *
               	 SIGMA (\h. (if f ((h,FST z),SND z) = x then 1 else 0)) high *
               	 lg (1 / & (CARD high * CARD low * CARD random) *
-                 SIGMA (\h. (if f ((h,FST z),SND z) = x then 1 else 0)) high * 
+                 SIGMA (\h. (if f ((h,FST z),SND z) = x then 1 else 0)) high *
 		       & (CARD low * CARD random))) x) x else 0))`
    >> RW_TAC std_ss []
    ++ ONCE_REWRITE_TAC [FUN_EQ_THM] ++ RW_TAC std_ss [IN_IMAGE, IN_CROSS]
@@ -1203,14 +1203,14 @@ val unif_prog_space_leakage_lemma2 = store_thm
    	   ~((high CROSS low) CROSS random={}) ==>
 	   (SIGMA (\x. (\(x,y,z).
 	    	  joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
-        	  lg (joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} * 
+        	  lg (joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
 	    	      & (CARD high * CARD low))) x)
   	          (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random))=
    	    SIGMA (\x. (\(out,h,l).
 	    	  ((1/(&(CARD high * CARD low * CARD random)))*
 		   (SIGMA (\r. if (f((h,l),r)=out) then 1 else 0) random)) *
         	  lg (((1/(&(CARD high * CARD low * CARD random)))*
-		   (SIGMA (\r. if (f((h,l),r)=out) then 1 else 0) random)) * 
+		   (SIGMA (\r. if (f((h,l),r)=out) then 1 else 0) random)) *
 	    	      & (CARD high * CARD low))) x)
   	          (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random)))``,
    RW_TAC std_ss []
@@ -1395,14 +1395,14 @@ val unif_prog_space_visible_leakage_lemma2 = store_thm
    	   ~((high CROSS low) CROSS random={}) ==>
 	   (SIGMA (\x. (\(x,y,z).
 	    	  joint_distribution (unif_prog_space high low random) f (\s. (H s,L s,R s)) {(x,y,z)} *
-        	  lg (joint_distribution (unif_prog_space high low random) f (\s. (H s,L s,R s)) {(x,y,z)} * 
+        	  lg (joint_distribution (unif_prog_space high low random) f (\s. (H s,L s,R s)) {(x,y,z)} *
 	    	      & (CARD high * CARD low * CARD random))) x)
   	          (IMAGE (\s. (f s,FST (FST s),SND (FST s),SND s)) (high CROSS low CROSS random))=
    	    SIGMA (\x. (\(out,h,l,r).
 	    	  ((1/(&(CARD high * CARD low * CARD random)))*
 		   (if (f((h,l),r)=out) then 1 else 0)) *
         	  lg (((1/(&(CARD high * CARD low * CARD random)))*
-		   (if (f((h,l),r)=out) then 1 else 0)) * 
+		   (if (f((h,l),r)=out) then 1 else 0)) *
 	    	      & (CARD high * CARD low * CARD random))) x)
   	          (IMAGE (\s. (f s,FST (FST s),SND (FST s),SND s)) (high CROSS low CROSS random)))``,
    RW_TAC std_ss []
@@ -1432,7 +1432,7 @@ val unif_prog_space_visible_leakage_lemma2 = store_thm
    ++ ONCE_REWRITE_TAC [FUN_EQ_THM] ++ RW_TAC std_ss [IN_IMAGE, IN_CROSS]
    ++ RW_TAC std_ss [] ++ `FST s' = (FST(FST s'),SND(FST s'))` by RW_TAC std_ss [PAIR]
    ++ POP_ORW ++ RW_TAC real_ss []
-   ++ Suff `joint_distribution (unif_prog_space high low random) f (\s. (H s,L s,R s)) {(f s',FST (FST s'),SND (FST s'),SND s')} = 
+   ++ Suff `joint_distribution (unif_prog_space high low random) f (\s. (H s,L s,R s)) {(f s',FST (FST s'),SND (FST s'),SND s')} =
 		1 / & (CARD high * CARD low * CARD random)`
    >> RW_TAC std_ss []
    ++ RW_TAC std_ss [joint_distribution_def, unif_prog_space_def, unif_prog_dist_def, PROB,
@@ -1465,7 +1465,7 @@ val unif_prog_space_visible_leakage_lemma2 = store_thm
    ++ RW_TAC std_ss []
    ++ `(PREIMAGE f {f s'} INTER PREIMAGE (\s. (H s,L s,R s)) {(FST (FST s'),SND (FST s'),SND s')} INTER
 	(high CROSS low CROSS random)) = {s'}`
-	by (ONCE_REWRITE_TAC [EXTENSION] ++ RW_TAC std_ss [IN_INTER, IN_SING, IN_PREIMAGE, high_state_def, 
+	by (ONCE_REWRITE_TAC [EXTENSION] ++ RW_TAC std_ss [IN_INTER, IN_SING, IN_PREIMAGE, high_state_def,
 			   low_state_def, random_state_def, IN_CROSS]
 	    ++ METIS_TAC [PAIR, FST, SND])
    ++ RW_TAC std_ss [REAL_SUM_IMAGE_SING, IN_CROSS]);
@@ -1555,7 +1555,7 @@ val unif_prog_space_leakage_lemma3 = store_thm
 	   ++ SPOSE_NOT_THEN STRIP_ASSUME_TAC
 	   ++ FULL_SIMP_TAC std_ss [CROSS_EMPTY])
    ++ POP_ORW
-   ++ `& (CARD low) * (inv (& (CARD high) * & (CARD random)) * inv (& (CARD low))) = 
+   ++ `& (CARD low) * (inv (& (CARD high) * & (CARD random)) * inv (& (CARD low))) =
        ((inv (& (CARD low))) * ((& (CARD low)))) * (inv (& (CARD high) * & (CARD random)))`
        by REAL_ARITH_TAC
    ++ POP_ORW
@@ -1654,7 +1654,7 @@ val unif_prog_space_visible_leakage_lemma3 = store_thm
 	   ++ FULL_SIMP_TAC std_ss [CROSS_EMPTY])
    ++ POP_ORW
    ++ `& (CARD low) * & (CARD random) *
-	(inv (& (CARD high)) * inv (& (CARD low) * & (CARD random))) = 
+	(inv (& (CARD high)) * inv (& (CARD low) * & (CARD random))) =
        inv (& (CARD high)) * (inv (& (CARD low) * & (CARD random) ) * (& (CARD low) * & (CARD random)) )`
        by REAL_ARITH_TAC
    ++ POP_ORW
@@ -1676,7 +1676,7 @@ val unif_prog_space_leakage_lemma4 = store_thm
    	   ~((high CROSS low) CROSS random={}) ==>
 	   (SIGMA (\x. (\(x,y,z).
 	    	  joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
-        	  lg (joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} * 
+        	  lg (joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
 	    	      & (CARD high * CARD low))) x)
   	          (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random))=
 	    (1/(&(CARD high * CARD low * CARD random)))*
@@ -1845,7 +1845,7 @@ val unif_prog_space_leakage_LIST_TO_SET_computation_reduce = store_thm
 	    (REAL_SUM (MAP (\x. (\(out,l). (\s. s * lg ((1/(&(LENGTH high * LENGTH random)))*s))
             	      	   	(REAL_SUM (MAP (\(h,r). if (f((h,l),r)=out) then 1 else 0)
 					  (LIST_COMBS high random)))) x)
-		      (MAKE_ALL_DISTINCT 
+		      (MAKE_ALL_DISTINCT
 		  		(MAP (\s. (f s,SND (FST s)))
 				     (LIST_COMBS (LIST_COMBS high low) random)))))))``,
    REPEAT STRIP_TAC

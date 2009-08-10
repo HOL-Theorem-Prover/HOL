@@ -14,17 +14,17 @@ val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
  *---------------------------------------------------------------------------*)
 
 val meter = Count.mk_meter();
-val timer = Lib.start_time(); 
+val timer = Lib.start_time();
 
 (*---------------------------------------------------------------------------
- * Theorem for projection of a sequence of microcycles into a single 
+ * Theorem for projection of a sequence of microcycles into a single
  *  macrocycle.
  *---------------------------------------------------------------------------*)
 
 val _ = new_theory "NEXT";
 
 val INDUCTION        = numTheory.INDUCTION;
-val INDUCT_TAC       = INDUCT_THEN INDUCTION ASSUME_TAC;          
+val INDUCT_TAC       = INDUCT_THEN INDUCTION ASSUME_TAC;
 
 val SUC_LESS         = prim_recTheory.SUC_LESS;
 val LESS_REFL        = prim_recTheory.LESS_REFL;
@@ -88,13 +88,13 @@ val NEXT_SUC2 =
     THEN RES_TAC
     THEN ASM_REWRITE_TAC[]
     THEN IMP_RES_TAC
-         (SPECL[--`done:num->bool`--, 
+         (SPECL[--`done:num->bool`--,
                 --`x2:num`--,
                 --`SUC x1`--] FUN_EQ_LEMMA')
     THEN IMP_RES_TAC LESS_SUC_EQ_LEMMA
     THEN ASM_REWRITE_TAC[])
 end;
-   
+
 val STABLE_SUC =
  store_thm
   ("STABLE_SUC",
@@ -126,7 +126,7 @@ val STABLE_LEMMA = store_thm("STABLE_LEMMA",
     THEN REPEAT STRIP_TAC
     THEN ASSUME_TAC stb_SUC
     THEN IMP_RES_TAC(SPECL[--`SUC x`--, --`d:num`--] LESS_ADD_NONZERO)
-    THEN CONV_TAC SYM_CONV 
+    THEN CONV_TAC SYM_CONV
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASSUME_TAC(SPEC (--`x:num`--) LESS_EQ_SUC_REFL)
     THEN ASM_REWRITE_TAC[]);
@@ -148,7 +148,7 @@ val NEXT_LEMMA1 =
 val next_SUC =
  DISCH_ALL
   (REWRITE_RULE
-   [ADD_CLAUSES] 
+   [ADD_CLAUSES]
    (SUBS [ASSUME (--`d = 0`--)]
          (ASSUME (--`(done:num->bool) (SUC x + d)`--))));
 
@@ -162,7 +162,7 @@ val NEXT_LEMMA2 =
     THEN IMP_RES_TAC next_SUC
     THEN RES_TAC);
 
-val assm = 
+val assm =
  ASSUME (--`(!x. (done x = f(s x)) /\ (s(SUC x) = g(i x,s x))) /\
             (!a b. (FN:('a#'b)->'b)(a,b) = (if f b then b else FN(a,g(a,b))))`--) ;
 
@@ -179,7 +179,7 @@ val NEXT_THM =
  store_thm
   ("NEXT_THM",
    --`!(FN : 'a#'b -> 'b).
-      !(f:'b->bool). 
+      !(f:'b->bool).
       !(g: 'a#'b -> 'b).
       !(done : num->bool).
       !(i:num->'a).
@@ -187,7 +187,7 @@ val NEXT_THM =
       ((!x. (done x = f(s x)) /\ (s(x+1) = g(i x,s x))) /\
       (!a b. FN(a,b) = (if f b then b else FN(a,g(a,b)))))    ==>
       (!d x.
-        (NEXT(x,x+d)done /\ STABLE(x,x+d)i) ==> 
+        (NEXT(x,x+d)done /\ STABLE(x,x+d)i) ==>
         (s(x+d) = FN(i x,g(i x,s x))))`--,
    REPEAT GEN_TAC
     THEN REWRITE_TAC[SYM(SPEC_ALL ADD1)]
@@ -203,9 +203,9 @@ val NEXT_THM =
        THEN IMP_RES_TAC ADD_INV_0
        THEN REWRITE_TAC[ASSUME (--`d=0`--),ADD_CLAUSES]
        THEN REWRITE_TAC
-             ([SPECL[--`(i:num->'a)x`--, 
+             ([SPECL[--`(i:num->'a)x`--,
                      --`(g:('a#'b)->'b)(i(x:num),s x)`--] FN,
-               ASSUME (--`(done(SUC x)):bool`--)] @ 
+               ASSUME (--`(done(SUC x)):bool`--)] @
               (map SYM (CONJUNCTS(SPEC_ALL done_s)))),
       ALL_TAC]
     THEN ASSUME_TAC(SPEC (--`SUC x`--) ind_hyp)
@@ -213,7 +213,7 @@ val NEXT_THM =
     THEN IMP_RES_TAC NEXT_SUC2
     THEN RES_TAC
     THEN REWRITE_TAC[s_tm]
-    THEN SUBST_TAC[SPECL[--`(i:num->'a)x`--, 
+    THEN SUBST_TAC[SPECL[--`(i:num->'a)x`--,
                          --`(g:('a#'b)->'b)(i(x:num),s x)`--]FN]
     THEN REWRITE_TAC
           (ASSUME (--`~done(SUC x)`--)::(map SYM (CONJUNCTS(SPEC_ALL done_s))))
@@ -250,14 +250,14 @@ val MULT_FUN_CURRY = new_recursive_definition
  * Rewriting ambiguity between SUC_SUB1 and SUB means that hol88
  * does the following proof properly, but hol90 won't. Both will do
  * the "non-commented-out version"
- * 
+ *
  * val MULT_FUN_CURRY_THM =
  *  store_thm
  *   ("MULT_FUN_CURRY_THM",
  *    --`!i1 i2 m n t.
  *      MULT_FUN_CURRY n i1 i2 m t =
  *       (if t then (m,n,t)
- *        else MULT_FUN_CURRY (n-1) i1 i2 (if i1=0 then m else i2+m) 
+ *        else MULT_FUN_CURRY (n-1) i1 i2 (if i1=0 then m else i2+m)
  *                            ((((n-1)-1)=0) \/ (i2=0)))`--,
  *    REPEAT GEN_TAC
  *     THEN STRUCT_CASES_TAC(SPEC (--`n:num`--) num_CASES)
@@ -277,7 +277,7 @@ val MULT_FUN_CURRY_THM = store_thm("MULT_FUN_CURRY_THM",
     THEN ASM_REWRITE_TAC[MULT_FUN_CURRY,SUB]);
 
 
-val MULT_FUN = new_definition("MULT_FUN", 
+val MULT_FUN = new_definition("MULT_FUN",
    --`MULT_FUN((i1,i2),m,n,t) = MULT_FUN_CURRY n i1 i2 m t`--);
 
 val MULT_FUN_DEF = store_thm("MULT_FUN_DEF",
@@ -330,7 +330,7 @@ val MULT_FUN_F =
  store_thm
   ("MULT_FUN_F",
    --`!i1 i2 m n.
-     MULT_FUN((i1,i2),m,n,F) = 
+     MULT_FUN((i1,i2),m,n,F) =
      MULT_FUN((i1,i2),(if i1=0 then m else i2+m),(n-1),((((n-1)-1)=0) \/ (i2=0)))`--,
    REPEAT GEN_TAC
     THEN ASM_CASES_TAC (--`t:bool`--)
@@ -401,7 +401,7 @@ val MULT_FUN_THM =
   ("MULT_FUN_THM",
    --`!n i1 i2 m t.
      MULT_FUN((i1,i2),m,n,t) =
-       if t then 
+       if t then
        (m,n,t)
        else
        (if ((n-1)=0)\/(i2=0) then
@@ -410,9 +410,9 @@ val MULT_FUN_THM =
         ((if i1=0 then m else ((n-1)*i2)+m),1,T))`--,
        INDUCT_TAC
        THEN REPEAT GEN_TAC
-       THEN ASM_CASES_TAC (--`t:bool`--) 
+       THEN ASM_CASES_TAC (--`t:bool`--)
        THEN ASM_REWRITE_TAC[MULT_FUN_T,MULT_FUN_F,SUC_SUB1,SUB_0]
-       THEN ASM_CASES_TAC (--`i1=0`--) 
+       THEN ASM_CASES_TAC (--`i1=0`--)
        THEN ASM_CASES_TAC (--`i2=0`--)
        THEN ASM_CASES_TAC (--`n=0`--)
        THEN ASM_CASES_TAC (--`(n-1)=0`--)
@@ -520,20 +520,20 @@ val prims = [MUX,REG,FLIPFLOP,DEC,ADDER,ZERO_TEST,IS_ZERO,OR_GATE]
 
 
 (* Now use the unwinding rules.  *)
-val MULT_IMP_UNFOLD = 
+val MULT_IMP_UNFOLD =
   save_thm("MULT_IMP_UNFOLD",
        unwindLib.UNFOLD_RIGHT_RULE prims MULT_IMP);
 
-val MULT_IMP_UNWIND = 
+val MULT_IMP_UNWIND =
   save_thm("MULT_IMP_UNWIND",
        unwindLib.UNWIND_AUTO_RIGHT_RULE MULT_IMP_UNFOLD);
 
-val MULT_IMP_PRUNE = 
-  save_thm("MULT_IMP_PRUNE", 
+val MULT_IMP_PRUNE =
+  save_thm("MULT_IMP_PRUNE",
        unwindLib.PRUNE_RIGHT_RULE MULT_IMP_UNWIND);
 
-val MULT_IMP_EXPAND = 
-  save_thm("MULT_IMP_EXPAND", 
+val MULT_IMP_EXPAND =
+  save_thm("MULT_IMP_EXPAND",
          unwindLib.EXPAND_AUTO_RIGHT_RULE prims MULT_IMP);
 
 val COND_ADD_LEMMA = store_thm("COND_ADD_LEMMA",
@@ -565,7 +565,7 @@ val G_FUN = new_definition("G_FUN",
      (if t then i1 else n - 1),
      (((if t then i1 - 1 else (n - 1) - 1) = 0) \/ (i2 = 0)))`--);
 
-val NEXT_THM' = 
+val NEXT_THM' =
  INST_TYPE[alpha |-> Type`:num#num`, beta  |-> Type`:num#num#bool`] NEXT_THM;
 
 
@@ -583,7 +583,7 @@ val NEXT_MULT_LEMMA1 = save_thm("NEXT_MULT_LEMMA1",
                            NEXT_THM')));
 
 val NEXT_MULT_LEMMA2 = store_thm("NEXT_MULT_LEMMA2",
-   --`MULT_IMP(i1,i2,o1,o2,done) 
+   --`MULT_IMP(i1,i2,o1,o2,done)
       ==> !x.
             (o2(x + 1),o1(x + 1),done(x + 1)) =
              G_FUN((i1 x,i2 x),o2 x,o1 x,done x)`--,
@@ -655,7 +655,7 @@ val MULT_CORRECTNESS = store_thm("MULT_CORRECTNESS",
     THEN IMP_RES_TAC(fst(EQ_IMP_RULE(SPEC_ALL PAIR_SPLIT))));
 
 
-val _ = export_theory (); 
+val _ = export_theory ();
 
 
 (*---------------------------------------------------------------------------*

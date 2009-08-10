@@ -13,11 +13,11 @@ sig
   val def_suffix : string ref
   val const_eq_ref : conv ref
 
-  val wfrec_eqns : thry -> term -> 
-                    {SV : term list, 
-                     WFR : term, 
+  val wfrec_eqns : thry -> term ->
+                    {SV : term list,
+                     WFR : term,
                      extracta : (thm * term list * bool) list,
-                     pats : pattern list, 
+                     pats : pattern list,
                      proto_def : term}
 
   val mk_defn    : string -> term -> defn
@@ -43,7 +43,7 @@ sig
   val elim_tcs   : defn -> thm list -> defn
   val simp_tcs   : defn -> conv -> defn
   val prove_tcs  : defn -> tactic -> defn
-  
+
   val triv_defn  : defn -> bool
   val fetch_eqns : defn -> thm
 

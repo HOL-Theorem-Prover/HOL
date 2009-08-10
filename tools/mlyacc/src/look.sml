@@ -1,4 +1,4 @@
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/22 07:40:27  michaeln
@@ -10,7 +10,7 @@
  *
  * Revision 1.1.1.1  1996/01/31  16:01:46  george
  * Version 109
- * 
+ *
  *)
 
 functor mkLook (structure IntGrammar : INTGRAMMAR) : LOOK =
@@ -44,7 +44,7 @@ functor mkLook (structure IntGrammar : INTGRAMMAR) : LOOK =
 			val eq = eqNonterm
 			val gt = gtNonterm
 		end)
-	
+
 	val mkFuncs = fn {rules : rule list, nonterms : int,
 			  produces : nonterm -> rule list} =>
 
@@ -72,7 +72,7 @@ functor mkLook (structure IntGrammar : INTGRAMMAR) : LOOK =
 		       place it back on the list
 		   (4) repeat until the list does not change.
 
-	   We have found all the possible nullable rules. 
+	   We have found all the possible nullable rules.
       *)
 
 	val nullable =
@@ -91,7 +91,7 @@ functor mkLook (structure IntGrammar : INTGRAMMAR) : LOOK =
 	      val f = fn ((NT i,nil),(l,_)) => (update(nullable,i,true);
 				 	       (l,true))
 		       | (a as (lhs,(h::t)),(l,change)) =>
-				case (nullable sub h) 
+				case (nullable sub h)
 				  of false => (a::l,change)
 				   | true => ((lhs,t)::l,true)
 	      fun prove(l,true) = prove(List.foldr f (nil,false) l)
@@ -108,7 +108,7 @@ functor mkLook (structure IntGrammar : INTGRAMMAR) : LOOK =
 		if nullable nt then f (rest,addSymbol(sym,result))
 		else addSymbol(sym,result)
       	      | f ((sym as TERM _) :: _,result) = addSymbol(sym,result)
-	in f 
+	in f
 	end
 
      (* accumulate: look at the start of the right-hand-sides of rules,
@@ -169,7 +169,7 @@ functor mkLook (structure IntGrammar : INTGRAMMAR) : LOOK =
 		   of true => nullable_string r
 		    | f => f)
 	| nullable_string nil = true
-	  
+
     in {nullable = nullable, first = prefix}
     end
 end;

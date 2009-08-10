@@ -12,7 +12,7 @@
 * Parent theories (comment out "load"s and "quietdec"s for compilation)
 ******************************************************************************)
 
-(* 
+(*
 *)
 quietdec := true;
 loadPath := ["../../path","../../regexp","../official-semantics"] @ !loadPath;
@@ -29,7 +29,7 @@ open bossLib metisLib listTheory rich_listTheory pred_setLib intLib
      arithmeticTheory;
 open regexpTheory matcherTheory;
 open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory 
+     UnclockedSemanticsTheory ClockedSemanticsTheory
      (* PropertiesTheory*);
 
 (*
@@ -46,7 +46,7 @@ quietdec := false;
 val _ = new_theory "ExecuteSemantics";
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers 
+* Set default parsing to natural numbers rather than integers
 ******************************************************************************)
 val _ = intLib.deprecate_int();
 
@@ -70,7 +70,7 @@ val pureDefine = with_flag (computeLib.auto_import_definitions,false) Define;
 (******************************************************************************
 * A simpset fragment to rewrite away quantifiers restricted with :: (a to b)
 ******************************************************************************)
-val resq_SS = 
+val resq_SS =
  simpLib.merge_ss
   [res_quanTools.resq_SS,
    rewrites [IN_DEF,LESS_def,LESSX_def,
@@ -110,18 +110,18 @@ val S_CLOCK_FREE_def =
    /\
    (S_CLOCK_FREE (S_CAT(r1,r2))      =  S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
-   (S_CLOCK_FREE (S_FUSION(r1,r2))   = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2) 
+   (S_CLOCK_FREE (S_FUSION(r1,r2))   = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
-   (S_CLOCK_FREE (S_OR(r1,r2))       = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2) 
+   (S_CLOCK_FREE (S_OR(r1,r2))       = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
-   (S_CLOCK_FREE (S_AND(r1,r2))      = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2) 
+   (S_CLOCK_FREE (S_AND(r1,r2))      = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
    (S_CLOCK_FREE (S_REPEAT r)        = S_CLOCK_FREE r)
    /\
    (S_CLOCK_FREE (S_CLOCK v)         = F)`;
 
 (******************************************************************************
-* Neutrality                                                
+* Neutrality
 ******************************************************************************)
 
 (*
@@ -189,7 +189,7 @@ val NEUTRAL_LIST = prove
       [NEUTRAL_LIST_def, TOP_FREE_LIST_def, BOTTOM_FREE_LIST_def, EVERY_DEF]);
 
 (******************************************************************************
-* Evaluating boolean properties                                        
+* Evaluating boolean properties
 ******************************************************************************)
 val B_SEMS_def = pureDefine `B_SEMS s b = B_SEM (STATE s) b`;
 
@@ -213,9 +213,9 @@ val EVAL_B_SEM = store_thm
        case l of TOP -> T || BOTTOM -> F || STATE s -> B_SEMS s b``,
    Cases
    ++ RW_TAC std_ss [B_SEM_def, B_SEMS_def]);
-        
+
 (******************************************************************************
-* Derived SEREs                                               
+* Derived SEREs
 ******************************************************************************)
 
 (* Empty only matches the empty string *)
@@ -284,14 +284,14 @@ val US_SEM_REPEAT_TRUE = store_thm
 
 (******************************************************************************
 * Executable semantics of [f1 U f2]
-*   w |= [f1 U f2] 
-*   <==> 
+*   w |= [f1 U f2]
+*   <==>
 *   |w| > 0 And (w |= f2  Or  (w |= f1  And  w^1 |= [f1 U f2]))
 ******************************************************************************)
 val UF_SEM_F_UNTIL_REC =
  store_thm
   ("UF_SEM_F_UNTIL_REC",
-   ``UF_SEM w (F_UNTIL(f1,f2)) = 
+   ``UF_SEM w (F_UNTIL(f1,f2)) =
       LENGTH w > 0
       /\
       (UF_SEM w f2
@@ -373,8 +373,8 @@ val UF_SEM_F_UNTIL_REC =
 *
 *   w |=_0 {r}(f)
 *
-*   w |=_{n+1} {r}(f)  
-*   <==>  
+*   w |=_{n+1} {r}(f)
+*   <==>
 *   w |=_n {r}(f)  And  (w^{0,n} |= r  Implies  w^n |= f)
 *
 * then
@@ -382,12 +382,12 @@ val UF_SEM_F_UNTIL_REC =
 *   w |= {r}(f)  <==>  w |=_|w| {r}(f)
 ******************************************************************************)
 val UF_SEM_F_SUFFIX_IMP_FINITE_REC_def =
- Define 
+ Define
   `(UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) 0 = T)
    /\
-   (UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) (SUC n) = 
+   (UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) (SUC n) =
      UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n
-     /\ 
+     /\
      (US_SEM (SEL w (0, n)) r ==> UF_SEM (RESTN w n) f))`;
 
 (******************************************************************************
@@ -396,10 +396,10 @@ val UF_SEM_F_SUFFIX_IMP_FINITE_REC_def =
 val UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX =
  store_thm
   ("UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX",
-  ``UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n = 
+  ``UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n =
      (n = 0) \/
      (UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) (n-1)
-      /\ 
+      /\
      (US_SEM (SEL w (0, (n-1))) r ==> UF_SEM (RESTN w (n-1)) f))``,
   Cases_on `n`
    THEN RW_TAC arith_ss [UF_SEM_F_SUFFIX_IMP_FINITE_REC_def]);
@@ -445,9 +445,9 @@ end;
 val UF_SEM_F_SUFFIX_IMP_FINITE_REC =
  store_thm
   ("UF_SEM_F_SUFFIX_IMP_FINITE_REC",
-   ``NEUTRAL_LIST w 
+   ``NEUTRAL_LIST w
      ==>
-     (UF_SEM (FINITE w) (F_SUFFIX_IMP(r,f)) = 
+     (UF_SEM (FINITE w) (F_SUFFIX_IMP(r,f)) =
        UF_SEM_F_SUFFIX_IMP_FINITE_REC (FINITE w) (r,f) (LENGTH w))``,
    RW_TAC list_resq_ss [UF_SEM_def]
     THEN PROVE_TAC
@@ -457,11 +457,11 @@ val UF_SEM_F_SUFFIX_IMP_FINITE_REC =
 * Define w |=_x {r}(f) where x is an extended number (xnum)
 ******************************************************************************)
 val UF_SEM_F_SUFFIX_IMP_REC_def =
- Define 
-  `(UF_SEM_F_SUFFIX_IMP_REC w (r,f) (XNUM n) = 
+ Define
+  `(UF_SEM_F_SUFFIX_IMP_REC w (r,f) (XNUM n) =
      UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n)
    /\
-   (UF_SEM_F_SUFFIX_IMP_REC w (r,f) INFINITY = 
+   (UF_SEM_F_SUFFIX_IMP_REC w (r,f) INFINITY =
      !n. US_SEM (SEL w (0,n)) r ==> UF_SEM (RESTN w n) f)`;
 
 (******************************************************************************
@@ -472,7 +472,7 @@ val UF_SEM_F_SUFFIX_IMP_REC =
   ("UF_SEM_F_SUFFIX_IMP_REC",
    ``NEUTRAL_PATH w
      ==>
-     (UF_SEM w (F_SUFFIX_IMP(r,f)) = 
+     (UF_SEM w (F_SUFFIX_IMP(r,f)) =
        UF_SEM_F_SUFFIX_IMP_REC w (r,f) (LENGTH w))``,
    Cases_on `w`
     THEN RW_TAC list_resq_ss
@@ -514,7 +514,7 @@ val SEL_FINITE_is_BUTFIRSTN_FIRSTN = prove
        ++ RW_TAC arith_ss [BUTFIRSTN])
    ++ FULL_SIMP_TAC arith_ss [LENGTH]
    ++ ONCE_REWRITE_TAC [SEL_REC_AUX]
-   ++ RW_TAC arith_ss 
+   ++ RW_TAC arith_ss
       [LENGTH, FIRSTN, arithmeticTheory.ADD1, HEAD_def, HD, REST_def, TL,
        BUTFIRSTN]
    << [Q.PAT_ASSUM `!j. P j` (MP_TAC o Q.SPECL [`0`, `n`])
@@ -537,7 +537,7 @@ val sere2regexp = prove
   (``!r l. S_CLOCK_FREE r ==> (US_SEM l r = sem (sere2regexp r) l)``,
    INDUCT_THEN sere_induct ASSUME_TAC
    ++ RW_TAC std_ss
-      [US_SEM_def, sem_def, sere2regexp_def, sem_One, 
+      [US_SEM_def, sem_def, sere2regexp_def, sem_One,
        ELEM_EL, EL, S_CLOCK_FREE_def]
    ++ CONV_TAC (DEPTH_CONV ETA_CONV)
    ++ RW_TAC std_ss [CONCAT_is_CONCAT]);
@@ -575,7 +575,7 @@ val FINITE_UF_SEM_F_STRONG_SERE = store_thm
        US_SEM w (S_CAT (r,S_ANY))``,
 
        if NEUTRAL_LIST w /\ CLOCK_FREE r then
-         US_SEM 
+         US_SEM
         UF_SEM (FINITE w)
         (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_STRONG_BOOL B_FALSE)))))``,
        NEUTRAL_LIST w
@@ -610,7 +610,7 @@ val INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
        UF_SEM (INFINITE p) (F_STRONG_IMP (r1,r2)) =
        UF_SEM (INFINITE p)
        (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))``,
-   RW_TAC list_resq_ss [UF_SEM_def, B_SEM, AND_IMP_INTRO] 
+   RW_TAC list_resq_ss [UF_SEM_def, B_SEM, AND_IMP_INTRO]
     THEN HO_MATCH_MP_TAC (* MJCG tried using ++, <<, but it wouldn't parse *)
           (METIS_PROVE []
            ``(!j. P j ==> (Q j = R j)) ==> ((!j. P j ==> Q j) = !j. P j ==> R j)``)
@@ -632,7 +632,7 @@ val UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
            INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
 
 (******************************************************************************
-* Weak implication                                    
+* Weak implication
 ******************************************************************************)
 val BUTFIRSTN_FIRSTN = prove
   (``!n k l.
@@ -741,7 +741,7 @@ val F_SERE_NEVER_amatch = store_thm
    ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
    ++ ONCE_REWRITE_TAC [EVAL_US_SEM]
    ++ RW_TAC std_ss [S_CLOCK_FREE_def, S_TRUE_def]
-   ++ Suff `!j : num. (!k : num. ~(j <= k)) = F` 
+   ++ Suff `!j : num. (!k : num. ~(j <= k)) = F`
    >> DISCH_THEN (fn th => REWRITE_TAC [th])
    ++ RW_TAC std_ss []
    ++ PROVE_TAC [arithmeticTheory.LESS_EQ_REFL]);
@@ -2217,7 +2217,7 @@ val checker_SEL_REC = store_thm
        ++ ONCE_REWRITE_TAC [simple_def, checker_def]
        ++ RW_TAC std_ss [boolean_def]
        ++ METIS_TAC [checker_NOT_AND],
-       
+
        (* F_NOT (F_BOOL b) *)
        RW_TAC std_ss
          [boolean_checker_US_SEM, boolean_def, simple_def, checker_def],

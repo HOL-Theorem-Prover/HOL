@@ -184,7 +184,7 @@ val Whitening_Inversion = Q.store_thm
 (* Round operations in the encryption and the decryption. Slow to define.    *)
 (*---------------------------------------------------------------------------*)
 
-val Round_def = 
+val Round_def =
  tDefine
    "Round"
    `Round n (k:keysched) (b:block) =
@@ -192,7 +192,7 @@ val Round_def =
       then PostWhitening k b
       else Round (n-1) (ROTKEYS k) (FwdRound b (GETKEYS k))`
   (WF_REL_TAC `measure FST` THEN RW_TAC arith_ss [ELIM_UNCURRY]);
-  
+
 val Round_ind = fetch "-" "Round_ind";
 
 (*---------------------------------------------------------------------------*)
@@ -200,7 +200,7 @@ val Round_ind = fetch "-" "Round_ind";
 (* that PreWhitening and PostWhitening use the same key pair                 *)
 (*---------------------------------------------------------------------------*)
 
-val InvRound_def = 
+val InvRound_def =
  tDefine
    "InvRound"
    `InvRound n k b =

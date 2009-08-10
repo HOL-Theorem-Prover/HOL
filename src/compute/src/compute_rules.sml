@@ -145,7 +145,7 @@ val strictify_thm = repeat_on_conj UNFUNIFY;
 
 (* Ensures a theorem is an equality. *)
 fun eq_intro thm =
-  if is_eq (concl thm) then thm else 
+  if is_eq (concl thm) then thm else
   if is_neg (concl thm) then EQF_INTRO thm
                         else EQT_INTRO thm;
 

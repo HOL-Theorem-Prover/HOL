@@ -11,10 +11,10 @@ val ARW = RW_TAC arith_ss;
 
 val _ = new_theory "gcd";
 
-val IS_GCD = Define `is_gcd a b c 
-                        = 
-                     divides c a /\ 
-                     divides c b /\ 
+val IS_GCD = Define `is_gcd a b c
+                        =
+                     divides c a /\
+                     divides c b /\
                      !d. divides d a /\ divides d b ==> divides d c`;
 
 
@@ -41,7 +41,7 @@ val IS_GCD_0L = store_thm("IS_GCD_0R",
 val PRIME_IS_GCD = store_thm("PRIME_IS_GCD",
                         Term `!p b. prime p ==> divides p b \/ is_gcd p b 1`,
                         ARW[] THEN Cases_on `divides p b` THEN ARW[]
-                        THEN ARW[IS_GCD,ONE_DIVIDES_ALL]         
+                        THEN ARW[IS_GCD,ONE_DIVIDES_ALL]
                         THEN Cases_on `d=1` THEN ARW[ONE_DIVIDES_ALL]
                         THEN PROVE_TAC[prime_def]);
 
@@ -58,11 +58,11 @@ val IS_GCD_MINUS_R = store_thm("IS_GCD_MINUS_R",
                             PROVE_TAC[IS_GCD_MINUS_L,IS_GCD_SYM]
                      );
 
-val GCD = 
- Define 
+val GCD =
+ Define
      `(gcd 0 y = y)
- /\   (gcd (SUC x) 0 = SUC x) 
- /\   (gcd (SUC x) (SUC y) = if y <= x then gcd (x-y) (SUC y) 
+ /\   (gcd (SUC x) 0 = SUC x)
+ /\   (gcd (SUC x) (SUC y) = if y <= x then gcd (x-y) (SUC y)
                                        else gcd (SUC x) (y-x))`;
 
 val gcd_ind = GEN_ALL (fetch "-" "gcd_ind");
@@ -70,7 +70,7 @@ val gcd_ind = GEN_ALL (fetch "-" "gcd_ind");
 
 val GCD_IS_GCD = store_thm("GCD_IS_GCD",
                            Term`!a b. is_gcd a b (gcd a b)`,
-                           recInduct gcd_ind THEN ARW [GCD] THEN 
+                           recInduct gcd_ind THEN ARW [GCD] THEN
                            PROVE_TAC [IS_GCD_0L,IS_GCD_0R,
                                       IS_GCD_MINUS_L,IS_GCD_MINUS_R,
                                       DECIDE``~(y<=x) ==> SUC x <= SUC y``,
@@ -111,9 +111,9 @@ val PRIME_GCD = store_thm("PRIME_GCD",
                         Term `!p b. prime p ==> divides p b \/ (gcd p b = 1)`,
                         PROVE_TAC[PRIME_IS_GCD,GCD_IS_GCD,IS_GCD_UNIC]);
 
-val EUCLIDES_AUX = prove(Term 
+val EUCLIDES_AUX = prove(Term
 `!a b c d. divides c (d*a) /\ divides c (d*b)
-               ==> 
+               ==>
              divides c (d*gcd a b)`,
 recInduct gcd_ind THEN ARW [GCD]
   THEN Q.PAT_ASSUM `$! M` MATCH_MP_TAC
@@ -126,7 +126,7 @@ recInduct gcd_ind THEN ARW [GCD]
 
 val L_EUCLIDES = store_thm("L_EUCLIDES",
                            Term `!a b c. (gcd a b = 1) /\ divides b (a*c) ==> divides b c`,
-                           ARW[] 
+                           ARW[]
                            THEN `c=c* gcd a b` by ARW[MULT_CLAUSES]
                            THEN ONCE_ASM_REWRITE_TAC[]
                            THEN PROVE_TAC[EUCLIDES_AUX,DIVIDES_MULT,MULT_SYM,DIVIDES_REF]);
@@ -134,7 +134,7 @@ val L_EUCLIDES = store_thm("L_EUCLIDES",
 
 val P_EUCLIDES = store_thm("P_EUCLIDES",
                            Term `!p a b. prime p /\ divides p (a*b)
-                                           ==> 
+                                           ==>
                                          divides p a \/ divides p b`,
                            ARW[] THEN Cases_on `divides p a` THEN ARW[]
                            THEN `gcd p a = 1` by PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIC,PRIME_GCD]

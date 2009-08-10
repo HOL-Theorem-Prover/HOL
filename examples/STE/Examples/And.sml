@@ -3,16 +3,16 @@
 
 val And_def = Define  `And (a, b) (c, d) = (a/\c, b\/d)`;;
 
-val And_bool_def =  Define `And_bool s_b s_b' = 
-    !node. ((node = "out") ==> 
+val And_bool_def =  Define `And_bool s_b s_b' =
+    !node. ((node = "out") ==>
 	    (s_b' node = ((s_b "i0") /\ (s_b "i1"))))`;
 
-val And_lattice_def = Define `(And_lattice s node = 
+val And_lattice_def = Define `(And_lattice s node =
 			    if (node = "i0")
-				then X 
+				then X
 			    else if (node = "i1") then X
-			    else if (node = "out") 
-				     then 
+			    else if (node = "out")
+				     then
 					 And (s "i0")(s "i1")
 				 else
 				     X)`;
@@ -25,7 +25,7 @@ val c  =  (T, "out", ``(v1/\v2):bool``, 1, 2) ;
 val A  =  TF [a1, a2];
 val C  =  TF [c];
 
-(* Running the STE Simulator *)	      
+(* Running the STE Simulator *)
 val AND_STE_IMPL1 = STE A C ``And_lattice`` comp_list true;
 
 (* when you expect a low output at the AND gate *)
@@ -36,7 +36,7 @@ val c  =  (T, "out", ``F:bool``, 1, 2) ;
 val A  =  TF [a1];
 val C  =  TF [c];
 
-(* Running the STE Simulator *)	      
+(* Running the STE Simulator *)
 val AND_STE_IMPL1 = STE A C ``And_lattice`` comp_list true;
 
 
@@ -47,7 +47,7 @@ val c  = (T, "out", ``T:bool``, 1, 2) ;
 val A  =  TF [a1,a2];
 val C  =  TF [c];
 
-(* Running the STE Simulator *)	      
+(* Running the STE Simulator *)
 val AND_STE_IMPL1 = STE A C ``And_lattice`` comp_list true;
 val residue = rhs(concl AND_STE_IMPL1);
 

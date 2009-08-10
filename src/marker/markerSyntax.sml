@@ -15,13 +15,13 @@ val label_tm    = prim_mk_const{Name=":-",       Thy="marker"};
 (* Abbrev (n = M) can appear as a hypothesis in a goal.                      *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_abbrev (s,tm) = 
+fun mk_abbrev (s,tm) =
  let val l = mk_var(s,type_of tm)
      val eq = mk_eq (l,tm)
  in mk_comb (abbrev_tm,eq)
  end;
 
-fun dest_abbrev tm = 
+fun dest_abbrev tm =
   ((fst o dest_var)##I)
    (dest_eq(dest_monop abbrev_tm (ERR "" "") tm))
   handle HOL_ERR _ => raise ERR "dest_abbrev" "";
@@ -48,7 +48,7 @@ fun Abbr q =
  in case total parse q
    of NONE => raise ERR "Abbr" "Ill-formed quotation"
     | SOME tm =>
-       if is_var tm then 
+       if is_var tm then
           REFL(mk_var(fst(dest_var tm),mk_vartype "'abbrev"))
         else raise ERR "Abbr" "Ill-formed quotation"
  end;
@@ -78,8 +78,8 @@ fun mk_label (s, t) =
     else
       list_mk_comb(label_tm, [mk_var(s, label_ty), t]);
 
-fun dest_label tm = 
- ((fst o dest_var)##I) 
+fun dest_label tm =
+ ((fst o dest_var)##I)
  (dest_binop label_tm (ERR "" "") tm)
  handle HOL_ERR _ => raise ERR "dest_label" "" ;
 

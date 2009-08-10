@@ -80,16 +80,16 @@ struct
   fun mk_while(P,g,x) =
       list_mk_comb(inst [alpha |-> type_of x] while_tm, [P,g,x]);
 
-  fun mk_least P = 
+  fun mk_least P =
       mk_comb(inst [alpha |-> fst(dom_rng(type_of P))] least_tm, P);
 
   fun mk_divmod(m,n,a) = list_mk_comb(divmod_tm, [m,n,a]);
 
-  fun mk_measure (f,x,y) = 
+  fun mk_measure (f,x,y) =
       list_mk_comb(inst [alpha |-> type_of x] measure_tm, [f,x,y]);
 
   (* Partial application of measure is often more useful *)
-  fun mk_cmeasure f = 
+  fun mk_cmeasure f =
      mk_comb(inst [alpha |-> fst(dom_rng (type_of f))] measure_tm, f);
 
 
@@ -163,7 +163,7 @@ struct
     case total dest_comb tm
      of NONE => raise ERR "dest_cmeasure" "not an application of \"measure\""
       | SOME (m,f) => if same_const measure_tm m then f
-                      else raise ERR "dest_cmeasure" 
+                      else raise ERR "dest_cmeasure"
                                      "not an application of \"measure\""
 
 (*---------------------------------------------------------------------------

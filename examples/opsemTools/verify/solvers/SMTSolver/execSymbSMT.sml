@@ -4,29 +4,29 @@
    Version of execSymb.sml that uses the SMT solver yices
 
    Takes a Hoare triple (pre,prog,post) and verifies if
-   the program satisfies its specification by 
+   the program satisfies its specification by
    symbolic execution using a CSP solver.
 
    The output is a "if then else" term where
-     - conditions are conditions that were not reduced to constant 
+     - conditions are conditions that were not reduced to constant
        during symbolic execution
-     - values are outcome 
+     - values are outcome
         (i.e RESULT, ERROR or TIMEOUT followed by
         the final state value)
 
    Symbolic execution prints a trace of the calls to the
    SMT solver.
-   It also displays some information (stored in global 
-   variables): 
-     * nbPath is the number of feasible paths that have 
+   It also displays some information (stored in global
+   variables):
+     * nbPath is the number of feasible paths that have
        been explored during symbolic execution
      * nbResolvedCond is the number of conditions that
        have been evaluated to constants by function EVAL
      * SMTtime is the total CSP solving time.
-   
-       
+
+
    Functions in term2yices.ml generate input syntax of yices for
-   a term. 
+   a term.
 
    Need to have yices intalled on the machine and to have defined
    an environment variable called YICES_EXEC that points to yices
@@ -39,7 +39,7 @@
 
 (* ======================== algorithm ========================
 
-Algorithm for symbolic execution of a 
+Algorithm for symbolic execution of a
 Hoare triple (pre,prog,post)
 -------------------------------------
 
@@ -51,13 +51,13 @@ Let (pre, path, state1,state2, post) be Boolean terms that represent:
 - the postcondition: a lambda expression on state1 and state2 which expresses
   a relation between state before execution and state after
 
-Let l be a list of terms that represent the instructions 
+Let l be a list of terms that represent the instructions
 of prog in the opSem syntax.
 Let valPre be the precondition evaluated on state1
 and valPost be the postcondition evaluated on state1 and state2.
 
 We assume that we have two functions:
-  - testPath:bool that tests if a path is feasible 
+  - testPath:bool that tests if a path is feasible
   i.e (valPre /\ path) has a solution
   - verifyPath:outcome that verifies the correctness of the
   path
@@ -67,11 +67,11 @@ We assume that we have two functions:
   contains the errors that have been found.
 
 
-The symbolic execution is a deep first search algorithm 
+The symbolic execution is a deep first search algorithm
 that covers feasible paths only.
 It starts with an initial symbolic state
 where all variables in the program have symbolic values,
-the list of instructions of prog and an initial empty path 
+the list of instructions of prog and an initial empty path
 (i.e term ``T``).
 Variable n is the allowed number of steps and res is
 an initial empty list that will contain the result.
@@ -79,35 +79,35 @@ an initial empty list that will contain the result.
 
 symbExec(pre,path,l,st1,st2,n,post,res) =
 
-- if l=[] 
+- if l=[]
   then the end of a path has been reached so
        add the result (path,verifyPath(pre,path,st1,st2,post))
        to res
 - else
-    * if n=0 
+    * if n=0
       then this path leads to a timeout so add the result
            (path,(TIMEOUT st)) to res
     * else
-       let l = [i1,l'] 
+       let l = [i1,l']
        - if i1 is not a control instruction
          then call "STEP1" to compute the next state st'
-         according to the small step semantics. 
+         according to the small step semantics.
          Then call execSymb(pre,path,l',st1,st',n-1,post,res)
        - else
-            Let cond be the condition of i1 
+            Let cond be the condition of i1
             * evaluate cond on the current state
               using the semantics of Boolean expressions
               (i.e the HOL definition "beval")
             * if it is a constant (T or F)
               then take the corresponding path
-            * else 
-                - call testPath(pre,st1,path/\cond,state) to know 
+            * else
+                - call testPath(pre,st1,path/\cond,state) to know
                   if cond is possible
-                - if it is possible, take the corresponding 
+                - if it is possible, take the corresponding
                   path in the program
-                - call testPath(pre,st2,path/\~cond,state) to 
-                  know if the NEGATION of cond is possible 
-                - if it is possible, take the corresponding 
+                - call testPath(pre,st2,path/\~cond,state) to
+                  know if the NEGATION of cond is possible
+                - if it is possible, take the corresponding
                   path in the program
 
 Taking a path in the program depends on the type of the
@@ -115,7 +115,7 @@ control instruction.
 
 If the control instruction i1 is (Cond c i_if i_else)
 then:
-  - if c is ``T`` or possible then taking the path 
+  - if c is ``T`` or possible then taking the path
     is a call to
        execSymb(pre,path/\c,[i_if,l'],st1,st2,n,post,res)
   - else a call to
@@ -123,10 +123,10 @@ then:
 
 If the control instruction i1 is (While c i)
 then:
-  - if c is ``T`` or possible then taking the path 
+  - if c is ``T`` or possible then taking the path
     is a call to
        execSymb(pre,path/\c,[i,(While c i1)],st1,st2,n,post,res)
-  - else a call to 
+  - else a call to
        execSymb(pre,path/\~c,l',st1,st2,n,post,res)
 
 
@@ -136,7 +136,7 @@ then:
 
 (* ============== Proof at the end of a path ==================
 Let valPre be the precondition evaluated on state1
-and valPost be the postcondition evaluated on state1 and 
+and valPost be the postcondition evaluated on state1 and
 state2.
 Path is the accumulated path where each condition has been
 evaluated on the current state.
@@ -152,7 +152,7 @@ The current version performs this proof as follows:
 1. Compute the negation of the postcondition
    by propagating De Morgan's laws at one level using
    the conversion rule:
- 
+
    NOT_CONJ_IMP_CONV ``~((A1 ==> B1)/\ ... /\(An ==> Bn))``=
       |- (A1 /\ ~B1) \/ ... \/ (An /\ ~Bn)
 
@@ -169,9 +169,9 @@ The current version performs this proof as follows:
 Then for each term dk = (path/\pre/\state/\npk):
 
 3. Try to refute dk using METIS as follows:
- 
-   val IMP_F_IS_F = 
-      METIS_PROVE [] ``!P. (!Q. P ==> Q) ==> (P = F)``; 
+
+   val IMP_F_IS_F =
+      METIS_PROVE [] ``!P. (!Q. P ==> Q) ==> (P = F)``;
    fun refute tm =
      let val th = prove(``!Q. ^tm ==> Q``, RW_TAC std_ss [])
    in
@@ -181,56 +181,56 @@ Then for each term dk = (path/\pre/\state/\npk):
 4. If METIS fails (i.e raises a HOL_ERR) then try to simplify
    term dk with SIMP_CONV arith_ss and OMEGA_CONV
 
-5. Rebuild the disjunction from terms dk which have been 
-   simplified in step 3 or 4. 
-   Eliminate F from this disjunction using rule 
+5. Rebuild the disjunction from terms dk which have been
+   simplified in step 3 or 4.
+   Eliminate F from this disjunction using rule
       F \/ t = t
 
 6. If the final disjunction is not equal to F then call
    the constraint solver.
-   The constraint solver will successively build and solve 
-   a SMT for each term of the final disjunction.    
-   
+   The constraint solver will successively build and solve
+   a SMT for each term of the final disjunction.
+
 
 Remarks:
   - Step 1 is useful if the postcondition is a conjunction
     of specification cases (such as in tritype). It allows *
     to avoid disjunctions in the final SMT.
   - If the program is not correct, then at least one term
-    dk doesn't reduce to F. In this case, METIS and SIMP_CONV 
-    will fail but the constraint solver will be efficient to 
+    dk doesn't reduce to F. In this case, METIS and SIMP_CONV
+    will fail but the constraint solver will be efficient to
     find the error since the constraint system has a solution.
 
  ================= end of the path =======================
 *)
 
 
-open HolKernel Parse boolLib 
+open HolKernel Parse boolLib
      newOpsemTheory bossLib pairSyntax intLib intSimps
      computeLib finite_mapTheory stringLib
-     simpTools stateTools extSMTSolver;  
+     simpTools stateTools extSMTSolver;
 
 
 
 (* -------------------------------------------- *)
 (* Global variables and functions to build the solution:
    - SMT solving time information
-   - number of conditions that have been evaluated as 
-     constants using EVAL 
+   - number of conditions that have been evaluated as
+     constants using EVAL
    - number of feasible paths that have been explored
-*) 
+*)
 (* -------------------------------------------- *)
 
 (* global variable to know if there was an error *)
 val nbError = ref 0;
 
-fun incNbError() = 
+fun incNbError() =
    nbError := !nbError + 1;
 
 (* global variable to know if there was a timeout *)
 val nbTimeout = ref 0;
 
-fun incNbTimeout() = 
+fun incNbTimeout() =
    nbTimeout := !nbTimeout + 1;
 
 
@@ -241,7 +241,7 @@ fun incNbTimeout() =
 
 val SMTtime= ref 0.0;
 
-fun incSMTTime(t) = 
+fun incSMTTime(t) =
    SMTtime := !SMTtime + t;
 
 (* -------------------------------------------- *)
@@ -251,7 +251,7 @@ fun incSMTTime(t) =
 
 val SMTSolvedPath= ref 0;
 
-fun incSMTSolvedPath() = 
+fun incSMTSolvedPath() =
    SMTSolvedPath := !SMTSolvedPath + 1;
 
 (* global variable and functions to manage
@@ -260,7 +260,7 @@ fun incSMTSolvedPath() =
 
 val nbPath= ref 0;
 
-fun incPath() = 
+fun incPath() =
    nbPath := !nbPath + 1;
 
 (* global variable and functions to manage
@@ -269,7 +269,7 @@ fun incPath() =
 
 val nbCond= ref 0;
 
-fun incNbCond() = 
+fun incNbCond() =
    nbCond := !nbCond + 1;
 
 (* global variable and functions to manage
@@ -279,7 +279,7 @@ fun incNbCond() =
 
 val nbEvalCond = ref 0;
 
-fun incEvalCond() = 
+fun incEvalCond() =
     nbEvalCond:= !nbEvalCond + 1;
 
 (* global variable and functions to manage
@@ -288,7 +288,7 @@ fun incEvalCond() =
 
 val nbUnfeasiblePath = ref 0;
 
-fun incUnfeasiblePath() = 
+fun incUnfeasiblePath() =
     nbUnfeasiblePath:= !nbUnfeasiblePath + 1;
 
 
@@ -299,7 +299,7 @@ fun incUnfeasiblePath() =
 
 val nbMETISPath = ref 0;
 
-fun incMETISPath() = 
+fun incMETISPath() =
   nbMETISPath:= !nbMETISPath + 1;
 
 (* global variable and functions to manage
@@ -309,7 +309,7 @@ fun incMETISPath() =
 
 val nbSIMPPath = ref 0;
 
-fun incSIMPPath() = 
+fun incSIMPPath() =
   nbSIMPPath:= !nbSIMPPath + 1;
 
 
@@ -322,10 +322,10 @@ fun resetProgramVars() =
      programVars:=[];
 
 (* To set the variables of the program.
-    Used to make existential terms 
+    Used to make existential terms
     This function is called in stateTools when making the state
 *)
-fun setVars vars = 
+fun setVars vars =
    map
     (fn v =>
       let val s = fromHOLstring v
@@ -339,7 +339,7 @@ fun setVars vars =
 
 
 (* to reset the global variables at the end of an execution *)
-fun resetAll() = 
+fun resetAll() =
   (SMTtime:=0.0;
    SMTSolvedPath:=0;
    nbError:=0;
@@ -351,7 +351,7 @@ fun resetAll() =
    nbMETISPath:=0;
    nbSIMPPath:=0
   );
-   
+
 
 
 
@@ -369,27 +369,27 @@ fun existQuantify tm =
 (* functions to simplify each sub-term of disjunction *)
 (* -------------------------------------------------- *)
 
-(* PRE: l is a list of terms 
-   POST: the list where each term has been simplified 
+(* PRE: l is a list of terms
+   POST: the list where each term has been simplified
          using SIMP_CONV std_ss (or arith_ss)*)
 fun simplifyDisjunct l =
-  map (fn t => 
+  map (fn t =>
        (print ("simplify disjunct " ^ term_to_string(t) ^"\n");
         getThm (SIMP_CONV arith_ss  [] t))
        )
       l;
 
-(* PRE: l is a list of simplified terms 
-   POST: the disjunction (s1\/s2\/...\/sp) where 
-         si are terms which are not constant *) 
+(* PRE: l is a list of simplified terms
+   POST: the disjunction (s1\/s2\/...\/sp) where
+         si are terms which are not constant *)
 fun mkDisjFromList l =
   let val (h,t) = (hd(l) ,tl(l));
-   in 
+   in
      if (length l) = 1
      then h
      else
        if (is_const(h))
-       then 
+       then
 	 if (h=``T``)
 	 then h
          else mkDisjFromList t
@@ -398,34 +398,34 @@ fun mkDisjFromList l =
 
 
 (* -------------------------------------------------- *)
-(* Functions to build the term to be verified 
+(* Functions to build the term to be verified
    i.e that will be simplified
    with HOL or passed to the constraint solver.
 
-   Takes the negation of the postcondition using 
-   NOT_CONJ_IMP_CONV => gives a disjunction 
+   Takes the negation of the postcondition using
+   NOT_CONJ_IMP_CONV => gives a disjunction
    d = d1 \/ d2 \/ ... \/dn.
    Takes the precondtion, the current path, the term
    that represents the current state: term of the form
    c= c1 /\ c2 /\ ... /\ cp.
    Then distributes d on c and simplifies each
    subterm using SIMP_CONV arith_ss  [] to obtain
-    simp(c1 /\ c2 /\ ... /\ cp /\d1) \/ 
+    simp(c1 /\ c2 /\ ... /\ cp /\d1) \/
     simp(c1 /\ c2 /\ ... /\ cp /\d2) \/ ... \/
     simp(c1 /\ c2 /\ ... /\ cp /\dn)
    Also simplifies the final disjunction if there is a
-   constant T or F. 
+   constant T or F.
 *)
 (* -------------------------------------------------- *)
 
 
 
-local 
+local
 
 (* function to eliminate  ``F`` from disjunctions. *)
-fun simplDisj t = 
+fun simplDisj t =
   let val orthm = EVAL t;
-  in 
+  in
     getThm orthm
 end;
 
@@ -441,35 +441,35 @@ fun refute tm =
 
 
 (* version that works with integers *)
-(* could also try 
-(SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [CONJ_RIGHT_ASSOC,CONJ_LEFT_ASSOC] 
+(* could also try
+(SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [CONJ_RIGHT_ASSOC,CONJ_LEFT_ASSOC]
 THENC OMEGA_CONV ) c;
 *)
 fun distributeAndRefute tm ld =
-  map 
-   (fn t => 
+  map
+   (fn t =>
       let val c = mk_conj(tm,t)
           val fc = existQuantify c ;
       in
-         (print("\nTerm to be refuted with METIS " 
-                ^ term_to_string(fc) ^ "\n"); 
+         (print("\nTerm to be refuted with METIS "
+                ^ term_to_string(fc) ^ "\n");
 	  refute fc;
           incMETISPath();
           ``F``
          )
-         handle HOL_ERR s => 
+         handle HOL_ERR s =>
            (print "METIS failed\n";
-            print("Trying to simplify with SIMP_CONV and COOPER\n"); 
-           let  
+            print("Trying to simplify with SIMP_CONV and COOPER\n");
+           let
              val res = getThm (SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] fc)
-             in 
+             in
               (incSIMPPath();
                res
               )
              end
             )
-      end 
-      handle UNCHANGED => 
+      end
+      handle UNCHANGED =>
         (print "Term unchanged\n";
         mk_conj(tm,t))
    )
@@ -478,19 +478,19 @@ fun distributeAndRefute tm ld =
 
 in
 
-(* Verify a term at the end of a path *) 
+(* Verify a term at the end of a path *)
 fun verifyTerm tm post =
   let val np =  takeNegPost post;
     val listDisj = strip_disj(np);
     val disj = mkDisjFromList(distributeAndRefute tm listDisj)
-   in 
+   in
       ((* print "VerifyTerm\n";
        print_term disj;*)
        simplDisj(disj)
       )
    end
-   
-   handle HOL_ERR s => 
+
+   handle HOL_ERR s =>
        (print ("HOL_ERR in makeTermToVerify\n");
 	print("tm is " ^ term_to_string(tm));
         print("post is " ^ term_to_string(post));
@@ -505,29 +505,29 @@ end;
 (* ------------------------------------------------- *)
 (* to test if a path is possible                     *)
 (* with a current precondition and a current state   *)
-(* ------------------------------------------------- *) 
+(* ------------------------------------------------- *)
 (*  test if (pre /\ path) is satisfied for some values of
     the current state
-                           
+
   Use function extSolvTimeout in extSolv.sml
   to call the solver with a timeout of 100ms.
 
-  If there is a timeout or if the solver showed that the 
-  condition is not possible, try to prove 
-  the formula using 
+  If there is a timeout or if the solver showed that the
+  condition is not possible, try to prove
+  the formula using
   SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] t *)
 
 (* --------------------------------------------------- *)
-local 
+local
 fun pathInfo b tm time =
   if b =``T``
-  then 
+  then
     (print "======================\n";
      print( "Taking path " ^ term_to_string(tm) ^ "\n");
      print "======================\n";
      (true,time)
     )
-  else 
+  else
     (print "======================\n";
      print ("Path " ^ term_to_string(tm) ^ " is impossible\n");
      print "======================\n";
@@ -535,7 +535,7 @@ fun pathInfo b tm time =
      (false,time)
     );
 
-in 
+in
 
 
 fun testPath name pre path st =
@@ -550,22 +550,22 @@ fun testPath name pre path st =
     in
      if (res = ``F``)
      then
-       (* try to show that the condition is impossible 
-          using SIMP_CONV*)  
+       (* try to show that the condition is impossible
+          using SIMP_CONV*)
        let  val existsConj = existQuantify conj
          val thSimp = SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] existsConj
          val resSimp=  getThm thSimp
        in
           pathInfo resSimp path time
        end
-       handle UNCHANGED  => 
+       handle UNCHANGED  =>
         (* It was not possible to show the theorem in HOL
             so return the theorem computed with the
             external solver *)
          (print "Path was solved using external solver\n";
           pathInfo res path time
          )
-     else 
+     else
        (print "======================\n";
 	print( "Taking path " ^ term_to_string(path) ^ "\n");
 	print "======================\n";
@@ -581,11 +581,11 @@ fun testPath name pre path st =
           pathInfo resSimp path ((Real.fromInt timeout)*0.001)
          )
        end
-       handle UNCHANGED  => 
+       handle UNCHANGED  =>
         (print "======================\n";
 	 print "Path unsolved\n";
          print( "Taking path " ^ term_to_string(path) ^ "\n");
-	 print "======================\n"; 
+	 print "======================\n";
          (true,((Real.fromInt timeout)*0.001))
         )
 *)
@@ -602,33 +602,33 @@ end;
    path is the current path ,
    st is the state of the variables i.e the final values
       of the variables computed by symbolic execution
-      along the path 
+      along the path
 
 Let evalPost be the post condition evaluated on the final state.
 
-returns a RESULT outcome 
+returns a RESULT outcome
   if pre /\ path /\ ~evalPost
-  has no solution  
+  has no solution
   which means that (pre /\ path) => evalPost
   is true
 
 returns an ERROR outcome otherwise
 
 use functions printXML_to_file and validate
-in term2xml 
+in term2xml
 *)
 
 
 (* ------------------------------------------ *)
 local
 
-fun printCorrect() = 
+fun printCorrect() =
   (print "======================\n";
    print "Program is correct on this path\n";
    print "======================\n"
 );
 
-fun printError() = 
+fun printError() =
   (print "======================\n";
    print "An ERROR has been found\n";
    print "======================\n"
@@ -653,24 +653,24 @@ fun verifyPath name pre st1 st2 post path =
     val po = evalPost post st1 st2'
     val np =  takeNegPost po
     val tm = mk_conj(np,conj)
-    in 
+    in
       (print "======================\n";
        print "Testing correctness\n";
        print "======================\n";
-       let val (th,t) = extSolvSMT name tm 
+       let val (th,t) = extSolvSMT name tm
            val res = getThm th
        in
            if res = ``F``
-           then 
-	       ( incSMTSolvedPath();  
+           then
+	       ( incSMTSolvedPath();
 		 printCorrect();
 		 (``RESULT ^st2'``,t)
 	       )
-           else 
+           else
                (* add to the current state the values
                   of the variables that correspond to an error
-                  i.e the values found by the SMT 
-                  when solving pre /\ state /\ path /\ ~post *) 
+                  i.e the values found by the SMT
+                  when solving pre /\ state /\ path /\ ~post *)
             let val errorState = makeErrorState name st2'
             in
               (printError();
@@ -686,16 +686,16 @@ end;
 
 
 
-(* -------------------------------------------------- 
-   main functions to symbolically execute a program 
+(* --------------------------------------------------
+   main functions to symbolically execute a program
    using the small step semantics and calling a SMT
    -------------------------------------------------- *)
 
-local 
+local
 
 (* to test if the term that represents the first instruction
    is a condition *)
-fun is_condition tm = 
+fun is_condition tm =
 let val (opr,_) = strip_comb(tm)
   in
    opr=``Cond``
@@ -703,7 +703,7 @@ let val (opr,_) = strip_comb(tm)
 
 (* to test if the term that represents the first instruction
    is a while *)
-fun is_while tm = 
+fun is_while tm =
 let val (opr,_) = strip_comb(tm)
   in
    opr=``While``
@@ -711,7 +711,7 @@ let val (opr,_) = strip_comb(tm)
 
 
 (* to get the instruction name *)
-fun instName tm = 
+fun instName tm =
 let val (opr,_) = strip_comb(tm)
   in
    opr
@@ -720,9 +720,9 @@ let val (opr,_) = strip_comb(tm)
 in
 
 (*------------------------------------------
- Main function to verify a Hoare triple 
+ Main function to verify a Hoare triple
    (pre, prog, post) by symbolic execution
-   l: list of instructions in opSem syntax 
+   l: list of instructions in opSem syntax
       that correspond to prog
    st1: initial state
    st2: current state
@@ -735,18 +735,18 @@ Use functions:
     execution when the first instruction is a conditional
     instruction (resp. a while instruction)
   - verifyPath at the end of a path (i.e when the instruction
-    list is empty) to verify if 
+    list is empty) to verify if
         (pre /\ path) ==> post on the current state
   - testPath to test if a condition is possible on a path
-    i.e if 
-        (pre /\ path /\ cond) 
+    i.e if
+        (pre /\ path /\ cond)
     has a solution
 ------------------------------------------*)
 
-fun execSymb name pre (l,st1,st2,n) post path= 
+fun execSymb name pre (l,st1,st2,n) post path=
  if listSyntax.is_nil(l)
  then
-     (*end of a path 
+     (*end of a path
        test if (pre /\ path) ==> post
        on the current state
      *)
@@ -756,7 +756,7 @@ fun execSymb name pre (l,st1,st2,n) post path=
       print "======================\n";
       (*print ("st2 " ^ term_to_string(st2));*)
       let val (r,t) = verifyPath name pre st1 st2 post path
-        in 
+        in
           (incPath();
            incSMTTime(t);
            r
@@ -767,7 +767,7 @@ fun execSymb name pre (l,st1,st2,n) post path=
    if n=0
    (* no more steps, so add a TIMEOUT outcome *)
    then let val st2' = pruneState(st2)
-        in 
+        in
           ``TIMEOUT ^st2'``
         end
    else
@@ -776,8 +776,8 @@ fun execSymb name pre (l,st1,st2,n) post path=
       in
        (* conditional *)
        if is_condition(inst)
-       then execSymbCond name pre (l,st1,st2,n) post path 
-       else 
+       then execSymbCond name pre (l,st1,st2,n) post path
+       else
          (* while *)
          if is_while(inst)
 	 then execSymbWhile name pre (l,st1,st2,n) post path
@@ -789,17 +789,17 @@ fun execSymb name pre (l,st1,st2,n) post path=
             val newState = snd(dest_comb(snd(dest_comb(tm))));
             val newList = snd(dest_comb(fst(dest_comb(tm))));
            in
-             execSymb name pre (newList,st1,newState,(n-1)) post path 
+             execSymb name pre (newList,st1,newState,(n-1)) post path
            end
 (*) *)
       end
 
-(* ----------------------------------------------------- 
+(* -----------------------------------------------------
    Function to symbolically execute a "Cond" instruction.
 
    The first instruction of list l has the form "Cond c i1 i2".
-   If c evaluates to a constant (T or F) 
-   on the current state using function "EVAL", then take 
+   If c evaluates to a constant (T or F)
+   on the current state using function "EVAL", then take
    the corresponding branch
    Else, call the solver to know if the condition is possible
    with the current precondition, current path and current state.
@@ -807,18 +807,18 @@ fun execSymb name pre (l,st1,st2,n) post path=
       and then try the "else" branch.
       If the condition is not possible, only try the else branch
 
-Use function testPath to know if the condition is possible 
+Use function testPath to know if the condition is possible
 with the current precondition, path and state.
 Function testPath calls the SMT.
   ----------------------------------------------------- *)
 
-and execSymbCond name pre (l,st1,st2,n) post path = 
+and execSymbCond name pre (l,st1,st2,n) post path =
  (incNbCond();
   let val (_,comb) = strip_comb(l)
     (* first instruction COND *)
     val instCond = (el 1 comb)
     val listInst = (el 2 comb)
-   (* save current state to perform  symbolic execution 
+   (* save current state to perform  symbolic execution
       of else part with the state before the conditionnal *)
     val saveState = st2;
     val (_,listCond) = strip_comb(instCond)
@@ -827,13 +827,13 @@ and execSymbCond name pre (l,st1,st2,n) post path =
     val elsetm = (el 3 listCond)
     (* evaluate the condition on the current state *)
     val (_,evalCond) = strip_comb(concl(EVAL ``beval ^cond ^st2``))
-    val termCond = (el 2 evalCond);      
-   in   
+    val termCond = (el 2 evalCond);
+   in
 
    (* if the condition has been evaluated to a constant
       by EVAL, then takes the decision according to its value *)
    if (is_const(termCond))
-   then 
+   then
     (incEvalCond();
      if (termCond=``T``)
      then
@@ -843,23 +843,23 @@ and execSymbCond name pre (l,st1,st2,n) post path =
          print ("Condition\n" ^ pretty_string(cond) ^"\n");
          print ("is TRUE on the current state, ");
 	 print ("taking this path\n");
-         execSymb name pre (nextList,st1,st2,n) post path 
+         execSymb name pre (nextList,st1,st2,n) post path
         )
        end
-    else 
+    else
       let val nextList =listSyntax.mk_cons(elsetm,listInst)
-       in 
+       in
        ( incUnfeasiblePath();
          print "======================\n";
          print ("Condition\n" ^ pretty_string(cond) ^"\n");
          print ("is FALSE on the current state, ");
 	 print ("taking the other path\n");
-         execSymb name pre (nextList,st1,st2,n) post path 
+         execSymb name pre (nextList,st1,st2,n) post path
         )
      end
      )
    else
-   (* the condition has not been simplified by EVAL. 
+   (* the condition has not been simplified by EVAL.
       Use the solver to know if the condition is
       possible on the current path
     *)
@@ -867,20 +867,20 @@ and execSymbCond name pre (l,st1,st2,n) post path =
       val (ok,tIf) = testPath name pre newPath st2;
       val nextListIf = listSyntax.mk_cons(iftm,listInst);
       val nextListElse = listSyntax.mk_cons(elsetm,listInst);
-      val resIf= 
-         if (ok) 
+      val resIf=
+         if (ok)
          (* Add the condition to the current path
          and do symbolic execution of if part*)
-         then  execSymb name pre (nextListIf,st1,st2,n) post newPath 
+         then  execSymb name pre (nextListIf,st1,st2,n) post newPath
          else ``F``;
       val newPathElse = mkSimplConj path (mk_neg termCond);
       val (elseOk,tElse) = testPath name pre newPathElse saveState;
-      val resElse = 
+      val resElse =
           if (elseOk)
          (* do  symbolic execution on else part *)
          (* and add ~cond to the current path *)
-          then execSymb name pre (nextListElse,st1,saveState,n) post newPathElse 
-          else ``F`` 
+          then execSymb name pre (nextListElse,st1,saveState,n) post newPathElse
+          else ``F``
        in
            (incSMTTime(tIf);
             incSMTTime(tElse);
@@ -895,25 +895,25 @@ and execSymbCond name pre (l,st1,st2,n) post path =
 end)
 
 
-(* ----------------------------------------------------- 
+(* -----------------------------------------------------
    Function to symbolically execute a "While" instruction.
 
    The list l has the form [While c i,l'].
-   If the condition evaluates to a constant (T or F) 
+   If the condition evaluates to a constant (T or F)
    on the current state using function "EVAL":
       - if c is T then call STEP1 to computes the next state
-        s' after execution of i and continue symbolic  
+        s' after execution of i and continue symbolic
         execution with s' and instruction list l
-      - if c is false, then continue symbolic execution 
+      - if c is false, then continue symbolic execution
         with l'
    Else, call the solver to know if the condition is possible
    with the current precondition, current path and current state.
       - If it is possible, then enter the while
       and then try the exit condition of the loop.
-      - If the condition is not possible, only try the 
+      - If the condition is not possible, only try the
       exit branch.
 
-Use function testPath to know if the condition is possible 
+Use function testPath to know if the condition is possible
 with the current precondition, path and state.
 Function testPath calls the SMT.
   ----------------------------------------------------- *)
@@ -925,7 +925,7 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
     val instCond = (el 1 comb)
     (* other instructions *)
     val tail = (el 2 comb)
-   (* save current state to perform  symbolic execution 
+   (* save current state to perform  symbolic execution
       of exit part with the state before the while *)
     val saveState = st2;
     val (_,listCond) = strip_comb(instCond)
@@ -935,14 +935,14 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
     val block = (el 2 listCond)
     (* evaluate the condition on the current state *)
     val (_,evalCond) = strip_comb(concl(EVAL ``beval ^cond ^st2``))
-    val termCond = (el 2 evalCond);      
-   in   
+    val termCond = (el 2 evalCond);
+   in
    (* if the condition has been evaluated to a constant
       by EVAL, then takes the decision according to its value *)
    if (is_const(termCond))
-   then 
+   then
     (incEvalCond();
-     (* enter the loop: do symbolic execution of list 
+     (* enter the loop: do symbolic execution of list
         [block,l] *)
      if (termCond=``T``)
      then
@@ -955,8 +955,8 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
          execSymb name pre (nextList,st1,st2,n) post path
         )
        end
-    else 
-      (* exit the loop: do symbolic execution of 
+    else
+      (* exit the loop: do symbolic execution of
          the tail of instruction list *)
        ( incUnfeasiblePath();
          print "======================\n";
@@ -967,14 +967,14 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
         )
      )
    else
-   (* the condition has not been simplified by EVAL. 
+   (* the condition has not been simplified by EVAL.
       Use the solver to know if the condition is
       possible on the current path
     *)
    let  val newPath = mkSimplConj path termCond;
      val (ok,tLoop) = testPath name pre newPath st2;
      val nextListLoop = listSyntax.mk_cons(block,l);
-     val resLoop = 
+     val resLoop =
        if (ok)
        (* Add the condition to the current path
         and enter the loop: do symbolic execution of [block,l] *)
@@ -982,9 +982,9 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
        else ``F``
      val newPathExit = mkSimplConj path (mk_neg termCond);
      val (elseOk,tExit) = testPath name pre newPathExit saveState;
-     (* exit the loop: do  symbolic execution on the tail of 
+     (* exit the loop: do  symbolic execution on the tail of
         the list and add ~cond to the current path *)
-     val resExit = 
+     val resExit =
          if (elseOk)
          then execSymb name pre (tail,st1,saveState,n) post newPathExit
          else ``F``
@@ -997,15 +997,15 @@ and execSymbWhile name pre (l,st1,st2,n) post path  =
 	      then ``if ^termCond then ^resLoop else ^resExit``
 	      else resLoop
 	  else resExit
-	 ) 
+	 )
    end
-   
+
 end);
 
 
 
 
-(* -------------------------------------------------- 
+(* --------------------------------------------------
    main function to verify a Hoare triple by symbolic
    execution
    -------------------------------------------------- *)
@@ -1015,7 +1015,7 @@ local
 
 
 fun plural n =
-  if n>1 
+  if n>1
   then "s have been "
   else " has been ";
 
@@ -1030,11 +1030,11 @@ fun printStatistics() =
          then print "PROGRAM IS CORRECT\n"
          else print(int_to_string(!nbError) ^ " ERROR" ^ plural(!nbError)
 		    ^ "found\n");
-     print (int_to_string(!nbCond) ^ " condition" 
+     print (int_to_string(!nbCond) ^ " condition"
             ^ plural(!nbCond) ^ "tested.\n");
-     print (int_to_string(!nbEvalCond) ^ " condition" 
+     print (int_to_string(!nbEvalCond) ^ " condition"
             ^ plural(!nbEvalCond) ^ "solved" ^ " by EVAL.\n");
-     print (int_to_string(!nbUnfeasiblePath) ^ " condition" 
+     print (int_to_string(!nbUnfeasiblePath) ^ " condition"
             ^ plural(!nbUnfeasiblePath) ^ "shown impossible.\n\n");
      print (int_to_string(!nbPath) ^ " feasible path" ^ plural(!nbPath)
             ^ "explored.\n");
@@ -1043,13 +1043,13 @@ fun printStatistics() =
      then print "All correct paths were verified in HOL.\n"
      else print(int_to_string(!SMTSolvedPath)  ^ " path" ^ plural(!SMTSolvedPath)
                 ^ "shown correct with the SMT solver\n");
-     print (int_to_string(!nbMETISPath) ^ " subterm" 
+     print (int_to_string(!nbMETISPath) ^ " subterm"
             ^ plural(!nbMETISPath) ^ "solved with refute and METIS.\n");
-     print (int_to_string(!nbSIMPPath) ^ " subterm" 
+     print (int_to_string(!nbSIMPPath) ^ " subterm"
             ^ plural(!nbSIMPPath) ^ "solved with SIMP_CONV and COOPER.\n\n");
 *)
-     print ("Total time spent with the SMT solver: " 
-	    ^ Real.toString(!SMTtime) ^ "s.\n"); 
+     print ("Total time spent with the SMT solver: "
+	    ^ Real.toString(!SMTtime) ^ "s.\n");
      print "===============================\n"
     );
 
@@ -1060,7 +1060,7 @@ in
 (* Do symbolic execution
    The symbolic state is built from variables in the program
  *)
-fun execSymbWithSMT name spec n = 
+fun execSymbWithSMT name spec n =
   let  val (_,args) = strip_comb spec;
    val (pre,prog,post) = (el 1 args, el 2 args, el 3 args);
    val (listVars,s) = makeState prog;
@@ -1069,15 +1069,15 @@ fun execSymbWithSMT name spec n =
   in
      (resetAll(); (* reset global variables *)
       setVars(listVars);
-      let val res = 
-        execSymb name 
-                 evalP 
-                 (``[^prog]``,s,s,n) 
-                 post 
+      let val res =
+        execSymb name
+                 evalP
+                 (``[^prog]``,s,s,n)
+                 post
                  ``T``
       in
         (printStatistics();
-         resetProgramVars(); (* reset the list of variable used to existentially quantify terms *) 
+         resetProgramVars(); (* reset the list of variable used to existentially quantify terms *)
 	 res)
       end
      )
@@ -1087,7 +1087,7 @@ fun execSymbWithSMT name spec n =
 (* Do symbolic execution
    The symbolic state is built from variables in the program
  *)
-fun execSymbWithSMT_vars name spec n vars = 
+fun execSymbWithSMT_vars name spec n vars =
   let  val (_,args) = strip_comb spec;
    val (pre,prog,post) = (el 1 args, el 2 args, el 3 args);
    val (listVars,s) = makeStateFromVars vars;
@@ -1096,15 +1096,15 @@ fun execSymbWithSMT_vars name spec n vars =
   in
      (resetAll(); (* reset global variables *)
       setVars(listVars); (* set the set of variables for quantifying terms *)
-      let val res = 
-        execSymb name 
-                 evalP 
-                 (``[^prog]``,s,s,n) 
-                 post 
+      let val res =
+        execSymb name
+                 evalP
+                 (``[^prog]``,s,s,n)
+                 post
                  ``T``
       in
         (printStatistics();
-         resetProgramVars(); (* reset the list of variable used to existentially quantify terms *) 
+         resetProgramVars(); (* reset the list of variable used to existentially quantify terms *)
 	 res)
       end
      )

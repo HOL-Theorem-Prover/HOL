@@ -181,14 +181,14 @@ val ex1_field_sub_def = Define
   `ex1_field_sub (x : word32, y : word32) =
    ex1_field_add (x, ex1_field_neg y)`;
 
-val ex1_field_mult_aux_def = 
- Define 
+val ex1_field_mult_aux_def =
+ Define
    `ex1_field_mult_aux (x : word32, y : word32, acc : word32) =
      if y = 0w then acc
-     else 
+     else
        let x' = ex1_field_add (x,x) in
        let y' = y >>> 1 in
-       let acc' = if y && 1w = 0w then acc else ex1_field_add (acc,x) 
+       let acc' = if y && 1w = 0w then acc else ex1_field_add (acc,x)
        in
          ex1_field_mult_aux (x',y',acc')`;
 
@@ -196,14 +196,14 @@ val ex1_field_mult_aux_def =
 val ex1_field_mult_def = Define
    `ex1_field_mult (x : word32, y : word32) = ex1_field_mult_aux (x,y,0w)`;
 
-val ex1_field_exp_aux_def = 
+val ex1_field_exp_aux_def =
  Define
    `ex1_field_exp_aux (x : word32, n : word32, acc : word32) =
       if n = 0w then acc
       else
         let x' = ex1_field_mult (x,x) in
         let n' = n >>> 1 in
-        let acc' = if n && 1w = 0w then acc else ex1_field_mult (acc,x) 
+        let acc' = if n && 1w = 0w then acc else ex1_field_mult (acc,x)
         in ex1_field_exp_aux (x',n',acc')`;
 
 val ex1_field_exp_def = Define
@@ -228,12 +228,12 @@ val ex1_curve_neg_def = Define
    let $- = CURRY ex1_field_sub in
    let $* = CURRY ex1_field_mult in
    let a1 = ex1_field_elt example1_curve.a1 in
-   let a3 = ex1_field_elt example1_curve.a3 
+   let a3 = ex1_field_elt example1_curve.a3
    in
-     if (x1,y1) = ex1_curve_zero 
+     if (x1,y1) = ex1_curve_zero
        then ex1_curve_zero
        else let x = x1 in
-            let y = ~y1 - a1 * x1 - a3 
+            let y = ~y1 - a1 * x1 - a3
             in (x,y)`;
 
 val ex1_curve_double_def = Define
@@ -249,17 +249,17 @@ val ex1_curve_double_def = Define
    let a2 = ex1_field_elt example1_curve.a2 in
    let a3 = ex1_field_elt example1_curve.a3 in
    let a4 = ex1_field_elt example1_curve.a4 in
-   let a6 = ex1_field_elt example1_curve.a6 
+   let a6 = ex1_field_elt example1_curve.a6
    in
      if (x1,y1) = ex1_curve_zero then ex1_curve_zero
      else
-       let d = & 2 * y1 + a1 * x1 + a3 
+       let d = & 2 * y1 + a1 * x1 + a3
        in if d = ex1_field_zero then ex1_curve_zero
           else
             let l = (& 3 * x1 ** 2w + & 2 * a2 * x1 + a4 - a1 * y1) / d in
             let m = (~(x1 ** 3w) + a4 * x1 + & 2 * a6 - a3 * y1) / d in
             let x = l ** 2w + a1 * l - a2 - &2 * x1 in
-            let y = ~(l + a1) * x - m - a3 
+            let y = ~(l + a1) * x - m - a3
             in (x,y)`;
 
 val ex1_curve_add_def = Define
@@ -289,7 +289,7 @@ val ex1_curve_add_def = Define
        let y = ~(l + a1) * x - m - a3 in
        (x,y)`;
 
-val ex1_curve_mult_aux_def = 
+val ex1_curve_mult_aux_def =
  Define
   `ex1_curve_mult_aux (x : word32, y : word32, n : word32,
                        acc_x : word32, acc_y : word32) =
@@ -297,16 +297,16 @@ val ex1_curve_mult_aux_def =
     else
       let (x',y') = ex1_curve_double (x,y) in
       let n' = n >>> 1 in
-      let (acc_x',acc_y') = 
+      let (acc_x',acc_y') =
             if n && 1w = 0w then (acc_x,acc_y)
-            else ex1_curve_add (x,y,acc_x,acc_y) 
-      in 
+            else ex1_curve_add (x,y,acc_x,acc_y)
+      in
         ex1_curve_mult_aux (x',y',n',acc_x',acc_y')`;
 
 
-val ex1_curve_mult_def = 
+val ex1_curve_mult_def =
  Define
-   `ex1_curve_mult (x:word32, y:word32, n:word32) 
+   `ex1_curve_mult (x:word32, y:word32, n:word32)
      = ex1_curve_mult_aux (x,y,n,0w,0w)`;
 
 (* ------------------------------------------------------------------------- *)

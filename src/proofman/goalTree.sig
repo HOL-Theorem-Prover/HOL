@@ -3,7 +3,7 @@ sig
 
   include Abbrev
 
-  datatype gtree 
+  datatype gtree
      = vGoal of goal
      | vAtom of string * tactic
      | vThen of gtree * gtree

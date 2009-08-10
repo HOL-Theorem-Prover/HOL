@@ -137,7 +137,7 @@ in
 end
 
 
-fun main () = 
+fun main () =
     case CommandLine.arguments() of
       [docdir, texfile] => let
         val texfstr = TextIO.openAppend texfile

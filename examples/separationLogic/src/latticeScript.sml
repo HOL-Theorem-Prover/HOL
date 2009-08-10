@@ -2,8 +2,8 @@ open HolKernel Parse boolLib bossLib;
 
 (*
 quietdec := true;
-loadPath := 
-            (concat Globals.HOLDIR "/examples/separationLogic/src") :: 
+loadPath :=
+            (concat Globals.HOLDIR "/examples/separationLogic/src") ::
             !loadPath;
 
 map load ["relationTheory", "pred_setTheory", "operatorTheory"];
@@ -18,13 +18,13 @@ quietdec := false;
 
 val _ = new_theory "lattice";
 
-val OPTION_SELECT_def = Define 
+val OPTION_SELECT_def = Define
    `OPTION_SELECT P = if ~(?x. P x) then NONE else SOME @x. P x`
 
 val OPTION_SELECT_THM = store_thm ("OPTION_SELECT_THM",
    ``(!P. ((OPTION_SELECT P = NONE) = (!x. ~(P x)))) /\
      (!P. (IS_SOME (OPTION_SELECT P) = (?x. P x))) /\
-     (!P s. ((OPTION_SELECT P = SOME s) = 
+     (!P s. ((OPTION_SELECT P = SOME s) =
          (?x. P x) /\ (s = @x. P x)))``,
 
 SIMP_TAC std_ss [OPTION_SELECT_def, COND_RAND, COND_RATOR] THEN
@@ -54,7 +54,7 @@ val rest_WeakOrder_def = Define `
 
 val rest_WeakOrder_THM = store_thm ("rest_WeakOrder_THM",
 
-``(!M R. 
+``(!M R.
    (rest_antisymmetric M (inv R) = rest_antisymmetric M R) /\
    (rest_reflexive M (inv R) = rest_reflexive M R) /\
    (rest_transitive M (inv R) = rest_transitive M R) /\
@@ -75,7 +75,7 @@ val rest_WeakOrder_THM = store_thm ("rest_WeakOrder_THM",
 
 
 REWRITE_TAC [rest_reflexive_def, SUBSET_DEF, IN_UNIV, reflexive_def,
-   rest_antisymmetric_def, IMP_CONJ_THM, FORALL_AND_THM, 
+   rest_antisymmetric_def, IMP_CONJ_THM, FORALL_AND_THM,
    antisymmetric_def, rest_transitive_def, transitive_def, rest_WeakOrder_def,
    WeakOrder, inv_DEF] THEN
 REPEAT STRIP_TAC THEN
@@ -88,7 +88,7 @@ val IS_UPPER_BOUND_def = Define `
    IS_UPPER_BOUND f D M b = ((b IN D) /\ !m. m IN M ==> f m b)`;
 
 val IS_SUPREMUM_def = Define `
-   IS_SUPREMUM f D M s = 
+   IS_SUPREMUM f D M s =
    (IS_UPPER_BOUND f D M s) /\
    (!b. IS_UPPER_BOUND f D M b ==> (f s b))`;
 
@@ -102,7 +102,7 @@ val IS_LOWER_BOUND_def = Define `
    IS_LOWER_BOUND f D M b = ((b IN D) /\ !m. m IN M ==> f b m)`;
 
 val IS_INFIMUM_def = Define `
-   IS_INFIMUM f D M s = 
+   IS_INFIMUM f D M s =
    (IS_LOWER_BOUND f D M s) /\
    (!b. IS_LOWER_BOUND f D M b ==> (f b s))`;
 
@@ -146,7 +146,7 @@ PROVE_TAC [inv_inv, INF_SUP_inv_THM___1, INF_SUP_inv_THM___2, INF_SUP_inv_THM___
 
 
 
-   
+
 val IS_SUPREMUM_UNIQUE_THM = store_thm ("IS_SUPREMUM_UNIQUE_THM",
 ``!D f a b M. (rest_antisymmetric D f /\ IS_SUPREMUM f D M a /\ IS_SUPREMUM f D M b) ==> (a = b)``,
 SIMP_TAC std_ss [IS_SUPREMUM_def, rest_antisymmetric_def, IS_UPPER_BOUND_def]);
@@ -178,12 +178,12 @@ PROVE_TAC [BIGSUP_THM, INF_SUP_inv_THM, rest_WeakOrder_THM]);
 
 
 val INF_REWRITE = save_thm ("INF_REWRITE",
-   SIMP_RULE std_ss [BIGINF_def, IS_INFIMUM_def, 
+   SIMP_RULE std_ss [BIGINF_def, IS_INFIMUM_def,
       IS_LOWER_BOUND_def, IN_INSERT, NOT_IN_EMPTY,
       DISJ_IMP_THM, FORALL_AND_THM] INF_def);
 
 val SUP_REWRITE = save_thm ("SUP_REWRITE",
-   SIMP_RULE std_ss [BIGSUP_def, IS_SUPREMUM_def, 
+   SIMP_RULE std_ss [BIGSUP_def, IS_SUPREMUM_def,
       IS_UPPER_BOUND_def, IN_INSERT, NOT_IN_EMPTY,
       DISJ_IMP_THM, FORALL_AND_THM] SUP_def);
 
@@ -213,7 +213,7 @@ val COMPLETE_LATTICE___IS_LATTICE = store_thm ("COMPLETE_LATTICE___IS_LATTICE",
 
 
 val BIGUNION_IS_SUPREMUM = store_thm ("BIGUNION_IS_SUPREMUM",
-``!s D M. 
+``!s D M.
 BIGUNION M IN D ==>
 (IS_SUPREMUM $SUBSET D M s = ((s = BIGUNION M)))``,
 
@@ -295,7 +295,7 @@ REPEAT STRIP_TAC THENL [
 
    `BIGINTER M IN POW D` by ALL_TAC THEN1 (
       FULL_SIMP_TAC std_ss [IN_POW, SUBSET_DEF,
-         IN_BIGINTER, GSYM MEMBER_NOT_EMPTY] THEN      
+         IN_BIGINTER, GSYM MEMBER_NOT_EMPTY] THEN
       METIS_TAC[]
    ) THEN
    FULL_SIMP_TAC std_ss [BIGINTER_IS_INFIMUM, IN_POW, SUBSET_DEF,
@@ -303,7 +303,7 @@ REPEAT STRIP_TAC THENL [
 
    `BIGUNION M IN POW D` by ALL_TAC THEN1 (
       FULL_SIMP_TAC std_ss [IN_POW, SUBSET_DEF,
-         IN_BIGUNION, GSYM MEMBER_NOT_EMPTY] THEN      
+         IN_BIGUNION, GSYM MEMBER_NOT_EMPTY] THEN
       METIS_TAC[]
    ) THEN
    FULL_SIMP_TAC std_ss [BIGUNION_IS_SUPREMUM, IN_POW, SUBSET_DEF,
@@ -334,9 +334,9 @@ ASM_SIMP_TAC std_ss [SUBSET_REFL, IS_INFIMUM_def,
    IS_SUPREMUM_def, IS_LOWER_BOUND_def,
    IS_UPPER_BOUND_def, NOT_IN_EMPTY] THEN
 METIS_TAC[]);
-   
 
-val IS_COMPLETE_LATTICE___ALTERNATIVE_DEF = 
+
+val IS_COMPLETE_LATTICE___ALTERNATIVE_DEF =
 store_thm ("IS_COMPLETE_LATTICE___ALTERNATIVE_DEF",
 ``IS_COMPLETE_LATTICE f D = (
    (D = EMPTY) \/
@@ -361,7 +361,7 @@ Cases_on `M = {}` THENL [
 
 
 val IS_NON_EMPTY_COMPLETE_LATTICE_def = Define `
-   IS_NON_EMPTY_COMPLETE_LATTICE f D = 
+   IS_NON_EMPTY_COMPLETE_LATTICE f D =
       IS_COMPLETE_LATTICE f D /\ (~(D= EMPTY))`
 
 val IS_NON_EMPTY_COMPLETE_LATTICE_THM = store_thm ("IS_NON_EMPTY_COMPLETE_LATTICE_THM",
@@ -391,7 +391,7 @@ PROVE_TAC[]);
 
 
 val IS_SOME_EXISTS = prove (``
-   IS_SOME p = ?x. p = SOME x``, 
+   IS_SOME p = ?x. p = SOME x``,
 Cases_on `p` THEN SIMP_TAC std_ss []);
 
 val BIGSUP_BIGINF_IN_D = store_thm ("BIGSUP_BIGINF_IN_D",
@@ -417,7 +417,7 @@ val NON_EMPTY_COMPLETE_LATTICE___BIGSUP_THM = store_thm ("NON_EMPTY_COMPLETE_LAT
         (!s'. IS_SUPREMUM f D M s' ==> (s' = s)))``,
 
 REPEAT STRIP_TAC THEN
-FULL_SIMP_TAC std_ss [IS_NON_EMPTY_COMPLETE_LATTICE_THM] THEN  
+FULL_SIMP_TAC std_ss [IS_NON_EMPTY_COMPLETE_LATTICE_THM] THEN
 `?s. (BIGSUP f D M = SOME s)` by METIS_TAC[IS_SOME_EXISTS] THEN
 ASM_SIMP_TAC std_ss [] THEN
 MATCH_MP_TAC (prove (``(A /\ (A ==> (B /\ C))) ==> (C /\ A /\ B)``, METIS_TAC[])) THEN
@@ -456,11 +456,11 @@ ASM_SIMP_TAC std_ss [inv_LATTICE, INF_SUP_inv_THM]);
 val IS_COMPLETE_LATTICE_LEMMA_1 = store_thm ("IS_COMPLETE_LATTICE_LEMMA_1",
 ``!f D A B.
 
-(IS_NON_EMPTY_COMPLETE_LATTICE f D /\ 
+(IS_NON_EMPTY_COMPLETE_LATTICE f D /\
 (A SUBSET D) /\ (B SUBSET D)) ==>
 
 ((BIGSUP f D A = BIGSUP f D B) =
- ((IS_UPPER_BOUND f D A (THE (BIGSUP f D B))) /\ 
+ ((IS_UPPER_BOUND f D A (THE (BIGSUP f D B))) /\
   (IS_UPPER_BOUND f D B (THE (BIGSUP f D A)))))``,
 
 REPEAT STRIP_TAC THEN
@@ -474,9 +474,9 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [IS_SUPREMUM_def] THEN
 EQ_TAC THENL [
    STRIP_TAC THEN
-   FULL_SIMP_TAC std_ss [], 
+   FULL_SIMP_TAC std_ss [],
 
-   STRIP_TAC THEN 
+   STRIP_TAC THEN
    `f sa sb /\ f sb sa` by METIS_TAC[] THEN
    FULL_SIMP_TAC std_ss [IS_NON_EMPTY_COMPLETE_LATTICE_THM,
       rest_WeakOrder_def, rest_antisymmetric_def]
@@ -486,11 +486,11 @@ EQ_TAC THENL [
 val IS_COMPLETE_LATTICE_LEMMA_2 = store_thm ("IS_COMPLETE_LATTICE_LEMMA_2",
 ``!f D A B.
 
-(IS_NON_EMPTY_COMPLETE_LATTICE f D /\ 
+(IS_NON_EMPTY_COMPLETE_LATTICE f D /\
 (A SUBSET D) /\ (B SUBSET D)) ==>
 
 ((BIGINF f D A = BIGINF f D B) =
- ((IS_LOWER_BOUND f D A (THE (BIGINF f D B))) /\ 
+ ((IS_LOWER_BOUND f D A (THE (BIGINF f D B))) /\
   (IS_LOWER_BOUND f D B (THE (BIGINF f D A)))))``,
 
 REPEAT STRIP_TAC THEN
@@ -502,7 +502,7 @@ ASM_SIMP_TAC std_ss [rest_WeakOrder_THM, INF_SUP_inv_THM, inv_LATTICE]);
 val IS_COMPLETE_LATTICE_LEMMA_3 = store_thm ("IS_COMPLETE_LATTICE_LEMMA_3",
 ``!f D A.
 
-(IS_NON_EMPTY_COMPLETE_LATTICE f D /\ 
+(IS_NON_EMPTY_COMPLETE_LATTICE f D /\
 (BIGUNION A SUBSET D)) ==>
 
 (BIGSUP f D (BIGUNION A) =
@@ -531,7 +531,7 @@ ASM_SIMP_TAC std_ss [IS_COMPLETE_LATTICE_LEMMA_1] THEN
        (s1 IN D)) /\
  ?s2. (BIGSUP f D (IMAGE (\a. THE (BIGSUP f D a)) A) = SOME s2) /\
       (IS_SUPREMUM f D (IMAGE (\a. THE (BIGSUP f D a)) A) s2) /\
-      (s2 IN D)` by 
+      (s2 IN D)` by
    METIS_TAC[NON_EMPTY_COMPLETE_LATTICE___BIGSUP_THM] THEN
 FULL_SIMP_TAC std_ss [] THEN
 
@@ -541,12 +541,12 @@ REPEAT STRIP_TAC THENL [
     (s SUBSET D)` by METIS_TAC[] THEN
    `?s3. (BIGSUP f D s = SOME s3) /\
          (s3 IN D) /\
-         (IS_SUPREMUM f D s s3)` by 
+         (IS_SUPREMUM f D s s3)` by
       METIS_TAC[NON_EMPTY_COMPLETE_LATTICE___BIGSUP_THM] THEN
    `f s3 s2` by METIS_TAC[option_CLAUSES] THEN
    `f m s3` by ALL_TAC THEN1 (
       FULL_SIMP_TAC std_ss [IS_SUPREMUM_def, IS_UPPER_BOUND_def]
-   ) THEN 
+   ) THEN
    `m IN D` by METIS_TAC[SUBSET_DEF] THEN
    FULL_SIMP_TAC std_ss [IS_NON_EMPTY_COMPLETE_LATTICE_def,
       rest_WeakOrder_def, rest_transitive_def,
@@ -556,7 +556,7 @@ REPEAT STRIP_TAC THENL [
 
    `?s3. (BIGSUP f D a = SOME s3) /\
          (s3 IN D) /\
-         (IS_SUPREMUM f D a s3)` by 
+         (IS_SUPREMUM f D a s3)` by
       METIS_TAC[NON_EMPTY_COMPLETE_LATTICE___BIGSUP_THM] THEN
    FULL_SIMP_TAC std_ss [] THEN
    `f s3 s2` by METIS_TAC[option_CLAUSES] THEN
@@ -567,7 +567,7 @@ REPEAT STRIP_TAC THENL [
 
       `?s4. (BIGSUP f D a' = SOME s4) /\
             (s4 IN D) /\
-            (IS_SUPREMUM f D a' s4)` by 
+            (IS_SUPREMUM f D a' s4)` by
          METIS_TAC[NON_EMPTY_COMPLETE_LATTICE___BIGSUP_THM] THEN
       FULL_SIMP_TAC std_ss [IS_SUPREMUM_def] THEN
       Q.PAT_ASSUM `!b. P b` MATCH_MP_TAC THEN
@@ -580,12 +580,12 @@ REPEAT STRIP_TAC THENL [
       IS_COMPLETE_LATTICE_def] THEN
    METIS_TAC[]
 ]);
-   
-         
+
+
 val IS_COMPLETE_LATTICE_LEMMA_4 = store_thm ("IS_COMPLETE_LATTICE_LEMMA_4",
 ``!f D A.
 
-(IS_NON_EMPTY_COMPLETE_LATTICE f D /\ 
+(IS_NON_EMPTY_COMPLETE_LATTICE f D /\
 (BIGUNION A SUBSET D)) ==>
 
 (BIGINF f D (BIGUNION A) =
@@ -602,7 +602,7 @@ ASM_SIMP_TAC std_ss [rest_WeakOrder_THM, INF_SUP_inv_THM, inv_LATTICE]);
 val IS_COMPLETE_LATTICE_LEMMA_5 = store_thm ("IS_COMPLETE_LATTICE_LEMMA_5",
 ``!f D A B.
 
-(IS_NON_EMPTY_COMPLETE_LATTICE f D /\ 
+(IS_NON_EMPTY_COMPLETE_LATTICE f D /\
 A SUBSET B /\ (B SUBSET D)) ==>
 
 f (THE (BIGSUP f D A)) (THE (BIGSUP f D B))``,
@@ -614,7 +614,7 @@ REPEAT STRIP_TAC THEN
    (BIGSUP f D B = SOME sb) /\
    (sa IN D) /\ (sb IN D) /\
    (IS_SUPREMUM f D A sa) /\
-   (IS_SUPREMUM f D B sb)` by 
+   (IS_SUPREMUM f D B sb)` by
    METIS_TAC[NON_EMPTY_COMPLETE_LATTICE___BIGSUP_THM] THEN
 
 FULL_SIMP_TAC std_ss [IS_SUPREMUM_def] THEN
@@ -628,7 +628,7 @@ FULL_SIMP_TAC std_ss [IS_UPPER_BOUND_def, SUBSET_DEF]);
 val IS_COMPLETE_LATTICE_LEMMA_6 = store_thm ("IS_COMPLETE_LATTICE_LEMMA_6",
 ``!f D A B.
 
-(IS_NON_EMPTY_COMPLETE_LATTICE f D /\ 
+(IS_NON_EMPTY_COMPLETE_LATTICE f D /\
 A SUBSET B /\ (B SUBSET D)) ==>
 
 f (THE (BIGINF f D B)) (THE (BIGINF f D A))``,
@@ -730,7 +730,7 @@ REPEAT STRIP_TAC THENL [
 	Q.PAT_ASSUM `X IN D` MP_TAC THEN
 	SELECT_ELIM_TAC THEN
 	CONJ_TAC THENL [
-		Q.EXISTS_TAC `s` THEN 
+		Q.EXISTS_TAC `s` THEN
 		ASM_REWRITE_TAC[],
 
 		REPEAT STRIP_TAC THEN
@@ -742,7 +742,7 @@ REPEAT STRIP_TAC THENL [
 	Q.PAT_ASSUM `X IN D` MP_TAC THEN
 	SELECT_ELIM_TAC THEN
 	CONJ_TAC THENL [
-		Q.EXISTS_TAC `s` THEN 
+		Q.EXISTS_TAC `s` THEN
 		ASM_REWRITE_TAC[],
 
 		REPEAT STRIP_TAC THEN

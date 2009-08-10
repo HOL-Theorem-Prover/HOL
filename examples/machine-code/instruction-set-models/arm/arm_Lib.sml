@@ -1,6 +1,6 @@
 structure arm_Lib :> arm_Lib =
 struct
- 
+
 open HolKernel boolLib bossLib;
 open wordsLib stringLib listSyntax simpLib listTheory wordsTheory combinTheory;
 
@@ -12,7 +12,7 @@ open arm_rulesTheory arm_evalTheory armTheory arm_auxTheory;
 fun arm_decode s = let
   val tm = instructionSyntax.decode_instruction_hex s
   in (tm, EVAL (mk_comb(``enc``,tm))) end;
- 
+
 
 (* one step symbolic simulation *)
 
@@ -30,8 +30,8 @@ val n2w_extract_ss = eval_term_ss "n2w_extract" ``((k >< l) ((n2w n):'a word)):'
 val reg_list_ss = eval_term_ss "reg_list" ``REGISTER_LIST (n2w n)``
 
 fun GENLIST_CONV tm = let
-  val (y,z) = dest_comb tm  
-  val (x,y) = dest_comb y  
+  val (y,z) = dest_comb tm
+  val (x,y) = dest_comb y
   val _ = if numSyntax.is_numeral z then () else hd []
   val v = genvar(type_of y)
   in INST [v|->y] (EVAL (mk_comb(mk_comb(x,v),z))) end handle e => ALL_CONV tm;
@@ -59,17 +59,17 @@ val arm_rev_ss = std_ss ++ rewrites [GSYM ARM_MODE_def, GSYM
 val UNABBREV_ALL_RULE = REWRITE_RULE [markerTheory.Abbrev_def] o
   repeat (fn th => let
   val tm = find_term (can (match_term ``Abbrev (x = y:'a)``)) (concl th)
-  val (x,y) = (dest_eq o snd o dest_comb) tm     
+  val (x,y) = (dest_eq o snd o dest_comb) tm
   in REWRITE_RULE [] (INST [x|->y] th) end) o SPEC_ALL;
 
-fun expand_GENLIST th = let 
-  val tm = find_term (can (match_term ``GENLIST (f:num->'a) (NUMERAL n)``)) (concl th) 
+fun expand_GENLIST th = let
+  val tm = find_term (can (match_term ``GENLIST (f:num->'a) (NUMERAL n)``)) (concl th)
   val i = (Arbnum.toInt o numSyntax.dest_numeral o snd o dest_comb) tm
   fun g i = if i = 0 then ``0:num`` else mk_comb(``SUC``,g (i-1))
   val rw = GSYM (EVAL (g i))
-  val rw = (RAND_CONV (REWRITE_CONV [rw]) THENC REWRITE_CONV [rich_listTheory.GENLIST] THENC SIMP_CONV std_ss [rich_listTheory.SNOC_APPEND,APPEND,word_mul_n2w]) tm 
-  val th = SIMP_RULE std_ss [rw,ZIP,STM_LIST_def,MAP,FOLDL,LDM_LIST_def] th 
-  val th = SIMP_RULE (srw_ss()) [systemTheory.TRANSFER_def] th 
+  val rw = (RAND_CONV (REWRITE_CONV [rw]) THENC REWRITE_CONV [rich_listTheory.GENLIST] THENC SIMP_CONV std_ss [rich_listTheory.SNOC_APPEND,APPEND,word_mul_n2w]) tm
+  val th = SIMP_RULE std_ss [rw,ZIP,STM_LIST_def,MAP,FOLDL,LDM_LIST_def] th
+  val th = SIMP_RULE (srw_ss()) [systemTheory.TRANSFER_def] th
   in th end handle e => th;
 
 fun arm_step s = let
@@ -88,11 +88,11 @@ fun arm_step s = let
     val th = (INST i o INST_TYPE t) th
     val th = INST [``Rm:word4``|->``0w:word4``,``Rn:word4``|->``0w:word4``,``Rd:word4``|->``0w:word4``] th
     val th = REWRITE_RULE [CONDITION_PASSED2_AL] th
-    val th = SIMP_RULE (srw_ss()++reg_list_ss) 
+    val th = SIMP_RULE (srw_ss()++reg_list_ss)
                [ADDR_MODE4_def,LET_DEF,WB_ADDRESS_def,ARM_WRITE_REG_PC_INTRO,
                 UP_DOWN_def,FIRST_ADDRESS_def,ADDRESS_LIST_def] th
-    val th = expand_GENLIST th 
-    val th = REWRITE_RULE [Abbrev_F] th 
+    val th = expand_GENLIST th
+    val th = REWRITE_RULE [Abbrev_F] th
     in if concl th = T then [] else [th] end handle e => []
   val thms = foldr (uncurry append) [] (map format thms)
   val thms = map (SIMP_RULE arm_ss [enc_th]) thms
@@ -131,7 +131,7 @@ fun arm_step s = let
   val res = arm_step "12847001"; (* addne r7,r4,#1 *)
   val res = arm_step "15857000"; (* strne r7,[r5] *)
   val res = arm_step "E2475001"; (* sub r5,r7,#1 *)
-  val res = arm_step "0020D3E5"; (* ldrb r2,[r3] *) 
+  val res = arm_step "0020D3E5"; (* ldrb r2,[r3] *)
   val res = arm_step "0020C3E5"; (* strb r2,[r3] *)
   val res = arm_step "E88407E0"; (* stmia r4,{r5-r10} *)
   val res = arm_step "E89407E0"; (* ldmia r4,{r5-r10} *)

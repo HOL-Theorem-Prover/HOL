@@ -25,30 +25,30 @@ val MOD16_IS_16_def = Define `MOD16_IS_16 (v3:bool,v2:bool,v1:bool,v0:bool) = v3
 
 val MOD16_IS_4_def = Define `MOD16_IS_4 (v3:bool,v2:bool,v1:bool,v0:bool) = ~v3 /\ v2 /\ ~v1 /\ ~v0`
 
-val MOD16_EQ_def = `MOD16_EQ (v3:bool,v2:bool,v1:bool,v0:bool) (w3:bool,w2:bool,w1:bool,w0:bool) = 
+val MOD16_EQ_def = `MOD16_EQ (v3:bool,v2:bool,v1:bool,v0:bool) (w3:bool,w2:bool,w1:bool,w0:bool) =
 (v3=w3) /\ (v2=w2) /\ (v1=w1) /\ (v0=w0)`;
 
-val dest_mod16_tup = save_thm("dest_mod16_tup",prove(``!v3 v2 v1 v0 v3' v2' v1' v0'. ((v3',v2',v1',v0')=(v3,v2,v1,v0)) 
+val dest_mod16_tup = save_thm("dest_mod16_tup",prove(``!v3 v2 v1 v0 v3' v2' v1' v0'. ((v3',v2',v1',v0')=(v3,v2,v1,v0))
 = (v3'=v3) /\  (v2'=v2) /\  (v1'=v1) /\  (v0'=v0)``,METIS_TAC [PAIR_EQ]))
- 
-val dest_mod16 = save_thm("dest_mod16",prove(``!P Q v3 v2 v1 v0 v3' v2' v1' v0'. (P (v3',v2',v1',v0')= Q (v3,v2,v1,v0)) 
-=  (FST (P (v3',v2',v1',v0')) = FST (Q (v3,v2,v1,v0))) /\ 
-   (FST (SND (P (v3',v2',v1',v0'))) = (FST (SND (Q (v3,v2,v1,v0))))) /\ 
-   (FST (SND (SND (P (v3',v2',v1',v0')))) = (FST (SND (SND (Q (v3,v2,v1,v0)))))) /\ 
+
+val dest_mod16 = save_thm("dest_mod16",prove(``!P Q v3 v2 v1 v0 v3' v2' v1' v0'. (P (v3',v2',v1',v0')= Q (v3,v2,v1,v0))
+=  (FST (P (v3',v2',v1',v0')) = FST (Q (v3,v2,v1,v0))) /\
+   (FST (SND (P (v3',v2',v1',v0'))) = (FST (SND (Q (v3,v2,v1,v0))))) /\
+   (FST (SND (SND (P (v3',v2',v1',v0')))) = (FST (SND (SND (Q (v3,v2,v1,v0)))))) /\
    (SND (SND (SND (P (v3',v2',v1',v0')))) = (SND (SND (SND (Q (v3,v2,v1,v0))))))``,
  METIS_TAC [PAIR_FST_SND_EQ]))
 
-val dest_mod16r = save_thm("dest_mod16r",prove(``!Q v3 v2 v1 v0 v3' v2' v1' v0'. ((v3',v2',v1',v0')= Q (v3,v2,v1,v0)) 
-=  (FST ((v3',v2',v1',v0')) = FST (Q (v3,v2,v1,v0))) /\ 
-   (FST (SND ((v3',v2',v1',v0'))) = (FST (SND (Q (v3,v2,v1,v0))))) /\ 
-   (FST (SND (SND ((v3',v2',v1',v0')))) = (FST (SND (SND (Q (v3,v2,v1,v0)))))) /\ 
+val dest_mod16r = save_thm("dest_mod16r",prove(``!Q v3 v2 v1 v0 v3' v2' v1' v0'. ((v3',v2',v1',v0')= Q (v3,v2,v1,v0))
+=  (FST ((v3',v2',v1',v0')) = FST (Q (v3,v2,v1,v0))) /\
+   (FST (SND ((v3',v2',v1',v0'))) = (FST (SND (Q (v3,v2,v1,v0))))) /\
+   (FST (SND (SND ((v3',v2',v1',v0')))) = (FST (SND (SND (Q (v3,v2,v1,v0)))))) /\
    (SND (SND (SND ((v3',v2',v1',v0')))) = (SND (SND (SND (Q (v3,v2,v1,v0))))))``,
  METIS_TAC [PAIR_FST_SND_EQ]))
 
-val dest_mod16r2 = save_thm("dest_mod16r2",prove(``!Q v3 v2 v1 v0 . ((v3,v2,v1,v0)= Q) 
-=  (FST ((v3,v2,v1,v0)) = FST Q) /\ 
-   (FST (SND ((v3,v2,v1,v0))) = (FST (SND Q))) /\ 
-   (FST (SND (SND ((v3,v2,v1,v0)))) = (FST (SND (SND Q)))) /\ 
+val dest_mod16r2 = save_thm("dest_mod16r2",prove(``!Q v3 v2 v1 v0 . ((v3,v2,v1,v0)= Q)
+=  (FST ((v3,v2,v1,v0)) = FST Q) /\
+   (FST (SND ((v3,v2,v1,v0))) = (FST (SND Q))) /\
+   (FST (SND (SND ((v3,v2,v1,v0)))) = (FST (SND (SND Q)))) /\
    (SND (SND (SND ((v3,v2,v1,v0)))) = (SND (SND (SND Q))))``,
  METIS_TAC [PAIR_FST_SND_EQ]))
 
@@ -66,29 +66,29 @@ val MOD16_FORALL_EXPAND8 = save_thm("MOD16_FORALL_EXPAND8",prove(``!P. ((!n. n<8
 GEN_TAC THEN EQ_TAC THENL [
 SIMP_TAC arith_ss [],
 REPEAT STRIP_TAC
-THEN METIS_TAC [DECIDE ``n<8 ==> ((n=0) \/ (n=1) \/  (n=2) \/ (n=3) \/ (n=4) \/ (n=5) \/  (n=6) \/ (n=7))``] 
+THEN METIS_TAC [DECIDE ``n<8 ==> ((n=0) \/ (n=1) \/  (n=2) \/ (n=3) \/ (n=4) \/ (n=5) \/  (n=6) \/ (n=7))``]
 ]));
 
 val MOD16_FORALL_EXPAND4 = save_thm("MOD16_FORALL_EXPAND4",prove(``!P. ((!n. n<4 ==> P n) = P 0 /\ P 1 /\ P 2 /\ P 3)``,
 GEN_TAC THEN EQ_TAC THENL [
 SIMP_TAC arith_ss [],
 REPEAT STRIP_TAC
-THEN METIS_TAC [DECIDE ``n<4 ==> ((n=0) \/ (n=1) \/  (n=2) \/ (n=3))``] 
+THEN METIS_TAC [DECIDE ``n<4 ==> ((n=0) \/ (n=1) \/  (n=2) \/ (n=3))``]
 ]));
 
 val MOD16_PROJ_def = Define `MOD16_PROJ (b3,b2,b1,b0) i = if i = 0 then b0 else if i=1 then b1 else if i=2 then b2 else b3`
 
-val N2B'_defn = Hol_defn "MOD16_N2B'"  
-`MOD16_N2B' n k (b3,b2,b1,b0) = 
-    if k=0 then 
+val N2B'_defn = Hol_defn "MOD16_N2B'"
+`MOD16_N2B' n k (b3,b2,b1,b0) =
+    if k=0 then
 	if n=1 then b0 else ~b0
-    else (if n >= 2**k then MOD16_PROJ (b3,b2,b1,b0) k else ~(MOD16_PROJ (b3,b2,b1,b0) k)) /\ 
-	MOD16_N2B' (if n >= 2**k then n-(2**k) else n) (k-1) (b3,b2,b1,b0)`; 
-                  
+    else (if n >= 2**k then MOD16_PROJ (b3,b2,b1,b0) k else ~(MOD16_PROJ (b3,b2,b1,b0) k)) /\
+	MOD16_N2B' (if n >= 2**k then n-(2**k) else n) (k-1) (b3,b2,b1,b0)`;
+
 val (MOD16_N2B'_def,N2B'_ind) = Defn.tprove(N2B'_defn,WF_REL_TAC `measure (FST o SND)`);
 val _ = save_thm("MOD16_N2B'_def",MOD16_N2B'_def)
 
-val MOD16_N2B_def = Define `MOD16_N2B n (b3,b2,b1,b0) = MOD16_N2B' n 3 (b3,b2,b1,b0)` 
+val MOD16_N2B_def = Define `MOD16_N2B n (b3,b2,b1,b0) = MOD16_N2B' n 3 (b3,b2,b1,b0)`
 
 val MOD16_N2B_15 = save_thm("MOD16_N2B_15",prove(``!b3 b2 b0 b1. MOD16_N2B 15 (b3,b2,b1,b0) = b3 /\ b2 /\ b1 /\ b0``,
 SIMP_TAC arith_ss [MOD16_N2B_def,MOD16_N2B'_def,MOD16_PROJ_def]));
@@ -123,4 +123,4 @@ SIMP_TAC arith_ss [MOD16_N2B_def,MOD16_N2B'_def,MOD16_PROJ_def]));
 val MOD16_N2B_0 = save_thm("MOD16_N2B_0",prove(``!b3 b2 b0 b1. MOD16_N2B 0 (b3,b2,b1,b0) = ~b3 /\ ~b2 /\ ~b1 /\ ~b0``,
 SIMP_TAC arith_ss [MOD16_N2B_def,MOD16_N2B'_def,MOD16_PROJ_def]));
 
-val _ = export_theory(); 
+val _ = export_theory();

@@ -21,7 +21,7 @@ sig
   * interface similar to the interface of SimpLib is provided.
   *)
 
-  
+
   (* ---------------------------------------------------------------------
   * congsetfrag
   *
@@ -34,14 +34,14 @@ sig
   *               unlike simpLib conditional and ordered rewriting is not supported
   *               ad the moment. Therefore rewrite thms have to be of the form
   *               (R x y) where R is a preorder contained in relations or the equality.
-  *               Additionally it is possible to provide theorems that use 
+  *               Additionally it is possible to provide theorems that use
   *               allquantification and that are conjunctions of such theorems.
   *               Notice, that providing rewrites like (x + y = y + x) will cause the
   *               simplification to loop, because no ordered rewriting is provided.
   *    congs:     The congruence rules for the preorders. These rules are just defined
-  *               as congruence rules, for the simplifier, since both are in fact 
+  *               as congruence rules, for the simplifier, since both are in fact
   *               congruence rules for the traverser. This means a congruence Rule is of
-  *               the form 
+  *               the form
   *               R1 x1 y1 ==> R2 x2 y2 ==> ... Rn xn yn ==> R x y
   *               When simplifing a term t that matches x, where x contains x1, ... xn, *               it first simplifies (x1 to y1 according to R1) then
   *               (x2 to y2 according to R2)... and finally return R x y where
@@ -52,36 +52,36 @@ sig
   datatype congsetfrag = CSFRAG of
     {relations : Travrules.preorder list,
      rewrs  : thm list,
-     congs  : thm list,     
+     congs  : thm list,
      dprocs : Traverse.reducer list
      };
-  
+
   (* ---------------------------------------------------------------------
   * congset
-  *  
+  *
   * The real datastructure. It contains processed informations of consetfrags
-  *) 
+  *)
   type congset;
-  
-  
+
+
   (*Some elemantary functions to handle congsets and congsetfrags*)
 
   (*The empty congset, containing just equality*)
   val empty_congset : congset;
 
-  (*Creates a congset out of a list of congsetfrags*)  
+  (*Creates a congset out of a list of congsetfrags*)
   val mk_congset : congsetfrag list -> congset
 
   (*Adds a congsetfrag to a congset*)
   val cs_addfrag : congset -> congsetfrag -> congset
 
-  (*Merges several congsetfrags*)  
+  (*Merges several congsetfrags*)
   val merge_cs : congsetfrag list -> congsetfrag
 
-  (*creates a congsetfrag just containing rewrites*)  
+  (*creates a congsetfrag just containing rewrites*)
   val csfrag_rewrites : thm list -> congsetfrag
 
-  (*adds rewrites to a congsetfrag*)  
+  (*adds rewrites to a congsetfrag*)
   val add_csfrag_rewrites : congsetfrag -> thm list -> congsetfrag
 
 
@@ -91,7 +91,7 @@ sig
   *
   * This is the main function. It is quite similar to SIMP_CONV. Additionally to
   * SIMP_CONV, it takes as the first argument the relation it
-  * should simplify according to and as the second argument a congset. 
+  * should simplify according to and as the second argument a congset.
   * The other parameters are just like the parameters of SIMP_CONV.
   * Notice, that CONGRUENCE_SIMP_CONV ``$=`` empty_congset shoult behave
   * exactly like SIMP_CONV.

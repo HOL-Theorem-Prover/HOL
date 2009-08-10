@@ -11,19 +11,19 @@ val _ = new_theory "cps";
 (*---------------------------------------------------------------------------*)
 
 val Seq_def =
-  Define 
+  Define
    `Seq (f1:'a->'b) (f2:'b->'c) = \x. f2(f1 x)`;
 
 val Par_def =
- Define 
+ Define
    `Par f1 f2 = \x. (f1 x, f2 x)`;
 
 val Ite_def =
- Define 
+ Define
    `Ite f1 f2 f3 = \x. if f1 x then f2 x else f3 x`;
 
-val Rec_def = 
- TotalDefn.DefineSchema 
+val Rec_def =
+ TotalDefn.DefineSchema
    `Rec (x:'a) = if f1 x then f2 x else Rec (f3 x)`;
 
 val Rec_ind = fetch "-" "Rec_ind";
@@ -35,18 +35,18 @@ val Rec_ind = fetch "-" "Rec_ind";
 (* representatives for lower-level implementations.                          *)
 (*---------------------------------------------------------------------------*)
 
-val CPS_def = 
-  Define 
+val CPS_def =
+  Define
    `CPS f = \k arg. k (f arg)`;
 
 val CPS_ID = store_thm
 ("CPS_ID",
- ``CPS (\x.x)  = \k x. k x``, 
+ ``CPS (\x.x)  = \k x. k x``,
  SIMP_TAC std_ss [CPS_def]);
 
 val CPS_CONST = store_thm
 ("CPS_CONST",
- ``CPS (\x.c)  = \k x. k c``, 
+ ``CPS (\x.c)  = \k x. k c``,
  SIMP_TAC std_ss [CPS_def]);
 
 val UNCPS = store_thm
@@ -59,7 +59,7 @@ val UNCPS = store_thm
 (* CPSing the function                                                       *)
 (*---------------------------------------------------------------------------*)
 
-val CPS_INV = Q.store_thm 
+val CPS_INV = Q.store_thm
 ("CPS_INV",
  `(!f g. (f = CPS g) ==> (f = (CPS (\arg. f (\x.x) arg)))) /\
   (!f. f arg = (CPS f) (\x.x) arg)`,
@@ -71,11 +71,11 @@ val CPS_INV = Q.store_thm
 (* Used in the test expression of an if-then-else                            *)
 (*---------------------------------------------------------------------------*)
 
-val CPS2_def = 
+val CPS2_def =
   Define
    `CPS2 f = \k1 k2 arg. if f arg then k1 T else k2 F`;
 
-val CPS2_INV = Q.store_thm 
+val CPS2_INV = Q.store_thm
 ("CPS2_INV",
  `(!f. (?f'. f = CPS2 f') ==> (f = (CPS2 (\arg. f (\x.x) (\x.x) arg)))) /\
   (!f. f arg = (CPS2 f) (\x.x) (\x.x) arg)`,
@@ -86,7 +86,7 @@ val CPS2_INV = Q.store_thm
 (* CPSing sequential composition                                             *)
 (*---------------------------------------------------------------------------*)
 
-val CPS_SEQ_def = 
+val CPS_SEQ_def =
   Define
    `CPS_SEQ f g = \k arg. f (\ret. g k ret) arg`;
 
@@ -100,7 +100,7 @@ val CPS_SEQ_INTRO = Q.store_thm
 (* CSPing parallel composition                                               *)
 (*---------------------------------------------------------------------------*)
 
-val CPS_PAR_def = 
+val CPS_PAR_def =
   Define
    `CPS_PAR f g = \k arg. f (\ret2. g (\ret. k (ret2, ret)) arg) arg`;
 
@@ -114,17 +114,17 @@ val CPS_PAR_INTRO = Q.store_thm
 (* CPSing if-then-else                                                       *)
 (*---------------------------------------------------------------------------*)
 (*
-val CPS_ITE_def = 
+val CPS_ITE_def =
   Define
    `CPS_ITE e f g = \k arg. let k2 = k in e (\ret. f k2 arg) (\ret. g k2 arg) arg`;
 
 val CPS_ITE_INTRO = Q.store_thm
 ("CPS_ITE_INTRO",
  `!e f g.  CPS (Ite e f g) = CPS_ITE (CPS2 e) (CPS f) (CPS g)`,
- RW_TAC std_ss [CPS_def, CPS2_def, Ite_def, 
+ RW_TAC std_ss [CPS_def, CPS2_def, Ite_def,
                 CPS_ITE_def, FUN_EQ_THM, COND_RAND, LET_THM])
 
-val CPS_TEST_def = 
+val CPS_TEST_def =
   Define
    `CPS_TEST f = \k1 k2 arg. f (\ret. if ret then k1 ret else k2 ret) arg`;
 
@@ -134,7 +134,7 @@ val CPS2_INTRO = Q.store_thm
  RW_TAC std_ss [CPS_def, CPS2_def, CPS_TEST_def, FUN_EQ_THM]);
 *)
 
-val CPS_ITE_def = 
+val CPS_ITE_def =
   Define
    `CPS_ITE e f g = \k arg. e (\ret. let k2 = k in if ret then f k2 arg else g k2 arg) arg`;
 
@@ -182,14 +182,14 @@ val CPS_REC_fn_def = Define
                             arg`;
 
 val CPS_REC_TCS_def = Define
-`CPS_REC_TCS (R: (('a->'b) # 'a) -> (('a->'b) # 'a) -> bool) 
+`CPS_REC_TCS (R: (('a->'b) # 'a) -> (('a->'b) # 'a) -> bool)
              (e: ('a,'b) cps2_fun)
              (g: ('a,'a,'b) cps_fun) =
    WF R /\
    (?e' g'. (e = CPS2 e') /\ (g = CPS g') /\
             !k arg. ~(e' arg) ==> R (k,g' arg) (k,arg))`;
 
-val CPS_REC_PRIM_def = 
+val CPS_REC_PRIM_def =
  Define
    `CPS_REC_PRIM e f g = WFREC (@R. CPS_REC_TCS R e g) (CPS_REC_fn e f g)`;
 
@@ -197,24 +197,24 @@ val CPS_REC_PRIM_THM =
 (UNDISCH_ALL o
  SIMP_RULE std_ss [GSYM AND_IMP_INTRO, CPS_REC_TCS_def, CPS_REC_fn_def] o
  SPEC_ALL)
-(Q.prove 
+(Q.prove
 (`!R e f g arg k.
-  CPS_REC_TCS R e g 
+  CPS_REC_TCS R e g
     ==>
-  (CPS_REC_PRIM e f g (arg, k) = 
+  (CPS_REC_PRIM e f g (arg, k) =
    CPS_REC_fn e f g (CPS_REC_PRIM e f g) (arg, k))`,
- RW_TAC std_ss [Once CPS_REC_PRIM_def] 
-  THEN `CPS_REC_TCS (@R. CPS_REC_TCS R e g) e g` by METIS_TAC [SELECT_THM] 
-  THEN POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE [Once CPS_REC_TCS_def]) 
-  THEN RW_TAC std_ss [WFREC_THM, GSYM CPS_REC_PRIM_def] 
-  THEN RW_TAC std_ss [Once CPS_REC_fn_def] 
-  THEN FULL_SIMP_TAC std_ss [CPS_def, CPS2_def] 
-  THEN RW_TAC std_ss [RESTRICT_LEMMA] 
+ RW_TAC std_ss [Once CPS_REC_PRIM_def]
+  THEN `CPS_REC_TCS (@R. CPS_REC_TCS R e g) e g` by METIS_TAC [SELECT_THM]
+  THEN POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE [Once CPS_REC_TCS_def])
+  THEN RW_TAC std_ss [WFREC_THM, GSYM CPS_REC_PRIM_def]
+  THEN RW_TAC std_ss [Once CPS_REC_fn_def]
+  THEN FULL_SIMP_TAC std_ss [CPS_def, CPS2_def]
+  THEN RW_TAC std_ss [RESTRICT_LEMMA]
   THEN RW_TAC std_ss [CPS_REC_fn_def])
 );
 
-val CPS_REC_def = 
- Define 
+val CPS_REC_def =
+ Define
    `CPS_REC e f g k arg = CPS_REC_PRIM e f g (k,arg)`;
 
 (*---------------------------------------------------------------------------*)
@@ -230,7 +230,7 @@ val CPS_REC_def =
 (*             (\ret. g arg (\ret. CPS_REC e f g ret k))                     *)
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
- 
+
 val CPS_REC_THM = SIMP_RULE std_ss [GSYM CPS_REC_def] CPS_REC_PRIM_THM;
 
 val _ = save_thm("CPS_REC_THM",CPS_REC_THM);
@@ -255,7 +255,7 @@ val TC_RELATION = Q.prove
      THEN FULL_SIMP_TAC std_ss [pairTheory.LAMBDA_PROD,inv_image_def],
    Q.EXISTS_TAC `e` THEN Q.EXISTS_TAC `g` THEN METIS_TAC[]]);
 
-val lemma = 
+val lemma =
   (REWRITE_RULE [GSYM CPS_REC_TCS_def, AND_IMP_INTRO] o DISCH_ALL) CPS_REC_THM;
 
 (*---------------------------------------------------------------------------*)
@@ -266,28 +266,28 @@ val lemma =
 
 val CPS_REC_INTRO = Q.store_thm
 ("CPS_REC_INTRO",
- `!e f g. 
+ `!e f g.
     (?R. WF R /\ !x. ~e x ==> R (g x) x)
      ==>
     (CPS (Rec e f g) = CPS_REC (CPS2 e) (CPS f) (CPS g))`,
- REPEAT STRIP_TAC 
-  THEN REWRITE_TAC [Once CPS_def] 
-  THEN RW_TAC std_ss [Rec_def, FUN_EQ_THM] 
-  THEN Q.ID_SPEC_TAC `arg` 
-  THEN IMP_RES_TAC (DISCH_ALL Rec_ind) 
-  THEN POP_ASSUM HO_MATCH_MP_TAC 
-  THEN RW_TAC std_ss [] 
+ REPEAT STRIP_TAC
+  THEN REWRITE_TAC [Once CPS_def]
+  THEN RW_TAC std_ss [Rec_def, FUN_EQ_THM]
+  THEN Q.ID_SPEC_TAC `arg`
+  THEN IMP_RES_TAC (DISCH_ALL Rec_ind)
+  THEN POP_ASSUM HO_MATCH_MP_TAC
+  THEN RW_TAC std_ss []
   THEN IMP_RES_TAC (INST_TYPE [beta |-> alpha] (DISCH_ALL Rec_def))
-  THEN POP_ASSUM (fn x => ONCE_REWRITE_TAC [x]) 
-  THEN IMP_RES_TAC TC_RELATION 
+  THEN POP_ASSUM (fn x => ONCE_REWRITE_TAC [x])
+  THEN IMP_RES_TAC TC_RELATION
   THEN IMP_RES_TAC lemma
-  THEN POP_ASSUM (fn x => ONCE_REWRITE_TAC [x]) 
-  THEN RW_TAC std_ss [] 
+  THEN POP_ASSUM (fn x => ONCE_REWRITE_TAC [x])
+  THEN RW_TAC std_ss []
   THEN FULL_SIMP_TAC std_ss [CPS_def, CPS2_def]);
 *)
 
 val CPS_REC_def = Define
-`CPS_REC e f g = \k arg. k (Rec (e (\x.x)) (f (\x.x)) (g (\x.x)) arg)` 
+`CPS_REC e f g = \k arg. k (Rec (e (\x.x)) (f (\x.x)) (g (\x.x)) arg)`
 
 val CPS_REC_INTRO = Q.store_thm
 ("CPS_REC_INTRO",
@@ -302,28 +302,28 @@ val CPS_REC_INTRO = Q.store_thm
 val Rec_INTRO = store_thm
 ("Rec_INTRO",
  ``!f f1 f2 f3.
-     (!x:'a. f x = if f1(x) then f2(x) else f(f3 x)) 
+     (!x:'a. f x = if f1(x) then f2(x) else f(f3 x))
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f3 x) x))
      ==> (f:'a->'b = Rec f1 f2 f3)``,
  REPEAT (GEN_TAC ORELSE STRIP_TAC)
   THEN ONCE_REWRITE_TAC [FUN_EQ_THM]
-  THEN HO_MATCH_MP_TAC Rec_ind 
+  THEN HO_MATCH_MP_TAC Rec_ind
   THEN GEN_TAC THEN STRIP_TAC
   THEN IMP_RES_TAC (DISCH_ALL Rec_def)
   THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC[th])
   THEN METIS_TAC[]);
-   
+
 (*---------------------------------------------------------------------------*)
 (* Misc. lemmas                                                              *)
 (*---------------------------------------------------------------------------*)
 
-val MY_LET_RAND = 
+val MY_LET_RAND =
  save_thm
   ("MY_LET_RAND",
-    METIS_PROVE []  
+    METIS_PROVE []
      ``!f M N. (let x = M in f (N x)) = f (let x = M in N x)``);
 
-val UNLET = 
+val UNLET =
  save_thm
   ("UNLET",
    METIS_PROVE [] ``!f M. (let f2 = f in f2 M) = f M``);

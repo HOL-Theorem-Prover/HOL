@@ -1,13 +1,13 @@
 structure prog_x86Lib :> prog_x86Lib =
 struct
- 
+
 open HolKernel boolLib bossLib;
 open wordsLib stringLib addressTheory pred_setTheory combinTheory;
 open set_sepTheory x86_Theory x86_Lib helperLib;
 open x86_seq_monadTheory x86_coretypesTheory x86_astTheory x86_icacheTheory;
 open prog_x86Theory;
 
-infix \\ 
+infix \\
 val op \\ = op THEN;
 
 
@@ -20,13 +20,13 @@ fun set_x86_code_write_perm_flag b = (x86_code_write_perm := b);
 
 fun name_for_resource counter tm = let
   val to_lower_drop_two = implode o tl o tl o explode o to_lower
-  in if type_of tm = ``:Xreg`` then (to_lower o fst o dest_const) tm else 
+  in if type_of tm = ``:Xreg`` then (to_lower o fst o dest_const) tm else
      if type_of tm = ``:Xeflags`` then (to_lower_drop_two o fst o dest_const) tm else
      (counter := 1 + !counter; ("x" ^ int_to_string (!counter))) end;
 
 fun pre_process_thm th = let
   val x = ref 0
-  fun all_distinct [] = [] 
+  fun all_distinct [] = []
     | all_distinct (x::xs) = x :: all_distinct (filter (fn y => not (x = y)) xs)
   val rs = find_terml (fn tm => type_of tm = ``:Xreg``) (concl th)
   val fs = find_terml (fn tm => type_of tm = ``:Xeflags``) (concl th)
@@ -43,7 +43,7 @@ fun pre_process_thm th = let
   val fs2 = map (make_eq_tm ``XREAD_EFLAG f s`` ``f:Xeflags``) fs
   val ws2 = map (make_eq_tm ``XREAD_MEM2_WORD a s`` ``a:word32``) ws
   val bs2 = map (make_eq_tm ``XREAD_MEM2 a s`` ``a:word32``) bs
-  val result = rs2 @ fs2 @ ws2 @ bs2 @ [``XREAD_EIP s = eip``]   
+  val result = rs2 @ fs2 @ ws2 @ bs2 @ [``XREAD_EIP s = eip``]
   val th = foldr (uncurry DISCH) th result
   val th = RW [AND_IMP_INTRO,GSYM CONJ_ASSOC,wordsTheory.WORD_XOR_CLAUSES,
              wordsTheory.WORD_AND_CLAUSES,wordsTheory.WORD_ADD_0] (SIMP_RULE std_ss [] th)
@@ -67,13 +67,13 @@ fun x86_pre_post g s = let
   fun get_assigned_value x y = assigned_aux x y ys
   fun mk_pre_post_assertion (name,var) = let
     val (pattern,name_tm,var_tm) =
-          if type_of name = ``:Xreg`` then 
-            (``xR a w``,``a:Xreg``,``w:word32``) 
-          else if type_of name = ``:Xeflags`` then 
-            (``xS1 a w``,``a:Xeflags``,``w:bool option``) 
-          else if type_of var = ``:word8`` then 
-            (``~(xM1 a (SOME (w,xDATA_PERM ex)))``,``a:word32``,``w:word8``) 
-          else if type_of var = ``:word32`` then 
+          if type_of name = ``:Xreg`` then
+            (``xR a w``,``a:Xreg``,``w:word32``)
+          else if type_of name = ``:Xeflags`` then
+            (``xS1 a w``,``a:Xeflags``,``w:bool option``)
+          else if type_of var = ``:word8`` then
+            (``~(xM1 a (SOME (w,xDATA_PERM ex)))``,``a:word32``,``w:word8``)
+          else if type_of var = ``:word32`` then
             (``xM a w``,``a:word32``,``w:word32``) else hd []
     in (subst [name_tm|->name,var_tm|->var] pattern,
         subst [name_tm|->name,var_tm|->get_assigned_value name var] pattern) end
@@ -91,15 +91,15 @@ fun x86_pre_post g s = let
     not (can (match_term ``XREAD_EIP s = v``) tm)) handle e => true
   val all_conds = (list_dest dest_conj o fst o dest_imp) h
   val pre_conds = (filter is_precond) all_conds
-  val ss = foldr (fn (x,y) => (fst (dest_eq x) |-> snd (dest_eq x)) :: y handle e => y) [] 
-             (filter is_precond pre_conds) 
+  val ss = foldr (fn (x,y) => (fst (dest_eq x) |-> snd (dest_eq x)) :: y handle e => y) []
+             (filter is_precond pre_conds)
   val ss = ss @ map ((fn tm => mk_var((fst o dest_var o cdr) tm,``:bool option``) |-> tm) o cdr)
     (filter (can (match_term ``XREAD_EFLAG x s = SOME y``)) all_conds)
   val pre = subst ss pre
   val post = subst ss post
   val pre = mk_star (pre,``xPC eip``)
   val post = mk_star (post,mk_comb(``xPC``,new_eip))
-  val pre = if pre_conds = [] then pre else mk_cond_star(pre,mk_comb(``Abbrev``,list_mk_conj pre_conds)) 
+  val pre = if pre_conds = [] then pre else mk_cond_star(pre,mk_comb(``Abbrev``,list_mk_conj pre_conds))
   in (pre,post) end;
 
 fun introduce_xMEMORY th = let
@@ -108,12 +108,12 @@ fun introduce_xMEMORY th = let
   val c = MOVE_OUT_CONV (car tm) THENC STAR_REVERSE_CONV
   val th = CONV_RULE (POST_CONV c THENC PRE_CONV c) th
   val th = MATCH_MP xMEMORY_INTRO (RW [GSYM STAR_ASSOC] th)
-  val th = RW [GSYM progTheory.SPEC_MOVE_COND,STAR_ASSOC] th  
+  val th = RW [GSYM progTheory.SPEC_MOVE_COND,STAR_ASSOC] th
   fun replace_access_in_pre th = let
     val (_,p,c,q) = dest_spec(concl th)
     val tm = find_term (can (match_term ``(a:'a =+ w:'b) f``)) p
     val (tm,y) = dest_comb tm
-    val (tm,x) = dest_comb tm  
+    val (tm,x) = dest_comb tm
     val a = snd (dest_comb tm)
     val th = REWRITE_RULE [APPLY_UPDATE_ID] (INST [x |-> mk_comb(y,a)] th)
     in th end handle e => th
@@ -128,29 +128,29 @@ fun introduce_xBYTE_MEMORY_ANY th = let
   val c2 = MOVE_OUT_CONV tm2 THENC STAR_REVERSE_CONV
   val th = CONV_RULE (POST_CONV c2 THENC PRE_CONV c1) th
   val th = MATCH_MP xBYTE_MEMORY_ANY_INTRO (RW [GSYM STAR_ASSOC] th)
-  val th = RW [GSYM progTheory.SPEC_MOVE_COND,STAR_ASSOC] th  
+  val th = RW [GSYM progTheory.SPEC_MOVE_COND,STAR_ASSOC] th
   fun replace_access_in_pre th = let
     val (_,p,c,q) = dest_spec(concl th)
     val tm = find_term (can (match_term ``(a:'a =+ w:'b) f``)) p
     val (tm,y) = dest_comb tm
-    val (tm,x) = dest_comb tm  
+    val (tm,x) = dest_comb tm
     val a = snd (dest_comb tm)
     val th = REWRITE_RULE [APPLY_UPDATE_ID] (INST [x |-> mk_comb(y,a)] th)
     in th end handle e => th
   val th = replace_access_in_pre th
   in th end handle e => th;
 
-fun calculate_length_and_jump th = let 
+fun calculate_length_and_jump th = let
   val (_,_,c,q) = dest_spec (concl th)
   val l = (length o fst o listSyntax.dest_list o cdr o car o cdr o cdr o car) c
   in
     let val v = find_term (can (match_term ``xPC (p + n2w n)``)) q
-    in (th,l,SOME (0 + (numSyntax.int_of_term o cdr o cdr o cdr) v)) end 
+    in (th,l,SOME (0 + (numSyntax.int_of_term o cdr o cdr o cdr) v)) end
   handle e =>
     let val v = find_term (can (match_term ``xPC (p - n2w n)``)) q
     in (th,l,SOME (0 - (numSyntax.int_of_term o cdr o cdr o cdr) v)) end
-  handle e => 
-    (th,l,NONE) end 
+  handle e =>
+    (th,l,NONE) end
 
 fun post_process_thm th = let
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w,SEP_CLAUSES] th
@@ -184,22 +184,22 @@ fun calc_code th = let
 fun x86_prove_one_spec th c = let
   val g = concl th
   val s = find_term (can (match_term ``X86_NEXT x = SOME y``)) g
-  val s = (snd o dest_comb o snd o dest_comb) s    
+  val s = (snd o dest_comb o snd o dest_comb) s
   val (pre,post) = x86_pre_post g s
   val tm = ``SPEC X86_MODEL pre {(eip,(c,w))} post``
-  val tm = subst [mk_var("pre",type_of pre) |-> pre, 
-                  mk_var("post",type_of post) |-> post, 
+  val tm = subst [mk_var("pre",type_of pre) |-> pre,
+                  mk_var("post",type_of post) |-> post,
                   mk_var("c",type_of c) |-> c] tm
   val FLIP_TAC = CONV_TAC (ONCE_REWRITE_CONV [EQ_SYM_EQ])
   val th1 = Q.INST [`s`|->`X86_ICACHE_UPDATE x (r,e,t,m,i)`] th
-  val th1 = RW [XREAD_CLAUSES,XWRITE_MEM2_WORD_def] th1 
+  val th1 = RW [XREAD_CLAUSES,XWRITE_MEM2_WORD_def] th1
   val th1 = RW [XWRITE_EFLAG_def,X86_ICACHE_UPDATE_def,XWRITE_MEM2_def,XWRITE_REG_def,
         APPLY_UPDATE_THM,WORD_EQ_ADD_CANCEL,x86_address_lemma,XWRITE_EIP_def] th1
   val th = prove(tm,
 (*
     set_goal([],tm)
 *)
-    MATCH_MP_TAC IMP_X86_SPEC \\ REPEAT STRIP_TAC 
+    MATCH_MP_TAC IMP_X86_SPEC \\ REPEAT STRIP_TAC
     \\ EXISTS_TAC ((cdr o cdr o concl o UNDISCH) th1)
     \\ STRIP_TAC \\ REWRITE_TAC [X86_ICACHE_UPDATE_def]
     THENL [MATCH_MP_TAC th1,ALL_TAC]
@@ -209,7 +209,7 @@ fun x86_prove_one_spec th c = let
          GSYM ALIGNED_def, wordsTheory.n2w_11, Xeflags_distinct,
          Q.SPECL [`s`,`x INSERT t`] SET_EQ_SUBSET, INSERT_SUBSET,
          EMPTY_SUBSET, SEP_CLAUSES,X86_ICACHE_UPDATE_def,XCLEAR_ICACHE_def,
-         X86_ICACHE_REVERT_def,xM_def,WORD_EQ_ADD_CANCEL,x86_address_lemma] 
+         X86_ICACHE_REVERT_def,xM_def,WORD_EQ_ADD_CANCEL,x86_address_lemma]
     \\ ONCE_REWRITE_TAC [CODE_POOL_x86_2set]
     \\ REWRITE_TAC [listTheory.LENGTH,address_list_def]
     \\ SIMP_TAC std_ss [arithmeticTheory.ADD1,X86_ICACHE_EXTRACT_def]
@@ -217,14 +217,14 @@ fun x86_prove_one_spec th c = let
          STAR_x86_2set, IN_DELETE, APPLY_UPDATE_THM, Xreg_distinct,
          GSYM ALIGNED_def, wordsTheory.n2w_11, Xeflags_distinct,
          Q.SPECL [`s`,`x INSERT t`] SET_EQ_SUBSET, INSERT_SUBSET,
-         EMPTY_SUBSET,x86_pool_def,X86_ACCURATE_CLAUSES] 
+         EMPTY_SUBSET,x86_pool_def,X86_ACCURATE_CLAUSES]
     \\ SIMP_TAC std_ss [XREAD_REG_def,XREAD_EFLAG_def,XREAD_EIP_def]
     \\ NTAC 3 (FLIP_TAC \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO])
     \\ SIMP_TAC std_ss [CAN_XREAD_MEM,CAN_XWRITE_MEM,IN_INSERT]
-    \\ SIMP_TAC std_ss [XREAD_MEM2_WORD_def,XREAD_MEM2_def,wordsTheory.WORD_ADD_0]    
+    \\ SIMP_TAC std_ss [XREAD_MEM2_WORD_def,XREAD_MEM2_def,wordsTheory.WORD_ADD_0]
     \\ SIMP_TAC std_ss [bit_listTheory.bytes2word_thm,IN_xDATA_PERM]
     THEN1 (SIMP_TAC std_ss [markerTheory.Abbrev_def]
-           \\ REPEAT STRIP_TAC \\ FLIP_TAC \\ MATCH_MP_TAC XREAD_INSTR_IMP 
+           \\ REPEAT STRIP_TAC \\ FLIP_TAC \\ MATCH_MP_TAC XREAD_INSTR_IMP
            \\ Q.EXISTS_TAC `w` \\ ASM_SIMP_TAC std_ss []
            \\ FULL_SIMP_TAC std_ss [wordsTheory.word_add_n2w,GSYM wordsTheory.WORD_ADD_ASSOC])
     \\ SIMP_TAC std_ss [word2bytes_thm,EL_thm,INSERT_SUBSET,IN_INSERT,EMPTY_SUBSET]

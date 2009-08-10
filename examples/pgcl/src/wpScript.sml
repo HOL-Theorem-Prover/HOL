@@ -345,14 +345,14 @@ val healthy_wp_prob = lemma
           `(bound1 (f s) * (c1 * x1) + bound1 (f s) * (c2 * x2)) +
            (c1 * ((1 - bound1 (f s)) * x1') + c2 * ((1 - bound1 (f s)) * x2'))
            - c <= bound1 (f s) * y + (1 - bound1 (f s)) * y'`
-       >> (`!a a' b. (a = a') ==> a <= b ==> a' <= b` by PROVE_TAC [] 
+       >> (`!a a' b. (a = a') ==> a <= b ==> a' <= b` by PROVE_TAC []
            ++ METIS_TAC [mul_comm, mul_assoc])
        ++ Suff
           `(bound1 (f s) * (c1 * x1) + bound1 (f s) * (c2 * x2)) +
            ((1 - bound1 (f s)) * (c1 * x1') + (1 - bound1 (f s)) * (c2 * x2'))
            - c <= bound1 (f s) * y + (1 - bound1 (f s)) * y'`
-       >> (`!a a' b. (a = a') ==> a <= b ==> a' <= b` by PROVE_TAC [] 
-            ++ METIS_TAC [mul_comm, mul_assoc]) 
+       >> (`!a a' b. (a = a') ==> a <= b ==> a' <= b` by PROVE_TAC []
+            ++ METIS_TAC [mul_comm, mul_assoc])
        ++ RW_TAC std_ss [GSYM add_ldistrib]
        ++ MATCH_MP_TAC sub_le_imp
        ++ ASM_REWRITE_TAC []
@@ -468,12 +468,12 @@ val healthy_wp_prob = lemma
            ++ Know `!e f : 'a state expect. Leq e f ==> (!s. e s <= f s)`
            >> METIS_TAC [Leq_def]
            ++ DISCH_THEN HO_MATCH_MP_TAC
-           ++ CONV_TAC (DEPTH_CONV ETA_CONV)) 
+           ++ CONV_TAC (DEPTH_CONV ETA_CONV))
        << [Q.PAT_ASSUM `lub X Y Z` (K ALL_TAC)
            ++ Q.PAT_ASSUM `lub X Y Z` MP_TAC
            ++ RW_TAC real_ss [lub_def, expect_def]
            ++ FIRST_ASSUM MATCH_MP_TAC
-           ++ RW_TAC posreal_ss [Leq_def]   
+           ++ RW_TAC posreal_ss [Leq_def]
            ++ MATCH_MP_TAC le_sup_imp
            ++ BETA_TAC
            ++ METIS_TAC [],
@@ -868,7 +868,7 @@ val healthy_wp_while = lemma
            ++ RW_TAC std_ss [])
        ++ FIRST_ASSUM MATCH_MP_TAC
        ++ Q.PAT_ASSUM `!r. P r = Q r`
-          (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM th])))       
+          (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM th])))
        ++ RW_TAC posreal_ss [Leq_def]
        ++ REVERSE (Cases_on `cond s` ++ ASM_SIMP_TAC posreal_ss [add_sub])
        ++ POP_ASSUM (K ALL_TAC)

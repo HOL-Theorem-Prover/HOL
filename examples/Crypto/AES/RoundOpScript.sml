@@ -38,10 +38,10 @@ val _ = new_theory "RoundOp";
 (* a special format.                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val _ = type_abbrev("block", 
-                    Type`:word8 # word8 # word8 # word8 # 
-                          word8 # word8 # word8 # word8 # 
-                          word8 # word8 # word8 # word8 # 
+val _ = type_abbrev("block",
+                    Type`:word8 # word8 # word8 # word8 #
+                          word8 # word8 # word8 # word8 #
+                          word8 # word8 # word8 # word8 #
                           word8 # word8 # word8 # word8`);
 
 val _ = type_abbrev("state", Type`:block`);
@@ -62,7 +62,7 @@ val ZERO_BLOCK_def =
 
 val FORALL_BLOCK = Q.store_thm
 ("FORALL_BLOCK",
- `(!b:block. P b) = 
+ `(!b:block. P b) =
    !w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16.
     P (w1,w2,w3,w4,w5,w6,w7,w8,w9,w10,w11,w12,w13,w14,w15,w16)`,
  SIMP_TAC std_ss [FORALL_PROD]);
@@ -147,7 +147,7 @@ val genSubBytes_def = try Define
                    b10,b11,b12,b13,
                    b20,b21,b22,b23,
                    b30,b31,b32,b33) :state)
-                          = 
+                          =
              (S b00, S b01, S b02, S b03,
               S b10, S b11, S b12, S b13,
               S b20, S b21, S b22, S b23,
@@ -165,7 +165,7 @@ val SubBytes_Inversion = Q.store_thm
 
 
 (*---------------------------------------------------------------------------
-    Left-shift the first row not at all, the second row by 1, the 
+    Left-shift the first row not at all, the second row by 1, the
     third row by 2, and the last row by 3. And the inverse operation.
  ---------------------------------------------------------------------------*)
 
@@ -189,7 +189,7 @@ val InvShiftRows_def = Define
                 (b00,b01,b02,b03,
                  b10,b11,b12,b13,
                  b20,b21,b22,b23,
-                 b30,b31,b32,b33) :state`; 
+                 b30,b31,b32,b33) :state`;
 
 (*---------------------------------------------------------------------------
         InvShiftRows inverts ShiftRows
@@ -221,14 +221,14 @@ val InvShiftRows_InvSubBytes_Commute = Q.store_thm
  ---------------------------------------------------------------------------*)
 
 val MultCol_def = Define
- `MultCol (a,b,c,d) = 
+ `MultCol (a,b,c,d) =
    ((2w ** a) ?? (3w ** b) ??  c        ?? d,
      a        ?? (2w ** b) ?? (3w ** c) ?? d,
      a        ??  b        ?? (2w ** c) ?? (3w ** d),
     (3w ** a) ??  b        ??  c        ?? (2w ** d))`;
 
 val InvMultCol_def = Define
- `InvMultCol (a,b,c,d) = 
+ `InvMultCol (a,b,c,d) =
    ((0xEw ** a) ?? (0xBw ** b) ?? (0xDw ** c) ?? (9w   ** d),
     (9w   ** a) ?? (0xEw ** b) ?? (0xBw ** c) ?? (0xDw ** d),
     (0xDw ** a) ?? (9w   ** b) ?? (0xEw ** c) ?? (0xBw ** d),
@@ -238,7 +238,7 @@ val InvMultCol_def = Define
 (* Inversion lemmas for column multiplication. Proved with an ad-hoc tactic  *)
 (*---------------------------------------------------------------------------*)
 
-val BYTE_CASES_TAC = 
+val BYTE_CASES_TAC =
   Cases_word_value
     THEN RW_TAC std_ss [fetch "Mult" "mult_tables"]
     THEN REWRITE_TAC [fetch "Mult" "mult_tables"]
@@ -313,12 +313,12 @@ val lemma_d4 = Count.apply Q.prove
 (* The following lemma is hideous to prove without permutative rewriting     *)
 (*---------------------------------------------------------------------------*)
 
-val rearrange_xors = Q.prove   
+val rearrange_xors = Q.prove
 (`(a1 ?? b1 ?? c1 ?? d1) ??
   (a2 ?? b2 ?? c2 ?? d2) ??
   (a3 ?? b3 ?? c3 ?? d3) ??
-  (a4 ?? b4 ?? c4 ?? d4) 
-     = 
+  (a4 ?? b4 ?? c4 ?? d4)
+     =
   (a1 ?? a2 ?? a3 ?? a4) ??
   (b1 ?? b2 ?? b3 ?? b4) ??
   (c1 ?? c2 ?? c3 ?? c4) ??
@@ -326,47 +326,47 @@ val rearrange_xors = Q.prove
  SRW_TAC [] []);
 
 val mix_lemma1 = Q.prove
-(`!a b c d. 
+(`!a b c d.
    (0xEw ** ((2w ** a) ?? (3w ** b) ?? c ?? d)) ??
    (0xBw ** (a ?? (2w ** b) ?? (3w ** c) ?? d)) ??
    (0xDw ** (a ?? b ?? (2w ** c) ?? (3w ** d))) ??
    (9w  ** ((3w ** a) ?? b ?? c ?? (2w ** d)))
       = a`,
- RW_TAC std_ss [ConstMultDistrib] 
-   THEN ONCE_REWRITE_TAC [rearrange_xors] 
+ RW_TAC std_ss [ConstMultDistrib]
+   THEN ONCE_REWRITE_TAC [rearrange_xors]
    THEN RW_TAC std_ss [lemma_a1,lemma_a2,lemma_a3,lemma_a4,WORD_XOR_CLAUSES]);
 
 val mix_lemma2 = Q.prove
-(`!a b c d. 
+(`!a b c d.
    (9w  ** ((2w ** a) ?? (3w ** b) ?? c ?? d)) ??
    (0xEw ** (a ?? (2w ** b) ?? (3w ** c) ?? d)) ??
    (0xBw ** (a ?? b ?? (2w ** c) ?? (3w ** d))) ??
    (0xDw ** ((3w ** a) ?? b ?? c ?? (2w ** d)))
      = b`,
- RW_TAC std_ss [ConstMultDistrib] 
-   THEN ONCE_REWRITE_TAC [rearrange_xors] 
+ RW_TAC std_ss [ConstMultDistrib]
+   THEN ONCE_REWRITE_TAC [rearrange_xors]
    THEN RW_TAC std_ss [lemma_b1,lemma_b2,lemma_b3,lemma_b4,WORD_XOR_CLAUSES]);
 
 val mix_lemma3 = Q.prove
-(`!a b c d. 
+(`!a b c d.
    (0xDw ** ((2w ** a) ?? (3w ** b) ?? c ?? d)) ??
    (9w  ** (a ?? (2w ** b) ?? (3w ** c) ?? d)) ??
    (0xEw ** (a ?? b ?? (2w ** c) ?? (3w ** d))) ??
    (0xBw ** ((3w ** a) ?? b ?? c ?? (2w ** d)))
      = c`,
- RW_TAC std_ss [ConstMultDistrib] 
-   THEN ONCE_REWRITE_TAC [rearrange_xors] 
+ RW_TAC std_ss [ConstMultDistrib]
+   THEN ONCE_REWRITE_TAC [rearrange_xors]
    THEN RW_TAC std_ss [lemma_c1,lemma_c2,lemma_c3,lemma_c4,WORD_XOR_CLAUSES]);
 
 val mix_lemma4 = Q.prove
-(`!a b c d. 
+(`!a b c d.
    (0xBw ** ((2w ** a) ?? (3w ** b) ?? c ?? d)) ??
    (0xDw ** (a ?? (2w ** b) ?? (3w ** c) ?? d)) ??
    (9w  ** (a ?? b ?? (2w ** c) ?? (3w ** d))) ??
    (0xEw ** ((3w ** a) ?? b ?? c ?? (2w ** d)))
      = d`,
- RW_TAC std_ss [ConstMultDistrib] 
-   THEN ONCE_REWRITE_TAC [rearrange_xors] 
+ RW_TAC std_ss [ConstMultDistrib]
+   THEN ONCE_REWRITE_TAC [rearrange_xors]
    THEN RW_TAC std_ss [lemma_d1,lemma_d2,lemma_d3,lemma_d4,WORD_XOR_CLAUSES]);
 
 (*---------------------------------------------------------------------------*)
@@ -389,7 +389,7 @@ val genMixColumns_def = Define
    let (b01', b11', b21', b31') = MC (b01,b11,b21,b31) in
    let (b02', b12', b22', b32') = MC (b02,b12,b22,b32) in
    let (b03', b13', b23', b33') = MC (b03,b13,b23,b33)
-   in 
+   in
     (b00', b01', b02', b03',
      b10', b11', b12', b13',
      b20', b21', b22', b23',
@@ -419,8 +419,8 @@ val AddRoundKey_def = Define `AddRoundKey = XOR_BLOCK`;
 
 val InvMixColumns_Distrib = Q.store_thm
 ("InvMixColumns_Distrib",
- `!s k. InvMixColumns (AddRoundKey s k) 
-            = 
+ `!s k. InvMixColumns (AddRoundKey s k)
+            =
         AddRoundKey (InvMixColumns s) (InvMixColumns k)`,
  SIMP_TAC std_ss [FORALL_BLOCK] THEN
  SRW_TAC [] [XOR_BLOCK_def, AddRoundKey_def, InvMixColumns_def, LET_THM,

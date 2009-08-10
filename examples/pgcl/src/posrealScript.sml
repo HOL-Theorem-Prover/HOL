@@ -60,7 +60,7 @@ val posreal_inhabited =
 
 val posreal_tydef = new_type_definition ("posreal", posreal_inhabited);
 
-val posreal_tybij = define_new_type_bijections 
+val posreal_tybij = define_new_type_bijections
   {name = "posreal_tybij", ABS = "posreal_abs",
    REP = "posreal_rep", tyax = posreal_tydef};
 
@@ -187,7 +187,7 @@ local
 in
   fun pcases goal =
     let val v = genvar posreal in X_GEN_TAC v THEN pcase_split v end goal;
-  
+
   val pcases_on = Q_TAC pcase_split;
 
   fun pcases3 goal =
@@ -668,7 +668,7 @@ val lt_sub_imp = store_thm
       [le_infty, infty_le, sub_linfty, sub_rinfty, zero_le, preal_not_infty,
        preal_add, preal_sub, preal_lt_def, add_rinfty, add_linfty]
    ++ METIS_TAC [preal_le, le_preal, REAL_LE_SUB_RADD, REAL_LE_ADD]);
-   
+
 val sub_lt_imp = store_thm
   ("sub_lt_imp",
    ``!x y z.
@@ -843,7 +843,7 @@ val add_sub2 = store_thm
   ("add_sub2",
    ``!x y. ~(y = infty) ==> (y + x - y = x)``,
    METIS_TAC [add_sub, add_comm]);
-   
+
 val sub_add = store_thm
   ("sub_add",
    ``!x y. y <= x /\ ~(y = infty) ==> ((x - y) + y = x)``,

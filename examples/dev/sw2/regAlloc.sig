@@ -2,7 +2,7 @@ signature regAlloc =
 sig
   include Abbrev
 
-  datatype alloc_result 
+  datatype alloc_result
      = Alloc of term (* allocated register *)
      | Spill of term (* spilled variable *)
 

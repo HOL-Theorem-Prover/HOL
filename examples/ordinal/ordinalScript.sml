@@ -638,7 +638,7 @@ THENL
 `!d. Tails d ==> oless (expt d) (expt x)`
        by METIS_TAC [decompose_plus,rank_positive,LESS_0] THEN
 `!d. Tails d ==> oless (expt x) (expt d)`
-       by METIS_TAC [decompose_plus, rank_positive_expt,DECIDE``(m=n)==>m<=n``] 
+       by METIS_TAC [decompose_plus, rank_positive_expt,DECIDE``(m=n)==>m<=n``]
 THEN METIS_TAC [oless_antisym],
 ALL_TAC
 ]
@@ -655,7 +655,7 @@ THEN
     (`?v. s_alpha_1_k_1 v /\ (t = tail v)` by METIS_TAC[] THEN
      `s_alpha_1 v /\ (coeff v = coeff x1)` by METIS_TAC [] THEN
      `sj(v) /\ (expt v = expt x)` by METIS_TAC [] THEN
-     `v = Plus (expt v) (coeff v) (tail v)` by METIS_TAC [rank_positive,LESS_0] 
+     `v = Plus (expt v) (coeff v) (tail v)` by METIS_TAC [rank_positive,LESS_0]
      THEN METIS_TAC [])
 
 THEN

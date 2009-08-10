@@ -11,7 +11,7 @@ val _ = new_theory "num";
  * Define successor `SUC_REP:ind->ind` on ind.
  *---------------------------------------------------------------------------*)
 
-val SUC_REP_DEF = new_specification 
+val SUC_REP_DEF = new_specification
    ("SUC_REP_DEF",["SUC_REP"], boolTheory.INFINITY_AX);
 
 
@@ -163,7 +163,7 @@ val lemma =
                ASM_CASES_TAC (--`A:bool`--) THEN ASM_REWRITE_TAC []);
 
 val ind_lemma2 = TAC_PROOF(([],
-  --`!P. P ZERO_REP /\ (!i. IS_NUM_REP i /\ P i ==> P(SUC_REP i)) 
+  --`!P. P ZERO_REP /\ (!i. IS_NUM_REP i /\ P i ==> P(SUC_REP i))
            ==>
          !i. IS_NUM_REP i ==> P i`--),
      GEN_TAC THEN STRIP_TAC THEN

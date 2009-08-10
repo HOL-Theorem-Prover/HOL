@@ -756,7 +756,7 @@ fun TEMP_DEFS_CONV t =
 	     in mk_eq{lhs=ell,rhs=(eta_conv new_r)}
 	    end
 	fun beta_conv t = rhs(concl ((QCONV (REPEATC (DEPTH_CONV BETA_CONV))) t))
-	val hdefs = map (fun_eta_conv o temporal2hol) defs 
+	val hdefs = map (fun_eta_conv o temporal2hol) defs
 	val hpt = mk_comb{Rator=(temporal2hol pt),Rand=(--`0`--)}
 	val hpt = beta_conv hpt
 	val hdefs = map beta_conv hdefs
@@ -1377,7 +1377,7 @@ fun print_smv_info smv_info =
 
 
 fun SMV_RUN_FILE smv_file =
-    let 
+    let
   val _ = Process.system
       ((!smv_path)^(!smv_call)^" "
       ^smv_file^" > "
@@ -1400,7 +1400,7 @@ fun SMV_RUN_FILE smv_file =
     end
 
 fun SMV_RUN smv_program =
-    let 
+    let
   val file_st = TextIO.openOut((!smv_tmp_dir)^"smv_file.smv")
   val _ = (
     TextIO.output(file_st,smv_program);
@@ -1414,8 +1414,8 @@ fun SMV_RUN smv_program =
 
 
 fun SMV_AUTOMATON_CONV automaton =
-    
-    let 
+
+    let
   val smv_program = genbuechi2smv_string automaton
   val proved = SMV_RUN smv_program
   in
@@ -1454,6 +1454,6 @@ fun UNSAFE_LTL_CONV t =
     end
 
 val _ = Parse.temp_set_grammars ambient_grammars
-end; 
+end;
 
 end;

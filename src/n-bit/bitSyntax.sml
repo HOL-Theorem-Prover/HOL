@@ -10,7 +10,7 @@ let val tm = prim_mk_const{Name = name, Thy=thy}
     val n = String.map Char.toLower name
     val dest = dest_monop tm (ERR ("dest_"^n) "")
 in
-  (tm, fn v => mk_comb(tm,v) handle HOL_ERR _ => raise ERR ("mk_"^n) "", 
+  (tm, fn v => mk_comb(tm,v) handle HOL_ERR _ => raise ERR ("mk_"^n) "",
    dest, can dest)
 end;
 
@@ -90,7 +90,7 @@ let val tm = prim_mk_const{Name = name, Thy=thy}
 in
   (tm,
    fn (v1,v2) => list_mk_comb(tm,[v1,v2])
-     handle HOL_ERR _ => raise ERR ("mk_"^n) "", 
+     handle HOL_ERR _ => raise ERR ("mk_"^n) "",
    dest, can dest)
 end;
 
@@ -116,7 +116,7 @@ let val tm = prim_mk_const{Name = name, Thy=thy}
 in
   (tm,
    fn (v1,v2,v3) => list_mk_comb(tm,[v1,v2,v3])
-     handle HOL_ERR _ => raise ERR ("mk_"^n) "", 
+     handle HOL_ERR _ => raise ERR ("mk_"^n) "",
    dest, can dest)
 end;
 

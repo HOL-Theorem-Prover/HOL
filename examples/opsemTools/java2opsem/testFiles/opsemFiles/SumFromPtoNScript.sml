@@ -24,20 +24,20 @@ val MAIN_def =
             (Const 0)
           )
           (Seq
-            (While 
-              (LessEq 
+            (While
+              (LessEq
                 (Var "i")
                 (Var "n")
               )
               (Seq
                 (Assign "s"
-                  (Plus 
+                  (Plus
                     (Var "s")
                     (Var "i")
                   )
                 )
                 (Assign "i"
-                  (Plus 
+                  (Plus
                     (Var "i")
                     (Const 1)
                   )

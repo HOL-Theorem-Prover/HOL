@@ -105,7 +105,7 @@ sig
   val smallfoot_tag_term : term
   val smallfoot_var_term : term
   val smallfoot_xenv_term : term
-  
+
 
 
   val FEMPTY_tm : term
@@ -149,7 +149,7 @@ sig
   val dest_SMALLFOOT_HOARE_TRIPLE : term -> term * term * term * term * term
   val dest_SMALLFOOT_IS_STRONG_STACK_PROPOSITION : term -> term;
   val dest_SMALLFOOT_PROP_IMPLIES : term -> term * term * term * term *  term * term * term * term
-  val dest_SMALLFOOT_SING_PROCEDURE_SPEC : term -> term * term * term * term * term * term * term * term 
+  val dest_SMALLFOOT_SING_PROCEDURE_SPEC : term -> term * term * term * term * term * term * term * term
   val dest_SMALLFOOT_SPECIFICATION : term -> term * term
   val dest_fasl_prog_best_local_action : term -> term * term
   val dest_fasl_prog_block : term -> term
@@ -182,7 +182,7 @@ sig
   val dest_smallfoot_ap_unknown : term -> string;
   val dest_smallfoot_ap_var_update : term -> term * term * term;
   val dest_smallfoot_choose_const_best_local_action : term -> term * term * term * term * term
-  val dest_smallfoot_cond_best_local_action : term -> term * term 
+  val dest_smallfoot_cond_best_local_action : term -> term * term
   val dest_smallfoot_cond_choose_const_best_local_action : term -> term * term * term * term * term
   val dest_smallfoot_cond_star : term -> term * term;
   val dest_smallfoot_parallel_proc_call_abstraction : term -> term * term * term * term * term * term * term * term * term * term
@@ -195,7 +195,7 @@ sig
   val dest_smallfoot_prog_field_assign : term -> term * term * term
   val dest_smallfoot_prog_field_lookup : term -> term * term * term
   val dest_smallfoot_prog_local_var : term -> term * term
-  val dest_smallfoot_prog_new : term -> term 
+  val dest_smallfoot_prog_new : term -> term
   val dest_smallfoot_prog_parallel : term -> term * term
   val dest_smallfoot_prog_parallel_procedure_call : term -> term * term * term * term * term * term
   val dest_smallfoot_prog_procedure_call : term -> term * term * term

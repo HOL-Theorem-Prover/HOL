@@ -115,7 +115,7 @@ val FILTER_MEM = store_thm
    ``!P (x:'a) l. MEM x (FILTER P l) ==> P x``,
    NTAC 2 STRIP_TAC
    ++ Induct >> RW_TAC std_ss [MEM, FILTER]
-   ++ (RW_TAC std_ss [MEM, FILTER] ++ PROVE_TAC []));   
+   ++ (RW_TAC std_ss [MEM, FILTER] ++ PROVE_TAC []));
 
 val MEM_FILTER = store_thm
   ("MEM_FILTER",

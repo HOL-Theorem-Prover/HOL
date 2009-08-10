@@ -175,7 +175,7 @@ val BETA_R_patterns = [--`^BETA_R t1 t2`--];
 val BETA_R_rules_tm =
 --`
        (* -------------------------------------------- *)
-            (^BETA_R (App (Lam x u) t) (u <[ [x,t]))     
+            (^BETA_R (App (Lam x u) t) (u <[ [x,t]))
 `--;
 
 val (BETA_R_rules_sat,BETA_R_ind_thm) =
@@ -184,7 +184,7 @@ val (BETA_R_rules_sat,BETA_R_ind_thm) =
 val BETA_R_inv_thms = prove_inversion_theorems
     BETA_R_rules_sat BETA_R_ind_thm;
 
-val BETA_R_strong_ind = prove_strong_induction 
+val BETA_R_strong_ind = prove_strong_induction
     BETA_R_rules_sat BETA_R_ind_thm;
 
 val _ = save_thm ("BETA_R_rules_sat", BETA_R_rules_sat);
@@ -403,8 +403,8 @@ val REDL_patterns = [--`^REDL t1 t2`--];
 
 val REDL_rules_tm =
 --`
-                           
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                          (^REDL t t)                                    /\
 
 
@@ -420,7 +420,7 @@ val REDL_rules_tm =
 
                 ((^REDL t1 t2) /\ (^REDL u1 u2)
        (* -------------------------------------------- *) ==>
-           (^REDL (App (Lam x t1) u1) (t2 <[ [x,u2])))     
+           (^REDL (App (Lam x t1) u1) (t2 <[ [x,u2])))
 `--;
 
 val (REDL_rules_sat,REDL_ind_thm) =
@@ -429,7 +429,7 @@ val (REDL_rules_sat,REDL_ind_thm) =
 val REDL_inv_thms = prove_inversion_theorems
     REDL_rules_sat REDL_ind_thm;
 
-val REDL_strong_ind = prove_strong_induction 
+val REDL_strong_ind = prove_strong_induction
     REDL_rules_sat REDL_ind_thm;
 
 val _ = save_thm ("REDL_rules_sat", REDL_rules_sat);
@@ -1006,12 +1006,12 @@ val REDC_patterns = [--`^REDC t1 t2`--];
 
 val REDC_rules_tm =
 --`
-                           
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                     (^REDC (Con a) (Con a))                             /\
 
-                           
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                     (^REDC (Var x) (Var x))                             /\
 
 
@@ -1027,7 +1027,7 @@ val REDC_rules_tm =
 
                 ((^REDC t1 t2) /\ (^REDC u1 u2)
        (* -------------------------------------------- *) ==>
-           (^REDC (App (Lam x t1) u1) (t2 <[ [x,u2])))     
+           (^REDC (App (Lam x t1) u1) (t2 <[ [x,u2])))
 `--;
 
 val (REDC_rules_sat,REDC_ind_thm) =
@@ -1036,7 +1036,7 @@ val (REDC_rules_sat,REDC_ind_thm) =
 val REDC_inv_thms = prove_inversion_theorems
     REDC_rules_sat REDC_ind_thm;
 
-val REDC_strong_ind = prove_strong_induction 
+val REDC_strong_ind = prove_strong_induction
     REDC_rules_sat REDC_ind_thm;
 
 val _ = save_thm ("REDC_rules_sat", REDC_rules_sat);
@@ -1574,7 +1574,7 @@ val RC_INDUCT_TAC =
 Barendregt Lemma 3.2.7, page 62, the proof begins with the note that
 
     --->B    SUBSET     -->>     SUBSET     -->>B
-     =                   l                  
+     =                   l
 
 which in our notation corresponds to
 
@@ -1867,7 +1867,7 @@ val BETA_R_NORMAL_FORM_UNIQUE = store_thm
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "beta.lst";
-                                                                                
+
 val _ = html_theory "beta";
 
 val _ = print_theory_size();

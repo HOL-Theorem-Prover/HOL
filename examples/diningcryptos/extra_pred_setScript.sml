@@ -111,7 +111,7 @@ val (list_elts_def, list_elts_ind) = ((Q.GEN `s` ## I) o Defn.tprove)
       ++ MP_TAC (Q.SPEC `s` CARD_EQ_0)
       ++ RW_TAC arith_ss [])
   end;
-      
+
 val _ = save_thm ("list_elts_def", list_elts_def);
 val _ = save_thm ("list_elts_ind", list_elts_ind);
 
@@ -167,7 +167,7 @@ val GSPEC_DEF_ALT = store_thm
   ("GSPEC_DEF_ALT",
    ``!(f:'a -> 'b # bool). GSPEC f = (\v. ?x. (v, T) = f x)``,
    RW_TAC std_ss [EXTENSION, GSPECIFICATION]
-   ++ RW_TAC std_ss [SPECIFICATION]);   
+   ++ RW_TAC std_ss [SPECIFICATION]);
 
 val UNION_DISJOINT_SPLIT = store_thm
   ("UNION_DISJOINT_SPLIT",
@@ -1473,7 +1473,7 @@ val COUNTABLE_BIGUNION = store_thm
    ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `f (n : num)`)
    ++ RW_TAC std_ss []
    ++ POP_ASSUM (MP_TAC o Q.SPEC `x`)
-   ++ RW_TAC std_ss []      
+   ++ RW_TAC std_ss []
    ++ Q.PAT_ASSUM `BIJ f' X Y` MP_TAC
    ++ RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV, IN_CROSS]
    ++ POP_ASSUM (MP_TAC o Q.SPEC `(n, n')`)
@@ -1930,7 +1930,7 @@ val REAL_SUM_IMAGE_SPOS = store_thm
 		(\s. (~(s = {})) ==>
 	   !f. (!x. x IN s ==> 0 < f x) ==>
 		0 < REAL_SUM_IMAGE f s) s`
-   >> RW_TAC std_ss [] 
+   >> RW_TAC std_ss []
    ++ MATCH_MP_TAC FINITE_INDUCT
    ++ RW_TAC real_ss [REAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT, IN_INSERT, DISJ_IMP_THM,
 		      FORALL_AND_THM]
@@ -2027,7 +2027,7 @@ val REAL_SUM_IMAGE_FINITE_SAME_lem = prove
    ++ `f e = f x` by FULL_SIMP_TAC std_ss [IN_INSERT]
    ++ FULL_SIMP_TAC std_ss [] ++ POP_ASSUM (K ALL_TAC)
    ++ Q.PAT_ASSUM `!f p. b` MATCH_MP_TAC ++ METIS_TAC [IN_INSERT]);
-   
+
 val REAL_SUM_IMAGE_FINITE_SAME = store_thm
   ("REAL_SUM_IMAGE_FINITE_SAME",
    ``!P. FINITE P ==>
@@ -2178,7 +2178,7 @@ val REAL_SUM_IMAGE_EQ_CARD_lem = prove
    ++ RW_TAC real_ss [REAL_SUM_IMAGE_THM, CARD_EMPTY, IN_INSERT]
    ++ (MP_TAC o Q.SPECL [`s`]) CARD_INSERT
    ++ RW_TAC real_ss [ADD1] ++ ONCE_REWRITE_TAC [GSYM REAL_ADD]
-   ++ Suff `REAL_SUM_IMAGE (\x. (if (x = e) \/ x IN s then 1 else 0)) (s DELETE e) = 
+   ++ Suff `REAL_SUM_IMAGE (\x. (if (x = e) \/ x IN s then 1 else 0)) (s DELETE e) =
 		REAL_SUM_IMAGE (\x. (if x IN s then 1 else 0)) s`
    >> RW_TAC real_ss []
    ++ Q.PAT_ASSUM `REAL_SUM_IMAGE (\x. (if x IN s then 1 else 0)) s = & (CARD s)` (K ALL_TAC)
@@ -2253,7 +2253,7 @@ val REAL_SUM_IMAGE_INTER_ELIM = store_thm
    ``!P. FINITE P ==>
 	 !f P'. (!x. (~(x IN P')) ==> (f x = 0)) ==>
 			(REAL_SUM_IMAGE f (P INTER P') =
-			 REAL_SUM_IMAGE f P)``,   
+			 REAL_SUM_IMAGE f P)``,
    METIS_TAC [REAL_SUM_IMAGE_INTER_ELIM_lem]);
 
 val REAL_SUM_IMAGE_COUNT = store_thm
@@ -2325,7 +2325,7 @@ val REAL_SUM_IMAGE_CONST_EQ_1_EQ_INV_CARD = store_thm
 	by METIS_TAC []
       ++ POP_ORW
       ++ ONCE_REWRITE_TAC [(GSYM o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_IN_IF]
-      ++ (MP_TAC o Q.SPECL [`(\x. (f:'a->real) e)`, `(f:'a->real) e`] o 
+      ++ (MP_TAC o Q.SPECL [`(\x. (f:'a->real) e)`, `(f:'a->real) e`] o
 	  UNDISCH o Q.ISPEC `s:'a -> bool`) REAL_SUM_IMAGE_FINITE_CONST
       ++ SIMP_TAC std_ss []
       ++ STRIP_TAC ++ POP_ASSUM (K ALL_TAC)
@@ -2344,7 +2344,7 @@ val REAL_SUM_IMAGE_CONST_EQ_1_EQ_INV_CARD = store_thm
 	by METIS_TAC []
    ++ POP_ORW
    ++ ONCE_REWRITE_TAC [(GSYM o UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_IN_IF]
-   ++ (MP_TAC o Q.SPECL [`(\x. (f:'a->real) e)`, `(f:'a->real) e`] o 
+   ++ (MP_TAC o Q.SPECL [`(\x. (f:'a->real) e)`, `(f:'a->real) e`] o
 	  UNDISCH o Q.ISPEC `s:'a -> bool`) REAL_SUM_IMAGE_FINITE_CONST
    ++ SIMP_TAC std_ss []
    ++ STRIP_TAC ++ POP_ASSUM (K ALL_TAC)
@@ -2391,18 +2391,18 @@ val REAL_SUM_IMAGE_REAL_SUM_IMAGE = store_thm
 	    ++ METIS_TAC [])
    ++ POP_ORW
    ++ `DISJOINT (IMAGE (\x. (e,x)) s') (s CROSS s')`
-	by (FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT, DISJOINT_DEF, Once EXTENSION, 
+	by (FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT, DISJOINT_DEF, Once EXTENSION,
 				  NOT_IN_EMPTY, IN_INTER, IN_CROSS, IN_SING, IN_IMAGE]
 	    ++ STRIP_TAC ++ (MP_TAC o Q.ISPEC `x:'a#'b`) pair_CASES
 	    ++ RW_TAC std_ss [FST, SND]
 	    ++ METIS_TAC [])
-   ++ (MP_TAC o REWRITE_RULE [GSYM AND_IMP_INTRO] o 
-	Q.ISPECL [`IMAGE (\x. (e:'a,x)) (s':'b->bool)`, `(s:'a->bool) CROSS (s':'b->bool)`]) 
+   ++ (MP_TAC o REWRITE_RULE [GSYM AND_IMP_INTRO] o
+	Q.ISPECL [`IMAGE (\x. (e:'a,x)) (s':'b->bool)`, `(s:'a->bool) CROSS (s':'b->bool)`])
 	REAL_SUM_IMAGE_DISJOINT_UNION
    ++ RW_TAC std_ss [FINITE_CROSS, IMAGE_FINITE]
    ++ POP_ASSUM (K ALL_TAC)
-   ++ (MP_TAC o Q.SPEC `(\x. (e,x))` o UNDISCH o Q.SPEC `s'` o 
-	INST_TYPE [``:'c``|->``:'a # 'b``] o INST_TYPE [``:'a``|->``:'b``] o 
+   ++ (MP_TAC o Q.SPEC `(\x. (e,x))` o UNDISCH o Q.SPEC `s'` o
+	INST_TYPE [``:'c``|->``:'a # 'b``] o INST_TYPE [``:'a``|->``:'b``] o
 	INST_TYPE [``:'b``|->``:'c``]) REAL_SUM_IMAGE_IMAGE
    ++ RW_TAC std_ss [INJ_DEF, IN_IMAGE, o_DEF] ++ METIS_TAC []);
 
@@ -2488,8 +2488,8 @@ val finite_enumeration_of_sets_has_max_non_empty = store_thm
 		++ Cases_on `n < N`
 		>> (Q.EXISTS_TAC `N`
 		    ++ RW_TAC std_ss [GREATER_EQ]
-		    ++ `~(n' = n)` 
-			by METIS_TAC [LESS_LESS_EQ_TRANS, 
+		    ++ `~(n' = n)`
+			by METIS_TAC [LESS_LESS_EQ_TRANS,
 				      DECIDE ``!m (n:num). m < n ==> ~(m=n)``]
 		    ++ Cases_on `f n' = f n`
 		    >> (`DISJOINT (f n') (f n)` by METIS_TAC []
@@ -2502,7 +2502,7 @@ val finite_enumeration_of_sets_has_max_non_empty = store_thm
 		++ Q.EXISTS_TAC `SUC n`
 		++ RW_TAC std_ss [GREATER_EQ]
 		++ FULL_SIMP_TAC std_ss [NOT_LESS]
-		++ `~(n' = n)` 
+		++ `~(n' = n)`
 			by METIS_TAC [LESS_LESS_EQ_TRANS,
 				      DECIDE ``!n:num. n < SUC n``,
 				      DECIDE ``!m (n:num). m < n ==> ~(m=n)``]

@@ -1,8 +1,8 @@
 (*---------------------------------------------------------------------------------*)
-(*      Simple Examples                                                            *) 
+(*      Simple Examples                                                            *)
 (*      No precedure call is presented in these examples                           *)
 (*---------------------------------------------------------------------------------*)
-loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: 
+loadPath := (concat Globals.HOLDIR "/examples/dev/sw") ::
             !loadPath;
 
 use (concat Globals.HOLDIR "/examples/dev/sw/compiler");
@@ -37,7 +37,7 @@ val ShiftXor_def =
   Name              : ShiftXor
   Arguments         : (r0,(r1,(r2,r3)))
   Returns           : r0
-  Body: 
+  Body:
     0:          lsl     r4, r0, #4iw
     1:          add     r2, r4, r2
     2:          add     r1, r0, r1
@@ -54,11 +54,11 @@ val ShiftXor_def =
 (*---------------------------------------------------------------------------------*)
 
 val cj_f_1_def = Define `
-    cj_f_1 (a,b:word32) = 
-       if a = 1w then 
+    cj_f_1 (a,b:word32) =
+       if a = 1w then
             let e = a + b + 3w
-            in e 
-       else let c = a + b in 
+            in e
+       else let c = a + b in
             let d = c * c - a in
             d`;
 (*
@@ -82,7 +82,7 @@ val cj_f_1_def = Define `
   Name              : cj_f_1
   Arguments         : (r0,r1)
   Returns           : r0
-  Body: 
+  Body:
   CJ(r0 = #1w,
     [madd r0 r0 r1; madd r0 r0 #3w],
     [madd r1 r0 r1; mmul r1 r1 r1; msub r0 r1 r0])
@@ -92,7 +92,7 @@ val cj_f_1_def = Define `
   Name              : cj_f_1
   Arguments         : (r0,r1)
   Returns           : r0
-  Body: 
+  Body:
     0:          cmp     r0, #1iw
     1:          beq     + (5)
     2:          add     r1, r0, r1
@@ -105,7 +105,7 @@ val cj_f_1_def = Define `
 
 (*---------------------------------------------------------------------------------*)
 (*      Tail Recusive Functions                                                    *)
-(*      Factorial Function. Form: SC (TR, BLK)                                     *) 
+(*      Factorial Function. Form: SC (TR, BLK)                                     *)
 (*      This is the example 1 in the paper                                         *)
 (*---------------------------------------------------------------------------------*)
 val WORD_LO___MEASURE = store_thm ("WORD_LO___MEASURE",
@@ -113,7 +113,7 @@ val WORD_LO___MEASURE = store_thm ("WORD_LO___MEASURE",
   SIMP_TAC std_ss [FUN_EQ_THM, prim_recTheory.measure_def,
     relationTheory.inv_image_def, WORD_LO] );
 
-val fact_def = Hol_defn "fact" 
+val fact_def = Hol_defn "fact"
    `fact (x:word32,a:word32) = if x=0w then a else fact(x-1w, x*a)`;
 
 val (fact_def, fact_ind) =
@@ -125,12 +125,12 @@ Defn.tprove (fact_def,
 
 (*equivalence proof does not terminate, therefore use false for equivalence check parameter
 
-val fact_comp = pp_compile fact_def true 
+val fact_comp = pp_compile fact_def true
 
 *)
 
-val fact_comp_pre = pp_compile fact_def false  
-(* set_goal___spec_assums fact_comp_pre*)	
+val fact_comp_pre = pp_compile fact_def false
+(* set_goal___spec_assums fact_comp_pre*)
 val fact_spec = prove___spec_assums fact_comp_pre
    (
    SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
@@ -235,7 +235,7 @@ pp_compile cj_f_2_def true;
   Name              : cj_f_2
   Arguments         : (r0,r1)
   Returns           : r2
-  Body: 
+  Body:
     0:          add     r2, r0, #1iw
     1:          cmp     r0, #1iw
     2:          beq     + (3)
@@ -253,21 +253,21 @@ val f3_def = Define `
     f3 (a:word32,b:word32) = let c = a + 1w in
                let d = if a = 1w then b else a + b in
                let e = c - d in
-               e 
+               e
 `;
 
 
 (* equivalence proof fails, thus an assumtion is created*)
-val f3_comp_pre = pp_compile f3_def true 
-val f3_spec = prove___spec_assums f3_comp_pre 
-	(* set_goal___spec_assums  f3_comp_pre*)	
+val f3_comp_pre = pp_compile f3_def true
+val f3_spec = prove___spec_assums f3_comp_pre
+	(* set_goal___spec_assums  f3_comp_pre*)
 	(
    SIMP_TAC std_ss [FUN_EQ_THM, f3_def, FORALL_PROD, LET_THM] THEN
 	REPEAT GEN_TAC THEN
 	Cases_on `p_1 = 1w` THEN (
 		ASM_SIMP_TAC std_ss [] THEN
 		WORDS_TAC
-	))	
+	))
 
 (*
 *)

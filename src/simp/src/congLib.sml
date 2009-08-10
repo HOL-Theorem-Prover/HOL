@@ -109,7 +109,7 @@ local
     else
       (let
         val thm_relation = rator(rator(concl thm));
-        val _ = if (samerel thm_relation (extract_preorder_const preorder)) then T 
+        val _ = if (samerel thm_relation (extract_preorder_const preorder)) then T
                 else failwith ("not applicable");
         val thmLHS = rand (rator (concl thm));
         val match = match_terml [] boundvars thmLHS term;
@@ -265,8 +265,8 @@ fun CONGRUENCE_SIMP_QCONV relation (cs as (CS csdata)) ss =
   let
     (*build a connection between the preorders and =*)
     val preorders = (#relations csdata);
-    val preorders = filter (fn p => not (same_const (extract_preorder_const p) 
-                                                    boolSyntax.equality)) 
+    val preorders = filter (fn p => not (same_const (extract_preorder_const p)
+                                                    boolSyntax.equality))
                            preorders;
     val preorder_eq_congs = map mk_eq_congproc preorders
     val eq_congsTravrule = TRAVRULES

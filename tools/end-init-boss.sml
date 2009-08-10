@@ -2,7 +2,7 @@ let
   val s = "[loading theories and proof tools "
   val l = ["optionTheory", "pairLib", "sumTheory", "numTheory",
            "arithmeticTheory", "Arith", "numLib", "mesonLib", "BasicProvers",
-           "SingleStep", "Datatype", "listTheory", "bossLib", "EmitTeX", 
+           "SingleStep", "Datatype", "listTheory", "bossLib", "EmitTeX",
            "pred_setLib"
            ]
   val terminfo = case Process.getEnv "TERM" of
@@ -39,7 +39,7 @@ open bossLib;  (* Any others? *)
 val _ = use (HOLDIR^"/src/proofman/expandq");
 (* val _ = use (HOLDIR^"/src/datatype/Interactive"); *)
 
-val Hol_datatype = 
+val Hol_datatype =
   Lib.with_flag
     (Feedback.emit_WARNING,false)
     bossLib.Hol_datatype;

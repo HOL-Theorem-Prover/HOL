@@ -253,7 +253,7 @@ fun del_persistent_consts [] = ()
      let open Portable
          val plist = map (fn c => let val {Name,Thy,Ty} = dest_thy_const c
                                   in (Name,Thy) end) clist
-         val plist' = map (Lib.mlquote##Lib.mlquote) plist 
+         val plist' = map (Lib.mlquote##Lib.mlquote) plist
          fun prec (s1,s2) = "Term.prim_mk_const{Name = "^s1^", Thy = "^s2^"}"
          val plist'' = map prec plist'
      in

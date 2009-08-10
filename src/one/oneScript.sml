@@ -44,7 +44,7 @@ val EXISTS_ONE_REP = prove
 (* The theorem returned is:   |- ?rep. TYPE_DEFINITION (\b.b) rep	     *)
 (*---------------------------------------------------------------------------*)
 
-val one_TY_DEF = 
+val one_TY_DEF =
  REWRITE_RULE [boolTheory.TYPE_DEFINITION_THM]
     (new_type_definition("one", EXISTS_ONE_REP));
 
@@ -101,9 +101,9 @@ val one_prim_rec = store_thm
  ("one_prim_rec",
   Term`!e:'a. ?fn. fn one = e`,
   ACCEPT_TAC
-    (GEN_ALL (CONJUNCT1 (SPEC_ALL 
+    (GEN_ALL (CONJUNCT1 (SPEC_ALL
       (CONV_RULE (DEPTH_CONV EXISTS_UNIQUE_CONV) one_Axiom)))));
-  
+
 (* ----------------------------------------------------------------------
     Set up the one value to print as (), by analogy with SML's unit
    ---------------------------------------------------------------------- *)
@@ -122,7 +122,7 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
      solely for its effect on the printing ("outward") direction; the
      concrete syntax is such that Absyn parsing will never generate the
      string "()" for later stages of the parsing process to see, and it
-     wouldn't matter if it did. 
+     wouldn't matter if it did.
  ---------------------------------------------------------------------------*)
 
 val _ = overload_on ("()", ``one``);

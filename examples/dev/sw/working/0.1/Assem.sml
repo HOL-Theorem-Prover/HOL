@@ -9,7 +9,7 @@ structure Assem = struct
   datatype operation =  ADD | SUB | RSB | MUL | MLA |
                         AND | ORR | EOR | CMP | TST |
                         LSL | LSR | ASR | ROR |
-                        LDR | STR | LDMFD | STMFD | 
+                        LDR | STR | LDMFD | STMFD |
 			MRS | MSR |
                         B | BL |
                         SWI | DCD |
@@ -20,7 +20,7 @@ structure Assem = struct
   datatype exp = NAME of Temp.label
 	       | TEMP of int
 	       | NCONST of Arbint.int
-	       | WCONST of Arbint.int 
+	       | WCONST of Arbint.int
 	       | PAIR of exp * exp
 	       | CALL of exp * exp
 	       | TMEM of int
@@ -108,16 +108,16 @@ structure Assem = struct
     |  printAlias IP = "IP"
     |  printAlias SP = "SP"
     |  printAlias LR = "LR"
-    |  printAlias PC = "PC"   
+    |  printAlias PC = "PC"
 
    val use_alias = ref true;
    val use_capital = ref false;
-   val address_stride = ref 1; 
+   val address_stride = ref 1;
 
-   fun printReg r = 
+   fun printReg r =
 	if !use_alias andalso r >= 11 then
 	   printAlias (toAlias r)
-	else "R" ^ Int.toString r 
+	else "R" ^ Int.toString r
 
    fun eval_exp (TEMP e) =
             e
@@ -144,7 +144,7 @@ structure Assem = struct
                 Substring.translate (Char.toString o Char.toLower)
                 (Substring.substring (str, 0, String.size str))
 
-    fun one_exp exp = 
+    fun one_exp exp =
 	let
     	    fun format_exp (TMEM e) =
 	    	 "[" ^ Int.toString e ^ "]"
@@ -178,29 +178,29 @@ structure Assem = struct
 	end
 
     fun formatInst (OPER {oper = (op1, cond1, flag1), src = sl, dst = dl, jump = jl}) =
-	let 
-	    fun appendBlanks i = if i <= 0 then "" else " " ^ appendBlanks (i-1)  
+	let
+	    fun appendBlanks i = if i <= 0 then "" else " " ^ appendBlanks (i-1)
 
 	    val (sl,dl) = if op1 = LDMFD orelse op1 = STR then (dl,sl)
-			  else if op1 = CMP then (sl,[]) 
+			  else if op1 = CMP then (sl,[])
 			  else (sl,dl)
 
-	    val ops0 = (print_op op1 ^ print_cond cond1 ^ print_flag flag1)	
+	    val ops0 = (print_op op1 ^ print_cond cond1 ^ print_flag flag1)
 	    val ops1 = ops0 ^ appendBlanks (8 - String.size ops0)
 
-	    val inst =  
+	    val inst =
         	indent ^ ops1 ^
-   
+
         	(
 	 	 if op1 = STMFD orelse op1 = LDMFD then
-            	 	(one_exp (hd dl)) ^ ", {" ^ one_exp (hd sl) ^ 
+            	 	(one_exp (hd dl)) ^ ", {" ^ one_exp (hd sl) ^
 					(List.foldl (fn (n,s) => (s ^ "," ^ one_exp n)) "" (tl sl)) ^ "}"
 		 else if op1 = BL then
 			(if null dl then ""
-			 else 
+			 else
 			    "(" ^ one_exp (hd dl) ^ (List.foldl (fn (n,s) => (s ^ "," ^ one_exp n)) "" (tl dl)) ^ "), " ^
 			    "(" ^ one_exp (hd sl) ^ (List.foldl (fn (n,s) => (s ^ "," ^ one_exp n)) "" (tl sl)) ^ ")"
-			) ^ 
+			) ^
 			Symbol.name (hd (valOf jl)) ^ " (" ^ Int.toString (Symbol.index (hd (valOf jl))) ^ ")"
          	 else
 	           	(if null dl then "" else (one_exp (hd dl))) ^
@@ -208,7 +208,7 @@ structure Assem = struct
 			 else if null dl then (one_exp (hd sl))
 			 else ", " ^ (one_exp (hd sl))
 			) ^
-			(if null sl then "" 
+			(if null sl then ""
 			 else List.foldl (fn (v,s) => s ^ ", " ^ (one_exp v)) "" (tl sl)) ^
             		(case jl of
                 	      NONE => ""
@@ -234,8 +234,8 @@ structure Assem = struct
 
 val lineNo = ref ~1;
 
-fun printInsts stms = 
-  let 
+fun printInsts stms =
+  let
       fun formatNextLineNo () =
           ( lineNo := !lineNo + 1;
             "  " ^
@@ -254,11 +254,11 @@ fun printInsts stms =
 val print_structure = ref true;
 
 fun printarm progL =
-   let 
+   let
        val _ = lineNo := ~1;
-       fun one_fun flag(fname,ftype,args,stms,outs,rs) = 
-   	 ( 
-	  (if flag then 
+       fun one_fun flag(fname,ftype,args,stms,outs,rs) =
+   	 (
+	  (if flag then
 	      ( print "*****************************************************************\n";
 	    	print ("  Name              : " ^ fname ^ "\n");
      	        print "  Arguments         : ";
@@ -273,7 +273,7 @@ fun printarm progL =
      	  printInsts stms
    	 )
    in
-      ( one_fun true (hd progL); 
+      ( one_fun true (hd progL);
         List.map (one_fun (!print_structure)) (tl progL)
       )
    end

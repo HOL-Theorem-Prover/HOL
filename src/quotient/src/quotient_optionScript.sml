@@ -212,7 +212,7 @@ val OPTION_MAP_PRS = store_thm
    ("OPTION_MAP_PRS",
     (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         !a f. OPTION_MAP f a = 
+         !a f. OPTION_MAP f a =
                OPTION_MAP abs2
                     (OPTION_MAP ((abs1 --> rep2) f) (OPTION_MAP rep1 a))`--),
     REPEAT (REPEAT GEN_TAC THEN DISCH_TAC)
@@ -249,6 +249,6 @@ val OPTION_MAP_RSP = store_thm
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "quotient_option.lst";
-                                                                                
+
 val _ = html_theory "quotient_option";
 

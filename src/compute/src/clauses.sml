@@ -189,7 +189,7 @@ fun set_skip (rws as RWS htbl) p sk =
   in rl := (db,sk)
   end;
 
-fun scrub_const (RWS htbl) c = 
+fun scrub_const (RWS htbl) c =
   let val {Thy,Name,Ty} = dest_thy_const c
   in htbl := #1 (Redblackmap.remove (!htbl,(Name,Thy)))
   end;

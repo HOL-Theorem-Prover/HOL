@@ -44,9 +44,9 @@ sig
       ?fv1 ... fvn. P i ==> ?v. P v   and
       !v. P v ==> !fv1 ... fvn. P i
 
-      or if one want's to use equations 
+      or if one want's to use equations
 
-      ?v. P v = (?fv1 ... fvn. P i) \/ 
+      ?v. P v = (?fv1 ... fvn. P i) \/
                    ?v. (!fv1 ... fvn. ~(i = v)) /\ (P v)  and
 
       !v. P v = (!fv1 ... fvn. P i) /\
@@ -56,27 +56,27 @@ sig
       These two possibilies are always available and
       choosen if the other guesses don't provide a theorem.
     *)
-    guess_general of term * term list 
+    guess_general of term * term list
 
     (*i makes P i false
 
       This can be used to proof
       !v. P v = F
 
-      If a theorem is provided it has to be of the form 
+      If a theorem is provided it has to be of the form
       !fv1 ... fvn. ~(P i)
     *)
-  | guess_false of term * term list * (unit -> thm) option 
+  | guess_false of term * term list * (unit -> thm) option
 
     (*i makes P i true
 
       This can be used to proof
       ?v. P v = T
 
-      The theorem has to be of the form 
+      The theorem has to be of the form
       !fv1 ... fvn. P i
     *)
-  | guess_true of term * term list * (unit -> thm) option 
+  | guess_true of term * term list * (unit -> thm) option
 
     (*if i does satisfy P then all other i' as well
 
@@ -84,37 +84,37 @@ sig
       !v. P v = !fv1 ... fvn. P i
 
 
-      The theorem has to be of the form 
+      The theorem has to be of the form
       (!fv1 ... fvn. P i) ==> !v. P v
     *)
-  | guess_only_not_possible of term * term list * (unit -> thm) option 
+  | guess_only_not_possible of term * term list * (unit -> thm) option
 
     (*if i does not satisfy P then all other i' don't as well
 
       This can be used to proof
       ?v. P v = ?fv1 ... fvn. P i
 
-      The theorem has to be of the form 
+      The theorem has to be of the form
       (!fv1 ... fvn. ~(P i)) ==> !v. ~(P v)
     *)
   | guess_only_possible of term * term list * (unit -> thm) option
 
-    (*all instantiations except i do not satisfy P 
+    (*all instantiations except i do not satisfy P
 
       This can be used to proof
       ?v. P v = ?fv1 ... fvn. P i
 
-      The theorem has to be of the form 
+      The theorem has to be of the form
       !v. (!fv1 ... fvn. ~(v = i)) ==> ~P v
     *)
-  | guess_others_not_possible of term * term list * (unit -> thm) option 
+  | guess_others_not_possible of term * term list * (unit -> thm) option
 
-    (*all instantiations except i do satisfy P 
+    (*all instantiations except i do satisfy P
 
       This can be used to proof
       !v. P v = !fv1 ... fvn. P i
 
-      The theorem has to be of the form 
+      The theorem has to be of the form
       !v. (!fv1 ... fvn. ~(v = i)) ==> P v
     *)
   | guess_others_satisfied of term * term list * (unit -> thm) option;
@@ -147,7 +147,7 @@ sig
   (*guesses are organised in collections. They are used to
     store the different types of guesses separately. Moreover,
     rewrite theorems, that might come in handy, are there as well.*)
-  type guess_collection = 
+  type guess_collection =
    {rewrites            : thm list,
     general             : guess list,
     true                : guess list,
@@ -173,7 +173,7 @@ sig
   val correct_guess_list : term -> term -> guess list -> guess list;
   val correct_guess_collection :
      term -> term -> guess_collection -> guess_collection
-  
+
 
   val term_variant : term list -> term list -> term -> term * term list
 
@@ -183,7 +183,7 @@ sig
 
 (*Some types*)
   type quant_heuristic = term list -> term -> term -> guess_collection;
-  type quant_heuristic_combine_argument = 
+  type quant_heuristic_combine_argument =
     {distinct_thms      : thm list,
      cases_thms         : thm list,
      rewrite_thms       : thm list,
@@ -207,7 +207,7 @@ sig
 
   val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth : int ref
 
-  val QUANT_INSTANTIATE_HEURISTIC___COMBINE :    
+  val QUANT_INSTANTIATE_HEURISTIC___COMBINE :
     ((quant_heuristic -> quant_heuristic) list) -> quant_heuristic_cache ref option -> quant_heuristic;
 
 
@@ -224,7 +224,7 @@ sig
 
   val EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV :  quant_heuristic_cache ref option ->
       bool -> (term -> bool) -> quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
-  val QUANT_INSTANTIATE_CONSEQ_CONV : 
+  val QUANT_INSTANTIATE_CONSEQ_CONV :
       quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
 
 

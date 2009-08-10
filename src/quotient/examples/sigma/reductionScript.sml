@@ -461,7 +461,7 @@ val (RED1_rules_sat,RED1_ind_thm) =
 val RED1_inv_thms = prove_inversion_theorems
     RED1_rules_sat RED1_ind_thm;
 
-val RED1_strong_ind = prove_strong_induction 
+val RED1_strong_ind = prove_strong_induction
     RED1_rules_sat RED1_ind_thm;
 
 val _ = save_thm ("RED1_rules_sat", RED1_rules_sat);
@@ -489,7 +489,7 @@ val RED1_height_ind_thm_LEMMA = store_thm
          (!R e1 d e2. P_2 R e1 e2 ==> P_1 R (CONS e1 d) (CONS e2 d)) /\
          (!R e d1 d2. P_1 R d1 d2 ==> P_1 R (CONS e d1) (CONS e d2)) /\
          (!R l m1 m2. P_3 R m1 m2 ==> P_2 R (l,m1) (l,m2)) /\
-         (!R x o1 o2. 
+         (!R x o1 o2.
            (!o1' o2'. RED1_obj R o1' o2' /\
                       (HEIGHT_obj o1 = HEIGHT_obj o1') /\
                       (HEIGHT_obj o2 = HEIGHT_obj o2') ==> P_0 R o1' o2')
@@ -610,7 +610,7 @@ val RED1_height_ind_thm = store_thm
          (!R e1 d e2. P_2 R e1 e2 ==> P_1 R (CONS e1 d) (CONS e2 d)) /\
          (!R e d1 d2. P_1 R d1 d2 ==> P_1 R (CONS e d1) (CONS e d2)) /\
          (!R l m1 m2. P_3 R m1 m2 ==> P_2 R (l,m1) (l,m2)) /\
-         (!R x o1 o2. 
+         (!R x o1 o2.
            (!o1' o2'. RED1_obj R o1' o2' /\
                       (HEIGHT_obj o1 = HEIGHT_obj o1') /\
                       (HEIGHT_obj o2 = HEIGHT_obj o2') ==> P_0 R o1' o2')
@@ -657,7 +657,7 @@ val RED1_height_strong_ind_LEMMA = store_thm
          (!R l m1 m2.
            P_3 R m1 m2 /\ RED1_method R m1 m2 ==> P_2 R (l,m1) (l,m2)) /\
          (!R x o1 o2.
-           (!o1' o2'. 
+           (!o1' o2'.
              RED1_obj R o1' o2' /\
              (HEIGHT_obj o1 = HEIGHT_obj o1') /\
              (HEIGHT_obj o2 = HEIGHT_obj o2') ==>
@@ -804,7 +804,7 @@ val RED1_height_strong_ind = store_thm
          (!R l m1 m2.
            P_3 R m1 m2 /\ RED1_method R m1 m2 ==> P_2 R (l,m1) (l,m2)) /\
          (!R x o1 o2.
-           (!o1' o2'. 
+           (!o1' o2'.
              RED1_obj R o1' o2' /\
              (HEIGHT_obj o1 = HEIGHT_obj o1') /\
              (HEIGHT_obj o2 = HEIGHT_obj o2') ==>
@@ -886,8 +886,8 @@ val RED_rules_tm =
        (* -------------------------------------------- *) ==>
                        ^RED_obj R o1 o2)                                   /\
 
-                       
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                       (^RED_obj R o1 o1)                                   /\
 
 
@@ -900,8 +900,8 @@ val RED_rules_tm =
        (* -------------------------------------------- *) ==>
                        ^RED_dict R d1 d2)                                 /\
 
-                       
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                       (^RED_dict R d1 d1)                                 /\
 
 
@@ -914,8 +914,8 @@ val RED_rules_tm =
        (* -------------------------------------------- *) ==>
                       ^RED_entry R e1 e2)                                 /\
 
-                       
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                      (^RED_entry R e1 e1)                                 /\
 
 
@@ -928,14 +928,14 @@ val RED_rules_tm =
        (* -------------------------------------------- *) ==>
                      ^RED_method R m1 m2)                                 /\
 
-                 
+
        (* -------------------------------------------- *)
                     (^RED_method R m1 m1)                                 /\
 
 
            (^RED_method R m1 m2 /\ ^RED_method R m2 m3
        (* -------------------------------------------- *) ==>
-                     ^RED_method R m1 m3)                  
+                     ^RED_method R m1 m3)
 `--;
 
 
@@ -945,7 +945,7 @@ val (RED_rules_sat,RED_ind_thm) =
 val RED_inv_thms = prove_inversion_theorems
     RED_rules_sat RED_ind_thm;
 
-val RED_strong_ind = prove_strong_induction 
+val RED_strong_ind = prove_strong_induction
     RED_rules_sat RED_ind_thm;
 
 val _ = save_thm ("RED_rules_sat", RED_rules_sat);
@@ -1196,7 +1196,7 @@ val REQUAL_rules_tm =
 
         (^REQUAL_method R m1 m2 /\ ^REQUAL_method R m2 m3
        (* -------------------------------------------- *) ==>
-                    ^REQUAL_method R m1 m3)                  
+                    ^REQUAL_method R m1 m3)
 `--;
 
 
@@ -1206,7 +1206,7 @@ val (REQUAL_rules_sat,REQUAL_ind_thm) =
 val REQUAL_inv_thms = prove_inversion_theorems
     REQUAL_rules_sat REQUAL_ind_thm;
 
-val REQUAL_strong_ind = prove_strong_induction 
+val REQUAL_strong_ind = prove_strong_induction
     REQUAL_rules_sat REQUAL_ind_thm;
 
 val _ = save_thm ("REQUAL_rules_sat", REQUAL_rules_sat);
@@ -1445,9 +1445,9 @@ val CHURCH_ROSSER =
     new_definition
     ("CHURCH_ROSSER",
      (--`CHURCH_ROSSER R =
-            (DIAMOND (RED_obj R) /\ 
-             DIAMOND (RED_dict R) /\ 
-             DIAMOND (RED_entry R) /\ 
+            (DIAMOND (RED_obj R) /\
+             DIAMOND (RED_dict R) /\
+             DIAMOND (RED_entry R) /\
              DIAMOND (RED_method R))`--));
 
 

@@ -85,5 +85,5 @@ val STL_SCONST = store_thm
   ("STL_SCONST",
    ``!b. STL (SCONST b) = SCONST b``,
    RW_TAC std_ss [SCONST_def, K_DEF, STL_def, GSYM EQ_EXT_EQ]);
- 
+
 val _ = export_theory ();

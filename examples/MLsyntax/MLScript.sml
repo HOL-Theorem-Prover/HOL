@@ -61,7 +61,7 @@ struct
 open bossLib Theory Parse ;
 
 local open stringTheory pred_setTheory   (* Make strings and sets be present *)
-in end;   
+in end;
 
 val _ = new_theory "ML";
 
@@ -97,13 +97,13 @@ val _ = Hol_datatype
        valbind = bind  of pat => exp
                | bindl of pat => exp => valbind
                | rec_bind of valbind ;
- 
+
            pat = wild_pat
                | var_pat of var`;
 
 
 (*---------------------------------------------------------------------------
-      A simple collection of functions for finding the variables 
+      A simple collection of functions for finding the variables
       in a program.
  ----------------------------------------------------------------------------*)
 

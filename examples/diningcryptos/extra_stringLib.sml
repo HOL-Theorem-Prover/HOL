@@ -6,8 +6,8 @@ structure extra_stringLib :> extra_stringLib =
 struct
 
 open HolKernel Parse boolLib bossLib metisLib arithmeticTheory
-     listTheory numTheory simpLib 
-     stringTheory rich_listTheory stringSimps 
+     listTheory numTheory simpLib
+     stringTheory rich_listTheory stringSimps
      listSimps extra_stringTheory;
 
 
@@ -20,7 +20,7 @@ val arith_string_ss = (simpLib.++ (arith_ss, STRING_ss));
 val string_ss = (simpLib.++ (list_ss, STRING_ss));
 
 
-fun test_eq tm1 tm2 = let 
+fun test_eq tm1 tm2 = let
 	val x = match_term tm1 tm2
 	in ALL_CONV tm2 end;
 

@@ -4,7 +4,7 @@ sig
 	type thm = Thm.thm
 	type goal = Abbrev.goal
 	type conv = Abbrev.conv
-	type tactic = Abbrev.tactic 
+	type tactic = Abbrev.tactic
 	type simpset = simpLib.simpset
 
 	(* tactics *)

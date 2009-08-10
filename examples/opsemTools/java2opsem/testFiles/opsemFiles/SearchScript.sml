@@ -24,19 +24,19 @@ val MAIN_def =
             (Const 0)
           )
           (Seq
-            (While 
-              (And 
-                (Equal 
+            (While
+              (And
+                (Equal
                   (Var "result")
                   (Const ~1)
                 )
-                (Less 
+                (Less
                   (Var "left")
                   (Var "aLength")
                 )
               )
-              (Cond 
-                (Equal 
+              (Cond
+                (Equal
                   (Arr "a"
                     (Var "left")
                   )
@@ -46,7 +46,7 @@ val MAIN_def =
                   (Var "left")
                 )
                 (Assign "left"
-                  (Plus 
+                  (Plus
                     (Var "left")
                     (Const 1)
                   )

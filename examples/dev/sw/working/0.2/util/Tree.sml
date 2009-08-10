@@ -1,4 +1,4 @@
-structure Tree  = 
+structure Tree  =
 struct
   type size = int
 
@@ -20,10 +20,10 @@ datatype stm = SEQ of stm * stm
 	     | CALL of exp * exp
 	     | PAIR of exp * exp
 
-      and binop = PLUS | MINUS | MUL | DIV 
+      and binop = PLUS | MINUS | MUL | DIV
                 | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR | ROR
 
-      and relop = EQ | NE | LT | GT | LE | GE 
+      and relop = EQ | NE | LT | GT | LE | GE
 	        | CC | LS | HI | CS
 
   fun pair2list (PAIR(v1, v2)) =

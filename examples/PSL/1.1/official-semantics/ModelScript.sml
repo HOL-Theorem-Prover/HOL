@@ -61,7 +61,7 @@ val _ = hide "S";
 (*****************************************************************************)
 val model_def =
  Hol_datatype
-  `model = 
+  `model =
     <| S: 'state -> bool;
        S0:'state -> bool;
        R: 'state # 'state -> bool;
@@ -86,14 +86,14 @@ val letter_def =
 (*****************************************************************************)
 (* PATH M s is true of path p iff p is a computation path of model M         *)
 (*****************************************************************************)
-val PATH_def = 
- Define 
-  `PATH M s w = 
+val PATH_def =
+ Define
+  `PATH M s w =
     (LENGTH w > 0) /\ (s = ELEM w 0) /\ s IN M.S /\
-    (!n :: (LESS(LENGTH w - 1)). 
-      ELEM w n IN M.S /\ ELEM w (SUC n) IN M.S /\ 
+    (!n :: (LESS(LENGTH w - 1)).
+      ELEM w n IN M.S /\ ELEM w (SUC n) IN M.S /\
       (ELEM w n, ELEM w (SUC n)) IN M.R) /\
-    (!l. (w = FINITE l) 
+    (!l. (w = FINITE l)
          ==> !s. s IN M.S ==> ~((ELEM w (LENGTH l - 1), s) IN M.R))`;
 
 
@@ -101,7 +101,7 @@ val PATH_def =
 (* A computation of M is a path of M starting from an initial state          *)
 (*****************************************************************************)
 val COMPUTATION_def =
- Define 
+ Define
   `COMPUTATION M w = ?s. s IN M.S0 /\ PATH M s w`;
 
 val _ = export_theory();

@@ -192,7 +192,7 @@ in
           (RATOR_CONV o RAND_CONV)
           ((RATOR_CONV o RAND_CONV) simplifier THENC RAND_CONV simplifier)
           THENC TRYC (ho_COND_REWR_CONV MOD_PLUS1 qprover)
-          THENC TRYC (ho_COND_REWR_CONV MOD_PLUS2 qprover)) tm 
+          THENC TRYC (ho_COND_REWR_CONV MOD_PLUS2 qprover)) tm
        end)
       THENC trace_CONV 2 "mod_plus_rewr result"))
 end;
@@ -229,7 +229,7 @@ in
           (RATOR_CONV o RAND_CONV)
           ((RATOR_CONV o RAND_CONV) simplifier THENC RAND_CONV simplifier)
           THENC TRYC (ho_COND_REWR_CONV MOD_MULT1 qprover)
-          THENC TRYC (ho_COND_REWR_CONV MOD_MULT2 qprover)) tm 
+          THENC TRYC (ho_COND_REWR_CONV MOD_MULT2 qprover)) tm
        end)
       THENC trace_CONV 2 "mod_mult_rewr result"))
 end;

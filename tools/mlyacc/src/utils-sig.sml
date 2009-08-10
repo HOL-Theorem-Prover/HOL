@@ -2,8 +2,8 @@
  * Ported to MLton.
  *)
 type int = Int.int
-   
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/22 07:40:27  michaeln
@@ -15,7 +15,7 @@ type int = Int.int
  *
  * Revision 1.1.1.1  1996/01/31  16:01:46  george
  * Version 109
- * 
+ *
  *)
 
 signature ORDSET =

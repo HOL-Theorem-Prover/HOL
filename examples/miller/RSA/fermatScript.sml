@@ -5,7 +5,7 @@ quietdec := true;
 *)
 
 open HolKernel Parse boolLib
-open bossLib numLib arithmeticTheory prim_recTheory 
+open bossLib numLib arithmeticTheory prim_recTheory
      gcdTheory dividesTheory
      binomialTheory congruentTheory summationTheory powerTheory ;
 
@@ -28,7 +28,7 @@ val DIV_FACT = store_thm("DIV_FACT",
                         THEN Cases_on `divides p (SUC n)` THENL[
                           EXISTS_TAC (Term `SUC n`) THEN ARW[],
                           IMP_RES_TAC P_EUCLIDES THEN TRY (PROVE_TAC[])
-                            THEN `0 < n` by ALL_TAC 
+                            THEN `0 < n` by ALL_TAC
                             THENL [
                               Cases_on `n=0` THEN ARW[]
                                 THEN `~(divides p (FACT 0))` by REWRITE_TAC[FACT_def, ONE]
@@ -41,7 +41,7 @@ val DIV_FACT = store_thm("DIV_FACT",
 val DIV_FACT_LESS = store_thm("DIV_FACT_LESS",
                               Term `!p n. prime p /\ divides p (FACT n) ==> p <= n`,
                               Cases_on `n` THENL[
-                                ARW[FACT_def] 
+                                ARW[FACT_def]
                                   THEN `p <= 1` by ARW[DIVIDES_LE]
                                   THEN Cases_on `p=1`
                                   THEN ARW[NOT_PRIME_1] THEN PROVE_TAC[NOT_PRIME_1],
@@ -50,10 +50,10 @@ val DIV_FACT_LESS = store_thm("DIV_FACT_LESS",
                               ]
                               );
 
-                              
+
 val P_DIV_BINOMIAL = store_thm("P_DIV_BINOMIAL",
 			Term `!p n. prime p /\ 0<n /\ n<p ==>  divides p (binomial p n)`,
-                        ARW[] 
+                        ARW[]
                         THEN `0<p` by (Cases_on `p=0` THEN ARW[] THEN PROVE_TAC[NOT_PRIME_0])
                         THEN `divides p ((binomial ((p-n)+n) n) * (FACT (p-n) * FACT n))` by ARW[BINOMIAL_FACT,DIVIDES_FACT]
                         THEN  Cases_on `divides p (FACT (p-n) * FACT n)`
@@ -94,18 +94,18 @@ val FERMAT_1 = store_thm
    THEN ARW[CONGRUENT_REF]
    THEN MATCH_MP_TAC
      (BETA_RULE
-      (Q.SPECL 
-       [`n`, `1`,  
+      (Q.SPECL
+       [`n`, `1`,
         `\k'. k EXP (n + 1 - k') * binomial (n + 1) k'`,
         `\a. congruent a 0 (n + 1)`] INV_SUMMATION))
      THEN ARW[ADD_CLAUSES, CONGRUENT_REF] THENL
      [PROVE_TAC[CONGRUENT_ADD,ADD_CLAUSES],
-      `divides (SUC n) (binomial (n + 1) (k' + 1))` 
+      `divides (SUC n) (binomial (n + 1) (k' + 1))`
       by ARW[GSYM ADD1, P_DIV_BINOMIAL]
       THEN PROVE_TAC[CONGRUENT_MULT_0,DIVIDES_CONGRUENT,ADD1,MULT_COMM]
       ]
      );
-  
+
 
 val FERMAT_2 = store_thm("FERMAT_2",
                              Term `!k p. prime p ==> congruent ($EXP k p) k p`,
@@ -119,7 +119,7 @@ val FERMAT_2 = store_thm("FERMAT_2",
 val FERMAT = store_thm("FERMAT",
                         Term `!k p. prime p ==> congruent ($EXP k (p-1)) 1 p \/ divides p k`,
                         Cases_on `k` THEN Cases_on `p` THEN ARW[power_def,CONGRUENT_REF,ALL_DIVIDES_0]
-                        THEN Cases_on `divides (SUC n') (SUC n)` THEN ARW[] 
+                        THEN Cases_on `divides (SUC n') (SUC n)` THEN ARW[]
                         THEN `SUC n <= $EXP (SUC n) (SUC n')` by ARW[POWER_LE]
                         THEN `divides (SUC n) (($EXP (SUC n) (SUC n')) - (SUC n))`
                            by ARW[DIVIDES_SUB,DIVIDES_REFL,power_def,DIVIDES_MULT,MULT_SYM]
@@ -129,7 +129,7 @@ val FERMAT = store_thm("FERMAT",
                         THEN `divides (SUC n') q` by PROVE_TAC[L_EUCLIDES,MULT_SYM]
                         THEN POP_ASSUM MP_TAC THEN ARW[divides_def,congruent_def]
                         THEN EXISTS_TAC (Term `0`) THEN EXISTS_TAC (Term `q':num`) THEN ARW[MULT_CLAUSES]
-                        THEN `(($EXP (SUC n) n' -1)*(SUC n)) = (q' * SUC n') * (SUC n)` 
+                        THEN `(($EXP (SUC n) n' -1)*(SUC n)) = (q' * SUC n') * (SUC n)`
                            by (REWRITE_TAC[RIGHT_SUB_DISTRIB] THEN PROVE_TAC[power_def,MULT_SYM,MULT_LEFT_1])
                         THEN `($EXP (SUC n) n' -1) = q' + q'* n'` by PROVE_TAC[ MULT_SUC_EQ,MULT_SYM,MULT_CLAUSES]
                         THEN `1 <= $EXP (SUC n) n'` by PROVE_TAC[POWER_LE_1]

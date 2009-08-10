@@ -148,7 +148,7 @@ val ETA_R_patterns = [--`^ETA_R t1 t2`--];
 val ETA_R_rules_tm =
 --`                    (~(x IN FV t)
        (* -------------------------------------------- *) ==>
-              (^ETA_R (Lam x (App t (Var x))) t))      
+              (^ETA_R (Lam x (App t (Var x))) t))
 `--;
 
 val (ETA_R_rules_sat,ETA_R_ind_thm) =
@@ -157,7 +157,7 @@ val (ETA_R_rules_sat,ETA_R_ind_thm) =
 val ETA_R_inv_thms = prove_inversion_theorems
     ETA_R_rules_sat ETA_R_ind_thm;
 
-val ETA_R_strong_ind = prove_strong_induction 
+val ETA_R_strong_ind = prove_strong_induction
     ETA_R_rules_sat ETA_R_ind_thm;
 
 val _ = save_thm ("ETA_R_rules_sat", ETA_R_rules_sat);
@@ -227,7 +227,7 @@ val ETA_FV = store_thm
 
 val SUBST_IS_SAME = store_thm
    ("SUBST_IS_SAME",
-    (--`!t:^term x y. ((t <[ [x,Var y]) = t) ==> 
+    (--`!t:^term x y. ((t <[ [x,Var y]) = t) ==>
                       ((x = y) \/ ~(x IN FV t))`--),
     MUTUAL_INDUCT_THEN term_height_induct ASSUME_TAC
     THEN REPEAT GEN_TAC
@@ -395,7 +395,7 @@ val IN_UNION_R = store_thm
 
 val DIAMOND_TC_UNION1 = TAC_PROOF(([],
     (--`!R1 R2 (a:'a) b. TC (R1 UNION_R R2) a b ==>
-          (DIAMOND R1 /\ DIAMOND R2 /\ (R1 <=> R2) ==> 
+          (DIAMOND R1 /\ DIAMOND R2 /\ (R1 <=> R2) ==>
            (!c. (R1 UNION_R R2) a c ==>
                (?d. (R1 UNION_R R2) b d /\ TC (R1 UNION_R R2) c d)))`--)),
     GEN_TAC
@@ -428,7 +428,7 @@ val DIAMOND_TC_UNION1 = TAC_PROOF(([],
 
 val DIAMOND_TC_UNION2 = TAC_PROOF(([],
     (--`!R1 R2 (a:'a) b. TC (R1 UNION_R R2) a b ==>
-          (DIAMOND R1 /\ DIAMOND R2 /\ (R1 <=> R2) ==> 
+          (DIAMOND R1 /\ DIAMOND R2 /\ (R1 <=> R2) ==>
            (!c. TC (R1 UNION_R R2) a c ==>
                (?d. TC (R1 UNION_R R2) b d /\ TC (R1 UNION_R R2) c d)))`--)),
     GEN_TAC
@@ -463,7 +463,7 @@ val DIAMOND_TC_UNION2 = TAC_PROOF(([],
 val DIAMOND_TC_UNION = store_thm
    ("DIAMOND_TC_UNION",
     (--`!(R1:'a->'a->bool) R2.
-          DIAMOND R1 /\ DIAMOND R2 /\ (R1 <=> R2) ==> 
+          DIAMOND R1 /\ DIAMOND R2 /\ (R1 <=> R2) ==>
           DIAMOND (TC (R1 UNION_R R2))`--),
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[DIAMOND]
@@ -1359,7 +1359,7 @@ val BETA_ETA_R_NORMAL_FORM_UNIQUE = store_thm
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "eta.lst";
-                                                                                
+
 val _ = html_theory "eta";
 
 val _ = print_theory_size();

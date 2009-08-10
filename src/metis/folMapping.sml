@@ -291,7 +291,7 @@ local
 fun lit_subterm parm p lit =
   if is_neg lit then (mk_neg o cast_to
   let
-    val 
+    val
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -821,7 +821,7 @@ local
       in
         res
       end;
-    
+
   fun chat_proof_step parm prev (p as (fol_th, inf)) =
     if not (chatting 1) then proof_step parm prev p else
       let

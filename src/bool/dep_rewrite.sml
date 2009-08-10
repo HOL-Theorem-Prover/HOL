@@ -190,7 +190,7 @@ fun TACTIC_ERR{function,message} =
                       origin_function = function,
                       message = message};
 
-fun failwith function = 
+fun failwith function =
    ( (**) if debug_fail then
          print_string ("Failure in dep_rewrite: "^function^"\n")
      else (); (**)
@@ -199,7 +199,7 @@ fun failwith function =
 
 
 fun UNDER_FORALL_CONV conv tm =
-    if is_forall tm then 
+    if is_forall tm then
        RAND_CONV (ABS_CONV (UNDER_FORALL_CONV conv)) tm
     else
        conv tm ;
@@ -245,7 +245,7 @@ fun UNDISCH_ALL_NOT_NEG th =
 
 
 fun DEP_FIND_matches th =
-   let 
+   let
        val tha = (* CONV_RULE (REPEATC
                      (UNDER_FORALL_CONV RIGHT_IMP_FORALL_CONV)) *) th;
        val tm = concl tha
@@ -422,11 +422,11 @@ fun DEP_TAC dep :tactic = fn g0 =>
          print_string "]\n")
     else (); *)
     if gls = [] then (gl2,p2)
-    else 
+    else
     let
         val rgls = mk_set (flatten (map strip_conj gls));
         val gl1 = [(asl1,list_mk_conj rgls)];
-        val p1 = (fn [th] => 
+        val p1 = (fn [th] =>
                   map2 (fn gl => fn p =>
                         p [( (* if debug then
                                (print_string "Prove: ";
@@ -452,7 +452,7 @@ fun DEP_TAC dep :tactic = fn g0 =>
               case gl1
                 of [(asl1,g1)] =>
                   ((intersect asl1 asl2,Rsyntax.mk_conj{conj1=g1,conj2=g2})::gl3,
-                   (fn (tha::thl) => 
+                   (fn (tha::thl) =>
                           itlist Drule.PROVE_HYP (p1 [CONJUNCT1 tha])
                                                  (p2 ((CONJUNCT2 tha)::thl))
                      | [] => failwith "DEP_TAC"))
@@ -479,7 +479,7 @@ fun ctac1 THEN1_DEP ctac2 = fn g =>
     let val (asl1,gs1,ps1,gl1,p1) = ctac1 g
     in
     case gl1
-    of [] => 
+    of [] =>
          (asl1,gs1,ps1,gl1,p1)
      | (g1::gl1') =>
          let val (asl2,gs2,ps2,gl2,p2) = ctac2 g1
@@ -503,17 +503,17 @@ fun ctac1 ORELSE_DEP ctac2 = fn g =>
     ctac1 g handle _ => ctac2 g;
 
 
-fun FIRST_DEP cl = 
+fun FIRST_DEP cl =
     case cl
-    of [] => 
+    of [] =>
          ALL_DEP
      | (c::cl') =>
          c ORELSE_DEP FIRST_DEP cl';
 
 
-fun EVERY_DEP cl = 
+fun EVERY_DEP cl =
     case cl
-    of [] => 
+    of [] =>
          ALL_DEP
      | (c::cl') =>
          c THEN1_DEP EVERY_DEP cl'
@@ -809,7 +809,7 @@ e(DEP_ONCE_REWRITE_TAC[SELECT_AX]);
 drop();
 
 g `!P f x. P f ==> (x = f x)`;
-e(DEP_ONCE_REWRITE_TAC[RIGHT_FORALL_IMP_THM]); 
+e(DEP_ONCE_REWRITE_TAC[RIGHT_FORALL_IMP_THM]);
 drop();
 
 *)

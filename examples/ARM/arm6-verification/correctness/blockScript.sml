@@ -286,7 +286,7 @@ val lem3b = prove(
             \\ POP_ASSUM SUBST1_TAC
             \\ `q <= y` by DECIDE_TAC
             \\ METIS_TAC [(GEN_ALL o SIMP_RULE arith_ss
-                 [BITV_def,GSYM NOT_BIT] o 
+                 [BITV_def,GSYM NOT_BIT] o
                  SPECL [`q`,`y`,`BITV (w2n list)`]) SUM_MONO,
                  DECIDE ``a < b ==> ~(a = b:num)``,BIT_w2n]]]);
 

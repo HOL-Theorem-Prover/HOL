@@ -1,6 +1,6 @@
 structure ppc_Lib :> ppc_Lib =
 struct
- 
+
 open HolKernel boolLib bossLib;
 open wordsLib stringLib listSyntax simpLib listTheory wordsTheory;
 open opmonTheory bit_listTheory combinTheory;
@@ -17,10 +17,10 @@ fun ppc_decode s = let
   in th end;
 
 fun ppc_decode_next s = let
-  fun fill s = if length (explode s) < 8 then fill ("0" ^ s) else s 
+  fun fill s = if length (explode s) < 8 then fill ("0" ^ s) else s
   val s = fill s
   val th = ppc_decode s
-  val th = MATCH_MP PPC_NEXT_THM th   
+  val th = MATCH_MP PPC_NEXT_THM th
   val th = Q.SPEC [QUOTE ("(0x"^(substring(s,0,2))^"w:word8)")] th
   val th = Q.SPEC [QUOTE ("(0x"^(substring(s,2,2))^"w:word8)")] th
   val th = Q.SPEC [QUOTE ("(0x"^(substring(s,4,2))^"w:word8)")] th
@@ -34,13 +34,13 @@ fun ppc_decode_next s = let
 val else_none_mem_lemma = (UNDISCH o SPEC_ALL) ppc_else_none_mem_lemma
 val else_none_status_lemma = (UNDISCH o SPEC_ALL) ppc_else_none_status_lemma
 val assertT_lemma = (UNDISCH o SPEC_ALL) ppc_assertT_lemma
-val else_none_conv1 = (fst o dest_eq o concl) else_none_mem_lemma 
+val else_none_conv1 = (fst o dest_eq o concl) else_none_mem_lemma
 val else_none_conv2 = (fst o dest_eq o concl) else_none_status_lemma
 val else_none_conv3 = (fst o dest_eq o concl) assertT_lemma
 fun else_none_conv tm = let
   val ((i,t),th) = (match_term else_none_conv1 tm, else_none_mem_lemma) handle HOL_ERR _ =>
                    (match_term else_none_conv2 tm, else_none_status_lemma) handle HOL_ERR _ =>
-                   (match_term else_none_conv3 tm, assertT_lemma) 
+                   (match_term else_none_conv3 tm, assertT_lemma)
   in INST i (INST_TYPE t th) end;
 
 val w2bytes1 = SIMP_CONV std_ss [Ntimes word2bytes_def 7,ASR_ADD] ``word2bytes 1 (w:word32)``
@@ -50,7 +50,7 @@ val w2bytes4 = SIMP_CONV std_ss [Ntimes word2bytes_def 7,ASR_ADD] ``word2bytes 4
 val lemma1 = REWRITE_RULE [WORD_ADD_0] (Q.SPECL [`v`,`0w`,`x`] WORD_EQ_ADD_LCANCEL)
 val lemma2 = REWRITE_RULE [WORD_ADD_0] (Q.SPECL [`v`,`x`,`0w`] WORD_EQ_ADD_LCANCEL)
 val address_lemma = prove(
-  ``~(0w = 1w:word32) /\ ~(0w = 2w:word32) /\ ~(0w = 3w:word32) /\ 
+  ``~(0w = 1w:word32) /\ ~(0w = 2w:word32) /\ ~(0w = 3w:word32) /\
     ~(1w = 2w:word32) /\ ~(1w = 3w:word32) /\ ~(2w = 3w:word32)``,EVAL_TAC);
 
 val w_conv = SIMP_CONV std_ss [ppc_write_mem_aux_def,GSYM WORD_ADD_ASSOC, word_add_n2w]
@@ -94,10 +94,10 @@ fun ppc_step s = let
   val tm = (fst o dest_eq o fst o dest_imp o concl) th
   val th1 = SIMP_CONV (std_ss++ss++wordsLib.SIZES_ss) [ppc_exec_instr_def] tm
   fun cc th = CONV_RULE (ONCE_DEPTH_CONV else_none_conv) th
-  fun f th = (DISCH_ALL o CONV_RULE (RAND_CONV (SIMP_CONV std_ss [pull_if_lemma])) o 
-              UNDISCH_ALL o SIMP_RULE (std_ss++ss) [LET_DEF] o 
+  fun f th = (DISCH_ALL o CONV_RULE (RAND_CONV (SIMP_CONV std_ss [pull_if_lemma])) o
+              UNDISCH_ALL o SIMP_RULE (std_ss++ss) [LET_DEF] o
               DISCH_ALL o cc) th
-  fun change f x = let val y = f x in if concl y = concl x then x else change f y end 
+  fun change f x = let val y = f x in if concl y = concl x then x else change f y end
   val th1 = change f th1
   val th1 = EVAL_word_and_eq th1
   val th1 = DISCH_ALL (MATCH_MP th (UNDISCH_ALL (REWRITE_RULE [if_SOME] th1)))
@@ -175,11 +175,11 @@ fun ppc_step s = let
 val _ = output_words_as_hex();
 
 fun ppc_test_aux inst input output = let
-  val rw = ppc_step inst  
+  val rw = ppc_step inst
   fun format state (i,j) =
-    if mem i ["PC","CTR","LR"] 
+    if mem i ["PC","CTR","LR"]
     then ("PREAD_R PPC_"^i^" "^state^" = 0x"^j^"w")
-    else if substring(i,0,3) = "GPR"  
+    else if substring(i,0,3) = "GPR"
     then ("PREAD_R (PPC_IR "^substring(i,3,size(i)-3)^"w) "^state^" = 0x"^j^"w")
     else if i = "CARRY"
     then ("PREAD_S PPC_CARRY "^state^" = SOME "^j)
@@ -201,12 +201,12 @@ fun ppc_test_aux inst input output = let
   val th = REWRITE_RULE [GSYM CONJ_ASSOC] th
   val xs = find_terms (can (match_term ``PWRITE_S x NONE``)) (concl th)
   val xs = map (snd o dest_comb o fst o dest_comb) xs
-  val output1 = f "(THE (PPC_NEXT s))" output  
+  val output1 = f "(THE (PPC_NEXT s))" output
   val output2 = Lib.zip (map (snd o dest_comb o fst o dest_comb o fst o dest_eq) output1) output1
   val output3 = filter (fn (x,y) => not (mem x xs)) output2
   val tm = list_mk_conj (map snd output3)
   val tm2 = (hd o hyp o UNDISCH) th
-  val goal = mk_imp(tm2,tm)    
+  val goal = mk_imp(tm2,tm)
 (*
   set_goal([],goal)
 *)
@@ -219,7 +219,7 @@ fun ppc_test_aux inst input output = let
   in result end;
 
 fun ppc_test inst input output = let
-  fun p s = if length (explode s) < 6 then s else "["^s^"]" 
+  fun p s = if length (explode s) < 6 then s else "["^s^"]"
   val _ = print ("\nTesting:\n  instruction = "^inst^"\n")
   val _ = print ("Input:\n")
   val _ = map (fn (x,y) => print ("  "^(p x)^" = "^y^"\n")) input

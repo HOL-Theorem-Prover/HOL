@@ -6,7 +6,7 @@ open tflLib;
 
 fun Rfunction s q1 q2 = Count.apply (tflLib.Rfunction s q1) q2;
 
-Rfunction "fact_cond_def" 
+Rfunction "fact_cond_def"
           `^(tflLib.pred)`
      `fact x = ((x = 0) => 1 | x * fact(x-1))`;
 
@@ -25,17 +25,17 @@ Rfunction "Ack_def" `$< ** $<`
     (Ack (SUC m,0) = Ack (m, 1)) /\
     (Ack (SUC m, SUC n) = Ack (m, Ack (SUC m, n)))`;
 
-Rfunction "ack_def" 
+Rfunction "ack_def"
           `^pred ** ^pred`
    `(ack (0,n) =  n+1) /\
     (ack (SUC m,0) = ack (m, 1)) /\
     (ack (SUC m, SUC n) = ack (m, ack (SUC m, n)))`;
 
-val smaller_def = Rfunction "smaller_def" 
+val smaller_def = Rfunction "smaller_def"
                      `inv_image ^pred (FST o FST)`
   `(smaller((0,i), z) = (i:num))    /\
    (smaller((SUC x, i), (0,j)) = j) /\
-   (smaller((SUC x, i), (SUC y,j)) = 
+   (smaller((SUC x, i), (SUC y,j)) =
       ((SUC y = i) => i
      | (SUC x = j) => j
      | smaller((x,i), (y,j))))`;
@@ -43,7 +43,7 @@ val smaller_def = Rfunction "smaller_def"
 (* Finds the smaller of two Peano numbers efficiently: count down
  * both until you bump into one or the other original values (or 0). *)
 Rfunction "min_def"
-          `Empty` 
+          `Empty`
    `min (x,y) = smaller((x,x), (y,y))`;
 
 Rfunction "map2_def"
@@ -55,19 +55,19 @@ Rfunction "map2_def"
 Rfunction "sorted"
           `inv_image ^list_pred SND`
    `(sorted (R, []) = T) /\
-    (sorted (R,       [x]) = T) /\   
+    (sorted (R,       [x]) = T) /\
     (sorted (R, CONS x (CONS y rst)) = R x y /\ sorted(R, CONS y rst))`;
 
 (* Supporting constant declarations.  *)
 val _ = new_infix{Name="++", Prec=300, Ty=Type`:'a list->'a list->'a list`};
-val _ = map new_constant 
+val _ = map new_constant
             [{Name="filter", Ty=Type`:('a->bool)->'a list->'a list`},
              {Name="mem",    Ty=Type`:'a->'a list -> bool`}];
 
 Rfunction "qsort_def"
-          `measure (LENGTH o SND)` 
+          `measure (LENGTH o SND)`
    `(qsort(ord,[]) = []) /\
-    (qsort(ord, CONS x rst) = 
+    (qsort(ord, CONS x rst) =
       qsort(ord,filter($~ o ord x) rst)
       ++[x]++
       qsort(ord,filter(ord x) rst))`;
@@ -80,12 +80,12 @@ Rfunction "gcd_def"
           `measure \(x,y). x+y`
    `(gcd (0,y) = y) /\
     (gcd (SUC x, 0) = SUC x) /\
-    (gcd (SUC x, SUC y) = 
-        ((y <= x)     => gcd(x-y, SUC y) 
+    (gcd (SUC x, SUC y) =
+        ((y <= x)     => gcd(x-y, SUC y)
          | (*otherwise*) gcd(SUC x, y-x)))`;
 
 Rfunction "G_def"
-          `$<` 
+          `$<`
    `(G 0 = 0) /\
     (G (SUC x) = G (G x))`;
 
@@ -97,7 +97,7 @@ Rfunction "div_def"
           `inv_image ^pred FST`
    `(div(0,x) = (0,0)) /\
     (div(SUC x, y) = let (q,r) = div(x,y)
-                     in (y <= SUC r) => (SUC q,0) 
+                     in (y <= SUC r) => (SUC q,0)
                         | (*otherwise*) (q, SUC r))`;
 
 (* Test nested lets *)
@@ -106,7 +106,7 @@ Rfunction "Div_def"
    `(Div(0,x) = (0,0)) /\
     (Div(SUC x, y) = let q = FST(Div(x,y)) in
                      let r = SND(Div(x,y))
-                     in (y <= SUC r) => (SUC q,0) 
+                     in (y <= SUC r) => (SUC q,0)
                         | (*otherwise*) (q, SUC r))`;
 
 Rfunction "part_def"
@@ -115,10 +115,10 @@ Rfunction "part_def"
     (part(P, CONS h rst, l1,l2) =
         (P h => part(P,rst, CONS h l1, l2)
              |  part(P,rst,  l1,  CONS h l2)))`;
-  
+
 
 (* Have to note that our tuples may not be the tuples of SML! *)
-val partition_def = 
+val partition_def =
   new_definition
     ("partition", Term`!(P:'a->bool). partition(P,L) = part(P,L,[],[])`);
 
@@ -127,7 +127,7 @@ val partition_def =
 Rfunction "fqsort_def"
           `measure (LENGTH o SND)`
    `(fqsort(ord,[]) = []) /\
-    (fqsort(ord, CONS x rst) = 
+    (fqsort(ord, CONS x rst) =
         let (l1,l2) = partition((\y. ord y x), rst)
         in
           fqsort(ord,l1)++[x]++fqsort(ord,l2))`;
@@ -136,7 +136,7 @@ Rfunction "fqsort_def"
 Rfunction "Qsort_def"
           `measure (LENGTH o SND)`
    `(Qsort(ord,[]) = []) /\
-    (Qsort(ord, CONS x rst) = 
+    (Qsort(ord, CONS x rst) =
       let ((L1,L2),P) = (partition((\y. ord y x), rst), (x,rst)) in
       let (lower,upper) = ((ord,L1),(ord,L2))
       in
@@ -144,12 +144,12 @@ Rfunction "Qsort_def"
 
 
 (* Limitations of antiquotes seen: polymorphic constants have type
-   variables that are constrainable, but list_pred was being antiquoted in, 
+   variables that are constrainable, but list_pred was being antiquoted in,
    and had ordinary type variables, which are deemed to be constant for
    type inference.
 *)
 
-val list_pred_def = 
+val list_pred_def =
    new_definition("list_pred", Term`list_pred l1 l2 = ?h:'a. l2 = CONS h l1`);
 
 
@@ -160,8 +160,8 @@ Rfunction "AND_def"
 
 (* Patterns in "non-standard" order *)
 Rfunction "rev_def"
-          `^list_pred` 
-  `(rev (CONS h t) = CONS h (rev t)) /\ 
+          `^list_pred`
+  `(rev (CONS h t) = CONS h (rev t)) /\
    (rev ([]:'a list) = [])`;
 
 val fdef = (hd o map #1 o #extracta)
@@ -176,13 +176,13 @@ val fdef_all = CONJ fdef0 fdef1;
 (* Nesting and scope. There should be 2 termination conditions extracted. *)
 Rfunction "k" `Empty`
   `(k 0 = 0) /\
-   (k (SUC n) = let x = k 1 
+   (k (SUC n) = let x = k 1
                 in (0=1) => k 2 | n)`;
 
 (* Overlapping patterns *)
-Rfunction "Foo" 
+Rfunction "Foo"
           `Empty`
-   `(Foo(0,x) = x) /\ 
+   `(Foo(0,x) = x) /\
     (Foo(x,0) = Foo(0,0))`;
 
 (* Should fail on repeated variables. *)

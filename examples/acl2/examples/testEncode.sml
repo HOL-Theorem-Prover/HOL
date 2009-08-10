@@ -28,19 +28,19 @@ val _ = Hol_datatype `test5 = RecursiveList of test5 list | EndList`;
 val _ = Hol_datatype `test6 = DoubleList of test6 list => test6 list | EndD`;
 val _ = Hol_datatype `test7 = Node of test7 # test7 | Leaf of 'a`;
 val _ = Hol_datatype `test8 = Double of test8 test7 # test8 list | End8`;
-val _ = Hol_datatype `test9l = R9 of test9r | EndL ; 
+val _ = Hol_datatype `test9l = R9 of test9r | EndL ;
                       test9r = L9 of test9l | EndR`;
 val _ = Hol_datatype `testA = <| Reg1 : num; Reg2 : num; Waiting : bool |>`;
-val _ = Hol_datatype `testBa = Aa of num | Ba of testBb | Ca of testBc ; 
+val _ = Hol_datatype `testBa = Aa of num | Ba of testBb | Ca of testBc ;
 		      testBb = Bb of int | Ab of testBa | Cb of testBc ;
 		      testBc = Cc of rat | Bc of testBb | Ac of testBa`;
 val _ = Hol_datatype `labels = l1 | l2 | l3 | l4 | l5`;
 val _ = Hol_datatype `noalpha = CurryNA of num => num => num # num`;
-val _ = Hol_datatype `threecons = ConsNone 
-                                | CurryTC of 'a => 'b => 'c 
+val _ = Hol_datatype `threecons = ConsNone
+                                | CurryTC of 'a => 'b => 'c
                                 | CurryNTC of num => num => num # num`;
-val _ = Hol_datatype `rose_tree = Branch of ('a # rose_tree) list`; 
-val _ = Hol_datatype `mlistL = Left of 'a => mlistR | endL ; 
+val _ = Hol_datatype `rose_tree = Branch of ('a # rose_tree) list`;
+val _ = Hol_datatype `mlistL = Left of 'a => mlistR | endL ;
                       mlistR = Right of 'b => mlistL | endR`;
 
 
@@ -49,7 +49,7 @@ val _ = Hol_datatype `mlistL = Left of 'a => mlistR | endL ;
 (*****************************************************************************)
 
 val _ = Hol_datatype `colour = R | B`;
-val _ = Hol_datatype `tree = LEAF | NODE of colour => num => tree => tree`; 
+val _ = Hol_datatype `tree = LEAF | NODE of colour => num => tree => tree`;
 
 (*****************************************************************************)
 (* Some examples from src/datatype/jrh.test                                  *)
@@ -57,21 +57,21 @@ val _ = Hol_datatype `tree = LEAF | NODE of colour => num => tree => tree`;
 
 val _ = Hol_datatype  `One = Single_contructor`;
 
-val _ = Hol_datatype 
-         `Term = Var of 'A => 'B 
+val _ = Hol_datatype
+         `Term = Var of 'A => 'B
                | App of bool => Termlist;
-      Termlist = Emp 
+      Termlist = Emp
                | Consp of Term => Termlist`;
 
-val _ = Hol_datatype 
-      `List = Nil 
+val _ = Hol_datatype
+      `List = Nil
             | Cons of 'A => List`;;
 
-val _ = Hol_datatype 
-    `Btree = Lf of 'A 
+val _ = Hol_datatype
+    `Btree = Lf of 'A
            | Nd of 'B => Btree => Btree`;;
 
-val _ = Hol_datatype 
+val _ = Hol_datatype
     `Command = Assign of num => Express
              | If of Express => Command
              | Ite of Express => Command => Command
@@ -83,27 +83,27 @@ val _ = Hol_datatype
              | Summ of Express => Express
              | Product of Express => Express`;
 
-val _ = Hol_datatype 
-    `atexp = Varb of num 
+val _ = Hol_datatype
+    `atexp = Varb of num
            | Let of dec => exp;
 
-       exp = Exp1 of atexp 
-           | Exp2 of exp => atexp 
+       exp = Exp1 of atexp
+           | Exp2 of exp => atexp
            | Exp3 of match;
 
-     match = Match1 of rule 
+     match = Match1 of rule
            | Matches of rule => match;
 
      rule  = Rule of pat => exp;
-       dec = Val of valbind 
-           | Local of dec => dec 
+       dec = Val of valbind
+           | Local of dec => dec
            | Decs of dec => dec;
 
-   valbind = Single of pat => exp 
-           | Multi of pat => exp => valbind 
+   valbind = Single of pat => exp
+           | Multi of pat => exp => valbind
            | Rec of valbind;
 
-       pat = Wild 
+       pat = Wild
            | Varpat of num`;
 
 val _ = Hol_datatype
@@ -112,33 +112,33 @@ val _ = Hol_datatype
 Hol_datatype
       `Steve0 = X1  | X2  | X3  | X4  | X5  | X6  | X7  | X8  | X9  | X10 |
                 X11 | X12 | X13 | X14 | X15 | X16 | X17 | X18 | X19 | X20 |
-                X21 | X22 | X23 | X24 | X25 | X26 | X27 | X28 | X29 | X30 | 
+                X21 | X22 | X23 | X24 | X25 | X26 | X27 | X28 | X29 | X30 |
                 X31 | X32 | X33 | X34`;;
 
 Hol_datatype
-    `TY1 = NoF__ 
+    `TY1 = NoF__
          | Fk__ of 'A => TY2;
 
-     TY2 = Ta__   of bool 
-         | Td__   of bool 
-         | Tf__   of TY1 
-         | Tk__   of bool 
+     TY2 = Ta__   of bool
+         | Td__   of bool
+         | Tf__   of TY1
+         | Tk__   of bool
          | Tp__   of bool
-         | App__  of 'A => TY1 => TY2 => TY3 
+         | App__  of 'A => TY1 => TY2 => TY3
          | Pair__ of TY2 => TY2;
 
-     TY3 = NoS__ 
-         | Fresh__        of TY2 
+     TY3 = NoS__
+         | Fresh__        of TY2
          | Trustworthy__  of 'A
-         | PrivateKey__   of 'A => 'B => 'C 
+         | PrivateKey__   of 'A => 'B => 'C
          | PublicKey__    of 'A => 'B => 'C
-         | Conveyed__     of 'A => TY2 
-         | Possesses__    of 'A => TY2 
-         | Received__     of 'A => TY2 
-         | Recognizes__   of 'A => TY2 
-         | Sends__        of 'A => TY2 => 'B 
+         | Conveyed__     of 'A => TY2
+         | Possesses__    of 'A => TY2
+         | Received__     of 'A => TY2
+         | Recognizes__   of 'A => TY2
+         | Sends__        of 'A => TY2 => 'B
          | SharedSecret__ of 'A => TY2 => 'B
-         | Believes__     of 'A => TY3 
+         | Believes__     of 'A => TY3
          | And__          of TY3 => TY3
          | NeverMalFromSelf__ of 'A => 'B => TY2`;;
 
@@ -147,7 +147,7 @@ Hol_datatype
 (*****************************************************************************)
 
 Hol_datatype
-  `String = EMPTY_STRING 
+  `String = EMPTY_STRING
           | CONS_STRING of num => String`;
 
 Hol_datatype
@@ -230,16 +230,16 @@ val types = [``:('a,'b) test1``,``:('a,'b) test2``,``:('a,'b,'c) test2b``,``:('a
 		``:test4``,``:test5``,``:test6``,``:test8``,``:'a test7``,``:test9l``,``:test9r``,``:'a rose_tree``,``:testBa``,``:('a,'b) mlistL``,``:tree``,
 		``:One``,``:('a,'b) Term``,``:'a List``,``:('a,'b) Btree``,``:Command``,``:tri``,``:exp``,``:Steve0``,``:('a,'b,'c) TY1``,``:atpat_e``];
 
-fun test_types types = 
-let	fun timeit t = 
+fun test_types types =
+let	fun timeit t =
 	let 	val _ = print "Encoding Type: "
 		val _ = print_type t
 		val _ = print "\n"
 		val start = Time.now()
 		val res = encode_type t
-	in 
+	in
 		(print ("Time taken: " ^ (Time.toString (Time.- (Time.now(),start)) handle e => "0.000") ^ "s\n\n") ; res)
-	end;	
+	end;
 	val (passed,failed) = partition (can timeit) types
 	fun concat f [] = ""
 	  | concat f [x] = f x
@@ -247,9 +247,9 @@ let	fun timeit t =
 	val _ = print ("Passed: [" ^ (concat type_to_string passed) ^ "]\n")
 	val _ = print ("Failed: [" ^ (concat type_to_string failed) ^ "]\n")
 in
-	(print "\nTheorems:\n" ; 
-	app (fn x => (	print_thm (get_encode_decode_thm x) ; print "\n" ; 
-			print_thm (get_decode_encode_thm x) ; print "\n" ; 
+	(print "\nTheorems:\n" ;
+	app (fn x => (	print_thm (get_encode_decode_thm x) ; print "\n" ;
+			print_thm (get_decode_encode_thm x) ; print "\n" ;
 			print_thm (get_detect_encode_thm x) ; print "\n\n")) passed)
 end;
 
@@ -276,7 +276,7 @@ val read_step_def =
  Define
   `(read_step (addr:num) [] = 0n)
    /\
-   (read_step addr ((addr',v)::alist) = 
+   (read_step addr ((addr',v)::alist) =
      if addr = addr' then v else read_step addr alist)`;
 
 (*****************************************************************************)
@@ -290,8 +290,8 @@ val write_step_def =
   `(write_step (addr:num) (v:num) [] = [(addr,v)])
    /\
    (write_step addr v ((addr',v')::alist) =
-     if addr = addr' 
-      then (addr,v)::alist 
+     if addr = addr'
+      then (addr,v)::alist
       else (addr',v')::(write_step addr v alist))`;
 
 (*****************************************************************************)
@@ -335,13 +335,13 @@ val run_def =
 (* Note that as an accumulator is used, the list returned is the list of     *)
 (* instructions in the reverse order to which they were created.             *)
 (*****************************************************************************)
-val write_increment_def = 
+val write_increment_def =
  Define `write_increment = 13n`;
 
-val read_increment_def = 
+val read_increment_def =
  Define `read_increment = 17n`;
 
-val max_addr_def = 
+val max_addr_def =
  Define `max_addr = 100n`;
 
 val fix_address_def = Define  `fix_address a b = if a >= b /\ ~(b = 0) then fix_address (a - b) b else a:num`;
@@ -350,7 +350,7 @@ val make_instrs_def =
  Define
   `(make_instrs read_start write_start flag 0 acc = acc)
    /\
-   (make_instrs read_start write_start flag (SUC n) acc = 
+   (make_instrs read_start write_start flag (SUC n) acc =
      if flag
       then make_instrs read_start
                        (fix_address (write_start + write_increment) max_addr)
@@ -371,7 +371,7 @@ val make_instrs_def =
  prove
   (``make_instrs read_start write_start flag n acc =
       if n=0
-       then acc 
+       then acc
        else if flag
              then make_instrs read_start
                               (fix_address (write_start + write_increment) max_addr)
@@ -427,13 +427,13 @@ set_trace "EncodeLib.FunctionEncoding" 1;
 (* Some simple arithmetic functions:                                         *)
 (*****************************************************************************)
 
-val (divsub_def,divsub_ind) = 
-	(RIGHT_CONV_RULE (ONCE_DEPTH_CONV (HO_REWR_CONV 
-		(prove(``	(let c = a * b:num in let d = a + b in e c d) = 
+val (divsub_def,divsub_ind) =
+	(RIGHT_CONV_RULE (ONCE_DEPTH_CONV (HO_REWR_CONV
+		(prove(``	(let c = a * b:num in let d = a + b in e c d) =
 				(let c = a * b and d = a + b in e c d)``,
 			REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REFL_TAC)))) ## I)
-	(Defn.tprove 
-		(Hol_defn "divsub" `divsub a b = 
+	(Defn.tprove
+		(Hol_defn "divsub" `divsub a b =
 			if 0 < a \/ 0 < b then let c = a * b in let d = a + b in 1 + divsub (c DIV d) (c - d) else 0n`,
 	WF_REL_TAC `measure (\ (a,b). if 0 < a then a else b)` THEN
 	RW_TAC arith_ss [DIV_LT_X,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,X_LT_DIV]));
@@ -442,7 +442,7 @@ val acl2_exp_def = 		convert_definition EXP;
 val acl2_fact_def =             convert_definition FACT;
 val acl2_findq_def = 		convert_definition findq_thm;
 val acl2_divmod_def = 		convert_definition DIVMOD_THM;
-val acl2_divsub_def = 		convert_definition_full NONE 
+val acl2_divsub_def = 		convert_definition_full NONE
 					[DECIDE ``0 < a \/ 0 < b ==> ~(a + b = 0n)``] divsub_def;
 
 
@@ -464,11 +464,11 @@ val acl2_make_instrs_def = 	convert_definition make_instrs_def;
 (*****************************************************************************)
 
 
-val count_def = 		Define `	(count (Branch []) = 0n) /\ 
+val count_def = 		Define `	(count (Branch []) = 0n) /\
 						(count (Branch ((x,hd)::tl)) = 1 + count (hd:num rose_tree) + count (Branch tl))`;
 val acl2_count_def = 		convert_definition count_def;
 
-val member_def = 		Define `	(member key LEAF = F) /\ 
+val member_def = 		Define `	(member key LEAF = F) /\
 						(member key (NODE col k left right) = if key < k then member key left else if k < key then member key right else T)`;
 val acl2_member_def = 		convert_definition member_def;
 
@@ -496,7 +496,7 @@ val acl2_division = 	convert_theorem [DECIDE ``0 < a ==> ~(a = 0n)``] DIVISION;
 val acl2_divmod_calc = 	convert_theorem [DECIDE ``0 < a ==> ~(a = 0n)``] DIVMOD_CALC;
 
 (*****************************************************************************)
-(* HO function encoding...                                                   *)                   
+(* HO function encoding...                                                   *)
 (*****************************************************************************)
 
 val (acl2_filter_correct,acl2_filter_def) = convert_definition (INST_TYPE [``:'a`` |-> ``:num``] FILTER);
@@ -510,10 +510,10 @@ val (filter0_rewrite,filter0_def) = flatten_HO_definition "filter0" acl2_filter_
 val acl2_filter_zero_def' = REWRITE_RULE [filter0_rewrite] acl2_filter_zero_def;
 
 (*****************************************************************************)
-(* Encoding functions with missing clauses:                                  *)                
+(* Encoding functions with missing clauses:                                  *)
 (*****************************************************************************)
 
-val acl2_firstn_def = convert_definition_full (SOME ``\n l. n <= LENGTH l``) 
+val acl2_firstn_def = convert_definition_full (SOME ``\n l. n <= LENGTH l``)
 			[prove(``!n (l:num list). n <= LENGTH l ==> (n = 0) \/ ?t h. l = h :: t``,
 				Cases_on `l` THEN Cases_on `n` THEN RW_TAC std_ss [LENGTH]),
 			prove(``!n (l:num list) x. SUC n <= LENGTH (x::l) ==> n <= LENGTH l``,
@@ -522,13 +522,13 @@ val acl2_tl_def = convert_definition (INST_TYPE [``:'a`` |-> ``:num``] TL);
 val acl2_hd_def = convert_definition (INST_TYPE [``:'a`` |-> ``:num``] HD);
 
 (*****************************************************************************)
-(* A long example from red-black trees (most likely 4+ hours...)             *)    
+(* A long example from red-black trees (most likely 4+ hours...)             *)
 (*****************************************************************************)
 
 val make_black =
     Define
         `  (make_black (NODE R e l r) = NODE B e l r)
-        /\ (make_black x              = x)`; 
+        /\ (make_black x              = x)`;
 
 val balance =
     Mosml.time
@@ -542,7 +542,7 @@ val balance =
            (balance B x a (NODE R y b (NODE R z c d))
                 = NODE R y (NODE B x a b) (NODE B z c d)) /\
            (balance col x left right
-                = NODE col x left right)`; 
+                = NODE col x left right)`;
 
 val ins =
     Define

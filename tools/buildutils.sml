@@ -34,7 +34,7 @@ val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
 val DYNLIB = Systeml.DYNLIB
 
-fun read_buildsequence ssall readline bseq_fname = let 
+fun read_buildsequence ssall readline bseq_fname = let
   fun read_file acc fstr =
       case readline fstr of
         NONE => List.rev acc
@@ -54,31 +54,31 @@ fun read_buildsequence ssall readline bseq_fname = let
                   if String.sub(s,0) = #"!" then
                     extract_testcount (String.extract(s,1,NONE), acc+1)
                   else (s,acc)
-              fun extract_mlsys s = 
-                  if String.sub(s,0) = #"[" then let 
-                      fun grabsys i = 
-                          if String.sub(s,i) = #"]" then 
-                            (String.substring(s,1,i-1), 
+              fun extract_mlsys s =
+                  if String.sub(s,0) = #"[" then let
+                      fun grabsys i =
+                          if String.sub(s,i) = #"]" then
+                            (String.substring(s,1,i-1),
                              String.extract(s,i+1,NONE))
-                          else grabsys (i + 1) 
+                          else grabsys (i + 1)
                     in
-                      grabsys 1 
-                      handle Subscript => 
+                      grabsys 1
+                      handle Subscript =>
                              die ("Malformed system spec: "^s)
                     end
                   else ("", s)
               val (mlsys,s) = extract_mlsys s
               val (dirname0,testcount) = extract_testcount (s,0)
-              val dirname = 
+              val dirname =
                   if Path.isAbsolute dirname0 then dirname0
                   else fullPath [HOLDIR, dirname0]
               open FileSys
-            in 
-              if mlsys = "" orelse mlsys = Systeml.ML_SYSNAME then 
+            in
+              if mlsys = "" orelse mlsys = Systeml.ML_SYSNAME then
                 if access (dirname, [A_READ, A_EXEC]) then
                   if isDir dirname orelse mlsys <> "" then
                     read_file ((dirname,testcount)::acc) fstr
-                  else 
+                  else
                     (warn ("** File "^dirname0^
                            " from build sequence is not a directory \
                            \-- skipping it\n");
@@ -93,7 +93,7 @@ fun read_buildsequence ssall readline bseq_fname = let
 in
   read_file [] bseq_file before TextIO.closeIn bseq_file
 end
-             
-             
+
+
 
 end (* struct *)

@@ -40,7 +40,7 @@ val inv_transform_def = Define`
     let y22 = y21 #>> 3 in
     let y02 = y01 #>> 13 in
       (y02,y11,y22,y31))`;
-                
+
 val transform_THM = Q.store_thm (
 "transform_THM",
 `!v. inv_transform (transform v) = v`,
@@ -52,7 +52,7 @@ val keying_def = Define
 `keying (x0:word32, x1:word32, x2:word32, x3:word32)
         (subkey0:word32, subkey1:word32, subkey2:word32, subkey3:word32)
  = (x0 ?? subkey0, x1 ?? subkey1, x2 ?? subkey2,x3 ?? subkey3)`;
-   
+
 val keying_THM = Q.store_thm (
 "keying_THM",
 `!d sk.
@@ -218,7 +218,7 @@ val decryptSchedule_def = Define
     decryptRnd24::decryptRnd25::decryptRnd26::decryptRnd27::
     decryptRnd28::decryptRnd29::decryptRnd30::decryptRnd31::[]`;
 
-           
+
 val serpent_encrypt_def = Define
     `serpent_encrypt plaintext subkeys =
     let opKey = ZIP (encryptSchedule, subkeys)
@@ -232,7 +232,7 @@ val serpent_decrypt_def = Define
     FOLDL f ciphertext opKey`;
 
 (*********************FUNCTIONAL CORRECTNESS********************)
-   
+
 val serpent_THM = Q.store_thm(
 "serpent_THM",
 `!pt sk.
@@ -266,7 +266,7 @@ val serpent_THM = Q.store_thm(
     decryptRnd23_def,decryptRnd24_def,decryptRnd25_def,decryptRnd26_def,
     decryptRnd27_def,decryptRnd28_def,decryptRnd29_def,decryptRnd30_def,
     decryptRnd31_def,
-  
+
     RND00_THM,RND01_THM,RND02_THM,RND03_THM,
     RND04_THM,RND05_THM,RND06_THM,RND07_THM,
     RND08_THM,RND09_THM,RND10_THM,RND11_THM,
@@ -276,5 +276,5 @@ val serpent_THM = Q.store_thm(
     RND24_THM,RND25_THM,RND26_THM,RND27_THM,
     RND28_THM,RND29_THM,RND30_THM,RND31_THM,
     keying_THM,transform_THM]);
-  
+
 val _ = export_theory();

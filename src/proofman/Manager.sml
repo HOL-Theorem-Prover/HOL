@@ -61,10 +61,10 @@ fun hd_proj f (PRFS (p::_)) = f p
 (* Common operations on managers.                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun new_goalstack g f 
+fun new_goalstack g f
   = GOALSTACK(new_history{obj=goalStack.new_goal g f, limit=15});
 
-fun new_goaltree g 
+fun new_goaltree g
   = GOALTREE(new_history{obj=goalTree.new_gtree g, limit=15});
 
 fun set_goal g = new_goalstack g Lib.I;  (* historical *)
@@ -81,7 +81,7 @@ fun expandf tac (GOALSTACK s) = GOALSTACK (apply (goalStack.expandf tac) s)
 fun expand tac (GOALSTACK s) = GOALSTACK (apply (goalStack.expand tac) s)
   | expand tac (GOALTREE t) = GOALTREE (apply (goalTree.expand("",tac)) t);
 
-fun expandv (s,tac) (GOALTREE t) = 
+fun expandv (s,tac) (GOALTREE t) =
      GOALTREE (apply (goalTree.expand (s,tac)) t)
    | expandv _ _ = raise ERR "expandv" "not implemented for goal stacks";
 
@@ -101,7 +101,7 @@ fun top_goals (GOALSTACK s) = project goalStack.top_goals s
   | top_goals (GOALTREE t) = project goalTree.all_goals t;
 
 fun rotate i (GOALSTACK s) = GOALSTACK(apply (C goalStack.rotate i) s)
-  | rotate i (GOALTREE t) = raise ERR "rotate" 
+  | rotate i (GOALTREE t) = raise ERR "rotate"
                                "not implemented for goal trees";
 
 fun restart (x as GOALSTACK _) = new_goalstack (initial_goal x) (finalizer x)
@@ -150,7 +150,7 @@ fun pp_proofs ppstrm =
                         add_break(1,0);
                         pr_goal (project goalStack.top_goal x));
                   end_block())
-         | pr1 (GOALTREE t) = 
+         | pr1 (GOALTREE t) =
             if (project inactive_tree t)
             then (begin_block Portable.CONSISTENT 2;
                   add_string"Completed goaltree:"; add_break(1,0);
@@ -160,7 +160,7 @@ fun pp_proofs ppstrm =
                   add_string"Incomplete goaltree:"; add_break(1,0);
                   add_string"Initial goal:"; add_break(1,0);
                   pr_gtree (History.initialValue t);
-                  add_newline(); 
+                  add_newline();
                   add_string "Current goaltree:";
                   add_break(1,0);
                   project pr_gtree t;

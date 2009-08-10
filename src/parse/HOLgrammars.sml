@@ -1,4 +1,4 @@
-structure HOLgrammars :> HOLgrammars = 
+structure HOLgrammars :> HOLgrammars =
 struct
 
 exception GrammarError of string

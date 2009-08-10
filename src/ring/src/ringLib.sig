@@ -22,7 +22,7 @@ sig
    * The actual declaration is then very fast.
    *)
   val store_ring   : { Name : string, Theory : thm } -> thm
-  val declare_ring : { RingThm : thm, IsConst : term -> bool, 
+  val declare_ring : { RingThm : thm, IsConst : term -> bool,
                        Rewrites : thm list} -> unit
 
   (*  - RING_NORM_CONV is a conversion to simplify a ring term (i.e. its

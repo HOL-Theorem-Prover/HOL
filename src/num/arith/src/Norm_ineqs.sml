@@ -19,7 +19,7 @@ structure Norm_ineqs :> Norm_ineqs =
 struct
 
 
-open Arbint HolKernel Arith_cons RJBConv 
+open Arbint HolKernel Arith_cons RJBConv
      Term_coeffs Thm_convs Norm_bool Norm_arith;
 
 infix THENC <<;
@@ -160,8 +160,8 @@ fun ARITH_FORM_NORM_CONV tm =
  (EQ_IMP_ELIM_CONV is_num_reln
   THENC MOVE_NOT_DOWN_CONV is_num_reln
           (NUM_RELN_NORM_CONV
-              (SUM_OF_PRODUCTS_CONV 
-                 THENC LINEAR_SUM_CONV 
+              (SUM_OF_PRODUCTS_CONV
+                 THENC LINEAR_SUM_CONV
                  THENC SORT_AND_GATHER_CONV
                  THENC NORM_ZERO_AND_ONE_CONV)
               LESS_OR_EQ_GATHER_CONV)

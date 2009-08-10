@@ -613,8 +613,8 @@ val sublinear_lfp = store_thm
 
 val expect_lfp_eq = store_thm
   ("expect_lfp_eq",
-   ``!t e. (monotonic (expect, Leq) t) /\ 
-	   (lfp (expect, Leq) t e) ==> 
+   ``!t e. (monotonic (expect, Leq) t) /\
+	   (lfp (expect, Leq) t e) ==>
 	   (expect_lfp t = e)``,
    METIS_TAC [lfp_unique, expect_poset, expect_lfp_def]);
 
@@ -642,8 +642,8 @@ val sublinear_gfp = store_thm
 
 val expect_gfp_eq = store_thm
   ("expect_gfp_eq",
-   ``!t e. (monotonic (expect, Leq) t) /\ 
-	   (gfp (expect, Leq) t e) ==> 
+   ``!t e. (monotonic (expect, Leq) t) /\
+	   (gfp (expect, Leq) t e) ==>
 	   (expect_gfp t = e)``,
    METIS_TAC [gfp_unique, expect_poset, expect_gfp_def]);
 

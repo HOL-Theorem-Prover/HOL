@@ -8,7 +8,7 @@ signature regexpTools =
 sig
 
 (******************************************************************************
-* The trace levels of the regular expression library:      
+* The trace levels of the regular expression library:
 * 0: silent
 * 1: 1 character (either - or +) for each list element processed
 * 2: matches as they are discovered

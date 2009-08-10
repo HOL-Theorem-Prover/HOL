@@ -3,6 +3,6 @@ sig
 
     include Abbrev
 
-    val arm_step            : string -> thm list      
+    val arm_step            : string -> thm list
 
 end

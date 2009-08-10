@@ -1,9 +1,9 @@
 (*---------------------------------------------------------------------------
     Normalizers and equality provers for rings. These are applications
     of general support available in ringLib for normalizing ring terms,
-    and proving equality of ring terms. The library ringLib is Coq 
+    and proving equality of ring terms. The library ringLib is Coq
     technology transported to HOL by Bruno Barras.
- 
+
    First, we try some examples on natural numbers
  ---------------------------------------------------------------------------*)
 
@@ -26,19 +26,19 @@ num_ring_conv `(a+b)*(a+b) = (b+a)*(b+a) : num`;  (* equality *)
 
 open arithmeticTheory;
 
-val sum_def = 
+val sum_def =
  Define `(sum f 0 = 0n) /\ (sum f (SUC n) = sum f n + f (SUC n))`;
 
 val lemma = Q.prove
 (`!n:num. sum (\m. m * m) n * 6 = n * (n+1) * (2 * n + 1)`,
- Induct 
-   THEN RW_TAC arith_ss [sum_def,RIGHT_ADD_DISTRIB] 
+ Induct
+   THEN RW_TAC arith_ss [sum_def,RIGHT_ADD_DISTRIB]
    THEN NUM_RING_TAC);
 
 val sum_squares = Q.prove
 (`!n:num. sum (\m. m * m) n  = (n*(n+1) * (2*n + 1)) DIV 6`,
- GEN_TAC 
-   THEN MATCH_MP_TAC (GSYM DIV_UNIQUE) 
+ GEN_TAC
+   THEN MATCH_MP_TAC (GSYM DIV_UNIQUE)
    THEN Q.EXISTS_TAC `0`
    THEN RW_TAC arith_ss [lemma]);
 
@@ -63,10 +63,10 @@ int_ring_conv `(a+b)*(a+b) = (b+a)*(b+a) :int`;   (* equality *)
 
 
 (*---------------------------------------------------------------------------
-       Bigger test: 8 squares 
+       Bigger test: 8 squares
  ---------------------------------------------------------------------------*)
 
-Count.apply int_ring_conv 
+Count.apply int_ring_conv
    `(p1*p1+q1*q1+r1*r1+s1*s1+t1*t1+u1*u1+v1*v1+w1*w1)
   * (p2*p2+q2*q2+r2*r2+s2*s2+t2*t2+u2*u2+v2*v2+w2*w2)
 

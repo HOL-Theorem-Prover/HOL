@@ -1,14 +1,14 @@
-(* Redblackmap --                                                   *) 
+(* Redblackmap --                                                   *)
 (*    applicative maps implemented by Okasaki-style Red-Black trees *)
 (* Ken Friis Larsen <ken@friislarsen.net>                           *)
 structure Redblackmap :>  Redblackmap =
 struct
 
-  datatype ('key, 'a) tree = 
+  datatype ('key, 'a) tree =
            LEAF
          | RED   of 'key * 'a * ('key, 'a) tree * ('key, 'a) tree
          | BLACK of 'key * 'a * ('key, 'a) tree * ('key, 'a) tree
-                           
+
   type ('key, 'a) dict  = ('key * 'key -> order) * ('key, 'a) tree * int
 
   exception NotFound
@@ -28,7 +28,7 @@ struct
             | loop (BLACK(k, x, left, right)) = loopShared k x left right
       in  loop tree end
 
-  fun peek (set, key) = SOME(find(set, key)) 
+  fun peek (set, key) = SOME(find(set, key))
                         handle NotFound => NONE
 
   fun lbalance z zd (RED(y,yd,RED(x,xd,a,b),c)) d =
@@ -36,14 +36,14 @@ struct
     | lbalance z zd (RED(x,xd,a,RED(y,yd,b,c))) d =
       RED(y,yd,BLACK(x,xd,a,b),BLACK(z,zd,c,d))
     | lbalance k x left right = BLACK(k, x, left, right)
-                              
+
   fun rbalance x xd a (RED(y,yd,b,RED(z,zd,c,d))) =
       RED(y,yd,BLACK(x,xd,a,b),BLACK(z,zd,c,d))
     | rbalance x xd a (RED(z,zd,RED(y,yd,b,c),d)) =
       RED(y,yd,BLACK(x,xd,a,b),BLACK(z,zd,c,d))
     | rbalance k x left right = BLACK(k, x, left, right)
-                        
-  exception GETOUT  
+
+  exception GETOUT
 
   fun insert (set as (compare, tree, n), key, data) =
       let val addone = ref true
@@ -61,17 +61,17 @@ struct
       in  ( compare
           , case ins tree of
                 RED x => BLACK x
-              | tree  => tree          
+              | tree  => tree
           , if !addone then n+1 else n) end
 
   fun push LEAF stack = stack
     | push tree stack = tree :: stack
 
-  fun pushNode left k x right stack = 
+  fun pushNode left k x right stack =
       left :: (BLACK(k, x, LEAF, LEAF) :: (push right stack))
 
   fun getMin []             some none = none
-    | getMin (tree :: rest) some none = 
+    | getMin (tree :: rest) some none =
       case tree of
           LEAF                 => getMin rest some none
         | RED  (k, x, LEAF, b) => some k x (push b rest)
@@ -80,7 +80,7 @@ struct
         | BLACK(k, x, a, b)    => getMin(pushNode a k x b rest) some none
 
   fun getMax []             some none = none
-    | getMax (tree :: rest) some none = 
+    | getMax (tree :: rest) some none =
       case tree of
           LEAF                 => getMax rest some none
         | RED  (k, x, a, LEAF) => some k x (push a rest)
@@ -114,55 +114,55 @@ struct
   fun redden (BLACK arg) = RED arg
     | redden _ = raise RedBlackMapError
 
-  fun balleft y yd (RED(x,xd,a,b)) c                = 
+  fun balleft y yd (RED(x,xd,a,b)) c                =
       RED(y, yd, BLACK(x, xd, a, b), c)
-    | balleft x xd bl (BLACK(y, yd, a, b))          = 
+    | balleft x xd bl (BLACK(y, yd, a, b))          =
       rbalance x xd bl (RED(y, yd, a, b))
-    | balleft x xd bl (RED(z,zd,BLACK(y,yd,a,b),c)) = 
+    | balleft x xd bl (RED(z,zd,BLACK(y,yd,a,b),c)) =
       RED(y, yd, BLACK(x, xd, bl, a), rbalance z zd b (redden c))
     | balleft _ _ _ _ = raise RedBlackMapError
 
-  fun balright x xd a             (RED(y, yd ,b,c)) = 
+  fun balright x xd a             (RED(y, yd ,b,c)) =
       RED(x, xd, a, BLACK(y, yd, b, c))
-    | balright y yd (BLACK(x,xd,a,b))          br = 
+    | balright y yd (BLACK(x,xd,a,b))          br =
       lbalance y yd (RED(x,xd,a,b)) br
-    | balright z zd (RED(x,xd,a,BLACK(y,yd,b,c))) br = 
+    | balright z zd (RED(x,xd,a,BLACK(y,yd,b,c))) br =
       RED(y, yd, lbalance x xd (redden a) b, BLACK(z, zd, c, br))
     | balright _ _ _ _ = raise RedBlackMapError
 
 
   (* [append left right] constructs a new tree t.
-  PRECONDITIONS: RB left /\ RB right 
+  PRECONDITIONS: RB left /\ RB right
               /\ !e in left => !x in right e < x
   POSTCONDITION: not (RB t)
   *)
   fun append LEAF right                    = right
     | append left LEAF                     = left
-    | append (RED(x,xd,a,b)) (RED(y,yd,c,d))     = 
+    | append (RED(x,xd,a,b)) (RED(y,yd,c,d))     =
       (case append b c of
 	   RED(z, zd, b, c) => RED(z, zd, RED(x, xd, a, b), RED(y, yd, c, d))
          | bc           => RED(x, xd, a, RED(y, yd, bc, d)))
     | append a (RED(x,xd,b,c))                = RED(x, xd, append a b, c)
-    | append (RED(x,xd,a,b)) c                = RED(x, xd, a, append b c) 
-    | append (BLACK(x,xd,a,b)) (BLACK(y,yd,c,d)) = 
+    | append (RED(x,xd,a,b)) c                = RED(x, xd, a, append b c)
+    | append (BLACK(x,xd,a,b)) (BLACK(y,yd,c,d)) =
       (case append b c of
 	   RED(z, zd, b, c) => RED(z, zd, BLACK(x,xd,a,b), BLACK(y,yd,c,d))
          | bc           => balleft x xd a (BLACK(y, yd, bc, d)))
-   
+
   fun remove ((compare, tree, n), key) =
       let fun delShared k x a b =
               case compare(key, k) of
                   EQUAL   => (x, append a b)
-                | LESS    => 
+                | LESS    =>
                   let val (res, a') = del a
                   in  (res, case a of
                                 BLACK _ => balleft k x a' b
                               | _       => RED(k, x, a', b)) end
-                | GREATER => 
+                | GREATER =>
                   let val (res, b') = del b
                   in  (res, case b of
                                 BLACK _ => balright k x a b'
-                              | _       => RED(k, x, a, b')) end  
+                              | _       => RED(k, x, a, b')) end
           and del LEAF                = raise NotFound
             | del (RED(k, x, a, b))   = delShared k x a b
             | del (BLACK(k, x, a, b)) = delShared k x a b
@@ -172,24 +172,24 @@ struct
                               | x              => x
       in  ((compare, tree, n-1), res) end
 
-  fun map f (compare, tree, n) = 
+  fun map f (compare, tree, n) =
       let fun loop LEAF = LEAF
-            | loop (RED(k,x,a,b)) = 
+            | loop (RED(k,x,a,b)) =
               let val a = loop a
                   val x = f(k,x)
               in  RED(k,x,a, loop b) end
-            | loop (BLACK(k,x,a,b)) = 
+            | loop (BLACK(k,x,a,b)) =
               let val a = loop a
                   val x = f(k,x)
               in  BLACK(k,x,a, loop b) end
       in  (compare, loop tree, n) end
 
-  fun transform f (compare, tree, n) = 
+  fun transform f (compare, tree, n) =
       let fun loop LEAF = LEAF
-            | loop (RED(k,x,a,b)) = 
+            | loop (RED(k,x,a,b)) =
               let val a = loop a
               in  RED(k, f x, a, loop b) end
-            | loop (BLACK(k,x,a,b)) = 
+            | loop (BLACK(k,x,a,b)) =
               let val a = loop a
               in  BLACK(k, f x, a, loop b) end
       in  (compare, loop tree, n) end

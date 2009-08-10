@@ -34,9 +34,9 @@ val _ = Hol_datatype `state_out = <| state : 'a; out : 'b |>`;
 (*---------------------------------------------------------------------------
   - Paired Iterated Maps ----------------------------------------------------
   ---------------------------------------------------------------------------*)
- 
+
 val ADVANCE_def = Define `ADVANCE t1 s t2 = s (t1 + t2)`;
- 
+
 val PINIT_def = Define`
   PINIT init out =
     \x. let s = init x.state in
@@ -54,10 +54,10 @@ val PMAP_def = Define `
 
 val IS_PMAP_INIT_def = Define`
   IS_PMAP_INIT f init out = ?next. PMAP f init next out`;
- 
+
 val IS_PMAP_def = Define`
   IS_PMAP f = ?init next out. PMAP f init next out`;
- 
+
 val THE_PMAP_def = Define`
   (THE_PMAP init next out 0 x = PINIT init out x) /\
   (THE_PMAP init next out (SUC t) x =
@@ -69,7 +69,7 @@ val Pstate_out_state = Define`
 (*---------------------------------------------------------------------------
   - Output ------------------------------------------------------------------
   ---------------------------------------------------------------------------*)
- 
+
 val POUTPUT_def = Define`
   POUTPUT g x (t:num) = (state_inp_state (g t x)).out`;
 
@@ -285,10 +285,10 @@ val STREAM_ABSTRACTION_def = Define `
 (*---------------------------------------------------------------------------
   - Immersions : General and Uniform ----------------------------------------
   ---------------------------------------------------------------------------*)
- 
+
 val IMMERSION_def = Define `
   IMMERSION imm = !x:(('a,'b) state_inp). FREE_IMMERSION (imm x)`;
- 
+
 val IMMERSION = REWRITE_RULE [FREE_IMMERSION_def] IMMERSION_def;
 
 val PUIMMERSION_def = Define `
@@ -296,7 +296,7 @@ val PUIMMERSION_def = Define `
     ((!x:(('a,'b) state_inp). 0 < dur x) /\
      (!x. imm x 0 = 0) /\
      (!x t. imm x (SUC t) = dur (Pstate_out_state (f (imm x t) x)) + imm x t))`;
- 
+
 val PUNIFORM_def = Define`
   PUNIFORM imm f = ?dur. PUIMMERSION imm f dur`;
 
@@ -329,7 +329,7 @@ val PTCON_def = Define `
 val PTCON_IMMERSION_def = Define `
   PTCON_IMMERSION f imm strm =
     !t1:num t2 x:('a,'b) state_inp.
-      x.inp IN strm ==> 
+      x.inp IN strm ==>
       let s2 = imm x t2 in
       let x2 = Pstate_out_state (f s2 x) in
       let s1 = imm x2 t1 in
@@ -354,22 +354,22 @@ val PTCON_IMMERSION =
 
 val PTCON_SMPL_def = Define `
   PTCON_SMPL smpl imm f strm =
-    !t x. x.inp IN strm ==> 
+    !t x. x.inp IN strm ==>
            (smpl (Pstate_out_state (f (imm x t) x)) = ADVANCE t (smpl x))`;
 
 (*---------------------------------------------------------------------------
   - Uniform Immersions are Immersions ---------------------------------------
   ---------------------------------------------------------------------------*)
- 
+
 val SUC_COMM_LEMMA =
   prove(`!t p. t + (SUC p + 1) = SUC (t + (p + 1))`,ARITH_TAC);
- 
+
 val PUIMMERSION_MONO_LEMMA = prove(
   `!imm f dur a i t. PUIMMERSION imm f dur ==> imm x t < imm x (SUC t)`,
   RW_TAC bool_ss [PUIMMERSION_def]
     \\ ONCE_REWRITE_TAC [GSYM PAIR]
     \\ ASM_SIMP_TAC bool_ss [ADD_COMM,LESS_NOT_EQ,LESS_ADD_NONZERO]);
- 
+
 val PUIMMERSION_MONO_LEMMA2 = prove(
   `!imm f dur a i t p. PUIMMERSION imm f dur ==> imm x t < imm x (t + (p + 1))`,
   REPEAT STRIP_TAC
@@ -378,7 +378,7 @@ val PUIMMERSION_MONO_LEMMA2 = prove(
    >> ASM_REWRITE_TAC [SYM ONE,GSYM ADD1,PUIMMERSION_MONO_LEMMA]
    \\ FULL_SIMP_TAC bool_ss
         [SUC_COMM_LEMMA,LESS_IMP_LESS_ADD,ADD_COMM,PUIMMERSION_def]);
- 
+
 val PUIMMERSION_IS_IMMERSION_LEMMA = prove(
   `!imm f dur. PUIMMERSION imm f dur ==> IMMERSION imm`,
   REPEAT STRIP_TAC
@@ -387,11 +387,11 @@ val PUIMMERSION_IS_IMMERSION_LEMMA = prove(
     \\ RW_TAC bool_ss [IMMERSION]
     \\ IMP_RES_TAC LESS_ADD_1
     \\ ASM_REWRITE_TAC [PUIMMERSION_MONO_LEMMA2]);
- 
+
 val PUNIFORM_IMP_IMMERSION = prove(
   `!imm f. PUNIFORM imm f ==> IMMERSION imm`,
   PROVE_TAC [PUNIFORM_def,PUIMMERSION_IS_IMMERSION_LEMMA]);
- 
+
 val PUIMMERSION_ONE = prove(
   `!f init out imm dur.
      IS_PMAP_INIT f init out /\ PUIMMERSION imm f dur ==>
@@ -402,24 +402,24 @@ val PUIMMERSION_ONE = prove(
 (*---------------------------------------------------------------------------
   - Paired Map Results ------------------------------------------------------
   ---------------------------------------------------------------------------*)
- 
+
 val ADVANCE_ZERO = store_thm("ADVANCE_ZERO",
   `!i. ADVANCE 0 i = i`,
   REWRITE_TAC [ADD,FUN_EQ_THM,ADVANCE_def]);
- 
+
 val ADVANCE_COMP = store_thm("ADVANCE_COMP",
   `!t1 t2 i. ADVANCE (t1 + t2) i = ADVANCE t1 (ADVANCE t2 i)`,
   SIMP_TAC arith_ss [FUN_EQ_THM,ADVANCE_def]);
- 
+
 val ADVANCE_ONE = save_thm("ADVANCE_ONE",
   (GEN_ALL o REWRITE_RULE [GSYM SUC_ONE_ADD] o SPECL [`1`,`t`]) ADVANCE_COMP);
- 
+
 val PMAP2 = prove(
   `!f. IS_PMAP f ==> !t x. (f t x).inp = ADVANCE t x.inp`,
   RW_TAC bool_ss [IS_PMAP_def,PMAP_def,PINIT_def,PNEXT_def]
     \\ Induct_on `t`
     \\ ASM_SIMP_TAC (srw_ss()) [ADVANCE_ZERO,ADVANCE_ONE,ADVANCE_def]);
- 
+
 val STATE_FUNPOW_LEMMA = prove(
   `!f init next out. PMAP f init next out ==>
      (!t x. f t x = FUNPOW (PNEXT next out) t (PINIT init out x))`,
@@ -463,7 +463,7 @@ val PTCON_THM = prove(
         \\ IMP_RES_TAC PMAP2 \\ ASM_SIMP_TAC bool_ss [],
       FULL_SIMP_TAC bool_ss [PMAP_def]
         \\ Induct_on `t1` \\ ASM_SIMP_TAC arith_ss [ADD_CLAUSES,ADVANCE_def]
-        \\ ISPECL_THEN [`next`,`out`] IMP_RES_TAC PNEXT_OUT_FREE 
+        \\ ISPECL_THEN [`next`,`out`] IMP_RES_TAC PNEXT_OUT_FREE
         \\ PROVE_TAC []]);
 
 (*
@@ -581,7 +581,7 @@ val SPLIT_ITER_LEMMA = prove(
     \\ ASM_REWRITE_TAC [FUNPOW_COMP]);
 
 val SPLIT_ITER_LEMMA2 = prove(
-  `!t x f init out imm dur. IS_PMAP_INIT f init out /\ PUNIFORM imm f /\ 
+  `!t x f init out imm dur. IS_PMAP_INIT f init out /\ PUNIFORM imm f /\
      (Pstate_out_state (PINIT init out (Pstate_out_state (f (imm x t) x))) =
       Pstate_out_state (f (imm x t) x)) ==>
      (imm x (SUC t) = imm (Pstate_out_state (f (imm x t) x)) 1 + imm x t)`,
@@ -675,7 +675,7 @@ val PUNIFORM_ID = prove(
   `!f. PUNIFORM (\a t. t) f`,
   RW_TAC bool_ss [PUNIFORM_def] \\ EXISTS_TAC `\a. 1`
     \\ REWRITE_TAC [PUIMMERSION_def] \\ SIMP_TAC arith_ss []);
- 
+
 (*
  |- !strm out init f.
        IS_PMAP_INIT f init out ==>
@@ -690,7 +690,7 @@ val PUNIFORM_ID = prove(
           (Pstate_out_state (PINIT init out (Pstate_out_state (f 1 x))) =
            Pstate_out_state (f 1 x)))
 *)
-val PTCON_ONE_STEP_THM = 
+val PTCON_ONE_STEP_THM =
   (GEN_ALL o SIMP_RULE std_ss [PUNIFORM_ID,PTCON_IMMERSION_PTCON] o
    SPECL [`strm`,`f`,`init`,`out`,`\a t. t`]) PTCON_IMMERSION_ONE_STEP_THM;
 
@@ -894,7 +894,7 @@ val PONE_STEP_THM = prove(
 (*---------------------------------------------------------------------------
   - Iterated Maps -----------------------------------------------------------
   ---------------------------------------------------------------------------*)
- 
+
 val IMAP_def = Define `
   IMAP f init next out =
     (!x. (f 0 x).state = init x.state) /\
@@ -903,10 +903,10 @@ val IMAP_def = Define `
 
 val IS_IMAP_INIT_def = Define`
   IS_IMAP_INIT f init = ?next out. IMAP f init next out`;
- 
+
 val IS_IMAP_def = Define`
   IS_IMAP f = ?init next out. IMAP f init next out`;
- 
+
 val SINIT_def = Define`
   SINIT init = \x. <| state := init x.state; inp := x.inp |>`;
 
@@ -922,7 +922,7 @@ val SNEXT = store_thm("SNEXT",
 (*---------------------------------------------------------------------------
   - Uniform Immersions ------------------------------------------------------
   ---------------------------------------------------------------------------*)
- 
+
 val UIMMERSION_def = Define `
   UIMMERSION imm f dur =
     ((!x:('a,'b) state_inp. 0 < dur x) /\
@@ -930,7 +930,7 @@ val UIMMERSION_def = Define `
      (!x t. imm x (SUC t) =
              dur <| state := (f (imm x t) x).state;
                      inp := ADVANCE (imm x t) x.inp |> + imm x t))`;
- 
+
 val UNIFORM_def = Define`
   UNIFORM imm f = ?dur. UIMMERSION imm f dur`;
 
@@ -981,7 +981,7 @@ val TCON_IMMERSION = save_thm("TCON_IMMERSION",
   ---------------------------------------------------------------------------*)
 
 val TCON_SMPL_def = Define `
-  TCON_SMPL smpl imm f strm = 
+  TCON_SMPL smpl imm f strm =
     !t x. x.inp IN strm ==>
           (smpl <| state := (f (imm x t) x).state;
                    inp := ADVANCE (imm x t) x.inp |> = ADVANCE t (smpl x))`;
@@ -1058,7 +1058,7 @@ val UNIFORM_ID = prove(
   `!f. UNIFORM (\a t. t) f`,
   RW_TAC bool_ss [UNIFORM_def] \\ EXISTS_TAC `\a. 1`
     \\ REWRITE_TAC [UIMMERSION_def] \\ SIMP_TAC arith_ss []);
- 
+
 val TCON_IMP_TCON_IMMERSION = store_thm("TCON_IMP_TCON_IMMERSION",
   `!strm f. TCON f strm ==> !imm. TCON_IMMERSION f imm strm`,
   RW_TAC bool_ss [TCON_def,TCON_IMMERSION]);
@@ -1251,7 +1251,7 @@ val ONE_STEP_THM = store_thm("ONE_STEP_THM",
 (*---------------------------------------------------------------------------
   - Data Abstraction Id -----------------------------------------------------
   ---------------------------------------------------------------------------*)
- 
+
 val lem = prove(
   `!a b c. (a = <| state := b; out := c |>) ==> (a.state = b)`,
   SIMP_TAC (srw_ss()) []);

@@ -14,7 +14,7 @@ val _ = new_theory "Serpent_Reference_Transformation";
 (*---------------------------------------------------------------------------*)
 
 val row_conv =
-  REPEATC (numLib.BOUNDED_FORALL_CONV EVAL) THENC REWRITE_CONV [];     
+  REPEATC (numLib.BOUNDED_FORALL_CONV EVAL) THENC REWRITE_CONV [];
 
 val LTTable_def = Define
 `LTTable =
@@ -147,7 +147,7 @@ val LTTable_def = Define
 [68;110;121];
 [5;11;26;80;122;126];
 [32;86;99]
-]`;     
+]`;
 
 (* linear transformation table used in decryption *)
 
@@ -419,7 +419,7 @@ val LTFunVal = Q.store_thm(
 (LTFun 125 = [ 68;110;121])  /\
 (LTFun 126 = [ 5;11;26;80;122;126])  /\
 (LTFun 127 = [ 32;86;99])`,
-EVAL_TAC);     
+EVAL_TAC);
 
 (* linear transformation table used in decryption *)
 
@@ -643,8 +643,8 @@ val transform_inv2_w128 = Q.store_thm(
   ASM_SIMP_TAC arith_ss [] THEN
   `to = SUC d` by DECIDE_TAC THEN
   ASM_SIMP_TAC arith_ss [transform_inv1_w128]);
-    
-(* the composite of two linear transformations *)       
+
+(* the composite of two linear transformations *)
 
 val transCompose_def = Define `transCompose f1 f2 = \x. FLAT (MAP f1 (f2 x))`;
 
@@ -681,20 +681,20 @@ val transformComposeLemma = Q.store_thm(
 val transformComposeBit = Q.store_thm(
  "transformComposeBit",
  `!i transFun1 transFun2 w.
-    i < 128                 /\  
+    i < 128                 /\
     transInRange transFun1  /\
-    transInRange transFun2 
+    transInRange transFun2
     ==>
     ((transform transFun2 127 (transform transFun1 127 w)) ' i =
      (transform (transCompose transFun1 transFun2) 127 w) ' i)`,
  RW_TAC arith_ss [transCompose_def,transInRange_def,transform_inv2_w128,
-                  transformComposeLemma]);   
+                  transformComposeLemma]);
 
 val transformComposeWord = Q.store_thm(
  "transformComposeWord",
  `!transFun1 transFun2 w.
     transInRange transFun1  /\
-    transInRange transFun2 
+    transInRange transFun2
     ==>
     (transform transFun2 127 (transform transFun1 127 w) =
      transform (transCompose transFun1 transFun2) 127 w)`,
@@ -702,7 +702,7 @@ val transformComposeWord = Q.store_thm(
 
 val TL128_eq_makeTL128 = save_thm(
  "TL128_eq_makeTL128", SYM (EVAL ``makeTL 128``));
-         
+
 (* the intermediate values of the composite of the two given linear
    transformation functions, used to speed up the verification *)
 
@@ -717,7 +717,7 @@ val ResTable =
   LIST_CONJ (map EVAL (map (fn i => ``Res ^(term_of_int i)``) (upto 0 127)));
 
 val _ = computeLib.add_thms [ResTable] computeLib.the_compset;
-       
+
 (* parity check is the same as counting EVEN or ODD.
    countEvenL and countEven is the two equivalent description,
    while countEvenL reduce a layer of loop *)
@@ -732,21 +732,21 @@ val countL_def = Define
 
 val countEvenL_def = Define`
  countEvenL tl =
-   countL 
+   countL
      [T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T;
        T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T;
        T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T;
        T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T;
        T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T; T;
        T; T; T; T; T; T; T; T; T; T; T; T; T] tl`;
-         
+
 val countEvenL_LT_facts = Q.store_thm(
  "countEvenL_LT_facts",
  `!i.
     i < 128
     ==>
         (countEvenL (Res i) = countEvenL [i]) `,
- SIMP_TAC std_ss [] THEN CONV_TAC (time row_conv) THEN REWRITE_TAC []);   
+ SIMP_TAC std_ss [] THEN CONV_TAC (time row_conv) THEN REWRITE_TAC []);
 
 val countEven_def = Define`
  (countEven x [] = T) /\
@@ -773,26 +773,26 @@ val Res_fact = Q.store_thm(
     ALL_EL (\x. x < 128) (Res i)`,
  SIMP_TAC std_ss [] THEN CONV_TAC (time row_conv));
 
-(* equivalence between countEven and countEvenL *)   
+(* equivalence between countEven and countEvenL *)
 
 val countEvenL_countEven_eq = Q.store_thm(
  "countEvenL_countEven_eq",
  `!i tl.
     i < 128 /\
-    ALL_EL (\x. x < 128) tl     
+    ALL_EL (\x. x < 128) tl
     ==>
     (EL i (countEvenL tl) = countEven i tl)`,
  SIMP_TAC std_ss [] THEN
  Induct_on `tl` THENL [
    FULL_SIMP_TAC arith_ss [countEvenL_def,countEven_def,countL_def,
                            TL128_eq_makeTL128,makeTL_fact],
-   
+
    FULL_SIMP_TAC std_ss [ALL_EL,countEvenL_def,countEven_def,countL_def,
                          LET_THM,TL128_eq_makeTL128,makeTL_fact,
                          zipXor_makeL_COMM,LENGTH_zipXor,boolXorComm3,
                          LENGTH_makeTL] THEN
    FULL_SIMP_TAC std_ss [countEven_def,countL_fact,countEvenL_def,
-                         TL128_eq_makeTL128,LENGTH_makeTL]]);   
+                         TL128_eq_makeTL128,LENGTH_makeTL]]);
 
 val LTFun_invLTFun_fact = Q.store_thm(
  "LTFun_invLTFun_fact",
@@ -815,15 +815,15 @@ val countEven_filter1 = Q.store_thm(
     LENGTH transL <= L /\
     i < d+1  /\
     ALL_EL (\x. x < d+1) transL
-   
+
     ==>
-    countEven i (FILTER (\x. ~(x = i)) transL)`,   
+    countEven i (FILTER (\x. ~(x = i)) transL)`,
  Induct_on `L` THEN
  RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER] THEN
  Cases_on `transL` THEN
- RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER] THEN 
+ RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER] THEN
  FULL_SIMP_TAC list_ss [boolXor_def] THEN
- METIS_TAC []);   
+ METIS_TAC []);
 
 
 val countEven_filter2 = Q.store_thm(
@@ -845,7 +845,7 @@ val countEven_filter2 = Q.store_thm(
  Cases_on `k = i` THEN Cases_on `h = i` THEN
  RW_TAC std_ss [boolXor_def,countEven_def] THEN
  METIS_TAC []);
-   
+
 val countEven_filter3 = Q.store_thm(
  "countEven_filter3",
  `!i k L d transL1 transL2.
@@ -858,10 +858,10 @@ val countEven_filter3 = Q.store_thm(
     ALL_EL (\x. x < d+1) transL2
     ==>
     (countEven k (FILTER (\x. ~(x = i)) transL1) =
-     countEven k (FILTER (\x. ~(x = i)) transL2))`,  
+     countEven k (FILTER (\x. ~(x = i)) transL2))`,
  RW_TAC std_ss [] THEN METIS_TAC [countEven_filter2]);
 
-(* desired properties of selParity *)    
+(* desired properties of selParity *)
 
 val selParity_filter = Q.store_thm(
  "selParity_filter",
@@ -1004,14 +1004,14 @@ val selParity_eq1 = Q.store_thm(
       Cases_on `countEven h (h'::t')` THEN
       FULL_SIMP_TAC std_ss [] THEN
       METIS_TAC []]);
-   
+
 val selParity_eq2 = Q.store_thm(
  "selParity_eq2",
   `!transL1 transL2 w.
     ALL_EL (\x. x < 128) transL1 /\
     ALL_EL (\x. x < 128) transL2 /\
     (!j.
-        j <  128 
+        j <  128
         ==>
         (countEven j transL1 = countEven j transL2 ))
     ==>
@@ -1025,7 +1025,7 @@ val selParity_eq2 = Q.store_thm(
     `LENGTH transL2 <=  LENGTH transL1` by RW_TAC arith_ss [] THEN
     METIS_TAC [selParity_eq1]]);
 
-(* given linear transformations cancel each other *)   
+(* given linear transformations cancel each other *)
 
 val invLT_LT_cancel = Q.store_thm(
  "invLT_LT_cancel",
@@ -1040,6 +1040,6 @@ val invLT_LT_cancel = Q.store_thm(
        by METIS_TAC [Res_fact] THEN
     FULL_SIMP_TAC arith_ss [],
     `ALL_EL (\x. x < 128) [i]` by RW_TAC list_ss [ALL_EL] THEN
-    RW_TAC arith_ss [LTFun_invLTFun_fact,selParity_eq2]]);   
+    RW_TAC arith_ss [LTFun_invLTFun_fact,selParity_eq2]]);
 
-val _ = export_theory();   
+val _ = export_theory();

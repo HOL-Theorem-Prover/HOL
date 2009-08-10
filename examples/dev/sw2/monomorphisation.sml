@@ -3,7 +3,7 @@ struct
 
 
 (*
-app load ["basic"]; 
+app load ["basic"];
 *)
 
 open HolKernel Parse boolLib pairLib PairRules bossLib pairSyntax ParseDatatype TypeBase;
@@ -47,7 +47,7 @@ fun is_fun t =   (* the term is a function? *)
   #1 (Type.dest_type (type_of t)) = "fun"
   handle e => false
 
-fun get_fname f = 
+fun get_fname f =
   #1 (strip_comb (#1 (dest_eq f)))
 
 (*-----------------------------------------------------------------------------------------*)
@@ -75,10 +75,10 @@ val map2 = M.insert(M.mkDict typeOrder, ``:'b``, S.addList(S.empty typeOrder, [`
 (* Union and composition of instantiation maps.                                            *)
 (*-----------------------------------------------------------------------------------------*)
 
-fun mk_map inst_rules = 
-  List.foldl (fn (rule : {redex : hol_type, residue : hol_type}, m) => 
-                M.insert(m, #redex rule, 
-                  case M.peek(m, #redex rule) of 
+fun mk_map inst_rules =
+  List.foldl (fn (rule : {redex : hol_type, residue : hol_type}, m) =>
+                M.insert(m, #redex rule,
+                  case M.peek(m, #redex rule) of
                       NONE => S.add(S.empty typeOrder, #residue rule)
                     | SOME s => S.add(s, #residue rule)
                 )
@@ -87,8 +87,8 @@ fun mk_map inst_rules =
              inst_rules
 
 fun union_map map1 map2 =
-   List.foldl (fn ((tp, insts), m) => 
-                 case M.peek(m, tp) of 
+   List.foldl (fn ((tp, insts), m) =>
+                 case M.peek(m, tp) of
                       NONE => M.insert(m, tp, insts)
                     | SOME old_insts => M.insert(m, tp, S.union(old_insts, insts))
               )
@@ -96,34 +96,34 @@ fun union_map map1 map2 =
               (M.listItems map2)
 
 fun compose_map map1 map2 =
-  let 
-    fun compose type_set = 
+  let
+    fun compose type_set =
        List.foldl (fn (tp, s) =>
-                     case M.peek(map2, tp) of 
+                     case M.peek(map2, tp) of
                         NONE => S.add(S.empty typeOrder, tp)
                       | SOME s' => S.union(s, s')
                   )
                   (S.empty typeOrder)
                   (S.listItems type_set)
-  in                     
-   List.foldl (fn ((tp, type_set), m) => 
+  in
+   List.foldl (fn ((tp, type_set), m) =>
                 M.insert(m, tp, compose type_set)
               )
               (M.mkDict typeOrder)
               (M.listItems map1)
   end
 
-fun union_imap imap1 imap2 = 
-   List.foldl (fn ((f, m), imap) => 
-                 case M.peek(imap, f) of 
+fun union_imap imap1 imap2 =
+   List.foldl (fn ((f, m), imap) =>
+                 case M.peek(imap, f) of
                       NONE => M.insert(imap, f, m)
                     | SOME old_m => M.insert(imap, f, union_map old_m  m)
               )
               imap1
               (M.listItems imap2)
 
-fun compose_imap imap map = 
-   List.foldl (fn ((f, m), imap') => 
+fun compose_imap imap map =
+   List.foldl (fn ((f, m), imap') =>
                 M.insert(imap', f, compose_map m map)
               )
               (M.mkDict strOrder)
@@ -137,14 +137,14 @@ fun strip_type tp =
   let val (t1, t2) = dest_prod tp
   in (strip_type t1) @ (strip_type t2)
   end
-  handle _ => 
+  handle _ =>
     let val (t1, t2) = dom_rng tp
     in (strip_type t1) @ (strip_type t2)
     end
     handle _ => [tp]
 
-fun examine_type tp = 
-  List.foldl (fn (t,imap) => 
+fun examine_type tp =
+  List.foldl (fn (t,imap) =>
       let val original_t = (TypeBasePure.ty_of o valOf o TypeBase.fetch) t
           val pstr = #1 (dest_type t)
           val inst_rules = match_type original_t t
@@ -165,7 +165,7 @@ fun examine_type tp =
 
 (* find the constant by its name (a string) *)
 
-fun peek_fname f_str env = 
+fun peek_fname f_str env =
   case M.peek(env, f_str) of
       SOME x => SOME x
    |  NONE => SOME (hd (Term.decls f_str))
@@ -180,7 +180,7 @@ fun trav_exp t env =
   else if is_let t then
     let val (v,M,N) = dest_plet t in
       if is_pabs M then       (* an embedded function *)
-        let 
+        let
           val (arg, body) = dest_pabs M
           val f_str = #1 (dest_var v)
           val body_imap = trav_exp body env
@@ -209,7 +209,7 @@ fun trav_exp t env =
     end
   else if is_comb t then
     let val (M,N) = dest_comb t
-    in 
+    in
        if is_constructor M then
          union_imap (examine_type (type_of M)) (trav_exp N env)
        else if is_fun M then    (* function application *)
@@ -233,7 +233,7 @@ fun trav_exp t env =
 
 fun build_imap defs =
   let
-    fun compose (f_def,imap) = 
+    fun compose (f_def,imap) =
       let val env = M.mkDict strOrder
           val (f_lhs, f_body) = (dest_eq o concl o SPEC_ALL) f_def
           val f_str = #1 (dest_const (#1 (strip_comb f_lhs)))
@@ -250,7 +250,7 @@ fun build_imap defs =
 (* Eliminate polymorphism by duplicating functions definitions.                            *)
 (*-----------------------------------------------------------------------------------------*)
 
-(* 
+(*
 val Duplicated  = ref (M.mkDict tvarOrder)      (* definitions of the monomorphic functions  *)
                                                 (* format: function name |-> new definition  *)
 *)
@@ -274,7 +274,7 @@ val judgements = ref []             (* a list of judgements specifying the monom
 
 (* Create the clones of a function according to the instantiation information in the instantiation map *)
 
-fun duplicate_func imap def = 
+fun duplicate_func imap def =
   let
     fun one_type tp [] rules = []
      |  one_type tp (x::xs) rules =
@@ -293,7 +293,7 @@ fun duplicate_func imap def =
 
     val index = ref 0
     val insts = M.listItems(M.find(imap, f_str)) handle _ => []
-    val new_fs = 
+    val new_fs =
           if null insts then (* the function is already monomorphistic, no instantiations are needed *)
             (* However, we still need to rewrite its body if other monomorphic functions are called in this body *)
             let val f' = subst mono_rules f
@@ -302,7 +302,7 @@ fun duplicate_func imap def =
                 val new_f = subst [fname |-> new_fname] f'
                 val new_f_def = Define `^new_f`
                 val _ = MonoFunc := M.insert(!MonoFunc, fname, mk_const(new_f_str, f_type))
-                val _ = judgements := (mk_eq(mk_const(f_str, f_type), mk_const(new_f_str, f_type))) 
+                val _ = judgements := (mk_eq(mk_const(f_str, f_type), mk_const(new_f_str, f_type)))
                                       :: (!judgements)
             in
                 [new_f_def]
@@ -320,8 +320,8 @@ fun duplicate_func imap def =
                     val new_fname = mk_var(new_f_str, new_f_type)
                     val f'' = subst [old_fname |-> new_fname] new_f
                     val new_f_def = Define `^f''`
-                    val _ = MonoFunc := M.insert(!MonoFunc, old_fname, mk_const(new_f_str, new_f_type)) 
-                    val _ = judgements := (mk_eq(mk_const(f_str, new_f_type), mk_const(new_f_str, new_f_type))) 
+                    val _ = MonoFunc := M.insert(!MonoFunc, old_fname, mk_const(new_f_str, new_f_type))
+                    val _ = judgements := (mk_eq(mk_const(f_str, new_f_type), mk_const(new_f_str, new_f_type)))
                                           :: (!judgements)
                 in new_f_def
                 end)
@@ -336,7 +336,7 @@ fun build_clone defs =
     val imap = build_imap defs
     val _ = MonoFunc := M.mkDict tvarWithTypeOrder
     val _ = judgements := []
-    val new_defs = List.foldl (fn (def,fs) => 
+    val new_defs = List.foldl (fn (def,fs) =>
                      fs @ (duplicate_func imap def))
                     [] defs
   in
@@ -347,10 +347,10 @@ fun build_clone defs =
 (* Mechanical proof.                                                                       *)
 (*-----------------------------------------------------------------------------------------*)
 
-fun elim_poly defs = 
+fun elim_poly defs =
   let
     val (newdefs, judgement) = build_clone defs
-    val thm = prove (judgement, 
+    val thm = prove (judgement,
                 SIMP_TAC std_ss [FUN_EQ_THM, pairTheory.FORALL_PROD] THEN
                 SIMP_TAC std_ss (defs @ newdefs)
               )
@@ -400,7 +400,7 @@ Hol_datatype `dt1 = C of 'a # 'b`;
 
 val f_def = Define `f (x:'a) = x`;
 val g_def = Define `g (x : 'c, y : 'd) =
-      let h = \z. C (f x, f z) in 
+      let h = \z. C (f x, f z) in
       h y`;
 val j_def = Define `j = (g(1, F), g(F, T))`;
 

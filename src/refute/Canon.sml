@@ -131,7 +131,7 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
 	    (``!P. (?!x:'a. P x) = (?x. P x /\ !y. P y ==> (y = x))``,
 		GEN_TAC THEN REWRITE_TAC [EXISTS_UNIQUE_DEF,
 					  LEFT_AND_EXISTS_THM,BETA_THM] THEN
-		EQ_TAC THEN DISCH_THEN(X_CHOOSE_THEN ``x:'a`` STRIP_ASSUME_TAC) 
+		EQ_TAC THEN DISCH_THEN(X_CHOOSE_THEN ``x:'a`` STRIP_ASSUME_TAC)
                 THEN
 		EXISTS_TAC ``x:'a`` THEN
 		ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC THENL
@@ -327,7 +327,7 @@ val PRENEX_CONV =
 	     handle DEST_CONST =>
 	     let val (oper,l) = dest_comb lop
 		 val cname = name_of_const oper
-	     in if cname = ("/\\","bool") orelse 
+	     in if cname = ("/\\","bool") orelse
                    cname = ("\\/","bool") orelse cname = ("==>","min")
                 then let val th =
 		           let val lth = PRENEX_QCONV l

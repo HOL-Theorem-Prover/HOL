@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib finite_mapTheory; 
+open HolKernel Parse boolLib bossLib finite_mapTheory;
 
 (*---------------------------------------------------------------------------------*)
 (*      Simplifier on finite maps                                                  *)

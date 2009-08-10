@@ -4,7 +4,7 @@ struct
 exception CFG;
 
 type node = {instr:Assem.instr, def : int list, use : int list};
-type Cfg = (node,int) Graph.graph;  
+type Cfg = (node,int) Graph.graph;
 type dataSeg = Assem.instr list;
 
 exception CFG
@@ -47,10 +47,10 @@ fun buildCFG tmpT (args,stmList,outs) =
    |  bi_operator Tree.ROR = Assem.ROR
    |  bi_operator Tree.DIV = raise CFG
 
-  fun cjump e = 
+  fun cjump e =
     let val x = T.look(!relopT, e)
     in  if x = Tree.EQ then Assem.EQ
-	else if x = Tree.NE then Assem.NE 
+	else if x = Tree.NE then Assem.NE
 	else if x = Tree.LT then Assem.LT
 	else if x = Tree.GT then Assem.GT
 	else if x = Tree.LE then Assem.LE
@@ -69,7 +69,7 @@ fun buildCFG tmpT (args,stmList,outs) =
 
   fun tmpIndexL [] = []
    |  tmpIndexL ((Tree.TEMP x)::rest) = x :: (tmpIndexL rest)
-   |  tmpIndexL _ = [];  
+   |  tmpIndexL _ = [];
 
   fun tmpIndexL2 [] = []
    |  tmpIndexL2 ((Assem.TEMP x)::rest) = x :: (tmpIndexL2 rest)
@@ -80,9 +80,9 @@ fun buildCFG tmpT (args,stmList,outs) =
   fun one_stm (Tree.MOVE(d, Tree.BINOP(bop, e1, e2))) =
     let
       val not_change = if (bop = Tree.MUL) then
-        [{instr = Assem.OPER {oper = (Assem.NOP,NONE,false), dst = [], src = [], jump = NONE}, 
+        [{instr = Assem.OPER {oper = (Assem.NOP,NONE,false), dst = [], src = [], jump = NONE},
       def = [], use = tmpIndexL [e1]}]
-        else [];        
+        else [];
     in
 	 ({ instr = Assem.OPER {oper = (bi_operator bop,NONE,false), dst = [one_exp d], src = [one_exp e1, one_exp e2], jump = NONE},
 	   def = tmpIndexL [d],
@@ -90,19 +90,19 @@ fun buildCFG tmpT (args,stmList,outs) =
 	 }::not_change)
   end
    |  one_stm (Tree.MOVE(d, Tree.RELOP(rop, e1, e2))) =
-	let 
+	let
 	    val _= relopT := T.enter(!relopT, getTmp d, rop) in
 	    [{ instr = Assem.OPER {oper = (Assem.CMP,NONE,false), dst = [one_exp d], src = [one_exp e1, one_exp e2], jump = NONE},
 	      def = tmpIndexL [d],
 	      use = tmpIndexL [e1, e2]
 	    }]
 	end
-   |  one_stm (Tree.MOVE(d, Tree.CALL(name, args))) = 
+   |  one_stm (Tree.MOVE(d, Tree.CALL(name, args))) =
 	let val (Tree.NAME fun_name) = name;
-	    val outL = Tree.pair2list d in 
-	    [{ instr = Assem.OPER {oper = (Assem.BL,NONE,false), 
+	    val outL = Tree.pair2list d in
+	    [{ instr = Assem.OPER {oper = (Assem.BL,NONE,false),
 				 dst = [one_exp d],
-				 src = [one_exp args], 
+				 src = [one_exp args],
 				 jump = SOME [fun_name]},
 	      def = tmpIndexL outL,
 	      use = tmpIndexL (Tree.pair2list args)
@@ -137,7 +137,7 @@ fun buildCFG tmpT (args,stmList,outs) =
 	      calLabels (rest, i+1)
 	    )
      |  calLabels ([],i) = ()
-     |  calLabels (stm :: rest, i) = calLabels (rest, i+1); 
+     |  calLabels (stm :: rest, i) = calLabels (rest, i+1);
 
 
     (* Build edges for the whole CFG												*)
@@ -147,21 +147,21 @@ fun buildCFG tmpT (args,stmList,outs) =
 	    val i = ref 0;
 	    val ll = length instL;
 	    fun one_stm (stm:{instr:Assem.instr, use:int list, def:int list}) =
-		case (#instr stm) of 
-		    Assem.OPER x => 
+		case (#instr stm) of
+		    Assem.OPER x =>
                         (case #jump (x) of
                               NONE => (edgeL := (!i,!i+1,0) :: (!edgeL))
                            |  SOME labs => (case T.peek(!labT, Symbol.index (hd labs)) of
 						 NONE => edgeL := (!i,!i+1,0) :: (!edgeL)
 					     |   SOME j =>
 						      let val (op',cond',flag') = #oper x
-						      in 
+						      in
 						          if (cond' = SOME (Assem.AL)) orelse (op' = Assem.BL) then
  							      edgeL := (!i, j, 1) :: (!i,!i+1,2) :: (!edgeL)
 						          else
 							      edgeL := (!i, j, 1) :: (!i,!i+1,0) :: (!edgeL)
 						      end))
-							
+
                  |  _ => (edgeL := (!i,!i+1,0) :: (!edgeL))
 	in
 	  (  List.map (fn stm => (one_stm stm; i := !i + 1)) instL;
@@ -170,18 +170,18 @@ fun buildCFG tmpT (args,stmList,outs) =
 	end;
 
     val insts = Lib.flatten (List.map (fn inst => one_stm inst) stmList);
-    val augmentedInsts = ({instr = Assem.OPER{oper = (Assem.NOP,NONE,false), dst = [], src = [], jump = NONE}, 
+    val augmentedInsts = ({instr = Assem.OPER{oper = (Assem.NOP,NONE,false), dst = [], src = [], jump = NONE},
 			  def = tmpIndexL2 (Assem.pair2list args),use = []}) ::
-	insts @ [{instr = Assem.OPER {oper = (Assem.NOP,NONE,false), dst = [], src = [], jump = NONE}, 
+	insts @ [{instr = Assem.OPER {oper = (Assem.NOP,NONE,false), dst = [], src = [], jump = NONE},
 		  def = [], use = tmpIndexL2 (Assem.pair2list outs)}];
     val _ = calLabels (augmentedInsts,0);
     val edgeL = List.rev (buildEdges augmentedInsts)
   in
-	Graph.mkgr(augmentedInsts, edgeL) 
+	Graph.mkgr(augmentedInsts, edgeL)
   end
 
 
-fun convert_to_CFG prog = 
+fun convert_to_CFG prog =
   let
      val (fun_name, fun_type, args, stms, outs) = IR.convert_to_IR prog
      val (args, outs) = (one_exp args, one_exp outs)
@@ -237,25 +237,25 @@ fun linearizeCFG (cfg : ({instr : Assem.instr, use : int list, def : int list}, 
           else LESS;
       val lastNode = ref 0;
       val sucS = ref (Array.fromList(
-		List.map (fn n => 
+		List.map (fn n =>
 			( lastNode := (if null (Graph.suc(n,cfg)) then n else (!lastNode));
 			  Binaryset.addList(Binaryset.empty intOrder, Graph.suc(n,cfg)))) (Graph.nodes cfg)));
       val _ = push (!lastNode);
 
       fun find_first_free_node () =
-	  let val i = pop () in 
+	  let val i = pop () in
 	      if Binaryset.isEmpty (Array.sub(!sucS,i)) then i
 	      else find_first_free_node ()
 	  end;
 
-      fun round () = 
-	let val cur_node = find_first_free_node ();	
+      fun round () =
+	let val cur_node = find_first_free_node ();
       	    val in_edges = #1 (Graph.context(cur_node, cfg));
       	    val _ = if length in_edges = 1 then push (#2 (hd in_edges))
-	            else if length in_edges = 2 then 
+	            else if length in_edges = 2 then
 		   	( if #1 (hd in_edges) then (push (#2 (hd in_edges)); push (#2 (hd (tl in_edges))))
 			  else (push (#2 (hd (tl in_edges))); push (#2 (hd in_edges))))
-             	    else (); 
+             	    else ();
       	    val _ = List.map (fn n => Array.update(!sucS, n, Binaryset.delete(Array.sub(!sucS,n), cur_node))) (Graph.pred (cur_node, cfg))
        in
 	    if null in_edges then [cur_node]
@@ -264,7 +264,7 @@ fun linearizeCFG (cfg : ({instr : Assem.instr, use : int list, def : int list}, 
 
        val stms = List.map (fn node => #instr (#3 (Graph.context(node,cfg)))) (round())
 
-     in 
+     in
 	tl(List.take(stms, length stms - 1))
      end
 *)

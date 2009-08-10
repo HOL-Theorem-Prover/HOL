@@ -23,7 +23,7 @@ fun unsymb "Type.-->"        = "Type.arrow"
   | unsymb other             = other;
 
 fun tosymb "Type.arrow"          = "Type.-->"
-  | tosymb "Lib.maplet"          = "Lib.|->" 
+  | tosymb "Lib.maplet"          = "Lib.|->"
   | tosymb "Lib.hash2"           = "Lib.##"
   | tosymb "bossLib.amper2"      = "bossLib.&&"
   | tosymb "BasicProvers.amper2" = "BasicProvers.&&"

@@ -86,10 +86,10 @@ val polynom_normalize_def = Define `
    (polynom_normalize (Pvar i) = (Cons_varlist [i] Nil_monom))
 /\ (polynom_normalize (Pconst c) = (Cons_monom c [] Nil_monom))
 /\ (polynom_normalize (Pplus pl pr) =
-      (r_canonical_sum_merge (polynom_normalize pl) 
+      (r_canonical_sum_merge (polynom_normalize pl)
       	                       (polynom_normalize pr)))
 /\ (polynom_normalize (Pmult pl pr) =
-      (r_canonical_sum_prod (polynom_normalize pl) 
+      (r_canonical_sum_prod (polynom_normalize pl)
       	                      (polynom_normalize pr)))
 /\ (polynom_normalize (Popp p) =
       (r_canonical_sum_scalar3 (RN R1) [] (polynom_normalize p))) `;

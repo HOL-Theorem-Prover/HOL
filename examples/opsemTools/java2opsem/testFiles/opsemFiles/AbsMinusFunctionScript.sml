@@ -13,47 +13,47 @@ val _ = new_theory "AbsMinusFunction";
   val func1_def =
     Define `func1 i j k =
 	    (* parameters are local variables in func1 *)
-            (Local "func1_i" 
-               (Local "func1_j" 
-	          (Local "func1_k" 
+            (Local "func1_i"
+               (Local "func1_j"
+	          (Local "func1_k"
 		     (* parameter passing *)
-		     (Seq 
+		     (Seq
                         (Assign "func1_i" i)
-		        (Seq 
+		        (Seq
                            (Assign "func1_j" j)
-		           (Seq  
+		           (Seq
                               (Assign "func1_k" k)
         (* method body *)
         (* result is a local variable in func1 *)
-	(Local "func1_result" 
+	(Local "func1_result"
         (Seq
           (Assign "func1_result" (Const 0))
           (Seq
-            (Cond 
-              (And 
-                (Equal 
+            (Cond
+              (And
+                (Equal
                   (Var "func1_k")
                   (Const 1)
                 )
-                (Not (Equal 
+                (Not (Equal
                   (Var "func1_i")
                   (Var "func1_j")
                 ))
               )
               (Assign "func1_result"
-                (Sub 
+                (Sub
                   (Var "func1_j")
                   (Var "func1_i")
                 )
               )
               (Assign "func1_result"
-                (Sub 
+                (Sub
                   (Var "func1_i")
                   (Var "func1_j")
                 )
               )
             )
-            (Seq 
+            (Seq
               (Assign "func1_Result"
                  (Var "func1_result")
               )
@@ -62,7 +62,7 @@ val _ = new_theory "AbsMinusFunction";
           )
         )
 )
-        ))))))        
+        ))))))
       `
 
 (* Method absMinus*)
@@ -71,18 +71,18 @@ val MAIN_def =
     RSPEC
     (\state.
       T)
-      (Seq 
+      (Seq
         (Assign "k"
           (Const 0)
         )
-        (Seq 
-          (Cond 
-            (LessEq 
+        (Seq
+          (Cond
+            (LessEq
               (Var "i")
               (Var "j")
             )
             (Assign "k"
-              (Plus 
+              (Plus
                 (Var "k")
                 (Const 1)
               )
@@ -99,7 +99,7 @@ val MAIN_def =
       )
     )
     (\state1 state2.
-      ((((ScalarOf (state1 ' "i")<ScalarOf (state1 ' "j")))) 
+      ((((ScalarOf (state1 ' "i")<ScalarOf (state1 ' "j"))))
       ==> (((ScalarOf (state2 ' "Result")=ScalarOf (state1 ' "j")-ScalarOf (state1 ' "i")))))/\
       ((((ScalarOf (state1 ' "i")>=ScalarOf (state1 ' "j")))) ==> (((ScalarOf (state2 ' "Result")=ScalarOf (state1 ' "i")-ScalarOf (state1 ' "j"))))))
     `

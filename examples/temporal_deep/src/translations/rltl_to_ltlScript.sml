@@ -4,8 +4,8 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 val hol_dir = concat Globals.HOLDIR "/";
 val home_dir = (concat hol_dir "examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
-            (concat home_dir "src/tools") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
+            (concat home_dir "src/tools") ::
             !loadPath;
 
 map load

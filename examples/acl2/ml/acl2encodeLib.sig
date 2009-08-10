@@ -55,8 +55,8 @@
 (*                                                                           *)
 (*****************************************************************************)
 
-signature acl2encodeLib = 
-sig 
+signature acl2encodeLib =
+sig
     include Abbrev
 
 (*****************************************************************************)
@@ -159,12 +159,12 @@ sig
 (*                                                                           *)
 (*****************************************************************************)
 
-    val translate_simple_function 
+    val translate_simple_function
     	: (term * string) list -> thm -> thm
     val translate_conditional_function
     	: (term * string) list -> thm list -> thm -> thm
     val translate_limit_function
-    	: (term * string) list -> 
+    	: (term * string) list ->
 	  (term * term list) list -> thm list -> thm -> thm
 
 (*****************************************************************************)
@@ -195,12 +195,12 @@ sig
 (*                                                                           *)
 (*****************************************************************************)
 
-    val translate_simple_polymorphic_function 
+    val translate_simple_polymorphic_function
     	: (term * string) list -> (term * thm) list -> thm -> thm
     val translate_conditional_polymorphic_function
     	: (term * string) list -> (term * thm) list -> thm list -> thm -> thm
     val translate_limit_polymorphic_function
-    	: (term * string) list -> 
+    	: (term * string) list ->
 	  (term * thm) list -> (term * term list) list -> thm list -> thm -> thm
 
 (*****************************************************************************)

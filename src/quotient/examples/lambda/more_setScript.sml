@@ -74,7 +74,7 @@ val IN_DISJOINT_IMP =
    THENL
      [ POP_ASSUM (fn th1 => POP_ASSUM (fn th2 =>
                       MP_TAC (CONJ th2 th1) )),
- 
+
        POP_ASSUM (fn th1 => POP_ASSUM (fn th2 =>
                       MP_TAC (CONJ th1 th2) ))
      ]
@@ -420,7 +420,7 @@ val SUBSET_DIFF =
    THEN ASM_REWRITE_TAC[]
   );
 
-val SUBSETS_UNION = 
+val SUBSETS_UNION =
  store_thm
   ("SUBSETS_UNION",
     (--`!(s1:'a->bool) s2 t1 t2.
@@ -768,6 +768,6 @@ val GSPEC_EMPTY_LEMMA =
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "more_set.lst";
-                                                                                
+
 val _ = html_theory "more_set";
 

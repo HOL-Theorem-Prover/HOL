@@ -20,13 +20,13 @@ val MAIN_def =
           (Const 0)
         )
         (Seq
-          (Cond 
-            (Not (Less 
+          (Cond
+            (Not (Less
               (Var "n")
               (Var "k")
             ))
             (Assign "s"
-              (Plus 
+              (Plus
                 (Var "n")
                 (Var "k")
               )
@@ -35,20 +35,20 @@ val MAIN_def =
               (Assign "i"
                 (Const 0)
               )
-              (While 
-                (LessEq 
+              (While
+                (LessEq
                   (Var "i")
                   (Var "n")
                 )
                 (Seq
                   (Assign "s"
-                    (Plus 
+                    (Plus
                       (Var "s")
                       (Var "i")
                     )
                   )
                   (Assign "i"
-                    (Plus 
+                    (Plus
                       (Var "i")
                       (Const 1)
                     )

@@ -89,11 +89,11 @@ fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
               else failwith "fail")) tm
         end)
   else ((ARGS_CONV arith_conv) THENC
-        (if is_eq tm then (NUM_EQ_NORM_CONV THENC (ARGS_CONV leq_conv)) else 
-         if is_leq tm then leq_conv else 
+        (if is_eq tm then (NUM_EQ_NORM_CONV THENC (ARGS_CONV leq_conv)) else
+         if is_leq tm then leq_conv else
          if is_less tm then
             (LESS_NORM_CONV THENC
-              (RATOR_CONV 
+              (RATOR_CONV
                 (RAND_CONV (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC leq_conv)
          else if (is_great tm) then
             (GREAT_NORM_CONV THENC
@@ -104,7 +104,7 @@ fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
          else failwith "fail")) tm
  ) handle Interrupt => raise Interrupt
        | e as HOL_ERR _ => raise (wrap_exn "Norm_arith" "NUM_RELN_NORM_CONV" e)
-       
+
 
 (*---------------------------------------------------------------------------*)
 (* MULT_CONV : conv                                                          *)

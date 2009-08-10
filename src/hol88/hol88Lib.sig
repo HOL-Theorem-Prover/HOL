@@ -65,7 +65,7 @@ sig
   val subst         : (term,term)hol88subst -> term -> term
   val inst          : (hol_type,hol_type)hol88subst -> term -> term
   val subst_occs    : int list list -> (term,term)hol88subst -> term -> term
-  val match_term    : term -> term 
+  val match_term    : term -> term
                        -> (term,term)hol88subst * (hol_type,hol_type)hol88subst
   val SUBST         : (term,thm)hol88subst ->term -> thm -> thm
   val INST          : (term,term)hol88subst -> thm -> thm

@@ -24,7 +24,7 @@ open HolKernel Parse boolLib bossLib;
 open intLib SyntaxTheory;
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers 
+* Set default parsing to natural numbers rather than integers
 ******************************************************************************)
 val _ = intLib.deprecate_int();
 
@@ -91,12 +91,12 @@ val S_ANY_def = Define `S_ANY = S_REPEAT S_TRUE`;
 (******************************************************************************
 * {r1} & {r2} = {{r1} && {r2;T[*]}} | {{r1;T[*]} && {r2}}
 ******************************************************************************)
-val S_FLEX_AND_def = Define 
- `S_FLEX_AND(r1,r2) = 
+val S_FLEX_AND_def = Define
+ `S_FLEX_AND(r1,r2) =
   S_OR (S_AND (r1, S_CAT (r2,S_ANY)), S_AND(S_CAT (r1,S_ANY), r2))`;
 
 (******************************************************************************
-* r[+] = r;r[*] 
+* r[+] = r;r[*]
 ******************************************************************************)
 val S_NON_ZERO_REPEAT_def =
  Define `S_NON_ZERO_REPEAT r = S_CAT(r, S_REPEAT r)`;
@@ -107,9 +107,9 @@ val S_NON_ZERO_REPEAT_def =
 *         |  r;r;...;r (k times)   otherwise
 ******************************************************************************)
 val S_REPEAT_ITER_def =
- Define 
-  `S_REPEAT_ITER r k = 
-    if k=0 then S_EMPTY  
+ Define
+  `S_REPEAT_ITER r k =
+    if k=0 then S_EMPTY
            else if k=1 then r else S_CAT(r, S_REPEAT_ITER r (k-1))`;
 
 (******************************************************************************
@@ -120,7 +120,7 @@ val S_REPEAT_ITER_def =
 * RANGE_ITER_AUX op f i n = (f i) op (f(i+1)) op ... op (f n)
 ******************************************************************************)
 val RANGE_ITER_AUX_def =
- Define 
+ Define
   `(RANGE_ITER_AUX op f i 0 = f i)
    /\
    (RANGE_ITER_AUX op f i (SUC n) = op(f i, RANGE_ITER_AUX op f (i+1) n))`;
@@ -131,7 +131,7 @@ val RANGE_ITER_AUX_def =
 val RANGE_ITER_AUX =
  store_thm
   ("RANGE_ITER_AUX",
-   ``RANGE_ITER_AUX op f i n = 
+   ``RANGE_ITER_AUX op f i n =
       if n=0 then f i
              else op(f i, RANGE_ITER_AUX op f (i+1) (n-1))``,
    Cases_on `n` THEN RW_TAC arith_ss [RANGE_ITER_AUX_def]);
@@ -150,20 +150,20 @@ val count_def =
          | RANGE of num # num option`;           (* range                    *)
 
 (******************************************************************************
-* S_RANGE_REPEAT(r, NUM i)      = r[*i] 
+* S_RANGE_REPEAT(r, NUM i)      = r[*i]
 *                               = r;r;...;r (i times)
-* S_RANGE_REPEAT(r, RANGE(i,j)) = r[*i..j] 
+* S_RANGE_REPEAT(r, RANGE(i,j)) = r[*i..j]
 *                               = {r[*i]} | {r[*(i+1)]} | ... | {r[*j]}
 ******************************************************************************)
 val S_RANGE_REPEAT_def =
  Define
-  `(S_RANGE_REPEAT(r, NUM i) = 
+  `(S_RANGE_REPEAT(r, NUM i) =
      S_REPEAT_ITER r i)
    /\
-   (S_RANGE_REPEAT(r, RANGE(i, SOME j)) = 
+   (S_RANGE_REPEAT(r, RANGE(i, SOME j)) =
      RANGE_ITER(i, j) S_OR (S_REPEAT_ITER r))
    /\
-   (S_RANGE_REPEAT(r, RANGE(i, NONE)) = 
+   (S_RANGE_REPEAT(r, RANGE(i, NONE)) =
      S_CAT(S_REPEAT_ITER r i, S_REPEAT r))`;
 
 (******************************************************************************
@@ -177,20 +177,20 @@ val S_EQ_REPEAT_ITER_def =
       S_REPEAT(S_BOOL(B_NOT b)))`;
 
 (******************************************************************************
-* S_RANGE_EQ_REPEAT(b, NUM i)      = b[=i] 
+* S_RANGE_EQ_REPEAT(b, NUM i)      = b[=i]
 *                                  = {!b[*];b}[*i];!b[*]
-* S_RANGE_EQ_REPEAT(b, RANGE(i,j)) = b[=i..j] 
+* S_RANGE_EQ_REPEAT(b, RANGE(i,j)) = b[=i..j]
 *                                  = {b[=i]} | {b[*=i+1)]} | ... | {b[=j]}
 ******************************************************************************)
 val S_RANGE_EQ_REPEAT_def =
  Define
-  `(S_RANGE_EQ_REPEAT(b, NUM i) = 
+  `(S_RANGE_EQ_REPEAT(b, NUM i) =
      S_EQ_REPEAT_ITER b i)
    /\
-   (S_RANGE_EQ_REPEAT(b, RANGE(i, SOME j)) = 
+   (S_RANGE_EQ_REPEAT(b, RANGE(i, SOME j)) =
      RANGE_ITER(i, j) S_OR (S_EQ_REPEAT_ITER b))
    /\
-   (S_RANGE_EQ_REPEAT(b, RANGE(i, NONE)) = 
+   (S_RANGE_EQ_REPEAT(b, RANGE(i, NONE)) =
      S_CAT(S_EQ_REPEAT_ITER b i, S_REPEAT S_TRUE))`;
 
 (******************************************************************************
@@ -198,21 +198,21 @@ val S_RANGE_EQ_REPEAT_def =
 ******************************************************************************)
 val S_GOTO_REPEAT_ITER_def =
  Define
-  `S_GOTO_REPEAT_ITER b = 
+  `S_GOTO_REPEAT_ITER b =
     S_REPEAT_ITER (S_CAT(S_REPEAT(S_BOOL(B_NOT b)),S_BOOL b))`;
 
 (******************************************************************************
-* S_RANGE_GOTO_REPEAT(b, RANGE(k,l)) = b[->k] 
+* S_RANGE_GOTO_REPEAT(b, RANGE(k,l)) = b[->k]
 *                                    = {!b[*];b}[*k]
-* S_RANGE_GOTO_REPEAT(b, RANGE(k,l)) = b[->k..l] 
+* S_RANGE_GOTO_REPEAT(b, RANGE(k,l)) = b[->k..l]
 *                                    = {b[->k]} | {b[*->k+1)]} | ... | {b[->l]}
 ******************************************************************************)
 val S_RANGE_GOTO_REPEAT_def =
  Define
-  `(S_RANGE_GOTO_REPEAT(b, NUM k) = 
+  `(S_RANGE_GOTO_REPEAT(b, NUM k) =
      S_GOTO_REPEAT_ITER b k)
    /\
-   (S_RANGE_GOTO_REPEAT(b, RANGE(k, SOME l)) = 
+   (S_RANGE_GOTO_REPEAT(b, RANGE(k, SOME l)) =
      RANGE_ITER(k, l) S_OR (S_GOTO_REPEAT_ITER b))
    /\
    (S_RANGE_GOTO_REPEAT(b, RANGE(k, NONE)) = S_GOTO_REPEAT_ITER b k)`;
@@ -222,7 +222,7 @@ val S_RANGE_GOTO_REPEAT_def =
 ******************************************************************************)
 val S_WITHIN_def =
  Define
-  `S_WITHIN(r1,r2) = 
+  `S_WITHIN(r1,r2) =
     S_AND(S_CAT(S_REPEAT S_TRUE, S_CAT(r1, S_REPEAT S_TRUE)), r2)`;
 
 (******************************************************************************
@@ -236,22 +236,22 @@ val F_OR_def =
 * Formula implication: f1 --> f2
 ******************************************************************************)
 val F_IMPLIES_def =
- Define 
+ Define
   `F_IMPLIES(f1,f2) = F_OR(F_NOT f1, f2)`;
 
 (******************************************************************************
-* Formula implication: f1 --> f2 
+* Formula implication: f1 --> f2
 * (alternative definition to match ML datatype)
 ******************************************************************************)
 val F_IMP_def =
- Define 
+ Define
   `F_IMP = F_IMPLIES`;
 
 (******************************************************************************
 * Formula equivalence: f1 <--> f2
 ******************************************************************************)
 val F_IFF_def =
- Define 
+ Define
   `F_IFF(f1,f2) = F_AND(F_IMPLIES(f1, f2), F_IMPLIES(f2, f1))`;
 
 (******************************************************************************
@@ -260,14 +260,14 @@ val F_IFF_def =
 val F_F_def =
  Define
   `F_F f = F_UNTIL(F_WEAK_BOOL B_TRUE, f)`;
-      
+
 (******************************************************************************
 * Always: G f
 ******************************************************************************)
 val F_G_def =
  Define
   `F_G f = F_NOT(F_F(F_NOT f))`;
-      
+
 (******************************************************************************
 * Weak next: X f
 ******************************************************************************)
@@ -393,7 +393,7 @@ val F_WEAK_BEFORE_INC_def =
 *          |  X! X! ... X! (i times)   otherwise
 ******************************************************************************)
 val F_NUM_STRONG_X_def =
- Define 
+ Define
   `F_NUM_STRONG_X(i,f) = FUNPOW F_NEXT i f`;
 
 (******************************************************************************
@@ -406,63 +406,63 @@ val F_NUM_STRONG_X_def =
 * > val it =
 *     |- F_NUM_WEAK_X (2,f) =
 *        F_NOT (F_NEXT (F_NOT (F_NOT (F_NEXT (F_NOT f))))) : thm
-* 
+*
 ******************************************************************************)
 val F_NUM_WEAK_X_def =
- Define 
+ Define
   `F_NUM_WEAK_X(i,f) = FUNPOW F_WEAK_X i f`;
 
 (******************************************************************************
 * next![i] f = X! [i] f
 ******************************************************************************)
 val F_NUM_STRONG_NEXT_def =
- Define 
+ Define
   `F_NUM_STRONG_NEXT = F_NUM_STRONG_X`;
 
 (******************************************************************************
 * next[i] f = X [i] f
 ******************************************************************************)
 val F_NUM_WEAK_NEXT_def =
- Define 
+ Define
   `F_NUM_WEAK_NEXT = F_NUM_WEAK_X`;
 
 (******************************************************************************
 * next_a![i..j]f = X![i]f /\ ... /\ X![j]f
 ******************************************************************************)
 val F_NUM_STRONG_NEXT_A_def =
- Define 
-  `F_NUM_STRONG_NEXT_A((i, SOME j),f) = 
+ Define
+  `F_NUM_STRONG_NEXT_A((i, SOME j),f) =
     RANGE_ITER (i,j) $F_AND (\n. F_NUM_STRONG_X(n,f))`;
 
 (******************************************************************************
 * next_a[i..j]f = X[i]f /\ ... /\ X[j]f
 ******************************************************************************)
 val F_NUM_WEAK_NEXT_A_def =
- Define 
-  `F_NUM_WEAK_NEXT_A((i, SOME j),f) = 
+ Define
+  `F_NUM_WEAK_NEXT_A((i, SOME j),f) =
     RANGE_ITER (i,j) $F_AND (\n. F_NUM_WEAK_X(n,f))`;
 
 (******************************************************************************
 * next_e![i..j]f = X![i]f \/ ... \/ X![j]f
 ******************************************************************************)
 val F_NUM_STRONG_NEXT_E_def =
- Define 
-  `F_NUM_STRONG_NEXT_E((i, SOME j),f) = 
+ Define
+  `F_NUM_STRONG_NEXT_E((i, SOME j),f) =
     RANGE_ITER (i,j) $F_OR (\n. F_NUM_STRONG_X(n,f))`;
 
 (******************************************************************************
 * next_e[i..j]f = X[i]f \/ ... \/ X[j]f
 ******************************************************************************)
 val F_NUM_WEAK_NEXT_E_def =
- Define 
-  `F_NUM_WEAK_NEXT_E((i, SOME j),f) = 
+ Define
+  `F_NUM_WEAK_NEXT_E((i, SOME j),f) =
     RANGE_ITER (i,j) $F_OR (\n. F_NUM_WEAK_X(n,f))`;
 
 (******************************************************************************
 * next_event!(b)(f) = [!b U (b & f)]
 ******************************************************************************)
 val F_STRONG_NEXT_EVENT_def =
- Define 
+ Define
   `F_STRONG_NEXT_EVENT(b,f) =
     F_UNTIL(F_WEAK_BOOL(B_NOT b), F_AND(F_WEAK_BOOL b, f))`;
 
@@ -470,31 +470,31 @@ val F_STRONG_NEXT_EVENT_def =
 * next_event(b)(f) = [!b W (b & f)]
 ******************************************************************************)
 val F_WEAK_NEXT_EVENT_def =
- Define 
+ Define
   `F_WEAK_NEXT_EVENT(b,f) =
     F_W(F_WEAK_BOOL(B_NOT b), F_AND(F_WEAK_BOOL b, f))`;
 
 (******************************************************************************
 * next_event!(b)[k](f) = next_event!
 *                         (b)
-*                         (X! next_event!(b) ... (X! next_event!(b)(f)) ... ) 
+*                         (X! next_event!(b) ... (X! next_event!(b)(f)) ... )
 *                          |---------------- k-1 times ----------------|
 ******************************************************************************)
 val F_NUM_STRONG_NEXT_EVENT_def =
- Define 
-  `F_NUM_STRONG_NEXT_EVENT(b,k,f) = 
+ Define
+  `F_NUM_STRONG_NEXT_EVENT(b,k,f) =
     F_STRONG_NEXT_EVENT
      (b, FUNPOW (\f. F_NEXT(F_STRONG_NEXT_EVENT(b,f))) (k-1) f)`;
 
 (******************************************************************************
 * next_event(b)[k](f) = next_event
 *                         (b)
-*                         (X next_event(b) ... (X next_event(b)(f)) ... ) 
+*                         (X next_event(b) ... (X next_event(b)(f)) ... )
 *                          |-------------- k-1 times --------------|
 ******************************************************************************)
 val F_NUM_WEAK_NEXT_EVENT_def =
- Define 
-  `F_NUM_WEAK_NEXT_EVENT(b,k,f) = 
+ Define
+  `F_NUM_WEAK_NEXT_EVENT(b,k,f) =
     F_WEAK_NEXT_EVENT
      (b, FUNPOW (\f. F_NEXT(F_WEAK_NEXT_EVENT(b,f))) (k-1) f)`;
 
@@ -503,8 +503,8 @@ val F_NUM_WEAK_NEXT_EVENT_def =
 *  next_event! (b) [k] (f) /\ ... /\ next_event! (b) [l] (f)
 ******************************************************************************)
 val F_NUM_STRONG_NEXT_EVENT_A_def =
- Define 
-  `F_NUM_STRONG_NEXT_EVENT_A(b,(k,SOME l),f) = 
+ Define
+  `F_NUM_STRONG_NEXT_EVENT_A(b,(k,SOME l),f) =
     RANGE_ITER (k,l) $F_AND (\n. F_NUM_STRONG_NEXT_EVENT(b,n,f))`;
 
 (******************************************************************************
@@ -512,8 +512,8 @@ val F_NUM_STRONG_NEXT_EVENT_A_def =
 *  next_event (b) [k] (f) /\ ... /\ next_event (b) [l] (f)
 ******************************************************************************)
 val F_NUM_WEAK_NEXT_EVENT_A_def =
- Define 
-  `F_NUM_WEAK_NEXT_EVENT_A(b,(k,SOME l),f) = 
+ Define
+  `F_NUM_WEAK_NEXT_EVENT_A(b,(k,SOME l),f) =
     RANGE_ITER (k,l) $F_AND (\n. F_NUM_WEAK_NEXT_EVENT(b,n,f))`;
 
 (******************************************************************************
@@ -521,8 +521,8 @@ val F_NUM_WEAK_NEXT_EVENT_A_def =
 *  next_event! (b) [k] (f) \/ ... \/ next_event! (b) [l] (f)
 ******************************************************************************)
 val F_NUM_STRONG_NEXT_EVENT_E_def =
- Define 
-  `F_NUM_STRONG_NEXT_EVENT_E(b,(k,SOME l),f) = 
+ Define
+  `F_NUM_STRONG_NEXT_EVENT_E(b,(k,SOME l),f) =
     RANGE_ITER (k,l) $F_OR (\n. F_NUM_STRONG_NEXT_EVENT(b,n,f))`;
 
 (******************************************************************************
@@ -530,12 +530,12 @@ val F_NUM_STRONG_NEXT_EVENT_E_def =
 *  next_event (b) [k] (f) \/ ... \/ next_event (b) [l] (f)
 ******************************************************************************)
 val F_NUM_WEAK_NEXT_EVENT_E_def =
- Define 
-  `F_NUM_WEAK_NEXT_EVENT_E(b,(k,SOME l),f) = 
+ Define
+  `F_NUM_WEAK_NEXT_EVENT_E(b,(k,SOME l),f) =
     RANGE_ITER (k,l) $F_OR (\n. F_NUM_WEAK_NEXT_EVENT(b,n,f))`;
 
 (******************************************************************************
-* {r} |=> f 
+* {r} |=> f
 ******************************************************************************)
 val F_SKIP_SUFFIX_IMP_def =
  Define

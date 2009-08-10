@@ -270,7 +270,7 @@ fun SPECL tml th =
   rev_itlist SPEC tml th handle HOL_ERR _ => raise ERR "SPECL" ""
 
 (*---------------------------------------------------------------------------*
- * SELECT introduction   
+ * SELECT introduction
  *
  *    A |- P t
  *  -----------------
@@ -740,7 +740,7 @@ fun CONJ_PAIR th = (CONJUNCT1 th, CONJUNCT2 th)
  * ["A1|-t1", ..., "An|-tn"]  ---> "A1u...uAn|-t1 /\ ... /\ tn", where n>0
  *---------------------------------------------------------------------------*)
 
-val LIST_CONJ = end_itlist CONJ 
+val LIST_CONJ = end_itlist CONJ
 
 (*---------------------------------------------------------------------------
  * "A |- t1 /\ (...(... /\ tn)...)"
@@ -822,7 +822,7 @@ fun IMP_CANON th =
  *            A u A1 u ... u An |- t
  *---------------------------------------------------------------------------*)
 
-val LIST_MP  = rev_itlist (fn x => fn y => MP y x) 
+val LIST_MP  = rev_itlist (fn x => fn y => MP y x)
 
 (*---------------------------------------------------------------------------
  *      A |-t1 ==> t2
@@ -895,7 +895,7 @@ fun DISJ_CASES_UNION dth ath bth =
 (* to sorting lines them up with the disjuncts in the theorem.               *)
 (*---------------------------------------------------------------------------*)
 
-local 
+local
  fun ishyp tm th = HOLset.member(hypset th,tm)
  fun organize (tm::rst) (alist as (_::_)) =
       let val (th,next) = Lib.pluck (ishyp tm) alist
@@ -913,7 +913,7 @@ fun DISJ_CASESL disjth thl =
        | DL th (th1::rst) = DISJ_CASES th th1
                                (DL(ASSUME(snd(dest_disj(concl th)))) rst)
  in DL disjth thl'
- end 
+ end
  handle e => raise wrap_exn "Drule" "DISJ_CASESL" e
 end
 

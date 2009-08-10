@@ -24,9 +24,9 @@ in
 
 (* Conjunction in condtions *)
 val AND_COND = Q.prove
- (`(if c1 /\ c2 then e1 else e2) = 
+ (`(if c1 /\ c2 then e1 else e2) =
      let x = e2 in
-      (if c1 then 
+      (if c1 then
          if c2 then e1 else x
        else x)`,
    RW_TAC std_ss [LET_THM] THEN
@@ -35,7 +35,7 @@ val AND_COND = Q.prove
 
 (* Disjunction in condtions *)
 val OR_COND = Q.prove (
-  `(if c1 \/ c2 then e1 else e2) = 
+  `(if c1 \/ c2 then e1 else e2) =
     let x = e1 in
       (if c1 then x else
        if c2 then x else e2)`,
@@ -45,7 +45,7 @@ val OR_COND = Q.prove (
 
 (* Normalize the conditions in branches *)
 val BRANCH_NORM = Q.prove (
-  `((if a > b then x else y) = (if a <= b then y else x)) /\ 
+  `((if a > b then x else y) = (if a <= b then y else x)) /\
     ((if a >= b then x else y) = (if b <= a then x else y)) /\
     ((if a < b then x else y) = (if b <= a then y else x))
   `,

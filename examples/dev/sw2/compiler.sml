@@ -1,7 +1,7 @@
 structure compiler :> compiler =
 struct
 
-(* for interactive use  
+(* for interactive use
 fun load_path_add x = loadPath := !loadPath @ [concat Globals.HOLDIR x];
 val _ = load_path_add "/examples/mc-logic";
 val _ = load_path_add "/examples/ARM/v4";
@@ -9,7 +9,7 @@ val _ = load_path_add "/tools/mlyacc/mlyacclib";
 (* load_path_add "/examples/dev/sw2"; *)
 
 val _ = quietdec := true;
-app load ["arm_compilerLib", "Normal", "inline", "closure", 
+app load ["arm_compilerLib", "Normal", "inline", "closure",
           "regAlloc", "funcCall", "refine"];
 val _ = quietdec := false;
 *)
@@ -50,21 +50,21 @@ structure M = Binarymap;
 
 fun resultOf (PASS x) = x;
 
-fun head eqns = 
+fun head eqns =
   strip_comb (lhs(snd(strip_forall(hd (strip_conj(concl eqns))))));
 
 (*---------------------------------------------------------------------------*)
 (* Compiling a list of functions.                                            *)
 (*---------------------------------------------------------------------------*)
-  
-fun defname th = 
+
+fun defname th =
   fst(dest_const(fst(strip_comb(lhs(snd(strip_forall(concl th)))))));
 
-fun compenv comp = 
+fun compenv comp =
  let fun compile (env,[]) = PASS(rev env)
        | compile (env,h::t) =
           let val name = defname h
-          in 
+          in
             print ("Compiling "^name^" ... ");
             case total comp (env,h)
              of SOME def1 => (print "succeeded.\n"; compile(def1::env,t))
@@ -88,7 +88,7 @@ fun complist passes deflist = compenv passes ([],deflist);
 
 val cond_lift = ref true;
 
-fun convert1 (env,def) = 
+fun convert1 (env,def) =
   let val def1 = Normal.pre_process def
       val def2 = if !cond_lift then refine.lift_cond def1 else def1
   in
@@ -97,15 +97,15 @@ fun convert1 (env,def) =
 
 (* All previous, plus inlining and optimizations                             *)
 
-fun convert1a (env,def) = 
+fun convert1a (env,def) =
   let val def1 = convert1 def
-  in 
+  in
    Normal.SSA_RULE (inline.optimize_norm env def1)
   end;
 
 (* All previous, and closure conversion.                                     *)
 
-fun convert1b (env,def) = 
+fun convert1b (env,def) =
   let val def1 = convert1a (env,def)
   in case total closure.closure_convert def1
       of SOME thm => Normal.SSA_RULE (inline.optimize_norm env thm)
@@ -117,7 +117,7 @@ fun convert1b (env,def) =
 (* All previous, and register allocation.                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun convert2 (env,def) = 
+fun convert2 (env,def) =
   let val def1 = convert1 (env,def)
       val def2 = regAlloc.reg_alloc def1
   in
@@ -126,9 +126,9 @@ fun convert2 (env,def) =
 
 (* Different convert2, in which some intermediate steps are skipped.         *)
 
-fun convert2a (env,def) = 
+fun convert2a (env,def) =
   let val def1 = convert1a (env,def)
-  in 
+  in
      regAlloc.reg_alloc def1
   end;
 
@@ -147,21 +147,21 @@ fun convert3 (env,def) =
 (* Compiling a list of source functions.                                     *)
 (*---------------------------------------------------------------------------*)
 
-fun defname th = 
+fun defname th =
   fst(dest_const(fst(strip_comb(lhs(snd(strip_forall(concl th)))))));
 
-fun compenv comp = 
+fun compenv comp =
  let fun compile (env,[]) = PASS(rev env)
        | compile (env,h::t) =
           let val name = defname h
-          in 
+          in
             print ("Compiling "^name^" ... ");
-            case total comp (env,h) 
+            case total comp (env,h)
              of SOME def1 => (print "succeeded.\n"; compile(def1::env,t))
               | NONE => (print "failed.\n"; FAIL(env,h::t))
           end
  in
-    compile 
+    compile
  end;
 
 (* Compile a list of definitions, accumulating the environment.              *)
@@ -186,7 +186,7 @@ val pass3 = complist convert3
 
 (* All previous, and the following:                                          *)
 (*  1. enforce caller-save-style function calls                              *)
-(*  2. tune the normal forms for the back-end                                *)  
+(*  2. tune the normal forms for the back-end                                *)
 
 
 (*---------------------------------------------------------------------------*)
@@ -194,26 +194,26 @@ val pass3 = complist convert3
 (*---------------------------------------------------------------------------*)
 
 val renamed = (* Format: [function's old name |-> function's new name] *)
-ref (M.mkDict regAlloc.tvarOrder)  
+ref (M.mkDict regAlloc.tvarOrder)
 
 fun renamed_rules () =
     List.foldl
       (fn ((f,f'),ys) => (f |-> f') :: ys)
       [] (M.listItems (!renamed));
 
-val only_one = ref false;        
+val only_one = ref false;
 
 (*---------------------------------------------------------------------------*)
 (* Front end.                                                                *)
 (* the flag indicates whether we start all over                              *)
 (*---------------------------------------------------------------------------*)
 
-fun f_compile_basic defs flag = 
+fun f_compile_basic defs flag =
  let
   val _ = if flag then (renamed := M.mkDict regAlloc.tvarOrder) else ()
 
   fun redefine def =
-   let 
+   let
      val (fname, fbody) = dest_eq (concl def)
      val (args,body) = pairSyntax.dest_pabs fbody
      val def1 = CONV_RULE (RHS_CONV pairLib.GEN_BETA_CONV) (AP_THM def args)
@@ -224,24 +224,24 @@ fun f_compile_basic defs flag =
 
      val vtm = subst [fname |-> cvar] (concl def1)
      (* rename the function name in function application *)
-     val vtm1 = subst (renamed_rules ()) vtm    
+     val vtm1 = subst (renamed_rules ()) vtm
      (* val _ = HOL_MESG "redefinition" *)
      val PASS (defn2,tcs) = TotalDefn.std_apiDefine (new_name,vtm1)
      val def2 = LIST_CONJ (Defn.eqns_of defn2)
      val ind = Defn.ind_of defn2
-     val (def', ind') = 
-        let val lem = prove(mk_eq(mk_const(new_name, ctype), fname), 
+     val (def', ind') =
+        let val lem = prove(mk_eq(mk_const(new_name, ctype), fname),
                  REWRITE_TAC [FUN_EQ_THM] THEN
                  SIMP_TAC bool_ss [pairTheory.FORALL_PROD] THEN
                  REWRITE_TAC [Once def1, Once def2])
-            val ind2 = case ind of 
+            val ind2 = case ind of
                    SOME th => ONCE_REWRITE_RULE [lem] th
                  | NONE => TRUTH
         in (def1, ind2) end
-        handle _ => 
+        handle _ =>
           let val newc = mk_const(new_name, ctype)
               val _ = renamed := M.insert(!renamed, fname, newc)
-          in  (def2, case ind of 
+          in  (def2, case ind of
                          SOME th => th
                        | NONE => TRUTH)
           end
@@ -251,7 +251,7 @@ fun f_compile_basic defs flag =
 
    val result = pass3 defs
  in
-   case result of 
+   case result of
         PASS defs' => PASS (List.map redefine defs')
      |  FAIL x => FAIL x
  end
@@ -265,8 +265,8 @@ fun f_compile defs = f_compile_basic defs true;
 
 val style = ref (InLineCode);
 
-fun b_compile_one (def, ind) = 
-  let 
+fun b_compile_one (def, ind) =
+  let
     val (th,strs) = arm_compilerLib.arm_compile (SPEC_ALL def) ind (!style)
     val code = fetch "-" (#1 (dest_const (#1 (head def))) ^ "_code1_def")
   in  (th, code)
@@ -277,7 +277,7 @@ fun b_compile norms =
       val _ = arm_compilerLib.reset_compiled()
       val _ = optimise_code := true;
   in
-    case norms of 
+    case norms of
          PASS defs => PASS (List.map b_compile_one defs)
       |  FAIL x => FAIL x
   end

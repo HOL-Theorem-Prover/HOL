@@ -15,7 +15,7 @@ val _ = new_theory "ppc_";
 val iiid_dummy_def = Define `iiid_dummy = <| proc:=0; program_order_index:=0 |>`;
 
 val PPC_NEXT_def = Define `
-  PPC_NEXT s = 
+  PPC_NEXT s =
     let pc = PREAD_R PPC_PC s in
     let w0 = PREAD_M (pc + 0w) s in
     let w1 = PREAD_M (pc + 1w) s in
@@ -31,7 +31,7 @@ val PPC_NEXT_THM = store_thm("PPC_NEXT_THM",
   ``(ppc_decode xs = SOME i) ==>
     !w0 w1 w2 w3.
       (w2bits w3 ++ w2bits w2 ++ w2bits w1 ++ w2bits w0 = xs) ==>
-      (ppc_exec_instr iiid_dummy i s = SOME (tt,s')) ==>   
+      (ppc_exec_instr iiid_dummy i s = SOME (tt,s')) ==>
       (PREAD_R PPC_PC s && 3w = 0w) ==>
       (PREAD_M (PREAD_R PPC_PC s + 0w) s = SOME w0) ==>
       (PREAD_M (PREAD_R PPC_PC s + 1w) s = SOME w1) ==>

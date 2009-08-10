@@ -3,13 +3,13 @@
  *
  *----------------------------------------------------------------------*)
 
-signature Unify = 
+signature Unify =
 sig
   include Abbrev
 
    (* these don't do type unification *)
 
-   val simp_unify_terms_in_env : 
+   val simp_unify_terms_in_env :
      term list -> term -> term -> (term,term)subst -> (term,term)subst
    val simp_unify_terms : term list -> term -> term -> (term,term)subst
 
@@ -19,7 +19,7 @@ sig
 
    (* discard some (local) instantiations from an environment *)
 
-   val restrict_tmenv :(term -> bool) -> (term,term)subst -> (term,term)subst 
+   val restrict_tmenv :(term -> bool) -> (term,term)subst -> (term,term)subst
 
 end
 

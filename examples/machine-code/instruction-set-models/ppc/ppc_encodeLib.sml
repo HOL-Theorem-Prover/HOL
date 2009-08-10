@@ -1,28 +1,28 @@
 structure ppc_encodeLib :> ppc_encodeLib =
 struct
- 
+
 open HolKernel boolLib bossLib;
 open ppc_decoderTheory;
 
 val car = fst o dest_comb;
 val cdr = snd o dest_comb;
 
-val instructions = let 
-  fun foo tm = let val (x,y) = dest_comb tm in 
+val instructions = let
+  fun foo tm = let val (x,y) = dest_comb tm in
     foo x @ [stringSyntax.fromHOLstring (cdr y)] end
     handle _ => [(implode o tl o explode o fst o dest_const) tm]
   fun d (x,y) = let
     val xs = (foo o snd o dest_abs) y
     val (i,t) = (hd xs, tl xs)
-    val f = String.tokens (fn x => (x = #" ")) (stringSyntax.fromHOLstring x) 
+    val f = String.tokens (fn x => (x = #" ")) (stringSyntax.fromHOLstring x)
     val i = (implode o map (fn x => if x = #"_" then #"." else x) o explode) i
     in (i,(t,f)) end
-  in (map d o map pairSyntax.dest_pair o fst o 
+  in (map d o map pairSyntax.dest_pair o fst o
       listSyntax.dest_list o cdr o cdr o concl o SPEC_ALL) ppc_decode_def end;
 
 fun ppc_encode s = let
-  fun token_size name = 
-    if mem name ["A","B","C","D","S","BO","BI","crbA","crbB","crbD","SH","MB","ME"] then 5 
+  fun token_size name =
+    if mem name ["A","B","C","D","S","BO","BI","crbA","crbB","crbD","SH","MB","ME"] then 5
     else if mem name ["BD"] then 14
     else if mem name ["SIMM","UIMM","d"] then 16
     else if mem name ["LI"] then 24
@@ -36,8 +36,8 @@ fun ppc_encode s = let
     in if Arbint.<=(Arbint.zero,i) then fill n (Arbnum.toBinString(Arbint.toNat i))
                                    else fill n (Arbnum.toBinString(Arbint.toNat j))
     end
-  val xs = String.tokens (fn x => mem x [#",",#" ",#"(",#")",#"[",#"]"]) s  
-  val (x,xs) = (hd xs, tl xs) 
+  val xs = String.tokens (fn x => mem x [#",",#" ",#"(",#")",#"[",#"]"]) s
+  val (x,xs) = (hd xs, tl xs)
   val (x,xs) = if x = "bne" then ("bc",["4","2"] @ xs) else
                if x = "beq" then ("bc",["12","2"] @ xs) else
                if x = "blt" then ("bc",["12","0"] @ xs) else

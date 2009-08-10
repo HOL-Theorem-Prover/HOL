@@ -66,7 +66,7 @@ fun dest_axiom th =
   | _ => raise Error "dest_axiom";
 
 val is_axiom = can dest_axiom;
-  
+
 (* ------------------------------------------------------------------------- *)
 (* Pretty-printing of theorems                                               *)
 (* ------------------------------------------------------------------------- *)
@@ -417,7 +417,7 @@ fun UNIT_SQUASH th =
     in
       FACTOR (INST (squash |<>| (clause th)) th)
     end;
-  
+
 val REFLEXIVITY = REFL (Var "x");
 
 val SYMMETRY =

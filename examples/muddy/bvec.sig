@@ -3,19 +3,19 @@ signature bvec =
 sig
     type bvec
     type const = int
-	
-    val bvectrue: fdd.precision -> bvec 
-    val bvecfalse: fdd.precision -> bvec 
+
+    val bvectrue: fdd.precision -> bvec
+    val bvecfalse: fdd.precision -> bvec
     val con: fdd.precision -> const -> bvec
     val var: fdd.precision -> bdd.varnum -> int -> bvec
     val varfdd: fdd.fddvar -> bvec
-	
+
     val coerce: fdd.precision -> bvec -> bvec
-	
+
     val isConst: bvec -> bool
     val getConst: bvec -> const
     val lookupConst: bvec -> const option
-	
+
     val add: bvec * bvec -> bvec
     val sub: bvec * bvec -> bvec
 
@@ -27,7 +27,7 @@ sig
 
     val divi     : bvec * bvec -> bvec
     val divifixed: bvec * const -> bvec
- 
+
     val modu     : bvec * bvec -> bvec
     val modufixed: bvec * const -> bvec
 
@@ -36,7 +36,7 @@ sig
 
     val shr     : bvec -> bvec -> bdd.bdd -> bvec
     val shrfixed: bvec -> int -> bdd.bdd -> bvec
-	
+
     val lth: bvec * bvec -> bdd.bdd
     val lte: bvec * bvec -> bdd.bdd
     val gth: bvec * bvec -> bdd.bdd
@@ -53,13 +53,13 @@ end
 
   The following table shows how ML types and values in this modules
   relates to C types and function declarations in bvec.h:
-  
+
   MuDDy       BuDDy                   Comment
   -----------------------------------------------------------------
   Types:
   bvec        BVEC
   const       int
-  
+
   Values:
   ?	      bvec_copy
   bvectrue    bvec_true
@@ -92,5 +92,5 @@ end
   gte	      bvec_gte
   equ	      bvec_equ
   neq	      bvec_neq
-  
+
 *)

@@ -11,21 +11,21 @@
 (* for more information.                                                     *)
 (*---------------------------------------------------------------------------*)
 
-Lib.with_flag (quietdec,true) use "prelim";  
+Lib.with_flag (quietdec,true) use "prelim";
 
 quietdec := true;
 open wordsTheory wordsLib pairTheory pairLib;
 quietdec := false;
 
-val KMATCH_MP_TAC = 
-  MATCH_MP_TAC o 
+val KMATCH_MP_TAC =
+  MATCH_MP_TAC o
   Ho_Rewrite.REWRITE_RULE [AND_IMP_INTRO,
-           METIS_PROVE [] ``(a ==> !x. b x) = !x. a ==> b x``]; 
+           METIS_PROVE [] ``(a ==> !x. b x) = !x. a ==> b x``];
 
 val WORD_PRED_EXISTS = Q.prove
 (`!w:'a word. ~(w = 0w) ==> ?u. w = u + 1w`,
-  RW_TAC std_ss [] THEN 
-  Q.EXISTS_TAC `w - 1w` THEN 
+  RW_TAC std_ss [] THEN
+  Q.EXISTS_TAC `w - 1w` THEN
   RW_TAC std_ss [WORD_SUB_ADD,WORD_ADD_SUB,WORD_MULT_CLAUSES]);
 
 
@@ -39,20 +39,20 @@ val _ = type_abbrev("state", ``:block # key # word32``);
 
 val DELTA_def = Define `DELTA = 0x9e3779b9w:word32`;
 
-val ShiftXor_def = 
- Define 
-   `ShiftXor (x:word32,s,k0,k1) = 
+val ShiftXor_def =
+ Define
+   `ShiftXor (x:word32,s,k0,k1) =
           ((x << 4) + k0) ?? (x + s) ?? ((x >> 5) + k1)`;
 
 (* --------------------------------------------------------------------------*)
 (*	One round forward computation    				     *)
 (* --------------------------------------------------------------------------*)
 
-val Round_def = 
+val Round_def =
  Define
-   `Round ((y,z),(k0,k1,k2,k3),s):state = 
-      let s' = s + DELTA in let 
-          y' = y + ShiftXor(z, s', k0, k1) 
+   `Round ((y,z),(k0,k1,k2,k3),s):state =
+      let s' = s + DELTA in let
+          y' = y + ShiftXor(z, s', k0, k1)
       in
 	((y', z + ShiftXor(y', s', k2, k3)),
 	 (k0,k1,k2,k3), s')`;
@@ -61,9 +61,9 @@ val Round_def =
 (* Arbitrary number of cipher rounds                                         *)
 (*---------------------------------------------------------------------------*)
 
-val Rounds_def = 
+val Rounds_def =
  Define
-   `Rounds (n:word32,s:state) = 
+   `Rounds (n:word32,s:state) =
       if n=0w then s else Rounds (n-1w, Round s)`;
 
 val Rounds_ind = fetch "-" "Rounds_ind";
@@ -94,14 +94,14 @@ val InvRound_def =
           z - ShiftXor(y, sum, k2, k3)),
          (k0,k1,k2,k3),
          sum-DELTA)`;
-   
+
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of decipher rounds                                       *)
 (*---------------------------------------------------------------------------*)
 
-val InvRounds_def = 
+val InvRounds_def =
  Define
-   `InvRounds (n:word32,s:state) = 
+   `InvRounds (n:word32,s:state) =
      if n=0w then s else InvRounds (n-1w, InvRound s)`;
 
 (*---------------------------------------------------------------------------*)
@@ -111,7 +111,7 @@ val InvRounds_def =
 val TEADecrypt_def =
  Define
    `TEADecrypt (keys,txt) =
-      let (plaintxt,keys,sum) = InvRounds(32w,(txt,keys,DELTA << 5)) 
+      let (plaintxt,keys,sum) = InvRounds(32w,(txt,keys,DELTA << 5))
       in
         plaintxt`;
 
@@ -142,11 +142,11 @@ val OneRound_Inversion = Q.store_thm("OneRound_Inversion",
 (*---------------------------------------------------------------------------*)
 
 val Rounds_ind' = Q.prove
-(`!P. 
-   (!(n:word32) b1 k1 s1. 
+(`!P.
+   (!(n:word32) b1 k1 s1.
        (~(n = 0w) ==> P (n - 1w,Round(b1,k1,s1))) ==> P (n,(b1,k1,s1))) ==>
      !i b k s:word32. P (i,b,k,s)`,
- REPEAT STRIP_TAC THEN 
+ REPEAT STRIP_TAC THEN
  MATCH_MP_TAC (DISCH_ALL(SPEC_ALL (UNDISCH (SPEC_ALL Rounds_ind)))) THEN
  METIS_TAC [ABS_PAIR_THM]);
 
@@ -161,17 +161,17 @@ val lemma1 = Q.prove
 val lemma = Q.prove
 (`!i b k s. ?b1. Rounds (i,b,k,s) = (b1,k,s + DELTA * i)`,
  recInduct Rounds_ind' THEN RW_TAC std_ss [] THEN
-  ONCE_REWRITE_TAC [Rounds_def] THEN 
+  ONCE_REWRITE_TAC [Rounds_def] THEN
   RW_TAC arith_ss [WORD_MULT_CLAUSES, WORD_ADD_0] THEN
   RES_TAC THEN RW_TAC std_ss [] THENL
   [METIS_TAC [lemma1,FST,SND],
    `?b2. Round(b1,k1,s1) = (b2,k1,s1+DELTA)` by METIS_TAC [lemma1] THEN
    RW_TAC arith_ss [WORD_EQ_ADD_LCANCEL,GSYM WORD_ADD_ASSOC] THEN
-   `?m. n = m + 1w` by METIS_TAC [WORD_PRED_EXISTS] THEN 
+   `?m. n = m + 1w` by METIS_TAC [WORD_PRED_EXISTS] THEN
    RW_TAC std_ss [WORD_ADD_SUB,WORD_MULT_CLAUSES]]);
 
 val delta_shift = Q.prove
-(`DELTA << 5 = DELTA * 32w`, 
+(`DELTA << 5 = DELTA * 32w`,
  REWRITE_TAC [DELTA_def] THEN WORDS_TAC);
 
 (*---------------------------------------------------------------------------*)
@@ -182,14 +182,14 @@ val TEA_CORRECT = Q.store_thm
 ("TEA_CORRECT",
  `!plaintext keys.
      TEADecrypt (keys,TEAEncrypt (keys,plaintext)) = plaintext`,
- RW_TAC list_ss [TEAEncrypt_def, TEADecrypt_def, delta_shift] 
-  THEN `(keys1 = keys) /\ (sum = DELTA * 32w)` 
-        by METIS_TAC [lemma,WORD_ADD_0,PAIR_EQ] 
-  THEN RW_TAC std_ss [] 
-  THEN Q.PAT_ASSUM `Rounds x = y` (SUBST_ALL_TAC o SYM) 
-  THEN POP_ASSUM MP_TAC 
-  THEN computeLib.RESTR_EVAL_TAC 
-           (flatten(map decls ["Round", "InvRound", "DELTA"])) 
+ RW_TAC list_ss [TEAEncrypt_def, TEADecrypt_def, delta_shift]
+  THEN `(keys1 = keys) /\ (sum = DELTA * 32w)`
+        by METIS_TAC [lemma,WORD_ADD_0,PAIR_EQ]
+  THEN RW_TAC std_ss []
+  THEN Q.PAT_ASSUM `Rounds x = y` (SUBST_ALL_TAC o SYM)
+  THEN POP_ASSUM MP_TAC
+  THEN computeLib.RESTR_EVAL_TAC
+           (flatten(map decls ["Round", "InvRound", "DELTA"]))
   THEN RW_TAC std_ss [OneRound_Inversion]);
 
 
@@ -222,10 +222,10 @@ compile4 teaFns;
 (* Different pass4, in which some intermediate steps are skipped.            *)
 (*---------------------------------------------------------------------------*)
 
-fun pass4a (env,def) = 
+fun pass4a (env,def) =
   let val def1 = pass1 def
       val def2 = reg_alloc def1
-  in 
+  in
     def2
   end;
 

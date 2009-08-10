@@ -1320,7 +1320,7 @@ local
           "-" ^ Int.toString (offset2comp n j)
       end
 in
-  fun thumb_target sz l i = 
+  fun thumb_target sz l i =
     case l of
       SOME n => abs_offset_string sz n i
     | NONE   => rel_offset_string (ipow2 (sz + 1)) i ^ "; relative"

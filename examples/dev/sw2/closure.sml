@@ -12,17 +12,17 @@ val fun_tm = prim_mk_const{Name="fun",Thy="Normal"};
 (* Consider a free variable each time                                        *)
 (*---------------------------------------------------------------------------*)
 
-fun abs_fvars tm = 
- let fun close_up f body = 
-      List.foldl 
-       (fn (v,t) => mk_plet(v,mk_comb(inst[alpha |-> type_of v] atom_tm,v),t)) 
+fun abs_fvars tm =
+ let fun close_up f body =
+      List.foldl
+       (fn (v,t) => mk_plet(v,mk_comb(inst[alpha |-> type_of v] atom_tm,v),t))
        f (free_vars body)
-     fun trav t = 
-       if is_let t then 
+     fun trav t =
+       if is_let t then
            let val (v,M,N) = dest_plet t in
-               if is_pabs M then 
-                 close_up (mk_plet 
-                     (v, mk_comb(inst[alpha |-> type_of M] fun_tm,trav M),trav N)) M 
+               if is_pabs M then
+                 close_up (mk_plet
+                     (v, mk_comb(inst[alpha |-> type_of M] fun_tm,trav M),trav N)) M
                else mk_plet (v, trav M, trav N)
            end
        else if is_cond t then
@@ -33,11 +33,11 @@ fun abs_fvars tm =
             let val (M,N) = dest_pabs t in
             mk_pabs (trav M, trav N) end
        else t
-  in 
+  in
     trav tm
   end;
 
-fun close_one_by_one def = 
+fun close_one_by_one def =
   let
     val th1 = abs_fun def
     val body = rhs (concl th1)
@@ -55,13 +55,13 @@ fun close_one_by_one def =
 (* Consider all free variable each time                                      *)
 (*---------------------------------------------------------------------------*)
 
-fun identify_fun tm = 
-  let 
-     fun trav t = 
-       if is_let t then 
+fun identify_fun tm =
+  let
+     fun trav t =
+       if is_let t then
            let val (v,M,N) = dest_plet t in
-               if is_pabs M then 
-                 mk_plet (v, mk_comb (inst [alpha |-> type_of M] fun_tm, trav M), trav N) 
+               if is_pabs M then
+                 mk_plet (v, mk_comb (inst [alpha |-> type_of M] fun_tm, trav M), trav N)
                else mk_plet (v, trav M, trav N)
            end
        else if is_cond t then
@@ -72,17 +72,17 @@ fun identify_fun tm =
             let val (M,N) = dest_pabs t in
             mk_pabs (trav M, trav N) end
        else t
-  in 
+  in
     trav tm
   end;
 
-fun abs_all_fvars tm = 
-  let 
-     fun trav t = 
-       if is_let t then 
+fun abs_all_fvars tm =
+  let
+     fun trav t =
+       if is_let t then
            let val (v,M,N) = dest_plet t in
-               if is_pabs M then 
-                  let val cls = list_mk_pair (free_vars M) 
+               if is_pabs M then
+                  let val cls = list_mk_pair (free_vars M)
                       val (args, d) = dest_pabs M
                       val (M',N') = (trav M, trav N)
                       val f = mk_pabs (cls, M')
@@ -91,7 +91,7 @@ fun abs_all_fvars tm =
                       val N'' = subst_exp [v |-> mk_comb (v', cls)] N'
                   in
                      mk_plet (v', f', N'')
-                  end 
+                  end
                else mk_plet (v, trav M, trav N)
            end
        else if is_cond t then
@@ -102,11 +102,11 @@ fun abs_all_fvars tm =
             let val (M,N) = dest_pabs t in
             mk_pabs (trav M, trav N) end
        else t
-  in 
+  in
     trav tm
   end;
 
-fun close_all def = 
+fun close_all def =
   let
     val th1 = abs_fun def
     val body = rhs (concl th1)
@@ -122,7 +122,7 @@ fun close_all def =
 
 (*---------------------------------------------------------------------------*)
 (*   Closure conversion                                                      *)
-(*   Move all functions definitions to top level                             *)  
+(*   Move all functions definitions to top level                             *)
 (*---------------------------------------------------------------------------*)
 
 val TOP_LEVEL_RULE =  (* may loop forever, to be improved *)
@@ -130,11 +130,11 @@ val TOP_LEVEL_RULE =  (* may loop forever, to be improved *)
 
 (*---------------------------------------------------------------------------*)
 (*   Closure conversion                                                      *)
-(*   Interface                                                               *)  
+(*   Interface                                                               *)
 (*---------------------------------------------------------------------------*)
 
-fun closure_convert def = 
-  let 
+fun closure_convert def =
+  let
     val th1 = close_all def
     val th2 = TOP_LEVEL_RULE th1
     val th3 = SIMP_RULE pure_ss [FLATTEN_LET] th2

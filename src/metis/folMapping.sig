@@ -26,7 +26,7 @@ val update_with_types   : (bool -> bool) -> parameters -> parameters
 
 (* Mapping HOL literals to FOL (need to pass in variables) *)
 val hol_literals_to_fol : parameters -> vars * term list -> formula1 list
-  
+
 (* Mapping HOL theorems to FOL axioms *)
 val hol_thm_to_fol : parameters -> vars * thm -> thm1
 

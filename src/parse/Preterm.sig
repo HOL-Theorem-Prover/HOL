@@ -3,9 +3,9 @@ sig
   type pretype = Pretype.pretype
   type hol_type = Type.hol_type
   type term = Term.term
-  type overinfo = {Name : string, 
+  type overinfo = {Name : string,
                    Ty : pretype,
-                   Info : Overload.overloaded_op_info, 
+                   Info : Overload.overloaded_op_info,
                    Locn : locn.locn}
 
   datatype preterm =

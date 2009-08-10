@@ -9,10 +9,10 @@ val _ = new_theory "ppc_ast";
 
 (* ---------------------------------------------------------------------------------- *>
 
-  This theory defines the abstract syntax tree (AST) for PowerPC instructions. 
+  This theory defines the abstract syntax tree (AST) for PowerPC instructions.
 
   It leaves out the following which don't correspond to a PowerPC instruction:
-    
+
     | Pallocframe of Z => Z       (* allocate new stack frame *)
     | Pallocblock                 (* allocate new heap block *)
     | Plfi of freg => float       (* load float constant *)

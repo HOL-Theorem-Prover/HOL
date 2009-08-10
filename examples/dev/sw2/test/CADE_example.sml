@@ -17,7 +17,7 @@ val fact_def = Define
 val f1_def = Define
    `f1 (k0,k1,k2)  =
         let y = k2 + 100 in
-        let g = (\(x,y). y - (x * k0)) in 
+        let g = (\(x,y). y - (x * k0)) in
         let z = if fact 3 < 10 /\ y + 2 * k1 > k0 then g (k1, k2)
                 else y
         in
@@ -70,7 +70,7 @@ val lem2 = SSA_RULE (normalize f1_def);
                        v11))
            in
            let v8 = v4 * v7 in
-             v8)) 
+             v8))
 *)
 
 val env = [lem1];
@@ -114,7 +114,7 @@ val th2 = closure_convert th1;
              v9))
 *)
 
-val th3 = SSA_RULE (optimize_norm [] 
+val th3 = SSA_RULE (optimize_norm []
                      (SIMP_RULE std_ss [Once LET_THM, NormalTheory.fun_def] th2));
 
 (*

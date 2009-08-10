@@ -340,7 +340,7 @@ fun enum_type_to_tyinfo (ty, constrs) = let
   val (result as {constrs,TYPE,...}) = define_enum_type(ty,constrs,abs,rep)
   val abs_thm = save_thm(abs ^ "_thm", LIST_CONJ (map SYM (#defs result)))
   val rep_name = rep ^ "_thm"
-  val rep_thm = save_thm(rep_name, 
+  val rep_thm = save_thm(rep_name,
                    LIST_CONJ (num_values (#REP_ABS result) (#defs result)))
   val eq_elim_name = ty^"_EQ_"^ty
   val eq_elim_th = save_thm(eq_elim_name, GSYM (#REP_11 result))
@@ -357,7 +357,7 @@ fun enum_type_to_tyinfo (ty, constrs) = let
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
   open TypeBasePure
   val tyinfo0 =
-      mk_datatype_info 
+      mk_datatype_info
          {ax = ORIG initiality,
           induction = ORIG induction,
           case_def = case_def,

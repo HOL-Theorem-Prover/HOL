@@ -67,7 +67,7 @@ struct
                    (fcpML.ITSELF (numML.fromDecString"2")) ONE ZERO
                    addr) word (mem_read (mem,a30)))
         end
-   
+
   fun MEM_WRITE_HALF mem addr word =
         let val a30 = addr30 addr
         in
@@ -651,7 +651,7 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wthumb, Wireg) cycle s ns =
       ((if Wireg then
           if exc1 = armML.software then
             let
-              val arm_out1 = armML.OUT_ARM1 (pairML.FST s) 
+              val arm_out1 = armML.OUT_ARM1 (pairML.FST s)
               val mem_out1 = armML.OUT_MEM memoryML.MEM_WRITE memoryML.MEM_READ
                                (mem1, arm_out1)
             in

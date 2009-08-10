@@ -36,7 +36,7 @@ sig
   val PERM_NO_ELIM_NORMALISE_CONV = fn : term -> thm
 
 
-  (* Turns ``PERM l1 l2`` into ``PERM l2 l1`` iff l1 is in some sence 
+  (* Turns ``PERM l1 l2`` into ``PERM l2 l1`` iff l1 is in some sence
      smaller than l2. This is useful in combination with PERM_REWR_CONV.
 
      Exmaple:
@@ -74,9 +74,9 @@ sig
   val PERM_SPLIT : term -> term -> thm
 
 
-  (* Given a theorem |- PERM l r and a term 
-     PERM l1 l2 then 
-     PERM_REWR_CONV tries to replace l in l1 or l2 with r. 
+  (* Given a theorem |- PERM l r and a term
+     PERM l1 l2 then
+     PERM_REWR_CONV tries to replace l in l1 or l2 with r.
      Afterwards PERM_NORMALISE_CONV is used.
 
      Example:

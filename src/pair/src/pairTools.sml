@@ -133,7 +133,7 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun flat_vstruct tuple rhs =
-  let 
+  let
     (* behaviour of mk_fst and mk_snd should match PairedLambda.GEN_BETA_CONV in LET_INTRO *)
     val mk_fst = fn tm => if is_pair tm then #1 (dest_pair tm) else mk_fst tm
     val mk_snd = fn tm => if is_pair tm then #2 (dest_pair tm) else mk_snd tm
@@ -273,7 +273,7 @@ local
              else NONE
         else NONE
   fun ndest_quant dquant 0 tm = ([],tm)
-    | ndest_quant dquant n tm = 
+    | ndest_quant dquant n tm =
        let val (v,M) = dquant tm
            val (V,body) = ndest_quant dquant (n-1) M
        in (v::V,body)

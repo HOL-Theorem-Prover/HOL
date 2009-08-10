@@ -46,9 +46,9 @@ val strip_prod_type = pairSyntax.spine_prod;
 
 fun atom_name tm = fst(dest_var tm handle HOL_ERR _ => dest_const tm);
 
-fun strip_imp tm = 
-   if is_neg tm then ([],tm) else 
-   if is_imp tm then 
+fun strip_imp tm =
+   if is_neg tm then ([],tm) else
+   if is_imp tm then
         let val (ant,conseq) = dest_imp_only tm
             val (imps,rst) = strip_imp conseq
         in (ant::imps, rst)
@@ -86,7 +86,7 @@ fun dest_relation tm =
    else raise ERR "dest_relation" "not a boolean term";
 
 
-fun is_WFR tm = 
+fun is_WFR tm =
  case total dest_thy_const (rator tm)
   of SOME{Name="WF", Thy="relation", ...} => true
    | otherwise => false;
@@ -107,7 +107,7 @@ fun vary vlist =
          if Lib.mem str (!slist)
          then (counter := !counter + 1; pass ("v"^int_to_string(!counter)))
          else (slist := str :: !slist; str)
-  in 
+  in
     fn ty => mk_var(pass "v", ty)
   end
 end;

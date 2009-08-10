@@ -41,7 +41,7 @@ in
 (* Print a BDD to <file>.dot and convert it to <file>.ps; return the bdd     *)
 (*****************************************************************************)
 
-fun dotBdd file label bdd = 
+fun dotBdd file label bdd =
  let val glab  = ("label=\""^label^"\"");
      val gsize = "size=\"7.5,8\""
  in
@@ -60,7 +60,7 @@ fun dotBdd file label bdd =
 (* return the bdd and the variable name-to-number mapping                    *)
 (*****************************************************************************)
 
-     
+
 (*****************************************************************************)
 (* Create a sed script for editing a dot file so that BBD nodes              *)
 (* are labelled with variable names rather than numbers                      *)
@@ -71,8 +71,8 @@ local
 fun varmap_to_sed_script file varmap_pairs =
  let val out = BasicIO.open_out file
  in
- (List.map 
-  (fn (s,n) => 
+ (List.map
+  (fn (s,n) =>
     BasicIO.output
      (out,
       "s/\\\""^(makestring n)^"\\\"/\\\""^s^"\\\"/g\n"
@@ -83,7 +83,7 @@ fun varmap_to_sed_script file varmap_pairs =
 
 in
 
-fun dotLabelledTermBdd file label tb = 
+fun dotLabelledTermBdd file label tb =
  let val (_,ass,vm,tm,bdd) = dest_term_bdd tb;
      val pairs           = Binarymap.listItems vm;
      val glab            = ("label=\""^label^"\"");
@@ -112,15 +112,15 @@ end;
 val dotTermBddFlag = ref true;
 
 (* Old version -- gets printing of "/\" and "\/" wrong
-fun dotTermBdd tb = 
+fun dotTermBdd tb =
  (print "writing scratchBdd.ps\n";
-  dotLabelledTermBdd 
-   "scratchBdd" 
-   (if !dotTermBddFlag then Parse.term_to_string(getTerm tb) else "") 
+  dotLabelledTermBdd
+   "scratchBdd"
+   (if !dotTermBddFlag then Parse.term_to_string(getTerm tb) else "")
    tb);
 *)
 
-fun dotTermBdd tb = 
+fun dotTermBdd tb =
  let val _ = add_rule {term_name = "/\\",
                        fixity = Infixr  400,
                        pp_elements = [HardSpace 1, TOK "AND", BreakSpace(1,0)],
@@ -132,9 +132,9 @@ fun dotTermBdd tb =
                        paren_style = OnlyIfNecessary,
                        block_style = (AroundSameName, (PP.INCONSISTENT, 0))}
      val _ = print "writing scratchBdd.ps\n";
-     val _ = dotLabelledTermBdd 
-              "scratchBdd" 
-              (if !dotTermBddFlag then Parse.term_to_string(getTerm tb) else "") 
+     val _ = dotLabelledTermBdd
+              "scratchBdd"
+              (if !dotTermBddFlag then Parse.term_to_string(getTerm tb) else "")
               tb
      val _ = remove_termtok {term_name = "/\\", tok = "AND"}
      val _ = prefer_form_with_tok {term_name = "/\\", tok = "/\\"}

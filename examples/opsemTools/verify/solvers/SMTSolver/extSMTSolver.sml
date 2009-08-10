@@ -42,7 +42,7 @@ fun readFileToString name =
      val _ = TextIO.closeIn instream
  in
   if contents=""
-  then 
+  then
       (print("Compilation error in yices file: " ^ name);
       raise YICES_COMPILEError
       )
@@ -51,8 +51,8 @@ fun readFileToString name =
 
 
 
-(* 
-Parse a solutions file -- very ad hoc and no error checking! 
+(*
+Parse a solutions file -- very ad hoc and no error checking!
 
  getSolutions : string -> (string * string) list list * real
  getSolutions file_name = ([[("x1","m1"),...,],...,[("y1","n1"),...]], time)
@@ -61,15 +61,15 @@ If the solver returns "No solution" then the first component of the
 returned pair (a list of lists) is empty.
 
 *)
-local 
+local
 
 (* If p(xi)=false (for 1<=i<=n) and p(x)=true, then:
-   splitUntil p [x1,...,xn,x,y1,...ym] = ([x1,...,xn],[y1,...,ym])  
+   splitUntil p [x1,...,xn,x,y1,...ym] = ([x1,...,xn],[y1,...,ym])
 *)
 val splitUntil =
   let fun splitUntilAux acc p [] = (rev acc,[])
-|  splitUntilAux acc p (x::l) = 
-  if p(x) then (rev acc,l) 
+|  splitUntilAux acc p (x::l) =
+  if p(x) then (rev acc,l)
   else splitUntilAux (x::acc) p l
   in
   splitUntilAux ([] : string list)
@@ -78,7 +78,7 @@ end;
 
 (* dest_string_int_pair "(x,n)" --> ("x","n") *)
 fun dest_string_int_pair str =
-  let val [x,n] = 
+  let val [x,n] =
     String.tokens (fn c => mem c [#"(",#")",#" ",#"="]) str
   in
   (x, n)
@@ -89,11 +89,11 @@ in
 
 fun getSolutions name =
   let val lines = String.tokens (fn c => c = #"\n") (readFileToString name)
-val solutions = 
+val solutions =
   if hd lines = "unsat"
   then []
-  else 
-      map 
+  else
+      map
           dest_string_int_pair
 	  (tl (fst (splitUntil (String.isPrefix "Statistics:") lines)))
 val sol_time_str = String.extract(last lines, (String.size "cpu time:                         "),
@@ -128,9 +128,9 @@ end;
                ("a_0",Scalar ~32768))))`` : term
 Value of a_i must be set into the array a
 *)
-fun makeErrorState name st = 
+fun makeErrorState name st =
    let val (sol,_) =  getSolutions name
-   in 
+   in
      stateTools.finiteMapSol sol st
    end;
 
@@ -142,17 +142,17 @@ fun makeErrorState name st =
 
 
 
-(* ============================================================ 
-   Functions to call the solver 
+(* ============================================================
+   Functions to call the solver
    ============================================================ *)
 
 (* Path to Yices executable *)
 exception YICES_EXECUndefinedError;
 
-fun getYICES_EXEC() = 
+fun getYICES_EXEC() =
  case Portable.getEnv "YICES_EXEC" of
     SOME path_name => path_name
-  | NONE           => (print "Environment variable YICES_EXEC undefined.\n"; 
+  | NONE           => (print "Environment variable YICES_EXEC undefined.\n";
                        print "Add:\n setenv YICES_EXEC \"<path to YICES executable>\" \nto ~/.shrc\n";
                        raise YICES_EXECUndefinedError);
 
@@ -167,8 +167,8 @@ fun getYICES_EXEC() =
 
 
 fun execPath name  =
- let val exec =  getYICES_EXEC() ^ " -st -e " ^ yicesPath 
-                 ^ name ^ ".ys > " ^ yicesPath ^ "results/" ^ 
+ let val exec =  getYICES_EXEC() ^ " -st -e " ^ yicesPath
+                 ^ name ^ ".ys > " ^ yicesPath ^ "results/" ^
                  name ^ ".res";
   in
     (Portable.system(exec))
@@ -177,10 +177,10 @@ end;
 
 (* same function as above but using a timeout.
    n is an integer and corresponds to the timeout given in
-   seconds 
+   seconds
 *)
 fun limitedExecPath name n  =
-  let val exec = getYICES_EXEC() ^ " -st -e --timeout=" ^ int_to_string(n) ^ yicesPath 
+  let val exec = getYICES_EXEC() ^ " -st -e --timeout=" ^ int_to_string(n) ^ yicesPath
                  ^ name ^ ".ys > " ^ yicesPath ^ "results/" ^ name ^ ".res";
    in
      (Portable.system(exec)
@@ -195,11 +195,11 @@ end;
 (* ======================================================= *)
 
 
-local 
+local
 
 (* Prove a term is satisfiable using a supplied solution  *)
 
-(* 
+(*
    Obscure code to convert a string to a HOL integer, e.g.:
    string_to_int_term "37"  = ``37``
    string_to_int_term "~37" = ``~37``
@@ -216,12 +216,12 @@ fun lookupSolution soln var =
     if ty=``:int`` then string_to_int_term v
     else (if v="0" then ``F`` else ``T``)
 end;
-                                                                             
-            
+
+
 (*
    proveSat tm soln existentially quantifies all variables in tm and then
    proves the result using soln (which is assumed to have been supplied
-   by invoking a solver). 
+   by invoking a solver).
  *)
 fun proveSat tm soln =
   let val frees = free_vars tm
@@ -242,13 +242,13 @@ in
    a theorem as an oracle
    If the solver finds solutions then uses the values that have
    been found and DECIDE_TAC to return a HOL theorem *)
-(* no printing because printing are supposed to be done 
+(* no printing because printing are supposed to be done
    in functions that call the external solver *)
 
 (* return a pair (thm,time) where thm is the theorem
    and the time is the time taken by the solver *)
 
-(* if timeout has been reached by the solver, then 
+(* if timeout has been reached by the solver, then
    raise exception ExtSolverTimeout                  *)
 
 (* use default format for integers: 16 bits          *)
@@ -258,16 +258,16 @@ fun extSolvSMT name tm =
  let val (vars,bdy) = strip_exists tm
  in
  (print("Calling external SMT solver on:\n");
-  print_term bdy; 
+  print_term bdy;
   print "\n";
   printTerm_to_file(name,bdy);
   execPath name ;
   let val (sol,time) = getSolutions name;
   in
       if (null sol)
-      then  
+      then
 	  (EQF_INTRO(mk_oracle_thm name ([], mk_neg tm)),time)
-      else 
+      else
 	  (EQT_INTRO(mk_oracle_thm name ([],tm)),time)
           (*(EQT_INTRO(proveSat bdy (hd sol)),time)*)
   end)
@@ -276,12 +276,12 @@ fun extSolvSMT name tm =
 
 
 (* same function as above but use a timeout *)
-(* TODO 
+(* TODO
 fun extSolvSMTTimeout name tm n f =
  let val (vars,bdy) = strip_exists tm
  in
  (print("Calling external SMT solver with timeout on:\n");
-  print_term bdy; 
+  print_term bdy;
   print "\n";
   printXML_to_file(name,bdy);
   limitedExecPath name n ;
@@ -292,9 +292,9 @@ fun extSolvSMTTimeout name tm n f =
    then raise ExtSolverTimeout
    else
       if (null sol)
-      then  
+      then
 	  (EQF_INTRO(mk_oracle_thm tag ([], mk_neg tm)),time)
-      else 
+      else
 	  (EQT_INTRO(mk_oracle_thm tag ([],tm)),time)
           (*(EQT_INTRO(proveSat bdy (hd sol)),time)*)
   end)

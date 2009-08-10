@@ -5,7 +5,7 @@ struct
 
   val ERR = mk_HOL_ERR "finite_mapLib"
 
-  local open finite_mapTheory finite_mapSyntax pred_setTheory in 
+  local open finite_mapTheory finite_mapSyntax pred_setTheory in
 
 
 val FEVERY_cs = computeLib.bool_compset ()

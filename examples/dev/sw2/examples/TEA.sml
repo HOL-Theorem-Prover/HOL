@@ -11,7 +11,7 @@
 (* for more information.                                                     *)
 (*---------------------------------------------------------------------------*)
 
-(* for interactive use  
+(* for interactive use
 fun load_path_add x = loadPath := !loadPath @ [concat Globals.HOLDIR x];
 val _ = load_path_add "/examples/mc-logic";
 val _ = load_path_add "/examples/ARM/v4";
@@ -25,26 +25,26 @@ open compiler;
 (* Cipher types                                                              *)
 (*---------------------------------------------------------------------------*)
 
-val _ = 
- type_abbrev("state", ``:word32 # word32 # word32 # 
+val _ =
+ type_abbrev("state", ``:word32 # word32 # word32 #
                          word32 # word32 # word32 # word32``);
 
 val DELTA_def = Define `DELTA = 1w`;  (* 0xe3779b9w:word32`; *)
 
-val ShiftXor_def = 
- Define 
-   `ShiftXor (x:word32,s,k0,k1) = 
+val ShiftXor_def =
+ Define
+   `ShiftXor (x:word32,s,k0,k1) =
           ((x << 4) + k0) ?? (x + s) ?? ((x >> 5) + k1)`;
 
 (* --------------------------------------------------------------------------*)
 (*	One round forward computation    				     *)
 (* --------------------------------------------------------------------------*)
 
-val Round_def = 
+val Round_def =
  Define
-   `Round ((y,z,k0,k1,k2,k3,s):state) = 
-      let s' = s + DELTA in let 
-          y' = y + ShiftXor(z, s', k0, k1) 
+   `Round ((y,z,k0,k1,k2,k3,s):state) =
+      let s' = s + DELTA in let
+          y' = y + ShiftXor(z, s', k0, k1)
       in
 	(y', z + ShiftXor(y', s', k2, k3),
 	 k0,k1,k2,k3,s')`;
@@ -56,10 +56,10 @@ val code1 = pp_compile defs1;
 (* Arbitrary number of cipher rounds                                         *)
 (*---------------------------------------------------------------------------*)
 
-val Rounds_def = 
+val Rounds_def =
  Define
-   `Rounds (n:word32,s:state) = 
-      if n = 0w then s else 
+   `Rounds (n:word32,s:state) =
+      if n = 0w then s else
          Rounds (n-1w, Round s)`;
 
 (*
@@ -99,9 +99,9 @@ val inv_defs = [ShiftXor_def, SIMP_RULE std_ss [DELTA_def] InvRound_def];
 (* Arbitrary number of decipher rounds                                       *)
 (*---------------------------------------------------------------------------*)
 
-val InvRounds_def = 
+val InvRounds_def =
  Define
-   `InvRounds (n:word32,s:state) = 
+   `InvRounds (n:word32,s:state) =
      if n=0w then s else InvRounds (n-1w, InvRound s)`;
 
 (* val defs = [ShiftXor_def, SIMP_RULE std_ss [DELTA_def] InvRound_def]; *)
@@ -113,6 +113,6 @@ val InvRounds_def =
 val TEADecrypt_def =
  Define
    `TEADecrypt (keys,txt) =
-      let (plaintxt,keys,sum) = InvRounds(32w,(txt,keys,DELTA << 5)) 
+      let (plaintxt,keys,sum) = InvRounds(32w,(txt,keys,DELTA << 5))
       in
         plaintxt`;

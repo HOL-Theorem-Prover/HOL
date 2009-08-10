@@ -12,44 +12,44 @@ val o_tm = prim_mk_const{Name="o", Thy="combin"};
 
 val update_tm = prim_mk_const{Name="UPDATE", Thy="combin"};
 
-fun mk_K(x,y) = 
-   list_mk_comb(inst[alpha |-> type_of x, 
+fun mk_K(x,y) =
+   list_mk_comb(inst[alpha |-> type_of x,
                      beta |-> type_of y]K_tm, [x,y]);
 
 fun mk_K_1 (tm,ty) = mk_comb(inst [alpha |-> type_of tm,
                                    beta  |-> ty] K_tm,tm)
 
-fun mk_S(f,g,x) = 
+fun mk_S(f,g,x) =
  let val (fdom,frng) = dom_rng(type_of f)
      val (ty1,ty2) = dom_rng frng
- in list_mk_comb(inst[alpha |-> fdom, 
+ in list_mk_comb(inst[alpha |-> fdom,
                       beta |-> ty1, gamma |-> ty2]S_tm, [f,g,x])
  end
 
 fun mk_I x = mk_comb(inst[alpha |-> type_of x]I_tm, x)
 
-fun mk_C(f,x,y) = 
+fun mk_C(f,x,y) =
  let val (fdom,frng) = dom_rng(type_of f)
      val (ty1,ty2) = dom_rng frng
- in list_mk_comb(inst[alpha |-> fdom, 
-                      beta  |-> ty1, 
+ in list_mk_comb(inst[alpha |-> fdom,
+                      beta  |-> ty1,
                       gamma |-> ty2]C_tm, [f,x,y])
  end
 
-fun mk_W(f,x) = 
+fun mk_W(f,x) =
   let val (ty1,rng) = dom_rng (type_of f)
       val (_,ty2) = dom_rng rng
   in list_mk_comb(inst[alpha |-> ty1, beta |-> ty2]W_tm, [f,x])
- end 
+ end
 
-fun mk_o(f,g) = 
+fun mk_o(f,g) =
  let val (fdom,frng) = dom_rng(type_of f)
      val (gdom,_)    = dom_rng(type_of g)
  in list_mk_comb
       (inst [alpha |-> gdom, beta |-> frng, gamma |-> fdom] o_tm, [f,g])
  end;
 
-fun mk_update(f,g) = 
+fun mk_update(f,g) =
  list_mk_comb
     (inst [alpha |-> type_of f, beta |-> type_of g] update_tm, [f,g])
  handle HOL_ERR _ => raise ERR "mk_update" "";
@@ -76,14 +76,14 @@ val is_update = can dest_update
 
 val fail_tm = prim_mk_const{Name="FAIL", Thy="combin"};
 
-fun mk_fail (f,s,args) = 
+fun mk_fail (f,s,args) =
    list_mk_comb(inst[alpha |-> type_of f,
-                     beta |-> bool]fail_tm, 
+                     beta |-> bool]fail_tm,
                  f::mk_var(s,bool)::args);
-fun dest_fail M = 
+fun dest_fail M =
   case strip_comb M
    of (c,f::s::args) =>
-        if same_const c fail_tm then 
+        if same_const c fail_tm then
           if is_var s then (f,fst(dest_var s),args)
           else raise ERR "dest_fail" "need a variable"
         else raise ERR "dest_fail" "not a FAIL term"

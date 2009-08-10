@@ -41,8 +41,8 @@
 (*                                                                           *)
 (*****************************************************************************)
 
-(* Comment out for compilation 
-load "HolBddLib"; 
+(* Comment out for compilation
+load "HolBddLib";
 load "PrimitiveBddRules";
 load "ListPair";
 *)
@@ -64,15 +64,15 @@ open pairTheory;
 
 val _ = new_theory "KatiPuzzle";
 
-val _ = Globals.priming := SOME ""; 
+val _ = Globals.priming := SOME "";
 
 (*****************************************************************************)
 (* Varmap (i.e. variable ordering) for later use                             *)
 (*****************************************************************************)
 
-val basic_varmap = 
- extendVarmap 
-  (map 
+val basic_varmap =
+ extendVarmap
+  (map
     (fn s => mk_var(s,bool))
     ["v0","v1","v2","v3","v4","v5","v6","v7","v8",
      "v0'","v1'","v2'","v3'","v4'","v5'","v6'","v7'","v8'",
@@ -86,7 +86,7 @@ val basic_varmap =
 
 val Init_def =
  Define
-  `Init(v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool) = 
+  `Init(v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool) =
     ~v0 /\ v1 /\ ~v2 /\ v3 /\ ~v4 /\ v5 /\ ~v6 /\ v7 /\ ~v8`;
 
 (*****************************************************************************)
@@ -123,14 +123,14 @@ val Trans_def =
     \/
     ((v0'=v0)/\(v1'=v1)/\(v2'=v2)/\(v3'=v3)/\(v4'=v4)/\       (* toggle 8 *)
      (v5'=~v5)/\(v6'=v6)/\(v7'=~v7)/\(v8'=~v8) /\ c3' /\ ~c2' /\ ~c1' /\ ~c0')`;
-   
+
 (*****************************************************************************)
 (* Final state                                                               *)
 (*****************************************************************************)
 
 val Final_def =
  Define
-  `Final(v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool) = 
+  `Final(v0,v1,v2,v3,v4,v5,v6,v7,v8,c0:bool,c1:bool,c2:bool,c3:bool) =
     ~v0 /\ ~v1 /\ ~v2 /\ ~v3 /\ ~v4 /\ ~v5 /\ ~v6 /\ ~v7 /\ ~v8`;
 
 val (_,thl,thfin) = findTrace basic_varmap Trans_def Init_def Final_def;
@@ -138,21 +138,21 @@ val (_,thl,thfin) = findTrace basic_varmap Trans_def Init_def Final_def;
 (******************************************************************************
 Stuff commented out here superceded by findTrace
 
-val s = 
+val s =
  ``(v0:bool,v1:bool,v2:bool,v3:bool,v4:bool,v5:bool,v6:bool,v7:bool,v8:bool,
     c0:bool,c1:bool,c2:bool,c3:bool)``;
 
-val (by_th0,by_thsuc) = 
+val (by_th0,by_thsuc) =
  time
   (REWRITE_RULE[Eq_def,pairTheory.PAIR_EQ] ## REWRITE_RULE[Trans_def])
-  (MkIterThms 
-    MachineTransitionTheory.ReachBy_rec 
+  (MkIterThms
+    MachineTransitionTheory.ReachBy_rec
     (lhs(concl(SPEC_ALL Trans_def)))
     (lhs(concl(ISPECL[``(F,T,F,T,F,T,F,T,F,F,F,F,F)``,s]Eq_def))));
 
-val (FinalTb,FinalTb') = 
- computeFixedpoint 
-  (fn n => fn tb => print ".") 
+val (FinalTb,FinalTb') =
+ computeFixedpoint
+  (fn n => fn tb => print ".")
   basic_varmap
   (by_th0,by_thsuc);
 
@@ -160,21 +160,21 @@ val ReachTb =
  BddEqMp
   (SYM
     (AP_THM
-     (MATCH_MP 
+     (MATCH_MP
        ReachBy_fixedpoint
        (EXT
-         (PGEN 
-           (mk_var("s",type_of s)) 
-           s 
+         (PGEN
+           (mk_var("s",type_of s))
+           s
            (BddThmOracle(BddOp(Biimp,FinalTb,FinalTb'))))))
      s))
   FinalTb;
 
-val Trace = 
- computeTrace 
-  (fn n => fn tb => print".") 
-  basic_varmap 
-  Final_def 
+val Trace =
+ computeTrace
+  (fn n => fn tb => print".")
+  basic_varmap
+  Final_def
   (by_th0,by_thsuc);
 
 val Solution = traceBack basic_varmap Trace Final_def Trans_def;
@@ -210,7 +210,7 @@ fun PrintState flag tm =
  in
   (nl();
    (if flag then (print"  "; pb(s 12, s 11, s 10, s 9) ; nl()) else ());
-   print"      "    ;p 0 ;sp();p 1 ;sp();p 2 ;nl(); 
+   print"      "    ;p 0 ;sp();p 1 ;sp();p 2 ;nl();
    print"      |     |     |"; nl();
    print"      "    ;p 3 ;sp();p 4 ;sp();p 5 ;nl();
    print"      |     |     |"; nl();
@@ -223,7 +223,7 @@ fun PrintState flag tm =
 
 fun PrintTrace cl =
  (print "\nThe number shows the position toggled to get to the following state\n\n";
-  PrintState false (hd cl); 
+  PrintState false (hd cl);
   map (PrintState true) (tl cl));
 
 val _ = PrintTrace

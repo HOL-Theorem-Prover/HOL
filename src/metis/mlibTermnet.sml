@@ -265,7 +265,7 @@ fun filter pred =
       | filt (SINGLE (tm,n)) = omap (fn (i,n) => (i, SINGLE (tm,n))) (filt n)
       | filt (MULTIPLE (vs,fs)) =
       let
-        fun subfilt (x, n, im as (i,m)) = 
+        fun subfilt (x, n, im as (i,m)) =
           case filt n of NONE => im | SOME (j,n) => (i + j, M.insert (m,x,n))
         val (i,vs) =
           case Option.mapPartial filt vs of NONE => (0,NONE)

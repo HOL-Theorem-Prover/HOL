@@ -7,7 +7,7 @@ load "ringLib";
 *)
 
 open HolKernel Parse boolLib integerTheory integerRingTheory
-     
+
 infix THEN THENL THENC o;
 infix 8 by;
 
@@ -17,7 +17,7 @@ val int_0 = intSyntax.zero_tm
 val int_1 = intSyntax.one_tm
 fun is_closed_int t =
   mem t [int_0,int_1] orelse
-    ((is_comb t) andalso (rator t)=num_to_int) andalso 
+    ((is_comb t) andalso (rator t)=num_to_int) andalso
      (numSyntax.is_numeral (rand t));
 
 val _ = ringLib.declare_ring

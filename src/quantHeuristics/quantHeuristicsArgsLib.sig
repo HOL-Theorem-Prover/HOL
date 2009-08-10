@@ -7,7 +7,7 @@ sig
   val TypeBase_qhca        : quantHeuristicsLib.quant_heuristic_combine_argument
 
 
-  (* ones for specific types *)   
+  (* ones for specific types *)
   val pair_qhca    : quantHeuristicsLib.quant_heuristic_combine_argument;
   val num_qhca     : quantHeuristicsLib.quant_heuristic_combine_argument;
   val option_qhca  : quantHeuristicsLib.quant_heuristic_combine_argument;

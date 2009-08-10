@@ -17,7 +17,7 @@
   quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
      pairTools numLib metisLib pairTheory word8Theory tablesTheory MultTheory;
 
 (*---------------------------------------------------------------------------*)
@@ -40,10 +40,10 @@ val _ = new_theory "RoundOp";
 (* a special format.                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val _ = type_abbrev("block", 
-                    Type`:word8 # word8 # word8 # word8 # 
-                          word8 # word8 # word8 # word8 # 
-                          word8 # word8 # word8 # word8 # 
+val _ = type_abbrev("block",
+                    Type`:word8 # word8 # word8 # word8 #
+                          word8 # word8 # word8 # word8 #
+                          word8 # word8 # word8 # word8 #
                           word8 # word8 # word8 # word8`);
 
 val _ = type_abbrev("state", Type`:block`);
@@ -61,7 +61,7 @@ val ZERO_BLOCK_def = Define
 
 val FORALL_BLOCK = Q.store_thm
 ("FORALL_BLOCK",
- `(!b:block. P b) = 
+ `(!b:block. P b) =
    !w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16.
     P (w1,w2,w3,w4,w5,w6,w7,w8,w9,w10,w11,w12,w13,w14,w15,w16)`,
  SIMP_TAC std_ss [FORALL_PROD]);
@@ -92,7 +92,7 @@ val XOR_BLOCK_INV = Q.store_thm
 val XOR_BLOCK_AC = Q.store_thm
 ("XOR_BLOCK_AC",
  `(!x y z:block. XOR_BLOCK (XOR_BLOCK x y) z = XOR_BLOCK x (XOR_BLOCK y z)) /\
-  (!x y:block. XOR_BLOCK x y = XOR_BLOCK y x)`, 
+  (!x y:block. XOR_BLOCK x y = XOR_BLOCK y x)`,
  SIMP_TAC std_ss [FORALL_BLOCK,XOR_BLOCK_def, XOR8_AC]);
 
 val [a,c] = CONJUNCTS XOR8_AC;
@@ -147,7 +147,7 @@ val genSubBytes_def = try Define
                    b10,b11,b12,b13,
                    b20,b21,b22,b23,
                    b30,b31,b32,b33) :state)
-                          = 
+                          =
              (S b00, S b01, S b02, S b03,
               S b10, S b11, S b12, S b13,
               S b20, S b21, S b22, S b23,
@@ -165,7 +165,7 @@ val SubBytes_Inversion = Q.store_thm
 
 
 (*---------------------------------------------------------------------------
-    Left-shift the first row not at all, the second row by 1, the 
+    Left-shift the first row not at all, the second row by 1, the
     third row by 2, and the last row by 3. And the inverse operation.
  ---------------------------------------------------------------------------*)
 
@@ -189,7 +189,7 @@ val InvShiftRows_def = Define
                 (b00,b01,b02,b03,
                  b10,b11,b12,b13,
                  b20,b21,b22,b23,
-                 b30,b31,b32,b33) :state`; 
+                 b30,b31,b32,b33) :state`;
 
 (*---------------------------------------------------------------------------
         InvShiftRows inverts ShiftRows
@@ -222,14 +222,14 @@ val InvShiftRows_InvSubBytes_Commute = Q.store_thm
  ---------------------------------------------------------------------------*)
 
 val MultCol_def = Define
- `MultCol (a,b,c,d) = 
+ `MultCol (a,b,c,d) =
    ((TWO ** a)   # (THREE ** b) #  c           # d,
      a           # (TWO ** b)   # (THREE ** c) # d,
      a           #  b           # (TWO ** c)   # (THREE ** d),
     (THREE ** a) #  b           #  c           # (TWO ** d))`;
 
 val InvMultCol_def = Define
- `InvMultCol (a,b,c,d) = 
+ `InvMultCol (a,b,c,d) =
    ((E_HEX ** a) # (B_HEX ** b) # (D_HEX ** c) # (NINE  ** d),
     (NINE  ** a) # (E_HEX ** b) # (B_HEX ** c) # (D_HEX ** d),
     (D_HEX ** a) # (NINE  ** b) # (E_HEX ** c) # (B_HEX ** d),
@@ -246,7 +246,7 @@ val BYTE_CASES_TAC =
  Ho_Rewrite.ONCE_REWRITE_TAC [FORALL_BYTE_VARS] THEN EVAL_TAC
  THEN REWRITE_TAC [REWRITE_RULE [ZERO_def] XOR8_ZERO]
  THEN Cases THEN PURE_REWRITE_TAC [COND_CLAUSES]
- THEN REPEAT Cases 
+ THEN REPEAT Cases
  THEN EVAL_TAC;
 
 val lemma_a1 = Q.prove
@@ -317,12 +317,12 @@ val lemma_d4 = Count.apply Q.prove
 (* The following lemma is hideous to prove without permutative rewriting     *)
 (*---------------------------------------------------------------------------*)
 
-val rearrange_xors = Q.prove   
+val rearrange_xors = Q.prove
 (`(a1 # b1 # c1 # d1) #
   (a2 # b2 # c2 # d2) #
   (a3 # b3 # c3 # d3) #
-  (a4 # b4 # c4 # d4) 
-     = 
+  (a4 # b4 # c4 # d4)
+     =
   (a1 # a2 # a3 # a4) #
   (b1 # b2 # b3 # b4) #
   (c1 # c2 # c3 # c4) #
@@ -330,49 +330,49 @@ val rearrange_xors = Q.prove
  RW_TAC std_ss [AC a c]);
 
 val mix_lemma1 = Q.prove
-(`!a b c d. 
+(`!a b c d.
    (E_HEX ** ((TWO ** a) # (THREE ** b) # c # d)) #
    (B_HEX ** (a # (TWO ** b) # (THREE ** c) # d)) #
    (D_HEX ** (a # b # (TWO ** c) # (THREE ** d))) #
    (NINE  ** ((THREE ** a) # b # c # (TWO ** d)))
       = a`,
- RW_TAC std_ss [ConstMultDistrib] 
-   THEN ONCE_REWRITE_TAC [rearrange_xors] 
+ RW_TAC std_ss [ConstMultDistrib]
+   THEN ONCE_REWRITE_TAC [rearrange_xors]
    THEN RW_TAC std_ss [lemma_a1,lemma_a2,lemma_a3,lemma_a4,XOR8_ZERO]);
 
 val mix_lemma2 = Q.prove
-(`!a b c d. 
+(`!a b c d.
    (NINE  ** ((TWO ** a) # (THREE ** b) # c # d)) #
    (E_HEX ** (a # (TWO ** b) # (THREE ** c) # d)) #
    (B_HEX ** (a # b # (TWO ** c) # (THREE ** d))) #
    (D_HEX ** ((THREE ** a) # b # c # (TWO ** d)))
      = b`,
- RW_TAC std_ss [ConstMultDistrib] 
-   THEN ONCE_REWRITE_TAC [rearrange_xors] 
+ RW_TAC std_ss [ConstMultDistrib]
+   THEN ONCE_REWRITE_TAC [rearrange_xors]
    THEN RW_TAC std_ss [lemma_b1,lemma_b2,lemma_b3,lemma_b4,
                        XOR8_ZERO, ONCE_REWRITE_RULE [XOR8_AC] XOR8_ZERO]);
 
 val mix_lemma3 = Q.prove
-(`!a b c d. 
+(`!a b c d.
    (D_HEX ** ((TWO ** a) # (THREE ** b) # c # d)) #
    (NINE  ** (a # (TWO ** b) # (THREE ** c) # d)) #
    (E_HEX ** (a # b # (TWO ** c) # (THREE ** d))) #
    (B_HEX ** ((THREE ** a) # b # c # (TWO ** d)))
      = c`,
- RW_TAC std_ss [ConstMultDistrib] 
-   THEN ONCE_REWRITE_TAC [rearrange_xors] 
+ RW_TAC std_ss [ConstMultDistrib]
+   THEN ONCE_REWRITE_TAC [rearrange_xors]
    THEN RW_TAC std_ss [lemma_c1,lemma_c2,lemma_c3,lemma_c4,
                        XOR8_ZERO, ONCE_REWRITE_RULE [XOR8_AC] XOR8_ZERO]);
 
 val mix_lemma4 = Q.prove
-(`!a b c d. 
+(`!a b c d.
    (B_HEX ** ((TWO ** a) # (THREE ** b) # c # d)) #
    (D_HEX ** (a # (TWO ** b) # (THREE ** c) # d)) #
    (NINE  ** (a # b # (TWO ** c) # (THREE ** d))) #
    (E_HEX ** ((THREE ** a) # b # c # (TWO ** d)))
      = d`,
- RW_TAC std_ss [ConstMultDistrib] 
-   THEN ONCE_REWRITE_TAC [rearrange_xors] 
+ RW_TAC std_ss [ConstMultDistrib]
+   THEN ONCE_REWRITE_TAC [rearrange_xors]
    THEN RW_TAC std_ss [lemma_d1,lemma_d2,lemma_d3,lemma_d4,
                        XOR8_ZERO, ONCE_REWRITE_RULE [XOR8_AC] XOR8_ZERO]);
 
@@ -401,7 +401,7 @@ val genMixColumns_def = Define
    let (b01', b11', b21', b31') = MC (b01,b11,b21,b31) in
    let (b02', b12', b22', b32') = MC (b02,b12,b22,b32) in
    let (b03', b13', b23', b33') = MC (b03,b13,b23,b33)
-   in 
+   in
     (b00', b01', b02', b03',
      b10', b11', b12', b13',
      b20', b21', b22', b23',
@@ -431,8 +431,8 @@ val AddRoundKey_def = Define `AddRoundKey = XOR_BLOCK`;
 
 val InvMixColumns_Distrib = Q.store_thm
 ("InvMixColumns_Distrib",
- `!s k. InvMixColumns (AddRoundKey s k) 
-            = 
+ `!s k. InvMixColumns (AddRoundKey s k)
+            =
         AddRoundKey (InvMixColumns s) (InvMixColumns k)`,
  SIMP_TAC std_ss [FORALL_BLOCK] THEN
  RW_TAC std_ss [XOR_BLOCK_def, AddRoundKey_def, InvMixColumns_def, LET_THM,

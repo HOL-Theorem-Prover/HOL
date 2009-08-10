@@ -36,7 +36,7 @@ val vars   =  ty_antiq( ==`:var list`== );
 val subs   =  ty_antiq( ==`:(var # 'a term1) list`== );
 
 
- 
+
 (* --------------------------------------------------------------------- *)
 (* Define alpha equivalence for lambda expressions.                      *)
 (* --------------------------------------------------------------------- *)
@@ -307,7 +307,7 @@ val ALPHA1_patterns = [--`^ALPHA1 t1 t2 xs ys`--];
 
 val ALPHA1_rules_tm =
 --`
-       
+
        (* -------------------------------------------- *)
                 (^ALPHA1 (Con1 a) (Con1 a) xs ys)                /\
 
@@ -334,7 +334,7 @@ val (ALPHA1_rules_sat,ALPHA1_ind_thm) =
 val ALPHA1_inv_thms = prove_inversion_theorems
     ALPHA1_rules_sat ALPHA1_ind_thm;
 
-val ALPHA1_strong_ind = prove_strong_induction 
+val ALPHA1_strong_ind = prove_strong_induction
     ALPHA1_rules_sat ALPHA1_ind_thm;
 
 val _ = save_thm ("ALPHA1_rules_sat", ALPHA1_rules_sat);
@@ -503,7 +503,7 @@ val ALPHA1_FV = store_thm
    ("ALPHA1_FV",
     (--`!t1 t2 :'a term1 xs ys.
          ALPHA1 t1 t2 xs ys ==>
-         (!x. x IN FV1 t1 ==> 
+         (!x. x IN FV1 t1 ==>
               (?y. y IN FV1 t2 /\ alpha_match xs ys x y))`--),
 
     rule_induct ALPHA1_strong_ind
@@ -524,7 +524,7 @@ val ALPHA1_FV = store_thm
 
 
 val FORALL_OR_IMP = TAC_PROOF(([],
-    --`!s t (f:'a->'b) g. 
+    --`!s t (f:'a->'b) g.
         (!x. x IN s \/ x IN t ==> (f x = g x)) ==>
         ((!x. x IN s ==> (f x = g x)) /\
          (!x. x IN t ==> (f x = g x)))`--),
@@ -534,7 +534,7 @@ val FORALL_OR_IMP = TAC_PROOF(([],
 
 val ALPHA1_FREE_CONTEXT = store_thm
    ("ALPHA1_FREE_CONTEXT",
-    (--`!t1:'a term1 t2 xs ys xs' ys'. 
+    (--`!t1:'a term1 t2 xs ys xs' ys'.
           ((LENGTH xs = LENGTH ys) = (LENGTH xs' = LENGTH ys')) /\
           (!x. (x IN FV1 t1) ==>
                (SUB1 ((xs // ys):^subs) x = SUB1 (xs' // ys') x)) /\
@@ -610,7 +610,7 @@ val ALPHA1_FREE_CONTEXT = store_thm
 
 val ALPHA1_EXTRANEOUS_CONTEXT = store_thm
    ("ALPHA1_EXTRANEOUS_CONTEXT",
-    (--`!t1 t2 :'a term1 xs ys x y. 
+    (--`!t1 t2 :'a term1 xs ys x y.
           ~(x IN FV1 t1) /\ ~(y IN FV1 t2) ==>
           (ALPHA1 t1 t2 (CONS x xs) (CONS y ys) =
            ALPHA1 t1 t2 xs ys)`--),

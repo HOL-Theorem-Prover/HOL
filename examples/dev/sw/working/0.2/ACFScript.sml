@@ -35,12 +35,12 @@ val tr_INTRO = store_thm
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f2 x) x))
      ==> (f:'a->'a = tr f1 f2)``,
 
-  REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN 
-  ONCE_REWRITE_TAC [FUN_EQ_THM] THEN 
-  HO_MATCH_MP_TAC tr_ind THEN 
-  GEN_TAC THEN STRIP_TAC THEN 
-  IMP_RES_TAC (DISCH_ALL tr_def) THEN 
-  POP_ASSUM (fn th => ONCE_REWRITE_TAC[th]) THEN 
+  REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
+  ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
+  HO_MATCH_MP_TAC tr_ind THEN
+  GEN_TAC THEN STRIP_TAC THEN
+  IMP_RES_TAC (DISCH_ALL tr_def) THEN
+  POP_ASSUM (fn th => ONCE_REWRITE_TAC[th]) THEN
   METIS_TAC[]
  );
 
@@ -51,16 +51,16 @@ val rec_INTRO = store_thm
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f3 x) x))
      ==> (f:'a->'b = sc (tr f1 f3) f2)``,
 
-  REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN 
-  ONCE_REWRITE_TAC [FUN_EQ_THM] THEN 
+  REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
+  ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
   GEN_TAC THEN
   IMP_RES_TAC  relationTheory.WF_INDUCTION_THM THEN
   POP_ASSUM (MATCH_MP_TAC o SIMP_RULE std_ss [] o
           Q.SPEC `\x. f x = sc (tr f1 f3) f2 x`) THEN
   REPEAT STRIP_TAC THEN
-  Cases_on `f1 x` THENL [ 
+  Cases_on `f1 x` THENL [
     METIS_TAC [sc_def, DISCH_ALL tr_def],
-  
+
     IMP_RES_TAC (DISCH_ALL tr_def) THEN
     METIS_TAC [sc_def]
   ]

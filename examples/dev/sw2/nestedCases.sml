@@ -34,7 +34,7 @@ val destruct_suc_def = Define `
   (destruct_suc (SUC x) = x)`;
 
 val num_case_lem = Q.prove (
-  `num_case b f2 z = 
+  `num_case b f2 z =
      if is_0 z then b
      else let v = destruct_suc z in f2 v`,
   Cases_on `z` THEN
@@ -48,7 +48,7 @@ val num_case_lem = Q.prove (
 
 val lems = [pairTheory.FORALL_PROD, pairTheory.pair_case_thm, num_case_lem, is_0_lem];
 
-fun elim_pattern_match defs = 
+fun elim_pattern_match defs =
   List.map (SIMP_RULE std_ss lems) defs
 
 (*-----------------------------------------------------------------------------------------*)

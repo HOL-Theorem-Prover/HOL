@@ -10,7 +10,7 @@ val _ = new_theory "x86_decoder";
 
 (* ---------------------------------------------------------------------------------- *>
 
-  A decoder for x86 instructions is defined and at the end pre-evaliuated for 
+  A decoder for x86 instructions is defined and at the end pre-evaliuated for
   fast execution with EVAL.
 
 <* ---------------------------------------------------------------------------------- *)
@@ -19,8 +19,8 @@ val _ = new_theory "x86_decoder";
 
 val STR_SPACE_AUX_def = Define `
   (STR_SPACE_AUX n "" = "") /\
-  (STR_SPACE_AUX n (STRING c s) = 
-     if n = 0 then STRING #" " (STRING c (STR_SPACE_AUX 1 s)) 
+  (STR_SPACE_AUX n (STRING c s) =
+     if n = 0 then STRING #" " (STRING c (STR_SPACE_AUX 1 s))
               else STRING c (STR_SPACE_AUX (n-1) s))`;
 
 val bytebits_def = Define `
@@ -29,7 +29,7 @@ val bytebits_def = Define `
 (* interprete the IA-32 manuals' syntax *)
 
 val check_opcode_def = Define `
-  check_opcode s = 
+  check_opcode s =
     let y = (n2bits 3 o char2num o HD o TL o EXPLODE) s in
       assert (\g. g "Reg/Opcode" = y)`;
 
@@ -37,13 +37,13 @@ val read_SIB_def = Define `
   read_SIB =
     assign_drop "Base" 3 >> assign_drop "Index" 3 >> assign_drop "Scale" 2 >>
     option_try [
-      assert (\g. (g "Mod" = [F;F]) /\  (g "Base" = [T;F;T])) >> assign_drop "disp32" 32; 
+      assert (\g. (g "Mod" = [F;F]) /\  (g "Base" = [T;F;T])) >> assign_drop "disp32" 32;
       assert (\g. (g "Mod" = [F;F]) /\ ~(g "Base" = [T;F;T]));
       assert (\g. (g "Mod" = [T;F])) >> assign_drop "disp8" 8;
       assert (\g. (g "Mod" = [F;T])) >> assign_drop "disp32" 32]`;
 
 val read_ModRM_def = Define `
-  read_ModRM = 
+  read_ModRM =
     assign_drop "R/M" 3 >> assign_drop "Reg/Opcode" 3 >> assign_drop "Mod" 2 >>
     option_try [
       assert (\g.  (g "Mod" = [T;T]));
@@ -57,7 +57,7 @@ val is_hex_add_def = Define `
   is_hex_add x = ((IMPLODE o DROP 2 o EXPLODE) x = "+rd")`;
 
 val process_hex_add_def = Define `
-  process_hex_add name = 
+  process_hex_add name =
     let n = (hex2num o IMPLODE o TAKE 2 o EXPLODE) name in
       option_try [drop_eq (n2bits 8 (n+0)) >> assign "reg" (n2bits 3 0);
                   drop_eq (n2bits 8 (n+1)) >> assign "reg" (n2bits 3 1);
@@ -69,32 +69,32 @@ val process_hex_add_def = Define `
                   drop_eq (n2bits 8 (n+7)) >> assign "reg" (n2bits 3 7)]`;
 
 val x86_match_step_def = Define `
-  x86_match_step name = 
+  x86_match_step name =
     if is_hex name /\ (STRLEN name = 2) then     (* opcode e.g. FE, 83 and 04 *)
-      drop_eq (n2bits 8 (hex2num name))      
+      drop_eq (n2bits 8 (hex2num name))
     else if is_hex_add name then                 (* opcode + rd, e.g. F8+rd *)
-      process_hex_add name 
-    else if name = "1" then                           (* constant 1 *) 
-      assign_drop name 0  
-    else if MEM name ["ib";"cb";"rel8";"imm8"] then   (* 8-bit immediate or address *) 
-      assign_drop name 8  
-    else if MEM name ["iw";"cw";"imm16"] then         (* 16-bit immediate or address *) 
-      assign_drop name 16 
-    else if MEM name ["id";"cd";"rel32";"imm32"] then (* 32-bit immediate or address *) 
-      assign_drop name 32 
-    else if name = "/r" then                     (* normal reg + reg/mem *) 
+      process_hex_add name
+    else if name = "1" then                           (* constant 1 *)
+      assign_drop name 0
+    else if MEM name ["ib";"cb";"rel8";"imm8"] then   (* 8-bit immediate or address *)
+      assign_drop name 8
+    else if MEM name ["iw";"cw";"imm16"] then         (* 16-bit immediate or address *)
+      assign_drop name 16
+    else if MEM name ["id";"cd";"rel32";"imm32"] then (* 32-bit immediate or address *)
+      assign_drop name 32
+    else if name = "/r" then                     (* normal reg + reg/mem *)
       read_ModRM
     else if MEM name ["/0";"/1";"/2";"/3";"/4";"/5";"/6";"/7"] then (* opcode extension in ModRM *)
       read_ModRM >> check_opcode name
-    else 
+    else
       option_fail`;
 
 (* syntax classes *)
 
-val x86_binop_def = Define `x86_binop = 
+val x86_binop_def = Define `x86_binop =
   [("ADD",Xadd); ("AND",Xand); ("CMP",Xcmp); ("OR",Xor); ("SAR",Xsar); ("SHR",Xshr); ("SHL",Xshl); ("SUB",Xsub); ("TEST",Xtest); ("XOR",Xxor)]`;
 
-val x86_monop_def = Define `x86_monop = 
+val x86_monop_def = Define `x86_monop =
   [("DEC",Xdec); ("INC",Xinc); ("NOT",Xnot); ("NEG",Xneg)]`;
 
 (* x86 - decoder *)
@@ -102,23 +102,23 @@ val x86_monop_def = Define `x86_monop =
 val b2reg_def = Define `
   b2reg g name = (EL (bits2num (g name)) [EAX;ECX;EDX;EBX;ESP;EBP;ESI;EDI]):Xreg`;
 
-val decode_Xr32_def = Define `  
+val decode_Xr32_def = Define `
   decode_Xr32 g name =
     if name = "EAX" then EAX else
       if g "reg" = [] then b2reg g "Reg/Opcode" else b2reg g "reg"`;
 
 val decode_SIB_def = Define `
-  decode_SIB g = 
+  decode_SIB g =
     let scaled_index = (if g "Index" = [F;F;T] then NONE else SOME (b2w g "Scale",b2reg g "Index")) in
       if g "Base" = [T;F;T] then (* the special case indicated by "[*]" *)
         if g "Mod" = [F;F] then Xm scaled_index NONE (b2w g "disp32") else
         if g "Mod" = [T;F] then Xm scaled_index (SOME EBP) (b2w g "disp8") else
-        (* g "Mod" = [F;T] *)   Xm scaled_index (SOME EBP) (b2w g "disp32") 
+        (* g "Mod" = [F;T] *)   Xm scaled_index (SOME EBP) (b2w g "disp32")
       else (* normal cases, just need to read off the correct displacement *)
         let disp = (if (g "Mod" = [T;F]) then sw2sw ((b2w g "disp8"):word8) else b2w g "disp32") in
         let disp = (if (g "Mod" = [F;F]) then 0w else disp) in
           Xm scaled_index (SOME (b2reg g "Base")) disp`;
-    
+
 val decode_Xrm32_def = Define `  (* sw2sw = sign-extension *)
   decode_Xrm32 g name =
     if name = "EAX" then Xr EAX else
@@ -130,33 +130,33 @@ val decode_Xrm32_def = Define `  (* sw2sw = sign-extension *)
       if  (g "Mod" = [T;T]) then Xr (b2reg g "R/M") else Xr (b2reg g "reg") `;
 
 val decode_Xconst_def = Define `
-  decode_Xconst name g = 
+  decode_Xconst name g =
    if name = "imm8"  then sw2sw:word8 ->word32 (b2w g "ib") else
    if name = "rel8"  then sw2sw:word8 ->word32 (b2w g "cb") else
    if name = "imm16" then sw2sw:word16->word32 (b2w g "iw") else
    if name = "imm32" then b2w g "id" else
-   if name = "rel32" then b2w g "cd" else 
+   if name = "rel32" then b2w g "cd" else
    if name = "1"     then 1w else 0w`;
 
 val decode_Xdest_src_def = Define `
   decode_Xdest_src g dest src =
-    if MEM src ["r32";"r8"] then 
-      Xrm_r (decode_Xrm32 g dest) (decode_Xr32 g src)  
-    else if MEM src ["r/m32";"r/m8"] then 
-      Xr_rm (decode_Xr32 g dest)  (decode_Xrm32 g src) 
-    else if src = "m" then 
-      Xr_rm (decode_Xr32 g dest)  (decode_Xrm32 g src) 
+    if MEM src ["r32";"r8"] then
+      Xrm_r (decode_Xrm32 g dest) (decode_Xr32 g src)
+    else if MEM src ["r/m32";"r/m8"] then
+      Xr_rm (decode_Xr32 g dest)  (decode_Xrm32 g src)
+    else if src = "m" then
+      Xr_rm (decode_Xr32 g dest)  (decode_Xrm32 g src)
     else
       Xrm_i (decode_Xrm32 g dest) (decode_Xconst src g)`;
 
-val decode_Xconst_or_zero_def = Define `  
+val decode_Xconst_or_zero_def = Define `
   decode_Xconst_or_zero ts g =
     if LENGTH ts < 2 then 0w else decode_Xconst (EL 1 ts) g`;
 
-val decode_Ximm_rm_def = Define `  
+val decode_Ximm_rm_def = Define `
   decode_Ximm_rm ts g =
-    if MEM (EL 1 ts) ["r/m32";"r32";"r/m8";"r8"] 
-    then Xi_rm (decode_Xrm32 g (EL 1 ts)) 
+    if MEM (EL 1 ts) ["r/m32";"r32";"r/m8";"r8"]
+    then Xi_rm (decode_Xrm32 g (EL 1 ts))
     else Xi (decode_Xconst (EL 1 ts) g)`;
 
 val x86_select_op_def = Define `
@@ -171,7 +171,7 @@ val x86_syntax_monop = ``
 val X_SOME_def = Define `X_SOME f = SOME o (\(g,w). (f g,w))`;
 
 val x86_syntax_def = Define `
-  x86_syntax ts = 
+  x86_syntax ts =
     if LENGTH ts = 0 then option_fail else
     if (HD ts = "CMP") /\ MEM "r/m8" ts then X_SOME (\g. Xcmp_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
     if (HD ts = "MOV") /\ MEM "r/m8" ts then X_SOME (\g. Xmov_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
@@ -212,7 +212,7 @@ val x86_syntax_def = Define `
     if HD ts = "DIV"     then X_SOME (\g. Xdiv  (decode_Xrm32 g (EL 1 ts))) else
     if HD ts = "CALL"    then X_SOME (\g. Xcall (decode_Ximm_rm ts g)) else
     if HD ts = "RET"     then X_SOME (\g. Xret (decode_Xconst_or_zero ts g)) else option_fail`;
-  
+
 
 (* a list of x86 instructions, ordered by the combination of addressing modes they support *)
 
@@ -257,10 +257,10 @@ val x86_syntax_list = `` [
     " 33 /r     | XOR r32, r/m32    ";
 
     " 0F B1 /r  | CMPXCHG r/m32, r32";
-    " 0F C1 /r  | XADD r/m32, r32   "; 
-    " 90+rd     | XCHG EAX, r32     "; 
-    " 87 /r     | XCHG r/m32, r32   "; 
-    
+    " 0F C1 /r  | XADD r/m32, r32   ";
+    " 90+rd     | XCHG EAX, r32     ";
+    " 87 /r     | XCHG r/m32, r32   ";
+
     " FF /1     | DEC r/m32         ";
     " 48+rd     | DEC r32           ";
     " FF /0     | INC r/m32         ";
@@ -302,7 +302,7 @@ val x86_syntax_list = `` [
     " 73 cb     | JNB rel8          ";
     " 0F 72 cd  | JB rel32          ";
     " 0F 73 cd  | JNB rel32         ";
- 
+
     " 0F 44 /r  | CMOVE r32, r/m32  ";
     " 0F 45 /r  | CMOVNE r32, r/m32 ";
     " 0F 48 /r  | CMOVS r32, r/m32  ";
@@ -324,23 +324,23 @@ val x86_syntax_list = `` [
     " F7 /6     | DIV r/m32         ";
     " F7 /4     | MUL r/m32         ";
 
-    " C6 /0 ib  | MOV r/m8, imm8    "; 
-    " 88 /r     | MOV r/m8, r8      "; 
+    " C6 /0 ib  | MOV r/m8, imm8    ";
+    " 88 /r     | MOV r/m8, r8      ";
     " 0F B6 /r  | MOV r32, r/m8     "; (* encodes MOVZX *)
-    " 38 /r     | CMP r/m8, r8      "; 
-    " 3A /r     | CMP r8, r/m8      "; 
+    " 38 /r     | CMP r/m8, r8      ";
+    " 3A /r     | CMP r8, r/m8      ";
     " 80 /7 ib  | CMP r/m8, imm8    ";
     " FE /1     | DEC r/m8          "
 
   ] ``;
 
 val x86_decode_aux_def = Define `
-  x86_decode_aux = (match_list x86_match_step tokenise (x86_syntax o tokenise) o 
-                     MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x86_syntax_list`;  
+  x86_decode_aux = (match_list x86_match_step tokenise (x86_syntax o tokenise) o
+                     MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x86_syntax_list`;
 
 val x86_decode_prefixes_def = Define `
-  x86_decode_prefixes w = 
-    if LENGTH w < 16 then (Xg1_none,Xg2_none,w) else 
+  x86_decode_prefixes w =
+    if LENGTH w < 16 then (Xg1_none,Xg2_none,w) else
       let bt1  = (TAKE 8 w = n2bits 8 (hex2num "2E")) in
       let bnt1 = (TAKE 8 w = n2bits 8 (hex2num "3E")) in
       let l1   = (TAKE 8 w = n2bits 8 (hex2num "F0")) in
@@ -350,8 +350,8 @@ val x86_decode_prefixes_def = Define `
       let g1   = if l1 \/ l2 then Xlock else Xg1_none in
       let g2   = if bt1 \/ bt2 then Xbranch_taken else Xg2_none in
       let g2   = if bnt1 \/ bnt2 then Xbranch_not_taken else g2 in
-      let n    = if bt1 \/ bnt1 \/ l1 then (if bt2 \/ bnt2 \/ l2 then 16 else 8) else 0 in      
-        (g1,g2,DROP n w)`;        
+      let n    = if bt1 \/ bnt1 \/ l1 then (if bt2 \/ bnt2 \/ l2 then 16 else 8) else 0 in
+        (g1,g2,DROP n w)`;
 
 val dest_accesses_memory_def = Define `
   (dest_accesses_memory (Xrm_i rm i) = rm_is_memory_access rm) /\
@@ -359,30 +359,30 @@ val dest_accesses_memory_def = Define `
   (dest_accesses_memory (Xr_rm r rm) = F)`;
 
 val x86_lock_ok_def = Define `
-  (x86_lock_ok (Xbinop binop_name ds) = 
+  (x86_lock_ok (Xbinop binop_name ds) =
     MEM binop_name [Xadd;Xand;Xor;Xsub;Xxor] /\
     dest_accesses_memory ds) /\
-  (x86_lock_ok (Xmonop monop_name rm) = 
+  (x86_lock_ok (Xmonop monop_name rm) =
     MEM monop_name [Xdec;Xinc;Xneg;Xnot] /\
     rm_is_memory_access rm) /\
   (x86_lock_ok (Xxadd rm r) = rm_is_memory_access rm) /\
   (x86_lock_ok (Xxchg rm r) = rm_is_memory_access rm) /\
   (x86_lock_ok (Xcmpxchg rm r) = rm_is_memory_access rm) /\
-  (x86_lock_ok (Xpop rm) = F) /\              
-  (x86_lock_ok (Xlea ds) = F) /\              
-  (x86_lock_ok (Xpush imm_rm) = F) /\              
+  (x86_lock_ok (Xpop rm) = F) /\
+  (x86_lock_ok (Xlea ds) = F) /\
+  (x86_lock_ok (Xpush imm_rm) = F) /\
   (x86_lock_ok (Xcall imm_rm) = F) /\
-  (x86_lock_ok (Xret imm) = F) /\ 
+  (x86_lock_ok (Xret imm) = F) /\
   (x86_lock_ok (Xmov c ds) = F) /\
-  (x86_lock_ok (Xjcc c imm) = F) /\   
-  (x86_lock_ok (Xjmp rm) = F) /\   
+  (x86_lock_ok (Xjcc c imm) = F) /\
+  (x86_lock_ok (Xjmp rm) = F) /\
   (x86_lock_ok (Xloop c imm) = F) /\
   (x86_lock_ok (Xpushad) = F) /\
   (x86_lock_ok (Xpopad) = F)`;
 
 val x86_decode_def = Define `
-  x86_decode w = 
-    let (g1,g2,w) = x86_decode_prefixes w in 
+  x86_decode w =
+    let (g1,g2,w) = x86_decode_prefixes w in
     let result = x86_decode_aux w in
       if result = NONE then NONE else
         let (i,w) = THE result in
@@ -408,18 +408,18 @@ val imm_rm_args_ok_def = Define `
   (imm_rm_args_ok (Xi i) = T)`;
 
 val x86_args_ok_def = Define `
-  (x86_args_ok (Xbinop binop_name ds) = dest_src_args_ok ds) /\ 
+  (x86_args_ok (Xbinop binop_name ds) = dest_src_args_ok ds) /\
   (x86_args_ok (Xmonop monop_name rm) = rm_args_ok rm) /\
   (x86_args_ok (Xxadd rm r) = rm_args_ok rm ) /\
   (x86_args_ok (Xxchg rm r) = rm_args_ok rm ) /\
   (x86_args_ok (Xcmpxchg rm r) = rm_args_ok rm ) /\
   (x86_args_ok (Xpop rm) = rm_args_ok rm) /\
-  (x86_args_ok (Xpush imm_rm) = imm_rm_args_ok imm_rm) /\              
+  (x86_args_ok (Xpush imm_rm) = imm_rm_args_ok imm_rm) /\
   (x86_args_ok (Xcall imm_rm) = imm_rm_args_ok imm_rm) /\
-  (x86_args_ok (Xret imm) = w2n imm < 2**16) /\ 
+  (x86_args_ok (Xret imm) = w2n imm < 2**16) /\
   (x86_args_ok (Xmov c ds) = dest_src_args_ok ds /\ MEM c [X_NE;X_E;X_ALWAYS]) /\ (* partial list *)
-  (x86_args_ok (Xjcc c imm) = T) /\   
-  (x86_args_ok (Xjmp rm) = T) /\   
+  (x86_args_ok (Xjcc c imm) = T) /\
+  (x86_args_ok (Xjmp rm) = T) /\
   (x86_args_ok (Xloop c imm) = MEM c [X_NE;X_E;X_ALWAYS]) /\
   (x86_args_ok (Xpushad) = T) /\
   (x86_args_ok (Xpopad) = T)`;
@@ -431,13 +431,13 @@ val x86_well_formed_instruction_def = Define `
 
 
 (* -- partially pre-evaluate x86_decode_aux -- *)
-  
+
 val x86_decode_aux_thm = let
-  fun eval_term_ss tm_name tm = conv_ss 
+  fun eval_term_ss tm_name tm = conv_ss
     { name = tm_name, trace = 3, key = SOME ([],tm), conv = K (K EVAL) };
   val token_ss = eval_term_ss "tokenise" ``tokenise x``;
-  val if_ss = conv_ss { name = "if", trace = 3, 
-    key = SOME ([],``if x then (y:'a) else z``), 
+  val if_ss = conv_ss { name = "if", trace = 3,
+    key = SOME ([],``if x then (y:'a) else z``),
     conv = K (K ((RATOR_CONV o RATOR_CONV o RAND_CONV) EVAL)) };
   val hex_ss = eval_term_ss "hex" ``n2bits 8 (hex2num y)``;
   val hex_add_ss = eval_term_ss "hex" ``n2bits 8 ((hex2num y) + k)``;
@@ -447,7 +447,7 @@ val x86_decode_aux_thm = let
     ``!x y z t. (EL 0 (x::t) = x) /\ (EL 1 (x::y::t) = y) /\ (EL 2 (x:'a::y::z::t) = z)``,
     REPEAT STRIP_TAC THEN EVAL_TAC);
   val SOME_LEMMA = prove(``!(f :'a -> 'b option) (g :'c) (h :'d). (SOME >> f = f)``,
-    SIMP_TAC std_ss [FUN_EQ_THM,option_then_def,LET_DEF]);  
+    SIMP_TAC std_ss [FUN_EQ_THM,option_then_def,LET_DEF]);
   val th1 = REWRITE_CONV [MAP,x86_decode_aux_def,combinTheory.o_DEF] ``x86_decode_aux``
   val th2 = CONV_RULE (ONCE_DEPTH_CONV (BETA_CONV) THENC (RAND_CONV (RAND_CONV EVAL))) th1
   val th3 = REWRITE_RULE [match_list_def,MAP] th2
@@ -470,12 +470,12 @@ val x86_decode_aux_thm = let
 fun permanently_add_to_compset name thm = let
   val _ = save_thm(name,thm)
   val _ = computeLib.add_funs [thm]
-  val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME (fn ppstrm => 
+  val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME (fn ppstrm =>
     let val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) in
             S ("val _ = computeLib.add_funs ["^name^"];")
     end)}
   in print ("Permanently added to compset: "^name^"\n") end;
-  
+
 val _ = permanently_add_to_compset "x86_decode_aux_thm" x86_decode_aux_thm;
 
 

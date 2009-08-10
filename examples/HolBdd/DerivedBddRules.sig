@@ -1,6 +1,6 @@
 signature DerivedBddRules = sig
 
-  type thm = Thm.thm  
+  type thm = Thm.thm
   type term = Term.term
   type bdd = bdd.bdd
   type bddop = bdd.bddop

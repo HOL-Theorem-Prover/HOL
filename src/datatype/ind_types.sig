@@ -1,6 +1,6 @@
 signature ind_types =
 sig
- include Abbrev 
+ include Abbrev
  type constructor  = string * hol_type list
  type tyspec       = hol_type * constructor list
 

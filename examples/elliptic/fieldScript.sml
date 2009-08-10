@@ -2019,7 +2019,7 @@ val field_inv_neg = store_thm
    >> (match_tac field_rinv ++ RW_TAC alg_ss [])
    ++ RW_TAC std_ss []
    ++ RW_TAC alg_ss' []);
-  
+
 val context = subtypeTools.add_rewrite2'' field_inv_neg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
@@ -2071,7 +2071,7 @@ val field_add_ac_conv =
             [field_add_lzero,
              field_add_lzero',
              field_add_rzero,
-             field_add_rzero'],             
+             field_add_rzero'],
           simplify_ths =
             [GSYM field_num_one,
              field_neg_zero,
@@ -2107,7 +2107,7 @@ val field_add_ac_conv =
              field_neg_add_neg',
              field_neg_add_neg_mult',
              field_neg_mult_add_neg_mult']}};
-    
+
 val context = subtypeTools.add_conversion2'' field_add_ac_conv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
@@ -2159,7 +2159,7 @@ val field_mult_ac_conv =
              field_inv_mult_inv',
              field_inv_mult_inv_exp',
              field_inv_exp_mult_inv_exp']}};
-    
+
 val context = subtypeTools.add_conversion2'' field_mult_ac_conv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
@@ -2438,7 +2438,7 @@ val poly_eval_def = Define
 val AlgebraicallyClosedField_def = Define
   `AlgebraicallyClosedField =
    { (f : 'a field) |
-     f IN Field /\ 
+     f IN Field /\
      !p :: Poly f.
        (poly_degree p = 0) \/
        ?z :: (f.carrier). poly_eval f p z = field_zero f }`;
@@ -2474,7 +2474,7 @@ val trivial_field = store_thm
       AbelianGroup_def, Group_def, IN_INSERT, NOT_IN_EMPTY, EXTENSION,
       FINITE_INSERT, FINITE_EMPTY, IN_DIFF, field_nonzero_def]
    ++ RW_TAC std_ss []
-   ++ METIS_TAC []);  
+   ++ METIS_TAC []);
 
 (* ------------------------------------------------------------------------- *)
 (* GF(p).                                                                    *)
@@ -2489,7 +2489,7 @@ val modexp_def = Define
 val modexp_ind = fetch "-" "modexp_ind";
 
 val GF_def = Define
-  `GF p = 
+  `GF p =
    <| carrier := { n | n < p };
       sum := add_mod p;
       prod := mult_mod p |>`;
@@ -2692,7 +2692,7 @@ val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
 (***
 val GF_2_def = Define
-  `GF_2 n = 
+  `GF_2 n =
    <| carrier := ;
       sum := ;
       prod :=  |>`;

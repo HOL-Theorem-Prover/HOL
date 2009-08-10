@@ -3,12 +3,12 @@ struct
 
 (*
 quietdec := true;
-loadPath := 
-            (concat Globals.HOLDIR "/examples/dev/sw") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/arm") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/spec") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/sep") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/swsep") :: 
+loadPath :=
+            (concat Globals.HOLDIR "/examples/dev/sw") ::
+            (concat Globals.HOLDIR "/examples/elliptic/arm") ::
+            (concat Globals.HOLDIR "/examples/elliptic/spec") ::
+            (concat Globals.HOLDIR "/examples/elliptic/sep") ::
+            (concat Globals.HOLDIR "/examples/elliptic/swsep") ::
             !loadPath;
 
 show_assums := true;
@@ -55,22 +55,22 @@ fun get_word_fun_arity t =
 	end
 
 fun add_consts t set =
-	if (numSyntax.is_numeral t) then set 
+	if (numSyntax.is_numeral t) then set
 	else if (is_const t) then
 		(if (
 				(same_const let_tm t) orelse
 				(same_const conditional t)
 			 )then
 			set
-		else 
+		else
 			(HOLset.add (set, t)))
 	else if (is_abs t) then
-		add_consts (#2 (dest_abs t)) set 
+		add_consts (#2 (dest_abs t)) set
 	else if (pairSyntax.is_pair t) then
 		let
 			val (t1, t2) = pairSyntax.dest_pair t
 			val set = add_consts t1 set;
-			val set = add_consts t2 set;		
+			val set = add_consts t2 set;
 		in
 			set
 		end
@@ -132,9 +132,9 @@ fun indent_block l =
 
 exception SYNTAX_EXCEPTION;
 fun syntax_error c m =
-	if c then 
+	if c then
 		let
-			val _ = print ("!! "^m^"\n");			
+			val _ = print ("!! "^m^"\n");
 		in
 			raise SYNTAX_EXCEPTION
 		end
@@ -144,7 +144,7 @@ fun syntax_error c m =
 val max_used_word_type = ref 1;
 fun get_word_type n =
 	let
-		val _ = if (n > !max_used_word_type) then 
+		val _ = if (n > !max_used_word_type) then
 				  (max_used_word_type := n) else ()
 	in
 		if (n = 1) then "word32" else
@@ -190,7 +190,7 @@ fun translate_fun f argL =
 		([], "("^(hd (el 1 argL))^" ^ "^(hd (el 2 argL))^")")
 	else if (same_const f wordsSyntax.word_lsr_tm) then
 		([], "("^(hd (el 1 argL))^" >> "^(hd (el 2 argL))^")")
-	else 
+	else
 	let
 		val argL' = if argL = [] then [] else el 1 argL;
 		val (f_name, f_type) = dest_const f;
@@ -211,26 +211,26 @@ fun translate_fun f argL =
 fun translate_exp exp n =
 	let
 		fun translate_bool_exp exp =
-			if (exp = T) then ([], "1") 
-			else if (exp = F) then ([], "0")				
+			if (exp = T) then ([], "1")
+			else if (exp = F) then ([], "0")
 			else if (is_neg exp) then
 				let
 					val exp' = dest_neg exp;
-					val (inst, exp_s) = translate_bool_exp exp';				
+					val (inst, exp_s) = translate_bool_exp exp';
 				in
 					(inst, "(!"^exp_s^")")
 				end
 			else if (is_conj exp) then
 				let
 					val (exp1, exp2) = dest_conj exp;
-					val (inst1, exp_s1) = translate_bool_exp exp1;			val (inst2, exp_s2) = translate_bool_exp exp2;			
+					val (inst1, exp_s1) = translate_bool_exp exp1;			val (inst2, exp_s2) = translate_bool_exp exp2;
 				in
 					(inst1@inst2, "("^exp_s1^" && "^exp_s2^")")
 				end
-			else if (is_disj exp) then			
+			else if (is_disj exp) then
 				let
 					val (exp1, exp2) = dest_disj exp;
-					val (inst1, exp_s1) = translate_bool_exp exp1;			val (inst2, exp_s2) = translate_bool_exp exp2;			
+					val (inst1, exp_s1) = translate_bool_exp exp1;			val (inst2, exp_s2) = translate_bool_exp exp2;
 				in
 					(inst1@inst2, "("^exp_s1^" || "^exp_s2^")")
 				end
@@ -240,7 +240,7 @@ fun translate_exp exp n =
 					val _ = syntax_error ((not (length args = 2)) orelse
 												((not (all (fn arg => (type_of arg = word_type)) args))))
 								("Unknown boolean function '"^(term_to_string exp)^"'!");
-					val (signed, operator) = 
+					val (signed, operator) =
 						if (same_const f boolSyntax.equality) then
 							(false, "==")
 						else if (f = ``($<+):word32->word32->bool``) then
@@ -270,13 +270,13 @@ fun translate_exp exp n =
 			else
 				translate_exp exp n
 
-		fun translate_args arg = 
+		fun translate_args arg =
 			if (numLib.is_numeral arg) then
 				([], [term_to_string arg])
 			else
 				let
-					val (args_n, res_n) = 
-						get_word_fun_arity (type_of arg);					
+					val (args_n, res_n) =
+						get_word_fun_arity (type_of arg);
 					val _ = syntax_error ((not (args_n = 0)) orelse
 												(res_n  <= 0))
 							("Invalid argument '" ^ (term_to_string arg) ^"' in term '"^(term_to_string exp)^"'!");
@@ -332,7 +332,7 @@ fun translate_exp exp n =
 		else if (pairLib.is_pair exp) then
 			let
 				val expL = pairLib.strip_pair exp;
-				val expL' = map translate_args expL 
+				val expL' = map translate_args expL
 				val (args_insts, args_exp) = unzip expL';
 				val args_insts = List.concat args_insts;
 				val args_exp = List.concat args_exp;
@@ -355,9 +355,9 @@ fun translate_exp exp n =
 				(pre@assignments@x, exp_s)
 			end
 		else if ((is_comb exp) orelse (is_const exp)) then
-			let 
+			let
 				val (f, args) = strip_comb exp;
-				val args_exp = map translate_args args;				
+				val args_exp = map translate_args args;
 				val (args_insts, args_exp) = unzip args_exp;
 				val args_insts = List.concat args_insts;
 				val (fun_insts, fun_exp) = translate_fun f args_exp;
@@ -375,7 +375,7 @@ fun translate_exp exp n =
 			in
 				(args_insts@fun_insts@extra_insts, expL)
 			end
-		else 
+		else
 			let
 				val _ = syntax_error true ("Unknown expression '"^(term_to_string exp)^"'!")
 			in
@@ -394,45 +394,45 @@ end
 
 
 
-fun std_bvars stem tm = 
- let 
+fun std_bvars stem tm =
+ let
 	open Lib
    fun num2name i = stem^Lib.int_to_string i
 	val nameStrm = Lib.mk_istream (fn x => x+1) 0 num2name
 	fun next_name () = state(next nameStrm)
-	fun trav M = 
-		if is_comb M then 
+	fun trav M =
+		if is_comb M then
 			let val (M1,M2) = dest_comb M
 					val M1' = trav M1
-					val M2' = trav M2 
+					val M2' = trav M2
 			in mk_comb(M1',M2')
-			end else 
-		if is_abs M then 
+			end else
+		if is_abs M then
 			let val (v,N) = dest_abs(rename_bvar (next_name()) M)
 			in mk_abs(v,trav N)
 			end
 		else M
- in 
+ in
    trav tm
- end; 
+ end;
 
-fun STD_BVARS_CONV stem tm = 
+fun STD_BVARS_CONV stem tm =
  let val tm' = std_bvars stem tm
  in Thm.ALPHA tm tm'
  end;
 
-fun is_valid_c_indentifier s = 
+fun is_valid_c_indentifier s =
 	all (fn c => not (c = #"'")) (String.explode s)
 
-fun dest_fun_def def = 
+fun dest_fun_def def =
 	let
-		val def_term = concl (SPEC_ALL def);		
+		val def_term = concl (SPEC_ALL def);
 		val (fun_const, args) = strip_comb (lhs def_term);
 		val body = rhs def_term;
 		val (fun_name, fun_type) = dest_const fun_const
 		val (arg_n, return_n) = get_word_fun_arity fun_type;
 		val _ = syntax_error ((return_n <= 0) orelse (arg_n < 0) orelse
-								    (length args > 1)) 
+								    (length args > 1))
 					("The function '"^fun_name^"' is not a function on 32-bit words!");
 		val args_fv = FVL args Term.empty_varset
 		val body_fv = FVL [body] Term.empty_varset
@@ -442,7 +442,7 @@ fun dest_fun_def def =
 		val body_av = HOLset.addList (Term.empty_varset, Term.all_vars body);
 		val body_bv = HOLset.difference (body_av, body_fv);
 		val body_bv_list = HOLset.listItems body_bv;
-		
+
 		val args_list = if (args=[]) then [] else (pairLib.strip_pair (hd args));
 	in
 		(def_term, args_list, body_bv_list, body, fun_name, arg_n, return_n)
@@ -464,8 +464,8 @@ fun normalise_fun_def def force =
 		val def'' = if (force orelse not valid_args) then
 							let
 								val ren = enumerate 1 args_list;
-								val ren' = map (fn (n, t) => 
-									({redex=t, residue = mk_var ("a"^(Int.toString n), word_type)})) ren;								
+								val ren' = map (fn (n, t) =>
+									({redex=t, residue = mk_var ("a"^(Int.toString n), word_type)})) ren;
 							in
 								Thm.INST ren' def'
 							end
@@ -473,7 +473,7 @@ fun normalise_fun_def def force =
 	in
 		def''
 	end
-	
+
 
 fun translate_fun_to_c def =
 	let
@@ -483,7 +483,7 @@ fun translate_fun_to_c def =
 		val def_string = "/* "^(term_to_string def_term)^ " */";
 
 		val word_type_string = get_word_type 1;
-		val args_string_list = map (fn arg => 
+		val args_string_list = map (fn arg =>
 				word_type_string^ " "^(#1 (dest_var arg))) args_list;
 		val args_string = String.concat (commafy args_string_list);
 		val fun_sig = get_word_type (return_n) ^ " "^fun_name^ " ("^args_string^")";
@@ -517,7 +517,7 @@ fun create_tests testL =
 			val (f_name, f_type) = dest_const f;
 			val (args_n, res_n) = get_word_fun_arity f_type;
 			val res_var = get_new_temp_var ();
-			
+
 			val decl_ret = (get_word_type res_n)^" "^res_var^";";
 			fun create_single_test (arg, res) =
 				let
@@ -544,19 +544,19 @@ fun create_tests testL =
 					val res_words = if (res_n) = 1 then [res_var] else
 											(List.tabulate (res_n, (fn n =>
 												res_var^".e"^(Int.toString (n+1)))));
-					val print_results = map (fn s=>"printf(\"- %ud\\n\", "^s^"); ") res_words; 
+					val print_results = map (fn s=>"printf(\"- %ud\\n\", "^s^"); ") res_words;
 
 					val error_inst = "if (! ("^condition^")) { printf(\""^(String.toCString error_message)^"\"); "^(String.concat print_results)^"};"
 				in
 					[fun_call,error_inst]
 				end
-			
+
 			val test_insts = map create_single_test tests
-		in	
+		in
 			decl_ret::(List.concat test_insts)@[""]
 		end;
 
-		val all_tests = List.concat (map create_f_test testL)		
+		val all_tests = List.concat (map create_f_test testL)
 	in
 		["void auto_tests() {"]@(indent_block all_tests)@["}"]
 	end
@@ -578,21 +578,21 @@ let
 	val read_args = map (fn s =>
 		("printf(\""^s^": \"); if (scanf(\"%ud\", &"^s^") == 0) exit(0);")) args_list
 	val execution = "res = "^f_string^";"
-	
+
 	val res_words = if (res_n) = 1 then ["res"] else
 							(List.tabulate (res_n, (fn n =>
 								"res.e"^(Int.toString (n+1)))));
 	val print_results = map (fn s=>"printf(\"- %ud\\n\", "^s^");") res_words;
 	val print_space = "printf(\"\\n\\n\");"
-	
+
 	val body = [print_fun]@read_args@[execution,print_space]@print_results@[print_space]
 
 	val run_auto_tests = ["auto_tests();", "", ""];
 	val body' = run_auto_tests@decl_args@[decl_ret]@["","while (1) {"]@
-					(indent_block body)@["}"]			
+					(indent_block body)@["}"]
 in
 	["main () {"]@(indent_block body')@["}"]
-end;		
+end;
 
 
 
@@ -620,9 +620,9 @@ fun translate_to_c dirname filename defs rewrites main_fun tests =
 					  val _ = map (fn t => (print " - ";print_term t;print "\n")) unknown_consts_list
 				  in
 					 fail()
-				  end 
+				  end
 
-		val _ = max_used_word_type := 1;		
+		val _ = max_used_word_type := 1;
 	 	val (fun_decl, fun_defs) = unzip (map (fn (_, def) => translate_fun_to_c def) defs'');
 
 (*		val def = #2 (el 1 defs'');
@@ -633,7 +633,7 @@ fun translate_to_c dirname filename defs rewrites main_fun tests =
 
 		val word_type_defs = (c_get_signed_word_type()):: (List.tabulate ((!max_used_word_type), fn n => c_get_word_type (n+1)));
 		val word_type_defs = List.concat (map (fn l => l@[""]) word_type_defs);
-		
+
 		val auto_test = create_tests tests;
 		val main_fun_def = create_main main_fun;
 		val spaces = ["",""];
@@ -642,9 +642,9 @@ fun translate_to_c dirname filename defs rewrites main_fun tests =
 		(*write header file*)
 		val file_name_header = filename^".h";
 		val file_name_header_guard = filename^"_H";
-		
+
 	   val file_st = TextIO.openOut(dirname^file_name_header);
-		val _ = map (fn s => TextIO.output(file_st, s^"\n")) 
+		val _ = map (fn s => TextIO.output(file_st, s^"\n"))
 			(["#ifndef "^file_name_header_guard, "#define "^file_name_header_guard, ""]@word_type_defs@spaces@fun_decl@["","#endif"]);
    	val _ = TextIO.output(file_st, "\n\n");
       val _ = TextIO.flushOut file_st;
@@ -695,12 +695,12 @@ fun generate_word max =
 
 fun generate_word_pair n max =
 	let
-		val wL = List.tabulate (n, fn n => generate_word max);		
+		val wL = List.tabulate (n, fn n => generate_word max);
 	in
 		pairSyntax.list_mk_pair wL
 	end;
 
 fun generate_word_pair_list n max m =
-	List.tabulate (m, fn x => generate_word_pair n max);		
+	List.tabulate (m, fn x => generate_word_pair n max);
 
 end;

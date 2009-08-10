@@ -1169,7 +1169,7 @@ val SUMS_PICK = store_thm
    ++ DISCH_THEN (CONV_TAC o RAND_CONV o ONCE_REWRITE_CONV o wrap o SYM)
    ++ MATCH_MP_TAC SER_0
    ++ RW_TAC arith_ss []);
-   
+
 val SUM_REORDER_LE = store_thm
   ("SUM_REORDER_LE",
    ``!f n1 n2 j1 j2.
@@ -1877,7 +1877,7 @@ val exp_convex_lemma6 = store_thm
    ++ Q.EXISTS_TAC `(\x. (1-t) * exp x - (1 - t)*exp ((1-t)*x))`
    ++ Q.UNABBREV_TAC `f`
    ++ RW_TAC real_ss [exp_convex_lemma2, exp_convex_lemma3, exp_convex_lemma4]);
-	   
+
 val exp_convex = store_thm
   ("exp_convex",
    ``exp IN convex_fn``,
@@ -1901,7 +1901,7 @@ val exp_convex = store_thm
 (* ------------------------------------------------------------------------- *)
 
 val pos_convex_fn = Define
-	`pos_convex_fn = {f | !x y t. (0 < x /\ 0 < y /\ 0 <= t /\ t <= 1) ==> 
+	`pos_convex_fn = {f | !x y t. (0 < x /\ 0 < y /\ 0 <= t /\ t <= 1) ==>
 				f (t * x + (1 - t) * y) <= t * f x + (1 - t) * f y}`;
 
 val pos_concave_fn = Define
@@ -2159,7 +2159,7 @@ val jensen_pos_convex_SIGMA = store_thm
        ++ Cases_on `s = {}` >> FULL_SIMP_TAC real_ss [REAL_SUM_IMAGE_THM]
        ++ `0 < SIGMA (\x. g x / (1 - g e) * g' x) s`
        	by (RW_TAC std_ss [REAL_LT_LE]
-	    >> ((MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o 
+	    >> ((MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o
 			Q.SPECL [`(\x. g x / (1 - g e) * g' x)`,`s`]) REAL_SUM_IMAGE_POS
 		++ RW_TAC real_ss [] ++ Cases_on `g x = 0` >> RW_TAC real_ss []
 	        ++ MATCH_MP_TAC REAL_LE_MUL
@@ -2188,7 +2188,7 @@ val jensen_pos_convex_SIGMA = store_thm
 				    ++ CONJ_TAC
 				    >> (MATCH_MP_TAC REAL_LT_MUL ++ PROVE_TAC [REAL_LT_LE])
 				    ++ RW_TAC std_ss [REAL_LT_LE]
-				    ++ (MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o 
+				    ++ (MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o
 					Q.SPECL [`(\x. g x * g' x)`,`s`]) REAL_SUM_IMAGE_POS
 				    ++ RW_TAC std_ss []
 				    ++ Cases_on `g x = 0` >> RW_TAC real_ss []
@@ -2203,7 +2203,7 @@ val jensen_pos_convex_SIGMA = store_thm
 				    ++ CONJ_TAC
 				    >> (MATCH_MP_TAC REAL_LT_MUL ++ METIS_TAC [REAL_LT_LE])
 				    ++ RW_TAC std_ss [REAL_LT_LE]
-				    ++ (MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o 
+				    ++ (MATCH_MP_TAC o UNDISCH o REWRITE_RULE [GSYM AND_IMP_INTRO] o
 					Q.SPECL [`(\x. g x * g' x)`,`s`]) REAL_SUM_IMAGE_POS
 				    ++ RW_TAC std_ss []
 				    ++ Cases_on `g x' = 0` >> RW_TAC real_ss []
@@ -2211,7 +2211,7 @@ val jensen_pos_convex_SIGMA = store_thm
 		    ++ METIS_TAC [REAL_LT_IMP_NE])
 	    ++ POP_ASSUM (ASSUME_TAC o UNDISCH o Q.SPEC `s`) ++ FULL_SIMP_TAC std_ss [IMP_CONJ_THM, FORALL_AND_THM]
 	    ++ POP_ASSUM (ASSUME_TAC o UNDISCH_ALL o REWRITE_RULE [GSYM AND_IMP_INTRO] o Q.SPECL [`g`,`g'`])
-	    ++ (ASSUME_TAC o Q.SPECL [`(\x. if x IN s then g x else 0)`, `0`] o 
+	    ++ (ASSUME_TAC o Q.SPECL [`(\x. if x IN s then g x else 0)`, `0`] o
 		UNDISCH o Q.SPEC `s`) REAL_SUM_IMAGE_FINITE_CONST
 	    ++ `SIGMA (\x. (if x IN s then g x else 0)) s = SIGMA g s` by METIS_TAC [GSYM REAL_SUM_IMAGE_IN_IF]
 	    ++ FULL_SIMP_TAC real_ss [])

@@ -320,7 +320,7 @@ let val (k,t) = dest_in_ptree tm
     val thm = if is_some then IN_PTREE_SOME else IN_PTREE_NONE
 in
   REWR_CONV (MATCH_MP thm peek_thm) tm
-end;  
+end;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -456,7 +456,7 @@ let val (k,t) = dest_insert_ptree tm
     val insert_thm = add_ptree_thm(t,pairSyntax.mk_pair(k,oneSyntax.one_tm))
 in
   REWR_CONV (MATCH_MP INSERT_PTREE insert_thm) tm
-end;  
+end;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -593,7 +593,7 @@ fun ptree_size t =
   case dest_strip t of
     ("Empty", []) => REWR_CONV size_empty (mk_size t)
   | ("Leaf", [j, d]) => REWR_CONV size_leaf (mk_size t)
-  | ("Branch", [p, m, l, r]) => 
+  | ("Branch", [p, m, l, r]) =>
         let val l_thm = ptree_size l
             val r_thm = ptree_size r
         in
@@ -852,7 +852,7 @@ val DEPTH_INSERT_PTREE_THM = prove(
 
 fun DEPTH_ARI_CONV rwt tm =
   REWR_CONV rwt tm
-  handle HOL_ERR e => 
+  handle HOL_ERR e =>
     if is_add tm then
       let val (t,x) = dest_add tm
           val thm = DEPTH_ARI_CONV rwt t

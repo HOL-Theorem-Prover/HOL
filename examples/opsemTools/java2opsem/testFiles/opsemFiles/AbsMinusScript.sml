@@ -22,13 +22,13 @@ val MAIN_def =
             (Const 0)
           )
           (Seq
-            (Cond 
-              (LessEq 
+            (Cond
+              (LessEq
                 (Var "i")
                 (Var "j")
               )
               (Assign "k"
-                (Plus 
+                (Plus
                   (Var "k")
                   (Const 1)
                 )
@@ -36,25 +36,25 @@ val MAIN_def =
               Skip
             )
             (Seq
-              (Cond 
-                (And 
-                  (Equal 
+              (Cond
+                (And
+                  (Equal
                     (Var "k")
                     (Const 1)
                   )
-                  (Not (Equal 
+                  (Not (Equal
                     (Var "i")
                     (Var "j")
                   ))
                 )
                 (Assign "result"
-                  (Sub 
+                  (Sub
                     (Var "j")
                     (Var "i")
                   )
                 )
                 (Assign "result"
-                  (Sub 
+                  (Sub
                     (Var "i")
                     (Var "j")
                   )

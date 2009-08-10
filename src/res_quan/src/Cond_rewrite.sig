@@ -11,11 +11,11 @@ sig
 
   include Abbrev
 
-  val COND_REWR_TAC 
+  val COND_REWR_TAC
    :(term -> term -> ((term,term)subst * (hol_type,hol_type)subst) list)
      -> thm_tactic
 
-  val search_top_down 
+  val search_top_down
    :term -> term -> ((term,term)subst * (hol_type,hol_type)subst) list
   val COND_REWR_CONV
    :(term -> term -> ((term,term)subst * (hol_type,hol_type)subst)list)

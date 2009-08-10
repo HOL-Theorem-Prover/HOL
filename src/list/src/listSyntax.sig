@@ -1,4 +1,4 @@
-signature listSyntax = 
+signature listSyntax =
 sig
   include Abbrev
 

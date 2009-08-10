@@ -31,14 +31,14 @@ val find         : (int -> bool) -> intset -> int option
 
 end
 
-(* 
-   [intset] is the type of sets of integers.  
+(*
+   [intset] is the type of sets of integers.
 
    [empty] is the empty set of integers.
 
    [singleton i] is the singleton set containing i.
 
-   [add(s, i)] adds item i to set s.  
+   [add(s, i)] adds item i to set s.
 
    [addList(s, xs)] adds all items from the list xs to the set s.
 
@@ -52,30 +52,30 @@ end
    [member(s, i)] returns true if and only if i is in s.
 
    [delete(s, i)] removes item i from s.  Raises NotFound if i is not in s.
-   
+
    [numItems s] returns the number of items in set s.
 
-   [union(s1, s2)] returns the union of s1 and s2.  
+   [union(s1, s2)] returns the union of s1 and s2.
 
    [intersection(s1, s2)] returns the intersectionof s1 and s2.
 
    [difference(s1, s2)] returns the difference between s1 and s2 (that
    is, the set of elements in s1 but not in s2).
 
-   [listItems s] returns a list of the items in set s, in increasing 
+   [listItems s] returns a list of the items in set s, in increasing
    order.
 
    [app f s] applies function f to the elements of s, in increasing
    order.
 
    [revapp f s] applies function f to the elements of s, in decreasing
-   order. 
+   order.
 
    [foldl f e s] applies the folding function f to the entries of the
    set in increasing order.
 
    [foldr f e s] applies the folding function f to the entries of the
-   set in decreasing order. 
+   set in decreasing order.
 
    [find p s] returns SOME i, where i is an item in s which satisfies
    p, if one exists; otherwise returns NONE.

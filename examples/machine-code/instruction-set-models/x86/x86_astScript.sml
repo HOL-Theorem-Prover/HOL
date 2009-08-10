@@ -8,7 +8,7 @@ val _ = new_theory "x86_ast";
 
 (* ---------------------------------------------------------------------------------- *>
 
-  This theory defines the abstract syntax tree (AST) for x86 instructions. It uses 
+  This theory defines the abstract syntax tree (AST) for x86 instructions. It uses
 
      Ximm - type of immediate constant
      Xreg - type of register name
@@ -22,13 +22,13 @@ val _ = new_theory "x86_ast";
 
 
 val _ = Hol_datatype `
-  Xrm = Xr of Xreg                                         (* register *) 
+  Xrm = Xr of Xreg                                         (* register *)
       | Xm of (word2 # Xreg) option => Xreg option => Ximm (* mem[2^{scale} * index + base + displacement] *)`;
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)
 
 val rm_is_memory_access_def = Define `
-  (rm_is_memory_access (Xm i b d) = T) /\ 
+  (rm_is_memory_access (Xm i b d) = T) /\
   (rm_is_memory_access (Xr r) = F)`;
 
 val _ = Hol_datatype `
@@ -37,7 +37,7 @@ val _ = Hol_datatype `
             | Xr_rm of Xreg => Xrm   (* mnemonic r32, r/m32 *)  `;
 
 val _ = Hol_datatype `
-  Ximm_rm = Xi_rm of Xrm    (* r/m32 *) 
+  Ximm_rm = Xi_rm of Xrm    (* r/m32 *)
           | Xi    of Ximm   (* imm32 or imm8 (sign-extended) *) `;
 
 val _ = Hol_datatype `Xbinop_name = Xadd | Xand | Xcmp | Xor | Xshl | Xshr | Xsar | Xsub | Xtest | Xxor `;
@@ -53,9 +53,9 @@ val _ = Hol_datatype `Xcond = (* this list is not complete *)
 val _ = Hol_datatype `
   Xinstruction = Xbinop     of Xbinop_name => Xdest_src
                | Xmonop     of Xmonop_name => Xrm
-               | Xcmpxchg   of Xrm => Xreg 
-               | Xxadd      of Xrm => Xreg 
-               | Xxchg      of Xrm => Xreg 
+               | Xcmpxchg   of Xrm => Xreg
+               | Xxadd      of Xrm => Xreg
+               | Xxchg      of Xrm => Xreg
                | Xmul       of Xrm
                | Xdiv       of Xrm
                | Xlea       of Xdest_src
@@ -64,13 +64,13 @@ val _ = Hol_datatype `
                | Xcall      of Ximm_rm
                | Xret       of Ximm
                | Xmov       of Xcond => Xdest_src
-               | Xmov_byte  of Xdest_src          
+               | Xmov_byte  of Xdest_src
                | Xcmp_byte  of Xdest_src
                | Xdec_byte  of Xrm
                | Xjcc       of Xcond => Ximm      (* jcc includes jmp rel, i.e. unconditional relative jumps. *)
                | Xjmp       of Xrm                (* jmp excludes relative jumps, see jcc. *)
                | Xloop      of Xcond => Ximm      (* Here Xcond over approximates possibilities. *)
-               | Xpushad      
+               | Xpushad
                | Xpopad     `;
 
 val _ = Hol_datatype `Xpre_g1 = Xlock | Xg1_none `;

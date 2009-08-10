@@ -3,14 +3,14 @@
 quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
-app load ["pred_setSimps", "pred_setTheory", "arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", 
+app load ["pred_setSimps", "pred_setTheory", "arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory",
 "listTheory", "whileTheory", "finite_mapTheory", "preARMTheory", "ARMCompositionTheory"];
 
 quietdec := false;
 *)
 
 
-open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory arithmeticTheory wordsTheory wordsLib 
+open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory arithmeticTheory wordsTheory wordsLib
 pairTheory listTheory whileTheory finite_mapTheory preARMTheory ARMCompositionTheory;
 
 (*---------------------------------------------------------------------------------*)
@@ -42,7 +42,7 @@ val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 (*      the pc is invisible in this level                                          *)
 (*---------------------------------------------------------------------------------*)
 
-val _ = Hol_datatype ` 
+val _ = Hol_datatype `
     MREG = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | R11 | R12 | R13 | R14`;
 
 val _ = type_abbrev("MMEM", Type`:num # OFFSET`);      (* memory in ir *)
@@ -55,7 +55,7 @@ val _ = Hol_datatype `
 val index_of_reg = Define `
     (index_of_reg R0 = 0) /\
     (index_of_reg R1 = 1) /\
-    (index_of_reg R2 = 2) /\      
+    (index_of_reg R2 = 2) /\
     (index_of_reg R3 = 3) /\
     (index_of_reg R4 = 4) /\
     (index_of_reg R5 = 5) /\
@@ -70,7 +70,7 @@ val index_of_reg = Define `
     (index_of_reg R14 = 14)`;
 
 val from_reg_index_def = Define `
-    from_reg_index i = 
+    from_reg_index i =
       if i = 0 then R0
       else if i = 1 then R1
       else if i = 2 then R2
@@ -145,13 +145,13 @@ val lr_def = Define `
 (*      Syntax of CFL                                                              *)
 (*---------------------------------------------------------------------------------*)
 
-val _ = Hol_datatype ` 
-    DOPER = 
+val _ = Hol_datatype `
+    DOPER =
      MLDR of MREG => MMEM |
      MSTR of MMEM => MREG |
      MMOV of MREG => MEXP |
      MADD of MREG => MREG => MEXP |
-     MSUB of MREG => MREG => MEXP | 
+     MSUB of MREG => MREG => MEXP |
      MRSB of MREG => MREG => MEXP |
      MMUL of MREG => MREG => MEXP |
      MAND of MREG => MREG => MEXP |
@@ -166,9 +166,9 @@ val _ = Hol_datatype `
 
 val _ = type_abbrev("CEXP", Type`:MREG # COND # MEXP`);
 
-val _ = Hol_datatype `CTL_STRUCTURE = 
+val _ = Hol_datatype `CTL_STRUCTURE =
     BLK of DOPER list |
-    SC of CTL_STRUCTURE => CTL_STRUCTURE | 
+    SC of CTL_STRUCTURE => CTL_STRUCTURE |
     CJ of CEXP => CTL_STRUCTURE => CTL_STRUCTURE |
     TR of CEXP => CTL_STRUCTURE
   `;
@@ -181,14 +181,14 @@ val _ = Hol_datatype `CTL_STRUCTURE =
 (* Push into the stack from multiple registers with writing-back to the sp              *)
 
 val pushL_def =
-  Define `pushL st baseR regL = 
+  Define `pushL st baseR regL =
    write (FST (FOLDL (\(st1,i) reg. (write st1 (MEM(baseR,NEG i)) (read st reg), i+1)) (st,0) (REVERSE (MAP REG regL))))
          (REG baseR) (read st (REG baseR) - n2w (LENGTH regL))`;
 
 (* Pop into multiple registers from the stack with writing-back to the sp   *)
- 
+
 val popL_def =
-  Define `popL st baseR regL = 
+  Define `popL st baseR regL =
    write (FST (FOLDL (\(st1,i) reg. (write st1 reg (read st (MEM(baseR, POS(i+1)))), i+1)) (st,0) (MAP REG regL)))
          (REG baseR) (read st (REG baseR) + n2w (LENGTH regL))`;
 
@@ -222,7 +222,7 @@ val mdecode_def = Define `
   (mdecode st (MLSL dst src2_reg src2_num) =
       write st (toREG dst) (read st (toREG src2_reg) << w2n src2_num)) /\
   (mdecode st (MLSR dst src2_reg src2_num) =
-      write st (toREG dst) (read st (toREG src2_reg) >>> w2n src2_num)) /\  
+      write st (toREG dst) (read st (toREG src2_reg) >>> w2n src2_num)) /\
   (mdecode st (MASR dst src2_reg src2_num) =
       write st (toREG dst) (read st (toREG src2_reg) >> w2n src2_num)) /\
   (mdecode st (MROR dst src2_reg src2_num) =
@@ -288,17 +288,17 @@ val TRANSLATE_ASSIGMENT_CORRECT_2 = Q.store_thm
 val translate_def = Define `
     (translate (BLK (stm::stmL)) = translate_assignment stm :: translate (BLK stmL)) /\
     (translate (BLK []) = []) /\
-    (translate (SC S1 S2) = 
+    (translate (SC S1 S2) =
          mk_SC (translate S1) (translate S2)) /\
-    (translate (CJ cond Strue Sfalse) = 
+    (translate (CJ cond Strue Sfalse) =
 	 mk_CJ (translate_condition cond) (translate Strue) (translate Sfalse)) /\
-    (translate (TR cond Sbody) = 
+    (translate (TR cond Sbody) =
          mk_TR (translate_condition cond) (translate Sbody))
   `;
 
 (*---------------------------------------------------------------------------------*)
 (*      Derivation of the semantics of CFL by investigating the interpreter        *)
-(*      The data state excluding pc and pcsr is observed                           *) 
+(*      The data state excluding pc and pcsr is observed                           *)
 (*---------------------------------------------------------------------------------*)
 
 val run_arm_def = Define `
@@ -333,7 +333,7 @@ val WELL_FORMED_SUB_thm = store_thm ("WELL_FORMED_SUB_thm",
     PROVE_TAC[]);
 
 (*---------------------------------------------------------------------------------*)
-(*      Hoare Rules for CFL                                                        *) 
+(*      Hoare Rules for CFL                                                        *)
 (*---------------------------------------------------------------------------------*)
 
 val HOARE_SC_CFL = Q.store_thm (
@@ -344,7 +344,7 @@ val HOARE_SC_CFL = Q.store_thm (
            (!st. R st ==> T (run_cfl S2 st)) /\ (!st. Q st ==> R st) ==>
              !st. P st ==>
                   T (run_cfl (SC S1 S2) st)`,
-   RW_TAC std_ss [WELL_FORMED_SUB_thm, run_cfl_def, translate_def, run_arm_def, eval_fl_def] THEN 
+   RW_TAC std_ss [WELL_FORMED_SUB_thm, run_cfl_def, translate_def, run_arm_def, eval_fl_def] THEN
    IMP_RES_TAC (SIMP_RULE std_ss [eval_fl_def, uploadCode_def]  HOARE_SC_FLAT)
   );
 
@@ -367,14 +367,14 @@ val HOARE_TR_CFL = Q.store_thm (
    `!cond S_cfl P.
        WELL_FORMED S_cfl /\  WF_TR (translate_condition cond, translate S_cfl) /\
          (!st. P st ==> P (run_cfl S_cfl st)) ==>
-            !st. P st ==> P (run_cfl (TR cond S_cfl) st) /\ 
+            !st. P st ==> P (run_cfl (TR cond S_cfl) st) /\
                  eval_il_cond cond (run_cfl (TR cond S_cfl) st)`,
    RW_TAC std_ss [WELL_FORMED_SUB_thm, run_cfl_def, translate_def, run_arm_def, eval_fl_def, eval_il_cond_def] THEN
    METIS_TAC [SIMP_RULE std_ss [eval_fl_def, uploadCode_def] HOARE_TR_FLAT]
   );
 
 (*---------------------------------------------------------------------------------*)
-(*      Well-formedness of CFL programs                                            *) 
+(*      Well-formedness of CFL programs                                            *)
 (*---------------------------------------------------------------------------------*)
 
 val UPLOAD_LEM_2 = Q.store_thm (
@@ -390,7 +390,7 @@ val STATEMENT_IS_WELL_FORMED = Q.store_thm (
    `!stm. well_formed [translate_assignment stm]`,
     RW_TAC list_ss [FORALL_DSTATE, well_formed_def, terminated_def, stopAt_def, status_independent_def] THENL [
         Cases_on `stm` THEN
-            (fn g => 
+            (fn g =>
                (SIMP_TAC list_ss [closed_def, Once RUNTO_ADVANCE, UPLOAD_LEM_2, TRANSLATE_ASSIGMENT_CORRECT_2, SUC_ONE_ADD] THEN
                 RW_TAC set_ss [Once RUNTO_ADVANCE]) g
             ),
@@ -399,13 +399,13 @@ val STATEMENT_IS_WELL_FORMED = Q.store_thm (
             `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
             RW_TAC arith_ss [FUNPOW, UPLOAD_LEM_2, step_def, TRANSLATE_ASSIGMENT_CORRECT_2, SUC_ONE_ADD],
         Cases_on `stm` THEN
-            (fn g => 
-               (SIMP_TAC list_ss [get_st_def, Once RUNTO_ADVANCE, SIMP_RULE std_ss [] (Q.SPEC `(pos0,cpsr0,regs,mem):STATE` 
-			  (INST_TYPE [alpha |-> Type `:word32 # (num |-> word32) # (num |-> word32)`] UPLOAD_LEM_2)), 
+            (fn g =>
+               (SIMP_TAC list_ss [get_st_def, Once RUNTO_ADVANCE, SIMP_RULE std_ss [] (Q.SPEC `(pos0,cpsr0,regs,mem):STATE`
+			  (INST_TYPE [alpha |-> Type `:word32 # (num |-> word32) # (num |-> word32)`] UPLOAD_LEM_2)),
                          TRANSLATE_ASSIGMENT_CORRECT_2, SUC_ONE_ADD] THEN
                 RW_TAC std_ss [Once RUNTO_ADVANCE] THEN
-                SIMP_TAC list_ss [get_st_def, Once RUNTO_ADVANCE, SIMP_RULE std_ss [] (Q.SPEC `(pos1,cpsr1,regs,mem):STATE` 
-			  (INST_TYPE [alpha |-> Type `:word32 # (num |-> word32) # (num |-> word32)`] UPLOAD_LEM_2)), 
+                SIMP_TAC list_ss [get_st_def, Once RUNTO_ADVANCE, SIMP_RULE std_ss [] (Q.SPEC `(pos1,cpsr1,regs,mem):STATE`
+			  (INST_TYPE [alpha |-> Type `:word32 # (num |-> word32) # (num |-> word32)`] UPLOAD_LEM_2)),
                          TRANSLATE_ASSIGMENT_CORRECT_2, SUC_ONE_ADD] THEN
                 RW_TAC std_ss [Once RUNTO_ADVANCE]) g
             )
@@ -461,7 +461,7 @@ val WELL_FORMED_thm = store_thm ("WELL_FORMED_thm",
 
 (*---------------------------------------------------------------------------------*)
 (*      Semantics of CFL derived from the interpreter                              *)
-(*      Other interpreters will result in different semantics                      *) 
+(*      Other interpreters will result in different semantics                      *)
 (*---------------------------------------------------------------------------------*)
 
 val CFL_SEMANTICS_SC = Q.store_thm (
@@ -469,11 +469,11 @@ val CFL_SEMANTICS_SC = Q.store_thm (
    `WELL_FORMED S1 /\ WELL_FORMED S2 ==>
      (run_cfl (SC S1 S2) st =
        run_cfl S2 (run_cfl S1 st))`,
-    METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`S1`,`S2`, `\st'. st' = st`, `\st'. st' = run_cfl S1 st`, 
+    METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`S1`,`S2`, `\st'. st' = st`, `\st'. st' = run_cfl S1 st`,
                `\st'. st' = run_cfl S1 st`, `\st'. st' =  run_cfl S2 (run_cfl S1 st)`] HOARE_SC_CFL)]
    );
-   
- 
+
+
 val CFL_SEMANTICS_BLK = Q.store_thm (
    "CFL_SEMANTICS_BLK",
     `(run_cfl (BLK (stm::stmL)) st =
@@ -489,7 +489,7 @@ val CFL_SEMANTICS_BLK = Q.store_thm (
                RW_TAC list_ss [GSYM uploadCode_def, UPLOADCODE_LEM] THEN
                RW_TAC list_ss [GSYM TRANSLATE_ASSIGMENT_CORRECT, get_st_def, Once RUNTO_ADVANCE]
            ) THEN
-           `well_formed [translate_assignment stm] /\ well_formed (translate (BLK stmL))` by 
+           `well_formed [translate_assignment stm] /\ well_formed (translate (BLK stmL))` by
                METIS_TAC [WELL_FORMED_def, BLOCK_IS_WELL_FORMED, STATEMENT_IS_WELL_FORMED] THEN
            FULL_SIMP_TAC list_ss [WELL_FORMED_def, CFL_SEMANTICS_SC, translate_def],
        RW_TAC list_ss [run_cfl_def, run_arm_def, translate_def, Once RUNTO_ADVANCE, get_st_def]
@@ -499,11 +499,11 @@ val CFL_SEMANTICS_BLK = Q.store_thm (
 val CFL_SEMANTICS_CJ = Q.store_thm (
    "CFL_SEMANTICS_CJ",
    ` WELL_FORMED S_t /\ WELL_FORMED S_f ==>
-     (run_cfl (CJ cond S_t S_f) st = 
+     (run_cfl (CJ cond S_t S_f) st =
           if eval_il_cond cond st then run_cfl S_t st
           else run_cfl S_f st)`,
    RW_TAC std_ss [] THEN
-   METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`cond`, `S_t`, `S_f`, `\st'. st' = st`, `\st'. st' = run_cfl S_t st`, 
+   METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`cond`, `S_t`, `S_f`, `\st'. st' = st`, `\st'. st' = run_cfl S_t st`,
                  `\st'. st' = run_cfl S_f st`] HOARE_CJ_CFL)]
   );
 
@@ -528,7 +528,7 @@ val CFL_SEMANTICS_TR = Q.store_thm (
         REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [FUNPOW] THEN
             IMP_RES_TAC LOOPNUM_INDUCTIVE THEN
             `v = loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,SND (SND (FST (runTo (upload arm (\i.ARB) 0) (LENGTH arm) ((0,0w,st),{}))))),{})` by
-            METIS_TAC [ABS_PAIR_THM,DECIDE (Term`!x.0+x=x`),LOOPNUM_INDEPENDENT_OF_CPSR_PCS, get_st_def, FST, SND, DSTATE_IRRELEVANT_PCS, 
+            METIS_TAC [ABS_PAIR_THM,DECIDE (Term`!x.0+x=x`),LOOPNUM_INDEPENDENT_OF_CPSR_PCS, get_st_def, FST, SND, DSTATE_IRRELEVANT_PCS,
 		well_formed_def] THEN
             RES_TAC THEN Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
             Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
@@ -536,7 +536,7 @@ val CFL_SEMANTICS_TR = Q.store_thm (
             RW_TAC std_ss [Once WHILE] THEN
             Q.UNABBREV_TAC `arm` THEN
             `run_cfl S_body st = SND (SND (FST (runTo (upload (translate S_body) (\i. ARB) 0) (LENGTH (translate S_body)) ((0,0w,st),{}))))` by RW_TAC arith_ss [
-                   get_st_def, run_cfl_def, run_arm_def] THEN 
+                   get_st_def, run_cfl_def, run_arm_def] THEN
             METIS_TAC [SND,FST,get_st_def,FUNPOW_DSTATE, ABS_PAIR_THM]
       ]
   );
@@ -551,11 +551,11 @@ val SEMANTICS_OF_CFL = Q.store_thm (
      (run_cfl (SC S1 S2) st = run_cfl S2 (run_cfl S1 st)) /\
      (run_cfl (CJ cond S1 S2) st =
            (if eval_il_cond cond st then run_cfl S1 st else run_cfl S2 st)) /\
-     ( WF_TR (translate_condition cond,translate S1) ==> 
+     ( WF_TR (translate_condition cond,translate S1) ==>
        (run_cfl (TR cond S1) st =
            WHILE (\st'. ~eval_il_cond cond st') (run_cfl S1) st))`,
    RW_TAC std_ss [CFL_SEMANTICS_BLK, CFL_SEMANTICS_CJ, CFL_SEMANTICS_SC, CFL_SEMANTICS_TR]
-  );       
+  );
 
 
 val _ = export_theory();

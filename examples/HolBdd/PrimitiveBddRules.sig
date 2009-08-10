@@ -3,7 +3,7 @@ signature PrimitiveBddRules = sig
   type assums = Term.term HOLset.set
   type varmap = Varmap.varmap
   type term_bdd
-  
+
   exception BddAppallError
   exception nameError
   exception BddSupportContractVarmapError
@@ -53,5 +53,5 @@ signature PrimitiveBddRules = sig
   val BddReplace : (term_bdd * term_bdd) list -> term_bdd -> term_bdd
   val BddSupportContractVarmap : Term.term -> term_bdd -> term_bdd
   val termApply : Term.term -> Term.term -> bdd.bddop -> Term.term
-  val BddIte : term_bdd * term_bdd * term_bdd -> term_bdd  
+  val BddIte : term_bdd * term_bdd * term_bdd -> term_bdd
 end

@@ -4,14 +4,14 @@ use "prelim";
 (*	Test the pre-processing and normalization     	                     *)
 (* --------------------------------------------------------------------------*)
 
-val f1_def = Define 
+val f1_def = Define
    `f1 (x,s,k0,k1) = (x + k0) * (x + s) * (x + k1)`;
 
-val f2_def = 
+val f2_def =
  Define
-   `f2 ((y,z),(k0,k1,k2,k3),sum)  = 
+   `f2 ((y,z),(k0,k1,k2,k3),sum)  =
 	let sum1 = sum + 100 in
-	let v1 = if y > z \/ y + 2 * k0 > z then y + f1 (z, sum1 * 4, k0, k1) 
+	let v1 = if y > z \/ y + 2 * k0 > z then y + f1 (z, sum1 * 4, k0, k1)
           else z + f1 (y, sum1, k2 - y, k3)
         in
 	v1 + sum1`;
@@ -99,7 +99,7 @@ val f3_def = Define
         let k9 = k8 (k7,k4) in
          k9`;
 
-(* 
+(*
 - inline.expand_anonymous f3_def;
 > val it =
     |- !k0 k1 k2 k3.
@@ -108,7 +108,7 @@ val f3_def = Define
           let k7 = (let k6 = k3 + k1 in k2 * k6) in
           let k9 = (let k6 = k7 + k1 in k2 * k6) in
             k9) : thm
-*)    
+*)
 
 (* Inline expansion of named functions stored in env                         *)
 
@@ -117,15 +117,15 @@ val g1_def = Define `g1 (k0,k1) = let k2 = k0 + k1 in k2 * 15`;
 (* factorial function *)
 
 val g2_def = Define `
-    g2 k0 = 
-    if k0 = 0 then 1 else 
-      let k1 = k0 - 1 in 
+    g2 k0 =
+    if k0 = 0 then 1 else
+      let k1 = k0 - 1 in
       let k2 = g2 k1 in
       k0 * k2`;
 
 val g3_def = Define `
-    g3 (k0,k1,k2) = 
-       let k3 = g1 (k0, k1) in 
+    g3 (k0,k1,k2) =
+       let k3 = g1 (k0, k1) in
        let k4 = k2 * k0 in
        let k5 = g2 2 in
        k5 - k4`;
@@ -171,7 +171,7 @@ val env = [g1_def, g2_def];
             k5 - k4) : thm
 *)
 
-(* Optimization on Normal Forms, including inline expansion and 
+(* Optimization on Normal Forms, including inline expansion and
    other optimizations *)
 
 (*
@@ -209,9 +209,9 @@ val f5_def = Define
    `f5 (k0,k1,k2,k3)  =
         let k4 = k0 + 100 in
         let k5 = (\x. let k6 = x + k1 in k2 * k6) in
-        let k7 = if k4 > k1 then 
-           let k8 = (\(x,y). let k9 = x * k1 in y - k0) in k8 (k3,k4) 
-           else k0 in  
+        let k7 = if k4 > k1 then
+           let k8 = (\(x,y). let k9 = x * k1 in y - k0) in k8 (k3,k4)
+           else k0 in
         let k8 = k5 k7 in
         k8`;
 (*

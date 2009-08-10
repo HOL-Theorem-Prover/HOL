@@ -29,35 +29,35 @@ val MAIN_def =
             )
             (Seq
               (Assign "right"
-                (Sub 
+                (Sub
                   (Var "aLength")
                   (Const 1)
                 )
               )
               (Seq
-                (While 
-                  (And 
-                    (Equal 
+                (While
+                  (And
+                    (Equal
                       (Var "result")
                       (Const ~1)
                     )
-                    (LessEq 
+                    (LessEq
                       (Var "left")
                       (Var "right")
                     )
                   )
                   (Seq
                     (Assign "mid"
-                      (Div 
-                        (Plus 
+                      (Div
+                        (Plus
                           (Var "left")
                           (Var "right")
                         )
                         (Const 2)
                       )
                     )
-                    (Cond 
-                      (Equal 
+                    (Cond
+                      (Equal
                         (Arr "a"
                           (Var "mid")
                         )
@@ -66,21 +66,21 @@ val MAIN_def =
                       (Assign "result"
                         (Var "mid")
                       )
-                      (Cond 
-                        (Less 
+                      (Cond
+                        (Less
                           (Var "x")
                           (Arr "a"
                             (Var "mid")
                           )
                         )
                         (Assign "right"
-                          (Sub 
+                          (Sub
                             (Var "mid")
                             (Const 1)
                           )
                         )
                         (Assign "right"
-                          (Sub 
+                          (Sub
                             (Var "mid")
                             (Const 1)
                           )

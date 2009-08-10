@@ -1,18 +1,18 @@
-structure ANF :> ANF = 
+structure ANF :> ANF =
 struct
 
 (* For interactive use:
 
- loadPath := 
-            (concat Globals.HOLDIR "/examples/dev/sw") :: 
+ loadPath :=
+            (concat Globals.HOLDIR "/examples/dev/sw") ::
             !loadPath;
 
-app load ["pairLib", "cpsSyntax", "wordsLib"]; 
+app load ["pairLib", "cpsSyntax", "wordsLib"];
   quietdec := true;
-  open pairLib pairTheory PairRules pairSyntax cpsTheory cpsSyntax; 
+  open pairLib pairTheory PairRules pairSyntax cpsTheory cpsSyntax;
   quietdec := false;
 *)
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
      pairLib pairSyntax pairTheory PairRules cpsTheory cpsSyntax;
 
 type env = (term * (bool * thm * thm * thm)) list;
@@ -26,28 +26,28 @@ val _ = (Globals.priming := SOME "");
 (* others.                                                                   *)
 (*---------------------------------------------------------------------------*)
 
-fun std_bvars stem tm = 
+fun std_bvars stem tm =
  let open Lib
      fun num2name i = stem^Lib.int_to_string i
      val nameStrm = Lib.mk_istream (fn x => x+1) 0 num2name
      fun next_name () = state(next nameStrm)
-     fun trav M = 
-       if is_comb M then 
+     fun trav M =
+       if is_comb M then
             let val (M1,M2) = dest_comb M
                 val M1' = trav M1
-                val M2' = trav M2 
+                val M2' = trav M2
             in mk_comb(M1',M2')
-            end else 
-       if is_abs M then 
+            end else
+       if is_abs M then
            let val (v,N) = dest_abs(rename_bvar (next_name()) M)
            in mk_abs(v,trav N)
            end
        else M
- in 
+ in
    trav tm
- end; 
+ end;
 
-fun STD_BVARS_CONV stem tm = 
+fun STD_BVARS_CONV stem tm =
  let val tm' = std_bvars stem tm
  in Thm.ALPHA tm tm'
  end;
@@ -111,7 +111,7 @@ val SEQ_PAR_I_THM = Q.prove
  RW_TAC std_ss [LET_SEQ_PAR_THM,combinTheory.I_THM]);
 
 
-fun is_word_literal tm = 
+fun is_word_literal tm =
   ((is_comb tm) andalso
   let val (c,args) = strip_comb tm
       val {Name,Thy,Ty} = dest_thy_const c
@@ -121,19 +121,19 @@ fun is_word_literal tm =
 
 
 fun Convert_CONV f =
- let val (args,t) = 
+ let val (args,t) =
          dest_pabs f
          handle HOL_ERR _
           => (print_term f; print"\n";
               print "is not an abstraction\n";
               raise ERR "Convert_CONV" "not an abstraction")
   in
-  if not(free_vars f = []) 
+  if not(free_vars f = [])
   then (print_term f; print "\n";
-        print "has free variables: "; 
+        print "has free variables: ";
         map (fn t => (print_term t; print " "))(rev(free_vars f)); print "\n";
         raise ERR "Convert_CONV" "disallowed free variables")
-  else if is_var t orelse is_word_literal t orelse numSyntax.is_numeral t orelse is_const t 
+  else if is_var t orelse is_word_literal t orelse numSyntax.is_numeral t orelse is_const t
    then REFL f
   else if is_pair t
    then let val (t1,t2) = dest_pair t
@@ -142,7 +142,7 @@ fun Convert_CONV f =
             val th1 = PBETA_CONV (mk_comb(f1,args))
             val th2 = PBETA_CONV (mk_comb(f2,args))
             val th3 = ISPECL [f1,f2] Par_def
-            val ptm = mk_pabs(args, mk_pair(mk_comb(f1,args),mk_comb(f2,args))) 
+            val ptm = mk_pabs(args, mk_pair(mk_comb(f1,args),mk_comb(f2,args)))
             val th4 = TRANS th3 (PALPHA  (rhs(concl th3)) ptm)
             val th5 = CONV_RULE
                        (RHS_CONV
@@ -152,13 +152,13 @@ fun Convert_CONV f =
                        th4
             val th6 = GSYM th5
         in
-         if aconv (lhs(concl th6)) f 
+         if aconv (lhs(concl th6)) f
           then CONV_RULE
-                (RHS_CONV 
-                  ((RAND_CONV Convert_CONV) 
+                (RHS_CONV
+                  ((RAND_CONV Convert_CONV)
                    THENC (RATOR_CONV(RAND_CONV Convert_CONV))))
                 th6
-          else (print "bad Par case\n"; 
+          else (print "bad Par case\n";
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
   else if is_cond t
@@ -172,7 +172,7 @@ fun Convert_CONV f =
             val th3 = ISPECL [fb,f1,f2] Ite_def
             val ptm = mk_pabs
                        (args,
-                        mk_cond(mk_comb(fb,args),mk_comb(f1,args),mk_comb(f2,args))) 
+                        mk_cond(mk_comb(fb,args),mk_comb(f1,args),mk_comb(f2,args)))
             val th4 = TRANS th3 (PALPHA  (rhs(concl th3)) ptm)
             val th5 = CONV_RULE
                        (RHS_CONV
@@ -183,14 +183,14 @@ fun Convert_CONV f =
                        th4
             val th6 = GSYM th5
         in
-         if aconv (lhs(concl th6)) f 
+         if aconv (lhs(concl th6)) f
           then CONV_RULE
-                (RHS_CONV 
-                  ((RAND_CONV Convert_CONV) 
+                (RHS_CONV
+                  ((RAND_CONV Convert_CONV)
                    THENC (RATOR_CONV(RAND_CONV Convert_CONV))
                    THENC (RATOR_CONV(RATOR_CONV(RAND_CONV Convert_CONV)))))
                 th6
-          else (print "bad Ite case\n"; 
+          else (print "bad Ite case\n";
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
   else if is_let t   (*  t = LET (\v. N) M  *)
@@ -203,16 +203,16 @@ fun Convert_CONV f =
             val th3 = TRANS th2 (SYM (QCONV (SIMP_CONV std_ss [LAMBDA_PROD]) f))
             val th4 = SYM th3
         in
-         if aconv (lhs(concl th4)) f 
+         if aconv (lhs(concl th4)) f
           then CONV_RULE
-                (RHS_CONV 
-                  ((RAND_CONV Convert_CONV) 
+                (RHS_CONV
+                  ((RAND_CONV Convert_CONV)
                    THENC (RATOR_CONV(RAND_CONV (RAND_CONV Convert_CONV)))))
                 th4
-          else (print "bad let case\n"; 
+          else (print "bad let case\n";
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
-  else if is_comb t 
+  else if is_comb t
    then let val th0 = (REWR_CONV (GSYM UNCURRY_DEF) ORELSEC REFL) t
             val (t1,t2) = dest_comb(rhs(concl th0))
             val f1 = mk_pabs(args,t1)
@@ -224,9 +224,9 @@ fun Convert_CONV f =
             val th4 = GSYM(CONV_RULE(RHS_CONV(PABS_CONV(RAND_CONV(REWR_CONV th3))))th2)
             val th5 = CONV_RULE(LHS_CONV(PABS_CONV(REWR_CONV(GSYM th0)))) th4
         in
-         if aconv (lhs(concl th5)) f 
+         if aconv (lhs(concl th5)) f
           then CONV_RULE
-                (RHS_CONV 
+                (RHS_CONV
                   (RATOR_CONV(RAND_CONV Convert_CONV)))
                 th5
           else (print "bad Seq case\n";
@@ -252,24 +252,24 @@ fun occurs_in t1 t2 = can (find_term (aconv t1)) t2;
 (* and Ite.                                                                  *)
 (*****************************************************************************)
 fun Convert defth =
- let val (lt,rt) = 
+ let val (lt,rt) =
          dest_eq(concl(SPEC_ALL defth))
-         handle HOL_ERR _ 
-         => (print "not an equation\n"; 
+         handle HOL_ERR _
+         => (print "not an equation\n";
              raise ERR "Convert" "not an equation")
-     val (func,args) = 
+     val (func,args) =
          dest_comb lt
-         handle HOL_ERR _ => 
-         (print "lhs not a comb\n"; 
+         handle HOL_ERR _ =>
+         (print "lhs not a comb\n";
           raise ERR "Convert" "lhs not a comb")
      val _ = if not(is_const func)
               then (print_term func; print " is not a constant\n";
                     raise ERR "Convert" "rator of lhs not a constant")
               else ()
      val _ = if not(subtract (free_vars rt) (free_vars lt) = [])
-              then (print "definition rhs has unbound variables: "; 
+              then (print "definition rhs has unbound variables: ";
                     map (fn t => (print_term t; print " "))
-                        (rev(subtract (free_vars rt) (free_vars lt))); 
+                        (rev(subtract (free_vars rt) (free_vars lt)));
                     print "\n";
                     raise ERR "Convert" "definition rhs has unbound variables")
               else ()
@@ -327,46 +327,46 @@ val Seq_o = Q.prove(`!f g. f o g = Seq g f`,
          SIMP_TAC std_ss [combinTheory.o_DEF,Seq_def]);
 
 fun RecConvert defth =
- let val (lt,rt) = 
+ let val (lt,rt) =
          dest_eq(concl(SPEC_ALL defth))
-         handle HOL_ERR _ 
-         => (print "not an equation\n"; 
+         handle HOL_ERR _
+         => (print "not an equation\n";
              raise ERR "RecConvert" "not an equation")
-     val (func,args) = 
+     val (func,args) =
          dest_comb lt
-         handle HOL_ERR _ => 
-         (print "lhs not a comb\n"; 
+         handle HOL_ERR _ =>
+         (print "lhs not a comb\n";
           raise ERR "RecConvert" "lhs not a comb")
      val _ = if not(is_const func)
               then (print_term func; print " is not a constant\n";
                     raise ERR "RecConvert" "rator of lhs not a constant")
               else ()
-     val (b,t1,t2) = 
+     val (b,t1,t2) =
          dest_cond rt
-         handle HOL_ERR _ 
-         => (print "rhs not a conditional\n"; 
+         handle HOL_ERR _
+         => (print "rhs not a conditional\n";
              raise ERR "RecConvert" "rhs not a conditional")
      val _ = if not(subtract (free_vars rt) (free_vars lt) = [])
-              then (print "definition rhs has unbound variables: "; 
+              then (print "definition rhs has unbound variables: ";
                     map (fn t => (print_term t; print " "))
-                        (rev(subtract (free_vars rt) (free_vars lt))); 
+                        (rev(subtract (free_vars rt) (free_vars lt)));
                     print "\n";
                     raise ERR "RecConvert" "definition rhs has unbound variables")
               else()
  in
-  if (is_comb t2 
+  if (is_comb t2
        andalso aconv (rator t2) func
        andalso not(occurs_in func b)
        andalso not(occurs_in func t1)
        andalso not(occurs_in func (rand t2)))
-  then 
+  then
    let val fb = mk_pabs(args,b)
        val f1 = mk_pabs(args,t1)
        val f2 = mk_pabs(args,rand t2)
        val thm = ISPECL[func,fb,f1,f2] Rec_INTRO
        val M = fst(dest_imp(concl thm))
        val (v,body) = dest_forall M
-       val M' = rhs(concl(DEPTH_CONV PBETA_CONV 
+       val M' = rhs(concl(DEPTH_CONV PBETA_CONV
                  (mk_pforall(args,subst [v |-> args]body))))
        val MeqM' = prove(mk_eq(M,M'),
                     Ho_Rewrite.REWRITE_TAC[LAMBDA_PROD]
@@ -378,7 +378,7 @@ fun RecConvert defth =
        val (R,tm) = dest_exists N
        val (tm1,tm2) = dest_conj tm
        val (v,body) = dest_forall tm2
-       val tm2' = rhs(concl(DEPTH_CONV PBETA_CONV 
+       val tm2' = rhs(concl(DEPTH_CONV PBETA_CONV
                  (mk_pforall(args,subst [v |-> args]body))))
        val N' = mk_exists(R,mk_conj(tm1,tm2'))
        val NeqN' = prove(mk_eq(N,N'),
@@ -394,7 +394,7 @@ fun RecConvert defth =
     in thm6
     end
   else if occurs_in func rt
-   then (print "definition of: "; print_term func; 
+   then (print "definition of: "; print_term func;
          print " is not tail recursive"; print "\n";
          raise ERR "RecConvert" "not tail recursive")
    else raise ERR "RecConvert" "this shouldn't happen"
@@ -405,13 +405,13 @@ fun RecConvert defth =
 (* by calling Convert or RecConvert.                                         *)
 (*---------------------------------------------------------------------------*)
 
-fun toComb def = 
+fun toComb def =
  let val (l,r) = dest_eq(snd(strip_forall(concl def)))
      val (func,args) = dest_comb l
      val is_recursive = Lib.can (find_term (aconv func)) r
 (* val comb_exp_thm = if is_recursive then RecConvert def else Convert def *)
      val comb_exp_thm = Convert def
- in 
+ in
    (is_recursive,lhs(concl comb_exp_thm), args, comb_exp_thm)
  end;
 
@@ -425,8 +425,8 @@ val LET_ID = METIS_PROVE [] ``!f M. (LET M (\x. x)) = M (\x. x)``
 
 fun REPAIR_SYNTAX_RESTRICTIONS_CONV t =
   if (is_comb t) then
-    let      
-      val (f, args) = strip_comb t;      
+    let
+      val (f, args) = strip_comb t;
       val {Name,Thy,Ty} = dest_thy_const f;
     in
       if ((Name = "UNCURRY") andalso (Thy = "pair") andalso
@@ -456,13 +456,13 @@ fun REPAIR_SYNTAX_RESTRICTIONS_CONV t =
 
 
               fun COMM_OPER_CONV t =
-                (CURRY_CONV THENC 
+                (CURRY_CONV THENC
                  ONCE_REWRITE_CONV [wordsTheory.WORD_ADD_COMM,
                                     wordsTheory.WORD_OR_COMM,
                                     wordsTheory.WORD_AND_COMM,
                                     wordsTheory.WORD_XOR_COMM,
                                     EQ_SYM_EQ
-                                   ] THENC 
+                                   ] THENC
                  UNCURRY_CONV) t
             in
               if (is_word_l) then
@@ -488,13 +488,13 @@ fun REPAIR_SYNTAX_RESTRICTIONS_CONV t =
     REFL t;
 
 fun VAR_LET_CONV t =
- let open pairSyntax 
+ let open pairSyntax
      val (_,tm) = dest_let t;
- in 
-   if is_vstruct tm orelse 
+ in
+   if is_vstruct tm orelse
       ((is_word_literal tm orelse numSyntax.is_numeral tm))
-       
-   then 
+
+   then
       (REWR_CONV LET_THM THENC GEN_BETA_CONV THENC REPAIR_SYNTAX_RESTRICTIONS_CONV) t
    else raise ERR "VAR_LET_CONV" ""
  end;
@@ -513,11 +513,11 @@ in
       val (body, v1) = dest_comb rhs_thm
       val (body, v2) = dest_comb body
       val (varlist, body) = strip_pabs body;
-        
+
       val body = mk_let (mk_pabs(el 2 varlist, body), v1);
       val body = mk_let (mk_pabs(el 1 varlist, body), v2);
-      val thm = prove (mk_eq (t, body), 
-        CONV_TAC (DEPTH_CONV let_CONV) THEN REWRITE_TAC[])    
+      val thm = prove (mk_eq (t, body),
+        CONV_TAC (DEPTH_CONV let_CONV) THEN REWRITE_TAC[])
     in
       thm
     end
@@ -531,8 +531,8 @@ fun ANFof (args,thm) =
      val thm2a = REWRITE_RULE [CPS2_def] thm2
      val thm3 = CONV_RULE (DEPTH_CONV (REWR_CONV CPS_SEQ_def ORELSEC
                                        REWR_CONV CPS_PAR_def ORELSEC
-                                       REWR_CONV CPS_ITE_def 
-(* ORELSEC REWR_CONV CPS_REC_def *))) thm2a 
+                                       REWR_CONV CPS_ITE_def
+(* ORELSEC REWR_CONV CPS_REC_def *))) thm2a
      val thm4 = CONV_RULE (DEPTH_CONV (REWR_CONV UNCPS)) thm3
      val thm5 = CONV_RULE (LAND_CONV (REWR_CONV CPS_def)) thm4
      val thm6 = CONV_RULE (REPEATC (STRIP_QUANT_CONV (HO_REWR_CONV FUN_EQ_THM)))
@@ -558,13 +558,13 @@ fun ANFof (args,thm) =
 (* to combinator form, then to A-Normal form and add the result to the       *)
 (* environment.                                                              *)
 (*---------------------------------------------------------------------------*)
-fun toANF env def = 
+fun toANF env def =
  let val (is_recursive,func,args,const_eq_comb) = toComb def
      val anf = STD_BVARS "v" (ANFof (args,const_eq_comb))
- in 
+ in
    (func,(is_recursive,def,anf,const_eq_comb))::env
  end;
 
 
 end
- 
+

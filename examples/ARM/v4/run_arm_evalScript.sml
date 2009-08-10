@@ -17,8 +17,8 @@ val _ = new_theory "run_arm_eval";
 
 (* ------------------------------------------------------------------------- *)
 
-val max = 
-  case Int.maxInt of 
+val max =
+  case Int.maxInt of
        SOME n => n
      | NONE => 1073741823;
 val i2s = int_to_string;

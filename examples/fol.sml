@@ -7,9 +7,9 @@
  * Invokes MESON and supplies some statistics as well.                       *
  *---------------------------------------------------------------------------*)
 
-fun Prove tm = 
+fun Prove tm =
   Lib.with_flag(mesonLib.chatting, 1)
-    (Count.apply Tactical.prove) 
+    (Count.apply Tactical.prove)
        (tm,mesonLib.MESON_TAC[]);
 
 
@@ -34,7 +34,7 @@ val CAT001_3 = Term
  (!X. there_exists(codomain(X)) ==> there_exists(X)) /\
  (!Y X. there_exists(compose(X,Y)) ==> there_exists(domain(X))) /\
  (!X Y. there_exists(compose(X,Y)) ==> equal(domain(X),codomain(Y))) /\
- (!X Y. there_exists(domain(X)) /\ equal(domain(X),codomain(Y)) ==> 
+ (!X Y. there_exists(domain(X)) /\ equal(domain(X),codomain(Y)) ==>
         there_exists(compose(X,Y))) /\
  (!X Y Z. equal(compose(X,compose(Y,Z)),compose(compose(X,Y),Z))) /\
  (!X. equal(compose(X,domain(X)),X)) /\
@@ -59,8 +59,8 @@ val CAT001_3 = Term
           equal(compose(compose(a,b),Z),Y) ==> equal(X,Z)) /\
  (there_exists(compose(b,h))) /\
  (equal(compose(b,h),compose(b,g))) /\
- (~equal(h,g)) 
-  ==> 
+ (~equal(h,g))
+  ==>
      F`;
 
 Prove CAT001_3;
@@ -73,14 +73,14 @@ val CAT005_1 = Term
  (!X Y. defined(X,Y) ==> product(X,Y,compose(X,Y))) /\
  (!Z X Y. product(X,Y,Z) ==> defined(X,Y)) /\
  (!X Xy Y Z. product(X,Y,Xy) /\ defined(Xy,Z) ==> defined(Y,Z)) /\
- (!Y Xy Z X Yz. product(X,Y,Xy) /\ product(Y,Z,Yz) /\ 
+ (!Y Xy Z X Yz. product(X,Y,Xy) /\ product(Y,Z,Yz) /\
                 defined(Xy,Z) ==> defined(X,Yz)) /\
- (!Xy Y Z X Yz Xyz. product(X,Y,Xy) /\ product(Xy,Z,Xyz) /\ 
+ (!Xy Y Z X Yz Xyz. product(X,Y,Xy) /\ product(Xy,Z,Xyz) /\
                     product(Y,Z,Yz) ==> product(X,Yz,Xyz)) /\
  (!Z Yz X Y. product(Y,Z,Yz) /\ defined(X,Yz) ==> defined(X,Y)) /\
- (!Y X Yz Xy Z. product(Y,Z,Yz) /\ product(X,Y,Xy) /\ 
+ (!Y X Yz Xy Z. product(Y,Z,Yz) /\ product(X,Y,Xy) /\
                 defined(X,Yz) ==> defined(Xy,Z)) /\
- (!Yz X Y Xy Z Xyz. product(Y,Z,Yz) /\ product(X,Yz,Xyz) /\ 
+ (!Yz X Y Xy Z Xyz. product(Y,Z,Yz) /\ product(X,Yz,Xyz) /\
                     product(X,Y,Xy) ==> product(Xy,Z,Xyz)) /\
  (!Y X Z. defined(X,Y) /\ defined(Y,Z) /\ identity_map(Y) ==> defined(X,Z)) /\
  (!X. identity_map(domain(X))) /\
@@ -104,8 +104,8 @@ val CAT005_1 = Term
  (!X Y Z. equal(X,Y) ==> equal(compose(X,Z),compose(Y,Z))) /\
  (defined(a,d)) /\
  (identity_map(d)) /\
- (~equal(domain(a),d)) 
-  ==> 
+ (~equal(domain(a),d))
+  ==>
      F`;
 
 

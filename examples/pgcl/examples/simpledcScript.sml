@@ -95,7 +95,7 @@ val initialize_var_N_def = Define
    `initialize_var_N n = Assign "N" (\s. Int (&n))`;
 
 val initialize_var_NSApays_def = Define
-   `initialize_var_NSApays nsapays = 
+   `initialize_var_NSApays nsapays =
 	if nsapays then Assign "NSApays" (\s. Yes)
 	           else Assign "NSApays" (\s. No)`;
 
@@ -105,8 +105,8 @@ val set_payer_def = Define
 		   else NondetAssign "payer" (zero_to_n_Int_list n)`;
 
 val initialize_def = Define
-  `initialize n nsapays = Program [initialize_var_N n; 
-                                   initialize_var_NSApays nsapays; 
+  `initialize n nsapays = Program [initialize_var_N n;
+                                   initialize_var_NSApays nsapays;
                                    set_payer n nsapays]`;
 
 val flip_coins_def = Define
@@ -129,7 +129,7 @@ val set_announcements_def = Define
 	   For_0_to_n "i" "N"
 	   [
 		Assign "currentcoin" (\s. get_Array_i (s "Coins") (num_of_value (s "i")));
-		If (\s. (num_of_value (s "i")) = 0) 
+		If (\s. (num_of_value (s "i")) = 0)
 		   (Assign "previouscoin" (\s. get_Array_i (s "Coins") (num_of_value(s "N")-1)))
 		   (Assign "previouscoin" (\s. get_Array_i (s "Coins") ((num_of_value (s "i"))-1)));
 		If (\s. s "i" = s "payer")
@@ -180,7 +180,7 @@ val zero_to_n_Int_list_result = store_thm
    ++ Cases_on `i < x`
    >> RW_TAC arith_ss [zero_to_n_Int_list_length, EL_SNOC]
    ++ `i = x` by RW_TAC arith_ss []
-   ++ `LENGTH (zero_to_n_Int_list x) = i` 
+   ++ `LENGTH (zero_to_n_Int_list x) = i`
 	   by RW_TAC arith_ss [zero_to_n_Int_list_length]
    ++ RW_TAC arith_ss [EL_LENGTH_SNOC]);
 
@@ -237,23 +237,23 @@ val zero_to_n_Int_list_contains_Int = store_thm
   ("zero_to_n_Int_list_contains_Int",
    ``!x n. MEM x (zero_to_n_Int_list n) ==> (num_of_value x < n)``,
    REPEAT GEN_TAC
-   ++ `(MEM (Int (& (num_of_value x))) (zero_to_n_Int_list n)) ==> 
-	((num_of_value x) < n)` 
+   ++ `(MEM (Int (& (num_of_value x))) (zero_to_n_Int_list n)) ==>
+	((num_of_value x) < n)`
    by METIS_TAC [zero_to_n_Int_list_contains_lem2]
    ++ `MEM x (zero_to_n_Int_list n) ==> MEM (Int (& (num_of_value x))) (zero_to_n_Int_list n)` by
-	(`((MEM x (zero_to_n_Int_list n)) /\ 
-          (x = (Int (& (num_of_value x))))) ==> 
-		(MEM (Int (& (num_of_value x))) (zero_to_n_Int_list n))` 
+	(`((MEM x (zero_to_n_Int_list n)) /\
+          (x = (Int (& (num_of_value x))))) ==>
+		(MEM (Int (& (num_of_value x))) (zero_to_n_Int_list n))`
 	 by METIS_TAC []
-	 ++ `(MEM x (zero_to_n_Int_list n) /\ ?i. x = Int i) ==> 
-		((MEM x (zero_to_n_Int_list n)) /\ 
-		(x = (Int (& (num_of_value x)))))` 
+	 ++ `(MEM x (zero_to_n_Int_list n) /\ ?i. x = Int i) ==>
+		((MEM x (zero_to_n_Int_list n)) /\
+		(x = (Int (& (num_of_value x)))))`
 	     by (REPEAT STRIP_TAC
     	     ++ RW_TAC arith_ss [num_of_value_def, INT_OF_NUM, int_of_value_def]
     	     ++ METIS_TAC [MEM_zero_to_n_Int_list_implies_ge_zero])
-	 ++ `(MEM x (zero_to_n_Int_list n)) ==> 
-		((MEM x (zero_to_n_Int_list n)) /\ 
-		(?i. x = Int i))` 
+	 ++ `(MEM x (zero_to_n_Int_list n)) ==>
+		((MEM x (zero_to_n_Int_list n)) /\
+		(?i. x = Int i))`
 	 by METIS_TAC [MEM_zero_to_n_Int_list_implies_Int]
 	 ++ METIS_TAC [])
    ++ METIS_TAC []);
@@ -284,13 +284,13 @@ val initialize_var_NSApays_term = store_thm
 
 val initialize_var_NSApays_result = store_thm
   ("initialize_var_NSApays_result",
-   ``!nsapays. (wp (initialize_var_NSApays nsapays) 
+   ``!nsapays. (wp (initialize_var_NSApays nsapays)
 		   (\s. if nsapays then
 				(if (s "NSApays") = Yes then 1 else 0)
 			else
 				(if (s "NSApays") = No then 1 else 0))) = One``,
-   RW_TAC std_ss [initialize_var_NSApays_def, wp_def, assign_def, 
-                  Yes_def, No_def, One_def, num_of_value_def, 
+   RW_TAC std_ss [initialize_var_NSApays_def, wp_def, assign_def,
+                  Yes_def, No_def, One_def, num_of_value_def,
 		  int_of_value_def, NUM_OF_INT]);
 
 (* ------------------------- general arithmetic proof ---------------------- *)
@@ -411,7 +411,7 @@ val NondetAssign_of_singleton_Leq = store_thm
        >> SIMP_TAC std_ss [leq_refl]
        ++ FULL_SIMP_TAC std_ss [NondetAssign_def, MAP, Nondets_def, wp_def, Leq_def]
        ++ RW_TAC posreal_ss [Min_def, preal_min_def]
-       ++ `expect1 (\(s:string->'a). (if ~(s v = k) then (1:posreal) else 0))` 
+       ++ `expect1 (\(s:string->'a). (if ~(s v = k) then (1:posreal) else 0))`
    	by (RW_TAC posreal_ss [expect1_def]
    	    ++ RW_TAC posreal_ss [zero_le, le_refl])
        ++ `expect1 (wp (Nondets (Assign v (\s. h')::MAP (\x. Assign v (\s. x)) t))
@@ -425,7 +425,7 @@ val NondetAssign_of_singleton_Leq = store_thm
    << [FULL_SIMP_TAC std_ss [assign_eta]
        ++ `~((1:posreal) <= 0)` by RW_TAC posreal_ss []
        ++ METIS_TAC [le_trans],
-       `expect1 (\(s:string->'a). (if ~(s v = k) then (1:posreal) else 0))` 
+       `expect1 (\(s:string->'a). (if ~(s v = k) then (1:posreal) else 0))`
 		by (RW_TAC posreal_ss [expect1_def]
 		    ++ RW_TAC posreal_ss [zero_le, le_refl])
        ++ `expect1 (wp (Nondets (Assign v (\s. h')::MAP (\x. Assign v (\s. x)) t))
@@ -472,7 +472,7 @@ val NondetAssign_partial_result = store_thm
 	++ Cases_on `t`
 	++ FULL_SIMP_TAC arith_ss [LENGTH, MEM]
 	++ FULL_SIMP_TAC posreal_ss [MAP, Nondets_def, wp_def, assign_eta, Min_def, Zero_def]
-	++ REPEAT STRIP_TAC 
+	++ REPEAT STRIP_TAC
 	++ RW_TAC posreal_ss [strip_nested_min]
 	++ FULL_SIMP_TAC posreal_ss []]);
 
@@ -507,7 +507,7 @@ val NondetAssign_result = store_thm
 		++ RW_TAC posreal_ss [leq_refl])
    	++ `Leq One (wp prog (\s. (if (s v = h) \/ (s v = h') \/ MEM (s v) t then 1 else 0)))` by
 		METIS_TAC [leq_refl, leq_trans]
-   	++ `(wp prog (\s. (if (s v = h) \/ (s v = h') \/ MEM (s v) t then 1 else 0))) = One` by 		
+   	++ `(wp prog (\s. (if (s v = h) \/ (s v = h') \/ MEM (s v) t then 1 else 0))) = One` by
 	 	METIS_TAC [leq_antisym]
    	++ RW_TAC posreal_ss [Min_def, One_def],
 	RW_TAC std_ss [NondetAssign_def]
@@ -518,7 +518,7 @@ val NondetAssign_result = store_thm
 	++ Cases_on `t`
 	++ FULL_SIMP_TAC arith_ss [LENGTH, MEM]
 	++ FULL_SIMP_TAC posreal_ss [MAP, Nondets_def, wp_def, assign_eta, Min_def, Zero_def]
-	++ REPEAT STRIP_TAC 
+	++ REPEAT STRIP_TAC
 	++ RW_TAC posreal_ss [strip_nested_min]
 	++ FULL_SIMP_TAC posreal_ss [],
 	Suff `Leq (wp (NondetAssign v l) (\s. (if ~(s v = k) then 1 else 0)))
@@ -578,7 +578,7 @@ val ProbAssign_do_nothing = store_thm
                inv (1 - inv (& (SUC (LENGTH l)))) =
 	       inv ((& (SUC (LENGTH l))) * (1 - inv (& (SUC (LENGTH l)))))`
 		by (`~((& (SUC (LENGTH l)) * (1 - inv (& (SUC (LENGTH l))))) = (0:posreal))`
-			by RW_TAC posreal_ss [entire, posreal_of_num_inj, 
+			by RW_TAC posreal_ss [entire, posreal_of_num_inj,
 					      subr1_inv_eq_zero, DE_MORGAN_THM]
 		    ++ METIS_TAC [inv_mul])
 	   ++ RW_TAC std_ss []
@@ -617,7 +617,7 @@ val ProbAssign_do_nothing_val = store_thm
                inv (1 - inv (& (SUC (LENGTH l)))) =
 	       inv ((& (SUC (LENGTH l))) * (1 - inv (& (SUC (LENGTH l)))))`
 		by (`~((& (SUC (LENGTH l)) * (1 - inv (& (SUC (LENGTH l))))) = (0:posreal))`
-			by RW_TAC posreal_ss [entire, posreal_of_num_inj, 
+			by RW_TAC posreal_ss [entire, posreal_of_num_inj,
 					      subr1_inv_eq_zero, DE_MORGAN_THM]
 		    ++ METIS_TAC [inv_mul])
 	   ++ RW_TAC std_ss []
@@ -637,7 +637,7 @@ val ProbAssign_do_nothing_val = store_thm
 	    ++ Q.UNABBREV_TAC `x'`
 	    ++ RW_TAC posreal_ss [LENGTH])
 	++ FULL_SIMP_TAC arith_ss [LENGTH]);
-	   
+
 (* -------------------------- set_payer proofs ----------------------------- *)
 
 val set_payer_term = store_thm
@@ -660,22 +660,22 @@ val initialize_result = store_thm
   ("initialize_result",
    ``!n nsapays k. (n > 0) ==>
 	((wp (initialize n nsapays) (\s. if ((num_of_value (s "N")) = n) then 1 else 0) = One) /\
-	 (wp (initialize n nsapays) (\s. if nsapays 
+	 (wp (initialize n nsapays) (\s. if nsapays
 					 then (if ((s "NSApays") = Yes) then 1 else 0)								 else (if ((s "NSApays") = No) then 1 else 0)) = One) /\
 	 (if nsapays
 	  then (wp (initialize n nsapays) (\s. if ((s "payer") = (s "N")) then 1 else 0) = One)
-	  else 
-	  ((wp (initialize n nsapays) 
-	       (\s. if ((num_of_value (s "payer")) < 
+	  else
+	  ((wp (initialize n nsapays)
+	       (\s. if ((num_of_value (s "payer")) <
 		        (num_of_value (s "N"))) then 1 else 0) = One)
 	    /\ ((n > 1) ==> ((wp (initialize n nsapays)
 			         (\s. if (s "payer") = Int (& k) then 1 else 0) = Zero)
 	    		     /\ ( (k < n) ==>
 				(wp (initialize n nsapays)
-				    (\s. if ~ ((s "payer") = Int (& k)) 
+				    (\s. if ~ ((s "payer") = Int (& k))
 					 then 1 else 0) = Zero)))))))``,
    REPEAT STRIP_TAC
-   << [RW_TAC std_ss [initialize_def, Program_def, wp_def, set_payer_def, 
+   << [RW_TAC std_ss [initialize_def, Program_def, wp_def, set_payer_def,
 		   initialize_var_NSApays_def, assign_eta]
     >> RW_TAC posreal_ss [initialize_var_N_result]
     ++ `wp (NondetAssign "payer" (zero_to_n_Int_list n))
@@ -693,13 +693,13 @@ val initialize_result = store_thm
 	    ++ ASM_REWRITE_TAC []
 	    ++ `!a s. (\s. (if num_of_value (s "N") = n then (1:posreal) else 0)) s =
 		      (\s. (if num_of_value (s "N") = n then 1 else 0))
-		      (assign "payer" a s)` 
+		      (assign "payer" a s)`
 		by RW_TAC std_ss [assign_eta]
 	    ++ `!(v :string) (l :value list) (e :(string -> value) -> posreal).
          	 LENGTH l > (0 :num) ==>
          	 (!(a :(string -> value) -> value) (s :string -> value).
           	 e s = e (assign v a s)) ==>
-         	(wp (NondetAssign v l) e = e)` 
+         	(wp (NondetAssign v l) e = e)`
 		by METIS_TAC [NondetAssign_do_nothing_val]
 	    ++ FULL_SIMP_TAC std_ss [])
     ++ RW_TAC std_ss [initialize_var_N_result],
@@ -726,13 +726,13 @@ val initialize_result = store_thm
 	    ++ ASM_REWRITE_TAC []
 	    ++ `!a s. (\s. (if s "NSApays" = No then (1:posreal) else 0)) s =
 		      (\s. (if s "NSApays" = No then 1 else 0))
-		      (assign "payer" a s)` 
+		      (assign "payer" a s)`
 		by RW_TAC std_ss [assign_eta]
 	    ++ `!(v :string) (l :value list) (e :(string -> value) -> posreal).
          	 LENGTH l > (0 :num) ==>
          	 (!(a :(string -> value) -> value) (s :string -> value).
           	 e s = e (assign v a s)) ==>
-         	(wp (NondetAssign v l) e = e)` 
+         	(wp (NondetAssign v l) e = e)`
 		by METIS_TAC [NondetAssign_do_nothing_val]
 	    ++ FULL_SIMP_TAC std_ss [])
     ++ ASM_REWRITE_TAC []
@@ -747,7 +747,7 @@ val initialize_result = store_thm
     RW_TAC std_ss []
     << [RW_TAC posreal_ss [initialize_def, Program_def, wp_def, set_payer_def, assign_eta,
 			   initialize_var_NSApays_def, initialize_var_N_def, One_def],
- 	RW_TAC posreal_ss [initialize_def, Program_def, wp_def, set_payer_def, assign_eta, 
+ 	RW_TAC posreal_ss [initialize_def, Program_def, wp_def, set_payer_def, assign_eta,
 			   initialize_var_NSApays_def, initialize_var_N_def]
 	++ `Leq (\s. (if n = num_of_value (s "N") then 1 else 0))
 		(wp (NondetAssign "payer" (zero_to_n_Int_list n))
@@ -756,7 +756,7 @@ val initialize_result = store_thm
 	    		     (\s. (if n = num_of_value (s "N") then 1 else 0)))
 			 (wp (NondetAssign "payer" (zero_to_n_Int_list n))
 	    		     (\s. (if num_of_value (s "payer") < num_of_value (s "N") then 1 else 0)))`
-			by (`Leq (Conj (wp (NondetAssign "payer" (zero_to_n_Int_list n)) 
+			by (`Leq (Conj (wp (NondetAssign "payer" (zero_to_n_Int_list n))
 		  			   (\s. if (n = num_of_value (s "N")) then 1 else 0))
 	      			       (wp (NondetAssign "payer" (zero_to_n_Int_list n))
 		  			   (\s. if MEM (s "payer") (zero_to_n_Int_list n) then 1 else 0)))
@@ -765,43 +765,43 @@ val initialize_result = store_thm
 				by (`Leq (Conj (wp (NondetAssign "payer" (zero_to_n_Int_list n))
 			   			   (\s. (if n = num_of_value (s "N") then 1 else 0)))
 		       			       (wp (NondetAssign "payer" (zero_to_n_Int_list n))
-			   			   (\s. (if MEM (s "payer") (zero_to_n_Int_list n) 
+			   			   (\s. (if MEM (s "payer") (zero_to_n_Int_list n)
 						         then 1 else 0))))
 		 			 (wp (NondetAssign "payer" (zero_to_n_Int_list n))
 		     			     (Conj (\s. if (n = num_of_value (s "N")) then 1 else 0)
-	      		   			   (\s. if MEM (s "payer") (zero_to_n_Int_list n) 
+	      		   			   (\s. if MEM (s "payer") (zero_to_n_Int_list n)
 							then (1:posreal) else 0)))`
 					by METIS_TAC [wp_conj]
 	    			    ++ Suff `Leq (wp (NondetAssign "payer" (zero_to_n_Int_list n))
 		     	     			     (Conj (\s. if (n = num_of_value (s "N")) then 1 else 0)
-	      		   	   			   (\s. if MEM (s "payer") (zero_to_n_Int_list n) 
+	      		   	   			   (\s. if MEM (s "payer") (zero_to_n_Int_list n)
 								then (1:posreal) else 0)))
 	    		 			 (wp (NondetAssign "payer" (zero_to_n_Int_list n))
-	    		     			     (\s. if num_of_value (s "payer") < num_of_value (s "N") 
+	    		     			     (\s. if num_of_value (s "payer") < num_of_value (s "N")
 							  then 1 else 0))`
 	    			    >> PROVE_TAC [leq_trans]
 	    			    ++ POP_ASSUM (K ALL_TAC)
 	    			    ++ MATCH_MP_TAC wp_mono
-	    			    ++ `Leq (\s. if MEM (s "payer") 
-						        (zero_to_n_Int_list (num_of_value (s "N"))) 
+	    			    ++ `Leq (\s. if MEM (s "payer")
+						        (zero_to_n_Int_list (num_of_value (s "N")))
 						 then 1 else 0)
-        	    			    (\s. if num_of_value (s "payer") < num_of_value (s "N") 
+        	    			    (\s. if num_of_value (s "payer") < num_of_value (s "N")
 						 then (1:posreal) else 0)`
 					by (RW_TAC posreal_ss [Leq_def]
 	    				    ++ RW_TAC posreal_ss [zero_le, le_refl]
 	  			  	    ++ METIS_TAC [zero_to_n_Int_list_contains_Int])
-	    			    ++ `Leq (\s. if MEM (s "payer") (zero_to_n_Int_list n) /\ 
+	    			    ++ `Leq (\s. if MEM (s "payer") (zero_to_n_Int_list n) /\
 			 			    (n = num_of_value (s "N")) then 1 else 0)
-		    			    (\s. if MEM (s "payer") 
-						    (zero_to_n_Int_list (num_of_value (s "N"))) 
+		    			    (\s. if MEM (s "payer")
+						    (zero_to_n_Int_list (num_of_value (s "N")))
 						 then 1 else 0)`
 					by (RW_TAC posreal_ss [Leq_def]
 	     			            ++ RW_TAC posreal_ss [zero_le, le_refl]
 	       			            ++ METIS_TAC [])
 				    ++ `Leq (Conj (\s. if (n = num_of_value (s "N")) then 1 else 0)
-	 			     		  (\s. if MEM (s "payer") (zero_to_n_Int_list n) 
+	 			     		  (\s. if MEM (s "payer") (zero_to_n_Int_list n)
 						       then (1:posreal) else 0))
-					    (\s. if MEM (s "payer") (zero_to_n_Int_list n) /\ 
+					    (\s. if MEM (s "payer") (zero_to_n_Int_list n) /\
 						    (n = num_of_value (s "N")) then 1 else 0)`
 					by (RW_TAC posreal_ss [Leq_def, Conj_def]
 					    ++ RW_TAC posreal_ss []
@@ -822,7 +822,7 @@ val initialize_result = store_thm
 				by (Cases_on `n`
 		    		    ++ RW_TAC arith_ss [zero_to_n_Int_list, LENGTH_SNOC])
 		    	    ++ `!a s. (\s. (if n = num_of_value (s "N") then (1:posreal) else 0)) s =
-			              (\s. (if n = num_of_value (s "N") then 1 else 0)) 
+			              (\s. (if n = num_of_value (s "N") then 1 else 0))
 			      	      (assign "payer" a s)`
 				by RW_TAC posreal_ss [assign_eta]
 		    	    ++ `!v (l:value list) (e:(string->value)->posreal). (LENGTH l > 0) ==>
@@ -851,7 +851,7 @@ val initialize_result = store_thm
 	>> METIS_TAC [le_trans]
 	++ Q.UNABBREV_TAC `state`
 	++ RW_TAC posreal_ss [num_of_value_def, int_of_value_def, NUM_OF_INT],
-	RW_TAC posreal_ss [initialize_def, Program_def, wp_def, set_payer_def, assign_eta, 
+	RW_TAC posreal_ss [initialize_def, Program_def, wp_def, set_payer_def, assign_eta,
 			   initialize_var_NSApays_def, initialize_var_N_def]
 	++ RW_TAC posreal_ss [FUN_EQ_THM, Zero_def]
 	++ `LENGTH (zero_to_n_Int_list n) > 0`
@@ -865,7 +865,7 @@ val initialize_result = store_thm
                (\s. (if s "payer" = Int(& k) then 1 else 0)) = Zero`
 		by METIS_TAC [NondetAssign_partial_result]
 	++ RW_TAC posreal_ss [Zero_def],
-	RW_TAC posreal_ss [initialize_def, Program_def, wp_def, set_payer_def, assign_eta, 
+	RW_TAC posreal_ss [initialize_def, Program_def, wp_def, set_payer_def, assign_eta,
 			   initialize_var_NSApays_def, initialize_var_N_def]
 	++ RW_TAC posreal_ss [FUN_EQ_THM, Zero_def]
 	++ `LENGTH (zero_to_n_Int_list n) > 0`
@@ -887,22 +887,22 @@ val initialize_result2 = store_thm
    ``!n nsapays k. (n > 0) ==>
 	((wp (initialize n nsapays) (\s. if ((num_of_value (s "N")) = n) then 1 else 0) = One) /\
 	 (wp (initialize n nsapays) (\s. if (s"N" = Int(&n)) then 1 else 0) = One) /\
-	 (wp (initialize n nsapays) (\s. if nsapays 
+	 (wp (initialize n nsapays) (\s. if nsapays
 					 then (if ((s "NSApays") = Yes) then 1 else 0)								 else (if ((s "NSApays") = No) then 1 else 0)) = One) /\
 	 (if nsapays
 	  then (wp (initialize n nsapays) (\s. if ((s "payer") = (s "N")) then 1 else 0) = One)
-	  else 
-	  ((wp (initialize n nsapays) 
-	       (\s. if ((num_of_value (s "payer")) < 
+	  else
+	  ((wp (initialize n nsapays)
+	       (\s. if ((num_of_value (s "payer")) <
 		        (num_of_value (s "N"))) then 1 else 0) = One)
 	    /\ ((n > 1) ==> ((wp (initialize n nsapays)
 			         (\s. if (s "payer") = Int (& k) then 1 else 0) = Zero)
 	    		     /\ ( (k < n) ==>
 				(wp (initialize n nsapays)
-				    (\s. if ~ ((s "payer") = Int (& k)) 
+				    (\s. if ~ ((s "payer") = Int (& k))
 					 then 1 else 0) = Zero)))))))``,
     RW_TAC bool_ss [FORALL_AND_THM, initialize_result]
-    ++ RW_TAC std_ss [initialize_def, Program_def, wp_def, set_payer_def, 
+    ++ RW_TAC std_ss [initialize_def, Program_def, wp_def, set_payer_def,
 		   initialize_var_NSApays_def, assign_eta]
     >> RW_TAC posreal_ss [initialize_var_N_result2]
     ++ `wp (NondetAssign "payer" (zero_to_n_Int_list n))
@@ -920,13 +920,13 @@ val initialize_result2 = store_thm
 	    ++ ASM_REWRITE_TAC []
 	    ++ `!a s. (\s. (if s "N" = Int (& n) then (1:posreal) else 0)) s =
 		      (\s. (if s "N" = Int (& n) then 1 else 0))
-		      (assign "payer" a s)` 
+		      (assign "payer" a s)`
 		by RW_TAC std_ss [assign_eta]
 	    ++ `!(v :string) (l :value list) (e :(string -> value) -> posreal).
          	 LENGTH l > (0 :num) ==>
          	 (!(a :(string -> value) -> value) (s :string -> value).
           	 e s = e (assign v a s)) ==>
-         	(wp (NondetAssign v l) e = e)` 
+         	(wp (NondetAssign v l) e = e)`
 		by METIS_TAC [NondetAssign_do_nothing_val]
 	    ++ FULL_SIMP_TAC std_ss [])
     ++ RW_TAC std_ss [initialize_var_N_result2]);
@@ -951,7 +951,7 @@ val flip_coins_term = store_thm
 			(\s. if (\s. (0 <= int_of_value (s "i"))) s then 1 else 0))`
 		by (SRW_TAC [] [Program_def, wp_def, Assign_Array_i_def, assign_eta]
 		    ++ Suff `wp (ProbAssign "coinflip" [Heads; Tails])
-		                (\s. (if 0 <= int_of_value (s "i") then (1:posreal) else 0)) = 
+		                (\s. (if 0 <= int_of_value (s "i") then (1:posreal) else 0)) =
 			        (\s. (if 0 <= int_of_value (s "i") then (1:posreal) else 0))`
 		    >> (RW_TAC std_ss [] ++ METIS_TAC [leq_refl])
 		    ++ `!v l e. (LENGTH l > 0) ==>
@@ -959,7 +959,7 @@ val flip_coins_term = store_thm
 		   ((wp (ProbAssign v l) e) = e))` by METIS_TAC [ProbAssign_do_nothing_val]
 		    ++ `!a s. (\s. (if 0 <= int_of_value (s "i") then (1:posreal) else 0)) s =
 			      (\s. (if 0 <= int_of_value (s "i") then 1 else 0))
-			      (assign "coinflip" a s)` 
+			      (assign "coinflip" a s)`
 			by SRW_TAC [] [assign_eta]
 		    ++ `LENGTH [Heads;Tails] > 0` by RW_TAC arith_ss [LENGTH]
 		    ++ FULL_SIMP_TAC std_ss [])
@@ -970,32 +970,32 @@ val flip_coins_term = store_thm
 			(wp (Program
 			     [ProbAssign "coinflip" [Heads; Tails];
 			      Assign_Array_i "Coins" "i" (\s. s "coinflip")])
-			    (\s. if ((\s.((int_of_value (s "N")) - (int_of_value (s "i")))) s <= N) 
+			    (\s. if ((\s.((int_of_value (s "N")) - (int_of_value (s "i")))) s <= N)
 			         then 1 else 0))`
 		by (SRW_TAC [] [Program_def, wp_def, Assign_Array_i_def, assign_eta]
 		    ++ `Leq (\s. (if int_of_value (s "i") < int_of_value (s "N") /\
 				     0 <= int_of_value (s "i") /\
 				     (int_of_value (s "N") - int_of_value (s "i") = N)
 				  then 1 else 0))
-			    (\s. (if int_of_value (s "N") - int_of_value (s "i") <= N 
+			    (\s. (if int_of_value (s "N") - int_of_value (s "i") <= N
 				  then 1 else 0))`
 			by (RW_TAC posreal_ss [Leq_def]
 			    ++ RW_TAC posreal_ss []
 			    ++ METIS_TAC [INT_LE_REFL])
 		    ++ Suff `(wp (ProbAssign "coinflip" [Heads; Tails])
-				 (\s. (if int_of_value (s "N") - int_of_value (s "i") <= N 
+				 (\s. (if int_of_value (s "N") - int_of_value (s "i") <= N
 				       then 1 else 0))) =
-			     (\s. (if int_of_value (s "N") - int_of_value (s "i") <= N 
+			     (\s. (if int_of_value (s "N") - int_of_value (s "i") <= N
 				  then 1 else 0))`
 		    >> (RW_TAC std_ss [] ++ METIS_TAC [leq_trans])
 		    ++ `!v l e. (LENGTH l > 0) ==>
 	        ((!a (s:string->value). e s = e (assign v a s)) ==>
 		   ((wp (ProbAssign v l) e) = e))` by METIS_TAC [ProbAssign_do_nothing_val]
-		    ++ `!a s. (\s. (if int_of_value (s "N") - 
+		    ++ `!a s. (\s. (if int_of_value (s "N") -
 				       int_of_value (s "i") <= N then (1:posreal) else 0)) s =
-			      (\s. (if int_of_value (s "N") - 
+			      (\s. (if int_of_value (s "N") -
 				       int_of_value (s "i") <= N then 1 else 0))
-			      (assign "coinflip" a s)` 
+			      (assign "coinflip" a s)`
 			by SRW_TAC [] [assign_eta]
 		    ++ `LENGTH [Heads;Tails] > 0` by RW_TAC arith_ss [LENGTH]
 		    ++ FULL_SIMP_TAC std_ss [])
@@ -1183,7 +1183,7 @@ val flip_coins_result_part1 = store_thm
 		    ++ RW_TAC posreal_ss [bool_exp_def, Leq_def]
 		    ++ RW_TAC posreal_ss [zero_le]
 		    ++ Q.UNABBREV_TAC `body`
-		    ++ RW_TAC posreal_ss [Program_def, wp_def, assign_eta, Assign_Array_i_def, 
+		    ++ RW_TAC posreal_ss [Program_def, wp_def, assign_eta, Assign_Array_i_def,
 					  ProbAssign_def, MAP, Probs_def, LENGTH]
 		    ++ Q.UNABBREV_TAC `Inv`
 		    ++ Q.UNABBREV_TAC `g`
@@ -1196,7 +1196,7 @@ val flip_coins_result_part1 = store_thm
 			    ++ RW_TAC posreal_ss [])
 		    ++ ASM_REWRITE_TAC []
 		    ++ POP_ASSUM (K ALL_TAC)
-		    ++ FULL_SIMP_TAC posreal_ss [lin_eta, bound1_def, mul_lone, Zero_def, mul_rzero, 
+		    ++ FULL_SIMP_TAC posreal_ss [lin_eta, bound1_def, mul_lone, Zero_def, mul_rzero,
 						 int_of_value_def, let_lemma, let_lin_lemma]
 		    ++ `(0 :int) <= int_of_value ((s :value state) "i") + (1 :int)`
 			by RW_TAC int_ss []
@@ -1210,7 +1210,7 @@ val flip_coins_result_part1 = store_thm
 		    ++ POP_ASSUM (K ALL_TAC)
 		    ++ POP_ASSUM (K ALL_TAC)
 		    ++ `(0 :int) <= (& (n :num) :int)`
-			 by (MATCH_MP_TAC INT_LT_IMP_LE 
+			 by (MATCH_MP_TAC INT_LT_IMP_LE
 			     ++ METIS_TAC [INT_LET_TRANS])
    		    ++ `?(n' :num). int_of_value ((s :value state) "N") = (& n' :int)`
 			by METIS_TAC [int_of_value_def]
@@ -1384,7 +1384,7 @@ val flip_coins_result_part1 = store_thm
 	++ Q.UNABBREV_TAC `body`
 	++ Q.UNABBREV_TAC `g`
 	++ Q.UNABBREV_TAC `Inv`
-	++ SRW_TAC [] [bool_exp_def, wp_def, assign_eta, New_Array_def, 
+	++ SRW_TAC [] [bool_exp_def, wp_def, assign_eta, New_Array_def,
 		       num_of_value_def, int_of_value_def, Array_length_def]
 	++ `(\(s :value state).
        (if
@@ -1488,7 +1488,7 @@ val flip_coins_result = store_thm
 	(wp (Seq (initialize n nsapays) (flip_coins))
 	   (\s. if ((get_Array_i (s "Coins") i) = Heads) \/
 		   ((get_Array_i (s "Coins") i) = Tails)
-		then 1 else 0) = 
+		then 1 else 0) =
 	 One) /\
 	(wp (Seq (initialize n nsapays) (flip_coins))
 	    (\s. if ((get_Array_i (s "Coins") i) = Heads)
@@ -1542,9 +1542,9 @@ val set_announcements_term = store_thm
 	    ++ `~((if 0 <= int_of_value (s "i") then 1 else 0) = infty)`
 			by RW_TAC posreal_ss []
 	    ++ Q.UNABBREV_TAC `x'`
-	    ++ `((bound1 (if s "i" = s "payer" then 1 else 0)) * 
+	    ++ `((bound1 (if s "i" = s "payer" then 1 else 0)) *
 		(if 0 <= int_of_value (s "i") then 1 else 0) +
-		(1 - (bound1 (if s "i" = s "payer" then 1 else 0))) * 
+		(1 - (bound1 (if s "i" = s "payer" then 1 else 0))) *
 		(if 0 <= int_of_value (s "i") then 1 else 0)) =
 		(if 0 <= int_of_value (s "i") then 1 else 0)`
 			by PROVE_TAC [bound1_eq_lemma]
@@ -1556,7 +1556,7 @@ val set_announcements_term = store_thm
 				     0 <= int_of_value (s "i") /\
 				     (int_of_value (s "N") - int_of_value (s "i") = N)
 				  then 1 else 0))
-			    (\s. (if int_of_value (s "N") - int_of_value (s "i") <= N 
+			    (\s. (if int_of_value (s "N") - int_of_value (s "i") <= N
 				  then 1 else 0))`
 			by (RW_TAC posreal_ss [Leq_def]
 			    ++ RW_TAC posreal_ss []
@@ -1580,9 +1580,9 @@ val set_announcements_term = store_thm
 	++ `~((if int_of_value (s "N") - int_of_value (s "i") <= N then 1 else 0) = infty)`
 		by RW_TAC posreal_ss []
 	++ Q.UNABBREV_TAC `x'`
-	++ `((bound1 (if s "i" = s "payer" then 1 else 0)) * 
+	++ `((bound1 (if s "i" = s "payer" then 1 else 0)) *
 		(if int_of_value (s "N") - int_of_value (s "i") <= N then 1 else 0) +
-		(1 - (bound1 (if s "i" = s "payer" then 1 else 0))) * 
+		(1 - (bound1 (if s "i" = s "payer" then 1 else 0))) *
 		(if int_of_value (s "N") - int_of_value (s "i") <= N then 1 else 0)) =
 		(if int_of_value (s "N") - int_of_value (s "i") <= N then 1 else 0)`
 			by PROVE_TAC [bound1_eq_lemma]
@@ -1676,7 +1676,7 @@ val dcprog_result = store_thm
 		(Leq (wp (dcprog n nsapays)
 			 (\s. if ~(i = (s "payer"))
 			      then
-				(if (f (s "N") (s "Announces") (s "result")) = (s "payer") 
+				(if (f (s "N") (s "Announces") (s "result")) = (s "payer")
 				 then 1 else 0)
 			      else
 				0))
@@ -1722,7 +1722,7 @@ val flip_coins_g = Define
    `flip_coins_g = (\s. int_of_value (s "i") < int_of_value (s "N"))`;
 
 val flip_coins_invariant_constant = Define
-   `flip_coins_invariant_constant n nsapays pay = 
+   `flip_coins_invariant_constant n nsapays pay =
     (\s. (s "N" = Int (&n)) /\
     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
@@ -1775,34 +1775,34 @@ val flip_coins_loop_result_heads = store_thm
          (wlp flip_coins_loop (flip_coins_postE_heads n nsapays pay j))``,
    REPEAT STRIP_TAC
    ++ Suff `Leq (flip_coins_invariant_heads n nsapays pay j)
-	        (Cond flip_coins_g 
+	        (Cond flip_coins_g
 		      (wlp flip_coins_loopbody (flip_coins_invariant_heads n nsapays pay j))
-		      (flip_coins_postE_heads n nsapays pay j))`	     		 
+		      (flip_coins_postE_heads n nsapays pay j))`
    >> METIS_TAC [flip_coins_loop, wlp_while]
    ++ RW_TAC std_ss [Leq_def, cond_eta, flip_coins_invariant_heads]
    ++ Cases_on `~(flip_coins_invariant_constant n nsapays pay s)`
    >> RW_TAC posreal_ss [zero_le]
    ++ FULL_SIMP_TAC std_ss []
    ++ Cases_on `~ (flip_coins_g s)`
-   >> (FULL_SIMP_TAC std_ss [flip_coins_postE_heads, flip_coins_g, flip_coins_invariant_j_lt_i, 
-			     flip_coins_invariant_constant, flip_coins_invariant_coins_j_eq_heads, 
+   >> (FULL_SIMP_TAC std_ss [flip_coins_postE_heads, flip_coins_g, flip_coins_invariant_j_lt_i,
+			     flip_coins_invariant_constant, flip_coins_invariant_coins_j_eq_heads,
 			     bool_exp_def, num_of_value_def]
        ++ RW_TAC posreal_reduce_ss []
        ++ METIS_TAC [INT_LE_ANTISYM, INT_NOT_LT, int_of_value_def, NUM_OF_INT])
    ++ FULL_SIMP_TAC std_ss []
    ++ Cases_on `~(flip_coins_invariant_j_lt_i j s)`
-   >> (FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i, 
-			     flip_coins_g, flip_coins_invariant_constant, 
+   >> (FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i,
+			     flip_coins_g, flip_coins_invariant_constant,
 			     flip_coins_invariant_coins_j_eq_heads]
-       ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def, 
+       ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def,
 		      Assign_Array_i_def, ProbAssign_def, Probs_def, MAP, LENGTH]
        ++ SIMP_TAC posreal_reduce_ss [lin_eta, let_lin_lemma, mul_lzero, add_rzero, mul_lone, int_of_value_def]
        ++ `?i. int_of_value (s "i") = & i` by METIS_TAC [NUM_POSINT_EXISTS]
        ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT]
        ++ `i + 1 <= n` by METIS_TAC [int_of_value_def, INT_LT, LESS_EQ, ADD1]
-       ++ `Array_length (update_Array_i (Array l) i Heads) = n` 
+       ++ `Array_length (update_Array_i (Array l) i Heads) = n`
 		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
-       ++ `Array_length (update_Array_i (Array l) i Tails) = n` 
+       ++ `Array_length (update_Array_i (Array l) i Tails) = n`
 		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
        ++ `!k.
            k < i + 1 ==>
@@ -1810,9 +1810,9 @@ val flip_coins_loop_result_heads = store_thm
            (get_Array_i (update_Array_i (Array l) i Heads) k = Tails)`
 	by (REPEAT STRIP_TAC
 	    ++ `k <= i` by METIS_TAC [LE_LT1]
-	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k = 
+	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k =
 		if k = i then Heads else get_Array_i (Array l) k`
-		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT,
 			      int_of_value_def, INT_LT]
 	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
        ++ `!k.
@@ -1821,9 +1821,9 @@ val flip_coins_loop_result_heads = store_thm
            (get_Array_i (update_Array_i (Array l) i Tails) k = Tails)`
 	by (REPEAT STRIP_TAC
 	    ++ `k <= i` by METIS_TAC [LE_LT1]
-	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k = 
+	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k =
 		if k = i then Tails else get_Array_i (Array l) k`
-		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT,
 			      int_of_value_def, INT_LT]
 	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
        ++ Q.ABBREV_TAC `foo = (?l'. update_Array_i (Array l) i Heads = Array l')`
@@ -1846,18 +1846,18 @@ val flip_coins_loop_result_heads = store_thm
        ++ `get_Array_i (update_Array_i (Array l) i Tails) i = Tails`
 		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT]
        ++ RW_TAC posreal_reduce_ss [])
-   ++ FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i, 
-			    flip_coins_g, flip_coins_invariant_constant, 
+   ++ FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i,
+			    flip_coins_g, flip_coins_invariant_constant,
 			    flip_coins_invariant_coins_j_eq_heads]
-   ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def, 
+   ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def,
 		  Assign_Array_i_def, ProbAssign_def, Probs_def, MAP, LENGTH]
    ++ SIMP_TAC posreal_reduce_ss [lin_eta, let_lin_lemma, mul_lzero, add_rzero, mul_lone, int_of_value_def]
    ++ `?i. int_of_value (s "i") = & i` by METIS_TAC [NUM_POSINT_EXISTS]
    ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT]
    ++ `i + 1 <= n` by METIS_TAC [int_of_value_def, INT_LT, LESS_EQ, ADD1]
-   ++ `Array_length (update_Array_i (Array l) i Heads) = n` 
+   ++ `Array_length (update_Array_i (Array l) i Heads) = n`
 	by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
-   ++ `Array_length (update_Array_i (Array l) i Tails) = n` 
+   ++ `Array_length (update_Array_i (Array l) i Tails) = n`
 	by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
    ++ `!k.
         k < i + 1 ==>
@@ -1865,9 +1865,9 @@ val flip_coins_loop_result_heads = store_thm
          (get_Array_i (update_Array_i (Array l) i Heads) k = Tails)`
 	by (REPEAT STRIP_TAC
 	    ++ `k <= i` by METIS_TAC [LE_LT1]
-	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k = 
+	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k =
 		if k = i then Heads else get_Array_i (Array l) k`
-		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT,
 			      int_of_value_def, INT_LT]
 	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
    ++ `!k.
@@ -1876,9 +1876,9 @@ val flip_coins_loop_result_heads = store_thm
          (get_Array_i (update_Array_i (Array l) i Tails) k = Tails)`
 	by (REPEAT STRIP_TAC
 	    ++ `k <= i` by METIS_TAC [LE_LT1]
-	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k = 
+	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k =
 		if k = i then Tails else get_Array_i (Array l) k`
-		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT,
 			      int_of_value_def, INT_LT]
 	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
    ++ Q.ABBREV_TAC `foo = (?l'. update_Array_i (Array l) i Heads = Array l')`
@@ -1924,34 +1924,34 @@ val flip_coins_loop_result_tails = store_thm
          (wlp flip_coins_loop (flip_coins_postE_tails n nsapays pay j))``,
    REPEAT STRIP_TAC
    ++ Suff `Leq (flip_coins_invariant_tails n nsapays pay j)
-	        (Cond flip_coins_g 
+	        (Cond flip_coins_g
 		      (wlp flip_coins_loopbody (flip_coins_invariant_tails n nsapays pay j))
-		      (flip_coins_postE_tails n nsapays pay j))`	     		 
+		      (flip_coins_postE_tails n nsapays pay j))`
    >> METIS_TAC [flip_coins_loop, wlp_while]
    ++ RW_TAC std_ss [Leq_def, cond_eta, flip_coins_invariant_tails]
    ++ Cases_on `~(flip_coins_invariant_constant n nsapays pay s)`
    >> RW_TAC posreal_ss [zero_le]
    ++ FULL_SIMP_TAC std_ss []
    ++ Cases_on `~ (flip_coins_g s)`
-   >> (FULL_SIMP_TAC std_ss [flip_coins_postE_tails, flip_coins_g, flip_coins_invariant_j_lt_i, 
-			     flip_coins_invariant_constant, flip_coins_invariant_coins_j_eq_tails, 
+   >> (FULL_SIMP_TAC std_ss [flip_coins_postE_tails, flip_coins_g, flip_coins_invariant_j_lt_i,
+			     flip_coins_invariant_constant, flip_coins_invariant_coins_j_eq_tails,
 			     bool_exp_def, num_of_value_def]
        ++ RW_TAC posreal_reduce_ss []
        ++ METIS_TAC [INT_LE_ANTISYM, INT_NOT_LT, int_of_value_def, NUM_OF_INT])
    ++ FULL_SIMP_TAC std_ss []
    ++ Cases_on `~(flip_coins_invariant_j_lt_i j s)`
-   >> (FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i, 
-			     flip_coins_g, flip_coins_invariant_constant, 
+   >> (FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i,
+			     flip_coins_g, flip_coins_invariant_constant,
 			     flip_coins_invariant_coins_j_eq_tails]
-       ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def, 
+       ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def,
 		      Assign_Array_i_def, ProbAssign_def, Probs_def, MAP, LENGTH]
        ++ SIMP_TAC posreal_reduce_ss [lin_eta, let_lin_lemma, mul_lzero, add_rzero, mul_lone, int_of_value_def]
        ++ `?i. int_of_value (s "i") = & i` by METIS_TAC [NUM_POSINT_EXISTS]
        ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT]
        ++ `i + 1 <= n` by METIS_TAC [int_of_value_def, INT_LT, LESS_EQ, ADD1]
-       ++ `Array_length (update_Array_i (Array l) i Heads) = n` 
+       ++ `Array_length (update_Array_i (Array l) i Heads) = n`
 		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
-       ++ `Array_length (update_Array_i (Array l) i Tails) = n` 
+       ++ `Array_length (update_Array_i (Array l) i Tails) = n`
 		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
        ++ `!k.
            k < i + 1 ==>
@@ -1959,9 +1959,9 @@ val flip_coins_loop_result_tails = store_thm
            (get_Array_i (update_Array_i (Array l) i Heads) k = Tails)`
 	by (REPEAT STRIP_TAC
 	    ++ `k <= i` by METIS_TAC [LE_LT1]
-	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k = 
+	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k =
 		if k = i then Heads else get_Array_i (Array l) k`
-		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT,
 			      int_of_value_def, INT_LT]
 	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
        ++ `!k.
@@ -1970,9 +1970,9 @@ val flip_coins_loop_result_tails = store_thm
            (get_Array_i (update_Array_i (Array l) i Tails) k = Tails)`
 	by (REPEAT STRIP_TAC
 	    ++ `k <= i` by METIS_TAC [LE_LT1]
-	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k = 
+	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k =
 		if k = i then Tails else get_Array_i (Array l) k`
-		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT,
 			      int_of_value_def, INT_LT]
 	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
        ++ Q.ABBREV_TAC `foo = (?l'. update_Array_i (Array l) i Heads = Array l')`
@@ -1995,18 +1995,18 @@ val flip_coins_loop_result_tails = store_thm
        ++ `get_Array_i (update_Array_i (Array l) i Tails) i = Tails`
 		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT]
        ++ RW_TAC posreal_reduce_ss [])
-   ++ FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i, 
-			    flip_coins_g, flip_coins_invariant_constant, 
+   ++ FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i,
+			    flip_coins_g, flip_coins_invariant_constant,
 			    flip_coins_invariant_coins_j_eq_tails]
-   ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def, 
+   ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def,
 		  Assign_Array_i_def, ProbAssign_def, Probs_def, MAP, LENGTH]
    ++ SIMP_TAC posreal_reduce_ss [lin_eta, let_lin_lemma, mul_lzero, add_rzero, mul_lone, int_of_value_def]
    ++ `?i. int_of_value (s "i") = & i` by METIS_TAC [NUM_POSINT_EXISTS]
    ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT]
    ++ `i + 1 <= n` by METIS_TAC [int_of_value_def, INT_LT, LESS_EQ, ADD1]
-   ++ `Array_length (update_Array_i (Array l) i Heads) = n` 
+   ++ `Array_length (update_Array_i (Array l) i Heads) = n`
 	by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
-   ++ `Array_length (update_Array_i (Array l) i Tails) = n` 
+   ++ `Array_length (update_Array_i (Array l) i Tails) = n`
 	by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
    ++ `!k.
         k < i + 1 ==>
@@ -2014,9 +2014,9 @@ val flip_coins_loop_result_tails = store_thm
          (get_Array_i (update_Array_i (Array l) i Heads) k = Tails)`
 	by (REPEAT STRIP_TAC
 	    ++ `k <= i` by METIS_TAC [LE_LT1]
-	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k = 
+	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k =
 		if k = i then Heads else get_Array_i (Array l) k`
-		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT,
 			      int_of_value_def, INT_LT]
 	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
    ++ `!k.
@@ -2025,9 +2025,9 @@ val flip_coins_loop_result_tails = store_thm
          (get_Array_i (update_Array_i (Array l) i Tails) k = Tails)`
 	by (REPEAT STRIP_TAC
 	    ++ `k <= i` by METIS_TAC [LE_LT1]
-	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k = 
+	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k =
 		if k = i then Tails else get_Array_i (Array l) k`
-		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT,
 			      int_of_value_def, INT_LT]
 	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
    ++ Q.ABBREV_TAC `foo = (?l'. update_Array_i (Array l) i Heads = Array l')`
@@ -2056,7 +2056,7 @@ val flip_coins_wlp_lem8 = store_thm
 		     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
 		     (s "payer" = Int (& pay)) /\
 		     (0 <= int_of_value (s "payer")) /\
-		     (int_of_value (s "payer") <= int_of_value (s "N")) 
+		     (int_of_value (s "payer") <= int_of_value (s "N"))
 		  then 1/2 else 0:posreal)
 	 (wlp flip_coins (flip_coins_postE_heads n nsapays pay j))``,
    RW_TAC std_ss [flip_coins_def, Program_def, wlp_seq, For_0_to_n_def, For_def]
@@ -2069,7 +2069,7 @@ val flip_coins_wlp_lem8 = store_thm
 		     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
 		     (s "payer" = Int (& pay)) /\
 		     (0 <= int_of_value (s "payer")) /\
-		     (int_of_value (s "payer") <= int_of_value (s "N")) 
+		     (int_of_value (s "payer") <= int_of_value (s "N"))
 		  then 1/2 else 0:posreal)
       		(wlp (New_Array "Coins" "N")
          	     (wlp (Assign "i" (\s. Int 0))
@@ -2077,7 +2077,7 @@ val flip_coins_wlp_lem8 = store_thm
    >> PROVE_TAC [wlp_mono, leq_trans]
    ++ POP_ASSUM (K ALL_TAC)
    ++ SRW_TAC [] [New_Array_def, wlp_def, assign_eta, flip_coins_invariant_heads,
-		     flip_coins_invariant_constant, flip_coins_invariant_j_lt_i, 
+		     flip_coins_invariant_constant, flip_coins_invariant_j_lt_i,
 		     int_of_value_def, num_of_value_def, NUM_OF_INT, Leq_def]
    ++ RW_TAC posreal_reduce_ss []
    ++ FULL_SIMP_TAC bool_ss [DE_MORGAN_THM]
@@ -2094,7 +2094,7 @@ val flip_coins_wlp_lem9 = store_thm
 		     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
 		     (s "payer" = Int (& pay)) /\
 		     (0 <= int_of_value (s "payer")) /\
-		     (int_of_value (s "payer") <= int_of_value (s "N")) 
+		     (int_of_value (s "payer") <= int_of_value (s "N"))
 		  then 1/2 else 0:posreal)
 	 (wlp flip_coins (flip_coins_postE_tails n nsapays pay j))``,
    RW_TAC std_ss [flip_coins_def, Program_def, wlp_seq, For_0_to_n_def, For_def]
@@ -2107,7 +2107,7 @@ val flip_coins_wlp_lem9 = store_thm
 		     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
 		     (s "payer" = Int (& pay)) /\
 		     (0 <= int_of_value (s "payer")) /\
-		     (int_of_value (s "payer") <= int_of_value (s "N")) 
+		     (int_of_value (s "payer") <= int_of_value (s "N"))
 		  then 1/2 else 0:posreal)
       		(wlp (New_Array "Coins" "N")
          	     (wlp (Assign "i" (\s. Int 0))
@@ -2115,7 +2115,7 @@ val flip_coins_wlp_lem9 = store_thm
    >> PROVE_TAC [wlp_mono, leq_trans]
    ++ POP_ASSUM (K ALL_TAC)
    ++ SRW_TAC [] [New_Array_def, wlp_def, assign_eta, flip_coins_invariant_tails,
-		     flip_coins_invariant_constant, flip_coins_invariant_j_lt_i, 
+		     flip_coins_invariant_constant, flip_coins_invariant_j_lt_i,
 		     int_of_value_def, num_of_value_def, NUM_OF_INT, Leq_def]
    ++ RW_TAC posreal_reduce_ss []
    ++ FULL_SIMP_TAC bool_ss [DE_MORGAN_THM]
@@ -2140,30 +2140,30 @@ val flip_coins_loop_result_heads_or_tails = store_thm
          (wlp flip_coins_loop (flip_coins_postE_heads_or_tails n nsapays pay))``,
    REPEAT STRIP_TAC
    ++ Suff `Leq (flip_coins_invariant_heads_or_tails n nsapays pay)
-	        (Cond flip_coins_g 
+	        (Cond flip_coins_g
 		      (wlp flip_coins_loopbody (flip_coins_invariant_heads_or_tails n nsapays pay))
-		      (flip_coins_postE_heads_or_tails n nsapays pay))`	     		 
+		      (flip_coins_postE_heads_or_tails n nsapays pay))`
    >> METIS_TAC [flip_coins_loop, wlp_while]
    ++ RW_TAC std_ss [Leq_def, cond_eta, flip_coins_invariant_heads_or_tails, bool_exp_def]
    ++ Cases_on `~(flip_coins_invariant_constant n nsapays pay s)`
    >> RW_TAC posreal_ss [zero_le]
    ++ FULL_SIMP_TAC std_ss []
    ++ Cases_on `~ (flip_coins_g s)`
-   >> (FULL_SIMP_TAC std_ss [flip_coins_postE_heads_or_tails, flip_coins_g, 
-			     flip_coins_invariant_constant, 
+   >> (FULL_SIMP_TAC std_ss [flip_coins_postE_heads_or_tails, flip_coins_g,
+			     flip_coins_invariant_constant,
 			     bool_exp_def, num_of_value_def]
        ++ METIS_TAC [le_refl])
-   ++ FULL_SIMP_TAC std_ss [flip_coins_loopbody, 
+   ++ FULL_SIMP_TAC std_ss [flip_coins_loopbody,
 			     flip_coins_g, flip_coins_invariant_constant]
-   ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def, 
+   ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def,
 		      Assign_Array_i_def, ProbAssign_def, Probs_def, MAP, LENGTH]
    ++ SIMP_TAC posreal_reduce_ss [lin_eta, let_lin_lemma, mul_lzero, add_rzero, mul_lone, int_of_value_def]
    ++ `?i. int_of_value (s "i") = & i` by METIS_TAC [NUM_POSINT_EXISTS]
    ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT]
    ++ `i + 1 <= n` by METIS_TAC [int_of_value_def, INT_LT, LESS_EQ, ADD1]
-   ++ `Array_length (update_Array_i (Array l) i Heads) = n` 
+   ++ `Array_length (update_Array_i (Array l) i Heads) = n`
 		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
-   ++ `Array_length (update_Array_i (Array l) i Tails) = n` 
+   ++ `Array_length (update_Array_i (Array l) i Tails) = n`
 		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
    ++ `!k.
         k < i + 1 ==>
@@ -2171,9 +2171,9 @@ val flip_coins_loop_result_heads_or_tails = store_thm
          (get_Array_i (update_Array_i (Array l) i Heads) k = Tails)`
 	by (REPEAT STRIP_TAC
 	    ++ `k <= i` by METIS_TAC [LE_LT1]
-	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k = 
+	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k =
 		if k = i then Heads else get_Array_i (Array l) k`
-		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT,
 			      int_of_value_def, INT_LT]
 	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
    ++ `!k.
@@ -2182,9 +2182,9 @@ val flip_coins_loop_result_heads_or_tails = store_thm
          (get_Array_i (update_Array_i (Array l) i Tails) k = Tails)`
 	by (REPEAT STRIP_TAC
 	    ++ `k <= i` by METIS_TAC [LE_LT1]
-	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k = 
+	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k =
 		if k = i then Tails else get_Array_i (Array l) k`
-		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT,
 			      int_of_value_def, INT_LT]
 	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
    ++ Q.ABBREV_TAC `foo = (?l'. update_Array_i (Array l) i Heads = Array l')`
@@ -2220,7 +2220,7 @@ val flip_coins_wlp_lem10 = store_thm
    >> PROVE_TAC [wlp_mono, leq_trans]
    ++ POP_ASSUM (K ALL_TAC)
    ++ SRW_TAC [] [New_Array_def, wlp_def, assign_eta, flip_coins_invariant_heads_or_tails,
-		     flip_coins_invariant_constant, bool_exp_def, 
+		     flip_coins_invariant_constant, bool_exp_def,
 		     int_of_value_def, num_of_value_def, NUM_OF_INT, Leq_def]
    ++ RW_TAC posreal_reduce_ss []
    ++ FULL_SIMP_TAC bool_ss [DE_MORGAN_THM]
@@ -2238,30 +2238,30 @@ val set_announcements_j_eq_xor = Define
 	 then
 	    if j = 0
 	    then
-	       ((get_Array_i (s "Announces") j) = 
+	       ((get_Array_i (s "Announces") j) =
 		(xor [Yes;
 		      get_Array_i (s "Coins") 0;
 		      get_Array_i (s "Coins") ((num_of_value (s "N")) - 1)]))
 	    else
-	       ((get_Array_i (s "Announces") j) = 
+	       ((get_Array_i (s "Announces") j) =
 		(xor [Yes;
 		      get_Array_i (s "Coins") j;
 		      get_Array_i (s "Coins") (j - 1)]))
 	 else
 	    if j = 0
 	    then
-	       ((get_Array_i (s "Announces") j) = 
+	       ((get_Array_i (s "Announces") j) =
 		(xor [No;
 		      get_Array_i (s "Coins") 0;
 		      get_Array_i (s "Coins") ((num_of_value (s "N")) - 1)]))
 	    else
-	       ((get_Array_i (s "Announces") j) = 
+	       ((get_Array_i (s "Announces") j) =
 		(xor [No;
 		      get_Array_i (s "Coins") j;
 		      get_Array_i (s "Coins") (j - 1)])))`;
 
 val set_announcements_invariant_constant = Define
-   `set_announcements_invariant_constant n nsapays a pay = 
+   `set_announcements_invariant_constant n nsapays a pay =
     (\s. (s "N" = Int (&n)) /\
     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
@@ -2350,7 +2350,7 @@ val dc_prog_string_inequalities = store_thm
      (~("currentcoin" = "payer")) /\ (~("currentcoin" = "Announces")) /\ (~("currentcoin" = "previouscoin")) /\
      (~("currentcoin" = "NSApays")) /\ (~("currentcoin" = "coinflip")) /\ (~("currentcoin" = "result")) /\
      (~("currentcoin" = "pays")) /\
-     (~("previouscoin" = "i")) /\ (~("previouscoin" = "Coins")) /\ (~("previouscoin" = "N")) /\ 
+     (~("previouscoin" = "i")) /\ (~("previouscoin" = "Coins")) /\ (~("previouscoin" = "N")) /\
      (~("previouscoin" = "payer")) /\ (~("previouscoin" = "currentcoin")) /\ (~("previouscoin" = "Announces")) /\
      (~("previouscoin" = "NSApays")) /\ (~("previouscoin" = "coinflip")) /\ (~("previouscoin" = "result")) /\
      (~("previouscoin" = "pays")) /\
@@ -2375,28 +2375,28 @@ val set_announcements_loop_result = store_thm
          (wlp set_announcements_loop (set_announcements_postE n nsapays a pay))``,
    REPEAT STRIP_TAC
    ++ Suff `Leq (set_announcements_invariant n nsapays a pay)
-	        (Cond set_announcements_g 
+	        (Cond set_announcements_g
 		      (wlp set_announcements_loopbody (set_announcements_invariant n nsapays a pay))
-		      (set_announcements_postE n nsapays a pay))`	     		 
+		      (set_announcements_postE n nsapays a pay))`
    >> METIS_TAC [set_announcements_loop, wlp_while]
    ++ RW_TAC std_ss [Leq_def, cond_eta, set_announcements_invariant, bool_exp_def]
    ++ Cases_on `~(set_announcements_invariant_constant n nsapays a pay s)`
    >> RW_TAC posreal_ss [zero_le]
    ++ Cases_on `~ (set_announcements_g s)`
    >> (FULL_SIMP_TAC std_ss [set_announcements_postE, set_announcements_g,
-			     set_announcements_invariant_constant, 
+			     set_announcements_invariant_constant,
 			     bool_exp_def, num_of_value_def]
        ++ METIS_TAC [le_refl])
-   ++ FULL_SIMP_TAC std_ss [set_announcements_loopbody, wlp_seq, set_announcements_invariant_constant, 
+   ++ FULL_SIMP_TAC std_ss [set_announcements_loopbody, wlp_seq, set_announcements_invariant_constant,
 			    wlp_assign, assign_eta, num_of_value_def, int_of_value_def, NUM_OF_INT,
 			    Assign_Array_i_def, set_announcements_g, dc_prog_string_inequalities,
 			    set_announcements_j_eq_xor]
-   ++ FULL_SIMP_TAC std_ss [wlp_def, If_def, assign_eta, lin_eta, bound1_def, let_lin_lemma, 
+   ++ FULL_SIMP_TAC std_ss [wlp_def, If_def, assign_eta, lin_eta, bound1_def, let_lin_lemma,
 				int_of_value_def, NUM_OF_INT, dc_prog_string_inequalities]
    ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT, NOT_LESS]
    ++ `pay <= n` by METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LE]
-   ++ `i + 1 <= n` 
-	by METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LT, LESS_LESS_SUC, ADD1, NOT_LESS]	   
+   ++ `i + 1 <= n`
+	by METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LT, LESS_LESS_SUC, ADD1, NOT_LESS]
    ++ `Array_length (Array a) = n` by METIS_TAC [NUM_OF_INT, int_of_value_def]
    ++ `(!k.
            k < n ==>
@@ -2962,7 +2962,7 @@ val wlp_set_announcements_result = store_thm
 
 val compute_result_postE = Define
    `compute_result_postE n nsapays pay =
-    bool_exp (\s. 
+    bool_exp (\s.
     (s "N" = Int (&n)) /\
     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
@@ -3009,8 +3009,8 @@ val FIRSTN_SUC = store_thm
    ++ `SUC n = LENGTH (SNOC x l)` by FULL_SIMP_TAC arith_ss [LENGTH_SNOC]
    ++ `FIRSTN (SUC n) (SNOC x l) = (SNOC x l)` by METIS_TAC [FIRSTN_LENGTH]
    ++ `n = LENGTH l` by FULL_SIMP_TAC arith_ss [LENGTH_SNOC]
-   ++ `FIRSTN n (SNOC x l) = FIRSTN n l` 
-	by (`n <= LENGTH l` by RW_TAC arith_ss [] 
+   ++ `FIRSTN n (SNOC x l) = FIRSTN n l`
+	by (`n <= LENGTH l` by RW_TAC arith_ss []
 	    ++ METIS_TAC [FIRSTN_SNOC])
    ++ `FIRSTN n l = l` by METIS_TAC [FIRSTN_LENGTH]
    ++ RW_TAC std_ss [EL_LENGTH_SNOC]);
@@ -3033,14 +3033,14 @@ val Xor_APPEND = store_thm
    REPEAT STRIP_TAC
    ++ Induct_on `l1`
    >> (RW_TAC std_ss [APPEND]
-       ++ `(Xor (Array l2) = Int 1) \/ (Xor (Array l2) = Int 0)` 
+       ++ `(Xor (Array l2) = Int 1) \/ (Xor (Array l2) = Int 0)`
 		by METIS_TAC [Xor_is_Int1_or_Int0]
        ++ RW_TAC int_ss [Xor_def, xor_def, int_of_value_def])
    ++ REPEAT STRIP_TAC
    ++ FULL_SIMP_TAC std_ss [MEM]
-   ++ `(Xor (Array l2) = Int 1) \/ (Xor (Array l2) = Int 0)` 
+   ++ `(Xor (Array l2) = Int 1) \/ (Xor (Array l2) = Int 0)`
 		by METIS_TAC [Xor_is_Int1_or_Int0]
-   ++ `(Xor (Array l1) = Int 1) \/ (Xor (Array l1) = Int 0)` 
+   ++ `(Xor (Array l1) = Int 1) \/ (Xor (Array l1) = Int 0)`
 		by METIS_TAC [Xor_is_Int1_or_Int0]
    ++ `(h = Int 1) \/ (h = Int 0)` by RW_TAC std_ss []
    ++ FULL_SIMP_TAC int_ss [Xor_def, xor_def, int_of_value_def, APPEND]);
@@ -3074,7 +3074,7 @@ val wlp_seq_set_announcements_compute_result = store_thm
 	   ++ `num_of_value (s' "i") = n` by METIS_TAC [NUM_OF_INT, int_of_value_def, num_of_value_def]
            ++ FULL_SIMP_TAC std_ss [set_announcements_j_eq_xor, dc_prog_string_inequalities]
            ++ METIS_TAC [],
-           `l = []` 
+           `l = []`
 		by (`i = n` by (`i <= n` by METIS_TAC [NUM_OF_INT, INT_LE, int_of_value_def]
 			    	++ `~(i < n)` by METIS_TAC [NUM_OF_INT, INT_LT, int_of_value_def]
 			    	++ FULL_SIMP_TAC arith_ss [])
@@ -3110,7 +3110,7 @@ val wlp_seq_set_announcements_compute_result = store_thm
        ++ `num_of_value (s' "i") = n` by METIS_TAC [NUM_OF_INT, int_of_value_def, num_of_value_def]
        ++ FULL_SIMP_TAC std_ss [set_announcements_j_eq_xor, dc_prog_string_inequalities]
        ++ METIS_TAC [],
-       `i = n` 
+       `i = n`
 		by (`i <= n` by METIS_TAC [NUM_OF_INT, INT_LE, int_of_value_def]
 		    ++ `~(i < n)` by METIS_TAC [NUM_OF_INT, INT_LT, int_of_value_def]
 		    ++ FULL_SIMP_TAC arith_ss [])
@@ -3125,13 +3125,13 @@ val wlp_seq_set_announcements_compute_result = store_thm
      		 (EL j a = Int (0)))`
 		by METIS_TAC [Array_length_def, Heads_def, Tails_def, get_Array_i_def]
         ++ `!x. (MEM x l) ==> ((x = Int 1) \/ (x = Int 0))`
-		by METIS_TAC [MEM_EL]		
+		by METIS_TAC [MEM_EL]
 	++ `!x. (MEM x a) ==> ((x = Int 1) \/ (x = Int 0))`
 		by METIS_TAC [MEM_EL]
 	++ `LENGTH l = n` by METIS_TAC [Array_length_def]
 	++ `LENGTH a = n` by METIS_TAC [Array_length_def]
 	++ FULL_SIMP_TAC std_ss []
-	++ `!x. ((x> 0) /\ (x <= n))  ==> 
+	++ `!x. ((x> 0) /\ (x <= n))  ==>
     		(Xor (Array (FIRSTN x l)) =
      		 xor [EL (n-1) a; EL (x -1) a; (if pay < x then Yes else No)])`
 		by (REPEAT STRIP_TAC
@@ -3143,20 +3143,20 @@ val wlp_seq_set_announcements_compute_result = store_thm
 		    >> (`x = 0` by RW_TAC arith_ss []
 			++ Cases_on `l`
 			>> FULL_SIMP_TAC arith_ss [LENGTH]
-			++ FULL_SIMP_TAC arith_ss [FIRSTN, set_announcements_j_eq_xor, 
+			++ FULL_SIMP_TAC arith_ss [FIRSTN, set_announcements_j_eq_xor,
 						   Xor_def, Yes_def, No_def, Heads_def, Tails_def]
 			++ Cases_on `pay = 0`
-			>> (`h' = xor [Int 1; EL 0 a; EL (n-1) a]` 
-				by (`h' = xor [Int 1; 
-						  get_Array_i (s' "Coins") 0; 
+			>> (`h' = xor [Int 1; EL 0 a; EL (n-1) a]`
+				by (`h' = xor [Int 1;
+						  get_Array_i (s' "Coins") 0;
 						  get_Array_i (s' "Coins") (num_of_value (s' "N") - 1)]`
-					by (`h' = get_Array_i (s' "Announces") 0` 
+					by (`h' = get_Array_i (s' "Announces") 0`
 						by METIS_TAC [EL, get_Array_i_def, HD]
 				            ++ `0 < n` by RW_TAC arith_ss []
 					    ++ METIS_TAC [int_of_value_def, num_of_value_def, NUM_OF_INT])
 				    ++ `get_Array_i (s' "Coins") 0 = EL 0 a` by METIS_TAC [get_Array_i_def]
 				    ++ `get_Array_i (s' "Coins") (num_of_value (s' "N") - 1) = EL (n - 1) a`
-					by METIS_TAC [num_of_value_def, NUM_OF_INT, 
+					by METIS_TAC [num_of_value_def, NUM_OF_INT,
 						      int_of_value_def, get_Array_i_def]
 				    ++ FULL_SIMP_TAC std_ss [])
 			    ++ FULL_SIMP_TAC arith_ss []
@@ -3164,17 +3164,17 @@ val wlp_seq_set_announcements_compute_result = store_thm
 			    ++ `(EL (n - 1) a = Int (1)) \/ (EL (n - 1) a = Int (0))` by RW_TAC arith_ss []
 			    ++ RW_TAC int_ss [xor_def, int_of_value_def])
 			++ `~(pay < 1)` by RW_TAC arith_ss []
-			++ `h' = xor [Int 0; EL 0 a; EL (n-1) a]` 
-				by (`h' = xor [Int 0; 
-						  get_Array_i (s' "Coins") 0; 
+			++ `h' = xor [Int 0; EL 0 a; EL (n-1) a]`
+				by (`h' = xor [Int 0;
+						  get_Array_i (s' "Coins") 0;
 						  get_Array_i (s' "Coins") (num_of_value (s' "N") - 1)]`
-					by (`h' = get_Array_i (s' "Announces") 0` 
+					by (`h' = get_Array_i (s' "Announces") 0`
 						by METIS_TAC [EL, get_Array_i_def, HD]
 				            ++ `0 < n` by RW_TAC arith_ss []
 					    ++ METIS_TAC [int_of_value_def, num_of_value_def, NUM_OF_INT])
 				    ++ `get_Array_i (s' "Coins") 0 = EL 0 a` by METIS_TAC [get_Array_i_def]
 				    ++ `get_Array_i (s' "Coins") (num_of_value (s' "N") - 1) = EL (n - 1) a`
-					by METIS_TAC [num_of_value_def, NUM_OF_INT, 
+					by METIS_TAC [num_of_value_def, NUM_OF_INT,
 						      int_of_value_def, get_Array_i_def]
 				    ++ FULL_SIMP_TAC std_ss [])
 			++ FULL_SIMP_TAC arith_ss []
@@ -3187,15 +3187,15 @@ val wlp_seq_set_announcements_compute_result = store_thm
 		    ++ `x<n` by RW_TAC arith_ss []
 		    ++ `Xor (Array (FIRSTN x l ++ [EL x l])) =
  			xor [Xor (Array (FIRSTN x l)); Xor (Array [EL x l])]`
-			by (`!y. MEM y [EL x l] ==> MEM y l` 
+			by (`!y. MEM y [EL x l] ==> MEM y l`
 				by METIS_TAC [EL_IS_EL, MEM]
 	    		    ++ `!y. MEM y (FIRSTN x l) ==> MEM y l`
 				by METIS_TAC [IS_EL_FIRSTN]
 	    		    ++ METIS_TAC [Xor_APPEND])
-		    ++ FULL_SIMP_TAC arith_ss [set_announcements_j_eq_xor, 
+		    ++ FULL_SIMP_TAC arith_ss [set_announcements_j_eq_xor,
 					       Xor_def, Yes_def, No_def, Heads_def, Tails_def]
 		    ++ Cases_on `pay < x`
-		    >> (`EL x l = xor [Int 0; EL x a; EL (x - 1) a]` 
+		    >> (`EL x l = xor [Int 0; EL x a; EL (x - 1) a]`
 				by (`~(pay = x)` by RW_TAC arith_ss []
 				    ++ `~(x = 0)` by RW_TAC arith_ss []
 				    ++ METIS_TAC [int_of_value_def, num_of_value_def, NUM_OF_INT, get_Array_i_def])
@@ -3205,7 +3205,7 @@ val wlp_seq_set_announcements_compute_result = store_thm
 			++ `(EL x a = Int 1) \/ (EL x a = Int 0)` by FULL_SIMP_TAC arith_ss []
 			++ RW_TAC int_ss [xor_def, int_of_value_def])
 		    ++ Cases_on `pay = x`
-		    >> (`EL x l = xor [Int 1; EL x a; EL (x - 1) a]` 
+		    >> (`EL x l = xor [Int 1; EL x a; EL (x - 1) a]`
 				by (`~(x = 0)` by RW_TAC arith_ss []
 				    ++ METIS_TAC [int_of_value_def, num_of_value_def, NUM_OF_INT, get_Array_i_def])
 			++ `pay < SUC x` by RW_TAC arith_ss []
@@ -3213,7 +3213,7 @@ val wlp_seq_set_announcements_compute_result = store_thm
 			++ `(EL (x - 1) a = Int 1) \/ (EL (x - 1) a = Int 0)` by FULL_SIMP_TAC arith_ss []
 			++ `(EL x a = Int 1) \/ (EL x a = Int 0)` by FULL_SIMP_TAC arith_ss []
 			++ RW_TAC int_ss [xor_def, int_of_value_def])
-		    ++ `EL x l = xor [Int 0; EL x a; EL (x - 1) a]` 
+		    ++ `EL x l = xor [Int 0; EL x a; EL (x - 1) a]`
 				by (`~(pay = x)` by RW_TAC arith_ss []
 				    ++ `~(x = 0)` by RW_TAC arith_ss []
 				    ++ METIS_TAC [int_of_value_def, num_of_value_def, NUM_OF_INT, get_Array_i_def])
@@ -3282,7 +3282,7 @@ val wlp_Program_flip_coins_set_announcements_compute_result_result = store_thm
    >> PROVE_TAC [le_trans]
    ++ POP_ASSUM (K ALL_TAC)
    ++ RW_TAC std_ss [flip_coins_postE_heads_or_tails, bool_exp_def, zero_le]
-   ++ FULL_SIMP_TAC std_ss [set_announcements_preE, flip_coins_invariant_constant, 
+   ++ FULL_SIMP_TAC std_ss [set_announcements_preE, flip_coins_invariant_constant,
 			    flip_coins_g, num_of_value_def, int_of_value_def, NUM_OF_INT]
    ++ Q.EXISTS_TAC `l`
    ++ METIS_TAC [int_of_value_def, NUM_OF_INT, INT_NOT_LT, INT_LE_ANTISYM, le_refl]);
@@ -3313,7 +3313,7 @@ val wp_leq_wlp = store_thm
 	       ++ METIS_TAC [Leq_def])
 	   ++ `f s < 1` by METIS_TAC [le_antisym, preal_lt_def]
 	   ++ `~ (f s = infty)` by RW_TAC posreal_reduce_ss [le1_imp_not_infty]
-	   ++ `~((1 - f s) = 0)` 
+	   ++ `~((1 - f s) = 0)`
 		by (`~(1 = infty)` by RW_TAC posreal_ss []
 		     ++ `~ (1 <= f s)` by FULL_SIMP_TAC std_ss [preal_lt_def]
 		     ++ METIS_TAC [sub_zero_imp_le])
@@ -3322,7 +3322,7 @@ val wp_leq_wlp = store_thm
 	   ++ Cases_on `f s = 0`
 	   >> (RW_TAC posreal_reduce_ss [mul_lone, mul_lzero, add_lzero]
 	       ++ METIS_TAC [Leq_def])
-	   ++ METIS_TAC [add_linfty, mul_rinfty, Leq_def, infty_le, 
+	   ++ METIS_TAC [add_linfty, mul_rinfty, Leq_def, infty_le,
 			 add_rinfty, le_infty, le_lmul_imp, le_add2])
        ++ METIS_TAC [Leq_def],
        RW_TAC std_ss [wp_def, wlp_def]
@@ -3508,7 +3508,7 @@ val wp_set_payer_lemma_for_wlp = store_thm
    ++ `(wp (NondetAssign "payer" (zero_to_n_Int_list n))
             (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No)))) =
        (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No)))`
-	by (`(!a s. (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No))) s = 
+	by (`(!a s. (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No))) s =
 		    (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No))) (assign "payer" a s))`
 		by SRW_TAC [] [assign_eta, bool_exp_def]
 	    ++ METIS_TAC [NondetAssign_do_nothing])
@@ -3561,7 +3561,7 @@ val wlp_initialize_result = store_thm
   ("wlp_initialize_result",
    ``!n nsapays. (n > 0) ==>
 		 Leq One
-		     (wlp (initialize n nsapays) 
+		     (wlp (initialize n nsapays)
 			  (bool_exp (\s. (s "N" = Int (&n)) /\
 			    	    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
 			    	    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
@@ -3594,7 +3594,7 @@ val wlp_initialize_result = store_thm
                         	   s "NSApays" = Yes
                       		 else
                         	   s "NSApays" = No))))`
-	by (RW_TAC posreal_reduce_ss [Leq_def, One_def, bool_exp_def, wlp_def, 
+	by (RW_TAC posreal_reduce_ss [Leq_def, One_def, bool_exp_def, wlp_def,
 				      initialize_var_NSApays_def, assign_eta]
 	    ++ RW_TAC posreal_reduce_ss [zero_le])
    ++ Suff `Leq (bool_exp (\s. (s "N" = Int (& n)) /\
@@ -3619,7 +3619,7 @@ val wlp_initialize_result = store_thm
 
 val dc_prog_result_postE = Define
    `dc_prog_result_postE n nsapays =
-    bool_exp (\s. 
+    bool_exp (\s.
     (s "N" = Int (&n)) /\
     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\

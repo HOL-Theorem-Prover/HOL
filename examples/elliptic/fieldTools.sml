@@ -368,7 +368,7 @@ val field_add_ac_conv =
             [field_add_lzero,
              field_add_lzero',
              field_add_rzero,
-             field_add_rzero'],             
+             field_add_rzero'],
           simplify_ths =
             [GSYM field_num_one,
              field_neg_zero,
@@ -818,7 +818,7 @@ local
             in
               (push_conv solver a_th a, b_th)
             end
-          | EQUAL => 
+          | EQUAL =>
             let
               val (ac,bc) = hcf_power_conv2 f (a1,b1)
               val (a_th,b_th) = hcf_conv2 f solver (a2,b2)
@@ -1023,7 +1023,7 @@ in
         ORACLE_field_poly_conv term_normalize_ths solver tm
       else
 (***
-        trace_conv "field_poly_conv" 
+        trace_conv "field_poly_conv"
 ***)
         let
           val term_normalize_conv = PURE_REWRITE_CONV term_normalize_ths
@@ -1060,7 +1060,7 @@ in
                     mult_assoc_conv solver THENC TRY_CONV mult_conv,
                     LAND_CONV exp_conv THENC TRY_CONV mult_conv,
                     RAND_CONV mult_conv THENC TRY_CONV mult_conv]) tm
-              
+
           fun term_conv tm =
               (mult_conv ORELSEC
                CHANGED_CONV
@@ -1189,7 +1189,7 @@ in
         th
       end;
 end;
- 
+
 fun field_poly_basis_ss context =
     let
       val patterns =

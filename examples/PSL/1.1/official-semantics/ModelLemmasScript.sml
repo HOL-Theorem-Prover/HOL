@@ -12,13 +12,13 @@
 ******************************************************************************)
 (*
 quietdec := true;
-loadPath 
- := 
+loadPath
+ :=
  "../official-semantics" :: "../../path" :: !loadPath;
-map load 
+map load
  ["pred_setLib","res_quanTools", "rich_listTheory", "pairLib","intLib",
   "FinitePathTheory", "PathTheory", "UnclockedSemanticsTheory",
-  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", 
+  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory",
   "RewritesPropertiesTheory","ProjectionTheory",
   "rich_listTheory", "res_quanLib", "res_quanTheory", "metisLib"];
 open SyntaxTheory SyntacticSugarTheory
@@ -41,14 +41,14 @@ open HolKernel Parse boolLib bossLib;
 ******************************************************************************)
 open SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     pred_setLib pred_setTheory arithmeticTheory listTheory rich_listTheory 
-     res_quanLib pairLib res_quanTheory ModelTheory ClockedSemanticsTheory 
+     pred_setLib pred_setTheory arithmeticTheory listTheory rich_listTheory
+     res_quanLib pairLib res_quanTheory ModelTheory ClockedSemanticsTheory
      res_quanTools RewritesPropertiesTheory ProjectionTheory ModelTheory
      metisLib FinitePathTheory pairTheory
      PathTheory; (* Open after list theory for CONS_def *)
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers 
+* Set default parsing to natural numbers rather than integers
 ******************************************************************************)
 val _ = intLib.deprecate_int();
 
@@ -70,16 +70,16 @@ val resq_SS =
    rewrites
     [LESS_def,LENGTH_def,IN_LESS,IN_LESSX]];
 
-val PATH_CASES = 
+val PATH_CASES =
  store_thm
   ("PATH_CASES",
-   ``(PATH M s (FINITE l) = 
+   ``(PATH M s (FINITE l) =
       (LENGTH l > 0) /\ (s = HD l) /\ s IN M.S /\
-      (!n :: (LESS(LENGTH l - 1)). 
+      (!n :: (LESS(LENGTH l - 1)).
         EL n l IN M.S /\ EL (SUC n) l IN M.S /\ (EL n l, EL (SUC n) l) IN M.R) /\
       !s. s IN M.S ==> ~((EL (LENGTH l - 1) l, s) IN M.R))
      /\
-     (PATH M s (INFINITE f) = 
+     (PATH M s (INFINITE f) =
        (s = f 0) /\ !n. f n IN M.S /\ (f n, f(SUC n)) IN M.R)``,
    RW_TAC (list_ss++resq_SS) [PATH_def,LS,GT,ELEM_INFINITE,ELEM_FINITE,SUB]
     THEN EQ_TAC
@@ -94,11 +94,11 @@ val PATH_CASES =
 (*****************************************************************************)
 val SIMPLE_MODEL_def =
  Define
-  `SIMPLE_MODEL (B:'state -> bool) (R:'state#'state->bool) = 
+  `SIMPLE_MODEL (B:'state -> bool) (R:'state#'state->bool) =
     <| S  := {s | T};
        S0 := B;
-       R  := R; 
-       P  := {p | T}; 
+       R  := R;
+       P  := {p | T};
        L  := (\(s:'state). {p:'state -> bool | s IN p}) |>`;
 
 val MODEL_SIMPLE_MODEL =
@@ -122,13 +122,13 @@ val MODEL_SIMPLE_MODEL =
 (*    )                                                                      *)
 (*****************************************************************************)
 val MODEL_PROD_def =
- Define 
+ Define
   `MODEL_PROD (M1:('state1, 'prop1) model) (M2:('state2, 'prop2) model) =
     <| S  := {(s1,s2) | s1 IN M1.S  /\ s2 IN M2.S};
        S0 := {(s1,s2) | s1 IN M1.S0 /\ s2 IN M2.S0};
        R  := {((s1,s2),(s1',s2')) | (s1,s1') IN M1.R /\ (s2,s2') IN M2.R};
        P  := {p | if ISL p then OUTL p IN M1.P else OUTR p IN M2.P};
-       L  := \(s1,s2). 
+       L  := \(s1,s2).
               {p | if ISL p then OUTL p IN M1.L s1 else OUTR p IN M2.L s2} |>`;
 
 val _ = set_fixity "||" (Infixl 650);
@@ -163,7 +163,7 @@ val L_SEM_def =
 (*****************************************************************************)
 val LETTER_IN_def =
  Define
-  `LETTER_IN p v = 
+  `LETTER_IN p v =
     ?i. i < LENGTH v /\ ?s. (ELEM v i = STATE s) /\ p IN s` ;
 
 (*****************************************************************************)
@@ -171,7 +171,7 @@ val LETTER_IN_def =
 (*****************************************************************************)
 val FINITE_LETTER_IN_def =
  Define
-  `FINITE_LETTER_IN p l = 
+  `FINITE_LETTER_IN p l =
     ?i. i < LENGTH l /\ ?s. (EL i l = STATE s) /\ p IN s` ;
 
 (*****************************************************************************)
@@ -179,16 +179,16 @@ val FINITE_LETTER_IN_def =
 (*****************************************************************************)
 val INFINITE_LETTER_IN_def =
  Define
-  `INFINITE_LETTER_IN p f = 
+  `INFINITE_LETTER_IN p f =
     ?i s. (f i = STATE s) /\ p IN s` ;
 
 val LETTER_IN_CASES =
  store_thm
   ("LETTER_IN_CASES",
-   ``(LETTER_IN p (FINITE l) = FINITE_LETTER_IN p l) 
+   ``(LETTER_IN p (FINITE l) = FINITE_LETTER_IN p l)
      /\
      (LETTER_IN p (INFINITE f) = INFINITE_LETTER_IN p f)``,
-  RW_TAC list_ss 
+  RW_TAC list_ss
    [LETTER_IN_def,FINITE_LETTER_IN_def,INFINITE_LETTER_IN_def,
     LENGTH_def,LS,ELEM_FINITE,ELEM_INFINITE]);
 
@@ -197,7 +197,7 @@ val LETTER_IN_CASES =
 (*****************************************************************************)
 val PATH_TO_MODEL_def =
  Define
-  `(PATH_TO_MODEL v = 
+  `(PATH_TO_MODEL v =
     <| S  := {n | n < LENGTH v};
        S0 := {0};
        R  := {(n,n') | n < LENGTH v /\ n' < LENGTH v /\ (n' = n+1)};
@@ -207,20 +207,20 @@ val PATH_TO_MODEL_def =
 val PATH_TO_MODEL_CASES =
  store_thm
  ("PATH_TO_MODEL_CASES",
-  ``(PATH_TO_MODEL(FINITE l) = 
+  ``(PATH_TO_MODEL(FINITE l) =
      <| S  := {n | n < LENGTH l};
         S0 := {0};
         R  := {(n,n') | n < LENGTH l /\ n' < LENGTH l /\ (n' = n+1)};
         P  := {p:'prop | FINITE_LETTER_IN p l};
         L  := \n. {p | n < LENGTH l /\ FINITE_LETTER_IN p l /\ L_SEM (EL n l) p} |>)
     /\
-    (PATH_TO_MODEL(INFINITE f) = 
+    (PATH_TO_MODEL(INFINITE f) =
      <| S  := {n | T};
         S0 := {0};
         R  := {(n,n') | n' = n+1};
         P  := {p:'prop | INFINITE_LETTER_IN p f};
         L  := \n. {p | INFINITE_LETTER_IN p f /\ L_SEM (f n) p} |>)``,
-  RW_TAC list_ss 
+  RW_TAC list_ss
    [PATH_TO_MODEL_def,LENGTH_def,LS,ELEM_FINITE,ELEM_INFINITE,
     LETTER_IN_CASES]);
 
@@ -230,7 +230,7 @@ val MODEL_PATH_TO_MODEL =
    ``!p. 0 < LENGTH p ==>  MODEL(PATH_TO_MODEL p)``,
    GEN_TAC
     THEN Cases_on `p`
-    THEN RW_TAC list_ss [SUBSET_DEF,MODEL_def,PATH_TO_MODEL_CASES]   
+    THEN RW_TAC list_ss [SUBSET_DEF,MODEL_def,PATH_TO_MODEL_CASES]
     THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_UNIV,LENGTH_def,LS]);
 
 (*****************************************************************************)
@@ -239,7 +239,7 @@ val MODEL_PATH_TO_MODEL =
 (*****************************************************************************)
 val automaton_def =
  Hol_datatype
-  `automaton = 
+  `automaton =
     <| Sigma: 'label -> bool;
        Q:     'state -> bool;
        Delta: 'state # 'label # 'state -> bool;
@@ -257,8 +257,8 @@ val AUTOMATON_PATH_def =
     (!n::LESS (LENGTH w - 1).
        ELEM w n IN A.Q /\ ELEM w (SUC n) IN A.Q /\
        ?lab. lab IN A.Sigma /\ (ELEM w n, lab,  ELEM w (SUC n)) IN A.Delta) /\
-    !l. (w = FINITE l) 
-        ==> 
+    !l. (w = FINITE l)
+        ==>
         !s lab. s IN A.Q /\ lab IN A.Sigma
                 ==> ~((ELEM w (LENGTH l - 1), lab, s) IN A.Delta)`;
 
@@ -269,12 +269,12 @@ val AUTOMATON_PATH_def =
 (*****************************************************************************)
 (*
 val OLD_OPEN_MODEL_def =
- Define 
-  `OLD_OPEN_MODEL(P:'prop -> bool) = 
+ Define
+  `OLD_OPEN_MODEL(P:'prop -> bool) =
     <| S  := {s | s SUBSET P};
        S0 := {s | s SUBSET P};
-       R  := {(s,t) | s SUBSET P /\ t SUBSET P}; 
-       P  := P; 
+       R  := {(s,t) | s SUBSET P /\ t SUBSET P};
+       P  := P;
        L  := \s. {p | p IN s} |>`;
 *)
 
@@ -285,12 +285,12 @@ val SINK_def =
  Define `SINK P = {@p. ~(p IN P)}`;
 
 val OPEN_MODEL_def =
- Define 
-  `OPEN_MODEL(P:'prop -> bool) = 
+ Define
+  `OPEN_MODEL(P:'prop -> bool) =
     <| S  := {s | s SUBSET P} UNION {SINK P};
        S0 := {s | s SUBSET P};
-       R  := {(s,t) | s SUBSET P /\ (t SUBSET P \/ (t = SINK P))}; 
-       P  := P; 
+       R  := {(s,t) | s SUBSET P /\ (t SUBSET P \/ (t = SINK P))};
+       P  := P;
        L  := \s. if s = SINK P then {} else {p | p IN s} |>`;
 
 val MODEL_OPEN_MODEL =
@@ -312,8 +312,8 @@ val AUTOMATON_def =
 (* Use of totality suggested by Cindy Eisner                                 *)
 (*****************************************************************************)
 val TOTAL_AUTOMATON_def =
- Define 
-  `TOTAL_AUTOMATON A = 
+ Define
+  `TOTAL_AUTOMATON A =
     AUTOMATON A /\ !s a. ?s'. s' IN A.Q /\ (s,a,s') IN A.Delta`;
 
 (*****************************************************************************)
@@ -350,14 +350,14 @@ val AUTOMATON_MODEL_TO_AUTOMATON =
 (*  (s,s') is in the relation of M, and (t,a,t') is in the relation of A,    *)
 (*  where a is the labeling of s. P are the propositions of M and            *)
 (*  L(s,t) = L(s).                                                           *)
-(*****************************************************************************) 
+(*****************************************************************************)
 val MODEL_AUTOMATON_PROD_def =
- Define 
-  `MODEL_AUTOMATON_PROD 
+ Define
+  `MODEL_AUTOMATON_PROD
     (M:('prop,'state2) model) (A:('prop -> bool, 'state1) automaton)  =
     <| S  := {(s,t) | s IN M.S  /\ t IN A.Q};
        S0 := {(s,t) | s IN M.S0 /\ t IN A.Q0};
-       R  := {((s,t),(s',t')) | 
+       R  := {((s,t),(s',t')) |
               ?a. (a = M.L s) /\ (s,s') IN M.R /\ (t,a,t') IN A.Delta};
        P  := M.P;
        L  := \(s,t). M.L s |>`;
@@ -383,7 +383,7 @@ val AUTOMATON_PROD_def =
    (A1:('label1,'state1)automaton) (A2:('label2,'state2)automaton) =
     <| Sigma := {(a1,a2) | a1 IN A1.Sigma  /\ a2 IN A2.Sigma };
        Q     := {(q1,q2) | q1 IN A1.Q  /\ q2 IN A2.Q};
-       Delta := {((q1,q2),(a1,a2),(q1',q2')) | 
+       Delta := {((q1,q2),(a1,a2),(q1',q2')) |
                  (q1,a1,q1') IN A1.Delta /\ (q2,a2,q2') IN A2.Delta};
        Q0    := {(q1,q2) | q1 IN A1.Q0  /\ q2 IN A2.Q0};
        F     := {(q1,q2) | q1 IN A1.F  /\ q2 IN A2.F} |>`;
@@ -445,7 +445,7 @@ val EQ_PAIR =
 val LENGTH_LAST =
  store_thm
   ("LENGTH_LAST",
-   ``!l. LENGTH l > 0 
+   ``!l. LENGTH l > 0
          ==>
          (LAST l = EL (LENGTH l - 1) l)``,
    RW_TAC arith_ss [EL_PRE_LENGTH]);
@@ -459,10 +459,10 @@ val COMPUTATION_OPEN_MODEL =
       LENGTH v > 0 /\ ELEM v 0 SUBSET P
       /\
       (!n::LESS(LENGTH v - 1).
-        ELEM v n SUBSET P /\ 
+        ELEM v n SUBSET P /\
         (ELEM v (SUC n) SUBSET P \/ (ELEM v (SUC n) = SINK P)))
       /\
-      !l. (v = FINITE l) ==> ~(LAST l SUBSET P))``, 
+      !l. (v = FINITE l) ==> ~(LAST l SUBSET P))``,
      RW_TAC (srw_ss()++resq_SS)
       [OPEN_MODEL_def,IN_COMPUTATION,
        PATH_def,IN_LESS_LENGTH_SUB1,ELEM_FINITE,SUBSET_SINK]
@@ -505,9 +505,9 @@ val LENGTH1_LAST =
 
 val LEMMA1 = (* Surprisingly tricky proof needed *)
  prove
-  (``(?p. ~(p IN P)) 
-     ==> 
-     ((A /\ B) /\ (s SUBSET P /\ C) /\ Q(s = SINK P) = 
+  (``(?p. ~(p IN P))
+     ==>
+     ((A /\ B) /\ (s SUBSET P /\ C) /\ Q(s = SINK P) =
       (A /\ B) /\ (s SUBSET P /\ C) /\ Q F)``,
     RW_TAC list_ss []
      THEN EQ_TAC
@@ -522,21 +522,21 @@ val COMPUTATION_OPEN_MODEL_AUTOMATON =
    ``(?p. ~(p IN P)) /\ AUTOMATON A
      ==>
      (v IN COMPUTATION(OPEN_MODEL P || A) =
-      LENGTH v > 0 /\ FST(ELEM v 0) SUBSET P /\ SND(ELEM v 0) IN A.Q0 
+      LENGTH v > 0 /\ FST(ELEM v 0) SUBSET P /\ SND(ELEM v 0) IN A.Q0
       /\
       (!n::LESS(LENGTH v - 1).
-        FST(ELEM v n) SUBSET P /\ 
-        (FST(ELEM v (SUC n)) SUBSET P \/ (FST (ELEM v (SUC n)) = SINK P)) /\ 
-        (SND(ELEM v n), FST(ELEM v n), SND(ELEM v (SUC n))) IN A.Delta) 
+        FST(ELEM v n) SUBSET P /\
+        (FST(ELEM v (SUC n)) SUBSET P \/ (FST (ELEM v (SUC n)) = SINK P)) /\
+        (SND(ELEM v n), FST(ELEM v n), SND(ELEM v (SUC n))) IN A.Delta)
       /\
-      !l. (v = FINITE l) /\ FST(LAST l) SUBSET P 
-          ==> 
+      !l. (v = FINITE l) /\ FST(LAST l) SUBSET P
+          ==>
           !s. s IN A.Q ==> ~((SND(LAST l), FST(LAST l), s) IN A.Delta))``,
      RW_TAC (srw_ss()++resq_SS)
       [MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def,IN_COMPUTATION,
        PATH_def,IN_LESS_LENGTH_SUB1,ELEM_FINITE,SUBSET_SINK,
        DECIDE ``~A \/ (~B \/ ~C /\ ~D) \/ E = A ==> B ==> (C \/ D) ==> E``,
-       LEMMA1]  
+       LEMMA1]
       THEN FULL_SIMP_TAC (srw_ss()++resq_SS) [AUTOMATON_def]
       THEN EQ_TAC
       THEN RW_TAC list_ss []
@@ -546,8 +546,8 @@ val COMPUTATION_OPEN_MODEL_AUTOMATON =
       THEN ASM_REWRITE_TAC[GSYM EL]
       THEN Cases_on `LENGTH l = 1`
       THEN ASSUM_LIST
-            (fn thl => 
-              if is_eq(concl(el 1 thl)) 
+            (fn thl =>
+              if is_eq(concl(el 1 thl))
                then FULL_SIMP_TAC list_ss [GSYM(MATCH_MP LENGTH1_LAST (el 1 thl))]
                else ALL_TAC)
       THEN TRY(ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `(P,s)` (el 2 thl))))
@@ -590,7 +590,7 @@ val UF_VALID_OPEN_MODEL_AUTOMATON =
 (*****************************************************************************)
 val COMPUTATION_TO_MODEL_def =
  Define
-  `COMPUTATION_TO_MODEL w = 
+  `COMPUTATION_TO_MODEL w =
     <| S  := {n | n < LENGTH w};
        S0 := {0};
        R  := {(n,n') | n < LENGTH w /\ n' < LENGTH w /\ (n' = n+1)};
@@ -600,20 +600,20 @@ val COMPUTATION_TO_MODEL_def =
 val COMPUTATION_TO_MODEL_CASES =
  store_thm
   ("COMPUTATION_TO_MODEL_CASES",
-   ``(COMPUTATION_TO_MODEL(FINITE l) = 
+   ``(COMPUTATION_TO_MODEL(FINITE l) =
       <| S  := {n | n < LENGTH l};
          S0 := {0};
          R  := {(n,n') | n < LENGTH l /\ n' < LENGTH l /\ (n' = n+1)};
          P  := {p:'prop | ?i. i < LENGTH l /\ p IN EL i l};
          L  := \n. {p | n < LENGTH l /\ p IN (EL n l)} |>)
      /\
-     (COMPUTATION_TO_MODEL(INFINITE f) = 
+     (COMPUTATION_TO_MODEL(INFINITE f) =
       <| S  := {n | T};
          S0 := {0};
          R  := {(n,n') | n' = n+1};
          P  := {p:'prop | ?i. p IN f i};
          L  := \n. {p | p IN (f n)} |>)``,
-     RW_TAC list_ss 
+     RW_TAC list_ss
       [COMPUTATION_TO_MODEL_def,LENGTH_def,LS,ELEM_INFINITE,ELEM_FINITE]);
 
 val MODEL_COMPUTATION_TO_MODEL =
@@ -622,7 +622,7 @@ val MODEL_COMPUTATION_TO_MODEL =
    ``!p. 0 < LENGTH p ==>  MODEL(COMPUTATION_TO_MODEL p)``,
    GEN_TAC
     THEN Cases_on `p`
-    THEN RW_TAC list_ss [SUBSET_DEF,MODEL_def,COMPUTATION_TO_MODEL_def]   
+    THEN RW_TAC list_ss [SUBSET_DEF,MODEL_def,COMPUTATION_TO_MODEL_def]
     THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_UNIV,LENGTH_def,LS]
     THEN PROVE_TAC[]);
 
@@ -640,20 +640,20 @@ val GT_LS_IMP =
    Cases_on `w`
     THEN RW_TAC list_ss [LENGTH_def,LS,GT]);
 
-val LEMMA2 = 
+val LEMMA2 =
  prove
   (``1 <= LENGTH w
      /\
      (!n. n < LENGTH v - 1 ==>
-        SUC(FST(ELEM v n)) < LENGTH w 
-        /\ 
-        FST(ELEM v (SUC n)) < LENGTH w 
+        SUC(FST(ELEM v n)) < LENGTH w
+        /\
+        FST(ELEM v (SUC n)) < LENGTH w
         /\
         (FST(ELEM v (SUC n)) = SUC(FST(ELEM v n))))
      ==>
      LENGTH v <= LENGTH w``,
    Cases_on `v` THEN Cases_on `w`
-    THEN RW_TAC arith_ss 
+    THEN RW_TAC arith_ss
           [LENGTH_def,ELEM_FINITE,ELEM_INFINITE,LE,LS,SUB,GSYM EL,
            DECIDE ``~A \/ ~B \/ C = A /\ B ==> C``]
     THENL
@@ -663,7 +663,7 @@ val LEMMA2 =
        THEN RW_TAC arith_ss []
        THEN `LENGTH l - 1 < LENGTH l /\ LENGTH l - 2 < LENGTH l - 1` by DECIDE_TAC
        THEN RES_TAC
-       THEN `SUC (LENGTH l - 2) = LENGTH l - 1` 
+       THEN `SUC (LENGTH l - 2) = LENGTH l - 1`
              by  PROVE_TAC[DECIDE``m - 1 < m /\ m - 2 < m - 1 ==> (SUC(m - 2) = m - 1)``]
        THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
        THEN `FST (EL 0 l) + (LENGTH l - 1) < LENGTH l'` by PROVE_TAC[]
@@ -677,22 +677,22 @@ val LEMMA2 =
        THEN `SUC (FST (f (LENGTH l))) < LENGTH l` by PROVE_TAC[]
        THEN DECIDE_TAC]);
 
-val LEMMA3 = 
+val LEMMA3 =
  prove
-  (``1 <= LENGTH w 
+  (``1 <= LENGTH w
      /\
      (FST (ELEM v 0) = 0)
      /\
      (!n. n < LENGTH v - 1 ==>
-        SUC(FST(ELEM v n)) < LENGTH w 
-        /\ 
-        FST(ELEM v (SUC n)) < LENGTH w 
+        SUC(FST(ELEM v n)) < LENGTH w
+        /\
+        FST(ELEM v (SUC n)) < LENGTH w
         /\
         (FST(ELEM v (SUC n)) = SUC(FST(ELEM v n))))
      ==>
      !m. m < LENGTH v - 1 ==> (FST (ELEM v m) = m)``,
    Cases_on `v` THEN Cases_on `w`
-    THEN RW_TAC arith_ss 
+    THEN RW_TAC arith_ss
           [LENGTH_def,ELEM_FINITE,ELEM_INFINITE,LE,LS,SUB,GSYM EL,
            DECIDE ``~A \/ ~B \/ C = A /\ B ==> C``]
     THEN Induct_on `m`
@@ -704,15 +704,15 @@ val COMPUTATION_COMPUTATION_MODEL_AUTOMATON_LEMMA =
    ``AUTOMATON A
      ==>
      (v IN COMPUTATION(COMPUTATION_TO_MODEL w || A) =
-      LENGTH v > 0 /\ LENGTH w > 0 /\ (FST(ELEM v 0) = 0) /\ SND(ELEM v 0) IN A.Q0 
+      LENGTH v > 0 /\ LENGTH w > 0 /\ (FST(ELEM v 0) = 0) /\ SND(ELEM v 0) IN A.Q0
       /\
       (!n::LESS(LENGTH v - 1).
-        SUC(FST(ELEM v n)) < LENGTH w /\ FST(ELEM v (SUC n)) < LENGTH w /\ 
+        SUC(FST(ELEM v n)) < LENGTH w /\ FST(ELEM v (SUC n)) < LENGTH w /\
         SND(ELEM v n) IN A.Q /\ (FST(ELEM v (SUC n)) = SUC(FST(ELEM v n))) /\
-        (SND(ELEM v n), ELEM w (FST(ELEM v n)), SND(ELEM v (SUC n))) IN A.Delta) 
+        (SND(ELEM v n), ELEM w (FST(ELEM v n)), SND(ELEM v (SUC n))) IN A.Delta)
       /\
-      !l. (v = FINITE l) 
-          ==> 
+      !l. (v = FINITE l)
+          ==>
           !s. s IN A.Q /\ SUC(FST(LAST l)) < LENGTH w
               ==> ~((SND(LAST l), ELEM w (FST(LAST l)), s) IN A.Delta))``,
      RW_TAC (srw_ss()++resq_SS)
@@ -751,24 +751,24 @@ val COMPUTATION_COMPUTATION_MODEL_AUTOMATON =
    ``AUTOMATON A
      ==>
      (v IN COMPUTATION(COMPUTATION_TO_MODEL w || A) =
-      LENGTH v > 0 /\ LENGTH w > 0 /\ (FST(ELEM v 0) = 0) 
-      /\ 
+      LENGTH v > 0 /\ LENGTH w > 0 /\ (FST(ELEM v 0) = 0)
+      /\
       SND(ELEM v 0) IN A.Q0 /\ LENGTH v <= LENGTH w
       /\
-      (!n::LESS(LENGTH v - 1). 
+      (!n::LESS(LENGTH v - 1).
         (FST(ELEM v (SUC n)) = SUC n) /\ SND(ELEM v n) IN A.Q /\
-        (SND(ELEM v n), ELEM w n, SND(ELEM v (SUC n))) IN A.Delta) 
+        (SND(ELEM v n), ELEM w n, SND(ELEM v (SUC n))) IN A.Delta)
       /\
       !l. (v = FINITE l) /\ SUC(FST(LAST l)) < LENGTH w
-          ==> 
+          ==>
           !s. s IN A.Q ==> ~((SND(LAST l), ELEM w (FST(LAST l)), s) IN A.Delta))``,
      RW_TAC (srw_ss()++resq_SS)
       [COMPUTATION_COMPUTATION_MODEL_AUTOMATON_LEMMA,
        IN_LESS_LENGTH_SUB1]
       THEN EQ_TAC
       THEN RW_TAC list_ss []
-      THEN `1 <= LENGTH w` 
-            by (Cases_on `w` 
+      THEN `1 <= LENGTH w`
+            by (Cases_on `w`
                  THEN RW_TAC list_ss [LENGTH_def,LE]
                  THEN FULL_SIMP_TAC arith_ss [LENGTH_def,GT])
       THENL
@@ -802,8 +802,8 @@ val COMPUTATION_COMPUTATION_MODEL_AUTOMATON =
         Cases_on `n=0`
          THEN RW_TAC list_ss []
          THEN TRY(PROVE_TAC [ONE])
-         THEN `n - 1 < LENGTH v - 1` 
-               by (Cases_on `v` 
+         THEN `n - 1 < LENGTH v - 1`
+               by (Cases_on `v`
                     THEN RW_TAC list_ss [LENGTH_def,LS,SUB]
                     THEN FULL_SIMP_TAC arith_ss [LENGTH_def,GT,LS,SUB])
          THEN `SUC(n-1) = n` by DECIDE_TAC
@@ -829,21 +829,21 @@ val COMPUTATION_COMPUTATION_MODEL_AUTOMATON_COR1 =
    ``AUTOMATON A
      ==>
      (v IN COMPUTATION(COMPUTATION_TO_MODEL w || A) =
-      LENGTH v > 0 /\ (FST(ELEM v 0) = 0) 
-      /\ 
+      LENGTH v > 0 /\ (FST(ELEM v 0) = 0)
+      /\
       SND(ELEM v 0) IN A.Q0 /\ LENGTH v <= LENGTH w
       /\
       (!n. n < LENGTH v ==> (FST(ELEM v n) = n))
       /\
-      (!n. n < (LENGTH v - 1) ==> 
+      (!n. n < (LENGTH v - 1) ==>
            SND(ELEM v n) IN A.Q /\
-           (SND(ELEM v n), ELEM w n, SND(ELEM v (SUC n))) IN A.Delta) 
+           (SND(ELEM v n), ELEM w n, SND(ELEM v (SUC n))) IN A.Delta)
       /\
       !l. (v = FINITE l) /\ SUC(FST(LAST l)) < LENGTH w
-          ==> 
+          ==>
           !s. s IN A.Q ==> ~((SND(LAST l), ELEM w (FST(LAST l)), s) IN A.Delta))``,
      RW_TAC (srw_ss()++resq_SS) [COMPUTATION_COMPUTATION_MODEL_AUTOMATON,IN_LESS_LENGTH_SUB1]
-      THEN EQ_TAC 
+      THEN EQ_TAC
       THEN ZAP_TAC list_ss [SUC_SUB1_LS,GT_LE_TRANS]
       THEN Induct_on `n`
       THEN RW_TAC list_ss []
@@ -854,7 +854,7 @@ val XNUM_LS =
   ("XNUM_LS",
    ``XNUM m < n = m < n``,
    Cases_on `n`
-    THEN RW_TAC std_ss [LS]);      
+    THEN RW_TAC std_ss [LS]);
 
 val COMPUTATION_COMPUTATION_MODEL_AUTOMATON_COR2 =
  store_thm
@@ -862,21 +862,21 @@ val COMPUTATION_COMPUTATION_MODEL_AUTOMATON_COR2 =
    ``AUTOMATON A
      ==>
      (v IN COMPUTATION(COMPUTATION_TO_MODEL w || A) =
-      LENGTH v > 0 /\ (FST(ELEM v 0) = 0) 
-      /\ 
+      LENGTH v > 0 /\ (FST(ELEM v 0) = 0)
+      /\
       SND(ELEM v 0) IN A.Q0 /\ LENGTH v <= LENGTH w
       /\
       (!n. n < LENGTH v ==> (FST(ELEM v n) = n))
       /\
-      (!n. n < (LENGTH v - 1) ==> 
+      (!n. n < (LENGTH v - 1) ==>
            SND(ELEM v n) IN A.Q /\
-           (SND(ELEM v n), ELEM w n, SND(ELEM v (SUC n))) IN A.Delta) 
+           (SND(ELEM v n), ELEM w n, SND(ELEM v (SUC n))) IN A.Delta)
       /\
       !l. (v = FINITE l) /\ LENGTH v < LENGTH w
-          ==> 
+          ==>
           !s. s IN A.Q ==> ~((SND(LAST l), ELEM w (FST(LAST l)), s) IN A.Delta))``,
      RW_TAC (srw_ss()++resq_SS) [COMPUTATION_COMPUTATION_MODEL_AUTOMATON_COR1,IN_LESS_LENGTH_SUB1]
-      THEN EQ_TAC 
+      THEN EQ_TAC
       THEN ZAP_TAC list_ss [SUC_SUB1_LS,GT_LE_TRANS]
       THEN FULL_SIMP_TAC list_ss [LENGTH_def,ELEM_FINITE,GT,LS,SUB,LE]
       THEN `LENGTH l - 1 < LENGTH l` by DECIDE_TAC
@@ -890,41 +890,41 @@ val COMPUTATION_COMPUTATION_MODEL_AUTOMATON_COR3 =
    ``TOTAL_AUTOMATON A
      ==>
      (v IN COMPUTATION(COMPUTATION_TO_MODEL w || A) =
-      LENGTH v > 0 /\ (FST(ELEM v 0) = 0) 
-      /\ 
+      LENGTH v > 0 /\ (FST(ELEM v 0) = 0)
+      /\
       SND(ELEM v 0) IN A.Q0 /\ (LENGTH v = LENGTH w)
       /\
       (!n. n < LENGTH v ==> (FST(ELEM v n) = n))
       /\
-      (!n. n < (LENGTH v - 1) ==> 
+      (!n. n < (LENGTH v - 1) ==>
            SND(ELEM v n) IN A.Q /\
            (SND(ELEM v n), ELEM w n, SND(ELEM v (SUC n))) IN A.Delta))``,
      RW_TAC (srw_ss()++resq_SS)
       [TOTAL_AUTOMATON_def,COMPUTATION_COMPUTATION_MODEL_AUTOMATON_COR2,IN_LESS_LENGTH_SUB1]
-      THEN EQ_TAC 
+      THEN EQ_TAC
       THEN RW_TAC list_ss [SUC_SUB1_LS,GT_LE_TRANS]
       THEN TRY(Cases_on `v`) THEN TRY(Cases_on `w`)
-      THEN FULL_SIMP_TAC list_ss 
+      THEN FULL_SIMP_TAC list_ss
             [LENGTH_def,ELEM_FINITE,GT,LS,SUB,LE,xnum_11,xnum_distinct,path_11]
       THENL
        [Cases_on `LENGTH l < LENGTH l'`
          THEN TRY DECIDE_TAC
-         THEN `?s'. s' IN A.Q /\ (SND (LAST l),EL (FST (LAST l)) l',s) IN A.Delta` 
+         THEN `?s'. s' IN A.Q /\ (SND (LAST l),EL (FST (LAST l)) l',s) IN A.Delta`
               by PROVE_TAC[]
          THEN PROVE_TAC[],
         `?s'. s' IN A.Q /\ (SND (LAST l),EL (FST (LAST l)) l',s) IN A.Delta`
               by PROVE_TAC[]
          THEN PROVE_TAC[]]);
 
-val LANGUAGE_def = 
- Define 
-  `(LANGUAGE A (FINITE l) = 
+val LANGUAGE_def =
+ Define
+  `(LANGUAGE A (FINITE l) =
     (LENGTH l > 0)                                                         /\
     EL 0 l IN A.Q0                                                         /\
     (!n :: (LESS(LENGTH l - 1)). ?a. (EL n l, a, EL (SUC n) l) IN A.Delta) /\
     !a s. ~((EL (LENGTH l - 1) l, a, s) IN A.Delta))
    /\
-   (LANGUAGE A (INFINITE f) = 
+   (LANGUAGE A (INFINITE f) =
      f 0 IN A.Q0 /\ !n. ?a. (f n, a, f(SUC n)) IN A.Delta)`;
 
 (*****************************************************************************)
@@ -954,18 +954,18 @@ val PATH_ADD_IOTA_def =
 (* Should have proved FINITE_PATH_LANGUAGE directly, but now too lazy to     *)
 (* tweak the rather tedious proof.                                           *)
 (*****************************************************************************)
-val FINITE_PATH_LANGUAGE_LEMMA = 
+val FINITE_PATH_LANGUAGE_LEMMA =
  store_thm
   ("FINITE_PATH_LANGUAGE_LEMMA",
    ``!M s l.
       MODEL M /\ s IN M.S0 /\ (s = HD l)
       ==>
-      (PATH M s (FINITE l) = 
-        LANGUAGE 
-         (MODEL_TO_AUTOMATON M) 
+      (PATH M s (FINITE l) =
+        LANGUAGE
+         (MODEL_TO_AUTOMATON M)
          (CONS(NONE, (PATH_ADD_IOTA (FINITE l)))))``,
    REPEAT GEN_TAC
-    THEN SIMP_TAC (list_ss++resq_SS) 
+    THEN SIMP_TAC (list_ss++resq_SS)
           [MODEL_def,PATH_CASES,LANGUAGE_def,MODEL_TO_AUTOMATON_def,
            PATH_ADD_IOTA_def,CONS_def]
     THEN RW_TAC (srw_ss()) []
@@ -980,9 +980,9 @@ val FINITE_PATH_LANGUAGE_LEMMA =
           THEN Cases_on `l`
           THEN RW_TAC list_ss []
           THEN FULL_SIMP_TAC list_ss [],
-         Q.EXISTS_TAC `M.L(EL (SUC n') l)` 
+         Q.EXISTS_TAC `M.L(EL (SUC n') l)`
           THEN DISJ1_TAC
-          THEN Q.EXISTS_TAC `EL n' l` 
+          THEN Q.EXISTS_TAC `EL n' l`
           THEN Q.EXISTS_TAC `EL (SUC n') l`
           THEN `n' < LENGTH l` by DECIDE_TAC
           THEN RW_TAC list_ss [EL_MAP]
@@ -1035,14 +1035,14 @@ val FINITE_PATH_LANGUAGE_LEMMA =
        THEN RES_TAC
        THEN FULL_SIMP_TAC list_ss [EL_MAP]
        THEN `n < LENGTH l` by DECIDE_TAC
-       THEN `EL n (MAP SOME l) = SOME (EL n l)` by PROVE_TAC[EL_MAP] 
+       THEN `EL n (MAP SOME l) = SOME (EL n l)` by PROVE_TAC[EL_MAP]
        THENL
         [`SOME(EL n l) = SOME s'` by PROVE_TAC[]
           THEN FULL_SIMP_TAC list_ss []
           THEN Cases_on `l`
           THEN RW_TAC list_ss []
           THEN FULL_SIMP_TAC list_ss []
-          THEN `EL n (MAP SOME t) = SOME (EL n t)` by PROVE_TAC[EL_MAP] 
+          THEN `EL n (MAP SOME t) = SOME (EL n t)` by PROVE_TAC[EL_MAP]
                (* Above needed, I think, for mysterious type variable reasons *)
           THEN `SOME(EL n t) = SOME s''` by PROVE_TAC[]
           THEN FULL_SIMP_TAC list_ss [],
@@ -1057,10 +1057,10 @@ val FINITE_PATH_LANGUAGE_LEMMA =
         [`!a s.
             (!s' s''.
                (~(EL (LENGTH l) (NONE::MAP SOME l) = SOME s') \/
-                ~(a = M.L s'') \/ ~(s = SOME s'')) \/ ~((s',s'') IN M.R))` 
+                ~(a = M.L s'') \/ ~(s = SOME s'')) \/ ~((s',s'') IN M.R))`
            by PROVE_TAC[]
           THEN POP_ASSUM
-                (fn th => 
+                (fn th =>
                   ASSUME_TAC(Q.SPECL[`M.L s`,`SOME s`,`EL (LENGTH l - 1) l`,`s`]th))
           THEN FULL_SIMP_TAC list_ss []
           THEN `LENGTH l = SUC(LENGTH l - 1)` by DECIDE_TAC
@@ -1069,10 +1069,10 @@ val FINITE_PATH_LANGUAGE_LEMMA =
          `!a s.
             (!s' s''.
                (~(EL (LENGTH l) (NONE::MAP SOME l) = SOME s') \/
-                ~(a = M.L s'') \/ ~(s = SOME s'')) \/ ~((s',s'') IN M.R))` 
+                ~(a = M.L s'') \/ ~(s = SOME s'')) \/ ~((s',s'') IN M.R))`
            by PROVE_TAC[]
           THEN POP_ASSUM
-                (fn th => 
+                (fn th =>
                   ASSUME_TAC(Q.SPECL[`M.L s`,`SOME s`,`EL (LENGTH l - 1) l`,`s`]th))
           THEN FULL_SIMP_TAC list_ss []
           THEN `LENGTH l = SUC(LENGTH l - 1)` by DECIDE_TAC
@@ -1092,19 +1092,19 @@ val FINITE_PATH_LANGUAGE =
    ((Q.GEN `M` o Q.GEN `l`)
     (SIMP_RULE list_ss []
      (Q.SPECL[`M`,`HD l`,`l`]FINITE_PATH_LANGUAGE_LEMMA))));
- 
+
 val INFINITE_PATH_LANGUAGE =
  store_thm
   ("INFINITE_PATH_LANGUAGE",
    ``!M f.
       MODEL M /\ f 0 IN M.S0
       ==>
-      (PATH M (f 0) (INFINITE f) = 
-        LANGUAGE 
-         (MODEL_TO_AUTOMATON M) 
+      (PATH M (f 0) (INFINITE f) =
+        LANGUAGE
+         (MODEL_TO_AUTOMATON M)
          (CONS(NONE, (PATH_ADD_IOTA (INFINITE f)))))``,
    REPEAT GEN_TAC
-    THEN SIMP_TAC (list_ss++resq_SS) 
+    THEN SIMP_TAC (list_ss++resq_SS)
           [MODEL_def,PATH_CASES,LANGUAGE_def,MODEL_TO_AUTOMATON_def,
            PATH_ADD_IOTA_def,CONS_def]
     THEN RW_TAC (srw_ss()) []
@@ -1124,11 +1124,11 @@ val PATH_LANGUAGE =
    ``!M w.
       MODEL M /\ (ELEM w 0) IN M.S0
       ==>
-      (PATH M (ELEM w 0) w = 
+      (PATH M (ELEM w 0) w =
         LANGUAGE (MODEL_TO_AUTOMATON M) (CONS(NONE, (PATH_ADD_IOTA w))))``,
    REPEAT GEN_TAC
     THEN Cases_on `w`
-    THEN SIMP_TAC (list_ss++resq_SS) 
+    THEN SIMP_TAC (list_ss++resq_SS)
           [ELEM_def,HEAD_def,REST_def,RESTN_def,
            FINITE_PATH_LANGUAGE,INFINITE_PATH_LANGUAGE]);
 
@@ -1140,12 +1140,12 @@ val PATH_LANGUAGE =
 val UF_SEM_FINITE_TOP_FREE_F_ALWAYS =
  store_thm
   ("UF_SEM_FINITE_TOP_FREE_F_ALWAYS",
-   ``TOP_FREE l 
+   ``TOP_FREE l
      ==>
-     (UF_SEM (FINITE l) (F_ALWAYS(F_WEAK_BOOL b)) = 
+     (UF_SEM (FINITE l) (F_ALWAYS(F_WEAK_BOOL b)) =
       !i. i < LENGTH l ==> B_SEM (EL i l) b)``,
    RW_TAC
-    (list_ss++resq_SS) 
+    (list_ss++resq_SS)
     [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,FinitePathTheory.LENGTH_RESTN,LESSX_def,LS,
      ELEM_RESTN,ELEM_def,HEAD_def,REST_def,RESTN_FINITE,HD_RESTN,xnum_11,TOP_FREE_EL]
     THEN EQ_TAC
@@ -1157,11 +1157,11 @@ val UF_SEM_FINITE_TOP_FREE_F_ALWAYS =
 val UF_SEM_FINITE_F_ALWAYS =
  store_thm
   ("UF_SEM_FINITE_F_ALWAYS",
-   ``UF_SEM (FINITE l) (F_ALWAYS(F_WEAK_BOOL b)) = 
+   ``UF_SEM (FINITE l) (F_ALWAYS(F_WEAK_BOOL b)) =
       !i. i < LENGTH l ==> B_SEM (EL i l) b \/
           ?j. j < i /\ (EL j l = TOP) /\ ~(LENGTH l = j)``,
    RW_TAC
-    (list_ss++resq_SS) 
+    (list_ss++resq_SS)
     [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,FinitePathTheory.LENGTH_RESTN,LESSX_def,LS,
      ELEM_RESTN,ELEM_def,HEAD_def,REST_def,RESTN_FINITE,HD_RESTN,xnum_11,TOP_FREE_EL]
     THEN EQ_TAC
@@ -1174,24 +1174,24 @@ val UF_SEM_INFINITE_TOP_FREE_F_ALWAYS =
      ==>
      (UF_SEM (INFINITE f) (F_ALWAYS(F_WEAK_BOOL b)) = !i. B_SEM (f i) b)``,
    RW_TAC
-    (list_ss++resq_SS) 
+    (list_ss++resq_SS)
     [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,LENGTH_RESTN,LESSX_def,LS,
      ELEM_RESTN,ELEM_def,HEAD_def,REST_def,RESTN_INFINITE,HD_RESTN,TOP_FREE_EL]);
 
 val UF_SEM_INFINITE_F_ALWAYS =
  store_thm
   ("UF_SEM_INFINITE_F_ALWAYS",
-   ``UF_SEM (INFINITE f) (F_ALWAYS(F_WEAK_BOOL b)) = 
+   ``UF_SEM (INFINITE f) (F_ALWAYS(F_WEAK_BOOL b)) =
       !i. B_SEM (f i) b \/ ?j. j < i /\ (f j = TOP)``,
    RW_TAC
-    (list_ss++resq_SS) 
+    (list_ss++resq_SS)
     [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,LENGTH_RESTN,LESSX_def,LS,
      ELEM_RESTN,ELEM_def,HEAD_def,REST_def,RESTN_INFINITE,HD_RESTN]);
 
 val UF_SEM_F_ALWAYS =
  store_thm
   ("UF_SEM_F_ALWAYS",
-   ``UF_SEM w (F_ALWAYS(F_WEAK_BOOL b)) = 
+   ``UF_SEM w (F_ALWAYS(F_WEAK_BOOL b)) =
       !i::LESS(LENGTH w). B_SEM (ELEM w i) b \/ ?j::LESS i. ELEM w j = TOP``,
    Cases_on `w`
     THEN RW_TAC (list_ss++resq_SS)
@@ -1200,7 +1200,7 @@ val UF_SEM_F_ALWAYS =
            RESTN_INFINITE,RESTN_FINITE,HD_RESTN]
     THEN EQ_TAC
     THEN RW_TAC list_ss []
-    THEN RES_TAC 
+    THEN RES_TAC
     THEN ZAP_TAC list_ss []
     THEN `~(LENGTH l = j)` by DECIDE_TAC
     THEN PROVE_TAC[]);
@@ -1208,7 +1208,7 @@ val UF_SEM_F_ALWAYS =
 val UF_SEM_TOP_FREE_F_ALWAYS =
  store_thm
   ("UF_SEM_TOP_FREE_F_ALWAYS",
-   ``PATH_TOP_FREE w 
+   ``PATH_TOP_FREE w
      ==>
      (UF_SEM w (F_ALWAYS(F_WEAK_BOOL b)) = !i::LESS(LENGTH w). B_SEM (ELEM w i) b)``,
    Cases_on `w`
@@ -1218,7 +1218,7 @@ val UF_SEM_TOP_FREE_F_ALWAYS =
            RESTN_INFINITE,RESTN_FINITE,HD_RESTN,PATH_TOP_FREE_def]
     THEN EQ_TAC
     THEN RW_TAC list_ss []
-    THEN RES_TAC 
+    THEN RES_TAC
     THEN FULL_SIMP_TAC list_ss[TOP_FREE_EL]
     THEN `j < LENGTH l` by DECIDE_TAC
     THEN RES_TAC);
@@ -1245,7 +1245,7 @@ val PATH_ELEM_0 =
 val O_SEM_O_EF =
  store_thm
   ("O_SEM_O_EF",
-   ``O_SEM M (O_EF f) s =      
+   ``O_SEM M (O_EF f) s =
       ?p :: PATH M s. ?i :: (LESS(LENGTH p)).  O_SEM M f (ELEM p i)``,
    RW_TAC (std_ss++resq_SS) [IN_DEF,O_EF_def,O_SEM_def,LESSX_def,O_SEM_O_TRUE]
     THEN EQ_TAC
@@ -1257,7 +1257,7 @@ val O_AG_def =
 val O_SEM_O_AG =
  store_thm
   ("O_SEM_O_AG",
-   ``O_SEM M (O_AG f) s =      
+   ``O_SEM M (O_AG f) s =
       !p :: PATH M s. !i :: (LESS(LENGTH p)).  O_SEM M f (ELEM p i)``,
    RW_TAC (std_ss++resq_SS) [IN_DEF,O_SEM_O_EF,O_AG_def,O_SEM_def,LESSX_def]
     THEN EQ_TAC
@@ -1279,7 +1279,7 @@ val ELEM_MAP_PATH =
   ("ELEM_MAP_PATH",
    ``n < LENGTH p ==> (ELEM (MAP_PATH g p) n = g(ELEM p n))``,
    Cases_on `p`
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [MAP_PATH_def,ELEM_INFINITE,ELEM_FINITE,LENGTH_def,LS,EL_MAP]);
 
 val RESTN_MAP_PATH =
@@ -1287,7 +1287,7 @@ val RESTN_MAP_PATH =
   ("RESTN_MAP_PATH",
    ``n < LENGTH p ==> (RESTN (MAP_PATH g p) n = MAP_PATH g (RESTN p n))``,
    Cases_on `p`
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [MAP_PATH_def,ELEM_INFINITE,ELEM_FINITE,LENGTH_def,LS,EL_MAP,
            RESTN_FINITE,RESTN_INFINITE]
     THEN Q.UNDISCH_TAC `n < LENGTH l`
@@ -1308,8 +1308,8 @@ val SHARED_ALWAYS_STRONG_BOOL =
  store_thm
   ("SHARED_ALWAYS_STRONG_BOOL",
    ``UF_VALID M (F_G(F_STRONG_BOOL b)) = O_VALID M (O_AG(O_BOOL b))``,
-   RW_TAC (arith_ss++resq_SS) 
-    [IN_DEF,LESSX_def,UF_VALID_def,O_VALID_def,UF_SEM_F_G, 
+   RW_TAC (arith_ss++resq_SS)
+    [IN_DEF,LESSX_def,UF_VALID_def,O_VALID_def,UF_SEM_F_G,
      O_SEM_O_AG,COMPUTATION_def,UF_SEM,O_SEM_def,ELEM_RESTN,
      ELEM_MAP_PATH,LENGTH_MAP_PATH]
     THEN EQ_TAC
@@ -1335,8 +1335,8 @@ val SHARED_ALWAYS_WEAK_BOOL =
  store_thm
   ("SHARED_ALWAYS_WEAK_BOOL",
    ``UF_VALID M (F_G(F_WEAK_BOOL b)) = O_VALID M (O_AG(O_BOOL b))``,
-   RW_TAC (arith_ss++resq_SS) 
-    [IN_DEF,LESSX_def,UF_VALID_def,O_VALID_def,UF_SEM_F_G, 
+   RW_TAC (arith_ss++resq_SS)
+    [IN_DEF,LESSX_def,UF_VALID_def,O_VALID_def,UF_SEM_F_G,
      O_SEM_O_AG,COMPUTATION_def,UF_SEM,O_SEM_def,ELEM_RESTN,
      ELEM_MAP_PATH,LENGTH_MAP_PATH]
     THEN EQ_TAC
@@ -1349,7 +1349,7 @@ val SHARED_ALWAYS_WEAK_BOOL =
      THEN TRY(`j < LENGTH p` by PROVE_TAC[LS_TRANS_X])
      THEN FULL_SIMP_TAC std_ss [ELEM_MAP_PATH,letter_distinct]
      THEN `i < LENGTH(MAP_PATH (\s. STATE (M.L s)) p)` by PROVE_TAC[LENGTH_MAP_PATH]
-     THEN FULL_SIMP_TAC list_ss 
+     THEN FULL_SIMP_TAC list_ss
            [RESTN_MAP_PATH,LENGTH_MAP_PATH,PATH_FINITE_LENGTH_RESTN_0_COR]
      THEN `LENGTH(MAP_PATH (\s. STATE (M.L s)) p) = LENGTH(FINITE l)` by PROVE_TAC[]
      THEN FULL_SIMP_TAC list_ss [LENGTH_def,LENGTH_MAP_PATH,LS]);
@@ -1394,7 +1394,7 @@ val O_SEM_AG_B_IFF_IMP =
   ("O_SEM_AG_B_IFF_IMP",
    ``O_VALID M (O_AG(O_BOOL(B_IFF(b1, b2)))) ==>
       O_VALID M (O_IFF(O_AG(O_BOOL b1), O_AG(O_BOOL b2)))``,
-   RW_TAC (list_ss++resq_SS) 
+   RW_TAC (list_ss++resq_SS)
     [O_VALID_def,B_OR_def,B_IFF_def,B_IMP_def,B_SEM_def,B_SEM_def,
      O_SEM_O_AG,O_SEM_def,O_SEM_O_IFF]
     THEN PROVE_TAC[]);
@@ -1412,15 +1412,15 @@ try to prove
 val UF_INFINITE_VALID_def =
  Define
   `UF_INFINITE_VALID M f =
-   !pi. COMPUTATION M (INFINITE pi) 
-        ==> 
+   !pi. COMPUTATION M (INFINITE pi)
+        ==>
         UF_SEM (MAP_PATH (\s. STATE (M.L s)) (INFINITE pi)) f`;
 
 val UF_FINITE_VALID_def =
  Define
   `UF_FINITE_VALID M f =
-   !pi. COMPUTATION M (FINITE pi) 
-        ==> 
+   !pi. COMPUTATION M (FINITE pi)
+        ==>
         UF_SEM (MAP_PATH (\s. STATE (M.L s)) (FINITE pi)) f`;
 
 
@@ -1452,13 +1452,13 @@ val OPEN_MODEL_PROD_INFINITE =
      ==>
      !pi. COMPUTATION (OPEN_MODEL P) (INFINITE pi)
           ==>
-          UF_INFINITE_VALID 
+          UF_INFINITE_VALID
            (MODEL_AUTOMATON_PROD (COMPUTATION_TO_MODEL(INFINITE pi)) A)
            f``,
     RW_TAC (srw_ss()++resq_SS)
      [AUTOMATON_def,UF_VALID_def,UF_INFINITE_VALID_def,MODEL_AUTOMATON_PROD_def,
       OPEN_MODEL_def,COMPUTATION_def,IN_COMPUTATION,COMPUTATION_TO_MODEL_CASES,PATH_CASES]
-     THEN FULL_SIMP_TAC list_ss 
+     THEN FULL_SIMP_TAC list_ss
            [FST_LEMMA,PROVE[]``(!v. (?s. P s v) ==> Q v) = !v s. P s v ==> Q v``,
             MAP_PATH_def]
      THEN `(!n. (?s t. (pi' n = (s,t)) /\ t IN A.Q)) /\
@@ -1473,9 +1473,9 @@ val OPEN_MODEL_PROD_INFINITE =
      THEN POP_ASSUM(fn th => STRIP_ASSUME_TAC(CONV_RULE SKOLEM_CONV th))
      THEN ASSUM_LIST
            (fn thl => ASSUME_TAC
-                       (SPECL 
+                       (SPECL
                          [``INFINITE(\n. (pi(FST(pi' n)), t''' n)):(('a -> bool) # 'b) path``,
-                          ``(pi:num -> 'a -> bool 0,t):('a -> bool) # 'b``] 
+                          ``(pi:num -> 'a -> bool 0,t):('a -> bool) # 'b``]
                          (el 9 thl)))
      THEN `PATH
             <|S := {(s,t) | (s SUBSET P \/ (s = SINK P)) /\ t IN A.Q};
@@ -1506,7 +1506,7 @@ val OPEN_MODEL_PROD_INFINITE =
 (*        (\(s,t). {p | s < LENGTH w /\ p IN ELEM w s}) : thm                *)
 (*****************************************************************************)
 val LEMMA4 =
- SIMP_CONV (srw_ss()++resq_SS) 
+ SIMP_CONV (srw_ss()++resq_SS)
   [MODEL_AUTOMATON_PROD_def,OPEN_MODEL_def,IN_COMPUTATION,COMPUTATION_TO_MODEL_def,
    PATH_def,IN_LESS_LENGTH_SUB1,ELEM_FINITE,SUBSET_SINK,
    DECIDE ``~A \/ (~B \/ ~C /\ ~D) \/ E = A ==> B ==> (C \/ D) ==> E``,
@@ -1564,7 +1564,7 @@ val PROD_FST =
  store_thm
   ("PROD_FST",
    ``TOTAL_AUTOMATON A /\ p IN PATH (M || A) (s,t) ==> (MAP_PATH FST p) IN PATH M s ``,
-   RW_TAC (srw_ss()++resq_SS) 
+   RW_TAC (srw_ss()++resq_SS)
     [PATH_def,IN_LESS_LENGTH_SUB1,LENGTH_MAP_PATH,GT_LS,ELEM_MAP_PATH,
      PAIR_EQ_SPLIT,ELEM_FINITE,TOTAL_AUTOMATON_def,IN_PATH,
      SIMP_CONV (srw_ss()++resq_SS) [MODEL_AUTOMATON_PROD_def] ``(M || A).S``,
@@ -1618,15 +1618,15 @@ val LENGTH_MK_PROD_PATH =
   ("LENGTH_MK_PROD_PATH",
    ``LENGTH(MK_PROD_PATH p) = LENGTH p``,
    Cases_on `p`
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [LENGTH_def,MK_PROD_PATH_def,LENGTH_MK_FINITE_PROD_PATH]);
 
 val ELEM_MK_FINITE_PROD_PATH =
  store_thm
   ("ELEM_MK_FINITE_PROD_PATH",
-   ``!l m n. 
-       m < LENGTH l 
-       ==> 
+   ``!l m n.
+       m < LENGTH l
+       ==>
        (EL m (MK_FINITE_PROD_PATH l n) = (m+n, SND(EL m l)))``,
    Induct
     THEN RW_TAC list_ss [ELEM_def,MK_FINITE_PROD_PATH_def]
@@ -1639,8 +1639,8 @@ val ELEM_MK_PROD_PATH =
    ``!l m.
       m < LENGTH p ==> (ELEM (MK_PROD_PATH p) m = (m,SND(ELEM p m)))``,
    Cases_on `p`
-    THEN RW_TAC list_ss 
-          [MK_PROD_PATH_def,	
+    THEN RW_TAC list_ss
+          [MK_PROD_PATH_def,
            ELEM_FINITE,ELEM_INFINITE,LENGTH_def,
            MK_INFINITE_PROD_PATH_def,MK_FINITE_PROD_PATH_def]
     THEN FULL_SIMP_TAC list_ss [LS,ELEM_MK_FINITE_PROD_PATH]);
@@ -1655,7 +1655,7 @@ val AUTOMATON_Q0_Q =
 val EXISTS_EL_MAP_LEMMA =
  prove
   (``!P l f.
-      (?i. i < LENGTH l /\ ?s. P s (EL i (MAP f l))) = 
+      (?i. i < LENGTH l /\ ?s. P s (EL i (MAP f l))) =
       (?i. i < LENGTH l /\ ?s. P s (f(EL i l)))``,
    REPEAT GEN_TAC
     THEN EQ_TAC
@@ -1668,7 +1668,7 @@ val EXISTS_EL_MAP_LEMMA1 =
           i < LENGTH l /\
           ?s.
             (EL i (MAP (\s. STATE (M.L (FST s))) l) = STATE s) /\
-            p IN s) /\ L_SEM (EL n (MAP (\s. STATE (M.L (FST s))) l)) p) = 
+            p IN s) /\ L_SEM (EL n (MAP (\s. STATE (M.L (FST s))) l)) p) =
      ((?i.
           i < LENGTH l /\
           ?s.
@@ -1692,7 +1692,7 @@ val EXISTS_EL_MAP_LEMMA2 =
           i < LENGTH l /\
           ?s.
             (EL i (MAP (\s. STATE (M.L (FST s))) l) = STATE s) /\
-            p IN s) /\ L_SEM (EL n (MAP (\s. STATE (M.L (FST s))) l)) p) = 
+            p IN s) /\ L_SEM (EL n (MAP (\s. STATE (M.L (FST s))) l)) p) =
       p IN M.L (FST (EL n l)))``,
    RW_TAC list_ss []
     THEN EQ_TAC
@@ -1710,9 +1710,9 @@ val EXISTS_EL_MAP_LEMMA2 =
 val EXISTS_ELEM_MAP_PATH_LEMMA1 =
  prove
   (``((?i'. i' < LENGTH p /\
-            ?s. (ELEM (MAP_PATH (\s. STATE (M.L (FST s))) p) i' = STATE s) /\ p' IN s) 
+            ?s. (ELEM (MAP_PATH (\s. STATE (M.L (FST s))) p) i' = STATE s) /\ p' IN s)
       /\ p' IN M.L (FST (ELEM p i))) =
-     ((?i'. i' < LENGTH p /\ ?s. (s = M.L (FST(ELEM p i'))) /\ p' IN s) 
+     ((?i'. i' < LENGTH p /\ ?s. (s = M.L (FST(ELEM p i'))) /\ p' IN s)
       /\ p' IN M.L (FST (ELEM p i)))``,
    EQ_TAC
     THEN RW_TAC list_ss []
@@ -1741,7 +1741,7 @@ val EXISTS_ELEM_MAP_PATH_LEMMA2 =
     THEN IMP_RES_TAC(INST_TYPE[``:'b``|->``:'b letter``]ELEM_MAP_PATH)
     THENL
      [ASSUM_LIST
-       (fn thl=> 
+       (fn thl=>
          ASSUME_TAC(SIMP_RULE std_ss [](Q.SPEC `(\s. STATE (M.L  s))` (el 2 thl))))
        THEN PROVE_TAC[letter_11],
       POP_ASSUM(ASSUME_TAC o SIMP_RULE std_ss [] o Q.SPEC `(\s. STATE (M.L s))`)
@@ -1793,7 +1793,7 @@ val EXISTS_IN_LEMMA4 =
  prove
   (``(s < LENGTH v /\
       (?i'. i' < LENGTH v /\ p IN M.L (ELEM v i')) /\
-      p IN M.L (ELEM v s)) = 
+      p IN M.L (ELEM v s)) =
      s < LENGTH v /\ p IN M.L (ELEM v s)``,
    PROVE_TAC[]);
 
@@ -1809,22 +1809,22 @@ val MK_PATH_PROD_LEMMA =
   ("MK_PATH_PROD_LEMMA",
    ``PATH (M || A) (s,t) p /\ AUTOMATON A
      ==>
-     PATH 
+     PATH
       (PATH_TO_MODEL (MAP_PATH (\s. STATE (M.L (FST s))) p) || A)
-      (0,t) 
+      (0,t)
       (MK_PROD_PATH p)``,
    Cases_on `p`
     THEN RW_TAC list_ss
          [MK_PROD_PATH_def,PATH_TO_MODEL_def,ELEM_FINITE,ELEM_INFINITE,
           PATH_def,LENGTH_def,GT,LENGTH_MK_FINITE_PROD_PATH,LS]
-    THEN RW_TAC (srw_ss()++resq_SS)  
+    THEN RW_TAC (srw_ss()++resq_SS)
           [MODEL_AUTOMATON_PROD_def,LENGTH_MAP_PATH,LENGTH_def,LS,SUB]
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [ELEM_MK_FINITE_PROD_PATH,AUTOMATON_Q0_Q,MAP_PATH_def,
            LETTER_IN_def,L_SEM_def,LENGTH_def,ELEM_FINITE,ELEM_INFINITE,
            LS,EXISTS_EL_MAP_LEMMA1]
     THEN TRY(`n < LENGTH l` by DECIDE_TAC)
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [EL_MAP,L_SEM_def,EL_MAP_LEMMA,GSPEC_ID,EXISTS_EL_MAP_LEMMA2,
            EXISTS_IN_LEMMA1,EXISTS_IN_LEMMA2,
            PROVE[]``((~A \/ ~B) \/ ~C) \/ ~D \/ ~E \/ G = A ==> B ==> C ==> D ==> E ==> G``]
@@ -1852,9 +1852,9 @@ val MODEL_INTRO_IMP1 =
      (!v. UF_SEM v f = O_VALID (PATH_TO_MODEL v || A) (O_AG(O_BOOL b)))
      ==>
      (UF_VALID M f ==> O_VALID (M || A) (O_AG(O_BOOL b)))``,
-   SIMP_TAC (srw_ss()++resq_SS) 
+   SIMP_TAC (srw_ss()++resq_SS)
     [O_VALID_def,UF_VALID_def,O_SEM_O_AG]
-    THEN RW_TAC (srw_ss()++resq_SS) 
+    THEN RW_TAC (srw_ss()++resq_SS)
           [O_SEM_def,IN_LESS_LENGTH,LENGTH_MAP_PATH,IN_COMPUTATION,
            SIMP_CONV (srw_ss()++resq_SS) [MODEL_AUTOMATON_PROD_def] ``(M || A).L``,
            SIMP_CONV (srw_ss()++resq_SS) [MODEL_AUTOMATON_PROD_def] ``(M || A).S0``,
@@ -1870,15 +1870,15 @@ val MODEL_INTRO_IMP1 =
                 [el 1 thl,el 3 thl,el 4 thl,el 5 thl,
                  MAP_PATH_MAP_PATH]
                 ((SPEC_ALL o Q.SPECL [`s'`,`t`])
-                  (SIMP_RULE list_ss 
+                  (SIMP_RULE list_ss
                    [PROVE [] ``((?x. P x) ==> Q) = !x. P x ==> Q``,
                     PROVE [] ``(!x. P x ==> !y. Q x y) = !x y. P x ==> Q x y``]
                    (Q.SPEC `MAP_PATH FST (p :('c # 'b) path)` (el 6 thl))))))
     THEN POP_ASSUM
-          (ASSUME_TAC o 
-           SIMP_RULE list_ss 
+          (ASSUME_TAC o
+           SIMP_RULE list_ss
             [LENGTH_MAP_PATH,LENGTH_MK_PROD_PATH,
-             ELEM_MK_PROD_PATH] o 
+             ELEM_MK_PROD_PATH] o
            Q.SPEC `MK_PROD_PATH (p :('c # 'b) path)`)
     THEN FULL_SIMP_TAC std_ss [TOTAL_AUTOMATON_def]
     THEN ASSUM_LIST
@@ -1890,7 +1890,7 @@ val MODEL_INTRO_IMP1 =
     THEN ASSUM_LIST
           (fn thl =>
             ASSUME_TAC
-             (SIMP_RULE list_ss 
+             (SIMP_RULE list_ss
                [el 6 thl,ELEM_MAP_PATH,L_SEM_def,LETTER_IN_def,GSPEC_ID,
                 LENGTH_MAP_PATH,EXISTS_ELEM_MAP_PATH_LEMMA1,EXISTS_IN_LEMMA3]
                (el 1 thl)))
@@ -1930,7 +1930,7 @@ val PATH_TO_MODEL_COMPUTATION_TO_MODEL =
  store_thm
   ("PATH_TO_MODEL_COMPUTATION_TO_MODEL",
    ``PATH_TO_MODEL (MAP_PATH STATE v) = COMPUTATION_TO_MODEL v``,
-   RW_TAC list_ss 
+   RW_TAC list_ss
     [PATH_TO_MODEL_def,COMPUTATION_TO_MODEL_def,LENGTH_MAP_PATH,LETTER_IN_def,
      EXISTS_ELEM_MAP_PATH_LEMMA2,
      EXISTS_ELEM_MAP_PATH_LEMMA3,EXISTS_ELEM_MAP_PATH_LEMMA4]);
@@ -1938,9 +1938,9 @@ val PATH_TO_MODEL_COMPUTATION_TO_MODEL =
 val PATH_TO_MODEL_COMPUTATION_TO_MODEL_COR =
  store_thm
   ("PATH_TO_MODEL_COMPUTATION_TO_MODEL_COR",
-   ``PATH_TO_MODEL (MAP_PATH (\s. STATE (M.L s)) v) = 
+   ``PATH_TO_MODEL (MAP_PATH (\s. STATE (M.L s)) v) =
      COMPUTATION_TO_MODEL(MAP_PATH M.L v)``,
-   RW_TAC list_ss 
+   RW_TAC list_ss
     [GSYM PATH_TO_MODEL_COMPUTATION_TO_MODEL,MAP_PATH_MAP_PATH]);
 
 val PATH_TO_MODEL_PROD_S0 =
@@ -1948,7 +1948,7 @@ val PATH_TO_MODEL_PROD_S0 =
   ("PATH_TO_MODEL_PROD_S0",
    ``(s,q) IN (PATH_TO_MODEL v || A).S0 = (s = 0) /\ q IN A.Q0``,
    ACCEPT_TAC
-    (SIMP_CONV (srw_ss()++resq_SS) 
+    (SIMP_CONV (srw_ss()++resq_SS)
      [MODEL_AUTOMATON_PROD_def,
       PATH_def,IN_LESS_LENGTH_SUB1,ELEM_FINITE,SUBSET_SINK,PATH_TO_MODEL_def]
      ``(s,q) IN (PATH_TO_MODEL v || A).S0``));
@@ -1971,7 +1971,7 @@ val PATH_COMPUTATION_PROD =
  store_thm
   ("PATH_COMPUTATION_PROD",
   ``s IN M.S0 /\ t IN A.Q0 /\ PATH M s v /\ MODEL M /\ AUTOMATON A /\
-    PATH (COMPUTATION_TO_MODEL (MAP_PATH M.L v) || A) (0,t) p /\ 
+    PATH (COMPUTATION_TO_MODEL (MAP_PATH M.L v) || A) (0,t) p /\
     (IS_FINITE p ==> LENGTH p < LENGTH v)
     ==>
     PATH (M || A) (s,t) (MAP_PATH (\(n,q). (ELEM v n,q)) p)``,
@@ -1981,7 +1981,7 @@ val PATH_COMPUTATION_PROD =
    THEN ASSUM_LIST
          (fn thl =>
            ASSUME_TAC(SIMP_RULE list_ss [el 4 thl,COMPUTATION_COMPUTATION_MODEL_AUTOMATON_COR2] (el 1 thl)))
-   THEN RW_TAC (srw_ss()++resq_SS) 
+   THEN RW_TAC (srw_ss()++resq_SS)
          [MODEL_AUTOMATON_PROD_def,
           PATH_def,IN_LESS_LENGTH_SUB1,ELEM_FINITE,SUBSET_SINK,PATH_TO_MODEL_def,LENGTH_MAP_PATH]
    THEN TRY(`0 < LENGTH p` by PROVE_TAC[GT_LS])
@@ -2018,7 +2018,7 @@ val PATH_COMPUTATION_PROD =
        THEN `EL (LENGTH l - 1) l = LAST l` by METIS_TAC[LENGTH_LAST,GT,LENGTH_MAP_PATH,LENGTH_def]
        THEN RW_TAC list_ss []
        THEN Cases_on`p`
-       THEN FULL_SIMP_TAC list_ss 
+       THEN FULL_SIMP_TAC list_ss
              [path_11,path_distinct,MAP_PATH_def,LENGTH_def,LS,LE,GT,ELEM_FINITE,SUB,IS_FINITE_def]
        THEN `LENGTH l' = LENGTH l` by PROVE_TAC[LENGTH_MAP]
        THEN `LENGTH l' - 1 < LENGTH l'` by DECIDE_TAC
@@ -2052,7 +2052,7 @@ val PATH_COMPUTATION_PROD_TOTAL =
    THEN ASSUM_LIST
          (fn thl =>
            ASSUME_TAC(SIMP_RULE list_ss [el 3 thl,COMPUTATION_COMPUTATION_MODEL_AUTOMATON_COR3] (el 1 thl)))
-   THEN RW_TAC (srw_ss()++resq_SS) 
+   THEN RW_TAC (srw_ss()++resq_SS)
          [MODEL_AUTOMATON_PROD_def,
           PATH_def,IN_LESS_LENGTH_SUB1,ELEM_FINITE,SUBSET_SINK,PATH_TO_MODEL_def,LENGTH_MAP_PATH]
    THEN TRY(`0 < LENGTH p` by PROVE_TAC[GT_LS])
@@ -2094,14 +2094,14 @@ val PATH_COMPUTATION_PROD_TOTAL =
       THEN FULL_SIMP_TAC list_ss [path_11,path_distinct,MAP_PATH_def,LENGTH_def,LS,LE,GT,ELEM_FINITE,SUB]
       THENL
        [ASSUM_LIST
-         (fn thl => 
+         (fn thl =>
            ASSUME_TAC(SIMP_RULE list_ss [PATH_def,path_11,ELEM_FINITE](el 17 thl)))
          THEN `~((EL (LENGTH l' - 1) l',s'') IN M.R)` by PROVE_TAC[]
          THEN Cases_on`p`
          THEN FULL_SIMP_TAC list_ss [path_11,path_distinct,MAP_PATH_def,LENGTH_def,LS,LE,GT,ELEM_FINITE,SUB,xnum_11]
          THEN `LENGTH l'' - 1 < LENGTH l''` by DECIDE_TAC
-         THEN `EL (LENGTH l'' - 1) (MAP (\(n,q). (EL n l',q)) l'') = 
-               (\(n,q). (EL n l',q))(EL (LENGTH l'' - 1) l'')` 
+         THEN `EL (LENGTH l'' - 1) (MAP (\(n,q). (EL n l',q)) l'') =
+               (\(n,q). (EL n l',q))(EL (LENGTH l'' - 1) l'')`
                by METIS_TAC[EL_MAP]
          THEN `LENGTH l'' = LENGTH l` by PROVE_TAC[LENGTH_MAP]
          THEN ASSUM_LIST
@@ -2121,9 +2121,9 @@ val MODEL_INTRO_IMP2 =
      (!v. UF_SEM v f = O_VALID (PATH_TO_MODEL v || A) (O_AG(O_BOOL b)))
      ==>
      (O_VALID (M || A) (O_AG(O_BOOL b)) ==> UF_VALID M f)``,
-   SIMP_TAC (srw_ss()++resq_SS) 
+   SIMP_TAC (srw_ss()++resq_SS)
     [O_VALID_def,UF_VALID_def,O_SEM_O_AG]
-    THEN RW_TAC (srw_ss()++resq_SS) 
+    THEN RW_TAC (srw_ss()++resq_SS)
           [O_SEM_def,IN_LESS_LENGTH,LENGTH_MAP_PATH,IN_COMPUTATION,LETTER_IN_def,
            EXISTS_ELEM_MAP_PATH_LEMMA2,EXISTS_IN_LEMMA4,
            SIMP_CONV (srw_ss()++resq_SS) [MODEL_AUTOMATON_PROD_def] ``(M || A).L``,
@@ -2135,9 +2135,9 @@ val MODEL_INTRO_IMP2 =
           (fn thl =>
             ASSUME_TAC
              (GEN_BETA_RULE
-               (SIMP_RULE std_ss 
+               (SIMP_RULE std_ss
                  [el 3 thl,el 5 thl,
-                    PROVE[]``(!p. P p ==> !i. Q i p) = !p i. P p ==> Q i p``] 
+                    PROVE[]``(!p. P p ==> !i. Q i p) = !p i. P p ==> Q i p``]
                  (Q.SPEC `(s,t)` (el 6 thl)))))
      THEN ASSUM_LIST
            (fn thl =>
@@ -2162,7 +2162,7 @@ val MODEL_INTRO_IMP2 =
      THEN ASSUM_LIST
            (fn thl =>
              ASSUME_TAC
-              (SIMP_RULE list_ss [el 3 thl] 
+              (SIMP_RULE list_ss [el 3 thl]
                 (GEN_BETA_RULE(SIMP_RULE list_ss [el 1 thl] (el 5 thl)))))
      THEN METIS_TAC[PATH_COMPUTATION_PROD_TOTAL]);
 

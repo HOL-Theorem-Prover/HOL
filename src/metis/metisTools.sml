@@ -146,7 +146,7 @@ local
      mlibModel.update_size (K n)) mlibModel.defaults;
 
   fun holify_res ms =
-    mlibResolution.update_sos_parm 
+    mlibResolution.update_sos_parm
     (mlibSupport.update_model_perts (K MODEL_PERTS) o
      mlibSupport.update_model_parms (K ms));
 
@@ -398,7 +398,7 @@ local
     in
       order_lit lits (ord true [atom] state)
     end;
-    
+
   fun order_cl (cl,gs,_,_,_) [] = (cl,gs)
     | order_cl state (fm :: fms) =
     order_cl (order_lit (strip_disj fm) state) fms;

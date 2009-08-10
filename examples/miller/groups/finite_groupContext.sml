@@ -29,7 +29,7 @@ val op>> = op THEN1;
 (* Subtype checking.                                                     *)
 (* --------------------------------------------------------------------- *)
 
-val finite_group2_sc = 
+val finite_group2_sc =
   map SC_SIMPLIFICATION
   [] @
   map SC_JUDGEMENT

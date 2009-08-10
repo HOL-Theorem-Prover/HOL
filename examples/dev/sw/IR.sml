@@ -155,7 +155,7 @@ val symbolT : ((string,int) H.hash_table) ref =
         end
 
 
- fun flow [] exp = exp 
+ fun flow [] exp = exp
   |  flow (h::t) exp = Tree.ESEQ(h, flow t exp);
 
 
@@ -210,7 +210,7 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
 	end
      else if is_pair exp then
 	let val (t1,t2) = dest_pair exp
-        in  Tree.PAIR(analyzeExp t1, analyzeExp t2) 
+        in  Tree.PAIR(analyzeExp t1, analyzeExp t2)
 	end
 
      else if is_comb exp then
@@ -218,7 +218,7 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
 	let val (operator, operands) = dest_comb exp in
 
         if is_relop operator then
-	    let val (t1, t2) = dest_pair operands 
+	    let val (t1, t2) = dest_pair operands
             in
 	        Tree.RELOP(convert_relop operator, analyzeExp t1, analyzeExp t2)
 	    end
@@ -231,10 +231,10 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
 	    else Tree.BINOP (convert_binop operator, analyzeExp operands, analyzeExp operands)    (* UNIOP of uniop * exp  *)
 
 	else if same_const operator n2w_tm then				(* words		*)
-		Tree.WCONST (Arbint.fromNat (dest_numeral operands))	    
+		Tree.WCONST (Arbint.fromNat (dest_numeral operands))
         else 								(* function call		*)
 	    let val (fun_name, fun_type) = dest_const operator in
-	        Tree.CALL (Tree.NAME (Temp.namedlabel fun_name), 
+	        Tree.CALL (Tree.NAME (Temp.namedlabel fun_name),
 		           analyzeExp operands)
             end
         end
@@ -244,14 +244,14 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
 
 
 (*
-fun 
+fun
 	convert_ESEQ (Tree.ESEQ(Tree.MOVE(e1, e2), Tree.ESEQ(s2,e))) =
    convert_ESEQ (Tree.ESEQ (Tree.SEQ(
 		Tree.MOVE(e1, convert_ESEQ e2), s2), convert_ESEQ e))
  |
-	convert_ESEQ (Tree.ESEQ(s1, Tree.ESEQ(s2,e))) = 
+	convert_ESEQ (Tree.ESEQ(s1, Tree.ESEQ(s2,e))) =
 	convert_ESEQ (Tree.ESEQ (Tree.SEQ(s1, s2), convert_ESEQ e))
- |  convert_ESEQ s = s; 
+ |  convert_ESEQ s = s;
 
 convert_ESEQ ir
 
@@ -260,7 +260,7 @@ fun linearize (stm:Tree.stm) : Tree.stm list =
     fun linear (Tree.SEQ(a,b),l) = linear (a, linear(b,l))
      |  linear (s,l) = s::l
 
-    fun discompose_move(Tree.MOVE(Tree.PAIR(e1,e2), Tree.PAIR(e3,e4))) = 
+    fun discompose_move(Tree.MOVE(Tree.PAIR(e1,e2), Tree.PAIR(e3,e4))) =
 	      discompose_move(Tree.MOVE(e1,e3)) @ discompose_move(Tree.MOVE(e2,e4))
      |   discompose_move exp = [exp]
      |   discompose_move exp = [exp]
@@ -271,52 +271,52 @@ fun linearize (stm:Tree.stm) : Tree.stm list =
 
 *)
 
-val nextFreeTemp = ref 0 
+val nextFreeTemp = ref 0
 
 
-fun rename_temp_stm (Tree.SEQ (s1, s2)) offset = 
+fun rename_temp_stm (Tree.SEQ (s1, s2)) offset =
 		let
 			val (s1', m1) = rename_temp_stm s1 offset;
 			val (s2', m2) = rename_temp_stm s2 offset;
 		in
 			(Tree.SEQ (s1', s2'), Int.max (m1, m2))
 		end
-  | rename_temp_stm (Tree.CJUMP (e, l)) offset = 
+  | rename_temp_stm (Tree.CJUMP (e, l)) offset =
 		let
 			val (e', m) = rename_temp_exp e offset;
 		in
 			(Tree.CJUMP(e', l), m)
 		end
-  | rename_temp_stm (Tree.MOVE (e1, e2)) offset = 
+  | rename_temp_stm (Tree.MOVE (e1, e2)) offset =
 		let
 			val (e1', m1) = rename_temp_exp e1 offset;
 			val (e2', m2) = rename_temp_exp e2 offset;
 		in
 			(Tree.MOVE (e1', e2'), Int.max (m1, m2))
 		end
-  | rename_temp_stm (Tree.EXP e) offset = 
+  | rename_temp_stm (Tree.EXP e) offset =
 		let
 			val (e', m) = rename_temp_exp e offset;
 		in
 			(Tree.EXP e', m)
 		end
-  | rename_temp_stm X offset = 
+  | rename_temp_stm X offset =
 		(X, 0)
 and
-	 rename_temp_exp (Tree.BINOP (binop, e1, e2)) offset = 
+	 rename_temp_exp (Tree.BINOP (binop, e1, e2)) offset =
 		let
 			val (e1', m1) = rename_temp_exp e1 offset;
 			val (e2', m2) = rename_temp_exp e2 offset;
 		in
 			(Tree.BINOP (binop, e1', e2'), Int.max (m1, m2))
 		end
- | rename_temp_exp (Tree.MEM e) offset = 
+ | rename_temp_exp (Tree.MEM e) offset =
 		let
 			val (e', m) = rename_temp_exp e offset;
 		in
 			(Tree.MEM e', m)
 		end
- | rename_temp_exp (Tree.TEMP t) offset = 
+ | rename_temp_exp (Tree.TEMP t) offset =
 		let
 			val new_t = t + offset;
 			val var_name = "v"^(Int.toString (new_t +1))
@@ -326,28 +326,28 @@ and
 		end
 
 
- | rename_temp_exp (Tree.RELOP (relop, e1, e2)) offset = 
+ | rename_temp_exp (Tree.RELOP (relop, e1, e2)) offset =
 		let
 			val (e1', m1) = rename_temp_exp e1 offset;
 			val (e2', m2) = rename_temp_exp e2 offset;
 		in
 			(Tree.RELOP (relop, e1', e2'), Int.max (m1, m2))
 		end
- | rename_temp_exp (Tree.ESEQ (s, e)) offset = 
+ | rename_temp_exp (Tree.ESEQ (s, e)) offset =
 		let
 			val (s', m1) = rename_temp_stm s offset;
 			val (e', m2) = rename_temp_exp e offset;
 		in
 			(Tree.ESEQ (s', e'), Int.max (m1, m2))
 		end
- | rename_temp_exp (Tree.CALL (e1, e2)) offset = 
+ | rename_temp_exp (Tree.CALL (e1, e2)) offset =
 		let
 			val (e1', m1) = rename_temp_exp e1 offset;
 			val (e2', m2) = rename_temp_exp e2 offset;
 		in
 			(Tree.CALL (e1', e2'), Int.max (m1, m2))
 		end
- | rename_temp_exp (Tree.PAIR (e1, e2)) offset = 
+ | rename_temp_exp (Tree.PAIR (e1, e2)) offset =
 		let
 			val (e1', m1) = rename_temp_exp e1 offset;
 			val (e2', m2) = rename_temp_exp e2 offset;
@@ -358,7 +358,7 @@ and
 
 
 
-fun 
+fun
   linerize_IR_stm (Tree.MOVE (e1, Tree.ESEQ (s, e2))) =
 		(linerize_IR_stm s) @ linerize_IR_stm (Tree.MOVE (e1, e2)) |
   linerize_IR_stm (Tree.SEQ (s1, s2)) = (linerize_IR_stm s1) @ (linerize_IR_stm s2) |
@@ -381,7 +381,7 @@ fun
 			val _ = nextFreeTemp := !nextFreeTemp + max
 		in
 			(linerize_IR_stm (Tree.MOVE (fun_in'', e2)))@fun_ir''@(linerize_IR_stm (Tree.MOVE (e1, fun_out'')))
-		end 
+		end
 	else [Tree.MOVE (e1, Tree.CALL (Tree.NAME s, e2))]
   |
   linerize_IR_stm stm = [stm]
@@ -392,15 +392,15 @@ fun linerize_IR (Tree.ESEQ (s, e)) =
 			val (stmL, e') = linerize_IR e
 		in
 			(((linerize_IR_stm s) @ stmL), e')
-		end 
+		end
 	| linerize_IR (Tree.CALL (Tree.NAME s, e)) =
 		let
-			val exp = (Tree.CALL (Tree.NAME s, e));			
+			val exp = (Tree.CALL (Tree.NAME s, e));
 		   val temp_exp = mk_PAIR exp;
 			val new_exp = Tree.ESEQ (Tree.MOVE (temp_exp, exp), temp_exp);
 		in
 			linerize_IR (new_exp)
-		end	   
+		end
    | linerize_IR e = ([], e)
 
 fun convert_to_IR prog =
@@ -438,7 +438,7 @@ fun convert_to_IR prog =
    end
 
 
-fun print_stm ir = 
+fun print_stm ir =
   let val indent = "      ";
       val ((f_name,args,stms,outs):string * Tree.exp * Tree.stm list * Tree.exp) = ir
 
@@ -488,7 +488,7 @@ fun print_stm ir =
    |  one_exp _ =
         ""
    ;
- 
+
   fun one_stm (Tree.MOVE(v1,v2)) =
 	indent ^ "MOV " ^ (one_exp v1) ^ ", " ^ (one_exp v2)
    |  one_stm (Tree.LABEL lab) =
@@ -502,7 +502,7 @@ fun print_stm ir =
    |  one_stm _ =
         ""
   in
-       
+
     List.map (fn stm => print(one_stm stm ^ "\n")) stms
   end
 

@@ -33,7 +33,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories (including ratTheory from Jens Brandt).
 ******************************************************************************)
-open stringLib complex_rationalTheory gcdTheory 
+open stringLib complex_rationalTheory gcdTheory
      sexp sexpTheory hol_defaxiomsTheory;
 
 (*****************************************************************************)
@@ -64,7 +64,7 @@ val character_listp_forward_to_eqlable_listp_defthm =
        THEN FULL_SIMP_TAC arith_ss [GSYM ACL2_TRUE,GSYM nil_def]
        THEN Cases_on `x`
        THEN ACL2_FULL_SIMP_TAC [characterp_def]]);
-   
+
 (*
      [oracles: DEFTHM ACL2::STANDARD-CHAR-LISTP-FORWARD-TO-CHARACTER-LISTP]
      [axioms: ] [] |- |= implies (standard_char_listp x) (character_listp x),
@@ -91,7 +91,7 @@ val standard_char_listp_forward_to_character_listp_defthm =
      |- |= character_listp (coerce acl2_str (csym "LIST")),
 *)
 
-val character_listp_list_to_sexp = 
+val character_listp_list_to_sexp =
  store_thm
   ("character_listp_list_to_sexp",
    ``!l. |= character_listp(list_to_sexp chr l)``,
@@ -121,12 +121,12 @@ val assoc_nil =
 val assoc_cons =
  store_thm
   ("assoc_cons",
-   ``assoc x (cons (cons x' y) l) = 
+   ``assoc x (cons (cons x' y) l) =
       if |= equal x x' then cons x' y else assoc x l``,
    CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[assoc_def]))
     THEN ACL2_SIMP_TAC[itel_def]);
 
-(*     
+(*
 val lower_case_p_char_downcase_defaxiom =
  store_thm
   ("lower_case_p_char_downcase_defaxiom",

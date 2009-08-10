@@ -2,17 +2,17 @@
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
-            (concat home_dir "src/translations") :: 
-            (concat home_dir "src/model_check") :: 
-            (concat home_dir "src/tools") :: 
-            (concat hol_dir "examples/PSL/path") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
+            (concat home_dir "src/translations") ::
+            (concat home_dir "src/model_check") ::
+            (concat home_dir "src/tools") ::
+            (concat hol_dir "examples/PSL/path") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
  ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory",
-  "temporal_deep_mixedTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory", 
+  "temporal_deep_mixedTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory",
   "ltl_to_automaton_formulaTheory",
   "numLib", "listLib", "translationsLib", "rltlTheory",
   "rltl_to_ltlTheory", "psl_to_rltlTheory", "UnclockedSemanticsTheory",
@@ -20,7 +20,7 @@ map load
   "modelCheckLib"];
 *)
 
-open HolKernel boolLib bossLib  ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory 
+open HolKernel boolLib bossLib  ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory pairTheory rltlTheory
      ltl_to_automaton_formulaTheory numLib listLib translationsLib rltl_to_ltlTheory psl_to_rltlTheory UnclockedSemanticsTheory
@@ -124,7 +124,7 @@ val psl1 = ``
 F_ALWAYS (F_IMPLIES(F_STRONG_BOOL (B_PROP aa),
                     F_WEAK_NEXT_EVENT (B_PROP bb,
                                          F_WEAK_BEFORE (
-                                            F_STRONG_BOOL (B_PROP cc), 
+                                            F_STRONG_BOOL (B_PROP cc),
                                             F_STRONG_BOOL (B_PROP dd)
                                          ))
                    )
@@ -154,8 +154,8 @@ model_check___psl_ks_sem psl1 pslM1
 model_check___psl_ks_sem psl1 pslM2
 
 
-psl_contradiction2ks_fair_emptyness true pslTerm 
-psl_contradiction2ks_fair_emptyness___num 0 true pslTerm 
+psl_contradiction2ks_fair_emptyness true pslTerm
+psl_contradiction2ks_fair_emptyness___num 0 true pslTerm
 
 val res = model_check___psl_contradiction psl2
 val eval_res = REWRITE_RULE [psl_lemmataTheory.UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def] (valOf res)

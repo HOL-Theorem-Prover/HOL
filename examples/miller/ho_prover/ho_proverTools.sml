@@ -333,7 +333,7 @@ fun clause_pretty_term (CLAUSE ((vs, _), lits)) =
       in
         mk_var (stem ^ "_" ^ name, type_of g)
       end
-      
+
     val sub = (subst o zipwith (curry op|->) gs o map pretty_g) gs
   in
     mk_foralls (map sub vs, sub tm)
@@ -1343,7 +1343,7 @@ fun ho_meson_frule db : fact_rule =
   try_frule (factdb_norm_frule db);
 
 (* The calls to meson with the rule and default depths *)
-  
+
 fun ho_refute db =
   meson_refute_reduce_deepen db (ho_meson_frule db) (!prover_start)
   (!prover_step) (!prover_steps);

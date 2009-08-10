@@ -3,24 +3,24 @@ sig
 
   (******************************************************************
    *
-   * ltl2omega_rewrite t ltl 
+   * ltl2omega_rewrite t ltl
    * translates the ltl term ltl into an omega automaton and
    * returns a theorem that states the equivalence of the automaton
    * and the ltl formula. The parameter t is used to determine the kind
-   * of omega automaton. For t = TRUE an existential automaton 
+   * of omega automaton. For t = TRUE an existential automaton
    * otherwise an universal automaton is used.
    *
-   * It uses only rewrite rules for this translation. 
+   * It uses only rewrite rules for this translation.
    * Notice, that this is just a proof of concept. In practice
    * ltl2omega should be used, since it is much more efficient.
    *
    *******************************************************************)
   val ltl2omega_rewrite : bool -> Abbrev.term -> Abbrev.thm
-  
+
   (******************************************************************
    *
-   * ltl2omega fast fast t ltl 
-   * This function does the same translation as ltl2omega_rewrite. 
+   * ltl2omega fast fast t ltl
+   * This function does the same translation as ltl2omega_rewrite.
    * However, the implementation is more advanced. The parameter fast
    * tells the function whether to search for multiple occurences of
    * terms in the ltl formula. This may reduce the number of needed
@@ -32,16 +32,16 @@ sig
 
 
   (******************************************************************
-   * ltl2omega_interal fast fast t ltl 
-   * This function is similar to ltl2omega. 
-   * It in fact forms the main part of the translation done by ltl2omega. 
+   * ltl2omega_interal fast fast t ltl
+   * This function is similar to ltl2omega.
+   * It in fact forms the main part of the translation done by ltl2omega.
    * In contrast to ltl2omega, it returns some internal data, that contain
-   * more informations than the theorem returned by ltl2omega. 
+   * more informations than the theorem returned by ltl2omega.
    * This function is used to implement rltl2fctl and ltl2fctl
    *******************************************************************)
   val ltl2omega_internal : bool -> bool -> bool -> Abbrev.term -> (Abbrev.term * Abbrev.thm * Abbrev.thm * Abbrev.term * Abbrev.term * bool * bool)
 
-  
+
   (********************************************************************
    * These functions translate some ltl problems to an check whether there is
    * an fair path through a kripke structure. This problem can be handeled by
@@ -56,7 +56,7 @@ sig
   val ltl_equivalent_initial2ks_fair_emptyness : bool -> Abbrev.term -> Abbrev.term -> Abbrev.thm
 
 
-  
+
   (********************************************************************
    * These functions translate some ltl problems to an check whether there is
    * an fair path through a kripke structure. Thereby they replace all variables

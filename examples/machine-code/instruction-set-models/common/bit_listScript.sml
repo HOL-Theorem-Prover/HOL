@@ -9,9 +9,9 @@ val _ = new_theory "bit_list";
 (* conversions between ``:bool list`` and ``:num`` *)
 
 val bits2num_def = Define `
-  (bits2num [] = 0) /\ 
+  (bits2num [] = 0) /\
   (bits2num (T::bs) = 1 + 2 * bits2num bs) /\
-  (bits2num (F::bs) = 0 + 2 * bits2num bs)` ; 
+  (bits2num (F::bs) = 0 + 2 * bits2num bs)` ;
 
 val n2bits_def = Define `
   n2bits i n = if i = 0 then [] else (n MOD 2 = 1) :: n2bits (i-1) (n DIV 2)`;
@@ -25,7 +25,7 @@ val b2w_def = Define `b2w v x = n2w (bits2num (v x))`;
 (* parsing hex numbers represented by strings *)
 
 val is_hex_def = Define `
-  is_hex s = EVERY (\n. ORD #"0" <= n /\ n <= ORD #"9" \/ ORD #"A" <= n /\ n <= ORD #"F") 
+  is_hex s = EVERY (\n. ORD #"0" <= n /\ n <= ORD #"9" \/ ORD #"A" <= n /\ n <= ORD #"F")
                    (MAP ORD (EXPLODE s))`;
 
 val char2num_def = Define `
@@ -47,7 +47,7 @@ val hex2word_def = Define `
 (* converting between bytes and words *)
 
 val bytes2word_def = Define `
-  (bytes2word [] = 0w:'a word) /\ 
+  (bytes2word [] = 0w:'a word) /\
   (bytes2word (x:word8 ::xs) = w2w x !! (bytes2word xs << 8))`;
 
 val word2bytes_def = Define `
@@ -55,14 +55,14 @@ val word2bytes_def = Define `
     if n = 0 then [] else (((7 >< 0) w):word8) :: word2bytes (n-1) (w >> 8)`;
 
 val address_aligned_def = Define `
-  address_aligned n a = 
+  address_aligned n a =
     if n = 2  then (a && 1w = 0w) else
     if n = 4  then (a && 3w = 0w) else
     if n = 8  then (a && 7w = 0w) else
     if n = 16 then (a && 15w = 0w) else
     if n = 32 then (a && 31w = 0w) else T`;
 
-val bytes2word_lem = SIMP_RULE (std_ss++wordsLib.SIZES_ss) [] 
+val bytes2word_lem = SIMP_RULE (std_ss++wordsLib.SIZES_ss) []
   (CONJ (INST_TYPE [``:'b``|->``:32``] (CONJ w2w FCP_BETA))
         (INST_TYPE [``:'b``|->``:8``] (CONJ w2w FCP_BETA)));
 
@@ -86,23 +86,23 @@ val bytes2word_lemma = prove(
   THEN ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [word_bits_def,bytes2word_lem]);
 
 val bytes2word_thm = store_thm("bytes2word_thm",
-  ``!w:word32 x. 
-      (bytes2word [(7 >< 0) w; (7 >< 0) (w >> 8); (7 >< 0) (w >> 16); (7 >< 0) (w >> 24)] = w) /\ 
+  ``!w:word32 x.
+      (bytes2word [(7 >< 0) w; (7 >< 0) (w >> 8); (7 >< 0) (w >> 16); (7 >< 0) (w >> 24)] = w) /\
       (bytes2word [(7 >< 0) w; (15 >< 8) w; (23 >< 16) w; (31 >< 24) w] = w) /\
       (bytes2word [x] = (w2w x):'a word)``,
   REWRITE_TAC [bytes2word_def,wordsTheory.ZERO_SHIFT,wordsTheory.WORD_OR_CLAUSES]
   THEN REWRITE_TAC [bytes2word_lemma]
-  THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) 
+  THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss)
          [WORD_OR_CLAUSES,bytes2word_lemma]);
 
 val bits2num_n2bits = store_thm("bits2num_n2bits",
   ``!i n. bits2num (n2bits i n) = n MOD 2**i``,
-  Induct THEN ONCE_REWRITE_TAC [n2bits_def] THEN REPEAT STRIP_TAC 
+  Induct THEN ONCE_REWRITE_TAC [n2bits_def] THEN REPEAT STRIP_TAC
   THEN SIMP_TAC std_ss [bits2num_def,DECIDE ``~(SUC i = 0)``]
   THEN `0<2` by DECIDE_TAC
   THEN `n MOD 2 < 2 /\ (n DIV 2 * 2 + n MOD 2 = n)` by METIS_TAC [DIVISION]
   THEN Cases_on `n MOD 2 = 0` THENL [
-    ASM_SIMP_TAC std_ss [MOD_COMMON_FACTOR,ZERO_LT_EXP,bits2num_def]  
+    ASM_SIMP_TAC std_ss [MOD_COMMON_FACTOR,ZERO_LT_EXP,bits2num_def]
     THEN FULL_SIMP_TAC std_ss [EXP,AC MULT_COMM MULT_ASSOC],
     `n MOD 2 = 1` by DECIDE_TAC
     THEN ASM_SIMP_TAC std_ss [bits2num_def]
@@ -114,7 +114,7 @@ val bits2num_n2bits = store_thm("bits2num_n2bits",
     THEN SIMP_TAC std_ss [MATCH_MP (GSYM DIVISION) (DECIDE ``0<2``)]]);
 
 val bits2num_w2bits = store_thm("bits2num_w2bits",
-  ``!w:'a word. bits2num (w2bits w) = w2n w``,   
+  ``!w:'a word. bits2num (w2bits w) = w2n w``,
   Cases THEN FULL_SIMP_TAC std_ss [w2bits_def,bits2num_n2bits,w2n_n2w,dimword_def]);
 
 val w2bits_word32 = save_thm("w2bits_word32",
@@ -129,9 +129,9 @@ val n2bits_bits2num = store_thm("n2bits_bits2num",
   ``!xs. n2bits (LENGTH xs) (bits2num xs) = xs``,
   Induct THEN ONCE_REWRITE_TAC [n2bits_def]
   THEN SIMP_TAC std_ss [LENGTH,DECIDE ``~(SUC n = 0)``]
-  THEN Cases  
+  THEN Cases
   THEN ASM_SIMP_TAC std_ss [bits2num_def,
-         ONCE_REWRITE_RULE [ADD_COMM] (ONCE_REWRITE_RULE [MULT_COMM] 
+         ONCE_REWRITE_RULE [ADD_COMM] (ONCE_REWRITE_RULE [MULT_COMM]
            (CONJ DIV_MULT (CONJ MOD_EQ_0 (CONJ MULT_DIV MOD_MULT))))]);
 
 val w2bits_b2w_word32 = store_thm("w2bits_b2w_word32",
@@ -141,10 +141,10 @@ val w2bits_b2w_word32 = store_thm("w2bits_b2w_word32",
   THEN ASSUME_TAC (Q.SPEC `[x1;x2;x3;x4;x5;x6;x7;x8]` n2bits_bits2num)
   THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [LENGTH]);
 
-val bits2num_MOD = store_thm("bits2num_MOD",  
+val bits2num_MOD = store_thm("bits2num_MOD",
   ``!i xs. bits2num xs MOD 2 ** i = bits2num (TAKE i xs)``,
   Induct THEN Cases THEN ONCE_REWRITE_TAC [TAKE_def]
-  THEN SIMP_TAC std_ss [bits2num_def,DECIDE ``~(SUC n = 0)``]  
+  THEN SIMP_TAC std_ss [bits2num_def,DECIDE ``~(SUC n = 0)``]
   THEN Tactical.REVERSE (Cases_on `h`) THEN SIMP_TAC std_ss [bits2num_def]
   THEN ASM_SIMP_TAC std_ss [GSYM MOD_COMMON_FACTOR,EXP]
   THEN POP_ASSUM (fn th => SIMP_TAC std_ss [GSYM th])
@@ -162,19 +162,19 @@ val bits2num_MOD = store_thm("bits2num_MOD",
   THEN DECIDE_TAC);
 
 val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
-  ``!imm32:word32. 
+  ``!imm32:word32.
       ((b2w I
             [w2n imm32 MOD 2 = 1; (w2n imm32 DIV 2) MOD 2 = 1;
              (w2n imm32 DIV 4) MOD 2 = 1; (w2n imm32 DIV 8) MOD 2 = 1;
              (w2n imm32 DIV 16) MOD 2 = 1; (w2n imm32 DIV 32) MOD 2 = 1;
-             (w2n imm32 DIV 64) MOD 2 = 1; (w2n imm32 DIV 128) MOD 2 = 1]) = 
+             (w2n imm32 DIV 64) MOD 2 = 1; (w2n imm32 DIV 128) MOD 2 = 1]) =
        (w2w imm32):word8) /\
       ((b2w I
             [(w2n imm32 DIV 256) MOD 2 = 1;
              (w2n imm32 DIV 512) MOD 2 = 1; (w2n imm32 DIV 1024) MOD 2 = 1;
              (w2n imm32 DIV 2048) MOD 2 = 1; (w2n imm32 DIV 4096) MOD 2 = 1;
              (w2n imm32 DIV 8192) MOD 2 = 1; (w2n imm32 DIV 16384) MOD 2 = 1;
-             (w2n imm32 DIV 32768) MOD 2 = 1]) = 
+             (w2n imm32 DIV 32768) MOD 2 = 1]) =
        (w2w (imm32 >>> 8)):word8) /\
       ((b2w I
             [(w2n imm32 DIV 65536) MOD 2 = 1;
@@ -190,7 +190,7 @@ val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
              (w2n imm32 DIV 536870912) MOD 2 = 1; (w2n imm32 DIV 1073741824) MOD 2 = 1;
              (w2n imm32 DIV 2147483648) MOD 2 = 1]) =
        (w2w (imm32 >>> 24)):word8)``,
-  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [w2w_def,b2w_def]  
+  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [w2w_def,b2w_def]
   THEN CONV_TAC (RAND_CONV (REWRITE_CONV [GSYM bits2num_w2bits]))
   THEN SIMP_TAC std_ss [w2bits_word32,n2w_11,dimword_def]
   THEN SIMP_TAC (bool_ss++wordsLib.SIZES_ss) []

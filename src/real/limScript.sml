@@ -9,7 +9,7 @@ struct
 
 (*
 app load ["numLib",
-          "pairLib",          
+          "pairLib",
           "jrhUtils",
           "seqTheory"];
 *)

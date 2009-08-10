@@ -1,16 +1,16 @@
-structure refine :> refine = 
+structure refine :> refine =
 struct
 
-(* app load ["wordsLib", "Normal"]; 
+(* app load ["wordsLib", "Normal"];
 *)
 
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
   wordsSyntax numSyntax pairSyntax NormalTheory;
 
 (*---------------------------------------------------------------------------*)
 
 val C_tm = prim_mk_const{Name="C",Thy="Normal"};
-fun mk_C tm = 
+fun mk_C tm =
   mk_comb (inst [alpha |-> type_of tm, beta |-> type_of tm] C_tm, tm);
 
 val dest_C = dest_monop C_tm (ERR "dest_C" "");
@@ -21,8 +21,8 @@ val dest_C = dest_monop C_tm (ERR "dest_C" "");
 
 val is_word_literal = is_n2w;
 
-fun strip_word_or tm = 
- let fun f tm = 
+fun strip_word_or tm =
+ let fun f tm =
       case total dest_word_or tm
        of SOME (l,r) => f(l) @ f(r)
         | NONE => [tm]
@@ -38,7 +38,7 @@ fun pflat [] = []
 (* Translating constants into compound expressions.                          *)
 (*---------------------------------------------------------------------------*)
 
-fun type_to_name t = 
+fun type_to_name t =
  String.extract(Hol_pp.type_to_string t, 1, NONE);
 
 fun numeric_type_to_num t =
@@ -50,17 +50,17 @@ fun pad s i =
  in String.implode (loop i (String.explode s))
  end;
 
-fun bit_pattern w = 
+fun bit_pattern w =
  let open wordsSyntax
      val (ntm,ty) = dest_n2w w
      val n = numSyntax.dest_numeral ntm
      val ty_width = Arbnum.toInt(numeric_type_to_num ty)
      val str = Arbnum.toBinString n
- in 
+ in
    pad str (ty_width - String.size str)
  end;
 
-fun word_of_string(s,width) = 
+fun word_of_string(s,width) =
     mk_n2w(mk_numeral(Arbnum.fromBinString s),width);
 
 val index32 = fcpLib.index_type (Arbnum.fromInt 32);
@@ -70,13 +70,13 @@ fun word_of_int (i,width) =
   mk_n2w(numSyntax.term_of_int i,
          fcpLib.index_type(Arbnum.fromInt width));
 
-fun chunk s = 
+fun chunk s =
  let open String numSyntax
      val s1 = substring(s,0,8)
      val s2 = substring(s,8,8)
      val s3 = substring(s,16,8)
      val s4 = substring(s,24,8)
- in 
+ in
    (word32_of_string s1,word32_of_string s2,
     word32_of_string s3,word32_of_string s4)
  end;
@@ -87,12 +87,12 @@ val n16 = term_of_int 16;
 val n24 = term_of_int 24;
 val n256 = Arbnum.fromInt 256;
 
-fun bytes_to_let (b1,b2,b3,b4) = 
- let val plist = List.mapPartial 
+fun bytes_to_let (b1,b2,b3,b4) =
+ let val plist = List.mapPartial
                    (fn p as (b,s) => if b = zero32 then NONE else SOME p)
                     [(b1,n24), (b2,n16), (b3,n8)]
      val plist' = enumerate 0 plist
-     val plist'' = map (fn (i,p as (b,_)) => 
+     val plist'' = map (fn (i,p as (b,_)) =>
                           (mk_var("v"^Int.toString i,type_of b),p)) plist'
      val vlist = list_mk_word_or (map fst plist'' @ [b4])
      fun foo (v,(c,s)) = ((v,c),(v,mk_word_lsl(v,s)))
@@ -103,7 +103,7 @@ fun bytes_to_let (b1,b2,b3,b4) =
 
 fun IMMEDIATE_CONST_CONV c =
  let val n = numSyntax.dest_numeral(fst(dest_n2w c))
- in if Arbnum.<(n,n256) then failwith "CONST_CONV" else 
+ in if Arbnum.<(n,n256) then failwith "CONST_CONV" else
     let val bstr = bit_pattern c
         val res = bytes_to_let (chunk bstr)
     in EQT_ELIM (wordsLib.WORDS_CONV (mk_eq(c,res)))
@@ -117,20 +117,20 @@ fun IMMEDIATE_CONST_CONV c =
 (*   if P then (let x = c in x) else (let x = d in x)                        *)
 (*---------------------------------------------------------------------------*)
 
-fun MK_COND tm th1 th2 = 
+fun MK_COND tm th1 th2 =
  let val core = rator(rator tm)
      val thm1 = MK_COMB (REFL core, th1)
      val thm2 = MK_COMB (thm1,th2)
  in thm2
  end;
 
-fun letify c = 
+fun letify c =
  let val v = genvar (type_of c)
      val tm = mk_let (mk_abs(v,v),c)
  in SYM(BETA_RULE (REWR_CONV LET_THM tm))
  end;
 
-fun COND_CONST_ELIM_CONV tm = 
+fun COND_CONST_ELIM_CONV tm =
  let val (t,a1,a2) = dest_cond tm
  in case (is_const a1 orelse is_word_literal a1,
           is_const a2 orelse is_word_literal a2)
@@ -157,18 +157,18 @@ val refine_const = refine0b o refine0a o refine0;
 (*---------------------------------------------------------------------------*)
 
 val LIFT_COND_ABOVE_LET = Q.prove
-(`!f v1 v2 v3. 
-  (let x = (if v1 then v2 else v3) in f x) = 
+(`!f v1 v2 v3.
+  (let x = (if v1 then v2 else v3) in f x) =
     if v1 then (let x = v2 in f x) else (let x = v3 in f x)`,
  RW_TAC std_ss [LET_DEF]);
 
 val LIFT_COND_ABOVE_LET1 = Q.prove
-(`(let x = val in (if v1 then v2 x else v3 x)) = 
+(`(let x = val in (if v1 then v2 x else v3 x)) =
   if v1 then (let x = val in v2 x) else (let x = val in v3 x)`,
  RW_TAC std_ss [LET_DEF]);
 
 val LIFT_COND_ABOVE_TRIVLET = Q.prove
-(`(let x = (if v1 then v2 else v3) in x) = 
+(`(let x = (if v1 then v2 else v3) in x) =
   if v1 then v2 else v3`,
  SIMP_TAC std_ss [LET_DEF]);
 
@@ -178,7 +178,7 @@ val ID_LET = Q.prove
 
 fun lift_cond def =
   let
-    fun mk_flat_let (x, e1, e2) = 
+    fun mk_flat_let (x, e1, e2) =
         if is_pair x andalso is_pair e1 then
            let val (x1,x2) = dest_pair x
                val (e1',e1'') = dest_pair e1
@@ -215,11 +215,11 @@ fun lift_cond def =
 
       val (fname, fbody) = dest_eq (concl (SPEC_ALL def))
       val fbody' = trav fbody
-      val th1 = prove (mk_eq(fbody, fbody'), 
+      val th1 = prove (mk_eq(fbody, fbody'),
 		       SIMP_TAC bool_ss [LET_THM])
-                handle _ => prove (mk_eq(fbody, fbody'), 
+                handle _ => prove (mk_eq(fbody, fbody'),
 		                   RW_TAC std_ss [LET_THM])
-                handle _ => def 
+                handle _ => def
       val th2 = CONV_RULE (RHS_CONV (REWRITE_CONV [Once th1])) (SPEC_ALL def)
   in
      th2
@@ -231,7 +231,7 @@ fun lift_cond def =
 
 (*
 val LIFT_COND_ABOVE_C = Q.prove (
-  `!f v1 v2 v3. C (let x = (if v1 then v2 else v3) in f x) = 
+  `!f v1 v2 v3. C (let x = (if v1 then v2 else v3) in f x) =
      if v1 then C v2 (\x. C (f x)) else C v3 (\y. C (f y))`,
   SIMP_TAC std_ss [C_def, LET_THM, FUN_EQ_THM] THEN
   Cases_on `v1` THEN
@@ -249,14 +249,14 @@ fun lift_cond exp =
               val M1' = mk_plet (v, lift_cond M1, N')
               val M2' = mk_plet (v, lift_cond M2, N')
 
-	      val th3 = 
+	      val th3 =
                      let val f = mk_pabs(v,N)
-                         val th = INST_TYPE [alpha |-> type_of N, 
-                                            beta  |-> type_of N, 
+                         val th = INST_TYPE [alpha |-> type_of N,
+                                            beta  |-> type_of N,
                                             gamma |-> type_of v]
                                  (LIFT_COND_ABOVE_C)
                          val t2 = rhs (concl (SPECL [f, J, M1, M2] th))
-                         val th2 = prove (mk_eq(exp,t2), 
+                         val th2 = prove (mk_eq(exp,t2),
 					  RW_TAC std_ss [LET_THM, C_def])
                      in
 			 PairRules.PBETA_RULE (SIMP_RULE std_ss [pairTheory.LAMBDA_PROD] th2)

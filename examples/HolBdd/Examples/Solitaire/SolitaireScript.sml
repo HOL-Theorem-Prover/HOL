@@ -24,7 +24,7 @@
 (*****************************************************************************)
 
 (*
-load "HolBddLib"; 
+load "HolBddLib";
 load "PrimitiveBddRules";
 load "ListPair";
 *)
@@ -44,7 +44,7 @@ val _ = (Globals.priming := SOME "");
 
 val _ = new_theory "Solitaire";
 
-val var_list as 
+val var_list as
     [v01,v02,v03,v04,v05,v06,v07,v08,v09,v10,
      v11,v12,v13,v14,v15,v16,v17,v18,v19,v20,
      v21,v22,v23,v24,v25,v26,v27,v28,v29,v30,
@@ -57,11 +57,11 @@ val var_list as
      "v26","v27","v28","v29","v30",
      "v31","v32","v33"];
 
-val var_list' as 
+val var_list' as
     [v01',v02',v03',v04',v05',v06',v07',v08',v09',v10',
      v11',v12',v13',v14',v15',v16',v17',v18',v19',v20',
      v21',v22',v23',v24',v25',v26',v27',v28',v29',v30',
-     v31',v32',v33'] = 
+     v31',v32',v33'] =
     map (fn v => v^"'") var_list;
 
 (*****************************************************************************)
@@ -76,10 +76,10 @@ and mk_primed_bool_var s = mk_bool_var(s^"'");
 (* Function shuffle below used to create it                                  *)
 (*****************************************************************************)
 
-fun shuffle (l1,l2) = 
+fun shuffle (l1,l2) =
  ListPair.foldr (fn(x1,x2,l) => x1 :: x2 :: l) [] (l1,l2);
 
-val solitaire_varmap = 
+val solitaire_varmap =
  extendVarmap (map mk_bool_var (shuffle(var_list,var_list'))) empty;
 
 (*****************************************************************************)
@@ -94,9 +94,9 @@ and st' = list_mk_pair (map mk_bool_var var_list');
 (*****************************************************************************)
 
 val SolitaireInit_def =
- Define 
-   `SolitaireInit ^st = 
-     ^(list_mk_conj(map (fn v => if v="v17" then mk_neg(mk_bool_var v) 
+ Define
+   `SolitaireInit ^st =
+     ^(list_mk_conj(map (fn v => if v="v17" then mk_neg(mk_bool_var v)
                                             else mk_bool_var v) var_list))`;
 
 (*****************************************************************************)
@@ -104,10 +104,10 @@ val SolitaireInit_def =
 (*****************************************************************************)
 
 val SolitaireFinal_def =
- Define 
-   `SolitaireFinal ^st = 
+ Define
+   `SolitaireFinal ^st =
      ^(list_mk_conj
-        (map (fn v => if v="v17" then mk_bool_var v 
+        (map (fn v => if v="v17" then mk_bool_var v
                                  else mk_neg(mk_bool_var v)) var_list))`;
 
 (*****************************************************************************)
@@ -170,7 +170,7 @@ val moves =
 (*****************************************************************************)
 
 val SolitaireTrans_def =
- Define  
+ Define
   `SolitaireTrans(^st,^st') = ^(list_mk_disj(map make_move_trans moves))`;
 
 val (initth,transthl,finalth) =
@@ -182,25 +182,25 @@ val (initth,transthl,finalth) =
 val trace_list = ref[];
 
 fun report n tb =
- (trace_list := append (!trace_list) [tb]; print "Iteration: "; print (Int.toString n); 
+ (trace_list := append (!trace_list) [tb]; print "Iteration: "; print (Int.toString n);
   print " Node size: "; print(Int.toString(bdd.nodecount(getBdd tb))); print "\n");
 
-val (in_th0,in_thsuc) = 
+val (in_th0,in_thsuc) =
  time
   (REWRITE_RULE[SolitaireInit_def] ## REWRITE_RULE[SolitaireTrans_def])
-  (MkIterThms 
-    MachineTransitionTheory.ReachBy_rec 
+  (MkIterThms
+    MachineTransitionTheory.ReachBy_rec
     (lhs(concl(SPEC_ALL SolitaireTrans_def)))
     (lhs(concl(SPEC_ALL SolitaireInit_def))));
-  
+
 val (tb,tb') = time (computeFixedpoint report solitaire_varmap) (in_th0,in_thsuc);
 
-val (in_th0,in_thsuc) = 
+val (in_th0,in_thsuc) =
  time
-  (REWRITE_RULE[SolitaireInit_def] ## 
-   simpLib.SIMP_RULE boolSimps.bool_ss [SolitaireTrans_def,LEFT_AND_OVER_OR,EXISTS_OR_THM]) 
-  (MkIterThms 
-    MachineTransitionTheory.ReachBy_rec 
+  (REWRITE_RULE[SolitaireInit_def] ##
+   simpLib.SIMP_RULE boolSimps.bool_ss [SolitaireTrans_def,LEFT_AND_OVER_OR,EXISTS_OR_THM])
+  (MkIterThms
+    MachineTransitionTheory.ReachBy_rec
     (lhs(concl(SPEC_ALL SolitaireTrans_def)))
     (lhs(concl(SPEC_ALL SolitaireInit_def))));
 
@@ -232,22 +232,22 @@ fun PrintState tm =
      fun sp () = print "   "
      fun nl () = print"\n"
  in
-  (print"  ";p 07;p 14;p 21;nl(); 
-   print"  ";p 08;p 15;p 22;nl(); 
+  (print"  ";p 07;p 14;p 21;nl();
+   print"  ";p 08;p 15;p 22;nl();
    p 01;p 04;p 09;p 16;p 23;p 28;p 31;nl();
    p 02;p 05;p 10;p 17;p 24;p 29;p 32;nl();
    p 03;p 06;p 11;p 18;p 25;p 30;p 33;nl();
-   print"  ";p 12;p 19;p 26;nl(); 
-   print"  ";p 13;p 20;p 22;nl();nl()) 
+   print"  ";p 12;p 19;p 26;nl();
+   print"  ";p 13;p 20;p 22;nl();nl())
  end;
 
 (*****************************************************************************)
 (* Print out a trace as found by findTrace                                   *)
 (*****************************************************************************)
 
-val _ = 
- List.map 
-  PrintState 
+val _ =
+ List.map
+  PrintState
   (List.map (fst o dest_pair o rand o concl) transthl @ [rand(concl finalth)]);
 
 val _ = export_theory();
@@ -256,10 +256,10 @@ val _ = export_theory();
 (* Reachable state with/without disjunctive partitioning
 
 fun computeSimpReachable vm Rth Bth =
- let val (by_th0,by_thsuc) = 
+ let val (by_th0,by_thsuc) =
           (REWRITE_RULE[Bth,pairTheory.PAIR_EQ] ## REWRITE_RULE[Rth])
-           (MkIterThms 
-             MachineTransitionTheory.ReachBy_rec 
+           (MkIterThms
+             MachineTransitionTheory.ReachBy_rec
              (lhs(concl(SPEC_ALL Rth)))
              (lhs(concl(SPEC_ALL Bth))))
      val _ = print "Starting disjunctive partitioning ...\n"
@@ -270,7 +270,7 @@ fun computeSimpReachable vm Rth Bth =
   time (computeFixedpoint (fn n=>fn tb=>print".") vm) (by_th0,by_thsuc_simp)
  end;
 
-val SimpReachable = 
+val SimpReachable =
  computeSimpReachable solitaire_varmap SolitaireTrans_def SolitaireInit_def;
 
 (*
@@ -282,17 +282,17 @@ Computing reachable states ...
 *)
 
 fun computeReachable vm Rth Bth =
- let val (by_th0,by_thsuc) = 
+ let val (by_th0,by_thsuc) =
           (REWRITE_RULE[Bth,pairTheory.PAIR_EQ] ## REWRITE_RULE[Rth])
-           (MkIterThms 
-             MachineTransitionTheory.ReachBy_rec 
+           (MkIterThms
+             MachineTransitionTheory.ReachBy_rec
              (lhs(concl(SPEC_ALL Rth)))
              (lhs(concl(SPEC_ALL Bth))))
  in
   time (computeFixedpoint (fn n=>fn tb=>print".") vm) (by_th0,by_thsuc)
  end;
 
-val Reachable = 
+val Reachable =
  computeSimpReachable solitaire_varmap SolitaireTrans_def SolitaireInit_def;
 
 *)

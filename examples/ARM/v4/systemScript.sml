@@ -188,7 +188,7 @@ val OUT_CP_def = Define`
                if ic = mrc then
                  [SOME (cp.f_mrc state is_usr ireg) ; NONE ]
                else if (ic = ldc_stc) /\ ~(ireg ' 20) then
-                 cp.f_stc state is_usr ireg 
+                 cp.f_stc state is_usr ireg
                else
                  GENLIST (K NONE) (cp.n_ldc state is_usr ireg);
            absent := F |>

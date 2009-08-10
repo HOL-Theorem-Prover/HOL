@@ -2,7 +2,7 @@ structure preARMSyntax =
 struct
 
 local
-  open HolKernel Parse boolLib preARMTheory pairLib 
+  open HolKernel Parse boolLib preARMTheory pairLib
        numSyntax optionSyntax listSyntax
 in
 
@@ -37,8 +37,8 @@ fun mk_arm (ins,stms,outs) =
             val ops = list_mk_pair [ mk_thy_const {Name = Assem.print_op op1, Thy = "preARM", Ty = Type `:OPERATOR`},
 
 				     (* For instruction BL, jump is always effective; and, when the pc appears in the destination list, then
-					a jump occurs												*) 
-                                     if op1 = Assem.BL orelse not (List.find (fn r => r = Assem.REG 15 orelse r = Assem.WREG 15) dlist = NONE)  then 
+					a jump occurs												*)
+                                     if op1 = Assem.BL orelse not (List.find (fn r => r = Assem.REG 15 orelse r = Assem.WREG 15) dlist = NONE)  then
 						Term(`SOME AL:COND option`)         (* always jumps *)
 
 				     else if cond1 = NONE then mk_none (Type `:COND`)
@@ -100,7 +100,7 @@ fun from_op operator =
   else if operator = Term `SUB:OPERATOR` then Assem.SUB
   else if operator = Term `RSB:OPERATOR` then Assem.RSB
   else if operator = Term `MUL:OPERATOR` then Assem.MUL
-  else if operator = Term `MLA:OPERATOR` then Assem.MLA  
+  else if operator = Term `MLA:OPERATOR` then Assem.MLA
   else if operator = Term `AND:OPERATOR` then Assem.AND
   else if operator = Term `ORR:OPERATOR` then Assem.ORR
   else if operator = Term `EOR:OPERATOR` then Assem.EOR
@@ -122,7 +122,7 @@ fun from_op operator =
   else if operator = Term `NOP:OPERATOR` then Assem.NOP
   else raise Fail "from_op: invalid ARM operator!"
 
-fun from_cond cond = 
+fun from_cond cond =
   if cond = Term `SOME EQ` then SOME (Assem.EQ)
   else if cond = Term `SOME NE` then SOME (Assem.NE)
   else if cond = Term `SOME GE` then SOME (Assem.GE)
@@ -134,10 +134,10 @@ fun from_cond cond =
   else NONE;
 
 
-fun from_exp t = 
-    if is_comb t then 
+fun from_exp t =
+    if is_comb t then
        let val (c,v) = dest_comb t
-       in  
+       in
            if same_const c (Term`REG`) then Assem.REG (int_of_term v)
            else if same_const c (Term`WREG`) then Assem.WREG (int_of_term v)
            else if same_const c (Term`NCONST`) then Assem.NCONST ((Arbint.fromNat o dest_numeral) v)
@@ -164,7 +164,7 @@ fun dest_arm stms =
     fun dest_stm stm =
         let
           val [operator0, op_cond0, flag0, dst0, srcL0, jump0] = strip_pair stm;
-        in  
+        in
           if operator0 = Term`MOV` then
              Assem.MOVE {dst = from_exp (dest_some dst0),
                          src = from_exp (hd (#1 (dest_list srcL0)))
@@ -196,7 +196,7 @@ fun dest_arm stms =
             end
        end
   in
-      List.map dest_stm (#1 (dest_list stms)) 
+      List.map dest_stm (#1 (dest_list stms))
   end
 
 end (* local open *)

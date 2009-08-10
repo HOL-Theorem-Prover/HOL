@@ -351,7 +351,7 @@ fun mk_case ty_info ty_match FV range_ty =
      let val pty = type_of p
          val thy_tyop = type_names pty
      in
-     if exists Literal.is_pure_literal col0 (* col0 has a literal *) then  
+     if exists Literal.is_pure_literal col0 (* col0 has a literal *) then
        let val other_var = fresh_var pty
            val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
                               @ [other_var]
@@ -375,7 +375,7 @@ fun mk_case ty_info ty_match FV range_ty =
            (pat_rect1,tree')
        end
      else
-     if all (is_constructor_var_pat ty_info) col0 (* col0 is constrs *) then 
+     if all (is_constructor_var_pat ty_info) col0 (* col0 is constrs *) then
        let val {case_const,constructors} = Option.valOf(ty_info thy_tyop)
            val {Name = case_const_name, Thy,...} = dest_thy_const case_const
            val nrows = flatten (map (expand constructors pty) rows)
@@ -396,7 +396,7 @@ fun mk_case ty_info ty_match FV range_ty =
        in
           (pat_rect1,tree)
        end
-     else 
+     else
         mk_case_fail "Some patterns are not constructors or variables"
      end
      end
@@ -518,7 +518,7 @@ local fun build_case_clause((ty,constr),rhs) =
            in (v::V,M')
            end
      val (V,rhs') = peel args rhs
-     val theta = Type.match_type (type_of constr) 
+     val theta = Type.match_type (type_of constr)
                       (list_mk_fun (map type_of V, ty))
      val constr' = inst theta constr
  in

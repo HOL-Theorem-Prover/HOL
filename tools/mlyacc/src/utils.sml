@@ -3,7 +3,7 @@
  *)
 type int = Int.int
 
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/22 07:40:27  michaeln
@@ -18,13 +18,13 @@ type int = Int.int
  *
  * Revision 1.1.1.1  1996/01/31  16:01:47  george
  * Version 109
- * 
+ *
  *)
 
 (* Implementation of ordered sets using ordered lists and red-black trees.  The
    code for red-black trees was originally written by Norris Boyd, which was
    modified for use here.
-*)   
+*)
 
 (* ordered sets implemented using ordered lists.
 
@@ -60,7 +60,7 @@ functor ListOrdSet(B : sig type elem
 struct
  type elem = B.elem
  val elem_gt = B.gt
- val elem_eq = B.eq 
+ val elem_eq = B.eq
 
  type set = elem list
  exception Select_arb
@@ -74,13 +74,13 @@ struct
  	      | f nil = [key]
 	in f s
 	end
-		
+
  val select_arb = fn nil => raise Select_arb
  		   | a::b => a
 
  val exists = fn (key,s) =>
 	let fun f (h::t) = if elem_gt(key,h) then f t
-			   else elem_eq(h,key) 
+			   else elem_eq(h,key)
  	      | f nil = false
 	in f s
 	end
@@ -92,12 +92,12 @@ struct
  	      | f nil = NONE
 	in f s
 	end
-   
+
  fun revfold f lst init = List.foldl f init lst
  fun fold f lst init = List.foldr f init lst
  val app = List.app
 
-fun set_eq(h::t,h'::t') = 
+fun set_eq(h::t,h'::t') =
 	(case elem_eq(h,h')
 	  of true => set_eq(t,t')
 	   | a => a)
@@ -112,7 +112,7 @@ fun set_gt(h::t,h'::t') =
 	   |  a => a)
   | set_gt(_::_,nil) = true
   | set_gt _ = false
-		
+
 fun union(a as (h::t),b as (h'::t')) =
 	  if elem_gt(h',h) then h::union(t,b)
 	  else if elem_eq(h,h') then h::union(t,t')
@@ -204,7 +204,7 @@ struct
 
  type elem = B.elem
  val elem_gt = B.gt
- val elem_eq = B.eq 
+ val elem_eq = B.eq
 
  datatype Color = RED | BLACK
 
@@ -260,7 +260,7 @@ struct
 
  fun select_arb (TREE(k,_,l,r)) = k
    | select_arb EMPTY = raise Select_arb
-   
+
  fun exists(key,t) =
   let fun look EMPTY = false
 	| look (TREE(k,_,l,r)) =

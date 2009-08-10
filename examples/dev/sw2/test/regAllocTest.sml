@@ -49,7 +49,7 @@ reg_alloc def;
 numRegs := 2;
 
 val def1 = Define
-   `f1 = \(v1:word32,v2:word32). 
+   `f1 = \(v1:word32,v2:word32).
      let (v3,v4,v5) = (v1,v2,v1) in (v1,v3,v5)`;
 
 val def2 = Define `

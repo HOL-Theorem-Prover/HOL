@@ -46,7 +46,7 @@ val FRONT_NIL = Q.prove
 (`FRONT [] = FAIL FRONT ^(mk_var("empty list",bool))  []`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
 
-val defs = 
+val defs =
   map DEFN [NULL_DEF, CONJ HD_NIL HD, CONJ TL_NIL TL, APPEND, FLAT, MAP,
             MEM, FILTER, FOLDR, FOLDL, EVERY_DEF,
             EXISTS_DEF, MAP2_THM, ZIP_THM, UNZIP_THM, REVERSE_DEF,
@@ -55,14 +55,14 @@ val defs =
             list_size_def]
 
 val _ = eSML "list"
-  (MLSIG "type num = numML.num" :: 
-   OPEN ["num"] :: 
+  (MLSIG "type num = numML.num" ::
+   OPEN ["num"] ::
    defs)
 
 val _ = eCAML "list"
-  (MLSIG "type num = NumML.num" :: 
+  (MLSIG "type num = NumML.num" ::
    MLSTRUCT "type num = NumML.num" ::
-   OPEN ["Num"] :: 
+   OPEN ["Num"] ::
    defs)
 
 val _ = adjoin_to_theory

@@ -2,7 +2,7 @@ signature leakageLib =
 sig
 
    include Abbrev
-    
+
    val REPEAT_SAFE_EVAL	  			: term -> thm
    val FIND_CONV				: term -> (term -> thm) -> conv
    val ONCE_FIND_CONV				: term -> (term -> thm) -> conv

@@ -2,12 +2,12 @@
 
 (*
 quietdec := true;
-loadPath := 
-            (concat Globals.HOLDIR "/examples/dev/sw") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/arm") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/spec") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/sep") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/swsep") :: 
+loadPath :=
+            (concat Globals.HOLDIR "/examples/dev/sw") ::
+            (concat Globals.HOLDIR "/examples/elliptic/arm") ::
+            (concat Globals.HOLDIR "/examples/elliptic/spec") ::
+            (concat Globals.HOLDIR "/examples/elliptic/sep") ::
+            (concat Globals.HOLDIR "/examples/elliptic/swsep") ::
             !loadPath;
 
 map load ["swsepLib", "elliptic_exampleTheory"];
@@ -24,11 +24,11 @@ quietdec := false;
 *)
 
 fun sep_compile def prove_equiv =
-	let 
+	let
 		val comp = pp_compile def prove_equiv;
 		val _ = print "Translating specification to separation logic\n";
 		val spec = spec_sep comp
-	in 
+	in
 		spec
 	end
 
@@ -67,7 +67,7 @@ val WORD_LO___MEASURE = store_thm ("WORD_LO___MEASURE",
   SIMP_TAC std_ss [FUN_EQ_THM, prim_recTheory.measure_def,
     relationTheory.inv_image_def, WORD_LO] );
 
-val fact_def = Hol_defn "fact" 
+val fact_def = Hol_defn "fact"
    `fact (x:word32,a:word32) = if x=0w then a else fact(x-1w, x*a)`;
 
 val (fact_def, fact_ind) =
@@ -79,8 +79,8 @@ Defn.tprove (fact_def,
 
 val fact_spec___pre =  sep_compile fact_def false;
 
-val fact_spec = 
-	PROVE_HYP 
+val fact_spec =
+	PROVE_HYP
 		(prove (hd (hyp fact_spec___pre),
 			SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
 			HO_MATCH_MP_TAC fact_ind THEN

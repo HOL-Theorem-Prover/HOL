@@ -344,7 +344,7 @@ val IS_Reset_IMP_EXISTS_SOME_Reset = store_thm("IS_Reset_IMP_EXISTS_SOME_Reset",
 
 val SIMP_IS_Dabort = store_thm("SIMP_IS_Dabort",
   `!x n irqactl iregabt2 fiqactl dataabt1 coproc1.
-    IS_Dabort (exc2exception (num2exception (w2n 
+    IS_Dabort (exc2exception (num2exception (w2n
     (AREGN1 F dataabt1 fiqactl irqactl coproc1 iregabt2))) x n) = dataabt1`,
   RW_TAC (std_ss++SIZES_ss) [IS_Dabort_def,AREGN1_def,exc2exception_def,
     num2exception_thm,w2n_n2w]);

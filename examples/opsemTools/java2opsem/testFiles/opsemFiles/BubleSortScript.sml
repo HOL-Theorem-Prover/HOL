@@ -21,7 +21,7 @@ val MAIN_def =
         )
         (Seq
           (Assign "j"
-            (Sub 
+            (Sub
               (Var "aLength")
               (Const 1)
             )
@@ -34,8 +34,8 @@ val MAIN_def =
               (Assign "stop"
                 (Const 0)
               )
-              (While 
-                (Equal 
+              (While
+                (Equal
                   (Var "stop")
                   (Const 0)
                 )
@@ -48,16 +48,16 @@ val MAIN_def =
                       (Const 0)
                     )
                     (Seq
-                      (While 
-                        (Less 
+                      (While
+                        (Less
                           (Var "i")
                           (Var "j")
                         )
                         (Seq
-                          (Cond 
-                            (Less 
+                          (Cond
+                            (Less
                               (Arr "a"
-                                (Plus 
+                                (Plus
                                   (Var "i")
                                   (Const 1)
                                 )
@@ -76,7 +76,7 @@ val MAIN_def =
                                 (ArrayAssign "a"
                                   (Var "i")
                                   (Arr "a"
-                                    (Plus 
+                                    (Plus
                                       (Var "i")
                                       (Const 1)
                                     )
@@ -84,7 +84,7 @@ val MAIN_def =
                                 )
                                 (Seq
                                   (ArrayAssign "a"
-                                    (Plus 
+                                    (Plus
                                       (Var "i")
                                       (Const 1)
                                     )
@@ -99,7 +99,7 @@ val MAIN_def =
                             Skip
                           )
                           (Assign "i"
-                            (Plus 
+                            (Plus
                               (Var "i")
                               (Const 1)
                             )
@@ -107,7 +107,7 @@ val MAIN_def =
                         )
                       )
                       (Assign "j"
-                        (Sub 
+                        (Sub
                           (Var "j")
                           (Const 1)
                         )

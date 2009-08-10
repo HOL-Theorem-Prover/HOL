@@ -2,23 +2,23 @@
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
-            (concat home_dir "src/translations") :: 
-            (concat home_dir "src/tools") :: 
-            (concat hol_dir "examples/PSL/path") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
+            (concat home_dir "src/translations") ::
+            (concat home_dir "src/tools") ::
+            (concat hol_dir "examples/PSL/path") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
  ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory",
-  "temporal_deep_mixedTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory", 
+  "temporal_deep_mixedTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory",
   "ltl_to_automaton_formulaTheory",
   "numLib", "listLib", "translationsLib", "rltlTheory",
   "rltl_to_ltlTheory", "psl_to_rltlTheory", "UnclockedSemanticsTheory",
   "SyntacticSugarTheory", "congLib", "temporal_deep_simplificationsLib"];
 *)
 
-open HolKernel boolLib bossLib  ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory 
+open HolKernel boolLib bossLib  ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory pairTheory rltlTheory
      ltl_to_automaton_formulaTheory numLib listLib translationsLib rltl_to_ltlTheory psl_to_rltlTheory UnclockedSemanticsTheory
@@ -42,52 +42,52 @@ quietdec := false;
 
 local
 
-  fun  mpattern_int 0 = ``LTL_NEXT (m:'a ltl)`` 
+  fun  mpattern_int 0 = ``LTL_NEXT (m:'a ltl)``
     | mpattern_int n = subst [mk_var ("X", ``:'a ltl``) |-> mpattern_int (n-1)]
                           ``LTL_NEXT (LTL_AND(LTL_NOT (m:'a ltl), X))``;
-  
+
   fun mpattern n = subst [mk_var ("X", ``:'a ltl``) |-> mpattern_int n]
                         ``LTL_AND((m:'a ltl), LTL_ALWAYS (LTL_IMPL (m, X)))``;
-  
-  
-  
-  fun  bpattern 0 = ``LTL_NOT (b:'a ltl)`` 
+
+
+
+  fun  bpattern 0 = ``LTL_NOT (b:'a ltl)``
     | bpattern n = subst [mk_var ("X", ``:'a ltl``) |-> bpattern (n-1)]
                         ``LTL_AND(LTL_NOT (b:'a ltl), LTL_NEXT X)`` ;
-  
-  
-  fun  nest_next_pattern 0 t = t 
+
+
+  fun  nest_next_pattern 0 t = t
     | nest_next_pattern n t = liteLib.mk_icomb (``LTL_NEXT:'a ltl->'a ltl``, nest_next_pattern (n-1) t)
-  
+
   fun nest_pattern n =
     let
       val pattern = ``LTL_AND (
                         LTL_ALWAYS (LTL_IMPL(
                           LTL_AND(m:'a ltl, LTL_NOT b),
-                          LTL_NEXT (LTL_AND (X1, 
+                          LTL_NEXT (LTL_AND (X1,
                             LTL_SUNTIL(
                               LTL_AND (LTL_NOT m, LTL_AND(LTL_IMPL (b, LTL_NEXT X1),
                                   LTL_IMPL (LTL_NOT b, LTL_NEXT X2))), m))))),
                         LTL_ALWAYS (LTL_IMPL(
                           LTL_AND(m:'a ltl, b),
-                          LTL_NEXT (LTL_AND (X2, 
+                          LTL_NEXT (LTL_AND (X2,
                             LTL_OR (
                               LTL_SUNTIL(LTL_AND (b, LTL_AND(LTL_NOT m, LTL_NEXT (X2))), m),
-  
-                              LTL_AND (LTL_NOT m, LTL_AND(LTL_NOT b, 
-                              LTL_NEXT (LTL_AND(X1, 
+
+                              LTL_AND (LTL_NOT m, LTL_AND(LTL_NOT b,
+                              LTL_NEXT (LTL_AND(X1,
                                 LTL_SUNTIL(
                                   LTL_AND (LTL_NOT m, LTL_AND(LTL_IMPL (b, LTL_NEXT (X1)),
                                   LTL_IMPL (LTL_NOT b, LTL_NEXT (X2)))), m)))))
                             ))))))``;
-  
-  
+
+
       val x1_term = nest_next_pattern n ``b:'a ltl``
       val x2_term = nest_next_pattern n ``LTL_NOT b:'a ltl``;
     in
       subst [mk_var ("X1", ``:'a ltl``) |-> x1_term,
             mk_var ("X2", ``:'a ltl``) |-> x2_term] pattern
-    end;                     
+    end;
 
 in
   fun ltl_counter n =
@@ -108,7 +108,7 @@ in
     in
       term
     end
-    
+
 end;
 
 
@@ -121,7 +121,7 @@ val pslTerm = ``
 F_ALWAYS (F_IMPLIES(F_STRONG_BOOL (B_PROP aa),
                     F_STRONG_NEXT_EVENT (B_PROP bb,
                                          F_STRONG_BEFORE (
-                                            F_STRONG_BOOL (B_PROP cc), 
+                                            F_STRONG_BOOL (B_PROP cc),
                                             F_STRONG_BOOL (B_PROP dd)
                                          ))
                    )
@@ -151,7 +151,7 @@ LTL_NOT (LTL_SUNTIL (
 
     LTL_NOT(
         LTL_SUNTIL (
-            LTL_NOT (LTL_ALWAYS (LTL_NOT (LTL_PROP (P_PROP  a)))), 
+            LTL_NOT (LTL_ALWAYS (LTL_NOT (LTL_PROP (P_PROP  a)))),
             LTL_NOT (LTL_PROP (P_PROP  a))
         )
     )
@@ -196,7 +196,7 @@ val test14LTL = ``LTL_EQUIV(LTL_NOT(LTL_PROP (P_PROP a)), LTL_PROP (P_PROP b))``
 
 val test1RLTL = ``RLTL_PROP (P_PROP a)``;
 val test2RLTL = ``RLTL_NOT(RLTL_PROP (P_PROP (a:'c)))``;
-val test3RLTL = ``RLTL_ACCEPT(RLTL_SUNTIL (RLTL_PROP (P_PROP a), 
+val test3RLTL = ``RLTL_ACCEPT(RLTL_SUNTIL (RLTL_PROP (P_PROP a),
 RLTL_NEXT(RLTL_PROP (P_PROP a))), P_PROP c)``;
 
 

@@ -2,7 +2,7 @@ structure quantHeuristicsScript =
 struct
 
 
-open HolKernel Parse boolLib Drule BasicProvers 
+open HolKernel Parse boolLib Drule BasicProvers
      pairTheory listTheory optionTheory;
 
 val _ = new_theory "quantHeuristics";
@@ -29,7 +29,7 @@ val EXISTS_UNIQUE_INSTANTIATE_THM = store_thm ("EXISTS_UNIQUE_INSTANTIATE_THM",
 
 
 val MOVE_EXISTS_IMP_THM = store_thm ("MOVE_EXISTS_IMP_THM",
-``(?x. ((!y. (~(P x y)) ==> R y) ==> Q x)) = 
+``(?x. ((!y. (~(P x y)) ==> R y) ==> Q x)) =
          (((!y. (~(!x. P x y)) ==> R y)) ==> ?x. Q x)``,
          PROVE_TAC[]);
 
@@ -64,7 +64,7 @@ val RIGHT_IMP_OR_INTRO = store_thm ("RIGHT_IMP_OR_INTRO",
 
 val PAIR_EQ_EXPAND = store_thm ("PAIR_EQ_EXPAND",
 ``(((x:'a,y:'b) = X) = ((x = FST X) /\ (y = SND X))) /\
-  ((X = (x,y)) = ((FST X = x) /\ (SND X = y)))``, 
+  ((X = (x,y)) = ((FST X = x) /\ (SND X = y)))``,
 SingleStep.Cases_on `X` THEN
 REWRITE_TAC[pairTheory.PAIR_EQ]);
 
@@ -75,7 +75,7 @@ val PAIR_EQ_SIMPLE_EXPAND = store_thm ("PAIR_EQ_SIMPLE_EXPAND",
   (((FST X, y) = X) = (y = SND X)) /\
   (((x, SND X) = X) = (x = FST X)) /\
   ((X = (FST X, y)) = (SND X = y)) /\
-  ((X = (x, SND X)) = (FST X = x))``, 
+  ((X = (x, SND X)) = (FST X = x))``,
 SingleStep.Cases_on `X` THEN
 ASM_REWRITE_TAC[pairTheory.PAIR_EQ]);
 

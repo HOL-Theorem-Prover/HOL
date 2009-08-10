@@ -31,7 +31,7 @@ val is_presburger           = Gen_arith.is_presburger
 val NEGATE_CONV             = Solve.NEGATE_CONV
 val PRENEX_CONV             = RJBConv.RULE_OF_CONV Prenex.PRENEX_CONV
 val non_presburger_subterms = Gen_arith.non_presburger_subterms
-val SUB_AND_COND_ELIM_CONV  = RJBConv.RULE_OF_CONV 
+val SUB_AND_COND_ELIM_CONV  = RJBConv.RULE_OF_CONV
                                  Sub_and_cond.SUB_AND_COND_ELIM_CONV;
 
 end

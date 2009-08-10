@@ -1531,7 +1531,7 @@ val curve_add_example_def = Define
        (affine (GF 751) [mw2n x_1; mw2n y_1])
        (affine (GF 751) [mw2n x_2; mw2n y_2])`;
 
-val curve_add_example_compilable = 
+val curve_add_example_compilable =
     CONV_RULE (RAND_CONV execute_conv) curve_add_example_def;
 ***)
 

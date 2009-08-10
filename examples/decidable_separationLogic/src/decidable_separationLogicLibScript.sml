@@ -2,8 +2,8 @@ open HolKernel Parse boolLib bossLib;
 
 (*
 quietdec := true;
-loadPath := 
-            (concat [Globals.HOLDIR, "/examples/decidable_separationLogic/src"]) :: 
+loadPath :=
+            (concat [Globals.HOLDIR, "/examples/decidable_separationLogic/src"]) ::
             !loadPath;
 
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
@@ -24,7 +24,7 @@ val _ = new_theory "decidable_separationLogicLib";
 
 val nchotomy_thm = prove (``!x.
       (x = sf_emp) \/ (?d l. x = sf_points_to d l) \/
-      (?l d d0. x = sf_tree l d d0) \/ ?d d0. x = sf_star d d0``, 
+      (?l d d0. x = sf_tree l d d0) \/ ?d d0. x = sf_star d d0``,
                         REWRITE_TAC [TypeBase.nchotomy_of ``:('a,'b,'c) ds_spatial_formula``]);
 
 val _ = TypeBase.write [TypeBasePure.put_nchotomy nchotomy_thm (valOf (TypeBase.fetch ``:('a,'b,'c) ds_spatial_formula``))];
@@ -62,7 +62,7 @@ val SAFE_EL_def = Define `
 
 
 val SAFE_EL_SEM = store_thm ("SAFE_EL_SEM",
-   ``!e n l. SAFE_EL e n l = 
+   ``!e n l. SAFE_EL e n l =
                if (n < LENGTH l) then EL n l else e``,
 
    Induct_on `n` THENL [
@@ -120,7 +120,7 @@ val MEM_DELETE_ELEMENT = store_thm ("MEM_DELETE_ELEMENT",
       SIMP_TAC list_ss [DELETE_ELEMENT_THM],
 
       Cases_on `n` THEN (
-         SIMP_TAC list_ss [DELETE_ELEMENT_THM] THEN 
+         SIMP_TAC list_ss [DELETE_ELEMENT_THM] THEN
          METIS_TAC[]
       )
    ]);
@@ -146,10 +146,10 @@ val EL_DELETE_ELEMENT = store_thm ("EL_DELETE_ELEMENT",
    CONJ_TAC THENL [
       Induct_on `l` THENL [
          SIMP_TAC list_ss [DELETE_ELEMENT_THM],
-   
+
          Cases_on `n2` THENL [
             SIMP_TAC list_ss [],
-         
+
             SIMP_TAC list_ss [DELETE_ELEMENT_THM] THEN
             Cases_on `n1` THEN SIMP_TAC list_ss [] THEN
             ASM_SIMP_TAC std_ss []
@@ -159,14 +159,14 @@ val EL_DELETE_ELEMENT = store_thm ("EL_DELETE_ELEMENT",
 
       Induct_on `l` THENL [
          SIMP_TAC list_ss [DELETE_ELEMENT_THM],
-   
+
          Cases_on `n1` THENL [
             SIMP_TAC list_ss [] THEN
             REPEAT STRIP_TAC THEN
             `n2 = 0` by DECIDE_TAC THEN
             ASM_SIMP_TAC std_ss [DELETE_ELEMENT_THM],
 
-       
+
             SIMP_TAC list_ss [] THEN
             Cases_on `n2` THENL [
                SIMP_TAC list_ss [DELETE_ELEMENT_THM],
@@ -181,7 +181,7 @@ val EL_DELETE_ELEMENT = store_thm ("EL_DELETE_ELEMENT",
 
 
 val DELETE_ELEMENT_DELETE_ELEMENT = store_thm ("EL_DELETE_ELEMENT",
-   ``!n1 n2 l. ((n1 <= n2) ==> (DELETE_ELEMENT n2 (DELETE_ELEMENT n1 l) = 
+   ``!n1 n2 l. ((n1 <= n2) ==> (DELETE_ELEMENT n2 (DELETE_ELEMENT n1 l) =
                                DELETE_ELEMENT n1 (DELETE_ELEMENT (SUC n2) l)))``,
 
    Induct_on `l` THENL [
@@ -228,13 +228,13 @@ val SWAP_ELEMENTS_THM = store_thm ("SWAP_ELEMENTS_THM",
             Cases_on `l` THENL [
                SIMP_TAC std_ss [SWAP_ELEMENTS_def],
 
-               Cases_on `t` THEN 
+               Cases_on `t` THEN
                ASM_SIMP_TAC std_ss [SWAP_ELEMENTS_def]
             ]
          ]
       ]
    ) THEN
-   STRIP_TAC THEN 
+   STRIP_TAC THEN
    REPEAT CONJ_TAC THENL [
       Cases_on `x` THEN Cases_on `y` THEN
       SIMP_TAC std_ss [SWAP_ELEMENTS_def],
@@ -243,7 +243,7 @@ val SWAP_ELEMENTS_THM = store_thm ("SWAP_ELEMENTS_THM",
       SIMP_TAC std_ss [SWAP_ELEMENTS_def],
 
       ASM_SIMP_TAC arith_ss [],
-      
+
       ASM_SIMP_TAC arith_ss [],
 
       Cases_on `l` THENL [
@@ -254,7 +254,7 @@ val SWAP_ELEMENTS_THM = store_thm ("SWAP_ELEMENTS_THM",
          SIMP_TAC std_ss [SWAP_ELEMENTS_def]
       ],
 
-      Cases_on `l` THEN 
+      Cases_on `l` THEN
       Cases_on `x` THEN Cases_on `y` THEN
       SIMP_TAC std_ss [SWAP_ELEMENTS_def]
    ])
@@ -265,7 +265,7 @@ val SWAP_ELEMENTS_SEM = store_thm ("SWAP_ELEMENTS_SEM",
    ``!x y l. ((x <= y) /\ y < LENGTH l) ==>
              ((EL x (SWAP_ELEMENTS x y l) = EL y l) /\
               (EL y (SWAP_ELEMENTS x y l) = EL x l) /\
-              (!p. (~(p = x) /\ ~(p = y) /\ (p < LENGTH l)) ==> 
+              (!p. (~(p = x) /\ ~(p = y) /\ (p < LENGTH l)) ==>
                   (EL p (SWAP_ELEMENTS x y l) = EL p l)))``,
 
    Induct_on `x` THENL [
@@ -326,7 +326,7 @@ val SWAP_TO_POS_THM = store_thm ("SWAP_TO_POS_THM",
          ]
       ]
    ) THEN
-   STRIP_TAC THEN 
+   STRIP_TAC THEN
    REPEAT CONJ_TAC THENL [
       Cases_on `x` THEN Cases_on `y` THEN
       SIMP_TAC std_ss [SWAP_TO_POS_def],
@@ -338,7 +338,7 @@ val SWAP_TO_POS_THM = store_thm ("SWAP_TO_POS_THM",
       SIMP_TAC std_ss [SWAP_TO_POS_def],
 
       ASM_SIMP_TAC arith_ss [],
-      
+
       ASM_SIMP_TAC arith_ss [],
 
       SIMP_TAC std_ss [SWAP_TO_POS_def],
@@ -365,7 +365,7 @@ val SAFE_DEL_EL___REWRITE = SUC_RULE (SAFE_DEL_EL_THM);
 val SWAP_REWRITES = save_thm ("SWAP_REWRITES",
    LIST_CONJ [SWAP_ELEMENTS___REWRITE, REPLACE_ELEMENT___REWRITE, SAFE_EL___REWRITE,
               SWAP_TO_POS___REWRITE, DELETE_ELEMENT___REWRITE, SAFE_DEL_EL___REWRITE])
-               
+
 
 
 val PERM___SAFE_REPLACE_EL = store_thm ("PERM___SAFE_REPLACE_EL",
@@ -418,7 +418,7 @@ Induct_on `m` THENL [
 
       Cases_on `l` THENL [
          SIMP_TAC std_ss [SWAP_ELEMENTS_THM, PERM_REFL],
-      
+
          SIMP_TAC std_ss [SWAP_ELEMENTS_THM] THEN
          METIS_TAC[PERM_MONO]
       ]
@@ -482,7 +482,7 @@ Induct_on `m` THENL [
 
       Cases_on `l` THENL [
          SIMP_TAC std_ss [SWAP_TO_POS_THM, PERM_REFL],
-      
+
          SIMP_TAC std_ss [SWAP_TO_POS_THM] THEN
          METIS_TAC[PERM_MONO]
       ]
@@ -496,7 +496,7 @@ val LIST_DS_ENTAILS___PERM_SWAP_ELEMENTS = store_thm (
 ``!n1 m1 n2 m2 n3 m3 n4 m4 n5 m5 n6 m6 c1 c2 pf sf pf' sf'.
 
 LIST_DS_ENTAILS (c1, c2) (pf, sf) (pf', sf') =
-LIST_DS_ENTAILS (SWAP_ELEMENTS n5 m5 c1, SWAP_ELEMENTS n6 m6 c2) ((SWAP_ELEMENTS n1 m1 pf), (SWAP_ELEMENTS n2 m2 sf)) 
+LIST_DS_ENTAILS (SWAP_ELEMENTS n5 m5 c1, SWAP_ELEMENTS n6 m6 c2) ((SWAP_ELEMENTS n1 m1 pf), (SWAP_ELEMENTS n2 m2 sf))
                 ((SWAP_ELEMENTS n3 m3 pf'), (SWAP_ELEMENTS n4 m4 sf'))``,
 
 REPEAT STRIP_TAC THEN
@@ -510,7 +510,7 @@ val LIST_DS_ENTAILS___PERM_SWAP_TO_POS = store_thm (
 ``!n1 m1 n2 m2 n3 m3 n4 m4 n5 m5 n6 m6 c1 c2 pf sf pf' sf'.
 
 LIST_DS_ENTAILS (c1,c2) (pf, sf) (pf', sf') =
-LIST_DS_ENTAILS (SWAP_TO_POS n5 m5 c1, SWAP_TO_POS n6 m6 c2) ((SWAP_TO_POS n1 m1 pf), (SWAP_TO_POS n2 m2 sf)) 
+LIST_DS_ENTAILS (SWAP_TO_POS n5 m5 c1, SWAP_TO_POS n6 m6 c2) ((SWAP_TO_POS n1 m1 pf), (SWAP_TO_POS n2 m2 sf))
                 ((SWAP_TO_POS n3 m3 pf'), (SWAP_TO_POS n4 m4 sf'))``,
 
 REPEAT STRIP_TAC THEN
@@ -560,7 +560,7 @@ SIMP_TAC list_ss [SAFE_MAP_def] THENL [
 
 
 val LIST_PF_SEM___PF_TURN_EQ = store_thm ("LIST_PF_SEM___PF_TURN_EQ",
-   ``!f s pfL. LIST_PF_SEM s (SAFE_MAP F f PF_TURN_EQ pfL) = 
+   ``!f s pfL. LIST_PF_SEM s (SAFE_MAP F f PF_TURN_EQ pfL) =
             LIST_PF_SEM s pfL``,
 
    Induct_on `pfL` THENL [
@@ -635,7 +635,7 @@ Cases_on `l` THENL [
    Cases_on `f` THEN REWRITE_TAC [POS_FILTER_def] THEN
    Cases_on `h` THEN REWRITE_TAC [POS_FILTER_def]
 ])
-   
+
 
 val MEM_POS_FILTER = store_thm ("MEM_POS_FILTER",
    ``!x f p l. ((MEM x l) /\ ~(p x)) ==> MEM x (POS_FILTER f p l)``,
@@ -659,7 +659,7 @@ val MEM_POS_FILTER_2 = store_thm ("MEM_POS_FILTER_2",
 
       Cases_on `f` THEN SIMP_TAC list_ss [POS_FILTER_THM] THEN
       Cases_on `h` THEN (
-         ASM_SIMP_TAC list_ss [POS_FILTER_THM, LET_THM, 
+         ASM_SIMP_TAC list_ss [POS_FILTER_THM, LET_THM,
             COND_RATOR, COND_RAND] THEN
          METIS_TAC[]
       )
@@ -686,7 +686,7 @@ val SAFE_FILTER_THM = store_thm ("SAFE_FILTER_THM",
       REPEAT STRIP_TAC THENL [
          Cases_on `l` THEN SIMP_TAC std_ss [SAFE_FILTER_def],
          Cases_on `l` THEN SIMP_TAC std_ss [SAFE_FILTER_def],
-   
+
          Cases_on `f` THENL [
             SIMP_TAC std_ss [SAFE_FILTER_def],
             Cases_on `h` THEN SIMP_TAC std_ss [SAFE_FILTER_def]
@@ -721,7 +721,7 @@ val MEM_SAFE_FILTER = store_thm ("MEM_SAFE_FILTER",
       SIMP_TAC list_ss [SAFE_FILTER_THM],
 
       Cases_on `l` THEN (
-         SIMP_TAC list_ss [SAFE_FILTER_THM] 
+         SIMP_TAC list_ss [SAFE_FILTER_THM]
       ) THEN
       Cases_on `h'` THEN (
          SIMP_TAC list_ss [SAFE_FILTER_THM] THEN
@@ -768,7 +768,7 @@ val SWAP_TO_POS___DELETE_ELEMENT = store_thm ("SWAP_TO_POS___DELETE_ELEMENT",
 
    Cases_on `l` THEN Cases_on `n` THEN
    SIMP_TAC list_ss [SWAP_TO_POS_THM, DELETE_ELEMENT_THM, SAFE_DEL_EL_SEM])
-   
+
 val SAFE_DEL_EL___EQ = store_thm ("SAFE_DEL_EL___EQ",
    ``(!n (l:'a list). (SAFE_DEL_EL n l = []) = (~(n < LENGTH l))) /\
      (!n (l:'a list) e. (SAFE_DEL_EL n l = [e]) = ((n < LENGTH l) /\ (EL n l = e))) /\
@@ -836,11 +836,11 @@ FULL_SIMP_TAC std_ss [SWAP_TO_POS___DELETE_ELEMENT,
 
 
 
-val PF_TRIVIAL_FILTER_PRED_def = Define 
+val PF_TRIVIAL_FILTER_PRED_def = Define
    `(PF_TRIVIAL_FILTER_PRED pf_true = T) /\
     (PF_TRIVIAL_FILTER_PRED (pf_unequal e1 e2) = F) /\
     (PF_TRIVIAL_FILTER_PRED (pf_equal e1 e2) = (e1 = e2)) /\
-    (PF_TRIVIAL_FILTER_PRED (pf_and pf1 pf2) = 
+    (PF_TRIVIAL_FILTER_PRED (pf_and pf1 pf2) =
      PF_TRIVIAL_FILTER_PRED pf1 /\ PF_TRIVIAL_FILTER_PRED pf2)`
 
 
@@ -858,7 +858,7 @@ Induct_on `pf` THENL [
 
 
 val LIST_PF_SEM___TRIVIAL_FILTER_THM = store_thm ("LIST_PF_SEM___TRIVIAL_FILTER_THM",
-   ``!s f pfL. 
+   ``!s f pfL.
           LIST_PF_SEM s (POS_FILTER f PF_TRIVIAL_FILTER_PRED pfL) =
            LIST_PF_SEM s pfL``,
 
@@ -879,11 +879,11 @@ Induct_on `pfL` THENL [
 
 
 
-val SF_TRIVIAL_FILTER_PRED_def = Define 
+val SF_TRIVIAL_FILTER_PRED_def = Define
    `(SF_TRIVIAL_FILTER_PRED sf_emp = T) /\
     (SF_TRIVIAL_FILTER_PRED (sf_points_to e a) = F) /\
     (SF_TRIVIAL_FILTER_PRED (sf_tree fL es e) = (es = e)) /\
-    (SF_TRIVIAL_FILTER_PRED (sf_star sf1 sf2) = 
+    (SF_TRIVIAL_FILTER_PRED (sf_star sf1 sf2) =
      SF_TRIVIAL_FILTER_PRED sf1 /\ SF_TRIVIAL_FILTER_PRED sf2)`
 
 
@@ -893,7 +893,7 @@ val SF_TRIVIAL_FILTER_PRED_THM = store_thm ("SF_TRIVIAL_FILTER_PRED_THM",
     (SF_TRIVIAL_FILTER_PRED (sf_tree fL es e) = (es = e)) /\
     (SF_TRIVIAL_FILTER_PRED (sf_ls f e1 e2) = (e1 = e2)) /\
     (SF_TRIVIAL_FILTER_PRED (sf_bin_tree (f1,f2) e) = (e = dse_nil)) /\
-    (SF_TRIVIAL_FILTER_PRED (sf_star sf1 sf2) = 
+    (SF_TRIVIAL_FILTER_PRED (sf_star sf1 sf2) =
      SF_TRIVIAL_FILTER_PRED sf1 /\ SF_TRIVIAL_FILTER_PRED sf2)``,
 
 SIMP_TAC std_ss [SF_TRIVIAL_FILTER_PRED_def, sf_ls_def, sf_bin_tree_def] THEN
@@ -914,13 +914,13 @@ Induct_on `sf` THENL [
    ASM_SIMP_TAC std_ss [SF_SEM_def, SF_TRIVIAL_FILTER_PRED_def, FUNION_FEMPTY_1, FDOM_FEMPTY,
       DISJOINT_EMPTY]
 ]);
-   
-   
+
+
 
 
 
 val LIST_SF_SEM___TRIVIAL_FILTER_THM = store_thm ("LIST_SF_SEM___TRIVIAL_FILTER_THM",
-   ``!s h f sfL. 
+   ``!s h f sfL.
           LIST_SF_SEM s h (POS_FILTER f SF_TRIVIAL_FILTER_PRED sfL) =
            LIST_SF_SEM s h sfL``,
 
@@ -939,7 +939,7 @@ Induct_on `sfL` THENL [
 
 
 val HEAP_DISTINCT___TRIVIAL_FILTER_THM = store_thm ("HEAP_DISTINCT___TRIVIAL_FILTER_THM",
-   ``!s h f c1 c2. 
+   ``!s h f c1 c2.
           (HEAP_DISTINCT s h c1 (POS_FILTER f (\x. (FST x = SND x)) c2) =
           HEAP_DISTINCT s h c1 c2)``,
 
@@ -1104,32 +1104,32 @@ val _ = Hol_datatype `hypothesis_rule_cases =
      hyp_keep
    | hyp_c_dse_nil of bool => num
    | hyp_c_unequal of num => num
-   | hyp_in_precond of bool => num 
+   | hyp_in_precond of bool => num
    | hyp_in_self of bool => num`
 
 
 val HYPOTHESIS_RULE_COND_def = Define `
    (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h hyp_keep = F) /\
 
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_dse_nil F m)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_dse_nil F m)  =
       ((e1 = dse_nil) /\ (SAFE_DEL_EL m cL = [e2]))) /\
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_dse_nil T m)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_dse_nil T m)  =
       ((e2 = dse_nil) /\ (SAFE_DEL_EL m cL = [e1]))) /\
    (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n pf (hyp_c_dse_nil b m) = F) /\
 
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_unequal m1 m2)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_unequal m1 m2)  =
       (~(m1 = m2) /\ (SAFE_DEL_EL m1 cL = [e1]) /\ (SAFE_DEL_EL m2 cL = [e2]))) /\
    (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n pf (hyp_c_unequal m1 m2) = F) /\
 
 
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h (hyp_in_precond F m)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h (hyp_in_precond F m)  =
       (SAFE_DEL_EL m pfL1 = [h])) /\
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h (hyp_in_precond T m)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h (hyp_in_precond T m)  =
       (SAFE_DEL_EL m pfL1 = [PF_TURN_EQ h])) /\
 
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h (hyp_in_self F m)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h (hyp_in_self F m)  =
       ((m < n) /\ (SAFE_DEL_EL m pfL2 = [h]))) /\
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h (hyp_in_self T m)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h (hyp_in_self T m)  =
       ((m < n) /\ (SAFE_DEL_EL m pfL2 = [PF_TURN_EQ h])))`
 
 
@@ -1137,25 +1137,25 @@ val HYPOTHESIS_RULE_COND_def = Define `
 val HYPOTHESIS_RULE_COND_THM = store_thm ("HYPOTHESIS_RULE_COND_THM",
 `` (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n pf hyp_keep = F) /\
 
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_dse_nil F m)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_dse_nil F m)  =
       ((e1 = dse_nil) /\ (SAFE_DEL_EL m cL = [e2]))) /\
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_dse_nil T m)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_dse_nil T m)  =
       ((e2 = dse_nil) /\ (SAFE_DEL_EL m cL = [e1]))) /\
 
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_unequal m1 m2)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n (pf_unequal e1 e2) (hyp_c_unequal m1 m2)  =
       (~(m1 = m2) /\(SAFE_DEL_EL m1 cL = [e1]) /\ (SAFE_DEL_EL m2 cL = [e2]))) /\
 
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n pf (hyp_in_precond b m)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n pf (hyp_in_precond b m)  =
       (SAFE_DEL_EL m pfL1 = [if b then PF_TURN_EQ pf else pf])) /\
 
-   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n pf (hyp_in_self b m)  = 
+   (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n pf (hyp_in_self b m)  =
       ((m < n) /\ (SAFE_DEL_EL m pfL2 = [if b then PF_TURN_EQ pf else pf])))``,
 
 Cases_on `pf` THEN Cases_on `b` THEN SIMP_TAC std_ss [HYPOTHESIS_RULE_COND_def])
 
 
 val HYPOTHESIS_RULE_COND___SEM = store_thm ("HYPOTHESIS_RULE_COND___SEM",
-``!s h n cL pfL1 pfL2 c2 hyp_cond pf. 
+``!s h n cL pfL1 pfL2 c2 hyp_cond pf.
     (HEAP_DISTINCT s h cL c2 /\
      LIST_PF_SEM s pfL1 /\ LIST_PF_SEM s pfL2 /\ n <= LENGTH pfL2 /\
      HYPOTHESIS_RULE_COND cL pfL1 (pfL2++l) n pf hyp_cond) ==>
@@ -1181,7 +1181,7 @@ Cases_on `hyp_cond` THENL [
    FULL_SIMP_TAC std_ss [DS_EXPRESSION_EVAL_VALUE_def, NOT_IS_DSV_NIL_THM] THEN
    FULL_SIMP_TAC std_ss [GET_DSV_VALUE_def, PF_SEM_def, DS_EXPRESSION_EQUAL_def] THEN
    METIS_TAC[],
-   
+
 
    SIMP_TAC list_ss [HYPOTHESIS_RULE_COND_THM, SAFE_DEL_EL___EQ] THEN
    REPEAT STRIP_TAC THEN
@@ -1202,7 +1202,7 @@ Cases_on `hyp_cond` THENL [
 val HYPOTHESIS_RULE_MAP_def = Define `
    (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n f [] = []) /\
    (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n [] l = l) /\
-   (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n (hyp_case::f) (h::l) = 
+   (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n (hyp_case::f) (h::l) =
       if HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h hyp_case then
          HYPOTHESIS_RULE_MAP cL pfL1 pfL2 (SUC n) f l
       else
@@ -1213,7 +1213,7 @@ val HYPOTHESIS_RULE_MAP_def = Define `
 val HYPOTHESIS_RULE_MAP_THM = store_thm ("HYPOTHESIS_RULE_MAP_THM",
 `` (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n f [] = []) /\
    (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n [] l = l) /\
-   (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n (hyp_case::f) (h::l) = 
+   (HYPOTHESIS_RULE_MAP cL pfL1 pfL2 n (hyp_case::f) (h::l) =
       if HYPOTHESIS_RULE_COND cL pfL1 pfL2 n h hyp_case then
          HYPOTHESIS_RULE_MAP cL pfL1 pfL2 (SUC n) f l
       else
@@ -1223,7 +1223,7 @@ val HYPOTHESIS_RULE_MAP_THM = store_thm ("HYPOTHESIS_RULE_MAP_THM",
 
 SIMP_TAC std_ss [HYPOTHESIS_RULE_MAP_def] THEN
 CONJ_TAC THENL [
-   Cases_on `f` THEN 
+   Cases_on `f` THEN
    SIMP_TAC std_ss [HYPOTHESIS_RULE_MAP_def],
 
    Cases_on `l` THEN SIMP_TAC list_ss [HYPOTHESIS_RULE_MAP_def]
@@ -1231,7 +1231,7 @@ CONJ_TAC THENL [
 
 
 val HYPOTHESIS_RULE_MAP___SEM1 = prove (
-``!s h n cL c2 pfL1 pfL2 f l. 
+``!s h n cL c2 pfL1 pfL2 f l.
     (HEAP_DISTINCT s h cL c2 /\ LIST_PF_SEM s pfL1 /\ LIST_PF_SEM s pfL2 /\ n <= LENGTH pfL2) ==>
 
     (LIST_PF_SEM s (HYPOTHESIS_RULE_MAP cL pfL1 (pfL2++l) n f l) =
@@ -1271,7 +1271,7 @@ Induct_on `l` THENL [
 
 
 val HYPOTHESIS_RULE_MAP___SEM = store_thm ("HYPOTHESIS_RULE_MAP___SEM",
-``!s h c1 c2 pfL1 f l. 
+``!s h c1 c2 pfL1 f l.
     HEAP_DISTINCT s h c1 c2 /\ LIST_PF_SEM s pfL1 ==>
 
     (LIST_PF_SEM s (HYPOTHESIS_RULE_MAP c1 pfL1 l 0 f l) =
@@ -1430,7 +1430,7 @@ val INFERENCE_STAR_INTRODUCTION___EVAL2 = store_thm ("INFERENCE_STAR_INTRODUCTIO
 REPEAT GEN_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
  LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n1 sfL) (pfL',SWAP_TO_POS 0 n2 sfL')` by ALL_TAC THEN1 (
-   MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN   
+   MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
 ) THEN
@@ -1460,7 +1460,7 @@ val SF_POINTS_TO_LIST_def = Define `
 
 val EL___SF_POINTS_TO_LIST = store_thm ("EL___SF_POINTS_TO_LIST",
 ``!l n. (n < LENGTH (SF_POINTS_TO_LIST l)) ==>
-     ?n' a. (n' < LENGTH l) /\ (n <= n') /\ 
+     ?n' a. (n' < LENGTH l) /\ (n <= n') /\
             (EL n' l = sf_points_to (EL n (SF_POINTS_TO_LIST l)) a)``,
 
 Induct_on `l` THENL [
@@ -1480,7 +1480,7 @@ Induct_on `l` THENL [
    Cases_on `n` THENL [
       FULL_SIMP_TAC std_ss [] THEN
       Q.EXISTS_TAC `0` THEN
-      SIMP_TAC list_ss [] THEN 
+      SIMP_TAC list_ss [] THEN
       METIS_TAC[],
 
       FULL_SIMP_TAC list_ss [] THEN
@@ -1557,32 +1557,32 @@ Induct_on `l` THENL [
 
 val _ = Hol_datatype `pointsto_cases =
      pointsto_skip
-   | pointsto_pointsto 
+   | pointsto_pointsto
    | pointsto_tree of bool => num`
 
 val SF_POINTS_TO_LIST_COND_def = Define `
    (SF_POINTS_TO_LIST_COND pfL pointsto_skip h = []) /\
    (SF_POINTS_TO_LIST_COND pfL pointsto_pointsto (sf_points_to e a) = [e]) /\
    (SF_POINTS_TO_LIST_COND pfL pointsto_pointsto (_) = []) /\
-   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree turn n) (sf_tree fL es e) = 
+   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree turn n) (sf_tree fL es e) =
    if (SAFE_DEL_EL n pfL = [if turn then pf_unequal es e else pf_unequal e es]) then [e] else []) /\
    (SF_POINTS_TO_LIST_COND pfL (pointsto_tree turn n) _ = [])`
 
 val SF_POINTS_TO_LIST_COND_THM = store_thm ("SF_POINTS_TO_LIST_COND_THM",
 ``(SF_POINTS_TO_LIST_COND pfL pointsto_skip h = []) /\
    (SF_POINTS_TO_LIST_COND pfL pointsto_pointsto (sf_points_to e a) = [e]) /\
-   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree T n) (sf_tree fL es e) = 
+   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree T n) (sf_tree fL es e) =
    if (SAFE_DEL_EL n pfL = [pf_unequal es e]) then [e] else []) /\
-   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree F n) (sf_tree fL es e) = 
+   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree F n) (sf_tree fL es e) =
    if (SAFE_DEL_EL n pfL = [pf_unequal e es]) then [e] else []) /\
-   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree T n) (sf_ls f e1 e2) = 
+   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree T n) (sf_ls f e1 e2) =
    if (SAFE_DEL_EL n pfL = [pf_unequal e2 e1]) then [e1] else []) /\
-   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree F n) (sf_ls f e1 e2) = 
+   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree F n) (sf_ls f e1 e2) =
    if (SAFE_DEL_EL n pfL = [pf_unequal e1 e2]) then [e1] else []) /\
 
-   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree T n) (sf_bin_tree (f1,f2) e) = 
+   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree T n) (sf_bin_tree (f1,f2) e) =
    if (SAFE_DEL_EL n pfL = [pf_unequal dse_nil e]) then [e] else []) /\
-   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree F n) (sf_bin_tree (f1,f2) e) = 
+   (SF_POINTS_TO_LIST_COND pfL (pointsto_tree F n) (sf_bin_tree (f1,f2) e) =
    if (SAFE_DEL_EL n pfL = [pf_unequal e dse_nil]) then [e] else [])``,
 
 SIMP_TAC std_ss [SF_POINTS_TO_LIST_COND_def, sf_ls_def, sf_bin_tree_def])
@@ -1593,7 +1593,7 @@ SIMP_TAC std_ss [SF_POINTS_TO_LIST_COND_def, sf_ls_def, sf_bin_tree_def])
 val SF_POINTS_TO_LIST_COND_FILTER_def = Define `
    (SF_POINTS_TO_LIST_COND_FILTER pfL f [] = []) /\
    (SF_POINTS_TO_LIST_COND_FILTER pfL [] l = []) /\
-   (SF_POINTS_TO_LIST_COND_FILTER pfL (pointsto_case::f) (h::l) = 
+   (SF_POINTS_TO_LIST_COND_FILTER pfL (pointsto_case::f) (h::l) =
       (SF_POINTS_TO_LIST_COND pfL pointsto_case h)++
       (SF_POINTS_TO_LIST_COND_FILTER pfL f l))`
 
@@ -1603,8 +1603,8 @@ val SF_POINTS_TO_LIST_COND_FILTER_def = Define `
 
 val SF_POINTS_TO_LIST_COND___PRED_def = Define `
    SF_POINTS_TO_LIST_COND___PRED pfL e1 e2 =
-((?a. (e2 = sf_points_to e1 a)) \/ 
- ((?es b fL m. 
+((?a. (e2 = sf_points_to e1 a)) \/
+ ((?es b fL m.
       (m < LENGTH pfL) /\
       (EL m pfL = (if b then (pf_unequal es e1) else (pf_unequal e1 es))) /\
       (e2 = sf_tree fL es e1))))`;
@@ -1625,21 +1625,21 @@ METIS_TAC[MEM_EL]);
 
 val EL___SF_POINTS_TO_LIST_COND_FILTER = store_thm ("EL___SF_POINTS_TO_LIST_COND_FILTER",
 ``!l pfL f n. (n < LENGTH (SF_POINTS_TO_LIST_COND_FILTER pfL f l)) ==>
-     (?n'. (n' < LENGTH l) /\ (n <= n') /\ 
+     (?n'. (n' < LENGTH l) /\ (n <= n') /\
            SF_POINTS_TO_LIST_COND___PRED pfL (EL n (SF_POINTS_TO_LIST_COND_FILTER pfL f l)) (EL n' l))``,
 
 Induct_on `l` THENL [
    Cases_on `f` THEN
    SIMP_TAC list_ss [SF_POINTS_TO_LIST_COND_FILTER_def],
 
-   REPEAT GEN_TAC THEN 
+   REPEAT GEN_TAC THEN
    Cases_on `f` THEN1 SIMP_TAC list_ss [SF_POINTS_TO_LIST_COND_FILTER_def] THEN
 
    Cases_on `(SF_POINTS_TO_LIST_COND_FILTER pfL (h'::t) (h::l)) =
              (SF_POINTS_TO_LIST_COND_FILTER pfL t l)` THEN1 (
       ASM_SIMP_TAC list_ss [] THEN
       REPEAT STRIP_TAC THEN
-      RES_TAC THEN 
+      RES_TAC THEN
       Q.EXISTS_TAC `SUC n'` THEN
       ASM_SIMP_TAC list_ss []
    ) THEN
@@ -1654,7 +1654,7 @@ Induct_on `l` THENL [
    STRIP_TAC THEN
    Tactical.REVERSE (Cases_on `n`) THEN1 (
       FULL_SIMP_TAC std_ss [] THEN
-      RES_TAC THEN 
+      RES_TAC THEN
       Q.EXISTS_TAC `SUC n''` THEN
       ASM_SIMP_TAC list_ss []
    ) THEN
@@ -1664,7 +1664,7 @@ Induct_on `l` THENL [
    SIMP_TAC list_ss [SF_POINTS_TO_LIST_COND___PRED_def] THEN
    Cases_on `h'` THEN Cases_on `h` THEN (
       FULL_SIMP_TAC list_ss [SF_POINTS_TO_LIST_COND_FILTER_def, SF_POINTS_TO_LIST_COND_def,
-         ds_spatial_formula_11, ds_spatial_formula_distinct] 
+         ds_spatial_formula_11, ds_spatial_formula_distinct]
    ) THEN
    Cases_on `SAFE_DEL_EL n pfL = [(if b then pf_unequal d d0 else pf_unequal d0 d)]` THEN FULL_SIMP_TAC list_ss [] THEN
    FULL_SIMP_TAC list_ss [SAFE_DEL_EL___EQ] THEN
@@ -1677,7 +1677,7 @@ val EL2___SF_POINTS_TO_LIST_COND_FILTER = store_thm ("EL2___SF_POINTS_TO_LIST_CO
 
 ``!l pfL f n m. ((m < LENGTH (SF_POINTS_TO_LIST_COND_FILTER pfL f l)) /\ (n < m)) ==>
      ?n' m'. (m' < LENGTH l) /\ (n <= n') /\ (m <= m') /\
-             (n' < m') /\ 
+             (n' < m') /\
              SF_POINTS_TO_LIST_COND___PRED pfL (EL n (SF_POINTS_TO_LIST_COND_FILTER pfL f l)) (EL n' l) /\
              SF_POINTS_TO_LIST_COND___PRED pfL (EL m (SF_POINTS_TO_LIST_COND_FILTER pfL f l)) (EL m' l)``,
 
@@ -1762,13 +1762,13 @@ val INFERENCE_NIL_NOT_LVAL___EVAL_NIL1 = prove (
 
 
 NTAC 7 GEN_TAC THEN
-Induct_on `l` THENL [   
+Induct_on `l` THENL [
    SIMP_TAC list_ss [SAFE_FILTER_THM],
 
    SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC list_ss [] THEN
-   Q.PAT_ASSUM `Y = LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL')` 
+   Q.PAT_ASSUM `Y = LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL')`
       (fn thm => (ASSUME_TAC (GSYM thm))) THEN
    FULL_SIMP_TAC std_ss [MEM_EL] THEN
    Q.PAT_ASSUM `Y = EL n sfL` (ASSUME_TAC o GSYM) THEN
@@ -1783,7 +1783,7 @@ Induct_on `l` THENL [
    FULL_SIMP_TAC std_ss [SF_POINTS_TO_LIST_COND___PRED_def, SWAP_TO_POS___DELETE_ELEMENT] THENL [
       ASM_SIMP_TAC list_ss [INFERENCE_NIL_NOT_LVAL___points_to],
 
-      
+
       MATCH_MP_TAC INFERENCE_NIL_NOT_LVAL___tree THEN
       SIMP_TAC list_ss [MEM_UNEQ_PF_LIST_def] THEN
       METIS_TAC[MEM_EL]
@@ -1812,7 +1812,7 @@ METIS_TAC[EL___SF_POINTS_TO_LIST_COND_FILTER]);
 
 val DISJOINT_LIST_PRODUCT_def = Define `
    (DISJOINT_LIST_PRODUCT [] = []) /\
-   (DISJOINT_LIST_PRODUCT (e::l) = 
+   (DISJOINT_LIST_PRODUCT (e::l) =
       (MAP (\x. (e, x)) l)++(DISJOINT_LIST_PRODUCT l))`;
 
 val MEM___DISJOINT_LIST_PRODUCT = store_thm ("MEM___DISJOINT_LIST_PRODUCT",
@@ -1854,7 +1854,7 @@ Induct_on `l` THENL [
 
 val LIST_PRODUCT_def = Define `
    (LIST_PRODUCT [] l2 = []) /\
-   (LIST_PRODUCT (e::l1) l2 = 
+   (LIST_PRODUCT (e::l1) l2 =
       (MAP (\x. (e, x)) l2)++(LIST_PRODUCT l1 l2))`;
 
 val MEM___LIST_PRODUCT = store_thm ("MEM___DISJOINT_LIST_PRODUCT",
@@ -1878,7 +1878,7 @@ PERM (EL n1 l::EL n2 l::(DELETE_ELEMENT n1 (DELETE_ELEMENT n2 l))) l``,
 
 REPEAT STRIP_TAC THEN
 Cases_on `n2` THEN1 FULL_SIMP_TAC arith_ss [] THEN
-`!l'. PERM l' l = PERM l' (SWAP_TO_POS (SUC 0) (SUC n) (SWAP_TO_POS 0 n1 l))` by 
+`!l'. PERM l' l = PERM l' (SWAP_TO_POS (SUC 0) (SUC n) (SWAP_TO_POS 0 n1 l))` by
    METIS_TAC[PERM_TRANS, PERM_SYM, PERM___SWAP_TO_POS] THEN
 ASM_REWRITE_TAC[] THEN
 MATCH_MP_TAC (prove (``(l = l') ==> PERM l l'``, SIMP_TAC std_ss [PERM_REFL])) THEN
@@ -1932,7 +1932,7 @@ ASM_SIMP_TAC std_ss [SWAP_TO_POS___DELETE_ELEMENT, PERM_CONS_IFF]
 val INFERENCE_PARTIAL___EVAL1 = prove (
 
 ``!l c1 c2 pfL sfL pfL' sfL'.
-         (!e1 e2. MEM (e1,e2) l ==> 
+         (!e1 e2. MEM (e1,e2) l ==>
           (?n1 n2 y1 y2. (n1 < n2) /\
                   SF_POINTS_TO_LIST_COND___PRED pfL e1 y1 /\
                   SF_POINTS_TO_LIST_COND___PRED pfL e2 y2 /\
@@ -1945,7 +1945,7 @@ val INFERENCE_PARTIAL___EVAL1 = prove (
          LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL'))``,
 
 REPEAT GEN_TAC THEN
-Induct_on `l` THENL [   
+Induct_on `l` THENL [
    SIMP_TAC list_ss [],
 
    SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
@@ -1967,7 +1967,7 @@ Induct_on `l` THENL [
       MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
       ASM_SIMP_TAC std_ss [PERM_REFL] THEN
       METIS_TAC[PERM_SYM]
-   ) THEN   
+   ) THEN
    ASM_SIMP_TAC std_ss [] THEN
 
    FULL_SIMP_TAC std_ss [SF_POINTS_TO_LIST_COND___PRED_def] THENL [
@@ -2008,7 +2008,7 @@ Induct_on `l` THENL [
 
 val INFERENCE_PARTIAL___EVAL2 = prove (
 
-``!f f2 c1 c2 pfL sfL pfL' sfL'.         
+``!f f2 c1 c2 pfL sfL pfL' sfL'.
          (LIST_DS_ENTAILS (c1, c2)
            ((MAP (\(e1,e2). pf_unequal e1 e2) (SAFE_FILTER F f (DISJOINT_LIST_PRODUCT (SF_POINTS_TO_LIST_COND_FILTER pfL f2 sfL)))) ++ (pfL),sfL)
            (pfL',sfL') =
@@ -2035,8 +2035,8 @@ ASM_SIMP_TAC arith_ss [])
 val INFERENCE_PARTIAL___EVAL3 = prove (
 
 ``!l c1 c2 pfL sfL pfL' sfL'.
-         (!e1 e2. MEM (e1,e2) l ==> 
-          (?n1 n2 y1. 
+         (!e1 e2. MEM (e1,e2) l ==>
+          (?n1 n2 y1.
                   SF_POINTS_TO_LIST_COND___PRED pfL e1 y1 /\
                   (SAFE_DEL_EL n1 sfL = [y1]) /\
                   (SAFE_DEL_EL n2 c1 = [e2]))) ==>
@@ -2047,7 +2047,7 @@ val INFERENCE_PARTIAL___EVAL3 = prove (
          LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL'))``,
 
 REPEAT GEN_TAC THEN
-Induct_on `l` THENL [   
+Induct_on `l` THENL [
    SIMP_TAC list_ss [],
 
    SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
@@ -2065,7 +2065,7 @@ Induct_on `l` THENL [
       MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
       SIMP_TAC std_ss [PERM_REFL] THEN
       METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
-   ) THEN   
+   ) THEN
    FULL_SIMP_TAC std_ss [SAFE_DEL_EL___EQ, SWAP_TO_POS___DELETE_ELEMENT] THEN
    `MEM r c1` by METIS_TAC[MEM_EL] THEN
 
@@ -2082,7 +2082,7 @@ Induct_on `l` THENL [
 
 val INFERENCE_PARTIAL___EVAL4 = prove (
 
-``!f f2 c1 c2 pfL1 pfL sfL pfL' sfL'.         
+``!f f2 c1 c2 pfL1 pfL sfL pfL' sfL'.
          (LIST_DS_ENTAILS (c1, c2)
            ((MAP (\(e1,e2). pf_unequal e1 e2) (SAFE_FILTER F f (LIST_PRODUCT (SF_POINTS_TO_LIST_COND_FILTER pfL f2 sfL) c1))) ++ (pfL1++pfL),sfL)
            (pfL',sfL') =
@@ -2103,10 +2103,10 @@ METIS_TAC[EL___SF_POINTS_TO_LIST_COND_FILTER, SF_POINTS_TO_LIST_COND___PRED___WE
 
 val INFERENCE_PARTIAL___EVAL = store_thm ("INFERENCE_PARTIAL___EVAL",
 
-``!f f2 c1 c2 pfL sfL pfL' sfL'.         
+``!f f2 c1 c2 pfL sfL pfL' sfL'.
          LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
          (LIST_DS_ENTAILS (c1, c2)
-           ((MAP (\(e1,e2). pf_unequal e1 e2) (SAFE_FILTER F f 
+           ((MAP (\(e1,e2). pf_unequal e1 e2) (SAFE_FILTER F f
                ((LIST_PRODUCT (SF_POINTS_TO_LIST_COND_FILTER pfL f2 sfL) c1) ++ (DISJOINT_LIST_PRODUCT (SF_POINTS_TO_LIST_COND_FILTER pfL f2 sfL))))) ++ pfL,sfL)
            (pfL',sfL'))``,
 
@@ -2123,7 +2123,7 @@ REWRITE_TAC [INFERENCE_PARTIAL___EVAL2]);
 
 
 val INFERENCE___precondition_STRENGTHEN_1 = store_thm ("INFERENCE___precondition_STRENGTHEN_1",
-``!n1 n2 e1 e2 c1 c2 pfL sfL pfL' sfL'. 
+``!n1 n2 e1 e2 c1 c2 pfL sfL pfL' sfL'.
          ((SAFE_DEL_EL n1 pfL = [pf_unequal e1 e2]) /\
           (SAFE_DEL_EL n2 c2 = [(e1,e2)])) ==>
 
@@ -2139,7 +2139,7 @@ Cases_on `LIST_DS_SEM s h (pfL,sfL)` THEN ASM_REWRITE_TAC[] THEN
 Cases_on `LIST_DS_SEM s h (pfL',sfL')` THEN ASM_REWRITE_TAC[] THEN
 
 REPEAT STRIP_TAC THEN
-`(HEAP_DISTINCT s h c1 c2) = 
+`(HEAP_DISTINCT s h c1 c2) =
  (HEAP_DISTINCT s h c1 (SWAP_TO_POS 0 n2 c2))` by ALL_TAC THEN1 (
    MATCH_MP_TAC HEAP_DISTINCT___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
@@ -2154,7 +2154,7 @@ FULL_SIMP_TAC std_ss [PF_SEM_def])
 
 
 val INFERENCE___precondition_STRENGTHEN_2 = store_thm ("INFERENCE___precondition_STRENGTHEN_2",
-``!n1 n2 e1 e2 c1 c2 pfL sfL pfL' sfL'. 
+``!n1 n2 e1 e2 c1 c2 pfL sfL pfL' sfL'.
          ((SAFE_DEL_EL n1 pfL = [pf_unequal e2 e1]) /\
           (SAFE_DEL_EL n2 c2 = [(e1,e2)])) ==>
 
@@ -2170,7 +2170,7 @@ Cases_on `LIST_DS_SEM s h (pfL,sfL)` THEN ASM_REWRITE_TAC[] THEN
 Cases_on `LIST_DS_SEM s h (pfL',sfL')` THEN ASM_REWRITE_TAC[] THEN
 
 REPEAT STRIP_TAC THEN
-`(HEAP_DISTINCT s h c1 c2) = 
+`(HEAP_DISTINCT s h c1 c2) =
  (HEAP_DISTINCT s h c1 (SWAP_TO_POS 0 n2 c2))` by ALL_TAC THEN1 (
    MATCH_MP_TAC HEAP_DISTINCT___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
@@ -2185,7 +2185,7 @@ FULL_SIMP_TAC std_ss [PF_SEM_def, DS_EXPRESSION_EQUAL_def])
 
 
 val INFERENCE___precondition_NOT_DISTINCT_EQ___EVAL = store_thm ("INFERENCE___precondition_NOT_DISTINCT_EQ___EVAL",
-``!n1 n2 e1 e2 c1 c2 pfL sfL pfL' sfL'. 
+``!n1 n2 e1 e2 c1 c2 pfL sfL pfL' sfL'.
          ((n1 < n2) /\ (SAFE_DEL_EL n1 c2 = [(e1,e2)]) /\
           (SAFE_DEL_EL n2 c2 = [(e1,e2)])) ==>
 
@@ -2195,7 +2195,7 @@ val INFERENCE___precondition_NOT_DISTINCT_EQ___EVAL = store_thm ("INFERENCE___pr
 
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ, LIST_DS_ENTAILS_def, LIST_DS_SEM_THM, PF_SEM_def] THEN
 REPEAT STRIP_TAC THEN
-HO_MATCH_MP_TAC (prove (``(!s h. P s h = Q s h) ==> ((!s h. P s h) = (!s h. Q s h))``, 
+HO_MATCH_MP_TAC (prove (``(!s h. P s h = Q s h) ==> ((!s h. P s h) = (!s h. Q s h))``,
 METIS_TAC[])) THEN
 REPEAT STRIP_TAC THEN
 Cases_on `LIST_DS_SEM s h (pfL', sfL')` THEN ASM_SIMP_TAC std_ss [] THEN
@@ -2205,11 +2205,11 @@ Cases_on `~DS_EXPRESSION_EQUAL s e1 e2` THEN1 (
    METIS_TAC[pairTheory.FST, pairTheory.SND, HEAP_DISTINCT___NOT_ALL_DISTINCT2]
 ) THEN
 FULL_SIMP_TAC std_ss [] THEN
-SIMP_TAC std_ss [HEAP_DISTINCT_def] THEN 
+SIMP_TAC std_ss [HEAP_DISTINCT_def] THEN
 `(FILTER (\(e1,e2). ~DS_EXPRESSION_EQUAL s e1 e2)
                   (DELETE_ELEMENT n1 (DELETE_ELEMENT n2 c2))) =
                   (FILTER (\(e1,e2). ~DS_EXPRESSION_EQUAL s e1 e2) c2)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `n1 < n2` MP_TAC THEN 
+   Q.PAT_ASSUM `n1 < n2` MP_TAC THEN
    REPEAT (Q.PAT_ASSUM `N < LENGTH c2` MP_TAC) THEN
    REPEAT (Q.PAT_ASSUM `X = (e1,e2)` MP_TAC) THEN
    Q.PAT_ASSUM `DS_EXPRESSION_EQUAL s e1 e2` MP_TAC THEN
@@ -2248,7 +2248,7 @@ SIMP_TAC std_ss [HEAP_DISTINCT_def] THEN
       ]
    ]
 ) THEN
-`!e1 e2. ~(DS_EXPRESSION_EQUAL s e1 e2) ==> 
+`!e1 e2. ~(DS_EXPRESSION_EQUAL s e1 e2) ==>
          (MEM (e1,e2) c2 = MEM (e1,e2) (DELETE_ELEMENT n1 (DELETE_ELEMENT n2 c2)))` by ALL_TAC THEN1 (
    REPEAT STRIP_TAC THEN
    `!l. MEM (e1', e2') l =
@@ -2263,7 +2263,7 @@ METIS_TAC[]);
 
 
 val INFERENCE___precondition_precondition_EQ___EVAL = store_thm ("INFERENCE___precondition_precondition_EQ___EVAL",
-``!n1 n2 e1 e2 c1 c2 pfL sfL pfL' sfL'. 
+``!n1 n2 e1 e2 c1 c2 pfL sfL pfL' sfL'.
          ((SAFE_DEL_EL n1 c1 = [e1]) /\
           (SAFE_DEL_EL n2 c2 = [(e1,e2)])) ==>
 
@@ -2273,7 +2273,7 @@ val INFERENCE___precondition_precondition_EQ___EVAL = store_thm ("INFERENCE___pr
 
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ, LIST_DS_ENTAILS_def, LIST_DS_SEM_THM, PF_SEM_def] THEN
 REPEAT STRIP_TAC THEN
-HO_MATCH_MP_TAC (prove (``(!s h. P s h = Q s h) ==> ((!s h. P s h) = (!s h. Q s h))``, 
+HO_MATCH_MP_TAC (prove (``(!s h. P s h = Q s h) ==> ((!s h. P s h) = (!s h. Q s h))``,
 METIS_TAC[])) THEN
 REPEAT STRIP_TAC THEN
 Cases_on `LIST_DS_SEM s h (pfL', sfL')` THEN ASM_SIMP_TAC std_ss [] THEN
@@ -2282,14 +2282,14 @@ MATCH_MP_TAC (prove (``(~a = ~b) ==> (a = b)``, SIMP_TAC list_ss [])) THEN
 REWRITE_TAC [] THEN
 SIMP_TAC std_ss [] THEN
 
-`(HEAP_DISTINCT s h c1 c2) = 
+`(HEAP_DISTINCT s h c1 c2) =
  (HEAP_DISTINCT s h c1 (SWAP_TO_POS 0 n2 c2))` by ALL_TAC THEN1 (
    MATCH_MP_TAC HEAP_DISTINCT___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
 ) THEN
-`!c2. 
- (HEAP_DISTINCT s h c1 c2) = 
+`!c2.
+ (HEAP_DISTINCT s h c1 c2) =
  (HEAP_DISTINCT s h (SWAP_TO_POS 0 n1 c1) c2)` by ALL_TAC THEN1 (
    GEN_TAC THEN
    MATCH_MP_TAC HEAP_DISTINCT___PERM THEN
@@ -2311,7 +2311,7 @@ FULL_SIMP_TAC std_ss [DS_EXPRESSION_EQUAL_def])
 
 
 val INFERENCE___NIL_LIST_EVAL = store_thm ("INFERENCE___NIL_LIST_EVAL",
-``!n f e c1 c2 pfL sfL pfL' sfL'. 
+``!n f e c1 c2 pfL sfL pfL' sfL'.
          (SAFE_DEL_EL n sfL = [sf_ls f dse_nil e]) ==>
 
          (LIST_DS_ENTAILS (c1, c2) (pfL, sfL) (pfL', sfL') =
@@ -2333,7 +2333,7 @@ ASM_REWRITE_TAC[INFERENCE___NIL_LIST])
 
 
 val INFERENCE___precondition_LIST_EVAL = store_thm ("INFERENCE___precondition_LIST_EVAL",
-``!n1 n2 f e1 e2 c1 c2 pfL sfL pfL' sfL'. 
+``!n1 n2 f e1 e2 c1 c2 pfL sfL pfL' sfL'.
          ((SAFE_DEL_EL n2 sfL = [sf_ls f e1 e2]) /\
           (SAFE_DEL_EL n1 c1 = [e1])) ==>
 
@@ -2377,7 +2377,7 @@ Cases_on `DS_EXPRESSION_EQUAL s e2 (EL n1 c1)` THENL [
 
 
 val INFERENCE___NON_EMPTY_LS___EVAL = store_thm ("INFERENCE___NON_EMPTY_LS___EVAL",
-``!n1 n2 n3 b e1 e2 e3 f a c1 c2 pfL sfL pfL' sfL'. 
+``!n1 n2 n3 b e1 e2 e3 f a c1 c2 pfL sfL pfL' sfL'.
          ((SAFE_DEL_EL n1 sfL' = [sf_ls f e1 e3]) /\
           (SAFE_DEL_EL n2 pfL = [if b then pf_unequal e1 e3 else pf_unequal e3 e1]) /\
           (SAFE_DEL_EL n3 sfL = [sf_points_to e1 a]) /\
@@ -2423,7 +2423,7 @@ METIS_TAC[INFERENCE_STAR_INTRODUCTION___points_to])
 
 
 val INFERENCE___NON_EMPTY_BIN_TREE___EVAL = store_thm ("INFERENCE___NON_EMPTY_BIN_TREE___EVAL",
-``!n1 n2 e e1 e2 f1 f2 a c1 c2 pfL sfL pfL' sfL'. 
+``!n1 n2 e e1 e2 f1 f2 a c1 c2 pfL sfL pfL' sfL'.
          ((SAFE_DEL_EL n1 sfL' = [sf_bin_tree (f1,f2) e]) /\
           (SAFE_DEL_EL n2 sfL = [sf_points_to e a]) /\
           (MEM (f1,e1) a) /\ MEM (f2,e2) a /\ ~(f1 = f2) /\ ALL_DISTINCT (MAP FST a)) ==>
@@ -2728,7 +2728,7 @@ METIS_TAC[]);
 
 
 val FINITE_DISTINCT_STACK_EXISTS_THM = store_thm ("FINITE_DISTINCT_STACK_EXISTS_THM",
-   ``(INFINITE (UNIV:'b set)) ==>      
+   ``(INFINITE (UNIV:'b set)) ==>
          !eL. (FINITE (eL:('b, 'a) ds_expression set)) ==> (
           !X. FINITE X ==>
           ?s. (!e. (e IN eL) ==> (IS_DSV_NIL (DS_EXPRESSION_EVAL s e) = (e = dse_nil))) /\
@@ -2765,10 +2765,10 @@ pred_setLib.SET_INDUCT_TAC THENL [
       STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [] THEN
 
-      `?c. ~(c IN (X UNION (IMAGE (DS_EXPRESSION_EVAL_VALUE s') s)))` by 
+      `?c. ~(c IN (X UNION (IMAGE (DS_EXPRESSION_EVAL_VALUE s') s)))` by
          METIS_TAC[NOT_IN_FINITE, IMAGE_FINITE,
          FINITE_UNION] THEN
-   
+
       Q.EXISTS_TAC `\x. if (x = v) then dsv_const c else s' x` THEN
       ASM_SIMP_TAC std_ss [IN_INSERT, FORALL_AND_THM, DISJ_IMP_THM, FORALL_AND_THM,
          LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR] THEN
@@ -2787,7 +2787,7 @@ pred_setLib.SET_INDUCT_TAC THENL [
 
          FULL_SIMP_TAC std_ss [IN_UNION],
          METIS_TAC[],
-      
+
 
          Cases_on `e2` THENL [
             SIMP_TAC list_ss [DS_EXPRESSION_EVAL_def, ds_expression_distinct] THEN
@@ -2831,17 +2831,17 @@ pred_setLib.SET_INDUCT_TAC THENL [
                FULL_SIMP_TAC std_ss [GET_DSV_VALUE_def, ds_value_11]
             ]
          ],
-         
+
          `!e. e IN s ==>
               (DS_EXPRESSION_EVAL (\x. (if x = v then dsv_const c else s' x)) e =
                DS_EXPRESSION_EVAL s' e)` by ALL_TAC THEN1 (
             REPEAT STRIP_TAC THEN
             Cases_on `e` THENL [
                SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def],
-               
+
                `~(v' = v)` by METIS_TAC[] THEN
                ASM_SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def]
-            ] 
+            ]
          ) THEN
          FULL_SIMP_TAC std_ss []
       ]
@@ -2853,7 +2853,7 @@ pred_setLib.SET_INDUCT_TAC THENL [
 
 
 val FINITE_DISTINCT_STACK_EXISTS_THM2 = store_thm ("FINITE_DISTINCT_STACK_EXISTS_THM2",
-   ``!eL. (FINITE (eL:('b, 'a) ds_expression set) /\ (INFINITE (UNIV:'b set))) ==>      
+   ``!eL. (FINITE (eL:('b, 'a) ds_expression set) /\ (INFINITE (UNIV:'b set))) ==>
          ?s. (!e. (e IN eL) ==> (IS_DSV_NIL (DS_EXPRESSION_EVAL s e) = (e = dse_nil))) /\
             (!e1 e2. (e1 IN eL /\ e2 IN eL) ==> (
                DS_EXPRESSION_EQUAL s e1 e2 = (e1 = e2)))``,
@@ -2870,7 +2870,7 @@ val PF_IS_WELL_FORMED_UNEQUAL_def = Define `
    (SF_IS_WELL_FORMED_UNEQUAL _ = F)`;
 
 val SF_IS_WELL_FORMED_POINTSTO_def = Define `
-   (SF_IS_WELL_FORMED_POINTSTO (sf_points_to e a) = 
+   (SF_IS_WELL_FORMED_POINTSTO (sf_points_to e a) =
       ALL_DISTINCT (MAP FST a)) /\
    (SF_IS_WELL_FORMED_POINTSTO _ = F)`;
 
@@ -2880,12 +2880,12 @@ val LIST_DS_ENTAILS___IS_SIMPLE_LHS_def = Define
     EVERY PF_IS_WELL_FORMED_UNEQUAL pfL /\
     EVERY SF_IS_WELL_FORMED_POINTSTO sfL /\
     ALL_DISTINCT (SF_POINTS_TO_LIST sfL) /\
-    EVERY (\x. ~(MEM x (SF_POINTS_TO_LIST sfL))) c1)` 
+    EVERY (\x. ~(MEM x (SF_POINTS_TO_LIST sfL))) c1)`
 
 
 
 DB.find "SF_POINTS_TO_LIST_def"
-   
+
 
 
 

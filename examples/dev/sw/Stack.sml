@@ -1,6 +1,6 @@
-structure Stack :> Stack = 
+structure Stack :> Stack =
 struct
-   
+
    exception EmptyStack
 
    datatype 'item stack =

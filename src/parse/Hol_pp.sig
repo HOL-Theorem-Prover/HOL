@@ -28,5 +28,5 @@ sig
   val print_thm      : thm -> unit
 
   (* val print_theory : theory -> unit  ... found in DB *)
-  
+
 end

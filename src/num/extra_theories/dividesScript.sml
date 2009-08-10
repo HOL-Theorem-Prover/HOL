@@ -2,7 +2,7 @@ structure dividesScript =
 struct
 
 open HolKernel Parse boolLib simpLib BasicProvers
-     prim_recTheory arithmeticTheory boolSimps SingleStep 
+     prim_recTheory arithmeticTheory boolSimps SingleStep
      metisLib numLib;
 
 val CALC = EQT_ELIM o reduceLib.REDUCE_CONV;
@@ -26,22 +26,22 @@ val divides_def = Q.new_definition
 val ALL_DIVIDES_0 = store_thm
 ("ALL_DIVIDES_0",
  ``!a. divides a 0``,
- METIS_TAC[divides_def,MULT_CLAUSES]) 
- before 
+ METIS_TAC[divides_def,MULT_CLAUSES])
+ before
  export_rewrites ["ALL_DIVIDES_0"];
 
 val ZERO_DIVIDES = store_thm(
   "ZERO_DIVIDES",
   ``divides 0 m = (m = 0)``,
-  SRW_TAC [][divides_def]) 
-  before 
+  SRW_TAC [][divides_def])
+  before
   export_rewrites ["ZERO_DIVIDES"];
 
 val DIVIDES_REFL = store_thm
 ("DIVIDES_REFL",
  ``!a. divides a a``,
- METIS_TAC[divides_def,MULT_CLAUSES]) 
- before 
+ METIS_TAC[divides_def,MULT_CLAUSES])
+ before
  export_rewrites ["DIVIDES_REFL"];
 
 val DIVIDES_TRANS = store_thm
@@ -52,15 +52,15 @@ val DIVIDES_TRANS = store_thm
 val ONE_DIVIDES_ALL = store_thm
 ("ONE_DIVIDES_ALL",
  ``!a. divides 1 a``,
- METIS_TAC[divides_def,MULT_CLAUSES]) 
- before 
+ METIS_TAC[divides_def,MULT_CLAUSES])
+ before
  export_rewrites ["ONE_DIVIDES_ALL"];
 
 val DIVIDES_ONE = store_thm
  ("DIVIDES_ONE",
   ``!x. divides x 1 = (x = 1)``,
   METIS_TAC [divides_def,MULT_CLAUSES,MULT_EQ_1])
-  before 
+  before
   export_rewrites ["DIVIDES_ONE"];
 
 val DIVIDES_ADD_1 = store_thm
@@ -81,7 +81,7 @@ val DIVIDES_SUB = store_thm
 val DIVIDES_LE = store_thm
 ("DIVIDES_LE",
  ``!a b. 0<b /\ divides a b ==> a <= b``,
- Cases_on `a` THEN ARW[divides_def] THEN Cases_on `q` THENL 
+ Cases_on `a` THEN ARW[divides_def] THEN Cases_on `q` THENL
  [METIS_TAC [MULT_CLAUSES,LESS_REFL],
   ARW[MULT_CLAUSES]]);
 
@@ -115,7 +115,7 @@ val DIVIDES_MULT_LEFT = store_thm(
   SIMP_TAC arith_ss [FORALL_AND_THM, EQ_IMP_THM, DISJ_IMP_THM,
                      ALL_DIVIDES_0, DIVIDES_REFL] THEN
   SIMP_TAC bool_ss [divides_def] THEN REPEAT STRIP_TAC THEN
-  `m * 1 = m * (n * q)` by 
+  `m * 1 = m * (n * q)` by
      (POP_ASSUM (CONV_TAC o LAND_CONV o
                  ONCE_REWRITE_CONV o C cons []) THEN
       ASM_SIMP_TAC bool_ss [MULT_CLAUSES] THEN
@@ -138,7 +138,7 @@ val LEQ_DIVIDES_FACT = store_thm
   ``!m n. 0 < m /\ m <= n ==> divides m (FACT n)``,
   RW_TAC arith_ss  [LESS_EQ_EXISTS]
    THEN Induct_on `p`
-   THEN METIS_TAC [FACT, LESS_REFL, num_CASES, DIVIDES_MULT, 
+   THEN METIS_TAC [FACT, LESS_REFL, num_CASES, DIVIDES_MULT,
                    MULT_COMM, DIVIDES_REFL, ADD_CLAUSES]);
 
 (*---------------------------------------------------------------------------*)
@@ -153,37 +153,37 @@ val prime_def = Q.new_definition
 val NOT_PRIME_0 = Q.store_thm
  ("NOT_PRIME_0",
   `~prime 0`,
-  ARW [prime_def, ALL_DIVIDES_0]) 
-  before 
+  ARW [prime_def, ALL_DIVIDES_0])
+  before
   export_rewrites ["NOT_PRIME_0"];
 
 val NOT_PRIME_1 = Q.store_thm
  ("NOT_PRIME_1",
   `~prime 1`,
-  ARW [prime_def, DIVIDES_LE]) 
-  before 
+  ARW [prime_def, DIVIDES_LE])
+  before
   export_rewrites ["NOT_PRIME_1"];
 
 val PRIME_2 = store_thm
  ("PRIME_2",
   ``prime 2``,
   RW_TAC arith_ss  [prime_def] THEN
-  `0 < b /\ b <= 2` by METIS_TAC [DIVIDES_LE, ZERO_DIVIDES, 
+  `0 < b /\ b <= 2` by METIS_TAC [DIVIDES_LE, ZERO_DIVIDES,
                                   CALC ``0<2``,NOT_ZERO_LT_ZERO] THEN
   NTAC 2 (POP_ASSUM MP_TAC) THEN ARITH_TAC)
-  before 
+  before
   export_rewrites ["PRIME_2"];
 
 val PRIME_3 = Q.store_thm
 ("PRIME_3",
- `prime 3`, 
+ `prime 3`,
   RW_TAC arith_ss  [prime_def] THEN
-  `b <= 3` by RW_TAC arith_ss [DIVIDES_LE] THEN 
+  `b <= 3` by RW_TAC arith_ss [DIVIDES_LE] THEN
   `(b=0) \/ (b=1) \/ (b=2) \/ (b=3)` by (POP_ASSUM MP_TAC THEN ARITH_TAC) THEN
-  RW_TAC arith_ss [] THENL 
+  RW_TAC arith_ss [] THENL
   [FULL_SIMP_TAC arith_ss [ZERO_DIVIDES],
    FULL_SIMP_TAC arith_ss [divides_def]])
-  before 
+  before
   export_rewrites ["PRIME_3"];
 
 val PRIME_POS = store_thm
@@ -200,9 +200,9 @@ val ONE_LT_PRIME = Q.store_thm
 val prime_divides_only_self = Q.store_thm
 ("prime_divides_only_self",
  `!m n. prime m /\ prime n /\ divides m n ==> (m=n)`,
- RW_TAC arith_ss [divides_def] THEN 
- `m<>1` by METIS_TAC [NOT_PRIME_0,NOT_PRIME_1] THEN 
- Q.PAT_ASSUM `prime (m*q)` MP_TAC THEN RW_TAC arith_ss [prime_def] THEN 
+ RW_TAC arith_ss [divides_def] THEN
+ `m<>1` by METIS_TAC [NOT_PRIME_0,NOT_PRIME_1] THEN
+ Q.PAT_ASSUM `prime (m*q)` MP_TAC THEN RW_TAC arith_ss [prime_def] THEN
  METIS_TAC [divides_def,MULT_SYM]);
 
 
@@ -223,7 +223,7 @@ val prime_divides_only_self = Q.store_thm
 val PRIME_FACTOR = store_thm
  ("PRIME_FACTOR",
   ``!n. ~(n = 1) ==> ?p. prime p /\ divides p n``,
-  completeInduct_on `n` THEN 
+  completeInduct_on `n` THEN
   METIS_TAC [DIVIDES_REFL, prime_def, LESS_OR_EQ, PRIME_2,
              DIVIDES_LEQ_OR_ZERO, DIVIDES_TRANS, ALL_DIVIDES_0]);
 
@@ -237,7 +237,7 @@ val EUCLID = store_thm
 CCONTR_TAC
 THEN
    `?n. !p. n < p ==> ~prime p`  by METIS_TAC[]                  THEN
-   `~(FACT n + 1 = 1)`           by RW_TAC arith_ss 
+   `~(FACT n + 1 = 1)`           by RW_TAC arith_ss
                                     [FACT_LESS,NOT_ZERO_LT_ZERO] THEN
    `?p. prime p /\
         divides p (FACT n + 1)`  by METIS_TAC [PRIME_FACTOR]     THEN
@@ -262,17 +262,17 @@ val PRIMES_def = new_recursive_definition
 val primePRIMES = Q.store_thm
 ("primePRIMES",
  `!n. prime (PRIMES n)`,
- Cases THEN RW_TAC arith_ss [PRIMES_def,PRIME_2] THEN 
- LEAST_ELIM_TAC THEN 
- RW_TAC bool_ss [] THEN 
+ Cases THEN RW_TAC arith_ss [PRIMES_def,PRIME_2] THEN
+ LEAST_ELIM_TAC THEN
+ RW_TAC bool_ss [] THEN
  METIS_TAC [EUCLID]);
 
 val INFINITE_PRIMES = Q.store_thm
 ("INFINITE_PRIMES",
  `!n. PRIMES n < PRIMES (SUC n)`,
  RW_TAC arith_ss [PRIMES_def] THEN
- LEAST_ELIM_TAC THEN 
- RW_TAC bool_ss [] THEN 
+ LEAST_ELIM_TAC THEN
+ RW_TAC bool_ss [] THEN
  METIS_TAC [EUCLID]);
 
 val LT_PRIMES = Q.store_thm
@@ -290,8 +290,8 @@ val PRIMES_11 = Q.store_thm
 val INDEX_LESS_PRIMES = Q.store_thm
 ("INDEX_LESS_PRIMES",
  `!n. n < PRIMES n`,
- Induct THEN RW_TAC arith_ss [PRIMES_def] THEN 
- LEAST_ELIM_TAC THEN CONJ_TAC THENL 
+ Induct THEN RW_TAC arith_ss [PRIMES_def] THEN
+ LEAST_ELIM_TAC THEN CONJ_TAC THENL
  [METIS_TAC [INFINITE_PRIMES,primePRIMES], RW_TAC arith_ss []]);
 
 val EUCLID_PRIMES = Q.store_thm
@@ -308,14 +308,14 @@ val NEXT_LARGER_PRIME = Q.store_thm
 val PRIMES_NO_GAP = Q.store_thm
 ("PRIMES_NO_GAP",
  `!n p. PRIMES n < p /\ p < PRIMES (SUC n) /\ prime p ==> F`,
- RW_TAC bool_ss [PRIMES_def,GSYM IMP_DISJ_THM] THEN POP_ASSUM MP_TAC THEN 
+ RW_TAC bool_ss [PRIMES_def,GSYM IMP_DISJ_THM] THEN POP_ASSUM MP_TAC THEN
  LEAST_ELIM_TAC THEN METIS_TAC[INFINITE_PRIMES,primePRIMES]);
 
 val PRIMES_ONTO = Q.store_thm
 ("PRIMES_ONTO",
  `!p. prime p ==> ?i. PRIMES i = p`,
  SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
- STRIP_ASSUME_TAC (Q.SPEC `p` NEXT_LARGER_PRIME) THEN 
+ STRIP_ASSUME_TAC (Q.SPEC `p` NEXT_LARGER_PRIME) THEN
  Cases_on `i` THENL
  [METIS_TAC [DECIDE``p < 2 = (p=0) \/ (p=1)``,
              NOT_PRIME_0,NOT_PRIME_1,PRIME_2,PRIMES_def],
@@ -330,7 +330,7 @@ val PRIME_INDEX = Q.store_thm
 val ONE_LT_PRIMES = Q.store_thm
 ("ONE_LT_PRIMES",
  `!n. 1 < PRIMES n`,
-  METIS_TAC [primePRIMES, NOT_PRIME_0, NOT_PRIME_1, 
+  METIS_TAC [primePRIMES, NOT_PRIME_0, NOT_PRIME_1,
              DECIDE ``(x=0) \/ (x=1) \/ 1<x``]);
 
 val ZERO_LT_PRIMES = Q.store_thm
@@ -363,7 +363,7 @@ val compute_divides = Q.store_thm
      in METIS_TAC [MOD_P_inst,MULT_SYM, ADD_CLAUSES]
      end]);
 
-val _ = 
+val _ =
  computeLib.add_persistent_funs
      [("compute_divides",compute_divides)];
 

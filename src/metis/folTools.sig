@@ -19,7 +19,7 @@ type conv        = Abbrev.conv
 type rule        = Abbrev.rule
 type tactic      = Abbrev.tactic
 type vars        = term list * hol_type list
-  
+
 (* First-order parameters *)
 type parameters =
   {equality     : bool,     (* Add equality axioms if needed *)

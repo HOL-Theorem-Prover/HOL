@@ -163,7 +163,7 @@ fun ski_pattern_term_build SKI_COMB_BEGIN stack =
 local
   fun final [RIGHT tm] = tm
     | final _ = raise ERR "ski_patterns_to_term" "not a complete pattern list"
-    
+
   fun final_a (vars, a) stack = ((vars, final stack), a)
 in
   fun ski_patterns_to_term pats =

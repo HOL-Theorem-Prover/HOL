@@ -19,16 +19,16 @@ val f2_def = Define `
              else let y = x * x in y`;
 
 val f3_def = Define `
-    f3 = \x. if x = (0:num) then 
+    f3 = \x. if x = (0:num) then
                   let z = x - x in z
-             else 
+             else
                   let y = x * x in y`;
 
 (* --------------------------------------------------------------------*)
 (* Results.                                                            *)
 (* --------------------------------------------------------------------*)
 
-   val result1 = certified_gen f1_def; 
+   val result1 = certified_gen f1_def;
    printSAL (#code result1);
 
 (*

@@ -163,7 +163,7 @@ val monty_hall = Count.apply prove
                      Nondets_def, Min_def, assign_def]
    ++ Q.UNABBREV_ALL_TAC
    ++ RW_TAC posreal_reduce_ss []);
-  
+
 (* ------------------------------------------------------------------------- *)
 (* The random walker                                                         *)
 (* ------------------------------------------------------------------------- *)

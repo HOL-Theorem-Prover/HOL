@@ -88,7 +88,7 @@ fun many parser =
     let
       fun sparser l = parser >> (fn x => x :: l)
     in
-      smany sparser [] >> rev      
+      smany sparser [] >> rev
     end;
 
 fun atleastone p = (p ++ many p) >> op::;
@@ -183,7 +183,7 @@ val infix_toks : infixities -> string list =
 fun parse_gen_infix update sof toks parse inp =
     let
       val (e, rest) = parse inp
-                      
+
       val continue =
           case rest of
             Stream.NIL => NONE
@@ -245,11 +245,11 @@ fun pp_right_infix toks = pp_gen_infix false toks;
 fun pp_infixes ops =
     let
       val layeredops = layerops ops
-                       
+
       val toks = List.concat (map (map op_clean o snd) layeredops)
-                 
+
       fun iprinter (a,t) = (if a then pp_left_infix else pp_right_infix) t
-                           
+
       val iprinters = map iprinter layeredops
     in
       fn dest => fn pp_sub =>

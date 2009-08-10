@@ -5,7 +5,7 @@
  quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
      listTheory wordsTheory MARS_SboxTheory MARS_DataTheory;
 
 val _ = new_theory "MARS_keyExpansion";
@@ -41,7 +41,7 @@ val LENGTH_UPDATE = Q.prove
       RW_TAC list_ss [update_def],
       Cases_on `i` THEN
       RW_TAC list_ss [update_def]]
-  );	    
+  );
 
 (* --------------------------------------------------------------------------*)
 (*   some assistant functions                                                *)
@@ -70,8 +70,8 @@ val Init_T_def = Define `Init_T(key_list) =
 
 val  (linear_rnd_def, linear_rnd_ind)  = Defn.tprove (
   Hol_defn "linear_rnd"
-   `linear_rnd i t j = 
-     if i > 14 then t else  
+   `linear_rnd i t j =
+     if i > 14 then t else
        linear_rnd (i+1)
          (update(t, i, ((sub(t, (i-7) MOD 15) ?? sub(t,(i-2) MOD 15)) #<< 3) ??
             (4w * n2w i + n2w j))) j`,
@@ -85,24 +85,24 @@ val  (stiring_rnd_def, stiring_rnd_ind)  = Defn.tprove (
     Hol_defn "stiring_rnd"
     `stiring_rnd i t j =
         if i > 14 then t else
-        stiring_rnd (i+1) 
+        stiring_rnd (i+1)
           (update(t, i, (sub(t,i) + Sbox(l9b(sub(t, (i-1) MOD 15)))) #<< 9)) j`,
         WF_REL_TAC `measure ($- 15 o FST)`);
-                                                                                      
+
 val stiring_step_def = Define
     `stiring_step (t, j) = stiring_rnd 0 t j`;
 
 val stiring_def = Define
-    `stiring (t, j) = 
+    `stiring (t, j) =
       stiring_step(stiring_step(stiring_step(stiring_step(t,j),j),j),j)`;
 
 val store_10_words_def = Define
-    `store_10_words (t) = 
+    `store_10_words (t) =
 	[sub(t,0); sub(t,4); sub(t,8); sub(t,12); sub(t,1);
          sub(t,5); sub(t,9); sub(t,13); sub(t,2); sub(t,6)]`;
 
 val Init_K_def = Define
-    `Init_K (t) = 
+    `Init_K (t) =
 	let t1 = store_10_words(stiring(linear(t,0),0)) in
 	let t2 = store_10_words(stiring(linear(t1,1),1)) in
 	let t3 = store_10_words(stiring(linear(t2,2),2)) in
@@ -143,13 +143,13 @@ val mul_rnd_def = Define `
        consider the word with these two bits set to 1, w = K[i] | 3           *)
     let j = w2n (sub(k,i) && 0x3w) in
     let w = sub(k,i) !! 0x3w in
-    
+
     let m = gen_mask(w) in
 
     let r = w2n(sub(k,i-1) && 0x1fw) in
     let p = sub(BB,j) #<< r
     in update(k, i, w ?? (p && m))`;
-                                                                                                           
+
 val mul_def = Define `
   mul (k) = mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd
 	(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(k,35),
@@ -165,7 +165,7 @@ val MUL_RND_LENGTH = Q.store_thm
 
 
 val key_expansion_def = Define `
-  key_expansion(k) = mul(Init_K(Init_T(k)))`; 
+  key_expansion(k) = mul(Init_K(Init_T(k)))`;
 
 
 val KEY_EXPANSION_LENGTH = Q.store_thm

@@ -8,7 +8,7 @@ structure MD5 :> MD5 =
 struct
 
 structure W32 = Word32
-structure W8V = 
+structure W8V =
 struct
   open Word8Vector
 	fun extract (vec, s, l) =
@@ -24,7 +24,7 @@ struct
     type word64  = {hi:W32.word,lo:W32.word}
     type word128 = {A:W32.word, B:W32.word, C:W32.word,  D:W32.word}
     type md5state = {digest:word128,
-		       mlen:word64, 
+		       mlen:word64,
 		        buf:Word8Vector.vector}
 
 
@@ -38,7 +38,7 @@ struct
       val hi = W32.+ (mul8hi,W32.+ (hi,cout))
     in {hi=hi,lo=lo}
     end
-  
+
     fun packLittle wrds = let
       fun loop [] = []
 	| loop (w::ws) = let
@@ -50,7 +50,7 @@ struct
 	  end
     in W8V.fromList (loop wrds)
     end
-    
+
     val S11 = 0w7
     val S12 = 0w12
     val S13 = 0w17
@@ -67,7 +67,7 @@ struct
     val S42 = 0w10
     val S43 = 0w15
     val S44 = 0w21
-      
+
     fun PADDING i =  W8V.tabulate (i,(fn 0 => 0wx80 | _ => 0wx0))
 
     fun F (x,y,z) = W32.orb (W32.andb (x,y),
@@ -84,7 +84,7 @@ struct
       val a = ROTATE_LEFT (a,s)
     in W32.+ (a,b)
     end
-			    
+
     val FF = XX F
     val GG = XX G
     val HH = XX H
@@ -151,7 +151,7 @@ struct
       val d = FF (d, a, b, c, x_13, S12, 0wxfd987193) (* 14 *)
       val c = FF (c, d, a, b, x_14, S13, 0wxa679438e) (* 15 *)
       val b = FF (b, c, d, a, x_15, S14, 0wx49b40821) (* 16 *)
-	  
+
       (* Round 2 *)
       val a = GG (a, b, c, d, x_01, S21, 0wxf61e2562) (* 17 *)
       val d = GG (d, a, b, c, x_06, S22, 0wxc040b340) (* 18 *)
@@ -169,7 +169,7 @@ struct
       val d = GG (d, a, b, c, x_02, S22, 0wxfcefa3f8) (* 30 *)
       val c = GG (c, d, a, b, x_07, S23, 0wx676f02d9) (* 31 *)
       val b = GG (b, c, d, a, x_12, S24, 0wx8d2a4c8a) (* 32 *)
-	  
+
       (* Round 3 *)
       val a = HH (a, b, c, d, x_05, S31, 0wxfffa3942) (* 33 *)
       val d = HH (d, a, b, c, x_08, S32, 0wx8771f681) (* 34 *)
@@ -187,7 +187,7 @@ struct
       val d = HH (d, a, b, c, x_12, S32, 0wxe6db99e5) (* 46 *)
       val c = HH (c, d, a, b, x_15, S33, 0wx1fa27cf8) (* 47 *)
       val b = HH (b, c, d, a, x_02, S34, 0wxc4ac5665) (* 48 *)
-	  
+
       (* Round 4 *)
       val a = II (a, b, c, d, x_00, S41, 0wxf4292244) (* 49 *)
       val d = II (d, a, b, c, x_07, S42, 0wx432aff97) (* 50 *)

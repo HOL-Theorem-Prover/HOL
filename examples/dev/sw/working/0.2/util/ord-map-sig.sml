@@ -20,8 +20,8 @@ signature ORD_MAP_UPD =
 	(* Insert an item.  *)
 
     val update : 'a map * int * ('a -> 'a) -> 'a map
-	(* Update an item by applying a function to the item already stored. 
-     * Raises LibBase.NotFound if not found. 
+	(* Update an item by applying a function to the item already stored.
+     * Raises LibBase.NotFound if not found.
      *)
 
     val find : 'a map * int -> 'a option

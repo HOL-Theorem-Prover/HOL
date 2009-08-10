@@ -12,9 +12,9 @@
 (*
 quietdec := true;
 loadPath :="dff" :: !loadPath;
-map load  
+map load
  ["List","composeTheory","compileTheory", "hol88Lib" (*for subst*),"unwindLib"];
-open arithmeticTheory pairLib pairTheory PairRules pairSyntax 
+open arithmeticTheory pairLib pairTheory PairRules pairSyntax
      combinTheory listTheory unwindLib composeTheory compileTheory;
 
 loadPath := "Fact32" :: !loadPath;
@@ -57,9 +57,9 @@ val SimpThms = [Seq_def,Par_def,Ite_def,Rec_def];
 (*****************************************************************************)
 (* Destruct ``d1 ===> d2`` into (``d1``,``d2``)                              *)
 (*****************************************************************************)
-fun dest_dev_imp tm = 
+fun dest_dev_imp tm =
  if is_comb tm
-     andalso is_comb(rator tm) 
+     andalso is_comb(rator tm)
      andalso is_const(rator(rator tm))
      andalso (fst(dest_const(rator(rator tm))) = "DEV_IMP")
   then (rand(rator tm), rand tm)
@@ -105,16 +105,16 @@ val SEQ_PAR_I_THM = Q.prove
  RW_TAC std_ss [LET_SEQ_PAR_THM,combinTheory.I_THM]);
 
 fun Convert_CONV f =
- let val (args,t) = 
+ let val (args,t) =
          dest_pabs f
          handle HOL_ERR _
           => (print_term f; print"\n";
               print "is not an abstraction\n";
               raise ERR "Convert_CONV" "not an abstraction")
   in
-  if not(free_vars f = []) 
+  if not(free_vars f = [])
   then (print_term f; print "\n";
-        print "has free variables: "; 
+        print "has free variables: ";
         map (fn t => (print_term t; print " "))(rev(free_vars f)); print "\n";
         raise ERR "Convert_CONV" "disallowed free variables")
   else if null(free_vars t) orelse is_var t
@@ -126,7 +126,7 @@ fun Convert_CONV f =
             val th1 = PBETA_CONV (mk_comb(f1,args))
             val th2 = PBETA_CONV (mk_comb(f2,args))
             val th3 = ISPECL [f1,f2] Par_def
-            val ptm = mk_pabs(args, mk_pair(mk_comb(f1,args),mk_comb(f2,args))) 
+            val ptm = mk_pabs(args, mk_pair(mk_comb(f1,args),mk_comb(f2,args)))
             val th4 = TRANS th3 (PALPHA  (rhs(concl th3)) ptm)
             val th5 = CONV_RULE
                        (RHS_CONV
@@ -136,13 +136,13 @@ fun Convert_CONV f =
                        th4
             val th6 = GSYM th5
         in
-         if aconv (lhs(concl th6)) f 
+         if aconv (lhs(concl th6)) f
           then CONV_RULE
-                (RHS_CONV 
-                  ((RAND_CONV Convert_CONV) 
+                (RHS_CONV
+                  ((RAND_CONV Convert_CONV)
                    THENC (RATOR_CONV(RAND_CONV Convert_CONV))))
                 th6
-          else (print "bad Par case\n"; 
+          else (print "bad Par case\n";
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
   else if is_cond t
@@ -156,7 +156,7 @@ fun Convert_CONV f =
             val th3 = ISPECL [fb,f1,f2] Ite_def
             val ptm = mk_pabs
                        (args,
-                        mk_cond(mk_comb(fb,args),mk_comb(f1,args),mk_comb(f2,args))) 
+                        mk_cond(mk_comb(fb,args),mk_comb(f1,args),mk_comb(f2,args)))
             val th4 = TRANS th3 (PALPHA  (rhs(concl th3)) ptm)
             val th5 = CONV_RULE
                        (RHS_CONV
@@ -167,14 +167,14 @@ fun Convert_CONV f =
                        th4
             val th6 = GSYM th5
         in
-         if aconv (lhs(concl th6)) f 
+         if aconv (lhs(concl th6)) f
           then CONV_RULE
-                (RHS_CONV 
-                  ((RAND_CONV Convert_CONV) 
+                (RHS_CONV
+                  ((RAND_CONV Convert_CONV)
                    THENC (RATOR_CONV(RAND_CONV Convert_CONV))
                    THENC (RATOR_CONV(RATOR_CONV(RAND_CONV Convert_CONV)))))
                 th6
-          else (print "bad Ite case\n"; 
+          else (print "bad Ite case\n";
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
   else if is_let t   (*  t = LET (\v. N) M  *)
@@ -186,13 +186,13 @@ fun Convert_CONV f =
             val th3 = TRANS th2 (SYM (QCONV (SIMP_CONV std_ss [LAMBDA_PROD]) f))
             val th4 = SYM th3
         in
-         if aconv (lhs(concl th4)) f 
+         if aconv (lhs(concl th4)) f
           then CONV_RULE
-                (RHS_CONV 
-                  ((RAND_CONV Convert_CONV) 
+                (RHS_CONV
+                  ((RAND_CONV Convert_CONV)
                    THENC RATOR_CONV(RAND_CONV Convert_CONV)))
                 th4
-          else (print "bad let case\n"; 
+          else (print "bad let case\n";
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
 (*  else if is_let t   (*  t = LET (\v. N) M  *)
@@ -205,18 +205,18 @@ fun Convert_CONV f =
             val th3 = TRANS th2 (SYM (QCONV (SIMP_CONV std_ss [LAMBDA_PROD]) f))
             val th4 = SYM th3
         in
-         if aconv (lhs(concl th4)) f 
+         if aconv (lhs(concl th4)) f
           then CONV_RULE
-                (RHS_CONV 
-                  ((RAND_CONV Convert_CONV) 
+                (RHS_CONV
+                  ((RAND_CONV Convert_CONV)
                    THENC (RATOR_CONV(RAND_CONV (RAND_CONV Convert_CONV)))))
                 th4
-          else (print "bad let case\n"; 
+          else (print "bad let case\n";
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
 *)
 
-  else if is_comb t 
+  else if is_comb t
    then let val th0 = (REWR_CONV (GSYM UNCURRY_DEF) ORELSEC REFL) t
             val (t1,t2) = dest_comb(rhs(concl th0))
             val f1 = mk_pabs(args,t1)
@@ -228,12 +228,12 @@ fun Convert_CONV f =
             val th4 = GSYM(CONV_RULE(RHS_CONV(PABS_CONV(RAND_CONV(REWR_CONV th3))))th2)
             val th5 = CONV_RULE(LHS_CONV(PABS_CONV(REWR_CONV(GSYM th0)))) th4
         in
-         if aconv (lhs(concl th5)) f 
+         if aconv (lhs(concl th5)) f
           then CONV_RULE
-                (RHS_CONV 
+                (RHS_CONV
                   (RATOR_CONV(RAND_CONV Convert_CONV)))
                 th5
-          else (print "bad Seq case\n"; 
+          else (print "bad Seq case\n";
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
   else (print_term f; print "\n";
@@ -255,28 +255,28 @@ fun occurs_in t1 t2 = can (find_term (aconv t1)) t2;
 (* and Ite.                                                                  *)
 (*****************************************************************************)
 fun Convert defth =
- let val (lt,rt) = 
+ let val (lt,rt) =
          dest_eq(concl(SPEC_ALL defth))
-         handle HOL_ERR _ 
-         => (print "not an equation\n"; 
+         handle HOL_ERR _
+         => (print "not an equation\n";
              raise ERR "Convert" "not an equation")
  in
   if is_const lt
    then defth
    else
-   let  val (func,args) = 
+   let  val (func,args) =
             dest_comb lt
-            handle HOL_ERR _ => 
-            (print "lhs not a comb\n"; 
+            handle HOL_ERR _ =>
+            (print "lhs not a comb\n";
              raise ERR "Convert" "lhs not a comb")
         val _ = if not(is_const func)
                  then (print_term func; print " is not a constant\n";
                        raise ERR "Convert" "rator of lhs not a constant")
                  else ()
         val _ = if not(subtract (free_vars rt) (free_vars lt) = [])
-                 then (print "definition rhs has unbound variables: "; 
+                 then (print "definition rhs has unbound variables: ";
                        map (fn t => (print_term t; print " "))
-                           (rev(subtract (free_vars rt) (free_vars lt))); 
+                           (rev(subtract (free_vars rt) (free_vars lt)));
                        print "\n";
                        raise ERR "Convert" "definition rhs has unbound variables")
                  else ()
@@ -326,45 +326,45 @@ fun Convert defth =
 (*                                                                           *)
 (*****************************************************************************)
 fun RecConvert defth totalth =
- let val (lt,rt) = 
+ let val (lt,rt) =
          dest_eq(concl(SPEC_ALL defth))
-         handle HOL_ERR _ 
-         => (print "not an equation\n"; 
+         handle HOL_ERR _
+         => (print "not an equation\n";
              raise ERR "RecConvert" "not an equation")
-     val (func,args) = 
+     val (func,args) =
          dest_comb lt
-         handle HOL_ERR _ => 
-         (print "lhs not a comb\n"; 
+         handle HOL_ERR _ =>
+         (print "lhs not a comb\n";
           raise ERR "RecConvert" "lhs not a comb")
      val _ = if not(is_const func)
               then (print_term func; print " is not a constant\n";
                     raise ERR "RecConvert" "rator of lhs not a constant")
               else ()
-     val (b,t1,t2) = 
+     val (b,t1,t2) =
          dest_cond rt
-         handle HOL_ERR _ 
-         => (print "rhs not a conditional\n"; 
+         handle HOL_ERR _
+         => (print "rhs not a conditional\n";
              raise ERR "RecConvert" "rhs not a conditional")
      val _ = if not(subtract (free_vars rt) (free_vars lt) = [])
-              then (print "definition rhs has unbound variables: "; 
+              then (print "definition rhs has unbound variables: ";
                     map (fn t => (print_term t; print " "))
-                        (rev(subtract (free_vars rt) (free_vars lt))); 
+                        (rev(subtract (free_vars rt) (free_vars lt)));
                     print "\n";
                     raise ERR "RecConvert" "definition rhs has unbound variables")
               else()
  in
-  if (is_comb t2 
+  if (is_comb t2
        andalso aconv (rator t2) func
        andalso not(occurs_in func b)
        andalso not(occurs_in func t1)
        andalso not(occurs_in func (rand t2)))
-  then 
+  then
    let val fb = mk_pabs(args,b)
        val f1 = mk_pabs(args,t1)
        val f2 = mk_pabs(args,rand t2)
        val _  = if aconv (concl(SPEC_ALL totalth)) ``TOTAL(^fb,^f1,^f2)``
                  then ()
-                 else (print "bad TOTAL theorem\n"; 
+                 else (print "bad TOTAL theorem\n";
                        raise ERR "RecConvert" "bad TOTAL theorem")
        val thb = PBETA_CONV (mk_comb(fb,args))
        val th1 = PBETA_CONV (mk_comb(f1,args))
@@ -378,7 +378,7 @@ fun RecConvert defth totalth =
                        (mk_comb(fb,args),
                         mk_comb(f1,args),
                         mk_comb(func,mk_comb(f2,args)))))
-       val th4 = CONV_RULE 
+       val th4 = CONV_RULE
                     (RATOR_CONV
                       (RAND_CONV
                         (REWR_CONV(PALPHA  (fst(dest_imp(concl th3))) ptm))))
@@ -387,14 +387,14 @@ fun RecConvert defth totalth =
        val th6 = MP th5 (PGEN args (SPEC_ALL defth))
    in
     CONV_RULE
-     (RHS_CONV 
-      ((RAND_CONV Convert_CONV) 
+     (RHS_CONV
+      ((RAND_CONV Convert_CONV)
         THENC (RATOR_CONV(RAND_CONV Convert_CONV))
         THENC (RATOR_CONV(RATOR_CONV(RAND_CONV Convert_CONV)))))
      th6
    end
   else if occurs_in func rt
-   then (print "definition of: "; print_term func; 
+   then (print "definition of: "; print_term func;
          print " is not tail recursive"; print "\n";
          raise ERR "RecConvert" "not tail recursive")
    else raise ERR "RecConvert" "this shouldn't happen"
@@ -407,15 +407,15 @@ fun RecConvert defth totalth =
 
 val total_tm = prim_mk_const{Name="TOTAL",Thy="compose"};
 
-fun mk_total (tm1,tm2,tm3) = 
+fun mk_total (tm1,tm2,tm3) =
  let val ty1 = fst(dom_rng(type_of tm1))
      val ty2 = type_of tm2
  in
    mk_comb(inst[alpha |-> ty1, beta |-> ty2] total_tm,
            pairLib.list_mk_pair[tm1,tm2,tm3])
  end;
- 
-fun getTotal def = 
+
+fun getTotal def =
  let val (lt,rt) = boolSyntax.dest_eq(concl (SPEC_ALL def))
      val (func,args) = dest_comb lt
      val (b1,t1,t2) = dest_cond rt
@@ -438,29 +438,29 @@ fun dest_exp tm =
   then (print_term tm;print "\n";
         print "is not a function\n";
         raise ERR "dest_exp" "dest_exp failure")
-  else if is_comb tm 
+  else if is_comb tm
           andalso is_const(fst(strip_comb tm))
-          andalso mem 
+          andalso mem
                    (fst(dest_const(fst(strip_comb tm))))
                    ["Seq","Par","Ite","Rec","Let"]
   then
    let val (opr,args) = strip_comb tm
    in
    case fst(dest_const opr) of
-      "Seq" => if length args = 2 
-                then (opr, args) 
+      "Seq" => if length args = 2
+                then (opr, args)
                 else raise ERR "dest_exp" "bad Seq"
-    | "Par" => if length args = 2 
-                then (opr, args) 
+    | "Par" => if length args = 2
+                then (opr, args)
                 else raise ERR "dest_exp" "bad Par"
     | "Ite" => if length args = 3
-                then (opr, args) 
+                then (opr, args)
                 else raise ERR "dest_exp" "bad Ite"
     | "Rec" => if length args = 3
-                then (opr, args) 
+                then (opr, args)
                 else raise ERR "dest_exp" "bad Rec"
-    | "Let" => if length args = 2 
-                then (opr, args) 
+    | "Let" => if length args = 2
+                then (opr, args)
                 else raise ERR "dest_exp" "bad Let"
     | _     => raise ERR "dest_exp" "this shouldn't happen"
    end
@@ -471,17 +471,17 @@ fun dest_exp tm =
 (* combinational by having their names included in the assignable list       *)
 (* combinational_constants                                                   *)
 (*****************************************************************************)
-val combinational_constants = 
+val combinational_constants =
  ref["T","F","/\\","\\/","~",",","o","CURRY","UNCURRY","COND",
      "FST","SND","=","Seq","Par","Ite","Let",
      "0","NUMERAL","BIT1","BIT2","ZERO","+","-"];
 
-fun add_combinational l = 
- (combinational_constants := union l (!combinational_constants)); 
+fun add_combinational l =
+ (combinational_constants := union l (!combinational_constants));
 
 fun is_combinational tm =
  is_var tm
-  orelse (is_const tm 
+  orelse (is_const tm
            andalso  mem (fst(dest_const tm))  (!combinational_constants))
   orelse (is_abs tm
            andalso is_combinational(body tm))
@@ -511,7 +511,7 @@ fun CompileExp tm =
                     raise ERR "CompileExp" "attempt to compile non-function")
               else ()
      val (opr,args) = dest_exp tm
-                      handle HOL_ERR _ 
+                      handle HOL_ERR _
                       => raise ERR "CompileExp" "bad expression"
  in
   if null args orelse is_combinational tm
@@ -521,16 +521,16 @@ fun CompileExp tm =
        "Seq" => let val tm1 = hd args
                     val tm2 = hd(tl args)
                 in
-                 if is_combinational tm1 
-                  then MATCH_MP 
+                 if is_combinational tm1
+                  then MATCH_MP
                         (ISPEC tm1 PRECEDE_DEV)
                         (CompileExp tm2)
-                  else if is_combinational tm2 
-                  then MATCH_MP 
+                  else if is_combinational tm2
+                  then MATCH_MP
                         (ISPEC tm2 FOLLOW_DEV)
                         (CompileExp tm1)
-                  else MATCH_MP 
-                        SEQ_INTRO 
+                  else MATCH_MP
+                        SEQ_INTRO
                         (CONJ (CompileExp tm1) (CompileExp tm2))
                 end
      | "Par" => MATCH_MP PAR_INTRO (LIST_CONJ(map CompileExp args))
@@ -564,7 +564,7 @@ fun CompileProg prog tm =
 (* Compile (|- f args = bdy) = CompileProg [|- f args = bdy] ``f``           *)
 (*****************************************************************************)
 fun Compile th =
- let val (func,_) = 
+ let val (func,_) =
       dest_eq(concl(SPEC_ALL th))
       handle HOL_ERR _ => raise ERR "Compile" "not an equation"
      val _ = if not(is_const func)
@@ -627,8 +627,8 @@ fun CompileConvert defth = Compile(Convert defth);
 fun RecCompileConvert defth totalth =
  let val previousShowTypes = !show_types
      val (l,r) = dest_eq(concl(SPEC_ALL defth))
-     val (func,args) = dest_comb l 
-     val impth = 
+     val (func,args) = dest_comb l
+     val impth =
         (GEN_BETA_RULE o
          SIMP_RULE std_ss [Seq_def,Par_def,Ite_def])
         (DISCH_ALL(Compile (RecConvert defth totalth)))
@@ -681,23 +681,23 @@ val hwDefineLib = ref([] : (thm * thm * thm)list);
 
 fun hwDefine defq =
  let val absyn0 = Parse.Absyn defq
- in 
+ in
   case absyn0
   of Absyn.APP(_,Absyn.APP(_,Absyn.IDENT(loc,"measuring"),def),f) =>
        let val (deftm,names) = Defn.parse_absyn def
            val hdeqn = hd (boolSyntax.strip_conj deftm)
            val (l,r) = boolSyntax.dest_eq hdeqn
-           val domty = pairSyntax.list_mk_prod 
+           val domty = pairSyntax.list_mk_prod
                          (map type_of (snd (boolSyntax.strip_comb l)))
            val fty = Pretype.fromType (domty --> numSyntax.num)
-           val typedf = Parse.absyn_to_term 
+           val typedf = Parse.absyn_to_term
                             (Parse.term_grammar())
                             (Absyn.TYPED(loc,f,fty))
            val defn = Defn.mk_defn (hd names) deftm
            val tac = EXISTS_TAC (numSyntax.mk_cmeasure typedf)
-                      THEN CONJ_TAC 
-                      THENL [TotalDefn.WF_TAC, 
-                             TotalDefn.TC_SIMP_TAC 
+                      THEN CONJ_TAC
+                      THENL [TotalDefn.WF_TAC,
+                             TotalDefn.TC_SIMP_TAC
                              THEN (PROVE_TAC[wordsTheory.WORD_PRED_THM])]
            val (defth,ind) = Defn.tprove(defn, tac)
            val totalth = prove
@@ -714,13 +714,13 @@ fun hwDefine defq =
    | otherwise =>
      let val (deftm,names) = Defn.parse_absyn absyn0
          val defn = Defn.mk_defn (hd names) deftm
-     in 
+     in
       case TotalDefn.primDefine defn
        of (defth,NONE,NONE) =>   (* non-recursive *)
           let val defth' = SPEC_ALL defth
-              val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+              val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def]
                               (CompileConvert defth')
-          in 
+          in
              hwDefineLib := (defth',boolTheory.TRUTH,devth) :: !hwDefineLib;
              (defth',boolTheory.TRUTH,devth)
           end
@@ -731,7 +731,7 @@ fun hwDefine defq =
                       THEN EXISTS_TAC (rand reln) THEN TotalDefn.TC_SIMP_TAC)
               val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
                                 (RecCompileConvert defth totalth)
-          in 
+          in
             hwDefineLib := (defth,ind,devth) :: !hwDefineLib;
             (defth,ind,devth)
           end
@@ -775,8 +775,8 @@ fun mk_FOLLOW(d,f) = ``FOLLOW ^d ^f``;
 (* ATM                                                                       *)
 (*****************************************************************************)
 fun is_ATM tm =
- is_comb tm 
-  andalso is_const(rator tm) 
+ is_comb tm
+  andalso is_const(rator tm)
   andalso (fst(dest_const(rator tm)) = "ATM");
 
 fun dest_ATM tm = rand tm;
@@ -787,7 +787,7 @@ fun mk_ATM tm = ``ATM ^tm``;
 (* SEQ                                                                       *)
 (*****************************************************************************)
 fun is_SEQ tm =
- is_comb tm 
+ is_comb tm
   andalso is_comb(rator tm)
   andalso is_const(rator(rator tm))
   andalso (fst(dest_const(rator(rator tm))) = "SEQ");
@@ -800,7 +800,7 @@ fun mk_SEQ(tm1,tm2) = ``SEQ ^tm1 ^tm2``;
 (* PAR                                                                       *)
 (*****************************************************************************)
 fun is_PAR tm =
- is_comb tm 
+ is_comb tm
   andalso is_comb(rator tm)
   andalso is_const(rator(rator tm))
   andalso (fst(dest_const(rator(rator tm))) = "PAR");
@@ -813,7 +813,7 @@ fun mk_PAR(tm1,tm2) = ``PAR ^tm1 ^tm2``;
 (* ITE                                                                       *)
 (*****************************************************************************)
 fun is_ITE tm =
- is_comb tm 
+ is_comb tm
   andalso is_comb(rator tm)
   andalso is_comb(rator(rator tm))
   andalso is_const(rator(rator(rator tm)))
@@ -827,7 +827,7 @@ fun mk_ITE(tm1,tm2,tm3) = ``ITE ^tm1 ^tm2 ^tm3``;
 (* REC                                                                       *)
 (*****************************************************************************)
 fun is_REC tm =
- is_comb tm 
+ is_comb tm
   andalso is_comb(rator tm)
   andalso is_comb(rator(rator tm))
   andalso is_const(rator(rator(rator tm)))
@@ -841,8 +841,8 @@ fun mk_REC(tm1,tm2,tm3) = ``REC ^tm1 ^tm2 ^tm3``;
 (* Dev                                                                       *)
 (*****************************************************************************)
 fun is_DEV tm =
- is_comb tm 
-  andalso is_const(rator tm) 
+ is_comb tm
+  andalso is_const(rator tm)
   andalso (fst(dest_const(rator tm)) = "DEV");
 
 fun dest_DEV tm = rand tm;
@@ -866,7 +866,7 @@ fun mk_DEV tm = ``DEV ^tm``;
 (*                                                                           *)
 (*****************************************************************************)
 fun ATM_REFINE tm =
- if not(is_comb tm 
+ if not(is_comb tm
          andalso is_const(rator tm)
          andalso (fst(dest_const(rator tm)) = "DEV"))
   then raise ERR "ATM_REFINE" "argument not a DEV"
@@ -888,7 +888,7 @@ fun LIB_REFINE lib tm =
  if is_DEV tm
   then
    case
-     List.find 
+     List.find
       (aconv tm o snd o dest_dev_imp o concl o SPEC_ALL)
       lib
    of SOME th => th
@@ -942,7 +942,7 @@ fun DEPTHR refine tm =
   then
    let val (tm1,tm2) = dest_SEQ tm
        val th1 = DEPTHR refine tm1
-       val th2 = DEPTHR refine tm2 
+       val th2 = DEPTHR refine tm2
    in
     MATCH_MP SEQ_DEV_IMP (CONJ th1 th2)
    end
@@ -950,7 +950,7 @@ fun DEPTHR refine tm =
   then
    let val (tm1,tm2) = dest_PAR tm
        val th1 = DEPTHR refine tm1
-       val th2 = DEPTHR refine tm2 
+       val th2 = DEPTHR refine tm2
    in
     MATCH_MP PAR_DEV_IMP (CONJ th1 th2)
    end
@@ -958,8 +958,8 @@ fun DEPTHR refine tm =
   then
    let val (tm1,tm2,tm3) = dest_ITE tm
        val th1 = DEPTHR refine tm1
-       val th2 = DEPTHR refine tm2 
-       val th3 = DEPTHR refine tm3 
+       val th2 = DEPTHR refine tm2
+       val th3 = DEPTHR refine tm3
    in
     MATCH_MP ITE_DEV_IMP (LIST_CONJ[th1,th2,th3])
    end
@@ -967,8 +967,8 @@ fun DEPTHR refine tm =
   then
    let val (tm1,tm2,tm3) = dest_REC tm
        val th1 = DEPTHR refine tm1
-       val th2 = DEPTHR refine tm2 
-       val th3 = DEPTHR refine tm3 
+       val th2 = DEPTHR refine tm2
+       val th3 = DEPTHR refine tm3
    in
     MATCH_MP REC_DEV_IMP (LIST_CONJ[th1,th2,th3])
    end
@@ -986,8 +986,8 @@ fun DEPTHR refine tm =
 (*  |- <circuit'> ===> Dev f                                                 *)
 (*****************************************************************************)
 fun REFINE refine th =
- MATCH_MP 
-  DEV_IMP_TRANS 
+ MATCH_MP
+  DEV_IMP_TRANS
   (CONJ (refine (fst(dest_dev_imp(concl th)))) th)
  handle _ => raise ERR "REFINE" "bad argument";
 
@@ -1016,7 +1016,7 @@ fun (refine1 THENR refine2) tm = ANTE_REFINE (refine1 tm) refine2;
 (*****************************************************************************)
 infixr 3 ORELSER;
 
-fun (refine1 ORELSER refine2) tm = 
+fun (refine1 ORELSER refine2) tm =
  refine1 tm handle HOL_ERR _ => refine2 tm;
 
 (*****************************************************************************)
@@ -1031,8 +1031,8 @@ fun REPEATR refine tm =
  let val th = refine tm
      val (tm1,tm2) = dest_dev_imp(concl th)
  in
-  if aconv tm1 tm2 
-   then th 
+  if aconv tm1 tm2
+   then th
    else ANTE_REFINE th (REPEATR refine)
  end;
 
@@ -1079,11 +1079,11 @@ fun OLD_STANDARDIZE_EXISTS_CONV s =
                   end
      fun LOCAL_RENAME_CONV t =
       if is_exists t orelse is_forall t
-       then 
+       then
         let val (v,_)  = if is_exists t then dest_exists t else dest_forall t
             val (_,ty) = dest_var v
         in
-         (GEN_ALPHA_CONV(mkv ty) THENC QUANT_CONV LOCAL_RENAME_CONV) t 
+         (GEN_ALPHA_CONV(mkv ty) THENC QUANT_CONV LOCAL_RENAME_CONV) t
         end
        else SUB_CONV LOCAL_RENAME_CONV t
  in
@@ -1102,8 +1102,8 @@ fun STANDARDIZE_EXISTS_CONV s =
                   end
      fun rename t =
       if is_exists t orelse is_forall t
-       then 
-        let val (vlist,body) = if is_exists t then strip_exists t 
+       then
+        let val (vlist,body) = if is_exists t then strip_exists t
                                               else strip_forall t
             val vlist' = map (mkv o type_of) vlist
             val theta  = map2 (curry op|->) vlist vlist'
@@ -1123,7 +1123,7 @@ fun STANDARDIZE_EXISTS_CONV s =
        else t
  in
   fn t => (ALPHA t (rename t)
-           handle HOL_ERR _ => 
+           handle HOL_ERR _ =>
              (print"STANDARDIZE_EXISTS_CONV: new version broken,\
                   \ so calling the old version";
             OLD_STANDARDIZE_EXISTS_CONV s t))
@@ -1131,11 +1131,11 @@ fun STANDARDIZE_EXISTS_CONV s =
 *)
 
 local
-val init_theta:(term,term)Binarymap.dict 
+val init_theta:(term,term)Binarymap.dict
           = Binarymap.mkDict Term.var_compare;
-fun mksubst L1 L2 theta_0 = 
- rev_itlist2 
-    (fn redex:term => fn residue:term => fn theta => 
+fun mksubst L1 L2 theta_0 =
+ rev_itlist2
+    (fn redex:term => fn residue:term => fn theta =>
           Binarymap.insert(theta,redex,residue)) L1 L2 theta_0;
 
 fun subst_fn theta M = Binarymap.find(theta,M);
@@ -1154,8 +1154,8 @@ fun STANDARDIZE_EXISTS_CONV s =
       if is_var t then applysubst theta t else
       if is_const t then t else
       if is_exists t orelse is_forall t
-       then 
-        let val (vlist,body) = if is_exists t then strip_exists t 
+       then
+        let val (vlist,body) = if is_exists t then strip_exists t
                                               else strip_forall t
             val vlist' = map (mkv o type_of) vlist
             val block_theta = subst_fn (mksubst vlist vlist' init_theta)
@@ -1167,7 +1167,7 @@ fun STANDARDIZE_EXISTS_CONV s =
        else if is_abs t then
              let val (vlist,body) = strip_abs t
                  val block_theta = subst_fn (mksubst vlist vlist init_theta)
-                 val body' = rename (theta oo block_theta) body 
+                 val body' = rename (theta oo block_theta) body
               in list_mk_abs(vlist,body')
               end
        else if is_comb t then
@@ -1177,7 +1177,7 @@ fun STANDARDIZE_EXISTS_CONV s =
        else t
  in
   fn t => (ALPHA t (rename (subst_fn init_theta) t)
-           handle HOL_ERR _ => 
+           handle HOL_ERR _ =>
              (print"STANDARDIZE_EXISTS_CONV: new version broken,\
                   \ so calling the old version";
             OLD_STANDARDIZE_EXISTS_CONV s t))
@@ -1204,12 +1204,12 @@ fun EXISTS_OUT t =
         in
          LOCAL_EXISTS_OUT t1
         end else
-      if is_conj t 
+      if is_conj t
        then
         let val (t1,t2) = dest_conj t
         in
          LOCAL_EXISTS_OUT t1 @ LOCAL_EXISTS_OUT t2
-        end 
+        end
       else [t]
      val tml = LOCAL_EXISTS_OUT t
  in
@@ -1226,21 +1226,21 @@ fun PRUNE1_FUN(v,tml) =
  let val l = filter (fn t => is_eq t andalso ((lhs t = v) orelse (rhs t = v))) tml
  in
   if null l
-   then tml 
+   then tml
    else
     let val (t1,t2) = dest_eq(hd l)
         val u = if t1=v then t2 else t1
-    in 
+    in
      filter
-      (fn t => not(is_eq t andalso (lhs t = rhs t))) 
+      (fn t => not(is_eq t andalso (lhs t = rhs t)))
       (map (hol88Lib.subst[(u,v)]) tml)
     end
- end;     
+ end;
 
 fun EXISTS_OUT_CONV t =
  let val th        = (*time*) (STANDARDIZE_EXISTS_CONV "v") t
      val (vl,tml)  = (*time*) EXISTS_OUT (rhs(concl th))
-     val tml1      = (*time*) (foldl PRUNE1_FUN tml) vl 
+     val tml1      = (*time*) (foldl PRUNE1_FUN tml) vl
      val t1        = (*time*) list_mk_conj tml1
      val vl1       = (*time*) rev (intersect vl (free_vars t1))
      val count_ref = ref 0
@@ -1250,9 +1250,9 @@ fun EXISTS_OUT_CONV t =
                       end
      val subsl     = map (fn v => (mkv(snd(dest_var v)),v)) vl1
      val vl2       = map fst subsl
-     val t2        = (*time*) (hol88Lib.subst subsl) t1 
+     val t2        = (*time*) (hol88Lib.subst subsl) t1
      val t3        = (*time*) list_mk_exists (vl2, t2)
-     val th        = (*time*) 
+     val th        = (*time*)
                       mk_oracle_thm (* YIKES! -- what's this!!! *)
                       "EXISTS_OUT_CONV" ([],mk_eq(t,t3))
  in
@@ -1292,7 +1292,7 @@ fun BUS_MATCH vst bus =
             val (bus1,bus2) = dest_BUS_CONCAT bus
         in
          BUS_MATCH vst1 bus1 @ BUS_MATCH vst2 bus2
-        end) 
+        end)
   handle HOL_ERR _ => [];
 
 (*****************************************************************************)
@@ -1301,9 +1301,9 @@ fun BUS_MATCH vst bus =
 (* (where types are lifted to functions from domain ty)                      *)
 (*****************************************************************************)
 fun varstruct_to_bus time_ty vs =
- if is_var vs 
+ if is_var vs
   then let val (name,ty) = dest_var vs
-       in 
+       in
         mk_var(name,``:^time_ty -> ^ty``)
        end
   else if is_pair vs
@@ -1320,10 +1320,10 @@ fun varstruct_to_bus time_ty vs =
 (*****************************************************************************)
 fun is_pure_abs tm =
  is_pabs tm
-  andalso 
+  andalso
    all
     is_combinational_const
-    (subtract 
+    (subtract
      (strip_pair(snd(dest_pabs tm)))
      (strip_pair(fst(dest_pabs tm))));
 
@@ -1332,7 +1332,7 @@ fun is_pure_abs tm =
 (* Test for ``Let f1 f2``                                                    *)
 (*****************************************************************************)
 fun is_Let tm =
- is_comb tm 
+ is_comb tm
    andalso is_const(fst(strip_comb tm))
    andalso (fst(dest_const(fst(strip_comb tm))) = "Let")
    andalso (length(snd(strip_comb tm)) = 2);
@@ -1359,7 +1359,7 @@ fun genbus time_ty v =
             end
     in makebus (type_of v)
     end;
-                                                                                                              
+
 (*****************************************************************************)
 (* Synthesise combinational circuits.                                        *)
 (* Examples (derived from FactScript.sml):                                   *)
@@ -1411,44 +1411,44 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
        val time_ty = hd(snd(dest_type(type_of in_bus)))
        val args_match = BUS_MATCH args in_bus
    in
-    if is_pair bdy 
+    if is_pair bdy
      then (if is_BUS_CONCAT out_bus
             then let val (bdy1,bdy2) = dest_pair bdy
                      val (out_bus1,out_bus2) = dest_BUS_CONCAT out_bus
-                     val goal = 
-                          ``^tm = 
+                     val goal =
+                          ``^tm =
                             COMB ^(mk_pabs(args, bdy1)) (^in_bus,^out_bus1) /\
                             COMB ^(mk_pabs(args, bdy2)) (^in_bus,^out_bus2)``
-                     val _ = (if_print "\n COMB_SYNTH_CONV case 4a:\n "; 
+                     val _ = (if_print "\n COMB_SYNTH_CONV case 4a:\n ";
                               if_print_term goal; if_print "\n")
                      val _ = comb_synth_goalref := goal
                  in
                  prove
                   (goal,
-                   REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
-                    THEN GEN_BETA_TAC 
+                   REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+                    THEN GEN_BETA_TAC
                     THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
                     THEN REWRITE_TAC[PAIR_EQ]
                     THEN EQ_TAC
                     THEN RW_TAC bool_ss []
                     THEN PROVE_TAC[])
                   handle HOL_ERR _ =>
-                  (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+                  (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal;
                    if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
                  end
             else let val (arg1,arg2) = dest_pair bdy
                      val v1 = genvar ``:^time_ty -> ^(type_of arg1)``
                      val v2 = genvar ``:^time_ty -> ^(type_of arg2)``
-                     val goal = ``^tm = ?^v1 ^v2. ^(rator tm) (^in_bus, ^v1 <> ^v2) 
+                     val goal = ``^tm = ?^v1 ^v2. ^(rator tm) (^in_bus, ^v1 <> ^v2)
                                                   /\
                                                   (^out_bus = ^v1 <> ^v2)``
                  in
                  prove
                   (goal, PROVE_TAC[BUS_SPLIT])
                   handle HOL_ERR _ =>
-                  (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+                  (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal;
                    if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
-                 end)      
+                 end)
      else if is_pure_abs abstr
      then let val bdy_match = BUS_MATCH bdy out_bus
               val goal =
@@ -1456,80 +1456,80 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
                 (tm,
                  list_mk_conj
                   (map
-                   (fn (t1,t2) => 
+                   (fn (t1,t2) =>
                      if is_combinational_const t1
                       then ``CONSTANT ^t1 ^(assoc t1 bdy_match)``
                       else mk_eq(t2,assoc t1 (rev args_match)))
                    bdy_match))
-              val _ = (if_print "\n COMB_SYNTH_CONV case 3:\n "; 
+              val _ = (if_print "\n COMB_SYNTH_CONV case 3:\n ";
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
             (goal,
-             REWRITE_TAC[COMB_def,BUS_CONCAT_def,CONSTANT_def] 
-             THEN GEN_BETA_TAC 
+             REWRITE_TAC[COMB_def,BUS_CONCAT_def,CONSTANT_def]
+             THEN GEN_BETA_TAC
              THEN Ho_Rewrite.REWRITE_TAC[PAIR_EQ,FORALL_AND_THM]
              THEN Ho_Rewrite.REWRITE_TAC[GSYM FUN_EQ_THM]
              THEN (* PROVE_TAC[] *)
              (EQ_TAC THEN REPEAT STRIP_TAC THEN FIRST_ASSUM ACCEPT_TAC)
               ORELSE PROVE_TAC [])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal;
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_var bdy andalso can (assoc bdy) args_match
      then let val goal = ``^tm = (^out_bus = ^(assoc bdy (rev args_match)))``
-              val _ = (if_print "\n COMB_SYNTH_CONV case 2:\n "; 
+              val _ = (if_print "\n COMB_SYNTH_CONV case 2:\n ";
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
             (goal,
-             REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
-              THEN GEN_BETA_TAC 
+             REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+              THEN GEN_BETA_TAC
               THEN REWRITE_TAC[]
               THEN PROVE_TAC[])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal;
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_combinational_const bdy
      then let val goal = ``^tm = CONSTANT ^bdy ^out_bus``
-              val _ = (if_print "\n COMB_SYNTH_CONV case 1:\n "; 
+              val _ = (if_print "\n COMB_SYNTH_CONV case 1:\n ";
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
             (goal,
-             REWRITE_TAC[COMB_def,CONSTANT_def,FUN_EQ_THM] 
-              THEN GEN_BETA_TAC 
+             REWRITE_TAC[COMB_def,CONSTANT_def,FUN_EQ_THM]
+              THEN GEN_BETA_TAC
               THEN REWRITE_TAC[]
               THEN PROVE_TAC[])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal;
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else if is_comb bdy andalso is_combinational_const(rator bdy)
      then let val arg = rand bdy
               val v = genvar ``:^time_ty -> ^(type_of arg)``
               val goal =
-                   ``^tm = ?^v. COMB ^(mk_pabs(args, arg)) (^in_bus,^v) 
+                   ``^tm = ?^v. COMB ^(mk_pabs(args, arg)) (^in_bus,^v)
                                 /\
                                 COMB ^(rator bdy) (^v, ^out_bus)``
-              val _ = (if_print "\n COMB_SYNTH_CONV case 5:\n "; 
+              val _ = (if_print "\n COMB_SYNTH_CONV case 5:\n ";
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
              (goal,
-              REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
-               THEN GEN_BETA_TAC 
+              REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+               THEN GEN_BETA_TAC
                THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
                THEN REWRITE_TAC[]
                THEN PROVE_TAC[])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal;
             if_print"\n";
             raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
@@ -1538,44 +1538,44 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
               val  sw = genvar ``:^time_ty -> ^(type_of test_tm)``
               val  mux_in1 = genvar ``:^time_ty -> ^(type_of then_tm)``
               val  mux_in2 = genvar ``:^time_ty -> ^(type_of else_tm)``
-              val goal = 
-                   ``^tm = 
+              val goal =
+                   ``^tm =
                      ?^sw ^mux_in1 ^mux_in2.
                       COMB ^(mk_pabs(args, test_tm)) (^in_bus, ^sw)     /\
                       COMB ^(mk_pabs(args, then_tm)) (^in_bus,^mux_in1) /\
                       COMB ^(mk_pabs(args, else_tm)) (^in_bus,^mux_in2) /\
                       MUX(^sw,^mux_in1,^mux_in2,^out_bus)``
-              val _ = (if_print "\n COMB_SYNTH_CONV case 6:\n "; 
+              val _ = (if_print "\n COMB_SYNTH_CONV case 6:\n ";
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
           prove
            (goal,
-            REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM,MUX_def] 
-             THEN GEN_BETA_TAC 
+            REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM,MUX_def]
+             THEN GEN_BETA_TAC
              THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
              THEN REWRITE_TAC[PAIR_EQ]
              THEN EQ_TAC
              THEN RW_TAC bool_ss []
              THEN PROVE_TAC[])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal;
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
-     else if is_let bdy 
+     else if is_let bdy
      then let val (let_abs,let_tm) = dest_let bdy
               val (let_var, let_bdy) = dest_pabs let_abs
               val bus = varstruct_to_bus time_ty let_var
               val bus_match = BUS_MATCH let_var bus
-              val goal = 
+              val goal =
                    mk_eq
                     (tm,
                      list_mk_exists
                       (rev(free_vars bus),
-                       ``COMB ^(mk_pabs(args, let_tm)) (^in_bus,^bus) /\ 
-                         COMB ^(mk_pabs(mk_pair(args,let_var), let_bdy)) 
+                       ``COMB ^(mk_pabs(args, let_tm)) (^in_bus,^bus) /\
+                         COMB ^(mk_pabs(mk_pair(args,let_var), let_bdy))
                             (^in_bus <> ^bus,^out_bus)``))
-              val _ = (if_print "\n COMB_SYNTH_CONV case 7:\n "; 
+              val _ = (if_print "\n COMB_SYNTH_CONV case 7:\n ";
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
@@ -1585,64 +1585,64 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
               THEN RW_TAC std_ss [GSYM CONJ_ASSOC])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal;
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
-     else if is_eq bdy 
-              andalso is_pair(lhs bdy) 
+     else if is_eq bdy
+              andalso is_pair(lhs bdy)
               andalso is_pair(rhs bdy)
      then let val (l1,l2) = dest_pair(lhs bdy)
               val (r1,r2) = dest_pair(rhs bdy)
               val v1 = genvar ``:^time_ty -> bool``
               val v2 = genvar ``:^time_ty -> bool``
-              val goal = 
-                   ``^tm = ?^v1 ^v2. 
-                       COMB ^(mk_pabs(args, mk_eq(l1,r1))) (^in_bus,^v1) /\ 
-                       COMB ^(mk_pabs(args, mk_eq(l2,r2))) (^in_bus,^v2) /\ 
+              val goal =
+                   ``^tm = ?^v1 ^v2.
+                       COMB ^(mk_pabs(args, mk_eq(l1,r1))) (^in_bus,^v1) /\
+                       COMB ^(mk_pabs(args, mk_eq(l2,r2))) (^in_bus,^v2) /\
                        COMB (UNCURRY $/\) (^v1 <> ^v2, ^out_bus)``
-              val _ = (if_print "\n COMB_SYNTH_CONV case 8:\n "; 
+              val _ = (if_print "\n COMB_SYNTH_CONV case 8:\n ";
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
             (goal,
-             REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM,PAIR_EQ,UNCURRY] 
-              THEN GEN_BETA_TAC 
+             REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM,PAIR_EQ,UNCURRY]
+              THEN GEN_BETA_TAC
               THEN REWRITE_TAC[FST,SND]
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
               THEN REWRITE_TAC[]
               THEN PROVE_TAC[])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal;
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
-     else if is_comb bdy 
-              andalso is_comb(rator bdy) 
+     else if is_comb bdy
+              andalso is_comb(rator bdy)
               andalso is_const(rator(rator bdy))
      then let val opr = rator(rator bdy)
               val arg1 = rand(rator bdy)
               val arg2 = rand bdy
               val v1 = genvar ``:^time_ty -> ^(type_of arg1)``
               val v2 = genvar ``:^time_ty -> ^(type_of arg2)``
-              val goal = 
-                   ``^tm = ?^v1 ^v2. 
-                       COMB ^(mk_pabs(args, arg1)) (^in_bus,^v1) /\ 
-                       COMB ^(mk_pabs(args, arg2)) (^in_bus,^v2) /\ 
+              val goal =
+                   ``^tm = ?^v1 ^v2.
+                       COMB ^(mk_pabs(args, arg1)) (^in_bus,^v1) /\
+                       COMB ^(mk_pabs(args, arg2)) (^in_bus,^v2) /\
                        COMB (UNCURRY ^opr) (^v1 <> ^v2, ^out_bus)``
-              val _ = (if_print "\n COMB_SYNTH_CONV case 9:\n "; 
+              val _ = (if_print "\n COMB_SYNTH_CONV case 9:\n ";
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
             (goal,
-             PURE_REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
-              THEN GEN_BETA_TAC 
+             PURE_REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
+              THEN GEN_BETA_TAC
               THEN PURE_REWRITE_TAC[UNCURRY,FST,SND]
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
               THEN REWRITE_TAC[]
               THEN PROVE_TAC[])
            handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal;
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
      else (if_print "COMB_SYNTH_CONV warning, case not handled:\n";
@@ -1653,7 +1653,7 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
 
 (* Trace COMB_SYNTH_CONV
 val COMB_SYNTH_CONV =
- fn tm => (let val th = COMB_SYNTH_CONV tm 
+ fn tm => (let val th = COMB_SYNTH_CONV tm
            in
             (print "\nTRACE:\n";print_thm th;print "\n\n"; th)
            end);
@@ -1689,7 +1689,7 @@ fun DEPTH_IMP f tm =
 (* AP_ANTE_IMP_TRANS f (|- t1 ==> t2) applies f to t1 to get |- t0 ==> t1    *)
 (* and then, using transitivity of ==>, returns |- t0 ==> t2                 *)
 (*****************************************************************************)
-fun AP_ANTE_IMP_TRANS f th = 
+fun AP_ANTE_IMP_TRANS f th =
  IMP_TRANS (f(fst(dest_imp(concl th)))) th;
 
 (*****************************************************************************)
@@ -1702,8 +1702,8 @@ fun DEV_IMP f th = IMP_TRANS (f(fst(dest_imp(concl th)))) th;
 (* DFF_IMP_INTRO ``DFF p`` --> |- DFF_IMP p => DFF p                         *)
 (*****************************************************************************)
 fun DFF_IMP_INTRO tm =
- if is_comb tm 
-     andalso is_const(rator tm) 
+ if is_comb tm
+     andalso is_const(rator tm)
      andalso (fst(dest_const(rator tm)) = "DFF")
   then ISPEC (rand tm) DFF_IMP_THM
   else DISCH tm (ASSUME tm);
@@ -1739,7 +1739,7 @@ fun IMP_REFINE th tm =
 (* is returned. Never fails.                                                 *)
 (*****************************************************************************)
 fun IMP_REFINEL [] tm = DISCH tm (ASSUME tm)
- |  IMP_REFINEL (th::thl) tm = 
+ |  IMP_REFINEL (th::thl) tm =
      IMP_REFINE th tm handle _
      => IMP_REFINEL thl tm;
 
@@ -1769,9 +1769,9 @@ fun ANTE_EXISTS_INTRO v th =
    DISCH exists_tm th3
   end)
  handle HOL_ERR _ => th;
- 
+
 fun LIST_ANTE_EXISTS_INTRO([],th) = th
- |  LIST_ANTE_EXISTS_INTRO((v::vl),th) = 
+ |  LIST_ANTE_EXISTS_INTRO((v::vl),th) =
      ANTE_EXISTS_INTRO v (LIST_ANTE_EXISTS_INTRO(vl,th));
 
 (*****************************************************************************)
@@ -1804,8 +1804,8 @@ fun bus_split tm =
    if (length tyl = 1)
     then tm
     else
-     let val vl1 = mapcount 
-                    (fn n => fn vty => 
+     let val vl1 = mapcount
+                    (fn n => fn vty =>
                       bus_split(mk_var((name^Int.toString n),``:^ty1->^vty``)))
                     tyl
          val (v1::vl2) = rev vl1
@@ -1826,7 +1826,7 @@ fun IN_OUT_SPLIT th =
  let val (tm1,tm2) = dest_dev_imp(concl th)
      val (ty1,ty2) = dom_rng (type_of tm2)
      val [load_ty,inp_ty,done_ty,out_ty] = strip_prodtype ty1
-     val args_tm = 
+     val args_tm =
           list_mk_pair
            [mk_var("load",load_ty),
             bus_split(mk_var("inp",inp_ty)),
@@ -1841,7 +1841,7 @@ fun IN_OUT_SPLIT th =
 (*****************************************************************************)
 val combinational_components = ref([] : thm list);
 
-fun add_combinational_components thl = 
+fun add_combinational_components thl =
  (combinational_components :=
    thl @ (!combinational_components));
 
@@ -1857,7 +1857,7 @@ val _ =
 
 val monitor_netlist_construction = ref false;
 
-fun ptime a f x = 
+fun ptime a f x =
   if !monitor_netlist_construction
    then (print (a^":  "); time f x)
    else f x;
@@ -1871,13 +1871,13 @@ val CIRC_RULE = CONV_RULE o CIRC_CONV;
 fun COMB_FN_CONV cnv tm =
   case strip_comb tm
    of (c,[_,_]) =>
-        if same_const c comb_tm 
+        if same_const c comb_tm
          then RATOR_CONV(RAND_CONV cnv) tm
          else raise Conv.UNCHANGED
     | other => raise Conv.UNCHANGED
 
 fun variants V [] = []
-  | variants V (h::t) = 
+  | variants V (h::t) =
      let val h' = variant V h
      in h'::variants (h'::V) t
      end;
@@ -1886,10 +1886,10 @@ val is_prod = Lib.can pairSyntax.dest_prod;
 
 val bus_concat_tm = prim_mk_const{Name="BUS_CONCAT",Thy="compile"};
 
-fun mk_bus_concat(tm1,tm2) = 
+fun mk_bus_concat(tm1,tm2) =
  let val (ty1,ty2) = dom_rng(type_of tm1)
      val (ty1',ty3) = dom_rng(type_of tm2)
- in 
+ in
   list_mk_comb(inst[alpha |-> ty1, beta |-> ty2, gamma |-> ty3] bus_concat_tm,
                [tm1,tm2])
  end;
@@ -1898,7 +1898,7 @@ val dest_bus_concat = dest_binop bus_concat_tm (ERR"dest_bus_concat" "");
 
 fun bus_concat_of ty V =
  let open pairSyntax
- in 
+ in
    if is_prod ty
     then let val (ty1,ty2) = dest_prod ty
              val (l,V') = bus_concat_of ty1 V
@@ -1913,8 +1913,8 @@ fun bus_concat_of ty V =
 (*---------------------------------------------------------------------------*)
 
 fun FUN_EXISTS_PROD_CONV tm =
- if is_exists tm andalso 
-    Lib.can (match_type ``:'a -> 'b#'c``) 
+ if is_exists tm andalso
+    Lib.can (match_type ``:'a -> 'b#'c``)
             (type_of (bvar (rand tm)))
  then
    let val (forig,body) = dest_exists tm
@@ -1924,27 +1924,27 @@ fun FUN_EXISTS_PROD_CONV tm =
        val (ty1,ty2) = dom_rng fty
        val ty2list = strip_prod ty2
        val vartys = map (curry op--> ty1) ty2list
-       val init_vars = map mk_var 
-                        (zip (map (strcat "f_" o Int.toString) 
+       val init_vars = map mk_var
+                        (zip (map (strcat "f_" o Int.toString)
                                   (upto 1 (length vartys)))
                              vartys)
        val vars = variants (free_vars tm) init_vars
        val bus_concatenation = fst(bus_concat_of ty2 vars)
        val absgoal = mk_eq(mk_exists(f,mk_comb(P,f)),
              list_mk_exists(vars,mk_comb(P,bus_concatenation)))
-       val tac = CONV_TAC (LHS_CONV (TOP_SWEEP_CONV 
+       val tac = CONV_TAC (LHS_CONV (TOP_SWEEP_CONV
                                       (HO_REWR_CONV FUN_EXISTS_PROD)))
                     THEN REFL_TAC
        val th = prove(absgoal,tac)
-   in 
+   in
      HO_REWR_CONV th tm
    end
  else raise ERR "FUN_EXISTS_PROD_CONV" "";
 
 val OLD_STEP4a =  (* split buses up *)
  let open Ho_Rewrite
- in 
-  ptime "\n4a" 
+ in
+  ptime "\n4a"
    (CONV_RULE (CIRC_CONV
      (GEN_REWRITE_CONV TOP_SWEEP_CONV [FUN_EXISTS_PROD])))
  end;
@@ -1952,17 +1952,17 @@ val OLD_STEP4a =  (* split buses up *)
 
 val STEP4a =  (* split buses up *)
  let open Ho_Rewrite
- in 
-  ptime "\n4a" 
+ in
+  ptime "\n4a"
    (CONV_RULE (CIRC_CONV
      (TOP_SWEEP_CONV FUN_EXISTS_PROD_CONV)))
  end;
 
 val STEP4b =  (* build names in COMBs *)
  let open Ho_Rewrite
- in 
-  ptime "4b" 
-   (CONV_RULE (CIRC_CONV 
+ in
+  ptime "4b"
+   (CONV_RULE (CIRC_CONV
      (TOP_SWEEP_CONV (COMB_FN_CONV
        (GEN_REWRITE_CONV TOP_SWEEP_CONV [LAMBDA_PROD] THENC
         GEN_REWRITE_CONV DEPTH_CONV [FST,SND])))))
@@ -1971,38 +1971,38 @@ val STEP4b =  (* build names in COMBs *)
 
 val STEP4c =  (* expose f<>g *)
  let open Ho_Rewrite
- in 
-  ptime "4c" 
+ in
+  ptime "4c"
    (CONV_RULE (CIRC_CONV
      (GEN_REWRITE_CONV TOP_SWEEP_CONV [GSYM BUS_CONCAT_def])))
  end;
 
-val STEP4d = 
+val STEP4d =
  let open Ho_Rewrite
- in 
-  ptime "4d" 
+ in
+  ptime "4d"
    (CONV_RULE (CIRC_CONV
-     (GEN_REWRITE_CONV TOP_DEPTH_CONV 
+     (GEN_REWRITE_CONV TOP_DEPTH_CONV
            [COMB_CONCAT_FST,COMB_CONCAT_SND,
             COMB_FST,COMB_SND,
 (*          COMB_CONSTANT_1,COMB_CONSTANT_2,COMB_CONSTANT_3, *)
             COMB_ID])))
  end;
 
-val STEP4e = 
+val STEP4e =
  let open Ho_Rewrite
- in 
-  ptime "4e" 
-   (CONV_RULE (CIRC_CONV 
+ in
+  ptime "4e"
+   (CONV_RULE (CIRC_CONV
      (GEN_REWRITE_CONV TOP_DEPTH_CONV [LATCH_def,POSEDGE_IMP_def])))
  end;
 
-val STEP4f = 
+val STEP4f =
  let open Ho_Rewrite
- in 
-  ptime "4f" 
+ in
+  ptime "4f"
    (CONV_RULE (CIRC_CONV
-     (GEN_REWRITE_CONV TOP_DEPTH_CONV 
+     (GEN_REWRITE_CONV TOP_DEPTH_CONV
         [ID_CONST, ID_o, o_ID,
          DEL_CONCAT,MUX_CONCAT,DFF_CONCAT,
          BUS_CONCAT_PAIR,BUS_CONCAT_ETA])))
@@ -2025,21 +2025,21 @@ fun CONCAT_CONV c M =
    of (f,[_,_]) => if same_const f bus_concat_tm
          then c M
          else COMB_CONV (CONCAT_CONV c) M
-    | otherwise => if is_comb M then COMB_CONV (CONCAT_CONV c) M 
+    | otherwise => if is_comb M then COMB_CONV (CONCAT_CONV c) M
                    else ALL_CONV M;
-  
+
 local (* partial evaluation instantiates term-nets once *)
  val SIMPLIFY = RATOR_CONV(RAND_CONV(CONCAT_CONV
-      (PURE_REWRITE_CONV [K_INTRO_THM,I_INTRO_THM,BUS_CONCAT_LIFTERS] THENC 
+      (PURE_REWRITE_CONV [K_INTRO_THM,I_INTRO_THM,BUS_CONCAT_LIFTERS] THENC
        PURE_REWRITE_CONV [BUS_CONCAT_LIFTERS1] THENC
-       PURE_REWRITE_CONV [o_DEF,C_THM] THENC 
+       PURE_REWRITE_CONV [o_DEF,C_THM] THENC
        PURE_ONCE_REWRITE_CONV [GSYM ETA_THM] THENC
        PURE_REWRITE_CONV [K_THM,C_THM,I_THM] THENC DEPTH_CONV BETA_CONV)))
 in
 fun STEP5a_CONV tm =
   case strip_comb tm
    of (c,[f,x]) =>x
-        if same_const c comb_tm andalso 
+        if same_const c comb_tm andalso
            Lib.can (find_term (same_const bus_concat_tm)) f
          then SIMPLIFY tm
          else raise ERR "STEP5_CONV" ""
@@ -2055,15 +2055,15 @@ fun LAMBDA_CONCAT_CONV tm =
      val _ = assert is_abs t1
      val _ = assert is_abs t2
      val bus_concat_thm = ISPECL [t1,t2] BUS_CONCAT_def
- in 
-   CONV_RULE (RHS_CONV (ABS_CONV (BINOP_CONV BETA_CONV))) 
+ in
+   CONV_RULE (RHS_CONV (ABS_CONV (BINOP_CONV BETA_CONV)))
              bus_concat_thm
  end
 
 fun STEP5_CONV tm =
   case strip_comb tm
    of (c,[f,x]) =>
-        if same_const c comb_tm 
+        if same_const c comb_tm
          then RATOR_CONV(RAND_CONV(DEPTH_CONV LAMBDA_CONCAT_CONV)) tm
          else raise ERR "STEP5_CONV" ""
     | other => raise ERR "STEP5_CONV" ""
@@ -2074,25 +2074,25 @@ fun STEP5_CONV tm =
 
 val MAKE_NETLIST =
  ((ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
-  (ptime "8" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, 
-                     GSYM COMB_AND, GSYM COMB_OR, GSYM COMB_MUX])) o 
+  (ptime "8" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT,
+                     GSYM COMB_AND, GSYM COMB_OR, GSYM COMB_MUX])) o
   (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
   (ptime "6" (PURE_REWRITE_RULE [UNCURRY,FST,SND]))                o
   (ptime "5-6" (REWRITE_RULE [DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]))  o
   (ptime "5" (CONV_RULE (CIRC_CONV (ONCE_DEPTH_CONV STEP5_CONV)))) o
   (ptime "4-5" (DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)))                o
-  (ptime "4" STEP4)          o 
+  (ptime "4" STEP4)          o
   (ptime "3" GEN_BETA_RULE)  o
   (ptime "2" IN_OUT_SPLIT)   o
-  (ptime "1" (REWRITE_RULE 
+  (ptime "1" (REWRITE_RULE
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Let_def,Ite_def,Par_def,Seq_def,o_THM])));
 
 
 (*----------------ORIGINAL (mostly)----------------------------------
-val OLD_STEP4 = 
- ptime "4" 
+val OLD_STEP4 =
+ ptime "4"
    (CONV_RULE (CIRC_CONV(Ho_Rewrite.REWRITE_CONV
      [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,
 (*    COMB_CONSTANT_1,COMB_CONSTANT_2,COMB_CONSTANT_3,  *)
@@ -2123,7 +2123,7 @@ fun MAKE_NETLIST devth =
      COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]))  o
   (ptime "3" GEN_BETA_RULE)  o
   (ptime "2" IN_OUT_SPLIT)   o
-  (ptime "1" (REWRITE_RULE 
+  (ptime "1" (REWRITE_RULE
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,o_THM]))) devth;
@@ -2134,7 +2134,7 @@ fun MAKE_NETLIST devth =
 (*****************************************************************************)
 val temporal_abstractions = ref([] : thm list);
 
-fun add_temporal_abstractions thl = 
+fun add_temporal_abstractions thl =
  (temporal_abstractions :=
    thl @ (!temporal_abstractions));
 
@@ -2158,7 +2158,7 @@ val _ =
 (* Unoptimized *)
 fun MAKE_CIRCUIT devth =
  (DISCH_ALL                                                                  o
-  LIST_ANTE_EXISTS_INTRO                                                     o 
+  LIST_ANTE_EXISTS_INTRO                                                     o
   (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL(!temporal_abstractions)))) o
   (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                  o
   at_SPEC_ALL ``clk:num->bool``                                              o
@@ -2166,7 +2166,7 @@ fun MAKE_CIRCUIT devth =
   Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,DEL_CONCAT]               o
   CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                           o
   Ho_Rewrite.REWRITE_RULE (!combinational_components)                        o
-  CONV_RULE 
+  CONV_RULE
    (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                    o
   SIMP_RULE std_ss [UNCURRY]                                                 o
   Ho_Rewrite.REWRITE_RULE
@@ -2183,7 +2183,7 @@ fun MAKE_CIRCUIT devth =
      COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                         o
   GEN_BETA_RULE                                                              o
   IN_OUT_SPLIT                                                               o
-  REWRITE_RULE 
+  REWRITE_RULE
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,Let_def,o_THM]) devth;
@@ -2191,7 +2191,7 @@ fun MAKE_CIRCUIT devth =
 (* Only generates DTYPE, CONSTANT, COMB *)
 fun MAKE_CIRCUIT devth =
  ((ptime "17" DISCH_ALL)                                                     o
-  (ptime "16" LIST_ANTE_EXISTS_INTRO)                                        o 
+  (ptime "16" LIST_ANTE_EXISTS_INTRO)                                        o
   (ptime "15" (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL(!temporal_abstractions))))) o
   (ptime "14" (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT]))                      o
   (ptime "13" (at_SPEC_ALL ``clk:num->bool``))                                o
@@ -2202,7 +2202,7 @@ fun MAKE_CIRCUIT devth =
   (ptime "10" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))))              o
   (ptime "9" (Ho_Rewrite.REWRITE_RULE[BUS_CONCAT_PAIR]))        (* new *)      o
   (ptime "8" (CONV_RULE (TOP_SWEEP_CONV FUN_EXISTS_PROD_CONV))) (* new *)      o
-  (ptime "7" (CONV_RULE 
+  (ptime "7" (CONV_RULE
      (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))))                o
   (ptime "6-1" (SIMP_RULE std_ss [UNCURRY]))                                   o
   (ptime "6" (Ho_Rewrite.REWRITE_RULE
@@ -2217,7 +2217,7 @@ fun MAKE_CIRCUIT devth =
      COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]))                        o
   (ptime "3" GEN_BETA_RULE)                                                  o
   (ptime "2" IN_OUT_SPLIT)                                                   o
-  (ptime "1" (REWRITE_RULE 
+  (ptime "1" (REWRITE_RULE
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,Let_def,o_THM]))) devth;
@@ -2226,22 +2226,22 @@ fun MAKE_CIRCUIT devth =
 (* Optimized                                                                 *)
 (*---------------------------------------------------------------------------*)
 
-fun EXISTSL_CONV tm = 
+fun EXISTSL_CONV tm =
   ((LEFT_IMP_EXISTS_CONV THENC QUANT_CONV EXISTSL_CONV) ORELSEC ALL_CONV) tm;
 
 val NEW_MAKE_CIRCUIT =
  (DISCH_ALL o
-  (ptime "15" LIST_ANTE_EXISTS_INTRO)                                        o 
-  (ptime "14" (I ## AP_ANTE_IMP_TRANS 
+  (ptime "15" LIST_ANTE_EXISTS_INTRO)                                        o
+  (ptime "14" (I ## AP_ANTE_IMP_TRANS
                       (DEPTH_IMP (IMP_REFINEL(!temporal_abstractions)))))    o
   (ptime "13" (I ## REWRITE_RULE[at_CONCAT]))                                o
   (ptime "12" (at_SPEC_ALL ``clk:num->bool``))                               o
   (ptime "11" GEN_ALL)                                                       o
   (ptime "10-11" (CONV_RULE EXISTSL_CONV)) o
-  (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND, 
-               GSYM COMB_OR, GSYM COMB_MUX])) o 
+  (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND,
+               GSYM COMB_OR, GSYM COMB_MUX])) o
   (ptime "9-2" (Ho_Rewrite.REWRITE_RULE
-                [GSYM COMB_NOT,GSYM COMB_AND,GSYM COMB_OR, 
+                [GSYM COMB_NOT,GSYM COMB_AND,GSYM COMB_OR,
                  GSYM COMB_MUX,GSYM LEFT_FORALL_IMP_THM,
                  DEL_CONCAT,COMB_COND_CONCAT])) o                   (* new *)
   (ptime "9-1" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
@@ -2255,7 +2255,7 @@ val NEW_MAKE_CIRCUIT =
   (ptime "4" STEP4)          o
   (ptime "3" GEN_BETA_RULE)  o
   (ptime "2" IN_OUT_SPLIT)   o
-  (ptime "1" (REWRITE_RULE 
+  (ptime "1" (REWRITE_RULE
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,Let_def,o_THM])));
@@ -2263,17 +2263,17 @@ val NEW_MAKE_CIRCUIT =
 
 val NEW_MAKE_CIRCUIT' =
  (DISCH_ALL o
-  (ptime "15" LIST_ANTE_EXISTS_INTRO)                                        o 
-  (ptime "14" (I ## AP_ANTE_IMP_TRANS 
+  (ptime "15" LIST_ANTE_EXISTS_INTRO)                                        o
+  (ptime "14" (I ## AP_ANTE_IMP_TRANS
                       (DEPTH_IMP (IMP_REFINEL(!temporal_abstractions)))))    o
   (ptime "13" (I ## REWRITE_RULE[at_CONCAT]))                                o
   (ptime "12" (at_SPEC_ALL ``clk:num->bool``))                               o
   (ptime "11" GEN_ALL)                                                       o
   (ptime "10-11" (CONV_RULE EXISTSL_CONV)) o
-  (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND, 
-               GSYM COMB_OR, GSYM COMB_MUX])) o 
+  (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND,
+               GSYM COMB_OR, GSYM COMB_MUX])) o
   (ptime "9-2" (REWRITE_RULE
-                [GSYM COMB_NOT,GSYM COMB_AND,GSYM COMB_OR, 
+                [GSYM COMB_NOT,GSYM COMB_AND,GSYM COMB_OR,
                  GSYM COMB_MUX,GSYM LEFT_FORALL_IMP_THM,
                  DEL_CONCAT,COMB_COND_CONCAT])) o                   (* new *)
   (ptime "9-1" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
@@ -2288,7 +2288,7 @@ val NEW_MAKE_CIRCUIT' =
   (ptime "3.1" (REWRITE_RULE [])) o
   (ptime "3" GEN_BETA_RULE)  o
   (ptime "2" IN_OUT_SPLIT)   o
-  (ptime "1" (REWRITE_RULE 
+  (ptime "1" (REWRITE_RULE
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,Let_def,o_THM])));
@@ -2296,17 +2296,17 @@ val NEW_MAKE_CIRCUIT' =
 
 val NEW_MAKE_CIRCUIT'' =
  (DISCH_ALL o
-  (ptime "15" LIST_ANTE_EXISTS_INTRO)                                        o 
-  (ptime "14" (I ## AP_ANTE_IMP_TRANS 
+  (ptime "15" LIST_ANTE_EXISTS_INTRO)                                        o
+  (ptime "14" (I ## AP_ANTE_IMP_TRANS
                       (DEPTH_IMP (IMP_REFINEL(!temporal_abstractions)))))    o
   (ptime "13" (I ## REWRITE_RULE[at_CONCAT]))                                o
   (ptime "12" (at_SPEC_ALL ``clk:num->bool``))                               o
   (ptime "11" GEN_ALL)                                                       o
   (ptime "10-11" (CONV_RULE EXISTSL_CONV)) o
-  (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND, 
-               GSYM COMB_OR, GSYM COMB_MUX])) o 
+  (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND,
+               GSYM COMB_OR, GSYM COMB_MUX])) o
   (ptime "9-2" (REWRITE_RULE
-                [GSYM COMB_NOT,GSYM COMB_AND,GSYM COMB_OR, 
+                [GSYM COMB_NOT,GSYM COMB_AND,GSYM COMB_OR,
                  GSYM COMB_MUX,GSYM LEFT_FORALL_IMP_THM,
                  DEL_CONCAT,COMB_COND_CONCAT])) o                   (* new *)
   (ptime "9-1" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o

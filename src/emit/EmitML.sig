@@ -1,10 +1,10 @@
-signature EmitML = 
+signature EmitML =
 sig
   include Abbrev
 
   val reshape_thm_hook : (thm -> thm) ref
   val pseudo_constr_rws : unit -> term list
-  val new_pseudo_constr : term * int -> unit 
+  val new_pseudo_constr : term * int -> unit
   val is_int_literal_hook : (term -> bool) ref
   val int_of_term_hook : (term -> Arbint.int) ref
 
@@ -26,10 +26,10 @@ sig
 
   val MLSIGSTRUCT      : string list -> elem list
 
-  val sigSuffix        : string ref 
-  val structSuffix     : string ref 
-  val sigCamlSuffix    : string ref 
-  val structCamlSuffix : string ref 
+  val sigSuffix        : string ref
+  val structSuffix     : string ref
+  val sigCamlSuffix    : string ref
+  val structCamlSuffix : string ref
 
   val emitML   : string -> string * elem list -> unit
   val emitCAML : string -> string * elem list -> unit

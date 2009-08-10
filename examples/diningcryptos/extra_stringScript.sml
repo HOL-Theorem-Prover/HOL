@@ -10,18 +10,18 @@
 
 app load ["bossLib", "metisLib", "arithmeticTheory",
     	  "listTheory", "formalizeUseful", "combinTheory", "pairTheory",
-	  "extra_boolTheory", "jrhUtils", "numTheory", "simpLib", 
-	  "stringTheory", "rich_listTheory", 
+	  "extra_boolTheory", "jrhUtils", "numTheory", "simpLib",
+	  "stringTheory", "rich_listTheory",
 	  "stringSimps", "listSimps", "extra_numTheory"];
 
 *)
 
 open HolKernel Parse boolLib bossLib metisLib arithmeticTheory
      listTheory formalizeUseful extra_numTheory combinTheory pairTheory
-     extra_boolTheory jrhUtils numTheory simpLib 
-     stringTheory rich_listTheory stringSimps 
+     extra_boolTheory jrhUtils numTheory simpLib
+     stringTheory rich_listTheory stringSimps
      listSimps;
-     
+
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)
 (* ------------------------------------------------------------------------- *)
@@ -58,7 +58,7 @@ val string_ss = (simpLib.++ (list_ss, STRING_ss));
 
 val rec_toString_def = Define
   `(rec_toString (0:num) = []) /\
-   (rec_toString (SUC n) = 
+   (rec_toString (SUC n) =
 	(rec_toString ((SUC n) DIV 10)) ++ [CHR (48 + ((SUC n) MOD 10))])`;
 
 val toString_def = Define
@@ -97,7 +97,7 @@ val IMPLODE_APPEND_EQ = store_thm
 	(IMPLODE (s1 ++ s2) = IMPLODE (s1' ++ s2')) =
 	(s1 ++ s2 = s1' ++ s2')``,
    Induct
-   >> (Induct >> (RW_TAC std_ss [APPEND_NIL, IMPLODE_EQ_EMPTYSTRING, IMPLODE_EQNS] 
+   >> (Induct >> (RW_TAC std_ss [APPEND_NIL, IMPLODE_EQ_EMPTYSTRING, IMPLODE_EQNS]
   		  ++ RW_TAC bool_ss [EQ_SYM_EQ])
        ++ FULL_SIMP_TAC std_ss [APPEND_NIL, IMPLODE_EQNS, IMPLODE_EQ_THM, EXPLODE_IMPLODE]
        ++ RW_TAC bool_ss [EQ_SYM_EQ])
@@ -127,27 +127,27 @@ val STRCAT_NEQ = store_thm
    ++ Q.UNABBREV_TAC `foo`
    ++ RW_TAC std_ss [EXPLODE_IMPLODE, IMPLODE_APPEND_EQ]
    ++ SPOSE_NOT_THEN STRIP_ASSUME_TAC
-   ++ (ASSUME_TAC o Q.ISPECL [`LENGTH (cs:char list)`, 
+   ++ (ASSUME_TAC o Q.ISPECL [`LENGTH (cs:char list)`,
       		    	      `LENGTH (cs':char list)`]) LESS_EQ_CASES
    ++ FULL_SIMP_TAC std_ss []
-   >> ((ASSUME_TAC o Q.ISPEC `(cs''':char list)` o 
+   >> ((ASSUME_TAC o Q.ISPEC `(cs''':char list)` o
       	UNDISCH o Q.ISPECL [`LENGTH (cs:char list)`,`(cs':char list)`])
       	FIRSTN_APPEND1
-       ++ `FIRSTN (LENGTH (cs:char list)) (cs':char list) = cs` 
+       ++ `FIRSTN (LENGTH (cs:char list)) (cs':char list) = cs`
        	  by METIS_TAC [FIRSTN_APPEND1, LESS_EQ_REFL, FIRSTN_LENGTH_ID]
        ++ FULL_SIMP_TAC std_ss [LESS_EQ_EXISTS]
        ++ (ASSUME_TAC o UNDISCH o REWRITE_RULE [Once EQ_SYM_EQ, Once ADD_COMM]
-	   o Q.ISPECL [`p:num`, `LENGTH (cs:char list)`,`(cs':char list)`] ) 
+	   o Q.ISPECL [`p:num`, `LENGTH (cs:char list)`,`(cs':char list)`] )
 	   APPEND_FIRSTN_LASTN
        ++ FULL_SIMP_TAC std_ss [IS_PREFIX_APPEND]
        ++ METIS_TAC [])
-   ++ (ASSUME_TAC o Q.ISPEC `(cs'':char list)` o 
+   ++ (ASSUME_TAC o Q.ISPEC `(cs'':char list)` o
        UNDISCH o Q.ISPECL [`LENGTH (cs':char list)`,`(cs:char list)`]) FIRSTN_APPEND1
-   ++ `FIRSTN (LENGTH (cs':char list)) (cs:char list) = cs'` 
+   ++ `FIRSTN (LENGTH (cs':char list)) (cs:char list) = cs'`
       by METIS_TAC [FIRSTN_APPEND1, LESS_EQ_REFL, FIRSTN_LENGTH_ID]
    ++ FULL_SIMP_TAC std_ss [LESS_EQ_EXISTS]
    ++ (ASSUME_TAC o UNDISCH o REWRITE_RULE [Once EQ_SYM_EQ, Once ADD_COMM]
-	   o Q.ISPECL [`p:num`, `LENGTH (cs':char list)`,`(cs:char list)`]) 
+	   o Q.ISPECL [`p:num`, `LENGTH (cs':char list)`,`(cs:char list)`])
        APPEND_FIRSTN_LASTN
    ++ FULL_SIMP_TAC std_ss [IS_PREFIX_APPEND]
    ++ METIS_TAC []);
@@ -168,9 +168,9 @@ val toString_inj = store_thm
        ++ Cases_on `SUC n MOD 10 = 0`
        >> (SRW_TAC [] []
 	   ++ Cases_on `SUC n DIV 10`
-	   >> (METIS_TAC [SUC_NOT,MULT_EQ_0, ADD_0, ADD_COMM, 
+	   >> (METIS_TAC [SUC_NOT,MULT_EQ_0, ADD_0, ADD_COMM,
 	      		  MATCH_MP DIVISION (DECIDE ``0:num < 10:num``)])
-	   ++ RW_TAC string_ss [rec_toString_def,IMPLODE_EQ_THM] 
+	   ++ RW_TAC string_ss [rec_toString_def,IMPLODE_EQ_THM]
 	   ++ MATCH_MP_TAC append_neq_lem
 	   ++ RW_TAC list_ss [])
        ++ Cases_on `rec_toString (SUC n DIV 10)`
@@ -178,7 +178,7 @@ val toString_inj = store_thm
 	   ++ `ORD (CHR (48 + SUC n MOD 10)) = 48 + SUC n MOD 10`
 		by (RW_TAC std_ss [GSYM ORD_CHR]
 		    ++ MATCH_MP_TAC LESS_LESS_EQ_TRANS ++ Q.EXISTS_TAC `48 + 10:num`
-		    ++ RW_TAC arith_ss [LT_ADD_LCANCEL, 
+		    ++ RW_TAC arith_ss [LT_ADD_LCANCEL,
 		       	      	        MATCH_MP DIVISION (DECIDE ``0:num < 10:num``)])
 	   ++ RW_TAC arith_ss [])
        ++ RW_TAC string_ss [rec_toString_def,IMPLODE_EQ_THM])
@@ -188,7 +188,7 @@ val toString_inj = store_thm
        ++ Cases_on `SUC n' MOD 10 = 0`
        >> (SRW_TAC [] []
 	   ++ Cases_on `SUC n' DIV 10`
-	   >> (METIS_TAC [SUC_NOT,MULT_EQ_0, ADD_0, ADD_COMM, 
+	   >> (METIS_TAC [SUC_NOT,MULT_EQ_0, ADD_0, ADD_COMM,
 	      		  MATCH_MP DIVISION (DECIDE ``0:num < 10:num``)])
 	   ++ SRW_TAC [] [rec_toString_def] ++ MATCH_MP_TAC append_neq_lem
 	   ++ RW_TAC list_ss [])
@@ -209,14 +209,14 @@ val toString_inj = store_thm
    ++ EQ_TAC
    >> (RW_TAC std_ss [toString_def, rec_toString_def, IMPLODE_11]
        ++ ONCE_REWRITE_TAC [DECIDE ``(n' = n) = (SUC n' = SUC n)``]
-       ++ `(SUC n' = SUC n) = 
+       ++ `(SUC n' = SUC n) =
        	   ((SUC n') DIV 10 * 10 + (SUC n') MOD 10 = (SUC n) DIV 10 * 10 + (SUC n) MOD 10)`
 		by METIS_TAC [MATCH_MP DIVISION (DECIDE ``0:num < 10:num``)]
        ++ POP_ORW
        ++ FULL_SIMP_TAC std_ss [append_sing_eq_lem]
        ++ (MP_TAC o Q.SPECL [`48 + SUC n' MOD 10`, `48 + SUC n MOD 10`]) CHR_11
        ++ `!n. 48 + SUC n MOD 10 < 256`
-		by (STRIP_TAC ++ MATCH_MP_TAC LESS_LESS_EQ_TRANS 
+		by (STRIP_TAC ++ MATCH_MP_TAC LESS_LESS_EQ_TRANS
 		    ++ Q.EXISTS_TAC `48 + 10:num`
 		    ++ RW_TAC arith_ss [LT_ADD_LCANCEL, MATCH_MP
        		       	      	        DIVISION (DECIDE ``0:num < 10:num``)])
@@ -224,19 +224,19 @@ val toString_inj = store_thm
        ++ Cases_on `SUC n' DIV 10`
        >> (Cases_on `SUC n DIV 10` ++ RW_TAC arith_ss []
 	   ++ FULL_SIMP_TAC std_ss [rec_toString_def]
-	   ++ `LENGTH ([]:char list) = LENGTH (rec_toString (SUC n'' DIV 10) 
+	   ++ `LENGTH ([]:char list) = LENGTH (rec_toString (SUC n'' DIV 10)
 						++ [CHR (48 + SUC n'' MOD 10)])`
 		by METIS_TAC []
-	   ++ Q.PAT_ASSUM `[] = rec_toString (SUC n'' DIV 10) 
+	   ++ Q.PAT_ASSUM `[] = rec_toString (SUC n'' DIV 10)
 	      		      	++ [CHR (48 + SUC n'' MOD 10)]` (K ALL_TAC)
 	   ++ FULL_SIMP_TAC arith_ss [LENGTH_APPEND, LENGTH, GSYM LENGTH_NIL])
        ++ Cases_on `SUC n DIV 10`
        >> (RW_TAC arith_ss []
 	   ++ FULL_SIMP_TAC std_ss [rec_toString_def]
-	   ++ `LENGTH ([]:char list) = 
+	   ++ `LENGTH ([]:char list) =
 	       LENGTH (rec_toString (SUC n'' DIV 10) ++ [CHR (48 + SUC n'' MOD 10)])`
 		by METIS_TAC []
-	   ++ Q.PAT_ASSUM `rec_toString (SUC n'' DIV 10) 
+	   ++ Q.PAT_ASSUM `rec_toString (SUC n'' DIV 10)
 	      		   ++ [CHR (48 + SUC n'' MOD 10)] = []` (K ALL_TAC)
 	   ++ FULL_SIMP_TAC arith_ss [LENGTH_APPEND, LENGTH, GSYM LENGTH_NIL])
        ++ `SUC n' DIV 10 < SUC n'`
@@ -250,7 +250,7 @@ val STRCAT_toString_inj = store_thm
   ("STRCAT_toString_inj",
    ``!n m s. (STRCAT s (toString n) = STRCAT s (toString m)) = (n = m)``,
    SRW_TAC [] [STRCAT1, toString_inj]);
-   
+
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
@@ -260,12 +260,12 @@ val toString_toNum_cancel = store_thm
    completeInduct_on `n`
    ++ Cases_on `n`
    >> (SRW_TAC [] [toString_def, toNum_def, rec_toNum_def])
-   ++ SRW_TAC [] [toString_def, rec_toString_def, toNum_def, rec_toNum_def, 
+   ++ SRW_TAC [] [toString_def, rec_toString_def, toNum_def, rec_toNum_def,
   		 GSYM SNOC_APPEND, REVERSE_SNOC]
    ++ (MP_TAC o Q.SPECL [`48 + SUC n' MOD 10`]) ORD_CHR
    ++ `!n. 48 + SUC n MOD 10 < 256`
 	by (STRIP_TAC ++ MATCH_MP_TAC LESS_LESS_EQ_TRANS ++ Q.EXISTS_TAC `48 + 10:num`
-	    ++ RW_TAC arith_ss [LT_ADD_LCANCEL, MATCH_MP 
+	    ++ RW_TAC arith_ss [LT_ADD_LCANCEL, MATCH_MP
 	       	      	        DIVISION (DECIDE ``0:num < 10:num``)])
    ++ RW_TAC arith_ss []
    ++ Suff `SUC n' MOD 10 + rec_toNum (REVERSE (rec_toString (SUC n' DIV 10))) 1 =
@@ -290,7 +290,7 @@ val toString_toNum_cancel = store_thm
 		      10 * rec_toNum (REVERSE (rec_toString (SUC n))) m`
    >> METIS_TAC [SUC_0]
    ++ completeInduct_on `SUC n`
-   ++ SRW_TAC [] [toString_def, rec_toString_def, toNum_def, rec_toNum_def, 
+   ++ SRW_TAC [] [toString_def, rec_toString_def, toNum_def, rec_toNum_def,
    		  GSYM SNOC_APPEND, REVERSE_SNOC, LEFT_ADD_DISTRIB]
    ++ ONCE_REWRITE_TAC [EXP]
    ++ RW_TAC arith_ss [EQ_ADD_LCANCEL]

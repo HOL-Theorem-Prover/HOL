@@ -2,8 +2,8 @@
  * Ported to MLton.
  *)
 type int = Int.int
-   
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/22 07:40:27  michaeln
@@ -23,7 +23,7 @@ type int = Int.int
  *
  * Revision 1.1.1.1  1996/01/31  16:01:45  george
  * Version 109
- * 
+ *
  *)
 
 functor HeaderFun () : HEADER =
@@ -38,11 +38,11 @@ functor HeaderFun () : HEADER =
 			    inStream : TextIO.instream,
 			    errorOccurred : bool ref}
 
-	val newSource = 
+	val newSource =
 	  fn (s : string,i : TextIO.instream ,errs : TextIO.outstream) =>
 	      {name=s,errStream=errs,inStream=i,
 	       errorOccurred = ref false}
-			
+
 	val errorOccurred = fn (s : inputSource) =>fn () => !(#errorOccurred s)
 
 	val pr = fn out : TextIO.outstream => fn s : string => TextIO.output(out,s)
@@ -67,17 +67,17 @@ functor HeaderFun () : HEADER =
         val symbolName = fn SYMBOL(s,_) => s
         val symbolPos = fn SYMBOL(_,p) => p
         val symbolMake = fn sp => SYMBOL sp
-    
+
 	type ty = string
         val tyName = fn i => i
         val tyMake = fn i => i
- 
+
 	datatype control = NODEFAULT | VERBOSE | PARSER_NAME of symbol |
 			   FUNCTOR of string  | START_SYM of symbol |
 			   NSHIFT of symbol list | POS of string | PURE |
 			   PARSE_ARG of string * string |
 			   TOKEN_SIG_INFO of string
-			   
+
 	datatype declData = DECL of
 			{eop : symbol list,
 			 keyword : symbol list,
@@ -101,7 +101,7 @@ functor HeaderFun () : HEADER =
 	       DECL {eop=e',control=c',keyword=k',nonterm=n',prec=prec',
 		     change=su',term=t',value=v'} : declData,
                inputSource,pos) =
-	  let val ignore = fn s => 
+	  let val ignore = fn s =>
 	                (warn inputSource pos ("ignoring duplicate " ^ s ^
 					    " declaration"))
 	      val join = fn (e,NONE,NONE) => NONE
@@ -130,4 +130,4 @@ functor HeaderFun () : HEADER =
 end;
 
 structure Header = HeaderFun();
-      
+

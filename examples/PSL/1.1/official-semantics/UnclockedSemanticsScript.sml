@@ -17,7 +17,7 @@ quietdec := true;
 loadPath                                  (* Add path to loadPath            *)
  :=
  "../../path" :: !loadPath;
-map load 
+map load
  ["SyntaxTheory","PathTheory","ModelTheory"];
 quietdec := false;
 *)
@@ -48,7 +48,7 @@ val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 
 (* Moved to ModelScript.sml
 (******************************************************************************
-* A letter is either TOP, or BOTTOM 
+* A letter is either TOP, or BOTTOM
 * or a set of atomic propositions repersenting a state
 ******************************************************************************)
 val letter_def =
@@ -87,32 +87,32 @@ val US_SEM_def =
  pureDefine
   `(US_SEM v (S_BOOL b) = (LENGTH v = 1) /\ B_SEM (ELEM v 0) b)
    /\
-   (US_SEM v (S_CAT(r1,r2)) = 
+   (US_SEM v (S_CAT(r1,r2)) =
      ?v1 v2. (v = v1 <> v2) /\ US_SEM v1 r1 /\ US_SEM v2 r2)
    /\
-   (US_SEM v (S_FUSION(r1,r2)) = 
-     ?v1 v2 l. (v = v1 <> [l] <> v2) /\ 
-               US_SEM (v1<>[l]) r1 /\ US_SEM ([l]<>v2) r2) 
+   (US_SEM v (S_FUSION(r1,r2)) =
+     ?v1 v2 l. (v = v1 <> [l] <> v2) /\
+               US_SEM (v1<>[l]) r1 /\ US_SEM ([l]<>v2) r2)
    /\
-   (US_SEM v (S_OR(r1,r2)) = 
-     US_SEM v r1 \/ US_SEM v r2) 
+   (US_SEM v (S_OR(r1,r2)) =
+     US_SEM v r1 \/ US_SEM v r2)
    /\
-   (US_SEM v (S_AND(r1,r2)) = 
-     US_SEM v r1 /\ US_SEM v r2) 
+   (US_SEM v (S_AND(r1,r2)) =
+     US_SEM v r1 /\ US_SEM v r2)
    /\
-   (US_SEM v S_EMPTY = 
-     (v = [])) 
+   (US_SEM v S_EMPTY =
+     (v = []))
    /\
-   (US_SEM v (S_REPEAT r) = 
+   (US_SEM v (S_REPEAT r) =
      ?vlist. (v = CONCAT vlist) /\ EVERY (\v. US_SEM v r) vlist)`;
 
 (* Lemma for deriving theorem US_SEM below *)
 val US_SEM_REPEAT =
  store_thm
   ("US_SEM_REPEAT",
-   ``US_SEM v (S_REPEAT r) = 
-      US_SEM v S_EMPTY \/ 
-      ?v1 v2. 
+   ``US_SEM v (S_REPEAT r) =
+      US_SEM v S_EMPTY \/
+      ?v1 v2.
        ~(v=[]) /\ (v = v1 <> v2) /\ US_SEM v1 r /\ US_SEM v2 (S_REPEAT r)``,
     Induct_on `v`
      THEN RW_TAC std_ss [US_SEM_def]
@@ -142,25 +142,25 @@ val US_SEM =
   ("US_SEM",
    ``(US_SEM v (S_BOOL b) = (LENGTH v = 1) /\ B_SEM (ELEM v 0) b)
      /\
-     (US_SEM v (S_CAT(r1,r2)) = 
+     (US_SEM v (S_CAT(r1,r2)) =
        ?v1 v2. (v = v1 <> v2) /\ US_SEM v1 r1 /\ US_SEM v2 r2)
      /\
-     (US_SEM v (S_FUSION(r1,r2)) = 
-       ?v1 v2 l. (v = v1 <> [l] <> v2) /\ 
-                 US_SEM (v1<>[l]) r1 /\ US_SEM ([l]<>v2) r2) 
+     (US_SEM v (S_FUSION(r1,r2)) =
+       ?v1 v2 l. (v = v1 <> [l] <> v2) /\
+                 US_SEM (v1<>[l]) r1 /\ US_SEM ([l]<>v2) r2)
      /\
-     (US_SEM v (S_OR(r1,r2)) = 
-       US_SEM v r1 \/ US_SEM v r2) 
+     (US_SEM v (S_OR(r1,r2)) =
+       US_SEM v r1 \/ US_SEM v r2)
      /\
-     (US_SEM v (S_AND(r1,r2)) = 
-       US_SEM v r1 /\ US_SEM v r2) 
+     (US_SEM v (S_AND(r1,r2)) =
+       US_SEM v r1 /\ US_SEM v r2)
      /\
-     (US_SEM v S_EMPTY = 
-       (v = [])) 
+     (US_SEM v S_EMPTY =
+       (v = []))
      /\
      (US_SEM v (S_REPEAT r) =
-       US_SEM v S_EMPTY \/ 
-        ?v1 v2. 
+       US_SEM v S_EMPTY \/
+        ?v1 v2.
          ~(v=[]) /\ (v = v1 <> v2) /\ US_SEM v1 r /\ US_SEM v2 (S_REPEAT r))``,
    RW_TAC std_ss [US_SEM_def, GSYM US_SEM_REPEAT]);
 
@@ -168,7 +168,7 @@ val US_SEM =
 * Complement a path
 ******************************************************************************)
 val COMPLEMENT_LETTER_def =
- Define 
+ Define
   `(COMPLEMENT_LETTER TOP      = BOTTOM) /\
    (COMPLEMENT_LETTER BOTTOM   = TOP)    /\
    (COMPLEMENT_LETTER(STATE s) = STATE s)`;
@@ -203,56 +203,56 @@ val TOP_OMEGA_def =
 ******************************************************************************)
 val UF_SEM_def =
  Define
-   `(UF_SEM v (F_NOT f) = 
-      ~(UF_SEM (COMPLEMENT v) f)) 
+   `(UF_SEM v (F_NOT f) =
+      ~(UF_SEM (COMPLEMENT v) f))
     /\
-    (UF_SEM v (F_AND(f1,f2)) = 
+    (UF_SEM v (F_AND(f1,f2)) =
       UF_SEM v f1 /\ UF_SEM v f2)
     /\
-    (UF_SEM v (F_STRONG_BOOL b) = 
+    (UF_SEM v (F_STRONG_BOOL b) =
       (LENGTH v > 0) /\ B_SEM (ELEM v 0) b)
     /\
-    (UF_SEM v (F_WEAK_BOOL b) = 
+    (UF_SEM v (F_WEAK_BOOL b) =
       (LENGTH v = XNUM 0) \/ B_SEM (ELEM v 0) b)
     /\
-    (UF_SEM v (F_STRONG_SERE r) = 
+    (UF_SEM v (F_STRONG_SERE r) =
       ?j :: (LESS(LENGTH v)). US_SEM (SEL v (0,j)) r)
 (*
     /\
-    (UF_SEM v (F_WEAK_SERE r) = 
-      !j :: (LESS(LENGTH v)). 
+    (UF_SEM v (F_WEAK_SERE r) =
+      !j :: (LESS(LENGTH v)).
        UF_SEM (CAT(SEL v (0,j),TOP_OMEGA)) (F_STRONG_SERE r))
 *)
     /\
-    (UF_SEM v (F_WEAK_SERE r) = 
-      !j :: (LESS(LENGTH v)). 
-        ?k :: (LESS(LENGTH(CAT(SEL v (0,j),TOP_OMEGA)))). 
+    (UF_SEM v (F_WEAK_SERE r) =
+      !j :: (LESS(LENGTH v)).
+        ?k :: (LESS(LENGTH(CAT(SEL v (0,j),TOP_OMEGA)))).
           US_SEM (SEL(CAT(SEL v (0,j),TOP_OMEGA)) (0,k)) r)
     /\
-    (UF_SEM v (F_NEXT f) = 
+    (UF_SEM v (F_NEXT f) =
       LENGTH v > 1 /\ UF_SEM (RESTN v 1) f)
     /\
-    (UF_SEM v (F_UNTIL(f1,f2)) = 
+    (UF_SEM v (F_UNTIL(f1,f2)) =
       ?k :: (LESS(LENGTH v)).
         UF_SEM (RESTN v k) f2 /\ !j :: (LESS k). UF_SEM (RESTN v j) f1)
     /\
 (* Contains j=0 bug spotted by Thomas Turk
      (UF_SEM v (F_ABORT (f,b)) =
-       UF_SEM v f 
+       UF_SEM v f
        \/
-       ?j :: (LESS(LENGTH v)). 
+       ?j :: (LESS(LENGTH v)).
           B_SEM (ELEM v j) b /\ UF_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) f)
 *)
     (UF_SEM v (F_ABORT (f,b)) =
-      UF_SEM v f 
+      UF_SEM v f
       \/
-      ?j :: (LESS(LENGTH v)). 
-        B_SEM (ELEM v j) b  
+      ?j :: (LESS(LENGTH v)).
+        B_SEM (ELEM v j) b
         /\
-        if j=0 then UF_SEM TOP_OMEGA f 
+        if j=0 then UF_SEM TOP_OMEGA f
                else UF_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) f)
     /\
-    (UF_SEM v (F_SUFFIX_IMP(r,f)) = 
+    (UF_SEM v (F_SUFFIX_IMP(r,f)) =
       !j :: (LESS(LENGTH v)).
         US_SEM (SEL (COMPLEMENT v) (0,j)) r ==> UF_SEM (RESTN v j) f)`;
 
@@ -265,56 +265,56 @@ val UF_SEM_def =
 val UF_SEM =
  store_thm
   ("UF_SEM",
-   ``(UF_SEM v (F_NOT f) = 
-       ~(UF_SEM (COMPLEMENT v) f)) 
+   ``(UF_SEM v (F_NOT f) =
+       ~(UF_SEM (COMPLEMENT v) f))
      /\
-     (UF_SEM v (F_AND(f1,f2)) = 
+     (UF_SEM v (F_AND(f1,f2)) =
        UF_SEM v f1 /\ UF_SEM v f2)
      /\
-     (UF_SEM v (F_STRONG_BOOL b) = 
+     (UF_SEM v (F_STRONG_BOOL b) =
        (LENGTH v > 0) /\ B_SEM (ELEM v 0) b)
      /\
-     (UF_SEM v (F_WEAK_BOOL b) = 
+     (UF_SEM v (F_WEAK_BOOL b) =
        (LENGTH v = XNUM 0) \/ B_SEM (ELEM v 0) b)
      /\
-     (UF_SEM v (F_STRONG_SERE r) = 
+     (UF_SEM v (F_STRONG_SERE r) =
        ?j :: (LESS(LENGTH v)). US_SEM (SEL v (0,j)) r)
      /\
-     (UF_SEM v (F_WEAK_SERE r) = 
-       !j :: (LESS(LENGTH v)). 
+     (UF_SEM v (F_WEAK_SERE r) =
+       !j :: (LESS(LENGTH v)).
         UF_SEM (CAT(SEL v (0,j),TOP_OMEGA)) (F_STRONG_SERE r))
 (*
      /\
-     (UF_SEM v (F_WEAK_SERE r) = 
-       !j :: (LESS(LENGTH v)). 
-         ?k :: (LESS(LENGTH(CAT(SEL v (0,j),TOP_OMEGA)))). 
+     (UF_SEM v (F_WEAK_SERE r) =
+       !j :: (LESS(LENGTH v)).
+         ?k :: (LESS(LENGTH(CAT(SEL v (0,j),TOP_OMEGA)))).
            US_SEM (SEL(CAT(SEL v (0,j),TOP_OMEGA)) (0,k)) r)
 *)
      /\
-     (UF_SEM v (F_NEXT f) = 
+     (UF_SEM v (F_NEXT f) =
        LENGTH v > 1 /\ UF_SEM (RESTN v 1) f)
      /\
-     (UF_SEM v (F_UNTIL(f1,f2)) = 
+     (UF_SEM v (F_UNTIL(f1,f2)) =
        ?k :: (LESS(LENGTH v)).
          UF_SEM (RESTN v k) f2 /\ !j :: (LESS k). UF_SEM (RESTN v j) f1)
      /\
 (* Contains j=0 bug spotted by Thomas Turk
      (UF_SEM v (F_ABORT (f,b)) =
-       UF_SEM v f 
+       UF_SEM v f
        \/
-       ?j :: (LESS(LENGTH v)). 
+       ?j :: (LESS(LENGTH v)).
           B_SEM (ELEM v j) b /\ UF_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) f)
 *)
     (UF_SEM v (F_ABORT (f,b)) =
-      UF_SEM v f 
+      UF_SEM v f
       \/
-      ?j :: (LESS(LENGTH v)). 
-        B_SEM (ELEM v j) b  
+      ?j :: (LESS(LENGTH v)).
+        B_SEM (ELEM v j) b
         /\
-        if j=0 then UF_SEM TOP_OMEGA f 
+        if j=0 then UF_SEM TOP_OMEGA f
                else UF_SEM (CAT(SEL v (0,j-1),TOP_OMEGA)) f)
      /\
-     (UF_SEM v (F_SUFFIX_IMP(r,f)) = 
+     (UF_SEM v (F_SUFFIX_IMP(r,f)) =
        !j :: (LESS(LENGTH v)).
          US_SEM (SEL (COMPLEMENT v) (0,j)) r ==> UF_SEM (RESTN v j) f)``,
    RW_TAC std_ss [UF_SEM_def]);
@@ -333,7 +333,7 @@ val MAP_PATH_def =
 ******************************************************************************)
 val UF_VALID_def = (* from UnclockedSemanticsScript.sml *)
  Define
-  `UF_VALID M f = 
+  `UF_VALID M f =
     !v::(COMPUTATION M). UF_SEM (MAP_PATH (\s. STATE(M.L s)) v) f`;
 
 (******************************************************************************
@@ -342,33 +342,33 @@ val UF_VALID_def = (* from UnclockedSemanticsScript.sml *)
 ******************************************************************************)
 
 (******************************************************************************
-* O_SEM M s f means "M, s |= f" 
+* O_SEM M s f means "M, s |= f"
 ******************************************************************************)
 val O_SEM_def =
  Define
   `(O_SEM M (O_BOOL b) s = B_SEM (STATE(M.L s)) b)
    /\
-   (O_SEM M (O_NOT f) s = ~(O_SEM M f s)) 
+   (O_SEM M (O_NOT f) s = ~(O_SEM M f s))
    /\
    (O_SEM M (O_AND(f1,f2)) s = O_SEM M f1 s /\ O_SEM M f2 s)
    /\
-   (O_SEM M (O_EX f) s = 
+   (O_SEM M (O_EX f) s =
      ?p :: PATH M s.
        (LENGTH p > 1) /\ (ELEM p 0 = s) /\ O_SEM M f (ELEM p 1))
    /\
-   (O_SEM M (O_EU(f1,f2)) s = 
+   (O_SEM M (O_EU(f1,f2)) s =
      ?p :: PATH M s.
        ?k :: (LESS(LENGTH p)).
-         (ELEM p 0 = s)        /\ 
-         O_SEM M f2 (ELEM p k) /\ 
+         (ELEM p 0 = s)        /\
+         O_SEM M f2 (ELEM p k) /\
          !j. j < k ==> O_SEM M f1 (ELEM p j))
    /\
-   (O_SEM M (O_EG f) s = 
+   (O_SEM M (O_EG f) s =
      ?p :: PATH M s.
        (ELEM p 0 = s) /\ !j :: (LESS(LENGTH p)). O_SEM M f (ELEM p j))`;
 
 (******************************************************************************
-* O_VALID M f means "M, s |= f" for all initial states s 
+* O_VALID M f means "M, s |= f" for all initial states s
 ******************************************************************************)
 val O_VALID_def =
  Define

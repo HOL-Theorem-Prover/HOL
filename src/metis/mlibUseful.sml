@@ -114,7 +114,7 @@ fun non f = not o f;
 fun bool_compare (true,false) = LESS
   | bool_compare (false,true) = GREATER
   | bool_compare _ = EQUAL;
-  
+
 (* ------------------------------------------------------------------------- *)
 (* Pairs                                                                     *)
 (* ------------------------------------------------------------------------- *)

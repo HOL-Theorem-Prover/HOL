@@ -1,6 +1,6 @@
 signature Sup_Inf =
 sig
-  type int = Arbint.int 
+  type int = Arbint.int
 
   datatype bound = Bound of Rationals.rat * (string * Rationals.rat) list
                  | Max_bound of bound list

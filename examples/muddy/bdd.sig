@@ -25,7 +25,7 @@ sig
     val var     : bdd -> varnum
     val low     : bdd -> bdd
     val high    : bdd -> bdd
-    
+
     datatype bddop =
 	And | Xor | Or | Nand | Nor | Imp | Biimp
       | Diff | Lessth | Invimp
@@ -74,7 +74,7 @@ sig
     val assignment : (varnum * bool) list -> assignment
     val fromAssignment : assignment -> bdd
     val toAssignment_ : bdd -> assignment
-    val getAssignment : assignment -> (varnum * bool) list 
+    val getAssignment : assignment -> (varnum * bool) list
 
 
     val restrict : bdd -> assignment -> bdd
@@ -123,9 +123,9 @@ sig
     val bddLoad : string -> bdd
 
     val satcount : bdd -> real
-    
+
     type nodetable = int * (varnum * int * int) Vector.vector
-    val nodetable  : bdd -> nodetable 
+    val nodetable  : bdd -> nodetable
 
     val nodecount : bdd -> int
 
@@ -178,7 +178,7 @@ end
    [fromBool b] gives the bdd representing b.
 
    [equal x y] is true if x and y represent equivalent boolean
-   expressions. 
+   expressions.
 
    [ithvar i] gives the bdd representing the i'th variable.  The
    requested variable must be in the range define by setvarnum
@@ -191,7 +191,7 @@ end
    [var r] gets the variable labeling r.
 
    [low r] gets the false branch of r.
-   
+
    [high r] gets the true branch of r.
 
    Type [varSet] is an effective representation of sets of variables.
@@ -250,10 +250,10 @@ end
    infix.
 
    [IMP(x,y)] equivalent to 'apply x y Imp', but this is nice for infix.
-    
+
    [LESSTH(x,y)] equivalent to 'apply x y Lessth', but this is nice for
    infix.
-    
+
    [BIIMP(x,y)] equivalent to 'apply x y Biimp', but this is nice for
    infix.
 
@@ -297,7 +297,7 @@ end
 
    [simplify r dom] tries to simplify r by restricting it to domain d,
    ie. 'r AND dom  =  dom AND (simplify r dom)'.
-   
+
    !!!! DOCUMENTATION IS MISSING ON VARIABLE REORDER STUFF !!!!
 
    [disableReorder()] diaples automatic reordering.  Reordering is
@@ -312,7 +312,7 @@ end
    account.
 
    [printdot r] prints r in a format suitable for use by the graph drawing
-   program dot, on standard output 
+   program dot, on standard output
    (dot can be obtained from http://www.research.att.com/sw/tools/graphviz/)
 
    [fnprintdot fname r] prints r in a format suitable for use by the graph

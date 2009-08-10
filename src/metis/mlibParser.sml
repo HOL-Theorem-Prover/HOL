@@ -68,7 +68,7 @@ fun many parser =
     let
       fun sparser l = parser >> (fn x => x :: l)
     in
-      smany sparser [] >> rev      
+      smany sparser [] >> rev
     end;
 
 fun atleastone p = (p ++ many p) >> op::;

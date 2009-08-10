@@ -339,7 +339,7 @@ local
             mkSum (if Map.null m then ms else Map.foldl f explEmpty ms)
           end
       | _ => mkProd (explProdRewrite eqns m);
-      
+
   fun repeat_norm eqns e =
       case total (norm eqns) e of SOME e => repeat_norm eqns e | NONE => e;
 in

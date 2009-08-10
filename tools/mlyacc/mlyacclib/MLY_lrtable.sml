@@ -2,8 +2,8 @@
  * Ported to MLton.
  *)
 type int = Int.int
-   
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/23 03:21:27  michaeln
@@ -21,10 +21,10 @@ type int = Int.int
  *
  * Revision 1.1.1.1  1996/01/31  16:01:42  george
  * Version 109
- * 
+ *
  *)
 
-structure LrTable : LR_TABLE = 
+structure LrTable : LR_TABLE =
     struct
 	open Array List
 	infix 9 sub
@@ -44,7 +44,7 @@ structure LrTable : LR_TABLE =
 	val numStates = fn ({states,...} : table) => states
 	val numRules = fn ({rules,...} : table) => rules
 	val describeActions =
-	   fn ({action,...} : table) => 
+	   fn ({action,...} : table) =>
 	           fn (STATE s) => action sub s
 	val describeGoto =
 	   fn ({goto,...} : table) =>

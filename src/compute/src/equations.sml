@@ -104,8 +104,8 @@ in
 fun inst_rw (th,monitoring,{Rule=RW{thm,rhs,...}, Inst=(bds,tysub)}) =
   let val tirhs = inst_type_dterm (tysub,rhs)
       val tithm = INST_TYPE tysub thm
-      val (spec_thm,venv) = Array.foldl inst_one_var (tithm,[]) bds 
-      val _ = if monitoring 
+      val (spec_thm,venv) = Array.foldl inst_one_var (tithm,[]) bds
+      val _ = if monitoring
                then (Hol_pp.print_term(concl spec_thm); print"\n")
                else ()
   in
@@ -121,13 +121,13 @@ val stoppers = ref NONE : (term -> bool) option ref;
  *---------------------------------------------------------------------------*)
 
 fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
-      (let val _ = (case !stoppers 
+      (let val _ = (case !stoppers
                      of NONE => ()
                       | SOME p => if p Head then raise No_match else ())
-           val (_,tytheta) = match_term Hcst Head 
+           val (_,tytheta) = match_term Hcst Head
                                  handle HOL_ERR _ => raise No_match
                val rule_inst = try_rwn tytheta Args rls
-               val mon = case !monitoring 
+               val mon = case !monitoring
                           of NONE => false
                            | SOME f => f Head
                val insted = inst_rw(th,mon,rule_inst)

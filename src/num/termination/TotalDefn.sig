@@ -33,7 +33,7 @@ sig
    val xDefine     : string -> term quotation -> thm
    val Define      : term quotation -> thm
    val multiDefine : term quotation -> thm list
-   datatype phase 
+   datatype phase
         = PARSE of term quotation
         | BUILD of term
         | TERMINATION of defn

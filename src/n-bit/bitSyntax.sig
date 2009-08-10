@@ -24,10 +24,10 @@ sig
   val n2s_tm         : term
   val bitwise_tm     : term
 
-  val num_from_bin_string_tm : term  
-  val num_from_oct_string_tm : term  
-  val num_from_dec_string_tm : term  
-  val num_from_hex_string_tm : term  
+  val num_from_bin_string_tm : term
+  val num_from_oct_string_tm : term
+  val num_from_dec_string_tm : term
+  val num_from_hex_string_tm : term
   val num_from_bin_list_tm   : term
   val num_from_oct_list_tm   : term
   val num_from_dec_list_tm   : term
@@ -62,10 +62,10 @@ sig
   val mk_n2s         : term * term * term -> term
   val mk_bitwise     : term * term * term * term -> term
 
-  val mk_num_from_bin_string : term -> term 
-  val mk_num_from_oct_string : term -> term 
-  val mk_num_from_dec_string : term -> term 
-  val mk_num_from_hex_string : term -> term 
+  val mk_num_from_bin_string : term -> term
+  val mk_num_from_oct_string : term -> term
+  val mk_num_from_dec_string : term -> term
+  val mk_num_from_hex_string : term -> term
   val mk_num_from_bin_list   : term -> term
   val mk_num_from_oct_list   : term -> term
   val mk_num_from_dec_list   : term -> term
@@ -100,10 +100,10 @@ sig
   val dest_n2s         : term -> term * term * term
   val dest_bitwise     : term -> term * term * term * term
 
-  val dest_num_from_bin_string : term -> term 
-  val dest_num_from_oct_string : term -> term 
-  val dest_num_from_dec_string : term -> term 
-  val dest_num_from_hex_string : term -> term 
+  val dest_num_from_bin_string : term -> term
+  val dest_num_from_oct_string : term -> term
+  val dest_num_from_dec_string : term -> term
+  val dest_num_from_hex_string : term -> term
   val dest_num_from_bin_list   : term -> term
   val dest_num_from_oct_list   : term -> term
   val dest_num_from_dec_list   : term -> term
@@ -138,10 +138,10 @@ sig
   val is_n2s         : term -> bool
   val is_bitwise     : term -> bool
 
-  val is_num_from_bin_string : term -> bool 
-  val is_num_from_oct_string : term -> bool 
-  val is_num_from_dec_string : term -> bool 
-  val is_num_from_hex_string : term -> bool 
+  val is_num_from_bin_string : term -> bool
+  val is_num_from_oct_string : term -> bool
+  val is_num_from_dec_string : term -> bool
+  val is_num_from_hex_string : term -> bool
   val is_num_from_bin_list   : term -> bool
   val is_num_from_oct_list   : term -> bool
   val is_num_from_dec_list   : term -> bool

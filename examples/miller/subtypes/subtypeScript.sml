@@ -123,7 +123,7 @@ val K_SUBSET = store_thm
    RW_TAC std_ss [K_DEF, SUBSET_DEF, IN_UNIV]
    ++ RW_TAC std_ss [SPECIFICATION]
    ++ PROVE_TAC []);
-  
+
 val SUBSET_K = store_thm
   ("SUBSET_K",
    ``!x y. x SUBSET K y = (x SUBSET EMPTY) \/ y``,

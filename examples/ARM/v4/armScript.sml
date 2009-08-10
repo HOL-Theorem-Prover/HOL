@@ -895,7 +895,7 @@ val OUT_ARM_def = Define`
     let mode = DECODE_MODE m in
       if (state.exception = software) /\ CONDITION_PASSED nzcv ireg then
         let ic = DECODE_ARM ireg in
-           <| transfers := 
+           <| transfers :=
                (case ic of
                    ldr_str   -> OUTL (LDR_STR r (CARRY nzcv) mode ireg NONE)
                 || ldrh_strh -> OUTL (LDRH_STRH r mode ireg NONE)

@@ -254,7 +254,7 @@ fun compute_cst_arg_map (fv,impargs) strm =
   end
 ;
 
-fun export_param_theory () = let 
+fun export_param_theory () = let
   val _ = Theory.scrub()
   val defs = rev (map fst (definitions"-"))
   val thms = rev (map fst (theorems"-"))
@@ -266,14 +266,14 @@ fun export_param_theory () = let
       (S ppstrm ",";
        NL ppstrm;
        S ppstrm "    ")
-  val adj = { 
-    sig_ps = 
+  val adj = {
+    sig_ps =
       SOME (fn ppstrm =>
     	       (S ppstrm "val IMPORT : abstraction.inst_infos ->"; NL ppstrm;
 	        S ppstrm "  { ";
 	        pr_list_sep (sig_line ppstrm) (sep ppstrm) (defs@thms);
 	        S ppstrm " }"; NL ppstrm)),
-    struct_ps = 
+    struct_ps =
       SOME (fn ppstrm =>
 	       (functor_header ppstrm;
 	        compute_cst_arg_map (!fv_ass, !impl_param_cstr) ppstrm;

@@ -34,7 +34,7 @@ quietdec := false;
 
 (*---------------------------------------------------------------------------*)
 (* Boilerplate needed for compilation                                        *)
-(*---------------------------------------------------------------------------*) 
+(*---------------------------------------------------------------------------*)
 open HolKernel (* Parse boolLib bossLib compileTheory compile;*)
 
 (*---------------------------------------------------------------------------*)
@@ -65,23 +65,23 @@ val _ = addTerminationTheorems wordsTheory.WORD_PRED_THM;
 
 fun hwDefine2 defq =
  let val absyn0 = Parse.Absyn defq
- in 
+ in
    case absyn0
     of Absyn.APP(_,Absyn.APP(_,Absyn.IDENT(loc,"measuring"),def),f) =>
         let val (deftm,names) = Defn.parse_absyn def
             val hdeqn = hd (boolSyntax.strip_conj deftm)
             val (l,r) = boolSyntax.dest_eq hdeqn
-            val domty = pairSyntax.list_mk_prod 
+            val domty = pairSyntax.list_mk_prod
                           (map type_of (snd (boolSyntax.strip_comb l)))
             val fty = Pretype.fromType (domty --> numSyntax.num)
-            val typedf = Parse.absyn_to_term 
+            val typedf = Parse.absyn_to_term
                              (Parse.term_grammar())
                              (Absyn.TYPED(loc,f,fty))
             val defn = Defn.mk_defn (hd names) deftm
             val tac = EXISTS_TAC (numSyntax.mk_cmeasure typedf)
             THEN CONJ_TAC
-                       THENL [TotalDefn.WF_TAC, 
-                              TotalDefn.TC_SIMP_TAC 
+                       THENL [TotalDefn.WF_TAC,
+                              TotalDefn.TC_SIMP_TAC
                               THEN (PROVE_TAC (!terminationTheorems))]
             val (defth,ind) = Defn.tprove(defn, tac)
             val (lt,rt) = boolSyntax.dest_eq(concl defth)
@@ -95,29 +95,29 @@ fun hwDefine2 defq =
                      RW_TAC std_ss [TOTAL_def,pairTheory.FORALL_PROD]
                       THEN EXISTS_TAC typedf
                       THEN TotalDefn.TC_SIMP_TAC
-                      THEN (PROVE_TAC (!terminationTheorems))) 
+                      THEN (PROVE_TAC (!terminationTheorems)))
             val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
                                  (RecCompileConvert defth totalth)
         in
-         hwDefineLib2 := (defth,ind,devth,RecConvert defth totalth,totalth) 
+         hwDefineLib2 := (defth,ind,devth,RecConvert defth totalth,totalth)
                         :: !hwDefineLib2;
          (defth,ind,devth,RecConvert defth totalth,totalth)
         end
-     | otherwise => 
+     | otherwise =>
         let val defth = SPEC_ALL(Define defq)
             val _ =
-             if occurs_in 
-                 (fst(strip_comb(lhs(concl defth)))) 
+             if occurs_in
+                 (fst(strip_comb(lhs(concl defth))))
                  (rhs(concl defth))
-              then (print "definition of "; 
+              then (print "definition of ";
                     print (fst(dest_const(fst(strip_comb(lhs(concl defth))))));
                     print " is recusive; must have a measure";
                     raise ERR "hwDefine2" "recursive definition without a measure")
               else ()
             val conv = Convert defth
             val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] (Compile conv)
-        in 
-         hwDefineLib2 := (defth,boolTheory.TRUTH,devth,conv,boolTheory.TRUTH) :: 
+        in
+         hwDefineLib2 := (defth,boolTheory.TRUTH,devth,conv,boolTheory.TRUTH) ::
                         !hwDefineLib2;
          (defth,boolTheory.TRUTH,devth,conv,boolTheory.TRUTH)
         end
@@ -138,7 +138,7 @@ fun CompileExp2 tm =
                     raise ERR "CompileExp2" "attempt to compile non-function")
               else ()
      val (opr,args) = dest_exp tm
-                      handle HOL_ERR _ 
+                      handle HOL_ERR _
                       => raise ERR "CompileExp2" "bad expression"
  in
   if null args orelse is_combinational tm
@@ -149,7 +149,7 @@ fun CompileExp2 tm =
                     val th2 = CompileExp2(hd(tl args))
                 in
                 if is_atm th1 andalso is_atm th2 then
-                   ISPEC ``DEV (Seq ^ (get_function th1) ^ (get_function th2))`` 
+                   ISPEC ``DEV (Seq ^ (get_function th1) ^ (get_function th2))``
                    DEV_IMP_REFL
                 else if (is_atm th1) andalso not(is_atm th2) then
                    MATCH_MP (ISPEC (get_function th1) PRECEDE_DEV) th2
@@ -162,7 +162,7 @@ fun CompileExp2 tm =
                     val th2 = CompileExp2(hd(tl args))
                 in
                 if is_atm th1 andalso is_atm th2 then
-                   ISPEC ``DEV (Par ^ (get_function th1) ^ (get_function th2))`` 
+                   ISPEC ``DEV (Par ^ (get_function th1) ^ (get_function th2))``
                    DEV_IMP_REFL
                 else
                    MATCH_MP PAR_INTRO (CONJ th1 th2)
@@ -173,7 +173,7 @@ fun CompileExp2 tm =
                 in
                 if is_atm th1 andalso is_atm th2 andalso is_atm th3 then
                    ISPEC ``DEV (Ite ^ (get_function th1) ^ (get_function th2)
-                                    ^ (get_function th3))`` 
+                                    ^ (get_function th3))``
                    DEV_IMP_REFL
                 else
                    MATCH_MP ITE_INTRO (LIST_CONJ [th1,th2,th3])
@@ -209,7 +209,7 @@ fun CompileProg2 prog tm =
 (* Compile2 (|- f args = bdy) = CompileProg [|- f args = bdy] ``f``          *)
 (*---------------------------------------------------------------------------*)
 fun Compile2 th =
- let val (func,_) = 
+ let val (func,_) =
       dest_eq(concl(SPEC_ALL th))
       handle HOL_ERR _ => raise ERR "Compile2" "not an equation"
      val _ = if not(is_const func)
@@ -227,7 +227,7 @@ fun Compile2 th =
 (* Seq, Par, Ite, and Rec followed by inline expansions                      *)
 (* See the example at the end of the file.                                   *)
 (*---------------------------------------------------------------------------*)
-fun convertTotal defths totalth = 
+fun convertTotal defths totalth =
     let val (f1,f2f3) = (dest_pair o snd o dest_comb o concl) totalth
         val (f2,f3) = dest_pair f2f3
 
@@ -259,25 +259,25 @@ fun inlineCompile maintm defths totalths =
            val mainth = REFINE (DEPTHR ATM_REFINE)
               (Compile2 ((CONV_RULE (REWRITE_CONV (Let::auxdefths))) maindef))
        in prove(concl mainth,
-                METIS_TAC ((DISCH_ALL mainth) :: 
+                METIS_TAC ((DISCH_ALL mainth) ::
                            (totalths @ (map (convertTotal (Let::defths)) totalths))))
        end;
 
 
 
 (*---------------------------------------------------------------------------
-  Example:                              
+  Example:
 
-  load "vsynth";open vsynth;                                    
-                                                                   
+  load "vsynth";open vsynth;
 
-  val (MULT_def,_,_,MULT_c,MULT_t) = hwDefine2                      
+
+  val (MULT_def,_,_,MULT_c,MULT_t) = hwDefine2
       `(MULT(n:num,m:num,acc) = if n=0 then acc else MULT(n-1,m,m+acc))
-       measuring FST`;                                               
-                                                                     
-  val (FACT_def,_,_,FACT_c,FACT_t) = hwDefine2                      
-      `(FACT(n,acc) = if n=0 then acc else FACT(n-1,MULT(n,acc,0)))  
-       measuring FST`;                                               
+       measuring FST`;
+
+  val (FACT_def,_,_,FACT_c,FACT_t) = hwDefine2
+      `(FACT(n,acc) = if n=0 then acc else FACT(n-1,MULT(n,acc,0)))
+       measuring FST`;
 
    (* Example of convertTotal *)
    convertTotal [MULT_c] FACT_t;

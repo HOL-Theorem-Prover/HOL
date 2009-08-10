@@ -174,7 +174,7 @@ val SEQUENCE_DEFINE_ALT = store_thm
    ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
    ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
    ++ RW_TAC std_ss [SCONS_EQ, SHD_SCONS, STL_SCONS]);
-   
+
 local
   val th =  prove
     (``?s. !h t x. s h t x = scons (h x) (s h t (t x))``,
@@ -196,5 +196,5 @@ val STL_SITER = store_thm
    RW_TAC std_ss []
    ++ CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [siter_def]))
    ++ RW_TAC std_ss [STL_SCONS]);
- 
+
 val _ = export_theory ();

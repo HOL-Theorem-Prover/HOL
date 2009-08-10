@@ -4,7 +4,7 @@
 (* maintained, see the Manager structure.                                    *)
 (*---------------------------------------------------------------------------*)
 
-structure proofManagerLib :> proofManagerLib = 
+structure proofManagerLib :> proofManagerLib =
 struct
 
 open HolKernel Abbrev;
@@ -20,11 +20,11 @@ val the_proofs = ref (Manager.initial_proofs());
 fun proofs() = !the_proofs;
 fun top_proof() = Manager.current_proof(proofs());
 
-fun set_goal g = 
+fun set_goal g =
    (the_proofs := Manager.add (Manager.set_goal g) (proofs());
     proofs());
 
-fun set_goaltree g = 
+fun set_goaltree g =
    (the_proofs := Manager.add (Manager.new_goaltree g) (proofs());
     proofs());
 
@@ -35,41 +35,41 @@ fun add g = (say"Adding new proof..\n";
              the_proofs := Manager.add g (proofs());
              proofs());
 
-fun backup () = 
+fun backup () =
    (the_proofs := Manager.hd_opr Manager.backup (proofs());
     top_proof());
 
 val b = backup;
 
-fun set_backup i = 
+fun set_backup i =
   (the_proofs := Manager.hd_opr (Manager.set_backup i) (proofs()));
 
-fun restart() = 
+fun restart() =
    (the_proofs := Manager.hd_opr Manager.restart (proofs());
     top_proof());
 
 local fun primdrop() = (the_proofs := Manager.drop (proofs()));
-in 
+in
 fun drop() = (primdrop(); say"OK..\n"; proofs())
         handle Manager.NO_PROOFS => proofs()
 fun dropn i =
-   if i<1 then (say"OK..\n"; proofs()) else (primdrop(); dropn (i-1)) 
+   if i<1 then (say"OK..\n"; proofs()) else (primdrop(); dropn (i-1))
    handle Manager.NO_PROOFS => proofs()
 end;
 
-fun expandf tac = 
+fun expandf tac =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expandf tac) (proofs());
     top_proof())
   handle e => Raise e;
 
-fun expand tac = 
+fun expand tac =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expand tac) (proofs());
     top_proof())
   handle e => Raise e;
 
-fun expandv (s,tac) = 
+fun expandv (s,tac) =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expandv (s,tac)) (proofs());
     top_proof())
@@ -84,20 +84,20 @@ val top_goal     = Manager.hd_proj Manager.top_goal o proofs;
 val top_goals    = Manager.hd_proj Manager.top_goals o proofs;
 
 fun p () = Manager.hd_proj I (proofs())
-        handle Manager.NO_PROOFS => 
-         (say "No goalstack is currently being managed.\n"; 
+        handle Manager.NO_PROOFS =>
+         (say "No goalstack is currently being managed.\n";
           raise mk_HOL_ERR "proofManagerLib" "p" "")
 
 val status = proofs;
 
-fun rotate i = 
+fun rotate i =
   (the_proofs := Manager.hd_opr (Manager.rotate i) (proofs());
    top_proof());
 
 val r = rotate;
 
-fun rotate_proofs i = 
-   (the_proofs := Manager.rotate_proofs i (proofs()); 
+fun rotate_proofs i =
+   (the_proofs := Manager.rotate_proofs i (proofs());
     proofs());
 
 val R = rotate_proofs;

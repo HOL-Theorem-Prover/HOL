@@ -43,7 +43,7 @@ sig
   val new_infix     : string * hol_type * int -> unit
   val new_binder    : string * hol_type -> unit
 
-  datatype lambda 
+  datatype lambda
      = VAR   of string * hol_type
      | CONST of {Name:string, Thy:string, Ty:hol_type}
      | COMB  of term * term

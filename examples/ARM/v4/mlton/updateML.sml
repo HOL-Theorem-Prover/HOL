@@ -6,7 +6,7 @@ struct
          formats_size UnsignedWord UnsignedHalfWord SignedHalfWord
          UnsignedByte SignedByte * / div mod + - ^ @ <> > < >= <= := o
          before;
-  
+
   open numML fcpML wordsML;
   type mem = (word30, word32) Redblackmap.dict
   val mem_updates = ref ([]: word30 list)
@@ -17,17 +17,17 @@ struct
        | UnsignedHalfWord
        | UnsignedWord
   fun formats_size x = ZERO
-    
+
   datatype data = Byte of word8 | Half of word16 | Word of word32
   fun data_size (Byte(a)) = ONE
     | data_size (Half(a)) = ONE
     | data_size (Word(a)) = ONE
-    
+
   fun |: a l =
         fn m => fn b =>
         if word_ls a b andalso < (- (w2n b) (w2n a)) (listML.LENGTH l)
           then listML.EL (- (w2n b) (w2n a)) l else m b
-    
+
   fun fromNum32 n =
         wordsML.fromNum(numML.fromHexString n, fcpML.ITSELF(numML.fromInt 32))
 
@@ -53,11 +53,11 @@ struct
   val empty_memory = (Redblackmap.mkDict word_compare):mem
 
   fun mem_items m = Redblackmap.listItems m
-    
+
   fun addr30 addr =
         word_extract_itself (fcpML.ITSELF (numML.fromDecString"30"))
           (fromString"31") TWO addr
-    
+
   fun GET_HALF oareg data =
         if word_index oareg ONE
           then word_extract_itself
@@ -66,7 +66,7 @@ struct
           else word_extract_itself
                  (fcpML.ITSELF (numML.fromDecString"16"))
                  (fromString"15") ZERO data
-    
+
   fun GET_BYTE oareg data =
         case
           word_eq oareg
@@ -97,7 +97,7 @@ struct
                              word_extract_itself
                                (fcpML.ITSELF (numML.fromDecString"8"))
                                (fromString"31") (fromString"24") data))
-    
+
   fun FORMAT fmt oareg data =
         case fmt
          of SignedByte =>
@@ -114,7 +114,7 @@ struct
                  (GET_HALF oareg data)
           | UnsignedWord =>
                word_ror data ( *  (fromString"8") (w2n oareg))
-    
+
   fun SET_BYTE oareg b w =
         word_modify (fn i => fn x =>
           < i (fromString"8")
@@ -147,7 +147,7 @@ struct
                       "3"
                       ),(fcpML.ITSELF (numML.fromDecString"2"))))
                then word_index b (- i (fromString"24")) else x)))) w
-    
+
   fun SET_HALF oareg hw w =
         word_modify (fn i => fn x =>
           < i (fromString"16")
@@ -157,7 +157,7 @@ struct
           (<= (fromString"16") i andalso < i (fromString"32"))
           andalso
           (if oareg then word_index hw (- i (fromString"16")) else x)) w
-    
+
   fun MEM_WRITE_BYTE mem addr word =
         let val a30 = addr30 addr
         in
@@ -167,7 +167,7 @@ struct
                    (fcpML.ITSELF (numML.fromDecString"2")) ONE ZERO
                    addr) word (mem_read (mem,a30)))
         end
-    
+
   fun MEM_WRITE_HALF mem addr word =
         let val a30 = addr30 addr
         in
@@ -175,13 +175,13 @@ struct
              (SET_HALF (word_index addr ONE) word
                 (mem_read (mem,a30)))
         end
-    
+
   fun MEM_WRITE_WORD mem addr word = mem_write mem (addr30 addr) word
-    
+
   fun MEM_WRITE mem addr d =
         case d
          of Byte(b) => MEM_WRITE_BYTE mem addr b
           | Half(hw) => MEM_WRITE_HALF mem addr hw
           | Word(w) => MEM_WRITE_WORD mem addr w
-    
+
 end

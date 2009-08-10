@@ -25,7 +25,7 @@ val transform : ('a -> 'b) -> 'a intmap -> 'b intmap
 
 end
 
-(* 
+(*
    ['a intmap] is the type of applicative maps from int to 'a.
 
    [empty] creates a new empty map.

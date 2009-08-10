@@ -4,7 +4,7 @@ open wordsTheory wordsLib bitTheory arithmeticTheory fcpTheory pred_setTheory;
 
 val _ = new_theory "address";
 
-infix \\ 
+infix \\
 val op \\ = op THEN;
 
 val RW = REWRITE_RULE;
@@ -26,7 +26,7 @@ val SING_SET_def = Define `SING_SET x = {x}`;
 
 val word_mod_def = Define `
   word_mod (v:'a word) (w:'a word) = n2w (w2n v MOD w2n w):'a word`;
-  
+
 
 (* theorems *)
 
@@ -51,7 +51,7 @@ val ADDR32_eq_0 = store_thm("ADDR32_eq_0",
   ``!x. (1 >< 0) (ADDR32 x) = 0w:word2``,
   SRW_TAC [ARITH_ss, WORD_EXTRACT_ss] [ADDR32_def]);
 
-val ADDR32_n2w = store_thm ("ADDR32_n2w", 
+val ADDR32_n2w = store_thm ("ADDR32_n2w",
   ``!n. (ADDR32 (n2w n)  = n2w (4 * n))``,
   SIMP_TAC (std_ss++WORD_MUL_LSL_ss) [GSYM word_mul_n2w, ADDR32_def]
     \\ SRW_TAC [WORD_BIT_EQ_ss] [n2w_def]);
@@ -62,7 +62,7 @@ val n2w_and_1 = store_thm("n2w_and_1",
     \\ SRW_TAC [WORD_BIT_EQ_ss, BIT_ss] [n2w_def]
     \\ Cases_on `i = 0`
     \\ SRW_TAC [ARITH_ss] [BIT_def, BITS_ZERO, BITS_COMP_THM2]);
-  
+
 val n2w_and_3 = store_thm("n2w_and_3",
   ``!n. (n2w n) && 3w = n2w (n MOD 4):'a word``,
   SIMP_TAC std_ss [(SIMP_RULE std_ss [] o GSYM o Q.SPEC `1`) BITS_ZERO3]
@@ -81,7 +81,7 @@ val ALIGNED_MULT = store_thm("ALIGNED_MULT",
   ``!x y. ALIGNED x ==> ALIGNED (x + 4w * y)``,
   Cases_word \\ Cases_word
   \\ REWRITE_TAC [word_add_n2w,word_mul_n2w,ALIGNED_def,n2w_and_3]
-  \\ ONCE_REWRITE_TAC [ADD_COMM] \\ ONCE_REWRITE_TAC [MULT_COMM] 
+  \\ ONCE_REWRITE_TAC [ADD_COMM] \\ ONCE_REWRITE_TAC [MULT_COMM]
   \\ SIMP_TAC std_ss [MOD_TIMES]);
 
 val ADDR32_and_3w = store_thm("ADDR32_and_3w",
@@ -104,17 +104,17 @@ val ADDR30_ADDR32_ADD = store_thm("ADDR30_ADDR32_ADD",
   \\ SIMP_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]);
 
 val ADDR30_ADDR32_LEMMA = prove(
-  ``!a. (ADDR30 (ADDR32 a + 0w) = a) /\ 
-        (ADDR30 (ADDR32 a + 1w) = a) /\ 
-        (ADDR30 (ADDR32 a + 2w) = a) /\ 
+  ``!a. (ADDR30 (ADDR32 a + 0w) = a) /\
+        (ADDR30 (ADDR32 a + 1w) = a) /\
+        (ADDR30 (ADDR32 a + 2w) = a) /\
         (ADDR30 (ADDR32 a + 3w) = a)``,
   SIMP_TAC std_ss [ADDR30_ADDR32_ADD,ADDR30_n2w,WORD_ADD_0]);
 
 val ADDR30_ADDR32 = store_thm("ADDR30_ADDR32",
   ``!x. (ADDR30 (ADDR32 x) = x) /\
-        (ADDR30 (ADDR32 x + 0w) = x) /\ 
-        (ADDR30 (ADDR32 x + 1w) = x) /\ 
-        (ADDR30 (ADDR32 x + 2w) = x) /\ 
+        (ADDR30 (ADDR32 x + 0w) = x) /\
+        (ADDR30 (ADDR32 x + 1w) = x) /\
+        (ADDR30 (ADDR32 x + 2w) = x) /\
         (ADDR30 (ADDR32 x + 3w) = x)``,
   REWRITE_TAC
     [REWRITE_RULE [WORD_ADD_0] ADDR30_ADDR32_LEMMA,ADDR30_ADDR32_LEMMA]);
@@ -130,22 +130,22 @@ val add32_ADDR30 = store_thm("ADDR32_ADDR30",
   REPEAT STRIP_TAC \\ IMP_RES_TAC EXISTS_ADDR30
     \\ ASM_REWRITE_TAC [ADDR30_ADDR32]);
 
-val ADDR32_ADD = store_thm ("ADDR32_ADD", 
+val ADDR32_ADD = store_thm ("ADDR32_ADD",
   ``!v w. (ADDR32 (v + w)  = ADDR32 v + ADDR32 w)``,
   Cases_word \\ Cases_word
   \\ REWRITE_TAC [ADDR32_n2w,word_add_n2w,LEFT_ADD_DISTRIB]);
 
 val ADDR32_NEG = store_thm("ADDR32_NEG",
   ``!w. ADDR32 (- w) = - (ADDR32 w)``,
-  wordsLib.Cases_word \\ REWRITE_TAC [ADDR32_n2w] 
+  wordsLib.Cases_word \\ REWRITE_TAC [ADDR32_n2w]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_2comp_n2w]
   \\ `(4 * n) < 4294967296` by DECIDE_TAC
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_2comp_n2w,ADDR32_n2w,LEFT_SUB_DISTRIB]);
-    
-val ADDR32_SUB = store_thm ("ADDR32_SUB", 
+
+val ADDR32_SUB = store_thm ("ADDR32_SUB",
   ``!v w. (ADDR32 (v - w)  = ADDR32 v - ADDR32 w)``,
   REWRITE_TAC [word_sub_def,ADDR32_ADD,ADDR32_NEG]);
-  
+
 val ADDR32_SUC = store_thm("ADDR32_SUC",
   ``!p. ADDR32 (p + 1w) = ADDR32 p + 4w``,
   SIMP_TAC std_ss [ADDR32_ADD,ADDR32_n2w]);
@@ -154,17 +154,17 @@ val ADDR30_ADD = store_thm("ADDR30_ADD",
   ``!x m. ADDR30 x + n2w m = ADDR30 (x + n2w (4 * m))``,
   Cases_word \\ REWRITE_TAC [ADDR30_n2w,word_add_n2w]
   \\ ONCE_REWRITE_TAC [ADD_COMM]
-  \\ SIMP_TAC std_ss [GSYM ADD_DIV_ADD_DIV,AC MULT_COMM MULT_ASSOC]);  
+  \\ SIMP_TAC std_ss [GSYM ADD_DIV_ADD_DIV,AC MULT_COMM MULT_ASSOC]);
 
 val ADD_LSL = save_thm("ADD_LSL", WORD_ADD_LSL);
 
 val ADDR32_11 = store_thm("ADDR32_11",
-  ``!a b. ((ADDR32 a = ADDR32 b) = (a = b)) /\ 
-          ((ADDR32 a = ADDR32 b + 0w) = (a = b)) /\ 
-          ((ADDR32 a + 0w = ADDR32 b) = (a = b)) /\ 
-          ((ADDR32 a + 0w = ADDR32 b + 0w) = (a = b)) /\ 
-          ((ADDR32 a + 1w = ADDR32 b + 1w) = (a = b)) /\ 
-          ((ADDR32 a + 2w = ADDR32 b + 2w) = (a = b)) /\ 
+  ``!a b. ((ADDR32 a = ADDR32 b) = (a = b)) /\
+          ((ADDR32 a = ADDR32 b + 0w) = (a = b)) /\
+          ((ADDR32 a + 0w = ADDR32 b) = (a = b)) /\
+          ((ADDR32 a + 0w = ADDR32 b + 0w) = (a = b)) /\
+          ((ADDR32 a + 1w = ADDR32 b + 1w) = (a = b)) /\
+          ((ADDR32 a + 2w = ADDR32 b + 2w) = (a = b)) /\
           ((ADDR32 a + 3w = ADDR32 b + 3w) = (a = b))``,
   SRW_TAC [] [WORD_EQ_ADD_RCANCEL,
     simpLib.SIMP_PROVE (std_ss++WORD_BIT_EQ_ss) [ADDR32_def]
@@ -181,28 +181,28 @@ val lem = Q.prove(
   SRW_TAC [WORD_BIT_EQ_ss] [ADDR32_def]);
 
 val ADDR32_NEQ_ADDR32 = store_thm("ADDR32_NEQ_ADDR32",
-  ``!a b. ~(ADDR32 a + 0w = ADDR32 b + 1w) /\ 
-          ~(ADDR32 a + 0w = ADDR32 b + 2w) /\ 
-          ~(ADDR32 a + 0w = ADDR32 b + 3w) /\ 
-          ~(ADDR32 a + 1w = ADDR32 b + 2w) /\ 
-          ~(ADDR32 a + 1w = ADDR32 b + 3w) /\ 
+  ``!a b. ~(ADDR32 a + 0w = ADDR32 b + 1w) /\
+          ~(ADDR32 a + 0w = ADDR32 b + 2w) /\
+          ~(ADDR32 a + 0w = ADDR32 b + 3w) /\
+          ~(ADDR32 a + 1w = ADDR32 b + 2w) /\
+          ~(ADDR32 a + 1w = ADDR32 b + 3w) /\
           ~(ADDR32 a + 2w = ADDR32 b + 3w) /\
-          ~(ADDR32 a + 1w = ADDR32 b + 0w) /\ 
-          ~(ADDR32 a + 2w = ADDR32 b + 0w) /\ 
-          ~(ADDR32 a + 3w = ADDR32 b + 0w) /\ 
-          ~(ADDR32 a + 2w = ADDR32 b + 1w) /\ 
-          ~(ADDR32 a + 3w = ADDR32 b + 1w) /\ 
-          ~(ADDR32 a + 3w = ADDR32 b + 2w) /\ 
-          ~(ADDR32 a + 1w = ADDR32 b) /\ 
-          ~(ADDR32 a + 2w = ADDR32 b) /\ 
+          ~(ADDR32 a + 1w = ADDR32 b + 0w) /\
+          ~(ADDR32 a + 2w = ADDR32 b + 0w) /\
+          ~(ADDR32 a + 3w = ADDR32 b + 0w) /\
+          ~(ADDR32 a + 2w = ADDR32 b + 1w) /\
+          ~(ADDR32 a + 3w = ADDR32 b + 1w) /\
+          ~(ADDR32 a + 3w = ADDR32 b + 2w) /\
+          ~(ADDR32 a + 1w = ADDR32 b) /\
+          ~(ADDR32 a + 2w = ADDR32 b) /\
           ~(ADDR32 a + 3w = ADDR32 b) /\
-          ~(ADDR32 a = ADDR32 b + 1w) /\ 
-          ~(ADDR32 a = ADDR32 b + 2w) /\ 
-          ~(ADDR32 a = ADDR32 b + 3w)``, 
+          ~(ADDR32 a = ADDR32 b + 1w) /\
+          ~(ADDR32 a = ADDR32 b + 2w) /\
+          ~(ADDR32 a = ADDR32 b + 3w)``,
   SRW_TAC [] [lem, WORD_ADD_OR] \\ SRW_TAC [WORD_BIT_EQ_ss] [ADDR32_def]);
 
 val EXISTS_ADDR32 = store_thm("EXISTS_ADDR32",
-  ``!p. ?a. (p = ADDR32 a + 0w) \/ (p = ADDR32 a + 1w) \/ 
+  ``!p. ?a. (p = ADDR32 a + 0w) \/ (p = ADDR32 a + 1w) \/
             (p = ADDR32 a + 2w) \/ (p = ADDR32 a + 3w)``,
   STRIP_TAC \\ Q.EXISTS_TAC `(31 >< 2) p`
     \\ SRW_TAC [] [lem, WORD_ADD_OR]
@@ -210,11 +210,11 @@ val EXISTS_ADDR32 = store_thm("EXISTS_ADDR32",
     \\ DECIDE_TAC);
 
 val ADDR32_ABSORB_CONST = store_thm("ADDR32_ABSORB_CONST",
-  ``(ADDR32 x + 0w  = ADDR32 x) /\ 
-    (ADDR32 x + 4w  = ADDR32 (x + 1w)) /\ 
-    (ADDR32 x + 8w  = ADDR32 (x + 2w)) /\ 
-    (ADDR32 x + 12w = ADDR32 (x + 3w)) /\ 
-    (ADDR32 x + 16w = ADDR32 (x + 4w)) /\ 
+  ``(ADDR32 x + 0w  = ADDR32 x) /\
+    (ADDR32 x + 4w  = ADDR32 (x + 1w)) /\
+    (ADDR32 x + 8w  = ADDR32 (x + 2w)) /\
+    (ADDR32 x + 12w = ADDR32 (x + 3w)) /\
+    (ADDR32 x + 16w = ADDR32 (x + 4w)) /\
     (ADDR32 x + 20w = ADDR32 (x + 5w)) /\
     (ADDR32 x + 24w = ADDR32 (x + 6w)) /\
     (ADDR32 x + 28w = ADDR32 (x + 7w)) /\
@@ -222,16 +222,16 @@ val ADDR32_ABSORB_CONST = store_thm("ADDR32_ABSORB_CONST",
     (ADDR32 x + 36w = ADDR32 (x + 9w)) /\
     (ADDR32 x + 40w = ADDR32 (x + 10w)) /\
     (ADDR32 x - 0w  = ADDR32 (x - 0w)) /\
-    (ADDR32 x - 4w  = ADDR32 (x - 1w)) /\ 
-    (ADDR32 x - 8w  = ADDR32 (x - 2w)) /\ 
-    (ADDR32 x - 12w = ADDR32 (x - 3w)) /\ 
-    (ADDR32 x - 16w = ADDR32 (x - 4w)) /\ 
+    (ADDR32 x - 4w  = ADDR32 (x - 1w)) /\
+    (ADDR32 x - 8w  = ADDR32 (x - 2w)) /\
+    (ADDR32 x - 12w = ADDR32 (x - 3w)) /\
+    (ADDR32 x - 16w = ADDR32 (x - 4w)) /\
     (ADDR32 x - 20w = ADDR32 (x - 5w)) /\
     (ADDR32 x - 24w = ADDR32 (x - 6w)) /\
     (ADDR32 x - 28w = ADDR32 (x - 7w)) /\
     (ADDR32 x - 32w = ADDR32 (x - 8w)) /\
     (ADDR32 x - 36w = ADDR32 (x - 9w)) /\
-    (ADDR32 x - 40w = ADDR32 (x - 10w))``,    
+    (ADDR32 x - 40w = ADDR32 (x - 10w))``,
   SIMP_TAC std_ss [ADDR32_ADD,ADDR32_SUB,ADDR32_n2w,WORD_ADD_0]);
 
 val ADDRESS_ROTATE = store_thm("ADDRESS_ROTATE",
@@ -255,8 +255,8 @@ val ALIGNED_THM = store_thm("ALIGNED_THM",
 val ALIGNED_NEG_lemma = prove(
   ``!x. ALIGNED x ==> ALIGNED (- x)``,
   ASM_SIMP_TAC std_ss  [ALIGNED_THM,w2n_n2w,LESS_MOD]
-  \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `n2w (2**30) - k` 
-  \\ ASM_SIMP_TAC (std_ss++WORD_ARITH_EQ_ss) [WORD_RIGHT_SUB_DISTRIB]            
+  \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `n2w (2**30) - k`
+  \\ ASM_SIMP_TAC (std_ss++WORD_ARITH_EQ_ss) [WORD_RIGHT_SUB_DISTRIB]
   \\ ASM_SIMP_TAC (std_ss++WORD_ss) []);
 
 val ALIGNED_NEG = store_thm("ALIGNED_NEG",
@@ -264,7 +264,7 @@ val ALIGNED_NEG = store_thm("ALIGNED_NEG",
   METIS_TAC [ALIGNED_NEG_lemma,WORD_NEG_NEG]);
 
 val ALIGNED_and_1 = store_thm("ALIGNED_and_1",
-  ``!x. ALIGNED x ==> (x && 1w = 0w)``,        
+  ``!x. ALIGNED x ==> (x && 1w = 0w)``,
   REWRITE_TAC [ALIGNED_THM] \\ NTAC 2 STRIP_TAC
   \\ ASM_REWRITE_TAC [] \\ POP_ASSUM (fn th => ALL_TAC)
   \\ Q.SPEC_TAC (`k`,`k`) \\ Cases
@@ -273,7 +273,7 @@ val ALIGNED_and_1 = store_thm("ALIGNED_and_1",
   \\ SIMP_TAC (std_ss++SIZES_ss) [MOD_EQ_0]);
 
 val ALIGNED_add_1_and_1 = store_thm("ALIGNED_add_1_and_1",
-  ``!x. ALIGNED x ==> ~(x + 1w && 1w = 0w)``,        
+  ``!x. ALIGNED x ==> ~(x + 1w && 1w = 0w)``,
   REWRITE_TAC [ALIGNED_THM] \\ NTAC 2 STRIP_TAC
   \\ ASM_REWRITE_TAC [] \\ POP_ASSUM (fn th => ALL_TAC)
   \\ Q.SPEC_TAC (`k`,`k`) \\ Cases
@@ -281,7 +281,7 @@ val ALIGNED_add_1_and_1 = store_thm("ALIGNED_add_1_and_1",
   \\ REWRITE_TAC [GSYM (EVAL ``2*2``),MULT_ASSOC]
   \\ SIMP_TAC (std_ss++SIZES_ss) [MOD_TIMES]);
 
-val tac = 
+val tac =
   REWRITE_TAC [ALIGNED_THM] \\ NTAC 2 STRIP_TAC
   \\ ASM_REWRITE_TAC [] \\ POP_ASSUM (fn th => ALL_TAC)
   \\ Q.SPEC_TAC (`k`,`k`) \\ Cases
@@ -299,7 +299,7 @@ val ALIGNED_ADD = store_thm("ALIGNED_ADD",
   ``!x y. ALIGNED x /\ ALIGNED y ==> ALIGNED (x + y)``,
   REWRITE_TAC [ALIGNED_THM] \\ REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [GSYM WORD_RIGHT_ADD_DISTRIB] \\ METIS_TAC []);
-  
+
 val word_arith_lemma1 = store_thm("word_arith_lemma1",
   ``!n m. (n2w n + n2w m = n2w (n + m):'a word) /\
           (x + n2w n + n2w m = x + n2w (n + m):'a word) /\
@@ -312,16 +312,16 @@ val word_arith_lemma2 = store_thm("word_arith_lemma2",
   REPEAT STRIP_TAC \\ Cases_on `n < m` \\ ASM_REWRITE_TAC []
   \\ FULL_SIMP_TAC bool_ss [NOT_LESS,LESS_EQ]
   \\ FULL_SIMP_TAC bool_ss [LESS_EQ_EXISTS,ADD1,DECIDE ``n+1+p-n = 1+p:num``]
-  \\ REWRITE_TAC [GSYM word_add_n2w,WORD_SUB_PLUS,WORD_SUB_REFL] 
-  \\ REWRITE_TAC [GSYM WORD_SUB_PLUS] 
+  \\ REWRITE_TAC [GSYM word_add_n2w,WORD_SUB_PLUS,WORD_SUB_REFL]
+  \\ REWRITE_TAC [GSYM WORD_SUB_PLUS]
   \\ REWRITE_TAC [word_sub_def,WORD_ADD_0,DECIDE ``m+p-m=p:num``]
   \\ REWRITE_TAC [GSYM WORD_ADD_ASSOC] \\ ONCE_REWRITE_TAC [WORD_ADD_COMM]
   \\ REWRITE_TAC [GSYM word_sub_def,WORD_SUB_ADD]);
-  
+
 val word_arith_lemma3 = store_thm("word_arith_lemma3",
   ``!x n m. x - n2w m + n2w n :'a word = if n < m then x - (n2w (m-n)) else x + n2w (n-m)``,
   REWRITE_TAC [word_sub_def,GSYM WORD_ADD_ASSOC]
-  \\ REWRITE_TAC [GSYM (RW1 [WORD_ADD_COMM] word_sub_def),word_arith_lemma2] 
+  \\ REWRITE_TAC [GSYM (RW1 [WORD_ADD_COMM] word_sub_def),word_arith_lemma2]
   \\ REPEAT STRIP_TAC \\ Cases_on `n<m` \\ ASM_REWRITE_TAC []);
 
 val word_arith_lemma4 = store_thm("word_arith_lemma4",
@@ -331,7 +331,7 @@ val word_arith_lemma4 = store_thm("word_arith_lemma4",
   \\ REPEAT STRIP_TAC \\ Cases_on `n<m` \\ ASM_REWRITE_TAC [word_sub_def]);
 
 val word_arith_lemma5 = store_thm("word_arith_lemma5",
-  ``!x y m n. (x + n2w n = y + n2w m) = 
+  ``!x y m n. (x + n2w n = y + n2w m) =
               if n < m then (x = y + n2w m - n2w n) else (x + n2w n - n2w m = y)``,
   ONCE_REWRITE_TAC [GSYM WORD_EQ_SUB_ZERO]
   \\ SIMP_TAC std_ss [WORD_SUB_PLUS,WORD_SUB_SUB]
@@ -340,14 +340,14 @@ val word_arith_lemma5 = store_thm("word_arith_lemma5",
 val ADDR32_ADD_EQ_ZERO_LEMMA = prove(
   ``!x m. 0 < m /\ w2n x + m < dimword (:'a) ==> ~((x:'a word) + n2w m = 0w)``,
   Cases_word
-  \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD,word_add_n2w,n2w_11,ZERO_LT_dimword] 
+  \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD,word_add_n2w,n2w_11,ZERO_LT_dimword]
   \\ DECIDE_TAC);
 
 val ADDR32_ADD_EQ_ZERO = store_thm("ADDR32_ADD_EQ_ZERO",
   ``!x. ~(ADDR32 x + 1w = 0w) /\ ~(ADDR32 x + 2w = 0w) /\ ~(ADDR32 x + 3w = 0w)``,
-  Cases_word \\ REWRITE_TAC [ADDR32_n2w] \\ REPEAT STRIP_TAC \\ POP_ASSUM MP_TAC 
+  Cases_word \\ REWRITE_TAC [ADDR32_n2w] \\ REPEAT STRIP_TAC \\ POP_ASSUM MP_TAC
   \\ REWRITE_TAC [] \\ MATCH_MP_TAC ADDR32_ADD_EQ_ZERO_LEMMA
-  \\ `4 * n < 4 * dimword (:30)` by DECIDE_TAC       
+  \\ `4 * n < 4 * dimword (:30)` by DECIDE_TAC
   \\ FULL_SIMP_TAC (bool_ss++SIZES_ss) [w2n_n2w,LESS_MOD,EVAL ``4 * 1073741824``]
   \\ DECIDE_TAC);
 
@@ -355,7 +355,7 @@ val word_add_and_3w = store_thm("word_add_and_3w",
   ``!w. (w + n2w n) && 3w = (w + n2w (n MOD 4)) && 3w``,
   Cases_word \\ SIMP_TAC std_ss [n2w_and_3,word_add_n2w]
   \\ `n = n DIV 4 * 4 + n MOD 4` by METIS_TAC [DIVISION,EVAL ``0<4``]
-  \\ ONCE_ASM_REWRITE_TAC []  
+  \\ ONCE_ASM_REWRITE_TAC []
   \\ ONCE_REWRITE_TAC [DECIDE ``m + (k + l) = k + (m + l:num)``]
   \\ SIMP_TAC std_ss [MOD_TIMES]);
 
@@ -363,29 +363,29 @@ val ALIGNED_CLAUSES = store_thm("ALIGNED_CLAUSES",
   ``!x a. (ALIGNED (a + 4w * x) = ALIGNED a) /\ (ALIGNED (4w * x + a) = ALIGNED a) /\
           (ALIGNED (a + x * 4w) = ALIGNED a) /\ (ALIGNED (x * 4w + a) = ALIGNED a) /\
           (ALIGNED (a + 4w) = ALIGNED a) /\ (ALIGNED (4w + a) = ALIGNED a)``,
-  Cases_word \\ SIMP_TAC std_ss [ALIGNED_def,word_mul_n2w] 
-  \\ ONCE_REWRITE_TAC [word_add_and_3w] \\ ONCE_REWRITE_TAC [WORD_ADD_COMM] 
-  \\ ONCE_REWRITE_TAC [word_add_and_3w] 
-  \\ SIMP_TAC std_ss [MOD_EQ_0,RW1 [MULT_COMM] MOD_EQ_0,WORD_ADD_0]);    
+  Cases_word \\ SIMP_TAC std_ss [ALIGNED_def,word_mul_n2w]
+  \\ ONCE_REWRITE_TAC [word_add_and_3w] \\ ONCE_REWRITE_TAC [WORD_ADD_COMM]
+  \\ ONCE_REWRITE_TAC [word_add_and_3w]
+  \\ SIMP_TAC std_ss [MOD_EQ_0,RW1 [MULT_COMM] MOD_EQ_0,WORD_ADD_0]);
 
 val NOT_ALIGNED = store_thm("NOT_ALIGNED",
   ``!a. ALIGNED a ==> ~(ALIGNED (a + 1w)) /\  ~(ALIGNED (a + 2w)) /\ ~(ALIGNED (a + 3w))``,
-  Cases_word \\ SIMP_TAC std_ss [ALIGNED_n2w,word_add_n2w] 
+  Cases_word \\ SIMP_TAC std_ss [ALIGNED_n2w,word_add_n2w]
   \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0<4``)]
   \\ STRIP_TAC \\ ASM_REWRITE_TAC [ADD] \\ EVAL_TAC);
 
 val word32_add_n2w = store_thm("word32_add_n2w",
-  ``!x n. x + (n2w n):word32 = 
+  ``!x n. x + (n2w n):word32 =
           if n < 2**31 then x + n2w n else x - n2w (2**32 - n MOD 2**32)``,
   Cases_word \\ STRIP_TAC
   \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) [word_sub_def,word_2comp_n2w]
   \\ Cases_on `n' < 2147483648` \\ ASM_REWRITE_TAC []
-  \\ `n' MOD 4294967296 < 4294967296` by METIS_TAC [arithmeticTheory.DIVISION,EVAL ``0 < 4294967296``]    
+  \\ `n' MOD 4294967296 < 4294967296` by METIS_TAC [arithmeticTheory.DIVISION,EVAL ``0 < 4294967296``]
   \\ Cases_on `n' MOD 4294967296 = 0` THENL [
     ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) []
     \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
     \\ ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [],
-    `(4294967296 - n' MOD 4294967296) < 4294967296` by DECIDE_TAC    
+    `(4294967296 - n' MOD 4294967296) < 4294967296` by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss []
     \\ `4294967296 - (4294967296 - n' MOD 4294967296) = n' MOD 4294967296` by DECIDE_TAC
     \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
@@ -398,24 +398,24 @@ val MOD_EQ_0_IMP = prove(
 val ALIGNED_BITS = store_thm("ALIGNED_BITS",
   ``!x. ALIGNED x = ~(x ' 0) /\ ~(x ' 1)``,
   Cases_word \\ ONCE_REWRITE_TAC [word_index_n2w]
-  \\ Cases_on `n MOD 4 = 0` \\ ASM_SIMP_TAC std_ss []   
+  \\ Cases_on `n MOD 4 = 0` \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [ALIGNED_n2w,bitTheory.BIT_def] THENL [
     ASM_SIMP_TAC std_ss [bitTheory.BITS_THM2]
     \\ `0 < 4` by EVAL_TAC
     \\ IMP_RES_TAC MOD_EQ_0_IMP
-    \\ ASM_SIMP_TAC std_ss []    
+    \\ ASM_SIMP_TAC std_ss []
     \\ REWRITE_TAC [GSYM (EVAL ``2*2``),MULT_ASSOC]
     \\ SIMP_TAC std_ss [MOD_EQ_0],
     ASM_SIMP_TAC std_ss [bitTheory.BITS_THM,GSYM bitTheory.NOT_MOD2_LEM]
     \\ Cases_on `n MOD 2 = 0` \\ ASM_SIMP_TAC std_ss []
-    \\ `0 < 2` by EVAL_TAC \\ `?k. n = k * 2` by METIS_TAC [MOD_EQ_0_IMP] 
+    \\ `0 < 2` by EVAL_TAC \\ `?k. n = k * 2` by METIS_TAC [MOD_EQ_0_IMP]
     \\ FULL_SIMP_TAC std_ss [MOD_EQ_0_IMP,MULT_DIV]
     \\ FULL_SIMP_TAC bool_ss [GSYM (EVAL ``2*2``),MULT_ASSOC]
     \\ FULL_SIMP_TAC bool_ss [GSYM (EVAL ``SUC 1``),MULT_SUC_EQ]]);
 
 val ALIGNED_OR = store_thm("ALIGNED_OR",
   ``!x y. ALIGNED (x !! y) = ALIGNED x /\ ALIGNED y``,
-  SIMP_TAC (std_ss++SIZES_ss) [ALIGNED_BITS,word_or_def,fcpTheory.FCP_BETA]  
+  SIMP_TAC (std_ss++SIZES_ss) [ALIGNED_BITS,word_or_def,fcpTheory.FCP_BETA]
   \\ METIS_TAC []);
 
 val ADDR32_LESS_EQ = store_thm("ADDR32_LESS_EQ",
@@ -438,14 +438,14 @@ val ALIGNED_LESS_ADD = store_thm("ALIGNED_LESS_ADD",
   \\ IMP_RES_TAC (RW [GSYM ALIGNED_def] EXISTS_ADDR30)
   \\ FULL_SIMP_TAC std_ss [GSYM ADDR32_SUC,
        ADDR32_LESS,GSYM (EVAL ``ADDR32 0w``),ADDR32_11]
-  \\ Q.PAT_ASSUM `~(y + 1w = 0w)` MP_TAC 
+  \\ Q.PAT_ASSUM `~(y + 1w = 0w)` MP_TAC
   \\ REPEAT (POP_ASSUM (K ALL_TAC))
   \\ Q.SPEC_TAC (`y`,`y`) \\ Cases_word
   \\ ASM_SIMP_TAC std_ss [word_add_n2w,n2w_11,ZERO_LT_dimword,WORD_LO,w2n_n2w]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [MOD_EQ_0_IMP]
-  \\ REPEAT STRIP_TAC  
+  \\ REPEAT STRIP_TAC
   \\ `~(n + 1 = 1 * 1073741824)` by METIS_TAC []
-  \\ FULL_SIMP_TAC std_ss []  
+  \\ FULL_SIMP_TAC std_ss []
   \\ `n + 1 < 1073741824` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC);
 
@@ -469,20 +469,20 @@ val ALIGNED_ADD_EQ = store_thm("ALIGNED_ADD_EQ",
                         (ALIGNED (x - y) = ALIGNED y) /\
                         (ALIGNED (y + x) = ALIGNED y) /\
                         (ALIGNED (y - x) = ALIGNED y)``,
-  REWRITE_TAC [word_sub_def]  
+  REWRITE_TAC [word_sub_def]
   \\ SIMP_TAC std_ss [ALIGNED_ADD_EQ_LEMMA,ALIGNED_NEG]
   \\ ONCE_REWRITE_TAC [WORD_ADD_COMM]
   \\ SIMP_TAC std_ss [ALIGNED_ADD_EQ_LEMMA,ALIGNED_NEG]);
 
 val ALIGNED_MOD_4 = store_thm("ALIGNED_MOD_4",
-  ``!a n. (ALIGNED (a + n2w n) = ALIGNED (a + n2w (n MOD 4))) /\ 
+  ``!a n. (ALIGNED (a + n2w n) = ALIGNED (a + n2w (n MOD 4))) /\
           (ALIGNED (a - n2w n) = ALIGNED (a - n2w (n MOD 4)))``,
   NTAC 2 STRIP_TAC
   \\ STRIP_ASSUME_TAC (Q.SPEC `n` (MATCH_MP DA (DECIDE ``0 < 4``)))
   \\ ASM_SIMP_TAC std_ss [MOD_MULT]
-  \\ ONCE_REWRITE_TAC [ADD_COMM] \\ ONCE_REWRITE_TAC [MULT_COMM]    
+  \\ ONCE_REWRITE_TAC [ADD_COMM] \\ ONCE_REWRITE_TAC [MULT_COMM]
   \\ SIMP_TAC std_ss [GSYM word_add_n2w,WORD_SUB_PLUS,GSYM word_mul_n2w,
-       WORD_ADD_ASSOC,ALIGNED_CLAUSES]  
+       WORD_ADD_ASSOC,ALIGNED_CLAUSES]
   \\ REWRITE_TAC [word_sub_def]
   \\ ONCE_REWRITE_TAC [RW1[WORD_MULT_COMM]WORD_NEG_MUL]
   \\ REWRITE_TAC [GSYM WORD_MULT_ASSOC,ALIGNED_CLAUSES]);
@@ -503,9 +503,9 @@ val ALIGNED_INTRO = store_thm("ALIGNED_INTRO",
   \\ REWRITE_TAC [ALIGNED_def] \\ METIS_TAC [WORD_AND_COMM]);
 
 val BIT_LEMMA = prove(
-  ``!x. (NUMERAL (BIT2 (BIT1 x)) = 4 * (x + 1)) /\ 
-        (NUMERAL (BIT2 (BIT2 x)) = 4 * (x + 1) + 2) /\ 
-        (NUMERAL (BIT1 (BIT2 x)) = 4 * (x + 1) + 1) /\ 
+  ``!x. (NUMERAL (BIT2 (BIT1 x)) = 4 * (x + 1)) /\
+        (NUMERAL (BIT2 (BIT2 x)) = 4 * (x + 1) + 2) /\
+        (NUMERAL (BIT1 (BIT2 x)) = 4 * (x + 1) + 1) /\
         (NUMERAL (BIT1 (BIT1 x)) = 4 * x + 3)``,
   REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
@@ -519,24 +519,24 @@ val ALIGNED_SUB_CLAUSES = prove(
   \\ SIMP_TAC std_ss [WORD_NEG_SUB, word_sub_def, ALIGNED_CLAUSES]);
 
 val ALIGNED = store_thm("ALIGNED",
-  ``!a x. 
-      (ALIGNED 0w = T) /\ 
-      (ALIGNED (n2w (NUMERAL (BIT2 (BIT1 x)))) = T) /\ 
-      (ALIGNED (n2w (NUMERAL (BIT1 (BIT2 x)))) = F) /\ 
-      (ALIGNED (n2w (NUMERAL (BIT2 (BIT2 x)))) = F) /\ 
+  ``!a x.
+      (ALIGNED 0w = T) /\
+      (ALIGNED (n2w (NUMERAL (BIT2 (BIT1 x)))) = T) /\
+      (ALIGNED (n2w (NUMERAL (BIT1 (BIT2 x)))) = F) /\
+      (ALIGNED (n2w (NUMERAL (BIT2 (BIT2 x)))) = F) /\
       (ALIGNED (n2w (NUMERAL (BIT1 (BIT1 (BIT1 x))))) = F) /\
       (ALIGNED (n2w (NUMERAL (BIT1 (BIT1 (BIT2 x))))) = F) /\
-      (ALIGNED (a + 0w) = ALIGNED a) /\ 
-      (ALIGNED (a + n2w (NUMERAL (BIT2 (BIT1 x)))) = ALIGNED a) /\ 
-      (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT2 x)))) = ALIGNED (a + 1w)) /\ 
-      (ALIGNED (a + n2w (NUMERAL (BIT2 (BIT2 x)))) = ALIGNED (a + 2w)) /\ 
+      (ALIGNED (a + 0w) = ALIGNED a) /\
+      (ALIGNED (a + n2w (NUMERAL (BIT2 (BIT1 x)))) = ALIGNED a) /\
+      (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT2 x)))) = ALIGNED (a + 1w)) /\
+      (ALIGNED (a + n2w (NUMERAL (BIT2 (BIT2 x)))) = ALIGNED (a + 2w)) /\
       (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT1 (BIT1 x))))) = ALIGNED (a + 3w)) /\
       (ALIGNED (a + n2w (NUMERAL (BIT1 (BIT1 (BIT2 x))))) = ALIGNED (a + 3w)) /\
-      (ALIGNED (a - 0w) = ALIGNED a) /\ 
-      (ALIGNED (a - n2w (NUMERAL (BIT2 (BIT1 x)))) = ALIGNED a) /\ 
-      (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT2 x)))) = ALIGNED (a - 1w)) /\ 
-      (ALIGNED (a - n2w (NUMERAL (BIT2 (BIT2 x)))) = ALIGNED (a - 2w)) /\ 
-      (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT1 (BIT1 x))))) = ALIGNED (a - 3w)) /\ 
+      (ALIGNED (a - 0w) = ALIGNED a) /\
+      (ALIGNED (a - n2w (NUMERAL (BIT2 (BIT1 x)))) = ALIGNED a) /\
+      (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT2 x)))) = ALIGNED (a - 1w)) /\
+      (ALIGNED (a - n2w (NUMERAL (BIT2 (BIT2 x)))) = ALIGNED (a - 2w)) /\
+      (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT1 (BIT1 x))))) = ALIGNED (a - 3w)) /\
       (ALIGNED (a - n2w (NUMERAL (BIT1 (BIT1 (BIT2 x))))) = ALIGNED (a - 3w))``,
   PURE_ONCE_REWRITE_TAC [BIT_LEMMA] \\ ONCE_REWRITE_TAC [ADD_COMM]
   \\ SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_SUB_PLUS,
@@ -587,27 +587,27 @@ val word_LSL_n2w = store_thm("word_LSL_n2w",
   SIMP_TAC std_ss [AC MULT_ASSOC MULT_COMM,WORD_MUL_LSL,word_mul_n2w]);
 
 val WORD_EQ_ADD_CANCEL = store_thm("WORD_EQ_ADD_CANCEL",
-  ``!v w x. ((v + w = x + w) = (v = x)) /\ ((w + v = x + w) = (v = x)) /\ 
-            ((v + w = w + x) = (v = x)) /\ ((w + v = w + x) = (v = x)) /\ 
-            ((w = x + w) = (x = 0w)) /\ ((v + w = w) = (v = 0w)) /\ 
+  ``!v w x. ((v + w = x + w) = (v = x)) /\ ((w + v = x + w) = (v = x)) /\
+            ((v + w = w + x) = (v = x)) /\ ((w + v = w + x) = (v = x)) /\
+            ((w = x + w) = (x = 0w)) /\ ((v + w = w) = (v = 0w)) /\
             ((w = w + x) = (x = 0w)) /\ ((w + v = w) = (v = 0w: 'a word))``,
-  METIS_TAC [WORD_ADD_0,WORD_ADD_COMM,WORD_EQ_ADD_LCANCEL]); 
+  METIS_TAC [WORD_ADD_0,WORD_ADD_COMM,WORD_EQ_ADD_LCANCEL]);
 
 val NOT_IF = store_thm("NOT_IF",
   ``!b x y:'a. (if ~b then x else y) = if b then y else x``,
   Cases THEN REWRITE_TAC []);
 
 val IF_IF = store_thm("IF_IF",
-  ``!b c x y:'a. 
-      ((if b then (if c then x else y) else y) = if b /\  c then x else y) /\ 
-      ((if b then (if c then y else x) else y) = if b /\ ~c then x else y) /\ 
-      ((if b then x else (if c then x else y)) = if b \/  c then x else y) /\ 
+  ``!b c x y:'a.
+      ((if b then (if c then x else y) else y) = if b /\  c then x else y) /\
+      ((if b then (if c then y else x) else y) = if b /\ ~c then x else y) /\
+      ((if b then x else (if c then x else y)) = if b \/  c then x else y) /\
       ((if b then x else (if c then y else x)) = if b \/ ~c then x else y)``,
   Cases THEN Cases THEN REWRITE_TAC []);
 
 val SING_SET_INTRO = store_thm("SING_SET_INTRO",
   ``!x:'a s. x INSERT s = SING_SET x UNION s``,
-  REWRITE_TAC [INSERT_UNION_EQ,UNION_EMPTY,SING_SET_def]);  
+  REWRITE_TAC [INSERT_UNION_EQ,UNION_EMPTY,SING_SET_def]);
 
 val UNION_CANCEL = store_thm("UNION_CANCEL",
   ``!x s:'a set. x UNION (x UNION s) = x UNION s``,
@@ -632,9 +632,9 @@ val extract_byte = store_thm("extract_byte",
   \\ SIMP_TAC (std_ss++SIZES_ss) [wordsTheory.word_extract_n2w,
        wordsTheory.w2w_def,bitTheory.BITS_THM,
        wordsTheory.w2n_n2w,wordsTheory.n2w_11]
-  \\ REWRITE_TAC [GSYM (EVAL ``256 * 16777216``)] 
+  \\ REWRITE_TAC [GSYM (EVAL ``256 * 16777216``)]
   \\ SIMP_TAC bool_ss [arithmeticTheory.MOD_MULT_MOD,EVAL ``0 < 256``,
-       EVAL ``0 < 16777216``]);  
+       EVAL ``0 < 16777216``]);
 
 val WORD_TIMES2 = store_thm("WORD_TIMES2",
   ``!w:'a word. 2w * w = w + w``,
@@ -642,10 +642,10 @@ val WORD_TIMES2 = store_thm("WORD_TIMES2",
   THEN REWRITE_TAC [word_add_n2w,word_mul_n2w,arithmeticTheory.TIMES2]);
 
 val WORD_SUB_INTRO = store_thm("WORD_SUB_INTRO",
-  ``!x y:'a word. 
-     ((- y) + x = x - y) /\ 
+  ``!x y:'a word.
+     ((- y) + x = x - y) /\
      (x + (- y) = x - y) /\
-     ((-1w) * y + x = x - y) /\ 
+     ((-1w) * y + x = x - y) /\
      (y * (-1w) + x = x - y) /\
      (x + (-1w) * y = x - y) /\
      (x + y * (-1w) = x - y)``,
@@ -655,7 +655,7 @@ val WORD_DIVISION = store_thm("WORD_DIVISION",
   ``!w. w <> 0w ==> !v. (v = (v // w) * w + word_mod v w) /\ word_mod v w <+ w``,
   Cases_word \\ ASM_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword]
   \\ STRIP_TAC \\ Cases_word
-  \\ ASM_SIMP_TAC std_ss [word_mod_def,word_div_def,w2n_n2w]  
+  \\ ASM_SIMP_TAC std_ss [word_mod_def,word_div_def,w2n_n2w]
   \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w,WORD_LO,w2n_n2w]
   \\ FULL_SIMP_TAC bool_ss [NOT_ZERO_LT_ZERO]
   \\ IMP_RES_TAC (GSYM DIVISION)
@@ -670,14 +670,14 @@ val WORD_ADD_LEMMA = prove(
   \\ SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]);
 
 val WORD_ADD_FOLD = store_thm("WORD_ADD_FOLD",
-  ``!(x:'a word) n p. 
-      (x + n2w n * x = n2w (n + 1) * x) /\ 
-      (x + x * n2w n = n2w (n + 1) * x) /\ 
-      (n2w n * x + x = n2w (n + 1) * x) /\ 
+  ``!(x:'a word) n p.
+      (x + n2w n * x = n2w (n + 1) * x) /\
+      (x + x * n2w n = n2w (n + 1) * x) /\
       (n2w n * x + x = n2w (n + 1) * x) /\
-      (p + x + n2w n * x = p + n2w (n + 1) * x) /\ 
-      (p + x + x * n2w n = p + n2w (n + 1) * x) /\ 
-      (p + n2w n * x + x = p + n2w (n + 1) * x) /\ 
+      (n2w n * x + x = n2w (n + 1) * x) /\
+      (p + x + n2w n * x = p + n2w (n + 1) * x) /\
+      (p + x + x * n2w n = p + n2w (n + 1) * x) /\
+      (p + n2w n * x + x = p + n2w (n + 1) * x) /\
       (p + n2w n * x + x = p + n2w (n + 1) * x)``,
   REWRITE_TAC [GSYM WORD_ADD_LEMMA]
   \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,
@@ -688,7 +688,7 @@ val EXISTS_EQ_LEMMA = store_thm("EXISTS_EQ_LEMMA",
   METIS_TAC []);
 
 val w2w_eq_n2w = store_thm("w2w_eq_n2w",
-  ``!w:word8. (!m. m < 256 ==> ((w2w w = (n2w m):word32) = (w = n2w m))) /\ 
+  ``!w:word8. (!m. m < 256 ==> ((w2w w = (n2w m):word32) = (w = n2w m))) /\
               (w2w ((w2w w):word32) = w)``,
   Cases_word
   THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2w_def,w2n_n2w,n2w_11]

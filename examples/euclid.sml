@@ -18,8 +18,8 @@ open arithmeticTheory
 (* Divisibility.                                                             *)
 (*---------------------------------------------------------------------------*)
 
-val divides_def = 
- Define 
+val divides_def =
+ Define
   `divides a b = ?x. b = a * x`;
 
 set_fixity "divides" (Infixr 450);
@@ -28,8 +28,8 @@ set_fixity "divides" (Infixr 450);
 (* Primality.                                                                *)
 (*---------------------------------------------------------------------------*)
 
-val prime_def = 
- Define 
+val prime_def =
+ Define
    `prime p = ~(p=1) /\ !x. x divides p ==> (x=1) \/ (x=p)`;
 
 (*---------------------------------------------------------------------------*)
@@ -179,7 +179,7 @@ val PRIME_FACTOR = store_thm
    THEN RW_TAC arith_ss  []
    THEN Cases_on `prime n` THENL
    [METIS_TAC [DIVIDES_REFL],
-    `?x. x divides n /\ ~(x=1) /\ ~(x=n)` by METIS_TAC[prime_def] THEN 
+    `?x. x divides n /\ ~(x=1) /\ ~(x=n)` by METIS_TAC[prime_def] THEN
     METIS_TAC [LESS_OR_EQ, PRIME_2,
                DIVIDES_LE, DIVIDES_TRANS, DIVIDES_0]]);
 
@@ -190,7 +190,7 @@ val PRIME_FACTOR = store_thm
 
 val PRIME_FACTOR = prove
  (``!n. ~(n = 1) ==> ?p. prime p /\ p divides n``,
-  completeInduct_on `n` THEN 
+  completeInduct_on `n` THEN
   METIS_TAC [DIVIDES_REFL,prime_def,LESS_OR_EQ, PRIME_2,
              DIVIDES_LE, DIVIDES_TRANS, DIVIDES_0]);
 

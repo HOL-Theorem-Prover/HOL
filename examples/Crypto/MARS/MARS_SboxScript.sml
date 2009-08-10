@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib wordsLib;
 val _ = new_theory "MARS_Sbox";
 
 val Sbox_def = Define`
-  Sbox i = case i : word32 of 
+  Sbox i = case i : word32 of
      0x0w -> 0x9D0C479w  || 0x1w -> 0x28C8FFE0w || 0x2w -> 0x84AA6C39w
   || 0x3w -> 0x9DAD7287w || 0x4w -> 0x7DFF9BE3w || 0x5w -> 0xD4268361w
   || 0x6w -> 0xC96DA1D4w || 0x7w -> 0x7974CC93w || 0x8w -> 0x85D0582Ew
