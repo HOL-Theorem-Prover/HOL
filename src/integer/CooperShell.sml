@@ -130,7 +130,9 @@ in
   p6_recurse THENC PURE_REWRITE_CONV [F_or_r]
 end tm
 
+(*
 val phase6_CONV = Profile.profile "phase6" phase6_CONV
+*)
 
 fun vphase6_CONV tm = let
   (* as above, but works over the constraint attached to v, not the one
@@ -696,8 +698,10 @@ in
   end
 end tm
 
+(*
 val pure_goal0 = Profile.profile "pure_goal0" pure_goal0
 val finish_pure_goal = Profile.profile "finish_pure_goal" finish_pure_goal
+*)
 
 val pure_goal = pure_goal0 THENC EVERY_DISJ_CONV finish_pure_goal THENC
                 REDUCE_CONV
