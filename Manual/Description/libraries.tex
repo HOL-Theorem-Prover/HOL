@@ -2577,7 +2577,7 @@ states
 \]
 This rule should be read: ``When simplifying $P\Rightarrow Q$, first
 simplify $P$ to $P'$.  Then assume $P'$, and simplify $Q$ to $Q'$.
-Then the result is $P' \Rightarrow Q'$.
+Then the result is $P' \Rightarrow Q'$.''
 
 The rule for conditional expressions is
 \[
@@ -2860,6 +2860,73 @@ A theorem ``wrapped'' in the \ml{Once} function will only be applied
 once when the simplifier is applied to a given term.  A theorem
 wrapped in \ml{Ntimes} will be applied as many times as given in the
 integer parameter.
+
+\paragraph{Simplifying at particular sub-terms}
+\index{simplification!at particular sub-terms}
+We have already seen (Section~\ref{sec:simp-congruences} above) that
+the simplifier's congruence technology can be used to force the
+simplifier to ignore particular terms.  The example in the section
+above discussed how a congruence rule might be used to ensure that
+only the guards of conditional expressions should be simplified.
+
+In many proofs, it is common to want to rewrite only on one side or
+the other of a binary connective (often, this connective is an
+equality).  For example, this occurs when rewriting with equations
+from complicated recursive definitions that are not just structural
+recursions.  In such definitions, the left-hand side of the equation
+will have a function symbol attached to a sequence of variables, e.g.:
+\begin{hol}
+\begin{verbatim}
+   |- f x y = ... f (g x y) z ...
+\end{verbatim}
+\end{hol}
+Theorems of a similar shape are also returned as the ``cases''
+theorems from inductive definitions.
+
+Whatever their origin, such theorems are the classic example of
+something to which one would want to attach the \ml{Once} qualifier.
+However, this may not be enough:  one may wish to prove a result such
+as
+\begin{hol}
+\begin{verbatim}
+   f (constructor x) y = ... f (h x y) z ...
+\end{verbatim}
+\end{hol}
+(With relations, the goal may often feature an implication instead of
+an equality.)  In this situation, one often wants to expand just the
+instance of \holtxt{f} on the left, leaving the other occurrence
+alone.  Using \ml{Once} will expand only one of them, but without
+specifying which one is to be expanded.
+
+The solution to this problem is to use special congruence rules,
+constructed as special forms that can be passed as theorems like
+\ml{Once}.  The functions
+\begin{hol}
+\begin{verbatim}
+   SimpL : term -> thm
+   SimpR : term -> thm
+\end{verbatim}
+\end{hol}
+construct congruence rules to force rewriting to the left or right of
+particular terms.  For example, if \holtxt{opn} is a binary operator,
+\ml{SimpL~\holquote{(opn)}} returns \ml{Cong} applied to the theorem
+\begin{hol}
+\begin{verbatim}
+   |- (x = x') ==> (opn x y = opn x' y)
+\end{verbatim}
+\end{hol}
+\index{SimpLHS@\ml{SimpLHS}}\index{SimpRHS@\ml{SimpRHS}}
+Because the equality case is so common, the special values
+\ml{SimpLHS} and \ml{SimpRHS} are provided to force
+simplification on the left or right of an equality respectively.
+These are just defined to be applications of \ml{SimpL} and \ml{SimpR}
+to equality.
+
+Note that these rules apply throughout a term, not just to the
+uppermost occurrence of an operator.  Also, the topmost operator in
+the term need not be that of the congruence rule.  This behaviour is
+an automatic consequence of the implementation in terms of congruence
+rules.
 
 \subsubsection{Limiting simplification}
 \label{sec:limit-simpl}
