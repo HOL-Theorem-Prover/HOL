@@ -132,8 +132,8 @@ val is_head_redex_thm = store_thm(
                                           p0 is_head_redex t) /\
     (p is_head_redex (VAR v) = F)``,
   REPEAT CONJ_TAC THEN
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [is_head_redex_cases])) THEN
-  SRW_TAC [][LAM_eq_thm, EQ_IMP_THM] THENL [
+  SRW_TAC [][Once is_head_redex_cases, SimpLHS, LAM_eq_thm] THEN
+  SRW_TAC [][EQ_IMP_THM] THENL [
     PROVE_TAC [],
     PROVE_TAC [is_abs_thm, term_CASES],
     METIS_TAC [is_comb_thm, term_CASES]
@@ -1075,10 +1075,8 @@ val lemma11_4_5 = store_thm(
            SRW_TAC [][relationTheory.RTC_RULES, head_reduces_RTC_hreduce1],
            METIS_TAC [head_reduces_TRANS]
          ]) THEN
-  REPEAT GEN_TAC THEN
-  CONV_TAC (LAND_CONV
-              (SIMP_CONV (srw_ss()) [i1_reduces_def, head_reduce1_def])) THEN
-  STRIP_TAC THEN
+  SIMP_TAC (srw_ss()) [SimpL ``(==>)``, i1_reduces_def, head_reduce1_def] THEN
+  REPEAT STRIP_TAC THEN
   `?r0. r0 is_head_redex M`
       by (Q_TAC SUFF_TAC
                 `!s. okpath (labelled_redn beta) s /\ finite s ==>
@@ -2261,8 +2259,7 @@ val drop_not_stopped = prove(
 val drop_tail_commute = store_thm(
   "drop_tail_commute",
   ``!i p. SUC i IN PL p ==> (drop i (tail p) = tail (drop i p))``,
-  Induct THEN CONV_TAC (HO_REWR_CONV FORALL_path) THEN
-  SRW_TAC [][] THEN REWRITE_TAC [arithmeticTheory.ONE] THEN
+  Induct THEN SIMP_TAC (srw_ss()) [Once FORALL_path] THEN
   SRW_TAC [][]);
 
 val is_head_reduction_coind = store_thm(
@@ -2307,21 +2304,21 @@ val head_reduction_path_uexists = prove(
                                   (head_reduct M))`
                STRIP_ASSUME_TAC path_Axiom THEN
   `!M. first (g M) = M`
-      by (POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
-          GEN_TAC THEN Cases_on `head_reduct M` THEN SRW_TAC [][]) THEN
+      by (POP_ASSUM (fn th => SRW_TAC [][Once th]) THEN
+          Cases_on `head_reduct M` THEN SRW_TAC [][]) THEN
   `!M. is_head_reduction (g M)`
       by (Q_TAC SUFF_TAC
                 `!p. (?M. p = g M) ==> is_head_reduction p` THEN1
                 METIS_TAC [] THEN
           HO_MATCH_MP_TAC is_head_reduction_coind THEN
-          REPEAT GEN_TAC THEN
           Q.PAT_ASSUM `!x:term. g x = Z`
-                          (fn th => CONV_TAC (LAND_CONV
-                                                (ONCE_REWRITE_CONV [th]))) THEN
-          CONV_TAC LEFT_IMP_EXISTS_CONV THEN GEN_TAC THEN
-          Cases_on `head_reduct M` THEN SRW_TAC [][] THEN
+                          (fn th => SIMP_TAC (srw_ss())
+                                             [Once th, SimpL ``(==>)``]) THEN
+          REPEAT GEN_TAC THEN STRIP_TAC THEN
+          Cases_on `head_reduct M` THEN
           FULL_SIMP_TAC (srw_ss()) [head_reduct_SOME, head_reduce1_def] THEN
-          TRY SELECT_ELIM_TAC THEN METIS_TAC [is_head_redex_unique]) THEN
+          REPEAT VAR_EQ_TAC THEN SELECT_ELIM_TAC THEN
+          METIS_TAC [is_head_redex_unique]) THEN
   `!p. finite p ==> !M. (p = g M) ==> hnf (last p)`
       by (HO_MATCH_MP_TAC finite_path_ind THEN
           SIMP_TAC (srw_ss()) [] THEN CONJ_TAC THEN REPEAT GEN_TAC THENL [

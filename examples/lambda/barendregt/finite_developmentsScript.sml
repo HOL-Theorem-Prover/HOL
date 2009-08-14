@@ -312,8 +312,7 @@ val lemma11_2_1 = store_thm(
                       okpath (lrcc (beta0 RUNION beta1)) sigma') ==>
             okpath (labelled_redn beta) sigma` THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC okpath_co_ind THEN
-  SIMP_TAC (srw_ss()) [GSYM LEFT_FORALL_IMP_THM] THEN
-  CONV_TAC (LAST_FORALL_CONV (HO_REWR_CONV FORALL_path)) THEN
+  SRW_TAC [][Once EXISTS_path, SimpL ``(==>)``] THEN
   SRW_TAC [][] THEN PROVE_TAC [lrcc_labelled_redn]);
 
 val beta0_lsubstitutive = store_thm(
@@ -397,10 +396,9 @@ val lrcc_beta_lam = store_thm(
         ?pos0 N0.
             lrcc (beta0 RUNION beta1) t pos0 N0 /\
             (pos = In :: pos0) /\ (N = LAM v N0)``,
-  CONV_TAC (STRIP_QUANT_CONV (LAND_CONV (REWR_CONV lrcc_cases))) THEN
-  REPEAT GEN_TAC THEN EQ_TAC THEN
+  SRW_TAC [][Once lrcc_cases, SimpLHS] THEN
   SRW_TAC [][relationTheory.RUNION, beta0_def, beta1_def, lLAM_eq_thm,
-             ltpm_eqr] THEN
+             ltpm_eqr, EQ_IMP_THM] THEN
   FULL_SIMP_TAC (srw_ss()) [lrcc_b01_ltpm_eqn, ltpm_flip_args] THENL [
     MAP_EVERY IMP_RES_TAC [lrcc_lcc, lcc_beta_FV] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -470,8 +468,8 @@ val lift_path_exists = prove(
   STRIP_ASSUME_TAC lift_path0 THEN
   Q.EXISTS_TAC `\M' p. g (M', p)` THEN
   REPEAT STRIP_TAC THEN
-  POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN
-  SIMP_TAC (srw_ss()) [] );
+  POP_ASSUM (fn th => SIMP_TAC (srw_ss()) [SimpLHS, Once th]) THEN
+  SRW_TAC [][]);
 
 val lift_path_def = new_specification (
   "lift_path_def", ["lift_path"], lift_path_exists);
@@ -512,13 +510,8 @@ val strip_path_label_okpath = store_thm(
                       (p' = lift_path M' p)) ==>
               okpath (lrcc (beta0 RUNION beta1)) p'` THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC okpath_co_ind THEN
-  SIMP_TAC (srw_ss()) [GSYM LEFT_FORALL_IMP_THM] THEN
-  CONV_TAC (STRIP_QUANT_CONV
-              (LAND_CONV (ONCE_REWRITE_CONV [okpath_cases]))) THEN
-  SIMP_TAC (srw_ss()) [GSYM LEFT_FORALL_IMP_THM, DISJ_IMP_THM,
-                       RIGHT_AND_OVER_OR, FORALL_AND_THM,
-                       GSYM LEFT_EXISTS_AND_THM, lift_path_def,
-                       first_lift_path] THEN
+  SIMP_TAC (srw_ss()) [Once okpath_cases, SimpL ``(==>)``] THEN
+  SIMP_TAC (srw_ss() ++ DNF_ss) [lift_path_def, first_lift_path] THEN
   PROVE_TAC [lift_redn_def]);
 
 val lemma11_2_2 = store_thm(
@@ -550,13 +543,9 @@ val is_redex_occurrence_thm = store_thm(
     (!v t p. is_redex_occurrence p (LAM v t) =
                 (p = In :: TL p) /\ is_redex_occurrence (TL p) t)``,
   SIMP_TAC pureSimps.pure_ss [is_redex_occurrence_def] THEN
-  CONV_TAC
-    (EVERY_CONJ_CONV (STRIP_QUANT_CONV
-                        (LAND_CONV
-                           (STRIP_QUANT_CONV
-                              (REWR_CONV labelled_redn_cases))))) THEN
-  SRW_TAC [][is_redex_occurrence_def, beta_def] THEN
-  SRW_TAC [][EQ_IMP_THM] THENL [
+  REPEAT CONJ_TAC THEN
+  SRW_TAC [][SimpLHS, Once labelled_redn_cases] THEN
+  SRW_TAC [][beta_def, EQ_IMP_THM] THENL [
     PROVE_TAC [],
     PROVE_TAC [],
     PROVE_TAC [is_abs_thm, term_CASES],
@@ -1320,8 +1309,7 @@ val labelled_redn_lam = store_thm(
        labelled_redn beta (LAM v t) r y =
        ?t' r'. labelled_redn beta t r' t' /\ (y = LAM v t') /\ (r = In::r')``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [
-    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [labelled_redn_cases])) THEN
-    SRW_TAC [][beta_def] THEN
+    SRW_TAC [][beta_def, Once labelled_redn_cases, SimpL ``(==>)``] THEN
     FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, tpm_eqr, tpm_flip_args] THEN
     SRW_TAC [][] THEN
     FULL_SIMP_TAC (srw_ss()) [labelled_redn_beta_tpm_eqn] THEN
@@ -1331,6 +1319,12 @@ val labelled_redn_lam = store_thm(
     POP_ASSUM (Q.SPEC_THEN `v'` MP_TAC) THEN SRW_TAC [][],
     SRW_TAC [][] THEN SRW_TAC [][labelled_redn_rules]
   ]);
+
+val labelled_redn_var = store_thm(
+  "labelled_redn_var",
+  ``~labelled_redn beta (VAR s) r t``,
+  SRW_TAC [][Once labelled_redn_cases, beta_def]);
+val _ = export_rewrites ["labelled_redn_var"]
 
 val labelled_redn_vposn_sub = store_thm(
   "labelled_redn_vposn_sub",
@@ -1369,31 +1363,32 @@ val position_maps_exist = store_thm(
                      !n. n_posns n y' =
                          BIGUNION (IMAGE f (n_posns n x'))``,
   HO_MATCH_MP_TAC simple_induction THEN REPEAT CONJ_TAC THENL [
-    ONCE_REWRITE_TAC [labelled_redn_cases] THEN SRW_TAC [][beta_def],
-    REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
-    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [labelled_redn_cases])) THEN
-    SRW_TAC [][beta_def] THENL [
-      ONCE_REWRITE_TAC [lrcc_cases] THEN
-      SRW_TAC [][relationTheory.RUNION, beta0_def, beta1_def, DISJ_IMP_THM] THEN
-      CONV_TAC (REDEPTH_CONV
-                  (FIRST_CONV [FORALL_AND_CONV, LEFT_IMP_EXISTS_CONV,
-                               REWR_CONV IMP_CONJ_THM,
-                               RIGHT_IMP_FORALL_CONV])) THEN
-      SRW_TAC [][strip_label_thm, n_posns_sub] THEN
+    SRW_TAC [][],
+
+    MAP_EVERY Q.X_GEN_TAC [`M`, `N`] THEN STRIP_TAC THEN
+    SIMP_TAC (srw_ss())
+             [Once labelled_redn_cases, beta_def, SimpL ``(==>)``] THEN
+    SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
+    REPEAT CONJ_TAC THENL [
+      MAP_EVERY Q.X_GEN_TAC [`bv`, `body`] THEN SRW_TAC [][] THEN
+      SRW_TAC [][RUNION, beta0_def, beta1_def, DISJ_IMP_THM,
+                 Once lrcc_cases] THEN
+      SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
       CONV_TAC EXISTS_AND_REORDER_CONV THEN
-      REWRITE_TAC [CONJ_ASSOC] THEN CONJ_TAC THENL [
-        REPEAT STRIP_TAC THEN
-        SRW_TAC [][strip_label_subst] THEN
-        FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, fresh_tpm_subst, lemma15a],
-        ALL_TAC
-      ] THEN
+      CONJ_TAC THEN1
+        (SRW_TAC [][strip_label_subst] THEN
+         FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, fresh_tpm_subst, lemma15a]) THEN
+      SRW_TAC [][Once lrcc_cases, RUNION, beta0_def, beta1_def] THEN
+      SIMP_TAC (srw_ss() ++ DNF_ss) [n_posns_sub] THEN
+
       Q.EXISTS_TAC `\p. if p = [] then {}
                         else if (HD p = Lt) /\ (HD (TL p) = In) then
                           {TL (TL p)}
                         else IMAGE (\vp. APPEND vp (TL p))
-                                   (v_posns x'' body)` THEN
+                                   (v_posns bv body)` THEN
+      SRW_TAC [][] THEN
       REPEAT STRIP_TAC THEN
-      (`v_posns x'' body = lv_posns v t`
+      (`v_posns bv body = lv_posns v t`
            by FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, lv_posns_def] THEN
        POP_ASSUM SUBST_ALL_TAC THEN
        SRW_TAC [][n_posns_def, GSYM IMAGE_COMPOSE,
@@ -1406,24 +1401,20 @@ val position_maps_exist = store_thm(
           PROVE_TAC []
         ])),
 
+      MAP_EVERY Q.X_GEN_TAC [`M'`, `pos`] THEN STRIP_TAC THEN
       RES_TAC THEN
       REPEAT (Q.PAT_ASSUM `!r y. labelled_redn beta X r y ==> Q X r y`
                           (K ALL_TAC)) THEN
-      ONCE_REWRITE_TAC [lrcc_cases] THEN SRW_TAC [][] THEN
-      CONV_TAC (REDEPTH_CONV
-                  (FIRST_CONV [FORALL_AND_CONV, LEFT_IMP_EXISTS_CONV,
-                               REWR_CONV IMP_CONJ_THM, REWR_CONV DISJ_IMP_THM,
-                               RIGHT_IMP_FORALL_CONV])) THEN
-      SRW_TAC [][strip_label_thm, GSYM CONJ_ASSOC] THEN
-      CONV_TAC (EXISTS_AND_CONV THENC RAND_CONV EXISTS_AND_CONV) THEN
+      ONCE_REWRITE_TAC [lrcc_cases] THEN
+      SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
+      CONV_TAC EXISTS_AND_REORDER_CONV THEN
       REPEAT STRIP_TAC THENL [
         PROVE_TAC [],
         REPEAT VAR_EQ_TAC THEN
-        FULL_SIMP_TAC (srw_ss()) [strip_label_eq_lam,
-                                  GSYM LEFT_FORALL_IMP_THM] THEN
-        `lrcc (beta0 RUNION beta1) (LAM v x''') (In::r) (LAM v y)`
-          by PROVE_TAC [lrcc_rules] THEN
-        PROVE_TAC [strip_label_thm],
+        FULL_SIMP_TAC (srw_ss() ++ DNF_ss)
+                      [strip_label_eq_lam, labelled_redn_lam,
+                       lrcc_beta_lam] THEN
+        SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [],
         ALL_TAC
       ] THEN
       Q.EXISTS_TAC `\p. if p = [] then {[]}
@@ -1432,7 +1423,7 @@ val position_maps_exist = store_thm(
       SRW_TAC [][n_posns_def, GSYM IMAGE_COMPOSE,
                  BIGUNION_IMAGE_SING, combinTheory.o_DEF]
       THENL [
-        FIRST_X_ASSUM (Q.SPEC_THEN `x'''` (ASSUME_TAC o REWRITE_RULE [])) THEN
+        FIRST_X_ASSUM (Q.SPEC_THEN `x` (ASSUME_TAC o REWRITE_RULE [])) THEN
         RES_TAC THEN
         REWRITE_TAC [EXTENSION] THEN
         SRW_TAC [ETA_ss][GSYM LEFT_EXISTS_AND_THM,
@@ -1442,10 +1433,8 @@ val position_maps_exist = store_thm(
         ALL_TAC
       ] THEN
       FIRST_X_ASSUM
-        (Q.SPEC_THEN `LAM v x'''`
-                     (ASSUME_TAC o
-                      SIMP_RULE (srw_ss()) [strip_label_thm])) THEN
-      `lrcc (beta0 RUNION beta1) (LAM v x''') (In::r) (LAM v y)`
+        (Q.SPEC_THEN `LAM v x` (ASSUME_TAC o SIMP_RULE (srw_ss()) [])) THEN
+      `lrcc (beta0 RUNION beta1) (LAM v x) (In::r) (LAM v y)`
         by PROVE_TAC [lrcc_rules] THEN RES_TAC THEN
       POP_ASSUM MP_TAC THEN
       SIMP_TAC (srw_ss()) [n_posns_def] THEN
@@ -1455,16 +1444,11 @@ val position_maps_exist = store_thm(
                EQ_IMP_THM, FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
       PROVE_TAC [],
 
-      RES_TAC THEN
+      MAP_EVERY Q.X_GEN_TAC [`N'`,`pos`] THEN STRIP_TAC THEN RES_TAC THEN
       REPEAT (Q.PAT_ASSUM `!r y. labelled_redn beta X r y ==> Q X r y`
                           (K ALL_TAC)) THEN
       ONCE_REWRITE_TAC [lrcc_cases] THEN SRW_TAC [][] THEN
-      CONV_TAC (REDEPTH_CONV
-                  (FIRST_CONV [FORALL_AND_CONV, LEFT_IMP_EXISTS_CONV,
-                               REWR_CONV IMP_CONJ_THM, REWR_CONV DISJ_IMP_THM,
-                               RIGHT_IMP_FORALL_CONV])) THEN
-      SRW_TAC [][GSYM CONJ_ASSOC, strip_label_thm] THEN
-      CONV_TAC (EXISTS_AND_CONV THENC RAND_CONV EXISTS_AND_CONV) THEN
+      SRW_TAC [DNF_ss][] THEN CONV_TAC EXISTS_AND_REORDER_CONV THEN
       REPEAT STRIP_TAC THENL [
         PROVE_TAC [],
         PROVE_TAC [],
@@ -1475,7 +1459,7 @@ val position_maps_exist = store_thm(
                         else {p}` THEN
       SRW_TAC [][n_posns_def, GSYM IMAGE_COMPOSE,
                  BIGUNION_IMAGE_SING, combinTheory.o_DEF] THEN
-      FIRST_X_ASSUM (Q.SPEC_THEN `x'''` (ASSUME_TAC o REWRITE_RULE [])) THEN
+      FIRST_X_ASSUM (Q.SPEC_THEN `x` (ASSUME_TAC o REWRITE_RULE [])) THEN
       RES_TAC THEN
       REWRITE_TAC [EXTENSION] THEN
       SRW_TAC [ETA_ss][GSYM LEFT_EXISTS_AND_THM,
@@ -1483,7 +1467,7 @@ val position_maps_exist = store_thm(
                        EQ_IMP_THM] THEN PROVE_TAC []
     ],
 
-    REPEAT GEN_TAC THEN STRIP_TAC THEN
+    MAP_EVERY Q.X_GEN_TAC [`bv`, `body`] THEN
     SRW_TAC [][labelled_redn_lam] THEN RES_TAC THEN
     Q.PAT_ASSUM `!r y. labelled_redn beta X r y ==> Q X r y`
                 (K ALL_TAC) THEN
@@ -1704,7 +1688,7 @@ val term_development_thm = store_thm(
 val first_lift_path = store_thm(
   "first_lift_path",
   ``!p M. first (lift_path M p) = M``,
-  CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][lift_path_def]);
+  SIMP_TAC (srw_ss()) [Once FORALL_path, lift_path_def]);
 
 val lrcc_RUNION = store_thm(
   "lrcc_RUNION",
@@ -1736,25 +1720,34 @@ val lterm_INJECTIVITY_LEMMA1i = store_thm(
         (n1 = n2) /\ (u1 = u2) /\ (t2 = [VAR v2/v1] t1)``,
   SRW_TAC [][lLAMi_eq_thm] THEN SRW_TAC [][fresh_ltpm_subst, l15a]);
 
+val lrcc_lpermutative = store_thm(
+  "lrcc_lpermutative",
+  ``lpermutative R ==>
+    !M p N. lrcc R M p N ==> !pi. lrcc R (ltpm pi M) p (ltpm pi N)``,
+  STRIP_TAC THEN HO_MATCH_MP_TAC lrcc_ind THEN SRW_TAC [][] THEN
+  METIS_TAC [lrcc_rules, lpermutative_def]);
+
+val beta0_lpermutative = store_thm(
+  "beta0_lpermutative",
+  ``lpermutative beta0``,
+  SRW_TAC [][lpermutative_def, beta0_def] THEN
+  SRW_TAC [][ltpm_subst] THEN METIS_TAC []);
+
+val beta1_lpermutative = store_thm(
+  "beta1_lpermutative",
+  ``lpermutative beta1``,
+  SRW_TAC [][lpermutative_def, beta1_def] THEN
+  SRW_TAC [][ltpm_subst] THEN METIS_TAC []);
+
 val lrcc_beta01_exclusive = store_thm(
   "lrcc_beta01_exclusive",
   ``!M r N. lrcc beta0 M r N ==> ~lrcc beta1 M r N``,
-  HO_MATCH_MP_TAC lrcc_ind THEN
-  REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
-  CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [lrcc_cases])) THEN
-  SRW_TAC [][] THEN
-  SRW_TAC [][GSYM IMP_DISJ_THM] THENL [
-    FULL_SIMP_TAC (srw_ss()) [beta0_def, beta1_def],
-    STRIP_TAC THEN
-    `M = [VAR v/v'] x` by PROVE_TAC [lterm_INJECTIVITY_LEMMA1] THEN
-    `N = [VAR v/v'] y` by PROVE_TAC [lterm_INJECTIVITY_LEMMA1] THEN
-    PROVE_TAC [lrcc_lsubstitutive, beta1_lsubstitutive],
-    PROVE_TAC [lterm_INJECTIVITY_LEMMA1i],
-    STRIP_TAC THEN
-    `M = [VAR v/v'] x` by PROVE_TAC [lterm_INJECTIVITY_LEMMA1i] THEN
-    `N = [VAR v/v'] y` by PROVE_TAC [lterm_INJECTIVITY_LEMMA1i] THEN
-    PROVE_TAC [lrcc_lsubstitutive, beta1_lsubstitutive]
-  ]);
+  HO_MATCH_MP_TAC lrcc_ind THEN REPEAT CONJ_TAC THEN
+  SIMP_TAC (srw_ss()) [DECIDE ``(~p ==> ~q) <=> (q ==> p)``] THEN
+  SIMP_TAC (srw_ss()) [Once lrcc_cases, SimpL ``(==>)``] THEN1
+    SIMP_TAC (srw_ss() ++ DNF_ss) [beta0_def, beta1_def, Once lrcc_cases] THEN
+  SIMP_TAC (srw_ss() ++ DNF_ss) [lLAMi_eq_thm, lLAM_eq_thm,
+                                 lrcc_lpermutative, beta1_lpermutative]);
 
 val lrcc_det = store_thm(
   "lrcc_det",
@@ -1807,7 +1800,7 @@ val lemma11_2_12 = store_thm(
     HO_MATCH_MP_TAC okpath_co_ind THEN
     MAP_EVERY Q.X_GEN_TAC [`x`, `r`, `sigma'`] THEN
     CONV_TAC (LAND_CONV (RENAME_VARS_CONV ["M", "sigma", "ps"])) THEN
-    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [development_cases])) THEN
+    SIMP_TAC (srw_ss()) [Once development_cases, SimpL ``(==>)``] THEN
     SIMP_TAC (srw_ss() ++ DNF_ss) [lift_path_def] THEN SRW_TAC [][] THENL [
       SRW_TAC [][first_lift_path] THEN
       Q.ABBREV_TAC `M' = nlabel 0 M ps` THEN
