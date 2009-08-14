@@ -754,6 +754,29 @@ fun check_definition schemevars clocs tm = let
                                    HOLset.addList(tyvset,
                                                   type_vars_in_term tm))
                                empty_tyset relvars
+
+  (* check that there aren't duplicate names in the forall chain *)
+  fun check_clause_foralls n c = let
+    val (vs, body) = strip_forall c
+    val loc = List.nth(clocs, n) handle Subscript => locn.Loc_None
+    fun foldthis (v, acc) = let
+      val (nm, _) = dest_var v
+    in
+      if HOLset.member(acc, nm) then
+        raise mk_HOL_ERRloc "InductiveDefinition"
+                            "check_clause"
+                            loc
+                            ("Clause #"^Int.toString (n + 1)^
+                             " contains duplicate name "^nm^
+                             " in outermost universal quantification")
+      else HOLset.add(acc, nm)
+    end
+  in
+    ignore (List.foldl foldthis (HOLset.empty String.compare) vs)
+  end
+  val _ = appi check_clause_foralls clauses
+
+
   fun check_tyvars n c = let
     val tyvs = HOLset.addList(empty_tyset, type_vars_in_term c)
   in
@@ -777,6 +800,8 @@ fun check_definition schemevars clocs tm = let
       ()
   end
   val _ = appi check_tyvars clauses
+
+
 
   (* here, generalise on the extra free variables if we're not being strict *)
   fun check_clause n c = let
