@@ -1,8 +1,10 @@
-This is work-in-progress on a project to link an LTL semantics in
-HOL with a cone-of-influence reduction method verified in ACL2.
+This directory will eventually contain a revised version of the case
+study in:
 
-Note that Holmake takes a long time due to a brute force metis proof
-of Lemma 2 (p 10 of Ray et al. Lemma 32, p 172 of Clarke et al.) in
-LTLScript.sml:
+ HOL/examples/acl2/examples/acl2-hol-ltl-paper-example
 
-(* runtime: 4978.813s,    gctime: 743.494s,     systime: 9.298s. *)
+The directory above is to support a paper on the example. This
+directory (examples/LTL) will just contain the case study material
+and will point to general infrastructure files, rather than contain
+them (as acl2-hol-ltl-paper-example does).
+
