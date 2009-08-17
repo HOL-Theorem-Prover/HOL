@@ -178,6 +178,20 @@ val subset_implies_SUBSET =
 val Main =
  time store_thm
   ("Main",
+   ``!C Vars.
+      (|= circuitp C)
+      ==>
+      !f. (Atoms f) SUBSET (SexpToSet (cone_variables Vars C))
+          ==>
+          (SAT (CIRC_TO_MODEL C) f =
+           SAT (CIRC_TO_MODEL (cone_of_influence_reduction C Vars)) f)``,
+   METIS_TAC [Key, Theorem1, CircuitModels]);
+
+show_tags := true;
+
+val MainCorollary =
+ time store_thm
+  ("MainCorollary",
    ``!C Vars FVars.
       (|= circuitp C) /\
       (|= subset FVars (cone_variables Vars C))
@@ -186,8 +200,9 @@ val Main =
           ==>
           (SAT (CIRC_TO_MODEL C) f =
            SAT (CIRC_TO_MODEL (cone_of_influence_reduction C Vars)) f)``,
-   METIS_TAC [SUBSET_TRANS, Key, Theorem1, CircuitModels, subset_implies_SUBSET]);
-   (* This proof takes ages -- should optimise *)
+   METIS_TAC [Main, SUBSET_TRANS, subset_implies_SUBSET]);
+
+show_tags := false;
 
 export_theory();
 

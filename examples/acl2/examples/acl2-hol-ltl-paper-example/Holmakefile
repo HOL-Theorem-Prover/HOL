@@ -1,4 +1,4 @@
-mainTheory.uo mainTheory.ui: imported_acl2Theory.uo imported_acl2Theory.ui
+mainTheory.uo mainTheory.ui: imported_acl2Theory.uo imported_acl2Theory.ui make_main_theory.ml
 	./../../../../bin/hol < make_main_theory.ml
 
 imported_acl2Theory.uo imported_acl2Theory.ui: LTLTheory.uo LTLTheory.ui load_book.uo load_book.ui
