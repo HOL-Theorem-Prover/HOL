@@ -9572,7 +9572,7 @@ mksym "ACL2" "ACCUMULATED-WARNINGS") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "ACL2-RAW-MODE-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "ACL2-VERSION") (mk_chars_str (chars_to_string (cons 65 (
 cons 67 (cons 76 (cons 50 (cons 32 (cons 86 (cons 101 (cons 114 (cons 115 (
-cons 105 (cons 111 (cons 110 (cons 32 (cons 51 (cons 46 (cons 53 nil))))))))))))))))))) (
+cons 105 (cons 111 (cons 110 (cons 32 (cons 51 (cons 46 (cons 54 nil))))))))))))))))))) (
 mkpair (mkpair (mksym "ACL2" "AXIOMSP") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "BDDNOTES") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
 mksym "ACL2" "CERTIFY-BOOK-DISABLEDP") (mksym "COMMON-LISP" "NIL")) (mkpair (
@@ -9725,36 +9725,36 @@ mkpair (mkpair (mksym "ACL2" "MACROS-WITH-RAW-CODE") (mkpair (mksym "ACL2"
 mkpair (mksym "ACL2" "CERTIFY-BOOK") (mkpair (mksym "ACL2" "PROGN!") (mkpair (
 mksym "ACL2" "F-PUT-GLOBAL") (mkpair (mksym "ACL2" "PUSH-UNTOUCHABLE") (
 mkpair (mksym "ACL2" "SET-BACKCHAIN-LIMIT") (mkpair (mksym "ACL2" 
-"SET-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "DEFTHEORY") (mkpair (mksym 
-"ACL2" "PSTK") (mkpair (mksym "ACL2" "VERIFY-GUARDS") (mkpair (mksym "ACL2" 
-"DEFCHOOSE") (mkpair (mksym "ACL2" "SET-DEFAULT-BACKCHAIN-LIMIT") (mkpair (
-mksym "ACL2" "SET-STATE-OK") (mkpair (mksym "ACL2" "SET-IGNORE-OK") (mkpair (
-mksym "ACL2" "SET-NON-LINEARP") (mkpair (mksym "ACL2" "WITH-OUTPUT") (mkpair (
-mksym "ACL2" "SET-COMPILE-FNS") (mkpair (mksym "ACL2" "ADD-INCLUDE-BOOK-DIR") (
-mkpair (mksym "ACL2" "CLEAR-PSTK") (mkpair (mksym "ACL2" 
-"ADD-CUSTOM-KEYWORD-HINT") (mkpair (mksym "ACL2" "INITIAL-GSTACK") (mkpair (
-mksym "ACL2" "ASSIGN-WORMHOLE-OUTPUT") (mkpair (mksym "ACL2" 
-"ACL2-UNWIND-PROTECT") (mkpair (mksym "ACL2" "SET-WELL-FOUNDED-RELATION") (
-mkpair (mksym "ACL2" "CATCH-TIME-LIMIT4") (mkpair (mksym "ACL2" "DEFUNS") (
-mkpair (mksym "ACL2" "ADD-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "LOCAL") (
-mkpair (mksym "ACL2" "ENCAPSULATE") (mkpair (mksym "ACL2" 
-"REMOVE-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "INCLUDE-BOOK") (mkpair (mksym 
-"ACL2" "PPROGN") (mkpair (mksym "ACL2" "SET-ENFORCE-REDUNDANCY") (mkpair (
-mksym "ACL2" "SET-IGNORE-DOC-STRING-ERROR") (mkpair (mksym "ACL2" "LOGIC") (
-mkpair (mksym "ACL2" "ER") (mkpair (mksym "ACL2" "DEFLABEL") (mkpair (mksym 
-"ACL2" "MV-LET") (mkpair (mksym "ACL2" "PROGRAM") (mkpair (mksym "ACL2" 
-"VALUE-TRIPLE") (mkpair (mksym "ACL2" "SET-BODY") (mkpair (mksym "ACL2" 
-"COMP") (mkpair (mksym "ACL2" "SET-BOGUS-DEFUN-HINTS-OK") (mkpair (mksym 
-"ACL2" "DMR-STOP") (mkpair (mksym "ACL2" "DEFPKG") (mkpair (mksym "ACL2" 
-"SET-MEASURE-FUNCTION") (mkpair (mksym "ACL2" "SET-INHIBIT-WARNINGS") (mkpair (
-mksym "ACL2" "DEFTHM") (mkpair (mksym "ACL2" "MV") (mkpair (mksym "ACL2" 
-"F-BIG-CLOCK-NEGATIVE-P") (mkpair (mksym "ACL2" "RESET-PREHISTORY") (mkpair (
-mksym "ACL2" "MUTUAL-RECURSION") (mkpair (mksym "ACL2" 
-"SET-REWRITE-STACK-LIMIT") (mkpair (mksym "ACL2" "ADD-MATCH-FREE-OVERRIDE") (
-mkpair (mksym "ACL2" "SET-INHIBIT-OUTPUT-LST") (mkpair (mksym "ACL2" 
-"SET-MATCH-FREE-DEFAULT") (mkpair (mksym "ACL2" "THE-MV") (mkpair (mksym 
-"ACL2" "TABLE") (mkpair (mksym "ACL2" "IN-ARITHMETIC-THEORY") (mkpair (mksym 
-"ACL2" "SET-CASE-SPLIT-LIMITATIONS") (mkpair (mksym "ACL2" 
+"SET-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "SET-OVERRIDE-HINTS-MACRO") (
+mkpair (mksym "ACL2" "DEFTHEORY") (mkpair (mksym "ACL2" "PSTK") (mkpair (
+mksym "ACL2" "VERIFY-GUARDS") (mkpair (mksym "ACL2" "DEFCHOOSE") (mkpair (
+mksym "ACL2" "SET-DEFAULT-BACKCHAIN-LIMIT") (mkpair (mksym "ACL2" 
+"SET-STATE-OK") (mkpair (mksym "ACL2" "SET-IGNORE-OK") (mkpair (mksym "ACL2" 
+"SET-NON-LINEARP") (mkpair (mksym "ACL2" "WITH-OUTPUT") (mkpair (mksym "ACL2" 
+"SET-COMPILE-FNS") (mkpair (mksym "ACL2" "ADD-INCLUDE-BOOK-DIR") (mkpair (
+mksym "ACL2" "CLEAR-PSTK") (mkpair (mksym "ACL2" "ADD-CUSTOM-KEYWORD-HINT") (
+mkpair (mksym "ACL2" "INITIAL-GSTACK") (mkpair (mksym "ACL2" 
+"ASSIGN-WORMHOLE-OUTPUT") (mkpair (mksym "ACL2" "ACL2-UNWIND-PROTECT") (
+mkpair (mksym "ACL2" "SET-WELL-FOUNDED-RELATION") (mkpair (mksym "ACL2" 
+"CATCH-TIME-LIMIT4") (mkpair (mksym "ACL2" "DEFUNS") (mkpair (mksym "ACL2" 
+"ADD-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "LOCAL") (mkpair (mksym "ACL2" 
+"ENCAPSULATE") (mkpair (mksym "ACL2" "REMOVE-DEFAULT-HINTS!") (mkpair (mksym 
+"ACL2" "INCLUDE-BOOK") (mkpair (mksym "ACL2" "PPROGN") (mkpair (mksym "ACL2" 
+"SET-ENFORCE-REDUNDANCY") (mkpair (mksym "ACL2" "SET-IGNORE-DOC-STRING-ERROR") (
+mkpair (mksym "ACL2" "LOGIC") (mkpair (mksym "ACL2" "ER") (mkpair (mksym 
+"ACL2" "DEFLABEL") (mkpair (mksym "ACL2" "MV-LET") (mkpair (mksym "ACL2" 
+"PROGRAM") (mkpair (mksym "ACL2" "VALUE-TRIPLE") (mkpair (mksym "ACL2" 
+"SET-BODY") (mkpair (mksym "ACL2" "COMP") (mkpair (mksym "ACL2" 
+"SET-BOGUS-DEFUN-HINTS-OK") (mkpair (mksym "ACL2" "DMR-STOP") (mkpair (mksym 
+"ACL2" "DEFPKG") (mkpair (mksym "ACL2" "SET-MEASURE-FUNCTION") (mkpair (mksym 
+"ACL2" "SET-INHIBIT-WARNINGS") (mkpair (mksym "ACL2" "DEFTHM") (mkpair (mksym 
+"ACL2" "MV") (mkpair (mksym "ACL2" "F-BIG-CLOCK-NEGATIVE-P") (mkpair (mksym 
+"ACL2" "RESET-PREHISTORY") (mkpair (mksym "ACL2" "MUTUAL-RECURSION") (mkpair (
+mksym "ACL2" "SET-REWRITE-STACK-LIMIT") (mkpair (mksym "ACL2" 
+"ADD-MATCH-FREE-OVERRIDE") (mkpair (mksym "ACL2" "SET-INHIBIT-OUTPUT-LST") (
+mkpair (mksym "ACL2" "SET-MATCH-FREE-DEFAULT") (mkpair (mksym "ACL2" "THE-MV") (
+mkpair (mksym "ACL2" "TABLE") (mkpair (mksym "ACL2" "IN-ARITHMETIC-THEORY") (
+mkpair (mksym "ACL2" "SET-CASE-SPLIT-LIMITATIONS") (mkpair (mksym "ACL2" 
 "SET-IRRELEVANT-FORMALS-OK") (mkpair (mksym "ACL2" "REMOVE-UNTOUCHABLE") (
 mkpair (mksym "ACL2" "IN-THEORY") (mkpair (mksym "ACL2" "WITH-OUTPUT-FORCED") (
 mkpair (mksym "ACL2" "DMR-START") (mkpair (mksym "ACL2" "REWRITE-ENTRY") (
@@ -9809,7 +9809,7 @@ mksym "ACL2" "MEMOIZE") (mkpair (mksym "ACL2" "DEFUNS-STD") (mkpair (mksym
 "POR") (mkpair (mksym "ACL2" "PAND") (mkpair (mksym "ACL2" "PLET") (mkpair (
 mksym "ACL2" "PARGS") (mkpair (mksym "ACL2" "TRACE!") (mkpair (mksym "ACL2" 
 "WITH-LIVE-STATE") (mkpair (mksym "ACL2" "WITH-OUTPUT-OBJECT-CHANNEL-SHARING") (
-mksym "COMMON-LISP" "NIL"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
+mksym "COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
 mkpair (mkpair (mksym "ACL2" "MAIN-TIMER") (mknum "0" "1" "0" "1")) (mkpair (
 mkpair (mksym "ACL2" "MAKE-EVENT-DEBUG") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "MAKE-EVENT-DEBUG-DEPTH") (mknum "0" "1" "0" "1")) (
@@ -9826,7 +9826,8 @@ mksym "ACL2" "PC-OUTPUT") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym
 mksym "ACL2" "PRINT-BASE") (mknum "10" "1" "0" "1")) (mkpair (mkpair (mksym 
 "ACL2" "PRINT-CASE") (mksym "KEYWORD" "UPCASE")) (mkpair (mkpair (mksym 
 "ACL2" "PRINT-CIRCLE") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
-"ACL2" "PRINT-CLAUSE-IDS") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
+"ACL2" "PRINT-CIRCLE-FILES") (mksym "COMMON-LISP" "T")) (mkpair (mkpair (
+mksym "ACL2" "PRINT-CLAUSE-IDS") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
 mksym "ACL2" "PRINT-DOC-START-COLUMN") (mknum "15" "1" "0" "1")) (mkpair (
 mkpair (mksym "ACL2" "PRINT-ESCAPE") (mksym "COMMON-LISP" "T")) (mkpair (
 mkpair (mksym "ACL2" "PRINT-LENGTH") (mksym "COMMON-LISP" "NIL")) (mkpair (
@@ -9896,6 +9897,7 @@ mkpair (mkpair (mksym "ACL2" "PROOFS-CO") (mksym "ACL2-OUTPUT-CHANNEL"
 "ACL2" "REDO-FLAT-FAIL") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "ACL2" "REDO-FLAT-SUCC") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "ACL2" "REDUNDANT-WITH-RAW-CODE-OKP") (mksym "COMMON-LISP" "NIL")) (mkpair (
+mkpair (mksym "ACL2" "RETRACE-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAFE-MODE") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAVED-OUTPUT-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAVED-OUTPUT-REVERSED") (mksym "COMMON-LISP" "NIL")) (
@@ -9926,7 +9928,8 @@ mk_chars_str (chars_to_string (cons 32 nil)))) (mkpair (mkpair (mksym "ACL2"
 "UNDONE-WORLDS-KILL-RING") (mkpair (mksym "COMMON-LISP" "NIL") (mkpair (mksym 
 "COMMON-LISP" "NIL") (mkpair (mksym "COMMON-LISP" "NIL") (mksym "COMMON-LISP" 
 "NIL"))))) (mkpair (mkpair (mksym "ACL2" "USER-HOME-DIR") (mksym 
-"COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "ACL2" 
+"COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "ACL2" "VERBOSE-THEORY-WARNING") (
+mksym "COMMON-LISP" "T")) (mkpair (mkpair (mksym "ACL2" 
 "WINDOW-INTERFACE-POSTLUDE") (mk_chars_str (chars_to_string (cons 35 (cons 62 (
 cons 92 (cons 62 (cons 35 (cons 60 (cons 92 (cons 60 (cons 101 (cons 40 (cons 
 97 (cons 99 (cons 108 (cons 50 (cons 45 (cons 119 (cons 105 (cons 110 (cons 
@@ -9946,7 +9949,7 @@ mkpair (mksym "ACL2" "WINDOW-INTERFACEP") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WORMHOLE-NAME") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WORMHOLE-OUTPUT") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WRITES-OKP") (mksym "COMMON-LISP" "T")) (mksym 
-"COMMON-LISP" "NIL"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
+"COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
 mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "ACL2" "GLOBAL-TABLE") (
 mkpair (mksym "ACL2" "X") (mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" 
 "NIL")))) (mkpair (mkpair (mksym "COMMON-LISP" "IF") (mkpair (mkpair (mksym 
@@ -10099,7 +10102,7 @@ mksym "ACL2" "ACCUMULATED-WARNINGS") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "ACL2-RAW-MODE-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "ACL2-VERSION") (mk_chars_str (chars_to_string (cons 65 (
 cons 67 (cons 76 (cons 50 (cons 32 (cons 86 (cons 101 (cons 114 (cons 115 (
-cons 105 (cons 111 (cons 110 (cons 32 (cons 51 (cons 46 (cons 53 nil))))))))))))))))))) (
+cons 105 (cons 111 (cons 110 (cons 32 (cons 51 (cons 46 (cons 54 nil))))))))))))))))))) (
 mkpair (mkpair (mksym "ACL2" "AXIOMSP") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "BDDNOTES") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
 mksym "ACL2" "CERTIFY-BOOK-DISABLEDP") (mksym "COMMON-LISP" "NIL")) (mkpair (
@@ -10252,36 +10255,36 @@ mkpair (mkpair (mksym "ACL2" "MACROS-WITH-RAW-CODE") (mkpair (mksym "ACL2"
 mkpair (mksym "ACL2" "CERTIFY-BOOK") (mkpair (mksym "ACL2" "PROGN!") (mkpair (
 mksym "ACL2" "F-PUT-GLOBAL") (mkpair (mksym "ACL2" "PUSH-UNTOUCHABLE") (
 mkpair (mksym "ACL2" "SET-BACKCHAIN-LIMIT") (mkpair (mksym "ACL2" 
-"SET-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "DEFTHEORY") (mkpair (mksym 
-"ACL2" "PSTK") (mkpair (mksym "ACL2" "VERIFY-GUARDS") (mkpair (mksym "ACL2" 
-"DEFCHOOSE") (mkpair (mksym "ACL2" "SET-DEFAULT-BACKCHAIN-LIMIT") (mkpair (
-mksym "ACL2" "SET-STATE-OK") (mkpair (mksym "ACL2" "SET-IGNORE-OK") (mkpair (
-mksym "ACL2" "SET-NON-LINEARP") (mkpair (mksym "ACL2" "WITH-OUTPUT") (mkpair (
-mksym "ACL2" "SET-COMPILE-FNS") (mkpair (mksym "ACL2" "ADD-INCLUDE-BOOK-DIR") (
-mkpair (mksym "ACL2" "CLEAR-PSTK") (mkpair (mksym "ACL2" 
-"ADD-CUSTOM-KEYWORD-HINT") (mkpair (mksym "ACL2" "INITIAL-GSTACK") (mkpair (
-mksym "ACL2" "ASSIGN-WORMHOLE-OUTPUT") (mkpair (mksym "ACL2" 
-"ACL2-UNWIND-PROTECT") (mkpair (mksym "ACL2" "SET-WELL-FOUNDED-RELATION") (
-mkpair (mksym "ACL2" "CATCH-TIME-LIMIT4") (mkpair (mksym "ACL2" "DEFUNS") (
-mkpair (mksym "ACL2" "ADD-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "LOCAL") (
-mkpair (mksym "ACL2" "ENCAPSULATE") (mkpair (mksym "ACL2" 
-"REMOVE-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "INCLUDE-BOOK") (mkpair (mksym 
-"ACL2" "PPROGN") (mkpair (mksym "ACL2" "SET-ENFORCE-REDUNDANCY") (mkpair (
-mksym "ACL2" "SET-IGNORE-DOC-STRING-ERROR") (mkpair (mksym "ACL2" "LOGIC") (
-mkpair (mksym "ACL2" "ER") (mkpair (mksym "ACL2" "DEFLABEL") (mkpair (mksym 
-"ACL2" "MV-LET") (mkpair (mksym "ACL2" "PROGRAM") (mkpair (mksym "ACL2" 
-"VALUE-TRIPLE") (mkpair (mksym "ACL2" "SET-BODY") (mkpair (mksym "ACL2" 
-"COMP") (mkpair (mksym "ACL2" "SET-BOGUS-DEFUN-HINTS-OK") (mkpair (mksym 
-"ACL2" "DMR-STOP") (mkpair (mksym "ACL2" "DEFPKG") (mkpair (mksym "ACL2" 
-"SET-MEASURE-FUNCTION") (mkpair (mksym "ACL2" "SET-INHIBIT-WARNINGS") (mkpair (
-mksym "ACL2" "DEFTHM") (mkpair (mksym "ACL2" "MV") (mkpair (mksym "ACL2" 
-"F-BIG-CLOCK-NEGATIVE-P") (mkpair (mksym "ACL2" "RESET-PREHISTORY") (mkpair (
-mksym "ACL2" "MUTUAL-RECURSION") (mkpair (mksym "ACL2" 
-"SET-REWRITE-STACK-LIMIT") (mkpair (mksym "ACL2" "ADD-MATCH-FREE-OVERRIDE") (
-mkpair (mksym "ACL2" "SET-INHIBIT-OUTPUT-LST") (mkpair (mksym "ACL2" 
-"SET-MATCH-FREE-DEFAULT") (mkpair (mksym "ACL2" "THE-MV") (mkpair (mksym 
-"ACL2" "TABLE") (mkpair (mksym "ACL2" "IN-ARITHMETIC-THEORY") (mkpair (mksym 
-"ACL2" "SET-CASE-SPLIT-LIMITATIONS") (mkpair (mksym "ACL2" 
+"SET-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "SET-OVERRIDE-HINTS-MACRO") (
+mkpair (mksym "ACL2" "DEFTHEORY") (mkpair (mksym "ACL2" "PSTK") (mkpair (
+mksym "ACL2" "VERIFY-GUARDS") (mkpair (mksym "ACL2" "DEFCHOOSE") (mkpair (
+mksym "ACL2" "SET-DEFAULT-BACKCHAIN-LIMIT") (mkpair (mksym "ACL2" 
+"SET-STATE-OK") (mkpair (mksym "ACL2" "SET-IGNORE-OK") (mkpair (mksym "ACL2" 
+"SET-NON-LINEARP") (mkpair (mksym "ACL2" "WITH-OUTPUT") (mkpair (mksym "ACL2" 
+"SET-COMPILE-FNS") (mkpair (mksym "ACL2" "ADD-INCLUDE-BOOK-DIR") (mkpair (
+mksym "ACL2" "CLEAR-PSTK") (mkpair (mksym "ACL2" "ADD-CUSTOM-KEYWORD-HINT") (
+mkpair (mksym "ACL2" "INITIAL-GSTACK") (mkpair (mksym "ACL2" 
+"ASSIGN-WORMHOLE-OUTPUT") (mkpair (mksym "ACL2" "ACL2-UNWIND-PROTECT") (
+mkpair (mksym "ACL2" "SET-WELL-FOUNDED-RELATION") (mkpair (mksym "ACL2" 
+"CATCH-TIME-LIMIT4") (mkpair (mksym "ACL2" "DEFUNS") (mkpair (mksym "ACL2" 
+"ADD-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "LOCAL") (mkpair (mksym "ACL2" 
+"ENCAPSULATE") (mkpair (mksym "ACL2" "REMOVE-DEFAULT-HINTS!") (mkpair (mksym 
+"ACL2" "INCLUDE-BOOK") (mkpair (mksym "ACL2" "PPROGN") (mkpair (mksym "ACL2" 
+"SET-ENFORCE-REDUNDANCY") (mkpair (mksym "ACL2" "SET-IGNORE-DOC-STRING-ERROR") (
+mkpair (mksym "ACL2" "LOGIC") (mkpair (mksym "ACL2" "ER") (mkpair (mksym 
+"ACL2" "DEFLABEL") (mkpair (mksym "ACL2" "MV-LET") (mkpair (mksym "ACL2" 
+"PROGRAM") (mkpair (mksym "ACL2" "VALUE-TRIPLE") (mkpair (mksym "ACL2" 
+"SET-BODY") (mkpair (mksym "ACL2" "COMP") (mkpair (mksym "ACL2" 
+"SET-BOGUS-DEFUN-HINTS-OK") (mkpair (mksym "ACL2" "DMR-STOP") (mkpair (mksym 
+"ACL2" "DEFPKG") (mkpair (mksym "ACL2" "SET-MEASURE-FUNCTION") (mkpair (mksym 
+"ACL2" "SET-INHIBIT-WARNINGS") (mkpair (mksym "ACL2" "DEFTHM") (mkpair (mksym 
+"ACL2" "MV") (mkpair (mksym "ACL2" "F-BIG-CLOCK-NEGATIVE-P") (mkpair (mksym 
+"ACL2" "RESET-PREHISTORY") (mkpair (mksym "ACL2" "MUTUAL-RECURSION") (mkpair (
+mksym "ACL2" "SET-REWRITE-STACK-LIMIT") (mkpair (mksym "ACL2" 
+"ADD-MATCH-FREE-OVERRIDE") (mkpair (mksym "ACL2" "SET-INHIBIT-OUTPUT-LST") (
+mkpair (mksym "ACL2" "SET-MATCH-FREE-DEFAULT") (mkpair (mksym "ACL2" "THE-MV") (
+mkpair (mksym "ACL2" "TABLE") (mkpair (mksym "ACL2" "IN-ARITHMETIC-THEORY") (
+mkpair (mksym "ACL2" "SET-CASE-SPLIT-LIMITATIONS") (mkpair (mksym "ACL2" 
 "SET-IRRELEVANT-FORMALS-OK") (mkpair (mksym "ACL2" "REMOVE-UNTOUCHABLE") (
 mkpair (mksym "ACL2" "IN-THEORY") (mkpair (mksym "ACL2" "WITH-OUTPUT-FORCED") (
 mkpair (mksym "ACL2" "DMR-START") (mkpair (mksym "ACL2" "REWRITE-ENTRY") (
@@ -10336,7 +10339,7 @@ mksym "ACL2" "MEMOIZE") (mkpair (mksym "ACL2" "DEFUNS-STD") (mkpair (mksym
 "POR") (mkpair (mksym "ACL2" "PAND") (mkpair (mksym "ACL2" "PLET") (mkpair (
 mksym "ACL2" "PARGS") (mkpair (mksym "ACL2" "TRACE!") (mkpair (mksym "ACL2" 
 "WITH-LIVE-STATE") (mkpair (mksym "ACL2" "WITH-OUTPUT-OBJECT-CHANNEL-SHARING") (
-mksym "COMMON-LISP" "NIL"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
+mksym "COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
 mkpair (mkpair (mksym "ACL2" "MAIN-TIMER") (mknum "0" "1" "0" "1")) (mkpair (
 mkpair (mksym "ACL2" "MAKE-EVENT-DEBUG") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "MAKE-EVENT-DEBUG-DEPTH") (mknum "0" "1" "0" "1")) (
@@ -10353,7 +10356,8 @@ mksym "ACL2" "PC-OUTPUT") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym
 mksym "ACL2" "PRINT-BASE") (mknum "10" "1" "0" "1")) (mkpair (mkpair (mksym 
 "ACL2" "PRINT-CASE") (mksym "KEYWORD" "UPCASE")) (mkpair (mkpair (mksym 
 "ACL2" "PRINT-CIRCLE") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
-"ACL2" "PRINT-CLAUSE-IDS") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
+"ACL2" "PRINT-CIRCLE-FILES") (mksym "COMMON-LISP" "T")) (mkpair (mkpair (
+mksym "ACL2" "PRINT-CLAUSE-IDS") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
 mksym "ACL2" "PRINT-DOC-START-COLUMN") (mknum "15" "1" "0" "1")) (mkpair (
 mkpair (mksym "ACL2" "PRINT-ESCAPE") (mksym "COMMON-LISP" "T")) (mkpair (
 mkpair (mksym "ACL2" "PRINT-LENGTH") (mksym "COMMON-LISP" "NIL")) (mkpair (
@@ -10423,6 +10427,7 @@ mkpair (mkpair (mksym "ACL2" "PROOFS-CO") (mksym "ACL2-OUTPUT-CHANNEL"
 "ACL2" "REDO-FLAT-FAIL") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "ACL2" "REDO-FLAT-SUCC") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "ACL2" "REDUNDANT-WITH-RAW-CODE-OKP") (mksym "COMMON-LISP" "NIL")) (mkpair (
+mkpair (mksym "ACL2" "RETRACE-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAFE-MODE") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAVED-OUTPUT-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAVED-OUTPUT-REVERSED") (mksym "COMMON-LISP" "NIL")) (
@@ -10453,7 +10458,8 @@ mk_chars_str (chars_to_string (cons 32 nil)))) (mkpair (mkpair (mksym "ACL2"
 "UNDONE-WORLDS-KILL-RING") (mkpair (mksym "COMMON-LISP" "NIL") (mkpair (mksym 
 "COMMON-LISP" "NIL") (mkpair (mksym "COMMON-LISP" "NIL") (mksym "COMMON-LISP" 
 "NIL"))))) (mkpair (mkpair (mksym "ACL2" "USER-HOME-DIR") (mksym 
-"COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "ACL2" 
+"COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "ACL2" "VERBOSE-THEORY-WARNING") (
+mksym "COMMON-LISP" "T")) (mkpair (mkpair (mksym "ACL2" 
 "WINDOW-INTERFACE-POSTLUDE") (mk_chars_str (chars_to_string (cons 35 (cons 62 (
 cons 92 (cons 62 (cons 35 (cons 60 (cons 92 (cons 60 (cons 101 (cons 40 (cons 
 97 (cons 99 (cons 108 (cons 50 (cons 45 (cons 119 (cons 105 (cons 110 (cons 
@@ -10473,7 +10479,7 @@ mkpair (mksym "ACL2" "WINDOW-INTERFACEP") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WORMHOLE-NAME") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WORMHOLE-OUTPUT") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WRITES-OKP") (mksym "COMMON-LISP" "T")) (mksym 
-"COMMON-LISP" "NIL"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
+"COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
 mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" "NTH") (
 mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "2" "1" "0" "1") (
 mksym "COMMON-LISP" "NIL"))) (mkpair (mksym "ACL2" "X") (mksym "COMMON-LISP" 
@@ -10656,7 +10662,7 @@ mksym "ACL2" "ACCUMULATED-WARNINGS") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "ACL2-RAW-MODE-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "ACL2-VERSION") (mk_chars_str (chars_to_string (cons 65 (
 cons 67 (cons 76 (cons 50 (cons 32 (cons 86 (cons 101 (cons 114 (cons 115 (
-cons 105 (cons 111 (cons 110 (cons 32 (cons 51 (cons 46 (cons 53 nil))))))))))))))))))) (
+cons 105 (cons 111 (cons 110 (cons 32 (cons 51 (cons 46 (cons 54 nil))))))))))))))))))) (
 mkpair (mkpair (mksym "ACL2" "AXIOMSP") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "BDDNOTES") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
 mksym "ACL2" "CERTIFY-BOOK-DISABLEDP") (mksym "COMMON-LISP" "NIL")) (mkpair (
@@ -10809,36 +10815,36 @@ mkpair (mkpair (mksym "ACL2" "MACROS-WITH-RAW-CODE") (mkpair (mksym "ACL2"
 mkpair (mksym "ACL2" "CERTIFY-BOOK") (mkpair (mksym "ACL2" "PROGN!") (mkpair (
 mksym "ACL2" "F-PUT-GLOBAL") (mkpair (mksym "ACL2" "PUSH-UNTOUCHABLE") (
 mkpair (mksym "ACL2" "SET-BACKCHAIN-LIMIT") (mkpair (mksym "ACL2" 
-"SET-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "DEFTHEORY") (mkpair (mksym 
-"ACL2" "PSTK") (mkpair (mksym "ACL2" "VERIFY-GUARDS") (mkpair (mksym "ACL2" 
-"DEFCHOOSE") (mkpair (mksym "ACL2" "SET-DEFAULT-BACKCHAIN-LIMIT") (mkpair (
-mksym "ACL2" "SET-STATE-OK") (mkpair (mksym "ACL2" "SET-IGNORE-OK") (mkpair (
-mksym "ACL2" "SET-NON-LINEARP") (mkpair (mksym "ACL2" "WITH-OUTPUT") (mkpair (
-mksym "ACL2" "SET-COMPILE-FNS") (mkpair (mksym "ACL2" "ADD-INCLUDE-BOOK-DIR") (
-mkpair (mksym "ACL2" "CLEAR-PSTK") (mkpair (mksym "ACL2" 
-"ADD-CUSTOM-KEYWORD-HINT") (mkpair (mksym "ACL2" "INITIAL-GSTACK") (mkpair (
-mksym "ACL2" "ASSIGN-WORMHOLE-OUTPUT") (mkpair (mksym "ACL2" 
-"ACL2-UNWIND-PROTECT") (mkpair (mksym "ACL2" "SET-WELL-FOUNDED-RELATION") (
-mkpair (mksym "ACL2" "CATCH-TIME-LIMIT4") (mkpair (mksym "ACL2" "DEFUNS") (
-mkpair (mksym "ACL2" "ADD-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "LOCAL") (
-mkpair (mksym "ACL2" "ENCAPSULATE") (mkpair (mksym "ACL2" 
-"REMOVE-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "INCLUDE-BOOK") (mkpair (mksym 
-"ACL2" "PPROGN") (mkpair (mksym "ACL2" "SET-ENFORCE-REDUNDANCY") (mkpair (
-mksym "ACL2" "SET-IGNORE-DOC-STRING-ERROR") (mkpair (mksym "ACL2" "LOGIC") (
-mkpair (mksym "ACL2" "ER") (mkpair (mksym "ACL2" "DEFLABEL") (mkpair (mksym 
-"ACL2" "MV-LET") (mkpair (mksym "ACL2" "PROGRAM") (mkpair (mksym "ACL2" 
-"VALUE-TRIPLE") (mkpair (mksym "ACL2" "SET-BODY") (mkpair (mksym "ACL2" 
-"COMP") (mkpair (mksym "ACL2" "SET-BOGUS-DEFUN-HINTS-OK") (mkpair (mksym 
-"ACL2" "DMR-STOP") (mkpair (mksym "ACL2" "DEFPKG") (mkpair (mksym "ACL2" 
-"SET-MEASURE-FUNCTION") (mkpair (mksym "ACL2" "SET-INHIBIT-WARNINGS") (mkpair (
-mksym "ACL2" "DEFTHM") (mkpair (mksym "ACL2" "MV") (mkpair (mksym "ACL2" 
-"F-BIG-CLOCK-NEGATIVE-P") (mkpair (mksym "ACL2" "RESET-PREHISTORY") (mkpair (
-mksym "ACL2" "MUTUAL-RECURSION") (mkpair (mksym "ACL2" 
-"SET-REWRITE-STACK-LIMIT") (mkpair (mksym "ACL2" "ADD-MATCH-FREE-OVERRIDE") (
-mkpair (mksym "ACL2" "SET-INHIBIT-OUTPUT-LST") (mkpair (mksym "ACL2" 
-"SET-MATCH-FREE-DEFAULT") (mkpair (mksym "ACL2" "THE-MV") (mkpair (mksym 
-"ACL2" "TABLE") (mkpair (mksym "ACL2" "IN-ARITHMETIC-THEORY") (mkpair (mksym 
-"ACL2" "SET-CASE-SPLIT-LIMITATIONS") (mkpair (mksym "ACL2" 
+"SET-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "SET-OVERRIDE-HINTS-MACRO") (
+mkpair (mksym "ACL2" "DEFTHEORY") (mkpair (mksym "ACL2" "PSTK") (mkpair (
+mksym "ACL2" "VERIFY-GUARDS") (mkpair (mksym "ACL2" "DEFCHOOSE") (mkpair (
+mksym "ACL2" "SET-DEFAULT-BACKCHAIN-LIMIT") (mkpair (mksym "ACL2" 
+"SET-STATE-OK") (mkpair (mksym "ACL2" "SET-IGNORE-OK") (mkpair (mksym "ACL2" 
+"SET-NON-LINEARP") (mkpair (mksym "ACL2" "WITH-OUTPUT") (mkpair (mksym "ACL2" 
+"SET-COMPILE-FNS") (mkpair (mksym "ACL2" "ADD-INCLUDE-BOOK-DIR") (mkpair (
+mksym "ACL2" "CLEAR-PSTK") (mkpair (mksym "ACL2" "ADD-CUSTOM-KEYWORD-HINT") (
+mkpair (mksym "ACL2" "INITIAL-GSTACK") (mkpair (mksym "ACL2" 
+"ASSIGN-WORMHOLE-OUTPUT") (mkpair (mksym "ACL2" "ACL2-UNWIND-PROTECT") (
+mkpair (mksym "ACL2" "SET-WELL-FOUNDED-RELATION") (mkpair (mksym "ACL2" 
+"CATCH-TIME-LIMIT4") (mkpair (mksym "ACL2" "DEFUNS") (mkpair (mksym "ACL2" 
+"ADD-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "LOCAL") (mkpair (mksym "ACL2" 
+"ENCAPSULATE") (mkpair (mksym "ACL2" "REMOVE-DEFAULT-HINTS!") (mkpair (mksym 
+"ACL2" "INCLUDE-BOOK") (mkpair (mksym "ACL2" "PPROGN") (mkpair (mksym "ACL2" 
+"SET-ENFORCE-REDUNDANCY") (mkpair (mksym "ACL2" "SET-IGNORE-DOC-STRING-ERROR") (
+mkpair (mksym "ACL2" "LOGIC") (mkpair (mksym "ACL2" "ER") (mkpair (mksym 
+"ACL2" "DEFLABEL") (mkpair (mksym "ACL2" "MV-LET") (mkpair (mksym "ACL2" 
+"PROGRAM") (mkpair (mksym "ACL2" "VALUE-TRIPLE") (mkpair (mksym "ACL2" 
+"SET-BODY") (mkpair (mksym "ACL2" "COMP") (mkpair (mksym "ACL2" 
+"SET-BOGUS-DEFUN-HINTS-OK") (mkpair (mksym "ACL2" "DMR-STOP") (mkpair (mksym 
+"ACL2" "DEFPKG") (mkpair (mksym "ACL2" "SET-MEASURE-FUNCTION") (mkpair (mksym 
+"ACL2" "SET-INHIBIT-WARNINGS") (mkpair (mksym "ACL2" "DEFTHM") (mkpair (mksym 
+"ACL2" "MV") (mkpair (mksym "ACL2" "F-BIG-CLOCK-NEGATIVE-P") (mkpair (mksym 
+"ACL2" "RESET-PREHISTORY") (mkpair (mksym "ACL2" "MUTUAL-RECURSION") (mkpair (
+mksym "ACL2" "SET-REWRITE-STACK-LIMIT") (mkpair (mksym "ACL2" 
+"ADD-MATCH-FREE-OVERRIDE") (mkpair (mksym "ACL2" "SET-INHIBIT-OUTPUT-LST") (
+mkpair (mksym "ACL2" "SET-MATCH-FREE-DEFAULT") (mkpair (mksym "ACL2" "THE-MV") (
+mkpair (mksym "ACL2" "TABLE") (mkpair (mksym "ACL2" "IN-ARITHMETIC-THEORY") (
+mkpair (mksym "ACL2" "SET-CASE-SPLIT-LIMITATIONS") (mkpair (mksym "ACL2" 
 "SET-IRRELEVANT-FORMALS-OK") (mkpair (mksym "ACL2" "REMOVE-UNTOUCHABLE") (
 mkpair (mksym "ACL2" "IN-THEORY") (mkpair (mksym "ACL2" "WITH-OUTPUT-FORCED") (
 mkpair (mksym "ACL2" "DMR-START") (mkpair (mksym "ACL2" "REWRITE-ENTRY") (
@@ -10893,7 +10899,7 @@ mksym "ACL2" "MEMOIZE") (mkpair (mksym "ACL2" "DEFUNS-STD") (mkpair (mksym
 "POR") (mkpair (mksym "ACL2" "PAND") (mkpair (mksym "ACL2" "PLET") (mkpair (
 mksym "ACL2" "PARGS") (mkpair (mksym "ACL2" "TRACE!") (mkpair (mksym "ACL2" 
 "WITH-LIVE-STATE") (mkpair (mksym "ACL2" "WITH-OUTPUT-OBJECT-CHANNEL-SHARING") (
-mksym "COMMON-LISP" "NIL"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
+mksym "COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
 mkpair (mkpair (mksym "ACL2" "MAIN-TIMER") (mknum "0" "1" "0" "1")) (mkpair (
 mkpair (mksym "ACL2" "MAKE-EVENT-DEBUG") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "MAKE-EVENT-DEBUG-DEPTH") (mknum "0" "1" "0" "1")) (
@@ -10910,7 +10916,8 @@ mksym "ACL2" "PC-OUTPUT") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym
 mksym "ACL2" "PRINT-BASE") (mknum "10" "1" "0" "1")) (mkpair (mkpair (mksym 
 "ACL2" "PRINT-CASE") (mksym "KEYWORD" "UPCASE")) (mkpair (mkpair (mksym 
 "ACL2" "PRINT-CIRCLE") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
-"ACL2" "PRINT-CLAUSE-IDS") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
+"ACL2" "PRINT-CIRCLE-FILES") (mksym "COMMON-LISP" "T")) (mkpair (mkpair (
+mksym "ACL2" "PRINT-CLAUSE-IDS") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
 mksym "ACL2" "PRINT-DOC-START-COLUMN") (mknum "15" "1" "0" "1")) (mkpair (
 mkpair (mksym "ACL2" "PRINT-ESCAPE") (mksym "COMMON-LISP" "T")) (mkpair (
 mkpair (mksym "ACL2" "PRINT-LENGTH") (mksym "COMMON-LISP" "NIL")) (mkpair (
@@ -10980,6 +10987,7 @@ mkpair (mkpair (mksym "ACL2" "PROOFS-CO") (mksym "ACL2-OUTPUT-CHANNEL"
 "ACL2" "REDO-FLAT-FAIL") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "ACL2" "REDO-FLAT-SUCC") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "ACL2" "REDUNDANT-WITH-RAW-CODE-OKP") (mksym "COMMON-LISP" "NIL")) (mkpair (
+mkpair (mksym "ACL2" "RETRACE-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAFE-MODE") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAVED-OUTPUT-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAVED-OUTPUT-REVERSED") (mksym "COMMON-LISP" "NIL")) (
@@ -11010,7 +11018,8 @@ mk_chars_str (chars_to_string (cons 32 nil)))) (mkpair (mkpair (mksym "ACL2"
 "UNDONE-WORLDS-KILL-RING") (mkpair (mksym "COMMON-LISP" "NIL") (mkpair (mksym 
 "COMMON-LISP" "NIL") (mkpair (mksym "COMMON-LISP" "NIL") (mksym "COMMON-LISP" 
 "NIL"))))) (mkpair (mkpair (mksym "ACL2" "USER-HOME-DIR") (mksym 
-"COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "ACL2" 
+"COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "ACL2" "VERBOSE-THEORY-WARNING") (
+mksym "COMMON-LISP" "T")) (mkpair (mkpair (mksym "ACL2" 
 "WINDOW-INTERFACE-POSTLUDE") (mk_chars_str (chars_to_string (cons 35 (cons 62 (
 cons 92 (cons 62 (cons 35 (cons 60 (cons 92 (cons 60 (cons 101 (cons 40 (cons 
 97 (cons 99 (cons 108 (cons 50 (cons 45 (cons 119 (cons 105 (cons 110 (cons 
@@ -11030,7 +11039,7 @@ mkpair (mksym "ACL2" "WINDOW-INTERFACEP") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WORMHOLE-NAME") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WORMHOLE-OUTPUT") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WRITES-OKP") (mksym "COMMON-LISP" "T")) (mksym 
-"COMMON-LISP" "NIL"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
+"COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
 mkpair (mksym "COMMON-LISP" "NIL") (mkpair (mksym "COMMON-LISP" "NIL") (
 mkpair (mknum "4000000" "1" "0" "1") (mkpair (mksym "COMMON-LISP" "NIL") (
 mkpair (mksym "COMMON-LISP" "NIL") (mkpair (mknum "1" "1" "0" "1") (mkpair (
@@ -11208,7 +11217,7 @@ mksym "ACL2" "ACCUMULATED-WARNINGS") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "ACL2-RAW-MODE-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "ACL2-VERSION") (mk_chars_str (chars_to_string (cons 65 (
 cons 67 (cons 76 (cons 50 (cons 32 (cons 86 (cons 101 (cons 114 (cons 115 (
-cons 105 (cons 111 (cons 110 (cons 32 (cons 51 (cons 46 (cons 53 nil))))))))))))))))))) (
+cons 105 (cons 111 (cons 110 (cons 32 (cons 51 (cons 46 (cons 54 nil))))))))))))))))))) (
 mkpair (mkpair (mksym "ACL2" "AXIOMSP") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "BDDNOTES") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
 mksym "ACL2" "CERTIFY-BOOK-DISABLEDP") (mksym "COMMON-LISP" "NIL")) (mkpair (
@@ -11361,36 +11370,36 @@ mkpair (mkpair (mksym "ACL2" "MACROS-WITH-RAW-CODE") (mkpair (mksym "ACL2"
 mkpair (mksym "ACL2" "CERTIFY-BOOK") (mkpair (mksym "ACL2" "PROGN!") (mkpair (
 mksym "ACL2" "F-PUT-GLOBAL") (mkpair (mksym "ACL2" "PUSH-UNTOUCHABLE") (
 mkpair (mksym "ACL2" "SET-BACKCHAIN-LIMIT") (mkpair (mksym "ACL2" 
-"SET-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "DEFTHEORY") (mkpair (mksym 
-"ACL2" "PSTK") (mkpair (mksym "ACL2" "VERIFY-GUARDS") (mkpair (mksym "ACL2" 
-"DEFCHOOSE") (mkpair (mksym "ACL2" "SET-DEFAULT-BACKCHAIN-LIMIT") (mkpair (
-mksym "ACL2" "SET-STATE-OK") (mkpair (mksym "ACL2" "SET-IGNORE-OK") (mkpair (
-mksym "ACL2" "SET-NON-LINEARP") (mkpair (mksym "ACL2" "WITH-OUTPUT") (mkpair (
-mksym "ACL2" "SET-COMPILE-FNS") (mkpair (mksym "ACL2" "ADD-INCLUDE-BOOK-DIR") (
-mkpair (mksym "ACL2" "CLEAR-PSTK") (mkpair (mksym "ACL2" 
-"ADD-CUSTOM-KEYWORD-HINT") (mkpair (mksym "ACL2" "INITIAL-GSTACK") (mkpair (
-mksym "ACL2" "ASSIGN-WORMHOLE-OUTPUT") (mkpair (mksym "ACL2" 
-"ACL2-UNWIND-PROTECT") (mkpair (mksym "ACL2" "SET-WELL-FOUNDED-RELATION") (
-mkpair (mksym "ACL2" "CATCH-TIME-LIMIT4") (mkpair (mksym "ACL2" "DEFUNS") (
-mkpair (mksym "ACL2" "ADD-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "LOCAL") (
-mkpair (mksym "ACL2" "ENCAPSULATE") (mkpair (mksym "ACL2" 
-"REMOVE-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "INCLUDE-BOOK") (mkpair (mksym 
-"ACL2" "PPROGN") (mkpair (mksym "ACL2" "SET-ENFORCE-REDUNDANCY") (mkpair (
-mksym "ACL2" "SET-IGNORE-DOC-STRING-ERROR") (mkpair (mksym "ACL2" "LOGIC") (
-mkpair (mksym "ACL2" "ER") (mkpair (mksym "ACL2" "DEFLABEL") (mkpair (mksym 
-"ACL2" "MV-LET") (mkpair (mksym "ACL2" "PROGRAM") (mkpair (mksym "ACL2" 
-"VALUE-TRIPLE") (mkpair (mksym "ACL2" "SET-BODY") (mkpair (mksym "ACL2" 
-"COMP") (mkpair (mksym "ACL2" "SET-BOGUS-DEFUN-HINTS-OK") (mkpair (mksym 
-"ACL2" "DMR-STOP") (mkpair (mksym "ACL2" "DEFPKG") (mkpair (mksym "ACL2" 
-"SET-MEASURE-FUNCTION") (mkpair (mksym "ACL2" "SET-INHIBIT-WARNINGS") (mkpair (
-mksym "ACL2" "DEFTHM") (mkpair (mksym "ACL2" "MV") (mkpair (mksym "ACL2" 
-"F-BIG-CLOCK-NEGATIVE-P") (mkpair (mksym "ACL2" "RESET-PREHISTORY") (mkpair (
-mksym "ACL2" "MUTUAL-RECURSION") (mkpair (mksym "ACL2" 
-"SET-REWRITE-STACK-LIMIT") (mkpair (mksym "ACL2" "ADD-MATCH-FREE-OVERRIDE") (
-mkpair (mksym "ACL2" "SET-INHIBIT-OUTPUT-LST") (mkpair (mksym "ACL2" 
-"SET-MATCH-FREE-DEFAULT") (mkpair (mksym "ACL2" "THE-MV") (mkpair (mksym 
-"ACL2" "TABLE") (mkpair (mksym "ACL2" "IN-ARITHMETIC-THEORY") (mkpair (mksym 
-"ACL2" "SET-CASE-SPLIT-LIMITATIONS") (mkpair (mksym "ACL2" 
+"SET-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "SET-OVERRIDE-HINTS-MACRO") (
+mkpair (mksym "ACL2" "DEFTHEORY") (mkpair (mksym "ACL2" "PSTK") (mkpair (
+mksym "ACL2" "VERIFY-GUARDS") (mkpair (mksym "ACL2" "DEFCHOOSE") (mkpair (
+mksym "ACL2" "SET-DEFAULT-BACKCHAIN-LIMIT") (mkpair (mksym "ACL2" 
+"SET-STATE-OK") (mkpair (mksym "ACL2" "SET-IGNORE-OK") (mkpair (mksym "ACL2" 
+"SET-NON-LINEARP") (mkpair (mksym "ACL2" "WITH-OUTPUT") (mkpair (mksym "ACL2" 
+"SET-COMPILE-FNS") (mkpair (mksym "ACL2" "ADD-INCLUDE-BOOK-DIR") (mkpair (
+mksym "ACL2" "CLEAR-PSTK") (mkpair (mksym "ACL2" "ADD-CUSTOM-KEYWORD-HINT") (
+mkpair (mksym "ACL2" "INITIAL-GSTACK") (mkpair (mksym "ACL2" 
+"ASSIGN-WORMHOLE-OUTPUT") (mkpair (mksym "ACL2" "ACL2-UNWIND-PROTECT") (
+mkpair (mksym "ACL2" "SET-WELL-FOUNDED-RELATION") (mkpair (mksym "ACL2" 
+"CATCH-TIME-LIMIT4") (mkpair (mksym "ACL2" "DEFUNS") (mkpair (mksym "ACL2" 
+"ADD-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "LOCAL") (mkpair (mksym "ACL2" 
+"ENCAPSULATE") (mkpair (mksym "ACL2" "REMOVE-DEFAULT-HINTS!") (mkpair (mksym 
+"ACL2" "INCLUDE-BOOK") (mkpair (mksym "ACL2" "PPROGN") (mkpair (mksym "ACL2" 
+"SET-ENFORCE-REDUNDANCY") (mkpair (mksym "ACL2" "SET-IGNORE-DOC-STRING-ERROR") (
+mkpair (mksym "ACL2" "LOGIC") (mkpair (mksym "ACL2" "ER") (mkpair (mksym 
+"ACL2" "DEFLABEL") (mkpair (mksym "ACL2" "MV-LET") (mkpair (mksym "ACL2" 
+"PROGRAM") (mkpair (mksym "ACL2" "VALUE-TRIPLE") (mkpair (mksym "ACL2" 
+"SET-BODY") (mkpair (mksym "ACL2" "COMP") (mkpair (mksym "ACL2" 
+"SET-BOGUS-DEFUN-HINTS-OK") (mkpair (mksym "ACL2" "DMR-STOP") (mkpair (mksym 
+"ACL2" "DEFPKG") (mkpair (mksym "ACL2" "SET-MEASURE-FUNCTION") (mkpair (mksym 
+"ACL2" "SET-INHIBIT-WARNINGS") (mkpair (mksym "ACL2" "DEFTHM") (mkpair (mksym 
+"ACL2" "MV") (mkpair (mksym "ACL2" "F-BIG-CLOCK-NEGATIVE-P") (mkpair (mksym 
+"ACL2" "RESET-PREHISTORY") (mkpair (mksym "ACL2" "MUTUAL-RECURSION") (mkpair (
+mksym "ACL2" "SET-REWRITE-STACK-LIMIT") (mkpair (mksym "ACL2" 
+"ADD-MATCH-FREE-OVERRIDE") (mkpair (mksym "ACL2" "SET-INHIBIT-OUTPUT-LST") (
+mkpair (mksym "ACL2" "SET-MATCH-FREE-DEFAULT") (mkpair (mksym "ACL2" "THE-MV") (
+mkpair (mksym "ACL2" "TABLE") (mkpair (mksym "ACL2" "IN-ARITHMETIC-THEORY") (
+mkpair (mksym "ACL2" "SET-CASE-SPLIT-LIMITATIONS") (mkpair (mksym "ACL2" 
 "SET-IRRELEVANT-FORMALS-OK") (mkpair (mksym "ACL2" "REMOVE-UNTOUCHABLE") (
 mkpair (mksym "ACL2" "IN-THEORY") (mkpair (mksym "ACL2" "WITH-OUTPUT-FORCED") (
 mkpair (mksym "ACL2" "DMR-START") (mkpair (mksym "ACL2" "REWRITE-ENTRY") (
@@ -11445,7 +11454,7 @@ mksym "ACL2" "MEMOIZE") (mkpair (mksym "ACL2" "DEFUNS-STD") (mkpair (mksym
 "POR") (mkpair (mksym "ACL2" "PAND") (mkpair (mksym "ACL2" "PLET") (mkpair (
 mksym "ACL2" "PARGS") (mkpair (mksym "ACL2" "TRACE!") (mkpair (mksym "ACL2" 
 "WITH-LIVE-STATE") (mkpair (mksym "ACL2" "WITH-OUTPUT-OBJECT-CHANNEL-SHARING") (
-mksym "COMMON-LISP" "NIL"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
+mksym "COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
 mkpair (mkpair (mksym "ACL2" "MAIN-TIMER") (mknum "0" "1" "0" "1")) (mkpair (
 mkpair (mksym "ACL2" "MAKE-EVENT-DEBUG") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "MAKE-EVENT-DEBUG-DEPTH") (mknum "0" "1" "0" "1")) (
@@ -11462,7 +11471,8 @@ mksym "ACL2" "PC-OUTPUT") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym
 mksym "ACL2" "PRINT-BASE") (mknum "10" "1" "0" "1")) (mkpair (mkpair (mksym 
 "ACL2" "PRINT-CASE") (mksym "KEYWORD" "UPCASE")) (mkpair (mkpair (mksym 
 "ACL2" "PRINT-CIRCLE") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
-"ACL2" "PRINT-CLAUSE-IDS") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
+"ACL2" "PRINT-CIRCLE-FILES") (mksym "COMMON-LISP" "T")) (mkpair (mkpair (
+mksym "ACL2" "PRINT-CLAUSE-IDS") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
 mksym "ACL2" "PRINT-DOC-START-COLUMN") (mknum "15" "1" "0" "1")) (mkpair (
 mkpair (mksym "ACL2" "PRINT-ESCAPE") (mksym "COMMON-LISP" "T")) (mkpair (
 mkpair (mksym "ACL2" "PRINT-LENGTH") (mksym "COMMON-LISP" "NIL")) (mkpair (
@@ -11532,6 +11542,7 @@ mkpair (mkpair (mksym "ACL2" "PROOFS-CO") (mksym "ACL2-OUTPUT-CHANNEL"
 "ACL2" "REDO-FLAT-FAIL") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "ACL2" "REDO-FLAT-SUCC") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "ACL2" "REDUNDANT-WITH-RAW-CODE-OKP") (mksym "COMMON-LISP" "NIL")) (mkpair (
+mkpair (mksym "ACL2" "RETRACE-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAFE-MODE") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAVED-OUTPUT-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAVED-OUTPUT-REVERSED") (mksym "COMMON-LISP" "NIL")) (
@@ -11562,7 +11573,8 @@ mk_chars_str (chars_to_string (cons 32 nil)))) (mkpair (mkpair (mksym "ACL2"
 "UNDONE-WORLDS-KILL-RING") (mkpair (mksym "COMMON-LISP" "NIL") (mkpair (mksym 
 "COMMON-LISP" "NIL") (mkpair (mksym "COMMON-LISP" "NIL") (mksym "COMMON-LISP" 
 "NIL"))))) (mkpair (mkpair (mksym "ACL2" "USER-HOME-DIR") (mksym 
-"COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "ACL2" 
+"COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "ACL2" "VERBOSE-THEORY-WARNING") (
+mksym "COMMON-LISP" "T")) (mkpair (mkpair (mksym "ACL2" 
 "WINDOW-INTERFACE-POSTLUDE") (mk_chars_str (chars_to_string (cons 35 (cons 62 (
 cons 92 (cons 62 (cons 35 (cons 60 (cons 92 (cons 60 (cons 101 (cons 40 (cons 
 97 (cons 99 (cons 108 (cons 50 (cons 45 (cons 119 (cons 105 (cons 110 (cons 
@@ -11582,7 +11594,7 @@ mkpair (mksym "ACL2" "WINDOW-INTERFACEP") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WORMHOLE-NAME") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WORMHOLE-OUTPUT") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WRITES-OKP") (mksym "COMMON-LISP" "T")) (mksym 
-"COMMON-LISP" "NIL"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
+"COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
 mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))) (mkpair (mkpair (
 mksym "ACL2" "ASSOC-EQ") (mkpair (mksym "ACL2" "X") (mkpair (mkpair (mksym 
 "COMMON-LISP" "QUOTE") (mkpair (mkpair (mkpair (mksym "ACL2" 
@@ -11592,7 +11604,7 @@ mksym "ACL2" "ACCUMULATED-WARNINGS") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "ACL2-RAW-MODE-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "ACL2-VERSION") (mk_chars_str (chars_to_string (cons 65 (
 cons 67 (cons 76 (cons 50 (cons 32 (cons 86 (cons 101 (cons 114 (cons 115 (
-cons 105 (cons 111 (cons 110 (cons 32 (cons 51 (cons 46 (cons 53 nil))))))))))))))))))) (
+cons 105 (cons 111 (cons 110 (cons 32 (cons 51 (cons 46 (cons 54 nil))))))))))))))))))) (
 mkpair (mkpair (mksym "ACL2" "AXIOMSP") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "BDDNOTES") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
 mksym "ACL2" "CERTIFY-BOOK-DISABLEDP") (mksym "COMMON-LISP" "NIL")) (mkpair (
@@ -11745,36 +11757,36 @@ mkpair (mkpair (mksym "ACL2" "MACROS-WITH-RAW-CODE") (mkpair (mksym "ACL2"
 mkpair (mksym "ACL2" "CERTIFY-BOOK") (mkpair (mksym "ACL2" "PROGN!") (mkpair (
 mksym "ACL2" "F-PUT-GLOBAL") (mkpair (mksym "ACL2" "PUSH-UNTOUCHABLE") (
 mkpair (mksym "ACL2" "SET-BACKCHAIN-LIMIT") (mkpair (mksym "ACL2" 
-"SET-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "DEFTHEORY") (mkpair (mksym 
-"ACL2" "PSTK") (mkpair (mksym "ACL2" "VERIFY-GUARDS") (mkpair (mksym "ACL2" 
-"DEFCHOOSE") (mkpair (mksym "ACL2" "SET-DEFAULT-BACKCHAIN-LIMIT") (mkpair (
-mksym "ACL2" "SET-STATE-OK") (mkpair (mksym "ACL2" "SET-IGNORE-OK") (mkpair (
-mksym "ACL2" "SET-NON-LINEARP") (mkpair (mksym "ACL2" "WITH-OUTPUT") (mkpair (
-mksym "ACL2" "SET-COMPILE-FNS") (mkpair (mksym "ACL2" "ADD-INCLUDE-BOOK-DIR") (
-mkpair (mksym "ACL2" "CLEAR-PSTK") (mkpair (mksym "ACL2" 
-"ADD-CUSTOM-KEYWORD-HINT") (mkpair (mksym "ACL2" "INITIAL-GSTACK") (mkpair (
-mksym "ACL2" "ASSIGN-WORMHOLE-OUTPUT") (mkpair (mksym "ACL2" 
-"ACL2-UNWIND-PROTECT") (mkpair (mksym "ACL2" "SET-WELL-FOUNDED-RELATION") (
-mkpair (mksym "ACL2" "CATCH-TIME-LIMIT4") (mkpair (mksym "ACL2" "DEFUNS") (
-mkpair (mksym "ACL2" "ADD-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "LOCAL") (
-mkpair (mksym "ACL2" "ENCAPSULATE") (mkpair (mksym "ACL2" 
-"REMOVE-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "INCLUDE-BOOK") (mkpair (mksym 
-"ACL2" "PPROGN") (mkpair (mksym "ACL2" "SET-ENFORCE-REDUNDANCY") (mkpair (
-mksym "ACL2" "SET-IGNORE-DOC-STRING-ERROR") (mkpair (mksym "ACL2" "LOGIC") (
-mkpair (mksym "ACL2" "ER") (mkpair (mksym "ACL2" "DEFLABEL") (mkpair (mksym 
-"ACL2" "MV-LET") (mkpair (mksym "ACL2" "PROGRAM") (mkpair (mksym "ACL2" 
-"VALUE-TRIPLE") (mkpair (mksym "ACL2" "SET-BODY") (mkpair (mksym "ACL2" 
-"COMP") (mkpair (mksym "ACL2" "SET-BOGUS-DEFUN-HINTS-OK") (mkpair (mksym 
-"ACL2" "DMR-STOP") (mkpair (mksym "ACL2" "DEFPKG") (mkpair (mksym "ACL2" 
-"SET-MEASURE-FUNCTION") (mkpair (mksym "ACL2" "SET-INHIBIT-WARNINGS") (mkpair (
-mksym "ACL2" "DEFTHM") (mkpair (mksym "ACL2" "MV") (mkpair (mksym "ACL2" 
-"F-BIG-CLOCK-NEGATIVE-P") (mkpair (mksym "ACL2" "RESET-PREHISTORY") (mkpair (
-mksym "ACL2" "MUTUAL-RECURSION") (mkpair (mksym "ACL2" 
-"SET-REWRITE-STACK-LIMIT") (mkpair (mksym "ACL2" "ADD-MATCH-FREE-OVERRIDE") (
-mkpair (mksym "ACL2" "SET-INHIBIT-OUTPUT-LST") (mkpair (mksym "ACL2" 
-"SET-MATCH-FREE-DEFAULT") (mkpair (mksym "ACL2" "THE-MV") (mkpair (mksym 
-"ACL2" "TABLE") (mkpair (mksym "ACL2" "IN-ARITHMETIC-THEORY") (mkpair (mksym 
-"ACL2" "SET-CASE-SPLIT-LIMITATIONS") (mkpair (mksym "ACL2" 
+"SET-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "SET-OVERRIDE-HINTS-MACRO") (
+mkpair (mksym "ACL2" "DEFTHEORY") (mkpair (mksym "ACL2" "PSTK") (mkpair (
+mksym "ACL2" "VERIFY-GUARDS") (mkpair (mksym "ACL2" "DEFCHOOSE") (mkpair (
+mksym "ACL2" "SET-DEFAULT-BACKCHAIN-LIMIT") (mkpair (mksym "ACL2" 
+"SET-STATE-OK") (mkpair (mksym "ACL2" "SET-IGNORE-OK") (mkpair (mksym "ACL2" 
+"SET-NON-LINEARP") (mkpair (mksym "ACL2" "WITH-OUTPUT") (mkpair (mksym "ACL2" 
+"SET-COMPILE-FNS") (mkpair (mksym "ACL2" "ADD-INCLUDE-BOOK-DIR") (mkpair (
+mksym "ACL2" "CLEAR-PSTK") (mkpair (mksym "ACL2" "ADD-CUSTOM-KEYWORD-HINT") (
+mkpair (mksym "ACL2" "INITIAL-GSTACK") (mkpair (mksym "ACL2" 
+"ASSIGN-WORMHOLE-OUTPUT") (mkpair (mksym "ACL2" "ACL2-UNWIND-PROTECT") (
+mkpair (mksym "ACL2" "SET-WELL-FOUNDED-RELATION") (mkpair (mksym "ACL2" 
+"CATCH-TIME-LIMIT4") (mkpair (mksym "ACL2" "DEFUNS") (mkpair (mksym "ACL2" 
+"ADD-DEFAULT-HINTS!") (mkpair (mksym "ACL2" "LOCAL") (mkpair (mksym "ACL2" 
+"ENCAPSULATE") (mkpair (mksym "ACL2" "REMOVE-DEFAULT-HINTS!") (mkpair (mksym 
+"ACL2" "INCLUDE-BOOK") (mkpair (mksym "ACL2" "PPROGN") (mkpair (mksym "ACL2" 
+"SET-ENFORCE-REDUNDANCY") (mkpair (mksym "ACL2" "SET-IGNORE-DOC-STRING-ERROR") (
+mkpair (mksym "ACL2" "LOGIC") (mkpair (mksym "ACL2" "ER") (mkpair (mksym 
+"ACL2" "DEFLABEL") (mkpair (mksym "ACL2" "MV-LET") (mkpair (mksym "ACL2" 
+"PROGRAM") (mkpair (mksym "ACL2" "VALUE-TRIPLE") (mkpair (mksym "ACL2" 
+"SET-BODY") (mkpair (mksym "ACL2" "COMP") (mkpair (mksym "ACL2" 
+"SET-BOGUS-DEFUN-HINTS-OK") (mkpair (mksym "ACL2" "DMR-STOP") (mkpair (mksym 
+"ACL2" "DEFPKG") (mkpair (mksym "ACL2" "SET-MEASURE-FUNCTION") (mkpair (mksym 
+"ACL2" "SET-INHIBIT-WARNINGS") (mkpair (mksym "ACL2" "DEFTHM") (mkpair (mksym 
+"ACL2" "MV") (mkpair (mksym "ACL2" "F-BIG-CLOCK-NEGATIVE-P") (mkpair (mksym 
+"ACL2" "RESET-PREHISTORY") (mkpair (mksym "ACL2" "MUTUAL-RECURSION") (mkpair (
+mksym "ACL2" "SET-REWRITE-STACK-LIMIT") (mkpair (mksym "ACL2" 
+"ADD-MATCH-FREE-OVERRIDE") (mkpair (mksym "ACL2" "SET-INHIBIT-OUTPUT-LST") (
+mkpair (mksym "ACL2" "SET-MATCH-FREE-DEFAULT") (mkpair (mksym "ACL2" "THE-MV") (
+mkpair (mksym "ACL2" "TABLE") (mkpair (mksym "ACL2" "IN-ARITHMETIC-THEORY") (
+mkpair (mksym "ACL2" "SET-CASE-SPLIT-LIMITATIONS") (mkpair (mksym "ACL2" 
 "SET-IRRELEVANT-FORMALS-OK") (mkpair (mksym "ACL2" "REMOVE-UNTOUCHABLE") (
 mkpair (mksym "ACL2" "IN-THEORY") (mkpair (mksym "ACL2" "WITH-OUTPUT-FORCED") (
 mkpair (mksym "ACL2" "DMR-START") (mkpair (mksym "ACL2" "REWRITE-ENTRY") (
@@ -11829,7 +11841,7 @@ mksym "ACL2" "MEMOIZE") (mkpair (mksym "ACL2" "DEFUNS-STD") (mkpair (mksym
 "POR") (mkpair (mksym "ACL2" "PAND") (mkpair (mksym "ACL2" "PLET") (mkpair (
 mksym "ACL2" "PARGS") (mkpair (mksym "ACL2" "TRACE!") (mkpair (mksym "ACL2" 
 "WITH-LIVE-STATE") (mkpair (mksym "ACL2" "WITH-OUTPUT-OBJECT-CHANNEL-SHARING") (
-mksym "COMMON-LISP" "NIL"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
+mksym "COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
 mkpair (mkpair (mksym "ACL2" "MAIN-TIMER") (mknum "0" "1" "0" "1")) (mkpair (
 mkpair (mksym "ACL2" "MAKE-EVENT-DEBUG") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "MAKE-EVENT-DEBUG-DEPTH") (mknum "0" "1" "0" "1")) (
@@ -11846,7 +11858,8 @@ mksym "ACL2" "PC-OUTPUT") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym
 mksym "ACL2" "PRINT-BASE") (mknum "10" "1" "0" "1")) (mkpair (mkpair (mksym 
 "ACL2" "PRINT-CASE") (mksym "KEYWORD" "UPCASE")) (mkpair (mkpair (mksym 
 "ACL2" "PRINT-CIRCLE") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
-"ACL2" "PRINT-CLAUSE-IDS") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
+"ACL2" "PRINT-CIRCLE-FILES") (mksym "COMMON-LISP" "T")) (mkpair (mkpair (
+mksym "ACL2" "PRINT-CLAUSE-IDS") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
 mksym "ACL2" "PRINT-DOC-START-COLUMN") (mknum "15" "1" "0" "1")) (mkpair (
 mkpair (mksym "ACL2" "PRINT-ESCAPE") (mksym "COMMON-LISP" "T")) (mkpair (
 mkpair (mksym "ACL2" "PRINT-LENGTH") (mksym "COMMON-LISP" "NIL")) (mkpair (
@@ -11916,6 +11929,7 @@ mkpair (mkpair (mksym "ACL2" "PROOFS-CO") (mksym "ACL2-OUTPUT-CHANNEL"
 "ACL2" "REDO-FLAT-FAIL") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "ACL2" "REDO-FLAT-SUCC") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "ACL2" "REDUNDANT-WITH-RAW-CODE-OKP") (mksym "COMMON-LISP" "NIL")) (mkpair (
+mkpair (mksym "ACL2" "RETRACE-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAFE-MODE") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAVED-OUTPUT-P") (mksym "COMMON-LISP" "NIL")) (mkpair (
 mkpair (mksym "ACL2" "SAVED-OUTPUT-REVERSED") (mksym "COMMON-LISP" "NIL")) (
@@ -11946,7 +11960,8 @@ mk_chars_str (chars_to_string (cons 32 nil)))) (mkpair (mkpair (mksym "ACL2"
 "UNDONE-WORLDS-KILL-RING") (mkpair (mksym "COMMON-LISP" "NIL") (mkpair (mksym 
 "COMMON-LISP" "NIL") (mkpair (mksym "COMMON-LISP" "NIL") (mksym "COMMON-LISP" 
 "NIL"))))) (mkpair (mkpair (mksym "ACL2" "USER-HOME-DIR") (mksym 
-"COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "ACL2" 
+"COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "ACL2" "VERBOSE-THEORY-WARNING") (
+mksym "COMMON-LISP" "T")) (mkpair (mkpair (mksym "ACL2" 
 "WINDOW-INTERFACE-POSTLUDE") (mk_chars_str (chars_to_string (cons 35 (cons 62 (
 cons 92 (cons 62 (cons 35 (cons 60 (cons 92 (cons 60 (cons 101 (cons 40 (cons 
 97 (cons 99 (cons 108 (cons 50 (cons 45 (cons 119 (cons 105 (cons 110 (cons 
@@ -11966,7 +11981,7 @@ mkpair (mksym "ACL2" "WINDOW-INTERFACEP") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WORMHOLE-NAME") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WORMHOLE-OUTPUT") (mksym "COMMON-LISP" "NIL")) (
 mkpair (mkpair (mksym "ACL2" "WRITES-OKP") (mksym "COMMON-LISP" "T")) (mksym 
-"COMMON-LISP" "NIL"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
+"COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
 mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))) (mkpair (mkpair (
 mksym "ACL2" "ASSOC-EQ") (mkpair (mksym "ACL2" "X") (mkpair (mkpair (mksym 
 "COMMON-LISP" "QUOTE") (mkpair (mkpair (mkpair (mksym "ACL2" "STANDARD-OI") (
@@ -16360,31 +16375,24 @@ mksym "COMMON-LISP" "NIL")))))
 ,
 
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "ACL2" 
-"GOOD-DEFUN-MODE-P") (mkpair (mkpair (mksym "ACL2" "P") (mksym "COMMON-LISP" 
-"NIL")) (mkpair (mkpair (mksym "ACL2" "MEMBER-EQ") (mkpair (mksym "ACL2" "P") (
-mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mkpair (mksym "KEYWORD" 
-"LOGIC") (mkpair (mksym "KEYWORD" "PROGRAM") (mksym "COMMON-LISP" "NIL"))) (
-mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))) (mksym 
-"COMMON-LISP" "NIL")))))
-,
-
-(mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "ACL2" 
 "DEFAULT-DEFUN-MODE") (mkpair (mkpair (mksym "ACL2" "WRLD") (mksym 
 "COMMON-LISP" "NIL")) (mkpair (mkpair (mkpair (mksym "COMMON-LISP" "LAMBDA") (
 mkpair (mkpair (mksym "ACL2" "VAL") (mksym "COMMON-LISP" "NIL")) (mkpair (
-mkpair (mksym "COMMON-LISP" "IF") (mkpair (mkpair (mksym "ACL2" 
-"GOOD-DEFUN-MODE-P") (mkpair (mksym "ACL2" "VAL") (mksym "COMMON-LISP" "NIL"))) (
+mkpair (mksym "COMMON-LISP" "IF") (mkpair (mkpair (mksym "ACL2" "MEMBER-EQ") (
 mkpair (mksym "ACL2" "VAL") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (
-mkpair (mksym "KEYWORD" "PROGRAM") (mksym "COMMON-LISP" "NIL"))) (mksym 
-"COMMON-LISP" "NIL"))))) (mksym "COMMON-LISP" "NIL")))) (mkpair (mkpair (
-mksym "COMMON-LISP" "CDR") (mkpair (mkpair (mksym "ACL2" "ASSOC-EQ") (mkpair (
-mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "KEYWORD" "DEFUN-MODE") (
-mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "ACL2" "TABLE-ALIST") (
-mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "ACL2" 
-"ACL2-DEFAULTS-TABLE") (mksym "COMMON-LISP" "NIL"))) (mkpair (mksym "ACL2" 
-"WRLD") (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))) (mksym 
-"COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" 
-"NIL")))))
+mkpair (mkpair (mksym "KEYWORD" "LOGIC") (mkpair (mksym "KEYWORD" "PROGRAM") (
+mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL"))) (mksym 
+"COMMON-LISP" "NIL")))) (mkpair (mksym "ACL2" "VAL") (mkpair (mkpair (mksym 
+"COMMON-LISP" "QUOTE") (mkpair (mksym "KEYWORD" "PROGRAM") (mksym 
+"COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL"))))) (mksym "COMMON-LISP" 
+"NIL")))) (mkpair (mkpair (mksym "COMMON-LISP" "CDR") (mkpair (mkpair (mksym 
+"ACL2" "ASSOC-EQ") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (
+mksym "KEYWORD" "DEFUN-MODE") (mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (
+mksym "ACL2" "TABLE-ALIST") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (
+mkpair (mksym "ACL2" "ACL2-DEFAULTS-TABLE") (mksym "COMMON-LISP" "NIL"))) (
+mkpair (mksym "ACL2" "WRLD") (mksym "COMMON-LISP" "NIL")))) (mksym 
+"COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" 
+"NIL"))) (mksym "COMMON-LISP" "NIL")))))
 ,
 
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "ACL2" 
@@ -18816,7 +18824,7 @@ mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "COMMON-LISP"
 cons 32 (cons 102 (cons 105 (cons 114 (cons 115 (cons 116 (cons 32 (cons 116 (
 cons 119 (cons 111 (cons 32 (cons 97 (cons 114 (cons 103 (cons 117 (cons 109 (
 cons 101 (cons 110 (cons 116 (cons 115 (cons 32 (cons 111 (cons 102 (cons 32 (
-cons 126 (cons 120 (cons 48 (cons 32 (cons 109 (cons 117 (cons 99 (cons 104 (
+cons 126 (cons 120 (cons 48 (cons 32 (cons 109 (cons 117 (cons 115 (cons 116 (
 cons 32 (cons 98 (cons 111 (cons 116 (cons 104 (cons 32 (cons 101 (cons 118 (
 cons 97 (cons 108 (cons 117 (cons 97 (cons 116 (cons 101 (cons 32 (cons 116 (
 cons 111 (cons 32 (cons 116 (cons 114 (cons 117 (cons 101 (cons 32 (cons 126 (
