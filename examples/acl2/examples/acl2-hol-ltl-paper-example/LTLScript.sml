@@ -505,8 +505,9 @@ val Lemma2 =
 val Theorem1 =
  time store_thm
   ("Theorem1",
-   ``!M M'. MODEL M /\ MODEL M' /\ BISIM_EQ M M' Vars 
-            ==> !f. (Atoms f SUBSET Vars) ==> (SAT M f = SAT M' f)``,
+   ``!M M' Vars. 
+      MODEL M /\ MODEL M' /\ BISIM_EQ M M' Vars 
+      ==> !f. (Atoms f SUBSET Vars) ==> (SAT M f = SAT M' f)``,
    RW_TAC std_ss [BISIM_EQ_def,SAT_def,SPECIFICATION]
     THEN EQ_TAC
     THEN RW_TAC std_ss []
@@ -525,140 +526,5 @@ val Theorem1 =
        THEN RES_TAC
        THEN `SEM M' p' f` by METIS_TAC[PATH_def]
        THEN METIS_TAC[Lemma2,IN_DEF]]);
-
-(* Instantiate to sexp-model
-
-ISPECL [``MAKE_HOL_MODEL m1``,``MAKE_HOL_MODEL m2``]Theorem1;
-
-
-
-I've tweaked the original HOL LTL proof to go through using the
-assumption on the transition relation R that:
-
- !s s'. s IN M.S /\ (s,s') IN M.R ==> s' IN M.S
-
-I think this corresponds to the Sandip assumption, based on what you
-said in an email:
-  
-  ------------------------------------------------------------------
-  I was however able to prove the following:
-
-   (defthm range-transition-relation
-    (implies (and (next-statep p q M)
-                  (memberp p (g :states M)) ; sadly, seems necessary
-                  (circuit-modelp M))
-             (memberp q (g :states M))))
-  ------------------------------------------------------------------
-
-I didn't need to change the definition of a path (as you predicted).
-
-I haven't looked at adding Vars, but I don't expect there to be any
-problems.
-
-Instead, I've been experimenting with reformulating the sexpression
-version you devised so that it is an instance of the original
-HOL version (i.e. so no need to convert "s IN M.S" to "s IN S M" etc).
-
-Let me know what you think of this reformulation. If you think it
-good, then I will use this approach when adding Vars.
-
-The reformulation defines a function that converts a Sandip
-s-expression representation of a model ``m:sexp`` to a HOL Kripke
-structures ``MAKE_HOL_MODEL m`` which has HOL type
-``(sexp,sexp)model`` - i.e. both states and propositions are 
-s-expressions. The definition packages up your definitions of S, S0,
-L, R into a HOL record structure:
-
-   val MAKE_HOL_MODEL_def =
-    Define
-     `MAKE_HOL_MODEL m =
-       <| S  := \s.     |= memberp s (g States m);
-          S0 := \s.     |= memberp s (g InitialStates m);
-          R  := \(p,q). |= (next_statep p q m);
-          L  := \s a.   |= memberp a (label_of s m)
-       |> : (sexp,sexp)model`;
-
-The HOL Theorem1:
-
-   |- !M M'.
-       MODEL M /\ MODEL M' /\ BISIM_EQ M M' 
-       ==> 
-       !f. SAT M f <=> SAT M' f
-
-can then be instantiated to
-
-   |- MODEL (MAKE_HOL_MODEL m1) /\ MODEL (MAKE_HOL_MODEL m2) /\
-      BISIM_EQ (MAKE_HOL_MODEL m1) (MAKE_HOL_MODEL m2) 
-      ==>
-      !f. SAT (MAKE_HOL_MODEL m1) f <=> SAT (MAKE_HOL_MODEL m2) f
-
-where m1 and m2 are Sandip s-expression models. In our application, m2
-will be COIR m1.
-
-To link the Sandip and HOL formulations of Kripke structure models one
-needs to prove that:
-
-   !m. (|= circuit_modelp m) ==> MODEL(MAKE_HOL_MODEL m)
-
-which, from the (revised) definition of MODEL, amounts to proving for
-all m that:
-
-   (|= circuit_modelp m)       /\
-   (|= memberp s (g States m)) /\
-   (|= next_statep s s' m)
-   ==>
-   (|= memberp s' (g States m))
-
-and
-
-   (|= circuit_modelp m) /\
-   (|= memberp x (g InitialStates m))
-   ==>
-   (|= memberp x (g States m))
-
-I think you've already done these.
-
-The third assumption of Theorem1 is 
-
- BISIM_EQ (MAKE_HOL_MODEL m1) (MAKE_HOL_MODEL m2)
-
-which expands to the following. Presumably Sandip provides an expicit
-s-expression witness for the existentially quantified variable B
-below, plus ACL2 theorems we can import into HOL to prove this (in the
-case that m2 is COIR m1).
-
-    ?B.
-      (!s s'.
-         (|= memberp s (g States m1)) /\ (|= memberp s' (g States m2)) /\
-         B (s,s') ==>
-         ((\a. |= memberp a (label_of s m1)) =
-          (\a. |= memberp a (label_of s' m2))) /\
-         (!s1.
-            (|= memberp s1 (g States m1)) /\ (|= next_statep s s1 m1) ==>
-            ?s1'.
-              (|= memberp s1' (g States m2)) /\
-              (|= next_statep s' s1' m2) /\ B (s1,s1')) /\
-         !s1'.
-           (|= memberp s1' (g States m2)) /\ (|= next_statep s' s1' m2) ==>
-           ?s1.
-             (|= memberp s1 (g States m1)) /\ (|= next_statep s s1 m1) /\
-             B (s1,s1')) /\
-      (!s0.
-         (|= memberp s0 (g InitialStates m1)) ==>
-         ?s0'. (|= memberp s0' (g InitialStates m2)) /\ B (s0,s0')) /\
-      !s0'.
-        (|= memberp s0' (g InitialStates m2)) ==>
-        ?s0. (|= memberp s0 (g InitialStates m1)) /\ B (s0,s0')
-
-I haven't looked at your LTLscript-*.sml files in detail yet 
-(I suspect some of the stuff above may duplicate or clash with
-LTLscript-3.sml). I'll do that next. BTW Holmake requires that source
-files that create theories are of the exact form
-<TheoryName>Script.sml (note capitalised "S"). This is indeed horrible, 
-but one has to live with it, so we may need to switch to LTLScript-*.sml.
-
-*)
-
-
 
 val _ = export_theory();

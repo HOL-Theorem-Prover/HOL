@@ -19,6 +19,7 @@ well as the particular files for the LTL.
    hol_defaxiomsScript.sml ............... HOL definitions of functions in defaxioms
    sexp.sml .............................. Tool for interactively processing s-expressions
    load_book.sml ......................... Load an ACL2-generated ML book into HOL
+   make_hol_acl2_defaxioms.ml ............ Creates and writes file hol_acl2_defaxioms.lisp
 
    LTLScript.sml ......................... Script to build LTL semantics and bisumulation theorem
 
