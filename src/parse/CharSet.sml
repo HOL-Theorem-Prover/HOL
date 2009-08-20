@@ -28,7 +28,7 @@ struct
     val cword = <<(word1, Word.fromInt m)
     fun update(i,w) = if i = d then orb(w, cword) else w
   in
-    mapi update (cs, 0, NONE)
+    mapi update cs
   end
 
   fun addList (cs, clist) = List.foldl (fn (c, cs) => add(cs, c)) cs clist
@@ -53,13 +53,13 @@ struct
   fun union(cs1, cs2) = let
     fun update(i, w) = orb(w, sub(cs2, i))
   in
-    mapi update (cs1, 0, NONE)
+    mapi update cs1
   end
 
   fun intersect(cs1, cs2) = let
     fun update(i, w) = andb(w, sub(cs2, i))
   in
-    mapi update (cs1, 0, NONE)
+    mapi update cs1
   end
 
   fun setbits_fold f acc w = let
@@ -82,7 +82,7 @@ struct
       setbits_fold g acc w
     end
   in
-    foldri f [] (cs, 0, NONE)
+    foldri f [] cs
   end
 
 end;
