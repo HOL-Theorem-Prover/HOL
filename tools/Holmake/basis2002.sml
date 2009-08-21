@@ -360,7 +360,8 @@ struct
 end;
 
 structure Word8Vector :> MONO_VECTOR
-                           where type elem = Word8.word =
+                           where type elem = Word8.word
+                             and type vector = Word8Vector.vector =
 struct
   open Word8Vector
   type vector = Word8Vector.vector
