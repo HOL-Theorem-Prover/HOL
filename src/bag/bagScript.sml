@@ -156,6 +156,7 @@ val BAG_IN_BAG_MERGE = Q.store_thm (
   `!e b1 b2. (BAG_IN e (BAG_MERGE b1 b2)) =
              (BAG_IN e b1 \/ BAG_IN e b2)`,
   SIMP_TAC std_ss [BAG_IN, BAG_INN_BAG_MERGE]);
+val _ = export_rewrites ["BAG_IN_BAG_MERGE"]
 
 val geq_refl = ARITH_PROVE ``m >= m``
 
@@ -576,6 +577,11 @@ val NOT_IN_BAG_DIFF = Q.store_thm(
             (BAG_DIFF b1 (BAG_INSERT x b2) = BAG_DIFF b1 b2)`,
   SRW_TAC [COND_elim_ss, ARITH_ss][FUN_EQ_THM, BAG_IN, BAG_INN, BAG_INSERT,
                                    BAG_DIFF]);
+
+val BAG_IN_DIFF_E = Q.store_thm(
+"BAG_IN_DIFF_E",
+`e <: b1 - b2 ==> e <: b1`,
+SRW_TAC [ARITH_ss][BAG_IN,BAG_INN,BAG_DIFF]);
 
 val BAG_UNION_DIFF = store_thm(
   "BAG_UNION_DIFF",
@@ -1703,9 +1709,25 @@ val BAG_EVERY =
 val BAG_EVERY_THM = store_thm ("BAG_EVERY_THM",
 ``(!P. (BAG_EVERY P EMPTY_BAG)) /\
   (!P e b. (BAG_EVERY P (BAG_INSERT e b) = P e /\ BAG_EVERY P b))``,
-SIMP_TAC std_ss [BAG_EVERY, BAG_IN_BAG_INSERT,
-		 DISJ_IMP_THM, FORALL_AND_THM,
-		 NOT_IN_EMPTY_BAG]);
+SIMP_TAC (srw_ss()) [BAG_EVERY] THEN METIS_TAC []);
+val _ = export_rewrites ["BAG_EVERY_THM"]
+
+val BAG_EVERY_UNION = Q.store_thm(
+"BAG_EVERY_UNION",
+`BAG_EVERY P (b1 + b2) = BAG_EVERY P b1 /\ BAG_EVERY P b2`,
+SRW_TAC [][BAG_EVERY] THEN METIS_TAC []);
+val _ = export_rewrites["BAG_EVERY_UNION"];
+
+val BAG_EVERY_MERGE = Q.store_thm(
+"BAG_EVERY_MERGE",
+`BAG_EVERY P (BAG_MERGE b1 b2) = BAG_EVERY P b1 /\ BAG_EVERY P b2`,
+SRW_TAC [][BAG_EVERY, DISJ_IMP_THM, FORALL_AND_THM]);
+val _ = export_rewrites ["BAG_EVERY_MERGE"]
+
+val BAG_EVERY_SET = Q.store_thm(
+"BAG_EVERY_SET",
+`BAG_EVERY P b = SET_OF_BAG b SUBSET {x | P x}`,
+SRW_TAC [][BAG_EVERY, SET_OF_BAG, SUBSET_DEF]);
 
 val BAG_ALL_DISTINCT = new_definition ("BAG_ALL_DISTINCT",
   ``BAG_ALL_DISTINCT b = (!e. b e <= 1:num)``);
@@ -1714,15 +1736,12 @@ val BAG_ALL_DISTINCT_THM = store_thm ("BAG_ALL_DISTINCT_THM",
 ``BAG_ALL_DISTINCT EMPTY_BAG /\
   (!e b. (BAG_ALL_DISTINCT (BAG_INSERT e b) =
          ~(BAG_IN e b) /\ BAG_ALL_DISTINCT b))``,
-SIMP_TAC std_ss [BAG_ALL_DISTINCT, EMPTY_BAG,
-		 BAG_IN, BAG_INN, BAG_INSERT,
-		 COND_RAND, COND_RATOR,
-		 COND_EXPAND_IMP, FORALL_AND_THM] THEN
-REPEAT GEN_TAC THEN
-`(b e + 1 <= 1) = (b e = 0)` by bossLib.DECIDE_TAC THEN
-`~(b e >= 1) = (b e = 0)` by bossLib.DECIDE_TAC THEN
-`0:num <= 1` by bossLib.DECIDE_TAC THEN
-METIS_TAC[]);
+`(!x. ((x + 1 <= 1) = (x = 0)) /\ (~(x >= 1) = (x = 0))) /\ 0n <= 1`
+   by bossLib.DECIDE_TAC THEN
+SRW_TAC [COND_elim_ss, DNF_ss]
+        [BAG_ALL_DISTINCT, EMPTY_BAG, BAG_INSERT, BAG_IN, BAG_INN,
+         EQ_IMP_THM] THEN METIS_TAC []);
+val _ = export_rewrites ["BAG_ALL_DISTINCT_THM"]
 
 val BAG_ALL_DISTINCT_BAG_MERGE = store_thm (
   "BAG_ALL_DISTINCT_BAG_MERGE",
@@ -1761,6 +1780,28 @@ val BAG_ALL_DISTINCT_DIFF = store_thm (
   bossLib.DECIDE_TAC);
 
 
+val BAG_ALL_DISTINCT_DELETE = store_thm(
+  "BAG_ALL_DISTINCT_DELETE",
+  ``BAG_ALL_DISTINCT b = !e. e <: b ==> ~(e <: b - {|e|})``,
+  SRW_TAC [][BAG_ALL_DISTINCT, BAG_IN, BAG_INN, BAG_DIFF, BAG_INSERT,
+             EMPTY_BAG, EQ_IMP_THM] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `e` MP_TAC) THEN DECIDE_TAC);
+
+val BAG_ALL_DISTINCT_SET = store_thm(
+  "BAG_ALL_DISTINCT_SET",
+  ``BAG_ALL_DISTINCT b <=> (BAG_OF_SET (SET_OF_BAG b) = b)``,
+  SRW_TAC [][BAG_ALL_DISTINCT, FUN_EQ_THM, SET_OF_BAG,
+             BAG_INN, BAG_IN, BAG_INSERT, EMPTY_BAG, BAG_OF_SET] THEN
+  EQ_TAC THEN STRIP_TAC THEN Q.X_GEN_TAC `e` THEN
+  POP_ASSUM (Q.SPEC_THEN `e` MP_TAC) THEN DECIDE_TAC);
+
+val BAG_ALL_DISTINCT_BAG_OF_SET = store_thm(
+  "BAG_ALL_DISTINCT_BAG_OF_SET",
+  ``BAG_ALL_DISTINCT (BAG_OF_SET s)``,
+  SRW_TAC [][BAG_ALL_DISTINCT_SET]);
+val _ = export_rewrites ["BAG_ALL_DISTINCT_BAG_OF_SET"]
+
+
 val BAG_IN_BAG_DIFF_ALL_DISTINCT = store_thm (
   "BAG_IN_BAG_DIFF_ALL_DISTINCT",
   ``!b1 b2 e. BAG_ALL_DISTINCT b1 ==>
@@ -1768,10 +1809,7 @@ val BAG_IN_BAG_DIFF_ALL_DISTINCT = store_thm (
         BAG_IN e b1 /\ ~BAG_IN e b2)``,
   SIMP_TAC std_ss [BAG_ALL_DISTINCT,
 		   BAG_IN, BAG_INN, BAG_DIFF] THEN
-  REPEAT STRIP_TAC THEN
-  `b1 e <= 1` by PROVE_TAC[] THEN
-  Cases_on `b1 e >= 1` THEN ASM_SIMP_TAC std_ss []
-);
+  REPEAT STRIP_TAC THEN `b1 e <= 1` by PROVE_TAC[] THEN DECIDE_TAC);
 
 val NOT_BAG_IN = Q.store_thm
 ("NOT_BAG_IN",
