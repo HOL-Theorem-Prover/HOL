@@ -590,6 +590,14 @@ file to \"use\" first."
   (let ((buf (ensure-hol-buffer-ok)))
     (interrupt-process (get-buffer-process buf))))
 
+
+(defun hol-kill ()
+  "Kill HOL process."
+  (interactive)
+  (let ((buf (ensure-hol-buffer-ok)))
+    (kill-process (get-buffer-process buf))))
+
+
 (defun hol-recentre ()
   "Display the HOL window in such a way that it displays most text."
   (interactive)
@@ -775,6 +783,11 @@ argument N, sets the trace to that value in particular."
   (interactive "P")
   (hol-toggle-trace "types" arg))
 
+(defun hol-toggle-show-types-verbosely ()
+  "Toggles the global show_types_verbosely variable."
+  (interactive)
+  (hol-toggle-var "Globals.show_types_verbosely"))
+
 (defun hol-toggle-show-numeral-types()
   "Toggles the global show_numeral_types variable."
   (interactive)
@@ -838,6 +851,13 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   (send-raw-string-to-hol (format "DB.print_match [] (Term`%s`)" tm)
                           hol-echo-commands-p))
 
+(defun hol-db-find (tm)
+  "Does a DB.find on the given string."
+  (interactive "sTheorem name part: ")
+  (send-raw-string-to-hol (format "DB.print_find \"%s\"" tm)
+                          hol-echo-commands-p))
+
+
 (defun hol-drop-all-goals ()
   "Drops all HOL goals from the current proofs object."
   (interactive)
@@ -879,6 +899,76 @@ already loaded.)"
 ;; (define-key comint-mode-map "\r" 'hol-return-key)
 
 
+
+;;templates
+(defun hol-extract-script-name (arg)
+  "Return the name of the theory associated with the given filename"
+(let* (
+   (pos (string-match "[^/]*Script\.sml" arg)))
+   (cond (pos (substring arg pos -10))
+         (t "..."))))
+
+(defun hol-template-new-script-file ()
+   (interactive)
+   (insert "\n\nopen HolKernel Parse boolLib bossLib;\n\nval _ = new_theory \"")
+   (insert (hol-extract-script-name buffer-file-name))
+   (insert "\";\n\n\n\n\nval _ = export_theory();\n\n"))
+
+(defun hol-template-comment-star ()
+   (interactive)
+   (insert "\n\n")
+   (insert "(**********************************************************************\n")
+   (insert " *                                                                    *\n")
+   (insert " *                                                                    *\n")
+   (insert " *                                                                    *\n")
+   (insert " **********************************************************************)\n"))
+
+(defun hol-template-comment-minus ()
+   (interactive)
+   (insert "\n\n")
+   (insert "(*--------------------------------------------------------------------*\n")
+   (insert " |                                                                    |\n")
+   (insert " |                                                                    |\n")
+   (insert " |                                                                    |\n")
+   (insert " *--------------------------------------------------------------------*)\n"))
+
+(defun hol-template-comment-equal ()
+   (interactive)
+   (insert "\n\n")
+   (insert "(*====================================================================*\n")
+   (insert " |                                                                    |\n")
+   (insert " |                                                                    |\n")
+   (insert " |                                                                    |\n")
+   (insert " *====================================================================*)\n"))
+
+(defun hol-template-define (name)
+   (interactive "sNew name: ")
+   (insert "val ")
+   (insert name)
+   (insert "_def = Define `")
+   (insert name)
+   (insert " = `;\n"))
+
+(defun hol-template-store-thm (name)
+   (interactive "sTheorem name: ")
+   (insert "val ")
+   (insert name)
+   (insert " = store_thm(")
+   (cond ((> (length name) 30) (insert "\n  "))
+          (t t))
+   (insert "\"")
+   (insert name)
+   (insert "\",\n  ``  ``,\n"))
+
+(defun hol-template-new-datatype ()
+   (interactive)
+   (insert "val _ = Hol_datatype ‘TREE = LEAF of ’a | BRANCH of TREE => TREE‘;\n"))
+
+
+
+
+
+
 (define-key global-map "\M-h" 'hol-map)
 
 (define-key hol-map "\C-a" 'hol-toggle-show-assums)
@@ -918,3 +1008,239 @@ already loaded.)"
 (define-key hol-map "t"    'mark-hol-tactic)
 (define-key hol-map "s"    'interactive-send-string-to-hol)
 (define-key hol-map "u"    'hol-use-file)
+(define-key hol-map "*"    'hol-template-comment-star)
+(define-key hol-map "-"    'hol-template-comment-minus)
+(define-key hol-map "="    'hol-template-comment-equal)
+(define-key hol-map "\M-d" 'hol-template-define)
+(define-key hol-map "\M-x" 'hol-template-store-thm)
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; The definition of the HOL menu
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-key-after (lookup-key global-map [menu-bar])
+  [hol-menu]
+  (cons "HOL" (make-sparse-keymap "HOL"))
+  'tools)
+
+
+;; HOL misc
+(define-key
+  global-map
+  [menu-bar hol-menu hol-misc]
+  (cons "Misc" (make-sparse-keymap "Misc")))
+
+(define-key global-map [menu-bar hol-menu hol-misc mark-tactic]
+   '("Mark tactic" . mark-hol-tactic))
+
+(define-key global-map [menu-bar hol-menu hol-misc backward-tactic]
+   '("Move to previous tactic" . backward-hol-tactic))
+
+(define-key global-map [menu-bar hol-menu hol-misc forward-tactic]
+   '("Move to next tactic" . forward-hol-tactic))
+
+(define-key global-map [menu-bar hol-menu hol-misc sep1]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-misc open-string]
+   '("Load and open" . hol-open-string))
+
+(define-key global-map [menu-bar hol-menu hol-misc use-file]
+   '("Use file" . hol-use-file))
+
+(define-key global-map [menu-bar hol-menu hol-misc load-file]
+   '("Load file" . hol-load-file))
+
+(define-key global-map [menu-bar hol-menu hol-misc sep2]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-misc db-find]
+   '("DB find" . hol-db-find))
+
+(define-key global-map [menu-bar hol-menu hol-misc db-match]
+   '("DB match" . hol-db-match))
+
+
+
+;; templates
+(define-key
+  global-map
+  [menu-bar hol-menu hol-template]
+  (cons "Templates" (make-sparse-keymap "Templates")))
+
+(define-key global-map [menu-bar hol-menu hol-template new-script]
+   '("New theory" . hol-template-new-script-file))
+
+(define-key global-map [menu-bar hol-menu hol-template new-datatype]
+   '("New datatype" . hol-template-new-datatype))
+
+(define-key global-map [menu-bar hol-menu hol-template define]
+   '("New definition" . hol-template-define))
+
+(define-key global-map [menu-bar hol-menu hol-template store-thm]
+   '("Store theorem" . hol-template-store-thm))
+
+(define-key global-map [menu-bar hol-menu hol-template sep1]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-template comment-star]
+   '("Comment *" . hol-template-comment-star))
+
+(define-key global-map [menu-bar hol-menu hol-template comment-equal]
+   '("Comment =" . hol-template-comment-equal))
+
+(define-key global-map [menu-bar hol-menu hol-template comment-minus]
+   '("Comment -" . hol-template-comment-minus))
+
+
+;; printing
+(define-key
+  global-map
+  [menu-bar hol-menu hol-printing]
+  (cons "Printing switches" (make-sparse-keymap "Printing switches")))
+
+(define-key global-map [menu-bar hol-menu hol-printing simplifier-trace]
+   '("Simplifier trace" . hol-toggle-simplifier-trace))
+
+(define-key global-map [menu-bar hol-menu hol-printing times]
+   '("Show times" . hol-toggle-show-times))
+
+(define-key global-map [menu-bar hol-menu hol-printing quiet]
+   '("Quiet" . hol-toggle-quietdec))
+
+(define-key global-map [menu-bar hol-menu hol-printing unicode]
+   '("Unicode" . hol-toggle-unicode))
+
+
+(define-key global-map [menu-bar hol-menu hol-printing sep2]
+   '(menu-item "--"))
+
+
+(define-key global-map [menu-bar hol-menu hol-printing num-assums]
+   '("Set no. of shown assumptions" . hol-toggle-goalstack-num-assums))
+
+(define-key global-map [menu-bar hol-menu hol-printing print-goal-at-top]
+   '("Print goal at top" . hol-toggle-goalstack-print-goal-at-top))
+
+(define-key global-map [menu-bar hol-menu hol-printing goal-fvs]
+   '("Show free vars in goal" . hol-toggle-goalstack-fvs))
+
+
+(define-key global-map [menu-bar hol-menu hol-printing sep1]
+   '(menu-item "--"))
+
+
+(define-key global-map [menu-bar hol-menu hol-printing show-assums]
+   '("Show assumptions" . hol-toggle-show-assums))
+
+(define-key global-map [menu-bar hol-menu hol-printing show-num-types]
+   '("Show numeral types" . hol-toggle-show-numeral-types))
+
+(define-key global-map [menu-bar hol-menu hol-printing show-types-verbosely]
+   '("Show types verbosely" . hol-toggle-show-types-verbosely))
+
+(define-key global-map [menu-bar hol-menu hol-printing show-types]
+   '("Show types" . hol-toggle-show-types))
+
+
+
+
+
+;; HOL goals
+(define-key
+  global-map
+  [menu-bar hol-menu hol-goalstack]
+  (cons "Goalstack" (make-sparse-keymap "Goalstack")))
+
+
+(define-key global-map [menu-bar hol-menu hol-goalstack apply-tactic-goaltree]
+   '("Apply tactic (goaltree)" . copy-region-as-goaltree-tactic))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack new-goaltree]
+   '("New goaltree" . hol-do-goaltree))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack sep3]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack restart-goal]
+   '("Restart goal" . hol-restart-goal))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack drop-all]
+   '("Drop all goals" . hol-drop-all-goals))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack drop-goal]
+   '("Drop goal" . hol-drop-goal))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack sep1]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack print-all]
+   '("Print all goals" . hol-print-all-goals))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack print-top]
+   '("Print goal" . hol-print-goal))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack sep0]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack top-thm]
+   '("Name top theorem" . hol-name-top-theorem))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack subgoal-tac]
+   '("Subgoal tactic" . hol-subgoal-tactic))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack rotate]
+   '("Rotate" . hol-rotate))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack back-up]
+   '("Back up" . hol-backup))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack apply-tactic]
+   '("Apply tactic" . copy-region-as-hol-tactic))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack new-goal]
+   '("New goal" . hol-do-goal))
+
+
+
+;;process
+(define-key
+  global-map
+  [menu-bar hol-menu hol-process]
+  (cons "Process" (make-sparse-keymap "Process")))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-scroll-down]
+   '("Scroll down" . hol-scroll-down))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-scroll-up]
+   '("Scroll up" . hol-scroll-up))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-recentre]
+   '("Recentre" . hol-recentre))
+
+(define-key global-map [menu-bar hol-menu hol-process sep2]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-send-string]
+   '("Send string to HOL" . interactive-send-string-to-hol))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-send-region]
+   '("Send region to HOL" . copy-region-as-hol-definition))
+
+(define-key global-map [menu-bar hol-menu hol-process sep1]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-kill]
+   '("Kill HOL" . hol-kill))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-interrupt]
+   '("Interrupt HOL" . hol-interrupt))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-start]
+   '("Start HOL" . hol))
+
+
+
+
