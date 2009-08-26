@@ -999,6 +999,7 @@ already loaded.)"
 (define-key hol-map "h"    'hol)
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "m"    'hol-db-match)
+(define-key hol-map "f"    'hol-db-find)
 (define-key hol-map "n"    'hol-name-top-theorem)
 (define-key hol-map "o"    'hol-open-string)
 (define-key hol-map "p"    'hol-print-goal)
