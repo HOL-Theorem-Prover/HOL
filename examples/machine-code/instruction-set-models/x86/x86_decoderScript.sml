@@ -292,16 +292,16 @@ val x86_syntax_list = `` [
     " 0F 85 cd  | JNE rel32         ";
     " 78 cb     | JS rel8           ";
     " 79 cb     | JNS rel8          ";
-    " 0F 78 cd  | JS rel32          ";
-    " 0F 79 cd  | JNS rel32         ";
+    " 0F 88 cd  | JS rel32          ";
+    " 0F 89 cd  | JNS rel32         ";
     " 77 cb     | JA rel8           ";
     " 76 cb     | JNA rel8          ";
-    " 0F 77 cd  | JA rel32          ";
-    " 0F 76 cd  | JNA rel32         ";
+    " 0F 87 cd  | JA rel32          ";
+    " 0F 86 cd  | JNA rel32         ";
     " 72 cb     | JB rel8           ";
     " 73 cb     | JNB rel8          ";
-    " 0F 72 cd  | JB rel32          ";
-    " 0F 73 cd  | JNB rel32         ";
+    " 0F 82 cd  | JB rel32          ";
+    " 0F 83 cd  | JNB rel32         ";
 
     " 0F 44 /r  | CMOVE r32, r/m32  ";
     " 0F 45 /r  | CMOVNE r32, r/m32 ";

@@ -16,6 +16,12 @@ fun nTimes n f x = if n = 0 then x else nTimes (n-1) f (f x)
 fun eval_term_ss tm_name tm = conv_ss
   { name = tm_name, trace = 3, key = SOME ([],tm), conv = K (K EVAL) };
 
+val bytes_LEMMA = SIMP_RULE std_ss [LENGTH] (Q.SPEC `[v1;v2;v3;v4;v5;v6;v7;v8]` bits2num_LESS)
+
+val n2w_SIGN_EXTEND = prove(
+  ``!n. n < 256 ==> (n2w (SIGN_EXTEND 8 32 n):word32 = sw2sw ((n2w n):word8))``,
+  SIMP_TAC (std_ss++SIZES_ss) [sw2sw_def,w2n_n2w]);  
+
 fun raw_x86_decode s = let
   fun mk_bool_list n =
     if n = 0 then ``[]:bool list`` else
@@ -33,6 +39,14 @@ fun raw_x86_decode s = let
     val th = REWRITE_RULE [GSYM thi] (INST i th)
     val th = REWRITE_RULE [bits2num_w2bits,n2w_w2n] th
     in (th,l+4) end handle e => (th,l)
+  val (th,l) = let
+    val x = find_term (can (match_term ``bits2num xs``)) (concl th) 
+    val th = REWRITE_RULE [bytes_LEMMA, MATCH_MP n2w_SIGN_EXTEND bytes_LEMMA] th
+    val thi = Q.INST [`w`|->`imm8`] w2bits_word8
+    val i = fst (match_term (snd (dest_comb x)) ((snd o dest_eq o concl o SPEC_ALL) thi))
+    val th = REWRITE_RULE [GSYM thi] (INST i th)
+    val th = REWRITE_RULE [bits2num_w2bits,n2w_w2n] th
+    in (th,l+1) end handle e => (th,l)
   val tm = (snd o dest_comb o fst o dest_eq o concl) th
   in (th,tm,l) end;
 
@@ -62,13 +76,13 @@ fun x86_decode s = let
     in UNDISCH (INST [y|->x] th) end
   val th = repeat inst_one th
   val th = REWRITE_RULE [] (DISCH_ALL th)
+  val th = REWRITE_RULE [GSYM w2bits_word8,COLLECT_BYTES_n2w_bits2num] th
   val th = REWRITE_RULE [AND_IMP_INTRO,CONJ_ASSOC] th
   val th = ONCE_REWRITE_RULE [CONJ_COMM] th
   val th = REWRITE_RULE [GSYM CONJ_ASSOC,GSYM AND_IMP_INTRO] th
   val any_b2w_ss = eval_term_ss "any_b2w" ``(b2w I xs):'a word``
   val th = SIMP_RULE (std_ss++any_b2w_ss) [] th
   in th end handle e => (print "  Decoding failed.\n" ; raise e);
-
 
 (* one step symbolic simulation *)
 
@@ -146,7 +160,8 @@ fun x86_step s = let
   (* works *)
 
   val th = x86_step (x86_encode "dec eax")
-  val th = x86_step "E9" (* example of partial decoder evaluation *)
+  val th = x86_step "E9" (* example of partial decoder evaluation with imm32 *)
+  val th = x86_step "83F1" (* example of partial decoder evaluation with imm8 *)
   val th = x86_step (x86_encode "mov [esi],45")
   val th = x86_step (x86_encode "mov BYTE [eax],-100")
   val th = x86_step (x86_encode "div esi")
