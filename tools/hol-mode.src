@@ -39,6 +39,9 @@
   "*Whether or not to print time elapsed messages after causing HOL
 evaluations.")
 
+(defvar hol-auto-load-p t
+  "*Do automatic loading?")
+
 ;;; For compatability between both Emacs and XEmacs, please use the following
 ;;; two functions to determine if the mark is active, or to set it active.
 
@@ -242,17 +245,16 @@ process in it."
   "Send STRING to HOL (with send-string-to-hol), and emit information about
 how long this took."
   (interactive)
-  (send-string-to-hol
-   "val hol_mode_time0 = #usr (Timer.checkCPUTimer Globals.hol_clock);")
+  (send-raw-string-to-hol
+   "val hol_mode_time0 = #usr (Timer.checkCPUTimer Globals.hol_clock);" nil nil)
   (send-string-to-hol string echo-p)
-  (send-string-to-hol
+  (send-raw-string-to-hol
        "val _ = let val t = #usr (Timer.checkCPUTimer Globals.hol_clock)
                       val elapsed = Time.-(t, hol_mode_time0)
                 in
                       print (\"\\n*** Time taken: \"^
                              Time.toString elapsed^\"s\\n\")
-                  end"))
-
+                  end" nil nil))
 
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
@@ -463,10 +465,12 @@ that the buffer has already had HOL terms, comments and strings removed."
           ;; first thing to do is to search through buffer looking for
           ;; identifiers of form id.id.  When spotted such identifiers need
           ;; to have the first component of the name loaded.
-          (while (re-search-forward (concat "\\(" sml-struct-id-regexp
+          (if hol-auto-load-p
+             (while (re-search-forward (concat "\\(" sml-struct-id-regexp
                                             "\\)\\.\\w+")
-                                    (point-max) t)
-            (hol-load-string (match-string 1)))
+                                       (point-max) t)
+               (hol-load-string (match-string 1)))
+             t)
           ;; next thing to do is to look for open declarations
           (goto-char (point-min))
           ;; search through buffer for open declarations
@@ -559,12 +563,11 @@ file to \"use\" first."
 (defvar hol-mode-wrapper-string "emacs HOL-mode command-wrapper - start")
 (defun send-raw-string-to-hol (string echoit newstart)
   "Sends a string in the raw to HOL.  Not for interactive use."
-  (let ((buf (ensure-hol-buffer-ok))) (
-   let ((wrapped_string 
-         (if newstart
-            (concat "val _ = print \"" hol-mode-wrapper-string "\\n\";"
-                  string ";\n")
-            (concat string ";\n"))))
+  (let ((buf (ensure-hol-buffer-ok))) 
+    (if newstart
+        (comint-send-string buf
+            (concat "val _ = print \"" hol-mode-wrapper-string "\\n\";"))
+        t)
     (if echoit
         (save-excursion
           (set-buffer buf)
@@ -573,7 +576,7 @@ file to \"use\" first."
           (goto-char (point-max))
           (comint-send-input)
           (hol-recentre))
-      (comint-send-string buf wrapped_string)))))
+      (comint-send-string buf (concat string ";\n")))))
 
 
 (defun hol-backup ()
@@ -628,10 +631,6 @@ file to \"use\" first."
              (recenter -1)))))
 
 
-(defun hol-elim-loading-errors (string)
-    (replace-regexp-in-string 
-        "Exception- Fail \"Cannot find file .*ui\" raised\n"
-     "" string))
 
 (defun hol-output-filter (output)
   (let* ((match-found 
@@ -640,7 +639,7 @@ file to \"use\" first."
     (if match-found (setq hol-recentre-pos
 			  (with-current-buffer hol-buffer-name (point-max)))
       t)
-    (hol-elim-loading-errors real-output)))
+    real-output))
 
 (defun hol-recentre-with-arg (output)
    (hol-recentre)
@@ -874,6 +873,20 @@ argument N, sets the trace to that value in particular."
   (message (if hol-emit-time-elapsed-p "Elapsed times WILL be displayed"
              "Elapsed times WON'T be displayed")))
 
+(defun hol-toggle-echo-commands ()
+  "Toggles the elisp variable 'hol-echo-commands-p."
+  (interactive)
+  (setq hol-echo-commands-p (not hol-echo-commands-p))
+  (message (if hol-echo-commands-p "Commands WILL be echoed"
+             "Commands WON'T be echoed")))
+
+(defun hol-toggle-auto-load ()
+  "Toggles the elisp variable 'hol-auto-load-p."
+  (interactive)
+  (setq hol-auto-load-p (not hol-auto-load-p))
+  (message (if hol-auto-load-p "automatic loading ON"
+             "automatic loading OFF")))
+
 (defun hol-toggle-recentre-mode()
   "Toggles the elisp variable 'hol-recentre-mode."
   (interactive)
@@ -941,6 +954,7 @@ already loaded.)"
   (send-string-to-hol
    (format "proofManagerLib.e (Q.SUBGOAL_THEN `%s` STRIP_ASSUME_TAC)"
            (hol-term-at-point))))
+
 
 ;; (defun hol-return-key ()
 ;;   "Run comint-send-input, but only if both: the user is editting the
@@ -1123,6 +1137,12 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-misc load-file]
    '("Load file" . hol-load-file))
 
+(define-key global-map [menu-bar hol-menu hol-misc auto-load]
+   '(menu-item "Automatic loading" hol-toggle-auto-load
+                     :button (:toggle
+                              . (and (boundp 'hol-auto-load-p)
+                                     hol-auto-load-p))))
+
 (define-key global-map [menu-bar hol-menu hol-misc sep2]
    '(menu-item "--"))
 
@@ -1176,6 +1196,9 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-printing times]
    '("Show times" . hol-toggle-show-times))
+
+(define-key global-map [menu-bar hol-menu hol-printing echo]
+   '("Echo commands" . hol-toggle-echo-commands))
 
 (define-key global-map [menu-bar hol-menu hol-printing quiet]
    '("Quiet" . hol-toggle-quietdec))
@@ -1303,6 +1326,9 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-process sep1]
    '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-exe]
+   '("Set HOL executable" . hol-set-executable))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-kill]
    '("Kill HOL" . hol-kill))
