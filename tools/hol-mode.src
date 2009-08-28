@@ -13,6 +13,7 @@
 
 
 (define-prefix-command 'hol-map)
+(define-prefix-command 'hol-insert-map)
 (define-prefix-command 'hol-d-map)
 (make-variable-buffer-local 'hol-buffer-name)
 (make-variable-buffer-local 'hol-buffer-ready)
@@ -619,6 +620,7 @@ file to \"use\" first."
   "Display the HOL window in such a way that it displays most text."
   (interactive)
   (ensure-hol-buffer-ok)
+  (if (get-buffer-window hol-buffer-name t)
   (save-selected-window
     (select-window (get-buffer-window hol-buffer-name t))
     ;; (delete-other-windows)
@@ -628,16 +630,25 @@ file to \"use\" first."
              (recenter 0)
              (goto-char (point-max)))
       (progn (goto-char (point-max))
-             (recenter -1)))))
+             (recenter -1))))))
 
 
+(defun hol-mode-lisp-printer (lisp)
+   (concat "val _ = print (\"HOL-mode-lisp-wrapper####" lisp "####lisp-wrapper-end\");\n"))
 
-(defun hol-output-filter (output)
+(defun hol-output-filter (output) 
   (let* ((match-found 
 	  (string-match (concat hol-mode-wrapper-string "\n\\(\\(.*\n\\)*.*\\)") output))
-	 (real-output (if match-found (match-string 1 output) output)))        
+	 (real-output0 (if match-found (match-string 1 output) output))
+         (match-found2 
+	  (string-match 
+                "HOL-mode-lisp-wrapper####\\(\\(.*\n\\)*.*\\)####lisp-wrapper-end\\(\\(.*\n\\)*.*\\)" real-output0))
+	 (real-output (if match-found2 (match-string 3 real-output0) real-output0)))
     (if match-found (setq hol-recentre-pos
 			  (with-current-buffer hol-buffer-name (point-max)))
+      t)
+    (if match-found2 (progn
+        (eval (car (read-from-string (regexp-quote (match-string 1 real-output0))))))
       t)
     real-output))
 
@@ -1049,7 +1060,112 @@ already loaded.)"
 
 
 
+;;checking for trouble with names in store_thm, save_thm, Define
+(setq store-thm-regexp
+   "val[ \t\n]*\\([^ \t\n]*\\)[ \t\n]*=[ \t\n]*store_thm[ \t\n]*([ \t\n]*\"\\([^\"]*\\)\"")
+(setq save-thm-regexp
+   "val[ \t\n]*\\([^ \t\n]*\\)[ \t\n]*=[ \t\n]*save_thm[ \t\n]*([ \t\n]*\"\\([^\"]*\\)\"")
+(setq define-thm-regexp
+   "val[ \t\n]*\\([^ \t\n]*\\)_def[ \t\n]*=[ \t\n]*Define[ \t\n]*`[ \t\n(]*\$?\\([^ \t\n(:]*\\)")
+
+(setq statement-eq-regexp-list (list store-thm-regexp save-thm-regexp define-thm-regexp))
+
+(defun hol-correct-eqstring (s1 p1 s2 p2)
+  (interactive)
+  (let (choice)
+    (setq choice 0)
+    (while (eq choice 0)
+      (message
+       (concat
+	"Different names used. Please choose one:\n(0) "
+	s1 "\n(1) " s2 "\n(i) ignore"))
+      (setq choice (if (fboundp 'read-char-exclusive)
+		       (read-char-exclusive)
+		     (read-char)))
+      (cond ((= choice ?0) t)
+	    ((= choice ?1) t)
+	    ((= choice ?i) t)
+	    (t (progn (setq choice 0) (ding))))
+      )
+    (if (= choice ?i) t
+    (let (so sr pr)
+      (cond ((= choice ?0) (setq so s1 sr s2 pr p2))
+	    (t             (setq so s2 sr s1 pr p1)))
+      (delete-region pr (+ pr (length sr)))
+      (goto-char pr)
+      (insert so)
+      ))))
+
+
+(defun hol-check-statement-eq-string ()
+  (interactive)
+  (save-excursion
+  (dolist (current-regexp statement-eq-regexp-list t)
+  (goto-char 0)
+  (let (no-error-found s1 p1 s2 p2)
+    (while (re-search-forward current-regexp nil t)
+      (progn (setq s1 (match-string-no-properties 1))
+             (setq s2 (match-string-no-properties 2))
+             (setq p1 (match-beginning 1))
+             (setq p2 (match-beginning 2))
+             (setq no-error-found (string= s1 s2))
+             (if no-error-found t (hol-correct-eqstring s1 p1 s2 p2)))))
+  (message "checking for problematic names done"))))
+
+
+;;some insertions
+(defun hol-insert-goalstack-cases-callback (buf num)
+   (let (instr)
+     (with-current-buffer buf
+     (insert "[")
+     (re-search-backward "^\\([ \n\t]*\\)" nil t)
+     (setq instr (match-string-no-properties 1))
+     (end-of-line)
+     (insert "\n")
+     (dotimes (n num t) (progn
+        (insert (concat instr "   ALL_TAC"))
+        (if (< (+ n 1) num) (insert ",") t)
+        (insert "\n")))
+     (insert (concat instr "]")))))
+
+(defun hol-insert-goalstack-cases ()
+   (interactive)
+   (send-raw-string-to-hol
+   (hol-mode-lisp-printer (concat 
+      "(hol-insert-goalstack-cases-callback \\\""
+      (buffer-name (current-buffer)) 
+      "\\\"\"^ Int.toString(length (proofManagerLib.top_goals())) ^ \")"))
+   nil nil))
+
+(defun hol-insert-callback (buf string)
+   (save-excursion
+     (switch-to-buffer buf)
+     (insert string)))
+
+(defun hol-insert-current-goal ()
+   (interactive)
+   (send-raw-string-to-hol
+   (hol-mode-lisp-printer (concat 
+      "(hol-insert-callback \\\""
+      (buffer-name (current-buffer)) 
+      "\\\" \\\"\"^ (term_to_string (snd (proofManagerLib.top_goal()))) ^ \"\\\")"))
+   nil nil))
+
+(defun hol-insert-assumption (num)
+   (interactive "nAssumption no: ")
+   (send-raw-string-to-hol
+   (hol-mode-lisp-printer (concat 
+      "(hol-insert-callback \\\""
+      (buffer-name (current-buffer)) 
+      "\\\" \\\"\"^ (term_to_string (let val (asm, _) = (proofManagerLib.top_goal()) in "
+      "(el (length asm - " (number-to-string num) ") asm) end)) ^ \"\\\")"))
+   nil nil))
+
+
+
+;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
+(define-key hol-map "\M-i" 'hol-insert-map)
 
 (define-key hol-map "\C-a" 'hol-toggle-show-assums)
 (define-key hol-map "\C-c" 'hol-interrupt)
@@ -1099,6 +1215,11 @@ already loaded.)"
 (define-key hol-map "\M-x" 'hol-template-store-thm)
 
 
+(define-key hol-insert-map "l" 'hol-insert-goalstack-cases)
+(define-key hol-insert-map "g" 'hol-insert-current-goal)
+(define-key hol-insert-map "a" 'hol-insert-assumption)
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; The definition of the HOL menu
@@ -1115,6 +1236,13 @@ already loaded.)"
   global-map
   [menu-bar hol-menu hol-misc]
   (cons "Misc" (make-sparse-keymap "Misc")))
+
+
+(define-key global-map [menu-bar hol-menu hol-misc check-names]
+   '("Check names in store_thm, ..." . hol-check-statement-eq-string))
+
+(define-key global-map [menu-bar hol-menu hol-misc sep2]
+   '(menu-item "--"))
 
 (define-key global-map [menu-bar hol-menu hol-misc mark-tactic]
    '("Mark tactic" . mark-hol-tactic))
@@ -1159,6 +1287,18 @@ already loaded.)"
   global-map
   [menu-bar hol-menu hol-template]
   (cons "Templates" (make-sparse-keymap "Templates")))
+
+(define-key global-map [menu-bar hol-menu hol-template insert-assumption]
+   '("Assumption" . hol-insert-assumption))
+
+(define-key global-map [menu-bar hol-menu hol-template current-goal]
+   '("Current goal" . hol-insert-current-goal))
+
+(define-key global-map [menu-bar hol-menu hol-template goalstack-cases]
+   '("Tactic list" . hol-insert-goalstack-cases))
+
+(define-key global-map [menu-bar hol-menu hol-template sep2]
+   '(menu-item "--"))
 
 (define-key global-map [menu-bar hol-menu hol-template new-script]
    '("New theory" . hol-template-new-script-file))
@@ -1344,6 +1484,7 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-process hol-start]
    '("Start HOL" . hol))
+
 
 
 
