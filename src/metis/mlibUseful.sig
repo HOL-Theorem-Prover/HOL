@@ -139,7 +139,7 @@ val pos               : real -> real
 val log2              : real -> real              (* Domain *)
 
 (* Pretty-printing *)
-type 'a pp = ppstream -> 'a -> unit
+type 'a pp = PP.ppstream -> 'a -> unit
 val LINE_LENGTH : int ref
 val pp_map      : ('a -> 'b) -> 'b pp -> 'a pp
 val pp_bracket  : string -> string -> 'a pp -> 'a pp

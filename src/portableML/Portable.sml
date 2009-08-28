@@ -112,9 +112,7 @@ end
     Pretty Printing
  ---------------------------------------------------------------------------*)
 
-open PP
-
-type ppstream = General.ppstream;
+open HOLPP
 
 fun with_ppstream ppstrm =
   {add_string     = add_string ppstrm,
@@ -188,9 +186,6 @@ fun pprint pp x =
  end;
 
 
-
-type 'a frag = 'a General.frag;
-type 'a quotation = 'a frag list;
 
 (*---------------------------------------------------------------------------
       MoscowML returns lists of QUOTE'd strings when a quote is spread

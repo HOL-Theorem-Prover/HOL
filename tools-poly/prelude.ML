@@ -8,7 +8,7 @@ local
   fun with_pp ppfn pps x =
       Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e;
   fun pp_from_stringfn sf pps x = PP.add_string pps (sf x);
-  fun pp2polypp (f : ppstream -> 'a -> unit)
+  fun pp2polypp (f : PP.ppstream -> 'a -> unit)
               (putString : string -> unit,
                beginBlock : int * bool -> unit,
                spaceBlock : int * int -> unit,

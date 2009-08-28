@@ -21,7 +21,7 @@ val op|| = op ORELSE;
 
 type 'a thunk = unit -> 'a;
 type 'a susp = 'a Susp.susp
-type ppstream = General.ppstream
+type ppstream = Portable.ppstream
 type ('a, 'b) maplet = {redex : 'a, residue : 'b}
 type ('a, 'b) subst = ('a, 'b) Lib.subst
 

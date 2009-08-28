@@ -446,7 +446,7 @@ fun toString n =
     nonzero_recurse n
   end
 
-fun pp_num ppstrm n = PP.add_string ppstrm (toString n);
+fun pp_num ppstrm n = HOLPP.add_string ppstrm (toString n);
 
 local
   fun toChar n =
@@ -465,7 +465,7 @@ in
   val toHexString = toBaseString (fromInt 16)
 end
 
-local open StringCvt PP in
+local open StringCvt HOLPP in
   fun base_pp_num BIN ppstrm n = add_string ppstrm ("0b" ^ toBinString n)
     | base_pp_num OCT ppstrm n = add_string ppstrm ("0" ^ toOctString n)
     | base_pp_num DEC ppstrm n = add_string ppstrm (toString n)

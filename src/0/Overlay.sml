@@ -30,3 +30,11 @@ infixr ##;
 infixr 3 -->;
 infix 8 via by;
 
+structure Process = OS.Process
+structure FileSys = OS.FileSys
+
+structure PP = HOLPP
+
+type 'a quotation = 'a PP.quotation
+type ppstream = PP.ppstream
+datatype frag = datatype PP.frag

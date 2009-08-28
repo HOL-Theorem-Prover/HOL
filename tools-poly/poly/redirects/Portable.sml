@@ -123,9 +123,7 @@ end
     Pretty Printing
  ---------------------------------------------------------------------------*)
 
-open PP
-
-type ppstream = General.ppstream;
+open HOLPP
 
 fun with_ppstream ppstrm =
   {add_string     = add_string ppstrm,
@@ -198,11 +196,6 @@ fun pprint pp x =
    end handle e => (flush_ppstream strm; raise e)
  end;
 
-
-
-datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a
-type 'a quotation = 'a frag list;
-
 (*---------------------------------------------------------------------------
       MoscowML returns lists of QUOTE'd strings when a quote is spread
       over more than one line. "norm_quote" concatenates all adjacent
@@ -215,4 +208,3 @@ fun norm_quote [] = []
   | norm_quote (h::rst) = h::norm_quote rst;
 
 end (* Portable *)
-datatype frag = datatype Portable.frag

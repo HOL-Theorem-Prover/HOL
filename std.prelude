@@ -1,9 +1,10 @@
 val _ = quietdec := true;
 
-
 (* ----------------------------------------------------------------------
     Establish the basic environment and bring in the HOL kernel
    ---------------------------------------------------------------------- *)
+load "PP";
+structure MosmlPP = PP
 
 val _ = app load
   ["Mosml", "Process", "Path", "boolLib", "proofManagerLib", "Arbrat"];
@@ -18,8 +19,36 @@ open HolKernel Parse boolLib proofManagerLib;
  *---------------------------------------------------------------------------*)
 
 local
-  fun with_pp ppfn pps x =
-      Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
+  structure MPP = MosmlPP
+  fun mosmlpp ppfn pps x = let
+    val slist = ref ([] : string list)
+    fun output_slist () = (app (MPP.add_string pps) (List.rev (!slist));
+                           slist := [])
+    fun flush ()= output_slist()
+    fun consume_string s = let
+      open Substring
+      val (pfx,sfx) = splitl (fn c => c <> #"\n") (full s)
+    in
+      if size sfx = 0 then slist := s :: !slist
+      else
+        (output_slist();
+         MPP.add_newline pps;
+         if size sfx > 1 then consume_string (string (triml 1 sfx))
+         else ())
+    end
+    val consumer = {consumer = consume_string,
+                    linewidth = !Globals.linewidth,
+                    flush = flush}
+    val newpps = HOLPP.mk_ppstream consumer
+  in
+    MPP.begin_block pps MPP.INCONSISTENT 0;
+    HOLPP.begin_block newpps HOLPP.INCONSISTENT 0;
+    ppfn newpps x;
+    HOLPP.end_block newpps;
+    HOLPP.flush_ppstream newpps;
+    MPP.end_block pps
+  end
+
   fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
   fun gprint g pps t = let
     val tyg = Parse.type_grammar()
@@ -31,23 +60,23 @@ local
   fun timepp pps t = PP.add_string pps (Time.toString t ^ "s")
   fun locpp pps l = PP.add_string pps (locn.toShortString l)
 in
-  val _ = installPP (with_pp Pretype.pp_pretype)
-  val _ = installPP (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
-  val _ = installPP (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
-  val _ = installPP (with_pp Hol_pp.pp_thm)
-  val _ = installPP (with_pp Hol_pp.pp_theory)
-  val _ = installPP (with_pp type_grammar.prettyprint_grammar)
-  val _ = installPP (with_pp ppg)
-  val _ = installPP (with_pp proofManagerLib.pp_proof)
-  val _ = installPP (with_pp proofManagerLib.pp_proofs)
-  val _ = installPP (with_pp Rewrite.pp_rewrites)
-  val _ = installPP (with_pp TypeBasePure.pp_tyinfo)
-  val _ = installPP (with_pp DefnBase.pp_defn)
-  val _ = installPP (with_pp Arbnum.pp_num)
-  val _ = installPP (with_pp Arbint.pp_int)
-  val _ = installPP (with_pp Arbrat.pp_rat)
-  val _ = installPP (with_pp timepp)
-  val _ = installPP (with_pp locpp)
+  val _ = installPP (mosmlpp Pretype.pp_pretype)
+  val _ = installPP (mosmlpp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
+  val _ = installPP (mosmlpp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
+  val _ = installPP (mosmlpp Hol_pp.pp_thm)
+  val _ = installPP (mosmlpp Hol_pp.pp_theory)
+  val _ = installPP (mosmlpp type_grammar.prettyprint_grammar)
+  val _ = installPP (mosmlpp ppg)
+  val _ = installPP (mosmlpp proofManagerLib.pp_proof)
+  val _ = installPP (mosmlpp proofManagerLib.pp_proofs)
+  val _ = installPP (mosmlpp Rewrite.pp_rewrites)
+  val _ = installPP (mosmlpp TypeBasePure.pp_tyinfo)
+  val _ = installPP (mosmlpp DefnBase.pp_defn)
+  val _ = installPP (mosmlpp Arbnum.pp_num)
+  val _ = installPP (mosmlpp Arbint.pp_int)
+  val _ = installPP (mosmlpp Arbrat.pp_rat)
+  val _ = installPP (mosmlpp timepp)
+  val _ = installPP (mosmlpp locpp)
 end;
 
 

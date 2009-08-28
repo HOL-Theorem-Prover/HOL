@@ -7,8 +7,13 @@
  *)
 
 (* the functions and data for actually doing printing. *)
-structure PP :> PP =
+structure HOLPP :> HOLPP =
 struct
+
+datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a
+type 'a quotation = 'a frag list
+
+
 open Array
 infix 9 sub
 
@@ -169,6 +174,7 @@ datatype ppstream =
       left_sum : int ref,      (* size of strings and spaces inserted *)
       right_sum : int ref}     (* size of strings and spaces printed *)
 
+fun lineWidth (PPS {linewidth, ...}) = linewidth
 
 type ppconsumer = {consumer : string -> unit,
 		   linewidth : int,

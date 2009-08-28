@@ -52,7 +52,7 @@ sig
 
   val compare     : num * num -> order
 
-  val base_pp_num : StringCvt.radix -> ppstream -> num -> unit
-  val pp_num      : ppstream -> num -> unit
+  val base_pp_num : StringCvt.radix -> HOLPP.ppstream -> num -> unit
+  val pp_num      : HOLPP.ppstream -> num -> unit
 
 end

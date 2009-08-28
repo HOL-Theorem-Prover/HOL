@@ -1,4 +1,4 @@
-signature PP =
+signature HOLPP =
 sig
 (* PP -- pretty-printing -- from the SML/NJ library *)
 
@@ -11,6 +11,9 @@ datatype break_style =
     CONSISTENT
   | INCONSISTENT
 
+datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a
+type 'a quotation = 'a frag list
+
 val mk_ppstream    : ppconsumer -> ppstream
 val dest_ppstream  : ppstream -> ppconsumer
 val add_break      : ppstream -> int * int -> unit
@@ -22,6 +25,7 @@ val clear_ppstream : ppstream -> unit
 val flush_ppstream : ppstream -> unit
 val with_pp        : ppconsumer -> (ppstream -> unit) -> unit
 val pp_to_string   : int -> (ppstream -> 'a -> unit) -> 'a -> string
+val lineWidth      : ppstream -> int
 
 (*
    This structure provides tools for creating customized Oppen-style

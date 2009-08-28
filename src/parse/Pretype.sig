@@ -42,6 +42,6 @@ val clean : pretype -> Type.hol_type
 val toType : pretype -> Type.hol_type
 val chase : pretype -> pretype
 
-val pp_pretype : ppstream -> pretype -> unit
+val pp_pretype : PP.ppstream -> pretype -> unit
 
 end
