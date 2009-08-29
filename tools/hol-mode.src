@@ -626,12 +626,15 @@ file to \"use\" first."
     ;; (delete-other-windows)
     (raise-frame)
     (if hol-recentre-mode
-      (progn (goto-char hol-recentre-pos)
+      (progn (setq comint-scroll-show-maximum-output nil)
+             (setq comint-scroll-to-bottom-on-output nil)
+             (goto-char hol-recentre-pos)
              (recenter 0)
              (goto-char (point-max)))
-      (progn (goto-char (point-max))
+      (progn (setq comint-scroll-show-maximum-output t)
+             (setq comint-scroll-to-bottom-on-output t)
+             (goto-char (point-max))
              (recenter -1))))))
-
 
 (defun hol-mode-lisp-printer (lisp)
    (concat "val _ = print (\"HOL-mode-lisp-wrapper####" lisp "####lisp-wrapper-end\");\n"))
