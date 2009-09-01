@@ -641,17 +641,18 @@ file to \"use\" first."
 
 (defun hol-output-filter (output) 
   (let* ((match-found 
-	  (string-match (concat hol-mode-wrapper-string "\n\\(\\(.*\n\\)*.*\\)") output))
-	 (real-output0 (if match-found (match-string 1 output) output))
+	  (string-match (concat "\\(\\(.*\n\\)*.*\\)" hol-mode-wrapper-string "\n\\(\\(.*\n\\)*.*\\)") output))
+	 (real-output0 (if match-found (concat (match-string 1 output) (match-string 3 output)) output))
          (match-found2 
 	  (string-match 
-                "HOL-mode-lisp-wrapper####\\(\\(.*\n\\)*.*\\)####lisp-wrapper-end\\(\\(.*\n\\)*.*\\)" real-output0))
-	 (real-output (if match-found2 (match-string 3 real-output0) real-output0)))
+                "\\(\\(.*\n\\)*.*\\)HOL-mode-lisp-wrapper####\\(\\(.*\n\\)*.*\\)####lisp-wrapper-end\\(\\(.*\n\\)*.*\\)" real-output0))
+	 (real-output (if match-found2 
+              (concat (match-string 1 real-output0) (match-string 5 real-output0)) real-output0)))
     (if match-found (setq hol-recentre-pos
 			  (with-current-buffer hol-buffer-name (point-max)))
       t)
     (if match-found2 (progn
-        (eval (car (read-from-string (regexp-quote (match-string 1 real-output0))))))
+        (eval (car (read-from-string (regexp-quote (match-string 3 real-output0))))))
       t)
     real-output))
 
@@ -1069,7 +1070,7 @@ already loaded.)"
 (setq save-thm-regexp
    "val[ \t\n]*\\([^ \t\n]*\\)[ \t\n]*=[ \t\n]*save_thm[ \t\n]*([ \t\n]*\"\\([^\"]*\\)\"")
 (setq define-thm-regexp
-   "val[ \t\n]*\\([^ \t\n]*\\)_def[ \t\n]*=[ \t\n]*Define[ \t\n]*`[ \t\n(]*\$?\\([^ \t\n(:]*\\)")
+   "val[ \t\n]*\\([^ \t\n]*\\)_def[ \t\n]*=[ \t\n]*Define[ \t\n]*`[ \t\n(]*\$?\\([^ \t\n([!?:]*\\)")
 
 (setq statement-eq-regexp-list (list store-thm-regexp save-thm-regexp define-thm-regexp))
 
