@@ -72,20 +72,20 @@ val t = parse_smallfoot_file file
 (*Till here the initialisation took place. This means loading libraries etc.
   Now we can start using Smallfoot. However, initialisation takes quite some time
   using PolyML. Therefore, it is useful to save the current state.
-  (please adapt filename)*)
+  (perhaps adapt filename)*)
 
-PolyML.SaveState.saveState "/home/tt291/Smallfoot";
+PolyML.SaveState.saveState (Globals.HOLDIR ^ "/examples/separationLogic/src/smallfoot/Smallfoot");
 
 
 (*In further sessions it is sufficient to just load this saved state instead of
   add the libraries and theories above*)
-PolyML.SaveState.loadState "/home/tt291/Smallfoot";
+PolyML.SaveState.loadState (Globals.HOLDIR ^ "/examples/separationLogic/src/smallfoot/Smallfoot");
 
 
 (*Smallfoot comes with an extension to HOL-mode. This extension resides in
-  smallfoot.el. It can be loaded by
+  smallfoot.el. It can be loaded by (adapt directory)
 
-(load "/home/tt291/hol98/examples/separationLogic2/src/smallfoot/smallfoot")
+(load "/home/tt291/hol98/examples/separationLogic/src/smallfoot/smallfoot")
 
   Please, either add this to your ".emacs" after adapting the path or
   load it manualy by moving the cursor behind the last parentesis and pressing "M-x M-e".
@@ -93,10 +93,14 @@ PolyML.SaveState.loadState "/home/tt291/Smallfoot";
   This adds a new menu with the common Smallfoot commands. This makes using
   Smallfoot much easier and possible for people not knowing HOL well.
 
-  The initialise command in this menu loads the state saved above. Before using
-  the initialise, please save the state somewhere and adapt the path in
-  smallfoot.el, line 5.
-*) 
+  The initialise command in this menu loads the state saved
+  above. Before using the initialise, please save the state somewhere
+  and if necessary adapt the path in smallfoot.el, line 5.  
+*)
+
+
+
+
 
 
 
@@ -175,17 +179,6 @@ val thm = smallfoot_verbose_auto_prove file;
 (*the specification with data works as well*)
 val file = concat [examplesDir, "reverse.dsf"]; 
 val thm = smallfoot_verbose_auto_prove file;
-
-
-
-
-
-
-
-
-
-
-
 
 
 

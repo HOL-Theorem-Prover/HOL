@@ -2,8 +2,9 @@
   "Initialises Smallfoot"
   (interactive)
   (hol ())
-  (send-raw-string-to-hol "PolyML.SaveState.loadState \"/home/tt291/Smallfoot\"" t nil))
- 
+  (send-raw-string-to-hol 
+   "PolyML.SaveState.loadState (Globals.HOLDIR ^ \"/examples/separationLogic/src/smallfoot/Smallfoot\");"
+   nil nil))
 
 (defun smallfoot-tactic (s)
   "*Executes a tactic*"
@@ -15,10 +16,6 @@
                      'send-string-to-hol))
   ) (funcall sender tac hol-echo-commands-p)
     (hol-recentre)))
-
-
-
-
 
 ;; flags
 (defvar smallfoot-autoconj-p nil "*do auto-conjs*")
