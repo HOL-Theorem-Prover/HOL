@@ -34,10 +34,11 @@ open HolKernel Parse boolLib bossLib;
 open smallfoot_pp_print generalHelpersTheory
      smallfootSyntax BoolExtractShared
      ConseqConv smallfootTheory
-     smallfootParser listTheory rich_listTheory;
-
+open smallfootParser listTheory rich_listTheory;
+open sortingTheory relationTheory permLib
 open smallfootLib
 open quantHeuristicsLib;
+
 
 
 
@@ -64,6 +65,38 @@ val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfo
 (*test the directory*)
 val file = concat [examplesDir, "append.sf"];
 val t = parse_smallfoot_file file
+
+
+
+
+(*Till here the initialisation took place. This means loading libraries etc.
+  Now we can start using Smallfoot. However, initialisation takes quite some time
+  using PolyML. Therefore, it is useful to save the current state.
+  (please adapt filename)*)
+
+PolyML.SaveState.saveState "/home/tt291/Smallfoot";
+
+
+(*In further sessions it is sufficient to just load this saved state instead of
+  add the libraries and theories above*)
+PolyML.SaveState.loadState "/home/tt291/Smallfoot";
+
+
+(*Smallfoot comes with an extension to HOL-mode. This extension resides in
+  smallfoot.el. It can be loaded by
+
+(load "/home/tt291/hol98/examples/separationLogic2/src/smallfoot/smallfoot")
+
+  Please, either add this to your ".emacs" after adapting the path or
+  load it manualy by moving the cursor behind the last parentesis and pressing "M-x M-e".
+  
+  This adds a new menu with the common Smallfoot commands. This makes using
+  Smallfoot much easier and possible for people not knowing HOL well.
+
+  The initialise command in this menu loads the state saved above. Before using
+  the initialise, please save the state somewhere and adapt the path in
+  smallfoot.el, line 5.
+*) 
 
 
 
@@ -169,8 +202,7 @@ val thm = smallfoot_verbose_auto_prove file;
 
 (*for the full functional verification open some
   libraries first*)
-open sortingTheory relationTheory
-
+open sortingTheory relationTheory permLib
 
 (*The tools is strong enough to abstract automatically from
   the differences between parallel and sequential mergesort.
@@ -190,81 +222,48 @@ smallfoot_set_goal file;
 
 
 
-
 val thm = smallfoot_verbose_prove( file,
-
 (*generate verification conditions*)
 SMALLFOOT_VC_TAC THEN
-
-
 (*All the program is gone, only theorems about
   permutations and sorted lists need to be still
   proved*)
-SIMP_TAC std_ss [SORTED_DEF, PERM_REFL] THEN
-REPEAT STRIP_TAC THENL [
-   Cases_on `qdata_t` THEN
-   FULL_SIMP_TAC std_ss [SORTED_DEF],
+ASM_SIMP_TAC (arith_ss++PERM_ss) 
+    [SORTED_EQ, SORTED_DEF, transitive_def] THEN
+REPEAT STRIP_TAC THEN (
+   IMP_RES_TAC PERM_MEM_EQ THEN
+   FULL_SIMP_TAC list_ss [] THEN
+   RES_TAC THEN ASM_SIMP_TAC arith_ss []
+));
 
 
-   `transitive (($<=):num -> num -> bool)` by ALL_TAC THEN1 (
-       SIMP_TAC arith_ss [transitive_def]
-   ) THEN
-   FULL_SIMP_TAC list_ss [SORTED_EQ] THEN
-   REPEAT STRIP_TAC THEN
-   `MEM y (pdata_h::(pdata_t ++ qdata_t))` by METIS_TAC[PERM_MEM_EQ] THEN
-   POP_ASSUM MP_TAC THEN
-   ASM_SIMP_TAC list_ss [DISJ_IMP_THM] THEN
-   REPEAT STRIP_TAC THEN
-   `pdata_h <= y` by RES_TAC THEN
-   DECIDE_TAC,
+(*Let's cheat and simplify the proof by a sideproof*)
 
-
-   Tactical.REVERSE (`PERM (pdata_h::(pdata_t ++ qdata_h::qdata_t)) 
-                      (qdata_h::pdata_h::(pdata_t ++ qdata_t))` by ALL_TAC) THEN1 (
-      PROVE_TAC[PERM_TRANS, PERM_MONO]
-   ) THEN
-   Tactical.REVERSE (`PERM (pdata_t ++ qdata_h::qdata_t) 
-                      (qdata_h::(pdata_t ++ qdata_t))` by ALL_TAC) THEN1 (
-      PROVE_TAC[PERM_TRANS, PERM_MONO, PERM_SWAP_AT_FRONT,  PERM_REFL]
-   ) THEN
-   PROVE_TAC[CONS_PERM, PERM_REFL, PERM_SYM],
+val MERGE_DATA_THM = prove (``
+ (!e. MEM e l1 ==> e1 <= e) /\
+ (!e. MEM e l2 ==> e2 <= e)  ==>
+ ((((e2:num >= e1:num) /\ PERM (e2::(l1++l2)) l) ==> !e:num. MEM e l ==> e1 <= e) /\
+  (((e2:num < e1:num) /\ PERM (e1::(l1++l2)) l) ==> !e:num. MEM e l ==> e2 <= e))
+``,
+REPEAT STRIP_TAC THEN
+IMP_RES_TAC PERM_MEM_EQ THEN
+FULL_SIMP_TAC list_ss [] THEN
+RES_TAC THEN ASM_SIMP_TAC arith_ss []
+);
 
 
 
-   Cases_on `pdata_t` THEN
-   FULL_SIMP_TAC std_ss [SORTED_DEF],
-
-
-
-   `transitive (($<=):num -> num -> bool)` by ALL_TAC THEN1 (
-       SIMP_TAC arith_ss [transitive_def]
-   ) THEN
-   FULL_SIMP_TAC list_ss [SORTED_EQ] THEN
-   REPEAT STRIP_TAC THEN
-   `MEM y (pdata_t ++ qdata_h::qdata_t)` by METIS_TAC[PERM_MEM_EQ] THEN
-   POP_ASSUM MP_TAC THEN
-   ASM_SIMP_TAC list_ss [DISJ_IMP_THM] THEN
-   REPEAT STRIP_TAC THEN
-   `qdata_h <= y` by RES_TAC THEN
-   DECIDE_TAC,
-
-
-   MATCH_MP_TAC PERM_MONO THEN
-   ASM_REWRITE_TAC[],
-
-
-   MATCH_MP_TAC PERM_MONO THEN
-   ONCE_REWRITE_TAC[PERM_SYM] THEN
-   MATCH_MP_TAC CONS_PERM THEN
-   PROVE_TAC [PERM_SYM],
-
-
-   PROVE_TAC[PERM_TRANS, PERM_SYM, PERM_CONG]
-]);
-
-
-
-
+val thm = smallfoot_verbose_prove( file,
+(*generate verification conditions*)
+SMALLFOOT_VC_TAC THEN
+(*All the program is gone, only theorems about
+  permutations and sorted lists need to be still
+  proved*)
+ASM_SIMP_TAC (arith_ss++PERM_ss) 
+    [SORTED_EQ, SORTED_DEF, transitive_def] THEN
+REPEAT STRIP_TAC THEN 
+IMP_RES_TAC MERGE_DATA_THM);
+ 
 
 
 
@@ -389,6 +388,11 @@ SMALLFOOT_STEP_TAC []
 
 smallfoot_set_goal file;
 
+REPEAT STRIP_TAC
+
+val file = concat [examplesDir, "reverse.dsf"]; 
+val file = concat [examplesDir, "reverse.sf"]; 
+val thm = smallfoot_verbose_auto_prove file;
 *)
 
 val thm = smallfoot_verbose_prove( file,
