@@ -260,13 +260,23 @@ how long this took."
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
   (interactive "r\nP")
-  (let* ((region-string (with-hol-locpragma start (buffer-substring start end)))
-         (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
-         (tactic-string
-          (format "%s (%s) handle e => Raise e" e-string region-string))
-         (sender (if hol-emit-time-elapsed-p
-                     'send-timed-string-to-hol
-                   'send-string-to-hol)))
+  (let*
+      ((region-string0 (with-hol-locpragma start (buffer-substring start end)))
+       (ste "\"show_typecheck_errors\"")
+       (region-string (concat "let val old = Feedback.current_trace "
+                              ste
+                              " val _ = Feedback.set_trace "
+                              ste
+                              " 0 in ("
+                              region-string0
+                              ") before "
+                              "Feedback.set_trace " ste " old end"))
+       (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
+       (tactic-string
+        (format "%s (%s) handle e => Raise e" e-string region-string))
+       (sender (if hol-emit-time-elapsed-p
+                   'send-timed-string-to-hol
+                 'send-string-to-hol)))
     (funcall sender tactic-string hol-echo-commands-p)))
 
 ;;; For goaltrees
@@ -564,7 +574,7 @@ file to \"use\" first."
 (defvar hol-mode-wrapper-string "emacs HOL-mode command-wrapper - start")
 (defun send-raw-string-to-hol (string echoit newstart)
   "Sends a string in the raw to HOL.  Not for interactive use."
-  (let ((buf (ensure-hol-buffer-ok))) 
+  (let ((buf (ensure-hol-buffer-ok)))
     (if newstart
         (comint-send-string buf
             (concat "val _ = print \"" hol-mode-wrapper-string "\\n\";"))
@@ -639,14 +649,14 @@ file to \"use\" first."
 (defun hol-mode-lisp-printer (lisp)
    (concat "val _ = print (\"HOL-mode-lisp-wrapper####" lisp "####lisp-wrapper-end\");\n"))
 
-(defun hol-output-filter (output) 
-  (let* ((match-found 
+(defun hol-output-filter (output)
+  (let* ((match-found
 	  (string-match (concat "\\(\\(.*\n\\)*.*\\)" hol-mode-wrapper-string "\n\\(\\(.*\n\\)*.*\\)") output))
 	 (real-output0 (if match-found (concat (match-string 1 output) (match-string 3 output)) output))
-         (match-found2 
-	  (string-match 
+         (match-found2
+	  (string-match
                 "\\(\\(.*\n\\)*.*\\)HOL-mode-lisp-wrapper####\\(\\(.*\n\\)*.*\\)####lisp-wrapper-end\\(\\(.*\n\\)*.*\\)" real-output0))
-	 (real-output (if match-found2 
+	 (real-output (if match-found2
               (concat (match-string 1 real-output0) (match-string 5 real-output0)) real-output0)))
     (if match-found (setq hol-recentre-pos
 			  (with-current-buffer hol-buffer-name (point-max)))
@@ -1135,9 +1145,9 @@ already loaded.)"
 (defun hol-insert-goalstack-cases ()
    (interactive)
    (send-raw-string-to-hol
-   (hol-mode-lisp-printer (concat 
+   (hol-mode-lisp-printer (concat
       "(hol-insert-goalstack-cases-callback \\\""
-      (buffer-name (current-buffer)) 
+      (buffer-name (current-buffer))
       "\\\"\"^ Int.toString(length (proofManagerLib.top_goals())) ^ \")"))
    nil nil))
 
@@ -1149,18 +1159,18 @@ already loaded.)"
 (defun hol-insert-current-goal ()
    (interactive)
    (send-raw-string-to-hol
-   (hol-mode-lisp-printer (concat 
+   (hol-mode-lisp-printer (concat
       "(hol-insert-callback \\\""
-      (buffer-name (current-buffer)) 
+      (buffer-name (current-buffer))
       "\\\" \\\"\"^ (term_to_string (snd (proofManagerLib.top_goal()))) ^ \"\\\")"))
    nil nil))
 
 (defun hol-insert-assumption (num)
    (interactive "nAssumption no: ")
    (send-raw-string-to-hol
-   (hol-mode-lisp-printer (concat 
+   (hol-mode-lisp-printer (concat
       "(hol-insert-callback \\\""
-      (buffer-name (current-buffer)) 
+      (buffer-name (current-buffer))
       "\\\" \\\"\"^ (term_to_string (let val (asm, _) = (proofManagerLib.top_goal()) in "
       "(el (length asm - " (number-to-string num) ") asm) end)) ^ \"\\\")"))
    nil nil))
