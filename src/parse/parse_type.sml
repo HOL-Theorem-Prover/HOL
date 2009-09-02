@@ -15,16 +15,20 @@ fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 fun parse_type tyfns allow_unknown_suffixes G = let
   val G = rules G and abbrevs = abbreviations G
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop} = tyfns
-  fun structure_to_value (s,locn) args st =
+  fun structure_to_value0 (s,locn) args st =
       case st of
         TYOP {Args, Thy, Tyop} =>
-        qtyop {Args = map (structure_to_value (s,locn) args) Args,
+        qtyop {Args = map (structure_to_value0 (s,locn) args) Args,
                Thy = Thy, Tyop = Tyop, Locn = locn}
       | PARAM n => List.nth(args, n)
-        handle Subscript =>
-               Feedback.Raise
-                 (ERRloc locn ("Insufficient arguments to abbreviated operator " ^
-                               Lib.quote s))
+
+  fun structure_to_value (s,locn) args st =
+      if num_params st <> length args then
+        raise ERRloc
+                  locn
+                  ("Incorrect number of arguments to abbreviated operator "^s^
+                   " (expects "^Int.toString (num_params st)^")")
+      else structure_to_value0 (s,locn) args st
 
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)
