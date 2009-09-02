@@ -11,6 +11,14 @@ datatype type_structure =
          TYOP of {Thy : string, Tyop : string, Args : type_structure list}
        | PARAM of int
 
+fun typstruct_uptodate ts =
+    case ts of
+      PARAM _ => true
+    | TYOP {Thy, Tyop, Args} => isSome (Type.op_arity {Thy = Thy, Tyop = Tyop})
+                                andalso List.all typstruct_uptodate Args
+
+
+
 datatype grammar = TYG of (int * grammar_rule) list *
                           (string, type_structure) Binarymap.dict *
                           (int * string) TypeNet.typenet
@@ -45,6 +53,17 @@ fun params0 acc (PARAM i) = HOLset.add(acc, i)
 val params = params0 (HOLset.empty Int.compare)
 
 val num_params = HOLset.numItems o params
+
+fun suffix_arity abbrevs s =
+    case Binarymap.peek (abbrevs, s) of
+      NONE => let
+      in
+        case Type.decls s of
+          [] => NONE
+        | ty :: _ => Option.map (fn n => (s,n)) (Type.op_arity ty)
+      end
+    | SOME st => if typstruct_uptodate st then SOME (s, num_params st)
+                 else NONE
 
 val std_suffix_precedence = 100
 
@@ -221,11 +240,7 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
   open Portable Lib
   val {add_break,add_newline,add_string,begin_block,end_block,...} =
       with_ppstream pps
-  fun print_suffix s = let
-    val oarity =
-        case Binarymap.peek(abbrevs, s) of
-          NONE => valOf (Type.op_arity (hd (Type.decls s)))
-        | SOME st => num_params st
+  fun print_suffix (s,arity) = let
     fun print_ty_n_tuple n =
         case n of
           0 => ()
@@ -235,7 +250,7 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
                         (fn () => ()) (List.tabulate(n,K ()));
                 add_string ")")
   in
-    print_ty_n_tuple oarity;
+    print_ty_n_tuple arity;
     add_string s
   end
 
@@ -266,18 +281,22 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
     end_block()
   end
 
-  fun print_abbrevs () =
-      if Binarymap.numItems abbrevs > 0 then let
-        in
-          add_newline();
-          add_string "Type abbreviations:";
-          add_break(2,0);
-          begin_block CONSISTENT 0;
-          pr_list print_abbrev (fn () => add_newline()) (fn () => ())
-                  (Binarymap.listItems abbrevs);
-          end_block()
-        end
-      else ()
+  fun print_abbrevs () = let
+    fun foldthis (k,st,acc) =
+        if typstruct_uptodate st then (k,st)::acc else acc
+    val okabbrevs = List.rev (Binarymap.foldl foldthis [] abbrevs)
+  in
+    if length okabbrevs > 0 then let
+      in
+        add_newline();
+        add_string "Type abbreviations:";
+        add_break(2,2);
+        begin_block CONSISTENT 0;
+        pr_list print_abbrev (fn () => add_newline()) (fn () => ()) okabbrevs;
+        end_block()
+      end
+    else ()
+  end
 
   fun print_infix {opname,parse_string} = let
   in
@@ -293,12 +312,17 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
   fun print_rule0 r =
     case r of
       SUFFIX sl => let
+        val oksl = List.mapPartial (suffix_arity abbrevs) sl
       in
-        add_string "TY  ::=  ";
-        begin_block INCONSISTENT 0;
-        pr_list print_suffix (fn () => add_string " |")
-                (fn () => add_break(1,0)) sl;
-        end_block ()
+        if null oksl then ()
+        else let
+          in
+            add_string "TY  ::=  ";
+            begin_block INCONSISTENT 0;
+            pr_list print_suffix (fn () => add_string " |")
+                    (fn () => add_break(1,0)) oksl;
+            end_block ()
+          end
       end
     | ARRAY_SFX => add_string "TY  ::=  TY[TY] (array type)"
     | INFIX(oplist, assoc) => let
@@ -324,10 +348,14 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
   end
 in
   begin_block CONSISTENT 0;
-  add_string "Rules:";
-  add_newline();
-  app print_rule g;
-  print_abbrevs();
+    begin_block CONSISTENT 0;
+      add_string "Rules:";
+      add_break (1,2);
+      begin_block CONSISTENT 0;
+        app print_rule g;
+      end_block ();
+    end_block ();
+    print_abbrevs();
   end_block()
 end;
 
