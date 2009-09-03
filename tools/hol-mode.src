@@ -30,6 +30,11 @@
   (interactive "fHOL executable: ")
   (setq hol-executable filename))
 
+(defvar hol-mode-sml-init-command 
+   "use (Globals.HOLDIR ^ \"/tools/hol-mode.sml\")"
+  "*The command to send to HOL to load the ML-part of hol-mode.")
+
+
 (defvar hol-echo-commands-p nil
   "*Whether or not to echo the text of commands originating elsewhere.")
 
@@ -311,6 +316,7 @@ the region contains no backquotes, then send region instead."
             arg)
       (send-string-as-hol-goal txt)
     (send-string-as-hol-goal (hol-term-at-point)))))
+
 
 (defun send-string-as-hol-goaltree (s)
   (let ((goal-string
@@ -742,14 +748,18 @@ region instead. With prefix ARG prompt for a file-name to load."
           (t (hol-load-string (read-string "Library to load: "))))))
 
 
-;** hol map keys and function definitions
+(defun hol-mode-init-sml ()
+   (send-raw-string-to-hol hol-mode-sml-init-command nil nil))
 
+
+;** hol map keys and function definitions
 (defun hol (niceness)
   "Runs a HOL session in a comint window.
 With a numeric prefix argument, runs it niced to that level
 or at level 10 with a bare prefix. "
   (interactive "P")
-  (let* ((niceval (cond ((null niceness) 0)
+  (let* ((hol-was-ok (hol-buffer-ok hol-buffer-name))
+         (niceval (cond ((null niceness) 0)
                         ((listp niceness) 0)
                         (t (prefix-numeric-value niceness))))
          (holname (format "HOL(n:%d)" niceval))
@@ -762,7 +772,13 @@ or at level 10 with a bare prefix. "
     (switch-to-buffer buf)
     (setq comint-prompt-regexp "^- ")
     (setq hol-buffer-name (buffer-name buf))
-    (setq comint-scroll-show-maximum-output t)))
+    (setq comint-scroll-show-maximum-output t)
+    (if hol-was-ok t (hol-mode-init-sml))))
+
+(defun hol-display ()
+   (interactive)
+   (display-buffer hol-buffer-name));
+
 
 (defun hol-vertical (niceness)
   "Runs a HOL session after splitting the window"
@@ -1126,13 +1142,21 @@ already loaded.)"
   (message "checking for problematic names done"))))
 
 
+(defun ml-quote (s)
+   (let* (
+     (s1 (replace-regexp-in-string "\\\\" "\\\\\\\\" s))
+     (s2 (replace-regexp-in-string "\n" "\\\\n" s1))
+     (s3 (replace-regexp-in-string "\t" "\\\\t" s2))
+     (s4 (replace-regexp-in-string "\"" "\\\\\"" s3))
+   ) s4))
+
 (defun hol-add-load-path (path)
   (interactive "DAdd new load-path: ")
   (let ((epath (expand-file-name path)))
   (if (file-accessible-directory-p epath)
      (progn 
         (send-raw-string-to-hol
-            (concat "loadPath := \"" epath "\" :: !loadPath;")
+            (concat "loadPath := \"" (ml-quote epath) "\" :: !loadPath;")
             nil nil)
         (message (concat "Load-path \"" epath "\" added.")))
      (progn (ding) (message "Not a directory!")))
@@ -1144,8 +1168,21 @@ already loaded.)"
    (send-raw-string-to-hol
    (hol-mode-lisp-printer (concat
       "(message \\\"\" ^ (foldl (fn (s, b) => (s ^ \"\\n\" ^ b)) \"\" (!loadPath)) ^ \"\\\")"))
-   t nil))
+   nil nil))
 
+(defun hol-type-info ()
+   "Gives informations about the type of a term"
+   (interactive)
+   (let* ((txt (buffer-substring-no-properties (region-beginning) (region-end)))
+          (use-marked (and (is-region-active) (= (count ?\` txt) 0)))
+          (at-point-term (thing-at-point 'hol-term))
+
+          (main-term (ml-quote (if use-marked txt at-point-term)))
+          (context-term (ml-quote (if use-marked at-point-term "")))
+          (command-s (concat "print_type_of_in_context true "
+                      (if use-marked (concat "(SOME \"" context-term "\")") "NONE")
+                      " \"" main-term "\"")))
+   (send-raw-string-to-hol command-s nil nil)))
 
 
 ;;some insertions
@@ -1229,6 +1266,7 @@ already loaded.)"
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "G"    'hol-do-goaltree)
 (define-key hol-map "h"    'hol)
+(define-key hol-map "4"    'hol-display)
 (define-key hol-map "3"    'hol-horizontal)
 (define-key hol-map "2"    'hol-vertical)
 (define-key hol-map "l"    'hol-load-file)
@@ -1241,6 +1279,7 @@ already loaded.)"
 (define-key hol-map "r"    'hol-rotate)
 (define-key hol-map "R"    'hol-restart-goal)
 (define-key hol-map "t"    'mark-hol-tactic)
+(define-key hol-map "i"    'hol-type-info)
 (define-key hol-map "s"    'interactive-send-string-to-hol)
 (define-key hol-map "u"    'hol-use-file)
 (define-key hol-map "*"    'hol-template-comment-star)
@@ -1313,6 +1352,12 @@ already loaded.)"
    '("Add load-path ..." . hol-add-load-path))
 
 (define-key global-map [menu-bar hol-menu hol-misc sep1]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-misc hol-type-info]
+   '("Type info of marked term" . hol-type-info))
+
+(define-key global-map [menu-bar hol-menu hol-misc sep0]
    '(menu-item "--"))
 
 (define-key global-map [menu-bar hol-menu hol-misc db-find]
@@ -1516,6 +1561,9 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-process hol-interrupt]
    '("Interrupt HOL" . hol-interrupt))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-display]
+   '("Display HOL buffer" . hol-display))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-start-vertical]
    '("Start HOL - vertical split" . hol-vertical))
