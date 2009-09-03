@@ -629,7 +629,6 @@ file to \"use\" first."
 (defun hol-recentre ()
   "Display the HOL window in such a way that it displays most text."
   (interactive)
-  (ensure-hol-buffer-ok)
   (if (get-buffer-window hol-buffer-name t)
   (save-selected-window
     (select-window (get-buffer-window hol-buffer-name t))
@@ -1127,6 +1126,28 @@ already loaded.)"
   (message "checking for problematic names done"))))
 
 
+(defun hol-add-load-path (path)
+  (interactive "DAdd new load-path: ")
+  (let ((epath (expand-file-name path)))
+  (if (file-accessible-directory-p epath)
+     (progn 
+        (send-raw-string-to-hol
+            (concat "loadPath := \"" epath "\" :: !loadPath;")
+            nil nil)
+        (message (concat "Load-path \"" epath "\" added.")))
+     (progn (ding) (message "Not a directory!")))
+))
+
+
+(defun hol-show-current-load-paths ()
+   (interactive)
+   (send-raw-string-to-hol
+   (hol-mode-lisp-printer (concat
+      "(message \\\"\" ^ (foldl (fn (s, b) => (s ^ \"\\n\" ^ b)) \"\" (!loadPath)) ^ \"\\\")"))
+   t nil))
+
+
+
 ;;some insertions
 (defun hol-insert-goalstack-cases-callback (buf num)
    (let (instr)
@@ -1255,7 +1276,7 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-misc check-names]
    '("Check names in store_thm, ..." . hol-check-statement-eq-string))
 
-(define-key global-map [menu-bar hol-menu hol-misc sep2]
+(define-key global-map [menu-bar hol-menu hol-misc sep3]
    '(menu-item "--"))
 
 (define-key global-map [menu-bar hol-menu hol-misc mark-tactic]
@@ -1267,7 +1288,7 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-misc forward-tactic]
    '("Move to next tactic" . forward-hol-tactic))
 
-(define-key global-map [menu-bar hol-menu hol-misc sep1]
+(define-key global-map [menu-bar hol-menu hol-misc sep2]
    '(menu-item "--"))
 
 (define-key global-map [menu-bar hol-menu hol-misc open-string]
@@ -1285,7 +1306,13 @@ already loaded.)"
                               . (and (boundp 'hol-auto-load-p)
                                      hol-auto-load-p))))
 
-(define-key global-map [menu-bar hol-menu hol-misc sep2]
+(define-key global-map [menu-bar hol-menu hol-misc show-load-paths]
+   '("Show load-paths" . hol-show-current-load-paths))
+
+(define-key global-map [menu-bar hol-menu hol-misc add-load-path]
+   '("Add load-path ..." . hol-add-load-path))
+
+(define-key global-map [menu-bar hol-menu hol-misc sep1]
    '(menu-item "--"))
 
 (define-key global-map [menu-bar hol-menu hol-misc db-find]
