@@ -523,12 +523,11 @@ fun flush_ppstream ppstrm =
     (flush_ppstream0 ppstrm;
      clear_ppstream ppstrm)
 
-fun add_string (pps : ppstream) s =
-    let val ppstrm = magic pps : ppstream
-        val PPS{the_token_buffer,the_delim_stack,consumer,
+fun add_stringsz (pps : ppstream) (s,slen) =
+    let val PPS{the_token_buffer,the_delim_stack,consumer,
                 right_index,right_sum,left_sum,
                 left_index,space_left,++,...}
-              = ppstrm
+              = pps
         fun fnl [{Block_size, ...}:block_info] = Block_size := INFINITY
 	  | fnl (_::rst) = fnl rst
           | fnl _ = raise Fail "PP-error: fnl: internal error"
@@ -554,19 +553,16 @@ fun add_string (pps : ppstream) s =
 		       in if (!left_index = i)
 			  then set (the_delim_stack, the_token_buffer sub i)
 			  else ();
-			  advance_left(ppstrm,
-                                       the_token_buffer sub (!left_index));
-		          if (pointers_coincide ppstrm)
-		          then ()
-		          else check_stream ()
+			  advance_left(pps, the_token_buffer sub (!left_index));
+		          if (pointers_coincide pps) then ()
+                          else check_stream ()
 		      end
 	    else ()
 
-	val slen = String.size s
 	val S_token = S{String = s, Length = slen}
 
     in if (delim_stack_is_empty the_delim_stack)
-       then print_token(ppstrm,S_token)
+       then print_token(pps,S_token)
        else (++right_index;
              update(the_token_buffer, !right_index, S_token);
              right_sum := (!right_sum)+slen;
@@ -574,9 +570,15 @@ fun add_string (pps : ppstream) s =
    end
 
 
+fun add_string pps s = let
+  val slen = UTF8.size s
+in
+  add_stringsz pps (s,slen)
+end
+
 (* Derived form. The +2 is for peace of mind *)
 fun add_newline (pps : ppstream) =
-  let val PPS{linewidth, ...} = magic pps
+  let val PPS{linewidth, ...} = pps
   in add_break pps (linewidth+2,0) end
 
 (* Derived form. Builds a ppstream, sends pretty printing commands called in

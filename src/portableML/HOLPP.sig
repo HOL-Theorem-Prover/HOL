@@ -19,6 +19,7 @@ val dest_ppstream  : ppstream -> ppconsumer
 val add_break      : ppstream -> int * int -> unit
 val add_newline    : ppstream -> unit
 val add_string     : ppstream -> string -> unit
+val add_stringsz   : ppstream -> (string * int) -> unit
 val begin_block    : ppstream -> break_style -> int -> unit
 val end_block      : ppstream -> unit
 val clear_ppstream : ppstream -> unit
@@ -85,7 +86,12 @@ val lineWidth      : ppstream -> int
 
    [add_newline ppstrm] issues a newline.
 
-   [add_string ppstrm str] outputs the string str to the ppstream.
+   [add_stringsz ppstrm str] outputs the string str to the ppstream
+   (calculating its width using the UTF8.size function).
+
+   [add_string ppstrm (str,sz)] outputs the string str to the ppstream
+   but the ppstream treats it as if it were sz many characters wide
+   rather than its true width.
 
    [begin_block ppstrm style blockoffset] begins a new block and
    level of indentation, with the given style and block offset.
