@@ -15,7 +15,7 @@ fun tm_free_eq M N P =
  * of a SUBST1_TAC.                                                          *
  *---------------------------------------------------------------------------*)
 
-val VAR_INTRO_TAC = REPEAT_TCL STRIP_THM_THEN 
+val VAR_INTRO_TAC = REPEAT_TCL STRIP_THM_THEN
                       (fn th => SUBST_ALL_TAC th ORELSE ASSUME_TAC th);
 
 val TERM_INTRO_TAC =
@@ -339,7 +339,7 @@ fun recInduct thm =
 
 fun SPOSE_NOT_THEN ttac =
   CCONTR_TAC THEN
-  POP_ASSUM (fn th => ttac (simpLib.SIMP_RULE boolSimps.bool_ss 
+  POP_ASSUM (fn th => ttac (simpLib.SIMP_RULE boolSimps.bool_ss
                                      [GSYM boolTheory.IMP_DISJ_THM] th))
 
 (*---------------------------------------------------------------------------

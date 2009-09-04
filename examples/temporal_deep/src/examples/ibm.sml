@@ -2,17 +2,17 @@
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
-            (concat home_dir "src/translations") :: 
-            (concat home_dir "src/model_check") :: 
-            (concat home_dir "src/tools") :: 
-            (concat hol_dir "examples/PSL/path") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
+            (concat home_dir "src/translations") ::
+            (concat home_dir "src/model_check") ::
+            (concat home_dir "src/tools") ::
+            (concat hol_dir "examples/PSL/path") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
  ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory",
-  "temporal_deep_mixedTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory", 
+  "temporal_deep_mixedTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory",
   "ltl_to_automaton_formulaTheory",
   "numLib", "listLib", "translationsLib", "rltlTheory",
   "rltl_to_ltlTheory", "psl_to_rltlTheory", "UnclockedSemanticsTheory",
@@ -20,7 +20,7 @@ map load
   "modelCheckLib", "ibmLib"];
 *)
 
-open HolKernel boolLib bossLib  ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory 
+open HolKernel boolLib bossLib  ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory pairTheory rltlTheory
      ltl_to_automaton_formulaTheory numLib listLib translationsLib rltl_to_ltlTheory psl_to_rltlTheory UnclockedSemanticsTheory
@@ -37,12 +37,12 @@ quietdec := false;
 *)
 
 (*
-Inputs: 
+Inputs:
 
-0 aa 
+0 aa
 1 bb
-2 cc 
-3 dd 
+2 cc
+3 dd
 
 
 assert G (aa -> next_event(bb)(cc before dd));
@@ -52,7 +52,7 @@ val psl = ``
 F_ALWAYS (F_IMPLIES(F_STRONG_BOOL (B_PROP (0:num)),
                     F_STRONG_NEXT_EVENT (B_PROP 1,
                                          F_STRONG_BEFORE (
-                                            F_STRONG_BOOL (B_PROP 2), 
+                                            F_STRONG_BOOL (B_PROP 2),
                                             F_STRONG_BOOL (B_PROP 3)
                                          ))
                    )
@@ -106,12 +106,12 @@ MODULE main
 ...
 *)
 
-val pre_A = ``symbolic_semi_automaton (INTERVAL_SET 4 7) 
+val pre_A = ``symbolic_semi_automaton (INTERVAL_SET 4 7)
 
           (P_BIGOR [X11; X8; X2; X1])
 
           (XP_BIGCOND [
-            (XP_CURRENT X1, 
+            (XP_CURRENT X1,
              XP_NEXT (P_BIGOR [X1; X11; X8; X2]));
 
             (XP_CURRENT (P_AND(X2, P_NOT (P_OR (P_NOT (P_PROP 0), P_PROP 1)))),
@@ -131,7 +131,7 @@ val pre_A = ``symbolic_semi_automaton (INTERVAL_SET 4 7)
 
             (XP_CURRENT (P_AND(X7, (P_AND (P_PROP 1, P_AND(P_NOT(P_AND(P_NOT (P_PROP 3), P_PROP 2)),  P_PROP 3))))),
              XP_NEXT X0);
-        
+
             (XP_CURRENT (P_AND(X8, (P_AND (P_PROP 0, P_AND (P_PROP 1, P_AND(P_NOT(P_AND(P_NOT (P_PROP 3), P_PROP 2)),  P_NOT (P_PROP 3))))))),
              XP_NEXT (P_BIGOR [X9; X10]));
 
@@ -147,21 +147,21 @@ SPECNEV       AG( ! (
 
 ((((( sat_x1)  = (
     6)))  & ((( !(( ! dd)  & (
-    cc)))  & ( dd)))))  | 
+    cc)))  & ( dd)))))  |
 
 ((
 
   ((((( sat_x1)  = ( 7
    )))  & ((( bb)  & ((( !
    (( ! dd)  & ( cc)))  & ( dd
-   )))))))  
+   )))))))
 
-  | 
+  |
    ((
       (((
    (( sat_x1)  = ( 10)))  & ((( !
    (( ! dd)  & ( cc)))  & ( dd
-   )))))  | 
+   )))))  |
 
       ((((( sat_x1)  = (
     11)))  & ((( aa)  & (((
@@ -172,7 +172,7 @@ SPECNEV       AG( ! (
   ))
 
 
-))) 
+)))
 )
 
 *)
@@ -208,7 +208,7 @@ fun inst_enc s t b1 b2 b3 b4 =
 
     val l = mk_list ([x1,x2,x3,x4], type_of x1)
     val replace = mk_comb (``P_BIGAND:num prop_logic list -> num prop_logic``, l)
-    
+
     val var = mk_var (s, type_of replace);
   in
     subst [var |-> replace] t
@@ -240,7 +240,7 @@ fun inst_all t =
   in
     r
   end;
-    
+
 
 val A = inst_all pre_A;
 val p = inst_all pre_p;
@@ -251,7 +251,7 @@ val psl = ``
 F_ALWAYS (F_IMPLIES(F_WEAK_BOOL (B_PROP (0:num)),
                     F_WEAK_NEXT_EVENT (B_PROP 1,
                                          F_WEAK_BEFORE (
-                                            F_WEAK_BOOL (B_PROP 2), 
+                                            F_WEAK_BOOL (B_PROP 2),
                                             F_WEAK_BOOL (B_PROP 3)
                                          ))
                    )

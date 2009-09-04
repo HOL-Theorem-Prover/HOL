@@ -2,7 +2,7 @@ signature ConsThms =
 sig
   type thm = Thm.thm
 
-  val build : {New_Ty_Existence_Thm : thm, 
+  val build : {New_Ty_Existence_Thm : thm,
                New_Ty_Induct_Thm : thm,
                New_Ty_Uniqueness_Thm : thm}
               ->

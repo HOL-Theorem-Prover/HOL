@@ -31,7 +31,7 @@ struct
 
 open HolKernel Parse boolLib;
 
-local val check = assert (fn tm => 
+local val check = assert (fn tm =>
             (case dest_thy_const (rator tm)
              of {Name="FINITE", Thy="pred_set",...} => true
               | other => false) handle HOL_ERR _ => false)

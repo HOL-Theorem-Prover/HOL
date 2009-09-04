@@ -28,8 +28,8 @@ sig
 
   val dest_chr          : term -> term
   val dest_ord          : term -> term
-  val dest_implode      : term -> term 
-  val dest_explode      : term -> term 
+  val dest_implode      : term -> term
+  val dest_explode      : term -> term
   val dest_string       : term -> term * term
   val dest_string_case  : term -> term * term * term
   val dest_strlen       : term -> term
@@ -54,7 +54,7 @@ sig
 
   val is_char_literal   : term -> bool
   val is_string_literal : term -> bool
-   
+
   val lift_char         : hol_type -> char -> term
   val lift_string       : hol_type -> string -> term
 

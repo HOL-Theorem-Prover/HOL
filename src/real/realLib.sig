@@ -10,7 +10,7 @@ sig
   val REAL_ARITH_TAC      : tactic
   val REAL_ARITH          : term -> thm
 
-   val real_ss : simpLib.simpset 
+   val real_ss : simpLib.simpset
    (* Incorporates simpsets for bool, pair, and arithmetic *)
 
    (* Differentiation *)

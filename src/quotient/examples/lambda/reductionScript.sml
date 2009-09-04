@@ -110,7 +110,7 @@ val BARENDREGT_SUBSTITUTION_LEMMA = store_thm
           ~(x = y) /\ ~(x IN FV L) ==>
           (((M <[ [x,N]) <[ [y,L]) =
            ((M <[ [y,L]) <[ [x, (N <[ [y,L])]))`--),
-    GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN 
+    GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN
     MUTUAL_INDUCT_THEN term_height_induct ASSUME_TAC
     THENL
       [ REPEAT STRIP_TAC
@@ -413,7 +413,7 @@ val (RED1_rules_sat,RED1_ind_thm) =
 val RED1_inv_thms = prove_inversion_theorems
     RED1_rules_sat RED1_ind_thm;
 
-val RED1_strong_ind = prove_strong_induction 
+val RED1_strong_ind = prove_strong_induction
     RED1_rules_sat RED1_ind_thm;
 
 val _ = save_thm ("RED1_rules_sat", RED1_rules_sat);
@@ -433,7 +433,7 @@ val RED1_height_ind_thm_LEMMA = store_thm
          (!R t1 t2. R t1 t2 ==> P_0 R t1 t2) /\
          (!R t1 u t2. P_0 R t1 t2 ==> P_0 R (App t1 u) (App t2 u)) /\
          (!R t u1 u2. P_0 R u1 u2 ==> P_0 R (App t u1) (App t u2)) /\
-         (!R x t1 t2. 
+         (!R x t1 t2.
            (!t1' t2'. RED1 R t1' t2' /\
                       (HEIGHT t1 = HEIGHT t1') /\
                       (HEIGHT t2 = HEIGHT t2') ==> P_0 R t1' t2')
@@ -499,7 +499,7 @@ val RED1_height_ind_thm = store_thm
          (!R (t1:^term) t2. R t1 t2 ==> P_0 R t1 t2) /\
          (!R t1 t2 u. P_0 R t1 t2 ==> P_0 R (App t1 u) (App t2 u)) /\
          (!R t u1 u2. P_0 R u1 u2 ==> P_0 R (App t u1) (App t u2)) /\
-         (!R x t1 t2. 
+         (!R x t1 t2.
            (!t1' t2'. RED1 R t1' t2' /\
                       (HEIGHT t1 = HEIGHT t1') /\
                       (HEIGHT t2 = HEIGHT t2') ==> P_0 R t1' t2')
@@ -526,7 +526,7 @@ val RED1_height_strong_ind_LEMMA = store_thm
            P_0 R u1 u2 /\ RED1 R u1 u2 ==>
            P_0 R (App t u1) (App t u2)) /\
          (!R x t1 t2.
-           (!t1' t2'. 
+           (!t1' t2'.
              RED1 R t1' t2' /\
              (HEIGHT t1 = HEIGHT t1') /\
              (HEIGHT t2 = HEIGHT t2') ==>
@@ -604,7 +604,7 @@ val RED1_height_strong_ind = store_thm
          (!R t u1 u2.
             P_0 R u1 u2 /\ RED1 R u1 u2 ==> P_0 R (App t u1) (App t u2)) /\
          (!R x t1 t2.
-           (!t1' t2'. 
+           (!t1' t2'.
              RED1 R t1' t2' /\
              (HEIGHT t1 = HEIGHT t1') /\
              (HEIGHT t2 = HEIGHT t2') ==>
@@ -722,14 +722,14 @@ val RED_rules_tm =
        (* -------------------------------------------- *) ==>
                          ^RED R t1 t2)                                   /\
 
-                       
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                         (^RED R t1 t1)                                   /\
 
 
                  (^RED R t1 t2 /\ ^RED R t2 t3
        (* -------------------------------------------- *) ==>
-                         ^RED R t1 t3)                         
+                         ^RED R t1 t3)
 `--;
 
 
@@ -739,7 +739,7 @@ val (RED_rules_sat,RED_ind_thm) =
 val RED_inv_thms = prove_inversion_theorems
     RED_rules_sat RED_ind_thm;
 
-val RED_strong_ind = prove_strong_induction 
+val RED_strong_ind = prove_strong_induction
     RED_rules_sat RED_ind_thm;
 
 val _ = save_thm ("RED_rules_sat", RED_rules_sat);
@@ -879,7 +879,7 @@ val REQUAL_rules_tm =
 
               (^REQUAL R t1 t2 /\ ^REQUAL R t2 t3
        (* -------------------------------------------- *) ==>
-                       ^REQUAL R t1 t3)                       
+                       ^REQUAL R t1 t3)
 `--;
 
 
@@ -889,7 +889,7 @@ val (REQUAL_rules_sat,REQUAL_ind_thm) =
 val REQUAL_inv_thms = prove_inversion_theorems
     REQUAL_rules_sat REQUAL_ind_thm;
 
-val REQUAL_strong_ind = prove_strong_induction 
+val REQUAL_strong_ind = prove_strong_induction
     REQUAL_rules_sat REQUAL_ind_thm;
 
 val _ = save_thm ("REQUAL_rules_sat", REQUAL_rules_sat);
@@ -1395,7 +1395,7 @@ val REQUAL_SUBSTITUTIVE = store_thm
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "reduction.lst";
-                                                                                
+
 val _ = html_theory "reduction";
 
 val _ = print_theory_size();

@@ -7,7 +7,7 @@ struct
   fun T s t A = mk_thy_type{Tyop=s, Thy=t,Args=A}
   fun V s q = mk_var(s,q)
   val U     = mk_vartype
-  
+
   (*  Parents *)
   local open ARMCompositionTheory
   in end;
@@ -475,7 +475,7 @@ struct
                T"prod" "pair" [T"COND" "preARM" [], T"MEXP" "IL" []]] -->
              (T"CTL_STRUCTURE" "IL" [] --> alpha)) -->
             (T"CTL_STRUCTURE" "IL" [] --> alpha)))))))];
-  
+
   local
   val share_table = Vector.fromList
   [C"?" "bool"
@@ -5307,7 +5307,7 @@ struct
    ("IR_SEMANTICS_CJ",IR_SEMANTICS_CJ,DB.Thm),
    ("IR_SEMANTICS_TR",IR_SEMANTICS_TR,DB.Thm),
    ("SEMANTICS_OF_IR",SEMANTICS_OF_IR,DB.Thm)]
-  
+
   local open Portable GrammarSpecials Parse
   in
   val _ = mk_local_grms [("ARMCompositionTheory.ARMComposition_grammars",
@@ -5600,10 +5600,10 @@ struct
         {Name = "WELL_FORMED_SUB", Thy = "IL"}
   val IL_grammars = Parse.current_lgrms()
   end
-  
-  
-  
-  
+
+
+
+
   val _ =
     TypeBase.write [
       let
@@ -5632,8 +5632,8 @@ in
         tyinfo0
       end
     ];
-  
-  
+
+
   val _ =
     TypeBase.write [
       let
@@ -5662,18 +5662,18 @@ in
         tyinfo0
       end
     ];
-  
-  
-  val _ = computeLib.add_funs [index_of_reg_def];  
-  
-  val _ = computeLib.add_funs [from_reg_index_def];  
-  
-  val _ = computeLib.add_funs [toREG_def];  
-  
-  val _ = computeLib.add_funs [toMEM_def];  
-  
-  val _ = computeLib.add_funs [toEXP_def];  
-  
+
+
+  val _ = computeLib.add_funs [index_of_reg_def];
+
+  val _ = computeLib.add_funs [from_reg_index_def];
+
+  val _ = computeLib.add_funs [toREG_def];
+
+  val _ = computeLib.add_funs [toMEM_def];
+
+  val _ = computeLib.add_funs [toEXP_def];
+
   val _ =
     TypeBase.write [
       let
@@ -5702,8 +5702,8 @@ in
         tyinfo0
       end
     ];
-  
-  
+
+
   val _ =
     TypeBase.write [
       let
@@ -5732,28 +5732,28 @@ in
         tyinfo0
       end
     ];
-  
-  
-  val _ = computeLib.add_funs [pushL_def];  
-  
-  val _ = computeLib.add_funs [popL_def];  
-  
-  val _ = computeLib.add_funs [mdecode_def];  
-  
-  val _ = computeLib.add_funs [translate_assignment_def];  
-  
-  val _ = computeLib.add_funs [translate_condition_def];  
-  
-  val _ = computeLib.add_funs [eval_il_cond_def];  
-  
-  val _ = computeLib.add_funs [translate_def];  
-  
-  val _ = computeLib.add_funs [run_arm_def];  
-  
-  val _ = computeLib.add_funs [run_ir_def];  
-  
-  val _ = computeLib.add_funs [WELL_FORMED_def];  
-  
+
+
+  val _ = computeLib.add_funs [pushL_def];
+
+  val _ = computeLib.add_funs [popL_def];
+
+  val _ = computeLib.add_funs [mdecode_def];
+
+  val _ = computeLib.add_funs [translate_assignment_def];
+
+  val _ = computeLib.add_funs [translate_condition_def];
+
+  val _ = computeLib.add_funs [eval_il_cond_def];
+
+  val _ = computeLib.add_funs [translate_def];
+
+  val _ = computeLib.add_funs [run_arm_def];
+
+  val _ = computeLib.add_funs [run_ir_def];
+
+  val _ = computeLib.add_funs [WELL_FORMED_def];
+
   val _ = computeLib.add_funs [WELL_FORMED_SUB_def];
   val _ = if !Globals.print_thy_loads then print "done\n" else ()
 

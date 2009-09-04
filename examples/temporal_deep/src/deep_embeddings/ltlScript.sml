@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
@@ -90,7 +90,7 @@ val LTL_SEM_def =
 
 val LTL_KS_SEM_def =
  Define
-   `LTL_KS_SEM M f = 
+   `LTL_KS_SEM M f =
       !p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==> LTL_SEM p f`;
 
 
@@ -427,10 +427,10 @@ val LTL_SEM_TIME___VAR_RENAMING___NOT_INJ =
 val LTL_SEM_TIME___VAR_RENAMING =
  store_thm
   ("LTL_SEM_TIME___VAR_RENAMING",
-   ``!f' t v f. (INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f') UNIV) ==> ((LTL_SEM_TIME t v f') = (LTL_SEM_TIME t 
+   ``!f' t v f. (INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f') UNIV) ==> ((LTL_SEM_TIME t v f') = (LTL_SEM_TIME t
     (PATH_VAR_RENAMING f v) (LTL_VAR_RENAMING f f')))``,
 
-   
+
    INDUCT_THEN ltl_induct ASSUME_TAC THENL [
       SIMP_TAC std_ss [LTL_SEM_TIME_def,
         LTL_VAR_RENAMING_def, PATH_VAR_RENAMING_def,
@@ -439,11 +439,11 @@ val LTL_SEM_TIME___VAR_RENAMING =
       MATCH_MP_TAC P_SEM___VAR_RENAMING THEN
       UNDISCH_HD_TAC THEN
       MATCH_MP_TAC INJ_SUBSET THEN
-      REWRITE_TAC [SUBSET_DEF, IN_UNION, LTL_USED_VARS_def, 
+      REWRITE_TAC [SUBSET_DEF, IN_UNION, LTL_USED_VARS_def,
         GSYM PATH_USED_VARS_THM] THEN
       PROVE_TAC[],
 
-      
+
       ASM_SIMP_TAC std_ss [LTL_SEM_TIME_def, LTL_USED_VARS_def,
         LTL_VAR_RENAMING_def],
 
@@ -466,7 +466,7 @@ val LTL_SEM_TIME___VAR_RENAMING =
 
       ASM_SIMP_TAC std_ss [LTL_SEM_TIME_def, LTL_USED_VARS_def,
         LTL_VAR_RENAMING_def],
-      
+
 
       SIMP_TAC std_ss [LTL_SEM_TIME_def, LTL_USED_VARS_def,
         LTL_VAR_RENAMING_def] THEN
@@ -514,7 +514,7 @@ val LTL_SEM_TIME___VAR_RENAMING =
 val LTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT =
  store_thm
   ("LTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT",
-   ``!f' t v f. (INJ f (LTL_USED_VARS f') UNIV) ==> ((LTL_SEM_TIME t v f') = (LTL_SEM_TIME t 
+   ``!f' t v f. (INJ f (LTL_USED_VARS f') UNIV) ==> ((LTL_SEM_TIME t v f') = (LTL_SEM_TIME t
     (PATH_VAR_RENAMING f (PATH_RESTRICT v (LTL_USED_VARS f'))) (LTL_VAR_RENAMING f f')))``,
 
    REPEAT STRIP_TAC THEN
@@ -555,9 +555,9 @@ val LTL_SBEFORE_SEM =
  store_thm
   ("LTL_SBEFORE_SEM",
    ``!v.!f1.!f2.!t. ((LTL_SEM_TIME t v (LTL_SBEFORE(f1,f2))) = (
-     ?k. (k >= t /\ (LTL_SEM_TIME k v f1) /\ (!j. ((t <= j) /\ (j <= k)) ==> 
+     ?k. (k >= t /\ (LTL_SEM_TIME k v f1) /\ (!j. ((t <= j) /\ (j <= k)) ==>
           (~(LTL_SEM_TIME j v f2))))))``,
-   REWRITE_TAC[LTL_SBEFORE_def, LTL_SEM_TIME_def] THEN 
+   REWRITE_TAC[LTL_SBEFORE_def, LTL_SEM_TIME_def] THEN
    REPEAT STRIP_TAC THEN
    EXISTS_EQ_STRIP_TAC THEN
    REPEAT BOOL_EQ_STRIP_TAC THEN
@@ -581,9 +581,9 @@ val LTL_PSBEFORE_SEM =
  store_thm
   ("LTL_PSBEFORE_SEM",
    ``!v.!f1.!f2.!t. ((LTL_SEM_TIME t v (LTL_PSBEFORE(f1,f2))) = (
-     ?k. (k <= t /\ (LTL_SEM_TIME k v f1) /\ (!j. ((k <= j) /\ (j <= t)) ==> 
+     ?k. (k <= t /\ (LTL_SEM_TIME k v f1) /\ (!j. ((k <= j) /\ (j <= t)) ==>
           (~(LTL_SEM_TIME j v f2))))))``,
-   REWRITE_TAC[LTL_PSBEFORE_def, LTL_SEM_TIME_def] THEN 
+   REWRITE_TAC[LTL_PSBEFORE_def, LTL_SEM_TIME_def] THEN
    REPEAT STRIP_TAC THEN
    EXISTS_EQ_STRIP_TAC THEN
    REPEAT BOOL_EQ_STRIP_TAC THEN
@@ -779,7 +779,7 @@ val LTL_EQUIVALENT_INITIAL___TO___CONTRADICTION =
 
   ``!l1 l2. LTL_EQUIVALENT_INITIAL l1 l2 = LTL_IS_CONTRADICTION (LTL_NOT (LTL_EQUIV(l1, l2)))``,
 
-    REWRITE_TAC[LTL_TAUTOLOGY_CONTRADICTION_DUAL, 
+    REWRITE_TAC[LTL_TAUTOLOGY_CONTRADICTION_DUAL,
         LTL_EQUIVALENT_INITIAL___TO___TAUTOLOGY]);
 
 val LTL_EQUIVALENT___TO___CONTRADICTION =
@@ -810,7 +810,7 @@ val LTL_CONTRADICTION___VAR_RENAMING =
 val LTL_KS_SEM___VAR_RENAMING =
  store_thm
   ("LTL_KS_SEM___VAR_RENAMING",
-   ``!f' M f. (INJ f (LTL_USED_VARS f' UNION (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS M)) UNIV) ==> (LTL_KS_SEM M f' = LTL_KS_SEM 
+   ``!f' M f. (INJ f (LTL_USED_VARS f' UNION (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS M)) UNIV) ==> (LTL_KS_SEM M f' = LTL_KS_SEM
       (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f M)
       (LTL_VAR_RENAMING f f'))``,
 
@@ -823,7 +823,7 @@ val LTL_KS_SEM___VAR_RENAMING =
                            XP_SEM___VAR_RENAMING___NOT_INJ,
                            LTL_SEM_TIME___VAR_RENAMING___NOT_INJ] THEN
       Q_SPEC_NO_ASSUM 2 `(\n x. f x IN p n)` THEN
-      UNDISCH_HD_TAC THEN 
+      UNDISCH_HD_TAC THEN
       ASM_SIMP_TAC std_ss [],
 
 
@@ -951,15 +951,15 @@ val LTL_RECURSION_LAWS___LTL_EVENTUAL =
 val LTL_RECURSION_LAWS___LTL_SUNTIL =
  store_thm
   ("LTL_RECURSION_LAWS___LTL_SUNTIL",
-   ``!l1 l2. LTL_EQUIVALENT (LTL_SUNTIL (l1, l2)) 
+   ``!l1 l2. LTL_EQUIVALENT (LTL_SUNTIL (l1, l2))
                             (LTL_OR(l2, LTL_AND(l1, LTL_NEXT(LTL_SUNTIL (l1, l2)))))``,
 
 
-SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_THM] THEN 
+SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_THM] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   Cases_on `k = t` THENL [
     PROVE_TAC[],
-    
+
     DISJ2_TAC THEN
     REPEAT STRIP_TAC THENL [
       `t <= t /\ t < k` by DECIDE_TAC THEN
@@ -993,15 +993,15 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
 val LTL_RECURSION_LAWS___LTL_PSUNTIL =
  store_thm
   ("LTL_RECURSION_LAWS___LTL_PSUNTIL",
-   ``!l1 l2. LTL_EQUIVALENT (LTL_PSUNTIL (l1, l2)) 
+   ``!l1 l2. LTL_EQUIVALENT (LTL_PSUNTIL (l1, l2))
                             (LTL_OR(l2, LTL_AND(l1, LTL_PSNEXT(LTL_PSUNTIL (l1, l2)))))``,
 
 
-SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_THM] THEN 
+SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_THM] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   Cases_on `k = t` THENL [
     PROVE_TAC[],
-    
+
     DISJ2_TAC THEN
     Cases_on `t` THEN SIMP_ALL_TAC arith_ss [] THEN
     REPEAT STRIP_TAC THENL [
@@ -1101,7 +1101,7 @@ val LTL_PAST_WEAK_UNTIL___ALTERNATIVE_DEF =
 
    SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_PUNTIL_def, LTL_SEM_THM] THEN
    REPEAT STRIP_TAC THEN
-   EQ_TAC THEN REPEAT STRIP_TAC THENL [      
+   EQ_TAC THEN REPEAT STRIP_TAC THENL [
       Cases_on `k' < k` THENL [
          `k' < k` by DECIDE_TAC THEN
          METIS_TAC[],
@@ -1121,11 +1121,11 @@ val LTL_PAST_WEAK_UNTIL___ALTERNATIVE_DEF =
         ASM_SIMP_TAC std_ss [GSYM arithmeticTheory.EXISTS_GREATEST] THEN
         REPEAT STRIP_TAC THENL [
           METIS_TAC[],
-        
+
           Q_TAC EXISTS_TAC `t` THEN
           SIMP_TAC arith_ss []
         ]
-      ) THEN      
+      ) THEN
       NTAC 2 (UNDISCH_HD_TAC) THEN
       ASM_SIMP_TAC std_ss [] THEN
       REPEAT STRIP_TAC THEN
@@ -1223,7 +1223,7 @@ INDUCT_THEN ltl_induct ASSUME_TAC THENL [
     EXISTS_TAC ``1:num`` THEN
     REPEAT STRIP_TAC THENL [
       ASM_SIMP_TAC arith_ss [CUT_PATH_PRERIODICALLY___BEGINNING],
-      
+
       EQ_TAC THEN REPEAT STRIP_TAC THENL [
         PROVE_TAC [],
 
@@ -1239,7 +1239,7 @@ INDUCT_THEN ltl_induct ASSUME_TAC THENL [
     EXISTS_TAC ``1:num`` THEN
     REPEAT STRIP_TAC THENL [
       ASM_SIMP_TAC arith_ss [CUT_PATH_PRERIODICALLY___BEGINNING],
-      
+
       ASM_SIMP_TAC std_ss [IMP_DISJ_THM] THEN
       GEN_TAC THEN
       RIGHT_DISJ_TAC THEN

@@ -70,7 +70,7 @@ fun INEQS_FALSE_CONV tm =
      val th'' = DISCH (hd rev_ineqs) th'
      fun conj_disch tm th = CONV_RULE IMP_IMP_CONJ_IMP_CONV (DISCH tm th)
      val th''' = itlist conj_disch (rev (tl rev_ineqs)) th''
-  in 
+  in
       CONV_RULE IMP_F_EQ_F_CONV th'''
   end
   handle HOL_ERR _ => failwith "INEQS_FALSE_CONV";
@@ -128,7 +128,7 @@ fun NEGATE_CONV conv tm =
      val th = RULE_OF_CONV conv (if neg then (dest_neg tm) else (mk_neg tm))
      val r = rhs (concl th)
      val truth_th =
-        if is_T r then NOT_T_F else 
+        if is_T r then NOT_T_F else
         if is_F r then NOT_F_T else failwith "NEGATE_CONV"
      val neg_fn = if neg then I else TRANS (NOT_NOT_INTRO_CONV tm)
  in  neg_fn (TRANS (AP_TERM neg_tm th) truth_th)

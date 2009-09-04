@@ -209,11 +209,11 @@ val aeq_refl = Store_Thm(
   "aeq_refl",
   ``aeq t t``,
   Induct_on `t` THEN ASM_SIMP_TAC (srw_ss())[aeq_rules] THENL [
-    Q.X_GEN_TAC `s` THEN 
+    Q.X_GEN_TAC `s` THEN
     MATCH_MP_TAC aeq_lam THEN SRW_TAC [][aeq_ptpm_eqn] THEN
     Q.SPEC_THEN `s INSERT allatoms t` MP_TAC NEW_def THEN SRW_TAC [][] THEN
     METIS_TAC [],
-    Q.X_GEN_TAC `s` THEN GEN_TAC THEN 
+    Q.X_GEN_TAC `s` THEN GEN_TAC THEN
     MATCH_MP_TAC aeq_lami THEN SRW_TAC [][aeq_ptpm_eqn] THEN
     Q.SPEC_THEN `s INSERT allatoms t` MP_TAC NEW_def THEN SRW_TAC [][] THEN
     METIS_TAC []
@@ -234,7 +234,7 @@ val aeq_app_inversion = store_thm(
   "aeq_app_inversion",
   ``aeq (app t u) v = ?t' u'. (v = app t' u') /\
                               aeq t t' /\ aeq u u'``,
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [aeq_cases])) THEN SRW_TAC [][]);
+  SRW_TAC [][Once aeq_cases, SimpLHS]);
 
 val aeq_app_11 = SIMP_RULE (srw_ss()) []
                            (Q.INST [`v` |-> `app t' u'`] aeq_app_inversion)
@@ -242,15 +242,13 @@ val aeq_var_11 = prove(
   ``aeq (var s1) (var s2) = (s1 = s2)``,
   ONCE_REWRITE_TAC [aeq_cases] THEN SRW_TAC [][] THEN METIS_TAC []);
 
-
 val aeq_lam_inversion = store_thm(
   "aeq_lam_inversion",
   ``aeq (lam v M) N = ?v' M' z. (N = lam v' M') /\
                                 ~(z = v') /\ ~(z = v) /\ ~(z IN allatoms M) /\
                                 ~(z IN allatoms M') /\
                                 aeq (ptpm [(v,z)] M) (ptpm [(v',z)] M')``,
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [aeq_cases])) THEN SRW_TAC [][] THEN
-  METIS_TAC []);
+  SRW_TAC [][Once aeq_cases, SimpLHS] THEN METIS_TAC []);
 
 val aeq_lami_inversion = store_thm(
   "aeq_lami_inversion",
@@ -260,8 +258,7 @@ val aeq_lami_inversion = store_thm(
                    ~(z IN allatoms M) /\ ~(z IN allatoms M') /\
                    aeq (ptpm [(v,z)] M) (ptpm [(v',z)] M') /\
                    aeq N N'``,
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [aeq_cases])) THEN SRW_TAC [][] THEN
-  METIS_TAC []);
+  SRW_TAC [][Once aeq_cases, SimpLHS] THEN METIS_TAC []);
 
 val aeq_strong_ind = IndDefLib.derive_strong_induction (aeq_rules, aeq_ind)
 
@@ -283,7 +280,7 @@ val aeq_trans = store_thm(
              !t''. aeq (lam a' t') t'' ==> aeq (lam a t) t''`
           THEN1 METIS_TAC [] THEN
     REPEAT GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN
-    CONV_TAC (LAND_CONV (REWRITE_CONV [aeq_lam_inversion])) THEN
+    SIMP_TAC (srw_ss()) [Once aeq_lam_inversion, SimpL ``(==>)``] THEN
     DISCH_THEN
       (Q.X_CHOOSE_THEN `a''`
          (Q.X_CHOOSE_THEN `t'''`
@@ -313,6 +310,7 @@ val aeq_trans = store_thm(
     SRW_TAC [][swapstr_def] THEN
     `aeq (ptpm [(a,d)] t) (ptpm [(a'',d)] t''')` by METIS_TAC [] THEN
     METIS_TAC [aeq_lam],
+
     Q_TAC SUFF_TAC
           `!a a' n b t t' u u'.
              (!t''. aeq (ptpm [(a',b)] t') t'' ==> aeq (ptpm [(a,b)] t) t'') /\
@@ -323,7 +321,7 @@ val aeq_trans = store_thm(
            THEN1 (STRIP_TAC THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
                   FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC []) THEN
     REPEAT GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN
-    CONV_TAC (LAND_CONV (REWRITE_CONV [aeq_lami_inversion])) THEN
+    SIMP_TAC (srw_ss()) [aeq_lami_inversion, SimpL ``(==>)``] THEN
     DISCH_THEN
       (Q.X_CHOOSE_THEN `a''`
          (Q.X_CHOOSE_THEN `t'''`
@@ -391,18 +389,18 @@ val fresh_swap = store_thm(
   "fresh_swap",
   ``!x y. ~(x IN fv t) /\ ~(y IN fv t) ==> aeq t (ptpm [(x, y)] t)``,
   SIMP_TAC (srw_ss()) [] THEN Induct_on `t` THEN
-  ASM_SIMP_TAC (srw_ss()) [aeq_rules, swapstr_safe] THENL [
-    Q.X_GEN_TAC `s` THEN 
+  ASM_SIMP_TAC (srw_ss()) [aeq_rules] THENL [
+    Q.X_GEN_TAC `s` THEN
     REPEAT STRIP_TAC THEN SRW_TAC [][] THEN
     MATCH_MP_TAC alt_aeq_lam THEN REPEAT STRIP_TAC THEN
     `~(z IN fv t)` by METIS_TAC [SUBSET_DEF, fv_SUBSET_allatoms]
     THENL [
-      Cases_on `s = x` THEN FULL_SIMP_TAC (srw_ss()) [swapstr_safe] THENL [
-        ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
-        SRW_TAC [][swapstr_def, aeq_ptpm_eqn],
+      Cases_on `s = x` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
+        ASM_SIMP_TAC (srw_ss()) [Once (GSYM ptpm_sing_to_back)] THEN
+        SRW_TAC [][aeq_ptpm_eqn, swapstr_def],
         ALL_TAC
       ] THEN Cases_on `s = y` THENL [
-        FULL_SIMP_TAC (srw_ss()) [swapstr_safe] THEN
+        FULL_SIMP_TAC (srw_ss()) [] THEN
         ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
         SRW_TAC [][swapstr_def, ptpm_flip_args, aeq_ptpm_eqn],
         SRW_TAC [][swapstr_def, aeq_ptpm_eqn]
@@ -414,18 +412,18 @@ val fresh_swap = store_thm(
       ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
       SRW_TAC [][swapstr_def, aeq_ptpm_eqn]
     ],
-    Q.X_GEN_TAC `s` THEN 
-    REPEAT STRIP_TAC THEN SRW_TAC [][swapstr_safe] THEN
+    Q.X_GEN_TAC `s` THEN
+    REPEAT STRIP_TAC THEN SRW_TAC [][] THEN
     MATCH_MP_TAC alt_aeq_lami THEN REPEAT STRIP_TAC THEN
     TRY (FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN NO_TAC) THEN
     `~(z IN fv t)` by METIS_TAC [SUBSET_DEF, fv_SUBSET_allatoms]
     THENL [
-      Cases_on `s = x` THEN FULL_SIMP_TAC (srw_ss()) [swapstr_safe] THENL [
+      Cases_on `s = x` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
         ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
         SRW_TAC [][swapstr_def, aeq_ptpm_eqn],
         ALL_TAC
       ] THEN Cases_on `s = y` THENL [
-        FULL_SIMP_TAC (srw_ss()) [swapstr_safe] THEN
+        FULL_SIMP_TAC (srw_ss()) [] THEN
         ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
         SRW_TAC [][swapstr_def, aeq_ptpm_eqn, ptpm_flip_args],
         SRW_TAC [][swapstr_def, aeq_ptpm_eqn]
@@ -477,7 +475,7 @@ val lam_aeq_thm = store_thm(
 val lami_nfixed = store_thm(
   "lami_nfixed",
   ``aeq (lami n v M1 N1) (lami m u M2 N2) ==> (n = m)``,
-  ONCE_REWRITE_TAC [aeq_cases] THEN SRW_TAC [][]);
+  SRW_TAC [][Once aeq_cases]);
 
 val lami_aeq_thm = store_thm(
   "lami_aeq_thm",

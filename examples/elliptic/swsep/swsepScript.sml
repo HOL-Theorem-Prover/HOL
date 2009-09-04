@@ -2,10 +2,10 @@
 
 quietdec := true;
 
-loadPath := 
-            (concat Globals.HOLDIR "/examples/dev/sw") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/arm") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/sep") :: 
+loadPath :=
+            (concat Globals.HOLDIR "/examples/dev/sw") ::
+            (concat Globals.HOLDIR "/examples/elliptic/arm") ::
+            (concat Globals.HOLDIR "/examples/elliptic/sep") ::
             !loadPath;
 
 map load
@@ -26,7 +26,7 @@ open arm_progTheory progTheory pred_setTheory set_sepLib set_sepTheory arm_instT
 (*
 show_assums := false;
 show_assums := true;
-show_types := true; 
+show_types := true;
 show_types := false;
 show_types_verbosely := true;
 show_types_verbosely := false;
@@ -71,7 +71,7 @@ val FORALL_EQ_STRIP_TAC :tactic = fn (asl,t) =>
 
 
 val SPEC_NO_ASSUM = (fn n => fn S => POP_NO_ASSUM n (fn x=> ASSUME_TAC (SPEC S x)));
-fun Q_SPEC_NO_ASSUM n = Q_TAC (SPEC_NO_ASSUM n);	
+fun Q_SPEC_NO_ASSUM n = Q_TAC (SPEC_NO_ASSUM n);
 fun Q_SPECL_NO_ASSUM n [] = ALL_TAC
 	| Q_SPECL_NO_ASSUM n (h::l) = (Q_SPEC_NO_ASSUM n h THEN Q_SPECL_NO_ASSUM 0 l);
 
@@ -90,9 +90,9 @@ fun GSYM_DEF_TAC t (asl, w) =
 	end;
 
 fun PROVE_CONDITION_TAC thm (asl, t) =
-	let 
+	let
 		val (p, c) = dest_imp (concl thm);
-		fun mp_thm thms = 
+		fun mp_thm thms =
 		let
 			val thm_p = el 1 thms;
 			val thm_t = el 2 thms;
@@ -189,7 +189,7 @@ MATCH_MP_TAC SORTED_LOWER_IMP_EQ THEN
 FULL_SIMP_TAC std_ss [MEM_REGISTER_LIST_reg_bitmap, SORTED_REGSITER_LIST, IS_SORTED_REG_LIST___SORTED_WORDS])
 
 
-val STACK_SIZE_DOPER_def = Define 
+val STACK_SIZE_DOPER_def = Define
 	`(STACK_SIZE_DOPER (MPUSH r l) = (LENGTH l, 0, (r = 13) /\ (IS_SORTED_REG_LIST l))) /\
 	 (STACK_SIZE_DOPER (MPOP r l) = (0, LENGTH l, (r = 13) /\ (IS_SORTED_REG_LIST l))) /\
 	 (STACK_SIZE_DOPER (MMOV dst e) = (0, 0, ~(dst = R13))) /\
@@ -228,9 +228,9 @@ SIMP_TAC std_ss [IS_MEMORY_DOPER_def,
 					  STACK_SIZE_DOPER_def])
 
 
-val STACK_SIZE_BLK_def = Define 
+val STACK_SIZE_BLK_def = Define
 	`(STACK_SIZE_BLK (max, current, valid) [] = (max, current, valid)) /\
-	 (STACK_SIZE_BLK (max, current, valid) (h::l) = 
+	 (STACK_SIZE_BLK (max, current, valid) (h::l) =
 	    let (p, n, v) = STACK_SIZE_DOPER h in
 		 let current' = ((current + p) - n) in
 		 let max' = MAX current' max in
@@ -238,17 +238,17 @@ val STACK_SIZE_BLK_def = Define
 		 STACK_SIZE_BLK (max', current', valid') l)`;
 
 
-val STACK_SIZE_CTL_STRUCTURE_def = Define 
-	`(STACK_SIZE_CTL_STRUCTURE (max, current, valid) (BLK l) = 
+val STACK_SIZE_CTL_STRUCTURE_def = Define
+	`(STACK_SIZE_CTL_STRUCTURE (max, current, valid) (BLK l) =
 		 STACK_SIZE_BLK (max, current, valid) l) /\
-	 (STACK_SIZE_CTL_STRUCTURE (max, current, valid) (SC ir1 ir2) = 
+	 (STACK_SIZE_CTL_STRUCTURE (max, current, valid) (SC ir1 ir2) =
 		 let (max', current', valid') = STACK_SIZE_CTL_STRUCTURE (max, current, valid) ir1 in
 			STACK_SIZE_CTL_STRUCTURE (max', current', valid') ir2) /\
-	 (STACK_SIZE_CTL_STRUCTURE (max, current, valid) (CJ c ir1 ir2) = 
+	 (STACK_SIZE_CTL_STRUCTURE (max, current, valid) (CJ c ir1 ir2) =
 		 let (max1, current1, valid1) = STACK_SIZE_CTL_STRUCTURE (max, current, valid) ir1 in
 		 let (max2, current2, valid2) = STACK_SIZE_CTL_STRUCTURE (max, current, valid) ir2 in
 			(MAX max1 max2, current1, valid1 /\ valid2 /\ (current1 = current2))) /\
-	 (STACK_SIZE_CTL_STRUCTURE (max, current, valid) (TR c ir) = 
+	 (STACK_SIZE_CTL_STRUCTURE (max, current, valid) (TR c ir) =
 		 let (max', current', valid') = STACK_SIZE_CTL_STRUCTURE (max, current, valid) ir in
 			(max', current', valid' /\ (current=current')))`
 
@@ -296,7 +296,7 @@ Induct_on `ir` THENL [
 		`!st st'. (read (run_ir (BLK l) st) (REG 13) = read (run_ir (BLK l) st') (REG 13)) = (read st (REG 13) = read st' (REG 13))` by ALL_TAC THEN1 (
 			POP_ASSUM (fn thm => MP_TAC (GSYM thm)) THEN
 			SIMP_TAC std_ss [WORD_EQ_ADD_RCANCEL, word_sub_def]
-		) THEN					 
+		) THEN
 		`!st M1 v. ~(M1 = R13) ==> (read (write st (toREG M1) v) (REG 13) =
 											 read st (REG 13))` by ALL_TAC THEN1 (
 			REPEAT (POP_ASSUM (fn thm => ALL_TAC)) THEN
@@ -317,7 +317,7 @@ Induct_on `ir` THENL [
 			Q.PAT_ASSUM `p = LENGTH l1` (fn thm => ALL_TAC) THEN
 			Q.PAT_ASSUM `IS_SORTED_REG_LIST l1` (fn thm => ALL_TAC) THEN
 			Q.PAT_ASSUM `STACK_SIZE_BLK X l = X'` (fn thm => ALL_TAC) THEN
-			Induct_on `l1` THENL [				
+			Induct_on `l1` THENL [
 				ASM_SIMP_TAC list_ss [pushL_def, WORD_SUB_RZERO] THEN
 				REPEAT STRIP_TAC THEN
 				Cases_on `st` THEN
@@ -325,8 +325,8 @@ Induct_on `ir` THENL [
 
 				ASM_SIMP_TAC list_ss [pushL_def]
 		]
-		
-		
+
+
 
 			FULL_SIMP_TAC std_ss [mdecode_def],
 			FULL_SIMP_TAC std_ss [mdecode_def],
@@ -349,7 +349,7 @@ match [] ``(let a = c in b a) = d``
 
 CTL_STRUCTURE_11
  = (max, current, valid)) /\
-	 ( (h::l) = 
+	 ( (h::l) =
 	    let (p, n, v) = STACK_SIZE_DOPER h in
 		 let current' = ((current + p) - n) in
 		 let max' = MAX current' max in
@@ -398,7 +398,7 @@ val IS_SORTED_REG_LIST___SNOC = store_thm ("IS_SORTED_REG_LIST___SNOC",
 
 
 val IS_SORTED_REG_LIST___LAST = store_thm ("IS_SORTED_REG_LIST___LAST",
-``!l. IS_SORTED_REG_LIST l ==> 
+``!l. IS_SORTED_REG_LIST l ==>
 		(EVERY (\n. n <= (LAST l)) l)``,
 
   INDUCT_THEN SNOC_INDUCT ASSUME_TAC THENL [
@@ -430,7 +430,7 @@ EVAL ``enc_REGISTER_LIST [2; 3; 5; 14]``
 
 GEN_TAC THEN
 DISJ_CASES_TAC (ISPEC ``l:num list`` SNOC_CASES) THENL [
-	ASM_SIMP_TAC list_ss [GENLIST] THEN		
+	ASM_SIMP_TAC list_ss [GENLIST] THEN
 	REPEAT (
 		CONV_TAC (DEPTH_CONV numLib.num_CONV) THEN
 		SIMP_TAC list_ss [GENLIST, fcpTheory.FCP_BETA, dimindex_16, FILTER_SNOC]
@@ -443,17 +443,17 @@ restart()
 SIMP_TAC std_ss [enc_REG_LIST_def, MEM, armTheory.REGISTER_LIST_def] THEN
 REPEAT STRIP_TAC THEN
 `(EVERY (\n. n < 16) l)` by PROVE_TAC[IS_SORTED_REG_LIST___EL_SIZE] THEN
-Q.ABBREV_TAC `max = 16` THEN 
+Q.ABBREV_TAC `max = 16` THEN
 `max <= 16` by FULL_SIMP_TAC arith_ss [] THEN
 Q.PAT_ASSUM `Abbrev X` (fn thm => ALL_TAC) THEN
 REPEAT (POP_ASSUM MP_TAC) THEN
 SPEC_TAC (``l:num list``,``l:num list``) THEN
 Induct_on `max` THENL [
    Cases_on `l` THEN SIMP_TAC list_ss [GENLIST],
-		
+
    GEN_TAC THEN
    DISJ_CASES_TAC (ISPEC ``l:num list`` SNOC_CASES) THENL [
-		ASM_SIMP_TAC list_ss [] THEN		
+		ASM_SIMP_TAC list_ss [] THEN
 		`!x. (x <= 16) ==> (FILTER FST (GENLIST (\i. ((FCP i. F):word16 %% i,(n2w i):word4)) x) = [])` by ALL_TAC THEN1 (
 			REPEAT (POP_ASSUM (fn thm => ALL_TAC)) THEN
 			Induct_on `x` THENL [
@@ -501,16 +501,16 @@ Induct_on `max` THENL [
 		CONV_TAC (DEPTH_CONV numLib.num_CONV) THEN
 		SIMP_TAC list_ss [GENLIST, fcpTheory.FCP_BETA, dimindex_16, FILTER_SNOC]
 	),
-	
+
 
 
 	Cases SNOC_CASES THENL SIMP_TAC list_ss [GENLIST]
 	REPEAT STRIP_TAC THEN
-	
+
 	Cases_on `EVERY (\n. n < max) l` THEN1 (
 		FULL_SIMP_TAC arith_ss [GENLIST, FILTER_SNOC, fcpTheory.FCP_BETA, dimindex_16]
-	
-		
+
+
 
 
 ONCE_REWRITE_TAC [REDEPTH_CONV numLib.num_CONV ``16``] THEN
@@ -630,7 +630,7 @@ val MREG_NOT_PC = store_thm ("MREG_NOT_PC",
 	SIMP_TAC std_ss [GSYM FORALL_AND_THM, MREG2REG_def,
 		MREG2register_def, GSYM armTheory.num2register_thm] THEN
    Cases_on `r` THEN(
-		SIMP_TAC std_ss [index_of_reg_def, arm_evalTheory.mode_reg2num_lt, armTheory.num2register_11, mode_reg2num___PC] THEN		
+		SIMP_TAC std_ss [index_of_reg_def, arm_evalTheory.mode_reg2num_lt, armTheory.num2register_11, mode_reg2num___PC] THEN
 		WORDS_TAC
 	));
 
@@ -667,12 +667,12 @@ val MREG2addr_model_thm = store_thm ("MREG2addr_model_thm",
 REPEAT GEN_TAC THEN
 Cases_on `mexp` THENL [
   SIMP_TAC std_ss [MEXP2addr_model_def, arm_evalTheory.IS_DP_IMMEDIATE_def,
-                   armTheory.ADDR_MODE1_def, 
+                   armTheory.ADDR_MODE1_def,
                    arm_evalTheory.shift_immediate_enc,
                    instructionTheory.shift_case_def,
                    arm_evalTheory.shift_immediate_shift_register,
                    armTheory.REG_READ_def,
-                   armTheory.LSL_def, MREG_NOT_PC, 
+                   armTheory.LSL_def, MREG_NOT_PC,
                    LET_THM,
 						 MREG2register_def,
                    DECODE_MEXP_def],
@@ -768,13 +768,13 @@ val DECODE_SHIFT_thm = store_thm ("DECODE_SHIFT_thm",
                    instructionTheory.shift_case_def,
                    arm_evalTheory.shift_immediate_shift_register] THEN
   Cases_on `c = 0w` THEN ASM_REWRITE_TAC[] THENL [
-    Cases_on `s` THENL [      
+    Cases_on `s` THENL [
       FULL_SIMP_TAC std_ss [instructionTheory.shift_case_def,
         armTheory.LSL_def, DECODE_SHIFT_def, WELL_FORMED_SHIFT_def] THEN
       WORDS_TAC THEN
       ASM_SIMP_TAC std_ss [SHIFT_ZERO, armTheory.REG_READ_def,
         WELL_FORMED_SHIFT_def, armTheory.mode_reg2num_def, LET_THM],
-      
+
       FULL_SIMP_TAC std_ss [WELL_FORMED_SHIFT_def],
       FULL_SIMP_TAC std_ss [WELL_FORMED_SHIFT_def],
       FULL_SIMP_TAC std_ss [WELL_FORMED_SHIFT_def]
@@ -805,12 +805,12 @@ val DECODE_MEXP_thm = store_thm ("DECODE_MEXP_thm",
   ``!registers regs m mem M0.
   REGS_EQUIVALENT m registers regs ==>
   (read (regs,mem) (toEXP M0) = DECODE_MEXP m M0 registers)``,
-  
+
   Cases_on `M0` THENL [
     SIMP_TAC std_ss [read_thm, toEXP_def, toREG_def, DECODE_MEXP_def,
       REGS_EQUIVALENT_def, MREG2register_def, MREG2REG_def] THEN
 	 PROVE_TAC[index_of_reg_lt],
-  
+
     SIMP_TAC std_ss [read_thm, toEXP_def, toREG_def, DECODE_MEXP_def]
   ]);
 
@@ -824,14 +824,14 @@ val MREG2REG_thm = store_thm ("MREG2REG_thm",
       LET_THM, toREG_def, read_thm,
       REGS_EQUIVALENT_def, MREG2REG_def] THEN
     PROVE_TAC[index_of_reg_lt]);
-    
+
 val REGS_EQUIVALENT___WRITE_PC = store_thm ("REGS_EQUIVALENT___WRITE_PC",
 ``!registers regs m m' v.
   REGS_EQUIVALENT m (REG_WRITE registers m' 15w v) regs =
   REGS_EQUIVALENT m registers regs``,
 
 SIMP_TAC std_ss [REGS_EQUIVALENT_def, armTheory.REG_WRITE_def] THEN
-REPEAT GEN_TAC THEN 
+REPEAT GEN_TAC THEN
 FORALL_EQ_STRIP_TAC THEN
 MATCH_MP_TAC (prove (``((b:word32) = (c:word32)) ==> ((a = b) = (a = c))``, PROVE_TAC[])) THEN
 SIMP_TAC std_ss [combinTheory.UPDATE_def] THEN
@@ -877,7 +877,7 @@ fun doper_reg_reg_addr_mode1 thm =
   ASSUME_TAC (SIMP_RULE std_ss [markerTheory.Abbrev_def] thm) THEN
   Q_SPECL_NO_ASSUM 0 [`state_old`, `F`, `AL:condition`, `MREG2REG M0`, `MREG2REG M'`, `(MEXP2addr_model M1)`] THEN
   PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-    FULL_SIMP_TAC std_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def, 
+    FULL_SIMP_TAC std_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def,
       armTheory.condition_case_def]
   ) THEN
   FULL_SIMP_TAC std_ss [systemTheory.arm_sys_state_accfupds,
@@ -908,17 +908,17 @@ fun doper_shift s_term =
   Q_SPECL_NO_ASSUM 0 [`state_old`, `F`, `AL:condition`, `MREG2REG M'`, `MREG2REG M'`] THEN
   Cases_on `c = 0w` THENL [
     SPEC_NO_ASSUM 1 ``Dp_shift_immediate (LSL (MREG2REG M0)) c``,
-    
+
     SPEC_NO_ASSUM 1 (list_mk_comb (``Dp_shift_immediate``,
                                    [mk_comb (s_term, ``MREG2REG M0``),
                                     ``c:word5``]))
   ] THEN (
     PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-      FULL_SIMP_TAC std_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def, 
+      FULL_SIMP_TAC std_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def,
         armTheory.condition_case_def]
     ) THEN
     FULL_SIMP_TAC std_ss [systemTheory.arm_sys_state_accfupds, REG_OWRT_ALL] THEN WEAKEN_HD_TAC THEN
-  
+
     `read (reg,mem) (toREG M0) = REG_READ state_old.registers m (MREG2REG M0)` by
       PROVE_TAC[MREG2REG_thm] THEN
     Q.PAT_UNDISCH_TAC `(reg',mem') = mdecode (reg, mem) X` THEN
@@ -955,7 +955,7 @@ val DOPER2INSTRUCTION_NO_MEM_thm = store_thm ("DOPER2INSTRUCTION_NO_MEM_thm",
 
  ((REGS_EQUIVALENT m state_new.registers reg') /\
   (mem' = mem) /\ (state_new.memory = state_old.memory) /\
-  (~state_new.undefined) /\  
+  (~state_new.undefined) /\
   (state_new.psrs = state_old.psrs) /\
   (state_new.cp_state = state_old.cp_state) /\
   (owrt_visible_regs state_new = owrt_visible_regs state_old) /\
@@ -967,16 +967,16 @@ Cases_on `oper` THEN
 REWRITE_TAC[IS_MEMORY_DOPER_def, IS_WELL_FORMED_DOPER_def, DOPER2INSTRUCTION_def,
 	owrt_visible_regs_def, state_mode_def] THENL [
 
-  (*MOV*)  
+  (*MOV*)
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   ASSUME_TAC (SIMP_RULE std_ss [markerTheory.Abbrev_def] ARM_MOV) THEN
   Q_SPECL_NO_ASSUM 0 [`state_old`, `F`, `AL:condition`, `MREG2REG M'`, `MREG2REG M'`, `(MEXP2addr_model M0)`] THEN
   PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-    FULL_SIMP_TAC std_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def, 
+    FULL_SIMP_TAC std_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def,
       armTheory.condition_case_def]
   ) THEN
   FULL_SIMP_TAC std_ss [systemTheory.arm_sys_state_accfupds,systemTheory.arm_sys_state_accessors,
-		REG_OWRT_ALL] THEN 
+		REG_OWRT_ALL] THEN
 
   `read (reg,mem) (toEXP M0) = DECODE_MEXP m M0 state_old.registers` by
     PROVE_TAC[DECODE_MEXP_thm] THEN
@@ -997,13 +997,13 @@ REWRITE_TAC[IS_MEMORY_DOPER_def, IS_WELL_FORMED_DOPER_def, DOPER2INSTRUCTION_def
   doper_reg_reg_addr_mode1 ARM_SUB,
   doper_reg_reg_addr_mode1 ARM_RSB,
 
-  (*MUL*)  
+  (*MUL*)
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   ASSUME_TAC (SIMP_RULE std_ss [markerTheory.Abbrev_def] ARM_MUL) THEN
   Q_SPECL_NO_ASSUM 0 [`state_old`, `F`, `AL:condition`, `MREG2REG M1`, `MREG2REG M0`, `MREG2REG M'`] THEN
   PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-    FULL_SIMP_TAC arith_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def, 
-      armTheory.condition_case_def, MREG2REG_11] 
+    FULL_SIMP_TAC arith_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def,
+      armTheory.condition_case_def, MREG2REG_11]
   ) THEN
   FULL_SIMP_TAC std_ss [systemTheory.arm_sys_state_accfupds, REG_OWRT_ALL] THEN WEAKEN_HD_TAC THEN
 
@@ -1038,11 +1038,11 @@ REWRITE_TAC[IS_MEMORY_DOPER_def, IS_WELL_FORMED_DOPER_def, DOPER2INSTRUCTION_def
 val DOPER2INSTRUCTION_thm = save_thm ("DOPER2INSTRUCTION_thm", DOPER2INSTRUCTION_NO_MEM_thm);
 
 val MEMORY_SLICE_def = Define `
-	MEMORY_SLICE (base, length) = 
+	MEMORY_SLICE (base, length) =
 		(MAP (\off. base - n2w off) (LIST_COUNT length))`
 
 val MEM_EQUIV_EXCEPT_SLICE_def = Define `
-	MEM_EQUIV_EXCEPT_SLICE (base, length) (mem, mem') = 
+	MEM_EQUIV_EXCEPT_SLICE (base, length) (mem, mem') =
 		!slice. (slice = (MEMORY_SLICE (base, length))) ==>
 		(((FDOM mem) UNION (LIST_TO_SET slice) =
         (FDOM mem') UNION (LIST_TO_SET slice)) /\
@@ -1056,7 +1056,7 @@ val REGS_EQUIVALENT_MEM_def = Define `
 				  (mem ' l =  memory l)))`
 
 
-val REGS_EQUIVALENT_MEM___NO_MEM = 
+val REGS_EQUIVALENT_MEM___NO_MEM =
 	store_thm ("REGS_EQUIVALENT_MEM___NO_MEM",
 ``!m offset registers memory regs mem.
 REGS_EQUIVALENT_MEM m (offset, 0) (registers, memory) (regs, mem) =
@@ -1084,7 +1084,7 @@ FST (FOLDL (\(mem',i) reg'. (mem' |+
 
 val pushL_thm = store_thm ("pushL_thm",
 ``!l reg mem r.
-pushL (reg, mem) r l = (reg |+ (n2w r, reg ' (n2w r) - n2w (4*(LENGTH l))), 
+pushL (reg, mem) r l = (reg |+ (n2w r, reg ' (n2w r) - n2w (4*(LENGTH l))),
 								pushL_mem (reg, mem) r 0 l)``,
 
 
@@ -1128,7 +1128,7 @@ INDUCT_THEN SNOC_INDUCT ASSUME_TAC THENL [
 
 val pushL_mem_thm = store_thm ("pushL_mem_thm", ``
 	(!reg mem r off. (pushL_mem (reg, mem) r off [] = mem)) /\
-	(!reg mem r off h l. (pushL_mem (reg, mem) r off (SNOC h l) = 
+	(!reg mem r off h l. (pushL_mem (reg, mem) r off (SNOC h l) =
 							pushL_mem (reg, mem |+ ((MEM_ADDR (reg ' (n2w r)) - (n2w off)), reg ' (n2w h))) r (SUC off) l))``,
 
 	SIMP_TAC list_ss [pushL_mem_def, FOLDL_APPEND] THEN
@@ -1162,7 +1162,7 @@ val DOPER2INSTRUCTION_thm = store_thm ("DOPER2INSTRUCTION_thm",
 
  ((REGS_EQUIVALENT_MEM m (off + n2w n - n2w p, stack_size + p) (state_new.registers, state_new.memory) (reg', mem')) /\
   (MEM_EQUIV_EXCEPT_SLICE (MEM_ADDR (state_new.registers sp), p) (mem, mem')) /\
-  (~state_new.undefined) /\  
+  (~state_new.undefined) /\
   (state_new.psrs = state_old.psrs) /\
   (owrt_visible_regs state_new = owrt_visible_regs state_old) /\
   (FETCH_PC state_new.registers = FETCH_PC state_old.registers + 4w)
@@ -1188,7 +1188,7 @@ Cases_on `~IS_MEMORY_DOPER oper` THENL [
 	Q.PAT_ASSUM `~(IS_MEMORY_DOPER oper)` MP_TAC THEN
 	Q.PAT_ASSUM `STACK_SIZE_DOPER X = Y` MP_TAC THEN
 	REPEAT (POP_ASSUM (fn thm => ALL_TAC)) THEN
-	
+
 	`!M. (M = R13) = (13w:word4 = n2w (index_of_reg M))` by ALL_TAC THEN1 (
 		Cases_on `M` THEN
 		SIMP_TAC std_ss [index_of_reg_def, n2w_11, dimword_4, MREG_distinct]
@@ -1205,15 +1205,15 @@ Cases_on `~IS_MEMORY_DOPER oper` THENL [
 		SIMP_TAC std_ss [STACK_SIZE_DOPER_def],
 		SIMP_TAC std_ss [STACK_SIZE_DOPER_def],
 
-		
+
 		SIMP_TAC std_ss [STACK_SIZE_DOPER_def, DOPER2INSTRUCTION_def,
 		WORD_ADD_0] THEN
 		REPEAT GEN_TAC THEN STRIP_TAC THEN
 		ASSUME_TAC (SIMP_RULE std_ss [markerTheory.Abbrev_def] ARM_STM) THEN
 		Q_SPECL_NO_ASSUM 0 [`state_old`, `PRE_TRANS_OPT`, `(reg_bitmap (MAP n2w l))`, `AL:condition`, `13w:word4`] THEN
 		PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-			FULL_SIMP_TAC arith_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def, 
-				armTheory.condition_case_def, MREG2REG_11] 
+			FULL_SIMP_TAC arith_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def,
+				armTheory.condition_case_def, MREG2REG_11]
 		) THEN
 		FULL_SIMP_TAC std_ss [systemTheory.arm_sys_state_accfupds, REG_OWRT_ALL,
 			instructionTheory.transfer_options_accessors, owrt_visible_regs_def, PRE_TRANS_OPT_def] THEN WEAKEN_HD_TAC THEN
@@ -1229,10 +1229,10 @@ Cases_on `~IS_MEMORY_DOPER oper` THENL [
 								  systemTheory.arm_sys_state_accfupds],
 
 			FULL_SIMP_TAC std_ss [mdecode_def, pushL_thm, REGS_EQUIVALENT_MEM_def,
-				MEM_EQUIV_EXCEPT_SLICE_def],  
+				MEM_EQUIV_EXCEPT_SLICE_def],
 
 	DB.find "pushL"
-		
+
 		DB.find "UP_DOWN_def"
 		Q.PAT_UNDISCH_TAC `(reg',mem') = mdecode (reg, mem) X` THEN
 		ASM_SIMP_TAC std_ss [armTheory.REG_WRITE_def, MREG2addr_model_thm,
@@ -1252,7 +1252,7 @@ Cases_on `~IS_MEMORY_DOPER oper` THENL [
 		],
 
 
-		
+
 *)
 
 
@@ -1264,19 +1264,19 @@ val DOPER2INSTRUCTION_LIST_def = Define `
 
 
 val TRANSLATE_COND_def = Define `
-  (TRANSLATE_COND (EQ:COND) = (EQ:condition)) /\ 
-  (TRANSLATE_COND (CS:COND) = (CS:condition)) /\ 
-  (TRANSLATE_COND (MI:COND) = (MI:condition)) /\ 
-  (TRANSLATE_COND (VS:COND) = (VS:condition)) /\ 
-  (TRANSLATE_COND (HI:COND) = (HI:condition)) /\ 
-  (TRANSLATE_COND (GE:COND) = (GE:condition)) /\ 
-  (TRANSLATE_COND (GT:COND) = (GT:condition)) /\ 
-  (TRANSLATE_COND (AL:COND) = (AL:condition)) /\ 
-  (TRANSLATE_COND (NE:COND) = (NE:condition)) /\ 
-  (TRANSLATE_COND (CC:COND) = (CC:condition)) /\ 
-  (TRANSLATE_COND (PL:COND) = (PL:condition)) /\ 
-  (TRANSLATE_COND (VC:COND) = (VC:condition)) /\ 
-  (TRANSLATE_COND (LS:COND) = (LS:condition)) /\ 
+  (TRANSLATE_COND (EQ:COND) = (EQ:condition)) /\
+  (TRANSLATE_COND (CS:COND) = (CS:condition)) /\
+  (TRANSLATE_COND (MI:COND) = (MI:condition)) /\
+  (TRANSLATE_COND (VS:COND) = (VS:condition)) /\
+  (TRANSLATE_COND (HI:COND) = (HI:condition)) /\
+  (TRANSLATE_COND (GE:COND) = (GE:condition)) /\
+  (TRANSLATE_COND (GT:COND) = (GT:condition)) /\
+  (TRANSLATE_COND (AL:COND) = (AL:condition)) /\
+  (TRANSLATE_COND (NE:COND) = (NE:condition)) /\
+  (TRANSLATE_COND (CC:COND) = (CC:condition)) /\
+  (TRANSLATE_COND (PL:COND) = (PL:condition)) /\
+  (TRANSLATE_COND (VC:COND) = (VC:condition)) /\
+  (TRANSLATE_COND (LS:COND) = (LS:condition)) /\
   (TRANSLATE_COND (LT:COND) = (LT:condition)) /\
   (TRANSLATE_COND (LE:COND) = (LE:condition)) /\
   (TRANSLATE_COND (NV:COND) = (NV:condition))`
@@ -1302,7 +1302,7 @@ val CJ2INSTRUCTION_LIST_thm = store_thm ("CJ2INSTRUCTION_LIST_thm",
  (state_new = STATE_ARM_MEM (LENGTH tprog) state_old)) ==>
 
  ((state_new.memory = state_old.memory) /\
-  (~state_new.undefined) /\  
+  (~state_new.undefined) /\
   (?N Z C V. state_new.psrs = CPSR_WRITE state_old.psrs (SET_NZCV (N,Z,C,V) (CPSR_READ state_old.psrs))) /\
   (state_new.cp_state = state_old.cp_state) /\
   (owrt_visible_regs state_new = owrt_visible_regs state_old) /\
@@ -1319,7 +1319,7 @@ REPEAT GEN_TAC THEN STRIP_TAC THEN
 ASSUME_TAC (SIMP_RULE std_ss [markerTheory.Abbrev_def] ARM_CMP) THEN
 Q_SPECL_NO_ASSUM 0 [`state_old`, `AL:condition`, `MREG2REG r`,  `(MEXP2addr_model e)`] THEN
 PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-  FULL_SIMP_TAC std_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def, 
+  FULL_SIMP_TAC std_ss [MREG_NOT_PC, armTheory.CONDITION_PASSED2_def, armTheory.NZCV_def,
     armTheory.condition_case_def, systemTheory.ADDR30_def, armTheory.FETCH_PC_def]
 ) THEN
 
@@ -1349,13 +1349,13 @@ Cases_on `eval_il_cond (r, c, e) (reg, mem)` THENL [
 		 systemTheory.ADDR30_def, armTheory.FETCH_PC_def]
 	) THEN
 
-	FULL_SIMP_TAC std_ss [systemTheory.arm_sys_state_accfupds, 
+	FULL_SIMP_TAC std_ss [systemTheory.arm_sys_state_accfupds,
 		arm_evalTheory.DECODE_IFMODE_SET_NZCV,
 		owrt_visible_regs_def, state_mode_def, arm_evalTheory.CPSR_WRITE_READ,
-		REG_OWRT_ALL] THEN 
+		REG_OWRT_ALL] THEN
 	REPEAT STRIP_TAC THENL [
 		METIS_TAC[],
-		
+
 		ASM_SIMP_TAC std_ss [REGS_EQUIVALENT___WRITE_PC, REGS_EQUIVALENT___INC_PC],
 
 	   REPEAT WEAKEN_HD_TAC THEN
@@ -1383,7 +1383,7 @@ Cases_on `eval_il_cond (r, c, e) (reg, mem)` THENL [
 		arm_evalTheory.INC_PC, arm_evalTheory.REG_WRITE_WRITE,
 		arm_evalTheory.DECODE_IFMODE_SET_NZCV,
 		owrt_visible_regs_def, state_mode_def, arm_evalTheory.CPSR_WRITE_READ,
-		REG_OWRT_ALL] THEN 
+		REG_OWRT_ALL] THEN
 	REPEAT STRIP_TAC THENL [
 		METIS_TAC[],
 
@@ -1429,7 +1429,7 @@ val CTL_STRUCTURE2INSTRUCTION_LIST_def = Define `
   (CTL_STRUCTURE2INSTRUCTION_LIST (TR cond prog1) =
 	(CJ2INSTRUCTION_LIST cond (n2w (LENGTH (CTL_STRUCTURE2INSTRUCTION_LIST prog1)))) ++
    (CTL_STRUCTURE2INSTRUCTION_LIST prog1) ++
-   [B AL ($- (n2w (LENGTH (CTL_STRUCTURE2INSTRUCTION_LIST prog1) + 
+   [B AL ($- (n2w (LENGTH (CTL_STRUCTURE2INSTRUCTION_LIST prog1) +
 		LENGTH (CJ2INSTRUCTION_LIST cond (n2w (LENGTH (CTL_STRUCTURE2INSTRUCTION_LIST prog1)))) + 2)))])`;
 
 
@@ -1452,13 +1452,13 @@ val DOPER2INSTRUCTION_LIST_thm = store_thm ("DOPER2INSTRUCTION_LIST_thm",
 
  ((REGS_EQUIVALENT m state_new.registers reg') /\
   (mem' = mem) /\ (state_new.memory = state_old.memory) /\
-  (~state_new.undefined) /\  
+  (~state_new.undefined) /\
   (state_new.psrs = state_old.psrs) /\
   (state_new.cp_state = state_old.cp_state) /\
   (owrt_visible_regs state_new = owrt_visible_regs state_old) /\
   (FETCH_PC state_new.registers = FETCH_PC state_old.registers + n2w (4 * LENGTH tprog))
   )``,
-  
+
   `!e. (e < 1) = (e = 0)` by DECIDE_TAC THEN
   ASM_SIMP_TAC list_ss [DOPER2INSTRUCTION_LIST_def] THEN
   REWRITE_TAC [prove(``1 = SUC 0``, DECIDE_TAC), STATE_ARM_MEM_EVAL] THEN
@@ -1533,11 +1533,11 @@ val CTL_STRUCTURE2INSTRUCTION_LIST_thm = store_thm ("CTL_STRUCTURE2INSTRUCTION_L
 
 ((REGS_EQUIVALENT m state_new.registers reg') /\
  (mem' = mem) /\ (state_new.memory = state_old.memory) /\
- (~state_new.undefined) /\  
+ (~state_new.undefined) /\
   (?N Z C V. state_new.psrs = CPSR_WRITE state_old.psrs (SET_NZCV (N,Z,C,V) (CPSR_READ state_old.psrs))) /\
   (state_new.cp_state = state_old.cp_state) /\
   (owrt_visible_regs state_new = owrt_visible_regs state_old) /\
- (FETCH_PC state_new.registers = (FETCH_PC state_old.registers + 
+ (FETCH_PC state_new.registers = (FETCH_PC state_old.registers +
   n2w (4 * LENGTH tprog)))))``,
 
 
@@ -1555,11 +1555,11 @@ Induct_on `prog` THENL [
 
     FULL_SIMP_TAC list_ss [CTL_STRUCTURE2INSTRUCTION_LIST_def,
       CONTAINS_MEMORY_DOPER_def,IS_WELL_FORMED_CTL_STRUCTURE_def,
-      IR_SEMANTICS_BLK,  
+      IR_SEMANTICS_BLK,
       WELL_FORMED_thm] THEN
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     `?reg'' mem''. mdecode (reg, mem) h = (reg'', mem'')` by METIS_TAC[PAIR] THEN
-  
+
     ASSUME_TAC (SIMP_RULE std_ss [] DOPER2INSTRUCTION_LIST_thm) THEN
     Q_SPECL_NO_ASSUM 0 [`h`, `reg`, `mem`, `reg''`, `mem''`, `m`, `state_old`] THEN
     PROVE_CONDITION_NO_ASSUM 0 THEN1 (
@@ -1570,7 +1570,7 @@ Induct_on `prog` THENL [
       UNDISCH_HD_TAC THEN
       ASM_SIMP_TAC arith_ss [rich_listTheory.EL_APPEND1]
     ) THEN
-  
+
 
     SUBGOAL_TAC `!a b. (n2w (4 * (a + b))):word32 =
                          n2w (4 * a) + n2w (4 * b)` THEN1 (
@@ -1619,8 +1619,8 @@ Induct_on `prog` THENL [
   ) THEN
   Q_SPECL_NO_ASSUM 23 [`reg''`, `mem''`, `reg'`, `mem'`, `m`, `state`] THEN
   PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-	 REWRITE_TAC[markerTheory.Abbrev_def] THEN	 
-    FULL_SIMP_TAC arith_ss [arm_evalTheory.DECODE_IFMODE_SET_NZCV, 
+	 REWRITE_TAC[markerTheory.Abbrev_def] THEN
+    FULL_SIMP_TAC arith_ss [arm_evalTheory.DECODE_IFMODE_SET_NZCV,
 		arm_evalTheory.CPSR_WRITE_READ] THEN
     REPEAT STRIP_TAC THENL [
       Q_SPEC_NO_ASSUM 16 `LENGTH (CTL_STRUCTURE2INSTRUCTION_LIST prog) + e` THEN
@@ -1633,7 +1633,7 @@ Induct_on `prog` THENL [
   FULL_SIMP_TAC std_ss [] THEN
   EXISTS_TAC ``(step_num':num) + step_num`` THEN
   Q.UNABBREV_TAC `state` THEN
-  FULL_SIMP_TAC std_ss [WORD_ADD_ASSOC, STATE_ARM_MEM_SPLIT, 	
+  FULL_SIMP_TAC std_ss [WORD_ADD_ASSOC, STATE_ARM_MEM_SPLIT,
 		arm_evalTheory.SET_NZCV_IDEM, arm_evalTheory.CPSR_WRITE_WRITE,
 		arm_evalTheory.CPSR_WRITE_READ] THEN
   PROVE_TAC[],
@@ -1648,7 +1648,7 @@ Induct_on `prog` THENL [
   REPEAT STRIP_TAC THEN
   UNDISCH_NO_TAC 1 (*run_ir CJ ...*) THEN
   ASM_SIMP_TAC std_ss [SEMANTICS_OF_IR] THEN
-  STRIP_TAC THEN  
+  STRIP_TAC THEN
 
   `?r c e. p = (r, c, e)` by METIS_TAC[PAIR] THEN
   ASSUME_TAC (SIMP_RULE std_ss [] CJ2INSTRUCTION_LIST_thm) THEN
@@ -1686,7 +1686,7 @@ Induct_on `prog` THENL [
 			AP_TERM_TAC THEN
 			AP_TERM_TAC THEN
 			SIMP_TAC std_ss [WORD_EQ_ADD_LCANCEL, GSYM WORD_ADD_ASSOC] THEN
-			
+
 			ASSUME_TAC (SIMP_RULE arith_ss [dimindex_32, dimindex_24] (INST_TYPE [alpha |-> ``:24``, beta |-> ``:32``] JUMP_ADDRESS_OK_thm)) THEN
 			Q_SPEC_NO_ASSUM 0 `length_false` THEN
 			UNDISCH_HD_TAC THEN
@@ -1701,11 +1701,11 @@ Induct_on `prog` THENL [
 		FULL_SIMP_TAC std_ss [] THEN
 		Q_TAC EXISTS_TAC `step_num+length_cond` THEN
 		ASM_SIMP_TAC std_ss [STATE_ARM_MEM_SPLIT, FETCH_PC___PC_WRITE,   arm_evalTheory.SET_NZCV_IDEM, arm_evalTheory.CPSR_WRITE_READ,
-			arm_evalTheory.CPSR_WRITE_WRITE] THEN 
+			arm_evalTheory.CPSR_WRITE_WRITE] THEN
 		REPEAT STRIP_TAC THENL [
 			METIS_TAC[],
 
-			SIMP_TAC std_ss [armTheory.FETCH_PC_def, WORD_EQ_ADD_LCANCEL, GSYM WORD_ADD_ASSOC] THEN			
+			SIMP_TAC std_ss [armTheory.FETCH_PC_def, WORD_EQ_ADD_LCANCEL, GSYM WORD_ADD_ASSOC] THEN
 			ASSUME_TAC (SIMP_RULE arith_ss [dimindex_32, dimindex_24] (INST_TYPE [alpha |-> ``:24``, beta |-> ``:32``] JUMP_ADDRESS_OK_thm)) THEN
 			Q_SPEC_NO_ASSUM 0 `length_false` THEN
 			UNDISCH_HD_TAC THEN
@@ -1768,7 +1768,7 @@ Induct_on `prog` THENL [
 			DECIDE_TAC
 		) THEN
 
-		
+
 		FULL_SIMP_TAC std_ss [] THEN
 		Q_TAC EXISTS_TAC `(SUC 0)+step_num+length_cond` THEN
 		REWRITE_TAC[STATE_ARM_MEM_SPLIT, STATE_ARM_MEM_EVAL] THEN
@@ -1782,13 +1782,13 @@ Induct_on `prog` THENL [
 			ASM_SIMP_TAC std_ss [owrt_visible_regs_def, state_mode_def,
 				systemTheory.arm_sys_state_accfupds, REG_OWRT_ALL,
 				arm_evalTheory.CPSR_WRITE_READ, arm_evalTheory.DECODE_IFMODE_SET_NZCV],
-			
+
 
 
 			ASM_REWRITE_TAC[GSYM armTheory.FETCH_PC_def, FETCH_PC___PC_WRITE] THEN
 			SIMP_TAC std_ss [WORD_EQ_ADD_LCANCEL, GSYM WORD_ADD_ASSOC] THEN
 			Cases_on `length_true` THENL[
-				WORDS_TAC THEN 
+				WORDS_TAC THEN
 				ASM_SIMP_TAC arith_ss [],
 
 				ASSUME_TAC (SIMP_RULE arith_ss [dimindex_32, dimindex_24] (INST_TYPE [alpha |-> ``:24``, beta |-> ``:32``] JUMP_ADDRESS_OK_thm)) THEN
@@ -1796,12 +1796,12 @@ Induct_on `prog` THENL [
 				UNDISCH_HD_TAC THEN
 				ASM_SIMP_TAC arith_ss [] THEN
 				DISCH_TAC THEN WEAKEN_HD_TAC THEN
-	
+
 				REWRITE_TAC [prove (``2 = 1 + 1``, DECIDE_TAC), GSYM LSL_ADD, LSL_ONE,
 					word_add_n2w] THEN
 				AP_TERM_TAC THEN
-				DECIDE_TAC			
-			] 
+				DECIDE_TAC
+			]
 		]
 	],
 
@@ -1809,7 +1809,7 @@ Induct_on `prog` THENL [
 
   FULL_SIMP_TAC list_ss [CTL_STRUCTURE2INSTRUCTION_LIST_def,
       CONTAINS_MEMORY_DOPER_def,IS_WELL_FORMED_CTL_STRUCTURE_def,
-      WELL_FORMED_thm] THEN  
+      WELL_FORMED_thm] THEN
   REPEAT STRIP_TAC THEN
   UNDISCH_NO_TAC 1 (*run_ir CJ ...*) THEN
   ASM_SIMP_TAC std_ss [IR_SEMANTICS_TR___FUNPOW] THEN
@@ -1856,7 +1856,7 @@ Induct_on `prog` THENL [
 			REWRITE_TAC [prove (``2 = 1 + 1``, DECIDE_TAC), GSYM LSL_ADD, LSL_ONE,
 				word_add_n2w] THEN
 			AP_TERM_TAC THEN
-			DECIDE_TAC			
+			DECIDE_TAC
 		],
 
 
@@ -1905,7 +1905,7 @@ Induct_on `prog` THENL [
 		) THEN
 		FULL_SIMP_TAC arith_ss [] THEN
 
-		
+
 		ASSUME_TAC (SIMP_RULE std_ss [markerTheory.Abbrev_def] arm_rulesTheory.ARM_B) THEN
 		Q_SPECL_NO_ASSUM 0 [`(STATE_ARM_MEM step_num (STATE_ARM_MEM length_cond state_old))`, `($- (n2w (length_cond + (length_prog + 2)))):word24`, `AL`] THEN
 		PROVE_CONDITION_NO_ASSUM 0 THEN1 (
@@ -1925,7 +1925,7 @@ Induct_on `prog` THENL [
              n2w (4 * length_prog) + 8w +
              sw2sw ($- (n2w (length_cond + (length_prog + 2))):word24) << 2 +
              n2w (4 * e1) = FETCH_PC state_old.registers + n2w (4 * e1))` THEN1 (
-			
+
 			GEN_TAC THEN
 			ASSUME_TAC (SIMP_RULE arith_ss [dimindex_32, dimindex_24] (INST_TYPE [alpha |-> ``:24``, beta |-> ``:32``] JUMP_ADDRESS_OK_thm)) THEN
 			Q_SPEC_NO_ASSUM 0 `(length_cond + (length_prog + 2))` THEN
@@ -1940,7 +1940,7 @@ Induct_on `prog` THENL [
 			`(length_cond + (length_prog + 2) +
             (length_cond + (length_prog + 2)) +
             (length_cond + (length_prog + 2) +
-             (length_cond + (length_prog + 2)))) = 
+             (length_cond + (length_prog + 2)))) =
 			 4*length_cond + 4 * length_prog + 8` by DECIDE_TAC THEN
 			ASM_SIMP_TAC std_ss [] THEN WEAKEN_HD_TAC THEN
 
@@ -1964,7 +1964,7 @@ Induct_on `prog` THENL [
 		FULL_SIMP_TAC std_ss [] THEN
 
 		EXISTS_TAC ``step_num' + (SUC 0) + step_num + length_cond:num`` THEN
-	   SIMP_TAC std_ss [STATE_ARM_MEM_SPLIT, STATE_ARM_MEM_EVAL] THEN 
+	   SIMP_TAC std_ss [STATE_ARM_MEM_SPLIT, STATE_ARM_MEM_EVAL] THEN
 		ASM_SIMP_TAC std_ss [FUNPOW, systemTheory.arm_sys_state_accfupds, FETCH_PC___PC_WRITE,   arm_evalTheory.SET_NZCV_IDEM,
 			arm_evalTheory.CPSR_WRITE_READ, arm_evalTheory.CPSR_WRITE_WRITE] THEN
 		REPEAT STRIP_TAC THENL [
@@ -2086,11 +2086,11 @@ val TRANSLATION_SPEC_thm = store_thm ("TRANSLATION_SPEC_thm",
 
 ((P (arm_mem_state2reg_fun state_old) (arm_mem_state2reg_fun state_new)) /\
  (state_new.memory = state_old.memory) /\
- (~state_new.undefined) /\  
+ (~state_new.undefined) /\
   (?N Z C V. state_new.psrs = CPSR_WRITE (state_old.psrs) (SET_NZCV (N,Z,C,V) (CPSR_READ state_old.psrs))) /\
  (state_new.cp_state = state_old.cp_state) /\
   (owrt_visible_regs state_new = owrt_visible_regs state_old) /\
- (FETCH_PC state_new.registers = (FETCH_PC state_old.registers + 
+ (FETCH_PC state_new.registers = (FETCH_PC state_old.registers +
   n2w (4 * LENGTH tprog))))))``,
 
 
@@ -2107,7 +2107,7 @@ PROVE_CONDITION_NO_ASSUM 0 THEN1 (
 ) THEN
 FULL_SIMP_TAC std_ss [] THEN
 EXISTS_TAC ``step_num:num`` THEN
-ASM_SIMP_TAC std_ss [] THEN 
+ASM_SIMP_TAC std_ss [] THEN
 REPEAT STRIP_TAC THENL [
 	SUBGOAL_TAC `m =  DECODE_MODE ((4 >< 0) (CPSR_READ (STATE_ARM_MEM step_num state_old).psrs))` THEN1 (
 		ASM_SIMP_TAC std_ss [arm_evalTheory.CPSR_WRITE_READ, arm_evalTheory.DECODE_IFMODE_SET_NZCV]
@@ -2130,7 +2130,7 @@ REPEAT WEAKEN_HD_TAC THEN REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC arith_ss [from_reg_index_thm, index_of_reg_def]);
 
 
-val MREG2REG_EVAL = 
+val MREG2REG_EVAL =
 	store_thm ("MREG2REG_EVAL", ``
 	(MREG2REG R0 = 0w) /\
 	(MREG2REG R1 = 1w) /\
@@ -2179,7 +2179,7 @@ val arm_mem_state2reg_fun2REG_READ =
 
 ``!state r. (arm_mem_state2reg_fun state (MREG2REG r) = REG_READ state.registers (DECODE_MODE ((4 >< 0) (CPSR_READ state.psrs))) (MREG2REG r))``,
 
-SIMP_TAC std_ss [arm_mem_state2reg_fun_def, armTheory.REG_READ_def, LET_THM, 
+SIMP_TAC std_ss [arm_mem_state2reg_fun_def, armTheory.REG_READ_def, LET_THM,
 MREG_NOT_PC]);
 
 
@@ -2194,7 +2194,7 @@ Induct_on `l` THENL [
 	ASM_SIMP_TAC list_ss [] THEN
 	METIS_TAC[FST, PAIR]
 ]);
-	
+
 
 val ALL_DISTINCT_IMPLIES_FILTER = store_thm ("ALL_DISTINCT_IMPLIES_FILTER", ``
 !l P. ALL_DISTINCT l ==> ALL_DISTINCT (FILTER P l)``,
@@ -2209,14 +2209,14 @@ val SUBSET_DIFF = store_thm ("SUBSET_DIFF",
 SIMP_TAC std_ss [SUBSET_DEF, DISJOINT_DEF, IN_DIFF, EXTENSION, NOT_IN_EMPTY, IN_INTER] THEN METIS_TAC[])
 
 
-val PAIR_EQ_ELIM = 
+val PAIR_EQ_ELIM =
 prove (``!x y z. ((x, y) = z) = ((x = FST z) /\ (y = SND z))``,
 				METIS_TAC[PAIR, FST, SND])
 
 
 val LIST_TO_FUN_def =
 	Define `((LIST_TO_FUN s [] e) = s) /\
-			  ((LIST_TO_FUN s ((h1, h2)::l) e) = 
+			  ((LIST_TO_FUN s ((h1, h2)::l) e) =
 					if (h1 = e) then h2 else
 				   (LIST_TO_FUN s l e))`;
 
@@ -2234,7 +2234,7 @@ val TRANSLATION_SPEC_SEP_thm = store_thm ("TRANSLATION_SPEC_SEP_thm",
           rv6 rv5 rv4 rv3 rv2 rv14 rv13 rv12 rv11 rv10 rv1 rv0 regs_list
           output_regs_list oregs_words input_regs_list.
 
-  (~(CONTAINS_MEMORY_DOPER prog) /\ (WELL_FORMED prog) /\    (IS_WELL_FORMED_CTL_STRUCTURE prog) /\ (UNCHANGED uregs prog) /\ 
+  (~(CONTAINS_MEMORY_DOPER prog) /\ (WELL_FORMED prog) /\    (IS_WELL_FORMED_CTL_STRUCTURE prog) /\ (UNCHANGED uregs prog) /\
    (CTL_STRUCTURE2INSTRUCTION_LIST prog = tprog) /\
 	(LENGTH tprog < 2**(dimindex (:24) - 1) -1) /\
   (!st r. (MEM r oregs_words) ==> ((state2reg_fun (run_ir prog st) r) = ((f (state2reg_fun st)) r))) /\
@@ -2251,7 +2251,7 @@ val TRANSLATION_SPEC_SEP_thm = store_thm ("TRANSLATION_SPEC_SEP_thm",
   ((FILTER (\x. (MEM (FST x) oregs_words)) (MAP (\(r, v). (r, f (LIST_TO_FUN 0w regs_list) r)) regs_list)) = output_regs_list) /\
   (FILTER (\x. ~(MEM x oregs_words)) (MAP FST input_regs_list) = unknown_changed_regs_list)
 	) ==>
-  	
+
 	ARM_PROG ((reg_spec input_regs_list) * (S stat)) (MAP enc tprog) {} ((reg_spec output_regs_list)*(ereg_spec unknown_changed_regs_list) * (SEP_EXISTS stat. S stat)) {}``,
 
 REPEAT STRIP_TAC THEN
@@ -2285,7 +2285,7 @@ SUBGOAL_TAC `ALL_DISTINCT output_regs_list /\ ALL_DISTINCT input_regs_list /\ AL
 	]
 ) THEN
 
-STRIP_TAC THENL [	
+STRIP_TAC THENL [
    ASM_SIMP_TAC list_ss [GSYM STAR_ASSOC, reg_spec_thm] THEN
 
 	ASM_SIMP_TAC arith_ss [LENGTH_MAP, ARMpc_def, ms_STAR___ZERO, R30_def, R_def, S_def, one_STAR, GSYM STAR_ASSOC, IN_DIFF, IN_DELETE, ARMel_distinct, SUBSET_DIFF, SUBSET_DELETE, ELIM_PFORALL_PEXISTS] THEN
@@ -2328,7 +2328,7 @@ STRIP_TAC THENL [
 
 		METIS_TAC[],
 		METIS_TAC[],
-		
+
       SIMP_TAC std_ss [GSYM EXISTS_OR_THM] THEN
       Q.EXISTS_TAC `e` THEN
       ASM_SIMP_TAC std_ss [addr32_11, addr32_NEQ_addr32, IN_arm2set],
@@ -2346,13 +2346,13 @@ STRIP_TAC THENL [
       ASM_SIMP_TAC std_ss [addr32_11, addr32_NEQ_addr32, IN_arm2set]
    ],
 
-	
+
 	ASM_SIMP_TAC list_ss [GSYM STAR_ASSOC, reg_spec_thm, ereg_spec_thm, RIGHT_EXISTS_IMP_THM, WD_ARM_arm2set', WD_ARM_DIFF] THEN
 	ASM_SIMP_TAC arith_ss [ms_STAR___ZERO, LENGTH_MAP, ARMpc_def, R30_def, R_def, S_def, one_STAR, GSYM STAR_ASSOC, IN_DIFF, IN_DELETE, ARMel_distinct, SUBSET_DIFF, SUBSET_DELETE, SEP_EXISTS_ABSORB_STAR, SEP_EXISTS_THM, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
 	REPEAT STRIP_TAC THEN
 	UNDISCH_HD_TAC THEN
 
-	SUBGOAL_TAC `LIST_TO_SET (MAP (\(r,v). Reg r v) input_regs_list) SUBSET 
+	SUBGOAL_TAC `LIST_TO_SET (MAP (\(r,v). Reg r v) input_regs_list) SUBSET
 		(arm2set'
        (15w INSERT LIST_TO_SET (MAP FST input_regs_list),
         BIGUNION
@@ -2361,8 +2361,8 @@ STRIP_TAC THENL [
                  {addr32 (p + n2w e) + 0w; addr32 (p + n2w e) + 1w;
                   addr32 (p + n2w e) + 2w; addr32 (p + n2w e) + 3w})
               (count (LENGTH tprog))),T,T,F) s)` THEN1 (
-		FULL_SIMP_TAC list_ss [SUBSET_DEF, MEM_MAP, EVERY_MEM, 
-			GSYM LEFT_FORALL_IMP_THM, IN_arm2set'] THEN		
+		FULL_SIMP_TAC list_ss [SUBSET_DEF, MEM_MAP, EVERY_MEM,
+			GSYM LEFT_FORALL_IMP_THM, IN_arm2set'] THEN
 		Cases_on `y` THEN
 		ASM_SIMP_TAC std_ss [IN_arm2set', IN_INSERT, IN_LIST_TO_SET, MEM_MAP] THEN
 		REPEAT STRIP_TAC THENL [
@@ -2386,7 +2386,7 @@ STRIP_TAC THENL [
 			REPEAT STRIP_TAC THEN
 			`?st'. (run_ir prog st) = st'` by PROVE_TAC[] THEN
 			Cases_on `st` THEN Cases_on `st'` THEN
-			Q_TAC GSYM_DEF_TAC `r` THEN			
+			Q_TAC GSYM_DEF_TAC `r` THEN
 			ASM_SIMP_TAC std_ss [state2reg_fun_def] THEN
 			`q ' r = read (run_ir prog (q,r')) (REG (index_of_reg y))` by METIS_TAC[] THEN
 			ASM_REWRITE_TAC[read_thm],
@@ -2438,7 +2438,7 @@ STRIP_TAC THENL [
             REWRITE_TAC[COUNT_SUC, COUNT_ZERO] THEN
             SIMP_TAC std_ss [IN_IMAGE, IN_INSERT, NOT_IN_EMPTY, LEFT_AND_OVER_OR,
                EXISTS_OR_THM, DISJ_IMP_THM] THEN
-            
+
             Q_TAC GSYM_DEF_TAC `regs_list` THEN
             ASM_SIMP_TAC list_ss [preARMTheory.word4_distinct]
          ) THEN
@@ -2454,7 +2454,7 @@ STRIP_TAC THENL [
 				arm_evalTheory.CPSR_WRITE_READ, arm_evalTheory.CPSR_WRITE_WRITE,
             mem_byte_def, arm_progTheory.mem_def]
 		],
-			
+
 
 		Q_TAC GSYM_DEF_TAC `output_regs_list` THEN
 		ASM_SIMP_TAC std_ss [EVERY_MEM, MAP, MEM_FILTER, MEM_MAP] THEN
@@ -2473,7 +2473,7 @@ STRIP_TAC THENL [
 			ASM_SIMP_TAC std_ss [arm_mem_state2reg_fun_def,LET_THM, reg_def, armTheory.REG_READ_def, arm_evalTheory.CPSR_WRITE_READ,
 			arm_evalTheory.DECODE_IFMODE_SET_NZCV, state_mode_def] THEN
 			REPEAT STRIP_TAC THEN
-			Q.PAT_ASSUM `!f1 f2. P f1 f2` (fn thm => MATCH_MP_TAC 
+			Q.PAT_ASSUM `!f1 f2. P f1 f2` (fn thm => MATCH_MP_TAC
 				(SIMP_RULE std_ss [AND_IMP_INTRO, GSYM RIGHT_FORALL_IMP_THM] thm)) THEN
 			FULL_SIMP_TAC std_ss [SET_EQ_SUBSET] THEN
 			Q.PAT_ASSUM `Y SUBSET arm2set' X s` MP_TAC THEN
@@ -2509,17 +2509,17 @@ STRIP_TAC THENL [
 			) THEN
 			Q_TAC EXISTS_TAC `y` THEN
 			Cases_on `y` THEN
-			Q_TAC GSYM_DEF_TAC `input_regs_list` THEN			
+			Q_TAC GSYM_DEF_TAC `input_regs_list` THEN
 			FULL_SIMP_TAC std_ss [MEM_FILTER] THEN
 			PROVE_TAC[]
 		],
 
 
-		Q_TAC GSYM_DEF_TAC `unknown_changed_regs_list` THEN		
+		Q_TAC GSYM_DEF_TAC `unknown_changed_regs_list` THEN
 		ASM_SIMP_TAC std_ss [EVERY_MEM, MEM_FILTER, MEM_MAP, IN_arm2set',
 			IN_INSERT, IN_LIST_TO_SET] THEN
 		pairLib.GEN_BETA_TAC THEN
-		SIMP_TAC std_ss [ARMel_11] THEN 
+		SIMP_TAC std_ss [ARMel_11] THEN
 		REPEAT STRIP_TAC THEN
 		Cases_on `y` THEN Cases_on `y'` THEN
 		FULL_SIMP_TAC std_ss [] THEN
@@ -2588,7 +2588,7 @@ STRIP_TAC THENL [
 
 		UNDISCH_HD_TAC THEN
 		Q_TAC GSYM_DEF_TAC `output_regs_list` THEN
-		Q_TAC GSYM_DEF_TAC `regs_list` THEN		
+		Q_TAC GSYM_DEF_TAC `regs_list` THEN
 		ASM_SIMP_TAC std_ss [MEM_MAP, MEM_FILTER] THEN
 		Cases_on `y` THEN
 		SIMP_TAC std_ss [ARMel_11] THEN
@@ -2604,7 +2604,7 @@ STRIP_TAC THENL [
 
 		UNDISCH_HD_TAC THEN
 		Q_TAC GSYM_DEF_TAC `unknown_changed_regs_list` THEN
-		Q_TAC GSYM_DEF_TAC `regs_list` THEN		
+		Q_TAC GSYM_DEF_TAC `regs_list` THEN
 		ASM_SIMP_TAC std_ss [IN_BIGUNION, IN_LIST_TO_SET, MEM_MAP, MEM_FILTER] THEN
 		REPEAT STRIP_TAC THEN
 		Cases_on `Reg 15w (addr32 (pcINC (MAP enc tprog) p)) IN s'` THEN ASM_REWRITE_TAC[] THEN
@@ -2623,7 +2623,7 @@ STRIP_TAC THENL [
 			Q_TAC EXISTS_TAC `Reg 15w (addr32 (pcINC (MAP enc tprog) p))` THEN
 			ASM_SIMP_TAC std_ss [IN_DEF, ARMel_11]
 		],
-					
+
 
 		UNDISCH_HD_TAC THEN
 		SIMP_TAC std_ss [MEM_MAP, IN_BIGUNION, IN_LIST_TO_SET,
@@ -2775,7 +2775,7 @@ val xR_list_sem_SOME = prove (
    ])
 
 val ms_sem_MEMORY = prove (
-   ``!a xs s1 s2. (s1.memory = s2.memory) ==> 
+   ``!a xs s1 s2. (s1.memory = s2.memory) ==>
          (ms_sem a xs s1 = ms_sem a xs s2)``,
 
    Induct_on `xs` THEN (
@@ -2809,7 +2809,7 @@ val TRANSLATION_SPEC_SEP_thm = store_thm ("TRANSLATION_SPEC_SEP_thm",
           rv6 rv5 rv4 rv3 rv2 rv14 rv13 rv12 rv11 rv10 rv1 rv0 regs_list
           output_regs_list oregs_words input_regs_list.
 
-  (~(CONTAINS_MEMORY_DOPER prog) /\ (WELL_FORMED prog) /\    (IS_WELL_FORMED_CTL_STRUCTURE prog) /\ (UNCHANGED uregs prog) /\ 
+  (~(CONTAINS_MEMORY_DOPER prog) /\ (WELL_FORMED prog) /\    (IS_WELL_FORMED_CTL_STRUCTURE prog) /\ (UNCHANGED uregs prog) /\
    (CTL_STRUCTURE2INSTRUCTION_LIST prog = tprog) /\
    (LENGTH tprog < 2**(dimindex (:24) - 1) -1) /\
   (!st r. (MEM r oregs_words) ==> ((state2reg_fun (run_ir prog st) r) = ((f (state2reg_fun st)) r))) /\
@@ -2826,7 +2826,7 @@ val TRANSLATION_SPEC_SEP_thm = store_thm ("TRANSLATION_SPEC_SEP_thm",
   ((FILTER (\x. (MEM (FST x) oregs_words)) (MAP (\(r, v). (r, f (LIST_TO_FUN 0w regs_list) r)) regs_list)) = output_regs_list) /\
   (FILTER (\x. ~(MEM x oregs_words)) (MAP FST input_regs_list) = unknown_changed_regs_list)
    ) ==>
-   
+
    ARM_PROG (spec_list (MAP (\(x,y). (x, SOME y)) input_regs_list) [] (T, stat) (F, ir1) (F, ir2) (F, ir3)) (MAP enc tprog) {} (
       SEP_EXISTS stat. (spec_list (APPEND (MAP (\(x,y). (x, SOME y)) output_regs_list) (MAP (\x. (x, NONE)) unknown_changed_regs_list)) [] (T, stat) (F, ir1) (F,ir2) (F,ir3))) {}``,
 
@@ -2850,7 +2850,7 @@ PROVE_CONDITION_NO_ASSUM 0 THEN1 (
    REPEAT STRIP_TAC THEN
    `?st'. (run_ir prog st) = st'` by PROVE_TAC[] THEN
    Cases_on `st` THEN Cases_on `st'` THEN
-   Q_TAC GSYM_DEF_TAC `r` THEN         
+   Q_TAC GSYM_DEF_TAC `r` THEN
    ASM_SIMP_TAC std_ss [state2reg_fun_def] THEN
    `q ' r = read (run_ir prog (q,r')) (REG (index_of_reg y))` by METIS_TAC[] THEN
    ASM_REWRITE_TAC[read_thm]
@@ -2876,7 +2876,7 @@ REPEAT STRIP_TAC THENL [
    ASM_REWRITE_TAC [] THEN
    SIMP_TAC std_ss [arm_mem_state2reg_fun2REG_READ, arm_progTheory.reg_def, state_mode_def, state_mode_def, MREG_NOT_PC] THEN
    STRIP_TAC THEN
-   Q.PAT_ASSUM `!f1 f2. P f1 f2` (fn thm => MATCH_MP_TAC (SIMP_RULE std_ss [AND_IMP_INTRO, GSYM RIGHT_FORALL_IMP_THM] thm)) THEN   
+   Q.PAT_ASSUM `!f1 f2. P f1 f2` (fn thm => MATCH_MP_TAC (SIMP_RULE std_ss [AND_IMP_INTRO, GSYM RIGHT_FORALL_IMP_THM] thm)) THEN
    FULL_SIMP_TAC std_ss [EVERY_MEM] THEN
    REPEAT STRIP_TAC THEN
    Cases_on `q` THEN
@@ -2916,7 +2916,7 @@ REPEAT STRIP_TAC THENL [
    Q_TAC GSYM_DEF_TAC `regs_list` THEN
    ASM_SIMP_TAC std_ss [] THEN
 
-   let 
+   let
       val MAP_ID = prove (``!l. MAP (\x. x) l = l``,
          Induct_on `l` THEN ASM_SIMP_TAC list_ss []);
       val MAP_FST = prove (``!l l2. (MAP FST (FILTER (\(x :REGISTER # DATA). MEM (FST x) l2) l)) =
@@ -2930,7 +2930,7 @@ REPEAT STRIP_TAC THENL [
    in
       ASM_SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF, MAP_ID, MAP_FST, MAP_FST2, PAIR_BETA, FILTER_FILTER]
    end THEN
-   
+
    SIMP_TAC std_ss [MAP, MEM_FILTER] THEN
 
    MATCH_MP_TAC (
@@ -2955,14 +2955,14 @@ REPEAT STRIP_TAC THENL [
    REPEAT WEAKEN_HD_TAC THEN
    METIS_TAC[],
 
-   
+
 
    ASM_SIMP_TAC std_ss [arm2set''_EQ, IN_LIST_TO_SET, MEM, mem_byte_def, arm_progTheory.mem_def,
       owrt_visible_def, set_status_def, arm_evalTheory.CPSR_READ_WRITE,
       arm_evalTheory.CPSR_WRITE_WRITE, arm_evalTheory.CPSR_WRITE_READ,
       arm_evalTheory.SET_NZCV_IDEM, arm_progTheory.reg_def, MEM_MAP,
       ELIM_PFORALL_PEXISTS] THEN
-   REPEAT STRIP_TAC THEN 
+   REPEAT STRIP_TAC THEN
    SUBGOAL_TAC `MEM r uregs_words` THEN1 (
       CCONTR_TAC THEN
       Q.PAT_ASSUM `!p2. ~(MEM (r, p2) input_regs_list)` MP_TAC THEN
@@ -2977,7 +2977,7 @@ REPEAT STRIP_TAC THENL [
       REWRITE_TAC[COUNT_SUC, IN_INSERT, (REDEPTH_CONV numLib.num_CONV) ``16``] THEN
       SIMP_TAC std_ss [COUNT_ZERO, NOT_IN_EMPTY, LEFT_AND_OVER_OR, EXISTS_OR_THM] THEN
       SIMP_TAC std_ss [DISJ_IMP_THM]
-   ) THEN 
+   ) THEN
    FULL_SIMP_TAC std_ss [EVERY_MEM] THEN
    RES_TAC THEN
    POP_ASSUM MP_TAC THEN
@@ -2989,6 +2989,6 @@ REPEAT STRIP_TAC THENL [
 
 
 
-	
+
 
 val _ = export_theory();

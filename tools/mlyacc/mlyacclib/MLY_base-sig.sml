@@ -2,8 +2,8 @@
  * Ported to MLton.
  *)
 type int = Int.int
-   
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/23 03:21:27  michaeln
@@ -21,7 +21,7 @@ type int = Int.int
  *
  * Revision 1.1.1.1  1996/01/31  16:01:42  george
  * Version 109
- * 
+ *
  *)
 
 (* base.sig: Base signature file for SML-Yacc.  This file contains signatures
@@ -55,7 +55,7 @@ signature LR_TABLE =
 			| ACCEPT
 			| ERROR
 	type table
-	
+
 	val numStates : table -> int
 	val numRules : table -> int
 	val describeActions : table -> state ->
@@ -87,7 +87,7 @@ signature LR_TABLE =
    constructor function for a integer token might be
 
 	  INT: int * 'a * 'a -> 'a token.
- 
+
    This is not possible because we need to have tokens with the representation
    given below for the polymorphic parser.
 
@@ -124,7 +124,7 @@ signature LR_PARSER =
 		     arg: 'arg,
 		     saction : int *
 			       '_c *
-				(LrTable.state * ('_b * '_c * '_c)) list * 
+				(LrTable.state * ('_b * '_c * '_c)) list *
 				'arg ->
 				     LrTable.nonterm *
 				     ('_b * '_c * '_c) *
@@ -163,7 +163,7 @@ signature LEXER =
 		type pos
 		type svalue
 	   end
-	val makeLexer : (int -> string) -> unit -> 
+	val makeLexer : (int -> string) -> unit ->
          (UserDeclarations.svalue,UserDeclarations.pos) UserDeclarations.token
    end
 
@@ -180,12 +180,12 @@ signature ARG_LEXER =
 		type svalue
 		type arg
 	   end
-	val makeLexer : (int -> string) -> UserDeclarations.arg -> unit -> 
+	val makeLexer : (int -> string) -> UserDeclarations.arg -> unit ->
          (UserDeclarations.svalue,UserDeclarations.pos) UserDeclarations.token
    end
 
 (* PARSER_DATA: the signature of ParserData structures in {parser name}LrValsFun
-   produced by  SML-Yacc.  All such structures match this signature.  
+   produced by  SML-Yacc.  All such structures match this signature.
 
    The {parser name}LrValsFun produces a structure which contains all the values
    except for the lexer needed to call the polymorphic parser mentioned
@@ -205,7 +205,7 @@ signature PARSER_DATA =
 
          (* the type of the user-supplied argument to the parser *)
  	type arg
- 
+
 	(* the intended type of the result of the parser.  This value is
 	   produced by applying extract from the structure Actions to the
 	   final semantic value resultiing from a parse.
@@ -222,7 +222,7 @@ signature PARSER_DATA =
 	   a default value for the semantic stack.
 	 *)
 
-	structure Actions : 
+	structure Actions :
 	  sig
 	      val actions : int * pos *
 		   (LrTable.state * (svalue * pos * pos)) list * arg->
@@ -250,7 +250,7 @@ signature PARSER_DATA =
 	val table : LrTable.table
     end
 
-(* signature PARSER is the signature that most user parsers created by 
+(* signature PARSER is the signature that most user parsers created by
    SML-Yacc will match.
 *)
 
@@ -270,7 +270,7 @@ signature PARSER =
 
          (* the type of the user-supplied argument to the parser *)
  	type arg
-	
+
 	(* type svalue is the type of semantic values for the semantic value
 	   stack
 	 *)
@@ -299,7 +299,7 @@ signature PARSER =
     lexer takes an additional argument.
 *)
 
-signature ARG_PARSER = 
+signature ARG_PARSER =
     sig
         structure Token : TOKEN
 	structure Stream : STREAM

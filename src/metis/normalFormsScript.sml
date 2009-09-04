@@ -35,7 +35,7 @@ val EXT_POINT_EXISTS =
       SKOLEM_THM
     val A16 =
       SPEC (Term `\f x. !(g:'a->'b). (f (x g) = g (x g)) ==> (f = g)`) A15
-    val A17 = 
+    val A17 =
       CONV_RULE (LAND_CONV (QUANT_CONV (QUANT_CONV (RATOR_CONV BETA_CONV)))) A16
     val A18 = CONV_RULE (LAND_CONV (QUANT_CONV (QUANT_CONV BETA_CONV))) A17
     val A19 = EQ_MP A18 A14

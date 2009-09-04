@@ -106,10 +106,10 @@ val Array_length_def = Define
 val update_Array_i_length = store_thm
  ("update_Array_i_length",
   ``!a i v.
-      (?l. (a = Array l)) /\ i < Array_length a ==> 
+      (?l. (a = Array l)) /\ i < Array_length a ==>
           (Array_length (update_Array_i a i v) = Array_length a)``,
-  RW_TAC arith_ss [] 
-  ++ FULL_SIMP_TAC arith_ss [Array_length_def, update_Array_i_def, update_nth_length] 
+  RW_TAC arith_ss []
+  ++ FULL_SIMP_TAC arith_ss [Array_length_def, update_Array_i_def, update_nth_length]
   ++ MATCH_MP_TAC update_nth_length);
 
 val update_Array_i_el = store_thm
@@ -134,7 +134,7 @@ val extend_Array_el = store_thm
   ("extend_Array_el",
    ``!a v i. (?l. (a = Array l)) /\
              i < SUC(Array_length a) ==>
-               (get_Array_i (extend_Array a v) i = 
+               (get_Array_i (extend_Array a v) i =
                   if (i = (Array_length a)) then v else get_Array_i a i)``,
   RW_TAC arith_ss []
   ++ FULL_SIMP_TAC arith_ss [get_Array_i_def, extend_Array_def, Array_length_def, EL_SNOC, EL_LENGTH_SNOC]);
@@ -143,7 +143,7 @@ val Assign_Array_num_i = Define
    `Assign_Array_num_i v i (e:value state -> value) = Assign v (\s. update_Array_i (s v) i (e s))`;
 
 val Assign_Array_i = Define
-   `Assign_Array_i v i (e:value state -> value) = 
+   `Assign_Array_i v i (e:value state -> value) =
        Assign v (\(s:value state). update_Array_i (s v) (num_of_value(s i)) (e s))`;
 
 val Assign_Array_extend = Define
@@ -167,8 +167,8 @@ val New_Array = Define
    `New_Array a n = Assign a (\s. Array (n_list (num_of_value (s n)) Null))`;
 
 val NondetAssign_Array_num_i_def = Define
-   `NondetAssign_Array_num_i a i xs = 
-	Nondets (MAP (\x. Assign_Array_num_i a i (\s. x)) xs)`; 
+   `NondetAssign_Array_num_i a i xs =
+	Nondets (MAP (\x. Assign_Array_num_i a i (\s. x)) xs)`;
 
 val NondetAssign_Array_i_def = Define
    `NondetAssign_Array_i a i xs =

@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
@@ -44,7 +44,7 @@ val symbolic_kripke_structure_S0 = DB.fetch "-" "symbolic_kripke_structure_S0";
 val symbolic_kripke_structure_R = DB.fetch "-" "symbolic_kripke_structure_R";
 val symbolic_kripke_structure_11 = DB.fetch "-" "symbolic_kripke_structure_11";
 
-val symbolic_kripke_structure_REWRITES = save_thm("symbolic_kripke_structure_REWRITES", LIST_CONJ [symbolic_kripke_structure_S0, symbolic_kripke_structure_R, 
+val symbolic_kripke_structure_REWRITES = save_thm("symbolic_kripke_structure_REWRITES", LIST_CONJ [symbolic_kripke_structure_S0, symbolic_kripke_structure_R,
 symbolic_kripke_structure_11]);
 
 
@@ -70,7 +70,7 @@ val IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___ALTERNATIVE_DEF =
   REWRITE_TAC[IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def] THEN
   BOOL_EQ_STRIP_TAC THEN
   FORALL_EQ_STRIP_TAC THEN
-  BOOL_EQ_STRIP_TAC THEN 
+  BOOL_EQ_STRIP_TAC THEN
   EQ_TAC THEN REPEAT STRIP_TAC THENL [
     Q_SPEC_NO_ASSUM 0 `SUC t0` THEN
     CLEAN_ASSUMPTIONS_TAC THEN
@@ -84,8 +84,8 @@ val IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___ALTERNATIVE_DEF =
     ASM_SIMP_TAC arith_ss []
   ]);
 
-    
-  
+
+
 
 
 val IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def =
@@ -159,7 +159,7 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___IDENTIFY_VARIABLES =
   store_thm (
     "IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___IDENTIFY_VARIABLES",
 
-    ``!f K fc. 
+    ``!f K fc.
         IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE K fc ==>
         IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f K) (MAP (P_VAR_RENAMING f) fc)``,
 
@@ -185,13 +185,13 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING =
         IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f K) (MAP (P_VAR_RENAMING f) fc))``,
 
       REPEAT STRIP_TAC THEN EQ_TAC THEN1 REWRITE_TAC[IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___IDENTIFY_VARIABLES] THEN
-      
+
       SIMP_TAC std_ss [IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_def,
                        PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___REWRITES,
                        SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING_def,
                        symbolic_kripke_structure_REWRITES,
                        MEM_MAP, GSYM LEFT_EXISTS_AND_THM] THEN
-      REPEAT STRIP_TAC THEN      
+      REPEAT STRIP_TAC THEN
       `?w. w = PATH_RESTRICT p (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS K UNION
              LIST_BIGUNION (MAP P_USED_VARS fc))` by PROVE_TAC[] THEN
       SUBGOAL_TAC `(((?n. ~XP_SEM K.R (p n,p (SUC n))) \/
@@ -225,7 +225,7 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING =
           SIMP_TAC std_ss [SUBSET_DEF, SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def, IN_UNION]
         ]
       ) THEN
-      ONCE_ASM_REWRITE_TAC[] THEN WEAKEN_HD_TAC THEN 
+      ONCE_ASM_REWRITE_TAC[] THEN WEAKEN_HD_TAC THEN
 
       `!n. w n SUBSET (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS K UNION
              LIST_BIGUNION (MAP P_USED_VARS fc))` by PROVE_TAC[PATH_RESTRICT_SUBSET] THEN

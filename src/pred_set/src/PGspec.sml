@@ -20,7 +20,7 @@ val PAIR = pairTheory.PAIR;
 
 val ERR = mk_HOL_ERR "PGspec";
 
-val dest_in = 
+val dest_in =
   dest_binop (prim_mk_const{Name = "IN", Thy="bool"})
              (ERR "dest_in" "not an IN term");
 
@@ -41,7 +41,7 @@ fun MK_PAIR vs v =
    then REFL v else
    let val vty = type_of v
        val alist = snd(dest_type vty)
-       val (ty1,ty2) = (case alist of [a,b] => (a,b) 
+       val (ty1,ty2) = (case alist of [a,b] => (a,b)
                         | otherwise => raise ERR "MK_PAIR" "")
        val inst = SYM(SPEC v (INST_TYPE [alpha |-> ty1, beta |-> ty2] PAIR))
        val (fst,snd) = dest_pair(rhs(concl inst))
@@ -93,7 +93,7 @@ end;
 
 local
   val EQT = el 1 (CONJUNCTS (SPEC (``c:bool``) EQ_CLAUSES))
-  val PEQ = 
+  val PEQ =
      let val inst = INST_TYPE [beta |-> bool]
                       (GENL[``x:'a``, ``y:'b``,
                             ``a:'a``, ``b:'b``] pairTheory.PAIR_EQ)
@@ -189,7 +189,7 @@ fun list_variant l1 l2 =
 (*   GSPEC (\(x1,...,xn). (t[x1,...,xn], p[x1,...,xn]))		        *)
 (* ---------------------------------------------------------------------*)
 
-val checkIN = assert (fn tm =>    
+val checkIN = assert (fn tm =>
             (case dest_thy_const tm
              of {Name="IN", Thy="bool",...} => true
               | other => false) handle HOL_ERR _ => false)
@@ -207,7 +207,7 @@ local val RAconv = RAND_CONV o ABS_CONV
          let val (Bvar,Body) = dest_abs(rand tm)
              val (xs,res) = mktup Body
          in (Bvar::xs,res)
-         end handle HOL_ERR _ 
+         end handle HOL_ERR _
              => let val (Bvar,Body) = dest_abs tm
                 in ([Bvar], fst(dest_pair Body))
                 end

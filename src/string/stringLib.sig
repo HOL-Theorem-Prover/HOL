@@ -20,8 +20,8 @@ sig
 
    val dest_chr       : term -> term
    val dest_ord       : term -> term
-   val dest_implode   : term -> term 
-   val dest_explode   : term -> term 
+   val dest_implode   : term -> term
+   val dest_explode   : term -> term
    val dest_string    : term -> term * term
 
    val is_chr         : term -> bool
@@ -39,5 +39,5 @@ sig
    val ORD_CHR_CONV   : conv
    val char_EQ_CONV   : conv
    val string_EQ_CONV : conv
-   
+
 end

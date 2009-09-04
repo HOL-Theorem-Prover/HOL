@@ -10,7 +10,7 @@ val par_tm = prim_mk_const {Name="Par", Thy="cps"};
 val ite_tm = prim_mk_const {Name="Ite", Thy="cps"};
 val rec_tm = prim_mk_const {Name="Rec", Thy="cps"};
 
-fun mk_seq(f1,f2) = 
+fun mk_seq(f1,f2) =
  let val (d1,r1) = dom_rng (type_of f1)
      val (d2,r2) = dom_rng (type_of f2)
  in
@@ -18,7 +18,7 @@ fun mk_seq(f1,f2) =
  end
  handle e => raise wrap_exn "cpsSyntax" "mk_seq" e;
 
-fun mk_par(f1,f2) = 
+fun mk_par(f1,f2) =
  let val (d1,r1) = dom_rng (type_of f1)
      val (d2,r2) = dom_rng (type_of f2)
  in
@@ -26,7 +26,7 @@ fun mk_par(f1,f2) =
  end
  handle e => raise wrap_exn "cpsSyntax" "mk_par" e;
 
-fun mk_ite(f1,f2,f3) = 
+fun mk_ite(f1,f2,f3) =
  let val (d1,_) = dom_rng (type_of f1)
      val (_,r2) = dom_rng (type_of f2)
  in
@@ -34,7 +34,7 @@ fun mk_ite(f1,f2,f3) =
  end
  handle e => raise wrap_exn "cpsSyntax" "mk_ite" e;
 
-fun mk_rec(f1,f2,f3) = 
+fun mk_rec(f1,f2,f3) =
  let val (d1,_) = dom_rng (type_of f1)
      val (_,r2) = dom_rng (type_of f2)
  in
@@ -60,26 +60,26 @@ fun dest_exp tm =
   then (print_term tm;print "\n";
         print "is not a function";
         raise ERR "dest_exp" "dest_exp failure")
-  else if is_comb tm 
+  else if is_comb tm
           andalso is_const(fst(strip_comb tm))
-          andalso mem 
+          andalso mem
                    (fst(dest_const(fst(strip_comb tm))))
                    ["Seq","Par","Ite","Rec"]
   then
    let val (opr,args) = strip_comb tm
    in
    case fst(dest_const opr) of
-      "Seq" => if length args = 2 
-                then (opr, args) 
+      "Seq" => if length args = 2
+                then (opr, args)
                 else raise ERR "dest_exp" "bad Seq"
-    | "Par" => if length args = 2 
-                then (opr, args) 
+    | "Par" => if length args = 2
+                then (opr, args)
                 else raise ERR "dest_exp" "bad Par"
     | "Ite" => if length args = 3
-                then (opr, args) 
+                then (opr, args)
                 else raise ERR "dest_exp" "bad Ite"
     | "Rec" => if length args = 3
-                then (opr, args) 
+                then (opr, args)
                 else raise ERR "dest_exp" "bad Rec"
     | _     => raise ERR "dest_exp" "this shouldn't happen"
    end

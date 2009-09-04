@@ -19,7 +19,7 @@ val main_def  = Define `
 (*----------------------------------------------------------------------------*)
 
 val _ = Hol_datatype `
-    clos = G1 of num 
+    clos = G1 of num
          | G2
     `;
 
@@ -31,7 +31,7 @@ val g2'_def = Define `
 
 val dispatch_def = Define `
     dispatch (c:clos, i:num) =
-      case c of 
+      case c of
          G1 y -> g1'(i,y) ||
          G2   -> g2' i
     `;
@@ -52,8 +52,8 @@ val main1_def  = Define `
 val Thm1 = Q.store_thm (
   "Thm1",
   `main1 = main`,
- RW_TAC std_ss 
-    [FUN_EQ_THM, FORALL_PROD,main1_def, main_def, LET_THM, twice1_def, 
+ RW_TAC std_ss
+    [FUN_EQ_THM, FORALL_PROD,main1_def, main_def, LET_THM, twice1_def,
      twice_def, dispatch_def,g1'_def, g2'_def]
   );
 

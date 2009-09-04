@@ -61,14 +61,14 @@ fun parseFileNoReport parser file stream lexbuf =
 * Auxiliary funtion to parse from a file and report error locations
 ******************************************************************************)
 fun parseFileReport parser file stream lexbuf =
-    let val expr = 
+    let val expr =
 	    parser Lexer.Token lexbuf
 	    handle
 	       Parsing.ParseError f =>
 		   let val pos1 = Lexing.getLexemeStart lexbuf
 		       val pos2 = Lexing.getLexemeEnd lexbuf
 		   in
-		       Location.errMsg (file, stream, lexbuf) 
+		       Location.errMsg (file, stream, lexbuf)
 		                       (Location.Loc(pos1, pos2))
 		                       "Syntax error."
 		   end
@@ -77,7 +77,7 @@ fun parseFileReport parser file stream lexbuf =
 		       Location.errMsg (file, stream, lexbuf)
 		                       (Location.Loc(pos1, pos2))
 		                       ("Lexical error: " ^ msg)
-		   else 
+		   else
 		       (Location.errPrompt ("Lexical error: " ^ msg ^ "\n\n");
 			raise Fail "Lexical error");
     in
@@ -100,7 +100,7 @@ fun parse parser file =
         val lexbuf = createLexerStream is
 	val expr   = parseFileReport parser file is lexbuf
 	             handle exn => (BasicIO.close_in is; raise exn)
-    in 
+    in
         BasicIO.close_in is;
 	expr
     end

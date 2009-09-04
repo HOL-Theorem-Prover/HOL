@@ -27,7 +27,7 @@ val mut_rec_ty_spec =[
                 being_defined "testa"]
      }
    ]
-  },  
+  },
   {type_name   ="testb",
    constructors=[
      {name    ="contentb",

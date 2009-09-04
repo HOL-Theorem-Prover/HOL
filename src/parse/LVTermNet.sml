@@ -11,15 +11,15 @@ datatype label = V of int
                | LV of string * int
 type key = term list * term
 
-val tlt_compare = pair_compare (list_compare Term.compare, Term.compare) 
+val tlt_compare = pair_compare (list_compare Term.compare, Term.compare)
 
 fun labcmp (p as (l1, l2)) =
     case p of
       (V n1, V n2) => Int.compare(n1, n2)
     | (V _, _) => LESS
     | (_, V _) => GREATER
-    | (C ({Name=nm1,Thy=th1}, n1), C ({Name=nm2,Thy=th2}, n2)) => 
-         pair_compare (Int.compare, 
+    | (C ({Name=nm1,Thy=th1}, n1), C ({Name=nm2,Thy=th2}, n2)) =>
+         pair_compare (Int.compare,
                        pair_compare (String.compare, String.compare))
                       ((n1, (th1, nm1)), (n2, (th2, nm2)))
     | (C _, _) => LESS
@@ -47,11 +47,11 @@ val empty = (EMPTY, 0)
 
 fun mkempty () = ND (Binarymap.mkDict labcmp)
 
-fun ndest_term (fvs, tm) = let 
+fun ndest_term (fvs, tm) = let
   val (f, args) = strip_comb tm
   val args' = map (fn t => (fvs, t)) args
 in
-  case dest_term f of 
+  case dest_term f of
     VAR(s, ty) => if op_mem eq tm fvs then (LV (s, length args), args')
                   else (V (length args), args')
   | LAMB(bv, bod) => (Lam (length args), (op_subtract eq fvs [bv], bod) :: args')
@@ -68,10 +68,10 @@ fun insert ((net,sz), k, item) = let
       | _ => mkempty()
   fun trav (net, tms) =
       case (net, tms) of
-        (LF d, []) => let 
-          val inc = 
+        (LF d, []) => let
+          val inc =
               case Binarymap.peek(d, k) of NONE => 1 | SOME _ => 0
-        in 
+        in
           (LF (Binarymap.insert(d,k,item)), inc)
         end
       | (ND d, k::ks0) => let
@@ -130,10 +130,10 @@ fun find (n, k) =
     valOf (peek (n, k)) handle Option => raise Binarymap.NotFound
 
 
-fun lookup_label tm = let 
+fun lookup_label tm = let
   val (f, args) = strip_comb tm
 in
-  case dest_term f of 
+  case dest_term f of
     CONST{Name, Thy, ...} => (C ({Name=Name,Thy=Thy}, length args), args)
   | LAMB(Bvar, Body) => (Lam (length args), args)
   | VAR (s, _) => (LV (s, length args), args)
@@ -152,12 +152,12 @@ fun match ((net,sz), tm) = let
                             NONE => acc
                           | SOME n => trav acc (n, ks0)
           val (lab, rest) = lookup_label k
-          val varhead_result = let 
+          val varhead_result = let
             val n = length (#2 (strip_comb k))
           in
-            if n = 0 then varresult 
+            if n = 0 then varresult
             else
-              case Binarymap.peek (d, V n) of 
+              case Binarymap.peek (d, V n) of
                 NONE => varresult
               | SOME n => trav varresult (n, rest @ ks0)
           end

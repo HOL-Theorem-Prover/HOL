@@ -15,7 +15,7 @@ struct
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib 
+open HolKernel Parse boolLib
 
 (*
 quietdec := false;
@@ -34,7 +34,7 @@ quietdec := false;
  * mk_neg___idempot ~a = a
  * with a not being a negationg
  *---------------------------------------------------------------------------*)
-  fun mk_neg___idempot t = 
+  fun mk_neg___idempot t =
     if is_neg t then dest_neg t else mk_neg t;
 
 
@@ -43,7 +43,7 @@ quietdec := false;
  * eq_sym_acond tests, wether they are alpha convertible with
  * respect to the symmetry of equaltity
  *---------------------------------------------------------------------------*)
-  fun eq_sym_aconv t1 t2 = 
+  fun eq_sym_aconv t1 t2 =
       aconv t1 t2 orelse
       (is_eq t1 andalso is_eq t2 andalso
        let
@@ -63,7 +63,7 @@ quietdec := false;
 
 
 
-  fun eq_sym_mem e [] = false 
+  fun eq_sym_mem e [] = false
     | eq_sym_mem e (h::l) =
       (eq_sym_aconv e h) orelse eq_sym_mem e l;
 
@@ -76,7 +76,7 @@ quietdec := false;
          if eq_sym_mem a l2 then a::l else l end;
 
   fun find_negation_pair [] = NONE |
-      find_negation_pair (e::l) = 
+      find_negation_pair (e::l) =
       if eq_sym_mem (mk_neg___idempot e) l then SOME e else
       find_negation_pair l;
 
@@ -92,7 +92,7 @@ quietdec := false;
 
   (*get_impl_terms returns a list of terms that imply the whole term and
     a list of terms that are implied. Thus if get_impl_terms t = (disjL,conjL) then
-					      
+
     forall x in disjL. x implies t and
     forall x in conjL. t implies x holds.
 
@@ -100,17 +100,17 @@ quietdec := false;
     so e. g. get_impl_terms ``a \/ b \/ ~c`` returns
      ([``a \/ b \/ ~c``, ``a``, ``b \/ ~c``, ``b``, ``~c``], [``a \/ b \/ ~c``])
 
-    
+
     get_impl_terms___multiple augments the results with information, whether
     multiple occurences of a term have been abbriated to one.
-   *)    
+   *)
   fun get_impl_terms___multiple t =
       if is_disj t then
-	  (let val (t1,t2)=dest_disj t; 
+	  (let val (t1,t2)=dest_disj t;
                val (l11,l12)= get_impl_terms___multiple t1;
                val (l21,l22)= get_impl_terms___multiple t2;
 	   in
-              ((t,false)::(l11 @ l21), (t,false)::findMatches___multiple (l12, l22))    
+              ((t,false)::(l11 @ l21), (t,false)::findMatches___multiple (l12, l22))
            end)
       else
       if is_conj t then
@@ -118,10 +118,10 @@ quietdec := false;
                val (l11,l12)= get_impl_terms___multiple t1;
                val (l21,l22)= get_impl_terms___multiple t2;
 	   in
-              ((t,false)::findMatches___multiple (l11, l21), (t,false)::(l12 @ l22))    
+              ((t,false)::findMatches___multiple (l11, l21), (t,false)::(l12 @ l22))
            end)
       else
-      if is_neg t then 
+      if is_neg t then
 	  (let val (l1,l2) = get_impl_terms___multiple (dest_neg t) in
 	      (map (fn (t,b) => (mk_neg___idempot t, b)) l2, map (fn (t,b) => (mk_neg___idempot t, b)) l1)
           end)
@@ -129,7 +129,7 @@ quietdec := false;
       if is_imp t then
 	  (let val (t1,t2)=dest_imp t;
                val neg_t1 = mk_neg___idempot t1;
-               val new_t = mk_disj (neg_t1, t2) 
+               val new_t = mk_disj (neg_t1, t2)
            in get_impl_terms___multiple new_t end)
       else
       if is_quant t then
@@ -151,7 +151,7 @@ quietdec := false;
       else
          (t,b)::clean_term_multiple_list L;
 
-   
+
   fun get_impl_terms t =
      let
         val (l1,l2) = get_impl_terms___multiple t;
@@ -165,16 +165,16 @@ quietdec := false;
 
 fun get_rewrite_assumption_thms rewr =
    let val match_thm = ASSUME rewr; in
-   if is_eq rewr then 
-      [EQT_INTRO match_thm, EQT_INTRO (GSYM match_thm)] 
+   if is_eq rewr then
+      [EQT_INTRO match_thm, EQT_INTRO (GSYM match_thm)]
    else if (is_neg_eq rewr) then
-      [match_thm, GSYM match_thm] 
+      [match_thm, GSYM match_thm]
    else [match_thm]
    end
 
 fun case_split_REWRITE_CONV [] t =
     EQT_ELIM (REWRITE_CONV [] t)
-  | case_split_REWRITE_CONV (m::matches) t = 
+  | case_split_REWRITE_CONV (m::matches) t =
     let
        fun rec_prove rewr =
        let
@@ -206,7 +206,7 @@ fun bool_eq_imp_real_imp_CONV matches t =
       val conc_term = rhs (concl (REWRITE_CONV matches_thms t));
       val _ = if (eq conc_term F) then raise UNCHANGED else ();
 
-      val goal_term = if (eq conc_term T) then T else mk_imp (list_mk_conj matches, conc_term); 
+      val goal_term = if (eq conc_term T) then T else mk_imp (list_mk_conj matches, conc_term);
       val _ = if (eq t goal_term) then raise UNCHANGED else ();
       val goal_eq_term = mk_eq (t, goal_term);
 
@@ -249,7 +249,7 @@ fun bool_extract_common_terms_internal_CONV disj matches t =
 
 (*cleans up the found matches by using just the simplest ones.
   So clean_disj_matches removes terms from the list that are implied by
-  one other in the list and clean_conj_matches removes terms that imply 
+  one other in the list and clean_conj_matches removes terms that imply
   another term*)
 
 fun clean_disj_matches [] acc = acc
@@ -285,15 +285,15 @@ fun clean_conj_matches [] acc = acc
 
 
 (*---------------------------------------------------------------------------
- * Given a equation with boolean expressions on both sides (b1 = b2), 
+ * Given a equation with boolean expressions on both sides (b1 = b2),
  * this conversion tries to extract common parts of b1 and b2 into a precondition.
  *
  * e.g.          (A \/ B \/ C) = (A \/ D) is converted to
- *       ~A ==> ((     B \/ C) =       D )	
+ *       ~A ==> ((     B \/ C) =       D )
  *
  *---------------------------------------------------------------------------*)
 
-fun BOOL_EQ_IMP_CONV t = 
+fun BOOL_EQ_IMP_CONV t =
    let
       val (l,r) = dest_eq t;
       val _ = if (type_of l = bool) then () else raise mk_HOL_ERR "Conv" "bool_eq_imp_CONV" "";
@@ -303,7 +303,7 @@ fun BOOL_EQ_IMP_CONV t =
       val disj_matches = clean_disj_matches (findMatches (disj_l, disj_r)) [];
       val conj_matches = clean_conj_matches (findMatches (conj_l, conj_r)) [];
 
-      val matches = (map mk_neg___idempot disj_matches) @ conj_matches; 
+      val matches = (map mk_neg___idempot disj_matches) @ conj_matches;
       val _ = if null matches then raise UNCHANGED else ();
    in
       bool_eq_imp_real_imp_CONV matches t
@@ -324,7 +324,7 @@ fun BOOL_EQ_IMP_CONV t =
  *---------------------------------------------------------------------------*)
 
 
-fun BOOL_NEG_PAIR_CONV t = 
+fun BOOL_NEG_PAIR_CONV t =
    let
       val _ = if (type_of t = bool) then () else raise mk_HOL_ERR "Conv" "bool_negation_pair_CONV" "";
       val (disj_t, conj_t) = get_impl_terms t;
@@ -353,7 +353,7 @@ fun BOOL_NEG_PAIR_CONV t =
 
 
 
-fun BOOL_EXTRACT_SHARED_CONV t = 
+fun BOOL_EXTRACT_SHARED_CONV t =
    let
       val _ = if (type_of t = bool) then () else raise mk_HOL_ERR "Conv" "bool_imp_extract_CONV" "";
       val (disj_t___multiple,conj_t___multiple) = get_impl_terms___multiple t;

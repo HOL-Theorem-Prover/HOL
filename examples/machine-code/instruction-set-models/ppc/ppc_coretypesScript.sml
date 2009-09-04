@@ -25,7 +25,7 @@ val _ = Hol_datatype `
           | PPC_CR0 of word2  (* bit i of the condition register  *)`;
 
 val _ = Hol_datatype `
-  ppc_reg = PPC_IR of word5  (* integer registers *) 
+  ppc_reg = PPC_IR of word5  (* integer registers *)
           | PPC_LR           (* link register (return address) *)
           | PPC_CTR          (* count register, used for some branches *)
           | PPC_PC           (* program counter *)`;

@@ -1,12 +1,12 @@
 (*
 quietdec := true;
-loadPath := 
-            (concat Globals.HOLDIR "/examples/dev/sw") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/arm") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/spec") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/sep") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/swsep") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/c_output") :: 
+loadPath :=
+            (concat Globals.HOLDIR "/examples/dev/sw") ::
+            (concat Globals.HOLDIR "/examples/elliptic/arm") ::
+            (concat Globals.HOLDIR "/examples/elliptic/spec") ::
+            (concat Globals.HOLDIR "/examples/elliptic/sep") ::
+            (concat Globals.HOLDIR "/examples/elliptic/swsep") ::
+            (concat Globals.HOLDIR "/examples/elliptic/c_output") ::
             !loadPath;
 
 map load ["elliptic_exampleTheory", "c_outputLib"];

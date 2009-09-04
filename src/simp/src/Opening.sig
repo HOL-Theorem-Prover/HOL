@@ -13,7 +13,7 @@ signature Opening = sig
     *    Providing these two returns a function which implements a
     * congruence rule suitable for use with the TRAVERSE engine.
     * Create a congruence procedure for a given congruence rule.
-    * 
+    *
     * "CONGRUENCE" PROCEDURES
     *   - Use the given continuation to derive simplified subterms
     *   - Use the provided solver to solve side conditions (solver
@@ -21,12 +21,12 @@ signature Opening = sig
     *   - Rename abstractions to avoid certain variables. (only implemented
     * for EQ_CONGPROC at present).
     *
-    * NOTES FROM THE SIMPLIFIER DOCUMENTATION 
+    * NOTES FROM THE SIMPLIFIER DOCUMENTATION
     *
     * Arbitrary extra contextual information can be introduced by
     * using "congurence rules".  These are theorems of a particular
     * shape.
-    * 
+    *
     * The general form must be:
     * \begin{verbatim}
     * |- !x1 x1' ... xn xn'.
@@ -41,18 +41,18 @@ signature Opening = sig
     * That probably doesn't make much sense.  Think of F as the construct
     * over which you are expressing the congruence.  Think of x1,x2,...xn
     * as the sub-constructs which are being rewritten, some of them under
-    * additional assumptions.  The implications (one on each line in the 
-    * sample above) state the necessary results which need to be derived 
+    * additional assumptions.  The implications (one on each line in the
+    * sample above) state the necessary results which need to be derived
     * about the subcomponents before the congruence can be deduced.  Some
     * of these subcomponenets may be simplified with extra assumpions - this
     * is indicated by P[x1] above.
-    * 
+    *
     * Some subterms may be functions which we want
-    * to rewrite under application. See the rule for restricted 
+    * to rewrite under application. See the rule for restricted
     * quantifiers for examples.
     * The simplifier does a degree of higher order matching when
     * these variables are specified.
-    * 
+    *
     * Some examples (where REL is HOL equality)
     * \begin{verbatim}
     *  |- !g g' t t' e e'.
@@ -60,13 +60,13 @@ signature Opening = sig
     *        (g ==> (t = t')) ==>
     *        (~g ==> (e = e')) ==>
     *        ((g => t | e) = (g' => t' | e')) : thm
-    * 
+    *
     *   |- !P P' Q Q'.
     *        (!x. P x = P' x) ==>
     *        (!x. P x ==> (Q x = Q' x)) ==>
     *        (RES_EXISTS P Q = RES_EXISTS P' Q') : thm
     * \end{verbatim}
-    * 
+    *
     * ---------------------------------------------------------------------*)
 
    include Abbrev
@@ -76,11 +76,11 @@ signature Opening = sig
 		    depther : (thm list * term) -> conv} -> conv
    val samerel            : term -> term -> bool
    val CONGPROC           :  (term -> conv) ->  thm -> congproc
-   val rel_of_congrule    : thm -> term  
+   val rel_of_congrule    : thm -> term
    val nconds_of_congrule : thm -> int
-  
+
    (* ---------------------------------------------------------------------
-    * EQ_CONGPROC                                                       
+    * EQ_CONGPROC
     *
     * Optimized implementations of the HOL equality congruence rules using the
     * built in operations AP_TERM, AP_THM, MK_ABS and MK_COMB.  These could

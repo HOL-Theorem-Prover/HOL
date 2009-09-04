@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
 
 (*
 quietdec := true;
@@ -28,25 +28,25 @@ val DIFF_OVER_INTER =
    PROVE_TAC[]);
 
 
-val INTER_OVER_DIFF = 
+val INTER_OVER_DIFF =
   store_thm
    ("INTER_OVER_DIFF",
     ``(!S1 S2 S3. (S1 DIFF (S2 INTER S3) = (S1 DIFF S2) UNION (S1 DIFF S3))) /\
-      (!S1 S2 S3. ((S1 INTER S2) DIFF S3 = (S1 DIFF S3) INTER (S2 DIFF S3)))``, 
+      (!S1 S2 S3. ((S1 INTER S2) DIFF S3 = (S1 DIFF S3) INTER (S2 DIFF S3)))``,
 
     REWRITE_TAC [SUBSET_DEF,IN_DIFF,IN_INTER,IN_UNION,DIFF_DEF,EXTENSION,GSPECIFICATION] THEN PROVE_TAC []);
 
 
-val UNION_OVER_DIFF = 
+val UNION_OVER_DIFF =
   store_thm
    ("UNION_OVER_DIFF",
     ``(!S1 S2 S3. (S1 DIFF (S2 UNION S3) = (S1 DIFF S2) INTER (S1 DIFF S3))) /\
-      (!S1 S2 S3. (((S1 UNION S2) DIFF S3) = ((S1 DIFF S3) UNION (S2 DIFF S3))))``, 
+      (!S1 S2 S3. (((S1 UNION S2) DIFF S3) = ((S1 DIFF S3) UNION (S2 DIFF S3))))``,
 
     REWRITE_TAC [SUBSET_DEF,IN_DIFF,IN_INTER,IN_UNION,DIFF_DEF,EXTENSION,GSPECIFICATION] THEN PROVE_TAC []);
 
 
-val BIGUNION_OVER_DIFF = 
+val BIGUNION_OVER_DIFF =
   store_thm
    ("BIGUNION_OVER_DIFF",
     ``!P. (UNIV DIFF (BIGUNION {s | ?(n:num). s = (P n)})) = (BIGINTER {s | ?(n:num). (s = (UNIV DIFF (P n)))})``,
@@ -57,7 +57,7 @@ val BIGUNION_OVER_DIFF =
       PROVE_TAC[IN_COMPL]);
 
 
-val BIGINTER_OVER_DIFF = 
+val BIGINTER_OVER_DIFF =
   store_thm
    ("BIGINTER_OVER_DIFF",
     ``!P. (UNIV DIFF (BIGINTER {s | ?(n:num). s = (P n)})) = (BIGUNION {s | ?(n:num). (s = (UNIV DIFF (P n)))})``,
@@ -352,7 +352,7 @@ val DIFF_DIFF_INTER =
  store_thm
   ("DIFF_DIFF_INTER",
     ``!A B. (A DIFF (A DIFF B)) = (A INTER B)``,
-    
+
     SIMP_TAC std_ss [DIFF_DEF, INTER_DEF, EXTENSION, GSPECIFICATION] THEN
     PROVE_TAC[]);
 
@@ -392,7 +392,7 @@ val SUBSET_IMAGE___ORGINAL_EXISTS =
   store_thm ("SUBSET_IMAGE___ORGINAL_EXISTS",
   ``!f os fs. (fs SUBSET (IMAGE f os)) ==>
           (?s. s SUBSET os /\ (fs = IMAGE f s))``,
-  
+
   REPEAT STRIP_TAC THEN
   Q_TAC EXISTS_TAC `os INTER (\x. (f x) IN fs)` THEN
   REWRITE_TAC[INTER_SUBSET] THEN

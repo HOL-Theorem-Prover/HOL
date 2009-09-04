@@ -8,9 +8,9 @@ structure UTuple =
 struct
 
   (* building *)
-  fun pair x y = (x,y) 
-  fun triple x y z = (x,y,z) 
- 
+  fun pair x y = (x,y)
+  fun triple x y z = (x,y,z)
+
   (* projection *)
      (** pairs **)
   fun swap (x,y) = (y,x)

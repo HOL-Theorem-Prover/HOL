@@ -572,7 +572,7 @@ fun mk_mlinclude book =
 (*****************************************************************************)
 fun is_mldefun
      (mlpair(x,mlpair(mlsym(_,_),mlpair(params,mlpair(bdy,n))))) =
-      (x = mldefun)         andalso 
+      (x = mldefun)         andalso
       is_mlsexp_list params andalso
       is_mlsexp_list bdy    andalso
       (n = mlnil)
@@ -630,7 +630,7 @@ fun dest_mldefun_sk d =
            of [_,nam,params,quant_bdy]
               => (case dest_mlsexp_list quant_bdy
                   of [quant,qvars,bdy]
-                     => (nam, dest_mlsexp_list params, 
+                     => (nam, dest_mlsexp_list params,
                          quant, dest_mlsexp_list qvars, bdy)
                   |  _
                      => err "dest_mldefun_sk" "bad quant case match")
@@ -645,8 +645,8 @@ fun dest_mldefun_sk d =
 (* (DEFUN-SK nam (x1 ... xn) (quant qvars bdy))                              *)
 (*****************************************************************************)
 fun mk_mldefun_sk (nam, params, quant, qvars, bdy) =
- mk_mlsexp_list 
-  [mldefun_sk, nam, mk_mlsexp_list params, 
+ mk_mlsexp_list
+  [mldefun_sk, nam, mk_mlsexp_list params,
    mk_mlsexp_list [quant, mk_mlsexp_list qvars, bdy]];
 
 (*****************************************************************************)
@@ -1860,12 +1860,12 @@ fun mk_acl2def d =
        val bdy_tm = mlsexp_to_term bdy
        val tm = list_mk_fun(param_vars, bdy_tm)
        val ty = type_of tm
-       val unbound_vars = 
+       val unbound_vars =
             subtract (free_vars bdy_tm) (name_to_var nam ty :: param_vars)
        val _ = if null unbound_vars
                 then ()
-                else print("Warning: " 
-                           ^ snd(dest_mlsym nam) 
+                else print("Warning: "
+                           ^ snd(dest_mlsym nam)
                            ^ " has unbound free variables\n")
 
        val sym_name = mlsym_to_string nam
@@ -1884,16 +1884,16 @@ fun mk_acl2def d =
             if quant = ml_forall
              then list_mk_forall(quant_vars, quant_bdy) else
             if quant = ml_exists
-             then list_mk_exists(quant_vars, quant_bdy) 
+             then list_mk_exists(quant_vars, quant_bdy)
              else err "mk_acl2def" (snd(dest_mlsym quant) ^ ": bad quantifier")
        val tm = list_mk_fun(param_vars, ``bool_to_sexp ^quant_tm``)
        val ty = type_of tm
-       val unbound_vars = 
+       val unbound_vars =
             subtract (free_vars quant_tm) (name_to_var nam ty :: param_vars)
        val _ = if null unbound_vars
                 then ()
-                else print("Warning: " 
-                           ^ snd(dest_mlsym nam) 
+                else print("Warning: "
+                           ^ snd(dest_mlsym nam)
                            ^ " has unbound free variables\n")
        val sym_name = mlsym_to_string nam
        val newvar = mk_var(sym_name,ty)
@@ -2074,7 +2074,7 @@ fun install(defun tm) =
          val (opr_name,opr_ty) = dest_var opr
          val _ = if not(null(Term.decls opr_name))
                   then (print "\"";
-                        print opr_name; 
+                        print opr_name;
                         print "\" can only be defined once\n";
                         err "install" "repeated defun event")
                   else ()
@@ -2137,7 +2137,7 @@ fun install(defun tm) =
          val save_name = hol_name ^ "_mutual"
          val defthm_thm =
               save_thm
-               (save_name, 
+               (save_name,
                 CLEAN_ACL2_VARS (mk_acl2_thm "MUTUAL-RECURSION" acl2_name newtm))
      in
       (save_name,defthm_thm)
@@ -2165,7 +2165,7 @@ fun install(defun tm) =
          val save_name = hol_name ^ "_encap"
          val defthm_thm =
               save_thm
-               (save_name, 
+               (save_name,
                 CLEAN_ACL2_VARS(mk_acl2_thm "ENCAPSULATE" acl2_name newtm))
      in
       (save_name,defthm_thm)
@@ -2256,7 +2256,7 @@ fun match_defthm full_acl2_name mlsexp =
 (*****************************************************************************)
 
 fun run_with_test string =
-    (Process.system (string ^ "&& touch success") ; 
+    (Process.system (string ^ "&& touch success") ;
      can FileSys.remove "success");
 
 (*****************************************************************************)
@@ -2268,7 +2268,7 @@ fun print_defuns_to_mlsexps ql =
  let val sl = map preterm_to_string ql
      val _ = print_lisp_file "defun-tmp" (fn pr => map pr sl)
 in
-  if not (run_with_test 
+  if not (run_with_test
          (a2ml ^ " defun-tmp.lisp defun-tmp.ml >& defun-tmp.log"))
    then (print "a2ml defun-tmp.lisp defun-tmp.ml: Failed\n";
          print "\n";
@@ -2433,9 +2433,9 @@ val event_names = ref([] : string list);
 (* Accumulate events and discard repeats                                     *)
 (*****************************************************************************)
 fun accumulate_discard_events [] = []
- |  accumulate_discard_events 
+ |  accumulate_discard_events
      ((ev as (mlpair(_,mlpair(mlsym(_,ev_name),_)))) :: evl) =
-      if mem ev_name (!event_names) 
+      if mem ev_name (!event_names)
        then accumulate_discard_events evl
        else (event_names := ev_name :: (!event_names);
              ev :: accumulate_discard_events evl)

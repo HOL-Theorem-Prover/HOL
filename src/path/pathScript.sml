@@ -90,6 +90,13 @@ val FORALL_path = store_thm(
   GEN_TAC THEN EQ_TAC THEN SRW_TAC [][] THEN
   Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN SRW_TAC [][]);
 
+val EXISTS_path = store_thm(
+  "EXISTS_path",
+  ``!P. (?p. P p) = (?x. P (stopped_at x)) \/ (?x r p. P (pcons x r p))``,
+  SRW_TAC [][EQ_IMP_THM] THEN1
+    (Q.SPEC_THEN `p` FULL_STRUCT_CASES_TAC path_cases THEN METIS_TAC []) THEN
+  METIS_TAC []);
+
 val first_thm = store_thm(
   "first_thm",
   ``(!x. first (stopped_at x : ('a,'b) path) = x) /\

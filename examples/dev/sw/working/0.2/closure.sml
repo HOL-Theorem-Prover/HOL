@@ -19,7 +19,7 @@ val main_def  = Define `
 (*----------------------------------------------------------------------------*)
 
 val _ = Hol_datatype `
-    clos = G1 of num 
+    clos = G1 of num
          | G2
     `;
 
@@ -31,7 +31,7 @@ val g2'_def = Define `
 
 val dispatch_def = Define `
     dispatch (c:clos, i:num) =
-      case c of 
+      case c of
          G1 y -> g1'(i,y) ||
          G2   -> g2' i
     `;

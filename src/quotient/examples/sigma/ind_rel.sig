@@ -13,7 +13,7 @@ val   define_inductive_relations :
          Term.term list ->     (* patterns *)
          Term.term ->          (* term giving rules *)
          Thm.thm * Thm.thm     (* rules_satisfied theorem, induction theorem *)
-val   prove_inversion_theorems : 
+val   prove_inversion_theorems :
          Thm.thm ->            (* rules_satisfied theorem *)
          Thm.thm ->            (* induction theorem *)
          Thm.thm list          (* inversion theorems *)

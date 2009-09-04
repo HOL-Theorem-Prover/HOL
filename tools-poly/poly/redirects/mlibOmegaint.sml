@@ -13,7 +13,7 @@ struct
   infix ==
 
   (*
-  fun hash n = 
+  fun hash n =
     case M.rep n of
       M.Small w => w
     | M.Big v   =>
@@ -28,7 +28,7 @@ struct
    (*------------------------------------------------------------------------*)
 
    (*
-  fun hash n = 
+  fun hash n =
     case M.rep n of
       M.Small w => w
     | M.Big v   =>

@@ -49,7 +49,7 @@ type parameters =
    sort_literals    : int,
    sort_rules       : bool};
 
-val defaults = 
+val defaults =
   {ancestor_pruning = true,
    ancestor_cutting = true,
    state_simplify   = true,

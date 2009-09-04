@@ -9,15 +9,15 @@
 
 (******************************************************************************
 * A model is a quintuple (S,S0,R,P,L), represented as a record, where
-* 
+*
 *  - S  : 'state                    is a set of states
 *  - S0 : 'state -> bool            is a subset of S, the initial states
-*  - R  : 'state # 'state -> bool   is a transition relation 
+*  - R  : 'state # 'state -> bool   is a transition relation
 *  - P  : 'prop                     is a set of atomic proposition
-*  - L  : 'state -> ('prop -> bool) maps each state to the 
+*  - L  : 'state -> ('prop -> bool) maps each state to the
 *                                   set of propositions true in that state
-* 
-* N.B. terms that follow are not contrained to use type variables 'state and 
+*
+* N.B. terms that follow are not contrained to use type variables 'state and
 *      'prop, but may use 'a, 'b etc or whatever typechecking assigns.
 ******************************************************************************)
 
@@ -26,7 +26,7 @@
 (*****************************************************************************)
 
 (******************************************************************************
-* Load theory of finite and infinite sequences and additional definitions of 
+* Load theory of finite and infinite sequences and additional definitions of
 functions on lists (commented out for compilation)
 ******************************************************************************)
 (*
@@ -48,7 +48,7 @@ open HolKernel Parse boolLib bossLib;
 open PathTheory listTheory rich_listTheory;
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers 
+* Set default parsing to natural numbers rather than integers
 ******************************************************************************)
 val _ = intLib.deprecate_int();
 
@@ -71,7 +71,7 @@ val _ = hide "S";
 ******************************************************************************)
 val kripke_structure_def =
  Hol_datatype
-  `kripke_structure = 
+  `kripke_structure =
     <| S: 'state -> bool;
        S0:'state -> bool;
        R: 'state # 'state -> bool;
@@ -79,19 +79,19 @@ val kripke_structure_def =
        L: 'state -> ('prop -> bool) |>`;
 
 (******************************************************************************
-* A useful special case (possibly the only one we'll need) is to identify 
-* propositions with predicates on states, then we just need to specify the 
-* set of initial states B:'state->bool and 
+* A useful special case (possibly the only one we'll need) is to identify
+* propositions with predicates on states, then we just need to specify the
+* set of initial states B:'state->bool and
 * transition relation R:'state#'state->bool, then:
 * MAKE_SIMPLE_KRIPKE_STRUCTURE B R : :('a, 'a -> bool) kripke_structure
 *******************************************************************************)
 val MAKE_SIMPLE_KRIPKE_STRUCTURE_def =
  Define
-  `MAKE_SIMPLE_KRIPKE_STRUCTURE (B:'state -> bool) (R:'state#'state->bool) = 
+  `MAKE_SIMPLE_KRIPKE_STRUCTURE (B:'state -> bool) (R:'state#'state->bool) =
     <| S  := \s.T;
        S0 := B;
-       R  := R; 
-       P  := \p.T; 
+       R  := R;
+       P  := \p.T;
        L  := (\(s:'state) (f:'state -> bool). f s) |>`;
 
 val _ = export_theory();

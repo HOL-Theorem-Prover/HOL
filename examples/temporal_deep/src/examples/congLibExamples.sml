@@ -2,7 +2,7 @@
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
@@ -57,7 +57,7 @@ CONGRUENCE_EQ_SIMP_CONV prop_logic_cs std_ss [] prop5;
 
 val thm = prove (``!x y. PROP_LOGIC_EQUIVALENT (P_OR(x, P_AND(y, y))) (P_OR(x, y))``,
 CONGRUENCE_SIMP_TAC prop_logic_cs std_ss []);
-                                        
+
 
 val thm = prove (``!x y z. PROP_LOGIC_EQUIVALENT y z ==> PROP_LOGIC_EQUIVALENT (P_OR(x, P_AND(y, z))) (P_OR(x, y))``,
 
@@ -112,7 +112,7 @@ SIMP_CONV std_ss [LTL_SWHILE_def] ltl4;
 CONGRUENCE_SIMP_CONV ``LTL_EQUIVALENT`` ltl_nnf_cs std_ss [] ltl4
 
 
-(*CONGRUENCE_SIMP_CONV never fails, 
+(*CONGRUENCE_SIMP_CONV never fails,
   CONGRUENCE_SIMP_QCONV may fail*)
 CONGRUENCE_SIMP_CONV ``LTL_EQUIVALENT`` ltl_nnf_cs std_ss [] ltl2;
 CONGRUENCE_SIMP_QCONV ``LTL_EQUIVALENT`` ltl_nnf_cs std_ss [] ltl2;

@@ -28,12 +28,12 @@ local
 in
   fun pcases goal =
     let val v = genvar posreal in X_GEN_TAC v THEN pcase_split v end goal;
-  
+
   val pcases_on = Q_TAC pcase_split;
 
   fun pcases3 goal =
     let val v = genvar posreal in X_GEN_TAC v THEN pcase3_split v end goal;
-  
+
   val pcases3_on = Q_TAC pcase3_split;
 end;
 

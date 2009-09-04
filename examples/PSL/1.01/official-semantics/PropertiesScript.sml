@@ -18,9 +18,9 @@
 (*
 quietdec := true;
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
-map load 
- ["bossLib", "KripkeTheory", "UnclockedSemanticsTheory", 
-  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", 
+map load
+ ["bossLib", "KripkeTheory", "UnclockedSemanticsTheory",
+  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory",
   "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory"];
 open KripkeTheory FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
@@ -54,14 +54,14 @@ val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 val simp_list_ss  = simpLib.++ (list_ss,  numSimps.SUC_FILTER_ss);
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers 
+* Set default parsing to natural numbers rather than integers
 ******************************************************************************)
 val _ = intLib.deprecate_int();
 
 (******************************************************************************
 * A simpset fragment to rewrite away quantifiers restricted with :: (a to b)
 ******************************************************************************)
-val resq_SS = 
+val resq_SS =
  simpLib.merge_ss
   [res_quanTools.resq_SS,
    rewrites
@@ -97,7 +97,7 @@ val S_BOOL_TRUE =
 val S_REPEAT_BOOL_TRUE =
  store_thm
   ("S_REPEAT_BOOL_TRUE",
-   ``S_SEM w B_TRUE (S_REPEAT(S_BOOL b))  = 
+   ``S_SEM w B_TRUE (S_REPEAT(S_BOOL b))  =
       !i. i < LENGTH w ==> B_SEM (EL i w) b``,
    RW_TAC (arith_ss ++ resq_SS)
     [S_SEM_def,B_SEM,CONJ_ASSOC,LENGTH_CONS,LENGTH_NIL,ELEM_EL,
@@ -110,7 +110,7 @@ val S_REPEAT_BOOL_TRUE =
        THEN POP_ASSUM(ASSUME_TAC o SIMP_RULE std_ss [EVERY_EL])
        THEN RES_TAC,
       Q.EXISTS_TAC `MAP (\l. [l]) w`
-       THEN RW_TAC list_ss 
+       THEN RW_TAC list_ss
              [EVERY_EL,CONCAT_MAP_SINGLETON,LENGTH_EL_MAP_SINGLETON,
               HD_EL_MAP]]);
 
@@ -123,26 +123,26 @@ end;
 val NEXT_RISE_def =
  Define
   `NEXT_RISE w c (i,j) =
-    S_SEM 
-     (SEL w (i,j)) 
-     B_TRUE 
+    S_SEM
+     (SEL w (i,j))
+     B_TRUE
      (S_CAT(S_REPEAT(S_BOOL(B_NOT c)),S_BOOL c))`;
 
 val NEXT_RISE_IMP =
  store_thm
   ("NEXT_RISE_IMP",
    ``NEXT_RISE p c (i,j) ==>
-      (!k. i <= k /\ k < j ==> ~B_SEM (ELEM p k) c) 
-      /\ 
+      (!k. i <= k /\ k < j ==> ~B_SEM (ELEM p k) c)
+      /\
       (i <= j ==> B_SEM (ELEM p j) c)``,
    REWRITE_TAC [NEXT_RISE_def,ELEM_EL]
     THEN ONCE_REWRITE_TAC[S_SEM_def]
-    THEN SIMP_TAC list_ss 
+    THEN SIMP_TAC list_ss
           [S_REPEAT_BOOL_TRUE,S_BOOL_TRUE,B_SEM]
     THEN ONCE_REWRITE_TAC [EQ_SINGLETON]
     THEN RW_TAC std_ss []
     THENL
-     [ASSUM_LIST(fn thl => ASSUME_TAC(ONCE_REWRITE_RULE[el 4 thl](el 6 thl)))	
+     [ASSUM_LIST(fn thl => ASSUME_TAC(ONCE_REWRITE_RULE[el 4 thl](el 6 thl)))
        THEN IMP_RES_TAC(DECIDE ``i <= k ==> k < j ==> k < j``)
        THEN `j > i` by DECIDE_TAC
        THEN IMP_RES_TAC SEL_APPEND_SINGLETON
@@ -152,19 +152,19 @@ val NEXT_RISE_IMP =
        THEN `ELEM p k = EL (k - i) w1` by PROVE_TAC[]
        THEN ASM_REWRITE_TAC []
        THEN ASSUM_LIST
-              (fn thl 
+              (fn thl
                 => ASSUME_TAC
-                    (Q.AP_TERM 
+                    (Q.AP_TERM
                      `list$LENGTH`
                      (el 7 thl)))
        THEN POP_ASSUM(ASSUME_TAC o REWRITE_RULE[LENGTH_SEL])
        THEN `k-i < LENGTH w1` by DECIDE_TAC
        THEN PROVE_TAC[],
-      ASSUM_LIST(fn thl => ASSUME_TAC(ONCE_REWRITE_RULE[el 3 thl](el 5 thl)))	
+      ASSUM_LIST(fn thl => ASSUME_TAC(ONCE_REWRITE_RULE[el 3 thl](el 5 thl)))
        THEN ASSUM_LIST
-             (fn thl => 
+             (fn thl =>
                ASSUME_TAC
-                (SIMP_RULE arith_ss 
+                (SIMP_RULE arith_ss
                   [LENGTH_MAP,LENGTH_APPEND,LENGTH,SEL_def,
                    LENGTH_SEL_REC]
                   (Q.AP_TERM `list$LENGTH` (el 1 thl))))
@@ -182,29 +182,29 @@ val NEXT_RISE_REVIMP =
  store_thm
   ("NEXT_RISE_REVIMP",
    ``i <= j                                         /\
-     (!k. i <= k /\ k < j ==> ~B_SEM (ELEM p k) c)  /\ 
-     B_SEM (ELEM p j) c  
+     (!k. i <= k /\ k < j ==> ~B_SEM (ELEM p k) c)  /\
+     B_SEM (ELEM p j) c
      ==>
      NEXT_RISE p c (i,j)``,
    REWRITE_TAC [NEXT_RISE_def]
     THEN ONCE_REWRITE_TAC[S_SEM_def]
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [S_REPEAT_BOOL_TRUE,S_BOOL_TRUE,B_SEM]
     THEN Cases_on `i=j`
      THENL
       [RW_TAC std_ss []
-        THEN Q.EXISTS_TAC `[]` 
-        THEN Q.EXISTS_TAC `SEL p (i,i)` 
+        THEN Q.EXISTS_TAC `[]`
+        THEN Q.EXISTS_TAC `SEL p (i,i)`
         THEN RW_TAC list_ss [SEL_ELEM],
       Q.EXISTS_TAC `SEL p (i,j-1)`
-        THEN Q.EXISTS_TAC `SEL p (j,j)` 
+        THEN Q.EXISTS_TAC `SEL p (j,j)`
         THEN RW_TAC list_ss []
         THENL
          [`i <= j-1 /\ j-1 < j /\ ((j-1)+1 = j)` by DECIDE_TAC
             THEN PROVE_TAC[SEL_SPLIT],
           POP_ASSUM
-            (ASSUME_TAC o 
-             SIMP_RULE arith_ss 
+            (ASSUME_TAC o
+             SIMP_RULE arith_ss
               [SEL_def,SEL_REC_def,LENGTH_SEL_REC])
            THEN `i <= i+i' /\ i+i' < j` by DECIDE_TAC
            THEN RES_TAC
@@ -216,7 +216,7 @@ val NEXT_RISE_REVIMP =
            THEN POP_ASSUM
                  (ASSUME_TAC o REWRITE_RULE[DECIDE``i + i' - i = i'``] o SPEC_ALL)
            THEN RW_TAC std_ss [],
-          Q.EXISTS_TAC `ELEM p j`          
+          Q.EXISTS_TAC `ELEM p j`
            THEN RW_TAC list_ss [SEL_ELEM]]]);
 
 val NEXT_RISE =
@@ -225,8 +225,8 @@ val NEXT_RISE =
    ``i <= j
      ==>
      (NEXT_RISE p c (i,j) =
-       (!k. i <= k /\ k < j ==> ~B_SEM (ELEM p k) c) 
-       /\ 
+       (!k. i <= k /\ k < j ==> ~B_SEM (ELEM p k) c)
+       /\
        B_SEM (ELEM p j) c)``,
    PROVE_TAC[NEXT_RISE_IMP, NEXT_RISE_REVIMP]);
 
@@ -255,7 +255,7 @@ val NEXT_RISE_TRUE_EXISTS =
   ("NEXT_RISE_TRUE_EXISTS",
    ``?k. NEXT_RISE p B_TRUE (j,k)``,
    Q.EXISTS_TAC `j`
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
      [SIMP_RULE arith_ss [] (Q.SPECL[`p`,`j`,`j`](GEN_ALL NEXT_RISE_TRUE))]);
 
 val NEXT_RISE_LEQ_TRUE_EXISTS =
@@ -263,16 +263,16 @@ val NEXT_RISE_LEQ_TRUE_EXISTS =
   ("NEXT_RISE_LEQ_TRUE_EXISTS",
    ``?k. j <= k /\ NEXT_RISE p B_TRUE (j,k)``,
    Q.EXISTS_TAC `j`
-    THEN RW_TAC arith_ss 
+    THEN RW_TAC arith_ss
      [SIMP_RULE arith_ss [] (Q.SPECL[`p`,`j`,`j`](GEN_ALL NEXT_RISE_TRUE))]);
 
 val NEXT_RISE_LESS =
  store_thm
   ("NEXT_RISE_LESS",
    ``i <= j /\ NEXT_RISE p c (i,j) =
-      i <= j 
+      i <= j
       /\
-      (!k. i <= k /\ k < j ==> ~B_SEM (ELEM p k) c) 
+      (!k. i <= k /\ k < j ==> ~B_SEM (ELEM p k) c)
       /\
       B_SEM (ELEM p j) c``,
    PROVE_TAC[NEXT_RISE]);
@@ -324,11 +324,11 @@ val S_CLOCK_FREE_def =
    /\
    (S_CLOCK_FREE (S_CAT(r1,r2))      =  S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
-   (S_CLOCK_FREE (S_FUSION(r1,r2))   = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2) 
+   (S_CLOCK_FREE (S_FUSION(r1,r2))   = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
-   (S_CLOCK_FREE (S_OR(r1,r2))       = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2) 
+   (S_CLOCK_FREE (S_OR(r1,r2))       = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
-   (S_CLOCK_FREE (S_AND(r1,r2))      = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2) 
+   (S_CLOCK_FREE (S_AND(r1,r2))      = S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2)
    /\
    (S_CLOCK_FREE (S_REPEAT r)        = S_CLOCK_FREE r)
    /\
@@ -342,7 +342,7 @@ val S_CLOCK_FREE_def =
 val S_SEM_TRUE_LEMMA =
  store_thm
   ("S_SEM_TRUE_LEMMA",
-   ``!r w. 
+   ``!r w.
       S_CLOCK_FREE r
       ==>
       (S_SEM w B_TRUE r = US_SEM w r)``,
@@ -359,7 +359,7 @@ val S_SEM_TRUE =
  store_thm
   ("S_SEM_TRUE",
    ``S_CLOCK_FREE r ==> !w. S_SEM w B_TRUE r = US_SEM w r``,
-   Cases_on `r` 
+   Cases_on `r`
     THEN RW_TAC std_ss [S_SEM_TRUE_LEMMA]);
 
 (******************************************************************************
@@ -399,7 +399,7 @@ val F_CLOCK_FREE_def =
  Define
   `(F_CLOCK_FREE (F_BOOL b)            = T)
    /\
-   (F_CLOCK_FREE (F_NOT f)             = F_CLOCK_FREE f) 
+   (F_CLOCK_FREE (F_NOT f)             = F_CLOCK_FREE f)
    /\
    (F_CLOCK_FREE (F_AND(f1,f2))        = F_CLOCK_FREE f1 /\ F_CLOCK_FREE f2)
    /\
@@ -455,7 +455,7 @@ val F_SEM_TRUE_LEMMA =
       Cases THEN INIT_TAC THEN RW_TAC std_ss [B_SEM],
       (* F_SUFFIX_IMP(s,f) *)
       Cases_on `p`
-       THEN INIT_TAC 
+       THEN INIT_TAC
        THEN RW_TAC (std_ss ++ resq_SS) [S_SEM_TRUE,B_SEM]
        THEN EQ_TAC
        THEN RW_TAC std_ss []
@@ -475,14 +475,14 @@ val F_SEM_TRUE_LEMMA =
          Q.EXISTS_TAC `i`
           THEN RW_TAC arith_ss [NEXT_RISE,B_SEM]],
       (* F_STRONG_IMP(s1,s2) *)
-      INIT_TAC 
-       THEN RW_TAC std_ss [S_SEM_TRUE,NEXT_TRUE_GE,DECIDE``m:num <= n:num = n >= m``] 
+      INIT_TAC
+       THEN RW_TAC std_ss [S_SEM_TRUE,NEXT_TRUE_GE,DECIDE``m:num <= n:num = n >= m``]
        THEN EQ_TAC
        THEN RW_TAC std_ss []
        THEN PROVE_TAC[],
       (* F_WEAK_IMP(s1,s2) *)
-      INIT_TAC 
-       THEN RW_TAC std_ss [S_SEM_TRUE,NEXT_TRUE_GE,DECIDE``m:num <= n:num = n >= m``] 
+      INIT_TAC
+       THEN RW_TAC std_ss [S_SEM_TRUE,NEXT_TRUE_GE,DECIDE``m:num <= n:num = n >= m``]
        THEN EQ_TAC
        THEN RW_TAC std_ss [],
       (* F_ABORT(f,b)) *)
@@ -503,7 +503,7 @@ val F_SEM_TRUE_LEMMA =
           THEN Q.EXISTS_TAC `w'`
           THEN RW_TAC std_ss []
           THEN Cases_on `p`
-          THEN FULL_SIMP_TAC arith_ss 
+          THEN FULL_SIMP_TAC arith_ss
                 [xnum_to_def,LENGTH_def,GT_xnum_num_def,RESTN_FINITE,LENGTH_def,
                  FinitePathTheory.LENGTH_RESTN,LENGTH_RESTN_INFINITE],
          Q.EXISTS_TAC `j`
@@ -547,17 +547,17 @@ val UF_SEM_F_F =
    ``UF_SEM p (F_F f) = ?i :: (0 to LENGTH p). UF_SEM (RESTN p i) f``,
    RW_TAC (arith_ss ++ resq_SS) [UF_SEM_def,F_F_def,B_SEM]
     THEN Cases_on `p`
-    THEN RW_TAC arith_ss 
+    THEN RW_TAC arith_ss
           [xnum_to_def,LENGTH_def,GT_xnum_num_def,RESTN_FINITE,LENGTH_def,
            FinitePathTheory.LENGTH_RESTN,LENGTH_RESTN_INFINITE]
     THEN EQ_TAC
     THEN ZAP_TAC arith_ss []
-    THEN Q.EXISTS_TAC `i` 
+    THEN Q.EXISTS_TAC `i`
     THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]);
 
 (******************************************************************************
 * Always: G f
-******************************************************************************)      
+******************************************************************************)
 val UF_SEM_F_G =
  store_thm
   ("UF_SEM_F_G",
@@ -593,7 +593,7 @@ val UF_SEM_F_U_CLOCK =
       Q.EXISTS_TAC `i`
        THEN RW_TAC std_ss []
        THEN Cases_on `p`
-       THEN FULL_SIMP_TAC arith_ss 
+       THEN FULL_SIMP_TAC arith_ss
              [xnum_to_def,LENGTH_def,GT_xnum_num_def,RESTN_FINITE,LENGTH_def,
               FinitePathTheory.LENGTH_RESTN,LENGTH_RESTN_INFINITE]]);
 
@@ -604,16 +604,16 @@ val UF_SEM_F_U_CLOCK =
 val UF_SEM_F_W_CLOCK =
  store_thm
   ("UF_SEM_F_W_CLOCK",
-   ``UF_SEM p (F_W_CLOCK c f) = 
-      UF_SEM p (F_U_CLOCK c f) 
-      \/ 
+   ``UF_SEM p (F_W_CLOCK c f) =
+      UF_SEM p (F_U_CLOCK c f)
+      \/
       !i :: (0 to LENGTH p).~UF_SEM (RESTN p i) (F_BOOL c)``,
-   RW_TAC (std_ss ++ resq_SS) 
+   RW_TAC (std_ss ++ resq_SS)
     [F_U_CLOCK_def,F_W_CLOCK_def,UF_SEM_F_W,UF_SEM_F_G,B_SEM,UF_SEM_def]
     THEN EQ_TAC
     THEN RW_TAC std_ss []
     THEN Cases_on `p`
-    THEN FULL_SIMP_TAC arith_ss 
+    THEN FULL_SIMP_TAC arith_ss
           [xnum_to_def,LENGTH_def,GT_xnum_num_def,RESTN_FINITE,LENGTH_def,
            FinitePathTheory.LENGTH_RESTN,LENGTH_RESTN_INFINITE]
     THENL
@@ -671,10 +671,10 @@ val F_CLOCK_COMP_CLOCK_FREE =
 ******************************************************************************)
 local open FinitePathTheory
 
-val INIT_TAC0 = 
+val INIT_TAC0 =
  RW_TAC (std_ss ++ resq_SS) [S_SEM_def, US_SEM_def, S_CLOCK_COMP_def];
 
-val INIT_TAC1 = 
+val INIT_TAC1 =
  INIT_TAC0
   THEN RW_TAC list_ss [EVERY_EL]
   THEN EQ_TAC
@@ -698,7 +698,7 @@ val S_CLOCK_COMP_ELIM =
      [(* S_BOOL b *)
       INIT_TAC1 THEN TRY INIT_TAC2
        THEN Q.EXISTS_TAC `BUTLAST w`
-       THEN Q.EXISTS_TAC `[LAST w]` 
+       THEN Q.EXISTS_TAC `[LAST w]`
        THEN RW_TAC list_ss []
        THEN RW_TAC list_ss [APPEND_BUTLAST_LAST,LENGTH_NIL_LEMMA]
        THENL
@@ -723,7 +723,7 @@ val S_CLOCK_COMP_ELIM =
       (* S_CLOCK (r,p_2) *)
       INIT_TAC0
        THEN EQ_TAC
-       THEN RW_TAC list_ss 
+       THEN RW_TAC list_ss
              [LENGTH_APPEND,LENGTH_NIL,ELEM_EL,EVERY_EL,LENGTH1,
               APPEND_SINGLETON_EQ]
        THEN FULL_SIMP_TAC list_ss []
@@ -747,9 +747,9 @@ val S_CLOCK_COMP_ELIM =
                 THEN ASSUM_LIST(fn thl => SIMP_TAC std_ss (mapfilter SYM thl))
                 THEN POP_ASSUM(ASSUME_TAC o SYM)
                 THEN IMP_RES_TAC
-                      (SIMP_RULE 
-                        arith_ss 
-                        [] 
+                      (SIMP_RULE
+                        arith_ss
+                        []
                         (GSYM(Q.SPECL[`w`,`i`,`0`,`list$LENGTH w - 1`]FinitePathTheory.SEL_SPLIT)))
                 THEN POP_ASSUM(fn th => REWRITE_TAC[th])
                 THEN PROVE_TAC[DECIDE``i:num < n:num-1 ==> 0 < n``,SEL_RESTN_EQ0]],
@@ -802,7 +802,7 @@ val LENGTH_RESTN =
 ******************************************************************************)
 val F_INIT_CLOCK_COMP_CORRECT_def =
  Define
-  `F_INIT_CLOCK_COMP_CORRECT f = 
+  `F_INIT_CLOCK_COMP_CORRECT f =
     !w c. (F_SEM w c f = UF_SEM w (F_INIT_CLOCK_COMP c f))`;
 
 val F_BOOL_INIT_CLOCK_COMP_ELIM =
@@ -822,7 +822,7 @@ val F_NOT_INIT_CLOCK_COMP_ELIM =
 val F_AND_INIT_CLOCK_COMP_ELIM =
  store_thm
   ("F_AND_INIT_CLOCK_COMP_ELIM",
-   ``!f1 f2. F_INIT_CLOCK_COMP_CORRECT f1 /\ F_INIT_CLOCK_COMP_CORRECT f2 
+   ``!f1 f2. F_INIT_CLOCK_COMP_CORRECT f1 /\ F_INIT_CLOCK_COMP_CORRECT f2
              ==> F_INIT_CLOCK_COMP_CORRECT (F_AND(f1,f2))``,
    RW_TAC (std_ss ++ resq_SS)
     [F_INIT_CLOCK_COMP_CORRECT_def,F_SEM,UF_SEM_def,F_INIT_CLOCK_COMP_def]);
@@ -845,7 +845,7 @@ val F_NEXT_INIT_CLOCK_COMP_ELIM =
         [DECIDE_TAC,
          Q.EXISTS_TAC `i-1`
           THEN IMP_RES_TAC NEXT_RISE
-          THEN RW_TAC arith_ss 
+          THEN RW_TAC arith_ss
                 [REST_def,LENGTH_def,xnum_to_def,RESTN_def,RESTN_FINITE,LENGTH_TL,
                  RESTN_TL,ELEM_FINITE_TL]
           THEN `0 < i /\ k+1 < i /\ 1 <= k+1 /\ 0 < LENGTH l` by DECIDE_TAC
@@ -887,8 +887,8 @@ val F_NEXT_INIT_CLOCK_COMP_ELIM =
 val F_UNTIL_INIT_CLOCK_COMP_ELIM =
  store_thm
   ("F_UNTIL_INIT_CLOCK_COMP_ELIM",
-   ``!f1 f2. 
-       F_INIT_CLOCK_COMP_CORRECT f1 /\ F_INIT_CLOCK_COMP_CORRECT f2 ==> 
+   ``!f1 f2.
+       F_INIT_CLOCK_COMP_CORRECT f1 /\ F_INIT_CLOCK_COMP_CORRECT f2 ==>
         F_INIT_CLOCK_COMP_CORRECT (F_UNTIL(f1, f2))``,
    RW_TAC (std_ss ++ resq_SS)
     [F_INIT_CLOCK_COMP_CORRECT_def,F_SEM,UF_SEM_def,F_INIT_CLOCK_COMP_def]
@@ -921,7 +921,7 @@ val F_SUFFIX_IMP_INIT_CLOCK_COMP_ELIM =
        THEN RW_TAC arith_ss [NEXT_RISE]
        THEN `0 <= i'` by DECIDE_TAC
        THEN POP_ASSUM
-             (fn th => FULL_SIMP_TAC std_ss 
+             (fn th => FULL_SIMP_TAC std_ss
                         [ELEM_RESTN,GSYM RESTN_FINITE,MATCH_MP NEXT_RISE th])
        THENL
         [`0 <= k-i /\ k-i < i' /\ ((k-i)+i = k)` by DECIDE_TAC
@@ -935,7 +935,7 @@ val F_SUFFIX_IMP_INIT_CLOCK_COMP_ELIM =
        THEN RW_TAC arith_ss [NEXT_RISE]
        THEN `0 <= i'` by DECIDE_TAC
        THEN POP_ASSUM
-             (fn th => FULL_SIMP_TAC std_ss 
+             (fn th => FULL_SIMP_TAC std_ss
                         [ELEM_RESTN,GSYM RESTN_FINITE,MATCH_MP NEXT_RISE th])
        THENL
         [`0 <= k-i /\ k-i < i' /\ ((k-i)+i = k)` by DECIDE_TAC
@@ -991,7 +991,7 @@ val F_INIT_CLOCK_COMP_ELIM =
   ("F_INIT_CLOCK_COMP_ELIM",
    ``!f. F_INIT_CLOCK_COMP_CORRECT f``,
    INDUCT_THEN fl_induct ASSUME_TAC
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [F_BOOL_INIT_CLOCK_COMP_ELIM,
            F_NOT_INIT_CLOCK_COMP_ELIM,
            F_AND_INIT_CLOCK_COMP_ELIM,
@@ -1004,7 +1004,7 @@ val F_INIT_CLOCK_COMP_ELIM =
            F_UNTIL_INIT_CLOCK_COMP_ELIM]);
 
 (******************************************************************************
-* Proof that if the clock is initially true, then the two rewrites for 
+* Proof that if the clock is initially true, then the two rewrites for
 * abort (defined in F_CLOCK_COMP and F_INIT_CLOCK_COMP) are equivalent.
 ******************************************************************************)
 local
@@ -1014,9 +1014,9 @@ in
 val INIT_CLOCK_COMP_EQUIV =
  store_thm
   ("INIT_CLOCK_COMP_EQUIV",
-   ``!f w c. 
-      B_SEM (ELEM w 0) c 
-      ==> 
+   ``!f w c.
+      B_SEM (ELEM w 0) c
+      ==>
       (UF_SEM w (F_CLOCK_COMP c f) = UF_SEM w (F_INIT_CLOCK_COMP c f))``,
    INDUCT_THEN fl_induct ASSUME_TAC
     THENL
@@ -1030,7 +1030,7 @@ val INIT_CLOCK_COMP_EQUIV =
       INIT_TAC
        THEN RW_TAC (arith_ss++resq_SS) [UF_SEM_F_U_CLOCK,RESTN_RESTN]
        THEN Cases_on `w`
-       THEN RW_TAC arith_ss 
+       THEN RW_TAC arith_ss
              [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,
               num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
        THEN EQ_TAC
@@ -1041,7 +1041,7 @@ val INIT_CLOCK_COMP_EQUIV =
       INIT_TAC
        THEN RW_TAC (arith_ss++resq_SS) [ELEM_RESTN,UF_SEM_F_IMPLIES,UF_SEM_def]
        THEN Cases_on `w`
-       THEN RW_TAC arith_ss 
+       THEN RW_TAC arith_ss
              [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,
               num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
        THEN EQ_TAC
@@ -1070,7 +1070,7 @@ val INIT_CLOCK_COMP_EQUIV =
       INIT_TAC
        THEN RW_TAC (arith_ss++resq_SS) [ELEM_RESTN,UF_SEM_F_OR,UF_SEM_def]
        THEN Cases_on `w`
-       THEN RW_TAC arith_ss 
+       THEN RW_TAC arith_ss
              [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,B_SEM,
               num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
        THEN EQ_TAC
@@ -1078,38 +1078,38 @@ val INIT_CLOCK_COMP_EQUIV =
        THEN RW_TAC std_ss []
        THENL
         [ASSUM_LIST
-          (fn thl => 
+          (fn thl =>
             ASSUME_TAC
              (GEN_ALL
-              (SIMP_RULE std_ss [ELEM_CAT_SEL] 
+              (SIMP_RULE std_ss [ELEM_CAT_SEL]
                (Q.SPECL[`(CAT (SEL w (0,j - 1),w'))`,`c`] (el 8 thl)))))
           THEN PROVE_TAC[],
          ASSUM_LIST
-          (fn thl => 
+          (fn thl =>
             ASSUME_TAC
              (GEN_ALL
-              (SIMP_RULE std_ss [ELEM_CAT_SEL] 
+              (SIMP_RULE std_ss [ELEM_CAT_SEL]
                (Q.SPECL[`(CAT (SEL w (0,j - 1),w'))`,`c`] (el 8 thl)))))
           THEN PROVE_TAC[],
          ASSUM_LIST
-          (fn thl => 
+          (fn thl =>
             ASSUME_TAC
              (GEN_ALL
-              (SIMP_RULE std_ss [ELEM_CAT_SEL] 
+              (SIMP_RULE std_ss [ELEM_CAT_SEL]
                (Q.SPECL[`(CAT (SEL w (0,j - 1),w'))`,`c`] (el 6 thl)))))
           THEN PROVE_TAC[],
          ASSUM_LIST
-          (fn thl => 
+          (fn thl =>
             ASSUME_TAC
              (GEN_ALL
-              (SIMP_RULE std_ss [ELEM_CAT_SEL] 
+              (SIMP_RULE std_ss [ELEM_CAT_SEL]
                (Q.SPECL[`(CAT (SEL w (0,j - 1),w'))`,`c`] (el 6 thl)))))
           THEN PROVE_TAC[]],
       (* F_STRONG_CLOCK(f,c) *)
       INIT_TAC
        THEN RW_TAC (arith_ss++resq_SS) [UF_SEM_F_U_CLOCK,RESTN_RESTN]
        THEN Cases_on `w`
-       THEN RW_TAC arith_ss 
+       THEN RW_TAC arith_ss
              [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,
               num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
        THEN EQ_TAC
@@ -1155,7 +1155,7 @@ fun FIN_TAC v =
   THEN PROVE_TAC[];
 
 fun INF_TAC f v =
- `0 < LENGTH(RESTN(INFINITE ^f) ^v)` 
+ `0 < LENGTH(RESTN(INFINITE ^f) ^v)`
   by PROVE_TAC[LENGTH_RESTN_INFINITE,LENGTH_def,PathTheory.LS,xnum_11]
   THEN PROVE_TAC[];
 in
@@ -1172,7 +1172,7 @@ val OLD_UF_SEM_UF_SEM =
       (* F_AND (f1,f2) *)
       INIT_TAC,
       (* F_NEXT f *)
-      INIT_TAC  
+      INIT_TAC
        THEN EQ_TAC
        THEN RW_TAC std_ss []
        THEN FULL_SIMP_TAC arith_ss [GT_LS]
@@ -1220,7 +1220,7 @@ val OLD_UF_SEM_UF_SEM =
       (* F_WEAK_IMP(s1,s2) *)
       INIT_TAC ,
       (* F_ABORT(f,b)) *)
-      INIT_TAC  
+      INIT_TAC
        THEN EQ_TAC
        THEN RW_TAC std_ss []
        THEN FULL_SIMP_TAC arith_ss [GT_LS]
@@ -1245,7 +1245,7 @@ val OLD_UF_SEM_UF_SEM =
              THEN PROVE_TAC[],
             `LENGTH(CAT (SEL (FINITE l) (0,j - 1),INFINITE f')) = INFINITY`
              by RW_TAC arith_ss [LENGTH_CAT]
-             THEN `0 < LENGTH (CAT (SEL (FINITE l) (0,j - 1),INFINITE f'))` 
+             THEN `0 < LENGTH (CAT (SEL (FINITE l) (0,j - 1),INFINITE f'))`
                    by PROVE_TAC[LENGTH_RESTN_INFINITE,LENGTH_def,PathTheory.LS,xnum_11]
              THEN PROVE_TAC[]],
          REPEAT DISJ2_TAC
@@ -1265,7 +1265,7 @@ val OLD_UF_SEM_UF_SEM =
              THEN PROVE_TAC[],
             `LENGTH(CAT (SEL (INFINITE f') (0,j - 1),INFINITE f'')) = INFINITY`
              by RW_TAC arith_ss [LENGTH_CAT]
-             THEN `0 < LENGTH (CAT (SEL (INFINITE f') (0,j - 1),INFINITE f''))` 
+             THEN `0 < LENGTH (CAT (SEL (INFINITE f') (0,j - 1),INFINITE f''))`
                    by PROVE_TAC[LENGTH_RESTN_INFINITE,LENGTH_def,PathTheory.LS,xnum_11]
              THEN PROVE_TAC[]],
          REPEAT DISJ2_TAC
@@ -1285,7 +1285,7 @@ val OLD_UF_SEM_UF_SEM =
              THEN PROVE_TAC[],
             `LENGTH(CAT (SEL (FINITE l) (0,j - 1),INFINITE f')) = INFINITY`
              by RW_TAC arith_ss [LENGTH_CAT]
-             THEN `0 < LENGTH (CAT (SEL (FINITE l) (0,j - 1),INFINITE f'))` 
+             THEN `0 < LENGTH (CAT (SEL (FINITE l) (0,j - 1),INFINITE f'))`
                    by PROVE_TAC[LENGTH_RESTN_INFINITE,LENGTH_def,PathTheory.LS,xnum_11]
              THEN PROVE_TAC[]],
          REPEAT DISJ2_TAC
@@ -1305,7 +1305,7 @@ val OLD_UF_SEM_UF_SEM =
              THEN PROVE_TAC[],
             `LENGTH(CAT (SEL (INFINITE f') (0,j - 1),INFINITE f'')) = INFINITY`
              by RW_TAC arith_ss [LENGTH_CAT]
-             THEN `0 < LENGTH (CAT (SEL (INFINITE f') (0,j - 1),INFINITE f''))` 
+             THEN `0 < LENGTH (CAT (SEL (INFINITE f') (0,j - 1),INFINITE f''))`
                    by PROVE_TAC[LENGTH_RESTN_INFINITE,LENGTH_def,PathTheory.LS,xnum_11]
              THEN PROVE_TAC[]]],
       (* F_STRONG_CLOCK(f,c) *)
@@ -1319,7 +1319,7 @@ val F_ABORT_FREE_def =
  Define
   `(F_ABORT_FREE (F_BOOL b)            = T)
    /\
-   (F_ABORT_FREE (F_NOT f)             = F_ABORT_FREE f) 
+   (F_ABORT_FREE (F_NOT f)             = F_ABORT_FREE f)
    /\
    (F_ABORT_FREE (F_AND(f1,f2))        = F_ABORT_FREE f1 /\ F_ABORT_FREE f2)
    /\
@@ -1343,15 +1343,15 @@ val F_ABORT_FREE_def =
 ******************************************************************************)
 local
 val INIT_TAC =
- RW_TAC std_ss 
+ RW_TAC std_ss
   [F_ABORT_FREE_def,F_CLOCK_COMP_def,F_INIT_CLOCK_COMP_def,UF_SEM_def,B_SEM];
 in
 val ABORT_FREE_INIT_CLOCK_COMP_EQUIV =
  store_thm
   ("ABORT_FREE_INIT_CLOCK_COMP_EQUIV",
    ``!f.
-      F_ABORT_FREE f 
-      ==> 
+      F_ABORT_FREE f
+      ==>
       !w c. UF_SEM w (F_CLOCK_COMP c f) = UF_SEM w (F_INIT_CLOCK_COMP c f)``,
    INDUCT_THEN fl_induct ASSUME_TAC
     THENL
@@ -1365,7 +1365,7 @@ val ABORT_FREE_INIT_CLOCK_COMP_EQUIV =
       INIT_TAC
        THEN RW_TAC (arith_ss++resq_SS) [UF_SEM_F_U_CLOCK,RESTN_RESTN]
        THEN Cases_on `w`
-       THEN RW_TAC arith_ss 
+       THEN RW_TAC arith_ss
              [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,
               num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
        THEN EQ_TAC
@@ -1376,7 +1376,7 @@ val ABORT_FREE_INIT_CLOCK_COMP_EQUIV =
       INIT_TAC
        THEN RW_TAC (arith_ss++resq_SS) [ELEM_RESTN,UF_SEM_F_IMPLIES,UF_SEM_def]
        THEN Cases_on `w`
-       THEN RW_TAC arith_ss 
+       THEN RW_TAC arith_ss
              [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,
               num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
        THEN EQ_TAC
@@ -1407,7 +1407,7 @@ val ABORT_FREE_INIT_CLOCK_COMP_EQUIV =
       INIT_TAC
        THEN RW_TAC (arith_ss++resq_SS) [UF_SEM_F_U_CLOCK,RESTN_RESTN]
        THEN Cases_on `w`
-       THEN RW_TAC arith_ss 
+       THEN RW_TAC arith_ss
              [LENGTH_def,GT_xnum_num_def,LENGTH_RESTN_INFINITE,
               num_to_def,xnum_to_def,NEXT_RISE,ELEM_RESTN]
        THEN EQ_TAC
@@ -1431,14 +1431,14 @@ val ABORT_FREE_F_CLOCK_COMP_CORRECT =
 val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 
 (******************************************************************************
-* Joe Hurd hack: EVAL should never get hold of this definition 
+* Joe Hurd hack: EVAL should never get hold of this definition
 ******************************************************************************)
 val UNINT_def = pureDefine `UNINT x = x`;
 
 val F_CLOCK_COMP_ELIM =
  store_thm
   ("F_CLOCK_COMP_ELIM",
-   ``F_SEM w c f = 
+   ``F_SEM w c f =
       if B_SEM (ELEM w 0) c
        then UF_SEM w (F_CLOCK_COMP c f)
        else (UNINT F_SEM) w c f``,
@@ -1447,8 +1447,8 @@ val F_CLOCK_COMP_ELIM =
 val ABORT_FREE_F_CLOCK_COMP_CORRECT_COR =
  store_thm
   ("ABORT_FREE_F_CLOCK_COMP_CORRECT_COR",
-   ``F_SEM w c f = 
-      if F_ABORT_FREE f 
+   ``F_SEM w c f =
+      if F_ABORT_FREE f
        then UF_SEM w (F_CLOCK_COMP c f)
        else (UNINT F_SEM) w c f``,
    RW_TAC std_ss [UNINT_def,ABORT_FREE_F_CLOCK_COMP_CORRECT]);
@@ -1507,7 +1507,7 @@ val S_CAT_FUSION_ASSOC =
         [PROVE_TAC[TL_APPEND,APPEND_ASSOC],
          Q.EXISTS_TAC `w1` THEN Q.EXISTS_TAC `TL w1'` THEN Q.EXISTS_TAC `l`
           THEN RW_TAC simp_list_ss [APPEND_ASSOC]
-          THEN RES_TAC 
+          THEN RES_TAC
           THEN IMP_RES_TAC TL_APPEND
           THEN POP_ASSUM(fn th => ASSUME_TAC(Q.SPEC `w2'` th))
           THEN PROVE_TAC[APPEND_RIGHT_CANCEL,APPEND_ASSOC,APPEND]]]);

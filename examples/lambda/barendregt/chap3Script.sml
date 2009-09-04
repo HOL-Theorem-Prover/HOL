@@ -1,4 +1,5 @@
 open HolKernel Parse boolLib bossLib metisLib basic_swapTheory
+     relationTheory
 
 val _ = new_theory "chap3";
 
@@ -98,7 +99,7 @@ val swap_eq_3substs = store_thm(
   SRW_TAC [][GSYM fresh_tpm_subst] THEN
   `tpm [(x,y)] (tpm [(z,x)] M) =
        tpm [(swapstr x y z, swapstr x y x)] (tpm [(x,y)] M)`
-     by (CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [GSYM tpm_sing_to_back])) THEN
+     by (SRW_TAC [][Once (GSYM tpm_sing_to_back), SimpLHS] THEN
          SRW_TAC [][]) THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   SRW_TAC [][tpm_flip_args]);
@@ -160,8 +161,8 @@ val RTC_substitutive = store_thm(
   "RTC_substitutive",
   ``substitutive R ==> substitutive (RTC R)``,
   STRIP_TAC THEN SIMP_TAC (srw_ss()) [substitutive_def] THEN
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  METIS_TAC [relationTheory.RTC_RULES, substitutive_def]);
+  HO_MATCH_MP_TAC RTC_INDUCT THEN
+  METIS_TAC [RTC_RULES, substitutive_def]);
 
 val _ = overload_on ("reduction", ``\R. RTC (compat_closure R)``)
 
@@ -183,7 +184,7 @@ val conversion_rules = store_thm(
     PROVE_TAC [equiv_closure_rules, compat_closure_rules],
     POP_ASSUM MP_TAC THEN SIMP_TAC (srw_ss()) [] THEN
     MAP_EVERY Q.ID_SPEC_TAC [`y`,`x`] THEN
-    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+    HO_MATCH_MP_TAC RTC_INDUCT THEN
     PROVE_TAC [equiv_closure_rules]
   ]);
 
@@ -206,9 +207,9 @@ val reduction_compatible = store_thm(
                         !c. one_hole_context c ==>
                             RTC (compat_closure R) (c x) (c y)` THEN1
     SRW_TAC [][compatible_def] THEN
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
+  HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
   PROVE_TAC [compatible_def, compat_closure_compatible,
-             relationTheory.RTC_RULES]);
+             RTC_RULES]);
 
 val reduction_rules = store_thm(
   "reduction_rules",
@@ -221,10 +222,10 @@ val reduction_rules = store_thm(
     (!x y z. reduction R x y ==> reduction R (x @@ z) (y @@ z)) /\
     (!x y v. reduction R x y ==> reduction R (LAM v x) (LAM v y))``,
   REPEAT STRIP_TAC THENL [
-    PROVE_TAC [relationTheory.RTC_RULES],
-    PROVE_TAC [relationTheory.RTC_RULES, compat_closure_rules],
-    PROVE_TAC [relationTheory.RTC_RULES],
-    PROVE_TAC [relationTheory.RTC_RTC],
+    PROVE_TAC [RTC_RULES],
+    PROVE_TAC [RTC_RULES, compat_closure_rules],
+    PROVE_TAC [RTC_RULES],
+    PROVE_TAC [RTC_RTC],
     PROVE_TAC [leftctxt, compatible_def, reduction_compatible],
     PROVE_TAC [rightctxt_thm, rightctxt, compatible_def, reduction_compatible],
     PROVE_TAC [absctxt, compatible_def, reduction_compatible]
@@ -412,10 +413,9 @@ val cc_beta_thm = store_thm(
                (?M'. (P = M' @@ N) /\ M -b-> M') \/
                (?N'. (P = M @@ N') /\ N -b-> N')) /\
     (!v M N. LAM v M -b-> N = ?N0. (N = LAM v N0) /\ M -b-> N0)``,
-  CONV_TAC (EVERY_CONJ_CONV
-            (STRIP_QUANT_CONV
-               (LAND_CONV (ONCE_REWRITE_CONV [compat_closure_cases])))) THEN
-  SIMP_TAC (srw_ss()) [beta_def] THEN REPEAT STRIP_TAC THEN EQ_TAC THEN
+  REPEAT CONJ_TAC THEN
+  SIMP_TAC (srw_ss()) [beta_def, SimpLHS, Once compat_closure_cases] THEN
+  REPEAT STRIP_TAC THEN EQ_TAC THEN
   SRW_TAC [][] THEN SRW_TAC [][] THENL [
     PROVE_TAC [],
     PROVE_TAC [],
@@ -512,12 +512,12 @@ val corollary3_2_1 = store_thm(
     PROVE_TAC [can_reduce_rules, redex_def],
     ALL_TAC
   ] THEN ASM_SIMP_TAC (srw_ss()) [] THEN
-  PROVE_TAC [relationTheory.RTC_CASES1]);
+  PROVE_TAC [RTC_CASES1]);
 
 val bnf_reduction_to_self = store_thm(
   "bnf_reduction_to_self",
   ``bnf M ==> (M -b->* N <=> (N = M))``,
-  METIS_TAC [corollary3_2_1, beta_normal_form_bnf, relationTheory.RTC_RULES]);
+  METIS_TAC [corollary3_2_1, beta_normal_form_bnf, RTC_RULES]);
 
 local open relationTheory
 in
@@ -525,7 +525,7 @@ val diamond_property_def = save_thm("diamond_property_def", diamond_def)
 end
 val _ = overload_on("diamond_property", ``relation$diamond``)
 
-(* This is not the same CR as appears in relationTheory.  There
+(* This is not the same CR as appears in   There
      CR R = diamond (RTC R)
    Here,
      CR R = diamond (RTC (compat_closure R))
@@ -562,7 +562,7 @@ val corollary3_3_1 = store_thm(
   ]);
 
 
-val diamond_TC = relationTheory.diamond_TC_diamond
+val diamond_TC = diamond_TC_diamond
 
 val bvc_cases = store_thm(
   "bvc_cases",
@@ -663,12 +663,11 @@ val app_grandbeta = store_thm(  (* property 3 on p. 37 *)
                (?x P P' N'. (M = LAM x P) /\ P =b=> P' /\
                             N =b=> N' /\ (L = [N'/x]P'))``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [
-    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [grandbeta_cases])) THEN
+    SIMP_TAC (srw_ss()) [SimpL ``(==>)``, Once grandbeta_cases] THEN
     SIMP_TAC (srw_ss()) [DISJ_IMP_THM, GSYM LEFT_FORALL_IMP_THM,
                          grandbeta_rules] THEN PROVE_TAC [],
     SRW_TAC [][] THEN PROVE_TAC [grandbeta_rules]
   ]);
-
 
 val grandbeta_permutative = store_thm(
   "grandbeta_permutative",
@@ -701,12 +700,11 @@ val abs_grandbeta = store_thm(
   "abs_grandbeta",
   ``!M N v. LAM v M =b=> N = ?N0. (N = LAM v N0) /\ M =b=> N0``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [
-    CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [grandbeta_cases])) THEN
+    SIMP_TAC (srw_ss()) [Once grandbeta_cases, SimpL ``(==>)``] THEN
     SIMP_TAC (srw_ss()) [DISJ_IMP_THM, grandbeta_rules] THEN
     SRW_TAC [][LAM_eq_thm] THENL [
       PROVE_TAC [],
-      SRW_TAC [][LAM_eq_thm] THEN
-      Q.EXISTS_TAC `tpm [(v,x)] M''` THEN SRW_TAC [][tpm_flip_args] THEN
+      SRW_TAC [][LAM_eq_thm, tpm_eqr, tpm_flip_args] THEN
       PROVE_TAC [SUBSET_DEF, grandbeta_FV]
     ],
     PROVE_TAC [grandbeta_rules]
@@ -835,15 +833,15 @@ val theorem3_17 = store_thm(
     THEN1 SRW_TAC [] [FUN_EQ_THM, EQ_IMP_THM] THEN
   CONJ_TAC THENL [
     Q_TAC SUFF_TAC `!M N. grandbeta M N ==> reduction beta M N`
-      THEN1 (PROVE_TAC [relationTheory.TC_IDEM, relationTheory.TC_RC_EQNS,
-                        relationTheory.TC_MONOTONE]) THEN
+      THEN1 (PROVE_TAC [TC_IDEM, TC_RC_EQNS,
+                        TC_MONOTONE]) THEN
     HO_MATCH_MP_TAC grandbeta_ind THEN PROVE_TAC [reduction_rules, beta_def],
 
     Q_TAC SUFF_TAC `!M N. RC (compat_closure beta) M N ==> grandbeta M N`
-      THEN1 PROVE_TAC [relationTheory.TC_MONOTONE,
-                       relationTheory.TC_RC_EQNS] THEN
+      THEN1 PROVE_TAC [TC_MONOTONE,
+                       TC_RC_EQNS] THEN
     Q_TAC SUFF_TAC `!M N. compat_closure beta M N ==> grandbeta M N`
-      THEN1 PROVE_TAC [relationTheory.RC_DEF, grandbeta_rules] THEN
+      THEN1 PROVE_TAC [RC_DEF, grandbeta_rules] THEN
     PROVE_TAC [exercise3_3_1]
   ]);
 
@@ -851,21 +849,23 @@ val beta_CR = store_thm(
   "beta_CR",
   ``CR beta``,
   PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]);
- 
+
+val betaCR_square = store_thm(
+  "betaCR_square",
+  ``M -b->* N1 /\ M -b->* N2 ==> ?N. N1 -b->* N /\ N2 -b->* N``,
+  METIS_TAC [beta_CR, diamond_property_def, CR_def]);
+
 val bnf_triangle = store_thm(
   "bnf_triangle",
   ``M -b->* N /\ M -b->* N' /\ bnf N ==> N' -b->* N``,
-  STRIP_TAC THEN 
-  `?Z. N -b->* Z /\ N' -b->* Z`
-     by METIS_TAC [beta_CR, diamond_property_def, CR_def] THEN 
-  METIS_TAC [bnf_reduction_to_self]);
+  METIS_TAC [betaCR_square, bnf_reduction_to_self]);
 
 val Omega_starloops = Store_thm(
-  "Omega_starloops",  
+  "Omega_starloops",
   ``Omega -b->* N <=> (N = Omega)``,
-  Q_TAC SUFF_TAC `!M N. M -b->* N ==> (M = Omega) ==> (N = Omega)` 
-     THEN1 METIS_TAC [relationTheory.RTC_RULES] THEN
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN 
+  Q_TAC SUFF_TAC `!M N. M -b->* N ==> (M = Omega) ==> (N = Omega)`
+     THEN1 METIS_TAC [RTC_RULES] THEN
+  HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [ccbeta_rwt, Omega_def]);
 
 val lameq_betaconversion = store_thm(
@@ -896,11 +896,11 @@ val prop3_18 = save_thm("prop3_18", lameq_betaconversion);
 val ccbeta_lameq = store_thm(
   "ccbeta_lameq",
   ``!M N. M -b-> N ==> M == N``,
-  SRW_TAC [][lameq_betaconversion, relationTheory.EQC_R]);
+  SRW_TAC [][lameq_betaconversion, EQC_R]);
 val betastar_lameq = store_thm(
   "betastar_lameq",
   ``!M N. M -b->* N ==> M == N``,
-  SRW_TAC [][lameq_betaconversion, relationTheory.RTC_EQC]);
+  SRW_TAC [][lameq_betaconversion, RTC_EQC]);
 
 val betastar_lameq_bnf = store_thm(
   "betastar_lameq_bnf",
@@ -925,23 +925,23 @@ val has_bnf_thm = store_thm(
   "has_bnf_thm",
   ``has_bnf M <=> ?N. M -b->* N /\ bnf N``,
   EQ_TAC THENL [
-    METIS_TAC [lameq_betaconversion, chap2Theory.has_bnf_def, theorem3_13, 
+    METIS_TAC [lameq_betaconversion, chap2Theory.has_bnf_def, theorem3_13,
                beta_CR, beta_normal_form_bnf, corollary3_2_1],
-    SRW_TAC [][chap2Theory.has_bnf_def, lameq_betaconversion] THEN 
-    METIS_TAC [relationTheory.RTC_EQC]
+    SRW_TAC [][chap2Theory.has_bnf_def, lameq_betaconversion] THEN
+    METIS_TAC [RTC_EQC]
   ]);
 
 val Omega_reachable_no_bnf = store_thm(
   "Omega_reachable_no_bnf",
   ``M -b->* Omega ==> ~has_bnf M``,
-  REPEAT STRIP_TAC THEN 
-  FULL_SIMP_TAC (srw_ss()) [has_bnf_thm] THEN 
-  `Omega -b->* N` by METIS_TAC [bnf_triangle] THEN 
-  `N = Omega` by FULL_SIMP_TAC (srw_ss()) [] THEN 
+  REPEAT STRIP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [has_bnf_thm] THEN
+  `Omega -b->* N` by METIS_TAC [bnf_triangle] THEN
+  `N = Omega` by FULL_SIMP_TAC (srw_ss()) [] THEN
   FULL_SIMP_TAC (srw_ss()) []);
 
 val weak_diamond_def =
-    save_thm("weak_diamond_def", relationTheory.WCR_def)
+    save_thm("weak_diamond_def", WCR_def)
 val _ = overload_on("weak_diamond", ``relation$WCR``)
 
 (* likewise, these definitions of WCR and SN, differ from those in
@@ -953,12 +953,10 @@ val WCR_def = (* definition 3.20, p39 *) Define`
 
 val SN_def = Define`SN R = relation$SN (compat_closure R)`;
 
-val EXTEND_RTC_TC = relationTheory.EXTEND_RTC_TC
-
 val newmans_lemma = store_thm( (* lemma3_22, p39 *)
   "newmans_lemma",
   ``!R. SN R /\ WCR R ==> CR R``,
-  SIMP_TAC (srw_ss()) [SN_def, WCR_def, relationTheory.Newmans_lemma,
+  SIMP_TAC (srw_ss()) [SN_def, WCR_def, Newmans_lemma,
                        CR_def,
                        GSYM relationTheory.diamond_def,
                        GSYM relationTheory.CR_def]);
@@ -972,13 +970,13 @@ val commute_COMM = store_thm(
   ``commute R1 R2 = commute R2 R1``,
   PROVE_TAC [commute_def]);
 
-val diamond_RC = relationTheory.diamond_RC_diamond
+val diamond_RC = diamond_RC_diamond
   (* |- !R. diamond_property R ==> diamond_property (RC R) *)
 
 val diamond_RTC = store_thm(
   "diamond_RTC",
   ``!R. diamond_property R ==> diamond_property (RTC R)``,
-  PROVE_TAC [diamond_TC, diamond_RC, relationTheory.TC_RC_EQNS]);
+  PROVE_TAC [diamond_TC, diamond_RC, TC_RC_EQNS]);
 
 val hr_lemma0 = prove(
   ``!R1 R2. diamond_property R1 /\ diamond_property R2 /\ commute R1 R2 ==>
@@ -987,16 +985,14 @@ val hr_lemma0 = prove(
   Q_TAC SUFF_TAC `diamond_property (R1 RUNION R2)` THEN1
         PROVE_TAC [diamond_RTC] THEN
   FULL_SIMP_TAC (srw_ss()) [diamond_property_def, commute_def,
-                            relationTheory.RUNION] THEN
+                            RUNION] THEN
   PROVE_TAC []);
 
 val RUNION_RTC_MONOTONE = store_thm(
   "RUNION_RTC_MONOTONE",
   ``!R1 x y. RTC R1 x y ==> !R2. RTC (R1 RUNION R2) x y``,
-  GEN_TAC THEN HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  PROVE_TAC [relationTheory.RTC_RULES, relationTheory.RUNION]);
-
-val RUNION_COMM = relationTheory.RUNION_COMM
+  GEN_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN
+  PROVE_TAC [RTC_RULES, RUNION]);
 
 val RTC_OUT = store_thm(
   "RTC_OUT",
@@ -1007,18 +1003,18 @@ val RTC_OUT = store_thm(
      (!x y. RTC (R1 RUNION R2) x y ==> RTC (RTC R1 RUNION RTC R2) x y)` THEN1
     (SIMP_TAC (srw_ss()) [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM] THEN
      PROVE_TAC []) THEN CONJ_TAC
-  THEN HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THENL [
+  THEN HO_MATCH_MP_TAC RTC_INDUCT THENL [
     CONJ_TAC THENL [
-      PROVE_TAC [relationTheory.RTC_RULES],
+      PROVE_TAC [RTC_RULES],
       MAP_EVERY Q.X_GEN_TAC [`x`,`y`,`z`] THEN REPEAT STRIP_TAC THEN
-      `RTC R1 x y \/ RTC R2 x y` by PROVE_TAC [relationTheory.RUNION] THEN
-      PROVE_TAC [RUNION_RTC_MONOTONE, relationTheory.RTC_RTC, RUNION_COMM]
+      `RTC R1 x y \/ RTC R2 x y` by PROVE_TAC [RUNION] THEN
+      PROVE_TAC [RUNION_RTC_MONOTONE, RTC_RTC, RUNION_COMM]
     ],
     CONJ_TAC THENL [
-      PROVE_TAC [relationTheory.RTC_RULES],
+      PROVE_TAC [RTC_RULES],
       MAP_EVERY Q.X_GEN_TAC [`x`,`y`,`z`] THEN REPEAT STRIP_TAC THEN
-      `R1 x y \/ R2 x y` by PROVE_TAC [relationTheory.RUNION] THEN
-      PROVE_TAC [relationTheory.RTC_RULES, relationTheory.RUNION]
+      `R1 x y \/ R2 x y` by PROVE_TAC [RUNION] THEN
+      PROVE_TAC [RTC_RULES, RUNION]
     ]
   ]);
 
@@ -1027,7 +1023,7 @@ val CC_RUNION_MONOTONE = store_thm(
   "CC_RUNION_MONOTONE",
   ``!R1 x y. compat_closure R1 x y ==> compat_closure (R1 RUNION R2) x y``,
   GEN_TAC THEN HO_MATCH_MP_TAC compat_closure_ind THEN
-  PROVE_TAC [compat_closure_rules, relationTheory.RUNION]);
+  PROVE_TAC [compat_closure_rules, RUNION]);
 
 val CC_RUNION_DISTRIB = store_thm(
   "CC_RUNION_DISTRIB",
@@ -1042,8 +1038,8 @@ val CC_RUNION_DISTRIB = store_thm(
      SIMP_TAC (srw_ss()) [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM] THEN
   CONJ_TAC THENL [
     HO_MATCH_MP_TAC compat_closure_ind THEN
-    PROVE_TAC [compat_closure_rules, relationTheory.RUNION],
-    SRW_TAC [][relationTheory.RUNION] THEN
+    PROVE_TAC [compat_closure_rules, RUNION],
+    SRW_TAC [][RUNION] THEN
     PROVE_TAC [RUNION_COMM, CC_RUNION_MONOTONE]
   ]);
 
@@ -1103,9 +1099,8 @@ val cc_eta_thm = store_thm(
     (!t u v. compat_closure eta (t @@ u) v =
              (?t'. (v = t' @@ u) /\ compat_closure eta t t') \/
              (?u'. (v = t @@ u') /\ compat_closure eta u u'))``,
-  CONV_TAC (EVERY_CONJ_CONV
-              (STRIP_QUANT_CONV
-                 (LAND_CONV (ONCE_REWRITE_CONV [compat_closure_cases])))) THEN
+  REPEAT CONJ_TAC THEN
+  SIMP_TAC (srw_ss()) [SimpLHS, Once compat_closure_cases] THEN
   SIMP_TAC (srw_ss()) [no_eta_thm, EQ_IMP_THM, DISJ_IMP_THM,
                        GSYM LEFT_FORALL_IMP_THM, RIGHT_AND_OVER_OR,
                        LEFT_AND_OVER_OR, FORALL_AND_THM,
@@ -1159,8 +1154,7 @@ val cc_eta_LAM = store_thm(
   ``!t v u. compat_closure eta (LAM v t) u =
             (?t'. (u = LAM v t') /\ compat_closure eta t t') \/
             eta (LAM v t) u``,
-  CONV_TAC (STRIP_QUANT_CONV
-              (LAND_CONV (ONCE_REWRITE_CONV [compat_closure_cases]))) THEN
+  SIMP_TAC (srw_ss()) [Once compat_closure_cases, SimpLHS] THEN
   SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss)[LAM_eq_thm, EQ_IMP_THM, tpm_eqr,
                                           cc_eta_tpm_eqn, tpm_flip_args] THEN
   REPEAT STRIP_TAC THEN DISJ1_TAC THEN
@@ -1212,8 +1206,8 @@ val eta_CR = store_thm(
   ``CR eta``,
   Q_TAC SUFF_TAC `diamond_property (RC (compat_closure eta))` THEN1
         (SRW_TAC [][CR_def] THEN
-         PROVE_TAC [relationTheory.TC_RC_EQNS, diamond_TC]) THEN
-  SIMP_TAC (srw_ss()) [diamond_property_def, relationTheory.RC_DEF,
+         PROVE_TAC [TC_RC_EQNS, diamond_TC]) THEN
+  SIMP_TAC (srw_ss()) [diamond_property_def, RC_DEF,
                        RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR, EXISTS_OR_THM,
                        DISJ_IMP_THM, FORALL_AND_THM] THEN
   PROVE_TAC [eta_diamond]);
@@ -1225,20 +1219,20 @@ val wonky_diamond_commutes = store_thm( (* Barendregt, lemma 3.3.6 *)
         commute (RTC R1) (RTC R2)``,
   REPEAT STRIP_TAC THEN
   `!x y. RTC R1 x y ==> !z. R2 x z ==> ?w. RTC R1 z w /\ RTC R2 y w` by
-      (HO_MATCH_MP_TAC relationTheory.RTC_STRONG_INDUCT THEN
+      (HO_MATCH_MP_TAC RTC_STRONG_INDUCT THEN
        CONJ_TAC THENL [
-         PROVE_TAC [relationTheory.RTC_RULES],
+         PROVE_TAC [RTC_RULES],
          MAP_EVERY Q.X_GEN_TAC [`x`,`y`,`z`] THEN REPEAT STRIP_TAC THEN
          `?w. RC R2 y w /\ RTC R1 z' w` by PROVE_TAC [] THEN
-         FULL_SIMP_TAC (srw_ss()) [relationTheory.RC_DEF] THEN
-         PROVE_TAC [relationTheory.RTC_RTC, relationTheory.RTC_RULES]
+         FULL_SIMP_TAC (srw_ss()) [RC_DEF] THEN
+         PROVE_TAC [RTC_RTC, RTC_RULES]
        ]) THEN
   Q_TAC SUFF_TAC
         `!x y. RTC R2 x y ==> !z. RTC R1 x z ==>
                                   ?w. RTC R2 z w /\ RTC R1 y w` THEN1
         (SRW_TAC [][commute_def] THEN PROVE_TAC []) THEN
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  PROVE_TAC [relationTheory.RTC_RULES, relationTheory.RTC_RTC]);
+  HO_MATCH_MP_TAC RTC_INDUCT THEN
+  PROVE_TAC [RTC_RULES, RTC_RTC]);
 
 val eta_cosubstitutive = store_thm(
   "eta_cosubstitutive",
@@ -1280,37 +1274,37 @@ val eta_beta_commute = store_thm(
          by METIS_TAC [cc_eta_subst] THEN
       `compat_closure beta (LAM v t'' @@ P) ([P/v]t'')`
          by METIS_TAC [beta_def, compat_closure_rules] THEN
-      METIS_TAC [relationTheory.RC_DEF, reduction_rules],
+      METIS_TAC [RC_DEF, reduction_rules],
       FULL_SIMP_TAC (srw_ss()) [eta_LAM, SUB_THM, lemma14b] THEN
       Q.EXISTS_TAC `t' @@ P` THEN
-      METIS_TAC [reduction_rules, relationTheory.RC_DEF],
+      METIS_TAC [reduction_rules, RC_DEF],
       Q.EXISTS_TAC `[u'/v]M` THEN
-      METIS_TAC [relationTheory.RC_DEF, eta_cosubstitutive, beta_def,
+      METIS_TAC [RC_DEF, eta_cosubstitutive, beta_def,
                  compat_closure_rules]
     ],
 
     FULL_SIMP_TAC (srw_ss()) [cc_eta_thm] THEN
-    METIS_TAC [compat_closure_rules, relationTheory.RC_DEF,
+    METIS_TAC [compat_closure_rules, RC_DEF,
                reduction_rules],
     FULL_SIMP_TAC (srw_ss()) [cc_eta_thm] THEN
-    METIS_TAC [compat_closure_rules, relationTheory.RC_DEF,
+    METIS_TAC [compat_closure_rules, RC_DEF,
                reduction_rules],
 
     FULL_SIMP_TAC (srw_ss()) [cc_eta_LAM, eta_LAM] THENL [
-      METIS_TAC [compat_closure_rules, relationTheory.RC_DEF,
+      METIS_TAC [compat_closure_rules, RC_DEF,
                  reduction_rules],
       FULL_SIMP_TAC (srw_ss()) [cc_beta_thm] THENL [
         SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
         Cases_on `v = v'` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
-          METIS_TAC [reduction_rules, relationTheory.RC_DEF],
+          METIS_TAC [reduction_rules, RC_DEF],
           `LAM v ([VAR v/v'] M0) = LAM v' M0`
              by METIS_TAC [SIMPLE_ALPHA] THEN
-          METIS_TAC [reduction_rules, relationTheory.RC_DEF]
+          METIS_TAC [reduction_rules, RC_DEF]
         ],
         `v NOTIN FV M'` by METIS_TAC [cc_beta_FV_SUBSET, SUBSET_DEF] THEN
         `compat_closure eta (LAM v (M' @@ VAR v)) M'`
            by SRW_TAC [][cc_eta_LAM, eta_LAM] THEN
-        METIS_TAC [relationTheory.RC_DEF, reduction_rules]
+        METIS_TAC [RC_DEF, reduction_rules]
       ]
     ]
   ])
@@ -1331,14 +1325,14 @@ val beta_eta_lameta = store_thm(
     REPEAT CONJ_TAC THEN1
       (HO_MATCH_MP_TAC compat_closure_ind THEN
        REPEAT CONJ_TAC THEN1
-          (SRW_TAC [][beta_def, eta_def, relationTheory.RUNION] THEN
+          (SRW_TAC [][beta_def, eta_def, RUNION] THEN
            PROVE_TAC [lameta_rules]) THEN
        PROVE_TAC [lameta_rules]) THEN
     PROVE_TAC [lameta_rules],
     CONV_TAC (RENAME_VARS_CONV ["M", "N"]) THEN HO_MATCH_MP_TAC lameta_ind THEN
     REPEAT STRIP_TAC THENL [
       `(beta RUNION eta) (LAM x M @@ N) ([N/x]M)` by
-         (SRW_TAC [][beta_def, relationTheory.RUNION] THEN PROVE_TAC []) THEN
+         (SRW_TAC [][beta_def, RUNION] THEN PROVE_TAC []) THEN
       PROVE_TAC [conversion_rules],
       PROVE_TAC [conversion_rules],
       PROVE_TAC [conversion_rules],
@@ -1348,7 +1342,7 @@ val beta_eta_lameta = store_thm(
       PROVE_TAC [conversion_compatible, compatible_def, leftctxt],
       PROVE_TAC [conversion_compatible, compatible_def, absctxt],
       `(beta RUNION eta) (LAM x (N @@ VAR x)) N` by
-         (SRW_TAC [][eta_def, relationTheory.RUNION] THEN PROVE_TAC []) THEN
+         (SRW_TAC [][eta_def, RUNION] THEN PROVE_TAC []) THEN
       PROVE_TAC [conversion_rules]
     ]
   ]);
@@ -1368,7 +1362,7 @@ val beta_eta_normal_form_benf = store_thm(
         PROVE_TAC [can_reduce_rules],
         PROVE_TAC [can_reduce_rules],
         `redex (beta RUNION eta) (f @@ x)` by
-         (SRW_TAC [][redex_def, relationTheory.RUNION, beta_def,
+         (SRW_TAC [][redex_def, RUNION, beta_def,
                      EXISTS_OR_THM] THEN
           PROVE_TAC [is_abs_thm, term_CASES]) THEN
         PROVE_TAC [can_reduce_rules],
@@ -1382,7 +1376,7 @@ val beta_eta_normal_form_benf = store_thm(
         PROVE_TAC [can_reduce_rules, lemma14a],
         Q_TAC SUFF_TAC `redex (beta RUNION eta) (LAM x M)` THEN1
             PROVE_TAC [can_reduce_rules] THEN
-        SRW_TAC [][redex_def, relationTheory.RUNION, eta_def] THEN
+        SRW_TAC [][redex_def, RUNION, eta_def] THEN
         PROVE_TAC [is_comb_rator_rand]
       ]
     ],
@@ -1390,7 +1384,7 @@ val beta_eta_normal_form_benf = store_thm(
           THEN1 PROVE_TAC [] THEN
     HO_MATCH_MP_TAC can_reduce_ind THEN
     SIMP_TAC (srw_ss()) [bnf_thm, enf_thm, DISJ_IMP_THM, redex_def,
-                         relationTheory.RUNION, GSYM LEFT_FORALL_IMP_THM,
+                         RUNION, GSYM LEFT_FORALL_IMP_THM,
                          beta_def, eta_def]
   ]);
 
@@ -1428,10 +1422,7 @@ val rator_isub_commutes = store_thm(
    ---------------------------------------------------------------------- *)
 
 open boolSimps
-val RTC1_step = CONJUNCT2 (SPEC_ALL relationTheory.RTC_RULES)
-
-
-
+val RTC1_step = CONJUNCT2 (SPEC_ALL RTC_RULES)
 
 val betastar_LAM = store_thm(
   "betastar_LAM",
@@ -1440,13 +1431,13 @@ val betastar_LAM = store_thm(
     Q_TAC SUFF_TAC `!M N. M -b->* N ==>
                           !v M0 N0. (M = LAM v M0) /\ (N = LAM v N0) ==>
                                     M0 -b->* N0` THEN1 METIS_TAC [] THEN
-    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+    HO_MATCH_MP_TAC RTC_INDUCT THEN
     SIMP_TAC (srw_ss() ++ DNF_ss) [ccbeta_rwt] THEN
-    METIS_TAC [relationTheory.RTC_RULES],
+    METIS_TAC [RTC_RULES],
 
-    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
+    HO_MATCH_MP_TAC RTC_INDUCT THEN
     SRW_TAC [][] THEN
-    METIS_TAC [compat_closure_rules, relationTheory.RTC_RULES]
+    METIS_TAC [compat_closure_rules, RTC_RULES]
   ]);
 val _ = export_rewrites ["betastar_LAM"]
 
@@ -1458,35 +1449,29 @@ val betastar_LAM_I = store_thm(
 val betastar_APPr = store_thm(
   "betastar_APPr",
   ``!M N. M -b->* N ==> P @@ M -b->* P @@ N``,
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
+  HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
   METIS_TAC [RTC1_step, compat_closure_rules]);
 
 val betastar_APPl = store_thm(
   "betastar_APPl",
   ``!M N. M -b->* N ==> M @@ P -b->* N @@ P``,
-  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
+  HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
   METIS_TAC [RTC1_step, compat_closure_rules]);
 
 val betastar_APPlr = store_thm(
   "betastar_APPlr",
   ``M -b->* M' ==> N -b->* N' ==> M @@ N -b->* M' @@ N'``,
-  METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE, betastar_APPl, betastar_APPr]);
+  METIS_TAC [RTC_CASES_RTC_TWICE, betastar_APPl, betastar_APPr]);
 
 val beta_betastar = store_thm(
   "beta_betastar",
   ``LAM v M @@ N -b->* [N/v]M``,
-  SRW_TAC [][ccbeta_rwt, relationTheory.RTC_SINGLE]);
+  SRW_TAC [][ccbeta_rwt, RTC_SINGLE]);
 
 val betastar_eq_cong = store_thm(
   "betastar_eq_cong",
   ``bnf N ==> M -b->* M' ==> (M -b->* N  = M' -b->* N)``,
-  SRW_TAC [][EQ_IMP_THM] THENL [
-    `?Z. N -b->* Z /\ M' -b->* Z` by METIS_TAC [beta_CR, CR_def,
-                                                diamond_property_def] THEN
-    METIS_TAC [corollary3_2_1, beta_normal_form_bnf],
-    METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE]
-  ]);
-
+  METIS_TAC [bnf_triangle, RTC_CASES_RTC_TWICE]);
 
 val _ = export_theory();
 

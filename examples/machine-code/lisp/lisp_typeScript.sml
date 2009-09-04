@@ -1,10 +1,10 @@
 open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_type";
 
-open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory; 
+open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory addressTheory stringTheory;
 
 
-infix \\ 
+infix \\
 val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -31,12 +31,12 @@ val getVal_def = Define `
 
 val CAR_def = Define `
   (CAR (Dot x y) = x) /\
-  (CAR (Val w) = Val w) /\ 
+  (CAR (Val w) = Val w) /\
   (CAR (Sym s) = Sym s)`;
 
 val CDR_def = Define `
   (CDR (Dot x y) = y) /\
-  (CDR (Val w) = Val w) /\ 
+  (CDR (Val w) = Val w) /\
   (CDR (Sym s) = Sym s)`;
 
 val LISP_ADD_def   = Define `LISP_ADD  (Val m) (Val n) = Val (m + n)`;
@@ -59,17 +59,17 @@ val TASK_EVAL_def = Define `TASK_EVAL = Sym "nil"`;
 val TASK_FUNC_def = Define `TASK_FUNC = Sym "quote"`;
 
 val isQuote_def = Define `
-  isQuote x = isDot x /\ (CAR x = Sym "quote") /\ 
+  isQuote x = isDot x /\ (CAR x = Sym "quote") /\
               isDot (CDR x) /\ (CDR (CDR x) = Sym "nil")`;
 
 val LSIZE_def = Define `
   (LSIZE (Dot x y) = SUC (LSIZE x + LSIZE y)) /\
-  (LSIZE (Val w) = 0) /\ 
+  (LSIZE (Val w) = 0) /\
   (LSIZE (Sym s) = 0)`;
-  
+
 val LDEPTH_def = Define `
   (LDEPTH (Dot x y) = SUC (MAX (LDEPTH x) (LDEPTH y))) /\
-  (LDEPTH (Val w) = 0) /\ 
+  (LDEPTH (Val w) = 0) /\
   (LDEPTH (Sym s) = 0)`;
 
 val SUM_LSIZE_def = Define `

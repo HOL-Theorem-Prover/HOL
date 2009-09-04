@@ -1,14 +1,14 @@
-structure amba_common = 
-struct 
+structure amba_common =
+struct
 
-local 
+local
 
 open HolKernel Parse boolLib bossLib
 
 open bossLib pairSyntax boolSyntax
 open mod16Theory commonTools
 
-in 
+in
 
 (* APB *)
 
@@ -92,7 +92,7 @@ val Is_state = list_mk_pair(List.concat (List.map strip_pair [``(haddr_0:bool,hr
 
 val Ia_state = list_mk_pair(List.concat (List.map strip_pair [``hreadyout:bool``,grant_vars,master_vars,busreq_vars]))
 
-val Ra_state = list_mk_pair(List.concat 
+val Ra_state = list_mk_pair(List.concat
 				(List.map strip_pair [``hreadyout:bool``,grant_vars,master_vars,
 						      mask_vars,busreq_vars,htransv]))
 val Ra_state2 = list_mk_pair(List.concat (List.map strip_pair [``hreadyout:bool``,grant_vars,master_vars,
@@ -125,10 +125,10 @@ val RCn_state =  list_mk_pair(List.concat (List.map strip_pair [``hreadyout:bool
 val RCn_state2 =  list_mk_pair(List.concat (List.map strip_pair [``hreadyout:bool``,htransv]))
 val RCn_state' = ksTools.mk_primed_state RCn_state
 
-val I1h_state =  list_mk_pair(undup Term.var_compare 
+val I1h_state =  list_mk_pair(undup Term.var_compare
 				    (List.concat (List.map strip_pair [Im_state,Is_state,Ia_state,Ra_state2,RCn_state2,
 								       Rm_state2,Rx_state2,(*Rd_state,*)Rs_state2])))
-val R1h_state = I1h_state 
+val R1h_state = I1h_state
 val R1h_state' = ksTools.mk_primed_state R1h_state
 
 val mod16defs = [MOD16_ZERO_def,MOD16_ONE_def,MOD16_IS_ZERO_def,MOD16_IS_ONE_def,MOD16_INC_def,MOD16_HOLD_def,dest_mod16,
@@ -141,9 +141,9 @@ val m16n2b = [MOD16_N2B_15,MOD16_N2B_14,MOD16_N2B_13,MOD16_N2B_12,MOD16_N2B_11,M
 val m16exp = [MOD16_FORALL_EXPAND16,MOD16_FORALL_EXPAND4,MOD16_FORALL_EXPAND8]
 
 (* unroll abstract model into purely boolean model *)
-fun unroll_ahb_CONV maindefs Adef abbrev_defs t = 
+fun unroll_ahb_CONV maindefs Adef abbrev_defs t =
 	    (PURE_ONCE_REWRITE_CONV maindefs
-             THENC NCONV nm (PURE_ONCE_REWRITE_CONV [Adef]) 
+             THENC NCONV nm (PURE_ONCE_REWRITE_CONV [Adef])
              THENC UNCHANGED_CONV (REWRITE_CONV abbrev_defs)
               THENC UNCHANGED_CONV (SIMP_CONV (pure_ss++BETA_ss) m16exp)
                THENC UNCHANGED_CONV (SIMP_CONV (pure_ss++numSimps.REDUCE_ss) ([COND_CLAUSES]))

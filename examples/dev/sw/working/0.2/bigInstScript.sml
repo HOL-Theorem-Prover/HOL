@@ -1,10 +1,10 @@
 (*
 quietdec := true;
 
-app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "whileTheory", "finite_mapTheory", 
+app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "whileTheory", "finite_mapTheory",
           "listTheory", "pred_setSimps", "pred_setTheory", "preARMTheory", "CFLTheory", "simplifier"];
 
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory whileTheory 
+open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory whileTheory
        listTheory pred_setSimps pred_setTheory finite_mapTheory preARMTheory CFLTheory simplifier;
 
 quietdec := false;
@@ -67,15 +67,15 @@ val _ = set_fixity "|#"  (Infixl 600);   (* dstate update *)
 
 val addr_of_def = Define `
     (addr_of st (isM m) = m) /\
-    (addr_of st (isV v) = w2n (read st FP) -  v)`; 
+    (addr_of st (isV v) = w2n (read st FP) -  v)`;
 
 val eq_addr_def = Define `
     eq_addr st addr1 addr2 =
-         (addr_of st addr1 = addr_of st addr2)`; 
+         (addr_of st addr1 = addr_of st addr2)`;
 
 
 val eq_exp_def = Define `
-    (eq_exp st (isR r1) (isR r2) = (r1 = r2)) /\  
+    (eq_exp st (isR r1) (isR r2) = (r1 = r2)) /\
     (eq_exp st (isC c1) (isC c2) = (c1 = c2)) /\
     (eq_exp st (isV v1) (isV v2) = eq_addr st (isV v1) (isV v2)) /\
     (eq_exp st (isM m1) (isM m2) = eq_addr st (isM m1) (isM m2)) /\
@@ -87,7 +87,7 @@ val eq_exp_def = Define `
     `;
 
 val eq_exp_def = Define `
-    (eq_exp st (isR r1) (isR r2) = (r1 = r2)) /\  
+    (eq_exp st (isR r1) (isR r2) = (r1 = r2)) /\
     (eq_exp st (isC c1) (isC c2) = (c1 = c2)) /\
     (eq_exp st (isV v1) (isV v2) = eq_addr st (isV v1) (isV v2)) /\
     (eq_exp st (isM m1) (isM m2) = eq_addr st (isM m1) (isM m2)) /\
@@ -119,9 +119,9 @@ val NOT_EQ_isR_LEM = Q.store_thm (
 (*---------------------------------------------------------------------------------*)
 (*      Different ways to restrict an expression                                   *)
 (*---------------------------------------------------------------------------------*)
- 
+
 val valid_regs_def = Define `
-    (valid_regs r = 
+    (valid_regs r =
         ~(r=9) /\ ~(r=10) /\ ~(r=11) /\ ~(r=12) /\ ~(r=13) /\ ~(r=14) /\ ~(r=15) /\
        (index_of_reg (from_reg_index r) = r)) /\
     (valid_regs _ = T)`;
@@ -135,17 +135,17 @@ val valid_regs_lem = Q.store_thm (
   );
 
 val valid_exp_def = Define `
-    (valid_exp (isR r) = valid_regs r) /\ 
+    (valid_exp (isR r) = valid_regs r) /\
     (valid_exp (isM m) = F) /\
     (valid_exp _ = T)`;
 
 val valid_exp_1_def = Define `
-    (valid_exp_1 (isR r) = ~(r = 13) /\ ~(r = 9) /\ (index_of_reg (from_reg_index r) = r)) /\ 
+    (valid_exp_1 (isR r) = ~(r = 13) /\ ~(r = 9) /\ (index_of_reg (from_reg_index r) = r)) /\
     (valid_exp_1 (isM m) = T) /\
     (valid_exp_1 _ = T)`;
 
 val valid_exp_2_def = Define `
-    (valid_exp_2 (isR r) = valid_regs r) /\ 
+    (valid_exp_2 (isR r) = valid_regs r) /\
     (valid_exp_2 (isM m) = T) /\
     (valid_exp_2 _ = T)`;
 
@@ -218,7 +218,7 @@ val WRITEE_COMMUTES = Q.store_thm (
 
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     Cases_on `e1` THEN  Cases_on `e2` THEN
-    RW_TAC finmap_ss [valid_exp_def, valid_regs_lem, eq_exp_def, eq_addr_def, addr_of_def, reade_def, writee_def, 
+    RW_TAC finmap_ss [valid_exp_def, valid_regs_lem, eq_exp_def, eq_addr_def, addr_of_def, reade_def, writee_def,
             read_thm, write_thm, FUPDATE_COMMUTES, FP_def, fp_def]
   );
 
@@ -235,7 +235,7 @@ val w2n_sub_lem = Q.store_thm (
     "w2n_sub_lem",
     `w2n i <= w2n k ==>
       (w2n (k - i) = w2n k - w2n i)`,
-    RW_TAC std_ss [word_sub_def, word_add_def, w2n_n2w, word_2comp_def] THEN 
+    RW_TAC std_ss [word_sub_def, word_add_def, w2n_n2w, word_2comp_def] THEN
     `0 < dimword (:'a)` by METIS_TAC [ZERO_LT_dimword] THEN
     RW_TAC std_ss [Once (GSYM MOD_PLUS)] THEN
     RW_TAC std_ss [Once MOD_PLUS] THEN
@@ -250,27 +250,27 @@ val w2n_sub_lem = Q.store_thm (
 val locate_ge_lem_1 = Q.store_thm (
     "locate_ge_lem_1",
     `locate_ge (x:word32) (k:num) ==>
-     (!i. w2n i <= k ==> 
+     (!i. w2n i <= k ==>
         (w2n (x - i) = w2n x - w2n i))`,
-     RW_TAC arith_ss [locate_ge_def, w2n_sub_lem] 
+     RW_TAC arith_ss [locate_ge_def, w2n_sub_lem]
    );
-      
+
 val locate_ge_lem_2 = Q.store_thm (
     "locate_ge_lem_2",
-    `locate_ge x k ==> 
+    `locate_ge x k ==>
       (!i j. ~(i = j) /\ w2n i <= k /\ w2n j <= k ==>
             ~(w2n (x - i) = w2n (x - j))) /\
       (!j. 1 <= w2n x ==> (w2n x - 1 + (j + 2) = w2n x + SUC j))`,
     RW_TAC arith_ss [] THEN
     IMP_RES_TAC locate_ge_lem_1 THEN
-    RW_TAC arith_ss [] THEN 
+    RW_TAC arith_ss [] THEN
     FULL_SIMP_TAC std_ss [locate_ge_def] THEN
     METIS_TAC [SUB_CANCEL, w2n_11, LESS_EQ_TRANS]
    );
 
 val locate_ge_thm = Q.store_thm (
     "locate_ge_thm",
-    `!x k. locate_ge x (SUC k) ==> 
+    `!x k. locate_ge x (SUC k) ==>
            locate_ge x 1 /\ locate_ge x k`,
      RW_TAC arith_ss [locate_ge_def]
    );
@@ -280,9 +280,9 @@ val locate_ge_thm = Q.store_thm (
 (*      Frames are separate                                                        *)
 (*      The temporary use of the stack won't affect existing data in the frame     *)
 (*---------------------------------------------------------------------------------*)
- 
+
 val in_range_def = Define `
-    in_range (k:num) (ubound,lbound) = 
+    in_range (k:num) (ubound,lbound) =
       k <= ubound /\ lbound < k`;
 
 val addr_in_range_def = Define `
@@ -342,37 +342,37 @@ val RUN_CFL_BLK_APPEND = Q.store_thm (
 (*---------------------------------------------------------------------------------*)
 
 val store_one_def = Define `
-     (store_one (isR r) offset = 
+     (store_one (isR r) offset =
           [MSTR (13,offset) (from_reg_index r)]) /\
-     (store_one (isC c) offset = 
+     (store_one (isC c) offset =
           [MMOV R9 (MC c);  MSTR (13,offset) R9]) /\
-     (store_one (isV k) offset = 
+     (store_one (isV k) offset =
           [MLDR R9 (fp, NEG k); MSTR (13,offset) R9])`;
 
 val load_one_def = Define `
-     (load_one (isR r) offset = 
+     (load_one (isR r) offset =
           [MLDR (from_reg_index r) (13,offset)]) /\
-     (load_one (isC c) offset = 
+     (load_one (isC c) offset =
           []) /\
-     (load_one (isV k) offset = 
+     (load_one (isV k) offset =
           [MLDR R9 (13,offset);  MSTR (fp, NEG (12 + k)) R9])`;
 
 val push_one_def = Define `
-     (push_one (isR r) = 
+     (push_one (isR r) =
           [MSTR (13,NEG 0) (from_reg_index r); MSUB R13 R13 (MC 1w)]) /\
-     (push_one (isC c) = 
+     (push_one (isC c) =
           [MMOV R9 (MC c);  MSTR (13,NEG 0) R9; MSUB R13 R13 (MC 1w)]) /\
-     (push_one (isV k) = 
+     (push_one (isV k) =
           [MLDR R9 (fp, NEG k);  MSTR (13,NEG 0) R9; MSUB R13 R13 (MC 1w)]) /\
      (push_one (isM m) = [MSUB R13 R13 (MC 1w)])
      `;
 
 val pop_one_def = Define `
-     (pop_one (isR r) = 
+     (pop_one (isR r) =
           [MLDR (from_reg_index r) (13,POS 1); MADD R13 R13 (MC 1w)]) /\
-     (pop_one (isC c) = 
+     (pop_one (isC c) =
           [MADD R13 R13 (MC 1w)]) /\
-     (pop_one (isV k) = 
+     (pop_one (isV k) =
           [MLDR R9 (13, POS 1); MSTR (fp,NEG k) R9; MADD R13 R13 (MC 1w)]) /\
      (pop_one (isM m) = [MADD R13 R13 (MC 1w)])
      `;
@@ -381,7 +381,7 @@ val pop_one_def = Define `
 (*      Properties about pushing / storing a single data                           *)
 (*---------------------------------------------------------------------------------*)
 
-val tac1 = (fn g => 
+val tac1 = (fn g =>
             ((CONV_TAC (DEPTH_CONV (
               REWRITE_CONV [Once mdecode_def] THENC
               SIMP_CONV finmap_ss [write_thm, read_thm, toMEM_def, toEXP_def, toREG_def, index_of_reg_def]))) THEN
@@ -389,10 +389,10 @@ val tac1 = (fn g =>
              g);
 
 val push_one_lem = Q.store_thm (
-    "push_one_lem", 
+    "push_one_lem",
     `!st e. valid_exp_3 e ==>
-          ((run_cfl (BLK (push_one e)) st = st |# (isM (w2n (read st SP)), st '' e) |# (isR sp, st '' (isR sp) - 1w)) \/ 
-           (?v. run_cfl (BLK (push_one e)) st = 
+          ((run_cfl (BLK (push_one e)) st = st |# (isM (w2n (read st SP)), st '' e) |# (isR sp, st '' (isR sp) - 1w)) \/
+           (?v. run_cfl (BLK (push_one e)) st =
                    st |# (isM (w2n (read st SP)), st '' e) |# (isR 9, v) |# (isR sp, st '' (isR sp) - 1w)))
           `,
      SIMP_TAC std_ss [FORALL_DSTATE] THEN
@@ -418,7 +418,7 @@ val push_list_def = Define `
 (*---------------------------------------------------------------------------------*)
 
 val legal_push_exp_def = Define `
-    legal_push_exp st e k = 
+    legal_push_exp st e k =
        ~(addr_in_range st e (w2n (read st SP), w2n (read st SP) - k)) /\ valid_exp_1 e`;
 
 val PUSH_ONE_SANITY = Q.store_thm (
@@ -444,7 +444,7 @@ val PUSH_ONE_SANITY = Q.store_thm (
 val PUSH_LIST_SP_FP = Q.store_thm (
     "PUSH_LIST_SP_FP",
     `!l st x. locate_ge (read st SP) (LENGTH l)
-             ==> let st' = run_cfl (BLK (push_list l)) st in 
+             ==> let st' = run_cfl (BLK (push_list l)) st in
               (w2n (read st' SP) = w2n (read st SP) - LENGTH l) /\
               (w2n (read st' FP) = w2n (read st FP)) /\
               (w2n (read st' IP) = w2n (read st IP))`,
@@ -456,7 +456,7 @@ val PUSH_LIST_SP_FP = Q.store_thm (
           REPEAT STRIP_TAC THEN
           IMP_RES_TAC locate_ge_thm THEN
           RES_TAC THEN
-          `?regs mem. run_cfl (BLK (push_list l)) st = (regs,mem)` by METIS_TAC [ABS_PAIR_THM] THEN  
+          `?regs mem. run_cfl (BLK (push_list l)) st = (regs,mem)` by METIS_TAC [ABS_PAIR_THM] THEN
           FULL_SIMP_TAC std_ss [read_thm, SP_def, FP_def, IP_def, LET_THM] THEN
           `locate_ge ((regs ' 13):word32) 1` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
           `(w2n (1w:word32) <= 1) /\ (w2n (1w:word32) = 1)` by WORDS_TAC THEN
@@ -500,7 +500,7 @@ val PUSH_LIST_SANITY = Q.store_thm (
           IMP_RES_TAC ADDR_IN_RANGE_INDUCT_1 THEN
           RES_TAC THEN
           IMP_RES_TAC (SIMP_RULE std_ss [LET_THM] PUSH_LIST_SP_FP) THEN POP_ASSUM (K ALL_TAC) THEN
-          IMP_RES_TAC (Q.SPECL [`l`,`st`,`e`,`isM (w2n (read st SP) - LENGTH (l:CFL_EXP list))`] 
+          IMP_RES_TAC (Q.SPECL [`l`,`st`,`e`,`isM (w2n (read st SP) - LENGTH (l:CFL_EXP list))`]
                         PUSH_LIST_EXP_INTACT) THEN
           NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
 
@@ -508,9 +508,9 @@ val PUSH_LIST_SANITY = Q.store_thm (
           IMP_RES_TAC push_one_lem THEN
           POP_ASSUM (ASSUME_TAC o Q.SPEC `st1`) THEN
           RW_TAC std_ss [sp_def] THEN RW_TAC std_ss [] THEN
-          `(!st. ~(eq_exp st (isR 9) e)) /\ (!st.~(eq_exp st (isR 13) e))` by 
+          `(!st. ~(eq_exp st (isR 9) e)) /\ (!st.~(eq_exp st (isR 13) e))` by
                 METIS_TAC [NOT_EQ_isR_LEM, valid_exp_1_def] THEN
-          `~(eq_exp st1 (isM (w2n (read st SP) - LENGTH l)) e)` by 
+          `~(eq_exp st1 (isM (w2n (read st SP) - LENGTH l)) e)` by
                    METIS_TAC [locate_ge_def, ADDR_IN_RANGE_OUTSIDE, eq_exp_SYM] THEN
           `~(isR 9 = isR fp) /\ ~(isR 13 = isR fp) /\ ~(isM (w2n (read st SP) - LENGTH l) = isR fp)`
                 by RW_TAC std_ss [fp_def] THEN
@@ -520,7 +520,7 @@ val PUSH_LIST_SANITY = Q.store_thm (
 
 val PUSH_LIST_FUNCTIONALITY = Q.store_thm (
     "PUSH_LIST_FUNCTIONALITY",
-    `!l st. EVERY valid_exp_3 l /\ locate_ge (read st SP) (LENGTH l)  ==> 
+    `!l st. EVERY valid_exp_3 l /\ locate_ge (read st SP) (LENGTH l)  ==>
         !i. i < LENGTH l /\ legal_push_exp st (EL i l) (PRE (LENGTH l) - i) ==>
              ((run_cfl (BLK (push_list l)) st) '' (isM (w2n (read st SP) - PRE (LENGTH l) + i))  = st '' (EL i l))`,
 
@@ -530,7 +530,7 @@ val PUSH_LIST_FUNCTIONALITY = Q.store_thm (
         RW_TAC list_ss [RUN_CFL_BLK_APPEND, push_list_def] THEN
           IMP_RES_TAC locate_ge_thm THEN
           IMP_RES_TAC (SIMP_RULE std_ss [LET_THM] PUSH_LIST_SP_FP) THEN
-          IMP_RES_TAC (Q.SPECL [`l`,`st`,`e`,`isM (w2n (read st SP) - LENGTH (l:CFL_EXP list))`] 
+          IMP_RES_TAC (Q.SPECL [`l`,`st`,`e`,`isM (w2n (read st SP) - LENGTH (l:CFL_EXP list))`]
                 PUSH_LIST_EXP_INTACT) THEN
           NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
 
@@ -542,7 +542,7 @@ val PUSH_LIST_FUNCTIONALITY = Q.store_thm (
           (fn g => (
            Cases_on `i` THENL [
              FULL_SIMP_TAC list_ss [] THEN
-               `(!st1. ~(eq_exp st1 (isR 9) (isM (w2n (read st SP) - LENGTH l)))) /\ 
+               `(!st1. ~(eq_exp st1 (isR 9) (isM (w2n (read st SP) - LENGTH l)))) /\
                  (!st1. ~(eq_exp st1 (isR 13) (isM (w2n (read st SP) - LENGTH l))))` by RW_TAC std_ss [eq_exp_def] THEN
                `~(isR 9 = isR fp) /\ ~(isR 13 = isR fp)` by RW_TAC std_ss [fp_def] THEN
                RW_TAC std_ss [READE_WRITEE_THM_2] THEN
@@ -553,17 +553,17 @@ val PUSH_LIST_FUNCTIONALITY = Q.store_thm (
 
            FULL_SIMP_TAC list_ss [] THEN
                `(w2n (read st SP) - LENGTH l + SUC n = w2n (read st SP) - PRE (LENGTH l) + n) /\
-                (LENGTH l - SUC n = PRE (LENGTH l) - n)` by 
+                (LENGTH l - SUC n = PRE (LENGTH l) - n)` by
                   (NTAC 7 (POP_ASSUM (K ALL_TAC)) THEN FULL_SIMP_TAC arith_ss [locate_ge_def]) THEN
                FULL_SIMP_TAC std_ss [] THEN NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
-               `(!st1. ~(eq_exp st1 (isR 9) (isM (w2n (read st SP) - PRE (LENGTH l) + n)))) /\ 
-                (!st1. ~(eq_exp st1 (isR 13) (isM (w2n (read st SP) - PRE (LENGTH l) + n))))` 
+               `(!st1. ~(eq_exp st1 (isR 9) (isM (w2n (read st SP) - PRE (LENGTH l) + n)))) /\
+                (!st1. ~(eq_exp st1 (isR 13) (isM (w2n (read st SP) - PRE (LENGTH l) + n))))`
                      by RW_TAC std_ss [eq_exp_def] THEN
                `~(isR 9 = isR fp) /\ ~(isR 13 = isR fp)` by RW_TAC std_ss [fp_def] THEN
                RW_TAC std_ss [READE_WRITEE_THM_2] THEN
-               NTAC 4 (POP_ASSUM (K ALL_TAC)) THEN               
+               NTAC 4 (POP_ASSUM (K ALL_TAC)) THEN
 
-               `~(eq_exp st1 (isM (w2n (read st SP) - LENGTH l)) (isM (w2n (read st SP) - PRE (LENGTH l) + n)))` 
+               `~(eq_exp st1 (isM (w2n (read st SP) - LENGTH l)) (isM (w2n (read st SP) - PRE (LENGTH l) + n)))`
                  by FULL_SIMP_TAC arith_ss [eq_exp_def, eq_addr_def, addr_of_def, locate_ge_def] THEN
                `~(is_C (isM (w2n (read st1 SP) - LENGTH l)))` by RW_TAC std_ss [is_C_def] THEN
                RW_TAC std_ss [READE_WRITEE_THM_2] THEN
@@ -577,17 +577,17 @@ val PUSH_LIST_FUNCTIONALITY = Q.store_thm (
 (*---------------------------------------------------------------------------------*)
 
 val pop_one_lem = Q.store_thm (
-    "pop_one_lem", 
+    "pop_one_lem",
     `!st e. valid_exp e ==>
-           (run_cfl (BLK (pop_one e)) st = 
+           (run_cfl (BLK (pop_one e)) st =
                    st |# (e, st '' (isM (w2n (read st SP) + 1))) |# (isR sp, st '' (isR sp) + 1w)) \/
-           ?v. run_cfl (BLK (pop_one e)) st = 
+           ?v. run_cfl (BLK (pop_one e)) st =
                    st |# (e, st '' (isM (w2n (read st SP) + 1))) |# (isR 9, v) |# (isR sp, st '' (isR sp) + 1w)
           `,
      SIMP_TAC std_ss [FORALL_DSTATE] THEN
      RW_TAC finmap_ss [reade_def, writee_def, read_thm, write_thm, SP_def, sp_def] THEN
      Cases_on `e` THEN
-     FULL_SIMP_TAC std_ss [valid_exp_def, valid_regs_lem, pop_one_def,CFL_SEMANTICS_BLK, 
+     FULL_SIMP_TAC std_ss [valid_exp_def, valid_regs_lem, pop_one_def,CFL_SEMANTICS_BLK,
              reade_def, read_thm, writee_def, write_thm] THENL [
        NTAC 4 tac1 THEN FULL_SIMP_TAC finmap_ss [valid_regs_lem] THEN
            METIS_TAC [DECIDE ``~(9 = 13)``, FUPDATE_COMMUTES, FUPDATE_REFL, valid_regs_lem],
@@ -610,7 +610,7 @@ val pop_list_def = Define `
 (*---------------------------------------------------------------------------------*)
 
 val grow_lt_def = Define `
-    grow_lt (x:word32) (k:num) = 
+    grow_lt (x:word32) (k:num) =
       w2n x + k < dimword (:32)`;
 
 val grow_lt_lem_1 = Q.store_thm (
@@ -632,7 +632,7 @@ val grow_lt_thm = Q.store_thm (
 (*---------------------------------------------------------------------------------*)
 
 val legal_pop_exp_def = Define `
-    legal_pop_exp st e l = 
+    legal_pop_exp st e l =
        EVERY (\x. ~(eq_exp st e x)) l /\ ~(is_C e) /\ valid_exp e
        `;
 
@@ -646,10 +646,10 @@ val LEGAL_POP_EXP_NOT_FP_SP = Q.store_thm (
    );
 
 val POP_ONE_SANITY = Q.store_thm (
-    "POP_ONE_SANITY", 
-    `!st e h l. valid_exp_2 e /\ valid_exp h /\ grow_lt (read st SP) (SUC (LENGTH l)) /\ 
+    "POP_ONE_SANITY",
+    `!st e h l. valid_exp_2 e /\ valid_exp h /\ grow_lt (read st SP) (SUC (LENGTH l)) /\
               ~eq_exp st e h ==>
-           let st1 = run_cfl (BLK (pop_one h)) st in  
+           let st1 = run_cfl (BLK (pop_one h)) st in
               grow_lt (read st1 SP) (LENGTH l) /\ (st1 '' e = st '' e)
     `,
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
@@ -657,23 +657,23 @@ val POP_ONE_SANITY = Q.store_thm (
     IMP_RES_TAC grow_lt_thm THEN
     IMP_RES_TAC grow_lt_lem_1 THEN
     Cases_on `h` THEN
-    FULL_SIMP_TAC std_ss [valid_exp_def, valid_regs_lem, pop_one_def,CFL_SEMANTICS_BLK, 
+    FULL_SIMP_TAC std_ss [valid_exp_def, valid_regs_lem, pop_one_def,CFL_SEMANTICS_BLK,
              read_thm, write_thm, SP_def, FP_def] THEN
     (fn g => (NTAC 3 tac1 THEN FULL_SIMP_TAC finmap_ss [LET_THM, read_thm, valid_regs_lem] THEN
          FULL_SIMP_TAC set_ss [FDOM_FUPDATE] THEN
          FULL_SIMP_TAC arith_ss [grow_lt_def] THEN
-         Cases_on `e` THEN 
+         Cases_on `e` THEN
          IMP_RES_TAC valid_regs_lem THEN
-         FULL_SIMP_TAC finmap_ss [eq_exp_def, valid_exp_2_def, eq_addr_def, addr_of_def, valid_exp_def, is_C_def, 
+         FULL_SIMP_TAC finmap_ss [eq_exp_def, valid_exp_2_def, eq_addr_def, addr_of_def, valid_exp_def, is_C_def,
              reade_def, read_thm, addr_in_range_def, in_range_def, fp_def, FP_def] THEN
          FULL_SIMP_TAC arith_ss [valid_regs_lem]
          ) g)
   );
 
 val POP_ONE_SANITY_2 = Q.store_thm (
-    "POP_ONE_SANITY_2", 
+    "POP_ONE_SANITY_2",
     `!st h l. valid_exp_2 e /\ valid_exp h /\ grow_lt (read st SP) (SUC (LENGTH l)) ==>
-           let st1 = run_cfl (BLK (pop_one h)) st in  
+           let st1 = run_cfl (BLK (pop_one h)) st in
               grow_lt (read st1 SP) (LENGTH l)
     `,
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
@@ -681,22 +681,22 @@ val POP_ONE_SANITY_2 = Q.store_thm (
     IMP_RES_TAC grow_lt_thm THEN
     IMP_RES_TAC grow_lt_lem_1 THEN
     Cases_on `h` THEN
-    FULL_SIMP_TAC std_ss [valid_exp_def, valid_regs_lem, pop_one_def,CFL_SEMANTICS_BLK, 
+    FULL_SIMP_TAC std_ss [valid_exp_def, valid_regs_lem, pop_one_def,CFL_SEMANTICS_BLK,
              read_thm, write_thm, SP_def, FP_def] THEN
     (fn g => (NTAC 3 tac1 THEN FULL_SIMP_TAC finmap_ss [LET_THM, read_thm, valid_regs_lem] THEN
          FULL_SIMP_TAC set_ss [FDOM_FUPDATE] THEN
          FULL_SIMP_TAC arith_ss [grow_lt_def] THEN
-         FULL_SIMP_TAC finmap_ss [eq_exp_def, eq_addr_def, addr_of_def, valid_exp_def, valid_exp_2_def, is_C_def, 
+         FULL_SIMP_TAC finmap_ss [eq_exp_def, eq_addr_def, addr_of_def, valid_exp_def, valid_exp_2_def, is_C_def,
                        read_thm, addr_in_range_def, in_range_def, fp_def, FP_def] THEN
          FULL_SIMP_TAC arith_ss [valid_regs_lem]
          ) g)
   );
 
 val POP_ONE_ADDR_IN_RANGE = Q.store_thm (
-    "POP_ONE_ADDR_IN_RANGE", 
-    `!st e h l. EVERY valid_exp l /\ valid_exp h /\ grow_lt (read st SP) (SUC (LENGTH l)) /\ 
+    "POP_ONE_ADDR_IN_RANGE",
+    `!st e h l. EVERY valid_exp l /\ valid_exp h /\ grow_lt (read st SP) (SUC (LENGTH l)) /\
               EVERY (\x. ~addr_in_range st x (w2n (read st SP) + SUC (LENGTH l), w2n (read st SP))) l ==>
-           let st' = run_cfl (BLK (pop_one h)) st in  
+           let st' = run_cfl (BLK (pop_one h)) st in
               EVERY (\x. ~addr_in_range st' x (w2n (read st' SP) + LENGTH l, w2n (read st' SP))) l`,
 
     SIMP_TAC std_ss [FORALL_DSTATE, LET_THM] THEN
@@ -710,27 +710,27 @@ val POP_ONE_ADDR_IN_RANGE = Q.store_thm (
     IMP_RES_TAC grow_lt_thm THEN
     IMP_RES_TAC grow_lt_lem_1 THEN
     Cases_on `h` THEN
-    FULL_SIMP_TAC std_ss [valid_exp_def, valid_regs_lem, pop_one_def,CFL_SEMANTICS_BLK, 
+    FULL_SIMP_TAC std_ss [valid_exp_def, valid_regs_lem, pop_one_def,CFL_SEMANTICS_BLK,
              read_thm, write_thm, SP_def, FP_def] THEN
     (fn g => (NTAC 3 tac1 THEN FULL_SIMP_TAC finmap_ss [LET_THM, read_thm, valid_regs_lem] THEN
               (fn g => REWRITE_TAC [Once EQ_SYM_EQ] g) THEN
-              Cases_on `x` THEN 
+              Cases_on `x` THEN
               IMP_RES_TAC valid_regs_lem THEN
-              FULL_SIMP_TAC finmap_ss [addr_in_range_def, in_range_def, addr_of_def, 
+              FULL_SIMP_TAC finmap_ss [addr_in_range_def, in_range_def, addr_of_def,
                  valid_exp_def, is_C_def, addr_in_range_def, in_range_def, fp_def, FP_def, read_thm] THEN
               FULL_SIMP_TAC arith_ss [valid_regs_lem]
          ) g)
-  );    
+  );
 
 val POP_LIST_SP_FP = Q.store_thm (
     "POP_LIST_SP_FP",
     `!l st x. grow_lt (read st SP) (LENGTH l) /\ EVERY valid_exp l
-             ==> let st' = run_cfl (BLK (pop_list l)) st in 
+             ==> let st' = run_cfl (BLK (pop_list l)) st in
               (w2n (read st' SP) = w2n (read st SP) + LENGTH l) /\
               (w2n (read st' FP) = w2n (read st FP)) /\
               (w2n (read st' IP) = w2n (read st IP)) `,
 
-    let val tac2 = FULL_SIMP_TAC finmap_ss [LET_THM,read_thm, SP_def, FP_def, IP_def, valid_regs_lem, grow_lt_lem_1] 
+    let val tac2 = FULL_SIMP_TAC finmap_ss [LET_THM,read_thm, SP_def, FP_def, IP_def, valid_regs_lem, grow_lt_lem_1]
                              THEN FULL_SIMP_TAC arith_ss [grow_lt_def, valid_regs_def]
     in
     Induct_on `l` THENL [
@@ -740,8 +740,8 @@ val POP_LIST_SP_FP = Q.store_thm (
           REPEAT STRIP_TAC THEN
           IMP_RES_TAC grow_lt_thm THEN
           `let st1 = run_cfl (BLK (pop_one h)) st in
-               grow_lt (read st1 SP) (LENGTH l) /\ (w2n (read st1 SP) = SUC (w2n (read st SP))) /\ 
-               (w2n (read st1 FP) = w2n (read st FP)) /\ (w2n (read st1 IP) = w2n (read st IP))` 
+               grow_lt (read st1 SP) (LENGTH l) /\ (w2n (read st1 SP) = SUC (w2n (read st SP))) /\
+               (w2n (read st1 FP) = w2n (read st FP)) /\ (w2n (read st1 IP) = w2n (read st IP))`
                    by SIMP_TAC std_ss [grow_lt_def] THENL [
             `?regs mem. st = (regs,mem)` by METIS_TAC [ABS_PAIR_THM] THEN
             Cases_on `h` THEN
@@ -761,7 +761,7 @@ val POP_ONE_EXP_LEM_1 = Q.store_thm (
     `!h st i. grow_lt (read st SP) 1 /\ valid_exp h /\ ~(eq_exp st h (isM (SUC i + w2n (read st SP)))) ==>
        let st' = run_cfl (BLK (pop_one h)) st in
           (st '' (isM (SUC i + w2n (read st SP))) = st' '' (isM (i + w2n (read st' SP))))`,
-    
+
     let val tac2 = FULL_SIMP_TAC finmap_ss [LET_THM,read_thm, SP_def, FP_def, valid_regs_lem, fp_def] THEN
                    RW_TAC arith_ss [SUC_ONE_ADD]
     in
@@ -769,7 +769,7 @@ val POP_ONE_EXP_LEM_1 = Q.store_thm (
     REPEAT STRIP_TAC THEN
     IMP_RES_TAC grow_lt_lem_1 THEN
     Cases_on `h` THEN
-    FULL_SIMP_TAC list_ss [eq_exp_def, eq_addr_def, addr_of_def, valid_exp_def, pop_one_def, CFL_SEMANTICS_BLK, 
+    FULL_SIMP_TAC list_ss [eq_exp_def, eq_addr_def, addr_of_def, valid_exp_def, pop_one_def, CFL_SEMANTICS_BLK,
            read_thm, reade_def, SP_def, FP_def] THENL [
        NTAC 2 tac1 THEN tac2,
        tac1 THEN tac2,
@@ -790,8 +790,8 @@ val POP_LIST_EXP_INTACT = Q.store_thm (
 
 val POP_ONE_EXP_INTACT = Q.store_thm (
     "POP_ONE_EXP_INTACT",
-   `!l st e h. grow_lt (read st SP) 1 /\ valid_exp h /\ 
-      EVERY (\x. ~eq_exp st e x) l ==> 
+   `!l st e h. grow_lt (read st SP) 1 /\ valid_exp h /\
+      EVERY (\x. ~eq_exp st e x) l ==>
         EVERY (\x. ~eq_exp (run_cfl (BLK (pop_one h)) st) e x) l`,
     REPEAT STRIP_TAC THEN
     POP_ASSUM MP_TAC THEN
@@ -813,13 +813,13 @@ val unique_exp_list_lem_1 = Q.store_thm (
     Induct_on `l` THEN
     RW_TAC list_ss [] THEN
     Cases_on `i` THEN
-    RW_TAC list_ss [] THEN 
+    RW_TAC list_ss [] THEN
     METIS_TAC [eq_exp_SYM]
   );
 
 val unique_exp_list_lem_2 = Q.store_thm (
-    "unique_exp_list_lem_2",   
-    `unique_exp_list st l /\ EVERY valid_exp l /\ valid_exp h /\ grow_lt (read st SP) 1 ==> 
+    "unique_exp_list_lem_2",
+    `unique_exp_list st l /\ EVERY valid_exp l /\ valid_exp h /\ grow_lt (read st SP) 1 ==>
          unique_exp_list (run_cfl (BLK (pop_one h)) st) l`,
      Induct_on `l` THEN
      RW_TAC list_ss [unique_exp_list_def] THEN
@@ -833,7 +833,7 @@ val unique_exp_list_lem_2 = Q.store_thm (
 val POP_LIST_SANITY = Q.store_thm (
     "POP_LIST_SANITY",
     `!l st x. EVERY valid_exp l /\ grow_lt (read st SP) (LENGTH l)
-             ==> !e. EVERY (\x. ~eq_exp st e x) l /\ valid_exp_2 e ==>                
+             ==> !e. EVERY (\x. ~eq_exp st e x) l /\ valid_exp_2 e ==>
                     ((run_cfl (BLK (pop_list l)) st) '' e = st '' e)`,
 
     Induct_on `l` THENL [
@@ -852,7 +852,7 @@ val POP_LIST_SANITY = Q.store_thm (
 val POP_LIST_FUNCTIONALITY = Q.store_thm (
     "POP_LIST_FUNCTIONALITY",
     `!l st. EVERY valid_exp l /\ grow_lt (read st SP) (LENGTH l) /\
-            unique_exp_list st l /\ EVERY (\x.~addr_in_range st x (w2n (read st SP) + LENGTH l, w2n (read st SP))) l 
+            unique_exp_list st l /\ EVERY (\x.~addr_in_range st x (w2n (read st SP) + LENGTH l, w2n (read st SP))) l
              ==> !i. i < LENGTH l /\ ~(is_C (EL i l)) /\ valid_exp (EL i l) ==>
              ((run_cfl (BLK (pop_list l)) st) '' (EL i l)  = st '' (isM (w2n (read st SP) + SUC i)))`,
 
@@ -862,12 +862,12 @@ val POP_LIST_FUNCTIONALITY = Q.store_thm (
         RW_TAC list_ss [RUN_CFL_BLK_APPEND, pop_list_def, unique_exp_list_def] THEN
           IMP_RES_TAC grow_lt_thm THEN
           Cases_on `i` THENL [
-         
+
             FULL_SIMP_TAC list_ss [] THEN
               `(run_cfl (BLK (pop_one h)) st) '' h = st '' isM (w2n (read st SP) + 1)` by ALL_TAC THENL [
                 IMP_RES_TAC pop_one_lem THEN POP_ASSUM (ASSUME_TAC o Q.SPEC `st`) THEN
-                RW_TAC std_ss [] THEN 
-                `(!st1. ~(eq_exp st1 (isR 9) h)) /\ (!st1. ~(eq_exp st1 (isR sp) h))` by (Cases_on `h` THEN 
+                RW_TAC std_ss [] THEN
+                `(!st1. ~(eq_exp st1 (isR 9) h)) /\ (!st1. ~(eq_exp st1 (isR sp) h))` by (Cases_on `h` THEN
                       FULL_SIMP_TAC std_ss [eq_exp_def, valid_exp_def, valid_regs_lem, sp_def]) THEN
                 `~(isR 9 = isR fp) /\ ~(isR sp = isR fp)` by RW_TAC std_ss [fp_def, sp_def] THEN
                 RW_TAC std_ss [READE_WRITEE_THM_2, READE_WRITEE],
@@ -880,7 +880,7 @@ val POP_LIST_FUNCTIONALITY = Q.store_thm (
                 FULL_SIMP_TAC std_ss [legal_pop_exp_def] THEN
                 METIS_TAC [POP_LIST_SANITY]
             ],
-  
+
             FULL_SIMP_TAC list_ss [] THEN
                 IMP_RES_TAC unique_exp_list_lem_1 THEN
                 IMP_RES_TAC valid_exp_thm THEN
@@ -914,7 +914,7 @@ val LOCATE_GE_GROW_LT = Q.store_thm (
 
 val LEGAL_PUSH_EXP_DSTATE = Q.store_thm (
     "LEGAL_PUSH_EXP_DSTATE",
-    `legal_pop_exp st e l /\ (w2n (read st FP) = w2n (read st' FP)) ==> 
+    `legal_pop_exp st e l /\ (w2n (read st FP) = w2n (read st' FP)) ==>
          legal_pop_exp st' e l`,
     RW_TAC std_ss [legal_pop_exp_def] THEN
     Q.PAT_ASSUM `EVERY x y` MP_TAC THEN
@@ -968,7 +968,7 @@ val  ADDR_IN_RANGE_LEGAL_EXP = Q.store_thm (
     RW_TAC std_ss [legal_push_exp_def, EVERY_EL] THEN
     RES_TAC THEN REPEAT (Q.PAT_ASSUM `!n.x` (K ALL_TAC)) THEN
     Cases_on `EL i l` THEN
-    FULL_SIMP_TAC std_ss [valid_exp_1_def, addr_in_range_def, in_range_def, addr_of_def, valid_exp_def, 
+    FULL_SIMP_TAC std_ss [valid_exp_1_def, addr_in_range_def, in_range_def, addr_of_def, valid_exp_def,
         valid_regs_lem, locate_ge_def] THEN
     Q.ABBREV_TAC `x = w2n (read st SP)` THEN Q.ABBREV_TAC `y = w2n (read st FP)` THEN
     FULL_SIMP_TAC std_ss [NOT_LESS, PRE_SUB1] THEN
@@ -1001,7 +1001,7 @@ val COPY_LIST_SANITY = Q.store_thm (
 val COPY_LIST_FUNCTIONALITY = Q.store_thm (
     "COPY_LIST_FUNCTIONALITY",
     `!st dstL srcL. EVERY valid_exp srcL /\ EVERY ($~ o is_C) srcL /\ EVERY ($~ o is_C) dstL /\
-                    EVERY valid_exp dstL /\ 
+                    EVERY valid_exp dstL /\
          locate_ge (read st SP) (LENGTH srcL) /\ unique_exp_list st dstL /\
             EVERY (\x. ~addr_in_range st x (w2n (read st SP), w2n (read st SP) - LENGTH srcL)) srcL /\
             EVERY (\x. ~addr_in_range st x (w2n (read st SP), w2n (read st SP) - LENGTH dstL)) dstL /\
@@ -1010,7 +1010,7 @@ val COPY_LIST_FUNCTIONALITY = Q.store_thm (
            (run_cfl (BLK (copy_list dstL srcL)) st '' (EL i dstL) = st '' (EL i srcL))`,
 
     RW_TAC std_ss [copy_list_def, RUN_CFL_BLK_APPEND] THEN
-    `let st' = run_cfl (BLK (push_list srcL)) st in EVERY (\x. ~addr_in_range st' x 
+    `let st' = run_cfl (BLK (push_list srcL)) st in EVERY (\x. ~addr_in_range st' x
            (w2n (read st' SP) + LENGTH dstL, w2n (read st' SP))) dstL` by METIS_TAC [PUSH_LIST_ADDR_IN_RANGE] THEN
     POP_ASSUM (ASSUME_TAC o SIMP_RULE std_ss [LET_THM]) THEN
     IMP_RES_TAC (SIMP_RULE std_ss [LET_THM] PUSH_LIST_SP_FP) THEN
@@ -1022,7 +1022,7 @@ val COPY_LIST_FUNCTIONALITY = Q.store_thm (
     RW_TAC std_ss [POP_LIST_FUNCTIONALITY] THEN
     NTAC 8 (POP_ASSUM (K ALL_TAC)) THEN
 
-    `w2n (read st SP) - PRE (LENGTH srcL) + i = w2n (read st SP) - LENGTH srcL + SUC i` by 
+    `w2n (read st SP) - PRE (LENGTH srcL) + i = w2n (read st SP) - LENGTH srcL + SUC i` by
                FULL_SIMP_TAC arith_ss [locate_ge_def, PRE_SUB1] THEN
     `~is_C (EL i srcL) /\ valid_exp (EL i srcL)` by (FULL_SIMP_TAC std_ss [EVERY_EL] THEN
            METIS_TAC []) THEN

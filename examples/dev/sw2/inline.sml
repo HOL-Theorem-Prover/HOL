@@ -12,8 +12,8 @@ open HolKernel Parse boolLib bossLib NormalTheory Normal
 
 val threshold = ref 10;
 
-fun size tm = 
-  if is_let tm then 
+fun size tm =
+  if is_let tm then
      let val (v,M,N) = dest_plet tm
      in size M + size N end
   else if is_pabs tm then
@@ -30,22 +30,22 @@ fun size tm =
 (* Inline Expansion small anonymous functions defined in the body            *)
 (*---------------------------------------------------------------------------*)
 
-fun identify_small_fun tm = 
-  let 
-     fun trav t = 
-       if is_let t then 
+fun identify_small_fun tm =
+  let
+     fun trav t =
+       if is_let t then
            let val (v,M,N) = dest_plet t
-               val M' = if is_pabs M andalso size M < !threshold then 
-                           mk_comb (inst [alpha |-> type_of M] (Term `fun`), M) 
+               val M' = if is_pabs M andalso size M < !threshold then
+                           mk_comb (inst [alpha |-> type_of M] (Term `fun`), M)
                         else trav M
            in mk_plet (v, M', trav N)
            end
        else t
-  in 
+  in
     trav tm
   end;
 
-fun once_expand_anonymous def = 
+fun once_expand_anonymous def =
   let
     val t0 = rhs (concl (SPEC_ALL def))
     val t1 = identify_small_fun t0
@@ -57,13 +57,13 @@ fun once_expand_anonymous def =
     thm2
   end
 
-fun expand_anonymous def = 
+fun expand_anonymous def =
   let
-    fun expand th = 
+    fun expand th =
        let val th' =  once_expand_anonymous th
-       in 
+       in
          if concl th' = concl th then th'
-         else expand th' 
+         else expand th'
        end
        handle e => th   (* Unchanged *)
   in
@@ -78,12 +78,12 @@ fun expand_anonymous def =
 val unroll_limit = ref 3;
 
 fun mk_inline_rules env =
-  let fun unroll defth = 
+  let fun unroll defth =
       let val (name,body) = dest_eq (concl defth)
-      in  if occurs_in name body 
+      in  if occurs_in name body
             then PBETA_RULE  (* unroll the function *)
-                  (CONV_RULE (RHS_CONV 
-                    (REWRITE_CONV 
+                  (CONV_RULE (RHS_CONV
+                    (REWRITE_CONV
                        [Ntimes defth (!unroll_limit)])) defth)
             else
               defth
@@ -92,7 +92,7 @@ fun mk_inline_rules env =
       List.map (unroll o abs_fun) env
   end
 
-fun expand_named env def = 
+fun expand_named env def =
   let
     val rules = mk_inline_rules env
     val thm1 = (PBETA_RULE o ONCE_REWRITE_RULE rules) def (* inline expansion *)
@@ -118,8 +118,8 @@ fun optimize th =
       else optimize lem2
   end
 
-fun optimize_norm env def = 
-  let 
+fun optimize_norm env def =
+  let
     val th1 = SSA_RULE def
     val th2 = expand_anonymous th1
     val th3 = expand_named env th2

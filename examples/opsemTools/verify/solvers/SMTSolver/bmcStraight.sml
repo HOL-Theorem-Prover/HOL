@@ -1,5 +1,5 @@
 (* To verify a relational specification using STRAIGHT_RUN
-   a SMT solver and a constraint solver when there is 
+   a SMT solver and a constraint solver when there is
    a non-linear expression.
 
 Principle:
@@ -10,11 +10,11 @@ Principle:
   * state after execution of block b_i is computed by calling
     STRAIGHT_RUN b_i s_i
     This gives a new state s_(i+1)
-- (TODO)if program contains "Local" and "Dispose", then then local variable 
-is renamed to become a new global variable (preprocessing that could 
+- (TODO)if program contains "Local" and "Dispose", then then local variable
+is renamed to become a new global variable (preprocessing that could
 be done during parsing)
 After renaming,  "Local" and "Dispose" are removed
-- when the current command is a loop (While c body) 
+- when the current command is a loop (While c body)
 it is unwound MAX_UNWIND times.
   * If current state is state s_i, then we successively call
     STRAIGHT_RUN body s_i which gives state s_(i+1)
@@ -28,13 +28,13 @@ it is unwound MAX_UNWIND times.
     where s is the current state
   * we add the exit condition to the term to be verified.
     The exit condition is EVAL ``beval ~b s_(i+MAX_UNWIND)``
-- (TODO)when the current command is an assertion, it is evaluated on the 
+- (TODO)when the current command is an assertion, it is evaluated on the
 current state
 - The term to be verified is:
-    ? vars. pre /\ l_0 /\ l_1 /\ ... /\ l_p 
-                /\ a_0 /\ a_1 /\ ... /\ a_q 
+    ? vars. pre /\ l_0 /\ l_1 /\ ... /\ l_p
+                /\ a_0 /\ a_1 /\ ... /\ a_q
                 /\ ~post
-  where l_i are conjunction of entrance and exit conditions of loops 
+  where l_i are conjunction of entrance and exit conditions of loops
   and a_i are the assertions
 
 *)
@@ -43,9 +43,9 @@ current state
 (* TODO
 - assert: on the current state
 - local and dispose
-- compute straight blocks only one time ==> build and use the 
+- compute straight blocks only one time ==> build and use the
 Control Flow Graph of the program
-*) 
+*)
 
 
 open HolKernel Parse boolLib  PATH_EVAL
@@ -62,33 +62,33 @@ val MAX_UNWIND = 10;
 fun getRes thm =
   snd(dest_comb(concl(thm)));
 
-fun isTrue thm = 
+fun isTrue thm =
   getRes(thm) = ``T``;
 
 
 (* ===================================================== *)
-(* conversions and simplifications on states to simplify 
-   conditional terms when a decision has been taken  
+(* conversions and simplifications on states to simplify
+   conditional terms when a decision has been taken
    when entering a loop *)
 (* ===================================================== *)
 
 
 (* ------------------------------------------------------*)
-(* Conversion to transform an equality between a conditional 
+(* Conversion to transform an equality between a conditional
    term and a value into a conditional term on equalities
 
    Apply theorem condEq:
     ``!b:bool c1:int c2:int x:int.
-               ((if b then c1 else c2) = x) = 
+               ((if b then c1 else c2) = x) =
                if b then c1=x else c2=x``
 *)
 
-local 
-val condEq = 
+local
+val condEq =
    prove(``!b:bool c1:int c2:int x:int.
-               ((if b then c1 else c2) = x) = 
+               ((if b then c1 else c2) = x) =
                if b then c1=x else c2=x``,
-         METIS_TAC []) 
+         METIS_TAC [])
 in
 
 fun cond_EQ_CONV tm =
@@ -99,20 +99,20 @@ fun cond_EQ_CONV tm =
       val b = (el 1 argsIf);
       val c1 = (el 2 argsIf);
       val c2 = (el 3 argsIf);
-    in 
+    in
         SPECL [b,c1,c2,x] condEq
     end
 end;
 
 (* ----------------------------------------------------- *)
 (* same conversion as above but for a conditional expression
-   that contains Num *) 
-local 
-val condEqNum = 
+   that contains Num *)
+local
+val condEqNum =
    prove(``!b:bool c1:int c2:int x:num.
-               (Num (if b then c1 else c2) = x) = 
+               (Num (if b then c1 else c2) = x) =
                if b then Num(c1)=x else Num(c2)=x``,
-         METIS_TAC []) 
+         METIS_TAC [])
 in
 
 fun cond_EQ_CONV_NUM tm =
@@ -120,14 +120,14 @@ fun cond_EQ_CONV_NUM tm =
       val num = (el 1 args);
       val (opr,iff) = dest_comb num;
     in
-      if opr = ``Num`` 
-      then 
+      if opr = ``Num``
+      then
         let val x = (el 2 args);
 	  val (_,argsIf) = strip_comb  iff;
 	  val b = (el 1 argsIf);
           val c1 = (el 2 argsIf);
           val c2 = (el 3 argsIf);
-        in 
+        in
           SPECL [b,c1,c2,x] condEqNum
         end
       else raise HOL_ERR {message="term doesn't match condEqNum",
@@ -138,10 +138,10 @@ end;
 
 
 (* -------------------------------------------------------- *)
-(* conversion functions to simplify a conditional term when 
+(* conversion functions to simplify a conditional term when
    if and else parts are constants T and F *)
-local 
-val condConstantT = 
+local
+val condConstantT =
    prove(``!b. (if b then T else F) = b``,
          METIS_TAC [])
 
@@ -152,9 +152,9 @@ fun cond_CONSTANT_T_CONV tm =
       val b = (el 1 args);
       val c1 = (el 2 args);
       val c2 = (el 3 args);
-    in 
+    in
       if c1=``T`` andalso c2 = ``F``
-      then SPECL [b] condConstantT 
+      then SPECL [b] condConstantT
       else raise HOL_ERR {message="term doesn't match condConstantT",
 		       origin_function ="cond_CONSTANT_T_CONV",
 		       origin_structure ="bmcStraight"}
@@ -163,9 +163,9 @@ end;
 
 
 local
- val condConstantF = 
+ val condConstantF =
    prove(``!b. (if b then F else T) = ~b``,
-         METIS_TAC []) 
+         METIS_TAC [])
 
 in
 
@@ -174,9 +174,9 @@ fun cond_CONSTANT_F_CONV tm =
       val b = (el 1 args);
       val c1 = (el 2 args);
       val c2 = (el 3 args);
-    in 
+    in
       if c1=``F`` andalso c2 = ``T``
-      then SPECL [b] condConstantF 
+      then SPECL [b] condConstantF
       else raise HOL_ERR {message="term doesn't match condConstantF",
 		       origin_function ="cond_CONSTANT_F_CONV",
 		       origin_structure ="bmcStraight"}
@@ -185,9 +185,9 @@ end;
 
 
 (*
-local 
-val cond_neg = 
-   prove(``!b c1 c2. ~(if b then c1 else c2) = 
+local
+val cond_neg =
+   prove(``!b c1 c2. ~(if b then c1 else c2) =
                       (if b then ~c1 else ~c2)``,
          METIS_TAC [])
 in
@@ -197,7 +197,7 @@ fun cond_NEGATION_CONV tm =
       val b = (el 1 args);
       val c1 = (el 2 args);
       val c2 = (el 3 args);
-    in 
+    in
       SPECL [b,c1,c2] condNeg
     end
 end
@@ -206,7 +206,7 @@ end
 fun COND_CONV tm =
   (TOP_DEPTH_CONV cond_EQ_CONV THENC REWRITE_CONV []
    (* THENC TOP_DEPTH_CONV cond_CONSTANT_T_CONV
-   THENC TOP_DEPTH_CONV cond_CONSTANT_F_CONV 
+   THENC TOP_DEPTH_CONV cond_CONSTANT_F_CONV
    THENC REWRITE_CONV [] *)
   )
   tm;
@@ -230,7 +230,7 @@ fun simplifyConditional cond =
   let val c1 = getRes((COND_CONV THENC REWRITE_CONV []) cond)
       (* simplify trivial equalities *)
       val c2 = getRes(EVAL c1)
-  in    
+  in
     (* simplify conditional with constants *)
     getRes((TOP_DEPTH_CONV cond_CONSTANT_F_CONV THENC REWRITE_CONV []) c2)
     handle UNCHANGED =>
@@ -238,7 +238,7 @@ fun simplifyConditional cond =
       handle UNCHANGED =>
       c2
   end
-  handle UNCHANGED => 
+  handle UNCHANGED =>
     getRes((TOP_DEPTH_CONV cond_CONSTANT_F_CONV THENC REWRITE_CONV []) cond)
     handle UNCHANGED =>
       getRes((TOP_DEPTH_CONV cond_CONSTANT_T_CONV THENC REWRITE_CONV []) cond)
@@ -250,18 +250,18 @@ fun simplifyConditional cond =
 
 
 (* ============================================================= *)
-(* to simplify states according to decisions that have been taken 
+(* to simplify states according to decisions that have been taken
    during loop unwinding *)
 
 (* ----------------------------------------------------- *)
-(* For a conditional term iftm = "if c then p1 else p2", 
+(* For a conditional term iftm = "if c then p1 else p2",
    if decision c has been taken during loop unwinding,
-   if "c==>cond" is true then iftm is replaced with p1, if 
-   "~c==>cond" is true then iftm is replaced with p2 
-   else simplification is recursively done in c p1 and p2. 
+   if "c==>cond" is true then iftm is replaced with p1, if
+   "~c==>cond" is true then iftm is replaced with p2
+   else simplification is recursively done in c p1 and p2.
 *)
 
-fun decide c iftm = 
+fun decide c iftm =
  if term2yices.is_conditional iftm
  then
    let val (_,args) = strip_comb iftm
@@ -276,13 +276,13 @@ fun decide c iftm =
      else
        let val impNotCond = ``(^c) ==> ~(^cond)``
          val resNotCond = getRes(EVAL impNotCond)
-       in 
+       in
         if resNotCond = ``T``
         then p2
         else  ``if ^(decide c cond)
                 then ^(decide c p1)
                 else ^(decide c p2)``
-       end 
+       end
    end
  else iftm;
 
@@ -293,9 +293,9 @@ fun decide c iftm =
    s is a list of terms ``("name",value)`` *)
 fun decideState d s =
   map
-    (fn p => 
+    (fn p =>
        let val (name,vall) = dest_comb(p)
-          in 
+          in
             mk_comb(name, decide d vall)
           end
      )
@@ -303,8 +303,8 @@ fun decideState d s =
 
 
 (* ----------------------------------------------------- *)
-(* compute the value of the state after that decision c has 
-   been taken during loop unwinding 
+(* compute the value of the state after that decision c has
+   been taken during loop unwinding
 *)
 fun stateForDecision c s =
    let val (l,t) = listSyntax.dest_list(s)
@@ -317,7 +317,7 @@ fun stateForDecision c s =
      handle UNCHANGED =>
        listSyntax.mk_list((decideState c l),t)
    end;
- 
+
 
 
 
@@ -325,34 +325,34 @@ fun stateForDecision c s =
 (* Functions to execute a program block by block.
    Compute successive states s0 s1 ... sn
    where s0 is symbolic initial state built from program variables,
-   and for each i, si+1 is state obtained after executing 
+   and for each i, si+1 is state obtained after executing
    block bi+1 on state si.
    Blocks are straight. *)
 (* ===================================================== *)
 
 (* ------------------------------------------------------------------*)
 (* to decompose a program as 2 subparts (s,p) where s is straight and
-   p is the rest of the program to analyze *) 
+   p is the rest of the program to analyze *)
 (* prog is a program
    return the first striaght block in prog and the rest of the program
    to be executed
-   i.e a pair (str,p) where 
+   i.e a pair (str,p) where
       - str is a straight program,
       - p is either "Skip" or a non straight program
-      - and "Seq str p" = prog 
+      - and "Seq str p" = prog
 *)
 fun getStaightBlock prog =
  let val (opr,args) = strip_comb prog
       val _ = if not(is_const opr)
-              then (print_term opr; 
-                    print " is not a constant\n"; 
+              then (print_term opr;
+                    print " is not a constant\n";
                     fail())
               else ()
      val name = fst(dest_const opr)
      val _ = if not(mem name ["Skip","Assign","ArrayAssign","GenAssign","Dispose","Seq",
                               "Cond","While","Local","Assert"])
-              then (print name; 
-                    print " is not a program constructor\n"; 
+              then (print name;
+                    print " is not a program constructor\n";
                     fail())
               else ()
  in
@@ -362,8 +362,8 @@ fun getStaightBlock prog =
           val p2= (el 2 args)
         in
            if isTrue(EVAL ``STRAIGHT ^p1``)
-           then 
-             let val gp2 = getStaightBlock p2 
+           then
+             let val gp2 = getStaightBlock p2
                 val p2str = fst gp2
                 val rest = snd gp2
                 in
@@ -373,7 +373,7 @@ fun getStaightBlock prog =
                (``Skip``,prog)
         end
    else
-      if name = "Dispose" orelse name ="Local" orelse name ="Assert" 
+      if name = "Dispose" orelse name ="Local" orelse name ="Assert"
       then (print "commands Dispose Local and Assert are not handled"; print name; fail())
       else
          (prog, ``Skip``)
@@ -391,7 +391,7 @@ fun getStaightBlock prog =
 *)
 
 
-(* TODO: 
+(* TODO:
 - build the term for all possible numbers of unwinding
   between 0 and MAX_UNWIND
 - consider cases where bev is constant when n=0
@@ -399,13 +399,13 @@ fun getStaightBlock prog =
 
 fun unwindWhile c b s n =
    if n=0
-   then 
+   then
      let val st = ``FEMPTY |++ ^s``;
         val bev = getRes(EVAL ``beval ^c ^st``);
         val notBev = mk_neg(bev)
         val ss = stateForDecision notBev s
      in
-        (* exit the loop so add the negation of loop 
+        (* exit the loop so add the negation of loop
            entrance condition *)
         (print "\nend of loop\n";
          print("neg of bev " ^ term_to_string(notBev));
@@ -413,7 +413,7 @@ fun unwindWhile c b s n =
         (ss,notBev)
         )
      end
-   else 
+   else
       let val se = ``FEMPTY |++ ^s``;
           val bev = getRes(EVAL ``beval ^c ^se``);
       in
@@ -421,7 +421,7 @@ fun unwindWhile c b s n =
          print("current state: " ^term_to_string(s));
 
 	if is_const(bev) andalso bev=``F``
-	then 
+	then
 	  (* exit the loop *)
 	  (print "======================\n";
            print ("Condition\n" ^ pretty_string(c) ^"\n");
@@ -431,9 +431,9 @@ fun unwindWhile c b s n =
           )
         else
            (* enter the loop so add the entrance condition *)
-           let  (* simplify s assuming decision c has been taken *) 
-             val ss = 
-               if bev = ``T`` 
+           let  (* simplify s assuming decision c has been taken *)
+             val ss =
+               if bev = ``T``
                then s
                else stateForDecision bev s
              val (st,cond) = finalState b ss
@@ -449,12 +449,12 @@ fun unwindWhile c b s n =
 )
       end
 
-      
-and execWhile prog s = 
+
+and execWhile prog s =
   let val (opr,args) = strip_comb prog
      val c = el 1 args
      val body = el 2 args
-  in 
+  in
     (print "\nstate before loop\n";
      print(term_to_string(s));
      unwindWhile c body s MAX_UNWIND
@@ -465,18 +465,18 @@ and execWhile prog s =
 
 (* ---------------------------------------------------------------------*)
 (* Takes a program and the current state (i.e state before current block)
-   Computes a pair (s',c) where 
+   Computes a pair (s',c) where
      - s' is the final state
-     - c is the conjunction of decisions that have been 
+     - c is the conjunction of decisions that have been
        taken when loops have been unwound
 *)
 and finalState prog s  =
   let val isStraight = getRes(EVAL ``STRAIGHT(^prog)``)
-  in 
+  in
     if isStraight=``T``
-    then 
+    then
        let val straightThm = EVAL ``STRAIGHT_RUN ^prog ^s``;
-       in 
+       in
           (getRes(straightThm),``T``)
        end
     else
@@ -484,18 +484,18 @@ and finalState prog s  =
 	 val block = fst b
 	 val rest = snd b
 	 val straightThm = EVAL ``STRAIGHT_RUN ^block ^s``;
-	 val stateAfter = getRes(straightThm); 
+	 val stateAfter = getRes(straightThm);
          val (opr,args) = strip_comb rest
        in
-	 if opr = ``Skip`` 
+	 if opr = ``Skip``
 	 then (stateAfter,``T``)
-	 else 
-	   if opr = ``Seq`` 
+	 else
+	   if opr = ``Seq``
 	   then
 	     let val p1= (el 1 args)
 		 val p2= (el 2 args)
 		 val (stAfterWhile,listCond) = execWhile p1 stateAfter;
-               val (fst,cond) = finalState p2 stAfterWhile 
+               val (fst,cond) = finalState p2 stAfterWhile
              in
 		 (fst,mk_conj(listCond,cond))
              end
@@ -509,17 +509,17 @@ and finalState prog s  =
 
 (* ------------------------------------------------------------------*)
 (* compute the initial state using makeStateList in ../stateTools.sml
-   and the final state using "finalState" and evaluate 
+   and the final state using "finalState" and evaluate
    pre and post conditions using these states.
    The term to be verified is:
       ? vars. valPre /\ valPost /\ cond
-   where vars are variables in the program, valPre (resp. valPost) 
+   where vars are variables in the program, valPre (resp. valPost)
    is the value of pre (resp. post) and cond is the conjunction of
    decisions that have been taken during loop unfolding
 *)
 
 
-fun buildTermToVerify spec = 
+fun buildTermToVerify spec =
   let val (_,args) = strip_comb spec;
     val prog =  el 2 args;
     val pre =  el 1 args;
@@ -527,9 +527,9 @@ fun buildTermToVerify spec =
     val s1 = makeStateList prog;
     val (s2,listCond) = finalState prog s1;
     val stateBefore = ``FEMPTY |++ ^s1``;
-    val stateAfter = ``FEMPTY |++ ^s2``; 
+    val stateAfter = ``FEMPTY |++ ^s2``;
     val preValue = evalPre pre stateBefore;
-    val postValue = evalPost post stateBefore stateAfter; 
+    val postValue = evalPost post stateBefore stateAfter;
 (*    val simpListCond = simplifyConditional listCond
     val simpPostValue = simplifyConditional postValue
     val verif = mk_conj(mk_conj(preValue,simpListCond),
@@ -542,7 +542,7 @@ fun buildTermToVerify spec =
     list_mk_exists(f,verif)
 end;
 
-(* 
+(*
 simplifyConditional simpListCond
 
 val cond = `` ~(if a_9 = x then F else T)``
@@ -605,9 +605,9 @@ val l = ``(if a_0 = x then F else T) /\ (if a_1 = x then F else T) /\
       (if a_8 = x then F else T)``
 
 TOP_DEPTH_CONV cond_CONSTANT_F_CONV l1
-     handle HOL_ERR t  => 
+     handle HOL_ERR t  =>
        let val {origin_structure = or,origin_function=f,message=m } = t
-       in 
+       in
        (print(or ^ "\n");
         print(f ^ "\n");
         print(m ^ "\n");
@@ -710,11 +710,11 @@ val t = ``(a_9 = x) ==>
                                  (Num (if a_9 = x then 9 else ~1)) =
                                  x))))))))))``
 
-val th = ``!c:bool x1:int x2:int. 
+val th = ``!c:bool x1:int x2:int.
        c ==> ((if c then x1 else x2) = x1)``
-prove(th,METIS_TAC []) 
+prove(th,METIS_TAC [])
 
-val 
+val
 
 *)
 
@@ -731,24 +731,24 @@ fun printResult res =
 (* verify a specification *)
 (* ====================== *)
 
-(* the term to verify is built by evaluating states on successive blocks 
+(* the term to verify is built by evaluating states on successive blocks
    of the program and unwinding loops MAX_UNWIND times.
-   The verification is done first by evaluating the term to 
+   The verification is done first by evaluating the term to
    remove constants. If this term is not constant T or F then a SMT
    solver is called. If this solver fails because there is a non linear term,
    then the constraint solver is called
 *)
-    
+
 
 fun verify spec n =
   (print("Verifying program " ^ n ^ " \n");
   let val verif = (print "building term: "; time buildTermToVerify spec);
       val v = getThm(EVAL verif);
-      in 
+      in
         (print "Term to verify is:\n";
          print((term_to_string v)^ "\n");
          if is_const(v)
-	 then 
+	 then
 	   (print "Term to verify has been simplified to a constant\n";
 	    printResult v;
             []
@@ -756,7 +756,7 @@ fun verify spec n =
           else
 	    let  val (thm,t) = (print "calling SMT solver: " ; time (extSolvSMT(n^"Straight")) v)
 	      val res = getRes thm
-            in 
+            in
 		(print("Solving time with SMT solver: " ^  Real.toString(t) ^ "s.\n");
 		 printResult res;
 		 if res=``T``
@@ -765,12 +765,12 @@ fun verify spec n =
 		)
 	    end
 	)
-        handle YICES_COMPILEError => 
+        handle YICES_COMPILEError =>
          (print "Term contains non linear expressions, calling constraint solver\n";
-	  let  val (thm,t) = (print "calling constraint solver: " ; 
+	  let  val (thm,t) = (print "calling constraint solver: " ;
                               time (extSolv.extSolvTimeoutFormat(n^"Straight") v 1000) 8)
 	      val res = getRes thm
-          in 
+          in
              (print("Solving time with constraint solver: " ^  Real.toString(t) ^ "s.\n");
 	      printResult res;
 	      if res=``T``
@@ -791,8 +791,8 @@ fun verify spec n =
 
 
 
-(* trying to use lambda expressions to define straight code 
-denotational semantics. Passing from one state to another 
+(* trying to use lambda expressions to define straight code
+denotational semantics. Passing from one state to another
 is just reducing the lambda abstraction *)
 
 (* seems to be 10 times slower than direct computation of
@@ -826,12 +826,12 @@ val st = ``[("left",(if a_9 = x then Scalar 9 else Scalar 10)); ("x",Scalar x);
  ("a",
   Array
     ( FEMPTY |+ (0,a_0) |+ (1,a_1) |+ (2,a_2) |+ (3,a_3) |+ (4,a_4) |+
-     (5,a_5) |+ (6,a_6) |+ (7,a_7) |+ (8,a_8) |+ (9,a_9) |+ (i,a_i)))]`` 
+     (5,a_5) |+ (6,a_6) |+ (7,a_7) |+ (8,a_8) |+ (9,a_9) |+ (i,a_i)))]``
 
 val s = ``FEMPTY |++ ^st``
 
 val cond = ``\state1:state state2. ArrayOf (state2 ' "a") ' (Num (ScalarOf (state2 ' "Result")))=
-ScalarOf (state1 ' "aLength")`` 
+ScalarOf (state1 ' "aLength")``
 
 EVAL ``^cond ^s ^s``
 
@@ -891,27 +891,27 @@ val th = ``((Num Result =2) \/ (Num Result =0)\/ (Num Result =1))
                    a_1
                else a_0) = 10))``
 
-val th = ``(Num Result =2) 
+val th = ``(Num Result =2)
    ==> (t = (a_2:int = 10))``
 
-   prove(th,METIS_TAC []) 
+   prove(th,METIS_TAC [])
 
 
 
-val th = ``!c:bool x1:int x2:int. 
+val th = ``!c:bool x1:int x2:int.
        c ==> ((if c then x1 else x2) = x1)``
-prove(th,METIS_TAC []) 
+prove(th,METIS_TAC [])
 OK
 
-val th = ``!c1:bool c2:bool x1:int x2:int. 
-       (c1 \/ c2)  ==> 
+val th = ``!c1:bool c2:bool x1:int x2:int.
+       (c1 \/ c2)  ==>
          ~((if c1 then (if c2 then x1 else x2) else x3) = x3)``
 prove(th,METIS_TAC [])
 
 SIMP_CONV (srw_ss()++intSimps.COOPER_ss++ARITH_ss) [] th
 
 
-DB.match [] ``if c then x1 else x2`` 
+DB.match [] ``if c then x1 else x2``
 
 val t = `` FEMPTY '
      (Num

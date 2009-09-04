@@ -45,7 +45,7 @@ sig
   val PURE_ONCE_ASM_REWRITE_TAC : thm list -> tactic
   val ONCE_ASM_REWRITE_TAC      : thm list -> tactic
 
-  type pred = term -> bool  
+  type pred = term -> bool
 
   val FILTER_PURE_ASM_REWRITE_RULE      : pred -> thm list -> thm -> thm
   val FILTER_ASM_REWRITE_RULE           : pred -> thm list -> thm -> thm

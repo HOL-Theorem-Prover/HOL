@@ -1,7 +1,7 @@
 (*---------------------------------------------------------------------------
  * This example defines the abstract syntax for a simple ML-like language,
- *  and a simple mutually-recursive function for computing the variables 
- *  in a program. 
+ *  and a simple mutually-recursive function for computing the variables
+ *  in a program.
  *---------------------------------------------------------------------------*)
 
 app load ["mutrecLib", "stringTheory", "setTheory"];
@@ -11,7 +11,7 @@ app load ["mutrecLib", "stringTheory", "setTheory"];
  * First, we define a type of variables.
  *---------------------------------------------------------------------------*)
 
-val var_Axiom = 
+val var_Axiom =
   Define_type.define_type
      {name="var_Axiom",
       fixities = [Term.Prefix],
@@ -22,26 +22,26 @@ val var_ty = Parse.Type`:var`;
 
 (*------------GRAMMAR---------------------------------------------------------
 
-       atexp ::= <var> 
+       atexp ::= <var>
                | let <dec> in <exp> end
-    
+
        exp   ::= <atexp>
                | <exp> <atexp>
                | fn <match>
-    
+
        match ::= <rule>
                | <rule> "|" <match>
-    
+
        rule ::= <pat> => <exp>
-                
+
        dec   ::= val <valbind>
                | local <dec> in <dec> end
                | <dec> ; <dec>
-    
+
      valbind ::= <pat> = <exp>
                | <pat> = <exp> and <valbind>
                | valrec <valbind>
-    
+
        pat   ::= _  (* wildcard *)
                | <var>
 
@@ -71,7 +71,7 @@ val syntax_spec =
       [{name = "rule", arg_info = [being_defined "pat",
                                    being_defined "exp"]}]},
  {type_name = "dec",
-  constructors = 
+  constructors =
       [{name = "val_dec", arg_info = [being_defined "valbind"]},
        {name = "local_dec", arg_info = [being_defined "dec",
                                         being_defined "dec"]},
@@ -96,13 +96,13 @@ end;
  * Now define the type!
  *---------------------------------------------------------------------------*)
 val {Cases = syntax_cases,
-     Constructors_Distinct = syntax_constructors_distinct, 
+     Constructors_Distinct = syntax_constructors_distinct,
      Constructors_One_One = syntax_constructors_one_one,
-     New_Ty_Existence = syntax_existence_thm, 
+     New_Ty_Existence = syntax_existence_thm,
      New_Ty_Uniqueness = syntax_uniqueness_thm,
      New_Ty_Induct = syntax_induction_thm,
-     Argument_Extraction_Defs} 
- = Lib.time 
+     Argument_Extraction_Defs}
+ = Lib.time
      mutrecLib.define_type syntax_spec;
 
 
@@ -132,7 +132,7 @@ val vars_thm = mutrecLib.define_mutual_functions
     (decV (seq_dec d1 d2) = (decV d1) UNION (decV d2))
      /\
     (valbindV (bind p e) = (patV p) UNION (expV e)) /\
-    (valbindV (bind_list p e brst) = (patV p) UNION (expV e) 
+    (valbindV (bind_list p e brst) = (patV p) UNION (expV e)
                                      UNION (valbindV brst)) /\
     (valbindV (rec_bind vb) = (valbindV vb))
      /\
@@ -140,7 +140,7 @@ val vars_thm = mutrecLib.define_mutual_functions
     (patV (var_pat v) = {v})`};
 
 
-(* Warning! 
+(* Warning!
 
 One has to exercise a little discipline with variable names in
 quotations that define mutually recursive functions. Type inference will

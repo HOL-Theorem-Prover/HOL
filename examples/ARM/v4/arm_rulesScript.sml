@@ -600,13 +600,13 @@ val TRANSFER_LDM2 = prove(
 val TRANSFER_LDM2 = SIMP_RULE (bool_ss++boolSimps.LET_ss) [] TRANSFER_LDM2;
 
 val TRANSFER_STM = prove(
-  `!cpin data m r mode l. 
+  `!cpin data m r mode l.
       SND (SND (FOLDL (TRANSFER F) (cpin,data,m) (STM_LIST r mode l))) =
       FOLDL (\mem (rp,rd). MEM_WRITE mem rd (Word (REG_READ r mode rp))) m l`,
   Induct_on `l` \\ TRY (Cases_on `h`)
     \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [TRANSFER_def,STM_LIST_def]
     \\ ASM_SIMP_TAC std_ss [GSYM STM_LIST_def]);
-     
+
 val LDM_STM_ss =
   rewrites [LDM_STM_def,MEM_WRITE_def,
     rich_listTheory.FIRSTN_LENGTH_ID,my_listTheory.FOLDL_MAP2,

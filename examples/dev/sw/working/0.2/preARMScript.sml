@@ -42,7 +42,7 @@ val getS_def = Define
 
 val getS_thm = Q.store_thm (
 	"getS_thm",
-        `(getS (cpsr : CPSR) SN = cpsr %% 31) /\ 
+        `(getS (cpsr : CPSR) SN = cpsr %% 31) /\
 	 (getS (cpsr : CPSR) SZ = cpsr %% 30) /\
 	 (getS (cpsr : CPSR) SC = cpsr %% 29) /\
 	 (getS (cpsr : CPSR) SV = cpsr %% 28)
@@ -81,7 +81,7 @@ val setNZCV_thm = Q.store_thm (
     (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SZ = Z) /\
     (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SC = C) /\
     (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SV = V)`,
-   
+
    RW_TAC (std_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss) [getS_def, setNZCV_def, word_modify_def]);
 
 
@@ -118,7 +118,7 @@ val _ = Hol_datatype `OFFSET = POS of DISTANCE
              `;
 
 
-val _ = Hol_datatype `EXP = MEM of num # OFFSET			(* (register, offset) *) 
+val _ = Hol_datatype `EXP = MEM of num # OFFSET			(* (register, offset) *)
                   | NCONST of num
 		  | WCONST of word32
                   | REG of REGISTER
@@ -151,20 +151,20 @@ val _ = type_abbrev("INST", Type`:OPERATION # (EXP option) # (EXP list) # (OFFSE
 (*---------------------------------------------------------------------------------*)
 (* State                                                                           *)
 (*---------------------------------------------------------------------------------*)
-  
+
 val _ = type_abbrev("STATE", Type`: ADDR # CPSR # (REGISTER |-> DATA) # (ADDR |-> DATA)`);
 
 val FORALL_DSTATE = Q.store_thm
   ("FORALL_DSTATE",
-    `(!s:(REGISTER |-> DATA) # (ADDR |-> DATA). P s) = 
+    `(!s:(REGISTER |-> DATA) # (ADDR |-> DATA). P s) =
 	!regs mem. P (regs,mem)`,
     SIMP_TAC std_ss [FORALL_PROD]);
 
 val FORALL_STATE = Q.store_thm
   ("FORALL_STATE",
     `(!s:STATE. P s) = !pc pcsr regs mem. P (pc,pcsr,(regs,mem))`,
-    SIMP_TAC std_ss [FORALL_PROD]);  
-               
+    SIMP_TAC std_ss [FORALL_PROD]);
+
 (*---------------------------------------------------------------------------------*)
 (* Read and write registers and memory                                             *)
 (*---------------------------------------------------------------------------------*)
@@ -173,8 +173,8 @@ val read_def =
   Define `
     read (regs,mem) (exp:EXP) =
       case exp of
-        MEM (r,offset) -> 
-	    (case offset of 
+        MEM (r,offset) ->
+	    (case offset of
 		  POS k -> mem ' (w2n (regs ' r) + k) ||
 		  NEG k -> mem ' (w2n (regs ' r) - k)
 	    )	||
@@ -196,7 +196,7 @@ val write_def =
   Define `
     write (regs,mem) (exp:EXP) (v:DATA)=
       case exp of
-        MEM (r,offset) -> 
+        MEM (r,offset) ->
 	    (regs,
              (case offset of
                    POS k -> mem |+ (w2n (regs ' r) + k, v) ||
@@ -212,7 +212,7 @@ val write_thm = Q.store_thm (
   ` (write (regs,mem) (MEM (r,POS k)) v = (regs, mem |+ (w2n (regs ' r) + k, v))) /\
     (write (regs,mem) (MEM (r,NEG k)) v = (regs, mem |+ (w2n (regs ' r) - k, v))) /\
     (write (regs,mem) (REG r) v = (regs |+ (r, v), mem))`,
-    RW_TAC std_ss [write_def]);                      
+    RW_TAC std_ss [write_def]);
 
 (*---------------------------------------------------------------------------------*)
 (* Decoding and execution of an instruction                                        *)
@@ -223,7 +223,7 @@ val goto_def =
   Define `
     goto (pc, SOME jump) =
         case jump of
-            POS n -> pc + n  || 
+            POS n -> pc + n  ||
             NEG n -> pc - n
    `;
 
@@ -235,7 +235,7 @@ val goto_thm = Q.store_thm (
   RW_TAC std_ss [goto_def]);
 
 
-val decode_op_def = 
+val decode_op_def =
   Define `
   decode_op (pc,cpsr,s) (op,dst,src,jump) =
      case op of
@@ -278,7 +278,7 @@ val decode_op_def =
               ||
           MUL -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))))))
               ||
-	  MLA -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))) + 
+	  MLA -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))) +
 						  read s (HD (TL (TL (src)))) )))
               ||
           AND -> (cpsr, (write s (THE dst) (read s (HD src) && read s (HD (TL (src))))))
@@ -288,16 +288,16 @@ val decode_op_def =
           EOR -> (cpsr, (write s (THE dst) (read s (HD src) ?? read s (HD (TL (src))))))
               ||
 
-          LSL -> (cpsr, (write s (THE dst) 
+          LSL -> (cpsr, (write s (THE dst)
 				(read s (HD src) << w2n (read s (HD (TL (src)))))))
               ||
-          LSR -> (cpsr, (write s (THE dst) 
+          LSR -> (cpsr, (write s (THE dst)
 				(read s (HD src) >>> w2n (read s (HD (TL (src)))))))
               ||
-          ASR -> (cpsr, (write s (THE dst) 
+          ASR -> (cpsr, (write s (THE dst)
 				(read s (HD src) >> w2n (read s (HD (TL (src)))))))
               ||
-          ROR -> (cpsr, (write s (THE dst) 
+          ROR -> (cpsr, (write s (THE dst)
 				(read s (HD src) #>> w2n (read s (HD (TL (src)))))))
               ||
 
@@ -308,7 +308,7 @@ val decode_op_def =
                                 b <=+ a,
                                 ~(word_msb a = word_msb b) /\ ~(word_msb a = word_msb (a - b))), s))
               ||
-          
+
           (*  The carry flag is always set to false. This does not correspond to
               real ARM assembler. There you could set the carry flag by passing
               an shift as second argument. *)
@@ -325,7 +325,7 @@ val decode_op_def =
 		(* write the value in src (i.e. the memory) to the dst (i.e. the register)*)
               ||
 
-          STR -> (cpsr, (write s (HD src) (read s (THE dst))))   
+          STR -> (cpsr, (write s (HD src) (read s (THE dst))))
 		(* write the value in src (i.e. the register) to the dst (i.e. the memory)*)
               ||
 
@@ -335,7 +335,7 @@ val decode_op_def =
 	      ||
 
 	  B   -> (cpsr, s)
-	      || 
+	      ||
           BL ->  (cpsr, write s (REG 14) (n2w (SUC pc)))
   `;
 
@@ -358,7 +358,7 @@ val decode_op_thm = Q.store_thm
                         a = b,
                         b <=+ a,
                         ~(word_msb a = word_msb b) /\ ~(word_msb a = word_msb (a - b))), s))) /\
-  (decode_op (pc,cpsr,s) (TST,NONE,src,jump) = 
+  (decode_op (pc,cpsr,s) (TST,NONE,src,jump) =
       (let a = read s (HD src) in
                      let b = read s (HD (TL (src))) in
                      (setNZCV cpsr (word_msb (a && b),
@@ -400,10 +400,10 @@ val decode_op_thm = Q.store_thm
   (decode_op (pc,cpsr,s) (MSR,NONE,src,jump) = (read s (HD src),s)) /\
   (decode_op (pc,cpsr,s) (B,NONE,src,jump) = (cpsr,s)) /\
   (decode_op (pc,cpsr,s) (BL,NONE,src,jump) = (cpsr,write s (REG 14) (n2w (SUC pc))))`,
- 
+
    RW_TAC std_ss [decode_op_def]);
-  
-val decode_cond_cpsr_def = 
+
+val decode_cond_cpsr_def =
     Define `(decode_cond_cpsr cpsr EQ = getS cpsr SZ) /\
             (decode_cond_cpsr cpsr CS = getS cpsr SC) /\
             (decode_cond_cpsr cpsr MI = getS cpsr SN) /\
@@ -422,13 +422,13 @@ val decode_cond_cpsr_def =
             (decode_cond_cpsr cpsr NV = F)`
 
 
-val decode_cond_def = 
+val decode_cond_def =
   Define `
     (decode_cond ((pc,cpsr,s):STATE) (((op,cond,sflag), dst, src, jump):INST)) =
         (case cond of
             NONE -> (pc+1, decode_op (pc,cpsr,s) (op,dst,src,jump))
                 ||
-            SOME c -> 
+            SOME c ->
 		          if (decode_cond_cpsr cpsr c) then (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
 			        else (pc+1, cpsr, s))
   `;
@@ -461,10 +461,10 @@ val UPLOAD_NOT_AFFECT_LOWER = Q.store_thm (
    "UPLOAD_NOT_AFFECT_LOWER",
   `!instL iB start n. n < start ==>
         ((upload instL iB start) n = iB n)`,
-   Induct_on `instL` THEN 
+   Induct_on `instL` THEN
    RW_TAC std_ss [upload_def] THEN
    Induct_on `n` THEN
-   RW_TAC std_ss [upload_def] THEN           
+   RW_TAC std_ss [upload_def] THEN
    `SUC n < SUC start` by RW_TAC arith_ss [] THEN
    RES_TAC THEN
    POP_ASSUM (K ALL_TAC) THEN
@@ -478,7 +478,7 @@ val UPLOAD_LEM = Q.store_thm (
         ((upload instL iB start) (start+n) = EL n instL)`,
     Induct_on `n` THEN Induct_on `instL` THEN RW_TAC list_ss [upload_def] THENL [
         RW_TAC arith_ss [UPLOAD_NOT_AFFECT_LOWER],
-        RES_TAC THEN 
+        RES_TAC THEN
           POP_ASSUM (ASSUME_TAC o Q.SPECL [`SUC start`,`(\addr. if addr = start then h else iB addr)`]) THEN
           METIS_TAC [ADD_SUC, SUC_ADD_SYM, ADD_SYM]
     ]
@@ -489,12 +489,12 @@ val UPLOAD_START_POINT_INDEPENDENT = Q.store_thm (
   `!instL start1 start2 iB addr. addr < LENGTH instL ==>
 	((upload instL iB start1) (start1+addr) = (upload instL iB start2) (start2+addr))`,
    RW_TAC std_ss [UPLOAD_LEM]
-  );         
+  );
 
 val uploadCode_def =
   Define `uploadCode instL iB = upload instL iB 0`;
 
-                                     
+
 val UPLOADCODE_LEM = Q.store_thm (
    "UPLOADCODE_LEM",
    `!instL iB n. n < LENGTH instL ==>
@@ -504,15 +504,15 @@ val UPLOADCODE_LEM = Q.store_thm (
     POP_ASSUM (ASSUME_TAC o Q.SPECL [`0`,`iB`]) THEN
     FULL_SIMP_TAC arith_ss []
    );
-        
+
 val uploadSeg_def = Define `
     (uploadSeg 0 segs iB = iB) /\
-    (uploadSeg (SUC n) segs iB = 
+    (uploadSeg (SUC n) segs iB =
 	upload (EL n segs) (uploadSeg n segs iB) (10 * n))`;
 
 val UPLOADSEG_LEM = Q.store_thm
   ("UPLOADSEG_LEM",
-   `!n segs instB. uploadSeg n segs instB = 
+   `!n segs instB. uploadSeg n segs instB =
 	(if n > 0 then upload (EL (PRE n) segs) (uploadSeg (PRE n) segs instB) (10 * (PRE n)) else instB)`,
     Cases_on `n` THEN RW_TAC list_ss [uploadSeg_def]
   );
@@ -665,7 +665,7 @@ val SHORTEST_STOP = Q.store_thm
        P (FUNPOW g (shortest P g x) x)`,
     RW_TAC std_ss [stopAt_def, shortest_def] THEN
     METIS_TAC [Q.SPECL [`\n. P (FUNPOW g n x)`,`x`] LEAST_INTRO]
-  );  
+  );
 
 val SHORTEST_LEM = Q.store_thm
   ("SHORTEST_LEM",
@@ -674,7 +674,7 @@ val SHORTEST_LEM = Q.store_thm
        (stopAt P g x ==>
        ((0 = shortest P g x) ==> P x) /\
        (~(P x) = 1 <= shortest P g x))`,
-    REWRITE_TAC [stopAt_def, shortest_def] THEN REPEAT GEN_TAC THEN 
+    REWRITE_TAC [stopAt_def, shortest_def] THEN REPEAT GEN_TAC THEN
     `(P x ==> ((LEAST n. P (FUNPOW g n x)) = 0))` by ALL_TAC THENL [
        STRIP_TAC THEN
        `P (FUNPOW g 0 x)` by METIS_TAC [FUNPOW] THEN
@@ -688,7 +688,7 @@ val SHORTEST_LEM = Q.store_thm
            FULL_SIMP_TAC arith_ss []
        ]]
   );
-	       
+
 val SHORTEST_THM = Q.store_thm
   ("SHORTEST_THM",
    `!x P g m.
@@ -751,9 +751,9 @@ val TERD_WHILE_EQ_UNROLL = Q.store_thm
            REPEAT STRIP_TAC THEN
            IMP_RES_TAC SHORTEST_LEM THEN
            RW_TAC std_ss [Once WHILE, FUNPOW],
-        
+
         REPEAT GEN_TAC THEN
-           POP_ASSUM (ASSUME_TAC o (Q.SPECL [`P`, `g:'a ->'a`, `g (x:'a)`])) THEN 
+           POP_ASSUM (ASSUME_TAC o (Q.SPECL [`P`, `g:'a ->'a`, `g (x:'a)`])) THEN
            REWRITE_TAC [Once EQ_SYM_EQ] THEN
            REPEAT STRIP_TAC THEN
            `1 <= shortest P g x` by RW_TAC arith_ss [] THEN
@@ -771,7 +771,7 @@ val TERD_WHILE_EQ_UNROLL = Q.store_thm
 		   FULL_SIMP_TAC std_ss [FUNPOW]
            ]
    ]
-  );                 
+  );
 
 (*----------------------------------------------------------------------------*)
 (* Unroll the WHILE once, stop unrolling when a condition holds               *)
@@ -804,7 +804,7 @@ val WHILE_STILL = Q.store_thm
 (*---------------------------------------------------------------------------------*)
 (*                    Run to a particular position                                 *)
 (* Run the instructions in the instruction buffer until the pc reaches a specific  *)
-(*	position. The running may not terminate and keep going on                  *) 
+(*	position. The running may not terminate and keep going on                  *)
 (*---------------------------------------------------------------------------------*)
 
 val _ = type_abbrev("STATEPCS", Type`:STATE # (num->bool)`);
@@ -849,16 +849,16 @@ val STOPAT_ANY_PCS_2 = Q.store_thm
     Q.EXISTS_TAC `n` THEN
     METIS_TAC [STATE_PCS_SEPERATE]
   );
-      
+
 
 val SHORTEST_INDEPENDENT_OF_PCS = Q.store_thm
   ("SHORTEST_INDEPENDENT_OF_PCS",
   `!s0 s1 instB j.
-        stopAt (\s. FST (FST s) = j) (step instB) s0 /\ 
+        stopAt (\s. FST (FST s) = j) (step instB) s0 /\
         (FST s0 = FST s1) ==>
 	    (shortest (\s. FST (FST s) = j) (step instB) s0 =
              shortest (\s. FST (FST s) = j) (step instB) s1)`,
-  Induct_on `shortest (\s. FST (FST s) = j) (step instB) s0` THENL [ 
+  Induct_on `shortest (\s. FST (FST s) = j) (step instB) s0` THENL [
       RW_TAC std_ss [] THEN
           IMP_RES_TAC SHORTEST_LEM THEN
           FULL_SIMP_TAC std_ss [] THEN
@@ -957,7 +957,7 @@ val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 
 val RUNTO_STATE_PCS_SEPERATE = Q.store_thm
   ("RUNTO_STATE_PCS_SEPERATE",
-  `!j pcS0 pcS1 instB s. 
+  `!j pcS0 pcS1 instB s.
             stopAt (\s:STATEPCS.FST (FST s) = j) (step instB) (s,pcS0) ==>
             (FST (runTo instB j (s,pcS0)) = FST (runTo instB j (s,pcS1)))`,
   RW_TAC std_ss [UNROLL_RUNTO] THEN
@@ -989,7 +989,7 @@ val RUNTO_PCS_GROW = Q.store_thm
    Induct_on `n` THENL [
            RW_TAC std_ss [FUNPOW] THEN
                RW_TAC set_ss [Once step_FORM1],
-           RW_TAC std_ss [FUNPOW] THEN 
+           RW_TAC std_ss [FUNPOW] THEN
                FULL_SIMP_TAC std_ss [FUNPOW, SIMP_RULE std_ss [FUN_EQ_THM] FUNPOW_FUNPOW] THEN
                POP_ASSUM (ASSUME_TAC o Q.SPECL [`step instB s`]) THEN
                POP_ASSUM MP_TAC THEN
@@ -998,7 +998,7 @@ val RUNTO_PCS_GROW = Q.store_thm
                METIS_TAC [SUBSET_TRANS]
            ]
    );
-  
+
 
 val RUNTO_PCS_MEMBERS = Q.store_thm
   ("RUNTO_PCS_MEMBERS",
@@ -1053,8 +1053,8 @@ val RUNTO_PCS_UNION_LEM = Q.store_thm
        `step instB (s,pcS') = (s1,FST s INSERT pcS')` by FULL_SIMP_TAC std_ss [step_def] THEN
         RES_TAC THEN
         RW_TAC std_ss [] THEN
-       `FST (s:STATE) IN SND (FUNPOW (step instB) n (s1,FST s INSERT pcS'))` by (FULL_SIMP_TAC set_ss [step_def] THEN 
-	      RW_TAC set_ss [(SIMP_RULE arith_ss [step_def] o REWRITE_RULE [FUNPOW] o 
+       `FST (s:STATE) IN SND (FUNPOW (step instB) n (s1,FST s INSERT pcS'))` by (FULL_SIMP_TAC set_ss [step_def] THEN
+	      RW_TAC set_ss [(SIMP_RULE arith_ss [step_def] o REWRITE_RULE [FUNPOW] o
               Q.SPECL [`SUC n`, `0`, `instB`,`(s,pcS')`]) RUNTO_PCS_MEMBERS, RUNTO_PCS_GROW]) THEN
        `pcS1 = FST (s:STATE) INSERT pcS` by FULL_SIMP_TAC std_ss [step_def] THEN
        FULL_SIMP_TAC set_ss [] THEN
@@ -1065,7 +1065,7 @@ val RUNTO_PCS_UNION_LEM = Q.store_thm
 
 val RUNTO_PCS_UNION = Q.store_thm
   ("RUNTO_PCS_UNION",
-   `!n instB s pcS. 
+   `!n instB s pcS.
        stopAt (\s:STATEPCS.FST (FST s) = j) (step instB) (s,pcS) ==>
        (SND (runTo instB j (s,pcS)) =
             (SND (runTo instB j (s, ({}))) UNION pcS))`,
@@ -1142,11 +1142,11 @@ val RUNTO_COMPOSITION_LEM = Q.store_thm
     ]
   );
 
-       
+
 val RUNTO_COMPOSITION = Q.store_thm
   ("RUNTO_COMPOSITION",
    `!j k instB s0 pcS0 s1 pcS1.
-        terd instB j (s0,pcS0) /\ 
+        terd instB j (s0,pcS0) /\
         ((s1,pcS1) = runTo instB j (s0,pcS0)) /\
 	~(k IN ((FST s0) INSERT pcS1)) ==>
 	        (runTo instB k (s0,pcS0) = runTo instB k (s1,pcS1))`,
@@ -1162,15 +1162,15 @@ val RUNTO_COMPOSITION = Q.store_thm
 (*---------------------------------------------------------------------------------*)
 
 val in_regs_dom_def = Define `
-  in_regs_dom regs = 
+  in_regs_dom regs =
       0 IN (FDOM regs) /\ 1 IN (FDOM regs) /\ 2 IN (FDOM regs) /\ 3 IN (FDOM regs) /\
       4 IN (FDOM regs) /\ 5 IN (FDOM regs) /\ 6 IN (FDOM regs) /\ 7 IN (FDOM regs) /\
       8 IN (FDOM regs) /\ 9 IN (FDOM regs) /\ 10 IN (FDOM regs) /\ 11 IN (FDOM regs) /\
       12 IN (FDOM regs) /\ 13 IN (FDOM regs) /\ 14 IN (FDOM regs)`;
 
-  
+
 val in_mem_dom_def = Define `
-  in_mem_dom mem = 
+  in_mem_dom mem =
        !i:num. i IN (FDOM mem)`;
 
 

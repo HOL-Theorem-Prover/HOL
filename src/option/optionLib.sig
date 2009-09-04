@@ -2,7 +2,7 @@ signature optionLib =
 sig
   (*  include optionSyntax   ... defeats dependency analyzer *)
   include Abbrev
-   
+
   val mk_option        : hol_type -> hol_type
   val dest_option      : hol_type -> hol_type
   val is_option        : hol_type -> bool
@@ -17,21 +17,21 @@ sig
   val option_case_tm   : term
 
   val mk_none          : hol_type -> term
-  val mk_some          : term -> term 
-  val mk_the           : term -> term 
-  val mk_option_map    : term * term -> term 
-  val mk_option_join   : term -> term 
+  val mk_some          : term -> term
+  val mk_the           : term -> term
+  val mk_option_map    : term * term -> term
+  val mk_option_join   : term -> term
   val mk_is_some       : term -> term
-  val mk_is_none       : term -> term 
+  val mk_is_none       : term -> term
   val mk_option_case   : term * term * term -> term
 
   val dest_none        : term -> hol_type
-  val dest_some        : term -> term 
-  val dest_the         : term -> term 
+  val dest_some        : term -> term
+  val dest_the         : term -> term
   val dest_option_map  : term -> term * term
-  val dest_option_join : term -> term 
+  val dest_option_join : term -> term
   val dest_is_some     : term -> term
-  val dest_is_none     : term -> term 
+  val dest_is_none     : term -> term
   val dest_option_case : term -> term * term * term
 
   val is_none          : term -> bool

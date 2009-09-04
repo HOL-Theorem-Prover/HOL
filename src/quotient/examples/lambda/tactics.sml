@@ -168,7 +168,7 @@ fun TACTIC_ERR{function,message} =
                       origin_function = function,
                       message = message};
 
-fun failwith function = 
+fun failwith function =
     raise TACTIC_ERR{function = function,message = ""};
 
 fun fail () = failwith "fail";
@@ -215,7 +215,7 @@ fun MP_IMP_TAC imp_th :tactic = fn (asl,gl) =>
       end;
 
 fun UNASSUME_THEN (ttac:thm_tactic) tm :tactic = fn (asl,t) =>
- if op_mem eq tm asl 
+ if op_mem eq tm asl
  then ttac (ASSUME tm) (op_subtract eq asl [tm], t)
  else failwith "UNASSUME_TAC";
 
@@ -230,7 +230,7 @@ val FORALL_EQ_TAC :tactic = fn (asl,gl) =>
           val (x,t1) = dest_forall allt1
           and (y,t2) = dest_forall allt2 in
       if not (eq x y) then fail()
-      else 
+      else
        ([(asl,mk_eq (t1, t2))],
         fn [thm] => FORALL_EQ x thm)
       end)
@@ -241,7 +241,7 @@ val EXISTS_EQ_TAC :tactic = fn (asl,gl) =>
           val (x,t1) = dest_exists ext1
           and (y,t2) = dest_exists ext2 in
       if not (eq x y) then fail()
-      else 
+      else
        ([(asl,mk_eq (t1, t2))],
         fn [thm] => EXISTS_EQ x thm)
       end)
@@ -332,7 +332,7 @@ let FORALL_IMP_TAC :tactic = fn (asl,gl) =>
       let x,t1 = dest_forall allt1 in
       let y,t2 = dest_forall allt2 in
       if not (eq x y) then fail()
-      else 
+      else
        [asl,mk_imp (t1, t2)],
        fn [thm] => FORALL_IMP x thm)
       handle _ => failwith "FORALL_IMP_TAC";

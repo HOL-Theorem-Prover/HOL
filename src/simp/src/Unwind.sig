@@ -4,7 +4,7 @@
  *
  * DESCRIPTION
  *
- * UNWIND_EXISTS_CONV eliminates existential 
+ * UNWIND_EXISTS_CONV eliminates existential
  * quantifiers where the quantified variable
  * is restricted to a single point via an equality in the
  * conjuncts of the body.  Given a term of the form
@@ -59,8 +59,8 @@
  * UNWIND_FORALL_CONV (--`!x. (x < y) ==> (x = 3) /\ Q x ==> P x`--);
  * UNWIND_FORALL_CONV (--`!Q R. (x = 3) /\ Q /\ P x ==> R Q`--);
  * UNWIND_FORALL_CONV (--`!Q R. (x = 3) /\ ~Q /\ P x ==> R Q`--);
- * 
- * TESTING CODE 
+ *
+ * TESTING CODE
  *
  * use "3/simplifier/src/UNWIND.sml";
  * open UNWIND;

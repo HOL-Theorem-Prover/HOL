@@ -3,9 +3,9 @@ struct
 
 (*
 quietdec := true;
-loadPath := 
-            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) :: 
-            (concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot"]) :: 
+loadPath :=
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot"]) ::
             !loadPath;
 
 map load ["finite_mapTheory", "smallfootTheory"];
@@ -31,16 +31,16 @@ fun smallfoot_p_expression_printer (sys,strn,brk) gravs d pps t = let
   in
     if (eq op_term smallfoot_p_var_term)  then (
        (sys (Top, Top, Top) (d - 1) (hd (args)))
-    ) else 
+    ) else
     if (eq op_term smallfoot_p_const_term)  then (
        if (eq (hd args) ``0:num``) then strn "NULL" else
                 sys (Top, Top, Top) (d - 1) (hd args)
-    ) else if (eq op_term smallfoot_p_add_term)  then (       
+    ) else if (eq op_term smallfoot_p_add_term)  then (
        (sys (Top, Top, Top) (d - 1) (el 1 (args));
        strn(" +");
        brk(1,1);
        sys (Top, Top, Top) (d - 1) (el 2 (args)))
-    ) else if (eq op_term smallfoot_p_sub_term)  then (       
+    ) else if (eq op_term smallfoot_p_sub_term)  then (
        (sys (Top, Top, Top) (d - 1) (el 1 (args));
        strn(" -");
        brk(1,1);
@@ -51,7 +51,7 @@ fun smallfoot_p_expression_printer (sys,strn,brk) gravs d pps t = let
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 
-fun smallfoot_hide_printer GS (sys,strn,brk) gravs d pps t = 
+fun smallfoot_hide_printer GS (sys,strn,brk) gravs d pps t =
   let
     val _ = if !use_smallfoot_pretty_printer then () else raise term_pp_types.UserPP_Failed;
     open Portable term_pp_types
@@ -83,7 +83,7 @@ fun smallfoot_tag_printer (sys,strn,brk) gravs d pps t = let
 
 fun pretty_print_list not_last oper [] = () |
     pretty_print_list not_last oper [e] = (oper e) |
-    pretty_print_list not_last oper (e1::e2::es) = 
+    pretty_print_list not_last oper (e1::e2::es) =
     (oper e1;not_last ();(pretty_print_list not_last oper (e2::es)));
 
 
@@ -95,8 +95,8 @@ fun smallfoot_proccall_args_printer (sys,strn,brk) gravs d pps args_term =
       val (refArgs_term, valArgs_term) = pairLib.dest_pair args_term;
       val (refArgsL, _) = listSyntax.dest_list refArgs_term;
       val (valArgsL, _) = listSyntax.dest_list valArgs_term;
-      val pretty_print_arg_list = 
-    	      pretty_print_list (fn () => (strn ",";brk (1,0))) 
+      val pretty_print_arg_list =
+    	      pretty_print_list (fn () => (strn ",";brk (1,0)))
 	        (fn arg => sys (Top, Top, Top) (d - 1) arg);
    in
       strn ("(");
@@ -143,7 +143,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           brk (1,1);
           sys (Top, Top, Top) (d - 1) exp2_term;
 	  end_block pps
-       end 
+       end
     ) else if (eq op_term smallfoot_prog_procedure_call_term)  then (
        let
           val name_term = el 1 args;
@@ -153,7 +153,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           strn (stringLib.fromHOLstring name_term);
           smallfoot_proccall_args_printer (sys,strn,brk) gravs (d - 1) pps args_term;
           end_block pps
-       end 
+       end
     ) else if (eq op_term smallfoot_prog_parallel_procedure_call_term)  then (
        let
           val name1_term = el 1 args;
@@ -168,7 +168,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           strn (stringLib.fromHOLstring name2_term);
           smallfoot_proccall_args_printer (sys,strn,brk) gravs (d - 1) pps args2_term;
           end_block pps
-       end 
+       end
     ) else if (eq op_term smallfoot_prog_assign_term)  then (
        let
           val v_term = el 1 args;
@@ -180,7 +180,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           brk (1,1);
           sys (Top, Top, Top) (d - 1) exp_term;
           end_block pps
-       end    
+       end
     ) else if (eq op_term smallfoot_prog_dispose_term)  then (
        let
           val exp_term = el 1 args;
@@ -299,7 +299,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           end_block pps
        end
     ) else if (eq op_term smallfoot_prog_aquire_resource_term)  then (
-       let	   
+       let
           val cond_term = el 1 args;
           val var_term = el 2 args;
           val inv_term = el 3 args;
@@ -329,16 +329,16 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
           sys (Top, Top, Top) (d - 1) inv_term;
           end_block pps
        end
-    ) else if (eq op_term smallfoot_prog_local_var_term) orelse 
+    ) else if (eq op_term smallfoot_prog_local_var_term) orelse
 	      (eq op_term smallfoot_prog_val_arg_term) then (
        let
-          val (l, t') = dest_local_vars t;          
+          val (l, t') = dest_local_vars t;
 	  val _ = if (null l) then raise term_pp_types.UserPP_Failed else ();
        in
-          begin_block pps INCONSISTENT 0;             
-          strn "local";	  
+          begin_block pps INCONSISTENT 0;
+          strn "local";
           brk (1,!smallfoot_pretty_printer_block_indent);
-          pretty_print_list 
+          pretty_print_list
                 (fn () => (strn ",";
                            brk (1, !smallfoot_pretty_printer_block_indent)))
    	        (fn (v,vt) => (
@@ -354,7 +354,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
                 );
                 end_block pps)) l;
           strn ";";
-          brk (1,0);        
+          brk (1,0);
           sys (Top, Top, Top) (d - 1) t';
           end_block pps
       end
@@ -374,9 +374,9 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
          val pre_term = mk_comb (el 2 args, argL_term);
          val post_term = mk_comb (el 3 args, argL_term);
 
-         val pre_term'= (rhs o concl) 
+         val pre_term'= (rhs o concl)
                            (SIMP_CONV list_ss [bagTheory.BAG_UNION_INSERT, bagTheory.BAG_UNION_EMPTY] pre_term)
-         val post_term'= (rhs o concl) 
+         val post_term'= (rhs o concl)
                            (SIMP_CONV list_ss [bagTheory.BAG_UNION_INSERT, bagTheory.BAG_UNION_EMPTY] post_term)
       in
          begin_block pps CONSISTENT 0;
@@ -394,9 +394,9 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
 	  if null argL_term then () else
           if length argL_term = 1 then sys (Top, Top, Top) (d - 1) (hd argL_term) else
           (
-             begin_block pps CONSISTENT 0;             
+             begin_block pps CONSISTENT 0;
 	     pretty_print_list (fn () => (brk (1,0)))
-   	        (fn stm =>                
+   	        (fn stm =>
                 (begin_block pps CONSISTENT (!smallfoot_pretty_printer_block_indent);
                 sys (Top, Top, Top) (d - 1) stm;
                 strn ";";
@@ -405,7 +405,7 @@ fun smallfoot_prog_printer (sys,strn,brk) gravs d pps t = let
              end_block pps
           )
        end
-    ) else( 
+    ) else(
 
       raise term_pp_types.UserPP_Failed
     )
@@ -423,7 +423,7 @@ fun pretty_print_infix_operator (sys,strn,brk) d pps args opstring =
           begin_block pps INCONSISTENT (!smallfoot_pretty_printer_block_indent);
           sys (Top, Top, Top) (d - 1) l_term;
           strn (concat [" ", opstring]);
-          brk (1,1); 
+          brk (1,1);
           sys (Top, Top, Top) (d - 1) r_term;
 	  end_block pps
        end;
@@ -434,12 +434,12 @@ fun smallfoot_prop_printer (sys,strn,brk) gravs d pps t = let
     val (op_term,args) = strip_comb t;
   in
     if (eq op_term smallfoot_p_equal_term)  then (
-      if eq (el 1 args) (el 2 args) then 
+      if eq (el 1 args) (el 2 args) then
 	  strn "true"
       else
           pretty_print_infix_operator (sys,strn,brk) d pps args "=="
     ) else if (eq op_term smallfoot_p_unequal_term)  then (
-      if eq (el 1 args) (el 2 args) then 
+      if eq (el 1 args) (el 2 args) then
 	  strn "false"
       else
           pretty_print_infix_operator (sys,strn,brk) d pps args "!="
@@ -462,8 +462,8 @@ fun smallfoot_prop_printer (sys,strn,brk) gravs d pps t = let
 
 
 
-fun smallfoot_ae_printer (sys,strn,brk) gravs d pps t = 
-  let 
+fun smallfoot_ae_printer (sys,strn,brk) gravs d pps t =
+  let
     open Portable term_pp_types
     val (op_term,args) = strip_comb t;
   in
@@ -486,7 +486,7 @@ fun finite_map_printer (sys, strn, brk) gravs d pps t =
       in
           if ((length plist) = 1) then () else strn "[";
           pretty_print_list (fn () => (strn ", "))
-   	        (fn (tag,exp) =>                
+   	        (fn (tag,exp) =>
                 (sys (Top, Top, Top) (d - 1) tag;
                 strn ":";
                 sys (Top, Top, Top) (d - 1) exp
@@ -653,7 +653,7 @@ fun smallfoot_specification_printer (sys,strn,brk) gravs d pps t = let
     fun funt_preprocess funt =
       let
          val argL = pairLib.strip_pair funt;
-         val (fun_name,abs_body,abs_pre_wrapper,abs_post) = 
+         val (fun_name,abs_body,abs_pre_wrapper,abs_post) =
 	     (el 1 argL, el 2 argL, el 3 argL, el 4 argL);
 
          val wrapper_argL = snd (strip_comb abs_pre_wrapper);
@@ -666,7 +666,7 @@ fun smallfoot_specification_printer (sys,strn,brk) gravs d pps t = let
 	 val argL1_const = map (fn n => mk_comb (smallfoot_var_term, n)) argL1_term;
 	 val argL2_const = map (fn n => mk_var (n, numSyntax.num)) argL2_string
 	 val argL3_const = map (fn n => mk_var (n, Type `:smallfoot_data`)) argL3_string
-			       
+
 	 val argL_term =  pairLib.mk_pair
 	   		       (listSyntax.mk_list (argL1_const, ``:smallfoot_var``),
 			        listSyntax.mk_list (argL2_const, numSyntax.num));
@@ -720,7 +720,7 @@ fun smallfoot_specification_printer (sys,strn,brk) gravs d pps t = let
                 begin_block pps INCONSISTENT 0;
                 sys (Top, Top, Top) (d - 1) pre_term;
                 end_block pps;
-                
+
                 strn "] {";
 		add_newline pps;
                 strn "   ";
@@ -756,30 +756,30 @@ fun smallfoot_pretty_printer Gs (sys,strn,brk) gravs d pps t =
     val _ = if !use_smallfoot_pretty_printer then () else raise term_pp_types.UserPP_Failed;
     val t_type = type_of t;
   in
-    if t_type = smallfoot_prog_type then 
-       smallfoot_prog_printer (sys,strn,brk) gravs d pps t 
-    else if t_type = smallfoot_p_expression_type then 
-       smallfoot_p_expression_printer (sys,strn,brk) gravs d pps t 
-    else if t_type = smallfoot_p_proposition_type then 
-       smallfoot_prop_printer (sys,strn,brk) gravs d pps t 
-    else if t_type = smallfoot_var_type then 
-       smallfoot_var_printer (sys,strn,brk) gravs d pps t 
-    else if t_type = smallfoot_tag_type then 
-       smallfoot_tag_printer (sys,strn,brk) gravs d pps t 
-    else if t_type = smallfoot_a_proposition_type then 
-       smallfoot_a_prop_printer (sys,strn,brk) gravs d pps t 
-    else if t_type = smallfoot_a_expression_type then 
-       smallfoot_ae_printer (sys,strn,brk) gravs d pps t 
-    else if is_SMALLFOOT_SPECIFICATION t then 
-       smallfoot_specification_printer (sys,strn,brk) gravs d pps t 
-    else if t_type = pairLib.mk_prod(bool, smallfoot_a_proposition_type) then 
-       smallfoot_cond_a_prop_printer (sys,strn,brk) gravs d pps t    
+    if t_type = smallfoot_prog_type then
+       smallfoot_prog_printer (sys,strn,brk) gravs d pps t
+    else if t_type = smallfoot_p_expression_type then
+       smallfoot_p_expression_printer (sys,strn,brk) gravs d pps t
+    else if t_type = smallfoot_p_proposition_type then
+       smallfoot_prop_printer (sys,strn,brk) gravs d pps t
+    else if t_type = smallfoot_var_type then
+       smallfoot_var_printer (sys,strn,brk) gravs d pps t
+    else if t_type = smallfoot_tag_type then
+       smallfoot_tag_printer (sys,strn,brk) gravs d pps t
+    else if t_type = smallfoot_a_proposition_type then
+       smallfoot_a_prop_printer (sys,strn,brk) gravs d pps t
+    else if t_type = smallfoot_a_expression_type then
+       smallfoot_ae_printer (sys,strn,brk) gravs d pps t
+    else if is_SMALLFOOT_SPECIFICATION t then
+       smallfoot_specification_printer (sys,strn,brk) gravs d pps t
+    else if t_type = pairLib.mk_prod(bool, smallfoot_a_proposition_type) then
+       smallfoot_cond_a_prop_printer (sys,strn,brk) gravs d pps t
     else (
       raise term_pp_types.UserPP_Failed
     )
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-fun temp_add_smallfoot_pp () = 
+fun temp_add_smallfoot_pp () =
    (temp_add_user_printer ("smallfoot_pp_print", ``x:'a``, smallfoot_pretty_printer);
     temp_add_user_printer ("smallfoot_pp_print___GET_num_list_hide", ``smallfoot_data_GET_num_list x``, smallfoot_hide_printer);
     temp_add_user_printer ("smallfoot_pp_print___GET_num_hide", ``smallfoot_data_GET_num x``, smallfoot_hide_printer));

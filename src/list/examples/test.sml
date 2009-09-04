@@ -1,6 +1,6 @@
 open List_conv;
 
-LIST_CONV (--`SNOC h []:'a list`--); 
+LIST_CONV (--`SNOC h []:'a list`--);
 LIST_CONV (--`SNOC h (CONS h t):'a list`--);
 
 LIST_CONV (--`NULL ([]:'a list)`--);
@@ -25,23 +25,23 @@ LIST_CONV (--`LENGTH (FLAT (l :'a list list))`--);
 LIST_CONV (--`MAP (P:'a list -> 'a) []`--);
 LIST_CONV (--`MAP (P:'a list -> 'a) (CONS h t)`--);
 LIST_CONV (--`MAP (P:'a list -> 'a) (CONS h [])`--);
-LIST_CONV (--`MAP (P:'a list -> 'a) (SNOC h t)`--); 
-LIST_CONV (--`MAP (P:'a list -> 'a) (SNOC h [])`--); 
+LIST_CONV (--`MAP (P:'a list -> 'a) (SNOC h t)`--);
+LIST_CONV (--`MAP (P:'a list -> 'a) (SNOC h [])`--);
 LIST_CONV (--`MAP (P:'a list -> 'a) [x;y;z]`--);
-LIST_CONV (--`MAP (P:num list ->num) (APPEND l1 l2)`--); 
+LIST_CONV (--`MAP (P:num list ->num) (APPEND l1 l2)`--);
 LIST_CONV (--`MAP (f:'a ->'b) (FLAT l)`--);
 LIST_CONV (--`MAP (f:num ->num) (FLAT l)`--);
 
 LIST_CONV (--`FILTER (g:'b ->bool) []`--);
 LIST_CONV (--`FILTER (g:'b ->bool) (CONS h t)`--);
 LIST_CONV (--`FILTER (g:'b ->bool) (SNOC h t)`--);
-LIST_CONV (--`FILTER (P:num list -> bool) (APPEND l1 l2)`--); 
+LIST_CONV (--`FILTER (P:num list -> bool) (APPEND l1 l2)`--);
 LIST_CONV (--`FILTER (f:'a  -> bool) (FLAT l)`--);
 
-LIST_CONV (--`APPEND (l1:'a list) []`--); 
+LIST_CONV (--`APPEND (l1:'a list) []`--);
 LIST_CONV (--`APPEND [] (l1:'a list)`--);
 LIST_CONV (--`APPEND (l1:'a list) (CONS h t)`--);
-(* LIST_CONV (--`APPEND (l1:'a list) (APPEND l2 l3)`--) 
+(* LIST_CONV (--`APPEND (l1:'a list) (APPEND l2 l3)`--)
    handle e => Raise e; BLOCKED *)
 LIST_CONV (--`APPEND (APPEND l2 l3)(l1:'a list)`--);
 LIST_CONV (--`APPEND (l1:'a list) (SNOC h t)`--);
@@ -150,7 +150,7 @@ val RIGHT_ID_ADD_0 = TAC_PROOF(([], --`RIGHT_ID $+ 0`--),
 
 val LEFT_ID_ADD_0 = TAC_PROOF(([],    --`LEFT_ID $+ 0`--),
     REWRITE_TAC[LEFT_ID_DEF,ADD_CLAUSES]);
- 
+
 val MONOID_ADD_0 = TAC_PROOF(([],  --`MONOID $+ 0`--),
     REWRITE_TAC[MONOID_DEF,ASSOC_ADD,
     	LEFT_ID_ADD_0,RIGHT_ID_ADD_0]);
@@ -283,9 +283,9 @@ REPLICATE_CONV (--`REPLICATE 0 [1;2;3]`--);
 FIRSTN_CONV(--`FIRSTN 2 [1;2;3;4]`--);
 FIRSTN_CONV(--`FIRSTN 3 [1;2;3;4]`--);
 
-BUTLASTN_CONV (--`BUTLASTN 2 [1;2;3;4]`--); 
+BUTLASTN_CONV (--`BUTLASTN 2 [1;2;3;4]`--);
 
-BUTFIRSTN_CONV (--`BUTFIRSTN 2 [1;2;3;4]`--); 
+BUTFIRSTN_CONV (--`BUTFIRSTN 2 [1;2;3;4]`--);
 
 LASTN_CONV (--`LASTN 2 [1;2;3;4]`--);
 LASTN_CONV (--`LASTN 1 [1;2;3;4]`--);
@@ -371,7 +371,7 @@ e EQ_LENGTH_SNOC_INDUCT_TAC;
 *)
 
 
-(* (KLS) The following is unnecessary, since "define_type" has not been 
+(* (KLS) The following is unnecessary, since "define_type" has not been
    changed. But anyway, we'll leave it.
 
 new_theory "temp";
@@ -401,21 +401,21 @@ val List_Axiom = define_type{name="List_Axiom",
                              fixities = [Prefix,Infix 40]};
 
 val ty_Axiom = define_type{name="ty_Axiom",
-        type_spec = `ty = C1 of 'a 
-                        | C2 
+        type_spec = `ty = C1 of 'a
+                        | C2
                         | C3 of 'a => 'b => ty
-                        | C4 of ty => 'c => ty => 'a => 'b 
+                        | C4 of ty => 'c => ty => 'a => 'b
                         | C5 of ty => ty`,
         fixities = [Prefix, Prefix, Prefix, Prefix, Prefix]};
 
 define_type{name="bintree",
-            type_spec=`bintree = LEAF of 'a 
+            type_spec=`bintree = LEAF of 'a
                                | TREE of bintree => bintree`,
             fixities = [Prefix,Prefix]};
 
 define_type{name="seven",
-            type_spec= `typ = C of one 
-                                   => (one#one) 
+            type_spec= `typ = C of one
+                                   => (one#one)
                                    => (one -> one-> 'a list)
                                    => ('a,one#one,'a list) ty`,
             fixities = [Prefix]};

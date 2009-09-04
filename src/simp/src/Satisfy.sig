@@ -5,7 +5,7 @@
  * Still needs a little more work.
  *
  * Try to satisfy a set of goals by unifying against a set of facts.
- * 
+ *
  * EXAMPLES
  *
  * val tac = VALID (SATISFY_THEN ALL_TAC);
@@ -13,17 +13,17 @@
  * tac ([`!x. x + 1 = 6`], --`?a b. a + 1 = b` ;
  * tac ([`!P:'b. P = b`], --`?a b. Q (a:'a) = (b:'b)` ;
  * tac ([`!P. P`], --`?a b. a + 1 = b` ;
- * new_constant {Name="KKK",Ty=(==`:'a->'a->bool`==)} handle _ => (); 
+ * new_constant {Name="KKK",Ty=(==`:'a->'a->bool`==)} handle _ => ();
  * tac ([`!a:'a. KKK a a`], --`?(x:'a). KKK x x` ;
- * tac ([`!a:'a. KKK a a`,`(Q:'a -> 'a -> bool) n m`], 
+ * tac ([`!a:'a. KKK a a`,`(Q:'a -> 'a -> bool) n m`],
  *        --`?x y. KKK x x /\ (Q:'a->'a->bool) x y` ;
  * tac ([`(P1:num->num->bool) e f`,
  `(P2:num->num->bool) f g`,
- `!g. (P3:num->num->bool) e g`], 
+ `!g. (P3:num->num->bool) e g`],
  --`?a b c. (P1:num->num->bool) a b /\
  (P2:num->num->bool) b c /\
  (P3:num->num->bool) a b`;
- * 
+ *
  * SATISFY_PROVE [ASSUME `(T /\ F) = T`] `?a b. (a /\ F) = b` ;
  * SATISFY_PROVE [`!x. x + 1 = 6`] `?a b. a + 1 = b` ;
  * SATISFY_PROVE [`!P:'b. P = b`] `?a b. Q (a:'a) = (b:'b)` ;

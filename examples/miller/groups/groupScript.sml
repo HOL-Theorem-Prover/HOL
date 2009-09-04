@@ -162,7 +162,7 @@ val GROUP_LID = store_thm
    ``!G :: group. !x :: gset G. gop G (gid G) x = x``,
    S_TAC
    ++ AR_TAC [GROUP]);
-   
+
 val GINV_SUBTYPE = store_thm
   ("GINV_SUBTYPE",
    ``ginv IN (group --> \G. gset G -> gset G)``,
@@ -270,7 +270,7 @@ val IN_ABELIAN = store_thm
 
 (* Consolidate theorems so far in a simplification context *)
 
-val group1_sc = 
+val group1_sc =
   map SC_SIMPLIFICATION
   [] @
   map SC_JUDGEMENT
@@ -544,7 +544,7 @@ val LCOSETS_EQUAL_OR_DISJOINT = store_thm
 
 (* Consolidate all theorems in a theory simplification context *)
 
-val group3_sc = 
+val group3_sc =
   map SC_SIMPLIFICATION
   [] @
   map SC_JUDGEMENT
@@ -614,7 +614,7 @@ val GPOW_1 = store_thm
 
 val GINV_GOP = store_thm
   ("GINV_GOP",
-   ``!G :: group. !g h :: gset G. 
+   ``!G :: group. !g h :: gset G.
        ginv G (gop G g h) = gop G (ginv G h) (ginv G g)``,
    S_TAC
    ++ G_TAC [IS_GINV]

@@ -8,7 +8,7 @@
 (* ------------------------------------------------------------------------- *)
 (*
 val () = loadPath := [] @ !loadPath;
-val () = app load 
+val () = app load
   ["bossLib", "metisLib",
    "arithmeticTheory", "dividesTheory", "gcdTheory"];
 val () = quietdec := true;

@@ -9,7 +9,7 @@
 
 (*
 quietdec := true;
-map load 
+map load
  ["SyntacticSugarTheory","ClockedSemanticsTheory"];
 quietdec := false;
 *)
@@ -38,28 +38,28 @@ val _ = new_theory "Rewrites";
 ******************************************************************************)
 val S_CLOCK_COMP_def =
  Define
-  `(S_CLOCK_COMP c (S_BOOL b) = 
+  `(S_CLOCK_COMP c (S_BOOL b) =
      (S_CAT (S_REPEAT (S_BOOL (B_NOT c)),S_BOOL(B_AND(c, b)))))
    /\
-   (S_CLOCK_COMP c (S_CAT(r1,r2)) =  
+   (S_CLOCK_COMP c (S_CAT(r1,r2)) =
      S_CAT(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
    /\
-   (S_CLOCK_COMP c (S_FUSION(r1,r2)) = 
+   (S_CLOCK_COMP c (S_FUSION(r1,r2)) =
      S_FUSION(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
    /\
-   (S_CLOCK_COMP c (S_OR(r1,r2)) = 
+   (S_CLOCK_COMP c (S_OR(r1,r2)) =
      S_OR(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
    /\
-   (S_CLOCK_COMP c (S_AND(r1,r2))  = 
+   (S_CLOCK_COMP c (S_AND(r1,r2))  =
      S_AND(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2))
    /\
-   (S_CLOCK_COMP c S_EMPTY = 
+   (S_CLOCK_COMP c S_EMPTY =
      S_EMPTY)
    /\
-   (S_CLOCK_COMP c (S_REPEAT r) = 
+   (S_CLOCK_COMP c (S_REPEAT r) =
      S_REPEAT(S_CLOCK_COMP c r))
    /\
-   (S_CLOCK_COMP c (S_CLOCK(r, c1)) = 
+   (S_CLOCK_COMP c (S_CLOCK(r, c1)) =
      S_CLOCK_COMP c1 r)`;
 
 (******************************************************************************
@@ -87,40 +87,40 @@ val F_W_CLOCK_def =
 ******************************************************************************)
 val F_CLOCK_COMP_def =
  Define
-  `(F_CLOCK_COMP c (F_STRONG_BOOL b) = 
+  `(F_CLOCK_COMP c (F_STRONG_BOOL b) =
      F_U_CLOCK c (F_WEAK_BOOL b))
    /\
-   (F_CLOCK_COMP c (F_WEAK_BOOL b) = 
+   (F_CLOCK_COMP c (F_WEAK_BOOL b) =
      F_W_CLOCK c (F_WEAK_BOOL b))
    /\
-   (F_CLOCK_COMP c (F_NOT f) = 
+   (F_CLOCK_COMP c (F_NOT f) =
      F_NOT(F_CLOCK_COMP c f))
    /\
-   (F_CLOCK_COMP c (F_AND(f1,f2)) = 
+   (F_CLOCK_COMP c (F_AND(f1,f2)) =
      F_AND(F_CLOCK_COMP c f1, F_CLOCK_COMP c f2))
    /\
-   (F_CLOCK_COMP c (F_NEXT f) = 
+   (F_CLOCK_COMP c (F_NEXT f) =
      F_U_CLOCK c (F_NEXT(F_U_CLOCK c (F_CLOCK_COMP c f))))
    /\
-   (F_CLOCK_COMP c (F_UNTIL(f1,f2)) = 
-     F_UNTIL(F_IMPLIES(F_WEAK_BOOL c, F_CLOCK_COMP c f1), 
+   (F_CLOCK_COMP c (F_UNTIL(f1,f2)) =
+     F_UNTIL(F_IMPLIES(F_WEAK_BOOL c, F_CLOCK_COMP c f1),
              F_AND(F_WEAK_BOOL c, F_CLOCK_COMP c f2)))
    /\
    (F_CLOCK_COMP c (F_ABORT (f,b)) =
      F_ABORT(F_CLOCK_COMP c f, b))
    /\
-   (F_CLOCK_COMP c (F_CLOCK(f,c1)) =   
+   (F_CLOCK_COMP c (F_CLOCK(f,c1)) =
      F_CLOCK_COMP c1 f)
    /\
-   (F_CLOCK_COMP c (F_SUFFIX_IMP(r,f)) = 
-     F_SUFFIX_IMP(S_CLOCK_COMP c r, F_CLOCK_COMP c f))  
+   (F_CLOCK_COMP c (F_SUFFIX_IMP(r,f)) =
+     F_SUFFIX_IMP(S_CLOCK_COMP c r, F_CLOCK_COMP c f))
    /\
-   (F_CLOCK_COMP c (F_STRONG_SERE r) = 
+   (F_CLOCK_COMP c (F_STRONG_SERE r) =
      F_STRONG_SERE(S_CLOCK_COMP c r))
    /\
-   (F_CLOCK_COMP c (F_WEAK_SERE r) = 
+   (F_CLOCK_COMP c (F_WEAK_SERE r) =
      F_WEAK_SERE(S_CLOCK_COMP c r))`;
 
- 
+
 val _ = export_theory();
 

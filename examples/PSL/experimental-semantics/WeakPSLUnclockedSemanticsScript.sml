@@ -11,7 +11,7 @@ quietdec := true;                         (* Switch off output               *)
 loadPath                                  (* Add official-semantics to path  *)
  :=
  "../1.1/official-semantics" :: "../path" :: !loadPath;
-map load 
+map load
  ["intLib", "Cooper","rich_listTheory",   (* Load useful theories            *)
   "FinitePathTheory", "PathTheory",
   "res_quanLib", "res_quanTheory",
@@ -19,11 +19,11 @@ map load
   "LemmasTheory","ProjectionTheory",
   "UnclockedSemanticsTheory"];
 open FinitePathTheory PathTheory          (* Open theories                   *)
-     SyntaxTheory SyntacticSugarTheory 
+     SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory
      LemmasTheory ProjectionTheory
-     arithmeticTheory listTheory 
-     rich_listTheory 
+     arithmeticTheory listTheory
+     rich_listTheory
      res_quanLib res_quanTheory;
 intLib.deprecate_int();                   (* Set num as default numbers type *)
 quietdec := false;                        (* Restore output                  *)
@@ -85,7 +85,7 @@ and A_distinct = assoc "A_distinct" (DB.theorems "-");
 
 val A_ELEM_def =
  Define
-  `(A_ELEM (N l) n = EL n l) 
+  `(A_ELEM (N l) n = EL n l)
    /\
    (A_ELEM (W l) n = EL n l)
    /\
@@ -144,7 +144,7 @@ val CONC_ASSOC =
 
 val ASSOC_CONC =
  prove
-  (``ASSOC $*``, 
+  (``ASSOC $*``,
    RW_TAC std_ss [operatorTheory.ASSOC_DEF,CONC_ASSOC]);
 
 (*****************************************************************************)
@@ -157,7 +157,7 @@ val ASSOC_CONC =
 (*****************************************************************************)
 val LEN_def =
  Define
-  `(LEN(N w) = LENGTH w) 
+  `(LEN(N w) = LENGTH w)
    /\
    (LEN(W w) = LENGTH w)
    /\
@@ -195,14 +195,14 @@ val STRICT_PREFIX_NEUTRAL =
    Cases_on `u` THEN Cases_on `w`
     THEN RW_TAC list_ss [STRICT_PREFIX_def,PREFIX_def,CONC_def]);
 
-val IS_WEAK_def = 
- Define 
+val IS_WEAK_def =
+ Define
   `(IS_WEAK(W w) = T)    /\ (IS_WEAK(N w) = F)    /\ (IS_WEAK(S w) = F)`
-and IS_NEUTRAL_def = 
- Define 
+and IS_NEUTRAL_def =
+ Define
   `(IS_NEUTRAL(W w) = F) /\ (IS_NEUTRAL(N w) = T) /\ (IS_NEUTRAL(S w) = F)`
-and IS_STRONG_def = 
- Define 
+and IS_STRONG_def =
+ Define
   `(IS_STRONG(W w) = F)  /\ (IS_STRONG(N w) = F)  /\ (IS_STRONG(S w) = T)`;
 
 val IS_LETTER_def =
@@ -239,7 +239,7 @@ val IS_LETTER_def =
 
 val WUS_SEM_def =
  Define
-  `(WUS_SEM v (S_BOOL b) = 
+  `(WUS_SEM v (S_BOOL b) =
      (v = W[]) \/ (~(IS_STRONG v) /\ (LEN v = 1) /\ B_SEM (A_ELEM v 0) b))
    /\
    (WUS_SEM v (S_CAT(r1,r2)) =
@@ -247,7 +247,7 @@ val WUS_SEM_def =
    /\
    (WUS_SEM v (S_FUSION(r1,r2)) =
      ?v1 v2 l. (IS_LETTER l \/ (l = W[])) /\ (v = v1*l*v2)
-               /\  
+               /\
                WUS_SEM (v1*l) r1  /\ WUS_SEM (l*v2) r2)
    /\
    (WUS_SEM v (S_AND(r1,r2)) =
@@ -267,7 +267,7 @@ val WUS_SEM_def =
 (*****************************************************************************)
 local
 val WUS_SEM_SIMP_TAC =
- RW_TAC list_ss 
+ RW_TAC list_ss
   [S_CLOCK_FREE_def,WUS_SEM_def,IS_WEAK_def,IS_NEUTRAL_def,LEN_def,A_ELEM_def]
 in
 val TightTrueEmpty =
@@ -297,7 +297,7 @@ val TightTrueEmpty =
        THEN Q.EXISTS_TAC `[W []]`
        THEN RW_TAC list_ss [CONC_def],
       (* S_REPEAT (r,r') *)
-      WUS_SEM_SIMP_TAC  
+      WUS_SEM_SIMP_TAC
        THEN Q.EXISTS_TAC `[W []]`
        THEN RW_TAC list_ss [CONC_def],
       (* S_REPEAT (r,r') *)
@@ -307,7 +307,7 @@ end;
 (*****************************************************************************)
 (* Weaken a word                                                             *)
 (*****************************************************************************)
-val WEAKEN_def = 
+val WEAKEN_def =
  Define `(WEAKEN(N l) = W l) /\ (WEAKEN(W l) = W l) /\ (WEAKEN(S l) = S l)`;
 
 val LEN_WEAKEN =
@@ -323,7 +323,7 @@ val LEN_WEAKEN =
 val APPEND_EQ_NIL =
  prove
   (``!l1 l2. (LENGTH(l1++l2) = 0) ==> (l1 = []) /\ (l2 = [])``,
-   Induct 
+   Induct
     THEN RW_TAC list_ss []
     THEN `LENGTH l2 = 0` by DECIDE_TAC
     THEN PROVE_TAC[LENGTH_NIL]);
@@ -331,7 +331,7 @@ val APPEND_EQ_NIL =
 val APPEND_EQ_SINGLETON =
  prove
   (``!l1 l2. (LENGTH(l1++l2) = 1) ==> (l1 = []) \/ (l2 = [])``,
-   Induct 
+   Induct
     THEN RW_TAC list_ss []
     THEN `LENGTH l2 = 0` by DECIDE_TAC
     THEN PROVE_TAC[LENGTH_NIL]);
@@ -339,7 +339,7 @@ val APPEND_EQ_SINGLETON =
 val APPEND_NIL_CANCEL =
  prove
   (``!l1 l2. (l1++l2 = l1) ==> (l2 = [])``,
-   Induct 
+   Induct
     THEN RW_TAC list_ss []);
 
 val PREFIX_CONC =
@@ -419,7 +419,7 @@ val LIST_TRICHOTOMY =
 
 val PREFIX_TRICHOTOMY =
  prove
-  (``!v1 v2 w. 
+  (``!v1 v2 w.
        PREFIX v1 w /\ PREFIX v2 w ==> STRICT_PREFIX v1 v2 \/ PREFIX v2 v1``,
    REPEAT GEN_TAC
     THEN Cases_on `v1` THEN Cases_on `v2` THEN Cases_on `w`
@@ -463,7 +463,7 @@ val PREFIX_CANCEL =
      (PREFIX (S(u ++ v1)) (S(u ++ v2)) ==> PREFIX (S v1) (S v2))``,
    RW_TAC list_ss [PREFIX_def,CONC_def]
     THEN Cases_on `u'`
-    THEN FULL_SIMP_TAC std_ss 
+    THEN FULL_SIMP_TAC std_ss
           [GSYM APPEND_ASSOC,CONC_def,A_11,A_distinct,APPEND_LEFT_CANCEL]
     THEN PROVE_TAC[CONC_def]);
 
@@ -520,20 +520,20 @@ val FOLDL_CONCAT_N =
   (``!vlist v. FOLDL $* v vlist = v * FOLDL $* (N []) vlist``,
    PROVE_TAC[ASSOC_FOLDL,ASSOC_CONC,CONC_IDENTITY]);
 
-val WUS_SEM_CAT_REPEAT_CATN =                      
- store_thm                                                                
+val WUS_SEM_CAT_REPEAT_CATN =
+ store_thm
   ("WUS_SEM_CAT_REPEAT_CATN",
    ``!v r. WUS_SEM v (S_CAT(S_REPEAT r, r)) = ?n. WUS_SEM v (WS_CATN n r)``,
    RW_TAC list_ss [WUS_SEM_def]
     THEN EQ_TAC
     THEN RW_TAC list_ss []
-    THENL                                                                 
+    THENL
      [Induct_on `vlist`
        THEN RW_TAC list_ss [CONC_IDENTITY,WS_CATN_def,WUS_SEM_def]
        THEN ZAP_TAC std_ss [WS_CATN_def]
        THEN RW_TAC std_ss []
        THEN RES_TAC
-       THEN Q.EXISTS_TAC `SUC n` 
+       THEN Q.EXISTS_TAC `SUC n`
        THEN RW_TAC list_ss [WS_CATN_def,WUS_SEM_def]
        THEN Q.EXISTS_TAC `h` THEN Q.EXISTS_TAC `FOLDL $* (N []) vlist * v2`
        THEN RW_TAC std_ss []
@@ -544,7 +544,7 @@ val WUS_SEM_CAT_REPEAT_CATN =
        THEN Q.SPEC_TAC(`n`,`n`)
        THEN Induct
        THEN RW_TAC list_ss [WS_CATN_def]
-       THENL                                                              
+       THENL
         [Q.EXISTS_TAC `N[]` THEN Q.EXISTS_TAC `v`
           THEN RW_TAC list_ss [CONC_IDENTITY]
           THEN Q.EXISTS_TAC `[]`
@@ -552,7 +552,7 @@ val WUS_SEM_CAT_REPEAT_CATN =
          FULL_SIMP_TAC list_ss [WUS_SEM_def]
           THEN RES_TAC
           THEN RW_TAC std_ss []
-          THEN Q.EXISTS_TAC `v1 * FOLDL $* (N []) vlist` 
+          THEN Q.EXISTS_TAC `v1 * FOLDL $* (N []) vlist`
           THEN Q.EXISTS_TAC `v2'`
           THEN RW_TAC std_ss [CONC_ASSOC]
           THEN Q.EXISTS_TAC `v1::vlist`
@@ -579,8 +579,8 @@ val FOLDLN_ASSOC =
 val FOLDLN_CATN =
  prove
   (``!l v0 r.
-      ALL_EL (\v. WUS_SEM v r) l /\ WUS_SEM v0 r 
-      ==> 
+      ALL_EL (\v. WUS_SEM v r) l /\ WUS_SEM v0 r
+      ==>
       !n. n <= LENGTH l ==> WUS_SEM (FOLDLN n $* v0 l) (WS_CATN n r)``,
    Induct
     THEN RW_TAC list_ss [FOLDLN_def,WS_CATN_def]
@@ -594,11 +594,11 @@ val FOLDLN_CATN =
     THEN Q.EXISTS_TAC `FOLDLN m $* h l`
     THEN RW_TAC list_ss [FOLDLN_ASSOC]);
 
-val WUS_SEM_REPEAT_WS_CATN =                      
- store_thm                                                                
-  ("WUS_SEM_REPEAT_WS_CATN",                                                  
-   ``!v r. WUS_SEM v (S_REPEAT r) = (v = N[]) 
-           \/ 
+val WUS_SEM_REPEAT_WS_CATN =
+ store_thm
+  ("WUS_SEM_REPEAT_WS_CATN",
+   ``!v r. WUS_SEM v (S_REPEAT r) = (v = N[])
+           \/
            ?n. WUS_SEM v (WS_CATN n r)``,
    RW_TAC list_ss []
     THEN EQ_TAC
@@ -689,13 +689,13 @@ val WUS_SEM_SIMPS =
 in
 val TightPrefix_S_BOOL =
  prove
-  (``!b w. 
+  (``!b w.
       WUS_SEM w (S_BOOL b)
       ==>
       !u. PREFIX u w ==> WUS_SEM (WEAKEN u) (S_BOOL b)``,
    RW_TAC list_ss WUS_SEM_SIMPS
     THEN Cases_on `u` THEN Cases_on `u'`
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           (WUS_SEM_SIMPS@[IS_STRONG_def,CONC_def,A_11,A_distinct])
     THEN `(LENGTH l = 0) \/ (LENGTH l' = 0)` by DECIDE_TAC
     THEN (`l  = []` by PROVE_TAC[LENGTH_NIL] ORELSE
@@ -708,7 +708,7 @@ val TightPrefix_S_CAT =
   (``(!w. WUS_SEM w r ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r) /\
      (!w. WUS_SEM w r' ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r')
      ==>
-     !w. WUS_SEM w (S_CAT (r,r')) 
+     !w. WUS_SEM w (S_CAT (r,r'))
          ==>
          !u. PREFIX u w ==> WUS_SEM (WEAKEN u) (S_CAT (r,r'))``,
    RW_TAC list_ss [WUS_SEM_def]
@@ -719,7 +719,7 @@ val TightPrefix_S_CAT =
        THEN RW_TAC list_ss []
        THEN Cases_on `u` THEN Cases_on `v2`
        THEN RW_TAC list_ss [WEAKEN_def,CONC_def],
-      `STRICT_PREFIX v1 u` 
+      `STRICT_PREFIX v1 u`
         by PROVE_TAC[PREFIX_TRICHOTOMY,PREFIX_def,PREFIX_CONC,PREFIX_REFL]
        THEN FULL_SIMP_TAC list_ss [STRICT_PREFIX_def,PREFIX_def]
        THEN Q.EXISTS_TAC `v1` THEN Q.EXISTS_TAC `WEAKEN u''`
@@ -829,7 +829,7 @@ val PREFIX_ANTISYM =
 val PREFIX_FUSION_LEMMA =
  store_thm
   ("PREFIX_FUSION_LEMMA",
-   ``!v1 v2 l. 
+   ``!v1 v2 l.
        PREFIX (v1 * l) u /\ PREFIX u (v1 * l * v2)
        ==>
        ?v2'. (v1 * l * v2' = u) /\ PREFIX (l * v2') (l * v2)``,
@@ -845,7 +845,7 @@ val PREFIX_FUSION_LEMMA =
        THEN Q.EXISTS_TAC `v2`
        THEN RW_TAC list_ss [PREFIX_def]
        THEN Cases_on `l`
-       THEN RW_TAC list_ss 
+       THEN RW_TAC list_ss
              [CONC_def,GSYM CONC_ASSOC,CONC_CANCEL,IS_NEUTRAL_def]
        THEN Cases_on `v2`
        THEN RW_TAC list_ss [CONC_def,CONC_CANCEL,IS_NEUTRAL_def]
@@ -857,7 +857,7 @@ val TightPrefix_S_FUSION =
   (``(!w. WUS_SEM w r ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r) /\
      (!w. WUS_SEM w r' ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r')
      ==>
-     !w. WUS_SEM w (S_FUSION (r,r')) 
+     !w. WUS_SEM w (S_FUSION (r,r'))
          ==>
          !u. PREFIX u w ==> WUS_SEM (WEAKEN u) (S_FUSION (r,r'))``,
    RW_TAC list_ss [WUS_SEM_def]
@@ -866,42 +866,42 @@ val TightPrefix_S_FUSION =
     THENL
      [FULL_SIMP_TAC list_ss [STRICT_PREFIX_def]
        THEN RES_TAC
-       THEN Q.EXISTS_TAC `WEAKEN u` 
-       THEN Q.EXISTS_TAC `v2` 
+       THEN Q.EXISTS_TAC `WEAKEN u`
+       THEN Q.EXISTS_TAC `v2`
        THEN Q.EXISTS_TAC `l`
        THEN RW_TAC list_ss [WEAKEN_def,CONC_def,CONC_WEAKEN],
-      `PREFIX (v1 * l) u` 
+      `PREFIX (v1 * l) u`
         by PROVE_TAC
             [CONC_ASSOC,PREFIX_TRICHOTOMY,PREFIX_def,PREFIX_CONC,PREFIX_REFL]
        THEN FULL_SIMP_TAC std_ss [CONC_ASSOC]
-       THEN `?v2'. (v1 * l * v2' = u) /\  PREFIX (l * v2') (l * v2)` 
+       THEN `?v2'. (v1 * l * v2' = u) /\  PREFIX (l * v2') (l * v2)`
              by PROVE_TAC[PREFIX_FUSION_LEMMA]
        THEN `WUS_SEM (WEAKEN(l * v2')) r'` by PROVE_TAC[]
        THEN `WUS_SEM (l * WEAKEN v2') r'` by PROVE_TAC[WEAKEN_CONC]
-       THEN Q.EXISTS_TAC `v1` 
-       THEN Q.EXISTS_TAC `WEAKEN v2'` 
+       THEN Q.EXISTS_TAC `v1`
+       THEN Q.EXISTS_TAC `WEAKEN v2'`
        THEN Q.EXISTS_TAC `l`
        THEN `l * WEAKEN v2' = WEAKEN(l * v2')` by PROVE_TAC[WEAKEN_CONC]
        THEN RW_TAC std_ss [GSYM CONC_ASSOC]
        THEN REWRITE_TAC[WEAKEN_CONC],
       FULL_SIMP_TAC list_ss [STRICT_PREFIX_def]
        THEN RES_TAC
-       THEN Q.EXISTS_TAC `WEAKEN u` 
-       THEN Q.EXISTS_TAC `v2` 
+       THEN Q.EXISTS_TAC `WEAKEN u`
+       THEN Q.EXISTS_TAC `v2`
        THEN Q.EXISTS_TAC `W[]`
        THEN RW_TAC list_ss [WEAKEN_def,CONC_def,CONC_WEAKEN],
       RES_TAC
-       THEN Q.EXISTS_TAC `WEAKEN u` 
-       THEN Q.EXISTS_TAC `v2` 
+       THEN Q.EXISTS_TAC `WEAKEN u`
+       THEN Q.EXISTS_TAC `v2`
        THEN Q.EXISTS_TAC `W[]`
        THEN RW_TAC list_ss [WEAKEN_def,CONC_def,CONC_WEAKEN]]);
 
 val TightPrefix_WS_CATN =
  prove
-  (``(!w. WUS_SEM w r ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r) 
+  (``(!w. WUS_SEM w r ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r)
      ==>
-     !n w. 
-      WUS_SEM w (WS_CATN n r) 
+     !n w.
+      WUS_SEM w (WS_CATN n r)
       ==>
       !u. PREFIX u w ==> WUS_SEM (WEAKEN u) (WS_CATN n r)``,
    DISCH_TAC
@@ -941,7 +941,7 @@ val TightPrefix_S_REPEAT =
       !w. S_CLOCK_FREE (S_REPEAT r) /\ WUS_SEM w (S_REPEAT r) ==>
           !u. PREFIX u w ==> WUS_SEM (WEAKEN u) (S_REPEAT r)``,
    RW_TAC std_ss [S_CLOCK_FREE_def]
-    THEN `!w. WUS_SEM w r ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r` 
+    THEN `!w. WUS_SEM w r ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r`
           by PROVE_TAC[]
     THEN IMP_RES_TAC TightPrefix_WS_CATN
     THEN FULL_SIMP_TAC list_ss [WUS_SEM_REPEAT_WS_CATN]
@@ -954,7 +954,7 @@ val TightPrefix_S_REPEAT =
 
 val TightPrefix =
  prove
-  (``!r. S_CLOCK_FREE r 
+  (``!r. S_CLOCK_FREE r
          ==>
          !w. WUS_SEM w r ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r``,
    INDUCT_THEN sere_induct ASSUME_TAC
@@ -963,16 +963,16 @@ val TightPrefix =
       PROVE_TAC[TightPrefix_S_BOOL],
       (* S_CAT (r,r') *)
       RW_TAC std_ss [S_CLOCK_FREE_def]
-       THEN `!w. WUS_SEM w r  ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r`  
+       THEN `!w. WUS_SEM w r  ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r`
              by PROVE_TAC[]
-       THEN `!w. WUS_SEM w r' ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r'` 
+       THEN `!w. WUS_SEM w r' ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r'`
              by PROVE_TAC[]
        THEN IMP_RES_TAC TightPrefix_S_CAT,
       (* S_FUSION (r,r') *)
       RW_TAC std_ss [S_CLOCK_FREE_def]
-       THEN `!w. WUS_SEM w r  ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r`  
+       THEN `!w. WUS_SEM w r  ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r`
               by PROVE_TAC[]
-       THEN `!w. WUS_SEM w r' ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r'` 
+       THEN `!w. WUS_SEM w r' ==> !u. PREFIX u w ==> WUS_SEM (WEAKEN u) r'`
              by PROVE_TAC[]
        THEN IMP_RES_TAC TightPrefix_S_FUSION,
       (* S_OR (r,r') *)
@@ -986,7 +986,7 @@ val TightPrefix =
        THEN Cases_on `u`
        THEN FULL_SIMP_TAC list_ss [PREFIX_def,CONC_def,WEAKEN_def,A_distinct]
        THEN Cases_on `u`
-       THEN FULL_SIMP_TAC list_ss 
+       THEN FULL_SIMP_TAC list_ss
              [PREFIX_def,CONC_def,WEAKEN_def,A_distinct,A_11],
       (* S_REPEAT r *)
       PROVE_TAC[TightPrefix_S_REPEAT],
@@ -1017,7 +1017,7 @@ val US_SEM_WUS_SEM_CATN =
  store_thm
   ("US_SEM_WUS_SEM_CATN",
    ``(!w. US_SEM w r = WUS_SEM (N w) r)
-     ==> 
+     ==>
      !n w. US_SEM w (WS_CATN n r) = WUS_SEM (N w) (WS_CATN n r)``,
    DISCH_TAC
     THEN Induct
@@ -1039,7 +1039,7 @@ val US_SEM_WUS_SEM_CATN =
 local
 open FinitePathTheory;
 val SIMP =
- RW_TAC list_ss 
+ RW_TAC list_ss
   [S_CLOCK_FREE_def,US_SEM_def,WUS_SEM_def,IS_STRONG_def,LEN_def,A_ELEM_def,
    ELEM_def,HEAD_def,RESTN_def];
 in
@@ -1096,7 +1096,7 @@ val TightNeutralEquiv =
       (* S_EMPTY *)
       SIMP,
       (* S_REPEAT r *)
-      RW_TAC list_ss 
+      RW_TAC list_ss
        [WUS_SEM_REPEAT_WS_CATN,S_CLOCK_FREE_def,US_SEM_REPEAT_CATN]
        THEN EQ_TAC
        THEN RW_TAC list_ss []

@@ -1,9 +1,9 @@
-(* ===================================================================== 
+(* =====================================================================
  * DESCRIPTION  : Implementation of term nets, from GTT.
  * MODIFIED	: Donald Syme, 1995, to add local constants
- *  
- * MODIFIED    : Donald Syme, November 1995, to be keyed up to 
- *               higher order matching, based on JRH's code from GTT.  
+ *
+ * MODIFIED    : Donald Syme, November 1995, to be keyed up to
+ *               higher order matching, based on JRH's code from GTT.
  * ===================================================================== *)
 
 signature Ho_Net =

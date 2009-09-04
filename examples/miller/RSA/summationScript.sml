@@ -16,8 +16,8 @@ val ARW = RW_TAC arith_ss;
 
 val _ = new_theory "summation";
 
-val SUMMATION = 
- Define 
+val SUMMATION =
+ Define
      `(summation j 0 f       = 0)
    /\ (summation j (SUC i) f = f j + summation (SUC j) i f)`;
 
@@ -29,21 +29,21 @@ Term `!i j f. summation j (SUC i) f = f j + summation (SUC j) i f`,
 
 val SUMMATION_2 = store_thm("SUMMATION_2",
 Term `!i j f. summation j (SUC i) f = summation j i f + f (i + j)`,
-  Induct_on `i` 
-    THEN ONCE_REWRITE_TAC[SUMMATION] 
+  Induct_on `i`
+    THEN ONCE_REWRITE_TAC[SUMMATION]
     THEN ARW[ADD_CLAUSES] THEN ARW[SUMMATION]);
 
 
 val SUMMATION_EXT = store_thm("SUMMATION_EXT",
-Term `!i j f g. 
-        (!k. k < i ==> (f (j + k) = g (j + k))) 
-          ==> 
+Term `!i j f g.
+        (!k. k < i ==> (f (j + k) = g (j + k)))
+          ==>
         (summation j i f = summation j i g)`,
-Induct_on `i` 
+Induct_on `i`
   THEN ARW[SUMMATION]
   THEN `f j:num = f (j+0)` by REWRITE_TAC[ADD_CLAUSES]
   THEN ARW[]
-  THEN `!k. k < i ==> (f (SUC j + k):num = g (SUC j + k))` 
+  THEN `!k. k < i ==> (f (SUC j + k):num = g (SUC j + k))`
      by ARW[ADD_CLAUSES]
   THENL [
     `f (SUC (j+k)):num = f (j + SUC k)` by REWRITE_TAC[ADD_CLAUSES]
@@ -53,7 +53,7 @@ Induct_on `i`
 
 
 val SUMMATION_ADD = store_thm("SUMMATION_ADD",
-Term `!i j f g. 
+Term `!i j f g.
   summation j i f + summation j i g = summation j i (\n. (f n) + g n)`,
 Induct_on `i` THEN ARW [SUMMATION]);
 
@@ -64,11 +64,11 @@ Term `!i j k f. k * summation j i f = summation j i (\n.  k * f n)`,
 
 
 val INV_SUMMATION = store_thm("INV_SUMMATION",
-Term `!i j f P. 
+Term `!i j f P.
        P 0 /\
-       (! a b. (P a) /\ (P b) ==> P (a + b)) /\ 
+       (! a b. (P a) /\ (P b) ==> P (a + b)) /\
        (!k. k < i ==> P (f (k + j)))
-       ==> 
+       ==>
           P (summation j i f)`,
 Induct_on `i` THEN ARW[SUMMATION]
   THEN `P (f (j:num):num) : bool` by ALL_TAC
@@ -88,8 +88,8 @@ Induct_on `i` THEN ARW[SUMMATION]
 
 val SUMMATION_SHIFT = store_thm("SUMMATION_SHIFT",
 Term `!i j f. summation j i f = summation (SUC j) i (\n. f (n - 1))`,
- Induct_on `i` 
-  THEN  REWRITE_TAC[SUMMATION] 
+ Induct_on `i`
+  THEN  REWRITE_TAC[SUMMATION]
   THEN BETA_TAC THEN REWRITE_TAC[SUC_SUB1]
   THEN POP_ASSUM (fn thm => REWRITE_TAC[GSYM thm]));
 

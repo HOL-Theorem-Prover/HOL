@@ -94,8 +94,8 @@ sig
   val unlimit      : simpset -> simpset
   val add_weakener : (Travrules.preorder list * thm list * Traverse.reducer) ->
                      simpset -> simpset
-  val add_relsimp  : {trans: thm, refl: thm, weakenings: thm list, 
-                      subsets: thm list, rewrs : thm list} -> 
+  val add_relsimp  : {trans: thm, refl: thm, weakenings: thm list,
+                      subsets: thm list, rewrs : thm list} ->
                      simpset -> simpset
 
   val traversedata_for_ss: simpset -> Traverse.traverse_data

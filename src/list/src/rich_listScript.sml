@@ -3241,20 +3241,20 @@ val ZIP_GENLIST = store_thm("ZIP_GENLIST",
   REPEAT STRIP_TAC THEN
   `LENGTH (ZIP (l,GENLIST f n)) = LENGTH (GENLIST (\x. (EL x l,f x)) n)`
     by ASM_SIMP_TAC arith_ss [LENGTH_GENLIST,LENGTH_ZIP] THEN
-  ASM_SIMP_TAC arith_ss [listTheory.LIST_EQ_REWRITE, LENGTH_GENLIST, LENGTH_ZIP, 
+  ASM_SIMP_TAC arith_ss [listTheory.LIST_EQ_REWRITE, LENGTH_GENLIST, LENGTH_ZIP,
                          listTheory.EL_ZIP, EL_GENLIST]);
 
 
 
 (*---------------------------------------------------------------------------
-   General theorems about lists. From Antony Fox's and Thomas Tuerk's theories. 
+   General theorems about lists. From Antony Fox's and Thomas Tuerk's theories.
    Added by Thomas Tuerk
  ---------------------------------------------------------------------------*)
 
 val EL_BUTFIRSTN = store_thm("EL_BUTFIRSTN",
   ``!m n l. m + n < LENGTH l ==>
       (EL m (BUTFIRSTN n l) = EL (m + n) l)``,
-  Induct_on `l` THEN SIMP_TAC list_ss [] THEN 
+  Induct_on `l` THEN SIMP_TAC list_ss [] THEN
   Cases_on `n` THEN FULL_SIMP_TAC list_ss [BUTFIRSTN,ADD_CLAUSES]);
 
 val SNOC_EL_FIRSTN = store_thm("SNOC_EL_FIRSTN",
@@ -3295,7 +3295,7 @@ val ZIP_APPEND = store_thm("ZIP_APPEND",
 
 val APPEND_ASSOC_CONS = store_thm (
 "APPEND_ASSOC_CONS",
-``!l1 h l2 l3. 
+``!l1 h l2 l3.
   (l1 ++ (h::l2) ++ l3 =
    l1 ++ h::(l2++l3))``,
    REWRITE_TAC[GSYM APPEND_ASSOC, APPEND]);
@@ -3369,7 +3369,7 @@ val MEM_LAST_FRONT = store_thm (
 ``!e l h. MEM e l /\ ~(e = LAST (h::l)) ==>
           MEM e (FRONT (h::l))``,
 
-Induct_on `l` THEN 
+Induct_on `l` THEN
 FULL_SIMP_TAC list_ss [COND_RATOR, COND_RAND, listTheory.FRONT_DEF, listTheory.LAST_DEF] THEN
 PROVE_TAC[]);
 
@@ -3379,7 +3379,7 @@ PROVE_TAC[]);
    Added by Thomas Tuerk
  ---------------------------------------------------------------------------*)
 
-val LIST_ELEM_COUNT_DEF = new_definition("LIST_ELEM_COUNT_DEF", 
+val LIST_ELEM_COUNT_DEF = new_definition("LIST_ELEM_COUNT_DEF",
     ``LIST_ELEM_COUNT e l = LENGTH (FILTER (\x. x = e) l)``);
 
 val LIST_ELEM_COUNT_THM = store_thm ("LIST_ELEM_COUNT_THM",
@@ -3391,14 +3391,14 @@ SIMP_TAC list_ss [LIST_ELEM_COUNT_DEF, FILTER_APPEND]);
 
 val LIST_ELEM_COUNT_MEM = store_thm ("LIST_ELEM_COUNT_MEM",
   ``!e l. (LIST_ELEM_COUNT e l > 0) = (MEM e l)``,
-  Induct_on `l` THEN 
+  Induct_on `l` THEN
   FULL_SIMP_TAC list_ss [LIST_ELEM_COUNT_DEF,
                          COND_RAND, COND_RATOR] THEN
   PROVE_TAC[]);
 
 
 
-local 
+local
    val REPLACE_ELEMENT_exists = prove (``?fn.
                 (!e:'a n:num. fn e n ([]:'a list) = []:'a list) /\
                 (!e x l. fn e 0 (x::l) = e::l) /\

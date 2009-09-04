@@ -97,7 +97,7 @@ fun rotate(GSTK{prop=PROVED _, ...}) _ =
                             validation=validation o funpow n rotr} :: rst};
 
 
-local 
+local
   fun imp_err s = raise ERR "expandf" ("implementation error: "^s)
   fun return(GSTK{stack={goals=[],validation}::rst, prop as POSED g,final}) =
       let val th = validation []
@@ -105,7 +105,7 @@ local
          of [] =>
            (let val thm = final th
             in GSTK{prop=PROVED (thm,g), stack=[], final=final}
-            end 
+            end
             handle e as HOL_ERR _
               => (cr_add_string_cr "finalization failed"; raise e))
           | {goals = _::rst_o_goals, validation}::rst' =>
@@ -177,17 +177,17 @@ fun ppgoal ppstrm (asl,w) =
              pr tm; (if (i = length_asl - 1) then () else add_newline()); end_block()) else ()
        fun pr_indexes [] = raise ERR "pr_indexes" ""
          | pr_indexes [x] = pr x
-         | pr_indexes L = pr_list pr_index (fn () => ()) (fn () => ()) 
+         | pr_indexes L = pr_list pr_index (fn () => ()) (fn () => ())
                                   (Lib.enumerate 0 (rev asl));
 
-       fun pr_hidden_indexes L = ((if (((!print_number_assums) < length_asl)) then             
+       fun pr_hidden_indexes L = ((if (((!print_number_assums) < length_asl)) then
                                     (begin_block CONSISTENT 0;
-                                       add_string ("..."); 
+                                       add_string ("...");
 	                               if (!print_number_assums > 0) then add_newline() else ();
                                      end_block()) else ());pr_indexes L);
    in
      begin_block CONSISTENT 0;
-     if (not (!print_goal_at_top)) then () else ( 
+     if (not (!print_goal_at_top)) then () else (
         pr w;
         add_newline ();
         (case asl
@@ -219,15 +219,15 @@ fun ppgoal ppstrm (asl,w) =
          else ()
        end
      else ();
-     if (!print_goal_at_top) then () else ( 
+     if (!print_goal_at_top) then () else (
         (case asl
            of [] => ()
            | _  => ( begin_block CONSISTENT 2;
                      add_string "  ";
-                     pr_hidden_indexes asl; 
+                     pr_hidden_indexes asl;
                      end_block ();
                      add_newline ();
-                     add_string (!Globals.goal_line)));    
+                     add_string (!Globals.goal_line)));
         add_newline ();
         pr w;
         add_newline ());
@@ -254,9 +254,9 @@ fun pp_gstk ppstrm  =
              pr_goal g;
              end_block()
            end
-       | pr (GSTK{prop = POSED _, stack = ({goals,...}::_), ...}) = 
+       | pr (GSTK{prop = POSED _, stack = ({goals,...}::_), ...}) =
            let val (ellipsis_action, goals_to_print) =
-               if length goals > !show_nsubgoals then 
+               if length goals > !show_nsubgoals then
                let val num_elided = length goals - !show_nsubgoals
                in
                  ((fn () =>
@@ -276,7 +276,7 @@ fun pp_gstk ppstrm  =
              end_block()
            end
        | pr (GSTK{prop = PROVED (th,_), ...}) =
-           let in 
+           let in
               begin_block Portable.CONSISTENT 0;
               add_string "Initial goal proved.";
               add_newline();

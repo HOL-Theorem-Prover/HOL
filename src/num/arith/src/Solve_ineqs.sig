@@ -1,6 +1,6 @@
 signature Solve_ineqs =
 sig
-  type int = Arbint.int 
+  type int = Arbint.int
   type term = Term.term
   type thm  = Thm.thm
   type conv = Abbrev.conv

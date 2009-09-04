@@ -3,7 +3,7 @@ sig
 
   include Abbrev
 
-  val x86_assign2assembly      : codegen_inputLib.assign_type -> string list 
+  val x86_assign2assembly      : codegen_inputLib.assign_type -> string list
   val x86_guard2assembly       : codegen_inputLib.guard_type -> string list * (string * string)
 
   val x86_cond_code            : Parse.term -> string * string

@@ -4,26 +4,26 @@ open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
 
 val _ = new_theory "Serpent_Bitslice_KeySchedule";
 
-(*number of rounds*)                   
+(*number of rounds*)
 val R_def = Define `R = 32`;
 
 (* PHI: Constant used in the key schedule *)
 
 val PHI_def = Define `PHI = 0x9e3779b9w : word32`;
 
-val short2longKey_def = Define 
+val short2longKey_def = Define
 `short2longKey k kl = let nw256 = n2w (k MOD  (2**kl)) in
   nw256 !! (1w<<kl) : word256`;
 
 (*used in making preKey*)
 val (makeSubKeyBitSlice_def,makeSubKeyBitSlice_termi) = Defn.tstore_defn(
 Hol_defn "makeSubKeyBitSlice"
-`makeSubKeyBitSlice (w_1::w_2::w_3::w_4::w_5::w_6::w_7::w_8::t) i 
- = let nl =((w_1 ?? w_3 ??  w_5 ?? w_8 ?? PHI ?? (n2w:num->word32) (131-i)) #>> 
-            (32-11)) 
-       ::(w_1::w_2::w_3::w_4::w_5::w_6::w_7::w_8::t) 
+`makeSubKeyBitSlice (w_1::w_2::w_3::w_4::w_5::w_6::w_7::w_8::t) i
+ = let nl =((w_1 ?? w_3 ??  w_5 ?? w_8 ?? PHI ?? (n2w:num->word32) (131-i)) #>>
+            (32-11))
+       ::(w_1::w_2::w_3::w_4::w_5::w_6::w_7::w_8::t)
    in
-   if i = 0 
+   if i = 0
       then nl
       else makeSubKeyBitSlice nl (i-1)`,
  WF_REL_TAC `measure SND`);
@@ -37,7 +37,7 @@ val makeRevPreKey_def = Define
 
 val revPreKey2SubKey_def = Define
 `revPreKey2SubKey revPreKey
- = let w = REVERSE revPreKey 
+ = let w = REVERSE revPreKey
   in
   RND03 (EL 0 w, EL 1 w, EL 2 w, EL 3 w)::
   RND02(EL 4 w, EL 5 w, EL 6 w, EL 7 w)::
@@ -74,19 +74,19 @@ val revPreKey2SubKey_def = Define
   RND03(EL 128 w, EL 129 w, EL 130 w, EL 131 w)::[]`;
 
 
-val makeKey_def = Define  
-`makeKey userKey kl 
- = let longKey = short2longKey userKey kl 
+val makeKey_def = Define
+`makeKey userKey kl
+ = let longKey = short2longKey userKey kl
   in
-  let revPreKey = makeRevPreKey longKey 
-  in 
+  let revPreKey = makeRevPreKey longKey
+  in
   revPreKey2SubKey revPreKey`;
-     
+
 val makeSubKeyBitSliceLength = Q.store_thm(
 "makeSubKeyBitSliceLength",
-`!longKey n. 
+`!longKey n.
     (LENGTH longKey>= 8)
-    ==> 
+    ==>
     (LENGTH (makeSubKeyBitSlice longKey n ) = n+LENGTH longKey+1)`,
   Induct_on `n` THENL [
     FULL_SIMP_TAC list_ss [makeSubKeyBitSlice_def,LENGTH,LET_THM] THEN
@@ -106,7 +106,7 @@ val makeSubKeyBitSliceLength = Q.store_thm(
 
 val makeRevPreKeyLength = Q.store_thm(
 "makeRevPreKeyLength",
-`!userKey. 
+`!userKey.
     LENGTH (makeRevPreKey userKey) = 132`,
   RW_TAC std_ss [makeRevPreKey_def,LET_THM] THEN
   `LENGTH (word256to32l userKey) = 8` by METIS_TAC [word256to32lLength] THEN
@@ -121,7 +121,7 @@ val makeRevPreKeyLength = Q.store_thm(
 (*only length matters in functional correctness*)
 val makeKeyLength = Q.store_thm(
 "makeKeyLength",
-`!userKey kl. 
+`!userKey kl.
     LENGTH (makeKey userKey kl) = 33`,
   RW_TAC list_ss [makeKey_def,revPreKey2SubKey_def,LET_THM]);
 

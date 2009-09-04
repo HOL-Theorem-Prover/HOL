@@ -413,7 +413,7 @@ val tac =
     RND03_def,InvRND03_def,RND04_def,InvRND04_def,RND05_def,InvRND05_def,
     RND06_def,InvRND06_def,RND07_def,InvRND07_def] THEN
   SRW_TAC [] [] THEN WORD_DECIDE_TAC;
-      
+
 val RND00_THM = Q.store_thm("RND00_THM", `!v. InvRND00 (RND00 v) = v`, tac);
 val RND01_THM = Q.store_thm("RND01_THM", `!v. InvRND01 (RND01 v) = v`, tac);
 val RND02_THM = Q.store_thm("RND02_THM", `!v. InvRND02 (RND02 v) = v`, tac);

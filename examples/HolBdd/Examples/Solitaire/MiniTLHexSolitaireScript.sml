@@ -24,7 +24,7 @@
 (*****************************************************************************)
 
 (* Comment out for compilation
-load "HolBddLib"; 
+load "HolBddLib";
 load "PrimitiveBddRules";
 load "ListPair";
 load "stringLib";
@@ -47,7 +47,7 @@ open pairTheory;
 
 val _ = new_theory "MiniTLHexSolitaire";
 
-val _ = Globals.priming := SOME ""; 
+val _ = Globals.priming := SOME "";
 
 (*****************************************************************************)
 (* List of board positions                                                   *)
@@ -59,7 +59,7 @@ val vl = [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19];
 (* Make an unprimed varibale for a board position                            *)
 (*****************************************************************************)
 
-fun mk_v n = 
+fun mk_v n =
  if n<10 then mk_var("v0"^(int_to_string n),bool)
          else mk_var("v"^(int_to_string n),bool);
 
@@ -67,7 +67,7 @@ fun mk_v n =
 (* Make a primed varibale for a board position                               *)
 (*****************************************************************************)
 
-fun mk_v' n = 
+fun mk_v' n =
  if n<10 then mk_var("v0"^(int_to_string n)^"'",bool)
          else mk_var("v"^(int_to_string n)^"'",bool);
 
@@ -82,18 +82,18 @@ and s' = list_mk_pair (map mk_v' vl);
 (* Funtion to shuffle unprimed and primed state variables                    *)
 (*****************************************************************************)
 
-fun shuffle (l1,l2) = 
+fun shuffle (l1,l2) =
  ListPair.foldr (fn(x1,x2,l) => x1 :: x2 :: l) [] (l1,l2);
 
 (*****************************************************************************)
 (* Varmap (i.e. variable ordering) for later use                             *)
 (*****************************************************************************)
 
-val hexsolitaire_varmap = 
- extendVarmap 
-  (map 
+val hexsolitaire_varmap =
+ extendVarmap
+  (map
     (fn s => mk_var(s,bool))
-    (shuffle(map (fst o dest_var o mk_v) vl, map (fst o dest_var o mk_v') vl))) 
+    (shuffle(map (fst o dest_var o mk_v) vl, map (fst o dest_var o mk_v') vl)))
   empty;
 
 (*****************************************************************************)
@@ -149,11 +149,11 @@ val HexSolitaireTrans_def =
 (*****************************************************************************)
 
 val HexSolitaireFinal_def =
- bossLib.Define 
-  `HexSolitaireFinal ^s = 
+ bossLib.Define
+  `HexSolitaireFinal ^s =
      ^(list_mk_conj
         (map (fn n => if (n=10 orelse n=18)
-                       then mk_v n 
+                       then mk_v n
                        else mk_neg(mk_v n)) vl))`;
 
 (*****************************************************************************)
@@ -174,17 +174,17 @@ val HexSolitaireFinal_def =
 (*                                                                           *)
 (*****************************************************************************)
 
-val (by_th0,by_thsuc) = 
+val (by_th0,by_thsuc) =
  time
   (REWRITE_RULE[Eq_def,pairTheory.PAIR_EQ] ## REWRITE_RULE[HexSolitaireTrans_def])
-  (MkIterThms 
-    MachineTransitionTheory.ReachBy_rec 
+  (MkIterThms
+    MachineTransitionTheory.ReachBy_rec
     (lhs(concl(SPEC_ALL HexSolitaireTrans_def)))
     (lhs(concl(ISPECL[``(T,T,T,T,T,T,T,T,T,F,T,T,T,T,T,T,T,T,T)``,s]Eq_def))));
 
-val (FinalTb,FinalTb') = 
- computeFixedpoint 
-  (fn n => fn tb => print ".") 
+val (FinalTb,FinalTb') =
+ computeFixedpoint
+  (fn n => fn tb => print ".")
   hexsolitaire_varmap
   (by_th0,by_thsuc);
 
@@ -192,12 +192,12 @@ val ReachTb =
  BddEqMp
   (SYM
     (AP_THM
-     (MATCH_MP 
+     (MATCH_MP
        ReachBy_fixedpoint
        (EXT
-         (PGEN 
-           (mk_var("s",type_of s)) 
-           s 
+         (PGEN
+           (mk_var("s",type_of s))
+           s
            (BddThmOracle(BddOp(Biimp,FinalTb,FinalTb'))))))
      s))
   FinalTb;
@@ -234,17 +234,17 @@ val Eval_def =
 (*****************************************************************************)
 
 fun Check wff =
- let val th = simpLib.SIMP_CONV 
-               std_ss 
+ let val th = simpLib.SIMP_CONV
+               std_ss
                [Eval_def,EXISTS_PROD,FORALL_PROD,HexSolitaireFinal_def]
-               ``Eval 
-                  ^wff 
-                  HexSolitaireTrans 
+               ``Eval
+                  ^wff
+                  HexSolitaireTrans
                   (T,T,T,T,T,T,T,T,T,F,T,T,T,T,T,T,T,T,T)``
       val (t1,t2) = dest_eq(concl th)
       val tb = GenTermToTermBdd (BddApRestrict ReachTb) hexsolitaire_varmap t2
   in
-   BddEqMp (SYM th) tb   
+   BddEqMp (SYM th) tb
   end;
 
 (*****************************************************************************)
@@ -253,22 +253,22 @@ fun Check wff =
 
 val EvalTb = Check ``(SOMETIME (ATOM HexSolitaireFinal))``;
 
-val wff1 = 
- ``\(v01,v02,v03,v04,v05,v06,v07,v08,v09,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19). 
+val wff1 =
+ ``\(v01,v02,v03,v04,v05,v06,v07,v08,v09,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19).
     ~v01 /\ ~v02 /\ ~v03 /\ ~v04 /\ ~v05 /\ ~v06 /\ ~v07 /\ ~v08 /\
     ~v09 /\ v10 /\ ~v11 /\ ~v12 /\ ~v13 /\ ~v14 /\ ~v15 /\ ~v16 /\ ~v17 /\ v18 /\ ~v19``;
 
 val EvalTb1 = Check ``(SOMETIME (ATOM ^wff1))``;
 
-val wff2 = 
- ``\(v01,v02,v03,v04,v05,v06,v07,v08,v09,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19). 
+val wff2 =
+ ``\(v01,v02,v03,v04,v05,v06,v07,v08,v09,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19).
     v01 /\ v02 /\ v03 /\ ~v04 /\ ~v05 /\ ~v06 /\ ~v07 /\ ~v08 /\
     ~v09 /\ ~v10 /\ ~v11 /\ ~v12 /\ ~v13 /\ ~v14 /\ ~v15 /\ ~v16 /\ ~v17 /\ ~v18 /\ ~v19``;
 
 val EvalTb2 = Check ``(SOMETIME (ATOM ^wff2))``;
 
-val wff3 = 
- ``\(v01,v02,v03,v04,v05,v06,v07,v08,v09,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19). 
+val wff3 =
+ ``\(v01,v02,v03,v04,v05,v06,v07,v08,v09,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19).
     ~v01 /\ ~v02 /\ ~v03 /\ ~v04 /\ ~v05 /\ ~v06 /\ ~v07 /\ ~v08 /\
     ~v09 /\ v10 /\ ~v11 /\ ~v12 /\ ~v13 /\ ~v14 /\ ~v15 /\ ~v16 /\ ~v17 /\ ~v18 /\ ~v19``;
 
@@ -324,18 +324,18 @@ val aEval_def =
 (*****************************************************************************)
 
 fun aCheck ass L awff =
- let val th = simpLib.SIMP_CONV 
-               std_ss 
+ let val th = simpLib.SIMP_CONV
+               std_ss
                ([aEval_def,EXISTS_PROD,FORALL_PROD,HexSolitaireFinal_def]
                 @ List.map ASSUME ass)
-               ``aEval 
-                  ^awff 
+               ``aEval
+                  ^awff
                   (HexSolitaireTrans,^L)
                   (T,T,T,T,T,T,T,T,T,F,T,T,T,T,T,T,T,T,T)``
       val (t1,t2) = dest_eq(concl th)
       val tb = GenTermToTermBdd (BddApRestrict ReachTb) hexsolitaire_varmap t2
   in
-   BddEqMp (SYM th) tb   
+   BddEqMp (SYM th) tb
   end;
 
 (*****************************************************************************)
@@ -343,7 +343,7 @@ fun aCheck ass L awff =
 (*****************************************************************************)
 
 val aEvalTb =
- aCheck 
+ aCheck
  []
  ``\a s. if a="HexSolitaireFinal" then HexSolitaireFinal s else F``
  ``(aSOMETIME (aATOM "HexSolitaireFinal"))``;
@@ -357,14 +357,14 @@ val _ = set_fixity "aAND" (Infixl 500);
 (*****************************************************************************)
 
 val finalwff =
- ``aNOT(aATOM v01) aAND aNOT(aATOM v02) aAND aNOT(aATOM v03) aAND 
-   aNOT(aATOM v04) aAND aNOT(aATOM v05) aAND aNOT(aATOM v06) aAND 
-   aNOT(aATOM v07) aAND aNOT(aATOM v08) aAND aNOT(aATOM v09) aAND 
+ ``aNOT(aATOM v01) aAND aNOT(aATOM v02) aAND aNOT(aATOM v03) aAND
+   aNOT(aATOM v04) aAND aNOT(aATOM v05) aAND aNOT(aATOM v06) aAND
+   aNOT(aATOM v07) aAND aNOT(aATOM v08) aAND aNOT(aATOM v09) aAND
    aATOM v10 aAND
-   aNOT(aATOM v11) aAND aNOT(aATOM v12) aAND aNOT(aATOM v13) aAND 
-   aNOT(aATOM v14) aAND aNOT(aATOM v15) aAND aNOT(aATOM v16) aAND 
-   aNOT(aATOM v17) aAND 
-   aATOM v18 aAND 
+   aNOT(aATOM v11) aAND aNOT(aATOM v12) aAND aNOT(aATOM v13) aAND
+   aNOT(aATOM v14) aAND aNOT(aATOM v15) aAND aNOT(aATOM v16) aAND
+   aNOT(aATOM v17) aAND
+   aATOM v18 aAND
    aNOT(aATOM v19)``;
 
 (*****************************************************************************)
@@ -401,7 +401,7 @@ val L = ``L:string->^(ty_antiq(type_of s))->bool``;
 (*****************************************************************************)
 
 val aEvalTb2 =
- aCheck 
+ aCheck
  (L_ass @  var_ass)
  L
  ``(aSOMETIME ^finalwff)``;

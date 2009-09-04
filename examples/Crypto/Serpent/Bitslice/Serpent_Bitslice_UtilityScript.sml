@@ -73,9 +73,9 @@ val LENGTH_myBUTLASTN = Q.store_thm(
     n <= LENGTH l
     ==>
     (LENGTH (myBUTLASTN n l) = LENGTH l - n)`,
-  RW_TAC arith_ss [myBUTLASTN_def,LENGTH_myFIRSTN,LET_THM]);   
-   
-(*explicitly instantiate a list give its length*)     
+  RW_TAC arith_ss [myBUTLASTN_def,LENGTH_myFIRSTN,LET_THM]);
+
+(*explicitly instantiate a list give its length*)
 val LENGTH_GREATER_EQ_CONS = Q.store_thm(
 "LENGTH_GREATER_EQ_CONS",
 `!l n.
@@ -92,7 +92,7 @@ val listInstGreaterEq8 = Q.store_thm(
     ?v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 t.
         l = (v_1::v_2::v_3::v_4::v_5::v_6::v_7::v_8::t)`,
   REWRITE_TAC [REDEPTH_CONV numLib.num_CONV ``8``] THEN
-  METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]);   
+  METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]);
 
 val listInstEq33 = Q.store_thm(
 "listInstEq33",

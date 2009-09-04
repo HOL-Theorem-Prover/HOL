@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------------*)
-(*      Simple Examples                                                            *) 
+(*      Simple Examples                                                            *)
 (*      No precedure call is presented in these examples                           *)
 (*---------------------------------------------------------------------------------*)
 
@@ -37,7 +37,7 @@ val ShiftXor_def =
   Name              : ShiftXor
   Arguments         : (r0,(r1,(r2,r3)))
   Returns           : r0
-  Body: 
+  Body:
     0:          lsl     r4, r0, #4iw
     1:          add     r2, r4, r2
     2:          add     r1, r0, r1
@@ -54,11 +54,11 @@ val ShiftXor_def =
 (*---------------------------------------------------------------------------------*)
 
 val cj_f_1_def = Define `
-    cj_f_1 (a,b) = 
-       if a = 1w then 
+    cj_f_1 (a,b) =
+       if a = 1w then
             let e = a + b + 3w
-            in e 
-       else let c = a + b in 
+            in e
+       else let c = a + b in
             let d = c * c - a in
             d`;
 
@@ -84,7 +84,7 @@ val cj_f_1_def = Define `
   Name              : cj_f_1
   Arguments         : (r0,r1)
   Returns           : r0
-  Body: 
+  Body:
   CJ(r0 = #1w,
     [madd r0 r0 r1; madd r0 r0 #3w],
     [madd r1 r0 r1; mmul r1 r1 r1; msub r0 r1 r0])
@@ -94,7 +94,7 @@ val cj_f_1_def = Define `
   Name              : cj_f_1
   Arguments         : (r0,r1)
   Returns           : r0
-  Body: 
+  Body:
     0:          cmp     r0, #1iw
     1:          beq     + (5)
     2:          add     r1, r0, r1
@@ -107,7 +107,7 @@ val cj_f_1_def = Define `
 
 (*---------------------------------------------------------------------------------*)
 (*      Tail Recusive Functions                                                    *)
-(*      Factorial Function. Form: SC (TR, BLK)                                     *) 
+(*      Factorial Function. Form: SC (TR, BLK)                                     *)
 (*      This is the example 1 in the paper                                         *)
 (*---------------------------------------------------------------------------------*)
 
@@ -141,7 +141,7 @@ val fact_thm = Q.store_thm (
                ((B,SOME AL,F),NONE,[],SOME (NEG 6));
                ((MOV,NONE,F),SOME (REG 2),[REG 1],NONE)]
               ((0,0w,st),{}))<MR R2> =
-         fact (st<MR R0>,st<MR R1>) 
+         fact (st<MR R0>,st<MR R1>)
 
 
 *)
@@ -174,7 +174,7 @@ pp_compile cj_f_2_def;
   Name              : cj_f_2
   Arguments         : (r0,r1)
   Returns           : r2
-  Body: 
+  Body:
     0:          add     r2, r0, #1iw
     1:          cmp     r0, #1iw
     2:          beq     + (3)
@@ -194,7 +194,7 @@ val f3_def = Define `
     f3 (a,b) = let c = a + 1w in
                let d = if a = 1w then b else a + b in
                let e = c - d in
-               e 
+               e
 `;
 
 (*

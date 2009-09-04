@@ -127,7 +127,7 @@ fun rm x [] = [] | rm x (h::t) = if eq x h then rm x t else h::rm x t;
 
 fun distinct [] = []
   | distinct (h::t) = h::distinct(rm h t);
-   
+
 (*---------------------------------------------------------------------------*)
 (* Need to handle fact that 0 is both a literal and a constructor            *)
 (*---------------------------------------------------------------------------*)
@@ -139,7 +139,7 @@ type divide_ty
        group       : (term list * (thm * (term, term) subst)) list,
        new_formals : term list} list;
 
-(* Original 
+(* Original
 fun mk_case ty_info FV thy =
  let
  val divide:divide_ty = ipartition (wfrecUtils.vary FV)  (* do not eta-expand!! *)
@@ -156,10 +156,10 @@ fun mk_case ty_info FV thy =
                                 (zip rights col0)
           in mk{path=rstp, rows=zip pat_rectangle' rights'}
           end
-(*     else    
-     if exists Literal.is_pure_literal col0  
+(*     else
+     if exists Literal.is_pure_literal col0
        (* column 0 matches against literals *)
-     then 
+     then
 *)
      else (* column 0 matches against constructors *)
      let val {Thy, Tyop = ty_name,...} = dest_thy_type (type_of p)
@@ -211,7 +211,7 @@ fun mk_case ty_info FV thy =
                                 (zip rights col0)
           in mk{path=rstp, rows=zip pat_rectangle' rights'}
           end
-     else    
+     else
      if exists Literal.is_pure_literal col0  (* col0 matches against literals *)
      then let val lits = distinct col0
            val (litpats, varpats) = Lib.partition (not o is_var) lits
@@ -219,11 +219,11 @@ fun mk_case ty_info FV thy =
            fun neglits v = map (fn lit => mk_neg(mk_eq(v,lit))) litpats
            val altliteqs = map neglits varpats
            val vareqs = map (curry mk_eq u) varpats
-           val var_constraints = map2 
+           val var_constraints = map2
               (fn veq => fn nlits => list_mk_conj(veq::nlits)) vareqs altliteqs
            val eqs = liteqs @ var_constraints
-           fun exquant tm = 
-             if is_conj tm 
+           fun exquant tm =
+             if is_conj tm
                then let val x = rhs(fst(dest_conj tm))
                     in mk_exists(x,tm)
                     end
@@ -233,7 +233,7 @@ fun mk_case ty_info FV thy =
            val subproblems = lpartition(lits,rows)
            val groups = map snd subproblems
            val geqs = zip groups eqs
-           fun expnd c (pats,(th,b)) = 
+           fun expnd c (pats,(th,b)) =
               if is_eq c then (pats, (SUBS[ASSUME c]th, b))
                  else let val lem = ASSUME c
                           val veq = CONJUNCT1 lem
@@ -244,8 +244,8 @@ fun mk_case ty_info FV thy =
                       end
            val news = map(fn(grp,c) => {path=rstp,rows=map (expnd c) grp}) geqs
            val recursive_thms = map mk news
-           fun left_exists tm thm = 
-             if is_exists tm 
+           fun left_exists tm thm =
+             if is_exists tm
                then let val (v,_) = dest_exists tm
                     in CHOOSE (v,ASSUME tm) thm
                     end
@@ -254,7 +254,7 @@ fun mk_case ty_info FV thy =
            val thms' = map2 left_exists vexl recursive_thms
            val same_concls = EVEN_ORS thms'
          in
-           DISJ_CASESL thm' same_concls 
+           DISJ_CASESL thm' same_concls
          end
      else (* column 0 matches against constructors *)
      let val {Thy, Tyop = ty_name,...} = dest_thy_type (type_of p)
@@ -285,7 +285,7 @@ fun mk_case ty_info FV thy =
          end
      end end
    | mk _ = fail"blunder"
-in 
+in
  mk
 end;
 
@@ -403,7 +403,7 @@ fun detuple newvar =
 val monitoring = ref 0;
 
 val _ = Feedback.register_trace("tfl_ind",monitoring,1);
-	
+
 (*---------------------------------------------------------------------------*
  * Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *
  *                                                                           *
@@ -469,32 +469,32 @@ fun match_clause pat clause =
         let val (x,target) = dest_eq xeq
         in case Term.match_term target pat
             of ([],[]) => clause
-             | (theta,[]) => 
-                 if var_pure theta 
+             | (theta,[]) =>
+                 if var_pure theta
                  then list_mk_exists(map (subst theta) V, subst theta tm)
                  else raise ERR "match_clause" "no match"
             | (theta,tytheta) => raise ERR "match_clause" "inequal types"
         end
  end;
 
-fun match_clauses pats case_thm = 
+fun match_clauses pats case_thm =
  let val clauses = strip_disj (concl case_thm)
      fun match [] [] = []
-       | match (p1::rst) (clauses as (_::_)) = 
+       | match (p1::rst) (clauses as (_::_)) =
            let open Lib
                val (cl,clauses') = trypluck (match_clause p1) clauses
            in cl::match rst clauses'
            end
        | match other wise = raise ERR "match_clauses" "different lengths"
- in 
+ in
   EQ_MP (EQT_ELIM
           (AC_CONV (DISJ_ASSOC,DISJ_SYM)
                (mk_eq(concl case_thm,
                       list_mk_disj (match pats clauses)))))
-       case_thm 
+       case_thm
  end
  handle e => raise wrap_exn "Induction" "match_clauses" e;
- 
+
 (*---------------------------------------------------------------------------*)
 (* Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *)
 (*                                                                           *)
@@ -521,7 +521,7 @@ let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val v = variant (free_varsl (map concl proved_cases)) (mk_var("v",domn))
     val case_thm' = ISPEC v case_thm
     val case_thm'' = match_clauses pats case_thm' (* align case_thm' with pats *)
-    fun mk_subst tm = 
+    fun mk_subst tm =
         if is_eq tm then SYM (ASSUME tm)
         else SYM (hd (CONJUNCTS (ASSUME (snd(strip_exists tm)))))
     val substs = map mk_subst (strip_disj (concl case_thm''))

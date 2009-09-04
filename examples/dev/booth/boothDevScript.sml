@@ -39,7 +39,7 @@ open HolKernel Parse boolLib bossLib metisLib;
 (* ---------------------------------------------------------------
    Open theories
 --------------------------------------------------------------- *)
-open word32Theory boothTheory compile metisLib intLib 
+open word32Theory boothTheory compile metisLib intLib
      vsynth arithmeticTheory inlineCompile
      fpgaCodeGenerator;
 
@@ -56,7 +56,7 @@ val _ = intLib.deprecate_int();
 (*---------------------------------------------------------------------------*)
 (* Start new theory "boothDev"                                               *)
 (*---------------------------------------------------------------------------*)
-val _ = new_theory "boothDev"; 
+val _ = new_theory "boothDev";
 infixr 3 THENR;
 val _ = type_abbrev("word",``:word32``);
 
@@ -67,12 +67,12 @@ fun HB() = let fun tm2str tm = let val saved_val = !show_types
                                    val _ = (show_types := false)
                                    val s = Parse.term_to_string tm
                                    val _ = (show_types := saved_val)
-                               in s 
+                               in s
                                end
            in tm2str ((snd o dest_eq o snd o dest_thm) HB_def)
            end;
 
-val _ = add_vsynth 
+val _ = add_vsynth
  [(``\(sw:bool,in1:num,in2:num). if sw then in1 else in2``,
     (fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3))),
   (``\(sw:bool,in1:word,in2:word). if sw then in1 else in2``,
@@ -93,45 +93,45 @@ val _ = add_vsynth
   (``(UNCURRY $\/)``,(fn[inp1,inp2] => inp1 ^ " || " ^ inp2)),
   (``w2n``,(fn[inp] => inp)),
   (``($~ :bool->bool)``,(fn[inp] => ("!" ^ inp))),
-  (``(BITS 31 1)``, 
+  (``(BITS 31 1)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+1)"))),
-  (``(BITS 1 0)``, 
+  (``(BITS 1 0)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-1)) >> (("^HB()^"-1)+0)"))),
-  (``(BITS 31 3)``, 
+  (``(BITS 31 3)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+3)"))),
-  (``(BITS 31 5)``, 
+  (``(BITS 31 5)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+5)"))),
-  (``(BITS 31 7)``, 
+  (``(BITS 31 7)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+7)"))),
-  (``(BITS 31 9)``, 
+  (``(BITS 31 9)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+9)"))),
-  (``(BITS 31 11)``, 
+  (``(BITS 31 11)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+11)"))),
-  (``(BITS 31 13)``, 
+  (``(BITS 31 13)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+13)"))),
-  (``(BITS 31 15)``, 
+  (``(BITS 31 15)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+15)"))),
-  (``(BITS 31 17)``, 
+  (``(BITS 31 17)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+17)"))),
-  (``(BITS 31 19)``, 
+  (``(BITS 31 19)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+19)"))),
-  (``(BITS 31 21)``, 
+  (``(BITS 31 21)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+21)"))),
-  (``(BITS 31 23)``, 
+  (``(BITS 31 23)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+23)"))),
-  (``(BITS 31 25)``, 
+  (``(BITS 31 25)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+25)"))),
-  (``(BITS 31 27)``, 
+  (``(BITS 31 27)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+27)"))),
-  (``(BITS 31 29)``, 
+  (``(BITS 31 29)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+29)"))),
-  (``(BITS HB 02)``, 
+  (``(BITS HB 02)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-" ^ HB()^")) >> (("^HB()^"-"^HB()^")+2)"))),
-  (``(BITS 31 02)``, 
+  (``(BITS 31 02)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+2)"))),
-  (``(BITS (HB-2) 0)``, 
+  (``(BITS (HB-2) 0)``,
       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-(" ^ HB()^"-2))) >> (("^HB()^"-("^HB()^"-2))+0)"))),
-  (``(BITS 29 0)``, 
+  (``(BITS 29 0)``,
        (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-29)) >> (("^HB()^"-29)+0)")))
  ];
 
@@ -370,9 +370,9 @@ val INIT_EQ = store_thm("INIT_EQ",
     ``!a b c d. T2B(INITd(a,b,c,d)) = (INIT a b c d)``,
     RW_TAC arith_ss [T2B_def,INITd_def,INIT_def]
     THEN `(mul1 = w2n c) /\ (count1 = 0) /\
-          (mul = BITS 1 count1 mul1) /\ 
+          (mul = BITS 1 count1 mul1) /\
           (mshift = (if mul = 2 then 1 else count1))`
-           by RW_TAC arith_ss [] 
+           by RW_TAC arith_ss []
     THEN RW_TAC arith_ss []);
 
 
@@ -403,7 +403,7 @@ val NEXT_EQ = store_thm("NEXT_EQ",
 (* ---------------------------------------------
    (fEXP f n) applies f n times to some input
 --------------------------------------------- *)
-val fEXP_def = Define 
+val fEXP_def = Define
   `(fEXP f 0 = (\x.x)) /\
    (fEXP f (SUC n) = ((fEXP f n) o f))`;
 
@@ -439,7 +439,7 @@ val fEXP_APPLY_NEXTd = store_thm("fEXP_APPLY_NEXTd",
     THENL [
           METIS_TAC [APPLY_NEXTd_def,fEXP_def]
           ,
-          `~(SUC n = 0) /\ (SUC n - 1 = n)` 
+          `~(SUC n = 0) /\ (SUC n - 1 = n)`
                 by RW_TAC arith_ss []
           THEN METIS_TAC [APPLY_NEXTd_def,fEXP_def,
                           o_THM,NEXT_EQ]
@@ -495,7 +495,7 @@ val PROJ_RD_EQ = store_thm("PROJ_RD_EQ",
     Cases_on `r1` THEN
     RW_TAC arith_ss [PROJ_RDd_def,PROJ_RD_def,T2B_def]);
 
-  
+
 
 (* ---------------------------------------------------------------
    BOOTHMULTIPLYd(a,b,c,d) = BOOTHMULTIPLY a b c d
@@ -513,8 +513,8 @@ val BOOTHMULTIPLY_EQ = store_thm("BOOTHMULTIPLY_EQ",
 
 
 (* ---------------------------------------------------------------
-   Define 
-    |- MULT32(w1,w2) = w1 * w2 
+   Define
+    |- MULT32(w1,w2) = w1 * w2
    to avoid pretty printer problems
 --------------------------------------------------------------- *)
 val MULT32_def =
@@ -529,7 +529,7 @@ val MULTd_CORRECT = store_thm("MULTd_CORRECT",
     `MULT32 = UNCURRY $*`
       by RW_TAC std_ss [FUN_EQ_THM,UNCURRY,MULT32_def,FORALL_PROD]
     THEN POP_ASSUM(fn th => RW_TAC std_ss [th])
-    THEN `!a b. MULTd(a,b) = a*b` 
+    THEN `!a b. MULTd(a,b) = a*b`
            by METIS_TAC [MULTd_def,BOOTHMULTIPLY_EQ,CORRECT,word32Theory.WORD_ADD_0]
     THEN `!a b. MULTd(a,b) = a*b` by METIS_TAC [MULTd_def, CORRECT, BOOTHMULTIPLY_EQ]
     THEN `!a b. (\p. MULTd p = UNCURRY $* p) (a,b)` by RW_TAC arith_ss []
@@ -552,7 +552,7 @@ val MULTd_dev = inlineCompile (fst(dest_eq(concl MULTd_comb)))
                             MOD_CNTWd_comb, MULTd_comb]
                            [APPLY_NEXTd_tot];
 
-(* runtime: 39.867s,    gctime: 14.104s,     systime: 0.155s.   
+(* runtime: 39.867s,    gctime: 14.104s,     systime: 0.155s.
 val MULTd_net = time MAKE_NETLIST MULTd_dev;
 time (MY_NETLIST []) MULTd_dev;
 

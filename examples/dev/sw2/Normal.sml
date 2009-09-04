@@ -15,7 +15,7 @@ val ERR = mk_HOL_ERR "Normal";
 
 val atom_tm = prim_mk_const{Name="atom",Thy="Normal"};
 
-fun mk_atom tm = 
+fun mk_atom tm =
   with_exn mk_comb (inst [alpha |-> type_of tm] atom_tm, tm)
           (ERR "mk_atom" "Non-boolean argument");
 
@@ -37,7 +37,7 @@ val branch_join = ref false
 
 val PRE_PROCESS_RULE = SIMP_RULE arith_ss [AND_COND, OR_COND, BRANCH_NORM];
 
-val pre_process = PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND] o 
+val pre_process = PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND] o
                    SIMP_RULE arith_ss [ELIM_USELESS_LET];
 
 (*---------------------------------------------------------------------------*)
@@ -57,7 +57,7 @@ val dest_C = dest_monop C_tm (ERR "dest_C" "");
 
 (* Rewrite the first two components with the obtained theorems *)
 
-fun SUBST_2_RULE (lem1,lem2) = 
+fun SUBST_2_RULE (lem1,lem2) =
   CONV_RULE (RHS_CONV (PABS_CONV (
           RATOR_CONV (REWRITE_CONV [Once lem1]) THENC
                       RAND_CONV (PABS_CONV (RATOR_CONV
@@ -88,15 +88,15 @@ fun norm_mult (th0,th1) (d0,d1) exp =
 (* Rewrite the four components of atomic branch with the obtained theorems *)
 
 fun Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp =
-   let 
+   let
      val th1 =  ONCE_REWRITE_CONV [C_ATOM_COND] exp
      val th2 =  CONV_RULE (RHS_CONV (PABS_CONV (
                   RATOR_CONV (REWRITE_CONV [Once lem0]) THENC
                   RAND_CONV (PABS_CONV (
                     RATOR_CONV (REWRITE_CONV [Once lem1]) THENC
                     RAND_CONV (PABS_CONV (RATOR_CONV (RAND_CONV (
-                      RATOR_CONV (RAND_CONV (RATOR_CONV 
-                                (REWRITE_CONV [Once lem2]))) THENC 
+                      RATOR_CONV (RAND_CONV (RATOR_CONV
+                                (REWRITE_CONV [Once lem2]))) THENC
                       RAND_CONV (RATOR_CONV (REWRITE_CONV [Once lem3]))))))
                     ))
                  ))) th1
@@ -106,15 +106,15 @@ fun Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp =
    end;
 
 fun Normalize_Atom_Cond_Ex (lem0,lem1,lem2,lem3) exp =
-   let 
+   let
      val th1 =  ONCE_REWRITE_CONV [C_ATOM_COND_EX] exp
      val th2 =  CONV_RULE (RHS_CONV (PABS_CONV (
                   RATOR_CONV (REWRITE_CONV [Once lem0]) THENC
                   RAND_CONV (PABS_CONV (
                     RATOR_CONV (REWRITE_CONV [Once lem1]) THENC
                     RAND_CONV (PABS_CONV (RAND_CONV (
-                      RATOR_CONV (RAND_CONV (RATOR_CONV 
-                                (REWRITE_CONV [Once lem2]))) THENC 
+                      RATOR_CONV (RAND_CONV (RATOR_CONV
+                                (REWRITE_CONV [Once lem2]))) THENC
                       RAND_CONV (RATOR_CONV (REWRITE_CONV [Once lem3])))))
                     ))
                  ))) th1
@@ -128,9 +128,9 @@ fun Normalize_Atom_Cond_Ex (lem0,lem1,lem2,lem3) exp =
 fun mk_let_norm (c_thm, th0, th1) =
   let val t0 = rhs (concl (SPEC_ALL c_thm))
       val (k, t1) = dest_pabs t0
-      val (c1, ts1) = strip_comb t1 
+      val (c1, ts1) = strip_comb t1
       val (x, t2) = dest_pabs (hd (tl ts1))
-      val (c2, ts2) = strip_comb t2 
+      val (c2, ts2) = strip_comb t2
       val cont = hd (tl ts2)
       val (e1, e2) = (rhs (concl th0), rhs (concl th1))
 
@@ -144,7 +144,7 @@ fun mk_let_norm (c_thm, th0, th1) =
 fun K_Normalize exp =
  let val t = dest_C exp               (* eliminate the C *)
  in
-  if is_word_literal t andalso not (is_8bit_literal t) then REFL exp (* over 8-bit word constants *) 
+  if is_word_literal t andalso not (is_8bit_literal t) then REFL exp (* over 8-bit word constants *)
   else if is_atomic t then ISPEC t C_ATOM_INTRO
   else if is_let t then                  (*  exp = LET (\v. N) M  *)
    let val (v,M,N) = dest_plet t
@@ -154,15 +154,15 @@ fun K_Normalize exp =
        val _ = branch_join := branch_flag   (* restore the branch_join flag *)
        val th3 = SIMP_CONV bool_ss [Once C_LET] exp
 	         handle Conv.UNCHANGED (* case let (v1,v2,..) = ... in ... *)
-		 => 
+		 =>
 		     let val t1 = mk_pabs(v,N)
-                         val th = INST_TYPE [alpha |-> type_of N, 
-                                            (* beta  |-> type_of N, *) 
+                         val th = INST_TYPE [alpha |-> type_of N,
+                                            (* beta  |-> type_of N, *)
                                             gamma |-> type_of v]
                                  (GEN_ALL C_LET)
                          val t2 = rhs (concl (SPECL [t1, M] th))
                          (* val theta = match_type (type_of exp) (type_of t2) *)
-                         val th2 = prove (mk_eq(exp,t2), (* set_goal([],mk_eq(exp,t2)) *) 
+                         val th2 = prove (mk_eq(exp,t2), (* set_goal([],mk_eq(exp,t2)) *)
 					  SIMP_TAC bool_ss [LET_THM, C_def])
                      in
 			 PBETA_RULE th2
@@ -174,12 +174,12 @@ fun K_Normalize exp =
     end
 
   else if is_pabs t then                        (*  exp = \(x...).M *)
-    let 
+    let
        val (v,M) = dest_pabs t
        val (v_type, m_type) = (type_of v, type_of M);
        val t1 = mk_C(M)
        val id = let val x = mk_var("x",alpha) in mk_abs(x,x) end
-       val t2 = mk_comb (inst [beta |-> m_type] t1, 
+       val t2 = mk_comb (inst [beta |-> m_type] t1,
                          inst [alpha |-> m_type] id)
        val t3 = mk_C (mk_pabs(v, t2))
        val th0 = K_Normalize t1
@@ -194,7 +194,7 @@ fun K_Normalize exp =
     else if is_pair t then                        (*  exp = (M,N) *)
         let
           val (M,N) = dest_pair t
-          val th0 = K_Normalize (mk_C M) 
+          val th0 = K_Normalize (mk_C M)
           val th1 = K_Normalize (mk_C N)
           val th2 = ONCE_REWRITE_CONV [C_PAIR] exp
           val th3 = SUBST_2_RULE (th0,th1) th2
@@ -204,34 +204,34 @@ fun K_Normalize exp =
         end
 
     else if is_cond t then                  (*  exp = if P then M else N *)
-      let 
+      let
          val (J,M,N) = dest_cond t
-      in 
+      in
          if is_atom_cond J then
-           let 
-              val (op0, [P,Q]) = strip_comb J 
-              val (lem0, lem1, lem2, lem3) = 
+           let
+              val (op0, [P,Q]) = strip_comb J
+              val (lem0, lem1, lem2, lem3) =
                  (K_Normalize (mk_C P),
-                  K_Normalize (mk_C Q), 
-                  K_Normalize (mk_C M), 
+                  K_Normalize (mk_C Q),
+                  K_Normalize (mk_C M),
                   K_Normalize (mk_C N))
 
               val th4 = if !branch_join then Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp
                         else Normalize_Atom_Cond_Ex (lem0,lem1,lem2,lem3) exp
               val th5 = if is_8bit_literal P then CONV_RULE (RHS_CONV (PABS_CONV (RAND_CONV (RATOR_CONV (RATOR_CONV (
-                              REWRITE_CONV [Once COND_SWAP])))))) th4 
+                              REWRITE_CONV [Once COND_SWAP])))))) th4
                         else th4
            in
               th5
            end
 
-        else 
+        else
           REFL exp
       end
 
    else if is_comb t then
       let fun norm_app (M,N) =
-            let val th0 = K_Normalize (mk_C M) 
+            let val th0 = K_Normalize (mk_C M)
                 val th1 = K_Normalize (mk_C N)
                 val th2 = ONCE_REWRITE_CONV [C_APP] exp
                 val th3 =  SUBST_2_RULE (th0,th1) th2
@@ -240,14 +240,14 @@ fun K_Normalize exp =
               th4
             end
       in
-       case strip_comb t of 
+       case strip_comb t of
          (operator,[d0,d1]) =>
-           if is_binop operator then 
+           if is_binop operator then
               let val th0 = K_Normalize (mk_C d0)
                   val th1 = K_Normalize (mk_C d1)
 
-                  val th2 = 
-                        if is_mult_op operator then 
+                  val th2 =
+                        if is_mult_op operator then
                           norm_mult (th0,th1) (d0,d1) exp
                         else if is_8bit_literal d0 then
                           (if is_8bit_literal d1 then       (* const op const *)
@@ -274,11 +274,11 @@ fun K_Normalize exp =
 (*   Convert a function to its equivalent KNF                                *)
 (*---------------------------------------------------------------------------*)
 
-fun normalize def = 
+fun normalize def =
  let val _ = branch_join := false     (* need not to introduce new binding for top level conditionals *)
      (* Break compound condition jumps *)
      val thm1 = def (* (PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND]) thm0 *)
-     val thm2 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [C_INTRO])) 
+     val thm2 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [C_INTRO]))
                           (SPEC_ALL thm1)
 
      val exp = mk_C (rhs (concl (SPEC_ALL thm1)))
@@ -298,14 +298,14 @@ fun normalize def =
 (* the aliasing of variables                                                 *)
 (*---------------------------------------------------------------------------*)
 
-fun identify_atom tm = 
-  let 
-     fun trav t = 
-       if is_let t then 
+fun identify_atom tm =
+  let
+     fun trav t =
+       if is_let t then
            let val (v,M,N) = dest_plet t
                val M' = if is_atomic M then
                            mk_atom M
-                        else if is_pair v andalso is_pair M then 
+                        else if is_pair v andalso is_pair M then
 		           trav M        (* to be revised *)
                         else trav M
            in mk_plet (v, M', trav N)
@@ -313,19 +313,19 @@ fun identify_atom tm =
        else if is_comb t then
             let val (M1,M2) = dest_comb t
                 val M1' = trav M1
-                val M2' = trav M2 
+                val M2' = trav M2
             in mk_comb(M1',M2')
             end
-       else if is_pabs t then 
+       else if is_pabs t then
            let val (v,M) = dest_pabs t
            in mk_pabs(v,trav M)
-           end 
+           end
        else t
-  in 
+  in
     trav tm
   end;
 
-fun beta_reduction def = 
+fun beta_reduction def =
   let
     val t0 = rhs (concl (SPEC_ALL def))
     val t1 = identify_atom t0
@@ -358,45 +358,45 @@ val FLATTEN_LET_RULE = SIMP_RULE std_ss [FLATTEN_LET]
 (* variable name in a term is different than the others.                     *)
 (*---------------------------------------------------------------------------*)
 
-fun to_ssa stem tm = 
+fun to_ssa stem tm =
  let open Lib
      fun num2name i = stem^Lib.int_to_string i
      val nameStrm = Lib.mk_istream (fn x => x+1) 0 num2name
      fun next_name () = state(next nameStrm)
-     fun trav M = 
-       if is_comb M then 
+     fun trav M =
+       if is_comb M then
             let val (M1,M2) = dest_comb M
                 val M1' = trav M1
-                val M2' = trav M2 
+                val M2' = trav M2
             in mk_comb(M1',M2')
-            end else 
-       if is_pabs M then 
+            end else
+       if is_pabs M then
            let val (v,N) = dest_pabs(rename_bvar (next_name()) M)
            in mk_pabs(v,trav N)
            end
        else M
- in 
+ in
    trav tm
- end; 
+ end;
 
-fun SSA_CONV tm = 
+fun SSA_CONV tm =
   let val tm' = to_ssa "v" tm
   in Thm.ALPHA tm tm'
   end;
 
-fun SSA_RULE def = 
+fun SSA_RULE def =
  let val (t1,t2) = dest_eq (concl (SPEC_ALL def))
-     val (fname,args) = 
-         if is_comb t1 then ((I##single) o dest_comb) t1 else 
+     val (fname,args) =
+         if is_comb t1 then ((I##single) o dest_comb) t1 else
          if is_pabs t1 then (t1, [#1 (dest_pabs t2)]) else (t1,[])
      val flag = is_pabs t2
-     val body = if flag then #2 (dest_pabs t2) else t2 
-     val lem1 = if flag then def else 
-                prove (mk_eq (fname, list_mk_pabs(args,body)), 
+     val body = if flag then #2 (dest_pabs t2) else t2
+     val lem1 = if flag then def else
+                prove (mk_eq (fname, list_mk_pabs(args,body)),
                        SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, Once def])
      val t3 = if flag then t2 else list_mk_pabs (args,body)
      val lem2 = SIMP_CONV std_ss [LAMBDA_PROD] t3 handle UNCHANGED => REFL t3
-     val lem3 = TRANS lem1 lem2 
+     val lem3 = TRANS lem1 lem2
      val lem4 = SSA_CONV (rhs (concl lem3))
      val lem5 = ONCE_REWRITE_RULE [lem4] lem3
  in
@@ -404,22 +404,22 @@ fun SSA_RULE def =
  end;
 
 (* Original
-fun SSA_RULE def = 
-  let 
+fun SSA_RULE def =
+  let
       val t0 = concl (SPEC_ALL def)
       val (t1,t2) = (lhs t0, rhs t0)
       val flag = is_pabs t2
-      val (fname, args) = 
+      val (fname, args) =
           if is_comb t1 then dest_comb t1
-          else (t1, #1 (dest_pabs t2)) 
-      val body = if flag then #2 (dest_pabs t2) else t2 
+          else (t1, #1 (dest_pabs t2))
+      val body = if flag then #2 (dest_pabs t2) else t2
       val lem1 = if flag then def
-                 else prove (mk_eq (fname, mk_pabs(args,body)), 
+                 else prove (mk_eq (fname, mk_pabs(args,body)),
 	           	SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, Once def])
       val t3 = if flag then t2 else mk_pabs (args,body)
-      val lem2 = QCONV SIMP_CONV std_ss [LAMBDA_PROD] t3 
+      val lem2 = QCONV SIMP_CONV std_ss [LAMBDA_PROD] t3
                   (* handle HOL_ERR _ => REFL t3 *)
-      val lem3 = TRANS lem1 lem2 
+      val lem3 = TRANS lem1 lem2
       val t4 = rhs (concl (GEN_ALL lem3))  (* SPEC_ALL? *)
       val lem4 = SSA_CONV t4
       val lem5 = ONCE_REWRITE_RULE [lem4] lem3

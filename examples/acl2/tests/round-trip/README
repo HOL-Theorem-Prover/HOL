@@ -13,7 +13,8 @@ Instructions for updating when ACL2 version changes:
 When ACL2 is updated to a new version, first run doit.  Then check
 quickly that results/axioms.lisp and gold/axioms.lisp are similar and
 that gold/axioms.ml and results/axioms.ml (the latter generated from
-gold/axioms.lisp) are identical.
+gold/axioms.lisp) are identical.  This can perhaps be determined
+easily by inspection of ./diffout.
 
 diff gold/axioms.ml results/axioms.ml
 # The above should produce no output, because results/axioms.ml was

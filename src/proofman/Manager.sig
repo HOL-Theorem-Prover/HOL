@@ -1,8 +1,8 @@
 signature Manager =
 sig
  include Abbrev
- 
-  datatype proof 
+
+  datatype proof
        = GOALSTACK of goalStack.gstk History.history
        | GOALTREE of goalTree.gtree History.history
 
@@ -33,7 +33,7 @@ sig
   val top_goal       : proof -> goal
   val top_goals      : proof -> goal list
   val current_proof  : proofs -> proof
- 
+
   (* Switch focus to a different subgoal (or proof attempt) *)
   val rotate         : int -> proof -> proof
   val rotate_proofs  : int -> proofs -> proofs

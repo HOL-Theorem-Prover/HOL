@@ -1,7 +1,7 @@
 (* For interactive use
-app load ["gcdTheory", "wordsLib", "intLib", "ExtendedEuclidTheory"]; 
+app load ["gcdTheory", "wordsLib", "intLib", "ExtendedEuclidTheory"];
 quietdec := true;
-open gcdTheory dividesTheory arithmeticTheory 
+open gcdTheory dividesTheory arithmeticTheory
      pairTheory intLib integerTheory
      wordsTheory wordsLib
      ExtendedEuclidTheory;
@@ -51,7 +51,7 @@ val gcd_Lemma1 = Q.store_thm
 ("gcd_Lemma1",
  `!a b. b <= a ==> (gcd (a-b) b = gcd a b)`,
  ARW [] THEN `is_gcd (a-b) b (gcd (a-b) b)` by ARW [GCD_IS_GCD] THEN
- IMP_RES_TAC IS_GCD_MINUS_L THEN 
+ IMP_RES_TAC IS_GCD_MINUS_L THEN
  `is_gcd a b (gcd a b)` by ARW [GCD_IS_GCD] THEN
  IMP_RES_TAC IS_GCD_UNIQUE);
 
@@ -59,13 +59,13 @@ val gcd_Lemma2 = Q.store_thm
 ("gcd_Lemma2",
  `!a b. a <= b ==> (gcd a (b-a) = gcd a b)`,
  ARW [] THEN `is_gcd a (b-a) (gcd a (b-a))` by ARW [GCD_IS_GCD] THEN
- IMP_RES_TAC IS_GCD_MINUS_R THEN 
+ IMP_RES_TAC IS_GCD_MINUS_R THEN
  `is_gcd a b (gcd a b)` by ARW [GCD_IS_GCD] THEN
  IMP_RES_TAC IS_GCD_UNIQUE);
 
 val minv_Lemma4 = Q.store_thm
 ("minv_Lemma4",
- `!r1:num r2:num u1:int u2:int v1:int v2:int. gcd r1 r2 = 
+ `!r1:num r2:num u1:int u2:int v1:int v2:int. gcd r1 r2 =
    gcd (FST(dec(r1, r2, u1, u2, v1, v2)))
        (FST(SND(dec(r1, r2, u1, u2,v1, v2))))`,
   ARW [dec_def] THENL [METIS_TAC [LESS_IMP_LESS_OR_EQ, gcd_Lemma2],
@@ -77,28 +77,28 @@ val minv_Lemma5 = Q.store_thm
    (~((FST (dec (r1,r2,u1,u2,v1,v2)) = 1) \/
       (FST (SND (dec (r1,r2,u1,u2,v1,v2))) = 1) \/
       (FST (dec (r1,r2,u1,u2,v1,v2)) = 0) \/
-      (FST (SND (dec (r1,r2,u1,u2,v1,v2))) = 0))) 
-  ==> (inv (dec (r1,r2,u1,u2,v1,v2)) = inv (dec (dec (r1,r2,u1,u2,v1,v2))))`, 
+      (FST (SND (dec (r1,r2,u1,u2,v1,v2))) = 0)))
+  ==> (inv (dec (r1,r2,u1,u2,v1,v2)) = inv (dec (dec (r1,r2,u1,u2,v1,v2))))`,
   REWRITE_TAC [dec_def] THEN RW_TAC arith_ss [inv_def]);
 
 val minv_Lemma6 = Q.store_thm
 ("minv_Lemma6",
- `!r1:num r2:num u1:int u2:int v1:int v2:int. gcd r1 r2 = 
+ `!r1:num r2:num u1:int u2:int v1:int v2:int. gcd r1 r2 =
   gcd (FST(inv(r1, r2, u1, u2, v1, v2)))
       (FST(SND(inv(r1, r2, u1, u2,v1, v2))))`,
-  FULL_SIMP_TAC arith_ss [inv_def] THEN 
+  FULL_SIMP_TAC arith_ss [inv_def] THEN
   recInduct inv_ind THEN ARW [] THENL[
-    UNDISCH_TAC ``FST (dec (r1,r2,u1,u2,v1,v2)) = 1`` THEN 
-    ARW [dec_def] THEN ARW [inv_def] THEN 
+    UNDISCH_TAC ``FST (dec (r1,r2,u1,u2,v1,v2)) = 1`` THEN
+    ARW [dec_def] THEN ARW [inv_def] THEN
     IMP_RES_TAC NOT_LESS THEN METIS_TAC [gcd_Lemma1],
-    UNDISCH_TAC ``FST (SND (dec (r1,r2,u1,u2,v1,v2))) = 1`` THEN 
-    ARW [dec_def] THEN ARW [inv_def] THEN 
+    UNDISCH_TAC ``FST (SND (dec (r1,r2,u1,u2,v1,v2))) = 1`` THEN
+    ARW [dec_def] THEN ARW [inv_def] THEN
     IMP_RES_TAC LESS_IMP_LESS_OR_EQ THEN
     METIS_TAC [gcd_Lemma2],
-    UNDISCH_TAC ``FST (dec (r1,r2,u1,u2,v1,v2)) = 0`` THEN 
-    ARW [dec_def] THEN IMP_RES_TAC NOT_LESS THEN 
-    IMP_RES_TAC LESS_EQUAL_ANTISYM THEN 
-    `r1-r2=0` by DECIDE_TAC THEN 
+    UNDISCH_TAC ``FST (dec (r1,r2,u1,u2,v1,v2)) = 0`` THEN
+    ARW [dec_def] THEN IMP_RES_TAC NOT_LESS THEN
+    IMP_RES_TAC LESS_EQUAL_ANTISYM THEN
+    `r1-r2=0` by DECIDE_TAC THEN
     `inv (r1 - r2,r2,u1 - u2,u2,v1 - v2,v2) = inv (0,r2,u1 - u2,u2,v1 - v2,v2)`
      by METIS_TAC [] THEN
     ARW [inv_def] THEN METIS_TAC [gcd_Lemma1],
@@ -122,7 +122,7 @@ val minv_Lemma7 = Q.store_thm
 
 val minv_Lemma8 = Q.store_thm
 ("minv_Lemma8",
- `!x. ((0 < x) /\ (x < 65537)) ==> (((ir1 x) = 1) \/ ((ir2 x) = 1))`, 
+ `!x. ((0 < x) /\ (x < 65537)) ==> (((ir1 x) = 1) \/ ((ir2 x) = 1))`,
  ARW [] THEN `gcd (ir1 x) (ir2 x) = 1` by ARW [minv_Lemma7, minv_Lemma3] THEN
  `((ir1 x) = 1) \/ ((ir1 x) = 0) \/ ((ir2 x) = 1) \/ ((ir2 x) =0)`
     by ARW [i16_Lemma6] THENL[
@@ -134,46 +134,46 @@ val minv_Lemma8 = Q.store_thm
 
 val minv_Lemma9 = Q.store_thm
 ("minv_Lemma9",
- `!x. ((0 < x) /\ (x < 65537)) ==> 
-   (((int_of_num x) * (iu1 x)) % 65537 = 1) \/ 
+ `!x. ((0 < x) /\ (x < 65537)) ==>
+   (((int_of_num x) * (iu1 x)) % 65537 = 1) \/
    (((int_of_num x) * (iu2 x)) % 65537 = 1)`,
- `~(65537i = 0)` 
+ `~(65537i = 0)`
       by intLib.ARITH_TAC THEN ARW [] THEN
  `($& (ir1 x) % 65537 = (iu1 x * $& x) % 65537) /\
-  ($& (ir2 x) % 65537 = (iu2 x * $& x) % 65537)` 
+  ($& (ir2 x) % 65537 = (iu2 x * $& x) % 65537)`
       by RW_TAC arith_ss [i16_Lemma8] THEN
- `(((ir1 x) = 1) \/ ((ir2 x) = 1))` 
-      by ARW [minv_Lemma8] THENL 
- [`$& 1 % 65537 = (iu1 x * $& x) % 65537` 
+ `(((ir1 x) = 1) \/ ((ir2 x) = 1))`
+      by ARW [minv_Lemma8] THENL
+ [`$& 1 % 65537 = (iu1 x * $& x) % 65537`
       by METIS_TAC [] THEN
-  `1 % 65537 = $& (1 MOD 65537)` 
+  `1 % 65537 = $& (1 MOD 65537)`
       by METIS_TAC [INT_MOD_CALCULATE] THEN
-  `1n < 65537n` 
+  `1n < 65537n`
       by ARW [] THEN
-  `1 MOD 65537 = 1` 
+  `1 MOD 65537 = 1`
       by METIS_TAC [LESS_MOD] THEN
-  `1 = (iu1 x * $& x) % 65537` 
+  `1 = (iu1 x * $& x) % 65537`
       by METIS_TAC [] THEN
-  `$& x * iu1 x = iu1 x * $& x` 
+  `$& x * iu1 x = iu1 x * $& x`
       by RW_TAC arith_ss [INT_MUL_COMM],
-  `$&1 % 65537 = (iu2 x * $& x) % 65537` 
+  `$&1 % 65537 = (iu2 x * $& x) % 65537`
       by METIS_TAC [] THEN
-  `$&1 % 65537 = $& (1 MOD 65537)` 
+  `$&1 % 65537 = $& (1 MOD 65537)`
       by METIS_TAC [INT_MOD_CALCULATE] THEN
-  `1n < 65537n` 
+  `1n < 65537n`
       by ARW [] THEN
-  `1 MOD 65537 = 1` 
+  `1 MOD 65537 = 1`
       by METIS_TAC [LESS_MOD] THEN
-  `1 = (iu2 x * $& x) % 65537` 
+  `1 = (iu2 x * $& x) % 65537`
       by METIS_TAC [] THEN
-  `$& x * iu2 x = iu2 x * $& x` 
+  `$& x * iu2 x = iu2 x * $& x`
       by RW_TAC arith_ss [INT_MUL_COMM]] THEN
    ARW []);
 
 val mode_Lemma1 = Q.store_thm
 ("mode_Lemma1",
  `!a c. (~(c=0) /\ (a % c = 0)) ==> (~a % c = 0)`,
- ARW [] THEN IMP_RES_TAC INT_MOD_EQ0 THEN 
+ ARW [] THEN IMP_RES_TAC INT_MOD_EQ0 THEN
  `~a = ~(k *c)` by METIS_TAC [] THEN
  `~a = ~k * c` by METIS_TAC [INT_NEG_LMUL] THEN
  METIS_TAC [INT_MOD_COMMON_FACTOR]);
@@ -181,7 +181,7 @@ val mode_Lemma1 = Q.store_thm
 val mode_Lemma2 = Q.store_thm
 ("mode_Lemma2",
 `!a b c. ~(c=0) ==> ((a * b % c) % c = (a * b) % c)`,
-RW_TAC arith_ss [int_mod] THEN ARW [INT_SUB_LDISTRIB] THEN 
+RW_TAC arith_ss [int_mod] THEN ARW [INT_SUB_LDISTRIB] THEN
 `a * (b / c * c) = a * (b / c) * c` by METIS_TAC [INT_MUL_ASSOC] THEN
  ARW [] THEN
 `(a * (b / c) * c) % c = 0` by METIS_TAC [INT_MOD_COMMON_FACTOR] THEN
@@ -190,7 +190,7 @@ RW_TAC arith_ss [int_mod] THEN ARW [INT_SUB_LDISTRIB] THEN
 THENL [`~(a * (b / c) * c) % c = 0` by METIS_TAC [mode_Lemma1] THEN
   ARW [INT_ADD_DIV] THEN ARW [INT_NEG_LMUL, INT_DIV_RMUL],
   ARW [INT_DIV_RMUL] THEN ARW [INT_SUB_RDISTRIB] THEN
-  ARW [INT_SUB_CALCULATE] THEN 
+  ARW [INT_SUB_CALCULATE] THEN
   `~(a * b / c * c + ~(a * (b / c) * c)) =
    ~(a * b / c * c) - ( ~(a * (b / c) * c))` by ARW [INT_SUB_LNEG] THEN
   ARW [] THEN ARW [INT_SUB_RNEG] THEN ARW [INT_ADD_ASSOC] THEN
@@ -198,7 +198,7 @@ THENL [`~(a * (b / c) * c) % c = 0` by METIS_TAC [mode_Lemma1] THEN
    a * b + (~(a * (b / c) * c) + ~(a * b / c * c) + a * (b / c) * c)`
   by METIS_TAC [INT_ADD_ASSOC] THEN ARW [] THEN
   `~(a * (b / c) * c) + ~(a * b / c * c) + a * (b / c) * c =
-   ~(a * (b / c) * c) + (~(a * b / c * c) + a * (b / c) * c)` 
+   ~(a * (b / c) * c) + (~(a * b / c * c) + a * (b / c) * c)`
   by METIS_TAC [INT_ADD_ASSOC] THEN ARW [] THEN
   `~(a * (b / c) * c) + (~(a * b / c * c) + a * (b / c) * c) =
   (~(a * b / c * c) + a * (b / c) * c) + ~(a * (b / c) * c)`
@@ -215,7 +215,7 @@ val piu2_def = Define `piu2 x = (iu2 x) % 65537`;
 
 val minv_Lemma10 = Q.store_thm
 ("minv_Lemma10",
- `!x. ((0 < x) /\ (x < 65537)) ==> 
+ `!x. ((0 < x) /\ (x < 65537)) ==>
   (((int_of_num x) * (piu1 x)) % 65537 = 1) \/
   (((int_of_num x) * (piu2 x)) % 65537 = 1)`,
  RW_TAC arith_ss [piu1_def, piu2_def] THEN
@@ -223,8 +223,8 @@ val minv_Lemma10 = Q.store_thm
  ASSUME_TAC minv_Lemma9 THEN
  METIS_TAC [mode_Lemma2]);
 
-val minv_def = 
-  Define `minv x = 
+val minv_def =
+  Define `minv x =
     if ((int_of_num x) * (piu1 x)) % 65537 = 1
         then piu1 x
         else if ((int_of_num x) * (piu2 x)) % 65537 = 1
@@ -243,7 +243,7 @@ val piu_Lemma1 = Q.store_thm
  ASP [piu1_def] THEN
  `~(65537 < 0)` by intLib.ARITH_TAC THEN
  `~(65537i = 0)` by intLib.ARITH_TAC THEN
- STRIP_TAC THEN METIS_TAC [INT_MOD_BOUNDS]);  
+ STRIP_TAC THEN METIS_TAC [INT_MOD_BOUNDS]);
 
 val piu_Lemma2 = Q.store_thm
 ("piu_Lemma2",
@@ -251,7 +251,7 @@ val piu_Lemma2 = Q.store_thm
  ASP [piu2_def] THEN
  `~(65537 < 0)` by intLib.ARITH_TAC THEN
  `~(65537i = 0)` by intLib.ARITH_TAC THEN
- STRIP_TAC THEN METIS_TAC [INT_MOD_BOUNDS]);  
+ STRIP_TAC THEN METIS_TAC [INT_MOD_BOUNDS]);
 
 val minv_Corollary1 = Q.store_thm
 ("minv_Corollary1",
@@ -326,20 +326,20 @@ val encode_Lemma3 = Q.store_thm
 
 val wmul_Lemma1 = Q.store_thm
 ("wmul_Lemma1",
- `!w:word16. 
+ `!w:word16.
    (int_of_num (encode (w2n w)) * minv (encode (w2n w))) % 65537 = 1`,
  ARW [] THEN
  `w2n w < 65536n` by WORD_DECIDE_TAC THEN
  METIS_TAC [encode_Lemma2]);
 
-val winv_def = 
- Define 
+val winv_def =
+ Define
    `winv (w:word16) = n2w (decode (Num (minv (encode (w2n w))))) : word16`;
 
-val wmul_def = 
- Define 
-   `wmul (x:word16) (y:word16) = 
-      n2w (decode (Num (((int_of_num (encode (w2n x))) * 
+val wmul_def =
+ Define
+   `wmul (x:word16) (y:word16) =
+      n2w (decode (Num (((int_of_num (encode (w2n x))) *
                        (int_of_num (encode (w2n y)))) % 65537))) : word16`;
 
 val _ = set_fixity "wmul"  (Infixr 350);
@@ -383,7 +383,7 @@ val wmul_Theorem = Q.store_thm
  `(0 < (minv (encode (w2n w)))) /\ ((minv (encode (w2n w))) < 65537)`
     by METIS_TAC [minv_Corollary3] THEN
  `($& (encode (w2n (n2w (decode (Num (minv (encode (w2n w))))):word16)))) =
-  (minv (encode (w2n w)))` 
+  (minv (encode (w2n w)))`
     by METIS_TAC [wmul_Lemma2] THEN ARW [] THEN
  `(($& (encode (w2n w)) * minv (encode (w2n w))) % 65537) = 1`
     by METIS_TAC [wmul_Lemma1] THEN ARW [] THEN
@@ -391,14 +391,14 @@ val wmul_Theorem = Q.store_thm
 
 val wmul_Lemma3 = Q.store_thm
 ("wmul_Lemma3",
- `!x:word16. ~(($& (encode (w2n x))) = 0)`, 
+ `!x:word16. ~(($& (encode (w2n x))) = 0)`,
  SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
  `encode (w2n x) = 0n` by METIS_TAC [INT_INJ] THEN
  `w2n x < 65536n` by WORD_DECIDE_TAC THEN
  `0 < encode (w2n x)` by METIS_TAC [encode_Lemma1] THEN
  ARW []);
 
-val MOD_EQ0 = 
+val MOD_EQ0 =
   SIMP_RULE arith_ss [] (BETA_RULE (Q.SPEC `\x. x=0` MOD_P));
 (* !p q. 0 < q ==> ((p MOD q = 0) = ?k. p = k * q) *)
 
@@ -449,7 +449,7 @@ val wmul_ASSOC = Q.store_thm
  `0 < (($& (encode (w2n y)) * $& (encode (w2n z))) % 65537)`
     by METIS_TAC [INT_LE_LT] THEN
  `($& (encode (w2n (n2w (decode
-    (Num (($& (encode (w2n x)) * $& (encode (w2n y))) % 65537))):word16)))) = 
+    (Num (($& (encode (w2n x)) * $& (encode (w2n y))) % 65537))):word16)))) =
   (($& (encode (w2n x)) * $& (encode (w2n y))) % 65537)`
     by METIS_TAC [wmul_Lemma2] THEN
  ARW [] THEN
@@ -468,7 +468,7 @@ val wmul_ASSOC = Q.store_thm
     by METIS_TAC [INT_MUL_COMM] THEN
  ARW [] THEN
  `(($& (encode (w2n z)) * ($& (encode (w2n x)) *
-    $& (encode (w2n y))) % 65537) % 65537) = 
+    $& (encode (w2n y))) % 65537) % 65537) =
   (($& (encode (w2n z)) * ($& (encode (w2n x)) * $& (encode (w2n y)))) % 65537)`
     by METIS_TAC [mode_Lemma2] THEN
  ARW [] THEN
@@ -479,10 +479,10 @@ val wmul_Mul1 = Q.store_thm
  `!w:word16. w wmul 1w = w`,
  `~(65537i = 0)` by intLib.ARITH_TAC THEN ARW [wmul_def] THEN
  `($& (encode (w2n w)) * $& (encode (w2n (1w:word16)))) =
-   $&((encode (w2n w)) * (encode (w2n (1w:word16))))` 
+   $&((encode (w2n w)) * (encode (w2n (1w:word16))))`
  by METIS_TAC [INT_MUL] THEN ARW [] THEN
  `$& (encode (w2n w) * encode (w2n (1w:word16))) % 65537 =
-  $& ((encode (w2n w) * encode (w2n (1w:word16))) MOD 65537)` 
+  $& ((encode (w2n w) * encode (w2n (1w:word16))) MOD 65537)`
     by METIS_TAC [INT_MOD] THEN ARW [] THEN
  ARW [word_1_n2w] THEN
  `encode 1 = 1` by ARW [encode_def] THEN ARW [] THEN
@@ -490,6 +490,6 @@ val wmul_Mul1 = Q.store_thm
  `(encode (w2n w) MOD 65537) = (encode (w2n w))`
     by METIS_TAC [LESS_MOD] THEN ARW [NUM_OF_INT] THEN
  `w2n w < 65536n` by WORD_DECIDE_TAC THEN
- SRW_TAC [] [decode_Lemma3]);  
+ SRW_TAC [] [decode_Lemma3]);
 
 val () = export_theory();

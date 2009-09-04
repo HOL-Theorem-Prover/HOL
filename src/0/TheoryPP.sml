@@ -210,7 +210,7 @@ fun pp_sig pp_thm info_record ppstrm = let
      add_string (String.concat ["[", s, "]"]);
      add_string ("  "^class);
      add_newline(); add_newline();
-     if null (Thm.hyp th) andalso 
+     if null (Thm.hyp th) andalso
         (Tag.isDisk (Thm.tag th) orelse Tag.isEmpty (Thm.tag th))
        then pp_thm th
        else with_flag(Globals.show_tags,true)

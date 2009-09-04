@@ -12,9 +12,9 @@
 (*
 quietdec := true;
 loadPath :="dff" :: !loadPath;
-map load  
+map load
  ["metisLib","composeTheory","devTheory","dffTheory"];
-open arithmeticTheory pairLib pairTheory PairRules combinTheory 
+open arithmeticTheory pairLib pairTheory PairRules combinTheory
      composeTheory devTheory dffTheory tempabsTheory metisLib;
 quietdec := false;
 *)
@@ -27,7 +27,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open metisLib arithmeticTheory pairLib pairTheory PairRules combinTheory 
+open metisLib arithmeticTheory pairLib pairTheory PairRules combinTheory
      composeTheory dffTheory tempabsTheory devTheory;
 
 (*****************************************************************************)
@@ -67,7 +67,7 @@ val DEV_QUANT_RENAME =
  store_thm
   ("DEV_QUANT_RENAME",
    ``!P.
-      (!(p1,p2,p3,p4). P(p1, p2, p3, p4)) = 
+      (!(p1,p2,p3,p4). P(p1, p2, p3, p4)) =
       !load inp done out. P(load, inp, done, out)``,
    SIMP_TAC std_ss [GSYM LAMBDA_PROD,FORALL_PROD]);
 
@@ -77,10 +77,10 @@ val DEV_QUANT_RENAME =
 val DEV_QUANT_NORM =
  store_thm
   ("DEV_QUANT_NORM",
-   ``(!P. (!(p1,p2,p3,p4). P(p1, p2, p3, p4)) = 
+   ``(!P. (!(p1,p2,p3,p4). P(p1, p2, p3, p4)) =
           !p. P(FST p, FST(SND p), FST(SND(SND p)), SND(SND(SND p))))
      /\
-     (!P. (!p1 p2 p3 p4. P(p1, p2, p3, p4)) = 
+     (!P. (!p1 p2 p3 p4. P(p1, p2, p3, p4)) =
           !p. P(FST p, FST(SND p), FST(SND(SND p)), SND(SND(SND p))))``,
    SIMP_TAC std_ss [GSYM LAMBDA_PROD,FORALL_PROD]);
 
@@ -126,7 +126,7 @@ val Seq_o =
 (*****************************************************************************)
 val PRECEDE_def =
  Define
-  `PRECEDE f d = 
+  `PRECEDE f d =
     \(load,inp,done,out). ?v. COMB f (inp,v) /\ d(load,v,done,out)`;
 
 val PRECEDE_ID =
@@ -154,9 +154,9 @@ val PRECEDE_DEV =
       (P ===> DEV f2)
       ==>
       PRECEDE f1 P
-      ===> 
+      ===>
       DEV (Seq f1 f2)``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [PRECEDE_def,FORALL_PROD,DEV_IMP_def,DEV_def,SAFE_DEV_def,COMB_def,
      LIV_def,Seq_def]
     THENL
@@ -199,9 +199,9 @@ val FOLLOW_DEV =
       (P ===> DEV f1)
       ==>
       FOLLOW P f2
-      ===> 
+      ===>
       DEV (Seq f1 f2)``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [FOLLOW_def,FORALL_PROD,DEV_IMP_def,DEV_def,SAFE_DEV_def,
      LIV_def,Seq_def,COMB_def]
     THENL
@@ -230,7 +230,7 @@ val SEQ_INTRO =
    RW_TAC std_ss [FORALL_PROD,SEQ_def,DEV_IMP_def]
     THEN `DEV f1 (c0,p_1',c1,data)` by PROVE_TAC[]
     THEN `DEV f2 (c1,data,c2,p_2)` by PROVE_TAC[]
-    THEN `SEQ (DEV f1) (DEV f2) (p_1,p_1',p_1'',p_2)` 
+    THEN `SEQ (DEV f1) (DEV f2) (p_1,p_1',p_1'',p_2)`
           by IMP_RES_TAC((hd o IMP_CANON o snd o EQ_IMP_RULE)(SPEC_ALL SEQ_def))
     THEN IMP_RES_TAC SEQ
     THEN FULL_SIMP_TAC std_ss [o_DEF,GSYM Seq_def]);
@@ -245,7 +245,7 @@ val PAR_INTRO =
    RW_TAC std_ss [FORALL_PROD,PAR_def,DEV_IMP_def]
     THEN `DEV f1 (start,p_1',done',data')` by PROVE_TAC[]
     THEN `DEV f2 (start,p_1',done'',data'')` by PROVE_TAC[]
-    THEN `!out. 
+    THEN `!out.
            (out = (\t. (out' t,out'' t))) ==>
             PAR (DEV f1) (DEV f2) (p_1,p_1',p_1'',out)`
           by (IMP_RES_TAC((hd o IMP_CANON o snd o EQ_IMP_RULE)(SPEC_ALL PAR_def))
@@ -334,7 +334,7 @@ val TOTAL_LEMMA_COR =
  store_thm
   ("TOTAL_LEMMA_COR",
    ``!f1 f2 f3.
-      TOTAL (f1,f2,f3) 
+      TOTAL (f1,f2,f3)
       ==>
       !x. Rec f1 f2 f3 x = if f1 x then f2 x else Rec f1 f2 f3 (f3 x)``,
    METIS_TAC[TOTAL_LEMMA,Rec_def]);
@@ -365,7 +365,7 @@ val TOTAL_THM =
 val PRECEDE_DEV_IMP =
  store_thm
   ("PRECEDE_DEV_IMP",
-   ``!f P Q. 
+   ``!f P Q.
        (P ===> Q) ==> (PRECEDE f P ===> PRECEDE f Q)``,
    RW_TAC std_ss [DEV_IMP_def,FORALL_PROD,PRECEDE_def,COMB_def]
     THEN METIS_TAC[]);
@@ -373,7 +373,7 @@ val PRECEDE_DEV_IMP =
 val FOLLOW_DEV_IMP =
  store_thm
   ("FOLLOW_DEV_IMP",
-   ``!f P Q. 
+   ``!f P Q.
        (P ===> Q) ==> (FOLLOW P f ===> FOLLOW Q f)``,
    RW_TAC std_ss [DEV_IMP_def,FORALL_PROD,FOLLOW_def,COMB_def]
     THEN METIS_TAC[]);
@@ -381,10 +381,10 @@ val FOLLOW_DEV_IMP =
 val SEQ_DEV_IMP =
  store_thm
   ("SEQ_DEV_IMP",
-   ``!P1 P2 Q1 Q2. 
+   ``!P1 P2 Q1 Q2.
        P1 ===> Q1 /\ P2 ===> Q2
        ==>
-       (SEQ P1 P2 ===> SEQ Q1 Q2)``,   
+       (SEQ P1 P2 ===> SEQ Q1 Q2)``,
    RW_TAC std_ss [DEV_IMP_def,FORALL_PROD]
     THEN FULL_SIMP_TAC std_ss [SEQ_def]   (* Not needed, but speeds up proof *)
     THEN PROVE_TAC[]);
@@ -392,10 +392,10 @@ val SEQ_DEV_IMP =
 val PAR_DEV_IMP =
  store_thm
   ("PAR_DEV_IMP",
-   ``!P1 P2 Q1 Q2. 
+   ``!P1 P2 Q1 Q2.
        P1 ===> Q1 /\ P2 ===> Q2
        ==>
-       (PAR P1 P2 ===> PAR Q1 Q2)``,   
+       (PAR P1 P2 ===> PAR Q1 Q2)``,
    RW_TAC std_ss [DEV_IMP_def,FORALL_PROD]
     THEN FULL_SIMP_TAC std_ss [PAR_def]
     THEN PROVE_TAC[]);
@@ -403,10 +403,10 @@ val PAR_DEV_IMP =
 val ITE_DEV_IMP =
  store_thm
   ("ITE_DEV_IMP",
-   ``!P1 P2 P3 Q1 Q2 Q3. 
+   ``!P1 P2 P3 Q1 Q2 Q3.
        P1 ===> Q1 /\ P2 ===> Q2 /\ P3 ===> Q3
        ==>
-       (ITE P1 P2 P3 ===> ITE Q1 Q2 Q3)``,   
+       (ITE P1 P2 P3 ===> ITE Q1 Q2 Q3)``,
    RW_TAC std_ss [DEV_IMP_def,FORALL_PROD]
     THEN FULL_SIMP_TAC std_ss [ITE_def]
     THEN PROVE_TAC[]);
@@ -414,10 +414,10 @@ val ITE_DEV_IMP =
 val REC_DEV_IMP =
  store_thm
   ("REC_DEV_IMP",
-   ``!P1 P2 P3 Q1 Q2 Q3. 
+   ``!P1 P2 P3 Q1 Q2 Q3.
        P1 ===> Q1 /\ P2 ===> Q2 /\ P3 ===> Q3
        ==>
-       (REC P1 P2 P3 ===> REC Q1 Q2 Q3)``,   
+       (REC P1 P2 P3 ===> REC Q1 Q2 Q3)``,
    RW_TAC std_ss [DEV_IMP_def,FORALL_PROD]
     THEN FULL_SIMP_TAC std_ss [REC_def]
     THEN PROVE_TAC[]);
@@ -468,7 +468,7 @@ val COMB_ID =
 val COMB_IN_SPLIT =
  store_thm
   ("COMB_IN_SPLIT",
-   ``COMB P (inp1 <> inp2, out) = 
+   ``COMB P (inp1 <> inp2, out) =
       (out = P o (inp1 <> inp2 ))``,
    RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
     THEN PROVE_TAC[]);
@@ -478,7 +478,7 @@ val COMB_IN_SPLIT =
 val COMB_OUT_SPLIT =
  store_thm
   ("COMB_OUT_SPLIT",
-   ``COMB (f <> g) (inp, out1 <> out2) = 
+   ``COMB (f <> g) (inp, out1 <> out2) =
       COMB f (inp,out1) /\ COMB g (inp,out2)``,
    RW_TAC std_ss [COMB_def,BUS_CONCAT_def,FUN_EQ_THM]
     THEN PROVE_TAC[]);
@@ -526,8 +526,8 @@ val COMB_AND =
 val AND_at =
  store_thm
   ("AND_at",
-   ``AND(in1,in2,out) 
-     ==> 
+   ``AND(in1,in2,out)
+     ==>
      AND(in1 at clk,in2 at clk,out at clk)``,
    RW_TAC std_ss [AND_def,at_def,when]);
 
@@ -546,17 +546,17 @@ val COMB_OR =
 val COMB_MUX =
  store_thm
   ("COMB_MUX",
-   ``COMB 
-      (\(sw,in1,in2). if sw then in1 else in2) 
-      (in1<>in2<>in3,out) = 
+   ``COMB
+      (\(sw,in1,in2). if sw then in1 else in2)
+      (in1<>in2<>in3,out) =
      MUX(in1,in2,in3,out)``,
    RW_TAC std_ss [COMB_def,MUX_def,BUS_CONCAT_def]);
 
 val OR_at =
  store_thm
   ("OR_at",
-   ``OR(in1,in2,out) 
-     ==> 
+   ``OR(in1,in2,out)
+     ==>
      OR(in1 at clk,in2 at clk,out at clk)``,
    RW_TAC std_ss [OR_def,at_def,when]);
 
@@ -656,7 +656,7 @@ val DEL_CONCAT =
 val DFF_CONCAT =
  store_thm
   ("DFF_CONCAT",
-   ``DFF(inp1 <> inp2, clk, out1 <> out2) = 
+   ``DFF(inp1 <> inp2, clk, out1 <> out2) =
       DFF(inp1,clk,out1) /\ DFF(inp2,clk,out2)``,
    RW_TAC std_ss [DFF_def,BUS_CONCAT_def]
     THEN EQ_TAC
@@ -669,7 +669,7 @@ val DFF_CONCAT =
 val MUX_CONCAT =
  store_thm
   ("MUX_CONCAT",
-   ``MUX(sel, inp11 <> inp12, inp21 <> inp22, out1 <> out2) = 
+   ``MUX(sel, inp11 <> inp12, inp21 <> inp22, out1 <> out2) =
       MUX(sel,inp11,inp21,out1) /\ MUX(sel,inp12,inp22,out2)``,
    RW_TAC std_ss [MUX_def,BUS_CONCAT_def]
     THEN EQ_TAC
@@ -723,7 +723,7 @@ val BUS_CONCAT_o =
 val POSEDGE_IMP =
  store_thm
   ("POSEDGE_IMP",
-   ``POSEDGE_IMP = 
+   ``POSEDGE_IMP =
       \(inp,out).
          ?c0 c1. DELT (inp,c0) /\ NOT (c0,c1) /\ AND (c1,inp,out)``,
    RW_TAC std_ss [FUN_EQ_THM,FORALL_PROD,POSEDGE_IMP_def]);
@@ -731,7 +731,7 @@ val POSEDGE_IMP =
 val CALL =
  store_thm
   ("CALL",
-   ``CALL = 
+   ``CALL =
       \(load,inp,done,done_g,data_g,start_e,inp_e).
          ?c0 c1 start sel.
            POSEDGE_IMP (load,c0) /\ DEL (done,c1) /\ AND (c0,c1,start) /\
@@ -742,7 +742,7 @@ val CALL =
 val SELECT =
  store_thm
   ("SELECT",
-   ``SELECT = 
+   ``SELECT =
       \(done_e,data_e,start_f,start_g).
          ?start' not_e.
            POSEDGE_IMP (done_e,start') /\ AND (start',data_e,start_f) /\
@@ -752,7 +752,7 @@ val SELECT =
 val FINISH =
  store_thm
   ("FINISH",
-   ``FINISH = 
+   ``FINISH =
       \(done_e,done_f,done_g,done).
          ?c2 c3 c4.
            DEL (done_g,c3) /\ AND (done_g,c3,c4) /\
@@ -762,7 +762,7 @@ val FINISH =
 val ATM =
  store_thm
   ("ATM",
-   ``ATM f = 
+   ``ATM f =
       \(load,inp,done,out).
        ?c0 c1.
          POSEDGE_IMP (load,c0) /\ NOT (c0,done) /\ COMB f (inp,c1) /\
@@ -772,7 +772,7 @@ val ATM =
 val SEQ =
  store_thm
   ("SEQ",
-   ``SEQ f g = 
+   ``SEQ f g =
       \(load,inp,done,out).
       ?not_c2 c0 c1 c2 data.
         NOT (c2,not_c2) /\ OR (not_c2,load,c0) /\ f (c0,inp,c1,data) /\
@@ -782,7 +782,7 @@ val SEQ =
 val PAR =
  store_thm
   ("PAR",
-   ``PAR f g = 
+   ``PAR f g =
       \(load,inp,done,out).
          ?c0 c1 start done' done'' data' data'' out' out''.
            POSEDGE_IMP (load,c0) /\ DEL (done,c1) /\ AND (c0,c1,start) /\
@@ -794,7 +794,7 @@ val PAR =
 val ITE =
  store_thm
   ("ITE",
-   ``ITE e f g = 
+   ``ITE e f g =
       \(load,inp,done,out).
          ?c0 c1 c2 start start' done_e data_e q not_e data_f data_g sel
             done_f done_g start_f start_g.
@@ -810,7 +810,7 @@ val ITE =
 val REC =
  store_thm
   ("REC",
-   ``REC e f g = 
+   ``REC e f g =
       \(load,inp,done,out).
          ?done_g data_g start_e q done_e data_e start_f start_g inp_e
             done_f.
@@ -859,7 +859,7 @@ val LATCH_def =
 val LATCH_THM =
  store_thm
   ("LATCH_THM",
-   ``LATCH(sw,d,q) = 
+   ``LATCH(sw,d,q) =
       (!t. sw t ==> (q t = d t)) /\ (!t. ~(sw(t+1)) ==> (q(t+1) = q t))``,
    RW_TAC std_ss [LATCH_def,MUX_def,DEL_def]
     THEN EQ_TAC
@@ -879,11 +879,11 @@ val LATCH_IMP =
     THEN PROVE_TAC[]);
 
 (* Implementation of DFF using LATCH
-  
+
           clk          d          q
            |           |          |
            |           |          |
-    |-------------|    |          | 
+    |-------------|    |          |
     | POSEDGE_IMP |    |          |
     |-------------|    |          |
            |           |          |
@@ -948,7 +948,7 @@ val DTYPE_def =
 (*****************************************************************************)
 val DTYPE_FUN_def =
  Define
-  `(DTYPE_FUN v ck d 0 = v) 
+  `(DTYPE_FUN v ck d 0 = v)
    /\
    (DTYPE_FUN v ck d (SUC t) = if Rise ck t then d t else DTYPE_FUN v ck d t)`;
 
@@ -992,8 +992,8 @@ val DEL_IMP =
 val Dtype0 =
  store_thm
   ("Dtype0",
-   ``Dtype (clk,d,q) /\ Istimeof 0 (Rise clk) t 
-     ==> 
+   ``Dtype (clk,d,q) /\ Istimeof 0 (Rise clk) t
+     ==>
      !t'. t' <= t ==> (q t' = q 0)``,
    RW_TAC arith_ss [Dtype,Istimeof]
     THEN Induct_on `t'`
@@ -1107,12 +1107,12 @@ val COMB_at =
 val MUX_at =
  store_thm
   ("MUX_at",
-   ``MUX(sw,in1,in2,out) 
-     ==> 
+   ``MUX(sw,in1,in2,out)
+     ==>
      MUX(sw at clk,in1 at clk,in2 at clk,out at clk)``,
    RW_TAC std_ss [MUX_def,at_def,when]);
 
-val UNWIND_THM = 
+val UNWIND_THM =
  store_thm
   ("UNWIND_THM",
    ``!P x y. (x = y) /\ P x = (x = y) /\ P y``,
@@ -1130,8 +1130,8 @@ val I_INTRO_THM = Q.store_thm
 
 val _ = Parse.reveal "C";
 
-val thlist = 
- map (C (curry Q.prove) 
+val thlist =
+ map (C (curry Q.prove)
         (RW_TAC std_ss [FUN_EQ_THM,BUS_CONCAT_def,combinTheory.C_THM]))
    [`!x y. K x <> K y = K (x,y)`,
     `!x y. (\v.x) <> (\v.y) = K (x,y)`,

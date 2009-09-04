@@ -1,6 +1,6 @@
 (* Intset -- modified for Moscow ML from SML/NJ library v. 0.2.
  *
- * COPYRIGHT (c) 1993 by AT&T Bell Laboratories.  
+ * COPYRIGHT (c) 1993 by AT&T Bell Laboratories.
  * See file mosml/copyrght/copyrght.att for details.
  *
  * This code was adapted from Stephen Adams' binary tree implementation
@@ -110,7 +110,7 @@ fun T' (v,E,E) = T(v,1,E,E)
 	    in
 		if rln < rrn then  single_L p  else  double_L p
 	    end
-	    
+
 	else if ln>=wt rn then  (*left is too big*)
 	    let val lln = size ll
 		val lrn = size lr
@@ -153,8 +153,8 @@ fun min (T(v,_,E,_)) = v
   | min _            = raise Match
 and delete' (E,r) = r
   | delete' (l,E) = l
-  | delete' (l,r) = 
-    let val min_elt = min r 
+  | delete' (l,r) =
+    let val min_elt = min r
     in T'(min_elt,l,delmin r) end
 and delmin (T(_,_,E,r)) = r
   | delmin (T(v,_,l,r)) = T'(v,delmin l,r)
@@ -172,7 +172,7 @@ type  intset = Set
 exception NotFound
 
 val empty = E
-	
+
 fun singleton x = T(x,1,E,E)
 
 local
@@ -181,9 +181,9 @@ local
 	if  v<=lo  then  trim lo hi r
 	else if  v>=hi  then  trim lo hi l
 	else  s
-		    
+
     fun uni_bd s E lo hi = s
-      | uni_bd E (T(v,_,l,r)) lo hi = 
+      | uni_bd E (T(v,_,l,r)) lo hi =
 	concat3 (split_gt l lo) v (split_lt r hi)
       | uni_bd (T(v,_,l1,r1)) (s2 as T(v2,_,l2,r2)) lo hi =
 	concat3 (uni_bd l1 (trim lo v s2) lo v)
@@ -201,23 +201,23 @@ local
     fun trim_hi _ E = E
       | trim_hi hi (s as T(v,_,l,_)) =
 	if v>=hi then trim_hi hi l else s
-		    
+
     fun uni_hi s E hi = s
-      | uni_hi E (T(v,_,l,r)) hi = 
+      | uni_hi E (T(v,_,l,r)) hi =
 	concat3 l v (split_lt r hi)
       | uni_hi (T(v,_,l1,r1)) (s2 as T(v2,_,l2,r2)) hi =
 	concat3 (uni_hi l1 (trim_hi v s2) v)
-		v 
+		v
 		(uni_bd r1 (trim v hi s2) v hi)
-	
+
     fun uni_lo s E lo = s
-      | uni_lo E (T(v,_,l,r)) lo = 
+      | uni_lo E (T(v,_,l,r)) lo =
 	concat3 (split_gt l lo) v r
       | uni_lo (T(v,_,l1,r1)) (s2 as T(v2,_,l2,r2)) lo =
 	concat3 (uni_bd l1 (trim lo v s2) lo v)
-		v 
+		v
 		(uni_lo r1 (trim_lo v s2) v)
-	
+
     fun uni (s,E) = s
       | uni (E,s as T(v,_,l,r)) = s
       | uni (T(v,_,l1,r1), s2 as T(v2,_,l2,r2)) =
@@ -275,22 +275,22 @@ fun delete (E,x) = raise NotFound
     else if x>v then T'(v,l,delete(r,x))
     else delete'(l,r)
 
-fun foldr f base set = 
+fun foldr f base set =
     let	fun fold' base E = base
 	  | fold' base (T(v,_,l,r)) = fold' (f(v, fold' base r)) l
     in fold' base set end
 
-fun foldl f base set = 
+fun foldl f base set =
     let	fun fold' base E = base
 	  | fold' base (T(v,_,l,r)) = fold' (f(v, fold' base l)) r
     in fold' base set end
 
-fun app f set = 
+fun app f set =
     let	fun app' E = ()
 	  | app'(T(v,_,l,r)) = (app' l; f v; app' r)
     in app' set end
 
-fun revapp f set = 
+fun revapp f set =
     let	fun app' E = ()
 	  | app'(T(v,_,l,r)) = (app' r; f v; app' l)
     in app' set end
@@ -301,11 +301,11 @@ local
 	let
 	    fun isIn E = true
 	      | isIn (T(v,_,E,E)) = membert t' v
-	      | isIn (T(v,_,l,E)) = 
+	      | isIn (T(v,_,l,E)) =
 		membert t' v andalso isIn l
-	      | isIn (T(v,_,E,r)) = 
+	      | isIn (T(v,_,E,r)) =
 		membert t' v andalso isIn r
-	      | isIn (T(v,_,l,r)) = 
+	      | isIn (T(v,_,l,r)) =
 		membert t' v andalso isIn l andalso isIn r
         in
 	    isIn t
@@ -322,13 +322,13 @@ in
       | equal _ = false
 end
 
-fun find p set = 
+fun find p set =
     let fun h E            = NONE
 	  | h (T(v,_,l,r)) =
 	    if p v then SOME v
 	    else case h l of
 		NONE => h r
-	      | a => a 
+	      | a => a
     in h set end;
 
 fun listItems set = foldr (op::) [] set

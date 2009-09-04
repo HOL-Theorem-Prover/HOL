@@ -1,7 +1,7 @@
 structure tuerk_tacticsLib :> tuerk_tacticsLib =
 struct
 
-  
+
   open HolKernel boolLib bossLib Abbrev metisLib pred_setTheory numLib schneiderUtils
 
 
@@ -98,10 +98,10 @@ struct
    val C_IMP_EQ_STRIP_TAC :tactic = fn (asl,t) =>
       let val (lhs,rhs) = dest_eq t
           val (la, lc) = dest_imp lhs;
-          val (ra, rc) = dest_imp rhs;          
+          val (ra, rc) = dest_imp rhs;
           val l1 = strip_disj lc
           val l2 = strip_disj rc
-          val m = findMatch (l1, l2, l2) 
+          val m = findMatch (l1, l2, l2)
       in
          (DISJ_CASES_TAC (REWRITE_RULE [EQ_CLAUSES] (SPEC m BOOL_CASES_AX)) THEN ASM_REWRITE_TAC[]) (asl, t)
       end
@@ -110,10 +110,10 @@ struct
    val A_IMP_EQ_STRIP_TAC :tactic = fn (asl,t) =>
       let val (lhs,rhs) = dest_eq t
           val (la, lc) = dest_imp lhs;
-          val (ra, rc) = dest_imp rhs;          
+          val (ra, rc) = dest_imp rhs;
           val l1 = strip_conj la
           val l2 = strip_conj ra
-          val m = findMatch (l1, l2, l2) 
+          val m = findMatch (l1, l2, l2)
       in
          (DISJ_CASES_TAC (REWRITE_RULE [EQ_CLAUSES] (SPEC m BOOL_CASES_AX)) THEN ASM_REWRITE_TAC[]) (asl, t)
       end
@@ -123,7 +123,7 @@ struct
    val BOOL_EQ_STRIP_TAC = FIRST [DISJ_EQ_STRIP_TAC, CONJ_EQ_STRIP_TAC,
     A_IMP_EQ_STRIP_TAC, C_IMP_EQ_STRIP_TAC, CHANGED_TAC (REWRITE_TAC [DE_MORGAN_THM])];
 
-   fun UNDISCH_KEEP_NO_TAC i = 
+   fun UNDISCH_KEEP_NO_TAC i =
     POP_NO_ASSUM i (fn x=> (ASSUME_TAC x THEN UNDISCH_TAC (concl x) THEN ASSUME_TAC x))
 
 
@@ -146,15 +146,15 @@ struct
    val SPEC_NO_ASSUM = (fn n => fn S => POP_NO_ASSUM n (fn x=> ASSUME_TAC (SPEC S x)));
    val SPECL_NO_ASSUM = (fn n => fn S => POP_NO_ASSUM n (fn x=> ASSUME_TAC (SPECL S x)));
 
-   
+
    fun Q_SPEC_NO_ASSUM n = Q_TAC (SPEC_NO_ASSUM n);
-   
+
    fun Q_SPECL_NO_ASSUM n [] = ALL_TAC
      | Q_SPECL_NO_ASSUM n (h::l) = (Q_SPEC_NO_ASSUM n h THEN Q_SPECL_NO_ASSUM 0 l);
 
    val IMP_TO_EQ_TAC = MATCH_MP_TAC (prove (``(a = b) ==> (a ==> b)``, SIMP_TAC std_ss []));
 
-   fun store_simp_thm(name,term,tac) = save_thm(name, 
+   fun store_simp_thm(name,term,tac) = save_thm(name,
             SIMP_RULE std_ss [] (prove(term, tac)));
 
 
@@ -166,16 +166,16 @@ struct
     in
       SUBGOAL_THEN lhs ASSUME_MP_TAC THEN1 tac
     end;
-  
+
   fun EXISTS_LEAST_TAC t = EXISTS_LEAST_TAC___GEN t (METIS_TAC[]);
   val Q_EXISTS_LEAST_TAC = Q_TAC EXISTS_LEAST_TAC;
 
 
-  
+
   fun PROVE_CONDITION_TAC thm (asl, t) =
-    let 
+    let
       val (p, c) = dest_imp (concl thm);
-      fun mp_thm thms = 
+      fun mp_thm thms =
         let
           val thm_p = el 1 thms;
           val thm_t = el 2 thms;
@@ -200,7 +200,7 @@ struct
     in
       MATCH_MP_TAC thm
     end
-    
+
   fun MATCH_RIGHT_EQ_MP_TAC thm =
     let
       val thm = UNDISCH_ALL (SPEC_ALL thm);
@@ -210,5 +210,5 @@ struct
     in
       MATCH_MP_TAC thm
     end
-      
+
 end

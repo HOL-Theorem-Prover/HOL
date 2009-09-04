@@ -19,8 +19,8 @@ val mnvm = --`Node_vm : 'a->'a varmap->'a varmap->'a varmap`--;
 fun vm_ty ty = inst [alpha |-> ty];
 
 
-datatype varnode 
-    = Lf 
+datatype varnode
+    = Lf
     | Nd of term * varnode ref * varnode ref
 
 type varmap = varnode ref;
@@ -119,7 +119,7 @@ fun op_assoc x [] = NONE
 fun meta_expr ty is_qu { Op1, Op2, Vars, Csts } =
   let fun meta_rec t =
         if is_qu t then Pquote t
-        else 
+        else
 	  let val oper =
     	    if is_comb t then
 	      let val (r1,a1) = dest_comb t in

@@ -18,12 +18,12 @@ val ERR = mk_HOL_ERR "pred_setLib";
 (*     tm IN {t | p}                                                         *)
 (*---------------------------------------------------------------------------*)
 
-fun in_conv tm = 
+fun in_conv tm =
   case strip_comb tm
    of (c,[a1,a2]) =>
         if same_const c in_tm
         then if is_set_spec a2 then SET_SPEC_CONV tm else
-             IN_CONV computeLib.EVAL_CONV tm 
+             IN_CONV computeLib.EVAL_CONV tm
         else raise ERR "in_conv" "not an IN term"
     | otherwise => raise ERR "in_conv" "not an IN term";
 
@@ -40,17 +40,17 @@ val _ = computeLib.add_convs
          ];
 
 
-val T_INTRO = 
+val T_INTRO =
  let open boolLib Drule
- in Rewrite.PURE_ONCE_REWRITE_RULE 
+ in Rewrite.PURE_ONCE_REWRITE_RULE
               [SYM (hd(tl (CONJUNCTS (SPEC_ALL EQ_CLAUSES))))]
  end;
 
-val _ = 
+val _ =
  let open pred_setTheory Drule
  in
-  computeLib.add_funs 
-     [INTER_EMPTY,INSERT_INTER, 
+  computeLib.add_funs
+     [INTER_EMPTY,INSERT_INTER,
       CONJ (CONJUNCT1 UNION_EMPTY) INSERT_UNION,
       CONJ EMPTY_DELETE DELETE_INSERT,
       CONJ DIFF_EMPTY DIFF_INSERT,
@@ -58,13 +58,13 @@ val _ =
       PSUBSET_EQN,
       CONJ IMAGE_EMPTY IMAGE_INSERT,
       CONJ BIGUNION_EMPTY BIGUNION_INSERT,
-      LIST_CONJ [BIGINTER_EMPTY,BIGINTER_SING, BIGINTER_INSERT], 
+      LIST_CONJ [BIGINTER_EMPTY,BIGINTER_SING, BIGINTER_INSERT],
       CONJ (T_INTRO (CONJUNCT1 (SPEC_ALL DISJOINT_EMPTY))) DISJOINT_INSERT,
       CROSS_EQNS,CONJUNCT1(SPEC_ALL CROSS_EMPTY),
       FINITE_INSERT, FINITE_EMPTY,
       MIN_SET_THM,
       count_EQN,
-      CONJUNCT1 MAX_SET_THM,  
+      CONJUNCT1 MAX_SET_THM,
       CARD_EMPTY, SUM_SET_DEF,
       CONJUNCT1 (SPEC_ALL SUM_IMAGE_THM),
       SET_EQ_SUBSET, IN_COMPL, POW_EQNS

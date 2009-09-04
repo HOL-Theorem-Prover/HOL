@@ -1,4 +1,4 @@
-signature refuteLib = 
+signature refuteLib =
 sig
   include Abbrev
 

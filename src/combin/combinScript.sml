@@ -145,7 +145,7 @@ val UPDATE_EQ = Q.store_thm("UPDATE_EQ",
 val UPDATE_APPLY_ID = Q.store_thm("UPDATE_APPLY_ID",
   `!f a b. (f a = b) = ((a =+ b) f = f)`,
   REPEAT GEN_TAC
-  THEN EQ_TAC 
+  THEN EQ_TAC
   THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
   THENL [
     REPEAT STRIP_TAC
@@ -162,7 +162,7 @@ val UPDATE_APPLY_IMP_ID = save_thm("UPDATE_APPLY_IMP_ID",
   GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL UPDATE_APPLY_ID))));
 
 val APPLY_UPDATE_ID = Q.store_thm("APPLY_UPDATE_ID",
-  `!f a. (a =+ f a) f = f`, 
+  `!f a. (a =+ f a) f = f`,
   REWRITE_TAC [GSYM UPDATE_APPLY_ID]);
 
 val UPD11_SAME_BASE = Q.store_thm("UPD11_SAME_BASE",
@@ -170,7 +170,7 @@ val UPD11_SAME_BASE = Q.store_thm("UPD11_SAME_BASE",
       ((a =+ c) f = (b =+ d) f) =
       (a = b) /\ (c = d) \/
       ~(a = b) /\ ((a =+ c) f = f) /\ ((b =+ d) f = f)`,
-  REPEAT GEN_TAC 
+  REPEAT GEN_TAC
   THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
   THEN BETA_TAC THEN EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []
   THEN ASM_CASES_TAC ``a = b`` THEN ASM_REWRITE_TAC []

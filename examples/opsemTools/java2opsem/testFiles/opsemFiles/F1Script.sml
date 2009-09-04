@@ -40,8 +40,8 @@ val MAIN_def =
                     (Var "i6")
                   )
                   (Seq
-                    (Cond 
-                      (Equal 
+                    (Cond
+                      (Equal
                         (Var "in18")
                         (Const 1)
                       )
@@ -50,13 +50,13 @@ val MAIN_def =
                           (Var "in11")
                         )
                         (Seq
-                          (Cond 
-                            (And 
-                              (Equal 
+                          (Cond
+                            (And
+                              (Equal
                                 (Var "in10")
                                 (Const 1)
                               )
-                              (Not (Equal 
+                              (Not (Equal
                                 (Const 1)
                                 (Var "Unit_Delay_a_DSTATE")
                               ))
@@ -74,36 +74,36 @@ val MAIN_def =
                             )
                             (Seq
                               (Assign "cas"
-                                (Plus 
-                                  (Plus 
+                                (Plus
+                                  (Plus
                                     (Const 1)
                                     (Var "in12")
                                   )
-                                  (Times 
+                                  (Times
                                     (Var "Data_Type_Conversion_a")
                                     (Const 2)
                                   )
                                 )
                               )
                               (Seq
-                                (Cond 
-                                  (Equal 
+                                (Cond
+                                  (Equal
                                     (Var "cas")
                                     (Const 1)
                                   )
                                   (Assign "Multiport_Switch"
                                     (Var "Unit_Delay_g")
                                   )
-                                  (Cond 
-                                    (Equal 
+                                  (Cond
+                                    (Equal
                                       (Var "cas")
                                       (Const 2)
                                     )
                                     (Assign "Multiport_Switch"
                                       (Const 1)
                                     )
-                                    (Cond 
-                                      (Equal 
+                                    (Cond
+                                      (Equal
                                         (Var "cas")
                                         (Const 3)
                                       )
@@ -115,13 +115,13 @@ val MAIN_def =
                                   )
                                 )
                                 (Seq
-                                  (Cond 
-                                    (And 
-                                      (Equal 
+                                  (Cond
+                                    (And
+                                      (Equal
                                         (Var "Unit_Delay_g")
                                         (Const 0)
                                       )
-                                      (Not (Equal 
+                                      (Not (Equal
                                         (Const 0)
                                         (Var "Unit_Delay_b_DSTATE")
                                       ))
@@ -134,8 +134,8 @@ val MAIN_def =
                                     )
                                   )
                                   (Seq
-                                    (Cond 
-                                      (Equal 
+                                    (Cond
+                                      (Equal
                                         (Var "in13")
                                         (Const 1)
                                       )
@@ -147,13 +147,13 @@ val MAIN_def =
                                       )
                                     )
                                     (Seq
-                                      (Cond 
-                                        (And 
-                                          (Equal 
+                                      (Cond
+                                        (And
+                                          (Equal
                                             (Var "Switch5")
                                             (Const 1)
                                           )
-                                          (Not (Equal 
+                                          (Not (Equal
                                             (Const 1)
                                             (Var "Unit_Delay3_a_DSTATE")
                                           ))
@@ -166,9 +166,9 @@ val MAIN_def =
                                         )
                                       )
                                       (Seq
-                                        (Cond 
-                                          (Not (Equal 
-                                            (Sub 
+                                        (Cond
+                                          (Not (Equal
+                                            (Sub
                                               (Var "and1_a")
                                               (Var "Unit_Delay_c_DSTATE")
                                             )
@@ -179,7 +179,7 @@ val MAIN_def =
                                           )
                                           (Seq
                                             (Assign "add_a"
-                                              (Plus 
+                                              (Plus
                                                 (Const 1)
                                                 (Var "Unit_Delay1_b_DSTATE")
                                               )
@@ -190,8 +190,8 @@ val MAIN_def =
                                           )
                                         )
                                         (Seq
-                                          (Cond 
-                                            (Not (Less 
+                                          (Cond
+                                            (Not (Less
                                               (Var "rtb_Switch_b")
                                               (Const 3)
                                             ))
@@ -203,8 +203,8 @@ val MAIN_def =
                                             )
                                           )
                                           (Seq
-                                            (Cond 
-                                              (Equal 
+                                            (Cond
+                                              (Equal
                                                 (Var "superior_a")
                                                 (Const 1)
                                               )
@@ -216,14 +216,14 @@ val MAIN_def =
                                               )
                                             )
                                             (Seq
-                                              (Cond 
-                                                (Equal 
+                                              (Cond
+                                                (Equal
                                                   (Var "Switch5")
                                                   (Const 1)
                                                 )
                                                 (Seq
-                                                  (Cond 
-                                                    (Equal 
+                                                  (Cond
+                                                    (Equal
                                                       (Var "and1_a")
                                                       (Const 1)
                                                     )
@@ -231,14 +231,14 @@ val MAIN_def =
                                                       (Const 1)
                                                     )
                                                     (Seq
-                                                      (Cond 
-                                                        (Equal 
+                                                      (Cond
+                                                        (Equal
                                                           (Var "superior_a")
                                                           (Const 1)
                                                         )
                                                         (Seq
-                                                          (Cond 
-                                                            (Equal 
+                                                          (Cond
+                                                            (Equal
                                                               (Var "Unit_Delay1_a_DSTATE")
                                                               (Const 1)
                                                             )
@@ -271,8 +271,8 @@ val MAIN_def =
                                                 )
                                               )
                                               (Seq
-                                                (Cond 
-                                                  (Equal 
+                                                (Cond
+                                                  (Equal
                                                     (Var "in13")
                                                     (Const 1)
                                                   )
@@ -284,13 +284,13 @@ val MAIN_def =
                                                   )
                                                 )
                                                 (Seq
-                                                  (Cond 
-                                                    (And 
-                                                      (Equal 
+                                                  (Cond
+                                                    (And
+                                                      (Equal
                                                         (Var "Switch4_a")
                                                         (Const 1)
                                                       )
-                                                      (Not (Equal 
+                                                      (Not (Equal
                                                         (Const 1)
                                                         (Var "Unit_Delay_d_DSTATE")
                                                       ))
@@ -303,10 +303,10 @@ val MAIN_def =
                                                     )
                                                   )
                                                   (Seq
-                                                    (Cond 
-                                                      (Equal 
+                                                    (Cond
+                                                      (Equal
                                                         (Const 1)
-                                                        (Sub 
+                                                        (Sub
                                                           (Var "and_d")
                                                           (Var "Unit_Delay_e_DSTATE")
                                                         )
@@ -316,7 +316,7 @@ val MAIN_def =
                                                       )
                                                       (Seq
                                                         (Assign "add_b"
-                                                          (Plus 
+                                                          (Plus
                                                             (Const 1)
                                                             (Var "Unit_Delay1_d_DSTATE")
                                                           )
@@ -327,8 +327,8 @@ val MAIN_def =
                                                       )
                                                     )
                                                     (Seq
-                                                      (Cond 
-                                                        (Not (Less 
+                                                      (Cond
+                                                        (Not (Less
                                                           (Var "rtb_Switch_c")
                                                           (Const 3)
                                                         ))
@@ -340,8 +340,8 @@ val MAIN_def =
                                                         )
                                                       )
                                                       (Seq
-                                                        (Cond 
-                                                          (Equal 
+                                                        (Cond
+                                                          (Equal
                                                             (Var "superior_b")
                                                             (Const 1)
                                                           )
@@ -353,14 +353,14 @@ val MAIN_def =
                                                           )
                                                         )
                                                         (Seq
-                                                          (Cond 
-                                                            (Equal 
+                                                          (Cond
+                                                            (Equal
                                                               (Var "Switch4_a")
                                                               (Const 1)
                                                             )
                                                             (Seq
-                                                              (Cond 
-                                                                (Equal 
+                                                              (Cond
+                                                                (Equal
                                                                   (Var "and_d")
                                                                   (Const 1)
                                                                 )
@@ -368,14 +368,14 @@ val MAIN_def =
                                                                   (Const 1)
                                                                 )
                                                                 (Seq
-                                                                  (Cond 
-                                                                    (Equal 
+                                                                  (Cond
+                                                                    (Equal
                                                                       (Var "superior_b")
                                                                       (Const 1)
                                                                     )
                                                                     (Seq
-                                                                      (Cond 
-                                                                        (Equal 
+                                                                      (Cond
+                                                                        (Equal
                                                                           (Var "Unit_Delay1_c_DSTATE")
                                                                           (Const 1)
                                                                         )
@@ -408,13 +408,13 @@ val MAIN_def =
                                                             )
                                                           )
                                                           (Seq
-                                                            (Cond 
-                                                              (And 
-                                                                (Equal 
+                                                            (Cond
+                                                              (And
+                                                                (Equal
                                                                   (Var "Data_Type_Conversion_a")
                                                                   (Const 1)
                                                                 )
-                                                                (Equal 
+                                                                (Equal
                                                                   (Var "Unit_Delay_g")
                                                                   (Const ~1)
                                                                 )
@@ -427,13 +427,13 @@ val MAIN_def =
                                                               )
                                                             )
                                                             (Seq
-                                                              (Cond 
-                                                                (Or 
-                                                                  (Equal 
+                                                              (Cond
+                                                                (Or
+                                                                  (Equal
                                                                     (Var "rtb_and_a")
                                                                     (Const 1)
                                                                   )
-                                                                  (Equal 
+                                                                  (Equal
                                                                     (Var "Unit_Delay_g")
                                                                     (Const 1)
                                                                   )
@@ -446,13 +446,13 @@ val MAIN_def =
                                                                 )
                                                               )
                                                               (Seq
-                                                                (Cond 
-                                                                  (And 
-                                                                    (Equal 
+                                                                (Cond
+                                                                  (And
+                                                                    (Equal
                                                                       (Var "OR")
                                                                       (Const 1)
                                                                     )
-                                                                    (Not (Equal 
+                                                                    (Not (Equal
                                                                       (Const 1)
                                                                       (Var "Unit_Delay_f_DSTATE")
                                                                     ))
@@ -465,8 +465,8 @@ val MAIN_def =
                                                                   )
                                                                 )
                                                                 (Seq
-                                                                  (Cond 
-                                                                    (Equal 
+                                                                  (Cond
+                                                                    (Equal
                                                                       (Var "rtb_and_a")
                                                                       (Const 1)
                                                                     )
@@ -478,8 +478,8 @@ val MAIN_def =
                                                                     )
                                                                   )
                                                                   (Seq
-                                                                    (Cond 
-                                                                      (Equal 
+                                                                    (Cond
+                                                                      (Equal
                                                                         (Var "counter_b_DSTATE")
                                                                         (Const 0)
                                                                       )
@@ -491,8 +491,8 @@ val MAIN_def =
                                                                       )
                                                                     )
                                                                     (Seq
-                                                                      (Cond 
-                                                                        (Not (Equal 
+                                                                      (Cond
+                                                                        (Not (Equal
                                                                           (Var "rtb_Switch1_g")
                                                                           (Const 0)
                                                                         ))
@@ -504,8 +504,8 @@ val MAIN_def =
                                                                         )
                                                                       )
                                                                       (Seq
-                                                                        (Cond 
-                                                                          (Equal 
+                                                                        (Cond
+                                                                          (Equal
                                                                             (Var "and_e")
                                                                             (Const 1)
                                                                           )
@@ -514,7 +514,7 @@ val MAIN_def =
                                                                           )
                                                                           (Seq
                                                                             (Assign "add_d"
-                                                                              (Plus 
+                                                                              (Plus
                                                                                 (Var "rtb_Switch1_g")
                                                                                 (Var "counter_b_DSTATE")
                                                                               )
@@ -525,13 +525,13 @@ val MAIN_def =
                                                                           )
                                                                         )
                                                                         (Seq
-                                                                          (Cond 
-                                                                            (And 
-                                                                              (Equal 
+                                                                          (Cond
+                                                                            (And
+                                                                              (Equal
                                                                                 (Var "Data_Type_Conversion_d")
                                                                                 (Const 1)
                                                                               )
-                                                                              (Not (Equal 
+                                                                              (Not (Equal
                                                                                 (Const 1)
                                                                                 (Var "Unit_Delay3_d_DSTATE")
                                                                               ))
@@ -544,10 +544,10 @@ val MAIN_def =
                                                                             )
                                                                           )
                                                                           (Seq
-                                                                            (Cond 
-                                                                              (Equal 
+                                                                            (Cond
+                                                                              (Equal
                                                                                 (Const 1)
-                                                                                (Sub 
+                                                                                (Sub
                                                                                   (Var "and1_c")
                                                                                   (Var "Unit_Delay_i_DSTATE")
                                                                                 )
@@ -557,7 +557,7 @@ val MAIN_def =
                                                                               )
                                                                               (Seq
                                                                                 (Assign "add_f"
-                                                                                  (Plus 
+                                                                                  (Plus
                                                                                     (Const 1)
                                                                                     (Var "Unit_Delay1_h_DSTATE")
                                                                                   )
@@ -568,8 +568,8 @@ val MAIN_def =
                                                                               )
                                                                             )
                                                                             (Seq
-                                                                              (Cond 
-                                                                                (Not (Less 
+                                                                              (Cond
+                                                                                (Not (Less
                                                                                   (Var "rtb_Switch_h")
                                                                                   (Const 1)
                                                                                 ))
@@ -581,8 +581,8 @@ val MAIN_def =
                                                                                 )
                                                                               )
                                                                               (Seq
-                                                                                (Cond 
-                                                                                  (Equal 
+                                                                                (Cond
+                                                                                  (Equal
                                                                                     (Var "superior_d")
                                                                                     (Const 1)
                                                                                   )
@@ -594,14 +594,14 @@ val MAIN_def =
                                                                                   )
                                                                                 )
                                                                                 (Seq
-                                                                                  (Cond 
-                                                                                    (Equal 
+                                                                                  (Cond
+                                                                                    (Equal
                                                                                       (Var "Data_Type_Conversion_d")
                                                                                       (Const 1)
                                                                                     )
                                                                                     (Seq
-                                                                                      (Cond 
-                                                                                        (Equal 
+                                                                                      (Cond
+                                                                                        (Equal
                                                                                           (Var "and1_c")
                                                                                           (Const 1)
                                                                                         )
@@ -609,14 +609,14 @@ val MAIN_def =
                                                                                           (Const 1)
                                                                                         )
                                                                                         (Seq
-                                                                                          (Cond 
-                                                                                            (Equal 
+                                                                                          (Cond
+                                                                                            (Equal
                                                                                               (Var "superior_d")
                                                                                               (Const 1)
                                                                                             )
                                                                                             (Seq
-                                                                                              (Cond 
-                                                                                                (Equal 
+                                                                                              (Cond
+                                                                                                (Equal
                                                                                                   (Var "Unit_Delay1_g_DSTATE")
                                                                                                   (Const 1)
                                                                                                 )
@@ -649,8 +649,8 @@ val MAIN_def =
                                                                                     )
                                                                                   )
                                                                                   (Seq
-                                                                                    (Cond 
-                                                                                      (Equal 
+                                                                                    (Cond
+                                                                                      (Equal
                                                                                         (Var "counter_a_DSTATE")
                                                                                         (Const 0)
                                                                                       )
@@ -662,8 +662,8 @@ val MAIN_def =
                                                                                       )
                                                                                     )
                                                                                     (Seq
-                                                                                      (Cond 
-                                                                                        (Not (Equal 
+                                                                                      (Cond
+                                                                                        (Not (Equal
                                                                                           (Var "rtb_Switch1_f")
                                                                                           (Const 0)
                                                                                         ))
@@ -675,8 +675,8 @@ val MAIN_def =
                                                                                         )
                                                                                       )
                                                                                       (Seq
-                                                                                        (Cond 
-                                                                                          (Equal 
+                                                                                        (Cond
+                                                                                          (Equal
                                                                                             (Var "and_c")
                                                                                             (Const 1)
                                                                                           )
@@ -685,7 +685,7 @@ val MAIN_def =
                                                                                           )
                                                                                           (Seq
                                                                                             (Assign "add_c"
-                                                                                              (Plus 
+                                                                                              (Plus
                                                                                                 (Var "rtb_Switch1_f")
                                                                                                 (Var "counter_a_DSTATE")
                                                                                               )
@@ -696,13 +696,13 @@ val MAIN_def =
                                                                                           )
                                                                                         )
                                                                                         (Seq
-                                                                                          (Cond 
-                                                                                            (And 
-                                                                                              (Equal 
+                                                                                          (Cond
+                                                                                            (And
+                                                                                              (Equal
                                                                                                 (Var "Data_Type_Conversion_c")
                                                                                                 (Const 1)
                                                                                               )
-                                                                                              (Not (Equal 
+                                                                                              (Not (Equal
                                                                                                 (Const 1)
                                                                                                 (Var "Unit_Delay3_e_DSTATE")
                                                                                               ))
@@ -715,10 +715,10 @@ val MAIN_def =
                                                                                             )
                                                                                           )
                                                                                           (Seq
-                                                                                            (Cond 
-                                                                                              (Equal 
+                                                                                            (Cond
+                                                                                              (Equal
                                                                                                 (Const 1)
-                                                                                                (Sub 
+                                                                                                (Sub
                                                                                                   (Var "and1_d")
                                                                                                   (Var "Unit_Delay_j_DSTATE")
                                                                                                 )
@@ -728,7 +728,7 @@ val MAIN_def =
                                                                                               )
                                                                                               (Seq
                                                                                                 (Assign "add_g"
-                                                                                                  (Plus 
+                                                                                                  (Plus
                                                                                                     (Const 1)
                                                                                                     (Var "Unit_Delay1_j_DSTATE")
                                                                                                   )
@@ -739,8 +739,8 @@ val MAIN_def =
                                                                                               )
                                                                                             )
                                                                                             (Seq
-                                                                                              (Cond 
-                                                                                                (Not (Less 
+                                                                                              (Cond
+                                                                                                (Not (Less
                                                                                                   (Var "rtb_Switch_i")
                                                                                                   (Const 10)
                                                                                                 ))
@@ -752,8 +752,8 @@ val MAIN_def =
                                                                                                 )
                                                                                               )
                                                                                               (Seq
-                                                                                                (Cond 
-                                                                                                  (Equal 
+                                                                                                (Cond
+                                                                                                  (Equal
                                                                                                     (Var "superior_e")
                                                                                                     (Const 1)
                                                                                                   )
@@ -765,14 +765,14 @@ val MAIN_def =
                                                                                                   )
                                                                                                 )
                                                                                                 (Seq
-                                                                                                  (Cond 
-                                                                                                    (Equal 
+                                                                                                  (Cond
+                                                                                                    (Equal
                                                                                                       (Var "Data_Type_Conversion_c")
                                                                                                       (Const 1)
                                                                                                     )
                                                                                                     (Seq
-                                                                                                      (Cond 
-                                                                                                        (Equal 
+                                                                                                      (Cond
+                                                                                                        (Equal
                                                                                                           (Var "and1_d")
                                                                                                           (Const 1)
                                                                                                         )
@@ -780,14 +780,14 @@ val MAIN_def =
                                                                                                           (Const 1)
                                                                                                         )
                                                                                                         (Seq
-                                                                                                          (Cond 
-                                                                                                            (Equal 
+                                                                                                          (Cond
+                                                                                                            (Equal
                                                                                                               (Var "superior_e")
                                                                                                               (Const 1)
                                                                                                             )
                                                                                                             (Seq
-                                                                                                              (Cond 
-                                                                                                                (Equal 
+                                                                                                              (Cond
+                                                                                                                (Equal
                                                                                                                   (Var "Unit_Delay1_i_DSTATE")
                                                                                                                   (Const 1)
                                                                                                                 )
@@ -820,13 +820,13 @@ val MAIN_def =
                                                                                                     )
                                                                                                   )
                                                                                                   (Seq
-                                                                                                    (Cond 
-                                                                                                      (Or 
-                                                                                                        (Equal 
+                                                                                                    (Cond
+                                                                                                      (Or
+                                                                                                        (Equal
                                                                                                           (Var "Switch3_e")
                                                                                                           (Const 1)
                                                                                                         )
-                                                                                                        (Equal 
+                                                                                                        (Equal
                                                                                                           (Var "Switch3_f")
                                                                                                           (Const 1)
                                                                                                         )
@@ -839,13 +839,13 @@ val MAIN_def =
                                                                                                       )
                                                                                                     )
                                                                                                     (Seq
-                                                                                                      (Cond 
-                                                                                                        (Or 
-                                                                                                          (Equal 
+                                                                                                      (Cond
+                                                                                                        (Or
+                                                                                                          (Equal
                                                                                                             (Var "Data_Type_Conversion_d")
                                                                                                             (Const 1)
                                                                                                           )
-                                                                                                          (Equal 
+                                                                                                          (Equal
                                                                                                             (Var "Data_Type_Conversion_c")
                                                                                                             (Const 1)
                                                                                                           )
@@ -858,25 +858,25 @@ val MAIN_def =
                                                                                                         )
                                                                                                       )
                                                                                                       (Seq
-                                                                                                        (Cond 
-                                                                                                          (And 
-                                                                                                            (Equal 
+                                                                                                        (Cond
+                                                                                                          (And
+                                                                                                            (Equal
                                                                                                               (Var "and_b")
                                                                                                               (Const 1)
                                                                                                             )
-                                                                                                            (Equal 
+                                                                                                            (Equal
                                                                                                               (Var "Warning_Acti_ZCE")
                                                                                                               (Const ~1)
                                                                                                             )
                                                                                                           )
                                                                                                           (Seq
-                                                                                                            (Cond 
-                                                                                                              (Equal 
+                                                                                                            (Cond
+                                                                                                              (Equal
                                                                                                                 (Var "in10")
                                                                                                                 (Const 1)
                                                                                                               )
-                                                                                                              (Cond 
-                                                                                                                (Equal 
+                                                                                                              (Cond
+                                                                                                                (Equal
                                                                                                                   (Var "Unit_Delay3_c_DSTATE")
                                                                                                                   (Const ~1)
                                                                                                                 )
@@ -907,8 +907,8 @@ val MAIN_def =
                                                                                                             (Var "and_b")
                                                                                                           )
                                                                                                           (Seq
-                                                                                                            (Cond 
-                                                                                                              (Equal 
+                                                                                                            (Cond
+                                                                                                              (Equal
                                                                                                                 (Var "in13")
                                                                                                                 (Const 1)
                                                                                                               )
@@ -920,13 +920,13 @@ val MAIN_def =
                                                                                                               )
                                                                                                             )
                                                                                                             (Seq
-                                                                                                              (Cond 
-                                                                                                                (And 
-                                                                                                                  (Equal 
+                                                                                                              (Cond
+                                                                                                                (And
+                                                                                                                  (Equal
                                                                                                                     (Var "Switch6")
                                                                                                                     (Const 1)
                                                                                                                   )
-                                                                                                                  (Not (Equal 
+                                                                                                                  (Not (Equal
                                                                                                                     (Const 1)
                                                                                                                     (Var "Unit_Delay3_b_DSTATE")
                                                                                                                   ))
@@ -939,10 +939,10 @@ val MAIN_def =
                                                                                                                 )
                                                                                                               )
                                                                                                               (Seq
-                                                                                                                (Cond 
-                                                                                                                  (Equal 
+                                                                                                                (Cond
+                                                                                                                  (Equal
                                                                                                                     (Const 1)
-                                                                                                                    (Sub 
+                                                                                                                    (Sub
                                                                                                                       (Var "and1_b")
                                                                                                                       (Var "Unit_Delay_h_DSTATE")
                                                                                                                     )
@@ -952,7 +952,7 @@ val MAIN_def =
                                                                                                                   )
                                                                                                                   (Seq
                                                                                                                     (Assign "add_e"
-                                                                                                                      (Plus 
+                                                                                                                      (Plus
                                                                                                                         (Const 1)
                                                                                                                         (Var "Unit_Delay1_f_DSTATE")
                                                                                                                       )
@@ -963,8 +963,8 @@ val MAIN_def =
                                                                                                                   )
                                                                                                                 )
                                                                                                                 (Seq
-                                                                                                                  (Cond 
-                                                                                                                    (Not (Less 
+                                                                                                                  (Cond
+                                                                                                                    (Not (Less
                                                                                                                       (Var "rtb_Switch_f")
                                                                                                                       (Const 3)
                                                                                                                     ))
@@ -976,8 +976,8 @@ val MAIN_def =
                                                                                                                     )
                                                                                                                   )
                                                                                                                   (Seq
-                                                                                                                    (Cond 
-                                                                                                                      (Equal 
+                                                                                                                    (Cond
+                                                                                                                      (Equal
                                                                                                                         (Var "superior_c")
                                                                                                                         (Const 1)
                                                                                                                       )
@@ -989,14 +989,14 @@ val MAIN_def =
                                                                                                                       )
                                                                                                                     )
                                                                                                                     (Seq
-                                                                                                                      (Cond 
-                                                                                                                        (Equal 
+                                                                                                                      (Cond
+                                                                                                                        (Equal
                                                                                                                           (Var "Switch6")
                                                                                                                           (Const 1)
                                                                                                                         )
                                                                                                                         (Seq
-                                                                                                                          (Cond 
-                                                                                                                            (Equal 
+                                                                                                                          (Cond
+                                                                                                                            (Equal
                                                                                                                               (Var "and1_b")
                                                                                                                               (Const 1)
                                                                                                                             )
@@ -1004,14 +1004,14 @@ val MAIN_def =
                                                                                                                               (Const 1)
                                                                                                                             )
                                                                                                                             (Seq
-                                                                                                                              (Cond 
-                                                                                                                                (Equal 
+                                                                                                                              (Cond
+                                                                                                                                (Equal
                                                                                                                                   (Var "superior_c")
                                                                                                                                   (Const 1)
                                                                                                                                 )
                                                                                                                                 (Seq
-                                                                                                                                  (Cond 
-                                                                                                                                    (Equal 
+                                                                                                                                  (Cond
+                                                                                                                                    (Equal
                                                                                                                                       (Var "Unit_Delay1_e_DSTATE")
                                                                                                                                       (Const 1)
                                                                                                                                     )
@@ -1044,8 +1044,8 @@ val MAIN_def =
                                                                                                                         )
                                                                                                                       )
                                                                                                                       (Seq
-                                                                                                                        (Cond 
-                                                                                                                          (Equal 
+                                                                                                                        (Cond
+                                                                                                                          (Equal
                                                                                                                             (Var "rtb_Logical_Operator1")
                                                                                                                             (Const 1)
                                                                                                                           )
@@ -1053,8 +1053,8 @@ val MAIN_def =
                                                                                                                             (Var "rtb_Logical_Operator")
                                                                                                                           )
                                                                                                                           (Seq
-                                                                                                                            (Cond 
-                                                                                                                              (Equal 
+                                                                                                                            (Cond
+                                                                                                                              (Equal
                                                                                                                                 (Var "Switch6")
                                                                                                                                 (Const 1)
                                                                                                                               )
@@ -1070,8 +1070,8 @@ val MAIN_def =
                                                                                                                             )
                                                                                                                           )
                                                                                                                         )
-                                                                                                                        (Cond 
-                                                                                                                          (Equal 
+                                                                                                                        (Cond
+                                                                                                                          (Equal
                                                                                                                             (Var "rtb_Logical_Operator1")
                                                                                                                             (Const 1)
                                                                                                                           )
@@ -1079,8 +1079,8 @@ val MAIN_def =
                                                                                                                             (Var "rtb_Logical_Operator")
                                                                                                                           )
                                                                                                                           (Seq
-                                                                                                                            (Cond 
-                                                                                                                              (Equal 
+                                                                                                                            (Cond
+                                                                                                                              (Equal
                                                                                                                                 (Var "Switch6")
                                                                                                                                 (Const 1)
                                                                                                                               )
@@ -1155,8 +1155,8 @@ val MAIN_def =
                         (Assign "Model_Outputs4"
                           (Var "Switch3_a")
                         )
-                        (Cond 
-                          (Equal 
+                        (Cond
+                          (Equal
                             (Var "in18")
                             (Const 1)
                           )

@@ -30,7 +30,7 @@ val op>> = op THEN1;
 (* Subtype checking.                                                     *)
 (* --------------------------------------------------------------------- *)
 
-val group1_sc = 
+val group1_sc =
   map SC_SIMPLIFICATION
   [] @
   map SC_JUDGEMENT
@@ -41,7 +41,7 @@ val group1_sc =
    GID_SUBTYPE,
    GINV_SUBTYPE];
 
-val group3_sc = 
+val group3_sc =
   map SC_SIMPLIFICATION
   [] @
   map SC_JUDGEMENT

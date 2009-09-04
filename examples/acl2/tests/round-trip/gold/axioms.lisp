@@ -3740,7 +3740,7 @@
             (ACCUMULATED-TTREE)
             (ACCUMULATED-WARNINGS)
             (ACL2-RAW-MODE-P)
-            (ACL2-VERSION . "ACL2 Version 3.5")
+            (ACL2-VERSION . "ACL2 Version 3.6")
             (AXIOMSP)
             (BDDNOTES)
             (CERTIFY-BOOK-DISABLEDP)
@@ -3847,6 +3847,7 @@
                                   DELETE-INCLUDE-BOOK-DIR CERTIFY-BOOK
                                   PROGN! F-PUT-GLOBAL PUSH-UNTOUCHABLE
                                   SET-BACKCHAIN-LIMIT SET-DEFAULT-HINTS!
+                                  SET-OVERRIDE-HINTS-MACRO
                                   DEFTHEORY PSTK VERIFY-GUARDS
                                   DEFCHOOSE SET-DEFAULT-BACKCHAIN-LIMIT
                                   SET-STATE-OK SET-IGNORE-OK
@@ -3913,6 +3914,7 @@
             (PRINT-BASE . 10)
             (PRINT-CASE . :UPCASE)
             (PRINT-CIRCLE)
+            (PRINT-CIRCLE-FILES . T)
             (PRINT-CLAUSE-IDS)
             (PRINT-DOC-START-COLUMN . 15)
             (PRINT-ESCAPE . T)
@@ -3974,6 +3976,7 @@
             (REDO-FLAT-FAIL)
             (REDO-FLAT-SUCC)
             (REDUNDANT-WITH-RAW-CODE-OKP)
+            (RETRACE-P)
             (SAFE-MODE)
             (SAVED-OUTPUT-P)
             (SAVED-OUTPUT-REVERSED)
@@ -4003,6 +4006,7 @@
             (TTAGS-ALLOWED . :ALL)
             (UNDONE-WORLDS-KILL-RING NIL NIL NIL)
             (USER-HOME-DIR)
+            (VERBOSE-THEORY-WARNING . T)
             (WINDOW-INTERFACE-POSTLUDE
                  .
                  "#>\\>#<\\<e(acl2-window-postlude ?~sw ~xt ~xp)#>\\>")
@@ -4094,7 +4098,7 @@
             (ACCUMULATED-TTREE)
             (ACCUMULATED-WARNINGS)
             (ACL2-RAW-MODE-P)
-            (ACL2-VERSION . "ACL2 Version 3.5")
+            (ACL2-VERSION . "ACL2 Version 3.6")
             (AXIOMSP)
             (BDDNOTES)
             (CERTIFY-BOOK-DISABLEDP)
@@ -4201,6 +4205,7 @@
                                   DELETE-INCLUDE-BOOK-DIR CERTIFY-BOOK
                                   PROGN! F-PUT-GLOBAL PUSH-UNTOUCHABLE
                                   SET-BACKCHAIN-LIMIT SET-DEFAULT-HINTS!
+                                  SET-OVERRIDE-HINTS-MACRO
                                   DEFTHEORY PSTK VERIFY-GUARDS
                                   DEFCHOOSE SET-DEFAULT-BACKCHAIN-LIMIT
                                   SET-STATE-OK SET-IGNORE-OK
@@ -4267,6 +4272,7 @@
             (PRINT-BASE . 10)
             (PRINT-CASE . :UPCASE)
             (PRINT-CIRCLE)
+            (PRINT-CIRCLE-FILES . T)
             (PRINT-CLAUSE-IDS)
             (PRINT-DOC-START-COLUMN . 15)
             (PRINT-ESCAPE . T)
@@ -4328,6 +4334,7 @@
             (REDO-FLAT-FAIL)
             (REDO-FLAT-SUCC)
             (REDUNDANT-WITH-RAW-CODE-OKP)
+            (RETRACE-P)
             (SAFE-MODE)
             (SAVED-OUTPUT-P)
             (SAVED-OUTPUT-REVERSED)
@@ -4357,6 +4364,7 @@
             (TTAGS-ALLOWED . :ALL)
             (UNDONE-WORLDS-KILL-RING NIL NIL NIL)
             (USER-HOME-DIR)
+            (VERBOSE-THEORY-WARNING . T)
             (WINDOW-INTERFACE-POSTLUDE
                  .
                  "#>\\>#<\\<e(acl2-window-postlude ?~sw ~xt ~xp)#>\\>")
@@ -4446,7 +4454,7 @@
             (ACCUMULATED-TTREE)
             (ACCUMULATED-WARNINGS)
             (ACL2-RAW-MODE-P)
-            (ACL2-VERSION . "ACL2 Version 3.5")
+            (ACL2-VERSION . "ACL2 Version 3.6")
             (AXIOMSP)
             (BDDNOTES)
             (CERTIFY-BOOK-DISABLEDP)
@@ -4553,6 +4561,7 @@
                                   DELETE-INCLUDE-BOOK-DIR CERTIFY-BOOK
                                   PROGN! F-PUT-GLOBAL PUSH-UNTOUCHABLE
                                   SET-BACKCHAIN-LIMIT SET-DEFAULT-HINTS!
+                                  SET-OVERRIDE-HINTS-MACRO
                                   DEFTHEORY PSTK VERIFY-GUARDS
                                   DEFCHOOSE SET-DEFAULT-BACKCHAIN-LIMIT
                                   SET-STATE-OK SET-IGNORE-OK
@@ -4619,6 +4628,7 @@
             (PRINT-BASE . 10)
             (PRINT-CASE . :UPCASE)
             (PRINT-CIRCLE)
+            (PRINT-CIRCLE-FILES . T)
             (PRINT-CLAUSE-IDS)
             (PRINT-DOC-START-COLUMN . 15)
             (PRINT-ESCAPE . T)
@@ -4680,6 +4690,7 @@
             (REDO-FLAT-FAIL)
             (REDO-FLAT-SUCC)
             (REDUNDANT-WITH-RAW-CODE-OKP)
+            (RETRACE-P)
             (SAFE-MODE)
             (SAVED-OUTPUT-P)
             (SAVED-OUTPUT-REVERSED)
@@ -4709,6 +4720,7 @@
             (TTAGS-ALLOWED . :ALL)
             (UNDONE-WORLDS-KILL-RING NIL NIL NIL)
             (USER-HOME-DIR)
+            (VERBOSE-THEORY-WARNING . T)
             (WINDOW-INTERFACE-POSTLUDE
                  .
                  "#>\\>#<\\<e(acl2-window-postlude ?~sw ~xt ~xp)#>\\>")
@@ -4805,7 +4817,7 @@
      (ACCUMULATED-TTREE)
      (ACCUMULATED-WARNINGS)
      (ACL2-RAW-MODE-P)
-     (ACL2-VERSION . "ACL2 Version 3.5")
+     (ACL2-VERSION . "ACL2 Version 3.6")
      (AXIOMSP)
      (BDDNOTES)
      (CERTIFY-BOOK-DISABLEDP)
@@ -4912,6 +4924,7 @@
                            DELETE-INCLUDE-BOOK-DIR CERTIFY-BOOK
                            PROGN! F-PUT-GLOBAL PUSH-UNTOUCHABLE
                            SET-BACKCHAIN-LIMIT SET-DEFAULT-HINTS!
+                           SET-OVERRIDE-HINTS-MACRO
                            DEFTHEORY PSTK VERIFY-GUARDS
                            DEFCHOOSE SET-DEFAULT-BACKCHAIN-LIMIT
                            SET-STATE-OK SET-IGNORE-OK
@@ -4978,6 +4991,7 @@
      (PRINT-BASE . 10)
      (PRINT-CASE . :UPCASE)
      (PRINT-CIRCLE)
+     (PRINT-CIRCLE-FILES . T)
      (PRINT-CLAUSE-IDS)
      (PRINT-DOC-START-COLUMN . 15)
      (PRINT-ESCAPE . T)
@@ -5038,6 +5052,7 @@
      (REDO-FLAT-FAIL)
      (REDO-FLAT-SUCC)
      (REDUNDANT-WITH-RAW-CODE-OKP)
+     (RETRACE-P)
      (SAFE-MODE)
      (SAVED-OUTPUT-P)
      (SAVED-OUTPUT-REVERSED)
@@ -5067,6 +5082,7 @@
      (TTAGS-ALLOWED . :ALL)
      (UNDONE-WORLDS-KILL-RING NIL NIL NIL)
      (USER-HOME-DIR)
+     (VERBOSE-THEORY-WARNING . T)
      (WINDOW-INTERFACE-POSTLUDE
           .
           "#>\\>#<\\<e(acl2-window-postlude ?~sw ~xt ~xp)#>\\>")
@@ -5083,7 +5099,7 @@
      (ACCUMULATED-TTREE)
      (ACCUMULATED-WARNINGS)
      (ACL2-RAW-MODE-P)
-     (ACL2-VERSION . "ACL2 Version 3.5")
+     (ACL2-VERSION . "ACL2 Version 3.6")
      (AXIOMSP)
      (BDDNOTES)
      (CERTIFY-BOOK-DISABLEDP)
@@ -5190,6 +5206,7 @@
                            DELETE-INCLUDE-BOOK-DIR CERTIFY-BOOK
                            PROGN! F-PUT-GLOBAL PUSH-UNTOUCHABLE
                            SET-BACKCHAIN-LIMIT SET-DEFAULT-HINTS!
+                           SET-OVERRIDE-HINTS-MACRO
                            DEFTHEORY PSTK VERIFY-GUARDS
                            DEFCHOOSE SET-DEFAULT-BACKCHAIN-LIMIT
                            SET-STATE-OK SET-IGNORE-OK
@@ -5256,6 +5273,7 @@
      (PRINT-BASE . 10)
      (PRINT-CASE . :UPCASE)
      (PRINT-CIRCLE)
+     (PRINT-CIRCLE-FILES . T)
      (PRINT-CLAUSE-IDS)
      (PRINT-DOC-START-COLUMN . 15)
      (PRINT-ESCAPE . T)
@@ -5316,6 +5334,7 @@
      (REDO-FLAT-FAIL)
      (REDO-FLAT-SUCC)
      (REDUNDANT-WITH-RAW-CODE-OKP)
+     (RETRACE-P)
      (SAFE-MODE)
      (SAVED-OUTPUT-P)
      (SAVED-OUTPUT-REVERSED)
@@ -5345,6 +5364,7 @@
      (TTAGS-ALLOWED . :ALL)
      (UNDONE-WORLDS-KILL-RING NIL NIL NIL)
      (USER-HOME-DIR)
+     (VERBOSE-THEORY-WARNING . T)
      (WINDOW-INTERFACE-POSTLUDE
           .
           "#>\\>#<\\<e(acl2-window-postlude ?~sw ~xt ~xp)#>\\>")
@@ -7134,11 +7154,9 @@
                                        WRLD)))
            'O<))
 
-(DEFUN GOOD-DEFUN-MODE-P (P) (MEMBER-EQ P '(:LOGIC :PROGRAM)))
-
 (DEFUN DEFAULT-DEFUN-MODE (WRLD)
        ((LAMBDA (VAL)
-                (IF (GOOD-DEFUN-MODE-P VAL)
+                (IF (MEMBER-EQ VAL '(:LOGIC :PROGRAM))
                     VAL ':PROGRAM))
         (CDR (ASSOC-EQ ':DEFUN-MODE
                        (TABLE-ALIST 'ACL2-DEFAULTS-TABLE
@@ -7990,7 +8008,7 @@
       'T
       (HARD-ERROR
        'SEARCH
-       '"The first two arguments of ~x0 much both evaluate to true ~
+       '"The first two arguments of ~x0 must both evaluate to true ~
                    lists or must both evaluate to strings."
        (CONS (CONS '#\0 'SEARCH) 'NIL))))))
   ((LAMBDA (END1 END2 SEQ2 SEQ1 START2 START1)

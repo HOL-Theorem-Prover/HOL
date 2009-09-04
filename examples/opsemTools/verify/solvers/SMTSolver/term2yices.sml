@@ -9,7 +9,7 @@
 
 Examples:
   x > -1 is correctly parsed
-  -x > 1 raise an exception because ~x is not parsed 
+  -x > 1 raise an exception because ~x is not parsed
 *)
 
 
@@ -29,7 +29,7 @@ open intSyntax   (* various functions on ints (e.g. is_plus) *)
 
 (* ============================================= *)
 (* inputs:
-   - the name of the program, 
+   - the name of the program,
    - a term (logical expression)
    output: a .ys file that follows the syntax of yices
 *)
@@ -41,7 +41,7 @@ open intSyntax   (* various functions on ints (e.g. is_plus) *)
    of arrayOutOfBound variable, that are used to replace
    and access to FEMPTY
 *)
-val nbArrayOutOfBound = ref 0; 
+val nbArrayOutOfBound = ref 0;
 
 fun incNbArrayOutOfBound() =
    nbArrayOutOfBound := !nbArrayOutOfBound + 1;
@@ -53,10 +53,10 @@ fun resetNbArrayOutOfBound() =
 (* functions for parsing Boolean and integer terms *)
 (* ----------------------------------------------- *)
 
-(* ad hoc function to temporary handle Num in terms 
-   built from \forall JML 
+(* ad hoc function to temporary handle Num in terms
+   built from \forall JML
    TODO: handle domains of numeral values*)
-fun is_num t = 
+fun is_num t =
    if is_comb t
    then
      let val (opr,v) = dest_comb t
@@ -71,12 +71,12 @@ fun is_num t =
 
 (* functions for parsing exponential *)
 fun is_exponential tm =
- is_comb tm 
-  andalso is_comb(rator tm) 
-  andalso is_const(rator(rator tm)) 
+ is_comb tm
+  andalso is_comb(rator tm)
+  andalso is_const(rator(rator tm))
   andalso (fst(dest_const(rator(rator tm))) = "int_exp");
 
-fun dest_exponential tm = 
+fun dest_exponential tm =
  if is_exponential tm
   then (rand(rator tm), rand tm)
   else raise ERR "dest_exponential" "not an integer exponential";
@@ -90,14 +90,14 @@ fun is_fempty tm =
  andalso (snd(dest_comb(rator tm))=``FEMPTY:num |-> int``);
 
 
-fun is_comparator(t) = 
+fun is_comparator(t) =
     is_less(t) orelse is_leq(t) orelse is_great(t)
     orelse is_geq(t) orelse is_eq(t);
 
 (* to know if a term is a "if then else" term *)
 fun is_conditional tm =
- is_comb tm 
-  andalso is_comb(rator tm) 
+ is_comb tm
+  andalso is_comb(rator tm)
   andalso is_comb(rator (rator tm) )
    andalso is_const(rator(rator (rator tm)) )
    andalso fst(dest_const(rator(rator (rator tm)))) = "COND";
@@ -105,13 +105,13 @@ fun is_conditional tm =
 
 fun is_bool_term(t) =
     is_neg(t) orelse is_conj(t) orelse is_disj(t)
-    orelse is_imp_only(t) orelse is_var(t) orelse 
+    orelse is_imp_only(t) orelse is_var(t) orelse
     is_comparator(t) orelse is_conditional t ;
 
 fun is_int_term(t) =
     is_plus(t) orelse is_minus(t) orelse is_mult(t)
-    orelse is_div(t) orelse is_exponential(t) 
-    orelse is_var(t) orelse is_int_literal(t) orelse 
+    orelse is_div(t) orelse is_exponential(t)
+    orelse is_var(t) orelse is_int_literal(t) orelse
     is_num(t) orelse  numSyntax.is_numeral t (* added for \forall in JML *)
     orelse is_fempty(t);
 
@@ -130,53 +130,53 @@ fun get_var(tm) =
 (* function for parsing a Boolean term (without quantifiers) *)
 fun parse_bool(tm,i) =
  if is_const tm
- then 
+ then
   if tm = ``T``
   then " true "
   else " false "
  else
   if is_conditional tm
   then parse_conditional_bool tm
-    else 
-      if is_var(tm) 
+    else
+      if is_var(tm)
         then let val v = get_var(tm)
               in
                 "(= " ^ v  ^ "1)"
               end
-      else 
+      else
         if is_comparator(tm)
         then parse_comparator(tm,i+1)
         else
             if is_neg(tm)
-            then 
-                let val c1 = parse_bool(dest_neg tm,i+1); 
-                in 
-                  "(not "   ^ c1  ^")" 
+            then
+                let val c1 = parse_bool(dest_neg tm,i+1);
+                in
+                  "(not "   ^ c1  ^")"
                 end
-            else 
+            else
                 (* binary operators *)
     if is_disj(tm)
     then
-        let val c1 = parse_bool(fst(dest_disj tm),i+1); 
-          val c2 = parse_bool(snd(dest_disj tm),i+1); 
+        let val c1 = parse_bool(fst(dest_disj tm),i+1);
+          val c2 = parse_bool(snd(dest_disj tm),i+1);
         in
             "(or " ^  c1 ^  c2  ^ ")\n"
         end
-    else 
+    else
         if is_imp_only(tm)
         then
-             let val c1 = parse_bool(fst(dest_imp_only tm),i+1); 
-              val c2 = parse_bool(snd(dest_imp_only tm),i+1); 
+             let val c1 = parse_bool(fst(dest_imp_only tm),i+1);
+              val c2 = parse_bool(snd(dest_imp_only tm),i+1);
             in
                 "(=>" ^  c1 ^  c2  ^ ")\n"
             end
                 (* conjunction *)
-        else 
+        else
           if (fst(dest_conj tm)=``T``)
           then parse_bool(snd(dest_conj tm),i+1)
           else
-            let val c1 = parse_bool(fst(dest_conj tm),i+1); 
-              val c2 = parse_bool(snd(dest_conj tm),i+1); 
+            let val c1 = parse_bool(fst(dest_conj tm),i+1);
+              val c2 = parse_bool(snd(dest_conj tm),i+1);
             in
                  "(and " ^  c1 ^  c2  ^ ")\n"
             end
@@ -185,15 +185,15 @@ fun parse_bool(tm,i) =
 
 and
 
-(* function to parse a conditional term with Boolean value 
-   i.e if b then x else y where x and y are Booleans 
+(* function to parse a conditional term with Boolean value
+   i.e if b then x else y where x and y are Booleans
 *)
 parse_conditional_bool tm =
   let val cond = rand (rator (rator tm))
     val iff = rand  (rator tm)
     val thenn = rand tm
   in
-   "(if "  ^ parse_bool(cond,1) ^ "\n" ^ 
+   "(if "  ^ parse_bool(cond,1) ^ "\n" ^
      parse_bool(iff,1) ^ "\n" ^
      parse_bool(thenn,1) ^ ")"
   end
@@ -204,22 +204,22 @@ parse_conditional_bool tm =
 and  parse_int(tm,i) =
   if is_num(tm)
   then let val (opr,v) = dest_comb(tm)
-    in 
-     parse_int(v,i) 
-    end            
+    in
+     parse_int(v,i)
+    end
   else
-    if is_var(tm) 
-    then " " ^ get_var(tm)  
-    else 
+    if is_var(tm)
+    then " " ^ get_var(tm)
+    else
       if is_int_literal(tm) orelse numSyntax.is_numeral(tm)
-       then 
+       then
          let val l =  term_to_string(tm);
            in
              if is_negated(tm)
              then  " -" ^ substring(l,1,size(l)-1)
-             else  " " ^ l 
+             else  " " ^ l
          end
-    else 
+    else
        if is_conditional tm
        then parse_conditional_int tm
       else if is_fempty tm
@@ -228,39 +228,39 @@ and  parse_int(tm,i) =
    else
       if is_plus(tm)
       then
-        let val c1 = parse_int(fst(dest_plus tm),i+1); 
-          val c2 = parse_int(snd(dest_plus tm),i+1); 
+        let val c1 = parse_int(fst(dest_plus tm),i+1);
+          val c2 = parse_int(snd(dest_plus tm),i+1);
           in
              "(+ " ^ c1 ^  c2 ^ ")"
           end
-      else 
+      else
         if is_minus(tm)
         then
-          let val c1 = parse_int(fst(dest_minus tm),i+1); 
-            val c2 = parse_int(snd(dest_minus tm),i+1); 
+          let val c1 = parse_int(fst(dest_minus tm),i+1);
+            val c2 = parse_int(snd(dest_minus tm),i+1);
             in
               "(- " ^  c1 ^  c2 ^ ")"
             end
-        else 
+        else
           if is_mult(tm)
           then
-            let val c1 = parse_int(fst(dest_mult tm),i+1); 
-               val c2 = parse_int(snd(dest_mult tm),i+1); 
+            let val c1 = parse_int(fst(dest_mult tm),i+1);
+               val c2 = parse_int(snd(dest_mult tm),i+1);
                in
                   "(* " ^  c1 ^  c2 ^  ")"
                end
-          else 
+          else
             if is_div(tm)
             then
-              let val c1 = parse_int(fst(dest_div tm),i+1); 
-                val c2 = parse_int(snd(dest_div tm),i+1); 
+              let val c1 = parse_int(fst(dest_div tm),i+1);
+                val c2 = parse_int(snd(dest_div tm),i+1);
                 in
                    "(/ " ^  c1 ^  c2  ^ ")"
                 end
             else (* exponential *)
               (* n**2 is translated as n*n *)
               if snd(dest_exponential tm)=``2``
-              then 
+              then
                 let val c =  parse_int(fst(dest_exponential tm),i+1);
                    in
                      "(* " ^  c ^  c ^  ")"
@@ -269,15 +269,15 @@ and  parse_int(tm,i) =
 
 and
 
-(* function to parse a conditional term with integer value 
-   i.e if b then x else y where x and y are integers 
+(* function to parse a conditional term with integer value
+   i.e if b then x else y where x and y are integers
 *)
 parse_conditional_int tm =
   let val cond = rand (rator (rator tm))
     val iff = rand  (rator tm)
     val thenn = rand tm
   in
-   "(if "  ^ parse_bool(cond,1) ^ "\n" ^ 
+   "(if "  ^ parse_bool(cond,1) ^ "\n" ^
      parse_int(iff,1) ^ "\n" ^
      parse_int(thenn,1) ^ ")"
   end
@@ -288,38 +288,38 @@ parse_conditional_int tm =
 and parse_comparator(tm,i) =
         if is_less(tm)
         then
-            let val c1 = parse_int(fst(dest_less tm),i+1); 
-              val c2 = parse_int(snd(dest_less tm),i+1); 
+            let val c1 = parse_int(fst(dest_less tm),i+1);
+              val c2 = parse_int(snd(dest_less tm),i+1);
             in
                 "(< " ^ c1 ^ c2 ^  ")"
             end
         else
             if is_leq(tm)
             then
-                let val c1 = parse_int(fst(dest_leq tm),i+1); 
-                  val c2 = parse_int(snd(dest_leq tm),i+1); 
+                let val c1 = parse_int(fst(dest_leq tm),i+1);
+                  val c2 = parse_int(snd(dest_leq tm),i+1);
                 in
                      "(<= " ^ c1  ^ c2  ^ ")"
                 end
             else
                 if is_eq(tm)
-                then 
-                    let val c1 = parse_int(fst(dest_eq tm),i+1); 
-                      val c2 = parse_int(snd(dest_eq tm),i+1); 
+                then
+                    let val c1 = parse_int(fst(dest_eq tm),i+1);
+                      val c2 = parse_int(snd(dest_eq tm),i+1);
                     in
                         "(= "  ^ c1 ^ c2 ^  ")"
                     end
                     else
                     if is_great(tm)
                     then
-                        let val c1 = parse_int(fst(dest_great tm),i+1); 
-                          val c2 = parse_int(snd(dest_great tm),i+1); 
+                        let val c1 = parse_int(fst(dest_great tm),i+1);
+                          val c2 = parse_int(snd(dest_great tm),i+1);
                         in
                            "(> "  ^  c1 ^  c2 ^ ")"
                         end
                     else (* greater or equal *)
-                             let val c1 = parse_int(fst(dest_geq tm),i+1); 
-                               val c2 = parse_int(snd(dest_geq tm),i+1); 
+                             let val c1 = parse_int(fst(dest_geq tm),i+1);
+                               val c2 = parse_int(snd(dest_geq tm),i+1);
                              in
                                 "(>= "   ^  c1 ^  c2 ^  ")"
                              end;
@@ -344,8 +344,8 @@ fun arrayOutOfBoundVars() =
 in
 
 fun var_list tm =
-  let val l = all_vars tm 
-    val ll = 
+  let val l = all_vars tm
+    val ll =
        map (fn v => "(define " ^ term_to_string(v) ^"::int)\n")
        l
   in
@@ -356,7 +356,7 @@ end;
 
 (* to add check command *)
 (* -------------------- *)
-fun check_term() = 
+fun check_term() =
    "\n(check)";
 
 
@@ -364,7 +364,7 @@ fun check_term() =
 (* terms can be empty *)
 (* ------------------ *)
 
-fun get_term(t) = 
+fun get_term(t) =
    (resetNbArrayOutOfBound();
     "(assert \n" ^ parse_bool(t,1) ^ "\n)\n");
 

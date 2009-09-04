@@ -5,11 +5,11 @@ struct
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
-            (concat home_dir "src/translations") :: 
-            (concat home_dir "src/tools") :: 
-            (concat home_dir "src/model_check") :: 
-            (concat hol_dir "examples/PSL/path") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
+            (concat home_dir "src/translations") ::
+            (concat home_dir "src/tools") ::
+            (concat home_dir "src/model_check") ::
+            (concat hol_dir "examples/PSL/path") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
@@ -26,15 +26,15 @@ map load
 *)
 
 open HolKernel boolLib bossLib
-     ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory   
-     prop_logicTheory 
+     ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
+     prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
-     pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory symbolic_kripke_structureTheory 
+     pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory symbolic_kripke_structureTheory
      numLib semi_automatonTheory omega_automatonTheory
      omega_automaton_translationsTheory ctl_starTheory
      ltl_to_automaton_formulaTheory containerTheory
      psl_to_rltlTheory rltl_to_ltlTheory temporal_deep_simplificationsLib congLib ibmTheory computeLib psl_lemmataTheory translationsLib
-     modelCheckLib Travrules SyntacticSugarTheory RewritesTheory;  
+     modelCheckLib Travrules SyntacticSugarTheory RewritesTheory;
 
 (*
 show_assums := false;
@@ -55,22 +55,22 @@ METIS_TAC[CONVERT_PATH_LTL_PSL___IS_INFINITE_TOP_BOTTOM_FREE]);
 
 val P_USED_VARS___P_BIGOR___EVAL =
   prove (``!n0 n1. P_USED_VARS (P_BIGOR (MAP P_PROP (INTERVAL_LIST n0 n1))) = (INTERVAL_SET n0 n1)``,
-  
+
   ONCE_REWRITE_TAC[EXTENSION] THEN
   SIMP_TAC std_ss [P_BIGOR___P_USED_VARS,
     MAP_MAP_o, combinTheory.o_DEF, P_USED_VARS_def,
     IN_INTERVAL_SET, IN_LIST_BIGUNION,
     MEM_MAP, IN_SING, MEM_INTERVAL_LIST,
     GSYM LEFT_EXISTS_AND_THM]);
-  
+
 
 val PROBLEM_TO_KRIPKE_STRUCTURE___eval =
   store_simp_thm ("PROBLEM_TO_KRIPKE_STRUCTURE___eval",
     ``!A i0 s0 p psl psl' sv. (sv =
           (\(n :num).
              (2 :num) * (2 :num) ** (SUC s0 - i0) + s0 + (3 :num) + n)) ==>
-           (i0 <= s0) ==>           
-           (A.S = (INTERVAL_SET (SUC i0) s0)) ==> 
+           (i0 <= s0) ==>
+           (A.S = (INTERVAL_SET (SUC i0) s0)) ==>
            (SEMI_AUTOMATON_USED_VARS A SUBSET (INTERVAL_SET 0 s0)) ==>
            (P_USED_VARS p SUBSET (INTERVAL_SET 0 s0)) ==>
             UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE psl psl' ==>
@@ -185,7 +185,7 @@ val PROBLEM_TO_KRIPKE_STRUCTURE___eval =
       (!K. (A_KS_SEM K (A_UNIV (A,ACCEPT_COND_G p))) =
       UF_KS_SEM K psl))``,
 
-      REPEAT STRIP_TAC THEN      
+      REPEAT STRIP_TAC THEN
       `!K. UF_KS_SEM K psl = UF_KS_SEM K psl'` by METIS_TAC [UF_KS_SEM___cong] THEN
       ASM_SIMP_TAC std_ss [] THEN
 
@@ -202,7 +202,7 @@ val PROBLEM_TO_KRIPKE_STRUCTURE___eval =
         UNDISCH_NO_TAC 12 (*i0 <= s0*) THEN
         ASM_SIMP_TAC std_ss [SEMI_AUTOMATON_USED_VARS_def, SUBSET_DEF, IN_UNION, IN_INTERVAL_SET, SEMI_AUTOMATON_USED_INPUT_VARS_def,
         IN_DIFF] THEN
-        REPEAT WEAKEN_HD_TAC THEN 
+        REPEAT WEAKEN_HD_TAC THEN
         REPEAT STRIP_TAC THEN
         RES_TAC,
 
@@ -218,7 +218,7 @@ val PROBLEM_TO_KRIPKE_STRUCTURE___eval =
 
 val PROBLEM_TO_KRIPKE_STRUCTURE___TOTAL___eval =
   store_simp_thm ("PROBLEM_TO_KRIPKE_STRUCTURE___TOTAL___eval",
-    ``!A i0 s0 p psl psl' sv. 
+    ``!A i0 s0 p psl psl' sv.
            IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A ==>
            (sv = \n:num. 2**(s0 - i0) + s0 + 1 + n) ==>
            (i0 <= s0) ==>
@@ -271,7 +271,7 @@ val PROBLEM_TO_KRIPKE_STRUCTURE___TOTAL___eval =
           (symbolic_kripke_structure S0 R) (MAP (\x. x sv) DS.FC))
         =
 
-      (!K. 
+      (!K.
       ((A_KS_SEM K (A_UNIV (A,ACCEPT_COND_G p))) =
       UF_KS_SEM K psl)))``,
 
@@ -292,7 +292,7 @@ val PROBLEM_TO_KRIPKE_STRUCTURE___TOTAL___eval =
         UNDISCH_NO_TAC 12 (*i0 <= s0*) THEN
         ASM_SIMP_TAC std_ss [SEMI_AUTOMATON_USED_VARS_def, SUBSET_DEF, IN_UNION, IN_INTERVAL_SET, SEMI_AUTOMATON_USED_INPUT_VARS_def,
         IN_DIFF] THEN
-        REPEAT WEAKEN_HD_TAC THEN 
+        REPEAT WEAKEN_HD_TAC THEN
         REPEAT STRIP_TAC THEN
         RES_TAC,
 
@@ -361,7 +361,7 @@ fun prepare_input_automaton A =
      IN_SING, XP_USED_VARS_EVAL, IN_INTERVAL_SET, DISJ_IMP_THM,
      P_USED_VARS_EVAL, symbolic_semi_automaton_REWRITES, NOT_IN_EMPTY] used_vars_term))
   in
-    (s0, i0, i0_le_s0, state_vars, used_vars)    
+    (s0, i0, i0_le_s0, state_vars, used_vars)
   end;
 
 
@@ -373,9 +373,9 @@ fun prepare_ctl p s0 =
       mk_var ("s0", num) |-> s0] used_vars_term;
     val used_vars = EQT_ELIM (SIMP_CONV std_ss [SEMI_AUTOMATON_USED_VARS___DIRECT_DEF, SUBSET_DEF, IN_UNION,
      IN_SING, XP_USED_VARS_EVAL, IN_INTERVAL_SET, DISJ_IMP_THM, NOT_IN_EMPTY,
-     P_USED_VARS_EVAL, symbolic_semi_automaton_REWRITES] used_vars_term)   
+     P_USED_VARS_EVAL, symbolic_semi_automaton_REWRITES] used_vars_term)
   in
-    used_vars    
+    used_vars
   end;
 
 
@@ -387,7 +387,7 @@ val PSL_EQUIVALENT_congs =
     ``(!f f'. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f f' ==>
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_NOT f) (F_NOT f')) /\
 
-      (!f1 f1' f2 f2'. 
+      (!f1 f1' f2 f2'.
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f1' ==>
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f2 f2' ==>
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_AND (f1, f2)) (F_AND (f1', f2'))) /\
@@ -395,23 +395,23 @@ val PSL_EQUIVALENT_congs =
       (!f f'. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f f' ==>
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_NEXT f) (F_NEXT f')) /\
 
-      (!f1 f1' f2 f2'. 
+      (!f1 f1' f2 f2'.
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f1' ==>
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f2 f2' ==>
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_UNTIL (f1, f2)) (F_UNTIL (f1', f2'))) /\
 
-      (!f f' r. 
+      (!f f' r.
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f f' ==>
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_SUFFIX_IMP (r, f)) (F_SUFFIX_IMP (r, f'))) /\
 
-      (!f f' c. 
+      (!f f' c.
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f f' ==>
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_U_CLOCK c f) (F_U_CLOCK c f')) /\
 
-      (!f f' c. 
+      (!f f' c.
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f f' ==>
               UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_W_CLOCK c f) (F_W_CLOCK c f'))``,
-    
+
     SIMP_TAC std_ss [UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def,
       UnclockedSemanticsTheory.UF_SEM_def, F_U_CLOCK_def, F_W_CLOCK_def,
       F_W_def, F_G_def, F_F_def, F_OR_def] THEN
@@ -419,10 +419,10 @@ val PSL_EQUIVALENT_congs =
       METIS_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT],
       METIS_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN],
       METIS_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN],
-      METIS_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN],      
-      METIS_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN],      
+      METIS_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN],
+      METIS_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN],
 
-      METIS_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN, IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT]      
+      METIS_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN, IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT]
     ]);
 
 
@@ -433,18 +433,18 @@ val PSL_EQUIVALENT_rewrites =
     ``!f. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_NOT (F_NOT f)) f``,
 
     SIMP_TAC std_ss [UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def,
-      UnclockedSemanticsTheory.UF_SEM_def, 
+      UnclockedSemanticsTheory.UF_SEM_def,
       RewritesPropertiesTheory.COMPLEMENT_COMPLEMENT]);
 
 
 val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL_BIGCAT___EVAL =
  prove (
-``(!f:'a fl b c. 
-   UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE 
-    (F_CLOCK_COMP c (F_SUFFIX_IMP (S_BOOL_BIGCAT [b], f))) 
+``(!f:'a fl b c.
+   UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE
+    (F_CLOCK_COMP c (F_SUFFIX_IMP (S_BOOL_BIGCAT [b], f)))
     (F_W_CLOCK c (F_NOT (F_AND (F_NOT (F_NOT (F_STRONG_BOOL b)), F_NOT (F_CLOCK_COMP c f)))))
   ) /\
-  (!f:'a fl b1 b2 l c. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE 
+  (!f:'a fl b1 b2 l c. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE
     (F_CLOCK_COMP c (F_SUFFIX_IMP (S_BOOL_BIGCAT (b1::b2::l), f)))
     (F_W_CLOCK c (F_NOT (F_AND (
         F_NOT (F_NOT (F_STRONG_BOOL b1)), F_NOT (F_NOT
@@ -459,14 +459,14 @@ val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL_BIGCAT_
   FULL_SIMP_TAC std_ss [F_CLOCK_COMP_def, F_WEAK_X_def, F_IMPLIES_def, F_OR_def]);
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL_BIGCAT___EVAL = 
+val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL_BIGCAT___EVAL =
 REWRITE_RULE [SyntacticSugarTheory.F_IMPLIES_def, SyntacticSugarTheory.F_OR_def] UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL_BIGCAT;
 
 
 
 val psl_equivalent_preorder =
     mk_preorder (UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TRANS,                             UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___REFL);
-val psl_CS = CSFRAG 
+val psl_CS = CSFRAG
    {rewrs  = [PSL_EQUIVALENT_rewrites,
     UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL_BIGCAT___EVAL,
     UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL_BIGCAT___EVAL],
@@ -475,18 +475,18 @@ val psl_CS = CSFRAG
     congs  = [PSL_EQUIVALENT_congs]};
 val psl_cs = mk_congset [psl_CS];
 
-val F_SUFFIX_IMP___S_BOOL_BIGCAT_def = Define 
+val F_SUFFIX_IMP___S_BOOL_BIGCAT_def = Define
   `F_SUFFIX_IMP___S_BOOL_BIGCAT l f = F_SUFFIX_IMP (S_BOOL_BIGCAT l, f)`
 
 
 
 fun prepare_psl psl i0 =
   let
-    
+
     val eval_thm = (REWRITE_CONV [GSYM F_SUFFIX_IMP___S_BOOL_BIGCAT_def] THENC RESTR_EVAL_CONV [``F_SUFFIX_IMP___S_BOOL_BIGCAT``] THENC
     REWRITE_CONV [F_SUFFIX_IMP___S_BOOL_BIGCAT_def]) psl;
     val eval_term = rhs (concl eval_thm);
-    val equiv_thm = CONGRUENCE_SIMP_CONV ``UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE`` psl_cs std_ss [] eval_term    
+    val equiv_thm = CONGRUENCE_SIMP_CONV ``UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE`` psl_cs std_ss [] eval_term
     val equiv_thm = (CONV_RULE (RATOR_CONV (ONCE_REWRITE_CONV [GSYM eval_thm]))) equiv_thm
     val equiv_thm = (CONV_RULE (RAND_CONV EVAL_CONV)) equiv_thm
 
@@ -504,7 +504,7 @@ fun prepare_psl psl i0 =
      IN_SING, XP_USED_VARS_EVAL, IN_INTERVAL_SET, DISJ_IMP_THM,
      B_USED_VARS_def, NOT_IN_EMPTY]) used_vars_term)
 
-    val psl_to_ltl_term = mk_comb (``PSL_TO_LTL:num fl -> num ltl``, eval_term); 
+    val psl_to_ltl_term = mk_comb (``PSL_TO_LTL:num fl -> num ltl``, eval_term);
     val psl_to_ltl = EVAL psl_to_ltl_term
   in
     (eval_term, equiv_thm, cs_free_thm, used_vars, psl_to_ltl)
@@ -530,9 +530,9 @@ fun reduce_S0 S0_thm =
         let
           val thm = CONV_RULE (RAND_CONV (CBV_CONV s0_cs)) thm
           val thm = CONV_RULE (RAND_CONV (DEPTH_CONV (reduceLib.RED_CONV))) thm
-      
+
           val equiv = CONGRUENCE_SIMP_CONV ``PROP_LOGIC_EQUIVALENT:'a prop_logic -> 'a prop_logic -> bool`` prop_logic_nnf_cs std_ss [] (rand (concl thm))
-      
+
           val new_thm = MATCH_MP prop_logic_equivalent_trans_thm thm
           val new_thm = MATCH_MP new_thm equiv
           val new_thm = reduce_S0 new_thm
@@ -562,9 +562,9 @@ fun reduce_R R_thm =
         let
           val thm = CONV_RULE (RAND_CONV (CBV_CONV r_cs)) thm
           val thm = CONV_RULE (RAND_CONV (DEPTH_CONV (reduceLib.RED_CONV))) thm
-      
+
           val equiv = CONGRUENCE_SIMP_CONV ``XPROP_LOGIC_EQUIVALENT:'a xprop_logic -> 'a xprop_logic -> bool`` xprop_logic_nnf_cs std_ss [] (rand (concl thm))
-      
+
           val new_thm = MATCH_MP xprop_logic_equivalent_trans_thm thm
           val new_thm = MATCH_MP new_thm equiv
           val new_thm = reduce_R new_thm
@@ -593,7 +593,7 @@ val _ = add_thms [XP_ASSIGN_TRUE_FALSE___EVAL, IN_SING, NOT_IN_EMPTY, XP_CURRENT
 
 fun reduce_R thm =
   let
-    val thm = CONV_RULE (RAND_CONV (CBV_CONV r_cs)) thm      
+    val thm = CONV_RULE (RAND_CONV (CBV_CONV r_cs)) thm
   in
     thm
   end
@@ -630,8 +630,8 @@ fun ibm_to_ks A p psl =
     val thm = MP thm psl_used_vars
 
     val thm = SIMP_RULE arith_ss [psl_to_ltl] thm
-    
-    val ltl_term = 
+
+    val ltl_term =
       let
         val t = snd (strip_forall (concl thm))
         val t = rand (rator (rand (rator t)))
@@ -639,9 +639,9 @@ fun ibm_to_ks A p psl =
         t
       end
 
-    val (l', ltl_equiv, ds_thm, ds, pf, b1, b2) = ltl2omega_internal true false true ltl_term 
+    val (l', ltl_equiv, ds_thm, ds, pf, b1, b2) = ltl2omega_internal true false true ltl_term
     val a = if b1 then ``T:bool`` else ``F:bool``;
-    val thm = ISPECL [a, ds, l', pf] thm; 
+    val thm = ISPECL [a, ds, l', pf] thm;
     val thm = MP thm ltl_equiv;
     val thm = MP thm ds_thm;
 
@@ -658,7 +658,7 @@ fun ibm_to_ks A p psl =
 
     (*evaluate INTERVAL_LISTS*)
     val i_term = ``INTERVAL_LIST (SUC i0) (SUC s0)``
-    val i_term = subst [      
+    val i_term = subst [
       mk_var ("i0", num) |-> i0,
       mk_var ("s0", num) |-> s0] i_term;
     val i_term = rhs (concl (REDUCE_CONV i_term))
@@ -667,7 +667,7 @@ fun ibm_to_ks A p psl =
     val i_term = ``(INTERVAL_LIST (SUC (SUC s0) + 2 ** SUC (s0 - i0))
                                   (PRE (2 ** SUC (s0 - i0)) +
                                   (SUC (SUC s0) + 2 ** SUC (s0 - i0))))``;
-    val i_term = subst [      
+    val i_term = subst [
       mk_var ("i0", num) |-> i0,
       mk_var ("s0", num) |-> s0] i_term;
     val i_term = rhs (concl (REDUCE_CONV i_term))
@@ -677,7 +677,7 @@ fun ibm_to_ks A p psl =
     val i_term = ``VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING
                               (INTERVAL_LIST (SUC i0) (SUC s0))
                               (SUC (SUC s0)) (SUC i0)``;
-    val i_term = subst [      
+    val i_term = subst [
       mk_var ("i0", num) |-> i0,
       mk_var ("s0", num) |-> s0] i_term;
     val i_term = rhs (concl ((REDUCE_CONV THENC REWRITE_CONV [i1_thm]) i_term))
@@ -686,7 +686,7 @@ fun ibm_to_ks A p psl =
 
     val thm = SIMP_RULE list_ss [ltl_to_gen_buechi_ds_REWRITES,
      LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def,
-     symbolic_semi_automaton_REWRITES, 
+     symbolic_semi_automaton_REWRITES,
      P_BIGOR_def, i1_thm, i2_thm, i3_thm, P_BIGAND_def, XP_BIGAND_def,
      XP_BIGOR_def, P_VAR_RENAMING_EVAL, XP_NEXT_THM, XP_CURRENT_THM] thm
   in
@@ -705,7 +705,7 @@ fun make_total_thm A =
 
 val P_USED_VARS___P_FORALL___IMPL =
   prove (``
-      !l p P. (!x. x IN P_USED_VARS p ==> P x) ==> 
+      !l p P. (!x. x IN P_USED_VARS p ==> P x) ==>
               (!x. x IN P_USED_VARS (P_FORALL l p) ==> P x)``,
   SIMP_TAC std_ss [P_FORALL___P_USED_VARS, IN_DIFF]);
 
@@ -729,8 +729,8 @@ fun ibm_to_ks_total A p psl total_thm =
     val thm = MP thm psl_used_vars
 
     val thm = SIMP_RULE arith_ss [psl_to_ltl] thm
-    
-    val ltl_term = 
+
+    val ltl_term =
       let
         val t = snd (strip_forall (concl thm))
         val t = rand (rator (rand (rator t)))
@@ -738,9 +738,9 @@ fun ibm_to_ks_total A p psl total_thm =
         t
       end
 
-    val (l', ltl_equiv, ds_thm, ds, pf, b1, b2) = ltl2omega_internal true false true ltl_term 
+    val (l', ltl_equiv, ds_thm, ds, pf, b1, b2) = ltl2omega_internal true false true ltl_term
     val a = if b1 then ``T:bool`` else ``F:bool``;
-    val thm = ISPECL [a, ds, l', pf] thm; 
+    val thm = ISPECL [a, ds, l', pf] thm;
     val thm = MP thm ltl_equiv;
     val thm = MP thm ds_thm;
 
@@ -753,7 +753,7 @@ fun ibm_to_ks_total A p psl total_thm =
     val imp_thm = SIMP_CONV arith_ss [ltl_to_gen_buechi_ds_REWRITES, SUBSET_DEF,
     IN_INTERVAL_SET, IN_INSERT, NOT_IN_EMPTY, P_USED_VARS_EVAL,
     IN_UNION, DISJ_IMP_THM] imp_term
-    val imp2_thm = 
+    val imp2_thm =
       HO_PART_MATCH (fn t => rand t) P_USED_VARS___P_FORALL___IMPL (rhs (concl imp_thm))
     val imp2_thm = SIMP_RULE std_ss [P_USED_VARS_EVAL,
       IN_UNION, DISJ_IMP_THM, IN_SING] imp2_thm
@@ -762,7 +762,7 @@ fun ibm_to_ks_total A p psl total_thm =
         val interval_term = rand (rator (rator (rand (rand (rand (rator (snd (strip_forall (imp2_term)))))))));
         val j = rand (interval_term)
         val i = rand (rator (interval_term))
-      in 
+      in
         (i, j)
       end;
     val P_USED_VARS___VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING___EVAL =
@@ -777,7 +777,7 @@ fun ibm_to_ks_total A p psl total_thm =
 
     (*evaluate INTERVAL_LISTS*)
     val i_term = ``INTERVAL_LIST (SUC i0) s0``
-    val i_term = subst [      
+    val i_term = subst [
       mk_var ("i0", num) |-> i0,
       mk_var ("s0", num) |-> s0] i_term;
     val i_term = rhs (concl (REDUCE_CONV i_term))
@@ -786,7 +786,7 @@ fun ibm_to_ks_total A p psl total_thm =
     val i_term = ``VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING
                               (INTERVAL_LIST (SUC i0) s0)
                               (SUC s0) (SUC i0)``;
-    val i_term = subst [      
+    val i_term = subst [
       mk_var ("i0", num) |-> i0,
       mk_var ("s0", num) |-> s0] i_term;
     val i_term = rhs (concl ((REDUCE_CONV THENC REWRITE_CONV [i1_thm]) i_term))
@@ -795,7 +795,7 @@ fun ibm_to_ks_total A p psl total_thm =
 
     val thm = SIMP_RULE list_ss [ltl_to_gen_buechi_ds_REWRITES,
      LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def,
-     symbolic_semi_automaton_REWRITES, 
+     symbolic_semi_automaton_REWRITES,
      P_BIGOR_def, i1_thm, i2_thm, P_BIGAND_def, XP_BIGAND_def,
      XP_BIGOR_def, P_VAR_RENAMING_EVAL, XP_NEXT_THM, XP_CURRENT_THM,
      XP_CURRENT_NEXT___FORALL, XP_CURRENT_NEXT___EXISTS] thm
@@ -836,7 +836,7 @@ fun ibm_to_ks_clock_total_cheat A p psl =
   end;
 
 
-fun model_check_ibm total A p psl = 
+fun model_check_ibm total A p psl =
     let
       val _ = print "Translating problem to kripke structure ...\n";
       val thm = if total then ibm_to_ks_total_cheat A p psl else ibm_to_ks A p psl;

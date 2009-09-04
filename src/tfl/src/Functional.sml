@@ -142,7 +142,7 @@ end;
 
 fun partition _ _ (_,_,_,[]) = raise ERR"partition" "no rows"
   | partition gv ty_match
-              (constructors, colty, res_ty, 
+              (constructors, colty, res_ty,
                rows as (((prefix:term list,_),_)::_)) =
     let val fresh = fresh_constr ty_match colty gv
         fun part {constrs = [],      rows, A} = rev A
@@ -223,7 +223,7 @@ fun type_names ty =
   end;
 
 (*---------------------------------------------------------------------------
-   Is a constant a constructor for some datatype.                            
+   Is a constant a constructor for some datatype.
   ---------------------------------------------------------------------------*)
 
 fun is_constructor ty_info c =
@@ -308,7 +308,7 @@ fun mk_case ty_info ty_match FV range_ty =
  val divide = partition fresh_var ty_match
  fun expandl literals ty ((_,[]), _) = mk_case_fail "expandl_var_row"
    | expandl literals ty (row as ((prefix, p::rst), rhs)) =
-       if is_var p then 
+       if is_var p then
          let fun expnd l = ((prefix, l::rst), psubst[p |-> l] rhs)
          in map expnd literals
          end
@@ -370,7 +370,7 @@ fun mk_case ty_info ty_match FV range_ty =
        in
           (pat_rect1,tree')
        end
-     else 
+     else
      if all (is_constructor_var_pat ty_info) col0 then (* col. of constrs *)
        let val {case_const,constructors} = Option.valOf(ty_info (Thy,Tyop))
            val {Name = case_const_name, Thy,...} = dest_thy_const case_const
@@ -392,9 +392,9 @@ fun mk_case ty_info ty_match FV range_ty =
        in
           (pat_rect1,tree)
        end
-     else 
+     else
        mk_case_fail "Some patterns are not constants or variables"
-     end 
+     end
     end
  in mk
  end;
@@ -507,11 +507,11 @@ fun mk_functional thy eqns =
      val originals = map (row_of_pat o #2) rows
      val new_rows = length finals - length originals
      val clause_s = if new_rows = 1 then " clause " else " clauses "
-     val _ = if new_rows > 0 then 
+     val _ = if new_rows > 0 then
             (msg ("\n  pattern completion has added "^
                   Int.toString new_rows^clause_s^
                   "to the original specification.");
-             if !allow_new_clauses then () else 
+             if !allow_new_clauses then () else
               err ("new clauses not allowed under current setting of "^
                    Lib.quote("Functional.allow_new_clauses")^" flag"))
              else ()

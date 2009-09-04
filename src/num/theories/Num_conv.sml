@@ -52,7 +52,7 @@ fun num_CONV t =
       in
          SYM (EQ_MP thm0 pre_thm)
       end
- else raise (mk_HOL_ERR "Num_conv" "num_CONV" 
+ else raise (mk_HOL_ERR "Num_conv" "num_CONV"
                         "Term either not a numeral or zero")
 end;
 

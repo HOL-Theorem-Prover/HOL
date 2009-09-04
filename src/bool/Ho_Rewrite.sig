@@ -17,7 +17,7 @@ sig
   val HIGHER_REWRITE_CONV        : thm list -> conv
   val PURE_ONCE_REWRITE_CONV     : thm list -> conv
   val ONCE_REWRITE_CONV          : thm list -> conv
-	
+
   val PURE_REWRITE_RULE          : thm list -> thm -> thm
   val REWRITE_RULE               : thm list -> thm -> thm
   val PURE_ONCE_REWRITE_RULE     : thm list -> thm -> thm
@@ -26,7 +26,7 @@ sig
   val ASM_REWRITE_RULE           : thm list -> thm -> thm
   val PURE_ONCE_ASM_REWRITE_RULE : thm list -> thm -> thm
   val ONCE_ASM_REWRITE_RULE      : thm list -> thm -> thm
-	
+
   val PURE_REWRITE_TAC           : thm list -> tactic
   val REWRITE_TAC                : thm list -> tactic
   val PURE_ONCE_REWRITE_TAC      : thm list -> tactic

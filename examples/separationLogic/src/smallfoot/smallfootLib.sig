@@ -41,8 +41,8 @@ sig
   val SMALLFOOT_EQ_CASE_SPLIT_TAC : term -> term -> tactic;
   val SMALLFOOT_PROP_IMPLIES___EQ_CASE_SPLIT_TAC : term -> term -> tactic;
 
-  val SMALLFOOT_VC_STEP_TAC : tactic 
-  val SMALLFOOT_VC_TAC : tactic 
+  val SMALLFOOT_VC_STEP_TAC : tactic
+  val SMALLFOOT_VC_TAC : tactic
   val SMALLFOOT_NO_CASE_SPLIT_STEP_TAC : thm list -> tactic
   val SMALLFOOT_NO_CASE_SPLIT_MINI_STEP_TAC : thm list -> tactic
 

@@ -1,6 +1,6 @@
 structure dbgTools = struct
 
-local 
+local
 
 open Globals HolKernel Parse PrimitiveBddRules DerivedBddRules Binaryset
 
@@ -21,12 +21,12 @@ val sbdd = ref false
 fun set_pfx s k = foldr (fn (v,av) => if String.isPrefix v k then true else av) false s
 
 fun show s = (member(!vis,s) orelse set_pfx (!visp) s)
- 
+
 fun showe s f = (!saee orelse member(!visee,s) orelse member(!visee,s^f))
 
 fun printer s p = (print ("["^s^"]\n"); with_flag (show_types,(!dbg)>1) with_flag (show_assums,(!dbg)>2) p (); print "\n")
 
-in 
+in
 
 fun DEN s f = if (!dbg)>0 andalso showe s f then print ("\n> > > > > > > > ["^s^"."^f^"]\n") else ()
 fun DEX s f = if (!dbg)>0 andalso showe s f then print ("\n< < < < < < < < ["^s^"."^f^"]\n") else ()
@@ -44,9 +44,9 @@ fun sm s = if (!dbg)>0 then (vis:= add(!vis,s)) else ()  (* unhide messages from
 fun sp s = if (!dbg)>0 then (visp := add(!visp,s)) else () (* show all with prefix s *)
 fun hp s = if (!dbg)>0 then (visp := delete(!visp,s)) else () (* hide all with prefix s *)
 
-fun se s = if(!dbg)>0 then (visee := add(!visee,s)) else () (* show entry/exit for these *) 
-							     
-fun he s = if(!dbg)>0 then (visee := delete(!visee,s)) else () (* hide entry/exit for these  *) 
+fun se s = if(!dbg)>0 then (visee := add(!visee,s)) else () (* show entry/exit for these *)
+
+fun he s = if(!dbg)>0 then (visee := delete(!visee,s)) else () (* hide entry/exit for these  *)
 
 fun sae() = if (!dbg)>0 then saee := true else () (* show all entry/exit *)
 

@@ -445,7 +445,7 @@ local
         case total dest_rewr cl of NONE => (s,s')
         | SOME (i,th) =>
           (Intset.add (s,i), if unchanged i th then Intset.add (s',i) else s')
-          
+
       val (s_init,s_id) = foldl mk_init_id (Intset.empty,Intset.empty) c
 
       fun quick i = snd (pk i) <> mlibRewrite.Both

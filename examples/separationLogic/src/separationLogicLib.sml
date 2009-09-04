@@ -3,9 +3,9 @@ struct
 
 (*
 quietdec := true;
-loadPath := 
-            (concat Globals.HOLDIR "/examples/separationLogic/src") :: 
-            (concat Globals.HOLDIR "/examples/separationLogic/src/smallfoot") :: 
+loadPath :=
+            (concat Globals.HOLDIR "/examples/separationLogic/src") ::
+            (concat Globals.HOLDIR "/examples/separationLogic/src/smallfoot") ::
             !loadPath;
 
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
@@ -36,7 +36,7 @@ let
    fun split_vars [] acc = ([], acc)
      | split_vars (t::ts) acc =
        if op_mem eq t vars then
-	   split_vars ts (t::acc) 
+	   split_vars ts (t::acc)
        else
 	   (rev (t::ts), acc)
    val (rest_args, elim_args) = split_vars (rev l_args) [];

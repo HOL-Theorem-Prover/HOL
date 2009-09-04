@@ -9,7 +9,7 @@ type ic = internalCacheTools.ic
 val empty_model : model
 
 val get_init : model -> Term.term
-val get_trans : model ->(string * Term.term) list 
+val get_trans : model ->(string * Term.term) list
 val get_flag_ric : model -> bool
 val get_name : model -> string option
 val get_vord : model -> string list option
@@ -31,11 +31,11 @@ val set_ic : ic -> model -> model
 val set_flag_abs : bool -> model -> model
 
 
-val dest_model : 
-    model -> Term.term * (string * Term.term) list * bool * string option * string list option 
-    * Term.term option * (string * Term.term) list 
+val dest_model :
+    model -> Term.term * (string * Term.term) list * bool * string option * string list option
+    * Term.term option * (string * Term.term) list
     * (PrimitiveBddRules.term_bdd * Thm.thm option * Term.term list option) list option
-    * ic option 
+    * ic option
 
 val prove_model : model -> model
 

@@ -130,7 +130,7 @@ val _ = adjoin_to_theory_struct
   \Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"});"];
 
 val _ = adjoin_to_theory
- {sig_ps = SOME (fn ppstrm => 
+ {sig_ps = SOME (fn ppstrm =>
              (PP.add_string ppstrm "val WORDS_EMIT_RULE : thm -> thm";
               PP.add_newline ppstrm)),
   struct_ps = SOME (fn ppstrm =>
@@ -143,7 +143,7 @@ val _ = adjoin_to_theory
      S "val WORDS_EMIT_RULE = "; NL();
      S " BETA_RULE o PURE_REWRITE_RULE "; NL();
      S " ([BIT_UPDATE, fcp_n2w, word_T_def, word_L_def, word_H_def, literal_case_THM]"; NL();
-     S "  @"; NL(); 
+     S "  @"; NL();
      S "  map GSYM [word_index_def, n2w_itself_def, w2w_itself_def, sw2sw_itself_def,"; NL();
      S "            word_concat_itself_def, word_extract_itself_def,"; NL();
      S "            FCPi_def, mk_fcp_def, literal_case_DEF]) "; NL();

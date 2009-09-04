@@ -8,13 +8,13 @@ val _ = new_theory "testFunctions";
 (*     FLAT : flatten a list using three clauses                             *)
 (*                                                                           *)
 (*****************************************************************************)
- 
+
 val FLAT = Define `
     (FLAT [] = []) /\
     (FLAT ([]::xs) = FLAT xs) /\
-    (FLAT (((y:'a)::ys)::xs) = y::FLAT (ys::xs))`; 
+    (FLAT (((y:'a)::ys)::xs) = y::FLAT (ys::xs))`;
 
-val SPLIT_def = tDefine "SPLIT" 
+val SPLIT_def = tDefine "SPLIT"
     `(split1 [] (X,Y) = (X,Y)) /\
      (split1 (x::ys) (X,Y) = split2 ys (x::X,Y)) /\
      (split2 [] (X,Y) = (X,Y)) /\
@@ -26,14 +26,14 @@ val merge_def = Define `
     (merge [] [] = []) /\
     (merge (a::b) [] = a::b) /\
     (merge [] (c::d) = c::d) /\
-    (merge (a::b) (c::d) = 
-    	   if a < c:num then a :: merge b (c::d) 
+    (merge (a::b) (c::d) =
+    	   if a < c:num then a :: merge b (c::d)
 	      	    else c :: merge (a::b) d)`;
 
-val length_split1_lemma1 = prove(``!x a b. 1 < LENGTH x ==> 
+val length_split1_lemma1 = prove(``!x a b. 1 < LENGTH x ==>
       (LENGTH (FST (split1 x (a,b))) < LENGTH x + LENGTH a)``,
     completeInduct_on `LENGTH x` THEN
-    Cases THEN 
+    Cases THEN
     STRUCT_CASES_TAC (ISPEC (mk_var("t",``:'a list``)) list_CASES) THEN
     RW_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1] THEN
     POP_ASSUM (MP_TAC o Q.SPEC `LENGTH t'`) THEN RW_TAC arith_ss [] THEN
@@ -43,14 +43,14 @@ val length_split1_lemma1 = prove(``!x a b. 1 < LENGTH x ==>
 		   DECIDE ``SUC a + b < a + (b + 2n)``,LENGTH] THEN
     Cases_on `t'` THEN
     FULL_SIMP_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1] THEN
-    POP_ASSUM MP_TAC THEN 
-    STRUCT_CASES_TAC (ISPEC (mk_var("t",``:'a list``)) list_CASES) THEN 
+    POP_ASSUM MP_TAC THEN
+    STRUCT_CASES_TAC (ISPEC (mk_var("t",``:'a list``)) list_CASES) THEN
     FULL_SIMP_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1]);
 
-val length_split1_lemma2 = prove(``!x a b. 1 < LENGTH x ==> 
+val length_split1_lemma2 = prove(``!x a b. 1 < LENGTH x ==>
       (LENGTH (SND (split1 x (a,b))) < LENGTH x + LENGTH b)``,
     completeInduct_on `LENGTH x` THEN
-    Cases THEN 
+    Cases THEN
     STRUCT_CASES_TAC (ISPEC (mk_var("t",``:'a list``)) list_CASES) THEN
     RW_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1] THEN
     POP_ASSUM (MP_TAC o Q.SPEC `LENGTH t'`) THEN RW_TAC arith_ss [] THEN
@@ -60,12 +60,12 @@ val length_split1_lemma2 = prove(``!x a b. 1 < LENGTH x ==>
 		   DECIDE ``SUC a + b < a + (b + 2n)``,LENGTH] THEN
     Cases_on `t'` THEN
     FULL_SIMP_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1] THEN
-    POP_ASSUM MP_TAC THEN 
-    STRUCT_CASES_TAC (ISPEC (mk_var("t",``:'a list``)) list_CASES) THEN 
+    POP_ASSUM MP_TAC THEN
+    STRUCT_CASES_TAC (ISPEC (mk_var("t",``:'a list``)) list_CASES) THEN
     FULL_SIMP_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1]);
 
 val merge_sort_def = tDefine "merge_sort" `
-    (merge_sort xs = 
+    (merge_sort xs =
       if LENGTH xs <= 1 then xs
          else let (left,right) = split1 xs ([],[])
 	      in  merge (merge_sort left) (merge_sort right))`
@@ -77,7 +77,7 @@ val merge_sort_def = tDefine "merge_sort" `
       pairTheory.PAIR,pairTheory.PAIR_EQ]);
 
 val EVEN_EXTEND_def= store_thm("EVEN_EXTEND_def",
-    ``(EVEN 0 = T) /\ 
+    ``(EVEN 0 = T) /\
       (EVEN (SUC 0) = F) /\
       (!n. EVEN (SUC (SUC n)) = EVEN n)``,
     RW_TAC arith_ss [arithmeticTheory.EVEN]);

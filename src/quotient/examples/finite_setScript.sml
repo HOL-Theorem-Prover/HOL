@@ -67,7 +67,7 @@ val fsequiv_rules_tm =
                   (^fsequiv (a :: (a :: A)) (a :: A))                   /\
 
 
-                      
+
        (* ------------------------------------------------------ *)
                            (^fsequiv [] [])                             /\
 
@@ -84,7 +84,7 @@ val fsequiv_rules_tm =
 
                     ((^fsequiv A B) /\ (^fsequiv B C)
        (* ------------------------------------------------------ *) ==>
-                            (^fsequiv A C))                      
+                            (^fsequiv A C))
 
 `--;
 
@@ -94,7 +94,7 @@ val (fsequiv_rules_sat,fsequiv_ind_thm) =
 val fsequiv_inv_thms = prove_inversion_theorems
     fsequiv_rules_sat fsequiv_ind_thm;
 
-val fsequiv_strong_ind = prove_strong_induction 
+val fsequiv_strong_ind = prove_strong_induction
     fsequiv_rules_sat fsequiv_ind_thm;
 
 val _ = overload_on("==", ``fsequiv:'a list -> 'a list -> bool``);

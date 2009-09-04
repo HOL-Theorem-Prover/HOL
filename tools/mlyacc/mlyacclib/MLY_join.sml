@@ -1,4 +1,4 @@
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/23 03:21:27  michaeln
@@ -16,7 +16,7 @@
  *
  * Revision 1.1.1.1  1996/01/31  16:01:42  george
  * Version 109
- * 
+ *
  *)
 
 (* functor Join creates a user parser by putting together a Lexer structure,
@@ -38,7 +38,7 @@ functor Join(structure Lex : LEXER
 struct
     structure Token = ParserData.Token
     structure Stream = LrParser.Stream
- 
+
     exception ParseError = LrParser.ParseError
 
     type arg = ParserData.arg
@@ -65,7 +65,7 @@ struct
      val sameToken = Token.sameToken
 end
 
-(* functor JoinWithArg creates a variant of the parser structure produced 
+(* functor JoinWithArg creates a variant of the parser structure produced
    above.  In this case, the makeLexer take an additional argument before
    yielding a value of type unit -> (svalue,pos) token
  *)

@@ -4,7 +4,7 @@ sig
     type proof = Manager.proof
     type proofs = Manager.proofs
 
-    val chatting : bool ref 
+    val chatting : bool ref
 
     (* Starting a proof *)
 

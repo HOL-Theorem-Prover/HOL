@@ -72,7 +72,7 @@ fun foldr f x (a : 'a mset) = M.foldr f x a;
    prevents this function being implemented :-(
 local
   exception foundit of 'a;
-in 
+in
   fun find p m =
     (M.app (fn x => if p x then raise foundit x else ()) m; NONE)
     handle foundit x => SOME x;
@@ -81,7 +81,7 @@ end;
 
 local
   exception existing;
-in 
+in
   fun exists p m =
     (M.app (fn x => if p x then raise existing else ()) m; false)
     handle existing => true;

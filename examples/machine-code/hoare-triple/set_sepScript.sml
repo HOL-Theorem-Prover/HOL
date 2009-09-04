@@ -1,5 +1,5 @@
 
-open HolKernel boolLib bossLib Parse pred_setTheory pairTheory; 
+open HolKernel boolLib bossLib Parse pred_setTheory pairTheory;
 val _ = new_theory "set_sep";
 
 
@@ -61,22 +61,22 @@ val STAR_ASSOC = store_thm("STAR_ASSOC",
   ONCE_REWRITE_TAC [FUN_EQ_THM] \\ METIS_TAC [STAR_ASSOC_LEMMA,STAR_SYM]);
 
 val SEP_CLAUSES = store_thm("SEP_CLAUSES",
-  ``!p q t c c'. 
-       (((SEP_EXISTS v. p v) * q)  = SEP_EXISTS v. p v * q) /\ 
-       ((q * (SEP_EXISTS v. p v))  = SEP_EXISTS v. q * p v) /\ 
-       (((SEP_EXISTS v. p v) \/ q) = SEP_EXISTS v. p v \/ q) /\ 
-       ((q \/ (SEP_EXISTS v. p v)) = SEP_EXISTS v. q \/ p v) /\ 
+  ``!p q t c c'.
+       (((SEP_EXISTS v. p v) * q)  = SEP_EXISTS v. p v * q) /\
+       ((q * (SEP_EXISTS v. p v))  = SEP_EXISTS v. q * p v) /\
+       (((SEP_EXISTS v. p v) \/ q) = SEP_EXISTS v. p v \/ q) /\
+       ((q \/ (SEP_EXISTS v. p v)) = SEP_EXISTS v. q \/ p v) /\
        ((SEP_EXISTS v. q) = q) /\  ((SEP_EXISTS v. p v * cond (v = x)) = p x) /\
        (q \/ SEP_F = q) /\ (SEP_F \/ q = q) /\ (SEP_F * q = SEP_F) /\ (q * SEP_F = SEP_F) /\
-       (r \/ r = r) /\ (q * (r \/ t) = q * r \/ q * t) /\ ((r \/ t) * q = r * q \/ t * q) /\ 
+       (r \/ r = r) /\ (q * (r \/ t) = q * r \/ q * t) /\ ((r \/ t) * q = r * q \/ t * q) /\
        (cond c \/ cond c' = cond (c \/ c')) /\ (cond c * cond c' = cond (c /\ c')) /\
        (cond T = emp) /\ (cond F = SEP_F) /\  (emp * q = q) /\ (q * emp = q)``,
   ONCE_REWRITE_TAC [FUN_EQ_THM]
-  \\ SIMP_TAC std_ss [SEP_EXISTS,STAR_def,SEP_DISJ_def,cond_def,SEP_F_def,emp_def] 
+  \\ SIMP_TAC std_ss [SEP_EXISTS,STAR_def,SEP_DISJ_def,cond_def,SEP_F_def,emp_def]
   \\ SPLIT_TAC);
 
 val SPLIT_LEMMA = prove(
-  ``!s t v. SPLIT s (t,v) = (v = s DIFF t) /\ t SUBSET s``,SPLIT_TAC);  
+  ``!s t v. SPLIT s (t,v) = (v = s DIFF t) /\ t SUBSET s``,SPLIT_TAC);
 
 val cond_STAR = store_thm("cond_STAR",
   ``!c s p. ((cond c * p) s = c /\ p s) /\ ((p * cond c) s = c /\ p s)``,
@@ -84,8 +84,8 @@ val cond_STAR = store_thm("cond_STAR",
 
 val one_STAR = store_thm("one_STAR",
   ``!x s p. (one x * p) s = x IN s /\ p (s DELETE x)``,
-  SIMP_TAC std_ss [STAR_def,one_def,SPLIT_LEMMA,DELETE_DEF,INSERT_SUBSET,EMPTY_SUBSET]); 
-  
+  SIMP_TAC std_ss [STAR_def,one_def,SPLIT_LEMMA,DELETE_DEF,INSERT_SUBSET,EMPTY_SUBSET]);
+
 val EQ_STAR = store_thm("EQ_STAR",
   ``!p s t. (SEP_EQ t * p) s = p (s DIFF t) /\ t SUBSET s``,
   SIMP_TAC std_ss [SEP_EQ_def,STAR_def,SPLIT_LEMMA] \\ METIS_TAC []);
@@ -140,12 +140,12 @@ val write_fun2set = store_thm("write_fun2set",
   ``!y a x p f. (one (a,x) * p) (fun2set (f,d)) ==> (p * one (a,y)) (fun2set ((a =+ y) f,d))``,
   SIMP_TAC std_ss [one_STAR,IN_DEF,fun2set_thm,combinTheory.APPLY_UPDATE_THM]
   \\ ONCE_REWRITE_TAC [STAR_SYM]
-  \\ SIMP_TAC std_ss [one_STAR,IN_DEF,fun2set_thm,combinTheory.APPLY_UPDATE_THM]  
-  \\ NTAC 4 STRIP_TAC \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (t /\ p x ==> p y)``)  
+  \\ SIMP_TAC std_ss [one_STAR,IN_DEF,fun2set_thm,combinTheory.APPLY_UPDATE_THM]
+  \\ NTAC 4 STRIP_TAC \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (t /\ p x ==> p y)``)
   \\ SIMP_TAC std_ss [EXTENSION] \\ Cases
-  \\ SIMP_TAC std_ss [fun2set_thm,IN_DELETE] 
-  \\ SIMP_TAC std_ss [fun2set_thm,IN_DELETE,IN_DEF] 
-  \\ Cases_on `q = a` \\ ASM_SIMP_TAC std_ss [combinTheory.APPLY_UPDATE_THM] 
+  \\ SIMP_TAC std_ss [fun2set_thm,IN_DELETE]
+  \\ SIMP_TAC std_ss [fun2set_thm,IN_DELETE,IN_DEF]
+  \\ Cases_on `q = a` \\ ASM_SIMP_TAC std_ss [combinTheory.APPLY_UPDATE_THM]
   \\ METIS_TAC []);
 
 val fun2set_NEQ = store_thm("fun2set_NEQ",
@@ -166,11 +166,11 @@ val SUBSET_fun2set = store_thm("SUBSET_fun2set",
 
 val fun2set_EMPTY = store_thm("fun2set_EMPTY",
   ``!f df. (fun2set (f,df) = {}) = (df = {})``,
-  SIMP_TAC std_ss [fun2set_def,EXTENSION,GSPECIFICATION,NOT_IN_EMPTY])  
+  SIMP_TAC std_ss [fun2set_def,EXTENSION,GSPECIFICATION,NOT_IN_EMPTY])
 
 val IN_fun2set = store_thm("IN_fun2set",
   ``!a y h dh. (a,y) IN fun2set (h,dh) = (h a = y) /\ a IN dh``,
-  SIMP_TAC std_ss [fun2set_def,GSPECIFICATION] \\ METIS_TAC []);  
+  SIMP_TAC std_ss [fun2set_def,GSPECIFICATION] \\ METIS_TAC []);
 
 val fun2set_DELETE = store_thm("fun2set_DELETE",
   ``!a h dh. fun2set (h,dh) DELETE (a, h a) = fun2set (h,dh DELETE a)``,

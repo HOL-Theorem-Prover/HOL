@@ -1,4 +1,4 @@
-structure optionLib :> optionLib = 
+structure optionLib :> optionLib =
 struct
 
  open Parse optionTheory optionSyntax;

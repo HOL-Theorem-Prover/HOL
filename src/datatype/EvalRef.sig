@@ -1,4 +1,4 @@
-signature EvalRef = 
-sig 
-   val r : Term.term ref 
+signature EvalRef =
+sig
+   val r : Term.term ref
 end

@@ -80,13 +80,13 @@ val def0 = Define `
   f0 x = if x = 0w:word32 then x
          else f0 (x - 1w)`;
 *)
-  
+
 
 val def1 = Define `
     f1 (x,y) = if x = (0w:word32) then y
                else f1 (x - 1w, x * y)`;
 
-(* 
+(*
 val def1' = (reg_alloc o SSA_RULE o normalize) def1;
 |- f1 =
        (\(r0,r1).
@@ -103,7 +103,7 @@ val def1' = (reg_alloc o SSA_RULE o normalize) def1;
 
 
 val def2 = Define `
-   f2 (k0:word32,(k1:word32,k2:word32),k3:word32) = 
+   f2 (k0:word32,(k1:word32,k2:word32),k3:word32) =
      if k0 = 0w then
        (k2,k3)
      else if k0 < 5w then
@@ -111,7 +111,7 @@ val def2 = Define `
      else
          f2 (k0 - 1w, (k0,k1), k3 - k0)`;
 
-(* 
+(*
 val def2' = (reg_alloc o SSA_RULE o normalize) def2;
 
     |- f2 =
@@ -199,12 +199,12 @@ normalize mult_def;
 *)
 
 val g1_def = Define `
-  g1 (x:word32) = 
+  g1 (x:word32) =
    if x > 1w /\ x < 10w then
      x + 1w
    else if 20w >+ x \/ x <=+ x then
      x + 4w
-   else 
+   else
      x
    `;
 

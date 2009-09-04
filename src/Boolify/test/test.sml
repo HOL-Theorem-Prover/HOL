@@ -18,7 +18,7 @@ open EncodeTheory DecodeTheory CoderTheory;
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun first_token (QUOTE s :: _) = hd (String.tokens Char.isSpace 
+fun first_token (QUOTE s :: _) = hd (String.tokens Char.isSpace
                                             (Lib.deinitcomment s))
   | first_token _ = "if_you_can_read_this_then_first_token_probably_failed";
 val size_of = Lib.total TypeBase.size_of;
@@ -33,7 +33,7 @@ val Hol_datatype =
     (tyname, size_of tyname, encode_of tyname)
   end;
 
-fun encode tm = 
+fun encode tm =
   let
     val db = TypeBase.theTypeBase()
     val f = TypeBasePure.type_encode db (type_of tm)
@@ -57,11 +57,11 @@ try Hol_datatype `List = Nil | Cons of 'A => List`;
 try Hol_datatype `tri = ONE | TWO | THREE`;
 
 try Hol_datatype
-  `command 
+  `command
        = Assignment of num list # expression list
        | Sequence   of command list
    ;
-   expression 
+   expression
        = Numeral of num
        | Plus    of expression # expression
        | Valof   of command`;
@@ -109,16 +109,16 @@ val [decode_list_tm] = decls "decode_list";
 fun Orelsef x [] = false
   | Orelsef x (h::t) = h(x) orelse Orelsef x t;
 
-computeLib.monitoring := 
-  SOME (fn x => Orelsef x 
+computeLib.monitoring :=
+  SOME (fn x => Orelsef x
        (map same_const [encode_num_tm,decode_num_tm]));
       (map same_const [encode_num_tm,decode_num_tm,decode_list_tm]));
 
 computeLib.monitoring := NONE;
 
-fun ED tm = 
- Count.apply 
-    EVAL (Term `decode_list (ALL_EL (K T)) (decode_num (K T)) 
+fun ED tm =
+ Count.apply
+    EVAL (Term `decode_list (ALL_EL (K T)) (decode_num (K T))
                  (encode_list encode_num ^tm)`);
 
 val th1 = bossLib.EVAL (Term` [1; 2; 3; 4]`);
@@ -140,7 +140,7 @@ val th1 = bossLib.EVAL (Term`encode_list encode_num [1]`);
 
 Count.apply EVAL (Term`decode_num (K T) (encode_num 4)`);
 
-val N = Term`decode_list (ALL_EL (K T)) (decode_num (K T)) 
+val N = Term`decode_list (ALL_EL (K T)) (decode_num (K T))
              ^(rhs(concl (EVAL (Term`encode_list encode_num [1; 2]`))))`;
 
 
@@ -154,28 +154,28 @@ EVAL (Term `decode_num (K T) [T; F; T; T; T; F; T; T; F]`);
 (* decode_list are far better.                                               *)
 (*---------------------------------------------------------------------------*)
 
-val decode_num_thm = 
- mk_thm ([], Term 
+val decode_num_thm =
+ mk_thm ([], Term
  `(decode_num P [] = NONE) /\
   (decode_num P [x] = NONE) /\
   (decode_num P (T::T::t) = SOME (0,t)) /\
-  (decode_num P (T::F::t) = 
-     let x = decode_num P t 
+  (decode_num P (T::F::t) =
+     let x = decode_num P t
      in if IS_SOME x then (let (m,t') = THE(x) in SOME (2*m + 1, t'))
         else NONE) /\
-  (decode_num P (F::t) = 
-     let x = decode_num P t 
+  (decode_num P (F::t) =
+     let x = decode_num P t
      in if IS_SOME x then (let (m,t') = THE(x) in SOME (2*m + 2, t'))
         else NONE)`);
 
-val decode_list_thm = 
+val decode_list_thm =
  mk_thm ([],Term
   `(decode_list (ALL_EL (K T)) (decode_num (K T)) [] = NONE) /\
    (decode_list (ALL_EL (K T)) (decode_num (K T)) (F::t) = SOME([],t)) /\
    (decode_list (ALL_EL (K T)) (decode_num (K T)) (T::t) =
        let x = decode_num (K T) t
-       in if IS_SOME x 
-            then let (y,t') = THE(x) 
+       in if IS_SOME x
+            then let (y,t') = THE(x)
                  in let z = decode_list (ALL_EL (K T)) (decode_num (K T)) t'
                     in if IS_SOME z
                         then (let (u,w) = THE(z) in SOME (y::u,w))

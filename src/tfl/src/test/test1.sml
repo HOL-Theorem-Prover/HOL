@@ -1,6 +1,6 @@
 fun function s q = Count.apply (tflLib.function s) q;
 
-val nested_function = LIST_CONJ o map #1 o #extracta o 
+val nested_function = LIST_CONJ o map #1 o #extracta o
                       Tfl.wfrec_eqns (Datatype.theFactBase())
                       o Parse.Term;
 
@@ -41,7 +41,7 @@ function "Mmap2"
 val order = ty_antiq(==`:'a -> 'a -> bool`==);
 function "sorted_def"
    `(sorted (R:^order, []) = T) /\
-    (sorted (R,       [x]) = T) /\   
+    (sorted (R,       [x]) = T) /\
     (sorted (R, CONS x (CONS y rst)) = R x y /\ sorted(R, CONS y rst))`;
 
 function "fin" `(fin(R:^order,[x:'a]) = T)`;
@@ -51,7 +51,7 @@ new_constant {Name="mem", Ty = Type`:'a -> 'a list -> bool`};
 
 function "qsort_def"
    `(qsort(ord:^order,[]) = []) /\
-    (qsort(ord, CONS (x:'a) rst) = 
+    (qsort(ord, CONS (x:'a) rst) =
       qsort(ord,filter($~ o ord x) rst)++[x]++qsort(ord,filter(ord x) rst))`;
 
 function "variant_def" `variant(x, L) = (mem x L => variant(SUC x,L) | x)`;
@@ -59,8 +59,8 @@ function "variant_def" `variant(x, L) = (mem x L => variant(SUC x,L) | x)`;
 function "gcd"
    `(gcd (0,y) = y) /\
     (gcd (SUC x, 0) = SUC x) /\
-    (gcd (SUC x, SUC y) = 
-        ((y <= x)     => gcd(x-y, SUC y) 
+    (gcd (SUC x, SUC y) =
+        ((y <= x)     => gcd(x-y, SUC y)
          | (*otherwise*) gcd(SUC x, y-x)))`;
 
 function "AND_def"
@@ -73,20 +73,20 @@ nested_function
 function "div_def"
    `(div(0,x) = (0,0)) /\
     (div(SUC x, y) = let (q,r) = div(x,y)
-                     in y <= SUC r => (SUC q,0) 
+                     in y <= SUC r => (SUC q,0)
                                    |  (q, SUC r))`;
 
 (* Nested paired lets *)
 function "div_def"
    `(Div(0,x) = (0,0)) /\
     (Div(SUC x, y) = let (q,r) = Div(x,y) in
-                     let (s,t) = (x,y) 
-                     in y <= SUC r => (SUC q,0) 
+                     let (s,t) = (x,y)
+                     in y <= SUC r => (SUC q,0)
                                    |  (q, SUC r))`;
 
 function "Qsort_def"
    `(Qsort(ord:^order,[]) = []) /\
-    (Qsort(ord, CONS (x:'a) rst) = 
+    (Qsort(ord, CONS (x:'a) rst) =
       let ((L1,L2),P) = ((filter($~ o ord x) rst,
                           filter (ord x) rst),
                        (x,rst)) in
@@ -95,31 +95,31 @@ function "Qsort_def"
       Qsort lower ++[x]++ Qsort upper)`;
 
 
-(* From Tobias Nipkow; "acc1" forms part of a lexer.  
+(* From Tobias Nipkow; "acc1" forms part of a lexer.
    .... currently fails to prove induction theorem. *)
 function "acc1"
    `(acc1 ((f,p),([]:'a list),(s:'b),xss,zs,xs) =
       ((xs=[]) => (xss, zs) |  acc1((f,p), zs, s, (xss++[xs]),[],[]))) /\
-    (acc1((f,(p:'c)), CONS y ys, s, xss, zs, xs) = 
-       let s' = s in let 
-          zs' = (f s' => [] | zs++[y]) in let 
+    (acc1((f,(p:'c)), CONS y ys, s, xss, zs, xs) =
+       let s' = s in let
+          zs' = (f s' => [] | zs++[y]) in let
           xs' = (f s' => xs++zs++[y] | xs)
-       in 
+       in
           acc1((f,p), ys, s', xss, zs', xs'))`;
 
 function "nested_if"
-  `(f(0,x) = (0,0)) /\ 
+  `(f(0,x) = (0,0)) /\
    (f(SUC x, y) = (y = x => (0<y => (0,0) | f(x,y)) | (x,y)))`;
 
 function "vary"
     `vary(x, L) = (mem x L => let x = SUC x in vary(x,L) | x)`;
 
 function "tricky1"
-    `vary1(x, L) = (mem x L => let x = SUC x in 
+    `vary1(x, L) = (mem x L => let x = SUC x in
                               let x = x in vary1(x,L) | x)`;
 
 function "tricky2"
-    `vary2(x, L) = (mem x L => let (x,y) = (SUC x,x) in 
+    `vary2(x, L) = (mem x L => let (x,y) = (SUC x,x) in
                                let (x,y) = (x,y) in vary2(x,L) | x)`;
 
 
@@ -129,6 +129,6 @@ nested_function
    `(Divide(0,x) = (0,0)) /\
     (Divide(SUC x, y) = let q = FST(Divide(x,y)) in
                      let r = SND(Divide(x,y))
-                     in y <= SUC r => (SUC q, 0) 
+                     in y <= SUC r => (SUC q, 0)
                                    |  (q, SUC r))`;
 

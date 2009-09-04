@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
 
-val _ = new_theory("setLemmas"); 
+val _ = new_theory("setLemmas");
 
 open pred_setLib pred_setTheory numLib metisLib pairTheory stringTheory stringLib
 
@@ -94,7 +94,7 @@ val SUBSET_CARD_LTE = save_thm("SUBSET_CARD_LTE",prove(``!s t. FINITE s /\ FINIT
 
 val GEN_PCHAIN_CARD_NO_UB = save_thm("GEN_PCHAIN_CARD_NO_UB",prove(``!(P:num -> 'state -> bool). (!n. CARD (P n) < (CARD (P (SUC n)))) ==> !m. ?n. (CARD (P n) > m)``,
 REPEAT STRIP_TAC THEN Induct_on `m` THENL [
-EXISTS_TAC ``1`` 
+EXISTS_TAC ``1``
 THEN `CARD ((P:num -> 'state -> bool) 0) >= 0` by ARITH_TAC
 THEN `CARD ((P:num -> 'state -> bool) 0) < CARD (P 1)` by ASSUM_LIST (fn t => PROVE_TAC ((DECIDE ``SUC 0 = 1``)::t))
 THEN FULL_SIMP_TAC arith_ss [], (* 0 *)
@@ -115,7 +115,7 @@ val SUBSET_EQ = save_thm("SUBSET_EQ",prove(``!s t. s SUBSET t /\ t SUBSET s = (s
 REPEAT STRIP_TAC THEN EQ_TAC THENL [
 SIMP_TAC std_ss [SUBSET_ANTISYM],
 SIMP_TAC std_ss [SUBSET_DEF,IN_DEF]]));
- 
+
 val BIGUNION_SUBSET_IMP = save_thm("BIGUNION_SUBSET_IMP",prove(``!P Q. (!n. P n SUBSET Q n) ==> BIGUNION {P' | ?n. P' = P n} SUBSET BIGUNION {Q' | ?n. Q' = Q n}``,
 REPEAT STRIP_TAC THEN SIMP_TAC std_ss [BIGUNION] THEN SIMP_TAC std_ss [SUBSET_DEF,SET_SPEC] THEN FULL_SIMP_TAC std_ss [SUBSET_DEF] THEN ASSUM_LIST PROVE_TAC));
 
@@ -163,10 +163,10 @@ SIMP_TAC std_ss [UNIV_DEF,IN_DEF]
 THEN EXISTS_TAC ``1``
 THEN SIMP_TAC arith_ss []],
 SIMP_TAC std_ss [IN_UNIV]],
-FULL_SIMP_TAC std_ss [GSYM FINITE_WEAK_ENUMERATE]])); 
+FULL_SIMP_TAC std_ss [GSYM FINITE_WEAK_ENUMERATE]]));
 
 val UNIV_CROSS_UNIV = save_thm("UNIV_CROSS_UNIV",prove(``(UNIV:bool -> bool) CROSS (UNIV:'state->bool) = (UNIV:(bool # 'state)->bool)``,
-SIMP_TAC std_ss [UNIV_DEF,CROSS_DEF,FST,SND,IN_DEF,SET_GSPEC])); 
+SIMP_TAC std_ss [UNIV_DEF,CROSS_DEF,FST,SND,IN_DEF,SET_GSPEC]));
 
 val IN_APPLY = save_thm("IN_APPLY",prove(``!P x. x IN P = P x``,SIMP_TAC std_ss [IN_DEF] THEN BETA_TAC));
 

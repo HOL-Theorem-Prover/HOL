@@ -11,7 +11,7 @@ val _ = new_theory "Serpent_Reference_SBox";
 
 (*sbox table used in encrytion
 *)
-val SBox_def=Define 
+val SBox_def=Define
 `SBox=MAP (MAP (n2w:num->word4))
 [[ 3; 8;15; 1;10; 6; 5;11;14;13; 4; 2; 7; 0; 9;12];
  [15;12; 2; 7; 9; 0; 5;10; 1;11;14; 8; 6;13; 3; 4];
@@ -59,7 +59,7 @@ val SBoxVal=Q.store_thm(
   (S 2  4= 3w) /\ (S 2  5=12w) /\ (S 2  6=10w) /\ (S 2  7=15w) /\
   (S 2  8=13w) /\ (S 2  9= 1w) /\ (S 2 10=14w) /\ (S 2 11= 4w) /\
   (S 2 12= 0w) /\ (S 2 13=11w) /\ (S 2 14= 5w) /\ (S 2 15= 2w) /\
-  (S 3  0= 0w) /\ (S 3  1=15w) /\ (S 3  2=11w) /\ (S 3  3= 8w) /\ 
+  (S 3  0= 0w) /\ (S 3  1=15w) /\ (S 3  2=11w) /\ (S 3  3= 8w) /\
   (S 3  4=12w) /\ (S 3  5= 9w) /\ (S 3  6= 6w) /\ (S 3  7= 3w) /\
   (S 3  8=13w) /\ (S 3  9= 1w) /\ (S 3 10= 2w) /\ (S 3 11= 4w) /\
   (S 3 12=10w) /\ (S 3 13= 7w) /\ (S 3 14= 5w) /\ (S 3 15=14w) /\
@@ -110,7 +110,7 @@ val invSBoxVal=Q.store_thm(
   (invS 4 12= 4w) /\ (invS 4 13=15w) /\ (invS 4 14=13w) /\ (invS 4 15= 1w) /\
   (invS 5  0= 8w) /\ (invS 5  1=15w) /\ (invS 5  2= 2w) /\ (invS 5  3= 9w) /\
   (invS 5  4= 4w) /\ (invS 5  5= 1w) /\ (invS 5  6=13w) /\ (invS 5  7=14w) /\
-  (invS 5  8=11w) /\ (invS 5  9= 6w) /\ (invS 5 10= 5w) /\ (invS 5 11= 3w) /\ 
+  (invS 5  8=11w) /\ (invS 5  9= 6w) /\ (invS 5 10= 5w) /\ (invS 5 11= 3w) /\
   (invS 5 12= 7w) /\ (invS 5 13=12w) /\ (invS 5 14=10w) /\ (invS 5 15= 0w) /\
   (invS 6  0=15w) /\ (invS 6  1=10w) /\ (invS 6  2= 1w) /\ (invS 6  3=13w) /\
   (invS 6  4= 5w) /\ (invS 6  5= 3w) /\ (invS 6  6= 6w) /\ (invS 6  7= 0w) /\
@@ -120,7 +120,7 @@ val invSBoxVal=Q.store_thm(
   (invS 7  4= 9w) /\ (invS 7  5=14w) /\ (invS 7  6=15w) /\ (invS 7  7= 8w) /\
   (invS 7  8= 5w) /\ (invS 7  9=12w) /\ (invS 7 10=11w) /\ (invS 7 11= 7w) /\
   (invS 7 12=10w) /\ (invS 7 13= 1w) /\ (invS 7 14= 4w) /\ (invS 7 15= 2w)`,
-	
+
 EVAL_TAC);
 
 
@@ -135,14 +135,14 @@ val invSNibble_def = Define
 (*SBox and invSBox cancels *)
 val invS_S_cancel=Q.store_thm(
 "invS_S_cancel",
-`!round. 
-	round<8 
+`!round.
+	round<8
 	==>
-	(!n. n<16==> (invS  round (w2n (S round n))=n2w n))`, 
+	(!n. n<16==> (invS  round (w2n (S round n))=n2w n))`,
 
 SIMP_TAC arith_ss [BOUNDED_FORALL_THM] THEN
   SRW_TAC [] [SBoxVal, invSBoxVal]);
-	
+
 val invSNibble_sNibble_cancel=Q.store_thm(
 "invSNibble_sNibble_cancel",
 `!round w.
@@ -155,32 +155,32 @@ SRW_TAC [] [invSNibble_def,sNibble_def,invS_S_cancel,
 
 val w4l_fact=Q.store_thm(
 "w4l_fact",
-`!wl round. 
+`!wl round.
 	round<32
-	==> 
+	==>
 	ALL_EL (\x. (invSNibble round o sNibble round) x =x) wl`,
-	
+
 Induct_on `wl` THENL [
 	 RW_TAC list_ss [],
-	 RW_TAC list_ss [invSNibble_sNibble_cancel]]);   	
-	 
+	 RW_TAC list_ss [invSNibble_sNibble_cancel]]);
 
 
 
-(*apply SBox and invSBox on a word128*)  
+
+(*apply SBox and invSBox on a word128*)
 val sBlock_def=Define
 `sBlock round w128=word4ltow128 (MAP (sNibble round) (word128tow4l w128))`;
 
 val invSBlock_def=Define
-`invSBlock round w128=word4ltow128 (MAP (invSNibble round) (word128tow4l w128))`;	
+`invSBlock round w128=word4ltow128 (MAP (invSNibble round) (word128tow4l w128))`;
 
 (*invSBlock and sBlock cancel*)
 val invSBlock_sBlock_cancel=Q.store_thm(
 "invSBlock_sBlock_cancel",
-`!w128 round. 
+`!w128 round.
 	round <32
 	==>
-	(invSBlock round (sBlock round w128)=w128)`,	
+	(invSBlock round (sBlock round w128)=w128)`,
 
 RW_TAC std_ss [invSBlock_def,sBlock_def] THEN
 `LENGTH  (MAP (sNibble round) (word128tow4l w128))=32` by METIS_TAC [LENGTH_MAP,LENGTH_word128tow4l] THEN

@@ -868,7 +868,7 @@ val shift_register_enc = store_thm("shift_register_enc",
 val shift_register_enc2 = store_thm("shift_register_enc2",
   `!r. (3 >< 0) ((11 >< 0) (msr_mode_encode (Msr_register r))) = r`,
   SRW_TAC (boolSimps.LET_ss::word_frags) [msr_mode_encode_def]);
- 
+
 val shift_immediate_shift_register = store_thm("shift_immediate_shift_register",
   `(!reg m c sh r.
      (11 >< 0) (addr_mode1_encode (Dp_shift_register sh r)) ' 4) /\

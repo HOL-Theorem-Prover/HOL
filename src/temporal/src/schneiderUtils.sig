@@ -4,7 +4,7 @@ signature schneiderUtils =
     type thm = Thm.thm
     type goal = Abbrev.goal
     type conv = Abbrev.conv
-    type tactic = Abbrev.tactic 
+    type tactic = Abbrev.tactic
 
     val APPLY_ASM_TAC : int -> tactic -> tactic
     val ASM_LIST_TAC : int list

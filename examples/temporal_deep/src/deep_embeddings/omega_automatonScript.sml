@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
@@ -13,7 +13,7 @@ map load
   "relationTheory", "symbolic_kripke_structureTheory"];
 *)
 open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory ltlTheory 
+     tuerk_tacticsLib temporal_deep_mixedTheory ltlTheory
      semi_automatonTheory numLib relationTheory;
 
 val _ = hide "S";
@@ -119,7 +119,7 @@ val EXPLICIT_ACCEPT_COND_USED_INPUT_VARS_INTER_SUBSET_THM =
   ``!f t i w S. EXPLICIT_ACCEPT_COND_USED_INPUT_VARS f SUBSET S ==>
               (EXPLICIT_ACCEPT_COND_SEM_TIME t i w f =
               EXPLICIT_ACCEPT_COND_SEM_TIME t (PATH_RESTRICT i S) w f)``,
-  
+
   INDUCT_THEN explicit_acceptance_condition_induct ASSUME_TAC THEN (
     FULL_SIMP_TAC std_ss [EXPLICIT_ACCEPT_COND_SEM_TIME_def,
                           EXPLICIT_ACCEPT_COND_USED_INPUT_VARS_def,
@@ -127,7 +127,7 @@ val EXPLICIT_ACCEPT_COND_USED_INPUT_VARS_INTER_SUBSET_THM =
                           UNION_SUBSET] THEN
     METIS_TAC[P_USED_VARS_INTER_SUBSET_THM]
   ));
-        
+
 
 
 
@@ -143,7 +143,7 @@ val IS_EXPLICIT_PROP_ACCEPT_COND_def=
 
 val EXPLICIT_PROP_ACCEPT_COND_SEM_def=
  Define
-   `EXPLICIT_PROP_ACCEPT_COND_SEM i0 w0 f = 
+   `EXPLICIT_PROP_ACCEPT_COND_SEM i0 w0 f =
     EXPLICIT_ACCEPT_COND_SEM_TIME 0 (\n. i0) (\n. w0) f`;
 
 
@@ -154,8 +154,8 @@ val EXPLICIT_PROP_ACCEPT_COND_SEM_THM =
     ``!f. IS_EXPLICIT_PROP_ACCEPT_COND f ==>
         (!t i w. (EXPLICIT_ACCEPT_COND_SEM_TIME t i w f =
                 EXPLICIT_PROP_ACCEPT_COND_SEM (i t) (w t) f))``,
-    
-    
+
+
     INDUCT_THEN explicit_acceptance_condition_induct ASSUME_TAC THEN (
       FULL_SIMP_TAC std_ss [EXPLICIT_ACCEPT_COND_SEM_TIME_def,
                             EXPLICIT_PROP_ACCEPT_COND_SEM_def,
@@ -187,11 +187,11 @@ val EXISTENTIAL_UNIVERSAL_OMEGA_AUTOMATON_SEM_THM =
     ~(UNIVERSAL_OMEGA_AUTOMATON_SEM (A, EXPLICIT_ACCEPT_NOT ac) i)) /\
     ((UNIVERSAL_OMEGA_AUTOMATON_SEM (A, ac) i) =
     ~EXISTENTIAL_OMEGA_AUTOMATON_SEM (A, EXPLICIT_ACCEPT_NOT ac) i))``,
-    
-    
+
+
     SIMP_TAC std_ss [EXISTENTIAL_OMEGA_AUTOMATON_SEM_def,
                     UNIVERSAL_OMEGA_AUTOMATON_SEM_def,
-                    EXPLICIT_ACCEPT_COND_SEM_def, 
+                    EXPLICIT_ACCEPT_COND_SEM_def,
                     EXPLICIT_ACCEPT_COND_SEM_TIME_def,
                     IMP_DISJ_THM]);
 
@@ -222,9 +222,9 @@ val EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING_def=
     (EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f (EXPLICIT_ACCEPT_STATE q) = (EXPLICIT_ACCEPT_STATE (IMAGE f q))) /\
     (EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f EXPLICIT_ACCEPT_TRUE = EXPLICIT_ACCEPT_TRUE) /\
     (EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f(EXPLICIT_ACCEPT_NOT a) = EXPLICIT_ACCEPT_NOT (EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f a)) /\
-    (EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f (EXPLICIT_ACCEPT_G a) = 
+    (EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f (EXPLICIT_ACCEPT_G a) =
      EXPLICIT_ACCEPT_G (EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f a)) /\
-    (EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f (EXPLICIT_ACCEPT_AND(a, b)) = (EXPLICIT_ACCEPT_AND(EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f a,           
+    (EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f (EXPLICIT_ACCEPT_AND(a, b)) = (EXPLICIT_ACCEPT_AND(EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f a,
                          EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f b)))`;
 
 
@@ -242,7 +242,7 @@ val EXPLICIT_ACCEPT_COND_SEM___STATE_VAR_RENAMING___NOT_INJ =
       SIMP_TAC std_ss [EXPLICIT_ACCEPT_COND_SEM_TIME_def, EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING_def],
 
       SIMP_TAC std_ss [EXPLICIT_ACCEPT_COND_SEM_TIME_def, EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING_def, PATH_MAP_def, IN_IMAGE,
-      EXPLICIT_ACCEPT_COND_USED_STATE_VARS_def, SUBSET_DEF] THEN      
+      EXPLICIT_ACCEPT_COND_USED_STATE_VARS_def, SUBSET_DEF] THEN
       METIS_TAC[],
 
       SIMP_TAC std_ss [EXPLICIT_ACCEPT_COND_SEM_TIME_def, EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING_def],
@@ -277,7 +277,7 @@ val OMEGA_AUTOMATON___STATE_VAR_RENAMING =
     INJ f A.S UNIV /\
     (!s. s IN A.S ==> (g (f s) = s))) ==>
     ((!i. EXISTENTIAL_OMEGA_AUTOMATON_SEM (A, ac) i =
-          EXISTENTIAL_OMEGA_AUTOMATON_SEM ((SEMI_AUTOMATON_STATE_VAR_RENAMING A f g), EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f ac) i))``, 
+          EXISTENTIAL_OMEGA_AUTOMATON_SEM ((SEMI_AUTOMATON_STATE_VAR_RENAMING A f g), EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING f ac) i))``,
 
 
     SIMP_TAC std_ss [EXISTENTIAL_OMEGA_AUTOMATON_SEM_def] THEN
@@ -297,8 +297,8 @@ val OMEGA_AUTOMATON___STATE_VAR_RENAMING =
 
     EQ_TAC THEN REPEAT STRIP_TAC THENL [
       Q_TAC EXISTS_TAC `PATH_MAP (\n. f) w` THEN
-      Q_SPEC_NO_ASSUM 2 `PATH_MAP (\n. f) w` THEN 
-      Q_SPEC_NO_ASSUM 3 `PATH_MAP (\n. f) w` THEN 
+      Q_SPEC_NO_ASSUM 2 `PATH_MAP (\n. f) w` THEN
+      Q_SPEC_NO_ASSUM 3 `PATH_MAP (\n. f) w` THEN
       NTAC 2 UNDISCH_HD_TAC THEN
       SIMP_ALL_TAC std_ss [IS_RUN_THROUGH_SEMI_AUTOMATON_def,
         EXPLICIT_ACCEPT_COND_SEM_def] THEN
@@ -307,8 +307,8 @@ val OMEGA_AUTOMATON___STATE_VAR_RENAMING =
 
 
       Q_TAC EXISTS_TAC `PATH_MAP (\n. g) w` THEN
-      Q_SPEC_NO_ASSUM 2 `w` THEN 
-      Q_SPEC_NO_ASSUM 3 `w` THEN 
+      Q_SPEC_NO_ASSUM 2 `w` THEN
+      Q_SPEC_NO_ASSUM 3 `w` THEN
       NTAC 2 UNDISCH_HD_TAC THEN
       SUBGOAL_TAC `!n. w n IN IMAGE f A.S` THEN1 (
         SIMP_ALL_TAC std_ss [IS_RUN_THROUGH_SEMI_AUTOMATON_def,

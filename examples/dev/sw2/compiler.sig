@@ -1,4 +1,4 @@
-signature compiler = 
+signature compiler =
 sig
   include Abbrev
   (* val style : arm_code_format ref *)

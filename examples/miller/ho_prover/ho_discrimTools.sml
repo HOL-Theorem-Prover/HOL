@@ -285,7 +285,7 @@ local
   fun vars_check (sub : substitution, (vars, a)) =
     if subst_vars_in_set sub vars then SOME (sub, a) else NONE
   fun check_fo_match ml = partial_map vars_check ml
-in    
+in
   fun vdiscrim_fo_match d tm = check_fo_match (discrim_fo_match d tm);
 end;
 

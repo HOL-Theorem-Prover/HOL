@@ -34,11 +34,11 @@ fun copies x =
 (* Pinched from MoscowML distribution (examples/small/perms.sml).            *)
 (*---------------------------------------------------------------------------*)
 
-local 
+local
     fun accuperms []      tail res = tail :: res
       | accuperms (x::xr) tail res = cycle [] x xr tail res
     and cycle left mid [] tail res = accuperms left (mid::tail) res
-      | cycle left mid (right as r::rr) tail res = 
+      | cycle left mid (right as r::rr) tail res =
         cycle (mid::left) r rr tail (accuperms (left @ right) (mid::tail) res)
 in
   fun perms xs = accuperms xs [] []
@@ -63,7 +63,7 @@ fun imk_var(i,ty) = mk_var("v"^Int.toString i,ty);
 
 val inv_image_tm = prim_mk_const{Thy="relation",Name="inv_image"};
 
-fun mk_inv_image(R,f) = 
+fun mk_inv_image(R,f) =
   let val ty1 = fst(dom_rng(type_of R))
       val ty2 = fst(dom_rng(type_of f))
   in
@@ -76,7 +76,7 @@ val isWFR = same_const WF_tm o fst o strip_comb;
 
 fun K0 ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm);
 
-fun get_WF tmlist = 
+fun get_WF tmlist =
    pluck isWFR tmlist
     handle HOL_ERR _ => raise ERR "get_WF" "unexpected termination condition";
 
@@ -95,7 +95,7 @@ fun list_mk_lex []  = raise ERR "list_mk_lex" "empty list"
 
 val nless_lex = list_mk_lex o copies numSyntax.less_tm;
 
-fun mk_lex_reln argvars sizedlist arrangement = 
+fun mk_lex_reln argvars sizedlist arrangement =
   let val lex_comb = nless_lex (length sizedlist)
       val pargvars = list_mk_pair argvars
   in
@@ -138,10 +138,10 @@ val termination_simps =
 (* Adjustable set of WF theorems for doing WF proofs.                        *)
 (*---------------------------------------------------------------------------*)
 
-val WF_thms = 
+val WF_thms =
  let open relationTheory prim_recTheory pairTheory
  in
-   ref [WF_inv_image, WF_measure, WF_LESS, 
+   ref [WF_inv_image, WF_measure, WF_LESS,
         WF_EMPTY_REL, WF_PRED, WF_RPROD, WF_LEX, WF_TC]
  end;
 
@@ -156,27 +156,27 @@ val paired_forall_ss =
  let open simpLib pairTools
      val fvar = mk_var("f",alpha-->beta-->bool)
  in
-    conv_ss 
+    conv_ss
       {name  = "ELIM_TUPLED_QUANT_CONV (remove paired quantification)",
        trace = 2,
        key   = SOME ([],``$! (UNCURRY ^fvar)``),
        conv  = K (K ELIM_TUPLED_QUANT_CONV)}
  end;
 
-val term_ss = 
+val term_ss =
  let open simpLib infix ++
- in boolSimps.bool_ss 
-    ++ pairSimps.PAIR_ss 
+ in boolSimps.bool_ss
+    ++ pairSimps.PAIR_ss
     ++ paired_forall_ss
     ++ rewrites [pairTheory.LAMBDA_PROD]
-    ++ numSimps.REDUCE_ss 
+    ++ numSimps.REDUCE_ss
     ++ numSimps.ARITH_RWTS_ss
- end; 
+ end;
 
-val term_dp_ss = 
+val term_dp_ss =
  let open simpLib infix ++
  in term_ss ++ numSimps.ARITH_DP_ss
- end; 
+ end;
 
 
 (*---------------------------------------------------------------------------*)
@@ -258,7 +258,7 @@ fun projects L0 =
 (*---------------------------------------------------------------------------*)
 
 fun column_summaries L = some_true_in_cols (rectangular L);
-  
+
 (*---------------------------------------------------------------------------*)
 (* Identify columns where P holds                                            *)
 (*---------------------------------------------------------------------------*)
@@ -298,14 +298,14 @@ fun list_mk_prod_tyl L =
 (* Construct all lex combos corresponding to permutations of list            *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_sized_subsets argvars sizedlist = 
- let val permutations = 
+fun mk_sized_subsets argvars sizedlist =
+ let val permutations =
          if length sizedlist > 4
-         then (WARN "mk_sized_subsets" 
+         then (WARN "mk_sized_subsets"
                  "too many permutations (more than 24): chopping some";
                perms (take 4 sizedlist))
          else perms sizedlist
- in 
+ in
   map (mk_lex_reln argvars sizedlist) permutations
   handle HOL_ERR _ => []
  end;
@@ -314,7 +314,7 @@ fun mk_sized_subsets argvars sizedlist =
 (* Simplify guessed relations                                                *)
 (*---------------------------------------------------------------------------*)
 
-val simplifyR = 
+val simplifyR =
  let open prim_recTheory basicSizeTheory reduceLib simpLib
      val expand = QCONV (SIMP_CONV term_ss
                     [measure_def,pair_size_def,bool_size_def,one_size_def])
@@ -334,19 +334,19 @@ val simplifyR =
 (* duplicates are weeded out.                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun known_fun tm = 
+fun known_fun tm =
  let fun dest_order x = dest_less x handle HOL_ERR _ => dest_leq x
-     fun get_lhs th = 
+     fun get_lhs th =
             rand (fst(dest_order(snd(strip_imp
                   (snd(strip_forall(concl th)))))))
      val pats = mapfilter get_lhs (!termination_simps)
- in 
+ in
     0 < length (mapfilter (C match_term tm) pats)
  end;
 
 fun relevant (tm,_) = known_fun tm;
 
-local 
+local
  open Defn numSyntax simpLib boolSimps
  fun tysize ty = TypeBasePure.type_size (TypeBase.theTypeBase()) ty
  fun size_app v = mk_comb(tysize (type_of v),v)
@@ -368,7 +368,7 @@ fun guessR defn =
            val domty0  = list_mk_prod_tyl domtyl_1
            (* deal with possible iterated prim_rec *)
            val indices_1 = Lib.upto 1 (length domtyl_1)
-           val (argvars_1,subset_1) = 
+           val (argvars_1,subset_1) =
              itlist2 (fn i => fn (b,ty) => fn (alist,slist) =>
                         let val v = imk_var(i,ty)
                         in (v::alist, if b then size_app v::slist else slist)
@@ -380,7 +380,7 @@ fun guessR defn =
            val chf2   = column_summaries check2
            val domtyl_2 = strip_prod_ty chf2 domty
            val indices = Lib.upto 1 (length domtyl_2)
-           val (argvars,subset) = 
+           val (argvars,subset) =
              itlist2 (fn i => fn (b,ty) => fn (alist,slist) =>
                         let val v = imk_var(i,ty)
                         in (v::alist, if b then size_app v::slist else slist)
@@ -421,7 +421,7 @@ fun get_orig (TypeBasePure.ORIG th) = th
 
 fun PRIM_TC_SIMP_CONV simps =
  let val els = TypeBasePure.listItems (TypeBase.theTypeBase())
-     val size_defs = 
+     val size_defs =
          mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) els
      val case_defs = mapfilter TypeBasePure.case_def_of els
  in
@@ -437,7 +437,7 @@ val ASM_ARITH_TAC =
                    then MP_TAC th else ALL_TAC))
     THEN CONV_TAC Arith.ARITH_CONV;
 
-fun PRIM_TC_SIMP_TAC thl = 
+fun PRIM_TC_SIMP_TAC thl =
   CONV_TAC (PRIM_TC_SIMP_CONV thl) THEN TRY ASM_ARITH_TAC;
 
 fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC (!termination_simps) g;
@@ -448,17 +448,17 @@ val STD_TERM_TAC = PRIM_TERM_TAC WF_TAC TC_SIMP_TAC;
 
 local
   fun mesg tac (g as (_,tm)) =
-    (if !Defn.monitoring then 
+    (if !Defn.monitoring then
       print(String.concat["\nCalling ARITH on\n",term_to_string tm,"\n"])
-      else () ; 
+      else () ;
      tac g)
 in
-fun PROVE_TERM_TAC g = 
+fun PROVE_TERM_TAC g =
  let open combinTheory simpLib
      val simps = map (PURE_REWRITE_RULE [I_THM]) (!termination_simps)
      val ss = term_dp_ss ++ rewrites simps
  in
-   PRIM_TERM_TAC WF_TAC 
+   PRIM_TERM_TAC WF_TAC
       (CONV_TAC TC_SIMP_CONV THEN BasicProvers.PRIM_STP_TAC ss NO_TAC)
  end g
 end;
@@ -470,7 +470,7 @@ end;
 (*---------------------------------------------------------------------------*)
 
 fun PRIM_WF_REL_TAC q WFthms simps g =
-  (Q.EXISTS_TAC q THEN CONJ_TAC THENL 
+  (Q.EXISTS_TAC q THEN CONJ_TAC THENL
    [PRIM_WF_TAC WFthms, PRIM_TC_SIMP_TAC simps]) g;
 
 fun WF_REL_TAC q = Q.EXISTS_TAC q THEN STD_TERM_TAC;
@@ -481,8 +481,8 @@ fun WF_REL_TAC q = Q.EXISTS_TAC q THEN STD_TERM_TAC;
        to prove termination. If the termination proof
        fails, the definition attempt fails.
  ---------------------------------------------------------------------------*)
- 
-fun reln_is_not_set defn = 
+
+fun reln_is_not_set defn =
  case Defn.reln_of defn
   of NONE => false
    | SOME R => is_var R;
@@ -501,10 +501,10 @@ local open Defn
      in not(null tcs) andalso
         null(op_intersect eq (free_varsl tcs) rhs_frees)
      end
-  fun fvs_on_rhs V = 
+  fun fvs_on_rhs V =
      let val Vstr = String.concat (Lib.commafy
                        (map (Lib.quote o #1 o dest_var) V))
-     in if !allow_schema_definition 
+     in if !allow_schema_definition
         then HOL_MESG (String.concat
             ["Definition is schematic in the following variables:\n    ",
              Vstr])
@@ -512,7 +512,7 @@ local open Defn
          ("  The following variables are free in the \n right hand side of\
           \ the proposed definition: " ^ Vstr)
      end
-  fun termination_proof_failed () = 
+  fun termination_proof_failed () =
      raise ERR "defnDefine" (String.concat
          ["Unable to prove termination!\nUse \"Defn.Hol_defn\" to make ",
           "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
@@ -543,9 +543,9 @@ val primDefine = defnDefine PROVE_TERM_TAC;
 (* fails in the process, remove any constants introduced by the definition.  *)
 (*---------------------------------------------------------------------------*)
 
-fun xDefine stem q = 
+fun xDefine stem q =
  Parse.try_grammar_extension
-   (Theory.try_theory_extension 
+   (Theory.try_theory_extension
        (#1 o primDefine o Defn.Hol_defn stem)) q
   handle e => Raise (wrap_exn "TotalDefn" "xDefine" e);
 
@@ -573,7 +573,7 @@ fun define q =
     handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
  end
 
-fun Define q = 
+fun Define q =
  Parse.try_grammar_extension
     (Theory.try_theory_extension define) q
  handle e => Raise e
@@ -585,9 +585,9 @@ end;
 
 fun tDefine stem q tac =
  let open Defn
-     fun thunk() = 
+     fun thunk() =
        let val defn = Hol_defn stem q
-       in 
+       in
         if triv_defn defn
         then let val def = fetch_eqns defn
                  val bind = stem ^ !Defn.def_suffix
@@ -605,26 +605,26 @@ fun tDefine stem q tac =
  end;
 
 (*---------------------------------------------------------------------------*)
-(* Version of Define that supports multiple definitions, failing if any do.  *) 
+(* Version of Define that supports multiple definitions, failing if any do.  *)
 (*---------------------------------------------------------------------------*)
 
 fun head tm = fst(strip_comb tm);
 
 fun multidefine q =
  let val eqnsl = Defn.parse_quote q
-     val stems = map (fst o dest_var o head o lhs o snd o 
+     val stems = map (fst o dest_var o head o lhs o snd o
                       strip_forall o hd o strip_conj) eqnsl
  in
     map (#1 o primDefine) (Defn.mk_defns stems eqnsl)
  end
- handle e => 
+ handle e =>
    let val absyn0 = Parse.Absyn q
        val locn = Absyn.locn_of_absyn absyn0
-   in 
+   in
      raise wrap_exn_loc "TotalDefn" "multiDefine" locn e
    end;
 
-fun multiDefine q = 
+fun multiDefine q =
  Parse.try_grammar_extension
     (Theory.try_theory_extension multidefine) q
  handle e => Raise e;
@@ -634,7 +634,7 @@ fun multiDefine q =
 (* API for Define                                                            *)
 (*---------------------------------------------------------------------------*)
 
-datatype phase 
+datatype phase
   = PARSE of term quotation
   | BUILD of term
   | TERMINATION of defn;
@@ -647,8 +647,8 @@ type apidefn = (defn * thm option, phase * exn) Lib.verdict
 (* invocation of f.                                                          *)
 (*---------------------------------------------------------------------------*)
 
-fun silent f = 
-  Lib.with_flag(Lib.saying,false) 
+fun silent f =
+  Lib.with_flag(Lib.saying,false)
    (Lib.with_flag(Feedback.emit_WARNING,false)
      (Lib.with_flag(Feedback.emit_MESG,false) f));
 
@@ -666,16 +666,16 @@ fun tryR tac defn = proveTotal tac o Defn.set_reln defn;
 (* termination conditions as a theorem, along with the tc-free defn.         *)
 (*---------------------------------------------------------------------------*)
 
-fun elimTCs guessR tac defn = 
- case guessR defn 
+fun elimTCs guessR tac defn =
+ case guessR defn
    of [] => (defn,NONE)   (* prim. rec. or non-rec. defn *)
     | guesses => Lib.tryfind (tryR tac defn) guesses;
- 
+
 (*---------------------------------------------------------------------------*)
 (* Sequence the phases of definition, starting from a stem and a term        *)
 (*---------------------------------------------------------------------------*)
 
-fun apiDefine guessR tprover (stem,tm) = 
+fun apiDefine guessR tprover (stem,tm) =
   PASS tm ?> verdict (Defn.mk_defn stem) BUILD
           ?> verdict (elimTCs guessR tprover) TERMINATION;
 
@@ -685,7 +685,7 @@ fun apiDefine guessR tprover (stem,tm) =
 
 fun stem eqn = (fst (dest_const (head (lhs eqn))),eqn)
 
-fun apiDefineq guessR tprover q = 
+fun apiDefineq guessR tprover q =
    PASS q ?> verdict (silent (stem o hd o Defn.parse_quote)) PARSE
           ?> apiDefine guessR tprover;
 
@@ -700,10 +700,10 @@ val std_apiDefineq = apiDefineq guessR PROVE_TERM_TAC;
     Special entrypoints for defining schemas
  ---------------------------------------------------------------------------*)
 
-fun xDefineSchema stem = 
+fun xDefineSchema stem =
    with_flag(allow_schema_definition,true) (xDefine stem);
 
-val DefineSchema = 
+val DefineSchema =
    with_flag(allow_schema_definition,true) Define;
 
 end

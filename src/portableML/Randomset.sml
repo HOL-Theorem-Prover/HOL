@@ -257,7 +257,7 @@ in
      Set (cmp, treeIntersect cmp t1 t2);
 end;
 
-(*      
+(*
 val intersect =
     fn f => fn t1 => fn t2 =>
     checkWellformed
@@ -279,7 +279,7 @@ local
 in
   fun delete (Set (cmp,t), k) = Set (cmp, treeDelete cmp t k);
 end;
- 
+
 (*
 val delete =
     fn t => fn x =>

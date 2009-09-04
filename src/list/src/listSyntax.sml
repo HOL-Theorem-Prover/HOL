@@ -54,7 +54,7 @@ fun eltype l = dest_list_type (type_of l);
 
 (*---------------------------------------------------------------------------
          Constructor functions ... should add bespoke error
-         message to each of these ... 
+         message to each of these ...
  ---------------------------------------------------------------------------*)
 
 fun mk_nil ty    = inst [alpha |-> ty] nil_tm
@@ -65,11 +65,11 @@ fun mk_tl l      = mk_comb(inst[alpha |-> eltype l] tl_tm,l)
 fun mk_append(l1,l2) = list_mk_comb(inst[alpha |-> eltype l1]append_tm,[l1,l2])
 fun mk_flat l    = mk_comb(inst[alpha |-> dest_list_type(eltype l)] flat_tm,l)
 fun mk_length l  = mk_comb(inst[alpha |-> eltype l] length_tm,l)
-fun mk_map (f,l) = 
-  list_mk_comb(inst[alpha |-> eltype l, 
+fun mk_map (f,l) =
+  list_mk_comb(inst[alpha |-> eltype l,
                     beta  |-> snd(dom_rng (type_of f))] map_tm, [f,l])
 fun mk_map2(f,l1,l2) =
-  list_mk_comb(inst[alpha |-> eltype l1, 
+  list_mk_comb(inst[alpha |-> eltype l1,
                     beta  |-> eltype l2,
                     gamma |-> snd(strip_fun(type_of f))] map2_tm, [f,l1,l2])
 
@@ -96,9 +96,9 @@ fun mk_last l = mk_comb(inst[alpha |-> eltype l] last_tm,l);
 fun mk_front l = mk_comb(inst[alpha |-> eltype l] front_tm,l);
 fun mk_all_distinct l = mk_comb(inst[alpha |-> eltype l] all_distinct_tm,l);
 
-fun mk_list_case (n,c,l) = 
+fun mk_list_case (n,c,l) =
  case total dest_list_type (type_of l)
-  of SOME ty => 
+  of SOME ty =>
        list_mk_comb
           (inst [alpha |-> ty, beta |-> type_of n]list_case_tm, [n,c,l])
    | NONE => raise ERR "mk_list_case" "";
@@ -108,8 +108,8 @@ fun mk_list_case (n,c,l) =
          Destructors
  ---------------------------------------------------------------------------*)
 
-fun dest_nil tm = 
- if same_const nil_tm tm 
+fun dest_nil tm =
+ if same_const nil_tm tm
    then dest_list_type (type_of tm)
    else raise ERR "dest_nil" "";
 
@@ -129,7 +129,7 @@ val dest_foldl   = dest_triop foldl_tm  (ERR "dest_foldl"  "not FOLDL")
 val dest_every   = dest_binop every_tm  (ERR "dest_every"  "not EVERY")
 val dest_exists  = dest_binop exists_tm (ERR "dest_exists" "not EXISTS")
 val dest_el      = dest_binop el_tm     (ERR "dest_el"     "not EL")
-val dest_zip     = pairSyntax.dest_pair 
+val dest_zip     = pairSyntax.dest_pair
                    o dest_monop zip_tm  (ERR "dest_zip"    "not ZIP")
 val dest_unzip   = dest_monop unzip_tm  (ERR "dest_unzip"  "not UNZIP")
 val dest_sum     = dest_monop sum_tm    (ERR "dest_sum"    "not SUM")
@@ -174,10 +174,10 @@ val is_list_case = can dest_list_case
 
 fun mk_list (l,ty) = itlist (curry mk_cons) l (mk_nil ty);
 
-fun dest_list M = 
+fun dest_list M =
  let fun dest M =
        case total dest_cons M
-       of NONE => if is_nil M then [] 
+       of NONE => if is_nil M then []
                   else raise ERR "dest_list" "not terminated with nil"
         | SOME(h,t) => h::dest t
  in (dest M, dest_list_type (type_of M))

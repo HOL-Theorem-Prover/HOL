@@ -4,16 +4,16 @@
 (*
 quietdec := true;
 
-app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory", 
+app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory",
           "CFLTheory", "ACFTheory"];
 
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory 
+open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory
      finite_mapTheory CFLTheory ACFTheory;
 
 quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory 
+open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory
        finite_mapTheory CFLTheory ACFTheory;
 
 
@@ -28,7 +28,7 @@ val _ = new_theory "HSL";
 (* Pointer registers *)
 
 val _ = Hol_datatype `
-    PTR = TTP | THP | TFP | TIP | TSP | TLR`;   (* temporary register, heap pointer, fp, ip, sp and lr *) 
+    PTR = TTP | THP | TFP | TIP | TSP | TLR`;   (* temporary register, heap pointer, fp, ip, sp and lr *)
 
 val toPTR_def = Define `
     (toPTR TTP = tp) /\
@@ -270,7 +270,7 @@ val tdecode_def = Define `
   (tdecode hs (TLSL dst src2_reg src2_num) =
       twrite hs (inR dst) (tread hs (roc_2_exp src2_reg) << w2n src2_num)) /\
   (tdecode hs (TLSR dst src2_reg src2_num) =
-      twrite hs (inR dst) (tread hs (roc_2_exp src2_reg) >>> w2n src2_num)) /\  
+      twrite hs (inR dst) (tread hs (roc_2_exp src2_reg) >>> w2n src2_num)) /\
   (tdecode hs (TASR dst src2_reg src2_num) =
       twrite hs (inR dst) (tread hs (roc_2_exp src2_reg) >> w2n src2_num)) /\
   (tdecode hs (TROR dst src2_reg src2_num) =
@@ -293,10 +293,10 @@ val empty_s_def = Define `
 (* The semantics of HSL, defined on stacks *)
 
 val run_hsl_def = Define `
-    (run_hsl (Blk (stm::stmL)) s = 
+    (run_hsl (Blk (stm::stmL)) s =
        run_hsl (Blk stmL) (tdecode s stm)) /\
     (run_hsl (Blk []) s = s) /\
-    (run_hsl (Sc S1 S2) s = 
+    (run_hsl (Sc S1 S2) s =
        run_hsl S2 (run_hsl S1 s)) /\
     (run_hsl (Cj cond S1 S2) s =
        (if eval_TCND cond s then run_hsl S1 s else run_hsl S2 s)) /\
@@ -386,7 +386,7 @@ val Sc_RULE = Q.store_thm (
 val Cj_RULE = Q.store_thm (
    "Cj_RULE",
    `!cond St Sf cond_f in_f f1 f2 out_f.
-     CSPEC St (in_f,f1,out_f) /\ CSPEC Sf (in_f,f2,out_f) /\ 
+     CSPEC St (in_f,f1,out_f) /\ CSPEC Sf (in_f,f2,out_f) /\
      (!s. cond_f (in_f s) = eval_TCND cond s)
         ==>
        CSPEC (Cj cond St Sf) (in_f, cj cond_f f1 f2, out_f)`,
@@ -446,7 +446,7 @@ val Tr_RULE = Q.store_thm (
    "Tr_RULE",
    `!cond S_hsl cond_f prj_f f.
         (?R. WF R /\ (!x. ~cond_f x ==> R (f x) x)) /\
-        (!s. cond_f (prj_f s) = eval_TCND cond s) /\ 
+        (!s. cond_f (prj_f s) = eval_TCND cond s) /\
         CSPEC S_hsl (prj_f,f,prj_f) ==>
           CSPEC (Tr cond S_hsl) (prj_f, tr cond_f f, prj_f)`,
 
@@ -455,7 +455,7 @@ val Tr_RULE = Q.store_thm (
     IMP_RES_TAC  relationTheory.WF_INDUCTION_THM THEN
     POP_ASSUM (K ALL_TAC) THEN
     Q.ABBREV_TAC `g = run_hsl S_hsl` THEN
-    Q.PAT_ASSUM `!P.k` (MATCH_MP_TAC o SIMP_RULE std_ss [] o 
+    Q.PAT_ASSUM `!P.k` (MATCH_MP_TAC o SIMP_RULE std_ss [] o
           Q.SPEC `\s. (prj_f (WHILE (\s'. ~eval_TCND cond s') (\a. g a) s) = (tr cond_f f) (prj_f s))`) THEN
     REPEAT STRIP_TAC THEN
 
@@ -518,12 +518,12 @@ val TRANSFER_INTACT = Q.store_thm (
 (*---------------------------------------------------------------------------------*)
 
 val match_def = Define `
-    match f lst g = 
+    match f lst g =
       !s:TSTATE. (f s = g (MAP (tread s) lst))`;
 
 val valid_arg_list_def = Define `
     valid_arg_list (caller_i, caller_o, callee_i, callee_o) =
-    unique_list caller_o /\ unique_list callee_i /\ 
+    unique_list caller_o /\ unique_list callee_i /\
     (LENGTH caller_i = LENGTH callee_i) /\ (LENGTH caller_o = LENGTH callee_o) /\
     EVERY notC callee_i /\ EVERY notC caller_o`;
 

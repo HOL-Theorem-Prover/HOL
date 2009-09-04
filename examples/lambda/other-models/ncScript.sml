@@ -1061,7 +1061,7 @@ val FV_SUB = store_thm(
 val nc_RECURSION2 = save_thm(
   "nc_RECURSION2",
   (SIMP_RULE bool_ss [ABS_DEF] o
-   Q.INST [`lam'` |-> `lam`] o 
+   Q.INST [`lam'` |-> `lam`] o
    Q.INST [`lam` |-> `\r t. let v = NEW (FV (ABS t) UNION X)
                             in lam' (r v) v (t v)`] o
    SPEC_ALL) nc_RECURSION)

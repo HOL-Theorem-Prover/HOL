@@ -23,13 +23,13 @@ val strip_cons : term -> term list * term;
 
 
 (* destructs a term of the from
-   
+
    LIST_DS_ENTAILS (pfL, sfL) (pfL', sfL')
 
    and returns the lists pfL, sfL, pfL', sfL'.
 *)
 
-val dest_LIST_DS_ENTAILS : 
+val dest_LIST_DS_ENTAILS :
    term -> (term * term * term * term * term * term);
 
 
@@ -70,14 +70,14 @@ val is_dse_nil : term -> bool;
 
 
 (* Given a term t of the form
-   
+
    LIST_DS_ENTAILS (c1, c2) ([pf1, pf2, pf3 ... pfn], [sf1 ... ]) ([pf'1, ...], [sf'1...])
 
-   GEN_SWAP_CONV n1 m1 n2 m2 n3 m3 n4 m4 n5 m5 n6 m6 t 
+   GEN_SWAP_CONV n1 m1 n2 m2 n3 m3 n4 m4 n5 m5 n6 m6 t
 
    constructs a term t' by SWAPING the elements of the argumenst lists.
-   Element m1 in [pf1, ...] bubbles up to position n1. 
-   m2 n2 modify [sf1...] etc. 
+   Element m1 in [pf1, ...] bubbles up to position n1.
+   m2 n2 modify [sf1...] etc.
    m5 n5 handles c1, m6 n6 c2
 
 
@@ -91,8 +91,8 @@ val is_dse_nil : term -> bool;
 *)
 val GEN_SWAP_CONV : int -> int -> int -> int -> int -> int -> int -> int -> int -> int -> int -> int -> term -> thm
 
-(* SWAP_CONV p n m is 
-   a wrapper for GEN_SWAP_CONV 
+(* SWAP_CONV p n m is
+   a wrapper for GEN_SWAP_CONV
    with all int-arguments set to 0 except one pair of n arguments, which
    is selected by the p argument.
 *)
@@ -102,21 +102,21 @@ val SWAP_CONV : int -> int -> int -> term -> thm
 
 (*
    Given a term t of the form
-   
+
    LIST_DS_ENTAILS (c1,c2) ([pf1, pf2, pf3 ... pfn], sfL) ([pf1', ...], sfL')
 
-   ds_DIRECT_EQUATIONS_CONV [b1, b2, b3, ...] [b1', b2', ...] 
-   
+   ds_DIRECT_EQUATIONS_CONV [b1, b2, b3, ...] [b1', b2', ...]
+
    turns pf_n('), iff pf_n(') is of the form (e1 = e2) or (e1 /= e2) and iff
    b_n(') is true.
-*) 
-val ds_TURN_EQUATIONS_CONV : bool list -> bool list -> term -> thm; 
+*)
+val ds_TURN_EQUATIONS_CONV : bool list -> bool list -> term -> thm;
 
-(* Turns equations and disequations automatically, thus that constansts are on the right side, while 
+(* Turns equations and disequations automatically, thus that constansts are on the right side, while
    variables are on the left. If these rules are not sufficient, a comparision of the string representation
    is used *)
-   
-val ds_AUTO_DIRECT_EQUATIONS_CONV : term -> thm; 
+
+val ds_AUTO_DIRECT_EQUATIONS_CONV : term -> thm;
 
 
 (************************************************************

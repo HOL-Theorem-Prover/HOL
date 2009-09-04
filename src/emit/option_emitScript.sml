@@ -10,7 +10,7 @@ val THE_NONE = Q.prove (
 val _ = ConstMapML.insert_cons(Term.prim_mk_const{Name="SOME",Thy="option"});
 val _ = ConstMapML.insert_cons(Term.prim_mk_const{Name="NONE",Thy="option"});
 
-val defs = 
+val defs =
   map DEFN [OPTION_MAP_DEF, IS_SOME_DEF, IS_NONE_DEF,
             CONJ THE_NONE THE_DEF, OPTION_JOIN_DEF];
 

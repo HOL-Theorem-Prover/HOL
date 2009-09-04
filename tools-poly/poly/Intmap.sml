@@ -1,6 +1,6 @@
 (* Intmap -- modified for Moscow ML from SML/NJ library v. 0.2.
  *
- * COPYRIGHT (c) 1993 by AT&T Bell Laboratories.  
+ * COPYRIGHT (c) 1993 by AT&T Bell Laboratories.
  * See file mosml/copyrght/copyrght.att for details.
  *
  * This code was adapted from Stephen Adams' binary tree implementation
@@ -49,13 +49,13 @@ exception NotFound
 
 fun wt (i : int) = 3 * i
 
-datatype 'a intmap = 
-  E 
+datatype 'a intmap =
+  E
 | T of {
-    key : int, 
-    value : 'a, 
-    cnt : int, 
-    left : 'a intmap, 
+    key : int,
+    value : 'a,
+    cnt : int,
+    left : 'a intmap,
     right : 'a intmap
 }
 
@@ -66,19 +66,19 @@ local
     fun N(k,v,E,E) = T{key=k,value=v,cnt=1,left=E,right=E}
       | N(k,v,E,r as T n) = T{key=k,value=v,cnt=1+(#cnt n),left=E,right=r}
       | N(k,v,l as T n,E) = T{key=k,value=v,cnt=1+(#cnt n),left=l,right=E}
-      | N(k,v,l as T n,r as T n') = 
+      | N(k,v,l as T n,r as T n') =
           T{key=k,value=v,cnt=1+(#cnt n)+(#cnt n'),left=l,right=r}
 
-    fun single_L (a,av,x,T{key=b,value=bv,left=y,right=z,...}) = 
+    fun single_L (a,av,x,T{key=b,value=bv,left=y,right=z,...}) =
           N(b,bv,N(a,av,x,y),z)
       | single_L _ = raise Match
-    fun single_R (b,bv,T{key=a,value=av,left=x,right=y,...},z) = 
+    fun single_R (b,bv,T{key=a,value=av,left=x,right=y,...},z) =
           N(a,av,x,N(b,bv,y,z))
       | single_R _ = raise Match
     fun double_L (a,av,w,T{key=c,value=cv,left=T{key=b,value=bv,left=x,right=y,...},right=z,...}) =
           N(b,bv,N(a,av,w,x),N(c,cv,y,z))
       | double_L _ = raise Match
-    fun double_R (c,cv,T{key=a,value=av,left=w,right=T{key=b,value=bv,left=x,right=y,...},...},z) = 
+    fun double_R (c,cv,T{key=a,value=av,left=w,right=T{key=b,value=bv,left=x,right=y,...},...},z) =
           N(b,bv,N(a,av,w,x),N(c,cv,y,z))
       | double_R _ = raise Match
 
@@ -108,21 +108,21 @@ local
             in
               if rln < rrn then  single_L p  else  double_L p
             end
-        
+
           else if ln >= wt rn then  (*left is too big*)
             let val lln = numItems ll
                 val lrn = numItems lr
             in
               if lrn < lln then  single_R p  else  double_R p
             end
-    
+
           else T{key=k,value=v,cnt=ln+rn+1,left=l,right=r}
 
     local
       fun min (T{left=E,key,value,...}) = (key,value)
         | min (T{left,...}) = min left
         | min _ = raise Match
-  
+
       fun delmin (T{left=E,right,...}) = right
         | delmin (T{key,value,left,right,...}) = T'(key,value,delmin left,right)
         | delmin _ = raise Match
@@ -135,14 +135,14 @@ local
     end
 in
     fun empty () = E
-    
+
     fun insert (E,x,v) = T{key=x,value=v,cnt=1,left=E,right=E}
       | insert (T(set as {key,left,right,value,...}),x,v) =
           if key > x then T'(key,value,insert(left,x,v),right)
           else if key < x then T'(key,value,left,insert(right,x,v))
           else T{key=x,value=v,left=left,right=right,cnt= #cnt set}
 
-    fun retrieve (set, x) = let 
+    fun retrieve (set, x) = let
       fun mem E = raise NotFound
         | mem (T(n as {key,left,right,...})) =
             if x > key then mem right
@@ -154,7 +154,7 @@ in
 
     fun remove (E,x) = raise NotFound
       | remove (set as T{key,left,right,value,...},x) =
-          if key > x then 
+          if key > x then
             let val (left',v) = remove(left,x)
             in (T'(key,value,left',right),v) end
           else if key < x then

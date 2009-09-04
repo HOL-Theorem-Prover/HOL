@@ -137,7 +137,6 @@ end;
 structure PolyGeneral = General;
 structure PolyArray = Array;
 structure PolySubstring = Substring;
-structure PolyWord8Vector = Word8Vector;
 structure PolyVector = Vector;
 structure PolyWord8 = Word8;
 structure PolyOS = OS;
@@ -178,17 +177,6 @@ structure Vector = struct
     | appi a (c, d, e) = VectorSlice.appi a (VectorSlice.slice (c, d, e));
   fun extract (c, d, e) =
     VectorSlice.vector (VectorSlice.slice (c, d, e))
-end;
-
-structure Word8Vector = struct
-  open PolyWord8Vector;
-  local
-    open Word8VectorSlice;
-  in
-    fun mapi f (v,i,jopt) = PolyWord8Vector.mapi f (vector(slice(v,i,jopt)));
-    fun foldri f b (v,i,jopt) =
-      PolyWord8Vector.foldri f b (vector(slice(v,i,jopt)));
-  end;
 end;
 
 structure Word8 = struct

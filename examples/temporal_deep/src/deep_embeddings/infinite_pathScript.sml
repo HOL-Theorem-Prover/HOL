@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
@@ -642,7 +642,7 @@ val INF_ELEMENTS_OF_PATH_NOT_EMPTY =
     ``!S. FINITE S ==> (!w. ((!n. w n IN S) ==> ~(INF_ELEMENTS_OF_PATH w = EMPTY)))``,
 
     PSet_ind.SET_INDUCT_TAC FINITE_INDUCT THEN1 REWRITE_TAC[NOT_IN_EMPTY] THEN
-    
+
     REPEAT STRIP_TAC THEN
     Cases_on `e IN INF_ELEMENTS_OF_PATH w` THEN1 (
         METIS_TAC[NOT_IN_EMPTY]
@@ -655,7 +655,7 @@ val INF_ELEMENTS_OF_PATH_NOT_EMPTY =
         PROVE_TAC[]
     ) THEN
     `?x. x IN s` by PROVE_TAC [MEMBER_NOT_EMPTY] THEN
-    
+
     `?w'. w' = \n. if (w n = e) then x else w n` by METIS_TAC[] THEN
     SUBGOAL_THEN ``!n:num. w' n IN (s:'a set)`` ASSUME_TAC THEN1 (
         ASM_SIMP_TAC std_ss [] THEN
@@ -663,19 +663,19 @@ val INF_ELEMENTS_OF_PATH_NOT_EMPTY =
         Cases_on `w n = e` THEN ASM_REWRITE_TAC[] THEN
         PROVE_TAC[IN_INSERT]
     ) THEN
-    
+
     SUBGOAL_THEN ``?n. !m. m > n ==> (w m = w' m)`` STRIP_ASSUME_TAC  THEN1 (
         FULL_SIMP_TAC std_ss [INF_ELEMENTS_OF_PATH_def, GSPECIFICATION] THEN
         PROVE_TAC[]
     ) THEN
-    
+
     SUBGOAL_THEN ``INF_ELEMENTS_OF_PATH w = INF_ELEMENTS_OF_PATH w'`` ASSUME_TAC THEN1 (
         SIMP_TAC std_ss [INF_ELEMENTS_OF_PATH_def, EXTENSION, GSPECIFICATION] THEN
         REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
             `?n''. n'' > n /\ n'' > n'` by (EXISTS_TAC ``SUC(n + n')`` THEN DECIDE_TAC) THEN
             `?m. m > n'' /\ (w m = x') /\ (w' m = x')` by METIS_TAC[] THEN
             METIS_TAC[],
-    
+
             `?n''. n'' > n /\ n'' > n'` by (EXISTS_TAC ``SUC(n + n')`` THEN DECIDE_TAC) THEN
             `?m. m > n'' /\ (w' m = x')` by METIS_TAC[] THEN
             `m > n /\ m > n'` by DECIDE_TAC THEN
@@ -683,7 +683,7 @@ val INF_ELEMENTS_OF_PATH_NOT_EMPTY =
             METIS_TAC[]
         ]
     ) THEN
-    
+
     PROVE_TAC[]);
 
 
@@ -712,7 +712,7 @@ val PATH_EXTENSION_EQUIV_THM =
           NOT_IN_EMPTY, PATH_RESTRICT_def, PATH_MAP_def, IN_INTER, PATH_SUBSET_def] THEN
         METIS_TAC[]
       ),
-      
+
       REWRITE_TAC[PATH_EXTENSION_def] THEN
       ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
       REPEAT STRIP_TAC THEN
@@ -730,7 +730,7 @@ val PATH_VAR_RENAMING___ORIG_PATH_EXISTS =
 
    ``!w f S. (PATH_SUBSET w (IMAGE f S)) ==> (?w'. (PATH_SUBSET w' S) /\ (w = PATH_VAR_RENAMING f w'))``,
 
-   SIMP_TAC std_ss [IMAGE_DEF, PATH_SUBSET_def, PATH_VAR_RENAMING_def, PATH_MAP_def, SUBSET_DEF, GSPECIFICATION] THEN   
+   SIMP_TAC std_ss [IMAGE_DEF, PATH_SUBSET_def, PATH_VAR_RENAMING_def, PATH_MAP_def, SUBSET_DEF, GSPECIFICATION] THEN
    REPEAT STRIP_TAC THEN
    SUBGOAL_TAC `?w'. !x n. x IN (w' n) = ((f x) IN w n /\ x IN S)` THEN1 (
      Q_TAC EXISTS_TAC `\n:num x. (f x) IN w n /\ x IN S` THEN
@@ -765,7 +765,7 @@ val IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE___ALTERNATIVE_DEF =
      (!m. p (n0 + m) = p (n0 + m MOD n)))``,
 
     SIMP_TAC std_ss [IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE_def] THEN
-    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [      
+    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       Induct_on `m DIV n` THENL [
         REPEAT STRIP_TAC THEN
         `m = (m DIV n)*n + m MOD n` by PROVE_TAC[DIVISION] THEN
@@ -781,7 +781,7 @@ val IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE___ALTERNATIVE_DEF =
         `(m-n) DIV n = (SUC v) - 1` by METIS_TAC[DIV_SUB] THEN
         `(m-n) MOD n = m MOD n` by METIS_TAC[MOD_SUB] THEN
         `((SUC v) - 1) = v` by DECIDE_TAC THEN
-        
+
         Q_SPECL_NO_ASSUM 9 [`m - n`, `n`] THEN
         UNDISCH_HD_TAC THEN
         ASM_SIMP_TAC std_ss [] THEN
@@ -833,7 +833,7 @@ val CUT_PATH_PERIODICALLY___IS_ULTIMATIVELY_PERIODIC =
     ASM_SIMP_TAC arith_ss [] THEN
     Cases_on `n = 0` THENL [
       ASM_SIMP_TAC arith_ss [],
-    
+
       `0 < n /\ ((m + n - n0) = (n + (m - n0)))` by DECIDE_TAC THEN
       ASM_SIMP_TAC std_ss [arithmeticTheory.ADD_MODULUS_RIGHT]
     ]);

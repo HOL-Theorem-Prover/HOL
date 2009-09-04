@@ -1,7 +1,7 @@
 (* FILE		: stable.ml						*)
 (* DESCRIPTION   : Creates the theory "stable" containing the definition*)
 (*		  of the predicate, Stable, and associated theorems. 	*)
-(*									*) 
+(*									*)
 (* READS FILES	: <none>						*)
 (* WRITES FILES	: stable.th						*)
 (*									*)
@@ -36,16 +36,16 @@ val _ = new_theory "stable";;
 
 (* Definition of Stable: a predicate for signals that are stable in an 	*)
 (* interval.								*)
-val Stable = 
+val Stable =
     new_definition
         ("Stable",
-	 ``!sig t1 t2. Stable t1 t2 sig = 
+	 ``!sig t1 t2. Stable t1 t2 sig =
 	    !t. ((t1 <= t) /\ (t < t2)) ==> (sig(t) = sig(t1))``);;
 
-val Stable_pair = 
+val Stable_pair =
     prove_thm
     ("Stable_pair",
-     ``!f t1 t2. 
+     ``!f t1 t2.
         Stable t1 t2 (\t. f t, g t) = ((Stable t1 t2 f) /\ Stable t1 t2 g)``,
      REWRITE_TAC [Stable] THEN
      REPEAT STRIP_TAC THEN

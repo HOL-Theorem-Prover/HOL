@@ -4,7 +4,7 @@ sig
     type precision = int
     type domain = int
     type fddvar
-	
+
     val extDomain: domain list -> fddvar list
     val clearAll: unit -> unit
     val domainNum: unit -> int
@@ -25,7 +25,7 @@ end
 
   Type [fddvar] is the type of fdd variables.  An fdd variable
   represents a set of bdd variables.
-	
+
   [extDomain [d1, ..., dn] ] returns a list of fddvars [v1, ... vn].
   The domain di represents the domain of the i'th variable vi.  See
   also [ordering].

@@ -1274,7 +1274,7 @@ fun primHol_datatype db q =
 
  ---------------------------------------------------------------------------*)
 
-val (type_to_string, term_to_string) = 
+val (type_to_string, term_to_string) =
  let
   val (pty, ptm) = print_from_grammars boolTheory.bool_grammars
  in
@@ -1308,9 +1308,9 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
                end
           fun do_extras extra_string =
               (S ("      val tyinfo0 = " ^ extra_string ^ "tyinfo0"); NL())
-          fun do_string_etc 
+          fun do_string_etc
              ({ax,case_def,case_cong,induction,nchotomy,
-               one_one,distinct,encode,lift,size,fields,accessors,updates}, 
+               one_one,distinct,encode,lift,size,fields,accessors,updates},
               extra_simpls_string) =
             (S "    let";                                               NL();
              S "      open TypeBasePure";                               NL();
@@ -1400,13 +1400,13 @@ fun write_tyinfo tyinfo =
             => SOME (tm, "COPY ("^string_pair sp^",encode_"^snd(sp)^"_def)")
        end
      val lift_info = NONE
-     val accessors_list = 
+     val accessors_list =
        let val acc_name = name"_accessors"
        in case accessors_of tyinfo
            of [] => "[]"
             | other => "Drule.CONJUNCTS "^acc_name
        end
-     val updates_list = 
+     val updates_list =
        let val upd_name = name"_fn_updates"
        in case updates_of tyinfo
            of [] => "[]"

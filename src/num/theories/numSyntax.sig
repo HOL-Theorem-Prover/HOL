@@ -1,4 +1,4 @@
-signature numSyntax = 
+signature numSyntax =
 sig
   include Abbrev
 

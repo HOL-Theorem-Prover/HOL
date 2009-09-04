@@ -5,7 +5,7 @@ sig
  type thm = Thm.thm
 
 
-  val RIGHT_ASSOC      : thm -> thm 
+  val RIGHT_ASSOC      : thm -> thm
   val FILTER_DISCH_ALL : (term -> bool) -> thm -> thm
 
   val CHOOSE           : term * thm -> thm -> thm

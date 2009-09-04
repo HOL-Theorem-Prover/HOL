@@ -228,25 +228,32 @@ end;
     Compiling Basis 2002 "fix"
    ---------------------------------------------------------------------- *)
 let
-  val _ = print "Compiling Basis 2002 update for Moscow ML\n"
+  val _ = print "Compiling Basis 2002 update for Moscow ML "
   val modTime = FileSys.modTime
   val dir_0 = FileSys.getDir()
   val _ = FileSys.chDir holmakedir
   val smlfile = fullPath [holmakedir, "basis2002.sml"]
   val uifile = fullPath [holmakedir, "basis2002.ui"]
+  val uofile = fullPath [holmakedir, "basis2002.uo"]
   val rebuild_basis = not (canread uifile) orelse
                       Time.>(modTime smlfile, modTime uifile)
-  val copy_basis = not (canread (fullPath [sigobj, "basis2002.ui"])) orelse
-                   not (canread (fullPath [sigobj, "basis2002.uo"])) orelse
-                   rebuild_basis
+  val sigui = fullPath [sigobj, "basis2002.ui"]
+  val siguo = fullPath [sigobj, "basis2002.uo"]
+  val copy_basis = not (canread sigui) orelse not (canread siguo) orelse
+                   rebuild_basis orelse
+                   Time.>(modTime uifile, modTime sigui) orelse
+                   Time.>(modTime uofile, modTime siguo)
 in
   if rebuild_basis then
-    if systeml [compiler, "-c", "-toplevel", "basis2002.sml"] =
+    (print "(recompile needed";
+     if systeml [compiler, "-c", "-toplevel", "basis2002.sml"] =
        OS.Process.success
-    then ()
-    else die "Couldn't compile basis2002.sml"
-  else ();
-  if copy_basis then app to_sigobj ["basis2002.ui", "basis2002.uo"] else ();
+     then ()
+     else die "Couldn't compile basis2002.sml")
+  else print "(up-to-date";
+  if copy_basis then (print "; copying to sigobj)\n";
+                      app to_sigobj ["basis2002.ui", "basis2002.uo"])
+  else print ")\n";
   FileSys.chDir dir_0
 end;
 
@@ -291,9 +298,11 @@ val _ = let
                             else ()
 in
   FileSys.chDir destdir;
-  systeml [compiler, "-c", "-toplevel", "mllex.sml"];
+  systeml [compiler, "-I", "../../sigobj", "-c", "-toplevel", "basis2002.ui",
+           "mllex.sml"];
   systeml [compiler, "-c", "mllex.ui", "mosmlmain.sml"];
-  systeml [compiler, "-o", "mllex.exe", "mllex.uo", "mosmlmain.uo"];
+  systeml [compiler, "-I", "../../sigobj", "-o", "mllex.exe", "mllex.uo",
+           "mosmlmain.uo"];
   FileSys.chDir cdir
 end handle _ => die "Failed to build mllex."
 

@@ -196,6 +196,6 @@ val COND_RAND_CONV   = REWR_CONV COND_RAND
 val COND_EXPAND_CONV = REWR_CONV COND_EXPAND;
 
 val _ = Parse.temp_set_grammars ambient_grammars
-end; 
+end;
 
 end

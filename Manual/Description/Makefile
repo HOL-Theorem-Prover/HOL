@@ -13,13 +13,11 @@ CHAPTERS = conv.tex drules.tex HolSat.tex libraries.tex misc.tex \
 OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex
 
 default: pdf
-all: ps pdf
-ps: description.ps HolBdd.ps holCheck.ps
 pdf: description.pdf HolBdd.pdf holCheck.pdf
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind description.{ps,pdf} \
-            *.bbl *.blg HolBdd.{ps,pdf} holCheck.{ps,pdf}
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind description.pdf \
+            *.bbl *.blg HolBdd.pdf holCheck.pdf
 
 description.pdf: description.tex $(CHAPTERS) $(OTHER)
 	${PDFLATEX}  description

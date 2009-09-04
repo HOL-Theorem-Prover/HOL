@@ -5,7 +5,7 @@
 (*---------------------------------------------------------------------------*)
 
 (*
-app load ["bossLib", "rich_listTheory", "metisLib"]; 
+app load ["bossLib", "rich_listTheory", "metisLib"];
 *)
 
 open HolKernel Parse boolLib;
@@ -43,12 +43,12 @@ val _ = overload_on ("<>", Term`APPEND`);
 val IN_THM = prove
   (``!x. P x = x IN P``,
    RW_TAC bool_ss [boolTheory.IN_DEF]);
- 
+
 val APPEND_ID_THM = prove
   (``!l1 l2. ((l1<>l2 = l1) = (l2=[])) /\
              ((l1<>l2 = l2) = (l1=[]))``,
    Induct THEN EVAL_TAC THEN ASM_REWRITE_TAC []
-   THEN GEN_TAC THEN Cases THEN RW_TAC list_ss [] THEN DISJ2_TAC 
+   THEN GEN_TAC THEN Cases THEN RW_TAC list_ss [] THEN DISJ2_TAC
    THEN SPOSE_NOT_THEN (MP_TAC o Q.AP_TERM `LENGTH`)
    THEN RW_TAC list_ss []);
 
@@ -72,7 +72,7 @@ val MEM_TL = prove
 
 val FIRST_EXISTS_THM = prove
   (``!P L. EXISTS P L ==>
-       ?prefix w suffix. 
+       ?prefix w suffix.
          (L = prefix <> [w] <> suffix) /\ EVERY ($~ o P) prefix /\ P w``,
    GEN_TAC THEN Induct THEN RW_TAC list_ss []
    THEN FULL_SIMP_TAC list_ss [EXISTS_DEF] THEN RW_TAC list_ss []
@@ -80,18 +80,18 @@ val FIRST_EXISTS_THM = prove
           RES_TAC THEN Cases_on `P h` THENL
           [MAP_EVERY Q.EXISTS_TAC [`[]`, `h`, `prefix <> [w] <> suffix`]
            THEN RW_TAC list_ss [],
-           MAP_EVERY Q.EXISTS_TAC [`h::prefix`, `w`, `suffix`] THEN 
+           MAP_EVERY Q.EXISTS_TAC [`h::prefix`, `w`, `suffix`] THEN
            RW_TAC list_ss [combinTheory.o_DEF]]]);
-    
+
 val EXISTS_ELIM_THM = prove
   (``!P l. EXISTS P l = ?x. MEM x l /\ x IN P``,
-   GEN_TAC THEN Induct 
+   GEN_TAC THEN Induct
    THEN RW_TAC list_ss [EXISTS_DEF]
    THEN PROVE_TAC [IN_THM]);
 
 val EVERY_ELIM_THM = prove
   (``!P l. EVERY P l = !x. MEM x l ==> x IN P``,
-    GEN_TAC THEN Induct 
+    GEN_TAC THEN Induct
     THEN RW_TAC list_ss [EVERY_DEF]
     THEN PROVE_TAC [IN_THM]);
 
@@ -99,8 +99,8 @@ val EVERY_ELIM_THM = prove
 (* Concatenate a list of lists                                               *)
 (*---------------------------------------------------------------------------*)
 
-val CONCAT_def = Define 
-  `(CONCAT []     = []) /\ 
+val CONCAT_def = Define
+  `(CONCAT []     = []) /\
    (CONCAT(l::ll) = l <> CONCAT ll)`;
 
 val CONCAT_EQ_NIL = prove
@@ -126,7 +126,7 @@ val ALL_SPLITS_def = Define
 val SPLITS_def = Define `SPLITS l = ALL_SPLITS ([],l)`;
 
 (*---------------------------------------------------------------------------*)
-(* Testing 
+(* Testing
 
     EVAL (Term`SPLITS [1;2;3;4]`);
     EVAL (Term`SPLITS [1;2;3;4;5;6;7;8;9]`);
@@ -138,12 +138,12 @@ val SPLITS_def = Define `SPLITS l = ALL_SPLITS ([],l)`;
 
 val ALL_SPLITS_LEMMA = prove
   (``!l1 l2 l3 l4. MEM (l3,l4) (ALL_SPLITS (l1,l2)) ==> (l1<>l2 = l3<>l4)``,
-   Induct_on `l2` THEN RW_TAC list_ss [ALL_SPLITS_def] THEN 
+   Induct_on `l2` THEN RW_TAC list_ss [ALL_SPLITS_def] THEN
    METIS_TAC [APPEND,APPEND_ASSOC]);
 
 val SPLITS_APPEND = prove
   (``!l l1 l2. MEM (l1,l2) (SPLITS l) ==> (l1<>l2 = l)``,
-   RW_TAC list_ss [SPLITS_def] THEN 
+   RW_TAC list_ss [SPLITS_def] THEN
    METIS_TAC [ALL_SPLITS_LEMMA,APPEND]);
 
 val MEM_ALL_SPLITS_ID = prove
@@ -179,20 +179,20 @@ val SPLITS_LENGTH = prove
 
 val SPLITS_NON_EMPTY = prove
   (``!l. ~NULL (SPLITS l)``,
-   RW_TAC list_ss [SPLITS_def] THEN 
+   RW_TAC list_ss [SPLITS_def] THEN
    Induct_on `l` THEN RW_TAC list_ss [ALL_SPLITS_def]);
 
 val lem = prove
   (``!l1 l2 l3 s1 s2.
        MEM (s1,s2) (ALL_SPLITS (l1,l2))
-       ==> 
+       ==>
        ?s3. MEM (s3,s2) (ALL_SPLITS (l3,l2))``,
    Induct_on `l2` THEN RW_TAC list_ss [ALL_SPLITS_def] THEN PROVE_TAC []);
 
-val MEM_ALL_SPLITS_LENGTH = prove 
+val MEM_ALL_SPLITS_LENGTH = prove
   (``!l s1 s2.
        ~NULL l ==> MEM (s1,s2) (TL (SPLITS l)) ==> LENGTH s2 < LENGTH l``,
-   REWRITE_TAC [SPLITS_def] THEN 
+   REWRITE_TAC [SPLITS_def] THEN
    Induct THEN RW_TAC list_ss [ALL_SPLITS_def]
    THEN Cases_on `l`
    THEN FULL_SIMP_TAC list_ss [ALL_SPLITS_def]
@@ -222,7 +222,7 @@ val One_def  = Define `One = Repeat Zero`;
 (* from the grammar and thus allow | to be used for "or" patterns.           *)
 (*---------------------------------------------------------------------------*)
 
-val _ = remove_termtok{term_name = "COND",tok="=>"};  
+val _ = remove_termtok{term_name = "COND",tok="=>"};
 val _ = overload_on ("|", Term`$Or`);
 val _ = overload_on ("&", Term`$And`);
 val _ = overload_on ("#", Term`$Cat`);
@@ -241,15 +241,15 @@ val _ = set_fixity "%" (Infixr 602);
 
 val sem_def =
  Define
-  `(sem (Atom b) w   = 
+  `(sem (Atom b) w   =
      (LENGTH w = 1) /\ b(HD w))                                           /\
-   (sem (r1#r2) w    = 
+   (sem (r1#r2) w    =
      ?w1 w2. (w = w1<>w2) /\ sem r1 w1 /\ sem r2 w2)                      /\
-   (sem (r1%r2) w    = 
+   (sem (r1%r2) w    =
      ?w1 w2 l. (w = w1<>[l]<>w2) /\ sem r1 (w1<>[l]) /\ sem r2 ([l]<>w2)) /\
-   (sem (r1|r2) w    = 
+   (sem (r1|r2) w    =
      sem r1 w \/ sem r2 w)                                                /\
-   (sem (r1&r2) w    = 
+   (sem (r1&r2) w    =
      sem r1 w /\ sem r2 w)                                                /\
    (sem (Repeat r) w =
      ?wlist. (w = CONCAT wlist) /\ EVERY (sem r) wlist)                   /\
@@ -296,7 +296,7 @@ val Then_ASSOC = Count.apply Q.prove
     THEN RW_TAC list_ss [] THEN EVAL_TAC THENL
     [Q.EXISTS_TAC `x::w1'` THEN Q.EXISTS_TAC `w2'` THEN RW_TAC list_ss [] THEN
      Q.EXISTS_TAC `[x]` THEN Q.EXISTS_TAC `w1'` THEN RW_TAC list_ss [],
-     Q.EXISTS_TAC `[x]` THEN Q.EXISTS_TAC `w2'<>w2` 
+     Q.EXISTS_TAC `[x]` THEN Q.EXISTS_TAC `w2'<>w2`
        THEN RW_TAC list_ss [] THEN METIS_TAC []],
      REPEAT GEN_TAC THEN EVAL_TAC THEN EQ_TAC THEN RW_TAC list_ss [],
      REPEAT GEN_TAC THEN EVAL_TAC THEN EQ_TAC THEN RW_TAC list_ss [] THENL
@@ -312,15 +312,15 @@ val Then_ASSOC = Count.apply Q.prove
       Q.EXISTS_TAC`w1'` THEN Q.EXISTS_TAC`w2'<>w2` THEN RW_TAC list_ss [] THEN
       Q.EXISTS_TAC`w2'` THEN Q.EXISTS_TAC`w2` THEN RW_TAC list_ss []],
      REPEAT GEN_TAC THEN EVAL_TAC THEN EQ_TAC THEN RW_TAC list_ss [] THENL
-     [Q.EXISTS_TAC `(w1'<>w2')<>w1''` THEN Q.EXISTS_TAC `w2''` 
-        THEN RW_TAC list_ss [] 
+     [Q.EXISTS_TAC `(w1'<>w2')<>w1''` THEN Q.EXISTS_TAC `w2''`
+        THEN RW_TAC list_ss []
         THEN Q.EXISTS_TAC `w1'<>w2'` THEN Q.EXISTS_TAC `w1''`
         THEN RW_TAC list_ss [] THEN METIS_TAC[],
-      Q.EXISTS_TAC `(w1''<>w2'')` THEN Q.EXISTS_TAC `w2'<>w2` 
+      Q.EXISTS_TAC `(w1''<>w2'')` THEN Q.EXISTS_TAC `w2'<>w2`
         THEN RW_TAC list_ss [] THEN METIS_TAC []],
      REPEAT GEN_TAC THEN EVAL_TAC THEN EQ_TAC THEN RW_TAC list_ss [] THENL
      [Q.EXISTS_TAC `(CONCAT wlist <> w1')` THEN Q.EXISTS_TAC `w2'`
-        THEN RW_TAC list_ss [] THEN 
+        THEN RW_TAC list_ss [] THEN
       Q.EXISTS_TAC `CONCAT wlist` THEN Q.EXISTS_TAC `w1'` THEN METIS_TAC[],
       Q.EXISTS_TAC `CONCAT wlist` THEN Q.EXISTS_TAC `w2'<>w2`
         THEN RW_TAC list_ss [] THEN METIS_TAC[]]]);
@@ -334,22 +334,22 @@ val Or_lemma = prove
 (* Checker - from a tech. report of Simon Thompson                           *)
 (*---------------------------------------------------------------------------*)
 
-val match_defn = Hol_defn 
+val match_defn = Hol_defn
    "match"
   `(match (Atom b) l = (LENGTH l = 1) /\ b(HD l))
-/\ (match (r1|r2) l  = match r1 l \/ match r2 l) 
-/\ (match (r1&r2) l  = match r1 l /\ match r2 l) 
-/\ (match (r1#r2) l  = 
+/\ (match (r1|r2) l  = match r1 l \/ match r2 l)
+/\ (match (r1&r2) l  = match r1 l /\ match r2 l)
+/\ (match (r1#r2) l  =
      EXISTS (\(s1,s2). match r1 s1 /\ match r2 s2) (SPLITS l))
-/\ (match (r1%r2) l  = 
+/\ (match (r1%r2) l  =
      if NULL l then F else
-     EXISTS (\(s1,s2). if NULL s2 
+     EXISTS (\(s1,s2). if NULL s2
                         then match r1 s1 /\ match r2 [LAST s1]
                         else match r1 (s1<>[HD s2]) /\ match r2 s2)
             (SPLITS l))
-/\ (match (Repeat r) l = 
-      if NULL l then T 
-      else EXISTS (\(s1,s2). match r s1 /\ match (Repeat r) s2) 
+/\ (match (Repeat r) l =
+      if NULL l then T
+      else EXISTS (\(s1,s2). match r s1 /\ match (Repeat r) s2)
                   (TL(SPLITS l)))
 /\ (match (Prefix r) l = ?l'. match r (l <> l'))`;
 
@@ -370,24 +370,24 @@ val sem_match = store_thm
    [(* Atom c *) RW_TAC list_ss [sem_def,match_def],
     (* r | r' *) RW_TAC list_ss [sem_def,match_def],
     (* r & r' *) RW_TAC list_ss [sem_def,match_def],
-    (* r # r' *) RW_TAC list_ss [sem_def,match_def,EXISTS_ELIM_THM,GSYM IN_THM] 
-    THEN EQ_TAC THEN RW_TAC list_ss [] THENL 
-    [Q.EXISTS_TAC `(w1,w2)` 
+    (* r # r' *) RW_TAC list_ss [sem_def,match_def,EXISTS_ELIM_THM,GSYM IN_THM]
+    THEN EQ_TAC THEN RW_TAC list_ss [] THENL
+    [Q.EXISTS_TAC `(w1,w2)`
      THEN SIMP_TAC list_ss [MEM_SPLITS] THEN PROVE_TAC [MEM_SPLITS],
      Cases_on`x` THEN FULL_SIMP_TAC list_ss [] THEN PROVE_TAC[SPLITS_APPEND]],
     (* r1 % r2 *)
-    RW_TAC list_ss [sem_def,match_def,EXISTS_ELIM_THM,GSYM IN_THM] 
-    THEN EQ_TAC THEN SIMP_TAC list_ss [pairTheory.EXISTS_PROD] THENL 
-    [STRIP_TAC THEN 
+    RW_TAC list_ss [sem_def,match_def,EXISTS_ELIM_THM,GSYM IN_THM]
+    THEN EQ_TAC THEN SIMP_TAC list_ss [pairTheory.EXISTS_PROD] THENL
+    [STRIP_TAC THEN
      `~NULL (w1 <> [l'] <> w2)` by (Cases_on `w1` THEN RW_TAC list_ss []) THEN
      `MEM (w1, l' ::w2) (SPLITS (w1 <> [l'] <> w2))`
      by PROVE_TAC[MEM_SPLITS,GSYM listTheory.APPEND_ASSOC,APPEND_CONS]
      THEN ASM_SIMP_TAC list_ss []
-     THEN MAP_EVERY Q.EXISTS_TAC [`w1`, `l' ::w2`] 
+     THEN MAP_EVERY Q.EXISTS_TAC [`w1`, `l' ::w2`]
      THEN RW_TAC list_ss []
      THEN METIS_TAC [listTheory.NULL,APPEND_CONS,listTheory.HD],
      Cases_on `l` THEN FULL_SIMP_TAC list_ss []
-     THEN BasicProvers.NORM_TAC list_ss [] 
+     THEN BasicProvers.NORM_TAC list_ss []
      THEN Cases_on `p_2` THEN FULL_SIMP_TAC list_ss [] THENL
      [METIS_TAC [listTheory.APPEND_FRONT_LAST,listTheory.NULL,
                  SPLITS_APPEND,APPEND_NIL],
@@ -395,28 +395,28 @@ val sem_match = store_thm
                  listTheory.APPEND_ASSOC,listTheory.APPEND_FRONT_LAST]]],
     (* Repeat r *)
     RW_TAC list_ss [sem_def]
-    THEN ONCE_REWRITE_TAC [match_def] 
+    THEN ONCE_REWRITE_TAC [match_def]
     THEN RW_TAC list_ss [EXISTS_ELIM_THM]
-    THEN Cases_on `NULL l` THENL 
-    [RW_TAC list_ss [] THEN Q.EXISTS_TAC `[]` THEN 
+    THEN Cases_on `NULL l` THENL
+    [RW_TAC list_ss [] THEN Q.EXISTS_TAC `[]` THEN
      RW_TAC list_ss [CONCAT_def] THEN PROVE_TAC [NULL_EQ_NIL],
-     FULL_SIMP_TAC list_ss [GSYM IN_THM] THEN EQ_TAC THEN 
+     FULL_SIMP_TAC list_ss [GSYM IN_THM] THEN EQ_TAC THEN
      RW_TAC list_ss [EXISTS_PROD] THENL
      [`EXISTS ($~ o NULL) wlist` by PROVE_TAC [NULL_CONCAT_THM,NOT_EVERY] THEN
-      IMP_RES_TAC FIRST_EXISTS_THM THEN 
-      RULE_ASSUM_TAC (SIMP_RULE list_ss [o_DEF]) THEN 
+      IMP_RES_TAC FIRST_EXISTS_THM THEN
+      RULE_ASSUM_TAC (SIMP_RULE list_ss [o_DEF]) THEN
       `sem r w /\ EVERY (sem r) suffix` by FULL_SIMP_TAC list_ss [EVERY_APPEND]
-      THEN 
-      `CONCAT wlist = CONCAT (w::suffix)` 
-      by (RW_TAC list_ss [CONCAT_APPEND_DISTRIB,CONCAT_def] THEN 
+      THEN
+      `CONCAT wlist = CONCAT (w::suffix)`
+      by (RW_TAC list_ss [CONCAT_APPEND_DISTRIB,CONCAT_def] THEN
           RULE_ASSUM_TAC (CONV_RULE (ONCE_DEPTH_CONV ETA_CONV)) THEN
           METIS_TAC[NULL_CONCAT_THM,APPEND,NULL_EQ_NIL]) THEN
       `MEM (w,CONCAT suffix) (TL(SPLITS(CONCAT wlist)))`
-      by RW_TAC list_ss [CONCAT_def, MEM_TL_SPLITS] THEN 
+      by RW_TAC list_ss [CONCAT_def, MEM_TL_SPLITS] THEN
       PROVE_TAC []
       ,
-      `?wlist. (p_2=CONCAT wlist) /\ EVERY (sem r) wlist` by PROVE_TAC[] THEN 
-      Q.EXISTS_TAC `p_1::wlist` THEN RW_TAC list_ss [CONCAT_def] THEN 
+      `?wlist. (p_2=CONCAT wlist) /\ EVERY (sem r) wlist` by PROVE_TAC[] THEN
+      Q.EXISTS_TAC `p_1::wlist` THEN RW_TAC list_ss [CONCAT_def] THEN
       PROVE_TAC [MEM_TL,SPLITS_NON_EMPTY,SPLITS_APPEND]]],
     RW_TAC std_ss [sem_def, match_def]]);
 

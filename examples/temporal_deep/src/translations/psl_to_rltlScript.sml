@@ -5,10 +5,10 @@ quietdec := true;
 
 val hol_dir = concat Globals.HOLDIR "/";
 val home_dir = (concat hol_dir "examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
-            (concat home_dir "src/translations") :: 
-            (concat home_dir "src/tools") :: 
-            (concat hol_dir "examples/PSL/path") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
+            (concat home_dir "src/translations") ::
+            (concat home_dir "src/tools") ::
+            (concat hol_dir "examples/PSL/path") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
@@ -110,11 +110,11 @@ val PSL_TO_LTL_CLOCK_def =
 val CONVERT_PATH_PSL_LTL___NO_TOP_BOT_LEMMA =
  store_thm
    ("CONVERT_PATH_PSL_LTL___NO_TOP_BOT_LEMMA",
-    ``!v b t. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==> 
+    ``!v b t. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==>
               (CONVERT_PATH_PSL_LTL t b v = CONVERT_PATH_PSL_LTL___NO_TOP_BOT v)``,
 
-   SIMP_TAC std_ss [IS_INFINITE_TOP_BOTTOM_FREE_PATH_def, 
-                    CONVERT_PATH_PSL_LTL_def, 
+   SIMP_TAC std_ss [IS_INFINITE_TOP_BOTTOM_FREE_PATH_def,
+                    CONVERT_PATH_PSL_LTL_def,
                     CONVERT_PATH_PSL_LTL___NO_TOP_BOT_def] THEN
    REPEAT STRIP_TAC THEN
    ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
@@ -233,8 +233,8 @@ INDUCT_THEN fl_induct ASSUME_TAC THENL [
    Cases_on `p 0` THENL [
       ASM_SIMP_TAC std_ss [IN_DEF, CONVERT_PATH_PSL_LTL_def, TRANSLATE_TOP_BOTTOM_def, B_SEM_def],
       ASM_SIMP_TAC std_ss [IN_DEF, CONVERT_PATH_PSL_LTL_def, TRANSLATE_TOP_BOTTOM_def, B_SEM_def],
-      
-      ASM_SIMP_TAC std_ss [IN_DEF, CONVERT_PATH_PSL_LTL_def, TRANSLATE_TOP_BOTTOM_def, BEXP_TO_PROP_LOGIC_THM] THEN 
+
+      ASM_SIMP_TAC std_ss [IN_DEF, CONVERT_PATH_PSL_LTL_def, TRANSLATE_TOP_BOTTOM_def, BEXP_TO_PROP_LOGIC_THM] THEN
       PROVE_TAC[PATH_PROP_FREE_SEM]
    ],
 
@@ -246,8 +246,8 @@ INDUCT_THEN fl_induct ASSUME_TAC THENL [
    Cases_on `p 0` THENL [
       ASM_SIMP_TAC std_ss [IN_DEF, CONVERT_PATH_PSL_LTL_def, TRANSLATE_TOP_BOTTOM_def, B_SEM_def],
       ASM_SIMP_TAC std_ss [IN_DEF, CONVERT_PATH_PSL_LTL_def, TRANSLATE_TOP_BOTTOM_def, B_SEM_def],
-      
-      ASM_SIMP_TAC std_ss [IN_DEF, CONVERT_PATH_PSL_LTL_def, TRANSLATE_TOP_BOTTOM_def, BEXP_TO_PROP_LOGIC_THM] THEN 
+
+      ASM_SIMP_TAC std_ss [IN_DEF, CONVERT_PATH_PSL_LTL_def, TRANSLATE_TOP_BOTTOM_def, BEXP_TO_PROP_LOGIC_THM] THEN
       PROVE_TAC[PATH_PROP_FREE_SEM]
    ],
 
@@ -301,7 +301,7 @@ INDUCT_THEN fl_induct ASSUME_TAC THENL [
 
 
    REPEAT STRIP_TAC THEN
-   SUBGOAL_TAC `(!k. (UF_SEM (RESTN v k) f) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b (RESTN v k)) (P_PROP t) (P_PROP b) (PSL_TO_RLTL f))) /\ 
+   SUBGOAL_TAC `(!k. (UF_SEM (RESTN v k) f) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b (RESTN v k)) (P_PROP t) (P_PROP b) (PSL_TO_RLTL f))) /\
                 (!k. (UF_SEM (RESTN v k) f') = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b (RESTN v k)) (P_PROP t) (P_PROP b) (PSL_TO_RLTL f')))` THEN1 (
       SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
       GEN_TAC THEN
@@ -348,13 +348,13 @@ INDUCT_THEN fl_induct ASSUME_TAC THENL [
             ) THEN
 
             Cases_on `p 0` THENL [
-              `!t:num. 0 <= t` by DECIDE_TAC THEN 
+              `!t:num. 0 <= t` by DECIDE_TAC THEN
               `v = TOP_OMEGA` by METIS_TAC [INFINITE_PROPER_PATH___RESTN_TOP_BOTTOM_OMEGA, RESTN_def, ELEM_INFINITE] THEN
               METIS_TAC[UF_SEM___F_CLOCK_SERE_FREE___OMEGA_TOP_BOTTOM, TOP_OMEGA_def],
 
               FULL_SIMP_TAC std_ss [B_SEM_def],
 
-              FULL_SIMP_TAC std_ss [B_SEM_def, BEXP_TO_PROP_LOGIC_THM, TRANSLATE_TOP_BOTTOM_def, 
+              FULL_SIMP_TAC std_ss [B_SEM_def, BEXP_TO_PROP_LOGIC_THM, TRANSLATE_TOP_BOTTOM_def,
                 CONVERT_PATH_PSL_LTL_def, LENGTH_def, LS, ELEM_INFINITE, P_SEM_def, IN_DEF] THEN
               PROVE_TAC[PATH_PROP_FREE_SEM]
             ],
@@ -422,11 +422,11 @@ INDUCT_THEN fl_induct ASSUME_TAC THENL [
 
          `NAND_ON_PATH_RESTN 0 (CONVERT_PATH_PSL_LTL t b (INFINITE p)) (P_PROP t) (P_PROP b)` by METIS_TAC[CONVERT_PATH_PSL_LTL___NAND_ON_PATH] THEN
          `NAND_ON_PATH_RESTN 0 (CONVERT_PATH_PSL_LTL t b (INFINITE p)) (P_AND (BEXP_TO_PROP_LOGIC p_2,P_NOT (P_PROP b))) (P_PROP b)` by   (REWRITE_TAC [NAND_ON_PATH_RESTN_def, P_SEM_THM]   THEN METIS_TAC[]) THEN
-         
+
          ASM_SIMP_TAC std_ss [RLTL_SEM_TIME___ACCEPT_OR_THM] THEN
          REPEAT STRIP_TAC THEN
 
-         SUBGOAL_TAC `?j. (P_SEM ((CONVERT_PATH_PSL_LTL t b v) j) (P_AND (BEXP_TO_PROP_LOGIC p_2,P_NOT (P_PROP b)))) /\ 
+         SUBGOAL_TAC `?j. (P_SEM ((CONVERT_PATH_PSL_LTL t b v) j) (P_AND (BEXP_TO_PROP_LOGIC p_2,P_NOT (P_PROP b)))) /\
             !j'. (j' < j) ==> (~(P_SEM ((CONVERT_PATH_PSL_LTL t b v) j') (P_AND (BEXP_TO_PROP_LOGIC p_2,P_NOT (P_PROP b)))) /\ ~(P_SEM ((CONVERT_PATH_PSL_LTL t b v) j') (P_PROP t)))` THEN1 (
 
             `IS_ON_PATH_RESTN 0 (CONVERT_PATH_PSL_LTL t b v) (P_AND (BEXP_TO_PROP_LOGIC p_2,P_NOT (P_PROP b)))` by METIS_TAC[RLTL_SEM_TIME___ACCEPT_REJECT_IS_ON_PATH] THEN
@@ -574,13 +574,13 @@ val P_USED_VARS___BEXP_TO_PROP_LOGIC =
 val RLTL_USED_VARS___PSL_TO_RLTL =
  store_thm
   ("RLTL_USED_VARS___PSL_TO_RLTL",
-  ``!f. F_CLOCK_SERE_FREE f ==> 
+  ``!f. F_CLOCK_SERE_FREE f ==>
     (RLTL_USED_VARS (PSL_TO_RLTL f) = F_USED_VARS f)``,
 
 REWRITE_TAC[F_CLOCK_SERE_FREE_def] THEN
 INDUCT_THEN fl_induct ASSUME_TAC THEN (
   ASM_SIMP_TAC std_ss [RLTL_USED_VARS_def,
-                   F_USED_VARS_def, 
+                   F_USED_VARS_def,
                    F_CLOCK_FREE_def, F_SERE_FREE_def,
                    PSL_TO_RLTL_def, P_USED_VARS___BEXP_TO_PROP_LOGIC]
 ));
@@ -643,7 +643,7 @@ val PSL_TO_RLTL___ELIM_ACCEPT_REJECT_THM =
 val PSL_TO_RLTL___CLOCKED_THM =
  store_thm
   ("PSL_TO_RLTL___CLOCKED_THM",
-   ``!f v b t c. ((IS_INFINITE_PROPER_PATH v) /\ (F_SERE_FREE f) /\ ~(t = b) /\ 
+   ``!f v b t c. ((IS_INFINITE_PROPER_PATH v) /\ (F_SERE_FREE f) /\ ~(t = b) /\
                   (PATH_PROP_FREE t v) /\ (PATH_PROP_FREE b v)) ==>
      ((F_SEM v c f) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b v) (P_PROP t) (P_PROP b) (PSL_TO_RLTL (F_CLOCK_COMP c f))))``,
 
@@ -723,7 +723,7 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM =
         RLTL_SEM (CONVERT_PATH_PSL_LTL___NO_TOP_BOT (PATH_LETTER_RESTRICT (F_USED_VARS f) v)) (PSL_TO_RLTL f)` THEN1 (
 
         SUBGOAL_TAC `UF_SEM v f = UF_SEM (PATH_LETTER_RESTRICT (F_USED_VARS f) v) f` THEN1 (
-            MATCH_MP_TAC (SIMP_RULE std_ss [AND_IMP_INTRO] F_USED_VARS_INTER_SUBSET_THM) THEN    
+            MATCH_MP_TAC (SIMP_RULE std_ss [AND_IMP_INTRO] F_USED_VARS_INTER_SUBSET_THM) THEN
             FULL_SIMP_TAC std_ss [F_CLOCK_SERE_FREE_def, SUBSET_REFL]
         ) THEN
         FULL_SIMP_TAC std_ss [RLTL_SEM_def] THEN
@@ -772,13 +772,13 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM =
             PATH_LETTER_RESTRICT_def, IS_INFINITE_TOP_BOTTOM_FREE_PATH_def,
             psl_lemmataTheory.PATH_MAP_def, IN_BETA_THM,
             psl_lemmataTheory.PATH_USED_VARS_def, LENGTH_def, GT, ELEM_INFINITE] THEN
-        REPEAT STRIP_TAC THEN 
+        REPEAT STRIP_TAC THEN
         `?s. p n = STATE s` by PROVE_TAC[] THEN
         FULL_SIMP_TAC std_ss [LETTER_RESTRICT_def, LETTER_USED_VARS_def,
             IN_INTER]
     ) THEN
     ASM_REWRITE_TAC[] THEN WEAKEN_HD_TAC THEN
-    
+
     SUBGOAL_TAC `UF_SEM (PATH_VAR_RENAMING g (PATH_LETTER_RESTRICT (F_USED_VARS f) v)) (F_VAR_RENAMING g f) =
     RLTL_SEM (CONVERT_PATH_PSL_LTL___NO_TOP_BOT ((PATH_VAR_RENAMING g (PATH_LETTER_RESTRICT (F_USED_VARS f) v)))) (PSL_TO_RLTL (F_VAR_RENAMING g f))` THEN1 (
         MATCH_MP_TAC PSL_TO_RLTL___NO_TOP_BOT_THM___WITH_T_B THEN
@@ -798,7 +798,7 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM =
         PROVE_TAC[]
     ) THEN
     ASM_REWRITE_TAC[] THEN WEAKEN_HD_TAC THEN
-    
+
 
     ASSUME_TAC (ISPECL [``PSL_TO_RLTL (f:'a fl)``, ``(CONVERT_PATH_PSL_LTL___NO_TOP_BOT
          (PATH_LETTER_RESTRICT (F_USED_VARS f) v))``, ``g:'a -> num``] RLTL_SEM___VAR_RENAMING___PATH_RESTRICT) THEN
@@ -825,13 +825,13 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM =
 
 
 val UF_KS_SEM_def =
- Define 
+ Define
    `!M f. UF_KS_SEM M f =
           (!p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==>
                 UF_SEM (CONVERT_PATH_LTL_PSL p) f)`;
 
 val F_KS_SEM_def =
- Define 
+ Define
    `!M f c. F_KS_SEM M c f =
           (!p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==>
                 F_SEM (CONVERT_PATH_LTL_PSL p) c f)`;
@@ -841,8 +841,8 @@ val PSL_TO_RLTL___UF_KS_SEM =
  store_thm
   ("PSL_TO_RLTL___UF_KS_SEM",
     ``!M f. F_CLOCK_SERE_FREE f
-            ==> 
-            (UF_KS_SEM M f = 
+            ==>
+            (UF_KS_SEM M f =
              RLTL_KS_SEM M (PSL_TO_RLTL f))``,
 
 
@@ -872,8 +872,8 @@ val PSL_TO_RLTL___F_KS_SEM =
  store_thm
   ("PSL_TO_RLTL___F_KS_SEM",
     ``!M f c. F_SERE_FREE f
-            ==> 
-            (F_KS_SEM M c f = 
+            ==>
+            (F_KS_SEM M c f =
              RLTL_KS_SEM M (PSL_TO_RLTL (F_CLOCK_COMP c f)))``,
 
 
@@ -887,7 +887,7 @@ val PSL_TO_RLTL___F_KS_SEM =
         ) THEN
         METIS_TAC [PSL_TO_RLTL___UF_KS_SEM]
       ) THEN
-      ASM_REWRITE_TAC[] THEN 
+      ASM_REWRITE_TAC[] THEN
       SIMP_TAC std_ss [F_KS_SEM_def, UF_KS_SEM_def,
                        F_CLOCK_COMP_CORRECT]);
 
@@ -919,8 +919,8 @@ val PSL_TO_LTL_THM =
 val PSL_TO_LTL___UF_KS_SEM =
  store_thm
   ("PSL_TO_LTL___UF_KS_SEM",
-    ``!M f. F_CLOCK_SERE_FREE f ==> 
-            (UF_KS_SEM M f = 
+    ``!M f. F_CLOCK_SERE_FREE f ==>
+            (UF_KS_SEM M f =
              LTL_KS_SEM M (PSL_TO_LTL f))``,
 
       SIMP_TAC std_ss [PSL_TO_LTL_def, PSL_TO_RLTL___UF_KS_SEM, RLTL_TO_LTL_THM___KS_SEM]);
@@ -929,8 +929,8 @@ val PSL_TO_LTL___UF_KS_SEM =
 val PSL_TO_LTL___F_KS_SEM =
  store_thm
   ("PSL_TO_LTL___F_KS_SEM",
-    ``!M f c. F_SERE_FREE f ==> 
-            (F_KS_SEM M c f = 
+    ``!M f c. F_SERE_FREE f ==>
+            (F_KS_SEM M c f =
              LTL_KS_SEM M (PSL_TO_LTL_CLOCK c f))``,
 
       SIMP_TAC std_ss [PSL_TO_LTL_CLOCK_def, PSL_TO_RLTL___F_KS_SEM, RLTL_TO_LTL_THM___KS_SEM]);
@@ -938,7 +938,7 @@ val PSL_TO_LTL___F_KS_SEM =
 val F_KS_SEM___TO___UF_KS_SEM =
  store_thm
   ("F_KS_SEM___TO___UF_KS_SEM",
-    ``!M f c. (F_KS_SEM M c f = 
+    ``!M f c. (F_KS_SEM M c f =
                UF_KS_SEM M (F_CLOCK_COMP c f))``,
 
       SIMP_TAC std_ss [F_KS_SEM_def, UF_KS_SEM_def, F_CLOCK_COMP_CORRECT]);
@@ -947,8 +947,8 @@ val F_KS_SEM___TO___UF_KS_SEM =
 val PSL_TO_LTL___UF_CONTRADICTION =
  store_thm
   ("PSL_TO_LTL___UF_CONTRADICTION",
-    ``!f. F_CLOCK_SERE_FREE f ==> 
-            (UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f = 
+    ``!f. F_CLOCK_SERE_FREE f ==>
+            (UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f =
              LTL_IS_CONTRADICTION (PSL_TO_LTL f))``,
 
       SIMP_TAC std_ss [PSL_TO_LTL_def, UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def,
@@ -958,7 +958,7 @@ val PSL_TO_LTL___UF_CONTRADICTION =
         Q_SPECL_NO_ASSUM 1 [`CONVERT_PATH_LTL_PSL v`] THEN
         SIMP_ALL_TAC std_ss [CONVERT_PATH_LTL_PSL___IS_INFINITE_TOP_BOTTOM_FREE,
                              CONVERT_PATH_LTL_PSL___CONVERT_PATH_PSL_LTL],
-        
+
         PROVE_TAC[]
       ]);
 
@@ -966,8 +966,8 @@ val PSL_TO_LTL___UF_CONTRADICTION =
 val PSL_TO_LTL___UF_TAUTOLOGY =
  store_thm
   ("PSL_TO_LTL___UF_TAUTOLOGY",
-    ``!f. F_CLOCK_SERE_FREE f ==> 
-            (UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f = 
+    ``!f. F_CLOCK_SERE_FREE f ==>
+            (UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f =
              LTL_IS_TAUTOLOGY (PSL_TO_LTL f))``,
 
       REPEAT STRIP_TAC THEN
@@ -982,8 +982,8 @@ val PSL_TO_LTL___UF_TAUTOLOGY =
 val PSL_TO_LTL___UF_EQUIVALENT =
  store_thm
   ("PSL_TO_LTL___UF_EQUIVALENT",
-    ``!f1 f2. F_CLOCK_SERE_FREE f1 ==> F_CLOCK_SERE_FREE f2 ==> 
-            (UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 = 
+    ``!f1 f2. F_CLOCK_SERE_FREE f1 ==> F_CLOCK_SERE_FREE f2 ==>
+            (UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 =
              LTL_IS_CONTRADICTION (LTL_NOT (LTL_EQUIV(PSL_TO_LTL f1, PSL_TO_LTL f2))))``,
 
       REWRITE_TAC[UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TO___CONTRADICTION] THEN

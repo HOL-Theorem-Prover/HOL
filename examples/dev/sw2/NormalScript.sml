@@ -1,11 +1,11 @@
-(* Interactive: 
+(* Interactive:
   load "wordsLib";
   quietdec := true;
   open wordsLib arithmeticTheory;
   quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib wordsLib 
+open HolKernel Parse boolLib bossLib wordsLib
      arithmeticTheory;
 
 (*---------------------------------------------------------------------------------*)
@@ -23,9 +23,9 @@ val _ = new_theory "Normal";            (* This name is misleading *)
 (* Conjunction in condtions *)
 val AND_COND = Q.store_thm (
   "AND_COND",
-  `(if c1 /\ c2 then e1 else e2) = 
+  `(if c1 /\ c2 then e1 else e2) =
      let x = e2 in
-      (if c1 then 
+      (if c1 then
          if c2 then e1 else x
        else x)`,
    RW_TAC std_ss [LET_THM] THEN
@@ -35,7 +35,7 @@ val AND_COND = Q.store_thm (
 (* Disjunction in condtions *)
 val OR_COND = Q.store_thm (
   "OR_COND",
-  `(if c1 \/ c2 then e1 else e2) = 
+  `(if c1 \/ c2 then e1 else e2) =
     let x = e1 in
       (if c1 then x else
        if c2 then x else e2)`,
@@ -46,9 +46,9 @@ val OR_COND = Q.store_thm (
 (* Normalize the conditions in branches *)
 val BRANCH_NORM = Q.store_thm (
   "BRANCH_NORM",
-  `((if (a:num) > b then x else y) = (if a <= b then y else x)) /\ 
+  `((if (a:num) > b then x else y) = (if a <= b then y else x)) /\
     ((if a >= b then x else y) = (if a < b then y else x)) /\
-    ((if aw > bw then xw else yw) = (if aw <= bw then yw else xw)) /\ 
+    ((if aw > bw then xw else yw) = (if aw <= bw then yw else xw)) /\
     ((if aw >= bw then xw else yw) = (if aw < bw then yw else xw)) /\
     ((if aw >+ bw then xw else yw) = (if aw <=+ bw then yw else xw)) /\
     ((if aw >=+ bw then xw else yw) = (if aw <+ bw then yw else xw))
@@ -102,7 +102,7 @@ val C_2_LET = Q.store_thm (
 
 (*---------------------------------------------------------------------------*)
 (* Convert an expression to it continuation format                           *)
-(* Theorems used for rewriting                                               *)	
+(* Theorems used for rewriting                                               *)
 (*---------------------------------------------------------------------------*)
 
 val ABS_C_BINOP = Q.store_thm
@@ -161,7 +161,7 @@ val C_WORDS_BINOP = Q.store_thm (
  `,
     SIMP_TAC arith_ss [C_def, LET_THM] THEN
     SIMP_TAC bool_ss [wordsTheory.WORD_GREATER, wordsTheory.WORD_GREATER_EQ,
-      wordsTheory.WORD_HIGHER, wordsTheory.WORD_HIGHER_EQ] 
+      wordsTheory.WORD_HIGHER, wordsTheory.WORD_HIGHER_EQ]
   );
 
 val rsb_def = Define `rsb x y = y - x`;
@@ -183,7 +183,7 @@ val C_WORDS_BINOP_SYM = Q.store_thm (
     (C (w1 #<< n) = \k. C w1 (\x. C n (\y. C (x #<< y) k)))
  `,
    SIMP_TAC std_ss [C_def, LET_THM, rsb_def] THEN
-   SIMP_TAC bool_ss [wordsTheory.WORD_ADD_COMM, wordsTheory.WORD_MULT_COMM, wordsTheory.WORD_AND_COMM, 
+   SIMP_TAC bool_ss [wordsTheory.WORD_ADD_COMM, wordsTheory.WORD_MULT_COMM, wordsTheory.WORD_AND_COMM,
      wordsTheory.WORD_XOR_COMM, wordsTheory.WORD_OR_COMM, wordsTheory.WORD_GREATER, wordsTheory.WORD_GREATER_EQ,
      wordsTheory.WORD_HIGHER, wordsTheory.WORD_HIGHER_EQ]
   );
@@ -244,18 +244,18 @@ val C_APP = Q.store_thm (
 
 val C_ATOM_COND = Q.store_thm (
   "C_ATOM_COND",
-   `C (if cmpop c1 c2 then e1 else e2) = 
+   `C (if cmpop c1 c2 then e1 else e2) =
        \k. C c1 (\p. C c2 (\q.
-         C (if cmpop p q then C e1 (\x.x) 
+         C (if cmpop p q then C e1 (\x.x)
             else C e2 (\y.y)) (\z. k z)))`,
    SIMP_TAC std_ss [C_def, LET_THM]
   );
 
 val C_ATOM_COND_EX = Q.store_thm (
   "C_ATOM_COND_EX",
-   `C (if cmpop c1 c2 then e1 else e2) = 
+   `C (if cmpop c1 c2 then e1 else e2) =
        \k. C c1 (\p. C c2 (\q.
-         k (if cmpop p q then C e1 (\x.x) 
+         k (if cmpop p q then C e1 (\x.x)
             else C e2 (\y.y)
            )))`,
    SIMP_TAC std_ss [C_def, LET_THM]
@@ -279,7 +279,7 @@ val ELIM_USELESS_LET = Q.store_thm (
 
 val FLATTEN_LET = Q.store_thm (
   "FLATTEN_LET",
-   `(let x = (let y = e1 in e2 y) in e3 x) = 
+   `(let x = (let y = e1 in e2 y) in e3 x) =
     (let y = e1 in let x = e2 y in e3 x)`,
    SIMP_TAC std_ss [LET_THM]
   );
@@ -312,7 +312,7 @@ val INLINE_EXPAND = store_thm (
 
 val CLOSE_ONE = store_thm (
   "CLOSE_ONE",
-  ``(let v = atom v in let f = fun (e1 v) in e2 f) = 
+  ``(let v = atom v in let f = fun (e1 v) in e2 f) =
     let f = fun (\v. e1 v) in e2 (f v)``,
    SIMP_TAC std_ss [LET_THM, fun_def, atom_def]
   );
@@ -342,14 +342,14 @@ val TOP_LEVEL_ABS = store_thm (
 
 val TOP_LEVEL_LET = store_thm (
   "TOP_LEVEL_LET",
-  ``(let v = e1 in let f = fun e2 in e3 v f) = 
+  ``(let v = e1 in let f = fun e2 in e3 v f) =
     (let f = fun e2 in let v = e1 in e3 v f)``,
    SIMP_TAC std_ss [LET_THM]
   );
 
 val TOP_LEVEL_COND_1 = store_thm (
   "TOP_LEVEL_COND_1",
-  ``(if e1 then let f = fun k1 in e2 f else e3) = 
+  ``(if e1 then let f = fun k1 in e2 f else e3) =
         (let f = fun k1 in if e1 then e2 f else e3)``,
    SIMP_TAC std_ss [LET_THM]
   );

@@ -49,9 +49,8 @@ sig
   val LIST_TY_BETA_CONV: term -> thm
   val RIGHT_LIST_BETA  : thm -> thm
   val RIGHT_LIST_TY_BETA : thm -> thm
-  val CONJUNCTS_CONV   : term * term -> thm
-  val CONJ_SET_CONV    : term list -> term list -> thm
-  val FRONT_CONJ_CONV  : term list -> term -> thm
+  val CONJUNCTS_AC     : term * term -> thm
+  val DISJUNCTS_AC     : term * term -> thm
   val CONJ_DISCH       : term -> thm -> thm
   val CONJ_DISCHL      : term list -> thm -> thm
   val NEG_DISCH        : term -> thm -> thm

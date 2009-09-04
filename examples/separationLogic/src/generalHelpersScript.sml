@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib;
 
 (*
 quietdec := true;
-loadPath := (Globals.HOLDIR ^ "/examples/decidable_separationLogic/src") :: 
+loadPath := (Globals.HOLDIR ^ "/examples/decidable_separationLogic/src") ::
             !loadPath;
 
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
@@ -30,7 +30,7 @@ fun MP_FREE_VAR_TAC var =
 local
    val thm = prove (``(!x. (P x = Q x)) ==> ((?x. P x) = (?x. Q x))``, METIS_TAC[]);
 in
-   val STRIP_EQ_EXISTS_TAC = 
+   val STRIP_EQ_EXISTS_TAC =
       HO_MATCH_MP_TAC thm THEN
       GEN_TAC
 end
@@ -39,7 +39,7 @@ end
 local
    val thm = prove (``(!x. (P x = Q x)) ==> ((!x. P x) = (!x. Q x))``, METIS_TAC[]);
 in
-   val STRIP_EQ_FORALL_TAC = 
+   val STRIP_EQ_FORALL_TAC =
       HO_MATCH_MP_TAC thm THEN
       GEN_TAC
 end
@@ -50,12 +50,12 @@ local
        find_in_lists_helper [] (e::l2) l r =
          find_in_lists_helper l l2 l r |
        find_in_lists_helper (e1::l1) (e2::l2) l r =
-         if (aconv e1 e2) then 
+         if (aconv e1 e2) then
             find_in_lists_helper l1 (e2::l2) l (e1::r) else
          find_in_lists_helper l1 (e2::l2) l r;
 
    fun find_in_lists l1 l2 = find_in_lists_helper l1 l2 l1 [];
-   
+
 
    fun strip_conj_disj t =
       if is_conj t then
@@ -73,7 +73,7 @@ in
          val g'' = (rhs (concl (
             (RHS_LHS_CONV (REWR_CONV IMP_DISJ_THM) g')))) handle _ => g';
          val (l, r) = dest_eq g'';
-   
+
          val lL = strip_conj_disj l;
          val rL = strip_conj_disj r;
 
@@ -110,15 +110,15 @@ SIMP_TAC std_ss [PAIR_BETA_THM, pairTheory.PEXISTS_THM]);
 
 val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
 
-   ``!n1 n2 P l. (~(n1 = n2) /\ (n1 < LENGTH l) /\ (n2 < LENGTH l) /\ 
+   ``!n1 n2 P l. (~(n1 = n2) /\ (n1 < LENGTH l) /\ (n2 < LENGTH l) /\
                    (EL n1 l = EL n2 l) /\ (P (EL n2 l))) ==>
-                 ?n1' n2'. ~(n1' = n2') /\ 
+                 ?n1' n2'. ~(n1' = n2') /\
                            (n1' < LENGTH (FILTER P l)) /\
                            (n2' < LENGTH (FILTER P l)) /\
                            (EL n1' (FILTER P l) = EL n2 l) /\
                            (EL n2' (FILTER P l) = EL n2 l)``,
 
-   HO_MATCH_MP_TAC (prove (``((!n1 n2. P n1 n2 = P n2 n1) /\ (!n1 n2. (n1 <= n2) ==> P n1 n2)) ==> 
+   HO_MATCH_MP_TAC (prove (``((!n1 n2. P n1 n2 = P n2 n1) /\ (!n1 n2. (n1 <= n2) ==> P n1 n2)) ==>
                              (!n1 n2. P n1 n2)``,
                     METIS_TAC[arithmeticTheory.LESS_EQ_CASES])) THEN
    CONJ_TAC THEN1 METIS_TAC[] THEN
@@ -240,16 +240,16 @@ val EL_ALL_DISTINCT_EQ = store_thm ("EL_ALL_DISTINCT_EQ",
 
    Induct_on `l` THENL [
       SIMP_TAC list_ss [],
-      
+
       ASM_SIMP_TAC list_ss [ALL_DISTINCT] THEN
       GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
          Cases_on `n1` THEN Cases_on `n2` THENL [
             SIMP_TAC list_ss [],
 
-            SIMP_TAC list_ss [] THEN 
+            SIMP_TAC list_ss [] THEN
             METIS_TAC[MEM_EL],
 
-            SIMP_TAC list_ss [] THEN 
+            SIMP_TAC list_ss [] THEN
             METIS_TAC[MEM_EL],
 
             SIMP_TAC list_ss [] THEN
@@ -259,7 +259,7 @@ val EL_ALL_DISTINCT_EQ = store_thm ("EL_ALL_DISTINCT_EQ",
 
          STRIP_TAC THENL [
             SIMP_TAC std_ss [MEM_EL] THEN
-            GEN_TAC THEN 
+            GEN_TAC THEN
             POP_ASSUM (fn thm => ASSUME_TAC (Q.SPECL [`0`, `SUC n`] thm)) THEN
             FULL_SIMP_TAC list_ss [] THEN
             METIS_TAC[],
@@ -271,7 +271,7 @@ val EL_ALL_DISTINCT_EQ = store_thm ("EL_ALL_DISTINCT_EQ",
          ]
       ]
    ]);
-   
+
 
 
 val EL_ALL_DISTINCT = store_thm ("EL_ALL_DISTINCT",
@@ -371,7 +371,7 @@ val PERM_LIST_TO_BAG = store_thm ("PERM_LIST_TO_BAG",
            PERM l1 l2``,
 
 Induct_on `l1` THENL [
-	Cases_on `l2` THEN 
+	Cases_on `l2` THEN
 	SIMP_TAC list_ss [FORALL_AND_THM, PERM_REFL,
 	LIST_TO_BAG_def, BAG_INSERT_NOT_EMPTY,
 	PERM_NIL],
@@ -401,7 +401,7 @@ Induct_on `l1` THENL [
 		Q.PAT_ASSUM `!n e. X n e` (MP_TAC o Q.SPECL [`SUC n`, `e`]) THEN
 		ASM_SIMP_TAC std_ss [] THEN
 		REPEAT STRIP_TAC THEN
-		HO_MATCH_MP_TAC (prove ( 
+		HO_MATCH_MP_TAC (prove (
 			``(!m1 m2. X m1 (SUC m2) = Y m1 m2) /\ ~(X 0 0) /\ (!m1. X (SUC m1) 0 ==> Y m1 0) ==>
 			((?m1 m2. X m1 m2) = (?m1 m2. Y m1 m2))``,
 				METIS_TAC[num_CASES])) THEN
@@ -415,7 +415,7 @@ Induct_on `l1` THENL [
 	]
 ]);
 
-		
+
 
 
 val PERM_ALL_DISTINCT = store_thm ("PERM_ALL_DISTINCT",
@@ -442,7 +442,7 @@ Induct_on `l1` THENL [
       Induct_on `l2` THENL [
          SIMP_TAC list_ss [],
 
-         SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN 
+         SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
          REPEAT STRIP_TAC THENL [
             Q.PAT_ASSUM `MEM h l2 ==> X` (K ALL_TAC) THEN
             Induct_on `l2` THENL [
@@ -626,7 +626,7 @@ val SUBMAP___FUNION_EQ = store_thm ("SUBMAP___FUNION_EQ",
 ``(!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f2) ==> (((f1 SUBMAP (FUNION f2 f3)) = (f1 SUBMAP f3)))) /\
   (!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f3 DIFF (FDOM f2)) ==> (((f1 SUBMAP (FUNION f2 f3)) = (f1 SUBMAP f2))))``,
 
-  SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION, 
+  SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION,
    NOT_IN_EMPTY, IN_INTER, IN_DIFF] THEN
   METIS_TAC[])
 
@@ -634,14 +634,14 @@ val SUBMAP___FUNION_EQ = store_thm ("SUBMAP___FUNION_EQ",
 val SUBMAP___FUNION = store_thm ("SUBMAP___FUNION",
 ``!f1 f2 f3. (f1 SUBMAP f2) \/ ((DISJOINT (FDOM f1) (FDOM f2) /\ (f1 SUBMAP f3))) ==> (f1 SUBMAP (FUNION f2 f3))``,
 
-SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION, 
+SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION,
    NOT_IN_EMPTY, IN_INTER] THEN
 METIS_TAC[]);
 
 val SUBMAP___FUNION___ID = store_thm ("SUBMAP___FUNION___ID",
 ``(!f1 f2. (f1 SUBMAP (FUNION f1 f2))) /\
 (!f1 f2. (DISJOINT (FDOM f1) (FDOM f2)) ==> (f2 SUBMAP (FUNION f1 f2)))``,
-   
+
 METIS_TAC[SUBMAP_REFL, SUBMAP___FUNION, DISJOINT_SYM]);
 
 val FEMPTY_SUBMAP = store_thm ("FEMPTY_SUBMAP",
@@ -654,16 +654,16 @@ val FEMPTY_SUBMAP = store_thm ("FEMPTY_SUBMAP",
 
 val FUNION_EQ = store_thm ("FUNION_EQ",
 ``!f1 f2 f3. (DISJOINT (FDOM f1) (FDOM f2) /\
-              DISJOINT (FDOM f1) (FDOM f3)) ==> 
+              DISJOINT (FDOM f1) (FDOM f3)) ==>
              (((FUNION f1 f2) = (FUNION f1 f3)) = (f2 = f3))``,
 
-  SIMP_TAC std_ss [GSYM SUBMAP_ANTISYM, SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION, 
+  SIMP_TAC std_ss [GSYM SUBMAP_ANTISYM, SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION,
    NOT_IN_EMPTY, IN_INTER, IN_DIFF] THEN
   METIS_TAC[])
 
 val FUNION_EQ___IMPL = store_thm ("FUNION_EQ___IMPL",
 ``!f1 f2 f3. (DISJOINT (FDOM f1) (FDOM f2) /\
-              DISJOINT (FDOM f1) (FDOM f3) /\ (f2 = f3)) ==> 
+              DISJOINT (FDOM f1) (FDOM f3) /\ (f2 = f3)) ==>
              ((FUNION f1 f2) = (FUNION f1 f3))``,
 
   METIS_TAC[FUNION_EQ]);
@@ -716,8 +716,8 @@ val EL_FRONT = store_thm ("EL_FRONT",
 
    Induct_on `l` THENL [
       SIMP_TAC list_ss [],
-   
-      Cases_on `l` THEN 
+
+      Cases_on `l` THEN
       FULL_SIMP_TAC list_ss [FRONT___LENGTH] THEN
       REPEAT STRIP_TAC THEN
       Cases_on `n` THENL [
@@ -725,7 +725,7 @@ val EL_FRONT = store_thm ("EL_FRONT",
          FULL_SIMP_TAC list_ss []
       ]
    ])
-         
+
 
 val BUTFIRSTN___CONCAT_EL = store_thm ("BUTFIRSTN___CONCAT_EL",
    ``!n. (n < LENGTH l) ==>
@@ -756,16 +756,16 @@ val EL_ALL_DISJOINT_EQ = store_thm ("EL_ALL_DISJOINT_EQ",
 
    Induct_on `l` THENL [
       SIMP_TAC list_ss [ALL_DISJOINT_def],
-      
+
       ASM_SIMP_TAC list_ss [ALL_DISJOINT_def, EVERY_MEM] THEN
       GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
          Cases_on `n1` THEN Cases_on `n2` THENL [
             SIMP_TAC list_ss [DISJOINT_DEF, EXTENSION, IN_INTER],
 
-            SIMP_TAC list_ss [] THEN 
+            SIMP_TAC list_ss [] THEN
             METIS_TAC[MEM_EL],
 
-            SIMP_TAC list_ss [] THEN 
+            SIMP_TAC list_ss [] THEN
             METIS_TAC[MEM_EL, DISJOINT_SYM],
 
             SIMP_TAC list_ss [] THEN
@@ -827,7 +827,7 @@ val ALL_DISJOINT___PERM = store_thm ("ALL_DISJOINT___PERM",
       METIS_TAC[]
    ) THEN
    HO_MATCH_MP_TAC PERM_IND THEN
-   SIMP_TAC list_ss [ALL_DISJOINT_def, EVERY_MEM] THEN   
+   SIMP_TAC list_ss [ALL_DISJOINT_def, EVERY_MEM] THEN
    REPEAT STRIP_TAC THENL [
       REWRITE_TAC[PERM_REFL],
       ASM_REWRITE_TAC[PERM_CONS_IFF],
@@ -846,7 +846,7 @@ val ALL_DISTINCT___PERM = store_thm ("ALL_DISTINCT___PERM",
       METIS_TAC[]
    ) THEN
    HO_MATCH_MP_TAC PERM_IND THEN
-   SIMP_TAC list_ss [] THEN   
+   SIMP_TAC list_ss [] THEN
    REPEAT STRIP_TAC THENL [
       REWRITE_TAC[PERM_REFL],
       ASM_REWRITE_TAC[PERM_CONS_IFF],
@@ -864,7 +864,7 @@ val ALL_DISJOINT___PERM = store_thm ("ALL_DISJOINT___PERM",
       METIS_TAC[]
    ) THEN
    HO_MATCH_MP_TAC PERM_IND THEN
-   SIMP_TAC list_ss [ALL_DISJOINT_def, EVERY_MEM] THEN   
+   SIMP_TAC list_ss [ALL_DISJOINT_def, EVERY_MEM] THEN
    REPEAT STRIP_TAC THENL [
       REWRITE_TAC[PERM_REFL],
       ASM_REWRITE_TAC[PERM_CONS_IFF],
@@ -882,7 +882,7 @@ val LESS_EQ_ADD_EXISTS = store_thm ("LESS_EQ_ADD_EXISTS",
 	Cases_on `n = m` THENL [
 		Q.EXISTS_TAC `0` THEN
 		ASM_SIMP_TAC arith_ss [],
-	
+
 		`n < m` by DECIDE_TAC THEN
 		PROVE_TAC[LESS_ADD]
 	]
@@ -1189,10 +1189,10 @@ Induct_on `l` THENL [
 		ASM_SIMP_TAC list_ss []
 	)
 ]);
-		
+
 
 val MONO_NOT_EQ = store_thm ("MONO_NOT_EQ",
-``(~A ==> ~B) = (B ==> A)``, 
+``(~A ==> ~B) = (B ==> A)``,
 METIS_TAC[]);
 
 
@@ -1215,7 +1215,7 @@ SIMP_TAC std_ss [IMAGE_ABS2, IN_ABS]);
 
 
 
-val LIST_ELEM_COUNT_def = 
+val LIST_ELEM_COUNT_def =
 save_thm ("LIST_ELEM_COUNT_def",
 LIST_ELEM_COUNT_DEF);
 
@@ -1274,7 +1274,7 @@ SIMP_TAC std_ss [EXTENSION, IN_ABS, IN_SING]);
 
 
 val IMAGE_BIGUNION = store_thm ("IMAGE_BIGUNION",
-	``IMAGE f (BIGUNION M) = 
+	``IMAGE f (BIGUNION M) =
 	    BIGUNION (IMAGE (IMAGE f) M)``,
 
 ONCE_REWRITE_TAC [EXTENSION] THEN
@@ -1303,11 +1303,11 @@ val COND_NONE_SOME_REWRITES = store_thm ("COND_NONE_SOME_REWRITES",
     (IS_SOME (if C then (SOME X) else NONE) = C) /\
     (IS_NONE (if C then NONE else (SOME X)) = C) /\
     (IS_NONE (if C then (SOME X) else NONE) = ~C) /\
-   ((if C then SOME X else SOME Y) = 
+   ((if C then SOME X else SOME Y) =
     SOME (if C then X else Y))
 ``,
 
-Cases_on `C` THEN Cases_on `C1` THEN Cases_on `C2` THEN 
+Cases_on `C` THEN Cases_on `C1` THEN Cases_on `C2` THEN
 SIMP_TAC std_ss []);
 
 
@@ -1319,7 +1319,7 @@ val COND_NONE_SOME_REWRITES2 = store_thm ("COND_NONE_SOME_REWRITES2",
    (((if C then NONE else X) = NONE) = C \/ (X = NONE)) /\
    (((if C then X else NONE) = NONE) = ~C \/ (X = NONE))``,
 
-Cases_on `C` THEN Cases_on `X` THEN 
+Cases_on `C` THEN Cases_on `X` THEN
 SIMP_TAC std_ss []);
 
 
@@ -1346,7 +1346,7 @@ val COND_REWRITES = store_thm ("COND_REWRITES",
     (C ==> (v2 = v1)))
 ``,
 
-Cases_on `C` THEN 
+Cases_on `C` THEN
 SIMP_TAC std_ss []);
 
 
@@ -1356,7 +1356,7 @@ val COND_EQ_REWRITE = store_thm ("COND_EQ_REWRITE",
    ((if C then X else Y) = (if C then X' else Y')) =
    ((C ==> (X = X')) /\ (~C ==> (Y = Y')))``,
 
-Cases_on `C` THEN 
+Cases_on `C` THEN
 SIMP_TAC std_ss []);
 
 
@@ -1383,7 +1383,7 @@ val COND_NONE_SOME_REWRITES_EQ = store_thm ("COND_NONE_SOME_REWRITES_EQ",
    (((if C1 then (SOME X) else NONE) =
     (if C2 then NONE else (SOME Y))) = ((C1 = ~C2) /\ (~C2 ==> (X = Y))))``,
 
-Cases_on `C1` THEN Cases_on `C2` THEN 
+Cases_on `C1` THEN Cases_on `C2` THEN
 SIMP_TAC std_ss []);
 
 
@@ -1468,7 +1468,7 @@ SIMP_TAC std_ss [INTER_SUBSET, SUBSET_UNION]);
 
 
 
-val BAG_ALL_DISTINCT_def = 
+val BAG_ALL_DISTINCT_def =
 save_thm ("BAG_ALL_DISTINCT_def",
 bagTheory.BAG_ALL_DISTINCT);
 
@@ -1519,7 +1519,7 @@ SIMP_TAC list_ss [LIST_UNROLL_GIVEN_ELEMENT_NAMES_def]);
 
 val LIST_UNROLL_GIVEN_ELEMENT_NAMES___UNROLL = store_thm ("LIST_UNROLL_GIVEN_ELEMENT_NAMES___UNROLL",
 ``(LIST_UNROLL_GIVEN_ELEMENT_NAMES x [] = (x = [])) /\
-  (LIST_UNROLL_GIVEN_ELEMENT_NAMES x (h::L) = 
+  (LIST_UNROLL_GIVEN_ELEMENT_NAMES x (h::L) =
    ?h' L'. (x = h'::L') /\ (LIST_UNROLL_GIVEN_ELEMENT_NAMES L' L))``,
 
 Cases_on `x` THEN
@@ -1544,7 +1544,7 @@ val SOME_THE_EQ = store_thm ("SOME_THE_EQ",
 
 val LIST_EQ_REWRITE = store_thm ("LIST_EQ_REWRITE",
 ``!l1 l2.
-  (l1 = l2) = 
+  (l1 = l2) =
   ((LENGTH l1 = LENGTH l2) /\
    ((!n. (n < LENGTH l1) ==> (EL n l1 = EL n l2))))``,
 
@@ -1575,7 +1575,7 @@ Induct_on `l1` THENL [
      ASM_SIMP_TAC list_ss []
   ]
 ]);
-  
+
 
 
 
@@ -1619,7 +1619,7 @@ SIMP_TAC std_ss [BAG_ALL_DISTINCT_def,
 		 GSYM FORALL_AND_THM] THEN
 REPEAT GEN_TAC THEN
 HO_MATCH_MP_TAC (prove (``(!e. (X e = Y e)) ==>
-			  ((!e. X e) = (!e. Y e))``, 
+			  ((!e. X e) = (!e. Y e))``,
                         PROVE_TAC[])) THEN
 GEN_TAC THEN
 DECIDE_TAC);
@@ -1659,14 +1659,14 @@ SIMP_TAC std_ss [BAG_ALL_DISTINCT_def,
 		 GSYM FORALL_AND_THM] THEN
 REPEAT GEN_TAC THEN
 HO_MATCH_MP_TAC (prove (``(!e. (X e = Y e)) ==>
-			  ((!e. X e) = (!e. Y e))``, 
+			  ((!e. X e) = (!e. Y e))``,
                         PROVE_TAC[])) THEN
 GEN_TAC THEN
 DECIDE_TAC);
 
 
 
-val BAG_IN_BAG_MERGE = 
+val BAG_IN_BAG_MERGE =
 store_thm ("BAG_IN_BAG_MERGE",
 
 ``!e b1 b2. (BAG_IN e (BAG_MERGE b1 b2)) =
@@ -1714,7 +1714,7 @@ ASM_SIMP_TAC std_ss [bagTheory.FINITE_BAG_THM])
 
 
 
-val FMAP_MAP_def = Define 
+val FMAP_MAP_def = Define
 `FMAP_MAP f m = FUN_FMAP (\x. f (m ' x)) (FDOM m)`;
 
 
@@ -1726,7 +1726,7 @@ SIMP_TAC std_ss [FMAP_MAP_def,
 		 FUN_FMAP_DEF, FDOM_FINITE]);
 
 
- 
+
 val FMAP_MAP_FEMPTY = store_thm ("FMAP_MAP_FEMPTY",
 ``FMAP_MAP f FEMPTY = FEMPTY``,
 
@@ -1735,7 +1735,7 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP_THM,
 
 
 val FMAP_MAP_FUPDATE = store_thm ("FMAP_MAP_FUPDATE",
-``FMAP_MAP f (m |+ (x, v)) = 
+``FMAP_MAP f (m |+ (x, v)) =
   (FMAP_MAP f m) |+ (x, f v)``,
 
 SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP_THM,
@@ -1748,7 +1748,7 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP_THM,
 
 val FEVERY_FMAP_MAP = store_thm ("FEVERY_FMAP_MAP",
 ``!m P f.
-  FEVERY P (FMAP_MAP f m) = 
+  FEVERY P (FMAP_MAP f m) =
   FEVERY (\x. P (FST x, (f (SND x)))) m``,
 
 SIMP_TAC std_ss [FEVERY_DEF,
@@ -1761,7 +1761,7 @@ SIMP_TAC std_ss [FEVERY_DEF,
 
 val FMAP_MAP___FMAP_MAP = store_thm ("FMAP_MAP___FMAP_MAP",
 ``!f1 f2 f.
-  FMAP_MAP f1 (FMAP_MAP f2 f) = 
+  FMAP_MAP f1 (FMAP_MAP f2 f) =
   FMAP_MAP (f1 o f2) f``,
 
 SIMP_TAC std_ss [GSYM fmap_EQ_THM,
@@ -1782,7 +1782,7 @@ SIMP_TAC std_ss [FMAP_MAP2_def,
 		 FUN_FMAP_DEF, FDOM_FINITE]);
 
 
- 
+
 val FMAP_MAP2_FEMPTY = store_thm ("FMAP_MAP2_FEMPTY",
 ``FMAP_MAP2 f FEMPTY = FEMPTY``,
 
@@ -1791,7 +1791,7 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP2_THM,
 
 
 val FMAP_MAP2_FUPDATE = store_thm ("FMAP_MAP2_FUPDATE",
-``FMAP_MAP2 f (m |+ (x, v)) = 
+``FMAP_MAP2 f (m |+ (x, v)) =
   (FMAP_MAP2 f m) |+ (x, f (x,v))``,
 
 SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP2_THM,
@@ -1906,7 +1906,7 @@ Cases_on `c` THEN SIMP_TAC std_ss []);
 
 
 
-val GSYM_LENGTH_NIL = store_thm ("GSYM_LENGTH_NIL", 
+val GSYM_LENGTH_NIL = store_thm ("GSYM_LENGTH_NIL",
 ``(0 = LENGTH l) = (l = [])``,
 Cases_on `l` THEN SIMP_TAC list_ss []);
 
@@ -1930,7 +1930,7 @@ METIS_TAC[]);
 
 val FEVERY_DRESTRICT_COMPL = store_thm(
 "FEVERY_DRESTRICT_COMPL",
-``FEVERY P (DRESTRICT (f |+ (k, v)) (COMPL s)) = 
+``FEVERY P (DRESTRICT (f |+ (k, v)) (COMPL s)) =
   (FEVERY P (DRESTRICT f (COMPL (k INSERT s))) /\
   (~(k IN s) ==> P (k,v)))``,
 
@@ -1945,7 +1945,7 @@ METIS_TAC[]);
 
 
 
-val BAG_OF_FMAP_def = 
+val BAG_OF_FMAP_def =
 save_thm ("BAG_OF_FMAP_def",
 BAG_OF_FMAP_def);
 
@@ -1963,7 +1963,7 @@ SIMP_TAC std_ss [BAG_OF_FMAP_def,
 		 GSYM EMPTY_DEF, CARD_EMPTY] THEN
 ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
 GEN_TAC THEN SIMP_TAC std_ss [] THEN
-Cases_on `x = f k v` THENL [  
+Cases_on `x = f k v` THENL [
    ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [FAPPLY_FUPDATE_THM,
 		        FDOM_DOMSUB, IN_DELETE,
 			DOMSUB_FAPPLY_THM] THEN
@@ -2046,7 +2046,7 @@ REPEAT GEN_TAC THEN
    SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_ABS] THEN
    PROVE_TAC[]
 ) THEN
-ONCE_ASM_REWRITE_TAC[] THEN 
+ONCE_ASM_REWRITE_TAC[] THEN
 MATCH_MP_TAC IMAGE_FINITE THEN
 REWRITE_TAC[FDOM_FINITE]);
 
@@ -2069,11 +2069,11 @@ SIMP_TAC list_ss []);
 
 val APPEND_ASSOC_CONS = store_thm (
 "APPEND_ASSOC_CONS",
-``!l1 h l2 l3. 
+``!l1 h l2 l3.
   (l1 ++ (h::l2) ++ l3 =
    l1 ++ h::(l2++l3))``,
 
-   REWRITE_TAC[GSYM rich_listTheory.APPEND_ASSOC, 
+   REWRITE_TAC[GSYM rich_listTheory.APPEND_ASSOC,
 	       rich_listTheory.APPEND]);
 
 

@@ -6,7 +6,7 @@
 *)
 (*=============================================================== *)
 
-open HolKernel Parse boolLib 
+open HolKernel Parse boolLib
      newOpsemTheory bossLib pairSyntax intLib intSimps
      computeLib finite_mapTheory  stringLib intSyntax;
 
@@ -23,7 +23,7 @@ open HolKernel Parse boolLib
 *)
 
 (* take a term that corresponds to a program in opSem syntax
-   and build a symbolic state that represents all 
+   and build a symbolic state that represents all
    its variables *)
 (* Functions  written by Mike Gordon in PATH_EVAL *)
 (* Have been modified to get also array variables *)
@@ -35,14 +35,14 @@ open HolKernel Parse boolLib
 fun nexp_vars nex =
  let val (opr,args) = strip_comb nex  (* syntax error if "op" instead of "opr" *)
      val _ = if not(is_const opr)
-              then (print_term opr; 
-                    print " is not a constant\n"; 
+              then (print_term opr;
+                    print " is not a constant\n";
                     fail())
               else ()
      val name = fst(dest_const opr)
      val _ = if not(mem name ["Var","Arr","Const","Plus","Times","Div","Sub","Min"])
-              then (print name; 
-                    print " is not an nexp constructor\n"; 
+              then (print name;
+                    print " is not an nexp constructor\n";
                     fail())
               else ()
  in
@@ -70,14 +70,14 @@ fun nexp_vars nex =
 fun bexp_vars bex =
  let val (opr,args) = strip_comb bex  (* syntax error if "op" instead of "opr" *)
      val _ = if not(is_const opr)
-              then (print_term opr; 
-                    print " is not a constant\n"; 
+              then (print_term opr;
+                    print " is not a constant\n";
                     fail())
               else ()
      val name = fst(dest_const opr)
      val _ = if not(mem name ["Equal","Less","LessEq","And","Or","Not"])
-              then (print name; 
-                    print " is not a bexp constructor\n"; 
+              then (print name;
+                    print " is not a bexp constructor\n";
                     fail())
               else ()
  in
@@ -109,12 +109,12 @@ fun getConcreteAssign i =
     let val (inst,args) = strip_comb(i)
     in
       if inst = ``GenAssign``
-      then 
+      then
          let val (ty,vall) = dest_comb(el 2 args)
          in
            if ty = ``(INL :nexp -> nexp + aexp)``
            then ``Assign ^(el 1 args) ^vall``
-           else 
+           else
               let val (_,arrUpdate) = strip_comb vall
               in
                 ``ArrayAssign ^(el 1 args) ^(el 2 arrUpdate) ^(el 3 arrUpdate)``
@@ -128,15 +128,15 @@ in
 fun program_vars c =
  let val (opr,args) = strip_comb c  (* N.B. syntax error if "op" instead of "opr" *)
      val _ = if not(is_const opr)
-              then (print_term opr; 
-                    print " is not a constant\n"; 
+              then (print_term opr;
+                    print " is not a constant\n";
                     fail())
               else ()
      val name = fst(dest_const opr)
      val _ = if not(mem name ["Skip","Assign","ArrayAssign","GenAssign","Dispose","Seq",
                               "Cond","While","Local","Assert"])
-              then (print name; 
-                    print " is not a program constructor\n"; 
+              then (print name;
+                    print " is not a program constructor\n";
                     fail())
               else ()
  in
@@ -152,12 +152,12 @@ fun program_vars c =
                          val exp3 = nexp_vars(el 3 args)
                        in
 			   ((union (fst exp2) (fst exp3)),
-			    insert (el 1 args) 
+			    insert (el 1 args)
 				   (union (snd exp2)
 					  (snd exp3)))
                        end
   | "GenAssign"   => let val ass = getConcreteAssign c
-                     in 
+                     in
                         program_vars ass
                      end
 
@@ -171,8 +171,8 @@ fun program_vars c =
   | "Cond"     =>  let val p2= program_vars(el 2 args)
                      val p3= program_vars(el 3 args)
                      val exp1 = bexp_vars(el 1 args)
-                  in 
-		    (union 
+                  in
+		    (union
 			 (fst exp1)
 			 (union (fst p2) (fst p3)),
 		     union
@@ -182,7 +182,7 @@ fun program_vars c =
 
   | "While"    => let val p2= program_vars(el 2 args)
                      val exp1 = bexp_vars(el 1 args)
-                  in 
+                  in
 		     (union (fst exp1) (fst p2),
 		      union (snd exp1) (snd p2))
 		  end
@@ -202,15 +202,15 @@ val MAX_ARRAY_SIZE = 10;
 (* to know if a variable is the length of an array *)
 fun isArrayLength tm =
   let val s = fromHOLstring tm
-  in  
+  in
      if (size s) > 6
-     then 
+     then
        String.extract (s,(size s) -6, NONE) = "Length"
      else false
   end;
 
 
-(* 
+(*
 Construct: FEMPTY |++ [("v1",v1);...;("vn",vn)]
 where v1,...,vn are the integer variables read or written in c
 
@@ -220,8 +220,8 @@ TODO: build the length of the array from preconditions
 fun varPairs vars =
   let val maxTerm = term_of_int(Arbint.fromInt(MAX_ARRAY_SIZE))
   in
-    map 
-      (fn tm => 
+    map
+      (fn tm =>
          if isArrayLength tm
          then ``(^tm,Scalar ^maxTerm)``
          else
@@ -231,7 +231,7 @@ fun varPairs vars =
 
 
 
-(* 
+(*
 Construct a pair (name,value) where name is the name of an array variable
 and (value) is a finite_map that represents symbolic initial value of the array.
 assuming that the maximum array size is MAX_ARRAY_SIZE.
@@ -270,7 +270,7 @@ end;
 in
 
 fun arrayPairs vars =
- map 
+ map
    (fn tm => generateArray(fromHOLstring(tm)))
  vars
 
@@ -288,24 +288,24 @@ end;
 
 local
 
-(* add a variable xxxLength for each array xxx 
+(* add a variable xxxLength for each array xxx
    in the list of int variables *)
 fun addArrLength varNames arrNames =
  if arrNames = []
  then varNames
- else 
+ else
    List.concat(
-    (map 
-      (fn tm => 
-        insert 
+    (map
+      (fn tm =>
+        insert
         (stringSyntax.fromMLstring(fromHOLstring(tm)^ "Length"))
         varNames
       )
       arrNames));
 
-(* TODO 
+(* TODO
 fun  getArrayLength pre =
-    take the precondition and return a list of pairs 
+    take the precondition and return a list of pairs
    ("arrLength", val) where val is the length of array arr
    given in the precondition or is MAX_ARRAY_SIZE if no information is
    given in the precondition *)
@@ -319,7 +319,7 @@ in
 *)
 (* ----------------------------------- *)
 
-(* make the state from the list of variables 
+(* make the state from the list of variables
    which has been built during translation from Java to opsem
    and is stored under definition intVar_def and arrVar_def
 *)
@@ -335,7 +335,7 @@ fun makeStateFromVars v =
      )
   end;
 
-fun makeState c = 
+fun makeState c =
   let val names = program_vars c;
   in
      makeStateFromVars names
@@ -351,7 +351,7 @@ fun makeStateListFromVars v =
       listSyntax.mk_list(vars@arrayVars,``:string#value``)
   end;
 
-fun makeStateList c = 
+fun makeStateList c =
   let val names = program_vars c;
   in
      makeStateListFromVars names
@@ -368,7 +368,7 @@ end;
 
 (* ---------------------------------------------- *)
 (* function to transform the list of solutions
-   as a finite map that can be used as outcome 
+   as a finite map that can be used as outcome
 
   st: the state
   l: a list of solution of the form (var,val)
@@ -376,19 +376,19 @@ end;
 (* ---------------------------------------------- *)
 
 local
-fun addSol st nt vt = 
+fun addSol st nt vt =
   ``^st |+ (^nt,Scalar ^vt)``;
 
 in
 fun finiteMapSol l st =
-  if null l 
+  if null l
   then st
-  else 
+  else
     let val (n,v) = (fst(hd(l)),snd(hd(l)));
       val (nt,vt) = (stringSyntax.fromMLstring(n),
                      intSyntax.term_of_int(Arbint.fromString(v)));
       val newSt = addSol st nt vt
-      in 
+      in
         finiteMapSol (tl l) newSt
     end
 end;
@@ -403,7 +403,7 @@ fun is_finite_map fm =
  (is_const fm andalso fst(dest_const fm) = "FEMPTY")
  orelse (let val (opr,args) = strip_comb fm
          in
-          is_const opr 
+          is_const opr
           andalso fst(dest_const opr) = "FUPDATE"
           andalso (length args = 2)
           andalso is_finite_map(el 1 args)
@@ -413,33 +413,33 @@ fun is_finite_map fm =
 
 (* Remove overwritten entries in a finite map *)
 fun PRUNE_FINITE_MAP_CONV  fm =
- if not(is_finite_map fm) orelse 
+ if not(is_finite_map fm) orelse
     (is_const fm andalso fst(dest_const fm) = "FEMPTY")
   then REFL fm
-  else (REWR_CONV FUPDATE_PRUNE 
+  else (REWR_CONV FUPDATE_PRUNE
          THENC RATOR_CONV(RAND_CONV(EVAL THENC PRUNE_FINITE_MAP_CONV)))
        fm;
 
 
-(* to prune arrays. Keep only the last value that have been assigned 
+(* to prune arrays. Keep only the last value that have been assigned
    for each index *)
-fun pruneArray fm = 
+fun pruneArray fm =
   if is_const fm
   then fm
-  else 
+  else
     let val (_,args1) = strip_comb fm
        val fnext = (el 1 args1)
        val v = (el 2 args1)
        val (_,args2) = strip_comb v
        val name = (el 1 args2)
        val value = (el 2 args2)
-       val pruneNext =  pruneArray(fnext) 
+       val pruneNext =  pruneArray(fnext)
        in
          if is_comb value andalso fst(dest_comb(value))=``Array``
-         then 
+         then
           let val pruneArr =  snd(dest_comb(concl(PRUNE_FINITE_MAP_CONV(snd(dest_comb(value))))))
             val newVal = ``(^name, Array ^pruneArr)``
-          in        
+          in
             ``(^pruneNext |+ ^newVal)``
           end
          else ``(^pruneNext |+ ^v)``
@@ -455,13 +455,13 @@ end;
 
 
 (* --------------------------------------------------*)
-(* to print a condition in the program as a condition 
+(* to print a condition in the program as a condition
    on variables instead of functions of state        *)
 
 (* (Cond (Less i j)) will be printed as i<j
    instead of (ScalarOf 'i) < (ScalarOf 'j)          *)
 (* --------------------------------------------------*)
-local 
+local
 
 (* Get set of string terms in a term *)
 (* Written by Mike Gordon in verifier.ml    *)
@@ -476,11 +476,11 @@ fun get_strings tm =
   then get_strings(body tm)
   else (print "error in get_strings"; fail());
 
-fun makeStateFromPair l = 
+fun makeStateFromPair l =
   if ((length l) = 1)
   then ``(FEMPTY |+ ^(hd l)) ``
   else
-      let 
+      let
         val map = makeStateFromPair (tl l);
       in
          ``^map |+ ^(hd l)``
@@ -489,18 +489,18 @@ end;
 in
 
 fun pretty_string tm =
- let val var_tms = get_strings tm; 
-     val pairs = map 
+ let val var_tms = get_strings tm;
+     val pairs = map
                   (fn tm => pairSyntax.mk_pair
                       let val v = mk_var(fromHOLstring tm,``:int``)
-                      in 
+                      in
 		      (tm,``Scalar ^v``)
 			end
 		  )
                   var_tms;
      val st = makeStateFromPair pairs;
      val (_,res) = strip_comb(concl(EVAL ``beval ^tm ^st``));
-     in 
+     in
        term_to_string(el 2 res)
      end
 end;

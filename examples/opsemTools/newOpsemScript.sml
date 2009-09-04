@@ -23,9 +23,9 @@ See see newOpsemDoc.txt for some documentation.
 
 (* Stuff needed when running interactively
 quietdec := true; (* turn off printing *)
-app load ["stringLib", "finite_mapTheory", "intLib", 
+app load ["stringLib", "finite_mapTheory", "intLib",
           "pred_setTheory","whileTheory","optionTheory","unwindLib"];
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
      stringLib IndDefLib IndDefRules finite_mapTheory relationTheory
      arithmeticTheory prim_recTheory
      pred_setTheory whileTheory combinTheory optionTheory unwindLib;
@@ -34,7 +34,7 @@ clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
 quietdec := false; (* turn printing back on *)3
 *)
 
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
      stringLib IndDefLib IndDefRules finite_mapTheory relationTheory
      arithmeticTheory prim_recTheory
      pred_setTheory optionTheory combinTheory whileTheory unwindLib;
@@ -105,9 +105,9 @@ val ArrayOf_def =
 (* are defined by datatypes with simple evaluation semantics.                *)
 (*---------------------------------------------------------------------------*)
 
-val _ = 
- Hol_datatype 
-  `nexp = Var of string 
+val _ =
+ Hol_datatype
+  `nexp = Var of string
         | Arr of string => nexp
         | Const of int
         | Plus of nexp => nexp
@@ -116,8 +116,8 @@ val _ =
         | Div of nexp => nexp
         | Min of nexp => nexp`;
 
-val _ = 
- Hol_datatype 
+val _ =
+ Hol_datatype
   `bexp = Equal of nexp => nexp
         | Less of nexp => nexp
         | LessEq of nexp => nexp
@@ -133,7 +133,7 @@ val _ =
         | ArrVar    of string                  (* array variable *)
         | ArrUpdate of aexp => nexp => nexp`;  (* array update   *)
 
-val neval_def =  
+val neval_def =
  Define
   `(neval (Var v) s = ScalarOf(s ' v)) /\
    (neval (Arr a e) s = (ArrayOf(s ' a) ' (Num(neval e s)))) /\
@@ -144,7 +144,7 @@ val neval_def =
    (neval (Div e1 e2) s = integer$int_quot (neval e1 s) (neval e2 s)) /\
    (neval (Min e1 e2) s = integer$int_min (neval e1 s) (neval e2 s))`;
 
-val beval_def =  
+val beval_def =
  Define
   `(beval (Equal e1 e2) s = (neval e1 s = neval e2 s)) /\
    (beval (Less e1 e2) s = integer$int_lt (neval e1 s) (neval e2 s)) /\
@@ -199,7 +199,7 @@ val Update_Exp =
 (* Datatype of programs                                                      *)
 (*---------------------------------------------------------------------------*)
 
-val _ = 
+val _ =
  Hol_datatype
   `program =
     Skip                                             (* null command         *)
@@ -282,28 +282,28 @@ val _ = set_fixity ";;" (Infixr 180);
 (*---------------------------------------------------------------------------*)
 
 val (rules,induction,ecases) = Hol_reln
-   `(!s. 
+   `(!s.
       EVAL Skip s s)
- /\ (!s v e. 
+ /\ (!s v e.
       EVAL (GenAssign v e) s (Update v e s))
  /\ (!s v. EVAL (Dispose v) s (s \\ v))
- /\ (!c1 c2 s1 s2 s3. EVAL c1 s1 s2 /\ EVAL c2 s2 s3 
+ /\ (!c1 c2 s1 s2 s3. EVAL c1 s1 s2 /\ EVAL c2 s2 s3
       ==> EVAL (Seq c1 c2) s1 s3)
- /\ (!c1 c2 s1 s2 b.  EVAL c1 s1 s2 /\ beval b s1 
+ /\ (!c1 c2 s1 s2 b.  EVAL c1 s1 s2 /\ beval b s1
       ==> EVAL (Cond b c1 c2) s1 s2)
- /\ (!c1 c2 s1 s2 b. EVAL c2 s1 s2 /\ ~beval b s1 
+ /\ (!c1 c2 s1 s2 b. EVAL c2 s1 s2 /\ ~beval b s1
       ==> EVAL (Cond b c1 c2) s1 s2)
- /\ (!c s b R. ~beval b s 
+ /\ (!c s b R. ~beval b s
       ==> EVAL (AnWhile b R c) s s)
  /\ (!c s1 s2 s3 b R.
-      EVAL c s1 s2 /\ EVAL (AnWhile b R c) s2 s3 /\ beval b s1 
+      EVAL c s1 s2 /\ EVAL (AnWhile b R c) s2 s3 /\ beval b s1
       ==> EVAL (AnWhile b R c) s1 s3)
- /\ (!c s1 s2 v. 
-      EVAL c s1 s2 
-      ==> EVAL (Local v c) s1 (if v IN FDOM s1 
-                                then s2|+(v, (s1 ' v)) 
+ /\ (!c s1 s2 v.
+      EVAL c s1 s2
+      ==> EVAL (Local v c) s1 (if v IN FDOM s1
+                                then s2|+(v, (s1 ' v))
                                 else s2 \\ v))
- /\ (!s P Q xs f. 
+ /\ (!s P Q xs f.
       EVAL (AnProc P Q xs f) s (f s))`;
 
 val rulel = CONJUNCTS rules;
@@ -332,33 +332,33 @@ val SKIP = store_thm
  ``!s. EVAL Skip s s``,
  METIS_TAC rulel);
 
-val GEN_ASSIGN_THM = store_thm 
+val GEN_ASSIGN_THM = store_thm
 ("GEN_ASSIGN_THM",
  ``!s1 s2 v e. EVAL (GenAssign v e) s1 s2 = (s2 = Update v e s1)``,
  RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
 
-val GEN_ASSIGN = store_thm 
+val GEN_ASSIGN = store_thm
 ("GEN_ASSIGN",
  ``!s v e. EVAL (GenAssign v e) s (Update v e s)``,
  METIS_TAC rulel);
 
-val ASSIGN = store_thm 
+val ASSIGN = store_thm
 ("ASSIGN",
  ``!s v e. EVAL (Assign v e) s (Update v (INL e) s)``,
  RW_TAC std_ss [Assign_def] THEN METIS_TAC rulel);
 
-val ARRAY_ASSIGN = store_thm 
+val ARRAY_ASSIGN = store_thm
 ("ARRAY_ASSIGN",
- ``!s v e1 e2. 
+ ``!s v e1 e2.
     EVAL (ArrayAssign v e1 e2) s (Update v (INR(ArrUpdate (ArrVar v) e1 e2)) s)``,
  RW_TAC std_ss [ArrayAssign_def] THEN METIS_TAC rulel);
 
-val DISPOSE_THM = store_thm 
+val DISPOSE_THM = store_thm
 ("DISPOSE_THM",
  ``!s1 s2 v. EVAL (Dispose v) s1 s2 = (s2 = s1 \\ v)``,
  RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
 
-val DISPOSE = store_thm 
+val DISPOSE = store_thm
 ("DISPOSE",
  ``!s v. EVAL (Dispose v) s (s \\ v)``,
  METIS_TAC rulel);
@@ -368,15 +368,15 @@ val SEQ_THM = store_thm
  ``!s1 s3 c1 c2. EVAL (Seq c1 c2) s1 s3 = ?s2. EVAL c1 s1 s2 /\ EVAL c2 s2 s3``,
  RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
 
-val IF_T_THM = store_thm 
+val IF_T_THM = store_thm
 ("IF_T_THM",
- ``!s1 s2 b c1 c2. 
+ ``!s1 s2 b c1 c2.
      beval b s1 ==> (EVAL (Cond b c1 c2) s1 s2 = EVAL c1 s1 s2)``,
  RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
 
-val IF_F_THM = store_thm 
+val IF_F_THM = store_thm
 ("IF_F_THM",
- ``!s1 s2 b c1 c2. 
+ ``!s1 s2 b c1 c2.
      ~beval b s1 ==> (EVAL (Cond b c1 c2) s1 s2 = EVAL c2 s1 s2)``,
  RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
 
@@ -388,60 +388,60 @@ val IF_THM =
         if beval b s1 then EVAL c1 s1 s2 else EVAL c2 s1 s2``,
    METIS_TAC[IF_T_THM,IF_F_THM]);
 
-val ANWHILE_T_THM = store_thm 
+val ANWHILE_T_THM = store_thm
 ("ANWHILE_T_THM",
  ``!s1 s3 b R c.
-    beval b s1 ==> 
-      (EVAL (AnWhile b R c) s1 s3 = 
+    beval b s1 ==>
+      (EVAL (AnWhile b R c) s1 s3 =
         ?s2. EVAL c s1 s2 /\ EVAL (AnWhile b R c) s2 s3)``,
  RW_TAC std_ss [EQ_IMP_THM,Once ecases]
  THEN METIS_TAC rulel);
 
-val WHILE_T_THM = 
- store_thm 
+val WHILE_T_THM =
+ store_thm
   ("WHILE_T_THM",
    ``!s1 s3 b c.
-      beval b s1 ==> 
-        (EVAL (While b c) s1 s3 = 
+      beval b s1 ==>
+        (EVAL (While b c) s1 s3 =
           ?s2. EVAL c s1 s2 /\ EVAL (While b c) s2 s3)``,
    METIS_TAC[ANWHILE_T_THM,While_def]);
 
-val ANWHILE_F_THM = store_thm 
+val ANWHILE_F_THM = store_thm
 ("ANWHILE_F_THM",
  ``!s1 s2 b R c. ~beval b s1 ==> (EVAL (AnWhile b R c) s1 s2 = (s1 = s2))``,
- RW_TAC std_ss [EQ_IMP_THM,Once ecases] 
+ RW_TAC std_ss [EQ_IMP_THM,Once ecases]
  THEN METIS_TAC rulel);
 
-val WHILE_F_THM = 
- store_thm 
+val WHILE_F_THM =
+ store_thm
   ("WHILE_F_THM",
    ``!s1 s2 b c. ~beval b s1 ==> (EVAL (While b c) s1 s2 = (s1 = s2))``,
    METIS_TAC[ANWHILE_F_THM,While_def]);
 
-val ANWHILE_THM = store_thm 
+val ANWHILE_THM = store_thm
 ("ANWHILE_THM",
  ``!s1 s3 b R c.
-     EVAL (AnWhile b R c) s1 s3 = 
-      if beval b s1 
+     EVAL (AnWhile b R c) s1 s3 =
+      if beval b s1
        then ?s2. EVAL c s1 s2 /\ EVAL (AnWhile b R c) s2 s3
        else (s1 = s3)``,
  METIS_TAC[ANWHILE_T_THM,ANWHILE_F_THM]);
 
-val WHILE_THM = store_thm 
+val WHILE_THM = store_thm
 ("WHILE_THM",
  ``!s1 s3 b c.
-     EVAL (While b c) s1 s3 = 
-      if beval b s1 
+     EVAL (While b c) s1 s3 =
+      if beval b s1
        then ?s2. EVAL c s1 s2 /\ EVAL (While b c) s2 s3
        else (s1 = s3)``,
  METIS_TAC[ANWHILE_THM,While_def]);
 
 val LOCAL_THM = store_thm
  ("LOCAL_THM",
-  ``!s1 s2 v c. 
-     EVAL (Local v c) s1 s2 = 
-      ?s3. EVAL c s1 s3 
-           /\ 
+  ``!s1 s2 v c.
+     EVAL (Local v c) s1 s2 =
+      ?s3. EVAL c s1 s3
+           /\
            (s2 = if v IN FDOM s1 then s3 |+ (v, (s1 ' v)) else s3 \\ v)``,
  RW_TAC std_ss [EQ_IMP_THM,Once ecases,While_def] THEN METIS_TAC(FUPDATE_EQ:: rulel));
 
@@ -454,7 +454,7 @@ val ANPROC_THM = store_thm
 val SEQ_ASSOC =
  store_thm
   ("SEQ_ASSOC",
-   ``!c1 c2 c3 s1 s2. 
+   ``!c1 c2 c3 s1 s2.
       EVAL (Seq (Seq c1 c2) c3) s1 s2 = EVAL (Seq c1 (Seq c2 c3)) s1 s2``,
    RW_TAC std_ss [SEQ_THM]
     THEN METIS_TAC[]); (* METIS does the whole proof, but is slower *)
@@ -469,13 +469,13 @@ val SEQ_ASSOC =
 (* cases - one per rule - rather than one per constructor.                   *)
 (*---------------------------------------------------------------------------*)
 
-val EVAL_DETERMINISTIC = store_thm 
+val EVAL_DETERMINISTIC = store_thm
 ("EVAL_DETERMINISTIC",
  ``!c st1 st2. EVAL c st1 st2 ==> !st3. EVAL c st1 st3 ==> (st2 = st3)``,
- HO_MATCH_MP_TAC induction THEN 
+ HO_MATCH_MP_TAC induction THEN
  RW_TAC std_ss [SKIP_THM,GEN_ASSIGN_THM,DISPOSE_THM,SEQ_THM,
-                IF_T_THM,IF_F_THM,ANWHILE_T_THM, 
-                ANWHILE_F_THM,LOCAL_THM,ANPROC_THM] THEN 
+                IF_T_THM,IF_F_THM,ANWHILE_T_THM,
+                ANWHILE_F_THM,LOCAL_THM,ANPROC_THM] THEN
  METIS_TAC[]);
 
 (* Corollary used later *)
@@ -491,8 +491,8 @@ val IMP_EVAL_DETERMINISTIC =
 (* derivation of proof rules.                                                *)
 (*---------------------------------------------------------------------------*)
 
-val SPEC_def = 
- Define 
+val SPEC_def =
+ Define
    `SPEC P c Q = !s1 s2. P s1 /\ EVAL c s1 s2 ==> Q s2`;
 
 (*---------------------------------------------------------------------------*)
@@ -500,8 +500,8 @@ val SPEC_def =
 (* where the postcondition is a relation between initial and final starts    *)
 (*---------------------------------------------------------------------------*)
 
-val RSPEC_def = 
- Define 
+val RSPEC_def =
+ Define
    `RSPEC P c R = !s1 s2. P s1 /\ EVAL c s1 s2 ==> R s1 s2`;
 
 (* Corollary used later *)
@@ -571,7 +571,7 @@ val DISPOSE_RULE = store_thm
 
 val SEQ_RULE = store_thm
 ("SEQ_RULE",
- ``!P c1 c2 Q R. 
+ ``!P c1 c2 Q R.
        SPEC P c1 Q /\ SPEC Q c2 R ==> SPEC P (Seq c1 c2) R``,
  RW_TAC std_ss [SPEC_def] THEN METIS_TAC [SEQ_THM]);
 
@@ -582,7 +582,7 @@ val SEQ_RULE = store_thm
 val COND_RULE = store_thm
 ("COND_RULE",
  ``!P b c1 c2 Q.
-      SPEC (\s. P(s) /\ beval b s) c1 Q /\ 
+      SPEC (\s. P(s) /\ beval b s) c1 Q /\
       SPEC (\s. P(s) /\ ~beval b s) c2 Q ==> SPEC P (Cond b c1 c2) Q``,
  RW_TAC std_ss [SPEC_def] THEN METIS_TAC [IF_T_THM, IF_F_THM]);
 
@@ -599,9 +599,9 @@ val lemma1 = Q.prove
 val lemma2 = Q.prove
 (`!c s1 s2.
    EVAL c s1 s2 ==>
-     !b' R' c'. 
+     !b' R' c'.
       (c = AnWhile b' R' c') ==>
-      (!s1 s2. P s1 /\ beval b' s1 /\ EVAL c' s1 s2 ==> P s2) 
+      (!s1 s2. P s1 /\ beval b' s1 /\ EVAL c' s1 s2 ==> P s2)
                ==> (P s1 ==> P s2)`,
  HO_MATCH_MP_TAC sinduction THEN RW_TAC std_ss [] THEN METIS_TAC[]);
 
@@ -615,7 +615,7 @@ val ANWHILE_RULE = store_thm
 
 end;
 
-val WHILE_RULE = 
+val WHILE_RULE =
  store_thm
   ("WHILE_RULE",
    ``!P b c. SPEC (\s. P(s) /\ beval b s) c P ==>
@@ -633,9 +633,9 @@ val INDEPENDENT_def =
 
 val LOCAL_RULE = store_thm
 ("LOCAL_RULE",
- ``!P Q c v. 
+ ``!P Q c v.
     SPEC P c Q /\ INDEPENDENT Q v
-    ==> 
+    ==>
     SPEC P (Local v c) Q``,
  RW_TAC std_ss [SPEC_def]
   THEN FULL_SIMP_TAC std_ss [LOCAL_THM]
@@ -664,9 +664,9 @@ val DEPENDS_ON_NOT_INDEPENDENT =
 
 val ANPROC_RULE = store_thm
 ("ANPROC_RULE",
- ``!P Q xs f. 
+ ``!P Q xs f.
     (!s. P s ==> Q(f s)) ==> !P' Q' xs. SPEC P (AnProc P' Q' xs f) Q``,
- RW_TAC std_ss [SPEC_def,ANPROC_THM] 
+ RW_TAC std_ss [SPEC_def,ANPROC_THM]
   THEN METIS_TAC []);
 
 (*---------------------------------------------------------------------------*)
@@ -693,13 +693,13 @@ val POST_WEAKEN = store_thm
 
 val CONJ_TRIPLE = store_thm
 ("CONJ_TRIPLE",
- ``!P1 P2 c Q1 Q2. SPEC P1 c Q1 /\ SPEC P2 c Q2 
+ ``!P1 P2 c Q1 Q2. SPEC P1 c Q1 /\ SPEC P2 c Q2
                    ==> SPEC (\s. P1 s /\ P2 s) c (\s. Q1 s /\ Q2 s)``,
  RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]);
 
 val DISJ_TRIPLE = store_thm
 ("DISJ_TRIPLE",
- ``!P1 P2 c Q1 Q2. SPEC P1 c Q1 /\ SPEC P2 c Q2 
+ ``!P1 P2 c Q1 Q2. SPEC P1 c Q1 /\ SPEC P2 c Q2
                    ==> SPEC (\s. P1 s \/ P2 s) c (\s. Q1 s \/ Q2 s)``,
  RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]);
 
@@ -716,16 +716,16 @@ val TOTAL_SPEC_def = Define `
 
 val TOTAL_SKIP_RULE = store_thm("TOTAL_SKIP_RULE",
   ``!P. TOTAL_SPEC P Skip P``,
-  SIMP_TAC std_ss [TOTAL_SPEC_def,SKIP_RULE] THEN REPEAT STRIP_TAC 
+  SIMP_TAC std_ss [TOTAL_SPEC_def,SKIP_RULE] THEN REPEAT STRIP_TAC
   THEN Q.EXISTS_TAC `s1` THEN REWRITE_TAC [rules]);
 
 val TOTAL_GEN_ASSIGN_RULE = store_thm("TOTAL_GEN_ASSIGN_RULE",
   ``!P v e. TOTAL_SPEC (P o Update v e) (GenAssign v e) P``,
-  SIMP_TAC std_ss [TOTAL_SPEC_def,GEN_ASSIGN_RULE] THEN REPEAT STRIP_TAC 
+  SIMP_TAC std_ss [TOTAL_SPEC_def,GEN_ASSIGN_RULE] THEN REPEAT STRIP_TAC
   THEN Q.EXISTS_TAC `Update v e s1` THEN REWRITE_TAC [rules]);
 
 val TOTAL_SEQ_RULE = store_thm("TOTAL_SEQ_RULE",
-  ``!P c1 c2 Q R. TOTAL_SPEC P c1 Q /\ TOTAL_SPEC Q c2 R ==> 
+  ``!P c1 c2 Q R. TOTAL_SPEC P c1 Q /\ TOTAL_SPEC Q c2 R ==>
                   TOTAL_SPEC P (Seq c1 c2) R``,
   REWRITE_TAC [TOTAL_SPEC_def] THEN REPEAT STRIP_TAC
   THEN1 (MATCH_MP_TAC SEQ_RULE THEN Q.EXISTS_TAC `Q` THEN ASM_REWRITE_TAC [])
@@ -740,7 +740,7 @@ val TOTAL_COND_RULE = store_thm("TOTAL_COND_RULE",
   REWRITE_TAC [TOTAL_SPEC_def] THEN REPEAT STRIP_TAC
   THEN1 (MATCH_MP_TAC COND_RULE THEN ASM_REWRITE_TAC [])
   THEN FULL_SIMP_TAC std_ss []
-  THEN Cases_on `beval b s1` THEN RES_TAC 
+  THEN Cases_on `beval b s1` THEN RES_TAC
   THEN IMP_RES_TAC IF_T_THM THEN IMP_RES_TAC IF_F_THM
   THEN Q.EXISTS_TAC `s2` THEN ASM_REWRITE_TAC []);
 
@@ -759,8 +759,8 @@ val TOTAL_WHILE_T_THM = store_thm("TOTAL_WHILE_T_THM",
 
 val TOTAL_GEN_ASSIGN_THM = store_thm("TOTAL_GEN_ASSIGN_THM",
   ``!P c v e Q. SPEC P (GenAssign v e) Q = TOTAL_SPEC P (GenAssign v e) Q``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN SIMP_TAC std_ss [TOTAL_SPEC_def] 
-  THEN REPEAT STRIP_TAC 
+  REPEAT STRIP_TAC THEN EQ_TAC THEN SIMP_TAC std_ss [TOTAL_SPEC_def]
+  THEN REPEAT STRIP_TAC
   THEN Q.EXISTS_TAC `Update v e s1` THEN REWRITE_TAC [rules]);
 
 (*===========================================================================*)
@@ -768,7 +768,7 @@ val TOTAL_GEN_ASSIGN_THM = store_thm("TOTAL_GEN_ASSIGN_THM",
 (*===========================================================================*)
 
 val _ =
- Hol_datatype 
+ Hol_datatype
   `outcome = RESULT of state | ERROR of state | TIMEOUT of state`;
 
 (* Some automatically proves theorems relating RESULT, TIMEOUT and ERROR     *)
@@ -782,167 +782,167 @@ val outcome_nchotomy = fetch "-" "outcome_nchotomy";
 (*===========================================================================*)
 
 val (small_rules,small_induction,small_ecases) = Hol_reln
-   `(!s l. 
+   `(!s l.
       SMALL_EVAL (Skip :: l, s) (l, s))
- /\ (!s v e l. 
+ /\ (!s v e l.
       SMALL_EVAL (GenAssign v e :: l, s) (l, Update v e s))
- /\ (!s v l. 
+ /\ (!s v l.
       SMALL_EVAL (Dispose v :: l, s) (l, s \\ v))
- /\ (!s l c1 c2. 
+ /\ (!s l c1 c2.
       SMALL_EVAL (Seq c1 c2 :: l, s) (c1 :: c2 :: l, s))
- /\ (!s l b c1 c2.  
-      beval b s 
-      ==> 
+ /\ (!s l b c1 c2.
+      beval b s
+      ==>
       SMALL_EVAL (Cond b c1 c2 :: l, s) (c1 :: l, s))
- /\ (!s l b c1 c2.  
+ /\ (!s l b c1 c2.
       ~(beval b s)
-      ==> 
+      ==>
       SMALL_EVAL (Cond b c1 c2 :: l, s) (c2 :: l, s))
- /\ (!s l b R c.  
-      beval b s 
-      ==> 
+ /\ (!s l b R c.
+      beval b s
+      ==>
       SMALL_EVAL (AnWhile b R c :: l, s) (c :: AnWhile b R c :: l, s))
- /\ (!s l b R c.  
+ /\ (!s l b R c.
       ~(beval b s )
-      ==> 
+      ==>
       SMALL_EVAL (AnWhile b R c :: l, s) (l, s))
  /\ (!s l v c.
       v IN FDOM s
       ==>
-      SMALL_EVAL 
-       (Local v c :: l, s) 
+      SMALL_EVAL
+       (Local v c :: l, s)
        (c :: GenAssign v (Exp(s ' v)) :: l, s))
  /\ (!s l v c.
       ~(v IN FDOM s)
       ==>
       SMALL_EVAL (Local v c :: l, s) (c :: Dispose v :: l, s))
- /\ (!s l P Q xs f. 
+ /\ (!s l P Q xs f.
       SMALL_EVAL (AnProc P Q xs f :: l, s) (l, f s))`;
 
 val small_rulel = CONJUNCTS small_rules;
 
 val SMALL_SKIP_THM = store_thm
 ("SMALL_SKIP_THM",
- ``!s1 s2 l1 l2. 
-    SMALL_EVAL (Skip :: l1, s1) (l2, s2) = 
+ ``!s1 s2 l1 l2.
+    SMALL_EVAL (Skip :: l1, s1) (l2, s2) =
      (l2 = l1) /\ (s2 = s1)``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases,While_def] THEN METIS_TAC small_rulel);
 
-val SMALL_GEN_ASSIGN_THM = store_thm 
+val SMALL_GEN_ASSIGN_THM = store_thm
 ("SMALL_GEN_ASSIGN_THM",
- ``!s1 s2 l1 l2 v e. 
-    SMALL_EVAL (GenAssign v e :: l1, s1) (l2, s2) = 
+ ``!s1 s2 l1 l2 v e.
+    SMALL_EVAL (GenAssign v e :: l1, s1) (l2, s2) =
      (l2 = l1) /\ (s2 = Update v e s1)``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases,While_def] THEN METIS_TAC small_rulel);
 
-val SMALL_DISPOSE_THM = store_thm 
+val SMALL_DISPOSE_THM = store_thm
 ("SMALL_DISPOSE_THM",
- ``!s1 s2 l1 l2 v. 
-    SMALL_EVAL (Dispose v :: l1, s1) (l2, s2) = 
+ ``!s1 s2 l1 l2 v.
+    SMALL_EVAL (Dispose v :: l1, s1) (l2, s2) =
      (l2 = l1) /\ (s2 = s1 \\ v)``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases,While_def] THEN METIS_TAC small_rulel);
 
 val SMALL_SEQ_THM = store_thm
 ("SMALL_SEQ_THM",
- ``!s1 s3 l1 l3 c1 c2. 
-    SMALL_EVAL (Seq c1 c2 :: l1, s1) (l2, s2) = 
+ ``!s1 s3 l1 l3 c1 c2.
+    SMALL_EVAL (Seq c1 c2 :: l1, s1) (l2, s2) =
      (l2 = c1 :: c2 :: l1) /\ (s2 = s1)``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases,While_def] THEN METIS_TAC small_rulel);
 
-val SMALL_IF_T_THM = store_thm 
+val SMALL_IF_T_THM = store_thm
 ("SMALL_IF_T_THM",
- ``!s1 s2 l1 l2 b c1 c2. 
+ ``!s1 s2 l1 l2 b c1 c2.
      beval b s1
-     ==> 
-     (SMALL_EVAL (Cond b c1 c2 :: l1, s1) (l2, s2) = 
+     ==>
+     (SMALL_EVAL (Cond b c1 c2 :: l1, s1) (l2, s2) =
       (l2 = c1 :: l1) /\ (s2 = s1))``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases,While_def] THEN METIS_TAC small_rulel);
 
-val SMALL_IF_F_THM = store_thm 
+val SMALL_IF_F_THM = store_thm
 ("SMALL_IF_F_THM",
- ``!s1 s2 l1 l2 b c1 c2. 
+ ``!s1 s2 l1 l2 b c1 c2.
      ~(beval b s1)
-     ==> 
-     (SMALL_EVAL (Cond b c1 c2 :: l1, s1) (l2, s2) = 
+     ==>
+     (SMALL_EVAL (Cond b c1 c2 :: l1, s1) (l2, s2) =
       (l2 = c2 :: l1) /\ (s2 = s1))``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases,While_def] THEN METIS_TAC small_rulel);
 
-val SMALL_IF_THM = store_thm 
+val SMALL_IF_THM = store_thm
 ("SMALL_IF_THM",
- ``!s1 s2 l1 l2 b c1 c2. 
-     SMALL_EVAL (Cond b c1 c2 :: l1, s1) (l2, s2) = 
+ ``!s1 s2 l1 l2 b c1 c2.
+     SMALL_EVAL (Cond b c1 c2 :: l1, s1) (l2, s2) =
       (l2 = (if beval b s1 then c1 else c2) :: l1) /\ (s2 = s1)``,
  METIS_TAC[SMALL_IF_T_THM,SMALL_IF_F_THM]);
 
-val SMALL_ANWHILE_T_THM = store_thm 
+val SMALL_ANWHILE_T_THM = store_thm
 ("SMALL_ANWHILE_T_THM",
  ``!s1 s2 l1 l2 b R c.
     beval b s1
-    ==> 
-    (SMALL_EVAL (AnWhile b R c :: l1, s1) (l2, s2) = 
+    ==>
+    (SMALL_EVAL (AnWhile b R c :: l1, s1) (l2, s2) =
     (l2 = c :: AnWhile b R c :: l1) /\ (s2 = s1))``,
- RW_TAC std_ss [EQ_IMP_THM,Once small_ecases] 
+ RW_TAC std_ss [EQ_IMP_THM,Once small_ecases]
   THEN METIS_TAC small_rulel);
 
-val SMALL_ANWHILE_F_THM = store_thm 
+val SMALL_ANWHILE_F_THM = store_thm
 ("SMALL_ANWHILE_F_THM",
  ``!s1 s2 l1 l2 b R c.
-    ~(beval b s1)    ==> 
-    (SMALL_EVAL (AnWhile b R c :: l1, s1) (l2, s2) = 
+    ~(beval b s1)    ==>
+    (SMALL_EVAL (AnWhile b R c :: l1, s1) (l2, s2) =
     (l2 = l1) /\ (s2 = s1))``,
- RW_TAC std_ss [EQ_IMP_THM,Once small_ecases] 
+ RW_TAC std_ss [EQ_IMP_THM,Once small_ecases]
   THEN METIS_TAC small_rulel);
 
-val SMALL_ANWHILE_THM = store_thm 
+val SMALL_ANWHILE_THM = store_thm
 ("SMALL_ANWHILE_THM",
  ``!s1 s2 l1 l2 b R c.
-    SMALL_EVAL (AnWhile b R c :: l1, s1) (l2, s2) = 
+    SMALL_EVAL (AnWhile b R c :: l1, s1) (l2, s2) =
     (l2 = if beval b s1 then c :: AnWhile b R c :: l1 else l1) /\ (s2 = s1)``,
  METIS_TAC[SMALL_ANWHILE_T_THM,SMALL_ANWHILE_F_THM]);
 
-val SMALL_WHILE_THM = store_thm 
+val SMALL_WHILE_THM = store_thm
 ("SMALL_WHILE_THM",
  ``!s1 s2 l1 l2 b c.
-    SMALL_EVAL (While b c :: l1, s1) (l2, s2) = 
+    SMALL_EVAL (While b c :: l1, s1) (l2, s2) =
     (l2 = if beval b s1 then c :: While b c :: l1 else l1) /\ (s2 = s1)``,
  METIS_TAC[SMALL_ANWHILE_THM,While_def]);
 
 val SMALL_LOCAL_IN_THM = store_thm
  ("SMALL_LOCAL_IN_THM",
-  ``!s1 s2 l1 l2 v c. 
+  ``!s1 s2 l1 l2 v c.
      v IN FDOM s1
      ==>
-     (SMALL_EVAL (Local v c :: l1, s1) (l2, s2) = 
+     (SMALL_EVAL (Local v c :: l1, s1) (l2, s2) =
        (l2 = c :: GenAssign v (Exp(s1 ' v)) :: l1)
-       /\ 
+       /\
        (s2 = s1))``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases] THEN METIS_TAC(FUPDATE_EQ:: small_rulel));
 
 val SMALL_LOCAL_NOT_IN_THM = store_thm
  ("SMALL_LOCAL_NOT_IN_THM",
-  ``!s1 s2 l1 l2 v c. 
+  ``!s1 s2 l1 l2 v c.
      ~(v IN FDOM s1)
      ==>
-     (SMALL_EVAL (Local v c :: l1, s1) (l2, s2) = 
+     (SMALL_EVAL (Local v c :: l1, s1) (l2, s2) =
        (l2 = c :: Dispose v :: l1)
-       /\ 
+       /\
        (s2 = s1))``,
  RW_TAC std_ss [EQ_IMP_THM,Once small_ecases] THEN METIS_TAC(FUPDATE_EQ:: small_rulel));
 
 val SMALL_LOCAL_THM = store_thm
  ("SMALL_LOCAL_THM",
-  ``!s1 s2 l1 l2 v c. 
-     SMALL_EVAL (Local v c :: l1, s1) (l2, s2) = 
-      (l2 = c :: (if v IN FDOM s1 
-                   then GenAssign v (Exp(s1 ' v)) 
+  ``!s1 s2 l1 l2 v c.
+     SMALL_EVAL (Local v c :: l1, s1) (l2, s2) =
+      (l2 = c :: (if v IN FDOM s1
+                   then GenAssign v (Exp(s1 ' v))
                    else Dispose v) :: l1)
-      /\ 
+      /\
       (s2 = s1)``,
  METIS_TAC[SMALL_LOCAL_IN_THM,SMALL_LOCAL_NOT_IN_THM]);
 
 val SMALL_ANPROC_THM = store_thm
  ("SMALL_ANPROC_THM",
-  ``!s1 s2 l1 l2 P Q xs f. 
+  ``!s1 s2 l1 l2 P Q xs f.
      SMALL_EVAL (AnProc P Q xs f :: l1, s1) (l2, s2) = (s2 = f s1) /\ (l2 = l1)``,
   ONCE_REWRITE_TAC[small_ecases]
    THEN SIMP_TAC (srw_ss()) []
@@ -951,8 +951,8 @@ val SMALL_ANPROC_THM = store_thm
 val EVAL_IMP_SMALL_EVAL_LEMMA =
  store_thm
   ("EVAL_IMP_SMALL_EVAL_LEMMA",
-   ``!c s1 s2. 
-      EVAL c s1 s2 
+   ``!c s1 s2.
+      EVAL c s1 s2
       ==>
       (\c s1 s2. !l. TC SMALL_EVAL (c :: l, s1) (l, s2)) c s1 s2``,
    IndDefRules.RULE_TAC
@@ -964,12 +964,12 @@ val EVAL_IMP_SMALL_EVAL_LEMMA =
       METIS_TAC[SMALL_IF_F_THM,TC_RULES],      (* Cond false *)
       METIS_TAC[SMALL_ANWHILE_T_THM,TC_RULES], (* AnWhile true *)
       IMP_RES_TAC small_rules                  (* Local IN FDOM *)
-       THEN `!l. TC SMALL_EVAL 
-                  (c::GenAssign v (Exp(s1 ' v))::l,s1) 
+       THEN `!l. TC SMALL_EVAL
+                  (c::GenAssign v (Exp(s1 ' v))::l,s1)
                   (GenAssign v (Exp(s1 ' v))::l,s2)`
              by METIS_TAC[]
-       THEN `!l. TC SMALL_EVAL 
-                  (GenAssign v (Exp(s1 ' v))::l,s2) 
+       THEN `!l. TC SMALL_EVAL
+                  (GenAssign v (Exp(s1 ' v))::l,s2)
                   (l, s2 |+ (v,s1 ' v))`
              by METIS_TAC[small_rules,TC_RULES,neval_def,Update_Exp]
        THEN METIS_TAC [TC_RULES],
@@ -1002,9 +1002,9 @@ val SMALL_EVAL_NIL =
 val TC_SMALL_EVAL_NIL_LEMMA =
  store_thm
   ("TC_SMALL_EVAL_NIL_LEMMA",
-   ``!con1 con2. 
-       TC SMALL_EVAL con1 con2 
-       ==> 
+   ``!con1 con2.
+       TC SMALL_EVAL con1 con2
+       ==>
        (\con1 con2. ~(FST con1 = [])) con1 con2``,
    IndDefRules.RULE_TAC
     (IndDefRules.derive_mono_strong_induction [] (TC_RULES,TC_INDUCT))
@@ -1030,13 +1030,13 @@ val RANAN_FRAER_LEMMA =
    ``!con1 con2.
      SMALL_EVAL con1 con2
      ==>
-     (\con1 con2. 
+     (\con1 con2.
        !s. EVAL (Seql(FST con2)) (SND con2) s
            ==>
            EVAL (Seql(FST con1)) (SND con1) s) con1 con2``,
    IndDefRules.RULE_TAC
     (IndDefRules.derive_mono_strong_induction [] (small_rules,small_induction))
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [neval_def,Seql_def,Update_Exp,
            SKIP_THM,GEN_ASSIGN_THM,DISPOSE_THM,SEQ_THM,IF_THM,LOCAL_THM,ANPROC_THM]
     THEN METIS_TAC[ANWHILE_THM]);
@@ -1045,11 +1045,11 @@ val SMALL_EVAL_IMP_EVAL_LEMMA =
  store_thm
   ("SMALL_EVAL_IMP_EVAL_LEMMA",
    ``!con1 con2.
-      TC SMALL_EVAL con1 con2 
+      TC SMALL_EVAL con1 con2
       ==>
       (\con1 con2.
-        !s. EVAL (Seql(FST con2)) (SND con2) s 
-            ==> 
+        !s. EVAL (Seql(FST con2)) (SND con2) s
+            ==>
             EVAL (Seql(FST con1)) (SND con1) s) con1 con2``,
   IndDefRules.RULE_TAC
     (IndDefRules.derive_mono_strong_induction [] (TC_RULES,TC_INDUCT))
@@ -1068,7 +1068,7 @@ val EVAL_SMALL_EVAL =
  store_thm
   ("EVAL_SMALL_EVAL",
    ``!c s1 s2. EVAL c s1 s2 = TC SMALL_EVAL ([c], s1) ([],s2)``,
-   METIS_TAC[EVAL_IMP_SMALL_EVAL,SMALL_EVAL_IMP_EVAL]); 
+   METIS_TAC[EVAL_IMP_SMALL_EVAL,SMALL_EVAL_IMP_EVAL]);
 
 (* Technical theorem to make EVAL work with lists for executing STEP_LIST *)
 val CONS_if =
@@ -1083,25 +1083,25 @@ val IS_SOME_if =
  store_thm
   ("IS_SOME_if",
    ``!(b:bool) x y. IS_SOME(if b then x else y) = if b then IS_SOME x else IS_SOME y``,
-   METIS_TAC[]);                                                                                                                         
+   METIS_TAC[]);
 
 val THE_if =
  store_thm
   ("THE_if",
    ``!(b:bool) x y. THE(if b then x else y) = if b then THE x else THE y``,
-   METIS_TAC[]);                                                                                                                         
+   METIS_TAC[]);
 
 val if_SOME =
  store_thm
   ("if_SOME",
    ``!(b:bool) x y. (if b then SOME x else SOME y) = SOME(if b then x else y)``,
-   METIS_TAC[]);                                                                                                                         
+   METIS_TAC[]);
 
 val SOME_EQ_ELIM =
  store_thm
   ("SOME_EQ_ELIM",
    ``!x y. (SOME x = SOME y) = (x = y)``,
-   RW_TAC (srw_ss()) []);                                                                                                                
+   RW_TAC (srw_ss()) []);
 
 val _ = computeLib.add_persistent_funs
          [("IS_SOME_if",   IS_SOME_if),
@@ -1113,7 +1113,7 @@ val _ = computeLib.add_persistent_funs
 val ScalarOf_if =
  store_thm
   ("ScalarOf_if",
-   ``ScalarOf((if b then s1 else s2) ' x) = 
+   ``ScalarOf((if b then s1 else s2) ' x) =
       if b then ScalarOf(s1 ' x) else ScalarOf(s2 ' x)``,
    METIS_TAC[]);
 
@@ -1173,9 +1173,9 @@ val int_relRightIf =
    ``!(r:int->int->bool). r (if b then x else y) n = if b then r x n else r y n``,
    METIS_TAC[]);
 
-val _ = 
+val _ =
   (map
-    (fn con => 
+    (fn con =>
       (save_thm ((fst(dest_const con) ^ "LeftIf"),   SPEC con int_opLeftIf);
        save_thm ((fst(dest_const con) ^ "RightIf"),  SPEC con int_opRightIf);
        computeLib.add_persistent_funs
@@ -1183,9 +1183,9 @@ val _ =
          ((fst(dest_const con) ^ "RightIf"),  SPEC con int_opRightIf)]))
     [``$int_add``,``$int_sub``]);
 
-val _ = 
+val _ =
   (map
-    (fn con => 
+    (fn con =>
       (save_thm ((fst(dest_const con) ^ "LeftIf"),   SPEC con int_relLeftIf);
        save_thm ((fst(dest_const con) ^ "RightIf"),  SPEC con int_relRightIf);
        computeLib.add_persistent_funs
@@ -1196,7 +1196,7 @@ val _ =
 
 (* Monad binding operation *)
 val RUN_BIND_def =
- Define 
+ Define
   `RUN_BIND m f = case m of
                      TIMEOUT s -> TIMEOUT s
                   || ERROR s   -> ERROR s
@@ -1207,7 +1207,7 @@ val _ = overload_on (">>=", ``RUN_BIND``);
 
 (* Monad unit function *)
 val RUN_RETURN_def =
- Define 
+ Define
   `RUN_RETURN x = RESULT x`;
 
 val RUN_MONAD_LAWS =
@@ -1252,7 +1252,7 @@ val outcome_case_if =
  store_thm
   ("outcome_case_if",
    ``!f f1 f2 b x y.
-      outcome_case f f1 f2 (if b then x else y) = 
+      outcome_case f f1 f2 (if b then x else y) =
       if b then outcome_case f f1 f2 x else outcome_case f f1 f2 y``,
    RW_TAC std_ss []);
 
@@ -1260,7 +1260,7 @@ val pair_case_if =
  store_thm
   ("pair_case_if",
    ``!f b x y.
-      pair_case f (if b then x else y) = 
+      pair_case f (if b then x else y) =
       if b then f (FST x) (SND x) else f (FST y) (SND y)``,
    RW_TAC std_ss []
     THENL
@@ -1284,7 +1284,7 @@ val _ = computeLib.add_persistent_funs
 val RUN_def =
  Define
   `(RUN 0 c s = TIMEOUT s)
-   /\  
+   /\
    (RUN (SUC n) c s =
     case c of
         Skip            -> RESULT s
@@ -1294,8 +1294,8 @@ val RUN_def =
      || Cond b c1 c2    -> if beval b s
                             then RUN n c1 s
                             else RUN n c2 s
-     || AnWhile b R c   -> if beval b s 
-                            then RUN n c s >>= RUN n (AnWhile b R c) 
+     || AnWhile b R c   -> if beval b s
+                            then RUN n c s >>= RUN n (AnWhile b R c)
                             else RESULT s
      || Local v c       -> if v IN FDOM s
                             then RUN n c s >>= (RESULT o (\s'. s' |+ (v, (s ' v))))
@@ -1319,9 +1319,9 @@ val RUN_EVAL_LEMMA =
 (* Lemma needed for EVAL_RUN *)
 val EVAL_RUN_LEMMA =
  prove
-  (``!c s1 s2. 
-      EVAL c s1 s2 
-      ==> 
+  (``!c s1 s2.
+      EVAL c s1 s2
+      ==>
       (\c s1 s2. ?m. !n. m < n ==> (RUN n c s1 = RESULT s2)) c s1 s2``,
    IndDefRules.RULE_TAC
     (IndDefRules.derive_mono_strong_induction [] (rules,induction))
@@ -1404,7 +1404,7 @@ val SPEC_RUN =
 val NOT_EVAL_RUN =
  store_thm
   ("NOT_EVAL_RUN",
-   ``!c s1. ~(?s2. EVAL c s1 s2) = 
+   ``!c s1. ~(?s2. EVAL c s1 s2) =
       !n. ?s2. (RUN n c s1 = ERROR s2) \/ (RUN n c s1 = TIMEOUT s2)``,
    REPEAT STRIP_TAC
     THEN EQ_TAC
@@ -1412,7 +1412,7 @@ val NOT_EVAL_RUN =
     THENL
      [Cases_on `RUN n c s1`
        THEN METIS_TAC[EVAL_RUN],
-      `!x y. ~(RESULT x = ERROR y) /\ ~(RESULT x = TIMEOUT y)` 
+      `!x y. ~(RESULT x = ERROR y) /\ ~(RESULT x = TIMEOUT y)`
        by RW_TAC (srw_ss()) []
        THEN METIS_TAC[EVAL_RUN]]);
 
@@ -1421,7 +1421,7 @@ val RUN =
  store_thm
   ("RUN",
    ``RUN n c s =
-      if n = 0 
+      if n = 0
        then TIMEOUT(s)
        else
         case c of
@@ -1432,7 +1432,7 @@ val RUN =
          || Cond b c1 c2    -> if beval b s
                                 then RUN (n-1) c1 s
                                 else RUN (n-1) c2 s
-         || AnWhile b R c   -> if beval b s 
+         || AnWhile b R c   -> if beval b s
                                 then RUN (n-1) c s >>= RUN (n-1) (AnWhile b R c)
                                 else RESULT s
          || Local v c       -> if v IN FDOM s
@@ -1456,28 +1456,28 @@ val STEP1_def =
   `(STEP1 ([], s) = ([], ERROR s))
    /\
    (STEP1 (Skip :: l, s) = (l, RESULT s))
-   /\ 
+   /\
    (STEP1 (GenAssign v e :: l, s) = (l, RESULT(Update v e s)))
-   /\ 
+   /\
    (STEP1 (Dispose v :: l, s) = (l, RESULT(s \\ v)))
-   /\ 
+   /\
    (STEP1 (Seq c1 c2 :: l, s) = (c1 :: c2 :: l, RESULT(s)))
-   /\ 
-   (STEP1 (Cond b c1 c2 :: l, s) = 
-     if beval b s 
-      then (c1 :: l, RESULT s) 
+   /\
+   (STEP1 (Cond b c1 c2 :: l, s) =
+     if beval b s
+      then (c1 :: l, RESULT s)
       else (c2 :: l, RESULT s))
-   /\ 
-   (STEP1 (AnWhile b R c :: l, s) = 
-     if beval b s 
-      then (c :: AnWhile b R c :: l, RESULT s) 
+   /\
+   (STEP1 (AnWhile b R c :: l, s) =
+     if beval b s
+      then (c :: AnWhile b R c :: l, RESULT s)
       else (l, RESULT s))
-   /\ 
+   /\
    (STEP1 (Local v c :: l, s) =
-     if v IN FDOM s 
+     if v IN FDOM s
       then (c :: GenAssign v (Exp(s ' v)) :: l, RESULT s)
       else (c :: Dispose v :: l, RESULT s))
-   /\ 
+   /\
    (STEP1 (AnProc P Q xs f :: l, s) = (l, RESULT(f s)))`;
 
 (* Version needed for evaluation by EVAL *)
@@ -1485,7 +1485,7 @@ val STEP1 =
  store_thm
   ("STEP1",
    ``!l s.
-      STEP1 (l, s) = 
+      STEP1 (l, s) =
        if NULL l
         then (l, ERROR s)
         else
@@ -1494,13 +1494,13 @@ val STEP1 =
         ||  GenAssign v e   -> (TL l, RESULT(Update v e s))
         ||  Dispose v       -> (TL l, RESULT(s \\ v))
         ||  Seq c1 c2       -> (c1 :: c2 :: TL l, RESULT s)
-        ||  Cond b c1 c2    -> if beval b s 
-                                then (c1 :: TL l, RESULT s) 
+        ||  Cond b c1 c2    -> if beval b s
+                                then (c1 :: TL l, RESULT s)
                                 else (c2 :: TL l, RESULT s)
-        ||  AnWhile b R c  -> if beval b s 
-                                then (c :: AnWhile b R c :: TL l, RESULT s) 
+        ||  AnWhile b R c  -> if beval b s
+                                then (c :: AnWhile b R c :: TL l, RESULT s)
                                 else (TL l, RESULT s)
-        ||  Local v c       -> if v IN FDOM s 
+        ||  Local v c       -> if v IN FDOM s
                                 then (c :: GenAssign v (Exp(s ' v)) :: TL l, RESULT s)
                                 else (c :: Dispose v :: TL l, RESULT s)
         ||  AnProc P Q xs f -> (TL l, RESULT(f s))``,
@@ -1517,7 +1517,7 @@ val SMALL_EVAL_IMP_STEP1 =
  prove
   (``!con1 con2.
       SMALL_EVAL con1 con2
-      ==> 
+      ==>
       (\con1 con2.
        STEP1 con1 = (FST con2, RESULT(SND con2))) con1 con2``,
    IndDefRules.RULE_TAC
@@ -1528,10 +1528,10 @@ val STEP1_IMP_SMALL_EVAL =
  prove
   (``!c l1 s1 l2 s2.
       (STEP1 (c :: l1, s1) = (l2, RESULT s2))
-      ==> 
+      ==>
       SMALL_EVAL (c :: l1, s1) (l2, s2)``,
     Induct
-     THEN RW_TAC std_ss 
+     THEN RW_TAC std_ss
            [STEP1_def,small_rules,neval_def,
             SMALL_GEN_ASSIGN_THM,SMALL_DISPOSE_THM,SMALL_IF_THM,SMALL_SEQ_THM,
             SMALL_LOCAL_THM,SMALL_ANPROC_THM]
@@ -1542,7 +1542,7 @@ val STEP1_SMALL_EVAL =
   ("STEP1_SMALL_EVAL",
    ``!l1 s1 l2 s2.
       (STEP1 (l1, s1) = (l2, RESULT s2))
-      = 
+      =
       SMALL_EVAL (l1, s1) (l2, s2)``,
    Induct
     THENL
@@ -1555,7 +1555,7 @@ val NOT_SMALL_EVAL_ERROR =
  store_thm
   ("NOT_SMALL_EVAL_ERROR",
    ``!con1 con2.
-      ~(?con2. SMALL_EVAL con1 con2) = 
+      ~(?con2. SMALL_EVAL con1 con2) =
        ?s. (SND(STEP1 con1 ) = ERROR s) \/ (SND(STEP1 con1 ) = TIMEOUT s)``,
    REPEAT STRIP_TAC
     THEN EQ_TAC
@@ -1595,8 +1595,8 @@ val SMALL_EVAL_ITER =
 
 val SMALL_EVAL_ITER_LEMMA =
  prove
-  (``!n1 x y. 
-      SMALL_EVAL_ITER n1 x y 
+  (``!n1 x y.
+      SMALL_EVAL_ITER n1 x y
       ==>
       !n2 z. SMALL_EVAL_ITER n2 y z ==> ?n3. SMALL_EVAL_ITER n3 x z``,
    Induct
@@ -1610,9 +1610,9 @@ val SMALL_EVAL_ITER_TC_LEMMA1 =
 
 val SMALL_EVAL_ITER_TC_LEMMA2 =
  prove
-  (``!con1 con2. 
+  (``!con1 con2.
       TC SMALL_EVAL con1 con2
-      ==> 
+      ==>
       (\con1 con2. ?n. SMALL_EVAL_ITER n con1 con2) con1 con2``,
   IndDefRules.RULE_TAC
     (IndDefRules.derive_mono_strong_induction [] (TC_RULES,TC_INDUCT))
@@ -1622,7 +1622,7 @@ val SMALL_EVAL_ITER_TC_LEMMA2 =
 val SMALL_EVAL_ITER_TC =
  store_thm
   ("SMALL_EVAL_ITER_TC",
-   ``!con1 con2. 
+   ``!con1 con2.
       TC SMALL_EVAL con1 con2 = ?n. SMALL_EVAL_ITER n con1 con2``,
    REPEAT GEN_TAC
     THEN EQ_TAC
@@ -1631,7 +1631,7 @@ val SMALL_EVAL_ITER_TC =
 val SMALL_EVAL_ITER_TC =
  store_thm
   ("SMALL_EVAL_ITER_TC",
-   ``!con1 con2. 
+   ``!con1 con2.
       TC SMALL_EVAL con1 con2 = ?n. SMALL_EVAL_ITER n con1 con2``,
    REPEAT GEN_TAC
     THEN EQ_TAC
@@ -1646,16 +1646,16 @@ val SMALL_EVAL_TC_SMALL_EVAL =
 val TC_SMALL_EVAL_TRANS =
  store_thm
   ("TC_SMALL_EVAL_TRANS",
-   ``!con1 con2 con3. 
-      TC SMALL_EVAL con1 con2 
-      ==> 
-      TC SMALL_EVAL con2 con3 
-      ==> TC 
+   ``!con1 con2 con3.
+      TC SMALL_EVAL con1 con2
+      ==>
+      TC SMALL_EVAL con2 con3
+      ==> TC
       SMALL_EVAL con1 con3``,
    METIS_TAC[TC_RULES]);
 
 val STEP_BIND_def =
- Define 
+ Define
   `STEP_BIND m f = case m of
                        (l, TIMEOUT s) -> (l, TIMEOUT s)
                     || (l, ERROR s)   -> (l, ERROR s)
@@ -1665,7 +1665,7 @@ val _ = overload_on (">>=", ``STEP_BIND``);
 
 (* Monad unit function *)
 val STEP_RETURN_def =
- Define 
+ Define
   `STEP_RETURN x = (FST x, RESULT(SND x))`;
 
 val STEP_MONAD_LAWS =
@@ -1685,11 +1685,11 @@ val STEP_MONAD_LAWS =
 (* Clocked next-state function *)
 val STEP_def =
  Define
-  `STEP n (l,s) = 
+  `STEP n (l,s) =
     if (l = [])
      then ([], RESULT s)
-     else if n = 0 
-     then (l, TIMEOUT s) 
+     else if n = 0
+     then (l, TIMEOUT s)
      else STEP1(l,s) >>= STEP (n-1)`;
 
 val STEP0 =
@@ -1702,7 +1702,7 @@ val STEP_SUC =
  store_thm
   ("STEP_SUC",
    ``STEP (SUC n) (l, s) =
-      if (l = []) 
+      if (l = [])
        then ([], RESULT s)
        else STEP1(l,s) >>= STEP n``,
    METIS_TAC[STEP_def, DECIDE ``~(SUC n = 0) /\ ((SUC n) - 1 = n)``]);
@@ -1720,25 +1720,25 @@ val STEP =
      /\
      (STEP (SUC n) (GenAssign v e :: l, s) =
        STEP n (l, Update v e s))
-     /\ 
-     (STEP (SUC n) (Dispose v :: l, s) = 
+     /\
+     (STEP (SUC n) (Dispose v :: l, s) =
        STEP n (l, s \\ v))
-     /\ 
-     (STEP (SUC n) (Seq c1 c2 :: l, s) = 
+     /\
+     (STEP (SUC n) (Seq c1 c2 :: l, s) =
        STEP n (c1 :: c2 :: l, s))
-     /\ 
-     (STEP (SUC n) (Cond b c1 c2 :: l, s) = 
-       if beval b s 
+     /\
+     (STEP (SUC n) (Cond b c1 c2 :: l, s) =
+       if beval b s
         then STEP n (c1 :: l, s)
         else STEP n (c2 :: l, s))
-     /\ 
-     (STEP (SUC n) (AnWhile b R c :: l, s) = 
-       if beval b s 
+     /\
+     (STEP (SUC n) (AnWhile b R c :: l, s) =
+       if beval b s
         then STEP n (c :: AnWhile b R c :: l, s)
         else STEP n (l, s))
-     /\ 
+     /\
      (STEP (SUC n) (Local v c :: l, s) =
-       if v IN FDOM s 
+       if v IN FDOM s
         then STEP n (c :: GenAssign v (Exp(s ' v)) :: l, s)
         else STEP n (c :: Dispose v :: l, s))
      /\
@@ -1762,12 +1762,12 @@ val STEP_NIL =
     THEN RW_TAC std_ss []
     THEN FULL_SIMP_TAC (srw_ss()) []
     THEN METIS_TAC[]);
-   
+
 val STEP_MONO =
  store_thm
   ("STEP_MONO",
-   ``!m n l1 s1 s2. 
-      m <= n  /\ (STEP m (l1,s1) = ([], RESULT s2)) 
+   ``!m n l1 s1 s2.
+      m <= n  /\ (STEP m (l1,s1) = ([], RESULT s2))
       ==> (STEP n (l1,s1) = ([], RESULT s2)) ``,
    Induct
     THEN RW_TAC std_ss [STEP,STEP_SUC,STEP_BIND_def]
@@ -1783,10 +1783,10 @@ val SMALL_EVAL_ITER_IMP_STEP =
  store_thm
   ("SMALL_EVAL_ITER_IMP_STEP",
    ``!m n l1 s1 s2.
-      SMALL_EVAL_ITER m (l1,s1) ([],s2) /\ m < n 
+      SMALL_EVAL_ITER m (l1,s1) ([],s2) /\ m < n
       ==> (STEP n (l1,s1) = ([], RESULT s2))``,
    Induct THEN Induct
-    THEN FULL_SIMP_TAC (srw_ss()) 
+    THEN FULL_SIMP_TAC (srw_ss())
           [SMALL_EVAL_ITER,STEP_SUC,STEP,GSYM STEP1_SMALL_EVAL,STEP_BIND_def]
     THEN Cases_on `l1 = []`
     THEN RW_TAC std_ss []
@@ -1798,8 +1798,8 @@ val STEP_IMP_SMALL_EVAL_ITER =
    ``!n l1 s1 s2.
       (STEP n (l1,s1) = ([], RESULT s2)) /\ ~(l1 = [])
       ==>
-      ?m. m < n /\ SMALL_EVAL_ITER m (l1,s1) ([],s2)``, 
-   Induct 
+      ?m. m < n /\ SMALL_EVAL_ITER m (l1,s1) ([],s2)``,
+   Induct
     THEN FULL_SIMP_TAC (srw_ss()) [SMALL_EVAL_ITER,STEP_SUC,STEP,STEP_BIND_def]
     THEN RW_TAC (srw_ss()) []
     THEN Cases_on `STEP1 (l1,s1)`
@@ -1823,8 +1823,8 @@ val SMALL_EVAL_ITER_STEP =
  store_thm
   ("SMALL_EVAL_ITER_STEP",
    ``!n c l s1 s2.
-      (?m. m < n /\ SMALL_EVAL_ITER m (c :: l, s1) ([],s2)) 
-      = 
+      (?m. m < n /\ SMALL_EVAL_ITER m (c :: l, s1) ([],s2))
+      =
       (STEP n (c :: l, s1) = ([], RESULT s2))``,
    REPEAT STRIP_TAC
     THEN EQ_TAC
@@ -1839,7 +1839,7 @@ val TC_SMALL_EVAL_STEP =
   ("TC_SMALL_EVAL_STEP",
    ``!c l s1 s2.
       TC SMALL_EVAL (c :: l, s1) ([],s2)
-      = 
+      =
       ?n. STEP n (c :: l, s1) = ([], RESULT s2)``,
    RW_TAC std_ss [SMALL_EVAL_ITER_TC,GSYM SMALL_EVAL_ITER_STEP]
     THEN METIS_TAC[DECIDE``n < SUC n``]);
@@ -1848,10 +1848,10 @@ val TC_SMALL_EVAL_STEP =
 val NOT_SMALL_EVAL_STEP_COR =
  store_thm
   ("NOT_SMALL_EVAL_STEP_COR",
-   ``!c l1 s1. 
-      ~(?s2. TC SMALL_EVAL (c :: l1, s1) ([], s2)) = 
+   ``!c l1 s1.
+      ~(?s2. TC SMALL_EVAL (c :: l1, s1) ([], s2)) =
       !n. ?l2 s2. (STEP n (c :: l1, s1) = (l2,ERROR s2) )
-                  \/ 
+                  \/
                   (STEP n (c :: l1, s1) = (l2,TIMEOUT s2))``,
    REPEAT STRIP_TAC
     THEN RW_TAC std_ss [TC_SMALL_EVAL_STEP]
@@ -1862,10 +1862,10 @@ val NOT_SMALL_EVAL_STEP_COR =
        THEN Cases_on `r`
        THEN RW_TAC (srw_ss()) []
        THEN METIS_TAC[STEP_NIL],
-      `!x y. ~(RESULT x = ERROR y) /\ ~(RESULT x = TIMEOUT y)` 
+      `!x y. ~(RESULT x = ERROR y) /\ ~(RESULT x = TIMEOUT y)`
        by RW_TAC (srw_ss()) []
-       THEN `?l2 s2. (STEP n (c::l1,s1) = (l2,ERROR s2)) 
-                     \/ 
+       THEN `?l2 s2. (STEP n (c::l1,s1) = (l2,ERROR s2))
+                     \/
                      (STEP n (c::l1,s1) = (l2,TIMEOUT s2))`
         by METIS_TAC[]
        THEN RW_TAC (srw_ss()) []]);
@@ -1873,10 +1873,10 @@ val NOT_SMALL_EVAL_STEP_COR =
 val NOT_SMALL_EVAL_STEP =
  store_thm
   ("NOT_SMALL_EVAL_STEP",
-   ``!c s1. 
-      ~(?s2. TC SMALL_EVAL ([c], s1) ([], s2)) = 
+   ``!c s1.
+      ~(?s2. TC SMALL_EVAL ([c], s1) ([], s2)) =
       !n. ?l s2. (STEP n ([c], s1) = (l,ERROR s2) )
-                  \/ 
+                  \/
                   (STEP n ([c], s1) = (l,TIMEOUT s2))``,
    METIS_TAC[NOT_SMALL_EVAL_STEP_COR]);
 
@@ -1913,7 +1913,7 @@ val FUPDATE_DOMSUB =
   ("FUPDATE_DOMSUB",
    ``!f x. x IN FDOM f ==> (f \\ x |+ (x, f ' x) = f)``,
    RW_TAC std_ss []
-    THEN `FDOM(f \\ x |+ (x,f ' x)) = FDOM f` 
+    THEN `FDOM(f \\ x |+ (x,f ' x)) = FDOM f`
           by METIS_TAC[FDOM_FUPDATE,FDOM_DOMSUB,pred_setTheory.INSERT_DELETE]
     THEN `!z. z IN FDOM f ==> ((f \\ x |+ (x,f ' x)) ' z = f ' z)`
           by METIS_TAC[FAPPLY_FUPDATE_THM,DOMSUB_FAPPLY_THM]
@@ -1927,14 +1927,14 @@ val NEVAL_FUPDATE_LEMMA =
 
 val AEVAL_FUPDATE_LEMMA =
  prove
-  (``!a s v. aeval a (s |+ (v,s ' v)) = aeval a s``,   
+  (``!a s v. aeval a (s |+ (v,s ' v)) = aeval a s``,
    Induct
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
      [aeval_def,FAPPLY_FUPDATE_THM,NOT_FDOM_FAPPLY_FEMPTY,NEVAL_FUPDATE_LEMMA]);
 
-(* 
-``ACC_PRED p c s1 s2`` is the constraint after 
-executing command c in state s1 with precondition p 
+(*
+``ACC_PRED p c s1 s2`` is the constraint after
+executing command c in state s1 with precondition p
 *)
 
 val ACC_PRED_def =
@@ -1947,24 +1947,24 @@ val ACC_PRED_def =
        then ((s2 ' v = Update v e s1 ' v) /\ p(s2 |+ (v,(s1 ' v))))
        else ((s2 ' v = Update v e s1 ' v) /\ p(s2 \\ v)))
    /\
-   (ACC_PRED p (Dispose v) s1 = 
+   (ACC_PRED p (Dispose v) s1 =
      \s2. if v IN FDOM s1 then p(s2 |+ (v,(s1 ' v))) else p s2)
    /\
    (ACC_PRED p (Seq c1 c2) s1 = p)
    /\
-   (ACC_PRED p (Cond b c1 c2) s1 = 
+   (ACC_PRED p (Cond b c1 c2) s1 =
      if beval b s1
       then (\s2. beval b s2 /\ p s2)
       else (\s2. ~(beval b s2) /\ p s2))
    /\
-   (ACC_PRED p (AnWhile b R c) s1 = 
+   (ACC_PRED p (AnWhile b R c) s1 =
      if beval b s1
       then (\s2. beval b s2 /\ p s2)
       else (\s2. ~(beval b s2) /\ p s2))
    /\
-   (ACC_PRED p (Local v c) s1 = 
+   (ACC_PRED p (Local v c) s1 =
      if v IN FDOM s1
-      then (\s2. v IN FDOM s2 /\ p s2) 
+      then (\s2. v IN FDOM s2 /\ p s2)
       else (\s2. ~(v IN FDOM s2) /\ p s2))
    /\
    (ACC_PRED p (AnProc P Q xs f) s1 = \s2. (s2 = f s1) /\ p s1)`;
@@ -1975,7 +1975,7 @@ val ACC_PRED_ASSIGN_LEMMA =
    ``!p v e s. p s ==> ACC_PRED p (GenAssign v e) s (Update v e s)``,
    RW_TAC std_ss []
     THEN Cases_on `e`
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [ACC_PRED_def,UpdateCases,FUPDATE_EQ,FAPPLY_FUPDATE,UpdateCases,
            FUPDATE_ID,NEVAL_FUPDATE_LEMMA,AEVAL_FUPDATE_LEMMA,
            DOMSUB_FUPDATE,DOMSUB_NOT_IN_DOM]);
@@ -1984,7 +1984,7 @@ val ACC_PRED_DISPOSE_LEMMA =
  store_thm
   ("ACC_PRED_DISPOSE_LEMMA",
    ``!p v s. p s ==> ACC_PRED p (Dispose v) s (s \\ v)``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [ACC_PRED_def,FUPDATE_EQ,FAPPLY_FUPDATE,
      FUPDATE_ID,NEVAL_FUPDATE_LEMMA,AEVAL_FUPDATE_LEMMA,
      DOMSUB_FUPDATE,DOMSUB_NOT_IN_DOM,FUPDATE_DOMSUB]);
@@ -1995,9 +1995,9 @@ val SMALL_EVAL_ACC_PRED_LEMMA =
    ``!con1 con2.
       SMALL_EVAL con1 con2
       ==>
-      (\con1 con2. 
-        p(SND con1) 
-        ==> 
+      (\con1 con2.
+        p(SND con1)
+        ==>
         ACC_PRED p (HD(FST con1)) (SND con1) (SND con2))
       con1 con2``,
    IndDefRules.RULE_TAC
@@ -2008,11 +2008,11 @@ val SMALL_EVAL_ACC_PRED_LEMMA =
 val SMALL_EVAL_ACC_PRED =
  store_thm
   ("SMALL_EVAL_ACC_PRED",
-   ``!c p l1 l2 s1 s2. 
+   ``!c p l1 l2 s1 s2.
       p s1
       ==>
       SMALL_EVAL (c::l1,s1) (l2,s2)
-      ==> 
+      ==>
       ACC_PRED p c s1 s2``,
    METIS_TAC
     [SMALL_EVAL_ACC_PRED_LEMMA,listTheory.HD,pairTheory.FST,pairTheory.SND]);
@@ -2020,11 +2020,11 @@ val SMALL_EVAL_ACC_PRED =
 val STEP1_ACC_PRED =
  store_thm
   ("STEP1_ACC_PRED",
-   ``!c p l1 l2 s1 s2. 
+   ``!c p l1 l2 s1 s2.
       p s1
       ==>
       (STEP1(c::l1,s1) = (l2, RESULT s2))
-      ==> 
+      ==>
       ACC_PRED p c s1 s2``,
    METIS_TAC[SMALL_EVAL_ACC_PRED,STEP1_SMALL_EVAL]);
 
@@ -2034,7 +2034,7 @@ val STEP1_ACC_PRED =
 
 val ACC_SMALL_EVAL_def =
  Define
-  `ACC_SMALL_EVAL (con1, p1) (con2, p2) = 
+  `ACC_SMALL_EVAL (con1, p1) (con2, p2) =
     SMALL_EVAL con1 con2 /\ (p2 = ACC_PRED p1 (HD(FST con1)) (SND con1))`;
 
 val ACC_SMALL_EVAL =
@@ -2059,101 +2059,101 @@ val ACC_SMALL_EVAL_CLAUSES =
    ``(!s1 p1 l2 s2 p2.
        ACC_SMALL_EVAL (([], s1), p1) ((l2, s2), p2) = F)
      /\
-     (!s1 l p. 
+     (!s1 l p.
        ACC_SMALL_EVAL ((Skip :: l, s1), p) ((l, s1), p))
-     /\ 
-     (!s1 v e l p. 
+     /\
+     (!s1 v e l p.
        v IN FDOM s1
        ==>
-       ACC_SMALL_EVAL 
-        ((GenAssign v e :: l, s1), p) 
-        ((l, 
-          Update v e s1), 
-          \s2. (s2 ' v = Update v e s1 ' v) 
-               /\ 
+       ACC_SMALL_EVAL
+        ((GenAssign v e :: l, s1), p)
+        ((l,
+          Update v e s1),
+          \s2. (s2 ' v = Update v e s1 ' v)
+               /\
                p(s2 |+ (v,(s1 ' v)))))
-     /\ 
-     (!s1 v e l p. 
+     /\
+     (!s1 v e l p.
        ~(v IN FDOM s1)
        ==>
-       ACC_SMALL_EVAL 
-        ((GenAssign v e :: l, s1), p) 
-        ((l, 
-          Update v e s1), 
-          \s2. (s2 ' v = Update v e s1 ' v) 
-               /\ 
+       ACC_SMALL_EVAL
+        ((GenAssign v e :: l, s1), p)
+        ((l,
+          Update v e s1),
+          \s2. (s2 ' v = Update v e s1 ' v)
+               /\
                p(s2 \\ v)))
-     /\ 
-     (!s1 v l p. 
+     /\
+     (!s1 v l p.
        v IN FDOM s1
        ==>
-       ACC_SMALL_EVAL 
-        ((Dispose v :: l, s1), p) 
+       ACC_SMALL_EVAL
+        ((Dispose v :: l, s1), p)
         ((l, s1 \\ v), \s2. p(s2 |+ (v,(s1 ' v)))))
-     /\ 
-     (!s1 v l p. 
+     /\
+     (!s1 v l p.
        ~(v IN FDOM s1)
        ==>
-       ACC_SMALL_EVAL 
-        ((Dispose v :: l, s1), p) 
+       ACC_SMALL_EVAL
+        ((Dispose v :: l, s1), p)
         ((l, s1 \\ v), p))
-     /\ 
-     (!s1 l c1 c2 p. 
-       ACC_SMALL_EVAL 
-        ((Seq c1 c2 :: l, s1), p) 
+     /\
+     (!s1 l c1 c2 p.
+       ACC_SMALL_EVAL
+        ((Seq c1 c2 :: l, s1), p)
         ((c1 :: c2 :: l, s1), p))
-     /\ 
-     (!s1 l b c1 c2 p.  
+     /\
+     (!s1 l b c1 c2 p.
        beval b s1
-       ==> 
-       ACC_SMALL_EVAL 
+       ==>
+       ACC_SMALL_EVAL
         ((Cond b c1 c2 :: l, s1), p)
         ((c1 :: l, s1), \s2. beval b s2 /\ p s2))
-     /\ 
-     (!s1 l b c1 c2 p.  
+     /\
+     (!s1 l b c1 c2 p.
        ~(beval b s1)
-       ==> 
-       ACC_SMALL_EVAL 
+       ==>
+       ACC_SMALL_EVAL
         ((Cond b c1 c2 :: l, s1), p)
         ((c2 :: l, s1), \s2. ~(beval b s2) /\ p s2))
      /\
-     (!s1 l b R c p.  
+     (!s1 l b R c p.
        beval b s1
-       ==> 
-       ACC_SMALL_EVAL 
+       ==>
+       ACC_SMALL_EVAL
         ((AnWhile b R c :: l, s1), p)
         ((c :: AnWhile b R c :: l, s1), \s2. beval b s2 /\ p s2))
      /\
-     (!s1 l b R c p.  
+     (!s1 l b R c p.
        ~(beval b s1)
-       ==> 
-       ACC_SMALL_EVAL 
+       ==>
+       ACC_SMALL_EVAL
         ((AnWhile b R c :: l, s1), p)
         ((l, s1), \s2. ~(beval b s2) /\ p s2))
      /\
      (!s1 l v c p.
        v IN FDOM s1
        ==>
-       ACC_SMALL_EVAL 
-        ((Local v c :: l, s1), p) 
-        ((c :: GenAssign v (Exp(s1 ' v)) :: l, s1), 
+       ACC_SMALL_EVAL
+        ((Local v c :: l, s1), p)
+        ((c :: GenAssign v (Exp(s1 ' v)) :: l, s1),
          \s2. v IN FDOM s2 /\ p s2))
      /\
      (!s1 l v c p.
        ~(v IN FDOM s1)
        ==>
-       ACC_SMALL_EVAL 
-        ((Local v c :: l, s1), p) 
-        ((c :: Dispose v :: l, s1), 
+       ACC_SMALL_EVAL
+        ((Local v c :: l, s1), p)
+        ((c :: Dispose v :: l, s1),
          \s2. ~(v IN FDOM s2) /\ p s2))
      /\
-     (!s1 l P Q xs f p. 
-       ACC_SMALL_EVAL 
-        ((AnProc P Q xs f :: l, s1), p) 
-        ((l, f s1), 
+     (!s1 l P Q xs f p.
+       ACC_SMALL_EVAL
+        ((AnProc P Q xs f :: l, s1), p)
+        ((l, f s1),
          \s2. (s2 = f s1) /\ p s1))``,
-   RW_TAC list_ss 
-    ([ACC_SMALL_EVAL,ACC_PRED_def,FUN_EQ_THM,IS_SOME_EXISTS,SMALL_ANPROC_THM] 
+   RW_TAC list_ss
+    ([ACC_SMALL_EVAL,ACC_PRED_def,FUN_EQ_THM,IS_SOME_EXISTS,SMALL_ANPROC_THM]
      @ small_rulel)
     THEN RW_TAC std_ss []
     THEN METIS_TAC []);
@@ -2180,8 +2180,8 @@ val ACC_SMALL_EVAL_THM =
    ``!l1 l2 s1 s2 p1 p2.
       p1 s1
       ==>
-      ACC_SMALL_EVAL ((l1,s1),p1) ((l2,s2),p2) 
-      ==> 
+      ACC_SMALL_EVAL ((l1,s1),p1) ((l2,s2),p2)
+      ==>
       SMALL_EVAL (l1,s1) (l2,s2) /\ p2 s2``,
   METIS_TAC[ACC_SMALL_EVAL_TRUE,ACC_SMALL_EVAL_SMALL_EVAL]);
 
@@ -2190,7 +2190,7 @@ val ACC_SMALL_EVAL_THM =
 (*===========================================================================*)
 
 val ACC_STEP_BIND_def =
- Define 
+ Define
   `ACC_STEP_BIND m f = case m of
                        ((l, TIMEOUT s), p) -> ((l, TIMEOUT s), p)
                     || ((l, ERROR s), p)   -> ((l, ERROR s), p)
@@ -2200,7 +2200,7 @@ val _ = overload_on (">>=", ``ACC_STEP_BIND``);
 
 (* Monad unit function *)
 val ACC_STEP_RETURN_def =
- Define 
+ Define
   `ACC_STEP_RETURN x = ((FST(FST x), RESULT(SND(FST x))), SND x)`;
 
 val ACC_STEP_MONAD_LAWS =
@@ -2226,8 +2226,8 @@ val ACC_STEP_BIND_RESULT =
 (* Single step *)
 val ACC_STEP1_def =
  Define
-  `ACC_STEP1 (con, p) = 
-    (STEP1 con, 
+  `ACC_STEP1 (con, p) =
+    (STEP1 con,
      if NULL(FST con) then p else ACC_PRED p (HD(FST con)) (SND con))`;
 
 (* Clocked accumulating next-state function *)
@@ -2251,10 +2251,10 @@ val ACC_STEP =
   ("ACC_STEP",
    ``!n l s p.
       ACC_STEP n ((l,s),p) =
-       if (l = []) 
+       if (l = [])
         then (([], RESULT s), p) else
-       if (n = 0)  
-        then ((l, TIMEOUT s), p) 
+       if (n = 0)
+        then ((l, TIMEOUT s), p)
         else ACC_STEP1 ((l,s),p) >>=  ACC_STEP (n-1)``,
     Cases
      THEN RW_TAC std_ss [ACC_STEP_def]
@@ -2275,10 +2275,10 @@ val ACC_STEP_STEP =
     THEN RW_TAC std_ss [ACC_STEP_def,STEP]
     THEN RW_TAC std_ss []
     THEN FULL_SIMP_TAC (srw_ss()) [ACC_STEP_def,NOT_EMPTY_EXISTS]
-    THEN RW_TAC std_ss [STEP_SUC]      
+    THEN RW_TAC std_ss [STEP_SUC]
     THEN FULL_SIMP_TAC (srw_ss()) [ACC_STEP_def,NOT_EMPTY_EXISTS]
     THEN RW_TAC std_ss []
-    THEN FULL_SIMP_TAC (srw_ss()) 
+    THEN FULL_SIMP_TAC (srw_ss())
           [ACC_STEP_def,NOT_EMPTY_EXISTS,ACC_STEP1_def,ACC_STEP_BIND_def,STEP_BIND_def]
     THENL
      [Cases_on `STEP1 (x::l',s1)`
@@ -2321,9 +2321,9 @@ val SPEC_ACC_STEP =
 val EVAL_SPEC_THM =
  store_thm
   ("EVAL_SPEC_THM",
-   ``!A P c Q f. 
-      (!s. A s ==> P s ==> (EVAL c s (f s) /\ (Q(f s) = T))) 
-      ==> 
+   ``!A P c Q f.
+      (!s. A s ==> P s ==> (EVAL c s (f s) /\ (Q(f s) = T)))
+      ==>
       SPEC (\s. P s /\ A s) c Q``,
    RW_TAC std_ss [SPEC_def]
     THEN RES_TAC
@@ -2332,12 +2332,12 @@ val EVAL_SPEC_THM =
 
 (* |- !f x y. f |+ (x,y) = f \\ x |+ (x,y)  *)
 val FUPDATE_PRUNE_LEMMA =
- Q.GEN `f` 
-  (Q.GEN `x` 
+ Q.GEN `f`
+  (Q.GEN `x`
     (Q.GEN `y`
      (GSYM
-       (CONV_RULE 
-         EVAL 
+       (CONV_RULE
+         EVAL
          (Q.SPEC `x` (Q.SPEC `f |+ (x,y)` FUPDATE_DOMSUB))))));
 
 val FUPDATE_PRUNE =
@@ -2357,7 +2357,7 @@ val FUPDATE_LIST_FOLD_LEMMA =
 
 (* Ad hoc collection of theorems used in SYM_RUN *)
 
-val NOT_IMP_EQ_F = 
+val NOT_IMP_EQ_F =
  save_thm
   ("NOT_IMP_EQ_F",
    METIS_PROVE [] ``!t. ~t ==> (t =F)``);
@@ -2365,15 +2365,15 @@ val NOT_IMP_EQ_F =
 val TC_SMALL_EVAL_IF =
  save_thm
   ("TC_SMALL_EVAL_IF",
-   METIS_PROVE [] 
+   METIS_PROVE []
     ``!con b s1 s2.
-       (b ==> TC SMALL_EVAL con ([],s1)) 
-       /\ 
+       (b ==> TC SMALL_EVAL con ([],s1))
+       /\
        (~b ==> TC SMALL_EVAL con ([],s2))
        ==>
        TC SMALL_EVAL con ([], if b then s1 else s2)``);
 
-val LEFT_T_ELIM = 
+val LEFT_T_ELIM =
  save_thm
   ("LEFT_T_ELIM",
    METIS_PROVE [] ``!b. T /\ b = b``);
@@ -2396,29 +2396,29 @@ val NOT_EQ_T =
 val ABS_T_CONJ =
  save_thm
   ("ABS_T_CONJ",
-   METIS_PROVE [] 
+   METIS_PROVE []
     ``!P Q (s:state). P s ==> (Q s = T) ==> (\s. P s /\ Q s) s``);
 
 val ABS_F_CONJ =
  save_thm
   ("ABS_F_CONJ",
-   METIS_PROVE [] 
+   METIS_PROVE []
     ``!P Q (s:state). P s ==> (~(Q s) = T) ==> (\s. P s /\ ~(Q s)) s``);
 
 val STEP1_T =
  save_thm
   ("STEP1_T",
    METIS_PROVE []
-   ``!bx b l s x y. 
-      bx ==> (bx ==> b = T) ==> (STEP1 (l,s) = if b then x else y) 
+   ``!bx b l s x y.
+      bx ==> (bx ==> b = T) ==> (STEP1 (l,s) = if b then x else y)
       ==> (STEP1 (l,s) = x)``);
 
 val STEP1_F =
  save_thm
   ("STEP1_F",
    METIS_PROVE []
-   ``!bx b l s x y. 
-      bx ==> (bx ==> ~b = T) ==> (STEP1 (l,s) = if b then x else y) 
+   ``!bx b l s x y.
+      bx ==> (bx ==> ~b = T) ==> (STEP1 (l,s) = if b then x else y)
       ==> (STEP1 (l,s) = y)``);
 
 (* Utility theorem used by CONJ_DISCH_ALL *)
@@ -2460,7 +2460,7 @@ val NOT_DISJ =
   ("NOT_DISJ",
    METIS_PROVE [] ``!A B : bool. ~(A \/ B) = ~A /\ ~B``);
 
-val IMP_F_IS_F = 
+val IMP_F_IS_F =
  save_thm
   ("IMP_F_IS_F",
    METIS_PROVE [] ``!P : bool. (!Q. P ==> Q) ==> (P = F)``);
@@ -2506,7 +2506,7 @@ val UPDATE_LIST_def =
    (UPDATE_LIST ((v2,x2) :: l) (v1,x1) =
      if v1 = v2 then (v1,x1) :: l else (v2,x2) :: UPDATE_LIST l (v1,x1))`;
 
-(* 
+(*
 ZIP_LIST b [(v1,x1);...;(vn,xn)] [(v1,y1);...;(vn,yn)] =
  [(v1,if b then x1 else y1);...;(vn,if b then xn else yn)]
 *)
@@ -2524,12 +2524,12 @@ val STRAIGHT_RUN_def =
  Define
   `(STRAIGHT_RUN Skip l = l)
    /\
-   (STRAIGHT_RUN (GenAssign v e) l = 
+   (STRAIGHT_RUN (GenAssign v e) l =
      UPDATE_LIST l (v, naeval e (FEMPTY |++ l)))
    /\
    (STRAIGHT_RUN (Seq c1 c2) s = STRAIGHT_RUN c2 (STRAIGHT_RUN c1 s))
    /\
-   (STRAIGHT_RUN (Cond b c1 c2) l = 
+   (STRAIGHT_RUN (Cond b c1 c2) l =
     ZIP_LIST (beval b (FEMPTY |++ l)) (STRAIGHT_RUN c1 l) (STRAIGHT_RUN c2 l))`;
 
 (*
@@ -2537,12 +2537,12 @@ val SIMPLE_RUN_def =
  Define
   `(SIMPLE_RUN Skip l = l)
    /\
-   (SIMPLE_RUN (GenAssign v e) l = 
+   (SIMPLE_RUN (GenAssign v e) l =
      UPDATE_LIST l (v, naeval e (FEMPTY |++ l)))
    /\
    (SIMPLE_RUN (Seq c1 c2) s = SIMPLE_RUN c2 (SIMPLE_RUN c1 s))
    /\
-   (SIMPLE_RUN (Cond b c1 c2) l = 
+   (SIMPLE_RUN (Cond b c1 c2) l =
     ZIP_LIST (beval b (FEMPTY |++ l)) (SIMPLE_RUN c1 l) (SIMPLE_RUN c2 l))
    /\
    (SIMPLE_RUN (AnWhile b R c) l = SIMPLE_RUN c <???>)`;
@@ -2560,80 +2560,80 @@ val FUPDATE_LIST_FUPDATE_NOT_MEM =
    Induct
     THEN RW_TAC std_ss [FUPDATE_LIST_THM,FUPDATE_EQ]
     THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT]
     THEN METIS_TAC[FUPDATE_EQ,FUPDATE_COMMUTES]);
 
 val UPDATE_LIST_FUPDATE =
  store_thm
   ("UPDATE_LIST_FUPDATE",
-   ``!l. DISTINCT_VARS l  
+   ``!l. DISTINCT_VARS l
          ==> !fm v x. fm |++ UPDATE_LIST l (v,x) = (fm |++ l) |+ (v,x)``,
    Induct
     THEN RW_TAC std_ss [UPDATE_LIST_def,FUPDATE_LIST_THM]
     THEN Cases_on `h`
     THEN FULL_SIMP_TAC std_ss [UPDATE_LIST_def,FUPDATE_LIST_THM,listTheory.ALL_DISTINCT]
     THEN Cases_on `v = q`
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [UPDATE_LIST_def,FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT]
     THEN METIS_TAC[FUPDATE_LIST_FUPDATE_NOT_MEM,DISTINCT_VARS_def]);
 
 val MAP_FST_UPDATE_LIST =
  prove
-  (``!l. MAP FST (UPDATE_LIST l (v,x)) = 
+  (``!l. MAP FST (UPDATE_LIST l (v,x)) =
           if MEM v (MAP FST l) then MAP FST l else (MAP FST l) ++ [v]``,
-   Induct 
+   Induct
     THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,UPDATE_LIST_def]
     THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,UPDATE_LIST_def]
     THEN Cases_on `q = v`
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,UPDATE_LIST_def]);
 
 val UpdateDISTINCT =
  store_thm
   ("UpdateDISTINCT",
    ``!l. DISTINCT_VARS l ==> !v x. DISTINCT_VARS(UPDATE_LIST l (v,x))``,
-   Induct 
+   Induct
     THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,UPDATE_LIST_def]
     THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,UPDATE_LIST_def]
     THEN Cases_on `q = v`
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,
            UPDATE_LIST_def,MAP_FST_UPDATE_LIST]
     THEN Cases_on `MEM v (MAP FST l)`
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,
            UPDATE_LIST_def,MAP_FST_UPDATE_LIST]);
 
 val MAP_FST_SUBSET_ZIP_LIST =
  prove
   (``!l1 l2 b x. MEM x (MAP FST (ZIP_LIST b l1 l2)) ==> MEM x (MAP FST l1)``,
-   Induct 
+   Induct
     THENL[ALL_TAC,GEN_TAC]
     THEN Induct
     THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
-    THEN Cases_on `h` 
+    THEN Cases_on `h`
     THEN TRY(Cases_on `h'`)
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
     THEN METIS_TAC[]);
 
 val ZIP_LIST_DISTINCT =
  store_thm
   ("ZIP_LIST_DISTINCT",
-   ``!l1 l2. DISTINCT_VARS l1 /\ DISTINCT_VARS l2 
+   ``!l1 l2. DISTINCT_VARS l1 /\ DISTINCT_VARS l2
              ==> !b. DISTINCT_VARS(ZIP_LIST b l1 l2)``,
-   Induct 
+   Induct
     THENL[ALL_TAC,GEN_TAC]
     THEN Induct
     THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
-    THEN Cases_on `h` 
+    THEN Cases_on `h`
     THEN TRY(Cases_on `h'`)
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
     THEN METIS_TAC[MAP_FST_SUBSET_ZIP_LIST]);
 
@@ -2641,10 +2641,10 @@ val STRAIGHT_RUN_DISTINCT =
  store_thm
   ("STRAIGHT_RUN_DISTINCT",
    ``!c. STRAIGHT c ==> !l. DISTINCT_VARS l ==> DISTINCT_VARS(STRAIGHT_RUN c l)``,
-   Induct 
+   Induct
     THEN RW_TAC std_ss [rules,STRAIGHT_RUN_def,STRAIGHT_def]
     THEN TRY(Cases_on `s0`)
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [SEQ_THM,IF_THM,rules,GEN_ASSIGN_THM,UpdateCases,
            STRAIGHT_RUN_def,UPDATE_LIST_FUPDATE,UpdateDISTINCT,ZIP_LIST_DISTINCT]);
 
@@ -2652,26 +2652,26 @@ val ZIP_LIST_T =
  store_thm
   ("ZIP_LIST_T",
    ``!l1 l2. (LENGTH l1 = LENGTH l2) ==> (ZIP_LIST T l1 l2 = l1)``,
-   Induct 
+   Induct
     THENL[ALL_TAC,GEN_TAC]
     THEN Induct
     THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
-    THEN Cases_on `h` 
+    THEN Cases_on `h`
     THEN TRY(Cases_on `h'`)
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]);
 
 val ZIP_LIST_F =
  store_thm
   ("ZIP_LIST_F",
    ``!l1 l2. (MAP FST l1 = MAP FST l2) ==> (ZIP_LIST F l1 l2 = l2)``,
-   Induct 
+   Induct
     THENL[ALL_TAC,GEN_TAC]
     THEN Induct
     THEN RW_TAC list_ss [DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]
-    THEN Cases_on `h` 
+    THEN Cases_on `h`
     THEN TRY(Cases_on `h'`)
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT,ZIP_LIST_def]);
 
 (* Vars assigned to in a program *)
@@ -2679,7 +2679,7 @@ val VARS_def =
  Define
   `(VARS Skip = {})
    /\
-   (VARS (GenAssign v e) = {v}) 
+   (VARS (GenAssign v e) = {v})
    /\
    (VARS (Seq c1 c2) = VARS c1 UNION VARS c2)
    /\
@@ -2702,7 +2702,7 @@ val LIST_UNION_UNION =
   ("LIST_UNION_UNION",
    ``!l1 l2. set(LIST_UNION l1 l2) = set l1 UNION set l2``,
    Induct
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [LIST_UNION_def,listTheory.LIST_TO_SET_THM,UNION_EMPTY,
            INSERT_UNION,GSYM listTheory.IN_LIST_TO_SET]);
 
@@ -2710,7 +2710,7 @@ val VARL_def =
  Define
   `(VARL Skip = [])
    /\
-   (VARL (GenAssign v e) = [v]) 
+   (VARL (GenAssign v e) = [v])
    /\
    (VARL (Seq c1 c2) = LIST_UNION (VARL c1) (VARL c2))
    /\
@@ -2746,7 +2746,7 @@ val VARS_VARL =
   ("VARS_VARL",
    ``!c. SIMPLE c ==> (VARS c = set(VARL c))``,
    Induct
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [SIMPLE_def,VARS_def,VARL_def,listTheory.LIST_TO_SET_THM,
            LIST_UNION_UNION,listTheory.SET_TO_LIST_INV]
     THEN METIS_TAC [INSERT_SING_UNION]);
@@ -2754,13 +2754,13 @@ val VARS_VARL =
 val MAP_FST_ZIP_LIST =
  prove
   (``!l1 l2 l b. (MAP FST l1 = l) /\ (MAP FST l2 = l) ==> (MAP FST (ZIP_LIST b l1 l2) = l)``,
-   Induct 
+   Induct
     THENL[ALL_TAC,GEN_TAC]
     THEN Induct
     THEN RW_TAC list_ss [ZIP_LIST_def]
-    THEN Cases_on `h` 
+    THEN Cases_on `h`
     THEN Cases_on `h'`
-    THEN FULL_SIMP_TAC list_ss [ZIP_LIST_def]);  
+    THEN FULL_SIMP_TAC list_ss [ZIP_LIST_def]);
 
 val VARS_IN_def =
  Define
@@ -2768,32 +2768,32 @@ val VARS_IN_def =
 
 val VARS_STRAIGHT_RUN =
  prove
-  (``!c l. STRAIGHT c /\ VARS_IN c l 
+  (``!c l. STRAIGHT c /\ VARS_IN c l
            ==> (MAP FST (STRAIGHT_RUN c l) = MAP FST l)``,
    Induct
     THEN TRY(Cases_on `s0`)
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [STRAIGHT_def,VARS_def,NOT_IN_EMPTY,IN_SING,STRAIGHT_RUN_def,
            MAP_FST_UPDATE_LIST,IN_UNION,VARS_IN_def,MAP_FST_ZIP_LIST,VARS_IN_def]);
 
 val VARS_STRAIGHT_RUN_COR =
  prove
-  (``!c l. STRAIGHT c /\ VARS_IN c l 
+  (``!c l. STRAIGHT c /\ VARS_IN c l
            ==> (LENGTH(STRAIGHT_RUN c l) = LENGTH l)``,
     METIS_TAC[VARS_IN_def,rich_listTheory.LENGTH_MAP,VARS_STRAIGHT_RUN]);
 
 val STRAIGHT_RUN_EVAL =
  store_thm
   ("STRAIGHT_RUN_EVAL",
-   ``!c l. STRAIGHT c 
-           ==> VARS_IN c l 
-           ==> DISTINCT_VARS l 
+   ``!c l. STRAIGHT c
+           ==> VARS_IN c l
+           ==> DISTINCT_VARS l
            ==> (EVAL c (FEMPTY |++ l) (FEMPTY |++ STRAIGHT_RUN c l))``,
    Induct
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [VARS_IN_def,STRAIGHT_def, rules, STRAIGHT_RUN_def,VARS_def,IN_UNION]
     THEN TRY(Cases_on `s0`)
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [SEQ_THM,IF_THM,rules,GEN_ASSIGN_THM,Update_def,
            STRAIGHT_RUN_def,UPDATE_LIST_FUPDATE]
     THEN METIS_TAC
@@ -2811,44 +2811,44 @@ val STRAIGHT_RUN_CONT =
  store_thm
   ("STRAIGHT_RUN_CONT",
    ``(!cont l. STRAIGHT_RUN_CONT Skip cont l = cont l)
-     /\ 
-     (!cont l v e_or_a. 
-        STRAIGHT_RUN_CONT (GenAssign v e_or_a) cont l = 
+     /\
+     (!cont l v e_or_a.
+        STRAIGHT_RUN_CONT (GenAssign v e_or_a) cont l =
          cont(UPDATE_LIST l (v, naeval e_or_a (FEMPTY |++ l))))
-     /\ 
-     (!cont l v e. 
-        STRAIGHT_RUN_CONT (Assign v e) cont l = 
+     /\
+     (!cont l v e.
+        STRAIGHT_RUN_CONT (Assign v e) cont l =
          cont(UPDATE_LIST l (v, Scalar(neval e (FEMPTY |++ l)))))
-     /\ 
-     (!cont l v e1 e2. 
-        STRAIGHT_RUN_CONT (ArrayAssign v e1 e2) cont l = 
+     /\
+     (!cont l v e1 e2.
+        STRAIGHT_RUN_CONT (ArrayAssign v e1 e2) cont l =
          cont(UPDATE_LIST
-               l 
-               (v, Array(aeval (ArrUpdate (ArrVar v) e1 e2) 
+               l
+               (v, Array(aeval (ArrUpdate (ArrVar v) e1 e2)
                (FEMPTY |++ l)))))
-     /\ 
-     (!cont l c1 c2. 
-        STRAIGHT_RUN_CONT (Seq c1 c2) cont l = 
+     /\
+     (!cont l c1 c2.
+        STRAIGHT_RUN_CONT (Seq c1 c2) cont l =
          STRAIGHT_RUN_CONT c1 (STRAIGHT_RUN_CONT c2 cont) l)
-     /\ 
-     (!cont l b c1 c2. 
-        STRAIGHT_RUN_CONT (Cond b c1 c2) cont l = 
-         cont(ZIP_LIST (beval b (FEMPTY |++ l)) 
-                       (STRAIGHT_RUN c1 l) 
+     /\
+     (!cont l b c1 c2.
+        STRAIGHT_RUN_CONT (Cond b c1 c2) cont l =
+         cont(ZIP_LIST (beval b (FEMPTY |++ l))
+                       (STRAIGHT_RUN c1 l)
                        (STRAIGHT_RUN c2 l)))
-     /\ 
-     (!cont l b c1 c2. 
-        (beval b (FEMPTY |++ l) = T) 
-        ==> STRAIGHT c1 ==> STRAIGHT c2 ==> VARS_IN c1 l ==> VARS_IN c2 l 
-        ==> (STRAIGHT_RUN_CONT (Cond b c1 c2) cont l = 
+     /\
+     (!cont l b c1 c2.
+        (beval b (FEMPTY |++ l) = T)
+        ==> STRAIGHT c1 ==> STRAIGHT c2 ==> VARS_IN c1 l ==> VARS_IN c2 l
+        ==> (STRAIGHT_RUN_CONT (Cond b c1 c2) cont l =
               cont(STRAIGHT_RUN c1 l)))
-     /\ 
-     (!cont l b c1 c2. 
+     /\
+     (!cont l b c1 c2.
         (beval b (FEMPTY |++ l) = F)
-        ==> STRAIGHT c1 ==> STRAIGHT c2 ==> VARS_IN c1 l ==> VARS_IN c2 l 
-        ==> (STRAIGHT_RUN_CONT (Cond b c1 c2) cont l = 
+        ==> STRAIGHT c1 ==> STRAIGHT c2 ==> VARS_IN c1 l ==> VARS_IN c2 l
+        ==> (STRAIGHT_RUN_CONT (Cond b c1 c2) cont l =
               cont(STRAIGHT_RUN c2 l)))``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [STRAIGHT_RUN_CONT_def,STRAIGHT_RUN_def,Assign_def,
      ArrayAssign_def,naeval_def]
     THEN METIS_TAC
@@ -2858,46 +2858,46 @@ val STRAIGHT_RUN_CONT =
 val STRAIGHT_RUN_CONT =
  store_thm
   ("STRAIGHT_RUN_CONT",
-   ``(!cont l. 
+   ``(!cont l.
         STRAIGHT_RUN_CONT Skip cont l = cont l)
-     /\ 
-     (!cont l v e_or_a. 
-        STRAIGHT_RUN_CONT (GenAssign v e_or_a) cont l = 
+     /\
+     (!cont l v e_or_a.
+        STRAIGHT_RUN_CONT (GenAssign v e_or_a) cont l =
          cont(UPDATE_LIST l (v, naeval e_or_a (FEMPTY |++ l))))
-     /\ 
-     (!cont l v e. 
-        STRAIGHT_RUN_CONT (Assign v e) cont l = 
+     /\
+     (!cont l v e.
+        STRAIGHT_RUN_CONT (Assign v e) cont l =
          cont(UPDATE_LIST l (v, Scalar(neval e (FEMPTY |++ l)))))
-     /\ 
-     (!cont l v e1 e2. 
-        STRAIGHT_RUN_CONT (ArrayAssign v e1 e2) cont l = 
+     /\
+     (!cont l v e1 e2.
+        STRAIGHT_RUN_CONT (ArrayAssign v e1 e2) cont l =
          cont(UPDATE_LIST
-               l 
-               (v, Array(aeval (ArrUpdate (ArrVar v) e1 e2) 
+               l
+               (v, Array(aeval (ArrUpdate (ArrVar v) e1 e2)
                (FEMPTY |++ l)))))
-     /\ 
-     (!cont l c1 c2. 
-        STRAIGHT_RUN_CONT (Seq c1 c2) cont l = 
+     /\
+     (!cont l c1 c2.
+        STRAIGHT_RUN_CONT (Seq c1 c2) cont l =
          STRAIGHT_RUN_CONT c1 (STRAIGHT_RUN_CONT c2 cont) l)
-     /\ 
-     (!cont l b c1 c2. 
-        STRAIGHT_RUN_CONT (Cond b c1 c2) cont l = 
-         STRAIGHT_RUN_CONT c1 
-          (\l1. STRAIGHT_RUN_CONT c2 
+     /\
+     (!cont l b c1 c2.
+        STRAIGHT_RUN_CONT (Cond b c1 c2) cont l =
+         STRAIGHT_RUN_CONT c1
+          (\l1. STRAIGHT_RUN_CONT c2
                  (\l2. cont(ZIP_LIST (beval b (FEMPTY |++ l)) l1 l2)) l) l)
-     /\ 
-     (!cont l b c1 c2. 
-        (beval b (FEMPTY |++ l) = T) 
-        ==> STRAIGHT c1 ==> STRAIGHT c2 ==> VARS_IN c1 l ==> VARS_IN c2 l 
-        ==> (STRAIGHT_RUN_CONT (Cond b c1 c2) cont l = 
+     /\
+     (!cont l b c1 c2.
+        (beval b (FEMPTY |++ l) = T)
+        ==> STRAIGHT c1 ==> STRAIGHT c2 ==> VARS_IN c1 l ==> VARS_IN c2 l
+        ==> (STRAIGHT_RUN_CONT (Cond b c1 c2) cont l =
               STRAIGHT_RUN_CONT c1 cont l))
-     /\ 
-     (!cont l b c1 c2. 
+     /\
+     (!cont l b c1 c2.
         (beval b (FEMPTY |++ l) = F)
-        ==> STRAIGHT c1 ==> STRAIGHT c2 ==> VARS_IN c1 l ==> VARS_IN c2 l 
-        ==> (STRAIGHT_RUN_CONT (Cond b c1 c2) cont l = 
+        ==> STRAIGHT c1 ==> STRAIGHT c2 ==> VARS_IN c1 l ==> VARS_IN c2 l
+        ==> (STRAIGHT_RUN_CONT (Cond b c1 c2) cont l =
               STRAIGHT_RUN_CONT c2 cont l))``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [STRAIGHT_RUN_CONT_def,STRAIGHT_RUN_def,Assign_def,
      ArrayAssign_def,naeval_def]
     THEN METIS_TAC
@@ -2935,7 +2935,7 @@ val SOME_FUNPOW_def =
  Define
   `(SOME_FUNPOW g 0 x = SOME x)
    /\
-   (SOME_FUNPOW g (SUC n) x = 
+   (SOME_FUNPOW g (SUC n) x =
      case g x of
         SOME y -> SOME_FUNPOW g n y
      || NONE   -> NONE)`;
@@ -2961,8 +2961,8 @@ val SOME_ITER_def =
  Define
   `SOME_ITER P g x =
     if (?n. IS_SOME(SOME_FUNPOW g n x) /\ P(THE(SOME_FUNPOW g n x)))
-     then SOME_FUNPOW 
-           g 
+     then SOME_FUNPOW
+           g
            (@n. (IS_SOME(SOME_FUNPOW g n x) /\ P(THE(SOME_FUNPOW g n x)))
                 /\
                 !m.  m < n ==> ~(IS_SOME(SOME_FUNPOW g m x) /\ P(THE(SOME_FUNPOW g m x))))
@@ -2974,7 +2974,7 @@ val SOME_ITER =
   ("SOME_ITER",
    ``SOME_ITER P g x =
       if (?n. IS_SOME(SOME_FUNPOW g n x) /\ P(THE(SOME_FUNPOW g n x)))
-       then 
+       then
         SOME_FUNPOW g (LEAST n. IS_SOME(SOME_FUNPOW g n x) /\ P(THE(SOME_FUNPOW g n x))) x
        else NONE``,
    METIS_TAC
@@ -2991,75 +2991,75 @@ val SOME_ITER_REC =
    ``SOME_ITER P g x =
       if P x then SOME x else g x >>= SOME_ITER P g``,
    REWRITE_TAC [SOME_ITER_def,SOME_BIND_def]
-    THEN COND_CASES_TAC 
+    THEN COND_CASES_TAC
     THENL
-     [POP_ASSUM STRIP_ASSUME_TAC 
-       THEN COND_CASES_TAC 
-       THENL 
-        [SELECT_ELIM_TAC 
-          THEN CONJ_TAC 
-          THENL 
-           [Q.EXISTS_TAC `0` 
+     [POP_ASSUM STRIP_ASSUME_TAC
+       THEN COND_CASES_TAC
+       THENL
+        [SELECT_ELIM_TAC
+          THEN CONJ_TAC
+          THENL
+           [Q.EXISTS_TAC `0`
              THEN ASM_REWRITE_TAC [SOME_FUNPOW_def, NOT_LESS_0]
              THEN METIS_TAC[option_CLAUSES],
-            Q.X_GEN_TAC `m` 
-             THEN REPEAT STRIP_TAC 
-             THEN Q.SUBGOAL_THEN `m = 0` (fn th => REWRITE_TAC [th,SOME_FUNPOW_def]) 
-             THEN Q.SPEC_THEN 
-                   `m` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) num_CASES 
-             THEN REWRITE_TAC [] 
-             THEN FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) 
+            Q.X_GEN_TAC `m`
+             THEN REPEAT STRIP_TAC
+             THEN Q.SUBGOAL_THEN `m = 0` (fn th => REWRITE_TAC [th,SOME_FUNPOW_def])
+             THEN Q.SPEC_THEN
+                   `m` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) num_CASES
+             THEN REWRITE_TAC []
+             THEN FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC)
              THEN FULL_SIMP_TAC (srw_ss()) [SOME_FUNPOW_def, LESS_0]],
          SELECT_ELIM_TAC
-          THEN CONJ_TAC 
-          THENL 
-           [Q.SPEC_THEN `\n. IS_SOME(SOME_FUNPOW g n x) /\ P(THE(SOME_FUNPOW g n x))` (IMP_RES_TAC o BETA_RULE) WOP 
+          THEN CONJ_TAC
+          THENL
+           [Q.SPEC_THEN `\n. IS_SOME(SOME_FUNPOW g n x) /\ P(THE(SOME_FUNPOW g n x))` (IMP_RES_TAC o BETA_RULE) WOP
              THEN METIS_TAC[],
-            Q.X_GEN_TAC `m` 
-             THEN REPEAT STRIP_TAC 
-             THEN Q.SUBGOAL_THEN `?p. m = SUC p` (CHOOSE_THEN SUBST_ALL_TAC) 
+            Q.X_GEN_TAC `m`
+             THEN REPEAT STRIP_TAC
+             THEN Q.SUBGOAL_THEN `?p. m = SUC p` (CHOOSE_THEN SUBST_ALL_TAC)
              THENL
-              [Q.SPEC_THEN `m` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) num_CASES 
-                THEN FULL_SIMP_TAC bool_ss [SOME_FUNPOW_def] 
+              [Q.SPEC_THEN `m` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) num_CASES
+                THEN FULL_SIMP_TAC bool_ss [SOME_FUNPOW_def]
                 THEN METIS_TAC [option_CLAUSES],
-               ALL_TAC] 
-             THEN FULL_SIMP_TAC bool_ss [SOME_FUNPOW_def] 
+               ALL_TAC]
+             THEN FULL_SIMP_TAC bool_ss [SOME_FUNPOW_def]
              THEN Cases_on `g x`
-             THEN FULL_SIMP_TAC (srw_ss()) [SOME_FUNPOW_def] 
-             THEN Q.SUBGOAL_THEN 
+             THEN FULL_SIMP_TAC (srw_ss()) [SOME_FUNPOW_def]
+             THEN Q.SUBGOAL_THEN
                    `?n. IS_SOME(SOME_FUNPOW g n (THE(g x))) /\ P(THE(SOME_FUNPOW g n (THE(g x))))`
-                   (fn th => REWRITE_TAC [th]) 
-             THEN1 METIS_TAC [option_CLAUSES] 
+                   (fn th => REWRITE_TAC [th])
+             THEN1 METIS_TAC [option_CLAUSES]
              THEN  ASSUM_LIST
-                    ((Q.SPEC_THEN 
-                       `SUC m` 
+                    ((Q.SPEC_THEN
+                       `SUC m`
                        (ASSUME_TAC o GEN_ALL o SIMP_RULE bool_ss [FUNPOW,LESS_MONO_EQ]))  o el 2)
              THEN RW_TAC std_ss []
              THENL
               [ALL_TAC,
                METIS_TAC[option_CLAUSES]]
-             THEN SELECT_ELIM_TAC 
-             THEN CONJ_TAC 
+             THEN SELECT_ELIM_TAC
+             THEN CONJ_TAC
              THENL
               [Q.EXISTS_TAC `p`
                 THEN RW_TAC (srw_ss()) []
                 THEN ASSUM_LIST
-                      (fn thl => 
+                      (fn thl =>
                         ASSUME_TAC
-                         (Q.GEN `n` 
+                         (Q.GEN `n`
                            (SIMP_RULE (srw_ss()) [el 5 thl](Q.SPECL[`g`,`n`,`x`](CONJUNCT2(SOME_FUNPOW_def))))))
                 THEN METIS_TAC[],
-               Q.X_GEN_TAC `m` 
-                THEN REPEAT STRIP_TAC 
+               Q.X_GEN_TAC `m`
+                THEN REPEAT STRIP_TAC
                 THEN ASSUM_LIST
-                      (fn thl => 
+                      (fn thl =>
                         ASSUME_TAC
-                         (Q.GEN `n` 
+                         (Q.GEN `n`
                            (SIMP_RULE (srw_ss()) [el 7 thl](Q.SPECL[`g`,`n`,`x`](CONJUNCT2(SOME_FUNPOW_def))))))
                 THEN METIS_TAC [LESS_LESS_CASES,option_CLAUSES]]]],
-      POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss []) 
+      POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss [])
        THEN FIRST_ASSUM (ASSUME_TAC o SIMP_RULE (srw_ss()) [SOME_FUNPOW_def] o
-                         GEN_ALL o SPEC ``SUC n``) 
+                         GEN_ALL o SPEC ``SUC n``)
        THEN Cases_on `P x`
        THEN FULL_SIMP_TAC (srw_ss()) []
        THEN Cases_on `g x`
@@ -3089,10 +3089,10 @@ val SOME_ITER_NONE =
 
 val SOME_ITER_SOME1 =
  prove
-  (``(?y. SOME_ITER P g x = SOME y) 
+  (``(?y. SOME_ITER P g x = SOME y)
      ==>
      ?n. IS_SOME(SOME_FUNPOW g n x)
-         /\ 
+         /\
          P(THE(SOME_FUNPOW g n x))
          /\
          (SOME_ITER P g x = SOME_FUNPOW g n x)``,
@@ -3109,7 +3109,7 @@ val SOME_ITER_SOME1 =
 val SOME_ITER_SOME2 =
  prove
   (``(?n. IS_SOME(SOME_FUNPOW g n x)
-          /\ 
+          /\
           P(THE(SOME_FUNPOW g n x))
           /\
           (SOME_ITER P g x = SOME_FUNPOW g n x))
@@ -3127,7 +3127,7 @@ val SOME_ITER_SOME =
   ("SOME_ITER_SOME",
    ``(?y. SOME_ITER P g x = SOME y) =
        ?n. IS_SOME(SOME_FUNPOW g n x)
-           /\ 
+           /\
            P(THE(SOME_FUNPOW g n x))
            /\
            (SOME_ITER P g x = SOME_FUNPOW g n x)``,
@@ -3139,9 +3139,9 @@ val SOME_ITER_LEAST =
    ``(?y. SOME_ITER P g x = SOME y) =
      (?n. IS_SOME (SOME_FUNPOW g n x) /\ P(THE(SOME_FUNPOW g n x)))
      /\
-     (SOME_ITER P g x = 
-       SOME_FUNPOW 
-        g 
+     (SOME_ITER P g x =
+       SOME_FUNPOW
+        g
         (LEAST n. IS_SOME(SOME_FUNPOW g n x) /\ P(THE(SOME_FUNPOW g n x)))
         x)``,
    RW_TAC std_ss [SOME_ITER]
@@ -3166,7 +3166,7 @@ val SOME_WHILE =
   ("SOME_WHILE",
    ``SOME_WHILE P g x =
       if (?n. IS_SOME(SOME_FUNPOW g n x) /\ ~P(THE(SOME_FUNPOW g n x)))
-       then 
+       then
         SOME_FUNPOW g (LEAST n. IS_SOME(SOME_FUNPOW g n x) /\ ~P(THE(SOME_FUNPOW g n x))) x
        else NONE``,
    RW_TAC std_ss [SOME_WHILE_def,SOME_ITER]);
@@ -3190,7 +3190,7 @@ val SOME_WHILE_NONE_CASES =
  store_thm
   ("SOME_WHILE_NONE_CASES",
    ``(SOME_WHILE P g x = NONE) =
-       P x /\ ((g x = NONE) \/ ?z. (g x = SOME z) /\ (SOME_WHILE P g z = NONE))``, 
+       P x /\ ((g x = NONE) \/ ?z. (g x = SOME z) /\ (SOME_WHILE P g z = NONE))``,
    RW_TAC (srw_ss()) [Once SOME_WHILE_REC,SOME_BIND_def]
     THEN Cases_on `g x`
     THEN FULL_SIMP_TAC (srw_ss()) []);
@@ -3200,7 +3200,7 @@ val SOME_WHILE_SOME =
   ("SOME_WHILE_SOME",
    ``(?y. SOME_WHILE P g x = SOME y) =
        ?n. IS_SOME(SOME_FUNPOW g n x)
-           /\ 
+           /\
            ~P(THE(SOME_FUNPOW g n x))
            /\
            (SOME_WHILE P g x = SOME_FUNPOW g n x)``,
@@ -3210,8 +3210,8 @@ val SOME_WHILE_SOME_CASES =
  store_thm
   ("SOME_WHILE_SOME_CASES",
    ``(SOME_WHILE P g x = SOME y) =
-       if P x 
-        then (?z. (g x = SOME z) /\ (SOME_WHILE P g z = SOME y)) 
+       if P x
+        then (?z. (g x = SOME z) /\ (SOME_WHILE P g z = SOME y))
         else (x = y)``,
    RW_TAC (srw_ss()) [Once SOME_WHILE_REC,SOME_BIND_def]
     THEN Cases_on `g x`
@@ -3223,9 +3223,9 @@ val SOME_WHILE_LEAST =
    ``(?y. SOME_WHILE P g x = SOME y) =
      (?n. IS_SOME (SOME_FUNPOW g n x) /\ ~P(THE(SOME_FUNPOW g n x)))
      /\
-     (SOME_WHILE P g x = 
-       SOME_FUNPOW 
-        g 
+     (SOME_WHILE P g x =
+       SOME_FUNPOW
+        g
         (LEAST n. IS_SOME(SOME_FUNPOW g n x) /\ ~P(THE(SOME_FUNPOW g n x)))
         x)``,
    RW_TAC std_ss [SOME_WHILE_def,SOME_ITER_LEAST]);
@@ -3234,33 +3234,33 @@ val SOME_WHILE_LEAST =
 Denotational semantics using the built-in WHILE function for While
 ============================================================================ *)
 
-val EVAL_FUN_def = 
+val EVAL_FUN_def =
  Define
   `(EVAL_FUN Skip s = SOME s)
-   /\ 
+   /\
    (EVAL_FUN (GenAssign v e) s = SOME(Update v e s))
-   /\ 
+   /\
    (EVAL_FUN (Dispose v) s = SOME(s \\ v))
-   /\ 
+   /\
    (EVAL_FUN (Seq c1 c2) s = EVAL_FUN c1 s >>= EVAL_FUN c2)
-   /\ 
-   (EVAL_FUN (Cond b c1 c2) s = 
+   /\
+   (EVAL_FUN (Cond b c1 c2) s =
      if beval b s then EVAL_FUN c1 s else EVAL_FUN c2 s)
-   /\ 
+   /\
    (EVAL_FUN (AnWhile b R c) s  = SOME_WHILE (beval b) (EVAL_FUN c) s)
-   /\ 
+   /\
    (EVAL_FUN (Local v c) s =
-     if v IN FDOM s 
+     if v IN FDOM s
       then EVAL_FUN c s >>= (\s'. SOME(s' |+ (v, (s ' v))))
       else EVAL_FUN c s >>= (\s'. SOME(s' \\ v)))
-   /\ 
+   /\
    (EVAL_FUN (AnProc P Q xs f) s = SOME(f s))`;
 
 val EVAL_IMP_EVAL_FUN_LEMMA =
  prove
   (``!c s1 s2.
-     EVAL c s1 s2 
-     ==> 
+     EVAL c s1 s2
+     ==>
      (\c s1 s2. EVAL_FUN c s1 = SOME s2) c s1 s2``,
    IndDefRules.RULE_TAC
     (IndDefRules.derive_mono_strong_induction [] (rules,induction))
@@ -3274,7 +3274,7 @@ val EVAL_EVAL_FUN =
  store_thm
   ("EVAL_EVAL_FUN",
    ``!c s1.
-      (?s2. EVAL c s1 s2) 
+      (?s2. EVAL c s1 s2)
       ==>
       !s2. EVAL c s1 s2 = (SOME s2 = EVAL_FUN c s1)``,
    RW_TAC std_ss []
@@ -3292,8 +3292,8 @@ val Least_AnWhile_LEMMA =
             /\
             (!m. IS_SOME(SOME_FUNPOW f m s1) /\ ~beval b (THE(SOME_FUNPOW f m s1)) ==> n <= m)
             /\
-            (SOME_FUNPOW f n s1 = SOME s2) 
-            ==> 
+            (SOME_FUNPOW f n s1 = SOME s2)
+            ==>
             EVAL (AnWhile b R c) s1 s2``,
    STRIP_TAC THEN STRIP_TAC THEN STRIP_TAC
     THEN Induct
@@ -3310,7 +3310,7 @@ val Least_AnWhile_LEMMA =
        THEN `(!m.
                IS_SOME (SOME_FUNPOW f m x) /\
                ~beval b (THE (SOME_FUNPOW f m x)) ==>
-               n <= m) ==> EVAL (AnWhile b R c) x s2` 
+               n <= m) ==> EVAL (AnWhile b R c) x s2`
              by METIS_TAC[option_CLAUSES]
        THEN `!m. IS_SOME (SOME_FUNPOW f (SUC m) s1) /\
             ~beval b (THE (SOME_FUNPOW f (SUC m) s1)) ==>
@@ -3327,15 +3327,15 @@ val LEAST_AnWhile =
            !b s1 s2.
             (?n. IS_SOME(SOME_FUNPOW f n s1) /\ ~beval b (THE(SOME_FUNPOW f n s1)))
             /\
-            (SOME_FUNPOW f 
-              (LEAST n. IS_SOME(SOME_FUNPOW f n s1) /\ ~beval b (THE(SOME_FUNPOW f n s1))) 
-              s1 = 
-             SOME s2) 
-            ==> 
+            (SOME_FUNPOW f
+              (LEAST n. IS_SOME(SOME_FUNPOW f n s1) /\ ~beval b (THE(SOME_FUNPOW f n s1)))
+              s1 =
+             SOME s2)
+            ==>
             EVAL (AnWhile b R c) s1 s2``,
    REPEAT STRIP_TAC
     THEN ASSUM_LIST
-          (fn thl=> 
+          (fn thl=>
             ASSUME_TAC
              (SIMP_RULE (srw_ss()) thl
               (Q.SPECL
@@ -3361,11 +3361,11 @@ val EVAL_FUN_IMP_EVAL_LEMMA =
     THEN RW_TAC std_ss
           [EVAL_FUN_def,SOME_BIND_def,rules,
            SKIP_THM,GEN_ASSIGN_THM,DISPOSE_THM,SEQ_THM,
-           IF_T_THM,IF_F_THM,ANWHILE_T_THM, 
+           IF_T_THM,IF_F_THM,ANWHILE_T_THM,
            ANWHILE_F_THM,LOCAL_THM,ANPROC_THM]
     THEN FULL_SIMP_TAC (srw_ss()) []
-    THEN TRY(Cases_on `EVAL_FUN c s1` 
-              THEN FULL_SIMP_TAC (srw_ss()) [] 
+    THEN TRY(Cases_on `EVAL_FUN c s1`
+              THEN FULL_SIMP_TAC (srw_ss()) []
               THEN METIS_TAC[])
     THEN IMP_RES_TAC SOME_WHILE_LEAST
     THEN METIS_TAC[LEAST_AnWhile]);
@@ -3376,28 +3376,28 @@ val EVAL_FUN_EVAL =
    ``!c s1 s2. (EVAL_FUN c s1 = SOME s2) =  EVAL c s1 s2``,
    METIS_TAC[EVAL_FUN_IMP_EVAL_LEMMA,EVAL_IMP_EVAL_FUN_LEMMA]);
 
-val EVAL_FUN = 
+val EVAL_FUN =
  store_thm
   ("EVAL_FUN",
    ``(EVAL_FUN Skip s = SOME s)
-     /\ 
+     /\
      (EVAL_FUN (GenAssign v e) s = SOME(Update v e s))
-     /\ 
+     /\
      (EVAL_FUN (Dispose v) s = SOME(s \\ v))
-     /\ 
+     /\
      (EVAL_FUN (Seq c1 c2) s = EVAL_FUN c1 s >>= EVAL_FUN c2)
-     /\ 
-     (EVAL_FUN (Cond b c1 c2) s = 
+     /\
+     (EVAL_FUN (Cond b c1 c2) s =
        if beval b s then EVAL_FUN c1 s else EVAL_FUN c2 s)
-     /\ 
-     (EVAL_FUN (AnWhile b R c) s  = 
+     /\
+     (EVAL_FUN (AnWhile b R c) s  =
        if beval b s then EVAL_FUN c s >>= EVAL_FUN (AnWhile b R c) else SOME s)
-     /\ 
+     /\
      (EVAL_FUN (Local v c) s =
-       if v IN FDOM s 
+       if v IN FDOM s
         then EVAL_FUN c s >>= (\s'. SOME(s' |+ (v, (s ' v))))
         else EVAL_FUN c s >>= (\s'. SOME(s' \\ v)))
-     /\ 
+     /\
      (EVAL_FUN (AnProc P Q xs f) s = SOME(f s))``,
    RW_TAC std_ss [EVAL_FUN_def,SOME_WHILE_REC]
     THEN RW_TAC (srw_ss()) [SOME_BIND_def]
@@ -3405,7 +3405,7 @@ val EVAL_FUN =
     THEN FULL_SIMP_TAC (srw_ss()) []
     THEN METIS_TAC[EVAL_FUN_def]);
 
-val _ = 
+val _ =
  computeLib.add_persistent_funs
   [("EVAL_FUN",     EVAL_FUN)];
 
@@ -3424,26 +3424,26 @@ val EVAL_CONT = (* This proof should be much easier -- maybe missing key lemmas 
  store_thm
   ("EVAL_CONT",
    ``(!cont. EVAL_CONT Skip cont s = cont s)
-     /\ 
+     /\
      (!cont. EVAL_CONT (GenAssign v e) cont s = cont(Update v e s))
-     /\ 
+     /\
      (!cont. EVAL_CONT (Dispose v) cont s = cont(s \\ v))
-     /\ 
+     /\
      (!cont. EVAL_CONT (Seq c1 c2) cont s = EVAL_CONT c1 (EVAL_CONT c2 cont) s)
-     /\ 
-     (!cont. EVAL_CONT (Cond b c1 c2) cont s = 
+     /\
+     (!cont. EVAL_CONT (Cond b c1 c2) cont s =
        if beval b s then EVAL_CONT c1 cont s else EVAL_CONT c2 cont s)
-     /\ 
-     (!cont. EVAL_CONT (AnWhile b R c) cont s = 
-       if beval b s 
-        then EVAL_CONT c (EVAL_CONT (AnWhile b R c) cont) s 
+     /\
+     (!cont. EVAL_CONT (AnWhile b R c) cont s =
+       if beval b s
+        then EVAL_CONT c (EVAL_CONT (AnWhile b R c) cont) s
         else cont s)
-     /\ 
+     /\
      (!cont. EVAL_CONT (Local v c) cont s =
-       if v IN FDOM s 
+       if v IN FDOM s
         then EVAL_CONT c (\s'. cont (s' |+ (v, (s ' v)))) s
         else EVAL_CONT c (\s'. cont (s' \\ v)) s)
-     /\ 
+     /\
      (!cont. EVAL_CONT (AnProc P Q xs f) cont s = cont(f s))``,
    RW_TAC std_ss [EVAL_CONT_def,EVAL_FUN_def,SOME_MONAD_LAWS]
     THENL
@@ -3460,8 +3460,8 @@ val EVAL_CONT = (* This proof should be much easier -- maybe missing key lemmas 
          THEN FULL_SIMP_TAC (srw_ss())[]
          THEN Cases_on `EVAL_FUN (AnWhile b R c) x`
          THEN FULL_SIMP_TAC (srw_ss())[EVAL_FUN_def]
-         THEN `(EVAL_FUN c s = NONE) \/ 
-               ?z. (EVAL_FUN c s = SOME z) /\ (SOME_WHILE  (beval b) (EVAL_FUN c) z = NONE)` 
+         THEN `(EVAL_FUN c s = NONE) \/
+               ?z. (EVAL_FUN c s = SOME z) /\ (SOME_WHILE  (beval b) (EVAL_FUN c) z = NONE)`
                by METIS_TAC[SOME_WHILE_NONE_CASES]
          THENL
           [METIS_TAC[option_CLAUSES],
@@ -3528,7 +3528,7 @@ val SKIP_SP_EX =
    ``!s0 P.
       SP (\s. (s = s0) /\ P s0) Skip = \s'. (s' = s0) /\ P s0``,
    RW_TAC std_ss [SKIP_SP]
-    THEN METIS_TAC[]); 
+    THEN METIS_TAC[]);
 
 val GEN_ASSIGN_SP =
  store_thm
@@ -3544,7 +3544,7 @@ val GEN_ASSIGN_SP_EX =
       SP (\s. (s = s0) /\ P s0) (GenAssign v e) =
        \s'. (s' = Update v e s0) /\ P s0``,
    RW_TAC std_ss [GEN_ASSIGN_SP]
-    THEN METIS_TAC[]); 
+    THEN METIS_TAC[]);
 
 val ASSIGN_SP_EX =
  store_thm
@@ -3553,7 +3553,7 @@ val ASSIGN_SP_EX =
       SP (\s. (s = s0) /\ P s0) (Assign v e) =
        \s'. (s' = s0 |+ (v, Scalar (neval e s0))) /\ P s0``,
    RW_TAC std_ss [GEN_ASSIGN_SP,Assign_def,UpdateCases]
-    THEN METIS_TAC[]); 
+    THEN METIS_TAC[]);
 
 val ARRAY_ASSIGN_SP_EX =
  store_thm
@@ -3562,7 +3562,7 @@ val ARRAY_ASSIGN_SP_EX =
       SP (\s. (s = s0) /\ P s0) (ArrayAssign v e1 e2) =
        \s'. (s' = s0 |+ (v, Array (aeval (ArrUpdate (ArrVar v) e1 e2) s0))) /\ P s0``,
    RW_TAC std_ss [GEN_ASSIGN_SP,ArrayAssign_def,UpdateCases]
-    THEN METIS_TAC[]); 
+    THEN METIS_TAC[]);
 
 val DISPOSE_SP =
  store_thm
@@ -3578,7 +3578,7 @@ val DISPOSE_SP_EX =
       SP (\s. (s = s0) /\ P s0) (Dispose v) =
        \s'. (s' = s0 \\ v) /\ P s0``,
    RW_TAC std_ss [DISPOSE_SP]
-    THEN METIS_TAC[]); 
+    THEN METIS_TAC[]);
 
 val SEQ_SP =
  store_thm
@@ -3604,11 +3604,11 @@ val IF_SP_EX =
       SP (\s. (s = s0) /\ P s0) (Cond b c1 c2) =
        \s'. SP (\s. (s = s0) /\ (P s0 /\  beval b s0)) c1 s' \/
             SP (\s. (s = s0) /\ (P s0 /\ ~beval b s0)) c2 s'``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [IF_SP,
-     METIS_PROVE [] 
+     METIS_PROVE []
       ``(\s. ((s = s0) /\ P s0) /\ beval b s) = (\s. (s = s0) /\ P s0 /\ beval b s0)``,
-     METIS_PROVE [] 
+     METIS_PROVE []
       ``(\s. ((s = s0) /\ P s0) /\ ~beval b s) = (\s. (s = s0) /\ P s0 /\ ~beval b s0)``]);
 
 val ANWHILE_SP =
@@ -3663,19 +3663,19 @@ val WHILE_SP_EX =
   ("WHILE_SP_EX",
    ``!s0 P b R c.
       SP (\s. (s = s0) /\ P s0) (AnWhile b R c) =
-       \s'. SP (SP (\s. (s = s0) /\ (P s0 /\  beval b s0)) c) (AnWhile b R c) s' 
+       \s'. SP (SP (\s. (s = s0) /\ (P s0 /\  beval b s0)) c) (AnWhile b R c) s'
             \/
             ((s' = s0) /\ (P s0 /\ ~beval b s0))``,
-   RW_TAC std_ss 
+   RW_TAC std_ss
     [Once ANWHILE_SP,
-     METIS_PROVE [] 
+     METIS_PROVE []
       ``(\s. ((s = s0) /\ P s0) /\ beval b s) = (\s. (s = s0) /\ P s0 /\ beval b s0)``]
     THEN METIS_TAC[]);
 
 val LOCAL_SP =
  store_thm
   ("LOCAL_SP",
-   ``SP P (Local v c) = 
+   ``SP P (Local v c) =
       \s''. (?s' x. SP (\s. P s /\ v IN FDOM s /\ (s ' v = x)) c s' /\ (s'' = s' |+ (v,x)))
             \/
             (?s'.   SP (\s. P s /\ ~(v IN FDOM s)) c s'             /\ (s'' = s' \\ v))``,
@@ -3684,7 +3684,7 @@ val LOCAL_SP =
     THEN EQ_TAC
     THEN RW_TAC (srw_ss()) []
     THENL
-     [Cases_on 
+     [Cases_on
        `?s'. (?s. (P s /\ ~(v IN FDOM s)) /\ (SOME s' = EVAL_FUN c s)) /\
              (f = s' \\ v)`
        THEN ASM_REWRITE_TAC[]
@@ -3707,10 +3707,10 @@ val LOCAL_SP_EX =
   ("LOCAL_SP_EX",
    ``!mkstate x P v c.
       SP (\s. (s = s0) /\ P s0) (Local v c) =
-       \s''. (?s'. SP(\s. (s = s0) /\ (P s0 /\ v IN FDOM s)) c s' 
-                   /\ (s'' = s' |+ (v,(s0 ' v)))) 
+       \s''. (?s'. SP(\s. (s = s0) /\ (P s0 /\ v IN FDOM s)) c s'
+                   /\ (s'' = s' |+ (v,(s0 ' v))))
              \/
-             (?s'. SP (\s. (s = s0) /\ (P s0 /\ ~(v IN FDOM s))) c s' 
+             (?s'. SP (\s. (s = s0) /\ (P s0 /\ ~(v IN FDOM s))) c s'
                    /\ (s'' = s' \\ v))``,
    RW_TAC std_ss [LOCAL_SP]
     THEN CONV_TAC FUN_EQ_CONV
@@ -3727,7 +3727,7 @@ val ANPROC_SP =
 val ANPROC_SP_EX =
  store_thm
   ("ANPROC_SP_EX",
-   ``SP (\s. (s = s0) /\ P s0) (AnProc P' Q xs f) = 
+   ``SP (\s. (s = s0) /\ P s0) (AnProc P' Q xs f) =
       \s'. (s' = f s0) /\ P s0``,
    RW_TAC std_ss [ANPROC_SP]
     THEN METIS_TAC[]);
@@ -3810,8 +3810,8 @@ val ANWHILE_WLP =
 val LOCAL_WLP =
  store_thm
   ("LOCAL_WLP",
-   ``WLP (Local v c) Q = 
-      \s. if v IN FDOM s 
+   ``WLP (Local v c) Q =
+      \s. if v IN FDOM s
            then WLP c (\s'. Q(s' |+ (v, s ' v))) s
            else WLP c (\s'. Q(s' \\ v)) s``,
    CONV_TAC FUN_EQ_CONV
@@ -3830,9 +3830,9 @@ val ANPROC_WLP =
 
 val LocP_def =
  Define
-  `LocP (v:string) (P:(state->bool)->(state->bool)) (Q:state->bool) = 
-    \s:state. 
-    if v IN FDOM s 
+  `LocP (v:string) (P:(state->bool)->(state->bool)) (Q:state->bool) =
+    \s:state.
+    if v IN FDOM s
      then P (\s'. Q(s' |+ (v, s ' v))) s
      else P (\s'. Q(s' \\ v)) s`;
 
@@ -3844,13 +3844,13 @@ val WVC_def =
    /\
    (WVC(Dispose v, Q) = ((\s. Q(s \\ v)), \s. T))
    /\
-   (WVC(Seq c1 c2, Q) = 
+   (WVC(Seq c1 c2, Q) =
     ((\s. FST (WVC(c1, FST(WVC(c2, Q)))) s),
      \s. SND (WVC(c1, FST(WVC(c2, Q)))) s /\ SND (WVC(c2, Q)) s))
    /\
-   (WVC(Cond b c1 c2, Q) = 
-    ((\s. (beval b s /\ FST(WVC(c1,Q)) s) 
-          \/ 
+   (WVC(Cond b c1 c2, Q) =
+    ((\s. (beval b s /\ FST(WVC(c1,Q)) s)
+          \/
           (~(beval b s) /\ FST(WVC(c2,Q)) s)),
      \s. SND (WVC(c1,Q)) s /\ SND (WVC(c2,Q)) s))
    /\
@@ -3860,8 +3860,8 @@ val WVC_def =
          (R s /\ beval b s ==> FST (WVC(c,R)) s) /\
          SND (WVC(c,R)) s))
    /\
-   (WVC(Local v c, Q) = 
-     ((\s. if v IN FDOM s 
+   (WVC(Local v c, Q) =
+     ((\s. if v IN FDOM s
             then FST (WVC(c, \s'. Q (s' |+ (v,s ' v)))) s
             else FST (WVC(c, \s'. Q (s' \\ v))) s),
       \s. (SND (WVC(c,Q)) s) /\ INDEPENDENT Q v))
@@ -3881,13 +3881,13 @@ val AWLP =
     /\
     (AWLP (Seq c1 c2) Q = AWLP c1 (AWLP c2 Q))
     /\
-    (AWLP (Cond b c1 c2) Q = 
+    (AWLP (Cond b c1 c2) Q =
       \s. (beval b s /\ AWLP c1 Q s) \/ (~(beval b s) /\ AWLP c2 Q s))
     /\
     (AWLP (AnWhile b R c) Q = R)
     /\
-    (AWLP (Local v c) Q = 
-      \s. if v IN FDOM s 
+    (AWLP (Local v c) Q =
+      \s. if v IN FDOM s
            then AWLP c (\s'. Q (s' |+ (v,s ' v))) s
            else AWLP c (\s'. Q (s' \\ v))  s)
     /\
@@ -3911,7 +3911,7 @@ val WLVC =
     /\
     (WLVC (Cond b c1 c2) Q = WLVC c1 Q /\ WLVC c2 Q)
     /\
-    (WLVC (AnWhile b R c) Q = 
+    (WLVC (AnWhile b R c) Q =
       (!s. R s /\ ~(beval b s) ==> Q s)     /\
       (!s. R s /\ beval b s ==> AWLP c R s) /\
       WLVC c R)
@@ -3932,21 +3932,21 @@ val VALID_def =
 
 val _= overload_on("|=", ``VALID``);
 
-val PRE_DERIVED_ANWHILE_RULE = 
+val PRE_DERIVED_ANWHILE_RULE =
  store_thm
  ("PRE_DERIVED_ANWHILE_RULE",
-  ``!P R Q S b c. 
+  ``!P R Q S b c.
      (|= \s. P s ==> R s)
-     /\ 
+     /\
      (|= \s. R s /\ beval b s ==> S s)
-     /\ 
+     /\
      SPEC S c R
      /\
-     (|= \s. R s /\ ~(beval b s) ==> Q s) 
-     ==> 
+     (|= \s. R s /\ ~(beval b s) ==> Q s)
+     ==>
      SPEC P (AnWhile b R c) Q``,
   RW_TAC std_ss [SPEC_def,VALID_def]
-   THEN `!s1 s2. (R s1 /\ beval b s1) /\ EVAL c s1 s2 ==> R s2` 
+   THEN `!s1 s2. (R s1 /\ beval b s1) /\ EVAL c s1 s2 ==> R s2`
          by METIS_TAC[]
    THEN IMP_RES_TAC (SIMP_RULE std_ss [SPEC_def] ANWHILE_RULE)
    THEN METIS_TAC[]);
@@ -3960,7 +3960,7 @@ val INDEPENDENT_FUPDATE =
 val INDEPENDENT_FUPDATE_ABS =
  store_thm
   ("INDEPENDENT_FUPDATE_ABS",
-   ``!Q v. INDEPENDENT Q v 
+   ``!Q v. INDEPENDENT Q v
            ==> ((\s. Q(s |+ (v,e))) = Q) /\ ((\s. Q(s \\ v)) = Q)``,
    RW_TAC std_ss []
     THEN CONV_TAC FUN_EQ_CONV
@@ -3980,17 +3980,17 @@ val WVC =
    ``!c Q. |= (SND (WVC(c, Q))) ==> SPEC (FST (WVC(c,Q))) c Q``,
    Induct
     THENL
-     [SIMP_TAC std_ss 
+     [SIMP_TAC std_ss
        [SPEC_def,VALID_def,WVC_def,SKIP_THM],
-      SIMP_TAC std_ss 
+      SIMP_TAC std_ss
        [SPEC_def,VALID_def,WVC_def,GEN_ASSIGN_THM],
-      SIMP_TAC std_ss 
+      SIMP_TAC std_ss
        [SPEC_def,VALID_def,WVC_def,DISPOSE_THM],
       FULL_REWRITE_TAC
-       [SPEC_def,VALID_def,WVC_def,SEQ_THM] 
+       [SPEC_def,VALID_def,WVC_def,SEQ_THM]
        THEN METIS_TAC[],
       FULL_REWRITE_TAC
-       [SPEC_def,VALID_def,WVC_def,IF_THM] 
+       [SPEC_def,VALID_def,WVC_def,IF_THM]
        THEN METIS_TAC[],
       FULL_REWRITE_TAC [WVC_def,VALID_def]
        THEN RW_TAC std_ss []
@@ -3998,7 +3998,7 @@ val WVC =
        THEN IMP_RES_TAC(SIMP_RULE std_ss [VALID_def]PRE_DERIVED_ANWHILE_RULE)
        THEN METIS_TAC[],
       FULL_REWRITE_TAC
-       [SPEC_def,VALID_def,WVC_def,LOCAL_THM] 
+       [SPEC_def,VALID_def,WVC_def,LOCAL_THM]
        THEN Cases_on `s IN FDOM s1`
        THEN FULL_SIMP_TAC std_ss []
        THEN RW_TAC std_ss []
@@ -4014,7 +4014,7 @@ val WVC =
           THEN `Q (s3 \\ s) = Q s3` by METIS_TAC[INDEPENDENT_FUPDATE]
           THEN RW_TAC std_ss []
           THEN METIS_TAC[]],
-      SIMP_TAC std_ss 
+      SIMP_TAC std_ss
        [SPEC_def,VALID_def,WVC_def,ANPROC_THM]]);
 
 val WVLC_AWLP_SPEC =
@@ -4042,27 +4042,27 @@ val LocalFree_def =
    /\
    (LocalFree (AnProc P Q xs f) = T)`;
 
-(* Old version 
+(* Old version
 val ASP_SVC_def =
  Define
   `(ASP_SVC(P, Skip)= (P, \s. T))
    /\
-   (ASP_SVC(P, GenAssign v e) = 
+   (ASP_SVC(P, GenAssign v e) =
      ((\s'. ?s. P s /\ (s' = Update v e s)), \s. T))
    /\
-   (ASP_SVC(P, Dispose v) = 
+   (ASP_SVC(P, Dispose v) =
      ((\s'. ?s. P s /\ (s' = s \\ v)), \s. T))
    /\
-   (ASP_SVC(P, Seq c1 c2) = 
+   (ASP_SVC(P, Seq c1 c2) =
     (FST(ASP_SVC(FST(ASP_SVC(P, c1)), c2)),
      \s. SND (ASP_SVC(P, c1)) s /\ SND (ASP_SVC(FST(ASP_SVC(P, c1)), c2)) s))
    /\
-   (ASP_SVC(P, Cond b c1 c2) = 
-    ((\s'. FST (ASP_SVC((\s. P s /\ beval b s), c1)) s' 
-           \/ 
+   (ASP_SVC(P, Cond b c1 c2) =
+    ((\s'. FST (ASP_SVC((\s. P s /\ beval b s), c1)) s'
+           \/
            FST (ASP_SVC((\s. P s /\ ~(beval b s)), c2)) s'),
-     \s'. SND (ASP_SVC((\s. P s /\ beval b s),c1)) s' 
-          /\ 
+     \s'. SND (ASP_SVC((\s. P s /\ beval b s),c1)) s'
+          /\
           SND (ASP_SVC((\s. P s /\ ~(beval b s)),c2)) s'))
    /\
    (ASP_SVC(P, AnWhile b R c) =
@@ -4071,7 +4071,7 @@ val ASP_SVC_def =
          (FST(ASP_SVC ((\s. R s /\ beval b s),c)) s ==> R s) /\
          (SND(ASP_SVC ((\s. R s /\ beval b s),c)) s)))
    /\
-   (ASP_SVC(P, AnProc P' Q xs f) = 
+   (ASP_SVC(P, AnProc P' Q xs f) =
      (Q, \s. (P s ==> P' s) /\ (P' s ==> Q(f s))))`;
 *)
 
@@ -4080,16 +4080,16 @@ val ASP_SVC_def =
 (* Another derived While rule                                                *)
 (*---------------------------------------------------------------------------*)
 
-val POST_DERIVED_ANWHILE_RULE = 
+val POST_DERIVED_ANWHILE_RULE =
  store_thm
   ("POST_DERIVED_ANWHILE_RULE",
-   ``!P Q R b c. 
+   ``!P Q R b c.
       (|= \s. P s ==> R s)
-      /\ 
+      /\
       (|= \s. Q s ==> R s)
       /\
       SPEC (\s. R s /\ beval b s) c Q
-      ==> 
+      ==>
       SPEC P (AnWhile b R c) (\s. R s /\ ~(beval b s))``,
  RW_TAC std_ss [SPEC_def,VALID_def]
   THEN `!s1 s2. (R s1 /\ beval b s1) /\ EVAL c s1 s2 ==> R s2` by METIS_TAC[]
@@ -4117,11 +4117,11 @@ val ASP_SVC =
        THEN FULL_SIMP_TAC std_ss []
        THENL
         [ASSUM_LIST
-          (fn thl => 
+          (fn thl =>
             ASSUME_TAC(SIMP_RULE std_ss[] (Q.ISPEC `\s. P s /\ beval b s` (el 9 thl))))
           THEN METIS_TAC[],
          ASSUM_LIST
-          (fn thl => 
+          (fn thl =>
             ASSUME_TAC(SIMP_RULE std_ss[] (Q.ISPEC `\s. P s /\ ~(beval b s)` (el 8 thl))))
           THEN METIS_TAC[]],
       FULL_SIMP_TAC std_ss [ASP_SVC_def,VALID_def]
@@ -4137,22 +4137,22 @@ val ASP_SVC_def =
  Define
   `(ASP_SVC(P, Skip)= (P, T))
    /\
-   (ASP_SVC(P, GenAssign v e) = 
+   (ASP_SVC(P, GenAssign v e) =
      ((\s'. ?s. P s /\ (s' = Update v e s)), T))
    /\
-   (ASP_SVC(P, Dispose v) = 
+   (ASP_SVC(P, Dispose v) =
      ((\s'. ?s. P s /\ (s' = s \\ v)), T))
    /\
-   (ASP_SVC(P, Seq c1 c2) = 
+   (ASP_SVC(P, Seq c1 c2) =
     (FST(ASP_SVC(FST(ASP_SVC(P, c1)), c2)),
      SND (ASP_SVC(P, c1)) /\ SND (ASP_SVC(FST(ASP_SVC(P, c1)), c2))))
    /\
-   (ASP_SVC(P, Cond b c1 c2) = 
-    ((\s'. FST (ASP_SVC((\s. P s /\ beval b s), c1)) s' 
-           \/ 
+   (ASP_SVC(P, Cond b c1 c2) =
+    ((\s'. FST (ASP_SVC((\s. P s /\ beval b s), c1)) s'
+           \/
            FST (ASP_SVC((\s. P s /\ ~(beval b s)), c2)) s'),
      SND (ASP_SVC((\s. P s /\ beval b s),c1))
-     /\ 
+     /\
      SND (ASP_SVC((\s. P s /\ ~(beval b s)),c2))))
    /\
    (ASP_SVC(P, AnWhile b R c) =
@@ -4161,7 +4161,7 @@ val ASP_SVC_def =
      (!s. FST(ASP_SVC ((\s. R s /\ beval b s),c)) s ==> R s) /\
      SND(ASP_SVC ((\s. R s /\ beval b s),c))))
    /\
-   (ASP_SVC(P, AnProc P' Q xs f) = 
+   (ASP_SVC(P, AnProc P' Q xs f) =
      (Q, (!s. P s ==> P' s) /\ (!s. P' s ==> Q(f s))))`;
 
 val ASP_def = Define `ASP P c = FST(ASP_SVC(P,c))`;
@@ -4179,7 +4179,7 @@ val ASP =
     /\
     (ASP P (Seq c1 c2) = ASP (ASP P c1) c2)
     /\
-    (ASP P (Cond b c1 c2) = 
+    (ASP P (Cond b c1 c2) =
       \s'. ASP (\s. P s /\ beval b s) c1 s' \/ ASP (\s. P s /\ ~(beval b s)) c2 s')
     /\
     (ASP P (AnWhile b R c) = \s. R s /\ ~(beval b s))
@@ -4198,10 +4198,10 @@ val SVC =
     /\
     (SVC P (Seq c1 c2) = SVC P c1 /\ SVC (ASP P c1) c2)
     /\
-    (SVC P (Cond b c1 c2) = 
+    (SVC P (Cond b c1 c2) =
       SVC (\s. P s /\ beval b s) c1 /\ SVC (\s. P s /\ ~(beval b s)) c2)
     /\
-    (SVC P (AnWhile b R c) = 
+    (SVC P (AnWhile b R c) =
       (!s. P s ==> R s)                             /\
       (!s. ASP (\s. R s /\ beval b s) c s ==> R s) /\
       SVC (\s. R s /\ beval b s) c)
@@ -4213,16 +4213,16 @@ val SVC =
 (* Another derived While rule                                                *)
 (*---------------------------------------------------------------------------*)
 
-val POST_DERIVED_ANWHILE_RULE = 
+val POST_DERIVED_ANWHILE_RULE =
  store_thm
   ("POST_DERIVED_ANWHILE_RULE",
-   ``!P Q R b c. 
+   ``!P Q R b c.
       (!s. P s ==> R s)
-      /\ 
+      /\
       (!s. Q s ==> R s)
       /\
       SPEC (\s. R s /\ beval b s) c Q
-      ==> 
+      ==>
       SPEC P (AnWhile b R c) (\s. R s /\ ~(beval b s))``,
  RW_TAC std_ss [SPEC_def]
   THEN `!s1 s2. (R s1 /\ beval b s1) /\ EVAL c s1 s2 ==> R s2` by METIS_TAC[]
@@ -4247,11 +4247,11 @@ val ASP_SVC =
        THEN RW_TAC std_ss []
        THENL
         [ASSUM_LIST
-          (fn thl => 
+          (fn thl =>
             ASSUME_TAC(SIMP_RULE std_ss[] (Q.ISPEC `\s. P s /\ beval b s` (el 9 thl))))
           THEN METIS_TAC[],
          ASSUM_LIST
-          (fn thl => 
+          (fn thl =>
             ASSUME_TAC(SIMP_RULE std_ss[] (Q.ISPEC `\s. P s /\ ~(beval b s)` (el 8 thl))))
           THEN METIS_TAC[]],
       FULL_SIMP_TAC std_ss [ASP_SVC_def]
@@ -4279,7 +4279,7 @@ val SVLC_ASP_SPEC =
       FULL_SIMP_TAC std_ss [ASP,SVC,ASP_SVC_def,ASP_SVC,SPEC_def,GEN_ASSIGN_THM],
       FULL_SIMP_TAC std_ss [ASP,SVC,ASP_SVC_def,ASP_SVC,SPEC_def,DISPOSE_THM],
       FULL_SIMP_TAC std_ss [ASP,SVC,ASP_SVC_def,ASP_SVC,SPEC_def,SEQ_THM]
-       
+
 *)
 
 (* Following stuff on symbolic execution and strongest liberal postconditions *)
@@ -4297,7 +4297,7 @@ val GEN_ASSIGN_EXEC_SP =
   ("GEN_ASSIGN_EXEC_SP",
    ``!l. DISTINCT_VARS l
          ==>
-         !v e. SP (\s. s = FEMPTY |++ l) (GenAssign v e) = 
+         !v e. SP (\s. s = FEMPTY |++ l) (GenAssign v e) =
                 \s. s = FEMPTY |++ (UPDATE_LIST l (v, naeval e (FEMPTY |++ l)))``,
    RW_TAC std_ss [SP_def,EVAL_FUN_def,Update_def]
     THEN CONV_TAC (X_FUN_EQ_CONV ``s':state``)
@@ -4319,7 +4319,7 @@ val SEQ_EXEC_SP =
          ==>
          !c1 c2. STRAIGHT c1 /\ STRAIGHT c2 /\ VARS_IN c1 l /\ VARS_IN c2 l
                  ==>
-                 (SP (\s. s = FEMPTY |++ l) (Seq c1 c2) = 
+                 (SP (\s. s = FEMPTY |++ l) (Seq c1 c2) =
                    \s. s = FEMPTY |++ (STRAIGHT_RUN c2 (STRAIGHT_RUN c1 l)))``,
    RW_TAC std_ss [SP_def,EVAL_FUN_EVAL]
     THEN CONV_TAC (X_FUN_EQ_CONV ``s':state``)
@@ -4342,7 +4342,7 @@ val IF_EXEC_SP =
          ==>
          !c1 c2. STRAIGHT c1 /\ STRAIGHT c2 /\ VARS_IN c1 l /\ VARS_IN c2 l
                  ==>
-                 (SP (\s. s = FEMPTY |++ l) (Cond b c1 c2) = 
+                 (SP (\s. s = FEMPTY |++ l) (Cond b c1 c2) =
                    \s. s = FEMPTY |++ ZIP_LIST (beval b (FEMPTY |++ l)) (STRAIGHT_RUN c1 l) (STRAIGHT_RUN c2 l))``,
    RW_TAC std_ss [SP_def,EVAL_FUN_EVAL]
     THEN CONV_TAC (X_FUN_EQ_CONV ``s':state``)
@@ -4416,24 +4416,24 @@ val VC_RUN_def =
  Define
   `(VC_RUN Skip lP = (lP, T))
    /\
-   (VC_RUN (GenAssign v e) lP = 
-     ((UPDATE_LIST (FST lP) (v, naeval e (FEMPTY |++ (FST lP))), 
-       \s'. ?s. (SND lP) s /\ (s' = Update v e s)), 
+   (VC_RUN (GenAssign v e) lP =
+     ((UPDATE_LIST (FST lP) (v, naeval e (FEMPTY |++ (FST lP))),
+       \s'. ?s. (SND lP) s /\ (s' = Update v e s)),
       T))
    /\
-   (VC_RUN (Seq c1 c2) lP = 
+   (VC_RUN (Seq c1 c2) lP =
      (FST(VC_RUN c2 (FST(VC_RUN c1 lP))),
       SND (VC_RUN c1 lP) /\ SND (VC_RUN c2 (FST(VC_RUN c1 lP)))))
    /\
-   (VC_RUN (Cond b c1 c2) lP = 
-    ((ZIP_LIST 
-       (beval b (FEMPTY |++ (FST lP))) 
+   (VC_RUN (Cond b c1 c2) lP =
+    ((ZIP_LIST
+       (beval b (FEMPTY |++ (FST lP)))
        (FST(FST(VC_RUN c1 ((FST lP), \s. (SND lP) s /\ beval b s))))
        (FST(FST(VC_RUN c2 ((FST lP), \s. (SND lP) s /\ ~(beval b s))))),
        \s'. SND (FST(VC_RUN c1 ((FST lP), \s. (SND lP) s /\ beval b s))) s'
             /\
             SND (FST(VC_RUN c2 ((FST lP), \s. (SND lP) s /\ ~(beval b s)))) s'),
-     SND (VC_RUN c1 ((FST lP), \s. (SND lP) s /\ beval b s)) 
+     SND (VC_RUN c1 ((FST lP), \s. (SND lP) s /\ beval b s))
      /\
      SND (VC_RUN c2 ((FST lP), \s. (SND lP) s /\ ~(beval b s)))))
    /\
@@ -4443,8 +4443,8 @@ val VC_RUN_def =
        (((@l'. newlist l'), \s. R s /\ ~(beval b s)),
         (?l'. newlist l')
         /\
-        (!s. SND lP s ==> R s) 
-        /\ 
+        (!s. SND lP s ==> R s)
+        /\
         SPEC (\s. R s /\ beval b s) c R
         /\
         SND (VC_RUN c ((FST lP), \s. SND lP s /\ beval b s))))`;
@@ -4459,24 +4459,24 @@ val VC_RUN =
   ("VC_RUN",
    ``(VC_RUN Skip (l,P) = ((l,P), T))
      /\
-     (VC_RUN (GenAssign v e) (l,P) = 
-       ((UPDATE_LIST l (v, naeval e (FEMPTY |++ l)), 
-         \s'. ?s. P s /\ (s' = Update v e s)), 
+     (VC_RUN (GenAssign v e) (l,P) =
+       ((UPDATE_LIST l (v, naeval e (FEMPTY |++ l)),
+         \s'. ?s. P s /\ (s' = Update v e s)),
         T))
      /\
-     (VC_RUN (Seq c1 c2) (l,P) = 
+     (VC_RUN (Seq c1 c2) (l,P) =
        (FST(VC_RUN c2 (FST(VC_RUN c1 (l,P)))),
         SND (VC_RUN c1 (l,P)) /\ SND (VC_RUN c2 (FST(VC_RUN c1 (l,P))))))
      /\
-     (VC_RUN (Cond b c1 c2) (l,P) = 
-      ((ZIP_LIST 
-         (beval b (FEMPTY |++ l)) 
+     (VC_RUN (Cond b c1 c2) (l,P) =
+      ((ZIP_LIST
+         (beval b (FEMPTY |++ l))
          (FST(FST(VC_RUN c1 (l, \s. P s /\ beval b s))))
          (FST(FST(VC_RUN c2 (l, \s. P s /\ ~(beval b s))))),
         \s'. SND (FST(VC_RUN c1 (l, \s. P s /\ beval b s))) s'
              /\
              SND (FST(VC_RUN c2 (l, \s. P s /\ ~(beval b s)))) s'),
-       SND (VC_RUN c1 (l, \s. P s /\ beval b s)) 
+       SND (VC_RUN c1 (l, \s. P s /\ beval b s))
        /\
        SND (VC_RUN c2 (l, \s. P s /\ ~(beval b s)))))
      /\
@@ -4486,8 +4486,8 @@ val VC_RUN =
        (((@l'. newlist l'), \s. R s /\ ~(beval b s)),
         (?l'. newlist l')
         /\
-        (!s. P s ==> R s) 
-        /\ 
+        (!s. P s ==> R s)
+        /\
         SPEC (\s. R s /\ beval b s) c R
         /\
         SND (VC_RUN c (l, \s. P s /\ beval b s))))``,
@@ -4535,12 +4535,12 @@ val VC_CHECK_def =
 
 val VARS_VC_RUN =
  prove
-  (``!c l. VC_CHECK c /\ VARS_IN c l 
+  (``!c l. VC_CHECK c /\ VARS_IN c l
            ==> !P. SND(VC_RUN c (l,P))
                    ==>
                    (MAP FST (FST(FST(VC_RUN c (l,P)))) = MAP FST l)``,
    Induct
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [VC_CHECK_def,VARS_def,NOT_IN_EMPTY,IN_SING,VC_RUN_def,
            MAP_FST_UPDATE_LIST,IN_UNION,MAP_FST_ZIP_LIST,SEQ_VARS_IN,IF_VARS_IN]
     THENL
@@ -4554,22 +4554,22 @@ val VARS_VC_RUN =
 
 val VARS_VC_RUN_COR =
  prove
-  (``!c l. VC_CHECK c /\ VARS_IN c l 
-           ==> !P. SND(VC_RUN c (l,P)) 
-                   ==> 
+  (``!c l. VC_CHECK c /\ VARS_IN c l
+           ==> !P. SND(VC_RUN c (l,P))
+                   ==>
                    (LENGTH(FST(FST(VC_RUN c (l,P)))) = LENGTH l)``,
     METIS_TAC[VARS_IN_def,rich_listTheory.LENGTH_MAP,VARS_VC_RUN]);
-     
+
 val VC_RUN_DISTINCT =
  store_thm
   ("VC_RUN_DISTINCT",
-   ``!c l. VC_CHECK c /\ VARS_IN c l /\ DISTINCT_VARS l 
+   ``!c l. VC_CHECK c /\ VARS_IN c l /\ DISTINCT_VARS l
            ==> !P. SND(VC_RUN c (l,P))
                    ==>
                    DISTINCT_VARS(FST(FST(VC_RUN c (l,P))))``,
-   Induct 
+   Induct
     THEN RW_TAC std_ss [rules,VC_RUN_def,VC_CHECK_def]
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [SEQ_THM,IF_THM,rules,GEN_ASSIGN_THM,UpdateCases,
            VC_RUN_def,UPDATE_LIST_FUPDATE,UpdateDISTINCT,ZIP_LIST_DISTINCT]
     THEN FULL_SIMP_TAC std_ss [IF_VARS_IN,SEQ_VARS_IN]
@@ -4616,17 +4616,17 @@ val VC_RUN_def =
    /\
    (VC_RUN (GenAssign v e) l = (UPDATE_LIST l (v, naeval e (FEMPTY |++ l)), T))
    /\
-   (VC_RUN (Seq c1 c2) l = 
+   (VC_RUN (Seq c1 c2) l =
      (FST(VC_RUN c2 (FST(VC_RUN c1 l))),
       SND (VC_RUN c1 l) /\ SND (VC_RUN c2 (FST(VC_RUN c1 l)))))
    /\
-   (VC_RUN (Cond b c1 c2) l = 
+   (VC_RUN (Cond b c1 c2) l =
     (ZIP_LIST (beval b (FEMPTY |++ l)) (FST(VC_RUN c1 l)) (FST(VC_RUN c2 l)),
       SND(VC_RUN c1 l) /\ SND(VC_RUN c2 l)))
    /\
    (VC_RUN (AnWhile b R c) l =
      ((@l'. (MAP FST l = MAP FST l') /\ R(FEMPTY |++ l') /\ ~(beval b (FEMPTY |++ l'))),
-      R(FEMPTY |++ l)                 /\ 
+      R(FEMPTY |++ l)                 /\
       SPEC (\s. R s /\ beval b s) c R /\
       ?l'. (MAP FST l' = MAP FST l) /\ R (FEMPTY |++ l') /\ ~beval b (FEMPTY |++ l')))`;
 
@@ -4649,7 +4649,7 @@ val VARS_VC_RUN =
   (``!c l. VC_CHECK c /\ VARS_IN c l /\ SND(VC_RUN c l)
            ==> (MAP FST (FST(VC_RUN c l)) = MAP FST l)``,
    Induct
-    THEN RW_TAC list_ss 
+    THEN RW_TAC list_ss
           [VC_CHECK_def,VARS_def,NOT_IN_EMPTY,IN_SING,VC_RUN_def,
            MAP_FST_UPDATE_LIST,IN_UNION,MAP_FST_ZIP_LIST,SEQ_VARS_IN,IF_VARS_IN]
     THENL
@@ -4664,15 +4664,15 @@ val VARS_VC_RUN_COR =
   (``!c l. VC_CHECK c /\ VARS_IN c l /\ SND(VC_RUN c l)
            ==> (LENGTH(FST(VC_RUN c l)) = LENGTH l)``,
     METIS_TAC[VARS_IN_def,rich_listTheory.LENGTH_MAP,VARS_VC_RUN]);
-     
+
 val VC_RUN_DISTINCT =
  store_thm
   ("VC_RUN_DISTINCT",
-   ``!c l. VC_CHECK c /\ VARS_IN c l /\ DISTINCT_VARS l /\ SND(VC_RUN c l) 
+   ``!c l. VC_CHECK c /\ VARS_IN c l /\ DISTINCT_VARS l /\ SND(VC_RUN c l)
            ==> DISTINCT_VARS(FST(VC_RUN c l))``,
-   Induct 
+   Induct
     THEN RW_TAC std_ss [rules,VC_RUN_def,VC_CHECK_def]
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [SEQ_THM,IF_THM,rules,GEN_ASSIGN_THM,UpdateCases,
            VC_RUN_def,UPDATE_LIST_FUPDATE,UpdateDISTINCT,ZIP_LIST_DISTINCT]
     THEN FULL_SIMP_TAC std_ss [IF_VARS_IN,SEQ_VARS_IN]
@@ -4705,7 +4705,7 @@ val FUPDATE_LIST_FUPDATE_COMMUTE =
    Induct
     THEN RW_TAC std_ss [FUPDATE_LIST_THM,FUPDATE_EQ]
     THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [FUPDATE_LIST_THM,DISTINCT_VARS_def,listTheory.ALL_DISTINCT]
     THEN METIS_TAC[FUPDATE_EQ,FUPDATE_COMMUTES]);
 
@@ -4725,7 +4725,7 @@ val MAP_S2L =
 
 val S2L_MAP_LEMMA1 =
  prove
-  (``!l : (string # value)list. 
+  (``!l : (string # value)list.
       (!x. MEM x l ==> (f x = g x)) ==> (MAP f l = MAP g l)``,
    Induct
     THEN RW_TAC list_ss []);
@@ -4739,11 +4739,11 @@ val S2L_MAP_LEMMA2 =
 
 val S2L_MAP_LEMMA3 =
  prove
-  (``~MEM q (MAP FST l) 
-     ==> 
-     !p : string # value. 
-      MEM p l 
-      ==> 
+  (``~MEM q (MAP FST l)
+     ==>
+     !p : string # value.
+      MEM p l
+      ==>
       (((\x. (x,(if x = q then r else ((FEMPTY |++ l) ' x)))) o FST) p =
        ((\x. (x,(FEMPTY |++ l) ' x)) o FST) p)``,
    RW_TAC std_ss []
@@ -4751,7 +4751,7 @@ val S2L_MAP_LEMMA3 =
 
 val S2L_MAP_LEMMA4 =
  prove
-  (``!l : (string # value)list. 
+  (``!l : (string # value)list.
       DISTINCT_VARS l
       ==>
       (MAP (\x. (x, (FEMPTY |++ l) ' x)) (MAP FST l) = l)``,
@@ -4767,7 +4767,7 @@ val S2L_MAP_LEMMA4 =
 val S2L_MAP =
  store_thm
   ("S2L_MAP",
-   ``!l : (string # value)list. 
+   ``!l : (string # value)list.
       DISTINCT_VARS l ==> (S2L (FEMPTY |++ l) (MAP FST l) = l)``,
    METIS_TAC[S2L_MAP_LEMMA4,S2L_def]);
 
@@ -4797,17 +4797,17 @@ val S2L =
   ("S2L",
    ``!xl. ALL_DISTINCT xl ==> !s. (FDOM s = set xl) ==> (s = FEMPTY |++ S2L s xl)``,
    Induct
-    THEN RW_TAC std_ss 
+    THEN RW_TAC std_ss
           [S2L_def,GSYM fmap_EQ_THM,FDOM_FUPDATE_LIST,FDOM_FEMPTY,UNION_EMPTY,
            rich_listTheory.MAP_MAP_o,MAP_FST_LEMMA]
-    THEN FULL_SIMP_TAC list_ss 
+    THEN FULL_SIMP_TAC list_ss
           [listTheory.IN_LIST_TO_SET,listTheory.LIST_TO_SET_THM,rich_listTheory.IS_EL,S2L_def]
     THEN RW_TAC std_ss []
     THEN `!x. FST((\x. (x,s ' x)) x) = x` by RW_TAC std_ss []
     THEN IMP_RES_TAC ALL_DISTINCT_DISTINCT_VARS
     THEN RW_TAC std_ss [FUPDATE_LIST_FUPDATE_COMMUTE]
     THEN ASSUME_TAC
-          (SIMP_RULE std_ss [rich_listTheory.MAP_MAP_o] 
+          (SIMP_RULE std_ss [rich_listTheory.MAP_MAP_o]
             (SPECL [``MAP (\x. (x,s ' x)) (xl:'a list)``,``h:'a``] FUPDATE_LIST_FUPDATE_COMMUTE))
     THEN FULL_SIMP_TAC std_ss [ALL_DISTINCT_DISTINCT_VARS,MAP_FST_LEMMA,FAPPLY_FUPDATE_THM]
     THEN `~(x = h)` by METIS_TAC[]
@@ -4838,7 +4838,7 @@ val STATE_LOOKUP =
     THEN `DISTINCT_VARS l` by METIS_TAC[DISTINCT_VARS_def]
     THEN Cases_on `v = q`
     THEN RW_TAC std_ss [LOOKUP_def]
-    THEN METIS_TAC 
+    THEN METIS_TAC
           [FUPDATE_LIST_FUPDATE_NOT_MEM,FUPDATE_LIST_FUPDATE_COMMUTE,
            FUPDATE_LIST_THM,FAPPLY_FUPDATE_THM]);
 
@@ -4855,7 +4855,7 @@ val STATE_LOOKUP =
     THEN `DISTINCT_VARS l` by METIS_TAC[DISTINCT_VARS_def]
     THEN Cases_on `v = q`
     THEN RW_TAC std_ss [LOOKUP_def]
-    THEN METIS_TAC 
+    THEN METIS_TAC
           [FUPDATE_LIST_FUPDATE_NOT_MEM,FUPDATE_LIST_FUPDATE_COMMUTE,
            FUPDATE_LIST_THM,FAPPLY_FUPDATE_THM]);
 
@@ -4873,19 +4873,19 @@ val XP_def =
   `(XP xl P Skip = P)
    /\
    (XP xl P (GenAssign v e) = \s'. ?s. P s /\ (s' = Update v e s))
-   /\ 
+   /\
    (XP xl P (Seq c1 c2) = XP xl (XP xl P c1) c2)
    /\
-   (XP xl P (Cond b c1 c2) = 
+   (XP xl P (Cond b c1 c2) =
      (XP xl (\s. P s /\ beval b s) c1) ORF (XP xl (\s. P s /\ ~(beval b s)) c2))
    /\
-   (XP xl P (AnWhile b R c) = 
+   (XP xl P (AnWhile b R c) =
      \s'. (FDOM s' = set xl) /\ R s' /\ ~(beval b s') /\ ?s. P s)
    /\
-   (XP xl P (Local v c) = 
+   (XP xl P (Local v c) =
      \s''. ?s' val. XP xl (\s. P s /\ (val = s ' v)) c s' /\ (s'' = s'|+(v,val)))
    /\
-   (XP xl P (AnProc P' Q xs f) = 
+   (XP xl P (AnProc P' Q xs f) =
      \s'. (FDOM s' = set xl) /\ Q s'  /\ ?s. P s)`;
 
 val XP_F =
@@ -4899,7 +4899,7 @@ val XP_F =
 (*
 val ORF_LEMMA =
  prove
-  (``!f1 f2 v val. 
+  (``!f1 f2 v val.
       (\s':state. f1 s' /\ (val = s' ' v) \/ f2 s' /\ (val = s' ' v))
       =
       (\s':state. (f1 s' \/ f2 s') /\ (val = s' ' v))``,
@@ -4923,7 +4923,7 @@ val XP_ORF =
        THEN ASSUM_LIST
              (fn thl =>
                ASSUME_TAC
-                (SPECL 
+                (SPECL
                   [``xl:string list``, ``\s:state. f2 s /\ beval b s``,  ``\s:state. f1 s /\ beval b s``]
                   (el 1 thl)))
         THEN FULL_SIMP_TAC std_ss [RIGHT_AND_OVER_OR]
@@ -4931,11 +4931,11 @@ val XP_ORF =
       METIS_TAC[],
       RES_TAC
        THEN POP_ASSUM
-             (fn th => 
+             (fn th =>
                ASSUME_TAC
-                (SIMP_RULE std_ss [] 
+                (SIMP_RULE std_ss []
                  (GEN_ALL
-                  (AP_THM 
+                  (AP_THM
                     (SPECL
                       [``xl:string list``,
                        ``\s':state. f2 s' /\ (val = s' ' s)``,
@@ -4963,8 +4963,8 @@ val XP_CONT_def =
 val XP_EXEC_SKIP =
  store_thm
   ("XP_EXEC_SKIP",
-   ``!xl f (P:(string#value)list->bool). 
-      XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) Skip = 
+   ``!xl f (P:(string#value)list->bool).
+      XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) Skip =
        (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l)))``,
    REPEAT STRIP_TAC
     THEN CONV_TAC (X_FUN_EQ_CONV ``s:state``)
@@ -4991,10 +4991,10 @@ val GEN_ASSIGN_FUN_def =
 val MAP_GEN_ASSIGN_FUN =
  store_thm
   ("MAP_GEN_ASSIGN_FUN",
-   ``!f xl v e. 
+   ``!f xl v e.
       (!l. (MAP FST l = xl) ==> (MAP FST (f l) = xl))
       ==>
-      MEM v xl 
+      MEM v xl
       ==>
       !l. (MAP FST l = xl) ==> (MAP FST ((GEN_ASSIGN_FUN v e o f) l) = xl)``,
    METIS_TAC[MAP_UPDATE_LIST,GEN_ASSIGN_FUN_def,combinTheory.o_THM]);
@@ -5002,12 +5002,12 @@ val MAP_GEN_ASSIGN_FUN =
 val XP_EXEC_GEN_ASSIGN =
  store_thm
   ("XP_EXEC_GEN_ASSIGN",
-   ``!xl (f:(string#value)list->(string#value)list) P v e. 
+   ``!xl (f:(string#value)list->(string#value)list) P v e.
       ALL_DISTINCT xl
       ==>
       (!l. (MAP FST l = xl) ==> (MAP FST (f l) = xl))
       ==>
-      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = (FEMPTY |++ (f l)))) (GenAssign v e) = 
+      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = (FEMPTY |++ (f l)))) (GenAssign v e) =
        \s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (GEN_ASSIGN_FUN v e o f) l))``,
    REPEAT STRIP_TAC
     THEN CONV_TAC (X_FUN_EQ_CONV ``s:state``)
@@ -5024,7 +5024,7 @@ val MAP_ASSIGN_FUN =
    ``!f xl. (!l. (MAP FST l = xl) ==> (MAP FST (f l) = xl))
             ==>
             !l v e.
-             MEM v xl 
+             MEM v xl
              ==> (MAP FST l = xl)
              ==> (MAP FST ((ASSIGN_FUN v e o f) l) = MAP FST l)``,
    METIS_TAC[MAP_UPDATE_LIST,ASSIGN_FUN_def,combinTheory.o_THM]);
@@ -5036,7 +5036,7 @@ val MAP_ASSIGN_FUN =
    ``!f xl v e.
       (!l. (MAP FST l = xl) ==> (MAP FST (f l) = xl))
       ==>
-      MEM v xl 
+      MEM v xl
       ==>
       !l. (MAP FST l = xl) ==> (MAP FST ((ASSIGN_FUN v e o f) l) = xl)``,
    METIS_TAC[MAP_UPDATE_LIST,ASSIGN_FUN_def,combinTheory.o_THM]);
@@ -5044,12 +5044,12 @@ val MAP_ASSIGN_FUN =
 val XP_EXEC_ASSIGN =
  store_thm
   ("XP_EXEC_ASSIGN",
-   ``!xl (f:(string#value)list->(string#value)list) P v e. 
+   ``!xl (f:(string#value)list->(string#value)list) P v e.
       ALL_DISTINCT xl
       ==>
       (!l. (MAP FST l = xl) ==> (MAP FST (f l) = xl))
       ==>
-      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = (FEMPTY |++ (f l)))) (Assign v e) = 
+      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = (FEMPTY |++ (f l)))) (Assign v e) =
        \s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (ASSIGN_FUN v e o f) l))``,
    REPEAT STRIP_TAC
     THEN CONV_TAC (X_FUN_EQ_CONV ``s:state``)
@@ -5059,8 +5059,8 @@ val XP_EXEC_ASSIGN =
 val XP_EXEC_SEQ =
  store_thm
   ("XP_EXEC_SEQ",
-   ``!xl f (P:(string#value)list->bool) c1 c2. 
-       XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) (Seq c1 c2) = 
+   ``!xl f (P:(string#value)list->bool) c1 c2.
+       XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) (Seq c1 c2) =
         XP xl (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) c1) c2``,
    REPEAT STRIP_TAC
     THEN CONV_TAC (X_FUN_EQ_CONV ``s:state``)
@@ -5084,7 +5084,7 @@ val XP_EXEC_IF =
  store_thm
   ("XP_EXEC_IF",
    ``!xl f (P:(string#value)list->bool) b c1 c2.
-      XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ f l)) (Cond b c1 c2) = 
+      XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ f l)) (Cond b c1 c2) =
       (XP xl (\s. ?l. (MAP FST l = xl) /\ ((\l. P l /\ beval b (FEMPTY |++ f l)) l) /\ (s = FEMPTY |++ f l)) c1)
       ORF
       (XP xl (\s. ?l. (MAP FST l = xl) /\ ((\l. P l /\ ~(beval b (FEMPTY |++ f l))) l) /\ (s = FEMPTY |++ f l)) c2)``,
@@ -5113,15 +5113,15 @@ val XP_EXEC_IF_ZIP =
       ==>
       (!l. (MAP FST l = xl) ==> (MAP FST (f2 l) = xl))
       ==>
-      (XP xl (\s. ?l. (MAP FST l = xl) /\ (P l /\ beval b (FEMPTY |++ f l)) /\ (s = FEMPTY |++ f l)) c1 = 
+      (XP xl (\s. ?l. (MAP FST l = xl) /\ (P l /\ beval b (FEMPTY |++ f l)) /\ (s = FEMPTY |++ f l)) c1 =
         \s. ?l. (MAP FST l = xl) /\ (P1 l /\ beval b (FEMPTY |++ f l)) /\ (s = FEMPTY |++ f1 l))
       ==>
-      (XP xl (\s. ?l. (MAP FST l = xl) /\ (P l /\ ~(beval b (FEMPTY |++ f l))) /\ (s = FEMPTY |++ f l)) c2 = 
+      (XP xl (\s. ?l. (MAP FST l = xl) /\ (P l /\ ~(beval b (FEMPTY |++ f l))) /\ (s = FEMPTY |++ f l)) c2 =
         \s. ?l. (MAP FST l = xl) /\ (P2 l /\ ~beval b (FEMPTY |++ f l)) /\ (s = FEMPTY |++ f2 l))
       ==>
-      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ f l)) (Cond b c1 c2) = 
+      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ f l)) (Cond b c1 c2) =
         \s. ?l. (MAP FST l = xl)
-                /\ (if (beval b (FEMPTY |++ f l)) then P1 l else P2 l) 
+                /\ (if (beval b (FEMPTY |++ f l)) then P1 l else P2 l)
                 /\ (s = FEMPTY |++ ZIP_LIST (beval b (FEMPTY |++ f l)) (f1 l) (f2 l)))``,
   CONV_TAC(DEPTH_CONV(RHS_CONV(REWRITE_CONV[GSYM CONJ_ASSOC]))) (* Hack so previous proof can be reused *)
     THEN CONV_TAC(TOP_DEPTH_CONV(X_FUN_EQ_CONV ``s:state``))
@@ -5147,7 +5147,7 @@ val XP_EXEC_IF_ZIP =
       FULL_SIMP_TAC std_ss [Lemma3,Lemma4]
        THEN `MAP FST (f1 l) = MAP FST (f2 l)` by METIS_TAC[rich_listTheory.LENGTH_MAP]
        THEN `LENGTH (f1 l) = LENGTH (f2 l)` by METIS_TAC[rich_listTheory.LENGTH_MAP]
-       THEN Cases_on 
+       THEN Cases_on
              `(?l'. (MAP FST l' = MAP FST l) /\ P1 l' /\ beval b (FEMPTY |++ f l') /\
                     (FEMPTY |++ ZIP_LIST (beval b (FEMPTY |++ f l)) (f1 l) (f2 l) =
                      FEMPTY |++ f1 l'))`
@@ -5195,12 +5195,12 @@ val Lemma6 =
 val XP_EXEC_IF_T =
  store_thm
   ("XP_EXEC_IF_T",
-   ``!xl f (P:(string#value)list->bool) b c1 c2. 
+   ``!xl f (P:(string#value)list->bool) b c1 c2.
       SIMPLE c2
       ==>
       (!l. (MAP FST l = xl) ==> P l ==> beval b (FEMPTY |++ f l))
-      ==> 
-      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ f l)) (Cond b c1 c2) = 
+      ==>
+      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ f l)) (Cond b c1 c2) =
         XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ f l)) c1)``,
    CONV_TAC(TOP_DEPTH_CONV(X_FUN_EQ_CONV ``s:state``))
     THEN SIMP_TAC std_ss [XP_def,ORF_def]
@@ -5227,12 +5227,12 @@ val Lemma8 =
 val XP_EXEC_IF_F =
  store_thm
   ("XP_EXEC_IF_F",
-   ``!xl f (P:(string#value)list->bool) b c1 c2. 
+   ``!xl f (P:(string#value)list->bool) b c1 c2.
       SIMPLE c1
       ==>
       (!l. (MAP FST l = xl) ==> P l ==> ~(beval b (FEMPTY |++ f l)))
-      ==> 
-      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ f l)) (Cond b c1 c2) = 
+      ==>
+      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ f l)) (Cond b c1 c2) =
         XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ f l)) c2)``,
    CONV_TAC(TOP_DEPTH_CONV(X_FUN_EQ_CONV ``s:state``))
     THEN SIMP_TAC std_ss [XP_def,ORF_def]
@@ -5242,7 +5242,7 @@ val XP_EXEC_IF_F =
 
 val ANWHILE_PRED_def =
  Define
-  `ANWHILE_PRED xl (P:(string#value)list->bool) R b s = 
+  `ANWHILE_PRED xl (P:(string#value)list->bool) R b s =
     (?l. (MAP FST l = xl) /\ P l) /\ R s /\ ~(beval b s)`;
 
 val XP_EXEC_ANWHILE =
@@ -5258,7 +5258,7 @@ val XP_EXEC_ANWHILE =
 
 val ANPROC_PRED_def =
  Define
-  `ANPROC_PRED xl (P:(string#value)list->bool) Q s = 
+  `ANPROC_PRED xl (P:(string#value)list->bool) Q s =
     (?l. (MAP FST l = xl) /\ P l) /\ Q s`;
 
 val XP_EXEC_ANPROC =
@@ -5297,8 +5297,8 @@ val Lemma10 =
 val XP_EXEC_LOCAL_LEMMA =
  store_thm
   ("XP_EXEC_LOCAL_LEMMA",
-   ``!xl f (P:(string#value)list->bool) v c. 
-       XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) (Local v c) = 
+   ``!xl f (P:(string#value)list->bool) v c.
+       XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) (Local v c) =
         \s''. ?s' val. XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (val = s ' v) /\ (s = FEMPTY |++ (f l))) c s'/\ (s'' = s' |+ (v,val))``,
    REPEAT STRIP_TAC
     THEN CONV_TAC (X_FUN_EQ_CONV ``s:state``)
@@ -5313,7 +5313,7 @@ val XP_EXEC_LOCAL_LEMMA =
 
 val LOCAL_PRED_def =
  Define
-  `LOCAL_PRED (P:(string#value)list->bool) f v val l = 
+  `LOCAL_PRED (P:(string#value)list->bool) f v val l =
     P l /\ (val = LOOKUP (f l) v)`;
 
 val Lemma11 =
@@ -5332,13 +5332,13 @@ val Lemma11 =
 val XP_EXEC_LOCAL =
  store_thm
   ("XP_EXEC_LOCAL",
-   ``!xl f (P:(string#value)list->bool) v c. 
+   ``!xl f (P:(string#value)list->bool) v c.
       ALL_DISTINCT xl
       ==>
       (!l. (MAP FST l = xl) ==> (MAP FST (f l) = xl))
       ==>
-      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) (Local v c) = 
-        \s''. ?s' val. 
+      (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) (Local v c) =
+        \s''. ?s' val.
                XP xl (\s. ?l. (MAP FST l = xl) /\ LOCAL_PRED P f v val l /\ (s = FEMPTY |++ (f l))) c s'
                /\ (s'' = s' |+ (v,val)))``,
    CONV_TAC (DEPTH_CONV(X_FUN_EQ_CONV ``s:state``))
@@ -5349,7 +5349,7 @@ val FVC_def =
   `(FVC xl P Skip = T)
    /\
    (FVC xl P (GenAssign v e)  = T)
-   /\ 
+   /\
    (FVC xl P (Seq c1 c2) = FVC xl P c1 /\ FVC xl (XP xl P c1) c2)
    /\
    (FVC xl P (Cond b c1 c2) = FVC xl (\s. P s /\ beval b s) c1 /\ FVC xl (\s. P s /\ ~(beval b s)) c2)
@@ -5367,8 +5367,8 @@ val VARS_SUBSET_FDOM =
       EVAL c s1 s2
       ==>
       SIMPLE c ==> VARS c SUBSET FDOM s1 ==> !xl P. FVC xl P c ==> (FDOM s1 = FDOM s2)``,
-   HO_MATCH_MP_TAC sinduction 
-    THEN RW_TAC std_ss 
+   HO_MATCH_MP_TAC sinduction
+    THEN RW_TAC std_ss
           [SIMPLE_def,VARS_def,SKIP_THM,GEN_ASSIGN_THM,SEQ_THM,IF_THM,
            Update_def,FDOM_FUPDATE,SUBSET_DEF,IN_SING,ANPROC_THM,FVC_def]
     THEN METIS_TAC[ABSORPTION,IN_UNION,SUBSET_DEF,DOMSUB_NOT_IN_DOM,IN_INSERT]);
@@ -5411,19 +5411,19 @@ val XP_FVC_SPEC =
     THENL
      [RW_TAC std_ss [SPEC_def,XP_def,ORF_def,FVC_def,SKIP_THM],
       RW_TAC std_ss [SPEC_def,XP_def,ORF_def,FVC_def,GEN_ASSIGN_THM] THEN METIS_TAC[],
-      FULL_SIMP_TAC std_ss [SPEC_def,XP_def,ORF_def,FVC_def,SEQ_THM,VARS_def,UNION_SUBSET] 
+      FULL_SIMP_TAC std_ss [SPEC_def,XP_def,ORF_def,FVC_def,SEQ_THM,VARS_def,UNION_SUBSET]
        THEN RW_TAC std_ss []
        THEN `XP xl P c s2'` by METIS_TAC[]
        THEN METIS_TAC[PDOM_XP],
-      FULL_SIMP_TAC std_ss [SPEC_def,XP_def,ORF_def,FVC_def,IF_THM,VARS_def,UNION_SUBSET,PDOM_def] 
+      FULL_SIMP_TAC std_ss [SPEC_def,XP_def,ORF_def,FVC_def,IF_THM,VARS_def,UNION_SUBSET,PDOM_def]
        THEN RW_TAC std_ss []
        THENL
         [ASSUM_LIST
-          (fn thl => 
+          (fn thl =>
             ASSUME_TAC(SIMP_RULE std_ss[] (Q.ISPEC `\s. P s /\ beval b s` (el 12 thl))))
           THEN METIS_TAC[],
          ASSUM_LIST
-          (fn thl => 
+          (fn thl =>
             ASSUME_TAC(SIMP_RULE std_ss[] (Q.ISPEC `\s. P s /\ ~(beval b s)` (el 11 thl))))
           THEN METIS_TAC[]],
       FULL_SIMP_TAC std_ss [XP_def,ORF_def,FVC_def]
@@ -5439,8 +5439,8 @@ val XP_FVC_SPEC =
        THEN `SIMPLE(AnWhile b f c)` by METIS_TAC[SIMPLE_def]
        THEN `FVC xl P (AnWhile b f c) ==> (FDOM s1 = FDOM s2)` by METIS_TAC[VARS_SUBSET_FDOM]
        THEN METIS_TAC
-             [SPECL 
-               [``xl:string list``,``P:pred``,``b:bexp``,``f:pred``,``c:program``] 
+             [SPECL
+               [``xl:string list``,``P:pred``,``b:bexp``,``f:pred``,``c:program``]
                (el 5 (CONJUNCTS FVC_def))],
       FULL_SIMP_TAC std_ss [XP_def,FVC_def,LOCAL_THM,VARS_def,SPEC_def,INSERT_SUBSET,PDOM_def]
        THEN RW_TAC std_ss []
@@ -5466,7 +5466,7 @@ val Lemma =
  prove
   (``(!l:(string#value)list. (MAP FST l = xl) ==> (MAP FST (f l) = xl))
      ==>
-     PDOM 
+     PDOM
       xl
       (\s:state. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l)))``,
    RW_TAC std_ss [PDOM_def]
@@ -5476,29 +5476,29 @@ val XP_FVC_SPEC_COR =
  store_thm
   ("XP_FVC_SPEC_COR",
    ``!xl f P c.
-      SIMPLE c 
+      SIMPLE c
       ==>
       (!l:(string#value)list. (MAP FST l = xl) ==> (MAP FST (f l) = xl))
       ==>
       (VARS c SUBSET (set xl))
       ==>
-      FVC xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) c 
+      FVC xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) c
       ==>
-      SPEC 
+      SPEC
        (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l)))
        c
        (XP xl (\s. ?l. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))) c)``,
     RW_TAC std_ss []
      THEN ASSUME_TAC
-           (SPECL 
+           (SPECL
              [``c : program``,
               ``\s:state. ?l:(string#value)list. (MAP FST l = xl) /\ P l /\ (s = FEMPTY |++ (f l))``,
               ``xl : string list``]
              XP_FVC_SPEC)
       THEN ASSUM_LIST
-            (fn thl => 
+            (fn thl =>
               ASSUME_TAC
-               (SIMP_RULE std_ss 
+               (SIMP_RULE std_ss
                  [el 2 thl,el 3 thl,el 5 thl, MP Lemma (el 4 thl)]
                  (el 1 thl)))
       THEN RW_TAC std_ss [])
@@ -5507,7 +5507,7 @@ end;
 val UNWIND_LEMMA =
  store_thm
   ("UNWIND_LEMMA",
-   ``!(l:(string#value)list) P. 
+   ``!(l:(string#value)list) P.
       (\s. (s = FEMPTY |++ l) /\ P s) = \s. (s = FEMPTY |++ l) /\ P(FEMPTY |++ l)``,
    RW_TAC std_ss []
     THEN CONV_TAC FUN_EQ_CONV
@@ -5524,9 +5524,9 @@ val MAP_FST_EXPAND_NIL =
 
 val MAP_FST_EXPAND1 =
  prove
-  (``!l x xl. 
+  (``!l x xl.
       (MAP FST l = x::xl) /\ P l
-      ==> 
+      ==>
       ?v l'. (MAP FST l' = xl) /\ P((x,v)::l')``,
    Induct
     THEN RW_TAC list_ss []
@@ -5549,7 +5549,7 @@ val MAP_FST_EXPAND =
  store_thm
   ("MAP_FST_EXPAND",
    ``!P x xl.
-      (?(l:(string#value)list). (MAP FST l = x::xl) /\ P l) = 
+      (?(l:(string#value)list). (MAP FST l = x::xl) /\ P l) =
       (?l. (MAP FST l = xl) /\ ?v. P((x,v)::l))``,
    METIS_TAC[MAP_FST_EXPAND1,MAP_FST_EXPAND2]);
 
@@ -5561,9 +5561,9 @@ val MAP_FST_FORALL_EXPAND_NIL =
 
 val MAP_FST_FORALL_EXPAND1 =
  prove
-  (``!xl x. 
+  (``!xl x.
       (!l. (MAP FST l = x::xl) ==> P l)
-      ==> 
+      ==>
       !v l'. (MAP FST l' = xl) ==> P((x,v)::l')``,
    Induct
     THEN RW_TAC list_ss []);
@@ -5580,7 +5580,7 @@ val MAP_FST_FORALL_EXPAND =
  store_thm
   ("MAP_FST_FORALL_EXPAND",
    ``!P x xl.
-      (!(l:(string#value)list). (MAP FST l = x::xl) ==> P l) = 
+      (!(l:(string#value)list). (MAP FST l = x::xl) ==> P l) =
       (!l. (MAP FST l = xl) ==> !v. P((x,v)::l))``,
    METIS_TAC[MAP_FST_FORALL_EXPAND1,MAP_FST_FORALL_EXPAND2]);
 

@@ -132,7 +132,7 @@ fun BETAS fnns body =
 (* ---------------------------------------------------------------------*)
 
 fun GTAC y (A,g) =
-   let 
+   let
        val (Bvar,Body) = dest_forall g
        and y' = variant (free_varsl (g::A)) y
    in

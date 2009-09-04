@@ -1,12 +1,12 @@
-(* 
+(*
 structure arm_translateLib :> arm_translateLib =
 struct
 
-	loadPath := 
-            (concat Globals.HOLDIR "/examples/dev/sw") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/arm") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/sep") :: 
-            (concat Globals.HOLDIR "/examples/elliptic/swsep") :: 
+	loadPath :=
+            (concat Globals.HOLDIR "/examples/dev/sw") ::
+            (concat Globals.HOLDIR "/examples/elliptic/arm") ::
+            (concat Globals.HOLDIR "/examples/elliptic/sep") ::
+            (concat Globals.HOLDIR "/examples/elliptic/swsep") ::
             !loadPath;
 
 	use (concat Globals.HOLDIR "/examples/dev/sw/compiler");
@@ -23,7 +23,7 @@ open Portable Assem wordsTheory ANF pairTheory pairLib listTheory arithmeticTheo
 open swsepTheory arm_progTheory progTheory pred_setTheory set_sepLib set_sepTheory arm_instTheory listTheory
    wordsTheory pairTheory wordsLib markerTheory
 
-fun extract_ir (_, _, _, _, _, spec, _, wf, _, _, _) = 
+fun extract_ir (_, _, _, _, _, spec, _, wf, _, _, _) =
 	let
 		val ir = rand (concl wf);
 		val (st_var, _) = dest_forall (concl spec);
@@ -84,8 +84,8 @@ fun spec_ir comp =
 
 		val (_, ir_thm, mem_thm, wf_thm2) = translate_ir ir;
 		val thm = SIMP_RULE std_ss [dimindex_24] TRANSLATION_SPEC_thm;
-		val thm = SPECL [ir, spec_term] thm 
-		val thm = SIMP_RULE list_ss [wf, ir_thm, mem_thm, wf_thm2, state2reg_fun2mread, 
+		val thm = SPECL [ir, spec_term] thm
+		val thm = SIMP_RULE list_ss [wf, ir_thm, mem_thm, wf_thm2, state2reg_fun2mread,
 			arm_mem_state2reg_fun2REG_READ, spec, ILTheory.from_reg_index_def] thm
 	in
 		thm
@@ -97,7 +97,7 @@ fun spec_ir comp =
 		let
 			val thm = ONCE_REWRITE_CONV [FILTER] t;
 			val thm = BETA_RULE thm
-			val r = rhs (concl thm)				
+			val r = rhs (concl thm)
 			val e = if (is_cond r) then
 							let
 								val thm2 = ((RATOR_CONV (RATOR_CONV conv)) THENC REWRITE_CONV []) r;
@@ -107,7 +107,7 @@ fun spec_ir comp =
 							end
 						else
 							thm
-		in 
+		in
 			e
 		end;
 
@@ -127,7 +127,7 @@ fun post_process_sep thm =
 			if	mem (rand t) used_values then t else
 				liteLib.mk_icomb (``$~:('a -> 'b -> bool) -> 'b -> bool``, rator t)
 
-		val new_preparts = map remove_unused pre_parts	
+		val new_preparts = map remove_unused pre_parts
 
 		val new_pre = mk_icomb (arm_prog, foldr (fn (t1, t2) => liteLib.list_mk_icomb opr [t1, t2]) (``emp:('a ARMel -> bool) -> bool``) new_preparts)
 		val new_pre = rhs (concl (SIMP_CONV std_ss [emp_STAR, STAR_ASSOC] new_pre))
@@ -135,8 +135,8 @@ fun post_process_sep thm =
 
 		val new_term = liteLib.list_mk_icomb new_pre (tl args)
 		val new_term = gen_all new_term;
-		
-		val thm = prove (new_term, 					
+
+		val thm = prove (new_term,
 			SIMP_TAC std_ss [GSYM SEP_HIDE_THM, new_pre_thm] THEN
 			ONCE_REWRITE_TAC[prove(``ARM_PROG (p:'a ARMset set) = ARM_PROG (emp * p)``, REWRITE_TAC[emp_STAR])] THEN
 			SIMP_TAC std_ss [GSYM ARM_PROG_HIDE_PRE] THEN
@@ -146,13 +146,13 @@ fun post_process_sep thm =
 	end;
 
 
-fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm list * thm * thm * thm * thm * thm * string * string list)) = 
+fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm list * thm * thm * thm * thm * thm * string * string list)) =
 	let
 		val (spec, wf, ir) = extract_ir comp;
 		val input_regs = listSyntax.mk_list (map IRSyntax.convert_reg (IRSyntax.pair2list (#1 (#3 comp))), Type `:MREG`);
 
 		val unchanged_thm = CONJUNCT1 (REWRITE_RULE [ILTheory.UNCHANGED_STACK_def] (#9 comp))
-		
+
 		val uregs_all = rand (rator (concl unchanged_thm));
 		val uregs_term = ``FILTER (\r. ~MEM r ^input_regs) ^uregs_all``
 		val uregs_thm = (FILTER_CONV (SIMP_CONV std_ss [MEM, ILTheory.MREG_distinct]))
@@ -161,7 +161,7 @@ fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm
 
 		val uregs_input = rhs (concl ((FILTER_CONV (SIMP_CONV std_ss [MEM, ILTheory.MREG_distinct]))
 				``FILTER (\r. MEM r ^uregs_all) ^input_regs``))
-		val r_unchanged_thm = REWRITE_RULE [uregs_thm] 
+		val r_unchanged_thm = REWRITE_RULE [uregs_thm]
 									 (prove (``UNCHANGED ^uregs_term ^ir``,
 										MP_TAC unchanged_thm THEN
 										REWRITE_TAC [ILTheory.UNCHANGED_def, MEM_FILTER] THEN
@@ -169,7 +169,7 @@ fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm
 
 		val (vars, body) = strip_forall (concl spec);
 		val body_rel = rand body
-		val body_rel = 
+		val body_rel =
 			(rhs (concl (SIMP_CONV std_ss [PAIR_FST_SND_EQ] body_rel)))
 			handle _ => body_rel
 
@@ -195,7 +195,7 @@ fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm
 		val body_list = strip_conj body_rel;
 		val x = mk_var ("x", Type `:word4`);
 		fun extract_oregs_f [] = (uregs_input, mk_comb(vals,x)) |
-			 extract_oregs_f (t::l) = 
+			 extract_oregs_f (t::l) =
 				let
 					val (oregs, f) = extract_oregs_f l;
 					val (ls', rs') = dest_eq t;
@@ -227,24 +227,24 @@ fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm
 
 
 		val input_regs_list_thm = GEN_ALL (
-			FILTER_CONV (REWRITE_CONV [MEM, preARMTheory.word4_distinct]) 		
+			FILTER_CONV (REWRITE_CONV [MEM, preARMTheory.word4_distinct])
 				``FILTER (\x. ~MEM (FST x) ^uregs_words) ^regs_list``)
 		val input_regs_list = rhs (concl (SPEC_ALL input_regs_list_thm))
 
 		val fe_var = mk_var ("fe", Type `:word4 -> word32`);
 		val output_regs_list_term = ``(FILTER (\x. MEM (FST x) ^oregs_words)
             (MAP (\(r,v). (r, ^fe_var r)) ^regs_list))``
-		val output_regs_thm1 = 
+		val output_regs_thm1 =
 			((SIMP_CONV std_ss [MAP]) THENC (FILTER_CONV (REWRITE_CONV [MEM, preARMTheory.word4_distinct]))) output_regs_list_term
-		val output_regs_thm2 = 
+		val output_regs_thm2 =
 			SPEC ``^f (LIST_TO_FUN 0w ^regs_list)`` (
 				GEN fe_var output_regs_thm1
 			)
 		val output_regs_thm = SIMP_RULE std_ss [f_thm, preARMTheory.word4_distinct] output_regs_thm2
 
-		
+
 		val unknown_changed_regs_list_thm = GEN_ALL (
-			((SIMP_CONV std_ss [MAP]) THENC (FILTER_CONV (REWRITE_CONV [MEM, preARMTheory.word4_distinct]))) 
+			((SIMP_CONV std_ss [MAP]) THENC (FILTER_CONV (REWRITE_CONV [MEM, preARMTheory.word4_distinct])))
 			``FILTER (\x. ~MEM x ^oregs_words) (MAP FST ^input_regs_list)``)
 
 		val f_depend_term = ``!f1 f2.
@@ -270,7 +270,7 @@ fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm
 
 		val (_, ir_thm, mem_thm, wf_thm2) = translate_ir ir;
 		val thm = TRANSLATION_SPEC_SEP_thm;
-		val thm2 = SPECL [ir, uregs, oregs, f] thm 
+		val thm2 = SPECL [ir, uregs, oregs, f] thm
 		val thm3 = REWRITE_RULE [wf, ir_thm, mem_thm, wf_thm2, spec, r_unchanged_thm,
 			uregs_words_thm, oregs_words_thm, oregs_uregs_distinct] thm2
 		val thm4 = SIMP_RULE std_ss [input_regs_list_thm, f_thm, output_regs_thm,
@@ -281,7 +281,7 @@ fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm
          GSYM (SIMP_RULE std_ss [STAR_SYM] SEP_EXISTS_ABSORB_STAR),
          Cong (REFL ``unint X``)
          ] thm5
-      val thm7 = REWRITE_RULE [unint_def] thm6 
+      val thm7 = REWRITE_RULE [unint_def] thm6
 		val thm8 = post_process_sep thm7
 	in
 		thm8

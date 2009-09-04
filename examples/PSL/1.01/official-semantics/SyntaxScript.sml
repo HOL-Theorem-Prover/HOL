@@ -24,7 +24,7 @@ val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 * Start a new theory called SyntaxTheory
 ******************************************************************************)
 val _ = new_theory "Syntax";
-   
+
 (******************************************************************************
 * Boolean expressions
 ******************************************************************************)
@@ -35,7 +35,7 @@ val bexp_def =
         | B_AND    of bexp # bexp`;              (* conjunction              *)
 
 (******************************************************************************
-* Sugar Extended Regular Expressions (SEREs) 
+* Sugar Extended Regular Expressions (SEREs)
 ******************************************************************************)
 val sere_def =
  Hol_datatype

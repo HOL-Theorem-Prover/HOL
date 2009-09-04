@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
@@ -191,7 +191,7 @@ Define
 
 
 val P_PROP_SET_MODEL_def = Define
-  `(P_PROP_SET_MODEL S S' = 
+  `(P_PROP_SET_MODEL S S' =
         P_AND(P_PROP_CONJUNCTION (SET_TO_LIST (S INTER S')), P_NOT(
         P_PROP_DISJUNCTION (SET_TO_LIST (S' DIFF S)))))`;
 
@@ -270,7 +270,7 @@ Define
 
 val VAR_RENAMING_HASHTABLE_def =
 Define
-`(VAR_RENAMING_HASHTABLE S f = 
+`(VAR_RENAMING_HASHTABLE S f =
    P_BIGOR (SET_TO_LIST (IMAGE (\s. P_AND(P_PROP_SET_MODEL s S, P_PROP(f s))) (POWER_SET S))))`;
 
 
@@ -332,13 +332,13 @@ val P_USED_VARS_EVAL =
  store_thm
   ("P_USED_VARS_EVAL",
    ``!p b b1 b2. (
-    (P_USED_VARS (P_TRUE) = {}) /\ 
-    (P_USED_VARS (P_FALSE) = {}) /\ 
-    (P_USED_VARS (P_PROP p) = {p}) /\ 
-    (P_USED_VARS (P_NOT b) = P_USED_VARS b) /\ 
-    (P_USED_VARS (P_AND(b1, b2)) = P_USED_VARS b1 UNION P_USED_VARS b2) /\ 
-    (P_USED_VARS (P_OR(b1, b2)) = P_USED_VARS b1 UNION P_USED_VARS b2) /\ 
-    (P_USED_VARS (P_IMPL(b1, b2)) = P_USED_VARS b1 UNION P_USED_VARS b2) /\ 
+    (P_USED_VARS (P_TRUE) = {}) /\
+    (P_USED_VARS (P_FALSE) = {}) /\
+    (P_USED_VARS (P_PROP p) = {p}) /\
+    (P_USED_VARS (P_NOT b) = P_USED_VARS b) /\
+    (P_USED_VARS (P_AND(b1, b2)) = P_USED_VARS b1 UNION P_USED_VARS b2) /\
+    (P_USED_VARS (P_OR(b1, b2)) = P_USED_VARS b1 UNION P_USED_VARS b2) /\
+    (P_USED_VARS (P_IMPL(b1, b2)) = P_USED_VARS b1 UNION P_USED_VARS b2) /\
     (P_USED_VARS (P_EQUIV(b1, b2)) = P_USED_VARS b1 UNION P_USED_VARS b2)
    )``,
 
@@ -385,13 +385,13 @@ val P_VAR_RENAMING_EVAL =
  store_thm
   ("P_VAR_RENAMING_EVAL",
    ``!p f b b1 b2. (
-    (P_VAR_RENAMING f (P_TRUE) = P_TRUE) /\ 
-    (P_VAR_RENAMING f (P_FALSE) = P_FALSE) /\ 
-    (P_VAR_RENAMING f (P_PROP p) = (P_PROP (f p))) /\ 
-    (P_VAR_RENAMING f (P_NOT b) = P_NOT(P_VAR_RENAMING f b)) /\ 
-    (P_VAR_RENAMING f (P_AND(b1, b2)) = P_AND(P_VAR_RENAMING f b1, P_VAR_RENAMING f b2)) /\ 
-    (P_VAR_RENAMING f (P_OR(b1, b2)) = P_OR(P_VAR_RENAMING f b1, P_VAR_RENAMING f b2)) /\ 
-    (P_VAR_RENAMING f (P_IMPL(b1, b2)) = P_IMPL(P_VAR_RENAMING f b1, P_VAR_RENAMING f b2)) /\ 
+    (P_VAR_RENAMING f (P_TRUE) = P_TRUE) /\
+    (P_VAR_RENAMING f (P_FALSE) = P_FALSE) /\
+    (P_VAR_RENAMING f (P_PROP p) = (P_PROP (f p))) /\
+    (P_VAR_RENAMING f (P_NOT b) = P_NOT(P_VAR_RENAMING f b)) /\
+    (P_VAR_RENAMING f (P_AND(b1, b2)) = P_AND(P_VAR_RENAMING f b1, P_VAR_RENAMING f b2)) /\
+    (P_VAR_RENAMING f (P_OR(b1, b2)) = P_OR(P_VAR_RENAMING f b1, P_VAR_RENAMING f b2)) /\
+    (P_VAR_RENAMING f (P_IMPL(b1, b2)) = P_IMPL(P_VAR_RENAMING f b1, P_VAR_RENAMING f b2)) /\
     (P_VAR_RENAMING f (P_EQUIV(b1, b2)) = P_EQUIV(P_VAR_RENAMING f b1, P_VAR_RENAMING f  b2))
    )``,
 
@@ -441,7 +441,7 @@ val IS_POSITIVE_NEGATIVE_PROP_FORMULA_SEM =
         (P_SEM S p))``,
 
     REWRITE_TAC[IS_POSITIVE_NEGATIVE_PROP_FORMULA_SUBSET_def,
-        IS_POSITIVE_PROP_FORMULA_def, 
+        IS_POSITIVE_PROP_FORMULA_def,
         IS_NEGATIVE_PROP_FORMULA_def] THEN
     REPEAT GEN_TAC THEN
     Cases_on `S SUBSET S'` THEN ASM_REWRITE_TAC[] THEN
@@ -468,7 +468,7 @@ val P_PROP_DISJUNCTION_SEM =
     ``!S1 S2. P_SEM S1 (P_PROP_DISJUNCTION S2) = (EXISTS (\s. s IN S1) S2)``,
 
     Induct_on `S2` THENL [
-        SIMP_TAC list_ss [P_PROP_DISJUNCTION_def, P_SEM_THM],    
+        SIMP_TAC list_ss [P_PROP_DISJUNCTION_def, P_SEM_THM],
         ASM_SIMP_TAC list_ss [P_PROP_DISJUNCTION_def, P_SEM_THM]
     ]);
 
@@ -518,13 +518,13 @@ val P_PROP_CONJUNCTION_MIN_SEM =
     SIMP_TAC list_ss [P_SEM_MIN_def, P_PROP_CONJUNCTION_SEM, EXTENSION,
         IN_LIST_TO_SET] THEN
     Induct_on `S2` THENL [
-        SIMP_TAC list_ss [] THEN        
+        SIMP_TAC list_ss [] THEN
         REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
             PROVE_TAC[REST_PSUBSET, MEMBER_NOT_EMPTY],
             PROVE_TAC[PSUBSET_MEMBER]
         ],
 
-        SIMP_TAC list_ss [] THEN        
+        SIMP_TAC list_ss [] THEN
         REPEAT STRIP_TAC THEN
         Cases_on `~(h IN S1)` THEN1 METIS_TAC[] THEN
         FULL_SIMP_TAC std_ss [] THEN
@@ -532,7 +532,7 @@ val P_PROP_CONJUNCTION_MIN_SEM =
            `!S'. (~(h IN S')) ==> EXISTS ($~ o (\s. s IN S')) S2` by
                 (SIMP_TAC std_ss [EXISTS_MEM] THEN PROVE_TAC[]) THEN
            METIS_TAC[],
-        
+
            `?S1'. S1' = S1 DELETE h` by PROVE_TAC[] THEN
            `EVERY (\s. s IN S1) S2 = EVERY (\s. s IN S1') S2` by
                 (ASM_SIMP_TAC std_ss [EVERY_MEM, IN_DELETE] THEN
@@ -553,7 +553,7 @@ val P_PROP_CONJUNCTION_MIN_SEM =
                     PROVE_TAC[],
 
                     Cases_on `h IN S'` THEN ASM_REWRITE_TAC[] THEN
-                    `(S' DELETE h) PSUBSET S1'` by 
+                    `(S' DELETE h) PSUBSET S1'` by
                         (FULL_SIMP_TAC std_ss [PSUBSET_DEF, SUBSET_DEF, IN_DELETE, EXTENSION] THEN
                         METIS_TAC[]) THEN
                     `EXISTS ($~ o (\s. s IN (S' DELETE h))) S2` by METIS_TAC[] THEN
@@ -565,7 +565,7 @@ val P_PROP_CONJUNCTION_MIN_SEM =
             METIS_TAC[]
         ]
     ]);
-    
+
 
 
 
@@ -628,9 +628,9 @@ val P_BIGAND___P_USED_VARS =
 
   ``!l. (P_USED_VARS (P_BIGAND l) =
         LIST_BIGUNION (MAP (\p. P_USED_VARS p) l))``,
-  
+
   Induct_on `l` THENL [
-    SIMP_TAC std_ss [P_USED_VARS_def, P_BIGAND_def, MAP, LIST_BIGUNION_def],    
+    SIMP_TAC std_ss [P_USED_VARS_def, P_BIGAND_def, MAP, LIST_BIGUNION_def],
     ASM_SIMP_TAC std_ss [P_USED_VARS_def, P_BIGAND_def, MAP, LIST_BIGUNION_def]
   ]);
 
@@ -653,15 +653,15 @@ val P_BIGOR___P_USED_VARS =
 
   ``!l. (P_USED_VARS (P_BIGOR l) =
         LIST_BIGUNION (MAP (\p. P_USED_VARS p) l))``,
-  
+
   Induct_on `l` THENL [
-    SIMP_TAC std_ss [P_USED_VARS_def, P_BIGOR_def, MAP, LIST_BIGUNION_def, P_FALSE_def],    
+    SIMP_TAC std_ss [P_USED_VARS_def, P_BIGOR_def, MAP, LIST_BIGUNION_def, P_FALSE_def],
     ASM_SIMP_TAC std_ss [P_USED_VARS_def, P_OR_def, P_BIGOR_def, MAP, LIST_BIGUNION_def]
   ]);
 
 
 val P_SEM_MIN_MODEL_EXISTS_FINITE =
-    prove (    
+    prove (
     ``!n p S. ((FINITE S) /\ (CARD S < n)) ==> (P_SEM S p ==> (?S'. S' SUBSET S /\ P_SEM_MIN S' p))``,
 
     Induct_on `n` THENL [
@@ -687,7 +687,7 @@ val P_SEM_MIN_MODEL_EXISTS_FINITE =
 val P_SEM_MIN_MODEL_EXISTS =
  store_thm
   ("P_SEM_MIN_MODEL_EXISTS",
-    
+
     ``!p S. (P_SEM S p ==> (?S'. FINITE S' /\ S' SUBSET S /\ P_SEM_MIN S' p))``,
 
     REPEAT STRIP_TAC THEN
@@ -696,8 +696,8 @@ val P_SEM_MIN_MODEL_EXISTS =
     `FINITE (S INTER T')` by PROVE_TAC[FINITE___P_USED_VARS,
         INTER_FINITE, INTER_COMM] THEN
     `(S INTER T') SUBSET S` by PROVE_TAC[INTER_SUBSET] THEN
-    `CARD (S INTER T') < SUC (CARD (S INTER T'))` by DECIDE_TAC THEN    
-    PROVE_TAC[SUBSET_TRANS, SUBSET_FINITE, 
+    `CARD (S INTER T') < SUC (CARD (S INTER T'))` by DECIDE_TAC THEN
+    PROVE_TAC[SUBSET_TRANS, SUBSET_FINITE,
         P_SEM_MIN_MODEL_EXISTS_FINITE]);
 
 
@@ -708,7 +708,7 @@ val P_PROP_SET_MODEL_SEM =
 
     REWRITE_TAC[P_PROP_SET_MODEL_def, P_SEM_THM, P_PROP_DISJUNCTION_SEM,
     P_PROP_CONJUNCTION_SEM, SOME_EL_IS_EL, EVERY_MEM] THEN
-    
+
     REPEAT STRIP_TAC THEN
     `FINITE (S INTER S')` by PROVE_TAC[INTER_FINITE, INTER_COMM] THEN
     `FINITE (S' DIFF S)` by PROVE_TAC[FINITE_DIFF] THEN
@@ -725,8 +725,8 @@ val P_ASSIGN_TRUE_SEM =
 
     INDUCT_THEN prop_logic_induct ASSUME_TAC THEN
     ASM_REWRITE_TAC[P_ASSIGN_TRUE_def, P_SEM_def] THEN
-    
-    REWRITE_TAC[IN_UNION] THEN 
+
+    REWRITE_TAC[IN_UNION] THEN
     Cases_on `a IN V` THEN
     REWRITE_TAC[P_SEM_def]);
 
@@ -740,8 +740,8 @@ val P_ASSIGN_FALSE_SEM =
 
     INDUCT_THEN prop_logic_induct ASSUME_TAC THEN
     ASM_REWRITE_TAC[P_ASSIGN_FALSE_def, P_SEM_def] THEN
-    
-    REWRITE_TAC[IN_DIFF] THEN 
+
+    REWRITE_TAC[IN_DIFF] THEN
     Cases_on `a IN V` THEN
     REWRITE_TAC[P_SEM_THM]);
 
@@ -763,62 +763,62 @@ val P_EXISTS_SEM =
  store_thm
   ("P_EXISTS_SEM",
 
-    ``!s l p. (P_SEM s (P_EXISTS l p) = 
+    ``!s l p. (P_SEM s (P_EXISTS l p) =
         (?l'. (l' SUBSET (LIST_TO_SET l)) /\ (P_SEM ((s DIFF (LIST_TO_SET l)) UNION l') p)))``,
 
     Induct_on `l` THENL [
         SIMP_TAC list_ss [LIST_TO_SET_THM, SUBSET_EMPTY, P_EXISTS_def, UNION_EMPTY,
             DIFF_EMPTY],
-    
+
         ASM_SIMP_TAC list_ss [P_EXISTS_def, LIST_TO_SET_THM, P_SEM_THM, P_ASSIGN_TRUE_SEM,
             P_ASSIGN_FALSE_SEM] THEN
         REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
             EXISTS_TAC ``h INSERT l'`` THEN
             REPEAT STRIP_TAC THENL [
                 FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INSERT] THEN PROVE_TAC[],
-                
+
                 `s DIFF (h INSERT LIST_TO_SET l) UNION (h INSERT l') =
-                s DIFF LIST_TO_SET l UNION l' UNION {h}` by 
-                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION, 
+                s DIFF LIST_TO_SET l UNION l' UNION {h}` by
+                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION,
                         NOT_IN_EMPTY] THEN
                     PROVE_TAC[]) THEN
                 ASM_REWRITE_TAC[]
             ],
-    
+
             EXISTS_TAC ``l' DELETE h`` THEN
             REPEAT STRIP_TAC THENL [
                 FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INSERT, IN_DELETE],
-                
+
                 `s DIFF (h INSERT LIST_TO_SET l) UNION (l' DELETE h) =
-                s DIFF LIST_TO_SET l UNION l' DIFF {h}` by 
-                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION, 
+                s DIFF LIST_TO_SET l UNION l' DIFF {h}` by
+                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION,
                         NOT_IN_EMPTY, DELETE_DEF] THEN
                     PROVE_TAC[]) THEN
                 ASM_REWRITE_TAC[]
             ],
-    
+
             EXISTS_TAC ``l' DELETE h`` THEN
             REPEAT STRIP_TAC THENL [
                 FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INSERT, IN_DELETE] THEN PROVE_TAC[],
-                
-                `(s DIFF LIST_TO_SET l UNION (l' DELETE h) UNION {h} = 
+
+                `(s DIFF LIST_TO_SET l UNION (l' DELETE h) UNION {h} =
                 s DIFF (h INSERT LIST_TO_SET l) UNION l') \/
-                (s DIFF LIST_TO_SET l UNION (l' DELETE h) DIFF {h} = 
-                s DIFF (h INSERT LIST_TO_SET l) UNION l')` by 
-                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION, 
+                (s DIFF LIST_TO_SET l UNION (l' DELETE h) DIFF {h} =
+                s DIFF (h INSERT LIST_TO_SET l) UNION l')` by
+                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION,
                         NOT_IN_EMPTY, DELETE_DEF] THEN
                     METIS_TAC[]) THEN
                 ASM_REWRITE_TAC[]
             ]
         ]
     ]);
-        
-    
+
+
 val P_FORALL_SEM =
  store_thm
   ("P_FORALL_SEM",
 
-    ``!s l p. (P_SEM s (P_FORALL l p) = 
+    ``!s l p. (P_SEM s (P_FORALL l p) =
         (!l'. (l' SUBSET (LIST_TO_SET l)) ==> (P_SEM ((s DIFF (LIST_TO_SET l)) UNION l') p)))``,
 
     REWRITE_TAC[P_FORALL_def, P_SEM_THM, P_EXISTS_SEM] THEN
@@ -940,9 +940,9 @@ val P_MODEL_DISJUNCTION_MIN_SEM =
 val P_DUAL_MODELS_THM =
  store_thm
   ("P_DUAL_MODELS_THM",
-    ``!p. (IS_POSITIVE_PROP_FORMULA p ==> (!S. (P_SEM S (P_DUAL p)) = 
+    ``!p. (IS_POSITIVE_PROP_FORMULA p ==> (!S. (P_SEM S (P_DUAL p)) =
         (!S'. (P_SEM S' p) ==> (~(DISJOINT S S'))))) /\
-        (IS_NEGATIVE_PROP_FORMULA p ==> (!S. ~(P_SEM S (P_DUAL p)) = 
+        (IS_NEGATIVE_PROP_FORMULA p ==> (!S. ~(P_SEM S (P_DUAL p)) =
         (!S'. (~P_SEM S' p) ==> (~(DISJOINT S S')))))``,
 
     SIMP_TAC std_ss  [IS_POSITIVE_PROP_FORMULA_def, P_DUAL_def,  P_SEM_def, NOT_IN_EMPTY, GSPECIFICATION,
@@ -952,13 +952,13 @@ val P_DUAL_MODELS_THM =
         PROVE_TAC[IN_SING],
         PROVE_TAC[NOT_IN_EMPTY],
         PROVE_TAC[],
-    
+
         REPEAT STRIP_TAC THEN
-        ASM_SIMP_TAC std_ss [] THEN 
+        ASM_SIMP_TAC std_ss [] THEN
         EQ_TAC THEN REPEAT STRIP_TAC THENL [
             METIS_TAC[],
             METIS_TAC[],
-            
+
             Cases_on `!S'. P_SEM S' p' ==> ?x. x IN S /\ x IN S'` THEN ASM_REWRITE_TAC[] THEN
             REPEAT STRIP_TAC THEN
             FULL_SIMP_TAC std_ss [GSYM IS_POSITIVE_PROP_FORMULA_def] THEN
@@ -968,7 +968,7 @@ val P_DUAL_MODELS_THM =
             `?x. x IN S /\ x IN T'` by PROVE_TAC[] THEN
             `x IN S'` by PROVE_TAC[IN_UNION] THEN
             PROVE_TAC[],
-    
+
             METIS_TAC[],
             METIS_TAC[],
             METIS_TAC[],
@@ -980,7 +980,7 @@ val P_DUAL_MODELS_THM =
 val P_DUAL_MIN_MODELS_THM =
  store_thm
   ("P_DUAL_MIN_MODELS_THM",
-    ``!p. IS_POSITIVE_PROP_FORMULA p ==> (!S. (P_SEM S (P_DUAL p)) = 
+    ``!p. IS_POSITIVE_PROP_FORMULA p ==> (!S. (P_SEM S (P_DUAL p)) =
         (!S'. (P_SEM_MIN S' p) ==> (~(DISJOINT S S'))))``,
 
     REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -1016,7 +1016,7 @@ val P_DUAL___IS_POSITIVE_NEGATIVE_PROP_FORMULA =
 
     REWRITE_TAC[IS_POSITIVE_PROP_FORMULA_def, IS_NEGATIVE_PROP_FORMULA_def, P_DUAL_def,
         IS_POSITIVE_NEGATIVE_PROP_FORMULA_SUBSET_def] THEN
-    REWRITE_TAC [GSYM IS_POSITIVE_PROP_FORMULA_def, GSYM IS_NEGATIVE_PROP_FORMULA_def, 
+    REWRITE_TAC [GSYM IS_POSITIVE_PROP_FORMULA_def, GSYM IS_NEGATIVE_PROP_FORMULA_def,
         P_NEGATE_VARS___IS_POSITIVE_NEGATIVE_PROP_FORMULA]);
 
 
@@ -1025,11 +1025,11 @@ val VAR_RENAMING_HASHTABLE_SEM =
  store_thm
   ("VAR_RENAMING_HASHTABLE_SEM",
 
-    ``!s S f. (FINITE S) ==> ((P_SEM s (VAR_RENAMING_HASHTABLE S f)) = 
+    ``!s S f. (FINITE S) ==> ((P_SEM s (VAR_RENAMING_HASHTABLE S f)) =
                   (f (s INTER S) IN s))``,
 
     REPEAT STRIP_TAC THEN
-    ASM_SIMP_TAC std_ss [VAR_RENAMING_HASHTABLE_def, P_BIGOR_SEM, 
+    ASM_SIMP_TAC std_ss [VAR_RENAMING_HASHTABLE_def, P_BIGOR_SEM,
         POWER_SET_FINITE, IMAGE_FINITE, MEM_SET_TO_LIST, IN_IMAGE,
         GSYM LEFT_EXISTS_AND_THM, IN_POWER_SET_SUBSET_EQUIV, P_SEM_THM,
         P_PROP_SET_MODEL_SEM] THEN
@@ -1064,7 +1064,7 @@ val P_ASSIGN_TRUE_FALSE___P_USED_VARS =
     P_USED_VARS p DIFF v) /\
     (P_USED_VARS (P_ASSIGN_FALSE v p) =
     P_USED_VARS p DIFF v)``,
-    
+
     INDUCT_THEN prop_logic_induct ASSUME_TAC THENL [
       REWRITE_TAC [P_ASSIGN_TRUE_def, P_ASSIGN_FALSE_def] THEN
       REPEAT GEN_TAC THEN
@@ -1073,12 +1073,12 @@ val P_ASSIGN_TRUE_FALSE___P_USED_VARS =
           IN_SING, NOT_IN_EMPTY] THEN
         PROVE_TAC[]
       ),
-    
+
       SIMP_TAC std_ss [P_ASSIGN_TRUE_def, P_USED_VARS_EVAL, EMPTY_DIFF,
                       P_ASSIGN_FALSE_def],
-    
+
       ASM_SIMP_TAC std_ss [P_ASSIGN_TRUE_def, P_ASSIGN_FALSE_def, P_USED_VARS_EVAL],
-    
+
       ASM_SIMP_TAC std_ss [P_ASSIGN_TRUE_def, P_ASSIGN_FALSE_def, P_USED_VARS_EVAL, UNION_OVER_DIFF]
     ]);
 
@@ -1117,7 +1117,7 @@ val P_EXISTS___P_USED_VARS =
 
   Induct_on `l` THENL [
     SIMP_TAC std_ss [P_EXISTS_def, LIST_TO_SET_THM, DIFF_EMPTY],
-  
+
     ASM_SIMP_TAC std_ss [P_EXISTS_def, LIST_TO_SET_THM, DIFF_EMPTY,
       P_USED_VARS_EVAL, P_ASSIGN_TRUE_FALSE___P_USED_VARS] THEN
     SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF, IN_SING, IN_INSERT] THEN
@@ -1161,18 +1161,18 @@ Define
 
 val VAR_RENAMING_HASHTABLE_LIST___CLEAN_VAR_SET =
   store_thm ("VAR_RENAMING_HASHTABLE_LIST___CLEAN_VAR_SET",
-    ``!l f S. 
+    ``!l f S.
 (VAR_RENAMING_HASHTABLE_LIST l S f) =
 (VAR_RENAMING_HASHTABLE_LIST l EMPTY (\x. f (x UNION S)))``,
 
 Induct_on `l` THENL [
   SIMP_TAC std_ss [VAR_RENAMING_HASHTABLE_LIST_def, UNION_EMPTY],
-  
+
   SIMP_TAC std_ss [VAR_RENAMING_HASHTABLE_LIST_def] THEN
   ONCE_ASM_REWRITE_TAC[] THEN
   SIMP_TAC std_ss [UNION_EMPTY, UNION_INSERT]
 ]);
-  
+
 
 
 val VAR_RENAMING_HASHTABLE_LIST___FUN_RESTRICT =
@@ -1202,7 +1202,7 @@ Induct_on `l` THENL [
         IN_LIST_TO_SET] THEN
       PROVE_TAC[]
     ) THEN
-    ASM_REWRITE_TAC[]    
+    ASM_REWRITE_TAC[]
   ]
 ]);
 
@@ -1210,7 +1210,7 @@ Induct_on `l` THENL [
 
 val VAR_RENAMING_HASHTABLE_LIST___EQUIVALENT_HASHTABLE_SET =
   store_thm ("VAR_RENAMING_HASHTABLE_LIST___EQUIVALENT_HASHTABLE_SET",
-  ``!l f. 
+  ``!l f.
   (PROP_LOGIC_EQUIVALENT (VAR_RENAMING_HASHTABLE (LIST_TO_SET l) f)
                         (VAR_RENAMING_HASHTABLE_LIST l EMPTY f))``,
 
@@ -1253,7 +1253,7 @@ Induct_on `l` THENL [
         ASM_SIMP_TAC std_ss [UNION_SING, INSERT_DELETE] THEN
         REPEAT STRIP_TAC THEN (
           SIMP_ALL_TAC std_ss [IN_POWER_SET_SUBSET_EQUIV, SUBSET_DEF, IN_INSERT, IN_DELETE, IN_LIST_TO_SET, EXTENSION, IN_INTER] THEN
-          METIS_TAC[]         
+          METIS_TAC[]
         )
       ],
 

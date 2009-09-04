@@ -3453,16 +3453,16 @@ val WORD_FINITE = store_thm("WORD_FINITE",
   `!s:'a word set. FINITE s`,
   STRIP_TAC
   \\ MATCH_MP_TAC ((ONCE_REWRITE_RULE [CONJ_COMM] o
-    REWRITE_RULE [AND_IMP_INTRO] o GEN_ALL o DISCH_ALL o SPEC_ALL o 
+    REWRITE_RULE [AND_IMP_INTRO] o GEN_ALL o DISCH_ALL o SPEC_ALL o
     UNDISCH_ALL o SPEC_ALL) SUBSET_FINITE)
   \\ Q.EXISTS_TAC `UNIV`
   \\ ASM_SIMP_TAC std_ss [SUBSET_UNIV]
   \\ MATCH_MP_TAC ((ONCE_REWRITE_RULE [CONJ_COMM] o
-    REWRITE_RULE [AND_IMP_INTRO] o GEN_ALL o DISCH_ALL o SPEC_ALL o 
+    REWRITE_RULE [AND_IMP_INTRO] o GEN_ALL o DISCH_ALL o SPEC_ALL o
     UNDISCH_ALL o SPEC_ALL) SUBSET_FINITE)
-  \\ Q.EXISTS_TAC `{ n2w n | n < dimword(:'a) }`  
+  \\ Q.EXISTS_TAC `{ n2w n | n < dimword(:'a) }`
   \\ STRIP_TAC
-  THEN1 SIMP_TAC std_ss [SUBSET_DEF,IN_UNIV,GSPECIFICATION,ranged_word_nchotomy]    
+  THEN1 SIMP_TAC std_ss [SUBSET_DEF,IN_UNIV,GSPECIFICATION,ranged_word_nchotomy]
   \\ Q.SPEC_TAC (`dimword (:'a)`,`k`)
   \\ Induct \\ `{n2w n | n < 0} = {}` by ALL_TAC
   \\ ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,FINITE_EMPTY]
@@ -3470,11 +3470,11 @@ val WORD_FINITE = store_thm("WORD_FINITE",
   \\ ASM_SIMP_TAC std_ss [FINITE_INSERT]
   \\ ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,IN_INSERT]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss [DECIDE ``n < SUC k = n < k \/ (n = k)``] 
+  \\ FULL_SIMP_TAC std_ss [DECIDE ``n < SUC k = n < k \/ (n = k)``]
   \\ METIS_TAC []);
 
 val WORD_SET_INDUCT = save_thm("WORD_SET_INDUCT",
-  REWRITE_RULE [WORD_FINITE] 
+  REWRITE_RULE [WORD_FINITE]
   (INST_TYPE [`:'a`|->`:'a word`] FINITE_INDUCT));
 
 (* ------------------------------------------------------------------------- *)

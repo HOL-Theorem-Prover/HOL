@@ -6,7 +6,7 @@ open HolKernel boolLib bossLib Parse wordsLib;
 
 val _ = new_theory "tables";
 
-val Sbox = Count.apply 
+val Sbox = Count.apply
  Define
   `Sbox x = case (x:word8) of
       0x0w -> 0x63w:word8
@@ -266,7 +266,7 @@ val Sbox = Count.apply
    || 0xFEw -> 0xBBw
    || 0xFFw -> 0x16w`;
 
-val InvSbox = Count.apply 
+val InvSbox = Count.apply
  Define
   `InvSbox x = case (x:word8) of
       0x0w -> 0x52w:word8

@@ -11,14 +11,14 @@ val welcome        : string vector ref
 val browser        : (string -> unit) ref
 val defaultBrowser : string -> unit
 end;
-(* 
-   [help s] provides on-line help on the topic indicated by string s.  
+(*
+   [help s] provides on-line help on the topic indicated by string s.
 
       help "lib";   gives an overview of the Moscow ML library.
       help "id";    provides help on identifier id (case-insensitive).
 
-   If exactly one identifier in the library matches id (case-insensitive), 
-   then the browser opens the signature defining that identifier, 
+   If exactly one identifier in the library matches id (case-insensitive),
+   then the browser opens the signature defining that identifier,
    positioning the first occurrence of id at the center of the screen.
 
    If more than one identifier matches id (case-insensitive), then a
@@ -53,15 +53,15 @@ end;
    `term' field should be all lowercase, since the argument passed to
    `help' will be converted to lowercase.
 
-   [welcome] is a reference to the text shown in response to the query 
+   [welcome] is a reference to the text shown in response to the query
    help "".  This is a vector of lines of text.
 
-   [browser] is a reference to the function that gets invoked on the 
+   [browser] is a reference to the function that gets invoked on the
    text of the help file.  Initially set to defaultBrowser.
 
    [defaultBrowser] is the default (built-in) help browser.
 
    [displayLines] is a reference to the size of the display (window)
    assumed by the defaultBrowser; initially 24 lines.  Set it to the
-   actual size of your window for best results.  
+   actual size of your window for best results.
 *)

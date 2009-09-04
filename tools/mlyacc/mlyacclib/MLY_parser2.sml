@@ -1,4 +1,4 @@
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/23 03:21:27  michaeln
@@ -27,7 +27,7 @@
  *
  * Revision 1.1.1.1  1996/01/31  16:01:42  george
  * Version 109
- * 
+ *
  *)
 
 (* parser.sml:  This is a parser driver for LR tables with an error-recovery
@@ -41,7 +41,7 @@
 
     This program is an implementation is the partial, deferred method discussed
     in the article.  The algorithm and data structures used in the program
-    are described below.  
+    are described below.
 
     This program assumes that all semantic actions are delayed.  A semantic
     action should produce a function from unit -> value instead of producing the
@@ -53,7 +53,7 @@
 
     Data Structures:
     ----------------
-	
+
 	* The parser:
 
 	   The state stack has the type
@@ -61,7 +61,7 @@
 		 (state * (semantic value * line # * line #)) list
 
 	   The parser keeps a queue of (state stack * lexer pair).  A lexer pair
-	 consists of a terminal * value pair and a lexer.  This allows the 
+	 consists of a terminal * value pair and a lexer.  This allows the
 	 parser to reconstruct the states for terminals to the left of a
 	 syntax error, and attempt to make error corrections there.
 
@@ -73,7 +73,7 @@
     Algorithm:
     ----------
 
-	* The steady-state parser:  
+	* The steady-state parser:
 
 	    This parser keeps the length of the queue of state stacks at
 	a steady state by always removing an element from the front when
@@ -109,7 +109,7 @@
 	tokens left unparsed, a queue, and an action option.
 *)
 
-signature FIFO = 
+signature FIFO =
   sig type 'a queue
       val empty : 'a queue
       exception Empty
@@ -161,11 +161,11 @@ structure LrParser :> LR_PARSER =
       type ('a,'b) lexpair = ('a,'b) lexv * (('a,'b) lexv Stream.stream)
       type ('a,'b) distanceParse =
 		 ('a,'b) lexpair *
-		 ('a,'b) stack * 
+		 ('a,'b) stack *
 		 (('a,'b) stack * ('a,'b) lexpair) Fifo.queue *
 		 int ->
 		   ('a,'b) lexpair *
-		   ('a,'b) stack * 
+		   ('a,'b) stack *
 		   (('a,'b) stack * ('a,'b) lexpair) Fifo.queue *
 		   int *
 		   action option
@@ -179,7 +179,7 @@ structure LrParser :> LR_PARSER =
 	  showTerminal : term -> string,
 	  noShift : term -> bool}
 
-      local 
+      local
 	 val print = fn s => TextIO.output(TextIO.stdOut,s)
 	 val println = fn s => (print s; print "\n")
 	 val showState = fn (STATE s) => "STATE " ^ (Int.toString s)
@@ -191,13 +191,13 @@ structure LrParser :> LR_PARSER =
                   println(showState state);
                   printStack(rest, n+1))
             | nil => ()
-                
+
         fun prAction showTerminal
 		 (stack as (state,_) :: _, (TOKEN (term,_), _), action) =
              (println "Parse: state stack:";
               printStack(stack, 0);
               print("       state="
-                         ^ showState state	
+                         ^ showState state
                          ^ " next="
                          ^ showTerminal term
                          ^ " action="
@@ -217,7 +217,7 @@ structure LrParser :> LR_PARSER =
 	fixError is called with the arguments of parseStep (lexv,stack,and
 	queue).  It returns the lexv, and a new stack and queue adjusted so
 	that the lexv can be parsed *)
-	
+
     val ssParse =
       fn (table,showTerminal,saction,fixError,arg) =>
 	let val prAction = prAction showTerminal
@@ -247,7 +247,7 @@ structure LrParser :> LR_PARSER =
 				    queue)
 		       | _ => raise (ParseImpossible 197))
 		 | ERROR => parseStep(fixError args)
-		 | ACCEPT => 
+		 | ACCEPT =>
 			(case stack
 			 of (_,(topvalue,_,_)) :: _ =>
 				let val (token,restLexer) = lexPair
@@ -298,7 +298,7 @@ structure LrParser :> LR_PARSER =
 		 | ACCEPT => (lexPair,stack,queue,distance,SOME nextAction)
 	      end
 	   | parseStep _ = raise (ParseImpossible 242)
-	in parseStep : ('_a,'_b) distanceParse 
+	in parseStep : ('_a,'_b) distanceParse
 	end
 
 (* mkFixError: function to create fixError function which adjusts parser state
@@ -308,7 +308,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 	      preferred_change,noShift,
 	      showTerminal,error,...} : ('_a,'_b) ecRecord,
 	     distanceParse : ('_a,'_b) distanceParse,
-	     minAdvance,maxAdvance) 
+	     minAdvance,maxAdvance)
 
             ((TOKEN (term, (_, leftPos, _)), _), _, queue) =
     let val _ = if DEBUG2 then
@@ -322,7 +322,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 
 	(* pull all the state * lexv elements from the queue *)
 
-	val stateList = 
+	val stateList =
 	   let fun f q = let val (elem,newQueue) = Fifo.get q
 			 in elem :: (f newQueue)
 			 end handle Fifo.Empty => nil
@@ -359,9 +359,9 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 
 	fun parse (lexPair,stack,queuePos : int) =
 	    case distanceParse(lexPair,stack,Fifo.empty,queuePos+maxAdvance+1)
-             of (_,_,_,distance,SOME ACCEPT) => 
-		        if maxAdvance-distance-1 >= 0 
-			    then maxAdvance 
+             of (_,_,_,distance,SOME ACCEPT) =>
+		        if maxAdvance-distance-1 >= 0
+			    then maxAdvance
 			    else maxAdvance-distance-1
 	      | (_,_,_,distance,_) => maxAdvance - distance - 1
 
@@ -376,9 +376,9 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 	     let val lex' = List.foldr (fn (t',p)=>(t',Stream.cons p)) lex new
 		 val distance = parse(lex',stack,
 				      pos + List.length new - List.length orig)
-	      in if distance >= minAdvance + keywordsDelta new 
+	      in if distance >= minAdvance + keywordsDelta new
 		   then [CHANGE{pos=pos,leftPos=leftPos,rightPos=rightPos,
-				distance=distance,orig=orig,new=new}] 
+				distance=distance,orig=orig,new=new}]
 		   else []
 	     end
 
@@ -407,7 +407,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 		 tryChange{lex=lexPair,stack=stack,
 			   pos=queuePos,orig=[],new=[tokAt(t,l)],
 			   leftPos=l,rightPos=l})
-			      
+
 (* trySubst: try to substitute tokens for the current terminal;
        return a list of the successes  *)
 
@@ -424,8 +424,8 @@ fun mkFixError({is_keyword,terms,errtermvalue,
      (* do_delete(toks,lexPair) tries to delete tokens "toks" from "lexPair".
          If it succeeds, returns SOME(toks',l,r,lp), where
 	     toks' is the actual tokens (with positions and values) deleted,
-	     (l,r) are the (leftmost,rightmost) position of toks', 
-	     lp is what remains of the stream after deletion 
+	     (l,r) are the (leftmost,rightmost) position of toks',
+	     lp is what remains of the stream after deletion
      *)
         fun do_delete(nil,lp as (TOKEN(_,(_,l,_)),_)) = SOME(nil,l,l,lp)
           | do_delete([t],(tok as TOKEN(t',(_,l,r)),lp')) =
@@ -439,13 +439,13 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 			       SOME(tok::deleted,l,r',lp'')
 			  | NONE => NONE
 		   else NONE
-			     
+
         fun tryPreferred((stack,lexPair),queuePos) =
 	    catList preferred_change (fn (delete,insert) =>
 	       if List.exists noShift delete then [] (* should give warning at
 						 parser-generation time *)
                else case do_delete(delete,lexPair)
-                     of SOME(deleted,l,r,lp) => 
+                     of SOME(deleted,l,r,lp) =>
 			    tryChange{lex=lp,stack=stack,pos=queuePos,
 				      leftPos=l,rightPos=r,orig=deleted,
 				      new=map (fn t=>(tokAt(t,r))) insert}
@@ -458,7 +458,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 			      catList numStateList (tryDelete 2) @
 			        catList numStateList (tryDelete 3)
 
-	val findMaxDist = fn l => 
+	val findMaxDist = fn l =>
 	  foldr (fn (CHANGE {distance,...},high) => Int.max(distance,high)) 0 l
 
 (* maxDist: max distance past error taken that we could parse *)
@@ -467,14 +467,14 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 
 (* remove changes which did not parse maxDist tokens past the error token *)
 
-        val changes = catList changes 
-	      (fn(c as CHANGE{distance,...}) => 
+        val changes = catList changes
+	      (fn(c as CHANGE{distance,...}) =>
 		  if distance=maxDist then [c] else [])
 
-      in case changes 
+      in case changes
 	  of (l as change :: _) =>
 	      let fun print_msg (CHANGE {new,orig,leftPos,rightPos,...}) =
-		  let val s = 
+		  let val s =
 		      case (orig,new)
 			  of (_::_,[]) => "deleting " ^ (showTerms orig)
 	                   | ([],_::_) => "inserting " ^ (showTerms new)
@@ -482,8 +482,8 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 				 " with " ^ (showTerms new)
 		  in error ("syntax error: " ^ s,leftPos,rightPos)
 		  end
-		   
-		  val _ = 
+
+		  val _ =
 		      (if length l > 1 andalso DEBUG2 then
 			   (print "multiple fixes possible; could fix it by:\n";
 			    app print_msg l;
@@ -511,7 +511,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 					  end
 		      in f (rev stateList,n)
 		      end
-		
+
 		  val CHANGE {pos,orig,new,...} = change
 		  val (last,queueFront) = findNth pos
 		  val (stack,lexPair) = last
@@ -519,7 +519,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 		  val lp1 = foldl(fn (_,(_,r)) => Stream.get r) lexPair orig
 		  val lp2 = foldr(fn(t,r)=>(t,Stream.cons r)) lp1 new
 
-		  val restQueue = 
+		  val restQueue =
 		      Fifo.put((stack,lp2),
 			       foldl Fifo.put Fifo.empty queueFront)
 

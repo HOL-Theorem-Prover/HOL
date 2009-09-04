@@ -17,7 +17,7 @@ open HolKernel boolTheory boolSyntax Drule Abbrev;
 
 val ERR = mk_HOL_ERR "Rewrite";
 
-type pred = term -> bool  
+type pred = term -> bool
 
 infix 3 ##
 
@@ -94,8 +94,8 @@ fun add_rewrites (RW{thms,net}) thl =
  in
    RW{thms = thms@thl,
        net = itlist Net.insert
-                (map (fn (th,tag) => 
-                        (boolSyntax.lhs(concl th), 
+                (map (fn (th,tag) =>
+                        (boolSyntax.lhs(concl th),
                          (appconv (Conv.REWR_CONV th,tag)))) rewrites)
                 net}
  end
@@ -257,7 +257,7 @@ fun pp_rewrites ppstrm rws =
         val {add_string,add_break,begin_block,end_block,add_newline,...} =
                with_ppstream ppstrm
         val pp_thm = Parse.pp_thm ppstrm
-        val thms = dest_rewrites rws        
+        val thms = dest_rewrites rws
         val thms' = flatten (map mk_rewrites thms)
         val how_many = length thms'
     in

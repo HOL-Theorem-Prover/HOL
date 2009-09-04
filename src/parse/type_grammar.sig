@@ -21,7 +21,7 @@ TApp   ::= Leaf | Tuple Leaf
     | BINDER of string list list
     | APPLICATION
     | CAST
-    | ARRAY_SFX 
+    | ARRAY_SFX
     | INFIX of {opname : string, parse_string : string} list *
                 HOLgrammars.associativity
 

@@ -99,7 +99,7 @@ val IntersectionClosed_def = Define
 val smallest_closed_def = Define
   `smallest_closed p (a : 'a set_system) =
    <| carrier := a.carrier;
-      sets := 
+      sets :=
         BIGINTER
           { b |
             a.sets SUBSET b /\
@@ -150,7 +150,7 @@ val smallest_closed_subset = prove
    RW_TAC resq_ss
      [SetSystem_def, smallest_closed_def, SUBSET_DEF, IN_BIGINTER,
       GSPECIFICATION, K_THM]
-     
+
 );
 
 val smallest_closed = prove
@@ -161,7 +161,7 @@ val smallest_closed = prove
        p (smallest_closed p a)``,
    RW_TAC resq_ss
      [smallest_closed_def, IntersectionClosed_def, GSPECIFICATION, K_THM]
-   ++ 
+   ++
 
    RW_TAC std_ss [sigma_def, sigma_algebra_def, algebra_def, IN_BIGINTER,
                   GSPECIFICATION]

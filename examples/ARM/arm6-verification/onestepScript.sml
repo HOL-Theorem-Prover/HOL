@@ -119,7 +119,7 @@ val IS_CORRECT_def = Define`
 val IS_CORRECT_SUP_def = Define`
   IS_CORRECT_SUP spec impl =
     ?imm1 imm2 abs. CORRECT_SUP spec impl imm1 imm2 abs`;
- 
+
 (*---------------------------------------------------------------------------
   - Time-Consistent State Functions -----------------------------------------
   ---------------------------------------------------------------------------*)
@@ -320,7 +320,7 @@ val TC_IMMERSION_LEMMA2 = store_thm("TC_IMMERSION_LEMMA2",
        \\ ASM_REWRITE_TAC []]);
 
 (* ------------------------------------------------------------------------- *)
- 
+
 val TC_IMM_LEM = store_thm("TC_IMM_LEM",
   `!f g imm dur.
      TCON_IMMERSION f imm /\ UIMMERSION imm f dur /\
@@ -450,7 +450,7 @@ val ONE_STEP_THM = store_thm("ONE_STEP_THM",
     \\ SIMP_TAC arith_ss [ADD1]);
 
 (* ------------------------------------------------------------------------- *)
- 
+
 val ONE_STEP_SUP_LEMMA = prove(
   `!f imm1 imm2.  ADJUNCT imm1 imm2 f /\ TCON_IMMERSION f imm2 ==>
       (!r a. imm1 a (SUC r) = (imm1 (f (imm2 a r) a) 1 + imm1 a r))`,

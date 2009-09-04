@@ -29,8 +29,8 @@ val arm_length1_thm = prove(
   ``!ys a y dm m. llist ys (a,dm,m) ==> arm_length1_pre (y,a,dm,m) /\
                   (arm_length1 (y,a,dm,m) = (y + n2w (LENGTH ys),0w,dm,m))``,
   Induct THEN ONCE_REWRITE_TAC [arm_defs]
-  THEN SIMP_TAC bool_ss [llist_def,LENGTH,WORD_ADD_0,LET_DEF,EMPTY_SUBSET, 
-    INSERT_SUBSET, ONCE_REWRITE_RULE [ADD_COMM] ADD1, GSYM word_add_n2w, WORD_ADD_ASSOC] 
+  THEN SIMP_TAC bool_ss [llist_def,LENGTH,WORD_ADD_0,LET_DEF,EMPTY_SUBSET,
+    INSERT_SUBSET, ONCE_REWRITE_RULE [ADD_COMM] ADD1, GSYM word_add_n2w, WORD_ADD_ASSOC]
   THEN METIS_TAC [])
 
 val arm_length_thm = prove(

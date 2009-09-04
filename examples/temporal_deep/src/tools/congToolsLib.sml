@@ -91,7 +91,7 @@ fun mk_list_as_set_congruence_relation_cs def preorder =
     dprocs = [],
     congs  = [cong_thm]}
   end
- 
+
 
 
 

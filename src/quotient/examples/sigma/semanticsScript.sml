@@ -414,7 +414,7 @@ val (SIGMA_R_rules_sat,SIGMA_R_ind_thm) =
 val SIGMA_R_inv_thms = prove_inversion_theorems
     SIGMA_R_rules_sat SIGMA_R_ind_thm;
 
-val SIGMA_R_strong_ind = prove_strong_induction 
+val SIGMA_R_strong_ind = prove_strong_induction
     SIGMA_R_rules_sat SIGMA_R_ind_thm;
 
 val _ = save_thm ("SIGMA_R_rules_sat", SIGMA_R_rules_sat);
@@ -554,8 +554,8 @@ val REDL_patterns =     [--`^REDL_obj o1 o2`--,
 
 val REDL_rules_tm =
 --`
-                           
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                        (^REDL_obj o1 o1)                                  /\
 
 
@@ -574,8 +574,8 @@ val REDL_rules_tm =
          (^REDL_obj (UPDATE o1 l m1) (UPDATE o2 l m2)))                 /\
 
 
-                    
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                        (^REDL_dict d d)                                   /\
 
 
@@ -584,8 +584,8 @@ val REDL_rules_tm =
              (^REDL_dict (CONS e1 d1) (CONS e2 d2)))                      /\
 
 
-                  
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                        (^REDL_entry e e)                                  /\
 
 
@@ -594,8 +594,8 @@ val REDL_rules_tm =
                 (^REDL_entry (l, m1) (l, m2)))                            /\
 
 
-                    
-       (* -------------------------------------------- *) 
+
+       (* -------------------------------------------- *)
                       (^REDL_method m m)                                  /\
 
 
@@ -611,7 +611,7 @@ val REDL_rules_tm =
 
            ((^REDL_dict d1 d2) /\ (^REDL_method m1 m2)
        (* -------------------------------------------- *) ==>
-   (^REDL_obj (UPDATE (OBJ d1) l m1) (update (OBJ d2) l m2)))     
+   (^REDL_obj (UPDATE (OBJ d1) l m1) (update (OBJ d2) l m2)))
 `--;
 
 val (REDL_rules_sat,REDL_ind_thm) =
@@ -620,7 +620,7 @@ val (REDL_rules_sat,REDL_ind_thm) =
 val REDL_inv_thms = prove_inversion_theorems
     REDL_rules_sat REDL_ind_thm;
 
-val REDL_strong_ind = prove_strong_induction 
+val REDL_strong_ind = prove_strong_induction
     REDL_rules_sat REDL_ind_thm;
 
 val _ = save_thm ("REDL_rules_sat", REDL_rules_sat);
@@ -656,7 +656,7 @@ val REDL_height_ind_thm_LEMMA = store_thm
          (!e. P_2 e e) /\
          (!l m1 m2. P_3 m1 m2 ==> P_2 (l,m1) (l,m2)) /\
          (!m. P_3 m m) /\
-         (!x o1 o2. 
+         (!x o1 o2.
            (!o1' o2'. REDL_obj o1' o2' /\
                       (HEIGHT_obj o1 = HEIGHT_obj o1') ==> P_0 o1' o2')
             ==> P_3 (SIGMA x o1) (SIGMA x o2)) ==>
@@ -1035,7 +1035,7 @@ val SHIFT_IN_DIFF = TAC_PROOF(([],
         ~(y IN FV_obj M' DIFF {w})`--)),
     REWRITE_TAC[IN_DIFF,IN]
     THEN REPEAT GEN_TAC THEN STRIP_TAC
-    THEN FIRST_ASSUM (MP_TAC o 
+    THEN FIRST_ASSUM (MP_TAC o
                REWRITE_RULE[FV_object] o
                AP_TERM (--`FV_method`--))
     THEN REWRITE_TAC[EXTENSION]
@@ -1054,7 +1054,7 @@ val SHIFT_IN_DIFF2 = TAC_PROOF(([],
         ~(x IN FV_obj M' DIFF {w})`--)),
     REWRITE_TAC[IN_DIFF,IN]
     THEN REPEAT GEN_TAC THEN STRIP_TAC
-    THEN FIRST_ASSUM (MP_TAC o 
+    THEN FIRST_ASSUM (MP_TAC o
                REWRITE_RULE[FV_object] o
                AP_TERM (--`FV_method`--))
     THEN REWRITE_TAC[EXTENSION]
@@ -1809,7 +1809,7 @@ val RC_INDUCT_TAC =
 Barendregt Lemma 3.2.7, page 62, the proof begins with the note that
 
     --->B    SUBSET     -->>     SUBSET     -->>B
-     =                   l                  
+     =                   l
 
 which in our notation corresponds to
 
@@ -2137,7 +2137,7 @@ val TC_REDL_IS_RED_SIGMA = store_thm
         THEN GEN_TAC
         THEN EXT_TAC (--`e2:^entry`--)
         THEN GEN_TAC,
- 
+
         EXT_TAC (--`m1:method`--)
         THEN GEN_TAC
         THEN EXT_TAC (--`m2:method`--)

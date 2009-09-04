@@ -120,7 +120,7 @@ val unify =
 (* (identity if no entry for s in vm)                                        *)
 (*****************************************************************************)
 
-fun remove s (vm:varmap) = 
+fun remove s (vm:varmap) =
  fst(Binarymap.remove(vm,s)) handle NotFound => vm;
 
 (*****************************************************************************)

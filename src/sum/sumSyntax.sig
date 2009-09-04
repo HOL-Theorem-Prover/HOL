@@ -23,10 +23,10 @@ sig
   val mk_outr     : term -> term
   val mk_sum_case : term * term * term -> term
 
-  datatype ('a,'b)sum = INL of 'a 
+  datatype ('a,'b)sum = INL of 'a
                       | INR of 'b
-  val lift_sum    : hol_type -> ('a -> term ) 
-                             -> ('b -> term) 
-                             -> ('a,'b)sum 
+  val lift_sum    : hol_type -> ('a -> term )
+                             -> ('b -> term)
+                             -> ('a,'b)sum
                              -> term
 end

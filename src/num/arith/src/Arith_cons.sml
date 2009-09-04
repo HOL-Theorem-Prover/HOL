@@ -136,8 +136,8 @@ and arg2 = rand;
 local infixr -->
       val num_reln_type = num_ty --> num_ty --> bool
 in
-fun is_num_reln tm = 
+fun is_num_reln tm =
   (num_reln_type = type_of(rator(rator tm))) handle HOL_ERR _ => false
 end;
- 
+
 end

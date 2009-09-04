@@ -10,13 +10,13 @@
   quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
      wordsTheory bitTheory wordsLib arithmeticTheory;
 
 val _ = new_theory "Mult";
 
 (*---------------------------------------------------------------------------
-    Multiply a byte (representing a polynomial) by x. 
+    Multiply a byte (representing a polynomial) by x.
  ---------------------------------------------------------------------------*)
 
 val xtime_def = Define
@@ -38,11 +38,11 @@ val xtime_distrib = Q.store_thm
 
 val _ = set_fixity "**" (Infixl 675);
 
-val ConstMult_def = 
- xDefine 
+val ConstMult_def =
+ xDefine
    "ConstMult"
    `b1 ** b2 =
-      if b1 = 0w:word8 then 0w else 
+      if b1 = 0w:word8 then 0w else
       if word_lsb b1
          then b2 ?? ((b1 >>> 1) ** xtime b2)
          else       ((b1 >>> 1) ** xtime b2)`;
@@ -61,8 +61,8 @@ val ConstMultDistrib = Q.store_thm
 (* Iterative version                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val IterConstMult_def = 
- Define 
+val IterConstMult_def =
+ Define
    `IterConstMult (b1,b2,acc) =
        if b1 = 0w:word8 then (b1,b2,acc)
        else IterConstMult (b1 >>> 1, xtime b2,
@@ -86,12 +86,12 @@ val ConstMultEq = Q.store_thm
 (*---------------------------------------------------------------------------*)
 
 fun UNROLL_RULE 0 def = def
-  | UNROLL_RULE n def = 
+  | UNROLL_RULE n def =
      SIMP_RULE arith_ss [LSR_ADD]
      (GEN_REWRITE_RULE (RHS_CONV o DEPTH_CONV) empty_rewrites [def]
                        (UNROLL_RULE (n - 1) def));
 val instantiate =
- SIMP_RULE (srw_ss()) [GSYM xtime_distrib] o 
+ SIMP_RULE (srw_ss()) [GSYM xtime_distrib] o
  ONCE_REWRITE_CONV [UNROLL_RULE 4 (SPEC_ALL ConstMult_def)];
 
 val IterMult2 = UNROLL_RULE 1 (SPEC_ALL IterConstMult_def);
@@ -141,12 +141,12 @@ val _ = save_thm ("mult_tables", mult_tables)
 (*
 val _ = save_thm ("mult_ifs", mult_ifs)
 *)
- 
+
 (*---------------------------------------------------------------------------*)
 (* Exponentiation                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val PolyExp_def = 
+val PolyExp_def =
  Define
    `PolyExp x n = if n=0 then 1w else x ** PolyExp x (n-1)`;
 

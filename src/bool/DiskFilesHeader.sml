@@ -74,7 +74,7 @@ fun convert_prethms (ids, types, atoms, named_ths) = let
                               (Binarymap.mkDict Int.compare)
                               atoms
 in
-  map (fn (s, pth) => (s, convert_thm(atoms, pth))) named_ths 
+  map (fn (s, pth) => (s, convert_thm(atoms, pth))) named_ths
 end
 
 

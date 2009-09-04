@@ -1,6 +1,6 @@
 (* Copyright (c) Michael Norrish *)
 
-signature mlibOmegaint = 
+signature mlibOmegaint =
 sig
 
   type int
@@ -37,7 +37,7 @@ sig
   val max : int * int -> int
 
 
-  
+
   val hash : int -> Int.int
   val gcd  : int * int -> int
 end

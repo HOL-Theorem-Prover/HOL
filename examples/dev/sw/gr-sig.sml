@@ -4,7 +4,7 @@
  *  COPYRIGHT (c) 1997 by Martin Erwig.  See COPYRIGHT file for details.
  *)
 
-(* 
+(*
    Hierarchy of Interfaces/Signatures for Directed Graphs
 
 
@@ -78,7 +78,7 @@ sig
   val suc         : node * ('a,'b) graph -> node list
   val pred        : node * ('a,'b) graph -> node list
   val ufold       : (('a,'b) context * 'c -> 'c) -> 'c -> ('a,'b) graph -> 'c
-  val gfold       : (('a,'b) context -> node list) -> ('a * 'c -> 'd) -> 
+  val gfold       : (('a,'b) context -> node list) -> ('a * 'c -> 'd) ->
                     ('d * 'c -> 'c) -> 'c -> node list -> ('a,'b) graph -> 'c
   val nodes       : ('a,'b) graph -> node list
   val labNodes    : ('a,'b) graph -> (node * 'a) list
@@ -121,11 +121,11 @@ sig
   val suc         : node * 'a graph -> node list
   val pred        : node * 'a graph -> node list
   val ufold       : ('a context * 'b -> 'b) -> 'b -> 'a graph -> 'b
-  val gfold       : ('a context -> node list) -> ('a * 'b -> 'c) -> 
+  val gfold       : ('a context -> node list) -> ('a * 'b -> 'c) ->
                     ('c * 'b -> 'b) -> 'b -> node list -> 'a graph -> 'b
   val nodes       : 'a graph -> node list
   val labNodes    : 'a graph -> (node * 'a) list
-  val noNodes     : 'a graph -> int 
+  val noNodes     : 'a graph -> int
   val isEmpty     : 'a graph -> bool
   val newNodes    : int -> 'a graph -> node list
   val mkgr        : 'a list * (node * node) list -> 'a graph

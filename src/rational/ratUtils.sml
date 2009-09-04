@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib Parse bossLib;
 
 (* interactive mode
-app load ["pairTheory", "pairLib", 
+app load ["pairTheory", "pairLib",
 	"integerTheory", "intLib",
 	"jbUtils"];
 *)

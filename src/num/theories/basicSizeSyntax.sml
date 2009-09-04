@@ -15,11 +15,11 @@ fun dom tm = fst(dom_rng(type_of tm));
 
 fun mk_bool_size tm = mk_comb(bool_size_tm,tm);
 fun mk_one_size tm = mk_comb(one_size_tm,tm);
-fun mk_pair_size (f,g,p) = 
+fun mk_pair_size (f,g,p) =
  list_mk_comb(inst[alpha |-> dom f, beta |-> dom g] pair_size_tm,[f,g,p]);
-fun mk_sum_size (f,g,s) = 
+fun mk_sum_size (f,g,s) =
  list_mk_comb(inst[alpha |-> dom f, beta |-> dom g] sum_size_tm,[f,g,s]);
-fun mk_option_size (f,tm) = 
+fun mk_option_size (f,tm) =
  list_mk_comb(inst [alpha |-> dom f]option_size_tm,[f,tm]);
 
 val dest_bool_size = dest_monop bool_size_tm  (ERR "dest_bool_size" "");

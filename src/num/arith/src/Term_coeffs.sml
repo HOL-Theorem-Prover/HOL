@@ -197,8 +197,8 @@ fun coeffs_of_leq tm =
 (*---------------------------------------------------------------------------*)
 
 fun coeffs_of_leq_set tm =
- map coeffs_of_leq (strip_conj tm) 
-     handle HOL_ERR _ => 
+ map coeffs_of_leq (strip_conj tm)
+     handle HOL_ERR _ =>
  failwith "coeffs_of_leq_set";
 
 (*===========================================================================*)

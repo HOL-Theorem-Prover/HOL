@@ -30,13 +30,13 @@ local
 
 open Globals HolKernel Parse
 open Array2 ListPair bossLib simpLib Binarymap pairSyntax boolSyntax stringLib
-open ctlTheory ctlSyntax commonTools holCheckLib 
+open ctlTheory ctlSyntax commonTools holCheckLib
 
-in 
+in
 
 (* n is size of grid *)
 fun makeTTT n =
-  let	
+  let
     val am = Array2.tabulate Array2.RowMajor (n,n,(fn (x,y) => "u"^Int.toString(x)^"_"^Int.toString(y)))
     val bm = Array2.tabulate Array2.RowMajor (n,n,(fn (x,y) => "v"^Int.toString(x)^"_"^Int.toString(y)))
     val am' = Array2.array(n,n,"")
@@ -59,15 +59,15 @@ fun makeTTT n =
     val bvm = ["m","m'"]@(shuffle(lam @ lbm, lam' @ lbm'));
 
     (* Finishing condition *)
-    
+
     fun bwin pm pl =
     let
       val r = List.map (fn x => Vector.foldr (fn (h,t) => h::t) [] (Array2.row(pm,x))) (List.tabulate (n, (fn x => x)))
       val c = List.map (fn x => Vector.foldr (fn (h,t) => h::t) [] (Array2.column(pm,x))) (List.tabulate (n, (fn x => x)))
-      val d1 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) [] 
-			  (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),				  
+      val d1 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) []
+			  (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),
 					(List.foldr (fn (h,t) => h @ t) [] c)))
-      val d2 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) [] 
+      val d2 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) []
 	  (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),
 			(List.rev(List.foldr (fn (h,t) => h @ t) [] c))))
       val aps = List.map (fn l => List.map (fn v => mk_bool_var v) l) (d1::d2::(r @ c))
@@ -78,7 +78,7 @@ fun makeTTT n =
     end;
 
     (* Note: fin is used only in making the moves. A draw is accounted for automatically because no moves are available *)
-    val fin = mk_disj(bwin am 0,bwin bm 1); 
+    val fin = mk_disj(bwin am 0,bwin bm 1);
 
     (* Initial state *)
 
@@ -110,7 +110,7 @@ fun makeTTT n =
     (* Define transition relation as disjunction of all moves *)
     (*val R1 = list_mk_disj(List.map make_move_trans moves)*)
     val T1 = List.map (fn v => (v,(make_move_trans v))) moves;
-     
+
     (* Properties for players A and B, as ctl formulae *)
     infixr 5 C_AND infixr 5 C_OR infixr 2 C_IMP infix C_IFF;
     val state = mk_state I1 T1
@@ -119,9 +119,9 @@ fun makeTTT n =
     let
       val r = List.map (fn x => Vector.foldr (fn (h,t) => h::t) [] (Array2.row(pm,x))) (List.tabulate (n, (fn x => x)))
       val c = List.map (fn x => Vector.foldr (fn (h,t) => h::t) [] (Array2.column(pm,x))) (List.tabulate (n, (fn x => x)))
-      val d1 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) [] 
+      val d1 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) []
 		(ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),(List.foldr (fn (h,t) => h @ t) [] c)))
-      val d2 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) [] 
+      val d2 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) []
 		(ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),(List.rev(List.foldr (fn (h,t) => h @ t) [] c))))
       val aps = List.map (fn l => List.map (fn v => ttt_AP v) l) (d1::d2::(r @ c))
       val wn = list_C_OR (List.map list_C_AND aps)
@@ -130,7 +130,7 @@ fun makeTTT n =
        mv C_AND wn
     end;
 
-    (* pl has a winning strategy if there exists a path from the current position such that either pl has already won, 
+    (* pl has a winning strategy if there exists a path from the current position such that either pl has already won,
        or, it is pl's move and there exists a path to a win, or, it is not pl's move but in all paths pl wins *)
     fun can_win pm pl =
     let
@@ -148,12 +148,12 @@ fun makeTTT n =
 
     val B_can_win = can_win bm 1 (* B has a winning strategy *)
 
-    val fl =[("isInit",isInit),("A_win",A_win),("B_win",B_win),("A_canwin",A_can_win),("B_can_win",B_can_win)] 
+    val fl =[("isInit",isInit),("A_win",A_win),("B_win",B_win),("A_canwin",A_can_win),("B_can_win",B_can_win)]
     (* this is for testing what holCheck does if supplied with both mu and CTL forumlas
      val fl' = [("muisInit",ctl2muTools.ctl2mu ((snd o hd) fl))]@fl@
 	      [("muAcw",ctl2muTools.ctl2mu ((snd o last o butlast) fl))]*)
   in
-    ((set_init I1) o (set_trans T1) o (set_flag_ric false) o (set_name "ttt") o (set_vord bvm)o (set_state state) o 
+    ((set_init I1) o (set_trans T1) o (set_flag_ric false) o (set_name "ttt") o (set_vord bvm)o (set_state state) o
     (set_props fl)) empty_model
   end
 

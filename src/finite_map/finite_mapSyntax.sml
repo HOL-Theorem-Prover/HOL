@@ -79,7 +79,7 @@ struct
  fun list_mk_fupdate (f,updl) =
    rev_itlist (fn p => fn map => mk_fupdate(map,p)) updl f;
 
-fun strip_fupdate tm = 
+fun strip_fupdate tm =
  let fun strip acc t =
       case total dest_fupdate t
        of SOME (fmap,p) => strip (p::acc) fmap

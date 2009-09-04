@@ -75,7 +75,7 @@ fun addf f k x t = let
         Empty => Leaf (k,x)
       | Leaf (j,old) => if j = k then Leaf (k, f old)
                         else join (k, Leaf (k, x), j, t)
-      | Branch (p,m,t0,t1,sz) => 
+      | Branch (p,m,t0,t1,sz) =>
         if match_prefix k p m then
 	    if zero_bit k m then Branch (p, m, ins t0, t1, sz+1)
 	    else Branch (p, m, t0, ins t1,sz+1)

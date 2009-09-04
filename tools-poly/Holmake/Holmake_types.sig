@@ -1,4 +1,4 @@
-signature Holmake_types = 
+signature Holmake_types =
 sig
 datatype pretoken = DEFN of string | RULE of string | EOF
 

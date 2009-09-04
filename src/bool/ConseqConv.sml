@@ -29,13 +29,13 @@ quietdec := false;
 (*---------------------------------------------------------------------------
  * generalise a variable in an implication of ==>
  *
- *   A |- t1 v ==> t2 v  
+ *   A |- t1 v ==> t2 v
  * ---------------------------------------------
  *   A |- (!v. t1 v) ==> (!v. t2 v)
  *
  *---------------------------------------------------------------------------*)
 
-fun GEN_IMP v thm = 
+fun GEN_IMP v thm =
   let
      val thm1 = GEN v thm;
      val thm2 = HO_MATCH_MP MONO_ALL thm1;
@@ -61,12 +61,12 @@ fun REFL_CONSEQ_CONV t = DISCH t (ASSUME t);
  *
  *---------------------------------------------------------------------------*)
 
-fun GEN_ASSUM v thm = 
+fun GEN_ASSUM v thm =
   let
     val assums = filter (fn t => op_mem eq v (free_vars t)) (hyp thm);
-    val thm2 = foldl (fn (t,thm) => DISCH t thm) thm assums; 
+    val thm2 = foldl (fn (t,thm) => DISCH t thm) thm assums;
     val thm3 = GEN v thm2;
-    val thm4 = foldl (fn (_,thm) => UNDISCH (HO_MATCH_MP MONO_ALL thm)) 
+    val thm4 = foldl (fn (_,thm) => UNDISCH (HO_MATCH_MP MONO_ALL thm))
                      thm3 assums;
   in
     thm4
@@ -99,18 +99,18 @@ end;
  * the form t = t'. In contrast a CONSEQ_CONV converts it to
  * a theorem of the form t' ==> t, i.e. it tries to strengthen a boolean expression
  *---------------------------------------------------------------------------*)
- 
+
 
 
 (*---------------------------------------------------------------------------
- * Converts a conversion returning theorems of the form 
+ * Converts a conversion returning theorems of the form
  *    t' ==> t, t = t' or t
  * to a CONSEQ_CONV. Also some checks are performed that the resulting
  * theorem is really of the form t' ==> t with t being the original input
  * and t' not being equal to t
  *---------------------------------------------------------------------------*)
 
-datatype CONSEQ_CONV_direction =  
+datatype CONSEQ_CONV_direction =
          CONSEQ_CONV_STRENGTHEN_direction
        | CONSEQ_CONV_WEAKEN_direction
        | CONSEQ_CONV_UNKNOWN_direction;
@@ -165,7 +165,7 @@ in
 	 val g' = if (aconv t2 t) then CONSEQ_CONV_STRENGTHEN_direction else
                   if (aconv t1 t) then CONSEQ_CONV_WEAKEN_direction else
 		  raise UNCHANGED;
-         val g'' = if (dir = CONSEQ_CONV_UNKNOWN_direction) then g' else dir;	 
+         val g'' = if (dir = CONSEQ_CONV_UNKNOWN_direction) then g' else dir;
 	 val _ = if not (g' = g'') then raise UNCHANGED else ();
       in
          (g'', thm)
@@ -173,11 +173,11 @@ in
    else if (is_eq thm_term) then
       (dir,
         if eq (lhs thm_term) t andalso not (eq (rhs thm_term) t) then
-           if (dir = CONSEQ_CONV_UNKNOWN_direction) then 
+           if (dir = CONSEQ_CONV_UNKNOWN_direction) then
               thm
-           else if (dir = CONSEQ_CONV_STRENGTHEN_direction) then 
+           else if (dir = CONSEQ_CONV_STRENGTHEN_direction) then
               snd (EQ_IMP_RULE thm)
-           else 
+           else
               fst (EQ_IMP_RULE thm)
         else raise UNCHANGED)
    else
@@ -188,7 +188,7 @@ end;
 fun CONSEQ_CONV_WRAPPER dir conv t =
 let
    val _ = if (type_of t = bool) then () else raise UNCHANGED;
-   val thm = conv dir t;   
+   val thm = conv dir t;
 in
    CONSEQ_CONV_WRAPPER___CONVERT_RESULT dir thm t
 end;
@@ -222,7 +222,7 @@ fun CHANGED_CONSEQ_CONV conv =
 
 
 (*like ORELSEC*)
-fun ORELSE_CONSEQ_CONV (c1:conv) c2 t =     
+fun ORELSE_CONSEQ_CONV (c1:conv) c2 t =
     ((c1 t handle HOL_ERR _ => raise UNCHANGED) handle UNCHANGED =>
      (c2 t handle HOL_ERR _ => raise UNCHANGED));
 
@@ -252,7 +252,7 @@ fun CONSEQ_CONV___GET_DIRECTION thm t =
       val (t1,t2) = dest_imp (concl thm);
    in
       if (aconv t1 t) andalso (aconv t2 t) then CONSEQ_CONV_UNKNOWN_direction else
-      if (aconv t2 t) then CONSEQ_CONV_STRENGTHEN_direction else 
+      if (aconv t2 t) then CONSEQ_CONV_STRENGTHEN_direction else
       if (aconv t1 t) then CONSEQ_CONV_WEAKEN_direction else
       raise UNCHANGED
    end;
@@ -312,8 +312,8 @@ fun is_refl_imp_eq t = is_refl_imp t orelse is_refl_eq t;
 
 
 fun THEN_CONSEQ_CONV___combine thm1 thm2 t =
-  if (is_refl_imp_eq (concl thm1)) then thm2 
-  else if (is_refl_imp_eq (concl thm2)) then thm1 
+  if (is_refl_imp_eq (concl thm1)) then thm2
+  else if (is_refl_imp_eq (concl thm2)) then thm1
   else if eq (concl thm1) t then THEN_CONSEQ_CONV___combine (EQT_INTRO thm1) thm2 t
   else if (is_eq (concl thm1)) andalso eq (rhs (concl thm1)) (concl thm2) then
      THEN_CONSEQ_CONV___combine thm1 (EQT_INTRO thm2) t
@@ -325,13 +325,13 @@ fun THEN_CONSEQ_CONV___combine thm1 thm2 t =
         val t2 = CONSEQ_CONV___GET_SIMPLIFIED_TERM thm1 t;
         val d2 = if not (d1 = CONSEQ_CONV_UNKNOWN_direction) then d1 else
 		 CONSEQ_CONV___GET_DIRECTION thm2 t2;
-         
+
         val thm1_imp = snd (CONSEQ_CONV_WRAPPER___CONVERT_RESULT d2 thm1 t)
                        handle UNCHANGED => REFL_CONSEQ_CONV t;
         val thm2_imp = snd (CONSEQ_CONV_WRAPPER___CONVERT_RESULT d2 thm2 t2)
                        handle UNCHANGED => REFL_CONSEQ_CONV t2;
      in
-        if (d2 = CONSEQ_CONV_STRENGTHEN_direction) then 
+        if (d2 = CONSEQ_CONV_STRENGTHEN_direction) then
 	    IMP_TRANS thm2_imp thm1_imp
         else
 	    IMP_TRANS thm1_imp thm2_imp
@@ -340,7 +340,7 @@ fun THEN_CONSEQ_CONV___combine thm1 thm2 t =
 
 
 (*like THENC*)
-fun THEN_CONSEQ_CONV (c1:conv) c2 t =     
+fun THEN_CONSEQ_CONV (c1:conv) c2 t =
     let
        val thm0_opt = (SOME (c1 t) handle HOL_ERR _ => raise UNCHANGED) handle UNCHANGED => NONE;
 
@@ -381,7 +381,7 @@ local
    val exists_eq_thm = prove (``(!s:'a. (P s = Q s)) ==> ((?s. P s) = (?s. Q s))``,
 		              STRIP_TAC THEN ASM_REWRITE_TAC[]);
 
-in   
+in
    val FORALL_EQ___CONSEQ_CONV = HO_PART_MATCH (snd o dest_imp) forall_eq_thm;
    val EXISTS_EQ___CONSEQ_CONV = HO_PART_MATCH (snd o dest_imp) exists_eq_thm;
 
@@ -394,7 +394,7 @@ in
    fun FORALL_CONSEQ_CONV conv t =
       let
          val (var, body) = dest_forall t;
-         val thm_body = conv body;     
+         val thm_body = conv body;
          val thm = GEN var thm_body;
          val thm2 = if (is_eq (concl thm_body)) then
 			forall_eq_thm
@@ -407,7 +407,7 @@ in
    fun EXISTS_CONSEQ_CONV conv t =
       let
          val (var, body) = dest_exists t;
-         val thm_body = conv body;     
+         val thm_body = conv body;
          val thm = GEN var thm_body;
          val thm2 = if (is_eq (concl thm_body)) then
 		       exists_eq_thm
@@ -428,9 +428,9 @@ end
 
 fun QUANT_CONSEQ_CONV conv t =
     if (is_forall t) then
-       FORALL_CONSEQ_CONV conv t 
+       FORALL_CONSEQ_CONV conv t
     else if (is_exists t) then
-       EXISTS_CONSEQ_CONV conv t 
+       EXISTS_CONSEQ_CONV conv t
     else
        NO_CONV t;
 
@@ -446,7 +446,7 @@ in
    fun TRUE_FALSE_REFL_CONSEQ_CONV CONSEQ_CONV_STRENGTHEN_direction = FALSE_CONSEQ_CONV
      | TRUE_FALSE_REFL_CONSEQ_CONV CONSEQ_CONV_WEAKEN_direction = TRUE_CONSEQ_CONV
      | TRUE_FALSE_REFL_CONSEQ_CONV CONSEQ_CONV_UNKNOWN_direction = REFL
-end; 
+end;
 
 
 
@@ -455,7 +455,7 @@ end;
   assumptions are propagated to the top level*)
 
 
-fun CONSEQ_CONV_DIRECTION_NEGATE CONSEQ_CONV_UNKNOWN_direction = CONSEQ_CONV_UNKNOWN_direction 
+fun CONSEQ_CONV_DIRECTION_NEGATE CONSEQ_CONV_UNKNOWN_direction = CONSEQ_CONV_UNKNOWN_direction
   | CONSEQ_CONV_DIRECTION_NEGATE CONSEQ_CONV_STRENGTHEN_direction = CONSEQ_CONV_WEAKEN_direction
   | CONSEQ_CONV_DIRECTION_NEGATE CONSEQ_CONV_WEAKEN_direction = CONSEQ_CONV_STRENGTHEN_direction;
 
@@ -476,7 +476,7 @@ val conv = K FALSE_CONSEQ_CONV;
 val t = ``~Y:bool``;
 
  ----------------------------------------------------------------------------*)
-    
+
 val DEPTH_CONSEQ_CONV_debug = ref 0;
 val _ = register_trace("DEPTH_CONSEQ_CONV", DEPTH_CONSEQ_CONV_debug, 3);
 
@@ -502,7 +502,7 @@ val (l,step_opt,dir,top,conv,t) = valOf (!tref2)
 
 *)
 
-fun DEPTH_CONSEQ_CONV_num l step_opt dir top redepth conv t = 
+fun DEPTH_CONSEQ_CONV_num l step_opt dir top redepth conv t =
   let
      val top_string = if top then "TOP " else "SUB ";
      val _ = DEPTH_CONSEQ_CONV_say 2 l (fn () => ("Trying "^top_string^" ``"^term_to_string t^"``"));
@@ -526,11 +526,11 @@ fun DEPTH_CONSEQ_CONV_num l step_opt dir top redepth conv t =
                    else
                       ("Trying REC ``"^term_to_string t2^
                        "`` - UNCHANGED")));
-            
-           val (m,thm3_opt) = if (aconv t t2) then (n2,thm2_opt) else 
+
+           val (m,thm3_opt) = if (aconv t t2) then (n2,thm2_opt) else
                               if (not (isSome thm2_opt)) then
 				  (n, thm_opt)
-                              else   
+                              else
                           	  (n2+n, SOME (THEN_CONSEQ_CONV___combine (valOf thm_opt) (valOf thm2_opt) t));
 
            val _ = DEPTH_CONSEQ_CONV_say 2 l (fn () => (
@@ -551,7 +551,7 @@ fun DEPTH_CONSEQ_CONV_num l step_opt dir top redepth conv t =
 	 val (b1,b2) = dest_conj t;
          val (n1, d1, thm1_opt) = DEPTH_CONSEQ_CONV_num (l+1) step_opt dir top redepth conv b1;
          val (n2, d2, thm2_opt) = DEPTH_CONSEQ_CONV_num (l+1) (step_opt_sub step_opt n1) d1 top redepth conv b2;
-          
+
 	 val thm3_opt = if (isSome thm1_opt) orelse (isSome thm2_opt) then
                           SOME (MATCH_MP MONO_AND (CONJ (CONVERT_THM_OPT (thm1_opt,b1)) (CONVERT_THM_OPT (thm2_opt,b2))))
                         else NONE;
@@ -612,19 +612,19 @@ fun DEPTH_CONSEQ_CONV_num l step_opt dir top redepth conv t =
         val (var, body) = dest_exists t;
 	val (n1, d1, thm_body_opt) = DEPTH_CONSEQ_CONV_num (l+1) step_opt dir top redepth conv body;
         val thm_opt = if (isSome thm_body_opt) then
-                         SOME (HO_MATCH_MP boolTheory.MONO_EXISTS 
+                         SOME (HO_MATCH_MP boolTheory.MONO_EXISTS
                             (GEN_ASSUM var (valOf thm_body_opt)))
                       else NONE
      in
         DEPTH_CONSEQ_CONV_num___REC_CALL l step_opt d1 true redepth conv thm_opt n1 t
      end
-   else 
+   else
      ((let
          val _ = DEPTH_CONSEQ_CONV_say 3 l (fn () => ("Trying CONV ``"^term_to_string t^"``"));
 	 val (d1, thm1) = CONSEQ_CONV_WRAPPER dir conv t;
          val (d2, thm2) = if d1 = CONSEQ_CONV_UNKNOWN_direction then
 			     (DEPTH_CONSEQ_CONV_say 3 l (fn () => ("Guessed direction strengthen!"));
-                              (CONSEQ_CONV_STRENGTHEN_direction,          
+                              (CONSEQ_CONV_STRENGTHEN_direction,
                                snd (EQ_IMP_RULE thm1)))
                           else (d1, thm1);
          val _ = DEPTH_CONSEQ_CONV_say 1 l (fn () => ("``"^term_to_string t^"`` became "^(thm_to_string thm2)));
@@ -640,29 +640,29 @@ end;
 
 
 
-fun DEPTH_CONSEQ_CONV conv dir  = 
- OPT_CHANGED_CHECK_CONSEQ_CONV (fn t => 
-   if (type_of t = bool) then 
+fun DEPTH_CONSEQ_CONV conv dir  =
+ OPT_CHANGED_CHECK_CONSEQ_CONV (fn t =>
+   if (type_of t = bool) then
       (#3 (DEPTH_CONSEQ_CONV_num 0 NONE dir false false conv t))
    else raise UNCHANGED)
 
 
-fun REDEPTH_CONSEQ_CONV conv dir  = 
- OPT_CHANGED_CHECK_CONSEQ_CONV (fn t => 
-   if (type_of t = bool) then 
+fun REDEPTH_CONSEQ_CONV conv dir  =
+ OPT_CHANGED_CHECK_CONSEQ_CONV (fn t =>
+   if (type_of t = bool) then
       (#3 (DEPTH_CONSEQ_CONV_num 0 NONE dir false true conv t))
    else raise UNCHANGED)
 
-fun NUM_DEPTH_CONSEQ_CONV conv n dir = 
-   OPT_CHANGED_CHECK_CONSEQ_CONV (fn t => 
-     if (type_of t = bool) then 
+fun NUM_DEPTH_CONSEQ_CONV conv n dir =
+   OPT_CHANGED_CHECK_CONSEQ_CONV (fn t =>
+     if (type_of t = bool) then
        (#3 (DEPTH_CONSEQ_CONV_num 0 (SOME n) dir false false conv t))
      else raise UNCHANGED)
 
 
-fun NUM_REDEPTH_CONSEQ_CONV conv n dir = 
-   OPT_CHANGED_CHECK_CONSEQ_CONV (fn t => 
-     if (type_of t = bool) then 
+fun NUM_REDEPTH_CONSEQ_CONV conv n dir =
+   OPT_CHANGED_CHECK_CONSEQ_CONV (fn t =>
+     if (type_of t = bool) then
        (#3 (DEPTH_CONSEQ_CONV_num 0 (SOME n) dir false true conv t))
      else raise UNCHANGED)
 
@@ -673,23 +673,23 @@ fun ONCE_DEPTH_CONSEQ_CONV conv = NUM_DEPTH_CONSEQ_CONV conv 1;
 (*---------------------------------------------------------------------------
  * Takes the assumptions returned by a CONSEQ_CONV,
  * tries to simplify them recursively with the same CONSEQ_CONV and
- * add the results to the assumptions. Assumptions in preserve_hyps are 
- * not simplified. 
+ * add the results to the assumptions. Assumptions in preserve_hyps are
+ * not simplified.
  *---------------------------------------------------------------------------*)
 
 fun CONJ_ASSUMPTIONS_CONSEQ_CONV conv preserve_hyp_pred dir t =
 let
     val thm = conv dir t;
     val new_hyps = filter (fn t => not (preserve_hyp_pred t)) (hyp thm);
-    val hyp_thms = map (fn h => 
+    val hyp_thms = map (fn h =>
                        ((SOME (CONJ_ASSUMPTIONS_CONSEQ_CONV conv preserve_hyp_pred CONSEQ_CONV_STRENGTHEN_direction h))
-		        handle HOL_ERR _ => NONE) 
+		        handle HOL_ERR _ => NONE)
                         handle UNCHANGED => NONE) new_hyps;
 
     val hyp_thms2 = filter (fn thm_opt => (isSome thm_opt andalso
 					   let val (l,r) = dest_imp (concl (valOf thm_opt))
-                                           in (not (eq l r)) end handle HOL_ERR _ => false)) hyp_thms; 
-    val hyp_thms3 = map (UNDISCH o valOf) hyp_thms2; 
+                                           in (not (eq l r)) end handle HOL_ERR _ => false)) hyp_thms;
+    val hyp_thms3 = map (UNDISCH o valOf) hyp_thms2;
 
     val thm2 = foldr (fn (thm1,thm2) => PROVE_HYP thm1 thm2) thm hyp_thms3;
 
@@ -710,7 +710,7 @@ fun CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV conv =
 
 
 (*A tactic that strengthens a boolean goal*)
-fun CONSEQ_CONV_TAC conv (asm,t) = 
+fun CONSEQ_CONV_TAC conv (asm,t) =
     HO_MATCH_MP_TAC ((CHANGED_CONSEQ_CONV (conv CONSEQ_CONV_STRENGTHEN_direction)) t) (asm,t) handle UNCHANGED =>
     ALL_TAC (asm,t)
 
@@ -752,13 +752,13 @@ fun REDEPTH_STRENGTHEN_CONSEQ_CONV conv =
 
 
 (*---------------------------------------------------------------------------
- * if conv ``A`` = |- (A' ==> A) then 
+ * if conv ``A`` = |- (A' ==> A) then
  * STRENGTHEN_CONSEQ_CONV_RULE ``(A ==> B)`` = |- (A' ==> B)
  *---------------------------------------------------------------------------*)
 
 fun STRENGTHEN_CONSEQ_CONV_RULE conv thm = let
    val (imp_term,_) = dest_imp (concl thm);
-   val imp_thm = conv CONSEQ_CONV_STRENGTHEN_direction imp_term;   
+   val imp_thm = conv CONSEQ_CONV_STRENGTHEN_direction imp_term;
   in
    IMP_TRANS imp_thm thm
   end
@@ -767,13 +767,13 @@ fun STRENGTHEN_CONSEQ_CONV_RULE conv thm = let
 
 
 (*---------------------------------------------------------------------------
- * if conv ``A`` = |- (A' ==> A) then 
+ * if conv ``A`` = |- (A' ==> A) then
  * WEAKEN_CONSEQ_CONV_RULE ``(A ==> B)`` = |- (A' ==> B)
  *---------------------------------------------------------------------------*)
 
 fun WEAKEN_CONSEQ_CONV_RULE conv thm = let
    val (_, imp_term) = dest_imp (concl thm);
-   val imp_thm = conv CONSEQ_CONV_WEAKEN_direction imp_term;   
+   val imp_thm = conv CONSEQ_CONV_WEAKEN_direction imp_term;
   in
    IMP_TRANS thm imp_thm
   end
@@ -794,7 +794,7 @@ fun WEAKEN_CONSEQ_CONV_RULE conv thm = let
  *
  * CONSEQ_REWR_CONV thm takes thms of either the form
  * "|- a ==> c", "|- c = a" or "|- c"
- * 
+ *
  * c is handled exactly as "c = T"
  *
  * If the thm is an equation, a "normal" rewrite is attempted. Otherwise,
@@ -809,7 +809,7 @@ fun CONSEQ_REWR_CONV___with_match ho strengten thm =
       ((if strengten then snd else fst) o dest_imp o concl) thm)
   else
      if (is_eq (concl thm)) then
-        (PART_MATCH lhs thm, 
+        (PART_MATCH lhs thm,
          (lhs o concl) thm)
      else
         (EQT_INTRO o PART_MATCH I thm,
@@ -821,7 +821,7 @@ fun CONSEQ_REWR_CONV strengten thm =
 
 
 (*---------------------------------------------------------------------------
- * His one does multiple rewrites, can handle theorems that 
+ * His one does multiple rewrites, can handle theorems that
  * contain alquantification and multiple conjuncted rewrite rules and
  * goes down into subterms.
  *---------------------------------------------------------------------------*)
@@ -913,18 +913,18 @@ fun CONSEQ_TOP_REWRITE_CONV___ho_opt ho (both_thmL,strengthen_thmL,weaken_thmL) 
            in
 	       map CONSEQ_TOP_REWRITE_CONV___EQT_EQF_INTRO thmL4
            end;
-     val thmL_st = CONSEQ_TOP_REWRITE_CONV___PREPARE_STRENGTHEN_THMS 
+     val thmL_st = CONSEQ_TOP_REWRITE_CONV___PREPARE_STRENGTHEN_THMS
 		       (prepare_general_thmL (append strengthen_thmL both_thmL));
-     val thmL_we = CONSEQ_TOP_REWRITE_CONV___PREPARE_WEAKEN_THMS 
+     val thmL_we = CONSEQ_TOP_REWRITE_CONV___PREPARE_WEAKEN_THMS
 		       (prepare_general_thmL (append weaken_thmL both_thmL));
 
 
-     val net_st = foldr (fn ((conv,t),net) => Net.insert (t,conv) net) Net.empty 
+     val net_st = foldr (fn ((conv,t),net) => Net.insert (t,conv) net) Net.empty
          (map (CONSEQ_REWR_CONV___with_match ho true) thmL_st);
-     val net_we = foldr (fn ((conv,t),net) => Net.insert (t,conv) net) Net.empty 
+     val net_we = foldr (fn ((conv,t),net) => Net.insert (t,conv) net) Net.empty
          (map (CONSEQ_REWR_CONV___with_match ho false) thmL_we);
-   in     
-     (fn dir => fn t =>    
+   in
+     (fn dir => fn t =>
         let
 	  val convL = if (dir = CONSEQ_CONV_STRENGTHEN_direction) then
 			  Net.match t net_st
@@ -942,7 +942,7 @@ val CONSEQ_TOP_REWRITE_CONV = CONSEQ_TOP_REWRITE_CONV___ho_opt false;
 val CONSEQ_HO_TOP_REWRITE_CONV = CONSEQ_TOP_REWRITE_CONV___ho_opt true;
 
 
-fun CONSEQ_REWRITE_CONV thmLs dir = 
+fun CONSEQ_REWRITE_CONV thmLs dir =
    REDEPTH_CONSEQ_CONV (CONSEQ_TOP_REWRITE_CONV thmLs) dir;
 
 fun CONSEQ_REWRITE_TAC thmLs =
@@ -951,7 +951,7 @@ fun CONSEQ_REWRITE_TAC thmLs =
 fun ONCE_CONSEQ_REWRITE_TAC thmLs =
     ONCE_DEPTH_CONSEQ_CONV_TAC (CONSEQ_TOP_REWRITE_CONV thmLs);
 
-fun CONSEQ_HO_REWRITE_CONV thmLs dir = 
+fun CONSEQ_HO_REWRITE_CONV thmLs dir =
    REDEPTH_CONSEQ_CONV (CONSEQ_HO_TOP_REWRITE_CONV thmLs) dir
 
 fun CONSEQ_HO_REWRITE_TAC thmLs =
@@ -1004,7 +1004,7 @@ METIS_TAC[]);
 
 You can use the FEVERY-theorem to strengthen expressions:
 
-CONSEQ_REWRITE_CONV ([rewrite_every_thm],[],[]) CONSEQ_CONV_STRENGTHEN_direction 
+CONSEQ_REWRITE_CONV ([rewrite_every_thm],[],[]) CONSEQ_CONV_STRENGTHEN_direction
    ``FEVERY P (g |+ (3, x) |+ (7,z))``
 
 This should result in:
@@ -1036,7 +1036,7 @@ CONSEQ_REWRITE_CONV ([rewrite_exists_thm],[],[]) CONSEQ_CONV_WEAKEN_direction ``
 
 Whether to weaken or strengthen subterms is figured out by their position
 
-CONSEQ_REWRITE_CONV ([rewrite_exists_thm,rewrite_every_thm],[],[]) CONSEQ_CONV_WEAKEN_direction 
+CONSEQ_REWRITE_CONV ([rewrite_exists_thm,rewrite_every_thm],[],[]) CONSEQ_CONV_WEAKEN_direction
    ``FEVERY P (g |+ (3, x) |+ (7,z)) ==> FEXISTS P (g |+ (3, x) |+ (7,z))``
 
 
@@ -1057,7 +1057,7 @@ for strengthening follows and finally one just for weakening.
 The parameter CONSEQ_CONV_UNKNOWN_direction can be used to let the system figure out,
 what to do:
 
-CONSEQ_REWRITE_CONV [rewrite_exists_thm,rewrite_every_thm] CONSEQ_CONV_UNKNOWN_direction 
+CONSEQ_REWRITE_CONV [rewrite_exists_thm,rewrite_every_thm] CONSEQ_CONV_UNKNOWN_direction
    ``FEVERY P (g |+ (3, x) |+ (7,z)) ==> FEXISTS P (g |+ (3, x) |+ (7,z))``
 
 

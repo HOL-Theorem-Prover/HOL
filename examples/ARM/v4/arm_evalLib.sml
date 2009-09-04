@@ -396,7 +396,7 @@ local
         if 12 < n andalso n < 15 then
           (print_reg l rest (List.nth(und_regs,n - 13)))
         else ();
-  
+
   fun mode2printer m =
     case m of
       USR => print_usr_reg
@@ -515,7 +515,7 @@ local
   fun mul4 a = Arbnum.*(a,Arbnum.fromInt 4);
   val start = Arbnum.zero;
 
-  fun label_table() = 
+  fun label_table() =
     ref (Redblackmap.mkDict String.compare);
     (*
     Polyhash.mkPolyTable
@@ -530,7 +530,7 @@ local
         | Data.BranchS b => mk_links r ht (add1 n)
         | Data.BranchN b => mk_links r ht (add1 n)
         | Data.Label s =>
-            (ht := Redblackmap.insert 
+            (ht := Redblackmap.insert
                           (!ht, s, "0x" ^ Arbnum.toHexString (mul4 n));
             (*(Polyhash.insert ht (s, "0x" ^ Arbnum.toHexString (mul4 n));*)
              mk_links r ht n)
@@ -542,7 +542,7 @@ local
 
   fun br_to_term (cond,link,label) ht n =
     let val s = assembler_to_string NONE (Data.BranchS(cond,link,"")) NONE
-        val address = 
+        val address =
           Redblackmap.find (!ht, label)
           handle Redblackmap.NotFound =>
             raise (HOL_ERR {message = "Cannot find ARM label\n",

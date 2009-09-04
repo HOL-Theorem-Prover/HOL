@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
@@ -168,24 +168,24 @@ Define
 
 
 val XP_PROP_SET_MODEL_def = Define
-  `XP_PROP_SET_MODEL S1 S2 S' = 
-        (XP_AND(XP_CURRENT(P_PROP_SET_MODEL S1 S'), 
+  `XP_PROP_SET_MODEL S1 S2 S' =
+        (XP_AND(XP_CURRENT(P_PROP_SET_MODEL S1 S'),
                       XP_NEXT(P_PROP_SET_MODEL S2 S')))`;
 
 
 val XP_PROP_SET_MODEL_CURRENT_def = Define
-  `XP_PROP_SET_MODEL_CURRENT f S' = 
+  `XP_PROP_SET_MODEL_CURRENT f S' =
         XP_BIGOR (SET_TO_LIST (IMAGE (\S.
-            (XP_AND(XP_NEXT(P_PROP_SET_MODEL S S'), 
+            (XP_AND(XP_NEXT(P_PROP_SET_MODEL S S'),
                           XP_CURRENT(P_PROP_SET_MODEL (f (S INTER S')) S'))))
-            (POWER_SET S')))`; 
+            (POWER_SET S')))`;
 
 val XP_PROP_SET_MODEL_NEXT_def = Define
-  `XP_PROP_SET_MODEL_NEXT f S' = 
+  `XP_PROP_SET_MODEL_NEXT f S' =
         XP_BIGOR (SET_TO_LIST (IMAGE (\S.
-            (XP_AND(XP_CURRENT(P_PROP_SET_MODEL S S'), 
+            (XP_AND(XP_CURRENT(P_PROP_SET_MODEL S S'),
                           XP_NEXT(P_PROP_SET_MODEL (f (S INTER S')) S'))))
-            (POWER_SET S')))`; 
+            (POWER_SET S')))`;
 
 
 val XP_NEXT_THM =
@@ -202,7 +202,7 @@ val XP_NEXT_THM =
     ((XP_NEXT (P_EQUIV(b1, b2))) = XP_EQUIV (XP_NEXT b1, XP_NEXT b2)) /\
     ((XP_NEXT (P_BIGAND l)) = XP_BIGAND (MAP XP_NEXT l)) /\
     ((XP_NEXT (P_BIGOR l)) = XP_BIGOR (MAP XP_NEXT l))``,
-    
+
     SIMP_TAC std_ss [XP_NEXT_def, XP_FALSE_def, P_FALSE_def, P_OR_def, XP_OR_def,
       P_IMPL_def, XP_IMPL_def, XP_EQUIV_def, P_EQUIV_def] THEN
     Induct_on `l` THENL [
@@ -225,7 +225,7 @@ val XP_CURRENT_THM =
     ((XP_CURRENT (P_EQUIV(b1, b2))) = XP_EQUIV (XP_CURRENT b1, XP_CURRENT b2)) /\
     ((XP_CURRENT (P_BIGAND l)) = XP_BIGAND (MAP XP_CURRENT l)) /\
     ((XP_CURRENT (P_BIGOR l)) = XP_BIGOR (MAP XP_CURRENT l))``,
-    
+
     SIMP_TAC std_ss [XP_CURRENT_def, XP_FALSE_def, P_FALSE_def, P_OR_def, XP_OR_def,
       P_IMPL_def, XP_IMPL_def, XP_EQUIV_def, P_EQUIV_def] THEN
     Induct_on `l` THENL [
@@ -260,13 +260,13 @@ val XP_SEM_THM =
 val XP_USED_VARS___DIRECT_DEF =
  store_thm
   ("XP_USED_VARS___DIRECT_DEF",
-   ``!p b b1 b2. 
+   ``!p b b1 b2.
       (XP_USED_VARS (XP_TRUE) = EMPTY) /\
       (XP_USED_VARS (XP_PROP p) = {p}) /\
       (XP_USED_VARS (XP_NEXT_PROP p) = {p}) /\
       (XP_USED_VARS (XP_NOT b) = XP_USED_VARS b) /\
       (XP_USED_VARS (XP_AND(b1,b2)) = ((XP_USED_VARS b1) UNION (XP_USED_VARS b2)))``,
-  
+
      SIMP_TAC std_ss [XP_USED_VARS_def, XP_USED_CURRENT_VARS_def, XP_USED_X_VARS_def,
        UNION_EMPTY, EXTENSION, IN_UNION] THEN
      PROVE_TAC[]);
@@ -282,7 +282,7 @@ val XP_BIGAND___XP_USED_VARS =
       LIST_BIGUNION (MAP (\xp. XP_USED_CURRENT_VARS xp) l))) /\
     (!l:'a xprop_logic list. (XP_USED_VARS (XP_BIGAND l) =
       LIST_BIGUNION (MAP (\xp. XP_USED_VARS xp) l)))``,
-  
+
   SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
   Induct_on `l` THENL [
     SIMP_TAC list_ss [XP_BIGAND_def, XP_USED_X_VARS_def,
@@ -290,7 +290,7 @@ val XP_BIGAND___XP_USED_VARS =
                       XP_USED_VARS_def,
                       LIST_BIGUNION_def,
                       UNION_EMPTY],
-  
+
     SIMP_ALL_TAC list_ss [XP_BIGAND_def, XP_USED_X_VARS_def,
                       XP_USED_CURRENT_VARS_def,
                       XP_USED_VARS_def,
@@ -341,45 +341,45 @@ val XP_USED_VARS_EVAL =
  store_thm
   ("XP_USED_VARS_EVAL",
    ``!p c b b1 b2 P. (
-    (XP_USED_VARS (XP_TRUE) = {}) /\ 
-    (XP_USED_VARS (XP_FALSE) = {}) /\ 
-    (XP_USED_VARS (XP_PROP p) = {p}) /\ 
-    (XP_USED_VARS (XP_NEXT_PROP p) = {p}) /\ 
+    (XP_USED_VARS (XP_TRUE) = {}) /\
+    (XP_USED_VARS (XP_FALSE) = {}) /\
+    (XP_USED_VARS (XP_PROP p) = {p}) /\
+    (XP_USED_VARS (XP_NEXT_PROP p) = {p}) /\
     (XP_USED_VARS (XP_CURRENT P) = P_USED_VARS P) /\
     (XP_USED_VARS (XP_NEXT P) = P_USED_VARS P) /\
-    (XP_USED_VARS (XP_NOT b) = XP_USED_VARS b) /\ 
-    (XP_USED_VARS (XP_AND(b1, b2)) = XP_USED_VARS b1 UNION XP_USED_VARS b2) /\ 
-    (XP_USED_VARS (XP_OR(b1, b2)) = XP_USED_VARS b1 UNION XP_USED_VARS b2) /\ 
-    (XP_USED_VARS (XP_COND(c, b1, b2)) = XP_USED_VARS c UNION XP_USED_VARS b1 UNION XP_USED_VARS b2) /\ 
-    (XP_USED_VARS (XP_IMPL(b1, b2)) = XP_USED_VARS b1 UNION XP_USED_VARS b2) /\ 
+    (XP_USED_VARS (XP_NOT b) = XP_USED_VARS b) /\
+    (XP_USED_VARS (XP_AND(b1, b2)) = XP_USED_VARS b1 UNION XP_USED_VARS b2) /\
+    (XP_USED_VARS (XP_OR(b1, b2)) = XP_USED_VARS b1 UNION XP_USED_VARS b2) /\
+    (XP_USED_VARS (XP_COND(c, b1, b2)) = XP_USED_VARS c UNION XP_USED_VARS b1 UNION XP_USED_VARS b2) /\
+    (XP_USED_VARS (XP_IMPL(b1, b2)) = XP_USED_VARS b1 UNION XP_USED_VARS b2) /\
     (XP_USED_VARS (XP_EQUIV(b1, b2)) = XP_USED_VARS b1 UNION XP_USED_VARS b2) /\
-    (XP_USED_CURRENT_VARS (XP_TRUE) = {}) /\ 
-    (XP_USED_CURRENT_VARS (XP_FALSE) = {}) /\ 
-    (XP_USED_CURRENT_VARS (XP_PROP p) = {p}) /\ 
-    (XP_USED_CURRENT_VARS (XP_NEXT_PROP p) = {}) /\ 
+    (XP_USED_CURRENT_VARS (XP_TRUE) = {}) /\
+    (XP_USED_CURRENT_VARS (XP_FALSE) = {}) /\
+    (XP_USED_CURRENT_VARS (XP_PROP p) = {p}) /\
+    (XP_USED_CURRENT_VARS (XP_NEXT_PROP p) = {}) /\
     (XP_USED_CURRENT_VARS (XP_CURRENT P) = P_USED_VARS P) /\
     (XP_USED_CURRENT_VARS (XP_NEXT P) = {}) /\
-    (XP_USED_CURRENT_VARS (XP_NOT b) = XP_USED_CURRENT_VARS b) /\ 
-    (XP_USED_CURRENT_VARS (XP_AND(b1, b2)) = XP_USED_CURRENT_VARS b1 UNION XP_USED_CURRENT_VARS b2) /\ 
-    (XP_USED_CURRENT_VARS (XP_OR(b1, b2)) = XP_USED_CURRENT_VARS b1 UNION XP_USED_CURRENT_VARS b2) /\ 
-    (XP_USED_CURRENT_VARS (XP_COND(c, b1, b2)) = XP_USED_CURRENT_VARS c UNION XP_USED_CURRENT_VARS b1 UNION XP_USED_CURRENT_VARS b2) /\ 
-    (XP_USED_CURRENT_VARS (XP_IMPL(b1, b2)) = XP_USED_CURRENT_VARS b1 UNION XP_USED_CURRENT_VARS b2) /\ 
+    (XP_USED_CURRENT_VARS (XP_NOT b) = XP_USED_CURRENT_VARS b) /\
+    (XP_USED_CURRENT_VARS (XP_AND(b1, b2)) = XP_USED_CURRENT_VARS b1 UNION XP_USED_CURRENT_VARS b2) /\
+    (XP_USED_CURRENT_VARS (XP_OR(b1, b2)) = XP_USED_CURRENT_VARS b1 UNION XP_USED_CURRENT_VARS b2) /\
+    (XP_USED_CURRENT_VARS (XP_COND(c, b1, b2)) = XP_USED_CURRENT_VARS c UNION XP_USED_CURRENT_VARS b1 UNION XP_USED_CURRENT_VARS b2) /\
+    (XP_USED_CURRENT_VARS (XP_IMPL(b1, b2)) = XP_USED_CURRENT_VARS b1 UNION XP_USED_CURRENT_VARS b2) /\
     (XP_USED_CURRENT_VARS (XP_EQUIV(b1, b2)) = XP_USED_CURRENT_VARS b1 UNION XP_USED_CURRENT_VARS b2) /\
-    (XP_USED_X_VARS (XP_TRUE) = {}) /\ 
-    (XP_USED_X_VARS (XP_FALSE) = {}) /\ 
-    (XP_USED_X_VARS (XP_PROP p) = {}) /\ 
-    (XP_USED_X_VARS (XP_NEXT_PROP p) = {p}) /\ 
+    (XP_USED_X_VARS (XP_TRUE) = {}) /\
+    (XP_USED_X_VARS (XP_FALSE) = {}) /\
+    (XP_USED_X_VARS (XP_PROP p) = {}) /\
+    (XP_USED_X_VARS (XP_NEXT_PROP p) = {p}) /\
     (XP_USED_X_VARS (XP_CURRENT P) = {}) /\
     (XP_USED_X_VARS (XP_NEXT P) = P_USED_VARS P) /\
-    (XP_USED_X_VARS (XP_NOT b) = XP_USED_X_VARS b) /\ 
-    (XP_USED_X_VARS (XP_AND(b1, b2)) = XP_USED_X_VARS b1 UNION XP_USED_X_VARS b2) /\ 
-    (XP_USED_X_VARS (XP_OR(b1, b2)) = XP_USED_X_VARS b1 UNION XP_USED_X_VARS b2) /\ 
-    (XP_USED_X_VARS (XP_COND(c, b1, b2)) = XP_USED_X_VARS c UNION XP_USED_X_VARS b1 UNION XP_USED_X_VARS b2) /\ 
-    (XP_USED_X_VARS (XP_IMPL(b1, b2)) = XP_USED_X_VARS b1 UNION XP_USED_X_VARS b2) /\ 
+    (XP_USED_X_VARS (XP_NOT b) = XP_USED_X_VARS b) /\
+    (XP_USED_X_VARS (XP_AND(b1, b2)) = XP_USED_X_VARS b1 UNION XP_USED_X_VARS b2) /\
+    (XP_USED_X_VARS (XP_OR(b1, b2)) = XP_USED_X_VARS b1 UNION XP_USED_X_VARS b2) /\
+    (XP_USED_X_VARS (XP_COND(c, b1, b2)) = XP_USED_X_VARS c UNION XP_USED_X_VARS b1 UNION XP_USED_X_VARS b2) /\
+    (XP_USED_X_VARS (XP_IMPL(b1, b2)) = XP_USED_X_VARS b1 UNION XP_USED_X_VARS b2) /\
     (XP_USED_X_VARS (XP_EQUIV(b1, b2)) = XP_USED_X_VARS b1 UNION XP_USED_X_VARS b2)
    )``,
 
-  REWRITE_TAC[XP_USED_VARS_def, 
+  REWRITE_TAC[XP_USED_VARS_def,
     XP_USED_X_VARS_def, XP_USED_CURRENT_VARS_def, UNION_EMPTY,
     XP_FALSE_def, XP_OR_def, XP_IMPL_def, XP_EQUIV_def,
     XP_NEXT___XP_USED_VARS, XP_CURRENT___XP_USED_VARS,
@@ -535,7 +535,7 @@ val IS_CURRENT_POSITIVE_NEGATIVE_PROP_FORMULA_SEM =
         (XP_SEM p (S, S'')))``,
 
     REWRITE_TAC[IS_CURRENT_POSITIVE_NEGATIVE_PROP_FORMULA_SUBSET_def,
-        IS_CURRENT_POSITIVE_PROP_FORMULA_def, 
+        IS_CURRENT_POSITIVE_PROP_FORMULA_def,
         IS_CURRENT_NEGATIVE_PROP_FORMULA_def] THEN
     REPEAT GEN_TAC THEN
     Cases_on `S SUBSET S'` THEN ASM_REWRITE_TAC[] THEN
@@ -576,7 +576,7 @@ val IS_NEXT_POSITIVE_NEGATIVE_PROP_FORMULA_SEM =
         (XP_SEM p (S'', S)))``,
 
     REWRITE_TAC[IS_NEXT_POSITIVE_NEGATIVE_PROP_FORMULA_SUBSET_def,
-        IS_NEXT_POSITIVE_PROP_FORMULA_def, 
+        IS_NEXT_POSITIVE_PROP_FORMULA_def,
         IS_NEXT_NEGATIVE_PROP_FORMULA_def] THEN
     REPEAT GEN_TAC THEN
     Cases_on `S SUBSET S'` THEN ASM_REWRITE_TAC[] THEN
@@ -665,104 +665,104 @@ val XP_CURRENT_EXISTS_SEM =
  store_thm
   ("XP_CURRENT_EXISTS_SEM",
 
-    ``!s s' l p. (XP_SEM (XP_CURRENT_EXISTS l p) (s, s') = 
+    ``!s s' l p. (XP_SEM (XP_CURRENT_EXISTS l p) (s, s') =
         (?l'. (l' SUBSET (LIST_TO_SET l)) /\ (XP_SEM p (((s DIFF (LIST_TO_SET l)) UNION l'), s'))))``,
 
     Induct_on `l` THENL [
         SIMP_TAC list_ss [LIST_TO_SET_THM, SUBSET_EMPTY, XP_CURRENT_EXISTS_def, UNION_EMPTY,
             DIFF_EMPTY],
-    
+
         ASM_SIMP_TAC list_ss [XP_CURRENT_EXISTS_def, LIST_TO_SET_THM, XP_SEM_THM, XP_ASSIGN_TRUE_SEM,
             XP_ASSIGN_FALSE_SEM] THEN
         REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
             EXISTS_TAC ``h INSERT l'`` THEN
             REPEAT STRIP_TAC THENL [
                 FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INSERT] THEN PROVE_TAC[],
-                
+
                 `s DIFF (h INSERT LIST_TO_SET l) UNION (h INSERT l') =
                 s DIFF LIST_TO_SET l UNION l' UNION {h}` by
-                (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION, 
+                (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION,
                     NOT_IN_EMPTY] THEN
                 PROVE_TAC[]) THEN
                 FULL_SIMP_TAC std_ss [UNION_EMPTY]
             ],
-    
+
             EXISTS_TAC ``l' DELETE h`` THEN
             REPEAT STRIP_TAC THENL [
                 FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_DELETE, IN_INSERT],
-                
+
                 `s DIFF (h INSERT LIST_TO_SET l) UNION (l' DELETE h) =
-                s DIFF LIST_TO_SET l UNION l' DIFF {h}` by 
-                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION, 
+                s DIFF LIST_TO_SET l UNION l' DIFF {h}` by
+                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION,
                         NOT_IN_EMPTY, DELETE_DEF] THEN
                     PROVE_TAC[]) THEN
                 FULL_SIMP_TAC std_ss [DIFF_EMPTY]
             ],
-    
+
             EXISTS_TAC ``l' DELETE h`` THEN
             REPEAT STRIP_TAC THENL [
                 FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INSERT, IN_DELETE] THEN PROVE_TAC[],
-                
-                `(s DIFF LIST_TO_SET l UNION (l' DELETE h) UNION {h} = 
+
+                `(s DIFF LIST_TO_SET l UNION (l' DELETE h) UNION {h} =
                 s DIFF (h INSERT LIST_TO_SET l) UNION l') \/
-                (s DIFF LIST_TO_SET l UNION (l' DELETE h) DIFF {h} = 
-                s DIFF (h INSERT LIST_TO_SET l) UNION l')` by 
-                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION, 
+                (s DIFF LIST_TO_SET l UNION (l' DELETE h) DIFF {h} =
+                s DIFF (h INSERT LIST_TO_SET l) UNION l')` by
+                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION,
                         NOT_IN_EMPTY, DELETE_DEF] THEN
                     METIS_TAC[]) THEN
                 FULL_SIMP_TAC std_ss [UNION_EMPTY, DIFF_EMPTY]
             ]
         ]
     ]);
-        
+
 
 val XP_NEXT_EXISTS_SEM =
  store_thm
   ("XP_NEXT_EXISTS_SEM",
 
-    ``!s s' l p. (XP_SEM (XP_NEXT_EXISTS l p) (s', s) = 
+    ``!s s' l p. (XP_SEM (XP_NEXT_EXISTS l p) (s', s) =
         (?l'. (l' SUBSET (LIST_TO_SET l)) /\ (XP_SEM p (s', ((s DIFF (LIST_TO_SET l)) UNION l')))))``,
 
     Induct_on `l` THENL [
         SIMP_TAC list_ss [LIST_TO_SET_THM, SUBSET_EMPTY, XP_NEXT_EXISTS_def, UNION_EMPTY,
             DIFF_EMPTY],
-    
+
         ASM_SIMP_TAC list_ss [XP_NEXT_EXISTS_def, LIST_TO_SET_THM, XP_SEM_THM, XP_ASSIGN_TRUE_SEM,
             XP_ASSIGN_FALSE_SEM] THEN
         REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
             EXISTS_TAC ``h INSERT l'`` THEN
             REPEAT STRIP_TAC THENL [
                 FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INSERT] THEN PROVE_TAC[],
-                
+
                 `s DIFF (h INSERT LIST_TO_SET l) UNION (h INSERT l') =
                 s DIFF LIST_TO_SET l UNION l' UNION {h}` by
-                (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION, 
+                (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION,
                     NOT_IN_EMPTY] THEN
                 PROVE_TAC[]) THEN
                 FULL_SIMP_TAC std_ss [UNION_EMPTY]
             ],
-    
+
             EXISTS_TAC ``l' DELETE h`` THEN
             REPEAT STRIP_TAC THENL [
                 FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_DELETE, IN_INSERT],
-                
+
                 `s DIFF (h INSERT LIST_TO_SET l) UNION (l' DELETE h) =
-                s DIFF LIST_TO_SET l UNION l' DIFF {h}` by 
-                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION, 
+                s DIFF LIST_TO_SET l UNION l' DIFF {h}` by
+                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION,
                         NOT_IN_EMPTY, DELETE_DEF] THEN
                     PROVE_TAC[]) THEN
                 FULL_SIMP_TAC std_ss [DIFF_EMPTY]
             ],
-    
+
             EXISTS_TAC ``l' DELETE h`` THEN
             REPEAT STRIP_TAC THENL [
                 FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INSERT, IN_DELETE] THEN PROVE_TAC[],
-                
-                `(s DIFF LIST_TO_SET l UNION (l' DELETE h) UNION {h} = 
+
+                `(s DIFF LIST_TO_SET l UNION (l' DELETE h) UNION {h} =
                 s DIFF (h INSERT LIST_TO_SET l) UNION l') \/
-                (s DIFF LIST_TO_SET l UNION (l' DELETE h) DIFF {h} = 
-                s DIFF (h INSERT LIST_TO_SET l) UNION l')` by 
-                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION, 
+                (s DIFF LIST_TO_SET l UNION (l' DELETE h) DIFF {h} =
+                s DIFF (h INSERT LIST_TO_SET l) UNION l')` by
+                    (SIMP_TAC std_ss [INSERT_DEF, UNION_DEF, DIFF_DEF, GSPECIFICATION, EXTENSION,
                         NOT_IN_EMPTY, DELETE_DEF] THEN
                     METIS_TAC[]) THEN
                 FULL_SIMP_TAC std_ss [UNION_EMPTY, DIFF_EMPTY]
@@ -770,12 +770,12 @@ val XP_NEXT_EXISTS_SEM =
         ]
     ]);
 
-    
+
 val XP_CURRENT_FORALL_SEM =
  store_thm
   ("XP_CURRENT_FORALL_SEM",
 
-    ``!s s' l p. (XP_SEM (XP_CURRENT_FORALL l p) (s, s')) = 
+    ``!s s' l p. (XP_SEM (XP_CURRENT_FORALL l p) (s, s')) =
         (!l'. (l' SUBSET (LIST_TO_SET l)) ==> (XP_SEM p (((s DIFF (LIST_TO_SET l)) UNION l'), s')))``,
 
     REWRITE_TAC[XP_CURRENT_FORALL_def, XP_SEM_THM, XP_CURRENT_EXISTS_SEM] THEN
@@ -786,7 +786,7 @@ val XP_NEXT_FORALL_SEM =
  store_thm
   ("XP_NEXT_FORALL_SEM",
 
-    ``!s s' l p. (XP_SEM (XP_NEXT_FORALL l p) (s, s')) = 
+    ``!s s' l p. (XP_SEM (XP_NEXT_FORALL l p) (s, s')) =
         (!l'. (l' SUBSET (LIST_TO_SET l)) ==> (XP_SEM p (s, ((s' DIFF (LIST_TO_SET l)) UNION l'))))``,
 
     REWRITE_TAC[XP_NEXT_FORALL_def, XP_SEM_THM, XP_NEXT_EXISTS_SEM] THEN
@@ -956,26 +956,26 @@ val XP_SEM___VAR_RENAMING =
    ``!p f s1 s2. (INJ f (s1 UNION s2 UNION XP_USED_VARS p) UNIV) ==> ((XP_SEM p (s1,s2)) = (XP_SEM (XP_VAR_RENAMING f p) (IMAGE f s1, IMAGE f s2)))``,
 
    INDUCT_THEN xprop_logic_induct ASSUME_TAC THEN REPEAT STRIP_TAC THENL [
-      SIMP_ALL_TAC std_ss [INJ_DEF, IMAGE_DEF, IN_UNIV, IN_UNION, XP_SEM_def, XP_VAR_RENAMING_def, GSPECIFICATION, 
+      SIMP_ALL_TAC std_ss [INJ_DEF, IMAGE_DEF, IN_UNIV, IN_UNION, XP_SEM_def, XP_VAR_RENAMING_def, GSPECIFICATION,
         XP_USED_VARS_def, XP_USED_CURRENT_VARS_def, IN_SING] THEN
       PROVE_TAC[],
 
-      SIMP_ALL_TAC std_ss [INJ_DEF, IMAGE_DEF, IN_UNIV, IN_UNION, XP_SEM_def, XP_VAR_RENAMING_def, GSPECIFICATION, 
+      SIMP_ALL_TAC std_ss [INJ_DEF, IMAGE_DEF, IN_UNIV, IN_UNION, XP_SEM_def, XP_VAR_RENAMING_def, GSPECIFICATION,
         XP_USED_VARS_def, XP_USED_X_VARS_def, IN_SING] THEN
       PROVE_TAC[],
 
       SIMP_TAC std_ss [XP_SEM_def, XP_VAR_RENAMING_def],
 
-      FULL_SIMP_TAC std_ss [XP_SEM_def, XP_VAR_RENAMING_def, XP_USED_VARS_def, XP_USED_CURRENT_VARS_def, 
+      FULL_SIMP_TAC std_ss [XP_SEM_def, XP_VAR_RENAMING_def, XP_USED_VARS_def, XP_USED_CURRENT_VARS_def,
         XP_USED_X_VARS_def],
 
-      FULL_SIMP_TAC std_ss [XP_SEM_def, XP_VAR_RENAMING_def, XP_USED_VARS_def, XP_USED_CURRENT_VARS_def, 
+      FULL_SIMP_TAC std_ss [XP_SEM_def, XP_VAR_RENAMING_def, XP_USED_VARS_def, XP_USED_CURRENT_VARS_def,
         XP_USED_X_VARS_def] THEN
-      SUBGOAL_TAC `(s1 UNION s2 UNION (XP_USED_CURRENT_VARS p UNION XP_USED_X_VARS p)) SUBSET 
+      SUBGOAL_TAC `(s1 UNION s2 UNION (XP_USED_CURRENT_VARS p UNION XP_USED_X_VARS p)) SUBSET
              (s1 UNION s2 UNION (XP_USED_CURRENT_VARS p UNION XP_USED_CURRENT_VARS p' UNION
               (XP_USED_X_VARS p UNION XP_USED_X_VARS p'))) /\
 
-             (s1 UNION s2 UNION (XP_USED_CURRENT_VARS p' UNION XP_USED_X_VARS p')) SUBSET 
+             (s1 UNION s2 UNION (XP_USED_CURRENT_VARS p' UNION XP_USED_X_VARS p')) SUBSET
              (s1 UNION s2 UNION (XP_USED_CURRENT_VARS p UNION XP_USED_CURRENT_VARS p' UNION
               (XP_USED_X_VARS p UNION XP_USED_X_VARS p')))` THEN1 (
 
@@ -990,14 +990,14 @@ val XP_VAR_RENAMING_EVAL =
  store_thm
   ("XP_VAR_RENAMING_EVAL",
    ``!p f b b1 b2. (
-    (XP_VAR_RENAMING f (XP_TRUE) = XP_TRUE) /\ 
-    (XP_VAR_RENAMING f (XP_FALSE) = XP_FALSE) /\ 
-    (XP_VAR_RENAMING f (XP_PROP p) = (XP_PROP (f p))) /\ 
-    (XP_VAR_RENAMING f (XP_NEXT_PROP p) = (XP_NEXT_PROP (f p))) /\ 
-    (XP_VAR_RENAMING f (XP_NOT b) = XP_NOT(XP_VAR_RENAMING f b)) /\ 
-    (XP_VAR_RENAMING f (XP_AND(b1, b2)) = XP_AND(XP_VAR_RENAMING f b1, XP_VAR_RENAMING f b2)) /\ 
-    (XP_VAR_RENAMING f (XP_OR(b1, b2)) = XP_OR(XP_VAR_RENAMING f b1, XP_VAR_RENAMING f b2)) /\ 
-    (XP_VAR_RENAMING f (XP_IMPL(b1, b2)) = XP_IMPL(XP_VAR_RENAMING f b1, XP_VAR_RENAMING f b2)) /\ 
+    (XP_VAR_RENAMING f (XP_TRUE) = XP_TRUE) /\
+    (XP_VAR_RENAMING f (XP_FALSE) = XP_FALSE) /\
+    (XP_VAR_RENAMING f (XP_PROP p) = (XP_PROP (f p))) /\
+    (XP_VAR_RENAMING f (XP_NEXT_PROP p) = (XP_NEXT_PROP (f p))) /\
+    (XP_VAR_RENAMING f (XP_NOT b) = XP_NOT(XP_VAR_RENAMING f b)) /\
+    (XP_VAR_RENAMING f (XP_AND(b1, b2)) = XP_AND(XP_VAR_RENAMING f b1, XP_VAR_RENAMING f b2)) /\
+    (XP_VAR_RENAMING f (XP_OR(b1, b2)) = XP_OR(XP_VAR_RENAMING f b1, XP_VAR_RENAMING f b2)) /\
+    (XP_VAR_RENAMING f (XP_IMPL(b1, b2)) = XP_IMPL(XP_VAR_RENAMING f b1, XP_VAR_RENAMING f b2)) /\
     (XP_VAR_RENAMING f (XP_EQUIV(b1, b2)) = XP_EQUIV(XP_VAR_RENAMING f b1, XP_VAR_RENAMING f  b2))
    )``,
 
@@ -1022,7 +1022,7 @@ val XP_PROP_SET_MODEL_CURRENT_SEM =
     REWRITE_TAC[XP_PROP_SET_MODEL_CURRENT_def, XP_SEM_THM,
         XP_BIGOR_SEM] THEN
     REPEAT STRIP_TAC THEN
-    ASM_SIMP_TAC std_ss [POWER_SET_FINITE, IMAGE_FINITE,    
+    ASM_SIMP_TAC std_ss [POWER_SET_FINITE, IMAGE_FINITE,
         MEM_SET_TO_LIST, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM,
         XP_SEM_THM, XP_SEM___XP_CURRENT, XP_SEM___XP_NEXT,
         P_PROP_SET_MODEL_SEM, IN_POWER_SET_SUBSET_EQUIV
@@ -1044,7 +1044,7 @@ val XP_PROP_SET_MODEL_NEXT_SEM =
     REWRITE_TAC[XP_PROP_SET_MODEL_NEXT_def, XP_SEM_THM,
         XP_BIGOR_SEM] THEN
     REPEAT STRIP_TAC THEN
-    ASM_SIMP_TAC std_ss [POWER_SET_FINITE, IMAGE_FINITE,    
+    ASM_SIMP_TAC std_ss [POWER_SET_FINITE, IMAGE_FINITE,
         MEM_SET_TO_LIST, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM,
         XP_SEM_THM, XP_SEM___XP_CURRENT, XP_SEM___XP_NEXT,
         P_PROP_SET_MODEL_SEM, IN_POWER_SET_SUBSET_EQUIV
@@ -1071,7 +1071,7 @@ val XP_ASSIGN_TRUE_FALSE___XP_USED_VARS =
     XP_USED_CURRENT_VARS xp DIFF v1) /\
     (XP_USED_X_VARS (XP_ASSIGN_FALSE v1 v2 xp) =
     XP_USED_X_VARS xp DIFF v2)``,
-    
+
     INDUCT_THEN xprop_logic_induct ASSUME_TAC THENL [
       REWRITE_TAC [XP_ASSIGN_TRUE_def, XP_ASSIGN_FALSE_def] THEN
       REPEAT GEN_TAC THEN
@@ -1080,7 +1080,7 @@ val XP_ASSIGN_TRUE_FALSE___XP_USED_VARS =
           IN_SING, NOT_IN_EMPTY] THEN
         PROVE_TAC[]
       ),
-    
+
 
       REWRITE_TAC [XP_ASSIGN_TRUE_def, XP_ASSIGN_FALSE_def] THEN
       REPEAT GEN_TAC THEN
@@ -1092,9 +1092,9 @@ val XP_ASSIGN_TRUE_FALSE___XP_USED_VARS =
 
       SIMP_TAC std_ss [XP_ASSIGN_TRUE_def, XP_USED_VARS_EVAL, EMPTY_DIFF,
                        XP_ASSIGN_FALSE_def],
-    
+
       ASM_SIMP_TAC std_ss [XP_ASSIGN_TRUE_def, XP_ASSIGN_FALSE_def, XP_USED_VARS_EVAL],
-    
+
       ASM_SIMP_TAC std_ss [XP_ASSIGN_TRUE_def, XP_ASSIGN_FALSE_def, XP_USED_VARS_EVAL, UNION_OVER_DIFF]
     ]);
 
@@ -1141,7 +1141,7 @@ val XP_EXISTS___XP_USED_VARS =
   Induct_on `l` THENL [
     SIMP_TAC std_ss [XP_CURRENT_EXISTS_def, LIST_TO_SET_THM, DIFF_EMPTY,
       XP_NEXT_EXISTS_def],
-  
+
     ASM_SIMP_TAC std_ss [XP_CURRENT_EXISTS_def, XP_NEXT_EXISTS_def,
       LIST_TO_SET_THM, DIFF_EMPTY,
       XP_USED_VARS_EVAL, XP_ASSIGN_TRUE_FALSE___XP_USED_VARS] THEN
@@ -1184,7 +1184,7 @@ val XP_CURRENT_NEXT___ASSIGN_TRUE_FALSE =
   ``!p V.
       (XP_CURRENT (P_ASSIGN_TRUE V p) = XP_ASSIGN_TRUE V EMPTY (XP_CURRENT p)) /\
       (XP_NEXT (P_ASSIGN_TRUE V p) = XP_ASSIGN_TRUE EMPTY V (XP_NEXT p)) /\
-    
+
       (XP_CURRENT (P_ASSIGN_FALSE V p) = XP_ASSIGN_FALSE V EMPTY (XP_CURRENT p)) /\
       (XP_NEXT (P_ASSIGN_FALSE V p) = XP_ASSIGN_FALSE EMPTY V (XP_NEXT p))``,
 
@@ -1206,7 +1206,7 @@ val XP_CURRENT_NEXT___EXISTS =
       SIMP_TAC std_ss [P_EXISTS_def, XP_CURRENT_EXISTS_def, XP_NEXT_EXISTS_def],
 
       ASM_SIMP_TAC std_ss [P_EXISTS_def, XP_CURRENT_EXISTS_def, XP_NEXT_EXISTS_def,
-        XP_NEXT_THM, XP_CURRENT_NEXT___ASSIGN_TRUE_FALSE, 
+        XP_NEXT_THM, XP_CURRENT_NEXT___ASSIGN_TRUE_FALSE,
         XP_CURRENT_THM]
     ]);
 

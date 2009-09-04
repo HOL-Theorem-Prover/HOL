@@ -64,9 +64,9 @@ val rec_INTRO = Q.store_thm
 (* Syntax                                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val _ = 
- Hol_datatype 
-   `COMPOSITE 
+val _ =
+ Hol_datatype
+   `COMPOSITE
       = NOP
       | ASG of LABEL => 'a => 'a  => LABEL
       | IFGOTO of LABEL => ('a -> bool) => LABEL => LABEL
@@ -81,7 +81,7 @@ val _ = set_fixity "|++|" (Infixl 650);
 (* Natural Operational Semantics                                             *)
 (*---------------------------------------------------------------------------*)
 
-(*  Values:                      *) 
+(*  Values:                      *)
 (*     NIL -- (w,w) or ()        *)
 (*     VAL -- (w,v)              *)
 
@@ -90,13 +90,13 @@ val _ = set_fixity "|++|" (Infixl 650);
 val (ns_rule, ns_ind, ns_case) =
     Hol_reln `
 
-    (Reduce (l1, ASG l1 v w l2, l2) (w,v))   (* inst *)  /\                  
+    (Reduce (l1, ASG l1 v w l2, l2) (w,v))   (* inst *)  /\
     (Reduce (l1, S1, l2) (v,v) /\            (* nop *)
      Reduce (l2, S2, l3) value ==> Reduce (l1, S1 |++| S2, l3) value) /\
     (Reduce (l1, S1, l2) e1 /\               (* skip *)
      Reduce (l3, S2, l4) e2 ==> Reduce (l1, S1 |++| S2, l2) e1) /\
     (Reduce (l1, S1, l2) (e,v) /\            (* seq *)
-     Reduce (l2, S2, l3) (f v, w) ==> Reduce (l1, S1 |++| S2, l3) 
+     Reduce (l2, S2, l3) (f v, w) ==> Reduce (l1, S1 |++| S2, l3)
                                              ((let v = e in f v), w)) /\
     (c v ==> (* ift *)
      Reduce (l1, IFGOTO l1 c l2 l3, l2) (v,v)) /\
@@ -108,13 +108,13 @@ val (ns_rule, ns_ind, ns_case) =
     (Reduce (l1, NOP, l2) (v,v))
   `;
 
-val [inst_rule, nop_rule, skip_rule, seq_rule, 
+val [inst_rule, nop_rule, skip_rule, seq_rule,
      ift_rule, iff_rule, goto_rule, loop_rule, dummy_rule] = CONJUNCTS ns_rule;
 
 val _ = map save_thm
-  [("inst_rule",inst_rule), ("nop_rule",nop_rule), 
-   ("skip_rule",skip_rule), ("seq_rule",seq_rule), 
-   ("ift_rule",ift_rule),   ("iff_rule",iff_rule), 
+  [("inst_rule",inst_rule), ("nop_rule",nop_rule),
+   ("skip_rule",skip_rule), ("seq_rule",seq_rule),
+   ("ift_rule",ift_rule),   ("iff_rule",iff_rule),
    ("goto_rule",goto_rule), ("loop_rule",loop_rule),
    ("dummy_rule",dummy_rule)];
 
@@ -165,7 +165,7 @@ val TR_LEM1 = Q.store_thm (
 val TR_LEM2 = Q.store_thm (
   "TR_LEM2",
    `(!x. ~(c x) ==> R (f x) x) /\ WF R /\       (* terminated loop *)
-    c v /\ Reduce (l3, S1, l4) (f v, v) 
+    c v /\ Reduce (l3, S1, l4) (f v, v)
     ==>
     Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2)
         (tr c f v, v)`,
@@ -238,8 +238,8 @@ val _ = export_theory();
 (* Examples                                                                  *)
 (*---------------------------------------------------------------------------*)
 
-(* 
-val f_def = Define `f x = 
+(*
+val f_def = Define `f x =
          if x = 0 then x else x + f (x - 1)`;
 
 val f = ``\f x. if x = 0 then x else x + f (x - 1)``;

@@ -27,12 +27,12 @@ val E_HEX_def  = Define  `E_HEX = BYTE F F F F T T T F`;
 
 
 (*---------------------------------------------------------------------------
-    Multiply a byte (representing a polynomial) by x. 
+    Multiply a byte (representing a polynomial) by x.
 
-   xtime b = (LeftShift b) 
-                # 
+   xtime b = (LeftShift b)
+                #
              (case BYTE_COMPARE b EIGHTY
-               of LESS  -> ZERO 
+               of LESS  -> ZERO
                || other -> ONE_B)
 
  ---------------------------------------------------------------------------*)
@@ -46,8 +46,8 @@ val xtime_def = Define
 val xtime_distrib = Q.store_thm
 ("xtime_distrib",
  `!a b. xtime (a # b) = (xtime a) # (xtime b)`,
- SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR8_def] 
-   THEN RW_TAC std_ss [xtime_def, XOR8_def, XOR_def] 
+ SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR8_def]
+   THEN RW_TAC std_ss [xtime_def, XOR8_def, XOR_def]
    THEN DECIDE_TAC);
 
 (*---------------------------------------------------------------------------*)
@@ -56,17 +56,17 @@ val xtime_distrib = Q.store_thm
 
 val _ = set_fixity "**" (Infixl 675);
 
-val (ConstMult_def,ConstMult_ind) = 
+val (ConstMult_def,ConstMult_ind) =
  Defn.tprove
   (Hol_defn "ConstMult"
      `b1 ** b2 =
-        if b1 = ZERO then ZERO else 
-        if (b1 & ONE) = ONE 
+        if b1 = ZERO then ZERO else
+        if (b1 & ONE) = ONE
            then b2 # (RightShift b1 ** xtime b2)
            else      (RightShift b1 ** xtime b2)`,
-   WF_REL_TAC `measure (BYTE_TO_NUM o FST)` THEN 
-   SIMP_TAC arith_ss [FORALL_BYTE_VARS]     THEN 
-   RW_TAC arith_ss [ZERO_def,RightShift_def,BYTE_TO_NUM_def] THEN 
+   WF_REL_TAC `measure (BYTE_TO_NUM o FST)` THEN
+   SIMP_TAC arith_ss [FORALL_BYTE_VARS]     THEN
+   RW_TAC arith_ss [ZERO_def,RightShift_def,BYTE_TO_NUM_def] THEN
    RW_TAC arith_ss [B2N_def]);
 
 val _ = save_thm("ConstMult_def",ConstMult_def);
@@ -85,20 +85,20 @@ val ConstMultDistrib = Q.store_thm
 (* Iterative version                                                         *)
 (*---------------------------------------------------------------------------*)
 
-val defn = Hol_defn 
+val defn = Hol_defn
   "IterConstMult"
   `IterConstMult (b1,b2,acc) =
      if b1 = ZERO then (b1,b2,acc)
      else IterConstMult (RightShift b1, xtime b2,
-                         if (b1 & ONE) = ONE 
+                         if (b1 & ONE) = ONE
                           then (b2 # acc) else acc)`;
 
-val (IterConstMult_def,IterConstMult_ind) = 
+val (IterConstMult_def,IterConstMult_ind) =
  Defn.tprove
   (defn,
-   WF_REL_TAC `measure (BYTE_TO_NUM o FST)` THEN 
-   SIMP_TAC arith_ss [FORALL_BYTE_VARS]     THEN 
-   RW_TAC arith_ss [ZERO_def,RightShift_def,BYTE_TO_NUM_def] THEN 
+   WF_REL_TAC `measure (BYTE_TO_NUM o FST)` THEN
+   SIMP_TAC arith_ss [FORALL_BYTE_VARS]     THEN
+   RW_TAC arith_ss [ZERO_def,RightShift_def,BYTE_TO_NUM_def] THEN
    RW_TAC arith_ss [B2N_def]);
 
 val _ = save_thm("IterConstMult_def",IterConstMult_def);
@@ -121,9 +121,9 @@ val ConstMultEq = Q.store_thm
 (*---------------------------------------------------------------------------*)
 (* Specialized version, with partially evaluated multiplication. Uses tables *)
 (* from tablesTheory.                                                        *)
-(*---------------------------------------------------------------------------*) 
+(*---------------------------------------------------------------------------*)
 
-val TableConstMult_def = 
+val TableConstMult_def =
  Define
   `tcm x = if x = TWO then GF256_by_2
             else if x = THREE then GF256_by_3
@@ -162,7 +162,7 @@ val MultEquiv = Count.apply Q.store_thm
 (* Exponentiation                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val PolyExp_def = 
+val PolyExp_def =
  Define
    `PolyExp x n = if n=0 then ONE else x ** PolyExp x (n-1)`;
 

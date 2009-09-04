@@ -70,7 +70,7 @@ fun DEPTH_EXISTS_CONV conv tm =
 (* where the RHS of the equation is a flattened version of the LHS.          *)
 (*---------------------------------------------------------------------------*)
 
-fun FLATTEN_CONJ_CONV t = CONJUNCTS_CONV (t,list_mk_conj (strip_conj t));
+fun FLATTEN_CONJ_CONV t = CONJUNCTS_AC (t,list_mk_conj (strip_conj t));
 
 (*===========================================================================*)
 (* Moving universal quantifiers in and out of conjunctions                   *)
@@ -101,9 +101,9 @@ fun CONJ_FORALL_ONCE_CONV t =
           in CONJ (conj_tree_map f conj1 th1) (conj_tree_map f conj2 th2)
           end handle HOL_ERR _ => (f th)
        val conjs = strip_conj t
-   in if (length conjs = 1) 
+   in if (length conjs = 1)
       then REFL t
-      else let val var = 
+      else let val var =
                   case (op_mk_set eq (map (#Bvar o dest_forall) conjs))
                    of [x] => x
                     | _ => raise UNWIND_ERR "CONJ_FORALL_ONCE_CONV"
@@ -111,7 +111,7 @@ fun CONJ_FORALL_ONCE_CONV t =
                val th = GEN var (conj_tree_map (SPEC var) t (ASSUME t))
                val th1 = DISCH t th
                and th2 = DISCH (concl th)
-                               (conj_tree_map (GEN var) t 
+                               (conj_tree_map (GEN var) t
                                               (SPEC var (ASSUME (concl th))))
         in IMP_ANTISYM_RULE th1 th2
         end
@@ -143,7 +143,7 @@ fun FORALL_CONJ_ONCE_CONV t =
        and th2 = DISCH (concl th)
                        (GEN var (conj_tree_map (SPEC var) (ASSUME (concl th))))
    in IMP_ANTISYM_RULE th1 th2
-   end 
+   end
    handle HOL_ERR _ => raise UNWIND_ERR "FORALL_CONJ_ONCE_CONV" "";
 
 (*---------------------------------------------------------------------------*)
@@ -172,8 +172,8 @@ end;
 fun CONJ_FORALL_CONV tm =
   case (strip_conj tm)
    of [_] => REFL tm
-    |  _  => (CONJ_FORALL_ONCE_CONV THENC 
-              RAND_CONV (ABS_CONV CONJ_FORALL_CONV)) tm 
+    |  _  => (CONJ_FORALL_ONCE_CONV THENC
+              RAND_CONV (ABS_CONV CONJ_FORALL_CONV)) tm
               handle HOL_ERR _ => REFL tm;
 
 
@@ -254,10 +254,10 @@ fun UNFOLD_CONV thl =
           then THENQC (RATOR_CONV (RAND_CONV (CONJ_TREE_CONV conv)))
                       (RAND_CONV (CONJ_TREE_CONV conv)) tm
           else conv tm
-   in fn t => 
+   in fn t =>
       if (null thl)
       then REFL t
-      else CONJ_TREE_CONV (Rewrite.REWRITES_CONV the_net) t 
+      else CONJ_TREE_CONV (Rewrite.REWRITES_CONV the_net) t
            handle HOL_ERR _ => REFL t
    end;
 
@@ -293,7 +293,7 @@ fun UNFOLD_RIGHT_RULE thl th =
 (*---------------------------------------------------------------------------*)
 
 fun line_var tm =
-   (fst o strip_comb o lhs o snd o strip_forall) tm 
+   (fst o strip_comb o lhs o snd o strip_forall) tm
    handle HOL_ERR _ => raise UNWIND_ERR "line_var" "";
 
 (*---------------------------------------------------------------------------*)
@@ -302,7 +302,7 @@ fun line_var tm =
 (*    line_name "!y1 ... ym. f x1 ... xn = t"  ----> "f"                     *)
 (*---------------------------------------------------------------------------*)
 
-fun line_name tm = (#Name o dest_var o line_var) tm 
+fun line_name tm = (#Name o dest_var o line_var) tm
                    handle HOL_ERR _ => raise UNWIND_ERR "line_name" "";
 
 (*---------------------------------------------------------------------------*)
@@ -367,7 +367,7 @@ fun trav p tm rl =
        val (pf1,fn1,rew) = trav p conj1 tmp
        val pf = (op @) o (pf1##pf2) o CONJ_PAIR
    in (pf,(fn rf => MK_COMB ((AP_TERM AND (fn1 rf)),(fn2 rf))),rew)
-   end handle HOL_ERR _ 
+   end handle HOL_ERR _
          => if (p tm handle HOL_ERR _ => false)
             then ((fn th => [th]),(fn rf => REFL tm),(ASSUME tm :: rl))
             else ((fn th => []),(fn rf => rf tm),rl)
@@ -375,7 +375,7 @@ in
 fun UNWIND_ONCE_CONV p tm =
    let val (pf,fnn,eqns) = trav p tm []
        val rconv = ONCE_DEPTH_CONV
-                      (REWRITES_CONV 
+                      (REWRITES_CONV
                            (Rewrite.add_rewrites Rewrite.empty_rewrites eqns))
        val th = fnn rconv
        val {lhs,rhs} = dest_eq (concl th)
@@ -384,7 +384,7 @@ fun UNWIND_ONCE_CONV p tm =
        val imp1 = DISCH lhs (EQ_MP (itlist PROVE_HYP (pf lth) th) lth)
        and imp2 = DISCH rhs (EQ_MP (SYM (itlist PROVE_HYP (pf rth) th)) rth)
    in IMP_ANTISYM_RULE imp1 imp2
-   end 
+   end
    handle HOL_ERR _ => raise UNWIND_ERR "UNWIND_ONCE_CONV" ""
 end;
 
@@ -440,7 +440,7 @@ fun UNWIND_ALL_BUT_CONV l tm =
        fun p line tm = (line_name tm) = line
        fun itfn line th = TRANS th (UNWIND_CONV (p line) (rhs (concl th)))
    in itlist itfn line_names (REFL tm)
-   end 
+   end
    handle HOL_ERR _ => raise UNWIND_ERR"UNWIND_ALL_BUT_CONV" "";
 
 (*---------------------------------------------------------------------------*)
@@ -481,7 +481,7 @@ fun graph_of_term tm =
                            (strip_conj t))
    in if (is_set lines)
       then let val graph = zip lines (map (op_intersect eq lines) rhs_free_vars)
-               val (intern,extern) = partition (fn p => op_mem eq (fst p) internals) 
+               val (intern,extern) = partition (fn p => op_mem eq (fst p) internals)
                                                graph
            in  extern@intern
            end
@@ -489,12 +489,12 @@ fun graph_of_term tm =
    end
 
 fun loops_containing_line line graph chain =
-   let val successors = map fst 
+   let val successors = map fst
              (filter (fn (_,predecs) => op_mem eq (Lib.trye hd chain) predecs) graph)
        val not_in_chain = filter (fn line => not (op_mem eq line chain)) successors
        val new_chains = map (fn line => line::chain) not_in_chain
        (* flatten(map ...) should be an itlist *)
-       val new_loops = flatten (map (loops_containing_line line graph) 
+       val new_loops = flatten (map (loops_containing_line line graph)
                                     new_chains)
    in if (op_mem eq line successors)
       then (rev chain)::new_loops
@@ -526,7 +526,7 @@ fun distinct_loops [] = []
 fun loops_of_graph graph =
   distinct_loops
     (flatten
-      (map (fn line => loops_containing_line line graph [line]) 
+      (map (fn line => loops_containing_line line graph [line])
            (map fst graph)))
 
 fun list_after x (l as (h::t)) =
@@ -534,9 +534,9 @@ fun list_after x (l as (h::t)) =
   | list_after _ _ = raise UNWIND_ERR "list_after" "";
 
 fun rev_front_of l n front =
-  if (n < 0) 
+  if (n < 0)
   then raise FAIL "rev_front_of"
-  else if (n = 0) 
+  else if (n = 0)
        then front
        else rev_front_of (Lib.trye tl l) (n - 1) (Lib.trye hd l ::front)
 
@@ -566,17 +566,17 @@ fun breaks internals graph =
        val loops' = filter (null o (op_intersect eq single_breaks)) loops
        val only_internal_loops =
               filter (fn l => null (op_set_diff eq l internals)) loops'
-       val only_internal_lines = end_itlist (op_union eq) only_internal_loops 
+       val only_internal_lines = end_itlist (op_union eq) only_internal_loops
                                  handle HOL_ERR _ => []
        val internal_breaks =
-              break_all_loops only_internal_loops only_internal_lines [] 
+              break_all_loops only_internal_loops only_internal_lines []
               handle HOL_ERR _ => []
        val external_loops = filter (null o (op_intersect eq internal_breaks)) loops'
        val external_lines =
               op_set_diff eq (end_itlist (op_union eq) external_loops handle HOL_ERR _ => [])
                        internals
        val external_breaks =
-              break_all_loops external_loops external_lines [] 
+              break_all_loops external_loops external_lines []
               handle HOL_ERR _ => []
    in single_breaks @ (rev internal_breaks) @ (rev external_breaks)
    end
@@ -596,7 +596,7 @@ fun UNWIND_AUTO_CONV tm =
    let val internals = fst (strip_exists tm)
        and graph = graph_of_term tm
        val brks = breaks internals graph
-       val dependencies = map (I ## (fn l => op_set_diff eq l brks)) 
+       val dependencies = map (I ## (fn l => op_set_diff eq l brks))
                               (filter (fn p => not (op_mem eq (fst p) brks)) graph)
    in DEPTH_EXISTS_CONV (conv dependencies []) tm
    end handle HOL_ERR _ => raise UNWIND_ERR "UNWIND_AUTO_CONV" ""
@@ -698,7 +698,7 @@ fun EXISTS_DEL_CONV tm =
       val th1 = DISCH tm (itlist (fn (tm,x) => CHOOSE (x, ASSUME tm)) txs th)
       and th2 = DISCH t (itlist EXISTS txs th)
   in IMP_ANTISYM_RULE th1 th2
-  end 
+  end
   handle HOL_ERR _ => raise UNWIND_ERR "EXISTS_DEL_CONV" ""
 end;
 
@@ -718,7 +718,7 @@ fun EXISTS_EQN_CONV t =
        val {lhs,rhs} = dest_eq A
        val xs = snd ((assert (eq l) ## I) (strip_comb lhs))
        val t3 = list_mk_abs (xs,rhs)
-       val th1 = GENL ys (RIGHT_CONV_RULE LIST_BETA_CONV 
+       val th1 = GENL ys (RIGHT_CONV_RULE LIST_BETA_CONV
                                           (REFL (list_mk_comb (t3,xs))))
    in EQT_INTRO (EXISTS (t,t3) th1)
    end handle HOL_ERR _ => raise UNWIND_ERR "EXISTS_EQN_CONV" "";
@@ -744,7 +744,7 @@ local val AP_AND = AP_TERM AND
 in
 fun PRUNE_ONCE_CONV tm =
  let val {Bvar,Body} = dest_exists tm
-  in 
+  in
     case (partition (free_in Bvar) (strip_conj Body))
      of ([], _) => EXISTS_DEL1_CONV tm
       | ([eq],l2) =>
@@ -753,11 +753,11 @@ fun PRUNE_ONCE_CONV tm =
             if (null l2) then th1
             else let val conj = list_mk_conj l2
                      val th2 = AP_THM (AP_AND th1) conj
-                     val th3 = EXISTS_EQ Bvar 
-                                 (CONJUNCTS_CONV
+                     val th3 = EXISTS_EQ Bvar
+                                 (CONJUNCTS_AC
                                    (Body,mk_conj{conj1=eq, conj2=conj}))
                      val th4 = RIGHT_CONV_RULE EXISTS_AND_CONV th3
-                 in 
+                 in
                   TRANS th4 (TRANS th2 (CONJUNCT1 (SPEC conj AND_CLAUSES)))
                  end
           end
@@ -833,7 +833,7 @@ fun PRUNE_ONE_CONV v tm =
 (*---------------------------------------------------------------------------*)
 
 fun PRUNE_SOME_CONV [] tm = REFL tm
-  | PRUNE_SOME_CONV (h::t) tm = 
+  | PRUNE_SOME_CONV (h::t) tm =
      (PRUNE_SOME_CONV t THENC PRUNE_ONE_CONV h) tm
      handle HOL_ERR _ => raise UNWIND_ERR "PRUNE_SOME_CONV" "";
 
@@ -1001,7 +1001,7 @@ fun EXPAND_AUTO_CONV thl tm =
     UNWIND_AUTO_CONV THENC
       (fn tm =>
         let val (internals,conjs) = (I ## strip_conj) (strip_exists tm)
-            val vars = flatten (map 
+            val vars = flatten (map
                         (free_vars o (fn tm => (rhs tm) handle HOL_ERR _ => tm)
                                    o snd o strip_forall) conjs)
         in PRUNE_SOME_CONV(map (#Name o dest_var) (op_set_diff eq internals vars)) tm

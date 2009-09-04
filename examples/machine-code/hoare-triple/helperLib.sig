@@ -8,8 +8,8 @@ sig
       (string -> (Thm.thm * int * int option) * (Thm.thm * int * int option) option) *
       (term -> term -> int -> bool -> string * int) * Thm.thm * Abbrev.term
 
-    datatype ftree_type = 
-      FUN_IF of term * ftree_type * ftree_type 
+    datatype ftree_type =
+      FUN_IF of term * ftree_type * ftree_type
     | FUN_LET of term * term * ftree_type
     | FUN_COND of term * ftree_type
     | FUN_VAL of term;
@@ -41,9 +41,9 @@ sig
     val mk_star                : term * term -> term
     val mk_sep_hide            : term -> term
     val dest_star              : term -> term * term
-    val dest_sep_hide          : term -> term       
-    val dest_spec              : term -> term * term * term * term 
-    val get_sep_domain         : term -> term       
+    val dest_sep_hide          : term -> term
+    val dest_spec              : term -> term * term * term * term
+    val get_sep_domain         : term -> term
     val list_mk_star           : term list -> hol_type -> term
     val word_patterns          : term list
 

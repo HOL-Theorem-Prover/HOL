@@ -33,7 +33,7 @@ val find         : ('item -> bool) -> 'item set -> 'item option
 
 end
 
-(* 
+(*
    ['item set] is the type of sets of ordered elements of type 'item.
    The ordering relation on the elements is used in the representation
    of the set.  The result of combining two sets with different
@@ -41,12 +41,12 @@ end
    uses ordered balanced binary trees.
 
    [empty ordr] creates a new empty set with the given ordering
-   relation.  
+   relation.
 
    [singleton ordr i] creates the singleton set containing i, with the
    given ordering relation.
 
-   [add(s, i)] adds item i to set s.  
+   [add(s, i)] adds item i to set s.
 
    [addList(s, xs)] adds all items from the list xs to the set s.
 
@@ -64,10 +64,10 @@ end
    [member(s, i)] returns true if and only if i is in s.
 
    [delete(s, i)] removes item i from s.  Raises NotFound if i is not in s.
-   
+
    [numItems s] returns the number of items in set s.
 
-   [union(s1, s2)] returns the union of s1 and s2.  
+   [union(s1, s2)] returns the union of s1 and s2.
 
    [intersection(s1, s2)] returns the intersectionof s1 and s2.
 
@@ -81,14 +81,14 @@ end
    order.
 
    [revapp f s] applies function f to the elements of s, in decreasing
-   order. 
+   order.
 
    [foldl f e s] applies the folding function f to the entries of the
    set in increasing order.
 
    [foldr f e s] applies the folding function f to the entries of the
-   set in decreasing order. 
+   set in decreasing order.
 
    [find p s] returns SOME i, where i is an item in s which satisfies
    p, if one exists; otherwise returns NONE.
-*)      
+*)

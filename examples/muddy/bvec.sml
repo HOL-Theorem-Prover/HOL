@@ -1,29 +1,29 @@
 (* Copyright (C) 1997-2001 by Ken Friis Larsen and Jakob Lichtenberg. *)
 structure bvec :> bvec =
 struct
-	
+
     open MuddyCore
-	
-    open bdd fdd 
-	
+
+    open bdd fdd
+
     prim_type bvec
     type const = int
-	
+
     val bvectrue: precision -> bvec = app1 (symb "mlbvec_true")
     val bvecfalse: precision -> bvec = app1 (symb "mlbvec_false")
     val con: precision -> const -> bvec = app2 (symb "mlbvec_con")
-	
+
     val var: precision -> varnum -> int -> bvec = app3 (symb "mlbvec_var")
     val varfdd: fddvar -> bvec = app1 (symb "mlbvec_varfdd")
-	
+
     val coerce: precision -> bvec -> bvec = app2 (symb "mlbvec_coerce")
-	
+
     val isConst: bvec -> bool = app1 (symb "mlbvec_isconst")
     val getConst: bvec -> const = app1 (symb "mlbvec_getconst")
-	
-    fun lookupConst bvec = 
+
+    fun lookupConst bvec =
 	if isConst bvec then SOME(getConst bvec) else NONE
-	    
+
     val add: bvec * bvec -> bvec = cur2 (symb "mlbvec_add")
     val sub: bvec * bvec -> bvec = cur2 (symb "mlbvec_sub")
 

@@ -19,7 +19,7 @@ open HolKernel Parse boolLib bossLib;
 * Start a new theory called SyntaxTheory
 ******************************************************************************)
 val _ = new_theory "Syntax";
-   
+
 (******************************************************************************
 * Boolean expressions
 ******************************************************************************)
@@ -32,7 +32,7 @@ val bexp_def =
         | B_AND of bexp # bexp`;                 (* conjunction              *)
 
 (******************************************************************************
-* Sequential Extended Regular Expressions (SEREs) 
+* Sequential Extended Regular Expressions (SEREs)
 ******************************************************************************)
 val sere_def =
  Hol_datatype

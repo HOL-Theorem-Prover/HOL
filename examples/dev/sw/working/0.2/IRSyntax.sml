@@ -7,7 +7,7 @@ structure IRSyntax = struct
   exception invalidILExp;
 
  (*---------------------------------------------------------------------------------*)
- (*      Definition of Data                                                         *) 
+ (*      Definition of Data                                                         *)
  (*---------------------------------------------------------------------------------*)
 
   datatype operator =  madd | msub | mrsb | mmul | mmla | mmov |
@@ -114,16 +114,16 @@ structure IRSyntax = struct
           else LESS
       end;
 
-   fun list2pair l = 
+   fun list2pair l =
      if null l then NA
-     else 
+     else
         let fun f [h] = h
              |  f (h::ts) = PAIR (h, f ts)
              |  f _ = raise Fail "list2pair fails"
         in f l
         end
 
-   fun list2set l = 
+   fun list2set l =
        if null l then S.empty expOrder
        else S.addList(S.empty expOrder, l);
 
@@ -144,18 +144,18 @@ structure IRSyntax = struct
 
 fun convert_reg (REG e) =
      rhs (concl (SIMP_CONV std_ss [from_reg_index_def] (mk_comb(Term`from_reg_index:num->MREG`, term_of_int e))))
- |  convert_reg _ = 
+ |  convert_reg _ =
      raise ERR "IL" ("invalid expression");
 
 fun convert_mem (MEM (regNo, offset)) =
      mk_pair(term_of_int regNo,
              mk_comb(if offset >= 0 then Term`POS` else Term`NEG`,
                 term_of_int (abs offset)))
- |  convert_mem _ = 
+ |  convert_mem _ =
      raise ERR "IL" ("invalid expression");
 
 fun convert_shift_const e =
-  let 
+  let
     fun smsb b = if b then Arbnum.pow(Arbnum.two,Arbnum.fromInt 31) else Arbnum.zero
     fun mror32 x n =
       if n = 0 then x
@@ -234,19 +234,19 @@ end
  fun convert_stm ({oper = op1, dst = dlist, src = slist}) =
     let
         val ops = convert_op op1
-    in 
+    in
         if op1 = mpush then
-            list_mk_comb (ops, [(term_of_int o index_of_exp) (hd dlist), 
+            list_mk_comb (ops, [(term_of_int o index_of_exp) (hd dlist),
                           mk_list (List.map (term_of_int o index_of_exp) slist, Type `:num`)])
-        else if op1 = mpop then 
-            list_mk_comb (ops, [(term_of_int o index_of_exp) (hd slist), 
+        else if op1 = mpop then
+            list_mk_comb (ops, [(term_of_int o index_of_exp) (hd slist),
                           mk_list (List.map (term_of_int o index_of_exp) dlist, Type `:num`)])
         else if ((op1 = mlsl) orelse
                  (op1 = mlsr) orelse
                  (op1 = masr) orelse
-                 (op1 = mror)) then            
+                 (op1 = mror)) then
             list_mk_comb (ops, [convert_reg (hd dlist), convert_reg (hd slist), convert_shift (el 2 slist)])
-        else if (op1 = mmul) then            
+        else if (op1 = mmul) then
             list_mk_comb (ops, (convert_reg (hd dlist)) :: map convert_reg slist)
         else if op1 = mstr then
             list_mk_comb (ops, (convert_mem (hd dlist)) :: [convert_reg (hd slist)])
@@ -314,14 +314,14 @@ end
     |  to_exp (Assem.PAIR(e1,e2)) =
            PAIR (to_exp e1, to_exp e2)
     |  to_exp _ =
-           raise ERR "IL" ("No corresponding expression in IL") 
+           raise ERR "IL" ("No corresponding expression in IL")
 
    fun to_inst (Assem.OPER {oper = (oper', cond', flag'), dst = dlist, src = slist, jump = jumps}) =
            {oper = to_op oper', dst = List.map to_exp dlist, src = List.map to_exp slist}
     |  to_inst (Assem.MOVE {dst = dst', src = src'}) =
            {oper = mmov, dst = [to_exp dst'], src = [to_exp src']}
-    |  to_inst _ = 
-           raise ERR "IL" ("Can convert only data operation instructions") 
+    |  to_inst _ =
+           raise ERR "IL" ("Can convert only data operation instructions")
 
    fun to_cond (Assem.OPER {oper = (Assem.CMP, cond1, flag1), dst = dlist1, src = slist1, jump = jumps1},
                 Assem.OPER {oper = (Assem.B, cond2, flag2), dst = dlist2, src = slist2, jump = jumps2}) =
@@ -332,19 +332,19 @@ end
  (*---------------------------------------------------------------------------------*)
  (* Find the inputs, outputs and temporaries for a basic block                      *)
  (*---------------------------------------------------------------------------------*)
-  
+
   structure T = IntMapTable(type key = int fun getInt n = n);
 
-  datatype ACCESS = READ | WRITE | PUSH | POP 
+  datatype ACCESS = READ | WRITE | PUSH | POP
   datatype ROLE = UNKNOWN | INPUT | OUTPUT | INSTACK;
 
   fun getIO stmL =
    let
-     val (regT:((ROLE * ROLE) T.table) ref, memCT:((ROLE * ROLE) T.table) ref, memRT:((ROLE * ROLE) T.table) ref) 
-	  = (ref (T.empty), ref (T.empty), ref (T.empty)); 
+     val (regT:((ROLE * ROLE) T.table) ref, memCT:((ROLE * ROLE) T.table) ref, memRT:((ROLE * ROLE) T.table) ref)
+	  = (ref (T.empty), ref (T.empty), ref (T.empty));
 
-     fun peekT(t,index) = 
-	case T.peek(t,index) of 
+     fun peekT(t,index) =
+	case T.peek(t,index) of
 	     NONE => (UNKNOWN,UNKNOWN)
 	 |   SOME v => v;
 
@@ -357,11 +357,11 @@ end
       |  ch_mode (m,INSTACK) WRITE = (m,OUTPUT)
       |  ch_mode _ _ = raise Fail "ch_mode: invalidMode";
 
-     fun update_mode (REG r) action = 
+     fun update_mode (REG r) action =
 	   regT := T.enter (!regT, r, ch_mode (peekT(!regT, r)) action)
-      |  update_mode (TMEM i) action = 
+      |  update_mode (TMEM i) action =
            memCT := T.enter (!memCT, i, ch_mode (peekT(!memCT, i)) action)
-      |  update_mode _ _ = 
+      |  update_mode _ _ =
 	   ();
 
      fun one_stm ({oper = op1, dst = dst1, src = src1}) =
@@ -369,14 +369,14 @@ end
 	    List.map (fn exp => update_mode exp WRITE) dst1
 	  );
 
-     fun mk_regL indexL = 
+     fun mk_regL indexL =
 	List.map (fn n => REG n) indexL;
 
      fun mk_memL indexL =
 	List.map TMEM indexL;
 
-     fun filter_inputs mode = 
-	 mk_regL (List.filter (fn n => #1 (T.look (!regT,n)) = mode) (T.listKeys (!regT))) @ 
+     fun filter_inputs mode =
+	 mk_regL (List.filter (fn n => #1 (T.look (!regT,n)) = mode) (T.listKeys (!regT))) @
 	 mk_memL (List.filter (fn n => #1 (T.look (!memCT,n)) = mode) (T.listKeys (!memCT)));
 
      fun filter_out_stack mode =
@@ -459,12 +459,12 @@ end
              printReg e
    |  format_exp (PAIR(e1,e2)) =
              "(" ^ format_exp e1 ^ "," ^ format_exp e2 ^ ")"
-   |  format_exp _ = 
+   |  format_exp _ =
              raise Fail "format_exp:invalid IR expression";
 
   fun formatInst {oper = operator, src = sList, dst = dList} =
       if operator = mpush then
-           print_op operator  ^ " " ^ format_exp (hd dList) ^ " {" ^ 
+           print_op operator  ^ " " ^ format_exp (hd dList) ^ " {" ^
            format_exp (hd sList) ^ itlist (curry (fn (exp,str) => "," ^ format_exp exp ^ str)) (tl sList) "" ^
            "}"
       else if operator = mpop then

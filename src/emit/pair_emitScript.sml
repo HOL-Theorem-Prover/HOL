@@ -3,7 +3,7 @@ open EmitML pairTheory;
 
 val _ = new_theory "pair_emit";
 
-val defs = 
+val defs =
   map EmitML.DEFN [CURRY_DEF,UNCURRY_DEF,FST,SND,PAIR_MAP_THM,LEX_DEF_THM];
 
 val _ = eSML "pair" defs;

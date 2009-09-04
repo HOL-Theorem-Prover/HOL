@@ -1,6 +1,6 @@
 structure helperLib :> helperLib =
 struct
- 
+
 open HolKernel boolLib bossLib;
 open wordsLib stringLib addressTheory set_sepTheory progTheory wordsTheory;
 
@@ -17,7 +17,7 @@ val RW1 = ONCE_REWRITE_RULE;
 
 val echo_level = ref (1:int);  (* 0 - nothing, 1 - brief, 2 - descriptive, 3+ - verbose *)
 
-fun echo level msg = 
+fun echo level msg =
   if level <= 0 then () else
   if level <= !echo_level then print msg else ();
 
@@ -27,10 +27,10 @@ fun set_echo level = (echo_level := level);
 
 fun cache (f:string->'a) = let
   val dd = ref ((Binarymap.mkDict String.compare) : (String.string, 'a) Binarymap.dict)
-  in (fn x => let val y = Binarymap.find(!dd,x) 
+  in (fn x => let val y = Binarymap.find(!dd,x)
                   val _ = echo 1 " [cache]"
               in y end
-      handle e => let val v = f x 
+      handle e => let val v = f x
                   val _ = dd := Binarymap.insert(!dd,x,v) in v end) end
 
 val to_lower = let
@@ -41,27 +41,27 @@ val to_lower = let
 (* finding and replacing terms *)
 
 fun all_distinct ([]:term list) = []
-  | all_distinct (x::xs) = 
+  | all_distinct (x::xs) =
       x :: all_distinct (filter (fn y => not (eq x y)) xs)
 
 fun replace_terml p tm = let
   fun aux tm = p tm handle e =>
-    if is_comb tm 
+    if is_comb tm
     then let val (x,y) = dest_comb tm in mk_comb(aux x, aux y) end
     else let val (x,y) = dest_abs tm in mk_abs(x, aux y) end
-    handle e => tm 
+    handle e => tm
   in aux tm end;
 
 fun find_terml p tm = let
-  fun aux tm = 
+  fun aux tm =
     if p tm then [tm] else
-      if is_comb tm then 
+      if is_comb tm then
         let val (x,y) = dest_comb tm in aux x @ aux y end
-      else aux (snd (dest_abs tm)) handle e => []   
+      else aux (snd (dest_abs tm)) handle e => []
   in all_distinct (aux tm) end
 
 fun find_terml_all p tm = let
-  fun aux tm acc = 
+  fun aux tm acc =
     let val acc = if p tm then acc @ [tm] else acc in
       if is_comb tm then let val (x,y) = dest_comb tm in aux y (aux x acc) end else
       if is_abs tm then let val (x,y) = dest_abs tm in aux y acc end else acc end
@@ -84,17 +84,17 @@ fun list_dest f tm = let val (x,y) = f tm in list_dest f x @ list_dest f y end h
 fun mk_star (tm1,tm2) = (fst o dest_eq o concl o ISPECL [tm1,tm2]) STAR_COMM
             handle e => (snd o dest_eq o concl o ISPECL [tm2,tm1]) STAR_COMM
 
-fun mk_cond_star (tm1,tm2) = (fst o dest_comb o fst o dest_eq o snd o 
+fun mk_cond_star (tm1,tm2) = (fst o dest_comb o fst o dest_eq o snd o
   dest_comb o concl o ISPEC tm1 o Q.SPEC `s` o ISPEC tm2) cond_STAR
 
-fun mk_sidecond_star (tm1,tm2) = (fst o dest_comb o fst o dest_eq o snd o 
-  dest_comb o concl o ISPEC tm1 o Q.SPEC `s` o ISPEC tm2 o 
+fun mk_sidecond_star (tm1,tm2) = (fst o dest_comb o fst o dest_eq o snd o
+  dest_comb o concl o ISPEC tm1 o Q.SPEC `s` o ISPEC tm2 o
   REWRITE_RULE [GSYM sidecond_def]) cond_STAR
 
-fun mk_sep_hide tm = 
+fun mk_sep_hide tm =
   (fst o dest_eq o concl o ISPEC tm) SEP_HIDE_def;
 
-fun list_mk_star xs ty = 
+fun list_mk_star xs ty =
   list_mk (fn (x,y) => mk_star (y,x)) (rev xs) (mk_const("emp",ty))
 
 fun dest_star tm = let
@@ -117,10 +117,10 @@ fun dest_spec tm = let
   in if fst (dest_const tm) = "SPEC" then (m,p,c,q) else hd [] end;
 
 fun is_normal_char c = (* test whether c is 0-9 A-Z a-z or _ *)
-  let val v = ord c in     (c = #"_") orelse (48 <= v andalso v <=  57) 
+  let val v = ord c in     (c = #"_") orelse (48 <= v andalso v <=  57)
     orelse (65 <= v andalso v <=  90) orelse (97 <= v andalso v <= 122) end
 
-fun get_sep_domain tm = 
+fun get_sep_domain tm =
   dest_sep_hide tm handle e => fst (dest_comb tm) handle e => tm;
 
 (* simpsets *)
@@ -139,10 +139,10 @@ val w2w_ss = eval_term_ss "w2w" ``(w2w:'a word->'b word) (n2w n)``
 val star_ss = simpLib.ac_ss [(STAR_ASSOC,STAR_COMM)]
 
 val cond_ELIM = prove(
-  ``!c c' P . (cond c * cond c' = cond (c /\ c'):'a set -> bool) /\ 
+  ``!c c' P . (cond c * cond c' = cond (c /\ c'):'a set -> bool) /\
               (P * cond c * cond c' = P * cond (c /\ c'):'a set -> bool)``,
   REWRITE_TAC [GSYM STAR_ASSOC,SEP_CLAUSES]);
-  
+
 val cond_MOVE = prove(
   ``!c P Q. (cond c * P = P * (cond c) :'a set -> bool) /\
             (P * cond c * Q = P * Q * cond c)``,
@@ -165,20 +165,20 @@ fun MOVE_STAR_REWRITE_CONV thms tm2 tm1 = prove(mk_eq(tm1,tm2),
 
 fun MOVE_OUT_CONV target tm = let
   fun take_drop_until p ys [] = hd []
-    | take_drop_until p ys (x::xs) = 
+    | take_drop_until p ys (x::xs) =
         if p x then (rev ys,x,xs) else take_drop_until p (x::ys) xs
   val xs = list_dest dest_star tm
   fun is_match x y = eq x (get_sep_domain y)
   val (s1,y,s2) = take_drop_until (is_match target) [] xs
   val result = list_mk_star (s1 @ s2 @ [y]) (type_of tm)
-  in prove(mk_eq(tm,result),SIMP_TAC bool_ss [AC STAR_ASSOC STAR_COMM]) end 
-  handle e => ALL_CONV tm; 
+  in prove(mk_eq(tm,result),SIMP_TAC bool_ss [AC STAR_ASSOC STAR_COMM]) end
+  handle e => ALL_CONV tm;
 
 fun STAR_REVERSE_CONV tm = let
   val xs = list_dest dest_star tm
   val result = list_mk_star (rev xs) (type_of tm)
-  in prove(mk_eq(tm,result),SIMP_TAC bool_ss [AC STAR_ASSOC STAR_COMM]) end 
-  handle e => ALL_CONV tm; 
+  in prove(mk_eq(tm,result),SIMP_TAC bool_ss [AC STAR_ASSOC STAR_COMM]) end
+  handle e => ALL_CONV tm;
 
 val PRE_CONV = RATOR_CONV o RATOR_CONV o RAND_CONV
 val POST_CONV = RAND_CONV
@@ -188,7 +188,7 @@ val FIX_WORD32_ARITH_CONV = DEPTH_CONV (fn tm => let
   val th1 = INST i (INST_TYPE j (SPEC_ALL word32_add_n2w))
   val th1 = CONV_RULE ((RAND_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV) EVAL) th1
   val th1 = CONV_RULE ((RAND_CONV o RAND_CONV o RAND_CONV) EVAL) (REWRITE_RULE [] th1)
-  in th1 end handle e => ALL_CONV tm);  
+  in th1 end handle e => ALL_CONV tm);
 
 fun FORCE_PBETA_CONV tm = let
   val (tm1,tm2) = dest_comb tm
@@ -196,7 +196,7 @@ fun FORCE_PBETA_CONV tm = let
   fun expand_pair_conv tm = ISPEC tm (GSYM pairTheory.PAIR)
   fun get_conv vs = let
     val (x,y) = pairSyntax.dest_pair vs
-    in expand_pair_conv THENC (RAND_CONV (get_conv y)) end 
+    in expand_pair_conv THENC (RAND_CONV (get_conv y)) end
     handle e => ALL_CONV
   in (RAND_CONV (get_conv vs) THENC PairRules.PBETA_CONV) tm end;
 
@@ -210,19 +210,19 @@ fun INST_SPEC spec_th abs_th = let
   val (i,t) = match_term tx tm
   val thi = INST i (INST_TYPE t abs_th)
   val th = MP th (el 1 (CONJUNCTS (UNDISCH thi)))
-  val thi = el 2 (CONJUNCTS (UNDISCH thi))  
+  val thi = el 2 (CONJUNCTS (UNDISCH thi))
   val th = CONV_RULE (UNBETA_CONV ((fst o dest_eq o concl) thi) THENC RAND_CONV (fn x => thi)) th
   val th = SIMP_RULE std_ss [] th
   val th = REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND] (DISCH_ALL th)
-  in th end;  
+  in th end;
 
 val EQ_IMP_IMP = prove(``(x = y) ==> x ==> y``,STRIP_TAC THEN ASM_REWRITE_TAC [])
 fun parse_in_thm q th = Parse.parse_in_context (free_varsl (concl th::hyp th)) q;
 val EXISTS_PRE_LEMMA = MATCH_MP EQ_IMP_IMP (SPEC_ALL progTheory.SPEC_PRE_EXISTS);
-fun EXISTS_PRE var th = let 
-  val v = parse_in_thm var th 
+fun EXISTS_PRE var th = let
+  val v = parse_in_thm var th
   val th = CONV_RULE (PRE_CONV (UNBETA_CONV v)) th
-  val th = MATCH_MP EXISTS_PRE_LEMMA (GEN v th)   
+  val th = MATCH_MP EXISTS_PRE_LEMMA (GEN v th)
   val th = CONV_RULE (PRE_CONV (RAND_CONV (ALPHA_CONV v))) th
   in BETA_RULE th end;
 
@@ -238,14 +238,14 @@ fun EVAL_ANY_MATCH_CONV patterns tm = let
   fun aux f [] = []
     | aux f (x::xs) = f x :: aux f xs handle _ => aux f xs
   val x = hd (aux (fn x => find_term (can (match_term x)) tm) patterns)
-  in (PURE_REWRITE_CONV [EVAL x] THENC EVAL_ANY_MATCH_CONV patterns) tm end 
+  in (PURE_REWRITE_CONV [EVAL x] THENC EVAL_ANY_MATCH_CONV patterns) tm end
   handle e => ALL_CONV tm;
 
 
 (* tree to term and back *)
 
-datatype ftree_type = 
-    FUN_IF of term * ftree_type * ftree_type 
+datatype ftree_type =
+    FUN_IF of term * ftree_type * ftree_type
   | FUN_LET of term * term * ftree_type
   | FUN_COND of term * ftree_type
   | FUN_VAL of term;
@@ -265,7 +265,7 @@ fun tm2ftree tm = let
   val (x,y) = pairSyntax.dest_anylet tm
   val z = tm2ftree y
   val v = mk_var("cond",``:bool``)
-  fun g((x,y),z) = if not (eq x v) then FUN_LET (x,y,z) else 
+  fun g((x,y),z) = if not (eq x v) then FUN_LET (x,y,z) else
     if (eq (fst(dest_conj(y))) v handle e => false) then FUN_COND (cdr y,z) else FUN_COND (y,z)
   in foldr g z x end handle e => FUN_VAL tm;
 
@@ -301,33 +301,33 @@ fun DISCH_ALL_AS_SINGLE_IMP th = let
   val th = RW [AND_IMP_INTRO] (DISCH_ALL th)
   in if is_imp (concl th) then th else DISCH ``T`` th end
 
-fun A_MATCH_MP th1 th2 = 
-  (UNDISCH_ALL o PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES]) 
+fun A_MATCH_MP th1 th2 =
+  (UNDISCH_ALL o PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES])
   (MATCH_MP (MATCH_MP INC_ASSUM (SPEC_ALL th1)) (DISCH_ALL_AS_SINGLE_IMP th2));
 
 val HIDE_POST1 = (SPEC_ALL SPEC_HIDE_POST);
-val HIDE_POST2 = (SPEC_ALL 
+val HIDE_POST2 = (SPEC_ALL
   (RW [SEP_CLAUSES] (Q.SPECL [`x`,`p`,`c`,`emp`] SPEC_HIDE_POST)));
 
 fun HIDE_POST_RULE tm th = let
-  val th = CONV_RULE (POST_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th  
+  val th = CONV_RULE (POST_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th
   val (_,_,_,q) = dest_spec (concl th)
   val v = fst (dest_comb (snd (dest_star q) handle e => q))
   val _ = if eq v tm then v else hd []
   in A_MATCH_MP HIDE_POST1 th handle e => A_MATCH_MP HIDE_POST2 th end;
 
 val HIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL SPEC_HIDE_PRE));
-val HIDE_PRE2 = (MATCH_MP EQ_IMP_IMP 
+val HIDE_PRE2 = (MATCH_MP EQ_IMP_IMP
   (SPEC_ALL (RW [SEP_CLAUSES] (Q.SPECL [`x`,`emp`] SPEC_HIDE_PRE))));
 
 fun HIDE_PRE_RULE tm th = let
-  val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th  
+  val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th
   val _ = find_term (fn x => eq x tm) (concl th)
   val (_,p,_,_) = dest_spec (concl th)
   val v = snd (dest_comb (snd (dest_star p) handle e => p))
-  val th = GEN v th 
+  val th = GEN v th
   in A_MATCH_MP HIDE_PRE1 th handle e => A_MATCH_MP HIDE_PRE2 th end
-  handle e => let 
+  handle e => let
   val (_,p,_,q) = dest_spec (concl th)
   val xs = list_dest dest_star p
   val xs = map (dest_comb) (filter (can car) xs)
@@ -340,22 +340,22 @@ fun HIDE_PRE_RULE tm th = let
   in HIDE_PRE_RULE tm th end;
 
 val UNHIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL (GSYM SPEC_HIDE_PRE)));
-val UNHIDE_PRE2 = (MATCH_MP EQ_IMP_IMP 
+val UNHIDE_PRE2 = (MATCH_MP EQ_IMP_IMP
   (SPEC_ALL (RW [SEP_CLAUSES] (Q.SPECL [`x`,`emp`] (GSYM SPEC_HIDE_PRE)))));
 
 fun UNHIDE_PRE_RULE tm th = let
-  val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV (car tm) THENC REWRITE_CONV [STAR_ASSOC])) th  
+  val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV (car tm) THENC REWRITE_CONV [STAR_ASSOC])) th
   val _ = find_term (fn x => eq x (car tm)) (car (concl th))
   val th = (A_MATCH_MP UNHIDE_PRE1 th handle e => A_MATCH_MP UNHIDE_PRE2 th)
   val th = SPEC (cdr tm) th
   in th end;
 
-fun get_model_status_list th = 
+fun get_model_status_list th =
   (map dest_sep_hide o list_dest dest_star o snd o dest_eq o concl) th handle e => []
 
 val lemma = prove (``(b = T) ==> b``,SIMP_TAC std_ss [])
 
-fun HIDE_STATUS_RULE in_post hide_th th = let 
+fun HIDE_STATUS_RULE in_post hide_th th = let
   val xs = get_model_status_list hide_th
   val ys = filter I (map (fn y => can (find_term (fn x => eq x y)) (concl th)) xs)
   val _ = if ys = [] then hd [] else ()
@@ -371,7 +371,7 @@ fun HIDE_STATUS_RULE in_post hide_th th = let
   val ps = filter (fn x => not (op_mem eq (get_sep_domain x) xs)) (list_dest dest_star p)
   val qs = filter (fn x => not (op_mem eq (get_sep_domain x) xs)) (list_dest dest_star q)
   val p = list_mk_star (ps @ [(fst o dest_eq o concl) hide_th]) (type_of p)
-  val q = list_mk_star (qs @ [(fst o dest_eq o concl) hide_th]) (type_of q) 
+  val q = list_mk_star (qs @ [(fst o dest_eq o concl) hide_th]) (type_of q)
   val (_,pp,_,qq) = dest_spec (concl th)
   val rw = MATCH_MP lemma (SIMP_CONV (bool_ss++star_ss) [hide_th] (mk_eq(pp,p)))
   val th = CONV_RULE (PRE_CONV (ONCE_REWRITE_CONV [rw])) th
@@ -390,13 +390,13 @@ fun SPEC_STRENGTHEN_RULE th pre = let
   val th = SPEC pre (MATCH_MP progTheory.SPEC_STRENGTHEN th)
   val goal = (fst o dest_imp o concl) th
   in (th,goal) end;
-  
+
 fun SPEC_WEAKEN_RULE th post = let
   val th = SPEC post (MATCH_MP progTheory.SPEC_WEAKEN th)
   val goal = (fst o dest_imp o concl) th
   in (th,goal) end;
 
-fun SPEC_FRAME_RULE th frame = 
+fun SPEC_FRAME_RULE th frame =
   SPEC frame (MATCH_MP progTheory.SPEC_FRAME th)
 
 fun SPEC_BOOL_FRAME_RULE th frame = let
@@ -412,10 +412,10 @@ fun remove_primes th = let
   fun last s = substring(s,size s-1,1)
   fun delete_last_prime s = if last s = "'" then substring(s,0,size(s)-1) else hd []
   fun foo [] ys i = i
-    | foo (x::xs) ys i = let 
-      val name = (fst o dest_var) x 
+    | foo (x::xs) ys i = let
+      val name = (fst o dest_var) x
       val new_name = repeat delete_last_prime name
-      in if name = new_name then foo xs (x::ys) i else let 
+      in if name = new_name then foo xs (x::ys) i else let
         val new_var = mk_var(new_name,type_of x)
         in foo xs (new_var::ys) ((x |-> new_var) :: i) end end
   val i = foo (free_varsl (concl th :: hyp th)) [] []
@@ -427,8 +427,8 @@ fun spec_post_and_pre th1 th2 = let
   in (list_dest dest_star q, list_dest dest_star p, type_of q) end;
 
 fun replace_abbrev_vars tm = let
-  fun f v = v |-> mk_var((Substring.string o hd o tl o Substring.tokens (fn x => x = #"@") o 
-                    Substring.all o fst o dest_var) v, type_of v) handle e => v |-> v
+  fun f v = v |-> mk_var((Substring.string o hd o tl o Substring.tokens (fn x => x = #"@") o
+                    Substring.full o fst o dest_var) v, type_of v) handle e => v |-> v
   in subst (map f (free_vars tm)) tm end
 
 fun find_composition1 th1 th2 = let
@@ -436,7 +436,7 @@ fun find_composition1 th1 th2 = let
   fun get_match_term tm = replace_abbrev_vars (get_sep_domain tm)
   fun mm x y = get_match_term x = get_match_term y
   fun fetch_match x [] zs = hd []
-    | fetch_match x (y::ys) zs = 
+    | fetch_match x (y::ys) zs =
         if mm x y then (y, rev zs @ ys) else fetch_match x ys (y::zs)
   fun partition [] ys (xs1,xs2,ys1) = (rev xs1, rev xs2, rev ys1, ys)
     | partition (x::xs) ys (xs1,xs2,ys1) =
@@ -447,10 +447,10 @@ fun find_composition1 th1 th2 = let
   val (xs1,xs2,ys1,ys2) = partition q p ([],[],[])
   val tm1 = mk_star (list_mk_star xs1 ty, list_mk_star xs2 ty)
   val tm2 = mk_star (list_mk_star ys1 ty, list_mk_star ys2 ty)
-  val th1 = CONV_RULE (POST_CONV (MOVE_STAR_CONV tm1)) th1    
-  val th2 = CONV_RULE (PRE_CONV (MOVE_STAR_CONV tm2)) th2 
-  val th = MATCH_MP SPEC_FRAME_COMPOSE (DISCH_ALL_AS_SINGLE_IMP th2)   
-  val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)   
+  val th1 = CONV_RULE (POST_CONV (MOVE_STAR_CONV tm1)) th1
+  val th2 = CONV_RULE (PRE_CONV (MOVE_STAR_CONV tm2)) th2
+  val th = MATCH_MP SPEC_FRAME_COMPOSE (DISCH_ALL_AS_SINGLE_IMP th2)
+  val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
   val th = UNDISCH_ALL (PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES] th)
   val th = SIMP_RULE std_ss [pred_setTheory.INSERT_UNION_EQ,pred_setTheory.UNION_EMPTY,
              word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4,
@@ -461,41 +461,41 @@ fun find_composition2 th1 th2 = let
   val (q,p,ty) = spec_post_and_pre th1 th2
   val post_not_hidden = map get_sep_domain (filter (not o can dest_sep_hide) q)
   val pre_not_hidden  = map get_sep_domain (filter (not o can dest_sep_hide) p)
-  fun f (d:term,(zs,to_be_hidden)) = 
+  fun f (d:term,(zs,to_be_hidden)) =
     if not (can dest_sep_hide d) then (zs,to_be_hidden) else
       (zs,filter (fn x => get_sep_domain d = x) zs @ to_be_hidden)
-  val hide_from_post = snd (foldr f (post_not_hidden,[]) p) 
-  val hide_from_pre  = snd (foldr f (pre_not_hidden,[]) q) 
+  val hide_from_post = snd (foldr f (post_not_hidden,[]) p)
+  val hide_from_pre  = snd (foldr f (pre_not_hidden,[]) q)
   val th1 = foldr (uncurry HIDE_POST_RULE) th1 hide_from_post
   val th2 = foldr (uncurry HIDE_PRE_RULE) th2 hide_from_pre
   in find_composition1 th1 th2 end;
 
 fun SPEC_COMPOSE_RULE [] = hd []
   | SPEC_COMPOSE_RULE [th] = th
-  | SPEC_COMPOSE_RULE (th1::th2::thms) = 
+  | SPEC_COMPOSE_RULE (th1::th2::thms) =
       SPEC_COMPOSE_RULE ((find_composition2 th1 th2)::thms)
 
 
 (* tactics *)
 
 fun SPEC_PROVE_TAC thms (hs,goal) = let
-  val (m,p,_,q) = dest_spec goal 
+  val (m,p,_,q) = dest_spec goal
   val th1 = Q.SPEC `{}` (ISPECL [m,p] SPEC_REFL)
   val th2 = Q.SPEC `{}` (ISPECL [m,q] SPEC_REFL)
   val ts = [th1] @ thms @ [th2]
-  fun move_cond th = 
+  fun move_cond th =
     UNDISCH_ALL (SIMP_RULE (bool_ss++sep_cond_ss) [SPEC_MOVE_COND] th)
   val th = SPEC_COMPOSE_RULE (map move_cond ts)
   val th = REWRITE_RULE [AND_IMP_INTRO] (DISCH_ALL th)
   val th = REWRITE_RULE [GSYM SPEC_MOVE_COND] th
-  val th = MATCH_MP SPEC_STRENGTHEN_WEAKEN th  
-  in (MATCH_MP_TAC th  
+  val th = MATCH_MP SPEC_STRENGTHEN_WEAKEN th
+  in (MATCH_MP_TAC th
       THEN SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_MOVE_COND,SEP_CLAUSES]
       THEN SIMP_TAC (std_ss++star_ss) [SEP_IMP_REFL]
       THEN ASM_SIMP_TAC (std_ss++star_ss) [SEP_IMP_REFL,SEP_CLAUSES]) (hs,goal) end;
 
-val ALIGNED_TAC = let 
-  val ALIGNED_CONV = 
+val ALIGNED_TAC = let
+  val ALIGNED_CONV =
     ONCE_REWRITE_CONV [ALIGNED_MOD_4] THENC
     SIMP_CONV std_ss [WORD_ADD_0,WORD_SUB_RZERO]
   val ALIGNED_convdata = {name = "ALIGNED_CONV",
@@ -523,7 +523,7 @@ val SEP_READ_TAC = let
     val (x,y) = pred_setSyntax.dest_in gs
     fun extract tm = let
       val (p,f) = dest_comb tm
-      val ps = filter (can dest_pair_one) (list_dest dest_star p)     
+      val ps = filter (can dest_pair_one) (list_dest dest_star p)
       val z = (snd o hd) (filter (fn (a,b) => eq x a) (map dest_pair_one ps))
       in mk_eq(mk_comb((fst o pairSyntax.dest_pair o cdr) f,x),z) end
     val tm = extract (hd (filter (can extract) hs))
@@ -532,7 +532,7 @@ val SEP_READ_TAC = let
     val (x,y) = dest_comb (fst (dest_eq gs))
     fun extract tm = let
       val (p,f) = dest_comb tm
-      val ps = filter (can dest_pair_one) (list_dest dest_star p)     
+      val ps = filter (can dest_pair_one) (list_dest dest_star p)
       val z = (snd o hd) (filter (fn (a,b) => eq y a) (map dest_pair_one ps))
       in pred_setSyntax.mk_in(y,cdr (cdr f)) end
     val tm = extract (hd (filter (can extract) hs))
@@ -542,7 +542,7 @@ val SEP_READ_TAC = let
       MATCH_MP_TAC read_fun2set THEN aux) end handle e => NO_TAC;
 
 fun list_dest_right f tm = let val (x,y) = f tm in x :: list_dest_right f y end handle e => [tm];
-fun SEP_WRITE_TAC (hs,gs) = let 
+fun SEP_WRITE_TAC (hs,gs) = let
   val xs = list_dest_right dest_comb ((fst o pairSyntax.dest_pair o cdr o cdr) gs)
   val updates = map (combinSyntax.dest_update) (butlast xs)
   val ys = list_dest dest_star (car gs)
@@ -557,10 +557,10 @@ fun SEP_WRITE_TAC (hs,gs) = let
   val ys = (list_dest dest_star o hd o map car) xs
   fun find_any_match [] name = hd []
     | find_any_match (tm::ws) name = let
-        val (v,x) = pairSyntax.dest_pair (dest_one tm) 
-        in if eq v name then x else find_any_match ws name end handle e => find_any_match ws name   
+        val (v,x) = pairSyntax.dest_pair (dest_one tm)
+        in if eq v name then x else find_any_match ws name end handle e => find_any_match ws name
   val witnesses = map (find_any_match ys) (map fst updates)
-  fun foo (w,tac) = 
+  fun foo (w,tac) =
     MATCH_MP_TAC write_fun2set THEN REWRITE_TAC [STAR_ASSOC] THEN EXISTS_TAC w
     THEN tac
   in (tac THEN foldr foo (FULL_SIMP_TAC (bool_ss++star_ss) []) witnesses) (hs,gs) end
@@ -570,23 +570,23 @@ fun SEP_NEQ_TAC (hs,gs) = let
   fun dest_one tm = let
     val (x,y) = dest_comb tm
     val _ = if fst (dest_const x) = "one" then () else hd []
-    in pairSyntax.dest_pair y end 
+    in pairSyntax.dest_pair y end
   fun take_apart h = let
     val xs = list_dest dest_star (car h)
     val ys = map dest_one (filter (can dest_one) xs)
     val z1 = (snd o hd o filter (fn (x,y) => eq x a1)) ys
     val z2 = (snd o hd o filter (fn (x,y) => eq x a2)) ys
-    fun is_match tm = op_mem (pair_cmp eq eq) (dest_one tm) [(a1,z1),(a2,z2)] handle e => false       
+    fun is_match tm = op_mem (pair_cmp eq eq) (dest_one tm) [(a1,z1),(a2,z2)] handle e => false
     in (z1,z2,list_mk_star (filter (not o is_match) xs) (type_of (car h)),cdr h) end
   val (z1,z2,zs,f) = take_apart (hd (filter (can take_apart) hs))
   val (f,df) = pairSyntax.dest_pair (cdr f)
   val thi = ISPECL [a1,a2,z1,z2,f,df,zs] fun2set_NEQ
-  in (MATCH_MP_TAC thi THEN FULL_SIMP_TAC (std_ss++star_ss) []) (hs,gs) end 
+  in (MATCH_MP_TAC thi THEN FULL_SIMP_TAC (std_ss++star_ss) []) (hs,gs) end
 
 
 (* debug prover *)
 
-fun auto_prove proof_name (goal,tac) = 
+fun auto_prove proof_name (goal,tac) =
   prove(goal,tac THEN (fn (tms,tm) => let
     val _ = print ("\n\n\n  AUTO PROOF FAILED: " ^ proof_name ^ "\n\n")
     val _ = print "-----------------------------------------------\n"

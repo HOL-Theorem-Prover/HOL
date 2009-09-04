@@ -16,7 +16,7 @@ val ERR = mk_HOL_ERR "pairSyntax";
 
 fun mk_prod (ty1,ty2) = Type.mk_thy_type{Tyop="prod",Thy="pair",Args=[ty1,ty2]}
 
-fun dest_prod ty = 
+fun dest_prod ty =
   case total dest_thy_type ty
    of SOME{Tyop="prod", Thy="pair", Args=[ty1,ty2]} => (ty1,ty2)
     | other => raise ERR "dest_prod" "not a product type";
@@ -47,7 +47,7 @@ fun mk_pair(fst,snd) =
  let val ty1 = type_of fst
      and ty2 = type_of snd
  in list_mk_comb(inst [alpha |-> ty1, beta |-> ty2] comma_tm, [fst,snd])
- end 
+ end
 
 val list_mk_pair = end_itlist (curry mk_pair);
 
@@ -103,10 +103,10 @@ fun mk_snd tm =
   end
   handle HOL_ERR _ => raise ERR "mk_snd" "";
 
-fun mk_uncurry_tm(xt,yt,zt) = 
+fun mk_uncurry_tm(xt,yt,zt) =
   inst [alpha |-> xt, beta |-> yt, gamma |-> zt] uncurry_tm;
 
-fun mk_curry (f,x,y) = 
+fun mk_curry (f,x,y) =
   let val (pty,rty) = dom_rng (type_of f)
       val (aty,bty) = dest_prod pty
   in list_mk_comb
@@ -114,7 +114,7 @@ fun mk_curry (f,x,y) =
   end
   handle HOL_ERR _ => raise ERR "mk_curry" "";
 
-fun mk_uncurry (f,x) = 
+fun mk_uncurry (f,x) =
   case strip_fun (type_of f)
    of ([a,b],c) => mk_comb(mk_comb(mk_uncurry_tm(a,b,c),f),x)
     | other => raise ERR "mk_uncurry" "";
@@ -122,7 +122,7 @@ fun mk_uncurry (f,x) =
 fun mk_pair_map(f,g) =
  let val (df,rf) = dom_rng (type_of f)
      val (dg,rg) = dom_rng (type_of g)
- in list_mk_comb(inst[alpha |-> df, beta  |-> dg, 
+ in list_mk_comb(inst[alpha |-> df, beta  |-> dg,
                       gamma |-> rf, delta |-> rg] pair_map_tm, [f,g])
  end;
 
@@ -135,7 +135,7 @@ fun mk_lex (r1,r2) =
 val dest_fst = dest_monop fst_tm (ERR "dest_fst" "")
 val dest_snd = dest_monop snd_tm (ERR "dest_snd" "")
 
-fun dest_curry tm = 
+fun dest_curry tm =
   let val (M,y) = with_exn dest_comb tm (ERR "dest_curry" "")
       val (f,x) = dest_binop curry_tm (ERR "dest_curry" "") M
   in (f,x,y)
@@ -160,8 +160,8 @@ val is_lex = can dest_lex;
 
 val mk_pabs = pairTheory.mk_pabs;
 
-fun mk_plet (p as (vstruct,rhs,body)) = 
-  mk_let (mk_pabs (vstruct,body),rhs) 
+fun mk_plet (p as (vstruct,rhs,body)) =
+  mk_let (mk_pabs (vstruct,body),rhs)
   handle HOL_ERR _ => raise ERR "mk_plet" "";
 
 fun mk_pforall (p as (vstruct,_)) =
@@ -212,10 +212,10 @@ local val FORALL_ERR  = ERR "dest_pforall"  "not a (possibly paired) \"!\""
       val EXISTS_ERR  = ERR "dest_pexists"  "not a (possibly paired) \"?\""
       val EXISTS1_ERR = ERR "dest_pexists1" "not a (possibly paired) \"?!\""
       val SELECT_ERR  = ERR "dest_pselect"  "not a (possibly paired) \"@\""
-in 
+in
 fun dest_pbinder c e M =
   let val (Rator,Rand) = with_exn dest_comb M e
-  in if same_const c Rator 
+  in if same_const c Rator
      then with_exn dest_pabs Rand e
      else raise e
   end
@@ -245,9 +245,9 @@ fun strip dest =
  let fun decomp M =
        case dest M
        of NONE => ([],M)
-        | SOME(vstruct,body) => 
-           let val (V,kern) = strip dest body 
-           in (vstruct::V,kern) 
+        | SOME(vstruct,body) =>
+           let val (V,kern) = strip dest body
+           in (vstruct::V,kern)
            end
  in decomp
  end;
@@ -262,17 +262,17 @@ val strip_pexists = strip (total dest_pexists);
 (* Support for dealing with the syntax of any kind of let.                   *)
 (*---------------------------------------------------------------------------*)
 
-local 
-  fun dest_plet' tm = 
+local
+  fun dest_plet' tm =
      let val (a,b,c) = dest_plet tm
      in ([(a,b)],c)
      end
-  fun dest_simple_let tm = 
+  fun dest_simple_let tm =
      let val (f,x) = dest_let tm
          val (v,M) = dest_abs f
      in ([(v,x)],M)
      end
-  fun dest_and_let tm acc = 
+  fun dest_and_let tm acc =
     let val (f,x) = boolSyntax.dest_let tm
     in if is_let f
        then dest_and_let f (x::acc)
@@ -280,21 +280,21 @@ local
             in (zip blist (x::acc), M)
             end
     end
-  fun fixup (l,r) = 
+  fun fixup (l,r) =
     let val (vstructs,M) = strip_pabs r
     in (list_mk_comb(l,vstructs),M)
     end
 in
-fun dest_anylet tm = 
-  let val (blist,M) = dest_simple_let tm handle HOL_ERR _ => 
-                      dest_plet' tm      handle HOL_ERR _ => 
+fun dest_anylet tm =
+  let val (blist,M) = dest_simple_let tm handle HOL_ERR _ =>
+                      dest_plet' tm      handle HOL_ERR _ =>
                       dest_and_let tm []
   in (map fixup blist,M)
   end
   handle HOL_ERR _ => raise ERR "dest_anylet" "not a \"let\"-term"
 end;
 
-local fun abstr (l,r) = 
+local fun abstr (l,r) =
         if is_pair l orelse is_var l then (l,r)
         else let val (f,args) = strip_comb l
              in (f,list_mk_pabs(args,r))
@@ -303,14 +303,14 @@ local fun abstr (l,r) =
 in
 fun mk_anylet ([],M) = raise ERR "mk_anylet" "no binding"
   | mk_anylet ([(l,r)],M) = mk_plet (reorg(l,r,M))
-  | mk_anylet (blist,M) = 
+  | mk_anylet (blist,M) =
       let val (L,R) = unzip (map abstr blist)
           val abstr = list_mk_pabs(L,M)
       in rev_itlist (fn r => fn tm => mk_let(tm,r)) R abstr
       end
 end;
 
-fun strip_anylet tm = 
+fun strip_anylet tm =
   case total dest_anylet tm
    of SOME(blist,M) =>
        let val (L,N) = strip_anylet M
@@ -320,20 +320,20 @@ fun strip_anylet tm =
 
 fun list_mk_anylet (L,M) = itlist (curry mk_anylet) L M;
 
-(* Examples 
+(* Examples
   val tm1 = Term `let x = M in N x`;
   val tm2 = Term `let (x,y,z) = M in N x y z`;
   val tm3 = Term `let x = M and y = N in P x y`;
   val tm4 = Term `let (x,y) = M and z = N in P x y z`;
   val tm5 = Term `let (x,y) = M and z = N in let u = x in P x y z u`;
-  val tm6 = Term `let f(x,y) = M 
-                  and g z = N 
+  val tm6 = Term `let f(x,y) = M
+                  and g z = N
                   in let u = x in P (g(f(x,u)))`;
   val tm7 = Term `let f x = M in P (f y)`;
-  val tm8 = Term `let g x = A in 
+  val tm8 = Term `let g x = A in
                   let v = g x y in
                   let f x y (a,b) = g a
-                  and foo = M 
+                  and foo = M
                   in f x foo v`;
 *)
 
@@ -361,7 +361,7 @@ fun genvarstruct ty =
 
 fun lift_prod ty =
   let val comma = TypeBasePure.cinst ty comma_tm
-  in 
+  in
      fn f => fn g => fn (x,y) => list_mk_comb(comma, [f x, g y])
   end
 

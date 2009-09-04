@@ -2,7 +2,7 @@ structure factorialScript =
 
 struct
 
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
      arithmeticTheory;
 
 infix THEN THENC THENL;
@@ -11,8 +11,8 @@ val ARW = RW_TAC arith_ss;
 
 val _ = new_theory "factorial";
 
-val FACT = 
- Define 
+val FACT =
+ Define
      `(fact 0 = 1)
   /\  (fact (SUC n) = fact n * SUC n)`;
 

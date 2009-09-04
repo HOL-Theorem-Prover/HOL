@@ -49,7 +49,7 @@ fun is_contained_in {subset, superset} =
    & hol_type substitutions that make PATTERN match the subterm *)
 
 fun find_match {pattern, term} =
-    let 
+    let
 	fun find_match_aux term =
 	    match_term pattern term
 	    handle HOL_ERR _ =>
@@ -77,7 +77,7 @@ fun mapshape {partition = [],functions = [], unionlist = []} = []
 	      unionlist} =
       let
 	  val (first_list,rem_lists) = split_after n1 unionlist
-      in 
+      in
 	  (f first_list) ::
 	  (mapshape
 	   {partition = rem_lengths,
@@ -150,7 +150,7 @@ end
     the type substitution to the hypotheses as needed.)
 
        A |- !x.u
-   ------------------  
+   ------------------
        A |- u[t/x]
 *)
 
@@ -189,7 +189,7 @@ fun AUTO_SPECL {specialization_list, generalized_theorem} =
       specialization_list
       generalized_theorem
 
-(* Are these needed?  
+(* Are these needed?
 (*
    EQF_INTRO : thm -> thm
 
@@ -257,7 +257,7 @@ fun MATCH_TERM_SUBS_RULE thm tm =
 	       type_substitution=type_substitution,
 	       theorem = strip_thm})]
     end
- 
+
 
 (* Tactics *)
 
@@ -392,7 +392,7 @@ fun SUBST_MATCH_TAC thm (asms,goal) =
 fun ASSUME_LIST_TAC thms (asms,goal) =
     let
 	val new_assums = flatten (map hyp thms)
-	val tactic = 
+	val tactic =
 	      itlist
 	       (fn thm => fn tac =>
 	         if exists (aconv (concl thm)) asms orelse
@@ -524,7 +524,7 @@ fun MATCH_THM_TAC {pattern_function, thm_tactic} =
 
 val NEW_MATCH_ACCEPT_TAC =
       MATCH_THM_TAC
-        {pattern_function = (fn x => x), 
+        {pattern_function = (fn x => x),
 	 thm_tactic = (fn thm => use_thm {theorem = thm,
 					  thm_tactic = ACCEPT_TAC})}
 
@@ -556,7 +556,7 @@ val MATCH_MP_IMP_TAC =
 *)
 
 local
-    fun tryfind f [] = 
+    fun tryfind f [] =
 	  raise UTILSLIB_ERR{function = "REDUCE_TAC-tryfind",
 					  message ="impossible to see this"}
       | tryfind f (x::rest) = f x handle (HOL_ERR _) => tryfind f rest

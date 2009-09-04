@@ -1153,7 +1153,7 @@ val SUMS_PICK = store_thm
    ++ DISCH_THEN (CONV_TAC o RAND_CONV o ONCE_REWRITE_CONV o wrap o SYM)
    ++ MATCH_MP_TAC SER_0
    ++ RW_TAC arith_ss []);
-   
+
 val SUM_REORDER_LE = store_thm
   ("SUM_REORDER_LE",
    ``!f n1 n2 j1 j2.

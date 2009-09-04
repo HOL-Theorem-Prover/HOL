@@ -11,7 +11,7 @@
 structure Ho_Rewrite :> Ho_Rewrite =
 struct
 
-open HolKernel boolTheory boolSyntax Abbrev 
+open HolKernel boolTheory boolSyntax Abbrev
      Drule Conv Tactic Tactical Ho_Net;
 
 type pred = term -> bool;
@@ -208,7 +208,7 @@ end;
 val HIGHER_REWRITE_CONV =
   let fun GINST th =
       let val fvs = HOLset.listItems
-                       (HOLset.difference(FVL[concl th]empty_tmset, 
+                       (HOLset.difference(FVL[concl th]empty_tmset,
                                           hyp_frees th))
           val gvs = map (genvar o type_of) fvs
       in INST (map2 (curry op |->) fvs gvs) th

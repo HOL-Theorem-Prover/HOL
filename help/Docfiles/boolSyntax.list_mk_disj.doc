@@ -3,10 +3,10 @@
 \TYPE {list_mk_disj : term list -> term}
 
 \SYNOPSIS
-Constructs the conjunction of a list of terms.
+Constructs the disjunction of a list of terms.
 
 \DESCRIBE
-{list_mk_disj([t1,...,tn])} returns {t1 /\ ... /\ tn}.
+{list_mk_disj([t1,...,tn])} returns {t1 \/ ... \/ tn}.
 
 \FAILURE
 Fails if the list is empty or if the list has more than
@@ -24,10 +24,9 @@ Non-boolean argument
 
 - list_mk_disj [mk_var("x",alpha)];
 > val it = `x` : term
-
 }
-
 
 \SEEALSO
 boolSyntax.strip_disj, boolSyntax.mk_disj.
+
 \ENDDOC

@@ -1,5 +1,5 @@
-structure Hol_pp :> Hol_pp = 
-struct 
+structure Hol_pp :> Hol_pp =
+struct
 
 open HolKernel Parse;
 
@@ -30,7 +30,7 @@ let val {add_string,add_break,begin_block,end_block, add_newline,
   fun vspace l = if null l then () else nl2();
   fun vblock(header, ob_pr, obs) =
     if null obs then ()
-    else 
+    else
     ( begin_block CONSISTENT 4;
      add_string (header^":");
      add_newline();
@@ -38,8 +38,8 @@ let val {add_string,add_break,begin_block,end_block, add_newline,
      (fn () => ()) add_newline obs;
      end_block())
   fun pr_thm (heading, ths) =
-    vblock(heading, 
-      (fn (s,th) => (begin_block CONSISTENT 0; 
+    vblock(heading,
+      (fn (s,th) => (begin_block CONSISTENT 0;
                      add_string s; add_break(2,0);
                       pp_thm th; end_block())),
       ths)

@@ -30,7 +30,7 @@ X   X   X
                              ____
                             /    \
                        ____/  12  \____
-                      /    \      /    \  
+                      /    \      /    \
                  ____/  07  \____/  16  \____
                 /    \      /    \      /    \
                /  03  \____/  11  \____/  19  \
@@ -46,14 +46,14 @@ X   X   X
                 \____/  04  \____/  13  \____/
                      \      /    \      /
                       \____/  08  \____/
-                           \      /      
+                           \      /
                             \____/
 
 *)
 
 
 (*
-load "HolBddLib"; 
+load "HolBddLib";
 load "PrimitiveBddRules";
 load "ListPair";
 *)
@@ -72,34 +72,34 @@ open bossLib;
 
 val _ = new_theory "HexSolitaire";
 
-val _ = Globals.priming := SOME ""; 
+val _ = Globals.priming := SOME "";
 
 val vl = [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19];
 
-fun mk_v n = 
+fun mk_v n =
  if n<10 then mk_var("v0"^(int_to_string n),bool)
          else mk_var("v"^(int_to_string n),bool);
 
-fun mk_v' n = 
+fun mk_v' n =
  if n<10 then mk_var("v0"^(int_to_string n)^"'",bool)
          else mk_var("v"^(int_to_string n)^"'",bool);
 
 val s  = list_mk_pair (map mk_v vl)
 and s' = list_mk_pair (map mk_v' vl);
 
-fun shuffle (l1,l2) = 
+fun shuffle (l1,l2) =
  ListPair.foldr (fn(x1,x2,l) => x1 :: x2 :: l) [] (l1,l2);
 
 fun mk_bool_var s = mk_var(s,bool);
 
-val hexsolitaire_varmap = 
- extendVarmap 
-  (map mk_bool_var (shuffle(map (fst o dest_var o mk_v) vl, map (fst o dest_var o mk_v') vl))) 
+val hexsolitaire_varmap =
+ extendVarmap
+  (map mk_bool_var (shuffle(map (fst o dest_var o mk_v) vl, map (fst o dest_var o mk_v') vl)))
   empty;
 
 val HexSolitaireInit_def =
- bossLib.Define 
-  `HexSolitaireInit ^s = 
+ bossLib.Define
+  `HexSolitaireInit ^s =
      ^(list_mk_conj
         (map (fn n => if n=10 then mk_neg(mk_v n) else mk_v n) vl))`;
 
@@ -143,28 +143,28 @@ val HexSolitaireTrans_def =
 (*****************************************************************************)
 
 val HexSolitaireFinish_def =
- bossLib.Define 
-  `HexSolitaireFinish ^s = 
+ bossLib.Define
+  `HexSolitaireFinish ^s =
      ^(list_mk_conj
         (map (fn n => if (n=10 orelse n=18)
-                       then mk_v n 
+                       then mk_v n
                        else mk_neg(mk_v n)) vl))`;
 
 (* This has no solution
 val HexSolitaireFinish_def =
- bossLib.Define 
-  `HexSolitaireFinish ^s = 
+ bossLib.Define
+  `HexSolitaireFinish ^s =
      ^(list_mk_conj
         (map (fn n => if (n=10)
-                       then mk_v n 
+                       then mk_v n
                        else mk_neg(mk_v n)) vl))`;
 *)
 
 val (initth,transthl,finalth) =
- findTrace 
-  hexsolitaire_varmap 
-  HexSolitaireTrans_def 
-  HexSolitaireInit_def 
+ findTrace
+  hexsolitaire_varmap
+  HexSolitaireTrans_def
+  HexSolitaireInit_def
   HexSolitaireFinish_def;
 
 (*****************************************************************************)
@@ -189,7 +189,7 @@ fun PrintState tm =
      fun sp () = print "   "
      fun nl () = print"\n"
  in
-  (print"      ";p 1 ;sp();p 2 ;sp();p 3 ;nl(); 
+  (print"      ";p 1 ;sp();p 2 ;sp();p 3 ;nl();
    print"    "  ;p 4 ;sp();p 5 ;sp();p 6 ;sp();p 7 ;nl();
    print"  "    ;p 8 ;sp();p 9 ;sp();p 10;sp();p 11;sp();p 12;nl();
    print"    "  ;p 13;sp();p 14;sp();p 15;sp();p 16;nl();
@@ -200,9 +200,9 @@ fun PrintState tm =
 (* Print out a trace as found by findTrace                                   *)
 (*****************************************************************************)
 
-val _ = 
- List.map 
-  PrintState 
+val _ =
+ List.map
+  PrintState
   (List.map (fst o dest_pair o rand o concl) transthl @ [rand(concl finalth)]);
 
 val _ = export_theory();

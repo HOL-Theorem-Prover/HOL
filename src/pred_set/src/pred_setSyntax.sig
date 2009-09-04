@@ -43,7 +43,7 @@ sig
   val linv_tm     : term
   val rinv_tm     : term
 
-  val mk_in       : term * term -> term 
+  val mk_in       : term * term -> term
   val mk_empty    : hol_type -> term
   val mk_univ    : hol_type -> term
   val mk_insert   : term * term -> term

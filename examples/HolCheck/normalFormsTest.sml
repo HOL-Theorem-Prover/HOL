@@ -37,7 +37,7 @@ fun mkP i j = list_mk_comb (P, [num_of_int i, num_of_int j]);
 
 fun row i j = list_mk_disj (map (mkP i) (upto 0 j));
 
-fun pigeon k = 
+fun pigeon k =
  let
    fun shares Pi plist =
      let
@@ -70,7 +70,7 @@ fun atoms_of tm =
  in
    Binaryset.listItems set
  end;
- 
+
 fun varify tm =
  let
    val atoms = atoms_of tm
@@ -445,7 +445,7 @@ val valid_1 =
       (O_7_ = HULP7) /\
       (O_8_ = HULP8) /\
       (O_9_ = HULP9) /\
-      (O_10_ = HULP10) /\                      
+      (O_10_ = HULP10) /\
       (O_11_ =  HULP11)`;
 
 (* Quick testing

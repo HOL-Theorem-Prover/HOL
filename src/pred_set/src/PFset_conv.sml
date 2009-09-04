@@ -129,7 +129,7 @@ fun IN_CONV conv tm =
  let val (x,S) = dest_in tm
  in if same_const pred_setSyntax.univ_tm S
     then EQT_INTRO (ISPEC x inUNIV)
-    else 
+    else
      let val ith = ISPEC x inI
          val eth = ISPEC x inE
      in in_conv conv (eth,ith) x S
@@ -200,7 +200,7 @@ local val Eu = CONJUNCT1 pred_setTheory.UNION_EMPTY
       val bv = genvar bool
       fun itfn conv (ith,iith) x th =
         let val (_,alist) = strip_comb(lhs(concl th))
-            val (S,T) = (case alist of [a,b] => (a,b) 
+            val (S,T) = (case alist of [a,b] => (a,b)
                          | otherwise => raise Match)
         in let val eql = IN_CONV conv (mk_in (x,T))
                val thm = SPEC T (SPEC S (SPEC x ith))
@@ -322,7 +322,7 @@ end;
 (*     CARD {e1; ...; en}                                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun CARD_CONV tm = 
+fun CARD_CONV tm =
  let val s = dest_card tm
      val ty = eltype s
      val items = strip_set s
@@ -335,7 +335,7 @@ fun CARD_CONV tm =
           val finthm' = EQ_MP (SYM (SPEC s (SPEC x FINITE_INSERT'))) finthm
           val cardthm1 = SPEC x (MP (SPEC s CARD_INSERT') finthm)
           val inthm = IN_CONV computeLib.EVAL_CONV (mk_in(x,s))
-          val cardthm2 = CONV_RULE (RHS_CONV 
+          val cardthm2 = CONV_RULE (RHS_CONV
              (REWRITE_CONV [inthm,cardthm] THENC reduceLib.SUC_CONV)) cardthm1
       in (finthm', cardthm2)
       end
@@ -369,7 +369,7 @@ fun MAX_SET_CONV tm  =
           val (y,s) = dest_insert ys
           val finthm' = EQ_MP (SYM (SPEC s (SPEC y FINITE_INSERT'))) finthm
           val maxthm1 = SPEC y (SPEC x (MP (SPEC s MAX_SET_THM') finthm))
-          val maxthm2 = CONV_RULE (RHS_CONV 
+          val maxthm2 = CONV_RULE (RHS_CONV
                 (RAND_CONV (REWR_CONV maxthm) THENC computeLib.EVAL_CONV)) maxthm1
       in (finthm', maxthm2)
       end
@@ -389,16 +389,16 @@ end;
 
 local val SIGMA_EMPTY = CONJUNCT1 (SPEC_ALL SUM_IMAGE_THM)
       val SIGMA_INSERT = Q.prove
-          (`!f s e. FINITE s ==> 
-                  (SIGMA f (e INSERT s) = 
+          (`!f s e. FINITE s ==>
+                  (SIGMA f (e INSERT s) =
                      f e + (if e IN s then SIGMA f s - f e else SIGMA f s))`,
-           REPEAT STRIP_TAC THEN 
+           REPEAT STRIP_TAC THEN
            IMP_RES_TAC (CONJUNCT2 (SPEC_ALL SUM_IMAGE_THM)) THEN
            ASM_REWRITE_TAC[] THEN
            IMP_RES_TAC SUM_IMAGE_DELETE THEN
            ASM_REWRITE_TAC [])
 in
-fun SUM_IMAGE_CONV tm = 
+fun SUM_IMAGE_CONV tm =
  let open numSyntax
      val (f,s) = dest_sum_image tm
      val ty = eltype s
@@ -413,7 +413,7 @@ fun SUM_IMAGE_CONV tm =
           val sumthm1 = MP (SPEC x (SPEC s SIGMA_INSERT')) finthm
           val inthm = IN_CONV computeLib.EVAL_CONV (mk_in(x,s))
           val sumthm2 = CONV_RULE (RHS_CONV
-              (RAND_CONV (REWRITE_CONV [inthm,sumthm]) 
+              (RAND_CONV (REWRITE_CONV [inthm,sumthm])
                           THENC computeLib.EVAL_CONV)) sumthm1
       in (finthm', sumthm2)
       end

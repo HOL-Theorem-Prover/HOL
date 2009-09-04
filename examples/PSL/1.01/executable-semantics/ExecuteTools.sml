@@ -7,13 +7,13 @@ struct
 
 (*
 quietdec := true;
-loadPath := "../official-semantics"   :: 
-            "../executable-semantics" :: 
-            "../regexp"               :: 
+loadPath := "../official-semantics"   ::
+            "../executable-semantics" ::
+            "../regexp"               ::
             !loadPath;
-map load 
- ["bossLib", "metisLib", "matcherTheory", "KripkeTheory", "UnclockedSemanticsTheory", 
-  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory", 
+map load
+ ["bossLib", "metisLib", "matcherTheory", "KripkeTheory", "UnclockedSemanticsTheory",
+  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory",
   "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory"];
 open KripkeTheory FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory

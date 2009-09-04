@@ -11,7 +11,7 @@ include Abbrev
 
 
 (* Types *)
-datatype CONSEQ_CONV_direction =  
+datatype CONSEQ_CONV_direction =
          CONSEQ_CONV_STRENGTHEN_direction
        | CONSEQ_CONV_WEAKEN_direction
        | CONSEQ_CONV_UNKNOWN_direction;
@@ -78,7 +78,7 @@ val NUM_DEPTH_CONSEQ_CONV  : directed_conseq_conv -> int ->
 val NUM_REDEPTH_CONSEQ_CONV: directed_conseq_conv -> int ->
 			     directed_conseq_conv
 
-val CONJ_ASSUMPTIONS_CONSEQ_CONV   : directed_conseq_conv -> 
+val CONJ_ASSUMPTIONS_CONSEQ_CONV   : directed_conseq_conv ->
 				     (term -> bool) -> directed_conseq_conv;
 val DEPTH_STRENGTHEN_CONSEQ_CONV   : conseq_conv -> conseq_conv;
 val REDEPTH_STRENGTHEN_CONSEQ_CONV : conseq_conv -> conseq_conv;

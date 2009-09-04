@@ -1,5 +1,5 @@
 signature PSet_ind =
-sig 
+sig
    type tactic = Abbrev.tactic
 
   val SET_INDUCT_TAC : Thm.thm -> tactic

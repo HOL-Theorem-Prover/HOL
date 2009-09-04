@@ -1,8 +1,8 @@
-signature encodeLib = 
+signature encodeLib =
 sig
 	include Abbrev
 
-	val construct_bottom_value : 
+	val construct_bottom_value :
 	    (hol_type -> bool) -> term -> hol_type -> term
         val set_bottom_value : hol_type -> term -> unit
 	val target_bottom_value : hol_type -> term -> hol_type -> term
@@ -80,7 +80,7 @@ sig
 	val APP_ALL_CONV  : term -> thm
 	val DECODE_PAIR_CONV  : term -> thm
 	val DETECT_PAIR_CONV  : hol_type -> term -> thm
-	val encode_decode_map_tactic : hol_type -> hol_type -> term list * term -> 
+	val encode_decode_map_tactic : hol_type -> hol_type -> term list * term ->
 		(term list * term) list * (thm list -> thm)
 	val encode_map_encode_tactic : hol_type -> hol_type -> term list * term ->
 		(term list * term) list * (thm list -> thm)
@@ -112,6 +112,6 @@ sig
 	val MK_SND : thm -> thm
 
         val CONSOLIDATE_CONV_data : (((term -> term) * term) option) ref
- 
+
 	val predicate_equivalence : hol_type -> hol_type -> thm
 end

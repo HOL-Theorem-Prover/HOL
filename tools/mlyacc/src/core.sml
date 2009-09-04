@@ -1,4 +1,4 @@
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/22 07:40:27  michaeln
@@ -15,7 +15,7 @@
  *
  * Revision 1.1.1.1  1996/01/31  16:01:44  george
  * Version 109
- * 
+ *
  *)
 
 functor mkCore(structure IntGrammar : INTGRAMMAR) : CORE =
@@ -45,7 +45,7 @@ functor mkCore(structure IntGrammar : INTGRAMMAR) : CORE =
 				val eq = eqItem
 				val gt = gtItem
 			end)
-		
+
 		open ItemList
 		datatype core = CORE of item list * int
 
@@ -68,12 +68,12 @@ functor mkCore(structure IntGrammar : INTGRAMMAR) : CORE =
 		   in fn (ITEM {rule=RULE {lhs,rhs,rulenum,num,...},
 				dot,rhsAfter,...}) =>
 			(prNonterm lhs; print " : "; showRhs(rhs,dot);
-		 	 case rhsAfter 
-			 of nil => (print " (reduce by rule "; 
+		 	 case rhsAfter
+			 of nil => (print " (reduce by rule ";
 				    printInt rulenum;
 				    print ")")
 			  | _ => ();
-			  if DEBUG then 
+			  if DEBUG then
 			     (print " (num "; printInt num; print ")")
 			  else ())
 		   end

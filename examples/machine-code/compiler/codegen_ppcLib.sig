@@ -3,7 +3,7 @@ sig
 
   include Abbrev
 
-  val ppc_assign2assembly      : codegen_inputLib.assign_type -> string list 
+  val ppc_assign2assembly      : codegen_inputLib.assign_type -> string list
   val ppc_guard2assembly       : codegen_inputLib.guard_type -> string list * (string * string)
 
   val ppc_cond_code            : Parse.term -> string * string

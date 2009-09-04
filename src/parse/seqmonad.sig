@@ -1,4 +1,4 @@
-signature seqmonad = 
+signature seqmonad =
 sig
 
 type ('a, 'b) seqmonad = 'a -> ('a * 'b) seq.seq

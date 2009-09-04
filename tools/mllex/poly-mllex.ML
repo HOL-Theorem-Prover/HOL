@@ -2,10 +2,6 @@
 val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
-structure Substring = struct
-  open Substring
-  val all = full
-end;
 val _ = use "mllex.sml";
 
 fun main() = let

@@ -1,6 +1,6 @@
 signature integerRingLib =
 sig
-  include Abbrev 
+  include Abbrev
 
   val INT_NORM_CONV : conv
   val INT_RING_CONV : conv

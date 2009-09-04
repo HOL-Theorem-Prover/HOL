@@ -37,11 +37,11 @@ fun failwith function = raise (mk_HOL_ERR "Norm_bool" function "");
 (*---------------------------------------------------------------------------*)
 
 fun EQ_IMP_ELIM_CONV is_atom tm =
- (if is_atom tm then ALL_CONV tm else 
-  if is_neg tm then RAND_CONV (EQ_IMP_ELIM_CONV is_atom) tm else 
-  if is_eq tm then (ARGS_CONV (EQ_IMP_ELIM_CONV is_atom) 
-                    THENC EQ_EXPAND_CONV) tm else 
-  if is_imp tm then (ARGS_CONV (EQ_IMP_ELIM_CONV is_atom) 
+ (if is_atom tm then ALL_CONV tm else
+  if is_neg tm then RAND_CONV (EQ_IMP_ELIM_CONV is_atom) tm else
+  if is_eq tm then (ARGS_CONV (EQ_IMP_ELIM_CONV is_atom)
+                    THENC EQ_EXPAND_CONV) tm else
+  if is_imp tm then (ARGS_CONV (EQ_IMP_ELIM_CONV is_atom)
                      THENC IMP_EXPAND_CONV) tm
   else ARGS_CONV (EQ_IMP_ELIM_CONV is_atom) tm)
   handle HOL_ERR _ => failwith "EQ_IMP_ELIM_CONV";
@@ -57,14 +57,14 @@ fun EQ_IMP_ELIM_CONV is_atom tm =
 (*---------------------------------------------------------------------------*)
 
 fun MOVE_NOT_DOWN_CONV is_atom conv tm =
- (if is_atom tm then conv tm else 
+ (if is_atom tm then conv tm else
   if is_neg tm then
      (let val tm' = rand tm
-      in if is_atom tm' then conv tm else 
+      in if is_atom tm' then conv tm else
          if is_neg tm'  then (NOT_NOT_NORM_CONV THENC
-                               (MOVE_NOT_DOWN_CONV is_atom conv)) tm else 
+                               (MOVE_NOT_DOWN_CONV is_atom conv)) tm else
          if is_conj tm' then (NOT_CONJ_NORM_CONV THENC
-                      (ARGS_CONV (MOVE_NOT_DOWN_CONV is_atom conv))) tm else 
+                      (ARGS_CONV (MOVE_NOT_DOWN_CONV is_atom conv))) tm else
          if is_disj tm' then
                  (NOT_DISJ_NORM_CONV THENC
                    ARGS_CONV (MOVE_NOT_DOWN_CONV is_atom conv)) tm

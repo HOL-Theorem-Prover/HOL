@@ -88,7 +88,7 @@ val (list_elts_def, list_elts_ind) = ((Q.GEN `s` ## I) o Defn.tprove)
       ++ MP_TAC (Q.SPEC `s` CARD_EQ_0)
       ++ RW_TAC arith_ss [])
   end;
-      
+
 val _ = save_thm ("list_elts_def", list_elts_def);
 val _ = save_thm ("list_elts_ind", list_elts_ind);
 
@@ -144,7 +144,7 @@ val GSPEC_DEF_ALT = store_thm
   ("GSPEC_DEF_ALT",
    ``!(f:'a -> 'b # bool). GSPEC f = (\v. ?x. (v, T) = f x)``,
    RW_TAC std_ss [EXTENSION, GSPECIFICATION]
-   ++ RW_TAC std_ss [SPECIFICATION]);   
+   ++ RW_TAC std_ss [SPECIFICATION]);
 
 val UNION_DISJOINT_SPLIT = store_thm
   ("UNION_DISJOINT_SPLIT",
@@ -1454,7 +1454,7 @@ val COUNTABLE_BIGUNION = store_thm
    ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `f (n : num)`)
    ++ RW_TAC std_ss []
    ++ POP_ASSUM (MP_TAC o Q.SPEC `x`)
-   ++ RW_TAC std_ss []      
+   ++ RW_TAC std_ss []
    ++ Q.PAT_ASSUM `BIJ f' X Y` MP_TAC
    ++ RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV, IN_CROSS]
    ++ POP_ASSUM (MP_TAC o Q.SPEC `(n, n')`)

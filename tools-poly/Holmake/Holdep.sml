@@ -12,13 +12,13 @@ structure Holdep = struct
 
 structure SimpleSMLLrVals =
   SimpleSMLLrValsFun(structure Token = LrParser.Token)
-structure SimpleSMLLex = 
+structure SimpleSMLLex =
   SimpleSMLLexFun(structure Tokens = SimpleSMLLrVals.Tokens)
 structure SimpleSMLParser=
   Join(structure ParserData = SimpleSMLLrVals.ParserData
        structure Lex=SimpleSMLLex
        structure LrParser=LrParser)
-  
+
 fun normPath s = OS.Path.toString(OS.Path.fromString s)
 fun manglefilename s = normPath s
 fun errMsg str = TextIO.output(TextIO.stdErr, str ^ "\n\n")
@@ -72,10 +72,10 @@ let val lexer = SimpleSMLParser.makeLexer (fn n => TextIO.inputN(strm,n))
       (print ("Parse error in " ^ s ^ " at " ^ Int.toString i1 ^ " to " ^
               Int.toString i2 ^ "\n");
        raise (Fail "Syntax Error."))
-in 
+in
   #1 (SimpleSMLParser.parse(15,lexer,print_error,()))
   handle SimpleSMLLex.UserDeclarations.LexicalError(msg, text, pos) =>
-    (print ("Lex error: " ^ msg ^ " at text " ^ text ^ 
+    (print ("Lex error: " ^ msg ^ " at text " ^ text ^
             " and at position " ^ Int.toString pos ^ "\n");
      raise (Fail "Lexical error"))
 end
@@ -186,14 +186,14 @@ fun endentry() = (* for non-file-based Holdep *)
   else ""
 end;
 
-fun read (assumes:string list) (srcext:string) 
+fun read (assumes:string list) (srcext:string)
          (objext:string) (filename:string) : string = let
   open OS.FileSys Systeml
   val op ^ = OS.Path.concat
   val unquote = xable_string(Systeml.HOLDIR ^ "bin" ^ "unquote")
   val file0 = addExt filename srcext
-  fun try_remove f = 
-    if file0 <> f then 
+  fun try_remove f =
+    if file0 <> f then
       ((OS.FileSys.remove f) handle OS.SysErr _ => ())
     else
       ();
@@ -208,10 +208,10 @@ fun read (assumes:string list) (srcext:string)
         end
       else file0
   in let
-  val is       = TextIO.openIn actualfile 
+  val is       = TextIO.openIn actualfile
   val mentions = ref (Binaryset.empty String.compare)
   fun insert s = mentions := Binaryset.addList (!mentions, s)
-  val names    = parseFile (filename, is) 
+  val names    = parseFile (filename, is)
   val _        = TextIO.closeIn is
   val _        = try_remove actualfile
   val curr_dir = OS.Path.dir filename

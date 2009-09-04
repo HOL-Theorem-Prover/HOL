@@ -1089,6 +1089,13 @@ val MONO_exists = store_thm(
   SRW_TAC [][]);
 val _ = IndDefLib.export_mono "MONO_exists"
 
+val exists_strong_ind = save_thm(
+  "exists_strong_ind",
+  exists_ind |> Q.SPECL [`P`, `\ll. Q ll /\ exists P ll`]
+             |> SIMP_RULE (srw_ss()) []
+             |> Q.GEN `Q` |> Q.GEN `P`);
+
+
 (* ----------------------------------------------------------------------
     companion LL_ALL/every (has a coinduction principle)
    ---------------------------------------------------------------------- *)
@@ -1113,7 +1120,6 @@ val every_thm = store_thm(
   ``(every P [||] = T) /\
     (every P (h:::t) = P h /\ every P t)``,
   SRW_TAC [][every_def]);
-
 val _ = export_rewrites ["every_thm"]
 val LL_ALL_THM = save_thm("LL_ALL_THM", every_thm)
 
@@ -1123,6 +1129,21 @@ val MONO_every = store_thm(
   STRIP_TAC THEN Q.ID_SPEC_TAC `l` THEN HO_MATCH_MP_TAC every_coind THEN
   SRW_TAC [][]);
 val _ = export_mono "MONO_every"
+
+val every_strong_coind = save_thm(
+  "every_strong_coind",
+  every_coind |> Q.SPECL [`P`, `\ll. Q ll \/ every P ll`]
+              |> SIMP_RULE (srw_ss()) [DISJ_IMP_THM, IMP_CONJ_THM,
+                                       FORALL_AND_THM]
+              |> Q.GEN `Q` |> Q.GEN `P`);
+
+(*
+  could alternatively take contrapositives of the exists induction principle:
+
+  exists_strong_ind |> Q.SPECL [`(~) o P`, `(~) o Q`]
+                     |> CONV_RULE (BINOP_CONV (ONCE_REWRITE_CONV [MONO_NOT_EQ]))
+                     |> SIMP_RULE (srw_ss()) [GSYM every_def]
+*)
 
 (* ----------------------------------------------------------------------
     can now define LFILTER and LFLATTEN

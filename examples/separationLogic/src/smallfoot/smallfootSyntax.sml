@@ -3,9 +3,9 @@ struct
 
 (*
 quietdec := true;
-loadPath := 
-            (concat Globals.HOLDIR "/examples/separationLogic/src") :: 
-            (concat Globals.HOLDIR "/examples/separationLogic/src/smallfoot") :: 
+loadPath :=
+            (concat Globals.HOLDIR "/examples/separationLogic/src") ::
+            (concat Globals.HOLDIR "/examples/separationLogic/src/smallfoot") ::
             !loadPath;
 
 map load ["finite_mapTheory", "smallfootTheory"];
@@ -85,10 +85,10 @@ val smallfoot_prog_new_term = ``smallfoot_prog_new``;
 val smallfoot_prog_dispose_term = ``smallfoot_prog_dispose``;
 val smallfoot_prog_block_term = ``smallfoot_prog_block``;
 val smallfoot_prog_cond_term = ``smallfoot_prog_cond``;
-val smallfoot_prog_while_term = ``smallfoot_prog_while`` 
-val smallfoot_prog_while_with_invariant_term = ``smallfoot_prog_while_with_invariant`` 
-val smallfoot_prog_procedure_call_term = ``smallfoot_prog_procedure_call`` 
-val smallfoot_prog_parallel_procedure_call_term = ``smallfoot_prog_parallel_procedure_call`` 
+val smallfoot_prog_while_term = ``smallfoot_prog_while``
+val smallfoot_prog_while_with_invariant_term = ``smallfoot_prog_while_with_invariant``
+val smallfoot_prog_procedure_call_term = ``smallfoot_prog_procedure_call``
+val smallfoot_prog_parallel_procedure_call_term = ``smallfoot_prog_parallel_procedure_call``
 val smallfoot_prog_parallel_term = ``smallfoot_prog_parallel``;
 val smallfoot_prog_local_var_term = ``$smallfoot_prog_local_var``
 val smallfoot_prog_val_arg_term = ``$smallfoot_prog_val_arg``
@@ -134,7 +134,7 @@ fun dest_smallfoot_tag t =
 	val (op_term, arg) = dest_comb t;
         val _ = if (eq op_term smallfoot_tag_term) then () else
                 Feedback.fail ();
-    in 
+    in
         arg
     end;
 
@@ -143,13 +143,13 @@ fun dest_smallfoot_var t =
 	val (op_term, arg) = dest_comb t;
         val _ = if (eq op_term smallfoot_var_term) then () else
                 Feedback.fail ();
-    in 
+    in
         arg
     end;
 val is_smallfoot_var = can dest_smallfoot_var
 
 
-fun dest_local_vars t = 
+fun dest_local_vars t =
     let
        val (op_term, args) = strip_comb t;
     in
@@ -178,7 +178,7 @@ val FEMPTY_tm = ``FEMPTY``;
 val FUPDATE_tm = ``$FUPDATE``;
 
 
-fun dest_finite_map t = 
+fun dest_finite_map t =
     let
 	val (op_term, args) = strip_comb t;
     in
@@ -189,7 +189,7 @@ fun dest_finite_map t =
                ((pairLib.dest_pair (el 2 args))::slist, rest)
 	   end
        else if (same_const op_term FEMPTY_tm) then ([], NONE)
-       else ([], SOME t) 
+       else ([], SOME t)
     end handle _ => ([], SOME t);
 
 
@@ -237,7 +237,7 @@ val is_SMALLFOOT_COND_HOARE_TRIPLE = (can dest_SMALLFOOT_COND_HOARE_TRIPLE);
 
 
 
-val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_term = 
+val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_term =
    ``SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE``;
 fun dest_SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE tt =
   let
@@ -417,7 +417,7 @@ fun dest_FASL_PROGRAM_IS_ABSTRACTION tt =
     (el 1 args, el 2 args, el 3 args, el 4 args)
   end
 val is_FASL_PROGRAM_IS_ABSTRACTION = (can dest_FASL_PROGRAM_IS_ABSTRACTION);
-fun mk_FASL_PROGRAM_IS_ABSTRACTION (xenv,penv,x,y) = 
+fun mk_FASL_PROGRAM_IS_ABSTRACTION (xenv,penv,x,y) =
    list_mk_icomb(FASL_PROGRAM_IS_ABSTRACTION_term, [xenv,penv,x,y]);
 
 
@@ -433,7 +433,7 @@ fun dest_fasl_prog_cond tt =
     (el 1 args, el 2 args, el 3 args)
   end
 val is_fasl_prog_cond = (can dest_fasl_prog_cond);
-fun mk_fasl_prog_cond (c,p1,p2) = 
+fun mk_fasl_prog_cond (c,p1,p2) =
    list_mk_icomb(fasl_prog_cond_term, [c,p1,p2]);
 
 
@@ -460,7 +460,7 @@ fun dest_fasl_prog_while_with_invariant tt =
     (el 1 args, el 2 args, el 3 args)
   end
 val is_fasl_prog_while_with_invariant = (can dest_fasl_prog_while_with_invariant);
-fun mk_fasl_prog_while_with_invariant (i,c,p) = 
+fun mk_fasl_prog_while_with_invariant (i,c,p) =
    list_mk_icomb(fasl_prog_while_with_invariant_term, [i,c,p]);
 
 
@@ -491,7 +491,7 @@ val is_smallfoot_prog_release_resource = (can dest_smallfoot_prog_release_resour
 
 
 
-val smallfoot_choose_const_best_local_action_term = 
+val smallfoot_choose_const_best_local_action_term =
    ``smallfoot_choose_const_best_local_action``;
 
 fun dest_smallfoot_choose_const_best_local_action tt =
@@ -508,7 +508,7 @@ val is_smallfoot_choose_const_best_local_action = (can dest_smallfoot_choose_con
 
 
 
-val smallfoot_cond_best_local_action_term = 
+val smallfoot_cond_best_local_action_term =
    ``smallfoot_cond_best_local_action``;
 
 fun dest_smallfoot_cond_best_local_action tt =
@@ -525,7 +525,7 @@ val is_smallfoot_cond_best_local_action = (can dest_smallfoot_cond_best_local_ac
 
 
 
-val smallfoot_cond_star_term = 
+val smallfoot_cond_star_term =
    ``smallfoot_cond_star``;
 
 fun dest_smallfoot_cond_star tt =
@@ -542,7 +542,7 @@ val is_smallfoot_cond_star = (can dest_smallfoot_cond_star);
 
 
 
-val fasl_prog_best_local_action_term = 
+val fasl_prog_best_local_action_term =
    ``fasl_prog_best_local_action``;
 
 fun dest_fasl_prog_best_local_action tt =
@@ -558,7 +558,7 @@ val is_fasl_prog_best_local_action = (can dest_fasl_prog_best_local_action);
 
 
 
-val smallfoot_prog_best_local_action_term = 
+val smallfoot_prog_best_local_action_term =
    ``smallfoot_prog_best_local_action``;
 
 fun dest_smallfoot_prog_best_local_action tt =
@@ -573,7 +573,7 @@ fun dest_smallfoot_prog_best_local_action tt =
 val is_smallfoot_prog_best_local_action = (can dest_smallfoot_prog_best_local_action);
 
 
-val smallfoot_parallel_proc_call_abstraction_term = 
+val smallfoot_parallel_proc_call_abstraction_term =
    ``smallfoot_parallel_proc_call_abstraction``;
 
 fun dest_smallfoot_parallel_proc_call_abstraction tt =
@@ -621,7 +621,7 @@ fun dest_smallfoot_prog_while_with_invariant tt =
     (x1,x2, el 2 args, el 3 args)
   end
 val is_smallfoot_prog_while_with_invariant = (can dest_smallfoot_prog_while_with_invariant);
-fun mk_smallfoot_prog_while_with_invariant (fvL,qi,c,p) = 
+fun mk_smallfoot_prog_while_with_invariant (fvL,qi,c,p) =
    list_mk_icomb(smallfoot_prog_while_with_invariant_term, [pairLib.mk_pair(fvL,qi),c,p]);
 
 
@@ -907,7 +907,7 @@ val is_smallfoot_ap_implies_ae_equal = (can dest_smallfoot_ap_implies_ae_equal);
 
 
 fun smallfoot_dest_is_binop cL m =
-  let 
+  let
      fun dest_fun tt =
      let
         val (f, args) = strip_comb tt;
@@ -922,22 +922,22 @@ fun smallfoot_dest_is_binop cL m =
   end;
 
 
-val (dest_smallfoot_ap_equal, is_smallfoot_ap_equal) = 
+val (dest_smallfoot_ap_equal, is_smallfoot_ap_equal) =
     smallfoot_dest_is_binop [smallfoot_ap_equal_term] "dest_smallfoot_ap_equal";
 
-val (dest_smallfoot_ap_unequal, is_smallfoot_ap_unequal) = 
+val (dest_smallfoot_ap_unequal, is_smallfoot_ap_unequal) =
     smallfoot_dest_is_binop [smallfoot_ap_unequal_term] "dest_smallfoot_ap_unequal";
 
 
 
 
-val (dest_smallfoot_ap_compare, is_smallfoot_ap_compare) = 
+val (dest_smallfoot_ap_compare, is_smallfoot_ap_compare) =
     smallfoot_dest_is_binop [smallfoot_ap_equal_term,
 			     smallfoot_ap_unequal_term,
 			     smallfoot_ap_lesseq_term,
 			     smallfoot_ap_less_term,
 			     smallfoot_ap_greatereq_term,
-			     smallfoot_ap_greater_term] 
+			     smallfoot_ap_greater_term]
 			    "dest_smallfoot_ap_compare";
 
 
@@ -1047,7 +1047,7 @@ fun dest_smallfoot_ap_unknown t =
     (stringLib.fromHOLstring (el 1 args))
   end
 val is_smallfoot_ap_unknown = (can dest_smallfoot_ap_unknown);
-fun mk_smallfoot_ap_unknown s = 
+fun mk_smallfoot_ap_unknown s =
    mk_icomb (smallfoot_ap_unknown_term, stringLib.fromMLstring s);
 
 

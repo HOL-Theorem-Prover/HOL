@@ -19,7 +19,7 @@ val _ = (Globals.priming := SOME "");
 fun varOrder (t1:term, t2:term) =
   let val s1 = #1 (dest_var t1)
       val s2 = #1 (dest_var t2)
-  in  
+  in
   if s1 > s2 then GREATER
   else if s1 = s2 then EQUAL
   else LESS
@@ -31,28 +31,28 @@ fun varOrder (t1:term, t2:term) =
 (* others.                                                                   *)
 (*---------------------------------------------------------------------------*)
 
-fun std_bvars stem tm = 
+fun std_bvars stem tm =
  let open Lib
      fun num2name i = stem^Lib.int_to_string i
      val nameStrm = Lib.mk_istream (fn x => x+1) 0 num2name
      fun next_name () = state(next nameStrm)
-     fun trav M = 
-       if is_comb M then 
+     fun trav M =
+       if is_comb M then
             let val (M1,M2) = dest_comb M
                 val M1' = trav M1
-                val M2' = trav M2 
+                val M2' = trav M2
             in mk_comb(M1',M2')
-            end else 
-       if is_abs M then 
+            end else
+       if is_abs M then
            let val (v,N) = dest_abs(rename_bvar (next_name()) M)
            in mk_abs(v,trav N)
            end
        else M
- in 
+ in
    trav tm
- end; 
+ end;
 
-fun STD_BVARS_CONV stem tm = 
+fun STD_BVARS_CONV stem tm =
  let val tm' = std_bvars stem tm
  in Thm.ALPHA tm tm'
  end;
@@ -95,7 +95,7 @@ val SimpThms = [sc_def, cj_def, tr_def];
 (* sc and cj.                                                                *)
 (*****************************************************************************)
 
-fun is_word_literal tm = 
+fun is_word_literal tm =
   ((is_comb tm) andalso
   let val (c,args) = strip_comb tm
       val {Name,Thy,Ty} = dest_thy_const c
@@ -107,7 +107,7 @@ fun is_word_literal tm =
 fun to_combinator f =
  let val (args,t) = dest_pabs f
  in
-   if is_var t orelse is_word_literal t orelse numSyntax.is_numeral t orelse is_const t orelse is_pair t then 
+   if is_var t orelse is_word_literal t orelse numSyntax.is_numeral t orelse is_const t orelse is_pair t then
      REFL f
 
    else if is_cond t then
@@ -121,7 +121,7 @@ fun to_combinator f =
             val th3 = ISPECL [fb,f1,f2] cj_def
             val ptm = mk_pabs
                        (args,
-                        mk_cond(mk_comb(fb,args),mk_comb(f1,args),mk_comb(f2,args))) 
+                        mk_cond(mk_comb(fb,args),mk_comb(f1,args),mk_comb(f2,args)))
             val th4 = TRANS th3 (PALPHA  (rhs(concl th3)) ptm)
             val th5 = CONV_RULE
                        (RHS_CONV
@@ -144,7 +144,7 @@ fun to_combinator f =
       let val (v,M,N) = dest_plet t
             val liveVarS = Binaryset.addList (Binaryset.empty varOrder, free_vars N)
             val extraVarS = Binaryset.delete (liveVarS, v)
-            val th1 = 
+            val th1 =
               if Binaryset.isEmpty extraVarS then
                 let val f1 = mk_pabs(args, M)
                     val f2 = mk_pabs(v, N)
@@ -152,7 +152,7 @@ fun to_combinator f =
                     ISPECL [f1,f2] sc_def
                 end
               else
-                let 
+                let
                   val extraVars = list_mk_pair (Binaryset.listItems extraVarS)
                   val args1 = mk_pair (extraVars,v)
                   val f1 = mk_pabs(args, mk_pair (extraVars, M))
@@ -173,7 +173,7 @@ fun to_combinator f =
 
   else if is_comb t then
        REFL f
-  else 
+  else
        REFL f
 (*
   else (print_term f; print "\n";
@@ -197,22 +197,22 @@ fun occurs_in t1 t2 = can (find_term (aconv t1)) t2;
 (*****************************************************************************)
 
 fun convert defth =
- let val (lt,rt) = 
+ let val (lt,rt) =
          dest_eq(concl(SPEC_ALL defth))
-         handle HOL_ERR _ 
+         handle HOL_ERR _
          => (print "not an equation\n"; raise ERR "Convert" "not an equation")
-     val (func,args) = 
+     val (func,args) =
          dest_comb lt
-         handle HOL_ERR _ => 
+         handle HOL_ERR _ =>
          (print "lhs not a comb\n"; raise ERR "Convert" "lhs not a comb")
      val _ = if not(is_const func)
               then (print_term func; print " is not a constant\n";
                     raise ERR "Convert" "rator of lhs not a constant")
               else ()
      val _ = if not(subtract (free_vars rt) (free_vars lt) = [])
-              then (print "definition rhs has unbound variables: "; 
+              then (print "definition rhs has unbound variables: ";
                     map (fn t => (print_term t; print " "))
-                        (rev(subtract (free_vars rt) (free_vars lt))); 
+                        (rev(subtract (free_vars rt) (free_vars lt)));
                     print "\n";
                     raise ERR "Convert" "definition rhs has unbound variables")
               else ()
@@ -253,19 +253,19 @@ fun rec_convert defth =
      val (func,args) = dest_comb lt
      val (b,t1,t2) = dest_cond rt
      val _ = if not(subtract (free_vars rt) (free_vars lt) = [])
-              then (print "definition rhs has unbound variables: "; 
+              then (print "definition rhs has unbound variables: ";
                     map (fn t => (print_term t; print " "))
-                        (rev(subtract (free_vars rt) (free_vars lt))); 
+                        (rev(subtract (free_vars rt) (free_vars lt)));
                     print "\n";
                     raise ERR "RecConvert" "definition rhs has unbound variables")
               else()
  in
-  if (is_comb t2 
+  if (is_comb t2
        andalso aconv (rator t2) func
        andalso not(occurs_in func b)
        andalso not(occurs_in func t1)
        andalso not(occurs_in func (rand t2)))
-  then 
+  then
    let val fb = mk_pabs(args,b)
        val f1 = mk_pabs(args,t1)
        val f2 = mk_pabs(args,rand t2)
@@ -273,7 +273,7 @@ fun rec_convert defth =
 
        val M = fst(dest_imp(concl thm))
        val (v,body) = dest_forall M
-       val M' = rhs(concl(DEPTH_CONV PBETA_CONV 
+       val M' = rhs(concl(DEPTH_CONV PBETA_CONV
                  (mk_pforall(args,subst [v |-> args]body))))
        val MeqM' = prove(mk_eq(M,M'),
                     Ho_Rewrite.REWRITE_TAC[LAMBDA_PROD]
@@ -286,7 +286,7 @@ fun rec_convert defth =
        val (R,tm) = dest_exists N
        val (tm1,tm2) = dest_conj tm
        val (v,body) = dest_forall tm2
-       val tm2' = rhs(concl(DEPTH_CONV PBETA_CONV 
+       val tm2' = rhs(concl(DEPTH_CONV PBETA_CONV
                  (mk_pforall(args,subst [v |-> args]body))))
        val N' = mk_exists(R,mk_conj(tm1,tm2'))
        val NeqN' = prove(mk_eq(N,N'),
@@ -302,7 +302,7 @@ fun rec_convert defth =
     in thm6
     end
   else if occurs_in func rt
-   then (print "definition of: "; print_term func; 
+   then (print "definition of: "; print_term func;
          print " is not tail recursive"; print "\n";
          raise ERR "RecConvert" "not tail recursive")
    else raise ERR "RecConvert" "this shouldn't happen"
@@ -313,12 +313,12 @@ fun rec_convert defth =
 (* by calling convert or tr_convert.                                         *)
 (*---------------------------------------------------------------------------*)
 
-fun toComb def = 
+fun toComb def =
  let val (l,r) = dest_eq(snd(strip_forall(concl def)))
      val (func,args) = dest_comb l
      val is_recursive = Lib.can (find_term (aconv func)) r
      val comb_exp_thm = if is_recursive then rec_convert def else convert def
- in 
+ in
    (is_recursive,lhs(concl comb_exp_thm), args, comb_exp_thm)
  end;
 
@@ -327,9 +327,9 @@ fun toComb def =
 (* to combinator form, then add the result to the environment.               *)
 (*---------------------------------------------------------------------------*)
 
-fun toACF env def = 
+fun toACF env def =
  let val (is_recursive,func,args,const_eq_comb) = toComb def
- in 
+ in
    (func,(is_recursive,def,const_eq_comb))::env
  end;
 

@@ -45,11 +45,11 @@ type thm_tactic = Abbrev.thm_tactic;
       :{theorem:thm,type_substitution:(hol_type,hol_type) Lib.subst} -> thm
   val STRONG_INST_TY_TERM :{term_substitution:(term,term) Lib.subst,
                             theorem:thm,
-                            type_substitution:(hol_type,hol_type)Lib.subst} -> 
+                            type_substitution:(hol_type,hol_type)Lib.subst} ->
                            thm
   val SUBST_MATCH_TAC :thm_tactic
   val SUPPOSE_TAC :term -> tactic
-  val find_match :{pattern:term, term:term} 
+  val find_match :{pattern:term, term:term}
                    -> (term,term) Lib.subst * (hol_type,hol_type) Lib.subst
   val is_contained_in :{subset:term list, superset: term list} -> bool
   val mapshape :{functions:('a list -> 'b) list,

@@ -76,23 +76,23 @@ fun constructors_of (DFACTS {constructors,...}) = constructors
   | constructors_of (NFACTS _) = [];
 
 fun case_const_of (DFACTS {case_const,...}) = case_const
-  | case_const_of (NFACTS (ty,_)) = 
+  | case_const_of (NFACTS (ty,_)) =
       raise ERR "case_const_of" (dollarty ty^" is not a datatype");
 
 fun case_cong_of (DFACTS {case_cong,...}) = case_cong
-  | case_cong_of (NFACTS (ty,_)) = 
+  | case_cong_of (NFACTS (ty,_)) =
        raise ERR "case_cong_of" (dollarty ty^" is not a datatype");
 
 fun case_def_of (DFACTS {case_def,...}) = case_def
-  | case_def_of (NFACTS (ty,_)) = 
+  | case_def_of (NFACTS (ty,_)) =
        raise ERR "case_def_of" (dollarty ty^" is not a datatype");
 
 fun induction_of0 (DFACTS {induction,...}) = induction
-  | induction_of0 (NFACTS (ty,_)) = 
+  | induction_of0 (NFACTS (ty,_)) =
         raise ERR "induction_of0" (dollarty ty^" is not a datatype");
 
 fun induction_of (DFACTS {induction,...}) = thm_of induction
-  | induction_of (NFACTS (ty,_)) = 
+  | induction_of (NFACTS (ty,_)) =
         raise ERR "induction_of" (dollarty ty^" is not a datatype");
 
 fun nchotomy_of (DFACTS {nchotomy,...}) = nchotomy
@@ -101,11 +101,11 @@ fun nchotomy_of (DFACTS {nchotomy,...}) = nchotomy
         raise ERR "nchotomy_of" (dollarty ty^" no cases theorem available");
 
 fun distinct_of (DFACTS {distinct,...}) = distinct
-  | distinct_of (NFACTS (ty,_)) = 
+  | distinct_of (NFACTS (ty,_)) =
         raise ERR "distinct_of" (dollarty ty^" is not a datatype");
 
 fun one_one_of (DFACTS {one_one,...}) = one_one
-  | one_one_of (NFACTS (ty,_)) = 
+  | one_one_of (NFACTS (ty,_)) =
         raise ERR "one_one_of" (dollarty ty^" is not a datatype");
 
 fun fields_of (DFACTS {fields,...}) = fields
@@ -121,15 +121,15 @@ fun simpls_of (DFACTS {simpls,...}) = simpls
   | simpls_of (NFACTS _) = simpfrag.empty_simpfrag;
 
 fun axiom_of0 (DFACTS {axiom,...}) = axiom
-  | axiom_of0 (NFACTS (ty,_)) = 
+  | axiom_of0 (NFACTS (ty,_)) =
       raise ERR "axiom_of0" (dollarty ty^" is not a datatype");
 
 fun axiom_of (DFACTS {axiom,...}) = thm_of axiom
-  | axiom_of (NFACTS (ty,_)) = 
+  | axiom_of (NFACTS (ty,_)) =
       raise ERR "axiom_of" (dollarty ty^" is not a datatype");
 
 fun size_of0 (DFACTS {size,...}) = size
-  | size_of0 (NFACTS (ty,_)) = 
+  | size_of0 (NFACTS (ty,_)) =
       raise ERR "size_of0" (dollarty ty^" is not a datatype");
 
 fun size_of (DFACTS {size=NONE,...}) = NONE
@@ -137,7 +137,7 @@ fun size_of (DFACTS {size=NONE,...}) = NONE
   | size_of (NFACTS(_,{size,...})) = size;
 
 fun encode_of0(DFACTS {encode,...}) = encode
-  | encode_of0(NFACTS (ty,_)) = 
+  | encode_of0(NFACTS (ty,_)) =
        raise ERR "encode_of0" (dollarty ty^" is not a datatype")
 
 fun encode_of(DFACTS {encode=NONE,...}) = NONE
@@ -145,7 +145,7 @@ fun encode_of(DFACTS {encode=NONE,...}) = NONE
   | encode_of(NFACTS(_,{encode,...})) = encode;
 
 fun lift_of(DFACTS {lift,...}) = lift
-  | lift_of(NFACTS (ty,_)) = 
+  | lift_of(NFACTS (ty,_)) =
        raise ERR "lift_of" (dollarty ty^" is not a datatype")
 ;
 
@@ -348,7 +348,7 @@ fun gen_datatype_info {ax, ind, case_defs} =
                  "Number of theorems automatically proved doesn't match up"
      val tyinfo_1 = mk_datatype_info
            {ax=ORIG ax, induction=ORIG ind,
-            case_def = hd case_defs, case_cong = hd case_congs, 
+            case_def = hd case_defs, case_cong = hd case_congs,
             nchotomy = hd nchotomyl,
             size=NONE, encode=NONE, lift=NONE,
             fields=[], accessors=[],updates=[],
@@ -424,7 +424,7 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
    add_string "Induction:"; add_break (1,0);
     (case induction
       of ORIG thm  => pp_thm thm
-       | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp))); 
+       | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)));
    end_block();
    add_break(1,0);
    begin_block CONSISTENT 1; add_string "Case completeness:";

@@ -12,7 +12,7 @@ open HolKernel Parse boolSyntax boolLib bossLib pairSyntax wordsSyntax;
 (*---------------------------------------------------------------------------*)
 
 (* Is the term a word? *)
-fun is_word_literal tm = 
+fun is_word_literal tm =
  case total dest_n2w tm
   of NONE => false
    | SOME (ntm,wty) => numSyntax.is_numeral ntm;
@@ -26,7 +26,7 @@ fun is_8bit_literal tm =
 
 (* Is the term an atomic term? *)
 fun is_atomic t =
-    is_var t orelse is_word_literal t orelse 
+    is_var t orelse is_word_literal t orelse
     numSyntax.is_numeral t orelse is_const t orelse
     is_neg t  (* ~x is considered to be an atom *)
     ;
@@ -40,7 +40,7 @@ fun OR test [] = false
 
 fun is_num_arithop op0 =
  let open numSyntax
- in 
+ in
     OR (same_const op0) [plus_tm,minus_tm,mult_tm,exp_tm]
  end;
 
@@ -61,7 +61,7 @@ fun is_num_cmpop op0 =
 
 fun is_word_arithop op0 =
   let open wordsSyntax
-  in 
+  in
     OR (same_const op0) [word_add_tm,word_sub_tm,word_mul_tm]
   end;
 
@@ -71,7 +71,7 @@ fun is_word_arithop op0 =
 
 fun is_mult_op op0 =
   (op0 = numSyntax.mult_tm) orelse
-  (#1 (dest_const(wordsSyntax.word_mul_tm)) = #1 (dest_const op0) 
+  (#1 (dest_const(wordsSyntax.word_mul_tm)) = #1 (dest_const op0)
    handle _ => false);
 
 (*---------------------------------------------------------------------------*)
@@ -79,14 +79,14 @@ fun is_mult_op op0 =
 (* comparisons.                                                              *)
 (*---------------------------------------------------------------------------*)
 
-val is_word_equality = 
+val is_word_equality =
    Lib.can (match_term (mk_const("=",``:'a word -> 'a word -> bool``)));
 
 fun is_word_cmpop op0 =
  let open wordsSyntax
  in
     is_word_equality op0 orelse
-    OR (same_const op0) [word_lt_tm,word_le_tm,word_gt_tm,word_ge_tm, 
+    OR (same_const op0) [word_lt_tm,word_le_tm,word_gt_tm,word_ge_tm,
       word_hi_tm, word_hs_tm, word_lo_tm, word_ls_tm]
  end;
 
@@ -97,7 +97,7 @@ fun is_word_cmpop op0 =
 fun is_word_shiftop op0 =
  let open wordsSyntax
  in
-    OR (same_const op0) 
+    OR (same_const op0)
         [word_ror_tm,word_rol_tm,word_lsl_tm,word_lsr_tm,word_asr_tm]
  end;
 
@@ -116,14 +116,14 @@ fun is_word_bitwiseop op0 =
 (* Is the operator a logical operator?                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun is_relop op0 = 
+fun is_relop op0 =
  let open boolSyntax
  in
     OR (same_const op0) [conjunction,disjunction]
  end;
 
-fun is_binop opr = 
-  is_relop opr orelse 
+fun is_binop opr =
+  is_relop opr orelse
   is_word_bitwiseop opr orelse
   is_num_arithop opr orelse
   is_word_arithop opr orelse
@@ -138,7 +138,7 @@ fun is_binop opr =
 
 fun is_atom_cond tm =
     is_comb tm andalso
-    let val (op0,_) = strip_comb tm 
+    let val (op0,_) = strip_comb tm
     in
       is_num_cmpop op0 orelse is_word_cmpop op0
     end;
@@ -147,7 +147,7 @@ fun is_atom_cond tm =
 (* Last Expression                                                           *)
 (*---------------------------------------------------------------------------*)
 
-fun last_exp exp = 
+fun last_exp exp =
   if is_let exp then
      last_exp (#3 (dest_plet exp))
   else exp;
@@ -156,8 +156,8 @@ fun last_exp exp =
 (* Term manipulating functions                                               *)
 (*---------------------------------------------------------------------------*)
 
-(* substitute variables in an expression *) 
-fun subst_exp rule exp = 
+(* substitute variables in an expression *)
+fun subst_exp rule exp =
   if is_plet exp then
      let val (v, M, N) = dest_plet exp
      in
@@ -178,12 +178,12 @@ fun subst_exp rule exp =
 fun occurs_in t1 t2 = can (find_term (aconv t1)) t2;
 
 (* Convert a function definition into a lamba format *)
-fun abs_fun def = 
-  let 
+fun abs_fun def =
+  let
       val t0 = concl (SPEC_ALL def)
       val (fname, args) = dest_comb (lhs t0)
       val body = rhs t0
-      val th1 = prove (mk_eq (fname, mk_pabs(args,body)), 
+      val th1 = prove (mk_eq (fname, mk_pabs(args,body)),
         SIMP_TAC std_ss [FUN_EQ_THM, pairTheory.FORALL_PROD, Once def])
   in
     th1
@@ -194,7 +194,7 @@ fun abs_fun def =
 (* Find the ouput of a term.                                                 *)
 (*---------------------------------------------------------------------------*)
 
-fun identify_output t = 
+fun identify_output t =
  let
   fun trav t =
       if is_let t then
@@ -205,13 +205,13 @@ fun identify_output t =
                  val t1 = trav M1
                  val t2 = trav M2
              in if t1 = t2 then t1
-                else case t1 of 
-                     SOME x => (case t2 of 
+                else case t1 of
+                     SOME x => (case t2 of
                                    SOME y => raise Fail "the outputs of two branches are different!"
                                  | NONE => SOME x
                                )
                  |  NONE => t1
-             end 
+             end
       else if is_pabs t then
            let val (M,N) = dest_pabs t in trav N end
       else if is_pair t orelse is_atomic t then
@@ -227,7 +227,7 @@ fun identify_output t =
 (* Sanity check of the source program.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun pre_check (args,body) = 
+fun pre_check (args,body) =
   let
     val fv = free_vars (mk_pair(args,body))
     val var_type = type_of (hd (fv))

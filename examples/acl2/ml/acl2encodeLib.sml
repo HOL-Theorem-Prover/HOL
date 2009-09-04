@@ -5,7 +5,7 @@ struct
 (* Used to encode functions from HOL to ACL2                                 *)
 (*****************************************************************************)
 
-open Lib Parse Type Term Drule Thm Tactical bossLib 
+open Lib Parse Type Term Drule Thm Tactical bossLib
 open Rewrite polytypicLib encodeLib functionEncodeLib
 open translateTheory extendTranslateTheory wordsLib intLib
 
@@ -60,14 +60,14 @@ fun perform string =
     if Lib.mem string (!performed) then raise ExistsAlready
        else (performed := string :: (!performed));
 
-fun tryperform string = 
+fun tryperform string =
     if Lib.mem string (!performed) then raise ExistsAlready else ();
 
 (*****************************************************************************)
 (* Add the type-translation theorems for natural numbers                     *)
 (*****************************************************************************)
 
-fun add_num_translations () = 
+fun add_num_translations () =
 let val _ = perform "add_num_translations"
     val _ = add_translation sexp num
     val _ = add_coding_function sexp num "encode"
@@ -75,23 +75,23 @@ let val _ = perform "add_num_translations"
     val _ = add_coding_function sexp num "decode"
 	{const = ``sexp_to_nat``,definition = translateTheory.sexp_to_nat_def,
 	 induction = NONE};
-    val _ = add_coding_function sexp num "detect" 
+    val _ = add_coding_function sexp num "detect"
 	{const = ``sexp_to_bool o natp``,
          definition = hol_defaxiomsTheory.natp_def,
 	 induction = NONE};
 
-    val _ = add_source_function num "map" 
+    val _ = add_source_function num "map"
 	{const = ``I``,definition = I_THM,induction = NONE};
-    val _ = add_source_function num "all" 
+    val _ = add_source_function num "all"
 	{const = ``K T``,definition = K_THM,induction = NONE};
-    val _ = add_coding_function sexp num "fix" 
+    val _ = add_coding_function sexp num "fix"
 	{const = ``nfix``,definition = hol_defaxiomsTheory.nfix_def,
 	 induction = NONE};
 
     val _ = add_coding_theorem sexp num "encode_decode_map"
     	    translateTheory.ENCDECMAP_NAT;
     val _ = add_coding_theorem sexp num "encode_detect_all"
-    	    translateTheory.ENCDETALL_NAT; 
+    	    translateTheory.ENCDETALL_NAT;
     val _ = add_coding_theorem sexp num "decode_encode_fix"
     	    translateTheory.DECENCFIX_NAT;
     val _ = add_coding_theorem sexp num "encode_map_encode"
@@ -104,7 +104,7 @@ let val _ = perform "add_num_translations"
     val _ = add_coding_theorem sexp num "detect_dead"
     	    translateTheory.DETDEAD_NAT;
     val _ = add_coding_theorem sexp num "general_detect"
-    	    (DECIDE ``!x. (sexp_to_bool o natp) x ==> 
+    	    (DECIDE ``!x. (sexp_to_bool o natp) x ==>
 	    	    	  (sexp_to_bool o natp) x``)
 in
     ()
@@ -113,8 +113,8 @@ end handle ExistsAlready => ()
 (*****************************************************************************)
 (* Add the type-translation theorems for integers                            *)
 (*****************************************************************************)
- 
-fun add_int_translations () = 
+
+fun add_int_translations () =
 let val _ = perform "add_int_translations"
     val _ = add_translation sexp int
     val _ = add_coding_function sexp int "encode"
@@ -122,23 +122,23 @@ let val _ = perform "add_int_translations"
     val _ = add_coding_function sexp int "decode"
 	{const = ``sexp_to_int``,definition = translateTheory.sexp_to_int_def,
 	 induction = NONE};
-    val _ = add_coding_function sexp int "detect" 
+    val _ = add_coding_function sexp int "detect"
 	{const = ``sexp_to_bool o integerp``,
          definition = sexpTheory.integerp_def,
 	 induction = NONE};
 
-    val _ = add_source_function int "map" 
+    val _ = add_source_function int "map"
 	{const = ``I``,definition = I_THM,induction = NONE};
-    val _ = add_source_function int "all" 
+    val _ = add_source_function int "all"
 	{const = ``K T``,definition = K_THM,induction = NONE};
-    val _ = add_coding_function sexp int "fix" 
+    val _ = add_coding_function sexp int "fix"
 	{const = ``ifix``,definition = hol_defaxiomsTheory.ifix_def,
 	 induction = NONE};
 
     val _ = add_coding_theorem sexp int "encode_decode_map"
     	    translateTheory.ENCDECMAP_INT;
     val _ = add_coding_theorem sexp int "encode_detect_all"
-    	    translateTheory.ENCDETALL_INT; 
+    	    translateTheory.ENCDETALL_INT;
     val _ = add_coding_theorem sexp int "decode_encode_fix"
     	    translateTheory.DECENCFIX_INT;
     val _ = add_coding_theorem sexp int "encode_map_encode"
@@ -150,7 +150,7 @@ let val _ = perform "add_int_translations"
     val _ = add_coding_theorem sexp int "detect_dead"
     	    translateTheory.DETDEAD_INT;
     val _ = add_coding_theorem sexp int "general_detect"
-    	    (DECIDE ``!x. (sexp_to_bool o integerp) x ==> 
+    	    (DECIDE ``!x. (sexp_to_bool o integerp) x ==>
 	    	    	  (sexp_to_bool o integerp) x``)
     val _ = set_bottom_value int ``0i``
 in
@@ -161,7 +161,7 @@ end handle ExistsAlready => ()
 (* Add the type-translation theorems for booleans                            *)
 (*****************************************************************************)
 
-fun add_bool_translations () = 
+fun add_bool_translations () =
 let val _ = perform "add_bool_translations"
     val _ = add_translation sexp bool
     val _ = add_coding_function sexp bool "encode"
@@ -170,23 +170,23 @@ let val _ = perform "add_bool_translations"
     val _ = add_coding_function sexp bool "decode"
 	{const = ``sexp_to_bool``,definition = translateTheory.sexp_to_bool_def,
 	 induction = NONE};
-    val _ = add_coding_function sexp bool "detect" 
+    val _ = add_coding_function sexp bool "detect"
 	{const = ``sexp_to_bool o booleanp``,
          definition = hol_defaxiomsTheory.booleanp_def,
 	 induction = NONE};
 
-    val _ = add_source_function bool "map" 
+    val _ = add_source_function bool "map"
 	{const = ``I``,definition = I_THM,induction = NONE};
-    val _ = add_source_function bool "all" 
+    val _ = add_source_function bool "all"
 	{const = ``K T``,definition = K_THM,induction = NONE};
-    val _ = add_coding_function sexp bool "fix" 
+    val _ = add_coding_function sexp bool "fix"
 	{const = ``fix_bool``,definition = translateTheory.fix_bool_def,
 	 induction = NONE};
 
     val _ = add_coding_theorem sexp bool "encode_decode_map"
     	    translateTheory.ENCDECMAP_BOOL;
     val _ = add_coding_theorem sexp bool "encode_detect_all"
-    	    translateTheory.ENCDETALL_BOOL; 
+    	    translateTheory.ENCDETALL_BOOL;
     val _ = add_coding_theorem sexp bool "decode_encode_fix"
     	    translateTheory.DECENCFIX_BOOL;
     val _ = add_coding_theorem sexp bool "encode_map_encode"
@@ -198,7 +198,7 @@ let val _ = perform "add_bool_translations"
     val _ = add_coding_theorem sexp bool "detect_dead"
     	    translateTheory.DETDEAD_BOOL;
     val _ = add_coding_theorem sexp bool "general_detect"
-    	    (DECIDE ``!x. (sexp_to_bool o booleanp) x ==> 
+    	    (DECIDE ``!x. (sexp_to_bool o booleanp) x ==>
 	    	    	  (sexp_to_bool o booleanp) x``)
 in
     ()
@@ -208,7 +208,7 @@ end handle ExistsAlready => ()
 (* Add the type-translation theorems for rational numbers                    *)
 (*****************************************************************************)
 
-fun add_rat_translations () = 
+fun add_rat_translations () =
 let val _ = perform "add_rat_translations"
     val _ = add_translation sexp rat
     val _ = add_coding_function sexp rat "encode"
@@ -216,23 +216,23 @@ let val _ = perform "add_rat_translations"
     val _ = add_coding_function sexp rat "decode"
 	{const = ``sexp_to_rat``,definition = translateTheory.sexp_to_rat_def,
 	 induction = NONE};
-    val _ = add_coding_function sexp rat "detect" 
+    val _ = add_coding_function sexp rat "detect"
 	{const = ``sexp_to_bool o rationalp``,
          definition = sexpTheory.rationalp_def,
 	 induction = NONE};
 
-    val _ = add_source_function rat "map" 
+    val _ = add_source_function rat "map"
 	{const = ``I``,definition = I_THM,induction = NONE};
-    val _ = add_source_function rat "all" 
+    val _ = add_source_function rat "all"
 	{const = ``K T``,definition = K_THM,induction = NONE};
-    val _ = add_coding_function sexp rat "fix" 
+    val _ = add_coding_function sexp rat "fix"
 	{const = ``fix_rat``,definition = translateTheory.fix_rat_def,
 	 induction = NONE};
 
     val _ = add_coding_theorem sexp rat "encode_decode_map"
     	    translateTheory.ENCDECMAP_RAT;
     val _ = add_coding_theorem sexp rat "encode_detect_all"
-    	    translateTheory.ENCDETALL_RAT; 
+    	    translateTheory.ENCDETALL_RAT;
     val _ = add_coding_theorem sexp rat "decode_encode_fix"
     	    translateTheory.DECENCFIX_RAT;
     val _ = add_coding_theorem sexp rat "encode_map_encode"
@@ -244,7 +244,7 @@ let val _ = perform "add_rat_translations"
     val _ = add_coding_theorem sexp rat "detect_dead"
     	    translateTheory.DETDEAD_RAT;
     val _ = add_coding_theorem sexp rat "general_detect"
-    	    (DECIDE ``!x. (sexp_to_bool o rationalp) x ==> 
+    	    (DECIDE ``!x. (sexp_to_bool o rationalp) x ==>
 	    	    	  (sexp_to_bool o rationalp) x``)
 in
     ()
@@ -265,26 +265,26 @@ let val _ = perform "add_product_translations"
 		{const = ``sexp_to_pair``,
 		 definition = translateTheory.sexp_to_pair_def,
 		 induction = NONE};
-    val _ = add_coding_function sexp pair "detect" 
+    val _ = add_coding_function sexp pair "detect"
 	      	{const = ``pairp``,
 		 definition = translateTheory.pairp_def,
 		 induction = NONE};
-    val _ = add_source_function pair "map" 
+    val _ = add_source_function pair "map"
 	        {const = ``$##``,
 		 definition = pairTheory.PAIR_MAP_THM,
 		 induction = NONE};
-    val _ = add_source_function pair "all" 
+    val _ = add_source_function pair "all"
 	      {const = ``all_pair``,
 	       definition = translateTheory.all_pair_def,
 	       induction = NONE};
-    val _ = add_coding_function sexp pair "fix" 
+    val _ = add_coding_function sexp pair "fix"
 	      {const = ``fix_pair``,definition = translateTheory.fix_pair_def,
 	       induction = NONE};
-    
+
     val _ = add_coding_theorem sexp pair "encode_decode_map"
     	    translateTheory.ENCDECMAP_PAIR;
     val _ = add_coding_theorem sexp pair "encode_detect_all"
-    	    translateTheory.ENCDETALL_PAIR; 
+    	    translateTheory.ENCDETALL_PAIR;
     val _ = add_coding_theorem sexp pair "decode_encode_fix"
     	    translateTheory.DECENCFIX_PAIR;
     val _ = add_coding_theorem sexp pair "encode_map_encode"
@@ -316,7 +316,7 @@ end handle ExistsAlready => ()
 
 val list_ind = translateTheory.sexp_list_ind;
 
-val decode_list_ind = 
+val decode_list_ind =
     (list_ind,[(``P0:sexp -> bool``,(``sexp_to_list f``,list)),
     	       (``P1:sexp -> bool``,(``sexp_to_pair f (sexp_to_list f)``,
 	       		     			    ``:'a # 'a list``))]);
@@ -332,10 +332,10 @@ val fix_list_ind =
 val encode_list_ind =
     (TypeBase.induction_of list,
     [(``P:'a list -> bool``,(``list f``,list))]);
-val map_list_ind = 
+val map_list_ind =
     (TypeBase.induction_of list,
     [(``P:'a list -> bool``,(``MAP f``,list))]);
-val every_list_ind = 
+val every_list_ind =
     (TypeBase.induction_of list,
     [(``P:'a list -> bool``,(``EVERY f``,list))]);
 
@@ -350,27 +350,27 @@ let val _ = perform "add_list_translations"
 		{const = ``sexp_to_list``,
 		 definition = translateTheory.sexp_to_list_thm,
 		 induction = SOME decode_list_ind};
-    val _ = add_coding_function sexp list "detect" 
+    val _ = add_coding_function sexp list "detect"
 	      	{const = ``listp``,
 		 definition = translateTheory.listp_thm,
 		 induction = SOME detect_list_ind};
-    val _ = add_source_function list "map" 
+    val _ = add_source_function list "map"
 	        {const = ``MAP``,
 		 definition = listTheory.MAP,
 		 induction = SOME map_list_ind};
-    val _ = add_source_function list "all" 
+    val _ = add_source_function list "all"
 	      {const = ``EVERY``,
 	       definition = listTheory.EVERY_DEF,
 	       induction = SOME every_list_ind};
-    val _ = add_coding_function sexp list "fix" 
+    val _ = add_coding_function sexp list "fix"
 	      {const = ``fix_list``,
 	       definition = translateTheory.fix_list_thm,
 	       induction = SOME fix_list_ind};
-    
+
     val _ = add_coding_theorem sexp list "encode_decode_map"
     	    translateTheory.ENCDECMAP_LIST;
     val _ = add_coding_theorem sexp list "encode_detect_all"
-    	    translateTheory.ENCDETALL_LIST; 
+    	    translateTheory.ENCDETALL_LIST;
     val _ = add_coding_theorem sexp list "decode_encode_fix"
     	    translateTheory.DECENCFIX_LIST;
     val _ = add_coding_theorem sexp list "encode_map_encode"
@@ -398,7 +398,7 @@ end handle ExistsAlready => ()
 (* Add the translations for FCPs                                             *)
 (*****************************************************************************)
 
-fun add_fcp_translations () = 
+fun add_fcp_translations () =
 let val _ = perform "add_fcp_translations"
     val _ = add_translation sexp fcp
     val _ = add_coding_function sexp fcp "encode"
@@ -409,18 +409,18 @@ let val _ = perform "add_fcp_translations"
 	{const = ``fcp_decode``,
 	 definition = extendTranslateTheory.fcp_decode_def,
 	 induction = NONE};
-    val _ = add_coding_function sexp fcp "detect" 
+    val _ = add_coding_function sexp fcp "detect"
 	{const = ``fcp_detect : (sexp -> bool) -> 'b itself -> sexp -> bool``,
          definition = extendTranslateTheory.fcp_detect_def,
 	 induction = NONE};
 
-    val _ = add_source_function fcp "map" 
+    val _ = add_source_function fcp "map"
 	{const = ``FCP_MAP : ('a -> 'c) -> 'a ** 'b -> 'c ** 'b``,
 	 definition = fcpTheory.FCP_MAP,induction = NONE};
-    val _ = add_source_function fcp "all" 
+    val _ = add_source_function fcp "all"
 	{const = ``FCP_EVERY : ('a -> bool) -> 'a ** 'b -> bool``,
 	 definition = fcpTheory.FCP_EVERY,induction = NONE};
-    val _ = add_coding_function sexp fcp "fix" 
+    val _ = add_coding_function sexp fcp "fix"
 	{const = ``fcp_fix : (sexp -> sexp) -> 'b itself -> sexp -> sexp``,
 	 definition = extendTranslateTheory.fcp_fix_def,
 	 induction = NONE};
@@ -428,7 +428,7 @@ let val _ = perform "add_fcp_translations"
     val _ = add_coding_theorem sexp fcp "encode_decode_map"
     	    extendTranslateTheory.ENCDECMAP_FCP;
     val _ = add_coding_theorem sexp fcp "encode_detect_all"
-    	    extendTranslateTheory.ENCDETALL_FCP; 
+    	    extendTranslateTheory.ENCDETALL_FCP;
     val _ = add_coding_theorem sexp fcp "decode_encode_fix"
     	    extendTranslateTheory.DECENCFIX_FCP;
     val _ = add_coding_theorem sexp fcp "encode_map_encode"
@@ -447,7 +447,7 @@ let val _ = perform "add_fcp_translations"
     	    extendTranslateTheory.DETDEAD_FCP;
     val _ = add_coding_theorem sexp fcp "general_detect"
     	    extendTranslateTheory.GENERAL_DETECT_FCP;
-   
+
     val _ = set_bottom_value ``:'a word`` ``\a. FCP i. a``;
 in
     ()
@@ -457,7 +457,7 @@ end handle ExistsAlready => ()
 (* Add the translations for words                                            *)
 (*****************************************************************************)
 
-fun add_word_translations () = 
+fun add_word_translations () =
 let val _ = perform "add_word_translations"
     val _ = add_translation_precise sexp word handle _ => ()
     val _ = add_coding_function_precise sexp word "encode"
@@ -468,16 +468,16 @@ let val _ = perform "add_word_translations"
 	{const = ``word_decode``,
 	 definition = extendTranslateTheory.word_decode_def,
 	 induction = NONE};
-    val _ = add_coding_function_precise sexp word "detect" 
+    val _ = add_coding_function_precise sexp word "detect"
 	{const = ``word_detect``,
          definition = extendTranslateTheory.word_detect_def,
 	 induction = NONE};
 
-    val _ = add_source_function_precise word "map" 
+    val _ = add_source_function_precise word "map"
 	{const = ``I``,definition = I_THM,induction = NONE};
-    val _ = add_source_function_precise word "all" 
+    val _ = add_source_function_precise word "all"
 	{const = ``K T``,definition = K_THM,induction = NONE};
-    val _ = add_coding_function_precise sexp word "fix" 
+    val _ = add_coding_function_precise sexp word "fix"
 	{const = ``word_fix``,
 	 definition = extendTranslateTheory.word_fix_def,
 	 induction = NONE};
@@ -485,7 +485,7 @@ let val _ = perform "add_word_translations"
     val _ = add_coding_theorem_precise sexp word "encode_decode_map"
     	    extendTranslateTheory.ENCDECMAP_WORD;
     val _ = add_coding_theorem_precise sexp word "encode_detect_all"
-    	    extendTranslateTheory.ENCDETALL_WORD; 
+    	    extendTranslateTheory.ENCDETALL_WORD;
     val _ = add_coding_theorem_precise sexp word "decode_encode_fix"
     	    extendTranslateTheory.DECENCFIX_WORD;
     val _ = add_coding_theorem_precise sexp word "encode_map_encode"
@@ -498,9 +498,9 @@ let val _ = perform "add_word_translations"
     val _ = add_coding_theorem_precise sexp word "detect_dead"
     	    extendTranslateTheory.DETDEAD_WORD;
     val _ = add_coding_theorem_precise sexp word "general_detect"
-    	    (DECIDE ``!x. word_detect (:'b) x ==> 
-	    	    	  word_detect (:'b) x``) 
-    val _ = add_source_theorem_precise ``:'a word`` "map_id" 
+    	    (DECIDE ``!x. word_detect (:'b) x ==>
+	    	    	  word_detect (:'b) x``)
+    val _ = add_source_theorem_precise ``:'a word`` "map_id"
     	    (REFL ``I:'a word -> 'a word``);
 
     val _ = set_bottom_value ``:'a word`` ``0w``;
@@ -512,10 +512,10 @@ end handle ExistsAlready => ()
 (* Initialise the type encoding system for s-expressions                     *)
 (*****************************************************************************)
 
-fun initialise_sexp() = 
+fun initialise_sexp() =
 let val _ = perform "initialise_sexp"
     val _ = add_translation_scheme sexp
-                translateTheory.SEXP_REDUCE 
+                translateTheory.SEXP_REDUCE
 	        translateTheory.SEXP_TERMINAL;
     val _ = add_product_translations();
     val _ = add_translation sexp sexp
@@ -573,30 +573,30 @@ end handle ExistsAlready => ()
 (*                                                                           *)
 (*****************************************************************************)
 
-fun set_destructors thms = 
+fun set_destructors thms =
     (functionEncodeLib.set_destructors sexp thms)
     handle e => wrapException "set_destructors" e
 
-fun initialise_type t = 
-    (encode_type sexp t ; 
+fun initialise_type t =
+    (encode_type sexp t ;
      add_standard_coding_rewrites sexp t)
     handle e => wrapException "initialise_type" e
 
-fun translate_simple_function names thm = 
+fun translate_simple_function names thm =
     convert_definition sexp names [] [] thm
     handle e => wrapException "translate_simple_function" e
 
-fun translate_conditional_function names extras thm = 
+fun translate_conditional_function names extras thm =
     convert_definition sexp names [] extras thm
     handle e => wrapException "translate_conditional_function" e
 
-fun translate_limit_function names limits extras thm = 
+fun translate_limit_function names limits extras thm =
     convert_definition sexp names limits extras thm
     handle e => wrapException "translate_limits_function" e
 
-fun flatten_recognizers namef t = 
+fun flatten_recognizers namef t =
     functionEncodeLib.flatten_recognizers namef sexp t
-    handle e => wrapException "flatten_recognizers" e; 
+    handle e => wrapException "flatten_recognizers" e;
 
 (*****************************************************************************)
 (* Polymorphic functions specialised for encoding to sexp                    *)
@@ -612,15 +612,15 @@ fun flatten_recognizers namef t =
 (*                                                                           *)
 (*****************************************************************************)
 
-fun translate_simple_polymorphic_function names map_thms thm = 
+fun translate_simple_polymorphic_function names map_thms thm =
     convert_polymorphic_definition sexp names [] map_thms [] thm
     handle e => wrapException "translate_simple_polymorphic_function" e
 
-fun translate_conditional_polymorphic_function names map_thms extras thm = 
+fun translate_conditional_polymorphic_function names map_thms extras thm =
     convert_polymorphic_definition sexp names [] map_thms extras thm
     handle e => wrapException "translate_conditional_polymorphic_function" e
 
-fun translate_limit_polymorphic_function names map_thms limits extras thm = 
+fun translate_limit_polymorphic_function names map_thms limits extras thm =
     convert_polymorphic_definition sexp names limits map_thms extras thm
     handle e => wrapException "translate_limits_polymorphic_function" e
 
@@ -633,7 +633,7 @@ fun translate_limit_polymorphic_function names map_thms limits extras thm =
 (*        : string -> thm list -> thm -> thm                                 *)
 (* translate_limit_fcp_function                                              *)
 (*        : string -> term list -> thm list -> thm -> thm                    *)
-(* translate_recursive_fcp_function                                          *) 
+(* translate_recursive_fcp_function                                          *)
 (*        : string -> term list -> thm list -> thm ->                        *)
 (*          thm list -> tactic -> (thm -> thm -> tactic) -> thm              *)
 (*                                                                           *)
@@ -642,35 +642,35 @@ fun translate_limit_polymorphic_function names map_thms limits extras thm =
 (*                                                                           *)
 (*****************************************************************************)
 
-fun translate_simple_fcp_function names thm = 
-    convert_abstracted_nonrec_definition 
+fun translate_simple_fcp_function names thm =
+    convert_abstracted_nonrec_definition
     (can (match_term ``dimindex (:'a)``))
     sexp names [] [] thm
     handle e => wrapException "translate_simple_fcp_function" e
 
-fun translate_conditional_fcp_function names extras thm = 
-    convert_abstracted_nonrec_definition 
+fun translate_conditional_fcp_function names extras thm =
+    convert_abstracted_nonrec_definition
     (can (match_term ``dimindex (:'a)``))
     sexp names [] extras thm
     handle e => wrapException "translate_conditional_fcp_function" e
 
-fun translate_limit_fcp_function names limits extras thm = 
-    convert_abstracted_nonrec_definition 
+fun translate_limit_fcp_function names limits extras thm =
+    convert_abstracted_nonrec_definition
     (can (match_term ``dimindex (:'a)``))
     sexp names limits extras thm
     handle e => wrapException "translate_limit_fcp_function" e
 
-fun translate_recursive_fcp_function names limits extras thm 
-        rewrites tactic1 tactic2 = 
-    convert_abstracted_definition 
+fun translate_recursive_fcp_function names limits extras thm
+        rewrites tactic1 tactic2 =
+    convert_abstracted_definition
     (can (match_term ``dimindex (:'a)``))
     sexp names limits extras thm rewrites tactic1 tactic2
     handle e => wrapException "translate_recursive_fcp_function" e
 
-fun flatten_fcp_recognizers namef t = 
-    flatten_abstract_recognizers 
+fun flatten_fcp_recognizers namef t =
+    flatten_abstract_recognizers
     namef (can (match_term ``dimindex (:'a)``)) sexp t
-    handle e => wrapException "flatten_fcp_recognizers" e; 
+    handle e => wrapException "flatten_fcp_recognizers" e;
 
 (*****************************************************************************)
 (* Tactics which may, or may not, be useful in proving full definitions.     *)
@@ -678,19 +678,19 @@ fun flatten_fcp_recognizers namef t =
 
 open Psyntax boolSyntax Tactic;
 
-fun ENCODE_WF_REL_TAC R (a,g) = 
+fun ENCODE_WF_REL_TAC R (a,g) =
 let val RR = Parse.parse_in_context (g::a) R
     val r = fst (dest_exists g)
     val rtypes = pairSyntax.strip_prod (hd (fst (strip_fun (type_of r))))
     val ftypes = pairSyntax.strip_prod (hd (fst (strip_fun (type_of RR))))
     fun ftype t = type_subst (map (fn v => v |-> sexp) (type_vars t)) t
-    
+
     val decoders = map (get_decode_function sexp o ftype) ftypes
     val func = foldr pairLib.mk_pair_map (last decoders) (butlast decoders)
-    
+
     val at = gen_tyvar();
     val bt = gen_tyvar();
-    val inv_image = 
+    val inv_image =
         mk_const("inv_image",
             (at --> at --> bool) --> (bt --> at) --> bt --> bt --> bool);
 
@@ -707,14 +707,14 @@ end
 
 local
 fun pop_tac ([],g) = ALL_TAC ([],g)
-  | pop_tac (a::b,g) = 
+  | pop_tac (a::b,g) =
     (POP_ASSUM (SUBST_ALL_TAC o GSYM) THEN
-    markerLib.ABBREV_TAC 
+    markerLib.ABBREV_TAC
     (mk_eq(variant (free_varsl (g::a::b))
               (mk_var(fst (dest_var (rhs a)),type_of (rand (lhs a)))),
            rand (lhs a)))) (a::b,g);
 in
-fun FULL_CHOOSE_DETECT_TAC (a,g) = 
+fun FULL_CHOOSE_DETECT_TAC (a,g) =
 let val types = mapfilter (get_detect_type o rator) a
     val thms = map (FULL_DECODE_ENCODE_THM sexp) types
     val rewrites1 = map (FULL_ENCODE_DECODE_THM sexp) types
@@ -734,18 +734,18 @@ end;
 local
 val tm = ``nat a``
 in
-fun is_encoded_num term = 
+fun is_encoded_num term =
     can (match_term tm) term
     andalso numLib.is_numeral (rand term)
 end
-     
-fun add_num_rewrites () = 
+
+fun add_num_rewrites () =
 let val _ = tryperform "add_num_rewrites"
     val _ = add_standard_rewrite 1 "num =0" translateTheory.NAT_EQUAL_0;
-    val _ = add_standard_rewrite 1 "num 0=" 
+    val _ = add_standard_rewrite 1 "num 0="
     	    (prove(``bool (0 = a) = zp (nat a)``,
 	     REWRITE_TAC [GSYM translateTheory.NAT_EQUAL_0,
-	     		  translateTheory.BOOL_CONG] THEN 
+	     		  translateTheory.BOOL_CONG] THEN
 	     DECIDE_TAC))
     val _ = add_standard_rewrite 1 "num 0 <" translateTheory.NAT_0_LT;
     val _ = add_standard_rewrite 0 "num <" translateTheory.NAT_LT;
@@ -791,7 +791,7 @@ let val _ = tryperform "add_bool_rewrites"
     val _ = add_standard_rewrite 1 "if T" translateTheory.COND_T;
     val _ = add_standard_rewrite 1 "if F" translateTheory.COND_F;
     val _ = add_conditional_rewrite 1 "/\\-left" translateTheory.BOOL_LEFT_AND;
-    val _ = add_conditional_rewrite 0 "/\\-right" 
+    val _ = add_conditional_rewrite 0 "/\\-right"
     	    translateTheory.BOOL_RIGHT_AND;
     val _ = add_conditional_rewrite 1 "\\/-left" translateTheory.BOOL_LEFT_OR;
     val _ = add_conditional_rewrite 0 "\\/-right" translateTheory.BOOL_RIGHT_OR;
@@ -811,7 +811,7 @@ end handle ExistsAlready => ()
 (* Add rewrites for list functions.                                          *)
 (*****************************************************************************)
 
-fun add_list_rewrites() = 
+fun add_list_rewrites() =
 let val _ = tryperform "add_list_rewrites"
     val _ = add_standard_rewrite 0 "HD" translateTheory.LIST_HD;
     val _ = add_standard_rewrite 0 "TL" translateTheory.LIST_TL;
@@ -846,14 +846,14 @@ end handle ExistsAlready => ()
 (* Add the polytypic rewrites                                                *)
 (*****************************************************************************)
 
-fun add_polytypic_rewrites() = 
+fun add_polytypic_rewrites() =
 let val _ = perform "add_polytypic_rewrites"
     val _ = add_standard_conversion 0 "nesting"
       				(nested_constructor_rewrite ``:sexp``);
     val _ = add_standard_rewrite 0 "=" translateTheory.BOOL_EQUALITY;
     val _ = add_polytypic_rewrite 0 "\\x." make_lambda_propagation_theorem;
     val _ = add_polytypic_rewrite 0 "dec enc" polytypic_decodeencode;
-    val _ = add_polytypic_rewrite 0 "case" polytypic_casestatement; 
+    val _ = add_polytypic_rewrite 0 "case" polytypic_casestatement;
     val _ = add_polytypic_rewrite 0 "construct" polytypic_encodes;
     val _ = add_polytypic_rewrite 0 "let" polytypic_let_conv
     val _ = add_standard_conversion 0 "I var" (target_function_conv ``:sexp``)
@@ -870,7 +870,7 @@ end handle ExistsAlready => ()
 local
 val tm = ``int (a:int)``
 in
-fun is_encoded_int term = 
+fun is_encoded_int term =
     can (match_term tm) term
     andalso numLib.is_numeral (rand (rand term)) handle _ => false
 end;
@@ -912,7 +912,7 @@ end handle ExistsAlready => ()
 local
 val tm = ``rat (a:rat)``
 in
-fun is_encoded_rat term = 
+fun is_encoded_rat term =
     can (match_term tm) term
     andalso numLib.is_numeral (rand (rand term)) handle _ => false
 end;
@@ -920,7 +920,7 @@ end;
 fun add_rat_rewrites() =
 let val _ = perform "add_rat_rewrites"
     val _ = add_standard_rewrite 0 "rationalp" translateTheory.FLATTEN_RAT;
-    
+
     val _ = add_standard_rewrite 0 "rat +" translateTheory.RAT_ADD;
     val _ = add_standard_rewrite 0 "rat *" translateTheory.RAT_MULT;
     val _ = add_standard_rewrite 0 "rat ~" translateTheory.RAT_UNARY_MINUS;
@@ -1002,13 +1002,13 @@ let val _ = perform "add_word_rewrites"
 	  INT_LE_NEGL]);
     in
        val i2n_thms = [INT_EXP_EQ0,ARITH_PROVE ``~(2 = 0i)``,
-            REWRITE_CONV [integerTheory.INT_POS,integerTheory.INT_EXP] 
+            REWRITE_CONV [integerTheory.INT_POS,integerTheory.INT_EXP]
                  ``0 <= 2 ** a``,
             prove(``~(b = 0) /\ 0i <= b ==> 0 <= a % b``,
 		     METIS_TAC [INT_MOD_BOUNDS,INT_NOT_LT]),i2n_lemma]
     end;
 
-    val _ = translate_conditional_function 
+    val _ = translate_conditional_function
     	    [(``i2n``,"translated_i2n")]
 	    i2n_thms
 	    signedintTheory.i2n_def;
@@ -1028,11 +1028,11 @@ val _ = Feedback.set_trace "functionEncodeLib.Trace" 1;
 
 val _ = (initialise_sexp() handle e =>
       	Raise (mkStandardExn "initialise_sexp"
-	      ("Failed to add the translations for :sexp\n" ^ 
+	      ("Failed to add the translations for :sexp\n" ^
 	       ("Original exception: \n" ^ exn_to_string e))));
 
-fun add_translations f t = 
-    (trace 1 "Adding translations for the type: " ; 
+fun add_translations f t =
+    (trace 1 "Adding translations for the type: " ;
      trace 1 (type_to_string t) ; trace 1 "\n" ;
      f ()) handle e =>
       	Raise (mkStandardExn "Initialisation"
@@ -1047,8 +1047,8 @@ val _ = add_translations add_list_translations list;
 val _ = add_translations add_fcp_translations fcp;
 val _ = add_translations add_word_translations word;
 
-fun add_rewrites f t = 
-    (trace 1 "Adding rewrites for the type: " ; 
+fun add_rewrites f t =
+    (trace 1 "Adding rewrites for the type: " ;
      trace 1 (type_to_string t) ; trace 1 "\n" ;
      f ()) handle e =>
       	Raise (mkStandardExn "Initialisation"
@@ -1057,7 +1057,7 @@ fun add_rewrites f t =
 
 val _ = add_rewrites add_num_rewrites num;
 val _ = add_rewrites add_bool_rewrites bool;
-val _ = (trace 1 "Adding polytypic rewrites\n" ; 
+val _ = (trace 1 "Adding polytypic rewrites\n" ;
       	 add_polytypic_rewrites())
 	handle e => Raise (mkStandardExn "Initialisation"
 	       	    ("Failed to add polytypic rewrites"));
@@ -1078,22 +1078,22 @@ val _ = add_rewrites add_word_rewrites word;
 open sexp;
 
 fun tryfilter f [] = []
-  | tryfilter f (x::xs) = 
+  | tryfilter f (x::xs) =
   if (f x handle _ => false) then x::tryfilter f xs else tryfilter f xs;
 
-fun mapff f1 f2 [] = [] 
+fun mapff f1 f2 [] = []
   | mapff f1 f2 (x::xs) = f1 x :: f2 x:: mapff f1 f2 xs;
 
-val GCONST = map (fst o strip_comb o lhs o snd o strip_forall) 
+val GCONST = map (fst o strip_comb o lhs o snd o strip_forall)
     	     o strip_conj o concl
 
 fun order_defs [] = []
-  | order_defs L = 
-let val (head,rest) = 
+  | order_defs L =
+let val (head,rest) =
     	with_exn
-        (pluck (fn x => 
+        (pluck (fn x =>
 	     all (fn y => null (find_terms (C mem (GCONST x)) (concl y))
-	     	       	  orelse (concl x = concl y)) L)) 
+	     	       	  orelse (concl x = concl y)) L))
         L
         (mkStandardExn "order_defs"
 	       ("Could not order the function list: " ^
@@ -1106,7 +1106,7 @@ fun acl2_var_map s = (implode o filter (not o curry op= #"'") o explode) s
 
 fun acl2_prime s = s ^ "p";
 
-fun acl2_variant vl v = 
+fun acl2_variant vl v =
     if mem v vl then acl2_variant vl (acl2_prime v) else v;
 
 local
@@ -1116,7 +1116,7 @@ let val var = fst (dest_var (fst (dest_abs term)))
     val newvar = acl2_var_map var
     val variant = acl2_variant (map (fst o dest_var) vars) newvar
 in
-    if variant = var 
+    if variant = var
        then NO_CONV term
        else RENAME_VARS_CONV [variant] term
 end;
@@ -1124,27 +1124,27 @@ in
 fun ACL2_BVARS_CONV term = REDEPTH_CONV conv1 term
     handle UNCHANGED => REFL term
          | e => wrapException "ACL2_BVARS_CONV" e
-end 
+end
 
-fun mk_mlsexp_mbe_term body = 
+fun mk_mlsexp_mbe_term body =
     mk_mlsexp_list
 	    [mksym "ACL2" "MUST-BE-EQUAL",
 	     term_to_mlsexp body,
 	     term_to_mlsexp (rand (rator body))]
 
-fun mk_mlsexp_guard body = 
+fun mk_mlsexp_guard body =
     mk_mlsexp_list
        [mksym "ACL2" "DECLARE",
         mk_mlsexp_list
 	   [mksym "ACL2" "XARGS",
 	    mksym "ACL2" ":GUARD",
             term_to_mlsexp (rand (rator (rator body)))]];
-		
-fun def_to_mlsexp_mbe_defun thm = 
+
+fun def_to_mlsexp_mbe_defun thm =
 let val (asl,concl) = dest_thm (SPEC_ALL thm)
     val _ = if null asl then ()
     	       else raise (mkStandardExn "def_to_mlsexp_mbe_defun"
-	       	    ("The theorem supplied:\n" ^ thm_to_string thm ^ 
+	       	    ("The theorem supplied:\n" ^ thm_to_string thm ^
 		     "\nhas a non-empty hypothesis set."))
     val (opr,args) = strip_comb (lhs concl)
 in
@@ -1156,17 +1156,17 @@ in
 	mk_mlsexp_mbe_term (rhs concl)]
 end;
 
-fun all_definitions (thm:thm) = 
+fun all_definitions (thm:thm) =
 let val consts = GCONST thm
     val {Name,Thy,Ty} = dest_thy_const (hd consts)
-    val consts = mk_set (find_terms (fn x => is_const x andalso 
+    val consts = mk_set (find_terms (fn x => is_const x andalso
     	       	 	    	     (curry op= Thy o #Thy o dest_thy_const) x)
     	       	 	    (concl thm))
     val all_defs = DB.definitions Thy
-    val filtered1 = tryfilter (not o null o intersect consts o GCONST o snd) 
+    val filtered1 = tryfilter (not o null o intersect consts o GCONST o snd)
     		    	      all_defs
     val filtered2 = tryfilter (String.isPrefix "translated_" o fst) filtered1
-    
+
     val recursive = map all_definitions
     		    	(op_set_diff (fn a => fn b => concl a = concl b)
 				     (map snd filtered2) [thm]);
@@ -1175,9 +1175,9 @@ in
     	      (thm::flatten recursive)
 end;
 
-fun print_all_defs filename print convert thm = 
+fun print_all_defs filename print convert thm =
 let val ordered = order_defs (all_definitions thm)
-    val rewritten = map (REWRITE_RULE [sexpTheory.andl_def] o 
+    val rewritten = map (REWRITE_RULE [sexpTheory.andl_def] o
     		         CONV_RULE ACL2_BVARS_CONV o GEN_ALL) ordered
     val preamble = mk_mlsexp_list
     	[mksym "ACL2" "IN-PACKAGE",
@@ -1185,7 +1185,7 @@ let val ordered = order_defs (all_definitions thm)
     fun post_def thm = mk_mlsexp_list
     	[mksym "ACL2" "VERIFY-GUARDS",
 	 string_to_mlsym(get_name (hd (GCONST thm)))]
-		
+
     fun mprint out x = (print out x ; out "\n\n")
 
     val outputs = preamble::mapff convert post_def (rev rewritten)
@@ -1193,11 +1193,11 @@ in
     print_lisp_file filename (fn out => map (mprint out) outputs)
 end handle e => wrapException "print_all_defs" e
 
-fun print_all_defs_standard filename thm = 
-    print_all_defs filename print_mlsexp def_to_mlsexp_defun thm 
+fun print_all_defs_standard filename thm =
+    print_all_defs filename print_mlsexp def_to_mlsexp_defun thm
 		   handle e => wrapException "print_all_defs_standard" e
 
-fun can_mbe thm = 
+fun can_mbe thm =
     can (C match_term (rhs (concl (SPEC_ALL thm)))) ``ite a b c`` andalso
     not (can (C match_term (rhs (concl (SPEC_ALL thm)))) ``ite (consp a) b c``);
 
@@ -1208,7 +1208,7 @@ fun can_mbe thm =
 
 fun print_allow_keyword (out:string->unit) (sym as mlsym(_,v))  =
      if String.isPrefix ":" v
-     	then out v 
+     	then out v
      	else out (mlsym_to_string sym)
  | print_allow_keyword (out:string->unit) (mlstr s) =
      (out "\""; out s; out "\"")
@@ -1233,7 +1233,7 @@ fun print_allow_keyword (out:string->unit) (sym as mlsym(_,v))  =
                      map (fn p => (out " "; print_allow_keyword out p)) sl;
                      ())
              end
-        else (print_allow_keyword out p1; out " . "; 
+        else (print_allow_keyword out p1; out " . ";
 	      print_allow_keyword out p2));
       out ")");
 

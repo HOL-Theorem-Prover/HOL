@@ -82,7 +82,7 @@ fun total_is_abbrev_match m t =
   case total (is_abbrev_match m) t of
     SOME b => b
   | _ => false;
-    
+
 fun get_abbrev_match m t = find_term (total_is_abbrev_match m) t;
 
 fun UNABBREV_RULE q thm =
@@ -118,7 +118,7 @@ fun RULE_GET m l = filter (fn x => not (term_eq (concl x) T))
 
 fun RULE_GET_ARM m = hd (RULE_GET m (map snd arm_rules));
 
-val GET_ARM = RULE_GET_ARM o instructionSyntax.mk_instruction; 
+val GET_ARM = RULE_GET_ARM o instructionSyntax.mk_instruction;
 
 (* ------------------------------------------------------------------------- *)
 

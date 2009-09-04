@@ -1,0 +1,20 @@
+ARM Machine Code Semantics:
+
+ - arm_coretypesScript.sml : specifies underlying types and operations
+ - arm_astScript.sml       : abstract syntax tree (AST) for instructions
+ - arm_decoderScript.sml   : decoding machine code to the AST
+ - arm_seq_monadScript.sml : state-transformer monad - specifies access to
+                             registers and main memory
+ - arm_opsemScript.sml     : operational semantics for instructions
+ - armScript.sml           : running programs (next state function)
+ - arm_stepScript.sml      : definitions and lemmas for "step" theorems
+ - arm_emitScript.sml      : use EmitML to produce SML version
+
+ - arm_parserLib           : parse ARM assembly code (output to AST)
+ - arm_encoderLib          : encode AST as machine code
+ - arm_disassemblerLib     : convert AST to ARM assembly code
+ - arm_stepLib             : generate "step" theorems
+ - armLib                  : top-level tools
+
+Should work with Poly/ML and Moscow ML.  However, you may need to patch
+Moscow ML, see <http://hol.sourceforge.net/mosml-chr-instructions.html>.

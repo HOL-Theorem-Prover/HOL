@@ -1,4 +1,4 @@
-signature translateLib = 
+signature translateLib =
 sig
 	include Abbrev
 
@@ -7,7 +7,7 @@ sig
 	val DOUBLE_MATCH            : (term -> term) -> (term -> term) -> term -> thm -> thm
 
 	val ite_tm                  : term
-	val mk_acl2_cond            : term * term * term -> term 
+	val mk_acl2_cond            : term * term * term -> term
 	val dest_acl2_cond          : term -> term * term * term
     	val is_acl2_cond            : term -> bool
 
@@ -20,7 +20,7 @@ sig
 	val mk_acl2_true            : term -> term
 	val dest_acl2_true          : term -> term
 	val is_acl2_true            : term -> bool
-	
+
 	val DISJ_CASES_UNIONL       : thm -> thm list -> thm
 
 	val RAT_CONG_TAC            : tactic

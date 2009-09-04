@@ -1,34 +1,34 @@
 (* Copyright (C) 1997-2001 by Ken Friis Larsen and Jakob Lichtenberg. *)
 structure bdd :> bdd =
 struct
-	
+
     prim_type bdd;
     type varSet = bdd;
-    type assignment = bdd;	
+    type assignment = bdd;
     prim_type pairSet;
     type composeSet = pairSet (* not the entire truth *)
-    
+
     type varnum = int
-    
+
     datatype bddop =
-	And | Xor | Or | Nand | Nor | Imp | Biimp | Diff | Lessth | Invimp 
-	
-    
+	And | Xor | Or | Nand | Nor | Imp | Biimp | Diff | Lessth | Invimp
+
+
     open MuddyCore
 
-    val constants_ : unit -> int * int * int * int 
-                           * int * int * int * int 
+    val constants_ : unit -> int * int * int * int
+                           * int * int * int * int
 	                   * int * int
-	                   * int * int * int * int * int * int * int * int 
-	           = app1 (symb "mlbdd_constants") 
+	                   * int * int * int * int * int * int * int * int
+	           = app1 (symb "mlbdd_constants")
 
-    val (bddop_and, bddop_xor, bddop_or, bddop_nand, 
-	 bddop_nor, bddop_imp, bddop_biimp, bddop_diff, 
+    val (bddop_and, bddop_xor, bddop_or, bddop_nand,
+	 bddop_nor, bddop_imp, bddop_biimp, bddop_diff,
 	 bddop_less, bddop_invimp,
 	 FIXED, FREE, WIN2, WIN2ITE, SIFT, SIFTITE, RANDOM, REORDER_NONE)
 	= constants_ ()
-	    
-    val opr2i = 
+
+    val opr2i =
 	fn And    => bddop_and
 	 | Xor    => bddop_xor
 	 | Or     => bddop_or
@@ -39,7 +39,7 @@ struct
 	 | Diff   => bddop_diff
 	 | Lessth => bddop_less
 	 | Invimp => bddop_invimp
-	
+
     val apply_ : bdd -> bdd -> int -> bdd = app3 (symb "mlbdd_bdd_apply")
     val exist_  : bdd -> varSet -> bdd    = app2 (symb "mlbdd_bdd_exist")
     val forall_ : bdd -> varSet -> bdd    = app2 (symb "mlbdd_bdd_forall")
@@ -51,7 +51,7 @@ struct
     val mkset_ : varnum vector -> varSet  = app1 (symb "mlbdd_makeset")
 
 
-    val stats_ : unit -> int * int * int * int * int * int * int * int 
+    val stats_ : unit -> int * int * int * int * int * int * int * int
 	                                  = app1 (symb "mlbdd_bdd_stats")
 
 
@@ -67,14 +67,14 @@ struct
 
     val root : bdd -> int = app1 (symb "mlbdd_root")
     val hash = root
-	
+
     val init : int -> int -> unit         = app2 (symb "mlbdd_bdd_init")
     val done : unit -> unit               = app1 (symb "mlbdd_bdd_done")
     val isRunning : unit -> bool          = app1 (symb "mlbdd_bdd_isrunning")
 
     val ithvar : varnum -> bdd  = app1 (symb "mlbdd_bdd_ithvar")
     val nithvar : varnum -> bdd = app1 (symb "mlbdd_bdd_nithvar")
-    
+
     val fromBool : bool -> bdd = app1 (symb "mlbdd_fromBool")
     val toBool : bdd -> bool   = app1 (symb "mlbdd_toBool")
 
@@ -103,10 +103,10 @@ struct
     val satcount : bdd -> real = app1 (symb "mlbdd_bdd_satcount")
 
     val nodecount : bdd -> int = app1 (symb "mlbdd_bdd_nodecount")
-	
+
     fun stats unit =
 	let val (p,nn,mn,fnum,minn,vn,cs,gn) = stats_ unit
-	in 
+	in
 	    {produced     = p,
 	     nodenum      = nn,
 	     maxnodenum   = mn,
@@ -131,11 +131,11 @@ struct
 			   | h :: tail => h :: nodup h tail
 	in
 	    makeset_ (Vector.fromList(nodup))
-	end 
+	end
 
     val scanset : varSet -> varnum vector = app1 (symb "mlbdd_bdd_scanset")
 
-    val support : bdd -> varSet = app1 (symb "mlbdd_bdd_support") 
+    val support : bdd -> varSet = app1 (symb "mlbdd_bdd_support")
 
     val fromSet = fn x => x
     val toSet_  = fn x => x
@@ -163,11 +163,11 @@ struct
 
     val replace : bdd -> pairSet -> bdd = app2 (symb "mlbdd_bdd_replace")
 
-    fun makepairSet pl = 
+    fun makepairSet pl =
         let val (old,new) = ListPair.unzip pl
         in makepairset_ (vector old) (vector new) end
 
-    val compose_ : bdd -> bdd -> varnum -> bdd 
+    val compose_ : bdd -> bdd -> varnum -> bdd
 	= app3 (symb "mlbdd_bdd_compose")
 
     fun compose (v,r2) r1 = compose_ r1 r2 v
@@ -179,7 +179,7 @@ struct
         in  makebddpairset_ (vector old) (vector new) end
 
 
-    fun assign((v,b), res) = apply res (if b then ithvar v else nithvar v) And 	
+    fun assign((v,b), res) = apply res (if b then ithvar v else nithvar v) And
     val assignment = List.foldl assign TRUE
     val fromAssignment = fn x => x
     val toAssignment_ = fn x => x
@@ -198,7 +198,7 @@ struct
         in  loop bdd [] end
 
     val restrict : bdd -> bdd -> bdd = app2 (symb "mlbdd_bdd_restrict")
-    
+
     val satone_ : bdd -> assignment = app1 (symb "mlbdd_bdd_satone")
     fun satone r = if equal r FALSE then raise Domain
                    else satone_ r
@@ -211,11 +211,11 @@ struct
 
 
     (* Three helper functions, used to normalize rootno *)
-    fun table size = (size, ref 0, Array.array(size,[]))    
+    fun table size = (size, ref 0, Array.array(size,[]))
     fun mem i []           = NONE
       | mem i ((k,d) :: t) = if i = k then SOME d
-			     else mem i t  
-    fun add (size,next,tab) r = 
+			     else mem i t
+    fun add (size,next,tab) r =
 	let val code = r mod size
 	    val slot = Array.sub(tab,code)
 	in
@@ -227,22 +227,22 @@ struct
 			end
 	      | SOME n => n
 	end
-    
+
     fun nodetable r =
 	let val nc = nodecount r + 2
 	    val rootno = add (table nc) o root
 	    val tab = Array.array(nc,NONE)
 	    fun peek i = Array.sub(tab, i)
 	    fun update i d = Array.update(tab,i,SOME d)
-		
+
 	    fun node r =
 		let val root = rootno r
 		in
 		    case peek root of
 			NONE   => let val low = low r
 				      val high = high r
-				  in  update root (var r, 
-						   rootno low, 
+				  in  update root (var r,
+						   rootno low,
 						   rootno high);
 				      node low;
 				      node high
@@ -255,7 +255,7 @@ struct
 	    node r;
 	    (rootno r,
 	     Vector.tabulate(nc, fn i => valOf(Array.sub(tab,i))))
-	end	
+	end
 
     (* BuDDy tuning stuff *)
     val setMaxincrease : int -> int = app1 (symb "mlbdd_bdd_setmaxincrease")
@@ -270,7 +270,7 @@ struct
 
     (* Variable reordering stuff *)
     type fixed = int
-    val addvarblock  : varnum -> varnum -> fixed -> unit 
+    val addvarblock  : varnum -> varnum -> fixed -> unit
         = app3 (symb "mlbdd_bdd_intaddvarblock")
     val clrvarblocks  : unit -> unit = app1 (symb "mlbdd_bdd_clrvarblocks")
 
@@ -289,5 +289,5 @@ struct
     type level = int
     val varToLevel : varnum -> level = app1 (symb "mlbdd_bdd_var2level")
     val varAtLevel : level -> varnum = app1 (symb "mlbdd_bdd_level2var")
-    
+
 end

@@ -41,17 +41,17 @@ Hol_datatype `NTree = Tree of NTree list`;
 (* ------------------------------------------------------------------------- *)
 
 Hol_datatype
-         `Term = Var of 'A => 'B 
+         `Term = Var of 'A => 'B
                | App of bool => Termlist;
-      Termlist = Emp 
+      Termlist = Emp
                | Consp of Term => Termlist`;
 
 Hol_datatype
-      `List = Nil 
+      `List = Nil
             | Cons of 'A => List`;
 
 Hol_datatype
-    `Btree = Lf of 'A 
+    `Btree = Lf of 'A
            | Nd of 'B => Btree => Btree`;
 
 Hol_datatype
@@ -67,32 +67,32 @@ Hol_datatype
              | Product of Express => Express`;
 
 Hol_datatype
-    `testa = empty_testa 
+    `testa = empty_testa
            | cons_testa of testa => testb;
      testb = contentb of 'L => testc;
      testc = connection of 'M => testa`;
 
 Hol_datatype
-    `atexp = Varb of ind 
+    `atexp = Varb of ind
            | Let of dec => exp;
 
-       exp = Exp1 of atexp 
-           | Exp2 of exp => atexp 
+       exp = Exp1 of atexp
+           | Exp2 of exp => atexp
            | Exp3 of match;
 
-     match = Match1 of rule 
+     match = Match1 of rule
            | Matches of rule => match;
 
      rule  = Rule of pat => exp;
-       dec = Val of valbind 
-           | Local of dec => dec 
+       dec = Val of valbind
+           | Local of dec => dec
            | Decs of dec => dec;
 
-   valbind = Single of pat => exp 
-           | Multi of pat => exp => valbind 
+   valbind = Single of pat => exp
+           | Multi of pat => exp => valbind
            | Rec of valbind;
 
-       pat = Wild 
+       pat = Wild
            | Varpat of ind`;
 
 Hol_datatype
@@ -105,33 +105,33 @@ Hol_datatype
 Hol_datatype
       `Steve0 = X1  | X2  | X3  | X4  | X5  | X6  | X7  | X8  | X9  | X10 |
                 X11 | X12 | X13 | X14 | X15 | X16 | X17 | X18 | X19 | X20 |
-                X21 | X22 | X23 | X24 | X25 | X26 | X27 | X28 | X29 | X30 | 
+                X21 | X22 | X23 | X24 | X25 | X26 | X27 | X28 | X29 | X30 |
                 X31 | X32 | X33 | X34`;
 
 Hol_datatype
-    `TY1 = NoF__ 
+    `TY1 = NoF__
          | Fk__ of 'A => TY2;
 
-     TY2 = Ta__   of bool 
-         | Td__   of bool 
-         | Tf__   of TY1 
-         | Tk__   of bool 
+     TY2 = Ta__   of bool
+         | Td__   of bool
+         | Tf__   of TY1
+         | Tk__   of bool
          | Tp__   of bool
-         | App__  of 'A => TY1 => TY2 => TY3 
+         | App__  of 'A => TY1 => TY2 => TY3
          | Pair__ of TY2 => TY2;
 
-     TY3 = NoS__ 
-         | Fresh__        of TY2 
+     TY3 = NoS__
+         | Fresh__        of TY2
          | Trustworthy__  of 'A
-         | PrivateKey__   of 'A => 'B => 'C 
+         | PrivateKey__   of 'A => 'B => 'C
          | PublicKey__    of 'A => 'B => 'C
-         | Conveyed__     of 'A => TY2 
-         | Possesses__    of 'A => TY2 
-         | Received__     of 'A => TY2 
-         | Recognizes__   of 'A => TY2 
-         | Sends__        of 'A => TY2 => 'B 
+         | Conveyed__     of 'A => TY2
+         | Possesses__    of 'A => TY2
+         | Received__     of 'A => TY2
+         | Recognizes__   of 'A => TY2
+         | Sends__        of 'A => TY2 => 'B
          | SharedSecret__ of 'A => TY2 => 'B
-         | Believes__     of 'A => TY3 
+         | Believes__     of 'A => TY3
          | And__          of TY3 => TY3
          | NeverMalFromSelf__ of 'A => 'B => TY2`;
 
@@ -139,7 +139,7 @@ Hol_datatype
 (* Some with nesting of various kinds, plus required auxiliaries.            *)
 (* ------------------------------------------------------------------------- *)
 
-Hol_datatype `fot = aVar of 'a 
+Hol_datatype `fot = aVar of 'a
                   | bApp of 'b => fot list`;
 
 Hol_datatype
@@ -147,11 +147,11 @@ Hol_datatype
          | Fni of ind => term list`;
 
 Hol_datatype
-  `bintree = Leafb 
+  `bintree = Leafb
            | Branchb of bintree # bintree`;
 
 Hol_datatype
-  `etree = Terminal 
+  `etree = Terminal
          | Nonterminal of num + etree`;
 
 Hol_datatype
@@ -173,7 +173,7 @@ Hol_datatype
 Hol_datatype
   `array = Arry of num => 'A list`;
 
-Lib.try Hol_datatype 
+Lib.try Hol_datatype
   `value = Integer of num
          | Boolean of bool
          | List of value list
@@ -189,20 +189,20 @@ Lib.try Hol_datatype  (* used to fail *)
           | Bough of simper xtree`;
 
 Hol_datatype
-  `command 
+  `command
        = Assignment of num list # expression list
        | Sequence   of command list
    ;
-   expression 
+   expression
        = Numeral of num
        | Plus    of expression # expression
        | Valof   of command`;
 
 
 Hol_datatype
-  `mutual = Mutual of 'A => mutual => 'D => otherone 
+  `mutual = Mutual of 'A => mutual => 'D => otherone
           | Friend of 'D => otherone;
- otherone = Great of 'C 
+ otherone = Great of 'C
           | Expectations of mutual => otherone`;
 
 (* loops? *)
@@ -222,7 +222,7 @@ Hol_datatype
 
 Hol_datatype `T1 = CONSTR1 of 'a`;
 
-Lib.try 
+Lib.try
 Hol_datatype `T2 = CONSTR2 of T3 list => 'a T1
                  ;
               T3 = CONSTR31 of 'a T1
@@ -231,7 +231,7 @@ Hol_datatype `T2 = CONSTR2 of T3 list => 'a T1
 
 Hol_datatype `T4 = CONSTR4 of ('a,'b)T2 set`;
 
-Hol_datatype `ty1 = C1 of 'a 
+Hol_datatype `ty1 = C1 of 'a
                   | C2 of ty2 option
                ;
               ty2 = C3 of 'b
@@ -267,19 +267,19 @@ Hol_datatype
 
           method = SIGMA of 'a => obj` ;
 
-val REM_ALL_def = 
+val REM_ALL_def =
  Define
   `(REM_ALL x [] = []) /\
    (REM_ALL x (h::t) = if x=h then REM_ALL x t else h::REM_ALL x t)`;
 
-val LDIFF_def = 
+val LDIFF_def =
  xDefine "LDIFF"
   `(LDIFF L [] = L) /\
    (LDIFF L (h::t) = LDIFF (REM_ALL h L) t)`;
 
 set_fixity "LDIFF" (Infixl 500);
 
-val FV_object = 
+val FV_object =
  xDefine "FV_object"
      `(FV_obj (OVAR x)        = [x])
  /\   (FV_obj (OBJ d)         = FV_dict d)
@@ -332,7 +332,7 @@ Hol_datatype
 Hol_datatype `Size = Byte | Word | Long`;
 
 Hol_datatype
-  `DataRegister 
+  `DataRegister
        = RegD0
        | RegD1
        | RegD2
@@ -343,7 +343,7 @@ Hol_datatype
        | RegD7`;
 
 Hol_datatype
-  `AddressRegister 
+  `AddressRegister
           = RegA0
           | RegA1
           | RegA2
@@ -359,7 +359,7 @@ Hol_datatype
                | address of AddressRegister`;
 
 Hol_datatype
-    `Condition 
+    `Condition
          = Hi
          | Ls
          | Cc
@@ -376,14 +376,14 @@ Hol_datatype
          | Le`;
 
 Hol_datatype
- `AddressingMode 
+ `AddressingMode
         = immediate of  num
         | direct of DataOrAddressRegister
         | indirect of AddressRegister
         | postinc of AddressRegister
         | predec of AddressRegister
         | indirectdisp of num => AddressRegister
-        | indirectindex of num => AddressRegister => 
+        | indirectindex of num => AddressRegister =>
                            DataOrAddressRegister => Size
         | absolute of num
         | pcdisp of num
@@ -501,7 +501,7 @@ Hol_datatype
 (* ------------------------------------------------------------------------- *)
 
 Hol_datatype
-  `string = EMPTY_STRING 
+  `string = EMPTY_STRING
           | CONS_STRING of num => string`;
 
 Hol_datatype
@@ -598,25 +598,25 @@ Hol_datatype
      | input_declaration of Range option => string list
      | output_declaration of Range option => string list
      | DeclarationMeta of string;
-  Range = range of Expression => Expression 
+  Range = range of Expression => Expression
         | RangeMeta of string;
   Statement
      = clock_statement of Clock => Statement_or_null
      | blocking_assignment of Lvalue => Expression
      | non_blocking_assignment of Lvalue => Expression
-     | conditional_statement of Expression => Statement_or_null 
+     | conditional_statement of Expression => Statement_or_null
                                 => Statement_or_null option
      | case_statement of Expression => Case_item list
      | while_loop of Expression => Statement
      | repeat_loop of Expression => Statement
-     | for_loop of Lvalue => Expression => Expression 
+     | for_loop of Lvalue => Expression => Expression
                    => Lvalue => Expression => Statement
      | forever_loop of Statement
      | disable of string
      | seq_block of string option => Statement list
      | StatementMeta of string;
-  Statement_or_null = statement of Statement 
-                    | null_statement 
+  Statement_or_null = statement of Statement
+                    | null_statement
                     | Statement_or_nullMeta of string;
   Clock
      = posedge of string

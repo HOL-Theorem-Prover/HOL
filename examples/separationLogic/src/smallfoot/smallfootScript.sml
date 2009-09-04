@@ -2,9 +2,9 @@ open HolKernel Parse boolLib bossLib;
 
 (*
 quietdec := true;
-loadPath := 
-            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) :: 
-            (concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot"]) :: 
+loadPath :=
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src/smallfoot"]) ::
             !loadPath;
 
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
@@ -28,7 +28,7 @@ val _ = new_theory "smallfoot";
 val bool_neg_pair_ss = simpLib.conv_ss BOOL_NEG_PAIR_convdata;
 val bool_eq_imp_ss = simpLib.conv_ss BOOL_EQ_IMP_convdata;
 val bool_extract_common_terms_ss = simpLib.conv_ss BOOL_EXTRACT_SHARED_convdata;
-    
+
 
 val smallfoot_tag = Hol_datatype `smallfoot_tag =
 	smallfoot_tag of string`
@@ -57,7 +57,7 @@ val INFINITE_UNIV_SMALLFOOT_TAG = store_thm ("INFINITE_UNIV_SMALLFOOT_TAG",
 
 `UNIV:smallfoot_tag set = IMAGE (smallfoot_tag) UNIV` by ALL_TAC THEN1 (
       SIMP_TAC std_ss [EXTENSION, IN_UNIV, IN_IMAGE] THEN
-      Cases_on `x` THEN 
+      Cases_on `x` THEN
       PROVE_TAC[]
 ) THEN
 METIS_TAC[IMAGE_11_INFINITE, INFINITE_UNIV_STRING, smallfoot_tag_11]);
@@ -69,7 +69,7 @@ val INFINITE_UNIV_SMALLFOOT_VAR = store_thm ("INFINITE_UNIV_SMALLFOOT_VAR",
 
 `UNIV:smallfoot_var set = IMAGE (smallfoot_var) UNIV` by ALL_TAC THEN1 (
       SIMP_TAC std_ss [EXTENSION, IN_UNIV, IN_IMAGE] THEN
-      Cases_on `x` THEN 
+      Cases_on `x` THEN
       PROVE_TAC[]
 ) THEN
 METIS_TAC[IMAGE_11_INFINITE, INFINITE_UNIV_STRING, smallfoot_var_11]);
@@ -116,7 +116,7 @@ PROVE_TAC[IS_SEPARATION_ALGEBRA___IS_COMBINATOR,
 	IS_SEPARATION_ALGEBRA___smallfoot_separation_combinator]);
 
 
-val IS_SOME___smallfoot_separation_combinator = store_thm 
+val IS_SOME___smallfoot_separation_combinator = store_thm
 ("IS_SOME___smallfoot_separation_combinator",
 ``IS_SOME (smallfoot_separation_combinator s s') =
 ?st1 st2 h1 h2. (s = SOME (st1,h1)) /\ (s' = SOME (st2, h2)) /\
@@ -134,7 +134,7 @@ METIS_TAC[])
 
 
 val smallfoot_separation_combinator___REWRITE_helper = prove (``
-!s1 s2. smallfoot_separation_combinator (SOME s1) (SOME s2) = 
+!s1 s2. smallfoot_separation_combinator (SOME s1) (SOME s2) =
            (if (VAR_RES_STACK_IS_SEPARATE (FST s1) (FST s2) /\ (DISJOINT (FDOM (SND s1)) (FDOM (SND s2)))) then
               SOME (THE (VAR_RES_STACK_COMBINE (SOME (FST s1)) (SOME (FST s2))),FUNION (SND s1) (SND s2))
             else
@@ -177,7 +177,7 @@ val SOME___smallfoot_separation_combinator = store_thm ("SOME___smallfoot_separa
 (VAR_RES_STACK_COMBINE (SOME (FST s1)) (SOME (FST s2)) = SOME (FST s)) /\
 ((SND s) = FUNION (SND s1) (SND s2)))``,
 
-				
+
 SIMP_TAC std_ss [smallfoot_separation_combinator___REWRITE, COND_NONE_SOME_REWRITES,
 SOME___VAR_RES_STACK_COMBINE] THEN
 Cases_on `VAR_RES_STACK_IS_SEPARATE (FST s1) (FST s2)` THEN ASM_REWRITE_TAC[] THEN
@@ -198,13 +198,13 @@ SIMP_TAC std_ss [asl_emp_def, smallfoot_separation_combinator___REWRITE,
 
 
 
-val smallfoot_data_type = Hol_datatype `smallfoot_data_type = 
+val smallfoot_data_type = Hol_datatype `smallfoot_data_type =
 	smallfoot_data_num_TYPE
       | smallfoot_data_var_TYPE
       |	smallfoot_data_num_list_TYPE`;
 
 
-val smallfoot_data = Hol_datatype `smallfoot_data = 
+val smallfoot_data = Hol_datatype `smallfoot_data =
 	smallfoot_data_num of num
       | smallfoot_data_var of smallfoot_var
       |	smallfoot_data_num_list of num list`;
@@ -293,7 +293,7 @@ LIST_CONJ [smallfoot_data_GET_num_def,
 
 val _ = type_abbrev("smallfoot_a_expression", Type `:smallfoot_stack -> num option`)
 
-val smallfoot_ae_var_def = Define `smallfoot_ae_var var = (\stack:smallfoot_stack. 
+val smallfoot_ae_var_def = Define `smallfoot_ae_var var = (\stack:smallfoot_stack.
 (if (var IN FDOM stack) then SOME (FST (stack ' var)) else NONE))`;
 
 val smallfoot_ae_const_def = Define `smallfoot_ae_const c = (K (SOME c)):smallfoot_a_expression`;
@@ -301,7 +301,7 @@ val smallfoot_ae_null_def = Define `smallfoot_ae_null = smallfoot_ae_const 0`;
 
 val smallfoot_ae_binop_def = Define `
 smallfoot_ae_binop (bop:num->num->num) e1 e2 =
-	(\s:smallfoot_stack. 
+	(\s:smallfoot_stack.
 		let no1 = e1 s in
 		let no2 = e2 s in
 		if ((IS_SOME no1) /\ (IS_SOME no2)) then SOME (bop (THE no1) (THE no2)) else NONE)`
@@ -312,7 +312,7 @@ val smallfoot_ae_binop___const_eval = store_thm ("smallfoot_ae_binop___const_eva
 ``smallfoot_ae_binop bop (smallfoot_ae_const c1) (smallfoot_ae_const c2) =
   smallfoot_ae_const (bop c1 c2)``,
 
-SIMP_TAC std_ss [smallfoot_ae_binop_def, smallfoot_ae_const_def, 
+SIMP_TAC std_ss [smallfoot_ae_binop_def, smallfoot_ae_const_def,
 		 LET_THM, FUN_EQ_THM]);
 
 val smallfoot_ae_binop___null_eval = store_thm ("smallfoot_ae_binop___null_eval",
@@ -324,7 +324,7 @@ val smallfoot_ae_binop___null_eval = store_thm ("smallfoot_ae_binop___null_eval"
    smallfoot_ae_const (bop 0 0))
 ``,
 
-SIMP_TAC std_ss [smallfoot_ae_null_def, 
+SIMP_TAC std_ss [smallfoot_ae_null_def,
 		 smallfoot_ae_binop___const_eval]);
 
 
@@ -333,7 +333,7 @@ val smallfoot_ae_eq_THM = store_thm ("smallfoot_ae_eq_THM",
 	   ((smallfoot_ae_const c1 = smallfoot_ae_const c2) = (c1 = c2)) /\
 	   (~(smallfoot_ae_const c = smallfoot_ae_var v))``,
 
-SIMP_TAC std_ss [FUN_EQ_THM, 
+SIMP_TAC std_ss [FUN_EQ_THM,
 	smallfoot_ae_var_def, smallfoot_ae_const_def] THEN
 CONJ_TAC THENL [
 	EQ_TAC THEN SIMP_TAC std_ss [] THEN
@@ -356,7 +356,7 @@ SIMP_TAC std_ss [smallfoot_ae_null_def, smallfoot_ae_eq_THM]);
 
 
 val SOME___smallfoot_ae_const = store_thm ("SOME___smallfoot_ae_const",
-``!c c1 X. 
+``!c c1 X.
   (smallfoot_ae_const c X = SOME c1) =
   (c = c1)``,
 
@@ -369,7 +369,7 @@ val smallfoot_ae_is_const_def = Define `
 
 val _ = type_abbrev("smallfoot_a_proposition", Type `:smallfoot_state -> bool`);
 
-val smallfoot_ae_is_defined_def = Define `smallfoot_ae_is_defined P ae = 
+val smallfoot_ae_is_defined_def = Define `smallfoot_ae_is_defined P ae =
 (!h st. (P:smallfoot_a_proposition) (st,h) ==>
 	IS_SOME ((ae st):num option))`;
 
@@ -381,12 +381,12 @@ smallfoot_ae_is_list_cond_defined P L =
 
 
 
-val smallfoot_ap_implies_readperms_def = Define `smallfoot_ap_implies_readperms P vs = 
+val smallfoot_ap_implies_readperms_def = Define `smallfoot_ap_implies_readperms P vs =
 (!h st. (P:smallfoot_a_proposition) (st,h) ==>
 	vs SUBSET FDOM st)`;
 
 
-val smallfoot_ap_implies_writeperm_def = Define `smallfoot_ap_implies_writeperm P v = 
+val smallfoot_ap_implies_writeperm_def = Define `smallfoot_ap_implies_writeperm P v =
 (!h st. (P:smallfoot_a_proposition) (st,h) ==>
 	var_res_sl___has_write_permission v st)`;
 
@@ -399,12 +399,12 @@ else
   NONE`;
 
 
-val smallfoot_ap_implies_stack_read_def = Define `smallfoot_ap_implies_stack_read P e t = 
+val smallfoot_ap_implies_stack_read_def = Define `smallfoot_ap_implies_stack_read P e t =
 (!s. s IN (P:smallfoot_a_proposition) ==>
         IS_SOME (smallfoot_ae_stack_read e t s))`
 
 
-val smallfoot_ap_implies_in_heap_def = Define `smallfoot_ap_implies_in_heap P e = 
+val smallfoot_ap_implies_in_heap_def = Define `smallfoot_ap_implies_in_heap P e =
 (!h st. (P:smallfoot_a_proposition) (st,h) ==>
         IS_SOME (e st) /\ ((THE (e st)) IN (FDOM h)) /\ (~((THE (e st)) = 0)))`;
 
@@ -416,7 +416,7 @@ val smallfoot_a_stack_proposition_def = Define `smallfoot_a_stack_proposition em
 
 val smallfoot_ap_binexpression_def = Define `
 smallfoot_ap_binexpression emp p e1 e2 =
-	smallfoot_a_stack_proposition emp (\s. 
+	smallfoot_a_stack_proposition emp (\s.
 		let (no1:num option) = e1 s in
 		let (no2:num option) = e2 s in
 		((IS_SOME no1) /\ (IS_SOME no2) /\ (p (THE no1) (THE no2))))`
@@ -424,12 +424,12 @@ smallfoot_ap_binexpression emp p e1 e2 =
 
 val smallfoot_ap_equal_def = Define `smallfoot_ap_equal p1 p2 =
 	smallfoot_ap_binexpression T $= p1 p2`;
-val smallfoot_ap_unequal_def = Define `smallfoot_ap_unequal p1 p2 = 
+val smallfoot_ap_unequal_def = Define `smallfoot_ap_unequal p1 p2 =
 	smallfoot_ap_binexpression T (\n1 n2. ~(n1 = n2)) p1 p2`;
 
-val smallfoot_ap_weak_equal_def = Define `smallfoot_ap_weak_equal p1 p2 = 
+val smallfoot_ap_weak_equal_def = Define `smallfoot_ap_weak_equal p1 p2 =
 	smallfoot_ap_binexpression F $= p1 p2`;
-val smallfoot_ap_weak_unequal_def = Define `smallfoot_ap_weak_unequal p1 p2 = 
+val smallfoot_ap_weak_unequal_def = Define `smallfoot_ap_weak_unequal p1 p2 =
 	smallfoot_ap_binexpression F (\n1 n2. ~(n1 = n2)) p1 p2`;
 
 val smallfoot_ap_less_def = Define `smallfoot_ap_less p1 p2 =
@@ -450,15 +450,15 @@ val smallfoot_ap_var_write_perm_def = Define `
 smallfoot_ap_var_write_perm v = asl_exists e. smallfoot_ap_var_write_perm_val v e`
 
 
-val smallfoot_ap_true_def = Define `smallfoot_ap_true = 
+val smallfoot_ap_true_def = Define `smallfoot_ap_true =
 	asl_true:smallfoot_a_proposition`;
-val smallfoot_ap_false_def = Define `smallfoot_ap_false = 
+val smallfoot_ap_false_def = Define `smallfoot_ap_false =
 	asl_false:smallfoot_a_proposition`;
-val smallfoot_ap_star_def = Define `smallfoot_ap_star = 
+val smallfoot_ap_star_def = Define `smallfoot_ap_star =
 	asl_star smallfoot_separation_combinator`;
-val smallfoot_ap_bigstar_def = Define `smallfoot_ap_bigstar = 
+val smallfoot_ap_bigstar_def = Define `smallfoot_ap_bigstar =
 	asl_bigstar smallfoot_separation_combinator`;
-val smallfoot_ap_bigstar_list_def = Define `smallfoot_ap_bigstar_list = 
+val smallfoot_ap_bigstar_list_def = Define `smallfoot_ap_bigstar_list =
 	asl_bigstar_list smallfoot_separation_combinator`;
 val smallfoot_ap_emp_def = Define `smallfoot_ap_emp =
 	asl_emp smallfoot_separation_combinator`
@@ -468,14 +468,14 @@ val smallfoot_ap_unknown_def = Define `smallfoot_ap_unknown s =
 
 val smallfoot_ap_emp_ALTERNATIVE_DEF = store_thm
     ("smallfoot_ap_emp_ALTERNATIVE_DEF",
-     ``smallfoot_ap_emp = \x. (FST x = FEMPTY) /\ (SND x = FEMPTY)``,				
+     ``smallfoot_ap_emp = \x. (FST x = FEMPTY) /\ (SND x = FEMPTY)``,
      SIMP_TAC std_ss [smallfoot_ap_emp_def, smallfoot_separation_combinator___asl_emp,
 		      EXTENSION, IN_ABS, PAIR_FORALL_THM, IN_SING]);
 
 
 
 val smallfoot_ap_bigstar_REWRITE = save_thm ("smallfoot_ap_bigstar_REWRITE",
-	let 
+	let
 		val thm0 = Q.ISPEC `smallfoot_separation_combinator` asl_bigstar_REWRITE;
 		val thm1 = SIMP_RULE std_ss
  [IS_SEPARATION_COMBINATOR___smallfoot_separation_combinator,
@@ -488,7 +488,7 @@ val smallfoot_ap_bigstar_REWRITE = save_thm ("smallfoot_ap_bigstar_REWRITE",
 
 
 val smallfoot_ap_bigstar_list_REWRITE = save_thm ("smallfoot_ap_bigstar_list_REWRITE",
-	let 
+	let
 		val thm0 = Q.ISPEC `smallfoot_separation_combinator` asl_bigstar_list_REWRITE;
 		val thm1 = SIMP_RULE std_ss
  [GSYM smallfoot_ap_bigstar_list_def, GSYM smallfoot_ap_emp_def,
@@ -549,7 +549,7 @@ Induct_on `l1` THENL [
 
 val smallfoot_ap_points_to_def = Define `
 	smallfoot_ap_points_to e1 L = \state:smallfoot_state.
-		let (stack,heap) = (FST state, SND state) in 
+		let (stack,heap) = (FST state, SND state) in
 		let loc_opt = (e1 stack) in (
 		IS_SOME (loc_opt) /\
 		let (loc = THE loc_opt) in (
@@ -563,7 +563,7 @@ val smallfoot_ap_points_to_def = Define `
 
 val smallfoot_ap_tree_seg_num_def = Define `
   smallfoot_ap_tree_seg_num n bal tagL startExp endExp =
-  (asl_rec_pred_num smallfoot_separation_combinator bal n (smallfoot_ap_equal endExp) 
+  (asl_rec_pred_num smallfoot_separation_combinator bal n (smallfoot_ap_equal endExp)
       (smallfoot_ap_weak_unequal endExp)
       (MAP (\t e1 e2 s. smallfoot_ae_is_const e2) tagL)
       (\e eL. smallfoot_ap_points_to e (LISTS_TO_FMAP (tagL, eL))) startExp)`;
@@ -571,7 +571,7 @@ val smallfoot_ap_tree_seg_num_def = Define `
 
 
 val smallfoot_ap_tree_seg_num_REWRITE = save_thm ("smallfoot_ap_tree_seg_num_REWRITE",
-   let 
+   let
       val thm0 = smallfoot_ap_tree_seg_num_def;
       val gsym = GSYM (Drule.RIGHT_ETA (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm0))));
       val thm1 = SIMP_RULE std_ss [asl_rec_pred_num_REWRITE_BOTH,
@@ -590,7 +590,7 @@ val smallfoot_ap_tree_seg_num_REWRITE = save_thm ("smallfoot_ap_tree_seg_num_REW
 
 
 val smallfoot_ap_tree_seg_num_REWRITE = save_thm ("smallfoot_ap_tree_seg_num_REWRITE",
-   let 
+   let
       val thm0 = smallfoot_ap_tree_seg_num_def;
       val gsym = GSYM (Drule.RIGHT_ETA (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm0))));
       val thm1 = SIMP_RULE std_ss [asl_rec_pred_num_REWRITE_BOTH,
@@ -609,11 +609,11 @@ val smallfoot_ap_tree_seg_num_REWRITE = save_thm ("smallfoot_ap_tree_seg_num_REW
 
 
 val smallfoot_ap_tree_seg_num_REWRITE_2 = save_thm ("smallfoot_ap_tree_seg_num_REWRITE_2",
-   let 
+   let
       val thm0 = SIMP_RULE std_ss [] (SPEC ``0:num`` smallfoot_ap_tree_seg_num_REWRITE)
 
       val thm1a = SIMP_RULE arith_ss [] (SPEC ``SUC n`` smallfoot_ap_tree_seg_num_REWRITE)
-      val thm1 = GEN ``n:num`` thm1a 
+      val thm1 = GEN ``n:num`` thm1a
    in
       CONJ thm0 thm1
    end);
@@ -640,7 +640,7 @@ val smallfoot_ap_bintree_def = Define `
 
 
 val smallfoot_ap_bintree_num_REWRITE = save_thm ("smallfoot_ap_bintree_num_REWRITE",
-   let 
+   let
       val thm0 = smallfoot_ap_bintree_num_def;
       val thm1 = SIMP_RULE list_ss [
          smallfoot_ap_tree_seg_num_def, GSYM asl_rec_pred_def] thm0;
@@ -665,7 +665,7 @@ val smallfoot_ap_bintree_num_REWRITE = save_thm ("smallfoot_ap_bintree_num_REWRI
 
 
 val smallfoot_ap_bintree_REWRITE = save_thm ("smallfoot_ap_bintree_REWRITE",
-   let 
+   let
       val thm0 = smallfoot_ap_bintree_def;
       val thm1 = SIMP_RULE list_ss [smallfoot_ap_tree_seg_num_def,
          smallfoot_ap_bintree_num_def] thm0;
@@ -704,7 +704,7 @@ METIS_TAC[]);
 
 
 val smallfoot_ap_star___PROPERTIES = save_thm ("smallfoot_ap_star___PROPERTIES",
-	let 
+	let
 		val thm0  = asl_star___PROPERTIES;
 		val thm1 = ISPEC ``smallfoot_separation_combinator`` thm0;
 		val thm2 = REWRITE_RULE [IS_SEPARATION_COMBINATOR___smallfoot_separation_combinator,
@@ -732,7 +732,7 @@ REWRITE_RULE [GSYM smallfoot_ap_star_def]
 (ISPEC ``smallfoot_separation_combinator`` asl_exists___asl_star_THM));
 
 
-val smallfoot_ap_false___NOT_IN = 
+val smallfoot_ap_false___NOT_IN =
 store_thm ("smallfoot_ap_false___NOT_IN",
 ``!x. ~(x IN smallfoot_ap_false)``,
 SIMP_TAC std_ss [smallfoot_ap_false_def, asl_bool_EVAL]);
@@ -798,7 +798,7 @@ val smallfoot_ap_list_seg_num_def = Define `
    smallfoot_ap_tree_seg_num n T [tl] startExp endExp`;
 
 val smallfoot_ap_list_seg_num_REWRITE = save_thm ("smallfoot_ap_list_seg_num_REWRITE",
-   let 
+   let
       val thm0 = smallfoot_ap_list_seg_num_def;
       val thm1 = SIMP_RULE list_ss [smallfoot_ap_tree_seg_num_def] thm0;
       val gsym = GSYM (Drule.RIGHT_ETA (MK_ABS (Q.GEN `startExp` (SPEC_ALL thm1))));
@@ -819,11 +819,11 @@ val smallfoot_ap_list_seg_num_REWRITE = save_thm ("smallfoot_ap_list_seg_num_REW
 
 
 val smallfoot_ap_list_seg_num_REWRITE_2 = save_thm ("smallfoot_ap_list_seg_num_REWRITE_2",
-   let 
+   let
       val thm0 = SIMP_RULE std_ss [] (SPEC ``0:num`` smallfoot_ap_list_seg_num_REWRITE)
 
       val thm1a = SIMP_RULE arith_ss [] (SPEC ``SUC n`` smallfoot_ap_list_seg_num_REWRITE)
-      val thm1 = GEN ``n:num`` thm1a 
+      val thm1 = GEN ``n:num`` thm1a
    in
       CONJ thm0 thm1
    end);
@@ -840,7 +840,7 @@ val smallfoot_ap_list_def = Define `
 
 
 val smallfoot_ap_list_seg_REWRITE = save_thm ("smallfoot_ap_list_seg_REWRITE",
-   let 
+   let
       val thm0 = smallfoot_ap_list_seg_def;
       val thm1 = SIMP_RULE list_ss [smallfoot_ap_tree_seg_num_def,
          smallfoot_ap_list_seg_num_def] thm0;
@@ -889,7 +889,7 @@ SIMP_TAC list_ss [smallfoot_ap_list_seg_num_def,
 
 
 val smallfoot_ap_list_REWRITE = save_thm ("smallfoot_ap_list_REWRITE",
-   let 
+   let
       val thm0 = smallfoot_ap_list_def;
       val thm1 = ONCE_REWRITE_RULE [smallfoot_ap_list_seg_REWRITE] thm0;
       val thm2 = REWRITE_RULE [GSYM smallfoot_ap_list_def] thm1
@@ -901,12 +901,12 @@ val smallfoot_ap_list_REWRITE = save_thm ("smallfoot_ap_list_REWRITE",
 
 
 val smallfoot_ap_data_list_seg_num_def = Define `
-  (smallfoot_ap_data_list_seg_num 0 tl startExp data endExp = 
-    (asl_and (smallfoot_ap_equal endExp startExp) 
+  (smallfoot_ap_data_list_seg_num 0 tl startExp data endExp =
+    (asl_and (smallfoot_ap_equal endExp startExp)
              (\s. FEVERY (\x. (SND x) = []) data))) /\
 
-  (smallfoot_ap_data_list_seg_num (SUC n) tl startExp data endExp = 
-    (asl_and (smallfoot_ap_weak_unequal endExp startExp) 
+  (smallfoot_ap_data_list_seg_num (SUC n) tl startExp data endExp =
+    (asl_and (smallfoot_ap_weak_unequal endExp startExp)
      (asl_and (\s. FEVERY (\x. ~((SND x) = [])) data)
       asl_exists n'. smallfoot_ap_star
                       (smallfoot_ap_points_to startExp
@@ -919,12 +919,12 @@ val smallfoot_ap_data_list_seg_num_def = Define `
 
 
 val smallfoot_ap_data_list_seg_num_REWRITE = store_thm ("smallfoot_ap_data_list_seg_num_REWRITE",
-``smallfoot_ap_data_list_seg_num n tl startExp data endExp = 
+``smallfoot_ap_data_list_seg_num n tl startExp data endExp =
   if (n = 0) then
-    (asl_and (smallfoot_ap_equal endExp startExp) 
+    (asl_and (smallfoot_ap_equal endExp startExp)
              (\s. FEVERY (\x. (SND x) = []) data))
   else
-  ((asl_and (smallfoot_ap_weak_unequal endExp startExp) 
+  ((asl_and (smallfoot_ap_weak_unequal endExp startExp)
      (asl_and (\s. FEVERY (\x. ~((SND x) = [])) data)
       asl_exists n'. smallfoot_ap_star
                       (smallfoot_ap_points_to startExp
@@ -952,7 +952,7 @@ Induct_on `n` THENL [
    SIMP_TAC std_ss [smallfoot_ap_data_list_seg_num_def,
 		    FEVERY_FEMPTY, asl_bool_REWRITES],
 
-   
+
    ONCE_REWRITE_TAC[smallfoot_ap_list_seg_num_REWRITE] THEN
    ASM_SIMP_TAC arith_ss [smallfoot_ap_data_list_seg_num_def,
 		      FMAP_MAP_FEMPTY, FEVERY_FEMPTY,
@@ -982,7 +982,7 @@ Induct_on `n` THENL [
       ASM_SIMP_TAC std_ss [asl_bool_REWRITES, smallfoot_ap_false_def]
    ) THEN
    Tactical.REVERSE (`~FEVERY (\x. LENGTH (SND x) = n) (FMAP_MAP TL data)` by ALL_TAC) THEN (
-      ASM_SIMP_TAC std_ss [asl_bool_REWRITES, 
+      ASM_SIMP_TAC std_ss [asl_bool_REWRITES,
 			   smallfoot_ap_false___smallfoot_ap_star_THM,
 			   asl_exists_def, smallfoot_ap_false___NOT_IN]
    ) THEN
@@ -996,7 +996,7 @@ Induct_on `n` THENL [
 		       FMAP_MAP_FUPDATE,
 		       FMAP_MAP_THM] THEN
    REPEAT STRIP_TAC THENL [
-     Cases_on `y` THEN 
+     Cases_on `y` THEN
      FULL_SIMP_TAC list_ss [],
 
      METIS_TAC[]
@@ -1018,15 +1018,15 @@ Induct_on `n` THENL [
    SIMP_TAC std_ss [smallfoot_ap_data_list_seg_num_def,
 		    asl_bool_EVAL, IN_ABS, FEVERY_DEF],
 
-   
+
    SIMP_TAC std_ss [smallfoot_ap_data_list_seg_num_def,
 		    asl_bool_EVAL, IN_ABS, FEVERY_DEF] THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [smallfoot_ap_star_def, asl_star_def,
 			 IN_ABS] THEN
-   Q.EXISTS_TAC `n'` THEN 
-   Q.EXISTS_TAC `p` THEN 
-   Q.EXISTS_TAC `q` THEN 
+   Q.EXISTS_TAC `n'` THEN
+   Q.EXISTS_TAC `p` THEN
+   Q.EXISTS_TAC `q` THEN
    ASM_SIMP_TAC std_ss [] THEN
    CONJ_TAC THENL [
       Q.PAT_ASSUM `p IN X` MP_TAC THEN
@@ -1036,7 +1036,7 @@ Induct_on `n` THENL [
 			   FEVERY_DEF, FMAP_MAP_THM,
 			   FDOM_FUPDATE, FAPPLY_FUPDATE_THM] THEN
       STRIP_TAC THEN GEN_TAC THEN STRIP_TAC THEN
-      Q.PAT_ASSUM `!x. X x` (MP_TAC o Q.SPEC `x`) THEN 
+      Q.PAT_ASSUM `!x. X x` (MP_TAC o Q.SPEC `x`) THEN
       Cases_on `x = tl` THEN (
          FULL_SIMP_TAC std_ss [smallfoot_ae_const_def, IN_INSERT,
 			      FMAP_MAP_THM]
@@ -1050,7 +1050,7 @@ Induct_on `n` THENL [
   ]
 ]);
 
-      
+
 
 
 
@@ -1058,7 +1058,7 @@ Induct_on `n` THENL [
 val smallfoot_ap_data_list_seg_num___ELIM_DATA___COMPLETE =
 store_thm ("smallfoot_ap_data_list_seg_num___ELIM_DATA___COMPLETE",
 
-``!data n tl startExp endExp s.  
+``!data n tl startExp endExp s.
    s IN smallfoot_ap_data_list_seg_num n tl startExp data endExp ==>
    s IN smallfoot_ap_list_seg_num n tl startExp endExp``,
 
@@ -1080,11 +1080,11 @@ val smallfoot_ap_data_list_seg_def = Define `
 
 
 val smallfoot_ap_data_list_seg_REWRITE = store_thm ("smallfoot_ap_data_list_seg_REWRITE",
-``smallfoot_ap_data_list_seg tl startExp data endExp = 
+``smallfoot_ap_data_list_seg tl startExp data endExp =
   asl_or
-    (asl_and (smallfoot_ap_equal endExp startExp) 
+    (asl_and (smallfoot_ap_equal endExp startExp)
              (\s. FEVERY (\x. (SND x) = []) data))
-    ((asl_and (smallfoot_ap_weak_unequal endExp startExp) 
+    ((asl_and (smallfoot_ap_weak_unequal endExp startExp)
      (asl_and (\s. FEVERY (\x. ~((SND x) = [])) data)
       asl_exists n'. smallfoot_ap_star
                       (smallfoot_ap_points_to startExp
@@ -1179,9 +1179,9 @@ FULL_SIMP_TAC std_ss [smallfoot_ap_false___NOT_IN]);
 
 
 
-val smallfoot_p_expression = Hol_datatype `smallfoot_p_expression = 
+val smallfoot_p_expression = Hol_datatype `smallfoot_p_expression =
 	smallfoot_p_var of smallfoot_var
-      | smallfoot_p_const of num 
+      | smallfoot_p_const of num
       |	smallfoot_p_add of smallfoot_p_expression => smallfoot_p_expression
       |	smallfoot_p_sub of smallfoot_p_expression => smallfoot_p_expression`;
 
@@ -1198,18 +1198,18 @@ val SMALLFOOT_P_EXPRESSION_EVAL_def = Define `
 		(smallfoot_ae_binop (\n1 n2. n1-n2) (SMALLFOOT_P_EXPRESSION_EVAL p1) (SMALLFOOT_P_EXPRESSION_EVAL p2)))`;
 
 
-val smallfoot_pt_proposition = Hol_datatype `smallfoot_pt_proposition = 
+val smallfoot_pt_proposition = Hol_datatype `smallfoot_pt_proposition =
 	smallfoot_pt_equal of smallfoot_p_expression => smallfoot_p_expression
       | smallfoot_pt_less of smallfoot_p_expression => smallfoot_p_expression`
 
 val smallfoot_pt_proposition_induction = DB.fetch "-" "smallfoot_pt_proposition_induction";
 val _ = type_abbrev("smallfoot_p_proposition", Type `:smallfoot_pt_proposition fasl_predicate`);
 
- 
+
 
 val nchotomy_thm = prove (``!s.
          (?s' s0. s = smallfoot_pt_equal s' s0) \/
-         ?s' s0. s = smallfoot_pt_less s' s0``, 
+         ?s' s0. s = smallfoot_pt_less s' s0``,
                         REWRITE_TAC [TypeBase.nchotomy_of ``:smallfoot_pt_proposition``]);
 
 val _ = TypeBase.write [TypeBasePure.put_nchotomy nchotomy_thm (valOf (TypeBase.fetch ``:smallfoot_pt_proposition``))];
@@ -1233,17 +1233,17 @@ val SMALLFOOT_PT_PROPOSITION_pred_map_def = Define `
 val smallfoot_p_true_def = Define `smallfoot_p_true:smallfoot_p_proposition = fasl_pred_true`;
 val smallfoot_p_false_def = Define `smallfoot_p_false:smallfoot_p_proposition = fasl_pred_false`;
 val smallfoot_p_neg_def = Define `smallfoot_p_neg = fasl_pred_neg:smallfoot_p_proposition->smallfoot_p_proposition`;
-val smallfoot_p_equal_def = Define `smallfoot_p_equal = 
+val smallfoot_p_equal_def = Define `smallfoot_p_equal =
 \e1 e2. fasl_pred_prim (smallfoot_pt_equal e1 e2)`;
-val smallfoot_p_less_def = Define `smallfoot_p_less = 
+val smallfoot_p_less_def = Define `smallfoot_p_less =
 \e1 e2. fasl_pred_prim (smallfoot_pt_less e1 e2)`;
-val smallfoot_p_unequal_def = Define `smallfoot_p_unequal = 
+val smallfoot_p_unequal_def = Define `smallfoot_p_unequal =
 \e1 e2. fasl_pred_or (smallfoot_p_less e1 e2) (smallfoot_p_less e2 e1)`;
-val smallfoot_p_lesseq_def = Define `smallfoot_p_lesseq = 
+val smallfoot_p_lesseq_def = Define `smallfoot_p_lesseq =
 \e1 e2. fasl_pred_or (smallfoot_p_less e1 e2) (smallfoot_p_equal e1 e2)`;
-val smallfoot_p_greater_def = Define `smallfoot_p_greater = 
+val smallfoot_p_greater_def = Define `smallfoot_p_greater =
 \e1 e2. smallfoot_p_less e2 e1`;
-val smallfoot_p_greatereq_def = Define `smallfoot_p_greatereq = 
+val smallfoot_p_greatereq_def = Define `smallfoot_p_greatereq =
 \e1 e2. smallfoot_p_lesseq e2 e1`;
 val smallfoot_p_and_def = Define `smallfoot_p_and = fasl_pred_and:smallfoot_p_proposition -> smallfoot_p_proposition -> smallfoot_p_proposition`;
 val smallfoot_p_or_def = Define `smallfoot_p_or = fasl_pred_or:smallfoot_p_proposition -> smallfoot_p_proposition -> smallfoot_p_proposition`;
@@ -1252,7 +1252,7 @@ val smallfoot_p_or_def = Define `smallfoot_p_or = fasl_pred_or:smallfoot_p_propo
 
 
 
-val smallfoot_action = Hol_datatype `smallfoot_action = 
+val smallfoot_action = Hol_datatype `smallfoot_action =
 	smallfoot_assign of smallfoot_var => smallfoot_p_expression
 |       smallfoot_field_lookup of smallfoot_var => smallfoot_p_expression => smallfoot_tag
 |       smallfoot_field_assign of smallfoot_p_expression  => smallfoot_tag => smallfoot_p_expression
@@ -1264,38 +1264,38 @@ val smallfoot_action = Hol_datatype `smallfoot_action =
 
 val SMALLFOOT_action_map_def = Define `
 	(SMALLFOOT_action_map (f:smallfoot_state bin_option_function) (smallfoot_assign v e) ((st, h):smallfoot_state) =
-		let ev_opt = SMALLFOOT_P_EXPRESSION_EVAL e st in 
-		if ((var_res_sl___has_write_permission v st) /\ (IS_SOME ev_opt)) then 
-			SOME {(st |+ (v, THE (ev_opt), var_res_write_permission), h)} 
+		let ev_opt = SMALLFOOT_P_EXPRESSION_EVAL e st in
+		if ((var_res_sl___has_write_permission v st) /\ (IS_SOME ev_opt)) then
+			SOME {(st |+ (v, THE (ev_opt), var_res_write_permission), h)}
 		else NONE) /\
 
 	(SMALLFOOT_action_map f (smallfoot_field_lookup v e t) ((st, h):smallfoot_state) =
 		let loc_opt = SMALLFOOT_P_EXPRESSION_EVAL e st in
-		if (~(var_res_sl___has_write_permission v st) \/ (IS_NONE loc_opt)) then NONE else 
+		if (~(var_res_sl___has_write_permission v st) \/ (IS_NONE loc_opt)) then NONE else
 		let loc = (THE loc_opt) in (
 		if (~(loc IN FDOM h) \/ (loc = 0)) then NONE else
-		(if (~(t IN FDOM (h ' loc))) then 
-                SOME (\s:smallfoot_state. ?new_v. (FST s = st |+ (v, new_v,var_res_write_permission)) /\ 
+		(if (~(t IN FDOM (h ' loc))) then
+                SOME (\s:smallfoot_state. ?new_v. (FST s = st |+ (v, new_v,var_res_write_permission)) /\
                 		  (SND s = h |+ (loc, (h ' loc) |+ (t, new_v)))) else
 		SOME {(st |+ (v, (h ' loc ' t), var_res_write_permission), h)}))) /\
 
 	(SMALLFOOT_action_map f (smallfoot_field_assign e1 t e2) ((st, h):smallfoot_state) =
 		let e1_opt = SMALLFOOT_P_EXPRESSION_EVAL e1 st in
 		let e2_opt = SMALLFOOT_P_EXPRESSION_EVAL e2 st in
-		if ((IS_NONE e1_opt) \/ (IS_NONE e2_opt)) then NONE else 
-		let e1_v = (THE e1_opt) in 
+		if ((IS_NONE e1_opt) \/ (IS_NONE e2_opt)) then NONE else
+		let e1_v = (THE e1_opt) in
 		let e2_v = (THE e2_opt) in (
 		if (~(e1_v IN FDOM h) \/ (e1_v = 0)) then NONE else
 		(SOME {(st, h |+ (e1_v, (h ' e1_v) |+ (t, e2_v)))}))) /\
 
 	(SMALLFOOT_action_map f (smallfoot_new v) ((st, h):smallfoot_state) =
-		if ~(var_res_sl___has_write_permission v st) then NONE else 
+		if ~(var_res_sl___has_write_permission v st) then NONE else
 		SOME (\s. ?n X. ~(n = 0) /\ ~(n IN FDOM h) /\ (s = (st |+ (v, n, var_res_write_permission),
 			h |+ (n, X))))) /\
 
 	(SMALLFOOT_action_map f (smallfoot_dispose e) ((st, h):smallfoot_state) =
 		let loc_opt = SMALLFOOT_P_EXPRESSION_EVAL e st in
-		if (IS_NONE loc_opt) then NONE else 
+		if (IS_NONE loc_opt) then NONE else
 		let loc = (THE loc_opt) in (
 		if (~(loc IN FDOM h) \/ (loc = 0)) then NONE else
 		(SOME {(st, h \\ loc)}))) /\
@@ -1303,16 +1303,16 @@ val SMALLFOOT_action_map_def = Define `
 	(SMALLFOOT_action_map f (smallfoot_new_var_init v e) ((st, h):smallfoot_state) =
 		let e_opt = SMALLFOOT_P_EXPRESSION_EVAL e st in
 		if (IS_NONE e_opt) then NONE else
-		(if (v IN FDOM st) then SOME {} else 
+		(if (v IN FDOM st) then SOME {} else
 		(SOME {(st |+ (v, THE e_opt, var_res_write_permission), h)}))) /\
 
 	(SMALLFOOT_action_map f (smallfoot_dispose_var v) ((st, h):smallfoot_state) =
-		if ~(var_res_sl___has_write_permission v st) then NONE else 
+		if ~(var_res_sl___has_write_permission v st) then NONE else
 		(SOME {(st\\v, h)}))`
 
 
 
-val SMALLFOOT_IS_SUBSTATE_def = Define 
+val SMALLFOOT_IS_SUBSTATE_def = Define
 `SMALLFOOT_IS_SUBSTATE =
  ASL_IS_SUBSTATE smallfoot_separation_combinator`;
 
@@ -1389,7 +1389,7 @@ Induct_on `p` THENL [
 
 
 	SIMP_TAC std_ss [SMALLFOOT_P_EXPRESSION_EVAL_def, smallfoot_ae_const_def],
-	
+
 	SIMP_TAC std_ss [SMALLFOOT_P_EXPRESSION_EVAL_def, smallfoot_ae_binop_def,
 		LET_THM, COND_RAND, COND_RATOR] THEN
 	METIS_TAC[],
@@ -1421,7 +1421,7 @@ val SMALLFOOT_SUBSTATE_IMPLS = store_thm ("SMALLFOOT_SUBSTATE_IMPLS",
 ``!s1 s2. ASL_IS_SUBSTATE smallfoot_separation_combinator s1 s2 ==>
  (((SND s1) SUBMAP (SND s2)) /\
  (!v. (v IN FDOM (FST s1)) ==> (
-	(v IN FDOM (FST s2)) /\ (FST ((FST s2) ' v) = (FST ((FST s1) ' v))) /\ 
+	(v IN FDOM (FST s2)) /\ (FST ((FST s2) ' v) = (FST ((FST s1) ' v))) /\
 	(IS_VAR_RES_SUBPERMISSION (SND ((FST s1) ' v)) (SND ((FST s2) ' v))))))``,
 
 
@@ -1564,7 +1564,7 @@ FASL_IS_LOCAL_ACTION smallfoot_separation_combinator
 		SMALLFOOT_action_map_def, PAIR_FORALL_THM, LET_THM,
 		COND_NONE_SOME_REWRITES, IN_SING] THEN
 	REPEAT GEN_TAC THEN STRIP_TAC THEN
-	`SMALLFOOT_P_EXPRESSION_EVAL e x1'' = 
+	`SMALLFOOT_P_EXPRESSION_EVAL e x1'' =
 		SMALLFOOT_P_EXPRESSION_EVAL e x1` by
 		METIS_TAC[SMALLFOOT_P_EXPRESSION_EVAL___SUBSTATE,
 			pairTheory.FST] THEN
@@ -1594,7 +1594,7 @@ FASL_IS_LOCAL_ACTION smallfoot_separation_combinator
 		SMALLFOOT_action_map_def, PAIR_FORALL_THM, LET_THM,
 		COND_NONE_SOME_REWRITES, IN_SING, NOT_NONE_IS_SOME] THEN
 	REPEAT GEN_TAC THEN STRIP_TAC THEN
-	`SMALLFOOT_P_EXPRESSION_EVAL e x1'' = 
+	`SMALLFOOT_P_EXPRESSION_EVAL e x1'' =
   	  SMALLFOOT_P_EXPRESSION_EVAL e x1` by
 		METIS_TAC[SMALLFOOT_P_EXPRESSION_EVAL___SUBSTATE,
 			pairTheory.FST] THEN
@@ -1622,7 +1622,7 @@ FASL_IS_LOCAL_ACTION smallfoot_separation_combinator
 		        FDOM_FUPDATE] THEN
            GEN_TAC THEN
 	   Q.EXISTS_TAC `new_v` THEN
-           REPEAT STRIP_TAC THENL [        
+           REPEAT STRIP_TAC THENL [
 	     METIS_TAC[VAR_RES_STACK_IS_SEPARATE___UPDATE],
 
 
@@ -1649,7 +1649,7 @@ FASL_IS_LOCAL_ACTION smallfoot_separation_combinator
                 REWRITE_TAC[EXTENSION] THEN
                 ASM_SIMP_TAC (std_ss++bool_eq_imp_ss) [IN_INSERT]
              ) THEN
-             `~(THE (SMALLFOOT_P_EXPRESSION_EVAL e x1) IN FDOM x2')` by ALL_TAC THEN1 (             
+             `~(THE (SMALLFOOT_P_EXPRESSION_EVAL e x1) IN FDOM x2')` by ALL_TAC THEN1 (
                FULL_SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER] THEN
                METIS_TAC[]
              ) THEN
@@ -1661,7 +1661,7 @@ FASL_IS_LOCAL_ACTION smallfoot_separation_combinator
 
 
  	        GEN_TAC THEN STRIP_TAC THEN
-                `~(x IN FDOM x2)` by ALL_TAC THEN1 (             
+                `~(x IN FDOM x2)` by ALL_TAC THEN1 (
                    FULL_SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER] THEN
                    METIS_TAC[]
                 ) THEN
@@ -1729,7 +1729,7 @@ FASL_IS_LOCAL_ACTION smallfoot_separation_combinator
 		COND_NONE_SOME_REWRITES, IN_ABS, IN_SING,
 		NOT_NONE_IS_SOME] THEN
 	REPEAT GEN_TAC THEN STRIP_TAC THEN
-	`SMALLFOOT_P_EXPRESSION_EVAL e x1'' = 
+	`SMALLFOOT_P_EXPRESSION_EVAL e x1'' =
 	  SMALLFOOT_P_EXPRESSION_EVAL e x1` by
 		METIS_TAC[SMALLFOOT_P_EXPRESSION_EVAL___SUBSTATE,
 			pairTheory.FST] THEN
@@ -1760,7 +1760,7 @@ FASL_IS_LOCAL_ACTION smallfoot_separation_combinator
 			) THEN
 			ASM_SIMP_TAC std_ss [DOMSUB_FAPPLY_THM, FUNION_DEF]
 		]
-	]	
+	]
 );
 
 
@@ -1777,13 +1777,13 @@ FASL_IS_LOCAL_ACTION smallfoot_separation_combinator
 		COND_NONE_SOME_REWRITES, IN_ABS, IN_SING,
 		NOT_NONE_IS_SOME] THEN
 	REPEAT GEN_TAC THEN STRIP_TAC THEN
-	CONJ_TAC THEN1 (	
+	CONJ_TAC THEN1 (
 		METIS_TAC[SMALLFOOT_STACK_WRITE_PERM___SUBSTATE, pairTheory.FST]
 	) THEN
 
 	FULL_SIMP_TAC std_ss [smallfoot_separation_combinator___REWRITE,
 		COND_NONE_SOME_REWRITES] THEN
-	Q.PAT_ASSUM `X = x1''` (ASSUME_TAC o GSYM) THEN 
+	Q.PAT_ASSUM `X = x1''` (ASSUME_TAC o GSYM) THEN
 	IMP_RES_TAC VAR_RES_STACK_IS_SEPARATE___write_perm THEN
 
 
@@ -1875,11 +1875,11 @@ FASL_IS_LOCAL_ACTION smallfoot_separation_combinator
 		NOT_NONE_IS_SOME] THEN
 	REPEAT GEN_TAC THEN STRIP_TAC THEN
 
-	`SMALLFOOT_P_EXPRESSION_EVAL e1 x1'' = 
+	`SMALLFOOT_P_EXPRESSION_EVAL e1 x1'' =
 		SMALLFOOT_P_EXPRESSION_EVAL e1 x1` by
 		METIS_TAC[SMALLFOOT_P_EXPRESSION_EVAL___SUBSTATE,
 			pairTheory.FST] THEN
-	`SMALLFOOT_P_EXPRESSION_EVAL e2 x1'' = 
+	`SMALLFOOT_P_EXPRESSION_EVAL e2 x1'' =
 		SMALLFOOT_P_EXPRESSION_EVAL e2 x1` by
 		METIS_TAC[SMALLFOOT_P_EXPRESSION_EVAL___SUBSTATE,
 			pairTheory.FST] THEN
@@ -1914,17 +1914,17 @@ FASL_IS_LOCAL_ACTION smallfoot_separation_combinator
 
 
 val SMALLFOOT_STATE_RESTRICT_def = Define `
-    SMALLFOOT_STATE_RESTRICT (s:smallfoot_state) vs = 
+    SMALLFOOT_STATE_RESTRICT (s:smallfoot_state) vs =
     (DRESTRICT (FST s) vs, SND s)`
 
 
 
 val smallfoot___has_read_permission_def = Define `
-	smallfoot___has_read_permission v = 
+	smallfoot___has_read_permission v =
 	smallfoot_a_stack_proposition T (var_res_sl___has_read_permission v)`;
 
 val smallfoot___has_write_permission_def = Define `
-	smallfoot___has_write_permission v = 
+	smallfoot___has_write_permission v =
 	smallfoot_a_stack_proposition T (var_res_sl___has_write_permission v)`;
 
 
@@ -1995,10 +1995,10 @@ ASM_SIMP_TAC std_ss [VAR_RES_STACK_COMBINE_def, BIN_OPTION_MAP_THM,
 
 
 
-val _ = type_abbrev("smallfoot_prog", 
-Type `:(smallfoot_action, 
+val _ = type_abbrev("smallfoot_prog",
+Type `:(smallfoot_action,
 	(smallfoot_var list # num list), (*procedure args*)
-	string (*locks*), 
+	string (*locks*),
 	string, (*procedure names*)
 	smallfoot_pt_proposition, (*predicates*)
 	unit, (*select predicates*)
@@ -2008,10 +2008,10 @@ Type `:(smallfoot_action,
 
 
 val smallfoot_env_def = Define `
-	smallfoot_env = (smallfoot_separation_combinator, 
-                         SMALLFOOT_PT_PROPOSITION_pred_map, 
-                         (\f:smallfoot_state bin_option_function. 
-			 \x:unit. \v:smallfoot_var. (\s:smallfoot_state. T)), 
+	smallfoot_env = (smallfoot_separation_combinator,
+                         SMALLFOOT_PT_PROPOSITION_pred_map,
+                         (\f:smallfoot_state bin_option_function.
+			 \x:unit. \v:smallfoot_var. (\s:smallfoot_state. T)),
                          SMALLFOOT_action_map)`
 
 
@@ -2028,7 +2028,7 @@ val FASL_IS_LOCAL_EVAL_ENV___smallfoot_env = store_thm ("FASL_IS_LOCAL_EVAL_ENV_
 SIMP_TAC std_ss [FASL_IS_LOCAL_EVAL_ENV_def, smallfoot_env_def] THEN
 REPEAT CONJ_TAC THENL [
 	SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___smallfoot_separation_combinator],
-	
+
 	HO_MATCH_MP_TAC smallfoot_pt_proposition_induction THEN
 	SIMP_TAC std_ss [SMALLFOOT_PT_PROPOSITION_pred_map_def,
 		smallfoot_ap_binexpression_def, ASL_IS_INTUITIONISTIC___REWRITE,
@@ -2112,9 +2112,9 @@ METIS_TAC[SOME_11]);
 
 val SMALLFOOT_PROCEDURE_SPEC_def = Define `
 	SMALLFOOT_PROCEDURE_SPEC res_env penv specs =
-        FASL_PROCEDURE_SPEC (smallfoot_env,res_env) (penv:(string |-> ((smallfoot_var list # num list) -> smallfoot_prog))) 
+        FASL_PROCEDURE_SPEC (smallfoot_env,res_env) (penv:(string |-> ((smallfoot_var list # num list) -> smallfoot_prog)))
 			    (\name. ((\arg x s. (s IN ((FST (specs name)) arg (FST x))) /\ (s = SND x)),
-				     (\arg x s. (s IN ((SND (specs name)) arg (FST x))) /\ 
+				     (\arg x s. (s IN ((SND (specs name)) arg (FST x))) /\
 				             (VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST (SND x)) (FST s))
 			            )))`
 
@@ -2159,7 +2159,7 @@ SIMP_TAC std_ss [SMALLFOOT_COND_HOARE_TRIPLE_def]);
 
 
 
-   
+
 
 val smallfoot_ap_resource_invariant_def =
 Define `smallfoot_ap_resource_invariant wp P =
@@ -2170,14 +2170,14 @@ Define `smallfoot_ap_resource_invariant wp P =
 
 val SMALLFOOT_res_decls_renv_def = Define `
 	SMALLFOOT_res_decls_renv  res_decls =
-		let (res_names, res_vars, res_invs_body) = 
+		let (res_names, res_vars, res_invs_body) =
 			(MAP FST res_decls,
                          MAP (FST o SND) res_decls,
-			 MAP (SND o SND) res_decls) in 
-                let res_invs = MAP (\(wpb,sf). 
+			 MAP (SND o SND) res_decls) in
+                let res_invs = MAP (\(wpb,sf).
 			       (smallfoot_ap_resource_invariant (LIST_TO_SET wpb) sf))
-                               (ZIP (res_vars, res_invs_body)) in 
-		let res_fmap = LISTS_TO_FMAP (res_names, res_invs) in 
+                               (ZIP (res_vars, res_invs_body)) in
+		let res_fmap = LISTS_TO_FMAP (res_names, res_invs) in
                 (FAPPLY res_fmap)`;
 
 
@@ -2188,35 +2188,35 @@ val SMALLFOOT_proc_specs_penv_def = Define `
 
 val SMALLFOOT_proc_specs_spec_def = Define `
 	SMALLFOOT_proc_specs_spec  proc_specs =
-		let (pnames, precond, postcond) = 
+		let (pnames, precond, postcond) =
 			(MAP FST proc_specs,
                          MAP (FST o SND o SND) proc_specs,
 			 MAP (SND o SND o SND) proc_specs) in
-		let conds = ZIP (precond, postcond) in 
-		let cond_fmap = LISTS_TO_FMAP (pnames, conds) in 
+		let conds = ZIP (precond, postcond) in
+		let cond_fmap = LISTS_TO_FMAP (pnames, conds) in
 		(FAPPLY cond_fmap)`
 
 val SMALLFOOT_SPECIFICATION_def = Define `
 	SMALLFOOT_SPECIFICATION res_decls proc_specs =
-		let (pnames, body, precond, postcond) = 
+		let (pnames, body, precond, postcond) =
 			(MAP FST proc_specs,
                          MAP (FST o SND) proc_specs,
                          MAP (FST o SND o SND) proc_specs,
-			 MAP (SND o SND o SND) proc_specs) in 
-		let conds = ZIP (precond, postcond) in 
+			 MAP (SND o SND o SND) proc_specs) in
+		let conds = ZIP (precond, postcond) in
 		let penv = LISTS_TO_FMAP (pnames, body) in
-		let cond_fmap = LISTS_TO_FMAP (pnames, conds) in 
-		let (res_names, res_vars, res_invs_body) = 
+		let cond_fmap = LISTS_TO_FMAP (pnames, conds) in
+		let (res_names, res_vars, res_invs_body) =
 			(MAP FST res_decls,
                          MAP (FST o SND) res_decls,
-			 MAP (SND o SND) res_decls) in 
-                let res_invs = MAP (\(wpb,sf). smallfoot_ap_resource_invariant (LIST_TO_SET wpb) sf) (ZIP (res_vars, res_invs_body)) in 
-		let res_fmap = LISTS_TO_FMAP (res_names, res_invs) in 
+			 MAP (SND o SND) res_decls) in
+                let res_invs = MAP (\(wpb,sf). smallfoot_ap_resource_invariant (LIST_TO_SET wpb) sf) (ZIP (res_vars, res_invs_body)) in
+		let res_fmap = LISTS_TO_FMAP (res_names, res_invs) in
 		SMALLFOOT_PROCEDURE_SPEC (FAPPLY res_fmap) penv (FAPPLY cond_fmap) (FDOM penv)`
 
 
 val SMALLFOOT_SPECIFICATION_THM = store_thm ("SMALLFOOT_SPECIFICATION_THM",
-``SMALLFOOT_SPECIFICATION res_decls proc_specs = 
+``SMALLFOOT_SPECIFICATION res_decls proc_specs =
 SMALLFOOT_PROCEDURE_SPEC (SMALLFOOT_res_decls_renv res_decls) (SMALLFOOT_proc_specs_penv proc_specs) (SMALLFOOT_proc_specs_spec proc_specs) (FDOM (SMALLFOOT_proc_specs_penv proc_specs))``,
 
 
@@ -2298,8 +2298,8 @@ smallfoot_prog_new_var v = fasl_prog_ndet (\p. ?c. p = smallfoot_prog_new_var_in
 
 
 val smallfoot_prog_with_resource_def = Define `smallfoot_prog_with_resource r
-c (body:smallfoot_prog) = 
-fasl_prog_critical_section r (fasl_prog_seq (fasl_prog_prim_command 
+c (body:smallfoot_prog) =
+fasl_prog_critical_section r (fasl_prog_seq (fasl_prog_prim_command
                                             (fasl_pc_assume c))
                                              body)`;
 
@@ -2312,11 +2312,11 @@ val smallfoot_prog_dispose_var_def = Define `
 
 
 val smallfoot_prog_choose_constants_def = Define `
-(smallfoot_prog_choose_constants prog expL):smallfoot_prog = 
+(smallfoot_prog_choose_constants prog expL):smallfoot_prog =
 
-fasl_prog_ndet 
+fasl_prog_ndet
 (IMAGE (\constL.
-fasl_prog_seq 
+fasl_prog_seq
    (fasl_prog_prim_command (fasl_pc_assume (fasl_pred_bigand
       (MAP (\x. smallfoot_p_equal (FST x) (smallfoot_p_const (SND x)))
       (ZIP (expL, constL))))))
@@ -2328,7 +2328,7 @@ fasl_prog_seq
 
 
 val smallfoot_prog_procedure_call_def = Define `
-(smallfoot_prog_procedure_call name (ref_argL, val_argL)):smallfoot_prog = 
+(smallfoot_prog_procedure_call name (ref_argL, val_argL)):smallfoot_prog =
 
 smallfoot_prog_choose_constants
    (\constL.(fasl_prog_procedure_call name (ref_argL, constL)))
@@ -2338,12 +2338,12 @@ smallfoot_prog_choose_constants
 
 
 val smallfoot_prog_parallel_procedure_call_def = Define `
-smallfoot_prog_parallel_procedure_call name1 (ref_argL1, val_argL1) 
-                                       name2 (ref_argL2, val_argL2) = 
+smallfoot_prog_parallel_procedure_call name1 (ref_argL1, val_argL1)
+                                       name2 (ref_argL2, val_argL2) =
 
 smallfoot_prog_choose_constants
    (\constL1. smallfoot_prog_choose_constants (\constL2.
-               (fasl_prog_parallel 
+               (fasl_prog_parallel
                   (fasl_prog_procedure_call name1 (ref_argL1, constL1))
                   (fasl_prog_procedure_call name2 (ref_argL2, constL2))))
                val_argL2)
@@ -2353,8 +2353,8 @@ smallfoot_prog_choose_constants
 
 
 val smallfoot_prog_val_arg_def = Define `smallfoot_prog_val_arg prog_body c =
-	(fasl_prog_select () (\x. fasl_prog_seq 
-				  (smallfoot_prog_new_var_init x (smallfoot_p_const c)) 
+	(fasl_prog_select () (\x. fasl_prog_seq
+				  (smallfoot_prog_new_var_init x (smallfoot_p_const c))
                                   (fasl_prog_seq (prog_body x) (smallfoot_prog_dispose_var x))))`;
 
 
@@ -2372,20 +2372,20 @@ val smallfoot_prog_local_var_def = Define `smallfoot_prog_local_var prog_body =
 
 val SMALLFOOT_HOARE_TRIPLE_INST_def = Define `
     SMALLFOOT_HOARE_TRIPLE_INST res_env penv pre body post =
-!cond_arg arg_refL arg_valL. 
-SMALLFOOT_HOARE_TRIPLE res_env penv 
+!cond_arg arg_refL arg_valL.
+SMALLFOOT_HOARE_TRIPLE res_env penv
     (pre (arg_refL,arg_valL) cond_arg)
     (body (arg_refL,arg_valL))
     (post (arg_refL,arg_valL) cond_arg)`;
 
-   
 
-			      
+
+
 
 val SMALLFOOT_SPECIFICATION___INFERENCE = store_thm ("SMALLFOOT_SPECIFICATION___INFERENCE",
-``!res_decls proc_specs. 
+``!res_decls proc_specs.
 (ALL_DISTINCT (MAP FST proc_specs) /\
-(!penv. (EVERY (\(name, fbody, pre, post). 
+(!penv. (EVERY (\(name, fbody, pre, post).
                 SMALLFOOT_HOARE_TRIPLE_INST (SMALLFOOT_res_decls_renv res_decls) penv pre (fasl_prog_procedure_call name) post)
                proc_specs) ==>
         (EVERY (\(name, fbody, pre, post).
@@ -2407,7 +2407,7 @@ Q.PAT_ASSUM `!penv. EVERY (P penv) proc_spec ==> X` (fn thm =>
 	in
 		SUBGOAL_THEN t (fn thm => (ASSUME_TAC (MP thm0 thm)))
 	end) THEN1 (
-	
+
 	SIMP_TAC list_ss [EVERY_MEM] THEN
 	GEN_TAC THEN
 	`?name fbody pre post. e = (name, fbody, pre, post)` by ALL_TAC THEN1 (
@@ -2424,7 +2424,7 @@ Q.PAT_ASSUM `!penv. EVERY (P penv) proc_spec ==> X` (fn thm =>
 		METIS_TAC[pairTheory.FST]
 	) THEN
 	FULL_SIMP_TAC std_ss [] THEN
-	
+
 	Q.PAT_ASSUM `!arg x. P arg x` MP_TAC THEN
 	IMP_RES_TAC SMALLFOOT_proc_specs_MEM_REWRITES THEN
 	ASM_SIMP_TAC std_ss [PAIR_FORALL_THM]
@@ -2502,12 +2502,12 @@ fasl_slp_opt (smallfoot_env, res_env) penv P (smallfoot_prog_new_var_init v e) =
 (if smallfoot_ae_is_defined P (SMALLFOOT_P_EXPRESSION_EVAL e) then
 SOME (smallfoot_slp_init_var v (SMALLFOOT_P_EXPRESSION_EVAL e) P) else
 NONE)``,
-	 
+
 
 
 SIMP_TAC list_ss [fasl_slp_opt___EXPANDED_DEF,
 	smallfoot_prog_new_var_init_def, FASL_PROGRAM_TRACES_IN_THM,
-	IN_SING, 
+	IN_SING,
 	FASL_TRACE_SEM_def, FASL_ATOMIC_ACTION_SEM_def,
 	fasla_big_seq_def, fasla_seq_skip,
 	EVAL_fasl_prim_command_def, smallfoot_env_def,
@@ -2523,7 +2523,7 @@ REWRITE_TAC [EXTENSION] THEN
 SIMP_TAC std_ss [IN_ABS, smallfoot_slp_init_var_def, var_res_sl___read_def,
 		 COND_NONE_SOME_REWRITES, LET_THM] THEN
 Cases_on `x` THEN
-SIMP_TAC std_ss [COND_RATOR, COND_RAND, NOT_IN_EMPTY, IN_SING, NOT_NONE_IS_SOME, 
+SIMP_TAC std_ss [COND_RATOR, COND_RAND, NOT_IN_EMPTY, IN_SING, NOT_NONE_IS_SOME,
    IS_SOME_EXISTS, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
 EQ_TAC THEN STRIP_TAC THENL [
    FULL_SIMP_TAC std_ss [FDOM_FUPDATE, IN_INSERT, FAPPLY_FUPDATE_THM, DOMSUB_FUPDATE_THM] THEN
@@ -2558,7 +2558,7 @@ val fasl_slp_opt___smallfoot_prog_new_var = store_thm (
 
 (fasl_slp_opt (smallfoot_env,res_env) penv P (smallfoot_prog_new_var v) =
 SOME (smallfoot_slp_new_var v P))``,
-	   
+
 
 
 SIMP_TAC std_ss [smallfoot_prog_new_var_def, fasl_slp_opt___prog_ndet, IN_ABS,
@@ -2584,10 +2584,10 @@ val fasl_wlp_opt___smallfoot_prog_dispose_var = store_thm (
 
 (fasl_wlp_opt (smallfoot_env,res_env) penv (smallfoot_prog_dispose_var v) Q =
 SOME (smallfoot_slp_new_var v Q))``,
-	   
 
 
-SIMP_TAC std_ss [fasl_wlp_opt_def, COND_NONE_SOME_REWRITES, 
+
+SIMP_TAC std_ss [fasl_wlp_opt_def, COND_NONE_SOME_REWRITES,
 		 COND_NONE_SOME_REWRITES_EQ, smallfoot_prog_dispose_var_def] THEN
 REPEAT STRIP_TAC THEN1 (
     FULL_SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, FASL_PROGRAM_TRACES_IN_THM]
@@ -2620,17 +2620,17 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 
 
 val SMALLFOOT_STACK_UPDATE_VAR_def = Define `
-    SMALLFOOT_STACK_UPDATE_VAR v c p (st:smallfoot_stack) = 
+    SMALLFOOT_STACK_UPDATE_VAR v c p (st:smallfoot_stack) =
        (st |+ (v, c, p))`;
 
 
 
 
 val SMALLFOOT_STATE_UPDATE_VAR_def = Define `
-    SMALLFOOT_STATE_UPDATE_VAR v c p (s:smallfoot_state) = 
+    SMALLFOOT_STATE_UPDATE_VAR v c p (s:smallfoot_state) =
        (SMALLFOOT_STACK_UPDATE_VAR v c p (FST s), SND s)`;
 
-  
+
 
 val SMALLFOOT_STATE_UPDATE_HEAP_def = Define `
     SMALLFOOT_STATE_UPDATE_HEAP c1 t c2 (s:smallfoot_state) =
@@ -2649,7 +2649,7 @@ val SMALLFOOT_STATE_REMOVE_HEAP_TAG_def = Define `
 
 
 val smallfoot_slp_field_lookup_def = Define `
-   smallfoot_slp_field_lookup v e t P = \s. 
+   smallfoot_slp_field_lookup v e t P = \s.
        ?c1 c2. (var_res_sl___read v (FST s) = SOME (c1, var_res_write_permission)) /\
 	       (let sold = SMALLFOOT_STATE_UPDATE_VAR v c2 var_res_write_permission s in
 		   ((smallfoot_ae_stack_read e t sold = SOME c1) /\
@@ -2661,12 +2661,12 @@ val smallfoot_slp_field_lookup_def = Define `
 
 val fasl_slp_opt___smallfoot_prog_field_lookup = store_thm ("fasl_slp_opt___smallfoot_prog_field_lookup",
 ``
-!res_env penv P v e t. 
+!res_env penv P v e t.
 fasl_slp_opt (smallfoot_env,res_env) penv P (smallfoot_prog_field_lookup v e t) =
 
 (if ((smallfoot_ap_implies_writeperm P v) /\ (smallfoot_ap_implies_in_heap P (SMALLFOOT_P_EXPRESSION_EVAL e))) then
 SOME (smallfoot_slp_field_lookup v (SMALLFOOT_P_EXPRESSION_EVAL e) t P) else NONE)``,
-	   
+
 
 SIMP_TAC list_ss [fasl_slp_opt___EXPANDED_DEF,
 		 smallfoot_prog_field_lookup_def, FASL_PROGRAM_TRACES_IN_THM,
@@ -2723,7 +2723,7 @@ GEN_TAC THEN EQ_TAC THENL [
 		       LET_THM, FDOM_FUPDATE, IN_INSERT,
 		       FAPPLY_FUPDATE_THM,
 		       FUPDATE_EQ] THEN
-      ASM_SIMP_TAC (std_ss++bool_eq_imp_ss++boolSimps.CONJ_ss) 
+      ASM_SIMP_TAC (std_ss++bool_eq_imp_ss++boolSimps.CONJ_ss)
                       [GSYM fmap_EQ_THM, FDOM_FUPDATE,
 		       EXTENSION, IN_INSERT, DISJ_IMP_THM,
 		       FORALL_AND_THM, FAPPLY_FUPDATE_THM,
@@ -2747,8 +2747,8 @@ GEN_TAC THEN EQ_TAC THENL [
 
    STRIP_TAC THENL [
       Q.EXISTS_TAC `FST x |+ (v,c2,var_res_write_permission)` THEN
-      Q.EXISTS_TAC `SND x` THEN 
-      Cases_on `x` THEN   
+      Q.EXISTS_TAC `SND x` THEN
+      Cases_on `x` THEN
       FULL_SIMP_TAC std_ss [smallfoot_ae_stack_read_def, COND_NONE_SOME_REWRITES, FUPDATE_EQ,
 			    IN_SING] THEN
       Q.PAT_ASSUM `v IN FDOM q` ASSUME_TAC THEN
@@ -2774,8 +2774,8 @@ GEN_TAC THEN EQ_TAC THENL [
       FULL_SIMP_TAC std_ss [] THEN
       STRIP_TAC THEN
       Q.EXISTS_TAC `FST x |+ (v,c2,var_res_write_permission)` THEN
-      Q.EXISTS_TAC `SND x |+ (loc,SND x ' loc \\ t)` THEN 
-      Cases_on `x` THEN   
+      Q.EXISTS_TAC `SND x |+ (loc,SND x ' loc \\ t)` THEN
+      Cases_on `x` THEN
       FULL_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM, FDOM_DOMSUB,
 			    IN_DELETE, FDOM_FUPDATE, IN_INSERT,
 			    IN_ABS] THEN
@@ -2787,7 +2787,7 @@ GEN_TAC THEN EQ_TAC THENL [
 
 	 Q.EXISTS_TAC `c1` THEN
          SIMP_TAC std_ss [FUPDATE_EQ] THEN
-	 ASM_SIMP_TAC (std_ss++bool_eq_imp_ss) 
+	 ASM_SIMP_TAC (std_ss++bool_eq_imp_ss)
                              [GSYM fmap_EQ_THM, EXTENSION,
 			      FAPPLY_FUPDATE_THM, FDOM_FUPDATE,
 			      IN_INSERT] THEN
@@ -2816,10 +2816,10 @@ GEN_TAC THEN EQ_TAC THENL [
 
 
 val smallfoot_slp_field_assign_def = Define `
-   smallfoot_slp_field_assign e1 t e2 P = \s:smallfoot_state. 
-       let e1_opt = e1 (FST s) in 
-       let e2_opt = e2 (FST s) in 
-       (IS_SOME e1_opt) /\ (IS_SOME e2_opt) /\ 
+   smallfoot_slp_field_assign e1 t e2 P = \s:smallfoot_state.
+       let e1_opt = e1 (FST s) in
+       let e2_opt = e2 (FST s) in
+       (IS_SOME e1_opt) /\ (IS_SOME e2_opt) /\
        (smallfoot_ae_stack_read e1 t s = e2_opt) /\
        ((?c. (P (SMALLFOOT_STATE_UPDATE_HEAP (THE e1_opt) t c s))) \/
              (P (SMALLFOOT_STATE_REMOVE_HEAP_TAG (THE e1_opt) t s)))`;
@@ -2828,7 +2828,7 @@ val smallfoot_slp_field_assign_def = Define `
 
 val fasl_slp_opt___smallfoot_prog_field_assign = store_thm ("fasl_slp_opt___smallfoot_prog_field_assign",
 ``
-!res_env penv P e1 e2 t. 
+!res_env penv P e1 e2 t.
 fasl_slp_opt (smallfoot_env,res_env) penv P (smallfoot_prog_field_assign e1 t e2) =
 
 (if ((smallfoot_ae_is_defined P (SMALLFOOT_P_EXPRESSION_EVAL e2)) /\
@@ -2842,7 +2842,7 @@ Q.ABBREV_TAC `ee2 = SMALLFOOT_P_EXPRESSION_EVAL e2` THEN
 
 ASM_SIMP_TAC list_ss [fasl_slp_opt___EXPANDED_DEF, smallfoot_prog_field_assign_def,
 		 FASL_PROGRAM_TRACES_IN_THM, FASL_TRACE_SEM_def,
-		 FASL_ATOMIC_ACTION_SEM_def, 
+		 FASL_ATOMIC_ACTION_SEM_def,
 		 smallfoot_env_def, fasla_seq_skip, fasla_big_seq_def,
 		 EVAL_fasl_prim_command_THM, SMALLFOOT_action_map_def,
 		 PAIR_FORALL_THM, PAIR_EXISTS_THM, LET_THM,
@@ -2939,7 +2939,7 @@ EQ_TAC THEN STRIP_TAC THENL [
 
 
 val smallfoot_slp_new_def = Define `
-   smallfoot_slp_new v P = \s:smallfoot_state. 
+   smallfoot_slp_new v P = \s:smallfoot_state.
        ?c1 c2. (var_res_sl___read v (FST s) = SOME (c1, var_res_write_permission)) /\
                (c1 IN FDOM (SND s)) /\ ~(c1 = 0) /\
                (P ((FST s) |+ (v, c2, var_res_write_permission), (SND s) \\ c1))`;
@@ -2950,7 +2950,7 @@ val smallfoot_slp_new_def = Define `
 
 val fasl_slp_opt___smallfoot_prog_new = store_thm ("fasl_slp_opt___smallfoot_prog_new",
 ``
-!res_env penv v P. 
+!res_env penv v P.
 fasl_slp_opt (smallfoot_env,res_env) penv P (smallfoot_prog_new v) =
 (if (smallfoot_ap_implies_writeperm P v) then
 SOME (smallfoot_slp_new v P) else NONE)``,
@@ -2959,7 +2959,7 @@ SOME (smallfoot_slp_new v P) else NONE)``,
 
 ASM_SIMP_TAC list_ss [fasl_slp_opt___EXPANDED_DEF, smallfoot_prog_new_def,
 		 FASL_PROGRAM_TRACES_IN_THM, FASL_TRACE_SEM_def,
-		 FASL_ATOMIC_ACTION_SEM_def, 
+		 FASL_ATOMIC_ACTION_SEM_def,
 		 smallfoot_env_def, fasla_seq_skip, fasla_big_seq_def,
 		 EVAL_fasl_prim_command_THM, SMALLFOOT_action_map_def,
 		 PAIR_FORALL_THM, PAIR_EXISTS_THM, LET_THM,
@@ -2971,7 +2971,7 @@ REPEAT STRIP_TAC THEN1 (
 ) THEN
 
 REWRITE_TAC[EXTENSION] THEN
-Cases_on `x` THEN 
+Cases_on `x` THEN
 SIMP_TAC std_ss [IN_ABS, smallfoot_slp_new_def, var_res_sl___read_def, COND_NONE_SOME_REWRITES,
 		 var_res_sl___has_write_permission_def] THEN
 EQ_TAC THEN STRIP_TAC THENL [
@@ -3017,7 +3017,7 @@ EQ_TAC THEN STRIP_TAC THENL [
 
 
 val smallfoot_slp_assign_def = Define `
-   smallfoot_slp_assign v e P = \s:smallfoot_state. 
+   smallfoot_slp_assign v e P = \s:smallfoot_state.
        ?c1 c2. (var_res_sl___read v (FST s) = SOME (c1, var_res_write_permission)) /\
 	       let sold = SMALLFOOT_STATE_UPDATE_VAR v c2 var_res_write_permission s in
 		   (P sold) /\ (e (FST sold) = SOME c1)`;
@@ -3027,7 +3027,7 @@ val smallfoot_slp_assign_def = Define `
 
 val fasl_slp_opt___smallfoot_prog_assign = store_thm ("fasl_slp_opt___smallfoot_prog_assign",
 ``
-!res_env penv v e P. 
+!res_env penv v e P.
 fasl_slp_opt (smallfoot_env,res_env) penv P (smallfoot_prog_assign v e) =
 
 
@@ -3075,7 +3075,7 @@ GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 
 
    Q.EXISTS_TAC `FST x |+ (v,c2,var_res_write_permission)` THEN
-   Q.EXISTS_TAC `SND x` THEN 
+   Q.EXISTS_TAC `SND x` THEN
    Cases_on `x` THEN
    FULL_SIMP_TAC std_ss [FUPDATE_EQ] THEN
    Q.PAT_ASSUM `v IN FDOM q` ASSUME_TAC THEN
@@ -3098,8 +3098,8 @@ GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 
 
 val smallfoot_slp_dispose_def = Define `
-   smallfoot_slp_dispose e P = \s:smallfoot_state. 
-       ?x p. (e (FST s) = SOME p) /\ 
+   smallfoot_slp_dispose e P = \s:smallfoot_state.
+       ?x p. (e (FST s) = SOME p) /\
            ~(p IN FDOM (SND s)) /\ ~(p = 0) /\
            (P (FST s, (SND s) |+ (p, x)))`;
 
@@ -3109,7 +3109,7 @@ val smallfoot_slp_dispose_def = Define `
 val fasl_slp_opt___smallfoot_prog_dispose = store_thm (
 "fasl_slp_opt___smallfoot_prog_dispose",
 ``
-!res_env penv e P. 
+!res_env penv e P.
 fasl_slp_opt (smallfoot_env,res_env) penv P (smallfoot_prog_dispose e) =
 (if (smallfoot_ap_implies_in_heap P (SMALLFOOT_P_EXPRESSION_EVAL e)) then
 SOME (smallfoot_slp_dispose (SMALLFOOT_P_EXPRESSION_EVAL e) P) else NONE)``,
@@ -3147,7 +3147,7 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
    METIS_TAC[],
 
 
-   
+
    Q.EXISTS_TAC `r |+ (p,x)` THEN
    ASM_SIMP_TAC std_ss [DOMSUB_FUPDATE_THM] THEN
    REPEAT STRIP_TAC THENL [
@@ -3212,11 +3212,11 @@ Tactical.REVERSE (REPEAT STRIP_TAC) THENL [
    MATCH_MP_TAC SMALLFOOT_REL_HOARE_TRIPLE___prog_forall_IMP THEN
    FULL_SIMP_TAC std_ss [SMALLFOOT_REL_HOARE_TRIPLE_def,
       SMALLFOOT_PROGRAM_SEM_def,
-      FASL_PROGRAM_SEM___prog_seq, 
+      FASL_PROGRAM_SEM___prog_seq,
       SOME___fasla_seq, GSYM LEFT_FORALL_IMP_THM,
       GSYM RIGHT_EXISTS_AND_THM,
       IS_SOME___fasla_seq, FASL_ATOMIC_ACTION_SEM_def,
-      smallfoot_prog_new_var_init_def, 
+      smallfoot_prog_new_var_init_def,
       FASL_PROGRAM_SEM___prim_command,
       EVAL_fasl_prim_command_THM,
       fasla_select_assume_def, IN_SING,
@@ -3246,7 +3246,7 @@ Tactical.REVERSE (REPEAT STRIP_TAC) THENL [
    `var_res_sl___has_write_permission x x1''` by RES_TAC THEN
    FULL_SIMP_TAC std_ss [IN_SING] THEN
 
-   Q.PAT_ASSUM `!v x1 x2 s'. X v x1 x2 s'` (MP_TAC o 
+   Q.PAT_ASSUM `!v x1 x2 s'. X v x1 x2 s'` (MP_TAC o
       Q.SPECL [`x`, `x1 |+ (x,c,var_res_write_permission)`, `x2`, `s1''`]) THEN
    ASM_SIMP_TAC std_ss [FDOM_FUPDATE, FAPPLY_FUPDATE_THM, IN_INSERT] THEN
    `x1 |+ (x,c,var_res_write_permission) \\ x= x1` by ALL_TAC THEN1 (
@@ -3263,7 +3263,7 @@ Tactical.REVERSE (REPEAT STRIP_TAC) THENL [
 		        DOMSUB_FAPPLY_THM, FDOM_FUPDATE,
 		        IN_INSERT, FAPPLY_FUPDATE_THM,
 		        FDOM_DOMSUB, IN_DELETE, EXTENSION] THEN
-   METIS_TAC[],  
+   METIS_TAC[],
 
 
    MATCH_MP_TAC FASL_INFERENCE_prog_select THEN
@@ -3371,7 +3371,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
          SIMP_TAC (std_ss++bool_neg_pair_ss) [VAR_RES_STACK_IS_SEPARATE_def, DRESTRICT_DEF,
 			  IN_INTER, IN_COMPL],
 
-	 
+
          Q.PAT_ASSUM `!st1 st2 h. X st1 st2 h` (MP_TAC o Q.SPECL [`DRESTRICT st1 vs`, `DRESTRICT st2 vs'`, `h`]) THEN
 	 UNABBREV_ALL_TAC THEN
          FULL_SIMP_TAC (std_ss++bool_eq_imp_ss) [DRESTRICT_DEF, IN_INTER, SUBSET_DEF,
@@ -3383,7 +3383,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
       ],
 
 
-      Q.PAT_ASSUM `!st1 st2 h:smallfoot_heap. X st1 st2 h` 
+      Q.PAT_ASSUM `!st1 st2 h:smallfoot_heap. X st1 st2 h`
 	  (MP_TAC o Q.SPECL [`DRESTRICT st1 vs`, `DRESTRICT st2 vs`, `h`]) THEN
       ASM_SIMP_TAC std_ss [] THEN
       MATCH_MP_TAC (prove (``A ==> ((A ==> B) ==> B)``, SIMP_TAC std_ss [])) THEN
@@ -3405,7 +3405,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
       METIS_TAC[],
 
 
-      Q.PAT_ASSUM `!st1 st2. X st1 st2` (MP_TAC o Q.SPECL [`st1`, 
+      Q.PAT_ASSUM `!st1 st2. X st1 st2` (MP_TAC o Q.SPECL [`st1`,
            `FMERGE VAR_RES_STACK_COMBINE___MERGE_FUNC st1 s1`]) THEN
       FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INTER, FMERGE_DEF, IN_UNION,
 			    VAR_RES_STACK_IS_SEPARATE_def,
@@ -3579,7 +3579,7 @@ SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___ALTERNATIVE_DEF_2,
 		 GSYM RIGHT_EXISTS_AND_THM,
 		 GSYM LEFT_FORALL_IMP_THM] THEN
 METIS_TAC[]);
-    
+
 
 val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___star = store_thm (
 "SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___star",
@@ -3606,7 +3606,7 @@ REPEAT STRIP_TAC THENL [
       		               EXTENSION, VAR_RES_STACK_IS_SEPARATE_def,
 			       SOME___VAR_RES_STACK_COMBINE,
 			       VAR_RES_STACK_COMBINE___MERGE_FUNC_def,
-			       DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, GSYM 
+			       DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, GSYM
 			       FORALL_AND_THM] THEN
          GEN_TAC THEN
          Q.PAT_ASSUM `!x:smallfoot_var. P x` (ASSUME_TAC o Q.SPEC `x`) THEN
@@ -3656,11 +3656,11 @@ REPEAT STRIP_TAC THENL [
             (?x1 x2 x1' x2'. Q x1 x2 x1' x2'))``, METIS_TAC[])) THEN
    SIMP_TAC (std_ss++bool_eq_imp_ss) [] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-      MP_TAC (ISPECL [``x1:smallfoot_stack``, 
-                      ``x1':smallfoot_stack``, 
-                      ``st1:smallfoot_stack``, 
-                      ``st2:smallfoot_stack``, 
-                      ``{}:smallfoot_var set``] 
+      MP_TAC (ISPECL [``x1:smallfoot_stack``,
+                      ``x1':smallfoot_stack``,
+                      ``st1:smallfoot_stack``,
+                      ``st2:smallfoot_stack``,
+                      ``{}:smallfoot_var set``]
                   VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___COMBINE_EXISTS) THEN
       ASM_SIMP_TAC std_ss [] THEN
       REPEAT STRIP_TAC THEN
@@ -3669,11 +3669,11 @@ REPEAT STRIP_TAC THENL [
       METIS_TAC[],
 
 
-      MP_TAC (ISPECL [``x1:smallfoot_stack``, 
-                      ``x1':smallfoot_stack``, 
-                      ``st2:smallfoot_stack``, 
-                      ``st1:smallfoot_stack``, 
-                      ``{}:smallfoot_var set``] 
+      MP_TAC (ISPECL [``x1:smallfoot_stack``,
+                      ``x1':smallfoot_stack``,
+                      ``st2:smallfoot_stack``,
+                      ``st1:smallfoot_stack``,
+                      ``{}:smallfoot_var set``]
                   VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___COMBINE_EXISTS) THEN
       `COMM ((VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS {}):(smallfoot_stack -> smallfoot_stack -> bool))` by REWRITE_TAC
          [VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_THM] THEN
@@ -3742,7 +3742,7 @@ val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___bigstar = store_thm (
 (SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS exS (smallfoot_ap_bigstar sfb))``,
 
 
-GEN_TAC THEN 
+GEN_TAC THEN
 Tactical.REVERSE (Cases_on `FINITE_BAG sfb`) THEN1 (
     ASM_REWRITE_TAC  [smallfoot_ap_bigstar_def,
 			 asl_bigstar_def,
@@ -3892,7 +3892,7 @@ SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___ALTERNATIVE_D
 val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___asl_exists = store_thm (
 "SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___asl_exists",
 ``!exS P.
-(!s x. P x s ==> (?x2. P x2 s /\ 
+(!s x. P x s ==> (?x2. P x2 s /\
                        SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS exS (P x2))) ==>
 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS exS (asl_exists x. P x)``,
 
@@ -3990,7 +3990,7 @@ val SMALLFOOT_AE_USED_VARS_REL___REWRITE = store_thm ("SMALLFOOT_AE_USED_VARS_RE
              (!v. v IN vs ==> (FST (st1 ' v) = FST (st2 ' v)))) ==>
              ((e st1) = (e st2)))``,
 
-SIMP_TAC std_ss [SMALLFOOT_AE_USED_VARS_REL_def,		 
+SIMP_TAC std_ss [SMALLFOOT_AE_USED_VARS_REL_def,
 		 VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def,
 		 NOT_IN_EMPTY] THEN
 EQ_TAC THEN STRIP_TAC THENL [
@@ -4043,7 +4043,7 @@ val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___binexpression = store_thm 
 
 
 
-SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___ALTERNATIVE_DEF, 
+SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___ALTERNATIVE_DEF,
 		 SMALLFOOT_AE_USED_VARS_THM,
 		 SMALLFOOT_AE_USED_VARS_REL___REWRITE,
 		 smallfoot_ap_binexpression_def, LET_THM,
@@ -4059,7 +4059,7 @@ FULL_SIMP_TAC std_ss []);
 
 
 
-      
+
 
 
 
@@ -4086,7 +4086,7 @@ SIMP_TAC std_ss [SMALLFOOT_AE_USED_VARS_THM,
 		 COND_REWRITES, FINITE_INSERT, FINITE_EMPTY]);
 
 
-    
+
 val SMALLFOOT_AE_USED_VARS___smallfoot_ae_binop = store_thm (
 "SMALLFOOT_AE_USED_VARS___smallfoot_ae_binop",
 ``!e1 e2 vs1 vs2 bop.
@@ -4103,13 +4103,13 @@ SIMP_TAC std_ss [SUBSET_REFL, FINITE_UNION,
 		     UNION_SUBSET, IN_UNION] THEN
 REPEAT STRIP_TAC THENL [
    ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR],
-   ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR],   
+   ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR],
    METIS_TAC[]
 ]);
 
 
 val SMALLFOOT_PE_USED_VARS_def = Define `
-    SMALLFOOT_PE_USED_VARS p = 
+    SMALLFOOT_PE_USED_VARS p =
     SMALLFOOT_AE_USED_VARS (SMALLFOOT_P_EXPRESSION_EVAL p)`;
 
 
@@ -4120,10 +4120,10 @@ store_thm ("SMALLFOOT_PE_USED_VARS___IS_SOME",
 
 REWRITE_TAC [SMALLFOOT_PE_USED_VARS_def] THEN
 Induct_on `p` THENL [
-   SIMP_TAC std_ss [SMALLFOOT_P_EXPRESSION_EVAL_def, 
+   SIMP_TAC std_ss [SMALLFOOT_P_EXPRESSION_EVAL_def,
 		    SMALLFOOT_AE_USED_VARS___smallfoot_ae_var],
 
-   SIMP_TAC std_ss [SMALLFOOT_P_EXPRESSION_EVAL_def, 
+   SIMP_TAC std_ss [SMALLFOOT_P_EXPRESSION_EVAL_def,
 		    SMALLFOOT_AE_USED_VARS___smallfoot_ae_const],
 
 
@@ -4147,13 +4147,13 @@ val SMALLFOOT_PE_USED_VARS___REWRITE =
 store_thm ("SMALLFOOT_PE_USED_VARS___REWRITE",
 ``(!c. (SMALLFOOT_PE_USED_VARS (smallfoot_p_const c) = SOME {})) /\
   (!v. (SMALLFOOT_PE_USED_VARS (smallfoot_p_var v) = SOME {v})) /\
-  (!e1 e2. 
-       (SMALLFOOT_PE_USED_VARS (smallfoot_p_add e1 e2) = 
-	SOME ((THE (SMALLFOOT_PE_USED_VARS e1)) UNION 
+  (!e1 e2.
+       (SMALLFOOT_PE_USED_VARS (smallfoot_p_add e1 e2) =
+	SOME ((THE (SMALLFOOT_PE_USED_VARS e1)) UNION
               (THE (SMALLFOOT_PE_USED_VARS e2))))) /\
-  (!e1 e2. 
-       (SMALLFOOT_PE_USED_VARS (smallfoot_p_sub e1 e2) = 
-	SOME ((THE (SMALLFOOT_PE_USED_VARS e1)) UNION 
+  (!e1 e2.
+       (SMALLFOOT_PE_USED_VARS (smallfoot_p_sub e1 e2) =
+	SOME ((THE (SMALLFOOT_PE_USED_VARS e1)) UNION
               (THE (SMALLFOOT_PE_USED_VARS e2)))))``,
 
 
@@ -4173,13 +4173,13 @@ val SMALLFOOT_PP_USED_VARS_def = Define `
    (SMALLFOOT_PP_USED_VARS (fasl_pred_true) = EMPTY) /\
    (SMALLFOOT_PP_USED_VARS (fasl_pred_false) = EMPTY) /\
    (SMALLFOOT_PP_USED_VARS (fasl_pred_neg p) = SMALLFOOT_PP_USED_VARS p) /\
-   (SMALLFOOT_PP_USED_VARS (fasl_pred_and p1 p2) = 
+   (SMALLFOOT_PP_USED_VARS (fasl_pred_and p1 p2) =
       SMALLFOOT_PP_USED_VARS p1 UNION SMALLFOOT_PP_USED_VARS p2) /\
-   (SMALLFOOT_PP_USED_VARS (fasl_pred_or p1 p2) = 
+   (SMALLFOOT_PP_USED_VARS (fasl_pred_or p1 p2) =
       SMALLFOOT_PP_USED_VARS p1 UNION SMALLFOOT_PP_USED_VARS p2) /\
-   (SMALLFOOT_PP_USED_VARS (fasl_pred_prim (smallfoot_pt_equal e1 e2)) = 
+   (SMALLFOOT_PP_USED_VARS (fasl_pred_prim (smallfoot_pt_equal e1 e2)) =
       THE (SMALLFOOT_PE_USED_VARS e1) UNION THE (SMALLFOOT_PE_USED_VARS e2)) /\
-   (SMALLFOOT_PP_USED_VARS (fasl_pred_prim (smallfoot_pt_less e1 e2)) = 
+   (SMALLFOOT_PP_USED_VARS (fasl_pred_prim (smallfoot_pt_less e1 e2)) =
       THE (SMALLFOOT_PE_USED_VARS e1) UNION THE (SMALLFOOT_PE_USED_VARS e2))`;
 
 
@@ -4188,26 +4188,26 @@ val SMALLFOOT_PP_USED_VARS_THM = store_thm("SMALLFOOT_PP_USED_VARS_THM",
 ``   (SMALLFOOT_PP_USED_VARS (fasl_pred_true) = EMPTY) /\
    (SMALLFOOT_PP_USED_VARS (fasl_pred_false) = EMPTY) /\
    (SMALLFOOT_PP_USED_VARS (fasl_pred_neg p) = SMALLFOOT_PP_USED_VARS p) /\
-   (SMALLFOOT_PP_USED_VARS (fasl_pred_and p1 p2) = 
+   (SMALLFOOT_PP_USED_VARS (fasl_pred_and p1 p2) =
       SMALLFOOT_PP_USED_VARS p1 UNION SMALLFOOT_PP_USED_VARS p2) /\
-   (SMALLFOOT_PP_USED_VARS (fasl_pred_or p1 p2) = 
+   (SMALLFOOT_PP_USED_VARS (fasl_pred_or p1 p2) =
       SMALLFOOT_PP_USED_VARS p1 UNION SMALLFOOT_PP_USED_VARS p2) /\
-   (SMALLFOOT_PP_USED_VARS (fasl_pred_prim (smallfoot_pt_equal e1 e2)) = 
+   (SMALLFOOT_PP_USED_VARS (fasl_pred_prim (smallfoot_pt_equal e1 e2)) =
       THE (SMALLFOOT_PE_USED_VARS e1) UNION THE (SMALLFOOT_PE_USED_VARS e2)) /\
-   (SMALLFOOT_PP_USED_VARS (fasl_pred_prim (smallfoot_pt_less e1 e2)) = 
+   (SMALLFOOT_PP_USED_VARS (fasl_pred_prim (smallfoot_pt_less e1 e2)) =
       THE (SMALLFOOT_PE_USED_VARS e1) UNION THE (SMALLFOOT_PE_USED_VARS e2)) /\
 
-   (SMALLFOOT_PP_USED_VARS (smallfoot_p_equal e1 e2) = 
+   (SMALLFOOT_PP_USED_VARS (smallfoot_p_equal e1 e2) =
       THE (SMALLFOOT_PE_USED_VARS e1) UNION THE (SMALLFOOT_PE_USED_VARS e2)) /\
-   (SMALLFOOT_PP_USED_VARS (smallfoot_p_unequal e1 e2) = 
+   (SMALLFOOT_PP_USED_VARS (smallfoot_p_unequal e1 e2) =
       THE (SMALLFOOT_PE_USED_VARS e1) UNION THE (SMALLFOOT_PE_USED_VARS e2)) /\
-   (SMALLFOOT_PP_USED_VARS (smallfoot_p_less e1 e2) = 
+   (SMALLFOOT_PP_USED_VARS (smallfoot_p_less e1 e2) =
       THE (SMALLFOOT_PE_USED_VARS e1) UNION THE (SMALLFOOT_PE_USED_VARS e2)) /\
-   (SMALLFOOT_PP_USED_VARS (smallfoot_p_lesseq e1 e2) = 
+   (SMALLFOOT_PP_USED_VARS (smallfoot_p_lesseq e1 e2) =
       THE (SMALLFOOT_PE_USED_VARS e1) UNION THE (SMALLFOOT_PE_USED_VARS e2)) /\
-   (SMALLFOOT_PP_USED_VARS (smallfoot_p_greater e1 e2) = 
+   (SMALLFOOT_PP_USED_VARS (smallfoot_p_greater e1 e2) =
       THE (SMALLFOOT_PE_USED_VARS e1) UNION THE (SMALLFOOT_PE_USED_VARS e2)) /\
-   (SMALLFOOT_PP_USED_VARS (smallfoot_p_greatereq e1 e2) = 
+   (SMALLFOOT_PP_USED_VARS (smallfoot_p_greatereq e1 e2) =
       THE (SMALLFOOT_PE_USED_VARS e1) UNION THE (SMALLFOOT_PE_USED_VARS e2))``,
 
 SIMP_TAC std_ss [SMALLFOOT_PP_USED_VARS_def,
@@ -4318,16 +4318,16 @@ Induct_on `p` THENL [
 
 
 val SMALLFOOT_P_PROPOSITION_EVAL_def = Define `
-	(SMALLFOOT_P_PROPOSITION_EVAL fasl_pred_true = 
+	(SMALLFOOT_P_PROPOSITION_EVAL fasl_pred_true =
         smallfoot_ap_stack_true) /\
-	(SMALLFOOT_P_PROPOSITION_EVAL fasl_pred_false = 
+	(SMALLFOOT_P_PROPOSITION_EVAL fasl_pred_false =
         asl_false) /\
 
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_and p1 p2) = 
-        asl_and (SMALLFOOT_P_PROPOSITION_EVAL p1) 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_and p1 p2) =
+        asl_and (SMALLFOOT_P_PROPOSITION_EVAL p1)
                          (SMALLFOOT_P_PROPOSITION_EVAL p2)) /\
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_or p1 p2) = 
-        asl_or (SMALLFOOT_P_PROPOSITION_EVAL p1) 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_or p1 p2) =
+        asl_or (SMALLFOOT_P_PROPOSITION_EVAL p1)
                          (SMALLFOOT_P_PROPOSITION_EVAL p2)) /\
 
 	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_prim (smallfoot_pt_less e1 e2)) =
@@ -4337,19 +4337,19 @@ val SMALLFOOT_P_PROPOSITION_EVAL_def = Define `
            smallfoot_ap_equal (SMALLFOOT_P_EXPRESSION_EVAL e1)  (SMALLFOOT_P_EXPRESSION_EVAL e2)) /\
 
 
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg fasl_pred_true) = 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg fasl_pred_true) =
          SMALLFOOT_P_PROPOSITION_EVAL fasl_pred_false) /\
 
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg fasl_pred_false) = 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg fasl_pred_false) =
          SMALLFOOT_P_PROPOSITION_EVAL fasl_pred_true) /\
 
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg (fasl_pred_and p1 p2)) = 
-         asl_or (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p1)) 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg (fasl_pred_and p1 p2)) =
+         asl_or (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p1))
                 (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p2))) /\
 
 
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg (fasl_pred_or p1 p2)) = 
-         asl_and (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p1)) 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg (fasl_pred_or p1 p2)) =
+         asl_and (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p1))
                  (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p2))) /\
 
 
@@ -4360,7 +4360,7 @@ val SMALLFOOT_P_PROPOSITION_EVAL_def = Define `
            smallfoot_ap_unequal (SMALLFOOT_P_EXPRESSION_EVAL e2)  (SMALLFOOT_P_EXPRESSION_EVAL e1)) /\
 
 	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg (fasl_pred_neg p)) =
-         SMALLFOOT_P_PROPOSITION_EVAL p)` 
+         SMALLFOOT_P_PROPOSITION_EVAL p)`
 
 
 
@@ -4368,30 +4368,30 @@ val SMALLFOOT_P_PROPOSITION_EVAL_def = Define `
 val SMALLFOOT_P_PROPOSITION___NEG_REWRITE_def = Define
 `(SMALLFOOT_P_PROPOSITION___NEG_REWRITE fasl_pred_true = fasl_pred_true) /\
  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE fasl_pred_false = fasl_pred_false) /\
- (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_and p1 p2) = 
+ (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_and p1 p2) =
       fasl_pred_and (SMALLFOOT_P_PROPOSITION___NEG_REWRITE p1)
                     (SMALLFOOT_P_PROPOSITION___NEG_REWRITE p2)) /\
-  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_or p1 p2) = 
-      fasl_pred_or (SMALLFOOT_P_PROPOSITION___NEG_REWRITE p1) 
+  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_or p1 p2) =
+      fasl_pred_or (SMALLFOOT_P_PROPOSITION___NEG_REWRITE p1)
                    (SMALLFOOT_P_PROPOSITION___NEG_REWRITE p2)) /\
-  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_prim pt) = 
+  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_prim pt) =
       fasl_pred_prim pt) /\
 
   (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg fasl_pred_true) = fasl_pred_false) /\
   (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg fasl_pred_false) = fasl_pred_true) /\
-  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg (fasl_pred_and p1 p2)) = 
-      fasl_pred_or (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg p1)) 
+  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg (fasl_pred_and p1 p2)) =
+      fasl_pred_or (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg p1))
                    (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg p2))) /\
-  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg (fasl_pred_or p1 p2)) = 
-      fasl_pred_and (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg p1)) 
+  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg (fasl_pred_or p1 p2)) =
+      fasl_pred_and (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg p1))
                    (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg p2))) /\
-  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg (fasl_pred_prim (smallfoot_pt_less e1 e2))) = 
+  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg (fasl_pred_prim (smallfoot_pt_less e1 e2))) =
       fasl_pred_or (fasl_pred_prim (smallfoot_pt_less e2 e1))
                    (fasl_pred_prim (smallfoot_pt_equal e1 e2))) /\
-  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg (fasl_pred_prim (smallfoot_pt_equal e1 e2))) = 
+  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg (fasl_pred_prim (smallfoot_pt_equal e1 e2))) =
       fasl_pred_or (fasl_pred_prim (smallfoot_pt_less e2 e1))
                    (fasl_pred_prim (smallfoot_pt_less e1 e2))) /\
-  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg (fasl_pred_neg p)) = 
+  (SMALLFOOT_P_PROPOSITION___NEG_REWRITE (fasl_pred_neg (fasl_pred_neg p)) =
    SMALLFOOT_P_PROPOSITION___NEG_REWRITE p)`;
 
 
@@ -4402,10 +4402,10 @@ val SMALLFOOT_P_PROPOSITION___NEG_REWRITE_def = Define
 val SMALLFOOT_P_PROPOSITION___IS_NEG_FREE_def = Define
 `(SMALLFOOT_P_PROPOSITION___IS_NEG_FREE fasl_pred_true = T) /\
  (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE fasl_pred_false = T) /\
- (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE (fasl_pred_and p1 p2) = 
+ (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE (fasl_pred_and p1 p2) =
       ((SMALLFOOT_P_PROPOSITION___IS_NEG_FREE p1) /\
       (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE p2))) /\
-  (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE (fasl_pred_or p1 p2) = 
+  (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE (fasl_pred_or p1 p2) =
       (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE p1) /\
       (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE p2)) /\
   (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE (fasl_pred_prim pt) = T) /\
@@ -4413,21 +4413,21 @@ val SMALLFOOT_P_PROPOSITION___IS_NEG_FREE_def = Define
 
 
 
-val SMALLFOOT_P_PROPOSITION___NEG_COUNT_def = Define 
+val SMALLFOOT_P_PROPOSITION___NEG_COUNT_def = Define
 `(SMALLFOOT_P_PROPOSITION___NEG_COUNT fasl_pred_true = 0) /\
  (SMALLFOOT_P_PROPOSITION___NEG_COUNT fasl_pred_false = 0) /\
- (SMALLFOOT_P_PROPOSITION___NEG_COUNT (fasl_pred_and p1 p2) = 
+ (SMALLFOOT_P_PROPOSITION___NEG_COUNT (fasl_pred_and p1 p2) =
       ((SMALLFOOT_P_PROPOSITION___NEG_COUNT p1) +
       (SMALLFOOT_P_PROPOSITION___NEG_COUNT p2))) /\
-  (SMALLFOOT_P_PROPOSITION___NEG_COUNT (fasl_pred_or p1 p2) = 
+  (SMALLFOOT_P_PROPOSITION___NEG_COUNT (fasl_pred_or p1 p2) =
       (SMALLFOOT_P_PROPOSITION___NEG_COUNT p1) +
       (SMALLFOOT_P_PROPOSITION___NEG_COUNT p2)) /\
   (SMALLFOOT_P_PROPOSITION___NEG_COUNT (fasl_pred_prim pt) = 0) /\
-  (SMALLFOOT_P_PROPOSITION___NEG_COUNT (fasl_pred_neg p) = 
+  (SMALLFOOT_P_PROPOSITION___NEG_COUNT (fasl_pred_neg p) =
    SUC (SMALLFOOT_P_PROPOSITION___NEG_COUNT p))`;
 
 
-val SMALLFOOT_P_PROPOSITION___NEG_COUNT___IS_NEG_FREE = 
+val SMALLFOOT_P_PROPOSITION___NEG_COUNT___IS_NEG_FREE =
 store_thm ("SMALLFOOT_P_PROPOSITION___NEG_COUNT___IS_NEG_FREE",
 ``(SMALLFOOT_P_PROPOSITION___NEG_COUNT p = 0) =
   (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE p)``,
@@ -4454,7 +4454,7 @@ Induct_on `p` THEN (
 
 
 
-val SMALLFOOT_P_PROPOSITION___NEG_REWRITE___IS_NEG_FREE___helper = 
+val SMALLFOOT_P_PROPOSITION___NEG_REWRITE___IS_NEG_FREE___helper =
 prove (``
 !p n. (SMALLFOOT_P_PROPOSITION___NEG_COUNT p <= n) ==>
 (SMALLFOOT_P_PROPOSITION___IS_NEG_FREE (SMALLFOOT_P_PROPOSITION___NEG_REWRITE p))``,
@@ -4481,8 +4481,8 @@ Cases_on `p` THEN (
 
 
 
-val SMALLFOOT_P_PROPOSITION___NEG_REWRITE___IS_NEG_FREE = store_thm 
-("SMALLFOOT_P_PROPOSITION___NEG_REWRITE___IS_NEG_FREE", 
+val SMALLFOOT_P_PROPOSITION___NEG_REWRITE___IS_NEG_FREE = store_thm
+("SMALLFOOT_P_PROPOSITION___NEG_REWRITE___IS_NEG_FREE",
 ``!p. SMALLFOOT_P_PROPOSITION___IS_NEG_FREE (SMALLFOOT_P_PROPOSITION___NEG_REWRITE p)``,
 
     METIS_TAC [SMALLFOOT_P_PROPOSITION___NEG_REWRITE___IS_NEG_FREE___helper,
@@ -4538,14 +4538,14 @@ Cases_on `p` THEN (
 		   smallfoot_a_stack_proposition_def,
 		   IN_ABS, PAIR_FORALL_THM, LET_THM] THEN
   REPEAT STRIP_TAC THEN
-  FULL_SIMP_TAC arith_ss [IS_SOME_EXISTS]   
+  FULL_SIMP_TAC arith_ss [IS_SOME_EXISTS]
 ));
 
 
 
 val SMALLFOOT_P_PROPOSITION_EVAL___NEG_REWRITE =
 store_thm ("SMALLFOOT_P_PROPOSITION_EVAL___NEG_REWRITE",
-``!p. 
+``!p.
 (SMALLFOOT_P_PROPOSITION_EVAL (SMALLFOOT_P_PROPOSITION___NEG_REWRITE p) =
 SMALLFOOT_P_PROPOSITION_EVAL p)``,
 
@@ -4576,7 +4576,7 @@ Induct_on `p` THEN (
 ) THEN
 Cases_on `p` THEN (
    SIMP_TAC std_ss [SMALLFOOT_P_PROPOSITION___NEG_REWRITE_def,
-		    SMALLFOOT_PP_USED_VARS_def, EXTENSION, 
+		    SMALLFOOT_PP_USED_VARS_def, EXTENSION,
 		    IN_UNION] THEN
    METIS_TAC[]
 ));
@@ -4596,7 +4596,7 @@ PROVE_TAC[SMALLFOOT_PP_USED_VARS___SMALLFOOT_P_PROPOSITION___NEG_REWRITE___helpe
 
 val SMALLFOOT_P_PROPOSITION_EVAL_PREDICATE_REWRITE =
 store_thm ("SMALLFOOT_P_PROPOSITION_EVAL_PREDICATE_REWRITE",
-``!P. 
+``!P.
   ((!p. P (SMALLFOOT_P_PROPOSITION_EVAL p) (SMALLFOOT_PP_USED_VARS p)) =
    (!p. SMALLFOOT_P_PROPOSITION___IS_NEG_FREE p ==>
 	P (SMALLFOOT_P_PROPOSITION_EVAL p) (SMALLFOOT_PP_USED_VARS p)))``,
@@ -4677,12 +4677,12 @@ FULL_SIMP_TAC std_ss [FASL_IS_LOCAL_EVAL_ENV_THM,
 		      IS_SEPARATION_COMBINATOR_EXPAND_THM]);
 
 
-val SMALLFOOT_AE_USED_VARS_REL___P_EXPRESSION_EVAL = 
+val SMALLFOOT_AE_USED_VARS_REL___P_EXPRESSION_EVAL =
 store_thm ("SMALLFOOT_AE_USED_VARS_REL___P_EXPRESSION_EVAL",
 ``!p. SMALLFOOT_AE_USED_VARS_REL (SMALLFOOT_P_EXPRESSION_EVAL p) (THE (SMALLFOOT_PE_USED_VARS p))``,
 
 GEN_TAC THEN
-`?vs. SMALLFOOT_PE_USED_VARS p = SOME vs` by 
+`?vs. SMALLFOOT_PE_USED_VARS p = SOME vs` by
    PROVE_TAC[SMALLFOOT_PE_USED_VARS___IS_SOME,
              IS_SOME_EXISTS] THEN
 ASM_SIMP_TAC std_ss [] THEN
@@ -4690,7 +4690,7 @@ FULL_SIMP_TAC std_ss [SMALLFOOT_PE_USED_VARS_def,
 		      SMALLFOOT_AE_USED_VARS_THM]);
 
 
-val SMALLFOOT_AE_USED_VARS___P_EXPRESSION_EVAL = 
+val SMALLFOOT_AE_USED_VARS___P_EXPRESSION_EVAL =
 store_thm ("SMALLFOOT_AE_USED_VARS_REL___P_EXPRESSION_EVAL",
 ``!p. SMALLFOOT_AE_USED_VARS (SMALLFOOT_P_EXPRESSION_EVAL p) = SOME (THE (SMALLFOOT_PE_USED_VARS p))``,
 
@@ -4712,7 +4712,7 @@ Induct_on `p` THEN (
 			 asl_bool_EVAL, smallfoot_ap_stack_true_def,
 			 IN_DEF, SMALLFOOT_PP_USED_VARS_def,
 			 UNION_SUBSET]
-) THEN 
+) THEN
 Cases_on `p` THEN (
    SIMP_TAC std_ss [SMALLFOOT_P_PROPOSITION_EVAL_def,
 		    smallfoot_ap_unequal_def, IN_ABS,
@@ -4734,7 +4734,7 @@ Cases_on `p` THEN (
 val SMALLFOOT_P_PROPOSITION_EVAL___ALTERNATIVE_DEF___helper =
 prove (
 
-``!p n s. 
+``!p n s.
 (SMALLFOOT_P_PROPOSITION___NEG_COUNT p <= n) /\
 (SMALLFOOT_PP_USED_VARS p) SUBSET (FDOM (FST s)) ==>
 
@@ -4758,7 +4758,7 @@ Induct_on `p` THEN (
 		   SMALLFOOT_P_PROPOSITION_EVAL_def,
 		   smallfoot_ap_equal_def,
 		   smallfoot_ap_less_def,
-		   smallfoot_a_stack_proposition_def, 
+		   smallfoot_a_stack_proposition_def,
 		   IN_ABS],
 
 
@@ -4815,7 +4815,7 @@ FULL_SIMP_TAC std_ss [SMALLFOOT_P_PROPOSITION_EVAL___fasl_pred_neg]);
 val SMALLFOOT_P_PROPOSITION_EVAL___ALTERNATIVE_DEF =
 store_thm ("SMALLFOOT_P_PROPOSITION_EVAL___ALTERNATIVE_DEF",
 
-``!p s.  
+``!p s.
 (SMALLFOOT_PP_USED_VARS p) SUBSET (FDOM (FST s)) ==>
 
 (SMALLFOOT_P_PROPOSITION_EVAL p s =
@@ -4865,7 +4865,7 @@ Induct_on `p` THEN (
 val XEVAL_fasl_predicate___smallfoot_env___ALTERNATIVE_DEF =
 store_thm ("XEVAL_fasl_predicate___smallfoot_env___ALTERNATIVE_DEF",
 
-``!p s. 
+``!p s.
 (SMALLFOOT_PP_USED_VARS p) SUBSET (FDOM (FST s)) ==>
 
 (XEVAL_fasl_predicate smallfoot_env p s =
@@ -4942,20 +4942,20 @@ Induct_on `p` THENL [
 
 
 
-val SMALLFOOT_P_PROPOSITION_EVAL___REWRITES = 
+val SMALLFOOT_P_PROPOSITION_EVAL___REWRITES =
 store_thm ("SMALLFOOT_P_PROPOSITION_EVAL___REWRITES",
 ``
-	(SMALLFOOT_P_PROPOSITION_EVAL fasl_pred_true = 
+	(SMALLFOOT_P_PROPOSITION_EVAL fasl_pred_true =
         smallfoot_ap_stack_true) /\
-	(SMALLFOOT_P_PROPOSITION_EVAL fasl_pred_false = 
+	(SMALLFOOT_P_PROPOSITION_EVAL fasl_pred_false =
         asl_false) /\
 
 
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_and p1 p2) = 
-        asl_and (SMALLFOOT_P_PROPOSITION_EVAL p1) 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_and p1 p2) =
+        asl_and (SMALLFOOT_P_PROPOSITION_EVAL p1)
                          (SMALLFOOT_P_PROPOSITION_EVAL p2)) /\
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_or p1 p2) = 
-        asl_or (SMALLFOOT_P_PROPOSITION_EVAL p1) 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_or p1 p2) =
+        asl_or (SMALLFOOT_P_PROPOSITION_EVAL p1)
                          (SMALLFOOT_P_PROPOSITION_EVAL p2)) /\
 
 	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_prim (smallfoot_pt_less e1 e2)) =
@@ -4988,18 +4988,18 @@ store_thm ("SMALLFOOT_P_PROPOSITION_EVAL___REWRITES",
            smallfoot_ap_unequal (SMALLFOOT_P_EXPRESSION_EVAL e1)  (SMALLFOOT_P_EXPRESSION_EVAL e2)) /\
 
 
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg fasl_pred_true) = 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg fasl_pred_true) =
         asl_false) /\
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg fasl_pred_false) = 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg fasl_pred_false) =
         smallfoot_ap_stack_true) /\
 
 
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg (fasl_pred_and p1 p2)) = 
-        asl_or (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p1)) 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg (fasl_pred_and p1 p2)) =
+        asl_or (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p1))
                          (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p2))) /\
 
-	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg (fasl_pred_or p1 p2)) = 
-        asl_and (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p1)) 
+	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg (fasl_pred_or p1 p2)) =
+        asl_and (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p1))
                          (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg p2))) /\
 
 	(SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg (fasl_pred_prim (smallfoot_pt_less e1 e2))) =
@@ -5034,7 +5034,7 @@ store_thm ("SMALLFOOT_P_PROPOSITION_EVAL___REWRITES",
         (smallfoot_p_and = fasl_pred_and) /\
         (smallfoot_p_or = fasl_pred_or) /\
         (smallfoot_p_neg = fasl_pred_neg)
-``, 
+``,
 
 
 SIMP_TAC std_ss [SMALLFOOT_P_PROPOSITION_EVAL_def,
@@ -5048,7 +5048,7 @@ SIMP_TAC std_ss [SMALLFOOT_P_PROPOSITION_EVAL_def,
 		 smallfoot_p_greatereq_def,
 		 smallfoot_p_equal_def,
 		 smallfoot_p_unequal_def,
-                 
+
 		 smallfoot_ap_less_def,
 		 smallfoot_ap_lesseq_def,
 		 smallfoot_ap_greater_def,
@@ -5056,7 +5056,7 @@ SIMP_TAC std_ss [SMALLFOOT_P_PROPOSITION_EVAL_def,
 		 smallfoot_ap_equal_def,
 		 smallfoot_ap_unequal_def] THEN
 REWRITE_TAC[EXTENSION] THEN
-SIMP_TAC std_ss 
+SIMP_TAC std_ss
                 [asl_bool_EVAL, IN_DEF,
 		 smallfoot_ap_binexpression_def,
 		 smallfoot_a_stack_proposition_def,
@@ -5083,7 +5083,7 @@ val smallfoot_prop_internal___COND_def = Define `
         (BAG_ALL_DISTINCT wpb) /\ (BAG_ALL_DISTINCT rpb) /\
         (!v. BAG_IN v rpb ==> ~(BAG_IN v wpb)) /\
         d /\ FINITE_BAG sfb /\
-	(!sf. BAG_IN sf sfb ==> 
+	(!sf. BAG_IN sf sfb ==>
 	      SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb)) sf
         )`;
 
@@ -5108,8 +5108,8 @@ val smallfoot_prop_internal_def = Define `
 	(smallfoot_prop_internal___COND (wpb, rpb) d sfb,
 
          if smallfoot_prop_internal___COND (wpb, rpb) d sfb then
-            smallfoot_prop_internal___PROP (wpb, rpb) (wp, rp) pL sfb P 
-         else 
+            smallfoot_prop_internal___PROP (wpb, rpb) (wp, rp) pL sfb P
+         else
 	    asl_false
         )`;
 
@@ -5173,7 +5173,7 @@ SIMP_RULE list_ss [smallfoot_prop_internal___COND_def] smallfoot_prop___COND_def
 val smallfoot_prop___REWRITE = save_thm ("smallfoot_prop___REWRITE",
 SIMP_RULE list_ss [smallfoot_prop_internal_def,
 		   GSYM smallfoot_prop___COND_def,
-   		   GSYM smallfoot_prop___PROP_def] 
+   		   GSYM smallfoot_prop___PROP_def]
 smallfoot_prop_def);
 
 
@@ -5197,7 +5197,7 @@ val smallfoot_prop___WEAK_COND_def = Define `
 
 
 
-val smallfoot_prop___WEAK_COND_IMP = 
+val smallfoot_prop___WEAK_COND_IMP =
 store_thm ("smallfoot_prop___WEAK_COND_IMP",
 ``
 !wpb rpb sfb.
@@ -5221,8 +5221,8 @@ val smallfoot_prop_internal___COND___EXPAND = store_thm (
              (!sf.
                 BAG_IN sf sfb ==>
                   SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb)) sf) /\
-            (~(sfb = EMPTY_BAG) ==> 
-	       (SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS 
+            (~(sfb = EMPTY_BAG) ==>
+	       (SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS
                 (SET_OF_BAG (BAG_UNION wpb rpb)) (smallfoot_ap_bigstar sfb))) /\
             (SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb))
                 (smallfoot_ap_star smallfoot_ap_stack_true
@@ -5233,13 +5233,13 @@ REPEAT GEN_TAC THEN EQ_TAC THEN SIMP_TAC std_ss [] THEN STRIP_TAC THEN
 REPEAT STRIP_TAC THENL [
    MATCH_MP_TAC SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___bigstar THEN
    ASM_SIMP_TAC std_ss [],
-   
+
 
    SIMP_TAC std_ss [GSYM smallfoot_ap_bigstar_REWRITE] THEN
    MATCH_MP_TAC SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___bigstar THEN
    ASM_SIMP_TAC std_ss [bagTheory.BAG_IN_BAG_INSERT, DISJ_IMP_THM,
 		    FORALL_AND_THM, bagTheory.BAG_INSERT_NOT_EMPTY] THEN
-   SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___ALTERNATIVE_DEF, 
+   SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___ALTERNATIVE_DEF,
                     smallfoot_ap_stack_true_def,
 		    IN_ABS]
 ]);
@@ -5282,7 +5282,7 @@ SIMP_TAC std_ss [smallfoot_prop_def,
 
 
 
-val smallfoot_prop_internal___PROP___INSERT_PROP = 
+val smallfoot_prop_internal___PROP___INSERT_PROP =
 store_thm ("smallfoot_prop_internal___PROP___INSERT_PROP",
 ``
 (smallfoot_prop_internal___PROP (wpb,rpb) (wp,rb) (c::pL) sfb P =
@@ -5310,7 +5310,7 @@ smallfoot_prop_internal (BAG_INSERT v wpb, rpb) (wp,rp) d pL EMPTY_BAG P)) /\
 (smallfoot_prop_internal (wpb, rpb) (wp,v INSERT rp) d pL EMPTY_BAG P =
 smallfoot_prop_internal (wpb, BAG_INSERT v rpb) (wp,rp) d pL EMPTY_BAG P))``,
 
-SIMP_TAC std_ss [smallfoot_prop_internal___EQ, 
+SIMP_TAC std_ss [smallfoot_prop_internal___EQ,
 		 smallfoot_prop_internal___COND_def,
 		 smallfoot_prop_internal___PROP_def,
 		 FUN_EQ_THM,
@@ -5393,7 +5393,7 @@ val smallfoot_prop_internal___PROG_PROP_TO_BAG = store_thm ("smallfoot_prop_inte
   (SMALLFOOT_PP_USED_VARS p SUBSET (SET_OF_BAG (BAG_UNION wpb rpb)))
  ==>
 (smallfoot_prop_internal (wpb, rpb) ({},{}) T (p::pL) sfb smallfoot_ap_emp  =
- smallfoot_prop_internal (wpb, rpb) ({},{}) T pL 
+ smallfoot_prop_internal (wpb, rpb) ({},{}) T pL
     (BAG_INSERT (SMALLFOOT_P_PROPOSITION_EVAL p) sfb) smallfoot_ap_emp)``,
 
 
@@ -5443,14 +5443,14 @@ EQ_TAC THEN STRIP_TAC THENL [
 
 
       `SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS vs
-             (SMALLFOOT_P_PROPOSITION_EVAL p)` by 
+             (SMALLFOOT_P_PROPOSITION_EVAL p)` by
          PROVE_TAC[SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___SMALLFOOT_P_PROPOSITION_EVAL] THEN
       FULL_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def,
 			       SMALLFOOT_AP_PERMISSION_UNIMPORTANT_def, IN_DEF] THEN
       PROVE_TAC[VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___VAR_RES_STACK_SPLIT],
 
 
-      FULL_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def, 
+      FULL_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def,
 			    SMALLFOOT_AP_PERMISSION_UNIMPORTANT_def, IN_DEF] THEN
       PROVE_TAC[VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS___VAR_RES_STACK_SPLIT]
    ],
@@ -5469,15 +5469,15 @@ EQ_TAC THEN STRIP_TAC THENL [
 			 FUNION_FEMPTY_1, DISJOINT_EMPTY, FDOM_FEMPTY] THEN
    CONJ_TAC THENL [
       `SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS vs
-             (SMALLFOOT_P_PROPOSITION_EVAL p)` by 
+             (SMALLFOOT_P_PROPOSITION_EVAL p)` by
          PROVE_TAC[SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___SMALLFOOT_P_PROPOSITION_EVAL] THEN
-      FULL_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def, 
+      FULL_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def,
 			    SMALLFOOT_AP_PERMISSION_UNIMPORTANT_def, IN_DEF] THEN
       `VAR_RES_STACK_IS_SUBSTATE q'' q'` by METIS_TAC[VAR_RES_STACK_IS_SUBSTATE_INTRO] THEN
       PROVE_TAC[],
 
 
-      FULL_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def, 
+      FULL_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def,
 			    SMALLFOOT_AP_PERMISSION_UNIMPORTANT_def, IN_DEF] THEN
       `VAR_RES_STACK_IS_SUBSTATE q''' q'` by METIS_TAC[VAR_RES_STACK_IS_SUBSTATE_INTRO] THEN
       PROVE_TAC[]
@@ -5486,7 +5486,7 @@ EQ_TAC THEN STRIP_TAC THENL [
 
 
 
-val COND_PROP___STRONG_EXISTS_def = Define 
+val COND_PROP___STRONG_EXISTS_def = Define
 `COND_PROP___STRONG_EXISTS P =
  ((!x. FST (P x)), asl_exists x. (SND (P x)))`;
 
@@ -5494,9 +5494,9 @@ val COND_PROP___STRONG_EXISTS_def = Define
 
 val smallfoot_prop_internal___EXISTS = store_thm ("smallfoot_prop_internal___EXISTS",
 ``
-(smallfoot_prop_internal (EMPTY_BAG, EMPTY_BAG) (wb, rp) d pL EMPTY_BAG 
+(smallfoot_prop_internal (EMPTY_BAG, EMPTY_BAG) (wb, rp) d pL EMPTY_BAG
 (asl_exists x. P x)) =
-COND_PROP___STRONG_EXISTS (\x. 
+COND_PROP___STRONG_EXISTS (\x.
 smallfoot_prop_internal (EMPTY_BAG, EMPTY_BAG) (wb, rp) d pL EMPTY_BAG (P x))
 
 ``,
@@ -5659,15 +5659,15 @@ val smallfoot_slp_init_var___small_prop_THM = store_thm ("smallfoot_slp_init_var
   (SMALLFOOT_AE_USED_VARS e = SOME vs) /\ (vs SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))) /\
    (smallfoot_prop___COND (wpb,rpb) sfb) /\ (~(v IN (SET_OF_BAG (BAG_UNION wpb rpb)))) ==>
 
-   ((smallfoot_prop___COND (BAG_INSERT v wpb, rpb) 
+   ((smallfoot_prop___COND (BAG_INSERT v wpb, rpb)
                     (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v) e) sfb)) /\
 
   ((smallfoot_slp_init_var v e (smallfoot_prop___PROP (wpb, rpb) sfb)) =
-   (smallfoot_prop___PROP (BAG_INSERT v wpb, rpb) 
+   (smallfoot_prop___PROP (BAG_INSERT v wpb, rpb)
                       (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v) e) sfb))))``,
 
 
-REPEAT GEN_TAC THEN 
+REPEAT GEN_TAC THEN
 STRIP_TAC THEN
 CONJ_TAC THEN1 (
    IMP_RES_TAC smallfoot_prop___COND_VAR_INSERT THEN
@@ -5734,7 +5734,7 @@ EQ_TAC THEN STRIP_TAC THENL [
 
 
 
-       Q.PAT_ASSUM `!st1 st2. X st1 st2` 
+       Q.PAT_ASSUM `!st1 st2. X st1 st2`
            (MP_TAC o Q.SPECL [`x1 \\ v`, `VAR_RES_STACK_SPLIT2 {v} x1`]) THEN
        SIMP_TAC std_ss [FDOM_DOMSUB, VAR_RES_STACK_SPLIT12___REWRITES, IN_DELETE,
 		        DOMSUB_FAPPLY_THM, IN_DIFF, IN_SING] THEN
@@ -5752,7 +5752,7 @@ EQ_TAC THEN STRIP_TAC THENL [
 			    VAR_RES_STACK_IS_SEPARATE_def]
    ) THEN
    CONJ_TAC THENL [
-       Q.PAT_ASSUM `!st1 st2. X st1 st2` 
+       Q.PAT_ASSUM `!st1 st2. X st1 st2`
            (MP_TAC o Q.SPECL [`x1''`, `x1 \\ v`]) THEN
        MATCH_MP_TAC (prove (``((B ==> C) /\ A) ==> ((A ==> B) ==> C)``, METIS_TAC[])) THEN
        CONJ_TAC THEN1 METIS_TAC[] THEN
@@ -5797,7 +5797,7 @@ MP_TAC (Q.SPECL [`wpb`, `rpb`, `sfb`, `EMPTY:smallfoot_var set`, `v`] smallfoot_
 ASM_SIMP_TAC std_ss [EMPTY_SUBSET, SMALLFOOT_AE_USED_VARS___smallfoot_ae_const] THEN
 STRIP_TAC THEN POP_ASSUM (K ALL_TAC) THEN
 
-SIMP_TAC std_ss [smallfoot_prop___PROP___REWRITE, IN_ABS, 
+SIMP_TAC std_ss [smallfoot_prop___PROP___REWRITE, IN_ABS,
 		 bagTheory.BAG_IN_BAG_INSERT, DISJ_IMP_THM,
 		 FORALL_AND_THM, var_res_sl___has_read_permission_def,
 		 var_res_sl___has_write_permission_def,
@@ -5823,7 +5823,7 @@ FULL_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___ALTERNAT
 		      SUBSET_DEF, IN_INTER, bagTheory.BAG_IN_BAG_INSERT,
 		      bagTheory.IN_SET_OF_BAG, bagTheory.BAG_IN_BAG_UNION] THEN
 EQ_TAC THEN STRIP_TAC THENL [
-   Q.PAT_ASSUM `!st1 st2. X st1 st2` 
+   Q.PAT_ASSUM `!st1 st2. X st1 st2`
          (MP_TAC o Q.SPECL [`x1'`, `st`]) THEN
    MATCH_MP_TAC (prove (``((B ==> C) /\ A) ==> ((A ==> B) ==> C)``, METIS_TAC[])) THEN
    CONJ_TAC THEN1 METIS_TAC[] THEN
@@ -5838,7 +5838,7 @@ EQ_TAC THEN STRIP_TAC THENL [
    ASM_SIMP_TAC std_ss [VAR_RES_STACK_COMBINE___VAR_RES_STACK_SPLIT12,
 		    VAR_RES_STACK_SPLIT12___REWRITES] THEN
 
-   Q.PAT_ASSUM `!st1 st2. X st1 st2` 
+   Q.PAT_ASSUM `!st1 st2. X st1 st2`
         (MP_TAC o Q.SPECL [`st`, `VAR_RES_STACK_SPLIT2 {} st`]) THEN
    SIMP_TAC std_ss [FDOM_DOMSUB, VAR_RES_STACK_SPLIT12___REWRITES, IN_DIFF,
 		    NOT_IN_EMPTY] THEN
@@ -5850,13 +5850,13 @@ EQ_TAC THEN STRIP_TAC THENL [
 
 
 
- 
+
 
 
 
 val smallfoot_slp_new_var___PROP_COND_def =
 Define `smallfoot_slp_new_var___PROP_COND v wpb rpb P =
-        (FST P /\ smallfoot_prop___WEAK_COND (BAG_INSERT v wpb) rpb, 
+        (FST P /\ smallfoot_prop___WEAK_COND (BAG_INSERT v wpb) rpb,
          smallfoot_slp_new_var v (SND P))`;
 
 
@@ -5877,7 +5877,7 @@ SIMP_TAC std_ss [smallfoot_slp_new_var___PROP_COND_def,
 ONCE_REWRITE_TAC[EXTENSION] THEN
 SIMP_TAC std_ss [asl_exists_def, IN_ABS,
    smallfoot_slp_new_var_def,
-   smallfoot_slp_init_var_def, LET_THM, 
+   smallfoot_slp_init_var_def, LET_THM,
    GSYM RIGHT_EXISTS_AND_THM,
    GSYM LEFT_EXISTS_AND_THM] THEN
 METIS_TAC[IN_DEF]);
@@ -5894,11 +5894,11 @@ val SMALLFOOT_COND_INFERENCE___prog_val_arg = store_thm (
 ``!wpb rpb sfb body Q.
 
 ((!v.
-SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop (BAG_INSERT v wpb,rpb) 
+SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop (BAG_INSERT v wpb,rpb)
 (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v) (smallfoot_ae_const c)) sfb))
 (body v) (smallfoot_slp_new_var___PROP_COND v wpb rpb Q))
 ) ==>
-(SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop (wpb,rpb) sfb) 
+(SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop (wpb,rpb) sfb)
 (smallfoot_prog_val_arg (\x. (body x)) c) Q)``,
 
 
@@ -5935,14 +5935,14 @@ CONJ_TAC THEN1 (
 		    smallfoot_ap_equal_def, smallfoot_ap_binexpression_def,
 		    smallfoot_a_stack_proposition_def, IN_ABS,
 		    LET_THM, smallfoot_ae_const_def, smallfoot_ae_var_def,
-		    SUBSET_DEF, IN_INTER, 
+		    SUBSET_DEF, IN_INTER,
                         bagTheory.IN_SET_OF_BAG,
-		        bagTheory.BAG_IN_BAG_UNION, 
+		        bagTheory.BAG_IN_BAG_UNION,
 		        bagTheory.BAG_IN_BAG_INSERT] THEN
   SIMP_TAC std_ss [COND_RATOR, COND_RAND] THEN
   REPEAT STRIP_TAC THEN
   METIS_TAC[]
-) THEN   
+) THEN
 
 REPEAT STRIP_TAC THEN
 MP_TAC (Q.SPECL [`wpb`, `rpb`, `sfb`, `{}`, `v`, `smallfoot_ae_const c`]
@@ -5965,7 +5965,7 @@ val SMALLFOOT_COND_INFERENCE___prog_local_var = store_thm (
 ((!v.
 SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop (BAG_INSERT v wpb,rpb) sfb)
 (body v) (smallfoot_slp_new_var___PROP_COND v wpb rpb Q))) ==>
-(SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop (wpb,rpb) sfb) 
+(SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop (wpb,rpb) sfb)
 (smallfoot_prog_local_var (\x. (body x))) Q)``,
 
 
@@ -5996,7 +5996,7 @@ CONJ_TAC THEN1 (
    MATCH_MP_TAC (prove (``((A==>B) /\ A) ==> (A /\ B)``, METIS_TAC[])) THEN
    CONJ_TAC THEN1 PROVE_TAC[smallfoot_prop___WEAK_COND_IMP] THEN
    PROVE_TAC[smallfoot_prop___COND_VAR_INSERT]
-) THEN   
+) THEN
 
 REPEAT STRIP_TAC THEN
 MP_TAC (Q.SPECL [`wpb`, `rpb`, `v`, `sfb`]  smallfoot_slp_new_var___small_prop_THM) THEN
@@ -6013,7 +6013,7 @@ val smallfoot_prog_block_def = Define `smallfoot_prog_block (L:smallfoot_prog li
 							   fasl_prog_block L`
 val smallfoot_prog_cond_def = Define `smallfoot_prog_cond c (pT:smallfoot_prog) pF = fasl_prog_cond c pT pF`;
 val smallfoot_prog_while_def = Define `smallfoot_prog_while c (prog:smallfoot_prog) = fasl_prog_while c prog`;
-val smallfoot_prog_while_with_invariant_def = Define `smallfoot_prog_while_with_invariant 
+val smallfoot_prog_while_with_invariant_def = Define `smallfoot_prog_while_with_invariant
    (i:(smallfoot_data_type # string) list # (smallfoot_data list -> smallfoot_a_proposition)) c prog = smallfoot_prog_while c prog`;
 val smallfoot_prog_parallel_def = Define `smallfoot_prog_parallel (p1:smallfoot_prog) p2 = fasl_prog_parallel p1 p2`;
 
@@ -6021,10 +6021,10 @@ val smallfoot_prog_parallel_def = Define `smallfoot_prog_parallel (p1:smallfoot_
 
 
 val smallfoot_input_preserve_names_wrapper_def = Define `
-	smallfoot_input_preserve_names_wrapper (ref_args:string list) 
+	smallfoot_input_preserve_names_wrapper (ref_args:string list)
 	   (val_args:string list) (free_params:(smallfoot_data_type # string) list) c =
-						   
-	\(arg_refL:smallfoot_var list, arg_valL:num list) fvL. 
+
+	\(arg_refL:smallfoot_var list, arg_valL:num list) fvL.
 	 if (LENGTH arg_valL = LENGTH val_args) /\
             (LENGTH arg_refL = LENGTH ref_args) /\
             (LENGTH fvL = LENGTH free_params) /\
@@ -6036,7 +6036,7 @@ val smallfoot_input_preserve_names_wrapper_def = Define `
 val SMALLFOOT_SING_PROCEDURE_SPEC_def = Define `
     SMALLFOOT_SING_PROCEDURE_SPEC res_env penv pre name post arg1 arg2 arg3 =
 
-    SMALLFOOT_HOARE_TRIPLE_INST res_env penv 
+    SMALLFOOT_HOARE_TRIPLE_INST res_env penv
 			   (smallfoot_input_preserve_names_wrapper arg1 arg2 arg3 pre)
 			   (fasl_prog_procedure_call name)
 			   post`;
@@ -6052,7 +6052,7 @@ val LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES_REWRITE = store_thm (
 "LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES_REWRITE",
 
 ``(LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES [] [] = T) /\
-(LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES (v::vL) (t::tL) = 
+(LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES (v::vL) (t::tL) =
  smallfoot_data_IS_WELL_TYPED (FST t, v) /\
  LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES vL tL)``,
 
@@ -6065,7 +6065,7 @@ val LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES___UNROLL = store_thm (
 "LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES___UNROLL",
 
 ``(LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES x [] = (x = [])) /\
-(LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES x (t::tL) = 
+(LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES x (t::tL) =
  ?L' v. (x = (v::L')) /\ smallfoot_data_IS_WELL_TYPED (FST t, v) /\
  LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES L' tL)``,
 
@@ -6079,8 +6079,8 @@ METIS_TAC[]);
 val SMALLFOOT_INFERENCE_smallfoot_input_preserve_names_wrapper = store_thm (
 "SMALLFOOT_INFERENCE_smallfoot_input_preserve_names_wrapper",
 ``
-(SMALLFOOT_HOARE_TRIPLE res_env penv 
-((smallfoot_input_preserve_names_wrapper ref_args val_args free_params c) 
+(SMALLFOOT_HOARE_TRIPLE res_env penv
+((smallfoot_input_preserve_names_wrapper ref_args val_args free_params c)
 (arg_refL,arg_valL) fvL) body post)
 
 =
@@ -6113,11 +6113,11 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_val_arg = store_thm (
 "FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_val_arg",
 ``!xenv penv c body body'.
 (!arg. FASL_PROGRAM_IS_ABSTRACTION xenv penv (body arg) (body' arg)) ==>
-FASL_PROGRAM_IS_ABSTRACTION xenv penv (smallfoot_prog_val_arg body c) 
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (smallfoot_prog_val_arg body c)
                                       (smallfoot_prog_val_arg body' c)``,
 
 REPEAT STRIP_TAC THEN
-REWRITE_TAC[smallfoot_prog_val_arg_def] THEN 
+REWRITE_TAC[smallfoot_prog_val_arg_def] THEN
 MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___select THEN
 SIMP_TAC std_ss [] THEN GEN_TAC THEN
 MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___seq THEN
@@ -6131,7 +6131,7 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_local_var = store_thm (
 "FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_local_var",
 ``!xenv penv body body'.
 (!arg. FASL_PROGRAM_IS_ABSTRACTION xenv penv (body arg) (body' arg)) ==>
-FASL_PROGRAM_IS_ABSTRACTION xenv penv (smallfoot_prog_local_var body) 
+FASL_PROGRAM_IS_ABSTRACTION xenv penv (smallfoot_prog_local_var body)
                                       (smallfoot_prog_local_var body')``,
 
 REPEAT STRIP_TAC THEN
@@ -6155,7 +6155,7 @@ val SMALLFOOT_P_EXPRESSION___READ_PERMISSION_def = Define `
     SMALLFOOT_P_EXPRESSION___READ_PERMISSION l = \s:smallfoot_state.
 
      (((SND s) = FEMPTY) /\
-     (EVERY (\e. (!x. x IN (THE (SMALLFOOT_PE_USED_VARS e)) ==> 
+     (EVERY (\e. (!x. x IN (THE (SMALLFOOT_PE_USED_VARS e)) ==>
                       var_res_sl___has_read_permission x (FST s))) l))`;
 
 
@@ -6250,7 +6250,7 @@ REPEAT STRIP_TAC THEN
 MP_TAC (let
    val thm = ISPEC ``(smallfoot_env,res_env:string -> smallfoot_a_proposition)`` FASL_INFERENCE_prog_parallel;
    val thm2 = INST_TYPE [Type `:'g` |-> stringLib.string_ty,
-			 Type `:'h` |-> Type `:smallfoot_var list # num list`] thm   
+			 Type `:'h` |-> Type `:smallfoot_var list # num list`] thm
    val thm3 = Q.SPECL [`penv`, `P1'`, `P2'`, `Q1'`, `Q2'`] thm2
 in
    thm3
@@ -6293,10 +6293,10 @@ ASM_SIMP_TAC std_ss [VAR_RES_STACK_COMBINE___MERGE_FUNC_def,
 
 
 
-val smallfoot_ap_equal___P_EXPRESSION_LIST_def = Define 
-`smallfoot_ap_equal___P_EXPRESSION_LIST expL constL = 
-  \s:smallfoot_state. (LENGTH expL = LENGTH constL) /\ 
-              EVERY (\p. SMALLFOOT_P_EXPRESSION_EVAL (FST p) (FST s) = 
+val smallfoot_ap_equal___P_EXPRESSION_LIST_def = Define
+`smallfoot_ap_equal___P_EXPRESSION_LIST expL constL =
+  \s:smallfoot_state. (LENGTH expL = LENGTH constL) /\
+              EVERY (\p. SMALLFOOT_P_EXPRESSION_EVAL (FST p) (FST s) =
                SOME (SND p)) (ZIP (expL,constL))`;
 
 
@@ -6307,7 +6307,7 @@ store_thm ("SMALLFOOT_INFERENCE___choose_constants",
 
 ((!e. MEM e expL ==> smallfoot_ae_is_defined P (SMALLFOOT_P_EXPRESSION_EVAL e)) /\
 
-(!constL. 
+(!constL.
 SMALLFOOT_HOARE_TRIPLE res_env penv (asl_and (smallfoot_ap_equal___P_EXPRESSION_LIST expL constL) P)
                             (prog constL) Q)) ==>
 
@@ -6356,7 +6356,7 @@ Tactical.REVERSE (`(XEVAL_fasl_predicate smallfoot_env c) =
   UNABBREV_ALL_TAC THEN
   FULL_SIMP_TAC std_ss [ASL_BOOL___PRED_SET_REWRITES, IN_INTER,
 		        INTER_ABS, IN_ABS, GSYM CONJ_ASSOC] THEN
-  Q.PAT_ASSUM `!x. X x` (MP_TAC o Q.SPEC `x`) THEN 
+  Q.PAT_ASSUM `!x. X x` (MP_TAC o Q.SPEC `x`) THEN
   MATCH_MP_TAC (prove (``(PP = PP') ==>
                         (FASL_PROGRAM_HOARE_TRIPLE smallfoot_xenv penv PP (prog constL) QQ ==>
                          FASL_PROGRAM_HOARE_TRIPLE smallfoot_xenv penv PP' (prog constL) QQ)``,
@@ -6394,7 +6394,7 @@ store_thm ("smallfoot_ap_equal___P_EXPRESSION_LIST_11",
    s IN smallfoot_ap_equal___P_EXPRESSION_LIST expL constL2) ==>
   (constL2 = constL1)``,
 
-SIMP_TAC (std_ss++boolSimps.CONJ_ss) 
+SIMP_TAC (std_ss++boolSimps.CONJ_ss)
                 [smallfoot_ap_equal___P_EXPRESSION_LIST_def,
 		 IN_ABS, LIST_EQ_REWRITE, EVERY_MEM,
 		 MEM_ZIP, GSYM LEFT_FORALL_IMP_THM]);
@@ -6438,7 +6438,7 @@ METIS_TAC[]);
 
 val smallfoot_prog_best_local_action_def = Define `
         smallfoot_prog_best_local_action P Q =
-        fasl_prog_quant_best_local_action (\x s. s IN P /\ (s = x)) 
+        fasl_prog_quant_best_local_action (\x s. s IN P /\ (s = x))
 (\x s. s IN Q /\ (VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST s)))`;
 
 
@@ -6452,9 +6452,9 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_proc_call = store_thm (
  (LENGTH val_arg_constL = LENGTH a2) /\
  LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES cons a3) ==>
 
-(FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv 
+(FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv
    (smallfoot_prog_procedure_call name (ref_argL, val_argL))
-   (smallfoot_prog_best_local_action 
+   (smallfoot_prog_best_local_action
       (asl_and (smallfoot_ap_equal___P_EXPRESSION_LIST
                              val_argL val_arg_constL)
                          (pre (ref_argL, val_arg_constL) cons))
@@ -6527,17 +6527,17 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_parallel_proc_call = store_thm (
  LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES cons2 a32) ==>
 
 
-(FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv 
+(FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv
    (smallfoot_prog_parallel_procedure_call name1 (ref_argL1, val_argL1)
                                            name2 (ref_argL2, val_argL2))
-   (smallfoot_prog_best_local_action 
+   (smallfoot_prog_best_local_action
       (asl_and (smallfoot_ap_equal___P_EXPRESSION_LIST
-                  (val_argL1++val_argL2) 
+                  (val_argL1++val_argL2)
                   (val_arg_constL1++val_arg_constL2))
                (smallfoot_ap_star
                    (pre1 (ref_argL1, val_arg_constL1) cons1)
                    (pre2 (ref_argL2, val_arg_constL2) cons2)))
-      (smallfoot_ap_star 
+      (smallfoot_ap_star
          (post1 (ref_argL1, val_arg_constL1) cons1)
          (post2 (ref_argL2, val_arg_constL2) cons2))))``,
 
@@ -6599,7 +6599,7 @@ METIS_TAC[]);
 
 val smallfoot_choose_const_best_local_action_def = Define `
 smallfoot_choose_const_best_local_action pre post condL expL =
-   (fasl_prog_quant_best_local_action 
+   (fasl_prog_quant_best_local_action
       (\(args:num list # smallfoot_data list,state).
       (asl_and (K (LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES (SND args) condL))
       (asl_and (smallfoot_ap_equal___P_EXPRESSION_LIST
@@ -6613,7 +6613,7 @@ smallfoot_choose_const_best_local_action pre post condL expL =
 
 val smallfoot_proc_call_abstraction_def = Define `
 smallfoot_proc_call_abstraction pre post (ref_argL:smallfoot_var list, val_argL) condL =
-smallfoot_choose_const_best_local_action 
+smallfoot_choose_const_best_local_action
 (\args. pre (ref_argL, FST args) (SND args))
 (\args. post (ref_argL, FST args) (SND args)) condL val_argL`;
 
@@ -6625,7 +6625,7 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_proc_call___quant = store_thm (
  (LENGTH ref_argL = LENGTH a1) /\
  (LENGTH val_argL = LENGTH a2)) ==>
 
-(FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv 
+(FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv
    (smallfoot_prog_procedure_call name (ref_argL, val_argL))
    (smallfoot_proc_call_abstraction pre post (ref_argL, val_argL) a3))``,
 
@@ -6657,23 +6657,23 @@ ASM_SIMP_TAC std_ss [smallfoot_prog_best_local_action_def,
                      FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action2,
 		     PAIR_FORALL_THM, GSYM CONJ_ASSOC]);
 
-		
+
 
 val smallfoot_parallel_proc_call_abstraction_def = Define `
 smallfoot_parallel_proc_call_abstraction pre1 post1 (ref_argL1:smallfoot_var list, val_argL1) free_params1
                                          pre2 post2 (ref_argL2:smallfoot_var list, val_argL2) free_params2 =
 smallfoot_choose_const_best_local_action
-(\args. smallfoot_ap_star (pre1 (ref_argL1, 
-                                   (FIRSTN (LENGTH val_argL1) (FST args))) 
+(\args. smallfoot_ap_star (pre1 (ref_argL1,
+                                   (FIRSTN (LENGTH val_argL1) (FST args)))
                                 (FIRSTN (LENGTH free_params1) (SND args)))
-                          (pre2 (ref_argL2, 
-                                   (BUTFIRSTN (LENGTH val_argL1) (FST args))) 
+                          (pre2 (ref_argL2,
+                                   (BUTFIRSTN (LENGTH val_argL1) (FST args)))
                                 (BUTFIRSTN (LENGTH free_params1) (SND args))))
-(\args. smallfoot_ap_star (post1 (ref_argL1, 
-                                   (FIRSTN (LENGTH val_argL1) (FST args))) 
+(\args. smallfoot_ap_star (post1 (ref_argL1,
+                                   (FIRSTN (LENGTH val_argL1) (FST args)))
                                 (FIRSTN (LENGTH free_params1) (SND args)))
-                          (post2 (ref_argL2, 
-                                   (BUTFIRSTN (LENGTH val_argL1) (FST args))) 
+                          (post2 (ref_argL2,
+                                   (BUTFIRSTN (LENGTH val_argL1) (FST args)))
                                 (BUTFIRSTN (LENGTH free_params1) (SND args))))
 (free_params1++free_params2) (val_argL1++val_argL2)`;
 
@@ -6693,7 +6693,7 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_parallel_proc_call___quant = store_t
  (LENGTH ref_argL2 = LENGTH a12) /\
  (LENGTH val_argL2 = LENGTH a22)) ==>
 
-(FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv 
+(FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv
    (smallfoot_prog_parallel_procedure_call name1 (ref_argL1, val_argL1)
                                            name2 (ref_argL2, val_argL2))
    (smallfoot_parallel_proc_call_abstraction pre1 post1 (ref_argL1, val_argL1) a31
@@ -6743,8 +6743,8 @@ MP_TAC (Q.SPECL [`res_env`, `penv`, `pre1`, `name1`, `post1`, `a11`, `a21`, `a31
 FASL_PROGRAM_IS_ABSTRACTION___smallfoot_parallel_proc_call) THEN
 
 `(LENGTH constL11 = LENGTH a21) /\
- (LENGTH constL12 = LENGTH a31) /\ 
- (LENGTH constL21 = LENGTH a22) /\ 
+ (LENGTH constL12 = LENGTH a31) /\
+ (LENGTH constL21 = LENGTH a22) /\
  (LENGTH constL22 = LENGTH a32)` by ALL_TAC THEN1 (
    UNABBREV_ALL_TAC THEN
    ASM_SIMP_TAC list_ss []
@@ -6754,7 +6754,7 @@ Q.PAT_ASSUM `LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES x2 X` MP_TAC THEN
 ASM_SIMP_TAC list_ss [smallfoot_prog_best_local_action_def,
    LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES_def,
    asl_and_def, IN_ABS, CONJ_ASSOC,
-   FASL_IS_LOCAL_EVAL_ENV___smallfoot_env, 
+   FASL_IS_LOCAL_EVAL_ENV___smallfoot_env,
    FASL_IS_LOCAL_EVAL_XENV_def, PAIR_FORALL_THM,
    FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action2,
    ZIP_APPEND]);
@@ -6851,7 +6851,7 @@ SIMP_TAC std_ss [smallfoot_cond_choose_const_best_local_action_def] THEN
 SIMP_TAC std_ss [COND_RAND, COND_RATOR, ETA_THM] THEN
 SIMP_TAC std_ss [smallfoot_choose_const_best_local_action_def,
 		 asl_bool_REWRITES, fasl_prog_quant_best_local_action___false_pre,
-	         prove (``(\(args,state). asl_false) = \x. asl_false``, 
+	         prove (``(\(args,state). asl_false) = \x. asl_false``,
                         SIMP_TAC std_ss [FUN_EQ_THM, PAIR_FORALL_THM])]);
 
 
@@ -6864,7 +6864,7 @@ SIMP_TAC std_ss [smallfoot_choose_const_best_local_action_def,
 val smallfoot_prog_best_local_action___COND_CHOOSE_REWRITE =
 store_thm ("smallfoot_prog_best_local_action___COND_CHOOSE_REWRITE",
 ``
-smallfoot_prog_best_local_action 
+smallfoot_prog_best_local_action
    (smallfoot_prop_internal_ap (wp1,rp1) d pL1 P1)
    (smallfoot_prop_internal_ap (wp2,rp2) d pL2 P2) =
 
@@ -6893,12 +6893,12 @@ store_thm ("smallfoot_choose_const_best_local_action___COND_CHOOSE_REWRITE",
 ``
 smallfoot_choose_const_best_local_action
    (\args.
-       (smallfoot_prop_internal_ap (wp1 args, rp1 args) 
+       (smallfoot_prop_internal_ap (wp1 args, rp1 args)
                                    d
                                    (pL1 args)
-                                   (P1 args))) 
+                                   (P1 args)))
    (\args.
-       (smallfoot_prop_internal_ap (wp2 args, rp2 args) 
+       (smallfoot_prop_internal_ap (wp2 args, rp2 args)
                                    d
                                    (pL2 args)
                                    (P2 args)))
@@ -6914,9 +6914,9 @@ smallfoot_choose_const_best_local_action
 
 
 MATCH_MP_TAC smallfoot_cond_choose_const_best_local_action___INTRO THEN
-SIMP_TAC std_ss [smallfoot_prop_internal_def, 
-                 smallfoot_prop_internal___PROP_def, 
-                 smallfoot_prop_internal___COND_def, 
+SIMP_TAC std_ss [smallfoot_prop_internal_def,
+                 smallfoot_prop_internal___PROP_def,
+                 smallfoot_prop_internal___COND_def,
 		 smallfoot_prop_internal_ap_def,
                  BAG_ALL_DISTINCT_THM,
 		 ALL_DISTINCT, bagTheory.NOT_IN_EMPTY_BAG,
@@ -6926,7 +6926,7 @@ SIMP_TAC std_ss [smallfoot_prop_internal_def,
 
 
 
-val smallfoot_cond_star_def = Define 
+val smallfoot_cond_star_def = Define
 `smallfoot_cond_star P1 P2 =
  (FST P1 /\ FST P2, smallfoot_ap_star (SND P1) (SND P2))`;
 
@@ -6938,22 +6938,22 @@ store_thm ("smallfoot_choose_const_best_local_action___COND_CHOOSE_REWRITE___con
 smallfoot_choose_const_best_local_action
    (\args.
        smallfoot_ap_star
-       (smallfoot_prop_internal_ap (wp1 args, rp1 args) 
+       (smallfoot_prop_internal_ap (wp1 args, rp1 args)
                                    d
                                    (pL1 args)
-                                   (P1 args))  
-       (smallfoot_prop_internal_ap (wp1' args, rp1' args) 
+                                   (P1 args))
+       (smallfoot_prop_internal_ap (wp1' args, rp1' args)
                                    d'
                                    (pL1' args)
-                                   (P1' args))) 
+                                   (P1' args)))
 
    (\args.
        smallfoot_ap_star
-       (smallfoot_prop_internal_ap (wp2 args, rp2 args) 
+       (smallfoot_prop_internal_ap (wp2 args, rp2 args)
                                    d
                                    (pL2 args)
                                    (P2 args))
-       (smallfoot_prop_internal_ap (wp2' args, rp2' args) 
+       (smallfoot_prop_internal_ap (wp2' args, rp2' args)
                                    d'
                                    (pL2' args)
                                    (P2' args)))
@@ -6961,11 +6961,11 @@ smallfoot_choose_const_best_local_action
    condL val_argL =
 (smallfoot_cond_choose_const_best_local_action
    (ALL_DISTINCT d /\ ALL_DISTINCT d')
-   (\args. smallfoot_cond_star 
+   (\args. smallfoot_cond_star
               (smallfoot_prop_internal (EMPTY_BAG, EMPTY_BAG) (wp1 args, rp1 args) (ALL_DISTINCT d) (pL1 args) EMPTY_BAG (P1 args))
               (smallfoot_prop_internal (EMPTY_BAG, EMPTY_BAG) (wp1' args, rp1' args) (ALL_DISTINCT d') (pL1' args) EMPTY_BAG (P1' args)))
 
-   (\args. smallfoot_cond_star 
+   (\args. smallfoot_cond_star
               (smallfoot_prop_internal (EMPTY_BAG, EMPTY_BAG) (wp2 args, rp2 args) (ALL_DISTINCT d) (pL2 args) EMPTY_BAG (P2 args))
               (smallfoot_prop_internal (EMPTY_BAG, EMPTY_BAG) (wp2' args, rp2' args) (ALL_DISTINCT d') (pL2' args) EMPTY_BAG (P2' args)))
 
@@ -6975,7 +6975,7 @@ smallfoot_choose_const_best_local_action
 
 
 MATCH_MP_TAC smallfoot_cond_choose_const_best_local_action___INTRO THEN
-SIMP_TAC std_ss [smallfoot_prop_internal_def, 
+SIMP_TAC std_ss [smallfoot_prop_internal_def,
                  smallfoot_prop_internal___COND_def,
 		 smallfoot_prop_internal___PROP_def,
 		 smallfoot_prop_internal_ap_def,
@@ -7023,7 +7023,7 @@ VAR_RES_STACK___IS_EQUAL_UPTO_VALUES st1 st3``,
 
 SIMP_TAC std_ss [VAR_RES_STACK___IS_EQUAL_UPTO_VALUES_def,
 		 GSYM FORALL_AND_THM] THEN
-REPEAT GEN_TAC THEN 
+REPEAT GEN_TAC THEN
 HO_MATCH_MP_TAC (prove (``(!x. (X x ==> Y x)) ==> ((!x. X x) ==> (!x. Y x))``,
          		     METIS_TAC[])) THEN
 GEN_TAC THEN
@@ -7256,8 +7256,8 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_while_with_invariant = store_th
  SMALLFOOT_HOARE_TRIPLE res_env penv (asl_and (qP fvL) (XEVAL_fasl_predicate smallfoot_env c)) prog (qP fvL))
  ==>
 
- FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv (smallfoot_prog_while_with_invariant (free_params, qP) c prog) 
-     (smallfoot_choose_const_best_local_action (\x. qP (SND x)) 
+ FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv (smallfoot_prog_while_with_invariant (free_params, qP) c prog)
+     (smallfoot_choose_const_best_local_action (\x. qP (SND x))
          (\x. (asl_and (qP (SND x)) (XEVAL_fasl_predicate smallfoot_env (fasl_pred_neg c))))
          free_params []))
          ``,
@@ -7349,11 +7349,11 @@ CONJ_TAC THENL [
       SIMP_TAC std_ss [fasla_assume_def] THEN
       GEN_TAC THEN
       Tactical.REVERSE (Cases_on `s IN XEVAL_fasl_predicate smallfoot_env c`) THEN1 (
-         FULL_SIMP_TAC std_ss [XEVAL_fasl_predicate_def, 
+         FULL_SIMP_TAC std_ss [XEVAL_fasl_predicate_def,
 			       COND_NONE_SOME_REWRITES, NOT_IN_EMPTY,
 			       IMAGE_EMPTY, BIGUNION_EMPTY]
       ) THEN
-      FULL_SIMP_TAC std_ss [XEVAL_fasl_predicate_def, 
+      FULL_SIMP_TAC std_ss [XEVAL_fasl_predicate_def,
 			    IN_SING, IN_BIGUNION, IN_IMAGE, IS_SOME_EXISTS,
 			    GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM]
    ]
@@ -7392,15 +7392,15 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_while_with_invariant2 = store_t
 ``!res_env penv wp rp d c pL free_params P prog.
  ((SMALLFOOT_PP_USED_VARS c) SUBSET wp UNION rp) ==>
  (!fvL. LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES fvL free_params ==>
- (SMALLFOOT_HOARE_TRIPLE res_env penv 
-     (smallfoot_prop_internal_ap (wp,rp) (d fvL) (c::(pL fvL)) (P fvL)) prog 
+ (SMALLFOOT_HOARE_TRIPLE res_env penv
+     (smallfoot_prop_internal_ap (wp,rp) (d fvL) (c::(pL fvL)) (P fvL)) prog
      (smallfoot_prop_internal_ap (wp,rp) (d fvL) (pL fvL) (P fvL)))) ==>
- FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv 
-     (smallfoot_prog_while_with_invariant 
-         (free_params, 
-          \fvL. smallfoot_prop_internal_ap (wp,rp) (d fvL) (pL fvL) (P fvL)) 
-         c prog) 
-     (smallfoot_choose_const_best_local_action 
+ FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv
+     (smallfoot_prog_while_with_invariant
+         (free_params,
+          \fvL. smallfoot_prop_internal_ap (wp,rp) (d fvL) (pL fvL) (P fvL))
+         c prog)
+     (smallfoot_choose_const_best_local_action
          (\x. smallfoot_prop_internal_ap (wp,rp) (d (SND x)) (pL (SND x)) (P (SND x)))
          (\x. smallfoot_prop_internal_ap (wp,rp) (d (SND x)) ((fasl_pred_neg c)::(pL (SND x))) (P (SND x)))
      free_params [])``,
@@ -7447,7 +7447,7 @@ SIMP_TAC std_ss [fasl_order_THM, SUBSET_REFL]);
 val NONE___SUP_fasl_order = store_thm ("NONE___SUP_fasl_order",
 ``(SUP_fasl_order M = NONE) = (NONE IN M)``,
 
-SIMP_TAC std_ss [SUP_fasl_order_def, COND_RATOR, 
+SIMP_TAC std_ss [SUP_fasl_order_def, COND_RATOR,
 		 COND_RAND]);
 
 
@@ -7458,12 +7458,12 @@ store_thm ("FASL_PROGRAM_SEM___fasl_prog_critical_section",
   (?e t. (t IN FASL_PROTO_TRACES_EVAL penv e) /\ (e IN prog))) ==>
 
 (
-FASL_PROGRAM_SEM (env,lock_env) penv 
+FASL_PROGRAM_SEM (env,lock_env) penv
 (fasl_prog_critical_section l prog) =
-FASL_PROGRAM_SEM (env,lock_env) penv 
+FASL_PROGRAM_SEM (env,lock_env) penv
 (fasl_prog_block [
 fasl_prog_prim_command (fasl_pc_shallow_command (\f. fasla_materialisation f (lock_env l)));
-prog; 
+prog;
 fasl_prog_prim_command (fasl_pc_shallow_command (\f. fasla_annihilation f (lock_env l)))]))``,
 
 
@@ -7595,13 +7595,13 @@ CONJ_TAC THENL [
 		        IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
 
 
-   `?P4. !t' x'' x'''. 
+   `?P4. !t' x'' x'''.
          ((NONE =  best_local_action (FST env) (lock_env l)
                      (asl_emp (FST env)) x'') /\
           x'' IN THE (FASL_TRACE_SEM (env,lock_env) t' x''') /\
           x''' IN x') =
           P4 t' x'' x'''` by ALL_TAC THEN1 (
-      Q.EXISTS_TAC `\t' x'' x'''. 
+      Q.EXISTS_TAC `\t' x'' x'''.
          ((NONE =  best_local_action (FST env) (lock_env l)
                      (asl_emp (FST env)) x'') /\
           x'' IN THE (FASL_TRACE_SEM (env,lock_env) t' x''') /\
@@ -7663,7 +7663,7 @@ CONJ_TAC THENL [
   ]
 ]);
 
-      
+
 
 
 
@@ -7695,8 +7695,8 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_with_resource = store_thm (
 ``!res_env penv r c prog P.
  (res_env r = smallfoot_ap_resource_invariant wp P) ==>
 
- FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv 
-      (smallfoot_prog_with_resource r c prog) 
+ FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv
+      (smallfoot_prog_with_resource r c prog)
       (smallfoot_prog_block
          [smallfoot_prog_aquire_resource_input c wp P;
           prog;
@@ -7717,7 +7717,7 @@ CONJ_TAC THEN1 (
 		    GSYM LEFT_EXISTS_AND_THM,
 		    FASL_PROTO_TRACES_EVAL_IN_THM] THEN
    Q.EXISTS_TAC `fasl_pt_diverge` THEN
-   Q.EXISTS_TAC `fasl_pt_diverge` THEN 
+   Q.EXISTS_TAC `fasl_pt_diverge` THEN
    SIMP_TAC std_ss [FASL_PROTO_TRACES_EVAL_IN_THM,
 		    fasl_pt_diverge_def]
 ) THEN
@@ -7758,7 +7758,7 @@ val SMALLFOOT_res_decls_renv_MEM_REWRITES = store_thm (
 (ALL_DISTINCT (MAP FST res_decls) /\
 (MEM (r,wpL,P) res_decls)) ==>
 
-((SMALLFOOT_res_decls_renv res_decls) r = 
+((SMALLFOOT_res_decls_renv res_decls) r =
  smallfoot_ap_resource_invariant (LIST_TO_SET wpL) P)``,
 
 
@@ -7794,8 +7794,8 @@ val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_prog_with_resource___res_decls_renv 
 ``!res_decls penv r c prog wpL P.
  (ALL_DISTINCT (MAP FST res_decls) /\ MEM (r,wpL,P) res_decls) ==>
 
- FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,SMALLFOOT_res_decls_renv res_decls) penv 
-      (smallfoot_prog_with_resource r c prog) 
+ FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,SMALLFOOT_res_decls_renv res_decls) penv
+      (smallfoot_prog_with_resource r c prog)
       (fasl_prog_block
          [smallfoot_prog_aquire_resource_input c (LIST_TO_SET wpL) P;
           prog;
@@ -7874,7 +7874,7 @@ SIMP_TAC std_ss [IS_SOME___SMALLFOOT_AE_USED_VARS_def,
 		 smallfoot_ae_null_def]);
 
 
-val IS_SOME___SMALLFOOT_AE_USED_VARS___REWRITE = 
+val IS_SOME___SMALLFOOT_AE_USED_VARS___REWRITE =
 store_thm("IS_SOME___SMALLFOOT_AE_USED_VARS___REWRITE",
 ``
 IS_SOME___SMALLFOOT_AE_USED_VARS e =
@@ -7984,7 +7984,7 @@ val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___compare1 = prove (
  SMALLFOOT_AE_USED_VARS_SUBSET vs e2) ==>
 
 (
-SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS vs (smallfoot_ap_equal e1 e2) /\ 
+SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS vs (smallfoot_ap_equal e1 e2) /\
 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS vs (smallfoot_ap_unequal e1 e2) /\
 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS vs (smallfoot_ap_less e1 e2) /\
 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS vs (smallfoot_ap_lesseq e1 e2) /\
@@ -8064,7 +8064,7 @@ CONV_RULE GSYM_FUN_EQ_CONV (GSYM smallfoot_ap_tree_seg_num_def));
 
 
 
-val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_tree_seg_num = 
+val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_tree_seg_num =
 store_thm ("SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_tree_seg_num",
 ``
 !n bal tagL startExp endExp vs.
@@ -8073,7 +8073,7 @@ store_thm ("SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_tree_
 
 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS vs (
 smallfoot_ap_tree_seg_num n bal tagL startExp endExp)``,
-	   
+
 
 Induct_on `n` THEN1 (
    SIMP_TAC std_ss [smallfoot_ap_tree_seg_num_def,
@@ -8085,7 +8085,7 @@ SIMP_TAC std_ss [smallfoot_ap_tree_seg_num_def,
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___asl_or THEN
 CONJ_TAC THEN1 (
-  MATCH_MP_TAC SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___asl_and THEN 
+  MATCH_MP_TAC SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___asl_and THEN
   ASM_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___const,
 	       	       SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___compare]
 ) THEN
@@ -8117,7 +8117,7 @@ SIMP_TAC list_ss [MEM_MAP, DISJ_IMP_THM, FORALL_AND_THM,
                   GSYM LEFT_FORALL_IMP_THM] THEN
 `!n. n < LENGTH tagL ==>
      SMALLFOOT_AE_USED_VARS_SUBSET vs (EL n x)` by ALL_TAC THEN1 (
-   REPEAT STRIP_TAC THEN 
+   REPEAT STRIP_TAC THEN
    RES_TAC THEN
    FULL_SIMP_TAC std_ss [smallfoot_ae_is_const_def,
 			 SMALLFOOT_AE_USED_VARS_SUBSET___EVAL]
@@ -8132,7 +8132,7 @@ REPEAT STRIP_TAC THENL [
 
 
      Q.PAT_ASSUM `!bal tagL. X bal tagL` MATCH_MP_TAC THEN
-     FULL_SIMP_TAC std_ss [SMALLFOOT_AE_USED_VARS_SUBSET___EVAL, 
+     FULL_SIMP_TAC std_ss [SMALLFOOT_AE_USED_VARS_SUBSET___EVAL,
 			  MEM_EL] THEN
      METIS_TAC[]
 ]);
@@ -8142,7 +8142,7 @@ REPEAT STRIP_TAC THENL [
 
 
 
-val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_tree_seg_num = 
+val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_tree_seg_num =
 store_thm ("SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_tree_seg_num",
 ``
 !n bal tagL startExp endExp.
@@ -8162,7 +8162,7 @@ FULL_SIMP_TAC std_ss [IS_SOME___SMALLFOOT_AE_USED_VARS_def,
 
 
 
-val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_tree_seg = 
+val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_tree_seg =
 store_thm ("SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_tree_seg",
 ``
 !bal tagL startExp endExp vs.
@@ -8183,7 +8183,7 @@ ASM_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot
 
 
 
-val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_tree_seg = 
+val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_tree_seg =
 store_thm ("SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_tree_seg",
 ``
 !bal tagL startExp endExp vs.
@@ -8203,7 +8203,7 @@ FULL_SIMP_TAC std_ss [IS_SOME___SMALLFOOT_AE_USED_VARS_def,
 
 
 
-    
+
 
 
 val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___data_list_seg_num =
@@ -8314,7 +8314,7 @@ ASM_SIMP_TAC std_ss [smallfoot_ap_bintree_num_def,
 		 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_tree_seg_num,
 	         SMALLFOOT_AE_USED_VARS_SUBSET___EVAL]);
 
-    
+
 
 val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___bintree =
 save_thm ("SMALLFOOT_AP_PERMISSION_UNIMPORTANT___bintree",
@@ -8355,14 +8355,14 @@ EQ_TAC THEN STRIP_TAC THENL [
    Q.EXISTS_TAC `x2'` THEN
    ASM_SIMP_TAC std_ss [] THEN
    CONJ_TAC THENL [
-      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P1` 
+      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P1`
         (MATCH_MP_TAC o SIMP_RULE std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___ALTERNATIVE_DEF_2]) THEN
       Q.EXISTS_TAC `(x1,x2)` THEN
       `VAR_RES_STACK_IS_SUBSTATE x1 q` by PROVE_TAC[VAR_RES_STACK_IS_SUBSTATE_INTRO] THEN
       FULL_SIMP_TAC std_ss [VAR_RES_STACK_IS_SUBSTATE_REWRITE],
 
 
-      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P2` 
+      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P2`
         (MATCH_MP_TAC o SIMP_RULE std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___ALTERNATIVE_DEF_2]) THEN
       Q.EXISTS_TAC `(x1',x2')` THEN
       `VAR_RES_STACK_IS_SUBSTATE x1' q` by PROVE_TAC[VAR_RES_STACK_IS_SUBSTATE_INTRO] THEN
@@ -8377,14 +8377,14 @@ EQ_TAC THEN STRIP_TAC THENL [
    Q.EXISTS_TAC `h2` THEN
    ASM_SIMP_TAC std_ss [VAR_RES_STACK_COMBINE___VAR_RES_STACK_SPLIT12] THEN
    CONJ_TAC THENL [
-      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P1` 
+      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P1`
         (MATCH_MP_TAC o SIMP_RULE std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___ALTERNATIVE_DEF_2]) THEN
       Q.EXISTS_TAC `(q,h1)` THEN
       ASM_SIMP_TAC std_ss [VAR_RES_STACK_SPLIT12___REWRITES,
 			   SUBSET_REFL],
 
 
-      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P2` 
+      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P2`
         (MATCH_MP_TAC o SIMP_RULE std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___ALTERNATIVE_DEF_2]) THEN
       Q.EXISTS_TAC `(q,h2)` THEN
       ASM_SIMP_TAC std_ss [VAR_RES_STACK_SPLIT12___REWRITES,
@@ -8449,7 +8449,7 @@ SIMP_TAC std_ss [smallfoot_ap_star___ap_stack_true___PERMISSION_UNIMPORTANT,
 val smallfoot_ap_star___ap_stack_true___IDEM2 =
 store_thm ("smallfoot_ap_star___ap_stack_true___IDEM2",
 ``!P.
-smallfoot_ap_star smallfoot_ap_stack_true 
+smallfoot_ap_star smallfoot_ap_stack_true
 (smallfoot_ap_star smallfoot_ap_stack_true P) =
 smallfoot_ap_star smallfoot_ap_stack_true P``,
 
@@ -8480,46 +8480,46 @@ SMALLFOOT_PROGRAM_SEM res_env' penv' prog`
 
 val SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE___SIMPLE_REWRITES =
 store_thm ("SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE___SIMPLE_REWRITES",
-``SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+``SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (smallfoot_prog_assign v e) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (fasl_prog_prim_command (smallfoot_pc_assume c)) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (fasl_prog_best_local_action P Q) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (fasl_prog_quant_best_local_action qP qQ) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (smallfoot_prog_best_local_action P Q) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (smallfoot_prog_field_assign e1 t e2) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (smallfoot_prog_field_lookup v e t) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (smallfoot_prog_new_var_init v e) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (smallfoot_prog_new_var v) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (smallfoot_prog_new v) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (smallfoot_prog_dispose e) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (fasl_prog_quant_best_local_action qP qQ) /\
 
   SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     (smallfoot_prog_release_resource_input wp P) /\
 
-  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE 
+  SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
     fasl_prog_skip
 ``,
 
@@ -8528,7 +8528,7 @@ SIMP_TAC std_ss [SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE_def,
 		 SMALLFOOT_PROGRAM_SEM_def,
 		 IMAGE_ABS, IN_ABS, fasl_prog_skip_def,
 		 GSYM RIGHT_EXISTS_AND_THM,
-		
+
 
 		 smallfoot_prog_field_assign_def,
 		 fasl_prog_best_local_action_def,
@@ -8683,7 +8683,7 @@ ASM_SIMP_TAC std_ss []);
 val SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE___smallfoot_cond_choose_const =
 store_thm("SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE___smallfoot_cond_choose_const",
 ``SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
-    (smallfoot_cond_choose_const_best_local_action 
+    (smallfoot_cond_choose_const_best_local_action
      c pre post condL expL)``,
 
 SIMP_TAC std_ss [SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE_def,
@@ -8716,8 +8716,8 @@ SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
   (smallfoot_proc_call_abstraction pre post (ref_argL,val_argL) condL) /\
 
 SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE
-  (smallfoot_parallel_proc_call_abstraction pre1 post1 
-           (ref_argL1,val_argL1) condL1 pre2 post2 
+  (smallfoot_parallel_proc_call_abstraction pre1 post1
+           (ref_argL1,val_argL1) condL1 pre2 post2
            (ref_argL2,val_argL2) condL2) ``,
 
 
@@ -8749,7 +8749,7 @@ val SMALLFOOT_COND_HOARE_TRIPLE_INTRO = store_thm ("SMALLFOOT_COND_HOARE_TRIPLE_
 ``SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE prog ==>
 
   (SMALLFOOT_HOARE_TRIPLE res_env penv (smallfoot_prop_internal_ap (wp1, rp1) d pL1 P1) prog (smallfoot_prop_internal_ap (wp2, rp2) d pL2 P2) =
-   SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop_internal (EMPTY_BAG, EMPTY_BAG) (wp1, rp1) (ALL_DISTINCT d) pL1 EMPTY_BAG P1) prog 
+   SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop_internal (EMPTY_BAG, EMPTY_BAG) (wp1, rp1) (ALL_DISTINCT d) pL1 EMPTY_BAG P1) prog
                               (smallfoot_prop_internal (EMPTY_BAG, EMPTY_BAG) (wp2, rp2) (ALL_DISTINCT d) pL2 EMPTY_BAG P2))``,
 
 SIMP_TAC std_ss [SMALLFOOT_COND_HOARE_TRIPLE_def,
@@ -8764,7 +8764,7 @@ SIMP_TAC std_ss [SMALLFOOT_COND_HOARE_TRIPLE_def,
 		 FASL_PROGRAM_HOARE_TRIPLE_def,
 		 SUBSET_DEF,
 		 bagTheory.FINITE_EMPTY_BAG,
-		 HOARE_TRIPLE_def, 
+		 HOARE_TRIPLE_def,
 		 SMALLFOOT_PROG_IS_RESOURCE_AND_PROCCALL_FREE_def,
 		 SMALLFOOT_PROGRAM_SEM_def] THEN
 Cases_on `ALL_DISTINCT d` THEN ASM_REWRITE_TAC[] THEN
@@ -8799,7 +8799,7 @@ SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF,
 
 val SMALLFOOT_COND_PROP___IMP_def = Define `
 SMALLFOOT_COND_PROP___IMP P1 P2 =
-(!x. (FST P1 /\ x IN SND P1) ==> 
+(!x. (FST P1 /\ x IN SND P1) ==>
   (FST P2 /\ x IN SND P2))`;
 
 
@@ -8852,7 +8852,7 @@ val SMALLFOOT_COND_PROP___STRONG_EQUIV___SYM = store_thm
 
 
 
-val SMALLFOOT_COND_PROP___EQUIV_REWRITE = 
+val SMALLFOOT_COND_PROP___EQUIV_REWRITE =
 store_thm("SMALLFOOT_COND_PROP___EQUIV_REWRITE",
 
 ``SMALLFOOT_COND_PROP___EQUIV P1 P2 =
@@ -8865,7 +8865,7 @@ METIS_TAC[]);
 
 
 
-val SMALLFOOT_COND_PROP___STRONG_EQUIV_REWRITE = 
+val SMALLFOOT_COND_PROP___STRONG_EQUIV_REWRITE =
 store_thm("SMALLFOOT_COND_PROP___STRONG_EQUIV_REWRITE",
 
 ``SMALLFOOT_COND_PROP___STRONG_EQUIV P1 P2 =
@@ -8938,7 +8938,7 @@ store_thm ("COND_PROP___STRONG_EXISTS___SMALLFOOT_COND_PROP___STRONG_IMP",
 (!x. SMALLFOOT_COND_PROP___STRONG_IMP (P x) (P' x)) ==>
 
 SMALLFOOT_COND_PROP___STRONG_IMP
-(COND_PROP___STRONG_EXISTS P) 
+(COND_PROP___STRONG_EXISTS P)
 (COND_PROP___STRONG_EXISTS P')
 
 ``,
@@ -9097,7 +9097,7 @@ SIMP_TAC std_ss [SMALLFOOT_COND_PROP___STRONG_EQUIV_def]);
 val cond_prop_false_def = Define `
 cond_prop_false = (F, asl_false)`
 
-val COND_PROP___EXISTS_def = Define 
+val COND_PROP___EXISTS_def = Define
 `$COND_PROP___EXISTS P = (T, \s:smallfoot_state. ?x. (FST (P x)) /\
                                     s IN (SND (P x)))`
 
@@ -9154,7 +9154,7 @@ METIS_TAC[]);
 
 
 
-val COND_PROP___ADD_COND_def = Define 
+val COND_PROP___ADD_COND_def = Define
 `COND_PROP___ADD_COND c P = (c /\ FST P, (SND P):smallfoot_a_proposition)`;
 
 
@@ -9256,7 +9256,7 @@ SIMP_TAC std_ss [SMALLFOOT_COND_PROP___EQUIV_def,
 
 val SMALLFOOT_COND_PROP___IMP___EXISTS = store_thm ("SMALLFOOT_COND_PROP___IMP___EXISTS",
 ``!p1 p2. (!x. SMALLFOOT_COND_PROP___IMP (p1 x) (p2 x)) ==>
-           (SMALLFOOT_COND_PROP___IMP (COND_PROP___EXISTS x. p1 x) 
+           (SMALLFOOT_COND_PROP___IMP (COND_PROP___EXISTS x. p1 x)
                                      (COND_PROP___EXISTS x. p2 x))``,
 
 SIMP_TAC std_ss [COND_PROP___EXISTS_def,
@@ -9268,7 +9268,7 @@ METIS_TAC[]);
 
 val SMALLFOOT_COND_PROP___EQUIV___EXISTS = store_thm ("SMALLFOOT_COND_PROP___EQUIV___EXISTS",
 ``!p1 p2. (!x. SMALLFOOT_COND_PROP___EQUIV (p1 x) (p2 x)) ==>
-           (SMALLFOOT_COND_PROP___EQUIV (COND_PROP___EXISTS x. p1 x) 
+           (SMALLFOOT_COND_PROP___EQUIV (COND_PROP___EXISTS x. p1 x)
                                      (COND_PROP___EXISTS x. p2 x))``,
 
 SIMP_TAC std_ss [SMALLFOOT_COND_PROP___EQUIV_def,
@@ -9282,8 +9282,8 @@ store_thm ("smallfoot_slp_new_var___PROP_COND___small_prop_THM",
 ``SMALLFOOT_COND_PROP___STRONG_IMP
 
 
-  (smallfoot_slp_new_var___PROP_COND v wpb rpb 
-   (smallfoot_prop (wpb,rpb) sfb)) 
+  (smallfoot_slp_new_var___PROP_COND v wpb rpb
+   (smallfoot_prop (wpb,rpb) sfb))
 (smallfoot_prop (BAG_INSERT v wpb,rpb) sfb)``,
 
 
@@ -9313,7 +9313,7 @@ REPEAT STRIP_TAC THENL [
 
 
 
-    
+
 
 
 val FASL_PROGRAM_IS_ABSTRACTION___smallfoot_cond_choose_const_best_local_action___GENERAL =
@@ -9344,7 +9344,7 @@ Q.ABBREV_TAC `c3 = ?arg. ~FST (P1 arg) \/ ~FST (Q1 arg)` THEN
 Q.ABBREV_TAC `c4 = ?arg. ~FST (P2 arg) \/ ~FST (Q2 arg)` THEN
 
 `c4 ==> c3` by ALL_TAC THEN1 (
-   UNABBREV_ALL_TAC THEN 
+   UNABBREV_ALL_TAC THEN
    METIS_TAC[]
 ) THEN
 Cases_on `c3` THEN1 (
@@ -9365,7 +9365,7 @@ ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
 
 
 Q.ABBREV_TAC `PRE1 = (\(arg,state).
-		asl_and (K (LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES (SND arg) condL))		  
+		asl_and (K (LIST_UNROLL_GIVEN_ELEMENT_NAMES___TYPES (SND arg) condL))
                  (asl_and
                     (smallfoot_ap_equal___P_EXPRESSION_LIST expL (FST arg))
                     (asl_and (SND (P1 arg)) (\s. s = state))))` THEN
@@ -9433,14 +9433,14 @@ FULL_SIMP_TAC std_ss [SMALLFOOT_COND_PROP___STRONG_IMP_def] THEN
 METIS_TAC[]);
 
 
-    
 
 
 
 
 
 
-val asl_bigstar___BAG_UNION = store_thm ("asl_bigstar___BAG_UNION", 
+
+val asl_bigstar___BAG_UNION = store_thm ("asl_bigstar___BAG_UNION",
 ``!f. IS_SEPARATION_COMBINATOR f ==>
 !b1 b2.
 asl_bigstar f (BAG_UNION b1 b2) =
@@ -9449,7 +9449,7 @@ asl_star f (asl_bigstar f b1) (asl_bigstar f b2)``,
 GEN_TAC THEN STRIP_TAC THEN
 GEN_TAC THEN
 Tactical.REVERSE (Cases_on `FINITE_BAG b1`) THEN1 (
-   ASM_SIMP_TAC std_ss [asl_bigstar_def, 
+   ASM_SIMP_TAC std_ss [asl_bigstar_def,
 		        asl_false___asl_star_THM,
 		        bagTheory.FINITE_BAG_UNION]
 ) THEN
@@ -9465,7 +9465,7 @@ ASM_SIMP_TAC std_ss [bagTheory.BAG_UNION_EMPTY,
 
 
 
-val smallfoot_ap_bigstar___BAG_UNION = store_thm ("smallfoot_ap_bigstar___BAG_UNION", 
+val smallfoot_ap_bigstar___BAG_UNION = store_thm ("smallfoot_ap_bigstar___BAG_UNION",
 ``!b1 b2.
 smallfoot_ap_bigstar (BAG_UNION b1 b2) =
 smallfoot_ap_star (smallfoot_ap_bigstar b1) (smallfoot_ap_bigstar b2)``,
@@ -9487,7 +9487,7 @@ BAG_DISJOINT wpb1 rpb2 /\
 BAG_DISJOINT wpb2 rpb1) ==>
 
 
-SMALLFOOT_COND_PROP___STRONG_IMP 
+SMALLFOOT_COND_PROP___STRONG_IMP
 (smallfoot_cond_star
    (smallfoot_prop (wpb1, rpb1) sfb1)
    (smallfoot_prop (wpb2, rpb2) sfb2))
@@ -9538,7 +9538,7 @@ REPEAT STRIP_TAC THENL [
    Q.ABBREV_TAC `P2 = smallfoot_ap_star smallfoot_ap_stack_true
                          (smallfoot_ap_bigstar sfb2)` THEN
    `smallfoot_ap_star smallfoot_ap_stack_true
-        (smallfoot_ap_bigstar (BAG_UNION sfb1 sfb2)) = 
+        (smallfoot_ap_bigstar (BAG_UNION sfb1 sfb2)) =
     smallfoot_ap_star P1 P2` by ALL_TAC THEN1 (
       UNABBREV_ALL_TAC THEN
       SIMP_TAC std_ss [smallfoot_ap_bigstar___BAG_UNION] THEN
@@ -9602,7 +9602,7 @@ REPEAT STRIP_TAC THENL [
 
 	 PROVE_TAC[],
 	 PROVE_TAC[],
-	 
+
 
 	 `SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS (SET_OF_BAG (BAG_UNION wpb1 rpb1)) P1` by
             FULL_SIMP_TAC std_ss [smallfoot_prop___COND___EXPAND] THEN
@@ -9671,7 +9671,7 @@ store_thm ("FASL_PROGRAM_IS_ABSTRACTION___smallfoot_cond_choose_const_best_local
 
 (
 FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv
-(smallfoot_cond_choose_const_best_local_action 
+(smallfoot_cond_choose_const_best_local_action
   d
   (\args. smallfoot_cond_star
              (smallfoot_prop (wpb1,rpb1) (sfb_pre1 args))
@@ -9682,7 +9682,7 @@ FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv
   condL expL
 )
 
-(smallfoot_cond_choose_const_best_local_action 
+(smallfoot_cond_choose_const_best_local_action
 (d /\ BAG_DISJOINT wpb1 wpb2 /\
    BAG_DISJOINT wpb1 rpb2 /\
    BAG_DISJOINT wpb2 rpb1)
@@ -9717,7 +9717,7 @@ val SMALLFOOT_COND_PROP___STRONG_EQUIV___cond_star = store_thm (
   (SMALLFOOT_COND_PROP___STRONG_EQUIV p1 p1' /\
   SMALLFOOT_COND_PROP___STRONG_EQUIV p2 p2') ==>
 
-  SMALLFOOT_COND_PROP___STRONG_EQUIV 
+  SMALLFOOT_COND_PROP___STRONG_EQUIV
      (smallfoot_cond_star p1 p2) (smallfoot_cond_star p1' p2')``,
 
 
@@ -9741,14 +9741,14 @@ store_thm ("FASL_PROGRAM_IS_ABSTRACTION___smallfoot_cond_choose_const_best_local
 
 (
 FASL_PROGRAM_IS_ABSTRACTION (smallfoot_env,res_env) penv
-(smallfoot_cond_choose_const_best_local_action 
+(smallfoot_cond_choose_const_best_local_action
   d
   (\args. smallfoot_cond_star (pre1 args) (pre2 args))
   (\args. smallfoot_cond_star (post1 args) (post2 args))
   condL expL
 )
 
-(smallfoot_cond_choose_const_best_local_action 
+(smallfoot_cond_choose_const_best_local_action
 (d /\ BAG_DISJOINT wpb1 wpb2 /\
    BAG_DISJOINT wpb1 rpb2 /\
    BAG_DISJOINT wpb2 rpb1)
@@ -9831,7 +9831,7 @@ val smallfoot_prop___PROP_INSERT = store_thm ("smallfoot_prop___PROP_INSERT",
   (smallfoot_prop___PROP (wpb, rpb) (BAG_INSERT sf sfb) =
   (\s. ?h1 h2. ?h1 h2.
                DISJOINT (FDOM h1) (FDOM h2) /\ (SND s = FUNION h1 h2) /\
-               (FST s,h1) IN sf /\ 
+               (FST s,h1) IN sf /\
                (FST s,h2) IN smallfoot_prop___PROP (wpb, rpb) sfb))``,
 
 
@@ -9862,9 +9862,9 @@ val smallfoot_prop___CONST_INTRO = store_thm (
 
 (SMALLFOOT_COND_PROP___EQUIV
  (smallfoot_prop (wpb,rpb) sfb)
- (COND_PROP___EXISTS c. (smallfoot_prop (wpb,rpb) 
+ (COND_PROP___EXISTS c. (smallfoot_prop (wpb,rpb)
 	       	        (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v)
-                                                        (smallfoot_ae_const c)) 
+                                                        (smallfoot_ae_const c))
                                     sfb))))``,
 
 REPEAT STRIP_TAC THEN
@@ -9896,8 +9896,8 @@ Q.ABBREV_TAC `P = smallfoot_ap_star smallfoot_ap_stack_true (smallfoot_ap_bigsta
 `SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS
             (SET_OF_BAG (BAG_UNION wpb rpb)) P` by
    FULL_SIMP_TAC std_ss [smallfoot_prop___COND___EXPAND] THEN
-`!c. SMALLFOOT_AP_PERMISSION_UNIMPORTANT 
-    (smallfoot_ap_equal (smallfoot_ae_var v) 
+`!c. SMALLFOOT_AP_PERMISSION_UNIMPORTANT
+    (smallfoot_ap_equal (smallfoot_ae_var v)
                         (smallfoot_ae_const c))` by ALL_TAC THEN1 (
    REWRITE_TAC [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___ALTERNATIVE_DEF] THEN
    GEN_TAC THEN
@@ -9946,13 +9946,13 @@ SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb)) e2)
  ==>
 
 (SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop (wpb,rpb) sfb) prog post =
- ((SMALLFOOT_COND_HOARE_TRIPLE  
-        (smallfoot_prop (wpb,rpb) 
+ ((SMALLFOOT_COND_HOARE_TRIPLE
+        (smallfoot_prop (wpb,rpb)
 	       	        (BAG_INSERT (smallfoot_ap_equal e1 e2)
                                     sfb))
         prog post) /\
- (SMALLFOOT_COND_HOARE_TRIPLE  
-        (smallfoot_prop (wpb,rpb) 
+ (SMALLFOOT_COND_HOARE_TRIPLE
+        (smallfoot_prop (wpb,rpb)
 	       	        (BAG_INSERT (smallfoot_ap_unequal e1 e2)
                                     sfb))
         prog post)))``,
@@ -10008,10 +10008,10 @@ val SMALLFOOT_COND_INFERENCE___CONST_INTRO = store_thm (
 (v IN SET_OF_BAG (BAG_UNION wpb rpb)) ==>
 
 (SMALLFOOT_COND_HOARE_TRIPLE (smallfoot_prop (wpb,rpb) sfb) prog post =
- !c. SMALLFOOT_COND_HOARE_TRIPLE  
-        (smallfoot_prop (wpb,rpb) 
+ !c. SMALLFOOT_COND_HOARE_TRIPLE
+        (smallfoot_prop (wpb,rpb)
 	       	        (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v)
-                                                        (smallfoot_ae_const c)) 
+                                                        (smallfoot_ae_const c))
                                     sfb))
         prog
         post)``,
@@ -10037,7 +10037,7 @@ val smallfoot_prop___UNEQUAL_INTRO = store_thm (
 
  (smallfoot_prop (wpb,rpb) sfb =
   smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1)
-                                                             (smallfoot_ae_const c2)) 
+                                                             (smallfoot_ae_const c2))
                                         sfb))``,
 
 
@@ -10068,9 +10068,9 @@ val smallfoot_prop___EQUAL_POINTS_TO = store_thm (
             (SET_OF_BAG (BAG_UNION wpb rpb)) (smallfoot_ap_points_to e2 L)) ==>
 
 
- (smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to e2 L) 
+ (smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to e2 L)
 		           (BAG_INSERT (smallfoot_ap_equal e1 e2) sfb)) =
-  smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to e1 L) 
+  smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to e1 L)
 		           (BAG_INSERT (smallfoot_ap_equal e1 e2) sfb)))``,
 
 
@@ -10139,7 +10139,7 @@ val smallfoot_ap_var_update_def = Define `
 
 val smallfoot_ae_var_update_def = Define `
     smallfoot_ae_var_update v c (e:smallfoot_a_expression) =
-    \st:smallfoot_stack. 
+    \st:smallfoot_stack.
            (e (SMALLFOOT_STACK_UPDATE_VAR v c var_res_write_permission st))`;
 
 
@@ -10155,7 +10155,7 @@ val smallfoot_ae_var_update_EVAL = store_thm ("smallfoot_ae_var_update_EVAL",
  smallfoot_ae_binop bop (smallfoot_ae_var_update v c e1) (smallfoot_ae_var_update v c e2))
 ``,
 
-ONCE_REWRITE_TAC [FUN_EQ_THM] THEN 
+ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
 SIMP_TAC std_ss [smallfoot_ae_var_update_def,
 		 SMALLFOOT_STACK_UPDATE_VAR_def,
 		 smallfoot_ae_const_def,
@@ -10198,15 +10198,15 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 			    FUNION_DEF, EXTENSION, IN_INTER,
 			    IN_UNION, IN_COMPL, IN_SING,
 			    IN_INSERT, FAPPLY_FUPDATE_THM, GSYM FORALL_AND_THM] THEN
-      GEN_TAC THEN 
+      GEN_TAC THEN
       Cases_on `x' = v` THEN (
          ASM_SIMP_TAC std_ss []
-      ) THEN      
+      ) THEN
       METIS_TAC[],
 
 
-      
-      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT p1` 
+
+      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT p1`
           (MATCH_MP_TAC o SIMP_RULE  std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___ALTERNATIVE_DEF_2]) THEN
       Q.EXISTS_TAC `p` THEN
       FULL_SIMP_TAC std_ss [SMALLFOOT_STATE_UPDATE_VAR_def,
@@ -10223,7 +10223,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 
 
 
-      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT p2` 
+      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT p2`
           (MATCH_MP_TAC o SIMP_RULE  std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___ALTERNATIVE_DEF_2]) THEN
       Q.EXISTS_TAC `q` THEN
       FULL_SIMP_TAC std_ss [SMALLFOOT_STATE_UPDATE_VAR_def,
@@ -10263,8 +10263,8 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 	 ASM_SIMP_TAC std_ss []
       ],
 
-      
-      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT p1` 
+
+      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT p1`
           (MATCH_MP_TAC o SIMP_RULE  std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___ALTERNATIVE_DEF_2]) THEN
       Q.EXISTS_TAC `SMALLFOOT_STATE_UPDATE_VAR v c var_res_write_permission p` THEN
       ASM_SIMP_TAC std_ss [SMALLFOOT_STATE_UPDATE_VAR_def,
@@ -10274,7 +10274,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 
 
 
-      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT p2` 
+      Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT p2`
           (MATCH_MP_TAC o SIMP_RULE  std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___ALTERNATIVE_DEF_2]) THEN
       Q.EXISTS_TAC `SMALLFOOT_STATE_UPDATE_VAR v c var_res_write_permission q` THEN
       ASM_SIMP_TAC std_ss [SMALLFOOT_STATE_UPDATE_VAR_def,
@@ -10333,9 +10333,9 @@ Cases_on `pL` THENL [
    FULL_SIMP_TAC list_ss [smallfoot_ap_bigstar_list_def,
 		     asl_bigstar_list_REWRITE] THEN
    FULL_SIMP_TAC std_ss [GSYM smallfoot_ap_star_def] THEN
-   `SMALLFOOT_AP_PERMISSION_UNIMPORTANT 
+   `SMALLFOOT_AP_PERMISSION_UNIMPORTANT
       (smallfoot_ap_star h (asl_bigstar_list smallfoot_separation_combinator t))` by ALL_TAC THEN1 (
-   
+
       SIMP_TAC std_ss [GSYM asl_bigstar_list_REWRITE, smallfoot_ap_star_def] THEN
       SIMP_TAC std_ss [GSYM smallfoot_ap_bigstar_list_def] THEN
       MATCH_MP_TAC SMALLFOOT_AP_PERMISSION_UNIMPORTANT___bigstar_list THEN
@@ -10344,7 +10344,7 @@ Cases_on `pL` THENL [
    ASM_SIMP_TAC std_ss [smallfoot_ap_var_update___smallfoot_ap_star]
 ]);
 
-   
+
 
 
 
@@ -10466,7 +10466,7 @@ smallfoot_ap_cond_equal (smallfoot_ae_var_update v c e1)
 			    (smallfoot_ae_var_update v c e2)
                             (smallfoot_ae_var_update v c e3)``,
 
-			    
+
 SIMP_TAC std_ss [smallfoot_ap_cond_equal_def,
 		 smallfoot_ap_var_update___BOOL,
 		 smallfoot_ap_var_update___compare]);
@@ -10538,7 +10538,7 @@ GEN_TAC THEN
 Tactical.REVERSE (Cases_on `LENGTH eL = LENGTH tagL`) THEN1 (
    ASM_SIMP_TAC std_ss [smallfoot_ap_var_update_def,
 		        IN_ABS]
-) THEN  
+) THEN
 ASM_REWRITE_TAC[] THEN
 MATCH_MP_TAC (prove (``((A = A') /\ (A' ==> (B = B'))) ==> ((A /\ B) = (A' /\ B'))``, PROVE_TAC[])) THEN
 CONJ_TAC THEN1 (
@@ -10665,7 +10665,7 @@ Induct_on `n` THENL [
                (t,smallfoot_ae_const n'))` THEN
    Q.ABBREV_TAC `data_tl = (FMAP_MAP TL data)` THEN
    `SMALLFOOT_AP_PERMISSION_UNIMPORTANT (smallfoot_ap_points_to e1 data_pt) /\
-    SMALLFOOT_AP_PERMISSION_UNIMPORTANT 
+    SMALLFOOT_AP_PERMISSION_UNIMPORTANT
           (smallfoot_ap_data_list_seg_num n t (smallfoot_ae_const n') data_tl
 	    e2)` by ALL_TAC THEN1 (
        Q.UNABBREV_TAC `data_pt` THEN
@@ -10682,7 +10682,7 @@ Induct_on `n` THENL [
                         IS_SOME___SMALLFOOT_AE_USED_VARS___EVAL,
 			smallfoot_ae_var_update_EVAL,
 			smallfoot_ap_var_update___smallfoot_ap_points_to] THEN
-      
+
    Tactical.REVERSE (`FMAP_MAP (smallfoot_ae_var_update v c) data_pt =
 		      data_pt` by ALL_TAC) THEN1 (
       ASM_REWRITE_TAC[]
@@ -10848,7 +10848,7 @@ Induct_on `e` THEN (
 		    smallfoot_ae_var_update_EVAL]
 ) THEN
 SIMP_TAC std_ss [smallfoot_ae_var_update_EVAL,
-          	 COND_RAND, COND_RATOR, 
+          	 COND_RAND, COND_RATOR,
 		 SMALLFOOT_P_EXPRESSION_EVAL_def]);
 
 
@@ -10917,23 +10917,23 @@ ASM_SIMP_TAC std_ss [smallfoot_ap_var_update___smallfoot_ap_star]);
 
 
 val smallfoot_ap_cond_def = Define `
-smallfoot_ap_cond e1 e2 p1 (p2:smallfoot_a_proposition) = 
-\s. IS_SOME (e1 (FST s)) /\ IS_SOME (e2 (FST s)) /\ 
+smallfoot_ap_cond e1 e2 p1 (p2:smallfoot_a_proposition) =
+\s. IS_SOME (e1 (FST s)) /\ IS_SOME (e2 (FST s)) /\
     asl_cond (smallfoot_ap_weak_equal e1 e2) p1 p2 s`;
 
 
 val smallfoot_ap_binexpression_cond_def = Define `
 smallfoot_ap_binexpression_cond p e1 e2 P =
 \s. IS_SOME (e1 (FST s)) /\ IS_SOME (e2 (FST s)) /\
-asl_cond (smallfoot_ap_binexpression F p e1 e2) 
+asl_cond (smallfoot_ap_binexpression F p e1 e2)
 (smallfoot_ap_star smallfoot_ap_stack_true P) smallfoot_ap_stack_true s`
 
 
 val smallfoot_ap_equal_cond_def = Define `
-smallfoot_ap_equal_cond = smallfoot_ap_binexpression_cond $=` 
+smallfoot_ap_equal_cond = smallfoot_ap_binexpression_cond $=`
 
 val smallfoot_ap_unequal_cond_def = Define `
-smallfoot_ap_unequal_cond = smallfoot_ap_binexpression_cond (\n1 n2. ~(n1 = n2))` 
+smallfoot_ap_unequal_cond = smallfoot_ap_binexpression_cond (\n1 n2. ~(n1 = n2))`
 
 
 
@@ -11006,14 +11006,14 @@ ASM_REWRITE_TAC [SMALLFOOT_AE_USED_VARS_SUBSET___UNIV_REWRITE]);
 val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_equal_cond =
 save_thm ("SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_equal_cond",
 REWRITE_RULE [GSYM smallfoot_ap_equal_cond_def]
-(SPEC ``($=):num -> num -> bool`` 
+(SPEC ``($=):num -> num -> bool``
 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_binexpression_cond));
 
 
 val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_equal_cond =
 save_thm ("SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_equal_cond",
 REWRITE_RULE [GSYM smallfoot_ap_equal_cond_def]
-(SPEC ``($=):num -> num -> bool`` 
+(SPEC ``($=):num -> num -> bool``
 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_binexpression_cond));
 
 
@@ -11021,7 +11021,7 @@ SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_binexpression_cond));
 val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_unequal_cond =
 save_thm ("SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_unequal_cond",
 REWRITE_RULE [GSYM smallfoot_ap_unequal_cond_def]
-(SPEC ``\n1:num n2. ~(n1 = n2)`` 
+(SPEC ``\n1:num n2. ~(n1 = n2)``
 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_binexpression_cond));
 
 
@@ -11053,8 +11053,8 @@ SIMP_TAC std_ss [smallfoot_ap_star___PERMISSION_UNIMPORTANT,
 		 smallfoot_ap_unequal_cond_def,
 		 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___smallfoot_ap_binexpression_cond] THEN
 SIMP_TAC std_ss [smallfoot_ap_cond_def, IN_ABS,
-		 asl_cond_def, 
-		 asl_star_def, 
+		 asl_cond_def,
+		 asl_star_def,
                  smallfoot_ap_binexpression_cond_def,
 		 smallfoot_ap_weak_equal_def,
 		 smallfoot_ap_star___ap_stack_true___PERMISSION_UNIMPORTANT] THEN
@@ -11087,7 +11087,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
    ) THEN
    FULL_SIMP_TAC std_ss [smallfoot_ap_binexpression_def, IN_ABS,
 			 smallfoot_a_stack_proposition_def, LET_THM] THEN
-   Cases_on `ec1 = ec2` THENL [ 
+   Cases_on `ec1 = ec2` THENL [
      FULL_SIMP_TAC std_ss [smallfoot_ap_stack_true_def, IN_ABS,
 			   FUNION_FEMPTY_2] THEN
      Q.PAT_ASSUM `X = h1` (ASSUME_TAC o GSYM) THEN
@@ -11103,7 +11103,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
 
 
 
-val smallfoot_ap_binexpression_cond___ap_star = 
+val smallfoot_ap_binexpression_cond___ap_star =
 store_thm ("smallfoot_ap_binexpression_cond___ap_star",
 ``!p e1 e2 P1 P2.
   (IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\
@@ -11112,7 +11112,7 @@ store_thm ("smallfoot_ap_binexpression_cond___ap_star",
    SMALLFOOT_AP_PERMISSION_UNIMPORTANT P2) ==>
 
   (smallfoot_ap_binexpression_cond p e1 e2 (smallfoot_ap_star P1 P2) =
-smallfoot_ap_star 
+smallfoot_ap_star
    (smallfoot_ap_binexpression_cond p e1 e2 P1)
    (smallfoot_ap_binexpression_cond p e1 e2 P2))``,
 
@@ -11212,7 +11212,7 @@ store_thm ("smallfoot_ap_binexpression_cond___false_cond",
  (e1 (FST s) = SOME ec1) /\ (e2 (FST s) = SOME ec2) /\
  ~(p ec1 ec2)) ==>
 
-(smallfoot_ap_binexpression_cond p e1 e2 P s = 
+(smallfoot_ap_binexpression_cond p e1 e2 P s =
 s IN smallfoot_ap_stack_true)``,
 
 
@@ -11256,7 +11256,7 @@ REPEAT STRIP_TAC THEN (
 val smallfoot_ap_var_update___smallfoot_ap_unequal_cond =
 save_thm ("smallfoot_ap_var_update___smallfoot_ap_unequal_cond",
 REWRITE_RULE [GSYM smallfoot_ap_unequal_cond_def]
-(SPEC ``\n1:num n2. ~(n1 = n2)`` 
+(SPEC ``\n1:num n2. ~(n1 = n2)``
 smallfoot_ap_var_update___smallfoot_ap_binexpression_cond));
 
 
@@ -11303,7 +11303,7 @@ FULL_SIMP_TAC std_ss [] THEN
 MATCH_MP_TAC (prove (``((B ==> C) /\ A)  ==> ((A ==> B) ==> C)``, SIMP_TAC std_ss [])) THEN
 CONJ_TAC THEN1 (
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `!s s'. X s s'` (MP_TAC o Q.SPECL [`s`, `s1`]) THEN    
+   Q.PAT_ASSUM `!s s'. X s s'` (MP_TAC o Q.SPECL [`s`, `s1`]) THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
    RES_TAC THEN
@@ -11325,18 +11325,18 @@ store_thm ("SMALLFOOT_COND_INFERENCE___prog_assign",
 
 ((BAG_IN v wpb) /\
 (THE (SMALLFOOT_PE_USED_VARS e) SUBSET (SET_OF_BAG (BAG_UNION wpb rpb)))) ==>
-((SMALLFOOT_COND_HOARE_TRIPLE 
-   (smallfoot_prop (wpb,rpb) 
-      (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v) 
-                                      (smallfoot_ae_var_update v c (SMALLFOOT_P_EXPRESSION_EVAL e))) 
+((SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb)
+      (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v)
+                                      (smallfoot_ae_var_update v c (SMALLFOOT_P_EXPRESSION_EVAL e)))
          (BAG_IMAGE (smallfoot_ap_var_update v c) sfb)))
     prog Q) ==>
 
 
-(SMALLFOOT_COND_HOARE_TRIPLE  
-   (smallfoot_prop (wpb,rpb) 
-      (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v) 
-                                      (smallfoot_ae_const c)) 
+(SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb)
+      (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v)
+                                      (smallfoot_ae_const c))
        sfb))
 
    (fasl_prog_seq (smallfoot_prog_assign v e) prog)
@@ -11393,7 +11393,7 @@ FULL_SIMP_TAC std_ss [smallfoot_prop___COND_INSERT] THEN
    CONJ_TAC THENL [
       FULL_SIMP_TAC std_ss [smallfoot_prop___COND___REWRITE,
 			    bagTheory.BAG_IN_FINITE_BAG_IMAGE,
-			    GSYM LEFT_EXISTS_AND_THM, 
+			    GSYM LEFT_EXISTS_AND_THM,
 			    GSYM LEFT_FORALL_IMP_THM,
 			    bagTheory.BAG_IMAGE_FINITE,
 			    SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_var_update],
@@ -11408,7 +11408,7 @@ FULL_SIMP_TAC std_ss [smallfoot_prop___COND_INSERT] THEN
 			   SMALLFOOT_PE_USED_VARS___smallfoot_pe_var_update] THEN
       FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_DELETE]
   ]
-) THEN 
+) THEN
 FULL_SIMP_TAC std_ss [] THEN
 
 Tactical.REVERSE (`(smallfoot_slp_assign v (SMALLFOOT_P_EXPRESSION_EVAL e)
@@ -11443,7 +11443,7 @@ Tactical.REVERSE (Cases_on `v IN FDOM q`) THEN1 (
 `?c1 perm. q ' v = (c1, perm)` by (Cases_on `q ' v` THEN SIMP_TAC std_ss []) THEN
 Tactical.REVERSE (Cases_on `perm = var_res_write_permission`) THEN1 (
    ASM_SIMP_TAC std_ss [] THEN
-   DISJ1_TAC THEN 
+   DISJ1_TAC THEN
    Q.EXISTS_TAC `v` THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
@@ -11453,9 +11453,9 @@ ASM_SIMP_TAC std_ss [IN_INSERT, COND_RAND, COND_RATOR] THEN
 `!v'. ((v' = v) \/ v' IN FDOM q) = (v' IN FDOM q)` by METIS_TAC[] THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 
-`!v'. ((v' = v) \/ (SND (q ' v') = var_res_write_permission)) = 
+`!v'. ((v' = v) \/ (SND (q ' v') = var_res_write_permission)) =
       (SND (q ' v') = var_res_write_permission)` by ALL_TAC THEN1 (
-   GEN_TAC THEN EQ_TAC THEN 
+   GEN_TAC THEN EQ_TAC THEN
    ASM_SIMP_TAC std_ss [DISJ_IMP_THM]) THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 
@@ -11523,16 +11523,16 @@ store_thm ("SMALLFOOT_COND_INFERENCE___prog_new",
 
 (BAG_IN v wpb) ==>
 ((SMALLFOOT_COND_HOARE_TRIPLE
-   (smallfoot_prop (wpb,rpb) 
-      (BAG_INSERT (smallfoot_ap_points_to (smallfoot_ae_var v) FEMPTY) 
+   (smallfoot_prop (wpb,rpb)
+      (BAG_INSERT (smallfoot_ap_points_to (smallfoot_ae_var v) FEMPTY)
          (BAG_IMAGE (smallfoot_ap_var_update v c) sfb)))
     prog Q) ==>
 
 
-(SMALLFOOT_COND_HOARE_TRIPLE 
-   (smallfoot_prop (wpb,rpb) 
-      (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v) 
-                                      (smallfoot_ae_const c)) 
+(SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb)
+      (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v)
+                                      (smallfoot_ae_const c))
        sfb))
 
    (fasl_prog_seq (smallfoot_prog_new v) prog)
@@ -11566,7 +11566,7 @@ REPEAT STRIP_TAC THENL [
 		    var_res_sl___has_write_permission_def,
 		    FAPPLY_FUPDATE_THM, FDOM_FUPDATE] THEN
    ONCE_REWRITE_TAC[EXTENSION] THEN
-   SIMP_TAC (std_ss++bool_eq_imp_ss++boolSimps.CONJ_ss) 
+   SIMP_TAC (std_ss++bool_eq_imp_ss++boolSimps.CONJ_ss)
         [IN_INSERT, COND_RATOR, COND_RAND],
 
    ALL_TAC
@@ -11582,7 +11582,7 @@ FULL_SIMP_TAC std_ss [smallfoot_prop___COND_INSERT] THEN
    CONJ_TAC THENL [
       FULL_SIMP_TAC std_ss [smallfoot_prop___COND___REWRITE,
 			    bagTheory.BAG_IN_FINITE_BAG_IMAGE,
-			    GSYM LEFT_EXISTS_AND_THM, 
+			    GSYM LEFT_EXISTS_AND_THM,
 			    GSYM LEFT_FORALL_IMP_THM,
 			    bagTheory.BAG_IMAGE_FINITE,
 			    SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_var_update],
@@ -11593,10 +11593,10 @@ FULL_SIMP_TAC std_ss [smallfoot_prop___COND_INSERT] THEN
 			   bagTheory.IN_SET_OF_BAG, bagTheory.BAG_IN_BAG_UNION,
 			   FEVERY_FEMPTY]
   ]
-) THEN 
+) THEN
 FULL_SIMP_TAC std_ss [] THEN
 
-Tactical.REVERSE (`(smallfoot_slp_new v 
+Tactical.REVERSE (`(smallfoot_slp_new v
          (smallfoot_prop___PROP (wpb,rpb)
             (BAG_INSERT
                (smallfoot_ap_equal (smallfoot_ae_var v)
@@ -11626,7 +11626,7 @@ Tactical.REVERSE (Cases_on `v IN FDOM q`) THEN1 (
 `?c1 perm. q ' v = (c1, perm)` by (Cases_on `q ' v` THEN SIMP_TAC std_ss []) THEN
 Tactical.REVERSE (Cases_on `perm = var_res_write_permission`) THEN1 (
    ASM_SIMP_TAC std_ss [] THEN
-   DISJ1_TAC THEN 
+   DISJ1_TAC THEN
    Q.EXISTS_TAC `v` THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
@@ -11636,9 +11636,9 @@ ASM_SIMP_TAC std_ss [IN_INSERT, COND_RAND, COND_RATOR] THEN
 `!v'. ((v' = v) \/ v' IN FDOM q) = (v' IN FDOM q)` by METIS_TAC[] THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 
-`!v'. ((v' = v) \/ (SND (q ' v') = var_res_write_permission)) = 
+`!v'. ((v' = v) \/ (SND (q ' v') = var_res_write_permission)) =
       (SND (q ' v') = var_res_write_permission)` by ALL_TAC THEN1 (
-   GEN_TAC THEN EQ_TAC THEN 
+   GEN_TAC THEN EQ_TAC THEN
    ASM_SIMP_TAC std_ss [DISJ_IMP_THM]) THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 
@@ -11725,7 +11725,7 @@ smallfoot_ap_implies_ae_equal P e1 e2 =
 
 val smallfoot_ap_implies_ae_equal___EQ = store_thm (
 "smallfoot_ap_implies_ae_equal___EQ",
-``!x P. 
+``!x P.
 smallfoot_ap_implies_ae_equal P x x``,
 
 SIMP_TAC std_ss [smallfoot_ap_implies_ae_equal_def,
@@ -11770,21 +11770,21 @@ store_thm ("SMALLFOOT_COND_INFERENCE___prog_field_lookup",
 ((BAG_IN v wpb) /\ (t IN FDOM L) /\
  SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb)) (L ' t))
 ==>
-((SMALLFOOT_COND_HOARE_TRIPLE 
-   (smallfoot_prop (wpb,rpb) 
-     (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v) 
-                                     (smallfoot_ae_var_update v c (L ' t))) 
-     (BAG_IMAGE (smallfoot_ap_var_update v c) 
-       (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) L) 
+((SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb)
+     (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v)
+                                     (smallfoot_ae_var_update v c (L ' t)))
+     (BAG_IMAGE (smallfoot_ap_var_update v c)
+       (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) L)
           sfb))))
     prog Q) ==>
 
 
-(SMALLFOOT_COND_HOARE_TRIPLE 
-   (smallfoot_prop (wpb,rpb) 
-      (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v) 
-                                      (smallfoot_ae_const c)) 
-      (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) L) 
+(SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb)
+      (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v)
+                                      (smallfoot_ae_const c))
+      (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) L)
        sfb)))
 
    (fasl_prog_seq (smallfoot_prog_field_lookup v e t) prog)
@@ -11817,14 +11817,14 @@ REPEAT STRIP_TAC THENL [
 		    DISJOINT_EMPTY, FDOM_FEMPTY, FUNION_FEMPTY_1,
                     IN_ABS, LET_THM, GSYM RIGHT_EXISTS_AND_THM,
 		    smallfoot_ae_const_def, smallfoot_ae_var_def,
-		    COND_NONE_SOME_REWRITES, 
+		    COND_NONE_SOME_REWRITES,
 		    GSYM LEFT_FORALL_IMP_THM,
 		    smallfoot_ap_points_to_def,
 		    IS_SOME_EXISTS, GSYM LEFT_EXISTS_AND_THM,
 		    FUNION_DEF, IN_SING, IN_UNION, FEVERY_DEF] THEN
    ASM_SIMP_TAC std_ss [],
 
- 
+
    SIMP_TAC std_ss [SMALLFOOT_REL_HOARE_TRIPLE_def,
 		    SMALLFOOT_PROGRAM_SEM_def,
 		    smallfoot_prog_field_lookup_def,
@@ -11842,14 +11842,14 @@ REPEAT STRIP_TAC THENL [
    SIMP_TAC (std_ss++bool_eq_imp_ss) [IN_INSERT, COND_RATOR,
 				      COND_RAND, NOT_IN_EMPTY] THEN
    SIMP_TAC std_ss [IN_ABS, NOT_IN_EMPTY, COND_RAND, COND_RATOR] THEN
-   REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN 
+   REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
    Cases_on `t IN FDOM (x2 ' (THE (SMALLFOOT_P_EXPRESSION_EVAL e x1)))` THEN (
-      ASM_SIMP_TAC (std_ss++bool_eq_imp_ss++boolSimps.CONJ_ss) 
+      ASM_SIMP_TAC (std_ss++bool_eq_imp_ss++boolSimps.CONJ_ss)
                           [FDOM_FUPDATE, FAPPLY_FUPDATE_THM,
 			   EXTENSION, IN_INSERT, COND_REWRITES,
 			   GSYM LEFT_FORALL_IMP_THM]
    ),
-	 
+
    ALL_TAC
 ] THEN
 
@@ -11860,7 +11860,7 @@ CONJ_TAC THEN1 (
    CONJ_TAC THENL [
       FULL_SIMP_TAC std_ss [smallfoot_prop___COND___REWRITE,
 			    bagTheory.BAG_IN_FINITE_BAG_IMAGE,
-			    GSYM LEFT_EXISTS_AND_THM, 
+			    GSYM LEFT_EXISTS_AND_THM,
 			    GSYM LEFT_FORALL_IMP_THM,
 			    bagTheory.BAG_IMAGE_FINITE,
 			    bagTheory.FINITE_BAG_INSERT,
@@ -11874,7 +11874,7 @@ CONJ_TAC THEN1 (
 			   bagTheory.IN_SET_OF_BAG, bagTheory.BAG_IN_BAG_UNION,
 			   SMALLFOOT_AE_USED_VARS_SUBSET___smallfoot_ae_var_update]
   ]
-) THEN 
+) THEN
 REPEAT STRIP_TAC THEN
 
 ONCE_REWRITE_TAC[EXTENSION] THEN GEN_TAC THEN
@@ -11899,7 +11899,7 @@ Tactical.REVERSE (Cases_on `v IN FDOM q`) THEN1 (
 `?c1 perm. q ' v = (c1, perm)` by (Cases_on `q ' v` THEN SIMP_TAC std_ss []) THEN
 Tactical.REVERSE (Cases_on `perm = var_res_write_permission`) THEN1 (
    ASM_SIMP_TAC std_ss [] THEN
-   DISJ1_TAC THEN 
+   DISJ1_TAC THEN
    Q.EXISTS_TAC `v` THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
@@ -11919,7 +11919,7 @@ SMALLFOOT_STATE_REMOVE_HEAP_TAG
                   (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) L)
                   sfb))))` by ALL_TAC THEN1 (
 
-   GEN_TAC THEN 
+   GEN_TAC THEN
    `?P. smallfoot_ap_star smallfoot_ap_stack_true
           (smallfoot_ap_star
              (smallfoot_ap_equal (smallfoot_ae_var v)
@@ -11933,7 +11933,7 @@ SMALLFOOT_STATE_REMOVE_HEAP_TAG
 
    ASM_SIMP_TAC std_ss [smallfoot_ap_bigstar_REWRITE,
 			 smallfoot_ap_star_def,
-			 asl_star_def, IN_ABS, 
+			 asl_star_def, IN_ABS,
 			 GSYM RIGHT_FORALL_OR_THM,
 			 GSYM LEFT_FORALL_OR_THM,
 			 smallfoot_ap_points_to_def,
@@ -11950,7 +11950,7 @@ SMALLFOOT_STATE_REMOVE_HEAP_TAG
    ASM_SIMP_TAC std_ss [] THEN
 
    SIMP_TAC std_ss [SMALLFOOT_STATE_REMOVE_HEAP_TAG_def, LET_THM,
-		    FAPPLY_FUPDATE_THM, 
+		    FAPPLY_FUPDATE_THM,
 		    FDOM_DOMSUB, IN_DELETE] THEN
    Q.PAT_ASSUM `VAR_RES_STACK_COMBINE (SOME x1) (SOME x1') = X` MP_TAC THEN
    ASM_SIMP_TAC std_ss [SMALLFOOT_STATE_REMOVE_HEAP_TAG_def,
@@ -11973,9 +11973,9 @@ ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR,
 `!v'. ((v' = v) \/ v' IN FDOM q) = (v' IN FDOM q)` by METIS_TAC[] THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 
-`!v'. ((v' = v) \/ (SND (q ' v') = var_res_write_permission)) = 
+`!v'. ((v' = v) \/ (SND (q ' v') = var_res_write_permission)) =
       (SND (q ' v') = var_res_write_permission)` by ALL_TAC THEN1 (
-   GEN_TAC THEN EQ_TAC THEN 
+   GEN_TAC THEN EQ_TAC THEN
    ASM_SIMP_TAC std_ss [DISJ_IMP_THM]) THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 
@@ -12079,22 +12079,22 @@ store_thm ("SMALLFOOT_COND_INFERENCE___prog_field_lookup___intro_const",
          (L |+ (t,smallfoot_ae_const c2)))))
 
 ==>
-((!c2. (SMALLFOOT_COND_HOARE_TRIPLE 
-   (smallfoot_prop (wpb,rpb) 
-     (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v) 
-                                     (smallfoot_ae_const c2)) 
-     (BAG_IMAGE (smallfoot_ap_var_update v c) 
-       (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) 
-					   (L |+ (t, smallfoot_ae_const c2))) 
+((!c2. (SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb)
+     (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v)
+                                     (smallfoot_ae_const c2))
+     (BAG_IMAGE (smallfoot_ap_var_update v c)
+       (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e)
+					   (L |+ (t, smallfoot_ae_const c2)))
           sfb))))
     prog Q)) ==>
 
 
-(SMALLFOOT_COND_HOARE_TRIPLE 
-   (smallfoot_prop (wpb,rpb) 
-      (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v) 
-                                      (smallfoot_ae_const c)) 
-      (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) L) 
+(SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb)
+      (BAG_INSERT (smallfoot_ap_equal (smallfoot_ae_var v)
+                                      (smallfoot_ae_const c))
+      (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) L)
        sfb)))
 
    (fasl_prog_seq (smallfoot_prog_field_lookup v e t) prog)
@@ -12127,14 +12127,14 @@ REPEAT STRIP_TAC THENL [
 		    DISJOINT_EMPTY, FDOM_FEMPTY, FUNION_FEMPTY_1,
                     IN_ABS, LET_THM, GSYM RIGHT_EXISTS_AND_THM,
 		    smallfoot_ae_const_def, smallfoot_ae_var_def,
-		    COND_NONE_SOME_REWRITES, 
+		    COND_NONE_SOME_REWRITES,
 		    GSYM LEFT_FORALL_IMP_THM,
 		    smallfoot_ap_points_to_def,
 		    IS_SOME_EXISTS, GSYM LEFT_EXISTS_AND_THM,
 		    FUNION_DEF, IN_SING, IN_UNION, FEVERY_DEF] THEN
    ASM_SIMP_TAC std_ss [],
 
- 
+
    SIMP_TAC std_ss [SMALLFOOT_REL_HOARE_TRIPLE_def,
 		    SMALLFOOT_PROGRAM_SEM_def,
 		    smallfoot_prog_field_lookup_def,
@@ -12152,22 +12152,22 @@ REPEAT STRIP_TAC THENL [
    SIMP_TAC (std_ss++bool_eq_imp_ss) [IN_INSERT, COND_RATOR,
 				      COND_RAND] THEN
    SIMP_TAC std_ss [IN_ABS, NOT_IN_EMPTY, COND_RAND, COND_RATOR] THEN
-   REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN 
+   REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
    Cases_on `t IN FDOM (x2 ' (THE (SMALLFOOT_P_EXPRESSION_EVAL e x1)))` THEN (
-      ASM_SIMP_TAC (std_ss++bool_eq_imp_ss++boolSimps.CONJ_ss) 
+      ASM_SIMP_TAC (std_ss++bool_eq_imp_ss++boolSimps.CONJ_ss)
                           [FDOM_FUPDATE, FAPPLY_FUPDATE_THM,
 			   EXTENSION, IN_INSERT, COND_REWRITES,
 			   GSYM LEFT_FORALL_IMP_THM]
    ),
-	 
+
    ALL_TAC
 ] THEN
 
 Q.PAT_ASSUM `!c2. A ==> B` MP_TAC THEN
-HO_MATCH_MP_TAC (prove (``((!n. A n) /\ ((!n. A n) ==> 
-                       (!s. s IN P2 ==> ?n. s IN (P1 n)))) ==> 
-((!n. A n ==> (SMALLFOOT_HOARE_TRIPLE res_env penv (P1 n) prog Q)) ==> 
- (SMALLFOOT_HOARE_TRIPLE res_env penv P2 prog Q))``, 
+HO_MATCH_MP_TAC (prove (``((!n. A n) /\ ((!n. A n) ==>
+                       (!s. s IN P2 ==> ?n. s IN (P1 n)))) ==>
+((!n. A n ==> (SMALLFOOT_HOARE_TRIPLE res_env penv (P1 n) prog Q)) ==>
+ (SMALLFOOT_HOARE_TRIPLE res_env penv P2 prog Q))``,
 
   SIMP_TAC (std_ss++boolSimps.CONJ_ss) [
      SMALLFOOT_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
@@ -12179,7 +12179,7 @@ CONJ_TAC THEN1 (
    CONJ_TAC THENL [
       FULL_SIMP_TAC std_ss [smallfoot_prop___COND___REWRITE,
 			    bagTheory.BAG_IN_FINITE_BAG_IMAGE,
-			    GSYM LEFT_EXISTS_AND_THM, 
+			    GSYM LEFT_EXISTS_AND_THM,
 			    GSYM LEFT_FORALL_IMP_THM,
 			    bagTheory.BAG_IMAGE_FINITE,
 			    bagTheory.FINITE_BAG_INSERT,
@@ -12193,7 +12193,7 @@ CONJ_TAC THEN1 (
 			   bagTheory.IN_SET_OF_BAG, bagTheory.BAG_IN_BAG_UNION,
 			   SMALLFOOT_AE_USED_VARS_SUBSET___smallfoot_ae_var_update]
   ]
-) THEN 
+) THEN
 STRIP_TAC THEN GEN_TAC THEN
 
 Cases_on `s` THEN
@@ -12216,7 +12216,7 @@ Tactical.REVERSE (Cases_on `v IN FDOM q`) THEN1 (
 `?c1 perm. q ' v = (c1, perm)` by (Cases_on `q ' v` THEN SIMP_TAC std_ss []) THEN
 Tactical.REVERSE (Cases_on `perm = var_res_write_permission`) THEN1 (
    ASM_SIMP_TAC std_ss [] THEN
-   DISJ1_TAC THEN 
+   DISJ1_TAC THEN
    Q.EXISTS_TAC `v` THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
@@ -12263,13 +12263,13 @@ Q.ABBREV_TAC `P2 = (smallfoot_ap_star smallfoot_ap_stack_true
          (smallfoot_ap_bigstar
             (BAG_IMAGE (smallfoot_ap_var_update v c)
                (BAG_INSERT
-                  (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) 
+                  (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e)
 			(L |+ (t,smallfoot_ae_const c1)))
                   sfb))))` THEN
 Q.ABBREV_TAC `P2' = (smallfoot_ap_star smallfoot_ap_stack_true
          (smallfoot_ap_bigstar
                (BAG_INSERT
-                  (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) 
+                  (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e)
 			(L |+ (t,smallfoot_ae_const c1)))
                   sfb)))` THEN
 Q.ABBREV_TAC `P3 = (smallfoot_ap_star smallfoot_ap_stack_true
@@ -12420,15 +12420,15 @@ store_thm ("SMALLFOOT_COND_INFERENCE___prog_field_assign",
 
 ==>
 ((SMALLFOOT_COND_HOARE_TRIPLE
-   (smallfoot_prop (wpb,rpb) 
-      (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e1) (L |+ (t, SMALLFOOT_P_EXPRESSION_EVAL e2))) 
+   (smallfoot_prop (wpb,rpb)
+      (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e1) (L |+ (t, SMALLFOOT_P_EXPRESSION_EVAL e2)))
        sfb))
     prog Q) ==>
 
 
-(SMALLFOOT_COND_HOARE_TRIPLE 
-   (smallfoot_prop (wpb,rpb) 
-      (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e1) L) 
+(SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb)
+      (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e1) L)
        sfb))
 
    (fasl_prog_seq (smallfoot_prog_field_assign e1 t e2) prog)
@@ -12456,7 +12456,7 @@ REPEAT STRIP_TAC THENL [
 			 smallfoot_ap_points_to_def, IN_ABS,
 			 LET_THM, FDOM_FUNION, IN_UNION,
 			 IN_SING],
- 
+
 
    SIMP_TAC std_ss [SMALLFOOT_REL_HOARE_TRIPLE_def,
 		    SMALLFOOT_PROGRAM_SEM_def,
@@ -12474,7 +12474,7 @@ REPEAT STRIP_TAC THENL [
 ] THEN
 
 Q.PAT_ASSUM `A ==> B` MP_TAC THEN
-MATCH_MP_TAC (prove (``(A /\ (A ==> (!x. x IN P2 ==> x IN P1))) ==> ((A ==> (SMALLFOOT_HOARE_TRIPLE res_env penv P1 prog Q)) ==> (SMALLFOOT_HOARE_TRIPLE res_env penv P2 prog Q))``, 
+MATCH_MP_TAC (prove (``(A /\ (A ==> (!x. x IN P2 ==> x IN P1))) ==> ((A ==> (SMALLFOOT_HOARE_TRIPLE res_env penv P1 prog Q)) ==> (SMALLFOOT_HOARE_TRIPLE res_env penv P2 prog Q))``,
 		       SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_REWRITE, SMALLFOOT_HOARE_TRIPLE_def, IN_ABS])) THEN
 CONJ_TAC THEN1 (
    FULL_SIMP_TAC std_ss [smallfoot_prop___COND_INSERT]
@@ -12532,7 +12532,7 @@ REPEAT STRIP_TAC THEN (
 		       DISJOINT_DEF]
    ) THEN
 
-   ASM_SIMP_TAC std_ss [IN_UNION, IN_SING, DISJ_IMP_THM, 
+   ASM_SIMP_TAC std_ss [IN_UNION, IN_SING, DISJ_IMP_THM,
 			 FORALL_AND_THM, FDOM_FUPDATE,
 		        IN_INSERT, FAPPLY_FUPDATE_THM,
 		        DOMSUB_FAPPLY_THM]
@@ -12570,13 +12570,13 @@ store_thm ("SMALLFOOT_COND_INFERENCE___prog_dispose",
 ``
  !wpb rpb e sfb prog Q.
 
-((SMALLFOOT_COND_HOARE_TRIPLE 
+((SMALLFOOT_COND_HOARE_TRIPLE
    (smallfoot_prop (wpb,rpb) sfb))
     prog Q) ==>
 
 
-(SMALLFOOT_COND_HOARE_TRIPLE 
-   (smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) L) 
+(SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to (SMALLFOOT_P_EXPRESSION_EVAL e) L)
        sfb))
 
    (fasl_prog_seq (smallfoot_prog_dispose e) prog)
@@ -12615,7 +12615,7 @@ REPEAT STRIP_TAC THENL [
    ALL_TAC
 ] THEN
 Q.PAT_ASSUM `A ==> B` MP_TAC THEN
-MATCH_MP_TAC (prove (``(A /\ (A ==> (!x. x IN P2 ==> x IN P1))) ==> ((A ==> (SMALLFOOT_HOARE_TRIPLE res_env penv P1 prog Q)) ==> (SMALLFOOT_HOARE_TRIPLE res_env penv P2 prog Q))``, 
+MATCH_MP_TAC (prove (``(A /\ (A ==> (!x. x IN P2 ==> x IN P1))) ==> ((A ==> (SMALLFOOT_HOARE_TRIPLE res_env penv P1 prog Q)) ==> (SMALLFOOT_HOARE_TRIPLE res_env penv P2 prog Q))``,
 		       SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_REWRITE, IN_ABS, SMALLFOOT_HOARE_TRIPLE_def])) THEN
 CONJ_TAC THEN1 (
    FULL_SIMP_TAC std_ss [smallfoot_prop___COND_INSERT]
@@ -12698,7 +12698,7 @@ FULL_SIMP_TAC std_ss [FUNION_DEF, IN_UNION, BIN_OPTION_MAP_THM]);
 (*
 val SMALLFOOT_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE_def = Define
 `SMALLFOOT_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE qP =
- !s s1 s2 x1 x2. 
+ !s s1 s2 x1 x2.
            (SMALLFOOT_IS_SUBSTATE s1 s /\ SMALLFOOT_IS_SUBSTATE s2 s /\
             (?y. s1 IN qP x1 y) /\ (?y. s2 IN qP x2 y)) ==>
             (?y. s1 IN qP x2 y)`;
@@ -12768,7 +12768,7 @@ store_thm ("SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___points_to",
 !wpb rpb e L t sfb.
 
 SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE (\y z.
-  smallfoot_prop (wpb,rpb) (BAG_INSERT 
+  smallfoot_prop (wpb,rpb) (BAG_INSERT
 			       (smallfoot_ap_points_to e ((L y z) |+ (t, smallfoot_ae_const y)))
                                (sfb y z)))``,
 
@@ -12833,13 +12833,13 @@ Tactical.REVERSE (`y = y'` by ALL_TAC) THEN1 METIS_TAC[] THEN
    `(SND s ' y' = h1 ' y') /\ (y' IN FDOM (SND s))` by ALL_TAC THEN1 (
       FULL_SIMP_TAC std_ss [SMALLFOOT_IS_SUBSTATE_REWRITE,
 			    ASL_IS_SUBSTATE_def,
-			    DISJOINT_FMAP_UNION_def, 
+			    DISJOINT_FMAP_UNION_def,
 			    BIN_OPTION_MAP_THM, COND_RAND, COND_RATOR] THEN
       Q.PAT_ASSUM `X = SND s` (ASSUME_TAC o GSYM) THEN
       ASM_SIMP_TAC std_ss [FUNION_DEF, IN_UNION, IN_SING]
    ) THEN
- 
-   ASM_SIMP_TAC std_ss [smallfoot_ae_stack_read_def]  
+
+   ASM_SIMP_TAC std_ss [smallfoot_ae_stack_read_def]
 ) THEN
 
 
@@ -12860,7 +12860,7 @@ val smallfoot_ap_bag_implies_in_heap_or_null_def = Define `
 
 
 (*
-val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___cyclic_list = 
+val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___cyclic_list =
 store_thm ("SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___cyclic_list",
 ``
 !wpb rpb e1 data e2 L t sfb.
@@ -12869,9 +12869,9 @@ store_thm ("SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___cyclic_list",
 (!y z. ~(e1 = e2) ==> smallfoot_ap_bag_implies_in_heap_or_null (sfb y z) e2))
 ==>
 SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE (\y z.
-  smallfoot_prop (wpb,rpb) (BAG_INSERT 
+  smallfoot_prop (wpb,rpb) (BAG_INSERT
                                (smallfoot_ap_data_list_seg t e1 data (smallfoot_ae_const y))
-                            (BAG_INSERT 
+                            (BAG_INSERT
 			       (smallfoot_ap_points_to (smallfoot_ae_const y) ((L y z) |+ (t, e2)))
                                (sfb y z))))``,
 
@@ -12956,20 +12956,20 @@ Q.ABBREV_TAC `P2 = \y'' z''. asl_and (\s. ~(e1 = e2) ==> ((THE (e2 (FST s)) = 0)
 		    GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
    Q.EXISTS_TAC `h1'` THEN
-   Q.EXISTS_TAC `h1''` THEN 
+   Q.EXISTS_TAC `h1''` THEN
    FULL_SIMP_TAC std_ss [FUNION_DEF, DISJOINT_UNION_BOTH, DISJOINT_SYM] THEN
    ASM_SIMP_TAC std_ss [ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION,
 		        FUNION_DEF, SUBSET_DEF, IN_UNION] THEN
    REPEAT CONJ_TAC THENL [
       METIS_TAC[],
       METIS_TAC[],
-      
+
 
       STRIP_TAC THEN
       Tactical.REVERSE (`?e2_c. (e2 x1 = SOME e2_c) /\ (e2_c IN 0 INSERT FDOM h2')` by ALL_TAC) THEN1 (
          FULL_SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER,
 			       IN_INSERT] THEN
-	 METIS_TAC[]        
+	 METIS_TAC[]
       ) THEN
       FULL_SIMP_TAC std_ss [] THEN
       Q.PAT_ASSUM `!y z. smallfoot_ap_bag_implies_in_heap_or_null X e2` MP_TAC THEN
@@ -12993,7 +12993,7 @@ Q.ABBREV_TAC `P2 = \y'' z''. asl_and (\s. ~(e1 = e2) ==> ((THE (e2 (FST s)) = 0)
 `?h3 h4. ASL_IS_SUBSTATE DISJOINT_FMAP_UNION h3 (SND s) /\
          ASL_IS_SUBSTATE DISJOINT_FMAP_UNION h4 (SND s) /\
          (st,h4) IN P2 y' z' /\
-         (st,h3) IN P2 y z` by ALL_TAC THEN1 ( 
+         (st,h3) IN P2 y z` by ALL_TAC THEN1 (
    RES_TAC THEN
    FULL_SIMP_TAC std_ss [] THEN
    METIS_TAC[ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___TRANS]
@@ -13045,9 +13045,9 @@ SIMP_TAC std_ss [AND_IMP_INTRO, GSYM CONJ_ASSOC,
 		 GSYM LEFT_FORALL_IMP_THM] THEN
 
 
-`(!e c data. IS_SOME___SMALLFOOT_AE_USED_VARS e ==> 
-    SMALLFOOT_AP_PERMISSION_UNIMPORTANT (smallfoot_ap_points_to e 
-      ((FMAP_MAP (\dl. smallfoot_ae_const (HD dl)) data) |+ 
+`(!e c data. IS_SOME___SMALLFOOT_AE_USED_VARS e ==>
+    SMALLFOOT_AP_PERMISSION_UNIMPORTANT (smallfoot_ap_points_to e
+      ((FMAP_MAP (\dl. smallfoot_ae_const (HD dl)) data) |+
       (t, smallfoot_ae_const c)))) /\
  (!c1 c2 data m. SMALLFOOT_AP_PERMISSION_UNIMPORTANT (smallfoot_ap_data_list_seg_num m t (smallfoot_ae_const c1) data (smallfoot_ae_const c2)))` by ALL_TAC THEN1 (
    CONSEQ_REWRITE_TAC ([],[SMALLFOOT_AP_PERMISSION_UNIMPORTANT___points_to,
@@ -13069,7 +13069,7 @@ Q.ABBREV_TAC `zCond = \z. (~(z = 0) /\ z IN FDOM h) ==> ~(h ' z ' t = z)` THEN
 
 Tactical.REVERSE (
 `!n n' z y' y h1 h1' e data.
-      (ASL_IS_SUBSTATE DISJOINT_FMAP_UNION h1 h /\  
+      (ASL_IS_SUBSTATE DISJOINT_FMAP_UNION h1 h /\
       ~(y IN FDOM h1) /\
       (st,h1) IN smallfoot_ap_data_list_seg_num n t e data (K (SOME y)) /\
       (h ' y ' t = z) /\ ~(y' = 0) /\ ~(y = 0) /\
@@ -13115,10 +13115,10 @@ Tactical.REVERSE (
   CCONTR_TAC THEN
   FULL_SIMP_TAC std_ss [] THEN
 
-  Tactical.REVERSE (`!m e1 h' data c. ((ASL_IS_SUBSTATE DISJOINT_FMAP_UNION h' h) /\ IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\ 
+  Tactical.REVERSE (`!m e1 h' data c. ((ASL_IS_SUBSTATE DISJOINT_FMAP_UNION h' h) /\ IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\
                                 (e1 st = SOME z) /\ (st,h') IN smallfoot_ap_data_list_seg_num m t e1 data (K (SOME c))) ==>
                      (c = z)` by ALL_TAC) THEN1 (
-     METIS_TAC[ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION] 
+     METIS_TAC[ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION]
   ) THEN
   Induct_on `m` THEN1 (
      ASM_SIMP_TAC arith_ss [smallfoot_ap_equal_def, LET_THM, IN_ABS,
@@ -13154,7 +13154,7 @@ Tactical.REVERSE (
 ) THEN
 
 HO_MATCH_MP_TAC (prove (``((!n:num n':num. (P n n' = P n' n)) /\ (!n n'. n <= n' ==> P n n')) ==>
-			  (!n n'. P n n')``, 
+			  (!n n'. P n n')``,
 		 METIS_TAC[LESS_EQ_CASES])) THEN
 CONJ_TAC THEN1 METIS_TAC[] THEN
 Induct_on `n` THENL [
@@ -13242,7 +13242,7 @@ Induct_on `n` THENL [
 
    Q.PAT_ASSUM `!y'. X y'` MATCH_MP_TAC THEN
    CCONTR_TAC THEN
-   REPEAT (Q.PAT_ASSUM `(st, X) IN Y` MP_TAC) THEN 
+   REPEAT (Q.PAT_ASSUM `(st, X) IN Y` MP_TAC) THEN
    REWRITE_TAC [] THEN
    ONCE_REWRITE_TAC[smallfoot_ap_data_list_seg_num_REWRITE] THEN
    SIMP_TAC arith_ss [asl_bool_EVAL, GSYM smallfoot_ae_const_def] THEN
@@ -13254,14 +13254,14 @@ Induct_on `n` THENL [
                     smallfoot_ae_const_def, smallfoot_ap_binexpression_def,
                     smallfoot_a_stack_proposition_def] THEN
    Cases_on `e st` THEN ASM_SIMP_TAC std_ss [] THEN
-   REPEAT STRIP_TAC THEN 
+   REPEAT STRIP_TAC THEN
    CCONTR_TAC THEN
    Q.PAT_ASSUM `~?h1. X h1` MP_TAC THEN
    FULL_SIMP_TAC std_ss [] THEN
    Q.EXISTS_TAC `h2` THEN
    Q.EXISTS_TAC `h2'` THEN
    Q.EXISTS_TAC `K (SOME (h ' x ' t))` THEN
-   
+
    FULL_SIMP_TAC std_ss [ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___FUNION] THEN
    `(h1''' ' x = h ' x) /\ (h1'' ' x = h ' x)` by FULL_SIMP_TAC std_ss [ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION, IN_SING] THEN
    FULL_SIMP_TAC std_ss [GSYM smallfoot_ae_const_def,
@@ -13278,7 +13278,7 @@ Induct_on `n` THENL [
 
 
 
-val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___data_list_seg = 
+val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___data_list_seg =
 store_thm ("SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___data_list_seg",
 ``
 !wpb rpb e1 data e2 t dt sfb.
@@ -13288,7 +13288,7 @@ store_thm ("SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___data_list_seg",
  ~(dt = t)) ==>
 
 SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE (\y z.
-  smallfoot_prop (wpb,rpb) (BAG_INSERT 
+  smallfoot_prop (wpb,rpb) (BAG_INSERT
                                (smallfoot_ap_data_list_seg t e1 ((data y z) |+ (dt, y)) e2)
                                (sfb y z)))``,
 
@@ -13313,7 +13313,7 @@ FULL_SIMP_TAC std_ss [SMALLFOOT_IS_SUBSTATE_REWRITE,
 
 `((FST s,h1') IN (smallfoot_ap_data_list_seg t e1 ((data y z) |+ (dt,y)) e2)) /\
  ((FST s,h1)  IN (smallfoot_ap_data_list_seg t e1 ((data y' z') |+ (dt,y')) e2))` by ALL_TAC THEN1 (
-   
+
    `(h1' = SND (FST s1, h1')) /\ (h1 = SND (FST s2, h1))` by SIMP_TAC std_ss [] THEN
    ONCE_ASM_REWRITE_TAC[] THEN
    NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
@@ -13371,11 +13371,11 @@ Induct_on `y1` THENL [
    ) THEN
    Cases_on `y2` THEN1 FULL_SIMP_TAC std_ss [] THEN
 
-   `(!data n' h y1. SMALLFOOT_AP_PERMISSION_UNIMPORTANT 
+   `(!data n' h y1. SMALLFOOT_AP_PERMISSION_UNIMPORTANT
         (smallfoot_ap_points_to e1
                (FMAP_MAP (\dl. smallfoot_ae_const (HD dl))
                   (data |+ (dt,h::y1)) |+ (t,smallfoot_ae_const n')))) /\
-    (!data n' h y1. SMALLFOOT_AP_PERMISSION_UNIMPORTANT 
+    (!data n' h y1. SMALLFOOT_AP_PERMISSION_UNIMPORTANT
        (smallfoot_ap_data_list_seg t (smallfoot_ae_const n')
                 (FMAP_MAP TL (data |+ (dt,h::y1))) e2))` by ALL_TAC THEN1 (
       CONSEQ_REWRITE_TAC([],[SMALLFOOT_AP_PERMISSION_UNIMPORTANT___data_list_seg,
@@ -13420,7 +13420,7 @@ Induct_on `y1` THENL [
 
 
 
-val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___data_list = 
+val SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___data_list =
 store_thm ("SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___data_list",
 ``
 !wpb rpb e data t dt sfb.
@@ -13429,7 +13429,7 @@ store_thm ("SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE___data_list",
  ~(dt = t)) ==>
 
 SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE (\y z.
-  smallfoot_prop (wpb,rpb) (BAG_INSERT 
+  smallfoot_prop (wpb,rpb) (BAG_INSERT
                                (smallfoot_ap_data_list t e ((data y z)|+ (dt, y)))
                                (sfb y z)))``,
 
@@ -13477,15 +13477,15 @@ store_thm ("SMALLFOOT_COND_INFERENCE___cond_best_local_action___FORALL_INTRO",
 ``!P prog Q pre post.
 
  (SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE (\x y:unit. post x) /\
-  !x. SMALLFOOT_COND_HOARE_TRIPLE P 
+  !x. SMALLFOOT_COND_HOARE_TRIPLE P
    (fasl_prog_seq (smallfoot_cond_best_local_action pre (post x)) prog) Q) ==>
- (SMALLFOOT_COND_HOARE_TRIPLE P 
+ (SMALLFOOT_COND_HOARE_TRIPLE P
    (fasl_prog_seq (smallfoot_cond_best_local_action
        pre (COND_PROP___STRONG_EXISTS (\x. post x))) prog) Q)
 ``,
 
 
-REPEAT GEN_TAC THEN 
+REPEAT GEN_TAC THEN
 Cases_on `SMALLFOOT_COND_CHOICE_IS_INDEPENDEND_FROM_SUBSTATE (\x y:unit. post x)` THEN ASM_REWRITE_TAC[] THEN
 `?Q_ap Q_cond. Q = (Q_cond, Q_ap)` by (Cases_on `Q` THEN SIMP_TAC std_ss []) THEN
 `?P_ap P_cond. P = (P_cond, P_ap)` by (Cases_on `P` THEN SIMP_TAC std_ss []) THEN
@@ -13507,7 +13507,7 @@ HO_MATCH_MP_TAC (prove (``
    METIS_TAC[])) THEN
 GEN_TAC THEN STRIP_TAC THEN
 
-Q.ABBREV_TAC `prog_sem = 
+Q.ABBREV_TAC `prog_sem =
               FASL_PROGRAM_SEM (smallfoot_env,K smallfoot_ap_true) FEMPTY prog` THEN
 Q.ABBREV_TAC `Q'_ap = (\s.
             s IN Q_ap /\
@@ -13564,7 +13564,7 @@ ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC) THEN
 
 SIMP_TAC std_ss [SOME___quant_best_local_action, IN_ABS, FORALL_AND_THM] THEN
 
-`!s1. Q'' s1 = (!e. e IN s1 ==> ?s2. (prog_sem e = SOME s2) /\ s2 SUBSET Q'_ap)` by 
+`!s1. Q'' s1 = (!e. e IN s1 ==> ?s2. (prog_sem e = SOME s2) /\ s2 SUBSET Q'_ap)` by
    ALL_TAC THEN1 (
    Q.UNABBREV_TAC `Q''` THEN
    SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM,
@@ -13590,7 +13590,7 @@ REPEAT STRIP_TAC THEN
 Q.PAT_ASSUM `!x'' s0. X x'' s0` (MP_TAC o Q.SPECL [`x'''`, `s0'`]) THEN
 ASM_SIMP_TAC std_ss [] THEN
 STRIP_TAC THEN
-Q.EXISTS_TAC `p'` THEN 
+Q.EXISTS_TAC `p'` THEN
 ASM_REWRITE_TAC[] THEN
 
 
@@ -13616,7 +13616,7 @@ METIS_TAC[]);
 val smallfoot_cond_best_local_action___STRONG_EQUIV___pre_post =
 store_thm ("smallfoot_cond_best_local_action___STRONG_EQUIV___pre_post",
 ``!pre post pre' post'.
-   (SMALLFOOT_COND_PROP___STRONG_EQUIV pre pre' /\ 
+   (SMALLFOOT_COND_PROP___STRONG_EQUIV pre pre' /\
     SMALLFOOT_COND_PROP___STRONG_EQUIV post post') ==>
 
    (smallfoot_cond_best_local_action pre post =
@@ -13638,9 +13638,9 @@ val SMALLFOOT_COND_INFERENCE___cond_best_local_action___EXISTS_INTRO =
 store_thm ("SMALLFOOT_COND_INFERENCE___cond_best_local_action___EXISTS_INTRO",
 ``!P prog Q pre post.
 
- (?x. SMALLFOOT_COND_HOARE_TRIPLE P 
+ (?x. SMALLFOOT_COND_HOARE_TRIPLE P
    (fasl_prog_seq (smallfoot_cond_best_local_action (pre x) post) prog) Q) ==>
- (SMALLFOOT_COND_HOARE_TRIPLE P 
+ (SMALLFOOT_COND_HOARE_TRIPLE P
    (fasl_prog_seq (smallfoot_cond_best_local_action
        (COND_PROP___STRONG_EXISTS (\x. pre x)) post) prog) Q)
 ``,
@@ -13668,7 +13668,7 @@ HO_MATCH_MP_TAC (prove (``
    METIS_TAC[])) THEN
 GEN_TAC THEN STRIP_TAC THEN
 
-Q.ABBREV_TAC `prog_sem = 
+Q.ABBREV_TAC `prog_sem =
               FASL_PROGRAM_SEM (smallfoot_env,K smallfoot_ap_true) FEMPTY prog` THEN
 Q.ABBREV_TAC `Q'_ap = (\s.
             s IN Q_ap /\
@@ -13754,17 +13754,17 @@ store_thm ("SMALLFOOT_COND_INFERENCE___cond_choose_const___free_param_ELIM",
 
  (?fpn_data. smallfoot_data_IS_WELL_TYPED (fpt,fpn_data) /\
 
-SMALLFOOT_COND_HOARE_TRIPLE 
-   P 
-   (fasl_prog_seq (smallfoot_cond_choose_const_best_local_action c 
-  (\args. pre (FST args, fpn_data::(SND args))) 
+SMALLFOOT_COND_HOARE_TRIPLE
+   P
+   (fasl_prog_seq (smallfoot_cond_choose_const_best_local_action c
+  (\args. pre (FST args, fpn_data::(SND args)))
   (\args. post (FST args, fpn_data::(SND args))) fpL expL) prog)
 
    Q) ==>
 
 
- (SMALLFOOT_COND_HOARE_TRIPLE 
-   P 
+ (SMALLFOOT_COND_HOARE_TRIPLE
+   P
    (fasl_prog_seq (smallfoot_cond_choose_const_best_local_action
 c pre post ((fpt,fpn)::fpL) expL) prog)
 
@@ -13888,7 +13888,7 @@ REPEAT STRIP_TAC THEN1 (
 ) THEN
 Q.PAT_ASSUM `Q'' X` MP_TAC THEN
 
-`!s1. Q'' s1 = (!e. e IN s1 ==> ?s2. (prog_sem e = SOME s2) /\ s2 SUBSET Q')` by 
+`!s1. Q'' s1 = (!e. e IN s1 ==> ?s2. (prog_sem e = SOME s2) /\ s2 SUBSET Q')` by
    ALL_TAC THEN1 (
    Q.UNABBREV_TAC `Q''` THEN
    SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM,
@@ -13919,21 +13919,21 @@ store_thm ("SMALLFOOT_COND_INFERENCE___cond_choose_const_ELIM",
 (
 (LENGTH expL = LENGTH cL) /\
 (EVERY (\e. smallfoot_ap_implies_ae_equal (smallfoot_prop (wpb,rpb) sfb) (SMALLFOOT_P_EXPRESSION_EVAL (FST e))
-		(smallfoot_ae_const (SND e))) (ZIP (expL,cL))) /\     
+		(smallfoot_ae_const (SND e))) (ZIP (expL,cL))) /\
 (smallfoot_prop___WEAK_COND wpb rpb ==> c))
 
  ==>
 
-((SMALLFOOT_COND_HOARE_TRIPLE  
-   (smallfoot_prop (wpb,rpb) sfb) 
+((SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb) sfb)
 
    (fasl_prog_seq (smallfoot_cond_best_local_action
 (smallfoot_ae_is_list_cond_defined (pre (cL,[])) (MAP SMALLFOOT_P_EXPRESSION_EVAL expL))
    (post (cL, []))) prog)
 
    Q) ==>
- (SMALLFOOT_COND_HOARE_TRIPLE 
-   (smallfoot_prop (wpb,rpb) sfb) 
+ (SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb) sfb)
 
    (fasl_prog_seq (smallfoot_cond_choose_const_best_local_action
 c pre post [] expL) prog)
@@ -13969,7 +13969,7 @@ Tactical.REVERSE (
    REPEAT STRIP_TAC THEN
    REPEAT (Q.PAT_ASSUM `!s. X s` (MP_TAC o Q.SPEC `x`)) THEN
    ASM_SIMP_TAC std_ss [NOT_NONE_IS_SOME, IS_SOME_EXISTS] THEN
-   REPEAT STRIP_TAC THEN   
+   REPEAT STRIP_TAC THEN
    Q.PAT_ASSUM `X = SOME s1` MP_TAC THEN
    FULL_SIMP_TAC std_ss [SUP_fasl_order_def, COND_NONE_SOME_REWRITES,
 		        IN_IMAGE, SUBSET_DEF, NOT_NONE_IS_SOME] THEN
@@ -14057,7 +14057,7 @@ Tactical.REVERSE (
 
 REPEAT (Q.PAT_ASSUM `X = SOME Y` (ASSUME_TAC o GSYM)) THEN
 Q.PAT_ASSUM `!s'. X s' ==> (Y s' = SOME (EL x' cL))` (K ALL_TAC) THEN
-`?ps. (SMALLFOOT_PE_USED_VARS (EL x' expL)) = SOME ps` by 
+`?ps. (SMALLFOOT_PE_USED_VARS (EL x' expL)) = SOME ps` by
       METIS_TAC[SMALLFOOT_PE_USED_VARS___IS_SOME, IS_SOME_EXISTS] THEN
 FULL_SIMP_TAC std_ss [SMALLFOOT_PE_USED_VARS_def,
          	      SMALLFOOT_AE_USED_VARS_THM, SMALLFOOT_AE_USED_VARS_REL___REWRITE,
@@ -14083,7 +14083,7 @@ ASM_SIMP_TAC std_ss []);
 
 
 
-val smallfoot_ap_fix_varset_def = Define 
+val smallfoot_ap_fix_varset_def = Define
 `smallfoot_ap_fix_varset vs P =
  \s:smallfoot_state. (FDOM (FST s) = vs) /\ s IN P`
 
@@ -14218,7 +14218,7 @@ store_thm ("SMALLFOOT_COND_PROP___STRONG_IMP___VAR_EQ_CONST_REWRITE",
   (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_equal (smallfoot_ae_var v) (smallfoot_ae_const c))
                             sfb))
-  (smallfoot_prop (wpb,rpb) (BAG_INSERT 
+  (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_equal (smallfoot_ae_var v) (smallfoot_ae_const c))
                             (BAG_IMAGE (smallfoot_ap_var_update v c) sfb)))``,
 
@@ -14229,7 +14229,7 @@ SIMP_TAC std_ss [SMALLFOOT_COND_PROP___STRONG_IMP_def,
 REPEAT STRIP_TAC THEN1 (
    FULL_SIMP_TAC std_ss [smallfoot_prop___COND___REWRITE,
            		 bagTheory.BAG_IN_FINITE_BAG_IMAGE,
-			 GSYM LEFT_EXISTS_AND_THM, 
+			 GSYM LEFT_EXISTS_AND_THM,
 			 GSYM LEFT_FORALL_IMP_THM,
 			 bagTheory.BAG_IMAGE_FINITE,
 			 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_var_update]
@@ -14281,7 +14281,7 @@ REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [SMALLFOOT_STATE_UPDATE_VAR_def,
 		     smallfoot_ap_var_update_def, IN_ABS] THEN
 
-Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P` 
+Q.PAT_ASSUM `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P`
    (MATCH_MP_TAC o CONJUNCT1 o REWRITE_RULE [SMALLFOOT_AP_PERMISSION_UNIMPORTANT_def]) THEN
 
 FULL_SIMP_TAC std_ss [VAR_RES_STACK___IS_EQUAL_UPTO_PERMISSIONS_def,
@@ -14308,7 +14308,7 @@ store_thm ("SMALLFOOT_COND_PROP___IMP___VAR_EQ_CONST_REWRITE",
   (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_equal (smallfoot_ae_var v) (smallfoot_ae_const c))
                             sfb))
-  (smallfoot_prop (wpb,rpb) (BAG_INSERT 
+  (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_equal (smallfoot_ae_var v) (smallfoot_ae_const c))
                             (BAG_IMAGE (smallfoot_ap_var_update v c) sfb)))``,
 
@@ -14317,7 +14317,7 @@ MATCH_MP_TAC SMALLFOOT_COND_PROP___STRONG_IMP_IMP THEN
 ASM_SIMP_TAC std_ss [SMALLFOOT_COND_PROP___STRONG_IMP___VAR_EQ_CONST_REWRITE]);
 
 
-   
+
 
 val SMALLFOOT_COND_INFERENCE___prog_cond =
 store_thm ("SMALLFOOT_COND_INFERENCE___prog_cond",
@@ -14327,19 +14327,19 @@ store_thm ("SMALLFOOT_COND_INFERENCE___prog_cond",
 (SMALLFOOT_PP_USED_VARS c SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))) ==>
 
 
-(((SMALLFOOT_COND_HOARE_TRIPLE 
-   (smallfoot_prop (wpb,rpb) 
+(((SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb)
       (BAG_INSERT (SMALLFOOT_P_PROPOSITION_EVAL c) sfb))
     (fasl_prog_seq pT prog)
     Q) /\
- (SMALLFOOT_COND_HOARE_TRIPLE  
-   (smallfoot_prop (wpb,rpb) 
+ (SMALLFOOT_COND_HOARE_TRIPLE
+   (smallfoot_prop (wpb,rpb)
       (BAG_INSERT (SMALLFOOT_P_PROPOSITION_EVAL (fasl_pred_neg c)) sfb))
     (fasl_prog_seq pF prog)
     Q)) ==>
 
 
-(SMALLFOOT_COND_HOARE_TRIPLE  
+(SMALLFOOT_COND_HOARE_TRIPLE
    (smallfoot_prop (wpb,rpb) sfb))
 
    (fasl_prog_seq (smallfoot_prog_cond c pT pF) prog)
@@ -14376,7 +14376,7 @@ REPEAT STRIP_TAC THENL [
 		      bagTheory.IN_SET_OF_BAG] THEN
    METIS_TAC[],
 
-   
+
    Q.PAT_ASSUM `!x. X s` (K ALL_TAC) THEN
    Q.PAT_ASSUM `!x. X s` (MP_TAC o Q.SPEC `x`) THEN
    HO_MATCH_MP_TAC (prove (
@@ -14411,7 +14411,7 @@ REPEAT STRIP_TAC THENL [
 
 
 
- 
+
 
 
 
@@ -14610,7 +14610,7 @@ val smallfoot_ap_exp_is_defined___const = store_thm (
 
 ``(!c. smallfoot_ap_exp_is_defined (smallfoot_ae_const c) =
        smallfoot_ap_stack_true) /\
-  ((smallfoot_ap_exp_is_defined smallfoot_ae_null) = 
+  ((smallfoot_ap_exp_is_defined smallfoot_ae_null) =
    smallfoot_ap_stack_true)``,
 
 SIMP_TAC std_ss [smallfoot_ap_exp_is_defined_def,
@@ -14630,16 +14630,16 @@ SIMP_TAC std_ss [smallfoot_ap_false_def,
 
 
 
-val COND_PROP___ADD_COND___true = 
+val COND_PROP___ADD_COND___true =
 store_thm ("COND_PROP___ADD_COND___true",
 ``!p. COND_PROP___ADD_COND T p = p``,
 SIMP_TAC std_ss [COND_PROP___ADD_COND_def]);
 
 
 
-val COND_PROP___ADD_COND___false = 
+val COND_PROP___ADD_COND___false =
 store_thm ("COND_PROP___ADD_COND___false",
-``!p. SMALLFOOT_COND_PROP___EQUIV (COND_PROP___ADD_COND F p) 
+``!p. SMALLFOOT_COND_PROP___EQUIV (COND_PROP___ADD_COND F p)
                                   cond_prop_false``,
 
 SIMP_TAC std_ss [COND_PROP___ADD_COND_def,
@@ -14657,7 +14657,7 @@ SIMP_TAC std_ss [COND_PROP___ADD_COND_def,
 	         SMALLFOOT_COND_PROP___EQUIV_REWRITE]);
 
 
-val COND_PROP___ADD_COND___ADD_COND = 
+val COND_PROP___ADD_COND___ADD_COND =
 store_thm ("COND_PROP___ADD_COND___ADD_COND",
 ``!p c1 c2.
   ((COND_PROP___ADD_COND c1 (COND_PROP___ADD_COND c2 p)) =
@@ -14673,7 +14673,7 @@ store_thm ("COND_PROP___ADD_COND___EXISTS",
 ``!p c.
 
   SMALLFOOT_COND_PROP___EQUIV
-  (COND_PROP___ADD_COND c (COND_PROP___EXISTS x. (p x))) 
+  (COND_PROP___ADD_COND c (COND_PROP___EXISTS x. (p x)))
   (COND_PROP___EXISTS x. (COND_PROP___ADD_COND c (p x)))``,
 
 REPEAT GEN_TAC THEN
@@ -14694,7 +14694,7 @@ store_thm ("COND_PROP___EXISTS___ADD_COND",
    (!x. c x ==> (x = x_const)) ==>
 
   (SMALLFOOT_COND_PROP___EQUIV
-   (COND_PROP___EXISTS x. (COND_PROP___ADD_COND (c x) (p x))) 
+   (COND_PROP___EXISTS x. (COND_PROP___ADD_COND (c x) (p x)))
    (COND_PROP___ADD_COND (c x_const) (p x_const)))``,
 
 REPEAT GEN_TAC THEN
@@ -14864,8 +14864,8 @@ PROVE_TAC[])
 val smallfoot_ap_data_list_seg_num___EQ_REWRITE =
 store_thm ("smallfoot_ap_data_list_seg_num___EQ_REWRITE",
 ``!n e tl data.
-  (smallfoot_ap_data_list_seg_num n tl e data e = 
-   asl_and (K ((n = 0) /\ (FEVERY (\x. (SND x) = []) data))) 
+  (smallfoot_ap_data_list_seg_num n tl e data e =
+   asl_and (K ((n = 0) /\ (FEVERY (\x. (SND x) = []) data)))
            (smallfoot_ap_exp_is_defined e))``,
 
   ONCE_REWRITE_TAC[smallfoot_ap_data_list_seg_num_REWRITE] THEN
@@ -14886,8 +14886,8 @@ store_thm ("smallfoot_ap_data_list_seg_num___EQ_REWRITE",
 val smallfoot_ap_data_list_seg___EQ_REWRITE =
 store_thm ("smallfoot_ap_data_list_seg___EQ_REWRITE",
 ``!e tl data.
-  (smallfoot_ap_data_list_seg tl e data e = 
-   asl_and (K (FEVERY (\x. (SND x) = []) data)) 
+  (smallfoot_ap_data_list_seg tl e data e =
+   asl_and (K (FEVERY (\x. (SND x) = []) data))
            (smallfoot_ap_exp_is_defined e))``,
 
 SIMP_TAC std_ss [smallfoot_ap_data_list_seg_def, EXTENSION,
@@ -14932,7 +14932,7 @@ Cases_on `n` THEN (
 ) THEN
 ONCE_REWRITE_TAC [EXTENSION] THEN
 SIMP_TAC std_ss [asl_bool_EVAL] THEN
-REPEAT STRIP_TAC THEN 
+REPEAT STRIP_TAC THEN
 Tactical.REVERSE EQ_TAC THEN1(
   REPEAT STRIP_TAC THEN
   ASM_REWRITE_TAC[]
@@ -14985,7 +14985,7 @@ SIMP_TAC std_ss [smallfoot_ap_data_list_seg_def,
 val smallfoot_ap_data_list___smallfoot_ae_null =
 store_thm ("smallfoot_ap_data_list___smallfoot_ae_null",
 ``!tl data.
-  (smallfoot_ap_data_list tl smallfoot_ae_null data) = 
+  (smallfoot_ap_data_list tl smallfoot_ae_null data) =
    asl_and (K (FEVERY (\x. SND x = []) data)) smallfoot_ap_stack_true``,
 
 SIMP_TAC std_ss [smallfoot_ap_data_list_def,
@@ -15037,7 +15037,7 @@ store_thm ("SMALLFOOT_COND_PROP___EQUIV___empty_heap_cond",
   SMALLFOOT_COND_PROP___EQUIV
   (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_empty_heap_cond c)
-                            sfb)) 
+                            sfb))
   (COND_PROP___ADD_COND c (smallfoot_prop (wpb,rpb) sfb))``,
 
 
@@ -15081,7 +15081,7 @@ store_thm ("SMALLFOOT_COND_PROP___EQUIV___empty_heap_cond___REWRITE",
   SMALLFOOT_COND_PROP___EQUIV
   (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_empty_heap_cond (a = b))
-                            (sfb a))) 
+                            (sfb a)))
   (COND_PROP___ADD_COND (a = b) (smallfoot_prop (wpb,rpb) (sfb b)))``,
 
 
@@ -15103,7 +15103,7 @@ store_thm ("smallfoot_prop___smallfoot_ap_stack_true",
 ``!wpb rpb sfb.
   (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_stack_true)
-                            sfb)) = 
+                            sfb)) =
   (smallfoot_prop (wpb,rpb) sfb)``,
 
 
@@ -15123,7 +15123,7 @@ store_thm ("SMALLFOOT_COND_PROP___STRONG_EQUIV___smallfoot_ap_stack_true",
   SMALLFOOT_COND_PROP___STRONG_EQUIV
   (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_stack_true)
-                            sfb)) 
+                            sfb))
   (smallfoot_prop (wpb,rpb) sfb)``,
 
 SIMP_TAC std_ss [smallfoot_prop___smallfoot_ap_stack_true,
@@ -15137,7 +15137,7 @@ store_thm ("SMALLFOOT_COND_PROP___EQUIV___smallfoot_ap_stack_true",
   SMALLFOOT_COND_PROP___EQUIV
   (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_stack_true)
-                            sfb)) 
+                            sfb))
   (smallfoot_prop (wpb,rpb) sfb)``,
 
 SIMP_TAC std_ss [smallfoot_prop___smallfoot_ap_stack_true,
@@ -15146,7 +15146,7 @@ SIMP_TAC std_ss [smallfoot_prop___smallfoot_ap_stack_true,
 
 
 
-    
+
 
 val smallfoot_prop___PROP___smallfoot_ap_false =
 store_thm ("smallfoot_prop___PROP___smallfoot_ap_false",
@@ -15154,7 +15154,7 @@ store_thm ("smallfoot_prop___PROP___smallfoot_ap_false",
   (smallfoot_prop___PROP (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_false)
                             sfb)) = smallfoot_ap_false``,
-  
+
 SIMP_TAC std_ss [smallfoot_prop___REWRITE,
 		 smallfoot_prop___PROP___REWRITE,
 		 smallfoot_ap_bigstar_REWRITE,
@@ -15170,7 +15170,7 @@ store_thm ("SMALLFOOT_COND_PROP___EQUIV___smallfoot_ap_false",
   SMALLFOOT_COND_PROP___EQUIV
   (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_false)
-                            sfb)) 
+                            sfb))
   cond_prop_false``,
 
 SIMP_TAC std_ss [SMALLFOOT_COND_PROP___EQUIV_REWRITE,
@@ -15189,7 +15189,7 @@ SIMP_TAC std_ss [SMALLFOOT_COND_PROP___EQUIV_REWRITE,
 val SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_exp_is_defined =
 store_thm ("SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_exp_is_defined",
 ``
-(SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS vs 
+(SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS vs
    (smallfoot_ap_exp_is_defined (smallfoot_ae_var v))) =
  v IN vs``,
 
@@ -15213,7 +15213,7 @@ store_thm ("smallfoot_prop___smallfoot_ap_exp_is_defined",
   (v IN SET_OF_BAG (BAG_UNION wpb rpb)) ==>
   ((smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_exp_is_defined (smallfoot_ae_var v))
-                            sfb)) = 
+                            sfb)) =
   (smallfoot_prop (wpb,rpb) sfb))``,
 
 REPEAT STRIP_TAC THEN
@@ -15249,7 +15249,7 @@ store_thm ("SMALLFOOT_COND_PROP___EQUIV___smallfoot_ap_exp_is_defined",
   SMALLFOOT_COND_PROP___EQUIV
   (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_exp_is_defined (smallfoot_ae_var v))
-                            sfb)) 
+                            sfb))
   (smallfoot_prop (wpb,rpb) sfb)``,
 
 SIMP_TAC std_ss [smallfoot_prop___smallfoot_ap_exp_is_defined,
@@ -15265,7 +15265,7 @@ store_thm ("SMALLFOOT_COND_PROP___IMP___smallfoot_ap_exp_is_defined",
   SMALLFOOT_COND_PROP___IMP
   (smallfoot_prop (wpb,rpb) (BAG_INSERT
                             (smallfoot_ap_exp_is_defined (smallfoot_ae_var v))
-                            sfb)) 
+                            sfb))
   (smallfoot_prop (wpb,rpb) sfb)``,
 
 REPEAT STRIP_TAC THEN
@@ -15312,17 +15312,17 @@ store_thm ("smallfoot_ap_star___points_to_points_to",
 !e1 e2 L1 L2.
 (SMALLFOOT_AP_PERMISSION_UNIMPORTANT (smallfoot_ap_points_to e1 L1) /\
  SMALLFOOT_AP_PERMISSION_UNIMPORTANT (smallfoot_ap_points_to e2 L2) /\
- ((IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\ 
+ ((IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\
    IS_SOME___SMALLFOOT_AE_USED_VARS e2) \/ (e1 = e2))) ==>
 
 (smallfoot_ap_star (smallfoot_ap_points_to e1 L1) (smallfoot_ap_points_to e2 L2) =
- smallfoot_ap_star (smallfoot_ap_points_to e1 L1) 
- (smallfoot_ap_star (smallfoot_ap_points_to e2 L2) 
+ smallfoot_ap_star (smallfoot_ap_points_to e1 L1)
+ (smallfoot_ap_star (smallfoot_ap_points_to e2 L2)
                    (smallfoot_ap_unequal e1 e2)))``,
 
 
 REPEAT GEN_TAC THEN
-Q.ABBREV_TAC `P = (IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\ 
+Q.ABBREV_TAC `P = (IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\
                    IS_SOME___SMALLFOOT_AE_USED_VARS e2) \/
                   (e1 = e2)` THEN
 STRIP_TAC THEN
@@ -15364,7 +15364,7 @@ SIMP_TAC std_ss [smallfoot_ap_cond_equal_def, asl_bool_EVAL,
 		 smallfoot_ap_unequal_def,
 		 smallfoot_ap_equal_def,
 		 smallfoot_ap_binexpression_def,
-		 smallfoot_a_stack_proposition_def, 
+		 smallfoot_a_stack_proposition_def,
 		 IN_ABS, LET_THM] THEN
 SIMP_TAC (std_ss++bool_eq_imp_ss) []);
 
@@ -15380,7 +15380,7 @@ SIMP_TAC std_ss [asl_bool_EVAL,
 		 smallfoot_ap_unequal_def,
 		 smallfoot_ap_equal_def,
 		 smallfoot_ap_binexpression_def,
-		 smallfoot_a_stack_proposition_def, 
+		 smallfoot_a_stack_proposition_def,
 		 IN_ABS, LET_THM] THEN
 SIMP_TAC (std_ss++bool_eq_imp_ss) []);
 
@@ -15396,7 +15396,7 @@ SIMP_TAC std_ss [asl_bool_EVAL,
 		 smallfoot_ap_unequal_def,
 		 smallfoot_ap_equal_def,
 		 smallfoot_ap_binexpression_def,
-		 smallfoot_a_stack_proposition_def, 
+		 smallfoot_a_stack_proposition_def,
 		 IN_ABS, LET_THM] THEN
 SIMP_TAC (std_ss++bool_eq_imp_ss) [])
 
@@ -15447,14 +15447,14 @@ store_thm ("smallfoot_ap_star___data_list_seg_unroll",
 
 (smallfoot_ap_star (smallfoot_ap_unequal e1 e2) (smallfoot_ap_data_list_seg tl e1 data e2) =
  asl_and (K (FEVERY (\x. ~(SND x = [])) data))
- (asl_exists n. smallfoot_ap_star (smallfoot_ap_unequal e1 e2) 
+ (asl_exists n. smallfoot_ap_star (smallfoot_ap_unequal e1 e2)
                (smallfoot_ap_star (smallfoot_ap_points_to e1 ((FMAP_MAP (\dl. smallfoot_ae_const (HD dl)) data) |+ (tl, smallfoot_ae_const n)))
                                   (smallfoot_ap_data_list_seg tl (smallfoot_ae_const n) (FMAP_MAP TL data) e2))))``,
 
 ONCE_REWRITE_TAC [EXTENSION] THEN
 REPEAT STRIP_TAC THEN
 
-`!n data. SMALLFOOT_AP_PERMISSION_UNIMPORTANT 
+`!n data. SMALLFOOT_AP_PERMISSION_UNIMPORTANT
        (smallfoot_ap_points_to e1 ((FMAP_MAP (\dl. smallfoot_ae_const (HD dl)) data) |+ (tl,smallfoot_ae_const n)))` by ALL_TAC THEN1 (
    CONSEQ_REWRITE_TAC ([],[SMALLFOOT_AP_PERMISSION_UNIMPORTANT___points_to,
 	   	       FEVERY_STRENGTHEN_THM],[]) THEN
@@ -15476,8 +15476,8 @@ SIMP_TAC std_ss [asl_bool_EVAL, IN_ABS, GSYM RIGHT_EXISTS_AND_THM,
 		 LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR,
 		 EXISTS_OR_THM] THEN
 HO_MATCH_MP_TAC (prove (``(~A /\ ((!n h1' h1 h2. (B h1 n h1' h2 = C h1 n h1' h2))) ==>
-                       ((A \/ (?h1 n h1' h2. B h1 n h1' h2)) = 
-                             (?n h1 h1' h2. C h1 n h1' h2)))``, 
+                       ((A \/ (?h1 n h1' h2. B h1 n h1' h2)) =
+                             (?n h1 h1' h2. C h1 n h1' h2)))``,
                      METIS_TAC[])) THEN
 SIMP_TAC std_ss [smallfoot_ap_unequal_def,
 		    smallfoot_ap_equal_def,
@@ -15542,7 +15542,7 @@ store_thm ("SMALLFOOT_COND_PROP___STRONG_IMP___data_list_seg_split",
   SMALLFOOT_COND_PROP___STRONG_IMP
   (smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_unequal e1 e2)
                             (BAG_INSERT (smallfoot_ap_data_list_seg tl e1 data e2)
-                             sfb))) 
+                             sfb)))
   (COND_PROP___EXISTS n.
    smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to e1 ((FMAP_MAP (\dl. smallfoot_ae_const (HD dl)) data) |+ (tl, smallfoot_ae_const n)))
                             (BAG_INSERT (smallfoot_ap_empty_heap_cond (FEVERY (\x. ~(SND x = [])) data))
@@ -15566,7 +15566,7 @@ REPEAT STRIP_TAC THEN
 `!n.
 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS
         (SET_OF_BAG (BAG_UNION wpb rpb))
-        (smallfoot_ap_points_to e1 
+        (smallfoot_ap_points_to e1
            ((FMAP_MAP (\dl. smallfoot_ae_const (HD dl)) data) |+ (tl,smallfoot_ae_const n)))` by ALL_TAC THEN1 (
   CONSEQ_REWRITE_TAC ([],[SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___points_to,
                       FEVERY_STRENGTHEN_THM],[]) THEN
@@ -15588,7 +15588,7 @@ Q.ABBREV_TAC `P = smallfoot_ap_star (smallfoot_ap_unequal e1 e2)
                (smallfoot_ap_bigstar sfb))) =
 smallfoot_ap_star P (smallfoot_ap_star smallfoot_ap_stack_true
                     (smallfoot_ap_bigstar sfb))` by ALL_TAC THEN1 (
-   METIS_TAC[smallfoot_ap_star___PROPERTIES, 
+   METIS_TAC[smallfoot_ap_star___PROPERTIES,
 	     COMM_DEF, ASSOC_DEF]
 ) THEN
 ASM_REWRITE_TAC[] THEN (POP_ASSUM (K ALL_TAC)) THEN
@@ -15596,7 +15596,7 @@ ASM_REWRITE_TAC[] THEN (POP_ASSUM (K ALL_TAC)) THEN
 MP_TAC (Q.SPECL [`e1`, `data`, `e2`, `tl`] smallfoot_ap_star___data_list_seg_unroll) THEN
 
 `IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\
- IS_SOME___SMALLFOOT_AE_USED_VARS e2` by 
+ IS_SOME___SMALLFOOT_AE_USED_VARS e2` by
    FULL_SIMP_TAC std_ss [IS_SOME___SMALLFOOT_AE_USED_VARS_def,
 	  	     SMALLFOOT_AE_USED_VARS_SUBSET_def] THEN
 
@@ -15640,7 +15640,7 @@ store_thm ("SMALLFOOT_COND_PROP___IMP___data_list_seg_split",
   SMALLFOOT_COND_PROP___IMP
   (smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_unequal e1 e2)
                             (BAG_INSERT (smallfoot_ap_data_list_seg tl e1 data e2)
-                             sfb))) 
+                             sfb)))
   (COND_PROP___EXISTS n.
    smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to e1 ((FMAP_MAP (\dl. smallfoot_ae_const (HD dl)) data) |+ (tl, smallfoot_ae_const n)))
                             (BAG_INSERT (smallfoot_ap_empty_heap_cond (FEVERY (\x. ~(SND x = [])) data))
@@ -15663,7 +15663,7 @@ store_thm ("SMALLFOOT_COND_PROP___IMP___data_list_split",
   SMALLFOOT_COND_PROP___IMP
   (smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_unequal e smallfoot_ae_null)
                             (BAG_INSERT (smallfoot_ap_data_list tl e data)
-                             sfb))) 
+                             sfb)))
   (COND_PROP___EXISTS n.
    smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to e ((FMAP_MAP (\dl. smallfoot_ae_const (HD dl)) data) |+ (tl, smallfoot_ae_const n)))
                             (BAG_INSERT (smallfoot_ap_empty_heap_cond (FEVERY (\x. ~(SND x = [])) data))
@@ -15695,14 +15695,14 @@ store_thm ("smallfoot_ap_star___bintree_unroll",
 ONCE_REWRITE_TAC [EXTENSION] THEN
 REPEAT STRIP_TAC THEN
 
-`!n n' lt rt. SMALLFOOT_AP_PERMISSION_UNIMPORTANT 
+`!n n' lt rt. SMALLFOOT_AP_PERMISSION_UNIMPORTANT
        (smallfoot_ap_points_to e (FEMPTY |+ (lt,smallfoot_ae_const n) |+ (rt,smallfoot_ae_const n')))` by ALL_TAC THEN1 (
   REPEAT GEN_TAC THEN
   MATCH_MP_TAC SMALLFOOT_AP_PERMISSION_UNIMPORTANT___points_to THEN
   ASM_SIMP_TAC std_ss [FEVERY_FEMPTY, FEVERY_FUPDATE, DRESTRICT_FEMPTY,
 		       IS_SOME___SMALLFOOT_AE_USED_VARS___EVAL,
 		       DRESTRICT_FUPDATE, COND_RAND, COND_RATOR]
-) THEN           
+) THEN
 SIMP_TAC std_ss [smallfoot_ap_bigstar_list_def,
 		 asl_bigstar_list_REWRITE,
 		 GSYM smallfoot_ap_star_def,
@@ -15735,11 +15735,11 @@ SIMP_TAC std_ss [smallfoot_ap_unequal_def,
 		    FDOM_FEMPTY, DISJOINT_EMPTY] THEN
 SIMP_TAC (std_ss++bool_neg_pair_ss) [] THEN
 
-HO_MATCH_MP_TAC (prove (``((!n n' h1' h1'' h2''. 
+HO_MATCH_MP_TAC (prove (``((!n n' h1' h1'' h2''.
 			     A n n' h1' h1'' h2'' =
 			     B n' n h1' h2'' h1'')) ==>
                        ((?n n' h1' h1'' h2''. A n n' h1' h1'' h2'') =
-                        (?n n' h1' h1'' h2''. B n n' h1' h1'' h2''))``, 
+                        (?n n' h1' h1'' h2''. B n n' h1' h1'' h2''))``,
                  METIS_TAC[])) THEN
 
 SIMP_TAC (std_ss++bool_eq_imp_ss) [FUNION_DEF, DISJOINT_UNION_BOTH] THEN
@@ -15764,7 +15764,7 @@ store_thm ("SMALLFOOT_COND_PROP___STRONG_IMP___bintree_split",
   SMALLFOOT_COND_PROP___STRONG_IMP
   (smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_unequal e smallfoot_ae_null)
                             (BAG_INSERT (smallfoot_ap_bintree (lt,rt) e)
-                             sfb))) 
+                             sfb)))
   (COND_PROP___EXISTS n n'.
    smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to e (FEMPTY |+ (rt, smallfoot_ae_const n) |+ (lt, smallfoot_ae_const n')))
                             (BAG_INSERT (smallfoot_ap_unequal e smallfoot_ae_null)
@@ -15810,14 +15810,14 @@ Q.ABBREV_TAC `P = smallfoot_ap_star (smallfoot_ap_unequal e smallfoot_ae_null)
                (smallfoot_ap_bigstar sfb))) =
 smallfoot_ap_star P (smallfoot_ap_star smallfoot_ap_stack_true
                     (smallfoot_ap_bigstar sfb))` by ALL_TAC THEN1 (
-   METIS_TAC[smallfoot_ap_star___PROPERTIES, 
+   METIS_TAC[smallfoot_ap_star___PROPERTIES,
 	     COMM_DEF, ASSOC_DEF]
 ) THEN
 ASM_REWRITE_TAC[] THEN (POP_ASSUM (K ALL_TAC)) THEN
 
 MP_TAC (Q.SPECL [`e`, `lt`, `rt`] smallfoot_ap_star___bintree_unroll) THEN
 
-`IS_SOME___SMALLFOOT_AE_USED_VARS e` by 
+`IS_SOME___SMALLFOOT_AE_USED_VARS e` by
    FULL_SIMP_TAC std_ss [IS_SOME___SMALLFOOT_AE_USED_VARS_def,
 	  	     SMALLFOOT_AE_USED_VARS_SUBSET_def] THEN
 
@@ -15853,7 +15853,7 @@ store_thm ("SMALLFOOT_COND_PROP___IMP___bintree_split",
   SMALLFOOT_COND_PROP___IMP
   (smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_unequal e smallfoot_ae_null)
                             (BAG_INSERT (smallfoot_ap_bintree (lt,rt) e)
-                             sfb))) 
+                             sfb)))
   (COND_PROP___EXISTS n n'.
    smallfoot_prop (wpb,rpb) (BAG_INSERT (smallfoot_ap_points_to e (FEMPTY |+ (rt, smallfoot_ae_const n) |+ (lt, smallfoot_ae_const n')))
                             (BAG_INSERT (smallfoot_ap_unequal e smallfoot_ae_null)
@@ -15873,7 +15873,7 @@ ASM_SIMP_TAC std_ss [SMALLFOOT_COND_PROP___STRONG_IMP___bintree_split]);
 
 
 
-val SMALLFOOT_IS_STRONG_STACK_PROPOSITION_def = Define 
+val SMALLFOOT_IS_STRONG_STACK_PROPOSITION_def = Define
 `SMALLFOOT_IS_STRONG_STACK_PROPOSITION (P:smallfoot_a_proposition) =
  !s. s IN P ==> (SND s = FEMPTY)`
 
@@ -15934,7 +15934,7 @@ val smallfoot_prop___PROP_UNION = store_thm ("smallfoot_prop___PROP_UNION",
 smallfoot_prop___COND (wpb,rpb) (BAG_UNION sfb1 sfb2) ==>
 
 (smallfoot_prop___PROP (wpb,rpb) (BAG_UNION sfb1 sfb2) =
- (\s. ?h1 h2. 
+ (\s. ?h1 h2.
               DISJOINT (FDOM h1) (FDOM h2) /\ (SND s = FUNION h1 h2) /\
               (FST s,h1) IN (smallfoot_prop___PROP (wpb,rpb) sfb1) /\
               (FST s,h2) IN (smallfoot_prop___PROP (wpb,rpb) sfb2)))``,
@@ -15952,7 +15952,7 @@ REPEAT STRIP_TAC THEN
 
   ONCE_REWRITE_TAC[GSYM smallfoot_ap_star___ap_stack_true___IDEM] THEN
   `(COMM smallfoot_ap_star) /\ (ASSOC smallfoot_ap_star)` by REWRITE_TAC[smallfoot_ap_star___PROPERTIES] THEN
-  SIMP_TAC std_ss [smallfoot_ap_bigstar___BAG_UNION] THEN 
+  SIMP_TAC std_ss [smallfoot_ap_bigstar___BAG_UNION] THEN
   METIS_TAC[COMM_DEF, ASSOC_DEF]
 ) THEN
 ASM_REWRITE_TAC[] THEN (POP_ASSUM (K ALL_TAC)) THEN
@@ -16060,11 +16060,11 @@ FULL_SIMP_TAC std_ss [IS_SOME_EXISTS]);
 val smallfoot_ap_bag_implies_in_heap_or_null___tree_seg_num = store_thm (
  "smallfoot_ap_bag_implies_in_heap_or_null___tree_seg_num",
 
-``!e1 e2 n bal tagL sfb. 
+``!e1 e2 n bal tagL sfb.
     (IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\
      IS_SOME___SMALLFOOT_AE_USED_VARS e2 /\
      ~(tagL = [])) ==>
-             smallfoot_ap_bag_implies_in_heap_or_null (BAG_INSERT (smallfoot_ap_tree_seg_num n bal tagL e1 e2) 
+             smallfoot_ap_bag_implies_in_heap_or_null (BAG_INSERT (smallfoot_ap_tree_seg_num n bal tagL e1 e2)
                                               (BAG_INSERT (smallfoot_ap_unequal e1 e2) sfb)) e1``,
 
 SIMP_TAC std_ss [smallfoot_ap_bag_implies_in_heap_or_null_def,
@@ -16154,11 +16154,11 @@ ASM_SIMP_TAC std_ss [smallfoot_ap_points_to_def, IN_ABS,
 val smallfoot_ap_bag_implies_in_heap_or_null___tree_seg = store_thm (
  "smallfoot_ap_bag_implies_in_heap_or_null___tree_seg",
 
-``!e1 e2 bal tagL sfb. 
+``!e1 e2 bal tagL sfb.
     (IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\
      IS_SOME___SMALLFOOT_AE_USED_VARS e2 /\
      ~(tagL = [])) ==>
-             smallfoot_ap_bag_implies_in_heap_or_null (BAG_INSERT (smallfoot_ap_tree_seg bal tagL e1 e2) 
+             smallfoot_ap_bag_implies_in_heap_or_null (BAG_INSERT (smallfoot_ap_tree_seg bal tagL e1 e2)
                                               (BAG_INSERT (smallfoot_ap_unequal e1 e2) sfb)) e1``,
 
 
@@ -16193,10 +16193,10 @@ METIS_TAC[]);
 val smallfoot_ap_bag_implies_in_heap_or_null___data_list_seg = store_thm (
  "smallfoot_ap_bag_implies_in_heap_or_null___data_list_seg",
 
-``!e1 data e2 tl sfb. 
+``!e1 data e2 tl sfb.
     (IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\
      IS_SOME___SMALLFOOT_AE_USED_VARS e2) ==>
-             smallfoot_ap_bag_implies_in_heap_or_null (BAG_INSERT (smallfoot_ap_data_list_seg tl e1 data e2) 
+             smallfoot_ap_bag_implies_in_heap_or_null (BAG_INSERT (smallfoot_ap_data_list_seg tl e1 data e2)
                                               (BAG_INSERT (smallfoot_ap_unequal e1 e2) sfb)) e1``,
 
 REPEAT STRIP_TAC THEN
@@ -16259,7 +16259,7 @@ store_thm ("smallfoot_ap_bag_implies_in_heap_or_null___unequal_null",
 IS_SOME___SMALLFOOT_AE_USED_VARS e ==>
 (smallfoot_ap_bag_implies_in_heap_or_null
     (BAG_INSERT (smallfoot_ap_unequal e smallfoot_ae_null) sfb) e =
-smallfoot_ap_bag_implies_in_heap_or_null 
+smallfoot_ap_bag_implies_in_heap_or_null
     (BAG_INSERT (smallfoot_ap_exp_is_defined e) sfb) e)``,
 
 REPEAT STRIP_TAC THEN
@@ -16270,7 +16270,7 @@ ASM_SIMP_TAC std_ss [smallfoot_ap_bag_implies_in_heap_or_null_def,
 		     smallfoot_ap_bigstar_REWRITE,
 		     smallfoot_ap_star___swap_ap_stack_true] THEN
 Cases_on `BAG_EVERY SMALLFOOT_AP_PERMISSION_UNIMPORTANT sfb` THEN ASM_REWRITE_TAC[] THEN
-Q.ABBREV_TAC `P = (smallfoot_ap_star smallfoot_ap_stack_true 
+Q.ABBREV_TAC `P = (smallfoot_ap_star smallfoot_ap_stack_true
             (smallfoot_ap_bigstar sfb))` THEN
 
 `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P` by ALL_TAC THEN1 (
@@ -16304,7 +16304,7 @@ METIS_TAC[]);
 val smallfoot_ap_bag_implies_in_heap_or_null___data_list = store_thm (
  "smallfoot_ap_bag_implies_in_heap_or_null___data_list",
 
-``!e data tl sfb.  
+``!e data tl sfb.
      IS_SOME___SMALLFOOT_AE_USED_VARS e ==>
              (smallfoot_ap_bag_implies_in_heap_or_null (BAG_INSERT (smallfoot_ap_data_list tl e data) sfb) e)``,
 
@@ -16370,7 +16370,7 @@ ASM_REWRITE_TAC[]);
 val smallfoot_ap_bag_implies_in_heap_or_null___bintree = store_thm (
  "smallfoot_ap_bag_implies_in_heap_or_null___bintree",
 
-``!e lt rt sfb.  
+``!e lt rt sfb.
      IS_SOME___SMALLFOOT_AE_USED_VARS e ==>
              (smallfoot_ap_bag_implies_in_heap_or_null (BAG_INSERT (smallfoot_ap_bintree (lt,rt) e) sfb) e)``,
 
@@ -16646,7 +16646,7 @@ store_thm ("smallfoot_ap_bag_implies_unequal___tree_seg",
 ``!e1 e2 e3 sfb bal tagL.
   smallfoot_ap_bag_implies_in_heap_or_null (BAG_INSERT (smallfoot_ap_unequal e1 e2) sfb) e3 ==>
   ((IS_SOME___SMALLFOOT_AE_USED_VARS e1 /\
-   IS_SOME___SMALLFOOT_AE_USED_VARS e2) ==> 
+   IS_SOME___SMALLFOOT_AE_USED_VARS e2) ==>
   smallfoot_ap_bag_implies_unequal (BAG_INSERT (smallfoot_ap_tree_seg bal tagL e1 e2)
                                    (BAG_INSERT (smallfoot_ap_unequal e1 e2) sfb)) e1 e3)``,
 
@@ -16726,7 +16726,7 @@ Q.ABBREV_TAC `P2 = smallfoot_ap_bigstar
 `!X. smallfoot_ap_star P (smallfoot_ap_star (smallfoot_ap_unequal e1 e2) X) =
  smallfoot_ap_star P2 X` by ALL_TAC THEN1 (
    Q.UNABBREV_TAC `P` THEN
-   Q.UNABBREV_TAC `P2` THEN 
+   Q.UNABBREV_TAC `P2` THEN
    SIMP_TAC std_ss [smallfoot_ap_bigstar_REWRITE] THEN
    METIS_TAC[smallfoot_ap_star___PROPERTIES, ASSOC_DEF, COMM_DEF]
 ) THEN
@@ -16800,7 +16800,7 @@ SIMP_TAC std_ss [smallfoot_ap_bintree_def,
 
 
 
-(*the first argument is ignored by this definition. It's used as an indicator to 
+(*the first argument is ignored by this definition. It's used as an indicator to
   conversions. If strong_rest is true the conversions try to make the deduced frame as strong as possible.
   to this end equations and disequations are put into it. Otherwise,
   they are left out.*)
@@ -16826,7 +16826,7 @@ val SMALLFOOT_PROP_IMPLIES_EXPAND = store_thm ("SMALLFOOT_PROP_IMPLIES_EXPAND",
 SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context sfb_split sfb_imp sfb_restP =
 
 ~(sfb_restP = EMPTY) ==>
-(?sfb_rest. sfb_restP sfb_rest /\ 
+(?sfb_rest. sfb_restP sfb_rest /\
 (smallfoot_prop___COND (wpb,rpb) (BAG_UNION sfb_context (BAG_UNION sfb_split sfb_imp)) ==>
 
 (!s. smallfoot_prop___PROP (wpb,rpb) (BAG_UNION sfb_split sfb_context) s ==>
@@ -16865,12 +16865,12 @@ val SMALLFOOT_COND_HOARE_TRIPLE___SOLVE = store_thm ("SMALLFOOT_COND_HOARE_TRIPL
   ((SET_OF_BAG wpb' SUBSET SET_OF_BAG wpb) /\
    (SET_OF_BAG rpb' SUBSET SET_OF_BAG (BAG_UNION wpb rpb))) ==>
 
-((SMALLFOOT_PROP_IMPLIES F (wpb,rpb) EMPTY_BAG EMPTY_BAG sfb sfb' 
+((SMALLFOOT_PROP_IMPLIES F (wpb,rpb) EMPTY_BAG EMPTY_BAG sfb sfb'
   (BAG_EVERY SMALLFOOT_IS_STRONG_STACK_PROPOSITION))
  ==>
 
 
-  SMALLFOOT_COND_HOARE_TRIPLE 
+  SMALLFOOT_COND_HOARE_TRIPLE
     (smallfoot_prop (wpb,rpb) sfb)
     (smallfoot_prog_block [])
     (smallfoot_prop (wpb',rpb') sfb'))``,
@@ -16910,7 +16910,7 @@ SIMP_TAC std_ss [SMALLFOOT_PROP_IMPLIES_def, bagTheory.BAG_UNION_EMPTY,
   SIMP_TAC std_ss [EMPTY_DEF] THEN
   Q.EXISTS_TAC `EMPTY_BAG` THEN
   REWRITE_TAC[BAG_EVERY_THM]
-) THEN 
+) THEN
 
 `smallfoot_prop___COND (wpb,rpb) sfb'` by ALL_TAC THEN1 (
    FULL_SIMP_TAC std_ss [smallfoot_prop___COND___REWRITE] THEN
@@ -16957,7 +16957,7 @@ Q.ABBREV_TAC `P = (smallfoot_ap_bigstar (BAG_INSERT smallfoot_ap_stack_true sfb)
 FULL_SIMP_TAC std_ss [GSYM smallfoot_ap_bigstar_REWRITE,
 		      smallfoot_prop___COND_INSERT] THEN
 
-`SMALLFOOT_AP_PERMISSION_UNIMPORTANT e` 
+`SMALLFOOT_AP_PERMISSION_UNIMPORTANT e`
    by FULL_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def] THEN
 
 `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P` by ALL_TAC THEN1 (
@@ -16990,7 +16990,7 @@ val SMALLFOOT_COND_PROP___STRONG_EQUIV___smallfoot_ae_is_list_cond_defined =
 store_thm ("SMALLFOOT_COND_PROP___STRONG_EQUIV___smallfoot_ae_is_list_cond_defined",
 ``!P P' L.
   SMALLFOOT_COND_PROP___STRONG_EQUIV P P' ==>
-  SMALLFOOT_COND_PROP___STRONG_EQUIV 
+  SMALLFOOT_COND_PROP___STRONG_EQUIV
      (smallfoot_ae_is_list_cond_defined P  L)
      (smallfoot_ae_is_list_cond_defined P' L)``,
 
@@ -17031,19 +17031,19 @@ val SMALLFOOT_COND_INFERENCE___smallfoot_cond_best_local_action___ae_defined_eli
    SMALLFOOT_COND_AP_PERMISSION_UNIMPORTANT pre /\
    SMALLFOOT_COND_AP_PERMISSION_UNIMPORTANT post) ==>
 
-((SMALLFOOT_COND_HOARE_TRIPLE 
+((SMALLFOOT_COND_HOARE_TRIPLE
     (smallfoot_prop (wpb,rpb) sfb)
-    (fasl_prog_seq 
+    (fasl_prog_seq
         (smallfoot_cond_best_local_action pre post)
         prog)
     Q)
 
  ==>
 
- (SMALLFOOT_COND_HOARE_TRIPLE 
+ (SMALLFOOT_COND_HOARE_TRIPLE
     (smallfoot_prop (wpb,rpb) sfb)
-    (fasl_prog_seq 
-        (smallfoot_cond_best_local_action 
+    (fasl_prog_seq
+        (smallfoot_cond_best_local_action
             (smallfoot_ae_is_list_cond_defined pre expL)
             post)
         prog)
@@ -17064,7 +17064,7 @@ SIMP_TAC std_ss [SMALLFOOT_HOARE_TRIPLE_def,
 Cases_on `~FST pre \/ ~FST post` THEN (
    FULL_SIMP_TAC std_ss []
 ) THEN
-Q.ABBREV_TAC `prog_sem = 
+Q.ABBREV_TAC `prog_sem =
                 FASL_PROGRAM_SEM (smallfoot_env,K smallfoot_ap_true) FEMPTY prog` THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
@@ -17115,8 +17115,8 @@ SIMP_TAC std_ss [SOME___quant_best_local_action, IN_ABS] THEN
 		       FORALL_AND_THM, var_res_sl___has_read_permission_def,
 		       var_res_sl___has_write_permission_def]
 ) THEN
-`SMALLFOOT_AP_PERMISSION_UNIMPORTANT (SND pre) /\ 
- SMALLFOOT_AP_PERMISSION_UNIMPORTANT (SND post)` by 
+`SMALLFOOT_AP_PERMISSION_UNIMPORTANT (SND pre) /\
+ SMALLFOOT_AP_PERMISSION_UNIMPORTANT (SND post)` by
    METIS_TAC[SMALLFOOT_COND_AP_PERMISSION_UNIMPORTANT_def] THEN
 
 REPEAT STRIP_TAC THENL [
@@ -17140,8 +17140,8 @@ REPEAT STRIP_TAC THENL [
    POP_ASSUM MATCH_MP_TAC THEN
    SIMP_TAC std_ss [SUBSET_DEF, IN_ABS] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `!x''' s0. X x''' s0` 
-      (MP_TAC o Q.SPECL [`(FST (x:smallfoot_state), SND (x''':smallfoot_state))`, 
+   Q.PAT_ASSUM `!x''' s0. X x''' s0`
+      (MP_TAC o Q.SPECL [`(FST (x:smallfoot_state), SND (x''':smallfoot_state))`,
                           `(FEMPTY, SND (s0':smallfoot_state))`]) THEN
    `SMALLFOOT_IS_SUBSTATE x''' x` by METIS_TAC[SMALLFOOT_IS_SUBSTATE_INTRO] THEN
    FULL_SIMP_TAC std_ss [SOME___smallfoot_separation_combinator,
@@ -17201,7 +17201,7 @@ REPEAT STRIP_TAC THENL [
    ASM_SIMP_TAC std_ss [IN_ABS, VAR_RES_STACK___IS_EQUAL_UPTO_VALUES_def,
 		    FUN_FMAP_DEF, FDOM_FINITE, FINITE_DIFF,
 		    IN_DIFF, SOME___VAR_RES_STACK_COMBINE,
-			 FMERGE_DEF, IN_UNION, 
+			 FMERGE_DEF, IN_UNION,
 			 VAR_RES_STACK_IS_SEPARATE_def] THEN
    STRIP_TAC THEN STRIP_TAC THEN
    REPEAT CONJ_TAC THENL [
@@ -17215,12 +17215,12 @@ REPEAT STRIP_TAC THENL [
       ) THEN
       ASM_SIMP_TAC std_ss [FUN_FMAP_DEF] THEN
       METIS_TAC[]
-      
+
    FUN_FMAP_DEF
-   
 
 
-		     
+
+
    REPEAT STRIP_TAC THENL [
       Q.PAT_ASSUM `VAR_RES_STACK_COMBINE
    VAR_RES_STACK___IS_EQUAL_UPTO_VALUES_def
@@ -17373,10 +17373,10 @@ CONJ_TAC THEN1 (
 			    IN_ABS, var_res_sl___has_write_permission_def,
 			    var_res_sl___has_read_permission_def,
 			    bagTheory.IN_SET_OF_BAG, bagTheory.BAG_IN_BAG_UNION,
-			    DISJ_IMP_THM],		       
+			    DISJ_IMP_THM],
 
 
-      ASM_SIMP_TAC std_ss [SOME___smallfoot_separation_combinator,			   
+      ASM_SIMP_TAC std_ss [SOME___smallfoot_separation_combinator,
 			   DISJOINT_SYM, FUNION___COMM,
 			   FMERGE_FEMPTY] THEN
       METIS_TAC [VAR_RES_STACK_COMBINE___IS_SEPARATION_COMBINATOR,
@@ -17451,7 +17451,7 @@ REPEAT STRIP_TAC THENL [
         (SET_OF_BAG (BAG_UNION (BAG_DIFF wpb wpb') (BAG_DIFF rpb wpb'))) P` by FULL_SIMP_TAC std_ss [smallfoot_prop___COND___EXPAND] THEN
    POP_ASSUM (MATCH_MP_TAC o REWRITE_RULE [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___ALTERNATIVE_DEF_2]) THEN
    Q.EXISTS_TAC `(FST x,h2)` THEN
-   `BAG_ALL_DISTINCT wpb /\ BAG_ALL_DISTINCT rpb` by 
+   `BAG_ALL_DISTINCT wpb /\ BAG_ALL_DISTINCT rpb` by
        FULL_SIMP_TAC std_ss [smallfoot_prop___COND___EXPAND] THEN
    ASM_SIMP_TAC std_ss [FMERGE_DEF, bagTheory.IN_SET_OF_BAG,
 		        VAR_RES_STACK_SPLIT12___REWRITES,
@@ -17503,18 +17503,18 @@ val SMALLFOOT_COND_INFERENCE___smallfoot_cond_best_local_action = store_thm ("SM
    EVERY (SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))) expL) ==>
 
 ( (
-  SMALLFOOT_PROP_IMPLIES T (wpb,rpb) wpb' EMPTY_BAG sfb sfb' 
-  (\sfb'''. SMALLFOOT_COND_HOARE_TRIPLE 
+  SMALLFOOT_PROP_IMPLIES T (wpb,rpb) wpb' EMPTY_BAG sfb sfb'
+  (\sfb'''. SMALLFOOT_COND_HOARE_TRIPLE
     (smallfoot_prop (wpb,rpb) (BAG_UNION sfb'' sfb''')) prog Q))
 
  ==>
 
 
-  SMALLFOOT_COND_HOARE_TRIPLE 
+  SMALLFOOT_COND_HOARE_TRIPLE
     (smallfoot_prop (wpb,rpb) sfb)
-    (fasl_prog_seq 
-        (smallfoot_cond_best_local_action 
-            (smallfoot_ae_is_list_cond_defined 
+    (fasl_prog_seq
+        (smallfoot_cond_best_local_action
+            (smallfoot_ae_is_list_cond_defined
                (smallfoot_prop (wpb',rpb') sfb')
                expL)
             (smallfoot_prop (wpb',rpb') sfb''))
@@ -17656,10 +17656,10 @@ CONJ_TAC THEN1 (
 			    IN_ABS, var_res_sl___has_write_permission_def,
 			    var_res_sl___has_read_permission_def,
 			    bagTheory.IN_SET_OF_BAG, bagTheory.BAG_IN_BAG_UNION,
-			    DISJ_IMP_THM],		       
+			    DISJ_IMP_THM],
 
 
-      ASM_SIMP_TAC std_ss [SOME___smallfoot_separation_combinator,			   
+      ASM_SIMP_TAC std_ss [SOME___smallfoot_separation_combinator,
 			   DISJOINT_SYM, FUNION___COMM,
 			   FMERGE_FEMPTY] THEN
       METIS_TAC [VAR_RES_STACK_COMBINE___IS_SEPARATION_COMBINATOR,
@@ -17734,7 +17734,7 @@ REPEAT STRIP_TAC THENL [
         (SET_OF_BAG (BAG_UNION (BAG_DIFF wpb wpb') (BAG_DIFF rpb wpb'))) P` by FULL_SIMP_TAC std_ss [smallfoot_prop___COND___EXPAND] THEN
    POP_ASSUM (MATCH_MP_TAC o REWRITE_RULE [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___ALTERNATIVE_DEF_2]) THEN
    Q.EXISTS_TAC `(FST x,h2)` THEN
-   `BAG_ALL_DISTINCT wpb /\ BAG_ALL_DISTINCT rpb` by 
+   `BAG_ALL_DISTINCT wpb /\ BAG_ALL_DISTINCT rpb` by
        FULL_SIMP_TAC std_ss [smallfoot_prop___COND___EXPAND] THEN
    ASM_SIMP_TAC std_ss [FMERGE_DEF, bagTheory.IN_SET_OF_BAG,
 		        VAR_RES_STACK_SPLIT12___REWRITES,
@@ -17779,7 +17779,7 @@ smallfoot_bag_exists exS sfb =
 
 if (!sf x.  BAG_IN sf (sfb x) ==>
            SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS
-             exS sf) /\ 
+             exS sf) /\
    (!x. FINITE_BAG (sfb x)) then
    {|asl_exists x. (smallfoot_ap_bigstar (BAG_INSERT smallfoot_ap_stack_true (sfb x)))|}
 else
@@ -17863,7 +17863,7 @@ val SMALLFOOT_PROP___STRONG_EXISTS___REWRITE = store_thm (
 "SMALLFOOT_PROP___STRONG_EXISTS___REWRITE",
 
 ``SMALLFOOT_COND_PROP___STRONG_EQUIV
-  (COND_PROP___STRONG_EXISTS (\x. smallfoot_prop (wpb,rpb) (sfb x))) 
+  (COND_PROP___STRONG_EXISTS (\x. smallfoot_prop (wpb,rpb) (sfb x)))
   (smallfoot_prop (wpb, rpb) (smallfoot_bag_exists (SET_OF_BAG (BAG_UNION wpb rpb)) sfb))``,
 
 
@@ -17876,7 +17876,7 @@ Tactical.REVERSE (Cases_on `(!sf x.
              SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS
                (SET_OF_BAG (BAG_UNION wpb rpb)) sf) /\
           !x. FINITE_BAG (sfb x)`) THEN1 (
-   ASM_REWRITE_TAC[] THEN  
+   ASM_REWRITE_TAC[] THEN
    SIMP_TAC std_ss [smallfoot_prop___COND___REWRITE,
 		    bagTheory.IN_SET_OF_BAG,
 		    bagTheory.BAG_IN_BAG_INSERT,
@@ -17921,14 +17921,14 @@ val SMALLFOOT_PROP___STRONG_EXISTS___REWRITE_TRANS = store_thm (
 ``(!x. SMALLFOOT_COND_PROP___STRONG_EQUIV (P x) (smallfoot_prop (wpb,rpb) (sfb x))) ==>
 
 SMALLFOOT_COND_PROP___STRONG_EQUIV
-  (COND_PROP___STRONG_EXISTS P) 
+  (COND_PROP___STRONG_EXISTS P)
   (smallfoot_prop (wpb, rpb) (smallfoot_bag_exists (SET_OF_BAG (BAG_UNION wpb rpb)) sfb))``,
 
 REPEAT STRIP_TAC THEN
-`SMALLFOOT_COND_PROP___STRONG_EQUIV 
+`SMALLFOOT_COND_PROP___STRONG_EQUIV
    (COND_PROP___STRONG_EXISTS (\x. (smallfoot_prop (wpb,rpb) (sfb x))))
    (smallfoot_prop (wpb,rpb)
-         (smallfoot_bag_exists (SET_OF_BAG (BAG_UNION wpb rpb)) sfb))` by 
+         (smallfoot_bag_exists (SET_OF_BAG (BAG_UNION wpb rpb)) sfb))` by
    REWRITE_TAC[SMALLFOOT_PROP___STRONG_EXISTS___REWRITE] THEN
 FULL_SIMP_TAC std_ss [SMALLFOOT_COND_PROP___STRONG_EQUIV_REWRITE,
 		      COND_PROP___STRONG_EXISTS_def,
@@ -18093,7 +18093,7 @@ FULL_SIMP_TAC std_ss [smallfoot_prop___COND_UNION] THEN
 Q.EXISTS_TAC `sfb_rest` THEN
 ASM_REWRITE_TAC[] THEN
 STRIP_TAC THEN
-`smallfoot_prop___COND (wpb,rpb) (sfb' x)` 
+`smallfoot_prop___COND (wpb,rpb) (sfb' x)`
    by METIS_TAC[smallfoot_prop___COND___bag_exists___IMP] THEN
 FULL_SIMP_TAC std_ss [] THEN
 GEN_TAC THEN STRIP_TAC THEN
@@ -18130,9 +18130,9 @@ store_thm ("SMALLFOOT_PROP_IMPLIES___sfb_restP___bag_exists",
 
 (exS SUBSET SET_OF_BAG (BAG_UNION wpb rpb)) ==>
 
-((!x. SMALLFOOT_COND_HOARE_TRIPLE 
+((!x. SMALLFOOT_COND_HOARE_TRIPLE
     (smallfoot_prop (wpb,rpb) (BAG_UNION (sfb_ex x) sfb2)) prog Q) ==>
- (SMALLFOOT_COND_HOARE_TRIPLE 
+ (SMALLFOOT_COND_HOARE_TRIPLE
     (smallfoot_prop (wpb,rpb) (BAG_UNION (smallfoot_bag_exists exS (\x. sfb_ex x)) sfb2)) prog Q))
 ``,
 
@@ -18226,17 +18226,17 @@ val SMALLFOOT_COND_INFERENCE___prog_aquire_resource = store_thm ("SMALLFOOT_COND
 
 
 ((
-  SMALLFOOT_COND_HOARE_TRIPLE 
-    (smallfoot_prop (BAG_UNION wpb' wpb,rpb) 
+  SMALLFOOT_COND_HOARE_TRIPLE
+    (smallfoot_prop (BAG_UNION wpb' wpb,rpb)
         (BAG_INSERT (SMALLFOOT_P_PROPOSITION_EVAL c) (BAG_UNION sfb' sfb)))
     prog Q)
 
  ==>
 
 
-  SMALLFOOT_COND_HOARE_TRIPLE 
+  SMALLFOOT_COND_HOARE_TRIPLE
     (smallfoot_prop (wpb,rpb) sfb)
-    (fasl_prog_seq 
+    (fasl_prog_seq
         (smallfoot_prog_aquire_resource c wpb' sfb')
         prog)
     Q)``,
@@ -18292,7 +18292,7 @@ Cases_on `P' = EMPTY` THEN1 (
 			EMPTY_SUBSET]
 ) THEN
 `!s. s IN P' ==> VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST s)` by ALL_TAC THEN1 (
-   Q.UNABBREV_TAC `P'` THEN   
+   Q.UNABBREV_TAC `P'` THEN
    SIMP_TAC std_ss [VAR_RES_STACK___IS_EQUAL_UPTO_VALUES_def,
 		    asl_star_def, IN_ABS, IN_SING,
 		    SOME___smallfoot_separation_combinator,
@@ -18343,7 +18343,7 @@ CONJ_TAC THEN1 (
    Cases_on `BAG_IN x' wpb'` THEN ASM_REWRITE_TAC[] THEN
    Q.PAT_ASSUM `x IN X` MP_TAC THEN
    SIMP_TAC std_ss [smallfoot_prop___PROP___REWRITE,
-		    IN_ABS, 
+		    IN_ABS,
 		    SUBSET_DEF, bagTheory.BAG_IN_BAG_UNION,
 		    bagTheory.IN_SET_OF_BAG,
 		    DISJ_IMP_THM, FORALL_AND_THM,
@@ -18373,9 +18373,9 @@ STRIP_TAC THEN
  smallfoot_prop___COND (BAG_UNION wpb' wpb,rpb) sfb` by ALL_TAC THEN1 (
    Tactical.REVERSE (
       `BAG_DISJOINT wpb' wpb /\ (!v. BAG_IN v rpb ==> ~BAG_IN v wpb')` by ALL_TAC) THEN1 (
-   
+
       FULL_SIMP_TAC std_ss [smallfoot_prop___COND___REWRITE,
-	      		 BAG_ALL_DISTINCT_THM, 
+	      		 BAG_ALL_DISTINCT_THM,
 			 bagTheory.NOT_IN_EMPTY_BAG,
                          BAG_ALL_DISTINCT___BAG_UNION,
 		         bagTheory.BAG_IN_BAG_UNION,
@@ -18426,7 +18426,7 @@ STRIP_TAC THEN
    ]
 ) THEN
 FULL_SIMP_TAC std_ss [GSYM smallfoot_ap_emp_def] THEN
-Q.ABBREV_TAC `P''' =  (smallfoot_prop_internal___PROP (BAG_UNION wpb' wpb,rpb) ({},{}) 
+Q.ABBREV_TAC `P''' =  (smallfoot_prop_internal___PROP (BAG_UNION wpb' wpb,rpb) ({},{})
                [c] (BAG_UNION sfb' sfb) smallfoot_ap_emp)` THEN
 Tactical.REVERSE (`!s. s IN P'' ==> s IN P'''` by ALL_TAC) THEN1 (
    Q.PAT_ASSUM `SMALLFOOT_HOARE_TRIPLE X1 X2 X3 prog Y` MP_TAC THEN
@@ -18445,7 +18445,7 @@ Tactical.REVERSE (`!s. s IN P'' ==> s IN P'''` by ALL_TAC) THEN1 (
 ) THEN
 
 Q.UNABBREV_TAC `P''` THEN
-SIMP_TAC std_ss [IN_BIGUNION, 
+SIMP_TAC std_ss [IN_BIGUNION,
 		 IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM, IN_ABS,
 		 bagTheory.NOT_IN_EMPTY_BAG, fasla_assume_def,
                  GSYM LEFT_FORALL_IMP_THM] THEN
@@ -18536,7 +18536,7 @@ REPEAT STRIP_TAC THENL [
 ]);
 
 
-   
+
 
 
 
@@ -18554,16 +18554,16 @@ val SMALLFOOT_COND_INFERENCE___prog_release_resource = store_thm ("SMALLFOOT_CON
 
 
 ( (
-  SMALLFOOT_PROP_IMPLIES T (wpb,rpb) wpb' EMPTY_BAG sfb sfb' 
-  (\sfb''. SMALLFOOT_COND_HOARE_TRIPLE 
+  SMALLFOOT_PROP_IMPLIES T (wpb,rpb) wpb' EMPTY_BAG sfb sfb'
+  (\sfb''. SMALLFOOT_COND_HOARE_TRIPLE
     (smallfoot_prop (BAG_DIFF wpb wpb',rpb) sfb'') prog Q))
 
  ==>
 
 
-  SMALLFOOT_COND_HOARE_TRIPLE 
+  SMALLFOOT_COND_HOARE_TRIPLE
     (smallfoot_prop (wpb,rpb) sfb)
-    (fasl_prog_seq 
+    (fasl_prog_seq
         (smallfoot_prog_release_resource wpb' sfb')
         prog)
     Q)``,
@@ -18772,7 +18772,7 @@ ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [COND_REWRITES] THEN
 REPEAT STRIP_TAC THEN
 Tactical.REVERSE (`~(VAR_RES_STACK_IS_SEPARATE (FST s0) (FST s1))` by ALL_TAC) THEN
 
-SIMP_TAC std_ss [VAR_RES_STACK_IS_SEPARATE_def, 
+SIMP_TAC std_ss [VAR_RES_STACK_IS_SEPARATE_def,
 		     bagTheory.IN_SET_OF_BAG] THEN
 Q.EXISTS_TAC `x''` THEN
 ASM_SIMP_TAC std_ss [var_res_permission_THM2]);
@@ -18867,14 +18867,14 @@ SIMP_TAC std_ss [SMALLFOOT_PROP_IS_EQUIV_FALSE___PROP_IMPLIES_DEF,
 
 
 
-val SMALLFOOT_PROP_IS_EQUIV_FALSE___PROP_IMPLIES_IMP = 
+val SMALLFOOT_PROP_IS_EQUIV_FALSE___PROP_IMPLIES_IMP =
 store_thm ("SMALLFOOT_PROP_IS_EQUIV_FALSE___PROP_IMPLIES_IMP",
 ``!wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_restP sr.
 
 SMALLFOOT_PROP_IS_EQUIV_FALSE (wpb,rpb) (BAG_UNION sfb_context sfb_split)
  ==>
 
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context
    sfb_split sfb_imp sfb_restP)
 ``,
 
@@ -18970,7 +18970,7 @@ REPEAT STRIP_TAC THENL [
    STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [IN_DEF]
 ]);
-  
+
 
 
 
@@ -18980,7 +18980,7 @@ val SMALLFOOT_PROP_IMPLIES___STRONG_STACK_PROPOSITION_INTRO = store_thm ("SMALLF
 ``!sf wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_restP sr.
 SMALLFOOT_IS_STRONG_STACK_PROPOSITION sf ==>
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context
    (BAG_INSERT sf sfb_split)
    sfb_imp sfb_restP) =
 
@@ -19020,7 +19020,7 @@ val SMALLFOOT_PROP_IMPLIES___STRONG_STACK_PROPOSITION___TO_CONTEXT = store_thm (
 
 SMALLFOOT_IS_STRONG_STACK_PROPOSITION sf ==>
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context
    (BAG_INSERT sf sfb_split)
    sfb_imp sfb_restP) =
 
@@ -19065,22 +19065,22 @@ PROVE_TAC[SMALLFOOT_PROP_IMPLIES___STRONG_STACK_PROPOSITION___TO_CONTEXT,
 
 val SMALLFOOT_PROP_IMPLIES___COND_PROP_IMP___split =
 store_thm ("SMALLFOOT_PROP_IMPLIES___COND_PROP_IMP___split",
-``!wpb rpb wpb' sfb_context  sfb_split  sfb_imp 
+``!wpb rpb wpb' sfb_context  sfb_split  sfb_imp
                 sfb_split' sfb_restP sr.
 
 (SMALLFOOT_COND_PROP___IMP (smallfoot_prop (wpb,rpb) sfb_split)
                            (smallfoot_prop (wpb,rpb) sfb_split')) ==>
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context sfb_split' sfb_imp sfb_restP) ==>
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context sfb_split sfb_imp sfb_restP))
 ``,
 
 
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC (std_ss++boolSimps.CONJ_ss)
-   [SMALLFOOT_PROP_IMPLIES_def, 
+   [SMALLFOOT_PROP_IMPLIES_def,
     smallfoot_prop___COND_UNION,
     smallfoot_prop___PROP_UNION,
     IN_ABS, GSYM RIGHT_EXISTS_AND_THM,
@@ -19114,7 +19114,7 @@ val SMALLFOOT_PROP_IMPLIES___equal_const = store_thm ("SMALLFOOT_PROP_IMPLIES___
 
 (v IN (SET_OF_BAG (BAG_UNION wpb rpb))) ==>
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT
       (smallfoot_ap_equal (smallfoot_ae_var v) (smallfoot_ae_const c))
       sfb_context)
@@ -19122,7 +19122,7 @@ val SMALLFOOT_PROP_IMPLIES___equal_const = store_thm ("SMALLFOOT_PROP_IMPLIES___
    (BAG_IMAGE (smallfoot_ap_var_update v c) sfb_imp)
    sfb_restP) ==>
 
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context
    (BAG_INSERT
       (smallfoot_ap_equal (smallfoot_ae_var v) (smallfoot_ae_const c))
       sfb_split)
@@ -19181,7 +19181,7 @@ Q.PAT_ASSUM `(FST s,h1') IN X` MP_TAC THEN
       smallfoot_prop___COND___REWRITE,
       SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def]
 ) THEN
-ASM_SIMP_TAC std_ss [smallfoot_prop___PROP___REWRITE, 
+ASM_SIMP_TAC std_ss [smallfoot_prop___PROP___REWRITE,
  IN_ABS, smallfoot_ap_var_update___smallfoot_ap_bigstar___ap_true,
  smallfoot_ap_var_update_def] THEN
 
@@ -19215,9 +19215,9 @@ val SMALLFOOT_PROP_IMPLIES___WEAK_COND_REWRITE = store_thm ("SMALLFOOT_PROP_IMPL
  (sfb_split = sfb_split') /\
  (sfb_imp = sfb_imp')) ==>
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context sfb_split sfb_imp sfb_restP) =
- (SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+ (SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context' sfb_split' sfb_imp' sfb_restP))
 ``,
 
@@ -19235,22 +19235,22 @@ ASM_SIMP_TAC std_ss [SMALLFOOT_PROP_IMPLIES_def]);
 
 val SMALLFOOT_PROP_IMPLIES___COND_PROP_STRONG_IMP___imp =
 store_thm ("SMALLFOOT_PROP_IMPLIES___COND_PROP_STRONG_IMP___imp",
-``!wpb rpb wpb' sfb_context  sfb_split sfb_imp 
+``!wpb rpb wpb' sfb_context  sfb_split sfb_imp
                 sfb_imp' sfb_restP sr.
 
 (SMALLFOOT_COND_PROP___STRONG_IMP (smallfoot_prop (wpb,rpb) sfb_imp)
                            (smallfoot_prop (wpb,rpb) sfb_imp')) ==>
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context sfb_split sfb_imp' sfb_restP) ==>
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context sfb_split sfb_imp sfb_restP))
 ``,
 
 
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC (std_ss++boolSimps.CONJ_ss)
-   [SMALLFOOT_PROP_IMPLIES_EXPAND, 
+   [SMALLFOOT_PROP_IMPLIES_EXPAND,
     smallfoot_prop___COND_UNION,
     smallfoot_prop___PROP_UNION,
     IN_ABS, GSYM RIGHT_EXISTS_AND_THM,
@@ -19276,19 +19276,19 @@ ASM_SIMP_TAC std_ss []);
 
 val SMALLFOOT_PROP_IMPLIES___COND_PROP_STRONG_EQUIV___imp =
 store_thm ("SMALLFOOT_PROP_IMPLIES___COND_PROP_STRONG_EQUIV___imp",
-``!wpb rpb wpb' sfb_context  sfb_split  sfb_imp 
+``!wpb rpb wpb' sfb_context  sfb_split  sfb_imp
                 sfb_imp' sfb_restP sr.
 
 (SMALLFOOT_COND_PROP___STRONG_EQUIV (smallfoot_prop (wpb,rpb) sfb_imp)
                            (smallfoot_prop (wpb,rpb) sfb_imp')) ==>
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context sfb_split sfb_imp' sfb_restP) =
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context sfb_split sfb_imp sfb_restP))
 ``,
 
-REPEAT STRIP_TAC THEN 
+REPEAT STRIP_TAC THEN
 METIS_TAC[SMALLFOOT_COND_PROP___STRONG_EQUIV_def,
 	  SMALLFOOT_PROP_IMPLIES___COND_PROP_STRONG_IMP___imp]);
 
@@ -19302,13 +19302,13 @@ val SMALLFOOT_PROP_IMPLIES___stack_true =
 store_thm ("SMALLFOOT_PROP_IMPLIES___stack_true",
 ``!wpb rpb wpb' sfb_context  sfb_split  sfb_imp sfb_rest sr.
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context sfb_split (BAG_INSERT smallfoot_ap_stack_true sfb_imp) sfb_restP) =
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context sfb_split sfb_imp sfb_restP))
 ``,
 
-REPEAT STRIP_TAC THEN 
+REPEAT STRIP_TAC THEN
 MATCH_MP_TAC SMALLFOOT_PROP_IMPLIES___COND_PROP_STRONG_EQUIV___imp THEN
 ONCE_REWRITE_TAC[SMALLFOOT_COND_PROP___STRONG_EQUIV___SYM] THEN
 REWRITE_TAC [SMALLFOOT_COND_PROP___STRONG_EQUIV___smallfoot_ap_stack_true]);
@@ -19319,14 +19319,14 @@ val SMALLFOOT_PROP_IMPLIES___empty_heap_cond =
 store_thm ("SMALLFOOT_PROP_IMPLIES___empty_heap_cond",
 ``!wpb rpb wpb' sfb_context  sfb_split  sfb_imp sfb_rest c sr.
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_empty_heap_cond c) sfb_context) sfb_split sfb_imp sfb_restP) =
 (c ==>
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context sfb_split sfb_imp sfb_restP)))
 ``,
 
-REPEAT STRIP_TAC THEN 
+REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [SMALLFOOT_PROP_IMPLIES_EXPAND,
 		 smallfoot_prop___COND_INSERT,
 		 bagTheory.BAG_UNION_INSERT,
@@ -19363,7 +19363,7 @@ val smallfoot_ap_equal_BAG_def = Define `
 smallfoot_ap_equal_BAG L L' =
 BAG_OF_SET (\x. ?t. (x = smallfoot_ap_equal (L ' t) (L' ' t)) /\ t IN FDOM L /\ t IN FDOM L')`;
 
-    
+
 
 
 
@@ -19379,7 +19379,7 @@ FEVERY (\(t,a). (t IN FDOM L) /\ (a = L ' t)) L' ==>
    sfb_split sfb_imp
    sfb_restP) ==>
 
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context
    (BAG_INSERT (smallfoot_ap_points_to e L) sfb_split)
    (BAG_INSERT (smallfoot_ap_points_to e L') sfb_imp) sfb_restP))
 
@@ -19438,7 +19438,7 @@ SMALLFOOT_PROP_IS_EQUIV_FALSE (wpb,rpb) (BAG_UNION sfb_context
    (BAG_INSERT (smallfoot_ap_points_to e L) sfb_split)))
  ==>
 
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' sfb_context
    (BAG_INSERT (smallfoot_ap_points_to e L) sfb_split)
    (BAG_INSERT (smallfoot_ap_points_to e L') sfb_imp) sfb_restP))
 
@@ -19453,7 +19453,7 @@ SIMP_TAC std_ss [DISJ_IMP_THM, SMALLFOOT_PROP_IMPLIES___points_to___points_to___
 
 
 
-val smallfoot_ap_tree_seg_num___REWRITE_START_EXP = 
+val smallfoot_ap_tree_seg_num___REWRITE_START_EXP =
 store_thm ("smallfoot_ap_tree_seg_num___REWRITE_START_EXP",
 ``
 !n bal tagL startExp endExp startExp' s.
@@ -19465,7 +19465,7 @@ store_thm ("smallfoot_ap_tree_seg_num___REWRITE_START_EXP",
 
 (s IN (smallfoot_ap_tree_seg_num n bal tagL startExp endExp) =
  s IN (smallfoot_ap_tree_seg_num n bal tagL startExp' endExp))``,
-	   
+
 
 Induct_on `n` THEN (
    SIMP_TAC std_ss [smallfoot_ap_tree_seg_num_def,
@@ -19501,7 +19501,7 @@ Q.ABBREV_TAC `P = (asl_bigstar_list smallfoot_separation_combinator
                eL))` THEN
 
 `!e. IS_SOME___SMALLFOOT_AE_USED_VARS e ==>
- SMALLFOOT_AP_PERMISSION_UNIMPORTANT 
+ SMALLFOOT_AP_PERMISSION_UNIMPORTANT
    (smallfoot_ap_points_to e (LISTS_TO_FMAP (tagL,eL)))` by ALL_TAC THEN1 (
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC SMALLFOOT_AP_PERMISSION_UNIMPORTANT___points_to THEN
@@ -19517,7 +19517,7 @@ Q.ABBREV_TAC `P = (asl_bigstar_list smallfoot_separation_combinator
 
 `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P` by ALL_TAC THEN1 (
   Q.UNABBREV_TAC `P` THEN
-  Q.PAT_ASSUM `LENGTH eL = X` (ASSUME_TAC o GSYM) THEN 
+  Q.PAT_ASSUM `LENGTH eL = X` (ASSUME_TAC o GSYM) THEN
   FULL_SIMP_TAC list_ss [EVERY_MEM, MEM_ZIP,
 			 GSYM LEFT_FORALL_IMP_THM,
 			 EL_MAP, smallfoot_ae_is_const_def] THEN
@@ -19580,7 +19580,7 @@ ASM_SIMP_TAC std_ss [smallfoot_ap_points_to_def,
 
 
 
-val smallfoot_ap_data_list_seg_num___REWRITE_START_EXP = 
+val smallfoot_ap_data_list_seg_num___REWRITE_START_EXP =
 store_thm ("smallfoot_ap_data_list_seg_num___REWRITE_START_EXP",
 ``
 !n tl data startExp endExp startExp' s.
@@ -19591,7 +19591,7 @@ store_thm ("smallfoot_ap_data_list_seg_num___REWRITE_START_EXP",
 
 (s IN (smallfoot_ap_data_list_seg_num n tl startExp data endExp) =
  s IN (smallfoot_ap_data_list_seg_num n tl startExp' data endExp))``,
-	   
+
 
 Induct_on `n` THEN (
    SIMP_TAC std_ss [smallfoot_ap_data_list_seg_num_def,
@@ -19613,11 +19613,11 @@ STRIP_TAC THEN
 CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 GEN_TAC THEN
 
-`SMALLFOOT_AP_PERMISSION_UNIMPORTANT 
+`SMALLFOOT_AP_PERMISSION_UNIMPORTANT
       (smallfoot_ap_points_to startExp
          (FMAP_MAP (\dl. smallfoot_ae_const (HD dl)) data |+
           (tl,smallfoot_ae_const n'))) /\
- SMALLFOOT_AP_PERMISSION_UNIMPORTANT 
+ SMALLFOOT_AP_PERMISSION_UNIMPORTANT
       (smallfoot_ap_points_to startExp'
          (FMAP_MAP (\dl. smallfoot_ae_const (HD dl)) data |+
           (tl,smallfoot_ae_const n'))) /\
@@ -19663,13 +19663,13 @@ SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))
 
 ((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_points_to e1 L) (BAG_INSERT (smallfoot_ap_unequal e1 e2) sfb_context))
-   sfb_split 
-   (BAG_UNION (BAG_OF_FMAP (\t tL. smallfoot_ap_equal (L ' t) (smallfoot_ae_const (HD tL))) data) 
+   sfb_split
+   (BAG_UNION (BAG_OF_FMAP (\t tL. smallfoot_ap_equal (L ' t) (smallfoot_ae_const (HD tL))) data)
    (BAG_INSERT (smallfoot_ap_empty_heap_cond (FEVERY (\x. ~(SND x = [])) data)) (
     BAG_INSERT (smallfoot_ap_data_list_seg tl e3 (FMAP_MAP TL data) e2) sfb_imp)))
    sfb_restP) ==>
 
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_unequal e1 e2) sfb_context)
    (BAG_INSERT (smallfoot_ap_points_to e1 L) sfb_split)
    (BAG_INSERT (smallfoot_ap_data_list_seg tl e1 data e2) sfb_imp) sfb_restP))
@@ -19786,7 +19786,7 @@ ASM_SIMP_TAC std_ss [smallfoot_prop___PROP_INSERT,
 		    smallfoot_a_stack_proposition_def]
 ) THEN
 
-`!st h. 
+`!st h.
  (st,h) IN smallfoot_ap_unequal e1 e2 =
  (st,h) IN asl_and smallfoot_ap_stack_true (smallfoot_ap_unequal e1 e2)` by ALL_TAC THEN1 (
    SIMP_TAC (std_ss++bool_eq_imp_ss)
@@ -19799,7 +19799,7 @@ ASM_SIMP_TAC std_ss [] THEN
 NTAC 5 (POP_ASSUM (K ALL_TAC)) THEN
 
 
-SIMP_TAC std_ss 
+SIMP_TAC std_ss
    [asl_bool_EVAL, IN_ABS,
     smallfoot_ap_stack_true_def,
     smallfoot_ap_empty_heap_cond_def,
@@ -19846,7 +19846,7 @@ REPEAT STRIP_TAC THENL [
 
    Q.ABBREV_TAC `xL = data ' x` THEN
    `?data'. (data = data' |+ (x, xL)) /\ FDOM (data' \\ x) SUBSET FDOM L` by ALL_TAC THEN1 (
-      Q.EXISTS_TAC `data` THEN     
+      Q.EXISTS_TAC `data` THEN
       FULL_SIMP_TAC std_ss [GSYM fmap_EQ_THM, FDOM_FUPDATE,
 		       FAPPLY_FUPDATE_THM, EXTENSION, IN_INSERT,
 		       FDOM_DOMSUB, SUBSET_DEF, IN_DELETE] THEN
@@ -19901,13 +19901,13 @@ SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))
 
 ((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_points_to e1 L) (BAG_INSERT (smallfoot_ap_unequal e1 smallfoot_ae_null) sfb_context))
-   sfb_split 
-   (BAG_UNION (BAG_OF_FMAP (\t tL. smallfoot_ap_equal (L ' t) (smallfoot_ae_const (HD tL))) data) 
+   sfb_split
+   (BAG_UNION (BAG_OF_FMAP (\t tL. smallfoot_ap_equal (L ' t) (smallfoot_ae_const (HD tL))) data)
    (BAG_INSERT (smallfoot_ap_empty_heap_cond (FEVERY (\x. ~(SND x = [])) data)) (
     BAG_INSERT (smallfoot_ap_data_list tl e2 (FMAP_MAP TL data)) sfb_imp)))
    sfb_restP) ==>
 
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_unequal e1 smallfoot_ae_null) sfb_context)
    (BAG_INSERT (smallfoot_ap_points_to e1 L) sfb_split)
    (BAG_INSERT (smallfoot_ap_data_list tl e1 data) sfb_imp) sfb_restP))
@@ -19940,12 +19940,12 @@ SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))
 
 ((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_points_to e L) (BAG_INSERT (smallfoot_ap_unequal e smallfoot_ae_null) sfb_context))
-   sfb_split 
-   (BAG_INSERT (smallfoot_ap_bintree (lt,rt) el) 
+   sfb_split
+   (BAG_INSERT (smallfoot_ap_bintree (lt,rt) el)
    (BAG_INSERT (smallfoot_ap_bintree (lt,rt) er) sfb_imp))
    sfb_restP) ==>
 
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_unequal e smallfoot_ae_null) sfb_context)
    (BAG_INSERT (smallfoot_ap_points_to e L) sfb_split)
    (BAG_INSERT (smallfoot_ap_bintree (lt,rt) e) sfb_imp) sfb_restP))
@@ -20032,7 +20032,7 @@ Q.EXISTS_TAC `h1` THEN
 Q.EXISTS_TAC `h2'` THEN
 
 SIMP_TAC std_ss [FDOM_FUNION, DISJOINT_UNION_BOTH,
-		 DISJOINT_SYM, 
+		 DISJOINT_SYM,
 		 LET_THM, IN_ABS, FEVERY_DEF,
 		 FDOM_FUPDATE, IN_INSERT, FDOM_FEMPTY,
 		 NOT_IN_EMPTY, FAPPLY_FUPDATE_THM,
@@ -20048,13 +20048,13 @@ SIMP_TAC std_ss [FDOM_FUNION, DISJOINT_UNION_BOTH,
 		] THEN
 ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [] THEN
 STRIP_TAC THEN
-`?Lrt_c Llt_c. 
+`?Lrt_c Llt_c.
          ((L ' lt (FST s)) = SOME Llt_c) /\
          ((L ' rt (FST s)) = SOME Lrt_c)` by ALL_TAC THEN1 (
   Q.PAT_ASSUM `(FST s, h1'') IN X` MP_TAC THEN
   ASM_SIMP_TAC std_ss [smallfoot_ap_points_to_def,
 		   IN_ABS, LET_THM, FEVERY_DEF,
-		   LEFT_EXISTS_AND_THM, 
+		   LEFT_EXISTS_AND_THM,
 		   RIGHT_EXISTS_AND_THM, GSYM IS_SOME_EXISTS]
 ) THEN
 REPEAT STRIP_TAC THENL [
@@ -20106,7 +20106,7 @@ REPEAT STRIP_TAC THENL [
 		      IS_SOME___SMALLFOOT_AE_USED_VARS_def,
 		      SMALLFOOT_AE_USED_VARS_SUBSET_def]
 ]);
-   
+
 
 
 
@@ -20264,7 +20264,7 @@ Induct_on `x` THENL [
 
 
 
-   REPEAT GEN_TAC THEN 
+   REPEAT GEN_TAC THEN
    Q.ABBREV_TAC `e3_cond = ((e3 (FST s) = SOME 0) \/ ~(THE (e3 (FST s)) IN FDOM (SND s)))` THEN
    STRIP_TAC THEN
    Q.PAT_ASSUM `s IN X` MP_TAC THEN
@@ -20309,7 +20309,7 @@ Induct_on `x` THENL [
 			   SMALLFOOT_AP_PERMISSION_UNIMPORTANT___star,
 			   IN_ABS, GSYM RIGHT_EXISTS_AND_THM] THEN
       REPEAT STRIP_TAC THEN
-      Q.PAT_ASSUM `!e1 e2 e3 data1 data2 data3 tl s x'. X e1 e2 e3 data1 data2 data3 tl s x'` 
+      Q.PAT_ASSUM `!e1 e2 e3 data1 data2 data3 tl s x'. X e1 e2 e3 data1 data2 data3 tl s x'`
          (MP_TAC o Q.SPECL [`(smallfoot_ae_const n')`, `e2`, `e3`, `FMAP_MAP TL data1`, `data2`, `FMAP_MAP TL data3`, `tl`, `(FST (s:smallfoot_state), h2')`, `x'`]) THEN
       Q.PAT_ASSUM `Abbrev (X \/ Y)` MP_TAC THEN
       ASM_SIMP_TAC std_ss [IS_SOME___SMALLFOOT_AE_USED_VARS___EVAL,
@@ -20325,7 +20325,7 @@ Induct_on `x` THENL [
          ) THEN
          ASM_SIMP_TAC list_ss [],
 
-         
+
          SIMP_TAC std_ss [DISJ_IMP_THM],
 
 
@@ -20350,7 +20350,7 @@ Induct_on `x` THENL [
    ASM_SIMP_TAC list_ss [smallfoot_ap_star___PERMISSION_UNIMPORTANT,
 			 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___star,
 			 IN_ABS, asl_bool_REWRITES,
-			 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___compare] THEN 
+			 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___compare] THEN
    SIMP_TAC std_ss [GSYM RIGHT_EXISTS_AND_THM,
 		    smallfoot_ap_unequal_def,
 		    smallfoot_ap_binexpression_def,
@@ -20359,7 +20359,7 @@ Induct_on `x` THENL [
 		    FUNION_FEMPTY_1, LET_THM,
 		    IS_SOME_EXISTS, GSYM RIGHT_EXISTS_AND_THM,
 		    GSYM LEFT_EXISTS_AND_THM] THEN
-   SIMP_TAC (std_ss++boolSimps.CONJ_ss) [] THEN  
+   SIMP_TAC (std_ss++boolSimps.CONJ_ss) [] THEN
    REPEAT STRIP_TAC THEN
    Q.EXISTS_TAC `h1'` THEN
    Q.EXISTS_TAC `h2'` THEN
@@ -20402,7 +20402,7 @@ Induct_on `x` THENL [
       ) THEN
       FULL_SIMP_TAC std_ss [FEVERY_DEF] THEN
       METIS_TAC[]
-  ]      
+  ]
 ]);
 
 
@@ -20449,13 +20449,13 @@ SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))
 
 ((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_data_list_seg tl e1 data1 e2) sfb_context)
-   sfb_split 
-   (BAG_INSERT (smallfoot_ap_empty_heap_cond 
+   sfb_split
+   (BAG_INSERT (smallfoot_ap_empty_heap_cond
         (FEVERY (\x. ?l2. (SND x = (data1 ' (FST x) ++ l2))) data2))
    (BAG_INSERT (smallfoot_ap_data_list_seg tl e2 (FMAP_MAP (DROP dl) data2) e3) sfb_imp))
    sfb_restP) ==>
 
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context
    (BAG_INSERT (smallfoot_ap_data_list_seg tl e1 data1 e2) sfb_split)
    (BAG_INSERT (smallfoot_ap_data_list_seg tl e1 data2 e3) sfb_imp) sfb_restP)))
@@ -20505,9 +20505,9 @@ Q.ABBREV_TAC `Q = (smallfoot_ap_star smallfoot_ap_stack_true
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 
 `SMALLFOOT_AP_PERMISSION_UNIMPORTANT P /\
- SMALLFOOT_AP_PERMISSION_UNIMPORTANT Q /\ 
+ SMALLFOOT_AP_PERMISSION_UNIMPORTANT Q /\
  SMALLFOOT_AP_PERMISSION_UNIMPORTANT (smallfoot_ap_data_list_seg tl e1 data2 e3)` by ALL_TAC THEN1 (
-  
+
    FULL_SIMP_TAC std_ss [smallfoot_prop___COND___EXPAND,
 			 SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def] THEN
    Q.UNABBREV_TAC `P` THEN
@@ -20552,11 +20552,11 @@ CONJ_TAC THENL [
 		     smallfoot_ap_bigstar_REWRITE] THEN
    FULL_SIMP_TAC std_ss [BAG_EVERY_def,
 		      smallfoot_prop___COND___REWRITE,
-		      SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def, 
+		      SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def,
                      GSYM LEFT_EXISTS_IMP_THM] THEN
    Q.EXISTS_TAC `(FST (s:smallfoot_state), h2')` THEN
-   ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM, 
-		     IN_INSERT, 
+   ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM,
+		     IN_INSERT,
 		     LEFT_AND_OVER_OR, DISJ_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER,
@@ -20575,7 +20575,7 @@ CONJ_TAC THENL [
    ) THEN
    `?t2. t2 IN FDOM data1 /\ (dl = LENGTH (data1 ' t2))` by ALL_TAC THEN1 (
       FULL_SIMP_TAC std_ss [SMALLFOOT_DATA_LIST___DATA_LENGTH_PRED_def, EXTENSION, NOT_IN_EMPTY] THEN
-      METIS_TAC[]       
+      METIS_TAC[]
    ) THEN
    ASM_REWRITE_TAC[] THEN
    Cases_on `?n. FEVERY (\x. LENGTH (SND x) = n) data1` THEN1 (
@@ -20612,13 +20612,13 @@ SMALLFOOT_AE_USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb))
 
 ((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_data_list_seg tl e1 data1 e2) sfb_context)
-   sfb_split 
-   (BAG_INSERT (smallfoot_ap_empty_heap_cond 
+   sfb_split
+   (BAG_INSERT (smallfoot_ap_empty_heap_cond
         (FEVERY (\x. ?l2. (SND x = (data1 ' (FST x) ++ l2))) data2))
    (BAG_INSERT (smallfoot_ap_data_list tl e2 (FMAP_MAP (DROP dl) data2)) sfb_imp))
    sfb_rest) ==>
 
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    sfb_context
    (BAG_INSERT (smallfoot_ap_data_list_seg tl e1 data1 e2) sfb_split)
    (BAG_INSERT (smallfoot_ap_data_list tl e1 data2) sfb_imp) sfb_rest))
@@ -20767,7 +20767,7 @@ SIMP_TAC std_ss [smallfoot_ap_stack_true_def, IN_ABS,
 	         DISJOINT_EMPTY]);
 
 
-val SMALLFOOT_COND_PROP___EQ___EQUAL_UNEQUAL_COND_LIST = 
+val SMALLFOOT_COND_PROP___EQ___EQUAL_UNEQUAL_COND_LIST =
 CONJUNCTS (
 SIMP_RULE std_ss [IMP_CONJ_THM, prove (``(!e1 e2. (P1 /\ P2 e1 /\ P2 e2) ==> (Q e1)) =
          (!e. (P1 /\ P2 e) ==> Q e)``, METIS_TAC[]),
@@ -20905,7 +20905,7 @@ SIMP_TAC std_ss [SMALLFOOT_PROP_IMPLIES_EXPAND,
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 Cases_on `sfb_restP = EMPTY` THEN ASM_REWRITE_TAC[] THEN
 DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
-SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN 
+SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
 GEN_TAC THEN
 ASM_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_equal_cond,
                      SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_unequal_cond,
@@ -20968,7 +20968,7 @@ SIMP_TAC std_ss [smallfoot_ap_stack_true_def, IN_ABS,
 
 
 
-val SMALLFOOT_PROP_IMPLIES___EQ___EQUAL_UNEQUAL_COND_LIST = 
+val SMALLFOOT_PROP_IMPLIES___EQ___EQUAL_UNEQUAL_COND_LIST =
 CONJUNCTS (
 SIMP_RULE std_ss [IMP_CONJ_THM, prove (``(!e1 e2. (P1 /\ P2 e1 /\ P2 e2) ==> (Q e1)) =
          (!e. (P1 /\ P2 e) ==> Q e)``, METIS_TAC[]),
@@ -21098,7 +21098,7 @@ SIMP_TAC std_ss [SMALLFOOT_PROP_IMPLIES_EXPAND,
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 Cases_on `sfb_restP = EMPTY` THEN ASM_REWRITE_TAC[] THEN
 DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
-SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN 
+SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
 GEN_TAC THEN
 ASM_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_equal_cond,
                      SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___smallfoot_ap_unequal_cond,
@@ -21113,8 +21113,8 @@ DEPTH_CONSEQ_CONV_TAC (K (HO_PART_MATCH (snd o dest_imp)
 		              METIS_TAC[])))) THEN
 CONV_TAC (DEPTH_CONV ETA_CONV) THEN
 
-MP_TAC (Q.SPECL [`wpb`, `rpb`, `BAG_UNION sfb_split sfb_context`, `sf`, `e1`, `e2`] 
-(SIMP_RULE (std_ss++boolSimps.CONJ_ss) 
+MP_TAC (Q.SPECL [`wpb`, `rpb`, `BAG_UNION sfb_split sfb_context`, `sf`, `e1`, `e2`]
+(SIMP_RULE (std_ss++boolSimps.CONJ_ss)
    [smallfoot_prop___REWRITE, COND_EQ_REWRITE] SMALLFOOT_COND_PROP___EQ___EQUAL_UNEQUAL_COND)) THEN
 ASM_SIMP_TAC std_ss [smallfoot_prop___COND_UNION, smallfoot_prop___COND_INSERT,
 		     SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___compare,
@@ -21128,7 +21128,7 @@ METIS_TAC[bagTheory.BAG_INSERT_commutes]);
 
 
 
-val SMALLFOOT_PROP_IMPLIES___EQ___SPLIT_EQUAL_UNEQUAL_COND_LIST = 
+val SMALLFOOT_PROP_IMPLIES___EQ___SPLIT_EQUAL_UNEQUAL_COND_LIST =
 CONJUNCTS (
 SIMP_RULE std_ss [IMP_CONJ_THM, prove (``(!e1 e2. (P1 /\ P2 e1 /\ P2 e2) ==> (Q e1)) =
          (!e. (P1 /\ P2 e) ==> Q e)``, METIS_TAC[]),
@@ -21178,13 +21178,13 @@ store_thm ("SMALLFOOT_PROP_IMPLIES___EQ_CASE_SPLIT",
   SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context
            sfb_split sfb_imp sfb_restP =
   (((n1 = n2) ==>
-    (SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' 
+    (SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb'
            sfb_context
            sfb_split sfb_imp sfb_restP)) /\
    (~(n1 = n2) ==>
-   (SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' 
-           (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const n1) 
-					     (smallfoot_ae_const n2)) 
+   (SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb'
+           (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const n1)
+					     (smallfoot_ae_const n2))
                        sfb_context)
            sfb_split sfb_imp sfb_restP)))``,
 
@@ -21216,7 +21216,7 @@ store_thm ("SMALLFOOT_PROP_IMPLIES___smallfoot_ap_false___context",
 
 ``!strong_rest wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_restP.
 
-  SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' 
+  SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb'
            (BAG_INSERT smallfoot_ap_false sfb_context)
            sfb_split sfb_imp sfb_restP``,
 
@@ -21237,7 +21237,7 @@ store_thm ("SMALLFOOT_PROP_IMPLIES___smallfoot_ap_false___split",
 
 ``!strong_rest wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_restP.
 
-  SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context 
+  SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context
            (BAG_INSERT smallfoot_ap_false sfb_split)
            sfb_imp sfb_restP``,
 
@@ -21257,11 +21257,11 @@ val SMALLFOOT_PROP_IMPLIES___context_unequal_const___helper =
 prove(
 ``!c1 c2 wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_rest sr.
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
-   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1) (smallfoot_ae_const c2)) sfb_context) 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
+   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1) (smallfoot_ae_const c2)) sfb_context)
    sfb_split sfb_imp sfb_restP) =
 (~(c1 = c2) ==>
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1) (smallfoot_ae_const c2)) sfb_context)
    sfb_split sfb_imp sfb_restP)))
 ``,
@@ -21279,31 +21279,31 @@ val SMALLFOOT_PROP_IMPLIES___context_unequal_const =
 store_thm("SMALLFOOT_PROP_IMPLIES___context_unequal_const",
 ``(!c1 c2 wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_rest sr.
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
-   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1) (smallfoot_ae_const c2)) sfb_context) 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
+   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1) (smallfoot_ae_const c2)) sfb_context)
    sfb_split sfb_imp sfb_restP) =
 (~(c1 = c2) ==>
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c1) (smallfoot_ae_const c2)) sfb_context)
    sfb_split sfb_imp sfb_restP)))) /\
 
 (!c wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_rest sr.
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
-   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c) smallfoot_ae_null) sfb_context) 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
+   (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c) smallfoot_ae_null) sfb_context)
    sfb_split sfb_imp sfb_restP) =
 (~(c = 0) ==>
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_unequal (smallfoot_ae_const c) smallfoot_ae_null) sfb_context)
    sfb_split sfb_imp sfb_restP)))) /\
 
 (!c wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_rest sr.
 
-((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
-   (BAG_INSERT (smallfoot_ap_unequal smallfoot_ae_null (smallfoot_ae_const c)) sfb_context) 
+((SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
+   (BAG_INSERT (smallfoot_ap_unequal smallfoot_ae_null (smallfoot_ae_const c)) sfb_context)
    sfb_split sfb_imp sfb_restP) =
 (~(c = 0) ==>
-(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb' 
+(SMALLFOOT_PROP_IMPLIES sr (wpb,rpb) wpb'
    (BAG_INSERT (smallfoot_ap_unequal smallfoot_ae_null (smallfoot_ae_const c)) sfb_context)
    sfb_split sfb_imp sfb_restP))))
 ``,
@@ -21328,7 +21328,7 @@ store_thm ("SMALLFOOT_PROP_IMPLIES___bag_implies___UNEQUAL_INTRO",
 
   (SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context
            sfb_split sfb_imp sfb_restP =
-  SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' 
+  SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb'
            (BAG_INSERT (smallfoot_ap_unequal e1 e2) sfb_context)
            sfb_split sfb_imp sfb_restP))``,
 
@@ -21344,7 +21344,7 @@ REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___compare] THEN
 HO_MATCH_MP_TAC (prove (``(!s. (X s = Y s)) ==> ((!s. X s) = (!s. Y s))``,
 		     METIS_TAC[])) THEN
-`SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb)) (smallfoot_ap_unequal e1 e2)` by ALL_TAC THEN1 (   
+`SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb)) (smallfoot_ap_unequal e1 e2)` by ALL_TAC THEN1 (
    ASM_SIMP_TAC std_ss [SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS___compare]
 ) THEN
 ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [smallfoot_prop___PROP_INSERT,
@@ -21353,7 +21353,7 @@ ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [smallfoot_prop___PROP_INSERT,
 GEN_TAC THEN
 Tactical.REVERSE (`smallfoot_prop___PROP (wpb,rpb) (BAG_UNION sfb_split sfb_context) s ==>
                   s IN smallfoot_ap_weak_unequal e1 e2` by ALL_TAC) THEN1 (
-   
+
    POP_ASSUM MP_TAC THEN
    SIMP_TAC std_ss [smallfoot_ap_unequal_def,
                     smallfoot_ap_weak_unequal_def,
@@ -21361,7 +21361,7 @@ Tactical.REVERSE (`smallfoot_prop___PROP (wpb,rpb) (BAG_UNION sfb_split sfb_cont
 		    smallfoot_a_stack_proposition_def,
 		    LET_THM, IN_ABS, DISJOINT_EMPTY, FDOM_FEMPTY,
 		    FUNION_FEMPTY_1, IN_DEF] THEN
-   METIS_TAC[] 
+   METIS_TAC[]
 ) THEN
 FULL_SIMP_TAC std_ss [smallfoot_ap_bag_implies_unequal_def,
 		      BAG_EVERY_def, bagTheory.BAG_IN_BAG_UNION,
@@ -21371,9 +21371,9 @@ FULL_SIMP_TAC std_ss [smallfoot_ap_bag_implies_unequal_def,
 		      SMALLFOOT_AP_PERMISSION_UNIMPORTANT___USED_VARS_def,
 		      smallfoot_ap_bigstar_REWRITE]);
 
- 
 
-val smallfoot_ap_var_update___REWRITES = 
+
+val smallfoot_ap_var_update___REWRITES =
 save_thm ("smallfoot_ap_var_update___REWRITES",
 
 LIST_CONJ [smallfoot_ap_var_update___BOOL,
@@ -21413,11 +21413,11 @@ SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context
        sfb_split {|smallfoot_ap_empty_heap_cond c|} sfb_restP) /\
 
 ((SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context
-       sfb_split (BAG_INSERT (smallfoot_ap_empty_heap_cond c1) 
-                  (BAG_INSERT (smallfoot_ap_empty_heap_cond c2) sfb_imp)) 
+       sfb_split (BAG_INSERT (smallfoot_ap_empty_heap_cond c1)
+                  (BAG_INSERT (smallfoot_ap_empty_heap_cond c2) sfb_imp))
        sfb_restP) =
 SMALLFOOT_PROP_IMPLIES strong_rest (wpb,rpb) wpb' sfb_context
-       sfb_split (BAG_INSERT (smallfoot_ap_empty_heap_cond (c1 /\ c2)) 
+       sfb_split (BAG_INSERT (smallfoot_ap_empty_heap_cond (c1 /\ c2))
                   sfb_imp) sfb_restP)``,
 
 SIMP_TAC std_ss[SMALLFOOT_PROP_IMPLIES___stack_true,
@@ -21438,7 +21438,7 @@ Cases_on `c1` THEN Cases_on `c2` THEN (
 
 
 
-val SMALLFOOT_PROP_IS_EQUIV_FALSE___ELIM = 
+val SMALLFOOT_PROP_IS_EQUIV_FALSE___ELIM =
 store_thm ("SMALLFOOT_PROP_IS_EQUIV_FALSE___ELIM",
 ``F ==> SMALLFOOT_PROP_IS_EQUIV_FALSE (wpb,rpb) sfb``,
 SIMP_TAC std_ss[]);

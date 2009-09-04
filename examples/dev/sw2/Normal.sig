@@ -1,4 +1,4 @@
-signature Normal = 
+signature Normal =
 sig
   include Abbrev
 

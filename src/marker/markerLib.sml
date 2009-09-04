@@ -114,7 +114,7 @@ in
   MAP_EVERY ABB' tminst g
 end
 
-fun HO_MATCH_ABBREV_TAC fv_set pattern (gl as (asl,w)) = 
+fun HO_MATCH_ABBREV_TAC fv_set pattern (gl as (asl,w)) =
  let val ctxt = HOLset.listItems fv_set
      val fixed_tyvars = Lib.U (map type_vars_in_term
                                 (Lib.op_intersect eq ctxt (free_vars pattern)))
@@ -127,13 +127,13 @@ in
   CONV_TAC (K unbeta_goal) THEN MAP_EVERY ABB' tminst
 end gl;
 
-fun UNABBREV_TAC s = 
- FIRST_X_ASSUM(SUBST_ALL_TAC o 
-               assert(equal s o fst o dest_var o lhs o concl) o 
+fun UNABBREV_TAC s =
+ FIRST_X_ASSUM(SUBST_ALL_TAC o
+               assert(equal s o fst o dest_var o lhs o concl) o
                DeAbbrev);
 
-val UNABBREV_ALL_TAC = 
- let fun ttac th0 = 
+val UNABBREV_ALL_TAC =
+ let fun ttac th0 =
       let val th = DeAbbrev th0
       in SUBST_ALL_TAC th ORELSE ASSUME_TAC th
       end
@@ -141,9 +141,9 @@ val UNABBREV_ALL_TAC =
   REPEAT (FIRST_X_ASSUM ttac)
 end
 
-fun RM_ABBREV_TAC s = 
-  FIRST_X_ASSUM (K ALL_TAC o 
-                 assert(equal s o fst o dest_var o lhs o concl) o 
+fun RM_ABBREV_TAC s =
+  FIRST_X_ASSUM (K ALL_TAC o
+                 assert(equal s o fst o dest_var o lhs o concl) o
                  DeAbbrev)
 
 val RM_ALL_ABBREVS_TAC = REPEAT (FIRST_X_ASSUM (K ALL_TAC o DeAbbrev))
@@ -157,7 +157,7 @@ fun CNTXT_REABBREV_TAC abbrevs (gl as (asl,_)) =
  let val abbrevs' = filter is_abbrev asl
      val ordered_abbrevs = topsort compare_abbrev (abbrevs@abbrevs')
      val lrs = map (dest_eq o rand) ordered_abbrevs
- in UNABBREV_ALL_TAC THEN MAP_EVERY (uncurry ABB) lrs 
+ in UNABBREV_ALL_TAC THEN MAP_EVERY (uncurry ABB) lrs
  end gl;
 
 (*---------------------------------------------------------------------------*)
@@ -166,9 +166,9 @@ fun CNTXT_REABBREV_TAC abbrevs (gl as (asl,_)) =
 (* the application of the tactic.                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun WITHOUT_ABBREVS tac (gl as (asl,_)) = 
+fun WITHOUT_ABBREVS tac (gl as (asl,_)) =
  let val abbrevs = filter is_abbrev asl
- in UNABBREV_ALL_TAC THEN tac THEN CNTXT_REABBREV_TAC abbrevs 
+ in UNABBREV_ALL_TAC THEN tac THEN CNTXT_REABBREV_TAC abbrevs
  end gl;
 
 (*---------------------------------------------------------------------------*)
@@ -193,7 +193,7 @@ val REABBREV_TAC = WITHOUT_ABBREVS ALL_TAC;
 (* in the assumptions of the goal before proceeding with simplification.     *)
 (*---------------------------------------------------------------------------*)
 
-fun ABBRS_THEN thl_tac thl = 
+fun ABBRS_THEN thl_tac thl =
  let val (abbrs, rest) = List.partition is_abbr thl
  in
   MAP_EVERY (UNABBREV_TAC o dest_abbr) abbrs THEN thl_tac rest

@@ -22,8 +22,8 @@ val Rb_state' = ksTools.mk_primed_state Rb_state
 (* AHB-APB bridge is just the conjunction of the APB master with a generic AHB slave *)
 (* Note that the actual bridging code has been abstracted out. We just assume the master and slave handle their
    syncing correctly. This code can be added in later, if required: all its signals can be hidden, so it doesn't matter *)
-val Rb = Define `TRANS_B (^Rb_state,^Rb_state') = 
-	 TRANS_APB_M (^Rpm_state,^Rpm_state') /\ 
+val Rb = Define `TRANS_B (^Rb_state,^Rb_state') =
+	 TRANS_APB_M (^Rpm_state,^Rpm_state') /\
          TRANS_AHB_S ^(fromMLnum (ahb_ns-1)) (^Rs_state,^Rs_state')
 `;
 
@@ -48,18 +48,18 @@ val r1hbt = (list_mk_exists
 				   lhs(concl(Drule.SPEC_ALL (SPEC (fromMLnum (nm-1)) (GEN ``n:num`` TRANS_A_def)))),
 				   list_mk_exists((strip_pair transm_vars)@(strip_pair transm_vars')
 						  @(strip_pair burstm_vars)@(strip_pair burstm_vars'),
-						  (list_mk_conj[``INIT_AHB (^I1h_state) ==> 
+						  (list_mk_conj[``INIT_AHB (^I1h_state) ==>
 								  !m. m<16 ==> IDLEM m (^transm_vars)``,
 								list_mk_conj(List.tabulate(nm,
-									fn n => lhs(concl(Drule.SPEC_ALL 
-									(SPEC (fromMLnum n) TRANS_AHB_M_def))))), 
+									fn n => lhs(concl(Drule.SPEC_ALL
+									(SPEC (fromMLnum n) TRANS_AHB_M_def))))),
 								lhs(concl(Drule.SPEC_ALL TRANS_X_def))]))])),
 		   list_mk_exists
 		   ((strip_pair slvsplt_vars)@(strip_pair slvsplt_vars'),
 		    list_mk_conj([``INIT_AHB (^I1h_state) ==> NO_HSLVSPLT (^slvsplt_vars)``,
-				    ``^(list_mk_exists((strip_pair Rpm_state)@(strip_pair Rpm_state'), 
+				    ``^(list_mk_exists((strip_pair Rpm_state)@(strip_pair Rpm_state'),
 				       (lhs(concl(Drule.SPEC_ALL Rb)))))``,
-				  list_mk_conj(List.tabulate(ns-1,fn n => lhs(concl(Drule.SPEC_ALL 
+				  list_mk_conj(List.tabulate(ns-1,fn n => lhs(concl(Drule.SPEC_ALL
 									(SPEC (fromMLnum n) TRANS_AHB_S_def)
     ))))]))]))
 
@@ -79,27 +79,27 @@ val unroll_ahb_CONV2 = unroll_ahb_CONV maindefs TRANS_A_def abbrev_defs
 (* APB is the same as APB with bridge instead of master whose ahb signals are hidden *)
 val apb1 = save_thm("APB_BRIDGE",prove(``^(lhs(concl (Drule.SPEC_ALL TRANS_APB_def))) = ^(lhs(concl (Drule.SPEC_ALL R1pb)))``,
 REWRITE_TAC [TRANS_APB_def,R1pb,Rb]
-THEN EQ_TAC THENL [ 
+THEN EQ_TAC THENL [
 STRIP_TAC THEN CONJ_TAC THENL [
-  REPEAT (CONV_TAC (Conv.LAST_EXISTS_CONV Conv.EXISTS_AND_CONV)) 
-  THEN CONJ_TAC THENL [ 
-    ASM_REWRITE_TAC [], 
-    MAP_EVERY EXISTS_TAC (exv (fst (strip_exists(fst(dest_conj(rhs(concl (Drule.SPEC_ALL R1pb)))))))  
-    (findAss (rhs(concl (Drule.SPEC_ALL  
+  REPEAT (CONV_TAC (Conv.LAST_EXISTS_CONV Conv.EXISTS_AND_CONV))
+  THEN CONJ_TAC THENL [
+    ASM_REWRITE_TAC [],
+    MAP_EVERY EXISTS_TAC (exv (fst (strip_exists(fst(dest_conj(rhs(concl (Drule.SPEC_ALL R1pb)))))))
+    (findAss (rhs(concl (Drule.SPEC_ALL
 			     (unroll_ahb_CONV2 (rhs(concl(Drule.SPEC_ALL(SPEC (fromMLnum (ns-1)) TRANS_AHB_S_def))))))))))
-    THEN (CONV_TAC unroll_ahb_CONV2) 
+    THEN (CONV_TAC unroll_ahb_CONV2)
     THEN EVAL_TAC
     ],
-  ASM_REWRITE_TAC [] 
-  ], 
-REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] 
-])); 
+  ASM_REWRITE_TAC []
+  ],
+REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []
+]));
 
 (* AHB is the same as AHB with bridge as a generic slave whose apb signals are hidden *)
 val ahb1 = save_thm("AHB_BRIDGE",prove(``^(lhs(concl (Drule.SPEC_ALL TRANS_AHB_def))) = ^(lhs(concl (Drule.SPEC_ALL R1hb)))``,
 PURE_REWRITE_TAC [TRANS_AHB_def,R1hb,Rb]
 THEN EQ_TAC THENL [
- STRIP_TAC 
+ STRIP_TAC
  THEN MAP_EVERY EXISTS_TAC ((strip_pair bbv)@(strip_pair bbv')@(strip_pair hwsv)@(strip_pair hwsv'))
  THEN REPEAT CONJ_TAC THEN PURE_ASM_REWRITE_TAC [] THENL [
   MAP_EVERY EXISTS_TAC ((strip_pair mask_vars)@(strip_pair mask_vars'))
@@ -109,11 +109,11 @@ THEN EQ_TAC THENL [
   THEN REPEAT CONJ_TAC THEN PURE_ASM_REWRITE_TAC [],
   MAP_EVERY EXISTS_TAC ((strip_pair slvsplt_vars)@(strip_pair slvsplt_vars'))
   THEN REPEAT CONJ_TAC THEN PURE_ASM_REWRITE_TAC []
-  THEN MAP_EVERY EXISTS_TAC (exv ((strip_pair Rpm_state)@(strip_pair Rpm_state'))  
+  THEN MAP_EVERY EXISTS_TAC (exv ((strip_pair Rpm_state)@(strip_pair Rpm_state'))
      (findAss (rhs(concl (Drule.SPEC_ALL TRANS_APB_M_def)))))
   THEN REWRITE_TAC [TRANS_APB_M_def]
  ],
- STRIP_TAC 
+ STRIP_TAC
  THEN MAP_EVERY EXISTS_TAC ((strip_pair bbv)@(strip_pair bbv')@(strip_pair hwsv)@(strip_pair hwsv'))
  THEN REPEAT CONJ_TAC THEN PURE_ASM_REWRITE_TAC [] THENL [
   MAP_EVERY EXISTS_TAC ((strip_pair mask_vars)@(strip_pair mask_vars'))
@@ -123,7 +123,7 @@ THEN EQ_TAC THENL [
   THEN REPEAT CONJ_TAC THEN PURE_ASM_REWRITE_TAC [],
   MAP_EVERY EXISTS_TAC ((strip_pair slvsplt_vars)@(strip_pair slvsplt_vars'))
   THEN REPEAT CONJ_TAC THEN PURE_ASM_REWRITE_TAC []
- ] 
+ ]
 ]));
 
 (*----------------------- Parallel synchronous composition -------------------------- *)
@@ -145,15 +145,15 @@ val _ = save_thm("amba_ks1_def",ks1_def)
 val _ = Define `amba_s1 (^s1) = T`
 val _ = Define `amba_s2 (^s2) = T`
 
-(* 
+(*
 now we can call (inan interactive session)
 
 mk_par_sync_comp_thm (amba_gpscth,amba_ks1_def,
 		      rand(lhs(concl (SPEC_ALL amba_s1_def))), (* s1 *)
 		      rand(lhs(concl (SPEC_ALL amba_s2_def)))) (* s2 *)
-                      f NONE 
+                      f NONE
 
-for some APB property f  
+for some APB property f
 *)
 
 val _ = export_theory()

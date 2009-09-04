@@ -500,7 +500,7 @@ fun pp_pretype pps pty = let
     case pty of
       Vartype s => PP.add_string pps ("V("^s^")")
     | Tyop {Thy,Tyop = tyop,Args} => let
-        fun qid pps = if Thy = "bool" orelse Thy = "min" then 
+        fun qid pps = if Thy = "bool" orelse Thy = "min" then
                         PP.add_string pps tyop
                       else PP.add_string pps (Thy ^ "$" ^ tyop)
       in
@@ -521,7 +521,7 @@ fun pp_pretype pps pty = let
           end
         else
           case Args of
-            [] => qid pps 
+            [] => qid pps
           | _ => let
             in
               PP.add_string pps "(";

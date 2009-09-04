@@ -36,7 +36,7 @@ val field_mult_aux_def =
 
 (* --------------------------------------------------------------------*)
 
-val field_mult_def = 
+val field_mult_def =
  Define
    `field_mult (x,y) = field_mult_aux (x,y,0w)`;
 
@@ -46,7 +46,7 @@ val code1 =  pp_compile defs1;
 
 (* --------------------------------------------------------------------*)
 
-val field_exp_aux_def = 
+val field_exp_aux_def =
  Define
    `field_exp_aux (x:word32,n:word32,acc:word32) =
       if n = 0w then acc
@@ -95,19 +95,19 @@ val code2 =  pp_compile defs2;
 
 (* --------------------------------------------------------------------*)
 
-val field_exp_def = 
+val field_exp_def =
  Define
    `field_exp (x,n) = field_exp_aux (x,n,1w)`;
 
 val field_inv_def =
- Define 
+ Define
    `field_inv x = field_exp (x,749w)`;
 
-val field_div_def = 
+val field_div_def =
  Define
    `field_div (x,y) = field_mult (x,field_inv y)`;
 
-val curve_neg_def = 
+val curve_neg_def =
  Define
    `curve_neg (x1,y1) =
        if (x1 = 0w) /\ (y1 = 0w) then (0w,0w)
@@ -118,7 +118,7 @@ val curve_neg_def =
          in
             (x1,y)`;
 
-val curve_double_def = 
+val curve_double_def =
  Define
    `curve_double (x1,y1) =
       if (x1 = 0w) /\ (y1 = 0w) then (0w,0w)
@@ -158,10 +158,10 @@ val curve_double_def =
            (x,y)`;
 
 
-val curve_add_def = 
+val curve_add_def =
  Define
    `curve_add (x1,y1,x2,y2) =
-       if (x1 = x2) /\ (y1 = y2) then curve_double (x2,y2) else 
+       if (x1 = x2) /\ (y1 = y2) then curve_double (x2,y2) else
        if (x1 = 0w) /\ (y1 = 0w) then (x2,y2) else
        if (x2 = 0w) /\ (y2 = 0w) then (x1,y1) else
        if x1 = x2 then (0w,0w)
@@ -184,7 +184,7 @@ val curve_add_def =
          in
           (x,y)`;
 
-val curve_mult_aux_def = 
+val curve_mult_aux_def =
  Define
    `curve_mult_aux (x,y,n:word32,acc_x,acc_y) =
       if n = 0w then (acc_x:word32,acc_y:word32)
@@ -197,7 +197,7 @@ val curve_mult_aux_def =
        in
         curve_mult_aux (x',y',n',acc_x',acc_y')`;
 
-val curve_mult_def = 
+val curve_mult_def =
  Define
    `curve_mult (x,y,n) = curve_mult_aux (x,y,n,0w,0w)`;
 

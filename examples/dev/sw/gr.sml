@@ -1,9 +1,9 @@
-(* 
+(*
  *  gr.sml - definitions that are shared among different graph implementations
  *
  *  COPYRIGHT (c) 1997 by Martin Erwig.  See COPYRIGHT file for details.
  *)
- 
+
 (*
    structures and functors defined:
 

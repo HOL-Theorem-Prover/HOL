@@ -88,7 +88,7 @@ val INDEP_FN_PROB_GEOMETRIC_ITER = store_thm
   ("INDEP_FN_PROB_GEOMETRIC_ITER",
    ``!a. prob_geometric_iter a IN indep_fn``,
    RW_TAC std_ss [prob_geometric_iter_def, INDEP_FN_SDEST, INDEP_FN_BIND,
-                  INDEP_FN_UNIT]);   
+                  INDEP_FN_UNIT]);
 
 val PROB_GEOMETRIC_LOOP_TERMINATES = store_thm
   ("PROB_GEOMETRIC_LOOP_TERMINATES",

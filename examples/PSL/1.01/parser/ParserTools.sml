@@ -15,11 +15,11 @@ struct
 quietdec := true;
 loadPath := "../official-semantics"   ::
             "../executable-semantics" ::
-            "../regexp"               :: 
-            "../parser.mosmlyacc"     :: 
+            "../regexp"               ::
+            "../parser.mosmlyacc"     ::
             !loadPath;
-map load 
- ["numLib", "intLib", "stringLib", 
+map load
+ ["numLib", "intLib", "stringLib",
   "Data", "Main", "regexpLib", "ExecuteTools"];
 open intLib numLib stringLib Data Main regexpLib;
 val _ = intLib.deprecate_int();
@@ -38,7 +38,7 @@ open HolKernel Parse boolLib bossLib;
 open intLib numLib stringLib Data Main regexpLib ExecuteTools;
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers 
+* Set default parsing to natural numbers rather than integers
 ******************************************************************************)
 val _ = intLib.deprecate_int();
 
@@ -59,57 +59,57 @@ val _ = set_trace "regexpTools" 1;
 (******************************************************************************
 * Translate ML datatype bexp to HOL terms
 ******************************************************************************)
-fun bexpToTerm(B_PROP a) = 
+fun bexpToTerm(B_PROP a) =
      if a="T" then ``B_TRUE:string bexp`` else ``B_PROP ^(fromMLstring a)``
- |  bexpToTerm(B_NOT b) = 
+ |  bexpToTerm(B_NOT b) =
      ``B_NOT ^(bexpToTerm b)``
- |  bexpToTerm(B_AND(b1,b2)) = 
+ |  bexpToTerm(B_AND(b1,b2)) =
      ``B_AND(^(bexpToTerm b1), ^(bexpToTerm b2))``
- |  bexpToTerm(B_OR(b1,b2)) = 
+ |  bexpToTerm(B_OR(b1,b2)) =
      ``B_OR(^(bexpToTerm b1), ^(bexpToTerm b2))``
- |  bexpToTerm(B_IMP(b1,b2)) = 
+ |  bexpToTerm(B_IMP(b1,b2)) =
      ``B_IMP(^(bexpToTerm b1), ^(bexpToTerm b2))``
- |  bexpToTerm(B_IFF(b1,b2)) = 
+ |  bexpToTerm(B_IFF(b1,b2)) =
      ``B_IFF(^(bexpToTerm b1), ^(bexpToTerm b2))``
- |  bexpToTerm B_TRUE = 
+ |  bexpToTerm B_TRUE =
      ``B_TRUE``
- |  bexpToTerm B_FALSE       = 
+ |  bexpToTerm B_FALSE       =
      ``B_FALSE``;
 
 (******************************************************************************
 * Translate ML datatype range to HOL terms
 ******************************************************************************)
-fun rangeToTerm(m, NONE)   = 
+fun rangeToTerm(m, NONE)   =
      ``(^(term_of_int m), NONE)``
- |  rangeToTerm(m, SOME n) = 
+ |  rangeToTerm(m, SOME n) =
      ``(^(term_of_int m), SOME ^(term_of_int n))``;
 
 (******************************************************************************
 * Translate ML datatype sere to HOL terms
 ******************************************************************************)
-fun sereToTerm(S_BOOL b) = 
+fun sereToTerm(S_BOOL b) =
      ``S_BOOL ^(bexpToTerm b)``
- |  sereToTerm(S_CAT(r1,r2)) = 
+ |  sereToTerm(S_CAT(r1,r2)) =
      ``S_CAT(^(sereToTerm r1), ^(sereToTerm r2))``
- |  sereToTerm(S_FUSION(r1,r2)) = 
+ |  sereToTerm(S_FUSION(r1,r2)) =
      ``S_FUSION(^(sereToTerm r1), ^(sereToTerm r2))``
- |  sereToTerm(S_OR(r1,r2)) = 
+ |  sereToTerm(S_OR(r1,r2)) =
      ``S_OR(^(sereToTerm r1), ^(sereToTerm r2))``
- |  sereToTerm(S_AND(r1,r2)) = 
+ |  sereToTerm(S_AND(r1,r2)) =
      ``S_AND(^(sereToTerm r1), ^(sereToTerm r2))``
- |  sereToTerm(S_REPEAT r) = 
+ |  sereToTerm(S_REPEAT r) =
      ``S_REPEAT ^(sereToTerm r)``
- |  sereToTerm(S_CLOCK(r,b)) = 
+ |  sereToTerm(S_CLOCK(r,b)) =
      ``S_CLOCK(^(sereToTerm r), ^(bexpToTerm b))``
- |  sereToTerm(S_FLEX_AND(r1,r2)) = 
+ |  sereToTerm(S_FLEX_AND(r1,r2)) =
      ``S_FLEX_AND(^(sereToTerm r1), ^(sereToTerm r2))``
- |  sereToTerm(S_RANGE_REPEAT(r,rng)) = 
+ |  sereToTerm(S_RANGE_REPEAT(r,rng)) =
      ``S_RANGE_REPEAT(^(sereToTerm r), ^(rangeToTerm rng))``
- |  sereToTerm(S_NON_ZERO_REPEAT r) = 
+ |  sereToTerm(S_NON_ZERO_REPEAT r) =
      ``S_NON_ZERO_REPEAT ^(sereToTerm r)``
- |  sereToTerm(S_RANGE_EQ_REPEAT(b, rng)) = 
+ |  sereToTerm(S_RANGE_EQ_REPEAT(b, rng)) =
      ``S_RANGE_EQ_REPEAT(^(bexpToTerm b), ^(rangeToTerm rng))``
- |  sereToTerm(S_RANGE_GOTO_REPEAT(b,rng)) = 
+ |  sereToTerm(S_RANGE_GOTO_REPEAT(b,rng)) =
      ``S_RANGE_GOTO_REPEAT(^(bexpToTerm b), ^(rangeToTerm rng))``
 ;
 
@@ -280,14 +280,14 @@ fun pathflToTerm(p,f) = ``F_SEM (FINITE ^(pathToTerm p)) B_TRUE ^(flToTerm f)``;
 
 (******************************************************************************
 * State "a,b,c" =
-*  ``{"a"; "b"; "c"}`` 
+*  ``{"a"; "b"; "c"}``
 *
-* Path "{}{a,b}{c,d,e}" = 
-*  ``[{}; {"a"; "b"}; {"c"; "d"; "e"}]`` 
+* Path "{}{a,b}{c,d,e}" =
+*  ``[{}; {"a"; "b"}; {"c"; "d"; "e"}]``
 *
 * PathSERE "{x}{y} |= x;y" =
 *  ``S_SEM [{"x"}; {"y"}] B_TRUE
-*     (S_CAT (S_BOOL (B_PROP "x"),S_BOOL (B_PROP "y")))`` 
+*     (S_CAT (S_BOOL (B_PROP "x"),S_BOOL (B_PROP "y")))``
 *
 * PathFL "{x}{y,p}{q} |= {x;y} |-> {p;q}" =
 *  ``F_SEM (FINITE [{"x"}; {"y"; "p"}; {"q"}]) B_TRUE
@@ -310,8 +310,8 @@ and EvalFL   = EVAL o PathFL;
 (* Examples
 loadPath := "../official-semantics"   ::
             "../executable-semantics" ::
-            "../regexp"               :: 
-            "../parser.mosmlyacc"     :: 
+            "../regexp"               ::
+            "../parser.mosmlyacc"     ::
             !loadPath;
 load "ParserTools";
 open ParserTools;
@@ -330,7 +330,7 @@ EvalFL "{x}{y}{p}{q} |= {x;y;T} |-> {p;q}";
 *)
 
 (******************************************************************************
-* EVAL an FL formula on all tails of a path and report positions 
+* EVAL an FL formula on all tails of a path and report positions
 * where it is true
 ******************************************************************************)
 
@@ -365,7 +365,7 @@ fun map_interval p l =
   (mapfilter
    (fn i =>
      mapfilter
-      (fn j => if i<=j then ((i,j),p(List.take(List.drop(l,i),j-i+1))) 
+      (fn j => if i<=j then ((i,j),p(List.take(List.drop(l,i),j-i+1)))
                        else fail())
       (List.tabulate(length l,I)))
    (List.tabulate(length l,I)));
@@ -409,32 +409,32 @@ EvalAllSERE
 
 (******************************************************************************
 * ML function to support processing of arguments of command line invocation:
-* 
+*
 *  pslcheck [-all] -sere '<SERE>' -path '<PATH>'
-*  pslcheck [-all] -fl   '<FL>'   -path '<PATH>' 
-* 
+*  pslcheck [-all] -fl   '<FL>'   -path '<PATH>'
+*
 * The optional "-all" argument specifies that all intervals are
 * checked in the case of a SERE and all path tails in the case of a
 * formula.
-* 
-* Without the "-all" arguments, the commands: 
-* 
-*  pslcheck -sere '<SERE>' -path '<PATH>' 
-*  pslcheck -fl   '<FL>'   -path '<PATH>' 
-* 
+*
+* Without the "-all" arguments, the commands:
+*
+*  pslcheck -sere '<SERE>' -path '<PATH>'
+*  pslcheck -fl   '<FL>'   -path '<PATH>'
+*
 * report "true" or "false" (or a parser or processing error).
-* 
-* The command: 
-* 
+*
+* The command:
+*
 *  pslcheck -all -sere '<SERE>' -path '<PATH>'
-* 
-* reports "true on intervals [m1:n1][m2:n2] ..." 
+*
+* reports "true on intervals [m1:n1][m2:n2] ..."
 * (or a parser or processing error).
 *
-* The command: 
-* 
+* The command:
+*
 *  pslcheck -all -fl   '<FL>'   -path '<PATH>'
-* 
+*
 * reports "true at times t1,t2, ..."
 * (or a parser or processing error).
 *
@@ -442,24 +442,24 @@ EvalAllSERE
 ******************************************************************************)
 
 fun intervalsToString [] = ""
- |  intervalsToString ((m,n)::il) = 
+ |  intervalsToString ((m,n)::il) =
      ("[" ^ Int.toString m ^ ":" ^ Int.toString n ^ "]" ^ intervalsToString il);
 
 fun timesToString []      = ""
  |  timesToString [m]     = Int.toString m
  |  timesToString (m::il) = (Int.toString m ^ "," ^ timesToString il);
 
-fun process_args ["-all","-sere",r,"-path",p] = 
+fun process_args ["-all","-sere",r,"-path",p] =
      ("true on intervals " ^ intervalsToString(EvalAllSERE(p,r)))
- |  process_args ["-all","-fl",f,"-path",p] = 
+ |  process_args ["-all","-fl",f,"-path",p] =
      ("true at times " ^ timesToString(EvalAllFL(p,f)))
- |  process_args ["-sere",r,"-path",p] = 
-     if rhs(concl(EVAL(pathsereToTerm(parsePath p, parseSere r)))) = T 
-      then "true" 
+ |  process_args ["-sere",r,"-path",p] =
+     if rhs(concl(EVAL(pathsereToTerm(parsePath p, parseSere r)))) = T
+      then "true"
       else "false"
- |  process_args ["-fl",f,"-path",p] = 
-     if rhs(concl(EVAL(pathflToTerm(parsePath p, parseFl f)))) = T   
-      then "true" 
+ |  process_args ["-fl",f,"-path",p] =
+     if rhs(concl(EVAL(pathflToTerm(parsePath p, parseFl f)))) = T
+      then "true"
       else "false"
  |  process_args _ = "bad arguments to pslcheck";
 

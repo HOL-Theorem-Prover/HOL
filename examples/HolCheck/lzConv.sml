@@ -146,30 +146,30 @@ fun ABS_CONV conv tm =
 			   Exception raised at Conv.ABS_CONV:
 			   ABS: The variable is free in the assumptions
 			! Uncaught exception:
-			! HOL_ERR 
+			! HOL_ERR
 
-                 in fact with  
+                 in fact with
                     fun  foo_conv tm = (ADD_ASSUM ``x:bool`` (REFL (mk_conj(``x:bool``,tm)))); is fails on TRANS rather an ABS
                  so definitely a bug *)
-                 val v = genvar (type_of Bvar) 
+                 val v = genvar (type_of Bvar)
                  val th1 = ALPHA_CONV v tm
-                 val r = rhs (concl th1) 
+                 val r = rhs (concl th1)
                  val {Body = Body',...} = dest_abs r
-                 val eq_thm' = ABS v (conv Body') 
-                 val at = rhs (concl eq_thm') 
+                 val eq_thm' = ABS v (conv Body')
+                 val at = rhs (concl eq_thm')
                  val v' = variant (HOLset.listItems (FVL (hyp newbody) empty_varset)) Bvar (*variant (free_vars at) Bvar*)
-                 val th2 = ALPHA_CONV v' at		 
+                 val th2 = ALPHA_CONV v' at
                in
                  TRANS (TRANS th1 eq_thm') th2
                end
                  handle HOL_ERR {origin_function, origin_structure, message} =>
-                        if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", 
-                                                     "ABS_CONV"] 
-                           andalso origin_structure = "lzConv" 
-                        then 
-                          raise ERR "ABS_CONV" message 
-                        else 
-                          raise ERR "ABS_CONV" 
+                        if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV",
+                                                     "ABS_CONV"]
+                           andalso origin_structure = "lzConv"
+                        then
+                          raise ERR "ABS_CONV" message
+                        else
+                          raise ERR "ABS_CONV"
                                     (origin_function ^ ": " ^ message)
       end
     | _ => raise ERR "ABS_CONV" "Term not an abstraction"
@@ -1094,7 +1094,7 @@ fun lzFORALL_IMP_CONV tm =
      if (fant andalso fconseq)
      then raise ERR "lzFORALL_IMP_CONV"
              ("`"^(#Name(dest_var Bvar))^"` free on both sides of `==>`")
-     else let val ltm = 
+     else let val ltm =
 		  if fant then boolSyntax.mk_imp(boolSyntax.mk_exists(Bvar,ant),conseq)
 		  else if fconseq then boolSyntax.mk_imp(ant,boolSyntax.mk_forall(Bvar,conseq))
 		  else boolSyntax.mk_imp(boolSyntax.mk_exists(Bvar,ant),boolSyntax.mk_forall(Bvar,conseq))
@@ -1799,8 +1799,8 @@ in
     | (v::vs) => rename v THENC BINDER_CONV (RENAME_VARS_CONV vs)
 
 
-  fun lzSWAP_VARS_CONV term = 
-      let val (l,bod) = strip_forall term 
+  fun lzSWAP_VARS_CONV term =
+      let val (l,bod) = strip_forall term
 	  (*val _ = DMSG (TM (list_mk_forall([hd(tl l),hd l]@List.drop(l,2),bod))) dbglzc(*DBG*)*)
 	  val jf = (fn _ => let val (dest, list_mk, qvar_thm) =
 				    if (is_exists term) then
@@ -1824,7 +1824,7 @@ in
 				CONV_RULE (RAND_CONV (BINDER_CONV (BINDER_CONV LIST_BETA_CONV)))
 					  (SUBS [final_thm] ex_rewrite)
 			    end)
-	  val res = mk_lthm (fn _ => (boolSyntax.mk_eq(term,list_mk_forall([hd(tl l),hd l]@List.drop(l,2),bod)),jf)) jf 
+	  val res = mk_lthm (fn _ => (boolSyntax.mk_eq(term,list_mk_forall([hd(tl l),hd l]@List.drop(l,2),bod)),jf)) jf
 	  (*val _ = DMSG (TH res) dbglzc(*DBG*)*)
       in res  end
 end

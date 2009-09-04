@@ -18,19 +18,19 @@ val MAIN_def =
       (Seq
         (Assign "trityp" (Const 0))
         (Seq
-          (Cond 
-            (Or 
-              (Or 
-                (Equal 
+          (Cond
+            (Or
+              (Or
+                (Equal
                   (Var "i")
                   (Const 0)
                 )
-                (Equal 
+                (Equal
                   (Var "j")
                   (Const 0)
                 )
               )
-              (Equal 
+              (Equal
                 (Var "k")
                 (Const 0)
               )
@@ -43,13 +43,13 @@ val MAIN_def =
                 (Const 0)
               )
               (Seq
-                (Cond 
-                  (Equal 
+                (Cond
+                  (Equal
                     (Var "i")
                     (Var "j")
                   )
                   (Assign "trityp"
-                    (Plus 
+                    (Plus
                       (Var "trityp")
                       (Const 1)
                     )
@@ -57,13 +57,13 @@ val MAIN_def =
                   Skip
                 )
                 (Seq
-                  (Cond 
-                    (Equal 
+                  (Cond
+                    (Equal
                       (Var "i")
                       (Var "k")
                     )
                     (Assign "trityp"
-                      (Plus 
+                      (Plus
                         (Var "trityp")
                         (Const 2)
                       )
@@ -71,44 +71,44 @@ val MAIN_def =
                     Skip
                   )
                   (Seq
-                    (Cond 
-                      (Equal 
+                    (Cond
+                      (Equal
                         (Var "j")
                         (Var "k")
                       )
                       (Assign "trityp"
-                        (Plus 
+                        (Plus
                           (Var "trityp")
                           (Const 3)
                         )
                       )
                       Skip
                     )
-                    (Cond 
-                      (Equal 
+                    (Cond
+                      (Equal
                         (Var "trityp")
                         (Const 0)
                       )
-                      (Cond 
-                        (Or 
-                          (Or 
-                            (LessEq 
-                              (Plus 
+                      (Cond
+                        (Or
+                          (Or
+                            (LessEq
+                              (Plus
                                 (Var "i")
                                 (Var "j")
                               )
                               (Var "k")
                             )
-                            (LessEq 
-                              (Plus 
+                            (LessEq
+                              (Plus
                                 (Var "j")
                                 (Var "k")
                               )
                               (Var "i")
                             )
                           )
-                          (LessEq 
-                            (Plus 
+                          (LessEq
+                            (Plus
                               (Var "i")
                               (Var "k")
                             )
@@ -122,23 +122,23 @@ val MAIN_def =
                           (Const 1)
                         )
                       )
-                      (Cond 
-                        (Less 
+                      (Cond
+                        (Less
                           (Const 3)
                           (Var "trityp")
                         )
                         (Assign "trityp"
                           (Const 3)
                         )
-                        (Cond 
-                          (And 
-                            (Equal 
+                        (Cond
+                          (And
+                            (Equal
                               (Var "trityp")
                               (Const 1)
                             )
-                            (Less 
+                            (Less
                               (Var "k")
-                              (Plus 
+                              (Plus
                                 (Var "i")
                                 (Var "j")
                               )
@@ -147,15 +147,15 @@ val MAIN_def =
                           (Assign "trityp"
                             (Const 2)
                           )
-                          (Cond 
-                            (And 
-                              (Equal 
+                          (Cond
+                            (And
+                              (Equal
                                 (Var "trityp")
                                 (Const 1)
                               )
-                              (Less 
+                              (Less
                                 (Var "j")
-                                (Plus 
+                                (Plus
                                   (Var "i")
                                   (Var "k")
                                 )
@@ -164,15 +164,15 @@ val MAIN_def =
                             (Assign "trityp"
                               (Const 2)
                             )
-                            (Cond 
-                              (And 
-                                (Equal 
+                            (Cond
+                              (And
+                                (Equal
                                   (Var "trityp")
                                   (Const 3)
                                 )
-                                (Less 
+                                (Less
                                   (Var "i")
-                                  (Plus 
+                                  (Plus
                                     (Var "j")
                                     (Var "k")
                                   )

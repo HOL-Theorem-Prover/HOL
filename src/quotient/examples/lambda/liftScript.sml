@@ -1751,7 +1751,7 @@ val LAMBDA_RENAME = store_thm
 val LAMBDA_CLEAN_VAR = store_thm
    ("LAMBDA_CLEAN_VAR",
     (--`!s x t:'a term. FINITE s ==>
-         ?x' t'. 
+         ?x' t'.
           ~(x' IN (FV t DIFF {x})) /\ ~(x' IN s) /\
           (HEIGHT t = HEIGHT t') /\
           (Lam x t = Lam x' t')`--),
@@ -1871,7 +1871,7 @@ val EVERY_MAP = TAC_PROOF(([],
 val LAMBDA_LIST_CLEAN_VAR = store_thm
    ("LAMBDA_LIST_CLEAN_VAR",
     (--`!s x os. FINITE s ==>
-         ?z os'. 
+         ?z os'.
           ~(z IN s) /\
           EVERY (\t:'a term. ~(z IN (FV t DIFF {x}))) os /\
           EVERY I (MAP2 (\t t'. HEIGHT t = HEIGHT t') os os') /\
@@ -1948,7 +1948,7 @@ val LAMBDA_SUBST_SIMPLE = store_thm
 val LAMBDA_SUBST_VAR = store_thm
    ("LAMBDA_SUBST_VAR",
     (--`!x t:'a term s.
-         ?x' t':'a term. 
+         ?x' t':'a term.
           ~(x' IN (FV t DIFF {x})) /\
           ~(x' IN FV_subst s (FV t DIFF {x})) /\
           ~(x' IN FV_subst s (FV t' DIFF {x'})) /\
@@ -2013,7 +2013,7 @@ val ALL_LAMBDA_OBJ_EQ = store_thm
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "lift.lst";
-                                                                                
+
 val _ = html_theory "lift";
 
 val _ = print_theory_size();

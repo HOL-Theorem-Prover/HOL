@@ -674,7 +674,7 @@ in
       let
         fun p res = chat
           ("\nRESOLVE:\n" ^
-           PP.pp_to_string 70 (pp_pair pp_clause pp_int) arg1 ^ "\n" ^ 
+           PP.pp_to_string 70 (pp_pair pp_clause pp_int) arg1 ^ "\n" ^
            PP.pp_to_string 70 (pp_pair pp_clause pp_int) arg2 ^ "\n" ^
            PP.pp_to_string 70 (pp_sum pp_clause pp_string) res ^ "\n")
         val res =
@@ -723,7 +723,7 @@ in
       let
         fun p res = chat
           ("\nPARAMODULATE:\n" ^
-           PP.pp_to_string 70 (pp_triple pp_clause pp_int pp_bool) arg1 ^ "\n"^ 
+           PP.pp_to_string 70 (pp_triple pp_clause pp_int pp_bool) arg1 ^ "\n"^
            PP.pp_to_string 70 (pp_triple pp_clause pp_int (pp_list pp_int))arg2^
            "\n" ^ PP.pp_to_string 70 (pp_sum pp_clause pp_string) res ^ "\n")
         val res =

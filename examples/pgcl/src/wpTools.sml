@@ -134,7 +134,7 @@ fun dest_triv_lam tm =
   in
     (v,la,r)
   end;
-  
+
 val is_triv_lam = can dest_triv_lam;
 
 local
@@ -150,7 +150,7 @@ local
 in
   fun elim_redundant_lam_tac (asl,g) = f [] [g] asl (asl,g);
 end;
-      
+
 local
   val if_t = (GEN_ALL o CONJUNCT1 o SPEC_ALL) COND_CLAUSES;
   val if_f = (GEN_ALL o CONJUNCT2 o SPEC_ALL) COND_CLAUSES;

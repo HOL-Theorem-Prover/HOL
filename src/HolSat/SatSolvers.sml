@@ -1,6 +1,6 @@
 (*
 ** This file contains specifications of the SAT tools that
-** can be invoked from HOL. 
+** can be invoked from HOL.
 ** Details of format in the comments following each field name.
 **
 ** {name            (* solver name                                         *)
@@ -19,18 +19,18 @@
 structure SatSolvers =
 struct
 
-datatype sat_solver = 
+datatype sat_solver =
  SatSolver of
   {name           : string,
    URL            : string,
-   executable     : string,    
-   post_exe       : string option,    
-   notime_run     : string -> string * string -> string ,    
-   time_run       : string -> (string * string) * int -> string,  
+   executable     : string,
+   post_exe       : string option,
+   notime_run     : string -> string * string -> string ,
+   time_run       : string -> (string * string) * int -> string,
    post_run       : string -> (string * string) -> string ,
    only_true      : bool,
    failure_string : string,
-   start_string   : string,  
+   start_string   : string,
    end_string     : string};
 
 fun getSolverName (SatSolver {name,...}) = name
@@ -51,24 +51,24 @@ fun spacify [] = ""
 
 val zchaff =
  SatSolver
-  {name           = "zchaff", 
+  {name           = "zchaff",
    URL            = "http://www.princeton.edu/~chaff/zchaff",
-   executable     = if isSome (Process.getEnv "OS") 
-		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL 
+   executable     = if isSome (Process.getEnv "OS")
+		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL
 		    then Globals.HOLDIR^"/src/HolSat/sat_solvers/zchaff/zchaff.exe"
 		    else Globals.HOLDIR^"/src/HolSat/sat_solvers/zchaff/zchaff",
-   post_exe       = SOME (if isSome (Process.getEnv "OS") 
-		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL 
+   post_exe       = SOME (if isSome (Process.getEnv "OS")
+		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL
 			  then Globals.HOLDIR^"/src/HolSat/sat_solvers/zc2hs/zc2hs.exe"
 			  else Globals.HOLDIR^"/src/HolSat/sat_solvers/zc2hs/zc2hs"),
-   notime_run     = (fn ex => fn (infile,outfile) => 
+   notime_run     = (fn ex => fn (infile,outfile) =>
                         spacify [p ex, p infile,">", p outfile]),
-   time_run       = (fn ex => fn ((infile,outfile),time) => 
-                        spacify [p ex, p infile, p (Int.toString time), ">", 
+   time_run       = (fn ex => fn ((infile,outfile),time) =>
+                        spacify [p ex, p infile, p (Int.toString time), ">",
                                  p outfile]),
-   post_run        = (fn ex => fn (infile,outfile) => 
-                        spacify [p ex, p infile, "-m", 
-                                 p (outfile ^ ".proof"), 
+   post_run        = (fn ex => fn (infile,outfile) =>
+                        spacify [p ex, p infile, "-m",
+                                 p (outfile ^ ".proof"),
                                  "-z",
                                  "resolve_trace", ">", "zc2hs_trace"]),
    only_true      = false,
@@ -78,19 +78,19 @@ val zchaff =
 
 val minisatp =
  SatSolver
-  {name           = "minisatp", 
+  {name           = "minisatp",
    URL            = "http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat",
-   executable     = if isSome (Process.getEnv "OS") 
-		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL 
+   executable     = if isSome (Process.getEnv "OS")
+		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL
 		    then Globals.HOLDIR^"/src/HolSat/sat_solvers/minisat/minisat.exe"
 		    else Globals.HOLDIR^"/src/HolSat/sat_solvers/minisat/minisat",
    post_exe       = NONE,
-   notime_run     = (fn ex => fn (infile,outfile) => 
-                      spacify [p ex, "-r", p outfile, "-p",  
-                               p (outfile^".proof"), p infile, "-x", ">",  
+   notime_run     = (fn ex => fn (infile,outfile) =>
+                      spacify [p ex, "-r", p outfile, "-p",
+                               p (outfile^".proof"), p infile, "-x", ">",
                                p (outfile ^".stats")]),
-   time_run       = (fn ex => fn ((infile,outfile),time) => 
-                      spacify [p ex, p infile, p (Int.toString time),  ">",  
+   time_run       = (fn ex => fn ((infile,outfile),time) =>
+                      spacify [p ex, p infile, p (Int.toString time),  ">",
                                p outfile]),
    post_run        = (fn _ => fn _ => ""),
    only_true      = false,

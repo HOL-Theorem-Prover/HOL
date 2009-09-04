@@ -10,7 +10,7 @@ sig
 
  val comma_tm        : term
  val fst_tm          : term
- val snd_tm          : term 
+ val snd_tm          : term
  val uncurry_tm      : term
  val curry_tm        : term
  val pair_map_tm     : term
@@ -42,7 +42,7 @@ sig
  val pbvar           : term -> term
  val pbody           : term -> term
  val dest_plet       : term -> term * term * term
- val dest_anylet     : term -> (term * term) list * term 
+ val dest_anylet     : term -> (term * term) list * term
  val dest_pforall    : term -> term * term
  val dest_pexists    : term -> term * term
  val dest_pexists1   : term -> term * term
@@ -58,7 +58,7 @@ sig
  val spine_pair      : term -> term list
  val unstrip_pair    : hol_type -> term list -> term * term list
  val strip_pabs      : term -> term list * term
- val strip_anylet    : term -> (term * term) list list * term 
+ val strip_anylet    : term -> (term * term) list list * term
  val strip_pforall   : term -> term list * term
  val strip_pexists   : term -> term list * term
 
@@ -80,6 +80,6 @@ sig
 
  val genvarstruct    : hol_type -> term
 
- val  lift_prod      : hol_type -> ('a -> term ) -> ('b -> term) 
+ val  lift_prod      : hol_type -> ('a -> term ) -> ('b -> term)
                                 -> 'a * 'b -> term
 end

@@ -1,6 +1,6 @@
 (* Database *)
 signature Database = sig
-datatype component = 
+datatype component =
     Str					(* structure                       *)
   | Exc of string			(* exception constructor with name *)
   | Typ of string			(* type constructor with name      *)

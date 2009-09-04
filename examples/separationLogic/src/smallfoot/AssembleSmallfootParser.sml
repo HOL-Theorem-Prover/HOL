@@ -21,7 +21,7 @@ struct
   end
 
   fun raw_read_stream strm = let
-    val lexer = DiskFileParser.makeLexer (fn _ => TextIO.inputLine strm)
+    val lexer = DiskFileParser.makeLexer (fn _ => Portable.input_line strm)
   in
     invoke lexer
   end

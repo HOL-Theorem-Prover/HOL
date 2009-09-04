@@ -24,12 +24,12 @@ val _ = Hol_datatype `
   Xeflags = X_CF | X_PF | X_AF | X_ZF | X_SF | X_OF `;
 
 val _ = Hol_datatype `
-  Xea = 
+  Xea =
       Xea_i of Ximm     (* constant       *)
     | Xea_r of Xreg     (* register name  *)
     | Xea_m of word32   (* memory address *) `;
 
-val _ = Hol_datatype   `iiid = <| proc : num ; 
+val _ = Hol_datatype   `iiid = <| proc : num ;
              program_order_index : num |>`;
 
 

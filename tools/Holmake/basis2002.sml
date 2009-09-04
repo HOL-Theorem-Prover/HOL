@@ -359,3 +359,46 @@ struct
 
 end;
 
+structure Word8Vector :> MONO_VECTOR
+                           where type elem = Word8.word
+                             and type vector = Word8Vector.vector =
+struct
+  open Word8Vector
+  type vector = Word8Vector.vector
+  fun update (v,i,e) =
+      tabulate (length v, (fn j => if j = i then e else sub(v,j)))
+  fun appi f v = Word8Vector.appi f (v, 0, NONE)
+  fun mapi f v = Word8Vector.mapi f (v, 0, NONE)
+  fun foldli f a v = Word8Vector.foldli f a (v, 0, NONE)
+  fun foldri f a v = Word8Vector.foldri f a (v, 0, NONE)
+
+  fun findi P v = let
+    val sz = length v
+    fun loop i =
+        if i = sz then NONE
+        else let
+            val c = sub(v,i)
+            val pr = (i,c)
+          in
+            if P pr then SOME pr else loop (i + 1)
+          end
+  in
+    loop 0
+  end
+  fun find P v = Option.map #2 (findi (fn (i,c) => P c) v)
+  fun exists P v = isSome (find P v)
+  fun all P = not o (exists (not o P))
+
+  fun collate wcmp (v1, v2) = let
+    val sz1 = length v1 and sz2 = length v2
+    fun loop i =
+        if i = sz1 then if i = sz2 then EQUAL else LESS
+        else if i = sz2 then GREATER
+        else
+          case wcmp (sub(v1,i), sub(v2,i)) of
+            EQUAL => loop (i + 1)
+          | x => x
+  in
+    loop 0
+  end
+end

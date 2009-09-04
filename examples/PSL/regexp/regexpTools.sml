@@ -21,7 +21,7 @@ open regexpTheory matcherTheory;
 (*---------------------------------------------------------------------------*)
 
 (******************************************************************************
-* The trace levels of the regular expression library:      
+* The trace levels of the regular expression library:
 * 0: silent
 * 1: 1 character (either - or +) for each list element processed
 * 2: matches as they are discovered
@@ -315,7 +315,7 @@ local
       val _ =
         res = T orelse res = F orelse
         raise ERR "export_nfa.accept" "couldn't reduce eval_accepts"
-    in 
+    in
       (res = T, th)
     end;
 
@@ -516,7 +516,7 @@ local
 
      add_string pp "endmodule";
      add_newline pp;
-     
+
      end_block pp);
 in
   fun module n a r =

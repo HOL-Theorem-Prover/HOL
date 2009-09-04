@@ -30,7 +30,7 @@ fun match_type ty          = hol88subst_of o Type.match_type ty
 val subst                  = Term.subst o subst_of
 val inst                   = Term.inst o subst_of
 fun subst_occs occs_list   = HolKernel.subst_occs occs_list o subst_of
-fun match_term pat ob      = (hol88subst_of ## hol88subst_of) 
+fun match_term pat ob      = (hol88subst_of ## hol88subst_of)
                              (Term.match_term pat ob)
 
 fun SUBST s template th    = Thm.SUBST (subst_of s) template th

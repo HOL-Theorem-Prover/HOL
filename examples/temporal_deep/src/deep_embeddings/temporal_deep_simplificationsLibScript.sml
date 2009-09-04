@@ -4,13 +4,13 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
  ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
-  "infinite_pathTheory", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "rich_listTheory", "pairTheory", 
-  "numLib", "listLib", "rltlTheory", "computeLib", "relationTheory", 
+  "infinite_pathTheory", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "rich_listTheory", "pairTheory",
+  "numLib", "listLib", "rltlTheory", "computeLib", "relationTheory",
   "tuerk_tacticsLib", "congLib", "Travrules", "congToolsLibTheory"];
 *)
 
@@ -39,7 +39,7 @@ val PROP_LOGIC_EQUIVALENT_REFL =
     "PROP_LOGIC_EQUIVALENT_REFL",
 
     ``!x. PROP_LOGIC_EQUIVALENT x x``,
-    
+
     SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def]);
 
 val PROP_LOGIC_EQUIVALENT_TRANS =
@@ -48,7 +48,7 @@ val PROP_LOGIC_EQUIVALENT_TRANS =
 
     ``!x y z. (PROP_LOGIC_EQUIVALENT x y /\ PROP_LOGIC_EQUIVALENT y z) ==>
               PROP_LOGIC_EQUIVALENT x z``,
-    
+
     SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def]);
 
 
@@ -86,7 +86,7 @@ val PROP_LOGIC_EQUIVALENT_congs =
       (!p1 p2 p1' p2'. PROP_LOGIC_EQUIVALENT p1 p1' ==>
                        PROP_LOGIC_EQUIVALENT p2 p2' ==>
                        PROP_LOGIC_EQUIVALENT (P_IMPL(p1, p2)) (P_IMPL(p1', p2'))) /\
-      (!c c' p1 p2 p1' p2'. 
+      (!c c' p1 p2 p1' p2'.
                        PROP_LOGIC_EQUIVALENT c c' ==>
                        PROP_LOGIC_EQUIVALENT p1 p1' ==>
                        PROP_LOGIC_EQUIVALENT p2 p2' ==>
@@ -105,7 +105,7 @@ val PROP_LOGIC_EQUIVALENT_congs =
                                             (P_EXISTS l' p1'))) /\
       (!p p' f. PROP_LOGIC_EQUIVALENT p p' ==>
                 PROP_LOGIC_EQUIVALENT (P_VAR_RENAMING f p) (P_VAR_RENAMING f p'))``,
-    
+
     SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def, P_SEM_THM,
                      P_SEM___VAR_RENAMING___NOT_INJ, P_IS_CONTRADICTION_def,
                      P_IS_TAUTOLOGY_def,
@@ -120,20 +120,20 @@ val PROP_LOGIC_EQUIVALENT_list_congs =
               PROP_LOGIC_EQUIVALENT (P_BIGAND l) (P_BIGAND l')) /\
       (!l l'. PROP_LOGIC_EQUIVALENT_LIST_AS_SET l l' ==>
               PROP_LOGIC_EQUIVALENT (P_BIGOR l) (P_BIGOR l'))``,
-    
+
     REWRITE_TAC[PROP_LOGIC_EQUIVALENT_LIST_AS_SET_def] THEN
     REPEAT STRIP_TAC THEN (
       Induct_on `l` THEN Induct_on `l'` THENL [
         REWRITE_TAC[PROP_LOGIC_EQUIVALENT_REFL],
         REWRITE_TAC[LIST_AS_SET_CONGRUENCE_RELATION_REWRITES],
         REWRITE_TAC[LIST_AS_SET_CONGRUENCE_RELATION_REWRITES],
-        
+
         FULL_SIMP_TAC list_ss [LIST_AS_SET_CONGRUENCE_RELATION_def,
           PROP_LOGIC_EQUIVALENT_def, P_BIGAND_SEM, P_BIGOR_SEM] THEN
         METIS_TAC[]
       ]
     ));
-      
+
 
 
 val PROP_LOGIC_EQUIVALENT_rewrites =
@@ -184,46 +184,46 @@ val PROP_LOGIC_EQUIVALENT_rewrites =
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_OR(p1, P_OR(p2, p1))) (P_OR(p1,p2))) /\
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_COND(P_FALSE, p1, p2)) p2) /\
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_COND(P_TRUE, p1, p2)) p1) /\
-      (!p1 p2. PROP_LOGIC_EQUIVALENT (P_COND(P_NOT c, p1, p2)) 
+      (!p1 p2. PROP_LOGIC_EQUIVALENT (P_COND(P_NOT c, p1, p2))
                                      (P_COND(c, p2, p1))) /\
 
 
-      (!p. (PROP_LOGIC_EQUIVALENT (P_NOT p) P_FALSE) = (PROP_LOGIC_EQUIVALENT p P_TRUE)) /\ 
+      (!p. (PROP_LOGIC_EQUIVALENT (P_NOT p) P_FALSE) = (PROP_LOGIC_EQUIVALENT p P_TRUE)) /\
       (!p. (PROP_LOGIC_EQUIVALENT (P_NOT p) P_TRUE) = (PROP_LOGIC_EQUIVALENT p P_FALSE)) /\
-      (!p. (PROP_LOGIC_EQUIVALENT P_FALSE (P_NOT p)) = (PROP_LOGIC_EQUIVALENT p P_TRUE)) /\ 
+      (!p. (PROP_LOGIC_EQUIVALENT P_FALSE (P_NOT p)) = (PROP_LOGIC_EQUIVALENT p P_TRUE)) /\
       (!p. (PROP_LOGIC_EQUIVALENT P_TRUE (P_NOT p)) = (PROP_LOGIC_EQUIVALENT p P_FALSE)) /\
 
-      (!c p p1 p2. 
+      (!c p p1 p2.
       PROP_LOGIC_EQUIVALENT (P_COND (c, P_EQUIV (p, p1), P_EQUIV (p, p2)))     (P_EQUIV (p, (P_COND (c, p1,p2))))) /\
-      (!c p p1 p2. 
+      (!c p p1 p2.
       PROP_LOGIC_EQUIVALENT (P_COND (c, P_EQUIV (p1, p), P_EQUIV (p2, p)))     (P_EQUIV ((P_COND (c, p1,p2)), p))) /\
 
-      (!c p p1 p2. 
-      PROP_LOGIC_EQUIVALENT (P_COND (c, P_AND (p, p1), P_AND (p, p2)))     
+      (!c p p1 p2.
+      PROP_LOGIC_EQUIVALENT (P_COND (c, P_AND (p, p1), P_AND (p, p2)))
       (P_AND (p, (P_COND (c, p1,p2))))) /\
-      (!c p p1 p2. 
-      PROP_LOGIC_EQUIVALENT (P_COND (c, P_AND (p1, p), P_AND (p2, p)))     
+      (!c p p1 p2.
+      PROP_LOGIC_EQUIVALENT (P_COND (c, P_AND (p1, p), P_AND (p2, p)))
       (P_AND ((P_COND (c, p1,p2)), p))) /\
 
-      (!c p1 p2. 
+      (!c p1 p2.
       PROP_LOGIC_EQUIVALENT (P_COND (c, P_NOT p1, P_NOT p2))
                              (P_NOT (P_COND(c, p1, p2)))) /\
 
-      (!c p p1 p2. 
-      PROP_LOGIC_EQUIVALENT (P_COND (c, P_OR (p, p1), P_OR (p, p2)))     
+      (!c p p1 p2.
+      PROP_LOGIC_EQUIVALENT (P_COND (c, P_OR (p, p1), P_OR (p, p2)))
       (P_OR (p, (P_COND (c, p1,p2))))) /\
-      (!c p p1 p2. 
-      PROP_LOGIC_EQUIVALENT (P_COND (c, P_OR (p1, p), P_OR (p2, p)))     
+      (!c p p1 p2.
+      PROP_LOGIC_EQUIVALENT (P_COND (c, P_OR (p1, p), P_OR (p2, p)))
       (P_OR ((P_COND (c, p1,p2)), p))) /\
 
-      (!c p p1 p2. 
-      PROP_LOGIC_EQUIVALENT (P_COND (c, P_IMPL (p, p1), P_IMPL (p, p2)))     
+      (!c p p1 p2.
+      PROP_LOGIC_EQUIVALENT (P_COND (c, P_IMPL (p, p1), P_IMPL (p, p2)))
       (P_IMPL (p, (P_COND (c, p1,p2))))) /\
-      (!c p p1 p2. 
-      PROP_LOGIC_EQUIVALENT (P_COND (c, P_IMPL (p1, p), P_IMPL (p2, p)))     
+      (!c p p1 p2.
+      PROP_LOGIC_EQUIVALENT (P_COND (c, P_IMPL (p1, p), P_IMPL (p2, p)))
       (P_IMPL ((P_COND (c, p1,p2)), p)))
       ``,
-    
+
     SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def, P_SEM_THM] THEN
     REPEAT STRIP_TAC THEN METIS_TAC[]);
 
@@ -260,7 +260,7 @@ val PROP_LOGIC_EQUIVALENT_nnf_rewrites =
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_NOT (P_IMPL(p1, p2))) (P_AND (p1, P_NOT p2))) /\
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_NOT (P_COND(c, p1, p2))) (P_COND(c, P_NOT p1, P_NOT p2))) /\
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_NOT (P_EQUIV(p1, p2))) (P_EQUIV (P_NOT p1, p2)))``,
-    
+
     SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def, P_SEM_THM] THEN
     METIS_TAC[]);
 
@@ -276,7 +276,7 @@ val PROP_LOGIC_EQUIVALENT_dnf_rewrites =
 
 
 val LIST_AS_SET_CONGRUENCE_RELATION___PROP_LOGIC_EQUIVALENT_def =
-    Define 
+    Define
      `LIST_AS_SET_CONGRUENCE_RELATION___PROP_LOGIC_EQUIVALENT =
       LIST_AS_SET_CONGRUENCE_RELATION PROP_LOGIC_EQUIVALENT`;
 
@@ -304,7 +304,7 @@ val XPROP_LOGIC_EQUIVALENT_REFL =
     "XPROP_LOGIC_EQUIVALENT_REFL",
 
     ``!x. XPROP_LOGIC_EQUIVALENT x x``,
-    
+
     SIMP_TAC std_ss [XPROP_LOGIC_EQUIVALENT_def]);
 
 val XPROP_LOGIC_EQUIVALENT_TRANS =
@@ -313,7 +313,7 @@ val XPROP_LOGIC_EQUIVALENT_TRANS =
 
     ``!x y z. (XPROP_LOGIC_EQUIVALENT x y /\ XPROP_LOGIC_EQUIVALENT y z) ==>
               XPROP_LOGIC_EQUIVALENT x z``,
-    
+
     SIMP_TAC std_ss [XPROP_LOGIC_EQUIVALENT_def]);
 
 
@@ -343,7 +343,7 @@ val XPROP_LOGIC_EQUIVALENT_congs =
       (!p1 p2 p1' p2'. XPROP_LOGIC_EQUIVALENT p1 p1' ==>
                        XPROP_LOGIC_EQUIVALENT p2 p2' ==>
                        XPROP_LOGIC_EQUIVALENT (XP_IMPL(p1, p2)) (XP_IMPL(p1', p2'))) /\
-      (!c c' p1 p2 p1' p2'. 
+      (!c c' p1 p2 p1' p2'.
                        XPROP_LOGIC_EQUIVALENT c c' ==>
                        XPROP_LOGIC_EQUIVALENT p1 p1' ==>
                        XPROP_LOGIC_EQUIVALENT p2 p2' ==>
@@ -355,25 +355,25 @@ val XPROP_LOGIC_EQUIVALENT_congs =
                 XPROP_LOGIC_EQUIVALENT (XP_NEXT p1) (XP_NEXT p1')) /\
       (!p1 p1'. PROP_LOGIC_EQUIVALENT p1 p1' ==>
                 XPROP_LOGIC_EQUIVALENT (XP_CURRENT p1) (XP_CURRENT p1')) /\
-      (!p1 p1' l l'. 
+      (!p1 p1' l l'.
                 XPROP_LOGIC_EQUIVALENT p1 p1' ==>
                 (l = l') ==>
-                XPROP_LOGIC_EQUIVALENT (XP_NEXT_EXISTS l p1) (XP_NEXT_EXISTS l' p1')) /\ 
-      (!p1 p1' l l'. 
+                XPROP_LOGIC_EQUIVALENT (XP_NEXT_EXISTS l p1) (XP_NEXT_EXISTS l' p1')) /\
+      (!p1 p1' l l'.
                 XPROP_LOGIC_EQUIVALENT p1 p1' ==>
                 (l = l') ==>
-                XPROP_LOGIC_EQUIVALENT (XP_CURRENT_EXISTS l p1) (XP_CURRENT_EXISTS l' p1')) /\ 
-      (!p1 p1' l l'. 
+                XPROP_LOGIC_EQUIVALENT (XP_CURRENT_EXISTS l p1) (XP_CURRENT_EXISTS l' p1')) /\
+      (!p1 p1' l l'.
                 XPROP_LOGIC_EQUIVALENT p1 p1' ==>
                 (l = l') ==>
-                XPROP_LOGIC_EQUIVALENT (XP_NEXT_FORALL l p1) (XP_NEXT_FORALL l' p1')) /\ 
-      (!p1 p1' l l'. 
+                XPROP_LOGIC_EQUIVALENT (XP_NEXT_FORALL l p1) (XP_NEXT_FORALL l' p1')) /\
+      (!p1 p1' l l'.
                 XPROP_LOGIC_EQUIVALENT p1 p1' ==>
                 (l = l') ==>
-                XPROP_LOGIC_EQUIVALENT (XP_CURRENT_FORALL l p1) (XP_CURRENT_FORALL l' p1')) /\ 
+                XPROP_LOGIC_EQUIVALENT (XP_CURRENT_FORALL l p1) (XP_CURRENT_FORALL l' p1')) /\
       (!p p' f. XPROP_LOGIC_EQUIVALENT p p' ==>
                 XPROP_LOGIC_EQUIVALENT (XP_VAR_RENAMING f p) (XP_VAR_RENAMING f p'))``,
-    
+
     SIMP_TAC std_ss [XPROP_LOGIC_EQUIVALENT_def, XP_SEM_THM, XP_SEM___VAR_RENAMING___NOT_INJ, PROP_LOGIC_EQUIVALENT_def,
     XP_SEM___XP_NEXT, XP_SEM___XP_CURRENT,
     XP_NEXT_EXISTS_SEM, XP_NEXT_FORALL_SEM, XP_CURRENT_EXISTS_SEM,
@@ -407,9 +407,9 @@ val XPROP_LOGIC_EQUIVALENT___EXISTS___basic_rewrites =
 
 val XPROP_LOGIC_EQUIVALENT___EXISTS___assign_rewrites =
   prove (``!V1 V2 V1' V2' p.
-      XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_TRUE V1 V2 (XP_ASSIGN_TRUE V1' V2' p)) 
+      XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_TRUE V1 V2 (XP_ASSIGN_TRUE V1' V2' p))
                             (XP_ASSIGN_TRUE (V1 UNION V1') (V2 UNION V2') p) /\
-      XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_FALSE V1 V2 (XP_ASSIGN_FALSE V1' V2' p)) 
+      XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_FALSE V1 V2 (XP_ASSIGN_FALSE V1' V2' p))
                             (XP_ASSIGN_FALSE (V1 UNION V1') (V2 UNION V2') p)``,
 
   SIMP_TAC std_ss [XPROP_LOGIC_EQUIVALENT_def, XP_ASSIGN_TRUE_SEM, XP_ASSIGN_FALSE_SEM, UNION_ASSOC] THEN
@@ -422,13 +422,13 @@ val XPROP_LOGIC_EQUIVALENT___EXISTS___assign_rewrites =
 val XPROP_LOGIC_EQUIVALENT___EXISTS___assign_exists_rewrites =
   prove (``
 !l V p.
-XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_TRUE EMPTY V (XP_CURRENT_EXISTS l p)) 
+XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_TRUE EMPTY V (XP_CURRENT_EXISTS l p))
                        (XP_CURRENT_EXISTS l (XP_ASSIGN_TRUE EMPTY V p)) /\
-XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_FALSE EMPTY V (XP_CURRENT_EXISTS l p)) 
+XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_FALSE EMPTY V (XP_CURRENT_EXISTS l p))
                        (XP_CURRENT_EXISTS l (XP_ASSIGN_FALSE EMPTY V p)) /\
-XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_TRUE V EMPTY (XP_NEXT_EXISTS l p)) 
+XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_TRUE V EMPTY (XP_NEXT_EXISTS l p))
                        (XP_NEXT_EXISTS l (XP_ASSIGN_TRUE V EMPTY p)) /\
-XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_FALSE V EMPTY (XP_NEXT_EXISTS l p)) 
+XPROP_LOGIC_EQUIVALENT (XP_ASSIGN_FALSE V EMPTY (XP_NEXT_EXISTS l p))
                        (XP_NEXT_EXISTS l (XP_ASSIGN_FALSE V EMPTY p))``,
 
 SIMP_TAC std_ss [XPROP_LOGIC_EQUIVALENT_def] THEN
@@ -457,14 +457,14 @@ val XPROP_LOGIC_EQUIVALENT_list_congs =
               XPROP_LOGIC_EQUIVALENT (XP_BIGAND l) (XP_BIGAND l')) /\
       (!l l'. XPROP_LOGIC_EQUIVALENT_LIST_AS_SET l l' ==>
               XPROP_LOGIC_EQUIVALENT (XP_BIGOR l) (XP_BIGOR l'))``,
-    
+
     REWRITE_TAC[XPROP_LOGIC_EQUIVALENT_LIST_AS_SET_def] THEN
     REPEAT STRIP_TAC THEN (
       Induct_on `l` THEN Induct_on `l'` THENL [
         REWRITE_TAC[XPROP_LOGIC_EQUIVALENT_REFL],
         REWRITE_TAC[LIST_AS_SET_CONGRUENCE_RELATION_REWRITES],
         REWRITE_TAC[LIST_AS_SET_CONGRUENCE_RELATION_REWRITES],
-        
+
         FULL_SIMP_TAC list_ss [LIST_AS_SET_CONGRUENCE_RELATION_def,
           XPROP_LOGIC_EQUIVALENT_def, XP_BIGAND_SEM, XP_BIGOR_SEM] THEN
         METIS_TAC[]
@@ -519,39 +519,39 @@ val XPROP_LOGIC_EQUIVALENT_rewrites =
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_OR(p1, XP_OR(p2, p1))) (XP_OR(p1,p2))) /\
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_COND(XP_FALSE, p1, p2)) p2) /\
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_COND(XP_TRUE, p1, p2)) p1) /\
-      (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_COND(XP_NOT c, p1, p2)) 
+      (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_COND(XP_NOT c, p1, p2))
                                      (XP_COND(c, p2, p1))) /\
 
-      (!c p p1 p2. 
+      (!c p p1 p2.
       XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_EQUIV (p, p1), XP_EQUIV (p, p2)))     (XP_EQUIV (p, (XP_COND (c, p1,p2))))) /\
-      (!c p p1 p2. 
+      (!c p p1 p2.
       XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_EQUIV (p1, p), XP_EQUIV (p2, p)))     (XP_EQUIV ((XP_COND (c, p1,p2)), p))) /\
 
-      (!c p p1 p2. 
-      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_AND (p, p1), XP_AND (p, p2)))     
+      (!c p p1 p2.
+      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_AND (p, p1), XP_AND (p, p2)))
       (XP_AND (p, (XP_COND (c, p1,p2))))) /\
-      (!c p p1 p2. 
-      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_AND (p1, p), XP_AND (p2, p)))     
+      (!c p p1 p2.
+      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_AND (p1, p), XP_AND (p2, p)))
       (XP_AND ((XP_COND (c, p1,p2)), p))) /\
 
-      (!c p1 p2. 
+      (!c p1 p2.
       XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_NOT p1, XP_NOT p2))
                              (XP_NOT (XP_COND(c, p1, p2)))) /\
 
-      (!c p p1 p2. 
-      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_OR (p, p1), XP_OR (p, p2)))     
+      (!c p p1 p2.
+      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_OR (p, p1), XP_OR (p, p2)))
       (XP_OR (p, (XP_COND (c, p1,p2))))) /\
-      (!c p p1 p2. 
-      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_OR (p1, p), XP_OR (p2, p)))     
+      (!c p p1 p2.
+      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_OR (p1, p), XP_OR (p2, p)))
       (XP_OR ((XP_COND (c, p1,p2)), p))) /\
 
-      (!c p p1 p2. 
-      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_IMPL (p, p1), XP_IMPL (p, p2)))     
+      (!c p p1 p2.
+      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_IMPL (p, p1), XP_IMPL (p, p2)))
       (XP_IMPL (p, (XP_COND (c, p1,p2))))) /\
-      (!c p p1 p2. 
-      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_IMPL (p1, p), XP_IMPL (p2, p)))     
+      (!c p p1 p2.
+      XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_IMPL (p1, p), XP_IMPL (p2, p)))
       (XP_IMPL ((XP_COND (c, p1,p2)), p)))``,
-    
+
     SIMP_TAC std_ss [XPROP_LOGIC_EQUIVALENT_def, XP_SEM_THM] THEN
     METIS_TAC[]);
 
@@ -566,7 +566,7 @@ val XPROP_LOGIC_EQUIVALENT_nnf_rewrites =
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_NOT (XP_IMPL(p1, p2))) (XP_AND (p1, XP_NOT p2))) /\
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_NOT (XP_COND(c, p1, p2))) (XP_COND(c, XP_NOT p1, XP_NOT p2))) /\
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_NOT (XP_EQUIV(p1, p2))) (XP_EQUIV (XP_NOT p1, p2)))``,
-    
+
     SIMP_TAC std_ss [XPROP_LOGIC_EQUIVALENT_def, XP_SEM_THM] THEN
     METIS_TAC[]);
 
@@ -615,7 +615,7 @@ val LTL_EQUIVALENT_REFL =
     "LTL_EQUIVALENT_REFL",
 
     ``!x. LTL_EQUIVALENT x x``,
-    
+
     SIMP_TAC std_ss [LTL_EQUIVALENT_def]);
 
 val LTL_EQUIVALENT_TRANS =
@@ -624,7 +624,7 @@ val LTL_EQUIVALENT_TRANS =
 
     ``!x y z. (LTL_EQUIVALENT x y /\ LTL_EQUIVALENT y z) ==>
               LTL_EQUIVALENT x z``,
-    
+
     SIMP_TAC std_ss [LTL_EQUIVALENT_def]);
 
 
@@ -637,7 +637,7 @@ val LTL_EQUIVALENT_congs =
                 (LTL_IS_CONTRADICTION l1 = LTL_IS_CONTRADICTION l1')) /\
       (!l1 l1' l2 l2'. LTL_EQUIVALENT l1 l1' ==>
                        LTL_EQUIVALENT l2 l2' ==>
-                       (LTL_EQUIVALENT_INITIAL l1 l2 = 
+                       (LTL_EQUIVALENT_INITIAL l1 l2 =
                         LTL_EQUIVALENT_INITIAL l1' l2')) /\
       (!l1 l1'. LTL_EQUIVALENT l1 l1' ==>
                 (LTL_IS_TAUTOLOGY l1 = LTL_IS_TAUTOLOGY l1')) /\
@@ -726,7 +726,7 @@ val LTL_EQUIVALENT_congs =
                        LTL_EQUIVALENT (LTL_PSWHILE(l1, l2)) (LTL_PSWHILE(l1', l2'))) /\
       (!l l' f. LTL_EQUIVALENT l l' ==>
                 LTL_EQUIVALENT (LTL_VAR_RENAMING f l) (LTL_VAR_RENAMING f l'))``,
-    
+
     SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_THM,
                      PROP_LOGIC_EQUIVALENT_def,
                      LTL_UNTIL_def, LTL_BEFORE_def,
@@ -805,14 +805,14 @@ val LTL_EQUIVALENT_simple_nnf_rewrites =
       (!l. LTL_EQUIVALENT (LTL_NOT(LTL_PSNEXT l)) (LTL_PNEXT (LTL_NOT l))) /\
       (!l. LTL_EQUIVALENT (LTL_NOT(LTL_PNEXT l)) (LTL_PSNEXT (LTL_NOT l))) /\
 
-      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_AND (l1, l2))) (LTL_OR (LTL_NOT l1, LTL_NOT l2))) /\ 
-      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_OR (l1, l2))) (LTL_AND (LTL_NOT l1, LTL_NOT l2))) /\ 
-      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_EQUIV (l1, l2))) (LTL_EQUIV (LTL_NOT l1, l2))) /\ 
-      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_IMPL (l1, l2))) (LTL_AND (l1, LTL_NOT l2))) /\ 
-      (!l1 l2. LTL_EQUIVALENT (LTL_EQUIV (LTL_NOT l1, LTL_NOT l2)) (LTL_EQUIV (l1, l2))) /\ 
-      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_SUNTIL (l1, l2))) (LTL_BEFORE (LTL_NOT l1, l2))) /\ 
-      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_PSUNTIL (l1, l2))) (LTL_PBEFORE (LTL_NOT l1, l2))) /\ 
-      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_BEFORE (l1, l2))) (LTL_SUNTIL (LTL_NOT l1, l2))) /\ 
+      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_AND (l1, l2))) (LTL_OR (LTL_NOT l1, LTL_NOT l2))) /\
+      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_OR (l1, l2))) (LTL_AND (LTL_NOT l1, LTL_NOT l2))) /\
+      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_EQUIV (l1, l2))) (LTL_EQUIV (LTL_NOT l1, l2))) /\
+      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_IMPL (l1, l2))) (LTL_AND (l1, LTL_NOT l2))) /\
+      (!l1 l2. LTL_EQUIVALENT (LTL_EQUIV (LTL_NOT l1, LTL_NOT l2)) (LTL_EQUIV (l1, l2))) /\
+      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_SUNTIL (l1, l2))) (LTL_BEFORE (LTL_NOT l1, l2))) /\
+      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_PSUNTIL (l1, l2))) (LTL_PBEFORE (LTL_NOT l1, l2))) /\
+      (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_BEFORE (l1, l2))) (LTL_SUNTIL (LTL_NOT l1, l2))) /\
       (!l1 l2. LTL_EQUIVALENT (LTL_NOT(LTL_PBEFORE (l1, l2))) (LTL_PSUNTIL (LTL_NOT l1, l2)))``,
 
     `!t. (~(t > 0)) = (t = 0)` by DECIDE_TAC THEN
@@ -824,7 +824,7 @@ val LTL_EQUIVALENT_simple_nnf_rewrites =
 
 val LTL_EQUIVALENT_until_sbefore_nnf_rewrites =
   prove (
-      ``(!l1:'a ltl l2. LTL_EQUIVALENT (LTL_NOT(LTL_UNTIL (l1, l2))) (LTL_SBEFORE (LTL_NOT l1, l2))) /\ 
+      ``(!l1:'a ltl l2. LTL_EQUIVALENT (LTL_NOT(LTL_UNTIL (l1, l2))) (LTL_SBEFORE (LTL_NOT l1, l2))) /\
       (!l1:'a ltl l2. LTL_EQUIVALENT (LTL_NOT(LTL_SBEFORE (l1, l2))) (LTL_UNTIL (LTL_NOT l1, l2)))``,
 
       Tactical.REVERSE LEFT_CONJ_TAC THEN1 (
@@ -837,7 +837,7 @@ val LTL_EQUIVALENT_until_sbefore_nnf_rewrites =
         METIS_TAC[]
       ) THEN
 
-      SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_TIME_def] THEN 
+      SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_TIME_def] THEN
       REPEAT STRIP_TAC THEN
       ONCE_REWRITE_TAC[REWRITE_RULE [LTL_EQUIVALENT_def] LTL_WEAK_UNTIL___ALTERNATIVE_DEF] THEN
       REWRITE_TAC[LTL_SBEFORE_def] THEN
@@ -848,7 +848,7 @@ val LTL_EQUIVALENT_until_sbefore_nnf_rewrites =
 
 val LTL_EQUIVALENT_puntil_psbefore_nnf_rewrites =
   prove (
-      ``(!l1:'a ltl l2. LTL_EQUIVALENT (LTL_NOT(LTL_PUNTIL (l1, l2))) (LTL_PSBEFORE (LTL_NOT l1, l2))) /\ 
+      ``(!l1:'a ltl l2. LTL_EQUIVALENT (LTL_NOT(LTL_PUNTIL (l1, l2))) (LTL_PSBEFORE (LTL_NOT l1, l2))) /\
       (!l1:'a ltl l2. LTL_EQUIVALENT (LTL_NOT(LTL_PSBEFORE (l1, l2))) (LTL_PUNTIL (LTL_NOT l1, l2)))``,
 
       Tactical.REVERSE LEFT_CONJ_TAC THEN1 (
@@ -861,7 +861,7 @@ val LTL_EQUIVALENT_puntil_psbefore_nnf_rewrites =
         METIS_TAC[]
       ) THEN
 
-      SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_TIME_def] THEN 
+      SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_TIME_def] THEN
       REPEAT STRIP_TAC THEN
       ONCE_REWRITE_TAC[REWRITE_RULE [LTL_EQUIVALENT_def] LTL_PAST_WEAK_UNTIL___ALTERNATIVE_DEF] THEN
       REWRITE_TAC[LTL_PSBEFORE_def] THEN
@@ -870,7 +870,7 @@ val LTL_EQUIVALENT_puntil_psbefore_nnf_rewrites =
 
 
 
-val LTL_EQUIVALENT_nnf_rewrites = 
+val LTL_EQUIVALENT_nnf_rewrites =
   save_thm("LTL_EQUIVALENT_nnf_rewrites",
   LIST_CONJ [
     LTL_EQUIVALENT_simple_nnf_rewrites,
@@ -1053,8 +1053,8 @@ val LTL_SEM_TIME_and_or_not =
     ``!t v l1 l2. ((LTL_SEM_TIME t v (LTL_NOT l1)) = ~(LTL_SEM_TIME t v l1)) /\
                   ((LTL_SEM_TIME t v (LTL_AND (l1, l2))) = ((LTL_SEM_TIME t v l1) /\ (LTL_SEM_TIME t v l2))) /\
                   ((LTL_SEM_TIME t v (LTL_OR (l1, l2))) = ((LTL_SEM_TIME t v l1) \/ (LTL_SEM_TIME t v l2)))``,
-  
-        SIMP_TAC std_ss [LTL_SEM_THM]);    
+
+        SIMP_TAC std_ss [LTL_SEM_THM]);
 
 
 
@@ -1068,7 +1068,7 @@ val LTL_EQUIVALENT_and_until_homogeneous_conj_disj_rewrites =
 
     SIMP_TAC std_ss [LTL_EQUIVALENT_def, LTL_SEM_THM, LTL_PUNTIL_def, LTL_UNTIL_def] THEN
     REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
-      `?mink. mink = MIN k k'` by METIS_TAC[] THEN      
+      `?mink. mink = MIN k k'` by METIS_TAC[] THEN
       EXISTS_TAC ``mink:num`` THEN
       SIMP_ALL_TAC std_ss [MIN_DEF] THEN
       REPEAT STRIP_TAC THENL [
@@ -1081,7 +1081,7 @@ val LTL_EQUIVALENT_and_until_homogeneous_conj_disj_rewrites =
       PROVE_TAC[],
       PROVE_TAC[],
 
-      `?maxk. maxk = MAX k k'` by METIS_TAC[] THEN      
+      `?maxk. maxk = MAX k k'` by METIS_TAC[] THEN
       EXISTS_TAC ``maxk:num`` THEN
       SIMP_ALL_TAC std_ss [MAX_DEF] THEN
       REPEAT STRIP_TAC THENL [
@@ -1095,7 +1095,7 @@ val LTL_EQUIVALENT_and_until_homogeneous_conj_disj_rewrites =
       PROVE_TAC[],
 
       DISJ1_TAC THEN
-      `?mink. mink = MIN k k'` by METIS_TAC[] THEN      
+      `?mink. mink = MIN k k'` by METIS_TAC[] THEN
       EXISTS_TAC ``mink:num`` THEN
       SIMP_ALL_TAC std_ss [MIN_DEF] THEN
       REPEAT STRIP_TAC THENL [
@@ -1113,7 +1113,7 @@ val LTL_EQUIVALENT_and_until_homogeneous_conj_disj_rewrites =
         PROVE_TAC[],
         `j >= t` by DECIDE_TAC THEN PROVE_TAC[]
       ],
-      
+
       DISJ1_TAC THEN
       EXISTS_TAC ``k:num`` THEN
       ASM_REWRITE_TAC[] THEN
@@ -1129,7 +1129,7 @@ val LTL_EQUIVALENT_and_until_homogeneous_conj_disj_rewrites =
       PROVE_TAC[],
 
       DISJ1_TAC THEN
-      `?maxk. maxk = MAX k k'` by METIS_TAC[] THEN      
+      `?maxk. maxk = MAX k k'` by METIS_TAC[] THEN
       EXISTS_TAC ``maxk:num`` THEN
       SIMP_ALL_TAC std_ss [MAX_DEF] THEN
       REPEAT STRIP_TAC THENL [
@@ -1138,7 +1138,7 @@ val LTL_EQUIVALENT_and_until_homogeneous_conj_disj_rewrites =
         `k < j` by DECIDE_TAC THEN PROVE_TAC[],
         `k' < j` by DECIDE_TAC THEN PROVE_TAC[]
       ],
-      
+
       DISJ1_TAC THEN
       EXISTS_TAC ``k:num`` THEN
       ASM_REWRITE_TAC[] THEN
@@ -1183,7 +1183,7 @@ val LTL_EQUIVALENT_and_until2_homogeneous_conj_disj_rewrites =
 val ltl_equivalent_preorder =
     mk_preorder (LTL_EQUIVALENT_TRANS, LTL_EQUIVALENT_REFL);
 
-val ltl_CS = CSFRAG 
+val ltl_CS = CSFRAG
    {rewrs  = [LTL_EQUIVALENT_bool_rewrites, LTL_EQUIVALENT_true_false_rewrites,
               LTL_EQUIVALENT_and_until_homogeneous_conj_disj_rewrites,
               LTL_EQUIVALENT_and_until2_homogeneous_conj_disj_rewrites,
@@ -1205,21 +1205,21 @@ val LTL_EQUIVALENT_before_homogeneous_conj_disj_rewrites =
       (!l l1 l2. (LTL_EQUIVALENT (LTL_AND (LTL_BEFORE (l, l1), LTL_BEFORE (l, l2))) (LTL_BEFORE (l, (LTL_OR(l1,l2)))))) /\
       (!l l1 l2. (LTL_EQUIVALENT (LTL_AND (LTL_PSBEFORE (l, l1), LTL_PSBEFORE (l, l2))) (LTL_PSBEFORE (l, (LTL_OR(l1,l2)))))) /\
       (!l l1 l2. (LTL_EQUIVALENT (LTL_AND (LTL_PBEFORE (l, l1), LTL_PBEFORE (l, l2))) (LTL_PBEFORE (l, (LTL_OR(l1,l2)))))) /\
-      
+
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_BEFORE (l1, l), LTL_OR(LTL_BEFORE (l2, l), l3))) (LTL_OR(LTL_BEFORE ((LTL_OR(l1,l2)), l), l3)))) /\
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_BEFORE (l1, l), LTL_OR(l3, LTL_BEFORE (l2, l)))) (LTL_OR(LTL_BEFORE ((LTL_OR(l1,l2)), l), l3)))) /\
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_PBEFORE (l1, l), LTL_OR(LTL_PBEFORE (l2, l), l3))) (LTL_OR(LTL_PBEFORE ((LTL_OR(l1,l2)), l), l3)))) /\
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_PBEFORE (l1, l), LTL_OR(l3, LTL_PBEFORE (l2, l)))) (LTL_OR(LTL_PBEFORE ((LTL_OR(l1,l2)), l), l3)))) /\
-      
+
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_AND (LTL_BEFORE (l, l1), LTL_AND(LTL_BEFORE (l, l2), l3))) (LTL_AND(LTL_BEFORE (l, (LTL_OR(l1,l2))), l3)))) /\
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_AND (LTL_BEFORE (l, l1), LTL_AND(l3, LTL_BEFORE (l, l2)))) (LTL_AND(LTL_BEFORE (l, (LTL_OR(l1,l2))), l3)))) /\
-      
+
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_AND (LTL_SBEFORE (l, l1), LTL_AND(LTL_SBEFORE (l, l2), l3))) (LTL_AND(LTL_SBEFORE (l, (LTL_OR(l1,l2))), l3)))) /\
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_AND (LTL_SBEFORE (l, l1), LTL_AND(l3, LTL_SBEFORE (l, l2)))) (LTL_AND(LTL_SBEFORE (l, (LTL_OR(l1,l2))), l3)))) /\
-      
+
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_AND (LTL_PSBEFORE (l, l1), LTL_AND(LTL_PSBEFORE (l, l2), l3))) (LTL_AND(LTL_PSBEFORE (l, (LTL_OR(l1,l2))), l3)))) /\
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_AND (LTL_PSBEFORE (l, l1), LTL_AND(l3, LTL_PSBEFORE (l, l2)))) (LTL_AND(LTL_PSBEFORE (l, (LTL_OR(l1,l2))), l3)))) /\
-      
+
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_AND (LTL_PBEFORE (l, l1), LTL_AND(LTL_PBEFORE (l, l2), l3))) (LTL_AND(LTL_PBEFORE (l, (LTL_OR(l1,l2))), l3)))) /\
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_AND (LTL_PBEFORE (l, l1), LTL_AND(l3, LTL_PBEFORE (l, l2)))) (LTL_AND(LTL_PBEFORE (l, (LTL_OR(l1,l2))), l3))))``,
 
@@ -1230,7 +1230,7 @@ val LTL_EQUIVALENT_before_homogeneous_conj_disj_rewrites =
 
 
 
-val LTL_EQUIVALENT_homogeneous_conj_disj_rewrites = 
+val LTL_EQUIVALENT_homogeneous_conj_disj_rewrites =
   save_thm("LTL_EQUIVALENT_homogeneous_conj_disj_rewrites",
   LIST_CONJ [
     LTL_EQUIVALENT_simple_homogeneous_conj_disj_rewrites,

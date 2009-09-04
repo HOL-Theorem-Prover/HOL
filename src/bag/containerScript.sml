@@ -162,7 +162,7 @@ STRIP_TAC THEN GEN_TAC THEN
 POP_ASSUM (ASSUME_TAC o Q.GEN `m` o Q.SPECL [`m`, `x`]) THEN
 Q.ABBREV_TAC `m1 = LENGTH (FILTER ($= x) l1)` THEN
 Q.ABBREV_TAC `m2 = LENGTH (FILTER ($= x) l2)` THEN
-Q.PAT_ASSUM `!m. X` (fn thm => 
+Q.PAT_ASSUM `!m. X` (fn thm =>
 			ASSUME_TAC (Q.SPEC `m1` thm) THEN
 			ASSUME_TAC (Q.SPEC `m2` thm)) THEN
 FULL_SIMP_TAC arith_ss [] THEN
@@ -180,7 +180,7 @@ METIS_TAC[]);
 
 
 (*---------------------------------------------------------------------------
-    finate  and bags. 
+    finate  and bags.
  ---------------------------------------------------------------------------*)
 
 val BAG_OF_FMAP = Define `BAG_OF_FMAP f b =
@@ -197,7 +197,7 @@ SIMP_TAC std_ss [BAG_OF_FMAP, FDOM_FEMPTY, NOT_IN_EMPTY, EMPTY_BAG,
 		 GSYM EMPTY_DEF, CARD_EMPTY] THEN
 ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
 REPEAT GEN_TAC THEN SIMP_TAC std_ss [] THEN
-Cases_on `x = f k v` THENL [  
+Cases_on `x = f k v` THENL [
    ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [
      FAPPLY_FUPDATE_THM, FDOM_DOMSUB, IN_DELETE,
      DOMSUB_FAPPLY_THM] THEN

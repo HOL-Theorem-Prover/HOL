@@ -17,7 +17,7 @@ open HolKernel Parse boolLib bossLib;
 open intLib stringLib stringTheory SyntaxTheory SyntacticSugarTheory;
 
 (******************************************************************************
-* Set default parsing to natural numbers rather than integers 
+* Set default parsing to natural numbers rather than integers
 ******************************************************************************)
 val _ = intLib.deprecate_int();
 
@@ -29,13 +29,13 @@ val _ = intLib.deprecate_int();
 * Start a new theory called ExtendedSyntaxTheory
 ******************************************************************************)
 val _ = new_theory "ExtendedSyntax";
-   
+
 (******************************************************************************
 * Extended boolean expressions
 ******************************************************************************)
 val ebexp_def =
  time
- Hol_datatype 
+ Hol_datatype
   `ebexp =
     EB_PROP              of string                (* atomic proposition      *)
   | EB_NOT               of ebexp                 (* negation                *)
@@ -54,12 +54,12 @@ val ebexp_def =
 val _ = type_abbrev("range", ``:num # num option``);
 
 (******************************************************************************
-* Extended Sequential Extended Regular Expressions (SEREs) 
+* Extended Sequential Extended Regular Expressions (SEREs)
 ******************************************************************************)
 val esere_def =
  time
- Hol_datatype 
-  `esere = 
+ Hol_datatype
+  `esere =
     ES_BOOL              of ebexp                 (* boolean expression      *)
   | ES_CAT               of esere # esere         (* r1 ;  r2                *)
   | ES_FUSION            of esere # esere         (* r1 :  r2                *)
@@ -76,13 +76,13 @@ val esere_def =
   `;
 
 (******************************************************************************
-* Extended Formulas 
+* Extended Formulas
 * runtime: 589.300s,    gctime: 151.590s,     systime: 3.800s. (on bass)
 ******************************************************************************)
 val efl_def =
  time
  Hol_datatype
-  `efl = 
+  `efl =
     EF_BOOL              of ebexp                 (* boolean expression      *)
   | EF_NOT               of efl                   (* \neg f                  *)
   | EF_AND               of efl # efl             (* f1 \wedge f2            *)
@@ -113,7 +113,7 @@ val efl_def =
   | EF_WEAK_UNTIL_INC    of efl # efl             (* [f1 until_ f2]          *)
   | EF_STRONG_BEFORE     of efl # efl             (* [f1 before! f2]         *)
   | EF_WEAK_BEFORE       of efl # efl             (* [f1 before f2]          *)
-  | EF_STRONG_BEFORE_INC 
+  | EF_STRONG_BEFORE_INC
                          of efl # efl             (* [f1 before!_ f2]        *)
   | EF_WEAK_BEFORE_INC   of efl # efl             (* [f1 before_ f2]         *)
   | EF_NUM_WEAK_X        of num # efl             (* X[n](f)                 *)
@@ -130,9 +130,9 @@ val efl_def =
                          of ebexp # num # efl     (* next_event!(b)[i](f)    *)
   | EF_NUM_WEAK_NEXT_EVENT
                          of ebexp # num # efl     (* next_event(b)[i](f)     *)
-  | EF_NUM_STRONG_NEXT_EVENT_A 
+  | EF_NUM_STRONG_NEXT_EVENT_A
                          of ebexp # range # efl   (* next_event_a!(b)[i](f)  *)
-  | EF_NUM_WEAK_NEXT_EVENT_A 
+  | EF_NUM_WEAK_NEXT_EVENT_A
                          of ebexp # range # efl   (* next_event_a(b)[i](f)   *)
   | EF_NUM_STRONG_NEXT_EVENT_E
                          of ebexp # range # efl   (* next_event_e!(b)[i](f)  *)
@@ -150,7 +150,7 @@ val efl_def =
   | EF_WEAK_WITHIN_INC   of esere # ebexp # esere (* within_(r1,b)r2         *)
   | EF_STRONG_WHILENOT   of ebexp # esere         (* whilenot!(b)r           *)
   | EF_WEAK_WHILENOT     of ebexp # esere         (* whilenot(b)r            *)
-  | EF_STRONG_WHILENOT_INC 
+  | EF_STRONG_WHILENOT_INC
                          of ebexp # esere         (* whilenot!_(b)r          *)
   | EF_WEAK_WHILENOT_INC of ebexp # esere         (* whilenot_(b)r           *)
   `;
@@ -172,44 +172,44 @@ val B_DESUGAR_def =
 
 
 (******************************************************************************
-* Translate extended SEREs into core syntax 
+* Translate extended SEREs into core syntax
 ******************************************************************************)
 val S_DESUGAR_def =
  Define
-  `(S_DESUGAR(ES_BOOL b) = 
+  `(S_DESUGAR(ES_BOOL b) =
      S_BOOL(B_DESUGAR b))
    /\
-   (S_DESUGAR(ES_CAT(r1,r2)) = 
+   (S_DESUGAR(ES_CAT(r1,r2)) =
      S_CAT(S_DESUGAR r1, S_DESUGAR r2))
    /\
-   (S_DESUGAR(ES_FUSION(r1,r2)) = 
+   (S_DESUGAR(ES_FUSION(r1,r2)) =
      S_FUSION(S_DESUGAR r1, S_DESUGAR r2))
    /\
-   (S_DESUGAR(ES_OR(r1,r2)) = 
+   (S_DESUGAR(ES_OR(r1,r2)) =
      S_OR(S_DESUGAR r1, S_DESUGAR r2))
    /\
-   (S_DESUGAR(ES_AND(r1,r2)) = 
+   (S_DESUGAR(ES_AND(r1,r2)) =
      S_AND(S_DESUGAR r1, S_DESUGAR r2))
    /\
-   (S_DESUGAR(ES_REPEAT r) = 
+   (S_DESUGAR(ES_REPEAT r) =
      S_REPEAT(S_DESUGAR r))
    /\
-   (S_DESUGAR(ES_CLOCK(r,b)) = 
+   (S_DESUGAR(ES_CLOCK(r,b)) =
      S_CLOCK(S_DESUGAR r, B_DESUGAR b))
    /\
-   (S_DESUGAR(ES_FLEX_AND(r1,r2)) = 
+   (S_DESUGAR(ES_FLEX_AND(r1,r2)) =
      S_FLEX_AND(S_DESUGAR r1, S_DESUGAR r2))
-   /\ 
-   (S_DESUGAR(ES_RANGE_REPEAT(r,rng)) = 
+   /\
+   (S_DESUGAR(ES_RANGE_REPEAT(r,rng)) =
      S_RANGE_REPEAT(S_DESUGAR r, rng))
    /\
-   (S_DESUGAR(ES_NON_ZERO_REPEAT r) = 
+   (S_DESUGAR(ES_NON_ZERO_REPEAT r) =
      S_NON_ZERO_REPEAT(S_DESUGAR r))
    /\
-   (S_DESUGAR(ES_RANGE_EQ_REPEAT(b, rng)) = 
+   (S_DESUGAR(ES_RANGE_EQ_REPEAT(b, rng)) =
      S_RANGE_EQ_REPEAT(B_DESUGAR b, rng))
    /\
-   (S_DESUGAR(ES_RANGE_GOTO_REPEAT(b,rng)) = 
+   (S_DESUGAR(ES_RANGE_GOTO_REPEAT(b,rng)) =
      S_RANGE_GOTO_REPEAT(B_DESUGAR b, rng))`;
 
 (******************************************************************************
@@ -222,7 +222,7 @@ val F_U_def = Define `F_U = F_UNTIL`;
 val F_IMP_def = Define `F_IMP = F_IMPLIES`;
 
 (******************************************************************************
-* Translate extended formulas into core syntax 
+* Translate extended formulas into core syntax
 ******************************************************************************)
 val F_DESUGAR_def =
  Define

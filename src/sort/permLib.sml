@@ -12,7 +12,7 @@ struct
 
 (*
 quietdec := true;
-loadPath := 
+loadPath :=
             (concat [Globals.HOLDIR, "/src/sort"])::
             !loadPath;
 
@@ -34,12 +34,12 @@ val LIST_NIL_CONV =
 
 
 val PERM_tm = ``PERM``;
-val dest_PERM = dest_binop PERM_tm (mk_HOL_ERR "permLib" "dest_PERM" "")  
+val dest_PERM = dest_binop PERM_tm (mk_HOL_ERR "permLib" "dest_PERM" "")
 val is_PERM = can dest_PERM;
 
 
 (*
-val t = ``PERM (x1::l1 ++ (l2 ++ (x2::x3::l3) ++ x4::l4)) (x1::l1 ++ ((x2::x3::l3) ++ x4::l4 ++ l2))``  
+val t = ``PERM (x1::l1 ++ (l2 ++ (x2::x3::l3) ++ x4::l4)) (x1::l1 ++ ((x2::x3::l3) ++ x4::l4 ++ l2))``
 val t1 =  ``x1::x2::x3::(l1 ++ (x2::x3::l3 ++ x4::l4 ++ l2 ++ l4))``
 val t2 =  ``x1::x2::x8::(x4::l4 ++ l2++l4)``
 *)
@@ -47,9 +47,9 @@ val t2 =  ``x1::x2::x8::(x4::l4 ++ l2++l4)``
 
 local
    fun strip_perm_list_acc xs ls t =
-      if (listSyntax.is_cons t) then 
-         let val (x,l) = listSyntax.dest_cons t; in 
-             strip_perm_list_acc (x::xs) ls l 
+      if (listSyntax.is_cons t) then
+         let val (x,l) = listSyntax.dest_cons t; in
+             strip_perm_list_acc (x::xs) ls l
          end
       else if (listSyntax.is_append t) then
          let
@@ -59,9 +59,9 @@ local
              strip_perm_list_acc xs' ls' t2
          end
       else
-         if (listSyntax.is_nil t) then (xs,ls) else (xs, t::ls)    
+         if (listSyntax.is_nil t) then (xs,ls) else (xs, t::ls)
 in
-   fun strip_perm_list t = 
+   fun strip_perm_list t =
       let
          val (xs,ls) = strip_perm_list_acc [] [] t
       in
@@ -82,7 +82,7 @@ fun bag_inter cmp [] _ = []
 fun perm_list_inter t1 t2 =
   let
      val (xs1,ls1) = strip_perm_list t1
-     val (xs2,ls2) = strip_perm_list t2   
+     val (xs2,ls2) = strip_perm_list t2
   in
      (bag_inter Term.compare xs1 xs2,
       bag_inter Term.compare ls1 ls2)
@@ -91,7 +91,7 @@ fun perm_list_inter t1 t2 =
 fun perm_sub_list t1 t2 =
   let
      val (xs1,ls1) = strip_perm_list t1
-     val (xs2,ls2) = strip_perm_list t2   
+     val (xs2,ls2) = strip_perm_list t2
 
      val xs = bag_inter Term.compare xs1 xs2;
      val ls = bag_inter Term.compare ls1 ls2;
@@ -142,14 +142,14 @@ else if (listSyntax.is_append (rand t)) then
          let
             val l1' = (rand o rand o rhs o  concl o valOf) l1_thm_opt
          in
-            SOME (MP (ISPECL [l2,l1,e,l1'] PERM_FUN_CONS_APPEND_1) 
+            SOME (MP (ISPECL [l2,l1,e,l1'] PERM_FUN_CONS_APPEND_1)
                      (valOf l1_thm_opt))
          end
       else if (isSome l2_thm_opt) then
          let
             val l2' = (rand o rand o rhs o  concl o valOf) l2_thm_opt
          in
-            SOME (MP (ISPECL [l1,l2,e,l2'] PERM_FUN_CONS_APPEND_2) 
+            SOME (MP (ISPECL [l1,l2,e,l2'] PERM_FUN_CONS_APPEND_2)
                      (valOf l2_thm_opt))
          end
       else NONE
@@ -197,7 +197,7 @@ if (listSyntax.is_nil l) then
       val tm = inst [alpha |-> ty] PERM_tm;
    in
       SOME (AP_TERM tm (GSYM (ISPEC (rand t) (CONJUNCT1 APPEND))))
-   end      
+   end
 else if (listSyntax.is_cons (rand t)) then
    let
       val (x, l') = listSyntax.dest_cons (rand t);
@@ -226,20 +226,20 @@ else if (listSyntax.is_append (rand t)) then
       let
          val l1_thm_opt = PERM_MOVE_APPEND_TO_FRONT l (mk_icomb (PERM_tm, l1))
          val l2_thm_opt = if isSome l1_thm_opt then NONE else
-                       PERM_MOVE_APPEND_TO_FRONT l (mk_icomb (PERM_tm, l2)) 
+                       PERM_MOVE_APPEND_TO_FRONT l (mk_icomb (PERM_tm, l2))
       in
          if (isSome l1_thm_opt) then
             let
                val l1' = (rand o rand o rhs o  concl o valOf) l1_thm_opt
             in
-               SOME (MP (ISPECL [l1,l,l1',l2] PERM_FUN_APPEND_APPEND_1) 
+               SOME (MP (ISPECL [l1,l,l1',l2] PERM_FUN_APPEND_APPEND_1)
                         (valOf l1_thm_opt))
             end
          else if (isSome l2_thm_opt) then
             let
                val l2' = (rand o rand o rhs o  concl o valOf) l2_thm_opt
             in
-               SOME (MP (ISPECL [l2,l,l2',l1] PERM_FUN_APPEND_APPEND_2) 
+               SOME (MP (ISPECL [l2,l,l2',l1] PERM_FUN_APPEND_APPEND_2)
                         (valOf l2_thm_opt))
             end
          else NONE
@@ -311,7 +311,7 @@ in
 end
 
 
-fun PERM_ELIM_DUPLICATES_CONV t = 
+fun PERM_ELIM_DUPLICATES_CONV t =
 let
    val (l1,l2) = dest_PERM t handle HOL_ERR _ => raise UNCHANGED;
    val common_terms = perm_list_inter l1 l2;
@@ -341,7 +341,7 @@ val ls = ``l1:'a list``
 val l = ``l2 ++ x::l1``
 *)
 
-fun PERM_SPLIT ls l = 
+fun PERM_SPLIT ls l =
 let
    val (b,_,common_terms) = perm_sub_list ls l;
    val _ = if b then () else raise UNCHANGED;
@@ -366,7 +366,7 @@ fun PERM_NO_ELIM_NORMALISE_CONV t =
 let
    val (l1,l2) = dest_PERM t handle HOL_ERR _ => raise UNCHANGED;
 
-   fun ELIM_NIL_RULE thm = CONV_RULE (RAND_CONV (REWR_CONV APPEND_NIL)) thm 
+   fun ELIM_NIL_RULE thm = CONV_RULE (RAND_CONV (REWR_CONV APPEND_NIL)) thm
                              handle HOL_ERR _ => thm;
 
    val thm_l1 = ELIM_NIL_RULE (PERM_SPLIT_el_lists l1 (strip_perm_list l1));
@@ -415,12 +415,12 @@ PERM_REWR_CONV thm t
 *)
 
 
-fun PERM_REWR_CONV thm t = 
+fun PERM_REWR_CONV thm t =
 let
    val (l,r) = dest_PERM (concl thm)
 
    val (l1,l2) = dest_PERM t handle HOL_ERR _ => raise UNCHANGED;
-   val (turn,split_thm) = 
+   val (turn,split_thm) =
      (false, PERM_SPLIT l l1) handle UNCHANGED =>
      (true,  PERM_SPLIT l l2);
 
@@ -454,8 +454,8 @@ fun PERM_SIMP_CONV thmL t =
 
 exception perm_reducer_context of thm list
 
-fun perm_reducer_get_context e = 
-    (raise e) 
+fun perm_reducer_get_context e =
+    (raise e)
     handle perm_reducer_context thmL => thmL;
 
 val thm_ref = ref []
@@ -463,8 +463,8 @@ val PERM_REDUCER =
   Traverse.REDUCER {name = SOME "PERM_REDUCER",
            initial = perm_reducer_context [],
            addcontext = fn (ctx, thmL) => (thm_ref := thmL :: !thm_ref;
-			       perm_reducer_context (append (filter (is_PERM o concl) 
-                                                    (flatten (map BODY_CONJUNCTS thmL))) 
+			       perm_reducer_context (append (filter (is_PERM o concl)
+                                                    (flatten (map BODY_CONJUNCTS thmL)))
                                (perm_reducer_get_context ctx))),
            apply = fn args => QCHANGED_CONV (PERM_SIMP_CONV (perm_reducer_get_context (#context args)))
               };
@@ -476,7 +476,7 @@ val PERM_ss = simpLib.SSFRAG
      }
 
 
-(* 
+(*
 
 val conv = SIMP_CONV (std_ss++PERM_ss) []
 

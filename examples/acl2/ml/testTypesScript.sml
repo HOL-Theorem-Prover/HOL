@@ -2,7 +2,7 @@ open Theory Datatype Drule Thm Term Lib listTheory ratTheory;
 
 val types = ref ([] : hol_type list);
 
-fun DataType t def = 
+fun DataType t def =
 let	val _ = (Parse.Type t ; ()) handle _ => Hol_datatype def
 in
 	(types := Parse.Type t :: (!types))
@@ -31,7 +31,7 @@ val _ = DataType `:'a BTree` `BTree = BT of 'a + BTree # BTree`;
 (*****************************************************************************)
 
 val _ = DataType `:'a RoseTree` `RoseTree = RTBranch of ('a # RoseTree) List`;
-val _ = DataType `:'a BRoseTree` 
+val _ = DataType `:'a BRoseTree`
       		 `BRoseTree = BRTBranch of ('a # BRoseTree) BList`;
 val _ = DataType `:RoseBush` `RoseBush = RBush of RoseBush RoseTree`;
 val _ = DataType `:BRoseBush` `BRoseBush = BBush of BRoseBush BRoseTree`;
@@ -41,18 +41,18 @@ val _ = DataType `:Thicket` `Thicket = TStalk of Thicket Tre`;
 (* Connected single constructors                                             *)
 (*****************************************************************************)
 
-val _ = DataType `:'a CS4` 
-		`	CS1 = CS1C of 'a CS2 => 'a CS4 ; 
-			CS2 = CS2C of 'a CS3 => 'a CS4 ; 
+val _ = DataType `:'a CS4`
+		`	CS1 = CS1C of 'a CS2 => 'a CS4 ;
+			CS2 = CS2C of 'a CS3 => 'a CS4 ;
 			CS3 = CS3C of 'a CS4 ;
 			CS4 = CS4C of 'a`;
 val _ = AddType `:'a CS1`;
 val _ = AddType `:'a CS2`;
 val _ = AddType `:'a CS3`;
 
-val _ = DataType `:'a DListL` 
+val _ = DataType `:'a DListL`
       	`DListL = DLR of DListR ; DListR = DLRNil | DLRCons of 'a => DListL`;
-(* val _ = DataType `:'a DLTree` 
+(* val _ = DataType `:'a DLTree`
        	   `DLTree = DLBranch of ('a # DLTree DListR)` --> Fails!! *)
 val _ = DataType `:'a CSList` `CSList = CSNil | CSCons of 'a => CSList CS1`;
 
@@ -64,7 +64,7 @@ val _ = DataType `:NumProdList`
 		`NumProdList = NPLNull | NPLCons of num # num => NumProdList`;
 
 val _ = DataType `:UncurriedNPL`
-		 `UncurriedNPL = UNPLNull | 
+		 `UncurriedNPL = UNPLNull |
 		 	       	 UNPLCons of num # num # UncurriedNPL`;
 
 (*****************************************************************************)
@@ -78,7 +78,7 @@ val _ = DataType `:('a,'b,'c) test2c`  `test2c = Curry2 of 'a => 'b # 'c`;
 val _ = DataType `:('a,'b) test3`  `test3 = Sum1 of 'a | Sum2 of 'b`;
 val _ = DataType `:test4`  `test4 = Recursive of test4 | End`;
 val _ = DataType `:test5`  `test5 = RecursiveList of test5 list | EndList`;
-val _ = DataType `:test6` 
+val _ = DataType `:test6`
       		 `test6 = DoubleList of test6 list => test6 list | EndD`;
 val _ = DataType `:'a test7`  `test7 = Node of test7 # test7 | Leaf of 'a`;
 val _ = DataType `:test8`  `test8 = Double of test8 test7 # test8 list | End8`;
@@ -86,25 +86,25 @@ val _ = DataType `:test9l`
       		 `test9l = R9 of test9r | EndL ; test9r = L9 of test9l | EndR`;
 val _ = DataType `:testA`
       		 `testA = <| Reg1 : num; Reg2 : num; Waiting : bool |>`;
-val _ = DataType `:testBa`  
-      		 `testBa = Aa of num | Ba of testBb | Ca of testBc ; 
+val _ = DataType `:testBa`
+      		 `testBa = Aa of num | Ba of testBb | Ca of testBc ;
 		  testBb = Bb of int | Ab of testBa | Cb of testBc ;
 		  testBc = Cc of rat | Bc of testBb | Ac of testBa`;
 val _ = DataType `:('a,'b) testCR`
-      		 `testCR = CR of ('a # testCL) list ; 
+      		 `testCR = CR of ('a # testCL) list ;
 		  testCL = CL of ('b # testCR) list`;
-val _ = DataType `:testDX` 
-      		 `testDX = dL of testDZ => testDY | DeL ; 
+val _ = DataType `:testDX`
+      		 `testDX = dL of testDZ => testDY | DeL ;
 		  testDY = dR of testDX ; testDZ = dRec of testDX`;
-val _ = DataType `:testEX`  
-      		 `testEX = eL of testEZ => testEY | EeL ; 
-		  testEY = eR of testEZ => testEX | EeR ; 
+val _ = DataType `:testEX`
+      		 `testEX = eL of testEZ => testEY | EeL ;
+		  testEY = eR of testEZ => testEX | EeR ;
 		  testEZ = twoRec of testEX => testEY`;
-val _ = DataType `:('a,'b) testFX`  
-      		 `testFX = fL of testFZ => testFY | FeL ; 
-		  testFY = fR of testFZ => testFX | FeR ; 
+val _ = DataType `:('a,'b) testFX`
+      		 `testFX = fL of testFZ => testFY | FeL ;
+		  testFY = fR of testFZ => testFX | FeR ;
 		  testFZ = fRec of testFX => 'a => 'b => testFY`;
-val _ = DataType `:('a,'b) state_out` 
+val _ = DataType `:('a,'b) state_out`
       		 `state_out = <| state : 'a; out : 'b |>`;
 val _ = DataType `:register`
 `register =
@@ -121,7 +121,7 @@ val _ = DataType `:exceptions`
   `exceptions = reset | undefined | software | pabort |
                 dabort | address |interrupt | fast`;
 val _ = DataType `:('a,'b,'c) sumpair` `sumpair = Lsp of 'a | Rsp of 'b => 'c`;
-val _ = DataType `:'a my_tree` 
+val _ = DataType `:'a my_tree`
       		 `my_tree = Branch of ('a,my_tree,my_tree) sumpair`;
 
 (*****************************************************************************)
@@ -129,7 +129,7 @@ val _ = DataType `:'a my_tree`
 (*****************************************************************************)
 
 val _ = DataType `colour = R | B`;
-val _ = DataType `tree = LEAF | NODE of colour => num => tree => tree`; 
+val _ = DataType `tree = LEAF | NODE of colour => num => tree => tree`;
 
 (*****************************************************************************)
 (* Some examples from src/datatype/jrh.test                                  *)
@@ -137,19 +137,19 @@ val _ = DataType `tree = LEAF | NODE of colour => num => tree => tree`;
 
 val _ = DataType  `:One` `One = Single_contructor`;
 
-val _ = DataType 
-        `:('A,'B) Term` 
-	`Term = Var of 'A => 'B 
+val _ = DataType
+        `:('A,'B) Term`
+	`Term = Var of 'A => 'B
                | App of bool => Termlist;
-      Termlist = Emp 
+      Termlist = Emp
                | Consp of Term => Termlist`;
 
-val _ = DataType 
+val _ = DataType
 	`:('A,'B) Btree`
-    	`Btree = Lf of 'A 
+    	`Btree = Lf of 'A
            | Nd of 'B => Btree => Btree`;;
 
-val _ = DataType 
+val _ = DataType
     `:Express`
     `Command = Assign of num => Express
              | If of Express => Command
@@ -164,28 +164,28 @@ val _ = DataType
 
 val _ = AddType `:Command`;
 
-val _ = DataType 
+val _ = DataType
     `:pat`
-    `atexp = Varb of num 
+    `atexp = Varb of num
            | Let of dec => exp;
 
-       exp = Exp1 of atexp 
-           | Exp2 of exp => atexp 
+       exp = Exp1 of atexp
+           | Exp2 of exp => atexp
            | Exp3 of match;
 
-     match = Match1 of rule 
+     match = Match1 of rule
            | Matches of rule => match;
 
      rule  = Rule of pat => exp;
-       dec = Val of valbind 
-           | Local of dec => dec 
+       dec = Val of valbind
+           | Local of dec => dec
            | Decs of dec => dec;
 
-   valbind = Single of pat => exp 
-           | Multi of pat => exp => valbind 
+   valbind = Single of pat => exp
+           | Multi of pat => exp => valbind
            | Rec of valbind;
 
-       pat = Wild 
+       pat = Wild
            | Varpat of num`;
 
 val _ = AddType `:atexp`;
@@ -198,34 +198,34 @@ val _ = DataType
       `:Steve0`
       `Steve0 = X1  | X2  | X3  | X4  | X5  | X6  | X7  | X8  | X9  | X10 |
                 X11 | X12 | X13 | X14 | X15 | X16 | X17 | X18 | X19 | X20 |
-                X21 | X22 | X23 | X24 | X25 | X26 | X27 | X28 | X29 | X30 | 
+                X21 | X22 | X23 | X24 | X25 | X26 | X27 | X28 | X29 | X30 |
                 X31 | X32 | X33 | X34`;;
 
 val _ = DataType
     `:('A,'B,'C) TY1`
-    `TY1 = NoF__ 
+    `TY1 = NoF__
          | Fk__ of 'A => TY2;
 
-     TY2 = Ta__   of bool 
-         | Td__   of bool 
-         | Tf__   of TY1 
-         | Tk__   of bool 
+     TY2 = Ta__   of bool
+         | Td__   of bool
+         | Tf__   of TY1
+         | Tk__   of bool
          | Tp__   of bool
-         | App__  of 'A => TY1 => TY2 => TY3 
+         | App__  of 'A => TY1 => TY2 => TY3
          | Pair__ of TY2 => TY2;
 
-     TY3 = NoS__ 
-         | Fresh__        of TY2 
+     TY3 = NoS__
+         | Fresh__        of TY2
          | Trustworthy__  of 'A
-         | PrivateKey__   of 'A => 'B => 'C 
+         | PrivateKey__   of 'A => 'B => 'C
          | PublicKey__    of 'A => 'B => 'C
-         | Conveyed__     of 'A => TY2 
-         | Possesses__    of 'A => TY2 
-         | Received__     of 'A => TY2 
-         | Recognizes__   of 'A => TY2 
-         | Sends__        of 'A => TY2 => 'B 
+         | Conveyed__     of 'A => TY2
+         | Possesses__    of 'A => TY2
+         | Received__     of 'A => TY2
+         | Recognizes__   of 'A => TY2
+         | Sends__        of 'A => TY2 => 'B
          | SharedSecret__ of 'A => TY2 => 'B
-         | Believes__     of 'A => TY3 
+         | Believes__     of 'A => TY3
          | And__          of TY3 => TY3
          | NeverMalFromSelf__ of 'A => 'B => TY2`;;
 
@@ -235,7 +235,7 @@ val _ = DataType
 
 val _ = DataType
   `:String`
-  `String = EMPTY_STRING 
+  `String = EMPTY_STRING
           | CONS_STRING of num => String`;
 
 val _ = DataType

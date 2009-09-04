@@ -43,7 +43,7 @@ val MK_I = store_thm
    !! STRIP_TAC
    ++ CONV_TAC (FUN_EQ_CONV)
    ++ RW_TAC std_ss [S_DEF, K_DEF, I_THM]);
-   
+
 val MK_K = store_thm
   ("MK_K",
    ``!x. (\v. x) = K x``,

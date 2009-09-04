@@ -18,7 +18,7 @@ fun deref_tmenv env tm =
                else tm;
 
 fun restrict_tmenv P E =
- mapfilter (fn {redex,residue} => 
+ mapfilter (fn {redex,residue} =>
               if P redex then redex |-> deref_tmenv E redex else fail()) E;
 
 fun occ env v =
@@ -38,16 +38,16 @@ fun bind env v t = if occ env v t then failwith "occurs" else (v |-> t)::env;
 fun simp_unify_terms_in_env consts tm1 tm2 env =
  let val tm1' = deref_tmenv env tm1
      val tm2' = deref_tmenv env tm2
- in 
-   if is_var tm1' andalso not (op_mem eq tm1' consts) 
-   then if is_var tm2' andalso not (op_mem eq tm2' consts) 
+ in
+   if is_var tm1' andalso not (op_mem eq tm1' consts)
+   then if is_var tm2' andalso not (op_mem eq tm2' consts)
         then if eq tm1' tm2' then env else bind env tm1' tm2'
         else bind env tm1' tm2'
-   else 
-   if is_var tm2' andalso not (op_mem eq tm2' consts) 
+   else
+   if is_var tm2' andalso not (op_mem eq tm2' consts)
    then bind env tm2' tm1'
-   else 
-   case (dest_term tm1',dest_term tm2') 
+   else
+   case (dest_term tm1',dest_term tm2')
     of (VAR x, VAR y) => if eq tm1' tm2' then env else  failwith "unify_terms"
      | (COMB p1,COMB p2) =>
          simp_unify_terms_in_env consts (fst p1) (fst p2)
@@ -55,15 +55,15 @@ fun simp_unify_terms_in_env consts tm1 tm2 env =
      | (LAMB p1,LAMB p2) =>
         let fun filt v = not (eq v (fst p1)) andalso not (eq v (fst p2))
         in restrict_tmenv filt
-             (simp_unify_terms_in_env 
-                (op_subtract eq consts [fst p1, fst p2]) (snd p1) (snd p2) 
+             (simp_unify_terms_in_env
+                (op_subtract eq consts [fst p1, fst p2]) (snd p1) (snd p2)
                 (restrict_tmenv filt env))
 	    end
      | otherwise => if eq tm1' tm2' then env else failwith "simp_unify_terms"
     end;
 
 
-fun simp_unify_terms consts tm1 tm2 = 
+fun simp_unify_terms consts tm1 tm2 =
    simp_unify_terms_in_env consts tm1 tm2 [];
 
 end (* struct *)

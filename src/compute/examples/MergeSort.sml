@@ -42,7 +42,7 @@ val merge_def = Define_rw
 
 
 val _ = Hol_datatype ` arbin =
-            Lf 
+            Lf
           | Nd of num => arbin => arbin `
 ;
 

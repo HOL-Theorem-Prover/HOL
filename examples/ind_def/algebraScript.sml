@@ -19,7 +19,7 @@ struct
 (* other libraries.                                                      *)
 (* --------------------------------------------------------------------- *)
 
-open HolKernel Parse boolLib bossLib 
+open HolKernel Parse boolLib bossLib
      listTheory IndDefRules IndDefLib stringLib;
 
 val _ = new_theory "algebra";
@@ -49,8 +49,8 @@ val _ = new_theory "algebra";
 
 val _ = type_abbrev ("label",``:string``);
 
-val _ = 
- Hol_datatype 
+val _ =
+ Hol_datatype
     `agent = Nil
            | Pre of  label => agent
            | Sum of  agent => agent
@@ -167,7 +167,7 @@ val Lemma1 = Q.prove
  [METIS_TAC trulel,
   METIS_TAC trulel,
   METIS_TAC trulel,
-  RULE_ASSUM_TAC (REWRITE_RULE [Once tcases]) THEN 
+  RULE_ASSUM_TAC (REWRITE_RULE [Once tcases]) THEN
    FULL_SIMP_TAC list_ss [] THEN RW_TAC list_ss [] THEN
    METIS_TAC [trules]]);
 
@@ -214,7 +214,7 @@ val Corollary1 = Q.store_thm
 val Lemma2 = Q.prove
 (`!A P Q P' Q'.
     TRANSIT P A Q /\ TRANSIT P' A Q' ==> TRANSIT (Prod P P') A (Prod Q Q')`,
- Induct THEN PURE_ONCE_REWRITE_TAC [Lcases] THEN 
+ Induct THEN PURE_ONCE_REWRITE_TAC [Lcases] THEN
   RW_TAC std_ss [] THEN METIS_TAC lrulel);
 
 (* --------------------------------------------------------------------- *)
@@ -230,17 +230,17 @@ val Lemma2 = Q.prove
 (* witnesses required for the two TRANSIT rules.			 *)
 (* --------------------------------------------------------------------- *)
 
-val Theorem2 = Q.store_thm 
+val Theorem2 = Q.store_thm
 ("Theorem2",
  `!P A. MTRACE P A ==> ?Q. TRANSIT P A Q /\ TERMINAL Q`,
  HO_MATCH_MP_TAC tind THEN RW_TAC std_ss [] THENL
  [METIS_TAC (TERMINAL_def::Lrulel@trulel@lrulel),
   METIS_TAC (Lrulel@trulel@lrulel),
-  RULE_ASSUM_TAC (REWRITE_RULE [Once Lcases]) 
-    THEN RW_TAC list_ss [] 
+  RULE_ASSUM_TAC (REWRITE_RULE [Once Lcases])
+    THEN RW_TAC list_ss []
     THEN METIS_TAC (TERMINAL_def::Lrulel@trulel@lrulel),
-  RULE_ASSUM_TAC (REWRITE_RULE [Once Lcases]) 
-    THEN RW_TAC list_ss [] 
+  RULE_ASSUM_TAC (REWRITE_RULE [Once Lcases])
+    THEN RW_TAC list_ss []
     THEN METIS_TAC (TERMINAL_def::Lrulel@trulel@lrulel),
   METIS_TAC (Lemma2::TERMINAL_def::Lrulel@trulel@lrulel)]);
 
@@ -281,8 +281,8 @@ val MEQUIV_def =
 
 val SIM_def =
  Define
-   `SIM s = !P Q. s P Q ==> 
-                   !a P'. TRANS P a P' ==> 
+   `SIM s = !P Q. s P Q ==>
+                   !a P'. TRANS P a P' ==>
                            ?Q'. TRANS Q a Q' /\ s P' Q'`;
 
 val BEQUIV_def =

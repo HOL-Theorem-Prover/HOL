@@ -23,10 +23,10 @@ val constfree_thm = store_thm(
     (constfree (M @@ N) = constfree M /\ constfree N) /\
     (constfree (LAM v M) = constfree M) /\
     (constfree (CON k) = F)``,
-  REPEAT CONJ_TAC THEN 
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [constfree_cases])) THEN 
+  REPEAT CONJ_TAC THEN
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [constfree_cases])) THEN
   SRW_TAC [][] THEN EQ_TAC THENL [
-    SRW_TAC [][LAM_INJ_swap] THEN 
+    SRW_TAC [][LAM_INJ_swap] THEN
     METIS_TAC [lswap_def, constfree_swap_I],
     METIS_TAC []
   ]);

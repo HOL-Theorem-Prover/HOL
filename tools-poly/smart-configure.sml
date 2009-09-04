@@ -118,7 +118,7 @@ val check_poly = check_dir "poly" [OS.FileSys.A_EXEC]
 val check_libpoly = check_dir "libpolymain.a" [OS.FileSys.A_READ]
 
 fun findpartial f [] = NONE
-  | findpartial f (h::t) = 
+  | findpartial f (h::t) =
     case f h of NONE => findpartial f t | x => x
 
 val poly = let
@@ -136,35 +136,35 @@ val poly = let
             val sep = case OS of "winNT" => #";" | _ => #":"
             val search_these = String.fields (fn c => c = sep) elist
           in
-            findpartial check_poly search_these 
+            findpartial check_poly search_these
           end
 in
   case cand of
     NONE => ""
   | SOME c => (case check_poly c of
                  SOME p => OS.Path.concat(p,"poly")
-               | NONE => 
+               | NONE =>
                  (print "\nCouldn't figure out location of poly executable\
                         \ - hope you have poly-includes.ML to specify it";
                   ""))
 end;
 
-val polymllibdir = 
-    if poly <> "" then let 
+val polymllibdir =
+    if poly <> "" then let
         val _ = determining "polymllibdir"
         val p as {arcs,isAbs,vol} = OS.Path.fromString poly
         val (dirname, _) = frontlast arcs
         val (parent, probably_bin) = frontlast dirname
-        val _ = if probably_bin <> "bin" then 
+        val _ = if probably_bin <> "bin" then
                   print "\nSurprised that poly is not in a \"bin\" directory\n"
                 else ()
         val candidate = OS.Path.toString { arcs = parent @ ["lib"], vol = vol,
                                            isAbs = isAbs }
       in
-        case check_libpoly candidate of 
+        case check_libpoly candidate of
           SOME c => c
-        | NONE => 
-          (print "\nCouldn't find libpolymain.a in sister lib directory"; 
+        | NONE =>
+          (print "\nCouldn't find libpolymain.a in sister lib directory";
            "")
       end
     else "";

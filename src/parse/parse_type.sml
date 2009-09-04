@@ -212,8 +212,8 @@ end
   fun n_appls_l ([], t) = raise Fail "parse_type.n_appls_l: can't happen"
     | n_appls_l (op1::ops, xs) = n_appls (ops, apply_tyop op1 xs)
 
-  fun n_array_sfxs locn (sfxs, ty) = let 
-    fun build (sfx, base) = 
+  fun n_array_sfxs locn (sfxs, ty) = let
+    fun build (sfx, base) =
         qtyop{Thy = "fcp", Tyop = "cart",Locn=locn,Args = [base, sfx]}
   in
     List.foldl build ty sfxs
@@ -251,7 +251,7 @@ end
     recurse ty1
   end
 
-  fun parse_atom prse fb = let 
+  fun parse_atom prse fb = let
     val (adv, (t,locn)) = typetok_of fb
     val ts = type_tokens.token_string t handle _ => "<unknown>"
     val _ = if is_debug() then print ("=> parse_atom of " ^ ts ^ "\n") else ()
@@ -260,7 +260,7 @@ end
         in (adv(); ty)                  (* if failure, don't adv()   *)
         end
   in
-    case t of 
+    case t of
       LParen => let val (tys,locn) = parse_tuple prse fb
                 in if is_debug() then print ("<= parse_tuple returned "
                          ^ Int.toString (length tys) ^ " types\n") else ();
@@ -378,8 +378,8 @@ end
     | _ => raise InternalFailure locn
   end
 
-  fun parse_asfx prse fb = let 
-    val (llocn, _) = itemP is_LBracket fb 
+  fun parse_asfx prse fb = let
+    val (llocn, _) = itemP is_LBracket fb
     val ty = one llocn (prse fb)
     val (rlocn, _) = itemP is_RBracket fb
   in
@@ -439,7 +439,7 @@ end
                       end
           | NONE => next_level strm
       end
-    | ARRAY_SFX => let 
+    | ARRAY_SFX => let
         val llocn = #2 (current strm)
         val ty1 = next_level strm
       in
@@ -501,7 +501,16 @@ end
         val _ = if is_debug() then print ">> TUPLE_APPL\n" else ()
       in
         case totalify (parse_tuple (parse_term G)) strm of
-          NONE => next_level strm
+          NONE => let
+            val ty1 = let
+              val op1 = parse_op slist strm
+            in
+              apply_tyop op1 []
+            end handle InternalFailure l => next_level strm
+            val ops = many (parse_op slist) strm
+          in
+            n_appls(ops, ty1)
+          end
         | SOME (tyl,locn) => let
           in
             case totalify (parse_abbrev tyl) strm of

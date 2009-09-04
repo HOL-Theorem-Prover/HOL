@@ -10,26 +10,26 @@ val _ = new_theory "ppc_decoder";
 
 (* ---------------------------------------------------------------------------------- *>
 
-  A decoder for PowerPC instructions is defined and, at the end, pre-evaluated for 
+  A decoder for PowerPC instructions is defined and, at the end, pre-evaluated for
   fast execution with EVAL.
 
 <* ---------------------------------------------------------------------------------- *)
 
 val ppc_match_step_def = Define `
-  ppc_match_step name = 
+  ppc_match_step name =
     if name = "0" then DF else
     if name = "1" then DT else
-    if MEM name ["A";"B";"C";"D";"S";"BO";"BI";"crbA";"crbB";"crbD";"SH";"MB";"ME"] then 
-      assign_drop name 5 
-    else if MEM name ["BD"] then 
+    if MEM name ["A";"B";"C";"D";"S";"BO";"BI";"crbA";"crbB";"crbD";"SH";"MB";"ME"] then
+      assign_drop name 5
+    else if MEM name ["BD"] then
       assign_drop name 14
-    else if MEM name ["SIMM";"UIMM";"d"] then 
+    else if MEM name ["SIMM";"UIMM";"d"] then
       assign_drop name 16
-    else if MEM name ["LI"] then 
+    else if MEM name ["LI"] then
       assign_drop name 24
-    else if MEM name ["AA";"Rc";"OE";"y";"z"] then 
+    else if MEM name ["AA";"Rc";"OE";"y";"z"] then
       assign_drop name 1
-    else 
+    else
       option_fail`;
 
 (* The following strings are copied from the PowerPC manual. *)
@@ -157,15 +157,15 @@ val ppc_syntax = ``
      (\v. Pxoris (b2w v "A") (b2w v "S") (b2w v "UIMM")))]    ``;
 
 val ppc_decode_def = Define `
-  ppc_decode = match_list ppc_match_step (REVERSE o tokenise) (\k x. SOME (k (FST x))) ^ppc_syntax`;  
+  ppc_decode = match_list ppc_match_step (REVERSE o tokenise) (\k x. SOME (k (FST x))) ^ppc_syntax`;
 
 (* -- partially pre-evaluate ppc_decode -- *)
 
-fun eval_term_ss tm_name tm = conv_ss 
+fun eval_term_ss tm_name tm = conv_ss
   { name = tm_name, trace = 3, key = SOME ([],tm), conv = K (K EVAL) };
 val token_ss = eval_term_ss "tokenise" ``tokenise x``;
-val if_ss = conv_ss { name = "if", trace = 3, 
-  key = SOME ([],``if x then (y:'a) else z``), 
+val if_ss = conv_ss { name = "if", trace = 3,
+  key = SOME ([],``if x then (y:'a) else z``),
   conv = K (K ((RATOR_CONV o RATOR_CONV o RAND_CONV) EVAL)) };
 
 val ppc_decode_thm = let
@@ -182,12 +182,12 @@ val ppc_decode_thm = let
 fun permanently_add_to_compset name thm = let
   val _ = save_thm(name,thm)
   val _ = computeLib.add_funs [thm]
-  val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME (fn ppstrm => 
+  val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME (fn ppstrm =>
     let val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) in
             S ("val _ = computeLib.add_funs ["^name^"];")
     end)}
   in print ("Permanently added to compset: "^name^"\n") end;
-  
+
 val _ = permanently_add_to_compset "ppc_decode_thm" ppc_decode_thm;
 
 

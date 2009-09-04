@@ -35,7 +35,7 @@ val dict1  =  ty_antiq( ==`:(string # method1) list`== );
 val entry1 =  ty_antiq( ==`:string # method1`== );
 
 
- 
+
 (* --------------------------------------------------------------------- *)
 (* Define semantics for objects, methods, and method dictionaries.       *)
 (* --------------------------------------------------------------------- *)
@@ -369,7 +369,7 @@ val (ALPHA1_rules_sat,ALPHA1_ind_thm) =
 val ALPHA1_inv_thms = prove_inversion_theorems
     ALPHA1_rules_sat ALPHA1_ind_thm;
 
-val ALPHA1_strong_ind = prove_strong_induction 
+val ALPHA1_strong_ind = prove_strong_induction
     ALPHA1_rules_sat ALPHA1_ind_thm;
 
 val _ = save_thm ("ALPHA1_rules_sat", ALPHA1_rules_sat);
@@ -498,7 +498,7 @@ val ALPHA1_TRANS1 = TAC_PROOF(([],
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
     THENL (* 9 subgoals *)
-      [ UNDISCH_THEN(--`(y:var) = x'`--) REWRITE_ALL_THM 
+      [ UNDISCH_THEN(--`(y:var) = x'`--) REWRITE_ALL_THM
         THEN UNDISCH_THEN (--`o3 = OVAR1 y'`--) REWRITE_ALL_THM
         THEN REWRITE_TAC[object1_one_one]
         THEN EXISTS_TAC (--`x:var`--)
@@ -945,19 +945,19 @@ fun FIND_INSTANTIATION th (asm,gl) =
 val ALPHA1_FV = store_thm
    ("ALPHA1_FV",
     (--`(!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys ==>
-         (!x. x IN FV_obj1 o1 ==> 
+         (!x. x IN FV_obj1 o1 ==>
               (?y. y IN FV_obj1 o2 /\ alpha_match xs ys x y))) /\
 
         (!d1 d2 xs ys. ALPHA1_dict d1 d2 xs ys ==>
-         (!x. x IN FV_dict1 d1 ==> 
+         (!x. x IN FV_dict1 d1 ==>
               (?y. y IN FV_dict1 d2 /\ alpha_match xs ys x y))) /\
 
         (!e1 e2 xs ys. ALPHA1_entry e1 e2 xs ys ==>
-         (!x. x IN FV_entry1 e1 ==> 
+         (!x. x IN FV_entry1 e1 ==>
               (?y. y IN FV_entry1 e2 /\ alpha_match xs ys x y))) /\
 
         (!m1 m2 xs ys. ALPHA1_method m1 m2 xs ys ==>
-         (!x. x IN FV_method1 m1 ==> 
+         (!x. x IN FV_method1 m1 ==>
               (?y. y IN FV_method1 m2 /\ alpha_match xs ys x y)))`--),
 
     rule_induct ALPHA1_strong_ind
@@ -978,7 +978,7 @@ val ALPHA1_FV = store_thm
 
 
 val FORALL_OR_IMP = TAC_PROOF(([],
-    --`!s t (f:'a->'b) g. 
+    --`!s t (f:'a->'b) g.
         (!x. x IN s \/ x IN t ==> (f x = g x)) ==>
         ((!x. x IN s ==> (f x = g x)) /\
          (!x. x IN t ==> (f x = g x)))`--),
@@ -988,28 +988,28 @@ val FORALL_OR_IMP = TAC_PROOF(([],
 
 val ALPHA1_FREE_CONTEXT = store_thm
    ("ALPHA1_FREE_CONTEXT",
-    (--`(!o1 o2 xs ys xs' ys'. 
+    (--`(!o1 o2 xs ys xs' ys'.
           ((LENGTH xs = LENGTH ys) = (LENGTH xs' = LENGTH ys')) /\
           (!x. (x IN FV_obj1 o1) ==>
                (SUB1 (xs // ys) x = SUB1 (xs' // ys') x)) /\
           (!y. (y IN FV_obj1 o2) ==>
                (SUB1 (ys // xs) y = SUB1 (ys' // xs') y))  ==>
           (ALPHA1_obj o1 o2 xs ys = ALPHA1_obj o1 o2 xs' ys')) /\
-        (!d1 d2 xs ys xs' ys'. 
+        (!d1 d2 xs ys xs' ys'.
           ((LENGTH xs = LENGTH ys) = (LENGTH xs' = LENGTH ys')) /\
           (!x. (x IN FV_dict1 d1) ==>
                (SUB1 (xs // ys) x = SUB1 (xs' // ys') x)) /\
           (!y. (y IN FV_dict1 d2) ==>
                (SUB1 (ys // xs) y = SUB1 (ys' // xs') y))  ==>
           (ALPHA1_dict d1 d2 xs ys = ALPHA1_dict d1 d2 xs' ys')) /\
-        (!e1 e2 xs ys xs' ys'. 
+        (!e1 e2 xs ys xs' ys'.
           ((LENGTH xs = LENGTH ys) = (LENGTH xs' = LENGTH ys')) /\
           (!x. (x IN FV_entry1 e1) ==>
                (SUB1 (xs // ys) x = SUB1 (xs' // ys') x)) /\
           (!y. (y IN FV_entry1 e2) ==>
                (SUB1 (ys // xs) y = SUB1 (ys' // xs') y))  ==>
           (ALPHA1_entry e1 e2 xs ys = ALPHA1_entry e1 e2 xs' ys')) /\
-        (!m1 m2 xs ys xs' ys'. 
+        (!m1 m2 xs ys xs' ys'.
           ((LENGTH xs = LENGTH ys) = (LENGTH xs' = LENGTH ys')) /\
           (!x. (x IN FV_method1 m1) ==>
                (SUB1 (xs // ys) x = SUB1 (xs' // ys') x)) /\
@@ -1130,19 +1130,19 @@ val ALPHA1_FREE_CONTEXT = store_thm
 
 val ALPHA1_EXTRANEOUS_CONTEXT = store_thm
    ("ALPHA1_EXTRANEOUS_CONTEXT",
-    (--`(!o1 o2 xs ys x y. 
+    (--`(!o1 o2 xs ys x y.
           ~(x IN FV_obj1 o1) /\ ~(y IN FV_obj1 o2) ==>
           (ALPHA1_obj o1 o2 (CONS x xs) (CONS y ys) =
            ALPHA1_obj o1 o2 xs ys)) /\
-        (!d1 d2 xs ys x y. 
+        (!d1 d2 xs ys x y.
           ~(x IN FV_dict1 d1) /\ ~(y IN FV_dict1 d2) ==>
           (ALPHA1_dict d1 d2 (CONS x xs) (CONS y ys) =
            ALPHA1_dict d1 d2 xs ys)) /\
-        (!e1 e2 xs ys x y. 
+        (!e1 e2 xs ys x y.
           ~(x IN FV_entry1 e1) /\ ~(y IN FV_entry1 e2) ==>
           (ALPHA1_entry e1 e2 (CONS x xs) (CONS y ys) =
            ALPHA1_entry e1 e2 xs ys)) /\
-        (!m1 m2 xs ys x y. 
+        (!m1 m2 xs ys x y.
           ~(x IN FV_method1 m1) /\ ~(y IN FV_method1 m2) ==>
           (ALPHA1_method m1 m2 (CONS x xs) (CONS y ys) =
            ALPHA1_method m1 m2 xs ys))`--),

@@ -3,11 +3,11 @@
 functor MlyaccLrValsFun(structure Hdr : HEADER
 		          where type prec = Header.prec
 			structure Token : TOKEN)
- = 
+ =
 struct
 structure ParserData=
 struct
-structure Header = 
+structure Header =
 struct
 (* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi *)
 
@@ -18,7 +18,7 @@ open Hdr
 end
 structure LrTable = Token.LrTable
 structure Token = Token
-local open LrTable in 
+local open LrTable in
 val table=let val actionRows =
 "\
 \\001\000\001\000\076\000\000\000\
@@ -248,7 +248,7 @@ val gotoT =
 val numstates = 104
 val numrules = 55
 val s = ref "" and index = ref 0
-val string_to_int = fn () => 
+val string_to_int = fn () =>
 let val i = !index
 in index := i+2; Char.ord(String.sub(!s,i)) + Char.ord(String.sub(!s,i+1)) * 256
 end
@@ -306,7 +306,7 @@ end
 local open Header in
 type pos = int
 type arg = Hdr.inputSource
-structure MlyValue = 
+structure MlyValue =
 struct
 datatype svalue = VOID | ntVOID of unit ->  unit
  | UNKNOWN of unit ->  (string) | TYVAR of unit ->  (string)
@@ -330,16 +330,16 @@ datatype svalue = VOID | ntVOID of unit ->  unit
  | BEGIN of unit ->  (string*Hdr.declData* ( Hdr.rule list ) )
 end
 type svalue = MlyValue.svalue
-type result = string*Hdr.declData* ( Hdr.rule list ) 
+type result = string*Hdr.declData* ( Hdr.rule list )
 end
 structure EC=
 struct
 open LrTable
 val is_keyword =
 fn _ => false
-val preferred_change = 
+val preferred_change =
 nil
-val noShift = 
+val noShift =
 fn (T 8) => true | _ => false
 val showTerminal =
 fn (T 0) => "ARROW"
@@ -396,17 +396,17 @@ val terms = (T 0) :: (T 1) :: (T 2) :: (T 3) :: (T 4) :: (T 5) :: (T 6
  :: (T 34) :: (T 35) :: (T 36) :: (T 38) :: (T 39) :: (T 41) :: nil
 end
 structure Actions =
-struct 
+struct
 type int = Int.int
 exception mlyAction of int
 local open Header in
-val actions = 
+val actions =
 fn (i392:int,defaultPos,stack,
     (inputSource):arg) =>
 case (i392,stack)
 of (0,(_,(MlyValue.G_RULE_LIST G_RULE_LIST1,_,G_RULE_LIST1right))::_::
 (_,(MlyValue.MPC_DECLS MPC_DECLS1,_,_))::(_,(MlyValue.HEADER HEADER1,
-HEADER1left,_))::rest671) => let val result=MlyValue.BEGIN(fn _ => 
+HEADER1left,_))::rest671) => let val result=MlyValue.BEGIN(fn _ =>
 let val HEADER as HEADER1=HEADER1 ()
 val MPC_DECLS as MPC_DECLS1=MPC_DECLS1 ()
 val G_RULE_LIST as G_RULE_LIST1=G_RULE_LIST1 ()
@@ -414,7 +414,7 @@ val G_RULE_LIST as G_RULE_LIST1=G_RULE_LIST1 ()
 )
  in (LrTable.NT 0,(result,HEADER1left,G_RULE_LIST1right),rest671) end
 | (1,(_,(MlyValue.MPC_DECL MPC_DECL1,MPC_DECLleft,MPC_DECL1right))::(_
-,(MlyValue.MPC_DECLS MPC_DECLS1,MPC_DECLS1left,_))::rest671) => let 
+,(MlyValue.MPC_DECLS MPC_DECLS1,MPC_DECLS1left,_))::rest671) => let
 val result=MlyValue.MPC_DECLS(fn _ => let val MPC_DECLS as MPC_DECLS1=
 MPC_DECLS1 ()
 val MPC_DECL as MPC_DECL1=MPC_DECL1 ()
@@ -428,7 +428,7 @@ DECL {prec=nil,nonterm=NONE,term=NONE,eop=nil,control=nil,
 ))
  in (LrTable.NT 5,(result,defaultPos,defaultPos),rest671) end
 | (3,(_,(MlyValue.CONSTR_LIST CONSTR_LIST1,_,CONSTR_LIST1right))::(_,(
-_,TERM1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _ => 
+_,TERM1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _ =>
 let val CONSTR_LIST as CONSTR_LIST1=CONSTR_LIST1 ()
  in (
 DECL { prec=nil,nonterm=NONE,
@@ -469,7 +469,7 @@ DECL {prec=nil,control=[START_SYM (symbolMake ID)],nonterm=NONE,
 )
  in (LrTable.NT 4,(result,START1left,ID1right),rest671) end
 | (7,(_,(MlyValue.ID_LIST ID_LIST1,_,ID_LIST1right))::(_,(_,
-PERCENT_EOP1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn 
+PERCENT_EOP1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn
 _ => let val ID_LIST as ID_LIST1=ID_LIST1 ()
  in (
 DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,
@@ -489,7 +489,7 @@ DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,eop=nil,
 )
  in (LrTable.NT 4,(result,KEYWORD1left,ID_LIST1right),rest671) end
 | (9,(_,(MlyValue.ID_LIST ID_LIST1,_,ID_LIST1right))::(_,(_,
-PREFER1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _ => 
+PREFER1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _ =>
 let val ID_LIST as ID_LIST1=ID_LIST1 ()
  in (
 DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,eop=nil,
@@ -509,7 +509,7 @@ DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,eop=nil,
 )
  in (LrTable.NT 4,(result,CHANGE1left,CHANGE_DECL1right),rest671) end
 | (11,(_,(MlyValue.SUBST_DECL SUBST_DECL1,_,SUBST_DECL1right))::(_,(_,
-SUBST1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _ => 
+SUBST1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _ =>
 let val SUBST_DECL as SUBST_DECL1=SUBST_DECL1 ()
  in (
 DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,eop=nil,
@@ -578,7 +578,7 @@ DECL {prec=nil,control=[Hdr.VERBOSE],
 		value=nil}
 ))
  in (LrTable.NT 4,(result,VERBOSE1left,VERBOSE1right),rest671) end
-| (18,(_,(_,NODEFAULT1left,NODEFAULT1right))::rest671) => let val 
+| (18,(_,(_,NODEFAULT1left,NODEFAULT1right))::rest671) => let val
 result=MlyValue.MPC_DECL(fn _ => (
 DECL {prec=nil,control=[Hdr.NODEFAULT],
 	        nonterm=NONE,term=NONE,eop=nil,
@@ -586,7 +586,7 @@ DECL {prec=nil,control=[Hdr.NODEFAULT],
 		value=nil}
 ))
  in (LrTable.NT 4,(result,NODEFAULT1left,NODEFAULT1right),rest671) end
-| (19,(_,(_,PERCENT_PURE1left,PERCENT_PURE1right))::rest671) => let 
+| (19,(_,(_,PERCENT_PURE1left,PERCENT_PURE1right))::rest671) => let
 val result=MlyValue.MPC_DECL(fn _ => (
 DECL {prec=nil,control=[Hdr.PURE],
 	        nonterm=NONE,term=NONE,eop=nil,
@@ -619,8 +619,8 @@ DECL {prec=nil,control=nil,
 )
  in (LrTable.NT 4,(result,VALUE1left,PROG1right),rest671) end
 | (22,(_,(MlyValue.CHANGE_DECL CHANGE_DECL1,_,CHANGE_DECL1right))::_::
-(_,(MlyValue.CHANGE_DEC CHANGE_DEC1,CHANGE_DEC1left,_))::rest671) => 
-let val result=MlyValue.CHANGE_DECL(fn _ => let val CHANGE_DEC as 
+(_,(MlyValue.CHANGE_DEC CHANGE_DEC1,CHANGE_DEC1left,_))::rest671) =>
+let val result=MlyValue.CHANGE_DECL(fn _ => let val CHANGE_DEC as
 CHANGE_DEC1=CHANGE_DEC1 ()
 val CHANGE_DECL as CHANGE_DECL1=CHANGE_DECL1 ()
  in (CHANGE_DEC :: CHANGE_DECL) end
@@ -642,7 +642,7 @@ val ID_LIST2=ID_LIST2 ()
 )
  in (LrTable.NT 15,(result,ID_LIST1left,ID_LIST2right),rest671) end
 | (25,(_,(MlyValue.SUBST_DECL SUBST_DECL1,_,SUBST_DECL1right))::_::(_,
-(MlyValue.SUBST_DEC SUBST_DEC1,SUBST_DEC1left,_))::rest671) => let 
+(MlyValue.SUBST_DEC SUBST_DEC1,SUBST_DEC1left,_))::rest671) => let
 val result=MlyValue.SUBST_DECL(fn _ => let val SUBST_DEC as SUBST_DEC1
 =SUBST_DEC1 ()
 val SUBST_DECL as SUBST_DECL1=SUBST_DECL1 ()
@@ -651,14 +651,14 @@ val SUBST_DECL as SUBST_DECL1=SUBST_DECL1 ()
  in (LrTable.NT 12,(result,SUBST_DEC1left,SUBST_DECL1right),rest671)
  end
 | (26,(_,(MlyValue.SUBST_DEC SUBST_DEC1,SUBST_DEC1left,SUBST_DEC1right
-))::rest671) => let val result=MlyValue.SUBST_DECL(fn _ => let val 
+))::rest671) => let val result=MlyValue.SUBST_DECL(fn _ => let val
 SUBST_DEC as SUBST_DEC1=SUBST_DEC1 ()
  in ([SUBST_DEC]) end
 )
  in (LrTable.NT 12,(result,SUBST_DEC1left,SUBST_DEC1right),rest671)
  end
 | (27,(_,(MlyValue.ID ID2,_,ID2right))::_::(_,(MlyValue.ID ID1,ID1left
-,_))::rest671) => let val result=MlyValue.SUBST_DEC(fn _ => let val 
+,_))::rest671) => let val result=MlyValue.SUBST_DEC(fn _ => let val
 ID1=ID1 ()
 val ID2=ID2 ()
  in ([symbolMake ID2],[symbolMake ID1]) end
@@ -673,7 +673,7 @@ val TY as TY1=TY1 ()
  in ((symbolMake ID,SOME (tyMake TY))::CONSTR_LIST) end
 )
  in (LrTable.NT 1,(result,CONSTR_LIST1left,TY1right),rest671) end
-| (29,(_,(MlyValue.ID ID1,_,ID1right))::_::(_,(MlyValue.CONSTR_LIST 
+| (29,(_,(MlyValue.ID ID1,_,ID1right))::_::(_,(MlyValue.CONSTR_LIST
 CONSTR_LIST1,CONSTR_LIST1left,_))::rest671) => let val result=
 MlyValue.CONSTR_LIST(fn _ => let val CONSTR_LIST as CONSTR_LIST1=
 CONSTR_LIST1 ()
@@ -682,13 +682,13 @@ val ID as ID1=ID1 ()
 )
  in (LrTable.NT 1,(result,CONSTR_LIST1left,ID1right),rest671) end
 | (30,(_,(MlyValue.TY TY1,_,TY1right))::_::(_,(MlyValue.ID ID1,ID1left
-,_))::rest671) => let val result=MlyValue.CONSTR_LIST(fn _ => let val 
+,_))::rest671) => let val result=MlyValue.CONSTR_LIST(fn _ => let val
 ID as ID1=ID1 ()
 val TY as TY1=TY1 ()
  in ([(symbolMake ID,SOME (tyMake TY))]) end
 )
  in (LrTable.NT 1,(result,ID1left,TY1right),rest671) end
-| (31,(_,(MlyValue.ID ID1,ID1left,ID1right))::rest671) => let val 
+| (31,(_,(MlyValue.ID ID1,ID1left,ID1right))::rest671) => let val
 result=MlyValue.CONSTR_LIST(fn _ => let val ID as ID1=ID1 ()
  in ([(symbolMake ID,NONE)]) end
 )
@@ -706,21 +706,21 @@ map (fn {rhs,code,prec} =>
 )
  in (LrTable.NT 9,(result,ID1left,RHS_LIST1right),rest671) end
 | (33,(_,(MlyValue.G_RULE G_RULE1,_,G_RULE1right))::(_,(
-MlyValue.G_RULE_LIST G_RULE_LIST1,G_RULE_LIST1left,_))::rest671) => 
-let val result=MlyValue.G_RULE_LIST(fn _ => let val G_RULE_LIST as 
+MlyValue.G_RULE_LIST G_RULE_LIST1,G_RULE_LIST1left,_))::rest671) =>
+let val result=MlyValue.G_RULE_LIST(fn _ => let val G_RULE_LIST as
 G_RULE_LIST1=G_RULE_LIST1 ()
 val G_RULE as G_RULE1=G_RULE1 ()
  in (G_RULE@G_RULE_LIST) end
 )
  in (LrTable.NT 10,(result,G_RULE_LIST1left,G_RULE1right),rest671) end
 | (34,(_,(MlyValue.G_RULE G_RULE1,G_RULE1left,G_RULE1right))::rest671)
- => let val result=MlyValue.G_RULE_LIST(fn _ => let val G_RULE as 
+ => let val result=MlyValue.G_RULE_LIST(fn _ => let val G_RULE as
 G_RULE1=G_RULE1 ()
  in (G_RULE) end
 )
  in (LrTable.NT 10,(result,G_RULE1left,G_RULE1right),rest671) end
 | (35,(_,(MlyValue.ID_LIST ID_LIST1,_,ID_LIST1right))::(_,(MlyValue.ID
- ID1,ID1left,_))::rest671) => let val result=MlyValue.ID_LIST(fn _ => 
+ ID1,ID1left,_))::rest671) => let val result=MlyValue.ID_LIST(fn _ =>
 let val ID as ID1=ID1 ()
 val ID_LIST as ID_LIST1=ID_LIST1 ()
  in (symbolMake ID :: ID_LIST) end
@@ -739,7 +739,7 @@ val PROG as PROG1=PROG1 ()
  in (LrTable.NT 8,(result,ID_LIST1left,PROG1right),rest671) end
 | (38,(_,(MlyValue.PROG PROG1,_,PROG1right))::(_,(MlyValue.G_RULE_PREC
  G_RULE_PREC1,_,_))::(_,(MlyValue.ID_LIST ID_LIST1,_,_))::_::(_,(
-MlyValue.RHS_LIST RHS_LIST1,RHS_LIST1left,_))::rest671) => let val 
+MlyValue.RHS_LIST RHS_LIST1,RHS_LIST1left,_))::rest671) => let val
 result=MlyValue.RHS_LIST(fn _ => let val RHS_LIST as RHS_LIST1=
 RHS_LIST1 ()
 val ID_LIST as ID_LIST1=ID_LIST1 ()
@@ -748,47 +748,47 @@ val PROG as PROG1=PROG1 ()
  in ({rhs=ID_LIST,code=PROG,prec=G_RULE_PREC}::RHS_LIST) end
 )
  in (LrTable.NT 8,(result,RHS_LIST1left,PROG1right),rest671) end
-| (39,(_,(MlyValue.TYVAR TYVAR1,TYVAR1left,TYVAR1right))::rest671) => 
+| (39,(_,(MlyValue.TYVAR TYVAR1,TYVAR1left,TYVAR1right))::rest671) =>
 let val result=MlyValue.TY(fn _ => let val TYVAR as TYVAR1=TYVAR1 ()
  in (TYVAR) end
 )
  in (LrTable.NT 16,(result,TYVAR1left,TYVAR1right),rest671) end
 | (40,(_,(_,_,RBRACE1right))::(_,(MlyValue.RECORD_LIST RECORD_LIST1,_,
-_))::(_,(_,LBRACE1left,_))::rest671) => let val result=MlyValue.TY(fn 
+_))::(_,(_,LBRACE1left,_))::rest671) => let val result=MlyValue.TY(fn
 _ => let val RECORD_LIST as RECORD_LIST1=RECORD_LIST1 ()
  in ("{ "^RECORD_LIST^" } ") end
 )
  in (LrTable.NT 16,(result,LBRACE1left,RBRACE1right),rest671) end
-| (41,(_,(_,_,RBRACE1right))::(_,(_,LBRACE1left,_))::rest671) => let 
+| (41,(_,(_,_,RBRACE1right))::(_,(_,LBRACE1left,_))::rest671) => let
 val result=MlyValue.TY(fn _ => ("{}"))
  in (LrTable.NT 16,(result,LBRACE1left,RBRACE1right),rest671) end
-| (42,(_,(MlyValue.PROG PROG1,PROG1left,PROG1right))::rest671) => let 
+| (42,(_,(MlyValue.PROG PROG1,PROG1left,PROG1right))::rest671) => let
 val result=MlyValue.TY(fn _ => let val PROG as PROG1=PROG1 ()
  in (" ( "^PROG^" ) ") end
 )
  in (LrTable.NT 16,(result,PROG1left,PROG1right),rest671) end
 | (43,(_,(MlyValue.QUAL_ID QUAL_ID1,_,QUAL_ID1right))::(_,(MlyValue.TY
- TY1,TY1left,_))::rest671) => let val result=MlyValue.TY(fn _ => let 
+ TY1,TY1left,_))::rest671) => let val result=MlyValue.TY(fn _ => let
 val TY as TY1=TY1 ()
 val QUAL_ID as QUAL_ID1=QUAL_ID1 ()
  in (TY^" "^QUAL_ID) end
 )
  in (LrTable.NT 16,(result,TY1left,QUAL_ID1right),rest671) end
 | (44,(_,(MlyValue.QUAL_ID QUAL_ID1,QUAL_ID1left,QUAL_ID1right))::
-rest671) => let val result=MlyValue.TY(fn _ => let val QUAL_ID as 
+rest671) => let val result=MlyValue.TY(fn _ => let val QUAL_ID as
 QUAL_ID1=QUAL_ID1 ()
  in (QUAL_ID) end
 )
  in (LrTable.NT 16,(result,QUAL_ID1left,QUAL_ID1right),rest671) end
 | (45,(_,(MlyValue.TY TY2,_,TY2right))::_::(_,(MlyValue.TY TY1,TY1left
-,_))::rest671) => let val result=MlyValue.TY(fn _ => let val TY1=TY1 
+,_))::rest671) => let val result=MlyValue.TY(fn _ => let val TY1=TY1
 ()
 val TY2=TY2 ()
  in (TY1^"*"^TY2) end
 )
  in (LrTable.NT 16,(result,TY1left,TY2right),rest671) end
 | (46,(_,(MlyValue.TY TY2,_,TY2right))::_::(_,(MlyValue.TY TY1,TY1left
-,_))::rest671) => let val result=MlyValue.TY(fn _ => let val TY1=TY1 
+,_))::rest671) => let val result=MlyValue.TY(fn _ => let val TY1=TY1
 ()
 val TY2=TY2 ()
  in (TY1 ^ " -> " ^ TY2) end
@@ -796,7 +796,7 @@ val TY2=TY2 ()
  in (LrTable.NT 16,(result,TY1left,TY2right),rest671) end
 | (47,(_,(MlyValue.TY TY1,_,TY1right))::_::(_,(MlyValue.LABEL LABEL1,_
 ,_))::_::(_,(MlyValue.RECORD_LIST RECORD_LIST1,RECORD_LIST1left,_))::
-rest671) => let val result=MlyValue.RECORD_LIST(fn _ => let val 
+rest671) => let val result=MlyValue.RECORD_LIST(fn _ => let val
 RECORD_LIST as RECORD_LIST1=RECORD_LIST1 ()
 val LABEL as LABEL1=LABEL1 ()
 val TY as TY1=TY1 ()
@@ -810,7 +810,7 @@ val TY as TY1=TY1 ()
  in (LABEL^":"^TY) end
 )
  in (LrTable.NT 7,(result,LABEL1left,TY1right),rest671) end
-| (49,(_,(MlyValue.ID ID1,ID1left,ID1right))::rest671) => let val 
+| (49,(_,(MlyValue.ID ID1,ID1left,ID1right))::rest671) => let val
 result=MlyValue.QUAL_ID(fn _ => let val ID as ID1=ID1 ()
  in ((fn (a,_) => a) ID) end
 )
@@ -822,18 +822,18 @@ val QUAL_ID as QUAL_ID1=QUAL_ID1 ()
  in (IDDOT^QUAL_ID) end
 )
  in (LrTable.NT 6,(result,IDDOT1left,QUAL_ID1right),rest671) end
-| (51,(_,(MlyValue.ID ID1,ID1left,ID1right))::rest671) => let val 
+| (51,(_,(MlyValue.ID ID1,ID1left,ID1right))::rest671) => let val
 result=MlyValue.LABEL(fn _ => let val ID as ID1=ID1 ()
  in ((fn (a,_) => a) ID) end
 )
  in (LrTable.NT 3,(result,ID1left,ID1right),rest671) end
-| (52,(_,(MlyValue.INT INT1,INT1left,INT1right))::rest671) => let val 
+| (52,(_,(MlyValue.INT INT1,INT1left,INT1right))::rest671) => let val
 result=MlyValue.LABEL(fn _ => let val INT as INT1=INT1 ()
  in (INT) end
 )
  in (LrTable.NT 3,(result,INT1left,INT1right),rest671) end
 | (53,(_,(MlyValue.ID ID1,_,ID1right))::(_,(_,PREC_TAG1left,_))::
-rest671) => let val result=MlyValue.G_RULE_PREC(fn _ => let val ID as 
+rest671) => let val result=MlyValue.G_RULE_PREC(fn _ => let val ID as
 ID1=ID1 ()
  in (SOME (symbolMake ID)) end
 )

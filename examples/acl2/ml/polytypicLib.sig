@@ -1,4 +1,4 @@
-signature polytypicLib = 
+signature polytypicLib =
 sig
 	include Abbrev
 
@@ -7,11 +7,11 @@ type ('a,'b) dict = ('a,'b) Binarymap.dict
 type proof = proofManagerLib.proof;
 
 (* The types defined *)
-	type translation_scheme = 
-		{target : hol_type, induction : thm, recursion : thm, 
+	type translation_scheme =
+		{target : hol_type, induction : thm, recursion : thm,
 		left : term, right : term, predicate : term,
 		bottom : term, bottom_thm : thm};
-	type function = 
+	type function =
 		{const : term, definition : thm,
 		induction : (thm * (term * (term * hol_type)) list) option}
 	datatype exception_level = Standard | Fatal | Debug;
@@ -197,18 +197,18 @@ type proof = proofManagerLib.proof;
 	val inst_function_def : (hol_type -> thm) -> (hol_type -> term) -> hol_type -> thm
 	val expanded_function_def : (term -> thm) -> (term -> thm) -> (hol_type -> thm) -> hol_type -> term list -> thm
 	val mk_split_source_function : (hol_type -> term) -> (hol_type -> thm) -> (hol_type -> term) -> (term -> thm) -> (term -> thm) -> hol_type -> thm * thm
-	val mk_split_target_function : (hol_type -> term) -> (hol_type -> thm) -> (hol_type -> term) -> (term -> thm) -> (term -> thm) -> 
+	val mk_split_target_function : (hol_type -> term) -> (hol_type -> thm) -> (hol_type -> term) -> (term -> thm) -> (term -> thm) ->
 					translation_scheme -> hol_type -> (thm * (term * term) list * thm) * thm
 
 (* Removal of function splits *)
 	val MATCH_IND_TERM : term -> thm -> thm
 	val strengthen_proof_term : thm list -> term -> thm
 	val prove_split_term : (term * (term * hol_type)) list -> thm -> thm -> thm * term -> term -> thm
-	val prove_all_split_terms : (hol_type -> thm * (term * (term * hol_type)) list) * (hol_type -> thm) * (term -> thm) * (term -> thm) * thm * term -> 
+	val prove_all_split_terms : (hol_type -> thm * (term * (term * hol_type)) list) * (hol_type -> thm) * (term -> thm) * (term -> thm) * thm * term ->
 						(term * hol_type) list -> thm -> thm list * thm
 	val remove_hyp_terms : thm -> thm list -> thm list * thm -> thm
 	val match_mapping : thm -> (term * term) list -> (hol_type -> term) -> thm -> hol_type -> (term * (term * hol_type)) list
-	val unsplit_function : (hol_type -> thm * (term * (term * hol_type)) list) -> (hol_type -> thm) -> (hol_type -> term) -> 
+	val unsplit_function : (hol_type -> thm * (term * (term * hol_type)) list) -> (hol_type -> thm) -> (hol_type -> term) ->
 						(term -> thm) -> (term -> thm) -> thm * term -> hol_type -> thm * thm -> thm
 
 (* Full function creation *)
@@ -241,7 +241,7 @@ type proof = proofManagerLib.proof;
 	val add_inductive_source_theorem_generator : string -> string -> (term -> thm) -> (hol_type -> tactic) -> unit
 	val add_tactic_coding_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> tactic) -> hol_type -> unit
 	val add_tactic_source_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> tactic) -> unit
-	val add_rule_coding_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> thm) -> hol_type -> unit 
+	val add_rule_coding_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> thm) -> hol_type -> unit
 	val add_rule_source_theorem_generator : string -> (hol_type -> bool) -> (hol_type -> thm) -> unit
 
 end

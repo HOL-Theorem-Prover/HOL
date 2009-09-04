@@ -185,7 +185,7 @@ fun tautologous lits =
 
 local
   fun distrib s1 s2 = cartwith union s1 s2;
-    
+
   fun push (Or (p,q))  = distrib (push p) (push q)
     | push (And (p,q)) = union (push p) (push q)
     | push fm = [[fm]];
@@ -236,7 +236,7 @@ fun categorize_clauses fms =
     val horn =
       if List.exists null cls then Trivial
       else if List.all (fn cl => length cl = 1) cls then Unit
-      else 
+      else
         let
           val posl = map (length o List.filter positive) cls
           val negl = map (length o List.filter negative) cls

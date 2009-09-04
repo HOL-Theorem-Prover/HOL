@@ -75,7 +75,7 @@ fun TACTIC_ERR{function,message} =
                      origin_function = function,
                      message = message};
 
-fun failwith function = 
+fun failwith function =
    ( (* if debug_fail then
          print_string ("Failure in Cond_rewrite: "^function^"\n")
      else (); *)
@@ -95,7 +95,7 @@ val get_shift_matches = (dest_subst##dest_subst) o
 val get_shift_matches = Psyntax.match_term (--`Lam x t :'a term`--);
 *)
 
-(* SEARCH_matches applies the function f to every subterm of the 
+(* SEARCH_matches applies the function f to every subterm of the
    given term tm, except to variables or constants, for which
    SEARCH_matches always raises an exception.
    The return value is a list of 'a objects, as produced by f
@@ -164,13 +164,13 @@ fun remove_s_matches matches =
 (* have identical bound variables afterwards.  This is important.     *)
 (* ------------------------------------------------------------------ *)
 
-fun find_x (match::matches) = 
+fun find_x (match::matches) =
     let val (l,r) = match in
       if eq r (--`x:var`--) then l else find_x matches
     end
   | find_x [] = (--`x:var`--);
 
-fun find_t (match::matches) = 
+fun find_t (match::matches) =
     let val (l,r) = match in
       if eq r (--`t:'a term`--) then l else find_t matches
     end
@@ -279,7 +279,7 @@ fun MAKE_LIST_CLEAN_VAR_THM free_vrs (x, os) =
                                  (--`[]:'a term list`--)
          val os_tm = mk_term_list os
          val lambda_thm = SPECL[ftm,x,os_tm] LAMBDA_LIST_CLEAN_VAR
-         val exists_list_thm = 
+         val exists_list_thm =
                 REWRITE_RULE[FINITE_EMPTY,FINITE_INSERT,FINITE_UNION,
                              FINITE_FV,IN,IN_UNION,DE_MORGAN_THM]
                            lambda_thm

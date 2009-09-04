@@ -34,7 +34,7 @@ val mut_rec_ty_spec =
       [{name = "rule", arg_info = [being_defined "pat",
                                    being_defined "exp"]}]},
  {type_name = "dec",
-  constructors = 
+  constructors =
       [{name = "val_dec", arg_info = [being_defined "valbind"]},
        {name = "local_dec", arg_info = [being_defined "dec",
                                         being_defined "dec"]},
@@ -68,10 +68,10 @@ end; (* struct *)
 (* Prove the defining theorems for the type *)
 structure GramDef = MutRecTypeFunc (Ast);
 
-(* Just so that the constant "UNION" is defined. To actually work with sets, 
+(* Just so that the constant "UNION" is defined. To actually work with sets,
    one would want to load in the "set" library.
 *)
-val _ = new_parent "set"; 
+val _ = new_parent "set";
 (* A simple function for finding the variables in a program *)
 
 val vars_thm = define_mutual_functions
@@ -94,7 +94,7 @@ val vars_thm = define_mutual_functions
     (decV (seq_dec d1 d2) = (decV d1) UNION (decV d2))
      /\
     (valbindV (bind p e) = (patV p) UNION (expV e)) /\
-    (valbindV (bind_list p e brst) = (patV p) UNION (expV e) 
+    (valbindV (bind_list p e brst) = (patV p) UNION (expV e)
                                      UNION (valbindV brst)) /\
     (valbindV (rec_bind vb) = (valbindV vb))
      /\

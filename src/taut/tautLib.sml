@@ -9,9 +9,9 @@
 (* AUTHOR        : R.J.Boulton, University of Cambridge                      *)
 (* DATE          : 9th July 1991                                             *)
 (* TRANSLATOR    : Konrad Slind, University of Calgary                       *)
-(*                                                                           *)          
+(*                                                                           *)
 (* LAST MODIFIED : Hasan Amjad                                               *)
-(* DATE          : 1st August 2007                                           *) 
+(* DATE          : 1st August 2007                                           *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -53,16 +53,16 @@ and is_F tm = (eq tm F);
 (*    |- (!x1 ... xn. f[x1,...,xn]) = F                                      *)
 (*---------------------------------------------------------------------------*)
 
-fun TAUT_CHECK_CONV tm =     
+fun TAUT_CHECK_CONV tm =
     let val (vars,tm') = strip_forall tm
     in EQT_INTRO (GENL vars (SAT_PROVE tm')) end
     handle HolSatLib.SAT_cex th =>
 	   let val (vars,tm') = strip_forall tm
-	       val g = list_mk_exists(vars,mk_neg tm')		   
-	       val cxm = List.foldl (fn (v,cxm) => 
+	       val g = list_mk_exists(vars,mk_neg tm')
+	       val cxm = List.foldl (fn (v,cxm) =>
 					if (is_neg v) then Redblackmap.insert(cxm,dest_neg v,F)
 					else Redblackmap.insert(cxm,v,T))
-				    (Redblackmap.mkDict Term.compare) 
+				    (Redblackmap.mkDict Term.compare)
 				    (strip_conj (fst (dest_imp (concl th))))
 	       val cex = List.map (fn v => Redblackmap.find(cxm,v) handle NotFound => T) vars
 	       val th1 = prove(g,MAP_EVERY EXISTS_TAC cex THEN REWRITE_TAC [])
@@ -152,7 +152,7 @@ fun PTAUT_PROVE tm =
     Computes a set of subterms of a term that are either variables or
     Boolean valued non-propositional terms.
    ---------------------------------------------------------------------- *)
-local 
+local
 open Rsyntax
 in
 fun non_prop_terms tm = let

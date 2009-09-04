@@ -5,7 +5,7 @@
 (*		 							*)
 (* READS FILES	: tempabs.th						*)
 (* WRITES FILES  : dff.th						*)
-(*									*) 
+(*									*)
 (* AUTHOR	: T. Melham						*)
 (* DATE		: 87.04.16						*)
 (*                                                                      *)
@@ -45,22 +45,22 @@ val Rise =
      ("Rise", ``!s t.Rise s t = ~s(t) /\ s(t+1)``);
 
 (* D-TYPE flip flop - rising-edge triggered - SIMPLE MODEL.		*)
-val Dtype = 
+val Dtype =
     new_definition
         ("Dtype",
-         ``!ck d q. 
+         ``!ck d q.
 	   Dtype(ck,d,q) = !t. q(t+1) = if Rise ck t then d(t) else q(t)``);
 
 (* Unit delay								*)
 val Del =
-    new_definition 
+    new_definition
         ("Del", ``!inp out. Del(inp,out) = (!t. out(t+1) = (inp t))``);
 
 (* Proof that there is no simple SINGLE abstraction from                *)
 (* a Boolean Dtype to Del.	                                        *)
-val no_simple_abs = 
+val no_simple_abs =
     prove_thm("no_simple_abs",
-              ``~?p. Inf(p) /\ 
+              ``~?p. Inf(p) /\
 		    !ck (d:num->bool) q. Dtype(ck,d,q) ==> Del(d when p, q when p)``,
 	      CONV_TAC NOT_EXISTS_CONV THEN
 	      REWRITE_TAC [DE_MORGAN_THM,SYM(SPEC_ALL IMP_DISJ_THM),Inf] THEN
@@ -81,25 +81,25 @@ val Funpow_I =
 (* Put tempabs' in the correct form for application to D-type		*)
 (* NOTE: Need to automate this... and the tactic below.			*)
 
-val tempabs = 
+val tempabs =
  let val spec = Q.ISPECL [`\t:num.T`,
                           `d:num->'a`,
                           `q:num->'a`,
                           `Rise ck`,
                           `(K K):bool->'a->'a->'a`, (* \(x:bool) (y:'a) (z:'a). y *)
-                          `(K I):bool->'a->'a` (* \(x:bool) (y:'a). y *)] tempabs' 
+                          `(K I):bool->'a->'a` (* \(x:bool) (y:'a). y *)] tempabs'
      val simp1 = REWRITE_RULE [K_THM,ASSUME ``Inf(Rise ck)``,Stable] spec
-     val simp2 = REWRITE_RULE [Funpow_I,I_THM] simp1 
-     val simp3 = REWRITE_RULE [Dev,K_THM,GSYM Dtype,I_THM] simp2 
+     val simp2 = REWRITE_RULE [Funpow_I,I_THM] simp1
+     val simp3 = REWRITE_RULE [Dev,K_THM,GSYM Dtype,I_THM] simp2
  in
     DISCH_ALL simp3
  end;
 
 (* Correctness of Dtype w.r.t. the temporal abstraction Del.		*)
-val Dtype_correct = 
+val Dtype_correct =
     prove_thm("Dtype_correct"     ,
-	      ``!ck.Inf(Rise ck) ==> 
-                   !d q. Dtype(ck,d,q) ==> 
+	      ``!ck.Inf(Rise ck) ==>
+                   !d q. Dtype(ck,d,q) ==>
 		         Del(d when (Rise ck), q when (Rise ck))``,
               PROVE_TAC[Del,tempabs]);
 

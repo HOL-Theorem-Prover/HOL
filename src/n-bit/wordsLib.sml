@@ -1320,9 +1320,9 @@ in
             begin_block pps INCONSISTENT 0;
             str ("(" ^ "(@@)" ^ type_to_string (type_of a));
             str "->"; brk(1,0);
-            str (stype b); 
+            str (stype b);
             str "->"; brk(1,0);
-            str (stype t ^ ")"); 
+            str (stype t ^ ")");
             end_block pps;
             sys (prec,prec,prec) (d - 1) a; brk(1,0);
             sys (prec,prec,prec) (d - 1) b;
@@ -1337,9 +1337,9 @@ in
             str "><"; brk(1,0);
             sys (prec,prec,prec) (d - 1) l;
             str ")"; brk(1,0);
-            str (type_to_string (type_of a)); 
+            str (type_to_string (type_of a));
             str "->"; brk(1,0);
-            str (stype t ^ ")"); 
+            str (stype t ^ ")");
             end_block pps;
             sys (prec,prec,prec) (d - 1) a;
             delim 700 (fn () => str ")")

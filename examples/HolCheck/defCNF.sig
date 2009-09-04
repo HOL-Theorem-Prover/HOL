@@ -7,7 +7,7 @@ signature defCNF =
 sig
 
 include Abbrev
-  
+
 (* ------------------------------------------------------------------------- *)
 (* Definitional Negation Normal Form                                         *)
 (*                                                                           *)

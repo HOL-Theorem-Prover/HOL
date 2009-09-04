@@ -55,7 +55,7 @@ in
       THEN POP_ASSUM (fn th => rewriter th THEN assumer th)
     end;
 end;
-  
+
 val Introduce = Q_TAC INTRODUCE_TAC;
 
 val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
@@ -183,7 +183,7 @@ val chr_11 = store_thm
   ("chr_11",
    ``!m n x. (m = ORD x) /\ (n = ORD x) = (m = n) /\ (m = ORD x)``,
    METIS_TAC []);
-   
+
 val chr_suff = store_thm
   ("chr_suff",
    ``!n p. (?x. (n = ORD x) \/ p x) = n < 256 \/ ?x. p x``,

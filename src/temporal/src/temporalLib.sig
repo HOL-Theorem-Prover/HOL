@@ -1,4 +1,4 @@
-signature temporalLib = 
+signature temporalLib =
   sig
     val smv_call    : string ref
     val smv_path    : string ref

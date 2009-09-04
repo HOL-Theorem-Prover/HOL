@@ -23,7 +23,7 @@ sig
 
   val dest_K      : term -> term * term
   val dest_K_1    : term -> term
-  val dest_S      : term -> term * term * term 
+  val dest_S      : term -> term * term * term
   val dest_I      : term -> term
   val dest_C      : term -> term * term * term
   val dest_W      : term -> term * term

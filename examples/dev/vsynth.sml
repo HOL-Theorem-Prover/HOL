@@ -12,7 +12,7 @@
 (*
 quietdec := true;
 loadPath :="dff" :: !loadPath;
-map load  
+map load
  ["composeTheory","compileTheory", "hol88Lib" (*for subst*),"compile",
   "Date","FileSys","TextIO","Process","Char","String"];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
@@ -93,7 +93,7 @@ fun is_supported_type ty =
 (* ``:bool``  --> "0"                                                        *)
 (*****************************************************************************)
 fun ty2size ty =
- let val n = 
+ let val n =
       if (ty = ``:bool``) then 1
       else if (ty = ``:num``) then
         32
@@ -115,7 +115,7 @@ fun var2size tm =
      val _ = if ((ty = ``:num``) orelse
                  (is_word_type ty andalso not (null (type_vars_in_term tm))))
                 andalso (!numWarning)
-              then 
+              then
                (print "Warning: type of ";
                 print_term tm ;
                 print " is ``";
@@ -180,7 +180,7 @@ fun strip_BUS_CONCAT tm =
   else [tm];
 
 (*
-** (|- InRise clk 
+** (|- InRise clk
 **     ==>
 **     (?v0 .... vn. M1(...) /\ ... /\ Mp(...))
 **     ==>
@@ -246,7 +246,7 @@ fun add_commas [] = []
 (*  ``?v. DTYPE v (clk,inp,out)`` --> ``DTYPE c (clk,inp,out)``              *)
 (*****************************************************************************)
 fun dest_DTYPE tm =
- if is_comb tm 
+ if is_comb tm
      andalso is_const(fst(strip_comb tm))
      andalso (fst(dest_const(fst(strip_comb tm))) = "DTYPE")
      andalso is_pair(rand tm)
@@ -283,8 +283,8 @@ fun is_CONSTANT tm =
 (*****************************************************************************)
 fun dest_CONSTANT tm =
  let val num = rand(rator tm)
-     val n = if (eq num ``F``) then ``0``      
-             else if (eq num ``T``) then ``1`` 
+     val n = if (eq num ``F``) then ``0``
+             else if (eq num ``T``) then ``1``
              else if (eq num ``0``) orelse (fst(dest_const(rator num)) = "NUMERAL")
              then num
              else rand num
@@ -302,9 +302,9 @@ fun dest_COMB tm =
  if is_comb tm
      andalso is_const(fst(strip_comb tm))
      andalso (fst(dest_const(fst(strip_comb tm))) = "COMB")
-     andalso (length(strip_prod(hd(fst(strip_fun(type_of(rand(rator tm))))))) 
+     andalso (length(strip_prod(hd(fst(strip_fun(type_of(rand(rator tm)))))))
               = length(strip_BUS_CONCAT(fst(dest_pair(rand tm)))))
- then (rand(rator tm), 
+ then (rand(rator tm),
        map var_name (strip_BUS_CONCAT(fst(dest_pair(rand tm)))),
        map var_name (strip_BUS_CONCAT(snd(dest_pair(rand tm)))))
  else (print "dest_COMB fails on: \n";
@@ -345,9 +345,9 @@ fun add_vsynth pl = (vsynth_lib := pl @ (!vsynth_lib));
 (*****************************************************************************)
 (* Lookup in vsynth_lib                                                      *)
 (*****************************************************************************)
-fun lookup_vsynth_lib [] tm = 
+fun lookup_vsynth_lib [] tm =
      raise ERR "lookup_vsynth" "not in vsynth_lib"
- |  lookup_vsynth_lib ((t, f : string list -> string)::vl) tm = 
+ |  lookup_vsynth_lib ((t, f : string list -> string)::vl) tm =
      if aconv t tm then f else lookup_vsynth_lib vl tm;
 
 fun lookup_vsynth tm = lookup_vsynth_lib (!vsynth_lib) tm;
@@ -358,11 +358,11 @@ fun lookup_vsynth tm = lookup_vsynth_lib (!vsynth_lib) tm;
 (*****************************************************************************)
 val _ =
  add_vsynth
-  [(``$~``, 
+  [(``$~``,
     fn[i] => ("~ " ^ i)),
-   (``UNCURRY $/\``, 
+   (``UNCURRY $/\``,
     fn[i1,i2] => (i1 ^ " && " ^ i2)),
-   (``UNCURRY $\/``, 
+   (``UNCURRY $\/``,
     fn[i1,i2] => (i1 ^ " || " ^ i2)),
    (``\(sel:bool,in1:bool,in2:bool). if sel then in1 else in2``,
     fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3)),
@@ -414,17 +414,17 @@ fun DTYPEvInst tm (out:string->unit) [("size",size)] [clk_name,in_name,out_name]
   out(term2string tm); out "\n*/\n";
   out "dtype   "; out inst_name;
   out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
-  out "   defparam ";out inst_name; out ".size = "; out size; 
+  out "   defparam ";out inst_name; out ".size = "; out size;
   out ";\n\n")
  end;
 
 fun termToVerilog_DTYPE (out:string->unit) tm =
  let val dest_tm = dest_DTYPE tm
  in
-  DTYPEvInst 
+  DTYPEvInst
    tm
-   out 
-   [("size", var2size(last(strip_pair(rand dest_tm))))] 
+   out
+   [("size", var2size(last(strip_pair(rand dest_tm))))]
    (map (fst o dest_var) (strip_pair(rand dest_tm)))
   end;
 
@@ -456,7 +456,7 @@ fun ClockvInst (out:string->unit) [("period",period)] [clk_name] =
  in
  (out " Clock      "; out inst_name;
   out " (";out clk_name; out ");";
-  out "   defparam ";out inst_name; out ".period = "; out period; 
+  out "   defparam ";out inst_name; out ".period = "; out period;
   out ";\n\n")
  end;
 
@@ -482,7 +482,7 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
   then
    let val (c, out_var) = dest_CONSTANT tm
        val out_name = var_name out_var
-   in 
+   in
     (out "/*\n"; out(term2string tm); out "\n*/\n";
      out "assign "; out out_name; out " = "; out c; out ";\n\n")
    end else
@@ -490,7 +490,7 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
   then
    let val (f, in_names, out_names) = dest_COMB tm
        val ml_fun = (lookup_vsynth f
-                      handle e => (print_term f; 
+                      handle e => (print_term f;
                                    print "\n"; print "not in vsynth_lib\n";
                                    raise e))
        val vstring = (ml_fun in_names
@@ -498,17 +498,17 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
                                    print_term f; print "\nfails on\n";
                                    print_term(fst(dest_pair(rand tm))); print "\n";
                                    raise e))
-   in 
+   in
     (out "/*\n"; out(term2string tm); out "\n*/\n";
-     out "assign "; 
-     if null(tl out_names) 
+     out "assign ";
+     if null(tl out_names)
       then out(hd out_names)
-      else (out "{"; 
+      else (out "{";
             out(hd out_names);
             map (fn s => (out ","; out s)) (tl out_names);
             out "}");
      out " = "; out vstring; out ";\n\n")
-   end 
+   end
    else (print "Can't generate Verilog for:\n";
          print_term tm; print "\n";
          raise ERR "MAKE_COMPONENT_VERILOG" "bad component term");
@@ -516,8 +516,8 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
 
 (*
 ** MAKE_VERILOG
-**  name 
-**  (|- InRise clk 
+**  name
+**  (|- InRise clk
 **      ==>
 **      (?v0 .... vn. <circuit>)
 **      ==>
@@ -526,7 +526,7 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
 **                done at clk,
 **                (out1 <> ... <> outv) at clk))
 **  output_stream
-** 
+**
 ** creates a module called name with header:
 **
 **  module name (clk,load,inp1,...,inpu,done,out1,...,outv);
@@ -544,15 +544,15 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
 (* New version that generates behavioral Verilog for combinational logic *)
 fun MAKE_VERILOG name thm out =
  let val (spec_tm,
-          (clk, load_tm,inpl,done_tm,outl), 
-          wire_vars, 
+          (clk, load_tm,inpl,done_tm,outl),
+          wire_vars,
           modules) = dest_cir thm
      val clk_name = var_name clk
      val load_name = var_name load_tm
      val inp_names = map var_name inpl
      val done_name = var_name done_tm
      val out_names = map var_name outl
-     val module_args = 
+     val module_args =
           [clk_name,load_name] @ inp_names @ [done_name] @ out_names
  in
  (out("// This file defines module " ^ name ^ " [Created: " ^ date() ^ "]\n\n");
@@ -560,22 +560,22 @@ fun MAKE_VERILOG name thm out =
   out DTYPEvDef;
   out("\n// Definition of module " ^ name ^ "\n");
   out "module ";
-  out name; 
+  out name;
   out " (";
   map out (add_commas module_args);
   out ");\n";
   out(" input " ^ clk_name ^ "," ^ load_name ^ ";\n");
-  map 
-   (fn v => out(" input [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+  map
+   (fn v => out(" input [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n"))
    inpl;
   out(" output " ^ done_name ^ ";\n");
-  map 
-   (fn v => out(" output [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+  map
+   (fn v => out(" output [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n"))
    outl;
   out(" wire " ^ clk_name ^ "," ^ done_name ^ ";\n");
   out "\n";
-  map 
-   (fn v => out(" wire [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+  map
+   (fn v => out(" wire [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n"))
    wire_vars;
   out "\n";
   map (MAKE_COMPONENT_VERILOG out) modules;
@@ -599,7 +599,7 @@ fun printStimulus (out:string->unit) clk_name load_name done_name stimulus =
   out("                        begin\n");
   out("                         #1 " ^ load_name ^ " = 1;\n");
   out("                         #1 ");
-  map 
+  map
    (fn (inname,inval) => out(inname ^ " = " ^ inval ^ "; "))
    stimulus;
   out("\n");
@@ -621,15 +621,15 @@ printToFile "Foo.vl" (MAKE_SIMULATION period thm stimulus name);
 
 fun MAKE_SIMULATION name thm period stimulus dump_all out =
  let val (spec_tm,
-          (clk, load_tm,inpl,done_tm,outl), 
-          vars, 
+          (clk, load_tm,inpl,done_tm,outl),
+          vars,
           modules) = dest_cir thm
      val clk_name = var_name clk
      val load_name = var_name load_tm
      val inp_names = map var_name inpl
      val done_name = var_name done_tm
      val out_names = map var_name outl
-     val module_args = 
+     val module_args =
           [clk_name,load_name] @ inp_names @ [done_name] @ out_names;
  in
  (MAKE_VERILOG name thm out;
@@ -638,12 +638,12 @@ fun MAKE_SIMULATION name thm period stimulus dump_all out =
   out "module Main ();\n";
   out(" wire " ^ clk_name ^ ";\n");
   out(" reg  " ^ load_name ^ ";\n");
-  map 
-   (fn v => out(" reg  [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+  map
+   (fn v => out(" reg  [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n"))
    inpl;
   out(" wire " ^ done_name ^ ";\n");
-  map 
-   (fn v => out(" wire [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+  map
+   (fn v => out(" wire [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n"))
    outl;
   out "\n";
   out(" initial\n  begin\n   $dumpfile(\"" ^name ^ ".vcd\");\n");
@@ -666,7 +666,7 @@ fun MAKE_SIMULATION name thm period stimulus dump_all out =
 
 (*
 ** PRINT_VERILOG
-**  (|- InRise clk 
+**  (|- InRise clk
 **      ==>
 **      (?v0 .... vn. <circuit>)
 **      ==>
@@ -674,7 +674,7 @@ fun MAKE_SIMULATION name thm period stimulus dump_all out =
 **                (inp1 <> ... <> inpu) at clk,
 **                done at clk,
 **                (out1 <> ... <> outv) at clk))
-** 
+**
 ** Prints translation to Verilog to a file Spec.vl and creates a module Spec
 * (fails if Spec isn't a constant)
 *)
@@ -693,7 +693,7 @@ val dump_all_flag = ref false;
 
 (*
 ** PRINT_SIMULATION
-**  (|- InRise clk 
+**  (|- InRise clk
 **      ==>
 **      (?v0 .... vn. <circuit>)
 **      ==>
@@ -702,17 +702,17 @@ val dump_all_flag = ref false;
 **                done at clk,
 **                (out1 <> ... <> outv) at clk))
 **  period stimulus (!dump_all_flag)
-** 
-** Prints translation to Verilog and a stimulus to a file Spec.vl and creates 
+**
+** Prints translation to Verilog and a stimulus to a file Spec.vl and creates
 ** a module Main that invokes module Spec connected to a simulation environment
-** described by stimulus. If 
+** described by stimulus. If
 ** (fails if Spec isn't a constant)
 *)
 
 fun PRINT_SIMULATION thm period stimulus =
  let val name = fst(dest_const(#1(dest_cir thm)))
  in
-  printToFile 
+  printToFile
    (name ^ ".vl")
    (MAKE_SIMULATION name thm period stimulus (!dump_all_flag))
  end;
@@ -748,7 +748,7 @@ fun isSuccess s = (s = Process.success);
 (*****************************************************************************)
 fun iverilog name =
  let val vvp_file = (name ^ ".vvp")
-     val iverilog_command = ((!iverilog_path) ^ " -o " ^ vvp_file 
+     val iverilog_command = ((!iverilog_path) ^ " -o " ^ vvp_file
                              ^ " " ^ name ^ ".vl")
      val code1 = Process.system iverilog_command
      val _ = if isSuccess code1

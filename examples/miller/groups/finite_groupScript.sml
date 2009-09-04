@@ -173,7 +173,7 @@ val ADD_GROUP_INV = store_thm
     AR_TAC [ADD_GROUP_SET, ADD_GROUP_OP]
     ++ Cases_on `x = 0` >> R_TAC []
     ++ R_TAC []]);
-    
+
 val ADD_GROUP = store_thm
   ("ADD_GROUP",
    ``!n. 0 < n ==> add_group n IN finite_group``,
@@ -507,7 +507,7 @@ val FINITE_GSET_SUBTYPE = store_thm
 
 (* Consolidate theorems so far in a simplification context *)
 
-val finite_group2_sc = 
+val finite_group2_sc =
   map SC_SIMPLIFICATION
   [] @
   map SC_JUDGEMENT
@@ -667,7 +667,7 @@ val GORD_GID = store_thm
    S_TAC
    ++ G_TAC [IS_GORD]
    ++ DECIDE_TAC);
-   
+
 val GORD_GID_UNIQUE = store_thm
   ("GORD_GID_UNIQUE",
    ``!G :: finite_group. !g :: gset G. (gord G g = 1) = (g = gid G)``,

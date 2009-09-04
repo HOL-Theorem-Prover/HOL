@@ -28,26 +28,26 @@ val MAIN_def =
               (Const 1)
             )
             (Seq
-              (While 
-                (LessEq 
+              (While
+                (LessEq
                   (Var "i")
                   (Var "n")
                 )
                 (Seq
-                  (While 
-                    (LessEq 
+                  (While
+                    (LessEq
                       (Var "j")
                       (Var "n")
                     )
                     (Seq
                       (Assign "s"
-                        (Plus 
+                        (Plus
                           (Var "s")
                           (Const 1)
                         )
                       )
                       (Assign "j"
-                        (Plus 
+                        (Plus
                           (Var "j")
                           (Const 1)
                         )
@@ -55,7 +55,7 @@ val MAIN_def =
                     )
                   )
                   (Assign "i"
-                    (Plus 
+                    (Plus
                       (Var "i")
                       (Const 1)
                     )

@@ -31,10 +31,10 @@ ringLib.RING_NORM_CONV(--` (a-b)*(a+b) : int `--);
 INT_NORM_CONV(--` (a-b)*(a+b) : int `--);
 
 (*---------------------------------------------------------------------------
-       bigger test: 8 squares 
+       bigger test: 8 squares
  ---------------------------------------------------------------------------*)
 
-Count.apply ring_conv 
+Count.apply ring_conv
    `(p1*p1+q1*q1+r1*r1+s1*s1+t1*t1+u1*u1+v1*v1+w1*w1)
    *(p2*p2+q2*q2+r2*r2+s2*s2+t2*t2+u2*u2+v2*v2+w2*w2)
 
@@ -65,7 +65,7 @@ Count.apply ring_conv
     (p1*w2-q1*v2+r1*u2+s1*t2-t1*s2-u1*r2+v1*q2+w1*p2)
     : int`;
 
-Count.apply ring_conv 
+Count.apply ring_conv
    `(p1*p1+q1*q1+r1*r1+s1*s1+t1*t1+u1*u1+v1*v1+w1*w1)
    *(p2*p2+q2*q2+r2*r2+s2*s2+t2*t2+u2*u2+v2*v2+w2*w2)
 
@@ -98,7 +98,7 @@ Count.apply ring_conv
 
 
 (*---------------------------------------------------------------------------
-    Developer comments ... 
+    Developer comments ...
 
     (with ternary comparison:)
     runtime: 41.240s,    gctime: 4.230s,     systime: 0.070s.
@@ -118,7 +118,7 @@ Count.apply ring_conv
 
 open arithmeticTheory;
 
-val sum_def = 
+val sum_def =
  Define `(sum f 0 = 0n) /\ (sum f (SUC n) = sum f n + f (SUC n))`;
 
 val lemma = Q.prove

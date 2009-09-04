@@ -2095,7 +2095,7 @@ fun cnvMP eqth impth =
     (EQ_MP (MK_COMB (MK_COMB(imp_refl,eqth),REFL tm)) impth)
  end;
 
-fun MAP_THM cnv th = 
+fun MAP_THM cnv th =
  let val (hyps,c) = dest_thm th
      val cth = cnv c
      val hypths = map cnv hyps

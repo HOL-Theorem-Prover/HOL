@@ -139,7 +139,7 @@ val EQUIV_REFL_SYM_TRANS = store_thm
     THEN REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC
     THENL (* 4 subgoals *)
-      [ 
+      [
         PURE_ASM_REWRITE_TAC[]
         THEN REFL_TAC,
 
@@ -945,7 +945,7 @@ val FUN_QUOTIENT = store_thm
     THEN REWRITE_TAC[QUOTIENT_def]
     THEN CONJ_TAC
     THENL (* 2 subgoals *)
-      [ 
+      [
 
         GEN_TAC
         THEN IMP_RES_THEN MP_TAC QUOTIENT_REP
@@ -1122,10 +1122,10 @@ SPEC ``I:bool->bool``
  (MATCH_MP
   (MATCH_MP FUN_QUOTIENT (INST_TYPE [alpha |-> bool] IDENTITY_QUOTIENT))
   (UNDISCH (ISPEC ``P:'a -> bool`` ABSTRACTION_QUOTIENT))))
-    
-             
+
+
 By QUOTIENT ($= :bool->bool->bool) (I:bool->bool) ($= :bool->bool->bool)
-(IDENTITY_QUOTIENT, the identity quotient on booleans), and 
+(IDENTITY_QUOTIENT, the identity quotient on booleans), and
 by QUOTIENT (\r s:'a. P r = P s) (P:'a -> bool) (\(a:bool) (r:'a). P r = a)
 as assumptions to the FUN_QUOTIENT, we have
 QUOTIENT ($= ===> (\r s:'a. P r = P s))

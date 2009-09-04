@@ -79,7 +79,7 @@ local
 in
   fun set_benchmark_seconds secs = max_benchmark_seconds := SOME secs;
 
-  val check_benchmark_time = 
+  val check_benchmark_time =
       let
         val start_time = Time.now ()
 
@@ -157,7 +157,7 @@ fun non f = not o f;
 fun bool_compare (true,false) = LESS
   | bool_compare (false,true) = GREATER
   | bool_compare _ = EQUAL;
-  
+
 (* ------------------------------------------------------------------------- *)
 (* Pairs                                                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -398,7 +398,7 @@ fun sort cmp =
        | l as [_] => l
        | h :: t => merge_pairs (find_runs [] h [] t)
     end;
-    
+
 fun sort_map _ _ [] = []
   | sort_map _ _ (l as [_]) = l
   | sort_map f cmp xs =

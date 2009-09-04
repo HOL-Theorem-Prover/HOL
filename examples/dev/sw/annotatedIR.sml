@@ -38,46 +38,46 @@ quietdec := true;
   val show_call_detail = ref true;
 
   fun print_ir (outstream, s0) =
-    let 
+    let
 
       fun say s = TextIO.output(outstream,s)
-      fun sayln s= (say s; say "\n") 
+      fun sayln s= (say s; say "\n")
 
       fun indent 0 = ()
         | indent i = (say " "; indent(i-1))
 
       fun printtree(SC(s1,s2,info),d) =
             (indent d; sayln "SC("; printtree(s1,d+2); sayln ","; printtree(s2,d+2); say ")")
-        | printtree(CJ((exp1,rop,exp2),s1,s2,info),d) = 
+        | printtree(CJ((exp1,rop,exp2),s1,s2,info),d) =
             (indent d; say "CJ("; say (format_exp exp1 ^ " " ^ print_rop rop ^ " " ^ format_exp exp2); sayln ",";
 		       printtree(s1,d+2); sayln ","; printtree(s2,d+2); say ")")
-        | printtree(TR((exp1,rop,exp2),s,info),d) = 
+        | printtree(TR((exp1,rop,exp2),s,info),d) =
             (indent d; say "TR("; say (format_exp exp1 ^ " " ^ print_rop rop ^ format_exp exp2); sayln ",";
 		       printtree(s,d+2); say ")")
         | printtree(CALL(fname,pre,body,post,info),d) =
-            if not (!show_call_detail) then 
+            if not (!show_call_detail) then
                 (indent d; say ("CALL(" ^ fname ^ ")"))
             else
                 let val ir' = SC (pre, SC (body, post, info), info)
                     (* val ir'' = (merge_stm o rm_dummy_inst) ir' *)
-                in 
+                in
                     printtree (ir', d)
                 end
 
-        | printtree(STM stmL,d) = 
-            (indent d; if null stmL then say ("[]") 
+        | printtree(STM stmL,d) =
+            (indent d; if null stmL then say ("[]")
                        else say ("[" ^ formatInst (hd stmL) ^
                                  (itlist (curry (fn (stm,str) => "; " ^ formatInst stm ^ str)) (tl stmL) "") ^ "]"))
         | printtree(BLK(stmL, info),d) =
             printtree(STM stmL,d)
 
-    in  
+    in
       printtree(s0,0); sayln ""; TextIO.flushOut outstream
     end
 
   fun printIR ir = print_ir (TextIO.stdOut, ir)
 
-  fun printIR2 (f_name, f_type, (ins,ir,outs), defs) = 
+  fun printIR2 (f_name, f_type, (ins,ir,outs), defs) =
       ( print ("Module: " ^ f_name ^ "\n");
         print ("Inputs: " ^ format_exp ins ^ "\n" ^ "Outputs: " ^ format_exp outs ^ "\n");
         printIR ir
@@ -97,24 +97,24 @@ quietdec := true;
        in G.embed(((lab,n0)::p1,m1,l1,s1),del_n1)
     end;
 
-   (* retreive the subgraph starting from the start node and ends when "f node" holds *) 
-   fun sub_graph gr start_node f = 
-       let 
+   (* retreive the subgraph starting from the start node and ends when "f node" holds *)
+   fun sub_graph gr start_node f =
+       let
            fun one_node (nodeNo,gr') =
                if f nodeNo then
 		   gr'
-               else           
+               else
                    List.foldl (fn ((a,b),gr'') =>
                                    one_node (b, G.embed (([(a,nodeNo)],b,#3 (G.context(b,gr)),[]), gr''))
                               handle e => mk_edge (nodeNo,b,0) gr'')
                             gr' (#4 (G.context(nodeNo,gr)))
-       in 
+       in
            one_node (start_node, G.embed(([],start_node, #3 (G.context(start_node,gr)),[]),G.empty))
        end;
 
     (* locate a node, whenever the final node is reached, search terminats *)
-    fun locate gr start_node f = 
-       let 
+    fun locate gr start_node f =
+       let
            val maxNodeNo = G.noNodes gr - 1;
            fun one_node nodeNo =
                if f nodeNo then
@@ -124,7 +124,7 @@ quietdec := true;
                else
                    List.foldl (fn ((a,b),(n,found)) => if found then (n,found) else one_node b)
                             (SOME start_node,false) (#4 (G.context(nodeNo,gr)))
-       in 
+       in
            #1 (one_node start_node)
        end;
 
@@ -137,64 +137,64 @@ quietdec := true;
 
    (* find the node including the function label, if there are more than one incoming edges, then a rec is found *)
 
-   fun is_rec gr n = 
-       let 
+   fun is_rec gr n =
+       let
            val context = G.context(n,gr)
            fun is_label (Assem.LABEL _) = true
             |  is_label _ = false
-       in 
+       in
            if is_label (#instr ((#3 context):CFG.node)) then
                 (length (#1 context) > 1, n)
            else is_rec gr (#2 (hd (#4 context)))
-       end 
+       end
        handle e => (false,0);        (* no label node in the graph *)
 
 
-   (* Given a TR cfg and the node including the function name label, break this cfg into three parts: the pre-condition part, 
-      the basic case part and the recursive case part. The condition is also derived.                                          *)    
+   (* Given a TR cfg and the node including the function name label, break this cfg into three parts: the pre-condition part,
+      the basic case part and the recursive case part. The condition is also derived.                                          *)
 
 
-   fun break_rec gr lab_node = 
-     let 
+   fun break_rec gr lab_node =
+     let
         fun get_sucL n = #4 (G.context(n,gr));
         fun get_preL n = #1 (G.context(n,gr));
 
         val last_node = valOf (locate gr 0 (fn n => null (get_sucL n)));
-        fun find_join_node n = 
+        fun find_join_node n =
             if length (get_preL n) > 1 then n
-            else find_join_node (#2 (hd (get_preL n))); 
+            else find_join_node (#2 (hd (get_preL n)));
         val join_node = find_join_node last_node;  (* the node that the basic and recursive parts join *)
 
         (* the nodes jumping to the join node *)
-        val BAL_node = #2 (valOf (List.find (fn (flag,n) => flag = 1) (get_preL join_node))); 
-        val b_end_node = #2 (valOf (List.find (fn (flag,n) => flag = 0) (get_preL join_node))); 
-        val b_start_node = #2 (valOf (List.find (fn (flag,n) => flag = 2) (get_sucL BAL_node))); 
+        val BAL_node = #2 (valOf (List.find (fn (flag,n) => flag = 1) (get_preL join_node)));
+        val b_end_node = #2 (valOf (List.find (fn (flag,n) => flag = 0) (get_preL join_node)));
+        val b_start_node = #2 (valOf (List.find (fn (flag,n) => flag = 2) (get_sucL BAL_node)));
         val b_cfg = sub_graph gr b_start_node (fn n => n = b_end_node);
 
         val cj_node = #2 (valOf (List.find (fn (flag,n) => flag = 1) (get_preL b_start_node)));
         val cmp_node = #2 (hd (get_preL cj_node));
-        val cond = to_cond (#instr ((#3 (G.context(cmp_node,gr))):CFG.node), 
+        val cond = to_cond (#instr ((#3 (G.context(cmp_node,gr))):CFG.node),
                             #instr ((#3 (G.context(cj_node,gr))):CFG.node));
-              
+
         val r_start_node = #2 (valOf (List.find (fn (flag,n) => flag = 0) (get_sucL cj_node)));
-        val BL_node = #2 (valOf (List.find (fn (flag,n) => flag = 1) (get_preL lab_node))); 
+        val BL_node = #2 (valOf (List.find (fn (flag,n) => flag = 1) (get_preL lab_node)));
         val r_end_node = #2 (hd (get_preL BL_node));
         val r_cfg = sub_graph gr r_start_node (fn n => n = r_end_node);
-               
+
         val p_start_node = if #2 (hd (get_sucL lab_node)) = cmp_node then NONE
                            else SOME (#2 (hd (get_sucL lab_node)));
-        val p_cfg = case p_start_node of 
+        val p_cfg = case p_start_node of
                           NONE => NONE  (* the pre-condition part may be empty *)
                       |   SOME k => SOME (sub_graph gr k (fn n => n = #2 (hd (get_preL cj_node))))
     in
         (cond, ((p_cfg,p_start_node), (b_cfg,b_start_node), (r_cfg,r_start_node)), join_node)
     end
 
-   (* Given a CJ cfg and the node including the cmp instruction, break this cfg into the true case part and 
-      the false case part.                                                        *) 
+   (* Given a CJ cfg and the node including the cmp instruction, break this cfg into the true case part and
+      the false case part.                                                        *)
 
-   fun break_cj gr cmp_node = 
-     let 
+   fun break_cj gr cmp_node =
+     let
         fun get_sucL n = #4 (G.context(n,gr));
         fun get_preL n = #1 (G.context(n,gr));
 
@@ -206,19 +206,19 @@ quietdec := true;
         val f_end_node = #2 (hd (get_preL bal_node));
 
         val join_node = #2 (valOf (List.find (fn (flag,n) => flag = 1) (get_sucL bal_node)));
-        val t_end_node =  #2 (valOf (List.find (fn (flag,n) => flag = 0) (get_preL join_node))); 
-  
-        val cond = to_cond (#instr ((#3 (G.context(cmp_node,gr))):CFG.node), 
+        val t_end_node =  #2 (valOf (List.find (fn (flag,n) => flag = 0) (get_preL join_node)));
+
+        val cond = to_cond (#instr ((#3 (G.context(cmp_node,gr))):CFG.node),
                             #instr ((#3 (G.context(cj_node,gr))):CFG.node));
-              
-        val (t_cfg,f_cfg) = (sub_graph gr t_start_node (fn n => n = t_end_node), 
+
+        val (t_cfg,f_cfg) = (sub_graph gr t_start_node (fn n => n = t_end_node),
                              sub_graph gr f_start_node (fn n => n = f_end_node))
     in
         (cond, ((t_cfg,t_start_node), (f_cfg,f_start_node)), join_node)
     end
 
-   
-   fun convert_cond (exp1, rop, exp2) = 
+
+   fun convert_cond (exp1, rop, exp2) =
        (to_exp exp1, to_rop rop, to_exp exp2);
 
  (*---------------------------------------------------------------------------------*)
@@ -236,33 +236,33 @@ val x = inst'
 *)
 
    fun convert cfg n =
-        let 
+        let
            val (preL,_,{instr = inst', def = def', use = sue'},sucL) = G.context(n,cfg);
         in
-           case inst' of 
-               Assem.OPER {oper = (Assem.NOP, _, _), ...} => 
-                     if not (null sucL) then convert cfg (#2 (hd sucL)) else STM [] 
+           case inst' of
+               Assem.OPER {oper = (Assem.NOP, _, _), ...} =>
+                     if not (null sucL) then convert cfg (#2 (hd sucL)) else STM []
 
            |   Assem.OPER {oper = (Assem.BL,_,_), dst = dList, src = sList, jump = jp} =>
-                     let val stm = CALL(Symbol.name(hd (valOf jp)), STM [], STM [], STM [], 
-                                      {fspec = thm_t, ins = list2pair (List.map to_exp sList), 
+                     let val stm = CALL(Symbol.name(hd (valOf jp)), STM [], STM [], STM [],
+                                      {fspec = thm_t, ins = list2pair (List.map to_exp sList),
                                         outs = list2pair (List.map to_exp dList), context = []})
-                     in  if null sucL then stm   
+                     in  if null sucL then stm
                          else SC (stm, convert cfg (#2 (hd sucL)), init_info)
                      end
            |   Assem.LABEL {...} =>
-                     if not (null sucL) then convert cfg (#2 (hd sucL)) else STM [] 
+                     if not (null sucL) then convert cfg (#2 (hd sucL)) else STM []
 
            |   Assem.OPER {oper = (Assem.CMP, _, _), ...} =>
                      let val (cond, ((t_cfg,t_start_node),(f_cfg,f_start_node)), join_node) = break_cj cfg n;
                               (* val rest_cfg = sub_graph gr join_node (fn k => k = end_node); *)
-                     in 
+                     in
                          SC (CJ (convert_cond cond, convert t_cfg t_start_node, convert f_cfg f_start_node, init_info),
                              convert cfg join_node, init_info)
                      end
 
-           |   x => 
-                     if not (null sucL) then 
+           |   x =>
+                     if not (null sucL) then
                          SC (STM [to_inst x], convert cfg (#2 (hd sucL)), init_info)
                      else STM [to_inst x]
         end
@@ -271,33 +271,33 @@ val x = inst'
 (*  Convert a cfg corresonding to a function to ir                                 *)
 (*---------------------------------------------------------------------------------*)
 
-   fun convert_module (ins,cfg,outs) = 
-      let 
+   fun convert_module (ins,cfg,outs) =
+      let
          val (flag, lab_node) = is_rec cfg 0
          val (inL,outL) = (pair2list ins, pair2list outs)
-      in 
+      in
          if not flag then convert cfg lab_node
-         else 
-            let val (cond, ((p_cfg,p_start_node), (b_cfg,b_start_node), (r_cfg,r_start_node)), join_node) = break_rec cfg lab_node 
+         else
+            let val (cond, ((p_cfg,p_start_node), (b_cfg,b_start_node), (r_cfg,r_start_node)), join_node) = break_rec cfg lab_node
                 val (b_ir,r_ir) = (convert b_cfg b_start_node, convert r_cfg r_start_node);
 
                 val bal_node = #2 (valOf (List.find (fn (flag,n) => flag = 1) (#1 (G.context(lab_node,cfg)))));
                 val (Assem.OPER {src = rec_argL,...}) = #instr ((#3(G.context(bal_node,cfg))):CFG.node);
-                val rec_args_pass_ir = STM (List.map (fn (dexp,sexp) => {oper = mmov, src = [sexp], dst = [dexp]}) 
+                val rec_args_pass_ir = STM (List.map (fn (dexp,sexp) => {oper = mmov, src = [sexp], dst = [dexp]})
                              (zip inL (pair2list (to_exp (hd rec_argL)))))    (* dst_exp  = BL (src_exp) *)
 
                 val info = {fspec = DECIDE(Term`T`), ins = ins, outs = ins, context = []}
                 val r_ir_1 = SC(r_ir,rec_args_pass_ir, info)
 
                 val cond' = convert_cond cond
-                val tr_ir = case p_cfg of 
-                                 NONE => 
+                val tr_ir = case p_cfg of
+                                 NONE =>
                                     SC (TR (cond', r_ir_1, {fspec = thm_t, ins = ins, outs = ins, context = []}),
                                         b_ir, info)
                                |  SOME p_gr =>
                                     let val p_ir = convert p_gr (valOf p_start_node);
                                         val ir0 = SC (r_ir_1, p_ir, init_info)
-                                        val ir1 = TR (cond', ir0, {fspec = thm_t, ins = ins, outs = outs, context = []})            
+                                        val ir1 = TR (cond', ir0, {fspec = thm_t, ins = ins, outs = outs, context = []})
                                         val ir2 = SC (ir1, b_ir, {fspec = thm_t, ins = ins, outs = ins, context = []})
                                     in
                                          SC (p_ir, ir2, {fspec = thm_t, ins = ins, outs = outs, context = []})
@@ -305,7 +305,7 @@ val x = inst'
              in
                 tr_ir
              end
-       end;              
+       end;
 
  (*---------------------------------------------------------------------------------*)
  (*      Simplify the IR tree                                                       *)
@@ -325,9 +325,9 @@ val x = inst'
 
    fun rm_dummy_inst (SC(ir1,ir2,info)) =
          SC (rm_dummy_inst ir1, rm_dummy_inst ir2, info)
-    |  rm_dummy_inst (TR(cond,ir2,info)) = 
+    |  rm_dummy_inst (TR(cond,ir2,info)) =
          TR(cond, rm_dummy_inst ir2, info)
-    |  rm_dummy_inst (CJ(cond,ir1,ir2,info)) = 
+    |  rm_dummy_inst (CJ(cond,ir1,ir2,info)) =
          CJ(cond, rm_dummy_inst ir1, rm_dummy_inst ir2, info)
     |  rm_dummy_inst (STM stmL) =
          STM (List.filter (not o is_dummy_inst) stmL)
@@ -340,47 +340,47 @@ val x = inst'
    fun merge_ir ir =
      let
 
-       (* Determine whether two irs are equal or not *) 
+       (* Determine whether two irs are equal or not *)
 
-       fun is_ir_equal (SC(s1,s2,_)) (SC(s3,s4,_)) = 
+       fun is_ir_equal (SC(s1,s2,_)) (SC(s3,s4,_)) =
 	     is_ir_equal s1 s3 andalso is_ir_equal s2 s4
-        |  is_ir_equal (TR(cond1,body1,_)) (TR(cond2,body2,_)) = 
+        |  is_ir_equal (TR(cond1,body1,_)) (TR(cond2,body2,_)) =
 	     cond1 = cond2 andalso is_ir_equal body1 body2
-        |  is_ir_equal (CJ(cond1,s1,s2,_)) (CJ(cond2,s3,s4,_)) = 
+        |  is_ir_equal (CJ(cond1,s1,s2,_)) (CJ(cond2,s3,s4,_)) =
 	     cond1 = cond2 andalso is_ir_equal s1 s3 andalso is_ir_equal s2 s4
-        |  is_ir_equal (BLK(s1,_)) (BLK(s2,_)) = 
+        |  is_ir_equal (BLK(s1,_)) (BLK(s2,_)) =
 	     List.all (op =) (zip s1 s2)
-        |  is_ir_equal (STM s1) (STM s2) = 
+        |  is_ir_equal (STM s1) (STM s2) =
 	     List.all (op =) (zip s1 s2)
-        |  is_ir_equal (CALL(name1,_,_,_,_)) (CALL(name2,_,_,_,_)) = 
+        |  is_ir_equal (CALL(name1,_,_,_,_)) (CALL(name2,_,_,_,_)) =
 	     name1 = name2
         |  is_ir_equal _ _ = false;
 
-       fun merge_stm (SC(STM s1, STM s2, info)) = 
+       fun merge_stm (SC(STM s1, STM s2, info)) =
              BLK (s1 @ s2, info)
-        |  merge_stm (SC(STM s1, BLK(s2,_), info)) = 
+        |  merge_stm (SC(STM s1, BLK(s2,_), info)) =
 	     BLK (s1 @ s2, info)
-	|  merge_stm (SC(BLK(s1,_), STM s2, info)) = 
+	|  merge_stm (SC(BLK(s1,_), STM s2, info)) =
 	     BLK (s1 @ s2, info)
-	|  merge_stm (SC(BLK(s1,_), BLK(s2,_), info)) = 
+	|  merge_stm (SC(BLK(s1,_), BLK(s2,_), info)) =
 	     BLK (s1 @ s2, info)
-	|  merge_stm (SC(STM [], s2, info)) = 
+	|  merge_stm (SC(STM [], s2, info)) =
 	     merge_stm s2
-	|  merge_stm (SC(s1, STM [], info)) = 
+	|  merge_stm (SC(s1, STM [], info)) =
 	     merge_stm s1
-	|  merge_stm (SC(BLK([],_), s2, info)) = 
+	|  merge_stm (SC(BLK([],_), s2, info)) =
 	     merge_stm s2
-	|  merge_stm (SC(s1, BLK([],_), info)) = 
-	     merge_stm s1	
+	|  merge_stm (SC(s1, BLK([],_), info)) =
+	     merge_stm s1
 	|  merge_stm (SC(s1,s2,info)) =
 	     SC (merge_stm s1, merge_stm s2, info)
-	|  merge_stm (TR(cond, body, info)) = 
+	|  merge_stm (TR(cond, body, info)) =
 	     TR(cond, merge_stm body, info)
-	|  merge_stm (CJ(cond, s1, s2, info)) = 
+	|  merge_stm (CJ(cond, s1, s2, info)) =
 	     CJ(cond, merge_stm s1, merge_stm s2, info)
         |  merge_stm (STM s) =
              BLK(s, init_info)
-	|  merge_stm stm = 
+	|  merge_stm stm =
 	     stm
 
         fun merge ir = let val ir' = merge_stm ir;
@@ -403,16 +403,16 @@ val x = inst'
     |  get_annt (CALL(fname,pre,body,post,info)) = info
     |  get_annt (STM stmL) = {ins = NA, outs = NA, fspec = thm_t, context = []};
 
-   fun replace_ins {ins = ins', outs = outs', context = context', fspec = fspec'} ins'' = 
+   fun replace_ins {ins = ins', outs = outs', context = context', fspec = fspec'} ins'' =
            {ins = ins'', outs = outs', context = context', fspec = fspec'};
 
-   fun replace_outs {ins = ins', outs = outs', context = context', fspec = fspec'} outs'' = 
+   fun replace_outs {ins = ins', outs = outs', context = context', fspec = fspec'} outs'' =
            {ins = ins', outs = outs'', context = context', fspec = fspec'};
 
-   fun replace_context {ins = ins', outs = outs', context = context', fspec = fspec'} context'' = 
+   fun replace_context {ins = ins', outs = outs', context = context', fspec = fspec'} context'' =
            {ins = ins', outs = outs', context = context'', fspec = fspec'};
 
-   fun replace_fspec {ins = ins', outs = outs', context = context', fspec = fspec'} fspec'' = 
+   fun replace_fspec {ins = ins', outs = outs', context = context', fspec = fspec'} fspec'' =
            {ins = ins', outs = outs', context = context', fspec = fspec''};
 
 
@@ -434,11 +434,11 @@ val x = inst'
 
    fun get_modified_regs (SC(ir1,ir2,info)) =
          (get_modified_regs ir1) @ (get_modified_regs ir2)
-    |  get_modified_regs (TR(cond,ir,info)) = 
+    |  get_modified_regs (TR(cond,ir,info)) =
          get_modified_regs ir
-    |  get_modified_regs (CJ(cond,ir1,ir2,info)) = 
+    |  get_modified_regs (CJ(cond,ir1,ir2,info)) =
          (get_modified_regs ir1) @ (get_modified_regs ir2)
-    |  get_modified_regs (CALL(fname,pre,body,post,info)) = 
+    |  get_modified_regs (CALL(fname,pre,body,post,info)) =
 			let
 				val preL = get_modified_regs pre
 				val bodyL = get_modified_regs body
@@ -449,10 +449,10 @@ val x = inst'
 				modL
 			end
     |  get_modified_regs (STM l) =
-         itlist (curry (fn (a,b) => one_stm_modified_regs a @ b)) l [] 
-    |  get_modified_regs (BLK (l,info)) = 
+         itlist (curry (fn (a,b) => one_stm_modified_regs a @ b)) l []
+    |  get_modified_regs (BLK (l,info)) =
          itlist (curry (fn (a,b) => one_stm_modified_regs a @ b)) l [];
-  
+
  (*---------------------------------------------------------------------------------*)
  (*      Set input, output and context information                                  *)
  (*      Alignment functions                                                        *)
@@ -467,7 +467,7 @@ val x = inst'
                ir
             else
                case ir of
-                   (BLK (stmL, info)) => 
+                   (BLK (stmL, info)) =>
                        BLK (stmL, replace_ins info outer_ins)
                 |  (SC (s1,s2,info)) =>
                        SC (adjust_ins s1 outer_info, s2, replace_ins info outer_ins)
@@ -477,12 +477,12 @@ val x = inst'
                        TR(cond, adjust_ins s info, replace_ins info outer_ins)
                 |  (CALL (fname,pre,body,post,info)) =>
                        CALL(fname, pre, body, post, replace_ins info outer_ins)
-                |  _ => 
+                |  _ =>
                        raise Fail "adjust_ins: invalid IR tree"
         end
 
 
-   fun args_diff (ins1, outs0) = 
+   fun args_diff (ins1, outs0) =
         set2pair (S.difference (pair2set ins1, pair2set outs0));
 
    (* Given the outputs and the context of an ir, calculate its inputs *)
@@ -492,11 +492,11 @@ val x = inst'
 val irX = (back_trace ir1 info)
 
 fun extract (SC(s1,s2,inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}:annt) =
-	(s1, s2, inner_info, outer_outs, contextL, outer_info) 
+	(s1, s2, inner_info, outer_outs, contextL, outer_info)
 
 val (s1, s2, inner_info, outer_outs, contextL, outer_info)  = extract ir1 info
 
-              val s1' = back_trace 
+              val s1' = back_trace
 
 val s2' = back_trace s2 outer_info
 
@@ -512,21 +512,21 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
 
 *)
 
-   fun back_trace (BLK (stmL,inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}:annt) = 
-          let 
+   fun back_trace (BLK (stmL,inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}:annt) =
+          let
               val (inner_inL, inner_tempL, inner_outL) =  getIO stmL
               val gapL = set2list (S.difference (pair2set outer_outs, list2set inner_outL));
               val read_inS = list2set (gapL @ inner_inL);
              (* val contextS = S.difference (list2set contextL, real_outS) *)
-          in 
-              BLK (stmL, {outs = outer_outs, ins = set2pair read_inS, context = contextL, fspec = #fspec inner_info}) 
+          in
+              BLK (stmL, {outs = outer_outs, ins = set2pair read_inS, context = contextL, fspec = #fspec inner_info})
           end
 
     |  back_trace (STM stmL) info =
           back_trace (BLK (stmL,init_info)) info
 
     |  back_trace (SC(s1,s2,inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
-           let 
+           let
               val s2' = back_trace s2 outer_info
               val (s1_info, s2_info) = (get_annt s1, get_annt s2');
               val s2'' = if S.isSubset (pair2set (#ins s2_info), pair2set (#outs s1_info))
@@ -540,7 +540,7 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
            end
 
     |  back_trace (CJ(cond, s1, s2, inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
-          let 
+          let
               fun filter_exp (REG e) = true
                |  filter_exp (MEM e) = true
                |  filter_exp _ = false
@@ -549,8 +549,8 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
               val s1' = back_trace s1 outer_info
               val s2' = back_trace s2 outer_info
               val ({ins = ins1, outs = outs1, ...}, {ins = ins2, outs = outs2, ...}) = (get_annt s1', get_annt s2');
-              val inS_0 = set2pair (list2set (filter filter_exp 
-					(cond_expL @ (pair2list ins1) @ (pair2list ins2)))); 
+              val inS_0 = set2pair (list2set (filter filter_exp
+					(cond_expL @ (pair2list ins1) @ (pair2list ins2))));
                       (* union of the variables in the condition and the inputs of the s1' and s2' *)
               val info_0 = replace_ins outer_info inS_0
           in
@@ -558,7 +558,7 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
           end
 
     |  back_trace (TR (cond, body, info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
-           let 
+           let
               val extra_outs = args_diff (PAIR (outer_outs, list2pair contextL), #outs info)
               val info' = replace_context info (pair2list extra_outs);
               val body' = adjust_ins body info'
@@ -568,7 +568,7 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
 
           (* the adjustment will be performed later in the funCall.sml *)
     |  back_trace (CALL (fname, pre, body, post, info)) (outer_info as {outs = outer_outs, context = contextL, fspec = fout_spec, ...}) =
-          let 
+          let
 				  val outer_outs_set = pair2set outer_outs
 				  val inner_outs_set = pair2set (#outs info);
 				  val extra_outs_set = S.difference (outer_outs_set, inner_outs_set);
@@ -582,9 +582,9 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
               CALL (fname, pre, BLK ([], info), post, info')
           end;
 
-   fun set_info (ins,ir,outs) = 
-       let 
-          fun extract_outputs ir0 = 
+   fun set_info (ins,ir,outs) =
+       let
+          fun extract_outputs ir0 =
               let val info0 = get_annt ir0;
                   val (inner_outS, outer_outS) = (IRSyntax.pair2set (#outs info0), IRSyntax.pair2set outs)
                   val ir1 = if Binaryset.equal(inner_outS, outer_outS) then ir0
@@ -605,16 +605,16 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
   fun match_ins_outs (SC(s1,s2,info)) =
-      let 
+      let
           val (ir1,ir2) = (match_ins_outs s1, match_ins_outs s2);
           val (info1,info2) = (get_annt ir1, get_annt ir2);
           val (outs1, ins2) = (#outs info1, #ins info2);
       in
-          if outs1 = ins2 then 
+          if outs1 = ins2 then
               SC(ir1,ir2,info)
-          else 
-              SC(ir1, 
-                 SC (BLK ([], {ins = outs1, outs = ins2, context = #context info2, fspec = thm_t}), ir2, 
+          else
+              SC(ir1,
+                 SC (BLK ([], {ins = outs1, outs = ins2, context = #context info2, fspec = thm_t}), ir2,
                           replace_ins info2 outs1),
                  info)
       end
@@ -634,8 +634,8 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
                   ir',
                   info)
       end
-    
-   |  match_ins_outs ir = 
+
+   |  match_ins_outs ir =
       ir;
 
 
@@ -643,7 +643,7 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
  (*      Interface                                                                  *)
  (*---------------------------------------------------------------------------------*)
 
-   fun build_ir (f_name, f_type, f_args, f_gr, f_outs, f_rs) = 
+   fun build_ir (f_name, f_type, f_args, f_gr, f_outs, f_rs) =
       let
          val (ins, outs) = (IRSyntax.to_exp f_args, IRSyntax.to_exp f_outs)
          val ir0 = convert_module (ins, f_gr, outs)
@@ -651,14 +651,14 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
          val ir2 = set_info (ins,ir1,outs)
       in
          (ins,ir2,outs)
-      end  
+      end
 
    fun sfl2ir prog =
      let
         val env = ANF.toANF [] prog;
         val defs = List.map (fn (name, (flag,src,anf,cps)) => src) env;
         val (f_const,(_, f_defs, f_anf, f_ast)) = hd env
-        val setting as (f_name, f_type, f_args, f_gr, f_outs, f_rs) = regAllocation.convert_to_ARM (f_anf); 
+        val setting as (f_name, f_type, f_args, f_gr, f_outs, f_rs) = regAllocation.convert_to_ARM (f_anf);
         val f_ir = build_ir setting
      in
         (f_name, f_type, f_ir, defs)

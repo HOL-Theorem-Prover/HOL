@@ -11,7 +11,7 @@ app load ["permTheory","bossLib"];
 
 open HolKernel Parse boolLib bossLib listTheory permTheory;
 
-infix THEN THENL 
+infix THEN THENL
 infix 8 by;
 
 val MEM_APPEND_DISJ = Q.prove
@@ -28,14 +28,14 @@ val _ = new_theory "sorting";
  * all adjacent elements of the list.                                        *
  *---------------------------------------------------------------------------*)
 
-val SORTED_def = 
+val SORTED_def =
  Define
     `(SORTED R  [] = T)
  /\  (SORTED R [x] = T)
  /\  (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
 
 
-val performs_sorting_def = 
+val performs_sorting_def =
  Define
     `performs_sorting f R = !l. PERM l (f R l) /\ SORTED R (f R l)`;
 
@@ -48,7 +48,7 @@ val SORTED_eq = Q.store_thm("SORTED_eq",
 `!R L x. transitive R
          ==> (SORTED R (x::L) = SORTED R L /\ !y. MEM y L ==> R x y)`,
 Induct_on `L`
- THEN RW_TAC list_ss [SORTED_def,MEM] 
+ THEN RW_TAC list_ss [SORTED_def,MEM]
  THEN PROVE_TAC [relationTheory.transitive_def]);
 
 
@@ -57,17 +57,17 @@ Induct_on `L`
  *---------------------------------------------------------------------------*)
 
 val SORTED_APPEND = Q.store_thm("SORTED_APPEND",
-`!R L1 L2. 
-     transitive R 
+`!R L1 L2.
+     transitive R
  /\  SORTED R L1
  /\  SORTED R L2
  /\ (!x y. MEM x L1 /\ MEM y L2 ==> R x y)
-  ==> 
+  ==>
     SORTED R (APPEND L1 L2)`,
 Induct_on `L1`
- THEN RW_TAC list_ss [MEM] 
+ THEN RW_TAC list_ss [MEM]
  THEN `SORTED R L1 /\ !y. MEM y L1 ==> R h y` by PROVE_TAC [SORTED_eq]
- THEN RW_TAC bool_ss [SORTED_eq] 
+ THEN RW_TAC bool_ss [SORTED_eq]
  THEN `MEM y L1 \/ MEM y L2` by PROVE_TAC [MEM_APPEND_DISJ]
  THEN PROVE_TAC []);
 

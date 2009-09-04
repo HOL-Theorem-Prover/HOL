@@ -32,7 +32,7 @@ fun non_triv thl = gather (not o is_triv_rw o concl) thl
 (* PURE_REWRITE_RULE plus generalized beta conversion.                       *)
 (*---------------------------------------------------------------------------*)
 
-fun simplify thl = 
+fun simplify thl =
  let val rewrite = PURE_REWRITE_RULE (non_triv thl) (* PURE_ONCE_REWRITE_RULE *)
      fun simpl th =
       let val th' = GEN_BETA_RULE (rewrite th)

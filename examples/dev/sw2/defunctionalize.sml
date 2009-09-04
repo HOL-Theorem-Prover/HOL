@@ -48,7 +48,7 @@ fun is_fun t =   (* the term is a function? *)
   #1 (Type.dest_type (type_of t)) = "fun"
   handle e => false
 
-fun FunName f = 
+fun FunName f =
   #1 (strip_comb (#1 (dest_eq f)))
 
 (*-----------------------------------------------------------------------------------------*)
@@ -68,7 +68,7 @@ val ClosName = ref (M.mkDict typeOrder)     (* A mapping from a type to the name
 val HOFunc = ref (M.mkDict tvarOrder)       (* higher order functions *)
                                             (* Format: [function's name |-> (new function's lhs, constructor)] *)
 
-fun cF() = 
+fun cF() =
   (M.listItems (!Lifted),
    List.map (fn (tp, s) => (tp, S.listItems s)) (M.listItems (!ClosFunc)));
 
@@ -79,9 +79,9 @@ fun cF() =
 
 fun record_f fname =          (* store the name of a higher order function *)
   let val tp = type_of fname
-  in 
-    case M.peek(!ClosFunc, tp) of 
-         NONE => 
+  in
+    case M.peek(!ClosFunc, tp) of
+         NONE =>
              (* val _ = closure_index := !closure_index + 1; *)
              ClosFunc := M.insert(!ClosFunc, tp, S.add(S.empty tvarOrder, fname))
      |   SOME s =>
@@ -89,7 +89,7 @@ fun record_f fname =          (* store the name of a higher order function *)
   end;
 
 fun identify_f e =        (* Identify higher order functions in an expression and store them into the ClosFunc *)
- let 
+ let
    fun trav t =
        if is_let t then
            let val (v,M,N) = dest_plet t
@@ -129,7 +129,7 @@ fun identify_f e =        (* Identify higher order functions in an expression an
   end
 
 fun identify_closure defs =     (* Identify higher order functions in a list of function definitions *)
-  let 
+  let
     fun mk_clos_data f =
       let val (fdecl, fbody) = dest_eq f
           val (fname, args) = dest_comb fdecl
@@ -167,22 +167,22 @@ fun build_type tp funcs =                 (* build a new datatype for a type *)
     fun build_type_args fv =
       if null fv then []
       else if length fv = 1 then
-        [dTyop{Args = [], Thy = NONE, 
+        [dTyop{Args = [], Thy = NONE,
          Tyop = let val t = type_of (hd fv) in
-                  M.find(!ClosName, t) 
+                  M.find(!ClosName, t)
                   handle e => #1 (Type.dest_type t)
                 end}
         ]
-      else 
+      else
         [dTyop{Args =
-                 List.map (fn arg => 
-                   dTyop{Args = [], Thy = NONE, 
+                 List.map (fn arg =>
+                   dTyop{Args = [], Thy = NONE,
                         Tyop = M.find(!ClosName, type_of arg)
                                handle e => #1 (Type.dest_type (type_of arg))})
                  fv,
                Thy = NONE, Tyop = "prod"}
         ]
-     
+
     val clos_name = (* the name of the datatype representing a closure for the inputting type *)
         let val _ = closure_index := !closure_index + 1
             val x = "clos" ^ Int.toString (!closure_index)
@@ -191,14 +191,14 @@ fun build_type tp funcs =                 (* build a new datatype for a type *)
         end
 
     val clos_tp_info = (* the type information of the datatype *)
-         [(clos_name, 
+         [(clos_name,
            Constructors (
-             List.map 
+             List.map
               (fn lifted_f =>
                 let
                   val _ = constructor_index := !constructor_index + 1
                   val fv = free_vars (M.find (!Lifted, lifted_f))
-                  val args = build_type_args fv 
+                  val args = build_type_args fv
                 in
                   ("cons" ^ Int.toString(!constructor_index),
                    build_type_args fv
@@ -271,21 +271,21 @@ fun mk_dispatch tp =
     val df_type = mk_prod(clos_type, arg_type) --> return_type
 
     val df_var = mk_var(df_name, df_type)
-(*   
+(*
     val _ = new_constant(df_name, df_type)
     val df_const = mk_const(df_name, df_type)
 *)
-    
+
     fun mk_clause (fname, constructor) =        (* construct a dispatching clause for the pattern matching pattern *)
         let val f_body = M.find(!Lifted, fname)
             val (f_arg, body) = dest_pabs f_body
             val fv = free_vars f_body
             val fv' = List.map term2closure fv
-            val clos_arg = if null fv then constructor 
+            val clos_arg = if null fv then constructor
                            else mk_comb(constructor, list_mk_pair fv')
             val arg = mk_pair(clos_arg, f_arg)
             val lt = mk_comb(df_var, arg)
-            val rt = let val (old_name, ftype) = dest_const fname handle _ => dest_var fname 
+            val rt = let val (old_name, ftype) = dest_const fname handle _ => dest_var fname
                          val new_arg = if null fv then f_arg else mk_pair(list_mk_pair fv', f_arg)
                          val new_name = old_name ^ "'"
                          val new_f_type = (type_of new_arg) --> return_type
@@ -325,12 +325,12 @@ fun build_dispatch () =           (* build dispatch functions for all introduced
 (*-----------------------------------------------------------------------------------------*)
 
 val Redefined  = ref (M.mkDict tvarOrder)       (* definitions of the functions after closure conversion *)
-                                                (* format: function name |-> new definition              *) 
+                                                (* format: function name |-> new definition              *)
 fun convert_exp t =
   if is_let t then
     let val (v,M,N) = dest_plet t in
       if is_pabs M then       (* an embedded function *)
-        let 
+        let
           val (arg, body) = dest_pabs M
           val _ = convert_fun (mk_eq(mk_comb(v, arg), body))
 (*          val M' =  #2 (M.find(!HOFunc, v))
@@ -359,7 +359,7 @@ fun convert_exp t =
     end
   else if is_comb t then
     let val (M,N) = dest_comb t
-    in 
+    in
        if length (#2 (strip_comb t)) > 1 then t    (* binary expressions *)
        else if is_fun M then    (* function application *)
          if not (M.peek(!Redefined, M) = NONE) then     (* a pre-defined function *)
@@ -372,8 +372,8 @@ fun convert_exp t =
          else
             let
               val tp = type_of M
-              val clos_var = 
-                  mk_var(#1 (dest_const M) handle _ => #1 (dest_var M), 
+              val clos_var =
+                  mk_var(#1 (dest_const M) handle _ => #1 (dest_var M),
                                     type2closure tp)
               val closure = mk_pair(clos_var, convert_exp N)
             in
@@ -385,14 +385,14 @@ fun convert_exp t =
     handle _ => t      (* not function application *)
   else if is_fun t then
     case M.peek(!HOFunc, t) of     (* Higher order function *)
-         NONE => mk_var(#1 (dest_const t) handle _ => #1 (dest_var t), 
+         NONE => mk_var(#1 (dest_const t) handle _ => #1 (dest_var t),
                         type2closure (type_of t)) |
          SOME (f_sig, constr) => constr
   else t
 
 and
 
-convert_fun f = 
+convert_fun f =
   let
     val (fdecl, fbody) = dest_eq f
     val (fname, args) = dest_comb fdecl
@@ -429,10 +429,10 @@ fun defunctionalize defs =
   let
     val _ = build_types defs
     val _ = build_dispatch ()
-    
-    fun process_type tp = 
+
+    fun process_type tp =
       let val fs = S.listItems(M.find (!ClosFunc, tp))
-          val fs' = List.map (fn fname => 
+          val fs' = List.map (fn fname =>
                        let val fbody = M.find(!Lifted, fname)
                            val (args,body) = dest_pabs fbody
                            val fdecl = mk_comb(fname, args)
@@ -447,8 +447,8 @@ fun defunctionalize defs =
     val _ = Redefined := M.mkDict tvarOrder
     val dispatch_spec = List.map process_type (List.map fst (M.listItems (!ClosFunc)))
 
-    val remaining_funcs = 
-          List.filter (fn f => M.peek(!Redefined, #1 (dest_comb (lhs f))) = NONE) 
+    val remaining_funcs =
+          List.filter (fn f => M.peek(!Redefined, #1 (dest_comb (lhs f))) = NONE)
           (List.map (concl o SPEC_ALL) defs)
     val new_spec = List.map (fn x => let val f = convert_fun x in Define `^f` end) remaining_funcs
 
@@ -462,7 +462,7 @@ fun defunctionalize defs =
 
 (* Convert function arguments to closure arguments                                         *)
 
-fun process_args args = 
+fun process_args args =
   if is_pair args then
     let val (arg1, arg2) = dest_pair args
         val (assms1, arg1') = process_args arg1
@@ -488,17 +488,17 @@ fun process_args args =
 
 (* Build the equivalence statement for a function.                                       *)
 
-fun var2const t = 
-  if is_comb t then 
+fun var2const t =
+  if is_comb t then
     let val (M,N) = dest_comb t
     in mk_comb(var2const M, N)
     end
-  else 
+  else
     let val (v, tp) = dest_var t
     in mk_const(v, tp)
     end
 
-fun build_judgement f = 
+fun build_judgement f =
   let
     val (fdecl, fbody) = dest_eq f
     val (fname, args) = dest_comb fdecl
@@ -513,19 +513,19 @@ fun build_judgement f =
                      mk_eq(mk_comb(fdecl, input), new_fdecl')
                  end
     val x' = gen_all x
-    val judgement = if null assums then x' 
+    val judgement = if null assums then x'
                     else mk_imp(list_mk_conj assums, x')
   in
     judgement
   end
 
-(* 
+(*
   (build_judgement o concl o SPEC_ALL) (List.nth(defs,2))
   val def = List.nth(defs,2)
   val f = concl (SPEC_ALL def)
 *)
 
-fun elim_hof defs = 
+fun elim_hof defs =
   let
     val newdefs = defunctionalize defs
     val judgements = List.map (build_judgement o concl o SPEC_ALL) defs
@@ -572,11 +572,11 @@ set_goal ([], List.nth(judgements, 3))      (* set_goal ([], ``!m. dispatch1(upt
 Induct_on `n` THENL [
   ONCE_REWRITE_TAC (defs2 @ newdefs2) THEN
     expandf (RW_TAC arith_ss (defs1 @ newdefs1)),
-  
+
   ONCE_REWRITE_TAC (defs2 @ newdefs2) THEN
     RW_TAC arith_ss [LET_THM] THEN
     expandf (RW_TAC arith_ss (defs1 @ newdefs1)) THEN
-    Q.UNABBREV_TAC `s1` THEN 
+    Q.UNABBREV_TAC `s1` THEN
     RW_TAC std_ss []
 ]
 
@@ -590,7 +590,7 @@ val f_def = Define `
   f x = x * 2 < x + 10`;
 
 val g_def = Define `
-  g (s, x) = 
+  g (s, x) =
     let h1 = \y. y + x in
         if s x then h1 else let h2 = \y. h1 y * x in h2`;
 

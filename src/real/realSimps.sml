@@ -320,7 +320,7 @@ val simpset_convs = map (fn p => {conv = K (K elim_common_factor),
                                   name = "realSimps.elim_common_factor",
                                   trace = 2}) ecf_patterns
 
-val REAL_REDUCE_ss = SSFRAG 
+val REAL_REDUCE_ss = SSFRAG
   {name = SOME "REAL_REDUCE",
    ac = [], congs =[],
    convs = simpset_convs,

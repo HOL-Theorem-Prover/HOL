@@ -22,7 +22,12 @@ cone-of-influence.cert: cone-of-influence.lisp
 cone-of-influence.cert: circuits.cert
 # cone-of-influence.cert: $(ACL2_SYSTEM_BOOKS)/arithmetic-2/meta/top.cert
 
+defund-test.cert: defund-test.lisp
+
 encap1.cert: encap1.lisp
+
+ltl-project.cert: ltl-project.lisp
+ltl-project.cert: summary.cert
 
 ltl.cert: ltl.lisp
 ltl.cert: sets.cert

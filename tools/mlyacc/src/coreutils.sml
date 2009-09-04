@@ -1,4 +1,4 @@
-(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi 
+(* ML-Yacc Parser Generator (c) 1989 Andrew W. Appel, David R. Tarditi
  *
  * $Log$
  * Revision 1.1  2006/06/22 07:40:27  michaeln
@@ -10,7 +10,7 @@
  *
  * Revision 1.1.1.1  1996/01/31  16:01:45  george
  * Version 109
- * 
+ *
  *)
 
 functor mkCoreUtils(structure Core : CORE) : CORE_UTILS =
@@ -50,8 +50,8 @@ functor mkCoreUtils(structure Core : CORE) : CORE_UTILS =
 
 (* renumber rules so that rule numbers increase monotonically with
    the number of their lhs nonterminal, and so that rules are numbered
-   sequentially.  **Functions below assume that this number is true**, 
-   i.e. productions for nonterm i are numbered from j to k, 
+   sequentially.  **Functions below assume that this number is true**,
+   i.e. productions for nonterm i are numbered from j to k,
    productions for nonterm i+1 are numbered from k+1 to m, and
    productions for nonterm 0 start at 0 *)
 
@@ -72,7 +72,7 @@ functor mkCoreUtils(structure Core : CORE) : CORE_UTILS =
 
 (* list of rules - sorted by rule number. *)
 
-		 val rules = 
+		 val rules =
 		     let fun g i =
 			if i < nonterms then (derives sub i) @ (g (i+1))
 			else nil
@@ -155,7 +155,7 @@ functor mkCoreUtils(structure Core : CORE) : CORE_UTILS =
 			   nonterms nonterms
 			end
 
-(* shifts: compute the core sets that result from shift/gotoing on 
+(* shifts: compute the core sets that result from shift/gotoing on
    the closure of a kernal set.  The items in core sets are sorted, of
    course.
 
@@ -233,13 +233,13 @@ fun mergeShiftItems (args as ((k,l),r)) =
 		      | (_,results) => results)
 		    [] (produces nt)
 	       in memoize f
-	       end 
+	       end
 
 (* epsProds: take a core and compute a list of epsilon productions for it
    sorted by rule number.  ** Depends on closureNonterms returning a list
    of nonterminals sorted by nonterminal #, rule numbers increasing
    monotonically with their lhs production #, and nontermEpsProds returning
-   an ordered item list for each production 
+   an ordered item list for each production
 *)
 
 	fun epsProds (CORE (itemList,state)) =

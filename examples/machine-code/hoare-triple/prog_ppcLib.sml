@@ -1,12 +1,12 @@
 structure prog_ppcLib :> prog_ppcLib =
 struct
- 
+
 open HolKernel boolLib bossLib;
 open wordsLib stringLib addressTheory pred_setTheory combinTheory;
 open set_sepTheory ppc_Theory prog_ppcTheory helperLib ppc_Lib;
 open ppc_coretypesTheory ppc_seq_monadTheory;
 
-infix \\ 
+infix \\
 val op \\ = op THEN;
 val eq = Term.eq;
 
@@ -14,18 +14,18 @@ val eq = Term.eq;
 val ppc_status = pS_HIDE
 val ppc_pc = ``pPC``;
 
-fun process v tm = 
-  if type_of tm = ``:ppc_reg`` then 
+fun process v tm =
+  if type_of tm = ``:ppc_reg`` then
      if eq tm ``PPC_PC``  then (``pPC`` ,``p:word32``) else
      if eq tm ``PPC_LR``  then (``pLR`` ,``lr:word32``) else
      if eq tm ``PPC_CTR`` then (``pCTR``,``ctr:word32``) else
        let val tm = snd (dest_comb tm)
            val f = int_to_string o numSyntax.int_of_term o snd o dest_comb in
          (mk_comb(``pR``,tm),mk_var("r" ^ f tm,``:word32``)) end
-   else if type_of tm = ``:ppc_bit`` then 
+   else if type_of tm = ``:ppc_bit`` then
      if eq tm ``PPC_CARRY``  then (``pS1 PPC_CARRY`` ,``c:bool option``) else
        let val f = int_to_string o numSyntax.int_of_term o snd o dest_comb o snd o dest_comb in
-         (mk_comb(``pS1``,tm),mk_var("s" ^ f tm,``:bool option``)) end        
+         (mk_comb(``pS1``,tm),mk_var("s" ^ f tm,``:bool option``)) end
    else if type_of tm = ``:word32`` then
      (mk_comb(``pM1``,tm),v)
    else hd [];
@@ -55,15 +55,15 @@ fun ppc_pre_post g = let
   val assignments = find_terml (can (match_term ``PWRITE_S a x``)) g
                   @ find_terml (can (match_term ``PWRITE_R a x``)) g
                   @ find_terml (can (match_term ``PWRITE_M a x``)) g
-  val assignments = map (fn tm => (cdr (car tm), cdr tm)) assignments  
+  val assignments = map (fn tm => (cdr (car tm), cdr tm)) assignments
   fun assigned_aux x y [] = y
     | assigned_aux x y ((q,z)::zs) = if eq x q then z else assigned_aux x y zs
   fun get_assigned_value x y = assigned_aux x y assignments
   fun mk_pre_post_assertion (x,v) = let
     val (y,z) = process v x
     val q = get_assigned_value x z
-    in (mk_comb(y,z),mk_comb(y,q)) end   
-  val pre_post = map mk_pre_post_assertion (map (fn tm => (tm,T)) (regs @ bits) @ mems) 
+    in (mk_comb(y,z),mk_comb(y,q)) end
+  val pre_post = map mk_pre_post_assertion (map (fn tm => (tm,T)) (regs @ bits) @ mems)
   val pre = list_mk_star (map fst pre_post) ``:ppc_set -> bool``
   val post = list_mk_star (map snd pre_post) ``:ppc_set -> bool``
   fun is_precond tm =
@@ -73,19 +73,19 @@ fun ppc_pre_post g = let
   val all_conds = (list_dest dest_conj o fst o dest_imp) g
   val pre_conds = (filter is_precond) all_conds
   val pre_conds = (filter (fn tm => not (eq tm ``p && 3w = 0w:word32``))) pre_conds
-  val ss = foldr (fn (x,y) => (fst (dest_eq x) |-> snd (dest_eq x)) :: y handle e => y) [] 
-             (filter is_precond pre_conds) 
+  val ss = foldr (fn (x,y) => (fst (dest_eq x) |-> snd (dest_eq x)) :: y handle e => y) []
+             (filter is_precond pre_conds)
   val ss = ss @ map ((fn tm => mk_var((fst o dest_var o cdr) tm,``:bool option``) |-> tm) o cdr)
     (filter (can (match_term ``PREAD_S x s = SOME y``)) all_conds)
   val pre = subst ss pre
   val post = subst ss post
-  val pre = if null pre_conds then pre else mk_cond_star(pre,mk_comb(``Abbrev``,list_mk_conj pre_conds)) 
+  val pre = if null pre_conds then pre else mk_cond_star(pre,mk_comb(``Abbrev``,list_mk_conj pre_conds))
   in (pre,post) end;
 
 fun introduce_pMEMORY th = let
   val (_,p,c,q) = dest_spec(concl th)
   val tm3 = find_term (can (match_term ``pM1 (x + 3w) y``)) p
-  val tm = (fst o dest_comb o snd o dest_comb o fst o dest_comb) tm3  
+  val tm = (fst o dest_comb o snd o dest_comb o fst o dest_comb) tm3
   val vs = FVL [tm] empty_varset
   val tm0 = mk_comb(mk_comb(``pM1``,snd (dest_comb tm)),``yyy : word8 option``)
   val tm0 = find_term (can (match_terml [] vs tm0)) p
@@ -101,11 +101,11 @@ fun introduce_pMEMORY th = let
   val th = CONV_RULE (POST_CONV c THENC PRE_CONV c) th
   val f = snd o dest_comb o snd o dest_comb
   fun g th tm tm' = if is_var tm then INST [ tm |-> tm' ] th else th
-  val th = g th (f tm0) ``((7 >< 0) ((w >> 24):word32)):word8``   
-  val th = g th (f tm1) ``((7 >< 0) ((w >> 16):word32)):word8``   
-  val th = g th (f tm2) ``((7 >< 0) ((w >> 8):word32)):word8``   
-  val th = g th (f tm3) ``((7 >< 0) (w:word32)):word8``   
-  val h = REWRITE_RULE [GSYM STAR_ASSOC] 
+  val th = g th (f tm0) ``((7 >< 0) ((w >> 24):word32)):word8``
+  val th = g th (f tm1) ``((7 >< 0) ((w >> 16):word32)):word8``
+  val th = g th (f tm2) ``((7 >< 0) ((w >> 8):word32)):word8``
+  val th = g th (f tm3) ``((7 >< 0) (w:word32)):word8``
+  val h = REWRITE_RULE [GSYM STAR_ASSOC]
   val th = MATCH_MP (h pMEMORY_INTRO) (h th)
   val th = SIMP_RULE bool_ss [GSYM ALIGNED_def,SEP_CLAUSES] th
   val th = REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND,ALIGNED_def,
@@ -114,7 +114,7 @@ fun introduce_pMEMORY th = let
     val (_,p,c,q) = dest_spec(concl th)
     val tm = find_term (can (match_term ``(a:'a =+ w:'b) f``)) p
     val (tm,y) = dest_comb tm
-    val (tm,x) = dest_comb tm  
+    val (tm,x) = dest_comb tm
     val a = snd (dest_comb tm)
     val th = REWRITE_RULE [APPLY_UPDATE_ID] (INST [x |-> mk_comb(y,a)] th)
     in th end handle e => th
@@ -127,14 +127,14 @@ fun introduce_pBYTE_MEMORY th = let
   val c = MOVE_OUT_CONV (car tm0) THENC STAR_REVERSE_CONV
   val th = CONV_RULE (POST_CONV c THENC PRE_CONV c) th
   val f = cdr o cdr
-  val h = REWRITE_RULE [GSYM STAR_ASSOC,bit_listTheory.bytes2word_thm] 
+  val h = REWRITE_RULE [GSYM STAR_ASSOC,bit_listTheory.bytes2word_thm]
   val th = MATCH_MP (h pBYTE_MEMORY_INTRO) (h th)
   val th = RW [wordsTheory.WORD_ADD_0,GSYM progTheory.SPEC_MOVE_COND] th
   fun replace_access_in_pre th = let
     val (_,p,c,q) = dest_spec(concl th)
     val tm = find_term (can (match_term ``(a:'a =+ w:'b) f``)) p
     val (tm,y) = dest_comb tm
-    val (tm,x) = dest_comb tm  
+    val (tm,x) = dest_comb tm
     val a = snd (dest_comb tm)
     val th = REWRITE_RULE [APPLY_UPDATE_ID] (INST [x |-> mk_comb(y,a)] th)
     in th end handle e => th
@@ -142,20 +142,20 @@ fun introduce_pBYTE_MEMORY th = let
   val th = RW [STAR_ASSOC] th
   in th end handle e => th;
 
-fun calculate_length_and_jump th = 
+fun calculate_length_and_jump th =
   let val (_,_,_,q) = dest_spec(concl th) in
     let val v = find_term (fn t => eq t ``pPC (p + 4w)``) q in (th,4,SOME 4) end
   handle e =>
     let val v = find_term (can (match_term ``pPC (p + n2w n)``)) q
-    in (th,4,SOME (0 + (numSyntax.int_of_term o cdr o cdr o cdr) v)) end 
+    in (th,4,SOME (0 + (numSyntax.int_of_term o cdr o cdr o cdr) v)) end
   handle e =>
     let val v = find_term (can (match_term ``pPC (p - n2w n)``)) q
     in (th,4,SOME (0 - (numSyntax.int_of_term o cdr o cdr o cdr) v)) end
-  handle e => 
-    (th,4,NONE) end 
+  handle e =>
+    (th,4,NONE) end
 
 fun post_process_thm th = let
-  val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) 
+  val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss)
              [wordsTheory.word_mul_n2w,wordsTheory.WORD_ADD_0] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
   val th = introduce_pMEMORY th
@@ -167,16 +167,16 @@ fun ppc_prove_one_spec th c = let
   val g = concl th
   val th = Q.INST [`s`|->`(pr,ps,pm)`] th
   val s = find_term (can (match_term ``PPC_NEXT x = SOME y``)) (concl th)
-  val s = (snd o dest_comb o snd o dest_comb) s    
+  val s = (snd o dest_comb o snd o dest_comb) s
   val (pre,post) = ppc_pre_post g
   val tm = ``SPEC PPC_MODEL pre {(p,c)} post``
-  val tm = subst [mk_var("pre",type_of pre) |-> pre, 
-                  mk_var("post",type_of post) |-> post, 
+  val tm = subst [mk_var("pre",type_of pre) |-> pre,
+                  mk_var("post",type_of post) |-> post,
                   mk_var("c",type_of c) |-> c] tm
   val FLIP_TAC = CONV_TAC (ONCE_REWRITE_CONV [EQ_SYM_EQ])
   val th = RW [PREAD_R_def,PREAD_S_def,PREAD_M_def,PWRITE_R_def,PWRITE_S_def,PWRITE_M_def] th
   val result = prove(tm,
-    MATCH_MP_TAC IMP_PPC_SPEC \\ REPEAT STRIP_TAC \\ EXISTS_TAC s 
+    MATCH_MP_TAC IMP_PPC_SPEC \\ REPEAT STRIP_TAC \\ EXISTS_TAC s
     \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) [GSYM STAR_ASSOC,
          STAR_ppc2set, CODE_POOL_ppc2set, pR_def, pPC_def, IN_DELETE,
          APPLY_UPDATE_THM, ppc_reg_distinct, ppc_reg_11, ALIGNED_INTRO,
@@ -184,10 +184,10 @@ fun ppc_prove_one_spec th c = let
          INSERT aaa`] SET_EQ_SUBSET, INSERT_SUBSET, EMPTY_SUBSET,
          PREAD_R_def,PREAD_S_def,PREAD_M_def,PWRITE_R_def,PWRITE_S_def,PWRITE_M_def]
     \\ NTAC 3 (FLIP_TAC \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO])
-    \\ FLIP_TAC \\ REWRITE_TAC [AND_IMP_INTRO, GSYM CONJ_ASSOC] 
-    \\ SIMP_TAC std_ss [] \\ FLIP_TAC \\ STRIP_TAC \\ STRIP_TAC 
-    THEN1 (FLIP_TAC \\ MATCH_MP_TAC (RW [ALIGNED_INTRO] th) \\ FULL_SIMP_TAC std_ss 
-           [ALIGNED_def,wordsTheory.WORD_ADD_0,markerTheory.Abbrev_def] \\ EVAL_TAC)    
+    \\ FLIP_TAC \\ REWRITE_TAC [AND_IMP_INTRO, GSYM CONJ_ASSOC]
+    \\ SIMP_TAC std_ss [] \\ FLIP_TAC \\ STRIP_TAC \\ STRIP_TAC
+    THEN1 (FLIP_TAC \\ MATCH_MP_TAC (RW [ALIGNED_INTRO] th) \\ FULL_SIMP_TAC std_ss
+           [ALIGNED_def,wordsTheory.WORD_ADD_0,markerTheory.Abbrev_def] \\ EVAL_TAC)
     \\ ASM_REWRITE_TAC [ALIGNED_INTRO]
     \\ ASM_SIMP_TAC std_ss [UPDATE_ppc2set'',ALIGNED_CLAUSES]
     \\ ONCE_REWRITE_TAC [ALIGNED_MOD_4]

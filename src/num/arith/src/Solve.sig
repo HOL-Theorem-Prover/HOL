@@ -9,7 +9,7 @@ sig
    val is_T : term -> bool
    val is_F : term -> bool
    val NEGATE_CONV : conv -> conv
-   val DEPTH_FORALL_CONV : conv -> conv 
+   val DEPTH_FORALL_CONV : conv -> conv
    val FORALL_ARITH_CONV : conv
 
 end

@@ -81,15 +81,15 @@ val msgrel_patterns = [--`^msgrel X Y`--];
 
 val msgrel_rules_tm =
 --`
-                      
+
        (* -------------------------------------------- *)
              (^msgrel (Crypt1 k (Decrypt1 k X)) X)                /\
 
-                      
+
        (* -------------------------------------------- *)
              (^msgrel (Decrypt1 k (Crypt1 k X)) X)                /\
 
-                      
+
        (* -------------------------------------------- *)
                (^msgrel (Nonce1 N) (Nonce1 N))                   /\
 
@@ -116,7 +116,7 @@ val msgrel_rules_tm =
 
                   ((^msgrel X Y) /\ (^msgrel Y Z)
        (* -------------------------------------------- *) ==>
-                          (^msgrel X Z))                      
+                          (^msgrel X Z))
 
 `--;
 
@@ -126,7 +126,7 @@ val (msgrel_rules_sat,msgrel_ind_thm) =
 val msgrel_inv_thms = prove_inversion_theorems
     msgrel_rules_sat msgrel_ind_thm;
 
-val msgrel_strong_ind = prove_strong_induction 
+val msgrel_strong_ind = prove_strong_induction
     msgrel_rules_sat msgrel_ind_thm;
 
 val _ = save_thm ("msgrel_rules_sat", msgrel_rules_sat);

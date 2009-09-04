@@ -21,7 +21,7 @@ fun is_vGoal (vGoal _) = true
 
 fun apply_once f [] acc = NONE
   | apply_once f (h::t) acc =
-     case f h 
+     case f h
       of NONE => apply_once f t (h::acc)
        | SOME h' => SOME (rev acc @ (h'::t));
 
@@ -29,17 +29,17 @@ fun apply_once f [] acc = NONE
 (* Apply tactic only at first goal in tree.                                  *)
 (*---------------------------------------------------------------------------*)
 
-fun expand_opt (s,t) (vGoal g) = 
+fun expand_opt (s,t) (vGoal g) =
       SOME (case Tactical.VALID t g
             of ([],f)  => vAtom(s,t)
              | ([x],f) => vThen(vAtom(s,t),vGoal x)
              | (gl,f)  => vThenl(vAtom(s,t),map vGoal gl))
   | expand_opt p (vAtom _) = NONE
-  | expand_opt p (vThen(t1,t2)) = 
+  | expand_opt p (vThen(t1,t2)) =
      (case expand_opt p t1
         of SOME t1' => SOME (vThen(t1',t2))
-         | NONE => case expand_opt p t2 
-                    of NONE => NONE 
+         | NONE => case expand_opt p t2
+                    of NONE => NONE
                      | SOME t2' => SOME(vThen(t1,t2')))
   | expand_opt p (vThenl(t1,tlist)) =
      case expand_opt p t1
@@ -62,14 +62,14 @@ fun first_opt f [] = NONE
 
 fun first_goal_opt (vGoal g) = SOME g
   | first_goal_opt (vAtom _) = NONE
-  | first_goal_opt (vThen(t1,t2)) = 
+  | first_goal_opt (vThen(t1,t2)) =
      (case first_goal_opt t1 of NONE => first_goal_opt t2 | x => x)
   | first_goal_opt (vThenl(t1,tlist)) =
      case first_goal_opt t1
       of NONE => first_opt first_goal_opt tlist
        | x => x
 
-fun first_goal gtree = 
+fun first_goal gtree =
   case first_goal_opt gtree
    of NONE => raise ERR "first_goal" "no goals left"
     | SOME g => g;
@@ -91,27 +91,27 @@ fun tactic_of (vGoal _) = ALL_TAC
 
 fun pp_gtree ppstrm =
  let open Portable
-     val {add_break,add_newline,add_string,begin_block,end_block,...} 
+     val {add_break,add_newline,add_string,begin_block,end_block,...}
        = Portable.with_ppstream ppstrm
      val pp_goal = goalStack.pp_goal ppstrm
      val pp_slist = pr_list add_string (fn () => ())
                             (fn () => add_break(1,0))
-     fun pp (vAtom (s,t)) = 
-        if s="" then add_string "<anonymous>" 
+     fun pp (vAtom (s,t)) =
+        if s="" then add_string "<anonymous>"
         else
         (begin_block INCONSISTENT 0;
          pp_slist (String.tokens Char.isSpace s);
          end_block())
        | pp (vGoal g) = pp_goal g
-       | pp (vThen(vt1,vt2)) = 
-          let in 
+       | pp (vThen(vt1,vt2)) =
+          let in
              begin_block CONSISTENT 1;
              pp vt1; add_string " THEN"; add_break (1,0);
              pp vt2;
              end_block()
           end
-       | pp (vThenl(vt,tlist)) = 
-          let in 
+       | pp (vThenl(vt,tlist)) =
+          let in
              begin_block CONSISTENT 1;
              pp vt; add_string " THENL"; add_break (1,0);
              add_string "[";

@@ -154,7 +154,7 @@ val DIV_TWO_MONO = store_thm
    ++ REPEAT STRIP_TAC
    ++ KNOW_TAC `(m MOD 2 = 0) \/ (m MOD 2 = 1)` >> PROVE_TAC [MOD_TWO]
    ++ KNOW_TAC `(n MOD 2 = 0) \/ (n MOD 2 = 1)` >> PROVE_TAC [MOD_TWO]
-   ++ DECIDE_TAC);   
+   ++ DECIDE_TAC);
 
 val DIV_TWO_MONO_EVEN = store_thm
   ("DIV_TWO_MONO_EVEN",
@@ -526,7 +526,7 @@ val FILTER_MEM = store_thm
    ``!P (x:'a) l. MEM x (FILTER P l) ==> P x``,
    NTAC 2 STRIP_TAC
    ++ Induct >> RW_TAC std_ss [MEM, FILTER]
-   ++ (RW_TAC std_ss [MEM, FILTER] ++ PROVE_TAC []));   
+   ++ (RW_TAC std_ss [MEM, FILTER] ++ PROVE_TAC []));
 
 val MEM_FILTER = store_thm
   ("MEM_FILTER",
@@ -650,7 +650,7 @@ val SET_EQ_EXT = store_thm
    ``!(s:'a->bool) t. (s = t) = (!v. v IN s = v IN t)``,
    RW_TAC std_ss [SPECIFICATION]
    ++ PROVE_TAC [EQ_EXT]);
-   
+
 val UNION_DEF_ALT = store_thm
   ("UNION_DEF_ALT",
    ``!s t. s UNION t = (\x:'a. s x \/ t x)``,
@@ -706,7 +706,7 @@ val GSPEC_DEF_ALT = store_thm
   ("GSPEC_DEF_ALT",
    ``!(f:'a -> 'b # bool). GSPEC f = (\v. ?x. (v, T) = f x)``,
    RW_TAC std_ss [SET_EQ_EXT, GSPECIFICATION]
-   ++ RW_TAC std_ss [SPECIFICATION]);   
+   ++ RW_TAC std_ss [SPECIFICATION]);
 
 val COMPL_COMPL = store_thm
   ("COMPL_COMPL",
@@ -721,7 +721,7 @@ val COMPL_CLAUSES = store_thm
                     /\ (COMPL s UNION s = UNIV)``,
    RW_TAC std_ss [SET_EQ_EXT, COMPL_DEF, UNIV_DEF, DIFF_DEF,
 		  GSPECIFICATION, UNION_DEF, INTER_DEF, EMPTY_DEF]
-   ++ RW_TAC std_ss [SPECIFICATION]);   
+   ++ RW_TAC std_ss [SPECIFICATION]);
 
 val COMPL_SPLITS = store_thm
   ("COMPL_SPLITS",

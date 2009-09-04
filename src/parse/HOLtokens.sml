@@ -1,4 +1,4 @@
-structure HOLtokens :> HOLtokens = 
+structure HOLtokens :> HOLtokens =
 struct
 
 type charclass = char -> bool

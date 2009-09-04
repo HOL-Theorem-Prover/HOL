@@ -12,16 +12,16 @@ val ahb2 = holCheck.holCheck ahb1 handle ex => Raise ex;
 List.map (isSome o #2) (valOf (modelTools.get_results ahb2)); (* should be all true *)
 
 model checking is delibrately not part of the compile because it takes too long and this is a demo
-*) 
+*)
 
-(* FIXME: WARNING! WARNING! Ever since a change to the way I do abstractions, 
-          this example pretty much dies in the refinement 
-          stage. Run with abstraction off and it goes through eventually. 
+(* FIXME: WARNING! WARNING! Ever since a change to the way I do abstractions,
+          this example pretty much dies in the refinement
+          stage. Run with abstraction off and it goes through eventually.
           This is under investigation. *)
 structure amba_ahb =
 struct
 
-local 
+local
 
 open Globals HolKernel Parse goalstackLib;
 
@@ -47,7 +47,7 @@ val nw = 16;
     val transmv' = List.map prm transmv
     val transmvl = interleave transmv' transmv
     val maskv =  ["hmask_15","hmask_14","hmask_13","hmask_12","hmask_11","hmask_10","hmask_9","hmask_8","hmask_7",
-		  "hmask_6","hmask_5", "hmask_4","hmask_3","hmask_2","hmask_1","hmask_0"];  
+		  "hmask_6","hmask_5", "hmask_4","hmask_3","hmask_2","hmask_1","hmask_0"];
     val maskv' = List.map prm maskv
     val maskvl = interleave maskv' maskv
     val splitv =  ["hsplit_15","hsplit_14","hsplit_13","hsplit_12","hsplit_11","hsplit_10","hsplit_9","hsplit_8",
@@ -65,7 +65,7 @@ val nw = 16;
     val masterv =  ["hmaster_3","hmaster_2","hmaster_1","hmaster_0"];
     val masterv' = List.map prm masterv
     val mastervl = interleave masterv' masterv
-    val slvspltv = List.map (fn l => "hslvsplt_"^(int_to_string (hd l))^"_"^(int_to_string (last l))) 
+    val slvspltv = List.map (fn l => "hslvsplt_"^(int_to_string (hd l))^"_"^(int_to_string (last l)))
 			    (cartprod [List.tabulate(ns,I),List.tabulate(nm,I)])
     val slvspltv' = List.map prm slvspltv
     val slvspltvl = interleave slvspltv' slvspltv
@@ -90,19 +90,19 @@ val nw = 16;
 
 in
 
-local 
+local
 
     val mk_bool_pair = pairSyntax.list_mk_pair o (List.map mk_bool_var)
 
     val state = rand(lhs(concl(SPEC_ALL INIT_AHB_def)))
 
-    fun ahb2ctl t =  (bool2ctl state ((type_of state)-->bool) 
-		      (rhs(concl(UNCHANGED_CONV (SIMP_CONV (pure_ss++BETA_ss++numSimps.REDUCE_ss) 
+    fun ahb2ctl t =  (bool2ctl state ((type_of state)-->bool)
+		      (rhs(concl(UNCHANGED_CONV (SIMP_CONV (pure_ss++BETA_ss++numSimps.REDUCE_ss)
 					   ([RETRY_def,ERROR_def,GRANT_def,COND_CLAUSES,SPLIT_def,HSPLIT_def,MASTER_def]
 					    @m16n2b@m16exp)) t))))
 
     val T1rh = [(".",rhs(concl(SPEC_ALL amba_ahb_R1rh)))]
-	       
+
     (* CTL properties *)
 
     (* stupid ML requires redoing fixity decls *)
@@ -111,7 +111,7 @@ local
     fun ahb_AP s = C_AP state (mk_bool_var s)
 
     (* abbrevs *)
-	       
+
     val NSQ  = (ahb_AP "htrans_1") C_AND (C_NOT(ahb_AP "htrans_0"))
     val RDY = (ahb_AP "hreadyout")
     val OK = (C_NOT(ahb_AP "hresp_0")) C_AND (C_NOT(ahb_AP "hresp_1"))
@@ -127,22 +127,22 @@ local
     (* default master always the bus upon request (either right away, or if masked then after demasking via hsplit) *)
     (* AG (hbusreq_x /\ ~hmask_x ==> AF hgrant_x) *)
     val dmn = (nm-1) (* default master number*)
-    val ctl_hsplit_follows_split = 
+    val ctl_hsplit_follows_split =
 	ahb2ctl ``!m.m<16 ==> (SPLIT (hresp_0:bool,hresp_1:bool) /\ GRANT m (^(mk_bool_pair masterv)))
 	    ==> (BC_AF (HSPLIT m (^(mk_bool_pair splitv))))``
 
     val ctl_grant = C_AG (ahb2ctl ``(hbusreq_7:bool) ==> ((BC_AX (GRANT ^(fromMLnum dmn) (^(mk_bool_pair grantv)))) \/
-			  (BC_AF ((HSPLIT ^(fromMLnum dmn) (^(mk_bool_pair splitv))) ==> 
+			  (BC_AF ((HSPLIT ^(fromMLnum dmn) (^(mk_bool_pair splitv))) ==>
 							BC_AX (GRANT ^(fromMLnum dmn) (^(mk_bool_pair grantv))))))``)
 
     (* for low priority guy we can't guarantee the bus but the possibility should exist *)
     (*val ctl_grant2 = C_EF (((ahb_AP "hbusreq_2") C_AND (C_NOT(ahb_AP "hmask_1"))) C_IMP (C_EF (ahb_AP "hgrant_2")))*)
     val ctl_grant2 = C_AG (ahb2ctl ``(hbusreq_5:bool) ==> ((BC_EX (GRANT 5 (^(mk_bool_pair grantv)))) \/
 			  (BC_AF ((HSPLIT 5 (^(mk_bool_pair splitv))) ==> BC_EX (GRANT 5 (^(mk_bool_pair grantv))))))``)
-    
+
     (* quick sanity checks *)
-    val ch1 = C_AG (ahb2ctl ``^(rhs(concl(SPEC_ALL amba_ahb_I1rh))) ==> 
-			    ~SPLIT(hresp_0,hresp_1) /\ ~RETRY(hresp_0,hresp_1) /\ 
+    val ch1 = C_AG (ahb2ctl ``^(rhs(concl(SPEC_ALL amba_ahb_I1rh))) ==>
+			    ~SPLIT(hresp_0,hresp_1) /\ ~RETRY(hresp_0,hresp_1) /\
 										    ~ERROR(hresp_0,hresp_1)``)
     val ch2 = C_AG (ahb2ctl ``~SPLIT(hresp_0,hresp_1) /\ ~RETRY(hresp_0,hresp_1) /\ ~ERROR(hresp_0,hresp_1)``)
 
@@ -150,43 +150,43 @@ local
     (* AG (no_seq ==> AX(A(~no_seq U ((READY /\ OK) \/ RETRY \/ ERROR \/ SPLIT)))))*)
     (*SPLIT C_OR RETRY C_OR ERROR C_OR*)
     val ctl_latf = C_AG (NSQ C_IMP (C_AX((C_NOT(NSQ)) C_AU ((RDY C_AND OK)))))
- 
+
     (* to make it easier to type (as in keyboard) various latency properties *)
     val lat_rec_def = Define `(lat_rec f 0       = f) /\
-                              (lat_rec f (SUC n) = C_OR(f,C_AX (lat_rec f n)))`; 
+                              (lat_rec f (SUC n) = C_OR(f,C_AX (lat_rec f n)))`;
 
-    (* bus latency is at most four (four waitstates ) cycles*) 
-    (* AG (lat_rec 4 hreadyout) *)  
-    val ctl_bus_lat = C_AG (rhs(concl(SIMP_CONV std_ss [lat_rec_def] ``lat_rec (^(ahb_AP "hreadyout")) 
+    (* bus latency is at most four (four waitstates ) cycles*)
+    (* AG (lat_rec 4 hreadyout) *)
+    val ctl_bus_lat = C_AG (rhs(concl(SIMP_CONV std_ss [lat_rec_def] ``lat_rec (^(ahb_AP "hreadyout"))
 						(SUC (SUC (SUC (SUC 0))))``)));
 
     (*SPLIT C_OR RETRY C_OR ERROR C_OR*)
     (* transfer completes at most ten (two overhead + four waitstates + four beat burst) cycles from transfer start *)
     (* FIXME: actually this does not properly detect burst termination, since slave says rdy+ok after every transfer *)
     (* FIXME: replace ugly SUCs with numerals *)
-    (* AG ((no_seq /\ single ==> lat_rec 2  (hreadyout /\ OK)) /\ 
-           (no_seq /\ inc4   ==> lat_rec 10 (hreadyout /\ OK))) *)  
-    val ctl_trans_lat = 
-    C_AG ((NSQ C_AND (C_NOT (ahb_AP "hburst_0")) C_IMP 
-			((rhs(concl(SIMP_CONV std_ss [lat_rec_def] 
-			  ``lat_rec (^RDY /\ ^OK) (SUC (SUC 0))``))))) 
-	      C_AND 
-	  ((NSQ C_AND (ahb_AP "hburst_0")) C_IMP 
-			(((C_AX((C_NOT(NSQ)) C_AU ( (RDY C_AND OK))))) C_AND 
-			(rhs(concl(SIMP_CONV std_ss [lat_rec_def] 
+    (* AG ((no_seq /\ single ==> lat_rec 2  (hreadyout /\ OK)) /\
+           (no_seq /\ inc4   ==> lat_rec 10 (hreadyout /\ OK))) *)
+    val ctl_trans_lat =
+    C_AG ((NSQ C_AND (C_NOT (ahb_AP "hburst_0")) C_IMP
+			((rhs(concl(SIMP_CONV std_ss [lat_rec_def]
+			  ``lat_rec (^RDY /\ ^OK) (SUC (SUC 0))``)))))
+	      C_AND
+	  ((NSQ C_AND (ahb_AP "hburst_0")) C_IMP
+			(((C_AX((C_NOT(NSQ)) C_AU ( (RDY C_AND OK))))) C_AND
+			(rhs(concl(SIMP_CONV std_ss [lat_rec_def]
 		          ``lat_rec (^RDY /\ ^OK) (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC 0))))))))))``))))))
 
     (* no deadlock (this is conducted using the non-totalised R) *)
     val ctl_dlh = inst [alpha|->((type_of state-->bool))] ``C_AG (C_EX (C_BOOL(B_TRUE)))``;
-   
-in 
 
-fun mk_ahb() = ((set_init (rhs (concl(SPEC_ALL amba_ahb_I1rh)))) o (set_trans T1rh) o (set_flag_ric true) o 
-		(set_name "ahb") o (set_vord bvmh)o (set_state state) o 
+in
+
+fun mk_ahb() = ((set_init (rhs (concl(SPEC_ALL amba_ahb_I1rh)))) o (set_trans T1rh) o (set_flag_ric true) o
+		(set_name "ahb") o (set_vord bvmh)o (set_state state) o
 		 (set_props[("ctl_inith",ctl_inith),(*("ctl_dlh",ctl_dlh)*)("ctl_grant",ctl_grant),
 			    ("ctl_grant2",ctl_grant2),("ctl_latf",ctl_latf),("ctl_trans_lat",ctl_trans_lat)])) empty_model
 
 end
 
-end 
+end
 end

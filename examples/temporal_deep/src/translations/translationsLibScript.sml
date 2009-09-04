@@ -5,24 +5,24 @@ quietdec := true;
 
 val hol_dir = concat Globals.HOLDIR "/";
 val home_dir = (concat hol_dir "examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") :: 
-            (concat home_dir "src/translations") :: 
-            (concat home_dir "src/tools") :: 
-            (concat hol_dir "examples/PSL/path") :: 
+loadPath := (concat home_dir "src/deep_embeddings") ::
+            (concat home_dir "src/translations") ::
+            (concat home_dir "src/tools") ::
+            (concat hol_dir "examples/PSL/path") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
  ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory", "temporal_deep_mixedTheory",
-  "ltl_to_automaton_formulaTheory", "rltlTheory", 
+  "ltl_to_automaton_formulaTheory", "rltlTheory",
   "numLib", "listLib", "rltl_to_ltlTheory", "psl_to_rltlTheory",
   "PathTheory", "UnclockedSemanticsTheory", "ProjectionTheory",
   "symbolic_kripke_structureTheory", "temporal_deep_simplificationsLibTheory"];
 *)
 
-open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory 
+open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory temporal_deep_mixedTheory
-     pred_setTheory rich_listTheory set_lemmataTheory pairTheory 
+     pred_setTheory rich_listTheory set_lemmataTheory pairTheory
      ltl_to_automaton_formulaTheory numLib listLib rltlTheory
      rltl_to_ltlTheory psl_to_rltlTheory PathTheory UnclockedSemanticsTheory
      ProjectionTheory symbolic_kripke_structureTheory
@@ -59,26 +59,26 @@ val _ = new_theory "translationsLib";
   gen. Buechi*)
 val LTL_TO_GEN_BUECHI___TRANSLATION_THM___MAX =
   store_thm ("LTL_TO_GEN_BUECHI___TRANSLATION_THM___MAX",
-      ``!x l DS pf sv. 
+      ``!x l DS pf sv.
       ((pf = FST(LTL_TO_GEN_BUECHI l T x)) /\
       (DS = SND(LTL_TO_GEN_BUECHI l T x)) /\
       LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR DS sv) ==>
-                
+
         (!i. LTL_SEM i l = A_SEM i (LTL_TO_GEN_BUECHI_DS___A_NDET DS pf sv))``,
-  
+
       METIS_TAC[LTL_TO_GEN_BUECHI_THM,LTL_TO_GEN_BUECHI_DS___SEM___MAX])
 
 
 
 val LTL_TO_GEN_BUECHI___TRANSLATION_THM___MIN =
   store_thm ("LTL_TO_GEN_BUECHI___TRANSLATION_THM___MIN",
-    ``!x l DS pf sv. 
+    ``!x l DS pf sv.
       ((pf = FST(LTL_TO_GEN_BUECHI l x T)) /\
       (DS = SND(LTL_TO_GEN_BUECHI l x T)) /\
       LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR DS sv) ==>
-                
+
         (!i. LTL_SEM i l = A_SEM i (LTL_TO_GEN_BUECHI_DS___A_UNIV DS pf sv))``,
-  
+
       METIS_TAC[LTL_TO_GEN_BUECHI_THM,LTL_TO_GEN_BUECHI_DS___SEM___MIN])
 
 
@@ -100,9 +100,9 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_NOT___eval =
 
 
 
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_AND___eval =    
+val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_AND___eval =
     save_thm ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_AND___eval",
-    let 
+    let
       val thm = SIMP_RULE list_ss [EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def,
                        EXTEND_LTL_TO_GEN_BUECHI_DS_def, UNION_SING, UNION_EMPTY
                       ] CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_AND;
@@ -111,9 +111,9 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_AND___eval =
       thm
     end);
 
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_OR___eval =    
+val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_OR___eval =
     save_thm ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_OR___eval",
-    let 
+    let
       val thm = SIMP_RULE list_ss [EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def,
                        EXTEND_LTL_TO_GEN_BUECHI_DS_def, UNION_SING, UNION_EMPTY
                       ] CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_OR;
@@ -122,9 +122,9 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_OR___eval =
       thm
     end);
 
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV___eval =    
+val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV___eval =
     save_thm ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV___eval",
-    let 
+    let
       val thm = SIMP_RULE list_ss [EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def,
                        EXTEND_LTL_TO_GEN_BUECHI_DS_def, UNION_SING, UNION_EMPTY
                       ] CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV;
@@ -155,9 +155,9 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PNEXT___eval =
                       ] CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PNEXT);
 
 
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL___eval =    
+val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL___eval =
     save_thm ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL___eval",
-    let 
+    let
       val thm = SIMP_RULE list_ss [
                        EXTEND_LTL_TO_GEN_BUECHI_DS_def, UNION_SING, UNION_EMPTY
                       ] CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL;
@@ -166,9 +166,9 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL___eval =
       thm
     end);
 
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL___eval =    
+val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL___eval =
     save_thm ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL___eval",
-    let 
+    let
       val thm = SIMP_RULE list_ss [
                        EXTEND_LTL_TO_GEN_BUECHI_DS_def, UNION_SING, UNION_EMPTY
                       ] CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL;
@@ -177,9 +177,9 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL___eval =
       thm
     end);
 
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE___eval =    
+val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE___eval =
     save_thm ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE___eval",
-    let 
+    let
       val thm = SIMP_RULE list_ss [
                        EXTEND_LTL_TO_GEN_BUECHI_DS_def, UNION_SING, UNION_EMPTY
                       ] CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE;
@@ -188,9 +188,9 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE___eval =
       thm
     end);
 
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE___eval =    
+val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE___eval =
     save_thm ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE___eval",
-    let 
+    let
       val thm = SIMP_RULE list_ss [
                        EXTEND_LTL_TO_GEN_BUECHI_DS_def, UNION_SING, UNION_EMPTY
                       ] CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE;
@@ -201,7 +201,7 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE___eval =
 
 
 
- 
+
 
 
 
@@ -213,9 +213,9 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PROP___forget_eval =
                        EXTEND_LTL_TO_GEN_BUECHI_DS_def,
                        UNION_EMPTY,
                        EMPTY_LTL_TO_GEN_BUECHI_DS_def,
-                       ltl_to_gen_buechi_ds_REWRITES] 
+                       ltl_to_gen_buechi_ds_REWRITES]
       (prove (``!b1 b2 p.
-          LTL_TO_GEN_BUECHI_DS___SEM 
+          LTL_TO_GEN_BUECHI_DS___SEM
             (EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS EMPTY_LTL_TO_GEN_BUECHI_DS
                 {(LTL_PROP p,b1,b2,(\sv. p))} (P_USED_VARS p))``,
           METIS_TAC[CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PROP,
@@ -223,7 +223,7 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PROP___forget_eval =
                     EMPTY_LTL_TO_GEN_BUECHI_DS___SEM])));
 
 val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_NOT___forget_eval =
-  prove (``    
+  prove (``
     !b1 b2 DS l pf.
             LTL_TO_GEN_BUECHI_DS___SEM DS ==>
             (DS.B = {(l,b2,b1,pf)}) ==>
@@ -247,14 +247,14 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_NOT___forget_eval =
 
 
 val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_AND___forget_eval =
-  prove (``    
+  prove (``
     !b1 b2 DS1 DS2 l1 l2 pf1 pf2.
             LTL_TO_GEN_BUECHI_DS___SEM DS1 ==>
             LTL_TO_GEN_BUECHI_DS___SEM DS2 ==>
             (DS1.B = {(l1,b1,b2,pf1)}) ==>
             (DS2.B = {(l2,b1,b2,pf2)}) ==>
             LTL_TO_GEN_BUECHI_DS___SEM
-              (LTL_TO_GEN_BUECHI_DS___SET_BINDINGS 
+              (LTL_TO_GEN_BUECHI_DS___SET_BINDINGS
                   (LTL_TO_GEN_BUECHI_DS___PRODUCT DS1 DS2)
                   {(LTL_AND (l1, l2), b1,b2,(\sv. P_AND(pf1 sv, pf2 (\n. sv (n + DS1.SN)))))})``,
 
@@ -287,14 +287,14 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_AND___forget_eval =
 
 
 val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_OR___forget_eval =
-  prove (``    
+  prove (``
     !b1 b2 DS1 DS2 l1 l2 pf1 pf2.
             LTL_TO_GEN_BUECHI_DS___SEM DS1 ==>
             LTL_TO_GEN_BUECHI_DS___SEM DS2 ==>
             (DS1.B = {(l1,b1,b2,pf1)}) ==>
             (DS2.B = {(l2,b1,b2,pf2)}) ==>
             LTL_TO_GEN_BUECHI_DS___SEM
-              (LTL_TO_GEN_BUECHI_DS___SET_BINDINGS 
+              (LTL_TO_GEN_BUECHI_DS___SET_BINDINGS
                   (LTL_TO_GEN_BUECHI_DS___PRODUCT DS1 DS2)
                   {(LTL_OR (l1, l2), b1,b2,(\sv. P_OR(pf1 sv, pf2 (\n. sv (n + DS1.SN)))))})``,
 
@@ -326,14 +326,14 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_OR___forget_eval =
 
 
 val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV___forget_eval =
-  prove (``    
+  prove (``
     !b1 b2 DS1 DS2 l1 l2 pf1 pf2.
             LTL_TO_GEN_BUECHI_DS___SEM DS1 ==>
             LTL_TO_GEN_BUECHI_DS___SEM DS2 ==>
             (DS1.B = {(l1,T,T,pf1)}) ==>
             (DS2.B = {(l2,T,T,pf2)}) ==>
             LTL_TO_GEN_BUECHI_DS___SEM
-              (LTL_TO_GEN_BUECHI_DS___SET_BINDINGS 
+              (LTL_TO_GEN_BUECHI_DS___SET_BINDINGS
                   (LTL_TO_GEN_BUECHI_DS___PRODUCT DS1 DS2)
                   {(LTL_EQUIV (l1, l2),b1,b2,(\sv. P_EQUIV(pf1 sv, pf2 (\n. sv (n + DS1.SN)))))})``,
 
@@ -436,7 +436,7 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PNEXT___forget_eval =
 
 
 val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL___forget_eval =
-  prove (``    
+  prove (``
     !b1 b2 DS1 DS2 l1 l2 pf1 pf2 DS'.
             (LTL_TO_GEN_BUECHI_DS___PRODUCT DS1 DS2 = DS') ==>
             LTL_TO_GEN_BUECHI_DS___SEM DS1 ==>
@@ -491,7 +491,7 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL___forget_eval =
 
 
 val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL___forget_eval =
-  prove (``    
+  prove (``
     !b1 b2 DS1 DS2 l1 l2 pf1 pf2 DS'.
             (LTL_TO_GEN_BUECHI_DS___PRODUCT DS1 DS2 = DS') ==>
             LTL_TO_GEN_BUECHI_DS___SEM DS1 ==>
@@ -540,7 +540,7 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL___forget_eval =
 
 
 val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE___forget_eval =
-  prove (``    
+  prove (``
     !b1 b2 DS1 DS2 l1 l2 pf1 pf2 DS'.
             (LTL_TO_GEN_BUECHI_DS___PRODUCT DS1 DS2 = DS') ==>
             LTL_TO_GEN_BUECHI_DS___SEM DS1 ==>
@@ -597,7 +597,7 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE___forget_eval =
 
 
 val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE___forget_eval =
-  prove (``    
+  prove (``
     !b1 b2 DS1 DS2 l1 l2 pf1 pf2 DS'.
             (LTL_TO_GEN_BUECHI_DS___PRODUCT DS1 DS2 = DS') ==>
             LTL_TO_GEN_BUECHI_DS___SEM DS1 ==>
@@ -654,7 +654,7 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE___forget_eval =
 
 
 
-val LTL_TO_GEN_BUECHI_DS___SEM___MAX___eval =    
+val LTL_TO_GEN_BUECHI_DS___SEM___MAX___eval =
   store_thm ("LTL_TO_GEN_BUECHI_DS___SEM___MAX___eval", ``
      !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
@@ -666,7 +666,7 @@ val LTL_TO_GEN_BUECHI_DS___SEM___MAX___eval =
       METIS_TAC[LTL_TO_GEN_BUECHI_DS___SEM___MAX, LTL_SEM_def, LTL_EQUIVALENT_def])
 
 
-val LTL_TO_GEN_BUECHI_DS___SEM___MIN___eval =    
+val LTL_TO_GEN_BUECHI_DS___SEM___MIN___eval =
   store_thm ("LTL_TO_GEN_BUECHI_DS___SEM___MIN___eval", ``
      !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
@@ -679,7 +679,7 @@ val LTL_TO_GEN_BUECHI_DS___SEM___MIN___eval =
 
 
 
-val LTL_TO_GEN_BUECHI_DS___KS_SEM___MAX___eval =    
+val LTL_TO_GEN_BUECHI_DS___KS_SEM___MAX___eval =
   store_thm ("LTL_TO_GEN_BUECHI_DS___KS_SEM___MAX___eval", ``
      !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
@@ -691,7 +691,7 @@ val LTL_TO_GEN_BUECHI_DS___KS_SEM___MAX___eval =
       METIS_TAC[LTL_TO_GEN_BUECHI_DS___KS_SEM___MAX, LTL_KS_SEM_def, LTL_EQUIVALENT_def, LTL_SEM_def])
 
 
-val LTL_TO_GEN_BUECHI_DS___KS_SEM___MIN___eval =    
+val LTL_TO_GEN_BUECHI_DS___KS_SEM___MIN___eval =
   store_thm ("LTL_TO_GEN_BUECHI_DS___KS_SEM___MIN___eval", ``
      !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
@@ -704,7 +704,7 @@ val LTL_TO_GEN_BUECHI_DS___KS_SEM___MIN___eval =
 
 
 
-val LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE___eval =    
+val LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE___eval =
   store_thm ("LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE___eval", ``
      !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
@@ -719,7 +719,7 @@ val LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE___eval =
                      (LTL_TO_GEN_BUECHI_DS___INITIAL_STATES DS sv,
                       P_NOT (pf sv))) (XP_BIGAND (MAP (\xp. xp sv) DS.R))))
             (MAP (\x. x sv) DS.FC)))``,
-      
+
       REPEAT STRIP_TAC THEN
       ASSUME_TAC (GSYM LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE) THEN
       Q_SPECL_NO_ASSUM 0 [`DS`, `l'`, `pf`, `sv`, `M`, `a`] THEN
@@ -728,7 +728,7 @@ val LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE___eval =
 
 
 
-val LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE___eval =    
+val LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE___eval =
   store_thm ("LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE___eval", ``
      !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
@@ -740,7 +740,7 @@ val LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE___eval =
                      (LTL_TO_GEN_BUECHI_DS___INITIAL_STATES DS sv,
                       pf sv)) (XP_BIGAND (MAP (\xp. xp sv) DS.R)))
             (MAP (\x. x sv) DS.FC)))``,
-      
+
       REPEAT STRIP_TAC THEN
       ASSUME_TAC (GSYM LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE) THEN
       Q_SPECL_NO_ASSUM 0 [`DS`, `l'`, `pf`, `sv`, `a`] THEN
@@ -749,8 +749,8 @@ val LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE___eval =
 
 
 
-val LTL_TO_GEN_BUECHI_DS___SEM___EQUIVALENT___KRIPKE_STRUCTURE___eval =    
-  store_thm ("LTL_TO_GEN_BUECHI_DS___SEM___EQUIVALENT___KRIPKE_STRUCTURE___eval", 
+val LTL_TO_GEN_BUECHI_DS___SEM___EQUIVALENT___KRIPKE_STRUCTURE___eval =
+  store_thm ("LTL_TO_GEN_BUECHI_DS___SEM___EQUIVALENT___KRIPKE_STRUCTURE___eval",
   ``!DS l1 l2 l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
          (LTL_EQUIVALENT (LTL_EVENTUAL (LTL_NOT (LTL_EQUIV(l1, l2)))) l') ==>
@@ -761,10 +761,10 @@ val LTL_TO_GEN_BUECHI_DS___SEM___EQUIVALENT___KRIPKE_STRUCTURE___eval =
                      (LTL_TO_GEN_BUECHI_DS___INITIAL_STATES DS sv,
                       pf sv)) (XP_BIGAND (MAP (\xp. xp sv) DS.R)))
             (MAP (\x. x sv) DS.FC)))``,
-      
+
       REPEAT STRIP_TAC THEN
       ASSUME_TAC (GSYM LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE___eval) THEN
-      Q_SPECL_NO_ASSUM 0 [`DS`, `l'`, `l'`, `pf`, `a`] THEN 
+      Q_SPECL_NO_ASSUM 0 [`DS`, `l'`, `l'`, `pf`, `a`] THEN
       UNDISCH_HD_TAC THEN ASM_SIMP_TAC std_ss [LTL_EQUIVALENT_def] THEN DISCH_TAC THEN WEAKEN_HD_TAC THEN
       FULL_SIMP_TAC std_ss [LTL_IS_CONTRADICTION_def, LTL_EQUIVALENT_def, LTL_SEM_THM] THEN
       GSYM_NO_TAC 2 THEN
@@ -773,8 +773,8 @@ val LTL_TO_GEN_BUECHI_DS___SEM___EQUIVALENT___KRIPKE_STRUCTURE___eval =
 
 
 
-val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong =    
-  store_thm ("IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong", 
+val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong =
+  store_thm ("IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong",
     ``!S0 R fc S0' R' fc'.
     (PROP_LOGIC_EQUIVALENT S0 S0') ==>
     (XPROP_LOGIC_EQUIVALENT R R') ==>
@@ -793,8 +793,8 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong =
 
 
 
-val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval =    
-  store_thm ("IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval", 
+val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval =
+  store_thm ("IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval",
 
   ``!f K fc. COND_IMP_EQ (INJ f (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS K UNION
                                 LIST_BIGUNION (MAP P_USED_VARS fc)) UNIV)
@@ -804,31 +804,31 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval =
     SIMP_TAC std_ss [COND_IMP_EQ___REWRITE, IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___IDENTIFY_VARIABLES,
     IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING]);
 
-val IS_ELEMENT_ITERATOR___ID =    
-  store_thm ("IS_ELEMENT_ITERATOR___ID", 
+val IS_ELEMENT_ITERATOR___ID =
+  store_thm ("IS_ELEMENT_ITERATOR___ID",
 
     ``!S n0. IS_ELEMENT_ITERATOR (\n:num. n) n0 S =
           PRED_SET_FORALL (\n. n >= n0) S``,
-    
+
     SIMP_TAC std_ss [IS_ELEMENT_ITERATOR_def,
                     PRED_SET_FORALL_def, IMP_DISJ_THM,
                     NOT_LESS, GREATER_EQ] THEN
     PROVE_TAC[]);
 
 
-val INJ___ADD_FUNC =    
-  store_thm ("INJ___ADD_FUNC", 
+val INJ___ADD_FUNC =
+  store_thm ("INJ___ADD_FUNC",
 
     ``!S f n:num. INJ (\x. f x + n) S UNIV =
                   INJ f S UNIV``,
-    
+
     SIMP_TAC std_ss [INJ_DEF, IN_UNIV]);
 
 
 val INJ_POS_START___MP_HELPER =
   store_thm ("INJ_POS_START___MP_HELPER",
 
-    ``!l S n. 
+    ``!l S n.
     (!s. s IN S ==> MEM s l) ==>
     (ALL_DISTINCT l ==> INJ (\x. PRE (POS_START n l x)) S UNIV)``,
 
@@ -836,25 +836,25 @@ val INJ_POS_START___MP_HELPER =
 SIMP_TAC std_ss [INJ_DEF, IN_UNIV] THEN
 Induct_on `l` THENL [
   SIMP_TAC list_ss [IMP_DISJ_THM, MEMBER_NOT_EMPTY, NOT_IN_EMPTY],
-  
+
   SIMP_TAC list_ss [POS_START_def] THEN
   REPEAT STRIP_TAC THEN
   Q_SPECL_NO_ASSUM 6 [`S DELETE h`, `SUC n`] THEN
   UNDISCH_HD_TAC THEN
   `(!s. s IN S /\ ~(s = h) ==> MEM s l)` by METIS_TAC[] THEN
-  ASM_REWRITE_TAC [IN_DELETE] THEN 
+  ASM_REWRITE_TAC [IN_DELETE] THEN
   Cases_on `x = h` THEN Cases_on `x' = h` THENL [
     ASM_REWRITE_TAC[],
 
 
     `(POS_START (SUC n) l x' > SUC n)` by
-      PROVE_TAC[POS_START_FOUND] THEN    
+      PROVE_TAC[POS_START_FOUND] THEN
     FULL_SIMP_TAC arith_ss [],
 
     `(POS_START (SUC n) l x > SUC n)` by
-      PROVE_TAC[POS_START_FOUND] THEN    
+      PROVE_TAC[POS_START_FOUND] THEN
     FULL_SIMP_TAC arith_ss [],
-  
+
     FULL_SIMP_TAC std_ss []
   ]
 ]);
@@ -881,6 +881,6 @@ val NUM_FINITE_INJ_EXISTS =
     SIMP_TAC arith_ss []
   ) THEN
   METIS_TAC[FINITE_EMPTY]);
-  
+
 
 val _ = export_theory();

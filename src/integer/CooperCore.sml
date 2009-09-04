@@ -3,7 +3,6 @@ struct
 open HolKernel Parse boolLib
      integerTheory int_arithTheory intReduce
      intSyntax CooperSyntax CooperMath CooperThms
-     Profile
 
 val ERR = mk_HOL_ERR "CooperCore";
 
@@ -1141,8 +1140,9 @@ in
               RAND_CONV (BINDER_CONV rhs_constrain))) thm0
 end
 
-val phase4_CONV = profile "phase4" phase4_CONV
-
+(*
+val phase4_CONV = Profile.profile "phase4" phase4_CONV
+*)
 
 fun LIST_EL_CONV c tm = let
   (* applies c to all elements of a literal list tm *)
@@ -1186,9 +1186,9 @@ fun elim_bterms tm = let
                   else ALL_CONV
 in
   BINDER_CONV (RAND_CONV BETA_CONV THENC initially THENC
-               profile "eb.abs" (RAND_CONV (UNBETA_CONV var))) THENC
-  profile "eb.in_list" in_list_CONV THENC
-  profile "eb.beta" (EVERY_DISJ_CONV (TRY_CONV BETA_CONV))
+               (*Profile.profile "eb.abs"*) (RAND_CONV (UNBETA_CONV var))) THENC
+  (*Profile.profile "eb.in_list"*) in_list_CONV THENC
+  (*Profile.profile "eb.beta"*) (EVERY_DISJ_CONV (TRY_CONV BETA_CONV))
 end tm
 
 
@@ -1234,7 +1234,9 @@ val phase5_CONV  = let
                elim_bterms) THENC
               reduce_if_ground THENC
               push_one_exists_over_many_disjs)
-  val elim_bterms_on_right = profile "phase5.er" elim_bterms_on_right
+  (*
+  val elim_bterms_on_right = Profile.profile "phase5.er" elim_bterms_on_right
+  *)
 in
   LAND_CONV prelim_left THENC
   RAND_CONV (prelim_right THENC elim_bterms_on_right) THENC
@@ -1244,6 +1246,8 @@ in
                    TRY_CONV (REWR_CONV EXISTS_SIMP))
 end
 
-val phase5_CONV = profile "phase5" phase5_CONV
+(*
+val phase5_CONV = Profile.profile "phase5" phase5_CONV
+*)
 
 end

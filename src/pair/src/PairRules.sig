@@ -23,7 +23,7 @@ sig
   val PALPHA                 : term -> conv
   val paconv                 : term -> term -> bool
   val PAIR_CONV              : conv -> conv
-  
+
   val NOT_PFORALL_CONV       : conv
   val NOT_PEXISTS_CONV       : conv
   val PEXISTS_NOT_CONV       : conv
@@ -50,7 +50,7 @@ sig
   val PEXISTS_IMP_CONV       : conv
   val LEFT_IMP_PFORALL_CONV  : conv
   val RIGHT_IMP_PEXISTS_CONV : conv
-  
+
   val CURRY_FORALL_CONV      : term -> thm
   val CURRY_EXISTS_CONV      : term -> thm
   val UNCURRY_FORALL_CONV    : term -> thm
@@ -69,7 +69,7 @@ sig
   val P_PGEN_TAC             : term -> tactic
   val PGEN_TAC               : tactic
   val FILTER_PGEN_TAC        : term -> tactic
-  
+
   val PEXISTS_CONV           : term -> thm
   val PSELECT_RULE           : thm -> thm
   val PSELECT_CONV           : term -> thm

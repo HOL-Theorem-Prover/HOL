@@ -33,7 +33,7 @@ sig
  val dest_snd         : term -> term
  val dest_curry       : term -> term * term * term
  val dest_uncurry     : term -> term * term
- val dest_pair_map    : term -> term * term 
+ val dest_pair_map    : term -> term * term
  val dest_pabs        : term -> term * term
  val pbvar            : term -> term
  val pbody            : term -> term

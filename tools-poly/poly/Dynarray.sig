@@ -16,13 +16,13 @@ val bound    : 'a array -> int
 
 end
 
-(* 
+(*
    ['ty array] is the type of one-dimensional, mutable, zero-based
    unbounded arrays with elements of type 'ty.  Type 'ty array does
    not admit equality.
 
    [array(n, d)] returns a dynamic array, all of whose elements are
-   initialized to the default d.  The parameter n is used as a hint of the 
+   initialized to the default d.  The parameter n is used as a hint of the
    upper bound on non-default elements.  Raises Size if n < 0.
 
    [subArray(a, m, n)] returns a new array with the same default
@@ -32,8 +32,8 @@ end
    [fromList (xs, d)] returns an array whose first elements are
    those of [xs], and the rest are the default d.
 
-   [tabulate(n, f, d)] returns a new array whose first n elements 
-   are f 0, f 1, ..., f (n-1), created from left to right, and whose 
+   [tabulate(n, f, d)] returns a new array whose first n elements
+   are f 0, f 1, ..., f (n-1), created from left to right, and whose
    remaining elements are the default d.  Raises Size if n < 0.
 
    [sub(a, i)] returns the i'th element of a, counting from 0.

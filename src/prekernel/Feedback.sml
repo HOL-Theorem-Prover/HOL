@@ -204,7 +204,7 @@ fun register_btrace (nm, bref) =
                                         set= (fn i => bref := (i > 0))},
                            default = if !bref then 1 else 0,
                            maximum = 1}::(!trace_list)
-  | SOME _ => WARN "register_btrace" 
+  | SOME _ => WARN "register_btrace"
                ("Already a trace "^quote nm^" registered. No action taken");
 
 fun traces() =

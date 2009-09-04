@@ -20,10 +20,10 @@ sig
 
   val MLSIGSTRUCT      : string list -> elem list
 
-  val sigSuffix        : string ref 
-  val structSuffix     : string ref 
-  val sigCamlSuffix    : string ref 
-  val structCamlSuffix : string ref 
+  val sigSuffix        : string ref
+  val structSuffix     : string ref
+  val sigCamlSuffix    : string ref
+  val structCamlSuffix : string ref
 
   val emitML   : string -> string * elem list -> unit
   val emitCAML : string -> string * elem list -> unit

@@ -1,4 +1,4 @@
-structure HOLset :> HOLset = 
+structure HOLset :> HOLset =
 struct
   exception NotFound = Redblackset.NotFound
   open Redblackset

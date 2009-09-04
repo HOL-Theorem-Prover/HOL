@@ -485,7 +485,7 @@ in
   val term_compare    = cmt o sing;
   val formula_compare = cm o sing;
 end;
-  
+
 (* ------------------------------------------------------------------------- *)
 (* Basic operations on literals.                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -609,7 +609,7 @@ local
     | fv vs ((av, Iff (p, q)   ) :: fms) = fv vs ((av, p) :: (av, q) :: fms)
     | fv vs ((av, Forall (x, p)) :: fms) = fv vs ((insert x av, p) :: fms)
     | fv vs ((av, Exists (x, p)) :: fms) = fv vs ((insert x av, p) :: fms);
-in    
+in
   fun FVT    tm  = rev (fvt [] [] [tm]);
   fun FVTL l tms =      fvt [] l  tms;
   fun FV     fm  = rev (fv  [] [([], fm)]);
@@ -652,7 +652,7 @@ end;
 local
   fun f [] l = l | f ((p, t) :: w) l = g p t w ((rev p |-> t) :: l)
   and g _ (Var _) w l = f w l
-    | g p (Fn (_, ts)) w l = 
+    | g p (Fn (_, ts)) w l =
     let val a = map (fn (x,y) => (x::p,y)) (enumerate 0 ts) in f (a @ w) l end;
 in
   fun subterms p tm = f [(p, tm)] [];

@@ -1,6 +1,6 @@
 \DOC UNDISCH_ALL
 
-\TYPE {UNDISCH_ALL : (thm -> thm)}
+\TYPE {UNDISCH_ALL : thm -> thm}
 
 \SYNOPSIS
 Iteratively undischarges antecedents in a chain of implications.
@@ -17,16 +17,14 @@ rule, undischarge, antecedent.
 Note that {UNDISCH_ALL} treats {"~u"} as {"u ==> F"}.
 
 \FAILURE
-Unlike {UNDISCH}, {UNDISCH_ALL} will,
-when called on something other than an implication or negation,
-return its argument unchanged rather than failing.
+{UNDISCH_ALL} never fails. When called on something other than an implication
+or negation, it simply returns its argument unchanged.
 
 \COMMENTS
-Identical terms which are repeated in {A, "t1", ..., "tn"} will
-not be duplicated in the hypotheses of the resulting theorem.
-However, if two or more alpha-equivalent terms appear in {A, "t1", ..., "tn"},
-then each distinct term will appear in the result.
+Identical or alpha-equivalent terms which are repeated in {A, "t1", ..., "tn"}
+will not be duplicated in the hypotheses of the resulting theorem.
 
 \SEEALSO
 Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Tactic.UNDISCH_TAC.
+
 \ENDDOC
