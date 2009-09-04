@@ -638,8 +638,6 @@ file to \"use\" first."
   (if (get-buffer-window hol-buffer-name t)
   (save-selected-window
     (select-window (get-buffer-window hol-buffer-name t))
-    ;; (delete-other-windows)
-    (raise-frame)
     (if hol-recentre-mode
       (progn (setq comint-scroll-show-maximum-output nil)
              (setq comint-scroll-to-bottom-on-output nil)
