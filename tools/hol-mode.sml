@@ -82,6 +82,7 @@ let
 
    fun print_term_width w (t,s) =
       (print_width w s; 
+       print " ";
        print (type_to_string (type_of t));print "\n")
    val print_term = print_term_width 0;
 

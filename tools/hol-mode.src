@@ -362,6 +362,25 @@ variable before and after the region is sent."
          "val _ = print \"\\n*** Emacs/HOL command completed ***\\n\\n\""))
     (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec))))
 
+
+
+(defun copy-region-as-hol-definition-quitely (start end arg)
+   (interactive "r\np")
+   (hol-toggle-quietdec)
+   (copy-region-as-hol-definition start end arg)
+   (hol-toggle-quietdec))
+
+
+(defun copy-region-as-hol-definition-real-quitely (start end arg)
+   (interactive "r\np")
+   (send-raw-string-to-hol "val _ = print \"\\nStarting quiet command ...\\n\"" nil nil)
+   (hol-mode-turn-quiet-on)
+   (copy-region-as-hol-definition start end arg)
+   (hol-mode-turn-quiet-off)
+   (send-raw-string-to-hol "val _ = print \"\\nQuiet command complete.\\n\"" nil nil))
+
+
+
 (defun hol-name-top-theorem (string arg)
   "Name the top theorem of the proofManagerLib.
 With prefix argument, drop the goal afterwards."
@@ -649,6 +668,63 @@ file to \"use\" first."
              (goto-char (point-max))
              (recenter -1))))))
 
+
+(defvar hol-mode-quiet nil
+   "Tells hol-mode whether to print output")
+
+(defvar hol-mode-quiet-on-string "HOL-mode-quiet-start")
+(defvar hol-mode-quiet-off-string "HOL-mode-quiet-stop")
+
+(setq hol-mode-quiet-on-string "HOL-mode-quiet-start")
+(setq hol-mode-quiet-off-string "HOL-mode-quiet-stop")
+
+(defun hol-mode-turn-quiet-on ()
+   (interactive)
+   (send-raw-string-to-hol (concat "val _ = print \"" 
+       hol-mode-quiet-on-string "\"") nil nil))
+
+(defun hol-mode-turn-quiet-off ()
+   (interactive)
+   (send-raw-string-to-hol (concat "val _ = print \"" 
+       hol-mode-quiet-off-string "\"") nil nil))
+
+(defun hol-mode-toggle-quiet ()
+   (interactive)
+   (if hol-mode-quiet 
+       (progn (message "HOL is now not quiet") (hol-mode-turn-quiet-off))
+       (progn (message "HOL is now quiet") (hol-mode-turn-quiet-on))))
+
+;; removes stuff between hol-mode-quiet-on-string and
+;; hol-mode-quiet-off-string, so if these are "(" and ")", resp:
+;;   "aaa(bbb)cc", quiet off --> "aaacc", quiet off
+;;   "aaa(bbb)cc", quiet on  --> "cc", quiet off
+;;   "aaa(bbbcc", quiet off  --> "aaa", quiet on 
+;;   "aaa(bbbcc", quiet on   --> "", quiet on
+;;   "aaa)cc", quiet off     --> "aaacc", quiet off
+;;   "aaa)cc", quiet on      --> "cc", quiet off
+;;   "aaa(b)c)dd", quiet off --> "aaacdd", quiet off
+;;   "aaa(b)c)dd", quiet on  --> "cdd", quiet off 
+(defun hol-mode-quiet-filter (arg)
+  (let* (found result new-quiet p s) (progn
+    (setq s (if hol-mode-quiet (concat hol-mode-quiet-on-string arg) arg))
+    (setq found t)
+    (setq result "")
+    (setq new-quiet nil)
+    (while found 
+      (progn
+	(setq p (string-match hol-mode-quiet-on-string s))
+	(if (not p) (setq found nil)       
+	  (progn 
+	    (setq result (concat result (substring s 0 p)))
+	    (setq s (substring s p))
+	    (setq p (string-match hol-mode-quiet-off-string s))
+	    (if (not p) (setq found nil new-quiet t s "")  
+	      (setq s (substring s (+ (length hol-mode-quiet-off-string) p))))))))
+    (setq hol-mode-quiet new-quiet)
+    (setq result (replace-regexp-in-string hol-mode-quiet-off-string "" (concat result s)))
+    result)))
+
+
 (defun hol-mode-lisp-printer (lisp)
    (concat "val _ = print (\"HOL-mode-lisp-wrapper####" lisp "####lisp-wrapper-end\");\n"))
 
@@ -658,14 +734,17 @@ file to \"use\" first."
 	 (real-output0 (if match-found (concat (match-string 1 output) (match-string 3 output)) output))
          (match-found2
 	  (string-match
-                "\\(\\(.*\n\\)*.*\\)HOL-mode-lisp-wrapper####\\(\\(.*\n\\)*.*\\)####lisp-wrapper-end\\(\\(.*\n\\)*.*\\)" real-output0))
-	 (real-output (if match-found2
-              (concat (match-string 1 real-output0) (match-string 5 real-output0)) real-output0)))
+	   "\\(\\(.*\n\\)*.*\\)HOL-mode-lisp-wrapper####\\(\\(.*\n\\)*.*\\)####lisp-wrapper-end\\(\\(.*\n\\)*.*\\)" real-output0))
+	 (real-output1 (if match-found2
+			   (concat (match-string 1 real-output0) (match-string 5 real-output0)) real-output0))
+	 (command-from-ml (if match-found2
+			      (regexp-quote (match-string 3 real-output0)) ""))
+         (real-output (hol-mode-quiet-filter real-output1)))
     (if match-found (setq hol-recentre-pos
 			  (with-current-buffer hol-buffer-name (point-max)))
       t)
     (if match-found2 (progn
-        (eval (car (read-from-string (regexp-quote (match-string 3 real-output0))))))
+		       (eval (car (read-from-string command-from-ml))))
       t)
     real-output))
 
@@ -747,7 +826,9 @@ region instead. With prefix ARG prompt for a file-name to load."
 
 
 (defun hol-mode-init-sml ()
-   (send-raw-string-to-hol hol-mode-sml-init-command nil nil))
+   (hol-mode-turn-quiet-on)
+   (send-raw-string-to-hol hol-mode-sml-init-command nil nil)
+   (hol-mode-turn-quiet-off))
 
 
 ;** hol map keys and function definitions
@@ -1245,6 +1326,7 @@ already loaded.)"
 (define-key hol-map "\C-l" 'hol-recentre)
 (define-key hol-map "\C-n" 'hol-toggle-show-numeral-types)
 (define-key hol-map "\C-q" 'hol-toggle-quietdec)
+(define-key hol-map "q"    'hol-mode-toggle-quiet)
 (define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
 (define-key hol-map "\C-t" 'hol-toggle-show-types)
 (define-key hol-map "\C-u" 'hol-toggle-unicode)
@@ -1253,6 +1335,8 @@ already loaded.)"
 (define-key hol-map "\M-f" 'forward-hol-tactic)
 (define-key hol-map "\M-b" 'backward-hol-tactic)
 (define-key hol-map "\M-r" 'copy-region-as-hol-definition)
+(define-key hol-map "\C-r" 'copy-region-as-hol-definition-quitely)
+(define-key hol-map "\M-q" 'copy-region-as-hol-definition-real-quitely)
 (define-key hol-map "\M-t" 'hol-toggle-show-times)
 (define-key hol-map "\M-s" 'hol-subgoal-tactic)
 (define-key hol-map "\M-v" 'hol-scroll-down)
@@ -1424,8 +1508,11 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-printing echo]
    '("Echo commands" . hol-toggle-echo-commands))
 
+(define-key global-map [menu-bar hol-menu hol-printing real-quite]
+   '("Really quiet (hide all output)" . hol-mode-toggle-quiet))
+
 (define-key global-map [menu-bar hol-menu hol-printing quiet]
-   '("Quiet" . hol-toggle-quietdec))
+   '("Quiet (hide output except errors)" . hol-toggle-quietdec))
 
 (define-key global-map [menu-bar hol-menu hol-printing unicode]
    '("Unicode" . hol-toggle-unicode))
@@ -1544,6 +1631,12 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-process hol-send-string]
    '("Send string to HOL" . interactive-send-string-to-hol))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-send-region-real-quietly]
+   '("Send region to HOL - hide all output" . copy-region-as-hol-definition-real-quitely))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-send-region-quietly]
+   '("Send region to HOL - hide non errors" . copy-region-as-hol-definition-quitely))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-send-region]
    '("Send region to HOL" . copy-region-as-hol-definition))
