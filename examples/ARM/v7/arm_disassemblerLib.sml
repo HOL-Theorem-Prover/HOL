@@ -83,7 +83,10 @@ fun disassemble_word l =
 
 fun number tm =
 let val s = term_to_string tm in
-  String.extract(s,0,SOME (String.size s - 1))
+  if s = "ARB" then
+    "UNPREDICTABLE"
+  else
+    String.extract(s,0,SOME (String.size s - 1))
 end;
 
 fun constant tm = "#" ^ number tm;
@@ -823,6 +826,7 @@ fun arm_disassemble (arm_parserLib.Ascii s)       = disassemble_ascii s
   | arm_disassemble (arm_parserLib.Word l)        = disassemble_word l
   | arm_disassemble (arm_parserLib.Instruction i) = disassemble_instruction i;
 
+(*
 val arm_disassemble_parse =
   map (arm_disassemble o
        (snd : Arbnum.num * arm_parserLib.arm_code -> arm_parserLib.arm_code));
@@ -835,5 +839,6 @@ val arm_disassemble_from_string =
 
 val arm_disassemble_from_file =
   arm_disassemble_parse o arm_parserLib.arm_parse_from_file;
+*)
 
 end

@@ -9,6 +9,4 @@ sig
 
   val arm_assemble_from_quote  : string frag list -> (Arbnum.num * string) list
 
-  val print_code_from          : string -> (Arbnum.num * string) list -> unit
-
 end
