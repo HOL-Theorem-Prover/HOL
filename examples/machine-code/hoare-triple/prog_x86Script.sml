@@ -718,7 +718,7 @@ val xMEMORY_INSERT = prove(
        ALIGNED_add_3_and_3,n2w_11]
   \\ ASM_SIMP_TAC std_ss [ALIGNED_INTRO,xDATA_PERM_def]
   \\ SIMP_TAC std_ss [STAR_ASSOC]
-  \\ MATCH_MP_TAC (METIS_PROVE [] ``(q1 = q2) ==> ((p * q1) = (p * q2))``)
+  \\ MATCH_MP_TAC (METIS_PROVE [] ``(q1 = q2) ==> ((p * q1) = (STAR p q2))``)
   \\ `~(a IN xMEMORY_DOMAIN (df DELETE a)) /\
       ~(a+1w IN xMEMORY_DOMAIN (df DELETE a)) /\
       ~(a+2w IN xMEMORY_DOMAIN (df DELETE a)) /\
