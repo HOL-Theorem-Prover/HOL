@@ -5,8 +5,6 @@
 
 
 
-val _ = print "\nInitialising hol-mode ...\n";
-
 (*
    val use_goal_stack = true;
    val context_string_opt = SOME ("f (SOME x) (SOME 0) = T");
@@ -14,6 +12,15 @@ val _ = print "\nInitialising hol-mode ...\n";
 
    (set_goal ([], ``f y = F``))
 *)
+
+local 
+   fun repeat_print s n = if (n <= 0) then () else (print s; repeat_print s (n-1));
+   val print_space = repeat_print " ";
+   fun print_width n s = (print s; (print_space (n - (size s))));      
+   fun print_header c s =
+      (print s;print "\n";repeat_print c (if (size s) < 70 then size s else 70);print "\n");
+
+in
 
 fun type_of_in_context use_goal_stack context_string_opt term_string =
 let
@@ -64,6 +71,7 @@ in
 end;
 
 
+
 fun print_type_of_in_context use_goal_stack context_string_opt term_string =
 let
    val (t1, t2, t3, tL1, tL2) =
@@ -76,9 +84,6 @@ let
    val tL2s = map term_to_string tL2
 
    val list_max = foldl (fn (a,b) => if a > b then a else b) 0
-   fun repeat_print s n = if (n <= 0) then () else (print s; repeat_print s (n-1));
-   val print_space = repeat_print " ";
-   fun print_width n s = (print s; (print_space (n - (size s))));      
 
    fun print_term_width w (t,s) =
       (print_width w s; 
@@ -93,9 +98,6 @@ let
        in
           map (print_term_width max_width) l;()          
        end;
-
-   fun print_header c s =
-      (print s;print "\n";repeat_print c (if (size s) < 70 then size s else 70);print "\n");
 
 in
    print "\n\n\n\n";
@@ -123,5 +125,27 @@ in
 end;
 
 
-val _ = print "\nhol-mode initialisation finished!\n";
+fun print_current_load_paths () =
+let
+   val paths = !loadPath
+   val _ = print "\n\n";
+   val _ = print_header "-" "Current loadPath";
+   val _ = map (fn t => (print "  ";print t; print "\n")) paths
+   val _ = print "\n";
+in
+   ()
+end;
 
+
+fun emacs_hol_mode_loaded () =
+   ["HOL_Interactive", "Meta",
+  "Array", "ArraySlice", "BinIO", "BinPrimIO", "Bool", "Byte",
+  "CharArray", "CharArraySlice", "Char", "CharVector",
+  "CharVectorSlice", "CommandLine.name", "Date", "General", "IEEEReal",
+  "Int", "IO", "LargeInt", "LargeReal", "LargeWord", "List", "ListPair",
+  "Math", "Option", "OS", "Position", "Real", "StringCvt", "String",
+  "Substring", "TextIO", "TextPrimIO", "Text", "Timer", "Time",
+  "VectorSlice", "Vector", "Word8Array", "Word8ArraySlice",
+  "Word8Vector", "Word8VectorSlice", "Word8", "Word"] @ (Meta.loaded());
+
+end

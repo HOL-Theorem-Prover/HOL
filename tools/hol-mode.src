@@ -13,7 +13,6 @@
 
 
 (define-prefix-command 'hol-map)
-(define-prefix-command 'hol-insert-map)
 (define-prefix-command 'hol-d-map)
 (make-variable-buffer-local 'hol-buffer-name)
 (make-variable-buffer-local 'hol-buffer-ready)
@@ -366,19 +365,9 @@ variable before and after the region is sent."
 
 (defun copy-region-as-hol-definition-quitely (start end arg)
    (interactive "r\np")
-   (hol-toggle-quietdec)
+   (hol-toggle-quiet-quietdec)
    (copy-region-as-hol-definition start end arg)
-   (hol-toggle-quietdec))
-
-
-(defun copy-region-as-hol-definition-real-quitely (start end arg)
-   (interactive "r\np")
-   (send-raw-string-to-hol "val _ = print \"\\nStarting quiet command ...\\n\"" nil nil)
-   (hol-mode-turn-quiet-on)
-   (copy-region-as-hol-definition start end arg)
-   (hol-mode-turn-quiet-off)
-   (send-raw-string-to-hol "val _ = print \"\\nQuiet command complete.\\n\"" nil nil))
-
+   (hol-toggle-quiet-quietdec))
 
 
 (defun hol-name-top-theorem (string arg)
@@ -596,14 +585,9 @@ file to \"use\" first."
     (send-raw-string-to-hol (buffer-string) echoit t)))
 
 
-(defvar hol-mode-wrapper-string "emacs HOL-mode command-wrapper - start")
 (defun send-raw-string-to-hol (string echoit newstart)
   "Sends a string in the raw to HOL.  Not for interactive use."
   (let ((buf (ensure-hol-buffer-ok)))
-    (if newstart
-        (comint-send-string buf
-            (concat "val _ = print \"" hol-mode-wrapper-string "\\n\";"))
-        t)
     (if echoit
         (save-excursion
           (set-buffer buf)
@@ -643,118 +627,15 @@ file to \"use\" first."
   (let ((buf (ensure-hol-buffer-ok)))
     (kill-process (get-buffer-process buf))))
 
-(defvar hol-recentre-mode nil
-  "*Whether to recenter on the bottom of the buffer or at the
-    top of the last output. nil means the bottom, t the top
-    of the last output")
-
-(defvar hol-recentre-pos 0
-  "*The top position of the last output.")
-
 (defun hol-recentre ()
   "Display the HOL window in such a way that it displays most text."
   (interactive)
   (if (get-buffer-window hol-buffer-name t)
   (save-selected-window
     (select-window (get-buffer-window hol-buffer-name t))
-    (if hol-recentre-mode
-      (progn (setq comint-scroll-show-maximum-output nil)
-             (setq comint-scroll-to-bottom-on-output nil)
-             (goto-char hol-recentre-pos)
-             (recenter 0)
-             (goto-char (point-max)))
-      (progn (setq comint-scroll-show-maximum-output t)
-             (setq comint-scroll-to-bottom-on-output t)
-             (goto-char (point-max))
-             (recenter -1))))))
+    (goto-char (point-max))
+    (recenter -1))))
 
-
-(defvar hol-mode-quiet nil
-   "Tells hol-mode whether to print output")
-
-(defvar hol-mode-quiet-on-string "HOL-mode-quiet-start")
-(defvar hol-mode-quiet-off-string "HOL-mode-quiet-stop")
-
-(setq hol-mode-quiet-on-string "HOL-mode-quiet-start")
-(setq hol-mode-quiet-off-string "HOL-mode-quiet-stop")
-
-(defun hol-mode-turn-quiet-on ()
-   (interactive)
-   (send-raw-string-to-hol (concat "val _ = print \"" 
-       hol-mode-quiet-on-string "\"") nil nil))
-
-(defun hol-mode-turn-quiet-off ()
-   (interactive)
-   (send-raw-string-to-hol (concat "val _ = print \"" 
-       hol-mode-quiet-off-string "\"") nil nil))
-
-(defun hol-mode-toggle-quiet ()
-   (interactive)
-   (if hol-mode-quiet 
-       (progn (message "HOL is now not quiet") (hol-mode-turn-quiet-off))
-       (progn (message "HOL is now quiet") (hol-mode-turn-quiet-on))))
-
-;; removes stuff between hol-mode-quiet-on-string and
-;; hol-mode-quiet-off-string, so if these are "(" and ")", resp:
-;;   "aaa(bbb)cc", quiet off --> "aaacc", quiet off
-;;   "aaa(bbb)cc", quiet on  --> "cc", quiet off
-;;   "aaa(bbbcc", quiet off  --> "aaa", quiet on 
-;;   "aaa(bbbcc", quiet on   --> "", quiet on
-;;   "aaa)cc", quiet off     --> "aaacc", quiet off
-;;   "aaa)cc", quiet on      --> "cc", quiet off
-;;   "aaa(b)c)dd", quiet off --> "aaacdd", quiet off
-;;   "aaa(b)c)dd", quiet on  --> "cdd", quiet off 
-(defun hol-mode-quiet-filter (arg)
-  (let* (found result new-quiet p s) (progn
-    (setq s (if hol-mode-quiet (concat hol-mode-quiet-on-string arg) arg))
-    (setq found t)
-    (setq result "")
-    (setq new-quiet nil)
-    (while found 
-      (progn
-	(setq p (string-match hol-mode-quiet-on-string s))
-	(if (not p) (setq found nil)       
-	  (progn 
-	    (setq result (concat result (substring s 0 p)))
-	    (setq s (substring s p))
-	    (setq p (string-match hol-mode-quiet-off-string s))
-	    (if (not p) (setq found nil new-quiet t s "")  
-	      (setq s (substring s (+ (length hol-mode-quiet-off-string) p))))))))
-    (setq hol-mode-quiet new-quiet)
-    (setq result (replace-regexp-in-string hol-mode-quiet-off-string "" (concat result s)))
-    result)))
-
-
-(defun hol-mode-lisp-printer (lisp)
-   (concat "val _ = print (\"HOL-mode-lisp-wrapper####" lisp "####lisp-wrapper-end\");\n"))
-
-(defun hol-output-filter (output)
-  (let* ((match-found
-	  (string-match (concat "\\(\\(.*\n\\)*.*\\)" hol-mode-wrapper-string "\n\\(\\(.*\n\\)*.*\\)") output))
-	 (real-output0 (if match-found (concat (match-string 1 output) (match-string 3 output)) output))
-         (match-found2
-	  (string-match
-	   "\\(\\(.*\n\\)*.*\\)HOL-mode-lisp-wrapper####\\(\\(.*\n\\)*.*\\)####lisp-wrapper-end\\(\\(.*\n\\)*.*\\)" real-output0))
-	 (real-output1 (if match-found2
-			   (concat (match-string 1 real-output0) (match-string 5 real-output0)) real-output0))
-	 (command-from-ml (if match-found2
-			      (regexp-quote (match-string 3 real-output0)) ""))
-         (real-output (hol-mode-quiet-filter real-output1)))
-    (if match-found (setq hol-recentre-pos
-			  (with-current-buffer hol-buffer-name (point-max)))
-      t)
-    (if match-found2 (progn
-		       (eval (car (read-from-string command-from-ml))))
-      t)
-    real-output))
-
-(defun hol-recentre-with-arg (output)
-   (hol-recentre)
-   output)
-
-
-(add-hook 'comint-preoutput-filter-functions 'hol-output-filter)
-(add-hook 'comint-output-filter-functions 'hol-recentre-with-arg)
 
 
 (defun hol-rotate (arg)
@@ -792,7 +673,7 @@ file to \"use\" first."
          (commandstring
           (concat "val _ = if List.exists (fn s => s = \""
                   mys
-                  "\") (Meta.loaded()) then () else "
+                  "\") (emacs_hol_mode_loaded()) then () else "
                   "(print  \"Loading " mys
                   "\\n\"; " "Meta.load \"" mys "\");\n")))
     (comint-send-string buf commandstring)))
@@ -826,9 +707,9 @@ region instead. With prefix ARG prompt for a file-name to load."
 
 
 (defun hol-mode-init-sml ()
-   (hol-mode-turn-quiet-on)
+   (hol-toggle-quiet-quietdec)
    (send-raw-string-to-hol hol-mode-sml-init-command nil nil)
-   (hol-mode-turn-quiet-off))
+   (hol-toggle-quiet-quietdec))
 
 
 ;** hol map keys and function definitions
@@ -852,6 +733,7 @@ or at level 10 with a bare prefix. "
     (setq comint-prompt-regexp "^- ")
     (setq hol-buffer-name (buffer-name buf))
     (setq comint-scroll-show-maximum-output t)
+    (setq comint-scroll-to-bottom-on-output t)
     (if hol-was-ok t (hol-mode-init-sml))))
 
 (defun hol-display ()
@@ -902,6 +784,12 @@ or at level 10 with a bare prefix. "
                    "print (\"*** %s now \" ^"
                    "Bool.toString (!%s)^\" ***\\n\"))")
            s s s s) nil nil))
+
+(defun hol-toggle-var-quiet (s)
+  "Toggles the boolean variable STRING."
+  (send-raw-string-to-hol
+   (format "val _ = (%s := not (!%s));"
+           s s) nil nil))
 
 (defun hol-toggle-trace (s &optional arg)
   "Toggles the trace variable STRING between zero and non-zero.  With prefix
@@ -985,6 +873,13 @@ argument N, sets the trace to that value in particular."
     "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")") nil nil)
   (hol-toggle-var "Globals.interactive"))
 
+(defun hol-toggle-quiet-quietdec ()
+  "Toggles quiet declarations in the interactive system."
+  (interactive)
+  (send-raw-string-to-hol   
+    "val _ = HOL_Interactive.toggle_quietdec()" nil nil)
+  (hol-toggle-var-quiet "Globals.interactive"))
+
 (defun hol-toggle-show-times()
   "Toggles the elisp variable 'hol-emit-time-elapsed-p."
   (interactive)
@@ -1005,14 +900,6 @@ argument N, sets the trace to that value in particular."
   (setq hol-auto-load-p (not hol-auto-load-p))
   (message (if hol-auto-load-p "automatic loading ON"
              "automatic loading OFF")))
-
-(defun hol-toggle-recentre-mode()
-  "Toggles the elisp variable 'hol-recentre-mode."
-  (interactive)
-  (setq hol-recentre-mode (not hol-recentre-mode))
-  (hol-recentre)
-  (message (if hol-recentre-mode "HOL buffer recentres at TOP"
-             "HOL buffer recentres at BOTTOM")))
 
 (defun set-hol-executable (filename)
   "Sets the HOL executable variable to be equal to FILENAME."
@@ -1244,9 +1131,7 @@ already loaded.)"
 
 (defun hol-show-current-load-paths ()
    (interactive)
-   (send-raw-string-to-hol
-   (hol-mode-lisp-printer (concat
-      "(message \\\"\" ^ (foldl (fn (s, b) => (s ^ \"\\n\" ^ b)) \"\" (!loadPath)) ^ \"\\\")"))
+   (send-raw-string-to-hol "print_current_load_paths ()"
    nil nil))
 
 (defun hol-type-info ()
@@ -1264,59 +1149,9 @@ already loaded.)"
    (send-raw-string-to-hol command-s nil nil)))
 
 
-;;some insertions
-(defun hol-insert-goalstack-cases-callback (buf num)
-   (let (instr)
-     (with-current-buffer buf
-     (insert "[")
-     (re-search-backward "^\\([ \n\t]*\\)" nil t)
-     (setq instr (match-string-no-properties 1))
-     (end-of-line)
-     (insert "\n")
-     (dotimes (n num t) (progn
-        (insert (concat instr "   ALL_TAC"))
-        (if (< (+ n 1) num) (insert ",") t)
-        (insert "\n")))
-     (insert (concat instr "]")))))
-
-(defun hol-insert-goalstack-cases ()
-   (interactive)
-   (send-raw-string-to-hol
-   (hol-mode-lisp-printer (concat
-      "(hol-insert-goalstack-cases-callback \\\""
-      (buffer-name (current-buffer))
-      "\\\"\"^ Int.toString(length (proofManagerLib.top_goals())) ^ \")"))
-   nil nil))
-
-(defun hol-insert-callback (buf string)
-   (save-excursion
-     (switch-to-buffer buf)
-     (insert string)))
-
-(defun hol-insert-current-goal ()
-   (interactive)
-   (send-raw-string-to-hol
-   (hol-mode-lisp-printer (concat
-      "(hol-insert-callback \\\""
-      (buffer-name (current-buffer))
-      "\\\" \\\"\"^ (term_to_string (snd (proofManagerLib.top_goal()))) ^ \"\\\")"))
-   nil nil))
-
-(defun hol-insert-assumption (num)
-   (interactive "nAssumption no: ")
-   (send-raw-string-to-hol
-   (hol-mode-lisp-printer (concat
-      "(hol-insert-callback \\\""
-      (buffer-name (current-buffer))
-      "\\\" \\\"\"^ (term_to_string (let val (asm, _) = (proofManagerLib.top_goal()) in "
-      "(el (length asm - " (number-to-string num) ") asm) end)) ^ \"\\\")"))
-   nil nil))
-
-
 
 ;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
-(define-key hol-map "\M-i" 'hol-insert-map)
 
 (define-key hol-map "\C-a" 'hol-toggle-show-assums)
 (define-key hol-map "\C-c" 'hol-interrupt)
@@ -1326,11 +1161,9 @@ already loaded.)"
 (define-key hol-map "\C-l" 'hol-recentre)
 (define-key hol-map "\C-n" 'hol-toggle-show-numeral-types)
 (define-key hol-map "\C-q" 'hol-toggle-quietdec)
-(define-key hol-map "q"    'hol-mode-toggle-quiet)
 (define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
 (define-key hol-map "\C-t" 'hol-toggle-show-types)
 (define-key hol-map "\C-u" 'hol-toggle-unicode)
-(define-key hol-map "\C-k" 'hol-toggle-recentre-mode)
 (define-key hol-map "\C-v" 'hol-scroll-up)
 (define-key hol-map "\M-f" 'forward-hol-tactic)
 (define-key hol-map "\M-b" 'backward-hol-tactic)
@@ -1369,11 +1202,6 @@ already loaded.)"
 (define-key hol-map "="    'hol-template-comment-equal)
 (define-key hol-map "\M-d" 'hol-template-define)
 (define-key hol-map "\M-x" 'hol-template-store-thm)
-
-
-(define-key hol-insert-map "l" 'hol-insert-goalstack-cases)
-(define-key hol-insert-map "g" 'hol-insert-current-goal)
-(define-key hol-insert-map "a" 'hol-insert-assumption)
 
 
 
@@ -1456,18 +1284,6 @@ already loaded.)"
   [menu-bar hol-menu hol-template]
   (cons "Templates" (make-sparse-keymap "Templates")))
 
-(define-key global-map [menu-bar hol-menu hol-template insert-assumption]
-   '("Assumption" . hol-insert-assumption))
-
-(define-key global-map [menu-bar hol-menu hol-template current-goal]
-   '("Current goal" . hol-insert-current-goal))
-
-(define-key global-map [menu-bar hol-menu hol-template goalstack-cases]
-   '("Tactic list" . hol-insert-goalstack-cases))
-
-(define-key global-map [menu-bar hol-menu hol-template sep2]
-   '(menu-item "--"))
-
 (define-key global-map [menu-bar hol-menu hol-template new-script]
    '("New theory" . hol-template-new-script-file))
 
@@ -1508,17 +1324,11 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-printing echo]
    '("Echo commands" . hol-toggle-echo-commands))
 
-(define-key global-map [menu-bar hol-menu hol-printing real-quite]
-   '("Really quiet (hide all output)" . hol-mode-toggle-quiet))
-
 (define-key global-map [menu-bar hol-menu hol-printing quiet]
    '("Quiet (hide output except errors)" . hol-toggle-quietdec))
 
 (define-key global-map [menu-bar hol-menu hol-printing unicode]
    '("Unicode" . hol-toggle-unicode))
-
-(define-key global-map [menu-bar hol-menu hol-printing recentre]
-   '("Recentre mode" . hol-toggle-recentre-mode))
 
 (define-key global-map [menu-bar hol-menu hol-printing sep2]
    '(menu-item "--"))
@@ -1632,11 +1442,8 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-process hol-send-string]
    '("Send string to HOL" . interactive-send-string-to-hol))
 
-(define-key global-map [menu-bar hol-menu hol-process hol-send-region-real-quietly]
-   '("Send region to HOL - hide all output" . copy-region-as-hol-definition-real-quitely))
-
 (define-key global-map [menu-bar hol-menu hol-process hol-send-region-quietly]
-   '("Send region to HOL - hide non errors" . copy-region-as-hol-definition-quitely))
+   '("Send region to HOL - hide non-errors" . copy-region-as-hol-definition-quitely))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-send-region]
    '("Send region to HOL" . copy-region-as-hol-definition))
