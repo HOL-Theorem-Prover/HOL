@@ -2,8 +2,6 @@
 
 open HolKernel Parse
 
-val _ = current_backend := PPBackEnd.raw_terminal
-
 val _ = Feedback.set_trace "Theory.save_thm_reporting" 0;
 
 fun Hol_datatype q = let
