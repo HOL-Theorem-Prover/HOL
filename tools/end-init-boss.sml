@@ -25,40 +25,8 @@ in
   FileSys.chDir curdir
 end;
 
-local
-  structure MPP = MosmlPP
-  fun mosmlpp ppfn pps x = let
-    val slist = ref ([] : string list)
-    fun output_slist () = (app (MPP.add_string pps) (List.rev (!slist));
-                           slist := [])
-    fun flush ()= output_slist()
-    fun consume_string s = let
-      open Substring
-      val (pfx,sfx) = splitl (fn c => c <> #"\n") (full s)
-    in
-      if size sfx = 0 then slist := s :: !slist
-      else
-        (output_slist();
-         MPP.add_newline pps;
-         if size sfx > 1 then consume_string (string (triml 1 sfx))
-         else ())
-    end
-    val consumer = {consumer = consume_string,
-                    linewidth = !Globals.linewidth,
-                    flush = flush}
-    val newpps = HOLPP.mk_ppstream consumer
-  in
-    MPP.begin_block pps MPP.INCONSISTENT 0;
-    HOLPP.begin_block newpps HOLPP.INCONSISTENT 0;
-    ppfn newpps x;
-    HOLPP.end_block newpps;
-    HOLPP.flush_ppstream newpps;
-    MPP.end_block pps
-  end
-in
-  val _ = installPP (mosmlpp simpLib.pp_ssfrag);
-  val _ = installPP (mosmlpp simpLib.pp_simpset)
-end
+val _ = installPP (mosmlpp simpLib.pp_ssfrag);
+val _ = installPP (mosmlpp simpLib.pp_simpset)
 
 open bossLib;  (* Any others? *)
 

@@ -19,7 +19,18 @@ open HolKernel Parse boolLib proofManagerLib;
  *---------------------------------------------------------------------------*)
 
 local
+  fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
+  fun gprint g pps t = let
+    val tyg = Parse.type_grammar()
+    val (_, ppt) = Parse.print_from_grammars (tyg,g)
+  in
+    ppt pps t
+  end
+  fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
+  fun timepp pps t = PP.add_string pps (Time.toString t ^ "s")
+  fun locpp pps l = PP.add_string pps (locn.toShortString l)
   structure MPP = MosmlPP
+in
   fun mosmlpp ppfn pps x = let
     val slist = ref ([] : string list)
     fun output_slist () = (app (MPP.add_string pps) (List.rev (!slist));
@@ -48,18 +59,6 @@ local
     HOLPP.flush_ppstream newpps;
     MPP.end_block pps
   end
-
-  fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
-  fun gprint g pps t = let
-    val tyg = Parse.type_grammar()
-    val (_, ppt) = Parse.print_from_grammars (tyg,g)
-  in
-    ppt pps t
-  end
-  fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
-  fun timepp pps t = PP.add_string pps (Time.toString t ^ "s")
-  fun locpp pps l = PP.add_string pps (locn.toShortString l)
-in
   val _ = installPP (mosmlpp Pretype.pp_pretype)
   val _ = installPP (mosmlpp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
   val _ = installPP (mosmlpp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
