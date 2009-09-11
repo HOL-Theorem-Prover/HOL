@@ -84,6 +84,24 @@ fun term_grammar () = (!the_term_grammar)
 
 fun current_grammars() = (type_grammar(), term_grammar());
 
+(* ----------------------------------------------------------------------
+    Pervasive pretty-prining backend
+   ---------------------------------------------------------------------- *)
+
+val current_backend : PPBackEnd.t ref =
+    ref
+    (let
+       open PPBackEnd OS.Process
+     in
+       if !Globals.interactive then
+         case getEnv "INSIDE_EMACS" of
+           SOME _ => emacs_terminal
+         | NONE => (case getEnv "TERM" of
+                      SOME "xterm" => vt100_terminal
+                    | _ => raw_terminal)
+       else raw_terminal
+     end)
+
 (*---------------------------------------------------------------------------
          local grammars
  ---------------------------------------------------------------------------*)
@@ -144,7 +162,7 @@ val type_printer = ref (type_pp.pp_type (type_grammar()))
 
 val grammar_term_printer =
   ref (term_pp.pp_term (term_grammar()) (type_grammar()))
-fun pp_grammar_term pps t = (!grammar_term_printer) pps t
+fun pp_grammar_term pps t = (!grammar_term_printer) (!current_backend) pps t
 
 val term_printer = ref pp_grammar_term
 
@@ -189,7 +207,7 @@ fun pp_with_bquotes ppfn pp x =
   let open Portable in add_string pp "`"; ppfn pp x; add_string pp "`" end
 
 fun print_from_grammars (tyG, tmG) =
-  (type_pp.pp_type tyG, term_pp.pp_term tmG tyG)
+  (type_pp.pp_type tyG, term_pp.pp_term tmG tyG (!current_backend))
 
 fun print_term_by_grammar Gs = let
   open TextIO PP
@@ -1528,7 +1546,13 @@ in
  end
 end
 
-val _ = Theory.pp_thm := pp_thm;
+val _ = let
+  fun rawpp_thm pps th =
+      Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+                    (pp_thm pps) th
+in
+  Theory.pp_thm := rawpp_thm
+end
 val _ = Theory.after_new_theory setup_grammars;
 
 

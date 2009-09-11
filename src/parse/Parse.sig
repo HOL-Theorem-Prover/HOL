@@ -163,7 +163,7 @@ signature Parse = sig
 
 
   (* Pretty printing *)
-
+  val current_backend : PPBackEnd.t ref
   val pp_term : ppstream -> term -> unit
   val pp_type : ppstream -> hol_type -> unit
   val pp_thm : ppstream -> thm -> unit

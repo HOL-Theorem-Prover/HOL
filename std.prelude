@@ -6,6 +6,13 @@ val _ = quietdec := true;
 load "PP";
 structure MosmlPP = PP
 
+(* ----------------------------------------------------------------------
+    Set interactive flag to true
+   ---------------------------------------------------------------------- *)
+
+val _ = load "Globals";
+val _ = Globals.interactive := true;
+
 val _ = app load
   ["Mosml", "Process", "Path", "boolLib", "proofManagerLib", "Arbrat"];
 
@@ -124,11 +131,6 @@ in
      print "No theory files on disk; perhaps export_theory() required.\n"
 end
 
-(* ----------------------------------------------------------------------
-    Set interactive flag to true
-   ---------------------------------------------------------------------- *)
-
-val _ = Globals.interactive := true;
 
 (*---------------------------------------------------------------------------*
  * Print a banner.                                                           *
