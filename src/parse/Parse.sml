@@ -85,22 +85,23 @@ fun term_grammar () = (!the_term_grammar)
 fun current_grammars() = (type_grammar(), term_grammar());
 
 (* ----------------------------------------------------------------------
-    Pervasive pretty-prining backend
+    Pervasive pretty-printing backend
    ---------------------------------------------------------------------- *)
 
+fun interactive_ppbackend () = let
+  open PPBackEnd OS.Process
+in
+  (* assumes interactive *)
+  case getEnv "INSIDE_EMACS" of
+    SOME _ => emacs_terminal
+  | NONE => (case getEnv "TERM" of
+               SOME "xterm" => vt100_terminal
+             | _ => raw_terminal)
+end
+
 val current_backend : PPBackEnd.t ref =
-    ref
-    (let
-       open PPBackEnd OS.Process
-     in
-       if !Globals.interactive then
-         case getEnv "INSIDE_EMACS" of
-           SOME _ => emacs_terminal
-         | NONE => (case getEnv "TERM" of
-                      SOME "xterm" => vt100_terminal
-                    | _ => raw_terminal)
-       else raw_terminal
-     end)
+    ref (if !Globals.interactive then interactive_ppbackend()
+         else PPBackEnd.raw_terminal)
 
 (*---------------------------------------------------------------------------
          local grammars

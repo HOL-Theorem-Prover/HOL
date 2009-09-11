@@ -106,6 +106,7 @@ fun use s =
 end;
 
 val _ = Globals.interactive := true;
+val _ = Parse.current_backend := Parse.interactive_ppbackend()
 
 val build_stamp =
  let open TextIO Path;
