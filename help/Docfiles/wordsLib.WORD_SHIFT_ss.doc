@@ -12,7 +12,7 @@ simplification, words.
 
 \DESCRIBE
 
-The fragment {WORD_SHIFT_ss} does some basic simplications for the operations: {<<} (left shift), {>>} (arithmetic right shift), {>>>} (logical right shift), {#>>} (rotate right) and {#<<} (rotate left).  More simplication is possible when used in combination with {wordsLib.SIZES_ss}.
+The fragment {WORD_SHIFT_ss} does some basic simplifications for the operations: {<<} (left shift), {>>} (arithmetic right shift), {>>>} (logical right shift), {#>>} (rotate right) and {#<<} (rotate left).  More simplification is possible when used in combination with {wordsLib.SIZES_ss}.
 
 \EXAMPLE
 
@@ -28,7 +28,7 @@ The fragment {WORD_SHIFT_ss} does some basic simplications for the operations: {
 > val it = |- a >> 0 + 0w << n + a #<< 2 #>> 2 = a + 0w + a : thm
 }
 
-More simplication is possible when the word length is known.
+More simplification is possible when the word length is known.
 {
 - SIMP_CONV (std_ss++SIZES_ss++WORD_SHIFT_ss) [] ``a << 4 + (a #<< 6) : word4``
 > val it = |- a << 4 = 0w + a #<< 2 : thm
