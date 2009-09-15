@@ -5,4 +5,72 @@ local open bagTheory in end
 
 open bagSyntax bagSimps
 
+
+
+
+(******************************************************************************)
+(* Resorting bags                                                             *)
+(*                                                                            *)
+(* The insert of bags commutes. Therefore, there order can be easily changed. *)
+(* For example: {|x0; x1; x2; x3; x4|} = {|x0; x3; x2; x1; x4|}               *)
+(*                                                                            *)
+(* This conversion provides a way of doing such resorts. It gets a list       *)
+(* of integers that represent the positions of elements in the original list; *)
+(* counting starts with zero. It then sorts these elements to the front of    *)
+(* the new bag. Any remaining elements are placed behind them. It's           *)
+(* assumed that the elements of this list of integers are pairwise distinct.  *)
+(*                                                                            *)
+(* For example:                                                               *)
+(* BAG_RESORT_CONV [0,3,2] ``{|x0; x1; x2; x3; x4|}`` results in              *)
+(*                           {|x0; x3; x2; x1; x4|}                           *)
+(******************************************************************************)
+
+
+local
+   fun BAG_RESORT___BRING_TO_FRONT_CONV 0 b = REFL b
+     | BAG_RESORT___BRING_TO_FRONT_CONV n b =
+    let
+        (*remove frist element and 
+          bring to front in rest of the bag*)
+	val (e1,b') = bagSyntax.dest_insert b;                      
+        val thm0 = BAG_RESORT___BRING_TO_FRONT_CONV (n-1) b';
+
+        (*add first element again*)
+	val thm1 = AP_TERM (rator b) thm0;
+
+        (*swap the first two elements*)
+        val (e2, b'') = bagSyntax.dest_insert (rhs (concl thm0));
+        val thm2 = ISPECL [b'', e1, e2] bagTheory.BAG_INSERT_commutes
+        val thm3 = TRANS thm1 thm2
+    in
+        thm3
+    end;
+
+in
+   fun BAG_RESORT_CONV [] b = REFL b (*nothing to do*)
+   |   BAG_RESORT_CONV [n] b = BAG_RESORT___BRING_TO_FRONT_CONV n b (*that's simple :-)*)
+   |   BAG_RESORT_CONV (n::n2::ns) b = 
+   let
+      (*first bring the first element, i.e. n, to the front*)
+      val thm0 = BAG_RESORT___BRING_TO_FRONT_CONV n b;
+
+      (*remove first element*)
+      val (insert_e1,b') = dest_comb (rhs (concl thm0));
+
+      (*resort the rest of the bag
+        elements that occur before the one just moved to the front have the 
+        some position in b' as they had in b. The others moved one position to
+        the front *)
+      val ns' = map (fn m => if (n < m) then (m - 1) else m) (n2::ns);
+      val thm1 = BAG_RESORT_CONV ns' b';
+
+      (*combine again*)
+      val thm2 = AP_TERM insert_e1 thm1;
+      val thm3 = TRANS thm0 thm2
+   in
+      thm3
+   end;
+end
+
+
 end;
