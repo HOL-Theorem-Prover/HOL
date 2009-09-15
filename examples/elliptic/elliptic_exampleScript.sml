@@ -290,7 +290,7 @@ val ex1_curve_add_def = Define
        (x,y)`;
 
 val ex1_curve_mult_aux_def =
- Define
+ tDefine "ex1_curve_mult_aux"
   `ex1_curve_mult_aux (x : word32, y : word32, n : word32,
                        acc_x : word32, acc_y : word32) =
     if n = 0w then (acc_x,acc_y)
@@ -301,8 +301,11 @@ val ex1_curve_mult_aux_def =
             if n && 1w = 0w then (acc_x,acc_y)
             else ex1_curve_add (x,y,acc_x,acc_y)
       in
-        ex1_curve_mult_aux (x',y',n',acc_x',acc_y')`;
-
+        ex1_curve_mult_aux (x',y',n',acc_x',acc_y')`
+  (WF_REL_TAC `measure (w2n o FST o SND o SND)`
+   THEN SRW_TAC [] [wordsTheory.LSR_LESS]
+   THEN pairLib.GEN_BETA_TAC
+   THEN SRW_TAC [] [wordsTheory.LSR_LESS]);
 
 val ex1_curve_mult_def =
  Define
@@ -355,7 +358,8 @@ end;
 
 val constant_propagation_SS =
     simpLib.SSFRAG
-      {convs = [{name = "constant_propagation_let_conv",
+      {name = NONE,
+       convs = [{name = "constant_propagation_let_conv",
                  key = SOME ([], ``LET f x``),
                  trace = 2,
                  conv = K (K constant_propagation_let_conv)}],
@@ -495,5 +499,7 @@ val ex2_field_neg_def = Define
      let y1 = if y0 <= ex2_prime0 then ex2_prime1 - x1
               else ex2_prime1 - (x1 + 1w) in
      (y0,y1)`;
+
+val _ = html_theory "elliptic_example";
 
 val () = export_theory ();

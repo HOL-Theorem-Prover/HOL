@@ -192,4 +192,6 @@ val prime_checker = store_thm
    ++ Suff `i' <= i - 1 \/ (i' = i)` >> METIS_TAC []
    ++ DECIDE_TAC);
 
+val _ = html_theory "primality";
+
 val () = export_theory ();

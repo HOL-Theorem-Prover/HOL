@@ -1546,4 +1546,6 @@ val elgamal_correctness = store_thm
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
    ++ RW_TAC alg_ss []);
 
+val _ = html_theory "group";
+
 val () = export_theory ();

@@ -423,7 +423,8 @@ local
         end;
 
   fun algebra_dproc reductions judgements dproc_cache =
-      Traverse.REDUCER {initial = initial_state reductions judgements,
+      Traverse.REDUCER {name = NONE,
+                        initial = initial_state reductions judgements,
                         addcontext = state_add,
                         apply = state_apply_dproc dproc_cache};
 in
@@ -435,7 +436,7 @@ in
         val dproc = algebra_dproc reductions judgements dproc_cache
       in
         simpLib.SSFRAG
-          {ac = [], congs = [], convs = convs, rewrs = rewrites,
+          {name = NONE, ac = [], congs = [], convs = convs, rewrs = rewrites,
            dprocs = [dproc], filter = NONE}
       end;
 

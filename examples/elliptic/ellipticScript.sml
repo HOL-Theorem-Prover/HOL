@@ -1189,7 +1189,7 @@ val curve_add_carrier = Count.apply store_thm
    ++ ec_cases_on `e` `p`
    ++ ec_cases_on `e` `q`
    ++ RW_TAC resq_ss [curve_add_def]
-   ++ Q.UNABBREV_ALL_TAC
+   ++ UNABBREV_ALL_TAC
    ++ RW_TAC alg_ss [affine_case]
    ++ RW_TAC alg_ss []
    ++ Know `~(d = field_zero e.field)`
@@ -1235,7 +1235,7 @@ val curve_add_lzero = store_thm
    RW_TAC resq_ss []
    ++ ec_cases_on `e` `p`
    ++ RW_TAC resq_ss [curve_add_def]
-   ++ Q.UNABBREV_ALL_TAC
+   ++ UNABBREV_ALL_TAC
    ++ RW_TAC alg_ss [affine_case]);
 
 val context = subtypeTools.add_rewrite2 curve_add_lzero context;
@@ -1249,7 +1249,7 @@ val curve_add_lneg = store_thm
    ++ ec_cases_on `e` `p`
    ++ RW_TAC resq_ss [curve_add_def, curve_neg_def, LET_DEF]
    ++ RW_TAC alg_ss []
-   ++ Q.UNABBREV_ALL_TAC
+   ++ UNABBREV_ALL_TAC
    ++ RW_TAC alg_ss [affine_case]
    ++ Q.PAT_ASSUM `X = Y` MP_TAC
    ++ RW_TAC alg_ss [affine_case, affine_eq]
@@ -1268,7 +1268,7 @@ val curve_add_comm = Count.apply store_thm
    RW_TAC resq_ss []
    ++ Cases_on `p = q` >> RW_TAC alg_ss []
    ++ RW_TAC alg_ss [curve_add_def]
-   ++ Q.UNABBREV_ALL_TAC
+   ++ UNABBREV_ALL_TAC
    ++ ec_cases_on `e` `p`
    ++ ec_cases_on `e` `q`
    ++ RW_TAC resq_ss []
@@ -1352,7 +1352,7 @@ val curve_add_assoc = store_thm
         [curve_add_def, curve_double_def, affine_case, LET_DEF,
          affine_eq, curve_distinct]
 
-   ++ Q.UNABBREV_ALL_TAC
+   ++ UNABBREV_ALL_TAC
    ++ ec_cases_on `e` `p`
    ++ ec_cases_on `e` `q`
    ++ RW_TAC resq_ss []
@@ -1534,5 +1534,7 @@ val curve_add_example_def = Define
 val curve_add_example_compilable =
     CONV_RULE (RAND_CONV execute_conv) curve_add_example_def;
 ***)
+
+val _ = html_theory "elliptic";
 
 val () = export_theory ();

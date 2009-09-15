@@ -188,7 +188,7 @@ fun from_textfile {filename = f} =
     let
       open TextIO
       val (h,c) = if f = "-" then (stdIn, K ()) else (openIn f, closeIn)
-      fun res () = case inputLine h of "" => (c h; NIL) | s => CONS (s,res)
+      fun res () = case inputLine h of NONE => (c h; NIL) | SOME "" => (c h; NIL) | SOME s => CONS (s,res)
     in
       memoize (res ())
     end;

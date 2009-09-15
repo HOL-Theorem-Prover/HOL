@@ -264,7 +264,7 @@ val field_pretty_print = ref true;
 
 val field_pretty_print_max_size = ref 1000;
 
-fun field_print sys gravs d pp =
+fun field_print Gs (sys,str,brk) gravs d pp =
     let
       open Portable term_pp_types
 
@@ -280,8 +280,8 @@ fun field_print sys gravs d pp =
             val (_,x) = dest tm
           in
             begin_block pp INCONSISTENT 0;
-            add_string pp s;
-            add_break pp (1,0);
+            str s;
+            brk (1,0);
             sys (Prec (prec,s), Top, Top) (d - 1) x;
             end_block pp
           end
@@ -308,16 +308,16 @@ fun field_print sys gravs d pp =
           in
             if n > !field_pretty_print_max_size then
               (begin_block pp INCONSISTENT 0;
-               add_string pp ("<<" ^ int_to_string n ^ ">>");
+               str ("<<" ^ int_to_string n ^ ">>");
                end_block pp)
             else
               (begin_block pp INCONSISTENT (if b then 1 else 0);
-               if b then add_string pp "(" else ();
+               if b then str "(" else ();
                sys (p,l,p) (d - 1) x;
-               add_string pp (" " ^ s);
-               add_break pp (1,0);
+               str (" " ^ s);
+               brk (1,0);
                sys (p,p,r) (d - 1) y;
-               if b then add_string pp ")" else ();
+               if b then str ")" else ();
                end_block pp)
           end
 
@@ -339,7 +339,7 @@ fun field_print sys gravs d pp =
           tm
     end;
 
-val () = temp_add_user_printer ({Tyop = "", Thy = ""}, field_print);
+val () = temp_add_user_printer ("field_print", Term `x:'a`, field_print);
 
 (* ------------------------------------------------------------------------- *)
 (* AC normalization.                                                         *)
@@ -984,7 +984,7 @@ fun field_div_elim_ss context =
 
       val data =
           simpLib.SSFRAG
-            {ac = [], congs = [], convs = convs, rewrs = rewrs,
+            {name = NONE, ac = [], congs = [], convs = convs, rewrs = rewrs,
              dprocs = [], filter = NONE}
 
       val {simplify = alg_ss, ...} = subtypeTools.simpset2 context
@@ -1147,7 +1147,7 @@ fun field_poly_ss context term_normalize_ths =
 
       val data =
           simpLib.SSFRAG
-            {ac = [], congs = congs, convs = convs, rewrs = [],
+            {name =  NONE, ac = [], congs = congs, convs = convs, rewrs = [],
              dprocs = [], filter = NONE}
 
       val {simplify = alg_ss, ...} = subtypeTools.simpset2 context
@@ -1209,7 +1209,7 @@ fun field_poly_basis_ss context =
 
       val data =
           simpLib.SSFRAG
-            {ac = [], congs = [], convs = convs, rewrs = [],
+            {name =  NONE, ac = [], congs = [], convs = convs, rewrs = [],
              dprocs = [], filter = NONE}
 
       val {simplify = alg_ss, ...} = subtypeTools.simpset2 context
