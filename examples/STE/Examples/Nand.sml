@@ -32,8 +32,7 @@ val NAND_OK =
 	       THEN REPEAT STRIP_TAC
 	       THEN REPEAT COND_CASES_TAC
 	       THEN fs [lattice_X1_lemma, leq_def]
-	       THENL [PROVE_TAC [lattice_X1_lemma],
-		      Cases_on `s_b "in"` THEN fs [drop_def,
+	       THEN Cases_on `s_b "in"`   THEN fs [drop_def,
 						   One_def,
 						   Zero_def,
 						   X_def,
@@ -41,8 +40,7 @@ val NAND_OK =
 						   lub_def,
 						   Nand_def,
 						   And_def,
-						   Not_def],
-		      PROVE_TAC [lattice_X1_lemma]]
+						   Not_def]
 	       THEN Cases_on `s_b "out"` THEN fs [drop_def,
 						  One_def,
 						  Zero_def,
