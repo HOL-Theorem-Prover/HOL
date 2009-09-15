@@ -1,2 +1,2 @@
-selftest.exe : selftest.uo Yices.uo
+selftest.exe : selftest.uo HolSmtLib.uo CVC3.uo Yices.uo Z3.uo
 	HOLMOSMLC -o $@ $<
