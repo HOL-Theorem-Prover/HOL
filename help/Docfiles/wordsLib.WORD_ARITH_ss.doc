@@ -12,7 +12,7 @@ simplification, words.
 
 \DESCRIBE
 
-The fragment {WORD_ARITH_ss} does AC simplicaition for word multiplication, addition and subtraction.  It also simplifies {INT_MINw}, {INT_MAXw} and {UINT_MAXw}.  If the word length is know then further simplifcation may occur, in particular for {$- (n2w n)} and {w2n (n2w n)}.
+The fragment {WORD_ARITH_ss} does AC simplification for word multiplication, addition and subtraction.  It also simplifies {INT_MINw}, {INT_MAXw} and {UINT_MAXw}.  If the word length is known then further simplification may occur, in particular for {$- (n2w n)} and {w2n (n2w n)}.
 
 \EXAMPLE
 
@@ -26,7 +26,7 @@ The fragment {WORD_ARITH_ss} does AC simplicaition for word multiplication, addi
 > val it = |- INT_MINw + INT_MAXw + UINT_MAXw = $- 2w : thm
 }
 
-More simplication occurs when the word length is known.
+More simplification occurs when the word length is known.
 {
 - SIMP_CONV (pure_ss++WORD_ARITH_ss) [] ``3w * b + a + 2w * b - a * 4w:word2``
 > val it = |- 3w * b + a + 2w * b - a * 4w = a + b : thm
