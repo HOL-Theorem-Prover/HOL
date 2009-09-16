@@ -24,8 +24,8 @@ The instructions that follow are how to build from sources, on any of
 the supported operating systems
 
 
-Building the HOL system.
---------------------------
+Building the HOL system
+-----------------------
 
 A. [Moscow ML:] First, install Moscow ML. This is usually
    straightforward. The directory where it lives will be called
@@ -147,8 +147,8 @@ E. If bin/build completes (it takes a while!), successfully, you are
    On Windows the hol scripts additionally include a .bat extension,
    and Holmake has a .exe extension.
 
-External tools.
-----------------
+External tools
+--------------
 
 The HOL installation currently includes a C library (in HolBddLib),
 the C sources for the SMV model-checker (in temporalLib), and for a
@@ -160,8 +160,8 @@ Loading the BDD libraries muddyLib or HolBddLib will fail unless
 MoscowML has been built with dynamic linking enabled.
 
 
-Dealing with failure.
----------------------
+Dealing with failure
+--------------------
 
    * Send a message to hol-support@cl.cam.ac.uk giving a full transcript of
      the failed installation. Also make sure that you include the
