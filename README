@@ -1,8 +1,8 @@
-This is the distribution directory for the Kananaskis release of HOL-4.
+This is the distribution directory for the Kananaskis release of HOL4.
 The following is a brief listing of what's available.
 
      install.txt    * Installation instructions
-     std.prelude    * File loaded at the beginning of each HOL session.
+     std.prelude    * File loaded at the beginning of each HOL session
      COPYRIGHT      * Copyright notice
 
      bin/           * Executables
