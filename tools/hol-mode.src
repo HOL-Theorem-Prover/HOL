@@ -29,7 +29,7 @@
   (interactive "fHOL executable: ")
   (setq hol-executable filename))
 
-(defvar hol-mode-sml-init-command 
+(defvar hol-mode-sml-init-command
    "use (Globals.HOLDIR ^ \"/tools/hol-mode.sml\")"
   "*The command to send to HOL to load the ML-part of hol-mode.")
 
@@ -712,6 +712,14 @@ region instead. With prefix ARG prompt for a file-name to load."
    (hol-toggle-quiet-quietdec))
 
 
+(defun turn-off-hol-font-lock (oldvar)
+  (interactive)
+  (if (not oldvar)
+      (progn
+        (message "Turning on font-lock mode does nothing in HOL mode")
+        (setq font-lock-defaults nil)))
+  (setq font-lock-mode nil))
+
 ;** hol map keys and function definitions
 (defun hol (niceness)
   "Runs a HOL session in a comint window.
@@ -732,6 +740,13 @@ or at level 10 with a bare prefix. "
     (switch-to-buffer buf)
     (setq comint-prompt-regexp "^- ")
     (setq hol-buffer-name (buffer-name buf))
+    ;; must go to ridiculous lengths to ensure that font-lock-mode is
+    ;; turned off and stays off
+    (font-lock-mode 0)
+    (make-local-variable 'font-lock-function)
+    (setq font-lock-function 'turn-off-hol-font-lock)
+    (make-local-variable 'comint-preoutput-filter-functions)
+    (setq comint-preoutput-filter-functions '(holpp-output-filter))
     (setq comint-scroll-show-maximum-output t)
     (setq comint-scroll-to-bottom-on-output t)
     (if hol-was-ok t (hol-mode-init-sml))))
@@ -876,7 +891,7 @@ argument N, sets the trace to that value in particular."
 (defun hol-toggle-quiet-quietdec ()
   "Toggles quiet declarations in the interactive system."
   (interactive)
-  (send-raw-string-to-hol   
+  (send-raw-string-to-hol
     "val _ = HOL_Interactive.toggle_quietdec()" nil nil)
   (hol-toggle-var-quiet "Globals.interactive"))
 
@@ -1120,7 +1135,7 @@ already loaded.)"
   (interactive "DAdd new load-path: ")
   (let ((epath (expand-file-name path)))
   (if (file-accessible-directory-p epath)
-     (progn 
+     (progn
         (send-raw-string-to-hol
             (concat "loadPath := \"" (ml-quote epath) "\" :: !loadPath;")
             nil nil)
@@ -1147,6 +1162,64 @@ already loaded.)"
                       (if use-marked (concat "(SOME \"" context-term "\")") "NONE")
                       " \"" main-term "\"")))
    (send-raw-string-to-hol command-s nil nil)))
+
+(setq temp-hol-output-buf nil)
+
+(defun holpp-output-filter (s)
+  "Converts a munged emacs_terminal string into a pretty one with text properties."
+  (interactive)
+  (let* ((tmpbuf (or temp-hol-output-buf
+                     (generate-new-buffer " *HOL output filter*)")))
+         end)
+    (setq temp-hol-output-buf tmpbuf)
+    (save-excursion
+      (set-buffer tmpbuf)
+      (unwind-protect
+          (progn
+            (goto-char (point-max))
+            (insert s)
+            (goto-char (point-min))
+            (while (and (not end) (re-search-forward "(\\*(\\*(\\*" nil t))
+              (let ((uptoann (- (point) 6))
+                    (start (point)))
+                (if (not (re-search-forward "\\*)\\*)\\*)" nil t))
+                    (progn
+                      (goto-char uptoann)
+                      (setq end t))
+                  (delete-region uptoann start)
+                  (let*
+                      ((start (- start 6))
+                       (code (buffer-substring start (+ start 2)))
+                       (codeface
+                        (cond ((equal code "FV") 'hol-free-variable)
+                              ((equal code "BV") 'hol-bound-variable)
+                              nil)))
+                    (and codeface
+                         (add-text-properties
+                          (+ start 2)
+                          (- (point) 6) (list 'face codeface)))
+                    (delete-region start (+ start 2))
+                    (delete-region (- (point) 6) (point))))))
+            (if (not end) (goto-char (point-max)))
+            (prog1
+                (buffer-substring (point-min) (point))
+              (delete-region (point-min) (point))))))))
+
+(defface hol-free-variable
+  '((((class color) (min-colors 8))
+     :foreground "blue"
+     :weight 'bold
+     :fontified t))
+  "The face for presenting free variables in HOL terms."
+  :group 'hol-faces)
+
+(defface hol-bound-variable
+  '((((class color) (min-colors 8)) :foreground "green" :fontified t))
+  "The face for presenting bound variables in HOL terms."
+  :group 'hol-faces)
+
+
+
 
 
 

@@ -54,12 +54,22 @@ in
    name = "vt100_terminal"}
 end
 
-val emacs_terminal = {name = "emacs_terminal",
-                      add_break = #add_break raw_terminal,
-                      add_newline = #add_newline raw_terminal,
-                      add_ann_string = #add_ann_string raw_terminal,
-                      begin_block = #begin_block raw_terminal,
-                      end_block = #end_block raw_terminal,
-                      add_string = #add_string raw_terminal}
+val emacs_terminal = let
+  fun fv s = "(*(*(*FV"^s^"*)*)*)"
+  fun bv s = "(*(*(*BV"^s^"*)*)*)"
+  fun add_ann_string pps (s, ann) =
+      case ann of
+        FV _ => PP.add_stringsz pps (fv s, UTF8.size s)
+      | BV _ => PP.add_stringsz pps (bv s, UTF8.size s)
+      | _ => PP.add_string pps s
+in
+  {name = "emacs_terminal",
+   add_break = #add_break raw_terminal,
+   add_newline = #add_newline raw_terminal,
+   add_ann_string = add_ann_string,
+   begin_block = #begin_block raw_terminal,
+   end_block = #end_block raw_terminal,
+   add_string = #add_string raw_terminal}
+end
 
 end (* struct *)
