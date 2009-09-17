@@ -4,6 +4,7 @@ struct
 open Term Type Kind
 
 structure Map = Binarymap
+structure PP = HOLPP
 
 infixr 3 ==>
 

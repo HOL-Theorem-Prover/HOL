@@ -5,12 +5,12 @@ or term parser, and of type constraints.
 
 To load the library:
 
-   load"QLib";
+   load "QLib";
 
 This loads in a structure "Q", and the quotation-friendly entrypoints
 are then accessible through the "dot" notation, e.g.,
 
-   Q.EXISTS_TAC`x`
+   Q.EXISTS_TAC `x`
 
 The full set of entrypoints, which is quite ad-hoc, can be found by
 examining Q.sig.

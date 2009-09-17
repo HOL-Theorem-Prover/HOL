@@ -1,7 +1,7 @@
 val _ = PolyML.print_depth 0;
 
 local (* install prettyprinters for simpsets and ssfrags *)
-fun pp2polypp (f : ppstream -> 'a -> unit)
+fun pp2polypp (f : PP.ppstream -> 'a -> unit)
               (putString : string -> unit,
                beginBlock : int * bool -> unit,
                spaceBlock : int * int -> unit,
@@ -25,7 +25,7 @@ val _ = use (HOLDIR^"/src/proofman/expandq");
 *)
 (* val _ = use (HOLDIR^"/src/datatype/Interactive"); *)
 
-val Hol_datatype = 
+val Hol_datatype =
   Lib.with_flag
     (Feedback.emit_WARNING,false)
     bossLib.Hol_datatype;

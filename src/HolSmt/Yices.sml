@@ -455,49 +455,43 @@ structure Yices = struct
     defs' @ ["(assert " ^ yices_tm ^ ")\n(check)\n"]
   end
 
-  (* returns true if Yices reported "sat", false if Yices reported "unsat" *)
-  fun is_sat path =
+  fun write_strings_to_file path strings =
+  let val outstream = TextIO.openOut path
+  in
+    ignore (map (TextIO.output o Lib.pair outstream) strings);
+    TextIO.closeOut outstream
+  end
+
+  (* returns SAT if Yices reported "sat", UNSAT if Yices reported "unsat" *)
+  fun result_fn path =
     let val instream = TextIO.openIn path
         val line     = TextIO.inputLine instream
     in
       TextIO.closeIn instream;
       if line = SOME "sat\n" then
-        true
+        SolverSpec.SAT NONE
       else if line = SOME "unsat\n" then
-        false
+        SolverSpec.UNSAT NONE
       else
-        raise (Feedback.mk_HOL_ERR "Yices" "is_sat"
-          "satisfiability unknown (solver not installed/problem too hard?)")
+        SolverSpec.UNKNOWN NONE
     end
 
-  (* Yices 1.0.18, native file format *)
   local val infile = "input.yices"
         val outfile = "output.yices"
   in
-    val YicesOracle = SolverSpec.make_solver
-      ("Yices 1.0.18 (native)",
-       "yices -tc " ^ infile ^ " > " ^ outfile,
-       term_to_Yices,
-       infile,
-       [outfile],
-       (fn () => is_sat outfile),
-       NONE,  (* no models *)
-       NONE)  (* no proofs *)
-  end
+    (* Yices 1.0.18, native file format *)
+    val Yices_Oracle = SolverSpec.make_solver
+      (write_strings_to_file infile o term_to_Yices)
+      ("yices -tc " ^ infile ^ " > " ^ outfile)
+      (fn () => result_fn outfile)
+      [infile, outfile]
 
-  (* Yices 1.0.18, SMT-LIB file format *)
-  local val infile = "input.yices.smt"
-        val outfile = "output.yices"
-  in
-    val YicesSMTOracle = SolverSpec.make_solver
-      ("Yices 1.0.18 (SMT-LIB)",
-       "yices -tc -smt " ^ infile ^ " > " ^ outfile,
-       SmtLib.term_to_SmtLib,
-       infile,
-       [outfile],
-       (fn () => is_sat outfile),
-       NONE,  (* no models *)
-       NONE)  (* no proofs *)
+    (* Yices 1.0.18, SMT-LIB file format *)
+    val Yices_SMT_Oracle = SolverSpec.make_solver
+      (write_strings_to_file infile o Lib.snd o SmtLib.term_to_SmtLib)
+      ("yices -tc -smt " ^ infile ^ " > " ^ outfile)
+      (fn () => result_fn outfile)
+      [infile, outfile]
   end
 
 end

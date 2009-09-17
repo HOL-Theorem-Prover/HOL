@@ -1,9 +1,9 @@
 This is the distribution directory for the Kananaskis release of HOL-Omega.
 The following is a brief listing of what's available.
 
-     install.txt    * Installation instructions
-     std.prelude    * File loaded at the beginning of each HOL session.
+     INSTALL        * Installation instructions
      COPYRIGHT      * Copyright notice
+     std.prelude    * File loaded at the beginning of each HOL session
 
      bin/           * Executables
      doc/           * Some documentation, including release notes

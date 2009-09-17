@@ -687,7 +687,7 @@ fun pp_term (G : grammar) TyG = let
     val full_pr_term = pr_term
     val pr_term =
         pr_term binderp showtypes showtypes_v vars_seen pps ppfns NoCP
-    val {add_string, add_break, begin_block, end_block,...} = ppfns
+    val {add_string,add_break,begin_block,end_block,add_ann_string,...} = ppfns
     fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
       val needed =
         case #1 (#block_style (rr:rule_record)) of
@@ -1638,13 +1638,18 @@ fun pp_term (G : grammar) TyG = let
           val print_type =
             showtypes_v orelse
             showtypes andalso not isfake andalso (binderp orelse new_freevar)
+          fun adds s = if mem tm (!bvars_seen) orelse binderp then
+                         add_ann_string (s, PPBackEnd.BV Ty)
+                       else if not isfake then
+                         add_ann_string (s, PPBackEnd.FV Ty)
+                       else add_string s
         in
           begin_block INCONSISTENT 2; pbegin print_type;
           if isSome vrule then
             pr_sole_name vname (map #2 (valOf vrule))
           else
-            if HOLset.member(spec_table, vname) then dollarise add_string vname
-            else add_string vname;
+            if HOLset.member(spec_table, vname) then dollarise adds vname
+            else adds vname;
           if print_type then add_type() else ();
           pend print_type; end_block()
         end
@@ -1972,22 +1977,25 @@ fun pp_term (G : grammar) TyG = let
 
   fun start_names() = {fvars_seen = ref [], bvars_seen = ref []}
   val avoid_merge = avoid_symbolmerge G
+  open PPBackEnd
 in
-  fn pps => fn t =>
+  fn backend => fn pps => fn t =>
     let
-      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+      val baseppfns = with_ppstream backend pps
+      val {add_string,add_break,begin_block,end_block,...} = baseppfns
       val (add_string, add_break) = avoid_merge (add_string, add_break)
       val ppfns = {add_string = add_string, add_break = add_break,
-                   begin_block = begin_block, end_block = end_block}
+                   begin_block = begin_block, end_block = end_block,
+                   add_ann_string = #add_ann_string baseppfns}
     in
-       Portable.begin_block pps CONSISTENT 0;
+       begin_block CONSISTENT 0;
        pr_term false
                (!Globals.show_types orelse !Globals.show_types_verbosely)
                (!Globals.show_types_verbosely)
                (start_names())
                pps ppfns NoCP t RealTop RealTop RealTop
                (!Globals.max_print_depth);
-       Portable.end_block pps
+       end_block ()
     end
 end
 

@@ -436,8 +436,8 @@ in
         val dproc = algebra_dproc reductions judgements dproc_cache
       in
         simpLib.SSFRAG
-          {ac = [], congs = [], convs = convs, rewrs = rewrites,
-           dprocs = [dproc], filter = NONE, name = NONE}
+          {name = NONE, ac = [], congs = [], convs = convs, rewrs = rewrites,
+           dprocs = [dproc], filter = NONE}
       end;
 
   fun simpset context = simpLib.++ (std_ss, simpset_frag context);

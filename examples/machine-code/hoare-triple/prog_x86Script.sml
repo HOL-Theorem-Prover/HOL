@@ -377,8 +377,9 @@ val UPDATE_x86_2set'' = store_thm("UPDATE_x86_2set''",
   \\ ASM_SIMP_TAC std_ss [] \\ SRW_TAC [] [X86_ACCURATE_UPDATE]
   \\ METIS_TAC [X86_ACCURATE_UPDATE]);
 
-val X86_SPEC_CODE = RW [GSYM X86_MODEL_def,GSYM xCODE_def]
-  (SIMP_RULE std_ss [X86_MODEL_def] (Q.ISPEC `X86_MODEL` SPEC_CODE));
+val X86_SPEC_CODE = save_thm("X86_SPEC_CODE",
+  RW [GSYM X86_MODEL_def,GSYM xCODE_def] 
+  (SIMP_RULE std_ss [X86_MODEL_def] (Q.ISPEC `X86_MODEL` SPEC_CODE)));
 
 val IMP_X86_SPEC_LEMMA = prove(
   ``!p q.
@@ -717,7 +718,7 @@ val xMEMORY_INSERT = prove(
        ALIGNED_add_3_and_3,n2w_11]
   \\ ASM_SIMP_TAC std_ss [ALIGNED_INTRO,xDATA_PERM_def]
   \\ SIMP_TAC std_ss [STAR_ASSOC]
-  \\ MATCH_MP_TAC (METIS_PROVE [] ``(q1 = q2) ==> ((p * q1) = (p * q2))``)
+  \\ MATCH_MP_TAC (METIS_PROVE [] ``(q1 = q2) ==> ((p * q1) = (STAR p q2))``)
   \\ `~(a IN xMEMORY_DOMAIN (df DELETE a)) /\
       ~(a+1w IN xMEMORY_DOMAIN (df DELETE a)) /\
       ~(a+2w IN xMEMORY_DOMAIN (df DELETE a)) /\

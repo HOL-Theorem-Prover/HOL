@@ -26,14 +26,12 @@ val NOT_OK = store_thm("NOT_OK", ``Okay (Not_lattice, Not_bool)``,
 		       THEN REPEAT STRIP_TAC
 		       THEN REPEAT COND_CASES_TAC
 		       THEN fs [lattice_X1_lemma, leq_def]
-		       THENL [PROVE_TAC [lattice_X1_lemma],
-			      Cases_on `s_b "in"`
+		       THEN Cases_on `s_b "in"`
 			      THEN Cases_on `s_b' "out"`
 			      THEN fs [drop_def, One_def, Zero_def,
 				       X_def, Top_def, lub_def,
 				       Not_def,
-				       Not_bool_def],
-			      PROVE_TAC [lattice_X1_lemma]]);
+				       Not_bool_def]);
 
 
 

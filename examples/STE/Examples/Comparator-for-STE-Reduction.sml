@@ -3,7 +3,7 @@ val _ = load "combinTheory";
 val _ = load "stringLib";
 val _ = load "pairTheory";
 val _ = load "arithmeticTheory";
-val _ = load " listTheory";
+val _ = load "listTheory";
 open combinTheory stringLib pairTheory arithmeticTheory listTheory;
 
 fun SUC_ELIM n =
@@ -150,6 +150,7 @@ val C = (T, "out", T, 1, 2);
 
 STE (TF [B1, B2]) (TF [C]) ``And_lattice`` comp_list true;
 
+(*
 By time shift lemma it will be true that for the following formulas
 
 val B1 = (T, "i0", T, 1, 2);
@@ -177,3 +178,4 @@ Comp |= ("a0" is a0) and ("b0" is b0) and
 
 Similarly we can do the Inequality case by following the flow in this file
 ../../TypeSystem/Examples/Comparator.sml
+*)

@@ -48,8 +48,8 @@ fun parse_type (tyfns :
           | nargs _ = 0
     in nargs st
     end
-  fun structure_to_value (s,locn) args st =
-    let val stv = structure_to_value (s,locn) args
+  fun structure_to_value0 (s,locn) args st =
+    let val stv = structure_to_value0 (s,locn) args
     in
       case st of
         TYCON  {Thy, Tyop, Kind, Rank} => pConType {Thy=Thy, Tyop=Tyop, Kind=Prekind.fromKind Kind,
@@ -60,15 +60,19 @@ fun parse_type (tyfns :
       | TYVAR  (str,kd,rk) => pVartype ((str, Prekind.fromKind kd, Prerank.fromRank rk), locn)
 (*
         TYOP {Args, Thy, Tyop} =>
-        qtyop {Args = map (structure_to_value (s,locn) args) Args,
+        qtyop {Args = map (structure_to_value0 (s,locn) args) Args,
                Thy = Thy, Tyop = Tyop, Locn = locn}
 *)
       | PARAM (n,kd,rk) => List.nth(args, n)
-        handle Subscript =>
-               Feedback.Raise
-                 (ERRloc locn ("Insufficient arguments to abbreviated operator " ^
-                               Lib.quote s))
     end
+
+  fun structure_to_value (s,locn) args st =
+      if num_params st <> length args then
+        raise ERRloc
+                  locn
+                  ("Incorrect number of arguments to abbreviated operator "^s^
+                   " (expects "^Int.toString (num_params st)^")")
+      else structure_to_value0 (s,locn) args st
 
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)

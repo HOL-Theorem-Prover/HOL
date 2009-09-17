@@ -62,6 +62,8 @@ TApp   ::= Leaf | Tuple Leaf
   val new_tybinder     : grammar -> string list -> grammar
   val new_abbreviation : grammar -> string * type_structure -> grammar
   val remove_abbreviation : grammar -> string -> grammar
+  val num_params : type_structure -> int
+
   val merge_grammars   : grammar * grammar -> grammar
 
   val std_suffix_precedence : int

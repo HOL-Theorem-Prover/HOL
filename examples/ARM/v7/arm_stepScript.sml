@@ -2510,7 +2510,7 @@ val bx_write_pc_thm = Q.prove(
               read_cpsr_def, read__psr_def,
               write_cpsr_def, write__psr_def,
               seqT_def, readT_def, writeT_def, constT_def,
-              EVAL ``1w:word2 ' 1``, EVAL ``1w:word2 ' 0``, word_0,  FUN_EQ_THM]
+              EVAL ``(1w:word2) ' 1``, EVAL ``(1w:word2) ' 0``, word_0,  FUN_EQ_THM]
     \\ FULL_SIMP_TAC (srw_ss()) []
     \\ Cases_on `(x.psrs (ii.proc,CPSR)).J`
     \\ Cases_on `(x.psrs (ii.proc,CPSR)).T`

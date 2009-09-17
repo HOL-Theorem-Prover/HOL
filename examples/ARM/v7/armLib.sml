@@ -18,9 +18,11 @@ val ERR = Feedback.mk_HOL_ERR "armLib";
 
 val trace_progress = ref 1;
 val label_step_theorems = ref true;
+val disassemble = ref true;
 
-val _ = Feedback.register_trace ("arm steps", trace_progress, 3);
+val _ = Feedback.register_trace  ("arm steps", trace_progress, 3);
 val _ = Feedback.register_btrace ("label arm steps", label_step_theorems);
+val _ = Feedback.register_btrace ("add disassembler comments", disassemble);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -189,11 +191,15 @@ fun thumb_decode i = decode_from_string (SOME i);
 
 fun output_code ostrm line (c as Instruction _) =
       let val i = arm_encoderLib.arm_encode c
-          val (m,a) = arm_disassemble c
           val pad = StringCvt.padRight #" "
+          val comment = if !disassemble then
+                          let val (m,a) = arm_disassemble c in
+                            String.concat ["\t\t; ", pad 8 m, a]
+                          end
+                        else
+                          ""
       in
-        TextIO.output(ostrm,
-          String.concat [line, " ", pad 8 i, "\t\t; ", pad 8 m, a, "\n"])
+        TextIO.output (ostrm, String.concat [line, " ", pad 8 i, comment, "\n"])
       end
   | output_code ostrm line c =
       TextIO.output(ostrm,
@@ -234,5 +240,10 @@ fun arm_assemble_to_file_from_string s f =
 
 fun arm_assemble_to_file_from_file s f =
   arm_assemble_to_file_parse s f o arm_parse_from_file;
+
+fun join (a,b) = String.concat [a, " ", b];
+
+val arm_disassemble_decode = join o arm_disassemble o arm_decode;
+fun thumb_disassemble_decode i = join o arm_disassemble o (thumb_decode i);
 
 end

@@ -33,7 +33,7 @@ The fragment {WORD_ss} contains {BIT_ss}, {SIZES_ss}, {WORD_LOGIC_ss}, {WORD_ARI
 
 \COMMENTS
 
-The {WORD_ss} fragement does not include {WORD_ARITH_EQ_ss}, {WORD_BIT_EQ_ss}, {WORD_EXTRACT_ss} or {WORD_MUL_LSL_ss}.  These extra fragments have more specialised applications.
+The {WORD_ss} fragment does not include {WORD_ARITH_EQ_ss}, {WORD_BIT_EQ_ss}, {WORD_EXTRACT_ss} or {WORD_MUL_LSL_ss}.  These extra fragments have more specialised applications.
 
 \SEEALSO
 

@@ -18,6 +18,21 @@ datatype type_structure =
        | TYVAR  of string * Kind.kind * int (* rank *)
        | PARAM  of int    * Kind.kind * int (* rank *)
 
+fun typstruct_uptodate ts =
+    case ts of
+      PARAM _ => true
+    | TYVAR (str,kd,rk) => true
+    | TYCON {Thy, Tyop, Kind, Rank} => isSome (Type.op_kind {Thy = Thy, Tyop = Tyop})
+    | TYAPP (opr,arg) => typstruct_uptodate opr andalso typstruct_uptodate arg
+    | TYUNIV (bvar,body) => typstruct_uptodate body
+    | TYABST (bvar,body) => typstruct_uptodate body
+(*
+    | TYOP {Thy, Tyop, Args} => isSome (Type.op_arity {Thy = Thy, Tyop = Tyop})
+                                andalso List.all typstruct_uptodate Args
+*)
+
+
+
 type special_info = {lambda : string list,
                      forall : string list}
 
@@ -71,16 +86,16 @@ val params = params0 (HOLset.empty Int.compare)
 
 val num_params = HOLset.numItems o params
 
-fun triple_compare(cmp1,cmp2,cmp3)((a1,a2,a3),(b1,b2,b3)) =
-    Lib.pair_compare(cmp1,Lib.pair_compare(cmp2,cmp3))((a1,(a2,a3)),(b1,(b2,b3)))
-
-fun get_params0 acc (PARAM (i,kd,rk)) = HOLset.add(acc, (i,kd,rk))
-  | get_params0 acc (TYCON {Thy,Tyop,Kind,Rank}) = acc
-  | get_params0 acc (TYVAR (str,kd,rk)) = acc
-  | get_params0 acc (TYAPP (opr,arg)) = get_params0 (get_params0 acc opr) arg
-  | get_params0 acc (TYUNIV (bvar,body)) = get_params0 (get_params0 acc bvar) body
-  | get_params0 acc (TYABST (bvar,body)) = get_params0 (get_params0 acc bvar) body
-val get_params = get_params0 (HOLset.empty (triple_compare (Int.compare,Kind.kind_compare,Int.compare)))
+fun suffix_kind abbrevs s =
+    case Binarymap.peek (abbrevs, s) of
+      NONE => let
+      in
+        case Type.decls s of
+          [] => NONE
+        | ty :: _ => Option.map (fn n => (s,n)) (Type.op_kind ty)
+      end
+    | SOME st => if typstruct_uptodate st then SOME (s, Kind.mk_arity (num_params st))
+                 else NONE
 
 val std_suffix_precedence = 100
 val std_binder_precedence =  20
@@ -295,11 +310,7 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
   open Portable Lib
   val {add_break,add_newline,add_string,begin_block,end_block,...} =
       with_ppstream pps
-  fun print_suffix s = let
-    val oarity =
-        case Binarymap.peek(abbrevs, s) of
-          NONE => length (fst (Kind.strip_arrow_kind (valOf (Type.op_kind (hd (Type.decls s))))))
-        | SOME st => num_params st
+  fun print_suffix (s,kind) = let
     fun print_ty_n_tuple n =
         case n of
           0 => ()
@@ -308,8 +319,19 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
                 pr_list (fn () => add_string "TY") (fn () => add_string ", ")
                         (fn () => ()) (List.tabulate(n,K ()));
                 add_string ")")
+    open Kind
+    fun print_ty_kind kind =
+      if kind = typ then add_string "TY"
+      else if is_var_kind kind then add_string (dest_var_kind kind)
+      else let val (kds,kd) = strip_arrow_kind kind
+           in add_string "(";
+              pr_list (fn kd => print_ty_kind kd) (fn () => add_string " => ")
+                      (fn () => ()) (kds @ [kd]);
+              add_string ")"
+           end
   in
-    print_ty_n_tuple oarity;
+    if is_arity kind then print_ty_n_tuple (arity_of kind)
+                     else print_ty_kind kind;
     add_string s
   end
 
@@ -317,6 +339,17 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
   in
     add_string ("\"" ^ hd s ^ "\" <..binders..> \".\" TY")
   end
+
+fun triple_compare(cmp1,cmp2,cmp3)((a1,a2,a3),(b1,b2,b3)) =
+    Lib.pair_compare(cmp1,Lib.pair_compare(cmp2,cmp3))((a1,(a2,a3)),(b1,(b2,b3)))
+
+fun get_params0 acc (PARAM (i,kd,rk)) = HOLset.add(acc, (i,kd,rk))
+  | get_params0 acc (TYCON {Thy,Tyop,Kind,Rank}) = acc
+  | get_params0 acc (TYVAR (str,kd,rk)) = acc
+  | get_params0 acc (TYAPP (opr,arg)) = get_params0 (get_params0 acc opr) arg
+  | get_params0 acc (TYUNIV (bvar,body)) = get_params0 (get_params0 acc bvar) body
+  | get_params0 acc (TYABST (bvar,body)) = get_params0 (get_params0 acc bvar) body
+val get_params = get_params0 (HOLset.empty (triple_compare (Int.compare,Kind.kind_compare,Int.compare)))
 
   fun print_abbrev (s, st) = let
     val ps = HOLset.listItems (get_params st)
@@ -353,18 +386,22 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
     end_block()
   end
 
-  fun print_abbrevs () =
-      if Binarymap.numItems abbrevs > 0 then let
-        in
-          add_newline();
-          add_string "Type abbreviations:";
-          add_break(2,0);
-          begin_block CONSISTENT 0;
-          pr_list print_abbrev (fn () => add_newline()) (fn () => ())
-                  (Binarymap.listItems abbrevs);
-          end_block()
-        end
-      else ()
+  fun print_abbrevs () = let
+    fun foldthis (k,st,acc) =
+        if typstruct_uptodate st then (k,st)::acc else acc
+    val okabbrevs = List.rev (Binarymap.foldl foldthis [] abbrevs)
+  in
+    if length okabbrevs > 0 then let
+      in
+        add_newline();
+        add_string "Type abbreviations:";
+        add_break(2,2);
+        begin_block CONSISTENT 0;
+        pr_list print_abbrev (fn () => add_newline()) (fn () => ()) okabbrevs;
+        end_block()
+      end
+    else ()
+  end
 
   fun print_infix {opname,parse_string} = let
   in
@@ -380,12 +417,17 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
   fun print_rule0 r =
     case r of
       CONSTANT sl => let
+        val oksl = List.mapPartial (suffix_kind abbrevs) sl
       in
-        add_string "TY  ::=  ";
-        begin_block INCONSISTENT 0;
-        pr_list print_suffix (fn () => add_string " |")
-                (fn () => add_break(1,0)) sl;
-        end_block ()
+        if null oksl then ()
+        else let
+          in
+            add_string "TY  ::=  ";
+            begin_block INCONSISTENT 0;
+            pr_list print_suffix (fn () => add_string " |")
+                    (fn () => add_break(1,0)) oksl;
+            end_block ()
+          end
       end
     | BINDER sl => let
       in
@@ -421,10 +463,14 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,specials,pmap)) = let
   end
 in
   begin_block CONSISTENT 0;
-  add_string "Rules:";
-  add_newline();
-  app print_rule g;
-  print_abbrevs();
+    begin_block CONSISTENT 0;
+      add_string "Rules:";
+      add_break (1,2);
+      begin_block CONSISTENT 0;
+        app print_rule g;
+      end_block ();
+    end_block ();
+    print_abbrevs();
   end_block()
 end;
 

@@ -1,0 +1,651 @@
+(* interactive: use "EXAMPLES"; *)
+
+load "armLib";
+
+open armLib;
+
+
+
+
+
+(* ======================================================================== *)
+(* arm_encode encodes to HEX                                                *)
+(* ======================================================================== *)
+
+(* ------------------------------------------------------------------------
+   arm_encode : arm_code -> string
+   arm_encode <code>
+   ------------------------------------------------------------------------ *)
+
+val it = arm_encode
+   (Instruction(``Encoding_ARM``, ``14w:word4``,
+                ``DataProcessing
+                    (Data_Processing 4w F 1w 1w (Mode1_register 0w 0w 2w))``));
+
+val it = arm_encode
+   (Instruction(``Encoding_Thumb``, ``14w:word4``,
+                ``DataProcessing
+                    (Data_Processing 4w F 1w 1w (Mode1_register 0w 0w 2w))``));
+
+val it = arm_encode
+   (Instruction(``Encoding_Thumb2``, ``14w:word4``,
+                ``DataProcessing
+                    (Data_Processing 4w F 1w 1w (Mode1_register 0w 0w 2w))``));
+
+val it = arm_encode (Byte [``12i``,``24i``]);
+
+(* expected output:
+
+val it = "E0811002" : string
+val it = "4411" : string
+val it = "EB010102" : string
+val it = "0C 18" : string
+
+*)
+
+
+
+
+
+(* ======================================================================== *)
+(* arm_decode decodes ARM machine code                                      *)
+(* thumb_decode decodes Thumb(2) machine code                               *)
+(* ======================================================================== *)
+
+(* ------------------------------------------------------------------------
+   arm_decode : string -> arm_code
+   arm_decode <hex>
+   ------------------------------------------------------------------------ *)
+
+val it = arm_decode "E0811002";
+
+(* expected output:
+
+val it =
+    Instruction(``Encoding_ARM``, ``14w``,
+                ``DataProcessing
+                    (Data_Processing 4w F 1w 1w (Mode1_register 0w 0w 2w))``) :
+  arm_code
+*)
+
+(* ------------------------------------------------------------------------
+   thumb_decode : int -> string -> arm_code
+   thumb_decode <IT value> <hex>
+   ------------------------------------------------------------------------ *)
+
+val it = thumb_decode 0 "F000E800";
+
+(* expected output:
+
+val it =
+    Instruction(``Encoding_Thumb2``, ``14w``,
+                ``Branch (Branch_Link_Exchange_Immediate F T 0w)``) : arm_code
+
+*)
+
+
+
+
+
+(* ======================================================================== *)
+(* arm_disassemble disassambles to a pair of strings                        *)
+(* ======================================================================== *)
+
+(* ------------------------------------------------------------------------
+   arm_disassemble : arm_code -> string * string
+   arm_disassemble <code>
+   ------------------------------------------------------------------------ *)
+
+val it = arm_disassemble
+   (Instruction(``Encoding_ARM``, ``14w:word4``,
+                ``DataProcessing
+                    (Data_Processing 4w F 1w 1w (Mode1_register 0w 0w 2w))``));
+
+(* expected output:
+
+val it = ("add", "r1,r1,r2") : string * string
+
+The first string is always the instruction mnemonic and the second is any
+arguments, which may be "".
+
+*)
+
+
+
+
+
+(* ======================================================================== *)
+(* arm_disassemble_decode disassambles ARM machine code to a string         *)
+(* thumb_disassemble_decode disassambles Thumb(2) machine code to a string  *)
+(* ======================================================================== *)
+
+(* ------------------------------------------------------------------------
+   arm_disassemble_decode : string -> string
+   arm_disassemble_decode <hex>
+   ------------------------------------------------------------------------ *)
+
+val it = arm_disassemble_decode "E0811002";
+
+(* expected output:
+
+val it = "add r1,r1,r2" : string
+*)
+
+(* ------------------------------------------------------------------------
+   thumb_disassemble_decode : int -> string -> string
+   thumb_disassemble_decode <IT value> <hex>
+   ------------------------------------------------------------------------ *)
+
+val it = thumb_disassemble_decode 0 "F000E800";
+
+(* expected output:
+
+val it = "blx +#4" : string
+
+*)
+
+
+
+
+
+(* ======================================================================== *)
+(* The funtions *arm_assemble_* parse ARM assembler and encode as HEX       *)
+(* ======================================================================== *)
+
+(* ------------------------------------------------------------------------
+   arm_assemble_from_file : string -> (num * string) list
+   arm_assemble_from_file <filename>
+   ------------------------------------------------------------------------ *)
+
+val it = arm_assemble_from_file "example.s";
+
+(* expected output:
+
+val it =
+   [(0, "F000E800"), (4, "04921004"), (8, "E0811002"),
+    (12, "0000FEED 00000ACE")] : (num * string) list
+
+The elements are:
+ - the relative byte position and
+ - the HEX encoding.
+
+*)
+
+(* ------------------------------------------------------------------------
+   arm_assemble_from_quote : string frag list -> (num * string) list
+   arm_assemble_from_quote <quotation>
+   ------------------------------------------------------------------------ *)
+
+val it = arm_assemble_from_quote
+`	ARCH	armv5te
+
+	THUMB
+
+	blx	label
+
+	ARM
+
+label:
+	ldreq	r1,[r2],#4
+	add	r1,r2
+
+	WORD	0xFEED,0xACE`;
+
+(* expected output:
+
+val it =
+   [(0, "F000E800"), (4, "04921004"), (8, "E0811002"),
+    (12, "0000FEED 00000ACE")] : (num * string) list
+
+*)
+
+(* ------------------------------------------------------------------------
+   arm_assemble_from_string : string -> (num * string) list
+   arm_assemble_from_string <string>
+   ------------------------------------------------------------------------ *)
+
+val it = arm_assemble_from_string
+"\tARCH\tarmv5te\n\
+\\tTHUMB\n\
+\\n\
+\\tblx\tlabel\n\
+\\n\
+\\tARM\n\
+\\n\
+\label:\n\
+\\tldreq\tr1,[r2],#4\n\
+\\tadd\tr1,r2\n\
+\\n\
+\\tWORD\t0xFEED,0xACE";
+
+(* expected output:
+
+val it =
+   [(0, "F000E800"), (4, "04921004"), (8, "E0811002"),
+    (12, "0000FEED 00000ACE")] : (num * string) list
+
+*)
+
+(* ------------------------------------------------------------------------
+   print_arm_assemble_from_file : string -> string -> unit
+   print_arm_assemble_from_file <start address> <filename>
+   ------------------------------------------------------------------------ *)
+
+val _ = print_arm_assemble_from_file "1a" "example.s";
+
+(* expected output:
+
+    001a F000E800		; blx     +#4
+    001e 04921004		; ldreq   r1,[r2],#4
+    0022 E0811002		; add     r1,r1,r2
+    0026 0000FEED 00000ACE
+
+*)
+
+val _ = trace ("add disassembler comments", 0)
+          (print_arm_assemble_from_file "1a") "example.s";
+
+(* expected output:
+
+    001a F000E800
+    001e 04921004
+    0022 E0811002
+    0026 0000FEED 00000ACE
+
+*)
+
+(* ------------------------------------------------------------------------
+   print_arm_assemble_from_quote : string -> string frag list -> unit
+   print_arm_assemble_from_quote <start address> <quotation>
+   ------------------------------------------------------------------------ *)
+
+val _ = print_arm_assemble_from_quote "1a"
+`	ARCH	armv5te
+	THUMB
+	blx	label
+	ARM
+label:	ldreq	r1,[r2],#4
+	add	r1,r2
+	WORD	0xFEED,0xACE`;
+
+(* expected output:
+
+    001a F000E800		; blx     +#4
+    001e 04921004		; ldreq   r1,[r2],#4
+    0022 E0811002		; add     r1,r1,r2
+    0026 0000FEED 00000ACE
+
+*)
+
+(* ------------------------------------------------------------------------
+   print_arm_assemble_from_string : string -> string -> unit
+   print_arm_assemble_from_string <start address> <string>
+   ------------------------------------------------------------------------ *)
+
+val _ = print_arm_assemble_from_string "1a"
+"\tARCH\tarmv5te\n\
+\\tTHUMB\n\
+\\tblx\tlabel\n\
+\\tARM\n\
+\label:\tldreq\tr1,[r2],#4\n\
+\\tadd\tr1,r2\n\
+\\tWORD\t0xFEED,0xACE";
+
+(* expected output:
+
+    001a F000E800		; blx     +#4
+    001e 04921004		; ldreq   r1,[r2],#4
+    0022 E0811002		; add     r1,r1,r2
+    0026 0000FEED 00000ACE
+
+*)
+
+(* ------------------------------------------------------------------------
+   arm_assemble_to_file_from_file : string -> string -> string -> unit
+   arm_assemble_to_file_from_file <start address> <output file> <input file>
+   ------------------------------------------------------------------------ *)
+
+val _ = arm_assemble_to_file_from_file "4" "example.out" "example.s";
+
+(* expected output:
+
+$ cat example.out
+    0004 F000E800               ; blx     +#4
+    0008 04921004               ; ldreq   r1,[r2],#4
+    000c E0811002               ; add     r1,r1,r2
+    0010 0000FEED 00000ACE
+
+*)
+
+(* ------------------------------------------------------------------------
+   arm_assemble_to_file_from_quote
+     : string -> string -> string frag list -> unit
+   arm_assemble_to_file_from_quote <start address> <output file> <quotation>
+   ------------------------------------------------------------------------ *)
+
+val _ = arm_assemble_to_file_from_quote "4" "example.out2"
+`	ARCH	armv5te
+	THUMB
+	blx	label
+	ARM
+label:	ldreq	r1,[r2],#4
+	add	r1,r2
+	WORD	0xFEED,0xACE`;
+
+(* expected output:
+
+$ cat example.out2
+    0004 F000E800               ; blx     +#4
+    0008 04921004               ; ldreq   r1,[r2],#4
+    000c E0811002               ; add     r1,r1,r2
+    0010 0000FEED 00000ACE
+
+*)
+
+(* ------------------------------------------------------------------------
+   arm_assemble_to_file_from_string : string -> string -> string -> unit
+   arm_assemble_to_file_from_string <start address> <output file> <string>
+   ------------------------------------------------------------------------ *)
+
+val _ = arm_assemble_to_file_from_string "4" "example.out3"
+"\tARCH\tarmv5te\n\
+\\tTHUMB\n\
+\\tblx\tlabel\n\
+\\tARM\n\
+\label:\tldreq\tr1,[r2],#4\n\
+\\tadd\tr1,r2\n\
+\\tWORD\t0xFEED,0xACE";
+
+(* expected output:
+
+$ cat example.out3
+    0004 F000E800               ; blx     +#4
+    0008 04921004               ; ldreq   r1,[r2],#4
+    000c E0811002               ; add     r1,r1,r2
+    0010 0000FEED 00000ACE
+
+*)
+
+
+
+
+
+(* ======================================================================== *)
+(* The funtions arm_parse_* all parse ARM assembler to AST terms            *)
+(* ======================================================================== *)
+
+(* ------------------------------------------------------------------------
+   arm_parse_from_file : string -> (num * arm_code) list
+   arm_parse_from_file <filename>
+   ------------------------------------------------------------------------ *)
+
+val it = arm_parse_from_file "example.s";
+
+(* expected output:
+
+val it =
+  [(0,
+    Instruction(``Encoding_Thumb2``, ``14w``,
+                ``Branch (Branch_Link_Exchange_Immediate F T 0w)``)),
+   (4,
+    Instruction(``Encoding_ARM``, ``0w``,
+                ``LoadStore (Load F T F F F 2w 1w (Mode2_immediate 4w))``)),
+   (8,
+    Instruction(``Encoding_ARM``, ``14w``,
+                ``DataProcessing
+                    (Data_Processing 4w F 1w 1w (Mode1_register 0w 0w 2w))``)),
+   (12, Word [``65261``, ``2766``])] : (num * arm_code) list
+
+*)
+
+(* ------------------------------------------------------------------------
+   arm_parse_from_quote : string frag list -> (num * arm_code) list
+   arm_parse_from_quote <quotation>
+   ------------------------------------------------------------------------ *)
+
+val _ = arm_parse_from_quote
+`	ARCH	armv5te
+	THUMB
+	blx	label
+	ARM
+label:	ldreq	r1,[r2],#4
+	add	r1,r2
+	WORD	0xFEED,0xACE`;
+
+(* expected output:
+
+val it =
+  [(0,
+    Instruction(``Encoding_Thumb2``, ``14w``,
+                ``Branch (Branch_Link_Exchange_Immediate F T 0w)``)),
+   (4,
+    Instruction(``Encoding_ARM``, ``0w``,
+                ``LoadStore (Load F T F F F 2w 1w (Mode2_immediate 4w))``)),
+   (8,
+    Instruction(``Encoding_ARM``, ``14w``,
+                ``DataProcessing
+                    (Data_Processing 4w F 1w 1w (Mode1_register 0w 0w 2w))``)),
+   (12, Word [``65261``, ``2766``])] : (num * arm_code) list
+
+*)
+
+(* ------------------------------------------------------------------------
+   arm_parse_from_string : string -> (num * arm_code) list
+   arm_parse_from_string <string>
+   ------------------------------------------------------------------------ *)
+
+val _ = arm_parse_from_string
+"\tARCH\tarmv5te\n\
+\\tTHUMB\n\
+\\tblx\tlabel\n\
+\\tARM\n\
+\label:\tldreq\tr1,[r2],#4\n\
+\\tadd\tr1,r2\n\
+\\tWORD\t0xFEED,0xACE";
+
+(* expected output:
+
+val it =
+  [(0,
+    Instruction(``Encoding_Thumb2``, ``14w``,
+                ``Branch (Branch_Link_Exchange_Immediate F T 0w)``)),
+   (4,
+    Instruction(``Encoding_ARM``, ``0w``,
+                ``LoadStore (Load F T F F F 2w 1w (Mode2_immediate 4w))``)),
+   (8,
+    Instruction(``Encoding_ARM``, ``14w``,
+                ``DataProcessing
+                    (Data_Processing 4w F 1w 1w (Mode1_register 0w 0w 2w))``)),
+   (12, Word [``65261``, ``2766``])] : (num * arm_code) list
+
+*)
+
+
+
+
+
+(* ======================================================================== *)
+(* arm_step derives a next step theorem for machine code                    *)
+(* arm_steps_from_* derive next step theorems for assembly code             *)
+(* ======================================================================== *)
+
+(* ------------------------------------------------------------------------
+   arm_step : string -> string -> thm
+   arm_step <options> <hex>
+   ------------------------------------------------------------------------ *)
+
+val it = arm_step "v4T,fiq,big-endian,pass,arm" "E0811002";
+
+(* expected output:
+
+val it =
+    |- !state.
+         (ARM_ARCH state = ARMv4T) /\ (ARM_EXTENSIONS state = {}) /\
+         ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
+         ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR cV state /\
+         ARM_READ_SCTLR cA state /\ ~ARM_READ_SCTLR cU state /\
+         (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS sJ state /\
+         ~ARM_READ_STATUS sT state /\ ARM_READ_STATUS sE state /\
+         (ARM_MODE state = 17w) /\ aligned (ARM_READ_REG 15w state,4) /\
+         (ARM_READ_MEM (ARM_READ_REG 15w state + 3w) state = SOME 2w) /\
+         (ARM_READ_MEM (ARM_READ_REG 15w state + 2w) state = SOME 16w) /\
+         (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = SOME 129w) /\
+         (ARM_READ_MEM (ARM_READ_REG 15w state) state = SOME 224w) ==>
+         (ARM_NEXT state =
+          SOME
+            (ARM_WRITE_REG 1w
+               (ARM_READ_REG 1w state + ARM_READ_REG 2w state)
+               (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 4w) state))) : thm
+
+*)
+
+val it =
+  "THUMB\n add r1,r2"
+    |> arm_assemble_from_string
+    |> hd
+    |> snd
+    |> trace ("arm step", 3) (arm_step "v6T2,thumb,it:0");
+
+(* expected output:
+
+Starting evaluation ...
+... finished evaluation.
+Starting composition proof ...
+... finished composition proof.
+> val it =
+    |- !state.
+         (ARM_ARCH state = ARMv6T2) /\ (ARM_EXTENSIONS state = {}) /\
+         ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
+         ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR cV state /\
+         ARM_READ_SCTLR cA state /\ ~ARM_READ_SCTLR cU state /\
+         (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS sJ state /\
+         ARM_READ_STATUS sT state /\ ~ARM_READ_STATUS sE state /\
+         (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 15w state,2) /\
+         (ARM_READ_MEM (ARM_READ_REG 15w state + 3w) state = SOME 1w) /\
+         (ARM_READ_MEM (ARM_READ_REG 15w state + 2w) state = SOME 2w) /\
+         (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = SOME 235w) /\
+         (ARM_READ_MEM (ARM_READ_REG 15w state) state = SOME 1w) ==>
+         (ARM_NEXT state =
+          SOME
+            (ARM_WRITE_REG 1w
+               (ARM_READ_REG 1w state + ARM_READ_REG 2w state)
+               (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 4w) state))) : thm
+
+*)
+
+(* ------------------------------------------------------------------------
+   arm_steps_from_file : string -> string -> (thm * thm option) list
+   arm_steps_from_file <options> <filename>
+   ------------------------------------------------------------------------ *)
+
+val it = arm_steps_from_file "" "example.s";
+
+(* expected output:
+
+step: blx +#4 ; 32-bit Thumb ...
+step: ldreq r1,[r2],#4 ; ARM (pass condition) ...
+step: ldreq r1,[r2],#4 ; ARM (fail condition) ...
+step: add r1,r1,r2 ; ARM ...
+> val it =
+    [(|- blx +#4 ; 32-bit Thumb :-
+           !state.
+             (ARM_ARCH state = ARMv7_A) /\ (ARM_EXTENSIONS state = {}) /\
+             ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
+             ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR cV state /\
+             ARM_READ_SCTLR cA state /\ ~ARM_READ_SCTLR cU state /\
+             (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS sJ state /\
+             ARM_READ_STATUS sT state /\ ~ARM_READ_STATUS sE state /\
+             (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 15w state,2) /\
+             (ARM_READ_MEM (ARM_READ_REG 15w state + 3w) state = SOME 232w) /\
+             (ARM_READ_MEM (ARM_READ_REG 15w state + 2w) state = SOME 0w) /\
+             (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = SOME 240w) /\
+             (ARM_READ_MEM (ARM_READ_REG 15w state) state = SOME 0w) ==>
+             (ARM_NEXT state =
+              SOME
+                (ARM_WRITE_STATUS sT F
+                   (ARM_WRITE_REG 15w (align (ARM_READ_REG 15w state + 4w,4))
+                      (ARM_WRITE_REG 14w
+                         (word_modify (\i. COND (i = 0) T)
+                            (ARM_READ_REG 15w state + 4w)) state)))), NONE),
+   ... ] : (thm * thm option) list
+
+*)
+
+(* ------------------------------------------------------------------------
+   arm_steps_from_quote : string -> string frag list -> (thm * thm option) list
+   arm_steps_from_quote <options> <quotation>
+   ------------------------------------------------------------------------ *)
+
+val it = trace ("arm steps", 3) (arm_steps_from_quote "be")
+  `	THUMB
+	it	eq
+	muleq	r1,r2`;
+
+(* expected output:
+
+step: it eq ; 16-bit Thumb ...
+runtime: 1.874s,    gctime: 0.068s,     systime: 0.004s.
+step: muleq r1,r2,r1 ; 16-bit Thumb (pass condition) ...
+runtime: 2.246s,    gctime: 0.118s,     systime: 0.003s.
+step: muleq r1,r2,r1 ; 16-bit Thumb (fail condition) ...
+runtime: 1.980s,    gctime: 0.204s,     systime: 0.001s.
+> val it =
+    [(|- it eq ; 16-bit Thumb :-
+           !state.
+             (ARM_ARCH state = ARMv7_A) /\ (ARM_EXTENSIONS state = {}) /\
+             ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
+             ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR cV state /\
+             ARM_READ_SCTLR cA state /\ ~ARM_READ_SCTLR cU state /\
+             (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS sJ state /\
+             ARM_READ_STATUS sT state /\ ARM_READ_STATUS sE state /\
+             (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 15w state,2) /\
+             (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = SOME 8w) /\
+             (ARM_READ_MEM (ARM_READ_REG 15w state) state = SOME 191w) ==>
+             (ARM_NEXT state =
+              SOME
+                (ARM_WRITE_IT 8w
+                   (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 2w) state))),
+      NONE),
+      ...  ] : (thm * thm option) list
+
+*)
+
+(* ------------------------------------------------------------------------
+   arm_steps_from_string : string -> string -> (thm * thm option) list
+   arm_steps_from_string <options> <string>
+   ------------------------------------------------------------------------ *)
+
+val it = trace ("label arm steps", 0)
+           (trace ("arm steps", 0) (arm_steps_from_string "v4T"))
+              "THUMB\n ARCH ARMv4T\n ldr r1,[r2]";
+
+
+(* expected output:
+
+> val it =
+    [(|- !state.
+           (ARM_ARCH state = ARMv4T) /\ (ARM_EXTENSIONS state = {}) /\
+           ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
+           ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR cV state /\
+           ARM_READ_SCTLR cA state /\ ~ARM_READ_SCTLR cU state /\
+           (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS sJ state /\
+           ARM_READ_STATUS sT state /\ ~ARM_READ_STATUS sE state /\
+           (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 2w state,4) /\
+           aligned (ARM_READ_REG 15w state,2) /\
+           (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = SOME 104w) /\
+           (ARM_READ_MEM (ARM_READ_REG 15w state) state = SOME 17w) /\
+           IS_SOME (ARM_READ_MEM (ARM_READ_REG 2w state + 3w) state) /\
+           IS_SOME (ARM_READ_MEM (ARM_READ_REG 2w state + 2w) state) /\
+           IS_SOME (ARM_READ_MEM (ARM_READ_REG 2w state + 1w) state) /\
+           IS_SOME (ARM_READ_MEM (ARM_READ_REG 2w state) state) ==>
+           (ARM_NEXT state =
+            SOME
+              (ARM_WRITE_REG 1w
+                 (THE (ARM_READ_MEM (ARM_READ_REG 2w state + 3w) state) @@
+                  THE (ARM_READ_MEM (ARM_READ_REG 2w state + 2w) state) @@
+                  THE (ARM_READ_MEM (ARM_READ_REG 2w state + 1w) state) @@
+                  THE (ARM_READ_MEM (ARM_READ_REG 2w state) state))
+                 (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 2w) state))),
+      NONE)] : (thm * thm option) list
+
+*)

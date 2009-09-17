@@ -1,14 +1,51 @@
 (*
 app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory",
-	  "pred_setLib", "stringLib",          "listTheory", "state_transformerTheory", "probabilityTheory", 	  "formalizeUseful", "combinTheory", "pairTheory", "realTheory", 	  "realLib", "extra_boolTheory", "jrhUtils", "extra_pred_setTheory", "extra_listTheory",	  "realSimps", "extra_realTheory", "measureTheory", "numTheory", 	  "simpLib", "seqTheory", "subtypeTheory", "transcTheory", 	  "limTheory", "stringTheory", "rich_listTheory", "stringSimps", 	  "listSimps", "lebesgueTheory", "informationTheory",	  "extra_stringTheory", "extra_stringLib", "leakageTheory", "leakageLib",
+	  "pred_setLib", "stringLib",
+          "listTheory", "state_transformerTheory", "probabilityTheory",
+ 	  "formalizeUseful", "combinTheory", "pairTheory", "realTheory",
+ 	  "realLib", "extra_boolTheory", "jrhUtils", "extra_pred_setTheory", "extra_listTheory",
+	  "realSimps", "extra_realTheory", "measureTheory", "numTheory",
+ 	  "simpLib", "seqTheory", "subtypeTheory", "transcTheory",
+ 	  "limTheory", "stringTheory", "rich_listTheory", "stringSimps",
+ 	  "listSimps", "lebesgueTheory", "informationTheory",
+	  "extra_stringTheory", "extra_stringLib", "leakageTheory", "leakageLib",
 	  "wordsTheory", "wordsLib"];
-*)open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
-     pred_setLib stringLib     listTheory state_transformerTheory     probabilityTheory formalizeUseful extra_numTheory combinTheory     pairTheory realTheory realLib extra_boolTheory jrhUtils     extra_pred_setTheory realSimps extra_realTheory measureTheory numTheory     simpLib seqTheory subtypeTheory extra_listTheory     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps     lebesgueTheory informationTheory extra_stringTheory extra_stringLib leakageTheory
+*)
+open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
+     pred_setLib stringLib
+     listTheory state_transformerTheory
+     probabilityTheory formalizeUseful extra_numTheory combinTheory
+     pairTheory realTheory realLib extra_boolTheory jrhUtils
+     extra_pred_setTheory realSimps extra_realTheory measureTheory numTheory
+     simpLib seqTheory subtypeTheory extra_listTheory
+     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps
+     lebesgueTheory informationTheory extra_stringTheory extra_stringLib leakageTheory
      leakageLib wordsTheory wordsLib;
 
 val _ = new_theory "basic_leakage_examples";
 
-infixr 0 ++ << || THENC ORELSEC ORELSER ##;infix 1 >>;val op ++ = op THEN;val op << = op THENL;val op >> = op THEN1;val op || = op ORELSE;val REVERSE = Tactical.REVERSE;val Simplify = RW_TAC arith_ss;val Suff = PARSE_TAC SUFF_TAC;val Know = PARSE_TAC KNOW_TAC;val Rewr = DISCH_THEN (REWRITE_TAC o wrap);val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);val Cond =  DISCH_THEN  (fn mp_th =>   let     val cond = fst (dest_imp (concl mp_th))   in     KNOW_TAC cond << [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]   end);val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
+infixr 0 ++ << || THENC ORELSEC ORELSER ##;
+infix 1 >>;
+
+val op ++ = op THEN;
+val op << = op THENL;
+val op >> = op THEN1;
+val op || = op ORELSE;
+
+val REVERSE = Tactical.REVERSE;
+val Simplify = RW_TAC arith_ss;
+val Suff = PARSE_TAC SUFF_TAC;
+val Know = PARSE_TAC KNOW_TAC;
+val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val Cond =  DISCH_THEN
+  (fn mp_th =>
+   let
+     val cond = fst (dest_imp (concl mp_th))
+   in
+     KNOW_TAC cond << [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
+   end);
+val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
 val safe_set_ss = (simpLib.++ (bool_ss, PRED_SET_ss));
 

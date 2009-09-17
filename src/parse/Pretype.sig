@@ -115,7 +115,7 @@ val clean : pretype -> hol_type
 val toType : pretype -> hol_type
 val chase : pretype -> pretype
 
-val pp_pretype : ppstream -> pretype -> unit
+val pp_pretype : PP.ppstream -> pretype -> unit
 val pretype_to_string : pretype -> string
 val print_pretype : pretype -> unit
 val pp_pretypes : ppstream -> pretype list -> unit

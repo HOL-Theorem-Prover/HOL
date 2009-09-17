@@ -2224,7 +2224,7 @@ fun pp_raw_type pps ty =
 (* Send the results of prettyprinting to a string                            *)
 (*---------------------------------------------------------------------------*)
 
-fun sprint pp x = PP.pp_to_string 80 pp x
+fun sprint pp x = HOLPP.pp_to_string 80 pp x
 
 val type_to_string = sprint pp_raw_type;
 

@@ -179,6 +179,6 @@ sig
   val type_size     : hol_type -> int
 
   val unbound_ty    : hol_type -> bool
-  val pp_raw_type   : ppstream -> hol_type -> unit
+  val pp_raw_type   : HOLPP.ppstream -> hol_type -> unit
   val type_to_string: hol_type -> string
 end;

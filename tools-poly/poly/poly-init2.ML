@@ -10,13 +10,10 @@ val _ = use "Holmake/Holmake_types.sml";
 val _ = use "Holmake/ReadHMF.sig";
 val _ = use "Holmake/ReadHMF.sml";
 
-val _ = use "poly/PP.sig";
-val _ = use "poly/PP.sml";
-
 local
 
   val redirected_files =
-    ["Portable.sig", "Portable.sml", "mlibPortable.sml", "mlibOmegaint.sml",
+    ["Portable.sml", "mlibPortable.sml", "mlibOmegaint.sml",
      "OmegaMLShadow.sml"];
 
   (* used to stand for "has double quote", but the same analysis is necessary
@@ -134,7 +131,6 @@ open Meta;
 end;
 
 
-structure PolyGeneral = General;
 structure PolyArray = Array;
 structure PolySubstring = Substring;
 structure PolyVector = Vector;
@@ -147,11 +143,6 @@ structure PolyTimer = Timer;
 (* In Poly/ML "before" is 'a * 'b -> 'a and General.before is 'a * unit -> 'a.
    The Basis library says both should be 'a * unit -> 'a, but in Moscow ML,
    before is 'a * 'b -> 'a too.  Ick. *)
-structure General = struct
-  open PolyGeneral;
-  type ppstream = PP.ppstream;
-end;
-type ppstream = General.ppstream;
 structure Array = struct
   open PolyArray;
   fun extract (a, i, jopt) =

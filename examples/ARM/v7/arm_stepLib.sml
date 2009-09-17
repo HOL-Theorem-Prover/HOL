@@ -924,12 +924,6 @@ local
         [["thumb","thumb2","16-bit","16"],
          ["arm","32-bit","32"]]
 
-  val itblock_options = map (map lowercase)
-        [["ITBlock="],
-         ["LastInITBlock"],
-         ["NotInITBlock"],
-         ["NotLastInITBlock"]]
-
   fun find_pos P l =
         let fun tail [] n = n
               | tail (h::t) n = if P h then n else tail t (n + 1)

@@ -82,7 +82,7 @@ fun compare (r1, r2) =
 fun min(r1,r2) = if r1 < r2 then r1 else r2
 fun max(r1,r2) = if r1 > r2 then r1 else r2
 
-fun pp_rat pps r = PP.add_string pps (toString r)
+fun pp_rat pps r = HOLPP.add_string pps (toString r)
 
 
 end

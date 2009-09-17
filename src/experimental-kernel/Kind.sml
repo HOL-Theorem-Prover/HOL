@@ -294,7 +294,7 @@ fun pp_qkind pps kn =
 (* Send the results of prettyprinting to a string                            *)
 (*---------------------------------------------------------------------------*)
 
-fun sprint pp x = PP.pp_to_string 72 pp x
+fun sprint pp x = HOLPP.pp_to_string 72 pp x
 
 val kind_to_string = sprint pp_kind;
 

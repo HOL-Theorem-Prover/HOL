@@ -661,7 +661,9 @@ fun indented_term_to_string n tm = let
   fun pper pps tm = let
   in
     PP.add_string pps nspaces;
-    Parse.pp_term pps tm
+    Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
+                  (Parse.pp_term pps)
+                  tm
   end
 in
   PP.pp_to_string (!Globals.linewidth) pper tm
@@ -773,6 +775,10 @@ fun check_definition schemevars clocs tm = let
                                    HOLset.addList(tyvset,
                                                   type_vars_in_term tm))
                                empty_tyset relvars
+  val reltyvars = List.foldl (fn (tm,tyvset) =>
+                                 HOLset.addList(tyvset,
+                                                type_vars_in_term tm))
+                             reltyvars schemevars
 
   (* check that there aren't duplicate names in the forall chain *)
   fun check_clause_foralls n c = let

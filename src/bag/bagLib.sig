@@ -42,4 +42,5 @@ sig
   val SBAG_SOLVE    : thm list -> term -> thm
   val sbag_cache    : cache
 
+  val BAG_RESORT_CONV : int list -> conv
 end

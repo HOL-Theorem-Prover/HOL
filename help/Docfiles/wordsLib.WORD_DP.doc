@@ -8,7 +8,7 @@ Constructs a decision procedure for words.
 
 \DESCRIBE
 
-The conversion {WORD_DP dp} is a decision procedure for words that makes use of the supplied decision procedure {dp}.  Suitable decision procedures include {tautLib.TAUT_PROVE}, {bossLib.DECIDE} and {intLib.COOPER_PROVE}.  The procedure will first apply {WORD_BIT_EQ_CONV} and then try {dp}.  If this is not sufficient then an attempt is made to solve the problem by mapping it to the naturals e.g. {``(a = 0w) \/ (a = 1w :1 word)``} becomes {``w2n a < 2 ==> (w2n a = 0) \/ (w2n a = 1)``}.
+The conversion {WORD_DP dp} is a decision procedure for words that makes use of the supplied decision procedure {dp}.  Suitable decision procedures include {tautLib.TAUT_PROVE}, {bossLib.DECIDE}, {intLib.ARITH_PROVE} and {intLib.COOPER_PROVE}.  The procedure will first apply {WORD_BIT_EQ_CONV} and then try {dp}.  If this is not sufficient then an attempt is made to solve the problem by mapping it to the naturals e.g. {``(a = 0w) \/ (a = 1w :1 word)``} becomes {``w2n a < 2 ==> (w2n a = 0) \/ (w2n a = 1)``}.
 
 \FAILURE
 
@@ -23,13 +23,13 @@ The invocation will fail when the decision procedure {dp} fails.
 - WORD_DP DECIDE ``a < b /\ b < c ==> a < c : 'a word``
 > val it = |- a < b /\ b < c ==> a < c : thm
 
-- WORD_DP intLib.COOPER_PROVE ``a <+ 3w:word16 ==> (a = 0w) \/ (a = 1w) \/ (a = 2w)``
+- WORD_DP intLib.ARITH_PROVE ``a <+ 3w:word16 ==> (a = 0w) \/ (a = 1w) \/ (a = 2w)``
 > val it = |- a <+ 3w ==> (a = 0w) \/ (a = 1w) \/ (a = 2w) : thm
 }
 
 \COMMENTS
 
-On large problems {intLib.COOPER_PROVE} will perform much better than {bossLib.DECIDE}.
+On large problems {intLib.ARITH_PROVE} will perform much better than {bossLib.DECIDE}.
 
 \SEEALSO
 

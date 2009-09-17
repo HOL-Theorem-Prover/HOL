@@ -564,6 +564,7 @@ local val ln2 = Math.ln 2.0 in fun log2 x = Math.ln x / ln2 end;
 
 (* Generic pretty-printers *)
 
+type ppstream = PP.ppstream
 type 'a pp = ppstream -> 'a -> unit;
 
 val LINE_LENGTH = ref 75;

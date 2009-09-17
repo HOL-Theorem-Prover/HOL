@@ -1354,7 +1354,8 @@ fun add_sub_literal m (rd,i) =
       end handle HOL_ERR {message,...} =>
             other_errorT ("arm_parse_add_sub", message));
 
-fun narrow_okay_imm m i (rd,rn,v) =
+fun narrow_okay_imm m i (rd,rn) =
+let val v = sint_of_term i in
   if m = ADD orelse m = SUB then
     if is_SP rn then
       v mod 4 = 0 andalso
@@ -1370,7 +1371,8 @@ fun narrow_okay_imm m i (rd,rn,v) =
       else
         ~7 <= v andalso v <= 7
   else
-    m = RSB andalso v = 0 andalso narrow_registers [rd,rn];
+    m = RSB andalso v = 0 andalso narrow_registers [rd,rn]
+end handle Overflow => false;
 
 fun narrow_okay_reg m (rd,rn,rm,mode1) =
   is_mode1_register mode1 andalso
@@ -1394,11 +1396,10 @@ fun data_processing_immediate m (rd,rn,i) =
         if thumb then
           read_qualifier >>= (fn q =>
           read_InITBlock >>= (fn InITBlock =>
-            let val v = sint_of_term i
-                val thumb_sflag = mk_bool (not InITBlock andalso
+            let val thumb_sflag = mk_bool (not InITBlock andalso
                                            not (is_SP rn))
                 val narrow_okay = q <> Wide andalso thumb_sflag = sflag
-                                    andalso narrow_okay_imm m i (rd,rn,v)
+                                    andalso narrow_okay_imm m i (rd,rn)
                 val enc = pick_enc true narrow_okay
                 val (opc,imm12) =
                        mode1_immediate2 (enc = Encoding_Thumb2_tm) m i
@@ -1482,10 +1483,12 @@ val arm_parse_data_processing3 : instruction_mnemonic -> (term * term) M =
 
 (* ....................................................................... *)
 
-fun narrow_okay_imm m (rdn,v) =
+fun narrow_okay_imm m i rdn =
+let val v = sint_of_term i in
   (m = CMP orelse m = MOV) andalso
   0 <= v andalso v <= 255 andalso
-  narrow_register rdn;
+  narrow_register rdn
+end handle Overflow => false;
 
 fun narrow_okay_reg m (rdn,rm,mode1) =
   if m = MOV then
@@ -1512,11 +1515,10 @@ fun move_test_immediate m (rdn,i) =
     if thumb then
       read_qualifier >>= (fn q =>
       read_InITBlock >>= (fn InITBlock =>
-        let val v = sint_of_term i
-            val thumb_sflag = mk_bool (not InITBlock orelse
+        let val thumb_sflag = mk_bool (not InITBlock orelse
                                        m <> MOV andalso m <> MVN)
             val narrow_okay = q <> Wide andalso thumb_sflag = sflag andalso
-                              narrow_okay_imm m (rdn,v)
+                              narrow_okay_imm m i rdn
             val enc = pick_enc true narrow_okay
             val (opc,imm12) = mode1_immediate2 (enc = Encoding_Thumb2_tm) m i
             val r15 = mk_word4 15
@@ -1713,12 +1715,13 @@ val arm_parse_adr : (term * term) M =
           end handle HOL_ERR {message,...} =>
             other_errorT ("arm_parse_adr", message))
       else
-        let val offset = sint_of_term i - 8
-            val address = int_to_mode1_immediate o mk_integer o Arbnum.fromInt
+        let open intSyntax
+            val offset = eval (mk_minus(i, ``8i``))
+            val absoffset = eval (mk_absval offset)
         in
           return (Encoding_ARM_tm,
-            mk_Add_Sub (mk_bool (0 <= offset andalso not (i == ``-0i``)),
-              mk_word4 15,rd,address (Int.abs offset)))
+            mk_Add_Sub (mk_bool (not (is_negated offset)),mk_word4 15,rd,
+                        int_to_mode1_immediate absoffset))
         end handle HOL_ERR {message, ...} =>
           other_errorT ("arm_parse_adr", message))));
 
@@ -3516,6 +3519,8 @@ in
     else if ls = "apsr_g" then
       (F,mk_word4 4)
     else if ls = "apsr_nzcvqg" then
+      (F,mk_word4 12)
+    else if ls = "apsr" then
       (F,mk_word4 12)
     else if ls = "cpsr" then
       (F,mk_word4 9)

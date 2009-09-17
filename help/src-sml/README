@@ -1,20 +1,18 @@
-File <holdir>/help/src/README
-
 This directory contains various programs used to generate help
-facilities of various kinds for HOL98. We have adapted (in an extremely
-ugly way) some code used to generate help files for MoscowML. The notice
-from that code is appended.  
+facilities of various kinds for the HOL system. We have adapted (in an
+extremely ugly way) some code used to generate help files for
+MoscowML. The notice from that code is appended.
 
 Currently, we do the following:
 
   0. translate all files in help/Docfiles into a database usable by
      invoking "help" interactively.
 
-  1. translate all files in help/Docfiles into html versions
+  1. translate all files in help/Docfiles into HTML versions
      (via Doc2Html).
 
   2. translate all signature files found in <holdir>/sigobj into
-     html versions. Links for all value bindings are resolved to
+     HTML versions. Links for all value bindings are resolved to
      the results of (1), if possible. Theory signatures are internally
      linked to provide efficient access. A signature file contains a
      link to its source.

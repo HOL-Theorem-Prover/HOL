@@ -51,15 +51,14 @@ to know that they actually got "use"d in.
 There is a unappealing amount of duplication where I haven't been able to get
 the same source to run on both versions.  They vary in degree of hopelessness,
 but for now, changes in one probably need to be made also in its counterpart.
-1) help/src and help/src-sml
-2) tools-poly/poly/redirects (OmegaMLShadow.sml Portable.sml mlibPortable.sml
+
+1) tools-poly/poly/redirects (OmegaMLShadow.sml Portable.sml mlibPortable.sml
    Portable.sig mlibOmegaint.sml)
-3) std.prelude and tools-poly/prelude.ML
-4) tools/end-init-boss.sml and tools-poly/prelude2.ML
-5) tools/build-sequence and tools-poly/build-sequence
-6) tools/Holmake and tools-poly/Holmake
-7) tools/build.sml and tools-poly/build.sml
-8) tools/mosml-configure.sml and tools-poly/smart-configure.sml
+2) std.prelude and tools-poly/prelude.ML
+3) tools/end-init-boss.sml and tools-poly/prelude2.ML
+4) tools/Holmake and tools-poly/Holmake
+5) tools/build.sml and tools-poly/build.sml
+6) tools/mosml-configure.sml and tools-poly/smart-configure.sml
 
 PolyML doesn't have a way to suppress warnings separately from suppressing
 errors.

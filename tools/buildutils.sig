@@ -11,5 +11,4 @@ sig
       (string -> Substring.substring) -> (TextIO.instream -> string option) ->
       string -> (string * int) list
 
-
 end

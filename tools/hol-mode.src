@@ -32,6 +32,11 @@
   (interactive "fHOL executable: ")
   (setq hol-executable filename))
 
+(defvar hol-mode-sml-init-command 
+   "use (Globals.HOLDIR ^ \"/tools/hol-mode.sml\")"
+  "*The command to send to HOL to load the ML-part of hol-mode.")
+
+
 (defvar hol-echo-commands-p nil
   "*Whether or not to echo the text of commands originating elsewhere.")
 
@@ -262,13 +267,23 @@ how long this took."
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
   (interactive "r\nP")
-  (let* ((region-string (with-hol-locpragma start (buffer-substring start end)))
-         (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
-         (tactic-string
-          (format "%s (%s) handle e => Raise e" e-string region-string))
-         (sender (if hol-emit-time-elapsed-p
-                     'send-timed-string-to-hol
-                   'send-string-to-hol)))
+  (let*
+      ((region-string0 (with-hol-locpragma start (buffer-substring start end)))
+       (ste "\"show_typecheck_errors\"")
+       (region-string (concat "let val old = Feedback.current_trace "
+                              ste
+                              " val _ = Feedback.set_trace "
+                              ste
+                              " 0 in ("
+                              region-string0
+                              ") before "
+                              "Feedback.set_trace " ste " old end"))
+       (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
+       (tactic-string
+        (format "%s (%s) handle e => Raise e" e-string region-string))
+       (sender (if hol-emit-time-elapsed-p
+                   'send-timed-string-to-hol
+                 'send-string-to-hol)))
     (funcall sender tactic-string hol-echo-commands-p)))
 
 ;;; For goaltrees
@@ -303,6 +318,7 @@ the region contains no backquotes, then send region instead."
             arg)
       (send-string-as-hol-goal txt)
     (send-string-as-hol-goal (hol-term-at-point)))))
+
 
 (defun send-string-as-hol-goaltree (s)
   (let ((goal-string
@@ -347,6 +363,15 @@ variable before and after the region is sent."
         (send-string-to-hol
          "val _ = print \"\\n*** Emacs/HOL command completed ***\\n\\n\""))
     (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec))))
+
+
+
+(defun copy-region-as-hol-definition-quitely (start end arg)
+   (interactive "r\np")
+   (hol-toggle-quiet-quietdec)
+   (copy-region-as-hol-definition start end arg)
+   (hol-toggle-quiet-quietdec))
+
 
 (defun hol-name-top-theorem (string arg)
   "Name the top theorem of the proofManagerLib.
@@ -563,14 +588,9 @@ file to \"use\" first."
     (send-raw-string-to-hol (buffer-string) echoit t)))
 
 
-(defvar hol-mode-wrapper-string "emacs HOL-mode command-wrapper - start")
 (defun send-raw-string-to-hol (string echoit newstart)
   "Sends a string in the raw to HOL.  Not for interactive use."
-  (let ((buf (ensure-hol-buffer-ok))) 
-    (if newstart
-        (comint-send-string buf
-            (concat "val _ = print \"" hol-mode-wrapper-string "\\n\";"))
-        t)
+  (let ((buf (ensure-hol-buffer-ok)))
     (if echoit
         (save-excursion
           (set-buffer buf)
@@ -610,47 +630,15 @@ file to \"use\" first."
   (let ((buf (ensure-hol-buffer-ok)))
     (kill-process (get-buffer-process buf))))
 
-(defvar hol-recentre-mode nil
-  "*Whether to recenter on the bottom of the buffer or at the
-    top of the last output. nil means the bottom, t the top
-    of the last output")
-
-(defvar hol-recentre-pos 0
-  "*The top position of the last output.")
-
 (defun hol-recentre ()
   "Display the HOL window in such a way that it displays most text."
   (interactive)
-  (ensure-hol-buffer-ok)
+  (if (get-buffer-window hol-buffer-name t)
   (save-selected-window
     (select-window (get-buffer-window hol-buffer-name t))
-    ;; (delete-other-windows)
-    (raise-frame)
-    (if hol-recentre-mode
-      (progn (goto-char hol-recentre-pos)
-             (recenter 0)
-             (goto-char (point-max)))
-      (progn (goto-char (point-max))
-             (recenter -1)))))
+    (goto-char (point-max))
+    (recenter -1))))
 
-
-
-(defun hol-output-filter (output)
-  (let* ((match-found 
-	  (string-match (concat hol-mode-wrapper-string "\n\\(\\(.*\n\\)*.*\\)") output))
-	 (real-output (if match-found (match-string 1 output) output)))        
-    (if match-found (setq hol-recentre-pos
-			  (with-current-buffer hol-buffer-name (point-max)))
-      t)
-    real-output))
-
-(defun hol-recentre-with-arg (output)
-   (hol-recentre)
-   output)
-
-
-(add-hook 'comint-preoutput-filter-functions 'hol-output-filter)
-(add-hook 'comint-output-filter-functions 'hol-recentre-with-arg)
 
 
 (defun hol-rotate (arg)
@@ -688,7 +676,7 @@ file to \"use\" first."
          (commandstring
           (concat "val _ = if List.exists (fn s => s = \""
                   mys
-                  "\") (Meta.loaded()) then () else "
+                  "\") (emacs_hol_mode_loaded()) then () else "
                   "(print  \"Loading " mys
                   "\\n\"; " "Meta.load \"" mys "\");\n")))
     (comint-send-string buf commandstring)))
@@ -721,14 +709,20 @@ region instead. With prefix ARG prompt for a file-name to load."
           (t (hol-load-string (read-string "Library to load: "))))))
 
 
-;** hol map keys and function definitions
+(defun hol-mode-init-sml ()
+   (hol-toggle-quiet-quietdec)
+   (send-raw-string-to-hol hol-mode-sml-init-command nil nil)
+   (hol-toggle-quiet-quietdec))
 
+
+;** hol map keys and function definitions
 (defun hol (niceness)
   "Runs a HOL session in a comint window.
 With a numeric prefix argument, runs it niced to that level
 or at level 10 with a bare prefix. "
   (interactive "P")
-  (let* ((niceval (cond ((null niceness) 0)
+  (let* ((hol-was-ok (hol-buffer-ok hol-buffer-name))
+         (niceval (cond ((null niceness) 0)
                         ((listp niceness) 0)
                         (t (prefix-numeric-value niceness))))
          (holname (format "HOL(n:%d)" niceval))
@@ -741,7 +735,14 @@ or at level 10 with a bare prefix. "
     (switch-to-buffer buf)
     (setq comint-prompt-regexp "^- ")
     (setq hol-buffer-name (buffer-name buf))
-    (setq comint-scroll-show-maximum-output t)))
+    (setq comint-scroll-show-maximum-output t)
+    (setq comint-scroll-to-bottom-on-output t)
+    (if hol-was-ok t (hol-mode-init-sml))))
+
+(defun hol-display ()
+   (interactive)
+   (display-buffer hol-buffer-name));
+
 
 (defun hol-vertical (niceness)
   "Runs a HOL session after splitting the window"
@@ -786,6 +787,12 @@ or at level 10 with a bare prefix. "
                    "print (\"*** %s now \" ^"
                    "Bool.toString (!%s)^\" ***\\n\"))")
            s s s s) nil nil))
+
+(defun hol-toggle-var-quiet (s)
+  "Toggles the boolean variable STRING."
+  (send-raw-string-to-hol
+   (format "val _ = (%s := not (!%s));"
+           s s) nil nil))
 
 (defun hol-toggle-trace (s &optional arg)
   "Toggles the trace variable STRING between zero and non-zero.  With prefix
@@ -869,6 +876,13 @@ argument N, sets the trace to that value in particular."
     "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")") nil nil)
   (hol-toggle-var "Globals.interactive"))
 
+(defun hol-toggle-quiet-quietdec ()
+  "Toggles quiet declarations in the interactive system."
+  (interactive)
+  (send-raw-string-to-hol   
+    "val _ = HOL_Interactive.toggle_quietdec()" nil nil)
+  (hol-toggle-var-quiet "Globals.interactive"))
+
 (defun hol-toggle-show-times()
   "Toggles the elisp variable 'hol-emit-time-elapsed-p."
   (interactive)
@@ -889,14 +903,6 @@ argument N, sets the trace to that value in particular."
   (setq hol-auto-load-p (not hol-auto-load-p))
   (message (if hol-auto-load-p "automatic loading ON"
              "automatic loading OFF")))
-
-(defun hol-toggle-recentre-mode()
-  "Toggles the elisp variable 'hol-recentre-mode."
-  (interactive)
-  (setq hol-recentre-mode (not hol-recentre-mode))
-  (hol-recentre)
-  (message (if hol-recentre-mode "HOL buffer recentres at TOP"
-             "HOL buffer recentres at BOTTOM")))
 
 (defun set-hol-executable (filename)
   "Sets the HOL executable variable to be equal to FILENAME."
@@ -1052,6 +1058,102 @@ already loaded.)"
 
 
 
+;;checking for trouble with names in store_thm, save_thm, Define
+(setq store-thm-regexp
+   "val[ \t\n]*\\([^ \t\n]*\\)[ \t\n]*=[ \t\n]*store_thm[ \t\n]*([ \t\n]*\"\\([^\"]*\\)\"")
+(setq save-thm-regexp
+   "val[ \t\n]*\\([^ \t\n]*\\)[ \t\n]*=[ \t\n]*save_thm[ \t\n]*([ \t\n]*\"\\([^\"]*\\)\"")
+(setq define-thm-regexp
+   "val[ \t\n]*\\([^ \t\n]*\\)_def[ \t\n]*=[ \t\n]*Define[ \t\n]*`[ \t\n(]*\$?\\([^ \t\n([!?:]*\\)")
+
+(setq statement-eq-regexp-list (list store-thm-regexp save-thm-regexp define-thm-regexp))
+
+(defun hol-correct-eqstring (s1 p1 s2 p2)
+  (interactive)
+  (let (choice)
+    (setq choice 0)
+    (while (eq choice 0)
+      (message
+       (concat
+	"Different names used. Please choose one:\n(0) "
+	s1 "\n(1) " s2 "\n(i) ignore"))
+      (setq choice (if (fboundp 'read-char-exclusive)
+		       (read-char-exclusive)
+		     (read-char)))
+      (cond ((= choice ?0) t)
+	    ((= choice ?1) t)
+	    ((= choice ?i) t)
+	    (t (progn (setq choice 0) (ding))))
+      )
+    (if (= choice ?i) t
+    (let (so sr pr)
+      (cond ((= choice ?0) (setq so s1 sr s2 pr p2))
+	    (t             (setq so s2 sr s1 pr p1)))
+      (delete-region pr (+ pr (length sr)))
+      (goto-char pr)
+      (insert so)
+      ))))
+
+
+(defun hol-check-statement-eq-string ()
+  (interactive)
+  (save-excursion
+  (dolist (current-regexp statement-eq-regexp-list t)
+  (goto-char 0)
+  (let (no-error-found s1 p1 s2 p2)
+    (while (re-search-forward current-regexp nil t)
+      (progn (setq s1 (match-string-no-properties 1))
+             (setq s2 (match-string-no-properties 2))
+             (setq p1 (match-beginning 1))
+             (setq p2 (match-beginning 2))
+             (setq no-error-found (string= s1 s2))
+             (if no-error-found t (hol-correct-eqstring s1 p1 s2 p2)))))
+  (message "checking for problematic names done"))))
+
+
+(defun ml-quote (s)
+   (let* (
+     (s1 (replace-regexp-in-string "\\\\" "\\\\\\\\" s))
+     (s2 (replace-regexp-in-string "\n" "\\\\n" s1))
+     (s3 (replace-regexp-in-string "\t" "\\\\t" s2))
+     (s4 (replace-regexp-in-string "\"" "\\\\\"" s3))
+   ) s4))
+
+(defun hol-add-load-path (path)
+  (interactive "DAdd new load-path: ")
+  (let ((epath (expand-file-name path)))
+  (if (file-accessible-directory-p epath)
+     (progn 
+        (send-raw-string-to-hol
+            (concat "loadPath := \"" (ml-quote epath) "\" :: !loadPath;")
+            nil nil)
+        (message (concat "Load-path \"" epath "\" added.")))
+     (progn (ding) (message "Not a directory!")))
+))
+
+
+(defun hol-show-current-load-paths ()
+   (interactive)
+   (send-raw-string-to-hol "print_current_load_paths ()"
+   nil nil))
+
+(defun hol-type-info ()
+   "Gives informations about the type of a term"
+   (interactive)
+   (let* ((txt (buffer-substring-no-properties (region-beginning) (region-end)))
+          (use-marked (and (is-region-active) (= (count ?\` txt) 0)))
+          (at-point-term (thing-at-point 'hol-term))
+
+          (main-term (ml-quote (if use-marked txt at-point-term)))
+          (context-term (ml-quote (if use-marked at-point-term "")))
+          (command-s (concat "print_type_of_in_context true "
+                      (if use-marked (concat "(SOME \"" context-term "\")") "NONE")
+                      " \"" main-term "\"")))
+   (send-raw-string-to-hol command-s nil nil)))
+
+
+
+;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
 
 (define-key hol-map "\C-a" 'hol-toggle-show-assums)
@@ -1065,11 +1167,12 @@ already loaded.)"
 (define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
 (define-key hol-map "\C-t" 'hol-toggle-show-types)
 (define-key hol-map "\C-u" 'hol-toggle-unicode)
-(define-key hol-map "\C-k" 'hol-toggle-recentre-mode)
 (define-key hol-map "\C-v" 'hol-scroll-up)
 (define-key hol-map "\M-f" 'forward-hol-tactic)
 (define-key hol-map "\M-b" 'backward-hol-tactic)
 (define-key hol-map "\M-r" 'copy-region-as-hol-definition)
+(define-key hol-map "\C-r" 'copy-region-as-hol-definition-quitely)
+(define-key hol-map "\M-q" 'copy-region-as-hol-definition-real-quitely)
 (define-key hol-map "\M-t" 'hol-toggle-show-times)
 (define-key hol-map "\M-s" 'hol-subgoal-tactic)
 (define-key hol-map "\M-v" 'hol-scroll-down)
@@ -1081,6 +1184,7 @@ already loaded.)"
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "G"    'hol-do-goaltree)
 (define-key hol-map "h"    'hol)
+(define-key hol-map "4"    'hol-display)
 (define-key hol-map "3"    'hol-horizontal)
 (define-key hol-map "2"    'hol-vertical)
 (define-key hol-map "l"    'hol-load-file)
@@ -1093,6 +1197,7 @@ already loaded.)"
 (define-key hol-map "r"    'hol-rotate)
 (define-key hol-map "R"    'hol-restart-goal)
 (define-key hol-map "t"    'mark-hol-tactic)
+(define-key hol-map "i"    'hol-type-info)
 (define-key hol-map "s"    'interactive-send-string-to-hol)
 (define-key hol-map "u"    'hol-use-file)
 (define-key hol-map "*"    'hol-template-comment-star)
@@ -1119,6 +1224,13 @@ already loaded.)"
   [menu-bar hol-menu hol-misc]
   (cons "Misc" (make-sparse-keymap "Misc")))
 
+
+(define-key global-map [menu-bar hol-menu hol-misc check-names]
+   '("Check names in store_thm, ..." . hol-check-statement-eq-string))
+
+(define-key global-map [menu-bar hol-menu hol-misc sep3]
+   '(menu-item "--"))
+
 (define-key global-map [menu-bar hol-menu hol-misc mark-tactic]
    '("Mark tactic" . mark-hol-tactic))
 
@@ -1128,7 +1240,7 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-misc forward-tactic]
    '("Move to next tactic" . forward-hol-tactic))
 
-(define-key global-map [menu-bar hol-menu hol-misc sep1]
+(define-key global-map [menu-bar hol-menu hol-misc sep2]
    '(menu-item "--"))
 
 (define-key global-map [menu-bar hol-menu hol-misc open-string]
@@ -1146,7 +1258,19 @@ already loaded.)"
                               . (and (boundp 'hol-auto-load-p)
                                      hol-auto-load-p))))
 
-(define-key global-map [menu-bar hol-menu hol-misc sep2]
+(define-key global-map [menu-bar hol-menu hol-misc show-load-paths]
+   '("Show load-paths" . hol-show-current-load-paths))
+
+(define-key global-map [menu-bar hol-menu hol-misc add-load-path]
+   '("Add load-path ..." . hol-add-load-path))
+
+(define-key global-map [menu-bar hol-menu hol-misc sep1]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-misc hol-type-info]
+   '("Type info of marked term" . hol-type-info))
+
+(define-key global-map [menu-bar hol-menu hol-misc sep0]
    '(menu-item "--"))
 
 (define-key global-map [menu-bar hol-menu hol-misc db-find]
@@ -1204,13 +1328,10 @@ already loaded.)"
    '("Echo commands" . hol-toggle-echo-commands))
 
 (define-key global-map [menu-bar hol-menu hol-printing quiet]
-   '("Quiet" . hol-toggle-quietdec))
+   '("Quiet (hide output except errors)" . hol-toggle-quietdec))
 
 (define-key global-map [menu-bar hol-menu hol-printing unicode]
    '("Unicode" . hol-toggle-unicode))
-
-(define-key global-map [menu-bar hol-menu hol-printing recentre]
-   '("Recentre mode" . hol-toggle-recentre-mode))
 
 (define-key global-map [menu-bar hol-menu hol-printing sep2]
    '(menu-item "--"))
@@ -1324,6 +1445,9 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-process hol-send-string]
    '("Send string to HOL" . interactive-send-string-to-hol))
 
+(define-key global-map [menu-bar hol-menu hol-process hol-send-region-quietly]
+   '("Send region to HOL - hide non-errors" . copy-region-as-hol-definition-quitely))
+
 (define-key global-map [menu-bar hol-menu hol-process hol-send-region]
    '("Send region to HOL" . copy-region-as-hol-definition))
 
@@ -1339,6 +1463,9 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-process hol-interrupt]
    '("Interrupt HOL" . hol-interrupt))
 
+(define-key global-map [menu-bar hol-menu hol-process hol-display]
+   '("Display HOL buffer" . hol-display))
+
 (define-key global-map [menu-bar hol-menu hol-process hol-start-vertical]
    '("Start HOL - vertical split" . hol-vertical))
 
@@ -1347,6 +1474,7 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-process hol-start]
    '("Start HOL" . hol))
+
 
 
 

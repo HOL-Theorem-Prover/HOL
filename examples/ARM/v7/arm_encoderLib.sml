@@ -1305,6 +1305,7 @@ val arm_assemble_from_string =
 val arm_assemble_from_file =
   arm_assemble_parse o arm_parserLib.arm_parse_from_file;
 
+(*
 fun print_code_from s =
 let open Arbnum
     val start = fromHexString s
@@ -1313,5 +1314,6 @@ let open Arbnum
 in
   app (fn (n,i) => print (count (start + n) ^ " " ^ i ^ "\n"))
 end;
+*)
 
 end

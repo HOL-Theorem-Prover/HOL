@@ -11,8 +11,9 @@ HolSmtLib.{sig,sml}     Entry point into HolSmtLib. Provides GENERIC_SMT and
 README                  This file.
 selftest.sml            Unit tests for HolSmtLib.
 SmtLib.sml              Translation of HOL terms into SMT-LIB format.
-SolverSpec.{sig,sml}    Specification of SMT solvers: name, command, etc.
+SolverSpec.sml          Definition of SMT solvers.
 Yices.sml               Functions to invoke the Yices SMT solver.
+Z3.sml                  Functions to invoke the Z3 SMT solver.
 
 Further documentation can be found in the HOL Description (in
 HOL/Manual/Description).

@@ -12,7 +12,7 @@ simplification, words.
 
 \DESCRIBE
 
-The fragment {WORD_BIT_EQ_ss} simplifies using {fcpLib.FCP_ss} and the definitions of "bitwise" operations e.g. conjunction, disjunction, 1's complement, shifts, concatenation and sub-word extraction.  Can be used in combination with decision procedures to test for the bitwise equality of words.
+The fragment {WORD_BIT_EQ_ss} simplifies using {fcpLib.FCP_ss} and the definitions of "bitwise" operations, e.g., conjunction, disjunction, 1's complement, shifts, concatenation and sub-word extraction.  Can be used in combination with decision procedures to test for the bitwise equality of words.
 
 \EXAMPLE
 
@@ -20,7 +20,7 @@ The fragment {WORD_BIT_EQ_ss} simplifies using {fcpLib.FCP_ss} and the definitio
 - SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] ``a = b : 'a word``
 > val it = |- (a = b) = !i. i < dimindex (:'a) ==> (a ' i = b ' i) : thm
 }
-Further simplicaition occurs when the word length is known.
+Further simplification occurs when the word length is known.
 {
 - SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] ``a = b : word2``
 > val it = |- (a = b) = (a ' 1 = b ' 1) /\ (a ' 0 = b ' 0) : thm

@@ -2,6 +2,7 @@
 
 val fs = FULL_SIMP_TAC std_ss;
 val fl = FULL_SIMP_TAC list_ss;
+val fw = FULL_SIMP_TAC (srw_ss());
 
 (* Basic circuit functions defined on a domain of lattice values *)
 val Or_def = Define `Or (a, b) (c, d) = (a\/c, b/\d)`;;
@@ -64,17 +65,8 @@ val MUX_OK =
 		     PROVE_TAC [lattice_X1_lemma],
 		     PROVE_TAC [lattice_X1_lemma],
 		     FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"out0"``)
-		     THEN fl []
-		     THENL [POP_ASSUM MP_TAC THEN COND_CASES_TAC
-			    THENL [REPEAT (POP_ASSUM MP_TAC)
-				   THEN CONV_TAC
-				   (TOP_DEPTH_CONV(stringLib.string_EQ_CONV))
-				   THEN RW_TAC std_ss [],
-				   REPEAT (POP_ASSUM MP_TAC)
-				   THEN CONV_TAC
-				   (TOP_DEPTH_CONV(stringLib.string_EQ_CONV))
-				   THEN RW_TAC std_ss []],
-			    POP_ASSUM MP_TAC
+		         THEN fw []
+                         THEN POP_ASSUM MP_TAC
 			    THEN COND_CASES_TAC
 			    THENL [fl [] THEN Cases_on `s_b "a0"`
 				   THEN Cases_on `s_b "b0"`
@@ -87,18 +79,11 @@ val MUX_OK =
 				   THEN Cases_on `s_b' "out0"`
 				   THEN fs [drop_def, One_def, Zero_def,
 					    X_def, Top_def, lub_def,
-					    Or_def, And_def, Not_def]]],
-		     FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"out1"``) THEN fl []
+					    Or_def, And_def, Not_def]],
+		     FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"out1"``)
+                     THEN fw []
 		     THEN POP_ASSUM MP_TAC THEN (REPEAT COND_CASES_TAC)
-		     THENL [REPEAT (POP_ASSUM MP_TAC)
-			    THEN CONV_TAC
-			    (TOP_DEPTH_CONV(stringLib.string_EQ_CONV))
-			    THEN RW_TAC std_ss [],
-			    REPEAT (POP_ASSUM MP_TAC)
-			    THEN CONV_TAC
-			    (TOP_DEPTH_CONV(stringLib.string_EQ_CONV))
-			    THEN RW_TAC std_ss [],
-			    fl [] THEN Cases_on `s_b "a1"`
+		     THENL [fl [] THEN Cases_on `s_b "a1"`
 			    THEN Cases_on `s_b "b1"`
 			    THEN Cases_on `s_b' "out1"`
 			    THEN fs [drop_def, One_def, Zero_def,

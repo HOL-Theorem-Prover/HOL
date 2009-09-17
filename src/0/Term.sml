@@ -1919,7 +1919,7 @@ fun pp_raw_term tyindex index pps tm =
 (* Send the results of prettyprinting to a string                            *)
 (*---------------------------------------------------------------------------*)
 
-fun sprint pp x = PP.pp_to_string 72 pp x
+fun sprint pp x = HOLPP.pp_to_string 75 pp x
 
 val term_to_string = sprint (pp_raw_term (fn t => ~1) (fn t => ~1));
 

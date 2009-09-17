@@ -25,16 +25,10 @@ in
   FileSys.chDir curdir
 end;
 
-val _ = (* install prettyprinters for simpsets and ssfrags *)
-let
-  fun with_pp ppfn pps x =
-      Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
-in
-  installPP (with_pp Pretype.pp_pretype);
-  installPP (with_pp Prekind.pp_prekind);
-  installPP (with_pp simpLib.pp_ssfrag);
-  installPP (with_pp simpLib.pp_simpset)
-end;
+val _ = installPP (mosmlpp Pretype.pp_pretype);
+val _ = installPP (mosmlpp Prekind.pp_prekind);
+val _ = installPP (mosmlpp simpLib.pp_ssfrag);
+val _ = installPP (mosmlpp simpLib.pp_simpset)
 
 open bossLib;  (* Any others? *)
 

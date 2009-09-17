@@ -1,3 +1,7 @@
+structure Conversion :> Conversion =
+struct
+
+open HolKernel Parse boolLib
 
 (*
 val _ = load "stringLib";
@@ -153,4 +157,6 @@ in
     iter5
     end;
 
-end;
+end
+
+end (* struct *)

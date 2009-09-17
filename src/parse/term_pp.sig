@@ -3,8 +3,8 @@ sig
 
   type term = Term.term
   val pp_term :
-    term_grammar.grammar -> type_grammar.grammar -> Portable.ppstream ->
-    term -> unit
+    term_grammar.grammar -> type_grammar.grammar -> PPBackEnd.t ->
+    Portable.ppstream -> term -> unit
 
   val ty_antiq      : Type.hol_type -> term
   val dest_ty_antiq : term -> Type.hol_type

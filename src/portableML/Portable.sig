@@ -1,10 +1,12 @@
 signature Portable =
 sig
-  type ppstream  = General.ppstream
   type time      = Time.time
   type instream  = TextIO.instream
   type outstream = TextIO.outstream
-  include PP where type break_style = PP.break_style
+
+  include HOLPP where type break_style = HOLPP.break_style
+                  and type ppstream = HOLPP.ppstream
+                  and type 'a frag = 'a HOLPP.frag
 
   val with_ppstream : ppstream
                        -> {add_break      : int * int -> unit,
@@ -71,8 +73,6 @@ sig
   exception Div
   exception Interrupt
 
-  type 'a quotation = 'a frag list
-  type 'a frag = 'a frag
 
   val norm_quote : 'a quotation -> 'a quotation
 end

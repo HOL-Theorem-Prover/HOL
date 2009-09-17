@@ -39,8 +39,8 @@ sig
                               -> (kind,kind)Lib.subst
                               -> (kind,kind)Lib.subst
 
-  val pp_kind       : ppstream -> kind -> unit
-  val pp_qkind      : ppstream -> kind -> unit
+  val pp_kind       : HOLPP.ppstream -> kind -> unit
+  val pp_qkind      : HOLPP.ppstream -> kind -> unit
   val kind_to_string: kind -> string
   val kind_size     : kind -> int
 end

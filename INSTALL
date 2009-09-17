@@ -9,7 +9,7 @@ the Moscow ML compiler (version 2.01) from
 
      http://www.itu.dk/~sestoft/mosml.html
 
-Or Poly/ML, from
+or Poly/ML, from
 
      http://www.polyml.org
 
@@ -24,8 +24,8 @@ The instructions that follow are how to build from sources, on any of
 the supported operating systems
 
 
-Building the HOL system.
---------------------------
+Building the HOL system
+-----------------------
 
 A. [Moscow ML:] First, install Moscow ML. This is usually
    straightforward. The directory where it lives will be called
@@ -63,7 +63,7 @@ B. Unpack HOL with the commands
        gunzip release.tar.gz; tar xf release.tar
 
    in Unix, or the appropriate clicking activity in Windows (use a
-   program like Winzip). The resulting directory will be called
+   program like Winzip).  The resulting directory will be called
    <hol-dir> in the following.  When fully built, <hol-dir> takes
    approximately 35M of disk space, so be sure you have enough before
    starting.
@@ -81,14 +81,14 @@ C. In the HOL directory (<hol-dir>), type
    If smart-configure guesses the options incorrectly, then you will
    need to provide them yourself. Do this by creating a file called
 
-     [Moscow ML:] config-override in <hol-dir>
-     [Poly/ML:]   poly-include.ML in <hol-dir>/tools-poly
+       [Moscow ML:] config-override in <hol-dir>
+       [Poly/ML:]   poly-include.ML in <hol-dir>/tools-poly
 
    In this file provide ML bindings for as many of the values that
    were incorrectly guessed by smart-configure.sml.  For example, if
    the holdir guess was incorrect, then put
 
-     val holdir = "a full pathname to my holdir"
+       val holdir = "a full pathname to my holdir"
 
    for example. Most parameters must be given as ML strings, while
    dynlib_available must be an ML boolean (either true or false).  The
@@ -108,7 +108,7 @@ C. In the HOL directory (<hol-dir>), type
    tools/configure.sml file.  Edit this file if necessary to change
    this binding to whatever's required:
 
-           val GNUMAKE = "gnumake";
+       val GNUMAKE = "gnumake";
 
    If you are building HOL on an OS that is *not* Solaris or Linux,
    the muddy library is not currently accessible. In such a case, the
@@ -134,21 +134,22 @@ D. Now perform the following shell command:
 E. If bin/build completes (it takes a while!), successfully, you are
    done. From <hol-dir> you can now access
 
-      bin/hol              * The standard HOL interactive system;
-      bin/hol.noquote      * The interactive system with quote
-                             preprocessing turned off;
-      bin/hol.bare         * A "stripped down" version of hol;
-      bin/hol.bare.noquote * A "stripped down" version of hol.noquote,
-                             with quote preprocessing turned off;
-      bin/Holmake          * A batch compiler for HOL directories;
-      src/                 * System sources;
-      examples/            * Examples of the use of the system.
+       bin/hol              * The standard HOL interactive system;
+       bin/hol.noquote      * The interactive system with quote
+                              preprocessing turned off;
+       bin/hol.bare         * A "stripped down" version of hol;
+       bin/hol.bare.noquote * A "stripped down" version of hol.noquote,
+                              with quote preprocessing turned off;
+       bin/Holmake          * A batch compiler for HOL directories;
+       src/                 * System sources;
+       examples/            * Examples of the use of the system.
 
    On Windows the hol scripts additionally include a .bat extension,
    and Holmake has a .exe extension.
 
-External tools.
-----------------
+
+External tools
+--------------
 
 The HOL installation currently includes a C library (in HolBddLib),
 the C sources for the SMV model-checker (in temporalLib), and for a
@@ -160,26 +161,25 @@ Loading the BDD libraries muddyLib or HolBddLib will fail unless
 MoscowML has been built with dynamic linking enabled.
 
 
-Dealing with failure.
----------------------
+Dealing with failure
+--------------------
 
-   * Send a message to hol-support@cl.cam.ac.uk giving a full transcript of
-     the failed installation. Also make sure that you include the
-     following details:
+* Send a message to hol-support@cl.cam.ac.uk giving a full transcript
+  of the failed installation.  Please include the following details:
 
-           . hardware/OS the build failed on
-           . version of Moscow ML or Poly/ML being used
-           . version of HOL being built
+      . hardware/OS the build failed on
+      . version of Moscow ML or Poly/ML being used
+      . version of HOL being built
 
-   * Alternatively, use the Support tracker web-page at
+* Alternatively, use the Support tracker web-page at
 
-       http://sourceforge.net/tracker/?func=add&group_id=31790&atid=403398
+      http://sourceforge.net/tracker/?func=add&group_id=31790&atid=403398
 
-     and submit a request for support.  You can also use the Bugs
-     forum on SourceForge.
+  and submit a request for support.  You can also use the Bugs forum
+  on SourceForge.
 
-   * If a build attempt fails for some reason, you should attempt to invoke
+* If a build attempt fails for some reason, you should attempt to invoke
 
-        bin/build -cleanAll
+      bin/build -cleanAll
 
-     before a new build attempt.
+  from <hol-dir> before a new build attempt.

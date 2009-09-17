@@ -44,11 +44,7 @@ val COMPARATOR_OK =
 	       THEN REPEAT STRIP_TAC
 	       THEN REPEAT COND_CASES_TAC
 	       THEN fs [lattice_X1_lemma, leq_def]
-	       THENL [PROVE_TAC [lattice_X1_lemma],
-		      PROVE_TAC [lattice_X1_lemma],
-		      PROVE_TAC [lattice_X1_lemma],
-		      PROVE_TAC [lattice_X1_lemma],
-		      Cases_on `s_b "a0"`
+	       THEN Cases_on `s_b "a0"`
 		      THEN Cases_on `s_b "b0"`
 		      THEN Cases_on `s_b "a1"`
 		      THEN Cases_on `s_b "b1"`
@@ -60,8 +56,7 @@ val COMPARATOR_OK =
 			       lub_def,
 			       Or_def,
 			       And_def,
-			       Not_def],
-		      PROVE_TAC [lattice_X1_lemma]]);
+			       Not_def]);
 
 (* prove that the comparator circuit is monotonic *)
 val COMPARATOR_MONOTONIC =

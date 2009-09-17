@@ -1360,6 +1360,20 @@ val IS_SUFFIX_REVERSE = save_thm("IS_SUFFIX_REVERSE",
     (SPECL [(--`REVERSE(l1:'a list)`--), (--`REVERSE(l2:'a list)`--)]
            IS_PREFIX_REVERSE))));
 
+val IS_SUFFIX_CONS2_E = store_thm(
+  "IS_SUFFIX_CONS2_E",
+  ``IS_SUFFIX s (h::t) ==> IS_SUFFIX s t``,
+  SRW_TAC [][IS_SUFFIX_APPEND] THEN
+  metisLib.METIS_TAC [listTheory.APPEND, listTheory.APPEND_ASSOC]);
+
+val IS_SUFFIX_REFL = store_thm(
+  "IS_SUFFIX_REFL",
+  ``IS_SUFFIX l l``,
+  SRW_TAC [][IS_SUFFIX_APPEND] THEN
+  metisLib.METIS_TAC [listTheory.APPEND]);
+val _ = export_rewrites ["IS_SUFFIX_REFL"]
+
+
 val IS_SUBLIST_REVERSE = store_thm("IS_SUBLIST_REVERSE",
 --`!l1 l2:'a list. IS_SUBLIST (REVERSE l1) (REVERSE l2) = IS_SUBLIST l1 l2`--,
     REPEAT GEN_TAC THEN REWRITE_TAC[IS_SUBLIST_APPEND]

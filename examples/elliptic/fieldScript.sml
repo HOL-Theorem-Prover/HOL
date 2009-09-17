@@ -2698,4 +2698,6 @@ val GF_2_def = Define
       prod :=  |>`;
 ***)
 
+val _ = html_theory "field";
+
 val () = export_theory ();

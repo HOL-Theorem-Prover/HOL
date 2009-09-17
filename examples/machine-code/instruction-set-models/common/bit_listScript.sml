@@ -120,6 +120,9 @@ val bits2num_w2bits = store_thm("bits2num_w2bits",
 val w2bits_word32 = save_thm("w2bits_word32",
   SIMP_RULE std_ss [DIV_DIV_DIV_MULT] (EVAL ``w2bits (w:word32)``));
 
+val w2bits_word8 = save_thm("w2bits_word8",
+  SIMP_RULE std_ss [DIV_DIV_DIV_MULT] (EVAL ``w2bits (w:word8)``));
+
 val bits2num_LESS = store_thm("bits2num_LESS",
   ``!xs. bits2num xs < 2 ** (LENGTH xs)``,
   Induct THEN SIMP_TAC std_ss [bits2num_def]
@@ -162,7 +165,7 @@ val bits2num_MOD = store_thm("bits2num_MOD",
   THEN DECIDE_TAC);
 
 val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
-  ``!imm32:word32.
+  ``!imm32:word32 imm8:word8. 
       ((b2w I
             [w2n imm32 MOD 2 = 1; (w2n imm32 DIV 2) MOD 2 = 1;
              (w2n imm32 DIV 4) MOD 2 = 1; (w2n imm32 DIV 8) MOD 2 = 1;
@@ -189,13 +192,16 @@ val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
              (w2n imm32 DIV 134217728) MOD 2 = 1; (w2n imm32 DIV 268435456) MOD 2 = 1;
              (w2n imm32 DIV 536870912) MOD 2 = 1; (w2n imm32 DIV 1073741824) MOD 2 = 1;
              (w2n imm32 DIV 2147483648) MOD 2 = 1]) =
-       (w2w (imm32 >>> 24)):word8)``,
+       (w2w (imm32 >>> 24)):word8) /\
+      (b2w I (w2bits imm8) = imm8)``,
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [w2w_def,b2w_def]
   THEN CONV_TAC (RAND_CONV (REWRITE_CONV [GSYM bits2num_w2bits]))
   THEN SIMP_TAC std_ss [w2bits_word32,n2w_11,dimword_def]
   THEN SIMP_TAC (bool_ss++wordsLib.SIZES_ss) []
   THEN SIMP_TAC bool_ss [bits2num_MOD]
-  THEN SIMP_TAC std_ss [TAKE_def,w2n_lsr,DIV_DIV_DIV_MULT]);
+  THEN SIMP_TAC std_ss [TAKE_def,w2n_lsr,DIV_DIV_DIV_MULT]
+  THEN Q.SPEC_TAC (`imm8`,`x`) THEN wordsLib.Cases_word
+  THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2bits_def,w2n_n2w,bits2num_n2bits]);
 
 
 val _ = export_theory ();

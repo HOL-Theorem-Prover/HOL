@@ -12,7 +12,7 @@ simplification, words.
 
 \DESCRIBE
 
-The fragment {WORD_LOGIC_ss} does AC simplicaition for word conjuction, disjunction and 2's complement.  If the word length is know then further simplifcation occurs, in particular for {~(n2w n)}.
+The fragment {WORD_LOGIC_ss} does AC simplification for word conjunction, disjunction and 2's complement.  If the word length is known then further simplification occurs, in particular for {~(n2w n)}.
 
 \EXAMPLE
 
@@ -22,7 +22,7 @@ The fragment {WORD_LOGIC_ss} does AC simplicaition for word conjuction, disjunct
 > val it = |- 3w !! 12w && a !! ~4w !! a && 16w = 28w && a !! $- 5w : thm
 }
 
-More simplication occurs when the word length is known.
+More simplification occurs when the word length is known.
 {
 - SIMP_CONV (pure_ss++WORD_LOGIC_ss) [] ``~12w !! ~14w : word8``
 > val it = |- ~12w !! ~14w = 243w : thm

@@ -21,5 +21,12 @@ structure Term = Term :> FinalTerm where type term = Term.term
                                      and type kind = Kind.kind
 
 structure Process = OS.Process
+structure FileSys = OS.FileSys
+
+structure PP = HOLPP
+
+type 'a quotation = 'a PP.quotation
+type ppstream = PP.ppstream
+datatype frag = datatype PP.frag
 
 

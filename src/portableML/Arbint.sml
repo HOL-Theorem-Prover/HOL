@@ -96,7 +96,7 @@ fun divmod (i, j) = (i div j, i mod j)
 fun toString (true, n) = Arbnum.toString n ^ "i"
   | toString (false, n) = "-" ^ Arbnum.toString n ^ "i"
 
-fun pp_int ppstrm bi = PP.add_string ppstrm (toString bi);
+fun pp_int ppstrm bi = HOLPP.add_string ppstrm (toString bi);
 
 fun fromString s = let
   open Substring
