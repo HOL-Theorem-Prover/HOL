@@ -13,7 +13,7 @@
 # then dir1 can not depend on dir2, but if dir1 is later than dir2,
 # then it may or may not depend on dir2.
 
-# if a directory name is preceded by an !, then it will only be built
+# If a directory name is preceded by an !, then it will only be built
 # if the -selftest flag is passed to Holmake, and the object files
 # that it builds will not be transferred to the sigobj directory.  If
 # there is more than one ! then the number of them indicates the level
@@ -22,13 +22,13 @@
 # write -selftest 2, that's level 2, which means directories with 2 !s
 # will get tested.)
 
-# if a directory name is preceded by a string inside []-brackets, then
+# If a directory name is preceded by a string inside []-brackets, then
 # that directory/target will only be considered if the string is the
 # name of the current ML implementation.  Thus the line [poly]foo
 # will cause foo to be built only if the current implementation is
 # Poly/ML.  (The other supported implementation at the time of writing
 # is [mosml].)  If combining this with exclamation marks, the [system]
-# annotation should come first. I.e., [mosml]!!foo, not !![mosml]foo.
+# annotation should come first, i.e., [mosml]!!foo, not !![mosml]foo.
 
 
 tools/mlyacc/mlyacclib
