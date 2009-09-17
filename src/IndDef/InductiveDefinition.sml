@@ -754,6 +754,10 @@ fun check_definition schemevars clocs tm = let
                                    HOLset.addList(tyvset,
                                                   type_vars_in_term tm))
                                empty_tyset relvars
+  val reltyvars = List.foldl (fn (tm,tyvset) =>
+                                 HOLset.addList(tyvset,
+                                                type_vars_in_term tm))
+                             reltyvars schemevars
 
   (* check that there aren't duplicate names in the forall chain *)
   fun check_clause_foralls n c = let
