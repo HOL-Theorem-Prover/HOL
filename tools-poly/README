@@ -56,10 +56,9 @@ but for now, changes in one probably need to be made also in its counterpart.
    Portable.sig mlibOmegaint.sml)
 2) std.prelude and tools-poly/prelude.ML
 3) tools/end-init-boss.sml and tools-poly/prelude2.ML
-4) tools/build-sequence and tools-poly/build-sequence
-5) tools/Holmake and tools-poly/Holmake
-6) tools/build.sml and tools-poly/build.sml
-7) tools/mosml-configure.sml and tools-poly/smart-configure.sml
+4) tools/Holmake and tools-poly/Holmake
+5) tools/build.sml and tools-poly/build.sml
+6) tools/mosml-configure.sml and tools-poly/smart-configure.sml
 
 PolyML doesn't have a way to suppress warnings separately from suppressing
 errors.
