@@ -642,7 +642,9 @@ fun indented_term_to_string n tm = let
   fun pper pps tm = let
   in
     PP.add_string pps nspaces;
-    Parse.pp_term pps tm
+    Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
+                  (Parse.pp_term pps)
+                  tm
   end
 in
   PP.pp_to_string (!Globals.linewidth) pper tm
