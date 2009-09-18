@@ -1595,6 +1595,9 @@ fun pp_term (G : grammar) TyG = let
               then let
                   val (vs, body) = my_dest_abs Rand
                   val vfrees = FVL [vs] empty_tmset
+                  val bvars_seen_here = HOLset.listItems vfrees
+                  val old_seen = !bvars_seen
+
                   val (l, r) = dest_pair body
                   val lfrees = FVL [l] empty_tmset
                   val rfrees = FVL [r] empty_tmset
@@ -1606,6 +1609,7 @@ fun pp_term (G : grammar) TyG = let
                      andalso not (!unamb_comp)
                   then
                     (begin_block CONSISTENT 0;
+                     bvars_seen := old_seen @ bvars_seen_here;
                      add_string "{"; begin_block CONSISTENT 0;
                      pr_term l Top Top Top (decdepth depth);
                      add_string " |"; spacep true;
@@ -1613,9 +1617,11 @@ fun pp_term (G : grammar) TyG = let
                      end_block();
                      add_string "}";
                      end_block();
+                     bvars_seen := old_seen;
                      raise SimpleExit)
                   else
                     (begin_block CONSISTENT 0;
+                     bvars_seen := old_seen @ bvars_seen_here;
                      add_string "{"; begin_block CONSISTENT 0;
                      pr_term l Top Top Top (decdepth depth);
                      add_string " |"; spacep true;
@@ -1625,6 +1631,7 @@ fun pp_term (G : grammar) TyG = let
                      end_block();
                      add_string "}";
                      end_block();
+                     bvars_seen := old_seen;
                      raise SimpleExit)
                 end handle HOL_ERR _ => ()
               else ()
