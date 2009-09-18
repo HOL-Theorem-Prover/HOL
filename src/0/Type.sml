@@ -1894,7 +1894,7 @@ fun all_abconv [] [] = true
 
 fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
   (* local constants of kinds and types never change *)
-  val (var_homs,nvar_homs) = partition (fn (env,cty,vty) => is_vartype vty) homs
+  val (var_homs,nvar_homs) = partition (fn (env,cty,vty) => is_var_type vty) homs
   fun args_are_fixed (env,cty,vty) = let
        val (vhop, vargs) = strip_app_type vty
        val afvs = type_varsl vargs
