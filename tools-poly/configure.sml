@@ -373,9 +373,9 @@ val _ =
     val target = fullPath [holdir, "tools", "hol-mode.el"]
  in
     fill_holes (src, target)
-      ["(defvar hol-executable HOL-EXECUTABLE\n"
+      ["(defcustom hol-executable HOL-EXECUTABLE\n"
         -->
-       ("(defvar hol-executable \n  "^
+       ("(defcustom hol-executable \n  "^
         quote (fullPath [holdir, "bin", "hol"])^"\n")]
  end;
 

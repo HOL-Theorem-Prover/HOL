@@ -12,6 +12,11 @@
 (require 'cl)
 
 
+(defgroup hol nil
+  "Customising the Emacs interface to the HOL4 proof assistant."
+  :group 'external)
+
+
 (define-prefix-command 'hol-map)
 (define-prefix-command 'hol-d-map)
 (make-variable-buffer-local 'hol-buffer-name)
@@ -21,8 +26,10 @@
 
 (set-default 'hol-default-buffer nil)
 
-(defvar hol-executable HOL-EXECUTABLE
-  "*Path-name for the HOL executable.")
+(defcustom hol-executable HOL-EXECUTABLE
+  "Path-name for the HOL executable."
+  :group 'hol
+  :type '(file :must-match t))
 
 (defun hol-set-executable (filename)
   "*Set hol executable variable to be NAME."
@@ -34,8 +41,10 @@
   "*The command to send to HOL to load the ML-part of hol-mode.")
 
 
-(defvar hol-echo-commands-p nil
-  "*Whether or not to echo the text of commands originating elsewhere.")
+(defcustom hol-echo-commands-p nil
+  "Whether or not to echo the text of commands originating elsewhere."
+  :group 'hol
+  :type 'boolean)
 
 (defvar hol-generate-locpragma-p t
   "*Whether or not to generate (*#loc row col *) pragmas for HOL.")
@@ -1233,6 +1242,10 @@ already loaded.)"
                 (buffer-substring (point-min) (point))
               (delete-region (point-min) (point))))))))
 
+(defgroup hol-faces nil "Faces used in pretty-printing HOL values"
+  :group 'faces
+  :group 'hol)
+
 (defface hol-free-variable
   '((((class color) (min-colors 8))
      :foreground "blue"
@@ -1429,6 +1442,9 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-printing quiet]
    '("Quiet (hide output except errors)" . hol-toggle-quietdec))
 
+(define-key global-map [menu-bar hol-menu hol-printing ppbackend]
+  '("Toggle pretty-printing backend" . hol-toggle-ppbackend))
+
 (define-key global-map [menu-bar hol-menu hol-printing unicode]
    '("Unicode" . hol-toggle-unicode))
 
@@ -1444,7 +1460,6 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-printing goal-fvs]
    '("Show free vars in goal" . hol-toggle-goalstack-fvs))
-
 
 (define-key global-map [menu-bar hol-menu hol-printing sep1]
    '(menu-item "--"))
