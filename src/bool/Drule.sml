@@ -416,7 +416,7 @@ fun TY_SPECL tyl th =
  *---------------------------------------------------------------------------*)
 
 fun TY_GENL tyl th =
-  itlist TY_SPEC tyl th handle HOL_ERR _ => raise ERR "TY_GENL" "";
+  rev_itlist TY_GEN tyl th handle HOL_ERR _ => raise ERR "TY_GENL" "";
 
 
 (*---------------------------------------------------------------------------*

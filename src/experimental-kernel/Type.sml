@@ -1904,17 +1904,27 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
            end) handle HOL_ERR _ => (let
                          val vhop' = inst_fn vhop
                          val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
-                         val _ = if eq_ty vhop' chop then raise NOT_FOUND else () (* avoid infinite recurse *)
-                         val vhop_inst = [vhop' |-> chop]
-                         val vty1 = deep_beta_ty (type_subst vhop_inst (inst_fn vty))
-                         val pinsts_homs' =
-                             type_pmatch lconsts env vty1 cty (insts, tl homs)
-                         val (rkin',kdins') =
-                             get_rank_kind_insts kdavoids env
+                       in
+                         if eq_ty vhop' chop then (* avoid infinite recurse *)
+                           raise NOT_FOUND
+                         else let
+                           val vhop_inst = [vhop' |-> chop]
+                           val vty1 = deep_beta_ty (type_subst vhop_inst (inst_fn vty))
+                         in
+                           if eq_ty vty1 cty then (* avoid infinite recurse *)
+                             (* drop this hom as subsumed by current insts *)
+                             homatch rkin kdins (insts,tl homs)
+                           else let
+                             val pinsts_homs' =
+                                 type_pmatch lconsts env vty1 cty (insts, tl homs)
+                             val (rkin',kdins') =
+                                 get_rank_kind_insts kdavoids env
                                             (fst pinsts_homs')
                                             (0, ([], []))
-                       in
-                         homatch rkin' kdins' pinsts_homs'
+                           in
+                             homatch rkin' kdins' pinsts_homs'
+                           end
+                         end
                        end
                 handle NOT_FOUND => let
                          val (lc,rc) = dest_app_type cty

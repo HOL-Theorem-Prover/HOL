@@ -1901,7 +1901,15 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
     in all (fn a => can (find_residue_ty a) env orelse can (find_residue_ty a) insts
                     orelse HOLset.member(lconsts, a)) afvs
     end
-  val (real_homs,basic_homs) = partition args_are_fixed nvar_homs
+  val (fixed_homs,basic_homs) = partition args_are_fixed nvar_homs
+  fun args_are_distinct_vars (env,cty,vty) = let
+       val (vhop, vargs) = strip_app_type vty
+       fun distinct (x::xs) = not (mem x xs) andalso distinct xs
+         | distinct _ = true
+    in all is_var_type vargs andalso distinct vargs
+    end
+  val (distv_homs,real_homs) = partition args_are_distinct_vars fixed_homs
+  val ordered_homs = var_homs @ distv_homs @ real_homs @ basic_homs
   fun homatch rkin kdins (insts, homs) = 
   if homs = [] then insts
   else let
@@ -1967,17 +1975,27 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
            end) handle HOL_ERR _ => (let
                          val vhop' = inst_fn vhop
                          val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
-                         val _ = if eq_ty vhop' chop then raise NOT_FOUND else () (* avoid infinite recurse *)
-                         val vhop_inst = [vhop' |-> chop]
-                         val vty1 = deep_beta_ty (type_subst vhop_inst (inst_fn vty))
-                         val pinsts_homs' =
-                             type_pmatch lconsts env vty1 cty (insts, tl homs)
-                         val (rkin',kdins') =
-                             get_rank_kind_insts kdavoids env
+                       in
+                         if eq_ty vhop' chop then (* avoid infinite recurse *)
+                           raise NOT_FOUND
+                         else let
+                           val vhop_inst = [vhop' |-> chop]
+                           val vty1 = deep_beta_ty (type_subst vhop_inst (inst_fn vty))
+                         in
+                           if eq_ty vty1 cty then (* avoid infinite recurse *)
+                             (* drop this hom as subsumed by current insts *)
+                             homatch rkin kdins (insts,tl homs)
+                           else let
+                             val pinsts_homs' =
+                                 type_pmatch lconsts env vty1 cty (insts, tl homs)
+                             val (rkin',kdins') =
+                                 get_rank_kind_insts kdavoids env
                                             (fst pinsts_homs')
                                             (0, ([], []))
-                       in
-                         homatch rkin' kdins' pinsts_homs'
+                           in
+                             homatch rkin' kdins' pinsts_homs'
+                           end
+                         end
                        end
                 handle NOT_FOUND => let
                          val (lc,rc) = dest_app_type cty
@@ -1995,7 +2013,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
         end
     end
 in
-  homatch rkin kdins (insts, var_homs @ real_homs @ basic_homs)
+  homatch rkin kdins (insts, ordered_homs)
 end
 
 in
