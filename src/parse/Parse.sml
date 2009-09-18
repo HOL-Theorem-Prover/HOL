@@ -95,7 +95,8 @@ in
   case getEnv "INSIDE_EMACS" of
     SOME _ => emacs_terminal
   | NONE => (case getEnv "TERM" of
-               SOME "xterm" => vt100_terminal
+               SOME s => if String.isPrefix "xterm" s then vt100_terminal
+                         else raw_terminal
              | _ => raw_terminal)
 end
 
