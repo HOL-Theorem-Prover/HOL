@@ -1,6 +1,6 @@
 \DOC prove_thm
 
-\TYPE {Compat.prove_thm : (string * term * tactic) -> thm}
+\TYPE {prove_thm : (string * term * tactic) -> thm}
 
 \SYNOPSIS
 Attempts to prove a boolean term using the supplied tactic, then save the

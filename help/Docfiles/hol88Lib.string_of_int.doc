@@ -1,6 +1,6 @@
 \DOC string_of_int
 
-\TYPE {Compat.string_of_int : int -> string}
+\TYPE {string_of_int : int -> string}
 
 \SYNOPSIS
 Maps an integer to the corresponding decimal string.

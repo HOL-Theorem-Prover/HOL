@@ -1,6 +1,6 @@
 \DOC setify
 
-\TYPE {Compat.setify : ''a list -> ''a list}
+\TYPE {setify : ''a list -> ''a list}
 
 \SYNOPSIS
 {setify} makes a set out of an "eqtype" list.
@@ -23,9 +23,9 @@ loaded.
 \COMMENTS
 Perhaps the first occurrence of each duplicate should be left in the list, not
 the last? However, other functions may rely on the ordering currently used.
-Included in {Compat} because {setify} is not found in hol90 ({mk_set} is used 
-instead.)
+Included in {hol88Lib} because {setify} has since been replaced by {mk_set}.
 
 \SEEALSO
 distinct.
+
 \ENDDOC

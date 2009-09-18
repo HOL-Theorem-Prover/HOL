@@ -1,6 +1,6 @@
 \DOC tyvars
 
-\TYPE {Compat.tyvars : term -> type list}
+\TYPE {tyvars : term -> type list}
 
 \SYNOPSIS
 Returns a list of the type variables free in a term.
@@ -18,10 +18,10 @@ loaded.
   - theorem "pair" "PAIR";
   |- !x. (FST x,SND x) = x
 
-  - Compat.tyvars (concl PAIR);
+  - hol88Lib.tyvars (concl PAIR);
   val it = [(==`:'b`==),(==`:'a`==)] : hol_type list
 
-  - Compat.tyvars (--`x + 1 = SUC x`--);
+  - hol88Lib.tyvars (--`x + 1 = SUC x`--);
   [] : hol_type list
 }
 

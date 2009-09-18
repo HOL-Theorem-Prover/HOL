@@ -1,6 +1,6 @@
 \DOC freesl
 
-\TYPE {Compat.freesl : term list -> term list}
+\TYPE {freesl : term list -> term list}
 
 \SYNOPSIS
 Returns a list of the free variables in a list of terms.

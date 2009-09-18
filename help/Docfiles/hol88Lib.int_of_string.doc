@@ -1,6 +1,6 @@
 \DOC int_of_string
 
-\TYPE {Compat.int_of_string : string -> int}
+\TYPE {int_of_string : string -> int}
 
 \SYNOPSIS
 Maps a string of numbers to the corresponding integer.

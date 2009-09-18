@@ -1,6 +1,6 @@
 \DOC tyvarsl
 
-\TYPE {Compat.tyvarsl : (term list -> type list)}
+\TYPE {tyvarsl : (term list -> type list)}
 
 \SYNOPSIS
 Returns a list of the type variables free in a list of terms.
