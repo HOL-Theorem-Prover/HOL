@@ -14,5 +14,4 @@ struct
   type 'a quotation = 'a Portable.frag list
   type ('a,'b)subst = ('a,'b) Lib.subst
   type defn         = DefnBase.defn
-
 end
