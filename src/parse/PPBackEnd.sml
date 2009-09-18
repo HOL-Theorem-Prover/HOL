@@ -4,9 +4,9 @@ struct
 type hol_type = Type.hol_type
 open Portable
 
-datatype annotation = BV of hol_type
-                    | FV of hol_type
-                    | Const of {Thy: string,Name:string,Ty:hol_type}
+datatype annotation = BV of hol_type * string
+                    | FV of hol_type * string
+                    | Const of {Thy:string,Name:string,Ty:hol_type} * string
                     | Note of string
 
 type t = {add_string : ppstream -> string -> unit,
@@ -55,12 +55,12 @@ in
 end
 
 val emacs_terminal = let
-  fun fv s = "(*(*(*FV"^s^"*)*)*)"
-  fun bv s = "(*(*(*BV"^s^"*)*)*)"
+  fun fv s tystr = "(*(*(*FV\000"^tystr^"\000"^s^"*)*)*)"
+  fun bv s tystr = "(*(*(*BV\000"^tystr^"\000"^s^"*)*)*)"
   fun add_ann_string pps (s, ann) =
       case ann of
-        FV _ => PP.add_stringsz pps (fv s, UTF8.size s)
-      | BV _ => PP.add_stringsz pps (bv s, UTF8.size s)
+        FV (_,tystr) => PP.add_stringsz pps (fv s tystr, UTF8.size s)
+      | BV (_,tystr) => PP.add_stringsz pps (bv s tystr, UTF8.size s)
       | _ => PP.add_string pps s
 in
   {name = "emacs_terminal",

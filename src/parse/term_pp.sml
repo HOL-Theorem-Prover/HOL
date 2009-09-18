@@ -1464,11 +1464,13 @@ fun pp_term (G : grammar) TyG = let
           val print_type =
             showtypes_v orelse
             showtypes andalso not isfake andalso (binderp orelse new_freevar)
-          fun adds s = if mem tm (!bvars_seen) orelse binderp then
-                         add_ann_string (s, PPBackEnd.BV Ty)
-                       else if not isfake then
-                         add_ann_string (s, PPBackEnd.FV Ty)
-                       else add_string s
+          fun tystr ty = PP.pp_to_string 10000 (type_pp.pp_type TyG) Ty
+          fun adds s =
+              if mem tm (!bvars_seen) orelse binderp then
+                add_ann_string (s, PPBackEnd.BV (Ty, s^": "^tystr Ty))
+              else if not isfake then
+                add_ann_string (s, PPBackEnd.FV (Ty, s^": "^tystr Ty))
+              else add_string s
         in
           begin_block INCONSISTENT 2; pbegin print_type;
           if isSome vrule then

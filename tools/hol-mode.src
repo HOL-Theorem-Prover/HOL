@@ -1203,17 +1203,32 @@ already loaded.)"
                   (let*
                       ((start (- start 6))
                        (code (buffer-substring start (+ start 2)))
-                       (codeface
-                        (cond ((equal code "FV") 'hol-free-variable)
-                              ((equal code "BV") 'hol-bound-variable)
-                              nil)))
-                    (and codeface
-                         (add-text-properties
-                          (+ start 2)
-                          (- (point) 6) (list 'face codeface)))
+                       (codefacelist
+                        (cond ((equal code "FV") '(face hol-free-variable))
+                              ((equal code "BV") '(face hol-bound-variable))
+                              nil))
+                       (tooltipprop
+                        (save-excursion
+                          (goto-char (+ start 2))
+                          (if (equal (following-char) 0)
+                              (progn
+                                (goto-char (+ (point) 1))
+                                (skip-chars-forward "^[:cntrl:]")
+                                (prog1
+                                    (list 'help-echo
+                                          (buffer-substring (+ start 3)
+                                                            (point)))
+                                  (delete-region (+ start 2) (1+ (point)))))
+                            nil))))
+                       (add-text-properties
+                        (+ start 2)
+                        (- (point) 6) (append codefacelist tooltipprop))
                     (delete-region start (+ start 2))
                     (delete-region (- (point) 6) (point))))))
-            (if (not end) (goto-char (point-max)))
+            (if (not end)
+                (progn
+                  (goto-char (point-max))
+                  (skip-chars-backward "(*")))
             (prog1
                 (buffer-substring (point-min) (point))
               (delete-region (point-min) (point))))))))
