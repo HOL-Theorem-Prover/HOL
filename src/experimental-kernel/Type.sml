@@ -1831,14 +1831,22 @@ fun all_abconv [] [] = true
 
 fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
   (* local constants of kinds and types never change *)
-  val (var_homs,nvar_homs) = partition (fn (env,cty,vty) => is_var_type vty) homs
+  val (var_homs,nvar_homs) = partition (fn (env,cty,vty) => is_vartype vty) homs
   fun args_are_fixed (env,cty,vty) = let
        val (vhop, vargs) = strip_app_type vty
        val afvs = type_varsl vargs
     in all (fn a => can (find_residue_ty a) env orelse can (find_residue_ty a) insts
                     orelse HOLset.member(lconsts, a)) afvs
     end
-  val (real_homs,basic_homs) = partition args_are_fixed nvar_homs
+  val (fixed_homs,basic_homs) = partition args_are_fixed nvar_homs
+  fun args_are_distinct_vars (env,cty,vty) = let
+       val (vhop, vargs) = strip_app_type vty
+       fun distinct (x::xs) = not (mem x xs) andalso distinct xs
+         | distinct _ = true
+    in all is_var_type vargs andalso distinct vargs
+    end
+  val (distv_homs,real_homs) = partition args_are_distinct_vars fixed_homs
+  val ordered_homs = var_homs @ distv_homs @ real_homs @ basic_homs
   fun homatch rkin kdins (insts, homs) = 
   if homs = [] then insts
   else let
@@ -1942,7 +1950,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
         end
     end
 in
-  homatch rkin kdins (insts, var_homs @ real_homs @ basic_homs)
+  homatch rkin kdins (insts, ordered_homs)
 end
 
 in
