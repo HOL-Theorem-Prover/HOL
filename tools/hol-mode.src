@@ -916,6 +916,19 @@ argument N, sets the trace to that value in particular."
   (message (if hol-auto-load-p "automatic loading ON"
              "automatic loading OFF")))
 
+(defun hol-toggle-ppbackend ()
+  "Toggles between using the Emacs and \"raw\" terminal pretty-printing."
+  (interactive)
+  (send-raw-string-to-hol
+   (concat
+    "val _ = if #name (!Parse.current_backend) = \"emacs_terminal\" then"
+    "(Parse.current_backend := PPBackEnd.raw_terminal;"
+    "print \"*** PP Backend now \\\"raw\\\" ***\\n\")"
+    "else (Parse.current_backend := PPBackEnd.emacs_terminal;"
+    "print \"*** PP Backend now \\\"emacs\\\" ***\\n\")") nil nil))
+
+
+
 (defun set-hol-executable (filename)
   "Sets the HOL executable variable to be equal to FILENAME."
   (interactive "fHOL executable: ")
@@ -1179,10 +1192,10 @@ already loaded.)"
             (goto-char (point-max))
             (insert s)
             (goto-char (point-min))
-            (while (and (not end) (re-search-forward "(\\*(\\*(\\*" nil t))
+            (while (and (not end) (search-forward "(*(*(*" nil t))
               (let ((uptoann (- (point) 6))
                     (start (point)))
-                (if (not (re-search-forward "\\*)\\*)\\*)" nil t))
+                (if (not (search-forward "*)*)*)" nil t))
                     (progn
                       (goto-char uptoann)
                       (setq end t))
@@ -1208,7 +1221,7 @@ already loaded.)"
 (defface hol-free-variable
   '((((class color) (min-colors 8))
      :foreground "blue"
-     :weight 'bold
+     :weight bold
      :fontified t))
   "The face for presenting free variables in HOL terms."
   :group 'hol-faces)
@@ -1233,6 +1246,7 @@ already loaded.)"
 (define-key hol-map "\M-a" 'hol-toggle-goalstack-num-assums)
 (define-key hol-map "\C-l" 'hol-recentre)
 (define-key hol-map "\C-n" 'hol-toggle-show-numeral-types)
+(define-key hol-map "\C-p" 'hol-toggle-ppbackend)
 (define-key hol-map "\C-q" 'hol-toggle-quietdec)
 (define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
 (define-key hol-map "\C-t" 'hol-toggle-show-types)
