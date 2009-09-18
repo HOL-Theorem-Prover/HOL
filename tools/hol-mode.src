@@ -1249,13 +1249,12 @@ already loaded.)"
 (defface hol-free-variable
   '((((class color) (min-colors 8))
      :foreground "blue"
-     :weight bold
-     :fontified t))
+     :weight bold))
   "The face for presenting free variables in HOL terms."
   :group 'hol-faces)
 
 (defface hol-bound-variable
-  '((((class color) (min-colors 8)) :foreground "green" :fontified t))
+  '((((class color) (min-colors 8)) :foreground "green" ))
   "The face for presenting bound variables in HOL terms."
   :group 'hol-faces)
 
