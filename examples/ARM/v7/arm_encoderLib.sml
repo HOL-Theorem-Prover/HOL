@@ -222,14 +222,26 @@ fun encode_branch (cond,tm) = term_list_to_num ((cond,28)::
    | ("Branch_Exchange", [rm]) =>
         [(T,24), (T,21), (PC,16),(PC,12),(PC,8), (T,4), (rm,0)]
    | ("Branch_Link_Exchange_Immediate", [h,toarm,imm24]) =>
+        check ("encode_branch", tm) (fn _ => is_T toarm orelse is_PC cond)
         [(T,27), (T,25), (if is_T toarm then T else h,24), (imm24,0)]
    | ("Branch_Link_Exchange_Register", [rm]) =>
         [(T,24), (T,21), (PC,16),(PC,12),(PC,8), (T,5), (T,4), (rm,0)]
    | _ => raise ERR "encode_branch" ("cannot encode: " ^ term_to_string tm)));
 
+fun check_dp (tm,rd,rn) =
+      case uint_of_word tm
+      of 8  => is_0 rd
+       | 9  => is_0 rd
+       | 10 => is_0 rd
+       | 11 => is_0 rd
+       | 13 => is_0 rn
+       | 15 => is_0 rn
+       | _  => true;
+
 fun encode_data_processing (cond,tm) = term_list_to_num ((cond,28)::
  (case dest_strip tm
   of ("Data_Processing", [opc,s,n,d,mode1]) =>
+        check ("encode_data_processing", tm) (fn _ => check_dp (opc,d,n))
         [(opc,21), (s,20), (n,16), (d,12)] @ encode_mode1 mode1
    | ("Move_Halfword", [h,d,imm16]) =>
         [(T,25), (T,24), (h,22), (imm16$(15,12),16), (d,12), (imm16$(11,0),0)]
@@ -237,11 +249,18 @@ fun encode_data_processing (cond,tm) = term_list_to_num ((cond,28)::
         [(a,23), (NOT a,22), (n,16), (d,12)] @
          encode_mode1 (mk_Mode1_immediate imm12)
    | ("Multiply", [acc,s,d,a,m,n]) =>
-        [(acc,21), (s,20), (d,16), (a,12), (m,8), (T,7), (T, 4), (n,0)]
+        [(acc,21), (s,20), (d,16), (if is_T acc then a else mk_word4 0,12),
+         (m,8), (T,7), (T, 4), (n,0)]
    | ("Multiply_Subtract", [d,a,m,n]) =>
         [(T,22), (T,21), (d,16), (a,12), (m,8), (T,7), (T, 4), (n,0)]
    | ("Signed_Halfword_Multiply", [opc,M,N,d,a,m,n]) =>
-        [(T,24), (opc,21), (d,16), (a,12), (m,8), (T,7), (M,6), (N,5), (n,0)]
+        let val a = case uint_of_word opc
+                    of 1 => if is_T N then mk_word4 0 else a
+                     | 3 => mk_word4 0
+                     | _ => a
+        in
+          [(T,24), (opc,21), (d,16), (a,12), (m,8), (T,7), (M,6), (N,5), (n,0)]
+        end
    | ("Signed_Multiply_Dual", [d,a,m,M,N,n]) =>
         [(``7w:word3``,24), (d,16), (a,12), (m,8), (M,6), (N,5), (T,4), (n,0)]
    | ("Signed_Multiply_Long_Dual", [dhi,dlo,m,M,N,n]) =>
@@ -887,12 +906,22 @@ fun thumb2_opcode tm =
        | 15 => ``0b0011w:word4`` (* MVN/ORN *)
        | _  => raise ERR "thumb2_opcode" "cannot encode"
 
+fun check_thumb2_dp (tm,rd,rn) =
+      case uint_of_word tm
+      of 8  => is_PC rd
+       | 9  => is_PC rd
+       | 10 => is_PC rd
+       | 11 => is_PC rd
+       | 13 => is_PC rn
+       | _  => true;
+
 fun thumb2_encode_data_processing tm =
 let val checkdp = check ("thumb2_encode_data_processing",tm) in
  term_list_to_num ((``0b111w:word3``,29)::
    (case dest_strip tm
     of ("Data_Processing", [opc,s,n,d,mode1]) =>
-          if is_Mode1_immediate mode1 then
+        checkdp (fn _ => check_thumb2_dp (opc,d,n))
+         (if is_Mode1_immediate mode1 then
             let val imm12 = dest_Mode1_immediate mode1 in
               if is_PC d andalso is_LR n andalso is_T s then
                 checkdp (fn _ => width_okay 8 imm12)
@@ -916,7 +945,7 @@ let val checkdp = check ("thumb2_encode_data_processing",tm) in
               checkdp (fn _ => is_SP opc)
                 [(``0b1101w:word4``,25), (typ,21), (s,20), (m,16),
                  (PC,12), (d,8), (rs,0)]
-            end
+            end)
      | ("Move_Halfword", [h,d,imm16]) =>
           [(T,28), (imm16$(11,11),26), (T,25), (h,23), (T,22),
            (imm16$(15,12),16), (imm16$(10,8),12), (d,8), (imm16$(7,0),0)]

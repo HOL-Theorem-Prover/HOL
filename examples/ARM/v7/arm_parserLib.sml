@@ -1355,7 +1355,7 @@ fun add_sub_literal m (rd,i) =
             other_errorT ("arm_parse_add_sub", message));
 
 fun narrow_okay_imm m i (rd,rn) =
-let val v = sint_of_term i in
+let val v = sint_of_term i handle HOL_ERR _ => 1024 in
   if m = ADD orelse m = SUB then
     if is_SP rn then
       v mod 4 = 0 andalso
@@ -1372,7 +1372,7 @@ let val v = sint_of_term i in
         ~7 <= v andalso v <= 7
   else
     m = RSB andalso v = 0 andalso narrow_registers [rd,rn]
-end handle Overflow => false;
+end
 
 fun narrow_okay_reg m (rd,rn,rm,mode1) =
   is_mode1_register mode1 andalso
@@ -1484,11 +1484,11 @@ val arm_parse_data_processing3 : instruction_mnemonic -> (term * term) M =
 (* ....................................................................... *)
 
 fun narrow_okay_imm m i rdn =
-let val v = sint_of_term i in
+let val v = sint_of_term i handle HOL_ERR _ => 1024 in
   (m = CMP orelse m = MOV) andalso
   0 <= v andalso v <= 255 andalso
   narrow_register rdn
-end handle Overflow => false;
+end;
 
 fun narrow_okay_reg m (rdn,rm,mode1) =
   if m = MOV then
@@ -2193,10 +2193,10 @@ val arm_parse_thumb2_4 : (term * term) M =
          | SMLATT  => return_mk_shm (mk_word2 0,T,T,rd,ra,rm,rn)
          | SMLAWB  => return_mk_shm (mk_word2 1,F,F,rd,ra,rm,rn)
          | SMLAWT  => return_mk_shm (mk_word2 1,T,F,rd,ra,rm,rn)
-         | SMLALBB => return_mk_shm (mk_word2 2,F,F,rn,rd,ra,rm)
-         | SMLALTB => return_mk_shm (mk_word2 2,F,T,rn,rd,ra,rm)
-         | SMLALBT => return_mk_shm (mk_word2 2,T,F,rn,rd,ra,rm)
-         | SMLALTT => return_mk_shm (mk_word2 2,T,T,rn,rd,ra,rm)
+         | SMLALBB => return_mk_shm (mk_word2 2,F,F,rd,ra,rm,rn)
+         | SMLALTB => return_mk_shm (mk_word2 2,F,T,rd,ra,rm,rn)
+         | SMLALBT => return_mk_shm (mk_word2 2,T,F,rd,ra,rm,rn)
+         | SMLALTT => return_mk_shm (mk_word2 2,T,T,rd,ra,rm,rn)
          | SMLAD   => v6 (mk_Signed_Multiply_Dual (rd,ra,rm,F,F,rn))
          | SMLADX  => v6 (mk_Signed_Multiply_Dual (rd,ra,rm,F,T,rn))
          | SMLSD   => v6 (mk_Signed_Multiply_Dual (rd,ra,rm,T,F,rn))
@@ -2370,11 +2370,11 @@ val arm_parse_mode2 : bool -> term -> (term * term) M =
       (fn _ =>
          arm_parse_register >>= (fn rn =>
          tryT arm_parse_comma
-           (K (arm_parse_mode2_offset (ld,true,byte,F,rt,rn)))
+           (fn _ => arm_parse_mode2_offset (ld,true,byte,F,rt,rn))
            (fn _ =>
               arm_parse_rsquare >>-
               tryT arm_parse_comma
-                (K (arm_parse_mode2_offset (ld,false,byte,F,rt,rn)))
+                (fn _ => arm_parse_mode2_offset (ld,false,byte,F,rt,rn))
                 (fn _ =>
                    let val narrow_okay = q <> Wide andalso narrow_register rt
                                            andalso (narrow_register rn orelse
@@ -2569,11 +2569,11 @@ val arm_parse_mode3 : (term * term) option -> (term * term) M =
       (fn _ =>
          arm_parse_register >>= (fn rn =>
          tryT arm_parse_comma
-           (K (arm_parse_mode3_offset (opt,true,F,rt,rn)))
+           (fn _ => arm_parse_mode3_offset (opt,true,F,rt,rn))
            (fn _ =>
               arm_parse_rsquare >>-
               tryT arm_parse_comma
-                (K (arm_parse_mode3_offset (opt,false,F,rt,rn)))
+                (fn _ => arm_parse_mode3_offset (opt,false,F,rt,rn))
                 (fn _ =>
                    let val narrow_okay = q <> Wide andalso
                                          narrow_registers [rt,rn] andalso
@@ -3478,7 +3478,7 @@ in
         (thumb2_or_arm_okay "arm_parse_barrier"
          (fn enc =>
             tryT (arm_parse_strings barrier_strings)
-                 return (K (return "sy")) >>=
+                 return (fn _ => return "sy") >>=
             (fn s =>
                assertT (m <> ISB orelse s = "sy")
                  ("arm_parse_barrier", "sy is the only option available")
@@ -4086,8 +4086,8 @@ local
          assertT (P h)
            ("arm_parse_number_list", "number not in expected range")
            (tryT arm_parse_comma
-              (K (arm_parse_number_list (l @ [h]) P))
-              (K (return (l @ [h])))))
+              (fn _ => arm_parse_number_list (l @ [h]) P)
+              (fn _ => return (l @ [h]))))
       (fn _ =>
         assertT (not (null l))
          ("arm_parse_number_list", "not a valid number list")
@@ -4167,10 +4167,10 @@ val arm_parse_label : line list M =
     return ([Label (line,label |> dest_var |> fst)])));
 
 val arm_parse_labelled_line : line list M =
-  tryT arm_parse_endline (K (return [])) (fn _ =>
+  tryT arm_parse_endline (fn _ => return []) (fn _ =>
   tryT arm_parse_label return (fn _ => return []) >>=
    (fn label =>
-      tryT arm_parse_endline (K (return label))
+      tryT arm_parse_endline (fn _ => return label)
         (fn _ => arm_parse_line >>= (fn l => return (label @ l)))));
 
 fun arm_parse_lines (l1 : line list) : line list M =
