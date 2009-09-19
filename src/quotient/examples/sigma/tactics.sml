@@ -154,7 +154,6 @@ open new_type;
 (* Need the HOL 88 compatibility library.                                *)
 (* --------------------------------------------------------------------- *)
 open hol88Lib;
-(* open Compat; *)
 open listLib;
 open Psyntax;
 
