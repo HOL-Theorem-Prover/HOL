@@ -437,22 +437,20 @@ structure Yices = struct
           end
       end
 
-  fun term_to_Yices tm =
+  fun goal_to_Yices (As, g) =
   let
-    val _ = if Term.type_of tm <> Type.bool then
-        raise (Feedback.mk_HOL_ERR "Yices" "term_to_Yices"
-          "term supplied is not of type bool")
-      else ()
+    val g = boolSyntax.mk_neg g
     (* beta-normal, eta-long form (because Yices cannot handle partial
        applications) *)
-    val tm = full_eta_long_conv (full_beta_conv tm)
+    val As_g = List.map (full_eta_long_conv o full_beta_conv) (As @ [g])
     val empty = Redblackmap.mkDict Term.compare
     val empty_ty = Redblackmap.mkDict Type.compare
-    val ((_, _, _, _, defs), yices_tm) = translate_term
-      ((empty, 0, empty_ty, 0, []), tm)
-    val defs' = List.map (fn s => s ^ "\n") (List.rev defs)
+    val ((_, _, _, _, defs), yices_As_g) = Lib.foldl_map translate_term
+      ((empty, 0, empty_ty, 0, []), As_g)
+    val defs = List.map (fn s => s ^ "\n") (List.rev defs)
+    val yices_As_g = List.map (fn s => "(assert " ^ s ^ ")\n") yices_As_g
   in
-    defs' @ ["(assert " ^ yices_tm ^ ")\n(check)\n"]
+    defs @ yices_As_g @ ["(check)\n"]
   end
 
   fun write_strings_to_file path strings =
@@ -481,14 +479,14 @@ structure Yices = struct
   in
     (* Yices 1.0.18, native file format *)
     val Yices_Oracle = SolverSpec.make_solver
-      (write_strings_to_file infile o term_to_Yices)
+      (write_strings_to_file infile o goal_to_Yices)
       ("yices -tc " ^ infile ^ " > " ^ outfile)
       (fn () => result_fn outfile)
       [infile, outfile]
 
     (* Yices 1.0.18, SMT-LIB file format *)
     val Yices_SMT_Oracle = SolverSpec.make_solver
-      (write_strings_to_file infile o Lib.snd o SmtLib.term_to_SmtLib)
+      (write_strings_to_file infile o Lib.snd o SmtLib.goal_to_SmtLib)
       ("yices -tc -smt " ^ infile ^ " > " ^ outfile)
       (fn () => result_fn outfile)
       [infile, outfile]

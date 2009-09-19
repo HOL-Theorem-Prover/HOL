@@ -30,7 +30,7 @@ structure CVC3 = struct
         val outfile = "output.cvc3"
   in
     val CVC3_SMT_Oracle = SolverSpec.make_solver
-      (write_strings_to_file infile o Lib.snd o SmtLib.term_to_SmtLib)
+      (write_strings_to_file infile o Lib.snd o SmtLib.goal_to_SmtLib)
       ("cvc3-optimized -lang smt " ^ infile ^ " > " ^ outfile)
       (fn () => result_fn outfile)
       [infile, outfile]

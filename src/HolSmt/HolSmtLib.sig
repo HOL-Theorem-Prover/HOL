@@ -2,12 +2,12 @@
 
 signature HolSmtLib = sig
 
-  val GENERIC_SMT : (Term.term -> SolverSpec.result) -> Term.term -> Thm.thm
+  val GENERIC_SMT : (Abbrev.goal -> SolverSpec.result) -> Abbrev.goal -> Thm.thm
 
-  val YICES_ORACLE : Term.term -> Thm.thm
-  val CVC3_ORACLE : Term.term -> Thm.thm
-  val Z3_ORACLE : Term.term -> Thm.thm
-  val Z3_PROVE : Term.term -> Thm.thm
+  val YICES_ORACLE : Abbrev.goal -> Thm.thm
+  val CVC3_ORACLE : Abbrev.goal -> Thm.thm
+  val Z3_ORACLE : Abbrev.goal -> Thm.thm
+  val Z3_PROVE : Abbrev.goal -> Thm.thm
 
   val YICES_TAC : Abbrev.tactic
   val CVC3_TAC : Abbrev.tactic

@@ -5,13 +5,13 @@ Files:
 
 COPYRIGHT               Copyright notice, license and disclaimer.
 CVC3.sml                Functions to invoke the CVC3 SMT solver.
-Holmakefile             Make file for Holmake (to build selftest.exe).
+Holmakefile             Makefile for Holmake (to build selftest.exe).
 HolSmtLib.{sig,sml}     Entry point into HolSmtLib. Provides GENERIC_SMT and
                         related tactics.
 README                  This file.
 selftest.sml            Unit tests for HolSmtLib.
 SmtLib.sml              Translation of HOL terms into SMT-LIB format.
-SolverSpec.sml          Definition of SMT solvers.
+SolverSpec.sml          Definition of SMT solvers, tracing.
 Yices.sml               Functions to invoke the Yices SMT solver.
 Z3.sml                  Functions to invoke the Z3 SMT solver.
 
