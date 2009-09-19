@@ -1,99 +1,65 @@
-Brief notes on the use of CVS tags in the hol98 source repository.
+Brief notes on the directories in the HOL4 source repository, at
+
+  https://hol.svn.sourceforge.net/svnroot/hol
 ------------------------------------------------------------------
 
-If working on branch <b>, then the following tags should be defined:
+HOL/
+  The main-line (or "trunk") of HOL4 development.
 
- <b>_branch:
-     the branch tag
- <b>_branch_point:
-     a normal tag on the main branch where branch <b> begins
- <b>_branch_ends:
-     a normal tag on branch <b> where the branch ends and/or is about
-     to participate in a merge
- <b>_branch_merge_begins:
-     a normal tag on the main branch, where a merge from branch <b> is
-     about to begin
- <b>_branch_merge_ends:
-     a normal tag on the main branch, after a merge from branch <b>
-     has been done and everything cleaned up.
+tags/
+  As with standard svn practice, this directory should be used to
+  record snapshots of the development state.  After the first check-in
+  establishing a snapshot, there should not be further check-ins to
+  that sub-directory.
 
-Current branches:
------------------
-  term_with_closure:
-      initiated by Bruno Barras as an investigation into representing
-      substitutions as closures. Work from this branch was merged back
-      into the main branch, but by hand, not using CVS, so it should
-      be regarded as finished.
+  RELEASES/
+    Tags for public releases, identified by release name
+    (<lake>-<number>).
 
-  parse:
-      initiated by Michael Norrish as a reworking of the hol90 parser.
-      Finished, and merged back into the main branch to start the
-      Taupo series of releases.
+  Old-CVS-tags/
+    A number of old, mainly CVS-branching inspired tags.
 
-  athabasca5:
-      initiated by Michael Norrish to branch off from the athabasca-4
-      release and allow a release fixing problems in athabasca-4
-      without interfering with the development of Taupo releases.
 
-      There shouldn't be an athabasca-6 release at all, but if there
-      was, it could still sit on this branch.  The only need for the
-      branch is to allow improvements to athabasca-5 to be released
-      without having to also release the new Taupo parser.
+branches/
+  There are two sorts of branches here: those intended to support a
+  long-term ongoing project (three examples as of September 2009:
+  HOL-Omega, HOL-Check and other-languages), and those for work on
+  something short-term (where work is expected to eventually finish).
+  Short-term branches can probably be deleted: they either get merged
+  into the main-line, or they expire because the experiment failed.
 
-  taupo-5-fixes-branch:
-      initiated to branch off from the taupo-5 release to provide a
-      taupo-6 release, while work continues on the Kananaskis series.
-      No intention to merge back into main branch.
+  Things other than those listed here are probably ancient "new
+  feature" branches that were merged into the mainline.  (This is true
+  of parse-branch and term_with_closure_branch.)
 
-  kananaskis-1-fixes-branch:
-      initiated to allow release of Kananaskis-2, which does nothing
-      other than fix the Overflow bug.  No intention to merge back
-      into main branch.
+  release-development/
+    This is a special case of a short-term branch, where the work is
+    the final preparatory steps before a public release.  When the
+    release is made, the snapshot copied to tags/RELEASES will be from
+    here.  It's conceivable that a release could be made without
+    needing to use a release-development branch.  If so, the trunk can
+    just get copied.
 
-Other tags:
------------
-  athabasca-4        - a semi-official release, used as the basis for
-                       much of the first year's work on the Prosper
-                       project.
+    These branches probably shouldn't be deleted: one may wish to
+    release patches against particular releases.
 
-  athabasca-5        - another semi-official release, fixing
-                       athabasca-4 to run under MoscowML 1.44, and
-                       also fixing a bug in the string library.
+  HOL-Omega/
+    Peter Homeier's HOL-Omega system.
 
-  kananaskis-1       - release on the main branch (7 June 2002)
+  HOL-Check/
+    Michael Norrish's "playing around with MLton" experiment
 
-  kananaskis-2       - release on the kananaskis-1-fixes-branch
-                       (8 March 2004)
+  other-languages/
+    Versions of HOL in other languages.   The scheme work is the only
+    thing here as of September 2009.
 
-  now-need-mosml-144 - tag marking switch to MoscowML 1.44 on the main
-                       branch.
+    scheme/
 
-  post-holset-change - tag marking state of "Kananaskis-0" immediately
-                       after implementation of change described below
-                       under "pre-holset-change".
+webpages/
+  What appears on hol.sourceforge.net and code to support it.
 
-  pre-holset-change  - tag marking state of "Kananaskis-0" immediately
-                       before implementation of fairly radical change
-                       to representation of theorems (using binary
-                       trees to store hypotheses), adoption of a
-                       different higher order matcher, and general
-                       incorporation of "HOL sets" in lots of places.
+  topublish/
+    Exact copy of what is on the website
 
-  pre-kananaskis     - last known point on main branch at which system is
-                       known to build as a Taupo release.  Includes
-                       minor bug fixes above taupo-5.
-
-  pre-mn-typebase-change -
-                       point immediately before Michael Norrish
-                       changed TypeBase to have more "user-friendly"
-                       functions at the top-level.
-
-  start              - beginning of the repository, version slightly
-                       predating athabasca-4
-
-  taupo-[1-5]        - releases on the main branch.  (There was a
-                       taupo-6 release too, but there isn't a tag for
-                       it (bad!).  Instead, assume that what was
-                       released is the tip of the
-                       taupo-5-fixes-branch.)
-
+  tools/
+    Code to support the generation of web-pages.
