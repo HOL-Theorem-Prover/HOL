@@ -8,7 +8,6 @@ signature tautLib =
 sig
   include Abbrev
 
-
   val PTAUT_CONV   : conv
   val PTAUT_TAC    : tactic
   val PTAUT_PROVE  : conv
