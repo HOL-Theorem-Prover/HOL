@@ -378,7 +378,9 @@ end
    ---------------------------------------------------------------------- *)
 
 fun pp_term pps t = (update_term_fns(); !term_printer pps t)
-fun term_to_string t = Portable.pp_to_string (!Globals.linewidth) pp_term t;
+fun term_to_string t =
+    Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+                  (Portable.pp_to_string (!Globals.linewidth) pp_term) t;
 fun print_term t = Portable.output(Portable.std_out, term_to_string t);
 
 fun term_pp_with_delimiters ppfn pp tm =
@@ -416,7 +418,9 @@ fun pp_thm ppstrm th =
     end_block()
  end;
 
-fun thm_to_string thm = Portable.pp_to_string (!Globals.linewidth) pp_thm thm;
+fun thm_to_string thm =
+    Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+                  (Portable.pp_to_string (!Globals.linewidth) pp_thm) thm;
 fun print_thm thm     = Portable.output(Portable.std_out, thm_to_string thm);
 
 (*---------------------------------------------------------------------------
