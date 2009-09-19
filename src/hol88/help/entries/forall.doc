@@ -1,6 +1,6 @@
 \DOC forall
 
-\TYPE {Compat.forall : ('a -> bool) -> 'a list -> bool}
+\TYPE {forall : ('a -> bool) -> 'a list -> bool}
 
 \SYNOPSIS
 Tests a list to see if all its elements satisfy a predicate.

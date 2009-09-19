@@ -1,6 +1,6 @@
 \DOC new_axiom
 
-\TYPE {Compat.new_axiom : (string * term) -> thm}
+\TYPE {new_axiom : (string * term) -> thm}
 
 \SYNOPSIS
 Sets up a new axiom in the current theory.
@@ -16,7 +16,7 @@ in {tm} are generalized automatically before the axiom is set up.
 
 \FAILURE
 Fails if HOL is not in draft mode, or there is already an axiom or definition
-of that name in the current theory, or it the given term does not have type
+of that name in the current theory, or if the given term does not have type
 {bool}.
 
 \EXAMPLE
@@ -27,6 +27,7 @@ of that name in the current theory, or it the given term does not have type
   - new_axiom("untrue",--`x = 1`--));
   |- !x. x = 1
 }
+
 \COMMENTS
 hol90 doesn't have {new_axiom}; use {new_open_axiom} instead, which does
 not automatically generalize the term being asserted as an axiom. For

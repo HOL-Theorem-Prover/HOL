@@ -1,6 +1,6 @@
 \DOC save
 
-\TYPE {Compat.save : string -> unit}
+\TYPE {save : string -> unit}
 
 \SYNOPSIS
 Saves an executable version of HOL in its current state.

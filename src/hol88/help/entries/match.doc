@@ -1,6 +1,6 @@
 \DOC match
 
-\TYPE {Compat.match : term -> term -> ((term*term) list * (hol_type*hol_type) list)}
+\TYPE {match : term -> term -> ((term * term) list * (hol_type * hol_type) list)}
 
 \SYNOPSIS
 Finds instantiations to match one term to another.
@@ -19,7 +19,6 @@ apt to be useful unless {Old_syntax} is open, since the substitutions that
 {match} produces are not of the right type for the hol90 routines that use
 substitutions, like {subst} for instance.
 
-
 \EXAMPLE
 The following shows how {match_term} could be used to match the conclusion of a
 theorem to a term.
@@ -35,6 +34,7 @@ theorem to a term.
   - INST_TY_TERM it th;
    |- 1 = 1
 }
+
 \COMMENTS
 Note that there is no guarantee that the returned instantiations will be
 possible for {INST_TY_TERM} to achieve, because some of the variables (term or
@@ -58,8 +58,9 @@ type) which need to be instantiated may be free in the assumptions, eg:
 }
 In fact, for instantiating a theorem, {PART_MATCH} is usually easier.
 
-Why is {match} in Compat? Because {match} is not provided in hol90;
-the more accurate name {match_term} is used. Also, hol90 provides {match_type}.
+Why is {match} in {hol88Lib}? Because {match} is not provided in
+hol90; the more accurate name {match_term} is used. Also, hol90
+provides {match_type}.
 
 \SEEALSO
 INST_TY_TERM, PART_MATCH.

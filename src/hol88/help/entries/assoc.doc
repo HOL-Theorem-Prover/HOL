@@ -1,6 +1,6 @@
 \DOC assoc
 
-\TYPE {Compat.assoc : ''a -> (''a * 'b) list -> ''a * 'b}
+\TYPE {assoc : ''a -> (''a * 'b) list -> ''a * 'b}
 
 \SYNOPSIS
 Searches a list of pairs for a pair whose first component equals a specified

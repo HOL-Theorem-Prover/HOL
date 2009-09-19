@@ -1,6 +1,6 @@
 \DOC new_prim_rec_definition
 
-\TYPE {Compat.new_prim_rec_definition : (string * term) -> thm}
+\TYPE {new_prim_rec_definition : (string * term) -> thm}
 
 \SYNOPSIS
 Define a primitive recursive function over the type {:num}.

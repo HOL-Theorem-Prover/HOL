@@ -1,6 +1,6 @@
 \DOC conjuncts
 
-\TYPE {Compat.conjuncts : term -> term list}
+\TYPE {conjuncts : term -> term list}
 
 \SYNOPSIS
 Iteratively splits conjunctions into a list of conjuncts.
@@ -36,6 +36,7 @@ Never fails.
   - conjuncts (--`1`--);
   [--`1`--] : term list
 }
+
 \COMMENTS
 {conjuncts} is not in hol90. There, somewhat misleadingly, it is called
 {strip_conj}, in order to be consistent with all the other {strip_}

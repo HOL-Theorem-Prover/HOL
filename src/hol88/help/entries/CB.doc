@@ -1,6 +1,6 @@
 \DOC CB
 
-\TYPE {Compat.CB : ('a -> 'b) -> ('b -> 'c) -> 'a -> 'c}
+\TYPE {CB : ('a -> 'b) -> ('b -> 'c) -> 'a -> 'c}
 
 \SYNOPSIS
 Composes two functions: {CB f g x} = {g (f x)}. Note that {CB} is a prefix
@@ -10,7 +10,7 @@ operator in {hol90}; in hol88 it is infix.
 combinator.
 
 \FAILURE
-Never fails, unless the {hol88} library is not loaded.
+Never fails. Available only if the {hol88} library is loaded.
 
 \SEEALSO
 ##, B, C, Co, I, K, KI, o, oo, S, W.

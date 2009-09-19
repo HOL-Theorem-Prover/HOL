@@ -1,6 +1,6 @@
 \DOC rev_assoc
 
-\TYPE {Compat.rev_assoc : ''a -> ('b * ''a) list -> ('b * ''a)}
+\TYPE {rev_assoc : ''a -> ('b * ''a) list -> ('b * ''a)}
 
 \SYNOPSIS
 Searches a list of pairs for a pair whose second component equals a specified

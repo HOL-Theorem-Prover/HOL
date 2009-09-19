@@ -1,6 +1,6 @@
 \DOC flat
 
-\TYPE {Compat.flat : ('a list list -> 'a list)}
+\TYPE {flat : 'a list list -> 'a list}
 
 \SYNOPSIS
 Flattens a list of lists into one long list.

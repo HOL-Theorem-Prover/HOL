@@ -1,6 +1,6 @@
 \DOC new_infix_prim_rec_definition
 
-\TYPE {Compat.new_infix_prim_rec_definition : (string * term) -> thm}
+\TYPE {new_infix_prim_rec_definition : (string * term) -> thm}
 
 \SYNOPSIS
 Defines an infix primitive recursive function over the type {num}.

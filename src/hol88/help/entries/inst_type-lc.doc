@@ -1,6 +1,6 @@
 \DOC inst_type
 
-\TYPE {hol88Lib.inst_type : (hol_type * hol_type) list -> hol_type -> hol_type}
+\TYPE {inst_type : (hol_type * hol_type) list -> hol_type -> hol_type}
 
 \SYNOPSIS
 Instantiates types in a type.

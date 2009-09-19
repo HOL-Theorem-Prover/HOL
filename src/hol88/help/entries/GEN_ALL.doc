@@ -1,6 +1,6 @@
 \DOC GEN_ALL
 
-\TYPE {Compat.GEN_ALL : (thm -> thm)}
+\TYPE {GEN_ALL : thm -> thm}
 
 \SYNOPSIS
 Generalizes the conclusion of a theorem over its own free variables.
@@ -17,12 +17,13 @@ if any, which are free in {t} but not in the assumptions.
    ------------------  GEN_ALL
     A |- !x1...xn. t
 }
+
 \FAILURE
 Never fails.
 
 \COMMENTS
 WARNING: hol90 GEN_ALL does not always return the same result as GEN_ALL
-in hol88. That is why GEN_ALL is in Compat. Sometimes people write code
+in hol88. That is why GEN_ALL is in {hol88Lib}. Sometimes people write code
 that depends on the order of the quantification. They shouldn't.
 
 \SEEALSO

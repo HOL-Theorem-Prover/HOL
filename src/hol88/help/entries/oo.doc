@@ -1,6 +1,6 @@
 \DOC oo
 
-\TYPE {Compat.oo :('a * 'b -> 'c) * (('d -> 'a) * ('d -> 'b)) -> 'd -> 'c}
+\TYPE {oo : ('a * 'b -> 'c) * (('d -> 'a) * ('d -> 'b)) -> 'd -> 'c}
 
 \SYNOPSIS
 An infix operator that composes a function over a pair of functions:
@@ -10,7 +10,7 @@ An infix operator that composes a function over a pair of functions:
 combinator.
 
 \FAILURE
-Never fails, unless the {hol88} library has not been loaded.
+Never fails.  Available only if the {hol88} library has been loaded.
 
 \SEEALSO
 ##, B, C, CB, Co, I, K, KI, o, S, W.

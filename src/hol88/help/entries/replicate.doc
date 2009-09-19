@@ -1,6 +1,6 @@
 \DOC replicate
 
-\TYPE {Compat.replicate : ('a -> int -> * list)}
+\TYPE {replicate : ('a -> int -> 'a list)}
 
 \SYNOPSIS
 Makes a list consisting of a value replicated a specified number of times.
@@ -10,6 +10,6 @@ Makes a list consisting of a value replicated a specified number of times.
 
 \FAILURE
 Fails if number of replications is less than zero. This function is unavailable
-unless the {hol88} library has already been loaded.
+unless the {hol88} library has been loaded.
 
 \ENDDOC

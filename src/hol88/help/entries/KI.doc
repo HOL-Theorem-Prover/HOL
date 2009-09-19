@@ -1,9 +1,9 @@
 \DOC KI
 
-\TYPE {Compat.KI : ('a -> 'b -> 'c)}
+\TYPE {KI : 'a -> 'b -> 'b}
 
 \SYNOPSIS
-Maps a value to the identity function: {(KI x) y} = {y}.
+Maps a value to the identity function: {KI x y} = {y}.
 
 \KEYWORDS
 combinator, constant.
@@ -12,7 +12,7 @@ combinator, constant.
 This is the combinator dual to {K}.
 
 \FAILURE
-Never fails, unless the {hol88} library has not been loaded.
+Never fails.  Available only if the {hol88} library has been loaded.
 
 \SEEALSO
 ##, B, C, CB, Co, I, K, o, oo, S, W.

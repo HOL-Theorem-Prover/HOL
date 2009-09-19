@@ -1,6 +1,6 @@
 \DOC Co
 
-\TYPE {Compat.Co : ('a -> 'b -> 'c) * ('d -> 'a) -> 'b -> 'd -> 'c}
+\TYPE {Co : ('a -> 'b -> 'c) * ('d -> 'a) -> 'b -> 'd -> 'c}
 
 \SYNOPSIS
 Performs permuted function composition: {Co f g x y} = {f (g y) x}.
@@ -9,7 +9,7 @@ Performs permuted function composition: {Co f g x y} = {f (g y) x}.
 combinator, permute, compose.
 
 \FAILURE
-Never fails, unless the {hol88} library is not loaded.
+Never fails. Available only if the {hol88} library is loaded.
 
 \SEEALSO
 ##, B, C, CB, I, K, KI, o, oo, S, W.
