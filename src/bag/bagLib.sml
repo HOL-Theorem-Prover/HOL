@@ -94,7 +94,7 @@ fun BAG_IMAGE_CONV___FINITE t =
    if (is_empty b) then
       let
          val bag_type = bagSyntax.base_type b
-	 val finite_thm = INST_TYPE [alpha |-> bag_type] FINITE_EMPTY_BAG;
+	 val finite_thm = INST_TYPE [alpha |-> bag_type] bagTheory.FINITE_EMPTY_BAG;
 	 val bag_thm = ISPEC f bagTheory.BAG_IMAGE_EMPTY
       in
 	 (finite_thm, bag_thm)
