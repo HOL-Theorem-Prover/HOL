@@ -45,6 +45,9 @@ val CONSEQ_REWRITE_CONV         : (thm list * thm list * thm list) -> directed_c
 val CONSEQ_HO_TOP_REWRITE_CONV  : (thm list * thm list * thm list) -> directed_conseq_conv;
 val CONSEQ_HO_REWRITE_CONV      : (thm list * thm list * thm list) -> directed_conseq_conv;
 
+val EXT_CONSEQ_REWRITE_CONV     : conv list -> thm list -> (thm list * thm list * thm list) -> directed_conseq_conv;
+val EXT_CONSEQ_HO_REWRITE_CONV  : conv list -> thm list -> (thm list * thm list * thm list) -> directed_conseq_conv;
+
 
 (* Technical stuff that might help writing
    your own CONSEQ-CONVs *)
@@ -104,6 +107,9 @@ val CONSEQ_REWRITE_TAC           : (thm list * thm list * thm list) -> tactic;
 val CONSEQ_HO_REWRITE_TAC        : (thm list * thm list * thm list) -> tactic;
 val ONCE_CONSEQ_REWRITE_TAC      : (thm list * thm list * thm list) -> tactic;
 val ONCE_CONSEQ_HO_REWRITE_TAC   : (thm list * thm list * thm list) -> tactic;
+
+val EXT_CONSEQ_REWRITE_TAC      : conv list -> thm list -> (thm list * thm list * thm list) -> tactic;
+val EXT_CONSEQ_HO_REWRITE_TAC   : conv list -> thm list -> (thm list * thm list * thm list) -> tactic;
 
 
 end
