@@ -1383,17 +1383,18 @@ val BAG_IMAGE_DEF = new_definition(
 
 val BAG_IMAGE_EMPTY = store_thm(
   "BAG_IMAGE_EMPTY",
-  ``BAG_IMAGE f {||} = {||}``,
+  ``!f. BAG_IMAGE f {||} = {||}``,
   SRW_TAC [][BAG_IMAGE_DEF] THEN SRW_TAC [][EMPTY_BAG_alt])
  before
  export_rewrites ["BAG_IMAGE_EMPTY"];
 
 val BAG_IMAGE_FINITE_INSERT = store_thm(
   "BAG_IMAGE_FINITE_INSERT",
-  ``!b. FINITE_BAG b ==>
-        (BAG_IMAGE f (BAG_INSERT e b) = BAG_INSERT (f e) (BAG_IMAGE f b))``,
+  ``!b f e. FINITE_BAG b ==>
+            (BAG_IMAGE f (BAG_INSERT e b) = BAG_INSERT (f e) (BAG_IMAGE f b))``,
   SRW_TAC [][BAG_IMAGE_DEF] THEN
   SRW_TAC [][FUN_EQ_THM] THEN
+  REPEAT GEN_TAC THEN
   Cases_on `f e = e'` THENL [
     SRW_TAC [][BAG_CARD_THM] THEN SRW_TAC [][BAG_INSERT],
     SRW_TAC [][] THEN SRW_TAC [][BAG_INSERT]
@@ -1407,6 +1408,13 @@ val BAG_IMAGE_FINITE = store_thm(
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][])
  before
  export_rewrites ["BAG_IMAGE_FINITE"];
+
+val BAG_IMAGE_FINITE_I = store_thm(
+  "BAG_IMAGE_FINITE_I",
+  ``!b. FINITE_BAG b ==> (BAG_IMAGE I b = b)``,
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][])
+ before
+ export_rewrites ["BAG_IMAGE_FINITE_I"];
 
 val BAG_IN_FINITE_BAG_IMAGE = store_thm(
   "BAG_IN_FINITE_BAG_IMAGE",
