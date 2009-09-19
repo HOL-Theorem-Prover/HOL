@@ -1,7 +1,6 @@
 help/Docfiles
 src/num/arith/help/entries
 src/num/reduce/help/entries
-src/hol88/help/entries
 src/list/help/entries
 src/pair/help/entries
 src/pred_set/help/entries
