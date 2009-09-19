@@ -24,7 +24,7 @@ exception that {f} raises. Similarly, {(total o partial err) f} is equal
 to {f}.
 
 \FAILURE
-When application of the second argument to the third argument raises
+When application of the first argument to the second argument raises
 {Interrupt}.
 
 \EXAMPLE
@@ -40,7 +40,6 @@ When application of the second argument to the third argument raises
 ! Uncaught exception: 
 ! Div
 }
-
 
 \SEEALSO
 Lib.partial.
