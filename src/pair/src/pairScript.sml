@@ -361,16 +361,14 @@ val PEXISTS_THM = Q.store_thm
 val ELIM_PEXISTS_EVAL = Q.store_thm 
 ("ELIM_PEXISTS_EVAL",
  `$? (UNCURRY (\x. P x)) = ?x. $? (P x)`,
- `!x. P x = \y. P x y` by REWRITE_TAC [ETA_THM] THEN
- ONCE_ASM_REWRITE_TAC[] THEN
- REWRITE_TAC [PEXISTS_THM]);
+ Q.SUBGOAL_THEN `!x. P x = \y. P x y` (fn th => ONCE_REWRITE_TAC [th]) THEN 
+ REWRITE_TAC [ETA_THM, PEXISTS_THM]);
 
 val ELIM_PFORALL_EVAL = Q.store_thm 
 ("ELIM_PFORALL_EVAL",
  `$! (UNCURRY (\x. P x)) = !x. $! (P x)`,
- `!x. P x = \y. P x y` by REWRITE_TAC [ETA_THM] THEN
- ONCE_ASM_REWRITE_TAC[] THEN
- REWRITE_TAC [PFORALL_THM])
+ Q.SUBGOAL_THEN `!x. P x = \y. P x y` (fn th => ONCE_REWRITE_TAC [th]) THEN 
+ REWRITE_TAC [ETA_THM, PFORALL_THM]);
 
 (*---------------------------------------------------------------------------
         Map for pairs
