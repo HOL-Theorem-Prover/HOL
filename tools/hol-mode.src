@@ -758,7 +758,9 @@ or at level 10 with a bare prefix. "
     (setq comint-preoutput-filter-functions '(holpp-output-filter))
     (setq comint-scroll-show-maximum-output t)
     (setq comint-scroll-to-bottom-on-output t)
-    (if hol-was-ok t (hol-mode-init-sml))))
+    (if hol-was-ok t (hol-mode-init-sml))
+    (send-raw-string-to-hol
+     "val _ = Parse.current_backend := PPBackEnd.emacs_terminal;" nil nil)))
 
 (defun hol-display ()
    (interactive)
@@ -1222,7 +1224,7 @@ already loaded.)"
                           (if (equal (following-char) 0)
                               (progn
                                 (goto-char (+ (point) 1))
-                                (skip-chars-forward "^[:cntrl:]")
+                                (skip-chars-forward "^\^@")
                                 (prog1
                                     (list 'help-echo
                                           (buffer-substring (+ start 3)
@@ -1247,20 +1249,16 @@ already loaded.)"
   :group 'hol)
 
 (defface hol-free-variable
-  '((((class color) (min-colors 8))
+  '((((class color))
      :foreground "blue"
      :weight bold))
   "The face for presenting free variables in HOL terms."
   :group 'hol-faces)
 
 (defface hol-bound-variable
-  '((((class color) (min-colors 8)) :foreground "green" ))
+  '((((class color)) :foreground "green"))
   "The face for presenting bound variables in HOL terms."
   :group 'hol-faces)
-
-
-
-
 
 
 ;;The key combinations

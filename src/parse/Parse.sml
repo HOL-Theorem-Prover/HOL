@@ -92,12 +92,10 @@ fun interactive_ppbackend () = let
   open PPBackEnd OS.Process
 in
   (* assumes interactive *)
-  case getEnv "INSIDE_EMACS" of
-    SOME _ => emacs_terminal
-  | NONE => (case getEnv "TERM" of
-               SOME s => if String.isPrefix "xterm" s then vt100_terminal
-                         else raw_terminal
-             | _ => raw_terminal)
+  case getEnv "TERM" of
+    SOME s => if String.isPrefix "xterm" s then vt100_terminal
+              else raw_terminal
+  | _ => raw_terminal
 end
 
 val current_backend : PPBackEnd.t ref =
