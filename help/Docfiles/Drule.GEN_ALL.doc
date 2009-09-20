@@ -1,6 +1,6 @@
 \DOC GEN_ALL
 
-\TYPE {Drule.GEN_ALL : thm -> thm}
+\TYPE {GEN_ALL : thm -> thm}
 
 \SYNOPSIS
 Generalizes the conclusion of a theorem over its own free variables.
@@ -23,10 +23,10 @@ variables, if any, which are free in {t} but not in the assumptions.
 Never fails.
 
 \COMMENTS
-WARNING: hol90 {GEN_ALL} does not always return the same result as
-{GEN_ALL} in hol88.  Sometimes people write code that depends on the
-order of the quantification. They shouldn't.
+Sometimes people write code that depends on the order of the
+quantification. They shouldn't.
 
 \SEEALSO
-Thm.GEN, Thm.GENL, Drule.GEN_ALL, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
+Thm.GEN, Thm.GENL, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
+
 \ENDDOC

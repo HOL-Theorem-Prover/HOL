@@ -1311,7 +1311,7 @@ val COS_2 = prove_thm("COS_2",
 val COS_ISZERO = prove_thm("COS_ISZERO",
   (--`?!x. &0 <= x /\ x <= &2 /\ (cos x = &0)`--),
   REWRITE_TAC[EXISTS_UNIQUE_DEF] THEN BETA_TAC THEN
-  W(C SUBGOAL_THEN ASSUME_TAC o hd o conjuncts o snd) THENL
+  W(C SUBGOAL_THEN ASSUME_TAC o hd o strip_conj o snd) THENL
    [MATCH_MP_TAC IVT2 THEN REPEAT CONJ_TAC THENL
      [REWRITE_TAC[REAL_LE, ZERO_LESS_EQ],
       MATCH_MP_TAC REAL_LT_IMP_LE THEN ACCEPT_TAC COS_2,

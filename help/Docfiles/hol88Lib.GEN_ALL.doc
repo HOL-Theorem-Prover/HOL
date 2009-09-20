@@ -5,9 +5,6 @@
 \SYNOPSIS
 Generalizes the conclusion of a theorem over its own free variables.
 
-\KEYWORDS
-rule, quantifier, universal.
-
 \DESCRIBE
 When applied to a theorem {A |- t}, the inference rule {GEN_ALL} returns
 the theorem {A |- !x1...xn. t}, where the {xi} are all the variables,
@@ -22,11 +19,11 @@ if any, which are free in {t} but not in the assumptions.
 Never fails.
 
 \COMMENTS
-WARNING: hol90 GEN_ALL does not always return the same result as GEN_ALL
-in hol88. That is why GEN_ALL is in {hol88Lib}. Sometimes people write code
-that depends on the order of the quantification. They shouldn't.
+Superseded by {Drule.GEN_ALL}, which, however, may return a different
+result. That is why {GEN_ALL} is in {hol88Lib}. Sometimes people write
+code that depends on the order of the quantification. They shouldn't.
 
 \SEEALSO
-GEN, GENL, GEN_ALL, SPEC, SPECL, SPEC_ALL, SPEC_TAC.
+Drule.GEN_ALL.
 
 \ENDDOC

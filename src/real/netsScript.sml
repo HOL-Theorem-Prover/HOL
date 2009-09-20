@@ -78,7 +78,7 @@ val DORDER_LEMMA = prove_thm("DORDER_LEMMA",
 
 fun DORDER_THEN tac th =
   let val findpr = snd o dest_imp o body o rand o rand o body o rand
-      val [t1,t2] = map (rand o rand o body o rand) (conjuncts(concl th))
+      val [t1,t2] = map (rand o rand o body o rand) (strip_conj (concl th))
       val dog = (rator o rator o rand o rator o body) t1
       val thl = map ((uncurry X_BETA_CONV) o (I ## rand) o dest_abs) [t1,t2]
       val th1 = CONV_RULE(EXACT_CONV thl) th

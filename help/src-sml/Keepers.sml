@@ -59,9 +59,6 @@ val keepers =
      (* proofManagerLib *)
      "proofManagerLib.sig",
 
-     (* hol88 *)
-     "hol88Lib.sig",
-
      (* Integer *)
      "integerTheory.sig", "Cooper.sig", "intLib.sig", "intSyntax.sig",
      "integer_wordTheory.sig",

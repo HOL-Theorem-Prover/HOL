@@ -379,7 +379,7 @@ val SEQ_MONOSUB = prove_thm("SEQ_MONOSUB",
         CONV_TAC SELECT_CONV THEN FIRST_ASSUM MATCH_MP_TAC THEN
         FIRST_ASSUM ACCEPT_TAC,
         FIRST_ASSUM(UNDISCH_TAC o
-          assert(curry op =3 o length o conjuncts) o concl) THEN
+          assert(curry op =3 o length o strip_conj) o concl) THEN
         DISCH_THEN STRIP_ASSUME_TAC THEN CONJ_TAC THENL
          [REWRITE_TAC[GREATER_EQ] THEN MATCH_MP_TAC LESS_EQ_TRANS THEN
           EXISTS_TAC (--`(f:num->num) n`--) THEN REWRITE_TAC[GSYM GREATER_EQ] THEN

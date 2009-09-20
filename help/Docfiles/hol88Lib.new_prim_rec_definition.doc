@@ -1,93 +1,19 @@
 \DOC new_prim_rec_definition
 
-\TYPE {new_prim_rec_definition : (string * term) -> thm}
+\TYPE {new_prim_rec_definition : string * term -> thm}
 
 \SYNOPSIS
 Define a primitive recursive function over the type {:num}.
 
 \DESCRIBE
-The function {new_prim_rec_definition} provides the facility for defining
-primitive recursive functions on the type {num}. It takes a pair argument,
-consisting of the name under which the resulting definition will be saved in
-the current theory segment, and a term giving the desired definition.  The
-value returned by {new_prim_rec_definition} is a theorem which states the
-definition requested by the user.  This theorem is derived by formal proof from
-an instance of the theorem {num_Axiom}:
-{
-   |- !e f. ?! fn. (fn 0 = e) /\ (!n. fn(SUC n) = f(fn n)n)
-}
-Evaluating
-{
-   new_prim_rec_definition
-    ("fun_DEF",
-     --`(fun x_1 ... 0 ... x_i = f_1[x_1, ..., x_i]) /\
-        (fun x_1 ... (SUC n) ... x_i =
-                 f_2[fun t_1 ... n ... t_i, x_1, ..., n, ..., x_i])`--);
-}
-where all the free variables in the terms {t_1}, ..., {t_i} are
-contained in {{{n, x_1, ..., x_i}}}, automatically proves the theorem:
-{
-   |-  ?fun. !x_1 ... x_i. fun x_1 ... 0 ... x_i = f_1[x_1, ..., x_i] /\
-             !x_1 ... x_i. fun (SUC n) x_1 ... x_i =
-                               f_2[fun t_1 ... n ... t_i, x_1, ..., n, ...,x_i]
-}
-and then declares a new constant {fun} with this property as its
-specification. This constant specification is returned as a theorem by
-{new_prim_rec_definition} and is saved with name {fun_DEF} in the
-current theory segment.
-
-The ML function {new_prim_rec_definition} also allows the user to
-partially specify the value of a function defined (possibly recursively) on the
-natural numbers by giving its value for only one of {0} or {SUC n}.  See the
-example below.
+{new_prim_rec_definition (name, tm)} is equivalent to
+{Prim_rec.new_recursive_definition {name=name, def=tm, rec_axiom=prim_recTheory.num_Axiom}}.
 
 \FAILURE
-Failure occurs if HOL cannot prove there is a function satisfying the
-specification (ie. if the term supplied to {new_prim_rec_definition}
-is not a well-formed primitive recursive definition), or if
-any other condition for making a constant specification is violated
-(see the failure conditions for {new_specification}).
-
-\EXAMPLE
-A curried addition function {plus:num->num->num} can be defined by primitive
-recursion on its first argument:
-{
-   - val PLUS = new_prim_rec_definition
-   =           (`PLUS`,
-   =            (--`(plus 0 n = n) /\
-   =                (plus (SUC m) n = SUC(plus m n))`--));
-   PLUS = |- (!n. plus 0 n = n) /\ (!m n. plus(SUC m)n = SUC(plus m n))
-}
-or by primitive recursion on its second argument:
-{
-   - val PLUS = new_prim_rec_definition
-   =            (`PLUS`,
-   =             (--`(plus m 0 = m) /\
-   =                 (plus m (SUC n) = SUC(plus m n))`--));
-   PLUS = |- (!m. plus m 0 = m) /\ (!m n. plus m(SUC n) = SUC(plus m n))
-}
-A decrement function {DEC}, whose value is specified for only
-positive natural numbers, can be defined using {new_prim_rec_definition}
-as follows
-{
-   - val DEC = new_prim_rec_definition
-   =            (`DEC`, (--`DEC (SUC n) = n`--));
-   DEC = |- !n. DEC(SUC n) = n
-}
-This definition specifies the value of the function {DEC} only for
-positive natural numbers. In particular, the value of {DEC 0} is left
-unspecified, and the only non-trivial property that can be proved to hold of
-the constant {DEC} is the property stated by the theorem returned by the
-call to {new_prim_rec_definition} shown in the session above.
-
-
-\COMMENTS
-{new_prim_rec_definition} is not in hol90; it has been superceded by 
-{new_recursive_definition}.
+Fails if {Prim_rec.new_recursive_definition} fails with the above
+arguments.
 
 \SEEALSO
-new_definition, new_infix_definition, new_infix_list_rec_definition,
-new_infix_prim_rec_definition, new_list_rec_definition,
-new_recursive_definition, new_type_definition, new_specification, num_Axiom.
+Prim_rec.new_recursive_definition, prim_recTheory.num_Axiom.
 
 \ENDDOC

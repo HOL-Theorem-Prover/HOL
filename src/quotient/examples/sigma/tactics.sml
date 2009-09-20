@@ -7,7 +7,6 @@
 (* AUTHOR        : Peter Vincent Homeier                                 *)
 (* DATE          : October 19, 2000                                      *)
 (* COPYRIGHT     : Copyright (c) 2000 by Peter Vincent Homeier           *)
-(*                                                                       *)
 (* ===================================================================== *)
 
                         (* ================== *)
@@ -23,7 +22,6 @@
 
 structure tactics :> tactics =
 struct
-
 
 open HolKernel Parse boolLib;
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
@@ -262,7 +260,7 @@ fun EXISTS_VAR (x,u) th =
 val FIND_EXISTS_TAC :tactic = fn (asl,gl) =>
     let val (vars,body) = strip_exists gl
         val v = hd vars
-        val cnjs = conjuncts body
+        val cnjs = strip_conj body
         fun find_exists_eq [] = failwith "find_exists_eq"
           | find_exists_eq (cnj::cnjs) =
             let val (lhs,rhs) = dest_eq cnj
