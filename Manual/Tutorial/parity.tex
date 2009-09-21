@@ -27,25 +27,6 @@ checker is set as an exercise (a solution is provided).
 
 \section{Introduction}
 
-This case study is supported by three files in the \HOL{} distribution
-directory. These files are:
-
-\begin{hol}
-\begin{verbatim}
-   examples/parity/PARITY.sml
-   examples/parity/RESET_REG.sml
-   examples/parity/RESET_PARITY.sml
-\end{verbatim}
-\end{hol}
-
-The file {\verb|PARITY.sml|} contains the \HOL{} sessions in this
-chapter; the files {\verb|RESET_REG.sml|} and
-{\verb|RESET_PARITY.sml|} contain the solutions to the exercises
-described in Section~\ref{exercises}.
-
-The goal of the case study is to illustrate detailed `proof hacking'
-on a small and fairly simple example.
-
 The sessions of this example comprise the specification and
 verification of a device that computes the parity of a sequence of
 bits.  More specifically, a detailed verification is given of a device
@@ -55,10 +36,10 @@ specification that the $n$th output on {\small\verb|out|} is
 {\small\verb|T|}'s input on {\small\verb|in|}. A theory named
 {\small\verb|PARITY|} is constructed; this contains the specification
 and verification of the device. All the \ML{} input in the boxes below
-can be found in the file {\small\verb|parity/PARITY.sml|}. It is
-suggested that the reader interactively input this to get a `hands on'
-feel for the example.
-
+can be found in the file {\small\verb|examples/parity/PARITY.sml|}. It
+is suggested that the reader interactively input this to get a `hands
+on' feel for the example. The goal of the case study is to illustrate
+detailed `proof hacking' on a small and fairly simple example.
 
 \section{Specification}
 \label{example}
@@ -708,14 +689,7 @@ parity checking device.
 
 Two exercises are given in this section: Exercise~1 is
 straightforward, but Exercise~2 is quite tricky and might take a
-beginner several days to solve. The solutions to these exercises
-should be in the files:
-
-\begin{hol}\begin{verbatim}
-   hol/examples/parity/RESET_REG.sml
-   hol/examples/parity/RESET_PARITY.sml
-\end{verbatim}\end{hol}
-
+beginner several days to solve.
 
 \subsection{Exercise 1}
 
