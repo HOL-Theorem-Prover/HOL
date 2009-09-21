@@ -59,7 +59,7 @@ val Del =
 (* Proof that there is no simple SINGLE abstraction from                *)
 (* a Boolean Dtype to Del.	                                        *)
 val no_simple_abs =
-    prove_thm("no_simple_abs",
+    store_thm("no_simple_abs",
               ``~?p. Inf(p) /\
 		    !ck (d:num->bool) q. Dtype(ck,d,q) ==> Del(d when p, q when p)``,
 	      CONV_TAC NOT_EXISTS_CONV THEN
@@ -72,7 +72,7 @@ val no_simple_abs =
 	      REWRITE_TAC[when,o_THM]);
 
 val Funpow_I =
- prove_thm
+ store_thm
   ("Funpow_I",
    ``Funpow n I x = x``,
    Induct_on `n`
@@ -97,7 +97,7 @@ val tempabs =
 
 (* Correctness of Dtype w.r.t. the temporal abstraction Del.		*)
 val Dtype_correct =
-    prove_thm("Dtype_correct"     ,
+    store_thm("Dtype_correct"     ,
 	      ``!ck.Inf(Rise ck) ==>
                    !d q. Dtype(ck,d,q) ==>
 		         Del(d when (Rise ck), q when (Rise ck))``,

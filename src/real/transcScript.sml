@@ -51,13 +51,13 @@ val _ = Parse.reveal "B";
 (* Some miscellaneous lemmas                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val MULT_DIV_2 = PROVE
+val MULT_DIV_2 = prove
  ((--`!n. (2 * n) DIV 2 = n`--),
   GEN_TAC THEN ONCE_REWRITE_TAC[MULT_SYM] THEN
   MP_TAC(SPECL [(--`2:num`--), (--`0:num`--)] DIV_MULT) THEN REDUCE_TAC THEN
   REWRITE_TAC[ADD_CLAUSES] THEN DISCH_THEN MATCH_ACCEPT_TAC);
 
-val EVEN_DIV2 = PROVE
+val EVEN_DIV2 = prove
  ((--`!n. ~(EVEN n) ==> ((SUC n) DIV 2 = SUC((n - 1) DIV 2))`--),
   GEN_TAC THEN REWRITE_TAC[EVEN_ODD, ODD_EXISTS] THEN
   DISCH_THEN(X_CHOOSE_THEN (--`m:num`--) SUBST1_TAC) THEN
@@ -92,7 +92,7 @@ val sin = new_definition("sin",
 (* Show the series for exp converges, using the ratio test                   *)
 (*---------------------------------------------------------------------------*)
 
-val EXP_CONVERGES = prove_thm("EXP_CONVERGES",
+val EXP_CONVERGES = store_thm("EXP_CONVERGES",
   (--`!x. (\n. (^exp_ser) n * (x pow n)) sums exp(x)`--),
   let fun fnz tm =
     (GSYM o MATCH_MP REAL_LT_IMP_NE o
@@ -130,7 +130,7 @@ val EXP_CONVERGES = prove_thm("EXP_CONVERGES",
 (* Show by the comparison test that sin and cos converge                     *)
 (*---------------------------------------------------------------------------*)
 
-val SIN_CONVERGES = prove_thm("SIN_CONVERGES",
+val SIN_CONVERGES = store_thm("SIN_CONVERGES",
   (--`!x. (\n. (^sin_ser) n * (x pow n)) sums sin(x)`--),
   GEN_TAC THEN REWRITE_TAC[sin] THEN MATCH_MP_TAC SUMMABLE_SUM THEN
   MATCH_MP_TAC SER_COMPAR THEN
@@ -147,7 +147,7 @@ val SIN_CONVERGES = prove_thm("SIN_CONVERGES",
   MAP_EVERY MATCH_MP_TAC [REAL_LT_IMP_LE, REAL_INV_POS] THEN
   REWRITE_TAC[REAL_LT, FACT_LESS]);
 
-val COS_CONVERGES = prove_thm("COS_CONVERGES",
+val COS_CONVERGES = store_thm("COS_CONVERGES",
   (--`!x. (\n. (^cos_ser) n * (x pow n)) sums cos(x)`--),
   GEN_TAC THEN REWRITE_TAC[cos] THEN MATCH_MP_TAC SUMMABLE_SUM THEN
   MATCH_MP_TAC SER_COMPAR THEN
@@ -168,7 +168,7 @@ val COS_CONVERGES = prove_thm("COS_CONVERGES",
 (* Show what the formal derivatives of these series are                      *)
 (*---------------------------------------------------------------------------*)
 
-val EXP_FDIFF = prove_thm("EXP_FDIFF",
+val EXP_FDIFF = store_thm("EXP_FDIFF",
   (--`diffs ^exp_ser = ^exp_ser`--),
   REWRITE_TAC[diffs] THEN BETA_TAC THEN
   CONV_TAC(X_FUN_EQ_CONV (--`n:num`--)) THEN GEN_TAC THEN BETA_TAC THEN
@@ -182,7 +182,7 @@ val EXP_FDIFF = prove_thm("EXP_FDIFF",
     REWRITE_TAC[REAL_MUL_ASSOC, REAL_EQ_RMUL] THEN DISJ2_TAC THEN
     MATCH_MP_TAC REAL_MUL_RINV THEN ASM_REWRITE_TAC[]]);
 
-val SIN_FDIFF = prove_thm("SIN_FDIFF",
+val SIN_FDIFF = store_thm("SIN_FDIFF",
   (--`diffs ^sin_ser = ^cos_ser`--),
   REWRITE_TAC[diffs] THEN BETA_TAC THEN
   CONV_TAC(X_FUN_EQ_CONV (--`n:num`--)) THEN GEN_TAC THEN BETA_TAC THEN
@@ -201,7 +201,7 @@ val SIN_FDIFF = prove_thm("SIN_FDIFF",
     REWRITE_TAC[REAL_MUL_ASSOC, REAL_EQ_RMUL] THEN DISJ2_TAC THEN
     MATCH_MP_TAC REAL_MUL_RINV THEN ASM_REWRITE_TAC[]]);
 
-val COS_FDIFF = prove_thm("COS_FDIFF",
+val COS_FDIFF = store_thm("COS_FDIFF",
   (--`diffs ^cos_ser = (\n. ~((^sin_ser) n))`--),
   REWRITE_TAC[diffs] THEN BETA_TAC THEN
   CONV_TAC(X_FUN_EQ_CONV (--`n:num`--)) THEN GEN_TAC THEN BETA_TAC THEN
@@ -227,13 +227,13 @@ val COS_FDIFF = prove_thm("COS_FDIFF",
 (* Now at last we can get the derivatives of exp, sin and cos                *)
 (*---------------------------------------------------------------------------*)
 
-val SIN_NEGLEMMA = prove_thm("SIN_NEGLEMMA",
+val SIN_NEGLEMMA = store_thm("SIN_NEGLEMMA",
   (--`!x. ~(sin x) = suminf (\n. ~((^sin_ser) n * (x pow n)))`--),
   GEN_TAC THEN MATCH_MP_TAC SUM_UNIQ THEN
   MP_TAC(MATCH_MP SER_NEG (SPEC (--`x:real`--) SIN_CONVERGES)) THEN
   BETA_TAC THEN DISCH_THEN ACCEPT_TAC);
 
-val DIFF_EXP = prove_thm("DIFF_EXP",
+val DIFF_EXP = store_thm("DIFF_EXP",
   (--`!x. (exp diffl exp(x))(x)`--),
   GEN_TAC THEN REWRITE_TAC[HALF_MK_ABS exp] THEN
   GEN_REWR_TAC (LAND_CONV o ONCE_DEPTH_CONV)  [GSYM EXP_FDIFF] THEN
@@ -244,7 +244,7 @@ val DIFF_EXP = prove_thm("DIFF_EXP",
   REWRITE_TAC[ABS_LE, REAL_LT_ADDR] THEN
   REWRITE_TAC[REAL_LT, ONE, LESS_0]);
 
-val DIFF_SIN = prove_thm("DIFF_SIN",
+val DIFF_SIN = store_thm("DIFF_SIN",
   (--`!x. (sin diffl cos(x))(x)`--),
   GEN_TAC THEN REWRITE_TAC[HALF_MK_ABS sin, cos] THEN
   ONCE_REWRITE_TAC[GSYM SIN_FDIFF] THEN
@@ -261,7 +261,7 @@ val DIFF_SIN = prove_thm("DIFF_SIN",
     REWRITE_TAC[ABS_LE, REAL_LT_ADDR] THEN
     REWRITE_TAC[REAL_LT, ONE, LESS_0]]);
 
-val DIFF_COS = prove_thm("DIFF_COS",
+val DIFF_COS = store_thm("DIFF_COS",
   (--`!x. (cos diffl ~(sin(x)))(x)`--),
   GEN_TAC THEN REWRITE_TAC[HALF_MK_ABS cos, SIN_NEGLEMMA] THEN
   ONCE_REWRITE_TAC[REAL_NEG_LMUL] THEN
@@ -293,7 +293,7 @@ val _ = basic_diffs := !basic_diffs@[DIFF_EXP, DIFF_SIN, DIFF_COS];
 (* Processed versions of composition theorems.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val DIFF_COMPOSITE = prove_thm("DIFF_COMPOSITE",
+val DIFF_COMPOSITE = store_thm("DIFF_COMPOSITE",
  Term
   `((f diffl l)(x) /\ ~(f(x) = &0) ==>
         ((\x. inv(f x)) diffl ~(l / (f(x) pow 2)))(x)) /\
@@ -326,7 +326,7 @@ val _ = basic_diffs := !basic_diffs @ CONJUNCTS DIFF_COMPOSITE;
 (* Properties of the exponential function                                    *)
 (*---------------------------------------------------------------------------*)
 
-val EXP_0 = prove_thm("EXP_0",
+val EXP_0 = store_thm("EXP_0",
   (--`exp(&0) = &1`--),
   REWRITE_TAC[exp] THEN CONV_TAC SYM_CONV THEN
   MATCH_MP_TAC SUM_UNIQ THEN BETA_TAC THEN
@@ -340,7 +340,7 @@ val EXP_0 = prove_thm("EXP_0",
   DISCH_THEN(CHOOSE_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1) THEN
   REWRITE_TAC[GSYM ADD1, POW_0, REAL_MUL_RZERO, ADD_CLAUSES]);
 
-val EXP_LE_X = prove_thm("EXP_LE_X",
+val EXP_LE_X = store_thm("EXP_LE_X",
 (--`!x. &0 <= x ==> (&1 + x) <= exp(x)`--),
 GEN_TAC THEN DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
  [MP_TAC(SPECL [Term`\n. ^exp_ser n * (x pow n)`,Term`2:num`] SER_POS_LE) THEN
@@ -365,14 +365,14 @@ GEN_TAC THEN DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
     POP_ASSUM(SUBST1_TAC o SYM) THEN
     REWRITE_TAC[EXP_0, REAL_ADD_RID, REAL_LE_REFL]]);
 
-val EXP_LT_1 = prove_thm("EXP_LT_1",
+val EXP_LT_1 = store_thm("EXP_LT_1",
   (--`!x. &0 < x ==> &1 < exp(x)`--),
   GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC REAL_LTE_TRANS THEN
   EXISTS_TAC (--`&1 + x`--) THEN ASM_REWRITE_TAC[REAL_LT_ADDR] THEN
   MATCH_MP_TAC EXP_LE_X THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN
   POP_ASSUM ACCEPT_TAC);
 
-val EXP_ADD_MUL = prove_thm("EXP_ADD_MUL",
+val EXP_ADD_MUL = store_thm("EXP_ADD_MUL",
   (--`!x y. exp(x + y) * exp(~x) = exp(y)`--),
   REPEAT GEN_TAC THEN
   CONV_TAC(LAND_CONV(X_BETA_CONV (--`x:real`--))) THEN
@@ -387,21 +387,21 @@ val EXP_ADD_MUL = prove_thm("EXP_ADD_MUL",
     REWRITE_TAC[GSYM real_sub, REAL_SUB_0, REAL_MUL_RID, REAL_ADD_RID] THEN
     MATCH_ACCEPT_TAC REAL_MUL_SYM]);
 
-val EXP_NEG_MUL = prove_thm("EXP_NEG_MUL",
+val EXP_NEG_MUL = store_thm("EXP_NEG_MUL",
   (--`!x. exp(x) * exp(~x) = &1`--),
   GEN_TAC THEN MP_TAC(SPECL [(--`x:real`--), (--`&0`--)] EXP_ADD_MUL) THEN
   REWRITE_TAC[REAL_ADD_RID, EXP_0]);
 
-val EXP_NEG_MUL2 = prove_thm("EXP_NEG_MUL2",
+val EXP_NEG_MUL2 = store_thm("EXP_NEG_MUL2",
   (--`!x. exp(~x) * exp(x) = &1`--),
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN MATCH_ACCEPT_TAC EXP_NEG_MUL);
 
-val EXP_NEG = prove_thm("EXP_NEG",
+val EXP_NEG = store_thm("EXP_NEG",
   (--`!x. exp(~x) = inv(exp(x))`--),
   GEN_TAC THEN MATCH_MP_TAC REAL_RINV_UNIQ THEN
   MATCH_ACCEPT_TAC EXP_NEG_MUL);
 
-val EXP_ADD = prove_thm("EXP_ADD",
+val EXP_ADD = store_thm("EXP_ADD",
   (--`!x y. exp(x + y) = exp(x) * exp(y)`--),
   REPEAT GEN_TAC THEN
   MP_TAC(SPECL [(--`x:real`--), (--`y:real`--)] EXP_ADD_MUL) THEN
@@ -410,13 +410,13 @@ val EXP_ADD = prove_thm("EXP_ADD",
   REWRITE_TAC[ONCE_REWRITE_RULE[REAL_MUL_SYM] EXP_NEG_MUL, REAL_MUL_RID] THEN
   DISCH_THEN SUBST1_TAC THEN MATCH_ACCEPT_TAC REAL_MUL_SYM);
 
-val EXP_POS_LE = prove_thm("EXP_POS_LE",
+val EXP_POS_LE = store_thm("EXP_POS_LE",
   (--`!x. &0 <= exp(x)`--),
   GEN_TAC THEN
   GEN_REWR_TAC (funpow 2 RAND_CONV)  [GSYM REAL_HALF_DOUBLE] THEN
   REWRITE_TAC[EXP_ADD] THEN MATCH_ACCEPT_TAC REAL_LE_SQUARE);
 
-val EXP_NZ = prove_thm("EXP_NZ",
+val EXP_NZ = store_thm("EXP_NZ",
   (--`!x. ~(exp(x) = &0)`--),
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(SPEC (--`x:real`--) EXP_NEG_MUL) THEN
@@ -424,25 +424,25 @@ val EXP_NZ = prove_thm("EXP_NZ",
   CONV_TAC(RAND_CONV SYM_CONV) THEN
   MATCH_ACCEPT_TAC REAL_10);
 
-val EXP_POS_LT = prove_thm("EXP_POS_LT",
+val EXP_POS_LT = store_thm("EXP_POS_LT",
   (--`!x. &0 < exp(x)`--),
   GEN_TAC THEN REWRITE_TAC[REAL_LT_LE] THEN
   CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
   REWRITE_TAC[EXP_POS_LE, EXP_NZ]);
 
-val EXP_N = prove_thm("EXP_N",
+val EXP_N = store_thm("EXP_N",
   (--`!n x. exp(&n * x) = exp(x) pow n`--),
   INDUCT_TAC THEN REWRITE_TAC[REAL_MUL_LZERO, EXP_0, pow] THEN
   REWRITE_TAC[ADD1] THEN ONCE_REWRITE_TAC[ADD_SYM] THEN
   REWRITE_TAC[GSYM REAL_ADD, EXP_ADD, REAL_RDISTRIB] THEN
   GEN_TAC THEN ASM_REWRITE_TAC[REAL_MUL_LID]);
 
-val EXP_SUB = prove_thm("EXP_SUB",
+val EXP_SUB = store_thm("EXP_SUB",
   (--`!x y. exp(x - y) = exp(x) / exp(y)`--),
   REPEAT GEN_TAC THEN
   REWRITE_TAC[real_sub, real_div, EXP_ADD, EXP_NEG]);
 
-val EXP_MONO_IMP = prove_thm("EXP_MONO_IMP",
+val EXP_MONO_IMP = store_thm("EXP_MONO_IMP",
   (--`!x y. x < y ==> exp(x) < exp(y)`--),
   REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o
     MATCH_MP EXP_LT_1 o ONCE_REWRITE_RULE[GSYM REAL_SUB_LT]) THEN
@@ -454,7 +454,7 @@ val EXP_MONO_IMP = prove_thm("EXP_MONO_IMP",
     REWRITE_TAC[real_div, GSYM REAL_MUL_ASSOC, EXP_NEG_MUL2, GSYM EXP_NEG] THEN
     REWRITE_TAC[REAL_MUL_LID, REAL_MUL_RID]]);
 
-val EXP_MONO_LT = prove_thm("EXP_MONO_LT",
+val EXP_MONO_LT = store_thm("EXP_MONO_LT",
   (--`!x y. exp(x) < exp(y) = x < y`--),
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[REAL_NOT_LT] THEN
@@ -464,17 +464,17 @@ val EXP_MONO_LT = prove_thm("EXP_MONO_LT",
     POP_ASSUM ACCEPT_TAC,
     MATCH_ACCEPT_TAC EXP_MONO_IMP]);
 
-val EXP_MONO_LE = prove_thm("EXP_MONO_LE",
+val EXP_MONO_LE = store_thm("EXP_MONO_LE",
   (--`!x y. exp(x) <= exp(y) = x <= y`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM REAL_NOT_LT] THEN
   REWRITE_TAC[EXP_MONO_LT]);
 
-val EXP_INJ = prove_thm("EXP_INJ",
+val EXP_INJ = store_thm("EXP_INJ",
   (--`!x y. (exp(x) = exp(y)) = (x = y)`--),
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
   REWRITE_TAC[EXP_MONO_LE]);
 
-val EXP_TOTAL_LEMMA = prove_thm("EXP_TOTAL_LEMMA",
+val EXP_TOTAL_LEMMA = store_thm("EXP_TOTAL_LEMMA",
   (--`!y. &1 <= y ==> ?x. &0 <= x /\ x <= y - &1 /\ (exp(x) = y)`--),
   GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC IVT THEN
   ASM_REWRITE_TAC[EXP_0, REAL_LE_SUB_LADD, REAL_ADD_LID] THEN CONJ_TAC THENL
@@ -484,7 +484,7 @@ val EXP_TOTAL_LEMMA = prove_thm("EXP_TOTAL_LEMMA",
     MATCH_MP_TAC DIFF_CONT THEN EXISTS_TAC (--`exp(x)`--) THEN
     MATCH_ACCEPT_TAC DIFF_EXP]);
 
-val EXP_TOTAL = prove_thm("EXP_TOTAL",
+val EXP_TOTAL = store_thm("EXP_TOTAL",
   (--`!y. &0 < y ==> ?x. exp(x) = y`--),
   GEN_TAC THEN DISCH_TAC THEN
   DISJ_CASES_TAC(SPECL [(--`&1`--), (--`y:real`--)] REAL_LET_TOTAL) THENL
@@ -554,40 +554,40 @@ end new*)
 val ln = new_definition("ln",
   (--`ln x = @u. exp(u) = x`--));
 
-val LN_EXP = prove_thm("LN_EXP",
+val LN_EXP = store_thm("LN_EXP",
   (--`!x. ln(exp x) = x`--),
   GEN_TAC THEN REWRITE_TAC[ln, EXP_INJ] THEN
   CONV_TAC SYM_CONV THEN CONV_TAC(RAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN
   CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN MATCH_MP_TAC SELECT_AX THEN
   EXISTS_TAC (--`x:real`--) THEN REFL_TAC);
 
-val EXP_LN = prove_thm("EXP_LN",
+val EXP_LN = store_thm("EXP_LN",
   (--`!x. (exp(ln x) = x) = &0 < x`--),
   GEN_TAC THEN EQ_TAC THENL
    [DISCH_THEN(SUBST1_TAC o SYM) THEN MATCH_ACCEPT_TAC EXP_POS_LT,
     DISCH_THEN(X_CHOOSE_THEN (--`y:real`--) MP_TAC o MATCH_MP EXP_TOTAL) THEN
     DISCH_THEN(SUBST1_TAC o SYM) THEN REWRITE_TAC[EXP_INJ, LN_EXP]]);
 
-val LN_MUL = prove_thm("LN_MUL",
+val LN_MUL = store_thm("LN_MUL",
   (--`!x y. &0 < x /\ &0 < y ==> (ln(x * y) = ln(x) + ln(y))`--),
   REPEAT GEN_TAC THEN STRIP_TAC THEN ONCE_REWRITE_TAC[GSYM EXP_INJ] THEN
   REWRITE_TAC[EXP_ADD] THEN SUBGOAL_THEN (--`&0 < x * y`--) ASSUME_TAC THENL
    [MATCH_MP_TAC REAL_LT_MUL THEN ASM_REWRITE_TAC[],
     EVERY_ASSUM(fn th => REWRITE_TAC[ONCE_REWRITE_RULE[GSYM EXP_LN] th])]);
 
-val LN_INJ = prove_thm("LN_INJ",
+val LN_INJ = store_thm("LN_INJ",
   (--`!x y. &0 < x /\ &0 < y ==> ((ln(x) = ln(y)) = (x = y))`--),
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   EVERY_ASSUM(fn th => GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
     [SYM(REWRITE_RULE[GSYM EXP_LN] th)]) THEN
   CONV_TAC SYM_CONV THEN MATCH_ACCEPT_TAC EXP_INJ);
 
-val LN_1 = prove_thm("LN_1",
+val LN_1 = store_thm("LN_1",
   (--`ln(&1) = &0`--),
   ONCE_REWRITE_TAC[GSYM EXP_INJ] THEN
   REWRITE_TAC[EXP_0, EXP_LN, REAL_LT_01]);
 
-val LN_INV = prove_thm("LN_INV",
+val LN_INV = store_thm("LN_INV",
   (--`!x. &0 < x ==> (ln(inv x) = ~(ln x))`--),
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[GSYM REAL_RNEG_UNIQ] THEN
   SUBGOAL_THEN (--`&0 < x /\ &0 < inv(x)`--) MP_TAC THENL
@@ -598,7 +598,7 @@ val LN_INV = prove_thm("LN_INV",
       POP_ASSUM(ACCEPT_TAC o MATCH_MP REAL_POS_NZ),
       REWRITE_TAC[LN_1]]]);
 
-val LN_DIV = prove_thm("LN_DIV",
+val LN_DIV = store_thm("LN_DIV",
   (--`!x y. &0 < x /\ &0 < y ==> (ln(x / y) = ln(x) - ln(y))`--),
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   SUBGOAL_THEN (--`&0 < x /\ &0 < inv(y)`--) MP_TAC THENL
@@ -608,28 +608,28 @@ val LN_DIV = prove_thm("LN_DIV",
     REWRITE_TAC[MATCH_MP LN_INV (ASSUME (--`&0 < y`--))] THEN
     REWRITE_TAC[real_sub]]);
 
-val LN_MONO_LT = prove_thm("LN_MONO_LT",
+val LN_MONO_LT = store_thm("LN_MONO_LT",
   (--`!x y. &0 < x /\ &0 < y ==> (ln(x) < ln(y) = x < y)`--),
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   EVERY_ASSUM(fn th => GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
     [SYM(REWRITE_RULE[GSYM EXP_LN] th)]) THEN
   CONV_TAC SYM_CONV THEN MATCH_ACCEPT_TAC EXP_MONO_LT);
 
-val LN_MONO_LE = prove_thm("LN_MONO_LE",
+val LN_MONO_LE = store_thm("LN_MONO_LE",
   (--`!x y. &0 < x /\ &0 < y ==> (ln(x) <= ln(y) = x <= y)`--),
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   EVERY_ASSUM(fn th => GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
     [SYM(REWRITE_RULE[GSYM EXP_LN] th)]) THEN
   CONV_TAC SYM_CONV THEN MATCH_ACCEPT_TAC EXP_MONO_LE);
 
-val LN_POW = prove_thm("LN_POW",
+val LN_POW = store_thm("LN_POW",
   (--`!n x. &0 < x ==> (ln(x pow n) = &n * ln(x))`--),
   REPEAT GEN_TAC THEN
   DISCH_THEN(CHOOSE_THEN (SUBST1_TAC o SYM) o MATCH_MP EXP_TOTAL) THEN
   REWRITE_TAC[GSYM EXP_N, LN_EXP]);
 
 
-val LN_LE = prove_thm("LN_LE",
+val LN_LE = store_thm("LN_LE",
   Term `!x. &0 <= x ==> ln(&1 + x) <= x`,
   GEN_TAC THEN DISCH_TAC THEN
   GEN_REWRITE_TAC RAND_CONV  [] [GSYM LN_EXP] THEN
@@ -641,7 +641,7 @@ val LN_LE = prove_thm("LN_LE",
     DISCH_THEN SUBST1_TAC THEN MATCH_MP_TAC EXP_LE_X THEN ASM_REWRITE_TAC[]]);;
 
 
-val LN_LT_X = prove_thm("LN_LT_X",
+val LN_LT_X = store_thm("LN_LT_X",
   (--`!x. &0 < x ==> ln(x) < x`--),
   GEN_TAC THEN DISCH_TAC THEN
   GEN_REWR_TAC I  [TAUT_CONV (--`a:bool = ~~a`--)] THEN
@@ -660,7 +660,7 @@ val LN_LT_X = prove_thm("LN_LT_X",
   REWRITE_TAC[REAL_LT_RADD, REAL_LT_01] THEN
   REWRITE_TAC[REAL_ADD_LID, REAL_LE_REFL]);
 
-val LN_POS = prove_thm("LN_POS",
+val LN_POS = store_thm("LN_POS",
   Term `!x. &1 <= x ==> &0 <= ln(x)`,
   GEN_TAC THEN DISCH_TAC THEN SUBGOAL_THEN (Term `&0 < x`) ASSUME_TAC THENL
    [MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC (Term`&1`) THEN
@@ -671,7 +671,7 @@ val LN_POS = prove_thm("LN_POS",
     THEN REWRITE_TAC[EXP_MONO_LE]]);;
 
 
-val DIFF_LN = prove_thm("DIFF_LN",
+val DIFF_LN = store_thm("DIFF_LN",
   Term `!x. &0 < x ==> (ln diffl (inv x))(x)`,
   GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(ASSUME_TAC o REWRITE_RULE[GSYM EXP_LN]) THEN
@@ -694,7 +694,7 @@ val root = new_definition("root",
 val sqrt = new_definition("sqrt",
   (--`sqrt(x) = root(2) x`--));
 
-val ROOT_LT_LEMMA = prove_thm("ROOT_LT_LEMMA",
+val ROOT_LT_LEMMA = store_thm("ROOT_LT_LEMMA",
   (--`!n x. &0 < x ==> (exp(ln(x) / &(SUC n)) pow (SUC n) = x)`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[GSYM EXP_N] THEN ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
@@ -703,7 +703,7 @@ val ROOT_LT_LEMMA = prove_thm("ROOT_LT_LEMMA",
    [MATCH_MP_TAC REAL_MUL_LINV THEN REWRITE_TAC[REAL_INJ, NOT_SUC],
     ASM_REWRITE_TAC[REAL_MUL_RID, EXP_LN]]);
 
-val ROOT_LN = prove_thm("ROOT_LN",
+val ROOT_LN = store_thm("ROOT_LN",
   (--`!n x. &0 < x ==> (root(SUC n) x = exp(ln(x) / &(SUC n)))`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[root] THEN
   MATCH_MP_TAC SELECT_UNIQUE THEN X_GEN_TAC (--`y:real`--) THEN BETA_TAC THEN
@@ -726,7 +726,7 @@ val ROOT_LN = prove_thm("ROOT_LN",
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[EXP_POS_LT] THEN
     MATCH_MP_TAC ROOT_LT_LEMMA THEN ASM_REWRITE_TAC[]]);
 
-val ROOT_0 = prove_thm("ROOT_0",
+val ROOT_0 = store_thm("ROOT_0",
   (--`!n. root(SUC n) (&0) = &0`--),
   GEN_TAC THEN REWRITE_TAC[root] THEN
   MATCH_MP_TAC SELECT_UNIQUE THEN X_GEN_TAC (--`y:real`--) THEN
@@ -738,18 +738,18 @@ val ROOT_0 = prove_thm("ROOT_0",
       ASM_REWRITE_TAC[]],
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[pow, REAL_MUL_LZERO]]);
 
-val ROOT_1 = prove_thm("ROOT_1",
+val ROOT_1 = store_thm("ROOT_1",
   (--`!n. root(SUC n) (&1) = &1`--),
   GEN_TAC THEN REWRITE_TAC[MATCH_MP ROOT_LN REAL_LT_01] THEN
   REWRITE_TAC[LN_1, REAL_DIV_LZERO, EXP_0]);
 
-val ROOT_POS_LT = prove_thm("ROOT_POS_LT",
+val ROOT_POS_LT = store_thm("ROOT_POS_LT",
   (--`!n x. &0 < x ==> &0 < root(SUC n) x`--),
   REPEAT GEN_TAC THEN
   DISCH_THEN(fn th => REWRITE_TAC[MATCH_MP ROOT_LN th]) THEN
   REWRITE_TAC[EXP_POS_LT]);
 
-val ROOT_POW_POS = prove_thm("ROOT_POW_POS",
+val ROOT_POW_POS = store_thm("ROOT_POW_POS",
   (--`!n x. &0 <= x ==> ((root(SUC n) x) pow (SUC n) = x)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
   DISCH_THEN DISJ_CASES_TAC THENL
@@ -758,7 +758,7 @@ val ROOT_POW_POS = prove_thm("ROOT_POW_POS",
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[ROOT_0] THEN
     MATCH_ACCEPT_TAC POW_0]);
 
-val POW_ROOT_POS = prove_thm("POW_ROOT_POS",
+val POW_ROOT_POS = store_thm("POW_ROOT_POS",
   (--`!n x. &0 <= x ==> (root(SUC n)(x pow (SUC n)) = x)`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[root] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
@@ -779,7 +779,7 @@ val POW_ROOT_POS = prove_thm("POW_ROOT_POS",
 
 
 (* Known in GTT as ROOT_POS_POSITIVE *)
-val ROOT_POS = prove_thm("ROOT_POS",
+val ROOT_POS = store_thm("ROOT_POS",
   (--`!n x. &0 <= x ==> &0 <= root(SUC n) x`--),
   REPEAT GEN_TAC THEN
   DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
@@ -787,14 +787,14 @@ val ROOT_POS = prove_thm("ROOT_POS",
     POP_ASSUM ACCEPT_TAC,
     POP_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[ROOT_0, REAL_LE_REFL]]);
 
-val ROOT_POS_UNIQ = prove_thm("ROOT_POS_UNIQ",
+val ROOT_POS_UNIQ = store_thm("ROOT_POS_UNIQ",
  Term`!n x y. &0 <= x /\ &0 <= y /\ (y pow (SUC n) = x)
            ==> (root (SUC n) x = y)`,
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
   DISCH_THEN(CONJUNCTS_THEN2 MP_TAC (SUBST1_TAC o SYM)) THEN
   REWRITE_TAC[POW_ROOT_POS]);;
 
-val ROOT_MUL = prove_thm("ROOT_MUL",
+val ROOT_MUL = store_thm("ROOT_MUL",
  Term`!n x y. &0 <= x /\ &0 <= y
            ==> (root(SUC n) (x * y) = root(SUC n) x * root(SUC n) y)`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC ROOT_POS_UNIQ THEN
@@ -805,7 +805,7 @@ val ROOT_MUL = prove_thm("ROOT_MUL",
    IMP_RES_TAC ROOT_POW_POS THEN ASM_REWRITE_TAC[]]);
 
 
-val ROOT_INV = prove_thm("ROOT_INV",
+val ROOT_INV = store_thm("ROOT_INV",
  Term`!n x. &0 <= x ==> (root(SUC n) (inv x) = inv(root(SUC n) x))`,
 REPEAT STRIP_TAC THEN MATCH_MP_TAC ROOT_POS_UNIQ THEN REPEAT CONJ_TAC THENL
  [IMP_RES_THEN ACCEPT_TAC REAL_LE_INV,
@@ -819,7 +819,7 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC ROOT_POS_UNIQ THEN REPEAT CONJ_TAC THENL
      PAT_ASSUM (Term `$! M`) (SUBST1_TAC o SYM o SPEC_ALL)
       THEN ASM_REWRITE_TAC[REAL_INV_0,POW_0]]])
 
-val ROOT_DIV = prove_thm("ROOT_DIV",
+val ROOT_DIV = store_thm("ROOT_DIV",
  Term`!n x y. &0 <= x /\ &0 <= y
            ==> (root(SUC n) (x / y) = root(SUC n) x / root(SUC n) y)`,
 REWRITE_TAC [real_div] THEN REPEAT STRIP_TAC THEN IMP_RES_TAC REAL_LE_INV
@@ -829,7 +829,7 @@ REWRITE_TAC [real_div] THEN REPEAT STRIP_TAC THEN IMP_RES_TAC REAL_LE_INV
  THEN ASM_REWRITE_TAC[]);
 
 
-val ROOT_MONO_LE = prove_thm("ROOT_MONO_LE",
+val ROOT_MONO_LE = store_thm("ROOT_MONO_LE",
  Term`!x y. &0 <= x /\ x <= y ==> root(SUC n) x <= root(SUC n) y`,
   REPEAT STRIP_TAC THEN SUBGOAL_THEN (Term`&0 <= y`) ASSUME_TAC THENL
    [ASM_MESON_TAC[REAL_LE_TRANS], ALL_TAC] THEN
@@ -842,57 +842,57 @@ val ROOT_MONO_LE = prove_thm("ROOT_MONO_LE",
   MATCH_MP_TAC REAL_POW_LT2 THEN
   ASM_REWRITE_TAC[NOT_SUC] THEN MATCH_MP_TAC ROOT_POS THEN ASM_REWRITE_TAC[]);
 
-val SQRT_0 = prove_thm("SQRT_0",
+val SQRT_0 = store_thm("SQRT_0",
   (--`sqrt(&0) = &0`--),
   REWRITE_TAC[sqrt, TWO, ROOT_0]);
 
-val SQRT_1 = prove_thm("SQRT_1",
+val SQRT_1 = store_thm("SQRT_1",
   (--`sqrt(&1) = &1`--),
   REWRITE_TAC[sqrt, TWO, ROOT_1]);
 
-val SQRT_POS_LT = prove_thm("SQRT_POS_LT",
+val SQRT_POS_LT = store_thm("SQRT_POS_LT",
  Term`!x. &0 < x ==> &0 < sqrt(x)`,
  REWRITE_TAC [sqrt,TWO] THEN REPEAT STRIP_TAC
   THEN IMP_RES_TAC ROOT_LN THEN ASM_REWRITE_TAC[EXP_POS_LT]);
 
-val SQRT_POS_LE = prove_thm("SQRT_POS_LE",
+val SQRT_POS_LE = store_thm("SQRT_POS_LE",
  Term`!x. &0 <= x ==> &0 <= sqrt(x)`,
   REWRITE_TAC[REAL_LE_LT] THEN MESON_TAC[SQRT_POS_LT, SQRT_0]);;
 
-val SQRT_POW2 = prove_thm("SQRT_POW2",
+val SQRT_POW2 = store_thm("SQRT_POW2",
   (--`!x. (sqrt(x) pow 2 = x) = &0 <= x`--),
   GEN_TAC THEN EQ_TAC THENL
    [DISCH_THEN(SUBST1_TAC o SYM) THEN MATCH_ACCEPT_TAC REAL_LE_POW2,
     REWRITE_TAC[sqrt, TWO, ROOT_POW_POS]]);
 
-val SQRT_POW_2 = prove_thm("SQRT_POW_2",
+val SQRT_POW_2 = store_thm("SQRT_POW_2",
  Term `!x. &0 <= x ==> (sqrt(x) pow 2 = x)`,
   REWRITE_TAC[SQRT_POW2]);;
 
-val POW_2_SQRT = prove_thm("POW_2_SQRT",
+val POW_2_SQRT = store_thm("POW_2_SQRT",
  Term`&0 <= x ==> (sqrt(x pow 2) = x)`,
  REWRITE_TAC [sqrt,TWO,POW_ROOT_POS]);
 
-val SQRT_POS_UNIQ = prove_thm("SQRT_POS_UNIQ",
+val SQRT_POS_UNIQ = store_thm("SQRT_POS_UNIQ",
  Term`!x y. &0 <= x /\ &0 <= y /\ (y pow 2 = x)
            ==> (sqrt x = y)`,
   REWRITE_TAC[sqrt, TWO, ROOT_POS_UNIQ]);
 
-val SQRT_MUL = prove_thm("SQRT_MUL",
+val SQRT_MUL = store_thm("SQRT_MUL",
  Term`!x y. &0 <= x /\ &0 <= y
            ==> (sqrt(x * y) = sqrt x * sqrt y)`,
   REWRITE_TAC[sqrt, TWO, ROOT_MUL]);;
 
-val SQRT_INV = prove_thm("SQRT_INV",
+val SQRT_INV = store_thm("SQRT_INV",
  Term`!x. &0 <= x ==> (sqrt (inv x) = inv(sqrt x))`,
   REWRITE_TAC[sqrt, TWO, ROOT_INV]);;
 
-val SQRT_DIV = prove_thm("SQRT_DIV",
+val SQRT_DIV = store_thm("SQRT_DIV",
  Term`!x y. &0 <= x /\ &0 <= y
            ==> (sqrt (x / y) = sqrt x / sqrt y)`,
   REWRITE_TAC[sqrt, TWO, ROOT_DIV]);;
 
-val SQRT_MONO_LE = prove_thm("SQRT_MONO_LE",
+val SQRT_MONO_LE = store_thm("SQRT_MONO_LE",
  Term`!x y. &0 <= x /\ x <= y ==> sqrt(x) <= sqrt(y)`,
   REWRITE_TAC[sqrt, TWO, ROOT_MONO_LE]);;
 
@@ -907,7 +907,7 @@ val EVEN_MOD = prove
      MP_TAC (CONJUNCT1 (SPEC (Term `n:num`) (MATCH_MP DIVISION lem))) THEN
      ASM_REWRITE_TAC [ADD_CLAUSES]]);
 
-val SQRT_EVEN_POW2 = prove_thm("SQRT_EVEN_POW2",
+val SQRT_EVEN_POW2 = store_thm("SQRT_EVEN_POW2",
  Term`!n. EVEN n ==> (sqrt(&2 pow n) = &2 pow (n DIV 2))`,
  GEN_TAC THEN REWRITE_TAC[EVEN_MOD] THEN DISCH_TAC THEN
   MATCH_MP_TAC SQRT_POS_UNIQ THEN REPEAT CONJ_TAC THENL
@@ -919,7 +919,7 @@ val SQRT_EVEN_POW2 = prove_thm("SQRT_EVEN_POW2",
    THEN REFL_TAC]);
 
 
-val REAL_DIV_SQRT = prove_thm("REAL_DIV_SQRT",
+val REAL_DIV_SQRT = store_thm("REAL_DIV_SQRT",
  Term`!x. &0 <= x ==> (x / sqrt(x) = sqrt(x))`,
  GEN_TAC THEN ASM_CASES_TAC (Term`x = &0`) THENL
    [ASM_REWRITE_TAC[SQRT_0, real_div, REAL_MUL_LZERO], ALL_TAC] THEN
@@ -942,7 +942,7 @@ val REAL_DIV_SQRT = prove_thm("REAL_DIV_SQRT",
    PAT_ASSUM (Term `& 0 = x`) (SUBST_ALL_TAC o SYM)
    THEN REWRITE_TAC [POW_0, TWO, REAL_MUL_LZERO]]]);
 
-val SQRT_EQ = prove_thm("SQRT_EQ",
+val SQRT_EQ = store_thm("SQRT_EQ",
   (--`!x y. (x pow 2 = y) /\ (&0 <= x) ==> (x = (sqrt(y)))`--),
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   SUBGOAL_THEN (--`&0 <= y`--) ASSUME_TAC THENL
@@ -973,7 +973,7 @@ val SQRT_EQ = prove_thm("SQRT_EQ",
 (* Basic properties of the trig functions                                    *)
 (*---------------------------------------------------------------------------*)
 
-val SIN_0 = prove_thm("SIN_0",
+val SIN_0 = store_thm("SIN_0",
   (--`sin(&0) = &0`--),
   REWRITE_TAC[sin] THEN CONV_TAC SYM_CONV THEN
   MATCH_MP_TAC SUM_UNIQ THEN BETA_TAC THEN
@@ -987,7 +987,7 @@ val SIN_0 = prove_thm("SIN_0",
   DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN
   REWRITE_TAC[GSYM ADD1, POW_0, REAL_MUL_RZERO]);
 
-val COS_0 = prove_thm("COS_0",
+val COS_0 = store_thm("COS_0",
   (--`cos(&0) = &1`--),
   REWRITE_TAC[cos] THEN CONV_TAC SYM_CONV THEN
   MATCH_MP_TAC SUM_UNIQ THEN BETA_TAC THEN
@@ -1009,7 +1009,7 @@ val COS_0 = prove_thm("COS_0",
   DISCH_THEN(CHOOSE_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1) THEN
   REWRITE_TAC[GSYM ADD1, POW_0, REAL_MUL_RZERO, ADD_CLAUSES]);
 
-val SIN_CIRCLE = prove_thm("SIN_CIRCLE",
+val SIN_CIRCLE = store_thm("SIN_CIRCLE",
   (--`!x. (sin(x) pow 2) + (cos(x) pow 2) = &1`--),
   GEN_TAC THEN CONV_TAC(LAND_CONV(X_BETA_CONV (--`x:real`--))) THEN
   SUBGOAL_THEN (--`&1 = (\x.(sin(x) pow 2) + (cos(x) pow 2))(&0)`--) SUBST1_TAC THENL
@@ -1026,7 +1026,7 @@ val SIN_CIRCLE = prove_thm("SIN_CIRCLE",
     AP_TERM_TAC THEN REWRITE_TAC[TWO, SUC_SUB1] THEN
     REWRITE_TAC[POW_1] THEN MATCH_ACCEPT_TAC REAL_MUL_SYM]);
 
-val SIN_BOUND = prove_thm("SIN_BOUND",
+val SIN_BOUND = store_thm("SIN_BOUND",
   (--`!x. abs(sin x) <= &1`--),
   GEN_TAC THEN GEN_REWR_TAC I  [TAUT_CONV (--`a:bool = ~~a`--)] THEN
   PURE_ONCE_REWRITE_TAC[REAL_NOT_LE] THEN
@@ -1041,11 +1041,11 @@ val SIN_BOUND = prove_thm("SIN_BOUND",
     (--`a + (b + c) = (a + c) + b`--)] THEN
   REWRITE_TAC[SIN_CIRCLE, REAL_ADD_RINV, REAL_LT_REFL]);
 
-val SIN_BOUNDS = prove_thm("SIN_BOUNDS",
+val SIN_BOUNDS = store_thm("SIN_BOUNDS",
   (--`!x. ~(&1) <= sin(x) /\ sin(x) <= &1`--),
   GEN_TAC THEN REWRITE_TAC[GSYM ABS_BOUNDS, SIN_BOUND]);
 
-val COS_BOUND = prove_thm("COS_BOUND",
+val COS_BOUND = store_thm("COS_BOUND",
   (--`!x. abs(cos x) <= &1`--),
   GEN_TAC THEN GEN_REWR_TAC I  [TAUT_CONV (--`a:bool = ~~a`--)] THEN
   PURE_ONCE_REWRITE_TAC[REAL_NOT_LE] THEN
@@ -1058,11 +1058,11 @@ val COS_BOUND = prove_thm("COS_BOUND",
   REWRITE_TAC[real_sub, REAL_ADD_ASSOC, SIN_CIRCLE,
     REAL_ADD_ASSOC, SIN_CIRCLE, REAL_ADD_RINV, REAL_LT_REFL]);
 
-val COS_BOUNDS = prove_thm("COS_BOUNDS",
+val COS_BOUNDS = store_thm("COS_BOUNDS",
   (--`!x. ~(&1) <= cos(x) /\ cos(x) <= &1`--),
   GEN_TAC THEN REWRITE_TAC[GSYM ABS_BOUNDS, COS_BOUND]);
 
-val SIN_COS_ADD = prove_thm("SIN_COS_ADD",
+val SIN_COS_ADD = store_thm("SIN_COS_ADD",
   (--`!x y. ((sin(x + y) - ((sin(x) * cos(y)) + (cos(x) * sin(y)))) pow 2) +
          ((cos(x + y) - ((cos(x) * cos(y)) - (sin(x) * sin(y)))) pow 2) = &0`--),
   REPEAT GEN_TAC THEN
@@ -1086,7 +1086,7 @@ val SIN_COS_ADD = prove_thm("SIN_COS_ADD",
      [REWRITE_TAC[real_sub, REAL_NEG_ADD, REAL_NEGNEG, REAL_NEG_RMUL],
       REWRITE_TAC[GSYM REAL_NEG_RMUL, GSYM real_sub]]]);
 
-val SIN_COS_NEG = prove_thm("SIN_COS_NEG",
+val SIN_COS_NEG = store_thm("SIN_COS_NEG",
   (--`!x. ((sin(~x) + (sin x)) pow 2) +
        ((cos(~x) - (cos x)) pow 2) = &0`--),
   GEN_TAC THEN CONV_TAC(LAND_CONV(X_BETA_CONV (--`x:real`--))) THEN
@@ -1107,36 +1107,36 @@ val SIN_COS_NEG = prove_thm("SIN_COS_NEG",
     REWRITE_TAC[GSYM REAL_NEG_LMUL, REAL_NEG_RMUL] THEN AP_TERM_TAC THEN
     REWRITE_TAC[REAL_NEG_ADD, REAL_NEGNEG]]);
 
-val SIN_ADD = prove_thm("SIN_ADD",
+val SIN_ADD = store_thm("SIN_ADD",
   (--`!x y. sin(x + y) = (sin(x) * cos(y)) + (cos(x) * sin(y))`--),
   REPEAT GEN_TAC THEN MP_TAC(SPECL [(--`x:real`--), (--`y:real`--)] SIN_COS_ADD) THEN
   REWRITE_TAC[POW_2, REAL_SUMSQ] THEN REWRITE_TAC[REAL_SUB_0] THEN
   DISCH_THEN(fn th => REWRITE_TAC[th]));
 
-val COS_ADD = prove_thm("COS_ADD",
+val COS_ADD = store_thm("COS_ADD",
   (--`!x y. cos(x + y) = (cos(x) * cos(y)) - (sin(x) * sin(y))`--),
   REPEAT GEN_TAC THEN MP_TAC(SPECL [(--`x:real`--), (--`y:real`--)] SIN_COS_ADD) THEN
   REWRITE_TAC[POW_2, REAL_SUMSQ] THEN REWRITE_TAC[REAL_SUB_0] THEN
   DISCH_THEN(fn th => REWRITE_TAC[th]));
 
-val SIN_NEG = prove_thm("SIN_NEG",
+val SIN_NEG = store_thm("SIN_NEG",
   (--`!x. sin(~x) = ~(sin(x))`--),
   GEN_TAC THEN MP_TAC(SPEC (--`x:real`--) SIN_COS_NEG) THEN
   REWRITE_TAC[POW_2, REAL_SUMSQ] THEN REWRITE_TAC[REAL_LNEG_UNIQ] THEN
   DISCH_THEN(fn th => REWRITE_TAC[th]));
 
-val COS_NEG = prove_thm("COS_NEG",
+val COS_NEG = store_thm("COS_NEG",
   (--`!x. cos(~x) = cos(x)`--),
   GEN_TAC THEN MP_TAC(SPEC (--`x:real`--) SIN_COS_NEG) THEN
   REWRITE_TAC[POW_2, REAL_SUMSQ] THEN REWRITE_TAC[REAL_SUB_0] THEN
   DISCH_THEN(fn th => REWRITE_TAC[th]));
 
-val SIN_DOUBLE = prove_thm("SIN_DOUBLE",
+val SIN_DOUBLE = store_thm("SIN_DOUBLE",
   (--`!x. sin(&2 * x) = &2 * (sin(x) * cos(x))`--),
   GEN_TAC THEN REWRITE_TAC[GSYM REAL_DOUBLE, SIN_ADD] THEN
   AP_TERM_TAC THEN MATCH_ACCEPT_TAC REAL_MUL_SYM);
 
-val COS_DOUBLE = prove_thm("COS_DOUBLE",
+val COS_DOUBLE = store_thm("COS_DOUBLE",
   (--`!x. cos(&2 * x) = (cos(x) pow 2) - (sin(x) pow 2)`--),
   GEN_TAC THEN REWRITE_TAC[GSYM REAL_DOUBLE, COS_ADD, POW_2]);
 
@@ -1144,7 +1144,7 @@ val COS_DOUBLE = prove_thm("COS_DOUBLE",
 (* Show that there's a least positive x with cos(x) = 0; hence define pi     *)
 (*---------------------------------------------------------------------------*)
 
-val SIN_PAIRED = prove_thm("SIN_PAIRED",
+val SIN_PAIRED = store_thm("SIN_PAIRED",
   (--`!x. (\n. (((~(&1)) pow n) / &(FACT((2 * n) + 1)))
          * (x pow ((2 * n) + 1))) sums (sin x)`--),
   GEN_TAC THEN MP_TAC(SPEC (--`x:real`--) SIN_CONVERGES) THEN
@@ -1154,7 +1154,7 @@ val SIN_PAIRED = prove_thm("SIN_PAIRED",
   REWRITE_TAC[GSYM ADD1, EVEN_DOUBLE, REWRITE_RULE[ODD_EVEN] ODD_DOUBLE] THEN
   REWRITE_TAC[REAL_MUL_LZERO, REAL_ADD_LID, SUC_SUB1, MULT_DIV_2]);
 
-val SIN_POS = prove_thm("SIN_POS",
+val SIN_POS = store_thm("SIN_POS",
   (--`!x. &0 < x /\ x < &2 ==> &0 < sin(x)`--),
   GEN_TAC THEN STRIP_TAC THEN MP_TAC(SPEC (--`x:real`--) SIN_PAIRED) THEN
   DISCH_THEN(MP_TAC o MATCH_MP SUM_SUMMABLE) THEN
@@ -1212,7 +1212,7 @@ val SIN_POS = prove_thm("SIN_POS",
   ASM_REWRITE_TAC[] THEN CONV_TAC(REDEPTH_CONV num_CONV) THEN
   REWRITE_TAC[REAL_LE, LESS_EQ_MONO, ZERO_LESS_EQ]);
 
-val COS_PAIRED = prove_thm("COS_PAIRED",
+val COS_PAIRED = store_thm("COS_PAIRED",
   (--`!x. (\n. (((~(&1)) pow n) / &(FACT(2 * n)))
          * (x pow (2 * n))) sums (cos x)`--),
   GEN_TAC THEN MP_TAC(SPEC (--`x:real`--) COS_CONVERGES) THEN
@@ -1222,7 +1222,7 @@ val COS_PAIRED = prove_thm("COS_PAIRED",
   REWRITE_TAC[GSYM ADD1, EVEN_DOUBLE, REWRITE_RULE[ODD_EVEN] ODD_DOUBLE] THEN
   REWRITE_TAC[REAL_MUL_LZERO, REAL_ADD_RID, MULT_DIV_2]);
 
-val COS_2 = prove_thm("COS_2",
+val COS_2 = store_thm("COS_2",
   (--`cos(&2) < &0`--),
   GEN_REWR_TAC LAND_CONV  [GSYM REAL_NEGNEG] THEN
   REWRITE_TAC[REAL_NEG_LT0] THEN MP_TAC(SPEC (--`&2`--) COS_PAIRED) THEN
@@ -1308,7 +1308,7 @@ val COS_2 = prove_thm("COS_2",
   REWRITE_TAC[TWO, ADD_CLAUSES, MULT_CLAUSES] THEN
   REWRITE_TAC[ONE, LESS_MONO_EQ, LESS_0]);
 
-val COS_ISZERO = prove_thm("COS_ISZERO",
+val COS_ISZERO = store_thm("COS_ISZERO",
   (--`?!x. &0 <= x /\ x <= &2 /\ (cos x = &0)`--),
   REWRITE_TAC[EXISTS_UNIQUE_DEF] THEN BETA_TAC THEN
   W(C SUBGOAL_THEN ASSUME_TAC o hd o strip_conj o snd) THENL
@@ -1357,7 +1357,7 @@ val pi = new_definition("pi",
 (* Periodicity and related properties of the trig functions                  *)
 (*---------------------------------------------------------------------------*)
 
-val PI2 = prove_thm("PI2",
+val PI2 = store_thm("PI2",
   (--`pi / &2 = @x. &0 <= x /\ x <= &2 /\ (cos(x) = &0)`--),
   REWRITE_TAC[pi, real_div] THEN
   ONCE_REWRITE_TAC[AC(REAL_MUL_ASSOC,REAL_MUL_SYM)
@@ -1365,13 +1365,13 @@ val PI2 = prove_thm("PI2",
   IMP_SUBST_TAC REAL_MUL_LINV THEN REWRITE_TAC[REAL_INJ] THEN
   REDUCE_TAC THEN REWRITE_TAC[REAL_MUL_LID]);
 
-val COS_PI2 = prove_thm("COS_PI2",
+val COS_PI2 = store_thm("COS_PI2",
   (--`cos(pi / &2) = &0`--),
   MP_TAC(SELECT_RULE (EXISTENCE COS_ISZERO)) THEN
   REWRITE_TAC[GSYM PI2] THEN
   DISCH_THEN(fn th => REWRITE_TAC[th]));
 
-val PI2_BOUNDS = prove_thm("PI2_BOUNDS",
+val PI2_BOUNDS = store_thm("PI2_BOUNDS",
   (--`&0 < (pi / &2) /\ (pi / &2) < &2`--),
   MP_TAC(SELECT_RULE (EXISTENCE COS_ISZERO)) THEN
   REWRITE_TAC[GSYM PI2] THEN DISCH_TAC THEN
@@ -1382,12 +1382,12 @@ val PI2_BOUNDS = prove_thm("PI2_BOUNDS",
     REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LT_IMP_NE THEN
     MATCH_ACCEPT_TAC COS_2]);
 
-val PI_POS = prove_thm("PI_POS",
+val PI_POS = store_thm("PI_POS",
   (--`&0 < pi`--),
   GEN_REWR_TAC RAND_CONV  [GSYM REAL_HALF_DOUBLE] THEN
   MATCH_MP_TAC REAL_LT_ADD THEN REWRITE_TAC[PI2_BOUNDS]);
 
-val SIN_PI2 = prove_thm("SIN_PI2",
+val SIN_PI2 = store_thm("SIN_PI2",
   (--`sin(pi / &2) = &1`--),
   MP_TAC(SPEC (--`pi / &2`--) SIN_CIRCLE) THEN
   REWRITE_TAC[COS_PI2, POW_2, REAL_MUL_LZERO, REAL_ADD_RID] THEN
@@ -1403,7 +1403,7 @@ val SIN_PI2 = prove_thm("SIN_PI2",
   REWRITE_TAC[REAL_NEG_LT0] THEN MATCH_MP_TAC SIN_POS THEN
   REWRITE_TAC[PI2_BOUNDS]);
 
-val COS_PI = prove_thm("COS_PI",
+val COS_PI = store_thm("COS_PI",
   (--`cos(pi) = ~(&1)`--),
   MP_TAC(SPECL [(--`pi / &2`--), (--`pi / &2`--)] COS_ADD) THEN
   REWRITE_TAC[SIN_PI2, COS_PI2, REAL_MUL_LZERO, REAL_MUL_LID] THEN
@@ -1412,7 +1412,7 @@ val COS_PI = prove_thm("COS_PI",
   CONV_TAC SYM_CONV THEN MATCH_MP_TAC REAL_DIV_LMUL THEN
   REWRITE_TAC[REAL_INJ] THEN REDUCE_TAC);
 
-val SIN_PI = prove_thm("SIN_PI",
+val SIN_PI = store_thm("SIN_PI",
   (--`sin(pi) = &0`--),
   MP_TAC(SPECL [(--`pi / &2`--), (--`pi / &2`--)] SIN_ADD) THEN
   REWRITE_TAC[COS_PI2, REAL_MUL_LZERO, REAL_MUL_RZERO, REAL_ADD_LID] THEN
@@ -1421,43 +1421,43 @@ val SIN_PI = prove_thm("SIN_PI",
   MATCH_MP_TAC REAL_DIV_LMUL THEN
   REWRITE_TAC[REAL_INJ] THEN REDUCE_TAC);
 
-val SIN_COS = prove_thm("SIN_COS",
+val SIN_COS = store_thm("SIN_COS",
   (--`!x. sin(x) = cos((pi / &2) - x)`--),
   GEN_TAC THEN REWRITE_TAC[real_sub, COS_ADD] THEN
   REWRITE_TAC[SIN_PI2, COS_PI2, REAL_MUL_LZERO] THEN
   REWRITE_TAC[REAL_ADD_LID, REAL_MUL_LID] THEN
   REWRITE_TAC[SIN_NEG, REAL_NEGNEG]);
 
-val COS_SIN = prove_thm("COS_SIN",
+val COS_SIN = store_thm("COS_SIN",
   (--`!x. cos(x) = sin((pi / &2) - x)`--),
   GEN_TAC THEN REWRITE_TAC[real_sub, SIN_ADD] THEN
   REWRITE_TAC[SIN_PI2, COS_PI2, REAL_MUL_LZERO] THEN
   REWRITE_TAC[REAL_MUL_LID, REAL_ADD_RID] THEN
   REWRITE_TAC[COS_NEG]);
 
-val SIN_PERIODIC_PI = prove_thm("SIN_PERIODIC_PI",
+val SIN_PERIODIC_PI = store_thm("SIN_PERIODIC_PI",
   (--`!x. sin(x + pi) = ~(sin(x))`--),
   GEN_TAC THEN REWRITE_TAC[SIN_ADD, SIN_PI, COS_PI] THEN
   REWRITE_TAC[REAL_MUL_RZERO, REAL_ADD_RID, GSYM REAL_NEG_RMUL] THEN
   REWRITE_TAC[REAL_MUL_RID]);
 
-val COS_PERIODIC_PI = prove_thm("COS_PERIODIC_PI",
+val COS_PERIODIC_PI = store_thm("COS_PERIODIC_PI",
   (--`!x. cos(x + pi) = ~(cos(x))`--),
   GEN_TAC THEN REWRITE_TAC[COS_ADD, SIN_PI, COS_PI] THEN
   REWRITE_TAC[REAL_MUL_RZERO, REAL_SUB_RZERO, GSYM REAL_NEG_RMUL] THEN
   REWRITE_TAC[REAL_MUL_RID]);
 
-val SIN_PERIODIC = prove_thm("SIN_PERIODIC",
+val SIN_PERIODIC = store_thm("SIN_PERIODIC",
   (--`!x. sin(x + (&2 * pi)) = sin(x)`--),
   GEN_TAC THEN REWRITE_TAC[GSYM REAL_DOUBLE, REAL_ADD_ASSOC] THEN
   REWRITE_TAC[SIN_PERIODIC_PI, REAL_NEGNEG]);
 
-val COS_PERIODIC = prove_thm("COS_PERIODIC",
+val COS_PERIODIC = store_thm("COS_PERIODIC",
   (--`!x. cos(x + (&2 * pi)) = cos(x)`--),
   GEN_TAC THEN REWRITE_TAC[GSYM REAL_DOUBLE, REAL_ADD_ASSOC] THEN
   REWRITE_TAC[COS_PERIODIC_PI, REAL_NEGNEG]);
 
-val COS_NPI = prove_thm("COS_NPI",
+val COS_NPI = store_thm("COS_NPI",
   (--`!n. cos(&n * pi) = ~(&1) pow n`--),
   INDUCT_TAC THEN REWRITE_TAC[REAL_MUL_LZERO, COS_0, pow] THEN
   REWRITE_TAC[ADD1, GSYM REAL_ADD, REAL_RDISTRIB, COS_ADD] THEN
@@ -1465,20 +1465,20 @@ val COS_NPI = prove_thm("COS_NPI",
   ASM_REWRITE_TAC[COS_PI] THEN
   MATCH_ACCEPT_TAC REAL_MUL_SYM);
 
-val SIN_NPI = prove_thm("SIN_NPI",
+val SIN_NPI = store_thm("SIN_NPI",
   (--`!n. sin(&n * pi) = &0`--),
   INDUCT_TAC THEN REWRITE_TAC[REAL_MUL_LZERO, SIN_0, pow] THEN
   REWRITE_TAC[ADD1, GSYM REAL_ADD, REAL_RDISTRIB, SIN_ADD] THEN
   REWRITE_TAC[REAL_MUL_LID, SIN_PI, REAL_MUL_RZERO, REAL_ADD_RID] THEN
   ASM_REWRITE_TAC[REAL_MUL_LZERO]);
 
-val SIN_POS_PI2 = prove_thm("SIN_POS_PI2",
+val SIN_POS_PI2 = store_thm("SIN_POS_PI2",
   (--`!x. &0 < x /\ x < pi / &2 ==> &0 < sin(x)`--),
   GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC SIN_POS THEN
   ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LT_TRANS THEN
   EXISTS_TAC (--`pi / &2`--) THEN ASM_REWRITE_TAC[PI2_BOUNDS]);
 
-val COS_POS_PI2 = prove_thm("COS_POS_PI2",
+val COS_POS_PI2 = store_thm("COS_POS_PI2",
   (--`!x. &0 < x /\ x < pi / &2 ==> &0 < cos(x)`--),
   GEN_TAC THEN STRIP_TAC THEN
   GEN_REWR_TAC I  [TAUT_CONV (--`a:bool = ~~a`--)] THEN
@@ -1503,7 +1503,7 @@ val COS_POS_PI2 = prove_thm("COS_POS_PI2",
       ASM_REWRITE_TAC[REAL_NOT_LT]] THEN
     MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[PI2_BOUNDS]]);
 
-val COS_POS_PI = prove_thm("COS_POS_PI",
+val COS_POS_PI = store_thm("COS_POS_PI",
   (--`!x. ~(pi / &2) < x /\ x < pi / &2 ==> &0 < cos(x)`--),
   GEN_TAC THEN STRIP_TAC THEN
   REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
@@ -1514,7 +1514,7 @@ val COS_POS_PI = prove_thm("COS_POS_PI",
     ONCE_REWRITE_TAC[GSYM REAL_LT_NEG] THEN ASM_REWRITE_TAC[REAL_NEGNEG],
     MATCH_MP_TAC COS_POS_PI2 THEN ASM_REWRITE_TAC[]]);
 
-val SIN_POS_PI = prove_thm("SIN_POS_PI",
+val SIN_POS_PI = store_thm("SIN_POS_PI",
   (--`!x. &0 < x /\ x < pi ==> &0 < sin(x)`--),
   GEN_TAC THEN STRIP_TAC THEN
   REWRITE_TAC[SIN_COS] THEN ONCE_REWRITE_TAC[GSYM COS_NEG] THEN
@@ -1523,7 +1523,7 @@ val SIN_POS_PI = prove_thm("SIN_POS_PI",
   REWRITE_TAC[REAL_LT_SUB_LADD, REAL_LT_SUB_RADD] THEN
   ASM_REWRITE_TAC[REAL_HALF_DOUBLE, REAL_ADD_LINV]);
 
-val COS_POS_PI2_LE = prove_thm("COS_POS_PI2_LE",
+val COS_POS_PI2_LE = store_thm("COS_POS_PI2_LE",
   (--`!x. &0 <= x /\ x <= (pi / &2) ==> &0 <= cos(x)`--),
   GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
   DISCH_THEN(CONJUNCTS_THEN DISJ_CASES_TAC) THEN
@@ -1533,7 +1533,7 @@ val COS_POS_PI2_LE = prove_thm("COS_POS_PI2_LE",
   SUBST1_TAC(SYM(ASSUME (--`&0 = x`--))) THEN
   REWRITE_TAC[COS_0, REAL_LT_01]);
 
-val COS_POS_PI_LE = prove_thm("COS_POS_PI_LE",
+val COS_POS_PI_LE = store_thm("COS_POS_PI_LE",
   (--`!x. ~(pi / &2) <= x /\ x <= (pi / &2) ==> &0 <= cos(x)`--),
   GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
   DISCH_THEN(CONJUNCTS_THEN DISJ_CASES_TAC) THEN
@@ -1542,7 +1542,7 @@ val COS_POS_PI_LE = prove_thm("COS_POS_PI_LE",
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN
     REWRITE_TAC[COS_NEG, COS_PI2, REAL_LT_01]]);
 
-val SIN_POS_PI2_LE = prove_thm("SIN_POS_PI2_LE",
+val SIN_POS_PI2_LE = store_thm("SIN_POS_PI2_LE",
   (--`!x. &0 <= x /\ x <= (pi / &2) ==> &0 <= sin(x)`--),
   GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
   DISCH_THEN(CONJUNCTS_THEN DISJ_CASES_TAC) THEN
@@ -1551,7 +1551,7 @@ val SIN_POS_PI2_LE = prove_thm("SIN_POS_PI2_LE",
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[SIN_0],
     MP_TAC PI2_BOUNDS THEN ASM_REWRITE_TAC[REAL_LT_REFL]]);
 
-val SIN_POS_PI_LE = prove_thm("SIN_POS_PI_LE",
+val SIN_POS_PI_LE = store_thm("SIN_POS_PI_LE",
   (--`!x. &0 <= x /\ x <= pi ==> &0 <= sin(x)`--),
   GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
   DISCH_THEN(CONJUNCTS_THEN DISJ_CASES_TAC) THEN
@@ -1560,7 +1560,7 @@ val SIN_POS_PI_LE = prove_thm("SIN_POS_PI_LE",
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[SIN_0]]);
 
 
-val COS_TOTAL = prove_thm("COS_TOTAL",
+val COS_TOTAL = store_thm("COS_TOTAL",
   (--`!y. ~(&1) <= y /\ y <= &1 ==> ?!x. &0 <= x /\ x <= pi /\ (cos(x) = y)`--),
   GEN_TAC THEN STRIP_TAC THEN
   CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL
@@ -1596,7 +1596,7 @@ val COS_TOTAL = prove_thm("COS_TOTAL",
     MATCH_MP_TAC REAL_LTE_TRANS THEN EXISTS_TAC (--`x1:real`--)] THEN
   ASM_REWRITE_TAC[]);
 
-val SIN_TOTAL = prove_thm("SIN_TOTAL",
+val SIN_TOTAL = store_thm("SIN_TOTAL",
   (--`!y. ~(&1) <= y /\ y <= &1 ==>
         ?!x.  ~(pi / &2) <= x /\ x <= pi / &2 /\ (sin(x) = y)`--),
   GEN_TAC THEN DISCH_TAC THEN
@@ -1627,7 +1627,7 @@ val SIN_TOTAL = prove_thm("SIN_TOTAL",
     DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o C MATCH_MP th)) THEN
     REWRITE_TAC[REAL_EQ_RADD]]);
 
-val COS_ZERO_LEMMA = prove_thm("COS_ZERO_LEMMA",
+val COS_ZERO_LEMMA = store_thm("COS_ZERO_LEMMA",
   (--`!x. &0 <= x /\ (cos(x) = &0) ==>
       ?n. ~EVEN n /\ (x = &n * (pi / &2))`--),
   GEN_TAC THEN STRIP_TAC THEN
@@ -1664,7 +1664,7 @@ val COS_ZERO_LEMMA = prove_thm("COS_ZERO_LEMMA",
     CONV_TAC SYM_CONV THEN MATCH_MP_TAC REAL_DIV_RMUL THEN
     REWRITE_TAC[REAL_INJ] THEN REDUCE_TAC]);
 
-val SIN_ZERO_LEMMA = prove_thm("SIN_ZERO_LEMMA",
+val SIN_ZERO_LEMMA = store_thm("SIN_ZERO_LEMMA",
   (--`!x. &0 <= x /\ (sin(x) = &0) ==>
         ?n. EVEN n /\ (x = &n * (pi / &2))`--),
   GEN_TAC THEN DISCH_TAC THEN
@@ -1686,7 +1686,7 @@ val SIN_ZERO_LEMMA = prove_thm("SIN_ZERO_LEMMA",
   REWRITE_TAC[ADD1, GSYM REAL_ADD, REAL_RDISTRIB, REAL_MUL_LID] THEN
   REWRITE_TAC[ONCE_REWRITE_RULE[REAL_ADD_SYM] REAL_ADD_SUB]);
 
-val COS_ZERO = prove_thm("COS_ZERO",
+val COS_ZERO = store_thm("COS_ZERO",
   (--`!x. (cos(x) = &0) = (?n. ~EVEN n /\ (x = &n * (pi / &2))) \/
                        (?n. ~EVEN n /\ (x = ~(&n * (pi / &2))))`--),
   GEN_TAC THEN EQ_TAC THENL
@@ -1707,7 +1707,7 @@ val COS_ZERO = prove_thm("COS_ZERO",
     ASM_REWRITE_TAC[COS_PI, SIN_PI, REAL_MUL_LZERO, REAL_MUL_RZERO] THEN
     REWRITE_TAC[REAL_SUB_RZERO]]);
 
-val SIN_ZERO = prove_thm("SIN_ZERO",
+val SIN_ZERO = store_thm("SIN_ZERO",
   (--`!x. (sin(x) = &0) = (?n. EVEN n /\ (x = &n * (pi / &2))) \/
                        (?n. EVEN n /\ (x = ~(&n * (pi / &2))))`--),
   GEN_TAC THEN EQ_TAC THENL
@@ -1732,28 +1732,28 @@ val SIN_ZERO = prove_thm("SIN_ZERO",
 val tan = new_definition("tan",
   (--`tan(x) = sin(x) / cos(x)`--));
 
-val TAN_0 = prove_thm("TAN_0",
+val TAN_0 = store_thm("TAN_0",
   (--`tan(&0) = &0`--),
   REWRITE_TAC[tan, SIN_0, REAL_DIV_LZERO]);
 
-val TAN_PI = prove_thm("TAN_PI",
+val TAN_PI = store_thm("TAN_PI",
   (--`tan(pi) = &0`--),
   REWRITE_TAC[tan, SIN_PI, REAL_DIV_LZERO]);
 
-val TAN_NPI = prove_thm("TAN_NPI",
+val TAN_NPI = store_thm("TAN_NPI",
   (--`!n. tan(&n * pi) = &0`--),
   GEN_TAC THEN REWRITE_TAC[tan, SIN_NPI, REAL_DIV_LZERO]);
 
-val TAN_NEG = prove_thm("TAN_NEG",
+val TAN_NEG = store_thm("TAN_NEG",
   (--`!x. tan(~x) = ~(tan x)`--),
   GEN_TAC THEN REWRITE_TAC[tan, SIN_NEG, COS_NEG] THEN
   REWRITE_TAC[real_div, REAL_NEG_LMUL]);
 
-val TAN_PERIODIC = prove_thm("TAN_PERIODIC",
+val TAN_PERIODIC = store_thm("TAN_PERIODIC",
   (--`!x. tan(x + &2 * pi) = tan(x)`--),
   GEN_TAC THEN REWRITE_TAC[tan, SIN_PERIODIC, COS_PERIODIC]);
 
-val TAN_ADD = prove_thm("TAN_ADD",
+val TAN_ADD = store_thm("TAN_ADD",
   (--`!x y. ~(cos(x) = &0) /\ ~(cos(y) = &0) /\ ~(cos(x + y) = &0) ==>
            (tan(x + y) = (tan(x) + tan(y)) / (&1 - tan(x) * tan(y)))`--),
   REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[tan] THEN
@@ -1786,14 +1786,14 @@ val TAN_ADD = prove_thm("TAN_ADD",
   REPEAT(IMP_SUBST_TAC REAL_MUL_LINV THEN ASM_REWRITE_TAC[]) THEN
   REWRITE_TAC[REAL_MUL_LID]);
 
-val TAN_DOUBLE = prove_thm("TAN_DOUBLE",
+val TAN_DOUBLE = store_thm("TAN_DOUBLE",
   (--`!x. ~(cos(x) = &0) /\ ~(cos(&2 * x) = &0) ==>
             (tan(&2 * x) = (&2 * tan(x)) / (&1 - (tan(x) pow 2)))`--),
   GEN_TAC THEN STRIP_TAC THEN
   MP_TAC(SPECL [(--`x:real`--), (--`x:real`--)] TAN_ADD) THEN
   ASM_REWRITE_TAC[REAL_DOUBLE, POW_2]);
 
-val TAN_POS_PI2 = prove_thm("TAN_POS_PI2",
+val TAN_POS_PI2 = store_thm("TAN_POS_PI2",
   (--`!x. &0 < x /\ x < pi / &2 ==> &0 < tan(x)`--),
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[tan, real_div] THEN
   MATCH_MP_TAC REAL_LT_MUL THEN CONJ_TAC THENL
@@ -1801,7 +1801,7 @@ val TAN_POS_PI2 = prove_thm("TAN_POS_PI2",
     MATCH_MP_TAC REAL_INV_POS THEN MATCH_MP_TAC COS_POS_PI2] THEN
   ASM_REWRITE_TAC[]);
 
-val DIFF_TAN = prove_thm("DIFF_TAN",
+val DIFF_TAN = store_thm("DIFF_TAN",
   (--`!x. ~(cos(x) = &0) ==> (tan diffl inv(cos(x) pow 2))(x)`--),
   GEN_TAC THEN DISCH_TAC THEN MP_TAC(DIFF_CONV (--`\x. sin(x) / cos(x)`--)) THEN
   DISCH_THEN(MP_TAC o SPEC (--`x:real`--)) THEN ASM_REWRITE_TAC[REAL_MUL_RID] THEN
@@ -1810,7 +1810,7 @@ val DIFF_TAN = prove_thm("DIFF_TAN",
   REWRITE_TAC[GSYM POW_2, SIN_CIRCLE, GSYM REAL_INV_1OVER]);
 
 
-val TAN_TOTAL_LEMMA = prove_thm("TAN_TOTAL_LEMMA",
+val TAN_TOTAL_LEMMA = store_thm("TAN_TOTAL_LEMMA",
   (--`!y. &0 < y ==> ?x. &0 < x /\ x < pi / &2 /\ y < tan(x)`--),
   GEN_TAC THEN DISCH_TAC THEN
   SUBGOAL_THEN (--`((\x. cos(x) / sin(x)) -> &0) (pi / &2)`--)
@@ -1867,7 +1867,7 @@ val TAN_TOTAL_LEMMA = prove_thm("TAN_TOTAL_LEMMA",
     REWRITE_TAC[GSYM REAL_NOT_LE, real_sub, REAL_LE_ADDR, REAL_NEG_GE0] THEN
     ASM_REWRITE_TAC[REAL_NOT_LE]]);
 
-val TAN_TOTAL_POS = prove_thm("TAN_TOTAL_POS",
+val TAN_TOTAL_POS = store_thm("TAN_TOTAL_POS",
   (--`!y. &0 <= y ==> ?x. &0 <= x /\ x < pi / &2 /\ (tan(x) = y)`--),
   GEN_TAC THEN DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
    [FIRST_ASSUM(MP_TAC o MATCH_MP TAN_TOTAL_LEMMA) THEN
@@ -1892,7 +1892,7 @@ val TAN_TOTAL_POS = prove_thm("TAN_TOTAL_POS",
     POP_ASSUM(SUBST1_TAC o SYM) THEN EXISTS_TAC (--`&0`--) THEN
     REWRITE_TAC[TAN_0, REAL_LE_REFL, PI2_BOUNDS]]);
 
-val TAN_TOTAL = prove_thm("TAN_TOTAL",
+val TAN_TOTAL = store_thm("TAN_TOTAL",
   (--`!y. ?!x. ~(pi / &2) < x /\ x < (pi / &2) /\ (tan(x) = y)`--),
   GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL
    [DISJ_CASES_TAC(SPEC (--`y:real`--) REAL_LE_NEGTOTAL) THEN
@@ -1955,23 +1955,23 @@ val acs = new_definition("acs",
 val atn = new_definition("atn",
   (--`atn(y) = @x. ~(pi / &2) < x /\ x < pi / &2 /\ (tan x = y)`--));
 
-val ASN = prove_thm("ASN",
+val ASN = store_thm("ASN",
   (--`!y. ~(&1) <= y /\ y <= &1 ==>
            ~(pi / &2) <= asn(y) /\ (asn(y) <= pi / &2 /\ (sin(asn y) = y))`--),
   GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP SIN_TOTAL) THEN
   DISCH_THEN(MP_TAC o CONJUNCT1 o CONV_RULE EXISTS_UNIQUE_CONV) THEN
   DISCH_THEN(MP_TAC o SELECT_RULE) THEN REWRITE_TAC[GSYM asn]);
 
-val ASN_SIN = prove_thm("ASN_SIN",
+val ASN_SIN = store_thm("ASN_SIN",
   (--`!y. ~(&1) <= y /\ y <= &1 ==> (sin(asn(y)) = y)`--),
   GEN_TAC THEN DISCH_THEN(fn th => REWRITE_TAC[MATCH_MP ASN th]));
 
-val ASN_BOUNDS = prove_thm("ASN_BOUNDS",
+val ASN_BOUNDS = store_thm("ASN_BOUNDS",
   (--`!y. ~(&1) <= y /\ y <= &1
            ==> ~(pi / &2) <= asn(y) /\ asn(y) <= pi / &2`--),
 GEN_TAC THEN DISCH_THEN(fn th => REWRITE_TAC[MATCH_MP ASN th]));
 
-val ASN_BOUNDS_LT = prove_thm("ASN_BOUNDS_LT",
+val ASN_BOUNDS_LT = store_thm("ASN_BOUNDS_LT",
   (--`!y. ~(&1) < y /\ y < &1 ==> ~(pi / &2) < asn(y) /\ asn(y) < pi / &2`--),
   GEN_TAC THEN STRIP_TAC THEN
   SUBGOAL_THEN (--`~(pi / &2) <= asn(y) /\ asn(y) <= pi / &2`--) ASSUME_TAC THENL
@@ -1984,7 +1984,7 @@ val ASN_BOUNDS_LT = prove_thm("ASN_BOUNDS_LT",
   MATCH_MP_TAC ASN_SIN THEN CONJ_TAC THEN
   MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]);
 
-val SIN_ASN = prove_thm("SIN_ASN",
+val SIN_ASN = store_thm("SIN_ASN",
   (--`!x. ~(pi / &2) <= x /\ x <= pi / &2 ==> (asn(sin(x)) = x)`--),
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(MATCH_MP SIN_TOTAL (SPEC (--`x:real`--) SIN_BOUNDS)) THEN
@@ -1992,22 +1992,22 @@ val SIN_ASN = prove_thm("SIN_ASN",
   ASM_REWRITE_TAC[] THEN MATCH_MP_TAC ASN THEN
   MATCH_ACCEPT_TAC SIN_BOUNDS);
 
-val ACS = prove_thm("ACS",
+val ACS = store_thm("ACS",
   (--`!y. ~(&1) <= y /\ y <= &1 ==>
      &0 <= acs(y) /\ acs(y) <= pi  /\ (cos(acs y) = y)`--),
   GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP COS_TOTAL) THEN
   DISCH_THEN(MP_TAC o CONJUNCT1 o CONV_RULE EXISTS_UNIQUE_CONV) THEN
   DISCH_THEN(MP_TAC o SELECT_RULE) THEN REWRITE_TAC[GSYM acs]);
 
-val ACS_COS = prove_thm("ACS_COS",
+val ACS_COS = store_thm("ACS_COS",
   (--`!y. ~(&1) <= y /\ y <= &1 ==> (cos(acs(y)) = y)`--),
   GEN_TAC THEN DISCH_THEN(fn th => REWRITE_TAC[MATCH_MP ACS th]));
 
-val ACS_BOUNDS = prove_thm("ACS_BOUNDS",
+val ACS_BOUNDS = store_thm("ACS_BOUNDS",
   (--`!y. ~(&1) <= y /\ y <= &1 ==> &0 <= acs(y) /\ acs(y) <= pi`--),
   GEN_TAC THEN DISCH_THEN(fn th => REWRITE_TAC[MATCH_MP ACS th]));
 
-val ACS_BOUNDS_LT = prove_thm("ACS_BOUNDS_LT",
+val ACS_BOUNDS_LT = store_thm("ACS_BOUNDS_LT",
   (--`!y. ~(&1) < y /\ y < &1 ==> &0 < acs(y) /\ acs(y) < pi`--),
   GEN_TAC THEN STRIP_TAC THEN
   SUBGOAL_THEN (--`&0 <= acs(y) /\ acs(y) <= pi`--) ASSUME_TAC THENL
@@ -2022,7 +2022,7 @@ val ACS_BOUNDS_LT = prove_thm("ACS_BOUNDS_LT",
   MATCH_MP_TAC ACS_COS THEN CONJ_TAC THEN
   MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]);
 
-val COS_ACS = prove_thm("COS_ACS",
+val COS_ACS = store_thm("COS_ACS",
   (--`!x. &0 <= x /\ x <= pi ==> (acs(cos(x)) = x)`--),
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(MATCH_MP COS_TOTAL (SPEC (--`x:real`--) COS_BOUNDS)) THEN
@@ -2030,21 +2030,21 @@ val COS_ACS = prove_thm("COS_ACS",
   ASM_REWRITE_TAC[] THEN MATCH_MP_TAC ACS THEN
   MATCH_ACCEPT_TAC COS_BOUNDS);
 
-val ATN = prove_thm("ATN",
+val ATN = store_thm("ATN",
   (--`!y. ~(pi / &2) < atn(y) /\ atn(y) < (pi / &2) /\ (tan(atn y) = y)`--),
   GEN_TAC THEN MP_TAC(SPEC (--`y:real`--) TAN_TOTAL) THEN
   DISCH_THEN(MP_TAC o CONJUNCT1 o CONV_RULE EXISTS_UNIQUE_CONV) THEN
   DISCH_THEN(MP_TAC o SELECT_RULE) THEN REWRITE_TAC[GSYM atn]);
 
-val ATN_TAN = prove_thm("ATN_TAN",
+val ATN_TAN = store_thm("ATN_TAN",
   (--`!y. tan(atn y) = y`--),
   REWRITE_TAC[ATN]);
 
-val ATN_BOUNDS = prove_thm("ATN_BOUNDS",
+val ATN_BOUNDS = store_thm("ATN_BOUNDS",
   (--`!y. ~(pi / &2) < atn(y) /\ atn(y) < (pi / &2)`--),
   REWRITE_TAC[ATN]);
 
-val TAN_ATN = prove_thm("TAN_ATN",
+val TAN_ATN = store_thm("TAN_ATN",
   (--`!x. ~(pi / &2) < x /\ x < (pi / &2) ==> (atn(tan(x)) = x)`--),
   GEN_TAC THEN DISCH_TAC THEN MP_TAC(SPEC (--`tan(x)`--) TAN_TOTAL) THEN
   DISCH_THEN(MATCH_MP_TAC o CONJUNCT2 o CONV_RULE EXISTS_UNIQUE_CONV) THEN
@@ -2054,7 +2054,7 @@ val TAN_ATN = prove_thm("TAN_ATN",
 (* A few additional results about the trig functions                         *)
 (*---------------------------------------------------------------------------*)
 
-val TAN_SEC = prove_thm("TAN_SEC",
+val TAN_SEC = store_thm("TAN_SEC",
   (--`!x. ~(cos(x) = &0) ==> (&1 + (tan(x) pow 2) = inv(cos x) pow 2)`--),
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[tan] THEN
   FIRST_ASSUM(fn th => ONCE_REWRITE_TAC[GSYM
@@ -2064,13 +2064,13 @@ val TAN_SEC = prove_thm("TAN_SEC",
   ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
   REWRITE_TAC[GSYM REAL_RDISTRIB, SIN_CIRCLE, REAL_MUL_LID]);
 
-val SIN_COS_SQ = prove_thm("SIN_COS_SQ",
+val SIN_COS_SQ = store_thm("SIN_COS_SQ",
   (--`!x. &0 <= x /\ x <= pi ==> (sin(x) = sqrt(&1 - (cos(x) pow 2)))`--),
   GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC SQRT_EQ THEN
   REWRITE_TAC[REAL_EQ_SUB_LADD, SIN_CIRCLE] THEN
   MATCH_MP_TAC SIN_POS_PI_LE THEN ASM_REWRITE_TAC[]);
 
-val COS_SIN_SQ = prove_thm("COS_SIN_SQ",
+val COS_SIN_SQ = store_thm("COS_SIN_SQ",
   (--`!x. ~(pi / &2) <= x /\ x <= (pi / &2) ==>
              (cos(x) = sqrt(&1 - (sin(x) pow 2)))`--),
   GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC SQRT_EQ THEN
@@ -2079,24 +2079,24 @@ val COS_SIN_SQ = prove_thm("COS_SIN_SQ",
   REWRITE_TAC[SIN_CIRCLE] THEN
   MATCH_MP_TAC COS_POS_PI_LE THEN ASM_REWRITE_TAC[]);
 
-val COS_ATN_NZ = prove_thm("COS_ATN_NZ",
+val COS_ATN_NZ = store_thm("COS_ATN_NZ",
   (--`!x. ~(cos(atn(x)) = &0)`--),
   GEN_TAC THEN MATCH_MP_TAC REAL_POS_NZ THEN
   MATCH_MP_TAC COS_POS_PI THEN MATCH_ACCEPT_TAC ATN_BOUNDS);
 
-val COS_ASN_NZ = prove_thm("COS_ASN_NZ",
+val COS_ASN_NZ = store_thm("COS_ASN_NZ",
   (--`!x. ~(&1) < x /\ x < &1 ==> ~(cos(asn(x)) = &0)`--),
   GEN_TAC THEN DISCH_TAC THEN
   MAP_EVERY MATCH_MP_TAC [REAL_POS_NZ, COS_POS_PI, ASN_BOUNDS_LT] THEN
   POP_ASSUM ACCEPT_TAC);
 
-val SIN_ACS_NZ = prove_thm("SIN_ACS_NZ",
+val SIN_ACS_NZ = store_thm("SIN_ACS_NZ",
   (--`!x. ~(&1) < x /\ x < &1 ==> ~(sin(acs(x)) = &0)`--),
   GEN_TAC THEN DISCH_TAC THEN
   MAP_EVERY MATCH_MP_TAC [REAL_POS_NZ, SIN_POS_PI, ACS_BOUNDS_LT] THEN
   POP_ASSUM ACCEPT_TAC);
 
-val COS_SIN_SQRT = prove_thm("COS_SIN_SQRT",
+val COS_SIN_SQRT = store_thm("COS_SIN_SQRT",
   Term `!x. &0 <= cos(x) ==> (cos(x) = sqrt(&1 - (sin(x) pow 2)))`,
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC (ONCE_REWRITE_RULE[REAL_ADD_SYM] (SPEC (Term`x:real`) SIN_CIRCLE))
@@ -2106,7 +2106,7 @@ val COS_SIN_SQRT = prove_thm("COS_SIN_SQRT",
   CONV_TAC SYM_CONV THEN MATCH_MP_TAC POW_ROOT_POS THEN
   ASM_REWRITE_TAC[]);;
 
-val SIN_COS_SQRT = prove_thm("SIN_COS_SQRT",
+val SIN_COS_SQRT = store_thm("SIN_COS_SQRT",
   Term`!x. &0 <= sin(x) ==> (sin(x) = sqrt(&1 - (cos(x) pow 2)))`,
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC (SPEC (Term`x:real`) SIN_CIRCLE) THEN
@@ -2121,7 +2121,7 @@ val SIN_COS_SQRT = prove_thm("SIN_COS_SQRT",
 (* Derivatives of the inverse functions, starting with natural log           *)
 (*---------------------------------------------------------------------------*)
 
-val DIFF_LN = prove_thm("DIFF_LN",
+val DIFF_LN = store_thm("DIFF_LN",
   (--`!x. &0 < x ==> (ln diffl (inv x))(x)`--),
   GEN_TAC THEN DISCH_TAC THEN
   SUBGOAL_THEN (--`(ln diffl (inv x))(exp(ln(x)))`--) MP_TAC THENL
@@ -2137,7 +2137,7 @@ val DIFF_LN = prove_thm("DIFF_LN",
   ASM_REWRITE_TAC[]);
 
 (* Known as DIFF_ASN_COS in GTT *)
-val DIFF_ASN_LEMMA = prove_thm("DIFF_ASN_LEMMA",
+val DIFF_ASN_LEMMA = store_thm("DIFF_ASN_LEMMA",
   (--`!x. ~(&1) < x /\ x < &1 ==> (asn diffl (inv(cos(asn x))))(x)`--),
   GEN_TAC THEN STRIP_TAC THEN IMP_RES_TAC REAL_LT_IMP_LE THEN
   MP_TAC(SPEC (--`x:real`--) ASN_SIN) THEN ASM_REWRITE_TAC[] THEN
@@ -2151,7 +2151,7 @@ val DIFF_ASN_LEMMA = prove_thm("DIFF_ASN_LEMMA",
     MATCH_MP_TAC SIN_ASN THEN ASM_REWRITE_TAC[],
     MATCH_MP_TAC COS_ASN_NZ THEN ASM_REWRITE_TAC[]]);
 
-val DIFF_ASN = prove_thm("DIFF_ASN",
+val DIFF_ASN = store_thm("DIFF_ASN",
   (--`!x. ~(&1) < x /\ x < &1 ==> (asn diffl (inv(sqrt(&1 - (x pow 2)))))(x)`--),
   GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP DIFF_ASN_LEMMA) THEN
@@ -2164,7 +2164,7 @@ val DIFF_ASN = prove_thm("DIFF_ASN",
   CONJ_TAC THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]);
 
 (* Known as DIFF_ACS_SIN in GTT *)
-val DIFF_ACS_LEMMA = prove_thm("DIFF_ACS_LEMMA",
+val DIFF_ACS_LEMMA = store_thm("DIFF_ACS_LEMMA",
   (--`!x. ~(&1) < x /\ x < &1 ==> (acs diffl inv(~(sin(acs x))))(x)`--),
   GEN_TAC THEN STRIP_TAC THEN IMP_RES_TAC REAL_LT_IMP_LE THEN
   MP_TAC(SPEC (--`x:real`--) ACS_COS) THEN ASM_REWRITE_TAC[] THEN
@@ -2179,7 +2179,7 @@ val DIFF_ACS_LEMMA = prove_thm("DIFF_ACS_LEMMA",
     REWRITE_TAC[REAL_NEG_EQ, REAL_NEG_0] THEN
     MATCH_MP_TAC SIN_ACS_NZ THEN ASM_REWRITE_TAC[]]);
 
-val DIFF_ACS = prove_thm("DIFF_ACS",
+val DIFF_ACS = store_thm("DIFF_ACS",
   (--`!x. ~(&1) < x /\ x <  &1 ==> (acs diffl ~(inv(sqrt(&1 - (x pow 2)))))(x)`--),
   GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP DIFF_ACS_LEMMA) THEN
@@ -2202,7 +2202,7 @@ val DIFF_ACS = prove_thm("DIFF_ACS",
       ASM_REWRITE_TAC[REAL_NEGNEG]]] THEN
   CONJ_TAC THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN ASM_REWRITE_TAC[]);
 
-val DIFF_ATN = prove_thm("DIFF_ATN",
+val DIFF_ATN = store_thm("DIFF_ATN",
   (--`!x. (atn diffl (inv(&1 + (x pow 2))))(x)`--),
   GEN_TAC THEN
   SUBGOAL_THEN (--`(atn diffl (inv(&1 + (x pow 2))))(tan(atn x))`--) MP_TAC THENL
@@ -2301,7 +2301,7 @@ val Dint = new_definition("Dint",
 (* Useful lemmas about the size of `trivial` divisions etc.                 *)
 (* ------------------------------------------------------------------------ *)
 
-val DIVISION_0 = prove_thm("DIVISION_0",
+val DIVISION_0 = store_thm("DIVISION_0",
  Term `!a b. (a = b) ==> (dsize(\n:num. if (n = 0) then a else b) = 0)`,
   REPEAT GEN_TAC THEN DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC[COND_ID] THEN
   REWRITE_TAC[dsize] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
@@ -2311,7 +2311,7 @@ val DIVISION_0 = prove_thm("DIVISION_0",
      REWRITE_TAC[LESS_OR_EQ,NOT_LESS_0],
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[ZERO_LESS_EQ]]);;
 
-val DIVISION_1 = prove_thm("DIVISION_1",
+val DIVISION_1 = store_thm("DIVISION_1",
   Term `!a b. a < b ==> (dsize(\n. if (n = 0) then a else b) = 1)`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[dsize] THEN
   MATCH_MP_TAC SELECT_UNIQUE THEN X_GEN_TAC (Term `n:num`) THEN BETA_TAC THEN
@@ -2338,7 +2338,7 @@ val LESS_1 = prove (Term`!x:num. x < 1 = (x = 0)`,
  INDUCT_TAC THEN
   REWRITE_TAC [ONE,LESS_0,LESS_MONO_EQ,NOT_LESS_0,GSYM SUC_NOT]);
 
-val DIVISION_SINGLE = prove_thm("DIVISION_SINGLE",
+val DIVISION_SINGLE = store_thm("DIVISION_SINGLE",
   Term `!a b. a <= b ==> division(a,b)(\n. if (n = 0) then a else b)`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[division] THEN
   BETA_TAC THEN REWRITE_TAC[] THEN
@@ -2352,12 +2352,12 @@ val DIVISION_SINGLE = prove_thm("DIVISION_SINGLE",
     EXISTS_TAC (Term `0:num`) THEN REWRITE_TAC[NOT_LESS_0] THEN
     ASM_REWRITE_TAC[COND_ID]]);
 
-val DIVISION_LHS = prove_thm("DIVISION_LHS",
+val DIVISION_LHS = store_thm("DIVISION_LHS",
   Term `!D a b. division(a,b) D ==> (D(0) = a)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[division] THEN
   DISCH_THEN(fn th => REWRITE_TAC[th]));
 
-val DIVISION_THM = prove_thm("DIVISION_THM",
+val DIVISION_THM = store_thm("DIVISION_THM",
  Term `!D a b.
          division(a,b) D
            =
@@ -2390,13 +2390,13 @@ val DIVISION_THM = prove_thm("DIVISION_THM",
     DISCH_THEN SUBST1_TAC THEN DISCH_THEN SUBST1_TAC THEN
     REWRITE_TAC[REAL_LT_REFL]]);
 
-val DIVISION_RHS = prove_thm("DIVISION_RHS",
+val DIVISION_RHS = store_thm("DIVISION_RHS",
   Term`!D a b. division(a,b) D ==> (D(dsize D) = b)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[DIVISION_THM] THEN
   DISCH_THEN(MP_TAC o SPEC (Term`dsize D`) o last o CONJUNCTS) THEN
   REWRITE_TAC[GREATER_EQ, LESS_EQ_REFL]);
 
-val DIVISION_LT_GEN = prove_thm("DIVISION_LT_GEN",
+val DIVISION_LT_GEN = store_thm("DIVISION_LT_GEN",
 Term`!D a b m n. division(a,b) D /\ m < n /\ n <= (dsize D) ==> D(m) < D(n)`,
   REPEAT STRIP_TAC THEN UNDISCH_TAC (Term`m:num < n`) THEN
   DISCH_THEN(X_CHOOSE_THEN (Term`d:num`) MP_TAC o MATCH_MP LESS_ADD_1) THEN
@@ -2417,7 +2417,7 @@ Term`!D a b m n. division(a,b) D /\ m < n /\ n <= (dsize D) ==> D(m) < D(n)`,
         CONJUNCTS o REWRITE_RULE[DIVISION_THM]) THEN
       ASM_REWRITE_TAC[]]]);;
 
-val DIVISION_LT = prove_thm("DIVISION_LT",
+val DIVISION_LT = store_thm("DIVISION_LT",
   Term`!D a b. division(a,b) D ==> !n. n < (dsize D) ==> D(0) < D(SUC n)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[DIVISION_THM] THEN STRIP_TAC THEN
   INDUCT_TAC THEN DISCH_THEN(fn th => ASSUME_TAC th THEN
@@ -2429,7 +2429,7 @@ val DIVISION_LT = prove_thm("DIVISION_LT",
   MATCH_MP_TAC LESS_TRANS THEN EXISTS_TAC (Term`SUC n`) THEN
   ASM_REWRITE_TAC[LESS_SUC_REFL]);
 
-val DIVISION_LE = prove_thm("DIVISION_LE",
+val DIVISION_LE = store_thm("DIVISION_LE",
   Term`!D a b. division(a,b) D ==> a <= b`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP DIVISION_LT) THEN
@@ -2443,13 +2443,13 @@ val DIVISION_LE = prove_thm("DIVISION_LE",
   STRUCT_CASES_TAC(SPEC (Term`dsize D`) num_CASES) THEN
   ASM_REWRITE_TAC[PRE, REAL_LE_REFL, LESS_SUC_REFL, REAL_LT_IMP_LE]);;
 
-val DIVISION_GT = prove_thm("DIVISION_GT",
+val DIVISION_GT = store_thm("DIVISION_GT",
   Term`!D a b. division(a,b) D ==> !n. n < (dsize D) ==> D(n) < D(dsize D)`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC DIVISION_LT_GEN THEN
   MAP_EVERY EXISTS_TAC [Term`a:real`, Term`b:real`] THEN
   ASM_REWRITE_TAC[LESS_EQ_REFL]);;
 
-val DIVISION_EQ = prove_thm("DIVISION_EQ",
+val DIVISION_EQ = store_thm("DIVISION_EQ",
   Term`!D a b. division(a,b) D ==> ((a = b) = (dsize D = 0))`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP DIVISION_LT) THEN
@@ -2463,7 +2463,7 @@ val DIVISION_EQ = prove_thm("DIVISION_EQ",
   STRUCT_CASES_TAC(SPEC (Term`dsize D`) num_CASES) THEN
   ASM_REWRITE_TAC[PRE, NOT_SUC, LESS_SUC_REFL, REAL_LT_IMP_NE]);
 
-val DIVISION_LBOUND = prove_thm("DIVISION_LBOUND",
+val DIVISION_LBOUND = store_thm("DIVISION_LBOUND",
   Term`!D a b. division(a,b) D ==> !r. a <= D(r)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[DIVISION_THM] THEN STRIP_TAC THEN
   INDUCT_TAC THEN ASM_REWRITE_TAC[REAL_LE_REFL] THEN
@@ -2480,7 +2480,7 @@ val DIVISION_LBOUND = prove_thm("DIVISION_LBOUND",
       MATCH_MP_TAC REAL_EQ_IMP_LE THEN CONV_TAC SYM_CONV THEN
       FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[GREATER_EQ]]]);;
 
-val DIVISION_LBOUND_LT = prove_thm("DIVISION_LBOUND_LT",
+val DIVISION_LBOUND_LT = store_thm("DIVISION_LBOUND_LT",
  Term`!D a b. division(a,b) D /\ ~(dsize D = 0) ==> !n. a < D(SUC n)`,
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(SUBST1_TAC o SYM o MATCH_MP DIVISION_LHS) THEN
@@ -2495,7 +2495,7 @@ val DIVISION_LBOUND_LT = prove_thm("DIVISION_LBOUND_LT",
     FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP DIVISION_LT) THEN
     MATCH_MP_TAC OR_LESS THEN ASM_REWRITE_TAC[]]);;
 
-val DIVISION_UBOUND = prove_thm("DIVISION_UBOUND",
+val DIVISION_UBOUND = store_thm("DIVISION_UBOUND",
  Term`!D a b. division(a,b) D ==> !r. D(r) <= b`,
   REPEAT GEN_TAC THEN REWRITE_TAC[DIVISION_THM] THEN STRIP_TAC THEN
   GEN_TAC THEN DISJ_CASES_TAC(SPECL [Term`r:num`, Term`dsize D`] LESS_CASES)
@@ -2540,7 +2540,7 @@ val DIVISION_UBOUND = prove_thm("DIVISION_UBOUND",
     ASM_REWRITE_TAC[GSYM NOT_LESS],
     DISCH_THEN (SUBST1_TAC o SYM) THEN REWRITE_TAC[SUB_MONO_EQ]]);
 
-val DIVISION_UBOUND_LT = prove_thm("DIVISION_UBOUND_LT",
+val DIVISION_UBOUND_LT = store_thm("DIVISION_UBOUND_LT",
  Term`!D a b n. division(a,b) D /\ n < dsize D ==> D(n) < b`,
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(SUBST1_TAC o SYM o MATCH_MP DIVISION_RHS) THEN
@@ -2714,7 +2714,7 @@ val DIVISION_APPEND_LEMMA2 = prove(
       REWRITE_TAC[GREATER_EQ, SUB_LEFT_LESS_EQ] THEN
       ONCE_REWRITE_TAC[ADD_SYM] THEN ASM_REWRITE_TAC[]]]]);
 
-val DIVISION_APPEND = prove_thm("DIVISION_APPEND",
+val DIVISION_APPEND = store_thm("DIVISION_APPEND",
   Term`!a b c.
       (?D1 p1. tdiv(a,b) (D1,p1) /\ fine(g) (D1,p1)) /\
       (?D2 p2. tdiv(b,c) (D2,p2) /\ fine(g) (D2,p2)) ==>
@@ -2804,7 +2804,7 @@ val DIVISION_APPEND = prove_thm("DIVISION_APPEND",
 (* We can always find a division which is fine wrt any gauge                *)
 (* ------------------------------------------------------------------------ *)
 
-val DIVISION_EXISTS = prove_thm("DIVISION_EXISTS",
+val DIVISION_EXISTS = store_thm("DIVISION_EXISTS",
  Term `!a b g. a <= b /\ gauge(\x. a <= x /\ x <= b) g
                 ==>
                 ?D p. tdiv(a,b) (D,p) /\ fine(g) (D,p)`,
@@ -2866,7 +2866,7 @@ val DIVISION_EXISTS = prove_thm("DIVISION_EXISTS",
 (* Lemmas about combining gauges                                            *)
 (* ------------------------------------------------------------------------ *)
 
-val GAUGE_MIN = prove_thm("GAUGE_MIN",
+val GAUGE_MIN = store_thm("GAUGE_MIN",
   Term`!E g1 g2. gauge(E) g1 /\ gauge(E) g2 ==>
         gauge(E) (\x. if g1(x) < g2(x) then g1(x) else g2(x))`,
   REPEAT GEN_TAC THEN REWRITE_TAC[gauge] THEN STRIP_TAC THEN
@@ -2874,7 +2874,7 @@ val GAUGE_MIN = prove_thm("GAUGE_MIN",
   COND_CASES_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
   FIRST_ASSUM ACCEPT_TAC);;
 
-val FINE_MIN = prove_thm("FINE_MIN",
+val FINE_MIN = store_thm("FINE_MIN",
   Term`!g1 g2 D p.
         fine (\x. if g1(x) < g2(x) then g1(x) else g2(x)) (D,p) ==>
         fine(g1) (D,p) /\ fine(g2) (D,p)`,
@@ -2892,7 +2892,7 @@ val FINE_MIN = prove_thm("FINE_MIN",
 (* The integral is unique if it exists                                      *)
 (* ------------------------------------------------------------------------ *)
 
-val DINT_UNIQ = prove_thm("DINT_UNIQ",
+val DINT_UNIQ = store_thm("DINT_UNIQ",
  Term`!a b f k1 k2.
         a <= b /\ Dint(a,b) f k1 /\ Dint(a,b) f k2 ==> (k1 = k2)`,
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
@@ -2934,7 +2934,7 @@ val DINT_UNIQ = prove_thm("DINT_UNIQ",
 (* Integral over a null interval is 0                                       *)
 (* ------------------------------------------------------------------------ *)
 
-val INTEGRAL_NULL = prove_thm("INTEGRAL_NULL",
+val INTEGRAL_NULL = store_thm("INTEGRAL_NULL",
   Term`!f a. Dint(a,a) f (&0)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[Dint] THEN GEN_TAC THEN
   DISCH_TAC THEN EXISTS_TAC (Term`\x:real. &1`) THEN
@@ -3076,7 +3076,7 @@ val STRADDLE_LEMMA = prove(
       MATCH_MP_TAC REAL_INV_POS THEN
       REWRITE_TAC[REAL_LT, TWO, LESS_0]]]);
 
-val FTC1 = prove_thm("FTC1",
+val FTC1 = store_thm("FTC1",
  Term `!f f' a b.
        a <= b /\ (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x))
         ==> Dint(a,b) f' (f(b) - f(a))`,
@@ -3167,7 +3167,7 @@ val EXT_CONV =  SYM o uncurry X_FUN_EQ_CONV o
 
 val _ = Parse.hide "B";
 
-val MCLAURIN = prove_thm("MCLAURIN",
+val MCLAURIN = store_thm("MCLAURIN",
  Term
   `!f diff h n.
     &0 < h /\ 0 < n /\ (diff(0) = f) /\
@@ -3394,7 +3394,7 @@ val MCLAURIN = prove_thm("MCLAURIN",
       MATCH_MP_TAC REAL_LT_TRANS THEN EXISTS_TAC (Term`t0:real`) THEN
       ASM_REWRITE_TAC[]]]);
 
-val MCLAURIN_NEG = prove_thm("MCLAURIN_NEG",
+val MCLAURIN_NEG = store_thm("MCLAURIN_NEG",
  Term `!f diff h n.
     h < &0 /\ 0<n /\ (diff(0) = f) /\
     (!m t. m < n /\ h <= t /\ t <= &0 ==>
@@ -3441,7 +3441,7 @@ val MCLAURIN_NEG = prove_thm("MCLAURIN_NEG",
 (* Simple strong form if a function is differentiable everywhere.            *)
 (* ------------------------------------------------------------------------- *)
 
-val MCLAURIN_ALL_LT = prove_thm("MCLAURIN_ALL_LT",
+val MCLAURIN_ALL_LT = store_thm("MCLAURIN_ALL_LT",
  Term`!f diff.
       (diff 0 = f) /\
       (!m x. ((diff m) diffl (diff(SUC m) x)) x)
@@ -3470,7 +3470,7 @@ val MCLAURIN_ALL_LT = prove_thm("MCLAURIN_ALL_LT",
     UNDISCH_TAC (Term`&0 < t`) THEN UNDISCH_TAC (Term`t < x`)
     THEN REAL_ARITH_TAC]);
 
-val MCLAURIN_ZERO = prove_thm("MCLAURIN_ZERO",
+val MCLAURIN_ZERO = store_thm("MCLAURIN_ZERO",
  Term`!diff n x. (x = &0) /\ 0 < n
        ==>
        (sum(0,n) (\m. (diff m (&0) / &(FACT m)) * x pow m)
@@ -3505,7 +3505,7 @@ val REAL_POW_EQ_0 = prove
    [REWRITE_TAC [REAL_OF_NUM_EQ, ONE,NOT_SUC],
     EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]]);
 
-val MCLAURIN_ALL_LE = prove_thm("MCLAURIN_ALL_LE",
+val MCLAURIN_ALL_LE = store_thm("MCLAURIN_ALL_LE",
  Term`!f diff.
       (diff 0 = f) /\
       (!m x. ((diff m) diffl (diff(SUC m) x)) x)
@@ -3542,7 +3542,7 @@ val MCLAURIN_EXP_LEMMA = prove
    (!m x. (((\n:num. exp) m) diffl ((\n:num. exp) (SUC m) x)) x)`,
   REWRITE_TAC[DIFF_EXP]);
 
-val MCLAURIN_EXP_LT = prove_thm("MCLAURIN_EXP_LT",
+val MCLAURIN_EXP_LT = store_thm("MCLAURIN_EXP_LT",
  Term`!x n. ~(x = &0) /\ 0 < n
          ==> ?t. &0 < abs(t) /\
                  abs(t) < abs(x) /\
@@ -3556,7 +3556,7 @@ val MCLAURIN_EXP_LT = prove_thm("MCLAURIN_EXP_LT",
   THEN GEN_TAC THEN BETA_TAC THEN GEN_REWRITE_TAC LAND_CONV [] [REAL_MUL_SYM]
   THEN REFL_TAC);
 
-val MCLAURIN_EXP_LE = prove_thm("MCLAURIN_EXP_LE",
+val MCLAURIN_EXP_LE = store_thm("MCLAURIN_EXP_LE",
  Term`!x n. ?t. abs(t) <= abs(x) /\
              (exp(x) = sum(0,n)(\m. x pow m / &(FACT m)) +
                        (exp(t) / &(FACT n)) * x pow n)`,
@@ -3572,7 +3572,7 @@ val MCLAURIN_EXP_LE = prove_thm("MCLAURIN_EXP_LE",
 (* Version for ln(1 - x).                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val DIFF_LN_COMPOSITE = prove_thm("DIFF_LN_COMPOSITE",
+val DIFF_LN_COMPOSITE = store_thm("DIFF_LN_COMPOSITE",
  Term`!g m x. (g diffl m)(x) /\ &0 < g x
            ==> ((\x. ln(g x)) diffl (inv(g x) * m))(x)`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC DIFF_CHAIN THEN
@@ -3585,7 +3585,7 @@ val lem = prove(Term`!n:num. 0 < n ==> ~(n=0)`,
 INDUCT_TAC THEN ASM_REWRITE_TAC [NOT_SUC,NOT_LESS_0]);
 
 (*
-val MCLAURIN_LN_POS = prove_thm("MCLAURIN_LN_POS",
+val MCLAURIN_LN_POS = store_thm("MCLAURIN_LN_POS",
  Term`!x n.
      &0 < x /\ 0 < n
      ==> ?t. &0 < t /\

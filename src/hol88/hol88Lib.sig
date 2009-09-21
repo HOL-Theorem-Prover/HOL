@@ -14,14 +14,10 @@ sig
   type ('a,'b)hol88subst = ('b * 'a) list
 
   val match : term -> term -> (term * term) list * (hol_type * hol_type) list
-  val prove_thm : string * term * tactic -> thm
-  val PROVE : term * tactic -> thm
   val assoc : ''a -> (''a * 'b) list -> ''a * 'b
   val rev_assoc : ''a -> ('b * ''a) list -> 'b * ''a
   val frees : term -> term list
   val GEN_ALL : thm -> thm
-  val new_prim_rec_definition : string * term -> thm
-  val replicate :'a -> int -> 'a list
   val GEN_REWRITE_RULE : (conv -> conv) -> thm list -> thm list -> thm -> thm
   val GEN_REWRITE_TAC : (conv -> conv) -> thm list -> thm list -> tactic
   val variant : term list -> term -> term
@@ -41,8 +37,8 @@ sig
   val subst         : (term,term)hol88subst -> term -> term
   val inst          : (hol_type,hol_type)hol88subst -> term -> term
   val match_term    : term -> term
-                       -> (term,term)hol88subst * (hol_type,hol_type)hol88subst
-  val SUBST         : (term,thm)hol88subst ->term -> thm -> thm
+                        -> (term,term)hol88subst * (hol_type,hol_type)hol88subst
+  val SUBST         : (term,thm)hol88subst -> term -> thm -> thm
   val INST          : (term,term)hol88subst -> thm -> thm
   val INST_TYPE     : (hol_type,hol_type)hol88subst -> thm -> thm
   val INST_TY_TERM  : (term,term)hol88subst * (hol_type,hol_type)hol88subst

@@ -56,19 +56,6 @@ fun GEN_ALL th =
   Lib.itlist Thm.GEN
     (Lib.set_diff (frees (Thm.concl th)) (freesl (Thm.hyp th))) th
 
-fun new_prim_rec_definition (name, tm) =
-  Prim_rec.new_recursive_definition
-   {name=name, def=tm, rec_axiom=prim_recTheory.num_Axiom}
-
-val PROVE = Tactical.prove
-val prove_thm = Tactical.store_thm
-
-fun replicate x =
-   let fun repl 0 = []
-         | repl n = x::repl (n-1)
-   in repl
-   end
-
 fun GEN_REWRITE_RULE F thlist1 thlist2 =
     Rewrite.GEN_REWRITE_RULE F
         (Rewrite.add_rewrites Rewrite.empty_rewrites thlist1) thlist2
