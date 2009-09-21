@@ -9,7 +9,7 @@ val _ = new_theory "toy_core";
 (*  Type definitions                                                          *)
 (* -------------------------------------------------------------------------- *)
 
-(* This theroy defines a toy processor core which handles the 
+(* This theory defines a toy processor core which handles the 
    following instructions: *)
 
 val _ = type_abbrev ("reg",``:word4``); 
@@ -33,7 +33,7 @@ val _ = Hol_datatype `instruction =
      iBCC 40w           updates the program counter by 40w if status bit is set
 *)
 
-(* The state of the core consists of 16 registers, a boolean bit, and,
+(* The state of the core consists of 16 registers, a Boolean bit, and,
    for ease of presentation the code. *)
 
 val _ = type_abbrev ("core_state", 
