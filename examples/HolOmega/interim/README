@@ -1,0 +1,9 @@
+
+this directory contains files which are work-in-progress in regard to proving
+results to do with category theory, monads, etc, using the special features of
+HOL-Omega
+
+To process them, use "Holmake -I .."
+
+Jeremy Dawson
+
