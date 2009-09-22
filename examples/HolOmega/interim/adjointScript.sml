@@ -1,4 +1,3 @@
-
 structure adjointScript =
 struct
 
@@ -13,10 +12,6 @@ val _ = set_trace "kinds" 0;
 
 val _ = new_theory "adjoint";
 
-(* when using Holmake 
-Holmake -I /home/users/jeremy/hol-omega/examples/HolOmega
-*)
-
 val _ = type_abbrev ("hash",
   Type `: \'F 'G. !'a 'b. ('a -> 'b 'G) -> ('a 'F -> 'b)`) ;
 val _ = type_abbrev ("star",
@@ -25,17 +20,17 @@ val _ = type_abbrev ("star",
 val adjf1_def = new_definition("adjf1_def",
   ``adjf1 (G : 'G functor) (eta : (I, 'F o 'G) nattransf) 
       (hash : ('F, 'G) hash) =
-    (!: 'a 'b. (! (f : 'a -> 'b 'G) g. ((G g o eta = f) = (hash f = g))))``) ;
+    (!: 'a 'b. (! (f : 'a -> 'b 'G) g. (G g o eta = f) = (hash f = g)))``) ;
 
 val adjf2_def = new_definition("adjf2_def",
   ``adjf2 (F' : 'F functor) (eps : ('G o 'F, I) nattransf) 
       (star : ('G, 'F) star) = 
-    (!: 'b 'a. (! g (f : 'a -> 'b 'G). ((eps o F' f = g) = (star g = f))))``) ;
+    (!: 'b 'a. (! g (f : 'a -> 'b 'G). (eps o F' f = g) = (star g = f)))``) ;
 
 val adjf3_def = new_definition("adjf3_def",
   ``adjf3 (F' : 'F functor) (G : 'G functor)
     (eta : (I, 'F o 'G) nattransf) (eps : ('G o 'F, I) nattransf) =
-    (!: 'a 'b. ! (f : 'a -> 'b 'G) g. ((G g o eta = f) = (eps o F' f = g)))``);
+    (!: 'a 'b. ! (f : 'a -> 'b 'G) g. (G g o eta = f) = (eps o F' f = g))``);
 
 val adjf1DGh' = prove (``adjf1 G eta hash ==> (G (hash f) o eta = f)``,
   EVERY [ STRIP_TAC, (IMP_RES_TAC adjf1_def), (ASM_REWRITE_TAC []) ]) ;
@@ -79,7 +74,7 @@ val HASH_def = new_definition ("HASH_def",
 
 val tm12 = ``nattransf eta (\:'a 'b. I) (G oo F') /\ functor G /\
   adjf1 G eta hash ==> (adjf2 F' (EPS hash) (STAR G eta : ('G,'F) star))`` ;
-  
+
 (* better, get adjf1_2 as REWRITE_RULE [adjf3_2] adjf1_3 *)
 val adjf1_2 = store_thm ("adjf1_2", tm12,
   EVERY [ (REWRITE_TAC [adjf2_def, STAR_def, EPS_def]),

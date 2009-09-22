@@ -1913,8 +1913,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                          val vhop' = inst_fn vhop
                          val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
                          val _ = if eq_ty vhop' chop then raise NOT_FOUND else ()
-                         val vhop_inst = [vhop' |-> chop]
-                         val vty1 = deep_beta_ty (type_subst vhop_inst (inst_fn vty))
+                         val vty1 = deep_beta_ty (type_subst insts (inst_fn vty))
                        in
                          if eq_ty vty1 cty then
                            (* drop this hom as subsumed by current insts *)
