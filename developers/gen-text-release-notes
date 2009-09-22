@@ -1,3 +1,8 @@
+# Small -*- shell-script -*- to generate text version of HOL release
+# notes (e.g., for e-mail announcements).
+#
+# Usage: ./gen-text-release-notes < release-notes.html
+
 lynx -display_charset=utf8 -dump -nonumbers -stdin | \
            perl -e '$/ = "\n\n";
                     while (<>) { s/([.)])\n( *)\*/\1\n\n\2*/g; print; }'
