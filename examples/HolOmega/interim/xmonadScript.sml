@@ -13,10 +13,6 @@ val _ = set_trace "kinds" 0;
 val _ = new_theory "xmonad";
 
 
-(* when using Holmake 
-Holmake -I /home/users/jeremy/hol-omega/examples/HolOmega
-*)
-
 (*
 val _ = loadPath := "/home/users/jeremy/myholw/gen" :: !loadPath ;
 val _ = loadPath := 
@@ -107,7 +103,7 @@ val umj_monad_EQ_monad = store_thm ("umj_monad_EQ_monad",
       (FIRST_ASSUM (fn th => (SYM th ; CHANGED_TAC (SUBST_ALL_TAC th)))),
       (FIRST_ASSUM (fn th => (SYM th ; CHANGED_TAC (SUBST_ALL_TAC th)))),
       (SRW_TAC [] []) ])]) ) ;
-      
+
 val (umj_monadD, _) = EQ_IMP_RULE (SPEC_ALL umj_monad_def) ;
 val [umjD1, umjD2, umjD3, umjD4, umjD5, umjD6, umjD7] =
   CONJUNCTS (UNDISCH umj_monadD) ;
