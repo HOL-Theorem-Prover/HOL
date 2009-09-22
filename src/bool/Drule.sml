@@ -2193,9 +2193,9 @@ fun canon (fl,th) =
    end
 in
 fun RES_CANON th =
- let val conjlist = CONJUNCTS (SPEC_ALL th)
+ let val conjlist = CONJUNCTS (SPEC_ALL (TY_SPEC_ALL th))
      fun operate th accum =
-          accum @ map GEN_ALL (canon (not_elim (SPEC_ALL th)))
+          accum @ map GEN_ALL (canon (not_elim (SPEC_ALL (TY_SPEC_ALL th))))
      val imps = Lib.rev_itlist operate conjlist []
  in Lib.assert (op not o null) imps
  end handle HOL_ERR _
