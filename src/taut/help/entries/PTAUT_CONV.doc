@@ -29,18 +29,20 @@ have to be universally quantified if the term is valid).
 
 \EXAMPLE
 {
-#PTAUT_CONV "!x y z w. (((x \/ ~y) ==> z) /\ (z ==> ~w) /\ w) ==> y";;
+#PTAUT_CONV ``!x y z w. (((x \/ ~y) ==> z) /\ (z ==> ~w) /\ w) ==> y``;
 |- (!x y z w. (x \/ ~y ==> z) /\ (z ==> ~w) /\ w ==> y) = T
 
-#PTAUT_CONV "(((x \/ ~y) ==> z) /\ (z ==> ~w) /\ w) ==> y";;
+#PTAUT_CONV ``(((x \/ ~y) ==> z) /\ (z ==> ~w) /\ w) ==> y``;
 |- (x \/ ~y ==> z) /\ (z ==> ~w) /\ w ==> y = T
 
-#PTAUT_CONV "!x. x = T";;
+#PTAUT_CONV ``!x. x = T``;
 |- (!x. x = T) = F
 
-#PTAUT_CONV "x = T";;
-evaluation failed     PTAUT_CONV
+#PTAUT_CONV ``x = T``;
+Uncaught exception:
+HOL_ERR
 }
+
 \SEEALSO
 PTAUT_PROVE, PTAUT_TAC, TAUT_CONV.
 

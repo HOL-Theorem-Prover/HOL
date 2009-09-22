@@ -1,24 +1,15 @@
 (*****************************************************************************)
 (* FILE          : tautLib.sml                                               *)
-(* DESCRIPTION   : Boolean tautology checking by SAT solver proof replay     *)
-(*                 (replaces 1991 case analysis method by Tom Melham & RJB   *)
+(* DESCRIPTION   : Boolean tautology checking (by SAT solver proof replay)   *)
 (*                                                                           *)
 (* READS FILES   : Temporary files output by SAT solver. Deleted.            *)
 (* WRITES FILES  : Temporary input file to solver. Deleted.                  *)
-(*                                                                           *)
-(* AUTHOR        : R.J.Boulton, University of Cambridge                      *)
-(* DATE          : 9th July 1991                                             *)
-(* TRANSLATOR    : Konrad Slind, University of Calgary                       *)
-(*                                                                           *)
-(* LAST MODIFIED : Hasan Amjad                                               *)
-(* DATE          : 1st August 2007                                           *)
-(*                                                                           *)
 (*****************************************************************************)
 
 structure tautLib :> tautLib =
 struct
 
-open HolKernel Parse boolLib Abbrev boolSyntax HolSatLib;
+open HolKernel Parse boolLib Abbrev boolSyntax HolSatLib
 
 val ERR = mk_HOL_ERR "tautLib"
 
@@ -40,7 +31,7 @@ open Parse
 (*===========================================================================*)
 
 fun is_T tm = (tm = T)
-and is_F tm = (tm = F);
+fun is_F tm = (tm = F)
 
 (*---------------------------------------------------------------------------*)
 (* TAUT_CHECK_CONV : conv                                                    *)
@@ -54,24 +45,25 @@ and is_F tm = (tm = F);
 (*---------------------------------------------------------------------------*)
 
 fun TAUT_CHECK_CONV tm =
+  let val (vars,tm') = strip_forall tm
+  in EQT_INTRO (GENL vars (SAT_PROVE tm')) end
+  handle HolSatLib.SAT_cex th =>
     let val (vars,tm') = strip_forall tm
-    in EQT_INTRO (GENL vars (SAT_PROVE tm')) end
-    handle HolSatLib.SAT_cex th =>
-	   let val (vars,tm') = strip_forall tm
-	       val g = list_mk_exists(vars,mk_neg tm')
-	       val cxm = List.foldl (fn (v,cxm) =>
-					if (is_neg v) then Redblackmap.insert(cxm,dest_neg v,F)
-					else Redblackmap.insert(cxm,v,T))
-				    (Redblackmap.mkDict Term.compare)
-				    (strip_conj (fst (dest_imp (concl th))))
-	       val cex = List.map (fn v => Redblackmap.find(cxm,v) handle NotFound => T) vars
-	       val th1 = prove(g,MAP_EVERY EXISTS_TAC cex THEN REWRITE_TAC [])
-	       val th2 = CONV_RULE (REPEATC (LAST_EXISTS_CONV EXISTS_NOT_CONV)) th1
-	   in EQF_INTRO th2 end
-    handle ex => raise ERR "TAUT_CHECK_CONV" "";
+        val g = list_mk_exists(vars,mk_neg tm')
+        val cxm = List.foldl (fn (v, cxm) =>
+          if is_neg v then Redblackmap.insert (cxm, dest_neg v, F)
+          else Redblackmap.insert (cxm, v, T))
+            (Redblackmap.mkDict Term.compare)
+            (strip_conj (fst (dest_imp (concl th))))
+        val cex = List.map (fn v => Redblackmap.find (cxm, v)
+          handle NotFound => T) vars
+        val th1 = prove(g, MAP_EVERY EXISTS_TAC cex THEN REWRITE_TAC [])
+        val th2 = CONV_RULE (REPEATC (LAST_EXISTS_CONV EXISTS_NOT_CONV)) th1
+    in EQF_INTRO th2 end
+  handle HOL_ERR _ => raise ERR "TAUT_CHECK_CONV" ""
 
 (*---------------------------------------------------------------------------*)
-(* PTAUT_CONV :conv                                                          *)
+(* PTAUT_CONV : conv                                                         *)
 (*                                                                           *)
 (* Given a propositional term with all variables universally quantified,     *)
 (* e.g. `!x1 ... xn. f[x1,...,xn]`, this conversion proves the term to be    *)
@@ -106,7 +98,7 @@ fun TAUT_CHECK_CONV tm =
 (*                                                                           *)
 (*    |- !x1. ((!x2 ... xn. f[x1,...,xn]) = F)                               *)
 (*                                                                           *)
-(* i.e.                                                                      *)
+(* i.e.,                                                                     *)
 (*                                                                           *)
 (*    |- (!x2 ... xn. f[x1,...,xn]) = F                                      *)
 (*                                                                           *)
@@ -129,18 +121,18 @@ fun PTAUT_CONV tm =
 (* Tactic for solving propositional terms.                                   *)
 (*---------------------------------------------------------------------------*)
 
-val PTAUT_TAC = CONV_TAC PTAUT_CONV;
+val PTAUT_TAC = CONV_TAC PTAUT_CONV
 
 (*---------------------------------------------------------------------------*)
-(* PTAUT_PROVE : conv                                                        *)
+(* PTAUT_PROVE : term -> thm                                                 *)
 (*                                                                           *)
-(* Given a propositional term `t`, this conversion returns the theorem |- t  *)
-(* if `t` is a tautology. Otherwise it fails.                                *)
+(* Given a propositional term `t`, this function returns the theorem |- t if *)
+(* `t` is a tautology. Otherwise it fails.                                   *)
 (*---------------------------------------------------------------------------*)
 
 fun PTAUT_PROVE tm =
    EQT_ELIM (PTAUT_CONV tm)
-   handle e => raise (wrap_exn "tautLib" "PTAUT_PROVE" e);
+   handle e => raise (wrap_exn "tautLib" "PTAUT_PROVE" e)
 
 (*===========================================================================*)
 (* Tautology checking including instances of propositional tautologies       *)
@@ -199,7 +191,7 @@ fun TAUT_CONV tm =
       val tm'' = list_mk_forall (vars,subst theta tm')
   in EQT_INTRO (GENL univs (SPECL insts (PTAUT_PROVE tm'')))
   end
-  handle e => raise (wrap_exn "tautLib" "TAUT_CONV" e);
+  handle e => raise (wrap_exn "tautLib" "TAUT_CONV" e)
 
 (*---------------------------------------------------------------------------*)
 (* TAUT_TAC : tactic                                                         *)
@@ -208,27 +200,27 @@ fun TAUT_CONV tm =
 (* formulae.                                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val TAUT_TAC = CONV_TAC TAUT_CONV;
+val TAUT_TAC = CONV_TAC TAUT_CONV
 
 (*---------------------------------------------------------------------------*)
-(* ASM_TAUT_TAC : tactic                                                      *)
+(* ASM_TAUT_TAC : tactic                                                     *)
 (*                                                                           *)
-(* Same as TAUT_TAC, except that it takes account of the assumptions of the  *)
-(* goal.                                                                     *)
+(* Same as TAUT_TAC, except that it takes the assumptions of the goal into   *)
+(* account.                                                                  *)
 (*---------------------------------------------------------------------------*)
 
 val ASM_TAUT_TAC = REPEAT (POP_ASSUM MP_TAC) THEN TAUT_TAC
 
 (*---------------------------------------------------------------------------*)
-(* TAUT_PROVE : conv                                                         *)
+(* TAUT_PROVE : term -> thm                                                  *)
 (*                                                                           *)
 (* Given a valid propositional formula, or a valid instance of a             *)
-(* propositional formula, `t`, this conversion returns the theorem |- t.     *)
+(* propositional formula, `t`, this function returns the theorem |- t.       *)
 (*---------------------------------------------------------------------------*)
 
 fun TAUT_PROVE tm =
- EQT_ELIM (TAUT_CONV tm) handle HOL_ERR _ => raise ERR "TAUT_PROVE" "";
+ EQT_ELIM (TAUT_CONV tm) handle HOL_ERR _ => raise ERR "TAUT_PROVE" ""
 
-fun TAUT q = TAUT_PROVE (Term q);
+fun TAUT q = TAUT_PROVE (Term q)
 
 end (* tautLib *)

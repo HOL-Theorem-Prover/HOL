@@ -1,6 +1,6 @@
 \DOC PTAUT_PROVE
 
-\TYPE {PTAUT_PROVE : conv}
+\TYPE {PTAUT_PROVE : term -> thm}
 
 \SYNOPSIS
 Tautology checker. Proves propositional formulae.
@@ -18,18 +18,21 @@ Fails if the term is not a valid propositional formula.
 
 \EXAMPLE
 {
-#PTAUT_PROVE "!x y z w. (((x \/ ~y) ==> z) /\ (z ==> ~w) /\ w) ==> y";;
+#PTAUT_PROVE ``!x y z w. (((x \/ ~y) ==> z) /\ (z ==> ~w) /\ w) ==> y``;
 |- !x y z w. (x \/ ~y ==> z) /\ (z ==> ~w) /\ w ==> y
 
-#PTAUT_PROVE "(((x \/ ~y) ==> z) /\ (z ==> ~w) /\ w) ==> y";;
+#PTAUT_PROVE ``(((x \/ ~y) ==> z) /\ (z ==> ~w) /\ w) ==> y``;
 |- (x \/ ~y ==> z) /\ (z ==> ~w) /\ w ==> y
 
-#PTAUT_PROVE "!x. x = T";;
-evaluation failed     PTAUT_PROVE
+#PTAUT_PROVE ``!x. x = T``;
+Uncaught exception:
+HOL_ERR
 
-#PTAUT_PROVE "x = T";;
-evaluation failed     PTAUT_PROVE
+#PTAUT_PROVE ``x = T``;
+Uncaught exception:
+HOL_ERR
 }
+
 \SEEALSO
 PTAUT_CONV, PTAUT_TAC, TAUT_PROVE.
 

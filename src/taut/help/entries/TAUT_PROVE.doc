@@ -1,6 +1,6 @@
 \DOC TAUT_PROVE
 
-\TYPE {TAUT_PROVE : conv}
+\TYPE {TAUT_PROVE : term -> thm}
 
 \SYNOPSIS
 Tautology checker. Proves propositional formulae (and instances of them).
@@ -23,15 +23,17 @@ instance is not a valid formula.
 \EXAMPLE
 {
 #TAUT_PROVE
-# "!x n y. ((((n = 1) \/ ~x) ==> y) /\ (y ==> ~(n < 0)) /\ (n < 0)) ==> x";;
+# ``!x n y. ((((n = 1) \/ ~x) ==> y) /\ (y ==> ~(n < 0)) /\ (n < 0)) ==> x``;
 |- !x n y. ((n = 1) \/ ~x ==> y) /\ (y ==> ~n < 0) /\ n < 0 ==> x
 
-#TAUT_PROVE "((((n = 1) \/ ~x) ==> y) /\ (y ==> ~(n < 0)) /\ (n < 0)) ==> x";;
+#TAUT_PROVE ``((((n = 1) \/ ~x) ==> y) /\ (y ==> ~(n < 0)) /\ (n < 0)) ==> x``;
 |- ((n = 1) \/ ~x ==> y) /\ (y ==> ~n < 0) /\ n < 0 ==> x
 
-#TAUT_PROVE "!n. (n < 0) \/ (n = 0)";;
-evaluation failed     TAUT_PROVE
+#TAUT_PROVE ``!n. (n < 0) \/ (n = 0)``;
+Uncaught exception:
+HOL_ERR
 }
+
 \SEEALSO
 TAUT_CONV, TAUT_TAC, PTAUT_PROVE.
 
