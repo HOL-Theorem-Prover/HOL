@@ -483,7 +483,7 @@ structure Z3 = struct
        Skolemization; these are eliminated at the end of proof reconstruction *)
     val skolem_defs = ref ([] : Term.term list)
     (* stores assumptions, (only) these may remain in the final theorem *)
-    val asserted_hyps = ref (HOLset.empty Term.compare)
+    val asserted_hyps = ref Term.empty_tmset
     (* stores theorems of linear arithmetic (proved by 'rewrite' or 'th_lemma')
        for later retrieval, to avoid re-reproving them *)
     val arith_cache = ref Net.empty
@@ -2260,15 +2260,7 @@ structure Z3 = struct
                val thm = check_proof (parse_proof_file outfile ty_tm_dict)
                (* discharging definitions: INT_MIN, INT_MAX, ABS *)
                val INT_ABS = intLib.ARITH_PROVE
-                 ``!n. ABS (n:int) = if n < 0 then 0 - n else n``
-               val thm = List.foldl (fn (hyp, th) =>
-                 let
-                   val hyp_th = bossLib.METIS_PROVE
-                     [integerTheory.INT_MIN, integerTheory.INT_MAX, INT_ABS] hyp
-                 in
-                   Drule.PROVE_HYP hyp_th th
-                 end handle Feedback.HOL_ERR _ =>
-                   th) thm (Thm.hyp thm)
+                 ``!x. ABS (x:int) = if x < 0 then 0 - x else x``
                (* bool_case is replaced by if_then_else by the translation to
                   SMT-LIB format; this must therefore be done in the goal as
                   well *)
@@ -2280,11 +2272,13 @@ structure Z3 = struct
                val (As, g) = goal
                val unfold_thms = List.mapPartial unfold_bool_case
                  (boolSyntax.mk_neg g :: As)
-               val thm = List.foldl (fn (unfold_th, th) =>
-                 if HOLset.member (Thm.hypset th, Thm.concl unfold_th) then
-                   Drule.PROVE_HYP unfold_th th
+               fun prove_hyp (hyp, th) =
+                 if HOLset.member (Thm.hypset th, Thm.concl hyp) then
+                   Drule.PROVE_HYP hyp th
                  else
-                   th) thm unfold_thms
+                   th
+               val thm = List.foldl prove_hyp thm (integerTheory.INT_MIN ::
+                 integerTheory.INT_MAX :: INT_ABS :: unfold_thms)
                val thm = Thm.CCONTR g thm
              in
                SolverSpec.UNSAT (SOME thm)

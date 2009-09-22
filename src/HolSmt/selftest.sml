@@ -26,11 +26,12 @@ fun die s =
 
 (* provable terms: theorem expected *)
 fun expect_thm name solver t =
-  let val thm = HolSmtLib.GENERIC_SMT solver ([], t)
+  let val thm = Tactical.TAC_PROOF (([], t), HolSmtLib.GENERIC_SMT_TAC solver)
     handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
         Hol_pp.term_to_string t ^ "': exception HOL_ERR (in " ^
-        origin_structure^ "." ^ origin_function ^ ", message: " ^ message ^ ")")
+        origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
+        ")")
   in
     if Thm.hyp thm = [] andalso Thm.concl thm = t then ()
     else
@@ -41,22 +42,23 @@ fun expect_thm name solver t =
 
 (* unprovable terms: satisfiability expected *)
 fun expect_sat name solver t =
-  let val _ = HolSmtLib.GENERIC_SMT solver ([], t)
+  let val _ = Tactical.TAC_PROOF (([], t), HolSmtLib.GENERIC_SMT_TAC solver)
   in
     die ("Test of solver '" ^ name ^ "' failed on term '" ^
       Hol_pp.term_to_string t ^ "': exception expected")
   end handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
     if origin_structure = "HolSmtLib" andalso
-       origin_function = "GENERIC_SMT" andalso
-         (message = "solver reports negated term to be 'satisfiable'" orelse
-          message = "solver reports negated term to be 'satisfiable' (model returned)")
+       origin_function = "GENERIC_SMT_TAC" andalso
+       (message = "solver reports negated term to be 'satisfiable'" orelse
+        message = "solver reports negated term to be 'satisfiable' (model returned)")
     then
       ()
     else
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
         Hol_pp.term_to_string t ^
         "': exception HOL_ERR has unexpected argument values (in " ^
-        origin_structure^ "." ^ origin_function ^ ", message: " ^ message ^ ")")
+        origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
+        ")")
 
 (*****************************************************************************)
 (* check whether SMT solvers are installed                                   *)
@@ -64,27 +66,28 @@ fun expect_sat name solver t =
 
 val _ = print "Testing HolSmtLib "
 
-val yices_installed = Lib.can (HolSmtLib.GENERIC_SMT Yices.Yices_Oracle)
+val yices_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC Yices.Yices_Oracle)
   ([], ``T``)
 
 val _ = if not yices_installed then
           print "(Yices not installed? Some tests will be skipped.) "
         else ()
 
-val cvc3_installed = Lib.can (HolSmtLib.GENERIC_SMT CVC3.CVC3_SMT_Oracle)
+val cvc3_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC CVC3.CVC3_SMT_Oracle)
   ([], ``T``)
 
 val _ = if not cvc3_installed then
           print "(CVC3 not installed? Some tests will be skipped.) "
         else ()
 
-val z3_installed = Lib.can (HolSmtLib.GENERIC_SMT Z3.Z3_SMT_Oracle) ([], ``T``)
+val z3_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC Z3.Z3_SMT_Oracle)
+  ([], ``T``)
 
 val _ = if not z3_installed then
           print "(Z3 not installed? Some tests will be skipped.) "
         else ()
 
-val z3_proofs_installed = Lib.can (HolSmtLib.GENERIC_SMT Z3.Z3_SMT_Prover)
+val z3_proofs_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC Z3.Z3_SMT_Prover)
   ([], ``T``)
 
 val _ = if not z3_proofs_installed then

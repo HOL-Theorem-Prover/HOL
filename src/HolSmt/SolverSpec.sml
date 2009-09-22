@@ -66,7 +66,7 @@ structure SolverSpec = struct
           UNSAT (SOME thm) =>
             let
               val (A, g) = goal
-              val A_set = HOLset.addList (HOLset.empty Term.compare, A)
+              val A_set = HOLset.addList (Term.empty_tmset, A)
             in
               if not (HOLset.isSubset (Thm.hypset thm, A_set)) then
                 Feedback.HOL_WARNING "SolverSpec" "make_solver"
