@@ -23,10 +23,6 @@ val SPEC_TYVARL = rec1 Drule.SPEC_TYVAR ;
 
 local open HolKernel in 
 
-(* here, typo in Drule.sml *)
-fun TY_GENL tyl th =
-  Lib.itlist Thm.TY_GEN tyl th handle HOL_ERR _ => raise ERR "TY_GENL" "";
-
 (* sfg : (thm -> thm) -> thm -> thm
   remove universal quantifiers, apply f, add quantifiers back *)
 fun sfg f thm = 
@@ -37,7 +33,7 @@ fun sfg f thm =
   remove type universal quantifiers, apply f, add quantifiers back *)
 fun tsfg f thm =
   let val (tyvars, sthm) = SPEC_TYVARL thm ;
-  in TY_GENL tyvars (f sthm) end ;
+  in Drule.TY_GENL tyvars (f sthm) end ;
 
 end ; (* local open HolKernel *)
 end ; (* structure auxLib *)
