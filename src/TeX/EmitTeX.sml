@@ -237,7 +237,7 @@ let val S = PP.add_string ostrm
     fun NL() = PP.add_newline ostrm
     fun EB() = PP.end_block ostrm
     val PT = pp_term ostrm
-    val TP = type_pp.pp_type (Parse.type_grammar()) ostrm
+    val TP = type_pp.pp_type (Parse.type_grammar()) PPBackEnd.raw_terminal ostrm
 
     val type_trace = current_trace "types"
     val _ = set_trace "types" 0

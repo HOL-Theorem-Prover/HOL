@@ -347,7 +347,7 @@ in
   Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
 end handle HOL_ERR _ => fst (dest_const tm)
 
-fun pp_term (G : grammar) TyG = let
+fun pp_term (G : grammar) TyG backend = let
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
   val overload_info = overload_info G
   val spec_table =
@@ -828,7 +828,7 @@ fun pp_term (G : grammar) TyG = let
       add_string (numeral_str ^ sfx) ;
       if showtypes then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG pps (decdepth depth)
+         type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
                                     (#2 (dom_rng injty)))
       else ();
       pend showtypes
@@ -1140,7 +1140,8 @@ fun pp_term (G : grammar) TyG = let
                    prec prec rprec (decdepth depth);
       if comb_show_type then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG pps (decdepth depth) (type_of tm))
+         type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
+                                    (type_of tm))
       else ();
       end_block();
       pend (addparens orelse comb_show_type)
@@ -1406,7 +1407,7 @@ fun pp_term (G : grammar) TyG = let
       add_string "(ty_antiq(";
       add_break(0,0);
       add_string "`:";
-      type_pp.pp_type_with_depth TyG pps (decdepth depth) ty;
+      type_pp.pp_type_with_depth TyG backend pps (decdepth depth) ty;
       add_string "`))";
       end_block()
     end
@@ -1454,7 +1455,7 @@ fun pp_term (G : grammar) TyG = let
           fun add_type () = let
           in
             add_string (" "^type_intro); add_break (0,0);
-            type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty
+            type_pp.pp_type_with_depth TyG backend pps (decdepth depth) Ty
           end
           val new_freevar =
             showtypes andalso not isfake andalso
@@ -1464,7 +1465,10 @@ fun pp_term (G : grammar) TyG = let
           val print_type =
             showtypes_v orelse
             showtypes andalso not isfake andalso (binderp orelse new_freevar)
-          fun tystr ty = PP.pp_to_string 10000 (type_pp.pp_type TyG) Ty
+          fun tystr ty =
+              PP.pp_to_string 10000
+                              (type_pp.pp_type TyG PPBackEnd.raw_terminal)
+                              Ty
           fun adds s =
               if mem tm (!bvars_seen) orelse binderp then
                 add_ann_string (s, PPBackEnd.BV (Ty, s^": "^tystr Ty))
@@ -1488,7 +1492,7 @@ fun pp_term (G : grammar) TyG = let
             pbegin true;
             action();
             add_string (" "^type_intro);
-            type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty;
+            type_pp.pp_type_with_depth TyG backend pps (decdepth depth) Ty;
             pend true
           end
           val r = {Name = Name, Thy = Thy}
@@ -1511,7 +1515,7 @@ fun pp_term (G : grammar) TyG = let
                 add_string "(";
                 begin_block CONSISTENT 0;
                 add_string type_intro;
-                type_pp.pp_type_with_depth TyG pps depth (hd Args);
+                type_pp.pp_type_with_depth TyG backend pps depth (hd Args);
                 end_block ();
                 add_string ")"
               end
@@ -1797,7 +1801,7 @@ fun pp_term (G : grammar) TyG = let
   val avoid_merge = avoid_symbolmerge G
   open PPBackEnd
 in
-  fn backend => fn pps => fn t =>
+  fn pps => fn t =>
     let
       val baseppfns = with_ppstream backend pps
       val {add_string,add_break,begin_block,end_block,...} = baseppfns

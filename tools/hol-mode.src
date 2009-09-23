@@ -1217,6 +1217,7 @@ already loaded.)"
                        (codefacelist
                         (cond ((equal code "FV") '(face hol-free-variable))
                               ((equal code "BV") '(face hol-bound-variable))
+                              ((equal code "TY") '(face hol-type))
                               nil))
                        (tooltipprop
                         (save-excursion
@@ -1256,8 +1257,13 @@ already loaded.)"
   :group 'hol-faces)
 
 (defface hol-bound-variable
-  '((((class color)) :foreground "green"))
+  '((((class color))
+     :foreground "#009900"))
   "The face for presenting bound variables in HOL terms."
+  :group 'hol-faces)
+
+(defface hol-type '((nil :slant italic))
+  "The face for presenting HOL types."
   :group 'hol-faces)
 
 

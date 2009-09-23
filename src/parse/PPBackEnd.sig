@@ -6,6 +6,9 @@ sig
   type break_style = PP.break_style
   datatype annotation = BV of hol_type * string
                       | FV of hol_type * string
+                      | TyV
+                      | TyOp of string
+                      | TySyn of string
                       | Const of {Thy:string,Name:string,Ty:hol_type} * string
                       | Note of string
 

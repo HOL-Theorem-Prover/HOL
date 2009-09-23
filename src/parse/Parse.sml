@@ -189,7 +189,7 @@ fun update_type_fns () =
 fun pp_type pps ty = let in
    update_type_fns();
    Portable.add_string pps ":";
-   !type_printer pps ty
+   !type_printer (!current_backend) pps ty
  end
 
 val type_to_string = Portable.pp_to_string 75 pp_type
@@ -207,7 +207,8 @@ fun pp_with_bquotes ppfn pp x =
   let open Portable in add_string pp "`"; ppfn pp x; add_string pp "`" end
 
 fun print_from_grammars (tyG, tmG) =
-  (type_pp.pp_type tyG, term_pp.pp_term tmG tyG (!current_backend))
+  (type_pp.pp_type tyG (!current_backend),
+   term_pp.pp_term tmG tyG (!current_backend))
 
 fun print_term_by_grammar Gs = let
   open TextIO PP
@@ -1653,7 +1654,8 @@ val min_grammars = current_grammars();
     hideous hack section
    ---------------------------------------------------------------------- *)
 
-    val _ = initialise_typrinter type_pp.pp_type
+    val _ = initialise_typrinter
+            (fn G => type_pp.pp_type G PPBackEnd.raw_terminal)
     val _ = Definition.new_specification_hook := List.app add_const;
 
 (* when new_theory is called, and if the new theory has the same name

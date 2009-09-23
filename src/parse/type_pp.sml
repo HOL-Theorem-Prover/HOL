@@ -41,6 +41,38 @@ in
   toString (recurse (one, zero) ty)
 end
 
+val greek4 = let
+  open UnicodeChars
+in
+  [alpha, beta, gamma, delta]
+end
+
+fun structure_to_string st = let
+  fun recurse paren st =
+      case st of
+        TYOP {Thy,Tyop,Args} => let
+          val opstr = Thy ^ "$" ^ Tyop
+        in
+          case Args of
+            [] => opstr
+          | [x] => recurse false x ^ " " ^ opstr
+          | [x,y] => if Thy = "min" andalso Tyop = "fun" then
+                       (if paren then "(" else "") ^
+                       recurse true x ^ " -> " ^
+                       recurse false y ^
+                       (if paren then ")" else "")
+                     else
+                       "(" ^ recurse false x ^ ", " ^ recurse false y ^ ") " ^
+                       opstr
+          | _ => "(" ^ String.concatWith ", " (map (recurse false) Args) ^
+                 ") " ^ opstr
+        end
+      | PARAM i => if i < 4 then List.nth(greek4, i)
+                   else "'" ^ str (Char.chr (Char.ord #"a" + i))
+in
+  recurse false st
+end
+
 val pp_array_types = ref true
 val _ = register_btrace ("pp_array_types", pp_array_types)
 
@@ -51,7 +83,7 @@ in
   else raise ERR "dest_arraytype: not an array type"
 end
 
-fun pp_type0 (G:grammar) = let
+fun pp_type0 (G:grammar) backend = let
   fun lookup_tyop s = let
     fun recurse [] = NONE
       | recurse (x::xs) = let
@@ -72,15 +104,16 @@ fun pp_type0 (G:grammar) = let
     recurse (rules G) : (int * single_rule) option
   end
   fun pr_ty pps ty grav depth = let
-    val {add_string, add_break, begin_block, end_block,...} =
-      with_ppstream pps
+    open PPBackEnd
+    val {add_string, add_break, begin_block, end_block, add_ann_string,...} =
+      with_ppstream backend pps
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
 
   in
     if depth = 0 then add_string "..."
     else
-      if is_vartype ty then add_string (dest_vartype ty)
+      if is_vartype ty then add_ann_string (dest_vartype ty, TyV)
       else let
           val s = dest_numtype ty
         in
@@ -101,6 +134,31 @@ fun pp_type0 (G:grammar) = let
         end handle HOL_ERR _ =>
         let
           val (Tyop, Args) = type_grammar.abb_dest_type G ty
+          val tooltip =
+              case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
+                NONE => let
+                  val {Thy,Tyop,...} = dest_thy_type ty
+                in
+                  Thy ^ "$" ^ Tyop
+                end
+              | SOME st => let
+                  val numps = num_params st
+                in
+                  if 0 < numps then let
+                      val params =
+                          if numps <= 4 then List.take(greek4, numps)
+                          else let
+                              fun tab i = str (Char.chr (Char.ord #"e" + i))
+                            in
+                              greek4 @ List.tabulate(numps - 4, tab)
+                            end
+                    in
+                      UnicodeChars.lambda ^
+                      String.concatWith " " params ^ ". " ^
+                      structure_to_string st
+                    end
+                  else structure_to_string st
+                end
           fun print_args grav0 args = let
             val parens_needed = case Args of [_] => false | _ => true
             val grav = if parens_needed then Top else grav0
@@ -129,7 +187,7 @@ fun pp_type0 (G:grammar) = let
             in
               case lookup_tyop Tyop of
                 NONE => print_ghastly ()
-              | _ => add_string Tyop
+              | _ => add_ann_string (Tyop, TyOp tooltip)
             end
           | [arg1, arg2] => (let
               val (prec, rule) = valOf (lookup_tyop Tyop)
@@ -148,7 +206,7 @@ fun pp_type0 (G:grammar) = let
                      here makes no difference. *)
                   print_args Top Args;
                   add_break(1,0);
-                  add_string Tyop;
+                  add_ann_string (Tyop, TyOp tooltip);
                   end_block();
                   pend addparens
                 end
@@ -166,7 +224,7 @@ fun pp_type0 (G:grammar) = let
                   begin_block INCONSISTENT 0;
                   pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
                   add_break(1,0);
-                  add_string printthis;
+                  add_ann_string (printthis, TySyn tooltip);
                   add_break(1,0);
                   pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
                   end_block();
@@ -184,7 +242,7 @@ fun pp_type0 (G:grammar) = let
               begin_block INCONSISTENT 0;
               print_args (Sfx prec) Args;
               add_break(1,0);
-              add_string Tyop;
+              add_ann_string (Tyop, TyOp tooltip);
               end_block();
               pend addparens
             end handle Option => print_ghastly()
@@ -194,14 +252,14 @@ in
   pr_ty
 end
 
-fun pp_type G = let
-  val baseprinter = pp_type0 G
+fun pp_type G backend = let
+  val baseprinter = pp_type0 G backend
 in
   (fn pps => fn ty => baseprinter pps ty Top (!Globals.max_print_depth))
 end
 
-fun pp_type_with_depth G = let
-  val baseprinter = pp_type0 G
+fun pp_type_with_depth G backend = let
+  val baseprinter = pp_type0 G backend
 in
   (fn pps => fn depth => fn ty => baseprinter pps ty Top depth)
 end
