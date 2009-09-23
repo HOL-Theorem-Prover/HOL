@@ -247,10 +247,6 @@ fun LET_EQ_TAC thml =
 
    where <Q> is one of {?,!} and <vstruct> is a varstruct made
    from the variables v1,...,vn.
-
-   This is slightly imprecise: some of the rewrites done by CONV will
-   be attempted everywhere in the term. To make them happen just in
-   the quantifier prefix is a little more work (but not much).
  ---------------------------------------------------------------------------*)
 
 
@@ -260,9 +256,21 @@ val is_existential = same_const boolSyntax.existential;
 
 
 local
-  val CONV = Ho_Rewrite.PURE_REWRITE_CONV [ELIM_UNCURRY] THENC
-             DEPTH_CONV BETA_CONV THENC
-             Ho_Rewrite.PURE_REWRITE_CONV [ELIM_PEXISTS,ELIM_PFORALL]
+  fun UNCURRY_ELIM_CONV t = 
+     ((HO_REWR_CONV ELIM_UNCURRY)  THENC
+      ((((ABS_CONV o RATOR_CONV o RATOR_CONV) UNCURRY_ELIM_CONV) THENC
+         (ABS_CONV ((RATOR_CONV BETA_CONV) THENC BETA_CONV))) ORELSEC
+        (TRY_CONV (ABS_CONV UNCURRY_ELIM_CONV)))) t
+
+  val PQUANT_ELIM_STEP_CONV = HO_REWR_CONV ELIM_PFORALL ORELSEC
+                              HO_REWR_CONV ELIM_PEXISTS;
+  fun PQUANT_ELIM_CONV tm = 
+      (REPEATC (PQUANT_ELIM_STEP_CONV) THENC
+       TRY_CONV (QUANT_CONV PQUANT_ELIM_CONV)) tm
+
+  fun CONV tm = ((RAND_CONV UNCURRY_ELIM_CONV) THENC
+                 PQUANT_ELIM_CONV) tm
+
   fun dest_tupled_quant tm =
     case total dest_comb tm
      of NONE => NONE
