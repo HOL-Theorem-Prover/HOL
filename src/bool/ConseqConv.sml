@@ -711,8 +711,10 @@ fun CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV conv =
 
 (*A tactic that strengthens a boolean goal*)
 fun CONSEQ_CONV_TAC conv (asm,t) =
-    HO_MATCH_MP_TAC ((CHANGED_CONSEQ_CONV (conv CONSEQ_CONV_STRENGTHEN_direction)) t) (asm,t) handle UNCHANGED =>
-    ALL_TAC (asm,t)
+    ((HO_MATCH_MP_TAC ((CHANGED_CONSEQ_CONV (conv CONSEQ_CONV_STRENGTHEN_direction)) t)
+     THEN TRY (ACCEPT_TAC TRUTH)) (asm,t) handle UNCHANGED =>
+     ALL_TAC (asm,t))
+
 
 
 fun DEPTH_CONSEQ_CONV_TAC conv =
@@ -900,8 +902,12 @@ in
    thmL1
 end;
 
-
-
+(* val thm0 = prove (``(SUC 1 = 2) = (2 = 2)``, DECIDE_TAC)
+   val t = ``X ==> (SUC 1 = 2)``
+   val (both_thmL,strengthen_thmL,weaken_thmL) = ([thm0], [], []);
+   val ho = false
+   val thmL = (append strengthen_thmL both_thmL)
+*)
 fun CONSEQ_TOP_REWRITE_CONV___ho_opt ho (both_thmL,strengthen_thmL,weaken_thmL) =
    let
      fun prepare_general_thmL thmL =
@@ -938,12 +944,14 @@ fun CONSEQ_TOP_REWRITE_CONV___ho_opt ho (both_thmL,strengthen_thmL,weaken_thmL) 
 	end)
    end;
 
+
+
 val CONSEQ_TOP_REWRITE_CONV = CONSEQ_TOP_REWRITE_CONV___ho_opt false;
 val CONSEQ_HO_TOP_REWRITE_CONV = CONSEQ_TOP_REWRITE_CONV___ho_opt true;
 
 
 fun CONSEQ_REWRITE_CONV thmLs dir =
-   REDEPTH_CONSEQ_CONV (CONSEQ_TOP_REWRITE_CONV thmLs) dir;
+    REDEPTH_CONSEQ_CONV (CONSEQ_TOP_REWRITE_CONV thmLs) dir;
 
 fun CONSEQ_REWRITE_TAC thmLs =
     CONSEQ_CONV_TAC (CONSEQ_REWRITE_CONV thmLs);
@@ -959,6 +967,24 @@ fun CONSEQ_HO_REWRITE_TAC thmLs =
 
 fun ONCE_CONSEQ_HO_REWRITE_TAC thmLs =
     ONCE_DEPTH_CONSEQ_CONV_TAC (CONSEQ_HO_TOP_REWRITE_CONV thmLs)
+
+
+
+fun EXT_CONSEQ_REWRITE_CONV___ho_opt ho convL thmL thmLs dir =
+   REDEPTH_CONSEQ_CONV (fn dir' => 
+      ORELSE_CONSEQ_CONV (CONSEQ_TOP_REWRITE_CONV___ho_opt ho thmLs dir') 
+      (FIRST_CONV (map CHANGED_CONV ((REWRITE_CONV thmL)::convL)))) dir;
+
+
+val EXT_CONSEQ_REWRITE_CONV = EXT_CONSEQ_REWRITE_CONV___ho_opt false;
+fun EXT_CONSEQ_REWRITE_TAC convL thmL thmLs =
+    CONSEQ_CONV_TAC (EXT_CONSEQ_REWRITE_CONV convL thmL thmLs);
+
+val EXT_CONSEQ_HO_REWRITE_CONV = EXT_CONSEQ_REWRITE_CONV___ho_opt true;
+fun EXT_CONSEQ_HO_REWRITE_TAC convL thmL thmLs =
+    CONSEQ_CONV_TAC (EXT_CONSEQ_HO_REWRITE_CONV convL thmL thmLs);
+
+
 
 (*
 fun CONSEQ_SIMP_CONV impThmL ss eqThmL dir =

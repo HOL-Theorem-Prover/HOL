@@ -26,11 +26,12 @@ fun die s =
 
 (* provable terms: theorem expected *)
 fun expect_thm name solver t =
-  let val thm = HolSmtLib.GENERIC_SMT solver t
+  let val thm = Tactical.TAC_PROOF (([], t), HolSmtLib.GENERIC_SMT_TAC solver)
     handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
         Hol_pp.term_to_string t ^ "': exception HOL_ERR (in " ^
-        origin_structure^ "." ^ origin_function ^ ", message: " ^ message ^ ")")
+        origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
+        ")")
   in
     if null (Thm.hyp thm) andalso Term.eq (Thm.concl thm) t then ()
     else
@@ -41,22 +42,23 @@ fun expect_thm name solver t =
 
 (* unprovable terms: satisfiability expected *)
 fun expect_sat name solver t =
-  let val _ = HolSmtLib.GENERIC_SMT solver t
+  let val _ = Tactical.TAC_PROOF (([], t), HolSmtLib.GENERIC_SMT_TAC solver)
   in
     die ("Test of solver '" ^ name ^ "' failed on term '" ^
       Hol_pp.term_to_string t ^ "': exception expected")
   end handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
     if origin_structure = "HolSmtLib" andalso
-       origin_function = "GENERIC_SMT" andalso
-         (message = "solver reports negated term to be 'satisfiable'" orelse
-          message = "solver reports negated term to be 'satisfiable' (model returned)")
+       origin_function = "GENERIC_SMT_TAC" andalso
+       (message = "solver reports negated term to be 'satisfiable'" orelse
+        message = "solver reports negated term to be 'satisfiable' (model returned)")
     then
       ()
     else
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
         Hol_pp.term_to_string t ^
         "': exception HOL_ERR has unexpected argument values (in " ^
-        origin_structure^ "." ^ origin_function ^ ", message: " ^ message ^ ")")
+        origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
+        ")")
 
 (*****************************************************************************)
 (* check whether SMT solvers are installed                                   *)
@@ -64,25 +66,29 @@ fun expect_sat name solver t =
 
 val _ = print "Testing HolSmtLib "
 
-val yices_installed = Lib.can (HolSmtLib.GENERIC_SMT Yices.Yices_Oracle) ``T``
+val yices_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC Yices.Yices_Oracle)
+  ([], ``T``)
 
 val _ = if not yices_installed then
           print "(Yices not installed? Some tests will be skipped.) "
         else ()
 
-val cvc3_installed = Lib.can (HolSmtLib.GENERIC_SMT CVC3.CVC3_SMT_Oracle) ``T``
+val cvc3_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC CVC3.CVC3_SMT_Oracle)
+  ([], ``T``)
 
 val _ = if not cvc3_installed then
           print "(CVC3 not installed? Some tests will be skipped.) "
         else ()
 
-val z3_installed = Lib.can (HolSmtLib.GENERIC_SMT Z3.Z3_SMT_Oracle) ``T``
+val z3_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC Z3.Z3_SMT_Oracle)
+  ([], ``T``)
 
 val _ = if not z3_installed then
           print "(Z3 not installed? Some tests will be skipped.) "
         else ()
 
-val z3_proofs_installed = Lib.can (HolSmtLib.GENERIC_SMT Z3.Z3_SMT_Prover) ``T``
+val z3_proofs_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC Z3.Z3_SMT_Prover)
+  ([], ``T``)
 
 val _ = if not z3_proofs_installed then
           print "(Z3 (proofs) not installed? Some tests will be skipped.) "
@@ -100,35 +106,23 @@ local
 (*****************************************************************************)
 
   val thm_AUTO = let
-    fun internal_solver t =
+    fun internal_solver (_, t) =
     let
-      val neg_t = boolSyntax.dest_neg t
-        handle Feedback.HOL_ERR _ =>
-          boolSyntax.mk_neg t
-
-(*TODO*)
-val _ = print ("\n" ^ Hol_pp.term_to_string neg_t ^ "\n")
-
       val simpset = bossLib.++ (bossLib.++ (bossLib.srw_ss (),
         wordsLib.WORD_ss), wordsLib.WORD_EXTRACT_ss)
       val thm = simpLib.SIMP_PROVE simpset
           [integerTheory.INT_ABS, integerTheory.INT_MAX, integerTheory.INT_MIN,
-           boolTheory.bool_case_DEF] neg_t  (* [] |- neg_t *)
+           boolTheory.bool_case_DEF] t  (* [] |- t *)
         handle Feedback.HOL_ERR _ =>
-          bossLib.DECIDE neg_t
+          bossLib.DECIDE t
         handle Feedback.HOL_ERR _ =>
-          bossLib.METIS_PROVE [] neg_t
+          bossLib.METIS_PROVE [] t
         handle Feedback.HOL_ERR _ =>
-          intLib.ARITH_PROVE neg_t
+          intLib.ARITH_PROVE t
         handle Feedback.HOL_ERR _ =>
-          realLib.REAL_ARITH neg_t
+          realLib.REAL_ARITH t
         handle Feedback.HOL_ERR _ =>
-          wordsLib.WORD_DECIDE neg_t
-      val thm = Thm.DISCH boolSyntax.T thm  (* [] |- T ==> neg_t *)
-      val thm = Drule.CONTRAPOS thm  (* [] |- ~neg_t ==> ~T *)
-      val thm = Drule.UNDISCH thm  (* [~neg_t] |- ~T *)
-      val thm = Thm.NOT_ELIM thm  (* [~neg_t] |- T ==> F *)
-      val thm = Thm.MP thm boolTheory.TRUTH  (* [~neg_t] |- F *)
+          wordsLib.WORD_DECIDE t
     in
       SolverSpec.UNSAT (SOME thm)
     end
@@ -665,16 +659,16 @@ in
     (``(\x. x) = (\y. y)``,
       [thm_AUTO, thm_YO, thm_YSO, thm_CVC (*TODO:, thm_Z3*)]),
     (``(\x. \x. x) x x = (\y. \y. y) y x``,
-      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3 (*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO (*TODO:, thm_YSO, thm_CVC, thm_Z3, thm_Z3p*)]),
     (``(\x. x (\x. x)) = (\y. y (\x. x))``,
       [thm_AUTO, thm_YO, thm_YSO, thm_CVC (*TODO:, thm_Z3*)]),
     (* Yices 1.0.18 fails to decide this one
     ``(\x. x (\x. x)) = (\y. y x)``
     *)
     (``f x = (\x. f x) x``,
-      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO (*TODO:, thm_YSO, thm_CVC, thm_Z3, thm_Z3p*)]),
     (``f x = (\y. f y) x``,
-      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO:, thm_Z3p*)]),
+      [thm_AUTO, thm_YO (*TODO:, thm_YSO, thm_CVC, thm_Z3, thm_Z3p*)]),
 
     (* tuples, FST, SND *)
 

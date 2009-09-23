@@ -1,4 +1,3 @@
-This directory is a place-holder for automatically generated content.
-The presence of this README file ensures that the directory appears
-when a cvs checkout is done, and that it is not pruned as part of a
-cvs update -P operation.
+This is the "help/theorygraph" directory for HOL.  A theory dependency
+graph will be placed here when you build HOL (provided the Graphviz
+dot tool, cf. http://www.graphviz.org/, is available on your system).

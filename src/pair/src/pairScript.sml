@@ -353,6 +353,23 @@ val PEXISTS_THM = Q.store_thm
  REWRITE_TAC [ELIM_UNCURRY] THEN BETA_TAC THEN
  MATCH_ACCEPT_TAC (GSYM ELIM_PEXISTS));
 
+
+(* ------------------------------------------------------------------------- *)
+(* Rewrite versions of ELIM_PEXISTS and ELIM_PFORALL                         *)
+(* ------------------------------------------------------------------------- *)
+
+val ELIM_PEXISTS_EVAL = Q.store_thm 
+("ELIM_PEXISTS_EVAL",
+ `$? (UNCURRY (\x. P x)) = ?x. $? (P x)`,
+ Q.SUBGOAL_THEN `!x. P x = \y. P x y` (fn th => ONCE_REWRITE_TAC [th]) THEN 
+ REWRITE_TAC [ETA_THM, PEXISTS_THM]);
+
+val ELIM_PFORALL_EVAL = Q.store_thm 
+("ELIM_PFORALL_EVAL",
+ `$! (UNCURRY (\x. P x)) = !x. $! (P x)`,
+ Q.SUBGOAL_THEN `!x. P x = \y. P x y` (fn th => ONCE_REWRITE_TAC [th]) THEN 
+ REWRITE_TAC [ETA_THM, PFORALL_THM]);
+
 (*---------------------------------------------------------------------------
         Map for pairs
  ---------------------------------------------------------------------------*)

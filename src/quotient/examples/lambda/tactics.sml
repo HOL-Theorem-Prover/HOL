@@ -146,7 +146,6 @@ open new_type;
 (* Need the HOL 88 compatibility library.                                *)
 (* --------------------------------------------------------------------- *)
 open hol88Lib;
-(* open Compat; *)
 open listLib;
 open Psyntax;
 
@@ -255,7 +254,7 @@ fun EXISTS_VAR (x,u) th =
 val FIND_EXISTS_TAC :tactic = fn (asl,gl) =>
     let val (vars,body) = strip_exists gl
         val v = hd vars
-        val cnjs = conjuncts body
+        val cnjs = strip_conj body
         fun find_exists_eq [] = failwith "find_exists_eq"
           | find_exists_eq (cnj::cnjs) =
             let val (lhs,rhs) = dest_eq cnj

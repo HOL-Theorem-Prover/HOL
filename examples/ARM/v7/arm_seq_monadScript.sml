@@ -199,12 +199,12 @@ val bad_mode_def = Define`
       (\have_security_ext. constT (~have_security_ext))
     else
       constT (mode NOTIN {0b10000w;
-                              0b10001w;
-                              0b10010w;
-                              0b10011w;
-                              0b10111w;
-                              0b11011w;
-                              0b11111w})`;
+                          0b10001w;
+                          0b10010w;
+                          0b10011w;
+                          0b10111w;
+                          0b11011w;
+                          0b11111w})`;
 
 val read_spsr_def = Define`
   read_spsr (ii:iiid) =

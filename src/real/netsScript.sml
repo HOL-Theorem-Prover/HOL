@@ -52,7 +52,7 @@ val tendsto = new_definition("tendsto",
   (--`tendsto(m:('a)metric,x) y z =
       &0 < (dist m)(x,y) /\ (dist m)(x,y) <= (dist m)(x,z)`--));
 
-val DORDER_LEMMA = prove_thm("DORDER_LEMMA",
+val DORDER_LEMMA = store_thm("DORDER_LEMMA",
   (--`!g:'a->'a->bool.
       dorder g ==>
         !P Q. (?n. g n n /\ (!m. g m n ==> P m)) /\
@@ -78,7 +78,7 @@ val DORDER_LEMMA = prove_thm("DORDER_LEMMA",
 
 fun DORDER_THEN tac th =
   let val findpr = snd o dest_imp o body o rand o rand o body o rand
-      val [t1,t2] = map (rand o rand o body o rand) (conjuncts(concl th))
+      val [t1,t2] = map (rand o rand o body o rand) (strip_conj (concl th))
       val dog = (rator o rator o rand o rator o body) t1
       val thl = map ((uncurry X_BETA_CONV) o (I ## rand) o dest_abs) [t1,t2]
       val th1 = CONV_RULE(EXACT_CONV thl) th
@@ -91,7 +91,7 @@ fun DORDER_THEN tac th =
 (* Show that sequences and pointwise limits in a metric space are directed   *)
 (*---------------------------------------------------------------------------*)
 
-val DORDER_NGE = prove_thm("DORDER_NGE",
+val DORDER_NGE = store_thm("DORDER_NGE",
   (--`dorder ($>= :num->num->bool)`--),
   REWRITE_TAC[dorder, GREATER_EQ, LESS_EQ_REFL] THEN
   REPEAT GEN_TAC THEN
@@ -102,7 +102,7 @@ val DORDER_NGE = prove_thm("DORDER_NGE",
     [EXISTS_TAC (--`y:num`--), EXISTS_TAC (--`x:num`--)] THEN
   ASM_REWRITE_TAC[]);
 
-val DORDER_TENDSTO = prove_thm("DORDER_TENDSTO",
+val DORDER_TENDSTO = store_thm("DORDER_TENDSTO",
   (--`!m:('a)metric. !x. dorder(tendsto(m,x))`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[dorder, tendsto] THEN
   MAP_EVERY X_GEN_TAC [(--`u:'a`--), (--`v:'a`--)] THEN
@@ -118,7 +118,7 @@ val DORDER_TENDSTO = prove_thm("DORDER_TENDSTO",
 (* Simpler characterization of limit in a metric topology                    *)
 (*---------------------------------------------------------------------------*)
 
-val MTOP_TENDS = prove_thm("MTOP_TENDS",
+val MTOP_TENDS = store_thm("MTOP_TENDS",
   (--`!d g. !x:'b->'a. !x0. (x tends x0)(mtop(d),g) =
      !e. &0 < e ==> ?n. g n n /\ !m. g m n ==> dist(d)(x(m),x0) < e`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[tends] THEN EQ_TAC THEN DISCH_TAC THENL
@@ -150,7 +150,7 @@ val MTOP_TENDS = prove_thm("MTOP_TENDS",
 (* Prove that a net in a metric topology cannot converge to different limits *)
 (*---------------------------------------------------------------------------*)
 
-val MTOP_TENDS_UNIQ = prove_thm("MTOP_TENDS_UNIQ",
+val MTOP_TENDS_UNIQ = store_thm("MTOP_TENDS_UNIQ",
   (--`!g d. dorder (g:'b->'b->bool) ==>
       (x tends x0)(mtop(d),g) /\ (x tends x1)(mtop(d),g) ==> (x0:'a = x1)`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN
@@ -177,7 +177,7 @@ val MTOP_TENDS_UNIQ = prove_thm("MTOP_TENDS_UNIQ",
 
 val geq = Term`$>= : num->num->bool`;
 
-val SEQ_TENDS = prove_thm("SEQ_TENDS",
+val SEQ_TENDS = store_thm("SEQ_TENDS",
   (--`!d:('a)metric. !x x0. (x tends x0)(mtop(d), ^geq) =
      !e. &0 < e ==> ?N. !n. ^geq n N ==> dist(d)(x(n),x0) < e`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, GREATER_EQ, LESS_EQ_REFL]);
@@ -186,7 +186,7 @@ val SEQ_TENDS = prove_thm("SEQ_TENDS",
 (* And of limit of function between metric spaces                            *)
 (*---------------------------------------------------------------------------*)
 
-val LIM_TENDS = prove_thm("LIM_TENDS",
+val LIM_TENDS = store_thm("LIM_TENDS",
   (--`!m1:('a)metric. !m2:('b)metric. !f x0 y0.
       limpt(mtop m1) x0 re_universe ==>
         ((f tends y0)(mtop(m2),tendsto(m1,x0)) =
@@ -222,7 +222,7 @@ val LIM_TENDS = prove_thm("LIM_TENDS",
 (* Similar, more conventional version, is also true at a limit point         *)
 (*---------------------------------------------------------------------------*)
 
-val LIM_TENDS2 = prove_thm("LIM_TENDS2",
+val LIM_TENDS2 = store_thm("LIM_TENDS2",
   (--`!m1:('a)metric. !m2:('b)metric. !f x0 y0.
       limpt(mtop m1) x0 re_universe ==>
         ((f tends y0)(mtop(m2),tendsto(m1,x0)) =
@@ -245,7 +245,7 @@ val LIM_TENDS2 = prove_thm("LIM_TENDS2",
 (* Simpler characterization of boundedness for the real line                 *)
 (*---------------------------------------------------------------------------*)
 
-val MR1_BOUNDED = prove_thm("MR1_BOUNDED",
+val MR1_BOUNDED = store_thm("MR1_BOUNDED",
   (--`!(g:'a->'a->bool) f. bounded(mr1,g) f =
         ?k N. g N N /\ (!n. g n N ==> abs(f n) < k)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[bounded, MR1_DEF] THEN
@@ -273,14 +273,14 @@ val MR1_BOUNDED = prove_thm("MR1_BOUNDED",
 (* Firstly, prove useful forms of null and bounded nets                      *)
 (*---------------------------------------------------------------------------*)
 
-val NET_NULL = prove_thm("NET_NULL",
+val NET_NULL = store_thm("NET_NULL",
   (--`!g:'a->'a->bool. !x x0.
       (x tends x0)(mtop(mr1),g) = ((\n. x(n) - x0) tends &0)(mtop(mr1),g)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS] THEN BETA_TAC THEN
   REWRITE_TAC[MR1_DEF, REAL_SUB_LZERO] THEN EQUAL_TAC THEN
   REWRITE_TAC[REAL_NEG_SUB]);
 
-val NET_CONV_BOUNDED = prove_thm("NET_CONV_BOUNDED",
+val NET_CONV_BOUNDED = store_thm("NET_CONV_BOUNDED",
   (--`!g:'a->'a->bool. !x x0.
       (x tends x0)(mtop(mr1),g) ==> bounded(mr1,g) x`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, bounded] THEN
@@ -291,7 +291,7 @@ val NET_CONV_BOUNDED = prove_thm("NET_CONV_BOUNDED",
   MAP_EVERY EXISTS_TAC [(--`&1`--), (--`x0:real`--), (--`N:'a`--)] THEN
   ASM_REWRITE_TAC[]);
 
-val NET_CONV_NZ = prove_thm("NET_CONV_NZ",
+val NET_CONV_NZ = store_thm("NET_CONV_NZ",
   (--`!g:'a->'a->bool. !x x0.
       (x tends x0)(mtop(mr1),g) /\ ~(x0 = &0) ==>
         ?N. g N N /\ (!n. g n N ==> ~(x n = &0))`--),
@@ -305,7 +305,7 @@ val NET_CONV_NZ = prove_thm("NET_CONV_NZ",
   DISCH_THEN SUBST1_TAC THEN
   REWRITE_TAC[MR1_DEF, REAL_SUB_RZERO, REAL_LT_REFL]);
 
-val NET_CONV_IBOUNDED = prove_thm("NET_CONV_IBOUNDED",
+val NET_CONV_IBOUNDED = store_thm("NET_CONV_IBOUNDED",
   (--`!g:'a->'a->bool. !x x0.
       (x tends x0)(mtop(mr1),g) /\ ~(x0 = &0) ==>
         bounded(mr1,g) (\n. inv(x n))`--),
@@ -350,7 +350,7 @@ val NET_CONV_IBOUNDED = prove_thm("NET_CONV_IBOUNDED",
 (* Now combining theorems for null nets                                      *)
 (*---------------------------------------------------------------------------*)
 
-val NET_NULL_ADD = prove_thm("NET_NULL_ADD",
+val NET_NULL_ADD = store_thm("NET_NULL_ADD",
   (--`!g:'a->'a->bool. dorder g ==>
         !x y. (x tends &0)(mtop(mr1),g) /\ (y tends &0)(mtop(mr1),g) ==>
                 ((\n. x(n) + y(n)) tends &0)(mtop(mr1),g)`--),
@@ -368,7 +368,7 @@ val NET_NULL_ADD = prove_thm("NET_NULL_ADD",
   GEN_REWR_TAC RAND_CONV [GSYM REAL_HALF_DOUBLE] THEN
   MATCH_MP_TAC REAL_LT_ADD2 THEN ASM_REWRITE_TAC[]);
 
-val NET_NULL_MUL = prove_thm("NET_NULL_MUL",
+val NET_NULL_MUL = store_thm("NET_NULL_MUL",
   (--`!g:'a->'a->bool. dorder g ==>
       !x y. bounded(mr1,g) x /\ (y tends &0)(mtop(mr1),g) ==>
               ((\n. x(n) * y(n)) tends &0)(mtop(mr1),g)`--),
@@ -399,7 +399,7 @@ val NET_NULL_MUL = prove_thm("NET_NULL_MUL",
   REWRITE_TAC[ABS_MUL] THEN MATCH_MP_TAC REAL_LT_MUL2 THEN
   ASM_REWRITE_TAC[ABS_POS]);
 
-val NET_NULL_CMUL = prove_thm("NET_NULL_CMUL",
+val NET_NULL_CMUL = store_thm("NET_NULL_CMUL",
   (--`!g:'a->'a->bool. !k x.
       (x tends &0)(mtop(mr1),g) ==> ((\n. k * x(n)) tends &0)(mtop(mr1),g)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, MR1_DEF] THEN
@@ -431,7 +431,7 @@ val NET_NULL_CMUL = prove_thm("NET_NULL_CMUL",
 (* Now real arithmetic theorems for convergent nets                          *)
 (*---------------------------------------------------------------------------*)
 
-val NET_ADD = prove_thm("NET_ADD",
+val NET_ADD = store_thm("NET_ADD",
   (--`!g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\ (y tends y0)(mtop(mr1),g) ==>
                       ((\n. x(n) + y(n)) tends (x0 + y0))(mtop(mr1),g)`--),
@@ -442,7 +442,7 @@ val NET_ADD = prove_thm("NET_ADD",
   BETA_TAC THEN REWRITE_TAC[real_sub, REAL_NEG_ADD] THEN
   CONV_TAC(AC_CONV(REAL_ADD_ASSOC,REAL_ADD_SYM)));
 
-val NET_NEG = prove_thm("NET_NEG",
+val NET_NEG = store_thm("NET_NEG",
   (--`!g:'a->'a->bool. dorder g ==>
         (!x x0. (x tends x0)(mtop(mr1),g) =
                   ((\n. ~(x n)) tends ~x0)(mtop(mr1),g))`--),
@@ -452,7 +452,7 @@ val NET_NEG = prove_thm("NET_NEG",
   GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV) [ABS_SUB]
   THEN REFL_TAC);
 
-val NET_SUB = prove_thm("NET_SUB",
+val NET_SUB = store_thm("NET_SUB",
   (--`!g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\ (y tends y0)(mtop(mr1),g) ==>
                       ((\n. x(n) - y(n)) tends (x0 - y0))(mtop(mr1),g)`--),
@@ -464,7 +464,7 @@ val NET_SUB = prove_thm("NET_SUB",
   FIRST_ASSUM(fn th => ONCE_REWRITE_TAC[GSYM(MATCH_MP NET_NEG th)]) THEN
   ASM_REWRITE_TAC[]);
 
-val NET_MUL = prove_thm("NET_MUL",
+val NET_MUL = store_thm("NET_MUL",
   (--`!g:'a->'a->bool. dorder g ==>
         !x y x0 y0. (x tends x0)(mtop(mr1),g) /\ (y tends y0)(mtop(mr1),g) ==>
               ((\n. x(n) * y(n)) tends (x0 * y0))(mtop(mr1),g)`--),
@@ -492,7 +492,7 @@ val NET_MUL = prove_thm("NET_MUL",
     ASM_REWRITE_TAC[],
     MATCH_MP_TAC NET_NULL_CMUL THEN ASM_REWRITE_TAC[]]);
 
-val NET_INV = prove_thm("NET_INV",
+val NET_INV = store_thm("NET_INV",
   (--`!g:'a->'a->bool. dorder g ==>
         !x x0. (x tends x0)(mtop(mr1),g) /\ ~(x0 = &0) ==>
                    ((\n. inv(x(n))) tends inv x0)(mtop(mr1),g)`--),
@@ -554,7 +554,7 @@ val NET_INV = prove_thm("NET_INV",
   REWRITE_TAC[GSYM ABS_NZ] THEN
   MATCH_MP_TAC REAL_INV_NZ THEN ASM_REWRITE_TAC[]);
 
-val NET_DIV = prove_thm("NET_DIV",
+val NET_DIV = store_thm("NET_DIV",
   (--`!g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\
                   (y tends y0)(mtop(mr1),g) /\ ~(y0 = &0) ==>
@@ -567,7 +567,7 @@ val NET_DIV = prove_thm("NET_DIV",
   FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP NET_INV) THEN
   ASM_REWRITE_TAC[]);
 
-val NET_ABS = prove_thm("NET_ABS",
+val NET_ABS = store_thm("NET_ABS",
   (--`!g x x0. (x tends x0)(mtop(mr1),g) ==>
                ((\n:'a. abs(x n)) tends abs(x0))(mtop(mr1),g)`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS] THEN
@@ -585,7 +585,7 @@ val NET_ABS = prove_thm("NET_ABS",
 (* Comparison between limits                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val NET_LE = prove_thm("NET_LE",
+val NET_LE = store_thm("NET_LE",
   (--`!g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\
                   (y tends y0)(mtop(mr1),g) /\

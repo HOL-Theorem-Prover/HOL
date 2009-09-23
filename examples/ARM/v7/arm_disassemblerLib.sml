@@ -200,9 +200,9 @@ fun thumb_expand_imm tm =
         case (9 >< 8) ^tm : word2
         of 0b00w -> w2w imm8
         || 0b01w -> if imm8 = 0w then ARB else
-                      word32 [0b00000000w; imm8; 0b00000000w; imm8]
-        || 0b10w -> if imm8 = 0w then ARB else
                       word32 [imm8; 0b00000000w; imm8; 0b00000000w]
+        || 0b10w -> if imm8 = 0w then ARB else
+                      word32 [0b00000000w; imm8; 0b00000000w; imm8]
         || 0b11w -> if imm8 = 0w then ARB else
                       word32 [imm8; imm8; imm8; imm8]
     else
@@ -311,7 +311,7 @@ in
    | 12 => arith "orr"
    | 13 => move  "mov"
    | 14 => arith "bic"
-   | 15 => if enc = Encoding_Thumb2_tm andalso is_PC n then
+   | 15 => if enc = Encoding_Thumb2_tm andalso not (is_PC n) then
              arith "orn"
            else
              move "mvn"
@@ -485,9 +485,7 @@ let val f = mnemonic instr in
    | ("Branch_Exchange", [m]) =>
        f "bx" (register m)
    | ("Branch_Link_Exchange_Immediate", [h,toarm,imm24]) =>
-       f (if enc = Encoding_ARM_tm andalso is_F toarm orelse
-             enc <> Encoding_ARM_tm andalso is_T toarm
-          then "blx" else "bl")
+       f (if (enc = Encoding_ARM_tm) = is_F toarm then "blx" else "bl")
          (``let imm32 = (sw2sw ^imm24 << 2) +
                         (if ^enc = Encoding_ARM then 8w else 4w:word32) in
               if ^toarm then imm32 else (1 :+ ^h) imm32`` |> offset)
@@ -542,8 +540,7 @@ in
         f ((if is_PC a then "smmul" else "smmla") ^
            (if is_T r then "r" else "")) (ocommy (not (is_PC a)) [d,n,m] a)
    | ("Signed_Most_Significant_Multiply_Subtract", [d,a,m,r,n]) =>
-        f (if is_T r then "smmlsr" else "smmls")
-          (ocommy (not (is_PC a)) [d,n,m] a)
+        f (if is_T r then "smmlsr" else "smmls") (rcommy [d,n,m,a])
    | ("Multiply_Long", [sgnd,a,s,dhi,dlo,m,n]) =>
         f ((if is_T sgnd then "s" else "u") ^
            (if is_T a then "mlal" else "mull") ^
@@ -552,11 +549,14 @@ in
         f "umaal" (rcommy [dlo,dhi,n,m])
    | ("Saturate", [u,sat,d,imm5,sh,n]) =>
         f (if is_T u then "usat" else "ssat")
-          (commy [register d, constant sat,
+          (commy [register d,
+            constant (``if ^u then ^sat else ^sat + 1w`` |> eval),
             disassemble_imm_shift (imm5,mk_word2 (if is_T sh then 2 else 0),n)])
    | ("Saturate_16", [u,imm4,d,n]) =>
         f (if is_T u then "usat16" else "ssat16")
-          (commy [register d, constant imm4, register n])
+          (commy [register d,
+                  constant (``if ^u then ^imm4 else ^imm4 + 1w`` |> eval),
+                  register n])
    | ("Saturating_Add_Subtract", [opc,n,d,m]) =>
         f (case uint_of_word opc
            of 0 => "qadd" | 1 => "qsub" | 2 => "qdadd" | 3 => "qdsub"
@@ -613,8 +613,8 @@ in
    | ("Select_Bytes", [n,d,m]) =>
         f "sel" (rcommy [d,n,m])
    | ("Unsigned_Sum_Absolute_Differences", [d,a,m,n]) =>
-        f (if is_PC n then "usad8" else "usasa8")
-          (ocommy (not (is_PC n)) [d,n,m] a)
+        f (if is_PC a then "usad8" else "usada8")
+          (ocommy (not (is_PC a)) [d,n,m] a)
    | ("Parallel_Add_Subtract", [u,opc,n,d,m]) =>
         f (parallel_add_subtract (u,pairTheory.dest_pair opc)) (rcommy [d,n,m])
    | ("Divide", [u,n,d,m]) =>

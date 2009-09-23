@@ -32,41 +32,41 @@ open numTheory;
 open nextTheory;
 open stableTheory;
 
-(* Create the new theory, "tempabs.th".					*)
+(* Create the new theory, "tempabs.th". *)
 val _ = new_theory "tempabs";
 
 val SUB_MONO_EQ =
-    prove_thm
+    store_thm
     ("SUB_MONO_EQ",
      ``!n m. (SUC n) - (SUC m) = (n - m)``,
      DECIDE_TAC);
 
 val SUB_PLUS =
-   prove_thm
+   store_thm
    ("SUB_PLUS",
     ``!a b c. a - (b + c) = (a - b) - c``,
     DECIDE_TAC);
 
 val INV_PRE_LESS =
-   prove_thm
+   store_thm
    ("INV_PRE_LESS",
     ``!m n. 0 < m /\ 0 < n ==> ((PRE m < PRE n) = (m < n))``,
     DECIDE_TAC);
 
 val INV_PRE_LESS_EQ =
-   prove_thm
+   store_thm
    ("INV_PRE_LESS_EQ",
     ``!m n. 0 < m /\ 0 < n ==> ((PRE m <= PRE n) = (m <= n))``,
     DECIDE_TAC);
 
 val SUB_LESS_EQ =
-    prove_thm
+    store_thm
     ("SUB_LESS_EQ",
      ``!n m. (n - m) <= n``,
      DECIDE_TAC);
 
 val SUB_EQ_EQ_0 =
-    prove_thm
+    store_thm
     ("SUB_EQ_EQ_0",
      ``!m n. (m - n = m) = ((m = 0) \/ (n = 0))``,
      DECIDE_TAC);
@@ -122,12 +122,12 @@ val less_lemma =
 (* Define the relation Istimeof.						*)
 (* Istimeof n sig t <==> "t" is the time of the "n"th high value of "sig"*)
 (*			i.e. sig is high for the nth time at time t.	*)
-val Istimeof =
-    new_prim_rec_definition
-	("Istimeof",
-	 ``(Istimeof 0 sig t = (sig t /\ !t'. t'<t ==> ~sig t')) /\
-	  (Istimeof (SUC n) sig t =
-	    ?t'.(Istimeof n sig t') /\ Next t' t sig)``);
+val Istimeof = new_recursive_definition
+  {name = "Istimeof",
+   def = ``(Istimeof 0 sig t = (sig t /\ !t'. t'<t ==> ~sig t')) /\
+             (Istimeof (SUC n) sig t =
+               ?t'.(Istimeof n sig t') /\ Next t' t sig)``,
+   rec_axiom = num_Axiom}
 
 (* Timeof n sig = the time of the nth occurence of a high value on sig.	*)
 val Timeof =
@@ -153,7 +153,7 @@ val _ = set_fixity "when"  (Infixl 350);
 
 (* Prove that Inf could be alternatively defined as follows:		*)
 val Inf_thm1 =
-    prove_thm("Inf_thm1",
+    store_thm("Inf_thm1",
 	      ``!sig. Inf(sig) =
 		     (?t.sig(t)) /\ (!t. sig t ==> ?t'. t < t' /\ sig t')``,
 	      REWRITE_TAC [Inf] THEN GEN_TAC THEN EQ_TAC THENL
@@ -175,7 +175,7 @@ val Inf_thm1 =
 
 (* Prove that Inf could be alternatively defined as follows:		*)
 val Inf_thm2 =
-    prove_thm("Inf_thm2",
+    store_thm("Inf_thm2",
 	      ``!sig. Inf sig = !t. ?t'. t<=t' /\ sig(t')``,
 	      REWRITE_TAC [Inf,LESS_OR_EQ] THEN
 	      REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
@@ -190,7 +190,7 @@ val Inf_thm2 =
 
 (* Conditions for ~Inf(sig)						*)
 val Not_Inf =
-    prove_thm("Not_Inf",
+    store_thm("Not_Inf",
 	      ``!sig. (~Inf(sig)) =
 		      (!t.~sig(t)) \/ (?t. sig t /\ !t'. t < t' ==> ~sig t')``,
 	      REWRITE_TAC [Inf_thm1,IMP_DISJ_THM,DE_MORGAN_THM] THEN
@@ -244,7 +244,7 @@ val Istimeof_thm1 =
 
 (* We now show that if (Istimeof n sig t) holds then sig(t).		*)
 val Istimeof_thm2 =
-    prove_thm
+    store_thm
      ("Istimeof_thm2",
       ``!sig t. (?n. Istimeof n sig t) ==> sig t``,
       REPEAT STRIP_TAC THEN
@@ -255,7 +255,7 @@ val Istimeof_thm2 =
 
 (* There is an n such that Istimeof n sig t only if sig(t).		*)
 val Istimeof_thm3 =
-    prove_thm("Istimeof_thm3",
+    store_thm("Istimeof_thm3",
 	      ``!sig t. sig t = ?n. Istimeof n sig t``,
               PROVE_TAC[Istimeof_thm1,Istimeof_thm2]);
 
@@ -266,7 +266,7 @@ val Istimeof_thm3 =
 (* 									*)
 (* This will be proven by induction on n.				*)
 val Istimeof_thm4 =
-    prove_thm("Istimeof_thm4",
+    store_thm("Istimeof_thm4",
 	      ``!sig. Inf(sig) ==> !n.?t.Istimeof n sig t``,
 	      PURE_REWRITE_TAC [Inf] THEN
 	      REPEAT (FILTER_STRIP_TAC ``n:num``) THEN
@@ -287,7 +287,7 @@ val Istimeof_thm4 =
 (* Istimeof defines a Unique time:					*)
 (* Istimeof n sig t /\ Istimeof n sig t' ==> (t=t')			*)
 val Istimeof_thm5 =
-    prove_thm("Istimeof_thm5",
+    store_thm("Istimeof_thm5",
 	      ``!n sig t t'.Istimeof n sig t /\ Istimeof n sig t' ==> (t=t')``,
 	      INDUCT_TAC THEN
 	      REWRITE_TAC [Istimeof] THENL
@@ -302,7 +302,7 @@ val Istimeof_thm5 =
 (* If there is always a time when sig is true for the nth time, then sig	*)
 (* is true infinitely often.						*)
 val Istimeof_thm6 =
-    prove_thm
+    store_thm
      ("Istimeof_thm6",
       ``!sig. (!n.?t.Istimeof n sig t) ==> Inf sig``,
       CONV_TAC (ONCE_DEPTH_CONV CONTRAPOS_CONV) THEN
@@ -321,7 +321,7 @@ val Istimeof_thm6 =
 
 (* Inf sig iff there is always an nth time sig is true.			*)
 val Istimeof_thm7 =
-    prove_thm("Istimeof_thm7",
+    store_thm("Istimeof_thm7",
 	      ``!sig. Inf(sig) = !n. ?t. Istimeof n sig t``,
 	      GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
 	      [IMP_RES_TAC Istimeof_thm4, IMP_RES_TAC Istimeof_thm6]);
@@ -333,7 +333,7 @@ val Istimeof_thm7 =
 (* We prove the theorem relating Timeof and Next:			*)
 (* ``!sig. Inf(sig) ==> !n. Next (Timeof n sig) (Timeof (n+1) sig) sig``	*)
 val Timeof_thm1 =
-    prove_thm
+    store_thm
     ("Timeof_thm1",
      ``!sig. Inf(sig) ==> !n. Next (Timeof sig n) (Timeof sig (SUC n)) sig``,
      REPEAT STRIP_TAC THEN
@@ -351,7 +351,7 @@ val Timeof_thm1 =
      FIRST_ASSUM ACCEPT_TAC);
 
 val Timeof_thm2 =
-    prove_thm
+    store_thm
     ("Timeof_thm2",
      ``!sig. Inf(sig) ==> !n. (Timeof sig n) < (Timeof sig (SUC n))``,
      REPEAT STRIP_TAC THEN
@@ -361,7 +361,7 @@ val Timeof_thm2 =
      FIRST_ASSUM ACCEPT_TAC);
 
 val Timeof_thm3 =
-    prove_thm
+    store_thm
     ("Timeof_thm3",
      ``!sig. Inf(sig) ==>
       !n t. ((Timeof sig n) < t /\ t < (Timeof sig (SUC n))) ==> ~sig t``,
@@ -373,7 +373,7 @@ val Timeof_thm3 =
 
 (* Also prove that:  Inf(sig) ==> sig(Timeof n sig)			*)
 val Timeof_thm4 =
-    prove_thm
+    store_thm
     ("Timeof_thm4",
      ``!sig. Inf(sig) ==> !n. sig(Timeof sig n)``,
      REPEAT STRIP_TAC THEN
@@ -384,7 +384,7 @@ val Timeof_thm4 =
      REPEAT STRIP_TAC);
 
 val Timeof_thm5 =
-    prove_thm
+    store_thm
       ("Timeof_thm5",
        ``!sig t. sig(t) ==> ?n. t = Timeof sig n``,
        REPEAT STRIP_TAC THEN
@@ -397,7 +397,7 @@ val Timeof_thm5 =
 
 
 val Timeof_thm6 =
-    prove_thm
+    store_thm
       ("Timeof_thm6",
        ``!sig. Inf sig ==> !t. 0 < (Timeof sig (SUC t) - Timeof sig t)``,
        REPEAT STRIP_TAC THEN
@@ -409,7 +409,7 @@ val Timeof_thm6 =
        REWRITE_TAC [LESS_0]);
 
 val Timeof_thm7 =
-    prove_thm
+    store_thm
     ("Timeof_thm7",
      ``!c. Inf c ==> !t. (Timeof c (SUC t) - 1) < Timeof c (SUC t)``,
      REPEAT STRIP_TAC THEN
@@ -496,7 +496,7 @@ val Istimeof_lemma =
 (* ---------------------------------------------------------------------	*)
 
 val Incr_Inf_thm =
-    prove_thm("Incr_Inf_thm",
+    store_thm("Incr_Inf_thm",
 	      ``!f.Incr f = ?g. Inf(g) /\ (f = Timeof g)``,
 	      REPEAT (FIRST [STRIP_TAC, EQ_TAC]) THENL
 	      [EXISTS_TAC ``\n:num.?m:num. n = f m`` THEN
@@ -534,7 +534,7 @@ val Incr_Inf_thm =
 (* --------------------------------------------------------------------- *)
 
 val when_thm1 =
-    prove_thm
+    store_thm
      ("when_thm1",
       ``!f g c. (((\t.(f t,g t))when c)t) = (((f when c) t),((g when c) t))``,
       REPEAT STRIP_TAC THEN
@@ -542,7 +542,7 @@ val when_thm1 =
       CONV_TAC (DEPTH_CONV BETA_CONV) THEN REFL_TAC);
 
 val when_thm2 =
-    prove_thm
+    store_thm
      ("when_thm2",
       ``!c. Inf(c) ==> !t. (c when c) t``,
       REPEAT STRIP_TAC THEN
@@ -553,14 +553,13 @@ val when_thm2 =
 (* Iteration theorems.							 *)
 (* --------------------------------------------------------------------- *)
 
-val Funpow_DEF =
-    new_prim_rec_definition
-    ("Funpow_DEF",
-     ``(Funpow 0 f = I) /\
-      (Funpow (SUC n) f = (f o (Funpow n f)))``);
+val Funpow_DEF = new_recursive_definition
+  {name = "Funpow_DEF",
+   def = ``(Funpow 0 f = I) /\ (Funpow (SUC n) f = (f o (Funpow n f)))``,
+   rec_axiom = num_Axiom}
 
 val Funpow1 =
-    prove_thm("Funpow1",
+    store_thm("Funpow1",
      	     ``!f. (Funpow 0 f x = x) /\
       	          (!n. Funpow (SUC n) f x = f((Funpow n f)x))``,
 	     REWRITE_TAC [Funpow_DEF,I_THM,o_THM]);
@@ -572,7 +571,7 @@ val Dev =
        !t:num. s(t+1) = if c t then f (a t) (b t) (s t) else g (a t) (s t)``);
 
 val tempabs =
-    prove_thm
+    store_thm
    ("tempabs",
     ``!a b s c f g.
      Dev f g (c,a,b,s) ==>
@@ -608,7 +607,7 @@ val tempabs =
       RES_TAC THEN ASM_REWRITE_TAC[]]]);
 
 val tempabs' =
-    prove_thm
+    store_thm
    ("tempabs'",
     ``!a b s c f g.
      Dev f g (c,a,b,s) ==>

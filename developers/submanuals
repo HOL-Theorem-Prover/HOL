@@ -5,5 +5,4 @@ quotient src/quotient/Manual
 reduce src/num/reduce/Manual
 res_quan src/res_quan/Manual
 string src/string/Manual
-taut src/taut/Manual
 unwind src/unwind/Manual

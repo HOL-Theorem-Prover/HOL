@@ -306,12 +306,12 @@ val thumb_expand_imm_c_def = Define`
              if imm8 = 0w then
                errorT "thumb_expand_imm_c: unpredictable"
              else
-               constT (word32 [0b00000000w; imm8; 0b00000000w; imm8], carry_in)
+               constT (word32 [imm8; 0b00000000w; imm8; 0b00000000w], carry_in)
         || 0b10w ->
              if imm8 = 0w then
                errorT "thumb_expand_imm_c: unpredictable"
              else
-               constT (word32 [imm8; 0b00000000w; imm8; 0b00000000w], carry_in)
+               constT (word32 [0b00000000w; imm8; 0b00000000w; imm8], carry_in)
         || 0b11w ->
              if imm8 = 0w then
                errorT "thumb_expand_imm_c: unpredictable"

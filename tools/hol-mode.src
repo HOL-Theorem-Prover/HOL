@@ -12,6 +12,11 @@
 (require 'cl)
 
 
+(defgroup hol nil
+  "Customising the Emacs interface to the HOL4 proof assistant."
+  :group 'external)
+
+
 (define-prefix-command 'hol-map)
 (define-prefix-command 'hol-d-map)
 (make-variable-buffer-local 'hol-buffer-name)
@@ -21,8 +26,10 @@
 
 (set-default 'hol-default-buffer nil)
 
-(defvar hol-executable HOL-EXECUTABLE
-  "*Path-name for the HOL executable.")
+(defcustom hol-executable HOL-EXECUTABLE
+  "Path-name for the HOL executable."
+  :group 'hol
+  :type '(file :must-match t))
 
 (defvar sml-executable SML-EXECUTABLE
   "*Path-name for the Standard ML executable.")
@@ -32,13 +39,15 @@
   (interactive "fHOL executable: ")
   (setq hol-executable filename))
 
-(defvar hol-mode-sml-init-command 
+(defvar hol-mode-sml-init-command
    "use (Globals.HOLDIR ^ \"/tools/hol-mode.sml\")"
   "*The command to send to HOL to load the ML-part of hol-mode.")
 
 
-(defvar hol-echo-commands-p nil
-  "*Whether or not to echo the text of commands originating elsewhere.")
+(defcustom hol-echo-commands-p nil
+  "Whether or not to echo the text of commands originating elsewhere."
+  :group 'hol
+  :type 'boolean)
 
 (defvar hol-generate-locpragma-p t
   "*Whether or not to generate (*#loc row col *) pragmas for HOL.")
@@ -715,6 +724,14 @@ region instead. With prefix ARG prompt for a file-name to load."
    (hol-toggle-quiet-quietdec))
 
 
+(defun turn-off-hol-font-lock (oldvar)
+  (interactive)
+  (if (not oldvar)
+      (progn
+        (message "Turning on font-lock mode does nothing in HOL mode")
+        (setq font-lock-defaults nil)))
+  (setq font-lock-mode nil))
+
 ;** hol map keys and function definitions
 (defun hol (niceness)
   "Runs a HOL session in a comint window.
@@ -735,9 +752,18 @@ or at level 10 with a bare prefix. "
     (switch-to-buffer buf)
     (setq comint-prompt-regexp "^- ")
     (setq hol-buffer-name (buffer-name buf))
+    ;; must go to ridiculous lengths to ensure that font-lock-mode is
+    ;; turned off and stays off
+    (font-lock-mode 0)
+    (make-local-variable 'font-lock-function)
+    (setq font-lock-function 'turn-off-hol-font-lock)
+    (make-local-variable 'comint-preoutput-filter-functions)
+    (setq comint-preoutput-filter-functions '(holpp-output-filter))
     (setq comint-scroll-show-maximum-output t)
     (setq comint-scroll-to-bottom-on-output t)
-    (if hol-was-ok t (hol-mode-init-sml))))
+    (if hol-was-ok t (hol-mode-init-sml))
+    (send-raw-string-to-hol
+     "val _ = Parse.current_backend := PPBackEnd.emacs_terminal;" nil nil)))
 
 (defun hol-display ()
    (interactive)
@@ -879,7 +905,7 @@ argument N, sets the trace to that value in particular."
 (defun hol-toggle-quiet-quietdec ()
   "Toggles quiet declarations in the interactive system."
   (interactive)
-  (send-raw-string-to-hol   
+  (send-raw-string-to-hol
     "val _ = HOL_Interactive.toggle_quietdec()" nil nil)
   (hol-toggle-var-quiet "Globals.interactive"))
 
@@ -903,6 +929,19 @@ argument N, sets the trace to that value in particular."
   (setq hol-auto-load-p (not hol-auto-load-p))
   (message (if hol-auto-load-p "automatic loading ON"
              "automatic loading OFF")))
+
+(defun hol-toggle-ppbackend ()
+  "Toggles between using the Emacs and \"raw\" terminal pretty-printing."
+  (interactive)
+  (send-raw-string-to-hol
+   (concat
+    "val _ = if #name (!Parse.current_backend) = \"emacs_terminal\" then"
+    "(Parse.current_backend := PPBackEnd.raw_terminal;"
+    "print \"*** PP Backend now \\\"raw\\\" ***\\n\")"
+    "else (Parse.current_backend := PPBackEnd.emacs_terminal;"
+    "print \"*** PP Backend now \\\"emacs\\\" ***\\n\")") nil nil))
+
+
 
 (defun set-hol-executable (filename)
   "Sets the HOL executable variable to be equal to FILENAME."
@@ -1123,7 +1162,7 @@ already loaded.)"
   (interactive "DAdd new load-path: ")
   (let ((epath (expand-file-name path)))
   (if (file-accessible-directory-p epath)
-     (progn 
+     (progn
         (send-raw-string-to-hol
             (concat "loadPath := \"" (ml-quote epath) "\" :: !loadPath;")
             nil nil)
@@ -1151,6 +1190,84 @@ already loaded.)"
                       " \"" main-term "\"")))
    (send-raw-string-to-hol command-s nil nil)))
 
+(setq temp-hol-output-buf nil)
+
+(defun holpp-output-filter (s)
+  "Converts a munged emacs_terminal string into a pretty one with text properties."
+  (interactive)
+  (let* ((tmpbuf (or temp-hol-output-buf
+                     (generate-new-buffer " *HOL output filter*)")))
+         end)
+    (setq temp-hol-output-buf tmpbuf)
+    (save-excursion
+      (set-buffer tmpbuf)
+      (unwind-protect
+          (progn
+            (goto-char (point-max))
+            (insert s)
+            (goto-char (point-min))
+            (while (and (not end) (search-forward "(*(*(*" nil t))
+              (let ((uptoann (- (point) 6))
+                    (start (point)))
+                (if (not (search-forward "*)*)*)" nil t))
+                    (progn
+                      (goto-char uptoann)
+                      (setq end t))
+                  (delete-region uptoann start)
+                  (let*
+                      ((start (- start 6))
+                       (code (buffer-substring start (+ start 2)))
+                       (codefacelist
+                        (cond ((equal code "FV") '(face hol-free-variable))
+                              ((equal code "BV") '(face hol-bound-variable))
+                              ((equal code "TY") '(face hol-type))
+                              nil))
+                       (tooltipprop
+                        (save-excursion
+                          (goto-char (+ start 2))
+                          (if (equal (following-char) 0)
+                              (progn
+                                (goto-char (+ (point) 1))
+                                (skip-chars-forward "^\^@")
+                                (prog1
+                                    (list 'help-echo
+                                          (buffer-substring (+ start 3)
+                                                            (point)))
+                                  (delete-region (+ start 2) (1+ (point)))))
+                            nil))))
+                       (add-text-properties
+                        (+ start 2)
+                        (- (point) 6) (append codefacelist tooltipprop))
+                    (delete-region start (+ start 2))
+                    (delete-region (- (point) 6) (point))))))
+            (if (not end)
+                (progn
+                  (goto-char (point-max))
+                  (skip-chars-backward "(*")))
+            (prog1
+                (buffer-substring (point-min) (point))
+              (delete-region (point-min) (point))))))))
+
+(defgroup hol-faces nil "Faces used in pretty-printing HOL values"
+  :group 'faces
+  :group 'hol)
+
+(defface hol-free-variable
+  '((((class color))
+     :foreground "blue"
+     :weight bold))
+  "The face for presenting free variables in HOL terms."
+  :group 'hol-faces)
+
+(defface hol-bound-variable
+  '((((class color))
+     :foreground "#009900"))
+  "The face for presenting bound variables in HOL terms."
+  :group 'hol-faces)
+
+(defface hol-type '((nil :slant italic))
+  "The face for presenting HOL types."
+  :group 'hol-faces)
 
 
 ;;The key combinations
@@ -1163,6 +1280,7 @@ already loaded.)"
 (define-key hol-map "\M-a" 'hol-toggle-goalstack-num-assums)
 (define-key hol-map "\C-l" 'hol-recentre)
 (define-key hol-map "\C-n" 'hol-toggle-show-numeral-types)
+(define-key hol-map "\C-p" 'hol-toggle-ppbackend)
 (define-key hol-map "\C-q" 'hol-toggle-quietdec)
 (define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
 (define-key hol-map "\C-t" 'hol-toggle-show-types)
@@ -1330,6 +1448,9 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-printing quiet]
    '("Quiet (hide output except errors)" . hol-toggle-quietdec))
 
+(define-key global-map [menu-bar hol-menu hol-printing ppbackend]
+  '("Toggle pretty-printing backend" . hol-toggle-ppbackend))
+
 (define-key global-map [menu-bar hol-menu hol-printing unicode]
    '("Unicode" . hol-toggle-unicode))
 
@@ -1345,7 +1466,6 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-printing goal-fvs]
    '("Show free vars in goal" . hol-toggle-goalstack-fvs))
-
 
 (define-key global-map [menu-bar hol-menu hol-printing sep1]
    '(menu-item "--"))

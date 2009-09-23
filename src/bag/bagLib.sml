@@ -75,4 +75,47 @@ in
 end
 
 
+
+
+(******************************************************************************)
+(* BAG_IMAGE_CONV                                                             *)
+(*                                                                            *)
+(* Moves BAG_IMAGE over very simple bags that consists of repeatedly          *)
+(* inserting elements into the empty bag. For these bags, it's very easy to   *)
+(* show that they are finite.                                                 *)
+(*                                                                            *)
+(* For example:                                                               *)
+(* BAG_IMAGE_CONV ``BAG_IMAGE f {|x0; x1; x2; x3; x4|}`` results in           *)
+(*                              {|f x0; f x1; f x2; f x3; f x4|}              *)
+(******************************************************************************)
+
+fun BAG_IMAGE_CONV___FINITE t =
+   let val (f,b) = dest_image t in
+   if (is_empty b) then
+      let
+         val bag_type = bagSyntax.base_type b
+	 val finite_thm = INST_TYPE [alpha |-> bag_type] bagTheory.FINITE_EMPTY_BAG;
+	 val bag_thm = ISPEC f bagTheory.BAG_IMAGE_EMPTY
+      in
+	 (finite_thm, bag_thm)
+      end
+   else 
+      let
+         val (e,b') = dest_insert b;
+         val t' = mk_image (f, b')
+         val (finite_thm, bag_thm) = BAG_IMAGE_CONV___FINITE t';
+	 val finite_thm2 = SPEC e (MP (ISPEC b' bagTheory.FINITE_BAG_INSERT) finite_thm);
+	 val bag_thm' = MP (ISPECL [b',f,e]
+	       (bagTheory.BAG_IMAGE_FINITE_INSERT)) finite_thm
+         val bag_thm2 =  CONV_RULE (RHS_CONV (RAND_CONV 
+                   (K bag_thm))) bag_thm'
+      in
+         (finite_thm2, bag_thm2)
+      end
+   end handle HOL_ERR _ => raise UNCHANGED;
+
+
+val BAG_IMAGE_CONV = snd o BAG_IMAGE_CONV___FINITE;
+
+
 end;

@@ -1,13 +1,10 @@
 \DOC assoc
 
-\TYPE {Compat.assoc : ''a -> (''a * 'b) list -> ''a * 'b}
+\TYPE {assoc : ''a -> (''a * 'b) list -> ''a * 'b}
 
 \SYNOPSIS
 Searches a list of pairs for a pair whose first component equals a specified
 value.
-
-\KEYWORDS
-list.
 
 \DESCRIBE
 {assoc x [(x1,y1),...,(xn,yn)]} returns the first {(xi,yi)} in the list such
@@ -25,14 +22,9 @@ is empty.
 }
 
 \COMMENTS
-Not found in hol90, since we use an option type instead of exceptions.
-
-    assoc1;
-    val it = fn : ''a -> (''a * 'b) list -> (''a * 'b) option
-    - assoc2;
-    val it = fn : ''a -> ('b * ''a) list -> ('b * ''a) option
+Superseded by {Lib.assoc} and {Lib.assoc1}.
 
 \SEEALSO
-rev_assoc, find, mem, tryfind, exists, forall.
+hol88Lib.rev_assoc, Lib.assoc, Lib.assoc1.
 
 \ENDDOC

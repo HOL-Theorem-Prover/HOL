@@ -483,7 +483,7 @@ structure Z3 = struct
        Skolemization; these are eliminated at the end of proof reconstruction *)
     val skolem_defs = ref ([] : Term.term list)
     (* stores assumptions, (only) these may remain in the final theorem *)
-    val asserted_hyps = ref (HOLset.empty Term.compare)
+    val asserted_hyps = ref Term.empty_tmset
     (* stores theorems of linear arithmetic (proved by 'rewrite' or 'th_lemma')
        for later retrieval, to avoid re-reproving them *)
     val arith_cache = ref Net.empty
@@ -2230,51 +2230,56 @@ structure Z3 = struct
   in
     (* Z3 (via Wine), SMT-LIB file format, no proofs *)
     val Z3_Wine_SMT_Oracle = SolverSpec.make_solver
-      (write_strings_to_file infile o Lib.snd o SmtLib.term_to_SmtLib)
+      (write_strings_to_file infile o Lib.snd o SmtLib.goal_to_SmtLib)
       ("wine C:\\\\Z3\\\\bin\\\\z3.exe /smt " ^ infile ^ " > " ^ outfile)
       (fn () => is_sat_DOS outfile)
       [infile, outfile]
 
     (* Z3 (Linux/Unix), SMT-LIB file format, no proofs *)
     val Z3_SMT_Oracle = SolverSpec.make_solver
-      (write_strings_to_file infile o Lib.snd o SmtLib.term_to_SmtLib)
+      (write_strings_to_file infile o Lib.snd o SmtLib.goal_to_SmtLib)
       ("z3 -smt " ^ infile ^ " > " ^ outfile)
       (fn () => is_sat_Unix outfile)
       [infile, outfile]
 
     (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
     val Z3_SMT_Prover = SolverSpec.make_solver
-      (fn tm => let val (ty_tm_dict, lines) = SmtLib.term_to_SmtLib tm
-                in
-                  write_strings_to_file infile lines;
-                  (tm, ty_tm_dict)
-                end)
+      (fn goal =>
+        let
+          val (ty_tm_dict, lines) = SmtLib.goal_to_SmtLib goal
+        in
+          write_strings_to_file infile lines;
+          (goal, ty_tm_dict)
+        end)
       ("z3 -ini:z3.ini -smt " ^ infile ^ " > " ^ outfile)
-      (fn (tm, ty_tm_dict) => let val result = is_sat_Unix outfile
+      (fn (goal, ty_tm_dict) => let val result = is_sat_Unix outfile
          in
            case result of
              SolverSpec.UNSAT NONE =>
-             let val thm = check_proof (parse_proof_file outfile ty_tm_dict)
-                 (* discharging definitions: INT_MIN, INT_MAX, ABS *)
-                 val INT_ABS = intLib.ARITH_PROVE
-                   ``!n. ABS (n:int) = if n < 0 then 0 - n else n``
-                 val thm = List.foldl (fn (hyp, th) =>
-                   let val hyp_th = bossLib.METIS_PROVE
-                     [integerTheory.INT_MIN, integerTheory.INT_MAX, INT_ABS] hyp
-                   in
-                     Drule.PROVE_HYP hyp_th th
-                   end handle Feedback.HOL_ERR _ =>
-                     th) thm (Thm.hyp thm)
-                 (* unfolding definitions in 'tm' *)
-                 val tm_eq_simp = simpLib.SIMP_CONV simpLib.empty_ss
-                   [boolTheory.bool_case_DEF] tm
-                   handle Conv.UNCHANGED =>
-                     Thm.REFL tm
-                 val tm_eq_simp = Conv.BETA_RULE tm_eq_simp
-                 val simp_eq_tm = Thm.SYM tm_eq_simp
-                 val thm = Drule.DISCH_ALL thm
-                 val thm = simpLib.SIMP_RULE simpLib.empty_ss [simp_eq_tm] thm
-                 val thm = Drule.UNDISCH_ALL thm
+             let
+               val thm = check_proof (parse_proof_file outfile ty_tm_dict)
+               (* discharging definitions: INT_MIN, INT_MAX, ABS *)
+               val INT_ABS = intLib.ARITH_PROVE
+                 ``!x. ABS (x:int) = if x < 0 then 0 - x else x``
+               (* bool_case is replaced by if_then_else by the translation to
+                  SMT-LIB format; this must therefore be done in the goal as
+                  well *)
+               (* returns SOME "tm |- (... if-then-else ...)", or NONE *)
+               fun unfold_bool_case tm =
+                 Lib.total (Drule.UNDISCH o Lib.fst o Thm.EQ_IMP_RULE o
+                   Conv.BETA_RULE o simpLib.SIMP_CONV simpLib.empty_ss
+                     [boolTheory.bool_case_DEF]) tm
+               val (As, g) = goal
+               val unfold_thms = List.mapPartial unfold_bool_case
+                 (boolSyntax.mk_neg g :: As)
+               fun prove_hyp (hyp, th) =
+                 if HOLset.member (Thm.hypset th, Thm.concl hyp) then
+                   Drule.PROVE_HYP hyp th
+                 else
+                   th
+               val thm = List.foldl prove_hyp thm (integerTheory.INT_MIN ::
+                 integerTheory.INT_MAX :: INT_ABS :: unfold_thms)
+               val thm = Thm.CCONTR g thm
              in
                SolverSpec.UNSAT (SOME thm)
              end

@@ -57,6 +57,75 @@ in
   toString (recurse (one, zero) ty)
 end
 
+val greek4 = let
+  open UnicodeChars
+in
+  [alpha, beta, gamma, delta]
+end
+
+fun strip_app_structure0 argl (TYAPP(opr,arg)) =
+    strip_app_structure0 (arg::argl) opr
+  | strip_app_structure0 argl st = (st,argl)
+
+fun strip_app_structure st = strip_app_structure0 [] st
+
+fun structure_to_string st = let
+  open Kind
+  fun recurse paren st =
+      case st of
+        TYCON {Thy,Tyop,Kind,Rank} => Thy ^ "$" ^ Tyop
+      | TYVAR (str,kd,rk) =>
+            str ^
+            (if kd = typ then "" else " : "^kind_to_string kd) ^
+            (if rk = 0   then "" else " :<= "^Int.toString rk)
+      | TYAPP (TYAPP (TYCON {Thy="min",Tyop="fun",Kind,Rank}, x), y) =>
+                       (if paren then "(" else "") ^
+                       recurse true x ^ " -> " ^
+                       recurse false y ^
+                       (if paren then ")" else "")
+      | TYAPP (opr,arg) =>
+          let val (st0,args) = strip_app_structure st
+          in if length args = 1 then recurse false arg ^ " " ^ structure_to_string opr
+             else "(" ^ String.concatWith ", " (map (recurse false) args) ^
+                  ") " ^ structure_to_string st0
+          end
+      | TYABST (bvar,body) =>
+                       (if paren then "(" else "") ^ "\\" ^
+                       recurse true bvar ^ ". " ^
+                       recurse false body ^
+                       (if paren then ")" else "")
+      | TYUNIV (bvar,body) =>
+                       (if paren then "(" else "") ^ "\\" ^
+                       recurse true bvar ^ ". " ^
+                       recurse false body ^
+                       (if paren then ")" else "")
+(*
+        TYOP {Thy,Tyop,Args} => let
+          val opstr = Thy ^ "$" ^ Tyop
+        in
+          case Args of
+            [] => opstr
+          | [x] => recurse false x ^ " " ^ opstr
+          | [x,y] => if Thy = "min" andalso Tyop = "fun" then
+                       (if paren then "(" else "") ^
+                       recurse true x ^ " -> " ^
+                       recurse false y ^
+                       (if paren then ")" else "")
+                     else
+                       "(" ^ recurse false x ^ ", " ^ recurse false y ^ ") " ^
+                       opstr
+          | _ => "(" ^ String.concatWith ", " (map (recurse false) Args) ^
+                 ") " ^ opstr
+        end
+*)
+      | PARAM (i,kd,rk) => (if i < 4 then List.nth(greek4, i)
+                            else "'" ^ str (Char.chr (Char.ord #"a" + i))) ^
+                           (if kd = typ then "" else " : "^kind_to_string kd) ^
+                           (if rk = 0   then "" else " :<= "^Int.toString rk)
+in
+  recurse false st
+end
+
 val pp_array_types = ref true
 val _ = register_btrace ("pp_array_types", pp_array_types)
 
@@ -73,7 +142,7 @@ val _ = Feedback.register_trace("kinds", show_kinds, 2)
 *)
 val show_kinds = Feedback.get_tracefn "kinds"
 
-fun pp_type0 (G:grammar) = let
+fun pp_type0 (G:grammar) backend = let
   val {lambda = lambda, forall = forall} = specials G
   fun lookup_tyop s = let
     fun recurse [] = NONE
@@ -122,14 +191,18 @@ fun pp_type0 (G:grammar) = let
   end
 
   fun pr_ty pps ty grav depth = let
-    val {add_string, add_break, begin_block, end_block,...} =
-      with_ppstream pps
+    open PPBackEnd
+    val {add_string, add_break, begin_block, end_block, add_ann_string,...} =
+      with_ppstream backend pps
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
     fun check_dest_type ty =
-      let val (opr,args) = strip_app_type ty
+      let open Kind
+          val (opr,args) = strip_app_type ty
           val {Thy,Tyop,Kind,Rank} = dest_thy_con_type opr
-      in if Kind.is_arity Kind andalso Rank = 0 then (Tyop,args)
+      in if is_arity Kind (*andalso length args = arity_of Kind*)
+                          andalso Rank = 0
+         then (Tyop,args)
          else raise ERR "check_dest_type: not a traditional type"
       end
 
@@ -153,7 +226,7 @@ fun pp_type0 (G:grammar) = let
                  case grav of Top => false | _ => true
           in
             pbegin parens_needed;
-            add_string s;
+            add_ann_string (s, TyV);
             if k <> Kind.typ orelse show_kinds() = 2 then let
                 val p = r <> 0 andalso not (Kind.is_arity k)
               in
@@ -168,7 +241,7 @@ fun pp_type0 (G:grammar) = let
             else ();
             pend parens_needed
           end
-        else add_string s
+        else add_ann_string (s, TyV)
 
   in
     if depth = 0 then add_string "..."
@@ -192,29 +265,54 @@ fun pp_type0 (G:grammar) = let
           pr_ty pps cty Top (depth - 1);
           add_string "]"
         end handle HOL_ERR _ =>
-        if Lib.can check_dest_type ty then let
-            val (Tyop, Args) = type_grammar.abb_dest_type G ty
-            fun print_ghastly () = let
-              val {Thy,Tyop,...} = dest_thy_type ty
-            in
-              add_string "(";
-              begin_block INCONSISTENT 0;
-              if not (null Args) then (print_args Top Args; add_break(1,0))
-              else ();
-              add_string (Thy ^ "$" ^ Tyop);
-              end_block();
-              add_string ")"
-            end
+        if Lib.can check_dest_type ty then
+        let
+          val (Tyop, Args) = type_grammar.abb_dest_type G ty
+          val tooltip =
+              case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
+                NONE => let
+                  val {Thy,Tyop,...} = dest_thy_type ty
+                in
+                  Thy ^ "$" ^ Tyop
+                end
+              | SOME st => let
+                  val numps = num_params st
+                in
+                  if 0 < numps then let
+                      val params =
+                          if numps <= 4 then List.take(greek4, numps)
+                          else let
+                              fun tab i = str (Char.chr (Char.ord #"e" + i))
+                            in
+                              greek4 @ List.tabulate(numps - 4, tab)
+                            end
+                    in
+                      UnicodeChars.lambda ^
+                      String.concatWith " " params ^ ". " ^
+                      structure_to_string st
+                    end
+                  else structure_to_string st
+                end
+          fun print_ghastly () = let
+            val {Thy,Tyop,...} = dest_thy_type ty
           in
-            case Args of
-              [] => let
-              in
-                case lookup_tyop Tyop of
-                  NONE => print_ghastly ()
-                | _ => add_string Tyop
-              end
-            | [arg1, arg2] =>
-              (let
+            add_string "(";
+            begin_block INCONSISTENT 0;
+            if not (null Args) then (print_args Top Args; add_break(1,0))
+            else ();
+            add_string (Thy ^ "$" ^ Tyop);
+            end_block();
+            add_string ")"
+          end
+        in
+          case Args of
+            [] => let
+            in
+              case lookup_tyop Tyop of
+                NONE => print_ghastly ()
+              | _ => add_ann_string (Tyop, TyOp tooltip)
+            end
+          | [arg1, arg2] => (let
                  val (prec, rule) = valOf (lookup_tyop Tyop)
                in
                  case rule of
@@ -231,7 +329,7 @@ fun pp_type0 (G:grammar) = let
                         here makes no difference. *)
                      print_args Top Args;
                      add_break(1,0);
-                     add_string Tyop;
+                     add_ann_string (Tyop, TyOp tooltip);
                      end_block();
                      pend addparens
                    end
@@ -249,7 +347,7 @@ fun pp_type0 (G:grammar) = let
                      begin_block INCONSISTENT 0;
                      pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
                      add_break(1,0);
-                     add_string printthis;
+                     add_ann_string (printthis, TySyn tooltip);
                      add_break(1,0);
                      pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
                      end_block();
@@ -267,7 +365,7 @@ fun pp_type0 (G:grammar) = let
                 begin_block INCONSISTENT 0;
                 print_args (Sfx prec) Args;
                 add_break(1,0);
-                add_string Tyop;
+                add_ann_string (Tyop, TyOp tooltip);
                 end_block();
                 pend addparens
               end handle Option => print_ghastly()
@@ -342,14 +440,14 @@ in
   pr_ty
 end
 
-fun pp_type G = let
-  val baseprinter = pp_type0 G
+fun pp_type G backend = let
+  val baseprinter = pp_type0 G backend
 in
   (fn pps => fn ty => baseprinter pps ty Top (!Globals.max_print_depth))
 end
 
-fun pp_type_with_depth G = let
-  val baseprinter = pp_type0 G
+fun pp_type_with_depth G backend = let
+  val baseprinter = pp_type0 G backend
 in
   (fn pps => fn depth => fn ty => baseprinter pps ty Top depth)
 end

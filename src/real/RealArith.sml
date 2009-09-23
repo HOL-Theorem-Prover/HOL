@@ -900,7 +900,7 @@ val (clear_atom_cache,REAL_ATOM_NORM_CONV) =
   let
     val right_CONV = RAND_CONV REAL_SUM_NORM_CONV
     val atomcache = ref []
-    fun lookup_cache tm = find (fn th => eq (liteLib.lhand(concl th)) tm) (!atomcache)
+    fun lookup_cache tm = first (fn th => eq (liteLib.lhand(concl th)) tm) (!atomcache)
     fun clear_atom_cache () = (atomcache := [])
     val pth2 = prove
           (``(a:real < b = c < d:real) = (b <= a = d <= c)``,
@@ -973,7 +973,7 @@ fun lineq_eq (Lineq(i,t,l,j),Lineq(i',t',l',j')) =
 (* The main refutation-finding code.                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun is_trivial (Lineq(_,_,l,_)) = forall ((curry op=) zero) l;
+fun is_trivial (Lineq(_,_,l,_)) = all ((curry op=) zero) l;
 
 fun find_answer (ans as Lineq (k,ty,l,_)) =
   if ty = Eq andalso (not (k = zero))
@@ -1348,7 +1348,7 @@ val REAL_SIMPLE_ARITH_REFUTER =
         val _ = trace ("#(ths) = " ^ (Int.toString (length ths)) ^ ".")
         val _ = trace_thm_list ths
         val res =
-        find (fn th => eq (concl th) false_tm) ths
+        first (fn th => concl th = false_tm) ths
         handle HOL_ERR _ =>
           let
             val allvars = itlist
@@ -1489,7 +1489,7 @@ val PURE_REAL_ARITH_TAC =
             then failwith "ABS_ELIM_TAC1" else
               let
                 val tms = strip_plus tm0
-                val tm = find is_negabstm tms
+                val tm = first is_negabstm tms
                 val n = index_ac tm tms
                 val (ltms,rtms) = chop_list n tms
                 val ntms = tm::(ltms @ tl rtms)
@@ -1511,7 +1511,7 @@ val PURE_REAL_ARITH_TAC =
             else
               let
                 val tms = strip_plus tm0
-                val tm = find is_abstm tms
+                val tm = first is_abstm tms
               in
                 DISJ_CASES_THEN2
                 (fn th => RULE_ASSUM_TAC (SUBS [th]))

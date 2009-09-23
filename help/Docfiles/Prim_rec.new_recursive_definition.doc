@@ -1,9 +1,6 @@
 \DOC new_recursive_definition
 
-\BLTYPE
-new_recursive_definition :
-{name:string,def:term,rec_axiom:thm} -> thm
-\ELTYPE
+\TYPE new_recursive_definition : {name:string, def:term, rec_axiom:thm} -> thm
 
 \SYNOPSIS
 Defines a primitive recursive function over a concrete recursive type.

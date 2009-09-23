@@ -1,34 +1,20 @@
 \DOC freesl
 
-\TYPE {Compat.freesl : term list -> term list}
+\TYPE {freesl : term list -> term list}
 
 \SYNOPSIS
 Returns a list of the free variables in a list of terms.
 
 \DESCRIBE
-Found in the hol88 library. When applied to a list of terms, {freesl}
-returns a list of the variables which are free in any of those
-terms. There are no repetitions in the list produced even if several
-terms contain the same free variable.
+{freesl} is equivalent to {rev o Term.free_varsl}.
 
 \FAILURE
-Never fails, unless the hol88 library has not been loaded.
-
-\EXAMPLE
-In the following example there are two free instances each of {x} and {y},
-whereas the only instances of {z} are bound:
-{
-   - freesl [(--`x+y=2`--), (--`!z. z >= (x-y)`--)];
-   val it = [(--`x`--),(--`y`--)] : term list
-}
-
+Never fails.
 
 \COMMENTS
-{freesl} is not in hol90; use {free_varsl} instead. WARNING: One can not
-depend on the order of the list returned by {freesl} to be identical to that 
-returned by {free_varsl}. They are coded in terms of {frees} and {free_vars}, 
-and thus the discussion in the documentation for {frees} applies by extension.
+Superseded by {Term.free_varsl}.
 
 \SEEALSO
-hol88Lib.frees, Term.free_in, thm_frees.
+hol88Lib.frees, Term.free_varsl.
+
 \ENDDOC

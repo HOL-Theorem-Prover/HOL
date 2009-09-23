@@ -16,11 +16,7 @@ invalid; {prove} has no inbuilt validity-checking.
 Fails if the term is not of type {bool} (and so cannot possibly be
 the conclusion of a theorem), or if the tactic cannot solve the goal.
 
-\COMMENTS
-The function {PROVE} provides almost identical functionality, and will
-also list unsolved goals if the tactic fails. It is therefore preferable
-for most purposes.
-
 \SEEALSO
-BasicProvers.PROVE, hol88Lib.prove_thm, Tactical.TAC_PROOF, VALID.
+Tactical.TAC_PROOF.
+
 \ENDDOC

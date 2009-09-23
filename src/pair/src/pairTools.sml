@@ -1,7 +1,7 @@
 structure pairTools :> pairTools =
 struct
 
-open HolKernel Parse boolLib pairSyntax pairTheory;
+open HolKernel Parse boolLib pairSyntax pairTheory PairRules;
 
 val PERR = mk_HOL_ERR "pairTools";
 
@@ -240,6 +240,78 @@ fun LET_EQ_TAC thml =
   THEN REPEAT (LET_INTRO_TAC THEN DISCH_TAC);
 
 (*---------------------------------------------------------------------------
+ * Eliminate PABS 
+ *
+
+       -----------------------------------  PABS_ELIM_CONV (\<vstr>. P vstr)
+       |- \<vstr>. P <vstr> = \x. P x
+ *
+ *---------------------------------------------------------------------------*)
+
+local
+   fun UNCURRY_ELIM_CONV t =
+      ((REWR_CONV ELIM_UNCURRY) THENC
+       (ABS_CONV (
+          RATOR_CONV (
+             ((RATOR_CONV UNCURRY_ELIM_CONV) THENC
+             BETA_CONV THENC
+             UNCURRY_ELIM_CONV)) THENC
+          BETA_CONV))) t 
+      handle HOL_ERR _ => raise UNCHANGED;
+in
+
+fun PABS_ELIM_CONV t =
+  if (pairSyntax.is_pabs t) then (UNCURRY_ELIM_CONV t) else raise UNCHANGED;
+
+end
+
+
+(*---------------------------------------------------------------------------
+ * Gets a variant of an arbitray term instead of a single variable. Besides
+ * the resulting term, it returns also the substitution used to get it.
+ *---------------------------------------------------------------------------*)
+
+fun variant_of_term vs t =
+let
+   val check_vars = free_vars t;
+   val (_,sub) =
+      foldl (fn (v, (vs,sub)) =>
+	  let
+             val v' = variant vs v;
+             val vs' = v'::vs;
+             val sub' = if (aconv v v') then sub else
+			(v |-> v')::sub;
+          in
+             (vs',sub')
+          end) (vs,[]) check_vars;
+  val t' = subst sub t
+in
+  (t', sub)
+end;
+
+
+(*---------------------------------------------------------------------------
+ * Introduces PABS 
+ *
+
+       -----------------------------------  PABS_ELIM_CONV <vstr> (\x. P x)
+       |- \x. P x = \<vstr>. P vstr
+ *
+ *---------------------------------------------------------------------------*)
+
+fun PABS_INTRO_CONV vstruct tt = let
+   val (vstruct', _) = variant_of_term (free_vars tt) vstruct
+   val new_t = mk_comb (tt, vstruct')
+   val thm0 = (BETA_CONV THENC
+               REWRITE_CONV[pairTheory.FST, pairTheory.SND]) new_t
+
+   val thm1 = PairRules.PABS vstruct' thm0
+   val thm2 = CONV_RULE (LHS_CONV PairRules.PETA_CONV) thm1
+in
+   thm2
+end;
+
+(*---------------------------------------------------------------------------
    Eliminate tupled quantification
 
        -----------------------------------  TUPLED_QUANT_CONV `<Q><vstr>. P`
@@ -247,10 +319,6 @@ fun LET_EQ_TAC thml =
 
    where <Q> is one of {?,!} and <vstruct> is a varstruct made
    from the variables v1,...,vn.
-
-   This is slightly imprecise: some of the rewrites done by CONV will
-   be attempted everywhere in the term. To make them happen just in
-   the quantifier prefix is a little more work (but not much).
  ---------------------------------------------------------------------------*)
 
 
@@ -258,11 +326,16 @@ val is_uncurry_tm  = same_const pairSyntax.uncurry_tm
 val is_universal   = same_const boolSyntax.universal
 val is_existential = same_const boolSyntax.existential;
 
-
 local
-  val CONV = Ho_Rewrite.PURE_REWRITE_CONV [ELIM_UNCURRY] THENC
-             DEPTH_CONV BETA_CONV THENC
-             Ho_Rewrite.PURE_REWRITE_CONV [ELIM_PEXISTS,ELIM_PFORALL]
+  val PQUANT_ELIM_STEP_CONV = HO_REWR_CONV ELIM_PFORALL ORELSEC
+                              HO_REWR_CONV ELIM_PEXISTS;
+  fun PQUANT_ELIM_CONV tm = 
+      (REPEATC (PQUANT_ELIM_STEP_CONV) THENC
+       TRY_CONV (QUANT_CONV PQUANT_ELIM_CONV)) tm
+
+  fun CONV tm = ((RAND_CONV PABS_ELIM_CONV) THENC
+                 PQUANT_ELIM_CONV) tm
+
   fun dest_tupled_quant tm =
     case total dest_comb tm
      of NONE => NONE
@@ -292,5 +365,6 @@ fun ELIM_TUPLED_QUANT_CONV tm =
               (list_mk_quant(V, subst(map2 (curry op|->) W V) body)))
  end
 end ;
+
 
 end

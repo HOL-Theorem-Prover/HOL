@@ -33,7 +33,7 @@ val _ = new_theory "powser";
 (* More theorems about rearranging finite sums                               *)
 (*---------------------------------------------------------------------------*)
 
-val POWDIFF_LEMMA = prove_thm("POWDIFF_LEMMA",
+val POWDIFF_LEMMA = store_thm("POWDIFF_LEMMA",
   (--`!n x y. sum(0,SUC n)(\p. (x pow p) * y pow ((SUC n) - p)) =
                 y * sum(0,SUC n)(\p. (x pow p) * (y pow (n - p)))`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM SUM_CMUL] THEN
@@ -48,7 +48,7 @@ val POWDIFF_LEMMA = prove_thm("POWDIFF_LEMMA",
     ASM_REWRITE_TAC[SUB] THEN REWRITE_TAC[pow] THEN
     MATCH_ACCEPT_TAC REAL_MUL_SYM]);
 
-val POWDIFF = prove_thm("POWDIFF",
+val POWDIFF = store_thm("POWDIFF",
   (--`!n x y.
       (x pow (SUC n)) - (y pow (SUC n))
          =
@@ -76,7 +76,7 @@ val POWDIFF = prove_thm("POWDIFF",
     GEN_REWR_TAC (LAND_CONV o RAND_CONV) [REAL_MUL_SYM] THEN
     REWRITE_TAC[REAL_ADD_LINV]]);
 
-val POWREV = prove_thm("POWREV",
+val POWREV = store_thm("POWREV",
   (--`!n x y. sum(0,SUC n)(\p. (x pow p) * (y pow (n - p))) =
                 sum(0,SUC n)(\p. (x pow (n - p)) * (y pow p))`--),
   let val REAL_EQ_LMUL2' = CONV_RULE(REDEPTH_CONV FORALL_IMP_CONV) REAL_EQ_LMUL2 in
@@ -98,7 +98,7 @@ val POWREV = prove_thm("POWREV",
 (* if it sums for x, then it sums absolutely for z with |z| < |x|            *)
 (*---------------------------------------------------------------------------*)
 
-val POWSER_INSIDEA = prove_thm("POWSER_INSIDEA",
+val POWSER_INSIDEA = store_thm("POWSER_INSIDEA",
   (--`!f x z. summable (\n. f(n) * (x pow n)) /\ abs(z) < abs(x)
         ==> summable (\n. abs(f(n)) * (z pow n))`--),
   let val th = (GEN_ALL o CONV_RULE LEFT_IMP_EXISTS_CONV o snd o
@@ -149,7 +149,7 @@ val POWSER_INSIDEA = prove_thm("POWSER_INSIDEA",
 (* Weaker but more commonly useful form for non-absolute convergence         *)
 (*---------------------------------------------------------------------------*)
 
-val POWSER_INSIDE = prove_thm("POWSER_INSIDE",
+val POWSER_INSIDE = store_thm("POWSER_INSIDE",
   (--`!f x z. summable (\n. f(n) * (x pow n)) /\ abs(z) < abs(x)
         ==> summable (\n. f(n) * (z pow n))`--),
   REPEAT GEN_TAC THEN
@@ -170,7 +170,7 @@ val diffs = new_definition("diffs",
 (* Lemma about distributing negation over it                                 *)
 (*---------------------------------------------------------------------------*)
 
-val DIFFS_NEG = prove_thm("DIFFS_NEG",
+val DIFFS_NEG = store_thm("DIFFS_NEG",
   (--`!c. diffs(\n. ~(c n)) = \n. ~((diffs c) n)`--),
   GEN_TAC THEN REWRITE_TAC[diffs] THEN BETA_TAC THEN
   REWRITE_TAC[REAL_NEG_RMUL]);
@@ -179,7 +179,7 @@ val DIFFS_NEG = prove_thm("DIFFS_NEG",
 (* Show that we can shift the terms down one                                 *)
 (*---------------------------------------------------------------------------*)
 
-val DIFFS_LEMMA = prove_thm("DIFFS_LEMMA",
+val DIFFS_LEMMA = store_thm("DIFFS_LEMMA",
   (--`!n c x. sum(0,n) (\n. (diffs c)(n) * (x pow n)) =
            sum(0,n) (\n. &n * (c(n) * (x pow (n - 1)))) +
              (&n * (c(n) * x pow (n - 1)))`--),
@@ -189,13 +189,13 @@ val DIFFS_LEMMA = prove_thm("DIFFS_LEMMA",
   AP_TERM_TAC THEN REWRITE_TAC[diffs] THEN BETA_TAC THEN
   REWRITE_TAC[SUC_SUB1, REAL_MUL_ASSOC]);
 
-val DIFFS_LEMMA2 = prove_thm("DIFFS_LEMMA2",
+val DIFFS_LEMMA2 = store_thm("DIFFS_LEMMA2",
   (--`!n c x. sum(0,n) (\n. &n * (c(n) * (x pow (n - 1)))) =
            sum(0,n) (\n. (diffs c)(n) * (x pow n)) -
                 (&n * (c(n) * x pow (n - 1)))`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[REAL_EQ_SUB_LADD, DIFFS_LEMMA]);
 
-val DIFFS_EQUIV = prove_thm("DIFFS_EQUIV",
+val DIFFS_EQUIV = store_thm("DIFFS_EQUIV",
   (--`!c x. summable(\n. (diffs c)(n) * (x pow n)) ==>
       (\n. &n * (c(n) * (x pow (n - 1)))) sums
          (suminf(\n. (diffs c)(n) * (x pow n)))`--),
@@ -218,7 +218,7 @@ val DIFFS_EQUIV = prove_thm("DIFFS_EQUIV",
 (*  they all have the same radius of convergence, but we don't need to.)     *)
 (*===========================================================================*)
 
-val TERMDIFF_LEMMA1 = prove_thm("TERMDIFF_LEMMA1",
+val TERMDIFF_LEMMA1 = store_thm("TERMDIFF_LEMMA1",
   (--`!m z h.
      sum(0,m)(\p. (((z + h) pow (m - p)) * (z pow p)) - (z pow m)) =
        sum(0,m)(\p. (z pow p) *
@@ -232,7 +232,7 @@ val TERMDIFF_LEMMA1 = prove_thm("TERMDIFF_LEMMA1",
     MATCH_MP_TAC LESS_IMP_LESS_OR_EQ THEN
     POP_ASSUM(MP_TAC o CONJUNCT2) THEN REWRITE_TAC[ADD_CLAUSES]]);
 
-val TERMDIFF_LEMMA2 = prove_thm("TERMDIFF_LEMMA2",
+val TERMDIFF_LEMMA2 = store_thm("TERMDIFF_LEMMA2",
   (--`!z h n. ~(h = &0) ==>
        (((((z + h) pow n) - (z pow n)) / h) - (&n * (z pow (n - 1))) =
         h * sum(0,n - 1)(\p. (z pow p) *
@@ -272,7 +272,7 @@ val TERMDIFF_LEMMA2 = prove_thm("TERMDIFF_LEMMA2",
   AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC(TOP_DEPTH_CONV num_CONV) THEN
   REWRITE_TAC[SUB_MONO_EQ, SUB_0, ADD_SUB]);
 
-val TERMDIFF_LEMMA3 = prove_thm("TERMDIFF_LEMMA3",
+val TERMDIFF_LEMMA3 = store_thm("TERMDIFF_LEMMA3",
   (--`!z h n k'. ~(h = &0) /\ abs(z) <= k' /\ abs(z + h) <= k' ==>
     abs(((((z + h) pow n) - (z pow n)) / h) - (&n * (z pow (n - 1))))
         <= &n * (&(n - 1) * ((k' pow (n - 2)) * abs(h)))`--),
@@ -332,7 +332,7 @@ val TERMDIFF_LEMMA3 = prove_thm("TERMDIFF_LEMMA3",
   REWRITE_TAC[ABS_POS, GSYM POW_ABS] THEN
   CONJ_TAC THEN MATCH_MP_TAC POW_LE THEN ASM_REWRITE_TAC[ABS_POS] end);
 
-val TERMDIFF_LEMMA4 = prove_thm("TERMDIFF_LEMMA4",
+val TERMDIFF_LEMMA4 = store_thm("TERMDIFF_LEMMA4",
   (--`!f k' k. &0 < k /\
            (!h. &0 < abs(h) /\ abs(h) < k ==> abs(f h) <= k' * abs(h))
         ==> (f -> &0)(&0)`--),
@@ -385,7 +385,7 @@ val TERMDIFF_LEMMA4 = prove_thm("TERMDIFF_LEMMA4",
     ASM_REWRITE_TAC[GSYM real_div] THEN REWRITE_TAC[REAL_LT_HALF2] THEN
     ONCE_REWRITE_TAC[GSYM REAL_LT_HALF1] THEN ASM_REWRITE_TAC[]]);
 
-val TERMDIFF_LEMMA5 = prove_thm("TERMDIFF_LEMMA5",
+val TERMDIFF_LEMMA5 = store_thm("TERMDIFF_LEMMA5",
   (--`!f g k.
       &0 < k /\
       summable(f) /\
@@ -425,7 +425,7 @@ val TERMDIFF_LEMMA5 = prove_thm("TERMDIFF_LEMMA5",
   MAP_EVERY EXISTS_TAC [(--`suminf(f)`--), (--`k:real`--)] THEN
   BETA_TAC THEN ASM_REWRITE_TAC[]);
 
-val TERMDIFF = prove_thm("TERMDIFF",
+val TERMDIFF = store_thm("TERMDIFF",
   (--`!c k' x.
       summable(\n. c(n) * (k' pow n)) /\
       summable(\n. (diffs c)(n) * (k' pow n)) /\

@@ -43,7 +43,7 @@ val Stable =
 	    !t. ((t1 <= t) /\ (t < t2)) ==> (sig(t) = sig(t1))``);;
 
 val Stable_pair =
-    prove_thm
+    store_thm
     ("Stable_pair",
      ``!f t1 t2.
         Stable t1 t2 (\t. f t, g t) = ((Stable t1 t2 f) /\ Stable t1 t2 g)``,

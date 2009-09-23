@@ -4,9 +4,12 @@ struct
 type hol_type = Type.hol_type
 open Portable
 
-datatype annotation = BV of hol_type
-                    | FV of hol_type
-                    | Const of {Thy: string,Name:string,Ty:hol_type}
+datatype annotation = BV of hol_type * string
+                    | FV of hol_type * string
+                    | TyV
+                    | TyOp of string
+                    | TySyn of string
+                    | Const of {Thy:string,Name:string,Ty:hol_type} * string
                     | Note of string
 
 type t = {add_string : ppstream -> string -> unit,
@@ -25,7 +28,8 @@ fun with_ppstream (t:t) pps =
      begin_block = #begin_block t pps,
      end_block = (fn () => #end_block t pps),
      clear_ppstream = (fn () => PP.clear_ppstream pps),
-     flush_ppstream = (fn () => PP.flush_ppstream pps)}
+     flush_ppstream = (fn () => PP.flush_ppstream pps)
+    }
 
 val raw_terminal =
     {add_break = PP.add_break,
@@ -39,10 +43,14 @@ val raw_terminal =
 val vt100_terminal = let
   fun boldblue s = "\027[1;34m" ^ s ^ "\027[0m"
   fun green s = "\027[32m" ^ s ^ "\027[0m"
+  fun cyan s = "\027[36m" ^ s ^ "\027[0m"
   fun add_ann_string pps (s, ann) =
       case ann of
         FV _ => PP.add_stringsz pps (boldblue s, UTF8.size s)
       | BV _ => PP.add_stringsz pps (green s, UTF8.size s)
+      | TyV => PP.add_stringsz pps (cyan s, UTF8.size s)
+      | TyOp _ => PP.add_stringsz pps (cyan s, UTF8.size s)
+      | TySyn _ => PP.add_stringsz pps (cyan s, UTF8.size s)
       | _ => PP.add_string pps s
 in
   {add_break = PP.add_break,
@@ -54,12 +62,29 @@ in
    name = "vt100_terminal"}
 end
 
-val emacs_terminal = {name = "emacs_terminal",
-                      add_break = #add_break raw_terminal,
-                      add_newline = #add_newline raw_terminal,
-                      add_ann_string = #add_ann_string raw_terminal,
-                      begin_block = #begin_block raw_terminal,
-                      end_block = #end_block raw_terminal,
-                      add_string = #add_string raw_terminal}
+val emacs_terminal = let
+  val sz = UTF8.size
+  fun fv s tystr = "(*(*(*FV\000"^tystr^"\000"^s^"*)*)*)"
+  fun bv s tystr = "(*(*(*BV\000"^tystr^"\000"^s^"*)*)*)"
+  fun tyv s = "(*(*(*TY"^s^"*)*)*)"
+  fun tyop info s = "(*(*(*TY\000"^info^"\000"^s^"*)*)*)"
+  fun tysyn info s = "(*(*(*TY\000"^info^"\000"^s^"*)*)*)"
+  fun add_ann_string pps (s, ann) =
+      case ann of
+        FV (_,tystr) => PP.add_stringsz pps (fv s tystr, sz s)
+      | BV (_,tystr) => PP.add_stringsz pps (bv s tystr, sz s)
+      | TyV => PP.add_stringsz pps (tyv s, sz s)
+      | TyOp thy => PP.add_stringsz pps (tyop thy s, sz s)
+      | TySyn r => PP.add_stringsz pps (tysyn r s, sz s)
+      | _ => PP.add_string pps s
+in
+  {name = "emacs_terminal",
+   add_break = #add_break raw_terminal,
+   add_newline = #add_newline raw_terminal,
+   add_ann_string = add_ann_string,
+   begin_block = #begin_block raw_terminal,
+   end_block = #end_block raw_terminal,
+   add_string = #add_string raw_terminal}
+end
 
 end (* struct *)

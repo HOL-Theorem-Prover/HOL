@@ -102,11 +102,10 @@ fun interactive_ppbackend () = let
   open PPBackEnd OS.Process
 in
   (* assumes interactive *)
-  case getEnv "INSIDE_EMACS" of
-    SOME _ => emacs_terminal
-  | NONE => (case getEnv "TERM" of
-               SOME "xterm" => vt100_terminal
-             | _ => raw_terminal)
+  case getEnv "TERM" of
+    SOME s => if String.isPrefix "xterm" s then vt100_terminal
+              else raw_terminal
+  | _ => raw_terminal
 end
 
 val current_backend : PPBackEnd.t ref =
@@ -379,7 +378,7 @@ fun update_type_fns () =
 fun pp_type pps ty = let in
    update_type_fns();
    Portable.add_string pps ":";
-   !type_printer pps ty
+   !type_printer (!current_backend) pps ty
  end
 
 val type_to_string = Portable.pp_to_string 75 pp_type
@@ -397,7 +396,8 @@ fun pp_with_bquotes ppfn pp x =
   let open Portable in add_string pp "`"; ppfn pp x; add_string pp "`" end
 
 fun print_from_grammars (tyG, tmG) =
-  (type_pp.pp_type tyG, term_pp.pp_term tmG tyG (!current_backend))
+  (type_pp.pp_type tyG (!current_backend),
+   term_pp.pp_term tmG tyG (!current_backend))
 
 fun print_term_by_grammar Gs = let
   open TextIO PP
@@ -599,7 +599,9 @@ end
    ---------------------------------------------------------------------- *)
 
 fun pp_term pps t = (update_term_fns(); !term_printer pps t)
-fun term_to_string t = Portable.pp_to_string (!Globals.linewidth) pp_term t;
+fun term_to_string t =
+    Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+                  (Portable.pp_to_string (!Globals.linewidth) pp_term) t;
 fun print_term t = Portable.output(Portable.std_out, term_to_string t);
 
 fun pp_terms pps ts =
@@ -657,7 +659,9 @@ fun pp_thm ppstrm th =
     end_block()
  end;
 
-fun thm_to_string thm = Portable.pp_to_string (!Globals.linewidth) pp_thm thm;
+fun thm_to_string thm =
+    Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+                  (Portable.pp_to_string (!Globals.linewidth) pp_thm) thm;
 fun print_thm thm     = Portable.output(Portable.std_out, thm_to_string thm);
 
 (*---------------------------------------------------------------------------
@@ -1997,7 +2001,8 @@ val min_grammars = current_grammars();
     hideous hack section
    ---------------------------------------------------------------------- *)
 
-    val _ = initialise_typrinter type_pp.pp_type
+    val _ = initialise_typrinter
+            (fn G => type_pp.pp_type G PPBackEnd.raw_terminal)
     val _ = Definition.new_specification_hook := List.app add_const;
 
 (* when new_theory is called, and if the new theory has the same name

@@ -362,7 +362,7 @@ in
 end handle HOL_ERR _ => fst (dest_const tm)
                             handle HOL_ERR _ => atom_name (fst (dest_tycomb tm))
 
-fun pp_term (G : grammar) TyG = let
+fun pp_term (G : grammar) TyG backend = let
   val {restr_binders,lambda,type_lambda,endbinding,
        type_intro,type_lbracket,type_rbracket,res_quanop} = specials G
   val overload_info = overload_info G
@@ -881,7 +881,7 @@ fun pp_term (G : grammar) TyG = let
       pend addparens
     end
 
-    val pr_type = type_pp.pp_type_with_depth TyG pps (decdepth depth)
+    val pr_type = type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
 
     fun pr_typel s [] = raise PP_ERR "pp_term" "no bound variables in type abstraction"
       | pr_typel s [ty] = pr_type ty
@@ -961,7 +961,7 @@ fun pp_term (G : grammar) TyG = let
       add_string (numeral_str ^ sfx) ;
       if showtypes then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG pps (decdepth depth)
+         type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
                                     (#2 (dom_rng injty)))
       else ();
       pend showtypes
@@ -1273,7 +1273,8 @@ fun pp_term (G : grammar) TyG = let
                    prec prec rprec (decdepth depth);
       if comb_show_type then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG pps (decdepth depth) (type_of tm))
+         type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
+                                    (type_of tm))
       else ();
       end_block();
       pend (addparens orelse comb_show_type)
@@ -1580,7 +1581,7 @@ fun pp_term (G : grammar) TyG = let
       add_break(0,0);
       add_string ("`"^type_intro);
       add_break (0,0);
-      type_pp.pp_type_with_depth TyG pps (decdepth depth) ty;
+      type_pp.pp_type_with_depth TyG backend pps (decdepth depth) ty;
       add_string "`))";
       end_block()
     end
@@ -1628,7 +1629,7 @@ fun pp_term (G : grammar) TyG = let
           fun add_type () = let
           in
             add_string (" "^type_intro); add_break (0,0);
-            type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty
+            type_pp.pp_type_with_depth TyG backend pps (decdepth depth) Ty
           end
           val new_freevar =
             showtypes andalso not isfake andalso
@@ -1638,11 +1639,16 @@ fun pp_term (G : grammar) TyG = let
           val print_type =
             showtypes_v orelse
             showtypes andalso not isfake andalso (binderp orelse new_freevar)
-          fun adds s = if mem tm (!bvars_seen) orelse binderp then
-                         add_ann_string (s, PPBackEnd.BV Ty)
-                       else if not isfake then
-                         add_ann_string (s, PPBackEnd.FV Ty)
-                       else add_string s
+          fun tystr ty =
+              PP.pp_to_string 10000
+                              (type_pp.pp_type TyG PPBackEnd.raw_terminal)
+                              Ty
+          fun adds s =
+              if mem tm (!bvars_seen) orelse binderp then
+                add_ann_string (s, PPBackEnd.BV (Ty, s^": "^tystr Ty))
+              else if not isfake then
+                add_ann_string (s, PPBackEnd.FV (Ty, s^": "^tystr Ty))
+              else add_string s
         in
           begin_block INCONSISTENT 2; pbegin print_type;
           if isSome vrule then
@@ -1661,7 +1667,7 @@ fun pp_term (G : grammar) TyG = let
             (*begin_block CONSISTENT 0;*)
             action();
             add_string (" "^type_intro);
-            type_pp.pp_type_with_depth TyG pps (decdepth depth) Ty;
+            type_pp.pp_type_with_depth TyG backend pps (decdepth depth) Ty;
             (*end_block ();*)
             pend true
           end
@@ -1685,7 +1691,7 @@ fun pp_term (G : grammar) TyG = let
                 add_string "(";
                 begin_block CONSISTENT 0;
                 add_string type_intro;
-                type_pp.pp_type_with_depth TyG pps depth (hd Args);
+                type_pp.pp_type_with_depth TyG backend pps depth (hd Args);
                 end_block ();
                 add_string ")"
               end
@@ -1769,6 +1775,9 @@ fun pp_term (G : grammar) TyG = let
               then let
                   val (vs, body) = my_dest_abs Rand
                   val vfrees = FVL [vs] empty_tmset
+                  val bvars_seen_here = HOLset.listItems vfrees
+                  val old_seen = !bvars_seen
+
                   val (l, r) = dest_pair body
                   val lfrees = FVL [l] empty_tmset
                   val rfrees = FVL [r] empty_tmset
@@ -1780,6 +1789,7 @@ fun pp_term (G : grammar) TyG = let
                      andalso not (!unamb_comp)
                   then
                     (begin_block CONSISTENT 0;
+                     bvars_seen := old_seen @ bvars_seen_here;
                      add_string "{"; begin_block CONSISTENT 0;
                      pr_term l Top Top Top (decdepth depth);
                      add_string " |"; spacep true;
@@ -1787,9 +1797,11 @@ fun pp_term (G : grammar) TyG = let
                      end_block();
                      add_string "}";
                      end_block();
+                     bvars_seen := old_seen;
                      raise SimpleExit)
                   else
                     (begin_block CONSISTENT 0;
+                     bvars_seen := old_seen @ bvars_seen_here;
                      add_string "{"; begin_block CONSISTENT 0;
                      pr_term l Top Top Top (decdepth depth);
                      add_string " |"; spacep true;
@@ -1799,6 +1811,7 @@ fun pp_term (G : grammar) TyG = let
                      end_block();
                      add_string "}";
                      end_block();
+                     bvars_seen := old_seen;
                      raise SimpleExit)
                 end handle HOL_ERR _ => ()
               else ()
@@ -1979,7 +1992,7 @@ fun pp_term (G : grammar) TyG = let
   val avoid_merge = avoid_symbolmerge G
   open PPBackEnd
 in
-  fn backend => fn pps => fn t =>
+  fn pps => fn t =>
     let
       val baseppfns = with_ppstream backend pps
       val {add_string,add_break,begin_block,end_block,...} = baseppfns

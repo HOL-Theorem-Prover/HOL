@@ -49,7 +49,7 @@ val cases = DECIDE ``!m n. m < n ==> (SUC m) < n \/ (SUC m = n)``;
 (* Theorem for Increasing the size of the interval covered by the 	*)
 (* predicate Next.							*)
 val Next_Increase =
-    prove_thm
+    store_thm
      ("Next_Increase",
       ``!sig t1 t2. ~sig(SUC(t1)) /\ Next (SUC t1) t2 sig ==> Next t1 t2 sig``,
       PURE_REWRITE_TAC [Next] THEN
@@ -62,7 +62,7 @@ val Next_Increase =
 
 (* Lemma for decreasing the size of the interval covered by Next.	*)
 val Next_Decrease =
-    prove_thm
+    store_thm
      ("Next_Decrease",
       ``!sig t1 t2. Next t1 t2 sig /\ ~sig(SUC t1) ==> Next (SUC t1) t2 sig``,
       PURE_REWRITE_TAC [Next] THEN
@@ -76,7 +76,7 @@ val Next_Decrease =
 
 (* Uniqueness lemma for Next.						*)
 val Next_Unique =
-    prove_thm
+    store_thm
      ("Next_Unique",
       ``!sig t t1 t2. Next t t1 sig /\ Next t t2 sig ==> (t1 = t2)``,
       PURE_REWRITE_TAC [Next] THEN
@@ -85,5 +85,5 @@ val Next_Unique =
       ASM_CASES_TAC ``t1 < t2`` THENL
       [RES_TAC, IMP_RES_TAC LESS_CASES_IMP THEN RES_TAC]);
 
-(* Close the theory ``next.th``.						*)
+(* Close the theory ``next.th``.					*)
 val _ = export_theory();

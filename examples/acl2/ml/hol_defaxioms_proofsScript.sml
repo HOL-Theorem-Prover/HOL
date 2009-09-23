@@ -3223,7 +3223,8 @@ val acl2_package_defaxiom =
     THEN METIS_TAC
           [VALID_ACL2_PACKAGE_ALIST,LOOKUP_NOT_EMPTY_STRING,
            LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT,
-           pkg_thm_for_initial_pkg_system_lemma]);
+           pkg_thm_for_initial_pkg_system_lemma,
+	   prove(``"ACL2" <> ""``,RW_TAC std_ss [])]);
 
 (*****************************************************************************)
 (* val LOOKUP_EMPTY = |- LOOKUP "" ACL2_PACKAGE_ALIST s = "" : thm           *)

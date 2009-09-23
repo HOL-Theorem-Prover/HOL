@@ -1,5 +1,5 @@
 # =====================================================================
-# Makefile for the hol manual
+# Makefile for the HOL manual
 # =====================================================================
 
 default: all
@@ -42,4 +42,3 @@ quick:
 
 all: description tutorial logic reference interaction quick
 	@echo "=======> MANUAL made"
-

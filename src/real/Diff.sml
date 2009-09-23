@@ -99,8 +99,8 @@ fun DIFF_CONV tm =
                     end)
               end end
       val tha = diff tm
-      val cjs = conjuncts(fst(dest_imp
-                  (snd(strip_forall(concl tha))))) handle HOL_ERR _ => []
+      val cjs = strip_conj (fst (dest_imp
+                  (snd (strip_forall (concl tha))))) handle HOL_ERR _ => []
       val cj2 = filter is_diffl cjs
       val fvs = map (rand o rator) cj2
       val thb = itlist GEN fvs tha
