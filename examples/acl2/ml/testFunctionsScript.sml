@@ -30,39 +30,38 @@ val merge_def = Define `
     	   if a < c:num then a :: merge b (c::d)
 	      	    else c :: merge (a::b) d)`;
 
+local
+fun varftac f tac (a,g) =
+let val v = f g
+in  tac v (a,g)
+end
+val tactic = 
+    completeInduct_on `LENGTH x` THEN
+    Cases THEN 
+    TRY (varftac (rand o rand o rand o rand o rator) 
+    		 (fn v => STRUCT_CASES_TAC (ISPEC v list_CASES))) THEN
+    RW_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1] THEN
+    varftac (rand o rand o rator o rand o rand)
+    	    (fn v => POP_ASSUM (MP_TAC o ISPEC ``LENGTH (^v)``) THEN RW_TAC arith_ss []) THEN
+    varftac (rand o rand o rator o rand o rand)
+    	    (fn v => POP_ASSUM (MP_TAC o ISPEC v) THEN RW_TAC arith_ss [] THEN
+		     DISJ_CASES_TAC (ISPEC ``1 < LENGTH (^v)`` boolTheory.EXCLUDED_MIDDLE) THEN1
+    		         METIS_TAC [arithmeticTheory.LESS_TRANS,
+		     	       	    DECIDE ``SUC a + b < a + (b + 2n)``,LENGTH]) THEN
+    varftac (rand o rand o rator o rand o rand)
+    	    (fn v => REPEAT (POP_ASSUM MP_TAC) THEN
+	    	     STRUCT_CASES_TAC (ISPEC v listTheory.list_CASES) THEN
+    		     RW_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1]) THEN
+    varftac (rand o rand o rator o rand o rand)
+    	    (fn v => REPEAT (POP_ASSUM MP_TAC) THEN
+    		     STRUCT_CASES_TAC (ISPEC v list_CASES)) THEN
+    RW_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1]
+in
 val length_split1_lemma1 = prove(``!x a b. 1 < LENGTH x ==>
-      (LENGTH (FST (split1 x (a,b))) < LENGTH x + LENGTH a)``,
-    completeInduct_on `LENGTH x` THEN
-    Cases THEN
-    STRUCT_CASES_TAC (ISPEC (mk_var("t",``:'a list``)) list_CASES) THEN
-    RW_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1] THEN
-    POP_ASSUM (MP_TAC o Q.SPEC `LENGTH t'`) THEN RW_TAC arith_ss [] THEN
-    POP_ASSUM (MP_TAC o Q.SPEC `t'`) THEN RW_TAC arith_ss [] THEN
-    Cases_on `1 < LENGTH t'` THEN1
-        METIS_TAC [arithmeticTheory.LESS_TRANS,
-		   DECIDE ``SUC a + b < a + (b + 2n)``,LENGTH] THEN
-    Cases_on `t'` THEN
-    FULL_SIMP_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1] THEN
-    POP_ASSUM MP_TAC THEN
-    STRUCT_CASES_TAC (ISPEC (mk_var("t",``:'a list``)) list_CASES) THEN
-    FULL_SIMP_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1]);
-
+      (LENGTH (FST (split1 x (a,b))) < LENGTH x + LENGTH a)``,tactic);
 val length_split1_lemma2 = prove(``!x a b. 1 < LENGTH x ==>
-      (LENGTH (SND (split1 x (a,b))) < LENGTH x + LENGTH b)``,
-    completeInduct_on `LENGTH x` THEN
-    Cases THEN
-    STRUCT_CASES_TAC (ISPEC (mk_var("t",``:'a list``)) list_CASES) THEN
-    RW_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1] THEN
-    POP_ASSUM (MP_TAC o Q.SPEC `LENGTH t'`) THEN RW_TAC arith_ss [] THEN
-    POP_ASSUM (MP_TAC o Q.SPEC `t'`) THEN RW_TAC arith_ss [] THEN
-    Cases_on `1 < LENGTH t'` THEN1
-        METIS_TAC [arithmeticTheory.LESS_TRANS,
-		   DECIDE ``SUC a + b < a + (b + 2n)``,LENGTH] THEN
-    Cases_on `t'` THEN
-    FULL_SIMP_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1] THEN
-    POP_ASSUM MP_TAC THEN
-    STRUCT_CASES_TAC (ISPEC (mk_var("t",``:'a list``)) list_CASES) THEN
-    FULL_SIMP_TAC arith_ss [LENGTH,SPLIT_def,arithmeticTheory.ADD1]);
+      (LENGTH (SND (split1 x (a,b))) < LENGTH x + LENGTH b)``,tactic);
+end;
 
 val merge_sort_def = tDefine "merge_sort" `
     (merge_sort xs =

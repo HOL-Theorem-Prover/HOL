@@ -1,5 +1,4 @@
-(*
-Interactive use only...
+(*Interactive use only...
 
 load "translateTheory";
 load "intLib";
@@ -9,14 +8,22 @@ load "integerTheory";
 quietdec := true;
 use "extendTranslateScript.sml" handle _ => quietdec := false;
 quietdec := false;
-
-
 *)
 
 open Term Type Thm Theory Tactic Tactical Drule Rewrite boolSyntax;
 open Lib bossLib Conv Parse
 open sexpTheory arithmeticTheory integerTheory intLib boolTheory
-     hol_defaxiomsTheory translateLib translateTheory;
+     (*hol_defaxiomsTheory*) translateLib translateTheory;
+
+val fix_def=hol_defaxiomsTheory.fix_def;
+val zip_def = hol_defaxiomsTheory.zip_def;
+val nfix_def=hol_defaxiomsTheory.nfix_def;
+val not_def = hol_defaxiomsTheory.not_def;
+val ifix_def = hol_defaxiomsTheory.ifix_def;
+val endp_def = hol_defaxiomsTheory.endp_def;
+val atom_def = hol_defaxiomsTheory.atom_def;
+val zp_def = hol_defaxiomsTheory.zp_def;
+val eql_def = hol_defaxiomsTheory.eql_def;
 
 (*****************************************************************************)
 (* Start new theory "extendTranslate"                                        *)
@@ -1578,12 +1585,14 @@ val update_lem = prove(``!n x y a b.
 	REPEAT (PAT_ASSUM ``!(x:num).P`` (MP_TAC o Q.SPEC `0`)),
 	ALL_TAC] THEN
      RW_TAC arith_ss [EL,TL,HD] THEN
-     `(m:'a ** 'b) %% SUC n = EL n t'` by
-        (REPEAT (PAT_ASSUM ``!(x:num).P`` (MP_TAC o Q.SPEC `SUC n`)) THEN
+     MAP_FIRST (fn t => 
+        t by 
+             (REPEAT (PAT_ASSUM ``!(x:num).P`` (MP_TAC o Q.SPEC `SUC n`)) THEN
 	 RW_TAC arith_ss [EL,TL]) THEN
-     POP_ASSUM SUBST_ALL_TAC THEN
-     CONV_TAC SYM_CONV THEN MATCH_MP_TAC el_update2 THEN
-     RW_TAC arith_ss []);
+     	 POP_ASSUM SUBST_ALL_TAC THEN
+     	 CONV_TAC SYM_CONV THEN MATCH_MP_TAC el_update2 THEN
+     	 RW_TAC arith_ss []) 
+     [`(m:'a ** 'b) %% SUC n = EL n t''`,`(m:'a ** 'b) %% SUC n = EL n t'`]);
 in
 val UPDATE_V2L = store_thm("UPDATE_V2L",
     ``!a b m. V2L ((a :+ b) m) = update a b (V2L m)``,
