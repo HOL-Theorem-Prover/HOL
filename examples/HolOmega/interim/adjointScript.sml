@@ -72,20 +72,6 @@ val HASH_def = new_definition ("HASH_def",
   ``(HASH (F' : 'F functor) (eps : ('G o 'F, I) nattransf) : ('F,'G) hash) =
     ((\:'a 'b. \f : 'a -> 'b 'G. eps o F' f))``) ;
 
-val tm12 = ``nattransf eta (\:'a 'b. I) (G oo F') /\ functor G /\
-  adjf1 G eta hash ==> (adjf2 F' (EPS hash) (STAR G eta : ('G,'F) star))`` ;
-
-(* better, get adjf1_2 as REWRITE_RULE [adjf3_2] adjf1_3 *)
-val adjf1_2 = store_thm ("adjf1_2", tm12,
-  EVERY [ (REWRITE_TAC [adjf2_def, STAR_def, EPS_def]),
-    (REPEAT STRIP_TAC), TY_BETA_TAC,
-    BETA_TAC, EQ_TAC, STRIP_TAC,
-    POP_ASSUM (fn th => REWRITE_TAC [SYM th]), 
-    (IMP_RES_TAC adjf1_hash_eq),
-    (IMP_RES_TAC adjf1_def), (ASM_REWRITE_TAC []), 
-    (POP_ASSUM (MATCH_MP_TAC o tsfg (sfg (fst o EQ_IMP_RULE)))),
-    REFL_TAC ] ) ;
-
 val tmd = ``nattransf eta (\:'a 'b. I) (G oo F') /\ functor G /\
   adjf1 G eta hash ==> 
   (HASH F' (EPS hash) = hash) /\ (ETA (STAR G eta) = eta)`` ;
@@ -135,6 +121,8 @@ val adjf3_2 = store_thm ("adjf3_2",
   ``adjf3 F' G eta eps = adjf2 F' eps (STAR G eta)``,
   EVERY [ (REWRITE_TAC [adjf3_def, adjf2_def, STAR_def]),
     TY_BETA_TAC, BETA_TAC, EQ_TAC, DISCH_TAC, ASM_REWRITE_TAC [] ] ) ;
+
+val adjf1_2 = save_thm ("adjf1_2", REWRITE_RULE [adjf3_2] adjf1_3) ;
 
 val hash_star_inv_defs = store_thm ("hash_star_inv_defs",
   ``(functor F' ==> (EPS (HASH F' eps) = eps)) /\ 
