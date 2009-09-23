@@ -14,4 +14,8 @@ sig
  val TUPLE            : term -> thm -> thm
  val TUPLE_TAC        : term -> tactic
  val ELIM_TUPLED_QUANT_CONV : conv
+
+ val PABS_ELIM_CONV   : conv
+ val PABS_INTRO_CONV  : term -> conv
+
 end;
