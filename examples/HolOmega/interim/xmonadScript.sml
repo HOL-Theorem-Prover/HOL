@@ -1,4 +1,3 @@
-
 structure xmonadScript =
 struct
 
@@ -63,7 +62,7 @@ val umj_monad_IMP_monad_full = store_thm ("umj_monad_IMP_monad_full",
      (map = MMAP (unit, BIND (map, join))) /\ 
      (join = JOIN (unit, BIND (map, join)))``, 
   ((SRW_TAC [] []) THENL [
-      (MATCH_MP_TAC umj_monad_IMP_monad),
+      (MATCH_MP_TAC umj_monad_IMP_monad_bis),
       (MATCH_MP_TAC umj_monad_IMP_map_eq),
       (MATCH_MP_TAC umj_monad_IMP_join_eq)] 
     THEN (POP_ASSUM ACCEPT_TAC))) ;
