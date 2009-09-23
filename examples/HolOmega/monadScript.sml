@@ -258,11 +258,8 @@ val umj_monad_EQ_monad = store_thm
    THENL [ MATCH_ACCEPT_TAC umj_monad_IMP_monad,
 
            STRIP_TAC
-           THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC[th])
-           THEN POP_ASSUM (fn th => CONV_TAC (RAND_CONV (RAND_CONV (RATOR_CONV
-                  (ONCE_REWRITE_CONV[th])))))
-           THEN POP_ASSUM (MP_TAC o MATCH_MP monad_IMP_umj_monad)
-           THEN STRIP_TAC
+	   THEN (FIRST_X_ASSUM (MP_TAC o MATCH_MP monad_IMP_umj_monad))
+	   THEN (POP_ASSUM_LIST (fn ths => REWRITE_TAC (map SYM ths))) 
          ]
   );
 
