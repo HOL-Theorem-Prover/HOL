@@ -4,13 +4,6 @@
 
 structure CVC3 = struct
 
-  fun write_strings_to_file path strings =
-  let val outstream = TextIO.openOut path
-  in
-    ignore (map (TextIO.output o Lib.pair outstream) strings);
-    TextIO.closeOut outstream
-  end
-
   (* returns SAT if CVC3 reported "sat", UNSAT if CVC3 reported "unsat" *)
   fun result_fn path =
     let val instream = TextIO.openIn path
@@ -30,7 +23,7 @@ structure CVC3 = struct
         val outfile = "output.cvc3"
   in
     val CVC3_SMT_Oracle = SolverSpec.make_solver
-      (write_strings_to_file infile o Lib.snd o SmtLib.goal_to_SmtLib)
+      (Library.write_strings_to_file infile o Lib.snd o SmtLib.goal_to_SmtLib)
       ("cvc3-optimized -lang smt " ^ infile ^ " > " ^ outfile)
       (fn () => result_fn outfile)
       [infile, outfile]
