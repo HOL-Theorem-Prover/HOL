@@ -1263,7 +1263,7 @@ already loaded.)"
   :group 'hol-faces)
 
 (defface hol-type
-  '((nil
+  '((((class color))
      :foreground "cyan"
      :slant italic))
   "The face for presenting HOL types."
