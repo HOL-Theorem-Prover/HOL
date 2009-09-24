@@ -129,13 +129,16 @@ val category_dual = store_thm ("category_dual",
 val _ = type_abbrev ("g_functor", 
   Type `: \'C 'D 'F. !'a 'b. ('a, 'b) 'C -> ('a 'F, 'b 'F) 'D`);
 
+val _ = type_abbrev ("g_functor_dual", 
+  Type `: \'C 'D 'F. !'b 'a. ('a, 'b) 'C -> ('a 'F, 'b 'F) 'D`);
+
 (*---------------------------------------------------------------------------
             Functor predicate
  ---------------------------------------------------------------------------*)
 
 val g_functor_def = new_definition("g_functor_def", 
-   ``g_functor ((idC, compC) : 'C category)
-     ((idD, compD) : 'D category) (F': 'F (('C, 'D) g_functor)) =
+   ``g_functor = \:'C 'D. \ (idC : 'C id, compC : 'C comp) 
+     (idD : 'D id, compD : 'D comp) (F': 'F (('C, 'D) g_functor)).
       (* Identity *) 
           (!:'a. F' [:'a, 'a:] idC = idD) /\
       (* Composition *)
@@ -143,16 +146,23 @@ val g_functor_def = new_definition("g_functor_def",
 	    F' (compC g f) = compD (F' g) (F' f)) 
       `` );
 
-(* above definition seemsnot adequate,
-  similar reason to why we need type argument for category above ;
-  illustrated, I think, by
-``g_functor : 'C category -> 'D category -> 'F (('C, 'D) g_functor) -> bool`` ;
-(which succeeds)
+val g_functor_thm = store_thm ("g_functor_thm", 
+   ``g_functor [:'C, 'D:] (idC : 'C id, compC : 'C comp) 
+     (idD : 'D id, compD : 'D comp) (F': 'F (('C, 'D) g_functor)) =
+      (* Identity *) 
+          (!:'a. F' [:'a, 'a:] idC = idD) /\
+      (* Composition *)
+          (!:'a 'b 'c. !(f:('a, 'b) 'C) (g:('b, 'c) 'C).
+	    F' (compC g f) = compD (F' g) (F' f)) ``,
+    SRW_TAC [] [g_functor_def]) ;
 
-``g_functor : 'C C category -> 'D C category ->
-  'F (('C C, 'D C) g_functor) -> bool`` ;
-(which fails)
-*) 
+(* a functor also is a functor between the dual categories;
+  but you have to dualise the functor regarding the order of quantifying
+  over the two objects (source and target of an arrow) *)
+
+val g_dual_functor_def = new_definition ("g_dual_functor_def",
+  ``g_dual_functor (F': 'F (('C, 'D) g_functor)) =
+    (\:'a 'b. F' [:'b, 'a:]) : 'F (('C, 'D) g_functor_dual)``) ;
 
 val _ = set_trace "types" 1;
 val _ = set_trace "kinds" 0;
