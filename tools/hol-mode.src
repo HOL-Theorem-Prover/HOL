@@ -1262,7 +1262,10 @@ already loaded.)"
   "The face for presenting bound variables in HOL terms."
   :group 'hol-faces)
 
-(defface hol-type '((nil :slant italic))
+(defface hol-type
+  '((nil
+     :foreground "cyan"
+     :slant italic))
   "The face for presenting HOL types."
   :group 'hol-faces)
 
