@@ -116,11 +116,11 @@ see an error message \texttt{file '<name>' exists, please remove it}.
            |- (a ==> b) /\ (b ==> a) = (a = b) : thm
 
 - TAC_PROOF Z3_ORACLE_TAC ``(a ==> b) /\ (b ==> a) = (a=b)``;
-> val it = [oracles: DISK_THM, HolSatLib] [axioms: ] []
+> val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
            |- (a ==> b) /\ (b ==> a) = (a = b) : thm
 
 - TAC_PROOF Z3_TAC ``(a ==> b) /\ (b ==> a) = (a=b)``;
-> val it = [oracles: DISK_THM, HolSatLib] [axioms: ] []
+> val it = [oracles: DISK_THM] [axioms: ] []
            |- (a ==> b) /\ (b ==> a) = (a = b) : thm
 \end{verbatim}
 \end{session}
