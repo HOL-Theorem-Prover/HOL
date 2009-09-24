@@ -1,23 +1,28 @@
-Entering expressions.
----------------------
+Entering expressions
+--------------------
 
 The HOL type parser is called "Type".
 
-Example:     Type`:bool -> ('a -> bool) -> ind`
+Example:     Type `:bool -> ('a -> bool) -> ind`
 
 The HOL term parser is called "Term".
 
 Example:     Term `!x. ?y. x = y`
 
+Types and terms can also be entered using double backquotes.
+
+Example:     ``:bool -> ('a -> bool) -> ind``
+             ``!x. ?y. x = y``
+
 Goals are typically set with "g", which is an abbreviation
-for "set_goal"
+for "set_goal".
 
 Example:     g `!x. ?y. x = y`
-            set_goal([], Term `!x. ?y. x = y`)
+             set_goal ([], ``!x. ?y. x = y``)
 
 
-Theories.
----------
+Theories
+--------
 
 In HOL, theories are represented by ML structures. The theories listed
 below are some of those that come pre-built in the system.
@@ -28,10 +33,10 @@ below are some of those that come pre-built in the system.
     | pairTheory         | theory of pairs                             |
     |------------------------------------------------------------------|
     | numTheory          | Peano's axioms from the axiom of infinity   |
-    | prim_recTheory     | Primitive recursion theorem                 |
+    | prim_recTheory     | primitive recursion theorem                 |
     | arithmeticTheory   | Peano arithmetic development                |
-    | intTheory          | integers, by John Harrison                  |
-    | transcTheory       | real numbers and analysis, by John Harrison |
+    | intTheory          | integers                                    |
+    | transcTheory       | real numbers and analysis                   |
     |------------------------------------------------------------------|
     |                    | transitive closure of a relation            |
     | relationTheory     | wellfoundedness, induction, and recursion   |
@@ -56,19 +61,19 @@ below are some of those that come pre-built in the system.
     |------------------------------------------------------------------|
     | wordsTheory        | theory of bitstrings                        |
     |------------------------------------------------------------------|
-    | Temporal_LogicTheory | Linear time temporal logic                |
-    | Omega_AutomataTheory | Infinite state automata                   |
+    | Temporal_LogicTheory | linear time temporal logic                |
+    | Omega_AutomataTheory | infinite state automata                   |
      ------------------------------------------------------------------
 
-An invocation of HOL provides theories of lists, natural numbers, booleans,
-sums, and pairs. To gain access to any other theory when working
-interactively, simply invoke
+An invocation of HOL provides theories of lists, natural numbers,
+booleans, sums, and pairs. To gain access to any other theory when
+working interactively, simply invoke
 
     load "xTheory";
 
-where "x" is the name of the theory. Once the theory has been
-loaded by the system, access to its contents is through the `dot'
-notation of ML, e.g.,
+where "x" is the name of the theory. Once the theory has been loaded
+by the system, access to its contents is through the `dot' notation of
+ML, e.g.,
 
     xTheory.FOO_DEF,
 
@@ -76,11 +81,11 @@ or if you prefer, by `open'ing the structure and then directly
 accessing its contents.
 
 
-Libraries.
------------
+Libraries
+---------
 
- As for theories, a library is represented by an ML structure and can
-thus be brought into an interactive session by invoking `load', e.g.
+As for theories, a library is represented by an ML structure and can
+thus be brought into an interactive session by invoking `load', e.g.,
 
     load "xLib";
 
@@ -97,7 +102,7 @@ HOL currently offers the following libraries.
 
     ----------------------------------------------------------------
     | boolLib         | derived rules, tactics, convs, rewriting    |
-    | bossLib         | Suite of automatic tools.                   |
+    | bossLib         | suite of automatic tools                    |
     | simpLib         | Isabelle-style simplifier                   |
     | numLib          | support library for numbers                 |
     | intLib          | support library for integers                |
@@ -105,7 +110,7 @@ HOL currently offers the following libraries.
     | probLib         | probability theories                        |
     | temporalLib     | temporal logic and Buechi automata          |
     | goalstackLib    | simple manager for building tactic proofs   |
-    | IndDefLib       | Inductive definitions package               |
+    | IndDefLib       | inductive definitions package               |
     | optionLib       | option type                                 |
     | pairLib         | extended support for pairs                  |
     | pred_setLib     | sets as predicates                          |
@@ -118,7 +123,8 @@ HOL currently offers the following libraries.
     | reduceLib       | basic reasoners for nums and bools          |
     | tautLib         | tautology prover                            |
     | HolBddLib       | BDD-based state-exploration tools           |
-    | HolSatLib       | Support for external satisfiability tools   |
+    | HolSatLib       | support for external satisfiability tools   |
+    | HolSmtLib       | support for external SMT tools              |
     | hol88Lib        | support for hol88 compatibility             |
     | liteLib         | support for HOL-Light portability           |
     ----------------------------------------------------------------
