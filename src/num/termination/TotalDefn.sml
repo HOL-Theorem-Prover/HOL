@@ -152,23 +152,14 @@ val WF_thms =
 (* "M (FST N) (SND N)"                                                       *)
 (*---------------------------------------------------------------------------*)
 
-val paired_forall_ss =
- let open simpLib pairTools
-     val fvar = mk_var("f",alpha-->beta-->bool)
- in
-    conv_ss
-      {name  = "ELIM_TUPLED_QUANT_CONV (remove paired quantification)",
-       trace = 2,
-       key   = SOME ([],``$! (UNCURRY ^fvar)``),
-       conv  = K (K ELIM_TUPLED_QUANT_CONV)}
- end;
-
 val term_ss =
  let open simpLib infix ++
  in boolSimps.bool_ss
     ++ pairSimps.PAIR_ss
-    ++ paired_forall_ss
-    ++ rewrites [pairTheory.LAMBDA_PROD]
+    ++ pairSimps.paired_forall_ss
+    ++ pairSimps.paired_exists_ss
+    ++ pairSimps.gen_beta_ss
+    ++ rewrites [pairTheory.FORALL_PROD]
     ++ numSimps.REDUCE_ss
     ++ numSimps.ARITH_RWTS_ss
  end;
