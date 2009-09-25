@@ -1,5 +1,6 @@
 (*---------------------------------------------------------------------------
 	     Categories, Functors and Natural Transformations
+	      $Id$
               Originally written for HOL2P by Norbert Voelker
          Ported to HOL-Omega and expanded by Peter Vincent Homeier
       Adapted to categories with arbitrary arrow type by Jeremy Dawson
@@ -47,6 +48,8 @@ val category_def = new_definition("category_def",
     (!:'a 'b 'c 'd. !(f:'b ('a 'A)) (g:'c ('b 'A)) (h:'d ('c 'A)). 
       comp h (comp g f) = comp (comp h g) f)``) ;
 
+(* category_thm can't be done as a definition because 
+  new_definition does not yet support `name [:tyvar:] tmvar ... = body` *)
 val category_thm = store_thm ("category_thm", 
   ``category [:'A:] (id: 'A id, comp: 'A comp) = (
     (* Left Identity *)
@@ -56,31 +59,7 @@ val category_thm = store_thm ("category_thm",
     (* Composition *)
     (!:'a 'b 'c 'd. !(f:'b ('a 'A)) (g:'c ('b 'A)) (h:'d ('c 'A)). 
       comp h (comp g f) = comp (comp h g) f))``,
-  EVERY [ (REWRITE_TAC [category_def]),
-    (CONV_TAC (DEPTH_CONV TY_BETA_CONV)),
-    (REWRITE_TAC [UNCURRY_DEF]),
-    (CONV_TAC (DEPTH_CONV BETA_CONV)), REFL_TAC ]) ;
-
-(* trying to do category_thm as a definition, get error 
-Exception raised at Definition.new_definition:
-at new_definition.dest_atom lhs:
-at Definition.new_definition:
-expected a term of the form "v = M"
-*)
-
-(* tried to do this with category_def - failed - why ??
-(*** PVH: new_definition does not yet support `name [:tyvar:] tmvar ... = body` ***)
-val (categoryD, _) = EQ_IMP_RULE (SPEC_ALL category_def) ;
-val cd1 = REWRITE_RULE [FUN_EQ_THM, TY_FUN_EQ_THM, FORALL_PROD] category_def ;
-(* why doesn't it rewrite using FORALL_PROD ? *)
-(*** PVH: because there are no occurrences of (∀(p :'a # 'b). (P :'a # 'b -> bool) p). ***)
-val cd2 = CONV_RULE (DEPTH_CONV TY_BETA_CONV) cd1 ;
-val cd3 = (TY_SPEC_ALL cd2) ;
-val (fp1, _) = EQ_IMP_RULE FORALL_PROD ;
-MATCH_MP fp1 cd3 handle e => Raise e ; (* why ? *)
-HO_MATCH_MP fp1 cd3 handle e => Raise e ; (*** PVH: because it needs higher-order matching ***)
-val cd3 = SPEC_ALL (TY_SPEC_ALL cd2) ;
-*)
+  SRW_TAC [] [category_def]) ;
 
 val (categoryD, _) = EQ_IMP_RULE (SPEC_ALL category_thm) ;
 val [catDLU, catDRU, catDAss] =
