@@ -97,6 +97,7 @@ src/integer
 src/patricia
 src/emit
 !!examples/ARM/v4
+!!examples/ARM/v7
 src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
