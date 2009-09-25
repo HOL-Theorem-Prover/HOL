@@ -11,6 +11,7 @@ val ptable = ref (Binarymap.mkDict String.compare : (string,call_info)dict)
 datatype 'a result = OK of 'a | Ex of exn
 
 fun return (OK x) = x | return (Ex e) = raise e
+fun is_Ex (Ex e) = true | is_Ex _ = false
 
 fun time f x = let
   val timer = Timer.startCPUTimer()
@@ -20,22 +21,39 @@ in
   (result, timetaken)
 end
 
-fun profile nm f x =
+fun add_profile nm timefx =
     case peek (!ptable, nm) of
       NONE => let
-        val (result, {usr,sys,gc}) = time f x
+        val {usr,sys,gc} = timefx
       in
-        ptable := insert (!ptable, nm, {usr = usr, gc = gc, sys = sys, n = 1});
-        return result
+        ptable := insert (!ptable, nm, {usr = usr, gc = gc, sys = sys, n = 1})
       end
     | SOME {usr = usr0, sys = sys0, gc = gc0, n = n0} => let
-        val (result, {usr = usr1, sys = sys1, gc = gc1}) = time f x
+        val {usr = usr1, sys = sys1, gc = gc1} = timefx
         open Time
       in
         ptable := insert (!ptable, nm, {usr = usr0 + usr1, gc = gc0 + gc1,
-                                     sys = sys0 + sys1, n = Int.+ (n0, 1)});
-        return result
+                                     sys = sys0 + sys1, n = Int.+ (n0, 1)})
       end
+
+
+
+fun profile_exn_opt do_exn do_ok do_both nm f x =
+    let
+        val (result, timefx) = time f x
+        val _ = if do_both then add_profile nm timefx else ();
+        val _ = if is_Ex result andalso do_exn then 
+                  add_profile (nm ^ "_exn") timefx else ()
+        val _ = if not (is_Ex result) andalso do_ok then 
+                  add_profile (nm ^ "_OK") timefx else ()
+    in
+        return result
+    end;
+
+val profile = profile_exn_opt false false true;
+val profile_with_exn = profile_exn_opt true true true
+val profile_no_exn = profile_exn_opt false true false
+
 
 fun reset1 nm =
     ptable := #1 (remove (!ptable, nm)) handle Binarymap.NotFound => ()
