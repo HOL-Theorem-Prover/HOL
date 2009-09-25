@@ -90,9 +90,7 @@ val _ = map save_thm [("catDLU", catDLU), ("catDRU", catDRU),
 
 val category_fun = store_thm ("category_fun",
   ``category (((\:'a. I), (\:'a 'b 'c. combin$o) ) : fun category)``,
-  EVERY [ (REWRITE_TAC [category_def]), TY_BETA_TAC,
-    (REWRITE_TAC [o_THM, I_THM, FUN_EQ_THM, UNCURRY_DEF]),
-    BETA_TAC, TY_BETA_TAC, (REWRITE_TAC [o_THM, I_THM]) ]) ;
+  SRW_TAC [] [category_def]) ;
 
 (** reversing direction of arrows to form the dual category **)
   
@@ -104,10 +102,8 @@ val dual_comp_def = new_definition ("dual_comp_def",
   even with the annotation category ((id, dual_comp comp) : ('A C) category),
   on this, see discussion which is currently (r7221) in KmonadScript.sml *)
 val category_dual = store_thm ("category_dual",
-  ``category [:'A:] (id, comp) ==> category [:'A C:] (id, dual_comp comp)``,
-  EVERY [ (REWRITE_TAC [category_def, dual_comp_def]), TY_BETA_TAC,
-   (REWRITE_TAC [UNCURRY_DEF]), BETA_TAC, TY_BETA_TAC, BETA_TAC,
-   (REPEAT STRIP_TAC), (ASM_REWRITE_TAC []) ]) ;
+  ``category [:'A:] (id, comp) = category [:'A C:] (id, dual_comp comp)``,
+  EQ_TAC THEN SRW_TAC [] [category_def, dual_comp_def]) ;
 
 (*---------------------------------------------------------------------------
   Functors are homomorphisms between categories.  In this model, functors
@@ -157,12 +153,23 @@ val g_functor_thm = store_thm ("g_functor_thm",
     SRW_TAC [] [g_functor_def]) ;
 
 (* a functor also is a functor between the dual categories;
-  but you have to dualise the functor regarding the order of quantifying
-  over the two objects (source and target of an arrow) *)
+  but this is a good example of the intricacies of typechecking
+  in this area of work, as you have to dualise the functor
+  regarding the order of quantifying over the two objects 
+  (source and target of an arrow) *)
 
 val g_dual_functor_def = new_definition ("g_dual_functor_def",
   ``g_dual_functor (F': 'F (('C, 'D) g_functor)) =
     (\:'a 'b. F' [:'b, 'a:]) : 'F (('C, 'D) g_functor_dual)``) ;
+
+val g_functor_dual = store_thm ("g_functor_dual",
+  ``g_functor [:'C, 'D:] ((idC, compC) : 'C category)
+      ((idD, compD) : 'D category) (F': 'F (('C, 'D) g_functor)) =
+    g_functor [:'C C, 'D C:] ((idC, dual_comp compC) : 'C C category)
+      ((idD, dual_comp compD) : 'D C category) (g_dual_functor F') ``,
+  EQ_TAC THEN
+  SRW_TAC [] [g_functor_def, g_dual_functor_def, dual_comp_def]) ;
+
 
 val _ = set_trace "types" 1;
 val _ = set_trace "kinds" 0;
