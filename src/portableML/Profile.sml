@@ -50,9 +50,9 @@ fun profile_exn_opt do_exn do_ok do_both nm f x =
         return result
     end;
 
-val profile = profile_exn_opt false false true;
-val profile_with_exn = profile_exn_opt true true true
-val profile_no_exn = profile_exn_opt false true false
+fun profile nm          = profile_exn_opt false false true nm;
+fun profile_with_exn nm = profile_exn_opt true true true nm;
+fun profile_no_exn nm   = profile_exn_opt false true false nm;
 
 
 fun reset1 nm =
