@@ -3,6 +3,9 @@
 (* definitions.                                                              *)
 (*****************************************************************************)
 
+structure compile :> compile =
+struct
+
 (*****************************************************************************)
 (* START BOILERPLATE                                                         *)
 (*****************************************************************************)
@@ -2364,3 +2367,5 @@ fun netDefine qdef =
  in
    (def,ind,MAKE_NETLIST(EXPAND_COMPONENTS(REFINE_ALL dev)))
  end;
+
+end (* struct *)

@@ -59,8 +59,8 @@ in
   val () = Help.indexfiles := HELP "HOL.Help" :: !Help.indexfiles
   val () = Help.helpdirs   := HOLDIR :: SIGOBJ :: !Help.helpdirs
   val () = Help.specialfiles :=
-             {file = "help/Docfiles/README.Hol98",
-              term = "hol", title = "Hol98 Overview"}
+             {file = "help/Docfiles/HOL.help",
+              term = "hol", title = "HOL Overview"}
              :: !Help.specialfiles
   val help = Help.help
 end

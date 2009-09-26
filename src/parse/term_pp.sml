@@ -189,31 +189,33 @@ fun avoid_symbolmerge G = let
     y <> s2
   end handle base_tokens.LEX_ERR _ => true
 in
-  fn (add_string, add_break) => let
+  fn (add_string, add_break, add_ann_string) => let
        val last_string = ref " "
-       fun new_addstring s = let
+       fun new_addstring f s = let
          val sz = size s
          val ls = !last_string
          val allspaces = str_all (equal #" ") s
        in
          if sz = 0 then ()
-         else (if ls = " " orelse allspaces then add_string s
-               else if not (!avoid_symbol_merges) then add_string s
-               else if String.sub(ls, size ls - 1) = #"\"" then add_string s
+         else (if ls = " " orelse allspaces then f s
+               else if not (!avoid_symbol_merges) then f s
+               else if String.sub(ls, size ls - 1) = #"\"" then f s
                (* special case the quotation because term_tokens relies on
                   the base token technology (see base_lexer) to separate the
                   end of a string from the next character *)
                else if creates_comment (ls, s) orelse bad_merge (ls, s)
                then
-                 (add_string " "; add_string s)
+                 (add_string " "; f s)
                else
-                 add_string s;
+                 f s;
                last_string := (if allspaces then " " else s))
        end
        fun new_add_break (p as (n,m)) =
            (if n > 0 then last_string := " " else (); add_break p)
      in
-       (new_addstring, new_add_break)
+       (new_addstring add_string,
+        new_add_break,
+        (fn (s,ann) => new_addstring (fn s => add_ann_string(s,ann)) s))
      end
 end
 
@@ -894,6 +896,8 @@ fun pp_term (G : grammar) TyG backend = let
     fun pr_tyabs tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
       val (bvars, body) = strip_tyvstructs NONE tm (* strip_tyabs tm *)
+      val prev_btyvars_seen = !type_pp.btyvars_seen
+      val _ = type_pp.btyvars_seen := bvars @ prev_btyvars_seen
     in
       pbegin addparens;
       begin_block INCONSISTENT 2;
@@ -904,7 +908,8 @@ fun pp_term (G : grammar) TyG backend = let
       add_string endbinding; add_break (1,0);
       pr_term body Top Top Top (decdepth depth);
       end_block();
-      pend addparens
+      pend addparens;
+      type_pp.btyvars_seen := prev_btyvars_seen
     end
 
     fun pr_tycomb tm = let
@@ -1412,10 +1417,8 @@ fun pp_term (G : grammar) TyG backend = let
                     | BinderString r => #tok r
                     | TypeBinderString r => #tok r
           val (bvs, body) = strip_tyvstructs (SOME fname) tm (* strip_tyabs tm *)
-(*
-          val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
-          val old_seen = !bvars_seen
-*)
+          val prev_btyvars_seen = !type_pp.btyvars_seen
+          val _ = type_pp.btyvars_seen := bvs @ prev_btyvars_seen
           val addparens =
             case rgrav of
               Prec(n, _) => n > fprec
@@ -1429,13 +1432,8 @@ fun pp_term (G : grammar) TyG backend = let
           end_block();
           add_string endbinding; spacep true;
           begin_block CONSISTENT 0;
-(*
-          bvars_seen := bvars_seen_here @ old_seen;
-*)
           pr_term body Top Top Top (decdepth depth);
-(*
-          bvars_seen := old_seen;
-*)
+          type_pp.btyvars_seen := prev_btyvars_seen;
           end_block ();
           end_block();
           pend addparens
@@ -1995,13 +1993,17 @@ in
   fn pps => fn t =>
     let
       val baseppfns = with_ppstream backend pps
-      val {add_string,add_break,begin_block,end_block,...} = baseppfns
-      val (add_string, add_break) = avoid_merge (add_string, add_break)
+      val {add_string,add_break,begin_block,end_block,add_ann_string,...} =
+          baseppfns
+      val (add_string, add_break, add_ann_string) =
+          avoid_merge (add_string, add_break, add_ann_string)
       val ppfns = {add_string = add_string, add_break = add_break,
                    begin_block = begin_block, end_block = end_block,
-                   add_ann_string = #add_ann_string baseppfns}
+                   add_ann_string = add_ann_string}
     in
        begin_block CONSISTENT 0;
+       type_pp.ftyvars_seen := [];
+       type_pp.btyvars_seen := [];
        pr_term false
                (!Globals.show_types orelse !Globals.show_types_verbosely)
                (!Globals.show_types_verbosely)

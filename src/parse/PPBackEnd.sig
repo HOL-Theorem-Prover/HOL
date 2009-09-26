@@ -1,12 +1,14 @@
 signature PPBackEnd =
 sig
 
+  type kind = Kind.kind
   type hol_type = Type.hol_type
   type ppstream = PP.ppstream
   type break_style = PP.break_style
   datatype annotation = BV of hol_type * string
                       | FV of hol_type * string
-                      | TyV
+                      | TyBV of kind * int (*rank*) * string
+                      | TyFV of kind * int (*rank*) * string
                       | TyOp of string
                       | TySyn of string
                       | Const of {Thy:string,Name:string,Ty:hol_type} * string

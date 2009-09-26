@@ -1,7 +1,7 @@
 (* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
 
-(* Entry point into HolSmtLib. Provides GENERIC_SMT_TAC and derived functions
-   to call individual SMT solvers. *)
+(* Entry point into HolSmtLib. Provides GENERIC_SMT_TAC and derived tactics to
+   call SMT solvers. *)
 
 structure HolSmtLib :> HolSmtLib = struct
 

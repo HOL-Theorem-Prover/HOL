@@ -4,11 +4,12 @@
 
 
 \SYNOPSIS
-Applies a consequence conversion repeatedly to all the sub-terms of a term, in bottom-up
+Applies a consequence conversion repeatedly to all the sub-terms of a term, in top-down
 order.
 
 \DESCRIBE
-{DEPTH_CONSEQ_CONV c tm} breaks the term {tm} down into boolean
+{DEPTH_CONSEQ_CONV c tm} tries to apply the given conversion
+at toplevel. If this fails, it breaks the term {tm} down into boolean
 subterms. It can break up the following operators: {/\}, {\/}, {~},
 {==>} and quantification. Then it applies the directed consequence conversion
 {c} to terms and iterates. Finally, it puts everything together again.
@@ -41,5 +42,5 @@ substructures as well:
 
 \SEEALSO
 Conv.DEPTH_CONV, ConseqConv.ONCE_DEPTH_CONSEQ_CONV, ConseqConv.NUM_DEPTH_CONSEQ_CONV,
-ConseqConv.DEPTH_STRENGTHEN_CONSEQ_CONV.
+ConseqConv.DEPTH_STRENGTHEN_CONSEQ_CONV, ConseqConv.REDEPTH_CONSEQ_CONV
 \ENDDOC

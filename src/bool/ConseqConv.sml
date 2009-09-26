@@ -24,8 +24,6 @@ quietdec := false;
 
 
 
-
-
 (*---------------------------------------------------------------------------
  * generalise a variable in an implication of ==>
  *
@@ -42,6 +40,29 @@ fun GEN_IMP v thm =
   in
      thm2
   end;
+
+fun LIST_GEN_IMP vL thm =
+   foldr (uncurry GEN_IMP) thm vL
+
+
+(*---------------------------------------------------------------------------
+ * Introduces EXISTS on both sides of an implication
+ *
+ *   A |- t1 v ==> t2 v
+ * ---------------------------------------------
+ *   A |- (?v. t1 v) ==> (?v. t2 v)
+ *
+ *---------------------------------------------------------------------------*)
+fun EXISTS_INTRO_IMP v thm =
+  let
+     val thm1 = GEN v thm;
+     val thm2 = HO_MATCH_MP boolTheory.MONO_EXISTS thm1;
+  in
+     thm2
+  end;
+
+fun LIST_EXISTS_INTRO_IMP vL thm =
+   foldr (uncurry EXISTS_INTRO_IMP) thm vL
 
 
 (*---------------------------------------------------------------------------
@@ -185,12 +206,12 @@ in
 end;
 
 
-fun CONSEQ_CONV_WRAPPER dir conv t =
+fun CONSEQ_CONV_WRAPPER conv dir t =
 let
    val _ = if (type_of t = bool) then () else raise UNCHANGED;
    val thm = conv dir t;
 in
-   CONSEQ_CONV_WRAPPER___CONVERT_RESULT dir thm t
+   snd (CONSEQ_CONV_WRAPPER___CONVERT_RESULT dir thm t)
 end;
 
 
@@ -342,11 +363,13 @@ fun THEN_CONSEQ_CONV___combine thm1 thm2 t =
 (*like THENC*)
 fun THEN_CONSEQ_CONV (c1:conv) c2 t =
     let
-       val thm0_opt = (SOME (c1 t) handle HOL_ERR _ => raise UNCHANGED) handle UNCHANGED => NONE;
+       val thm0_opt = SOME (c1 t) handle HOL_ERR _ => NONE
+                                        | UNCHANGED => NONE
 
        val t2 = if (isSome thm0_opt) then CONSEQ_CONV___GET_SIMPLIFIED_TERM (valOf thm0_opt) t else t;
 
-       val thm1_opt = (SOME (c2 t2) handle HOL_ERR _ => raise UNCHANGED) handle UNCHANGED => NONE;
+       val thm1_opt = SOME (c2 t2) handle HOL_ERR _ => NONE
+                                        | UNCHANGED => NONE
     in
        if (isSome thm0_opt) andalso (isSome thm1_opt) then
          THEN_CONSEQ_CONV___combine (valOf thm0_opt) (valOf thm1_opt) t else
@@ -460,253 +483,240 @@ fun CONSEQ_CONV_DIRECTION_NEGATE CONSEQ_CONV_UNKNOWN_direction = CONSEQ_CONV_UNK
   | CONSEQ_CONV_DIRECTION_NEGATE CONSEQ_CONV_WEAKEN_direction = CONSEQ_CONV_STRENGTHEN_direction;
 
 
-fun step_opt_sub NONE n = NONE
-  | step_opt_sub (SOME m) n = SOME (m - n);
+
+(******************************************************************************)
+(* conseq_conv_congruences are used for moving consequence conversions        *)
+(* through boolean terms. They get a system callback and a term.              *)
+(*                                                                            *)
+(* Given the number of already performed step, a direction and a term t       *)
+(* sys n t will return the number of steps it performed and a theorem option. *)
+(* If this option is NULL, nothing could be done (and the returned number of  *)
+(* steps is 0). Otherwise thm_opt is a theorem of the form                    *)
+(* |- t ==> t' or |- t' ==> t                                                 *)
+(*                                                                            *)
+(* The congruence itself get's a term t and is supposed to return a           *)
+(* similar theorem option. Moreover, it has to add up all the steps done by   *)
+(* calling sys and return this sum.                                           *)
+(******************************************************************************)
 
 
-(*---------------------------------------------------------------------------
- - Test cases
- ----------------------------------------------------------------------------
+type conseq_conv_congruence_syscall = 
+   int -> CONSEQ_CONV_direction -> term -> (int * thm option)
 
-val step_opt = NONE;
-val dir = CONSEQ_CONV_UNKNOWN_direction;
-val top = false
-val conv = K FALSE_CONSEQ_CONV;
-
-val t = ``~Y:bool``;
-
- ----------------------------------------------------------------------------*)
-
-val DEPTH_CONSEQ_CONV_debug = ref 0;
-val _ = register_trace("DEPTH_CONSEQ_CONV", DEPTH_CONSEQ_CONV_debug, 3);
+type conseq_conv_congruence = 
+   conseq_conv_congruence_syscall ->
+   CONSEQ_CONV_direction -> term -> (int * thm)
 
 
-fun guarded_say r n tf =
-  if (!r >= n) then say (tf ()) else ();
+fun conseq_conv_congruence_EXPAND_THM_OPT (thm_opt,t) =
+  if isSome thm_opt then valOf thm_opt else REFL_CONSEQ_CONV t
 
 
-fun prefix_string 0 = ""
-  | prefix_string n = " "^(prefix_string (n-1));
+(* 
+   val sys:conseq_conv_congruence_syscall =
+      fn n => K (K ((n+1), NONE));
 
-
-fun DEPTH_CONSEQ_CONV_say n l t = guarded_say DEPTH_CONSEQ_CONV_debug n
-    (fn () =>
-        ((prefix_string (if (!DEPTH_CONSEQ_CONV_debug = 1) then 0 else l))^"DEPTH_CONSEQ_CONV "^(Int.toString n)^": "^(t ())^"\n"));
-
-(*
-val tref = ref NONE;
-val tref2 = ref NONE;
-val (t, t2, thm, thm2) = valOf (!tref)
-
-val (l,step_opt,dir,top,conv,t) = valOf (!tref2)
+   val dir = CONSEQ_CONV_STRENGTHEN_direction
+   val t = ``b1 /\ b2``;
+CONSEQ_CONV_CONGRUENCE___conj sys dir t
 
 *)
 
-fun DEPTH_CONSEQ_CONV_num l step_opt dir top redepth conv t =
+fun CONSEQ_CONV_CONGRUENCE___conj sys dir t =
   let
-     val top_string = if top then "TOP " else "SUB ";
-     val _ = DEPTH_CONSEQ_CONV_say 2 l (fn () => ("Trying "^top_string^" ``"^term_to_string t^"``"));
+     (* split t, if it fails, that's OK *)
+     val (b1,b2) = dest_conj t;
 
-     fun CONVERT_THM_OPT (thm_opt,t) =
-         if isSome thm_opt then valOf thm_opt else REFL_CONSEQ_CONV t
+     (* call recursively on subterms *)
+     val (n1, thm1_opt) = sys 0  dir b1; 
+     val (n2, thm2_opt) = sys n1 dir b2;
+     (* if both calls did not change a thing, then abort *)
+     val _ = if (isSome thm1_opt) orelse (isSome thm2_opt) then () else raise UNCHANGED;
 
-     fun DEPTH_CONSEQ_CONV_num___REC_CALL l step_opt dir top redepth conv thm_opt n t =
-        ((let
-           val t2 = if isSome thm_opt then
-                       CONSEQ_CONV___GET_SIMPLIFIED_TERM (valOf thm_opt) t
-                    else
-		       t;
+     (* if necessary create new trivial theorems of the form "t ==> t" *)
+     val thm1 = conseq_conv_congruence_EXPAND_THM_OPT (thm1_opt, b1);        
+     val thm2 = conseq_conv_congruence_EXPAND_THM_OPT (thm2_opt, b2);        
 
- 	   val (n2, d2, thm2_opt) = DEPTH_CONSEQ_CONV_num l (step_opt_sub step_opt n) dir top redepth conv t2;
-
-           val _ = DEPTH_CONSEQ_CONV_say 4 l (fn () => (
-                   if isSome thm2_opt then
-                      ("Trying REC ``"^term_to_string t2^
-                       "`` results in "^ (thm_to_string (valOf thm2_opt)))
-                   else
-                      ("Trying REC ``"^term_to_string t2^
-                       "`` - UNCHANGED")));
-
-           val (m,thm3_opt) = if (aconv t t2) then (n2,thm2_opt) else
-                              if (not (isSome thm2_opt)) then
-				  (n, thm_opt)
-                              else
-                          	  (n2+n, SOME (THEN_CONSEQ_CONV___combine (valOf thm_opt) (valOf thm2_opt) t));
-
-           val _ = DEPTH_CONSEQ_CONV_say 2 l (fn () => (
-                   if isSome thm3_opt then
-                       ("Result "^(thm_to_string (valOf thm3_opt)))
-                   else
-                       "UNCHANGED"));
-        in
-           (m, d2, thm3_opt)
-        end handle HOL_ERR _ => (DEPTH_CONSEQ_CONV_say 2 l (fn () => ("UNCHANGED")); (0, dir, NONE)))
-            handle UNCHANGED => (DEPTH_CONSEQ_CONV_say 2 l (fn () => ("UNCHANGED")); (0, dir, NONE)))
+     (* create combined theorem *)
+     val thm3 = MATCH_MP MONO_AND (CONJ thm1 thm2)
   in
-
-  if (step_opt = SOME 0) then
-     (0, dir, NONE)
-  else if ((not top) andalso is_conj t) then
-     let
-	 val (b1,b2) = dest_conj t;
-         val (n1, d1, thm1_opt) = DEPTH_CONSEQ_CONV_num (l+1) step_opt dir top redepth conv b1;
-         val (n2, d2, thm2_opt) = DEPTH_CONSEQ_CONV_num (l+1) (step_opt_sub step_opt n1) d1 top redepth conv b2;
-
-	 val thm3_opt = if (isSome thm1_opt) orelse (isSome thm2_opt) then
-                          SOME (MATCH_MP MONO_AND (CONJ (CONVERT_THM_OPT (thm1_opt,b1)) (CONVERT_THM_OPT (thm2_opt,b2))))
-                        else NONE;
-     in
-        DEPTH_CONSEQ_CONV_num___REC_CALL l step_opt d2 true redepth conv thm3_opt (n1+n2) t
-     end
-   else if ((not top) andalso is_disj t) then
-     let
-	 val (b1,b2) = dest_disj t;
-         val (n1, d1, thm1_opt) = DEPTH_CONSEQ_CONV_num (l+1) step_opt dir top redepth conv b1;
-         val (n2, d2, thm2_opt) = DEPTH_CONSEQ_CONV_num (l+1) (step_opt_sub step_opt n1) d1 top redepth conv b2;
-
-	 val thm3_opt = if (isSome thm1_opt) orelse (isSome thm2_opt) then
-                          SOME (MATCH_MP MONO_OR (CONJ (CONVERT_THM_OPT (thm1_opt,b1)) (CONVERT_THM_OPT (thm2_opt,b2))))
-                        else NONE;
-     in
-        DEPTH_CONSEQ_CONV_num___REC_CALL l step_opt d2 true redepth conv thm3_opt (n1+n2) t
-     end
-   else if ((not top) andalso is_imp_only t) then
-     let
-	 val (b1,b2) = dest_imp t;
-         val (n1, d1, thm1_opt) = DEPTH_CONSEQ_CONV_num (l+1) step_opt (CONSEQ_CONV_DIRECTION_NEGATE dir) top redepth conv b1;
-         val (n2, d2, thm2_opt) = DEPTH_CONSEQ_CONV_num (l+1) (step_opt_sub step_opt n1) (CONSEQ_CONV_DIRECTION_NEGATE d1) top redepth conv b2;
-
-	 val thm3_opt = if (isSome thm1_opt) orelse (isSome thm2_opt) then
-                          SOME (MATCH_MP MONO_IMP (CONJ (CONVERT_THM_OPT (thm1_opt,b1)) (CONVERT_THM_OPT (thm2_opt,b2))))
-                        else NONE;
-     in
-        DEPTH_CONSEQ_CONV_num___REC_CALL l step_opt d2 true redepth conv thm3_opt (n1+n2) t
-     end
-   else if ((not top) andalso is_neg t) then
-     let
-	 val b1 = dest_neg t;
-         val (n1, d1, thm1_opt) = DEPTH_CONSEQ_CONV_num (l+1) step_opt (CONSEQ_CONV_DIRECTION_NEGATE dir) top redepth conv b1;
-         val d2 = CONSEQ_CONV_DIRECTION_NEGATE d1;
-
-	 val thm3_opt = if isSome thm1_opt then
-                           SOME (MATCH_MP MONO_NOT (valOf thm1_opt))
-                        else
-                           NONE
-     in
-        DEPTH_CONSEQ_CONV_num___REC_CALL l step_opt d2 true redepth conv thm3_opt n1 t
-     end
-   else if ((not top) andalso is_forall t) then
-     let
-        val (var, body) = dest_forall t;
-	val (n1, d1, thm_body_opt) = DEPTH_CONSEQ_CONV_num (l+1) step_opt dir top redepth conv body;
+     (n2, thm3)
+  end
 
 
-        val thm_opt = if (isSome thm_body_opt) then
-                         SOME (HO_MATCH_MP MONO_ALL (GEN_ASSUM var (valOf thm_body_opt)))
-		      else NONE
-     in
-        DEPTH_CONSEQ_CONV_num___REC_CALL l step_opt d1 true redepth conv thm_opt n1 t
-     end
-   else if ((not top) andalso is_exists t) then
-     let
-        val (var, body) = dest_exists t;
-	val (n1, d1, thm_body_opt) = DEPTH_CONSEQ_CONV_num (l+1) step_opt dir top redepth conv body;
-        val thm_opt = if (isSome thm_body_opt) then
-                         SOME (HO_MATCH_MP boolTheory.MONO_EXISTS
-                            (GEN_ASSUM var (valOf thm_body_opt)))
-                      else NONE
-     in
-        DEPTH_CONSEQ_CONV_num___REC_CALL l step_opt d1 true redepth conv thm_opt n1 t
-     end
+fun CONSEQ_CONV_CONGRUENCE___disj (sys:conseq_conv_congruence_syscall) dir t =
+  let
+     val (b1,b2) = dest_disj t;
+     val (n1, thm1_opt) = sys 0  dir b1;
+     val (n2, thm2_opt) = sys n1 dir b2;
+     val _ = if (isSome thm1_opt) orelse (isSome thm2_opt) then () else raise UNCHANGED;
+
+     val thm1 = conseq_conv_congruence_EXPAND_THM_OPT (thm1_opt, b1);        
+     val thm2 = conseq_conv_congruence_EXPAND_THM_OPT (thm2_opt, b2);        
+
+     val thm3 = MATCH_MP MONO_OR (CONJ thm1 thm2)
+  in
+     (n2, thm3)
+  end
+
+
+fun CONSEQ_CONV_CONGRUENCE___imp (sys:conseq_conv_congruence_syscall) dir t =
+  let
+     val (b1,b2) = dest_imp_only t;
+     val (n1, thm1_opt) = sys 0  (CONSEQ_CONV_DIRECTION_NEGATE dir) b1;
+     val (n2, thm2_opt) = sys n1 dir b2;
+     val _ = if (isSome thm1_opt) orelse (isSome thm2_opt) then () else raise UNCHANGED;
+
+     val thm1 = conseq_conv_congruence_EXPAND_THM_OPT (thm1_opt, b1);        
+     val thm2 = conseq_conv_congruence_EXPAND_THM_OPT (thm2_opt, b2);        
+
+     val thm3 = MATCH_MP MONO_IMP (CONJ thm1 thm2)
+  in
+     (n2, thm3)
+  end;
+
+
+fun CONSEQ_CONV_CONGRUENCE___neg (sys:conseq_conv_congruence_syscall) dir t =
+  let
+     val b1 = dest_neg t;
+     val (n1, thm1_opt) = sys 0  (CONSEQ_CONV_DIRECTION_NEGATE dir) b1;
+     val _ = if (isSome thm1_opt) then () else raise UNCHANGED;
+
+     val thm2 = MATCH_MP MONO_NOT (valOf thm1_opt)
+  in
+     (n1, thm2)
+  end
+
+
+fun CONSEQ_CONV_CONGRUENCE___forall (sys:conseq_conv_congruence_syscall) dir t =
+  let
+     val (v, b1) = dest_forall t;
+     val (n1, thm1_opt) = sys 0 dir b1;
+     val _ = if (isSome thm1_opt) then () else raise UNCHANGED;
+
+     val thm2 = HO_MATCH_MP MONO_ALL (GEN_ASSUM v (valOf thm1_opt))
+  in
+     (n1, thm2)
+  end
+
+
+
+fun CONSEQ_CONV_CONGRUENCE___exists (sys:conseq_conv_congruence_syscall) dir t =
+  let
+     val (v, b1) = dest_exists t;
+     val (n1, thm1_opt) = sys 0 dir b1;
+     val _ = if (isSome thm1_opt) then () else raise UNCHANGED;
+
+     val thm2 =HO_MATCH_MP boolTheory.MONO_EXISTS (GEN_ASSUM v (valOf thm1_opt))
+  in
+     (n1, thm2)
+  end
+
+
+
+val CONSEQ_CONV_CONGRUENCE___basic_list = [
+   CONSEQ_CONV_CONGRUENCE___conj,
+   CONSEQ_CONV_CONGRUENCE___disj,
+   CONSEQ_CONV_CONGRUENCE___neg,
+   CONSEQ_CONV_CONGRUENCE___imp,
+   CONSEQ_CONV_CONGRUENCE___forall,
+   CONSEQ_CONV_CONGRUENCE___exists]
+
+
+
+
+fun step_opt_sub NONE n = NONE
+  | step_opt_sub (SOME m) n = SOME (m - n)
+
+fun step_opt_done NONE n = false
+  | step_opt_done (SOME m) n = (m <= n);
+
+(*
+   some test data for debugging 
+
+val congruence_list = CONSEQ_CONV_CONGRUENCE___basic_list
+
+fun my_conv t = 
+   if (aconv t ``xxx:bool``) then
+      mk_thm ([], ``xxx /\ xxx ==> xxx``)
    else
-     ((let
-         val _ = DEPTH_CONSEQ_CONV_say 3 l (fn () => ("Trying CONV ``"^term_to_string t^"``"));
-	 val (d1, thm1) = CONSEQ_CONV_WRAPPER dir conv t;
-         val (d2, thm2) = if d1 = CONSEQ_CONV_UNKNOWN_direction then
-			     (DEPTH_CONSEQ_CONV_say 3 l (fn () => ("Guessed direction strengthen!"));
-                              (CONSEQ_CONV_STRENGTHEN_direction,
-                               snd (EQ_IMP_RULE thm1)))
-                          else (d1, thm1);
-         val _ = DEPTH_CONSEQ_CONV_say 1 l (fn () => ("``"^term_to_string t^"`` became "^(thm_to_string thm2)));
-     in
-        if (redepth) then
-            DEPTH_CONSEQ_CONV_num___REC_CALL l step_opt d1 false true conv (SOME thm2) 1 t
-        else
-	    (1, d2, SOME thm2)
-     end handle HOL_ERR _ => (DEPTH_CONSEQ_CONV_say 2 l (K "No Result!");(0, dir, NONE)))
-         handle UNCHANGED => (DEPTH_CONSEQ_CONV_say 2 l (K "No Result!");(0, dir, NONE)))
-end;
+      Feedback.fail()
+
+val step_opt = SOME 2;
+val redepth = true
+val conv = (K my_conv)
+
+val t = ``xxx:bool``
+val n = 0
+val dir = CONSEQ_CONV_STRENGTHEN_direction
+
+*)
+
+fun DEPTH_CONSEQ_CONV_num congruence_list n step_opt dir redepth convL t =
+  if (dir = CONSEQ_CONV_UNKNOWN_direction) then 
+       Feedback.failwith "DEPTH_CONSEQ_CONV does not support CONSEQ_CONV_UNKNOWN_direction!" else 
+  if (step_opt_done step_opt n) then (n, NONE) else
+  let
+     (*define the call back and the recursive call*)
+     fun sys m dir t =
+        (DEPTH_CONSEQ_CONV_num congruence_list m
+           (step_opt_sub step_opt n) dir redepth convL t) 
+        handle UNCHANGED => (0, NONE)
+             | HOL_ERR _ => (0, NONE);
+
+     fun rec_call n thm = if (not redepth) then (n, SOME thm) else
+         let
+            val t2 = CONSEQ_CONV___GET_SIMPLIFIED_TERM thm t
+            val (n2, thm2_opt) = sys n dir t2
+            val _ = if (isSome thm2_opt) then () else raise UNCHANGED;
+             
+            val thm3 = THEN_CONSEQ_CONV___combine thm (valOf thm2_opt) t;
+        in
+           (n+n2, SOME thm3)
+        end handle UNCHANGED => (n, SOME thm)
+                 | HOL_ERR _ => (n, SOME thm)
+
+     (*put all the congruences in a list and the main conversion at first pos*)
+     fun conv_trans c dir t = 
+        (1, CONSEQ_CONV_WRAPPER c dir t)
+     val fL = (map conv_trans convL)@(map (fn c => c sys) congruence_list)
+
+     fun check_fun f =
+       let
+          val (n2, thm) = f dir t handle UNCHANGED => Feedback.fail();
+       in
+          (n+n2, thm)
+       end;
+
+     val (n3, thm) = tryfind check_fun fL;
+     val (n4, thm_opt2) = rec_call n3 thm
+  in
+    (n4, thm_opt2)
+  end handle HOL_ERR _ => (n, NONE);
 
 
 
-
-fun DEPTH_CONSEQ_CONV conv dir  =
+fun EXT_DEPTH_CONSEQ_CONV congruence_list step_opt redepth convL dir =
  OPT_CHANGED_CHECK_CONSEQ_CONV (fn t =>
    if (type_of t = bool) then
-      (#3 (DEPTH_CONSEQ_CONV_num 0 NONE dir false false conv t))
-   else raise UNCHANGED)
+      (snd (DEPTH_CONSEQ_CONV_num congruence_list 0 step_opt dir redepth convL t))
+   else raise UNCHANGED);
 
 
-fun REDEPTH_CONSEQ_CONV conv dir  =
- OPT_CHANGED_CHECK_CONSEQ_CONV (fn t =>
-   if (type_of t = bool) then
-      (#3 (DEPTH_CONSEQ_CONV_num 0 NONE dir false true conv t))
-   else raise UNCHANGED)
-
-fun NUM_DEPTH_CONSEQ_CONV conv n dir =
-   OPT_CHANGED_CHECK_CONSEQ_CONV (fn t =>
-     if (type_of t = bool) then
-       (#3 (DEPTH_CONSEQ_CONV_num 0 (SOME n) dir false false conv t))
-     else raise UNCHANGED)
+fun DEPTH_CONSEQ_CONV conv =
+  EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list NONE false [conv]
 
 
-fun NUM_REDEPTH_CONSEQ_CONV conv n dir =
-   OPT_CHANGED_CHECK_CONSEQ_CONV (fn t =>
-     if (type_of t = bool) then
-       (#3 (DEPTH_CONSEQ_CONV_num 0 (SOME n) dir false true conv t))
-     else raise UNCHANGED)
+fun REDEPTH_CONSEQ_CONV conv =
+  EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list NONE true [conv]
 
-fun ONCE_DEPTH_CONSEQ_CONV conv = NUM_DEPTH_CONSEQ_CONV conv 1;
+fun NUM_DEPTH_CONSEQ_CONV conv n =
+  EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list (SOME n) false [conv]
 
+fun NUM_REDEPTH_CONSEQ_CONV conv n =
+  EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list (SOME n) true [conv]
 
-
-(*---------------------------------------------------------------------------
- * Takes the assumptions returned by a CONSEQ_CONV,
- * tries to simplify them recursively with the same CONSEQ_CONV and
- * add the results to the assumptions. Assumptions in preserve_hyps are
- * not simplified.
- *---------------------------------------------------------------------------*)
-
-fun CONJ_ASSUMPTIONS_CONSEQ_CONV conv preserve_hyp_pred dir t =
-let
-    val thm = conv dir t;
-    val new_hyps = filter (fn t => not (preserve_hyp_pred t)) (hyp thm);
-    val hyp_thms = map (fn h =>
-                       ((SOME (CONJ_ASSUMPTIONS_CONSEQ_CONV conv preserve_hyp_pred CONSEQ_CONV_STRENGTHEN_direction h))
-		        handle HOL_ERR _ => NONE)
-                        handle UNCHANGED => NONE) new_hyps;
-
-    val hyp_thms2 = filter (fn thm_opt => (isSome thm_opt andalso
-					   let val (l,r) = dest_imp (concl (valOf thm_opt))
-                                           in (not (eq l r)) end handle HOL_ERR _ => false)) hyp_thms;
-    val hyp_thms3 = map (UNDISCH o valOf) hyp_thms2;
-
-    val thm2 = foldr (fn (thm1,thm2) => PROVE_HYP thm1 thm2) thm hyp_thms3;
-
-
-    val new_hyps2 = filter (fn t => not (preserve_hyp_pred t)) (hyp thm2);
-    val thm3 = foldr (fn (t,thm) => SUBST_MATCH (SPEC_ALL AND_IMP_INTRO) (DISCH t thm)) thm2 (new_hyps2);
-    val thm4 = CONV_RULE (RATOR_CONV (REWRITE_CONV [])) thm3
-in
-    thm4
-end;
-
-
-fun CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV conv =
-    CONJ_ASSUMPTIONS_CONSEQ_CONV (DEPTH_CONSEQ_CONV conv) (K false)
-
-fun CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV conv =
-    CONJ_ASSUMPTIONS_CONSEQ_CONV (REDEPTH_CONSEQ_CONV conv) (K false)
+fun ONCE_DEPTH_CONSEQ_CONV conv = NUM_DEPTH_CONSEQ_CONV conv 1
 
 
 (*A tactic that strengthens a boolean goal*)
@@ -714,8 +724,6 @@ fun CONSEQ_CONV_TAC conv (asm,t) =
     ((HO_MATCH_MP_TAC ((CHANGED_CONSEQ_CONV (conv CONSEQ_CONV_STRENGTHEN_direction)) t)
      THEN TRY (ACCEPT_TAC TRUTH)) (asm,t) handle UNCHANGED =>
      ALL_TAC (asm,t))
-
-
 
 fun DEPTH_CONSEQ_CONV_TAC conv =
     CONSEQ_CONV_TAC (DEPTH_CONSEQ_CONV conv)
@@ -725,7 +733,6 @@ fun REDEPTH_CONSEQ_CONV_TAC conv =
 
 fun ONCE_DEPTH_CONSEQ_CONV_TAC conv =
     CONSEQ_CONV_TAC (ONCE_DEPTH_CONSEQ_CONV conv)
-
 
 
 
@@ -1030,7 +1037,7 @@ METIS_TAC[]);
 
 You can use the FEVERY-theorem to strengthen expressions:
 
-CONSEQ_REWRITE_CONV ([rewrite_every_thm],[],[]) CONSEQ_CONV_STRENGTHEN_direction
+CONSEQ_REWRITE_CONV ([],[rewrite_every_thm],[]) CONSEQ_CONV_STRENGTHEN_direction
    ``FEVERY P (g |+ (3, x) |+ (7,z))``
 
 This should result in:
@@ -1042,7 +1049,8 @@ val it =
 
 It works in substructures as well
 
-CONSEQ_REWRITE_CONV ([rewrite_every_thm],[],[]) CONSEQ_CONV_STRENGTHEN_direction ``!g. ?x. Q (g, x) /\ FEVERY P (g |+ (3, x) |+ (7,z)) \/ (z = 12)``
+CONSEQ_REWRITE_CONV ([], [rewrite_every_thm],[]) CONSEQ_CONV_STRENGTHEN_direction 
+   ``!g. ?x. Q (g, x) /\ FEVERY P (g |+ (3, x) |+ (7,z)) \/ (z = 12)``
 
 > val it =
     |- (!g.
@@ -1052,7 +1060,7 @@ CONSEQ_REWRITE_CONV ([rewrite_every_thm],[],[]) CONSEQ_CONV_STRENGTHEN_direction
 
 You can use the FEXISTS-theorem to weaken them:
 
-CONSEQ_REWRITE_CONV ([rewrite_exists_thm],[],[]) CONSEQ_CONV_WEAKEN_direction ``FEXISTS P (g |+ (3, x) |+ (7,z))``
+CONSEQ_REWRITE_CONV ([], [], [rewrite_exists_thm]) CONSEQ_CONV_WEAKEN_direction ``FEXISTS P (g |+ (3, x) |+ (7,z))``
 
 > val it =
     |- FEXISTS P (g |+ (3,x) |+ (7,z)) ==>
@@ -1077,15 +1085,6 @@ CONSEQ_REWRITE_CONV ([rewrite_exists_thm,rewrite_every_thm],[],[]) CONSEQ_CONV_W
 However, you can mark some theorem for just beeing used for strengthening / or weakening.
 The first list contains theorems used for both, then a list of ones used only
 for strengthening follows and finally one just for weakening.
-
-
-
-The parameter CONSEQ_CONV_UNKNOWN_direction can be used to let the system figure out,
-what to do:
-
-CONSEQ_REWRITE_CONV [rewrite_exists_thm,rewrite_every_thm] CONSEQ_CONV_UNKNOWN_direction
-   ``FEVERY P (g |+ (3, x) |+ (7,z)) ==> FEXISTS P (g |+ (3, x) |+ (7,z))``
-
 
 *)
 

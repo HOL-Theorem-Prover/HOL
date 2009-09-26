@@ -453,13 +453,6 @@ structure Yices = struct
     defs @ yices_As_g @ ["(check)\n"]
   end
 
-  fun write_strings_to_file path strings =
-  let val outstream = TextIO.openOut path
-  in
-    ignore (map (TextIO.output o Lib.pair outstream) strings);
-    TextIO.closeOut outstream
-  end
-
   (* returns SAT if Yices reported "sat", UNSAT if Yices reported "unsat" *)
   fun result_fn path =
     let val instream = TextIO.openIn path
@@ -479,14 +472,14 @@ structure Yices = struct
   in
     (* Yices 1.0.18, native file format *)
     val Yices_Oracle = SolverSpec.make_solver
-      (write_strings_to_file infile o goal_to_Yices)
+      (Library.write_strings_to_file infile o goal_to_Yices)
       ("yices -tc " ^ infile ^ " > " ^ outfile)
       (fn () => result_fn outfile)
       [infile, outfile]
 
     (* Yices 1.0.18, SMT-LIB file format *)
     val Yices_SMT_Oracle = SolverSpec.make_solver
-      (write_strings_to_file infile o Lib.snd o SmtLib.goal_to_SmtLib)
+      (Library.write_strings_to_file infile o Lib.snd o SmtLib.goal_to_SmtLib)
       ("yices -tc -smt " ^ infile ^ " > " ^ outfile)
       (fn () => result_fn outfile)
       [infile, outfile]

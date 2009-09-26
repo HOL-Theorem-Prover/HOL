@@ -19,12 +19,33 @@ datatype CONSEQ_CONV_direction =
 type conseq_conv = term -> thm;
 type directed_conseq_conv = CONSEQ_CONV_direction -> conseq_conv;
 
+type conseq_conv_congruence_syscall = 
+   int -> CONSEQ_CONV_direction -> term -> (int * thm option)
+
+type conseq_conv_congruence = 
+   conseq_conv_congruence_syscall ->
+   CONSEQ_CONV_direction -> term -> (int * thm)
 
 
-(* General *)
+(* Technical stuff that might help writing
+   your own CONSEQ-CONVs, but is otherwise uninteresting *)
+val CONSEQ_CONV_DIRECTION_NEGATE      : CONSEQ_CONV_direction -> CONSEQ_CONV_direction;
+val CONSEQ_CONV___GET_SIMPLIFIED_TERM : thm -> term -> term;
+val CONSEQ_CONV___GET_DIRECTION       : thm -> term -> CONSEQ_CONV_direction;
+val THEN_CONSEQ_CONV___combine        : thm -> thm -> term -> thm;
+val CONSEQ_CONV___APPLY_CONV_RULE     : thm -> term -> (term -> thm) -> thm;
+
+
+
+
+(* General rules and tactics. These might be useful in general *)
 val GEN_ASSUM               : term -> thm -> thm;
 val GEN_IMP                 : term -> thm -> thm;
+val LIST_GEN_IMP            : term list -> thm -> thm;
+val EXISTS_INTRO_IMP        : term -> thm -> thm;
+val LIST_EXISTS_INTRO_IMP   : term list -> thm -> thm;
 val SPEC_ALL_TAC            : tactic;
+
 
 val IMP_QUANT_CANON             : thm -> thm;
 val IMP_FORALL_CONCLUSION_CANON : thm -> thm;
@@ -32,7 +53,8 @@ val IMP_EXISTS_PRECOND_CANON    : thm -> thm;
 
 
 
-(* Basic consequence conversions *)
+(* Basic consequence conversions; some of these are trivial, but
+   useful for writing your own conseq_convs *)
 val FALSE_CONSEQ_CONV       : conseq_conv;
 val TRUE_CONSEQ_CONV        : conseq_conv;
 val REFL_CONSEQ_CONV        : conseq_conv;
@@ -40,6 +62,9 @@ val FORALL_EQ___CONSEQ_CONV : conseq_conv;
 val EXISTS_EQ___CONSEQ_CONV : conseq_conv;
 
 val TRUE_FALSE_REFL_CONSEQ_CONV : directed_conseq_conv
+
+
+(* Rewriting consequence conversions *)
 val CONSEQ_TOP_REWRITE_CONV     : (thm list * thm list * thm list) -> directed_conseq_conv;
 val CONSEQ_REWRITE_CONV         : (thm list * thm list * thm list) -> directed_conseq_conv;
 val CONSEQ_HO_TOP_REWRITE_CONV  : (thm list * thm list * thm list) -> directed_conseq_conv;
@@ -49,13 +74,24 @@ val EXT_CONSEQ_REWRITE_CONV     : conv list -> thm list -> (thm list * thm list 
 val EXT_CONSEQ_HO_REWRITE_CONV  : conv list -> thm list -> (thm list * thm list * thm list) -> directed_conseq_conv;
 
 
-(* Technical stuff that might help writing
-   your own CONSEQ-CONVs *)
-val CONSEQ_CONV_DIRECTION_NEGATE      : CONSEQ_CONV_direction -> CONSEQ_CONV_direction;
-val CONSEQ_CONV___GET_SIMPLIFIED_TERM : thm -> term -> term;
-val CONSEQ_CONV___GET_DIRECTION       : thm -> term -> CONSEQ_CONV_direction;
-val THEN_CONSEQ_CONV___combine        : thm -> thm -> term -> thm;
-val CONSEQ_CONV___APPLY_CONV_RULE     : thm -> term -> (term -> thm) -> thm;
+(* Depth consequence conversions *)
+val CONSEQ_CONV_CONGRUENCE___basic_list : conseq_conv_congruence list;
+
+val EXT_DEPTH_CONSEQ_CONV  : conseq_conv_congruence list -> int option -> 
+                             bool -> directed_conseq_conv list -> directed_conseq_conv
+val DEPTH_CONSEQ_CONV      : directed_conseq_conv -> directed_conseq_conv;
+val REDEPTH_CONSEQ_CONV    : directed_conseq_conv -> directed_conseq_conv;
+val ONCE_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
+val NUM_DEPTH_CONSEQ_CONV  : directed_conseq_conv -> int ->
+			     directed_conseq_conv;
+val NUM_REDEPTH_CONSEQ_CONV: directed_conseq_conv -> int ->
+			     directed_conseq_conv
+
+val DEPTH_STRENGTHEN_CONSEQ_CONV   : conseq_conv -> conseq_conv;
+val REDEPTH_STRENGTHEN_CONSEQ_CONV : conseq_conv -> conseq_conv;
+
+
+
 
 (* Combinations for consequence conversions *)
 val CHANGED_CONSEQ_CONV    : conseq_conv -> conseq_conv;
@@ -73,22 +109,6 @@ val STRENGTHEN_CONSEQ_CONV : conseq_conv -> directed_conseq_conv;
 val WEAKEN_CONSEQ_CONV     : conseq_conv -> directed_conseq_conv;
 
 
-val DEPTH_CONSEQ_CONV      : directed_conseq_conv -> directed_conseq_conv;
-val REDEPTH_CONSEQ_CONV    : directed_conseq_conv -> directed_conseq_conv;
-val ONCE_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
-val NUM_DEPTH_CONSEQ_CONV  : directed_conseq_conv -> int ->
-			     directed_conseq_conv;
-val NUM_REDEPTH_CONSEQ_CONV: directed_conseq_conv -> int ->
-			     directed_conseq_conv
-
-val CONJ_ASSUMPTIONS_CONSEQ_CONV   : directed_conseq_conv ->
-				     (term -> bool) -> directed_conseq_conv;
-val DEPTH_STRENGTHEN_CONSEQ_CONV   : conseq_conv -> conseq_conv;
-val REDEPTH_STRENGTHEN_CONSEQ_CONV : conseq_conv -> conseq_conv;
-
-
-
-
 (* Rules *)
 val STRENGTHEN_CONSEQ_CONV_RULE  : directed_conseq_conv -> thm -> thm;
 val WEAKEN_CONSEQ_CONV_RULE      : directed_conseq_conv -> thm -> thm;
@@ -101,8 +121,6 @@ val CONSEQ_CONV_TAC              : directed_conseq_conv -> tactic;
 val DEPTH_CONSEQ_CONV_TAC        : directed_conseq_conv -> tactic;
 val REDEPTH_CONSEQ_CONV_TAC      : directed_conseq_conv -> tactic;
 val ONCE_DEPTH_CONSEQ_CONV_TAC   : directed_conseq_conv -> tactic;
-val CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
-val CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv;
 val CONSEQ_REWRITE_TAC           : (thm list * thm list * thm list) -> tactic;
 val CONSEQ_HO_REWRITE_TAC        : (thm list * thm list * thm list) -> tactic;
 val ONCE_CONSEQ_REWRITE_TAC      : (thm list * thm list * thm list) -> tactic;

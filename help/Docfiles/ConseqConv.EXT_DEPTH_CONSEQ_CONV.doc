@@ -1,0 +1,69 @@
+\DOC DEPTH_CONSEQ_CONV
+
+\TYPE {EXT_DEPTH_CONSEQ_CONV : conseq_conv_congruence list -> int option -> bool -> directed_conseq_conv list -> directed_conseq_conv}
+
+
+\SYNOPSIS
+The general depth consequence conversion of which
+{DEPTH_CONSEQ_CONV}, {REDEPTH_CONSEQ_CONV}, {ONCE_DEPTH_CONSEQ_CONV} etc
+are just instantiations.
+
+\DESCRIBE
+{DEPTH_CONSEQ_CONV} and similar conversions 
+are able apply a consequence conversion by breaking down the
+structure of a term using lemmata about {/\}, {\/}, {~}, {==>} and quantification.
+
+{EXT_DEPTH_CONSEQ_CONV congruence_list step_opt redepth convL} is the 
+conversion used by these other depth conversions. It's interface allows to
+add to the given list of boolean combinations and thus allow convert parts of
+user defined predicates. This is done using {congruence_list}, however, let's 
+consider the other parameters first: {step_opt} determines how many steps should
+be attempted. {NONE} means arbitrarily many; {SOME n} means at most n. {ONCE_DEPTH_CONSEQ_CONV} for
+example uses {SOME 1}. The parameter {redepth} determines whether modified
+terms should be revisited and {convL} is a list of
+directed consequence conversions of the conversions that should be applied at
+subpositions. 
+
+
+The first parameter {congruence_list} is a list of congruences 
+that determine how to break down terms. Each element of this list has to
+be a function {congruence sys dir t} which returns a pair of the number of
+performed steps and a resulting theorem. {sys} is a callback that allows to
+apply the depth conversion recursively to subterms. If you ignore the number of
+steps, the congruence is otherwise a directed consequence conversion. If the 
+congruence can't be applied, it should either fail or through an {UNCHANGED} 
+exception. The callback {sys} gets the number of already performed steps, a
+direction and a term. It then returns a accumulated number of steps and a 
+thm option. It never fails. The number of steps is used to abort, if
+the maximum number of globally allowed steps has been reached. The first
+call of {sys} should get {0}, then the accumulated number has to be passed. The
+congruence should return the finally, accumulated number of steps. As an example,
+the congruence for conjunctions is implemented by
+
+{
+fun CONSEQ_CONV_CONGRUENCE___conj sys dir t =
+  let
+     (* split t, if it fails, that's OK *)
+     val (b1,b2) = dest_conj t;
+
+     (* call recursively on subterms *)
+     val (n1, thm1_opt) = sys 0  dir b1; 
+     val (n2, thm2_opt) = sys n1 dir b2;
+     (* if both calls did not change a thing, then abort *)
+     val _ = if (isSome thm1_opt) orelse (isSome thm2_opt) then () else raise UNCHANGED;
+
+     (* if necessary create new trivial theorems of the form "t ==> t" *)
+     val thm1 = conseq_conv_congruence_EXPAND_THM_OPT (thm1_opt, b1);        
+     val thm2 = conseq_conv_congruence_EXPAND_THM_OPT (thm2_opt, b2);        
+
+     (* create combined theorem *)
+     val thm3 = MATCH_MP MONO_AND (CONJ thm1 thm2)
+  in
+     (n2, thm3)
+  end
+}
+\SEEALSO
+ConseqConv.DEPTH_CONSEQ_CONV, ConseqConv.REDEPTH_CONSEQ_CONV,
+ConseqConv.ONCE_DEPTH_CONSEQ_CONV, ConseqConv.NUM_DEPTH_CONSEQ_CONV,
+ConseqConv.NUM_REDEPTH_CONSEQ_CONV
+\ENDDOC

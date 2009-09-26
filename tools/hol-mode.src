@@ -1220,6 +1220,8 @@ already loaded.)"
                        (codefacelist
                         (cond ((equal code "FV") '(face hol-free-variable))
                               ((equal code "BV") '(face hol-bound-variable))
+                              ((equal code "TF") '(face hol-free-type-variable))
+                              ((equal code "TB") '(face hol-bound-type-variable))
                               ((equal code "TY") '(face hol-type))
                               nil))
                        (tooltipprop
@@ -1265,7 +1267,25 @@ already loaded.)"
   "The face for presenting bound variables in HOL terms."
   :group 'hol-faces)
 
-(defface hol-type '((nil :slant italic))
+(defface hol-free-type-variable
+  '((((class color))
+     :foreground "purple"
+     :slant italic))
+  "The face for presenting free type variables in HOL types."
+  :group 'hol-faces)
+
+(defface hol-bound-type-variable
+  '((((class color))
+     :foreground "DarkGoldenrod"
+     :slant italic))
+  "The face for presenting bound type variables in HOL types."
+  :group 'hol-faces)
+
+(defface hol-type
+  '((((class color))
+     :foreground "cyan"
+     :weight bold
+     :slant italic))
   "The face for presenting HOL types."
   :group 'hol-faces)
 

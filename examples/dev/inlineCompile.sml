@@ -36,6 +36,8 @@ quietdec := false;
 (* Boilerplate needed for compilation                                        *)
 (*---------------------------------------------------------------------------*)
 open HolKernel (* Parse boolLib bossLib compileTheory compile;*)
+open (*Tactic Tactical*) Parse boolLib bossLib pairSyntax composeTheory compileTheory
+infix THENL
 
 (*---------------------------------------------------------------------------*)
 (* Open theories                                                             *)

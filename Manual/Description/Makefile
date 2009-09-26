@@ -1,5 +1,5 @@
 # =====================================================================
-# Makefile for the hol DESCRIPTION
+# Makefile for the HOL DESCRIPTION
 # =====================================================================
 
 PDFLATEX=pdflatex
@@ -7,9 +7,9 @@ DVILATEX=latex
 MAKEINDEX=makeindex
 BIBTEX=bibtex
 
-CHAPTERS = conv.tex drules.tex HolSat.tex libraries.tex misc.tex \
-           preface.tex semantics.tex syntax.tex \
-           tactics.tex theories.tex title.tex system.tex definitions.tex
+CHAPTERS = conv.tex drules.tex HolSat.tex HolSmt.tex libraries.tex	\
+           misc.tex preface.tex semantics.tex syntax.tex tactics.tex	\
+           theories.tex title.tex system.tex definitions.tex
 OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex
 
 default: pdf

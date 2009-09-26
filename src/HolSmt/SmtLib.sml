@@ -256,8 +256,9 @@ structure SmtLib = struct
             end (* translate_term *)
 
   (* Returns a string representation of the input goal in SMT-LIB file format,
-     together with two dictionaries that map types and terms to identifiers.
-     The goal's conclusion is negated. *)
+     together with two dictionaries that map types and terms to identifiers
+     used in the SMT-LIB representation.  The goal's conclusion is negated
+     before translation into SMT-LIB format. *)
   fun goal_to_SmtLib goal : ((Type.hol_type, string) Redblackmap.dict *
                              (Term.term, string) Redblackmap.dict) *
                             string list =
