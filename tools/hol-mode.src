@@ -1283,8 +1283,7 @@ already loaded.)"
 
 (defface hol-type
   '((((class color))
-     :foreground "cyan"
-     :weight bold
+     :foreground "cyan3"
      :slant italic))
   "The face for presenting HOL types."
   :group 'hol-faces)

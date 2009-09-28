@@ -706,11 +706,13 @@ fun bind_restr_term l binder vlist restr tm (E as {scope=scope0,scope_ty=scope_t
 
 local
 open Pretype
+(*
 val pair_conty = Contype{Thy = "pair", Tyop = "prod",
                          Kind = Prekind.mk_arity 2, Rank = Prerank.Zerorank}
+*)
 in
-fun split (PT(TyApp(PT(TyApp(PT(con, _), arg1), _), arg2), locn)) =
-      if con = pair_conty then [arg1, arg2]
+fun split (PT(TyApp(PT(TyApp(PT(Contype{Thy,Tyop,...}, _), arg1), _), arg2), locn)) =
+      if Thy = "pair" andalso Tyop = "prod" then [arg1, arg2]
       else raise ERROR "split" "not a product"
   | split _ = raise ERROR "split" "not a product"
 end
@@ -722,7 +724,7 @@ fun cdom M [] = M
   | cdom (Abs{Bvar,Body,Locn}) (ty::rst) =
        Abs{Bvar = Constrained{Ptm=Bvar,Ty=ty,Locn=Locn}, Body = cdom Body rst, Locn = Locn}
   | cdom (Comb{Rator as Const{Name="UNCURRY",...},Rand,Locn}) (ty::rst) =
-       Comb{Rator=Rator, Rand=cdom Rand (split ty@rst), Locn=Locn}
+       Comb{Rator=Rator, Rand=cdom Rand (split (Pretype.deep_beta_conv_ty ty)@rst), Locn=Locn}
   | cdom x y = raise ERRORloc "cdom" (Preterm.locn x) "missing case"
 end;
 
