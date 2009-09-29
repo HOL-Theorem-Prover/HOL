@@ -36,28 +36,27 @@ val _ = Hol_datatype `instruction =
 (* The state of the core consists of 16 registers, a boolean bit, and,
    for ease of presentation, the code separate from the memory. *)
 
+val _ = Hol_datatype `access_tag = READ_TAG | WRITE_TAG`;
+
 val _ = type_abbrev ("core_state", 
   ``: (word4 -> word32) #       (* registers, including program counter (reg 15) *)
       bool #                    (* one status bit, similar to N, Z, C, V *) 
       (word32 -> instruction) # (* code: mapping from addresses to instructions *) 
-      (word32 -> word32 # bool # bool) (* memory, see below *)``);
+      (word32 -> word32 # access_tag set) (* memory, see below *)``);
 
-(* The memory is intuitively a mapping from word32 -> word32, the memory
-   is kept separate from the state of the processor's core. As far as NEXT 
-   is concerned memory is a mapping of type:
+(* The memory has type:
 
-     word32 -> word32 # bool # bool
+     word32 -> word32 # access_tag set
 
-   The two extra bool parts indicate whether there was a read or a
-   write, repsectively, to this location. So for memory m and address a 
+   The set of access tags indicates what accesses have occured. If the
+   READ_TAG is in the set for address a then a read has been performed
+   on location a, similarly if WRITE_TAG is in the set then a write
+   has occured at location a, the result of the write is stored in the
+   first component of type word32.
 
-     m a = (5w,F,F),  if address a was neither read nor written
-     m a = (5w,T,F),  if address a was read, but not written
-     m a = (1w,F,T),  if address a was not read, 1w was written to it
-     m a = (1w,T,T),  if address a was read, then 1w was written to it
-
-   Initally m will always be such that: !a. ?w. m a = (w,F,F)
+   Initally memory m will always be such that: !a. ?w. m a = (w,{})
 *)
+
 
 
 (* -------------------------------------------------------------------------- *)
@@ -69,12 +68,12 @@ val INC_PC_def = Define `INC_PC offset r = (15w =+ r 15w + offset) r`;
 (* MEM_READ tags the approriate memory location, and returns the data content *)
 
 val MEM_READ_def = Define `
-  MEM_READ a m = let (w,x,y) = m a in ((a =+ (w,T,y)) m, w)`;
+  MEM_READ a m = let (w,ts) = m a in ((a =+ (w,ts UNION {READ_TAG})) m, w)`;
 
 (* MEM_WRITE tags and updates the content of the approriate memory location *)
 
 val MEM_WRITE_def = Define `
-  MEM_WRITE a v m = let (w,x,y) = m a in (a =+ (v,x,T)) m`;
+  MEM_WRITE a v m = let (w,ts) = m a in (a =+ (v,ts UNION {WRITE_TAG})) m`;
 
 (* The next state funtion returns a new core state. *)
 
