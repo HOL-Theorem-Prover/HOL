@@ -380,7 +380,7 @@ let val init = { instruction = NONE,
                  tokens = arm_lex s }
 in
   case f init
-    of Error e    => Feedback.Raise (ERR (#origin_function e) (#message e))
+    of Error e    => raise ERR (#origin_function e) (#message e)
      | Okay (v,t) => v
 end;
 
@@ -2301,7 +2301,7 @@ val arm_parse_mode2_offset :
              arm_parse_rsquare >>-
              tryT arm_parse_exclaim (K (return T)) (K (return F))
            else
-             return (mk_bool thumb)) >>=
+             return (mk_bool (thumb orelse not thumb andalso is_T unpriv))) >>=
           (fn w =>
              let val v = sint_of_term i
                  val narrow_okay = q <> Wide andalso narrow_register rt andalso
@@ -2310,7 +2310,7 @@ val arm_parse_mode2_offset :
                                      narrow_register rn andalso v <= 31
                                    else
                                      v mod 4 = 0 andalso
-                                     if is_SP rn then
+                                     if is_SP rn orelse ld andalso is_PC rn then
                                        is_F byte andalso v <= 1020
                                      else
                                        narrow_register rn andalso v <= 124
@@ -2344,7 +2344,8 @@ val arm_parse_mode2_offset :
                arm_parse_rsquare >>-
                tryT arm_parse_exclaim (K (return T)) (K (return F))
              else
-               return (mk_bool thumb)) >>=
+               return
+                 (mk_bool (thumb orelse not thumb andalso is_T unpriv))) >>=
              (fn w =>
                 let val (sh,_,_) = dest_Mode2_register mode2
                     val narrow_okay = q <> Wide andalso indx andalso
@@ -2541,8 +2542,10 @@ val arm_parse_mode3_offset :
              else
                return (mk_bool thumb)) >>=
              (fn w =>
-                let val narrow_okay = q <> Wide andalso indx andalso
-                                      narrow_registers [rt,rn,rm] andalso is_F w
+                let val (sh,_) = dest_Mode3_register mode3
+                    val narrow_okay = q <> Wide andalso indx andalso
+                                      narrow_registers [rt,rn,rm] andalso
+                                      sh = mk_word2 0 andalso is_F w
                 in
                   assertT ((not thumb orelse pos andalso is_F w) andalso
                            (q <> Narrow orelse narrow_okay))
@@ -4234,7 +4237,7 @@ local
   fun Load_label tm =
         let val (_,_,_,_,_,_,_,mode2) = dest_Load tm in vname mode2 end
 
-  fun find_forward _ _ [] = Raise (ERR "find_forward" "label not found")
+  fun find_forward _ _ [] = raise ERR "find_forward" "label not found"
     | find_forward (x as (line,v)) n ((Label (_,s))::t) =
         if v = s then
           SOME (Arbint.-(Arbint.fromNat n,Arbint.fromNat (Arbnum.+(line,n4))))
@@ -4262,8 +4265,8 @@ local
           | Word1 t  => (inc_code_width line h,(line,h)::code,lmap)
           | Label (i,s) =>
               let val _ = not (isSome (Redblackmap.peek (lmap,s))) orelse
-                   Raise (ERR "number_lines"
-                     ("label " ^ s ^ " duplicated on line " ^ Int.toString i))
+                   raise ERR "number_lines"
+                     ("label " ^ s ^ " duplicated on line " ^ Int.toString i)
               in
                 (line,code,Redblackmap.insert (lmap,s,line))
               end
@@ -4309,8 +4312,8 @@ local
                                     end
                                 | NONE => pick false
                              end handle HOL_ERR _ =>
-                               Raise (ERR "number_lines" ("cannot find label " ^
-                                 v ^ " on line " ^ Int.toString i))
+                               raise ERR "number_lines" ("cannot find label " ^
+                                 v ^ " on line " ^ Int.toString i)
                       end
                     else if is_Add_Sub tm orelse is_Load tm then
                       let val v = if is_Add_Sub tm then
@@ -4336,8 +4339,8 @@ local
                                     end
                                 | NONE => pick false
                              end handle HOL_ERR _ =>
-                               Raise (ERR "number_lines" ("cannot find label " ^
-                                 v ^ " on line " ^ Int.toString i))
+                               raise ERR "number_lines" ("cannot find label " ^
+                                 v ^ " on line " ^ Int.toString i)
                       end
                     else raise ERR "number_lines" "unexpected genvar"
                   end
@@ -4366,8 +4369,8 @@ local
             of SOME target =>
                  let open Arbint
                  in f (intSyntax.term_of_int (fromNat target - pc)) end
-             | NONE => Raise (ERR "link_instruction"
-                 ("failed to find label " ^ v ^ " on line " ^ Int.toString i))
+             | NONE => raise ERR "link_instruction"
+                 ("failed to find label " ^ v ^ " on line " ^ Int.toString i)
       fun offset_to_int i offset =
             sint_of_term offset handle Overflow => raise ERR "link_instruction"
               ("offset caused overflow on line " ^ Int.toString i)
@@ -4414,9 +4417,9 @@ local
                                then
                                  mk_Branch_Target imm24
                                else
-                                 Raise (ERR "link_lines" ("branch target " ^ v ^
+                                 raise ERR "link_lines" ("branch target " ^ v ^
                                     " unaligned or beyond permitted range on\
-                                    \ line " ^ Int.toString i))
+                                    \ line " ^ Int.toString i)
                              end)
                       end
                     else if is_Branch_Link_Exchange_Immediate tm then
@@ -4452,9 +4455,9 @@ local
                                  mk_Branch_Link_Exchange_Immediate
                                    (h',toARM,imm24)
                                else
-                                 Raise (ERR "link_lines" ("branch target " ^ v ^
+                                 raise ERR "link_lines" ("branch target " ^ v ^
                                     " unaligned or beyond permitted range\
-                                    \ on line " ^ Int.toString i))
+                                    \ on line " ^ Int.toString i)
                              end)
                       end
                     else if is_Compare_Branch tm then
@@ -4470,9 +4473,9 @@ local
                                mk_Compare_Branch (nonzero,
                                  wordsSyntax.mk_wordii (offset div 2,6),n)
                              else
-                               Raise (ERR "link_lines" ("branch target " ^ v ^
+                               raise ERR "link_lines" ("branch target " ^ v ^
                                   " unaligned or beyond permitted range on\
-                                  \ line " ^ Int.toString i)))
+                                  \ line " ^ Int.toString i))
                       end
                     else if is_Add_Sub tm then
                       let val (a,n,d,imm12) = dest_Add_Sub tm
@@ -4486,9 +4489,9 @@ local
                                     mk_Add_Sub
                                       (mk_bool (opc = dp_opcode ADD),n,d,imm12)
                                 | NONE =>
-                                    Raise (ERR "link_lines" ("cannot represent\
+                                    raise ERR "link_lines" ("cannot represent\
                                       \ offset to label " ^ v ^ " as a mode1\
-                                      \ immmediate on line " ^ Int.toString i))
+                                      \ immmediate on line " ^ Int.toString i)
                              else
                                let val offset = offset_to_int i tm
                                    val narrow_okay =
@@ -4504,10 +4507,10 @@ local
                                then
                                  mk_Add_Sub (mk_bool (0 <= offset),n,d,imm12)
                                else
-                                 Raise (ERR "link_lines"
+                                 raise ERR "link_lines"
                                    ("address target " ^ v ^
                                     " unaligned or beyond permitted range on\
-                                    \ line " ^ Int.toString i))
+                                    \ line " ^ Int.toString i)
                              end)
                       end
                     else if is_Preload_Data tm then
@@ -4523,9 +4526,9 @@ local
                                mk_Preload_Data (mk_bool (0 <= offset),w,n,
                                 mk_Mode2_immediate (mk_word12 (Int.abs offset)))
                              else
-                               Raise (ERR "link_lines" ("load target " ^ v ^
+                               raise ERR "link_lines" ("load target " ^ v ^
                                   " unaligned or beyond permitted range\
-                                  \ on line " ^ Int.toString i)))
+                                  \ on line " ^ Int.toString i))
                       end
                     else if is_Preload_Instruction tm then
                       let val (a,n,mode2) = dest_Preload_Instruction tm
@@ -4540,9 +4543,9 @@ local
                                mk_Preload_Instruction (mk_bool (0 <= offset),n,
                                 mk_Mode2_immediate (mk_word12 (Int.abs offset)))
                              else
-                               Raise (ERR "link_lines" ("load target " ^ v ^
+                               raise ERR "link_lines" ("load target " ^ v ^
                                   " unaligned or beyond permitted range\
-                                  \ on line " ^ Int.toString i)))
+                                  \ on line " ^ Int.toString i))
                       end
                     else if is_Load tm then
                       let val (indx,a,b,w,u,n,t,mode2) = dest_Load tm
@@ -4565,9 +4568,9 @@ local
                                  mk_Load (indx,mk_bool (0 <= offset),b,w,u,n,t,
                                    mode2)
                                else
-                                 Raise (ERR "link_lines" ("load target " ^ v ^
+                                 raise ERR "link_lines" ("load target " ^ v ^
                                     " unaligned or beyond permitted range on\
-                                    \ line " ^ Int.toString i))
+                                    \ line " ^ Int.toString i)
                              end)
                       end
                     else if is_Load_Halfword tm then
@@ -4590,9 +4593,9 @@ local
                                  mk_Load_Halfword (indx,mk_bool (0 <= offset),w,
                                    s,h,u,n,t,mode3)
                                else
-                                 Raise (ERR "link_lines" ("load target " ^ v ^
+                                 raise ERR "link_lines" ("load target " ^ v ^
                                     " beyond permitted range on line " ^
-                                    Int.toString i))
+                                    Int.toString i)
                              end)
                       end
                     else if is_Load_Dual tm then
@@ -4615,9 +4618,9 @@ local
                                  mk_Load_Dual (indx,mk_bool (0 <= offset),w,
                                    n,t,t2,mode3)
                                else
-                                 Raise (ERR "link_lines" ("load target " ^ v ^
+                                 raise ERR "link_lines" ("load target " ^ v ^
                                     " beyond permitted range on line " ^
-                                    Int.toString i))
+                                    Int.toString i)
                              end)
                       end
                     else raise ERR "recurse"

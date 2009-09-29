@@ -3,6 +3,8 @@ struct
 
 open Abbrev HolKernel arm_seq_monadTheory arm_decoderTheory;
 
+val ERR = Feedback.mk_HOL_ERR "armSyntax";
+
 local
   val arm_state_type = ``:arm_state``;
   val err = ERR "dest_monad_type" "not an instance of 'a M"

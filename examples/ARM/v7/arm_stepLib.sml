@@ -682,9 +682,9 @@ fun get_valuestate s tm =
     armSyntax.dest_valuestate tm handle HOL_ERR _ =>
       (let val e = armSyntax.dest_error tm handle HOL_ERR _ =>
         (if (!arm_step_trace div 2) mod 2 = 1 then print_term tm else ();
-         Raise (ERR "eval_inst" ("Failed to fully evaluate " ^ s)))
+         raise ERR "eval_inst" ("Failed to fully evaluate " ^ s))
        in
-         Raise (ERR "eval_inst" ("Error: " ^ stringSyntax.fromHOLstring e))
+         raise ERR "eval_inst" ("Error: " ^ stringSyntax.fromHOLstring e)
        end);
 
 local
@@ -1023,8 +1023,8 @@ in
     val P = mk_abs (the_state,pre)
     val G = mk_abs (the_state,s)
     val character_thm = prove_character P G handle HOL_ERR _ =>
-                          Raise (ERR "eval_inst"
-                            "Failed to prove characteristic theorem")
+                          raise ERR "eval_inst"
+                            "Failed to prove characteristic theorem"
     val tm = mk_arm_next (mk_comb (mk_abs (the_state,s),the_state))
     val _ = print_progress "Starting evaluation ...\n"
     val eval_thm = computeLib.RESTR_EVAL_CONV restr_terms tm
@@ -1045,8 +1045,8 @@ in
     val H = mk_abs (the_state,optionSyntax.mk_some h)
     val _ = print_progress "Starting composition proof ...\n"
     val comp_thm = prove_comp_thm the_state P H G X handle HOL_ERR _ =>
-                          Raise (ERR "eval_inst"
-                            "Failed to prove composition theorem")
+                          raise ERR "eval_inst"
+                            "Failed to prove composition theorem"
     val _ = print_progress "... finished composition proof.\n"
     val next_thm = BETA_RULE (MATCH_MP arm_next_thm
                      (LIST_CONJ [character_thm,comp_thm,eval_thm]))
