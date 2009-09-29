@@ -349,7 +349,10 @@ in
   Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
 end handle HOL_ERR _ => fst (dest_const tm)
 
+
 fun pp_term (G : grammar) TyG backend = let
+  fun tystr ty =
+      PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
   val overload_info = overload_info G
   val spec_table =
@@ -1149,7 +1152,7 @@ fun pp_term (G : grammar) TyG backend = let
       pend (addparens orelse comb_show_type)
     end handle SimpleExit => ()
 
-    fun pr_sole_name n rules = let
+    fun pr_sole_name tm n rules = let
       (* This function prints a solitary name n.  The rules are possibly
          relevant rules from the grammar.  If one is a list rule, and our
          n is the name of the nil case, then we should print that
@@ -1162,6 +1165,18 @@ fun pp_term (G : grammar) TyG backend = let
           LISTRULE lrules => List.find (fn r => #nilstr r = n) lrules
         | _ => NONE
       val nilrule = find_partial check_rule rules
+      val fakerec = {Thy = "", Name = "", Ty = Type.alpha}
+      val ty = type_of tm
+      val add =
+          if is_const tm then
+            (fn s => add_ann_string (s, PPBackEnd.Const (dest_thy_const tm, s)))
+          else if is_fakeconst tm then
+            (fn s => add_ann_string (s, PPBackEnd.Const (fakerec, s)))
+          else if mem tm (!bvars_seen) orelse binderp then
+            (fn s => add_ann_string (s, PPBackEnd.BV (ty, tystr ty)))
+          else
+            (fn s => add_ann_string (s, PPBackEnd.FV (ty, tystr ty)))
+      val _ = if binderp then bvars_seen := tm :: !bvars_seen else ()
     in
       case nilrule of
         SOME r => (ignore (print_ellist (Top,Top,Top) (#leftdelim r, []));
@@ -1172,10 +1187,10 @@ fun pp_term (G : grammar) TyG backend = let
              Such functions don't need to be dollar-ed *)
         in
           case rules of
-            [LISTRULE _] => add_string n
+            [LISTRULE _] => add n
           | _ =>
-              if HOLset.member(spec_table, n) then dollarise add_string n
-              else add_string n
+              if HOLset.member(spec_table, n) then dollarise add n
+              else add n
         end
     end
 
@@ -1467,10 +1482,6 @@ fun pp_term (G : grammar) TyG backend = let
           val print_type =
             showtypes_v orelse
             showtypes andalso not isfake andalso (binderp orelse new_freevar)
-          fun tystr ty =
-              PP.pp_to_string 10000
-                              (type_pp.pp_type TyG PPBackEnd.raw_terminal)
-                              Ty
           fun adds s =
               if mem tm (!bvars_seen) orelse binderp then
                 add_ann_string (s, PPBackEnd.BV (Ty, s^": "^tystr Ty))
@@ -1480,7 +1491,7 @@ fun pp_term (G : grammar) TyG backend = let
         in
           begin_block INCONSISTENT 2; pbegin print_type;
           if isSome vrule then
-            pr_sole_name vname (map #2 (valOf vrule))
+            pr_sole_name tm vname (map #2 (valOf vrule))
           else
             if HOLset.member(spec_table, vname) then dollarise adds vname
             else adds vname;
@@ -1503,7 +1514,7 @@ fun pp_term (G : grammar) TyG backend = let
               val crules = lookup_term s
             in
               if isSome crules then
-                pr_sole_name s (map #2 (valOf crules))
+                pr_sole_name tm s (map #2 (valOf crules))
               else if s = "0" andalso can_pr_numeral NONE then
                 pr_numeral NONE tm
               else if Literal.is_emptystring tm then
