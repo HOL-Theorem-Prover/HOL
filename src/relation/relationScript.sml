@@ -883,6 +883,11 @@ GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[WF_DEF]
    THEN
    IMP_RES_TAC(REWRITE_RULE[transitive_def] TC_TRANSITIVE)]);
 
+val WF_TC_EQN = store_thm(
+  "WF_TC_EQN",
+  ``WF (R^+) <=> WF R``,
+  METIS_TAC [WF_TC, TC_SUBSET, WF_SUBSET]);
+
 
 (*---------------------------------------------------------------------------
  * Inverse image theorem: mapping into a wellfounded relation gives a
