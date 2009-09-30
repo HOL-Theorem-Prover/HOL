@@ -203,6 +203,7 @@ val _ = set_fixity "--" (Infixr 375)
 val _ = set_fixity "><" (Infixr 375)
 val _ = set_fixity "---" (Infixr 375);
 
+val _ = Unicode.unicode_version{u="<>", tmnm="<>"};
 val _ = send_to_back_overload "<>" {Name = "word_slice", Thy = "words"};
 
 (* ------------------------------------------------------------------------- *)
