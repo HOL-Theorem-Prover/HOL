@@ -82,7 +82,7 @@ val dual_comp_def = new_definition ("dual_comp_def",
   on this, see discussion which is currently (r7221) in KmonadScript.sml *)
 val category_dual = store_thm ("category_dual",
   ``category [:'A:] (id, comp) = category [:'A C:] (id, dual_comp comp)``,
-  EQ_TAC THEN SRW_TAC [] [category_def, dual_comp_def]) ;
+  EQ_TAC THEN SRW_TAC [] [category_thm, dual_comp_def]) ;
 
 (*---------------------------------------------------------------------------
   Functors are homomorphisms between categories.  In this model, functors
@@ -118,8 +118,7 @@ val g_functor_def = new_definition("g_functor_def",
           (!:'a. F' [:'a, 'a:] idC = idD) /\
       (* Composition *)
           (!:'a 'b 'c. !(f:('a, 'b) 'C) (g:('b, 'c) 'C).
-	    F' (compC g f) = compD (F' g) (F' f)) 
-      `` );
+	    F' (compC g f) = compD (F' g) (F' f)) `` );
 
 val g_functor_thm = store_thm ("g_functor_thm", 
    ``g_functor [:'C, 'D:] (idC : 'C id, compC : 'C comp) 
@@ -190,6 +189,11 @@ val g_nattransf_def = new_definition("g_nattransf_def",
 	  ( F' : ('C, 'D, 'F) g_functor ) ( G  : ('C, 'D, 'G) g_functor ).
        !:'a 'b. !(h: ('a, 'b) 'C). compD (G h) phi = compD phi (F' h)``) ;
 
+val g_nattransf_thm = store_thm("g_nattransf_thm", 
+   ``g_nattransf [:'D:] (idD, compD) (phi : ('D, 'F,'G) g_nattransf) F' G =
+       !:'a 'b. !(h: ('a, 'b) 'C). compD (G h) phi = compD phi (F' h)``,
+    SRW_TAC [] [g_nattransf_def]) ;
+
 (* thus
 ``(phi : ('D, 'F,'G) g_nattransf) = (phi : ('D C, 'G,'F) g_nattransf)`` ;
 *)
@@ -200,7 +204,7 @@ val g_nattransf_dual = store_thm ("g_nattransf_dual",
     g_nattransf [:'D C:] (idD, dual_comp compD : 'D C comp) 
       phi (g_dual_functor G) (g_dual_functor F')``,
     EQ_TAC THEN 
-    SRW_TAC [] [g_nattransf_def, dual_comp_def, g_dual_functor_def]) ;
+    SRW_TAC [] [g_nattransf_thm, dual_comp_def, g_dual_functor_def]) ;
 	      
 val _ = set_trace "types" 1;
 val _ = set_trace "kinds" 0;
