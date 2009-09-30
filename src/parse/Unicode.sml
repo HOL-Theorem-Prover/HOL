@@ -11,7 +11,7 @@ type term = Term.term
 
 fun temp_set_term_grammar g = temp_set_grammars(type_grammar(), g)
 
-val master_unicode_switch = ref false
+val master_unicode_switch = ref true
 
 datatype stored_data =
          RuleUpdate of { u : string, term_name : string,
@@ -203,9 +203,11 @@ fun enable_all () = List.app enable_one (List.rev (!term_table))
 fun disable_all () = List.app disable_one (!term_table)
 
 fun traceset n = if n = 0 then (master_unicode_switch := false;
+                                set_trace "Greek tyvars" 0;
                                 bare_lambda();
                                 disable_all())
                  else (master_unicode_switch := true;
+                       set_trace "Greek tyvars" 1;
                        unicode_lambda();
                        enable_all())
 fun traceget () = if !master_unicode_switch then 1 else 0

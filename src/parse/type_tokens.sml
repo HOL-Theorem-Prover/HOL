@@ -1,6 +1,10 @@
 structure type_tokens :> type_tokens =
 struct
 
+val greek_tyvars = ref true
+
+val _ = Feedback.register_btrace ("Greek tyvars", greek_tyvars)
+
 datatype 'a type_token
      = TypeIdent of string
      | QTypeIdent of string * string
@@ -82,7 +86,8 @@ fun MkNumType (pfx, sfx) =
       NONE => TypeIdent (munge pfx)
     | SOME _ => Error (BT_Numeral (Arbnum.fromString (munge pfx), sfx))
 
-
+fun isGreekLower i = (* but not lambda *)
+    0x3B1 <= i andalso i <= 0x3C9 andalso i <> 0x3BB
 
 fun split_and_check fb s locn = let
   val ((s0,i), srest) = valOf (UTF8.getChar s)
@@ -110,10 +115,11 @@ fun split_and_check fb s locn = let
         end
   open UnicodeChars
 in
-  if isAlpha s0 then consume_type typeidentp MkTypeIdent ([s0],[]) srest
+  if s0 = "'" orelse (isGreekLower i andalso !greek_tyvars) then
+    consume_type typevarp (TypeVar o munge) [s0] srest
+  else if isAlpha s0 then consume_type typeidentp MkTypeIdent ([s0],[]) srest
   else if Char.isDigit (String.sub(s0,0)) then
     consume_type numeraltypep MkNumType ([s0], NONE) srest
-  else if s0 = "'" then consume_type typevarp (TypeVar o munge) [s0] srest
   else if s0 = "(" then nadvance 1 LParen
   else if s0 = ")" then nadvance 1 RParen
   else if s0 = "," then nadvance 1 Comma

@@ -109,11 +109,18 @@ fun pp_type0 (G:grammar) backend = let
       with_ppstream backend pps
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
-
+    fun uniconvert s =
+        if get_tracefn "Greek tyvars" () = 1 andalso size s = 2 then let
+            val i = Char.ord (String.sub(s, 1)) - Char.ord #"a" + 0x3B1
+          in
+            if 0x3B1 <= i andalso i <= 0x3C9 andalso i <> 0x3BB then UTF8.chr i
+            else s
+          end
+        else s
   in
     if depth = 0 then add_string "..."
     else
-      if is_vartype ty then add_ann_string (dest_vartype ty, TyV)
+      if is_vartype ty then add_ann_string (uniconvert (dest_vartype ty), TyV)
       else let
           val s = dest_numtype ty
         in

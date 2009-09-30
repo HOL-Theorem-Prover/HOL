@@ -170,11 +170,19 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     recurse [ty1]
   end
 
+  fun uniconvert c = let
+    val ((s,i), s') = valOf (UTF8.getChar c)
+  in
+    if s' = "" andalso 0x3B1 <= i andalso i <= 0x3C9 then
+      "'" ^ str (Char.chr (i - 0x3B1 + Char.ord #"a"))
+    else c
+  end
+
   fun parse_atom fb = let
     val (adv, (t,locn)) = typetok_of fb
   in
     case t of
-      TypeVar s => (adv(); pVartype (s, locn))
+      TypeVar s => (adv(); pVartype (uniconvert s, locn))
     | AQ x => (adv(); pAQ x)
     | TypeIdent s => (adv(); apply_tyop(t,locn) [])
                      (* should only be a number *)

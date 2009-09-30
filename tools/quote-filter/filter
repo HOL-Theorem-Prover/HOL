@@ -75,6 +75,7 @@ MLid = ({letter} ({letter} | {digit} | _ | "'")*) | {symbol}+;
 ws = [\ \t];
 newline = "\n" | "\015\n";
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
+lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 
 %%
 
@@ -85,7 +86,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <INITIAL>")" => (ECHO yyarg yytext; dec pardepth;
                  if !antiquote andalso !pardepth < 1 then (yytext,yypos)
                  else continue());
-<INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('] | {digit}) => (
+<INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('] | {digit} | {lowergreek}) => (
                  print yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2);
                  print yyarg (drop_upto #":" yytext);
                  YYBEGIN tyquote;
