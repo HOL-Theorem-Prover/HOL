@@ -149,7 +149,59 @@ val g_functor_dual = store_thm ("g_functor_dual",
   EQ_TAC THEN
   SRW_TAC [] [g_functor_def, g_dual_functor_def, dual_comp_def]) ;
 
+(*---------------------------------------------------------------------------
+            Natural transformation type abbreviation
+	    (doesn't involve the arrow type of the source category)
+ ---------------------------------------------------------------------------*)
 
+val _ = type_abbrev ("g_nattransf", ``: \'D 'F 'G. !'a. ('a 'F, 'a 'G) 'D``);
+
+(*---------------------------------------------------------------------------
+            Natural transformation predicate
+ ---------------------------------------------------------------------------*)
+
+val g_nattransf_prev_def = new_definition("g_nattransf_prev_def", 
+   ``g_nattransf_prev = 
+     \ (idD, compD : 'D comp) (phi : ('D, 'F,'G) g_nattransf)
+	  ( F' : ('C, 'D, 'F) g_functor ) ( G  : ('C, 'D, 'G) g_functor ).
+       !:'a 'b. !(h: ('a, 'b) 'C). compD (G h) phi = compD phi (F' h)``) ;
+
+(* the definition g_nattransf_prev_def gave typing problems, 
+  including the following rather weird one:
+
+``g_nattransf_prev (idD, dual_comp compD : 'D C comp)
+ (phi : ('D C, 'F,'G) g_nattransf)`` ; (* OK *)
+
+``g_nattransf_prev (idD, dual_comp compD : 'D comp)
+ (phi : ('D, 'X,'Y) g_nattransf)`` ; (* OK *)
+
+``g_nattransf_prev (idD, dual_comp compD : 'D C comp)
+ (phi : ('D C, 'F,'G) g_nattransf)`` ; (* OK *)
+
+``g_nattransf_prev (idD, dual_comp compD : 'D C comp)
+ (phi : ('D C, 'X,'Y) g_nattransf)`` handle e => Raise e ; (* fails *)
+
+why should it make a difference whether I use ('F,'G) or ('X,'Y) ??
+*) 
+
+val g_nattransf_def = new_definition("g_nattransf_def", 
+   ``g_nattransf = \:'D. 
+     \ (idD, compD : 'D comp) (phi : ('D, 'F,'G) g_nattransf)
+	  ( F' : ('C, 'D, 'F) g_functor ) ( G  : ('C, 'D, 'G) g_functor ).
+       !:'a 'b. !(h: ('a, 'b) 'C). compD (G h) phi = compD phi (F' h)``) ;
+
+(* thus
+``(phi : ('D, 'F,'G) g_nattransf) = (phi : ('D C, 'G,'F) g_nattransf)`` ;
+*)
+
+val g_nattransf_dual = store_thm ("g_nattransf_dual",
+  ``g_nattransf (idD, compD : 'D comp) (phi : ('D, 'F,'G) g_nattransf)
+      ( F' : ('C, 'D, 'F) g_functor ) ( G  : ('C, 'D, 'G) g_functor ) = 
+    g_nattransf [:'D C:] (idD, dual_comp compD : 'D C comp) 
+      phi (g_dual_functor G) (g_dual_functor F')``,
+    EQ_TAC THEN 
+    SRW_TAC [] [g_nattransf_def, dual_comp_def, g_dual_functor_def]) ;
+	      
 val _ = set_trace "types" 1;
 val _ = set_trace "kinds" 0;
 val _ = html_theory "category";
