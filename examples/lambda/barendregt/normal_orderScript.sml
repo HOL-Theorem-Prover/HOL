@@ -763,6 +763,54 @@ val bnf_of_NONE = store_thm(
   REWRITE_TAC [has_bnf_of] THEN
   Cases_on `bnf_of M` THEN SRW_TAC [][]);
 
+val bnf_of_thm = store_thm(
+  "bnf_of_thm",
+  ``bnf_of M = if bnf M then SOME M else bnf_of (THE (noreduct M))``,
+  SRW_TAC [][bnf_of_def] THEN1
+    SRW_TAC [][Once whileTheory.OWHILE_THM] THEN
+  SRW_TAC [][SimpLHS, Once whileTheory.OWHILE_THM]);
+
+val nstar_bnf_of_SOME_I = store_thm(
+  "nstar_bnf_of_SOME_I",
+  ``M -n->* N ∧ bnf N ⇒ (bnf_of M = SOME N)``,
+  Q_TAC SUFF_TAC `∀M N. M -n->* N ⇒ bnf N ⇒ (bnf_of M = SOME N)`
+        THEN1 METIS_TAC [] THEN
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
+  SRW_TAC [][Once bnf_of_thm] THEN1 METIS_TAC [normorder_bnf] THEN
+  FULL_SIMP_TAC (srw_ss()) [noreduct_characterisation]);
+
+val betastar_bnf_of_SOME_I = store_thm(
+  "betastar_bnf_of_SOME_I",
+  ``M -β->* N ∧ bnf N ⇒ (bnf_of M = SOME N)``,
+  METIS_TAC [nstar_bnf_of_SOME_I, normal_finds_bnf]);
+
+val lameq_bnf_of_SOME_I = store_thm(
+  "lameq_bnf_of_SOME_I",
+  ``M == N ∧ bnf N ⇒ (bnf_of M = SOME N)``,
+  METIS_TAC [betastar_bnf_of_SOME_I, betastar_lameq_bnf]);
+
+val lameq_bnf_of_cong = store_thm(
+  "lameq_bnf_of_cong",
+  ``M == N ⇒ (bnf_of M = bnf_of N)``,
+  Cases_on `bnf_of N` THENL [
+    FULL_SIMP_TAC (srw_ss()) [bnf_of_NONE, chap2Theory.has_bnf_def] THEN
+    METIS_TAC [chap2Theory.lam_eq_rules],
+    IMP_RES_TAC bnf_of_SOME THEN STRIP_TAC THEN
+    `M == x` by METIS_TAC [chap2Theory.lam_eq_rules, nstar_lameq] THEN
+    METIS_TAC [lameq_bnf_of_SOME_I]
+  ]);
+
+val lameq_has_bnf_cong = store_thm(
+  "lameq_has_bnf_cong",
+  ``M == N ⇒ (has_bnf M = has_bnf N)``,
+  SRW_TAC [][has_bnf_of] THEN
+  METIS_TAC [lameq_bnf_of_cong, chap2Theory.lam_eq_rules]);
+
+val bnf_bnf_of = store_thm(
+  "bnf_bnf_of",
+  ``bnf M ⇒ (bnf_of M = SOME M)``,
+  SRW_TAC [][Once bnf_of_thm]);
+
 (* ----------------------------------------------------------------------
     weak head reduction gives a congruence rule for -n->* of sorts
    ---------------------------------------------------------------------- *)

@@ -67,7 +67,8 @@ fun betafy ss = let
   open chap2Theory head_reductionTheory
 in
   simpLib.add_relsimp {refl = GEN_ALL lameq_refl, trans = lameq_trans,
-                       weakenings = [lameq_weaken_cong],
+                       weakenings = [lameq_weaken_cong, lameq_has_bnf_cong,
+                                     lameq_bnf_of_cong],
                        subsets = [ccbeta_lameq, betastar_lameq, whstar_lameq,
                                   normorder_lameq, nstar_lameq],
                        rewrs = [lameq_S, lameq_K, lameq_I, lameq_C,

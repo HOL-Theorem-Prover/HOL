@@ -76,6 +76,7 @@ val HP_nselfapp = store_thm(
   Q_TAC (NEW_TAC "z") `FV M` THEN
   Q.ABBREV_TAC `G = LAM z (M @@ VAR z @@ Ω @@ cB T)` THEN
   Q.ABBREV_TAC `Gi = dBnum (fromTerm G)` THEN
+  Q.ABBREV_TAC `hbnf = has_bnf` THEN
   `G @@ church Gi == cB (has_bnf (G @@ church Gi)) @@ Ω @@ cB T`
      by ASM_SIMP_TAC (bsrw_ss()) [Abbr`G`, Abbr`Gi`, toTerm_thm] THEN
   Cases_on `has_bnf (G @@ church Gi)` THEN

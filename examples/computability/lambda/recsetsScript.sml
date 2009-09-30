@@ -2,7 +2,8 @@ open HolKernel Parse bossLib boolLib
 
 val _ = new_theory "recsets"
 
-open recfunsTheory
+open recfunsTheory reductionEval
+open binderLib
 
 val _ = set_trace "Unicode" 1
 
@@ -12,58 +13,106 @@ val recursive_def = Define`
   recursive s = ∃M. ∀e. Phi M e = SOME (if e ∈ s then 1 else 0)
 `;
 
-(*
-val bnf_of_lameq_CONG = store_thm(
-  "bnf_of_lameq_CONG",
-  ``M₁ == M₂ ⇒ (bnf_of M₁ = bnf_of M₂)``,
-  Cases_on `bnf_of M₂` THENL [
-    FULL_SIMP_TAC (srw_ss()) [normal_orderTheory.bnf_of_NONE,
-                              chap2Theory.has_bnf_def] THEN
-    METIS_TAC [chap2Theory.lam_eq_rules],
-    IMP_RES_TAC normal_orderTheory.bnf_of_SOME THEN
-    STRIP_TAC THEN
-    `M₁ == x` by METIS_TAC [chap2Theory.lam_eq_rules,
-                            normal_orderTheory.nstar_lameq] THEN
-    `M₁ -n->* x` by
-
-    `has_bnf M₂` by METIS_TAC [normal_orderTheory.has_bnf_of] THEN
-    STRIP_TAC THEN
-    Q_TAC SUFF_TAC `has_bnf M₂
-
-    FULL_SIMP_TAC (srw_ss()) [
-
-  SRW_TAC [][normal_orderTheory.has_bnf_of] THEN
-*)
-
 val empty_recursive = Store_thm(
   "empty_recursive",
   ``recursive {}``,
   SRW_TAC [][recursive_def, Phi_def] THEN
   Q.EXISTS_TAC `dBnum (fromTerm (LAM v (church 0)))` THEN
-  SRW_TAC [][normal_orderTheory.bnf_of_def] THEN
-  SRW_TAC [][Ntimes whileTheory.OWHILE_THM 2, normal_orderTheory.noreduct_thm,
-             termTheory.lemma14b]);
+  SIMP_TAC (bsrw_ss()) [normal_orderTheory.bnf_bnf_of]);
 
 val univ_recursive = Store_thm(
   "univ_recursive",
   ``recursive UNIV``,
   SRW_TAC [][recursive_def, Phi_def] THEN
   Q.EXISTS_TAC `dBnum (fromTerm (LAM v (church 1)))` THEN
-  SRW_TAC [][normal_orderTheory.bnf_of_def] THEN
-  SRW_TAC [][Ntimes whileTheory.OWHILE_THM 2, normal_orderTheory.noreduct_thm,
-             termTheory.lemma14b]);
+  SIMP_TAC (bsrw_ss()) [normal_orderTheory.bnf_bnf_of]);
 
-
-(*val union_recursive_I = Store_thm(
+val union_recursive_I = Store_thm(
   "union_recursive_I",
   ``recursive s₁ ∧ recursive s₂ ⇒ recursive (s₁ ∪ s₂)``,
-  SRW_TAC [][recursive_def, Phi_def] THEN
+  SRW_TAC [][recursive_def] THEN
+  SIMP_TAC (srw_ss()) [Phi_def] THEN
   Q.EXISTS_TAC
     `dBnum (fromTerm
-              (LAM v (cmod @@ (cplus @@ (toTerm (numdB M) @@ VAR v)
-                                     @@ (toTerm (numdB M') @@ VAR v))
-                           @@ church 2)))` THEN
-  SRW_TAC [][]
-*)
+      (LAM z (cor @@ (ceqnat @@ (church 1)
+                             @@ (UM @@ (cnpair @@ church M @@ VAR z)))
+                  @@ (ceqnat @@ (church 1)
+                             @@ (UM @@ (cnpair @@ church M' @@ VAR z)))
+                  @@ church 1
+                  @@ church 0)))` THEN
+  Q.X_GEN_TAC `n` THEN
+  REPEAT (FIRST_X_ASSUM (Q.SPEC_THEN `n` STRIP_ASSUME_TAC)) THEN
+  IMP_RES_TAC PhiSOME_UM_I THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour,
+                            churchnumTheory.ceqnat_behaviour] THEN
+  Cases_on `n ∈ s₁` THEN Cases_on `n ∈ s₂` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cor_behaviour,
+                            churchboolTheory.cB_behaviour,
+                            normal_orderTheory.bnf_bnf_of]);
+
+val inter_recursive_I = Store_thm(
+  "inter_recursive_I",
+  ``recursive s₁ ∧ recursive s₂ ⇒ recursive (s₁ ∩ s₂)``,
+  SRW_TAC [][recursive_def] THEN
+  SIMP_TAC (srw_ss()) [Phi_def] THEN
+  Q.EXISTS_TAC `
+    dBnum (fromTerm
+      (LAM z (cmult @@ (UM @@ (cnpair @@ church M @@ VAR z))
+                    @@ (UM @@ (cnpair @@ church M' @@ VAR z)))))` THEN
+  Q.X_GEN_TAC `n` THEN
+  REPEAT (FIRST_X_ASSUM (Q.SPEC_THEN `n` STRIP_ASSUME_TAC)) THEN
+  IMP_RES_TAC PhiSOME_UM_I THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour,
+                            churchnumTheory.cmult_behaviour,
+                            normal_orderTheory.bnf_bnf_of] THEN
+  Cases_on `n ∈ s₁` THEN SRW_TAC [][]);
+
+val compl_recursive_I = store_thm(
+  "compl_recursive_I",
+  ``recursive s ⇒ recursive (COMPL s)``,
+  SRW_TAC [][recursive_def] THEN
+  SIMP_TAC (srw_ss()) [Phi_def] THEN
+  Q.EXISTS_TAC `
+    dBnum (fromTerm
+      (LAM z (cminus @@ (church 1)
+                     @@ (UM @@ (cnpair @@ church M @@ VAR z)))))` THEN
+  Q.X_GEN_TAC `n` THEN
+  POP_ASSUM (Q.SPEC_THEN `n` STRIP_ASSUME_TAC) THEN
+  IMP_RES_TAC PhiSOME_UM_I THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour,
+                            churchnumTheory.cminus_behaviour,
+                            normal_orderTheory.bnf_bnf_of] THEN
+  Cases_on `n ∈ s` THEN SRW_TAC [][]);
+
+val compl_recursive = Store_thm(
+  "compl_recursive",
+  ``recursive (COMPL s) ⇔ recursive s``,
+  METIS_TAC [pred_setTheory.COMPL_COMPL, compl_recursive_I]);
+
+val finite_recursive = Store_thm(
+  "finite_recursive",
+  ``∀s. FINITE s ==> recursive s``,
+  HO_MATCH_MP_TAC pred_setTheory.FINITE_INDUCT THEN
+  SRW_TAC [][] THEN
+  FULL_SIMP_TAC (srw_ss()) [recursive_def] THEN
+  SIMP_TAC (srw_ss()) [Phi_def] THEN
+  Q.EXISTS_TAC `
+    dBnum (fromTerm
+      (LAM z (cor @@ (ceqnat @@ VAR z @@ church e)
+                  @@ (ceqnat @@ church 1
+                             @@ (UM @@ (cnpair @@ church M @@ VAR z)))
+                  @@ church 1
+                  @@ church 0)))` THEN
+  Q.X_GEN_TAC `n` THEN FIRST_X_ASSUM (Q.SPEC_THEN `n` STRIP_ASSUME_TAC) THEN
+  IMP_RES_TAC PhiSOME_UM_I THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour,
+                            churchnumTheory.ceqnat_behaviour,
+                            churchboolTheory.cor_behaviour] THEN
+  Cases_on `n = e` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
+                            normal_orderTheory.bnf_bnf_of] THEN
+  Cases_on `n ∈ s` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
+                            normal_orderTheory.bnf_bnf_of]);
 
 val _ = export_theory ()
