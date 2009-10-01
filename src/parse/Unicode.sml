@@ -214,6 +214,8 @@ fun traceget () = if !master_unicode_switch then 1 else 0
 
 val _ = register_ftrace ("Unicode", (traceget, traceset), 1)
 
+val _ = traceset 1
+
 fun print_update pps {u,tmnm} =
     PP.add_string
         pps
