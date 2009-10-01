@@ -784,7 +784,7 @@ fun CONSEQ_CONV_CONGRUENCE___forall context (sys:conseq_conv_congruence_syscall)
      val (n1, thm1_opt) = sys [] 0 dir b1;
      val _ = if (isSome thm1_opt) then () else raise UNCHANGED;
 
-     val thm2 = HO_MATCH_MP MONO_ALL (GEN v (valOf thm1_opt))
+     val thm2 = HO_MATCH_MP MONO_ALL (GEN_ASSUM v (valOf thm1_opt))
      val thm3 = CONV_RULE (dir_conv dir trivial_forall_simp) thm2 handle HOL_ERR _ => thm2
   in
      (n1, thm3)
@@ -805,7 +805,7 @@ fun CONSEQ_CONV_CONGRUENCE___exists context (sys:conseq_conv_congruence_syscall)
      val (n1, thm1_opt) = sys [] 0 dir b1;
      val _ = if (isSome thm1_opt) then () else raise UNCHANGED;
 
-     val thm2 = HO_MATCH_MP boolTheory.MONO_EXISTS (GEN v (valOf thm1_opt))
+     val thm2 = HO_MATCH_MP boolTheory.MONO_EXISTS (GEN_ASSUM v (valOf thm1_opt))
      val thm3 = CONV_RULE (dir_conv dir trivial_exists_simp) thm2 handle HOL_ERR _ => thm2
   in
      (n1, thm3)
