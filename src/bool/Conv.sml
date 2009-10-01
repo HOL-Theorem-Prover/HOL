@@ -1558,6 +1558,40 @@ fun SWAP_EXISTS_CONV xyt =
 
 
 (* ---------------------------------------------------------------------*)
+(* SWAP_FORALL_CONV: swap the order of existentially quantified vars.	*)
+(*									*)
+(* SWAP_FORALL_CONV "!x y.t[x,y]" ---> |- !x y.t[x,y] = !y x.t[x,y]	*)
+(* ---------------------------------------------------------------------*)
+fun SWAP_FORALL_CONV xyt =
+   let val {Bvar=x, Body=yt} = dest_forall xyt
+       val {Bvar=y, Body=t} = dest_forall yt
+       val xt  = mk_forall {Bvar=x, Body=t}
+       val yxt = mk_forall {Bvar=y, Body=xt}
+   in
+     IMP_ANTISYM_RULE
+         (DISCH xyt (GENL [y,x] (SPECL [x,y] (ASSUME xyt))))
+         (DISCH yxt (GENL [x,y] (SPECL [y,x] (ASSUME yxt))))
+   end
+
+(* ---------------------------------------------------------------------*)
+(* RESORT_FORALL_CONV: resorts the order of allquantified vars, as      *)
+(*    specified by a given resort function                              *)
+(*									*)
+(* RESORT_FORALL_CONV rev "!x1 x2 x3. t" ---> |-                        *)
+(*                         !x1 x2 x3. t = !x3 x2 x1. t                  *)
+(* ---------------------------------------------------------------------*)
+fun RESORT_FORALL_CONV rs xst =
+   let val (xs, t) = strip_forall xst
+       val ys = rs xs;
+       val yst = list_mk_forall (ys, t)
+   in
+     IMP_ANTISYM_RULE
+         (DISCH xst (GENL ys (SPECL xs (ASSUME xst))))
+         (DISCH yst (GENL xs (SPECL ys (ASSUME yst))))
+   end
+
+
+(* ---------------------------------------------------------------------*)
 (* bool_EQ_CONV: conversion for boolean equality.			*)
 (*									*)
 (* bool_EQ_CONV "b1 = b2" returns:					*)
@@ -1809,30 +1843,8 @@ in
       [] => REFL
     | (v::vs) => rename v THENC BINDER_CONV (RENAME_VARS_CONV vs)
 
-
-  fun SWAP_VARS_CONV term = let
-    val (dest, list_mk, qvar_thm) =
-      if (is_exists term) then
-        (dest_exists, LIST_MK_EXISTS, boolTheory.SWAP_EXISTS_THM)
-      else
-        (dest_forall, C (foldr(uncurry FORALL_EQ)), boolTheory.SWAP_FORALL_THM)
-    val {Bvar = fst_var, Body = fst_body} = dest term
-    val {Bvar = snd_var, Body = snd_body} = dest fst_body
-    val fnc = list_mk_abs ([fst_var,snd_var], snd_body)
-    val fn_rewrite =
-      SYM (LIST_BETA_CONV (list_mk_comb (fnc, [fst_var,snd_var])))
-    val ex_rewrite = list_mk [fst_var,snd_var] fn_rewrite
-    val inst_thm = ISPEC fnc qvar_thm
-    val final_thm =
-      TRANS inst_thm
-      (RENAME_VARS_CONV (map (#Name o dest_var) [snd_var,fst_var])
-       (rhs (concl inst_thm)))
-  in
-    (* must do precisely two beta reductions on the right hand side of the
-       theorem *)
-    CONV_RULE (RAND_CONV (BINDER_CONV (BINDER_CONV LIST_BETA_CONV)))
-              (SUBS [final_thm] ex_rewrite)
-  end
+  fun SWAP_VARS_CONV t = 
+    if is_exists t then SWAP_EXISTS_CONV t else SWAP_FORALL_CONV t
 
 end
 
