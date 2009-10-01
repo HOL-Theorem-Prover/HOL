@@ -1,5 +1,7 @@
 open HolKernel Parse boolTheory boolLib
 
+val _ = set_trace "Unicode" 0
+
 fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
 
 fun substtest (M, x, N, result) = let

@@ -166,6 +166,8 @@ val t = Lib.total Parse.Term `case (x:valbind) of
 val _ = case t of NONE => (print "FAILED!\n"; Process.exit Process.failure)
                 | SOME _ => print "OK\n"
 
+val _ = set_trace "Unicode" 0
+
 fun pptest (nm, t, expected) = let
   val _ = tprint ("Testing pretty-printing of "^nm)
   val s = Parse.term_to_string t
