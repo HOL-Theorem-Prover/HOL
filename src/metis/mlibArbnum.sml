@@ -4,7 +4,13 @@
 structure mlibArbnum :> mlibArbnum =
 struct
 
-(* app load ["Substring", "Random", "Int", "Process"] *)
+fun extract arg = ArraySlice.vector(ArraySlice.slice arg)
+
+fun copyVec' {di,dst,len,src,si} = let
+  val v = VectorSlice.vector(VectorSlice.slice(src,si,len));
+in
+  Array.copyVec {di = di, dst = dst, src = v}
+end
 
 (* base must be <= the sqrt of MaxInt *)
 val BASE = 10000;
@@ -275,7 +281,7 @@ fun divmod (xn, yn) =
           else
             qhat0
         (* D4. multiply and subtract *)
-        val uslice_v = Array.extract(u, j, SOME (Int.+(n, 1)))
+        val uslice_v = extract(u, j, SOME (Int.+(n, 1)))
         val uslice_l = List.rev (Vector.foldr (op::) [] uslice_v)
         val multiply_result0 = single_digit(qhat, normalised_v)
         val multiply_result = let
@@ -289,13 +295,13 @@ fun divmod (xn, yn) =
         end
         val (newu_l, d4carry) = comp_sub [] false (uslice_l, multiply_result)
         val newu_v = Vector.fromList newu_l
-        val _ = Array.copyVec {di=j, dst=u, len=NONE, src=newu_v, si=0}
+        val _ = copyVec' {di=j, dst=u, len=NONE, src=newu_v, si=0}
         (* D5. test remainder *)
         val () = update(q, j, qhat)
         val _ =
           if d4carry then let
             (* D6. Add back *)
-            val uslice_v = Array.extract(u, j, SOME (Int.+(n, 1)))
+            val uslice_v = extract(u, j, SOME (Int.+(n, 1)))
             val uslice_l = List.rev(Vector.foldr (op::) [] uslice_v)
             val newu0 = uslice_l + normalised_v
             (* have to ignore rightmost digit *)
@@ -303,7 +309,7 @@ fun divmod (xn, yn) =
             val newu_v = Vector.fromList newu
           in
             update(q, j, Int.-(q sub j, 1));
-            Array.copyVec {di = j, dst = u, len = NONE, src = newu_v, si = 0}
+            copyVec' {di = j, dst = u, len = NONE, src = newu_v, si = 0}
           end
           else ()
         open Int
@@ -317,7 +323,7 @@ fun divmod (xn, yn) =
         open Int
       in
         normalise (List.rev
-                   (Vector.foldr (op::) [] (Array.extract(u, m + 1, NONE))))
+                   (Vector.foldr (op::) [] (extract(u, m + 1, NONE))))
       end
       val rn = #1 (single_divmod rn0 d)
     in

@@ -1,3 +1,455 @@
+
+signature VECTOR =
+sig
+  type 'a vector = 'a Vector.vector
+  val maxLen : int
+  val fromList : 'a list -> 'a vector
+  val tabulate : int * (int -> 'a) -> 'a vector
+  val length : 'a vector -> int
+  val sub : 'a vector * int -> 'a
+  val update : 'a vector * int * 'a -> 'a vector
+  val concat : 'a vector list -> 'a vector
+  val appi : (int * 'a -> unit) -> 'a vector -> unit
+  val app  : ('a -> unit) -> 'a vector -> unit
+  val mapi : (int * 'a -> 'b) -> 'a vector -> 'b vector
+  val map  : ('a -> 'b) -> 'a vector -> 'b vector
+  val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+  val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+  val foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+  val foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+  val findi : (int * 'a -> bool)
+                -> 'a vector -> (int * 'a) option
+  val find  : ('a -> bool) -> 'a vector -> 'a option
+  val exists : ('a -> bool) -> 'a vector -> bool
+  val all : ('a -> bool) -> 'a vector -> bool
+  val collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order
+end
+
+structure MosmlVector = Vector
+structure MosmlArray = Array
+
+structure Vector :> VECTOR =
+struct
+  structure V = MosmlVector
+  open V
+  fun update (v,i,e) =
+      tabulate (length v, (fn j => if j = i then e else sub(v,j)))
+  fun appi f v = V.appi f (v,0,NONE)
+  fun mapi f v = V.mapi f (v,0,NONE)
+  fun foldli f b v = V.foldli f b (v,0,NONE)
+  fun foldri f b v = V.foldri f b (v,0,NONE)
+  fun findi P v = let
+    val sz = length v
+    fun recurse i =
+        if i < sz then let
+            val pr = (i,sub(v,i))
+          in
+            if P pr then SOME pr else recurse (i + 1)
+          end
+        else NONE
+  in
+    recurse 0
+  end
+  fun find P v = Option.map #2 (findi (P o #2) v)
+  fun exists P v = isSome (find P v)
+  fun all P v = not (exists (not o P) v)
+  fun collate cmp (a1, a2) = let
+    val sz1 = length a1 and sz2 = length a2
+    fun recurse i =
+        if i < sz1 then
+          if i < sz2 then
+            case cmp(sub(a1,i), sub(a2,i)) of
+              EQUAL => recurse (i + 1)
+            | x => x
+          else GREATER
+        else if i < sz2 then LESS
+        else EQUAL
+  in
+    recurse 0
+  end
+
+end
+
+signature VECTOR_SLICE = sig
+  type 'a slice
+  val length : 'a slice -> int
+  val sub : 'a slice * int -> 'a
+  val full : 'a Vector.vector -> 'a slice
+  val slice : 'a Vector.vector * int * int option -> 'a slice
+  val subslice : 'a slice * int * int option -> 'a slice
+  val base : 'a slice -> 'a Vector.vector * int * int
+  val vector : 'a slice -> 'a Vector.vector
+  val concat : 'a slice list -> 'a Vector.vector
+  val isEmpty : 'a slice -> bool
+  val getItem : 'a slice -> ('a * 'a slice) option
+  val appi : (int * 'a -> unit) -> 'a slice -> unit
+  val app  : ('a -> unit) -> 'a slice -> unit
+  val mapi : (int * 'a -> 'b) -> 'a slice -> 'b Vector.vector
+  val map  : ('a -> 'b) -> 'a slice -> 'b Vector.vector
+  val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a slice -> 'b
+  val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a slice -> 'b
+  val foldl  : ('a * 'b -> 'b) -> 'b -> 'a slice -> 'b
+  val foldr  : ('a * 'b -> 'b) -> 'b -> 'a slice -> 'b
+  val findi : (int * 'a -> bool)
+                -> 'a slice -> (int * 'a) option
+  val find  : ('a -> bool) -> 'a slice -> 'a option
+  val exists : ('a -> bool) -> 'a slice -> bool
+  val all : ('a -> bool) -> 'a slice -> bool
+  val collate : ('a * 'a -> order)
+                  -> 'a slice * 'a slice -> order
+end
+
+structure VectorSlice :> VECTOR_SLICE =
+struct
+  type 'a slice = ('a Vector.vector * int * int)
+  val vlen = Vector.length
+  val vsub = Vector.sub
+  fun length (v,i,sz) = sz
+  fun isEmpty (v,i,sz) = sz = 0
+  fun sub ((v,i,sz), j) = if j < 0 orelse sz <= j then raise Subscript
+                          else vsub(v, i + j)
+  fun getItem (v,i,sz) = if sz = 0 then NONE
+                         else SOME (vsub(v,i), (v,i+1,sz-1))
+  fun full v = (v,0,vlen v)
+  fun slice (v,i,NONE) = if i < 0 orelse vlen v < i then raise Subscript
+                         else (v,i,vlen v - i)
+    | slice (v,i,SOME sz) = if i < 0 orelse sz < 0 orelse vlen v < i + sz then
+                              raise Subscript
+                            else (v,i,sz)
+  fun subslice ((v,i,sz), j, NONE) = if j < 0 orelse sz < j then raise Subscript
+                                     else (v,i+j,sz - j)
+    | subslice ((v,i,sz), j, SOME sz') =
+      if j < 0 orelse sz' < 0 orelse sz < j + sz' then raise Subscript
+      else (v,i+j,sz')
+  fun base v : 'a slice = v
+  fun vector (sl as (v,i,sz)) = Vector.tabulate(sz, (fn i => sub(sl, i)))
+  fun concat sls =
+      case sls of
+        [] => Vector.fromList []
+      | [sl] => vector sl
+      | _ => let
+          val combinedsz = List.foldl (fn (sl,a) => a + length sl) 0 sls
+                           handle Overflow => raise Size
+          val _ = if combinedsz > Vector.maxLen then raise Size else ()
+          val sls_r = ref sls
+          val i_r = ref 0
+          fun tabthis i = let
+            val sl = hd (!sls_r)
+          in
+            if i - !i_r >= length sl then
+              (i_r := !i_r + length sl;
+               sls_r := tl (!sls_r);
+               tabthis i)
+            else sub(sl, i - !i_r)
+          end
+        in
+          Vector.tabulate(combinedsz, tabthis)
+        end
+
+  fun appi f sl = let
+    fun recurse i = if i < length sl then (f(i, sub(sl,i)); recurse (i + 1))
+                    else ()
+  in
+    recurse 0
+  end
+  fun app f = appi (f o #2)
+
+  fun mapi f sl = Vector.tabulate(length sl, (fn i => f(i,sub(sl,i))))
+  fun map f = mapi (f o #2)
+  fun foldli f b sl = let
+    val sz = length sl
+    fun recurse acc i = if i < sz then recurse (f(i,sub(sl,i),acc)) (i + 1)
+                        else acc
+  in
+    recurse b 0
+  end
+  fun foldri f b sl = let
+    fun recurse acc i = if i < 0 then acc
+                        else recurse (f(i,sub(sl,i),acc)) (i - 1)
+  in
+    recurse b (length sl - 1)
+  end
+  fun foldl f = foldli (fn (_,e,b) => f (e,b))
+  fun foldr f = foldri (fn (_,e,b) => f (e,b))
+  fun findi P v = let
+    val sz = length v
+    fun recurse i =
+        if i < sz then let
+            val pr = (i,sub(v,i))
+          in
+            if P pr then SOME pr else recurse (i + 1)
+          end
+        else NONE
+  in
+    recurse 0
+  end
+  fun find P v = Option.map #2 (findi (P o #2) v)
+  fun exists P v = isSome (find P v)
+  fun all P v = not (exists (not o P) v)
+  fun collate cmp (a1, a2) = let
+    val sz1 = length a1 and sz2 = length a2
+    fun recurse i =
+        if i < sz1 then
+          if i < sz2 then
+            case cmp(sub(a1,i), sub(a2,i)) of
+              EQUAL => recurse (i + 1)
+            | x => x
+          else GREATER
+        else if i < sz2 then LESS
+        else EQUAL
+  in
+    recurse 0
+  end
+
+end
+
+
+signature ARRAY =
+sig
+  type 'a array = 'a Array.array
+  type 'a vector = 'a Vector.vector
+  val maxLen : int
+  val array : int * 'a -> 'a array
+  val fromList : 'a list -> 'a array
+  val tabulate : int * (int -> 'a) -> 'a array
+  val length : 'a array -> int
+  val sub : 'a array * int -> 'a
+  val update : 'a array * int * 'a -> unit
+  val vector : 'a array -> 'a vector
+  val copy    : {src : 'a array, dst : 'a array, di : int} -> unit
+  val copyVec : {src : 'a vector, dst : 'a array, di : int} -> unit
+  val appi : (int * 'a -> unit) -> 'a array -> unit
+  val app  : ('a -> unit) -> 'a array -> unit
+  val modifyi : (int * 'a -> 'a) -> 'a array -> unit
+  val modify  : ('a -> 'a) -> 'a array -> unit
+  val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
+  val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
+  val foldl  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
+  val foldr  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
+  val findi : (int * 'a -> bool)
+              -> 'a array -> (int * 'a) option
+  val find  : ('a -> bool) -> 'a array -> 'a option
+  val exists : ('a -> bool) -> 'a array -> bool
+  val all : ('a -> bool) -> 'a array -> bool
+  val collate : ('a * 'a -> order)
+                -> 'a array * 'a array -> order
+end
+
+structure Array :> ARRAY =
+struct
+  type 'a vector = 'a Vector.vector
+  structure A = MosmlArray
+  open A
+
+  fun vector a = extract(a, 0, NONE)
+  fun copy {di,dst,src} =
+      A.copy {src = src, si = 0, len = NONE, dst = dst, di = di}
+  fun copyVec {di,dst,src} =
+      A.copyVec {src = src, si = 0, len = NONE, dst = dst, di = di}
+  fun appi f a = A.appi f (a, 0, NONE)
+  fun modifyi f a = A.modifyi f (a, 0, NONE)
+  fun foldli f b a = A.foldli f b (a, 0, NONE)
+  fun foldri f b a = A.foldri f b (a, 0, NONE)
+  fun findi P a = let
+    val sz = length a
+    fun recurse i =
+        if i < sz then let val pr = (i, sub(a,i))
+                       in
+                         if P pr then SOME pr else recurse (i + 1)
+                       end
+        else NONE
+  in
+    recurse 0
+  end
+  fun find P a = Option.map #2 (findi (P o #2) a)
+  fun exists P a = isSome (find P a)
+  fun all P a = not (exists (not o P) a)
+  fun collate cmp (a1, a2) = let
+    val sz1 = length a1 and sz2 = length a2
+    fun recurse i =
+        if i < sz1 then
+          if i < sz2 then
+            case cmp(sub(a1,i), sub(a2,i)) of
+              EQUAL => recurse (i + 1)
+            | x => x
+          else GREATER
+        else if i < sz2 then LESS
+        else EQUAL
+  in
+    recurse 0
+  end
+end
+
+signature ARRAY_SLICE =
+sig
+    type 'a slice
+    val length : 'a slice -> int
+    val sub : 'a slice * int -> 'a
+    val update : 'a slice * int * 'a -> unit
+    val full : 'a Array.array -> 'a slice
+    val slice : 'a Array.array * int * int option -> 'a slice
+    val subslice : 'a slice * int * int option -> 'a slice
+    val base : 'a slice -> 'a Array.array * int * int
+    val vector : 'a slice -> 'a Vector.vector
+    val copy    : {
+                      src : 'a slice,
+                      dst : 'a Array.array,
+                      di : int
+                    } -> unit
+    val copyVec : {
+                      src : 'a VectorSlice.slice,
+                      dst : 'a Array.array,
+                      di : int
+                    } -> unit
+    val isEmpty : 'a slice -> bool
+    val getItem : 'a slice -> ('a * 'a slice) option
+    val appi : (int * 'a -> unit) -> 'a slice -> unit
+    val app  : ('a -> unit) -> 'a slice -> unit
+    val modifyi : (int * 'a -> 'a) -> 'a slice -> unit
+    val modify  : ('a -> 'a) -> 'a slice -> unit
+    val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a slice -> 'b
+    val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a slice -> 'b
+    val foldl  : ('a * 'b -> 'b) -> 'b -> 'a slice -> 'b
+    val foldr  : ('a * 'b -> 'b) -> 'b -> 'a slice -> 'b
+    val findi : (int * 'a -> bool)
+                  -> 'a slice -> (int * 'a) option
+    val find  : ('a -> bool) -> 'a slice -> 'a option
+    val exists : ('a -> bool) -> 'a slice -> bool
+    val all : ('a -> bool) -> 'a slice -> bool
+    val collate : ('a * 'a -> order)
+                    -> 'a slice * 'a slice -> order
+end
+
+structure ArraySlice :> ARRAY_SLICE =
+struct
+
+  type 'a slice = ('a Array.array * int * int)
+
+  val vlen = Array.length
+  val vsub = Array.sub
+  fun length (v,i,sz) = sz
+  fun isEmpty (v,i,sz) = sz = 0
+  fun sub ((v,i,sz), j) = if j < 0 orelse sz <= j then raise Subscript
+                          else vsub(v, i + j)
+  fun update((a,i,sz),j,e) = Array.update(a,i + j,e)
+
+  fun getItem (v,i,sz) = if sz = 0 then NONE
+                         else SOME (vsub(v,i), (v,i+1,sz-1))
+  fun full v = (v,0,vlen v)
+  fun slice (v,i,NONE) = if i < 0 orelse vlen v < i then raise Subscript
+                         else (v,i,vlen v - i)
+    | slice (v,i,SOME sz) = if i < 0 orelse sz < 0 orelse vlen v < i + sz then
+                              raise Subscript
+                            else (v,i,sz)
+  fun subslice ((v,i,sz), j, NONE) = if j < 0 orelse sz < j then raise Subscript
+                                     else (v,i+j,sz - j)
+    | subslice ((v,i,sz), j, SOME sz') =
+      if j < 0 orelse sz' < 0 orelse sz < j + sz' then raise Subscript
+      else (v,i+j,sz')
+  fun base v : 'a slice = v
+  fun vector (sl as (v,i,sz)) = Vector.tabulate(sz, (fn i => sub(sl, i)))
+
+  fun copy {di,dst,src = src as (a,i,sz)} =
+      if di < 0 orelse vlen dst < di + sz then raise Subscript
+      else let
+          fun back2front j = if j < 0 then ()
+                             else (Array.update(dst,j + di,sub(src,j));
+                                   back2front (j - 1))
+          fun front2back j = if j < sz then (Array.update(dst,j+di,sub(src,j));
+                                             front2back (j + 1))
+                             else ()
+        in
+          if a = dst then
+            if i = di then ()
+            else if i < di then back2front (sz - 1)
+            else (* di < i *) front2back 0
+          else front2back 0
+        end
+
+  fun copyVec {di,dst,src} =
+      if di < 0 orelse vlen dst < di + VectorSlice.length src then
+        raise Subscript
+      else let
+          val sub = VectorSlice.sub
+          val sz = VectorSlice.length src
+          fun front2back j = if j < sz then (Array.update(dst,j+di,sub(src,j));
+                                             front2back (j + 1))
+                             else ()
+        in
+          front2back 0
+        end
+
+
+
+  fun appi f sl = let
+    fun recurse i = if i < length sl then (f(i, sub(sl,i)); recurse (i + 1))
+                    else ()
+  in
+    recurse 0
+  end
+  fun app f = appi (f o #2)
+
+  fun modifyi f sl = let
+    val sz = length sl
+    fun recurse i = if i < sz then
+                      (update(sl,i,f(i,sub(sl,i))); recurse (i + 1))
+                    else ()
+  in
+    recurse 0
+  end
+  fun modify f = modifyi (f o #2)
+
+  fun foldli f b sl = let
+    val sz = length sl
+    fun recurse acc i = if i < sz then recurse (f(i,sub(sl,i),acc)) (i + 1)
+                        else acc
+  in
+    recurse b 0
+  end
+  fun foldri f b sl = let
+    fun recurse acc i = if i < 0 then acc
+                        else recurse (f(i,sub(sl,i),acc)) (i - 1)
+  in
+    recurse b (length sl - 1)
+  end
+  fun foldl f = foldli (fn (_,e,b) => f (e,b))
+  fun foldr f = foldri (fn (_,e,b) => f (e,b))
+  fun findi P v = let
+    val sz = length v
+    fun recurse i =
+        if i < sz then let
+            val pr = (i,sub(v,i))
+          in
+            if P pr then SOME pr else recurse (i + 1)
+          end
+        else NONE
+  in
+    recurse 0
+  end
+  fun find P v = Option.map #2 (findi (P o #2) v)
+  fun exists P v = isSome (find P v)
+  fun all P v = not (exists (not o P) v)
+  fun collate cmp (a1, a2) = let
+    val sz1 = length a1 and sz2 = length a2
+    fun recurse i =
+        if i < sz1 then
+          if i < sz2 then
+            case cmp(sub(a1,i), sub(a2,i)) of
+              EQUAL => recurse (i + 1)
+            | x => x
+          else GREATER
+        else if i < sz2 then LESS
+        else EQUAL
+  in
+    recurse 0
+  end
+
+
+
+end
+
+
+
 signature OS_PROCESS =
 sig
     type status

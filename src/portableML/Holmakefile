@@ -1,1 +1,5 @@
 OPTIONS = NO_OVERLAY
+
+Arbnum.ui: Arbnum.sig $(if $(MOSML),$(SIGOBJ)/basis2002.ui,)
+
+HOLPP.ui: HOLPP.sig $(if $(MOSML),$(SIGOBJ)/basis2002.ui,)

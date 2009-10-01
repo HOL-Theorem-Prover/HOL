@@ -31,12 +31,14 @@ datatype factoid =
 val fromArbList = ALT o Vector.fromList
 val fromList = fromArbList o map Arbint.fromInt
 
+fun extract x = VectorSlice.vector(VectorSlice.slice x)
+
 
 type factoid_key = Arbint.int Vector.vector
 
 fun factoid_key f =
     case f of
-      ALT av => Vector.extract(av, 0, SOME (Vector.length av - 1))
+      ALT av => extract(av, 0, SOME (Vector.length av - 1))
 fun factoid_constant f =
     case f of
       ALT av => Vector.sub(av, Vector.length av - 1)
@@ -65,7 +67,7 @@ fun eval_factoid_rhs vmap f = let
       else ai * PIntMap.find i vmap + acc
 in
   case f of
-    ALT fv => foldli foldthis zero (fv, 0, NONE)
+    ALT fv => foldli foldthis zero fv
 end
 
 fun eval_factoid_except vmap i f = let
@@ -77,7 +79,7 @@ fun eval_factoid_except vmap i f = let
       else ai * PIntMap.find j vmap + acc
 in
   case f of
-    ALT fv => foldli foldthis zero (fv, 0, NONE)
+    ALT fv => foldli foldthis zero fv
 end
 
 val negate_key = Vector.map Arbint.~
@@ -91,9 +93,10 @@ fun keyhash v =
 fun factoid_pairings vars f =
     case f of
       ALT av => Vector.foldri
-                (fn (i, ai, list) =>
-                    (Arbint.toString ai, List.nth(vars, i)) :: list)
-                [] (av, 0, NONE)
+                    (fn (i, ai, list) =>
+                        (Arbint.toString ai, List.nth(vars, i)) :: list)
+                    []
+                    av
 
 (* ----------------------------------------------------------------------
     combine_real_factoids i f1 f2
@@ -155,14 +158,16 @@ fun combine_dark_factoids i low up =
     or raises the exception no_gcd, if there is no common factor.
    ---------------------------------------------------------------------- *)
 
+structure VS = VectorSlice
+
 exception no_gcd
 fun factoid_gcd f =
     case f of
       ALT av => let
-        open Vector CooperMath
-        val g = foldli (fn (_, c, g0) => gcd (Arbint.abs c, g0))
-                       Arbint.zero
-                       (av, 0, SOME (length av - 1))
+        open CooperMath Vector
+        val g = VS.foldli (fn (_, c, g0) => gcd (Arbint.abs c, g0))
+                          Arbint.zero
+                          (VS.slice(av, 0, SOME (length av - 1)))
       in
         if Arbint.<=(g, Arbint.one) then raise no_gcd
         else ALT (map (fn c => Arbint.div(c, g)) av)
@@ -218,7 +223,8 @@ fun factoid_to_term vars f =
               in
                 case t0 of NONE => SOME cv | SOME t => SOME (mk_plus(t, cv))
               end
-        val varpart = foldli varcoeff NONE (av, 0, SOME (length av - 1))
+        val varpart = VS.foldli varcoeff NONE
+                                (VS.slice(av, 0, SOME (length av - 1)))
         val numpart = term_of_int (sub(av,length av - 1))
       in
         case varpart of
@@ -400,7 +406,7 @@ fun has_one_var ptree = let
         | _ => raise return_false
   fun check ((f,d),a) = let
     val fk = factoid_key f
-    val fk_single = valOf (Vector.foldli checkkey NONE (fk, 0, NONE))
+    val fk_single = valOf (Vector.foldli checkkey NONE fk)
   in
     case a of
       NONE => SOME fk_single
@@ -430,7 +436,7 @@ fun one_var_analysis ptree em = let
   fun find_var (i, ai, NONE) = if ai <> Arbint.zero then SOME i else NONE
     | find_var (_, _, v as SOME _) = v
   val x_var =
-      valOf (Vector.foldli find_var NONE (factoid_key a_constraint, 0, NONE))
+      valOf (Vector.foldli find_var NONE (factoid_key a_constraint))
   open Arbint
   fun assign_factoid (df, acc as (upper, lower)) = let
     val (fk, (fc, d)) = split_dfactoid df
@@ -495,7 +501,7 @@ fun throwaway_redundant_factoids ptree nextstage kont = let
       | GREATER => Array.update(has_low, i, true)
     end
   in
-    Vector.appi appthis (fk, 0, NONE)
+    Vector.appi appthis fk
   end
   val () = dbapp (fn (f,d) => assess (factoid_key f)) ptree
 
@@ -564,14 +570,14 @@ fun exact_var ptree = let
                       else ();
                       Array.update(coeffs_all_zero, i, false))
   in
-    Vector.appi examine_key (factoid_key f, 0, NONE)
+    Vector.appi examine_key (factoid_key f)
   end
   val () = dbapp appthis ptree
   fun check_index (i, b, acc) =
       if b andalso not (Array.sub(coeffs_all_zero,i)) then SOME i else acc
 in
-  case Array.foldli check_index NONE (low_coeffs_unit, 0, NONE) of
-    NONE => Array.foldli check_index NONE (up_coeffs_unit, 0, NONE)
+  case Array.foldli check_index NONE low_coeffs_unit of
+    NONE => Array.foldli check_index NONE up_coeffs_unit
   | x => x
 end
 
@@ -589,14 +595,14 @@ fun least_coeff_var ptree = let
     fun add_in_c (i, ai) =
         Array.update(sums, i, Array.sub(sums, i) + abs ai)
   in
-    Vector.appi add_in_c (dfactoid_key df, 0, NONE)
+    Vector.appi add_in_c (dfactoid_key df)
   end
   val () = dbapp appthis ptree
   fun find_min (i,ai,NONE) = if ai <> Arbint.zero then SOME(i,ai) else NONE
     | find_min (i,ai, acc as SOME(mini, minai)) =
       if Arbint.<(ai, minai) andalso ai <> Arbint.zero then SOME(i,ai) else acc
 in
-  #1 (valOf (Array.foldli find_min NONE (sums, 0, NONE)))
+  #1 (valOf (Array.foldli find_min NONE sums))
 end
 
 (* ----------------------------------------------------------------------

@@ -131,57 +131,18 @@ open Meta;
 end;
 
 
-structure PolyArray = Array;
-structure PolySubstring = Substring;
-structure PolyVector = Vector;
 structure PolyWord8 = Word8;
-structure PolyOS = OS;
-structure PolyTextIO = TextIO;
 structure PolyTimer = Timer;
 (* awfulness to make the environment look like Moscow ML's *)
 
 (* In Poly/ML "before" is 'a * 'b -> 'a and General.before is 'a * unit -> 'a.
    The Basis library says both should be 'a * unit -> 'a, but in Moscow ML,
    before is 'a * 'b -> 'a too.  Ick. *)
-structure Array = struct
-  open PolyArray;
-  fun extract (a, i, jopt) =
-    ArraySlice.vector(ArraySlice.slice(a,i,jopt));
-  fun copyVec {di,dst,len,src,si} =
-    let val v = VectorSlice.vector(VectorSlice.slice(src,si,len));
-    in
-      PolyArray.copyVec {di = di, dst = dst, src = v}
-    end;
-  fun foldli a b (c, 0, NONE) = PolyArray.foldli a b c
-    | foldli a b (c, d, e) = Vector.foldli a b (extract (c, d, e));
-end;
-
-structure Vector = struct
-  open PolyVector;
-  fun mapi a (c, 0, NONE) = PolyVector.mapi a c
-    | mapi a (c, d, e) = VectorSlice.mapi a (VectorSlice.slice (c, d, e));
-  fun foldri a b (c, 0, NONE) = PolyVector.foldri a b c
-    | foldri a b (c, d, e) = VectorSlice.foldri a b (VectorSlice.slice (c, d, e));
-  fun foldli a b (c, 0, NONE) = PolyVector.foldli a b c
-    | foldli a b (c, d, e) = VectorSlice.foldli a b (VectorSlice.slice (c, d, e));
-  fun appi a (c, 0, NONE) = PolyVector.appi a c
-    | appi a (c, d, e) = VectorSlice.appi a (VectorSlice.slice (c, d, e));
-  fun extract (c, d, e) =
-    VectorSlice.vector (VectorSlice.slice (c, d, e))
-end;
 
 structure Word8 = struct
   open PolyWord8;
   fun toLargeWord w =
     Word.fromLargeWord (PolyWord8.toLargeWord w);
-end;
-
-structure OS = struct
-  open PolyOS;
-  structure Path = struct
-    open PolyOS.Path;
-    fun mkAbsolute (a,b) = PolyOS.Path.mkAbsolute {path=a, relativeTo=b};
-  end;
 end;
 
 structure Timer = struct

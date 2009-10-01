@@ -149,13 +149,21 @@ fun termToDimacs0 svm sva t =
 	    (strip_conj t)
 
 (* tail recursive version*)
-fun termToDimacs svm sva clauses numclauses =
-    Array.foldli (fn (ci,c,svm) =>
-	let val (l,svm') = (List.foldl (fn (p,(d,svm)) =>
-				      let val (n,svm') = literalToInt svm sva p
-				      in (n::d,svm') end) ([],svm) (List.rev (strip_disj c)))
-	in (Array.update(numclauses,ci,l);svm') end)
-	    svm (clauses,0,NONE)
+fun termToDimacs svm sva clauses numclauses = let
+  fun foldthis (ci,c,svm) = let
+    fun lfoldfn (p,(d,svm)) = let
+      val (n,svm') = literalToInt svm sva p
+    in
+      (n::d,svm')
+    end
+    val (l,svm') = List.foldl lfoldfn ([],svm) (List.rev (strip_disj c))
+  in
+    Array.update(numclauses,ci,l);
+    svm'
+  end
+in
+  Array.foldli foldthis svm clauses
+end
 
 (*
 ** reference containing prefix used to make variables from numbers
