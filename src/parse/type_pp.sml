@@ -233,7 +233,7 @@ fun pp_type0 (G:grammar) backend = let
             if k <> Kind.typ orelse show_kinds() = 2 then let
                 val p = r <> 0 andalso not (Kind.is_arity k)
               in
-                add_string ":";
+                add_string ": ";
                 pbegin p;
                 Kind.pp_kind pps k;
                 pend p
@@ -250,7 +250,7 @@ fun pp_type0 (G:grammar) backend = let
         let val (s,k,r) = dest_var_type tyv
             val bound = Lib.mem tyv (!btyvars_seen)
             val kd_annot = (* if k = Kind.typ then "" else *)
-                           ":" ^ Kind.kind_to_string k
+                           ": " ^ Kind.kind_to_string k
             val annot = (if bound then TyBV else TyFV)
                         (k, r, s ^ kd_annot)
         in if new then print_skr grav annot (s,k,r)
@@ -261,7 +261,7 @@ fun pp_type0 (G:grammar) backend = let
         let val {Thy, Tyop, Kind, Rank} = dest_thy_con_type tyc
             val fullname = Thy ^ "$" ^ Tyop
             val kd_annot = if Kind = Kind.typ then ""
-                           else ":" ^ Kind.kind_to_string Kind
+                           else ": " ^ Kind.kind_to_string Kind
             val annot = TyOp (fullname ^ kd_annot)
         in print_skr grav annot (fullname,Kind,Rank)
         end

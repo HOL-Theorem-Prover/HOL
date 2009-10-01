@@ -158,6 +158,16 @@ end
 fun token_string (TypeIdent s) = s
   | token_string (TypeVar s) = s
   | token_string (TypeSymbol s) = s
+  | token_string (QTypeIdent (r,s)) = r ^ "$" ^ s
+  | token_string  Comma = ","
+  | token_string  Period = "."
+  | token_string  LParen = "("
+  | token_string  RParen = ")"
+  | token_string  LBracket = "["
+  | token_string  RBracket = "]"
+  | token_string  KindCst  = ":"
+  | token_string  RankCst  = ":<="
+  | token_string (Error t) = base_tokens.toString t
   | token_string _ = raise Fail "token_string of something with no string"
 fun dest_aq (AQ x) = x
   | dest_aq _ = raise Fail "dest_aq of non antiquote token"

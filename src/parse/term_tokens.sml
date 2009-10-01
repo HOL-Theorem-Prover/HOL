@@ -240,6 +240,7 @@ in
 end
 
 fun token_string (Ident s) = s
+  | token_string (QIdent (t,s)) = t ^ "$" ^ s
   | token_string _ = raise Fail "token_string of something with no string"
 fun dest_aq (Antiquote x) = x
   | dest_aq _ = raise Fail "dest_aq of non antiquote token"

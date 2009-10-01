@@ -2176,11 +2176,11 @@ fun pp_raw_type pps ty =
      val pp_kind = Kind.pp_kind pps
      fun pp_kind_rank (kind,rank) =
           ( if kind = typ then ()
-            else (add_string "::"; pp_kind kind);
+            else (add_string ":"; pp_kind kind);
             if rank = 0 then ()
             else add_string ("/"^Lib.int_to_string rank) )
      fun pp (TyAbs(Btyvar,Body)) =
-          ( add_string "(\\:";
+          ( add_string "(\\";
             pp (TyFv Btyvar); add_string dot; add_break(1,0);
             pp Body; add_string ")" )
       | pp (TyAll(Btyvar,Body)) =

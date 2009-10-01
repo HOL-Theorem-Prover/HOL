@@ -28,6 +28,7 @@ loadPath := "/Users/palantir" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 quotation := true;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/bool" :: !loadPath;
+loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/marker" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/HolSat" :: !loadPath;
 
 app load ["Kind","Type","Term","Thm","Theory","Globals","HolKernel","Parse","Unicode"];

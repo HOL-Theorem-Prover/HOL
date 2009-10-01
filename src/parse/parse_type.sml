@@ -74,6 +74,40 @@ fun parse_type (tyfns :
                    " (expects "^Int.toString (num_params st)^")")
       else structure_to_value0 (s,locn) args st
 
+  val left_tokens =
+    let
+      open Redblackset
+      val ts0 = addList(empty String.compare, lambda @ forall)
+      fun gather_from_rule ((level, rule), ts) =
+        case rule of
+          CONSTANT slist => addList(ts, slist)
+        | BINDER slist => addList(ts, Lib.flatten slist)
+        | APPLICATION => add(ts, "(")
+        | _ => ts
+      fun gather_from_rules rs ts =
+        List.foldl gather_from_rule ts rs
+      fun gather_from_abbrev (s, _, ts) = add(ts, s)
+      fun gather_from_abbrevs abvs ts =
+        Binarymap.foldl gather_from_abbrev ts abvs
+    in
+      gather_from_abbrevs abbrevs (gather_from_rules G ts0)
+    end
+
+  fun is_left_token t = let
+    val s = type_tokens.token_string t
+    open Redblackset
+  in
+    case t of
+      TypeIdent s      => member(left_tokens, s)
+    | QTypeIdent (thy,ty) => Lib.can qtyop{Thy=thy,Tyop=ty,Locn=locn.Loc_None,Args=[]}
+    | TypeSymbol s     => member(left_tokens, s)
+    | TypeVar _        => true
+    | LParen           => true
+    | AQ _             => true
+    | _ => false
+  end
+
+
   (* extra fails on next two definitions will effectively make the stream
      push back the unwanted token *)
   (* can't use item for these, because this would require the token type
@@ -147,10 +181,14 @@ let val res =
     case t of
       TypeIdent s => let
         val _ = if is_debug() then print ("const_tyop of " ^ s ^ "\n") else ()
+        open Feedback
       in
         if is_numeric s then generate_fcpbit(s,locn)
         else pType((s,locn),[])
-             handle _ => raise InternalFailure locn (* if s not a known type name *)
+             handle (HOL_ERR {origin_structure="Parse",
+                              origin_function="type parser", ...})
+                    => raise InternalFailure locn (* if s not a known type name *)
+                  | e => (if is_debug() then Raise e else raise e)
       end
     | QTypeIdent(thy,ty) =>  let
         val _ = if is_debug() then print ("const_tyop of " ^ thy ^ "$" ^ ty ^ "\n") else ()
@@ -257,16 +295,22 @@ end
 
   fun parse_atom prse fb = let
     val (adv, (t,locn)) = typetok_of fb
-    val ts = type_tokens.token_string t handle _ => "<unknown>"
-    val _ = if is_debug() then print ("=> parse_atom of " ^ ts ^ "\n") else ()
+    fun ts t = type_tokens.token_string t handle _ => "<unknown>"
+    val _ = if is_debug() then print ("=> parse_atom of " ^ ts t ^ "\n") else ()
+    open Feedback
     fun try_const_tyop(t,locn) =
         let val ty = const_tyop(t,locn) (* may throw InternalFailure *)
-        in (adv(); ty)                  (* if failure, don't adv()   *)
+        in if is_debug() then print ("=> try_const_tyop succeeded on " ^ ts t ^ "\n") else ();
+           (adv(); ty)                  (* if failure, don't adv()   *)
+           handle e => if is_debug() then (print ("try_const_tyop advance failed on " ^ ts t ^ ".\n"); Raise e)
+                                     else raise e
         end
+        handle e => if is_debug() then (print ("try_const_tyop failed on " ^ ts t ^ ".\n"); Raise e)
+                                  else raise e
   in
     case t of
-      LParen => let val (tys,locn) = parse_tuple prse fb
-                in if is_debug() then print ("<= parse_tuple returned "
+      LParen => let val (tys,locn) = parse_tuple prse fb (* may throw InternalFailure *)
+                in if is_debug() then print ("<= parse_atom(paren) returned "
                          ^ Int.toString (length tys) ^ " types\n") else ();
                    tys
                 end
@@ -427,7 +471,7 @@ end
         val ty1 = next_level strm
       in
         case totalify (parse_binop stlist) strm of
-          NONE => (if is_debug() then print "   INFIX (RIGHT) sees no infix\n" else (); ty1)
+          NONE => (if is_debug() then print "   INFIX (RIGHT) sees no infix, returns.\n" else (); ty1)
         | SOME opn => let
                         val (adv, (t,rlocn)) = typetok_of strm
                       in [(if is_debug() then print ("   INFIX (RIGHT) sees an infix " ^
@@ -490,12 +534,28 @@ end
                                         recurse [ty2])
                   | NONE => let
                  val (adv, (t,locn1)) = typetok_of strm
+                 val ts = type_tokens.token_string t
                  val _ = if is_debug() then print ("  APPLICATION looking for operator;\n") else ()
              in
+               if not (is_left_token t) then
+                 (if is_debug() then print "  APPLICATION returns, no operator found.\n" else ();
+                  acc)
+               else
+                 let val ty2 = next_level strm
+                 in if is_debug() then print "  APPLICATION found operator!\n" else ();
+                    recurse [apply_tyop (one locn1 ty2, locn1) acc]
+                 end
+(*
                case totalify next_level strm of
-                 NONE => (if is_debug() then print "  APPLICATION returns.\n" else (); acc)
-               | SOME ty2 => (if is_debug() then print "  APPLICATION found operator!\n" else ();
+                 NONE => (if not (is_debug()) then () else
+                           (print "  APPLICATION returns, no operator found.\n";
+                            if is_left_token t then print ("is_left_token("^ts^") true but no type\n") else ());
+                          acc)
+               | SOME ty2 => (if not (is_debug()) then () else
+                               (print "  APPLICATION found operator!\n";
+                                if is_left_token t then () else print ("is_left_token("^ts^") false but a type\n"));
                               recurse [apply_tyop (one locn1 ty2,locn1) acc])
+*)
              end
           end
       in recurse ty1
