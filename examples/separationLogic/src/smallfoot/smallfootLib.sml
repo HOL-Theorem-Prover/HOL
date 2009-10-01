@@ -35,6 +35,46 @@ quietdec := false;
 *)
 
 
+(*---------------------------------------------------------------------------
+ * Takes the assumptions returned by a CONSEQ_CONV,
+ * tries to simplify them recursively with the same CONSEQ_CONV and
+ * add the results to the assumptions. Assumptions in preserve_hyps are
+ * not simplified.
+ *---------------------------------------------------------------------------*)
+
+fun CONJ_ASSUMPTIONS_CONSEQ_CONV conv preserve_hyp_pred dir t =
+let
+    val thm = conv dir t;
+    val new_hyps = filter (fn t => not (preserve_hyp_pred t)) (hyp thm);
+    val hyp_thms = map (fn h =>
+                       ((SOME (CONJ_ASSUMPTIONS_CONSEQ_CONV conv preserve_hyp_pred CONSEQ_CONV_STRENGTHEN_direction h))
+		        handle HOL_ERR _ => NONE)
+                        handle UNCHANGED => NONE) new_hyps;
+
+    val hyp_thms2 = filter (fn thm_opt => (isSome thm_opt andalso
+					   let val (l,r) = dest_imp (concl (valOf thm_opt)) in (not (l = r)) end handle HOL_ERR _ => false)) hyp_thms;
+    val hyp_thms3 = map (UNDISCH o valOf) hyp_thms2;
+
+    val thm2 = foldr (fn (thm1,thm2) => PROVE_HYP thm1 thm2) thm hyp_thms3;
+
+
+    val new_hyps2 = filter (fn t => not (preserve_hyp_pred t)) (hyp thm2);
+    val thm3 = foldr (fn (t,thm) => SUBST_MATCH (SPEC_ALL AND_IMP_INTRO) (DISCH t thm)) thm2 (new_hyps2);
+    val thm4 = CONV_RULE (RATOR_CONV (REWRITE_CONV [])) thm3
+in
+    thm4
+end;
+
+
+fun CONJ_ASSUMPTIONS_DEPTH_CONSEQ_CONV conv =
+    CONJ_ASSUMPTIONS_CONSEQ_CONV (DEPTH_CONSEQ_CONV conv) (K false)
+
+fun CONJ_ASSUMPTIONS_REDEPTH_CONSEQ_CONV conv =
+    CONJ_ASSUMPTIONS_CONSEQ_CONV (REDEPTH_CONSEQ_CONV conv) (K false)
+
+
+
+
 val time_ref = ref (Time.now());
 fun time_step_init () = time_ref := (Time.now());
 fun time_step m =
@@ -2626,44 +2666,7 @@ fun SMALLFOOT_COND_HOARE_TRIPLE___resort_precond_CONV rl =
 
 
 
-val FINITE_BAG_EMPTY =  CONJUNCT1 bagTheory.FINITE_BAG_THM
-val BAG_IMAGE_EMPTY = GEN_ALL bagTheory.BAG_IMAGE_EMPTY
-
-
-
-fun BAG_IMAGE_CONV___FINITE t =
-   let val (f,b) = dest_BAG_IMAGE t in
-   if (is_EMPTY_BAG b) then
-      let
-         val bag_type = bagSyntax.base_type b
-	 val finite_thm = INST_TYPE [alpha |-> bag_type] FINITE_BAG_EMPTY;
-	 val bag_thm = ISPEC f BAG_IMAGE_EMPTY
-      in
-	 (finite_thm, bag_thm)
-      end
-   else
-      let
-         val (e,b') = bagSyntax.dest_insert b;
-         val t' = mk_BAG_IMAGE f b'
-         val (finite_thm, bag_thm) = BAG_IMAGE_CONV___FINITE t';
-(*
-         val finite_thm = mk_thm ([], ``FINITE_BAG ^b'``);
-         val bag_thm = REFL t';
-*)
-	 val finite_thm2 = SPEC e (MP (ISPEC b' bagTheory.FINITE_BAG_INSERT) finite_thm);
-	 val bag_thm' = MP (ISPECL [f,e,b']
-	       (GEN_ALL bagTheory.BAG_IMAGE_FINITE_INSERT)) finite_thm
-         val bag_thm2 = SUBST_MATCH bag_thm bag_thm'
-      in
-         (finite_thm2, bag_thm2)
-      end
-   end
-
-
-val BAG_IMAGE_CONV = snd o BAG_IMAGE_CONV___FINITE;
-
-
-
+val BAG_IMAGE_CONV = bagLib.BAG_IMAGE_CONV
 
 
 val smallfoot_ap_var_update___THMS =
