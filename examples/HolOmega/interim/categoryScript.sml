@@ -130,6 +130,19 @@ val g_functor_thm = store_thm ("g_functor_thm",
 	    F' (compC g f) = compD (F' g) (F' f)) ``,
     SRW_TAC [] [g_functor_def]) ;
 
+(* composition of g_functors is a g_functor *)
+
+val g_oo_def = Define 
+  `$g_oo (G : ('D, 'E, 'G) g_functor) (F' : ('C, 'D, 'F) g_functor) =
+    \:'a 'b. G o F' [:'a,'b:]`;
+val _ = add_infix("g_oo", 800, HOLgrammars.RIGHT);
+
+val g_functor_oo = store_thm ("g_functor_oo", 
+  ``g_functor (idD, compD) (idE, compE) (G : ('D, 'E, 'G) g_functor) /\
+    g_functor (idC, compC) (idD, compD) (F' : ('C, 'D, 'F) g_functor) ==>
+    g_functor (idC, compC) (idE, compE) (G g_oo F')``,
+    SRW_TAC [] [g_functor_def, g_oo_def]) ;
+
 (* a functor also is a functor between the dual categories;
   but this is a good example of the intricacies of typechecking
   in this area of work, as you have to dualise the functor
