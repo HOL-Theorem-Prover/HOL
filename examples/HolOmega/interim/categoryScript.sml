@@ -30,7 +30,7 @@ val _ = new_theory "category";
 
 val _ = type_abbrev ("id", Type `: \'A. !'a. ('a ('a 'A))`);
 
-val _ = type_abbrev ("comp", Type `: \'A. 
+val _ = type_abbrev ("o_arrow", Type `: \'A. 
   (!'a 'b 'c. ('c ('b 'A)) -> ('b ('a 'A)) -> ('c ('a 'A)))`);
 
 val _ = type_abbrev ("category", Type `: \'A. (!'a. ('a ('a 'A))) # 
@@ -39,7 +39,7 @@ val _ = type_abbrev ("category", Type `: \'A. (!'a. ('a ('a 'A))) #
 val _ = type_abbrev ("C", Type `: \'A 'a 'b. ('b, 'a) 'A`) ;
 
 val category_def = new_definition("category_def", 
-  ``category = \:'A. \ (id: 'A id, comp: 'A comp).
+  ``category = \:'A. \ (id: 'A id, comp: 'A o_arrow).
     (* Left Identity *)
     (!:'a 'b. !(f:'b ('a 'A)). comp id f = f) /\
     (* Right Identity *)
@@ -51,7 +51,7 @@ val category_def = new_definition("category_def",
 (* category_thm can't be done as a definition because 
   new_definition does not yet support `name [:tyvar:] tmvar ... = body` *)
 val category_thm = store_thm ("category_thm", 
-  ``category [:'A:] (id: 'A id, comp: 'A comp) = (
+  ``category [:'A:] (id: 'A id, comp: 'A o_arrow) = (
     (* Left Identity *)
     (!:'a 'b. !(f:'b ('a 'A)). comp id f = f) /\
     (* Right Identity *)
@@ -74,7 +74,7 @@ val category_fun = store_thm ("category_fun",
 (** reversing direction of arrows to form the dual category **)
   
 val dual_comp_def = new_definition ("dual_comp_def",
-  ``dual_comp (comp : 'A comp) : ('A C) comp = 
+  ``dual_comp (comp : 'A o_arrow) : ('A C) o_arrow = 
     (\:'c 'b 'a. \f g. comp [:'a,'b,'c:] g f)``) ;
 
 (* this fails to parse without the type argument to category,
@@ -112,8 +112,8 @@ val _ = type_abbrev ("g_functor_dual",
  ---------------------------------------------------------------------------*)
 
 val g_functor_def = new_definition("g_functor_def", 
-   ``g_functor = \:'C 'D. \ (idC : 'C id, compC : 'C comp) 
-     (idD : 'D id, compD : 'D comp) (F': 'F (('C, 'D) g_functor)).
+   ``g_functor = \:'C 'D. \ (idC : 'C id, compC : 'C o_arrow) 
+     (idD : 'D id, compD : 'D o_arrow) (F': 'F (('C, 'D) g_functor)).
       (* Identity *) 
           (!:'a. F' [:'a, 'a:] idC = idD) /\
       (* Composition *)
@@ -121,8 +121,8 @@ val g_functor_def = new_definition("g_functor_def",
 	    F' (compC g f) = compD (F' g) (F' f)) `` );
 
 val g_functor_thm = store_thm ("g_functor_thm", 
-   ``g_functor [:'C, 'D:] (idC : 'C id, compC : 'C comp) 
-     (idD : 'D id, compD : 'D comp) (F': 'F (('C, 'D) g_functor)) =
+   ``g_functor [:'C, 'D:] (idC : 'C id, compC : 'C o_arrow) 
+     (idD : 'D id, compD : 'D o_arrow) (F': 'F (('C, 'D) g_functor)) =
       (* Identity *) 
           (!:'a. F' [:'a, 'a:] idC = idD) /\
       (* Composition *)
@@ -161,23 +161,23 @@ val _ = type_abbrev ("g_nattransf", ``: \'D 'F 'G. !'a. ('a 'F, 'a 'G) 'D``);
 
 val g_nattransf_prev_def = new_definition("g_nattransf_prev_def", 
    ``g_nattransf_prev = 
-     \ (idD, compD : 'D comp) (phi : ('D, 'F,'G) g_nattransf)
+     \ (idD, compD : 'D o_arrow) (phi : ('D, 'F,'G) g_nattransf)
 	  ( F' : ('C, 'D, 'F) g_functor ) ( G  : ('C, 'D, 'G) g_functor ).
        !:'a 'b. !(h: ('a, 'b) 'C). compD (G h) phi = compD phi (F' h)``) ;
 
 (* the definition g_nattransf_prev_def gave typing problems, 
   including the following rather weird one:
 
-``g_nattransf_prev (idD, dual_comp compD : 'D C comp)
+``g_nattransf_prev (idD, dual_comp compD : 'D C o_arrow)
  (phi : ('D C, 'F,'G) g_nattransf)`` ; (* OK *)
 
-``g_nattransf_prev (idD, dual_comp compD : 'D comp)
+``g_nattransf_prev (idD, dual_comp compD : 'D o_arrow)
  (phi : ('D, 'X,'Y) g_nattransf)`` ; (* OK *)
 
-``g_nattransf_prev (idD, dual_comp compD : 'D C comp)
+``g_nattransf_prev (idD, dual_comp compD : 'D C o_arrow)
  (phi : ('D C, 'F,'G) g_nattransf)`` ; (* OK *)
 
-``g_nattransf_prev (idD, dual_comp compD : 'D C comp)
+``g_nattransf_prev (idD, dual_comp compD : 'D C o_arrow)
  (phi : ('D C, 'X,'Y) g_nattransf)`` handle e => Raise e ; (* fails *)
 
 why should it make a difference whether I use ('F,'G) or ('X,'Y) ??
@@ -185,7 +185,7 @@ why should it make a difference whether I use ('F,'G) or ('X,'Y) ??
 
 val g_nattransf_def = new_definition("g_nattransf_def", 
    ``g_nattransf = \:'D. 
-     \ (idD, compD : 'D comp) (phi : ('D, 'F,'G) g_nattransf)
+     \ (idD, compD : 'D o_arrow) (phi : ('D, 'F,'G) g_nattransf)
 	  ( F' : ('C, 'D, 'F) g_functor ) ( G  : ('C, 'D, 'G) g_functor ).
        !:'a 'b. !(h: ('a, 'b) 'C). compD (G h) phi = compD phi (F' h)``) ;
 
@@ -199,9 +199,9 @@ val g_nattransf_thm = store_thm("g_nattransf_thm",
 *)
 
 val g_nattransf_dual = store_thm ("g_nattransf_dual",
-  ``g_nattransf (idD, compD : 'D comp) (phi : ('D, 'F,'G) g_nattransf)
+  ``g_nattransf (idD, compD : 'D o_arrow) (phi : ('D, 'F,'G) g_nattransf)
       ( F' : ('C, 'D, 'F) g_functor ) ( G  : ('C, 'D, 'G) g_functor ) = 
-    g_nattransf [:'D C:] (idD, dual_comp compD : 'D C comp) 
+    g_nattransf [:'D C:] (idD, dual_comp compD : 'D C o_arrow) 
       phi (g_dual_functor G) (g_dual_functor F')``,
     EQ_TAC THEN 
     SRW_TAC [] [g_nattransf_thm, dual_comp_def, g_dual_functor_def]) ;
