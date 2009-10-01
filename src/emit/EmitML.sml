@@ -1516,6 +1516,12 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
                         ^Lib.quote path)
  end
 
+val emit_xML =
+    (fn info => fn p => fn stuff =>
+                           Feedback.trace ("Unicode", 0)
+                                          (emit_xML info p)
+                                          stuff)
+
 val emitML = emit_xML (false,!sigSuffix,!structSuffix);
 
 val emitCAML = emit_xML (true,!sigCamlSuffix,!structCamlSuffix);
