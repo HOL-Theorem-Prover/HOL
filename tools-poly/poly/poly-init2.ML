@@ -13,8 +13,7 @@ val _ = use "Holmake/ReadHMF.sml";
 local
 
   val redirected_files =
-    ["Portable.sml", "mlibPortable.sml", "mlibOmegaint.sml",
-     "OmegaMLShadow.sml"];
+    ["Portable.sml", "mlibPortable.sml", "mlibOmegaint.sml"];
 
   (* used to stand for "has double quote", but the same analysis is necessary
      even for files that contain single quotes because of the special

@@ -368,7 +368,8 @@ fun readTerms get src =
 exception readDimacsError;
 
 fun genReadDimacs filename =
- let val fullfilename = Path.mkAbsolute(filename, FileSys.getDir())
+ let val fullfilename = Path.mkAbsolute{path = filename,
+                                        relativeTo = FileSys.getDir()}
      val ins          = TextIO.openIn fullfilename
      val res = TextIO.scanStream readTerms ins
  in  (TextIO.closeIn ins;

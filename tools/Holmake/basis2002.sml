@@ -464,30 +464,51 @@ sig
     val sleep : Time.time -> unit
 end
 
-structure OS =
-struct
-  open OS
-  structure Process : OS_PROCESS =
-  struct
-    open Process
-    fun isSuccess x = (x = success)
-    fun unixSleep t = ignore (system ("sleep "^Time.toString t))
-    fun winSleep delay = let
-      fun start_timer() = let
-        val timer = Timer.startRealTimer()
-      in
-        (fn () => Timer.checkRealTimer timer
-            handle Time.Time => Time.zeroTime)
-      end
-      val t = start_timer()
-      fun loop () = if Time.>= (t(), delay) then ()
-                    else loop()
-    in
-      loop()
-    end
-    val sleep = if Systeml.isUnix then unixSleep else winSleep
-  end
+signature OS_PATH =
+sig
+
+exception Path
+exception InvalidArc
+
+val parentArc : string
+val currentArc : string
+
+val fromString : string -> {isAbs : bool, vol : string, arcs : string list}
+val toString : {isAbs : bool, vol : string, arcs : string list} -> string
+
+val validVolume : {isAbs : bool, vol : string} -> bool
+
+val getVolume : string -> string
+val getParent : string -> string
+
+val splitDirFile : string -> {dir : string, file : string}
+val joinDirFile : {dir : string, file : string} -> string
+val dir  : string -> string
+val file : string -> string
+
+val splitBaseExt : string -> {base : string, ext : string option}
+val joinBaseExt : {base : string, ext : string option} -> string
+val base : string -> string
+val ext  : string -> string option
+
+val mkCanonical : string -> string
+val isCanonical : string -> bool
+val mkAbsolute : {path : string, relativeTo : string}
+                   -> string
+val mkRelative : {path : string, relativeTo : string}
+                   -> string
+val isAbsolute : string -> bool
+val isRelative : string -> bool
+val isRoot : string -> bool
+
+val concat : string * string -> string
+
+val fromUnixPath : string -> string
+val toUnixPath : string -> string
+
 end
+
+
 
 structure String = struct
   open String
@@ -853,4 +874,64 @@ struct
   in
     loop 0
   end
+end
+
+structure OS =
+struct
+  open OS
+  structure Process : OS_PROCESS =
+  struct
+    open Process
+    fun isSuccess x = (x = success)
+    fun unixSleep t = ignore (system ("sleep "^Time.toString t))
+    fun winSleep delay = let
+      fun start_timer() = let
+        val timer = Timer.startRealTimer()
+      in
+        (fn () => Timer.checkRealTimer timer
+            handle Time.Time => Time.zeroTime)
+      end
+      val t = start_timer()
+      fun loop () = if Time.>= (t(), delay) then ()
+                    else loop()
+    in
+      loop()
+    end
+    val sleep = if Systeml.isUnix then unixSleep else winSleep
+  end
+
+  structure Path : OS_PATH = struct
+    structure MP = Path
+    open Path
+
+    (* inspired by the mlton 20070826 approach *)
+    val isWindows = MP.validVolume {isAbs = true, vol = "c:"}
+    val slash = if isWindows then "\\" else "/"
+    infix 9 sub
+    val op sub = String.sub
+
+    exception InvalidArc
+    fun mkAbsolute{relativeTo, path} = MP.mkAbsolute(relativeTo,path)
+    fun mkRelative{relativeTo, path} = MP.mkRelative(relativeTo,path)
+    fun isRoot path =
+        case fromString path of
+          {isAbs = true, arcs = [""], ...} => true
+        | _ => false
+
+    fun fromUnixPath s =
+        if not isWindows then s
+        else if Char.contains s (slash sub 0) then raise InvalidArc
+        else String.translate (fn c => if c = #"/" then slash else str c) s
+
+    fun toUnixPath s =
+        if not isWindows then s
+        else
+          let
+            val {arcs, isAbs, vol} = fromString s
+          in
+            if vol <> "" then raise Path
+            else (if isAbs then "/" else "") ^ String.concatWith "/" arcs
+          end
+
+  end (* structure Path *)
 end

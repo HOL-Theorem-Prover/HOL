@@ -84,9 +84,18 @@ end
 
 val negate_key = Vector.map Arbint.~
 
-fun keyhash v =
-    if Arbint.<=(Arbint.zero,Vector.sub(v, 0)) then Polyhash.hash v
-    else ~(Polyhash.hash (Vector.map Arbint.~ v))
+local
+  fun add_hash (i, n, h) =
+    (Arbint.toInt n * i) + h
+
+  fun hash (v : Arbint.int Vector.vector) : int =
+    Vector.foldli add_hash 0 v
+in
+
+fun keyhash (v : Arbint.int Vector.vector) : int =
+    if Arbint.<=(Arbint.zero,Vector.sub(v, 0)) then hash v
+    else ~(hash (Vector.map Arbint.~ v));
+end;
 
 
 (* "prints" factoids *)

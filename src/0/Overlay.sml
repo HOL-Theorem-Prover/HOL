@@ -32,6 +32,7 @@ infix 8 via by;
 
 structure Process = OS.Process
 structure FileSys = OS.FileSys
+structure Path    = OS.Path
 
 structure PP = HOLPP
 

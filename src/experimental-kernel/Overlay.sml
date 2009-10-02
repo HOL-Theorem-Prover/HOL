@@ -18,6 +18,7 @@ structure Term = Term :> FinalTerm where type term = Term.term
 
 structure Process = OS.Process
 structure FileSys = OS.FileSys
+structure Path    = OS.Path
 
 structure PP = HOLPP
 
