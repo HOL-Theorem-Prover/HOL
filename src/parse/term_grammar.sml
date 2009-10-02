@@ -1086,10 +1086,9 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
       val oinfo1 = List.filter (not o uninteresting_overload) oinfo0
       val oinfo = Listsort.sort (String.compare o (#1 ## #1)) oinfo1
       val max =
-        List.foldl (fn (oi,n) => Int.max(String.size (#1 oi),
-                                         n))
-        0
-        oinfo
+        List.foldl (fn (oi,n) => Int.max(UTF8.size (#1 oi), n))
+                   0
+                   oinfo
       fun pr_ov (overloaded_op,
                 (r as {actual_ops,...}:Overload.overloaded_op_info)) =
        let
@@ -1108,7 +1107,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
       in
         begin_block INCONSISTENT 0;
         add_string (overloaded_op^
-                    nblanks (max - String.size overloaded_op)^
+                    nblanks (max - UTF8.size overloaded_op)^
                     " -> ");
         add_break(1,2);
         begin_block INCONSISTENT 0;

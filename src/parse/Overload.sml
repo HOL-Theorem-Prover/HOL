@@ -15,10 +15,6 @@ type nthy_rec = {Name : string, Thy : string}
 
 fun lose_constrec_ty {Name,Ty,Thy} = {Name = Name, Thy = Thy}
 
-(* though term's are stored, the Ty component is there just to
-   tell us what the generic type of a term is, it will never be a
-   specialisation of a polymorphic type *)
-
 type overloaded_op_info = {base_type : Type.hol_type, actual_ops : term list,
                            tyavoids : Type.hol_type list}
 
