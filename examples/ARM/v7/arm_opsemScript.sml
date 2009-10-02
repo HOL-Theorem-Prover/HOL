@@ -19,6 +19,8 @@ val _ = new_theory "arm_opsem";
 
 (* ------------------------------------------------------------------------ *)
 
+val _ = set_trace "Unicode" 0;
+
 val _ = numLib.prefer_num();
 val _ = wordsLib.prefer_word();
 
@@ -199,9 +201,9 @@ val branch_write_pc_def = Define`
            then
              errorT "branch_write_pc: unpredictable"
            else
-             branch_to ii ((31 <> 2) address))
+             branch_to ii ((31 '' 2) address))
        else
-         branch_to ii ((31 <> 1) address))`;
+         branch_to ii ((31 '' 1) address))`;
 
 val bx_write_pc_def = Define`
   bx_write_pc ii (address:word32) =
@@ -209,13 +211,13 @@ val bx_write_pc_def = Define`
     (\iset.
       if iset = InstrSet_ThumbEE then
         if address ' 0 then
-          branch_to ii ((31 <> 1) address)
+          branch_to ii ((31 '' 1) address)
         else
           errorT "bx_write_pc: unpredictable"
       else
         if address ' 0 then
           select_instr_set ii InstrSet_Thumb >>=
-          (\u. branch_to ii ((31 <> 1) address))
+          (\u. branch_to ii ((31 '' 1) address))
         else if ~(address ' 1) then
           select_instr_set ii InstrSet_ARM >>=
           (\u. branch_to ii address)
