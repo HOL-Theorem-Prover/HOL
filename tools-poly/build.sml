@@ -187,10 +187,10 @@ fun bincopy file path =  (* Dead simple file copy - binary version *)
 
 (* create a symbolic link - Unix only *)
 fun link b s1 s2 =
-  let open OS.Process
-  in if isSuccess (SYSTEML ["ln", "-s", s1, s2]) then ()
-     else die ("Unable to link file "^quote s1^" to file "^quote s2^".")
-  end
+    Posix.FileSys.symlink {new = s2, old = s1}
+    handle OS.SysErr (s, _) =>
+           die ("Unable to link old file "^quote s1^" to new file "
+                ^quote s2^": "^s)
 
 (* f is either bincopy or copy *)
 fun update_copy f src dest = let
