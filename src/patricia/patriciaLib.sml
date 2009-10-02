@@ -178,7 +178,7 @@ val ptree_of_nums = foldl (op insert_ptree) Empty;
 fun ptree_of_ints l = foldl (op insert_ptree o (Arbnum.fromInt ## I)) Empty l;
 
 fun custom_pp_term_ptree pp_empty pp_entry i ppstrm t =
-let open PP Portable
+let open Portable
     val {add_break,add_newline,
          add_string,begin_block,end_block,...} = with_ppstream ppstrm
     val pp_empty = pp_empty ppstrm
@@ -209,19 +209,20 @@ in
 end;
 
 fun standard_pp_empty ppstrm (b:bool) =
-  (PP.add_string ppstrm "Empty"; (if b then () else PP.add_break ppstrm (1,1)));
+  (Portable.add_string ppstrm "Empty";
+   (if b then () else Portable.add_break ppstrm (1,1)));
 
 fun standard_pp_entry ppstrm (n, tm) =
-  (PP.add_string ppstrm "|+ (";
+  (Portable.add_string ppstrm "|+ (";
    Arbnum.pp_num ppstrm n;
-   PP.add_string ppstrm ", ";
+   Portable.add_string ppstrm ", ";
    Hol_pp.pp_term ppstrm tm;
-   PP.add_string ppstrm ")");
+   Portable.add_string ppstrm ")");
 
 fun pp_term_ptree ppstrm t =
-  (PP.add_string ppstrm "``";
+  (Portable.add_string ppstrm "``";
    custom_pp_term_ptree standard_pp_empty standard_pp_entry 150 ppstrm t;
-   PP.add_string ppstrm "``");
+   Portable.add_string ppstrm "``");
 
 (* ------------------------------------------------------------------------- *)
 
