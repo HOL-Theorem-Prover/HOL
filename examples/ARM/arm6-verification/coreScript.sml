@@ -249,7 +249,7 @@ val FIELD_def = Define`
       if ~(ireg %% 22) then
         din
       else let a = 8 * w2n oareg in
-        ((a + 7) <> a) din
+        ((a + 7) '' a) din
     else if (ic = ldm) /\ ((is = tn) \/ (is = tm)) \/
             (ic = mrc) /\ (is = t5) then
       din

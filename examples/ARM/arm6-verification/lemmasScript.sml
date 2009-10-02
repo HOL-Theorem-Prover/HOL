@@ -390,7 +390,7 @@ val lem = prove(
     DECIDE ``0 < wl /\ n <= wl - 1 ==> n < wl``]);
 
 val SLICE_ROR_THM = store_thm("SLICE_ROR_THM",
-  `!h l a. ((h <> l) a) #>> l = (h -- l) a`,
+  `!h l a. ((h '' l) a) #>> l = (h -- l) a`,
   REPEAT STRIP_TAC \\ Cases_on `l = 0`
     >> ASM_REWRITE_TAC [WORD_SLICE_BITS_THM,SHIFT_ZERO]
     \\ Cases_on `a`
