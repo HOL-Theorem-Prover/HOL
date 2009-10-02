@@ -36,7 +36,9 @@ val _ = type_abbrev ("o_arrow", Type `: \'A.
 val _ = type_abbrev ("category", Type `: \'A. (!'a. ('a ('a 'A))) # 
   (!'a 'b 'c. ('c ('b 'A)) -> ('b ('a 'A)) -> ('c ('a 'A)))`) ;
 
+(*
 val _ = type_abbrev ("C", Type `: \'A 'a 'b. ('b, 'a) 'A`) ;
+*)
 
 val category_def = new_definition("category_def", 
   ``category = \:'A. \ (id: 'A id, comp: 'A o_arrow).
@@ -130,6 +132,15 @@ val g_functor_thm = store_thm ("g_functor_thm",
 	    F' (compC g f) = compD (F' g) (F' f)) ``,
     SRW_TAC [] [g_functor_def]) ;
 
+(* identity g_functors is a g_functor *)
+
+val g_I_def = Define 
+  `g_I = \:'C. \:'a 'b. I : ('a, 'b) 'C -> ('a, 'b) 'C` ;
+
+val g_functor_I = store_thm ("g_functor_I", 
+  ``g_functor (idC, compC : 'C o_arrow) (idC, compC) (g_I [:'C:])``,
+  SRW_TAC [] [g_functor_thm, g_I_def]) ;
+
 (* composition of g_functors is a g_functor *)
 
 val g_oo_def = Define 
@@ -219,7 +230,7 @@ val q = `g_nattransf_prev (idD, dual_comp compD : 'D C o_arrow)
 
 val g_nattransf_def = new_definition("g_nattransf_def", 
    ``g_nattransf = \:'D. 
-     \ (idD, compD : 'D o_arrow) (phi : ('D, 'F,'G) g_nattransf)
+     \ (idD : 'D id, compD : 'D o_arrow) (phi : ('D, 'F,'G) g_nattransf)
 	  ( F' : ('C, 'D, 'F) g_functor ) ( G  : ('C, 'D, 'G) g_functor ).
        !:'a 'b. !(h: ('a, 'b) 'C). compD (G h) phi = compD phi (F' h)``) ;
 
