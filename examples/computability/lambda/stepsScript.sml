@@ -61,16 +61,12 @@ val csteps_def = Define`
                          @@ (VAR "f" @@ (cnoreduct @@ VAR "u")))))
              @@ VAR "t"))
 `;
-
+(*
 val FV_csteps = store_thm(
   "FV_csteps",
   ``FV csteps = {}``,
   SRW_TAC [][csteps_def, pred_setTheory.EXTENSION, FV_cbnf] THEN
-  SRW_TAC [][]
-
-
-VAR t
-            @@ (LAM
+*)
 
 
 
