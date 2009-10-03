@@ -1469,8 +1469,8 @@ val FV_cbnf_ofk = Store_thm(
   SRW_TAC [][EXTENSION, cbnf_ofk_def]);
 
 val cbnf_of_def = Define`cbnf_of = cbnf_ofk @@ I`
-val FV_cbnf = Store_thm(
-  "FV_cbnf",
+val FV_cbnf_of = Store_thm(
+  "FV_cbnf_of",
   ``FV cbnf_of = {}``,
   SRW_TAC [][cbnf_of_def]);
 
