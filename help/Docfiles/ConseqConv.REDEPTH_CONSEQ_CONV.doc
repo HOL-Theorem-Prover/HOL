@@ -1,4 +1,4 @@
-\DOC DEPTH_CONSEQ_CONV
+\DOC
 
 \TYPE {REDEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv}
 

@@ -1,10 +1,10 @@
-\DOC TRUE_CONSEQ_CONV
+\DOC
 
 \TYPE {TRUE_CONSEQ_CONV : conseq_conv}
 
 \SYNOPSIS
-Given a term {t} of type {bool} this consequence conversion returns the theorem
-{|- t ==> T}.
+Given a term {t} of type {bool} this consequence conversion returns
+the theorem {|- t ==> T}.
 
 \SEEALSO
 ConseqConv.FALSE_CONSEQ_CONV, ConseqConv.REFL_CONSEQ_CONV,

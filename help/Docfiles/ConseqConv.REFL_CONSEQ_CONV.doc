@@ -6,8 +6,8 @@
 ConseqConv
 
 \SYNOPSIS
-Given a term {t} of type {bool} this consequence conversion returns the theorem
-{|- t ==> t}.
+Given a term {t} of type {bool} this consequence conversion returns
+the theorem {|- t ==> t}.
 
 \SEEALSO
 ConseqConv.TRUE_CONSEQ_CONV, ConseqConv.FALSE_CONSEQ_CONV,
