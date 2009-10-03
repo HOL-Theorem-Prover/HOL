@@ -85,16 +85,22 @@ end
 val negate_key = Vector.map Arbint.~
 
 local
-  fun add_hash (i, n, h) =
-    (Arbint.toInt n * i) + h
+  open Arbint
+  fun add_hash (i, n, h) = (n * fromInt i) + h
 
-  fun hash (v : Arbint.int Vector.vector) : int =
-    Vector.foldli add_hash 0 v
+  fun hash (v : Arbint.int Vector.vector) : Arbint.int =
+    Vector.foldli add_hash zero v
+
+  val make_it_fit : Arbint.int -> Int.int =
+      case Int.maxInt of
+        NONE => (fn i => toInt i)
+      | SOME mx => (fn i => toInt (i mod fromInt mx))
 in
 
-fun keyhash (v : Arbint.int Vector.vector) : int =
-    if Arbint.<=(Arbint.zero,Vector.sub(v, 0)) then hash v
-    else ~(hash (Vector.map Arbint.~ v));
+
+fun keyhash (v : Arbint.int Vector.vector) : Int.int =
+    if zero <= Vector.sub(v, 0) then make_it_fit (hash v)
+    else make_it_fit (~(hash (Vector.map Arbint.~ v)))
 end;
 
 
