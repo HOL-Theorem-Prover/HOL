@@ -1,9 +1,9 @@
 
 open HolKernel boolLib bossLib Parse;
-open decompilerLib set_sepTheory;
 open tailrecTheory tailrecLib compilerLib codegen_x86Lib;
 open wordsTheory addressTheory wordsLib arithmeticTheory;
 
+open decompilerLib set_sepTheory;
 
 val _ = new_theory "divide";
 

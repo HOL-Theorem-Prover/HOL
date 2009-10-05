@@ -74,7 +74,7 @@ fun x86_pre_post g s = let
           else if type_of var = ``:word8`` then
             (``~(xM1 a (SOME (w,xDATA_PERM ex)))``,``a:word32``,``w:word8``)
           else if type_of var = ``:word32`` then
-            (``xM a w``,``a:word32``,``w:word32``) else hd []
+            (``xM a w``,``a:word32``,``w:word32``) else fail()
     in (subst [name_tm|->name,var_tm|->var] pattern,
         subst [name_tm|->name,var_tm|->get_assigned_value name var] pattern) end
   val pre_post = map mk_pre_post_assertion xs

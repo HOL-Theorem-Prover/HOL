@@ -75,6 +75,10 @@ val SEP_CLAUSES = store_thm("SEP_CLAUSES",
   \\ SIMP_TAC std_ss [SEP_EXISTS,STAR_def,SEP_DISJ_def,cond_def,SEP_F_def,emp_def]
   \\ SPLIT_TAC);
 
+val SEP_EXISTS_THM = store_thm("SEP_EXISTS_THM",
+ ``(SEP_EXISTS x. p x) s = ?x. p x s``,    
+  SIMP_TAC std_ss [SEP_EXISTS]); 
+
 val SPLIT_LEMMA = prove(
   ``!s t v. SPLIT s (t,v) = (v = s DIFF t) /\ t SUBSET s``,SPLIT_TAC);
 
@@ -121,6 +125,15 @@ val SEP_IMP_STAR = store_thm("SEP_IMP_STAR",
 val SEP_IMP_EQ = store_thm("SEP_IMP_EQ",
   ``!p q. (p = q) = SEP_IMP p q /\ SEP_IMP q p``,
   FULL_SIMP_TAC bool_ss [SEP_IMP_def,FUN_EQ_THM] \\ METIS_TAC []);
+
+val SEP_IMP_EXISTS_EXISTS = store_thm("SEP_IMP_EXISTS_EXISTS",
+  ``(!x. SEP_IMP (p x) (q x)) ==> SEP_IMP ($SEP_EXISTS p) ($SEP_EXISTS q)``,
+  SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS] \\ REPEAT STRIP_TAC 
+  \\ Q.EXISTS_TAC `y` \\ ASM_SIMP_TAC std_ss []);
+
+val SEP_IMP_SEP_HIDE = store_thm("SEP_IMP_SEP_HIDE",
+  ``!p x. SEP_IMP (p x) (~p)``,
+  SIMP_TAC std_ss [SEP_IMP_def,SEP_HIDE_def,SEP_EXISTS_THM] THEN METIS_TAC []);
 
 val SPLIT_EQ = store_thm("SPLIT_EQ",
   ``!s u v. SPLIT s (u,v) = (u SUBSET s) /\ (v = s DIFF u)``,

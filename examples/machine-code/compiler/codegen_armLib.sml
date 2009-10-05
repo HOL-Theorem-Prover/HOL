@@ -40,23 +40,23 @@ val arm_assign2assembly = let
     | binop_to_name ASSIGN_BINOP_AND _ = "and"
     | binop_to_name ASSIGN_BINOP_XOR _ = "xor"
     | binop_to_name ASSIGN_BINOP_OR _ = "orr"
-    | binop_to_name ASSIGN_BINOP_DIV _ = hd []
-    | binop_to_name ASSIGN_BINOP_MOD _ = hd []
+    | binop_to_name ASSIGN_BINOP_DIV _ = fail()
+    | binop_to_name ASSIGN_BINOP_MOD _ = fail()
   fun code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_REG j) reversed =
        if b = ASSIGN_BINOP_MUL then
-         if d = i andalso i = j then hd [] else
+         if d = i andalso i = j then fail() else
            if d = i then code_for_binop d b (ASSIGN_X_REG j) (ASSIGN_X_REG i) (not reversed)
            else [binop_to_name b reversed ^ "? " ^ r d ^ ", " ^ r i ^ ", " ^ r j]
        else [binop_to_name b reversed ^ "? " ^ r d ^ ", " ^ r i ^ ", " ^ r j]
     | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_REG j) reversed =
         code_for_binop d b (ASSIGN_X_REG j) (ASSIGN_X_CONST i) (not reversed)
-    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_CONST j) reversed = hd []
+    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_CONST j) reversed = fail()
     | code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_CONST j) reversed = let
         val code = assign_const_to_reg j i
         in if length code = 1 andalso not (b = ASSIGN_BINOP_MUL) then
              [binop_to_name b reversed ^ "? " ^ r d ^ "," ^
               ((implode o tl o tl o tl o tl o explode o hd) code)]
-           else if d = i then hd [] else
+           else if d = i then fail() else
              assign_const_to_reg j d @
              code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_REG d) reversed
         end
@@ -84,7 +84,7 @@ val arm_assign2assembly = let
     | f (ASSIGN_MEMORY (ACCESS_WORD,a,ASSIGN_X_CONST i)) = assign_const_to_reg i temp @ ["str? " ^ r temp ^ ", " ^ address a]
     | f (ASSIGN_MEMORY (ACCESS_BYTE,a,ASSIGN_X_REG d)) = swpb (a,d)
     | f (ASSIGN_MEMORY (ACCESS_BYTE,a,ASSIGN_X_CONST i)) = assign_const_to_reg i temp2 @ swpb (a,temp2)
-    | f _ = hd []
+    | f _ = fail()
   in f end
 
 fun arm_guard2assembly (GUARD_NOT t) = let
@@ -106,10 +106,10 @@ fun arm_guard2assembly (GUARD_NOT t) = let
         | f (ASSIGN_X_CONST c) = "#" ^ Arbnum.toString c
       val code = ["tst " ^ rd ^ ", " ^ f j]
       in (code, ("eq","ne")) end
-  | arm_guard2assembly (GUARD_EQUAL_BYTE (a,i)) = hd []
+  | arm_guard2assembly (GUARD_EQUAL_BYTE (a,i)) = fail()
   | arm_guard2assembly (GUARD_OTHER tm) = let
       val (t1,t2) = dest_eq tm
-      fun f (ASSIGN_EXP (i,exp)) = (i,exp) | f _ = hd []
+      fun f (ASSIGN_EXP (i,exp)) = (i,exp) | f _ = fail()
       val (i,exp) = f (term2assign t1 t2)
       val t = get_arm_temp_reg ()
       val code = (arm_assign2assembly (ASSIGN_EXP (t, exp)))
@@ -118,7 +118,7 @@ fun arm_guard2assembly (GUARD_NOT t) = let
 
 fun arm_conditionalise c condition = let
   val c' = String.translate (fn x => if x = #"?" then condition else implode [x]) c
-  in if c = c' then hd [] else c' end
+  in if c = c' then fail() else c' end
 
 fun arm_remove_annotations c =
   String.translate (fn x => if x = #"?" then "" else implode [x]) c
@@ -127,7 +127,7 @@ fun arm_cond_code tm =
   (* carry    *) if tm = ``aS1 sC`` then ("cs","cc") else
   (* zero     *) if tm = ``aS1 sZ`` then ("eq","ne") else
   (* negative *) if tm = ``aS1 sN`` then ("mi","pl") else
-  (* overflow *) if tm = ``aS1 sV`` then ("vs","vc") else hd []
+  (* overflow *) if tm = ``aS1 sV`` then ("vs","vc") else fail()
 
 fun arm_encode_instruction s = let
   val tm = mk_comb(``enc``,instructionSyntax.mk_instruction s)

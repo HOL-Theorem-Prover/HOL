@@ -76,7 +76,7 @@ fun DISCH_ALL_AS_SINGLE_IMP th = let
 
 fun remove_primes th = let
   fun last s = substring(s,size s-1,1)
-  fun delete_last_prime s = if last s = "'" then substring(s,0,size(s)-1) else hd []
+  fun delete_last_prime s = if last s = "'" then substring(s,0,size(s)-1) else fail()
   fun foo [] ys i = i
     | foo (x::xs) ys i = let
       val name = (fst o dest_var) x
@@ -91,7 +91,7 @@ fun find_composition1 th1 th2 = let
   val (q,p,ty) = spec_post_and_pre th1 th2
   fun get_match_term tm = get_sep_domain tm
   fun mm x y = get_match_term x = get_match_term y
-  fun fetch_match x [] zs = hd []
+  fun fetch_match x [] zs = fail()
     | fetch_match x (y::ys) zs =
         if mm x y then (y, rev zs @ ys) else fetch_match x ys (y::zs)
   fun partition [] ys (xs1,xs2,ys1) = (rev xs1, rev xs2, rev ys1, ys)
@@ -127,7 +127,7 @@ fun find_composition2 th1 th2 = let
 
 val SPEC_COMPOSE_RULE = find_composition2;
 
-fun LISP_SPEC_COMPOSE_RULE [] = hd []
+fun LISP_SPEC_COMPOSE_RULE [] = fail()
   | LISP_SPEC_COMPOSE_RULE [th] = th
   | LISP_SPEC_COMPOSE_RULE (th1::th2::thms) =
       LISP_SPEC_COMPOSE_RULE ((SPEC_COMPOSE_RULE th1 th2)::thms)
@@ -549,7 +549,7 @@ val (th1,th2,th3) = compilerLib.compile_all ``
 val setup_code =
   map (fn (s,th) => (s,SIMP_RULE std_ss [th2,th3,LET_DEF,SEP_CLAUSES] th)) th1
 
-fun find_thm t [] = hd []
+fun find_thm t [] = fail()
   | find_thm t ((s,th)::xs) = if t = s then th else find_thm t xs
 
 val arm_eval_th = LISP_SPEC_COMPOSE_RULE

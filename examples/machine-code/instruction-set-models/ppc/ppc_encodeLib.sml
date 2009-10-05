@@ -27,7 +27,7 @@ fun ppc_encode s = let
     else if mem name ["SIMM","UIMM","d"] then 16
     else if mem name ["LI"] then 24
     else if mem name ["AA","Rc","OE","y","z"] then 1
-    else hd [];
+    else fail();
   fun fill n s = if size s < n then fill n ("0" ^ s) else s
   fun to_binary n i = let
     val m = Arbnum.pow(Arbnum.fromInt 2, Arbnum.fromInt n)

@@ -32,9 +32,10 @@ val reg_list_ss = eval_term_ss "reg_list" ``REGISTER_LIST (n2w n)``
 fun GENLIST_CONV tm = let
   val (y,z) = dest_comb tm
   val (x,y) = dest_comb y
-  val _ = if numSyntax.is_numeral z then () else hd []
+  val _ = if numSyntax.is_numeral z then () else fail()
   val v = genvar(type_of y)
-  in INST [v|->y] (EVAL (mk_comb(mk_comb(x,v),z))) end handle e => ALL_CONV tm;
+  in INST [v|->y] (EVAL (mk_comb(mk_comb(x,v),z))) end 
+  handle HOL_ERR _ => ALL_CONV tm;
 
 val genlist_ss = conv_term_ss GENLIST_CONV "genlist" ``GENLIST (f:num->'b) x``;
 

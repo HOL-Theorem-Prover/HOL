@@ -36,7 +36,7 @@ val xLISP_def = Define `
        cond (lisp_inv (x1,x2,x3,x4,x5,x6,limit) (r3,r4,r5,r6,r7,r8,a,df,f,s,dm,m,dg,g))`;
 
 fun x86_reg 1 = "eax" | x86_reg 2 = "ecx" | x86_reg 3 = "edx"
-  | x86_reg 4 = "ebx" | x86_reg 5 = "edi" | x86_reg 6 = "esi" | x86_reg _ = hd []
+  | x86_reg 4 = "ebx" | x86_reg 5 = "edi" | x86_reg 6 = "esi" | x86_reg _ = fail()
 
 val _ = set_echo 0;
 
@@ -45,12 +45,12 @@ val _ = set_echo 0;
 
 fun dest_sep_exists tm = let
   val (x,y) = dest_comb tm
-  val _ = if (fst o dest_const) x = "SEP_EXISTS" then () else hd []
+  val _ = if (fst o dest_const) x = "SEP_EXISTS" then () else fail()
   in dest_abs y end;
 
 fun dest_sep_cond tm =
   if (fst o dest_const o fst o dest_comb) tm = "cond"
-  then snd (dest_comb tm) else hd [];
+  then snd (dest_comb tm) else fail();
 
 fun prove_spec th imp def pre_tm post_tm = let
   val (m,p,_,q) = (dest_spec o concl o SPEC_ALL) th
@@ -359,7 +359,7 @@ fun swap_thm 1 = lisp_inv_swap1
   | swap_thm 4 = lisp_inv_swap4
   | swap_thm 5 = lisp_inv_swap5
   | swap_thm 6 = lisp_inv_swap6
-  | swap_thm _ = hd []
+  | swap_thm _ = fail()
 
 fun ARM_LISP_CONST (c,n,task,thc) i = let
   val _ = print "a"
