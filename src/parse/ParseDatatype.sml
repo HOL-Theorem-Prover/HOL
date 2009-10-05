@@ -566,7 +566,8 @@ fun dest_dTyop (dContype {Thy,Tyop,Kind,Rank}) = {Tyop=Tyop, Thy=Thy, Args=[]}
 
 fun qtyop {Tyop, Thy, Locn, Args} =
     dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
-fun tyop ((s,locn), args) = dTyop {Tyop = s, Thy = NONE, Args = args}
+fun tyop ((s,locn), args) =
+    dTyop {Tyop = s,    Thy = NONE,     Args = args}
 
 (* Building the kind parser: *)
 

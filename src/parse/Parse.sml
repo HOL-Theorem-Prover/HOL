@@ -279,17 +279,9 @@ fun remove_ty_aq t =
 (* "qtyop" refers to "qualified" type operator, i.e., qualified by theory name. *)
 
 fun mk_conty{Thy,Tyop,Kind,Rank,Locn} = let
-  open Prekind Prerank Pretype
-(*
-  val kind = toKind Kind
-  val rank = toRank Rank
-  val con = Type.mk_thy_con_type {Thy=Thy,Tyop=Tyop,Kind=kind,Rank=rank}
-  val kind = fromKind (Type.kind_of con)
-  val rank = fromRank (Type.rank_of con)
-*)
+  open Pretype
 in
   PT(Contype {Thy=Thy, Tyop=Tyop, Kind=Kind, Rank=Rank}, Locn)
-  (* PT(Contype {Thy=Thy, Tyop=Tyop, Kind=kind, Rank=rank}, Locn) *)
 end
 
 fun do_qtyop {Thy,Tyop,Locn,Args} =

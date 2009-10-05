@@ -1710,6 +1710,106 @@ fun ty_sub theta ty = let val ty' = type_subst theta ty
 
 
 (*---------------------------------------------------------------------------
+   Full propagation of substitutions. (unnecessary if no type substitutions)
+ ---------------------------------------------------------------------------*)
+
+local
+  fun tyvars_sigma_norm (s,ty) =
+    case ty of
+      TyFv _ => ty
+    | TyBv i =>
+        (case Subst.exp_rel(s,i) of
+           (0, SOME v)   => tyvars_sigma_norm (Subst.id, v)
+         | (lams,SOME v) => tyvars_sigma_norm (Subst.shift(lams,Subst.id),v)
+         | (lams,NONE)   => TyBv lams)
+    | TyApp(Opr,Ty) => TyApp(tyvars_sigma_norm(s, Opr),
+                             tyvars_sigma_norm(s, Ty ))
+    | TyAll(Btyvar,Body) => TyAll(Btyvar, tyvars_sigma_norm (Subst.lift(1,s),
+                                                             Body))
+    | TyAbs(Btyvar,Body) => TyAbs(Btyvar, tyvars_sigma_norm (Subst.lift(1,s),
+                                                             Body))
+    | _ => ty  (* i.e., a const *)
+in
+fun norm_clos ty = tyvars_sigma_norm(Subst.id,ty)
+end
+
+(*---------------------------------------------------------------------------*
+ *  Raw syntax prettyprinter for types.                                      *
+ *---------------------------------------------------------------------------*)
+
+val dot     = "."
+val dollar  = "$"
+val percent = "%";
+
+fun pp_raw_type pps ty =
+ let open Portable
+     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+     val pp_kind = Kind.pp_kind pps
+     fun pp_kind_rank (kind,rank) =
+          ( if kind = typ then ()
+            else (add_string ":"; pp_kind kind);
+            if rank = 0 then ()
+            else add_string ("/"^Lib.int_to_string rank) )
+     fun pp (TyAbs(Btyvar,Body)) =
+          ( add_string "(\\";
+            pp (TyFv Btyvar); add_string dot; add_break(1,0);
+            pp Body; add_string ")" )
+      | pp (TyAll(Btyvar,Body)) =
+          ( add_string "(!";
+            pp (TyFv Btyvar); add_string dot; add_break(1,0);
+            pp Body; add_string ")" )
+      | pp (TyApp(Rator as TyApp(TyCon(id,_,_),Rand1),Rand2)) =
+          if KernelSig.name_of id = "fun"
+          then
+          ( add_string "("; pp Rand1;
+            add_string " ->"; add_break(1,0);
+            pp Rand2; add_string ")" )
+          else
+          ( add_string "("; pp Rand2; add_break(1,0);
+                            pp Rator; add_string ")")
+      | pp (ty as TyApp(Rator,Rand)) =
+          let val (c,args) = strip_app_type ty
+          in if length args = 1 then
+          ( add_string "("; pp Rand; add_break(1,0);
+                            pp Rator; add_string ")")
+             else
+          ( add_string "(("; pps args; add_string ")";
+            add_break(1,0); pp c; add_string ")" )
+          end
+      | pp (TyBv i) = add_string (dollar^Lib.int_to_string i)
+      | pp (TyFv (name,kind,rank)) =
+         ( add_string name;
+           pp_kind_rank (kind,rank) )
+      | pp (TyCon (id,kind,rank)) =
+         ( add_string ( (* seg_of id^dollar^ *) KernelSig.name_of id);
+           pp_kind_rank (kind,rank) )
+    and pps [] = ()
+      | pps [ty] = pp ty
+      | pps (ty :: tys) = (pp ty; add_string ",";
+                           add_break(0,0); pps tys)
+ in
+   begin_block INCONSISTENT 0;
+   add_string "`:";
+   pp (norm_clos ty);
+   add_string "`";
+   end_block()
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Send the results of prettyprinting to a string                            *)
+(*---------------------------------------------------------------------------*)
+
+fun sprint pp x = HOLPP.pp_to_string 80 pp x
+
+val type_to_string = sprint pp_raw_type;
+
+(*
+val _ = installPP Kind.pp_kind;
+val _ = installPP pp_raw_type;
+*)
+
+
+(*---------------------------------------------------------------------------
        Higher order matching (from jrh via Michael Norrish - June 2001)
        Adapted to HOL-Omega types by PVH - July 18, 2008
  ---------------------------------------------------------------------------*)
@@ -1891,6 +1991,10 @@ fun all_abconv [] [] = true
   | all_abconv _ [] = false
   | all_abconv (h1::t1) (h2::t2) = eq_ty h1 h2 andalso all_abconv t1 t2
 
+fun remove_operator vhop insts =
+  filter (fn {redex, residue} =>
+          not (eq_ty vhop (fst (strip_app_type redex)))) insts
+
 
 fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
   (* local constants of kinds and types never change *)
@@ -1972,7 +2076,45 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
              end
            in
              homatch rkin kdins (ni,tl homs)
-           end) handle HOL_ERR _ => (let
+           end) handle HOL_ERR _ => (
+                       let
+                         val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
+                         val _ = if eq_ty vhop chop then raise NOT_FOUND else ()
+                         val vhop_inst = [vhop |-> chop]
+                         val vty1 = deep_beta_ty (type_subst vhop_inst vty)
+                       in
+                         if eq_ty vty1 cty then
+                           (* drop this hom as subsumed by current insts *)
+                           homatch rkin kdins (insts,tl homs)
+                         else let
+                           val insts0 = remove_operator vhop insts
+                           val insts' = (vhop |-> vhop) :: insts0
+                           val (vhop_str,_,_) = dest_var_type vhop
+(*
+                           val _ = print ("Type matching: freezing type operator " ^ vhop_str ^ "\n")
+                           val _ = print ("  Matching " ^ type_to_string vty1 ^ "\n" ^
+                                          "        to " ^ type_to_string cty  ^ "\n")
+*)
+                         in let
+                           val pinsts_homs' =
+                             type_pmatch lconsts env vty1 cty (insts', [] (* note NOT tl homs! *))
+                           val (rkin',kdins') =
+                             get_rank_kind_insts kdavoids env
+                                        (fst pinsts_homs')
+                                        (0, ([], []))
+                           val new_insts = homatch rkin' kdins' pinsts_homs'
+                        (* val _ = print ("Freezing type operator " ^ vhop_str ^ " succeeded!\n"); *)
+                           val insts' = (vhop |-> chop) :: remove_operator vhop new_insts
+                         in
+                           homatch rkin' kdins' (insts', tl homs)
+                         end
+                         handle e => ( (* print ("Freezing type operator " ^ vhop_str ^ " failed:" ^
+                                                          Feedback.exn_to_string e ^ "\n"); *)
+                                       raise NOT_FOUND)
+                         end
+                       end
+(*
+                       let
                          val vhop' = inst_fn vhop
                          val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
                          val _ = if eq_ty vhop' chop then raise NOT_FOUND else ()
@@ -1983,6 +2125,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                            homatch rkin kdins (insts,tl homs)
                          else raise NOT_FOUND
                        end
+*)
                 handle NOT_FOUND => let
                          val (lc,rc) = dest_app_type cty
                          val (lv,rv) = dest_app_type vty
@@ -2109,31 +2252,6 @@ fun ty_sub theta ty = let val ty' = type_subst theta ty
                       end;
 
 
-(*---------------------------------------------------------------------------
-   Full propagation of substitutions. (unnecessary if no type substitutions)
- ---------------------------------------------------------------------------*)
-
-local
-  fun tyvars_sigma_norm (s,ty) =
-    case ty of
-      TyFv _ => ty
-    | TyBv i =>
-        (case Subst.exp_rel(s,i) of
-           (0, SOME v)   => tyvars_sigma_norm (Subst.id, v)
-         | (lams,SOME v) => tyvars_sigma_norm (Subst.shift(lams,Subst.id),v)
-         | (lams,NONE)   => TyBv lams)
-    | TyApp(Opr,Ty) => TyApp(tyvars_sigma_norm(s, Opr),
-                             tyvars_sigma_norm(s, Ty ))
-    | TyAll(Btyvar,Body) => TyAll(Btyvar, tyvars_sigma_norm (Subst.lift(1,s),
-                                                             Body))
-    | TyAbs(Btyvar,Body) => TyAbs(Btyvar, tyvars_sigma_norm (Subst.lift(1,s),
-                                                             Body))
-    | _ => ty  (* i.e., a const *)
-in
-fun norm_clos ty = tyvars_sigma_norm(Subst.id,ty)
-end
-
-
 (*---------------------------------------------------------------------------*
  *       Does a type contain unbound "bound variables" (Bv's)?               *
  *---------------------------------------------------------------------------*)
@@ -2161,80 +2279,5 @@ fun size acc tylist =
       end
 
 fun type_size ty = size 0 [[ty]]
-
-(*---------------------------------------------------------------------------*
- *  Raw syntax prettyprinter for types.                                      *
- *---------------------------------------------------------------------------*)
-
-val dot     = "."
-val dollar  = "$"
-val percent = "%";
-
-fun pp_raw_type pps ty =
- let open Portable
-     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-     val pp_kind = Kind.pp_kind pps
-     fun pp_kind_rank (kind,rank) =
-          ( if kind = typ then ()
-            else (add_string ":"; pp_kind kind);
-            if rank = 0 then ()
-            else add_string ("/"^Lib.int_to_string rank) )
-     fun pp (TyAbs(Btyvar,Body)) =
-          ( add_string "(\\";
-            pp (TyFv Btyvar); add_string dot; add_break(1,0);
-            pp Body; add_string ")" )
-      | pp (TyAll(Btyvar,Body)) =
-          ( add_string "(!";
-            pp (TyFv Btyvar); add_string dot; add_break(1,0);
-            pp Body; add_string ")" )
-      | pp (TyApp(Rator as TyApp(TyCon(id,_,_),Rand1),Rand2)) =
-          if KernelSig.name_of id = "fun"
-          then
-          ( add_string "("; pp Rand1;
-            add_string " ->"; add_break(1,0);
-            pp Rand2; add_string ")" )
-          else
-          ( add_string "("; pp Rand2; add_break(1,0);
-                            pp Rator; add_string ")")
-      | pp (ty as TyApp(Rator,Rand)) =
-          let val (c,args) = strip_app_type ty
-          in if length args = 1 then
-          ( add_string "("; pp Rand; add_break(1,0);
-                            pp Rator; add_string ")")
-             else
-          ( add_string "(("; pps args; add_string ")";
-            add_break(1,0); pp c; add_string ")" )
-          end
-      | pp (TyBv i) = add_string (dollar^Lib.int_to_string i)
-      | pp (TyFv (name,kind,rank)) =
-         ( add_string name;
-           pp_kind_rank (kind,rank) )
-      | pp (TyCon (id,kind,rank)) =
-         ( add_string ( (* seg_of id^dollar^ *) KernelSig.name_of id);
-           pp_kind_rank (kind,rank) )
-    and pps [] = ()
-      | pps [ty] = pp ty
-      | pps (ty :: tys) = (pp ty; add_string ",";
-                           add_break(0,0); pps tys)
- in
-   begin_block INCONSISTENT 0;
-   add_string "`:";
-   pp (norm_clos ty);
-   add_string "`";
-   end_block()
- end;
-
-(*---------------------------------------------------------------------------*)
-(* Send the results of prettyprinting to a string                            *)
-(*---------------------------------------------------------------------------*)
-
-fun sprint pp x = HOLPP.pp_to_string 80 pp x
-
-val type_to_string = sprint pp_raw_type;
-
-(*
-val _ = installPP Kind.pp_kind;
-val _ = installPP pp_raw_type;
-*)
 
 end (* Type *)

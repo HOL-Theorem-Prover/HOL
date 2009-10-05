@@ -205,27 +205,6 @@ val g_nattransf_prev_def = new_definition("g_nattransf_prev_def",
  (phi : ('D C, 'X,'Y) g_nattransf)`` handle e => Raise e ; (* fails *)
 
 why should it make a difference whether I use ('F,'G) or ('X,'Y) ??
-
-val ty1 = Type
-`:(((!'a 'b 'c. (('c,'b) 'D:ar 2) -> (('b,'a) 'D:ar 2) -> (('c,'a) 'D:ar 2))
-    # 'd) ->
-   ((!'a. ((('a 'Y:ar 1),('a 'X:ar 1)) 'D:ar 2)) ->
-    (!'a 'b. ((('a,'b) 'e:ar 2) -> ((('b 'X:ar 1),('a 'X:ar 1)) 'D:ar 2))) ->
-    (!'a 'b. ((('a,'b) 'e:ar 2) -> ((('b 'Y:ar 1),('a 'Y:ar 1)) 'D:ar 2))) -> bool
-   )
-  )`;
-
-val c0 = prim_mk_const {Thy="category", Name="g_nattransf_prev"};
-val ty0 = type_of c0;
-kind_match_type ty0 ty1 handle e => Raise e ; (* fails *)
-
-val tm2 = ``g_nattransf_prev (idD, dual_comp compD : 'D C o_arrow)
-            (phi : ('D C, 'F,'G) g_nattransf)``;
-val tm3 = inst [``:'F`` |-> ``:'X``, ``:'G`` |-> ``:'Y``] tm2;
-
-val q = `g_nattransf_prev (idD, dual_comp compD : 'D C o_arrow)
- (phi : ('D C, 'X,'Y) g_nattransf)` : term frag list;
-
 *) 
 
 val g_nattransf_def = new_definition("g_nattransf_def", 
