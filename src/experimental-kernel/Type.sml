@@ -1735,6 +1735,9 @@ val _ = installPP pp_raw_type;
 
 local
   fun MERR s = raise ERR "raw_match_type error" s
+  val trace_complex_matching = ref 0
+  val _ = Feedback.register_trace ("Type.trace_complex_matching",
+                                   trace_complex_matching, 1)
   exception NOT_FOUND
   val eq_ty = abconv_ty (* beta-reduction NOT ASSUMMED before entering these functions *)
   fun find_residue red [] = raise NOT_FOUND
@@ -1903,9 +1906,23 @@ fun all_abconv [] [] = true
   | all_abconv _ [] = false
   | all_abconv (h1::t1) (h2::t2) = eq_ty h1 h2 andalso all_abconv t1 t2
 
-fun remove_operator vhop insts =
-  filter (fn {redex, residue} =>
-          not (eq_ty vhop (fst (strip_app_type redex)))) insts
+fun split_insts vhops insts =
+  partition (fn {redex, residue} =>
+             op_mem eq_ty (fst (strip_app_type redex)) vhops) insts
+
+fun freeze_operators vhops insts =
+  List.foldr (fn (ty,insts) => safe_insert_tya (ty |-> ty) insts) insts vhops
+
+fun print_insts str insts =
+  (print (str ^ " insts:\n");
+   print_insts0 insts)
+and
+    print_insts0 [] = ()
+  | print_insts0 (inst::insts) = (print_inst inst; print_insts0 insts)
+and
+    print_inst {redex,residue} =
+             print ("   " ^ type_to_string redex ^
+                    " |-> " ^ type_to_string residue ^ "\n") ;
 
 
 fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
@@ -1999,14 +2016,23 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                            (* drop this hom as subsumed by current insts *)
                            homatch rkin kdins (insts,tl homs)
                          else let
-                           val insts0 = remove_operator vhop insts
-                           val insts' = (vhop |-> vhop) :: insts0
+                           val pat_tyvars = op_subtract eq_ty (type_vars vty) [vhop]
+                           val freeze_tyvars = type_vars chop
+                           val (rel_insts,irrel_insts) = split_insts pat_tyvars insts
+                           val (insts0,_) = split_insts freeze_tyvars rel_insts
+                           val insts' = freeze_operators freeze_tyvars rel_insts
+                                        handle HOL_ERR _ => raise NOT_FOUND
+                                               (* conflicts with existing inst *)
                            val (vhop_str,_,_) = dest_var_type vhop
-(*
-                           val _ = print ("Type matching: freezing type operator " ^ vhop_str ^ "\n")
-                           val _ = print ("  Matching " ^ type_to_string vty1 ^ "\n" ^
-                                          "        to " ^ type_to_string cty  ^ "\n")
-*)
+                           val _ = if !trace_complex_matching = 0 then () else
+                                     (print ("Type matching: expanding type operator " ^ vhop_str ^ "\n");
+                                      print ("  Matching " ^ type_to_string vty1 ^ "\n" ^
+                                             "        to " ^ type_to_string cty  ^ "\n");
+                                      print_insts "all original" insts;
+                                      print_insts "relevant" rel_insts;
+                                      print_insts "irrelevant" irrel_insts;
+                                      print_insts "pre-freeze" insts0;
+                                      print_insts "subproblem" insts')
                          in let
                            val pinsts_homs' =
                              type_pmatch lconsts env vty1 cty (insts', [] (* note NOT tl homs! *))
@@ -2015,14 +2041,21 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                                         (fst pinsts_homs')
                                         (0, ([], []))
                            val new_insts = homatch rkin' kdins' pinsts_homs'
-                        (* val _ = print ("Freezing type operator " ^ vhop_str ^ " succeeded!\n"); *)
-                           val insts' = (vhop |-> chop) :: remove_operator vhop new_insts
+                           val (ninsts0,ninsts1) = split_insts freeze_tyvars new_insts
+                           val insts' = insts0 @ ninsts1 @ irrel_insts
+                           val _ = if !trace_complex_matching = 0 then () else
+                                     (print ("Expanding type operator " ^ vhop_str ^ " succeeded!\n");
+                                      print_insts "subproblem yielded" new_insts;
+                                      print_insts "non-frozen new" ninsts1;
+                                      print_insts "final result" insts';
+                                      print "\n")
                          in
                            homatch rkin' kdins' (insts', tl homs)
                          end
-                         handle e => ( (* print ("Freezing type operator " ^ vhop_str ^ " failed:" ^
-                                                          Feedback.exn_to_string e ^ "\n"); *)
-                                       raise NOT_FOUND)
+                         handle e => (if !trace_complex_matching = 0 then () else
+                                         print ("Expanding type operator " ^ vhop_str ^ " failed:" ^
+                                                Feedback.exn_to_string e ^ "\n");
+                                      raise NOT_FOUND)
                          end
                        end
 (*
