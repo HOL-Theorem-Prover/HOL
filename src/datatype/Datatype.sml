@@ -1082,13 +1082,15 @@ fun primHol_datatype db q =
 
  ---------------------------------------------------------------------------*)
 
-val (type_to_string, term_to_string) =
- let
+val (type_to_string, term_to_string) = let
   val (pty, ptm) = print_from_grammars boolTheory.bool_grammars
- in
-  ((fn ty => ":" ^ PP.pp_to_string 70 pty ty), PP.pp_to_string 70 ptm)
- end;
-
+  fun sanitise f =
+      f |> Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
+        |> trace ("Unicode", 0)
+in
+  (sanitise (fn ty => ":" ^ PP.pp_to_string 70 pty ty),
+   sanitise (PP.pp_to_string 70 ptm))
+end;
 
 fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
   | adjoin (string_etc0 :: strings_etc) =
@@ -1101,7 +1103,7 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
           fun do_size NONE = (S "         size = NONE,"; NL())
             | do_size (SOME (c,s)) =
                let val strc = String.concat
-                     ["(", term_to_string c, ") ",type_to_string (type_of c)]
+                     ["(", term_to_string c, ") ", type_to_string (type_of c)]
                    val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
                in S ("         size="^line); NL();
                   S ("                   "^s^"),")

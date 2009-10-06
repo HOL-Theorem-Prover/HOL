@@ -230,7 +230,8 @@ fun minprint t = let
     val t_str =
         String.toString
           (trace ("types", 1)
-                 (PP.pp_to_string 1000000 (#2 (print_from_grammars g0)))
+                 (trace ("Unicode", 0)
+                        (PP.pp_to_string 1000000 (#2 (print_from_grammars g0))))
                  t)
   in
     String.concat ["(#2 (parse_from_grammars min_grammars)",
