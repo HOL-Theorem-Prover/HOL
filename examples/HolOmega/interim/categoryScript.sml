@@ -144,10 +144,40 @@ val g_functor_I = store_thm ("g_functor_I",
 (* composition of g_functors is a g_functor *)
 
 val g_oo_def = Define 
-  `$g_oo (G : ('D, 'E, 'G) g_functor) (F' : ('C, 'D, 'F) g_functor) =
-    \:'a 'b. G o F' [:'a,'b:]`;
+  `$g_oo = \: 'C 'D 'E. 
+    \ (G : ('D, 'E, 'G) g_functor) (F' : ('C, 'D, 'F) g_functor).
+    \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]` ;
 val _ = add_infix("g_oo", 800, HOLgrammars.RIGHT);
 
+val g_oo_thm = store_thm ("g_oo_thm",
+  ``G g_oo F' = \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]``,
+  EVERY [(REWRITE_TAC [g_oo_def]), TY_BETA_TAC, BETA_TAC, REFL_TAC ]) ;
+
+val tmo = ``$g_oo G F' = \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]`` ;
+val tmw = ``$g_oo [:'C,'D,'E:] G F' =
+  \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]`` ;
+
+val ng_oo_def = Define 
+  `ng_oo = \: 'C 'D 'E. 
+    \ (G : ('D, 'E, 'G) g_functor) (F' : ('C, 'D, 'F) g_functor).
+    \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]` ;
+
+val ng_oo_thm = store_thm ("ng_oo_thm",
+  ``ng_oo G F' = \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]``,
+  EVERY [(REWRITE_TAC [ng_oo_def]), TY_BETA_TAC, BETA_TAC, REFL_TAC ]) ;
+
+val tmno = ``ng_oo G F' = \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]`` ;
+val tmnw = ``ng_oo [:'C,'D,'E:] G F' =
+  \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]`` ;
+
+(*
+show_types := true ;
+show_types := false ;
+handle e => Raise e ;
+set_goal ([], it) ;
+val (sgs, goal) = top_goal () ;
+*)
+  
 val g_functor_oo = store_thm ("g_functor_oo", 
   ``g_functor (idD, compD) (idE, compE) (G : ('D, 'E, 'G) g_functor) /\
     g_functor (idC, compC) (idD, compD) (F' : ('C, 'D, 'F) g_functor) ==>
@@ -171,6 +201,19 @@ val g_functor_dual = store_thm ("g_functor_dual",
       ((idD, dual_comp compD) : 'D C category) (g_dual_functor F') ``,
   EQ_TAC THEN
   SRW_TAC [] [g_functor_def, g_dual_functor_def, dual_comp_def]) ;
+
+(* but note, 
+  ``g_dual_functor (g_I [:'C C:]) = g_I [:'C:]``
+  fails parsing, how do we annotate this to make it work?? *)
+
+val g_I_dual = store_thm ("g_I_dual",
+  ``g_dual_functor (g_I [:'C:]) = g_I [:'C C:]``,
+  SRW_TAC [] [g_dual_functor_def, g_I_def]) ;
+  
+val g_oo_dual = store_thm ("g_oo_dual",
+  ``g_dual_functor ($g_oo [:'C,'D,'E:] G F') =
+    $g_oo [:'C C,'D C,'E C:] (g_dual_functor G) (g_dual_functor F')``,
+  SRW_TAC [] [g_dual_functor_def, g_oo_thm]) ;
 
 (*---------------------------------------------------------------------------
             Natural transformation type abbreviation

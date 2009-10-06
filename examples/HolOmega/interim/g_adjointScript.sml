@@ -9,6 +9,9 @@ open categoryTheory KmonadTheory ;
 load "auxLib" ;
 load "g_adjointTheory" ; open g_adjointTheory ;
 fun sge tm = set_goal ([], tm) ;
+fun eev tacs = e (EVERY tacs) ;
+fun eall [] = () 
+  | eall (t :: ts) = (e t ; eall ts) ;
 *)
 (*
 open monadTheory ;
@@ -151,7 +154,7 @@ val g_adjf1_hash_comp' = prove (tmhc,
     (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP (GSYM categoryD_assoc) th])),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC
       [(REWRITE_RULE [o_THM, I_THM] o TY_BETA_RULE o REWRITE_RULE
-      [g_oo_def, g_I_def] o MATCH_MP g_nattransfD) th])),
+      [g_oo_thm, g_I_def] o MATCH_MP g_nattransfD) th])),
     (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP categoryD th])),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_adjf1DGh th])) ]) ;
 
@@ -217,7 +220,7 @@ val g_adjf1_Feq_nt = store_thm ("g_adjf1_Feq_nt", tmfee,
   EVERY [ STRIP_TAC, EQ_TAC, STRIP_TAC] 
   THENL [
     EVERY [
-      (ASM_REWRITE_TAC [g_nattransf_thm, g_oo_def, g_I_def]),
+      (ASM_REWRITE_TAC [g_nattransf_thm, g_oo_thm, g_I_def]),
       TY_BETA_TAC, (REWRITE_TAC [o_THM, I_THM]), BETA_TAC,
       (REPEAT STRIP_TAC),
       (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP g_adjf1DGh)) ],
@@ -303,11 +306,26 @@ val ETA_EPS_dual = store_thm ("ETA_EPS_dual",
   EVERY [ (REWRITE_TAC [ETA_thm, EPS_def]), TY_BETA_TAC,
     (REWRITE_TAC [UNCURRY_DEF]), BETA_TAC, REFL_TAC ]) ;
 
+val EPS_ETA_dual = store_thm ("EPS_ETA_dual",
+  ``(EPS [:'C, 'D:] ((idC, compC) : 'C category) hash =
+    (ETA [:'C C, 'D C:] (idC, dual_comp compC) hash))``,
+  EVERY [ (REWRITE_TAC [ETA_def, EPS_thm]), TY_BETA_TAC,
+    (REWRITE_TAC [UNCURRY_DEF]), BETA_TAC, REFL_TAC ]) ;
+
 val HASH_STAR_dual = store_thm ("HASH_STAR_dual",
   ``HASH [:'C, 'D:] (idD,compD) F' eps =
     STAR [:'C C, 'D C:] (idD, dual_comp compD) (g_dual_functor F') eps``,
   EVERY [
     (REWRITE_TAC [HASH_thm, STAR_def, dual_comp_def, g_dual_functor_def]), 
+    (CONV_TAC (REDEPTH_CONV
+      (REWR_CONV UNCURRY_DEF ORELSEC TY_BETA_CONV ORELSEC BETA_CONV))),
+    REFL_TAC ]) ;
+
+val STAR_HASH_dual = store_thm ("STAR_HASH_dual",
+  ``STAR [:'D, 'C:] (idC,compC) G eta =
+    HASH [:'D C, 'C C:] (idC, dual_comp compC) (g_dual_functor G) eta``,
+  EVERY [
+    (REWRITE_TAC [HASH_def, STAR_thm, dual_comp_def, g_dual_functor_def]), 
     (CONV_TAC (REDEPTH_CONV
       (REWR_CONV UNCURRY_DEF ORELSEC TY_BETA_CONV ORELSEC BETA_CONV))),
     REFL_TAC ]) ;
@@ -354,7 +372,7 @@ val tment = ``adjf1_conds [:'C:] (idC, compC) (idD,compD) eta F' G /\
 
 val g_adjf1_eta_nt = store_thm ("g_adjf1_eta_nt", tment, 
   EVERY [DISCH_TAC,
-    (REWRITE_TAC [g_nattransf_def, EPS_thm, g_oo_def, g_I_def, o_DEF]),
+    (REWRITE_TAC [g_nattransf_def, EPS_thm, g_oo_thm, g_I_def, o_DEF]),
     (CONV_TAC (REDEPTH_CONV
       (REWR_CONV UNCURRY_DEF ORELSEC TY_BETA_CONV ORELSEC BETA_CONV))),
     (FIRST_ASSUM (fn th => 
@@ -389,24 +407,24 @@ set_goal ([], it) ;
 val (sgs, goal) = top_goal () ;
 *)
 
-(*
+(* prove g_adjf2_3 by duality from g_adjf1_3 *)
 val tm23 = ``g_nattransf (idD,compD) eps (F' g_oo G) (g_I [:'D:]) /\
        category (idD,compD) /\ g_functor (idC,compC) (idD,compD) F' /\
        g_adjf2 (idD, compD) F' eps star ==> 
        g_adjf3 (idC, compC) (idD,compD) F' G (ETA (idD, compD) star) eps`` ;
 
-set_goal ([], tm23) ;
-e (REWRITE_TAC [g_adjf12_dual]) ;
-e (STRIP_TAC) ;
-e (CONV_TAC (REWR_CONV g_adjf3_dual)) ;
-e (REWRITE_TAC [ETA_EPS_dual]) ;
-e (MATCH_MP_TAC g_adjf1_3) ; (* hangs - why ? *)
-
-val (sgs, goal) = top_goal () ;
-PART_MATCH (snd o dest_imp) g_adjf1_3 goal ; (* also hangs *)
-PART_MATCH I (REFL ``x``) goal handle e => Raise e ;
- 
-*)
+val g_adjf2_3 = store_thm ("g_adjf2_3", tm23,
+  EVERY [ (REWRITE_TAC [g_adjf12_dual]), (STRIP_TAC),
+    (CONV_TAC (REWR_CONV g_adjf3_dual)),
+    (REWRITE_TAC [ETA_EPS_dual]),
+    (MATCH_MP_TAC g_adjf1_3), 
+    (REWRITE_TAC [adjf1_conds_def]),
+    (CONV_TAC (REDEPTH_CONV
+      (REWR_CONV UNCURRY_DEF ORELSEC TY_BETA_CONV ORELSEC BETA_CONV))),
+    (ASM_REWRITE_TAC (map GSYM [g_functor_dual, category_dual])),
+    (FIRST_X_ASSUM (ASSUME_TAC o 
+      MATCH_MP (fst (EQ_IMP_RULE g_nattransf_dual)))),
+    (FIRST_ASSUM (ACCEPT_TAC o REWRITE_RULE [g_I_dual, g_oo_dual])) ]) ;
 
 val g_adjf3_1 = store_thm ("g_adjf3_1",
   ``g_adjf3 (idC, compC) (idD,compD) F' G eta eps =
@@ -447,14 +465,12 @@ val STAR_eps_I = store_thm ("STAR_eps_I",
 (* this is the actual formulation of the equivalence of two
   characterisations of adjoint functors *)
 
-val tm13e = ``category (idC,compC) /\ g_functor (idD,compD) (idC,compC) G /\
-    category (idD,compD) ==>
-  (g_adjf1 [:'C,'D:] (idC,compC) G eta hash /\
-    g_nattransf (idC,compC) eta (g_I [:'C:]) (G g_oo F') /\
-    (eps = EPS (idC,compC) hash) = 
+val tm13e = ``category (idC,compC) /\ category (idD,compD) /\
+    g_functor (idD,compD) (idC,compC) G /\
+    g_nattransf (idC,compC) eta (g_I [:'C:]) (G g_oo F') ==>
+  (g_adjf1 [:'C,'D:] (idC,compC) G eta hash /\ (eps = EPS (idC,compC) hash) = 
   g_adjf3 [:'C,'D:] (idC,compC) (idD,compD) F' G eta eps /\ 
     g_functor (idC,compC) (idD,compD) F' /\
-    g_nattransf (idC,compC) eta (g_I [:'C:]) (G g_oo F') /\
     g_nattransf (idD,compD) eps (F' g_oo G) (g_I [:'D:]) /\
     (hash = HASH (idD,compD) F' eps))`` ;
 
@@ -470,6 +486,74 @@ val g_adjf13_equiv = store_thm ("g_adjf13_equiv", tm13e,
       (MATCH_MP_TAC (fst (EQ_IMP_RULE g_adjf3_1)) ORELSE
 	MATCH_MP_TAC (CONJUNCT1 hash_star_inv_defs)),
       (ASM_REWRITE_TAC []) ]) ]) ;
+
+(* get link between g_adjf2 and g_adjf3 by duality *)
+
+val tm23e = ``category (idD,compD) /\ category (idC,compC) /\
+    g_functor (idC,compC) (idD,compD) F' /\
+    g_nattransf (idD,compD) eps (F' g_oo G) (g_I [:'D:]) ==>
+  (g_adjf2 (idD, compD) F' eps star /\ (eta = ETA (idD, compD) star) = 
+  g_adjf3 [:'C,'D:] (idC,compC) (idD,compD) F' G eta eps /\ 
+    g_functor (idD,compD) (idC,compC) G /\
+    g_nattransf (idC,compC) eta (g_I [:'C:]) (G g_oo F') /\
+    (star = STAR (idC,compC) G eta))`` ;
+
+val g_adjf23_equiv = store_thm ("g_adjf23_equiv", tm23e,
+  EVERY [ (REWRITE_TAC [g_adjf12_dual]), 
+    (CONV_TAC (ONCE_DEPTH_CONV (REWR_CONV g_adjf3_dual))),
+    (REWRITE_TAC [ETA_EPS_dual, STAR_HASH_dual]),
+    (CONV_TAC (ONCE_DEPTH_CONV (REWR_CONV g_functor_dual))),
+    (CONV_TAC (ONCE_DEPTH_CONV (REWR_CONV g_nattransf_dual))),
+    (CONV_TAC (ONCE_DEPTH_CONV (REWR_CONV category_dual))),
+    (REWRITE_TAC [g_oo_dual, g_I_dual]),
+    (MATCH_ACCEPT_TAC g_adjf13_equiv) ]) ;
+
+val tm12e = ``category (idC,compC) /\ category (idD,compD) ==>
+   ((g_adjf1 [:'C,'D:] (idC,compC) G eta hash /\
+     g_functor (idD,compD) (idC,compC) G /\
+     g_nattransf (idC,compC) eta (g_I [:'C:]) (G g_oo F') /\
+     (eps = EPS (idC,compC) hash) /\ (star = STAR (idC,compC) G eta)) = 
+   (g_adjf2 [:'D,'C:] (idD, compD) F' eps star /\ 
+     g_functor (idC,compC) (idD,compD) F' /\
+     g_nattransf (idD,compD) eps (F' g_oo G) (g_I [:'D:]) /\ 
+     (eta = ETA (idD,compD) star) /\ (hash = HASH (idD,compD) F' eps)))`` ;
+
+(* note, e (IMP_RES_TAC g_adjf13_equiv) takes forever,
+  partly because RES_CANON g_adjf13_equiv produces a list of length 200,
+  and partly because there are multiple instantiations for category ... *)
+
+(* set of functions to take a nested implication and repeatedly remove the
+  antecedents by MATCH_MP against the first matching theorem *)
+
+(* first : ('a -> 'b) -> 'a list -> 'b *) 
+fun first f (x :: xs) = (f x handle _ => first f xs) 
+  | first f [] = raise HOL_ERR 
+    {message = "", origin_function = "first", origin_structure = ""} ;
+
+(* fmmp : thm list -> thm -> thm *) 
+fun fmmp ths imp = first (MATCH_MP imp) ths ;
+
+(* repeat : ('a -> 'a) -> 'a -> 'a *) 
+fun repeat f x = repeat f (f x) handle _ => x ;
+
+val (ga13, ga31) = EQ_IMP_RULE (UNDISCH g_adjf13_equiv) ;
+val (ga23, ga32) = EQ_IMP_RULE (UNDISCH g_adjf23_equiv) ;
+(* this function takes [h] |- a ==> c to a ==> h ==> c, 
+  then turns conjuncts in a and h into more nested ==> , 
+  thus the first antecedent of the result
+  won't be one that might match the wrong hypothesis *)
+fun insa th = let val [h] = hyp th ;
+    val th' = DISCH_ALL (DISCH h (UNDISCH th)) ;
+  in REWRITE_RULE [GSYM AND_IMP_INTRO] th' end ;
+  
+fun etac gathm = (ASSUM_LIST (fn ths => 
+  MAP_EVERY ASSUME_TAC (CONJUNCTS (repeat (fmmp ths) (insa gathm))))) ;
+
+val g_adjf12_equiv = store_thm ("g_adjf12_equiv", tm12e,
+  EVERY [ STRIP_TAC, EQ_TAC, STRIP_TAC ]
+  THENL [ etac ga13 THEN etac ga32, etac ga23 THEN etac ga31 ]
+  THEN EVERY [ (ONCE_ASM_REWRITE_TAC []), (REWRITE_TAC []),
+    CONJ_TAC, AP_TERM_TAC, (FIRST_ASSUM ACCEPT_TAC) ]) ;
 
 (* note - RES_CANON doesn't deal with ty-foralls properly *)
 val seith = DISCH_ALL (TY_GEN_ALL (UNDISCH STAR_eps_I)) ;
