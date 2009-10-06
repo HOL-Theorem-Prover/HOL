@@ -60,7 +60,7 @@ fun random_from_list l = List.nth(l, random_range (length l));
 local
   val sp = mk_word4 13
   val valid_modes = map mk_word5 [16,17,18,19,23,27,31]
-  val valid_registers = map mk_word4 [0,1,2,3,6,7,8,9,10,11,12,13,14]
+  val valid_registers = map mk_word4 (List.tabulate (15,I))
   val (_,valid_thumb2_registers) = Lib.pluck (fn t => t = sp) valid_registers
   val valid_thumb_registers = List.take(valid_thumb2_registers, 6)
 in
@@ -596,15 +596,6 @@ in
 end;
 
 local
-  fun remove_duplicates l =
-  let fun recurse (h1::h2::t) l =
-            recurse (h2::t) (if h1 = h2 then l else h1::l)
-        | recurse [h] l = List.rev (h::l)
-        | recurse [] l = List.rev l
-  in
-    recurse l []
-  end
-
   fun encoding Thumb  = armSyntax.Encoding_Thumb_tm
     | encoding Thumb2 = armSyntax.Encoding_Thumb2_tm
     | encoding ARM    = armSyntax.Encoding_ARM_tm
@@ -649,17 +640,18 @@ local
         val a = arch ^ (if arm then s else "THUMB\n " ^ s)
         val d = a |> with_flag (Feedback.emit_WARNING,false)
                        armLib.arm_assemble_from_string |> hd |> snd
-        val _ = if d <> e then
-                  HOL_WARNING "arm_randomLib" "mk_code" (String.concat
-                    ["<<parse warning>>:", "\n",
-                     a, "\n",
-                     Hol_pp.term_to_string tm, "\n",
-                     "\t", e, " =/= ", d, "\n",
-                     Hol_pp.term_to_string (decode arm d), "\n"])
+        val w = if d <> e then
+                   (HOL_WARNING "arm_randomLib" "mk_code" (String.concat
+                     ["<<parse warning>>:", "\n",
+                      a, "\n",
+                      Hol_pp.term_to_string tm, "\n",
+                      "\t", e, " =/= ", d, "\n",
+                      Hol_pp.term_to_string (decode arm d), "\n"]);
+                     " : warning, equivalent to " ^ d ^ "?")
                  else
-                   ()
+                   ""
     in
-      (e,a,arm)
+      (e ^ w,a,arm)
     end handle HOL_ERR e =>
           (HOL_WARNING (#origin_structure e) (#origin_function e)
              (String.concat
@@ -702,11 +694,8 @@ local
         in
           (encoding enc, cond, tm)
         end
-
-   fun compare_code ((a,_,b),(c,_,d)) =
-         Lib.pair_compare (Term.compare,Term.compare) ((a,b),(c,d))
 in
-  fun generate_random arch n class =
+  fun generate_random arch class =
     let val a = arch_to_string arch
         val aa = String.concat ["ARCH ", a, "\n "]
         val typ = case class
@@ -716,11 +705,9 @@ in
                    | StatusAccess   => ``:status_access_instruction``
                    | Miscellaneous  => ``:miscellaneous_instruction``
     in
-      (n, fn i => random_code (arch_to_ecodings arch) typ)
-        |> List.tabulate
-        |> Listsort.sort compare_code
-        |> remove_duplicates
-        |> Lib.mapfilter (step_updates a o mk_code aa)
+      random_code (arch_to_ecodings arch) typ
+        |> mk_code aa
+        |> step_updates a
     end
 end;
 

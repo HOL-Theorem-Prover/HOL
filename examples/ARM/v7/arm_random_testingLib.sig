@@ -20,7 +20,7 @@ sig
                  | StatusAccess
                  | Miscellaneous
 
-  val generate_random : arch -> int -> class ->
-                        (string * string * term list * (term * term) list) list
+  val generate_random : arch -> class ->
+                        (string * string * term list * (term * term) list)
 
 end
