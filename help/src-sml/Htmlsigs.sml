@@ -3,7 +3,7 @@
 *)
 structure Htmlsigs :> Htmlsigs = struct
 fun indexbar out srcpath = out (String.concat
-   ["<hr><table width=100%>",
+   ["<hr><table width=\"100%\">",
     "<tr align = center>\n",
     "<th><a href=\"file://", srcpath,
     "\" type=\"text/plain\">Source File</a>\n",
@@ -264,16 +264,24 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 	print sigfile; print "\n"
        ; *)
         traverse pass1;
-        out "<html><head><title>Structure ";
-        out strName; out "</title></head>\n";
-        out "<body bgcolor=\""; out bgcolor; out "\">\n";
+        out "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\">\n";
+        out "<html><head>\n";
+        out "<meta http-equiv=\"content-type\" content=\"text/html ; \
+            \charset=UTF-8\">\n";
+        out "<title>Structure ";
+        out strName; out "</title>\n";
+        out "<style type=\"text/css\">\n";
+        out "<!--\n";
+        out "  body {background: "; out bgcolor; out "}\n-->\n</style>";
+        out "</head>\n";
+        out "<body>\n";
         out "<h1>Structure "; out strName; out "</h1>\n";
         indexbar out srcfile;
         out "<pre>\n";
         traverse (pass2 (isTheorysig sigfile));
         out "</pre>";
         indexbar out srcfile;
-        out "<br><em>"; out version; out "</em>";
+        out "<p><em>"; out version; out "</em></p>";
         out "</body></html>\n";
         TextIO.closeOut os
     end
@@ -398,7 +406,7 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 	prtree db;
 	out "</ul>\n";
 	mkalphaindex();
-	out "<br><em>"; out version; out "</em>";
+	out "<p><em>"; out version; out "</em></p>";
 	out "</body></html>\n";
 	TextIO.closeOut os
     end
