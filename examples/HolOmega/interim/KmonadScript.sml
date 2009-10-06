@@ -6,7 +6,10 @@ struct
 open HolKernel Parse boolLib
      bossLib
 
-open combinTheory pairTheory categoryTheory
+open combinTheory pairTheory categoryTheory ;
+(*
+load "KmonadTheory" ; open KmonadTheory ;
+*)
 
 val _ = set_trace "Unicode" 1;
 val _ = set_trace "kinds" 0;
@@ -140,10 +143,40 @@ is implemented.  But this would take a fair amount of work,
 on the order of weeks.
   
 ***)
+(** a monad gives a pair of adjoint functors **)
+(* first, the functors, unit o _ and ext *)
+
+val Kmonad_IMP_uof = store_thm ("Kmonad_IMP_uof",
+  ``category [:'A:] (id,comp) /\ Kmonad (id,comp) (unit,ext) ==>
+    g_functor [:'A, ('A, 'M) Kleisli :] (id, comp) 
+      (unit, Kcomp (id,comp) ext) (\:'a 'b. comp [:'a,'b,'b 'M:] unit)``,
+  EVERY [ (REWRITE_TAC [Kmonad_def, Kcomp_def, g_functor_thm, category_thm]),
+    STRIP_TAC, TY_BETA_TAC, BETA_TAC, (ASM_REWRITE_TAC []) ]) ;
+    
 (*
 show_types := true ;
 show_types := false ;
+handle e => Raise e ;
+set_goal ([], it) ;
+val (sgs, goal) = top_goal () ;
 *)
+
+    
+val Kmonad_IMP_ext_f = store_thm ("Kmonad_IMP_ext_f",
+  ``Kmonad (id,comp) (unit,ext) ==> g_functor [: ('A, 'M) Kleisli, 'A :] 
+      (unit, Kcomp (id,comp) ext) (id, comp) ext``,
+  EVERY [ (REWRITE_TAC [Kmonad_def, Kcomp_def, g_functor_thm]),
+    STRIP_TAC, (CONJ_TAC THEN1 FIRST_ASSUM ACCEPT_TAC),
+    TY_BETA_TAC, BETA_TAC, (CONV_TAC (ONCE_DEPTH_CONV SYM_CONV)),
+    (FIRST_ASSUM ACCEPT_TAC) ]) ;
+
+val Kmonad_IMP_unit_nt = store_thm ("Kmonad_IMP_unit_nt",
+  ``Kmonad (id,comp) (unit,ext) ==> 
+    g_nattransf [:'A:] (id, comp) unit (g_I [:'A:]) 
+      (\: 'a 'b. \f. ext [:'a,'b:] (comp (unit [:'b:]) f))``,
+  EVERY [ (REWRITE_TAC [Kmonad_def, Kcomp_def, g_I_def, g_nattransf_thm]),
+    STRIP_TAC, TY_BETA_TAC, BETA_TAC, (ASM_REWRITE_TAC [I_THM]) ]) ;
+
 
 val _ = set_trace "types" 1;
 val _ = set_trace "kinds" 0;
