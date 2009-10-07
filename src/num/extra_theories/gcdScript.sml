@@ -83,6 +83,8 @@ val GCD_IS_GCD = store_thm("GCD_IS_GCD",
                                       DECIDE(Term`~(y<=x) ==> SUC x <= SUC y`),
                                       LESS_EQ_MONO,SUB_MONO_EQ]);
 
+val GCD_THM = REWRITE_RULE [GCD_IS_GCD] (Q.SPECL [`m`,`n`,`gcd m n`] IS_GCD);
+
 val GCD_REF = store_thm("GCD_REF",
                         Term `!a. gcd a a = a`,
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_REF]);
@@ -176,15 +178,15 @@ val FACTOR_OUT_GCD = store_thm(
           ?p q. (n = p * gcd n m) /\ (m = q * gcd n m) /\
                 (gcd p q = 1)``,
   REPEAT STRIP_TAC THEN
-  `divides (gcd n m) n` by PROVE_TAC [GCD_IS_GCD, IS_GCD] THEN
-  `divides (gcd n m) m` by PROVE_TAC [GCD_IS_GCD, IS_GCD] THEN
+  `divides (gcd n m) n` by PROVE_TAC [GCD_THM] THEN
+  `divides (gcd n m) m` by PROVE_TAC [GCD_THM] THEN
   `?k. k * gcd n m = n` by PROVE_TAC [divides_def] THEN
   `?j. j * gcd n m = m` by PROVE_TAC [divides_def] THEN
   MAP_EVERY Q.EXISTS_TAC [`k`, `j`] THEN
   ASM_REWRITE_TAC [] THEN
   SPOSE_NOT_THEN ASSUME_TAC THEN
-  `divides (gcd k j) k` by PROVE_TAC [GCD_IS_GCD, IS_GCD] THEN
-  `divides (gcd k j) j` by PROVE_TAC [GCD_IS_GCD, IS_GCD] THEN
+  `divides (gcd k j) k` by PROVE_TAC [GCD_THM] THEN
+  `divides (gcd k j) j` by PROVE_TAC [GCD_THM] THEN
   `?u. u * gcd k j = k` by PROVE_TAC [divides_def] THEN
   `?v. v * gcd k j = j` by PROVE_TAC [divides_def] THEN
   `divides (gcd k j * gcd n m) n` by
@@ -380,6 +382,64 @@ val LCM_LEAST = store_thm(
   `divides (lcm m n) p` by METIS_TAC [LCM_IS_LEAST_COMMON_MULTIPLE] THEN
   `lcm m n <= p` by METIS_TAC [DIVIDES_LE] THEN
   DECIDE_TAC);
+
+
+val GCD_COMMON_FACTOR = store_thm("GCD_COMMON_FACTOR",
+  ``!m n k. gcd (k * m) (k * n) = k * gcd m n``,
+  HO_MATCH_MP_TAC GCD_SUCfree_ind
+  THEN REPEAT STRIP_TAC
+  THEN1 REWRITE_TAC [GCD,MULT_CLAUSES]
+  THEN1 METIS_TAC [GCD_SYM]
+  THEN1 REWRITE_TAC [GCD_REF]
+  THEN ASM_REWRITE_TAC [LEFT_ADD_DISTRIB,GCD_ADD_R]);
+
+val GCD_EQ_IS_GCD = prove(
+  ``!m n. (gcd m n = k) = is_gcd m n k``,
+  METIS_TAC [GCD_IS_GCD,IS_GCD_UNIQUE]);
+
+val divides_IMP = prove(
+  ``!m n p. divides m n ==> divides m (p * n)``,
+  REWRITE_TAC [divides_def] THEN REPEAT STRIP_TAC
+  THEN ASM_REWRITE_TAC [MULT_ASSOC] THEN METIS_TAC []);
+
+val GCD_CANCEL_MULT = store_thm("GCD_CANCEL_MULT",
+  ``!m n k. (gcd m k = 1) ==> (gcd m (k * n) = gcd m n)``,
+  REPEAT STRIP_TAC  
+  THEN REWRITE_TAC [GCD_EQ_IS_GCD,IS_GCD,GCD_THM]
+  THEN REPEAT STRIP_TAC  
+  THEN1 (MATCH_MP_TAC divides_IMP THEN REWRITE_TAC [GCD_THM])
+  THEN REVERSE (`divides d n` by ALL_TAC) THEN1 METIS_TAC [GCD_THM]
+  THEN MATCH_MP_TAC L_EUCLIDES
+  THEN Q.EXISTS_TAC `k`
+  THEN ASM_REWRITE_TAC []
+  THEN FULL_SIMP_TAC bool_ss [IS_GCD,GCD_EQ_IS_GCD,ONE_DIVIDES_ALL]   
+  THEN REPEAT STRIP_TAC
+  THEN Q.PAT_ASSUM `!d.bbb` MATCH_MP_TAC
+  THEN IMP_RES_TAC DIVIDES_TRANS
+  THEN ASM_REWRITE_TAC []);
+
+val ODD_IMP_GCD_CANCEL_EVEN = prove(
+  ``!n. ODD n ==> (gcd n (2 * m) = gcd n m)``,
+  REPEAT STRIP_TAC
+  THEN MATCH_MP_TAC GCD_CANCEL_MULT
+  THEN ONCE_REWRITE_TAC [GCD_SYM]
+  THEN REVERSE (`~divides 2 n` by ALL_TAC)
+  THEN1 (MP_TAC (Q.SPEC `n` (MATCH_MP PRIME_GCD PRIME_2))
+         THEN ASM_REWRITE_TAC [])
+  THEN REWRITE_TAC [divides_def]
+  THEN ONCE_REWRITE_TAC [MULT_COMM]
+  THEN REWRITE_TAC [GSYM EVEN_EXISTS]
+  THEN FULL_SIMP_TAC bool_ss [ODD_EVEN]);
+
+val BINARY_GCD = store_thm("BINARY_GCD",
+  ``!m n. 
+      (EVEN m /\ EVEN n ==> (gcd m n = 2 * gcd (m DIV 2) (n DIV 2))) /\ 
+      (EVEN m /\ ODD n ==> (gcd m n = gcd (m DIV 2) n))``,
+  SIMP_TAC bool_ss [EVEN_EXISTS] THEN REVERSE (REPEAT STRIP_TAC)
+  THEN `0 < 2` by (MATCH_MP_TAC PRIME_POS THEN REWRITE_TAC [PRIME_2])
+  THEN FULL_SIMP_TAC bool_ss [GCD_COMMON_FACTOR,
+         ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV,
+         ONCE_REWRITE_RULE [GCD_SYM] ODD_IMP_GCD_CANCEL_EVEN]);
 
 val _ = export_theory();
 
