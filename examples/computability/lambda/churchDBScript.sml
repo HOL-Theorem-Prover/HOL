@@ -8,6 +8,7 @@ open churchnumTheory churchboolTheory pure_dBTheory
 open reductionEval pred_setTheory termTheory chap3Theory
 open normal_orderTheory
 open head_reductionTheory
+open brackabs
 
 val _ = new_theory "churchDB"
 
@@ -317,133 +318,6 @@ val cdLAM_behaviour = store_thm(
     term recursion operator, termrec
    ---------------------------------------------------------------------- *)
 
-val B_I_uncond = store_thm(
-  "B_I_uncond",
-  ``v ∉ FV M ∧ v ∈ FV N ⇒ (LAM v (M @@ N) == B @@ M @@ (LAM v N))``,
-  STRIP_TAC THEN
-  ASM_SIMP_TAC (bsrw_ss()) [chap2Theory.B_def] THEN
-  REWRITE_TAC [chap2Theory.S_def] THEN
-  Q_TAC (NEW_TAC "z") `{"x"; "y"; "z"} ∪ FV M ∪ FV N` THEN
-  `LAM "z" (VAR "x" @@ VAR "z" @@ (VAR "y" @@ VAR "z")) =
-   LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))`
-     by SRW_TAC [][LAM_eq_thm] THEN
-  POP_ASSUM SUBST1_TAC THEN
-  Q_TAC (NEW_TAC "y") `{"x"; "y"; z} ∪ FV M ∪ FV N` THEN
-  `LAM "y" (LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))) =
-   LAM y (LAM z (VAR "x" @@ VAR z @@ (VAR y @@ VAR z)))`
-     by SRW_TAC [][LAM_eq_thm] THEN
-  POP_ASSUM SUBST1_TAC THEN
-  ASM_SIMP_TAC (bsrw_ss()) [] THEN
-  `∀x y. (x = y) ⇒ (x == y)` by SRW_TAC [][] THEN POP_ASSUM MATCH_MP_TAC THEN
-  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh, NOT_IN_SUB] THEN
-  SRW_TAC [][GSYM fresh_tpm_subst, tpm_flip_args]);
-
-val B_I = store_thm(
-  "B_I",
-  ``v ∉ FV M ∧ v ∈ FV N ∧ N ≠ VAR v ⇒
-      (LAM v (M @@ N) == B @@ M @@ (LAM v N))``,
-  METIS_TAC [B_I_uncond]);
-
-val C_I = store_thm(
-  "C_I",
-  ``v ∈ FV M ∧ v ∉ FV N ⇒ LAM v (M @@ N) == C @@ (LAM v M) @@ N``,
-  STRIP_TAC THEN ASM_SIMP_TAC (bsrw_ss()) [chap2Theory.C_def] THEN
-  REWRITE_TAC [chap2Theory.S_def] THEN
-  Q_TAC (NEW_TAC "z") `{"x"; "y"; "z"} ∪ FV M ∪ FV N` THEN
-  `LAM "z" (VAR "x" @@ VAR "z" @@ (VAR "y" @@ VAR "z")) =
-   LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))`
-     by SRW_TAC [][LAM_eq_thm] THEN
-  POP_ASSUM SUBST1_TAC THEN
-  Q_TAC (NEW_TAC "y") `{"x"; "y"; z} ∪ FV M ∪ FV N` THEN
-  `LAM "y" (LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))) =
-   LAM y (LAM z (VAR "x" @@ VAR z @@ (VAR y @@ VAR z)))`
-     by SRW_TAC [][LAM_eq_thm] THEN
-  POP_ASSUM SUBST1_TAC THEN
-  ASM_SIMP_TAC (bsrw_ss()) [NOT_IN_SUB] THEN
-  `∀x y. (x = y) ⇒ (x == y)` by SRW_TAC [][] THEN POP_ASSUM MATCH_MP_TAC THEN
-  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh, NOT_IN_SUB] THEN
-  SRW_TAC [][GSYM fresh_tpm_subst, tpm_flip_args]);
-
-val I_I = store_thm(
-  "I_I",
-  ``LAM x (VAR x) = I``,
-  SIMP_TAC (srw_ss()) [LAM_eq_thm, chap2Theory.I_def]);
-
-val K_I = store_thm(
-  "K_I",
-  ``v ∉ FV M ⇒ (LAM v M == K @@ M)``,
-  STRIP_TAC THEN REWRITE_TAC [chap2Theory.K_def] THEN
-  Q_TAC (NEW_TAC "y") `{"x"; "y"} ∪ FV M` THEN
-  `LAM "y" (VAR "x") = LAM y (VAR "x")` by SRW_TAC [][LAM_eq_thm] THEN
-  POP_ASSUM SUBST1_TAC THEN
-  ASM_SIMP_TAC (bsrw_ss()) [] THEN
-  `∀x y. (x = y) ⇒ (x == y)` by SRW_TAC [][] THEN POP_ASSUM MATCH_MP_TAC THEN
-  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh, NOT_IN_SUB]);
-
-val S_I = store_thm(
-  "S_I",
-  ``v ∈ FV M ∧ v ∈ FV N ⇒
-    LAM v (M @@ N) == S @@ (LAM v M) @@ (LAM v N)``,
-  STRIP_TAC THEN REWRITE_TAC [chap2Theory.S_def] THEN
-  Q_TAC (NEW_TAC "z") `{"x"; "y"; "z"} ∪ FV M ∪ FV N` THEN
-  `LAM "z" (VAR "x" @@ VAR "z" @@ (VAR "y" @@ VAR "z")) =
-   LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))`
-     by SRW_TAC [][LAM_eq_thm] THEN
-  POP_ASSUM SUBST1_TAC THEN
-  Q_TAC (NEW_TAC "y") `{"x"; "y"; z} ∪ FV M ∪ FV N` THEN
-  `LAM "y" (LAM z (VAR "x" @@ VAR z @@ (VAR "y" @@ VAR z))) =
-   LAM y (LAM z (VAR "x" @@ VAR z @@ (VAR y @@ VAR z)))`
-     by SRW_TAC [][LAM_eq_thm] THEN
-  POP_ASSUM SUBST1_TAC THEN
-  ASM_SIMP_TAC (bsrw_ss()) [NOT_IN_SUB] THEN
-  `LAM v (M @@ N) = LAM z ([VAR z/v] (M @@ N))`
-     by SRW_TAC [][SIMPLE_ALPHA] THEN
-  SRW_TAC [][]);
-
-val fake_eta = store_thm(
-  "fake_eta",
-  ``v ∉ FV M ∧ is_abs M ⇒ (LAM v (M @@ VAR v) == M)``,
-  STRIP_TAC THEN
-  `∃u M0. M = LAM u M0`
-     by (Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN
-         FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []) THEN
-  ASM_SIMP_TAC (bsrw_ss()) [] THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN
-  Cases_on `v = u` THEN SRW_TAC [][] THEN RES_TAC THEN
-  `LAM u M0 = LAM v ([VAR v/u] M0)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  SRW_TAC [][]);
-
-
-val B_eta = store_thm(
-  "B_eta",
-  ``LAM v (B @@ VAR v) == B``,
-  SIMP_TAC (bsrw_ss()) [chap2Theory.B_def] THEN
-  `S @@ (K @@ S) @@ K =
-   LAM "x" (LAM "y" (LAM "z" (VAR "x" @@ VAR "z" @@ (VAR "y" @@ VAR "z")))) @@
-       (K @@ S) @@ K`
-     by SRW_TAC [][chap2Theory.S_def] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [] THEN
-  `∀x y. (x = y) ⇒ x == y` by SRW_TAC [][] THEN
-  POP_ASSUM MATCH_MP_TAC THEN
-  SRW_TAC [][LAM_eq_thm, tpm_fresh]);
-
-val eqn_elim = prove(
-  ``(∀Y. X:term == Y ⇔ Z == Y) ⇒ X == Z``,
-  METIS_TAC [chap2Theory.lam_eq_rules]);
-fun brackabs_equiv ths def = let
-  val lameq_t = ``chap2$==``
-  val th = if is_eq (concl def) then let
-               val (l,r) = dest_eq (concl def)
-             in
-               EQ_MP (AP_TERM (mk_comb(lameq_t, l)) def)
-                     (SPEC l (GEN_ALL chap2Theory.lameq_refl))
-             end
-           else def
-in
-  SIMP_RULE (bsrw_ss())
-            ([S_I, K_I, B_I, C_I, fake_eta, B_eta, I_I] @ ths)
-            th
-end
 
 val is_abs_cdV = Store_thm(
   "is_abs_cdV",
@@ -529,7 +403,11 @@ val FV_termrec = Store_thm(
   ``FV termrec = {}``,
   SRW_TAC [][termrec_def, EXTENSION]);
 
-infix |> fun x |> f = f x
+val eqn_elim = prove(
+  ``(!Y. (X:term == Y) = (Z == Y)) ==> X == Z``,
+  STRIP_TAC THEN POP_ASSUM (Q.SPEC_THEN `Z` MP_TAC) THEN
+  REWRITE_TAC [chap2Theory.lameq_refl]);
+
 
 val termrec_behaviour = store_thm(
   "termrec_behaviour",
@@ -817,8 +695,7 @@ val Ccless_eta = prove(
   POP_ASSUM MATCH_MP_TAC THEN
   SRW_TAC [][LAM_eq_thm, tpm_fresh]);
 
-val cnsub_equiv0 = brackabs_equiv [Ccless_eta] cnsub_def
-val cnsub_equiv = brackabs_equiv [B_I_uncond] cnsub_equiv0
+val cnsub_equiv = brackabs_equiv [Ccless_eta] cnsub_def
 
 val cnsub_behaviour = store_thm(
   "cnsub_behaviour",
@@ -865,8 +742,7 @@ val FV_cnoreduct = Store_thm(
   ``FV cnoreduct = {}``,
   SRW_TAC [][cnoreduct_def, EXTENSION]);
 
-val cnoreduct_equiv0 = brackabs_equiv [] cnoreduct_def
-val cnoreduct_equiv = brackabs_equiv [B_I_uncond] cnoreduct_equiv0
+val cnoreduct_equiv = brackabs_equiv [] cnoreduct_def
 
 val cnoreduct_behaviour = store_thm(
   "cnoreduct_behaviour",
@@ -1047,8 +923,7 @@ val FV_cdbsize = Store_thm(
   ``FV cdbsize = {}``,
   SRW_TAC [][EXTENSION, cdbsize_def]);
 
-val cdbsize_equiv0 = brackabs_equiv [] cdbsize_def
-val cdbsize_equiv = brackabs_equiv [B_I_uncond] cdbsize_equiv0
+val cdbsize_equiv = brackabs_equiv [] cdbsize_def
 
 val cdbsize_behaviour = store_thm(
   "cdbsize_behaviour",
@@ -1075,8 +950,7 @@ val FV_cis_varn = Store_thm(
   ``FV cis_varn = {}``,
   SRW_TAC [][cis_varn_def, EXTENSION]);
 
-val cis_varn_equiv0 = brackabs_equiv [] cis_varn_def
-val cis_varn_equiv = brackabs_equiv [B_I_uncond] cis_varn_def
+val cis_varn_equiv = brackabs_equiv [] cis_varn_def
 
 val cis_varn_behaviour = store_thm(
   "cis_varn_behaviour",
@@ -1101,8 +975,7 @@ val FV_cis_ichurch = Store_thm(
   ``FV cis_ichurch = {}``,
   SRW_TAC [][EXTENSION, cis_ichurch_def]);
 
-val cis_ichurch_equiv0 = brackabs_equiv [] cis_ichurch_def
-val cis_ichurch_equiv = brackabs_equiv [B_I_uncond] cis_ichurch_equiv0
+val cis_ichurch_equiv = brackabs_equiv [] cis_ichurch_def
 
 val cis_ichurch_behaviour = store_thm(
   "cis_ichurch_behaviour",
@@ -1142,8 +1015,7 @@ val FV_cis_church = Store_thm(
   ``FV cis_church = {}``,
   SRW_TAC [][cis_church_def, EXTENSION]);
 
-val cis_church_equiv0 = brackabs_equiv [] cis_church_def
-val cis_church_equiv = brackabs_equiv [B_I_uncond] cis_church_equiv0
+val cis_church_equiv = brackabs_equiv [] cis_church_def
 
 val cis_church_behaviour = store_thm(
   "cis_church_behaviour",
@@ -1204,8 +1076,7 @@ val FV_cforce_num = Store_thm(
   ``FV cforce_num = {}``,
   SRW_TAC [][EXTENSION, cforce_num_def]);
 
-val cforce_num_equiv0 = brackabs_equiv [] cforce_num_def
-val cforce_num_equiv = brackabs_equiv [B_I_uncond] cforce_num_equiv0
+val cforce_num_equiv = brackabs_equiv [] cforce_num_def
 
 val dbsize_fromTerm = Store_thm(
   "dbsize_fromTerm",
@@ -1449,8 +1320,7 @@ val cbnfof_body_def = Define`
           @@ (VAR "f" @@ (cnoreduct @@ VAR "t")))))
 `;
 
-val cbnfof_body_equiv0 = brackabs_equiv [] cbnfof_body_def
-val cbnfof_body_equiv = brackabs_equiv [B_I_uncond] cbnfof_body_equiv0
+val cbnfof_body_equiv = brackabs_equiv [] cbnfof_body_def
 
 val FV_cbnfof_body = Store_thm(
   "FV_cbnfof_body",

@@ -1,6 +1,8 @@
 open HolKernel boolLib bossLib Parse
 
 open normal_orderTheory churchDBTheory
+open reductionEval
+
 
 val _ = new_theory "steps"
 
@@ -61,15 +63,24 @@ val csteps_def = Define`
                          @@ (VAR "f" @@ (cnoreduct @@ VAR "u")))))
              @@ VAR "t"))
 `;
-(*
+
 val FV_csteps = store_thm(
   "FV_csteps",
   ``FV csteps = {}``,
-  SRW_TAC [][csteps_def, pred_setTheory.EXTENSION, FV_cbnf] THEN
-*)
+  SRW_TAC [][csteps_def, pred_setTheory.EXTENSION]);
 
+open brackabs
+val csteps_eqn = brackabs_equiv [] csteps_def
 
-
-
+val csteps_behaviour = store_thm(
+  "csteps_behaviour",
+  ``∀n t.
+      csteps @@ church n @@ cDB (fromTerm t) -n->* cDB (fromTerm (steps n t))``,
+  SIMP_TAC (bsrw_ss()) [csteps_eqn] THEN
+  Induct THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.church_thm, cbnf_behaviour] THEN
+  Q.X_GEN_TAC `t` THEN Cases_on `bnf t` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
+                            cnoreduct_behaviour]);
 
 val _ = export_theory ()
