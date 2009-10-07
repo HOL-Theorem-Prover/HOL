@@ -27,7 +27,7 @@ fun process tm = let
      else if eq tm ``sV:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sv",``:bool``))
      else if type_of tm = ``:word30`` then
        (mk_comb(``aM``,tm),mk_var(name_of_tm tm,``:word32``))
-     else hd [] end;
+     else fail() end;
 
 val state = ``s:unit arm_sys_state``
 
@@ -97,7 +97,7 @@ fun introduce_aBYTE_MEMORY th = let
 
 fun remove_primes th = let
   fun last s = substring(s,size s-1,1)
-  fun delete_last_prime s = if last s = "'" then substring(s,0,size(s)-1) else hd []
+  fun delete_last_prime s = if last s = "'" then substring(s,0,size(s)-1) else fail()
   fun foo [] ys i = i
     | foo (x::xs) ys i = let
       val name = (fst o dest_var) x

@@ -34,6 +34,9 @@ val is_kd_antiq = Lib.can dest_kd_antiq
 val pp_num_types = ref true
 val _ = register_btrace("pp_num_types", pp_num_types)
 
+val pp_annotations = ref (!Globals.interactive)
+val _ = register_btrace ("pp_annotations", pp_annotations)
+
 fun dest_numtype ty = let
   open Arbnum
   val _ = (* respect pp_num_types flag *)
@@ -199,6 +202,15 @@ fun pp_type0 (G:grammar) backend = let
       with_ppstream backend pps
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
+    fun uniconvert s =
+        if get_tracefn "Greek tyvars" () = 1 andalso size s = 2 then let
+            val i = Char.ord (String.sub(s, 1)) - Char.ord #"a" + 0x3B1
+          in
+            if 0x3B1 <= i andalso i <= 0x3C9 andalso i <> 0x3BB then UTF8.chr i
+            else s
+          end
+        else s
+
     fun check_dest_type ty =
       let open Kind
           val (opr,args) = strip_app_type ty
@@ -247,7 +259,11 @@ fun pp_type0 (G:grammar) backend = let
         else add_ann_string (s, annot)
 
     fun print_var new grav tyv =
+      if not (!pp_annotations) then
+        add_string (uniconvert (#1 (dest_var_type ty)))
+      else
         let val (s,k,r) = dest_var_type tyv
+            val s = uniconvert s
             val bound = Lib.mem tyv (!btyvars_seen)
             val kd_annot = (* if k = Kind.typ then "" else *)
                            ": " ^ Kind.kind_to_string k
@@ -269,7 +285,7 @@ fun pp_type0 (G:grammar) backend = let
   in
     if depth = 0 then add_string "..."
     else
-      if is_vartype ty then
+      if is_var_type ty then
         let
           val new_freetyvar =
              not (Lib.mem ty (!ftyvars_seen)) andalso
@@ -301,30 +317,32 @@ fun pp_type0 (G:grammar) backend = let
         let
           val (Tyop, Args) = type_grammar.abb_dest_type G ty
           val tooltip =
-              case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
-                NONE => let
-                  val {Thy,Tyop,...} = dest_thy_type ty
-                in
-                  Thy ^ "$" ^ Tyop
-                end
-              | SOME st => let
-                  val numps = num_params st
-                in
-                  if 0 < numps then let
-                      val params =
-                          if numps <= 4 then List.take(greek4, numps)
-                          else let
-                              fun tab i = str (Char.chr (Char.ord #"e" + i))
-                            in
-                              greek4 @ List.tabulate(numps - 4, tab)
-                            end
-                    in
-                      UnicodeChars.lambda ^
-                      String.concatWith " " params ^ ". " ^
-                      structure_to_string st
-                    end
-                  else structure_to_string st
-                end
+              if !pp_annotations then
+                case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
+                  NONE => let
+                    val {Thy,Tyop,...} = dest_thy_type ty
+                  in
+                    Thy ^ "$" ^ Tyop
+                  end
+                | SOME st => let
+                    val numps = num_params st
+                  in
+                    if 0 < numps then let
+                        val params =
+                            if numps <= 4 then List.take(greek4, numps)
+                            else let
+                                fun tab i = str (Char.chr (Char.ord #"e" + i))
+                              in
+                                greek4 @ List.tabulate(numps - 4, tab)
+                              end
+                      in
+                        UnicodeChars.lambda ^
+                        String.concatWith " " params ^ ". " ^
+                        structure_to_string st
+                      end
+                    else structure_to_string st
+                  end
+              else ""
           fun print_ghastly () = let
             val {Thy,Tyop,...} = dest_thy_type ty
           in
@@ -336,143 +354,148 @@ fun pp_type0 (G:grammar) backend = let
             end_block();
             add_string ")"
           end
+          fun add_ann_string'(p as (s,ann)) =
+              if !pp_annotations then add_ann_string p else add_string s
         in
           case Args of
             [] => let
             in
               case lookup_tyop Tyop of
                 NONE => print_ghastly ()
-              | _ => add_ann_string (Tyop, TyOp tooltip)
+              | _ => add_ann_string' (Tyop, TyOp tooltip)
+
             end
           | [arg1, arg2] => (let
-                 val (prec, rule) = valOf (lookup_tyop Tyop)
-               in
-                 case rule of
-                   SR => let
-                     val addparens =
-                         case grav of
-                           Rfx(n, _) => (n > prec)
-                         | _ => false
-                   in
-                     pbegin addparens;
-                     begin_block INCONSISTENT 0;
-                     (* knowing that there are two args, we know that they will
-                        be printed with parentheses, so the gravity we pass in
-                        here makes no difference. *)
-                     print_args Top Args;
-                     add_break(1,0);
-                     add_ann_string (Tyop, TyOp tooltip);
-                     end_block();
-                     pend addparens
-                   end
-                 | IR(assoc, printthis) => let
-                     val parens_needed =
-                         case grav of
-                           Sfx n => (n > prec)
-                         | Lfx (n, s) => if s = printthis then assoc <> LEFT
-                                         else (n >= prec)
-                         | Rfx (n, s) => if s = printthis then assoc <> RIGHT
-                                         else (n >= prec)
-                         | _ => false
-                   in
-                     pbegin parens_needed;
-                     begin_block INCONSISTENT 0;
-                     pr_ty binderp pps arg1 (Lfx (prec, printthis)) (depth - 1);
-                     add_break(1,0);
-                     add_ann_string (printthis, TySyn tooltip);
-                     add_break(1,0);
-                     pr_ty binderp pps arg2 (Rfx (prec, printthis)) (depth -1);
-                     end_block();
-                     pend parens_needed
-                   end
-               end handle Option => print_ghastly())
-            | _ => let
-                val (prec, _) = valOf (lookup_tyop Tyop)
-                val addparens =
-                    case grav of
-                      Rfx (n, _) => (n > prec)
-                    | _ => false
-              in
-                pbegin addparens;
-                begin_block INCONSISTENT 0;
-                print_args (Sfx prec) Args;
-                add_break(1,0);
-                add_ann_string (Tyop, TyOp tooltip);
-                end_block();
-                pend addparens
-              end handle Option => print_ghastly()
-          end
-        else let
-            (* not a normal "classic" type operator with arguments *)
-            open TypeView
-          in
-            case fromType ty of
-              TyV_Const _ => let
-                val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
-              in
-                case lookup_tyop Tyop of
-                  NONE =>  print_const grav ty
-                | _ => add_ann_string (Tyop, TyOp (Thy ^ "$" ^ Tyop))
-              end
-            | TyV_App _ => let
-                val (base, args) = strip_app_type ty
-              in
-                begin_block INCONSISTENT 0;
-                print_args (Sfx 200) args;
-                add_break(1,0);
-                pr_ty binderp pps base (Sfx 200) (depth - 1);
-                end_block ()
-              end
-            | TyV_Abs _ => let
-                val (vars, body) = strip_abs_type ty
-                val prev_btyvars_seen = !btyvars_seen
-                val _ = btyvars_seen := vars @ prev_btyvars_seen
-                val parens = case grav of
-                               Top => false
-                             | _ => true
-                         (*    Lfx _ => true
-                             | _ => false *)
-              in
-                pbegin parens;
-                begin_block INCONSISTENT 0;
-                add_string (hd lambda);
-                pr_list (fn arg => pr_ty true pps arg grav (depth - 1))
-                        (fn () => ())
-                        (fn () => add_break (1, 0))
-                        vars;
-                add_string ".";
-                add_break (1,0);
-                pr_ty false pps body Top (depth - 1);
-                end_block ();
-                pend parens;
-                btyvars_seen := prev_btyvars_seen
-              end
-            | TyV_All _ => let
-                val (vars, body) = strip_univ_type ty
-                val prev_btyvars_seen = !btyvars_seen
-                val _ = btyvars_seen := vars @ prev_btyvars_seen
-                val parens = case grav of
-                               Top => false
-                             | _ => true
-                         (*    Lfx _ => true
-                             | _ => false *)
-              in
-                pbegin parens;
-                begin_block INCONSISTENT 0;
-                add_string (hd forall);
-                pr_list (fn arg => pr_ty true pps arg grav (depth - 1))
-                        (fn () => ())
-                        (fn () => add_break (1, 0))
-                        vars;
-                add_string ".";
-                add_break (1,0);
-                pr_ty false pps body Top (depth - 1);
-                end_block ();
-                pend parens;
-                btyvars_seen := prev_btyvars_seen
-              end
-            | _ => raise Fail "type_pp: this can't happen"
-          end
+              val (prec, rule) = valOf (lookup_tyop Tyop)
+            in
+              case rule of
+                SR => let
+                  val addparens =
+                      case grav of
+                        Rfx(n, _) => (n > prec)
+                      | _ => false
+                in
+                  pbegin addparens;
+                  begin_block INCONSISTENT 0;
+                  (* knowing that there are two args, we know that they will
+                     be printed with parentheses, so the gravity we pass in
+                     here makes no difference. *)
+                  print_args Top Args;
+                  add_break(1,0);
+                  add_ann_string' (Tyop, TyOp tooltip);
+                  end_block();
+                  pend addparens
+                end
+              | IR(assoc, printthis) => let
+                  val parens_needed =
+                      case grav of
+                        Sfx n => (n > prec)
+                      | Lfx (n, s) => if s = printthis then assoc <> LEFT
+                                      else (n >= prec)
+                      | Rfx (n, s) => if s = printthis then assoc <> RIGHT
+                                      else (n >= prec)
+                      | _ => false
+                in
+                  pbegin parens_needed;
+                  begin_block INCONSISTENT 0;
+                  pr_ty binderp pps arg1 (Lfx (prec, printthis)) (depth - 1);
+                  add_break(1,0);
+                  add_ann_string' (printthis, TySyn tooltip);
+                  add_break(1,0);
+                  pr_ty binderp pps arg2 (Rfx (prec, printthis)) (depth -1);
+                  end_block();
+                  pend parens_needed
+                end
+            end handle Option => print_ghastly())
+          | _ => let
+              val (prec, _) = valOf (lookup_tyop Tyop)
+              val addparens =
+                  case grav of
+                    Rfx (n, _) => (n > prec)
+                  | _ => false
+            in
+              pbegin addparens;
+              begin_block INCONSISTENT 0;
+              print_args (Sfx prec) Args;
+              add_break(1,0);
+              add_ann_string' (Tyop, TyOp tooltip);
+              end_block();
+              pend addparens
+            end handle Option => print_ghastly()
+        end
+      else let
+          (* not a normal "classic" type operator with arguments *)
+          open TypeView
+          fun add_ann_string'(p as (s,ann)) =
+              if !pp_annotations then add_ann_string p else add_string s
+        in
+          case fromType ty of
+            TyV_Const _ => let
+              val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
+            in
+              case lookup_tyop Tyop of
+                NONE =>  print_const grav ty
+              | _ => add_ann_string' (Tyop, TyOp (Thy ^ "$" ^ Tyop))
+            end
+          | TyV_App _ => let
+              val (base, args) = strip_app_type ty
+            in
+              begin_block INCONSISTENT 0;
+              print_args (Sfx 200) args;
+              add_break(1,0);
+              pr_ty binderp pps base (Sfx 200) (depth - 1);
+              end_block ()
+            end
+          | TyV_Abs _ => let
+              val (vars, body) = strip_abs_type ty
+              val prev_btyvars_seen = !btyvars_seen
+              val _ = btyvars_seen := vars @ prev_btyvars_seen
+              val parens = case grav of
+                             Top => false
+                           | _ => true
+                       (*    Lfx _ => true
+                           | _ => false *)
+            in
+              pbegin parens;
+              begin_block INCONSISTENT 0;
+              add_string (hd lambda);
+              pr_list (fn arg => pr_ty true pps arg grav (depth - 1))
+                      (fn () => ())
+                      (fn () => add_break (1, 0))
+                      vars;
+              add_string ".";
+              add_break (1,0);
+              pr_ty false pps body Top (depth - 1);
+              end_block ();
+              pend parens;
+              btyvars_seen := prev_btyvars_seen
+            end
+          | TyV_All _ => let
+              val (vars, body) = strip_univ_type ty
+              val prev_btyvars_seen = !btyvars_seen
+              val _ = btyvars_seen := vars @ prev_btyvars_seen
+              val parens = case grav of
+                             Top => false
+                           | _ => true
+                       (*    Lfx _ => true
+                           | _ => false *)
+            in
+              pbegin parens;
+              begin_block INCONSISTENT 0;
+              add_string (hd forall);
+              pr_list (fn arg => pr_ty true pps arg grav (depth - 1))
+                      (fn () => ())
+                      (fn () => add_break (1, 0))
+                      vars;
+              add_string ".";
+              add_break (1,0);
+              pr_ty false pps body Top (depth - 1);
+              end_block ();
+              pend parens;
+              btyvars_seen := prev_btyvars_seen
+            end
+          | _ => raise Fail "type_pp: this can't happen"
+        end
   end
 in
   pr_ty

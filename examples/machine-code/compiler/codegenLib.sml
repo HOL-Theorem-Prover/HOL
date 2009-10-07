@@ -12,17 +12,17 @@ open codegen_ppcLib;
 fun assembler_tools target =
   if target = "arm" then (arm_encode_instruction, arm_encode_branch, arm_branch_to_string) else
   if target = "x86" then (x86_encode_instruction, x86_encode_branch, x86_branch_to_string) else
-  if target = "ppc" then (ppc_encode_instruction, ppc_encode_branch, ppc_branch_to_string) else hd []
+  if target = "ppc" then (ppc_encode_instruction, ppc_encode_branch, ppc_branch_to_string) else fail()
 
 fun conditional_tools target =
   if target = "arm" then (arm_cond_code, arm_conditionalise, arm_remove_annotations) else
   if target = "x86" then (x86_cond_code, x86_conditionalise, x86_remove_annotations) else
-  if target = "ppc" then (ppc_cond_code, ppc_conditionalise, ppc_remove_annotations) else hd []
+  if target = "ppc" then (ppc_cond_code, ppc_conditionalise, ppc_remove_annotations) else fail()
 
 fun generator_tools target =
   if target = "arm" then (arm_assign2assembly, arm_guard2assembly) else
   if target = "x86" then (x86_assign2assembly, x86_guard2assembly) else
-  if target = "ppc" then (ppc_assign2assembly, ppc_guard2assembly) else hd []
+  if target = "ppc" then (ppc_assign2assembly, ppc_guard2assembly) else fail()
 
 (* -- target-specific part ends -- *)
 
@@ -70,7 +70,7 @@ fun basic_assembler target code3 = let
     | jump_length label (((ASM_INSTRUCTION (x,_,_),_) ,_)::xs) = (size(x) div 2) + jump_length label xs
     | jump_length label (((ASM_BRANCH (_,_),_) ,x)::xs) = (size(x) div 2) + jump_length label xs
     | jump_length label (((ASM_LABEL label2,_) ,_)::xs) = if label = label2 then 0 else jump_length label xs
-    | jump_length label _ = hd []
+    | jump_length label _ = fail()
   fun generate_jumps xs [] = rev xs
     | generate_jumps xs (((ASM_BRANCH (c,label),s),_) :: ys) = let
         val jump = branch false (jump_length label xs) c handle e =>
@@ -95,7 +95,7 @@ fun basic_assembler target code3 = let
   in (result,len,code7) end
 
 fun quote_to_strings q = let (* turns a quote `...` into a list of strings *)
-  fun get_QUOTE (QUOTE t) = t | get_QUOTE _ = hd []
+  fun get_QUOTE (QUOTE t) = t | get_QUOTE _ = fail()
   val xs = explode (get_QUOTE (hd q))
   fun strip_comments l [] = []
     | strip_comments l (x::xs) =
@@ -122,7 +122,7 @@ fun assemble target code = let
   fun f s = (String.fields (fn x => x = #":") s,s)
   val ys = map f (quote_to_strings code)
   fun space s = replace_char #" " "" s
-  fun process ([],s) = hd []
+  fun process ([],s) = fail()
     | process ([x],s) =
        if (String.substring(x,0,6) = "insert" handle e => false) then
          [(ASM_INSERT(space(String.substring(x,6,size(x)-6)),0,NONE),SOME s)]
@@ -130,7 +130,7 @@ fun assemble target code = let
     | process ((y::x::xs),s) = (ASM_LABEL (space y),NONE) :: process ((x::xs),s)
   val ys = map process ys
   fun spaces [] = 0 | spaces (x::xs) = if x = #" " then 1 + spaces xs else 0
-  fun max [] = hd []
+  fun max [] = fail()
     | max [x] = x
     | max (x::y::xs) = let val m = max (y::xs) in if x < m then m else x end
   fun get_spaces NONE = 0 | get_spaces (SOME x) = spaces (explode x)
@@ -145,7 +145,7 @@ fun assemble target code = let
   val ls = list_append (map (labels o fst) zs)
   fun create_branch x = let
     val ts = String.tokens (fn x => mem x [#" ",#","]) x
-    val _ = if mem (last ts) ls then () else hd []
+    val _ = if mem (last ts) ls then () else fail()
     in ASM_BRANCH (SOME (hd ts),last ts) end
   fun foo (ASM_INSTRUCTION (x,y,z),s) = ((create_branch x handle _ => ASM_INSTRUCTION (x,y,z)),s)
     | foo qq = qq
@@ -274,7 +274,7 @@ fun get_tools th = let
   val s = get_model_name th
   in if s = "PPC_MODEL" then prog_ppcLib.ppc_tools else
      if s = "X86_MODEL" then prog_x86Lib.x86_tools else
-     if s = "ARM_MODEL" then prog_armLib.arm_tools else hd [] end
+     if s = "ARM_MODEL" then prog_armLib.arm_tools else fail() end
 
 fun add_assignment (tm1,tm2,th,len) = let
   val (_,_,_,pc) = get_tools th
@@ -297,12 +297,7 @@ fun add_assignment (tm1,tm2,th,len) = let
     SIMP_TAC std_ss [LET_DEF]
     THEN SPEC_TAC (ws,genvar(type_of ws))
     THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD,LET_DEF]
-    THEN (fn t => hd [])) handle e => TRUTH
-(* (SPEC_TAC (ws,genvar(type_of ws))
-    THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD,LET_DEF]
-    THEN NO_TAC)
-   ORELSE SIMP_TAC std_ss [LET_DEF]
-   ORELSE (fn t => hd [])) handle e => TRUTH *)
+    THEN (fn t => hd [])) handle Empty => TRUTH
   val th = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [lemma])) th
   val _ = add_decompiled (name,th,len,SOME len)
   in () end;
@@ -332,7 +327,7 @@ fun extract_ops th = let
   fun sep_domain tm = dest_sep_hide tm handle _ => car tm
   val ps' = filter (fn tm => not (op_mem eq (sep_domain tm) (pc::xs))) ps
   val qs' = filter (fn tm => not (op_mem eq (sep_domain tm) (pc::xs))) qs
-  fun foo tm [] = hd []
+  fun foo tm [] = fail()
     | foo tm (x::xs) = if eq (sep_domain x) tm then x else foo tm xs
   val zs = map (fn tm => (cdr tm,cdr (foo (sep_domain tm) qs'))) ps'
   val (tm1,tm2) = hd zs
@@ -393,9 +388,17 @@ fun print_asm code target = let
   val str = code2string code false
   in print ("\n" ^ str ^ "\n") end
 
+val EXPAND_IF = prove(
+  ``!b c s1 (s2:'a).
+      ((if b \/ c then s1 else s2) = if b then s1 else if c then s1 else s2) /\
+      ((if b /\ c then s1 else s2) = if b then if c then s1 else s2 else s2)``,
+  Cases THEN Cases THEN SIMP_TAC std_ss []);
+
 fun generate_code target model_name print_assembly tm = let
   val (assign2assembly, guard2assembly) = generator_tools target
   val (cond_code, conditionalise, remove_annotations) = conditional_tools target
+  (* handle /\ and \/ in guards *)
+  val tm = (cdr o concl o REWRITE_CONV [EXPAND_IF]) tm handle e => tm
   (* fold constants *)
   val tm = (cdr o concl o EVAL_ANY_MATCH_CONV word_patterns) tm handle e => tm
   (* generate abstract code *)
@@ -460,35 +463,35 @@ fun generate_code target model_name print_assembly tm = let
   (* do basic instruction reorderings here *)
   (* ... *)
   (* look up assembly instructions for assignments and comparisions *)
-  fun find_assignment (tm1,tm2) [] = hd []
+  fun find_assignment (tm1,tm2) [] = fail()
     | find_assignment (tm1,tm2) ((x,y,l,n,m)::xs) =
         if (eq tm1 x) andalso (eq tm2 y) andalso (m = model_name)
         then (n,l) else find_assignment (tm1,tm2) xs
   fun find_compiled_assignment (tm1,tm2) = find_assignment (tm1,tm2) (!compiler_assignments)
-  fun find_conditional tm [] = hd []
+  fun find_conditional tm [] = fail()
     | find_conditional tm ((x,y,l,n,m)::xs) =
         if ((eq tm x) orelse (eq (mk_neg tm) x)) andalso (m = model_name)
         then (x,y,l,n) else find_conditional tm xs
   fun find_compiled_conditional tm = find_conditional tm (!compiler_conditionals)
   val to_x86 = subst (to_x86_regs())
   fun compile_inst1 (ASM_ASSIGN (t1,t2)) = let
-        val (s,i) = find_compiled_assignment (t1,t2) handle Empty =>
+        val (s,i) = find_compiled_assignment (t1,t2) handle _ =>
                     find_compiled_assignment (to_x86 t1,to_x86 t2)
         in [ASM_INSERT (s,i,NONE)] end
     | compile_inst1 (ASM_COMPARE tm) = let
-        val (t1,t2,i,s) = find_compiled_conditional tm handle Empty =>
+        val (t1,t2,i,s) = find_compiled_conditional tm handle _ =>
                           find_compiled_conditional (to_x86 tm)
         val (t,f) = cond_code t2
         val (t,f) = if is_neg t1 then (f,t) else (t,f)
         in [ASM_INSERT (s,i,SOME (t,f))] end
-    | compile_inst1 x = hd []
+    | compile_inst1 x = fail()
   fun func_name_annotations t1 t2 = let
     val vs = free_vars t1 @ free_vars t2
     val v = hd (filter (fn v => (type_of v = ``:word32 -> word32``)
                                 orelse
                                 (type_of v = ``:word32 -> word8``)) vs)
-    in "/" ^ fst (dest_var v) end handle Empty => ""
-  fun unable_to_compile s = (print ("\n\n\n  ERROR! Unable to generate " ^ target ^ " for:\n\n    " ^ s ^ "\n\n\n") ; hd [])
+    in "/" ^ fst (dest_var v) end handle _ => ""
+  fun unable_to_compile s = (print ("\n\n\n  ERROR! Unable to generate " ^ target ^ " for:\n\n    " ^ s ^ "\n\n\n") ; fail())
   fun compile_inst2 (ASM_ASSIGN (t1,t2)) = ((let
         val code = assign2assembly (term2assign t1 t2)
         val s = func_name_annotations t1 t2
@@ -501,18 +504,18 @@ fun generate_code target model_name print_assembly tm = let
         handle e => unable_to_compile ("if " ^ term_to_string tm ^ " then ... else ..."))
     | compile_inst2 x = [x]
   fun append_list [] = [] | append_list (x::xs) = x @ append_list xs
-  val code2 = append_list (map (fn x => compile_inst1 x handle Empty => compile_inst2 x) code1)
+  val code2 = append_list (map (fn x => compile_inst1 x handle _ => compile_inst2 x) code1)
   (* try to produce conditional execution *)
   fun bool2str c = if c then "true" else "false"
   fun conditionally_execute code u (t,f) label = let
-    fun find_label [] head  = hd []
+    fun find_label [] head  = fail()
       | find_label (x::xs) head =
           if asm_type_eq x (ASM_LABEL label) then (head,xs) else find_label xs (head @ [x])
     val (code,rest) = find_label code []
     val condition = if u then f else t
     fun force_condition (ASM_INSTRUCTION (c,x,h)) = ASM_INSTRUCTION (conditionalise c condition,x,h)
       | force_condition (ASM_BRANCH (NONE, l2)) = ASM_BRANCH (SOME (bool2str (not u)), l2)
-      | force_condition _ = hd []
+      | force_condition _ = fail()
     in map force_condition code @ rest end
   fun conditionalise [] (t,f) = []
     | conditionalise ((ASM_BRANCH (SOME u,label))::xs) (t,f) =

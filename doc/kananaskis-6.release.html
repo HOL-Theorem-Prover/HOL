@@ -35,14 +35,75 @@
 <ul>
 
 <li><p>The <code>HolSmtLib</code> library now supports proof
-  reconstruction for the SMT solver
-  <a href="http://research.microsoft.com/en-us/um/redmond/projects/z3/">Z3</a>.
-  (Several other SMT solvers continue to be supported as
-  oracles.)</p></li>
+    reconstruction for the
+    <abbrev title="Satisfiability Modulo Theories">SMT</abbrev> solver
+    <a href="http://research.microsoft.com/en-us/um/redmond/projects/z3/">Z3</a>.
+    (Several other SMT solvers continue to be supported as
+    oracles.)</p></li>
+
+<li><p>The pretty-printer now uses colours to convey extra information
+    about terms and types as they are printed.  For example, bound
+    term variables are printed in green, and free variables are
+    printed in blue.  This colouring will happen on colour terminals
+    such as Unix <code>xterm</code> (also the standard MacOS Terminal
+    application), as well as inside Emacs.  Also, if you are using the
+    Emacs mode, then the types of both sorts of variables are
+    available in a mouse-over tooltip.</p></li>
+
+<li><p>Many type variables can now be parsed and printed as lower-case
+    Greek letters.  For example, you can input <code>``:'a``</code>,
+    and will get back <code>``:α``</code>.  You can also input type
+    variables using the Greek letters (except for the letter λ).
+    Underneath, the type variable still has the name with the
+    apostrophe: this is a purely presentational change.</p></li>
+
+<li><p>Bounded rewrites work better (a few bugs were fixed here), and
+there is now also an easy way to specify that a rewrite should only
+occur on the left or right side of a term.  For example, to apply the
+theorem <code>th</code> twice, and on the left-hand side on an equality,
+use</p>
+<pre>
+         SIMP_TAC bool_ss [Ntimes th 2, SimpLHS]
+</pre>
+<p>To rewrite on the right-hand side:</p>
+<pre>
+         SIMP_TAC bool_ss [Ntimes th 2, SimpRHS]
+</pre>
+<p>It is also possible to rewrite on the left or right sides of
+operators other than equality.  See the Description manual for
+details. </p>
+</li>
+
+<li><p>If the block of universally quantified variables at the head of
+a clause in the definition of an inductive relation contains duplicate
+names, <code>Hol_reln</code> detects this and provides an informative
+error message. </p></li>
 
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
+
+<ul>
+<li><p>Type abbreviations used to be able to be applied to more type
+arguments than they were expecting.  E.g.,</p>
+<pre>
+         type_abbrev("foo", ``:bool``)
+</pre>
+<p>followed by</p>
+<pre>
+         ``:'a foo``
+</pre>
+<p>used to work.  No more!</p>
+</li>
+
+<li><p> <code>Hol_reln</code> now correctly accepts inductive
+definitions where type variables appear only in schematic
+variables.</p></li>
+
+
+</ul>
+
+
 
 <h2 id="new-theories">New theories:</h2>
 
@@ -64,6 +125,9 @@
   and <code>Drule.FRONT_CONJ_CONV</code> have been removed. Their
   functionality can easily be derived
   from <code>Drule.CONJUNCTS_AC</code>.</p></li>
+
+<li><p>The overload <code><></code> on <code>words$word_slice</code>
+  has been removed and replaced with <code>''</code>.</p></li>
 
 </ul>
 

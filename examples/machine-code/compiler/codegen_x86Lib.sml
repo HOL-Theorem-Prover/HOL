@@ -28,7 +28,7 @@ val x86_assign2assembly = let
     | binop_to_name ASSIGN_BINOP_SUB = "sub"
     | binop_to_name ASSIGN_BINOP_XOR = "xor"
     | binop_to_name ASSIGN_BINOP_OR = "or"
-    | binop_to_name _ = hd []
+    | binop_to_name _ = fail()
   fun exp (ASSIGN_X_REG j) = x86_reg j
     | exp (ASSIGN_X_CONST i) = Arbnum.toString i
   fun code_for_binop k ASSIGN_BINOP_MUL
@@ -39,7 +39,7 @@ val x86_assign2assembly = let
         val (i_reg,j_reg) = if i_reg = "eax" then (i_reg,j_reg) else (j_reg,i_reg)
         in if (i_reg = "eax") andalso (k_reg = "eax") then ["mul " ^ x86_reg j]
            else (print ("\n\nUnable to create x86 code for:   " ^ k_reg ^ " := " ^ i_reg ^
-                       " * " ^ j_reg ^ "\n\n"); hd []) end
+                       " * " ^ j_reg ^ "\n\n"); fail()) end
     | code_for_binop k ASSIGN_BINOP_DIV
                      (ASSIGN_X_REG i) (ASSIGN_X_REG j) reversed = let
         val k_reg = x86_reg k
@@ -48,7 +48,7 @@ val x86_assign2assembly = let
         val (i_reg,j_reg) = if i_reg = "eax" then (i_reg,j_reg) else (j_reg,i_reg)
         in if (i_reg = "eax") andalso (k_reg = "eax") then ["xor edx, edx", "div " ^ x86_reg j]
            else (print ("\n\nUnable to create x86 code for:   " ^ k_reg ^ " := " ^ i_reg ^
-                       " DIV " ^ j_reg ^ "\n\n"); hd []) end
+                       " DIV " ^ j_reg ^ "\n\n"); fail()) end
     | code_for_binop k ASSIGN_BINOP_MOD
                      (ASSIGN_X_REG i) (ASSIGN_X_REG j) reversed = let
         val k_reg = x86_reg k
@@ -57,10 +57,10 @@ val x86_assign2assembly = let
         val (i_reg,j_reg) = if i_reg = "eax" then (i_reg,j_reg) else (j_reg,i_reg)
         in if (i_reg = "eax") andalso (k_reg = "edx") then ["xor edx, edx", "mod " ^ x86_reg j]
            else (print ("\n\nUnable to create x86 code for:   " ^ k_reg ^ " := " ^ i_reg ^
-                       " MOD " ^ j_reg ^ "\n\n"); hd []) end
+                       " MOD " ^ j_reg ^ "\n\n"); fail()) end
     | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_REG j) reversed =
         code_for_binop d b (ASSIGN_X_REG j) (ASSIGN_X_CONST i) (not reversed)
-    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_CONST j) reversed = hd []
+    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_CONST j) reversed = fail()
     | code_for_binop d b (ASSIGN_X_REG i) j reversed =
        if (b = ASSIGN_BINOP_SUB) andalso reversed then
          (if j = ASSIGN_X_REG d then [] else ["mov " ^ x86_reg d ^ ", " ^ exp j]) @
@@ -104,7 +104,7 @@ val x86_assign2assembly = let
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT (j,n))) = code_for_shift d j n "sar"
     | f (ASSIGN_STACK (i,d)) = ["mov " ^ s i ^ ", " ^ mem_rhs ACCESS_WORD d]
     | f (ASSIGN_MEMORY (b,a,d)) = [mov_name b ^ " " ^ address a ^ ", " ^ mem_rhs b d]
-    | f (ASSIGN_OTHER (t1,t2)) = hd []
+    | f (ASSIGN_OTHER (t1,t2)) = fail()
   in f end
 
 fun x86_guard2assembly (GUARD_NOT t) = let
@@ -142,7 +142,7 @@ fun x86_guard2assembly (GUARD_NOT t) = let
 
 fun x86_conditionalise c condition = let
   val c' = String.translate (fn x => if x = #"?" then condition else implode [x]) c
-  in if c = c' then hd [] else c' end
+  in if c = c' then fail() else c' end
 
 fun x86_remove_annotations c =
   if String.substring(c,0,5) = "cmov?" then
@@ -152,7 +152,7 @@ fun x86_remove_annotations c =
 fun x86_cond_code tm = 
   (* zero     *) if eq tm ``xS1 X_ZF`` then ("e","ne") else
   (* sign     *) if eq tm ``xS1 X_SF`` then ("s","ns") else
-  (* below    *) if eq tm ``xS1 X_CF`` then ("b","nb") else hd []
+  (* below    *) if eq tm ``xS1 X_CF`` then ("b","nb") else fail()
 
 
 fun x86_encode_instruction s =
@@ -178,17 +178,17 @@ fun x86_flip_cond c =
   if mem c ["na","jna"] then "a" else
   if mem c ["a","ja"] then "na" else
   if mem c ["nb","jnb"] then "b" else
-  if mem c ["b","jb"] then "nb" else hd []
+  if mem c ["b","jb"] then "nb" else fail()
 
 fun x86_encode_branch forward l cond =
-  x86_encode_branch_aux forward l cond handle Empty =>
+  x86_encode_branch_aux forward l cond handle HOL_ERR _ =>
   let (* The implementation of long conditional jumps assume
          that short conditional jumps are 2 bytes inlength,
          and that long unconditional branches are 5 bytes. *)
-  fun the NONE = hd [] | the (SOME x) = x
+  fun the NONE = fail() | the (SOME x) = x
   val c = x86_flip_cond (the cond)
   val (xs,i) = x86_encode_branch_aux true 5 (SOME c)
-  val _ = if i = 2 then () else hd []
+  val _ = if i = 2 then () else fail()
   val l = if forward then l else l+2
   val (ys,j) = x86_encode_branch_aux forward l NONE
   in (xs ^ " " ^ ys, i + j) end

@@ -278,49 +278,6 @@ end
     | _ => raise InternalFailure locn
   end
 
-  fun parse_tuple prse fb = let
-    val (llocn,_) = itemP is_LParen fb
-    val ty1 = prse fb
-    fun recurse acc = let
-      val (adv,(t,locn)) = typetok_of fb
-    in
-      case t of
-        RParen => (adv(); (List.rev acc,locn.between llocn locn))
-      | Comma => (adv(); recurse (one locn (prse fb) :: acc))
-      | _ => raise InternalFailure locn
-    end
-  in
-    recurse ty1
-  end
-
-  fun parse_atom prse fb = let
-    val (adv, (t,locn)) = typetok_of fb
-    fun ts t = type_tokens.token_string t handle _ => "<unknown>"
-    val _ = if is_debug() then print ("=> parse_atom of " ^ ts t ^ "\n") else ()
-    open Feedback
-    fun try_const_tyop(t,locn) =
-        let val ty = const_tyop(t,locn) (* may throw InternalFailure *)
-        in if is_debug() then print ("=> try_const_tyop succeeded on " ^ ts t ^ "\n") else ();
-           (adv(); ty)                  (* if failure, don't adv()   *)
-           handle e => if is_debug() then (print ("try_const_tyop advance failed on " ^ ts t ^ ".\n"); Raise e)
-                                     else raise e
-        end
-        handle e => if is_debug() then (print ("try_const_tyop failed on " ^ ts t ^ ".\n"); Raise e)
-                                  else raise e
-  in
-    case t of
-      LParen => let val (tys,locn) = parse_tuple prse fb (* may throw InternalFailure *)
-                in if is_debug() then print ("<= parse_atom(paren) returned "
-                         ^ Int.toString (length tys) ^ " types\n") else ();
-                   tys
-                end
-    | TypeVar s => (adv(); [pVartype ((s,Prekind.new_uvar(),Prerank.new_uvar()), locn)])
-    | AQ x => (adv(); [pAQ x])
-    | QTypeIdent (s0,s) => [try_const_tyop(t,locn)]
-    | TypeIdent s => [try_const_tyop(t,locn)]
-    | _ => raise InternalFailure locn
-  end
-
   fun parse_num fb = let
     val (adv,(t,locn)) = typetok_of fb
   in
@@ -345,6 +302,93 @@ end
     val prk = Prerank.fromRank rk
   in
     (prk, locn.between llocn rlocn)
+  end
+
+  fun apply_binder ((t,locn),alphas,body) = let
+  in
+    case t of
+      TypeIdent s  => if Lib.mem s lambda then apply_abst(alphas, body)
+                      else if Lib.mem s forall then apply_univ(alphas, body)
+                      else raise InternalFailure locn
+    | QTypeIdent (_,s) => if Lib.mem s lambda then apply_abst(alphas, body)
+                      else if Lib.mem s forall then apply_univ(alphas, body)
+                      else raise InternalFailure locn
+    | TypeSymbol s => if Lib.mem s lambda then apply_abst(alphas, body)
+                      else if Lib.mem s forall then apply_univ(alphas, body)
+                      else raise InternalFailure locn
+    | _ => raise InternalFailure locn
+  end
+
+  fun parse_binop (stlist:{parse_string:string,opname:string}list) fb = let
+    val (adv, (t,locn)) = typetok_of fb
+    fun doit (t,locn) =
+      case List.find (fn r => (#parse_string r = token_string t)) stlist of
+        NONE => raise InternalFailure locn
+      | SOME r => (adv(); (TypeIdent (#opname r),locn))
+  in
+    case t of
+      TypeIdent s => doit (t,locn)
+    | TypeSymbol s => doit (t,locn)
+    | _ => raise InternalFailure locn
+  end
+
+  fun parse_asfx prse fb = let
+    val (llocn, _) = itemP is_LBracket fb
+    val ty = one llocn (prse fb)
+    val (rlocn, _) = itemP is_RBracket fb
+  in
+    ty
+  end
+
+  fun parse_tuple prse fb = let
+    val (llocn,_) = itemP is_LParen fb
+    val ty1 = prse fb
+    fun recurse acc = let
+      val (adv,(t,locn)) = typetok_of fb
+    in
+      case t of
+        RParen => (adv(); (List.rev acc,locn.between llocn locn))
+      | Comma => (adv(); recurse (one locn (prse fb) :: acc))
+      | _ => raise InternalFailure locn
+    end
+  in
+    recurse ty1
+  end
+
+  fun uniconvert c = let
+    val ((s,i), s') = valOf (UTF8.getChar c)
+  in
+    if s' = "" andalso 0x3B1 <= i andalso i <= 0x3C9 then
+      "'" ^ str (Char.chr (i - 0x3B1 + Char.ord #"a"))
+    else c
+  end
+
+  fun parse_atom prse fb = let
+    val (adv, (t,locn)) = typetok_of fb
+    fun ts t = type_tokens.token_string t handle _ => "<unknown>"
+    val _ = if is_debug() then print ("=> parse_atom of " ^ ts t ^ "\n") else ()
+    open Feedback
+    fun try_const_tyop(t,locn) =
+        let val ty = const_tyop(t,locn) (* may throw InternalFailure *)
+        in if is_debug() then print ("=> try_const_tyop succeeded on " ^ ts t ^ "\n") else ();
+           (adv(); ty)                  (* if failure, don't adv()   *)
+           handle e => if is_debug() then (print ("try_const_tyop advance failed on " ^ ts t ^ ".\n"); Raise e)
+                                     else raise e
+        end
+        handle e => if is_debug() then (print ("try_const_tyop failed on " ^ ts t ^ ".\n"); Raise e)
+                                  else raise e
+  in
+    case t of
+      LParen => let val (tys,locn) = parse_tuple prse fb (* may throw InternalFailure *)
+                in if is_debug() then print ("<= parse_atom(paren) returned "
+                         ^ Int.toString (length tys) ^ " types\n") else ();
+                   tys
+                end
+    | TypeVar s => (adv(); [pVartype ((uniconvert s,Prekind.new_uvar(),Prerank.new_uvar()), locn)])
+    | AQ x => (adv(); [pAQ x])
+    | QTypeIdent (s0,s) => [try_const_tyop(t,locn)]
+    | TypeIdent s => [try_const_tyop(t,locn)]
+    | _ => raise InternalFailure locn
   end
 
   fun parse_typevars parser strm = let
@@ -396,42 +440,6 @@ end
     val alphas = parse_typevars parser fb
   in
     ((t,locn),alphas)
-  end
-
-  fun apply_binder ((t,locn),alphas,body) = let
-  in
-    case t of
-      TypeIdent s  => if Lib.mem s lambda then apply_abst(alphas, body)
-                      else if Lib.mem s forall then apply_univ(alphas, body)
-                      else raise InternalFailure locn
-    | QTypeIdent (_,s) => if Lib.mem s lambda then apply_abst(alphas, body)
-                      else if Lib.mem s forall then apply_univ(alphas, body)
-                      else raise InternalFailure locn
-    | TypeSymbol s => if Lib.mem s lambda then apply_abst(alphas, body)
-                      else if Lib.mem s forall then apply_univ(alphas, body)
-                      else raise InternalFailure locn
-    | _ => raise InternalFailure locn
-  end
-
-  fun parse_binop (stlist:{parse_string:string,opname:string}list) fb = let
-    val (adv, (t,locn)) = typetok_of fb
-    fun doit (t,locn) =
-      case List.find (fn r => (#parse_string r = token_string t)) stlist of
-        NONE => raise InternalFailure locn
-      | SOME r => (adv(); (TypeIdent (#opname r),locn))
-  in
-    case t of
-      TypeIdent s => doit (t,locn)
-    | TypeSymbol s => doit (t,locn)
-    | _ => raise InternalFailure locn
-  end
-
-  fun parse_asfx prse fb = let
-    val (llocn, _) = itemP is_LBracket fb
-    val ty = one llocn (prse fb)
-    val (rlocn, _) = itemP is_RBracket fb
-  in
-    ty
   end
 
   fun parse_term current strm =

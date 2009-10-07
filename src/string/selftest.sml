@@ -82,6 +82,8 @@ val _ = app sectest sec_data
 
 fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
 
+val _ = set_trace "Unicode" 0
+
 fun tpp s = let
   val t = Parse.Term [QUOTE s]
   val _ = tprint ("Printing of `"^s^"`")

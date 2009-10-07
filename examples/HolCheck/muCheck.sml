@@ -765,7 +765,7 @@ fun init_prop (nf,mf) ee ksname state wfKS_ks vm githms msp prop_ty =
 	val _ = profTools.ent (dpfx^"init_prop_imf")(*PRF*)
         val qd = qdepth mf
         val ee2 = Array.array((Array.length ee)+qd,("dummy",BddCon true vm))
-	val _ = Array.copy {si=0,len=NONE,src=ee,dst=ee2,di=0}
+	val _ = Array.copy {src=ee,dst=ee2,di=0}
 	(*val tmr2 = Timer.startRealTimer()(*PRF*)*)
 	val (mfml,imf_thms,frv_thms) = mk_cache ee ie (nf,mf) mf qd githms state (seth,sel) msp
 	(*val _ = Binarymap.app (fn (k,v) => let val _ = dbgTools.DTM (dpfx^  k)  (*DBG*)

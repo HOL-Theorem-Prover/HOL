@@ -7,11 +7,11 @@ open HolKernel boolLib;
 (* Configuration                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val texLinewidth = 78;
 val texOptions = "11pt, twoside";
 
-val texPrefix  = ref "HOL";
-val emitTeXDir = ref "";
+val texLinewidth = ref 64;
+val texPrefix    = ref "HOL";
+val emitTeXDir   = ref "";
 
 val current_theory_name = ref "";
 val current_path        = ref Path.currentArc
@@ -226,29 +226,104 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
+(* An emit TeX back end                                                      *)
+(* ------------------------------------------------------------------------- *)
+
+fun token_string s = String.concat ["\\", !texPrefix, "Token", s, "{}"];
+
+local
+  fun char_map c =
+    case c
+    of #"\\" => token_string "Backslash"
+     | #"{"  => token_string "Leftbrace"
+     | #"}"  => token_string "Rightbrace"
+     | c     => String.str c
+
+  fun string_map s =
+    case s
+    of "!"     => (token_string "Forall",1)
+     | "?"     => (token_string "Exists",1)
+     | "?!"    => (token_string "Unique",2)
+     | "\\"    => (token_string "Lambda",1)
+     | "|->"   => (token_string "Mapto",1)
+     | " <-"   => (" " ^ token_string "Leftmap",2)
+     | "->"    => (token_string "Map",1)
+     | "-->"   => (token_string "Longmap",2)
+     | "><"    => (token_string "Extract",2)
+     | "<>"    => (token_string "NotEqual",1)
+     | "<=>"   => (token_string "Equiv",2)
+     | "<=/=>" => (token_string "NotEquiv",2)
+     | "=>"    => (token_string "Imp",1)
+     | "==>"   => (token_string "Imp",1)
+     | "===>"  => (token_string "Longimp",2)
+     | "/\\"   => (token_string "Conj",1)
+     | "\\/"   => (token_string "Disj",1)
+     | "<|"    => (token_string "Leftrec",2)
+     | "|>"    => (token_string "Rightrec",2)
+     | "|"     => (token_string "Bar",1)
+     | "~"     => (token_string "Neg",1)
+     | "<"     => (token_string "Lt",1)
+     | ">"     => (token_string "Gt",1)
+     | "<="    => (token_string "Leq",1)
+     | ">="    => (token_string "Geq",1)
+     | "<+"    => (token_string "Lo",1)
+     | ">+"    => (token_string "Hi",1)
+     | "<=+"   => (token_string "Ls",1)
+     | ">=+"   => (token_string "Hs",1)
+     | "<<"    => (token_string "Lsl",2)
+     | ">>"    => (token_string "Asr",2)
+     | ">>>"   => (token_string "Lsr",3)
+     | "#<<"   => (token_string "Rol",1)
+     | "#>>"   => (token_string "Ror",1)
+     | "||"    => (token_string "Or" ^ " ",2)
+     | "!!"    => (token_string "Or",1)
+     | "??"    => (token_string "Eor",1)
+     | "**"    => (token_string "Exp",2)
+     | "#"     => (token_string "Prod",1)
+     | "{}"    => (token_string "Empty",2)
+     | "_"     => (token_string "Underscore",1)
+     | _       => (String.translate char_map s,String.size s)
+in
+  val emit_latex =
+    {add_break = PP.add_break,
+     add_string = (fn pps => fn s => PP.add_stringsz pps (string_map s)),
+     add_ann_string = (fn pps => fn (s,ann) =>
+                                     PP.add_stringsz pps (string_map s)),
+     add_newline = PP.add_newline,
+     begin_block = PP.begin_block,
+     end_block = PP.end_block,
+     name = "emit_latex"}
+end;
+
+(* ------------------------------------------------------------------------- *)
 (* pp_datatype_theorem : ppstream -> thm -> unit                             *)
 (* Pretty-printer for datatype theorems                                      *)
 (* ------------------------------------------------------------------------- *)
 
-fun pp_datatype_theorem ostrm thm =
-let val S = PP.add_string ostrm
-    val BR = PP.add_break ostrm
-    val BB = PP.begin_block ostrm
-    fun NL() = PP.add_newline ostrm
-    fun EB() = PP.end_block ostrm
-    val PT = pp_term ostrm
-    val TP = type_pp.pp_type (Parse.type_grammar()) PPBackEnd.raw_terminal ostrm
-
-    val type_trace = current_trace "types"
-    val _ = set_trace "types" 0
+fun pp_datatype_theorem backend ostrm thm =
+let val {add_string,add_break,begin_block,add_newline,end_block,...} =
+           PPBackEnd.with_ppstream backend ostrm
+    val S = add_string
+    val BR = add_break
+    val BB = begin_block
+    val NL = add_newline
+    val EB = end_block
+    fun PT tm = Feedback.trace ("Unicode", 0) (Feedback.trace ("types", 0)
+                  (term_pp.pp_term
+                     (Feedback.trace ("Unicode", 0) Parse.term_grammar())
+                     (Feedback.trace ("Unicode", 0) Parse.type_grammar())
+                   backend ostrm)) tm
+    fun TP ty = Feedback.trace ("Unicode", 0)
+                  (type_pp.pp_type
+                     (Feedback.trace ("Unicode", 0) Parse.type_grammar())
+                   backend ostrm) ty
 
     fun strip_type t =
       if is_vartype t then
-       [t]
+        [t]
       else
         case dest_type t of
           ("fun", [a, b]) => a :: strip_type b
-
         | _ => [t]
 
     fun pp_clause t =
@@ -261,24 +336,28 @@ let val S = PP.add_string ostrm
              else
                (S " of ";
                 BB PP.CONSISTENT 0;
-                  app (fn x => (TP x; S " =>"; BR(1,0))) (List.take(l, ll - 2));
+                  app (fn x => (TP x; S " "; S "=>"; BR(1,0)))
+                      (List.take(l, ll - 2));
                   TP (List.nth(l, ll - 2));
                 EB()))
         end
+
     fun enumerated_type n =
           let val l = butlast (strip_type (type_of n))
               val typ = fst (dest_var n)
           in
             all (fn x => fst (dest_type x) = typ) l
           end
+
     fun pp_constructor_spec (n, l) =
           (PT n;
            BB (if enumerated_type n then PP.INCONSISTENT else PP.CONSISTENT) 1;
              S " = ";
-             app (fn x => (pp_clause x; BR(1,0); S "| "))
-               (List.take(l, length l - 1));
+             app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
+                 (List.take(l, length l - 1));
              pp_clause (last l);
            EB())
+
     fun pp_record_spec l =
         let val ll = tl l
             fun pp_record x = (PT x; S " : "; TP (type_of x))
@@ -292,130 +371,59 @@ let val S = PP.add_string ostrm
              S "|>";
            EB())
         end
+
     fun pp_binding (n, l) =
           if fst (dest_var n) = "record" then
             pp_record_spec l
           else
             pp_constructor_spec (n, l)
-    fun pp_datatype l =
-          (BB PP.CONSISTENT 0;
-             app (fn x => (pp_binding x; S " ;"; NL(); NL()))
-               (List.take(l, length l - 1));
-             pp_binding (last l);
-           EB())
 
     val t = map strip_comb (strip_conj (snd (dest_comb (concl thm))))
 in
-  pp_datatype t; PP.flush_ppstream ostrm; set_trace "types" type_trace
+  BB PP.CONSISTENT 0;
+  app (fn x => (pp_binding x; S " ;"; NL(); NL()))
+      (List.take(t, length t - 1));
+  pp_binding (last t);
+  EB()
 end;
 
 val datatype_thm_to_string =
-  PP.pp_to_string (!Globals.linewidth) pp_datatype_theorem;
+  PP.pp_to_string (!Globals.linewidth)
+    (pp_datatype_theorem PPBackEnd.raw_terminal);
 
 fun print_datatypes s =
   app (fn (_,x) => print (datatype_thm_to_string x ^ "\n"))
     (datatype_theorems s);
 
 (* ------------------------------------------------------------------------- *)
-(* theorem2tex : string -> string                                            *)
-(* datatype2tex : string -> string                                           *)
-(*   Replace HOL tokens in the string with tex code                          *)
-(* ------------------------------------------------------------------------- *)
-
-local
-  fun token_string s = "\\" ^ !texPrefix ^ "Token" ^ s ^ "{}";
-  fun h2t cs s =
-    case cs of
-      [] => s
-    | #"|" :: #"-" :: #">" :: l         => h2t l (s ^ token_string "Mapto")
-    | #"-" :: #"-" :: #">" :: l         => h2t l (s ^ token_string "Longmap")
-    | #"=" :: #"=" :: #"=" :: #">" :: l => h2t l (s ^ token_string "Longimp")
-    | #"-" :: #">" :: l                 => h2t l (s ^ token_string "Map")
-    | #"<" :: #"-" :: l                 => h2t l (s ^ token_string "Leftmap")
-    | #"=" :: #"=" :: #">" :: l         => h2t l (s ^ token_string "Imp")
-    | #"=" :: #">" :: l                 => h2t l (s ^ token_string "Imp")
-    | #"|" :: #"-" :: l                 => h2t l (s ^ token_string "Turnstile")
-    | #"/" :: #"\\" :: l                => h2t l (s ^ token_string "Conj")
-    | #"\\" :: #"/" :: l                => h2t l (s ^ token_string "Disj")
-    | #"<" :: #"=" :: #"/" :: #"=" :: #">" :: l
-                                        => h2t l (s ^ token_string "NotEquiv")
-    | #"<" :: #"=" :: #">" :: l         => h2t l (s ^ token_string "Equiv")
-    | #"<" :: #"|" :: l                 => h2t l (s ^ token_string "Leftrec")
-    | #"|" :: #">" :: l                 => h2t l (s ^ token_string "Rightrec")
-    | #"<" :: #"+" :: l                 => h2t l (s ^ token_string "Lo")
-    | #">" :: #"+" :: l                 => h2t l (s ^ token_string "Hi")
-    | #"<" :: #"=" :: #"+" :: l         => h2t l (s ^ token_string "Ls")
-    | #">" :: #"=" :: #"+" :: l         => h2t l (s ^ token_string "Hs")
-    | #"<" :: #"=" :: l                 => h2t l (s ^ token_string "Leq")
-    | #">" :: #"=" :: l                 => h2t l (s ^ token_string "Geq")
-    | #"{" :: #"}" :: l                 => h2t l (s ^ token_string "Empty")
-    | #"*" :: #"*" :: l                 => h2t l (s ^ token_string "Exp")
-    | #"#" :: #">" :: #">" :: l         => h2t l (s ^ token_string "Ror")
-    | #"#" :: #"<" :: #"<" :: l         => h2t l (s ^ token_string "Rol")
-    | #">" :: #">" :: #">" :: l         => h2t l (s ^ token_string "Lsr")
-    | #">" :: #">" :: l                 => h2t l (s ^ token_string "Asr")
-    | #"<" :: #"<" :: l                 => h2t l (s ^ token_string "Lsl")
-    | #"<" :: #">" :: l                 => h2t l (s ^ token_string "Slice")
-    | #">" :: #"<" :: l                 => h2t l (s ^ token_string "Extract")
-    | #"#" :: #"#" :: l                 => h2t l (s ^ "##")
-    | #"#" :: l                         => h2t l (s ^ token_string "Prod")
-    | #"|" :: l                         => h2t l (s ^ token_string "Bar")
-    | #"'" :: l                         => h2t l (s ^ token_string "Quote")
-    | #"~" :: l                         => h2t l (s ^ token_string "Neg")
-    | #"_" :: l                         => h2t l (s ^ token_string "Underscore")
-    | #"<"::l                           => h2t l (s ^ token_string "Lt")
-    | #">"::l                           => h2t l (s ^ token_string "Gt")
-    | #"{"::l                           => h2t l (s ^ token_string "Leftbrace")
-    | #"}"::l                           => h2t l (s ^ token_string "Rightbrace")
-    | #"\n"::l                          => h2t l (s ^ "\n")
-    | #"!" :: #"!" :: l                 => h2t l (s ^ token_string "Or")
-    | #"?" :: #"?" :: l                 => h2t l (s ^ token_string "Eor")
-    | #"!" :: c :: l  => if Char.isAlpha c orelse c = #"(" then
-                           h2t l (s ^ token_string "Forall" ^ Char.toString c)
-                         else
-                           h2t (c :: l) (s ^ "!")
-    | #"?" :: c :: l  => if Char.isAlpha c orelse c = #"(" then
-                           h2t l (s ^ token_string "Exists" ^ Char.toString c)
-                         else
-                           if c = #"!" then
-                             h2t l (s ^ token_string "Unique")
-                           else
-                             h2t (c :: l) (s ^ "?")
-    | #"\\" :: c :: l => if Char.isAlpha c orelse c = #"(" then
-                           h2t l (s ^ token_string "Lambda" ^ Char.toString c)
-                         else
-                           h2t (c :: l) (s ^ token_string "Backslash")
-    | c::l => h2t l (s ^ Char.toString c)
-in
-  fun hol2tex s  = h2t (explode s) ""
-end;
-
-val hol_to_tex  = ref hol2tex;
-
-(* ------------------------------------------------------------------------- *)
 (* Various pretty-printers                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-fun pp_term_as_tex ostrm t =
-let val u = current_trace "Unicode" in
-  set_trace "Unicode" 0;
-  PP.add_string ostrm (!hol_to_tex (term_to_string t));
-  set_trace "Unicode" u
-end;
+fun pp_term_as_tex ostrm tm =
+  Feedback.trace ("pp_dollar_escapes", 0)
+    (Feedback.trace ("Unicode", 0)
+      (term_pp.pp_term (Feedback.trace ("Unicode", 0) Parse.term_grammar ())
+                       (Feedback.trace ("Unicode", 0) Parse.type_grammar ())
+         emit_latex ostrm)) tm;
 
-fun pp_type_as_tex ostrm t =
-let val u = current_trace "Unicode" in
-  set_trace "Unicode" 0;
-  PP.add_string ostrm (!hol_to_tex (type_to_string t));
-  set_trace "Unicode" u
-end;
+fun pp_type_as_tex ostrm ty =
+   Feedback.trace ("Unicode", 0)
+     (type_pp.pp_type (Feedback.trace ("Unicode", 0) Parse.type_grammar ())
+        emit_latex ostrm) ty;
 
 fun pp_theorem_as_tex ostrm thm =
-  PP.add_string ostrm (!hol_to_tex
-    (if is_datatype_thm thm then
-       datatype_thm_to_string thm
-     else
-       thm_to_string thm));
+  if is_datatype_thm thm then
+    pp_datatype_theorem emit_latex ostrm thm
+  else
+    let val {add_string,begin_block,end_block,...} =
+               PPBackEnd.with_ppstream emit_latex ostrm
+    in
+      begin_block Portable.INCONSISTENT 0;
+      PP.add_stringsz ostrm (token_string "Turnstile",2);
+      add_string " ";
+      pp_term_as_tex ostrm (concl thm);
+      end_block ()
+    end;
 
 val print_term_as_tex = Portable.pprint pp_term_as_tex;
 val print_type_as_tex = Portable.pprint pp_type_as_tex;
@@ -548,7 +556,7 @@ fun print_theory_as_tex name =
        val filename = Path.concat(path, prefix_escape name ^ ".tex")
        val ostrm = Portable.open_out filename
    in
-     PP.with_pp {consumer = Portable.outputc ostrm, linewidth = texLinewidth,
+     PP.with_pp {consumer = Portable.outputc ostrm, linewidth = !texLinewidth,
                  flush = fn () => Portable.flush_out ostrm}
         (Lib.C pp_theory_as_tex name)
      handle e => (Portable.close_out ostrm; raise e);
@@ -697,7 +705,7 @@ in
        val _ = current_path := Path.currentArc
        val ostrm = Portable.open_out filename
    in
-     PP.with_pp {consumer = Portable.outputc ostrm, linewidth = texLinewidth,
+     PP.with_pp {consumer = Portable.outputc ostrm, linewidth = !texLinewidth,
                  flush = fn () => Portable.flush_out ostrm}
         (Lib.C pp_theories_as_tex_doc names)
      handle e => (Portable.close_out ostrm; raise e);

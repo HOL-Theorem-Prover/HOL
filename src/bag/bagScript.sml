@@ -1751,6 +1751,9 @@ SRW_TAC [COND_elim_ss, DNF_ss]
          EQ_IMP_THM] THEN METIS_TAC []);
 val _ = export_rewrites ["BAG_ALL_DISTINCT_THM"]
 
+val forall_eq_thm = prove (``(!s:'a. (P s = Q s)) ==> ((!s. P s) = (!s. Q s))``,
+                             STRIP_TAC THEN ASM_REWRITE_TAC[]);
+
 val BAG_ALL_DISTINCT_BAG_MERGE = store_thm (
   "BAG_ALL_DISTINCT_BAG_MERGE",
   ``!b1 b2. BAG_ALL_DISTINCT (BAG_MERGE b1 b2) =
@@ -1759,8 +1762,9 @@ val BAG_ALL_DISTINCT_BAG_MERGE = store_thm (
                    GSYM FORALL_AND_THM, COND_RAND, COND_RATOR,
 		   COND_EXPAND_IMP] THEN
   REPEAT STRIP_TAC THEN
-  ConseqConv.CONSEQ_CONV_TAC (K ConseqConv.FORALL_EQ___CONSEQ_CONV) THEN
+  HO_MATCH_MP_TAC forall_eq_thm THEN
   GEN_TAC THEN bossLib.DECIDE_TAC);
+
 
 val BAG_ALL_DISTINCT_BAG_UNION = store_thm (
   "BAG_ALL_DISTINCT_BAG_UNION",
@@ -1774,7 +1778,7 @@ val BAG_ALL_DISTINCT_BAG_UNION = store_thm (
 		   IN_SET_OF_BAG, BAG_IN,
      		   BAG_INN, GSYM FORALL_AND_THM] THEN
   REPEAT STRIP_TAC THEN
-  ConseqConv.CONSEQ_CONV_TAC (K ConseqConv.FORALL_EQ___CONSEQ_CONV) THEN
+  HO_MATCH_MP_TAC forall_eq_thm THEN
   GEN_TAC THEN bossLib.DECIDE_TAC);
 
 val BAG_ALL_DISTINCT_DIFF = store_thm (

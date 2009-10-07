@@ -28,7 +28,9 @@ struct
     bossLib.PROVE [] ``p \/ q \/ ~(if p then r else q)``,
     bossLib.PROVE [] ``~p \/ q \/ ~(if p then q else r)``,
     bossLib.PROVE [] ``(if p then q else r) \/ ~p \/ ~q``,
-    bossLib.PROVE [] ``(if p then q else r) \/ p \/ ~r``
+    bossLib.PROVE [] ``(if p then q else r) \/ p \/ ~r``,
+    bossLib.PROVE [] ``~(if p then q else r) \/ ~p \/ q``,
+    bossLib.PROVE [] ``~(if p then q else r) \/ p \/ r``
   ]
 
   val rewrite_thms = thm_net_from_list

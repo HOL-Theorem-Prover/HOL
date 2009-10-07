@@ -19,7 +19,7 @@ fun write_code_to_file filename th = let
                                      x :: del_repetations (y::xs)
     | del_repetations zs = zs
   val vs = del_repetations vs
-  fun no_duplicates (x::y::xs) = if fst x = fst y then hd [] else no_duplicates (y::xs)
+  fun no_duplicates (x::y::xs) = if fst x = fst y then fail() else no_duplicates (y::xs)
     | no_duplicates _ = true
   val _ = no_duplicates vs
   fun term_byte_size tm =
@@ -28,7 +28,7 @@ fun write_code_to_file filename th = let
       foldr (fn (x,y) => x + y) 0 (map term_byte_size (fst (listSyntax.dest_list tm)))
   fun no_holes i [] = true
     | no_holes i ((j,c)::xs) =
-       if i = j then no_holes (i + (term_byte_size c)) xs else hd []
+       if i = j then no_holes (i + (term_byte_size c)) xs else fail()
   val _ = no_holes 0 vs
   val byte_count = ref 0;
   val big_endian_format = ``[(w2w ((w:word32) >>> 24)):word8;
@@ -46,14 +46,14 @@ fun write_code_to_file filename th = let
     val _ = (byte_count := !byte_count + (if type_of tm = ``:word8`` then 1 else 4))
     val s = Arbnum.toHexString (numSyntax.dest_numeral (cdr tm))
     in "0x" ^ fill "0" "" (if type_of tm = ``:word8`` then 2 else
-                           if type_of tm = ``:word32`` then 8 else hd []) s end
+                           if type_of tm = ``:word32`` then 8 else fail()) s end
   fun word2string tm = let
     val (tms,ty) = if listSyntax.is_list tm
                    then listSyntax.dest_list tm
                    else ([tm],type_of tm)
     val str = if ty = ``:word8`` then "\t.byte\t" else
-              if ty = ``:word32`` then "\t.word\t" else hd []
-    fun foo [] = hd []
+              if ty = ``:word32`` then "\t.word\t" else fail()
+    fun foo [] = fail()
       | foo [x] = word2hex x ^ "\n"
       | foo (x::y::ys) = word2hex x ^ ", " ^ foo (y::ys)
     in str ^ foo tms end

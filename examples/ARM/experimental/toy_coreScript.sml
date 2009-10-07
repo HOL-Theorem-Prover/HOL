@@ -83,7 +83,7 @@ val NEXT_INST_def = Define `
        NO_MEMORY_ACCESS (new_r,b,c)) /\
   (NEXT_INST (iCMP x y g) (r,b,c) m = 
      let new_b = g (r x) (r y) in
-       NO_MEMORY_ACCESS (r,new_b,c)) /\
+       NO_MEMORY_ACCESS (INC_PC 4w r,new_b,c)) /\
   (NEXT_INST (iLDR x (y,offset)) (r,b,c) m = 
      let new_r = (x =+ m (r y + offset)) (INC_PC 4w r) in
        ATTACH_MEMORY_ACCESS (new_r,b,c) [MEM_READ (r y + offset)]) /\

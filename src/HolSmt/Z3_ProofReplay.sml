@@ -5,9 +5,7 @@
 structure Z3_ProofReplay =
 struct
 
-  open Z3_ProofParse
-
-  val EXCLUDED_MIDDLE = bossLib.DECIDE ``!p. p \/ ~p``
+  open Z3_Proof
 
   val ALL_DISTINCT_NIL = simpLib.SIMP_PROVE bossLib.list_ss []
     ``ALL_DISTINCT [] = T``
@@ -63,9 +61,10 @@ struct
     val arith_cache = ref Net.empty
 
     (*** auxiliary functions ***)
-    (* e.g.   (A --> B) --> C --> D   ==>   [A, B, C, D] *)
+    (* e.g.,   (A --> B) --> C --> D   ==>   [A, B, C, D] *)
     fun strip_fun_tys ty =
-      let val (dom, rng) = Type.dom_rng ty
+      let
+        val (dom, rng) = Type.dom_rng ty
       in
         strip_fun_tys dom @ strip_fun_tys rng
       end
@@ -79,80 +78,6 @@ struct
       handle Feedback.HOL_ERR _ =>
         List.exists (fn ty => ty = realSyntax.real_ty)
           (strip_fun_tys (Term.type_of tm))
-    (* A |- ... /\ t /\ ...
-       --------------------
-              A |- t        *)
-    fun conj_elim (thm, t) =
-      let fun elim conj =
-            if t = conj then
-              Lib.I
-            else
-              let val (l, r) = boolSyntax.dest_conj conj
-              in
-                elim l o Thm.CONJUNCT1
-                  handle Feedback.HOL_ERR _ =>
-                    elim r o Thm.CONJUNCT2
-              end
-      in
-        elim (Thm.concl thm) thm
-      end
-    (*        A |- t
-       --------------------
-       A |- ... \/ t \/ ... *)
-    fun disj_intro (thm, disj) =
-      if Thm.concl thm = disj then
-        thm
-      else
-        let val (l, r) = boolSyntax.dest_disj disj
-        in
-          Thm.DISJ1 (disj_intro (thm, l)) r
-            handle Feedback.HOL_ERR _ =>
-              Thm.DISJ2 l (disj_intro (thm, r))
-        end
-    (* |- ... \/ t \/ ... \/ ~t \/ ... *)
-    fun gen_excluded_middle disj =
-      let val (pos, neg) = Lib.tryfind (fn neg =>
-            let val pos = boolSyntax.dest_neg neg
-                fun check_is_disjunct lit disj =
-                  disj = lit orelse
-                    let val (l, r) = boolSyntax.dest_disj disj
-                    in
-                      check_is_disjunct lit l
-                        handle Feedback.HOL_ERR _ =>
-                          check_is_disjunct lit r
-                    end
-                val _ = check_is_disjunct pos disj
-            in
-              (pos, neg)
-            end) (boolSyntax.strip_disj disj)
-          val th1 = disj_intro (Thm.ASSUME pos, disj)
-          val th2 = disj_intro (Thm.ASSUME neg, disj)
-      in
-        Thm.DISJ_CASES (Thm.SPEC pos EXCLUDED_MIDDLE) th1 th2
-      end
-    (* A |- ... /\ t /\ ... /\ ~t /\ ...
-       ---------------------------------
-                    A |- F               *)
-    fun gen_contradiction thm =
-      let val (pos, neg) = Lib.tryfind (fn neg =>
-            let val pos = boolSyntax.dest_neg neg
-                fun check_is_conjunct lit conj =
-                  conj = lit orelse
-                    let val (l, r) = boolSyntax.dest_conj conj
-                    in
-                      check_is_conjunct lit l
-                        handle Feedback.HOL_ERR _ =>
-                          check_is_conjunct lit r
-                    end
-                val _ = check_is_conjunct pos (Thm.concl thm)
-            in
-              (pos, neg)
-            end) (boolSyntax.strip_conj (Thm.concl thm))
-          val th1 = conj_elim (thm, pos)
-          val th2 = conj_elim (thm, neg)
-      in
-        Thm.MP (Thm.MP (Thm.SPEC pos NOT_FALSE) th1) th2
-      end
     (* returns "|- l = r", provided 'l' and 'r' are conjunctions that can be
        obtained from each other using associativity, commutativity and
        idempotence of conjunction, and identity of "T" wrt. conjunction.
@@ -161,15 +86,17 @@ struct
        must contain both a literal and its negation.
     *)
     fun rewrite_conj (l, r) =
-      let val Tl = boolSyntax.mk_conj (boolSyntax.T, l)
-          val Tr = boolSyntax.mk_conj (boolSyntax.T, r)
-          val Tl_eq_Tr = Drule.CONJUNCTS_AC (Tl, Tr)
+      let
+        val Tl = boolSyntax.mk_conj (boolSyntax.T, l)
+        val Tr = boolSyntax.mk_conj (boolSyntax.T, r)
+        val Tl_eq_Tr = Drule.CONJUNCTS_AC (Tl, Tr)
       in
         Thm.MP (Drule.SPECL [l, r] T_AND) Tl_eq_Tr
       end
       handle Feedback.HOL_ERR _ =>
         if r = boolSyntax.F then
-          let val l_imp_F = Thm.DISCH l (gen_contradiction (Thm.ASSUME l))
+          let
+            val l_imp_F = Thm.DISCH l (Library.gen_contradiction (Thm.ASSUME l))
           in
             Drule.EQF_INTRO (Thm.NOT_INTRO l_imp_F)
           end
@@ -184,15 +111,16 @@ struct
        both a literal and its negation.
     *)
     fun rewrite_disj (l, r) =
-      let val Fl = boolSyntax.mk_disj (boolSyntax.F, l)
-          val Fr = boolSyntax.mk_disj (boolSyntax.F, r)
-          val Fl_eq_Fr = Drule.DISJUNCTS_AC (Fl, Fr)
+      let
+        val Fl = boolSyntax.mk_disj (boolSyntax.F, l)
+        val Fr = boolSyntax.mk_disj (boolSyntax.F, r)
+        val Fl_eq_Fr = Drule.DISJUNCTS_AC (Fl, Fr)
       in
         Thm.MP (Drule.SPECL [l, r] F_OR) Fl_eq_Fr
       end
       handle Feedback.HOL_ERR _ =>
         if r = boolSyntax.T then
-          Drule.EQT_INTRO (gen_excluded_middle l)
+          Drule.EQT_INTRO (Library.gen_excluded_middle l)
         else
           raise (Feedback.mk_HOL_ERR "Z3_ProofReplay" "check_proof"
             "rewrite_disj")
@@ -306,7 +234,7 @@ struct
 
     (*** implementation of Z3's inference rules ***)
     fun and_elim (thm, t) =
-      conj_elim (thm, t)
+      Library.conj_elim (thm, t)
       handle Feedback.HOL_ERR _ =>
         raise (Feedback.mk_HOL_ERR "Z3_ProofReplay" "check_proof" ("and_elim: "
           ^ Hol_pp.thm_to_string thm ^ ", " ^ Hol_pp.term_to_string t))
@@ -363,13 +291,13 @@ struct
       handle Feedback.HOL_ERR _ =>
       (* or (or ... p ...) (not p) *)
       (* or (or ... (not p) ...) p *)
-      gen_excluded_middle t
+      Library.gen_excluded_middle t
       handle Feedback.HOL_ERR _ =>
       (* (or (not (and ... p ...)) p) *)
       let val (lhs, rhs) = boolSyntax.dest_disj t
           val conj = boolSyntax.dest_neg lhs
           (* conj |- rhs *)
-          val thm = conj_elim (Thm.ASSUME conj, rhs)  (* may fail *)
+          val thm = Library.conj_elim (Thm.ASSUME conj, rhs)  (* may fail *)
       in
         (* |- lhs \/ rhs *)
         Drule.IMP_ELIM (Thm.DISCH conj thm)
@@ -588,7 +516,7 @@ struct
               (false, boolSyntax.mk_neg t)
           val disj = boolSyntax.dest_neg (Thm.concl thm)
           (* neg_t |- disj *)
-          val th1 = disj_intro (Thm.ASSUME neg_t, disj)
+          val th1 = Library.disj_intro (Thm.ASSUME neg_t, disj)
           (* |- ~disj ==> ~neg_t *)
           val th1 = Drule.CONTRAPOS (Thm.DISCH neg_t th1)
           (* |- ~neg_t *)

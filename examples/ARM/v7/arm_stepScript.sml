@@ -2484,7 +2484,7 @@ val bx_write_pc_thm = Q.prove(
   `!address:word32.
        (if address ' 0 then
           select_instr_set ii InstrSet_Thumb >>=
-          (\u. branch_to ii ((31 <> 1) address))
+          (\u. branch_to ii ((31 '' 1) address))
         else if ~(address ' 1) then
           select_instr_set ii InstrSet_ARM >>=
           (\u. branch_to ii address)
@@ -2501,7 +2501,7 @@ val bx_write_pc_thm = Q.prove(
                  ((s.psrs (ii.proc,CPSR)) with
                      <| J := F; T := address ' 0 |>) s) >>=
            (\u. branch_to ii
-              (if address ' 0 then (31 <> 1) address else address))
+              (if address ' 0 then (31 '' 1) address else address))
        else
          errorT s`,
   SRW_TAC [] [aligned_bx_thm, select_instr_set_def,
@@ -2569,7 +2569,7 @@ val compare_branch_instr_thm = Q.prove(
                 increment_pc ii Encoding_Thumb
             else
               branch_to ii (if nonzero <=/=> (rn = 0w) then
-                              (31 <> 1) (pc + w2w imm6 << 1)
+                              (31 '' 1) (pc + w2w imm6 << 1)
                             else
                               pc - 2w)))`,
   SRW_TAC [boolSimps.LET_ss] [current_instr_set_def,

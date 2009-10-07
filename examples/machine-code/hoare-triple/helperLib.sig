@@ -30,6 +30,7 @@ sig
     val collect_term_of_type   : hol_type -> term -> term list
     val find_terml             : (term -> bool) -> term -> term list
     val find_terml_all         : (term -> bool) -> term -> term list
+    val remove_primes          : thm -> thm
 
     val car                    : term -> term
     val cdr                    : term -> term
@@ -40,8 +41,10 @@ sig
     val mk_sidecond_star       : term * term -> term
     val mk_star                : term * term -> term
     val mk_sep_hide            : term -> term
+    val mk_sep_exists          : term * term -> term
     val dest_star              : term -> term * term
     val dest_sep_hide          : term -> term
+    val dest_sep_exists        : term -> term * term
     val dest_spec              : term -> term * term * term * term
     val get_sep_domain         : term -> term
     val list_mk_star           : term list -> hol_type -> term
@@ -76,6 +79,9 @@ sig
     val HIDE_PRE_STATUS_RULE   : thm -> thm -> thm
     val INST_SPEC              : thm -> thm -> thm
     val EXISTS_PRE             : term frag list -> thm -> thm
+    val SEP_EXISTS_ELIM_RULE   : thm -> thm
+    val SEP_EXISTS_POST_RULE   : term -> thm -> thm
+    val SEP_EXISTS_PRE_RULE    : term -> thm -> thm
 
     val SPEC_STRENGTHEN_RULE   : thm -> term -> thm * term
     val SPEC_WEAKEN_RULE       : thm -> term -> thm * term

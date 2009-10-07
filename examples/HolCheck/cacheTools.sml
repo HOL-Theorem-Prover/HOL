@@ -382,10 +382,14 @@ fun mk_inv_thm opr args env ithml (githms as [AP_I,RV_I,T_I,F_I,NEG_I,NEG_I2,CON
     in res end
 | mk_inv_thm _ _ _ _ _ _ _ _ _  = Raise Match
 
-fun print_rsc rsc label =
-    let val _ = print  (label^" rsc ")
-        val _ = Vector.appi (fn (i,iv) => print  ((Int.toString i)^":"^(Int.toString(Vector.sub(rsc,i)))^" ")) (rsc,0,NONE)
-    in print "\n" end
+fun print_rsc rsc label = let
+in
+  print (label^" rsc ");
+  Vector.appi (fn (i,iv) => print (Int.toString i^":"^
+                                   Int.toString(Vector.sub(rsc,i))^" "))
+              rsc;
+  print "\n"
+end
 
 fun is_eq_rsc rsc rsc' =
     let val _ = profTools.bgt (dpfx^"ier")(*PRF*)
@@ -417,142 +421,201 @@ fun cache_add depth rvnm2ix env (nf,mf) mfo ce rsc rvty ithml (githms as [_,_,T_
     (* if not RV then must agree on reverse scope otherwise (say) <.> Q and <.> Q in different scopes would be identified *)
     (* reverse scoping for RV's is more complicated, so it is quicker to just cache on name+depth (a la de Bruijn) to tell them apart *)
 	val res =
-	    if (Option.isSome en) andalso (is_RV mf orelse same_rsc rsc en)
-	    then
-		let val (_,_,_,_,_,rsc,ithm,abthm,_,_) = !(Option.valOf en)
-		    val _ = dbgTools.DST (dpfx^"ca_ already cached") (*DBG*)
-		in (Option.valOf en,(ce,rsc,ithm,abthm)) end
-	    else
-           let fun mk_abbr rhs =  let val _ = profTools.bgt (dpfx^"ca_ma")(*PRF*)
-				      val df = mk_adf (nf^(int_to_string (!guid))) rhs (* fast abbrev definition *)
-	                              val _ = (guid := (!guid)+1)
-				      val _ = profTools.ent (dpfx^"ca_ma")(*PRF*)
-				  in df end
-	       val (opr,args) = strip_comb mf
-	       val (_,argso) = strip_comb mfo
-               val (en,rsc,ithm,abthm) =
-                   case (fst (dest_const opr)) of
-                       "AP"      => let val _ = profTools.bgt (dpfx^"ca_ap")(*PRF*)
-					val abthm = REFL mf
-					val _ = profTools.ent (dpfx^"ca_ap")(*PRF*)
-					val ithm = mk_inv_thm opr args env ithml githms state 0 msp seth
-                                    in (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,NONE,NONE),rsc,ithm,SOME abthm) end
-                     | "RV"      => let val _ = profTools.bgt (dpfx^"ca_rv")(*PRF*)
-					val rv = snd(dest_comb mf)
-                                        (*val _ = dbgTools.DST (dpfx^ ("RV")) ; val _ = dbgTools.DST (dpfx^ (fromHOLstring rv)) ;(*DBG*)
-                                        val _ = List.app (fn (b,i) =>
-							  let val _ = dbgTools.DST (dpfx^  (b^"::"^(int_to_string i)^"\n"))  in () end)
-                                                         (rvnm2ix)(*DBG*)*)
-                                        val ix =  commonTools.listkeyfind rvnm2ix (fromHOLstring rv) String.compare
-                                        val rsc = Vector.mapi
-					    (fn (i,v)=> if (i=ix)
-							    then ((let val ty = commonTools.listkeyfind rvty rv Term.compare
-								   in if ty then 2 else 1
-								   end) handle NotFound => 0)
-							else v) (rsc,0,NONE)
-                                        (*val _ = print_rsc rsc "RV cache_add depth"*)
-					val abthm = REFL mf
-					val _ = profTools.ent (dpfx^"ca_rv")(*PRF*)
-                                        val ithm = mk_inv_thm opr args env ithml githms state 0 msp seth
-                                    in (ref (NONE,SOME TRUTH,NONE,env,ix,rsc,ithm,SOME abthm,NONE,NONE),rsc,ithm,SOME abthm) end
-                       | "And"     => let val _ = dbgTools.DST (dpfx^  "ca_ And") (*DBG*)
-                                          (*val _ = dbgTools.DTH (dpfx^   CONJ_I) (*DBG*)*)
-                                          (*val _ = dbgTools.DST (dpfx^  " gen\n") (*DBG*)*)
-					  val _ = profTools.bgt (dpfx^"ca_c1")(*PRF*)
-                                          val chc = (if (is_imp(snd(strip_forall(concl(List.hd ithml))))) then 1 else 0)
-                                                    +(if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 2 else 0)
-					  val lcabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
-					  val rcabthmnm = lhs(concl(Option.valOf(List.last abthml)))
-					  val _ = profTools.ent (dpfx^"ca_c1")(*PRF*)
-                                          val abthm = mk_abbr (list_mk_comb(ctm,[lcabthmnm,rcabthmnm]))
-                                          val ithm = mk_inv_thm opr [lcabthmnm,rcabthmnm] env ithml githms state chc msp seth
-					  val _ = profTools.bgt (dpfx^"ca_c2")(*PRF*)
-					  val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
-					  val _ = profTools.ent (dpfx^"ca_c2")(*PRF*)
-                                      in (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,NONE,NONE),rsc,ithm,SOME abthm) end
-                       | "Or"      => let val _ = dbgTools.DST (dpfx^"ca_ Or") (*DBG*)
-                                          (*val _ = dbgTools.DTH (dpfx^   DISJ_I) (*DBG*)*)
-                                         (* val _ = dbgTools.DST (dpfx^  " gen\n") (*DBG*)*)
-					  val _ = profTools.bgt (dpfx^"ca_d1")(*PRF*)
-                                          val chc = (if (is_imp(snd(strip_forall(concl(List.hd ithml))))) then 1 else 0)
-                                                    +(if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 2 else 0)
-					  val lcabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
-					  val rcabthmnm = lhs(concl(Option.valOf(List.last abthml)))
-					  val _ = profTools.ent (dpfx^"ca_d1")(*PRF*)
-                                          val abthm = mk_abbr (list_mk_comb(dtm,[lcabthmnm,rcabthmnm]))(*``Or(^lcabthmnm)(^rcabthmnm)``*)
-                                          val ithm = mk_inv_thm opr [lcabthmnm,rcabthmnm] env ithml githms state chc msp seth
-					  val _ = profTools.bgt (dpfx^"ca_d2")(*PRF*)
-					  val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
-					  val _ = profTools.ent (dpfx^"ca_d2")(*PRF*)
-                                      in (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,NONE,NONE),rsc,ithm,SOME abthm)  end
-                       | "Not"     => let val _ = profTools.bgt (dpfx^"ca_n1")(*PRF*)
-					  val chc = (if (is_imp(snd(strip_forall(concl(List.hd ithml))))) then 1 else 0)
-					  val cabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
-					  val _ = profTools.ent (dpfx^"ca_n1")(*PRF*)
-                                          val abthm = mk_abbr (mk_comb(ntm,cabthmnm))(*``Not (^cabthmnm)`` *)
-                                          val ithm = mk_inv_thm opr [cabthmnm] env ithml githms state chc msp seth
-					  val _ = profTools.bgt (dpfx^"ca_n2")(*PRF*)
-					  val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
-					  val _ = profTools.ent (dpfx^"ca_n2")(*PRF*)
-                                      in (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,NONE,NONE),rsc,ithm,SOME abthm) end
-                       | "TR"      => (ref (NONE,NONE,NONE,env,~1,rsc,T_I,SOME (REFL mf),NONE,NONE),rsc,T_I,SOME (REFL mf))
-                       | "FL"      => (ref (NONE,NONE,NONE,env,~1,rsc,F_I,SOME (REFL mf),NONE,NONE),rsc,F_I,SOME (REFL mf))
-                       | "DIAMOND" => let val _ = dbgTools.DST (dpfx^"ca_ DMD\n") (*DBG*)
-                                          (*val _ = dbgTools.DTH (dpfx^   DMD_I)  val _ = dbgTools.DST (dpfx^  " gen\n") (*DBG*)*)
-					  val _ = profTools.bgt (dpfx^"ca_dmd")(*PRF*)
-                                          val chc = (if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 1 else 0)
-					  val cabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
-					  val actnm = List.hd args
-					  val _ = profTools.ent (dpfx^"ca_dmd")(*PRF*)
-                                          val abthm = mk_abbr (list_mk_comb(dmdtm,[actnm,cabthmnm]))(*``DIAMOND (^actnm) (^cabthmnm)``*)
-                                          val ithm = mk_inv_thm opr [List.hd args,cabthmnm] env ithml githms state chc msp seth
-					  val _ = profTools.bgt (dpfx^"ca_dmd")(*PRF*)
-					  val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
-					  val _ = profTools.ent (dpfx^"ca_dmd")(*PRF*)
-                                      in (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,NONE,NONE),rsc,ithm,SOME abthm) end
-                       | "BOX"     => let val _ = dbgTools.DST (dpfx^  "ca_ BOX") (*DBG*)
-                                          (*val _ = dbgTools.DTH (dpfx^   BOX_I)  val _ = dbgTools.DST (dpfx^  " gen\n") (*DBG*)*)
-					  val _ = profTools.bgt (dpfx^"ca_box")(*PRF*)
-                                          val chc = (if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 1 else 0)
-					  val cabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
-					  val actnm = List.hd args
-					  val _ = profTools.ent (dpfx^"ca_box")(*PRF*)
-                                          val abthm = mk_abbr (list_mk_comb(boxtm,[actnm,cabthmnm]))(*``BOX (^actnm) (^cabthmnm)``*)
-                                          val ithm = mk_inv_thm opr [List.hd args,cabthmnm] env ithml githms state chc msp seth
-					  val _ = profTools.bgt (dpfx^"ca_box")(*PRF*)
-					  val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
-					  val _ = profTools.ent (dpfx^"ca_box")(*PRF*)
-                                      in (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,NONE,NONE),rsc,ithm,SOME abthm) end
-                       | "mu"      => let val _ = dbgTools.DST (dpfx^  "ca_ mu") (*DBG*)
-                                          val _ = profTools.bgt (dpfx^"ca_mu")(*PRF*)
-					  val chc = (if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 1 else 0)
-					  val cabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
-					  val rvnm = List.hd args
-                                          val _ = profTools.ent (dpfx^"ca_mu")(*PRF*)
-                                          val abthm = mk_abbr (list_mk_comb(mutm,[rvnm,cabthmnm]))(*``mu (^rvnm) .. (^cabthmnm)``*)
-                                          val ithm = mk_inv_thm opr [List.hd args,cabthmnm] env ithml githms state chc msp seth
-                                          val _ = profTools.bgt (dpfx^"ca_mu")(*PRF*)
-					  val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
-                                          val _ = profTools.ent (dpfx^"ca_mu")(*PRF*)
-                                      in  (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,NONE,NONE),rsc,ithm,SOME abthm) end
-                       | "nu"      => let val _ = dbgTools.DST (dpfx^  "ca_ nu") (*DBG*)
-                                          val _ = profTools.bgt (dpfx^"ca_nu")(*PRF*)
-					  val chc = (if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 1 else 0)
-					  val cabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
-					  val rvnm = List.hd args
-                                          val _ = profTools.ent (dpfx^"ca_nu")(*PRF*)
-                                          val abthm = mk_abbr (list_mk_comb(nutm,[rvnm,cabthmnm]))(*``nu (^rvnm) .. (^cabthmnm)`` *)
-                                          val ithm = mk_inv_thm opr [List.hd args,cabthmnm] env ithml githms state chc msp seth
-                                          val _ = profTools.bgt (dpfx^"ca_nu")(*PRF*)
-					  val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
-                                          val _ = profTools.ent (dpfx^"ca_nu")(*PRF*)
-                                      in (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,NONE,NONE),rsc,ithm,SOME abthm) end
-                       | _         => Raise Match
-           in let val _ = profTools.bgt(dpfx^"ca_bmi")(*PRF*)
-		  val _ = Polyhash.insert ce (cekey,en)(*Redblackmap.insert(ce,cekey,en) *)
-		  val _ = profTools.ent(dpfx^"ca_bmi")(*PRF*)
-	      in (en,(ce,rsc,ithm,abthm)) end
-	   end
+	    if (Option.isSome en) andalso (is_RV mf orelse same_rsc rsc en) then
+	      let
+                val (_,_,_,_,_,rsc,ithm,abthm,_,_) = !(Option.valOf en)
+		val _ = dbgTools.DST (dpfx^"ca_ already cached") (*DBG*)
+	      in
+                (Option.valOf en,(ce,rsc,ithm,abthm))
+              end
+	    else let
+                fun mk_abbr rhs = let
+                  val _ = profTools.bgt (dpfx^"ca_ma")(*PRF*)
+		  val df = mk_adf (nf^(int_to_string (!guid))) rhs (* fast abbrev definition *)
+	          val _ = (guid := (!guid)+1)
+		  val _ = profTools.ent (dpfx^"ca_ma")(*PRF*)
+		in
+                  df
+                end
+	        val (opr,args) = strip_comb mf
+	        val (_,argso) = strip_comb mfo
+                val (en,rsc,ithm,abthm) =
+                    case (fst (dest_const opr)) of
+                      "AP"      => let
+                        val _ = profTools.bgt (dpfx^"ca_ap")(*PRF*)
+			val abthm = REFL mf
+			val _ = profTools.ent (dpfx^"ca_ap")(*PRF*)
+			val ithm = mk_inv_thm opr args env ithml githms
+                                              state 0 msp seth
+                      in
+                        (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,
+                              NONE,NONE),rsc,ithm,SOME abthm)
+                      end
+                    | "RV"      => let
+                        val _ = profTools.bgt (dpfx^"ca_rv")(*PRF*)
+			val rv = snd(dest_comb mf)
+                        (*val _ = dbgTools.DST (dpfx^ ("RV")) ; val _ = dbgTools.DST (dpfx^ (fromHOLstring rv)) ;(*DBG*)
+                         val _ = List.app (fn (b,i) =>
+					      let val _ = dbgTools.DST (dpfx^  (b^"::"^(int_to_string i)^"\n"))  in () end)
+                                          (rvnm2ix)(*DBG*)*)
+                        val ix =  commonTools.listkeyfind
+                                    rvnm2ix
+                                    (fromHOLstring rv)
+                                    String.compare
+                        val rsc =
+                            Vector.mapi
+			      (fn (i,v)=> if (i=ix) then let
+                                              val ty = commonTools.listkeyfind
+                                                         rvty rv Term.compare
+					    in
+                                               if ty then 2 else 1
+					    end handle NotFound => 0
+					  else v)
+                              rsc
+                        (*val _ = print_rsc rsc "RV cache_add depth"*)
+			val abthm = REFL mf
+			val _ = profTools.ent (dpfx^"ca_rv")(*PRF*)
+                        val ithm = mk_inv_thm opr args env ithml githms
+                                              state 0 msp seth
+                      in
+                        (ref (NONE,SOME TRUTH,NONE,env,ix,rsc,ithm,SOME abthm,
+                              NONE,NONE),rsc,ithm,SOME abthm)
+                      end
+                    | "And"     => let
+                        val _ = dbgTools.DST (dpfx^  "ca_ And") (*DBG*)
+                        (*val _ = dbgTools.DTH (dpfx^   CONJ_I) (*DBG*)*)
+                        (*val _ = dbgTools.DST (dpfx^  " gen\n") (*DBG*)*)
+			val _ = profTools.bgt (dpfx^"ca_c1")(*PRF*)
+                        val chc = (if (is_imp(snd(strip_forall(concl(List.hd ithml))))) then 1 else 0)
+                                  +(if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 2 else 0)
+			val lcabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
+			val rcabthmnm = lhs(concl(Option.valOf(List.last abthml)))
+			val _ = profTools.ent (dpfx^"ca_c1")(*PRF*)
+                        val abthm = mk_abbr (list_mk_comb(ctm,[lcabthmnm,rcabthmnm]))
+                        val ithm = mk_inv_thm opr [lcabthmnm,rcabthmnm] env ithml githms state chc msp seth
+			val _ = profTools.bgt (dpfx^"ca_c2")(*PRF*)
+			val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
+			val _ = profTools.ent (dpfx^"ca_c2")(*PRF*)
+                      in
+                        (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,
+                              NONE,NONE),rsc,ithm,SOME abthm)
+                      end
+                    | "Or"      => let
+                        val _ = dbgTools.DST (dpfx^"ca_ Or") (*DBG*)
+                        (*val _ = dbgTools.DTH (dpfx^   DISJ_I) (*DBG*)*)
+                        (* val _ = dbgTools.DST (dpfx^  " gen\n") (*DBG*)*)
+			val _ = profTools.bgt (dpfx^"ca_d1")(*PRF*)
+                        val chc = (if (is_imp(snd(strip_forall(concl(List.hd ithml))))) then 1 else 0)
+                                  +(if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 2 else 0)
+			val lcabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
+			val rcabthmnm = lhs(concl(Option.valOf(List.last abthml)))
+			val _ = profTools.ent (dpfx^"ca_d1")(*PRF*)
+                        val abthm = mk_abbr (list_mk_comb(dtm,[lcabthmnm,rcabthmnm]))(*``Or(^lcabthmnm)(^rcabthmnm)``*)
+                        val ithm = mk_inv_thm opr [lcabthmnm,rcabthmnm] env ithml githms state chc msp seth
+			val _ = profTools.bgt (dpfx^"ca_d2")(*PRF*)
+			val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
+			val _ = profTools.ent (dpfx^"ca_d2")(*PRF*)
+                      in
+                        (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,
+                              NONE,NONE),rsc,ithm,SOME abthm)
+                      end
+                    | "Not"     => let
+                        val _ = profTools.bgt (dpfx^"ca_n1")(*PRF*)
+			val chc = (if (is_imp(snd(strip_forall(concl(List.hd ithml))))) then 1 else 0)
+			val cabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
+			val _ = profTools.ent (dpfx^"ca_n1")(*PRF*)
+                        val abthm = mk_abbr (mk_comb(ntm,cabthmnm))(*``Not (^cabthmnm)`` *)
+                        val ithm = mk_inv_thm opr [cabthmnm] env ithml githms state chc msp seth
+			val _ = profTools.bgt (dpfx^"ca_n2")(*PRF*)
+			val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
+			val _ = profTools.ent (dpfx^"ca_n2")(*PRF*)
+                      in
+                        (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,
+                              NONE,NONE),rsc,ithm,SOME abthm)
+                      end
+                    | "TR"      => (ref (NONE,NONE,NONE,env,~1,rsc,T_I,
+                                         SOME (REFL mf),NONE,NONE),rsc,T_I,
+                                    SOME (REFL mf))
+                    | "FL"      => (ref (NONE,NONE,NONE,env,~1,rsc,F_I,
+                                         SOME (REFL mf),NONE,NONE),rsc,F_I,
+                                    SOME (REFL mf))
+                    | "DIAMOND" => let
+                        val _ = dbgTools.DST (dpfx^"ca_ DMD\n") (*DBG*)
+                        (*val _ = dbgTools.DTH (dpfx^   DMD_I)  val _ = dbgTools.DST (dpfx^  " gen\n") (*DBG*)*)
+			val _ = profTools.bgt (dpfx^"ca_dmd")(*PRF*)
+                        val chc = (if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 1 else 0)
+			val cabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
+			val actnm = List.hd args
+			val _ = profTools.ent (dpfx^"ca_dmd")(*PRF*)
+                        val abthm = mk_abbr (list_mk_comb(dmdtm,[actnm,cabthmnm]))(*``DIAMOND (^actnm) (^cabthmnm)``*)
+                        val ithm = mk_inv_thm opr [List.hd args,cabthmnm] env ithml githms state chc msp seth
+			val _ = profTools.bgt (dpfx^"ca_dmd")(*PRF*)
+			val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
+			val _ = profTools.ent (dpfx^"ca_dmd")(*PRF*)
+                      in
+                        (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,
+                              NONE,NONE),rsc,ithm,SOME abthm)
+                      end
+                    | "BOX"     => let
+                        val _ = dbgTools.DST (dpfx^  "ca_ BOX") (*DBG*)
+                        (*val _ = dbgTools.DTH (dpfx^   BOX_I)  val _ = dbgTools.DST (dpfx^  " gen\n") (*DBG*)*)
+			val _ = profTools.bgt (dpfx^"ca_box")(*PRF*)
+                        val chc = (if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 1 else 0)
+			val cabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
+			val actnm = List.hd args
+			val _ = profTools.ent (dpfx^"ca_box")(*PRF*)
+                        val abthm = mk_abbr (list_mk_comb(boxtm,[actnm,cabthmnm]))(*``BOX (^actnm) (^cabthmnm)``*)
+                        val ithm = mk_inv_thm opr [List.hd args,cabthmnm] env ithml githms state chc msp seth
+			val _ = profTools.bgt (dpfx^"ca_box")(*PRF*)
+			val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
+			val _ = profTools.ent (dpfx^"ca_box")(*PRF*)
+                      in
+                        (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,
+                              NONE,NONE),rsc,ithm,SOME abthm)
+                      end
+                    | "mu"      => let
+                        val _ = dbgTools.DST (dpfx^  "ca_ mu") (*DBG*)
+                        val _ = profTools.bgt (dpfx^"ca_mu")(*PRF*)
+			val chc = (if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 1 else 0)
+			val cabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
+			val rvnm = List.hd args
+                        val _ = profTools.ent (dpfx^"ca_mu")(*PRF*)
+                        val abthm = mk_abbr (list_mk_comb(mutm,[rvnm,cabthmnm]))(*``mu (^rvnm) .. (^cabthmnm)``*)
+                        val ithm = mk_inv_thm opr [List.hd args,cabthmnm] env
+                                              ithml githms state chc msp seth
+                        val _ = profTools.bgt (dpfx^"ca_mu")(*PRF*)
+			val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
+                        val _ = profTools.ent (dpfx^"ca_mu")(*PRF*)
+                      in
+                        (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,
+                              NONE,NONE),rsc,ithm,SOME abthm)
+                      end
+                    | "nu"      => let
+                        val _ = dbgTools.DST (dpfx^  "ca_ nu") (*DBG*)
+                        val _ = profTools.bgt (dpfx^"ca_nu")(*PRF*)
+			val chc = (if (is_imp(snd(strip_forall(concl(List.last ithml))))) then 1 else 0)
+			val cabthmnm = lhs(concl(Option.valOf(List.hd abthml)))
+			val rvnm = List.hd args
+                        val _ = profTools.ent (dpfx^"ca_nu")(*PRF*)
+                        val abthm = mk_abbr (list_mk_comb(nutm,[rvnm,cabthmnm]))(*``nu (^rvnm) .. (^cabthmnm)`` *)
+                        val ithm = mk_inv_thm opr [List.hd args,cabthmnm] env ithml githms state chc msp seth
+                        val _ = profTools.bgt (dpfx^"ca_nu")(*PRF*)
+			val ithm = PURE_ONCE_REWRITE_RULE [SYM abthm] ithm
+                        val _ = profTools.ent (dpfx^"ca_nu")(*PRF*)
+                      in
+                        (ref (NONE,NONE,NONE,env,~1,rsc,ithm,SOME abthm,
+                              NONE,NONE),rsc,ithm,SOME abthm)
+                      end
+                    | _         => Raise Match
+              in
+                let
+                  val _ = profTools.bgt(dpfx^"ca_bmi")(*PRF*)
+	          val _ = Polyhash.insert ce (cekey,en)(*Redblackmap.insert(ce,cekey,en) *)
+	          val _ = profTools.ent(dpfx^"ca_bmi")(*PRF*)
+	        in
+                  (en,(ce,rsc,ithm,abthm))
+                end
+	      end
         val _ = profTools.ent (dpfx^"ca")(*PRF*)
 	val _ = dbgTools.DEX dpfx "ca" (*DBG*)
     in res end
@@ -560,8 +623,10 @@ fun cache_add depth rvnm2ix env (nf,mf) mfo ce rsc rvty ithml (githms as [_,_,T_
 
 (* take two reverse scopes and merge into one *)
 fun rcs_merge r1 r2 =
-    Vector.mapi (fn (i,_) => if (Vector.sub(r1,i)>Vector.sub(r2,i)) then Vector.sub(r1,i) else Vector.sub(r2,i))
-    (Vector.tabulate(Vector.length r1,fn i => 0),0,NONE)
+    Vector.mapi (fn (i,_) => if (Vector.sub(r1,i)>Vector.sub(r2,i)) then
+                               Vector.sub(r1,i)
+                             else Vector.sub(r2,i))
+                (Vector.tabulate(Vector.length r1,fn i => 0))
 
 fun BST_merge b1 b2 = (* merge two binary maps, b2 overwriting b1 in case of key collision *)
     let val _ = profTools.bgt (dpfx^"bstm")(*PRF*)
@@ -704,9 +769,14 @@ fun mk_cache_aux ee rvnm2ix env (nf,mf) mfo ce rscope depth rvty githms state se
 		      val _ = profTools.bgt (dpfx^"mca_mu")(*PRF*)
 		      val abs = frv_insert(abs,List.last args,xabthm)
 		      val _ = profTools.ent (dpfx^"mca_mu")(*PRF*)
-                      val (pt,(ce2,rsc2,ithm,abthm)) = cache_add depth rvnm2ix env (nf,mf) mfo ce1
-                                                        (Vector.mapi (fn (i,v) => if (i=depth) then 0 else v) (rsc,0,NONE))
-                                                        rvty [ithm] githms state seth msp guid [abthm] cons
+                      val (pt,(ce2,rsc2,ithm,abthm)) =
+                          cache_add depth rvnm2ix env (nf,mf) mfo ce1
+                                    (Vector.mapi (fn (i,v) => if (i=depth) then
+                                                                0
+                                                              else v)
+                                                 rsc)
+                                    rvty [ithm] githms state seth msp guid
+                                    [abthm] cons
 		      val _ = profTools.bgt (dpfx^"mca_mu")(*PRF*)
 		      val xabthm = PURE_ONCE_REWRITE_RULE [xabthm] (Option.valOf abthm)
 		      val imfth = PURE_ONCE_REWRITE_RULE [SYM xabthm] (mk_imf_thm imftm mf tysimps p_ty)
@@ -726,9 +796,14 @@ fun mk_cache_aux ee rvnm2ix env (nf,mf) mfo ce rscope depth rvty githms state se
 		       val _ = profTools.bgt (dpfx^"mca_nu1")(*PRF*)
 		       val abs = frv_insert(abs,List.last args,xabthm)
 		       val _ = profTools.ent (dpfx^"mca_nu1")(*PRF*)
-                       val (pt,(ce2,rsc2,ithm,abthm)) = cache_add depth rvnm2ix env (nf,mf) mfo ce1
-                                                        (Vector.mapi (fn (i,v) => if (i=depth) then 0 else v) (rsc,0,NONE))
-                                                        rvty [ithm] githms state seth msp guid [abthm] cons
+                       val (pt,(ce2,rsc2,ithm,abthm)) =
+                           cache_add depth rvnm2ix env (nf,mf) mfo ce1
+                                     (Vector.mapi (fn (i,v) => if (i=depth) then
+                                                                 0
+                                                               else v)
+                                                  rsc)
+                                     rvty [ithm] githms state seth msp
+                                     guid [abthm] cons
 		       val _ = profTools.bgt (dpfx^"mca_nu2a")(*PRF*)
 		       val xabthm = PURE_ONCE_REWRITE_RULE [xabthm] (Option.valOf abthm)
 		       val _ = profTools.ent (dpfx^"mca_nu2a")(*PRF*)

@@ -37,7 +37,7 @@ val ppc_assign2assembly = let
          [ fst (binop_to_name b) ^ " " ^ r d ^ ", " ^ r j  ^ ", " ^ r i ]
     | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_REG j) reversed =
         code_for_binop d b (ASSIGN_X_REG j) (ASSIGN_X_CONST i) (not reversed)
-    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_CONST j) reversed = hd []
+    | code_for_binop d b (ASSIGN_X_CONST i) (ASSIGN_X_CONST j) reversed = fail()
     | code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_CONST j) reversed = let
         val code = assign_const_to_reg j i
         in if length code = 1 then
@@ -45,7 +45,7 @@ val ppc_assign2assembly = let
                [ "addi " ^ r d ^ ", " ^ r i ^ ", -" ^ Arbnum.toString j ]
              else
                [ snd (binop_to_name b) ^ " " ^ r d ^ ", " ^ r i ^ ", " ^ Arbnum.toString j ]
-           else if d = i then hd [] else
+           else if d = i then fail() else
              assign_const_to_reg j d @
              code_for_binop d b (ASSIGN_X_REG i) (ASSIGN_X_REG d) reversed
         end
@@ -67,7 +67,7 @@ val ppc_assign2assembly = let
     | f (ASSIGN_MEMORY (ACCESS_BYTE,a,ASSIGN_X_REG d)) = ["stb " ^ r d ^ ", " ^ address a]
     | f (ASSIGN_MEMORY (ACCESS_WORD,a,ASSIGN_X_CONST i)) = assign_const_to_reg i t @ ["stw " ^ r t ^ ", " ^ address a]
     | f (ASSIGN_MEMORY (ACCESS_BYTE,a,ASSIGN_X_CONST i)) = assign_const_to_reg i t @ ["stb " ^ r t ^ ", " ^ address a]
-    | f _ = hd []
+    | f _ = fail()
   in f end
 
 fun ppc_guard2assembly (GUARD_NOT t) = let
@@ -96,23 +96,23 @@ fun ppc_guard2assembly (GUARD_NOT t) = let
       (["and. " ^ int_to_string (get_ppc_temp_reg()) ^ "," ^ int_to_string i ^ "," ^ int_to_string r], ("eq","ne"))
   | ppc_guard2assembly (GUARD_TEST (i,ASSIGN_X_CONST c)) =
       (["andi. " ^ int_to_string (get_ppc_temp_reg()) ^ "," ^ int_to_string i ^ "," ^ Arbnum.toString c], ("eq","ne"))
-  | ppc_guard2assembly (GUARD_EQUAL_BYTE (a,i)) = hd []
+  | ppc_guard2assembly (GUARD_EQUAL_BYTE (a,i)) = fail()
   | ppc_guard2assembly (GUARD_OTHER tm) = let
       val (t1,t2) = dest_eq tm
-      fun f (ASSIGN_EXP (i,exp)) = (i,exp) | f _ = hd []
+      fun f (ASSIGN_EXP (i,exp)) = (i,exp) | f _ = fail()
       val (i,exp) = f (term2assign t1 t2)
       val t = get_ppc_temp_reg ()
       val code = (ppc_assign2assembly (ASSIGN_EXP (t, exp)))
       val (code2,c) = ppc_guard2assembly (GUARD_COMPARE (i,GUARD_COMPARE_EQUAL,ASSIGN_X_REG t))
       in (code @ code2,c) end;
 
-fun ppc_conditionalise (x:string) = (hd []):string->string
+fun ppc_conditionalise (x:string) = (fail()):string->string
 fun ppc_remove_annotations x = (x:string)
 
 fun ppc_cond_code tm = 
   if eq tm ``pS1 (PPC_CR0 0w)`` then ("lt","ge") else
   if eq tm ``pS1 (PPC_CR0 1w)`` then ("le","gt") else
-  if eq tm ``pS1 (PPC_CR0 2w)`` then ("eq","ne") else hd []
+  if eq tm ``pS1 (PPC_CR0 2w)`` then ("eq","ne") else fail()
 
 
 fun ppc_encode_instruction s = (ppc_encode s, 4);

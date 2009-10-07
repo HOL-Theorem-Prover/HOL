@@ -4,9 +4,10 @@
 
 (*
 val _ = Globals.show_tags := true
-*)
 val _ = Globals.show_assums := true
 val _ = Globals.show_types := true
+*)
+
 (*
 val _ = Feedback.set_trace "HolSmtLib" 3
 *)
@@ -110,19 +111,22 @@ local
     let
       val simpset = bossLib.++ (bossLib.++ (bossLib.srw_ss (),
         wordsLib.WORD_ss), wordsLib.WORD_EXTRACT_ss)
-      val thm = simpLib.SIMP_PROVE simpset
-          [integerTheory.INT_ABS, integerTheory.INT_MAX, integerTheory.INT_MIN,
-           boolTheory.bool_case_DEF] t  (* [] |- t *)
+      val t_eq_t' = simpLib.SIMP_CONV simpset [integerTheory.INT_ABS,
+        integerTheory.INT_MAX, integerTheory.INT_MIN, boolTheory.bool_case_DEF]
+        t
+        handle Conv.UNCHANGED =>
+          Thm.REFL t
+      val t' = boolSyntax.rhs (Thm.concl t_eq_t')
+      val t'_thm = bossLib.DECIDE t'
         handle Feedback.HOL_ERR _ =>
-          bossLib.DECIDE t
+          bossLib.METIS_PROVE [] t'
         handle Feedback.HOL_ERR _ =>
-          bossLib.METIS_PROVE [] t
+          intLib.ARITH_PROVE t'
         handle Feedback.HOL_ERR _ =>
-          intLib.ARITH_PROVE t
+          realLib.REAL_ARITH t'
         handle Feedback.HOL_ERR _ =>
-          realLib.REAL_ARITH t
-        handle Feedback.HOL_ERR _ =>
-          wordsLib.WORD_DECIDE t
+          wordsLib.WORD_DECIDE t'
+      val thm = Thm.EQ_MP (Thm.SYM t_eq_t') t'_thm
     in
       SolverSpec.UNSAT (SOME thm)
     end
@@ -429,37 +433,37 @@ in
     (``(x:int) % 42 = x - x / 42 * 42``, [thm_AUTO, thm_YO]),
 
     (``ABS (x:int) >= 0``,
-      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``(ABS (x:int) = 0) = (x = 0)``,
-      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``(x:int) >= 0 ==> (ABS x = x)``,
-      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``(x:int) <= 0 ==> (ABS x = ~x)``,
-      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``ABS (ABS (x:int)) = ABS x``,
-      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``ABS (x:int) = x``, [sat_YO]),
 
     (``int_min (x:int) y <= x``,
-      [(*TODO: thm_AUTO,*) thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``int_min (x:int) y <= y``,
-      [(*TODO: thm_AUTO,*) thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``(z:int) < x /\ z < y ==> z < int_min x y``,
-      [(*TODO: thm_AUTO,*) thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``int_min (x:int) y < x``, [sat_YO]),
     (``int_min (x:int) 0 = 0``, [sat_YO]),
     (``(x:int) >= 0 ==> (int_min x 0 = 0)``,
-      [(*TODO: thm_AUTO,*) thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
 
     (``int_max (x:int) y >= x``,
-      [(*TODO: thm_AUTO,*) thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``int_max (x:int) y >= y``,
-      [(*TODO: thm_AUTO,*) thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``(z:int) > x /\ z > y ==> z > int_max x y``,
-      [(*TODO: thm_AUTO,*) thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``int_max (x:int) y > x``, [sat_YO]),
     (``(x:int) >= 0 ==> (int_max x 0 = x)``,
-      [(*TODO: thm_AUTO,*) thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
 
     (* real *)
 
@@ -641,7 +645,7 @@ in
 
     (* quantifiers *)
 
-    (``!x. x = x``, [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3(*TODO: , thm_Z3p*)]),
+    (``!x. x = x``, [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (* TODO: Yices 1.0.18 fails to decide this one *)
     (``?x. x = x``, [thm_AUTO]),
     (``(?y. !x. P x y) ==> (!x. ?y. P x y)``, [thm_AUTO, thm_YO]),

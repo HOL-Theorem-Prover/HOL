@@ -16,6 +16,7 @@ SolverSpec.sml          Definition of SMT solvers, tracing.
 Yices.sml               Functions to invoke the Yices SMT solver.
 Z3.sml                  Functions to invoke the Z3 SMT solver.
 Z3_ProformaThms.sml     Proforma theorems, used for Z3 proof reconstruction.
+Z3_Proof.sml            Proof reconstruction for Z3: SML type of Z3 proofs.
 Z3_ProofParse.sml       Proof reconstruction for Z3: parsing of Z3's proofs.
 Z3_ProofReplay.sml      Proof reconstruction for Z3: replaying Z3's proofs in
                         HOL.

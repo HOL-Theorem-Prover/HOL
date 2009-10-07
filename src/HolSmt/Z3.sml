@@ -61,7 +61,7 @@ structure Z3 = struct
           (goal, ty_tm_dict)
         end)
       ("z3 -ini:z3.ini -smt " ^ infile ^ " > " ^ outfile)
-      (fn (goal, ty_tm_dict) =>
+      (fn (goal, (ty_dict, tm_dict)) =>
          let
            val result = is_sat_Unix outfile
          in
@@ -69,14 +69,27 @@ structure Z3 = struct
              SolverSpec.UNSAT NONE =>
              let
                val thm = Z3_ProofReplay.check_proof
-                 (Z3_ProofParse.parse_proof_file outfile ty_tm_dict)
+                 (Z3_ProofParse.parse_proof_file outfile)
+               (* specialize the theorem derived by Z3 to the types and terms
+                  that were used in the input goal *)
+               val ty_subst =
+                 Redblackmap.foldl (fn (ty, s, subst) =>
+                   {redex = Type.mk_vartype ("'" ^ s), residue = ty} :: subst)
+                   [] ty_dict
+               val tm_subst =
+                 Redblackmap.foldl (fn (tm, s, subst) =>
+                   {redex = Term.mk_var (s, Term.type_of tm), residue = tm} ::
+                     subst)
+                   [] tm_dict
+               val thm = Drule.INST_TY_TERM (tm_subst, ty_subst) thm
                (* discharging definitions: INT_MIN, INT_MAX, ABS *)
                val INT_ABS = intLib.ARITH_PROVE
                  ``!x. ABS (x:int) = if x < 0 then 0 - x else x``
                (* bool_case is replaced by if_then_else by the translation to
                   SMT-LIB format; this must therefore be done in the goal as
                   well *)
-               (* returns SOME "tm |- (... if-then-else ...)", or NONE *)
+               (* returns SOME "tm[bool_case ...] |- tm[if_then_else ...]", or
+                  NONE *)
                fun unfold_bool_case tm =
                  Lib.total (Drule.UNDISCH o Lib.fst o Thm.EQ_IMP_RULE o
                    Conv.BETA_RULE o simpLib.SIMP_CONV simpLib.empty_ss
@@ -99,5 +112,28 @@ structure Z3 = struct
          end)
       [infile, outfile]
   end
+
+(*
+    (* invert 'ty_dict' (which is a map from types to strings): we need a map
+       from strings to types *)
+    val inverse_ty_dict = ref (Redblackmap.foldl (fn (ty, s, dict) =>
+      case Redblackmap.peek (dict, s) of
+        NONE =>
+        Redblackmap.insert (dict, s, ty)
+      | SOME _ =>
+        raise (Feedback.mk_HOL_ERR "Z3" "parse_proof_file"
+          ("inverting dictionary: more than one type maps to '" ^ s ^ "'"))
+      ) (Redblackmap.mkDict String.compare) ty_dict)
+    (* invert 'tm_dict' (which is a map from terms to strings): we need a map
+       from strings to terms *)
+    val inverse_tm_dict = ref (Redblackmap.foldl (fn (tm, s, dict) =>
+      case Redblackmap.peek (dict, s) of
+        NONE =>
+        Redblackmap.insert (dict, s, tm)
+      | SOME _ =>
+        raise (Feedback.mk_HOL_ERR "Z3" "parse_proof_file"
+          ("inverting dictionary: more than one term maps to '" ^ s ^ "'"))
+      ) (Redblackmap.mkDict String.compare) tm_dict)
+*)
 
 end

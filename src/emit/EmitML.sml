@@ -782,10 +782,7 @@ fun adjust_tygram tygram =
  end;
 
 fun prim_pp_type_as_ML tygram tmgram ppstrm ty =
- let val (pp_type,_) = Parse.print_from_grammars
-                              (adjust_tygram tygram, tmgram)
- in pp_type ppstrm ty
- end;
+    type_pp.pp_type (adjust_tygram tygram) PPBackEnd.raw_terminal ppstrm ty
 
 fun pp_type_as_ML ppstrm ty =
    prim_pp_type_as_ML (Parse.type_grammar()) (Parse.term_grammar())
@@ -1568,6 +1565,12 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
                         ^" prevents writing ML files to "
                         ^Lib.quote path)
  end
+
+val emit_xML =
+    (fn info => fn p => fn stuff =>
+                           Feedback.trace ("Unicode", 0)
+                                          (emit_xML info p)
+                                          stuff)
 
 val emitML = emit_xML (false,!sigSuffix,!structSuffix);
 

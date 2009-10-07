@@ -16,6 +16,7 @@ signature Parse = sig
      = RF of term_grammar.rule_fixity
      | Prefix
      | Binder
+  val fixityToString : fixity -> string
 
   (* Parsing Kinds *)
 
@@ -243,6 +244,7 @@ signature Parse = sig
   val set_term_printer : (ppstream -> term -> unit) ->
                                ppstream -> term -> unit
 
+  val minprint : term -> string
   val term_to_string : term -> string
   val terms_to_string : term list -> string
   val type_to_string : hol_type -> string

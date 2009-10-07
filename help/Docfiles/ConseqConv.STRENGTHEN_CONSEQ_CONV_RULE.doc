@@ -1,15 +1,15 @@
-\DOC STRENGTHEN_CONSEQ_CONV_RULE
+\DOC
 
-\TYPE {STRENGTHEN_CONSEQ_CONV_RULE : (directed_conseq_conv -> thm -> thm)}
+\TYPE {STRENGTHEN_CONSEQ_CONV_RULE : directed_conseq_conv -> thm -> thm}
 
 \SYNOPSIS
-Tries to strengthen the antecedent of a theorem consisting of
-an implication.
+Tries to strengthen the antecedent of a theorem consisting of an
+implication.
 
 \DESCRIBE
-Given a theorem of the form {|- A ==> C} and a directed consequence conversion
-{c} a call of {STRENGTHEN_CONSEQ_CONV_RULE c thm} tries to strengthen
-{A} to a predicate {sA} using {c}. If it succeeds it
+Given a theorem of the form {|- A ==> C} and a directed consequence
+conversion {c} a call of {STRENGTHEN_CONSEQ_CONV_RULE c thm} tries to
+strengthen {A} to a predicate {sA} using {c}. If it succeeds it
 returns the theorem {|- sA ==> C}.
 
 \SEEALSO

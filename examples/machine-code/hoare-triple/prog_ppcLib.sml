@@ -28,7 +28,7 @@ fun process v tm =
          (mk_comb(``pS1``,tm),mk_var("s" ^ f tm,``:bool option``)) end
    else if type_of tm = ``:word32`` then
      (mk_comb(``pM1``,tm),v)
-   else hd [];
+   else fail();
 
 fun pre_process_thm th = let
   val rs = find_terml (can (match_term ``PREAD_R x s``)) (concl th)

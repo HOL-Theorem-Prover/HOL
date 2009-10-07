@@ -81,7 +81,7 @@ val close_in       = TextIO.closeIn
 val close_out      = TextIO.closeOut
 val flush_out      = TextIO.flushOut
 fun input_line strm =
-  case PolyTextIO.inputLine strm of
+  case TextIO.inputLine strm of
     NONE => ""
   | SOME s => s
 val end_of_stream  = TextIO.endOfStream

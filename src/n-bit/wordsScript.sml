@@ -194,16 +194,15 @@ val word_len_def = Define`
 
 val _ = ai := false;
 
-val _ = overload_on ("<>",Term`$word_slice`);
+val _ = overload_on ("''",Term`$word_slice`);
 val _ = overload_on ("--",Term`$word_bits`);
 val _ = overload_on ("><",Term`$word_extract`);
 val _ = overload_on ("---",Term`$word_signed_bits`);
 
+val _ = set_fixity "''" (Infixr 375)
 val _ = set_fixity "--" (Infixr 375)
 val _ = set_fixity "><" (Infixr 375)
 val _ = set_fixity "---" (Infixr 375);
-
-val _ = send_to_back_overload "<>" {Name = "word_slice", Thy = "words"};
 
 (* ------------------------------------------------------------------------- *)
 (*  Word arithmetic: definitions                                             *)
@@ -981,7 +980,7 @@ val word_bit = store_thm("word_bit",
      (w ' b = word_bit b w)`, RW_TAC arith_ss [word_bit_def]);
 
 val word_slice_n2w = store_thm("word_slice_n2w",
-  `!h l n. (h <> l) (n2w n):'a word =
+  `!h l n. (h '' l) (n2w n):'a word =
              (n2w (SLICE (MIN h ^HB) l n)):'a word`,
   FIELD_WORD_TAC);
 
@@ -1212,29 +1211,29 @@ val WORD_EXTRACT_ZERO3 = store_thm("WORD_EXTRACT_ZERO3",
   SRW_TAC [] [word_extract_def, WORD_BITS_ZERO3, w2w_0]);
 
 val WORD_SLICE_THM = store_thm("WORD_SLICE_THM",
-  `!h l w. (h <> l) w = (h -- l) w << l`,
+  `!h l w. (h '' l) w = (h -- l) w << l`,
   FIELD_WORD_TAC \\ Cases_on `l <= i` \\ ASM_SIMP_TAC arith_ss []);
 
 val WORD_SLICE_ZERO = store_thm("WORD_SLICE_ZERO",
-  `!h l w. h < l ==> ((h <> l) w = 0w)`,
+  `!h l w. h < l ==> ((h '' l) w = 0w)`,
   NTAC 2 STRIP_TAC \\ Cases
     \\ RW_TAC arith_ss [word_slice_n2w,SLICE_ZERO,MIN_DEF]);
 
 val WORD_SLICE_ZERO2 = save_thm("WORD_SLICE_ZERO2",
-  SIMP_CONV std_ss [word_slice_n2w, SLICE_ZERO2] ``(h <> l) 0w``);
+  SIMP_CONV std_ss [word_slice_n2w, SLICE_ZERO2] ``(h '' l) 0w``);
 
 val WORD_SLICE_BITS_THM = store_thm("WORD_SLICE_BITS_THM",
-  `!h w. (h <> 0) w = (h -- 0) w`, FIELD_WORD_TAC);
+  `!h w. (h '' 0) w = (h -- 0) w`, FIELD_WORD_TAC);
 
 val WORD_BITS_SLICE_THM = store_thm("WORD_BITS_SLICE_THM",
-  `!h l w. (h -- l) ((h <> l) w) = (h -- l) w`,
+  `!h l w. (h -- l) ((h '' l) w) = (h -- l) w`,
   NTAC 2 STRIP_TAC \\ Cases
     \\ RW_TAC arith_ss [word_slice_n2w,word_bits_n2w,BITS_SLICE_THM]);
 
 val WORD_SLICE_COMP_THM = store_thm("WORD_SLICE_COMP_THM",
   `!h m' m l w:'a word. l <= m /\ (m' = m + 1) /\ m < h ==>
-     (((h <> m') w):'a word !! (m <> l) w =
-      ((h <> l) w):'a word)`,
+     (((h '' m') w):'a word !! (m '' l) w =
+      ((h '' l) w):'a word)`,
   FIELD_WORD_TAC \\ `i <= m \/ m + 1 <= i` by DECIDE_TAC
     \\ ASM_SIMP_TAC arith_ss []);
 
@@ -1375,11 +1374,11 @@ val EXTRACT_JOIN_ADD = store_thm("EXTRACT_JOIN_ADD",
 
 val WORD_SLICE_OVER_BITWISE = store_thm("WORD_SLICE_OVER_BITWISE",
   `(!h l v:'a word w:'a word.
-      (h <> l) v && (h <> l) w = (h <> l) (v && w)) /\
+      (h '' l) v && (h '' l) w = (h '' l) (v && w)) /\
    (!h l v:'a word w:'a word.
-      (h <> l) v !! (h <> l) w = (h <> l) (v !! w)) /\
+      (h '' l) v !! (h '' l) w = (h '' l) (v !! w)) /\
    (!h l v:'a word w:'a word.
-      (h <> l) v ?? (h <> l) w = (h <> l) (v ?? w))`,
+      (h '' l) v ?? (h '' l) w = (h '' l) (v ?? w))`,
   FIELD_WORD_TAC << [PROVE_TAC [], PROVE_TAC [], ALL_TAC]
     \\ Cases_on `l <= i /\ i <= h` \\ FULL_SIMP_TAC arith_ss []);
 
@@ -2285,7 +2284,7 @@ val word_ror = store_thm("word_ror",
 val word_asr = store_thm("word_asr",
   `!w:'a word n. w >> n =
       if word_msb w then
-        (dimindex (:'a) - 1 <> dimindex (:'a) - n) UINT_MAXw !! w >>> n
+        (dimindex (:'a) - 1 '' dimindex (:'a) - n) UINT_MAXw !! w >>> n
       else
         w >>> n`,
   SRW_TAC [fcpLib.FCP_ss, ARITH_ss]
@@ -3391,7 +3390,7 @@ val BIT0_CONV = SIMP_CONV std_ss [GSYM LSB_def, LSB_ODD];
 
 val extract_00 = prove(
   `(!a:'a word. (0 -- 0) a = if word_lsb a then 1w else 0w) /\
-   (!a:'a word. (0 <> 0) a = if word_lsb a then 1w else 0w) /\
+   (!a:'a word. (0 '' 0) a = if word_lsb a then 1w else 0w) /\
    (!a:'a word. (0 >< 0) a = if word_lsb a then 1w else 0w:'b word)`,
   SRW_TAC [fcpLib.FCP_ss]
        [n2w_def, w2w, word_bits_def, word_slice_def, word_extract_def,

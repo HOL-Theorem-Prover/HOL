@@ -68,17 +68,17 @@ datatype guard_type =
 (* term2guard, term2assign *)
 
 fun dest_var_char c tm =
-  if not ((hd o explode o fst o dest_var) tm = c) then hd [] else
+  if not ((hd o explode o fst o dest_var) tm = c) then fail() else
     (string_to_int o implode o tl o explode o fst o dest_var) tm
 val dest_reg = dest_var_char #"r"
 val dest_stack = dest_var_char #"s"
-fun dest_n2w tm = if car tm = ``n2w:num->word32`` then numSyntax.dest_numeral (cdr tm) else hd []
-fun dest_n2w_byte tm = if car tm = ``n2w:num->word8`` then numSyntax.dest_numeral (cdr tm) else hd []
+fun dest_n2w tm = if car tm = ``n2w:num->word32`` then numSyntax.dest_numeral (cdr tm) else fail()
+fun dest_n2w_byte tm = if car tm = ``n2w:num->word8`` then numSyntax.dest_numeral (cdr tm) else fail()
 fun dest_x tm = ASSIGN_X_REG (dest_reg tm) handle e => ASSIGN_X_CONST (dest_n2w tm)
 fun dest_address tm = ASSIGN_ADDRESS_REG (dest_reg tm) handle e =>
-  (if not ((fst o dest_const o car o car) tm = "word_add") then hd [] else
+  (if not ((fst o dest_const o car o car) tm = "word_add") then fail() else
     ASSIGN_ADDRESS_OFFSET_ADD ((dest_reg o cdr o car) tm, dest_n2w (cdr tm))) handle e =>
-  if not ((fst o dest_const o car o car) tm = "word_sub") then hd [] else
+  if not ((fst o dest_const o car o car) tm = "word_sub") then fail() else
     ASSIGN_ADDRESS_OFFSET_SUB ((dest_reg o cdr o car) tm, dest_n2w (cdr tm))
 
 fun basic_term2guard tm = (* expects input to use "~", "<+", "<" and "=" only *)
@@ -126,23 +126,23 @@ fun basic_term2assign t1 t2 = let
     ((snd o hd o filter (fn x => fst x = (fst o dest_const o car) tm)) monops,
      (dest_x o cdr) tm)
   fun dest_memory tm =
-    if not (is_var (car tm) andalso type_of (car tm) = ``:word32->word32``) then hd [] else
+    if not (is_var (car tm) andalso type_of (car tm) = ``:word32->word32``) then fail() else
       (ACCESS_WORD,dest_address (cdr tm))
   fun dest_byte_memory tm =
-    if not (is_const (car tm) andalso type_of (car tm) = ``:word8->word32``) then hd [] else
+    if not (is_const (car tm) andalso type_of (car tm) = ``:word8->word32``) then fail() else
       (ACCESS_BYTE,dest_address (cdr (cdr tm)))
   fun dest_lsl tm =
-    if not ((fst o dest_const o car o car) tm = "word_lsl") then hd [] else
+    if not ((fst o dest_const o car o car) tm = "word_lsl") then fail() else
       ((dest_x o cdr o car) tm, (Arbnum.toInt o numSyntax.dest_numeral o cdr) tm)
   fun dest_lsr tm =
-    if not ((fst o dest_const o car o car) tm = "word_lsr") then hd [] else
+    if not ((fst o dest_const o car o car) tm = "word_lsr") then fail() else
       ((dest_x o cdr o car) tm, (Arbnum.toInt o numSyntax.dest_numeral o cdr) tm)
   fun dest_asr tm =
-    if not ((fst o dest_const o car o car) tm = "word_asr") then hd [] else
+    if not ((fst o dest_const o car o car) tm = "word_asr") then fail() else
       ((dest_x o cdr o car) tm, (Arbnum.toInt o numSyntax.dest_numeral o cdr) tm)
   fun dest_memory_update tm =
     if not (is_var (cdr tm) andalso (fst o dest_const o car o car o car) tm = "UPDATE")
-    then hd [] else (ACCESS_WORD, (dest_address o cdr o car o car) tm, (dest_x o cdr o car) tm)
+    then fail() else (ACCESS_WORD, (dest_address o cdr o car o car) tm, (dest_x o cdr o car) tm)
     handle e => (ACCESS_BYTE, (dest_address o cdr o car o car) tm,
                  (dest_x o cdr o cdr o car) tm
                  handle e => (ASSIGN_X_CONST o dest_n2w_byte o cdr o car) tm)

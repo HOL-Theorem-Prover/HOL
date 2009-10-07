@@ -220,7 +220,7 @@ val ITAdvance_def = with_flag (computeLib.auto_import_definitions,false) Define`
     if (2 >< 0) IT = 0b000w:word3 then
       0b00000000w
     else
-      ((7 <> 5) IT !! w2w (((4 >< 0) IT) : word5 << 1))`;
+      ((7 '' 5) IT !! w2w (((4 >< 0) IT) : word5 << 1))`;
 
 val ITAdvance_n2w = save_thm("ITAdvance_n2w",
    ITAdvance_def
@@ -320,7 +320,7 @@ in
 end;
 
 val align_slice = Q.store_thm("align_slice",
-  `!n a:'a word. align (a,2 ** n) = (dimindex(:'a) - 1 <> n) a`,
+  `!n a:'a word. align (a,2 ** n) = (dimindex(:'a) - 1 '' n) a`,
   STRIP_TAC \\ Cases
     \\ SRW_TAC [ARITH_ss] [align_def, word_slice_n2w, SLICE_THM, BITS_THM2,
          DECIDE ``0 < n ==> (SUC (n - 1) = n)``]

@@ -1,10 +1,11 @@
-\DOC QUANT_CONSEQ_CONV
+\DOC
 
 \TYPE {QUANT_CONSEQ_CONV : (conseq_conv -> conseq_conv)}
 
 \SYNOPSIS
-Applies a consequence conversion to the body of a
-existentially or all-quantified term.
+
+Applies a consequence conversion to the body of a existentially or
+universally quantified term.
 
 \SEEALSO
 Conv.QUANT_CONV, ConseqConv.FORALL_CONSEQ_CONV, ConseqConv.EXISTS_CONSEQ_CONV.

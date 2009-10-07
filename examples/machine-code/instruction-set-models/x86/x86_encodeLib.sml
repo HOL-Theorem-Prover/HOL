@@ -18,8 +18,8 @@ val instructions = let
 
 fun parse_address s = let
   val xs = explode s
-  val _ = if hd xs = #"[" then () else hd []
-  val _ = if last xs = #"]" then () else hd []
+  val _ = if hd xs = #"[" then () else fail()
+  val _ = if last xs = #"]" then () else fail()
   fun f c = String.tokens (fn x => x = c)
   val ts = f #"+" (implode (butlast (tl xs)))
   fun append_lists [] = []
@@ -28,12 +28,12 @@ fun parse_address s = let
     | minus ["",x] = [("-",x)]
     | minus [x,y] = [("+",x),("-",y)]
     | minus (x::xs) = minus [x] @ minus xs
-    | minus _ = hd []
+    | minus _ = fail()
   val zs = append_lists (map (minus o f #"-") ts)
   fun prod [x] = (1,x)
     | prod [x,y] = if can string_to_int x then (string_to_int x, y)
                                           else (string_to_int y, x)
-    | prod _ = hd []
+    | prod _ = fail()
   val qs = map (fn (s,n) => (s,prod (f #"*" n))) zs
   fun g (c,(3,x)) = [(c,(1,x)),(c,(2,x))]
     | g (c,(5,x)) = [(c,(1,x)),(c,(4,x))]
@@ -42,11 +42,11 @@ fun parse_address s = let
   val us = append_lists (map g qs)
   fun extract_int ("-",(1,x)) = Arbint.-(Arbint.zero,Arbint.fromString x)
     | extract_int ("+",(1,x)) = Arbint.fromString x
-    | extract_int _ = hd []
+    | extract_int _ = fail()
   fun sum [] = Arbint.zero | sum (i::is) = Arbint.+(i,sum is)
   val imm = sum (map extract_int (filter (can extract_int) us))
   val vs = filter (not o can extract_int) us
-  val _ = if filter (fn (x,y) => not (x = "+")) vs = [] then () else hd []
+  val _ = if filter (fn (x,y) => not (x = "+")) vs = [] then () else fail()
   val ks = map snd vs
   val base = SOME ((snd o hd o filter (fn (x,y) => x = 1)) ks) handle e => NONE
   fun delete_base NONE xs = xs
@@ -62,14 +62,14 @@ fun unsigned_hex n s = let
   val i = fill n (Arbnum.toHexString (Arbnum.fromString s))
   val i = (substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^
            substring(i,0,2)) handle e => i
-  in if size i = n then i else hd [] end
+  in if size i = n then i else fail() end
 
 fun signed_hex n i = let
   val m = Arbnum.pow(Arbnum.fromInt 2, Arbnum.fromInt (4 * n))
   val m2 = Arbnum.pow(Arbnum.fromInt 2, Arbnum.fromInt (4 * n - 1))
   val j = Arbint.+(i,Arbint.fromNat m)
-  val i = if not (Arbint.<(i,Arbint.fromNat m2)) then hd [] else
-          if not (Arbint.<=(Arbint.fromNat m2, j)) then hd [] else
+  val i = if not (Arbint.<(i,Arbint.fromNat m2)) then fail() else
+          if not (Arbint.<=(Arbint.fromNat m2, j)) then fail() else
           if Arbint.<=(Arbint.zero,i) then fill n (Arbnum.toHexString(Arbint.toNat i))
                                       else fill n (Arbnum.toHexString(Arbint.toNat j))
   val i = (substring(i,6,2) ^ substring(i,4,2) ^ substring(i,2,2) ^
@@ -77,7 +77,7 @@ fun signed_hex n i = let
   in i end
 
 fun x86_reg2int r = let
-  fun find x [] = hd []
+  fun find x [] = fail()
     | find x ((y,z)::ys) = if x = y then z else find x ys
   val regs = ["EAX","ECX","EDX","EBX","ESP","EBP","ESI","EDI"]
   val indx = [0,1,2,3,4,5,6,7]
@@ -87,12 +87,12 @@ fun x86_reg2int r = let
 fun x86_address_encode s = let
   val (index,base,imm) = parse_address s
   val rr = int_to_string o x86_reg2int
-  fun the (SOME x) = x | the NONE = hd []
+  fun the (SOME x) = x | the NONE = fail()
   fun get_scale (SOME (1,i)) = [("Scale","0"),("Index",rr i)]
     | get_scale (SOME (2,i)) = [("Scale","1"),("Index",rr i)]
     | get_scale (SOME (4,i)) = [("Scale","2"),("Index",rr i)]
     | get_scale (SOME (8,i)) = [("Scale","3"),("Index",rr i)]
-    | get_scale _ = hd []
+    | get_scale _ = fail()
   fun f (index,base,disp) =
     if index = NONE then
       if base = NONE then
@@ -141,9 +141,9 @@ fun x86_encode s = let
                   (filter (fn x => not (x = "BYTE")) xs,
                    map (fn (x,y) => (x, map translate y))
                    (filter (fn (x,y) => mem "r/m8" y) ys))
-  fun pos x [] = hd []
+  fun pos x [] = fail()
     | pos x (y::ys) = if x = y then 0 else 1 + pos x ys
-  fun find x [] = hd []
+  fun find x [] = fail()
     | find x ((y,z)::ys) = if x = y then z else find x ys
   val regs = ["EAX","ECX","EDX","EBX","ESP","EBP","ESI","EDI"]
   fun try_all f [] = []
@@ -170,7 +170,7 @@ fun x86_encode s = let
         [("R/M",int_to_string (pos y regs)),("Mod","3")]
       else if ((x = "r/m32") orelse (x = "m")) andalso can x86_address_encode y then
         x86_address_encode y
-      else hd []
+      else fail()
     fun list_append [] = [] | list_append (x::xs) = x @ list_append xs
     val ts = list_append (map foo l)
     fun create_SIB xs =
@@ -195,7 +195,7 @@ fun x86_encode s = let
       if x = "/r" then create_ModRM ts else
       if hd (explode x) = #"/" then
         create_ModRM (("Reg/Opcode",(implode o tl o explode) x)::ts)
-      else hd []
+      else fail()
     val e = concat (map do_replace zs)
     in e end;
   val all = try_all use_encoding ys

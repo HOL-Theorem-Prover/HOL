@@ -1,6 +1,6 @@
 open HolKernel boolLib Parse PFset_conv
 
-
+val _ = set_trace "Unicode" 0
 val padr = StringCvt.padRight #" "
 val padl = StringCvt.padLeft #" "
 

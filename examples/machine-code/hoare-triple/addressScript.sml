@@ -696,4 +696,8 @@ val w2w_eq_n2w = store_thm("w2w_eq_n2w",
   THEN IMP_RES_TAC (DECIDE ``k < 256 ==> k < 4294967296``)
   THEN FULL_SIMP_TAC std_ss []);
 
+val LESS_SUB_MOD = store_thm("LESS_SUB_MOD",
+  ``!n m k. n < k ==> ((n - m) MOD k = n - m)``,
+  REPEAT STRIP_TAC THEN `n - m < k` by DECIDE_TAC THEN ASM_SIMP_TAC std_ss []);
+
 val _ = export_theory();

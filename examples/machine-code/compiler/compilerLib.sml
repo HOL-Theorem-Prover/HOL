@@ -60,15 +60,11 @@ val COMPILER_TAC =
     THEN REPEAT STRIP_TAC
     THEN ASM_SIMP_TAC std_ss [];
 
-val doing = ref T;
-val target = "arm";
-
 fun basic_compile target tm = let
-  val _ = (doing := tm)
   val (tools,target,model_name,s) =
     if mem target ["arm","ARM"] then (arm_tools,"arm","ARM_MODEL",[]) else
     if mem target ["x86","i32","386"] then (x86_tools,"x86","X86_MODEL",to_x86_regs ()) else
-    if mem target ["ppc","Power","PowerPC"] then (ppc_tools,"ppc","PPC_MODEL",[]) else hd []
+    if mem target ["ppc","Power","PowerPC"] then (ppc_tools,"ppc","PPC_MODEL",[]) else fail()
   val x = fst (dest_eq tm)
   val name = fst (dest_const (repeat car x)) handle e => fst (dest_var (repeat car x))
   val _ = echo 1 ("\nCompiling " ^ name ^ " into "^ target ^ "...\n")

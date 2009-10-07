@@ -93,6 +93,9 @@ sig
    val CONTRAPOS_CONV        : conv
    val ANTE_CONJ_CONV        : conv
    val SWAP_EXISTS_CONV      : conv
+   val SWAP_FORALL_CONV      : conv
+   val RESORT_FORALL_CONV    : (term list -> term list) -> conv
+   val SWAP_VARS_CONV        : conv
    val bool_EQ_CONV          : conv
    val EXISTS_UNIQUE_CONV    : conv
    val COND_CONV             : conv
@@ -100,7 +103,6 @@ sig
    val AC_CONV               : thm * thm -> conv
    val GSYM                  : thm -> thm
    val RENAME_VARS_CONV      : string list -> conv
-   val SWAP_VARS_CONV        : conv
    val PRINT_CONV            : conv
    val MAP_THM               : conv -> thm -> thm
 end

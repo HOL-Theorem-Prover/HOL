@@ -33,6 +33,8 @@ datatype factoid =
          ALT of arbint Vector.vector
 
 structure V = Vector
+structure VS = VectorSlice
+structure AS = ArraySlice
 
 abstype factoid_key = KEY of arbint V.vector * int
 with
@@ -42,22 +44,23 @@ with
   in
   fun khash v len =
       hash(if zero <= V.sub(v, 0)
-           then V.foldli (fn(_,i,h) => alpha * h + beta + i) zero (v,0,len)
-           else ~(V.foldli (fn(_,i,h)=> alpha * h + beta + ~i) zero (v,0,len)))
+           then V.foldli (fn(_,i,h) => alpha * h + beta + i) zero v
+           else ~(V.foldli (fn(_,i,h)=> alpha * h + beta + ~i) zero v))
   end
 
   fun factoid_key (ALT av) = KEY(av, V.length av - 1)
 
   fun keyhash (KEY(av, len)) = khash av (SOME len)
 
-  fun map_key f (KEY(v, len)) = V.mapi (fn(_, x) => f x) (v, 0, SOME len)
+  fun map_key f (KEY(v, len)) =
+      VS.mapi (fn(_, x) => f x) (VS.slice(v, 0, SOME len))
 
   fun foldl_key f c (KEY(v, len)) =
-      V.foldli (fn(_, x, c) => f(x, c)) c (v, 0, SOME len)
+      VS.foldli (fn(_, x, c) => f(x, c)) c (VS.slice(v, 0, SOME len))
 
-  fun foldli_key f c (KEY(v, len)) = V.foldli f c (v, 0, SOME len)
+  fun foldli_key f c (KEY(v, len)) = VS.foldli f c (VS.slice(v, 0, SOME len))
 
-  fun appi_key f (KEY(v, len)) = V.appi f (v, 0, SOME len)
+  fun appi_key f (KEY(v, len)) = VS.appi f (VS.slice(v, 0, SOME len))
 
   fun sub_key (KEY(v, len), i) = if i < len then V.sub(v, i)
                                  else raise Subscript
@@ -67,8 +70,8 @@ with
   fun key_eq (KEY(v1, len1)) (KEY(v2, len2)) =
       len1 = len2
       andalso
-      V.foldli (fn(i,e1,res) => res andalso e1 == V.sub(v2,i)) true
-               (v1, 0, SOME len1)
+      VS.foldli (fn(i,e1,res) => res andalso e1 == V.sub(v2,i)) true
+                (VS.slice(v1, 0, SOME len1))
 end
 
 
@@ -108,7 +111,7 @@ fun eval_factoid_rhs vmap f = let
       else ai * mlibPatricia.find i vmap + acc
 in
   case f of
-    ALT fv => foldli foldthis zero (fv, 0, NONE)
+    ALT fv => foldli foldthis zero fv
 end
 
 fun eval_factoid_except vmap i f = let
@@ -120,7 +123,7 @@ fun eval_factoid_except vmap i f = let
       else ai * mlibPatricia.find j vmap + acc
 in
   case f of
-    ALT fv => foldli foldthis zero (fv, 0, NONE)
+    ALT fv => foldli foldthis zero fv
 end
 
 
@@ -130,7 +133,7 @@ fun factoid_pairings vars f =
       ALT av => V.foldri
                 (fn (i, ai, list) =>
                     (mlibOmegaint.toString ai, List.nth(vars, i)) :: list)
-                [] (av, 0, NONE)
+                [] av
 
 
 fun ERR f s = Fail ("Function: "^f^", message: "^s)
@@ -211,13 +214,13 @@ exception no_gcd
 fun factoid_gcd f =
     case f of
       ALT av => let
-        open Vector
-        val g = foldli (fn (_, c, g0) => mlibOmegaint.gcd (mlibOmegaint.abs c, g0))
-                       mlibOmegaint.zero
-                       (av, 0, SOME (length av - 1))
+        val g = VS.foldli
+                    (fn (_, c, g0) => mlibOmegaint.gcd (mlibOmegaint.abs c, g0))
+                    mlibOmegaint.zero
+                    (VS.slice(av, 0, SOME (V.length av - 1)))
       in
         if mlibOmegaint.<=(g, mlibOmegaint.one) then raise no_gcd
-        else factoid (map (fn c => mlibOmegaint.div(c, g)) av)
+        else factoid (V.map (fn c => mlibOmegaint.div(c, g)) av)
       end
 
 (* ----------------------------------------------------------------------
@@ -354,8 +357,7 @@ fun combine_dfactoids em i ((f1, d1), (f2, d2)) =
 local structure V = Vector in
 fun veceq eq ( v1) ( v2) =
     if V.length v1 <> V.length v2 then false
-    else V.foldli (fn(i,e1,res) => res andalso eq(e1, V.sub(v2,i))) true
-                  (v1, 0, NONE)
+    else V.foldli (fn(i,e1,res) => res andalso eq(e1, V.sub(v2,i))) true v1
 end
 
 fun aveceq x = veceq op== x;
@@ -645,8 +647,8 @@ fun exact_var ptree = let
   fun check_index (i, b, acc) =
       if b andalso not (Array.sub(coeffs_all_zero,i)) then SOME i else acc
 in
-  case Array.foldli check_index NONE (low_coeffs_unit, 0, NONE) of
-    NONE => Array.foldli check_index NONE (up_coeffs_unit, 0, NONE)
+  case Array.foldli check_index NONE low_coeffs_unit of
+    NONE => Array.foldli check_index NONE up_coeffs_unit
   | x => x
 end
 
@@ -671,7 +673,7 @@ fun least_coeff_var ptree = let
     | find_min (i,ai, acc as SOME(mini, minai)) =
       if mlibOmegaint.<(ai, minai) andalso not(ai == mlibOmegaint.zero) then SOME(i,ai) else acc
 in
-  #1 (valOf (Array.foldli find_min NONE (sums, 0, NONE)))
+  #1 (valOf (Array.foldli find_min NONE sums))
 end
 
 (* ----------------------------------------------------------------------

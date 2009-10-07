@@ -3145,7 +3145,7 @@ fun AUTO_EXISTS_TAC (asm,tm) = let
      in exx ys (asm,tm) end
 
 fun store_string2sexp_thm target extra post = let
-  fun get_thm s [] = hd []
+  fun get_thm s [] = fail()
     | get_thm s ((t,th)::xs) = if s = t then th else get_thm s xs
   val th = get_thm target arm_string2sexp_thms
   val p = find_term (can (match_term ``aPC p``)) (cdr (concl th)) handle e =>

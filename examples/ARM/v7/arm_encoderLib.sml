@@ -695,8 +695,9 @@ fun thumb_encode_status_access tm = term_list_to_num
 fun thumb_encode_load_store tm = term_list_to_num
 let val checkls = check ("thumb_encode_load_store",tm) in
    (case dest_strip tm
-    of ("Load", [p,u,b,w,_,n,t,mode2]) =>
-          if is_Mode2_immediate mode2 then
+    of ("Load", [p,u,b,w,unpriv,n,t,mode2]) =>
+         checkls (fn _ => is_F unpriv)
+         (if is_Mode2_immediate mode2 then
             let val imm12 = dest_Mode2_immediate mode2 in
               if is_PC n orelse is_SP n then
                 let val imm8 = imm12$(10,2)
@@ -726,9 +727,10 @@ let val checkls = check ("thumb_encode_load_store",tm) in
                          is_0 imm5 andalso is_0 typ andalso
                          Lib.all (width_okay 3) [m,n,t])
                 [(``0b1011w:word4``,11), (b,10), (m,6), (n,3), (t,0)]
-            end
-     | ("Store", [p,u,b,w,_,n,t,mode2]) =>
-          if is_Mode2_immediate mode2 then
+            end)
+     | ("Store", [p,u,b,w,unpriv,n,t,mode2]) =>
+         checkls (fn _ => is_F unpriv)
+         (if is_Mode2_immediate mode2 then
             let val imm12 = dest_Mode2_immediate mode2 in
               if is_SP n then
                 let val imm8 = imm12$(10,2) in
@@ -755,9 +757,10 @@ let val checkls = check ("thumb_encode_load_store",tm) in
                          is_0 imm5 andalso is_0 typ andalso
                          Lib.all (width_okay 3) [m,n,t])
                 [(``0b101w:word4``,12), (b,10), (m,6), (n,3), (t,0)]
-            end
-     | ("Load_Halfword", [p,u,w,s,h,_,n,t,mode3]) =>
-          if is_Mode3_immediate mode3 then
+            end)
+     | ("Load_Halfword", [p,u,w,s,h,unpriv,n,t,mode3]) =>
+         checkls (fn _ => is_F unpriv)
+         (if is_Mode3_immediate mode3 then
             let val imm12 = dest_Mode3_immediate mode3
                 val imm5 = imm12$(11,1)
             in
@@ -772,11 +775,14 @@ let val checkls = check ("thumb_encode_load_store",tm) in
             let val (imm3,m) = dest_Mode3_register mode3 in
               checkls
                 (fn _ => is_T p andalso is_T u andalso is_F w andalso
+                         (is_T s orelse is_T h) andalso
                          is_0 imm3 andalso Lib.all (width_okay 3) [m,n,t])
-                [(``0b101101w:word6``,9), (m,6), (n,3), (t,0)]
-            end
-     | ("Store_Halfword", [p,u,w,_,n,t,mode3]) =>
-          if is_Mode3_immediate mode3 then
+                [(``0b101w:word3``,12), (h,11), (s,10), (T,9), (m,6), (n,3),
+                 (t,0)]
+            end)
+     | ("Store_Halfword", [p,u,w,unpriv,n,t,mode3]) =>
+         checkls (fn _ => is_F unpriv)
+         (if is_Mode3_immediate mode3 then
             let val imm12 = dest_Mode3_immediate mode3
                 val imm5 = imm12$(11,1)
             in
@@ -792,7 +798,7 @@ let val checkls = check ("thumb_encode_load_store",tm) in
                 (fn _ => is_T p andalso is_T u andalso is_F w andalso
                          is_0 imm3 andalso Lib.all (width_okay 3) [m,n,t])
                 [(``0b101001w:word6``,9), (m,6), (n,3), (t,0)]
-            end
+            end)
      | ("Load_Multiple", [p,u,s,w,n,registers]) =>
           if is_SP n then
             checkls
@@ -802,8 +808,11 @@ let val checkls = check ("thumb_encode_load_store",tm) in
                (registers$(7,0),0)]
           else
             checkls
-              (fn _ => is_F p andalso is_T u andalso is_F s andalso
-                       is_0 (registers$(15,8)) andalso width_okay 3 n)
+              (fn _ => let val rn = uint_of_word n in
+                         is_F p andalso is_T u andalso is_F s andalso
+                         is_T w = is_0 (registers$(rn,rn)) andalso
+                         is_0 (registers$(15,8)) andalso width_okay 3 n
+                       end)
               [(``0b11001w:word5``,11), (n,8), (registers$(7,0),0)]
      | ("Store_Multiple", [p,u,s,w,n,registers]) =>
           if is_SP n then
@@ -816,7 +825,8 @@ let val checkls = check ("thumb_encode_load_store",tm) in
           else
             checkls
               (fn _ => is_F p andalso is_T u andalso is_F s andalso
-                       is_0 (registers$(15,8)) andalso width_okay 3 n)
+                       is_T w andalso is_0 (registers$(15,8)) andalso
+                       width_okay 3 n)
               [(``0b11w:word2``,14), (n,8), (registers$(7,0),0)]
      | _ => raise ERR "thumb_encode_load_store"
               ("cannot encode: " ^ term_to_string tm))

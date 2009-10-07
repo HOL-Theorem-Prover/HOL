@@ -858,7 +858,7 @@ fun get_implicit_dependencies (f: File) : File list = let
                   else
                     file_dependencies0
   val file_dependencies = if nob2002 then file_dependencies
-                          else toFile (fullPath [SIGOBJ, "basis2002"]) ::
+                          else toFile (fullPath [SIGOBJ, "basis2002.uo"]) ::
                                file_dependencies
   fun is_thy_file (SML (Theory _)) = true
     | is_thy_file (SIG (Theory _)) = true

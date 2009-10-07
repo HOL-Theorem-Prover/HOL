@@ -9,6 +9,8 @@ open Abbrev HolKernel arm_astTheory;
 
 (* ------------------------------------------------------------------------- *)
 
+val ERR = Feedback.mk_HOL_ERR "arm_astSyntax";
+
 fun inst_word_alpha ty tm =
   inst [alpha |->
    (if wordsSyntax.is_word_type (type_of tm) then

@@ -1,4 +1,4 @@
-\DOC TRUE_FALSE_REFL_CONSEQ_CONV
+\DOC
 
 \TYPE {TRUE_FALSE_REFL_CONSEQ_CONV : directed_conseq_conv}
 
@@ -6,9 +6,10 @@
 ConseqConv
 
 \SYNOPSIS
-Given a term {t} of type {bool} this directed consequence conversion returns the theorem
-{|- F ==> t} for {CONSEQ_CONV_STRENGTHEN_direction}, the theorem
-{|- t ==> T} for {CONSEQ_CONV_WEAKEN_direction} and
+
+Given a term {t} of type {bool} this directed consequence conversion
+returns the theorem {|- F ==> t} for {CONSEQ_CONV_STRENGTHEN_direction},
+the theorem {|- t ==> T} for {CONSEQ_CONV_WEAKEN_direction} and
 {|- t = t} for {CONSEQ_CONV_UNKNOWN_direction}.
 
 \SEEALSO

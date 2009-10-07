@@ -1,5 +1,7 @@
 open HolKernel boolLib simpLib Parse realSimps
 
+val _ = set_trace "Unicode" 0
+
 val s = SIMP_CONV (bossLib.std_ss ++ REAL_REDUCE_ss) []
 
 fun test (problem, result) = let
