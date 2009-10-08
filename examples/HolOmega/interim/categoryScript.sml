@@ -89,9 +89,9 @@ val category_dual = store_thm ("category_dual",
 (*---------------------------------------------------------------------------
   Functors are homomorphisms between categories.  In this model, functors
   are homomorphisms between the HOL-Omega logic and itself.  A functor
-  consists of a type operator F of kind `::ty => ty` and a term operator F
-  of type `:!'a 'b. ('a, 'b) 'C -> ('a 'F, 'b 'F) 'D`,
-  so that F f : ('a 'F, 'b 'F) 'D whenever ('a, 'b) 'C.
+  consists of a type operator F of kind `::ty => ty` and
+  a term operator F of type `:!'a 'b. ('a, 'b) 'C -> ('a 'F, 'b 'F) 'D`,
+  so that F [:'a,'b:] f : ('a 'F, 'b 'F) 'D whenever f : ('a, 'b) 'C.
   Functors are also required to preserve identities and composition,
   as defined below.  
 

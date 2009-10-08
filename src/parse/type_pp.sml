@@ -233,15 +233,18 @@ fun pp_type0 (G:grammar) backend = let
       pend parens_needed
     end
 
+    fun add_ann_string'(p as (s,ann)) =
+              if !pp_annotations then add_ann_string p else add_string s
+
     fun print_skr grav annot (s,k,r) =
-        if (k <> Kind.typ orelse r <> 0) andalso show_kinds() = 1 orelse
-           show_kinds() = 2
+        if (k <> Kind.typ orelse r <> 0) andalso show_kinds() = 1
+           orelse show_kinds() = 2
         then let
             val parens_needed =
                  case grav of Top => false | _ => true
           in
             pbegin parens_needed;
-            add_ann_string (s, annot);
+            add_ann_string' (s, annot);
             if k <> Kind.typ orelse show_kinds() = 2 then let
                 val p = r <> 0 andalso not (Kind.is_arity k)
               in
@@ -256,12 +259,9 @@ fun pp_type0 (G:grammar) backend = let
             else ();
             pend parens_needed
           end
-        else add_ann_string (s, annot)
+        else add_ann_string' (s, annot)
 
     fun print_var new grav tyv =
-      if not (!pp_annotations) then
-        add_string (uniconvert (#1 (dest_var_type ty)))
-      else
         let val (s,k,r) = dest_var_type tyv
             val s = uniconvert s
             val bound = Lib.mem tyv (!btyvars_seen)
@@ -270,7 +270,7 @@ fun pp_type0 (G:grammar) backend = let
             val annot = (if bound then TyBV else TyFV)
                         (k, r, s ^ kd_annot)
         in if new then print_skr grav annot (s,k,r)
-                  else add_ann_string (s, annot)
+                  else add_ann_string' (s, annot)
         end
 
     fun print_const grav tyc =
@@ -354,8 +354,6 @@ fun pp_type0 (G:grammar) backend = let
             end_block();
             add_string ")"
           end
-          fun add_ann_string'(p as (s,ann)) =
-              if !pp_annotations then add_ann_string p else add_string s
         in
           case Args of
             [] => let
