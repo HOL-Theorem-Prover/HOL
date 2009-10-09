@@ -154,10 +154,12 @@ val _ =
   (term_pp_prefix := "``";   term_pp_suffix := "``";
    type_pp_prefix  := "``";   type_pp_suffix := "``");
 end;
-structure HOL_Interactive :> sig val toggle_quietdec : unit -> bool end =
+structure HOL_Interactive :> sig
+  val toggle_quietdec : unit -> bool
+  val amquiet : unit -> bool
+end =
 struct
-  local val qd = ref false
-  in
+  val qd = ref false
   fun toggle_quietdec () =
       if !qd then (PolyML.Compiler.prompt1 := "> ";
                    PolyML.Compiler.prompt2 := "# ";
@@ -169,8 +171,10 @@ struct
             PolyML.print_depth 0;
             qd := true;
             true)
-  end
-end
+  fun amquiet () = !qd
+end;
+
+use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 
 val _ = set_trace "metis" 1
 val _ = set_trace "meson" 1
