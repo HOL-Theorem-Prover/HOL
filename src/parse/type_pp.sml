@@ -196,6 +196,8 @@ fun pp_type0 (G:grammar) backend = let
     recurse (rules G) : (int * single_rule) option
   end
 
+  val _ = ftyvars_seen := []
+
   fun pr_ty binderp pps ty grav depth = let
     open PPBackEnd
     val {add_string, add_break, begin_block, end_block, add_ann_string,...} =
@@ -242,6 +244,7 @@ fun pp_type0 (G:grammar) backend = let
         then let
             val parens_needed =
                  case grav of Top => false | _ => true
+            val pkd = k <> Kind.typ orelse show_kinds() = 2
           in
             pbegin parens_needed;
             add_ann_string' (s, annot);

@@ -759,8 +759,10 @@ fun pp_term (G : grammar) TyG backend = let
           | BreakSpace (n, m) => (add_break(n,m); recurse (es, tyargs, args))
           | RE (TOK s) => if print_tycomb then
                             (pbegin print_tycomb;
+                             begin_block INCONSISTENT 0;
                              add_string s;
                              pr_type_list tyargs;
+                             end_block();
                              pend print_tycomb;
                              recurse (es, [], args))
                           else
