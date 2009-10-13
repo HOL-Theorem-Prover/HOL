@@ -196,8 +196,6 @@ fun pp_type0 (G:grammar) backend = let
     recurse (rules G) : (int * single_rule) option
   end
 
-  val _ = ftyvars_seen := []
-
   fun pr_ty binderp pps ty grav depth = let
     open PPBackEnd
     val {add_string, add_break, begin_block, end_block, add_ann_string,...} =
@@ -275,6 +273,8 @@ fun pp_type0 (G:grammar) backend = let
         in if new then print_skr grav annot (s,k,r)
                   else add_ann_string' (s, annot)
         end
+    fun print_vars [] = ()
+      | print_vars (v::vs) = (print_var true Top v; add_string ","; print_vars vs)
 
     fun print_const grav tyc =
         let val {Thy, Tyop, Kind, Rank} = dest_thy_con_type tyc
@@ -458,12 +458,14 @@ fun pp_type0 (G:grammar) backend = let
                            | _ => false *)
             in
               pbegin parens;
-              begin_block INCONSISTENT 0;
+              begin_block CONSISTENT 2;
               add_string (hd lambda);
+              begin_block INCONSISTENT 2;
               pr_list (fn arg => pr_ty true pps arg grav (depth - 1))
                       (fn () => ())
                       (fn () => add_break (1, 0))
                       vars;
+              end_block ();
               add_string ".";
               add_break (1,0);
               pr_ty false pps body Top (depth - 1);
@@ -482,12 +484,14 @@ fun pp_type0 (G:grammar) backend = let
                            | _ => false *)
             in
               pbegin parens;
-              begin_block INCONSISTENT 0;
+              begin_block CONSISTENT 2;
               add_string (hd forall);
+              begin_block INCONSISTENT 2;
               pr_list (fn arg => pr_ty true pps arg grav (depth - 1))
                       (fn () => ())
                       (fn () => add_break (1, 0))
                       vars;
+              end_block ();
               add_string ".";
               add_break (1,0);
               pr_ty false pps body Top (depth - 1);
@@ -502,16 +506,30 @@ in
   pr_ty
 end
 
-fun pp_type G backend = let
+fun pp_type_cont G backend = let
   val baseprinter = pp_type0 G backend
 in
   (fn pps => fn ty => baseprinter false pps ty Top (!Globals.max_print_depth))
 end
 
-fun pp_type_with_depth G backend = let
+fun pp_type_with_depth_cont G backend = let
   val baseprinter = pp_type0 G backend
 in
   (fn pps => fn depth => fn ty => baseprinter false pps ty Top depth)
+end
+
+fun pp_type G backend = let
+  val printer = pp_type_cont G backend
+  val _ = ftyvars_seen := []
+in
+  printer
+end
+
+fun pp_type_with_depth G backend = let
+  val printer = pp_type_with_depth_cont G backend
+  val _ = ftyvars_seen := []
+in
+  printer
 end
 
 end; (* struct *)

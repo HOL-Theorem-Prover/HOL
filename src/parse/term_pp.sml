@@ -367,7 +367,15 @@ end handle HOL_ERR _ => fst (dest_const tm)
 
 fun pp_term (G : grammar) TyG backend = let
   fun tystr ty =
-      PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty
+      let val cur_ftyvars_seen = !type_pp.ftyvars_seen
+          val cur_kinds = current_trace "kinds"
+          val _ = set_trace "kinds" 0
+          val s = PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty
+      in
+        type_pp.ftyvars_seen := cur_ftyvars_seen;
+        set_trace "kinds" cur_kinds;
+        s
+      end
   val {restr_binders,lambda,type_lambda,endbinding,
        type_intro,type_lbracket,type_rbracket,res_quanop} = specials G
   val overload_info = overload_info G
@@ -713,7 +721,7 @@ fun pp_term (G : grammar) TyG backend = let
     fun spacep b = if b then add_break(1, 0) else ()
     fun sizedbreak n = add_break(n, 0)
 
-    val pr_type = type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
+    val pr_type = type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth)
 
     fun pr_typel s [] = raise PP_ERR "pp_term" "no bound variables in type abstraction"
       | pr_typel s [ty] = pr_type ty
@@ -959,14 +967,6 @@ fun pp_term (G : grammar) TyG backend = let
       begin_block CONSISTENT 2;
       pr_term base Top Top Top (decdepth depth);
       pr_type_list tys;
-(*
-      add_break (1,0);
-      add_string type_lbracket;
-      begin_block INCONSISTENT 0;
-      pr_typel "," tys;
-      end_block();
-      add_string type_rbracket;
-*)
       end_block();
       pend addparens)
     end
@@ -1007,8 +1007,8 @@ fun pp_term (G : grammar) TyG backend = let
       add_string (numeral_str ^ sfx) ;
       if showtypes then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
-                                    (#2 (dom_rng injty)))
+         type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth)
+                                         (#2 (dom_rng injty)))
       else ();
       pend showtypes
     end
@@ -1319,8 +1319,8 @@ fun pp_term (G : grammar) TyG backend = let
                    prec prec rprec (decdepth depth);
       if comb_show_type then
         (add_string (" "^type_intro); add_break (0,0);
-         type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
-                                    (type_of tm))
+         type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth)
+                                         (type_of tm))
       else ();
       end_block();
       pend (addparens orelse comb_show_type)
@@ -1634,7 +1634,7 @@ fun pp_term (G : grammar) TyG backend = let
       add_break(0,0);
       add_string ("`"^type_intro);
       add_break (0,0);
-      type_pp.pp_type_with_depth TyG backend pps (decdepth depth) ty;
+      type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) ty;
       add_string "`))";
       end_block()
     end
@@ -1682,7 +1682,7 @@ fun pp_term (G : grammar) TyG backend = let
           fun add_type () = let
           in
             add_string (" "^type_intro); add_break (0,0);
-            type_pp.pp_type_with_depth TyG backend pps (decdepth depth) Ty
+            type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) Ty
           end
           val new_freevar =
             showtypes andalso not isfake andalso
@@ -1716,7 +1716,7 @@ fun pp_term (G : grammar) TyG backend = let
             (*begin_block CONSISTENT 0;*)
             action();
             add_string (" "^type_intro);
-            type_pp.pp_type_with_depth TyG backend pps (decdepth depth) Ty;
+            type_pp.pp_type_with_depth_cont TyG backend pps (decdepth depth) Ty;
             (*end_block ();*)
             pend true
           end
@@ -1740,7 +1740,7 @@ fun pp_term (G : grammar) TyG backend = let
                 add_string "(";
                 begin_block CONSISTENT 0;
                 add_string type_intro;
-                type_pp.pp_type_with_depth TyG backend pps depth (hd Args);
+                type_pp.pp_type_with_depth_cont TyG backend pps depth (hd Args);
                 end_block ();
                 add_string ")"
               end
