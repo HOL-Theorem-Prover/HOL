@@ -83,6 +83,11 @@ val BAG_MERGE = Q.new_definition(
   "BAG_MERGE",
   `BAG_MERGE b1 b2 = (\x. if (b1 x < b2 x) then b2 x else b1 x)`);
 
+val BAG_MERGE_IDEM = store_thm (
+  "BAG_MERGE_IDEM",
+  ``!b. BAG_MERGE b b = b``,
+  SIMP_TAC std_ss [BAG_MERGE, FUN_EQ_THM]);
+
 val _ = print "Properties relating BAG_IN(N) to other functions\n"
 val BAG_INN_0 = store_thm (
   "BAG_INN_0",
@@ -852,6 +857,12 @@ val SET_OF_EMPTY = store_thm (
   SIMP_TAC (srw_ss()) [BAG_OF_SET, EMPTY_BAG, FUN_EQ_THM])
 val _ = export_rewrites ["SET_OF_EMPTY"];
 
+val BAG_IN_BAG_OF_SET = store_thm (
+  "BAG_IN_BAG_OF_SET",
+  ``!P p. BAG_IN p (BAG_OF_SET P) = p IN P``,
+  SIMP_TAC std_ss [BAG_OF_SET, BAG_IN, BAG_INN, 
+                   COND_RAND, COND_RATOR]);
+
 val BAG_OF_EMPTY = store_thm (
   "BAG_OF_EMPTY",
   ``SET_OF_BAG (EMPTY_BAG:'a->num) = EMPTY``,
@@ -1212,6 +1223,17 @@ val BAG_CARD_THM = save_thm(
   "BAG_CARD_THM",
   CONJ BAG_CARD_EMPTY BAG_CARD_INSERT);
 
+val BAG_CARD_UNION = store_thm (
+  "BAG_CARD_UNION",
+  Term `!b1 b2. FINITE_BAG b1 /\ FINITE_BAG b2 ==>
+                (BAG_CARD (BAG_UNION b1 b2) =
+                 (BAG_CARD b1) + (BAG_CARD b2))`,
+  SIMP_TAC std_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
+  SIMP_TAC arith_ss [BAG_UNION_INSERT, BAG_UNION_EMPTY,
+     BAG_CARD_THM, FINITE_BAG_UNION]);
+
+
 val BCARD_SUC = Q.store_thm(
   "BCARD_SUC",
   `!b. FINITE_BAG b ==>
@@ -1402,12 +1424,32 @@ val BAG_IMAGE_FINITE_INSERT = store_thm(
  before
  export_rewrites ["BAG_IMAGE_FINITE_INSERT"];
 
+val BAG_IMAGE_FINITE_UNION = store_thm (
+  "BAG_IMAGE_FINITE_UNION",
+  ``!b1 b2 f. (FINITE_BAG b1 /\ FINITE_BAG b2) ==>
+    (BAG_IMAGE f (BAG_UNION b1 b2) = (BAG_UNION (BAG_IMAGE f b1) (BAG_IMAGE f b2)))``,
+  REPEAT STRIP_TAC THEN
+  Q.PAT_ASSUM `FINITE_BAG b1` MP_TAC THEN
+  Q.SPEC_TAC (`b1`, `b1`) THEN
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
+  ASM_SIMP_TAC std_ss [BAG_UNION_INSERT, BAG_UNION_EMPTY, BAG_IMAGE_EMPTY,
+     BAG_IMAGE_FINITE_INSERT, FINITE_BAG_UNION]) before
+  export_rewrites ["BAG_IMAGE_FINITE_UNION"];
+
 val BAG_IMAGE_FINITE = store_thm(
   "BAG_IMAGE_FINITE",
   ``!b. FINITE_BAG b ==> FINITE_BAG (BAG_IMAGE f b)``,
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][])
  before
  export_rewrites ["BAG_IMAGE_FINITE"];
+
+val BAG_IMAGE_COMPOSE = store_thm (
+  "BAG_IMAGE_COMPOSE",
+  ``!f g b. FINITE_BAG b ==> ((BAG_IMAGE (f o g) b = BAG_IMAGE f (BAG_IMAGE g b)))``,
+  GEN_TAC THEN GEN_TAC THEN
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
+  SIMP_TAC std_ss [BAG_IMAGE_EMPTY, BAG_IMAGE_FINITE_INSERT,
+     BAG_IMAGE_FINITE]);
 
 val BAG_IMAGE_FINITE_I = store_thm(
   "BAG_IMAGE_FINITE_I",
@@ -1822,6 +1864,40 @@ val BAG_IN_BAG_DIFF_ALL_DISTINCT = store_thm (
   SIMP_TAC std_ss [BAG_ALL_DISTINCT,
 		   BAG_IN, BAG_INN, BAG_DIFF] THEN
   REPEAT STRIP_TAC THEN `b1 e <= 1` by PROVE_TAC[] THEN DECIDE_TAC);
+
+val SUB_BAG_ALL_DISTINCT = store_thm (
+  "SUB_BAG_ALL_DISTINCT",
+  ``!b1 b2. BAG_ALL_DISTINCT b1 ==>
+    (SUB_BAG b1 b2 = (!x. BAG_IN x b1 ==> BAG_IN x b2))``,
+  SIMP_TAC std_ss [BAG_ALL_DISTINCT, SUB_BAG, BAG_INN, BAG_IN] THEN
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+     PROVE_TAC[],
+
+     REPEAT STRIP_TAC THEN
+     Cases_on `n = 0` THEN FULL_SIMP_TAC std_ss [] THEN
+     Q.PAT_ASSUM `!e. b1 e <= 1` (ASSUME_TAC o Q.SPEC `x`) THEN
+     `n = 1` by DECIDE_TAC THEN
+     FULL_SIMP_TAC std_ss []
+  ]);
+
+val BAG_ALL_DISTINCT_BAG_INN = store_thm (
+  "BAG_ALL_DISTINCT_BAG_INN",
+  ``!b n e. BAG_ALL_DISTINCT b ==> (BAG_INN e n b =
+            (n = 0) \/ ((n = 1) /\ BAG_IN e b))``,
+  SIMP_TAC std_ss [BAG_INN, BAG_ALL_DISTINCT, BAG_IN] THEN
+  REPEAT STRIP_TAC THEN 
+  Cases_on `n = 0` THEN ASM_SIMP_TAC std_ss [] THEN
+  Cases_on `n = 1` THEN1 ASM_SIMP_TAC std_ss [] THEN
+  `b e <= 1` by PROVE_TAC[] THEN
+  DECIDE_TAC);
+
+
+val BAG_ALL_DISTINCT_EXTENSION = store_thm (
+  "BAG_ALL_DISTINCT_EXTENSION",
+  ``!b1 b2. (BAG_ALL_DISTINCT b1 /\ BAG_ALL_DISTINCT b2) ==>
+            ((b1 = b2) = (!x. BAG_IN x b1 = BAG_IN x b2))``,
+  SIMP_TAC std_ss [BAG_EXTENSION, BAG_ALL_DISTINCT_BAG_INN] THEN
+  SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [])
 
 val NOT_BAG_IN = Q.store_thm
 ("NOT_BAG_IN",
