@@ -6,6 +6,7 @@
 
 (* interactive use:
   app load ["arm_astTheory", "wordsLib"];
+  val _ = HOL_Interactive.toggle_quietdec();
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -83,7 +84,8 @@ val _ = Hol_datatype `arm_state =
      psrs           : proc # PSRName -> ARMpsr; (* program-status  *)
      event_register : proc -> bool;
      interrupt_wait : proc -> bool;
-     memory         : FullAddress -> word8 option;
+     memory         : FullAddress -> word8;
+     accesses       : memory_access list;
      information    : ARMinfo;
      coprocessors   : Coprocessors;
      monitors       : ExclusiveMonitors (* synchronization & semaphores *)
@@ -450,21 +452,15 @@ val read_monitor_def = Define`
 val write_monitor_def = Define`
   write_monitor (ii:iiid) d = writeT (\s. s with monitors := d)`;
 
-(* memory writes are only allowed to modelled memory, i.e. locations
-   containing SOME ... *)
-
 val read_mem1_def = Define`
   read_mem1 (ii:iiid) (address:FullAddress) : word8 M =
-  \s. case s.memory address
-      of NONE   -> errorT "read_mem1: DAbort_Domain" s
-      || SOME x -> constT x s`;
+    seqT (writeT (arm_state_accesses_fupd (CONS (MEM_READ address))))
+         (\u:unit. readT (\s. s.memory address))`;
 
 val write_mem1_def = Define`
   write_mem1 (ii:iiid) (address:FullAddress) (byte:word8) =
-  \s. case s.memory address
-      of NONE   -> errorT "write_mem1: DAbort_Domain" s
-      || SOME d -> constT ()
-                     (s with memory updated_by (address =+ SOME byte))`;
+    seqT (writeT (arm_state_accesses_fupd (CONS (MEM_WRITE address byte))))
+         (\u:unit. writeT (arm_state_memory_fupd (address =+ byte)))`;
 
 (* aligned, atomic, little-endian memory access - read *)
 

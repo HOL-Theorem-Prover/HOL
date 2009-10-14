@@ -114,6 +114,9 @@ val _ = Hol_datatype `MBReqDomain =
 
 val _ = Hol_datatype `MBReqTypes = MBReqTypes_All | MBReqTypes_Writes`;
 
+val _ = Hol_datatype `memory_access =
+  MEM_READ of FullAddress | MEM_WRITE of FullAddress => word8`;
+
 (* Coprocessors *)
 
 val _ = type_abbrev("cpid", ``:word4``);

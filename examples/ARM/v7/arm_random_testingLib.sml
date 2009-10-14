@@ -3,6 +3,7 @@ struct
 
 (* interactive use:
   app load ["armLib"];
+  HOL_Interactive.toggle_quietdec ();
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -91,6 +92,16 @@ fun version_number a =
 
 (* ------------------------------------------------------------------------- *)
 
+fun data_processing_list n enc =
+  List.tabulate (4, fn _ => 0) @
+  List.tabulate
+    (if n < 6 then 3 else
+      case enc
+      of Thumb  => 8
+       | Thumb2 => 30
+       | ARM    => 29, I) @
+   (if n = 5 andalso enc = ARM then [23] else []);
+
 fun random_term arch enc typ =
 let val rand_term = random_term arch enc
     val pc = mk_word4 15
@@ -150,8 +161,9 @@ let val rand_term = random_term arch enc
     fun mul () = case rand_term ``:bool -> bool -> 'reg word -> 'reg word ->
                                   'reg word -> 'reg word``
                  of [a,b,c,d,e,f] =>
-                     let val (acc,sflag) = if enc = Thumb then (F,T) else (a,b)
-                     in arm_astSyntax.mk_Multiply (acc,sflag,c,d,e,f) end
+                     let val (acc,sflag,rm) =
+                                 if enc = Thumb then (F,T,c) else (a,b,e)
+                     in arm_astSyntax.mk_Multiply (acc,sflag,c,d,rm,f) end
                   | _ => raise ERR "random_term" "mul"
     fun ls () = case rand_term ``:bool -> bool -> bool -> bool ->
                                   'reg word -> 'reg word``
@@ -360,11 +372,7 @@ in
                      ``:'reg word -> bool -> 'reg word``
          | _ => raise ERR "random_term" "branch_instruction"]
    | ("data_processing_instruction", []) =>
-       if enc = Thumb andalso version_number arch < 6 orelse
-          enc <> Thumb andalso random_range 3 = 0 then
-         [dp ()]
-       else
-         [case random_range (if enc = Thumb then 8 else 30)
+         [case random_from_list (data_processing_list (version_number arch) enc)
           of 0 => dp ()
            | 1 => r4 arm_astSyntax.mk_Add_Sub
                      ``:bool -> 'reg word -> 'reg word -> word12``
@@ -542,7 +550,7 @@ local
   val GE   = mk_var ("GE", ``:word4``)
   val IT   = mk_var ("IT", ``:word8``)
   val mode = mk_var ("mode", ``:word5``)
-  val mem  = mk_var ("mem", ``:word32 -> word8 option``)
+  val mem  = mk_var ("mem", ``:word32 -> word8``)
 
   fun is_read tm =
        (case dest_strip tm
@@ -662,17 +670,24 @@ local
                       Hol_pp.term_to_string tm, "\n",
                       "\t", e, " =/= ", d, "\n",
                       Hol_pp.term_to_string (decode arm d), "\n"]);
-                     " : warning, equivalent to " ^ d ^ "?")
+                     String.concat
+                       [" // warning, ", e, " equivalent to ", d, "?"])
                  else
                    ""
     in
-      (e ^ w,a,arm)
+      (e,a ^ w,arm)
     end handle HOL_ERR e =>
           (HOL_WARNING (#origin_structure e) (#origin_function e)
              (String.concat
                 [Hol_pp.term_to_string enc, ": ",
                  Hol_pp.term_to_string tm, "\n"]);
            raise HOL_ERR e)
+      | Option =>
+          (HOL_WARNING "" ""
+             (String.concat
+                [Hol_pp.term_to_string enc, ": ",
+                 Hol_pp.term_to_string tm, "\n"]);
+           raise Option)
 
   fun arch_to_string a =
     case a

@@ -6,6 +6,7 @@
 
 (* interactive use:
   app load ["armTheory", "wordsLib"];
+  val _ = HOL_Interactive.toggle_quietdec ();
 *)
 
 open HolKernel boolLib bossLib;
@@ -228,7 +229,13 @@ val ARM_READ_MEM_def = Define`
   ARM_READ_MEM a s = s.memory a`;
 
 val ARM_WRITE_MEM_def = Define`
-  ARM_WRITE_MEM a w s = s with memory updated_by (a =+ SOME w)`;
+  ARM_WRITE_MEM a w s = s with memory updated_by (a =+ w)`;
+
+val ARM_WRITE_MEM_WRITE_def = Define`
+  ARM_WRITE_MEM_WRITE a w s = s with accesses updated_by CONS (MEM_WRITE a w)`;
+
+val ARM_WRITE_MEM_READ_def = Define`
+  ARM_WRITE_MEM_READ a s = s with accesses updated_by CONS (MEM_READ a)`;
 
 val RevLookUpRName_def = Define`
   RevLookUpRName (n:word4,m:word5) =
@@ -338,12 +345,12 @@ val UPDATE_ID = Q.store_thm("UPDATE_ID",
 
 val UPDATE_ID_o = Q.store_thm("UPDATE_ID_o",
   `(!a b. (a =+ b) o (a =+ b) = (a =+ b)) /\
-   (!a b. (a =+ b) o ((a =+ b) o g) = (a =+ b) o g)`,
+   (!a b g. (a =+ b) o ((a =+ b) o g) = (a =+ b) o g)`,
   SRW_TAC [] [FUN_EQ_THM, UPDATE_def]);
 
 val UPDATE_ID_o2 = Q.store_thm("UPDATE_ID_o2",
-  `(!a b. (a =+ b) o (a =+ c) = (a =+ b)) /\
-   (!a b. (a =+ b) o ((a =+ c) o g) = (a =+ b) o g)`,
+  `(!a b c. (a =+ b) o (a =+ c) = (a =+ b)) /\
+   (!a b c g. (a =+ b) o ((a =+ c) o g) = (a =+ b) o g)`,
   SRW_TAC [] [FUN_EQ_THM, UPDATE_def]);
 
 val FST_ADD_WITH_CARRY = Q.prove(
@@ -2239,13 +2246,13 @@ val neq_pc_plus4_t2 = save_thm("neq_pc_plus4_t2",
 
 val aligned_over_memread = Q.store_thm("aligned_over_memread",
   `(!b x:word8 y.
-      aligned (THE (if b then SOME x else SOME y),4) =
+      aligned (if b then x else y,4) =
       if b then aligned (x,4) else aligned (y,4)) /\
    (!b x:word8 y.
-      aligned_bx (THE (if b then SOME x else SOME y)) =
+      aligned_bx (if b then x else y) =
       if b then aligned_bx x else aligned_bx y) /\
    (!b c x:word8 y z.
-      aligned_bx (THE (if b then SOME x else if c then SOME y else SOME z)) =
+      aligned_bx (if b then x else if c then y else z) =
       if b then aligned_bx x else if c then aligned_bx y else aligned_bx z)`,
   SRW_TAC [] []);
 
@@ -2852,10 +2859,17 @@ val MARK_AND_CLEAR_EXCLUSIVE = Q.store_thm("MARK_AND_CLEAR_EXCLUSIVE",
     arm_state_component_equality, ExclusiveMonitors_component_equality]);
 
 val ARM_WRITE_MEM_o = Q.store_thm("ARM_WRITE_MEM_o",
-  `!a w g s.
+  `(!a w g s.
      (ARM_WRITE_MEM a w (s with memory updated_by g) =
-       (s with memory updated_by (a =+ SOME w) o g))`,
-  SRW_TAC [] [ARM_WRITE_MEM_def]);
+       (s with memory updated_by (a =+ w) o g))) /\
+   (!a w g s.
+     (ARM_WRITE_MEM_WRITE a w (s with accesses updated_by g) =
+       (s with accesses updated_by (CONS (MEM_WRITE a w)) o g))) /\
+   (!a w g s.
+     (ARM_WRITE_MEM_READ a (s with accesses updated_by g) =
+       (s with accesses updated_by (CONS (MEM_READ a)) o g)))`,
+  SRW_TAC []
+    [ARM_WRITE_MEM_def, ARM_WRITE_MEM_WRITE_def, ARM_WRITE_MEM_READ_def]);
 
 val ARM_WRITE_REG_o = Q.store_thm("ARM_WRITE_REG_o",
   `!x w g s.
@@ -3030,20 +3044,25 @@ val ARM_WRITE_REG_o = save_thm("ARM_WRITE_REG_o",
 val PSR_OF_UPDATES = Q.store_thm("PSR_OF_UPDATES",
   `(!n m d s. ARM_READ_CPSR (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_CPSR s) /\
    (!n d s. ARM_READ_CPSR (ARM_WRITE_REG n d s) = ARM_READ_CPSR s) /\
-   (!d s. ARM_READ_CPSR (ARM_WRITE_MEM a d s) = ARM_READ_CPSR s) /\
+   (!a d s. ARM_READ_CPSR (ARM_WRITE_MEM a d s) = ARM_READ_CPSR s) /\
+   (!a d s. ARM_READ_CPSR (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_CPSR s) /\
+   (!a s. ARM_READ_CPSR (ARM_WRITE_MEM_READ a s) = ARM_READ_CPSR s) /\
    (!d s. ARM_READ_CPSR (ARM_WRITE_CPSR d s) = d) /\
-   (!d s.  ARM_READ_CPSR (ARM_WRITE_SPSR d s) = ARM_READ_CPSR s) /\
-   (!f d s.  ARM_READ_CPSR (ARM_WRITE_STATUS_SPSR f d s) = ARM_READ_CPSR s) /\
-   (!d s.  ARM_READ_CPSR (ARM_WRITE_GE_SPSR d s) = ARM_READ_CPSR s) /\
-   (!d s.  ARM_READ_CPSR (ARM_WRITE_IT_SPSR d s) = ARM_READ_CPSR s) /\
-   (!d s.  ARM_READ_CPSR (ARM_WRITE_MODE_SPSR d s) = ARM_READ_CPSR s) /\
+   (!d s. ARM_READ_CPSR (ARM_WRITE_SPSR d s) = ARM_READ_CPSR s) /\
+   (!f d s. ARM_READ_CPSR (ARM_WRITE_STATUS_SPSR f d s) = ARM_READ_CPSR s) /\
+   (!d s. ARM_READ_CPSR (ARM_WRITE_GE_SPSR d s) = ARM_READ_CPSR s) /\
+   (!d s. ARM_READ_CPSR (ARM_WRITE_IT_SPSR d s) = ARM_READ_CPSR s) /\
+   (!d s. ARM_READ_CPSR (ARM_WRITE_MODE_SPSR d s) = ARM_READ_CPSR s) /\
    (!n m d s. ARM_READ_SPSR (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_SPSR s) /\
    (!n d s. ARM_READ_SPSR (ARM_WRITE_REG n d s) = ARM_READ_SPSR s) /\
-   (!d s. ARM_READ_SPSR (ARM_WRITE_MEM a d s) = ARM_READ_SPSR s) /\
+   (!a d s. ARM_READ_SPSR (ARM_WRITE_MEM a d s) = ARM_READ_SPSR s) /\
+   (!a d s. ARM_READ_SPSR (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_SPSR s) /\
+   (!a s. ARM_READ_SPSR (ARM_WRITE_MEM_READ a s) = ARM_READ_SPSR s) /\
    (!d s. ARM_READ_SPSR (ARM_WRITE_CPSR d s) = ARM_READ_SPSR_MODE d.M s) /\
    (!d s. ARM_READ_SPSR (ARM_WRITE_SPSR d s) = d)`,
   REPEAT STRIP_TAC \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
+                   ARM_WRITE_MEM_READ_def, ARM_WRITE_MEM_WRITE_def,
                    ARM_WRITE_SPSR_def, ARM_WRITE_CPSR_def, ARM_READ_CPSR_def,
                    ARM_WRITE_STATUS_SPSR_def, ARM_WRITE_GE_SPSR_def,
                    ARM_WRITE_IT_SPSR_def, ARM_WRITE_MODE_SPSR_def,
@@ -3057,8 +3076,11 @@ val CPSR_COMPONENTS_OF_UPDATES = Q.store_thm("CPSR_COMPONENTS_OF_UPDATES",
       ARM_READ_STATUS f (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_STATUS f s) /\
    (!f n d s. ARM_READ_STATUS f (ARM_WRITE_REG n d s) = ARM_READ_STATUS f s) /\
    (!f a d s. ARM_READ_STATUS f (ARM_WRITE_MEM a d s) = ARM_READ_STATUS f s) /\
-   (!ge s. ARM_READ_STATUS f (ARM_WRITE_GE ge s) = ARM_READ_STATUS f s) /\
-   (!it s. ARM_READ_STATUS f (ARM_WRITE_IT it s) = ARM_READ_STATUS f s) /\
+   (!f a d s. ARM_READ_STATUS f (ARM_WRITE_MEM_WRITE a d s) =
+              ARM_READ_STATUS f s) /\
+   (!f a s. ARM_READ_STATUS f (ARM_WRITE_MEM_READ a s) = ARM_READ_STATUS f s) /\
+   (!f ge s. ARM_READ_STATUS f (ARM_WRITE_GE ge s) = ARM_READ_STATUS f s) /\
+   (!f it s. ARM_READ_STATUS f (ARM_WRITE_IT it s) = ARM_READ_STATUS f s) /\
    (!f m s. ARM_READ_STATUS f (ARM_WRITE_MODE m s) = ARM_READ_STATUS f s) /\
    (!f b s. ARM_READ_STATUS f (ARM_WRITE_STATUS f b s) = b) /\
    (!f f2 b s. f2 <> f ==>
@@ -3069,12 +3091,14 @@ val CPSR_COMPONENTS_OF_UPDATES = Q.store_thm("CPSR_COMPONENTS_OF_UPDATES",
    (!f ge s. ARM_READ_STATUS f (ARM_WRITE_GE_SPSR ge s) =
              ARM_READ_STATUS f s) /\
    (!f m s. ARM_READ_STATUS f (ARM_WRITE_MODE_SPSR m s) =
-             ARM_READ_STATUS f s) /\
+            ARM_READ_STATUS f s) /\
    (!f f2 b s. ARM_READ_STATUS f (ARM_WRITE_STATUS_SPSR f2 b s) =
                ARM_READ_STATUS f s) /\
    (!f n m d s. ARM_READ_IT (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_IT s) /\
    (!f n d s. ARM_READ_IT (ARM_WRITE_REG n d s) = ARM_READ_IT s) /\
    (!f a d s. ARM_READ_IT (ARM_WRITE_MEM a d s) = ARM_READ_IT s) /\
+   (!f a d s. ARM_READ_IT (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_IT s) /\
+   (!f a s. ARM_READ_IT (ARM_WRITE_MEM_READ a s) = ARM_READ_IT s) /\
    (!ge s. ARM_READ_IT (ARM_WRITE_GE ge s) = ARM_READ_IT s) /\
    (!it s. ARM_READ_IT (ARM_WRITE_IT it s) = it) /\
    (!f m s. ARM_READ_IT (ARM_WRITE_MODE m s) = ARM_READ_IT s) /\
@@ -3087,6 +3111,8 @@ val CPSR_COMPONENTS_OF_UPDATES = Q.store_thm("CPSR_COMPONENTS_OF_UPDATES",
    (!f n m d s. ARM_READ_GE (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_GE s) /\
    (!f n d s. ARM_READ_GE (ARM_WRITE_REG n d s) = ARM_READ_GE s) /\
    (!f a d s. ARM_READ_GE (ARM_WRITE_MEM a d s) = ARM_READ_GE s) /\
+   (!f a d s. ARM_READ_GE (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_GE s) /\
+   (!f a s. ARM_READ_GE (ARM_WRITE_MEM_READ a s) = ARM_READ_GE s) /\
    (!ge s. ARM_READ_GE (ARM_WRITE_GE ge s) = ge) /\
    (!it s. ARM_READ_GE (ARM_WRITE_IT it s) = ARM_READ_GE s) /\
    (!f m s. ARM_READ_GE (ARM_WRITE_MODE m s) = ARM_READ_GE s) /\
@@ -3099,6 +3125,8 @@ val CPSR_COMPONENTS_OF_UPDATES = Q.store_thm("CPSR_COMPONENTS_OF_UPDATES",
    (!n m d s. ARM_MODE (ARM_WRITE_REG_MODE (n,m) d s) = ARM_MODE s) /\
    (!n d s. ARM_MODE (ARM_WRITE_REG n d s) = ARM_MODE s) /\
    (!a d s. ARM_MODE (ARM_WRITE_MEM a d s) = ARM_MODE s) /\
+   (!a d s. ARM_MODE (ARM_WRITE_MEM_WRITE a d s) = ARM_MODE s) /\
+   (!a s. ARM_MODE (ARM_WRITE_MEM_READ a s) = ARM_MODE s) /\
    (!it s. ARM_MODE (ARM_WRITE_IT it s) = ARM_MODE s) /\
    (!ge s. ARM_MODE (ARM_WRITE_GE ge s) = ARM_MODE s) /\
    (!m s. ARM_MODE (ARM_WRITE_MODE m s) = m) /\
@@ -3128,26 +3156,33 @@ val SPSR_COMPONENTS_OF_UPDATES = Q.store_thm("SPSR_COMPONENTS_OF_UPDATES",
               ARM_READ_STATUS_SPSR f s) /\
    (!f a d s. ARM_READ_STATUS_SPSR f (ARM_WRITE_MEM a d s) =
               ARM_READ_STATUS_SPSR f s) /\
+   (!f a d s. ARM_READ_STATUS_SPSR f (ARM_WRITE_MEM_WRITE a d s) =
+              ARM_READ_STATUS_SPSR f s) /\
+   (!f a s. ARM_READ_STATUS_SPSR f (ARM_WRITE_MEM_READ a s) =
+            ARM_READ_STATUS_SPSR f s) /\
    (!f f2 b s. ARM_READ_STATUS_SPSR f (ARM_WRITE_STATUS f2 b s) =
                ARM_READ_STATUS_SPSR f s) /\
-   (!ge s. ARM_READ_STATUS_SPSR f (ARM_WRITE_GE ge s) =
-           ARM_READ_STATUS_SPSR f s) /\
-   (!it s. ARM_READ_STATUS_SPSR f (ARM_WRITE_IT it s) =
-           ARM_READ_STATUS_SPSR f s) /\
+   (!f ge s. ARM_READ_STATUS_SPSR f (ARM_WRITE_GE ge s) =
+             ARM_READ_STATUS_SPSR f s) /\
+   (!f it s. ARM_READ_STATUS_SPSR f (ARM_WRITE_IT it s) =
+             ARM_READ_STATUS_SPSR f s) /\
    (!f b s. ARM_READ_STATUS_SPSR f (ARM_WRITE_STATUS_SPSR f b s) = b) /\
    (!f f2 b s. f <> f2 ==>
        (ARM_READ_STATUS_SPSR f (ARM_WRITE_STATUS_SPSR f2 b s) =
         ARM_READ_STATUS_SPSR f s)) /\
-   (!ge s. ARM_READ_STATUS_SPSR f (ARM_WRITE_GE_SPSR ge s) =
-           ARM_READ_STATUS_SPSR f s) /\
-   (!it s. ARM_READ_STATUS_SPSR f (ARM_WRITE_IT_SPSR it s) =
-           ARM_READ_STATUS_SPSR f s) /\
+   (!f ge s. ARM_READ_STATUS_SPSR f (ARM_WRITE_GE_SPSR ge s) =
+             ARM_READ_STATUS_SPSR f s) /\
+   (!f it s. ARM_READ_STATUS_SPSR f (ARM_WRITE_IT_SPSR it s) =
+             ARM_READ_STATUS_SPSR f s) /\
    (!f m s. ARM_READ_STATUS_SPSR f (ARM_WRITE_MODE_SPSR m s) =
             ARM_READ_STATUS_SPSR f s) /\
    (!n m d s. ARM_READ_IT_SPSR (ARM_WRITE_REG_MODE (n,m) d s) =
               ARM_READ_IT_SPSR s) /\
    (!n d s. ARM_READ_IT_SPSR (ARM_WRITE_REG n d s) = ARM_READ_IT_SPSR s) /\
    (!a d s. ARM_READ_IT_SPSR (ARM_WRITE_MEM a d s) = ARM_READ_IT_SPSR s) /\
+   (!a d s. ARM_READ_IT_SPSR (ARM_WRITE_MEM_WRITE a d s) =
+            ARM_READ_IT_SPSR s) /\
+   (!a s. ARM_READ_IT_SPSR (ARM_WRITE_MEM_READ a s) = ARM_READ_IT_SPSR s) /\
    (!f b s. ARM_READ_IT_SPSR (ARM_WRITE_STATUS f b s) = ARM_READ_IT_SPSR s) /\
    (!ge s. ARM_READ_IT_SPSR (ARM_WRITE_GE ge s) = ARM_READ_IT_SPSR s) /\
    (!it s. ARM_READ_IT_SPSR (ARM_WRITE_IT it s) = ARM_READ_IT_SPSR s) /\
@@ -3160,6 +3195,9 @@ val SPSR_COMPONENTS_OF_UPDATES = Q.store_thm("SPSR_COMPONENTS_OF_UPDATES",
               ARM_READ_GE_SPSR s) /\
    (!n d s. ARM_READ_GE_SPSR (ARM_WRITE_REG n d s) = ARM_READ_GE_SPSR s) /\
    (!a d s. ARM_READ_GE_SPSR (ARM_WRITE_MEM a d s) = ARM_READ_GE_SPSR s) /\
+   (!a d s. ARM_READ_GE_SPSR (ARM_WRITE_MEM_WRITE a d s) =
+            ARM_READ_GE_SPSR s) /\
+   (!a s. ARM_READ_GE_SPSR (ARM_WRITE_MEM_READ a s) = ARM_READ_GE_SPSR s) /\
    (!f b s. ARM_READ_GE_SPSR (ARM_WRITE_STATUS f b s) = ARM_READ_GE_SPSR s) /\
    (!ge s. ARM_READ_GE_SPSR (ARM_WRITE_GE ge s) = ARM_READ_GE_SPSR s) /\
    (!it s. ARM_READ_GE_SPSR (ARM_WRITE_IT it s) = ARM_READ_GE_SPSR s) /\
@@ -3172,6 +3210,9 @@ val SPSR_COMPONENTS_OF_UPDATES = Q.store_thm("SPSR_COMPONENTS_OF_UPDATES",
               ARM_READ_MODE_SPSR s) /\
    (!n d s. ARM_READ_MODE_SPSR (ARM_WRITE_REG n d s) = ARM_READ_MODE_SPSR s) /\
    (!a d s. ARM_READ_MODE_SPSR (ARM_WRITE_MEM a d s) = ARM_READ_MODE_SPSR s) /\
+   (!a d s. ARM_READ_MODE_SPSR (ARM_WRITE_MEM_WRITE a d s) =
+            ARM_READ_MODE_SPSR s) /\
+   (!a s. ARM_READ_MODE_SPSR (ARM_WRITE_MEM_READ a s) = ARM_READ_MODE_SPSR s) /\
    (!f b s. ARM_READ_MODE_SPSR (ARM_WRITE_STATUS f b s) =
             ARM_READ_MODE_SPSR s) /\
    (!ge s. ARM_READ_MODE_SPSR (ARM_WRITE_GE ge s) = ARM_READ_MODE_SPSR s) /\
@@ -3259,7 +3300,11 @@ val REG_MODE_OF_UPDATES = Q.store_thm("REG_MODE_OF_UPDATES",
    (!n1 n2 m d s. n1 <> n2 ==>
       (ARM_READ_REG_MODE (n1,m) (ARM_WRITE_REG n2 d s) =
        ARM_READ_REG_MODE (n1,m) s)) /\
-   (!n m d s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_MEM a d s) =
+   (!n m a d s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_MEM a d s) =
+                ARM_READ_REG_MODE (n,m) s) /\
+   (!n m a d s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_MEM_WRITE a d s) =
+                ARM_READ_REG_MODE (n,m) s) /\
+   (!n m a s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_MEM_READ a s) =
               ARM_READ_REG_MODE (n,m) s) /\
    (!n m it s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_IT it s) =
                ARM_READ_REG_MODE (n,m) s) /\
@@ -3272,6 +3317,7 @@ val REG_MODE_OF_UPDATES = Q.store_thm("REG_MODE_OF_UPDATES",
    (!n m d s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_SPSR d s) =
               ARM_READ_REG_MODE (n,m) s)`,
   SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
+              ARM_WRITE_MEM_WRITE_def, ARM_WRITE_MEM_READ_def,
               ARM_WRITE_SPSR_def, ARM_WRITE_IT_def, ARM_WRITE_GE_def,
               ARM_WRITE_MODE_def, ARM_WRITE_CPSR_def, ARM_READ_REG_MODE_def]
     \\ TRY (Cases_on `f`)
@@ -3284,7 +3330,9 @@ val REG_OF_UPDATES = Q.prove(
       (ARM_READ_REG n1 (ARM_WRITE_REG_MODE (n2,m) d s) = ARM_READ_REG n1 s)) /\
    (!n1 n2 d s. n1 <> n2 ==>
       (ARM_READ_REG n1 (ARM_WRITE_REG n2 d s) = ARM_READ_REG n1 s)) /\
-   (!n d s. ARM_READ_REG n (ARM_WRITE_MEM a d s) = ARM_READ_REG n s) /\
+   (!n a d s. ARM_READ_REG n (ARM_WRITE_MEM a d s) = ARM_READ_REG n s) /\
+   (!n a d s. ARM_READ_REG n (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_REG n s) /\
+   (!n a s. ARM_READ_REG n (ARM_WRITE_MEM_READ a s) = ARM_READ_REG n s) /\
    (!n it s. ARM_READ_REG n (ARM_WRITE_IT it s) = ARM_READ_REG n s) /\
    (!n ge s. ARM_READ_REG n (ARM_WRITE_GE ge s) = ARM_READ_REG n s) /\
    (!n m s. ARM_READ_REG n (ARM_WRITE_MODE m s) = ARM_READ_REG_MODE (n,m) s) /\
@@ -3300,13 +3348,16 @@ val MEM_OF_UPDATES = Q.store_thm("MEM_OF_UPDATES",
   `(!a n m d s.
       ARM_READ_MEM a (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_MEM a s) /\
    (!a n d s. ARM_READ_MEM a (ARM_WRITE_REG n d s) = ARM_READ_MEM a s) /\
-   (!a d s. ARM_READ_MEM a (ARM_WRITE_MEM a d s) = SOME d) /\
+   (!a d s. ARM_READ_MEM a (ARM_WRITE_MEM a d s) = d) /\
+   (!a d s. ARM_READ_MEM a (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_MEM a s) /\
+   (!a s. ARM_READ_MEM a (ARM_WRITE_MEM_READ a s) = ARM_READ_MEM a s) /\
    (!a it s. ARM_READ_MEM a (ARM_WRITE_IT it s) = ARM_READ_MEM a s) /\
    (!a ge s. ARM_READ_MEM a (ARM_WRITE_GE ge s) = ARM_READ_MEM a s) /\
    (!a m s. ARM_READ_MEM a (ARM_WRITE_MODE m s) = ARM_READ_MEM a s) /\
    (!a f b s. ARM_READ_MEM a (ARM_WRITE_STATUS f b s) = ARM_READ_MEM a s) /\
    (!a d s. ARM_READ_MEM a (ARM_WRITE_SPSR d s) = ARM_READ_MEM a s)`,
   SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
+              ARM_WRITE_MEM_READ_def, ARM_WRITE_MEM_WRITE_def,
               ARM_WRITE_SPSR_def, ARM_WRITE_IT_def, ARM_WRITE_GE_def,
               ARM_WRITE_MODE_def, ARM_WRITE_CPSR_def, ARM_READ_MEM_def]
     \\ TRY (Cases_on `f`)
@@ -3316,13 +3367,16 @@ val MEM_OF_UPDATES = Q.store_thm("MEM_OF_UPDATES",
 val MONITORS_OF_UPDATES = Q.store_thm("MONITORS_OF_UPDATES",
   `(!n m d s.  (ARM_WRITE_REG_MODE (n,m) d s).monitors = s.monitors) /\
    (!n d s. (ARM_WRITE_REG n d s).monitors = s.monitors) /\
-   (!d s. (ARM_WRITE_MEM a d s).monitors = s.monitors) /\
+   (!a d s. (ARM_WRITE_MEM a d s).monitors = s.monitors) /\
+   (!a d s. (ARM_WRITE_MEM_WRITE a d s).monitors = s.monitors) /\
+   (!a s. (ARM_WRITE_MEM_READ a s).monitors = s.monitors) /\
    (!it s. (ARM_WRITE_IT it s).monitors = s.monitors) /\
    (!ge s. (ARM_WRITE_GE ge s).monitors = s.monitors) /\
    (!m s. (ARM_WRITE_MODE m s).monitors = s.monitors) /\
    (!f b s. (ARM_WRITE_STATUS f b s).monitors = s.monitors) /\
    (!d s. (ARM_WRITE_SPSR d s).monitors = s.monitors)`,
   SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
+              ARM_WRITE_MEM_READ_def, ARM_WRITE_MEM_WRITE_def,
               ARM_WRITE_SPSR_def, ARM_WRITE_IT_def, ARM_WRITE_GE_def,
               ARM_WRITE_MODE_def, ARM_WRITE_CPSR_def]
     \\ TRY (Cases_on `f`)
@@ -3385,7 +3439,7 @@ val ARM_READ_UNCHANGED = Q.store_thm("ARM_READ_UNCHANGED",
    (!n w s. (ARM_READ_REG n s = w) ==> (ARM_WRITE_REG n w s = s)) /\
    (!n m w s. (ARM_READ_REG_MODE (n,m) s = w) ==>
               (ARM_WRITE_REG_MODE (n,m) w s = s))`, (* /\
-   (!a w s. (ARM_READ_MEM a s = SOME w) ==> (ARM_WRITE_MEM a w s = s))`, *)
+   (!a w s. (ARM_READ_MEM a s = w) ==> (ARM_WRITE_MEM a w s = s))`, *)
   REPEAT STRIP_TAC \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [arm_state_component_equality, ARMpsr_component_equality,
          UPDATE_APPLY_IMP_ID,
@@ -4016,7 +4070,7 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
            address_mode2 ii indx add rn mode2 >>=
            (\(offset_addr,address).
               if byte then
-                constT (SOME (address,1))
+                constT NONE
               else
                 case mode2
                   of Mode2_register _ _ m ->
@@ -4027,7 +4081,7 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
                             (\u.
                                address_mode2 ii indx add rn mode2 >>=
                                (\(offset_addr,address).
-                                  constT (SOME (align (address,4),4)))))
+                                  constT (SOME (align (address,4))))))
                        else if n = m then
                          con_align (n, address, 4, rn) >>=
                          (\u.
@@ -4035,13 +4089,13 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
                             (\rn.
                                address_mode2 ii indx add rn mode2 >>=
                                (\(offset_addr,address).
-                                  constT (SOME (align (address,4),4)))))
+                                  constT (SOME (align (address,4))))))
                        else
                          reg_align (n, address - rn, 4, rn) >>=
-                         (\u:unit. constT (SOME (align (address,4),4)))
+                         (\u:unit. constT (SOME (align (address,4))))
                   || _ ->
                        reg_align (n, address - rn, 4, rn) >>=
-                       (\u:unit. constT (SOME (align (address,4),4)))))
+                       (\u:unit. constT (SOME (align (address,4))))))
   and align_mode3 (load,indx,add,N,B,n,mode3) =
         (if load /\ is_mode3_immediate mode3 then
            read_reg_literal ii n
@@ -4051,7 +4105,7 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
            address_mode3 ii indx add rn mode3 >>=
            (\(offset_addr,address).
               if N = 1 then
-                constT (SOME (address,1))
+                constT NONE
               else
                 case mode3
                   of Mode3_register _ m ->
@@ -4061,22 +4115,20 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
                             con_align (m, address, N, rm) >>=
                             (\u.
                                address_mode3 ii indx add rn mode3 >>=
-                               (\(offset_addr,address).
-                                  constT (SOME (align (address,N),B)))))
+                               (\(offset_addr,address). constT NONE)))
                        else if n = m then
                          con_align (n, address, N, rn) >>=
                          (\u.
                             read_reg ii n >>=
                             (\rn.
                                address_mode3 ii indx add rn mode3 >>=
-                               (\(offset_addr,address).
-                                  constT (SOME (align (address,N),B)))))
+                               (\(offset_addr,address). constT NONE)))
                        else
                          reg_align (n, address - rn, N, rn) >>=
-                         (\u:unit. constT (SOME (align (address,N),B)))
+                         (\u:unit. constT NONE)
                   || _ ->
                        reg_align (n, address - rn, N, rn) >>=
-                       (\u:unit. constT (SOME (align (address,N),B)))))
+                       (\u:unit. constT NONE)))
   in
     if npass then constT NONE else
     case inst
@@ -4084,19 +4136,12 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
          (read_reg ii n ||| read_reg ii m) >>=
          (\(rn,rm).
             condT is_tbh (reg_align (n,LSL(rm,1),2,rn)) >>=
-            (\u:unit.
-               constT (SOME
-                 (if is_tbh then
-                    (align (rn + LSL(rm,1),2),2)
-                  else
-                    (rn + rm,1)))))
+            (\u:unit. constT NONE))
     || Miscellaneous (Swap swap_byte n _ _) ->
          read_reg ii n >>=
          (\rn.
             condT (~swap_byte) (reg_align (n,0w,4,rn)) >>=
-            (\u:unit.
-               constT (SOME
-                 (if swap_byte then (rn,1) else (align (rn,4),4)))))
+            (\u:unit. constT NONE))
     || LoadStore (Return_From_Exception P inc _ n) ->
          read_reg ii n >>=
          (\rn.
@@ -4104,7 +4149,7 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
             let address = if P = inc then address + 4w else address
             in
               reg_align (n, address - rn, 4, rn) >>=
-              (\u:unit. constT (SOME (align (address,4),8))))
+              (\u:unit. constT (SOME (align (address,4) + 4w))))
     || LoadStore (Store_Return_State P inc _ mode) ->
          read_reg_mode ii (13w,mode) >>=
          (\rn.
@@ -4113,7 +4158,7 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
             in
               write_reg_mode ii (13w,mode)
                 (align (address, 4) - (address - rn)) >>=
-              (\u:unit. constT (SOME (align (address,4),8))))
+              (\u:unit. constT NONE))
     || LoadStore (Load indx add load_byte _ _ n _ mode2) ->
          align_mode2 (T,indx,add,load_byte,n,mode2)
     || LoadStore (Load_Halfword indx add _ _ load_half _ n _ mode3) ->
@@ -4130,25 +4175,18 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
             in
               reg_align (n, start_address - rn, 4, rn) >>=
               (\u:unit.
-                 constT (SOME (align (start_address,4),count))))
+                 constT (SOME (align (start_address,4) + n2w (count - 4)))))
     || LoadStore (Load_Exclusive n _ imm8) ->
          read_reg ii n >>=
-         (\rn.
-            reg_align (n, (w2w imm8) << 2, 4, rn) >>=
-            (\u:unit.
-              constT (SOME (align (rn + (w2w imm8) << 2,4),4))))
+         (\rn. reg_align (n, (w2w imm8) << 2, 4, rn) >>= (\u:unit. constT NONE))
     || LoadStore (Load_Exclusive_Doubleword n _ _) ->
          read_reg ii n >>=
-         (\rn.
-            reg_align (n,0w,8,rn) >>=
-            (\u:unit. constT (SOME (align (rn,8),8))))
+         (\rn. reg_align (n,0w,8,rn) >>= (\u:unit. constT NONE))
     || LoadStore (Load_Exclusive_Halfword n _) ->
          read_reg ii n >>=
-         (\rn.
-            reg_align (n,0w,2,rn) >>=
-            (\u:unit. constT (SOME (align (rn,2),2))))
+         (\rn. reg_align (n,0w,2,rn) >>= (\u:unit. constT NONE))
     || LoadStore (Load_Exclusive_Byte n _) ->
-         read_reg ii n >>= (\rn. constT (SOME (rn,1)))
+         read_reg ii n >>= (\rn. constT NONE)
     || LoadStore (Store indx add store_byte _ _ n _ mode2) ->
          align_mode2 (F,indx,add,store_byte,n,mode2)
     || LoadStore (Store_Halfword indx add _ _ n _ mode3) ->
@@ -4164,26 +4202,20 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
                                               else base_address
             in
                reg_align (n, start_address - rn, 4, rn) >>=
-               (\u:unit.
-                  constT (SOME (align (start_address,4),count))))
+               (\u:unit. constT NONE))
     || LoadStore (Store_Exclusive n _ _ imm8) ->
          read_reg ii n >>=
          (\rn.
             reg_align (n, (w2w imm8) << 2, 4, rn) >>=
-            (\u:unit.
-              constT (SOME (align (rn + (w2w imm8) << 2,4),4))))
+            (\u:unit. constT NONE))
     || LoadStore (Store_Exclusive_Doubleword n _ _ _) ->
          read_reg ii n >>=
-         (\rn.
-            reg_align (n,0w,8,rn) >>=
-            (\u:unit. constT (SOME (align (rn,8),8))))
+         (\rn. reg_align (n,0w,8,rn) >>= (\u:unit. constT NONE))
     || LoadStore (Store_Exclusive_Halfword n _ _) ->
          read_reg ii n >>=
-         (\rn.
-            reg_align (n,0w,2,rn) >>=
-            (\u:unit. constT (SOME (align (rn,2),2))))
+         (\rn. reg_align (n,0w,2,rn) >>= (\u:unit. constT NONE))
     || LoadStore (Store_Exclusive_Byte n _ _) ->
-         read_reg ii n >>= (\rn. constT (SOME (rn,1)))
+         read_reg ii n >>= (\rn. constT NONE)
     || _ -> constT NONE`;
 
 (* ------------------------------------------------------------------------- *)
