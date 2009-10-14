@@ -13,6 +13,7 @@ fun is_bag_ty ty = #2 (dom_rng ty) = num_ty handle HOL_ERR _ => false
 val BAG_INSERT_tm = mk_const("BAG_INSERT", alpha --> bag_ty --> bag_ty);
 val BAG_UNION_tm = mk_const("BAG_UNION", bag_ty --> bag_ty --> bag_ty);
 val BAG_DIFF_tm = mk_const("BAG_DIFF", bag_ty --> bag_ty --> bag_ty);
+val BAG_CARD_tm = mk_const("BAG_CARD", bag_ty --> num_ty);
 val EMPTY_BAG_tm = mk_const("EMPTY_BAG", bag_ty);
 val SUB_BAG_tm = mk_const("SUB_BAG", bag_ty --> bag_ty --> bool);
 val BAG_EQ_tm = mk_const("=", bag_ty --> bag_ty --> bool);
@@ -87,14 +88,25 @@ val is_insert = can dest_insert
 
 fun mk_all_distinct b = mk_icomb (BAG_ALL_DISTINCT_tm, b);
 fun dest_all_distinct tm = let
-  val (f, args) = strip_comb tm
-  val _ = length args = 1 orelse raise ERR "BAG_ALL_DISTINCT" "not a unary term"
-  val _ = (aconv (hd args) BAG_ALL_DISTINCT_tm) orelse 
+  val (f, arg) = dest_comb tm
+  val _ = (aconv f BAG_ALL_DISTINCT_tm) orelse 
           raise ERR "BAG_ALL_DISTINCT" ("not a BAG_ALL_DISTINCT")
 in
-  (hd args)
+  arg
 end
 val is_all_distinct = can dest_all_distinct
+
+
+fun mk_card tm = 
+  mk_icomb(BAG_CARD_tm, tm)
+fun dest_card tm = let
+  val (f, arg) = dest_comb tm
+  val _ = (aconv f BAG_CARD_tm) orelse 
+          raise ERR "BAG_CARD" ("not a BAG_CARD")
+in
+  arg
+end
+val is_card = can dest_card
 
 
 fun mk_image (tm1, tm2) = 

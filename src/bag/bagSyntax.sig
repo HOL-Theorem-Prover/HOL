@@ -8,6 +8,7 @@ sig
   val BAG_INSERT_tm : term
   val BAG_UNION_tm : term
   val BAG_IMAGE_tm : term
+  val BAG_CARD_tm : term
   val BAG_ALL_DISTINCT_tm : term
 
   val is_bag_ty : hol_type -> bool
@@ -36,8 +37,12 @@ sig
   val mk_all_distinct : term -> term
   val dest_all_distinct : term -> term
   val is_all_distinct : term -> bool
+  val mk_card : term -> term
+  val dest_card : term -> term
+  val is_card : term -> bool
 
   val mk_bag : term list * hol_type -> term
+  val strip_insert : term -> term list * term
   val dest_bag : term -> term list * hol_type
 
 end
