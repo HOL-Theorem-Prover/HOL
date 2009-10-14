@@ -87,6 +87,7 @@ val BAG_MERGE_IDEM = store_thm (
   "BAG_MERGE_IDEM",
   ``!b. BAG_MERGE b b = b``,
   SIMP_TAC std_ss [BAG_MERGE, FUN_EQ_THM]);
+val _ = export_rewrites ["BAG_MERGE_IDEM"]
 
 val _ = print "Properties relating BAG_IN(N) to other functions\n"
 val BAG_INN_0 = store_thm (
@@ -860,8 +861,9 @@ val _ = export_rewrites ["SET_OF_EMPTY"];
 val BAG_IN_BAG_OF_SET = store_thm (
   "BAG_IN_BAG_OF_SET",
   ``!P p. BAG_IN p (BAG_OF_SET P) = p IN P``,
-  SIMP_TAC std_ss [BAG_OF_SET, BAG_IN, BAG_INN, 
+  SIMP_TAC std_ss [BAG_OF_SET, BAG_IN, BAG_INN,
                    COND_RAND, COND_RATOR]);
+val _ = export_rewrites ["BAG_IN_BAG_OF_SET"]
 
 val BAG_OF_EMPTY = store_thm (
   "BAG_OF_EMPTY",
@@ -1232,6 +1234,7 @@ val BAG_CARD_UNION = store_thm (
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
   SIMP_TAC arith_ss [BAG_UNION_INSERT, BAG_UNION_EMPTY,
      BAG_CARD_THM, FINITE_BAG_UNION]);
+val _ = export_rewrites ["BAG_CARD_UNION"]
 
 
 val BCARD_SUC = Q.store_thm(
@@ -1885,7 +1888,7 @@ val BAG_ALL_DISTINCT_BAG_INN = store_thm (
   ``!b n e. BAG_ALL_DISTINCT b ==> (BAG_INN e n b =
             (n = 0) \/ ((n = 1) /\ BAG_IN e b))``,
   SIMP_TAC std_ss [BAG_INN, BAG_ALL_DISTINCT, BAG_IN] THEN
-  REPEAT STRIP_TAC THEN 
+  REPEAT STRIP_TAC THEN
   Cases_on `n = 0` THEN ASM_SIMP_TAC std_ss [] THEN
   Cases_on `n = 1` THEN1 ASM_SIMP_TAC std_ss [] THEN
   `b e <= 1` by PROVE_TAC[] THEN
