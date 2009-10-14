@@ -359,7 +359,6 @@ end
 
 fun update_type_fns () =
   if !type_grammar_changed then let in
-     type_pp.ftyvars_seen := [];
      type_parser1 := parse_type.parse_type typ1_rec false (type_grammar());
      type_parser2 := parse_type.parse_type typ2_rec false (type_grammar());
      type_var_parser1 := parse_type.parse_type typ1_rec false (type_var_grammar());

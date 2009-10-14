@@ -370,11 +370,11 @@ fun pp_term (G : grammar) TyG backend = let
       let val cur_ftyvars_seen = !type_pp.ftyvars_seen
           val cur_kinds = current_trace "kinds"
           val _ = set_trace "kinds" 0
-          val s = PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty
+          val str = PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty
       in
         type_pp.ftyvars_seen := cur_ftyvars_seen;
         set_trace "kinds" cur_kinds;
-        s
+        str
       end
   val {restr_binders,lambda,type_lambda,endbinding,
        type_intro,type_lbracket,type_rbracket,res_quanop} = specials G
@@ -748,7 +748,7 @@ fun pp_term (G : grammar) TyG backend = let
        in place of RE TM elements.  Returns the unused args *)
     fun print_ellist (lprec, cprec, rprec) (els, tyargs, args) = let
       val recurse = print_ellist (lprec, cprec, rprec)
-      val print_tycomb = (!show_types) andalso not (null tyargs)
+      val print_tycomb = false (* (!show_types) andalso not (null tyargs) *)
     in
       case els of
         [] => args
