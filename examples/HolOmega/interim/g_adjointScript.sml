@@ -487,6 +487,9 @@ val g_adjf13_equiv = store_thm ("g_adjf13_equiv", tm13e,
 	MATCH_MP_TAC (CONJUNCT1 hash_star_inv_defs)),
       (ASM_REWRITE_TAC []) ]) ]) ;
 
+(* note that since g_adjf3 ==> g_adjf1 doesn't require that eps is a nt,
+  should be able to get g_adjf3 /\ F',G functors ==> (eps is nt = eta is nt)
+  *)
 (* get link between g_adjf2 and g_adjf3 by duality *)
 
 val tm23e = ``category (idD,compD) /\ category (idC,compC) /\
@@ -527,11 +530,13 @@ val tm12e = ``category (idC,compC) /\ category (idD,compD) ==>
 
 (* first : ('a -> 'b) -> 'a list -> 'b *) 
 fun first f (x :: xs) = (f x handle _ => first f xs) 
-  | first f [] = raise HOL_ERR 
-    {message = "", origin_function = "first", origin_structure = ""} ;
+  | first f [] = raise Empty ;
 
 (* fmmp : thm list -> thm -> thm *) 
-fun fmmp ths imp = first (MATCH_MP imp) ths ;
+fun fmmp ths imp = first (MATCH_MP imp) ths 
+  handle Empty => raise HOL_ERR 
+    {message = "MATCH_MP fails in all cases", 
+      origin_function = "fmmp", origin_structure = "g_adjointScript"} ;
 
 (* repeat : ('a -> 'a) -> 'a -> 'a *) 
 fun repeat f x = repeat f (f x) handle _ => x ;
@@ -548,6 +553,16 @@ fun insa th = let val [h] = hyp th ;
   
 fun etac gathm = (ASSUM_LIST (fn ths => 
   MAP_EVERY ASSUME_TAC (CONJUNCTS (repeat (fmmp ths) (insa gathm))))) ;
+
+(* neater version than above, suggested by Michael Norrish,
+  works for etac ga13, not for etac ga32,
+  not for etac ga23, works for etac ga31 - why ?? 
+  because at the point of MATCH_MP imp, the assumption of imp 
+  stops MATCH_MP from instantiating the free type variables *)
+fun etac' gathm = MP_TAC (insa gathm) THEN
+  REPEAT (DISCH_THEN (fn imp => 
+      FIRST_ASSUM (fn th => MP_TAC (MATCH_MP imp th)))) 
+  THEN DISCH_THEN (MAP_EVERY ASSUME_TAC o CONJUNCTS) ;
 
 val g_adjf12_equiv = store_thm ("g_adjf12_equiv", tm12e,
   EVERY [ STRIP_TAC, EQ_TAC, STRIP_TAC ]
@@ -613,7 +628,7 @@ val tmmon = ``category (idC,compC) /\ g_functor (idD,compD) (idC,compC) G /\
   Kmonad (idC,compC) (eta, \: 'a 'b. G o hash [:'a,'b 'F:])`` ;
 
 val g_adjf1_IMP_Kmonad = store_thm ("g_adjf1_IMP_Kmonad", tmmon,
-  EVERY [ (REWRITE_TAC [Kmonad_def]),
+  EVERY [ (REWRITE_TAC [Kmonad_thm]),
     (CONV_TAC (REDEPTH_CONV 
       (REWR_CONV o_THM ORELSEC TY_BETA_CONV ORELSEC BETA_CONV))),
     STRIP_TAC, (REPEAT CONJ_TAC)]
@@ -693,7 +708,7 @@ val (sgs, goal) = top_goal () ;
 val Kmonad_IMP_adjf = store_thm ("Kmonad_IMP_adjf",
   ``Kmonad (id,comp) (unit,ext) ==> 
     g_adjf1 [: 'A, ('A, 'M) Kleisli :] (id,comp) ext unit (\: 'a 'b. I)``,
-  EVERY [ (REWRITE_TAC [g_adjf1_def, Kmonad_def]),
+  EVERY [ (REWRITE_TAC [g_adjf1_def, Kmonad_thm]),
     (CONV_TAC (REDEPTH_CONV
       (REWR_CONV UNCURRY_DEF ORELSEC TY_BETA_CONV ORELSEC BETA_CONV))),
     REPEAT STRIP_TAC, (ASM_REWRITE_TAC [I_THM]),

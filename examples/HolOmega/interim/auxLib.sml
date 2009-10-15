@@ -35,6 +35,11 @@ fun tsfg f thm =
   let val (tyvars, sthm) = SPEC_TYVARL thm ;
   in Drule.TY_GENL tyvars (f sthm) end ;
 
+(* ufd : (thm -> thm) -> thm -> thm
+  removes implication antecedents, apply f, restores antecedents,
+  assumes thm has no assumptions *)
+fun ufd f thm = Drule.DISCH_ALL (f (Drule.UNDISCH_ALL thm)) ;
+
 end ; (* local open HolKernel *)
 end ; (* structure auxLib *)
 
