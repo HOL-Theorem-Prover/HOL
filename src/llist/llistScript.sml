@@ -1095,6 +1095,25 @@ val exists_strong_ind = save_thm(
              |> SIMP_RULE (srw_ss()) []
              |> Q.GEN `Q` |> Q.GEN `P`);
 
+val exists_LDROP = store_thm(
+  "exists_LDROP",
+  ``exists P ll <=> ?n a t. (LDROP n ll = SOME (a:::t)) /\ P a``,
+  EQ_TAC THENL [
+    Q_TAC SUFF_TAC
+       `!ll. exists P ll ==> ?n a t. (LDROP n ll = SOME (a:::t)) /\ P a`
+       THEN1 METIS_TAC [] THEN
+    HO_MATCH_MP_TAC exists_strong_ind THEN SRW_TAC [][] THENL [
+      Q.EXISTS_TAC `0` THEN SRW_TAC [][],
+      Q.EXISTS_TAC `SUC n` THEN SRW_TAC [][]
+    ],
+    Q_TAC SUFF_TAC
+       `!n ll a t. (LDROP n ll = SOME (a:::t)) /\ P a ==> exists P ll`
+       THEN1 METIS_TAC [] THEN
+    Induct THEN SRW_TAC [][] THEN
+    Q.SPEC_THEN `ll` FULL_STRUCT_CASES_TAC llist_CASES THEN
+    FULL_SIMP_TAC (srw_ss()) [LDROP]
+  ]);
+
 
 (* ----------------------------------------------------------------------
     companion LL_ALL/every (has a coinduction principle)
