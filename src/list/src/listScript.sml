@@ -357,6 +357,12 @@ val MAP_APPEND = store_thm ("MAP_APPEND",
     LIST_INDUCT_TAC THEN
     ASM_REWRITE_TAC [MAP, APPEND]);
 
+val MAP_ID = store_thm(
+  "MAP_ID",
+  ``(MAP (\x. x) l = l) /\ (MAP I l = l)``,
+  Induct_on `l` THEN SRW_TAC [][MAP]);
+val _ = export_rewrites ["MAP_ID"]
+
 val LENGTH_MAP = store_thm ("LENGTH_MAP",
  --`!l. !(f:'a->'b). LENGTH (MAP f l) = LENGTH l`--,
      LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP, LENGTH]);
@@ -1118,6 +1124,17 @@ val MAP2_ZIP = store_thm("MAP2_ZIP",
     THEN LIST_INDUCT_TAC THEN REWRITE_TAC[MAP,MAP2,ZIP,LENGTH,NOT_SUC,SUC_NOT]
     THEN ASM_REWRITE_TAC[CONS_11,UNCURRY_DEF,INV_SUC_EQ]
     end);
+
+val MAP_ZIP = Q.store_thm(
+  "MAP_ZIP",
+  `(LENGTH l1 = LENGTH l2) ==>
+     (MAP FST (ZIP (l1,l2)) = l1) /\
+     (MAP SND (ZIP (l1,l2)) = l2) /\
+     (MAP (f o FST) (ZIP (l1,l2)) = MAP f l1) /\
+     (MAP (g o SND) (ZIP (l1,l2)) = MAP g l2)`,
+  Q.ID_SPEC_TAC `l2` THEN Induct_on `l1` THEN
+  SRW_TAC [][] THEN Cases_on `l2` THEN
+  FULL_SIMP_TAC (srw_ss()) [ZIP, MAP]);
 
 val MEM_EL = store_thm(
   "MEM_EL",
