@@ -176,8 +176,6 @@ end;
 
 use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 
-val _ = set_trace "metis" 1
-val _ = set_trace "meson" 1
 val _ = set_trace "pp_annotations" 1
 
 val _ = PolyML.print_depth 100;
