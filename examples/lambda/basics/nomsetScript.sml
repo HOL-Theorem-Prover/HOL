@@ -1049,96 +1049,57 @@ val _ = overload_on ("ssetpm", ``setpm lswapstr``)
 
 val cpmsupp_avoids = perm_of_unchanged
 (*
-   given a finite set of atoms and an x with finite support, you can
-   exhibit a pi that maps the original set away from x, and doesn't
-   itself contain any atoms apart from those present in the original
-   set and its image.
+   given a finite set of atoms and some other set to avoid, we can
+   exhibit a pi that maps the original set away from the avoid set, and
+   doesn't itself contain any atoms apart from those present in the
+   original set and its image.
 *)
 val gen_avoidance_lemma = store_thm(
   "gen_avoidance_lemma",
-  ``is_perm pm ∧ FINITE atoms ∧ FINITE s ∧ support pm x s ⇒
-    ∃π. (∀a. a ∈ atoms ⇒ lswapstr π a ∉ supp pm x) ∧
+  ``is_perm pm ∧ FINITE atoms ∧ FINITE s  ⇒
+    ∃π. (∀a. a ∈ atoms ⇒ lswapstr π a ∉ s) ∧
         ∀x y. MEM (x,y) π ⇒ x ∈ atoms ∧ y ∈ ssetpm π atoms``,
   Q_TAC SUFF_TAC
-    `is_perm pm ∧ FINITE s ∧ support pm x s ⇒
+    `is_perm pm ∧ FINITE s ⇒
      ∀limit. FINITE limit ⇒
         ∀atoms. FINITE atoms ⇒
                 atoms ⊆ limit ⇒
-                ∃π. (∀a. a ∈ atoms ⇒ lswapstr π a ∉ supp pm x ∧
-                                      lswapstr π a ∉ limit) ∧
+                ∃π. (∀a. a ∈ atoms ⇒ lswapstr π a ∉ s ∧ lswapstr π a ∉ limit) ∧
                     ∀x y. MEM (x,y) π ⇒ x ∈ atoms ∧ y ∈ ssetpm π atoms`
     THEN1 METIS_TAC [SUBSET_REFL] THEN
   NTAC 3 STRIP_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][] THEN1
     (Q.EXISTS_TAC `[]` THEN SRW_TAC [][]) THEN
-  FULL_SIMP_TAC (srw_ss () ++ DNF_ss) [] THEN Cases_on `e ∈ supp pm x` THENL [
-    `FINITE (supp pm x)` by METIS_TAC [support_FINITE_supp] THEN
-    `lswapstr π e = e`
-      by (MATCH_MP_TAC cpmsupp_avoids THEN
-          DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE [IN_patoms_MEM]) THEN1
-            METIS_TAC [] THEN
-          `lswapstr π⁻¹ e ∈ atoms` by METIS_TAC [] THEN
-          `lswapstr π (lswapstr (REVERSE π) e) ∉ supp pm x`
-             by METIS_TAC [] THEN
-          FULL_SIMP_TAC (srw_ss()) []) THEN
+  FULL_SIMP_TAC (srw_ss () ++ DNF_ss) [] THEN
+  `lswapstr π e = e`
+    by (MATCH_MP_TAC cpmsupp_avoids THEN
+        DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE [IN_patoms_MEM]) THEN1
+          METIS_TAC [] THEN
+        `lswapstr π⁻¹ e ∈ atoms` by METIS_TAC [] THEN
+        `lswapstr π (lswapstr π⁻¹ e) ∉ limit` by METIS_TAC [] THEN
+        FULL_SIMP_TAC (srw_ss()) []) THEN
 
-    Q_TAC (NEW_TAC "e'") `supp pm x ∪ patoms π ∪ atoms ∪ {e} ∪
-                          IMAGE (lswapstr π) atoms ∪ limit` THEN
-    Q.EXISTS_TAC `(e,e')::π` THEN SRW_TAC [][] THENL [
-      SRW_TAC [][cpmsupp_avoids] THEN
-      FULL_SIMP_TAC (srw_ss()) [] THEN
-      `lswapstr π a ≠ e'` by METIS_TAC [] THEN
-      SRW_TAC [][swapstr_def],
-      FULL_SIMP_TAC (srw_ss()) [] THEN
-      `lswapstr π a ≠ e ∧ lswapstr π a ≠ e'` by METIS_TAC [] THEN
+  Q_TAC (NEW_TAC "e'") `s ∪ patoms π ∪ limit ∪ {e}` THEN
+  `∀a. a ∈ atoms ⇒ lswapstr π a ≠ e` by METIS_TAC [] THEN
+  `∀a. a ∈ atoms ⇒ lswapstr π a ≠ e'`
+      by (REPEAT STRIP_TAC THEN
+          `lswapstr π⁻¹ e' = a` by SRW_TAC [][lswapstr_eqr] THEN
+          METIS_TAC [cpmsupp_avoids, listsupp_REVERSE, SUBSET_DEF]) THEN
+  Q.EXISTS_TAC `(e,e')::π` THEN SRW_TAC [][] THENL [
+    METIS_TAC [],
+
+    SRW_TAC [][lswapstr_APPEND] THEN
+    FIRST_ASSUM (SUBST1_TAC o SYM) THEN SRW_TAC [][],
+
+    FULL_SIMP_TAC (srw_ss()) [lswapstr_APPEND] THEN
+    `y ∈ patoms π` by METIS_TAC [IN_patoms_MEM] THEN
+    `y ≠ e'` by METIS_TAC [] THEN
+    Cases_on `y = e` THENL [
+      SRW_TAC [][swapstr_def] THEN
+      `lswapstr π⁻¹ e ∈ atoms` by METIS_TAC [] THEN
+      POP_ASSUM MP_TAC THEN
+      FIRST_X_ASSUM (SUBST1_TAC o SYM) THEN
       SRW_TAC [][],
-      METIS_TAC [],
-      SRW_TAC [][lswapstr_APPEND] THEN
-      FIRST_ASSUM (SUBST1_TAC o SYM) THEN SRW_TAC [][],
-      FULL_SIMP_TAC (srw_ss()) [lswapstr_APPEND] THEN
-      `y ∈ patoms π` by METIS_TAC [IN_patoms_MEM] THEN
-      `y ≠ e'` by METIS_TAC [] THEN
-      Cases_on `y = e` THENL [
-        SRW_TAC [][swapstr_def] THEN
-        `lswapstr (REVERSE π) e ∈ atoms` by METIS_TAC [] THEN
-        POP_ASSUM MP_TAC THEN
-        FIRST_X_ASSUM (SUBST1_TAC o SYM) THEN
-        SRW_TAC [][],
-        SRW_TAC [][] THEN METIS_TAC []
-      ]
-    ],
-
-    `FINITE (supp pm x)` by METIS_TAC [support_FINITE_supp] THEN
-    Q_TAC (NEW_TAC "e'") `supp pm x ∪ patoms π ∪ limit` THEN
-    `lswapstr π e = e`
-       by (SPOSE_NOT_THEN ASSUME_TAC THEN
-           `e ∈ patoms π` by METIS_TAC [cpmsupp_avoids] THEN
-           FULL_SIMP_TAC (srw_ss()) [IN_patoms_MEM] THEN1 METIS_TAC [] THEN
-           `lswapstr (REVERSE π) e ∈ atoms` by METIS_TAC [] THEN
-           `lswapstr π (lswapstr (REVERSE π) e) ∉ limit` by METIS_TAC [] THEN
-           FULL_SIMP_TAC (srw_ss()) []) THEN
-    Q.EXISTS_TAC `(e,e')::π` THEN SRW_TAC [][] THENL [
-      `lswapstr π a ≠ e` by METIS_TAC [] THEN SRW_TAC [][swapstr_def],
-      `lswapstr π a ≠ e` by METIS_TAC [] THEN SRW_TAC [][swapstr_def] THEN
-      `lswapstr π a ≠ a` by METIS_TAC [SUBSET_DEF] THEN
-      `a ∈ patoms π` by METIS_TAC [cpmsupp_avoids] THEN
-      `lswapstr π a ∉ patoms π⁻¹` by SRW_TAC [][] THEN
-      `lswapstr π⁻¹ (lswapstr π a) = lswapstr π a`
-         by METIS_TAC [perm_of_unchanged] THEN
-      FULL_SIMP_TAC (srw_ss()) [],
-      METIS_TAC [],
-      SRW_TAC [][lswapstr_APPEND] THEN
-      FIRST_ASSUM (SUBST1_TAC o SYM) THEN SRW_TAC [][],
-      SRW_TAC [][lswapstr_APPEND] THEN
-      `y ∈ patoms π` by METIS_TAC [IN_patoms_MEM] THEN
-      `y ≠ e'` by METIS_TAC [] THEN
-      Cases_on `y = e` THENL [
-        SRW_TAC [][swapstr_def] THEN
-        `lswapstr (REVERSE π) e ∈ atoms` by METIS_TAC [] THEN
-        POP_ASSUM MP_TAC THEN
-        FIRST_X_ASSUM (SUBST1_TAC o SYM) THEN
-        SRW_TAC [][],
-        SRW_TAC [][] THEN METIS_TAC []
-      ]
+      SRW_TAC [][] THEN METIS_TAC []
     ]
   ]);
 
