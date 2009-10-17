@@ -6,7 +6,7 @@
 
 (* interactive use:
   app load ["armTheory", "wordsLib"];
-  val _ = HOL_Interactive.toggle_quietdec ();
+  HOL_Interactive.toggle_quietdec ();
 *)
 
 open HolKernel boolLib bossLib;
@@ -334,6 +334,15 @@ val condT_set_q = Q.store_thm("condT_set_q",
     set_q_def, constT_def, condT_def, seqT_def,
     write_cpsr_def, write__psr_def, writeT_def,
     read_cpsr_def, read_cpsr_def, read__psr_def, readT_def]);
+
+val ARM_WRITE_STATUS_Q = Q.store_thm("ARM_WRITE_STATUS_Q",
+  `!b s.
+     (if b then ARM_WRITE_STATUS sQ T s else s) =
+     ARM_WRITE_STATUS sQ (b \/ ARM_READ_STATUS sQ s) s`,
+  SRW_TAC [] [ARM_WRITE_STATUS_def, ARM_READ_STATUS_def,
+    ARM_WRITE_CPSR_def, ARM_READ_CPSR_def, arm_state_component_equality]
+    \\ MATCH_MP_TAC (GSYM UPDATE_APPLY_IMP_ID)
+    \\ SRW_TAC [] [ARMpsr_component_equality]);
 
 (* ------------------------------------------------------------------------- *)
 (* Evaluation for alignment and other miscellany                             *)

@@ -5,8 +5,7 @@
 (* ------------------------------------------------------------------------ *)
 
 (* interactive use:
-  app load ["armTheory", "wordsLib", "pred_setSyntax",
-            "EmitTeX", "words_emitLib",
+  app load ["armTheory", "wordsLib", "pred_setSyntax", "emitLib", "EmitTeX",
             "option_emitTheory",  "set_emitTheory", "int_emitTheory"];
 *)
 
@@ -159,6 +158,8 @@ val int_rule = SIMP_RULE std_ss (COND_RATOR :: map GSYM
    i2bits_itself_def, signed_sat_itself_def, unsigned_sat_itself_def,
    signed_sat_q_itself_def, unsigned_sat_q_itself_def]);
 
+val cons_rule = ONCE_REWRITE_RULE [GSYM (ETA_CONV ``\l. CONS f l``)];
+
 fun mk_word n =
 let val s = Int.toString n in
   MLSIG ("type word" ^ s ^ " = wordsML.word" ^ s)
@@ -181,9 +182,9 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
    MLSIG    "type ARMextensions_set = ARMextensions set",
    MLSTRUCT "type ARMextensions_set = ARMextensions set"] @
   map (DATATYPE o f)
-    [datatype_iiid, datatype_RName, datatype_PSRName,
-     datatype_ARMpsr, datatype_CP15sctlr, datatype_CP15scr,
-     datatype_CP15nsacr, datatype_CP15vbar, datatype_CP15reg,
+    [datatype_iiid, datatype_RName, datatype_PSRName, datatype_ARMpsr,
+     datatype_CP15sctlr, datatype_CP15scr, datatype_CP15nsacr,
+     datatype_CP15vbar, datatype_CP15reg, datatype_memory_access,
      datatype_ARMarch, datatype_ARMinfo, datatype_SRType, datatype_InstrSet,
      datatype_Encoding, datatype_MemType, datatype_MemoryAttributes,
      datatype_AddressDescriptor, datatype_MBReqDomain, datatype_MBReqTypes,
@@ -219,7 +220,8 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
   map (DEFN o reserved_rule o int_rule)
    ([IMP_DISJ_THM,
      (* arm_coretypes *)
-     n2w_rule align_def, aligned_def, n2w_rule count_leading_zeroes_def,
+     n2w_rule (Q.SPEC `n` sign_extend_def), n2w_rule align_def, aligned_def,
+     n2w_rule count_leading_zeroes_def,
      n2w_rule lowest_set_bit_compute, SUM, bit_count_upto_def,
      n2w_rule bit_count_def, ext_rule zero_extend32_def,
      ext_rule sign_extend32_def, word16_def, word32_def, word64_def,
@@ -248,9 +250,10 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      read_pc_def, pc_store_value_def, read_reg_def,
      write_reg_def, branch_to_def, increment_pc_def,
      big_endian_def, translate_address_def, read_monitor_def,
-     write_monitor_def, read_mem1_def, write_mem1_def, read_mem_def,
-     write_mem_def, read_memA_with_priv_def, write_memA_with_priv_def,
-     read_memU_with_priv_def, write_memU_with_priv_def, read_memA_def,
+     write_monitor_def, cons_rule read_mem1_def, cons_rule write_mem1_def,
+     read_mem_def, write_mem_def, read_memA_with_priv_def,
+     write_memA_with_priv_def, read_memU_with_priv_def,
+     write_memU_with_priv_def, read_memA_def,
      write_memA_def, read_memA_unpriv_def, write_memA_unpriv_def,
      read_memU_def, write_memU_def, read_memU_unpriv_def,
      write_memU_unpriv_def, data_memory_barrier_def,

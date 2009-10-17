@@ -1,6 +1,6 @@
 (* ------------------------------------------------------------------------ *)
-(*     ARM Machine Code Semantics                                           *)
-(*     ==========================                                           *)
+(*     ARM Machine Code Semantics (A and R profiles)                        *)
+(*     =============================================                        *)
 (*     Defines ARM state-space and a sequential state-transforming Monad    *)
 (* ------------------------------------------------------------------------ *)
 

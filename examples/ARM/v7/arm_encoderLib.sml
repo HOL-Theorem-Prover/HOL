@@ -512,7 +512,7 @@ in
   let val checkdp = check ("thumb_encode_data_processing",tm) in
    term_list_to_num
    (case dest_strip tm
-    of ("Data_Processing", [opc,_,n,d,mode1]) =>
+    of ("Data_Processing", [opc,sflag,n,d,mode1]) =>
           (case uint_of_word opc
            of 0  => thumb_encode_register (opc,n,d,mode1) "add"
             | 1  => thumb_encode_register (opc,n,d,mode1) "eor"
@@ -615,7 +615,7 @@ in
                       end
                     else if is_Mode1_register mode1 then
                       let val (imm5,typ,m) = dest_Mode1_register mode1 in
-                        if Lib.all (width_okay 3) [d,m] then
+                        if is_T sflag andalso Lib.all (width_okay 3) [d,m] then
                           checkdp (fn _ => not (term_eq typ ``0b11w:word2``))
                             [(typ,11), (imm5,6), (m,3), (d,0)]
                         else

@@ -14,7 +14,7 @@ sig
                 | ARMv6T2
                 | ARMv7_A
                 | ARMv7_R
-                | ARMv7_M
+             (* | ARMv7_M *)
 
   datatype class = DataProcessing
                  | LoadStore

@@ -20,7 +20,7 @@ val _ = Feedback.register_btrace ("arm random", arm_random_trace);
 datatype arch = ARMv4 | ARMv4T
               | ARMv5T | ARMv5TE
               | ARMv6 | ARMv6K | ARMv6T2
-              | ARMv7_A | ARMv7_R | ARMv7_M;
+              | ARMv7_A | ARMv7_R (* | ARMv7_M *);
 
 datatype encoding = ARM | Thumb | Thumb2;
 
@@ -88,7 +88,7 @@ fun version_number a =
    | ARMv6T2 => 6
    | ARMv7_A => 7
    | ARMv7_R => 7
-   | ARMv7_M => 7;
+(* | ARMv7_M => 7 *);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -700,7 +700,7 @@ local
      | ARMv6T2 => "ARMv6T2"
      | ARMv7_A => "ARMv7-A"
      | ARMv7_R => "ARMv7-R"
-     | ARMv7_M => "ARMv7-M"
+  (* | ARMv7_M => "ARMv7-M" *)
 
   fun valid_arch_ecoding e a = Lib.mem e
    (case a
@@ -713,7 +713,7 @@ local
      | ARMv6T2 => [ARM, Thumb, Thumb2]
      | ARMv7_A => [ARM, Thumb, Thumb2]
      | ARMv7_R => [ARM, Thumb, Thumb2]
-     | ARMv7_M => [Thumb, Thumb2])
+  (* | ARMv7_M => [Thumb, Thumb2] *))
 
   fun random_code arch enc typ =
         let val tm = hd (random_term arch enc typ)

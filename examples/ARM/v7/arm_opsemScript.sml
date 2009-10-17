@@ -1,6 +1,6 @@
 (* ------------------------------------------------------------------------ *)
-(*     ARM Machine Code Semantics                                           *)
-(*     ==========================                                           *)
+(*     ARM Machine Code Semantics (A and R profiles)                        *)
+(*     =============================================                        *)
 (*     Operational semantics for ARM                                        *)
 (* ------------------------------------------------------------------------ *)
 
@@ -492,9 +492,6 @@ val unsigned_sat_q_def = Define`
 
 val signed_sat_def   = Define `signed_sat   = FST o signed_sat_q`;
 val unsigned_sat_def = Define `unsigned_sat = FST o unsigned_sat_q`;
-
-val _ = temp_overload_on ("sat_q",
-          ``\u. if u then unsigned_sat_q else signed_sat_q``);
 
 val _ = temp_overload_on ("top_half", ``( 31 >< 16 ) : word32 -> word16``);
 val _ = temp_overload_on ("bot_half", ``( 15 >< 0  ) : word32 -> word16``);
@@ -1630,12 +1627,16 @@ val saturate_instr_def = iDefine`
              (d = 15w) \/ (n = 15w))
       ((read_reg ii n ||| read_cflag ii) >>=
        (\(rn,c).
-         let saturate_to = if unsigned then w2n sat_imm else w2n sat_imm + 1
-         and (shift_t,shift_n) = decode_imm_shift ((1 :+ sh) 0w, imm5)
-         in
+         let (shift_t,shift_n) = decode_imm_shift ((1 :+ sh) 0w, imm5) in
            shift (rn, shift_t, shift_n, c) >>=
            (\operand.
-              let (result,sat) = sat_q unsigned (SInt operand, saturate_to) in
+              let (result,sat) =
+                      if unsigned then
+                        unsigned_sat_q (SInt operand, w2n sat_imm)
+                      else let saturate_to = w2n sat_imm + 1 in
+                        (sign_extend saturate_to ## I)
+                          (signed_sat_q (SInt operand, saturate_to))
+              in
                 (increment_pc ii enc |||
                  write_reg ii d result |||
                  condT sat (set_q ii)) >>= unit3)))`;
@@ -1696,14 +1697,20 @@ val saturate_16_instr_def = iDefine`
              (d = 15w) \/ (n = 15w))
       (read_reg ii n >>=
        (\rn.
-         let saturate_to = if unsigned then w2n sat_imm else w2n sat_imm + 1 in
-         let (result1,sat1) =
-                sat_q unsigned (SInt (( 15 --  0 ) rn), saturate_to)
-         and (result2,sat2) =
-                sat_q unsigned (SInt (( 31 -- 16 ) rn), saturate_to)
+         let ((result1:word16,sat1),(result2:word16,sat2)) =
+           if unsigned then
+             let saturate_to = w2n sat_imm in
+               unsigned_sat_q (SInt (( 15 --  0 ) rn), saturate_to),
+               unsigned_sat_q (SInt (( 31 -- 16 ) rn), saturate_to)
+           else
+             let saturate_to = w2n sat_imm + 1 in
+               (sign_extend saturate_to ## I)
+                 (signed_sat_q (SInt (( 15 --  0 ) rn), saturate_to)),
+               (sign_extend saturate_to ## I)
+                 (signed_sat_q (SInt (( 31 -- 16 ) rn), saturate_to))
          in
            (increment_pc ii enc |||
-            write_reg ii d (result2:word16 @@ result1:word16) |||
+            write_reg ii d (result2 @@ result1) |||
             condT (sat1 \/ sat2) (set_q ii)) >>= unit3))`;
 
 (* ........................................................................
@@ -1896,7 +1903,10 @@ val bit_field_clear_insert_instr_def = iDefine`
           (if n = 15w then constT 0w else read_reg ii n)) >>=
          (\(rd,rn).
             let result = word_modify (\i b.
-                           if lsbit <= i /\ i <= msbit then rn ' i else b) rd
+                           if lsbit <= i /\ i <= msbit then
+                             rn ' (i - lsbit)
+                           else
+                             b) rd
             in
               (increment_pc ii enc |||
                write_reg ii d result) >>= unit2))`;
