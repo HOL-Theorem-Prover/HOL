@@ -892,7 +892,7 @@ in
                (NOT toarm,12), (j2,11), (imm24$(9,0),1), (h,0)]
           end
      | ("Table_Branch_Byte", [n,h,m]) =>
-          [(``0b10001101w:word8``,20), (n,16), (PC,12), (h,4), (m,0)]
+          [(``0b111010001101w:word12``,20), (n,16), (PC,12), (h,4), (m,0)]
      | _ => raise ERR "encode_branch" ("cannot encode: " ^ term_to_string tm))
 end;
 
