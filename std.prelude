@@ -193,11 +193,17 @@ val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
                            ())
         else ()
 
-structure HOL_Interactive : sig val toggle_quietdec : unit -> bool end =
+structure HOL_Interactive : sig
+  val toggle_quietdec : unit -> bool
+  val amquiet : unit -> bool
+end =
 struct
   fun toggle_quietdec () = (Meta.quietdec := not (!Meta.quietdec) ;
                             !Meta.quietdec)
-end
+  fun amquiet () = !Meta.quietdec
+end;
+
+use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 
 (* Local variables: *)
 (* mode: sml *)

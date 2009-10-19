@@ -73,7 +73,7 @@ val h_supported_by = prove(
        support (fnpm perm_of apm) ^h (v INSERT (A UNION patoms pi UNION sS))``,
   REPEAT STRIP_TAC THEN
   MAP_EVERY ASSUME_TAC [lamf_support_fresh, ssupport_fresh] THEN
-  SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, cpmpm_APPENDlist]);
+  SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, listpm_APPENDlist]);
 
 val cond16 = ``?a. ~(a IN A) /\ !x. ~(a IN supp apm (^lamf a x))``
 
@@ -156,7 +156,7 @@ val rawfinite_support = prove(
            SRW_TAC [][fnpm_def, lamf_support_fresh] THEN
            `cpmpm [(x,y)] pi ++ [(swapstr x y b, swapstr x y s)] =
                 cpmpm [(x,y)] (pi ++ [(b,s)])`
-              by SRW_TAC [][cpmpm_APPENDlist] THEN
+              by SRW_TAC [][listpm_APPENDlist] THEN
            SRW_TAC [][]) THEN
     POP_ASSUM (fn th =>
                   Q_TAC SUFF_TAC `fcond apm h` THEN1
@@ -240,7 +240,7 @@ val perms_move = prove(
   Q.PAT_ASSUM `!p1 p2. fn (ptpm p2 t) p1 = fn t (p1 ++ p2)` (K ALL_TAC) THEN
   `support (fnpm perm_of apm) f bigS /\ support (fnpm perm_of apm) g bigS`
      by (SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, Abbr`f`, Abbr`g`,
-                    Abbr`bigS`, cpmpm_APPENDlist] THEN
+                    Abbr`bigS`, listpm_APPENDlist] THEN
          SRW_TAC [][swapstr_perm_of, swapstr_def]) THEN
   `FINITE bigS` by SRW_TAC [][Abbr`bigS`] THEN
   Q_TAC (NEW_TAC "b") `bigS` THEN
@@ -259,7 +259,7 @@ val perms_move = prove(
             MAP_EVERY Q.EXISTS_TAC
                       [`A`, `A UNION allatoms t UNION patoms p2`] THEN
             SRW_TAC [][] THENL [
-              SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM, cpmpm_APPENDlist,
+              SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM, listpm_APPENDlist,
                          is_perm_sing_inv],
               METIS_TAC []
             ],
@@ -801,7 +801,6 @@ val ISUB_LAM = store_thm(
     Simultaneous substitution (using a finite map) - much more interesting
    ---------------------------------------------------------------------- *)
 
-val _ = set_trace "Unicode" 1
 val strterm_fmap_supp = store_thm(
   "strterm_fmap_supp",
   ``supp (fmpm lswapstr tpm) fmap =

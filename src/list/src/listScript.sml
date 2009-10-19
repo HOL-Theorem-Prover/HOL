@@ -357,6 +357,12 @@ val MAP_APPEND = store_thm ("MAP_APPEND",
     LIST_INDUCT_TAC THEN
     ASM_REWRITE_TAC [MAP, APPEND]);
 
+val MAP_ID = store_thm(
+  "MAP_ID",
+  ``(MAP (\x. x) l = l) /\ (MAP I l = l)``,
+  Induct_on `l` THEN SRW_TAC [][MAP]);
+val _ = export_rewrites ["MAP_ID"]
+
 val LENGTH_MAP = store_thm ("LENGTH_MAP",
  --`!l. !(f:'a->'b). LENGTH (MAP f l) = LENGTH l`--,
      LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP, LENGTH]);
@@ -573,6 +579,7 @@ CONJ_TAC THEN
   INDUCT_THEN list_INDUCT STRIP_ASSUME_TAC
    THEN REWRITE_TAC [CONS_11,NOT_NIL_CONS, NOT_CONS_NIL,APPEND]
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
+val _ = export_rewrites ["APPEND_eq_NIL"]
 
 val APPEND_11 = store_thm(
   "APPEND_11",
@@ -1118,6 +1125,17 @@ val MAP2_ZIP = store_thm("MAP2_ZIP",
     THEN ASM_REWRITE_TAC[CONS_11,UNCURRY_DEF,INV_SUC_EQ]
     end);
 
+val MAP_ZIP = Q.store_thm(
+  "MAP_ZIP",
+  `(LENGTH l1 = LENGTH l2) ==>
+     (MAP FST (ZIP (l1,l2)) = l1) /\
+     (MAP SND (ZIP (l1,l2)) = l2) /\
+     (MAP (f o FST) (ZIP (l1,l2)) = MAP f l1) /\
+     (MAP (g o SND) (ZIP (l1,l2)) = MAP g l2)`,
+  Q.ID_SPEC_TAC `l2` THEN Induct_on `l1` THEN
+  SRW_TAC [][] THEN Cases_on `l2` THEN
+  FULL_SIMP_TAC (srw_ss()) [ZIP, MAP]);
+
 val MEM_EL = store_thm(
   "MEM_EL",
   ``!(l:'a list) x. MEM x l = ?n. n < LENGTH l /\ (x = EL n l)``,
@@ -1181,12 +1199,14 @@ val LAST_CONS = store_thm(
   ``(!x:'a. LAST [x] = x) /\
     (!(x:'a) y z. LAST (x::y::z) = LAST(y::z))``,
   REWRITE_TAC [LAST_DEF, NOT_CONS_NIL]);
+val _ = export_rewrites ["LAST_CONS"]
 
 val FRONT_CONS = store_thm(
   "FRONT_CONS",
   ``(!x:'a. FRONT [x] = []) /\
     (!x:'a y z. FRONT (x::y::z) = x :: FRONT (y::z))``,
   REWRITE_TAC [FRONT_DEF, NOT_CONS_NIL]);
+val _ = export_rewrites ["FRONT_CONS"]
 
 val APPEND_FRONT_LAST = store_thm(
   "APPEND_FRONT_LAST",
@@ -1201,6 +1221,17 @@ val FILTER_APPEND_DISTRIB = Q.store_thm
  `!P L M. FILTER P (APPEND L M) = APPEND (FILTER P L) (FILTER P M)`,
    GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC
     THEN RW_TAC bool_ss [FILTER,APPEND]);
+
+val LAST_CONS_cond = store_thm(
+  "LAST_CONS_cond",
+  ``LAST (h::t) = if t = [] then h else LAST t``,
+  Cases_on `t` THEN SRW_TAC [][]);
+
+val LAST_APPEND_CONS = store_thm(
+  "LAST_APPEND_CONS",
+  ``LAST (l1 ++ h::l2) = LAST (h::l2)``,
+  Induct_on `l1` THEN SRW_TAC [][LAST_CONS_cond]);
+val _ = export_rewrites ["LAST_APPEND_CONS"]
 
 (* ----------------------------------------------------------------------
     TAKE and DROP
@@ -1664,11 +1695,10 @@ val _ = export_rewrites
            "SUM", "TL", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_APPEND", "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",
-           "CONS_ACYCLIC", "list_case_def", "APPEND_eq_NIL", "ZIP",
+           "CONS_ACYCLIC", "list_case_def", "ZIP",
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
            "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS",
-           "LAST_CONS", "FRONT_CONS", "FOLDL", "FOLDR", "FILTER",
-           "ALL_DISTINCT"];
+           "FOLDL", "FOLDR", "FILTER", "ALL_DISTINCT"];
 
 val nil_tm = Term.prim_mk_const{Name="NIL",Thy="list"};
 val cons_tm = Term.prim_mk_const{Name="CONS",Thy="list"};

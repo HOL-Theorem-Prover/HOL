@@ -1,0 +1,1 @@
+intExtensionTheory.sml: $(dprot $(SIGOBJ)/int_arithTheory.uo)

@@ -30,4 +30,7 @@ val Hol_datatype =
     (Feedback.emit_WARNING,false)
     bossLib.Hol_datatype;
 
+val _ = set_trace "metis" 1
+val _ = set_trace "meson" 1
+
 val _ = PolyML.print_depth 100;

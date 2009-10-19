@@ -75,14 +75,14 @@ val fv_rtypm = prove(
 val rtypm_is_perm = store_thm(
   "rtypm_is_perm",
   ``is_perm rtypm``,
-  SRW_TAC [][is_perm_def, permeq_def] THENL [
-    Induct_on `x` THEN SRW_TAC [ETA_ss][is_perm_nil, setpm_is_perm],
+  SRW_TAC [][is_perm_def] THENL [
+    Induct_on `x` THEN SRW_TAC [ETA_ss][is_perm_nil],
     Induct_on `x` THEN
-    SRW_TAC [ETA_ss][lswapstr_APPEND, is_perm_decompose,
-                     setpm_is_perm],
+    SRW_TAC [ETA_ss][lswapstr_APPEND, is_perm_decompose],
     FULL_SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
     Induct THEN SRW_TAC [][] THEN
-    METIS_TAC [setpm_is_perm, perm_of_is_perm, is_perm_def, permeq_def]
+    METIS_TAC [fnpm_is_perm, discrete_is_perm, perm_of_is_perm, is_perm_def,
+               permeq_def]
   ]);
 val _ = export_rewrites ["rtypm_is_perm"]
 
@@ -235,12 +235,12 @@ val avoid_finite_set0 = prove(
     Q.EXISTS_TAC `(z,e)::pi` THEN SRW_TAC [][] THENL [
       METIS_TAC [],
       SRW_TAC [][basic_swapTheory.swapstr_eq_left, is_perm_eql,
-                 patoms_REVERSE, perm_of_unchanged],
+                 listsupp_REVERSE, perm_of_unchanged],
 
       SRW_TAC [][perm_of_unchanged] THEN METIS_TAC [SUBSET_DEF],
 
       SRW_TAC [][basic_swapTheory.swapstr_eq_left] THEN
-      SRW_TAC [][is_perm_eql, perm_of_unchanged, patoms_REVERSE] THEN
+      SRW_TAC [][is_perm_eql, perm_of_unchanged, listsupp_REVERSE] THEN
       METIS_TAC [SUBSET_DEF],
 
       `~(e IN patoms pi)` by SRW_TAC [][] THEN
@@ -257,7 +257,7 @@ val avoid_finite_set0 = prove(
       METIS_TAC [SUBSET_DEF, basic_swapTheory.swapstr_def]
     ],
     Q.EXISTS_TAC `pi` THEN SRW_TAC [][] THENL [
-      SRW_TAC [][is_perm_eql, perm_of_unchanged, patoms_REVERSE] THEN
+      SRW_TAC [][is_perm_eql, perm_of_unchanged, listsupp_REVERSE] THEN
       METIS_TAC [],
       SRW_TAC [][perm_of_unchanged]
     ]
@@ -356,7 +356,7 @@ val okpm_exists = store_thm(
         Q_TAC (NEW_TAC "z") `patoms pi UNION fv ty UNION {e} UNION s` THEN
         Q.EXISTS_TAC `(z,e) :: pi` THEN SRW_TAC [][] THENL [
           SRW_TAC [][basic_swapTheory.swapstr_eq_left,
-                     is_perm_eql, patoms_REVERSE, perm_of_unchanged] THEN
+                     is_perm_eql, listsupp_REVERSE, perm_of_unchanged] THEN
           METIS_TAC [],
           SRW_TAC [][basic_swapTheory.swapstr_def],
           `~(z = s')` by METIS_TAC [] THEN
@@ -371,7 +371,7 @@ val okpm_exists = store_thm(
       Q_TAC (NEW_TAC "z") `patoms pi UNION fv ty UNION {e} UNION s` THEN
       Q.EXISTS_TAC `(z,e) :: pi` THEN SRW_TAC [][] THENL [
         SRW_TAC [][basic_swapTheory.swapstr_eq_left,
-                   is_perm_eql, patoms_REVERSE, perm_of_unchanged] THEN
+                   is_perm_eql, listsupp_REVERSE, perm_of_unchanged] THEN
         METIS_TAC [],
         SRW_TAC [][basic_swapTheory.swapstr_def],
         `~(z = s')` by METIS_TAC [] THEN
@@ -563,9 +563,10 @@ val tyspm_is_perm = Store_thm(
     SRW_TAC [ETA_ss][is_perm_nil],
     Q.ID_SPEC_TAC `x` THEN HO_MATCH_MP_TAC tys_ind THEN
     SRW_TAC [ETA_ss][lswapstr_APPEND, is_perm_decompose],
-    FULL_SIMP_TAC (srw_ss()) [permeq_def, FUN_EQ_THM] THEN
+    FULL_SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
     HO_MATCH_MP_TAC tys_ind THEN SRW_TAC [][] THEN
-    METIS_TAC [setpm_is_perm, perm_of_is_perm, is_perm_def, permeq_def]
+    METIS_TAC [fnpm_is_perm, discrete_is_perm, perm_of_is_perm, is_perm_def,
+               permeq_def]
   ]);
 
 val OKpm_increase = store_thm(

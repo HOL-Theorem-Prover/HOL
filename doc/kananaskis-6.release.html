@@ -79,6 +79,15 @@ a clause in the definition of an inductive relation contains duplicate
 names, <code>Hol_reln</code> detects this and provides an informative
 error message. </p></li>
 
+
+<li> <p>Users can configure their interactive sessions by creating a
+file in their home directory.  This file is <code>use</code>-ed into
+the session as it begins.  The file can be called one
+of <code>hol-config.sml</code>, <code>hol-config.ML</code>, <code>.hol-config</code>, <code>.hol-config.sml</code>,
+or <code>.hol-config.ML</code>.  The “home” directory is the one
+residing at the environment <code>HOME</code>,
+or <code>HOMEPATH</code>, or <code>APPDATA</code> (the latter two are
+used on Windows).</p></li>
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>

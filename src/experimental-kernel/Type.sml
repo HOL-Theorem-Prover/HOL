@@ -1910,8 +1910,14 @@ fun split_insts vhops insts =
   partition (fn {redex, residue} =>
              op_mem eq_ty (fst (strip_app_type redex)) vhops) insts
 
+(*
 fun freeze_operators vhops insts =
   List.foldr (fn (ty,insts) => safe_insert_tya (ty |-> ty) insts) insts vhops
+*)
+fun freeze_operators theta insts =
+  let val insts' = map (fn {redex,residue} => type_subst theta redex |-> residue) insts
+  in List.foldr (fn ({redex,residue},insts) => safe_insert_tya (residue |-> residue) insts) insts theta
+  end
 
 fun print_insts str insts =
   (print (str ^ " insts:\n");
@@ -2009,39 +2015,80 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                        let
                          val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
                          val _ = if eq_ty vhop chop then raise NOT_FOUND else ()
-                         val vhop_inst = [vhop |-> chop]
-                         val vty1 = deep_beta_ty (type_subst vhop_inst vty)
+                         val vty1 = deep_beta_ty (type_subst [vhop |-> chop] vty)
                        in
                          if eq_ty vty1 cty then
                            (* drop this hom as subsumed by current insts *)
                            homatch rkin kdins (insts,tl homs)
                          else let
+                           val _ = if !trace_complex_matching = 0 then () else
+                                     (print ("Complex Match " ^ type_to_string vty ^ "\n" ^
+                                             "           to " ^ type_to_string cty  ^ "\n"))
+                           fun types_to_string (ty::tys) = " " ^ type_to_string ty ^ types_to_string tys
+                             | types_to_string    []     = ""
                            val pat_tyvars = op_subtract eq_ty (type_vars vty) [vhop]
+                        (* val _ = if !trace_complex_matching = 0 then () else
+                                     (print ("  pat_tyvars:" ^ types_to_string pat_tyvars  ^ "\n")) *)
                            val freeze_tyvars = type_vars chop
-                           val (rel_insts,irrel_insts) = split_insts pat_tyvars insts
-                           val (insts0,_) = split_insts freeze_tyvars rel_insts
-                           val insts' = freeze_operators freeze_tyvars rel_insts
-                                        handle HOL_ERR _ => raise NOT_FOUND
-                                               (* conflicts with existing inst *)
+                        (* val _ = if !trace_complex_matching = 0 then () else
+                                     (print ("  freeze_tyvars:" ^ types_to_string freeze_tyvars  ^ "\n")) *)
+                           val all_vars = Lib.U [pat_tyvars, freeze_tyvars, type_vars cty,
+                                                 HOLset.listItems lconsts, map #redex env,
+                                                 map #residue env, type_varsl (map #residue insts)]
+                        (* val _ = if !trace_complex_matching = 0 then () else
+                                     (print ("  all_vars:" ^ types_to_string all_vars  ^ "\n")) *)
+                           fun new_fz_tyvar (v,vs) = (if mem v pat_tyvars
+                                                      then variant_type (vs @ all_vars) v
+                                                           (* gen_var_type(kind_of v,rank_of v) *)
+                                                      else v) :: vs
+                           val freeze_tyvars' = foldr new_fz_tyvar [] freeze_tyvars
+                        (* val _ = if !trace_complex_matching = 0 then () else
+                                     (print ("  freeze_tyvars':" ^ types_to_string freeze_tyvars'  ^ "\n")) *)
+(*
+                           fun new_fz_tyvar v = if mem v pat_tyvars
+                                                      then variant_type all_vars v
+                                                           (* gen_var_type(kind_of v,rank_of v) *)
+                                                      else v
+                           val freeze_tyvars' = map new_fz_tyvar freeze_tyvars
+*)
+                           (* now there are no tyvars in both freeze_tyvars' and pat_tyvars *)
+                           val _ = if !trace_complex_matching = 0 then () else
+                                     (print ("  freezing:" ^ types_to_string freeze_tyvars  ^ "\n");
+                                      print ("        to:" ^ types_to_string freeze_tyvars' ^ "\n"))
+                           val theta = map (op |->) (zip freeze_tyvars freeze_tyvars')
+                           val chop' = type_subst theta chop
+                           val vty1' = deep_beta_ty (type_subst [vhop |-> chop'] vty)
+                           val cty' = type_subst theta cty
                            val (vhop_str,_,_) = dest_var_type vhop
                            val _ = if !trace_complex_matching = 0 then () else
-                                     (print ("Type matching: expanding type operator " ^ vhop_str ^ "\n");
-                                      print ("  Matching " ^ type_to_string vty1 ^ "\n" ^
-                                             "        to " ^ type_to_string cty  ^ "\n");
-                                      print_insts "all original" insts;
+                                     (print ("  Expanding type operator " ^ vhop_str
+                                             ^ " |-> " ^ type_to_string chop' ^ "\n");
+                                      print ("     Matching " ^ type_to_string vty1' ^ "\n" ^
+                                             "           to " ^ type_to_string cty'  ^ "\n"))
+                           val (rel_insts,irrel_insts) = split_insts pat_tyvars insts
+                           val (insts0,_) = split_insts freeze_tyvars rel_insts
+                           val _ = if !trace_complex_matching = 0 then () else
+                                     (print_insts "all original" insts;
                                       print_insts "relevant" rel_insts;
                                       print_insts "irrelevant" irrel_insts;
-                                      print_insts "pre-freeze" insts0;
-                                      print_insts "subproblem" insts')
+                                      print_insts "pre-freeze" insts0)
+                           val insts' = freeze_operators theta rel_insts
+                                        handle HOL_ERR _ =>
+                                          (* conflicts with existing inst *)
+                                          (if !trace_complex_matching = 0 then () else
+                                             print "  Freezing operators failed.\n";
+                                           raise NOT_FOUND)
+                           val _ = if !trace_complex_matching = 0 then () else
+                                     (print_insts "subproblem" insts')
                          in let
                            val pinsts_homs' =
-                             type_pmatch lconsts env vty1 cty (insts', [] (* note NOT tl homs! *))
+                             type_pmatch lconsts env vty1' cty' (insts', [] (* note NOT tl homs! *))
                            val (rkin',kdins') =
                              get_rank_kind_insts kdavoids env
                                         (fst pinsts_homs')
                                         (0, ([], []))
                            val new_insts = homatch rkin' kdins' pinsts_homs'
-                           val (ninsts0,ninsts1) = split_insts freeze_tyvars new_insts
+                           val (ninsts0,ninsts1) = split_insts freeze_tyvars' new_insts
                            val insts' = insts0 @ ninsts1 @ irrel_insts
                            val _ = if !trace_complex_matching = 0 then () else
                                      (print ("Expanding type operator " ^ vhop_str ^ " succeeded!\n");

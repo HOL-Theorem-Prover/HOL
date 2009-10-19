@@ -19,8 +19,6 @@ val _ = new_theory "arm_opsem";
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = set_trace "Unicode" 0;
-
 val _ = numLib.prefer_num();
 val _ = wordsLib.prefer_word();
 

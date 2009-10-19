@@ -3,6 +3,7 @@ struct
 
 (* interactive use:
   app load ["armLib"];
+  HOL_Interactive.toggle_quietdec ();
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -58,11 +59,12 @@ fun random_const n = random_range (pow2 n);
 fun random_from_list l = List.nth(l, random_range (length l));
 
 local
+  val regs = map mk_word4
   val sp = mk_word4 13
   val valid_modes = map mk_word5 [16,17,18,19,23,27,31]
-  val valid_registers = map mk_word4 (List.tabulate (15,I))
-  val (_,valid_thumb2_registers) = Lib.pluck (fn t => t = sp) valid_registers
-  val valid_thumb_registers = List.take(valid_thumb2_registers, 6)
+  val valid_registers = regs [2,3,4,5,6,7,8,9,10,11,12,13,14]
+  val valid_thumb2_registers = regs [2,3,4,5,6,7,8,9,10,11,12,14]
+  val valid_thumb_registers = regs [2,3,4,5,6,7]
 in
   fun random_mode ()            = random_from_list valid_modes
   fun random_arm_register ()    = random_from_list valid_registers
@@ -75,10 +77,33 @@ val int_of_word =
 
 fun test_or_compare i = (i div 4) = 2;
 
+fun version_number a =
+  case a
+  of ARMv4   => 4
+   | ARMv4T  => 4
+   | ARMv5T  => 5
+   | ARMv5TE => 5
+   | ARMv6   => 6
+   | ARMv6K  => 6
+   | ARMv6T2 => 6
+   | ARMv7_A => 7
+   | ARMv7_R => 7
+   | ARMv7_M => 7;
+
 (* ------------------------------------------------------------------------- *)
 
-fun random_term enc typ =
-let val rand_term = random_term enc
+fun data_processing_list n enc =
+  List.tabulate (4, fn _ => 0) @
+  List.tabulate
+    (if n < 6 then 3 else
+      case enc
+      of Thumb  => 8
+       | Thumb2 => 30
+       | ARM    => 29, I) @
+   (if n = 5 andalso enc = ARM then [23] else []);
+
+fun random_term arch enc typ =
+let val rand_term = random_term arch enc
     val pc = mk_word4 15
     fun r2 p t = case rand_term t
                  of [a,b] => p (a,b)
@@ -115,9 +140,9 @@ let val rand_term = random_term enc
                          val (rd,rn) = if test_or_compare opc then
                                          (p,c)
                                        else
-                                         (d,if opc = 13 orelse opc = 15 andalso
-                                               (enc <> Thumb2 orelse
-                                                random_range 2 = 0)
+                                         (d,if (opc = 13 orelse opc = 15)
+					       andalso enc <> Thumb2 andalso
+                                               random_range 2 = 0
                                             then p else c)
                          val sflag = if enc = Thumb orelse test_or_compare opc
                                      then T else b
@@ -136,8 +161,9 @@ let val rand_term = random_term enc
     fun mul () = case rand_term ``:bool -> bool -> 'reg word -> 'reg word ->
                                   'reg word -> 'reg word``
                  of [a,b,c,d,e,f] =>
-                     let val (acc,sflag) = if enc = Thumb then (F,T) else (a,b)
-                     in arm_astSyntax.mk_Multiply (acc,sflag,c,d,e,f) end
+                     let val (acc,sflag,rm) =
+                                 if enc = Thumb then (F,T,c) else (a,b,e)
+                     in arm_astSyntax.mk_Multiply (acc,sflag,c,d,rm,f) end
                   | _ => raise ERR "random_term" "mul"
     fun ls () = case rand_term ``:bool -> bool -> bool -> bool ->
                                   'reg word -> 'reg word``
@@ -346,10 +372,7 @@ in
                      ``:'reg word -> bool -> 'reg word``
          | _ => raise ERR "random_term" "branch_instruction"]
    | ("data_processing_instruction", []) =>
-       if random_range 3 = 0 then
-         [dp ()]
-       else
-         [case random_range (if enc = Thumb then 8 else 30)
+         [case random_from_list (data_processing_list (version_number arch) enc)
           of 0 => dp ()
            | 1 => r4 arm_astSyntax.mk_Add_Sub
                      ``:bool -> 'reg word -> 'reg word -> word12``
@@ -527,7 +550,7 @@ local
   val GE   = mk_var ("GE", ``:word4``)
   val IT   = mk_var ("IT", ``:word8``)
   val mode = mk_var ("mode", ``:word5``)
-  val mem  = mk_var ("mem", ``:word32 -> word8 option``)
+  val mem  = mk_var ("mem", ``:word32 -> word8``)
 
   fun is_read tm =
        (case dest_strip tm
@@ -647,17 +670,24 @@ local
                       Hol_pp.term_to_string tm, "\n",
                       "\t", e, " =/= ", d, "\n",
                       Hol_pp.term_to_string (decode arm d), "\n"]);
-                     " : warning, equivalent to " ^ d ^ "?")
+                     String.concat
+                       [" // warning, ", e, " equivalent to ", d, "?"])
                  else
                    ""
     in
-      (e ^ w,a,arm)
+      (e,a ^ w,arm)
     end handle HOL_ERR e =>
           (HOL_WARNING (#origin_structure e) (#origin_function e)
              (String.concat
                 [Hol_pp.term_to_string enc, ": ",
                  Hol_pp.term_to_string tm, "\n"]);
            raise HOL_ERR e)
+      | Option =>
+          (HOL_WARNING "" ""
+             (String.concat
+                [Hol_pp.term_to_string enc, ": ",
+                 Hol_pp.term_to_string tm, "\n"]);
+           raise Option)
 
   fun arch_to_string a =
     case a
@@ -672,8 +702,8 @@ local
      | ARMv7_R => "ARMv7-R"
      | ARMv7_M => "ARMv7-M"
 
-  fun arch_to_ecodings a =
-    case a
+  fun valid_arch_ecoding e a = Lib.mem e
+   (case a
     of ARMv4   => [ARM]
      | ARMv4T  => [ARM, Thumb]
      | ARMv5T  => [ARM, Thumb]
@@ -683,11 +713,10 @@ local
      | ARMv6T2 => [ARM, Thumb, Thumb2]
      | ARMv7_A => [ARM, Thumb, Thumb2]
      | ARMv7_R => [ARM, Thumb, Thumb2]
-     | ARMv7_M => [Thumb, Thumb2]
+     | ARMv7_M => [Thumb, Thumb2])
 
-  fun random_code encs typ =
-        let val enc = random_from_list encs
-            val tm = hd (random_term enc typ)
+  fun random_code arch enc typ =
+        let val tm = hd (random_term arch enc typ)
             val cond = mk_word4
                          (if enc = ARM andalso arm_uncoditional tm
                           then 15 else 14)
@@ -695,8 +724,11 @@ local
           (encoding enc, cond, tm)
         end
 in
-  fun generate_random arch class =
-    let val a = arch_to_string arch
+  fun generate_random arch enc class =
+    let val _ = valid_arch_ecoding enc arch orelse
+                  raise ERR "generate_random"
+		            "Architecture does not support encoding"
+        val a = arch_to_string arch
         val aa = String.concat ["ARCH ", a, "\n "]
         val typ = case class
                   of DataProcessing => ``:data_processing_instruction``
@@ -705,7 +737,7 @@ in
                    | StatusAccess   => ``:status_access_instruction``
                    | Miscellaneous  => ``:miscellaneous_instruction``
     in
-      random_code (arch_to_ecodings arch) typ
+      random_code arch enc typ
         |> mk_code aa
         |> step_updates a
     end

@@ -3,6 +3,8 @@ sig
 
   include Abbrev
 
+  datatype encoding = ARM | Thumb | Thumb2
+
   datatype arch = ARMv4
                 | ARMv4T
                 | ARMv5T
@@ -20,7 +22,7 @@ sig
                  | StatusAccess
                  | Miscellaneous
 
-  val generate_random : arch -> class ->
+  val generate_random : arch -> encoding -> class ->
                         (string * string * term list * (term * term) list)
 
 end

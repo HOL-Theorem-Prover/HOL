@@ -238,7 +238,7 @@ fun define_partial_quotient_type tyname abs rep equiv =
     let
 
    (* Extract the existing type, ty, and the equivalence relation, REL. *)
-        val equiv = REWRITE_RULE[PARTIAL_EQUIV_def] equiv
+        val equiv = PURE_REWRITE_RULE[PARTIAL_EQUIV_def] equiv
         val (exist,pequiv) = CONJ_PAIR equiv
         val (v, exist_tm) = boolSyntax.dest_exists (concl exist)
         val ty = type_of v
@@ -461,7 +461,7 @@ but it could look like
             THEN ASM_REWRITE_TAC[])
 
         fun DISCH_EQN th =
-            case List.find is_eq (hyp th) of
+            case List.find is_eq (rev (hyp th)) of
               SOME t => DISCH t th
             | NONE => raise Fail "quotient.DISCH_EQN: This should never happen"
         fun DISCH_ALL_REV th = foldr (fn (a,th) => DISCH a th) th (hyp th)
@@ -517,14 +517,14 @@ but it could look like
 
         val ty_ABS_REP =
             (GEN atm o
-             REWRITE_RULE[ABS_REP] o
+             PURE_REWRITE_RULE[ABS_REP] o
              CHOOSE (r, SPEC atm ty_REP_REL) o
              UNDISCH o CONV_RULE (REWR_CONV AND_IMP_INTRO) o
              DISCH_ALL o DISCH_EQN o
-             REWRITE_RULE[SYM inst] o
-             REWRITE_RULE[UNDISCH (SPEC r ty_REL_SELECT_REL)] o
-             REWRITE_RULE[inst])
-               (REWRITE_CONV[ty_ABS_def,ty_REP_def] ABS_REP_tm)
+             PURE_REWRITE_RULE[SYM inst] o
+             PURE_REWRITE_RULE[UNDISCH (SPEC r ty_REL_SELECT_REL)] o
+             PURE_REWRITE_RULE[inst])
+               (PURE_REWRITE_CONV[ty_ABS_def,ty_REP_def] ABS_REP_tm)
 
         val REL_REP_REFL = TAC_PROOF(([],
             (--`!a. ^REL (^ty_REP a) (^ty_REP a)`--)),
@@ -545,10 +545,12 @@ but it could look like
                        ^REL r r /\ ^REL r' r' /\ (^ty_ABS r = ^ty_ABS r')`--)),
             GEN_TAC THEN GEN_TAC
             THEN CONV_TAC (LAND_CONV (REWR_CONV pequiv))
-            THEN REWRITE_TAC[ty_ABS_def]
+            THEN PURE_REWRITE_TAC[ty_ABS_def]
             THEN EQ_TAC
             THEN STRIP_TAC
-            THEN ASM_REWRITE_TAC[]
+            THEN REPEAT CONJ_TAC
+            THEN TRY (FIRST_ASSUM ACCEPT_TAC)
+            THEN FIRST_ASSUM REWRITE_THM
             THEN POP_ASSUM MP_TAC
             THEN IMP_RES_THEN (IMP_RES_THEN REWRITE_THM) cty_ABS_11)
 
@@ -703,7 +705,7 @@ fun check_tyop_simp th =
 
 
 fun define_quotient_type tyname abs rep equiv =
-    let val equiv = REWRITE_RULE (map GSYM [EQUIV_def,PARTIAL_EQUIV_def]) equiv
+    let val equiv = PURE_REWRITE_RULE (map GSYM [EQUIV_def,PARTIAL_EQUIV_def]) equiv
     in
         define_partial_quotient_type tyname abs rep
            (if is_partial_equiv equiv
@@ -1389,7 +1391,7 @@ fun define_quotient_lifted_function quot_ths tyops tyop_simps =
         val syms  = map (MATCH_MP QUOTIENT_SYM)   quot_ths
         val trans = map (MATCH_MP QUOTIENT_TRANS) quot_ths
 
-        val unp_quot_ths = map (REWRITE_RULE[QUOTIENT_def]) quot_ths
+        val unp_quot_ths = map (PURE_REWRITE_RULE[QUOTIENT_def]) quot_ths
         val (ABS_REP, (REP_REFL, ABS11)) = ((I ## unzip) o unzip)
                    (map ((I ## CONJ_PAIR) o CONJ_PAIR) unp_quot_ths)
         val (abss, rep_as) = unzip (map
@@ -1571,7 +1573,7 @@ datatype associativity = LEFT | RIGHT | NONASSOC
 fun prove_quotient_equiv_rep_one_one QUOTIENT =
     let
    (* Extract the existing type, ty, and the equivalence relation, REL. *)
-        val unp_quot_th = (REWRITE_RULE[QUOTIENT_def]) QUOTIENT
+        val unp_quot_th = (PURE_REWRITE_RULE[QUOTIENT_def]) QUOTIENT
         val quot_parts = ((I ## CONJ_PAIR) o CONJ_PAIR) unp_quot_th
         val (ABS_REP, (REP_REFL, REL_ABS)) = quot_parts
         val Rar = (snd o strip_comb o concl) QUOTIENT
@@ -1632,7 +1634,7 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
      REP_REFL:   !a. ?r. R r r /\ (rep a = r)
      ABS11:      !r s. R r s = R r r /\ R s s /\ (abs r = abs s)
 *)
-        val unp_quot_ths = map (REWRITE_RULE[QUOTIENT_def]) quot_ths
+        val unp_quot_ths = map (PURE_REWRITE_RULE[QUOTIENT_def]) quot_ths
         val quot_parts = map ((I ## CONJ_PAIR) o CONJ_PAIR) unp_quot_ths
         val (ABS_REP, (REP_REFL, ABS11)) = ((I ## unzip) o unzip) quot_parts
 
@@ -3760,7 +3762,7 @@ fun define_quotient_types_rule {types, defs,
                                 tyop_equivs, tyop_quotients, tyop_simps,
                                 respects, poly_preserves, poly_respects} =
   let
-      val equivs = map (REWRITE_RULE (map GSYM [EQUIV_def,PARTIAL_EQUIV_def])
+      val equivs = map (PURE_REWRITE_RULE (map GSYM [EQUIV_def,PARTIAL_EQUIV_def])
                         o #equiv) types
       val _ = map check_equiv equivs
       val _ = map check_tyop_equiv tyop_equivs

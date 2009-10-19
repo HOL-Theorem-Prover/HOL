@@ -4,6 +4,7 @@ struct
 (* interactive use:
   app load ["arm_stepTheory", "armSyntax", "intLib", "wordsLib",
             "SatisfySimps"];
+  HOL_Interactive.toggle_quietdec ();
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -206,6 +207,7 @@ val _ = computeLib.add_funs
    Q.ISPEC `ARMpsr_T` COND_RAND,
    Q.ISPEC `ARMpsr_IT_fupd f` COND_RAND,
    FST_ADD_WITH_CARRY,
+   DECIDE ``if b then b else T``,
    DECIDE ``~((n <=> if c then v else ~n) /\ ~c)``,
    DECIDE ``n <=/=> ~n``,
    DECIDE ``~((z /\ c) /\ ~z)``,
@@ -423,13 +425,14 @@ let val upd = dest_arm_state_updates tm
     val (mem,upd) = pluck (fn (s,_) => s = "arm_state_memory_fupd") upd
     val (evt,upd) = pluck (fn (s,_) => s = "arm_state_event_register_fupd") upd
     val (wfi,upd) = pluck (fn (s,_) => s = "arm_state_interrupt_wait_fupd") upd
+    val (acc,upd) = pluck (fn (s,_) => s = "arm_state_accesses_fupd") upd
     val (mon,upd) = trypluck' (fn (s,u) =>
                        if s = "arm_state_monitors_fupd" then
                          SOME u
                        else
                          NONE) upd
 in
-  (snd reg, snd psr, snd mem, snd evt, snd wfi, mon, upd)
+  (snd reg, snd psr, snd mem, snd evt, snd wfi, snd acc, mon, upd)
 end;
 
 local
@@ -519,70 +522,54 @@ fun bits32 (n,h,l) =
   end;
 
 local
-  val read_mem_tm = ``arm_state_memory``
-  val read_reg_tm = ``arm_state_registers``
+  val read_mem_tm = ``arm_seq_monad$arm_state_memory``
+  val read_reg_tm = ``arm_seq_monad$arm_state_registers``
   val pc_tm = ``(0n,RName_PC)``
-  val IMP_IS_SOME = trace ("metis",0) (METIS_PROVE [optionTheory.IS_SOME_DEF])
-                      ``!x y:'a. (x = SOME y) ==> (IS_SOME x)``
+  fun mk_word32 x = wordsSyntax.mk_wordii (x,32)
 
-  fun compute_footprint t =
+  fun make_bytes t =
     if optionSyntax.is_some t then
-      let open wordsSyntax
-          val (a,n) = pairSyntax.dest_pair (optionSyntax.dest_some t)
-          val i = Arbnum.toInt (numLib.dest_numeral n)
-      in
-        List.tabulate (i, fn x => mk_word_add (a,mk_wordii (x,32)))
+      let val a = optionSyntax.dest_some t in
+        List.tabulate (4, fn x => wordsSyntax.mk_word_add (a,mk_word32 x))
       end
     else if optionSyntax.is_none t then
       []
-    else raise ERR "compute_footprint" ""
+    else raise ERR "make_bytes" ""
 
-  val I_mem = ``I : (FullAddress -> word8 option) ->
-                    (FullAddress -> word8 option)``
+  val I_mem = ``I : (FullAddress -> word8) -> (FullAddress -> word8)``
 
-  (* a =+ SOME d *)
-  fun mk_some_mem (a,d) = combinSyntax.mk_update (a, optionSyntax.mk_some d)
-
-  (* a =+ SOME (if f d then THE d else 0w) *)
+  (* a =+ if f d then d else 0w *)
   fun mk_conform_mem (f,a,d) =
-        let val the_d = optionSyntax.mk_the d in
-          mk_some_mem (a, mk_cond (f the_d, the_d, ``0w:word8``))
-        end
+        combinSyntax.mk_update (a, mk_cond (f d, d, ``0w:word8``))
 
-  (* a =+ SOME (if GOOD_MODE ((4 >< 0) d) then THE d else THE d !! 31w) *)
+  (* a =+ if GOOD_MODE ((4 >< 0) d) then d else d !! 31w *)
   fun mk_good_mode_mem (a,d) =
-        let val the_d = optionSyntax.mk_the d
-            val good = ``GOOD_MODE ((4 >< 0) ^the_d)``
-        in
-          mk_some_mem (a, mk_cond (good, the_d,
-                            wordsSyntax.mk_word_or (the_d,``31w:word8``)))
-        end
-
-  fun mk_some_the_mem (s,a) =
-        let val b = restr_eval (list_mk_comb (read_mem_tm, [s,a])) in
-          (mk_some_mem (a, optionSyntax.mk_the b), optionSyntax.mk_is_some b)
+        let val good = ``GOOD_MODE ((4 >< 0) ^d)`` in
+          combinSyntax.mk_update
+            (a, mk_cond (good, d,
+                         wordsSyntax.mk_word_or (d,``31w:word8``)))
         end
 
   fun mk_aligned_the_mem (f:term -> term,s,l) =
         let val bytes = map (fn a => restr_eval
                                (list_mk_comb (read_mem_tm, [s,a]))) l
-            val aliged_word = concat_bytes (map optionSyntax.mk_the bytes)
+            val aliged_word = concat_bytes bytes
         in
-          (mk_conform_mem (f,hd l,hd bytes), f aliged_word)
+          (1, mk_conform_mem (f,hd l,hd bytes), f aliged_word)
         end
 
   fun mk_good_it_mode_the_mem (s,l) =
         let val bytes = map (fn a => restr_eval
                                (list_mk_comb (read_mem_tm, [s,a]))) l
-            val aliged_word = concat_bytes (map optionSyntax.mk_the bytes)
+            val aliged_word = concat_bytes bytes
         in
-          (list_mk_o
+          (3, list_mk_o
              [mk_good_mode_mem (hd l,hd bytes),
               mk_conform_mem
-                 (fn the_d => ``(7 >< 2) ^the_d = 0w:word6``,
+                 (fn d => ``(7 >< 2) ^d = 0w:word6``,
                   List.nth(l,1), List.nth(bytes,1)),
               mk_conform_mem
-                 (fn the_d => ``(2 >< 1) ^the_d = 0w:word2``,
+                 (fn d => ``(2 >< 1) ^d = 0w:word2``,
                   List.nth(l,3), List.nth(bytes,3))],
            ``GOOD_MODE ((4 >< 0) ^aliged_word) /\
              ((((15 >< 10) ^aliged_word):word6) @@
@@ -598,36 +585,22 @@ local
                      (n + 1, combinSyntax.mk_o (u,tm1), mk_conj (t,tm2))
                  end) init l
 
-  fun mk_memory_footprint (endian,arch,bx,s,t) =
-        let val foot = compute_footprint t
-            val data_mem =
-                  fold_mem (fn a => mk_some_the_mem (s,a)) (0,I_mem,T) foot
-        in
-          if optionSyntax.is_none bx then
-            data_mem
-          else
-            let val opt = optionSyntax.dest_some bx
-                val last_word = List.drop (foot, length foot - 4)
-                val last_word = if endian = BigEndian then
-                                  rev last_word
-                                else
-                                  last_word
-            in
-              if term_eq opt T then
-                let val align_fn =
-                           if arch_version arch >= 5 then
-                             Lib.C (Lib.curry mk_aligned_bx) ``4n``
-                           else
-                             Lib.C (Lib.curry armSyntax.mk_aligned) ``4n``
-                in
-                  fold_mem (fn l => mk_aligned_the_mem (align_fn,s,l))
-                    data_mem [last_word]
-                end
-              else
-                fold_mem (fn l => mk_good_it_mode_the_mem (s,l))
-                  data_mem [last_word]
+  fun mk_memory_good (endian,arch,bx,s,aligns) =
+        if optionSyntax.is_none bx then
+          (0,I_mem,T)
+        else
+          let val bytes = make_bytes aligns
+              val bytes = if endian = BigEndian then rev bytes else bytes
+              val align_fn = if arch_version arch >= 5 then
+                               Lib.C (Lib.curry mk_aligned_bx) ``4n``
+                             else
+                               Lib.C (Lib.curry armSyntax.mk_aligned) ``4n``
+          in
+            if term_eq (optionSyntax.dest_some bx) T then
+              mk_aligned_the_mem (align_fn,s,bytes)
+            else
+              mk_good_it_mode_the_mem (s,bytes)
           end
-        end
 
   fun mk_memory_opc data_mem (s,endian,enc,opc) =
         let open wordsSyntax
@@ -658,23 +631,22 @@ local
             val registers = mk_comb (read_reg_tm,s)
             val pc = restr_eval (mk_comb (registers,pc_tm))
             val addrs = pc :: List.tabulate (n,
-                  fn x => mk_word_add (pc,mk_wordii (x+1,32)))
+                                fn x => mk_word_add (pc,mk_word32 (x+1)))
         in
           fold_mem (fn (a,b) =>
-                     (restr_eval (mk_some_mem (a,b)),
-                      restr_eval
-                        (mk_test (read_mem_tm, [s,a], optionSyntax.mk_some b))))
+                     (restr_eval (combinSyntax.mk_update (a,b)),
+                      restr_eval (mk_test (read_mem_tm, [s,a], b))))
                    data_mem (zip addrs bytes)
         end
 in
   fun mk_arm_memory state' endian arch enc opc bx aligns =
-       let val data_mem = mk_memory_footprint (endian,arch,bx,state',aligns)
+       let val data_mem = mk_memory_good (endian,arch,bx,state',aligns)
            val (nmem,tm1,tm2) = mk_memory_opc data_mem (state',endian,enc,opc)
        in
          (nmem, tm1,
           apply_conv
             (SIMP_CONV (std_ss++boolSimps.CONJ_ss)
-               [GSYM word_sub_def, WORD_ADD_0, IMP_IS_SOME]) tm2)
+               [GSYM word_sub_def, WORD_ADD_0]) tm2)
        end
 end;
 
@@ -724,15 +696,18 @@ in
   let
     val arch = #arch opt
     val thumb = #thumb opt
+    val endian = #endian opt
     val _ = not (arch = ARMv4 andalso thumb) orelse
               raise ERR "make_arm_state_and_pre" "ARMv4 does not support Thumb."
     val ii = ``<| proc := 0 |>``
     val itstate = wordsSyntax.mk_wordii (#itblock opt,8)
     val M = mode_to_term (#mode opt)
-    val E = endian_to_term (#endian opt)
+    val E = endian_to_term endian
     val A = arch_to_term arch
     val Thumb = mk_bool thumb
     val opc = Arbnum.fromHexString instr
+                handle Option => raise ERR "make_arm_state_and_pre"
+                                           "not a valid hex opcode"
     val (enc,dec) = (I ## eval) (decode_opcode itstate arch thumb opc)
     val (cond,instruction) = pairSyntax.dest_pair dec
     val (flags_fupd,flags_pre) = set_flags the_state cond (#pass opt)
@@ -745,12 +720,12 @@ in
     val npass = if #pass opt then F else T
     val tm = list_mk_comb
                (``ARM_ALIGN_BX``, [ii,npass,opc',enc,instruction,state'])
-    val (v1,state') = get_valuestate "ARM_ALIGN_BX" (restr_eval tm)
+    val (bx,state') = get_valuestate "ARM_ALIGN_BX" (restr_eval tm)
     val tm = list_mk_comb
                (``ARM_MEMORY_FOOTPRINT``, [ii,npass,instruction,state'])
-    val (v2,state') = get_valuestate "ARM_MEMORY_FOOTPRINT" (restr_eval tm)
+    val (aligns,state') = get_valuestate "ARM_MEMORY_FOOTPRINT" (restr_eval tm)
     val (nmem,memory_fupd,memory_pre) =
-           mk_arm_memory state' (#endian opt) arch enc opc v1 v2
+           mk_arm_memory state' endian arch enc opc bx aligns
     val state' = list_mk_comb (``arm_state_memory_fupd``, [memory_fupd,state'])
     val state' = restr_eval state'
     val state' = apply_conv (PURE_REWRITE_CONV [UPDATE_ID_o2]) state'
@@ -834,6 +809,7 @@ local
 
   val record_rws =
     [GSYM ARM_READ_MEM_def, GSYM ARM_WRITE_MEM_def, GSYM ARM_WRITE_MEM_o,
+     GSYM ARM_WRITE_MEM_READ_def, GSYM ARM_WRITE_MEM_WRITE_def,
      ARM_READ_REG_FROM_MODE, ARM_WRITE_REG_FROM_MODE,
      GSYM ARM_READ_REG_MODE, GSYM ARM_WRITE_REG_MODE,
      GSYM ARM_WRITE_REG_o, GSYM ARM_MODE_def,
@@ -1030,7 +1006,7 @@ in
     val eval_thm = computeLib.RESTR_EVAL_CONV restr_terms tm
     val _ = print_progress "... finished evaluation.\n"
     val X = snd (get_valuestate "next_arm" (rhsc eval_thm))
-    val (reg,psr,mem,evt,wfi,mon,_) = arm_state_standard_updates X
+    val (reg,psr,mem,evt,wfi,acc,mon,_) = arm_state_standard_updates X
     val reg' = dropn_o (reg, nreg)
     val mem' = dropn_o (mem, nmem)
     val psr' = dropn_o (psr, 1)
@@ -1041,6 +1017,7 @@ in
     val h = some_update ``arm_state_psrs_fupd`` psr' h
     val h = some_update ``arm_state_event_register_fupd`` evt' h
     val h = some_update ``arm_state_interrupt_wait_fupd`` wfi' h
+    val h = some_update ``arm_state_accesses_fupd`` (SOME acc) h
     val h = some_update ``arm_state_monitors_fupd`` mon h
     val H = mk_abs (the_state,optionSyntax.mk_some h)
     val _ = print_progress "Starting composition proof ...\n"
@@ -1068,6 +1045,10 @@ end;
 end
 
 (*
+val test = arm_step "fiq";
+val _ = test "0xE591F000"; (* ldr pc,[r1] *)
+val _ = test "0xF8110A00"; (* rfeda r1 *)
+
 Unsupported:
   all coprocessor instructions.
 

@@ -243,26 +243,27 @@ val axioms      = List.map thm_of o Lib.filter (is Axm) o thy
 
 fun theorem s = let
   val (thm,c) = thm_class "-" s
-      handle HOL_ERR _ => raise ERR "theorem" "No theorem of that name"
+      handle HOL_ERR _ => raise ERR "theorem" ("No theorem of name "^s)
 in
   if c = Thm  then thm
-  else raise ERR "theorem" "No theorem of that name"
+  else raise ERR "theorem" ("No theorem of name "^s)
 end
 
 fun definition s = let
   val (thm,c) = thm_class "-" s
-      handle HOL_ERR _ => raise ERR "definition" "No definition of that name"
+      handle HOL_ERR _ => raise ERR "definition"
+                                    ("No definition of name "^s)
 in
   if c = Def then thm
-  else raise ERR "theorem" "No definition of that name"
+  else raise ERR "theorem" ("No definition of name "^s)
 end
 
 fun axiom s = let
   val (thm,c) = thm_class "-" s
-      handle HOL_ERR _ => raise ERR "axiom" "No axiom of that name"
+      handle HOL_ERR _ => raise ERR "axiom" ("No axiom of name "^s)
 in
   if c = Axm then thm
-  else raise ERR "axiom" "No axiom of that name"
+  else raise ERR "axiom" ("No axiom of name "^s)
 end
 (*---------------------------------------------------------------------------
      Support for print_theory

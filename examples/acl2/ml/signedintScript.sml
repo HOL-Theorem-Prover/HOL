@@ -1513,7 +1513,7 @@ val WORD_BITS_THM = store_thm("WORD_BITS_THM",
     RW_TAC int_ss [DECIDE ``i < a + 1 - b = i + b <= a:num``]);
 
 val WORD_SLICE_THM = store_thm("WORD_SLICE_THM",
-    ``(h <> l) a = a && n2w (2 ** SUC h - 2 ** l)``,
+    ``(h '' l) a = a && n2w (2 ** SUC h - 2 ** l)``,
     RW_TAC int_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_bits_def,
     	   word_and_def,word_lsr_def,
 	   PROVE [word_index_n2w] ``i < dimindex (:'a) ==>

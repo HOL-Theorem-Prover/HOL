@@ -169,9 +169,9 @@ val Kmonad_IMP_uof = store_thm ("Kmonad_IMP_uof",
   ``category [:'A:] (id,comp) /\ Kmonad (id,comp) (unit,ext) ==>
     g_functor [:'A, ('A, 'M) Kleisli :] (id, comp) 
       (unit, Kcomp (id,comp) ext) (\:'a 'b. comp [:'a,'b,'b 'M:] unit)``,
-  EVERY [ (REWRITE_TAC [Kmonad_thm, Kcomp_def, g_functor_thm, category_thm]),
+  EVERY [ (REPEAT (CHANGED_TAC (ONCE_REWRITE_TAC [Kmonad_thm, Kcomp_def, g_functor_thm, category_thm]))),
     STRIP_TAC, TY_BETA_TAC, BETA_TAC, (ASM_REWRITE_TAC []) ]) ;
-    
+
 (*
 show_types := true ;
 show_types := false ;
