@@ -8,7 +8,10 @@ structure HolSmtLib :> HolSmtLib = struct
   open Abbrev
 
   fun GENERIC_SMT_TAC solver goal =
-    case solver goal of
+  let
+    val ([goal'], validation_fn) = Tactical.REPEAT Tactic.GEN_TAC goal
+  in
+    case solver goal' of
       SolverSpec.SAT NONE =>
         raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT_TAC"
           "solver reports negated term to be 'satisfiable'")
@@ -17,20 +20,21 @@ structure HolSmtLib :> HolSmtLib = struct
           "solver reports negated term to be 'satisfiable' (model returned)")
     | SolverSpec.UNSAT NONE =>
         let
-          val thm = Thm.mk_oracle_thm "HolSmtLib" goal
+          val thm = Thm.mk_oracle_thm "HolSmtLib" goal'
         in
-          ([], fn _ => thm)
+          ([], fn _ => validation_fn [thm])
         end
     | SolverSpec.UNSAT (SOME thm) =>
         (* 'thm' should be of the form "A' |- concl", where A' \subseteq A and
            (A, concl) is the input goal (cf. SolverSpec.sml) *)
-        ([], fn _ => thm)
+        ([], fn _ => validation_fn [thm])
     | SolverSpec.UNKNOWN NONE =>
         raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT_TAC"
           "solver reports 'unknown' (solver not installed/problem too hard?)")
     | SolverSpec.UNKNOWN (SOME message) =>
         raise (Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT_TAC"
           ("solver reports 'unknown' (" ^ message ^ ")"))
+  end
 
   val YICES_TAC = GENERIC_SMT_TAC Yices.Yices_Oracle
   val CVC3_TAC = GENERIC_SMT_TAC CVC3.CVC3_SMT_Oracle
