@@ -5,6 +5,8 @@
 structure Library =
 struct
 
+  (* opens 'path' as an output text file; writes all elements of 'strings' to
+     this file (in the order given); closes the file *)
   fun write_strings_to_file path strings =
   let
     val outstream = TextIO.openOut path

@@ -87,16 +87,16 @@ Tracing output can be controlled via \ml{Feedback.set\_trace
 possible values.
 
 Communication between \HOL{} and external SMT solvers is via temporary
-files.  The default behavior is to delete these files after successful
-invocation of the SMT solver.  However, this can be changed via the
-above tracing variable.  If there is an error, files are retained in
-any case.
+files.  These files are located in the standard temporary directory,
+typically {\tt /tmp} on Unix machines.  The actual file names are
+generated at run-time, and can be shown by setting the above tracing
+variable to a suitable value.
 
-To protect your data, \ml{HolSmtLib} will not overwrite existing
-files.  Thus in case of an error, you will need to remove temporary
-files manually before you can invoke the SMT solver again.  If you
-forget to do so, or if the file exists for some other reason, you'll
-see an error message \texttt{file '<name>' exists, please remove it}.
+The default behavior of \ml{HolSmtLib} is to delete temporary files
+after successful invocation of the SMT solver.  This also can be
+changed via the above tracing variable.  If there is an error, files
+are retained in any case (but note that the operating system may
+delete temporary files automatically, \eg, when \HOL{} exits).
 
 \begin{session}
 \begin{verbatim}

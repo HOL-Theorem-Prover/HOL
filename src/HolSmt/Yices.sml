@@ -467,22 +467,16 @@ structure Yices = struct
         SolverSpec.UNKNOWN NONE
     end
 
-  local val infile = "input.yices"
-        val outfile = "output.yices"
-  in
-    (* Yices 1.0.18, native file format *)
-    val Yices_Oracle = SolverSpec.make_solver
-      (Library.write_strings_to_file infile o goal_to_Yices)
-      ("yices -tc " ^ infile ^ " > " ^ outfile)
-      (fn () => result_fn outfile)
-      [infile, outfile]
+  (* Yices 1.0.18, native file format *)
+  val Yices_Oracle = SolverSpec.make_solver
+    (Lib.pair () o goal_to_Yices)
+    "yices -tc" 
+    (Lib.K result_fn)
 
-    (* Yices 1.0.18, SMT-LIB file format *)
-    val Yices_SMT_Oracle = SolverSpec.make_solver
-      (Library.write_strings_to_file infile o Lib.snd o SmtLib.goal_to_SmtLib)
-      ("yices -tc -smt " ^ infile ^ " > " ^ outfile)
-      (fn () => result_fn outfile)
-      [infile, outfile]
-  end
+  (* Yices 1.0.18, SMT-LIB file format *)
+  val Yices_SMT_Oracle = SolverSpec.make_solver
+    (Lib.pair () o Lib.snd o SmtLib.goal_to_SmtLib)
+    "yices -tc -smt" 
+    (Lib.K result_fn)
 
 end
