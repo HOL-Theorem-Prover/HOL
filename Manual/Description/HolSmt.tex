@@ -36,13 +36,16 @@ goal~$(\Gamma, \varphi)$ (where $\Gamma$ is a list of assumptions, and
 $\varphi$ is the goal's conclusion), each tactic returns an empty list
 of new goals and a validation function that returns a theorem~$\Gamma'
 \vdash \varphi$ (with $\Gamma' \subseteq \Gamma$), or fails if the SMT
-solver cannot prove the goal.\footnote{Internally, the assumptions and
-  the \emph{negated} goal are passed to the SMT solver.  If the SMT
+solver cannot prove the goal.\footnote{Internally, the goal's
+  conclusion is first generalized, \ie, outermost universal
+  quantifiers are stripped.  Then the assumptions and the
+  \emph{negated} conclusion are passed to the SMT solver.  If the SMT
   solver determines that these formulas are unsatisfiable, then the
-  (unnegated) goal must be provable from the assumptions.}  In other
-words, these tactics solve the goal (or fail).  As with other tactics,
-\ml{Tactical.TAC\_PROOF} and \ml{Tactical.prove} can be used to derive
-functions of type \ml{goal -> thm} or \ml{term -> thm} from them.
+  (unnegated) conclusion must be provable from the assumptions.}  In
+other words, these tactics solve the goal (or fail).  As with other
+tactics, \ml{Tactical.TAC\_PROOF} and \ml{Tactical.prove} can be used
+to derive functions of type \ml{goal -> thm} or \ml{term -> thm} from
+them.
 
 \paragraph{Oracles vs.\ proof reconstruction}
 
