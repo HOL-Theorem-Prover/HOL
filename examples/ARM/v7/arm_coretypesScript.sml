@@ -256,7 +256,7 @@ val decode_psr_def = Define`
 
 val encode_psr_def = Define`
   encode_psr (psr:ARMpsr) : word32 =
-    word_modify (\x b.
+    FCP x.
       if x < 5 then psr.M ' x else
       if x = 5 then psr.T else
       if x = 6 then psr.F else
@@ -272,7 +272,7 @@ val encode_psr_def = Define`
       if x = 28 then psr.V else
       if x = 29 then psr.C else
       if x = 30 then psr.Z else
-      (* x = 31 *)   psr.N) 0w`;
+      (* x = 31 *)   psr.N`;
 
 val version_number_def = Define`
   (version_number ARMv4   = 4) /\
@@ -288,16 +288,6 @@ val version_number_def = Define`
 
 val thumb2_support_def = Define`
   thumb2_support = {a | (a = ARMv6T2) \/ version_number a >= 7}`;
-
-val _ = computeLib.auto_import_definitions := false;
-
-val _ = set_fixity "=+>" (Infix(NONASSOC, 320));
-val _ = set_fixity "=+<" (Infix(NONASSOC, 320));
-
-(* Used when sorting applications of UPDATE *)
-
-val Ua_def = xDefine "Ua" `$=+> = $=+`;
-val Ub_def = xDefine "Ub" `$=+< = $=+`;
 
 (* ------------------------------------------------------------------------ *)
 
@@ -388,30 +378,6 @@ val lowest_set_bit_compute = Q.store_thm("lowest_set_bit_compute",
          [word_index, LOWEST_SET_BIT_LESS_LEAST]
     \\ MATCH_MP_TAC LEAST_BIT_INTRO
     \\ METIS_TAC [BIT_EXISTS]);
-
-val UPDATE_SORT_RULE1 = Q.store_thm("UPDATE_SORT_RULE1",
-  `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
-     ((a =+> e) ((b =+> d) m) =
-         if R a b then
-           (b =+< d) ((a =+> e) m)
-         else
-           (a =+< e) ((b =+> d) m))`,
-  METIS_TAC [Ua_def,Ub_def,combinTheory.UPDATE_COMMUTES]);
-
-val UPDATE_SORT_RULE2 = Q.store_thm("UPDATE_SORT_RULE2",
-  `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
-     ((a =+> e) ((b =+< d) m) =
-         if R a b then
-           (b =+< d) ((a =+> e) m)
-         else
-           (a =+< e) ((b =+< d) m))`,
-  METIS_TAC [Ua_def,Ub_def,combinTheory.UPDATE_COMMUTES]);
-
-val UPDATE_EQ_RULE = Q.store_thm("UPDATE_EQ_RULE",
-  `((a =+< e) ((a =+> d) m) = (a =+> e) m) /\
-   ((a =+< e) ((a =+< d) m) = (a =+< e) m) /\
-   ((a =+> e) ((a =+> d) m) = (a =+> e) m)`,
-  REWRITE_TAC [Ua_def,Ub_def,combinTheory.UPDATE_EQ]);
 
 val NOT_IN_EMPTY_SPECIFICATION = save_thm("NOT_IN_EMPTY_SPECIFICATION",
   (GSYM o SIMP_RULE (srw_ss()) [] o Q.SPEC `{}`) pred_setTheory.SPECIFICATION);

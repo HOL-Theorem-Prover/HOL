@@ -66,12 +66,6 @@ val arm_run_def = Define`
     (forT 0 t (K (arm_next ii))) >>=
     (\unit_list:unit list. constT ())`;
 
-val arm_test_def = Define`
-  arm_test (f:'a M) (c:'b) P s =
-    case f s
-    of Error e -> F
-    || ValueState v q -> P q`;
-
 (* ------------------------------------------------------------------------ *)
 
 val _ = export_theory ();

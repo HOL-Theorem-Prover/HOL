@@ -309,8 +309,7 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      thumb2_decode_aux1_def, thumb2_decode_aux2_def, thumb2_decode_aux3_def,
      thumb2_decode_aux4_def, thumb2_decode_aux5_def, thumb2_decode_aux6_def,
      thumb2_decode_aux7_def, thumb2_decode_aux8_def, thumb2_decode_aux9_def,
-     thumb2_decode_def, fetch_instruction_def, arm_next_def, arm_run_def,
-     arm_test_def]));
+     thumb2_decode_def, fetch_instruction_def, arm_next_def, arm_run_def]));
 
 (* ------------------------------------------------------------------------ *)
 
