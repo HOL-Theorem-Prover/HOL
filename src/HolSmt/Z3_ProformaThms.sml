@@ -21,6 +21,7 @@ struct
     bossLib.DECIDE ``(p <=> ~q) \/ ~p \/ q``,
     bossLib.DECIDE ``(p <=> q) \/ p \/ q``,
     bossLib.DECIDE ``~(~p <=> q) \/ p \/ q``,
+    bossLib.DECIDE ``~(p <=> ~q) \/ p \/ q``,
     bossLib.DECIDE ``~q \/ p \/ ~(q <=> p)``,
     bossLib.DECIDE ``q \/ p \/ ~(q <=> ~p)``,
     bossLib.PROVE [] ``p \/ (x = if p then y else x)``,
