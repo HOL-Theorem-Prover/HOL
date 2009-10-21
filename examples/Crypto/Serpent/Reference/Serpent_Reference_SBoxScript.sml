@@ -184,7 +184,8 @@ val invSBlock_sBlock_cancel=Q.store_thm(
 
 RW_TAC std_ss [invSBlock_def,sBlock_def] THEN
 `LENGTH  (MAP (sNibble round) (word128tow4l w128))=32` by METIS_TAC [LENGTH_MAP,LENGTH_word128tow4l] THEN
-RW_TAC std_ss [word128tow4l_conversion,MAP_MAP_o,w4l_fact,MAP_ID,word4ltow128_conversion]);
+RW_TAC std_ss [word128tow4l_conversion,MAP_MAP_o,w4l_fact,
+               Serpent_Reference_UtilityTheory.MAP_ID,word4ltow128_conversion]);
 
 
 val _ = export_theory();
