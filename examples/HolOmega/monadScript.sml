@@ -263,6 +263,17 @@ val umj_monad_EQ_monad = store_thm
          ]
   );
 
+val umj_monad_IFF_monad = store_thm
+  ("umj_monad_IFF_monad",
+  ``!:'M. !(unit:'M unit) (map:'M map) (join:'M join) (bind : 'M bind).
+      umj_monad(unit,map,join) /\ (bind = BIND (map, join)) =
+      monad(unit, bind) /\ 
+        (map = MMAP (unit, bind)) /\ (join = JOIN (unit, bind))``,
+  EVERY [ (REPEAT STRIP_TAC), EQ_TAC, STRIP_TAC, (ASM_REWRITE_TAC []) ]
+  THENL
+    [ (FIRST_ASSUM (ACCEPT_TAC o MATCH_MP umj_monad_IMP_monad)),
+      (FIRST_ASSUM (ACCEPT_TAC o MATCH_MP monad_IMP_umj_monad)) ]) ;
+
 
 (*---------------------------------------------------------------------------
             Examples of Monads
