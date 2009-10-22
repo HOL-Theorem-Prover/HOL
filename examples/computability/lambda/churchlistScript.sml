@@ -86,6 +86,15 @@ val wh_cvcons = store_thm(
     by SRW_TAC [][cvcons_fresh] THEN
   ASM_SIMP_TAC (whfy(srw_ss())) []);
 
+val lameq_sym = List.nth(CONJUNCTS chap2Theory.lam_eq_rules, 2)
+val cvcons_eq_ccons =
+    wh_ccons |> MATCH_MP (GEN_ALL head_reductionTheory.whstar_lameq)
+             |> MATCH_MP lameq_sym
+val cvcons_cong = store_thm(
+  "cvcons_cong",
+  ``M1 == M2 ⇒ N1 == N2 ⇒ cvcons M1 N1 == cvcons M2 N2``,
+  SIMP_TAC (bsrw_ss()) [cvcons_eq_ccons]);
+
 val chd_def = Define`
   chd = LAM "l" (VAR "l" @@ church 0 @@ K)
 `;
@@ -222,5 +231,26 @@ val cel_example = prove(
   ASM_SIMP_TAC (whfy(bsrw_ss())) [wh_celbody, wh_ccons, wh_cvcons,
                                   cpred_behaviour, cnil_def, wh_cel,
                                   wh_cappend, wh_K]);
+
+val cmap_def = Define`
+  cmap =
+  LAM "f" (LAM "l"
+    (VAR "l" @@ cnil
+             @@ LAM "h" (LAM "r" (ccons @@ (VAR "f" @@ VAR "h") @@ (VAR "r")))))
+`;
+
+val FV_cmap = Store_thm(
+  "FV_cmap",
+  ``FV cmap = {}``,
+  SRW_TAC [][cmap_def, pred_setTheory.EXTENSION]);
+
+val cmap_eqn = brackabs.brackabs_equiv [] cmap_def
+
+val cmap_behaviour = store_thm(
+  "cmap_behaviour",
+  ``cmap @@ f @@ cnil == cnil ∧
+    cmap @@ f @@ cvcons h t == cvcons (f @@ h) (cmap @@ f @@ t)``,
+  SIMP_TAC (bsrw_ss()) [cmap_eqn, Cong cvcons_cong, cnil_def, wh_cvcons,
+                        wh_ccons]);
 
 val _ = export_theory()
