@@ -1906,18 +1906,20 @@ fun all_abconv [] [] = true
   | all_abconv _ [] = false
   | all_abconv (h1::t1) (h2::t2) = eq_ty h1 h2 andalso all_abconv t1 t2
 
+fun freeze_operators vhops insts =
+  List.foldr (fn (ty,insts) => safe_insert_tya (ty |-> ty) insts) insts vhops
+
+fun map_redexes f =
+  map (fn {redex,residue} => f redex |-> residue)
+fun subst_redexes theta = map_redexes (type_subst theta)
+fun map_insts f =
+  map (fn {redex,residue} => f redex |-> f residue)
+fun swap_subst theta =
+  map (fn {redex,residue} => residue |-> redex) theta
+
 fun split_insts vhops insts =
   partition (fn {redex, residue} =>
              op_mem eq_ty (fst (strip_app_type redex)) vhops) insts
-
-(*
-fun freeze_operators vhops insts =
-  List.foldr (fn (ty,insts) => safe_insert_tya (ty |-> ty) insts) insts vhops
-*)
-fun freeze_operators theta insts =
-  let val insts' = map (fn {redex,residue} => type_subst theta redex |-> residue) insts
-  in List.foldr (fn ({redex,residue},insts) => safe_insert_tya (residue |-> residue) insts) insts theta
-  end
 
 fun print_insts str insts =
   (print (str ^ " insts:\n");
@@ -1949,7 +1951,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
     end
   val (distv_homs,real_homs) = partition args_are_distinct_vars fixed_homs
   val ordered_homs = var_homs @ distv_homs @ real_homs @ basic_homs
-  fun homatch rkin kdins (insts, homs) = 
+  fun homatch rkin kdins (insts, homs) =
   if homs = [] then insts
   else let
       val (env,cty,vty) = hd homs
@@ -2005,7 +2007,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                    val vinsts = safe_insert_tya (vhop |-> absty) insts
                    val icpair = (list_mk_app_type(vhop',gvs) |-> cty')
                  in
-                   safe_insert_tya icpair vinsts
+                   (* safe_insert_tya icpair *) vinsts
                    (* icpair::vinsts *)
                  end
              end
@@ -2015,66 +2017,76 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                        let
                          val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
                          val _ = if eq_ty vhop chop then raise NOT_FOUND else ()
-                         val vty1 = deep_beta_ty (type_subst [vhop |-> chop] vty)
+                         (* val vty1 = deep_beta_ty (type_subst (map_redexes inst_fn ((vhop |-> chop)::env)) (inst_fn vty)) *)
+                         val vty1 = deep_beta_ty (type_subst (map_redexes inst_fn (env@insts)) (inst_fn vty))
+                                        handle HOL_ERR _ => vty
                        in
                          if eq_ty vty1 cty then
                            (* drop this hom as subsumed by current insts *)
                            homatch rkin kdins (insts,tl homs)
                          else let
                            val _ = if !trace_complex_matching = 0 then () else
-                                     (print ("Complex Match " ^ type_to_string vty ^ "\n" ^
-                                             "           to " ^ type_to_string cty  ^ "\n"))
+                                     (print ("Complex match " ^ type_to_string vty ^ "\n" ^
+                                             "           to " ^ type_to_string cty ^ "\n"))
                            fun types_to_string (ty::tys) = " " ^ type_to_string ty ^ types_to_string tys
                              | types_to_string    []     = ""
-                           val pat_tyvars = op_subtract eq_ty (type_vars vty) [vhop]
-                        (* val _ = if !trace_complex_matching = 0 then () else
-                                     (print ("  pat_tyvars:" ^ types_to_string pat_tyvars  ^ "\n")) *)
-                           val freeze_tyvars = type_vars chop
-                        (* val _ = if !trace_complex_matching = 0 then () else
-                                     (print ("  freeze_tyvars:" ^ types_to_string freeze_tyvars  ^ "\n")) *)
-                           val all_vars = Lib.U [pat_tyvars, freeze_tyvars, type_vars cty,
-                                                 HOLset.listItems lconsts, map #redex env,
-                                                 map #residue env, type_varsl (map #residue insts)]
-                        (* val _ = if !trace_complex_matching = 0 then () else
-                                     (print ("  all_vars:" ^ types_to_string all_vars  ^ "\n")) *)
-                           fun new_fz_tyvar (v,vs) = (if mem v pat_tyvars
+                           val lconstsl = HOLset.listItems lconsts
+                           val fixed = map #redex env @ lconstsl
+                           val vfixed = vhop :: fixed
+                           val pat_tyvars = subtract (type_vars vty) vfixed
+                           val vfixed1 = map inst_fn vfixed
+                           val freeze_tyvars = subtract (type_vars chop) (map #residue env @ lconstsl)
+                           val all_pvars = Lib.U [pat_tyvars, fixed,
+                                                  filter is_var_type (map #redex insts)]
+                           val all_pvars1 = map inst_fn all_pvars
+                           val all_tvars = Lib.U [freeze_tyvars, type_vars cty, map #residue env,
+                                                  type_varsl (map #residue insts)]
+                           val all_vars = union all_pvars1 all_tvars
+                           fun new_tyvar (v,vs) = (if mem v freeze_tyvars
                                                       then variant_type (vs @ all_vars) v
                                                            (* gen_var_type(kind_of v,rank_of v) *)
                                                       else v) :: vs
-                           val freeze_tyvars' = foldr new_fz_tyvar [] freeze_tyvars
-                        (* val _ = if !trace_complex_matching = 0 then () else
-                                     (print ("  freeze_tyvars':" ^ types_to_string freeze_tyvars'  ^ "\n")) *)
-(*
-                           fun new_fz_tyvar v = if mem v pat_tyvars
-                                                      then variant_type all_vars v
-                                                           (* gen_var_type(kind_of v,rank_of v) *)
-                                                      else v
-                           val freeze_tyvars' = map new_fz_tyvar freeze_tyvars
-*)
-                           (* now there are no tyvars in both freeze_tyvars' and pat_tyvars *)
-                           val _ = if !trace_complex_matching = 0 then () else
-                                     (print ("  freezing:" ^ types_to_string freeze_tyvars  ^ "\n");
-                                      print ("        to:" ^ types_to_string freeze_tyvars' ^ "\n"))
-                           val theta = map (op |->) (zip freeze_tyvars freeze_tyvars')
-                           val chop' = type_subst theta chop
-                           val vty1' = deep_beta_ty (type_subst [vhop |-> chop'] vty)
-                           val cty' = type_subst theta cty
+                           val mod_pvars = intersect (subtract all_pvars1 vfixed1) freeze_tyvars
+                           val mod_pvars' = foldr new_tyvar [] mod_pvars
+                           (* now there are no tyvars in both all_pvars1 and freeze_tyvars *)
+                           val theta = map (op |->) (zip mod_pvars mod_pvars')
+                           val vhop' = inst_fn vhop
+                           val vty'  = inst_fn vty
+                           val vty1' = deep_beta_ty (type_subst ((vhop' |-> chop)::theta) vty')
+                                         handle HOL_ERR _ =>
+                                            (if !trace_complex_matching = 0 then () else
+                                                (print ("Formation of new pattern failed: " ^
+                                                 type_to_string vty' ^ " [" ^ type_to_string chop ^
+                                                 " / " ^ type_to_string vhop' ^ "]\n"));
+                                             raise NOT_FOUND)
                            val (vhop_str,_,_) = dest_var_type vhop
                            val _ = if !trace_complex_matching = 0 then () else
                                      (print ("  Expanding type operator " ^ vhop_str
-                                             ^ " |-> " ^ type_to_string chop' ^ "\n");
+                                             ^ " |-> " ^ type_to_string chop ^ "\n");
                                       print ("     Matching " ^ type_to_string vty1' ^ "\n" ^
-                                             "           to " ^ type_to_string cty'  ^ "\n"))
-                           val (rel_insts,irrel_insts) = split_insts pat_tyvars insts
-                           val (insts0,_) = split_insts freeze_tyvars rel_insts
+                                             "           to " ^ type_to_string cty   ^ "\n");
+                                      print ("  freezing:" ^ types_to_string freeze_tyvars ^ "\n");
+                                      print ("  pattern: " ^ types_to_string pat_tyvars  ^ "\n");
+                                      print ("  modifying pat tyvars:" ^ types_to_string mod_pvars  ^ "\n");
+                                      if mod_pvars = mod_pvars' then () else
+                                      print ("            renamed as:" ^ types_to_string mod_pvars' ^ "\n");
+                                      if map #redex env = map #residue env then () else
+                                      print_insts "environment" env)
+                           val (f_insts0,nf_insts0) = split_insts freeze_tyvars insts
+                           val nf_insts1 = map_redexes (fn ty => if is_var_type ty then inst_fn ty
+                                                                 else ty)
+                                                       nf_insts0
+                           val nf_insts2 = subst_redexes theta nf_insts1
                            val _ = if !trace_complex_matching = 0 then () else
                                      (print_insts "all original" insts;
-                                      print_insts "relevant" rel_insts;
-                                      print_insts "irrelevant" irrel_insts;
-                                      print_insts "pre-freeze" insts0)
-                           val insts' = freeze_operators theta rel_insts
+                                      print_insts "pre-freeze" f_insts0;
+                                      print_insts "instantiated" nf_insts1;
+                                      if mod_pvars = mod_pvars' then () else
+                                      print_insts "renamed" nf_insts2)
+                           val env' = map_redexes inst_fn env
+                           val insts' = freeze_operators freeze_tyvars nf_insts2
                                         handle HOL_ERR _ =>
-                                          (* conflicts with existing inst *)
+                                          (* conflicts with existing inst? should never happen *)
                                           (if !trace_complex_matching = 0 then () else
                                              print "  Freezing operators failed.\n";
                                            raise NOT_FOUND)
@@ -2082,42 +2094,38 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                                      (print_insts "subproblem" insts')
                          in let
                            val pinsts_homs' =
-                             type_pmatch lconsts env vty1' cty' (insts', [] (* note NOT tl homs! *))
+                             type_pmatch lconsts env' vty1' cty (insts', [] (* note NOT tl homs! *))
                            val (rkin',kdins') =
-                             get_rank_kind_insts kdavoids env
+                             get_rank_kind_insts kdavoids env'
                                         (fst pinsts_homs')
                                         (0, ([], []))
                            val new_insts = homatch rkin' kdins' pinsts_homs'
-                           val (ninsts0,ninsts1) = split_insts freeze_tyvars' new_insts
-                           val insts' = insts0 @ ninsts1 @ irrel_insts
+                           (* new_insts is the answer from the subproblem *)
+                           val (_,nf_insts3) = split_insts freeze_tyvars new_insts
+                           val nf_insts4 = subst_redexes (swap_subst theta) nf_insts3
+                           val inv_inst = zip all_pvars1 all_pvars
+                           fun lookup v = assoc v inv_inst handle _ => v
+                           val nf_insts5 = map_redexes lookup nf_insts4
+                           val insts' = f_insts0 @ nf_insts5
                            val _ = if !trace_complex_matching = 0 then () else
                                      (print ("Expanding type operator " ^ vhop_str ^ " succeeded!\n");
                                       print_insts "subproblem yielded" new_insts;
-                                      print_insts "non-frozen new" ninsts1;
+                                      print_insts "non-frozen new" nf_insts3;
+                                      if mod_pvars = mod_pvars' then () else
+                                      print_insts "un-renamed new" nf_insts4;
+                                      print_insts "un-instantiated" nf_insts5;
                                       print_insts "final result" insts';
                                       print "\n")
                          in
                            homatch rkin' kdins' (insts', tl homs)
                          end
                          handle e => (if !trace_complex_matching = 0 then () else
+                                        (print "Subproblem failed.\n";
                                          print ("Expanding type operator " ^ vhop_str ^ " failed:" ^
-                                                Feedback.exn_to_string e ^ "\n");
+                                                Feedback.exn_to_string e ^ "\n"));
                                       raise NOT_FOUND)
                          end
                        end
-(*
-                       let
-                         val vhop' = inst_fn vhop
-                         val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
-                         val _ = if eq_ty vhop' chop then raise NOT_FOUND else ()
-                         val vty1 = deep_beta_ty (type_subst insts (inst_fn vty))
-                       in
-                         if eq_ty vty1 cty then
-                           (* drop this hom as subsumed by current insts *)
-                           homatch rkin kdins (insts,tl homs)
-                         else raise NOT_FOUND
-                       end
-*)
                 handle NOT_FOUND => let
                          val (lc,rc) = dest_app_type cty
                          val (lv,rv) = dest_app_type vty

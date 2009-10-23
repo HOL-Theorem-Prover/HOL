@@ -547,7 +547,7 @@ val (ga23, ga32) = EQ_IMP_RULE (UNDISCH g_adjf23_equiv) ;
   then turns conjuncts in a and h into more nested ==> , 
   thus the first antecedent of the result
   won't be one that might match the wrong hypothesis *)
-fun insa th = let val [h] = hyp th ;
+fun insa th = let val h = hd (hyp th) ;
     val th' = DISCH_ALL (DISCH h (UNDISCH th)) ;
   in REWRITE_RULE [GSYM AND_IMP_INTRO] th' end ;
   
