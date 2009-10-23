@@ -583,11 +583,11 @@ fun start_time () = Timer.startCPUTimer()
 fun end_time timer =
   let val {gc,sys,usr} = Timer.checkCPUTimer timer
   in
-     Portable.output(Portable.std_out,
+     TextIO.output(TextIO.stdOut,
           "runtime: "^Time.toString usr ^ "s,\
       \    gctime: "^Time.toString gc ^ "s, \
       \    systime: "^Time.toString sys ^"s.\n");
-     Portable.flush_out(Portable.std_out)
+     TextIO.flushOut TextIO.stdOut
   end
 
 fun time f x =

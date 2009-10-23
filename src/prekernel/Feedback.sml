@@ -45,8 +45,8 @@ val ERR = mk_HOL_ERR "Feedback";  (* local to this file *)
      Misc. utilities
  ---------------------------------------------------------------------------*)
 
-val output = Portable.output
-val flush_out = Portable.flush_out;
+val output = TextIO.output
+val flush_out = TextIO.flushOut
 
 fun quote s = String.concat ["\"",s,"\""];
 
