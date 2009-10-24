@@ -84,33 +84,4 @@ val csteps_behaviour = store_thm(
   ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
                             cnoreduct_behaviour]);
 
-val cbnf_filter_def = Define`
-  cbnf_filter =
-  LAM "l" (VAR "l" @@ cnil
-                   @@ (LAM "h" (LAM "r"
-                          (cbnf @@ VAR "h"
-                                @@ (ccons @@ VAR "h" @@ VAR "r")
-                                @@ VAR "r"))))
-`;
-
-val FV_cbnf_filter = Store_thm(
-  "FV_cbnf_filter",
-  ``FV cbnf_filter = {}``,
-  SRW_TAC [][cbnf_filter_def, pred_setTheory.EXTENSION]);
-
-
-val cbnf_filter_eqn = brackabs_equiv [] cbnf_filter_def
-
-val cbnf_filter_behaviour = store_thm(
-  "cbnf_filter_behaviour",
-  ``cbnf_filter @@ cnil == cnil ∧
-    cbnf_filter @@ (cvcons (cDB (fromTerm t)) l) ==
-      if bnf t then cvcons (cDB (fromTerm t)) (cbnf_filter @@ l)
-      else cbnf_filter @@ l``,
-  SIMP_TAC (bsrw_ss()) [cbnf_filter_eqn, cnil_def, wh_cvcons,
-                        cbnf_behaviour] THEN
-  Cases_on `bnf t` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cbnf_filter_eqn, churchboolTheory.cB_behaviour,
-                            Cong cvcons_cong, cnil_def, wh_ccons]);
-
 val _ = export_theory ()

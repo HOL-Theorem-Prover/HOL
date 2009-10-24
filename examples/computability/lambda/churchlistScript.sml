@@ -253,4 +253,55 @@ val cmap_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cmap_eqn, Cong cvcons_cong, cnil_def, wh_cvcons,
                         wh_ccons]);
 
+val cfilter_def = Define`
+  cfilter =
+  LAM "P" (LAM "l"
+    (VAR "l" @@ cnil
+             @@ LAM "h" (LAM "r" (VAR "P" @@ VAR "h"
+                                          @@ (ccons @@ VAR "h" @@ VAR "r")
+                                          @@ VAR "r"))))
+`;
+
+val FV_cfilter = Store_thm(
+  "FV_cfilter",
+  ``FV cfilter = {}``,
+  SRW_TAC [][pred_setTheory.EXTENSION, cfilter_def]);
+
+val cfilter_eqn = brackabs.brackabs_equiv [] cfilter_def
+
+val cfilter_behaviour = store_thm(
+  "cfilter_behaviour",
+  ``cfilter @@ P @@ cnil == cnil ∧
+    cfilter @@ P @@ cvcons h t ==
+       P @@ h @@ (cvcons h (cfilter @@ P @@ t))
+              @@ (cfilter @@ P @@ t)``,
+  SIMP_TAC (bsrw_ss()) [cfilter_eqn, cnil_def, wh_cvcons, wh_ccons,
+                        Cong cvcons_cong]);
+
+val ctabulate_def = Define`
+  ctabulate =
+  LAM "n" (LAM "g"
+    (VAR "n" @@ (LAM "f" cnil)
+             @@ (LAM "r" (LAM "f"
+                   (ccons @@ (VAR "f" @@ church 0)
+                          @@ (VAR "r" @@ (B @@ VAR "f" @@ csuc)))))
+             @@ VAR "g"))
+`;
+
+val FV_ctabulate = Store_thm(
+  "FV_ctabulate",
+  ``FV ctabulate = {}``,
+  SRW_TAC [][ctabulate_def, pred_setTheory.EXTENSION]);
+
+val ctabulate_eqn = brackabs.brackabs_equiv [] ctabulate_def
+
+val ctabulate_behaviour = store_thm(
+  "ctabulate_behaviour",
+  ``ctabulate @@ church 0 @@ f == cnil ∧
+    ctabulate @@ (church (SUC n)) @@ f ==
+      cvcons (f @@ church 0) (ctabulate @@ church n @@ (B @@ f @@ csuc))``,
+  SIMP_TAC (bsrw_ss()) [ctabulate_eqn, cnil_def, Cong cvcons_cong,
+                        church_thm, wh_ccons])
+
+
 val _ = export_theory()
