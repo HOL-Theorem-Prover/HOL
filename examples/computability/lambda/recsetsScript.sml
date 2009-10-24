@@ -4,8 +4,7 @@ val _ = new_theory "recsets"
 
 open recfunsTheory reductionEval
 open binderLib
-
-val _ = set_trace "Unicode" 1
+open stepsTheory
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -114,5 +113,56 @@ val finite_recursive = Store_thm(
   Cases_on `n ∈ s` THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
                             normal_orderTheory.bnf_bnf_of]);
+
+(* an r.e. set is one that can be enumerated.  In this world, I take enumerable
+   to mean there exists a function that returns values at successive indices.
+*)
+val re_def = Define`
+  re s = ∃Mi. ∀e. e ∈ s ⇔ ∃j. Phi Mi j = SOME e
+`;
+
+(* if a set s is r.e., then there is a machine that terminates on only those
+   elements of the set (and fails to terminate on non-members)
+
+   Say the machine we have that enumerates s is Mi.  Then we want one that
+   will correctly terminate on element e of s.
+   For increasing n, construct the list of n elements corresponding to
+   evaluating [Mi 0, Mi 1, Mi 2, ... Mi n] for n steps.  For all the bnfs in
+   this list, see if one of them is equal to e.  If so, terminate.
+
+
+val re_semirecursive1 = prove(
+  ``re s ⇒ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
+  SRW_TAC [][re_def] THEN
+  Q.EXISTS_TAC
+    `dBnum (fromTerm (
+       LAM "e" (Y @@
+         (LAM "loop" (LAM "n"
+            (cmem @@ VAR "e"
+                  @@ (cfilter
+                        @@ cbnf
+                        @@ (cmap
+                              @@ (csteps @@ VAR "n")
+                              @@ (ctabulate @@ (csuc @@ VAR "n")
+                                            @@ (LAM "j"
+                                                    (UM
+                                                       @@ (cnpair
+                                                             @@ (church Mi)
+                                                             @@ (VAR "j")))))))
+                  @@ church 0
+                  @@ (VAR "loop" @@ (csuc @@ VAR "n"))))))))`
+*)
+
+(*
+val recursive_re = store_thm(
+  "recursive_re",
+  ``recursive s ⇒ re s``,
+  SRW_TAC [][recursive_def, re_def] THEN
+  `dBnum (fromTerm
+
+*)
+
+
+
 
 val _ = export_theory ()

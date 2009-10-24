@@ -128,5 +128,15 @@ val cor_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cor_def] THEN
   Cases_on `p` THEN SIMP_TAC (bsrw_ss()) [cB_behaviour]);
 
+val cor_T1 = store_thm(
+  "cor_T1",
+  ``cor @@ cB T @@ X == cB T``,
+  SIMP_TAC (bsrw_ss()) [cor_def, cB_behaviour]);
+
+val cor_F1 = store_thm(
+  "cor_F1",
+  ``cor @@ cB F @@ X == X``,
+  SIMP_TAC (bsrw_ss()) [cor_def, cB_behaviour]);
+
 val _ = export_theory()
 

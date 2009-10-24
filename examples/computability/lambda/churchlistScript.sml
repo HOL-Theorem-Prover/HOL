@@ -303,5 +303,31 @@ val ctabulate_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [ctabulate_eqn, cnil_def, Cong cvcons_cong,
                         church_thm, wh_ccons])
 
+val cmem_def = Define`
+  cmem =
+  LAM "n" (LAM "L"
+    (VAR "L"
+         @@ cB F
+         @@ (LAM "h" (LAM "r" (cor @@ (ceqnat @@ VAR "h" @@ VAR "n")
+                                   @@ VAR "r")))))
+`;
+
+val FV_cmem = Store_thm(
+  "FV_cmem",
+  ``FV cmem = {}``,
+  SRW_TAC [][cmem_def, pred_setTheory.EXTENSION]);
+
+val cmem_eqn = brackabs.brackabs_equiv [] cmem_def
+
+val cmem_behaviour = store_thm(
+  "cmem_behaviour",
+  ``cmem @@ N @@ cnil == cB F ∧
+    cmem @@ church n @@ cvcons (church m) t ==
+      if n = m then cB T
+      else cmem @@ church n @@ t``,
+  SIMP_TAC (bsrw_ss()) [cmem_eqn, Cong cvcons_cong, cnil_def,
+                        wh_cvcons, ceqnat_behaviour] THEN
+  SRW_TAC [][] THEN1 SIMP_TAC (bsrw_ss()) [cor_T1] THEN
+  SIMP_TAC (bsrw_ss()) [cmem_eqn, cor_F1]);
 
 val _ = export_theory()
