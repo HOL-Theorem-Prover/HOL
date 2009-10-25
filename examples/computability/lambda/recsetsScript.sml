@@ -129,30 +129,94 @@ val re_def = Define`
    For increasing n, construct the list of n elements corresponding to
    evaluating [Mi 0, Mi 1, Mi 2, ... Mi n] for n steps.  For all the bnfs in
    this list, see if one of them is equal to e.  If so, terminate.
+*)
+val enum2semibody_def = Define`
+  enum2semibody Mi e loop n j =
+    LAM loop (LAM n
+      (cmem @@ e
+            @@ (cmap @@ cforce_num
+                     @@ (cfilter
+                           @@ cbnf
+                           @@ (ctabulate
+                                 @@ (csuc @@ VAR n)
+                                 @@ (LAM j
+                                       (csteps
+                                          @@ VAR n
+                                          @@ (cdAPP
+                                                @@ (cnumdB @@ church Mi)
+                                                @@ (cchurch @@ VAR j)))))))
+            @@ church 0
+            @@ (VAR loop @@ (csuc @@ VAR n))))
+`;
 
+val enum2semi_def = Define`
+  enum2semi Mi e =
+    let loop = NEW (FV e) in
+    let n = NEW ({loop} ∪ FV e) in
+    let j = NEW {n}
+    in
+       enum2semibody Mi e loop n j
+`;
 
-val re_semirecursive1 = prove(
+val FV_enum2semi = prove(
+  ``FV (enum2semi n t) = FV t``,
+  SRW_TAC [][enum2semi_def, LET_THM, pred_setTheory.EXTENSION,
+             enum2semibody_def] THEN
+  binderLib.NEW_ELIM_TAC THEN REPEAT GEN_TAC THEN
+  binderLib.NEW_ELIM_TAC THEN SRW_TAC [][] THEN
+  METIS_TAC []);
+
+val enum2semi_fresh = prove(
+  ``loop ∉ FV e ∧ n ≠ loop ∧ n ∉ FV e ∧ j ≠ n ⇒
+     (enum2semi Mi e = enum2semibody Mi e loop n j)``,
+  SRW_TAC [][enum2semi_def, LET_THM] THEN
+  binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
+  binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
+  binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
+  SRW_TAC [][enum2semibody_def, termTheory.LAM_eq_thm,
+             termTheory.tpm_fresh] THEN
+  Cases_on `loop = v` THEN SRW_TAC [][] THEN1
+    (SRW_TAC [][basic_swapTheory.swapstr_def] THEN METIS_TAC []) THEN
+  Cases_on `v = n` THEN SRW_TAC [][] THEN
+  Cases_on `loop = n` THEN SRW_TAC [][] THENL [
+    Cases_on `loop = j` THEN SRW_TAC [][] THEN
+    SRW_TAC [][basic_swapTheory.swapstr_def, termTheory.tpm_fresh] THEN
+    METIS_TAC [],
+
+    Cases_on `loop = j` THEN SRW_TAC [][] THEN1
+      (SRW_TAC [][basic_swapTheory.swapstr_def, termTheory.tpm_fresh] THEN
+       METIS_TAC []) THEN
+    Cases_on `v = j` THEN SRW_TAC [][] THEN
+    SRW_TAC [][basic_swapTheory.swapstr_def, termTheory.tpm_fresh] THEN
+    METIS_TAC []
+  ]);
+
+(* val enum2semi_eqn = brackabs.brackabs_equiv [] (SPEC_ALL enum2semi_def) *)
+
+val enum2semi_SUB = store_thm(
+  "enum2semi_SUB",
+  ``[N/v] (enum2semi n t) = enum2semi n ([N/v]t)``,
+  Q_TAC (NEW_TAC "loop") `FV N ∪ {v} ∪ FV t` THEN
+  Q_TAC (NEW_TAC "m") `FV N ∪ {v; loop} ∪ FV t` THEN
+  Q_TAC (NEW_TAC "j") `FV N ∪ {v;m}` THEN
+  `enum2semi n t = enum2semibody n t loop m j`
+     by METIS_TAC [enum2semi_fresh] THEN
+  `enum2semi n ([N/v]t) = enum2semibody n ([N/v]t) loop m j`
+     by (MATCH_MP_TAC enum2semi_fresh THEN
+         SRW_TAC [][chap2Theory.NOT_IN_FV_SUB]) THEN
+  SRW_TAC [][enum2semibody_def, termTheory.lemma14b]);
+
+(* val re_semirecursive1 = prove(
   ``re s ⇒ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
   SRW_TAC [][re_def] THEN
   Q.EXISTS_TAC
-    `dBnum (fromTerm (
-       LAM "e" (Y @@
-         (LAM "loop" (LAM "n"
-            (cmem @@ VAR "e"
-                  @@ (cfilter
-                        @@ cbnf
-                        @@ (cmap
-                              @@ (csteps @@ VAR "n")
-                              @@ (ctabulate @@ (csuc @@ VAR "n")
-                                            @@ (LAM "j"
-                                                    (UM
-                                                       @@ (cnpair
-                                                             @@ (church Mi)
-                                                             @@ (VAR "j")))))))
-                  @@ church 0
-                  @@ (VAR "loop" @@ (csuc @@ VAR "n"))))))))`
-*)
+    `dBnum (fromTerm
+              (LAM "e" (chap2$Y @@ enum2semi Mi (VAR "e") @@ church 0)))` THEN
+  SRW_TAC [][Phi_def, EQ_IMP_THM] THENL [
+    SIMP_TAC (bsrw_ss()) [churchDBTheory.cnumdB_behaviour,
+                          Once chap2Theory.lameq_Y]
 
+*)
 (*
 val recursive_re = store_thm(
   "recursive_re",
