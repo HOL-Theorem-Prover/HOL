@@ -211,7 +211,7 @@ val true = Type `: (('A, 'M) Kleisli, 'N) Kleisli` =
   Type `: ('A, 'N o 'M) Kleisli` ;
 
 (* following fails typechecking when both monad type arguments 
-  ('N and 'N o 'M) are deleted *)
+  ('N and 'N o 'M) are deleted (even after temp_clear_overloads_on "o") *)
 val tmpext = ``category (id, comp) /\ 
   Kmonad [:'A:] (id,comp) (unitM, extM : ('A, 'M) ext) /\ 
   Kmonad [: ('A, 'M) Kleisli, 'N :] 
@@ -326,6 +326,246 @@ val cm_Kc_J1 = store_thm ("cm_Kc_J1", tm_Kc_J1,
       (CONV_TAC (DEPTH_CONV ETA_CONV)), 
       (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), 
       REFL_TAC ] ]) ;
+
+(*---------------------------------------------------------------------------
+  Monad predicate, based on unit, map and join term operators,
+  geneeralised to general arrow types and also generalised to be relevant
+  to compound monads 
+ ---------------------------------------------------------------------------*)
+
+val _ = type_abbrev ("dunit", Type `: \'A 'N 'M. !'a. ('a 'M, 'a 'N 'M) 'A`);
+val _ = type_abbrev ("dmap",
+   Type `: \'A 'N 'M. !'a 'b. ('a, 'b 'M) 'A -> ('a 'N 'M, 'b 'N 'M) 'A`);
+val _ = type_abbrev ("djoin",
+   Type `: \'A 'N 'M. !'a. ('a 'N 'N 'M, 'a 'N 'M) 'A`);
+
+val _ = type_abbrev ("gunit", Type `: \'A 'M. !'a. ('a, 'a 'M) 'A`);
+val _ = type_abbrev ("gmap",
+   Type `: \'A 'M. !'a 'b. ('a, 'b) 'A -> ('a 'M, 'b 'M) 'A`);
+val _ = type_abbrev ("gjoin", Type `: \'A 'M. !'a. ('a 'M 'M, 'a 'M) 'A`);
+
+val EXT_def = Define 
+  `(EXT ((id, comp) : 'A category) 
+    (map : ('A, 'M) gmap, join: ('A, 'M) gjoin) : ('A, 'M) ext) = 
+    \:'a 'b. \f. comp join (map [:'a, 'b 'M:] f)` ;
+
+val EXTD_def = Define 
+  `(EXTD ((id, comp) : 'A category) 
+  (dmap : ('A, 'N, 'M) dmap, djoin: ('A, 'N, 'M) djoin) : ('A, 'N o 'M) ext) = 
+    \:'a 'b. \f. comp djoin (dmap [:'a, 'b 'N:] f)` ;
+
+val Gmonad_def = Define 
+   `Gmonad ((id, comp) : 'A category) = \: 'N 'M. 
+     \ (dunit: ('A, 'N, 'M) dunit,
+                dmap : ('A, 'N, 'M) dmap ,
+                djoin: ('A, 'N, 'M) djoin) 
+	       (unitNM: ('A, 'N o 'M) gunit,
+                mapNM : ('A, 'N o 'M) gmap ,
+                joinNM: ('A, 'N o 'M) gjoin)
+   (unitM: ('A, 'M) gunit).
+     (* map_I *)         (!:'a. dmap (unitM [:'a:]) = id) /\
+     (* map_o *)         (!:'a 'b 'c. !(f: ('a, 'b) 'A) (g: ('b, 'c 'M) 'A).
+			      dmap (comp g f) = comp (dmap g) (mapNM f)) /\
+     (* map_unit *)      (!:'a 'b. !f: ('a, 'b 'M) 'A.
+			      comp (dmap f) unitNM = comp dunit f) /\
+     (* map_join *) (!:'a 'b. !f: ('a, 'b 'M) 'A.
+             comp (dmap f) joinNM = comp djoin (dmap (dmap f))) /\
+     (* join_unit *)     (!:'a. comp djoin dunit = id [:'a 'N 'M:]) /\
+     (* join_map_unit *) (!:'a. comp djoin (dmap (unitNM [:'a:])) = id) /\
+     (* join_map_join *) (!:'a. 
+	  comp (djoin [:'a:]) (dmap djoin) = comp djoin joinNM) ` ;
+
+(* check that these typecheck - 
+  what you get when either 'N or 'M is the identity monad  *)
+val _ = 
+``Gmonad (id, comp) [:'N, I:] (unitN, mapN, joinN) (unitN, mapN, joinN) id `` ;
+val _ = ``Gmonad (id, comp) [:I, 'M:] 
+  ((\:'a. id [:'a 'M:]), EXT (id, comp) (mapM, joinM), (\:'a. id [:'a 'M:])) 
+  (unitM, mapM, joinM) unitM `` ;
+
+(* why does this require more type annotations than Gmonad_def ?? *)
+val Gmonad_thm = store_thm ("Gmonad_thm", 
+  ``Gmonad (id,comp) [:'N,'M:] (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM =
+     (* map_I *)  (!:'a. dmap [:'a, 'a:] (unitM [:'a:]) = id [:'a 'N 'M:]) /\ 
+     (* map_o *) (!:'a 'b 'c. !(f :('a, 'b) 'A) (g :('b, 'c 'M) 'A).
+                    dmap [:'a, 'c:] (comp [:'a, 'b, 'c 'M:] g f) =
+                    comp (dmap [:'b, 'c:] g) (mapNM [:'a, 'b:] f)) /\
+     (* map_unit *)      (!:'a 'b. !f: ('a, 'b 'M) 'A.
+			      comp (dmap f) unitNM = comp dunit f) /\
+     (* map_join *) (!:'a 'b. !f: ('a, 'b 'M) 'A.
+             comp (dmap f) joinNM = comp djoin (dmap (dmap f))) /\
+     (* join_unit *)     (!:'a. comp djoin dunit = id [:'a 'N 'M:]) /\
+     (* join_map_unit *) (!:'a. comp djoin (dmap (unitNM [:'a:])) = id) /\
+     (* join_map_join *) (!:'a. 
+	  comp (djoin [:'a:]) (dmap djoin) = comp djoin joinNM)``,
+  SRW_TAC [] [Gmonad_def]) ;
+
+val (GmonadD, _) = EQ_IMP_RULE Gmonad_thm ;
+val [GmD1, GmD2, GmD3, GmD4, GmD5, GmD6, GmD7] = 
+  map DISCH_ALL (CONJUNCTS (UNDISCH GmonadD)) ;
+
+(* abbreviate a much used tactic *)
+fun farwmmp con = (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP con th])) ; 
+
+val tmj = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
+      (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\ 
+   (extNM = EXTD (id, comp) (dmap, djoin)) ==> 
+   (joinNM = \:'a. extNM [:'a 'N 'M, 'a:] (id [:'a 'N 'M:]))`` ;
+
+val Gmonad_join = store_thm ("Gmonad_join", tmj,
+   EVERY [ (SRW_TAC [] [EXTD_def]), 
+     farwmmp (GSYM GmD1), farwmmp (GSYM GmD4),
+     farwmmp GmD1, farwmmp catDLU,
+     (CONV_TAC (ONCE_DEPTH_CONV TY_ETA_CONV)), REFL_TAC ]) ;
+  
+val tmdj = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
+      (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\ 
+   (extNM = EXTD (id, comp) (dmap, djoin)) ==> 
+   (djoin = \:'a. extNM [:'a 'N, 'a:] (unitM [:'a 'N:]))`` ;
+
+val Gmonad_djoin = store_thm ("Gmonad_djoin", tmdj,
+   EVERY [ (SRW_TAC [] [EXTD_def]), 
+     farwmmp GmD1, farwmmp catDRU,
+     (CONV_TAC (ONCE_DEPTH_CONV TY_ETA_CONV)), REFL_TAC ]) ;
+
+val tmm = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
+      (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\ 
+   (extNM = EXTD (id, comp) (dmap, djoin)) ==> 
+   (mapNM = \:'a 'b. \ (f : ('a, 'b) 'A).
+     extNM [:'a, 'b:] (comp [:'a, 'b, 'b 'N 'M:] (unitNM [:'b:]) f))`` ;
+
+val Gmonad_map = store_thm ("Gmonad_map", tmm,
+  EVERY [ (SRW_TAC [] [EXTD_def]), 
+    farwmmp GmD2, farwmmp catDAss, farwmmp GmD6, farwmmp catDLU,
+    (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
+    (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC ]) ;
+
+val tmu = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
+      (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM ==> 
+   (unitNM = \:'a. comp [:'a, 'a 'M, 'a 'N 'M:]
+     (dunit [:'a:]) (unitM [:'a:]))`` ;
+   
+val Gmonad_unit = store_thm ("Gmonad_unit", tmu,
+  EVERY [ (SRW_TAC [] []),
+    farwmmp (GSYM GmD3), farwmmp GmD1, farwmmp catDLU,
+    (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC ]) ;
+
+val tmmd = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
+      (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM ==> 
+   (mapNM = \:'a 'b. \ (f : ('a, 'b) 'A).
+     dmap [:'a, 'b:] (comp [:'a, 'b, 'b 'M:] (unitM [:'b:]) f))`` ;
+
+val Gmonad_map_d = store_thm ("Gmonad_map_d", tmmd,
+  EVERY [ (SRW_TAC [] []),
+    farwmmp GmD2, farwmmp GmD1, farwmmp catDLU,
+    (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
+    (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC ]) ;
+
+val tmeo = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
+      (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\ 
+   (extNM = EXTD (id, comp) (dmap, djoin)) ==> 
+   (extNM (comp g f) = comp (extNM g) (mapNM f))`` ;
+  
+val Gmonad_ext_o = store_thm ("Gmonad_ext_o", tmeo,
+  EVERY [ (SRW_TAC [] [EXTD_def]), 
+    farwmmp GmD2, farwmmp catDAss ]) ;
+
+val tmee = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
+      (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\ 
+   (extNM = EXTD (id, comp) (dmap, djoin)) ==> 
+   (extNM = EXT (id, comp) (mapNM, joinNM))`` ;
+
+val Gmonad_ext_jm = store_thm ("Gmonad_ext_jm", tmee,
+  EVERY [ DISCH_TAC, farwmmp Gmonad_join,
+    (SRW_TAC [] [EXTD_def, EXT_def]), 
+    farwmmp (GSYM catDAss), farwmmp (GSYM GmD2), farwmmp catDLU ]) ;
+
+fun fix_abs_eq rewr th = 
+  let val th0 = REWRITE_RULE [rewr, TY_FUN_EQ_THM, FUN_EQ_THM] th ; 
+    val th1 = CONV_RULE (DEPTH_CONV TY_BETA_CONV) th0 ; 
+    val th2 = CONV_RULE (DEPTH_CONV BETA_CONV) th1 ;
+  in th2 end ;
+
+val tmgc = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
+      (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\ 
+   (extNM = EXTD (id, comp) (dmap, djoin)) ==> 
+   Kmonad (id, comp) (unitNM, extNM)`` ;
+
+val Gmonad_IMP_Kmonad = store_thm ("Gmonad_IMP_Kmonad", tmgc,
+  EVERY [ DISCH_TAC,
+    (FIRST_ASSUM (ASSUME_TAC o SYM o MATCH_MP Gmonad_ext_jm)),
+    (SRW_TAC [] [Kmonad_def, EXTD_def]) ] 
+  THENL [ 
+    EVERY (map farwmmp [GSYM catDAss, GmD3, catDAss, GmD5, catDLU]),
+    farwmmp GmD6, 
+    EVERY (map farwmmp [GSYM catDAss, GmD2, catDAss, GmD7, GSYM catDAss])
+    THEN EVERY [
+     (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o fix_abs_eq EXT_def))),
+     (ASM_REWRITE_TAC []), farwmmp GmD2,
+     (FIRST_ASSUM (fn th => 
+       CONV_TAC (DEPTH_CONV (REWR_CONV (MATCH_MP catDAss th))))),
+     farwmmp (GSYM GmD4), farwmmp (GSYM catDAss),
+     (ASM_REWRITE_TAC []) ]]) ;
+
+val tmdm = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
+      (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\ 
+   (extNM = EXTD (id, comp) (dmap, djoin)) ==> 
+   (dmap = \:'a 'b. \ (f : ('a, 'b 'M) 'A).
+     extNM [:'a, 'b:] (comp [:'a, 'b 'M, 'b 'N 'M:] (dunit [:'b:]) f))`` ;
+
+val Gmonad_dmap = store_thm ("Gmonad_dmap", tmdm,
+  EVERY [ DISCH_TAC, 
+    (FIRST_ASSUM (ASSUME_TAC o GSYM o MATCH_MP Gmonad_ext_jm)),
+    (FIRST_ASSUM (ASSUME_TAC o REWRITE_RULE [Kmonad_thm] o
+      MATCH_MP Gmonad_IMP_Kmonad)),
+    (POP_ASSUM_LIST (MAP_EVERY ASSUME_TAC o
+      List.concat o map CONJUNCTS)),
+    farwmmp (GSYM GmD3),
+    (ASM_REWRITE_TAC [EXTD_def]), TY_BETA_TAC, BETA_TAC,
+    farwmmp GmD2, farwmmp catDAss,
+    farwmmp (GSYM GmD4), farwmmp (GSYM catDAss), 
+    (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o fix_abs_eq EXT_def))),
+    (ASM_REWRITE_TAC []), farwmmp catDRU,
+    (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
+    (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC ]) ;
+
+(*
+show_types := true ;
+show_types := false ;
+handle e => Raise e ;
+set_goal ([], it) ;
+val (sgs, goal) = top_goal () ;
+*)
+
+(* compound monad (G axioms) in progress
+
+
+(*---------------------------------------------------------------------------
+            Monad map and join operations,
+            defined in terms of unit and bind;
+            map is a functor, and join and unit are natural transformations.
+ ---------------------------------------------------------------------------*)
+
+val MMAP_def = Define
+   `MMAP (unit: 'M unit, bind: 'M bind) = \:'a 'b. \(f:'a -> 'b) (m : 'a 'M).
+                      bind m (\a. unit (f a))`;
+
+val JOIN_def = Define
+   `JOIN (unit: 'M unit, bind: 'M bind) = \:'a. \(z : 'a 'M 'M).
+                      bind z I`;
+
+
+(*---------------------------------------------------------------------------
+            Monad bind operation,
+            defined in terms of map and join
+ ---------------------------------------------------------------------------*)
+
+val BIND_def = Define
+   `BIND (map: 'M map, join: 'M join) = \:'a 'b. \(m : 'a 'M) (k:'a -> 'b 'M).
+                      join (map k m)`;
+
+
+*)
 
 (*
 show_types := true ;
