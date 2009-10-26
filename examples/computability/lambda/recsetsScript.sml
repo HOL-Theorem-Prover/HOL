@@ -5,6 +5,7 @@ val _ = new_theory "recsets"
 open recfunsTheory reductionEval
 open binderLib
 open stepsTheory
+open churchlistTheory churchDBTheory
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -225,6 +226,48 @@ val enum2semi_eqn =
       |> Q.INST [`j` |-> `NEW {n}`]
       |> Q.INST [`loop` |-> `NEW (FV e)`, `n` |-> `NEW (FV e ∪ {NEW (FV e)})`]
       |> C MP freshlemma
+
+val MEM_GENLIST = prove(
+  ``MEM e (GENLIST f n) = ∃i. i < n ∧ (e = f i)``,
+  Q.ID_SPEC_TAC `f` THEN
+  Induct_on `n` THEN1 SRW_TAC [][rich_listTheory.GENLIST] THEN
+  SRW_TAC [][GENLIST_ALT, EQ_IMP_THM] THENL [
+    Cases_on `e = f 0` THENL [
+      Q.EXISTS_TAC `0` THEN SRW_TAC [][],
+      FULL_SIMP_TAC (srw_ss()) [] THEN Q.EXISTS_TAC `SUC i` THEN
+      SRW_TAC [][]
+    ],
+    `∃m. i = SUC m` by METIS_TAC [TypeBase.nchotomy_of ``:num``] THEN
+    Q.EXISTS_TAC `m` THEN SRW_TAC [ARITH_ss][]
+  ]);
+
+
+val cmem_cvlist = prove(
+  ``(∀e. MEM e l ⇒ ∃n. e == church n) ⇒
+    cmem @@ church m @@ cvlist l ==
+    cB (EXISTS (λt. ceqnat @@ church m @@ t == cB T) l)``,
+  Induct_on `l` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cmem_behaviour] THEN REPEAT STRIP_TAC THEN
+  FIRST_ASSUM (Q.SPEC_THEN `h`
+                           (STRIP_ASSUME_TAC o SIMP_RULE (srw_ss()) [])) THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cmem_behaviour, Cong cvcons_cong,
+                            churchnumTheory.ceqnat_behaviour] THEN
+  Cases_on `m = n` THEN SRW_TAC [][]);
+
+val EXISTS_FILTER = prove(
+  ``EXISTS P (FILTER Q l) = EXISTS (λe. Q e ∧ P e) l``,
+  Induct_on `l` THEN SRW_TAC [][]);
+
+val EXISTS_GENLIST = prove(
+  ``∀n f. EXISTS P (GENLIST f n) = ∃i. i < n ∧ P (f i)``,
+  Induct THEN1 SRW_TAC [][rich_listTheory.GENLIST] THEN
+  SRW_TAC [][GENLIST_ALT, EQ_IMP_THM] THENL [
+    Q.EXISTS_TAC `0` THEN SRW_TAC [][],
+    Q.EXISTS_TAC `SUC i` THEN SRW_TAC [][],
+    Cases_on `i` THEN SRW_TAC [][] THEN
+    DISJ2_TAC THEN Q.EXISTS_TAC `n'` THEN SRW_TAC [ARITH_ss][]
+  ]);
+
 (*
 val re_semirecursive1 = prove(
   ``re s ⇒ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
@@ -255,12 +298,61 @@ val re_semirecursive1 = prove(
       POP_ASSUM SUBST_ALL_TAC THEN
       SIMP_TAC (bsrw_ss()) [Abbr`E`, enum2semi_eqn] THEN
       FULL_SIMP_TAC (srw_ss()) [] THEN
-      ASM_SIMP_TAC (bsrw_ss()) [churchlistTheory.ctabulate_cvlist,
-                                Cong churchlistTheory.cvlist_genlist_cong,
-                                churchnumTheory.csuc_behaviour,
-                                churchDBTheory.cchurch_behaviour,
-                                churchDBTheory.cnumdB_behaviour,
-                                churchDBTheory.cdAPP_behaviour] THEN
+      ASM_SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
+                   [ctabulate_cvlist, Cong cvlist_genlist_cong,
+                    churchnumTheory.csuc_behaviour,
+                    cchurch_behaviour, cnumdB_behaviour,
+                    cdAPP_behaviour, csteps_behaviour,
+                    cfilter_cvlist, MEM_GENLIST, cbnf_behaviour,
+                    cmap_cvlist, cmem_cvlist, listTheory.MEM_MAP,
+                    listTheory.MEM_FILTER, cforce_num_behaviour] THEN
+      ASM_SIMP_TAC (srw_ss()) [listTheory.EXISTS_MAP,
+                               EXISTS_FILTER, EXISTS_GENLIST] THEN
+      Q.MATCH_ABBREV_TAC `cB P @@ church 0 @@ X == church 0` THEN
+      Q_TAC SUFF_TAC `P` THEN1
+        SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour] THEN
+      markerLib.UNABBREV_ALL_TAC THEN
+      Q.EXISTS_TAC `j` THEN
+      SIMP_TAC (bsrw_ss()) [cforce_num_behaviour,
+                            churchnumTheory.ceqnat_behaviour,
+                            cbnf_behaviour] THEN
+      `steps (MAX (j + 1) n) (toTerm (numdB Mi) @@ church j) = z`
+         by (SRW_TAC [][] THEN Cases_on `MAX (j + 1) n = n`
+               THEN1 SRW_TAC [][] THEN
+             MATCH_MP_TAC bnf_steps_upwards_closed THEN
+             FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)
+                           [arithmeticTheory.MAX_DEF]) THEN
+      SRW_TAC [ARITH_ss][arithmeticTheory.MAX_DEF],
+
+      `st < MAX (j + 1) n` by DECIDE_TAC THEN
+      SIMP_TAC (bsrw_ss()) [Abbr`E`, Once enum2semi_eqn] THEN
+      ASM_SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
+                   [ctabulate_cvlist, Cong cvlist_genlist_cong,
+                    churchnumTheory.csuc_behaviour,
+                    cchurch_behaviour, cnumdB_behaviour,
+                    cdAPP_behaviour, csteps_behaviour,
+                    cfilter_cvlist, MEM_GENLIST, cbnf_behaviour,
+                    cmap_cvlist, cmem_cvlist, listTheory.MEM_MAP,
+                    listTheory.MEM_FILTER, cforce_num_behaviour] THEN
+      ASM_SIMP_TAC (srw_ss()) [listTheory.EXISTS_MAP,
+                               EXISTS_FILTER, EXISTS_GENLIST] THEN
+      Q.ABBREV_TAC `MX = MAX (j + 1) n`  THEN
+      FIRST_X_ASSUM (Q.SPEC_THEN `SUC st` MP_TAC) THEN
+      ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
+      STRIP_TAC THEN
+      ASM_SIMP_TAC (bsrw_ss()) [Once chap2Theory.lameq_Y] THEN
+      Q.MATCH_ABBREV_TAC `cB P @@ X @@ X == X` THEN
+      Cases_on `P` THEN
+      ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour]
+    ],
+
+    (* other direction *)
+    FULL_SIMP_TAC (bsrw_ss()) [enum2semi_SUB] THEN
+    FULL_SIMP_TAC (bsrw_ss()) [bnf_steps] THEN
+    NTAC 2 (POP_ASSUM MP_TAC) THEN POP_ASSUM (K ALL_TAC) THEN
+    Q.ID_SPEC_TAC `n` THEN completeInduct_on `n` THEN
+
+
 *)
 (*
 val recursive_re = store_thm(

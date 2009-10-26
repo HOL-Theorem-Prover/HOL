@@ -73,15 +73,19 @@ val FV_csteps = Store_thm(
 open brackabs
 val csteps_eqn = brackabs_equiv [] csteps_def
 
+val cnoreduct_behaviour' =
+    cnoreduct_behaviour |> Q.SPEC `toTerm t`
+                        |> SIMP_RULE (srw_ss()) []
+
 val csteps_behaviour = store_thm(
   "csteps_behaviour",
   ``∀n t.
-      csteps @@ church n @@ cDB (fromTerm t) -n->* cDB (fromTerm (steps n t))``,
+      csteps @@ church n @@ cDB t -n->* cDB (fromTerm (steps n (toTerm t)))``,
   SIMP_TAC (bsrw_ss()) [csteps_eqn] THEN
   Induct THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.church_thm, cbnf_behaviour] THEN
-  Q.X_GEN_TAC `t` THEN Cases_on `bnf t` THEN
+  Q.X_GEN_TAC `t` THEN Cases_on `dbnf t` THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
-                            cnoreduct_behaviour]);
+                            cnoreduct_behaviour']);
 
 val _ = export_theory ()
