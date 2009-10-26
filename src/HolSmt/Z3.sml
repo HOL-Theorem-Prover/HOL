@@ -47,7 +47,7 @@ structure Z3 = struct
 
   (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
   val Z3_SMT_Prover = SolverSpec.make_solver
-    (Lib.S (fn goal => Lib.## (Lib.pair goal, Lib.I)) SmtLib.goal_to_SmtLib)
+    (Lib.S (Lib.apfst o Lib.pair) SmtLib.goal_to_SmtLib)
     "z3 -ini:z3.ini -smt"
     (fn (goal, (ty_dict, tm_dict)) =>
       fn outfile =>
