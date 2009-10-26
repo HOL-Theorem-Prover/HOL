@@ -178,7 +178,7 @@ in fn {relation,solver,depther,freevars} =>
                 fun reprocess thm flag =
                   if flag then CONV_RULE (depther ([],equality)) thm
                     handle HOL_ERR _ =>
-                    (trace(5,PRODUCE(orig,"UNCHANGED",thm));thm)
+                    (trace(5,PRODUCE(concl thm,"UNCHANGED",thm));thm)
                   else thm
                 val reprocessed_assum_thms = map2 reprocess assum_thms flags
                 val rewr_thm =
