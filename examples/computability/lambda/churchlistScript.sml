@@ -330,4 +330,68 @@ val cmem_behaviour = store_thm(
   SRW_TAC [][] THEN1 SIMP_TAC (bsrw_ss()) [cor_T1] THEN
   SIMP_TAC (bsrw_ss()) [cmem_eqn, cor_F1]);
 
+(* cvlist allows terms to contain HOL lists of terms *)
+val cvlist_def = Define`
+  cvlist l = FOLDR cvcons cnil l
+`;
+
+val cvlist_thm = Store_thm(
+  "cvlist_thm",
+  ``(cvlist [] = cnil) ∧
+    (cvlist (h::t) = cvcons h (cvlist t))``,
+  SRW_TAC [][cvlist_def]);
+
+val GENLIST_ALT = store_thm(
+  "GENLIST_ALT",
+  ``GENLIST f (SUC n) = f 0 :: GENLIST (f o SUC) n``,
+  SIMP_TAC std_ss [rich_listTheory.GENLIST_APPEND, arithmeticTheory.ADD1] THEN
+  SIMP_TAC bool_ss [rich_listTheory.GENLIST, arithmeticTheory.ONE] THEN
+  SRW_TAC [][rich_listTheory.SNOC] THEN
+  Q_TAC SUFF_TAC `(λt. f (t + 1)) = f o SUC` THEN1 SRW_TAC [][] THEN
+  SRW_TAC [][FUN_EQ_THM, arithmeticTheory.ADD1]);
+
+val cvlist_genlist_cong = store_thm(
+  "cvlist_genlist_cong",
+  ``(∀x. f x == g x) ⇒
+    cvlist (GENLIST (λm. f m) n) == cvlist (GENLIST g n)``,
+  MAP_EVERY Q.ID_SPEC_TAC [`g`, `f`] THEN
+  Induct_on `n` THEN1 SRW_TAC [][rich_listTheory.GENLIST] THEN
+  SRW_TAC [][GENLIST_ALT] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [Cong cvcons_cong, combinTheory.o_DEF] THEN
+  FIRST_X_ASSUM (Q.SPECL_THEN [`f o SUC`, `g o SUC`] MP_TAC) THEN
+  ASM_SIMP_TAC (bsrw_ss()) [Cong cvcons_cong, combinTheory.o_DEF]);
+
+val ctabulate_cvlist = store_thm(
+  "ctabulate_cvlist",
+  ``∀f. ctabulate @@ church n @@ f == cvlist (GENLIST (λm. f @@ church m) n)``,
+  Induct_on `n` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [ctabulate_behaviour, GENLIST_ALT,
+                            Cong cvcons_cong, cnil_def]
+    THEN1 SRW_TAC [][rich_listTheory.GENLIST, cnil_def] THEN
+  GEN_TAC THEN MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] cvcons_cong) THEN
+  SRW_TAC [][] THEN
+  HO_MATCH_MP_TAC cvlist_genlist_cong THEN
+  SIMP_TAC (bsrw_ss()) [churchnumTheory.csuc_behaviour]);
+
+val cfilter_cvlist = store_thm(
+  "cfilter_cvlist",
+  ``(∀e. MEM e l ⇒ ∃b. P @@ e == cB b) ⇒
+      cfilter @@ P @@ cvlist l == cvlist (FILTER (λt. P @@ t == cB T) l)``,
+  Induct_on `l` THEN ASM_SIMP_TAC (bsrw_ss()) [cfilter_behaviour] THEN
+  SRW_TAC [][] THENL [
+    ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour] THEN
+    MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] cvcons_cong) THEN
+    SRW_TAC [][],
+    `∃b. P @@ h == cB b` by METIS_TAC [] THEN
+    `b ≠ T` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour]
+  ]);
+
+val cmap_cvlist = store_thm(
+  "cmap_cvlist",
+  ``cmap @@ f @@ cvlist l == cvlist (MAP ((@@) f) l)``,
+  Induct_on `l` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cmap_behaviour, Cong cvcons_cong]);
+
 val _ = export_theory()
