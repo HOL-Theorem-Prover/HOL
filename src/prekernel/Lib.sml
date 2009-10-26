@@ -21,10 +21,12 @@ datatype frag = datatype Portable.frag
  * Combinators                                                               *
  *---------------------------------------------------------------------------*)
 
-fun curry f x y = f(x,y)
+fun curry f x y = f (x,y)
 fun uncurry f (x,y) = f x y
 infix 3 ##
 fun (f ## g) (x,y) = (f x, g y)
+fun apfst f (x, y) = (f x, y)
+fun apsnd f (x, y) = (x, f y)
 infix |>
 fun x |> f = f x
 fun C f x y = f y x
