@@ -206,7 +206,27 @@ val enum2semi_SUB = store_thm(
          SRW_TAC [][chap2Theory.NOT_IN_FV_SUB]) THEN
   SRW_TAC [][enum2semibody_def, termTheory.lemma14b]);
 
-(* val re_semirecursive1 = prove(
+val freshlemma = prove(
+  ``NEW (FV e) ∉ FV e ∧ NEW (FV e ∪ {NEW (FV e)}) ≠ NEW (FV e) ∧
+    NEW (FV e ∪ {NEW (FV e)}) ∉ FV e ∧
+    NEW {NEW (FV e ∪ {NEW (FV e)})} ≠ NEW (FV e ∪ {NEW (FV e)})``,
+  binderLib.NEW_ELIM_TAC THEN NTAC 2 STRIP_TAC THEN
+  binderLib.NEW_ELIM_TAC THEN NTAC 2 STRIP_TAC THEN
+  binderLib.NEW_ELIM_TAC);
+
+val enum2semi_eqn =
+    enum2semi_fresh
+      |> REWRITE_RULE [enum2semibody_def]
+      |> UNDISCH
+      |> brackabs.brackabs_equiv
+          (CONJUNCTS
+               (ASSUME ``loop ∉ FV e ∧ n ≠ loop ∧ n ∉ FV e ∧ j ≠ n``))
+      |> DISCH_ALL
+      |> Q.INST [`j` |-> `NEW {n}`]
+      |> Q.INST [`loop` |-> `NEW (FV e)`, `n` |-> `NEW (FV e ∪ {NEW (FV e)})`]
+      |> C MP freshlemma
+(*
+val re_semirecursive1 = prove(
   ``re s ⇒ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
   SRW_TAC [][re_def] THEN
   Q.EXISTS_TAC
@@ -214,8 +234,33 @@ val enum2semi_SUB = store_thm(
               (LAM "e" (chap2$Y @@ enum2semi Mi (VAR "e") @@ church 0)))` THEN
   SRW_TAC [][Phi_def, EQ_IMP_THM] THENL [
     SIMP_TAC (bsrw_ss()) [churchDBTheory.cnumdB_behaviour,
-                          Once chap2Theory.lameq_Y]
-
+                          Once chap2Theory.lameq_Y, enum2semi_SUB] THEN
+    `toTerm (numdB Mi) @@ church j -n->* z ∧ bnf z`
+       by METIS_TAC [normal_orderTheory.bnf_of_SOME] THEN
+    `∃n. steps n (toTerm (numdB Mi) @@ church j) = z`
+       by METIS_TAC [stepsTheory.bnf_steps] THEN
+    Q.MATCH_ABBREV_TAC
+      `∃r. bnf_of (E @@ (chap2$Y @@ E) @@ church 0) = SOME r` THEN
+    Q_TAC SUFF_TAC `∀st. st ≤ MAX (j + 1) n ⇒
+                         E @@ (chap2$Y @@ E) @@ church st == church 0`
+          THEN1 (DISCH_THEN (Q.SPEC_THEN `0` MP_TAC) THEN
+                 SIMP_TAC (bsrw_ss()) [normal_orderTheory.bnf_bnf_of]) THEN
+    Q_TAC SUFF_TAC
+          `∀m st. (m = MAX (j + 1) n - st) ∧
+                  st ≤ MAX (j + 1) n ⇒
+                  E @@ (chap2$Y @@ E) @@ church st == church 0`
+          THEN1 METIS_TAC [] THEN
+    Induct THEN REPEAT STRIP_TAC THENL [
+      `st = MAX (j + 1) n` by DECIDE_TAC THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      SIMP_TAC (bsrw_ss()) [Abbr`E`, enum2semi_eqn] THEN
+      FULL_SIMP_TAC (srw_ss()) [] THEN
+      ASM_SIMP_TAC (bsrw_ss()) [churchlistTheory.ctabulate_cvlist,
+                                Cong churchlistTheory.cvlist_genlist_cong,
+                                churchnumTheory.csuc_behaviour,
+                                churchDBTheory.cchurch_behaviour,
+                                churchDBTheory.cnumdB_behaviour,
+                                churchDBTheory.cdAPP_behaviour] THEN
 *)
 (*
 val recursive_re = store_thm(

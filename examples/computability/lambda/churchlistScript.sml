@@ -353,7 +353,7 @@ val GENLIST_ALT = store_thm(
 val cvlist_genlist_cong = store_thm(
   "cvlist_genlist_cong",
   ``(∀x. f x == g x) ⇒
-    cvlist (GENLIST (λm. f m) n) == cvlist (GENLIST g n)``,
+    cvlist (GENLIST f n) == cvlist (GENLIST g n)``,
   MAP_EVERY Q.ID_SPEC_TAC [`g`, `f`] THEN
   Induct_on `n` THEN1 SRW_TAC [][rich_listTheory.GENLIST] THEN
   SRW_TAC [][GENLIST_ALT] THEN
