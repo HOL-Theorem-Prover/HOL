@@ -60,6 +60,27 @@ val g_adjf3_def = new_definition("g_adjf3_def",
     (!: 'a 'b. ! (f : ('a, 'b 'G) 'C) g. 
       (compC (G g) eta = f) = (compD eps (F' f) = g))``);
 
+val g_adjf4_def = new_definition("g_adjf4_def",
+  ``g_adjf4 = \: 'C 'D. 
+    \ (idC : 'C id, compC : 'C o_arrow) (idD : 'D id, compD : 'D o_arrow)
+      (hash : ('C, 'D, 'F, 'G) g_hash) (star : ('D, 'C, 'G, 'F) g_star). 
+    (!: 'b. star [:'b, 'b 'G:] (hash idC) = idC) /\ 
+    (!: 'a. hash [:'a, 'a 'F:] (star idD) = idD) /\ 
+    (!: 'a 'c 'b. ! h f. hash (compC [:'a, 'c, 'b 'G :] f h) = 
+        compD (hash f) (hash (compC (star idD) h))) /\
+    (!: 'a 'c 'b. ! h g. star (compD [:'a 'F, 'b,'c :] h g) = 
+        compC (star (compD h (hash idC))) (star g)) ``);
+
+val g_adjf5_def = new_definition("g_adjf5_def",
+  ``g_adjf5 = \: 'C 'D. 
+    \ (idC : 'C id, compC : 'C o_arrow) (idD : 'D id, compD : 'D o_arrow)
+      (hash : ('C, 'D, 'F, 'G) g_hash) (star : ('D, 'C, 'G, 'F) g_star). 
+    (!: 'a 'b. ! (f : ('a, 'b 'G) 'C) g. (star g = f) = (hash f = g)) /\
+    (!: 'a 'c 'b. ! h f. hash (compC [:'a, 'c, 'b 'G :] f h) = 
+        compD (hash f) (hash (compC (star idD) h))) /\
+    (!: 'a 'c 'b. ! h g. star (compD [:'a 'F, 'b,'c :] h g) = 
+        compC (star (compD h (hash idC))) (star g)) ``);
+
 (* note, [:'b,'a:] required in g_adjf2_thm,
   [:'a,'b:] not required in g_adjf1_thm *)
 val g_adjf1_thm = store_thm ("g_adjf1_thm",
@@ -80,6 +101,15 @@ val g_adjf3_thm = store_thm ("g_adjf3_thm",
       (compC (G g) eta = f) = (compD eps (F' f) = g))``,
   SRW_TAC [] [g_adjf3_def]) ;
 				      
+val exp_convs = [ TY_BETA_CONV, BETA_CONV,
+  HO_REWR_CONV pairTheory.FORALL_PROD, REWR_CONV pairTheory.UNCURRY_DEF,
+  REWR_CONV TY_FUN_EQ_THM, REWR_CONV FUN_EQ_THM ] ; 
+
+val mk_exp_thm = CONV_RULE (REDEPTH_CONV (FIRST_CONV exp_convs)) ;
+
+val g_adjf4_thm = save_thm ("g_adjf4_thm", mk_exp_thm g_adjf4_def) ;
+val g_adjf5_thm = save_thm ("g_adjf5_thm", mk_exp_thm g_adjf5_def) ;
+
 (* duality - g_adjf3 is self-dual and g_adjf2 is dual of g_adjf1 *)
 
 val g_adjf3_dual = store_thm ("g_adjf3_dual",
@@ -96,6 +126,25 @@ val g_adjf12_dual = store_thm ("g_adjf12_dual",
     (REWRITE_TAC [dual_comp_def, g_dual_functor_def, g_adjf1_thm, g_adjf2_thm]),
     TY_BETA_TAC, BETA_TAC, REFL_TAC]) ;
 
+val g_adjf4_dual = store_thm ("g_adjf4_dual",
+  ``g_adjf4 [:'C, 'D:] (idC,compC) (idD,compD) hash star = 
+    g_adjf4 [:'D C, 'C C:] 
+      (idD, dual_comp compD) (idC, dual_comp compC) star hash``,
+  EVERY [ (REWRITE_TAC [dual_comp_def, g_adjf4_thm]),
+    TY_BETA_TAC, BETA_TAC, EQ_TAC, STRIP_TAC, 
+    CONJ_TAC, REPEAT STRIP_TAC, 
+    FIRST_ASSUM MATCH_ACCEPT_TAC ]) ;
+      
+val g_adjf5_dual = store_thm ("g_adjf5_dual",
+  ``g_adjf5 [:'C, 'D:] (idC,compC) (idD,compD) hash star = 
+    g_adjf5 [:'D C, 'C C:] 
+      (idD, dual_comp compD) (idC, dual_comp compC) star hash``,
+  EVERY [ (REWRITE_TAC [dual_comp_def, g_adjf5_thm]),
+    TY_BETA_TAC, BETA_TAC, EQ_TAC, STRIP_TAC, 
+    CONJ_TAC, REPEAT STRIP_TAC, 
+    TRY (FIRST_ASSUM MATCH_ACCEPT_TAC),
+    ASM_REWRITE_TAC [] ]) ;
+      
 (*
 show_types := true ;
 show_types := false ;
@@ -445,18 +494,20 @@ val g_adjf3_2 = store_thm ("g_adjf3_2",
 val g_adjf1_2 = save_thm ("g_adjf1_2", REWRITE_RULE [g_adjf3_2] g_adjf1_3) ;
 
 val HASH_eta_I = store_thm ("HASH_eta_I", 
-  ``category (idC, compC) /\ g_functor (idD,compD) (idC,compC) G /\
-    g_adjf3 (idC,compC) (idD,compD) F' G (eta : ('C, I, 'F o 'G) g_nattransf)
-      (eps : ('D, 'G o 'F, I) g_nattransf) ==> (compD eps (F' eta) = idD)``,
+  ``g_adjf3 (idC,compC) (idD,compD) F' G (eta : ('C, I, 'F o 'G) g_nattransf)
+      (eps : ('D, 'G o 'F, I) g_nattransf) /\
+    category (idC, compC) /\ g_functor (idD,compD) (idC,compC) G ==> 
+    (compD eps (F' eta) = idD)``,
   EVERY [ STRIP_TAC,
     (FIRST_X_ASSUM (MATCH_MP_TAC o MATCH_MP g_adjf3D1)),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_functorD th])),
     (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP categoryD_idL)) ]) ;
 
 val STAR_eps_I = store_thm ("STAR_eps_I", 
-  ``category (idD, compD) /\ g_functor (idC,compC) (idD,compD) F' /\
-    g_adjf3 (idC,compC) (idD,compD) F' G (eta : ('C, I, 'F o 'G) g_nattransf)
-      (eps : ('D, 'G o 'F, I) g_nattransf) ==> (compC (G eps) eta = idC)``,
+  ``g_adjf3 (idC,compC) (idD,compD) F' G (eta : ('C, I, 'F o 'G) g_nattransf)
+      (eps : ('D, 'G o 'F, I) g_nattransf) /\
+    category (idD, compD) /\ g_functor (idC,compC) (idD,compD) F' ==>
+    (compC (G eps) eta = idC)``,
   EVERY [ STRIP_TAC,
     (FIRST_X_ASSUM (MATCH_MP_TAC o MATCH_MP g_adjf3D2)),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_functorD th])),
@@ -570,10 +621,124 @@ val g_adjf12_equiv = store_thm ("g_adjf12_equiv", tm12e,
   THEN EVERY [ (ONCE_ASM_REWRITE_TAC []), (REWRITE_TAC []),
     CONJ_TAC, AP_TERM_TAC, (FIRST_ASSUM ACCEPT_TAC) ]) ;
 
-(* note - RES_CANON doesn't deal with ty-foralls properly *)
+fun thm_from_ass thm ths = 
+  (repeat (fmmp ths) (REWRITE_RULE [GSYM AND_IMP_INTRO] thm)) ;
+
+fun uta ttac tfa = (ASSUM_LIST (ttac o tfa)) ;
+
 val seith = DISCH_ALL (TY_GEN_ALL (UNDISCH STAR_eps_I)) ;
 val heith = DISCH_ALL (TY_GEN_ALL (UNDISCH HASH_eta_I)) ;
 
+val tm35 = ``g_adjf3 [:'C,'D:] (idC,compC) (idD,compD) F' G eta eps /\
+  category (idC,compC) /\ category (idD,compD) /\ 
+       g_functor (idC,compC) (idD,compD) F' /\
+       g_functor (idD,compD) (idC,compC) G ==>
+  g_adjf5 [:'C, 'D:] (idC,compC) (idD,compD) 
+    (HASH (idD,compD) F' eps) (STAR (idC, compC) G eta)`` ;
+
+val g_adfj3_5 = store_thm ("g_adfj3_5", tm35, 
+  EVERY [ STRIP_TAC,
+    (uta ASSUME_TAC (thm_from_ass heith)),
+    (uta ASSUME_TAC (thm_from_ass seith)),
+    (SRW_TAC [] [g_adjf5_thm, HASH_thm, STAR_thm]),
+    (IMP_RES_TAC g_functor_thm),
+    (IMP_RES_TAC catDLU), (IMP_RES_TAC catDRU) ] 
+  THENL [
+    (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP g_adjf3D)),
+    EVERY [ (ASM_REWRITE_TAC []),
+      (FIRST_ASSUM (fn th => 
+	CHANGED_TAC (REWRITE_TAC [MATCH_MP (GSYM catDAss) th]))),
+      (REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC)),
+      (FIRST_ASSUM (fn th => 
+	CHANGED_TAC (ASM_REWRITE_TAC [MATCH_MP catDAss th]))) ],
+    EVERY [ (ASM_REWRITE_TAC []),
+      (FIRST_ASSUM (fn th => 
+	CHANGED_TAC (REWRITE_TAC [MATCH_MP catDAss th]))),
+      (REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC)),
+      (FIRST_ASSUM (fn th => 
+	CHANGED_TAC (ASM_REWRITE_TAC [MATCH_MP (GSYM catDAss) th]))) ]]) ;
+
+(*
+sge tm35 ;
+
+EVERY [ 
+STRIP_TAC,
+(uta ASSUME_TAC (thm_from_ass heith)),
+(uta ASSUME_TAC (thm_from_ass seith)),
+
+(SRW_TAC [] [g_adjf5_thm, HASH_thm, STAR_thm]),
+
+
+(IMP_RES_TAC g_functor_thm),
+(IMP_RES_TAC catDLU),
+(IMP_RES_TAC catDRU)
+] ;
+
+    (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP g_adjf3D)),
+
+e (ASM_REWRITE_TAC []) ;
+e (FIRST_ASSUM (fn th => 
+  CHANGED_TAC (REWRITE_TAC [MATCH_MP (GSYM catDAss) th]))) ;
+      e (REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC)) ;
+e (FIRST_ASSUM (fn th => 
+  CHANGED_TAC (ASM_REWRITE_TAC [MATCH_MP catDAss th]))) ;
+
+e (ASM_REWRITE_TAC []) ;
+e (FIRST_ASSUM (fn th => 
+  CHANGED_TAC (REWRITE_TAC [MATCH_MP catDAss th]))) ;
+      e (REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC)) ;
+e (FIRST_ASSUM (fn th => 
+  CHANGED_TAC (ASM_REWRITE_TAC [MATCH_MP (GSYM catDAss) th]))) ;
+
+*)
+
+val tm14 = ``adjf1_conds [:'C:] (idC, compC) (idD,compD) eta F' G /\
+  category (idD,compD) /\ g_adjf1 (idC, compC) G eta hash ==> 
+  g_adjf4 [:'C, 'D:] (idC,compC) (idD,compD) hash (STAR (idC, compC) G eta)`` ;
+
+val g_adfj1_4 = store_thm ("g_adfj1_4", tm14, 
+  EVERY [ STRIP_TAC, (REWRITE_TAC [g_adjf4_thm]), (REPEAT CONJ_TAC),
+    (REWRITE_TAC [STAR_def]),
+    (CONV_TAC (REDEPTH_CONV
+	  (REWR_CONV UNCURRY_DEF ORELSEC TY_BETA_CONV ORELSEC BETA_CONV))),
+    (REPEAT STRIP_TAC) ] 
+  THENL [
+    (FIRST_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP g_adjf1DGh)),
+    EVERY [
+      (FIRST_X_ASSUM (fn th => (MATCH_MP catDLU th ; ALL_TAC))),
+      (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o
+	mk_exp_thm o REWRITE_RULE [adjf1_conds_def]))),
+      (POP_ASSUM_LIST (fn ths => MAP_EVERY ASSUME_TAC (List.concat (map
+	CONJUNCTS ths)))),
+      (uta ASSUME_TAC (thm_from_ass g_adjf1_hash_eta)),
+      (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o REWRITE_RULE [g_functor_thm]))),
+      (FIRST_X_ASSUM (ASSUME_TAC o MATCH_MP catDLU)),
+      (ASM_REWRITE_TAC []) ],
+    EVERY [
+      (uta (fn th => CONV_TAC (RATOR_CONV (REWRITE_CONV [th])))
+	(thm_from_ass g_adjf1_hash_comp)),
+      AP_TERM_TAC,
+      (uta (fn th => REWRITE_TAC [th]) (thm_from_ass g_adjf1_Feq)),
+      (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o
+	mk_exp_thm o REWRITE_RULE [adjf1_conds_def, g_functor_thm]))),
+      (POP_ASSUM_LIST (fn ths => MAP_EVERY ASSUME_TAC (List.concat (map
+	CONJUNCTS ths)))),
+      (REPEAT (FIRST_X_ASSUM (ASSUME_TAC o MATCH_MP catDLU))),
+      (ASM_REWRITE_TAC []) ], 
+    EVERY [
+      (FIRST_X_ASSUM (ASSUME_TAC o MATCH_MP g_adjf1DGh)),
+      (FIRST_X_ASSUM (fn th => (MATCH_MP catDLU th ; ALL_TAC))),
+      (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o
+	mk_exp_thm o REWRITE_RULE [adjf1_conds_def, g_functor_thm]))),
+      (POP_ASSUM_LIST (fn ths => MAP_EVERY ASSUME_TAC (List.concat (map
+	CONJUNCTS ths)))),
+      (ASM_REWRITE_TAC []),
+      (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP catDAss th])),
+      (REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC)),
+      (FIRST_ASSUM (fn th => ASM_REWRITE_TAC [MATCH_MP (GSYM catDAss) th])),
+      (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP catDRU th])) ]]) ;
+
+(* note - RES_CANON doesn't deal with ty-foralls properly *)
 val tgs = TY_GEN_ALL (GEN_ALL STAR_eps_I) ;
 val rctgs = RES_CANON tgs ; 
 (* takes off the ty-foralls (recent change ?), but doesn't put them back *)
