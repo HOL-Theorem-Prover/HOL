@@ -54,6 +54,35 @@ val bnf_steps_upwards_closed = store_thm(
     Cases_on `m` THEN FULL_SIMP_TAC (srw_ss()) []
   ]);
 
+val nstar_steps = store_thm(
+  "nstar_steps",
+  ``∀M N. M -n->* N ⇒ ∃n. N = steps n M``,
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN1
+    (Q.EXISTS_TAC `0` THEN SRW_TAC [][]) THEN
+  FULL_SIMP_TAC (srw_ss()) [noreduct_characterisation] THEN
+  Q.EXISTS_TAC `SUC n` THEN SRW_TAC [][] THEN
+  FULL_SIMP_TAC (srw_ss()) [SYM noreduct_bnf]);
+
+val steps_noreduct = store_thm(
+  "steps_noreduct",
+  ``∀t. ¬bnf (steps n t) ⇒
+        (steps n (THE (noreduct t)) = THE (noreduct (steps n t)))``,
+  Induct_on `n` THEN SRW_TAC [][] THEN
+  POP_ASSUM MP_TAC THEN Cases_on `n` THEN SRW_TAC [][]);
+
+val steps_plus = store_thm(
+  "steps_plus",
+  ``∀t. steps (m + n) t = steps m (steps n t)``,
+  Induct_on `m` THEN SRW_TAC [][arithmeticTheory.ADD_CLAUSES] THENL [
+    Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) [],
+    POP_ASSUM MP_TAC THEN Cases_on `n` THEN SRW_TAC [][],
+    `steps n (THE (noreduct t)) = steps n t`
+      by METIS_TAC [bnf_steps_upwards_closed, steps_def,
+                    DECIDE ``n < SUC n``] THEN
+    Cases_on `m` THEN SRW_TAC [][],
+    SRW_TAC [][steps_noreduct]
+  ]);
+
 val csteps_def = Define`
   csteps =
   LAM "n" (LAM "t"

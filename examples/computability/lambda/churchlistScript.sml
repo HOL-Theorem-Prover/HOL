@@ -394,4 +394,17 @@ val cmap_cvlist = store_thm(
   Induct_on `l` THEN
   ASM_SIMP_TAC (bsrw_ss()) [cmap_behaviour, Cong cvcons_cong]);
 
+val cmem_cvlist = store_thm(
+  "cmem_cvlist",
+  ``(∀e. MEM e l ⇒ ∃n. e == church n) ⇒
+    cmem @@ church m @@ cvlist l ==
+    cB (EXISTS (λt. ceqnat @@ church m @@ t == cB T) l)``,
+  Induct_on `l` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cmem_behaviour] THEN REPEAT STRIP_TAC THEN
+  FIRST_ASSUM (Q.SPEC_THEN `h`
+                           (STRIP_ASSUME_TAC o SIMP_RULE (srw_ss()) [])) THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cmem_behaviour, Cong cvcons_cong,
+                            churchnumTheory.ceqnat_behaviour] THEN
+  Cases_on `m = n` THEN SRW_TAC [][]);
+
 val _ = export_theory()
