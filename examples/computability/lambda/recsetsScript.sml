@@ -6,6 +6,7 @@ open recfunsTheory reductionEval
 open binderLib
 open stepsTheory
 open churchlistTheory churchDBTheory
+open normal_orderTheory
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -18,14 +19,14 @@ val empty_recursive = Store_thm(
   ``recursive {}``,
   SRW_TAC [][recursive_def, Phi_def] THEN
   Q.EXISTS_TAC `dBnum (fromTerm (LAM v (church 0)))` THEN
-  SIMP_TAC (bsrw_ss()) [normal_orderTheory.bnf_bnf_of]);
+  SIMP_TAC (bsrw_ss()) [bnf_bnf_of]);
 
 val univ_recursive = Store_thm(
   "univ_recursive",
   ``recursive UNIV``,
   SRW_TAC [][recursive_def, Phi_def] THEN
   Q.EXISTS_TAC `dBnum (fromTerm (LAM v (church 1)))` THEN
-  SIMP_TAC (bsrw_ss()) [normal_orderTheory.bnf_bnf_of]);
+  SIMP_TAC (bsrw_ss()) [bnf_bnf_of]);
 
 val union_recursive_I = Store_thm(
   "union_recursive_I",
@@ -48,7 +49,7 @@ val union_recursive_I = Store_thm(
   Cases_on `n ∈ s₁` THEN Cases_on `n ∈ s₂` THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cor_behaviour,
                             churchboolTheory.cB_behaviour,
-                            normal_orderTheory.bnf_bnf_of]);
+                            bnf_bnf_of]);
 
 val inter_recursive_I = Store_thm(
   "inter_recursive_I",
@@ -64,7 +65,7 @@ val inter_recursive_I = Store_thm(
   IMP_RES_TAC PhiSOME_UM_I THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour,
                             churchnumTheory.cmult_behaviour,
-                            normal_orderTheory.bnf_bnf_of] THEN
+                            bnf_bnf_of] THEN
   Cases_on `n ∈ s₁` THEN SRW_TAC [][]);
 
 val compl_recursive_I = store_thm(
@@ -81,7 +82,7 @@ val compl_recursive_I = store_thm(
   IMP_RES_TAC PhiSOME_UM_I THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour,
                             churchnumTheory.cminus_behaviour,
-                            normal_orderTheory.bnf_bnf_of] THEN
+                            bnf_bnf_of] THEN
   Cases_on `n ∈ s` THEN SRW_TAC [][]);
 
 val compl_recursive = Store_thm(
@@ -110,10 +111,10 @@ val finite_recursive = Store_thm(
                             churchboolTheory.cor_behaviour] THEN
   Cases_on `n = e` THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
-                            normal_orderTheory.bnf_bnf_of] THEN
+                            bnf_bnf_of] THEN
   Cases_on `n ∈ s` THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
-                            normal_orderTheory.bnf_bnf_of]);
+                            bnf_bnf_of]);
 
 (* an r.e. set is one that can be enumerated.  In this world, I take enumerable
    to mean there exists a function that returns values at successive indices.
@@ -159,12 +160,19 @@ val enum2semi_def = Define`
        enum2semibody Mi e loop n j
 `;
 
-val FV_enum2semi = prove(
+val FV_enum2semi = Store_thm(
+  "FV_enum2semi",
   ``FV (enum2semi n t) = FV t``,
   SRW_TAC [][enum2semi_def, LET_THM, pred_setTheory.EXTENSION,
              enum2semibody_def] THEN
   binderLib.NEW_ELIM_TAC THEN REPEAT GEN_TAC THEN
   binderLib.NEW_ELIM_TAC THEN SRW_TAC [][] THEN
+  METIS_TAC []);
+
+val FV_enum2semibody = Store_thm(
+  "FV_enum2semibody",
+  ``FV (enum2semibody n t x y z) = FV t DELETE x DELETE y``,
+  SRW_TAC [][enum2semibody_def, pred_setTheory.EXTENSION] THEN
   METIS_TAC []);
 
 val enum2semi_fresh = prove(
@@ -268,7 +276,27 @@ val EXISTS_GENLIST = prove(
     DISJ2_TAC THEN Q.EXISTS_TAC `n'` THEN SRW_TAC [ARITH_ss][]
   ]);
 
+val Yf_fresh = store_thm(
+  "Yf_fresh",
+  ``v ∉ FV f ⇒
+    (Yf f = LAM v (f @@ (VAR v @@ VAR v)) @@ LAM v (f @@ (VAR v @@ VAR v)))``,
+  SRW_TAC [][chap2Theory.Yf_def, LET_THM] THEN
+  binderLib.NEW_ELIM_TAC THEN
+  SRW_TAC [][termTheory.LAM_eq_thm, termTheory.tpm_fresh]);
+
+val Yf_SUB = store_thm(
+  "Yf_SUB",
+  ``[N/x] (Yf f) = Yf ([N/x] f)``,
+  Q_TAC (NEW_TAC "v") `FV f ∪ FV N ∪ {x}` THEN
+  `Yf f = LAM v (f @@ (VAR v @@ VAR v)) @@ LAM v (f @@ (VAR v @@ VAR v))`
+     by SRW_TAC [][Yf_fresh] THEN
+  `Yf ([N/x]f) =
+     LAM v ([N/x]f @@ (VAR v @@ VAR v)) @@ LAM v ([N/x]f @@ (VAR v @@ VAR v))`
+     by SRW_TAC [][Yf_fresh, chap2Theory.NOT_IN_FV_SUB] THEN
+  SRW_TAC [][]);
+
 (*
+
 val re_semirecursive1 = prove(
   ``re s ⇒ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
   SRW_TAC [][re_def] THEN
@@ -279,7 +307,7 @@ val re_semirecursive1 = prove(
     SIMP_TAC (bsrw_ss()) [churchDBTheory.cnumdB_behaviour,
                           Once chap2Theory.lameq_Y, enum2semi_SUB] THEN
     `toTerm (numdB Mi) @@ church j -n->* z ∧ bnf z`
-       by METIS_TAC [normal_orderTheory.bnf_of_SOME] THEN
+       by METIS_TAC [bnf_of_SOME] THEN
     `∃n. steps n (toTerm (numdB Mi) @@ church j) = z`
        by METIS_TAC [stepsTheory.bnf_steps] THEN
     Q.MATCH_ABBREV_TAC
@@ -287,7 +315,7 @@ val re_semirecursive1 = prove(
     Q_TAC SUFF_TAC `∀st. st ≤ MAX (j + 1) n ⇒
                          E @@ (chap2$Y @@ E) @@ church st == church 0`
           THEN1 (DISCH_THEN (Q.SPEC_THEN `0` MP_TAC) THEN
-                 SIMP_TAC (bsrw_ss()) [normal_orderTheory.bnf_bnf_of]) THEN
+                 SIMP_TAC (bsrw_ss()) [bnf_bnf_of]) THEN
     Q_TAC SUFF_TAC
           `∀m st. (m = MAX (j + 1) n - st) ∧
                   st ≤ MAX (j + 1) n ⇒
@@ -347,10 +375,35 @@ val re_semirecursive1 = prove(
     ],
 
     (* other direction *)
-    FULL_SIMP_TAC (bsrw_ss()) [enum2semi_SUB] THEN
+    FULL_SIMP_TAC (bsrw_ss())
+                  [enum2semi_SUB, Yf_SUB,
+                   Once (MATCH_MP relationTheory.RTC_SINGLE
+                                  head_reductionTheory.whY1),
+                   Once (MATCH_MP relationTheory.RTC_SINGLE
+                                  head_reductionTheory.whY2)] THEN
     FULL_SIMP_TAC (bsrw_ss()) [bnf_steps] THEN
     NTAC 2 (POP_ASSUM MP_TAC) THEN POP_ASSUM (K ALL_TAC) THEN
+    SPEC_TAC(``0n``, ``m:num``) THEN
     Q.ID_SPEC_TAC `n` THEN completeInduct_on `n` THEN
+    Q.X_GEN_TAC `m` THEN
+    `lp ∉ FV (church e)` by SRW_TAC [][] THEN
+    Q_TAC (NEW_TAC "nm") `{lp}` THEN
+    Q_TAC (NEW_TAC "jm") `{nm}` THEN
+    `enum2semi Mi (church e) = enum2semibody Mi (church e) lp nm jm`
+       by (MATCH_MP_TAC enum2semi_fresh THEN SRW_TAC [][]) THEN
+    `(n = 0) ∨ (∃n0. n = SUC n0)`
+       by METIS_TAC [TypeBase.nchotomy_of ``:num``]
+       THEN1 (SRW_TAC [][enum2semibody_def] THEN
+              FULL_SIMP_TAC (srw_ss()) []) THEN
+    ASM_SIMP_TAC (srw_ss()) [Once enum2semibody_def, noreduct_thm,
+                             termTheory.lemma14b] THEN
+    `(n0 = 0) ∨ (∃n1. n0 = SUC n1)`
+       by METIS_TAC [TypeBase.nchotomy_of ``:num``]
+       THEN1 (SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+    ASM_SIMP_TAC (srw_ss()) [noreduct_thm, termTheory.lemma14b]
+
+
+
 
 
 *)
