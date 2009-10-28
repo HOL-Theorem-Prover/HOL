@@ -14,6 +14,12 @@ datatype qfs = QFS of {output_stream : TextIO.outstream,
 fun ECHO (QFS {output_stream , ...}) s = TextIO.output(output_stream, s)
 fun print (QFS {output_stream, ...}) s = TextIO.output(output_stream, s)
 
+fun makesafe c =
+    if not (Char.isPrint c) then "\\" ^ Int.toString (Char.ord c)
+    else str c
+
+fun safeprint x s = print x (String.translate makesafe s)
+
 fun drop_upto c s = let
   (* returns the substring of s that begins at the first occurrence of c *)
   open Substring
@@ -88,7 +94,7 @@ lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
                  else continue());
 <INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('] | {digit} | {lowergreek}) => (
                  print yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2);
-                 print yyarg (drop_upto #":" yytext);
+                 safeprint yyarg (drop_upto #":" yytext);
                  YYBEGIN tyquote;
                  continue());
 <INITIAL>"``" {ws}* ":^" =>
