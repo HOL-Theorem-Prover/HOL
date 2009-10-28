@@ -1147,6 +1147,12 @@ fun mk_abs(Bvar as Fv _, Body) =
        type abstractions.
   ---------------------------------------------------------------------------*)
 
+fun type_var_string (TyFv (s,kd,rk)) =
+    let open Kind in
+      s ^ (if kd = typ then "" else " : "^kind_to_string kd)
+        ^ (if rk =  0  then "" else " :<= "^Int.toString rk)
+    end
+  | type_var_string _ = raise ERR "type_var_string" "not a type variable"
 
 local val FORMAT = ERR "list_mk_tybinder"
    "expected first arg to be a constant of type :(!:<ty>_1. <ty>_2) -> <ty>_3"
@@ -1164,75 +1170,92 @@ local val FORMAT = ERR "list_mk_tybinder"
                    end)
 in
 fun list_mk_tybinder opt =
- let val f = check_opt opt
- in fn (vlist,tm) => 
-    if not (null (Lib.intersect vlist (type_varsl (map type_of (free_vars tm)))))
-    then raise ERR "list_mk_tyabs"
-         "bound type variable occurs free in the type of a free variable of the body"
-    else
-    let open Redblackmap
-     val varmap0 = mkDict Type.compare
-     fun enum [] _ A = A
-       | enum (h::t) i (vmap,rvs) = enum t (i-1) (insert (vmap,h,i), h::rvs)
-     val (varmap, rvlist) = enum vlist (length vlist - 1) (varmap0,[])
-     fun lookup v vmap = case peek (vmap,v) of NONE => v | SOME i => TyBv i
-     fun increment vmap = transform (fn x => x+1) vmap
-     fun bind (Fv(Name,Ty)) vmap k = bindty Ty vmap (fn ty => k (Fv(Name,ty)))
-       | bind (Const(N,Ty)) vmap k = bindpty Ty vmap (fn ty => k (Const(N,ty)))
-       | bind (Comb(M,N)) vmap k   = bind M vmap (fn m =>
-                                     bind N vmap (fn n => k (Comb(m,n))))
-       | bind (TComb(M,Ty)) vmap k = bind M vmap (fn m =>
-                                     bindty Ty vmap (fn ty => k (TComb(m,ty))))
-       | bind (Abs(v,M)) vmap k    = bind v vmap (fn v' =>
-                                     bind M vmap (fn m => k (Abs(v',m))))
-       | bind (TAbs(v,M)) vmap k   = bind M (increment vmap)
-                                            (fn m => k (TAbs(v,m)))
-       | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
-       | bind tm vmap k = k tm (* constant *)
-     and bindpty (GRND Ty) vmap k  = bindty Ty vmap (fn ty => k (GRND ty))
-       | bindpty (POLY Ty) vmap k  = bindty Ty vmap (fn ty => k (POLY ty))
-     and bindty (v as TyFv _) vmap k    = k (lookup v vmap)
-       | bindty (TyApp(Opr,Arg)) vmap k = bindty Opr vmap (fn opr =>
-                                          bindty Arg vmap (fn arg =>
-                                            k (TyApp(opr,arg))))
-       | bindty (TyAll(bv,Body)) vmap k = bindty Body (increment vmap)
-                                            (fn body => k (TyAll(bv,body)))
-       | bindty (TyAbs(bv,Body)) vmap k = bindty Body (increment vmap)
-                                            (fn body => k (TyAbs(bv,body)))
-       | bindty ty _ k = k ty (* constant *)
-  in
-     rev_itlist (fn TyFv a => fn M => f(TAbs(a,M))) rvlist (bind tm varmap I)
+  let val f = check_opt opt
+  in fn (vlist,tm) =>
+    let val ftyvs = type_varsl (map type_of (free_vars tm))
+        val escapers = Lib.intersect vlist ftyvs
+    in
+      if not (null escapers)
+      then let val escapee = hd escapers
+               val esc_name = type_var_string escapee
+               val fv = first (fn v => mem escapee (type_vars (type_of v))) (free_vars tm)
+               val fv_name = #1 (dest_var fv)
+           in raise ERR "list_mk_tyabs"
+              ("bound type variable (" ^ esc_name ^
+               ") occurs free in the type of a free variable of the body ("^fv_name^")")
+           end
+      else
+      let open Redblackmap
+        val varmap0 = mkDict Type.compare
+        fun enum [] _ A = A
+          | enum (h::t) i (vmap,rvs) = enum t (i-1) (insert (vmap,h,i), h::rvs)
+        val (varmap, rvlist) = enum vlist (length vlist - 1) (varmap0,[])
+        fun lookup v vmap = case peek (vmap,v) of NONE => v | SOME i => TyBv i
+        fun increment vmap = transform (fn x => x+1) vmap
+        fun bind (Fv(Name,Ty)) vmap k = bindty Ty vmap (fn ty => k (Fv(Name,ty)))
+          | bind (Const(N,Ty)) vmap k = bindpty Ty vmap (fn ty => k (Const(N,ty)))
+          | bind (Comb(M,N)) vmap k   = bind M vmap (fn m =>
+                                        bind N vmap (fn n => k (Comb(m,n))))
+          | bind (TComb(M,Ty)) vmap k = bind M vmap (fn m =>
+                                        bindty Ty vmap (fn ty => k (TComb(m,ty))))
+          | bind (Abs(v,M)) vmap k    = bind v vmap (fn v' =>
+                                        bind M vmap (fn m => k (Abs(v',m))))
+          | bind (TAbs(v,M)) vmap k   = bind M (increment vmap)
+                                               (fn m => k (TAbs(v,m)))
+          | bind (t as Clos _) vmap k = bind (push_clos t) vmap k
+          | bind tm vmap k = k tm (* constant *)
+        and bindpty (GRND Ty) vmap k  = bindty Ty vmap (fn ty => k (GRND ty))
+          | bindpty (POLY Ty) vmap k  = bindty Ty vmap (fn ty => k (POLY ty))
+        and bindty (v as TyFv _) vmap k    = k (lookup v vmap)
+          | bindty (TyApp(Opr,Arg)) vmap k = bindty Opr vmap (fn opr =>
+                                             bindty Arg vmap (fn arg =>
+                                               k (TyApp(opr,arg))))
+          | bindty (TyAll(bv,Body)) vmap k = bindty Body (increment vmap)
+                                               (fn body => k (TyAll(bv,body)))
+          | bindty (TyAbs(bv,Body)) vmap k = bindty Body (increment vmap)
+                                               (fn body => k (TyAbs(bv,body)))
+          | bindty ty _ k = k ty (* constant *)
+      in
+        rev_itlist (fn TyFv a => fn M => f(TAbs(a,M))) rvlist (bind tm varmap I)
+      end
+      handle e => raise wrap_exn "Term" "list_mk_tybinder" e
+    end
   end
-  handle e => raise wrap_exn "Term" "list_mk_tybinder" e
- end
 end;
 
 val list_mk_tyabs = list_mk_tybinder NONE;
 
 
 fun mk_tyabs(Bvar as TyFv Bvarty, Body) =
-    if mem Bvar (type_varsl (map type_of (free_vars Body)))
-    then raise ERR "mk_tyabs"
-         "bound type variable occurs free in the type of a free variable of the body"
-    else
-    let fun bind (Fv(Name,Ty)) i      = Fv(Name, bindty Ty i)
-          | bind (Const(Name,Ty)) i   = Const(Name, bindpty Ty i)
-          | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
-          | bind (TComb(Rator,Ty)) i  = TComb(bind Rator i, bindty Ty i)
-          | bind (Abs(Bvar,Body)) i   = Abs(bind Bvar i, bind Body i)
-          | bind (TAbs(Bvar,Body)) i  = TAbs(Bvar, bind Body (i+1))
-          | bind (t as Clos _) i      = bind (push_clos t) i
-          | bind tm _ = tm (* constant *)
-        and bindpty (GRND ty) i       = GRND (bindty ty i)
-          | bindpty (POLY ty) i       = POLY (bindty ty i)
-        and bindty (v as TyFv _) i    = if v=Bvar then TyBv i else v
-          | bindty (v as TyBv j) i    = if j>i then TyBv (j+1) else v (* new *)
-          | bindty (TyApp(opr,arg)) i = TyApp(bindty opr i, bindty arg i)
-          | bindty (TyAll(bv,Body)) i = TyAll(bv, bindty Body (i+1))
-          | bindty (TyAbs(bv,Body)) i = TyAbs(bv, bindty Body (i+1))
-          | bindty ty _ = ty (* constant *)
+    let val fvs = free_vars Body
     in
-      TAbs(Bvarty, bind Body 0)
+      if mem Bvar (type_varsl (map type_of fvs))
+      then let val fv = first (fn v => mem Bvar (type_vars (type_of v))) fvs
+               val fv_name = #1 (dest_var fv)
+           in raise ERR "mk_tyabs"
+              ("bound type variable (" ^ type_var_string Bvar ^
+               ") occurs free in the type of a free variable of the body ("^fv_name^")")
+           end
+      else
+      let fun bind (Fv(Name,Ty)) i      = Fv(Name, bindty Ty i)
+            | bind (Const(Name,Ty)) i   = Const(Name, bindpty Ty i)
+            | bind (Comb(Rator,Rand)) i = Comb(bind Rator i, bind Rand i)
+            | bind (TComb(Rator,Ty)) i  = TComb(bind Rator i, bindty Ty i)
+            | bind (Abs(Bvar,Body)) i   = Abs(bind Bvar i, bind Body i)
+            | bind (TAbs(Bvar,Body)) i  = TAbs(Bvar, bind Body (i+1))
+            | bind (t as Clos _) i      = bind (push_clos t) i
+            | bind tm _ = tm (* constant *)
+          and bindpty (GRND ty) i       = GRND (bindty ty i)
+            | bindpty (POLY ty) i       = POLY (bindty ty i)
+          and bindty (v as TyFv _) i    = if v=Bvar then TyBv i else v
+            | bindty (v as TyBv j) i    = if j>i then TyBv (j+1) else v (* new *)
+            | bindty (TyApp(opr,arg)) i = TyApp(bindty opr i, bindty arg i)
+            | bindty (TyAll(bv,Body)) i = TyAll(bv, bindty Body (i+1))
+            | bindty (TyAbs(bv,Body)) i = TyAbs(bv, bindty Body (i+1))
+            | bindty ty _ = ty (* constant *)
+      in
+        TAbs(Bvarty, bind Body 0)
+      end
     end
   | mk_tyabs _ = raise ERR "mk_tyabs" "not a type variable";
 

@@ -413,13 +413,30 @@ val list_mk_tycomb = lmk_tycomb (INCOMPAT_TYPES "list_mk_tycomb")
                                 (INCOMPAT_RANKS "list_mk_tycomb")
 end;
 
+fun type_var_string tyv =
+    let open Kind
+        val (s,kd,rk) = dest_var_type tyv
+                        handle HOL_ERR _ =>
+                        raise ERR "type_var_string" "not a type variable"
+    in
+      s ^ (if kd = typ then "" else " : "^kind_to_string kd)
+        ^ (if rk =  0  then "" else " :<= "^Int.toString rk)
+    end;
+
 (* constructors - type abstractions *)
 fun mk_tyabs(tyv, body) =
-    if not (null (Lib.intersect [tyv] (type_varsl (map type_of (free_vars body)))))
-    then raise ERR "mk_tyabs"
-         "bound type variable occurs free in the type of a free variable of the body"
-    else if is_var_type tyv then TAbs(tyv, body)
-    else raise ERR "mk_tyabs" "first argument not a type variable"
+    let val fvs = free_vars body
+    in
+      if mem tyv (type_varsl (map type_of fvs))
+      then let val fv = first (fn v => mem tyv (type_vars (type_of v))) fvs
+               val Var (fv_name,_) = fv
+           in raise ERR "mk_tyabs"
+              ("bound type variable (" ^ type_var_string tyv ^
+               ") occurs free in the type of a free variable of the body ("^fv_name^")")
+           end
+      else if is_var_type tyv then TAbs(tyv, body)
+      else raise ERR "mk_tyabs" "first argument not a type variable"
+    end
 
 
 (* destructors *)
