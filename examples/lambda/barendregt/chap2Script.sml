@@ -374,6 +374,24 @@ val lameq_Y = store_thm(
   ``Y @@ f == f @@ (Y @@ f)``,
   METIS_TAC [lam_eq_rules, YYf, YffYf]);
 
+val Yf_fresh = store_thm(
+  "Yf_fresh",
+  ``v ∉ FV f ⇒
+    (Yf f = LAM v (f @@ (VAR v @@ VAR v)) @@ LAM v (f @@ (VAR v @@ VAR v)))``,
+  SRW_TAC [][Yf_def, LET_THM] THEN
+  binderLib.NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, tpm_fresh]);
+
+val Yf_SUB = Store_thm(
+  "Yf_SUB",
+  ``[N/x] (Yf f) = Yf ([N/x] f)``,
+  Q_TAC (NEW_TAC "v") `FV f ∪ FV N ∪ {x}` THEN
+  `Yf f = LAM v (f @@ (VAR v @@ VAR v)) @@ LAM v (f @@ (VAR v @@ VAR v))`
+     by SRW_TAC [][Yf_fresh] THEN
+  `Yf ([N/x]f) =
+     LAM v ([N/x]f @@ (VAR v @@ VAR v)) @@ LAM v ([N/x]f @@ (VAR v @@ VAR v))`
+     by SRW_TAC [][Yf_fresh, NOT_IN_FV_SUB] THEN
+  SRW_TAC [][]);
+
 val SK_incompatible = store_thm( (* example 2.18, p23 *)
   "SK_incompatible",
   ``incompatible S K``,
