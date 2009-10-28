@@ -128,5 +128,59 @@ val cor_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cor_def] THEN
   Cases_on `p` THEN SIMP_TAC (bsrw_ss()) [cB_behaviour]);
 
+val cor_T1 = store_thm(
+  "cor_T1",
+  ``cor @@ cB T @@ X == cB T``,
+  SIMP_TAC (bsrw_ss()) [cor_def, cB_behaviour]);
+
+val cor_F1 = store_thm(
+  "cor_F1",
+  ``cor @@ cB F @@ X == X``,
+  SIMP_TAC (bsrw_ss()) [cor_def, cB_behaviour]);
+
+val cB_mynames = prove(
+  ``x ≠ y ⇒ (cB p = LAM x (LAM y (VAR (if p then x else y))))``,
+  SRW_TAC [DNF_ss][cB_def, LAM_eq_thm] THEN
+  SRW_TAC [][basic_swapTheory.swapstr_def] THEN METIS_TAC []);
+
+val whead_tests = store_thm(
+  "whead_tests",
+  ``(M == cB T ⇒ M @@ x @@ y -w->* x) ∧
+    (M == cB F ⇒ M @@ x @@ y -w->* y)``,
+  Q_TAC SUFF_TAC `∀M b x y. M == cB b ⇒ M @@ x @@ y -w->* if b then x else y`
+        THEN1 METIS_TAC [] THEN
+  REPEAT STRIP_TAC THEN
+  `M -n->* cB b` by (MATCH_MP_TAC normal_finds_bnf THEN
+                     SRW_TAC [][betastar_lameq_bnf]) THEN
+  Q_TAC (NEW_TAC "u") `FV M ∪ FV x ∪ FV y` THEN
+  Q_TAC (NEW_TAC "v") `{u} ∪ FV M ∪ FV x ∪ FV y` THEN
+  ASSUME_TAC (MATCH_MP (GEN_ALL cB_mynames) (ASSUME ``v:string ≠ u``)) THEN
+  `∃M0. M -w->* LAM v M0 ∧ M0 -n->* LAM u (VAR (if b then v else u))`
+     by METIS_TAC [normstar_to_abs_wstar] THEN
+  `M @@ x @@ y -w->* LAM v M0 @@ x @@ y`
+     by ASM_SIMP_TAC (srw_ss()) [wh_app_congL] THEN
+  `LAM v M0 @@ x -w->* [x/v]M0`
+     by METIS_TAC [relationTheory.RTC_SINGLE, weak_head_rules] THEN
+  `LAM v M0 @@ x @@ y -w->* [x/v]M0 @@ y`
+     by METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE,
+                   wh_app_congL] THEN
+  `∃M1. M0 -w->* LAM u M1 ∧ M1 -n->* VAR (if b then v else u)`
+     by (MATCH_MP_TAC normstar_to_abs_wstar THEN
+         `u ∉ FV (LAM v M0)` by METIS_TAC [whstar_FV] THEN
+         POP_ASSUM MP_TAC THEN SRW_TAC [][]) THEN
+  `[x/v]M0 -w->* [x/v](LAM u M1)` by METIS_TAC [whstar_substitutive] THEN
+  `[x/v]M0 -w->* LAM u ([x/v]M1)` by (POP_ASSUM MP_TAC THEN SRW_TAC [][]) THEN
+  `M1 -w->* VAR (if b then v else u)`
+     by SRW_TAC [][normstar_to_vheadnullary_wstar] THEN
+  `[x/v] M0 @@ y -w->* LAM u ([x/v]M1) @@ y`
+     by METIS_TAC [wh_app_congL] THEN
+  `LAM u ([x/v]M1) @@ y -w->* [y/u]([x/v]M1)`
+     by METIS_TAC [weak_head_rules, relationTheory.RTC_SINGLE] THEN
+  `[y/u]([x/v]M1) -w->* [y/u]([x/v] (VAR (if b then v else u)))`
+     by METIS_TAC [whstar_substitutive] THEN
+  POP_ASSUM MP_TAC THEN
+  Cases_on `b` THEN ASM_SIMP_TAC (srw_ss()) [lemma14b] THEN
+  METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE]);
+
 val _ = export_theory()
 

@@ -6,7 +6,7 @@
 
 (* interactive use:
   app load ["armTheory", "wordsLib"];
-  val _ = HOL_Interactive.toggle_quietdec ();
+  HOL_Interactive.toggle_quietdec ();
 *)
 
 open HolKernel boolLib bossLib;
@@ -334,6 +334,15 @@ val condT_set_q = Q.store_thm("condT_set_q",
     set_q_def, constT_def, condT_def, seqT_def,
     write_cpsr_def, write__psr_def, writeT_def,
     read_cpsr_def, read_cpsr_def, read__psr_def, readT_def]);
+
+val ARM_WRITE_STATUS_Q = Q.store_thm("ARM_WRITE_STATUS_Q",
+  `!b s.
+     (if b then ARM_WRITE_STATUS sQ T s else s) =
+     ARM_WRITE_STATUS sQ (b \/ ARM_READ_STATUS sQ s) s`,
+  SRW_TAC [] [ARM_WRITE_STATUS_def, ARM_READ_STATUS_def,
+    ARM_WRITE_CPSR_def, ARM_READ_CPSR_def, arm_state_component_equality]
+    \\ MATCH_MP_TAC (GSYM UPDATE_APPLY_IMP_ID)
+    \\ SRW_TAC [] [ARMpsr_component_equality]);
 
 (* ------------------------------------------------------------------------- *)
 (* Evaluation for alignment and other miscellany                             *)
@@ -3533,12 +3542,12 @@ val encode_psr_bit = Q.store_thm("encode_psr_bit",
    (!cpsr. encode_psr cpsr ' 2 = cpsr.M ' 2) /\
    (!cpsr. encode_psr cpsr ' 1 = cpsr.M ' 1) /\
    (!cpsr. encode_psr cpsr ' 0 = cpsr.M ' 0)`,
-  SRW_TAC [] [encode_psr_def, word_modify_bit]);
+  SRW_TAC [fcpLib.FCP_ss] [encode_psr_def]);
 
 val extract_modify =
    (GEN_ALL o SIMP_CONV (arith_ss++fcpLib.FCP_ss++boolSimps.CONJ_ss)
-    [word_modify_def, word_extract_def, word_bits_def, w2w])
-    ``(h >< l) (word_modify P w) = value``;
+    [word_extract_def, word_bits_def, w2w])
+    ``(h >< l) ($FCP P) = value``;
 
 val encode_psr_bits = Q.store_thm("encode_psr_bits",
   `(!cpsr. (26 >< 25) (encode_psr cpsr) = (1 >< 0) cpsr.IT) /\
@@ -3548,6 +3557,11 @@ val encode_psr_bits = Q.store_thm("encode_psr_bits",
    (!cpsr. ( 4 >< 0 ) (encode_psr cpsr) = cpsr.M)`,
   REPEAT STRIP_TAC \\ REWRITE_TAC [encode_psr_def, extract_modify]
     \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def, word_bits_def, w2w]);
+
+val extract_modify =
+   (GEN_ALL o SIMP_CONV (arith_ss++fcpLib.FCP_ss++boolSimps.CONJ_ss)
+    [word_modify_def, word_extract_def, word_bits_def, w2w])
+    ``(h >< l) (word_modify P w) = value``;
 
 val CONCAT62_EQ = Q.prove(
   `!a b c d.
@@ -3560,7 +3574,8 @@ val CONCAT628_EQ = Q.prove(
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [] \\ DECIDE_TAC);
 
 val cpsr_write_by_instr_thm = Q.store_thm("cpsr_write_by_instr_thm",
-  `!cpsr value:word32 bytemask:word4.
+  `!cpsr value:word32 bytemask:word4 affect_execstate priviledged secure
+    aw fw nmfi.
       decode_psr (word_modify (\i b.
          if 27 <= i /\ i <= 31 /\ bytemask ' 3 \/
             24 <= i /\ i <= 26 /\ bytemask ' 3 /\ affect_execstate \/

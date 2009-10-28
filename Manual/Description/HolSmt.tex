@@ -13,7 +13,7 @@ to~2011.  It is loosely inspired by \ml{HolSatLib}
 following publications:
 \begin{itemize}
 \item Tjark Weber: {\it SMT Solvers: New Oracles for the HOL Theorem
-  Prover}. Submitted for publication, 2009.%TODO
+  Prover}.  Accepted for publication at VSTTE 2009.%TODO
 \item Sascha B{\"o}hme, Tjark Weber: {\it Fast LCF-Style Proof
   Reconstruction for Z3}. Submitted for publication, 2009.%TODO
 \end{itemize}
@@ -36,13 +36,16 @@ goal~$(\Gamma, \varphi)$ (where $\Gamma$ is a list of assumptions, and
 $\varphi$ is the goal's conclusion), each tactic returns an empty list
 of new goals and a validation function that returns a theorem~$\Gamma'
 \vdash \varphi$ (with $\Gamma' \subseteq \Gamma$), or fails if the SMT
-solver cannot prove the goal.\footnote{Internally, the assumptions and
-  the \emph{negated} goal are passed to the SMT solver.  If the SMT
+solver cannot prove the goal.\footnote{Internally, the goal's
+  conclusion is first generalized, \ie, outermost universal
+  quantifiers are stripped.  Then the assumptions and the
+  \emph{negated} conclusion are passed to the SMT solver.  If the SMT
   solver determines that these formulas are unsatisfiable, then the
-  (unnegated) goal must be provable from the assumptions.}  In other
-words, these tactics solve the goal (or fail).
-\ml{Tactical.TAC\_PROOF} can be used to derive functions of type
-\ml{goal -> thm} from these tactics.
+  (unnegated) conclusion must be provable from the assumptions.}  In
+other words, these tactics solve the goal (or fail).  As with other
+tactics, \ml{Tactical.TAC\_PROOF} and \ml{Tactical.prove} can be used
+to derive functions of type \ml{goal -> thm} or \ml{term -> thm} from
+them.
 
 \paragraph{Oracles vs.\ proof reconstruction}
 
@@ -87,39 +90,39 @@ Tracing output can be controlled via \ml{Feedback.set\_trace
 possible values.
 
 Communication between \HOL{} and external SMT solvers is via temporary
-files.  The default behavior is to delete these files after successful
-invocation of the SMT solver.  However, this can be changed via the
-above tracing variable.  If there is an error, files are retained in
-any case.
+files.  These files are located in the standard temporary directory,
+typically {\tt /tmp} on Unix machines.  The actual file names are
+generated at run-time, and can be shown by setting the above tracing
+variable to a suitable value.
 
-To protect your data, \ml{HolSmtLib} will not overwrite existing
-files.  Thus in case of an error, you will need to remove temporary
-files manually before you can invoke the SMT solver again.  If you
-forget to do so, or if the file exists for some other reason, you'll
-see an error message \texttt{file '<name>' exists, please remove it}.
+The default behavior of \ml{HolSmtLib} is to delete temporary files
+after successful invocation of the SMT solver.  This also can be
+changed via the above tracing variable.  If there is an error, files
+are retained in any case (but note that the operating system may
+delete temporary files automatically, \eg, when \HOL{} exits).
 
 \begin{session}
 \begin{verbatim}
-- load "HolSmtLib"; open Tactical; open HolSmtLib;
+- load "HolSmtLib"; open HolSmtLib;
 (* output omitted *)
 > val it = () : unit
 
 - show_tags := true;
 > val it = () : unit
 
-- TAC_PROOF YICES_TAC ``(a ==> b) /\ (b ==> a) = (a=b)``;
+- Tactical.prove (``(a ==> b) /\ (b ==> a) = (a=b)``, YICES_TAC);
 > val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
            |- (a ==> b) /\ (b ==> a) = (a = b) : thm
 
-- TAC_PROOF CVC3_TAC ``(a ==> b) /\ (b ==> a) = (a=b)``;
+- Tactical.prove (``(a ==> b) /\ (b ==> a) = (a=b)``, CVC3_TAC);
 > val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
            |- (a ==> b) /\ (b ==> a) = (a = b) : thm
 
-- TAC_PROOF Z3_ORACLE_TAC ``(a ==> b) /\ (b ==> a) = (a=b)``;
+- Tactical.prove (``(a ==> b) /\ (b ==> a) = (a=b)``, Z3_ORACLE_TAC);
 > val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
            |- (a ==> b) /\ (b ==> a) = (a = b) : thm
 
-- TAC_PROOF Z3_TAC ``(a ==> b) /\ (b ==> a) = (a=b)``;
+- Tactical.prove (``(a ==> b) /\ (b ==> a) = (a=b)``, Z3_TAC);
 > val it = [oracles: DISK_THM] [axioms: ] []
            |- (a ==> b) /\ (b ==> a) = (a = b) : thm
 \end{verbatim}
@@ -144,13 +147,17 @@ location and name of the Yices executable.
 CVC3 can be obtained from \url{http://www.cs.nyu.edu/acsys/cvc3/}.
 The CVC3 executable must be made available as {\tt cvc3-optimized}.
 
-Z3 is probably hardest to set up.  A Windows version is available from
-\url{http://research.microsoft.com/en-us/um/redmond/projects/z3/}.
-For Linux and Mac OS~X, see the installation instructions at
-\url{http://www4.in.tum.de/~boehmes/z3.html}.  The executable must be
-made available as {\tt z3} after installation.  Additionally, to
-enable proofs, you must create a file {\tt z3.ini} in your current
-directory that contains (at least) the following lines:
+Z3 is probably hardest to set up.  The Z3 website,
+\url{http://research.microsoft.com/en-us/um/redmond/projects/z3/},
+only provides a Windows version of the solver.  To install this on
+Linux and Mac OS~X, see the instructions at
+\url{http://www4.in.tum.de/~boehmes/z3.html}.  Alternatively, a
+(slightly outdated) Linux version of Z3 can be obtained from
+\url{http://why.lri.fr/provers.en.html}.  The executable must be made
+available as {\tt z3} after installation.  Additionally, to enable
+proofs, you must create a file {\tt z3.ini} in your current directory
+(\ie, the directory you're running \HOL{} in) that contains (at least)
+the following lines:
 \begin{verbatim}
 PROOF_MODE=2
 DISPLAY_PROOF=true

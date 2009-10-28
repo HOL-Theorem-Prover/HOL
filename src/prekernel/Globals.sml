@@ -55,14 +55,12 @@ val show_scrub = ref true
  * Assignable function for printing errors.                                  *
  *---------------------------------------------------------------------------*)
 
-local open Portable
-in
-val output_HOL_ERR =
-   ref (fn {message,origin_function,origin_structure} =>
-         ( output(std_out, ("\nException raised at "^origin_structure^"."^
-			    origin_function^":\n"^message^"\n"));
-	  flush_out std_out))
-end;
+fun outHOL_ERR_default {message,origin_function,origin_structure} =
+    (TextIO.output(TextIO.stdOut,
+                   "\nException raised at "^ origin_structure^"."^
+		   origin_function^":\n"^message^"\n");
+     TextIO.flushOut TextIO.stdOut)
+val output_HOL_ERR = ref outHOL_ERR_default
 
 (*---------------------------------------------------------------------------*
  * Prettyprinting flags                                                      *

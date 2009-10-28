@@ -30,14 +30,22 @@ val DYNLIB = Systeml.DYNLIB
    ---------------------------------------------------------------------- *)
 
 
-(* use the experimental kernel? - Yes!  Poly bug prevents use of standard
-   kernel *)
+(* use the experimental kernel? Depends on the command-line and the compiler
+   version... *)
 val (use_expk, cmdline) =   let
-  val _ = print "** Using the experimental kernel (standard kernel \
-                \doesn't work with Poly/ML) **\n"
-  val (_, rest) = List.partition (fn e => e = "-expk") cmdline
+  val (expk, rest) = List.partition (fn e => e = "-expk") cmdline
+  val version_string_w1 =
+      hd (String.tokens Char.isSpace PolyML.Compiler.compilerVersion)
+      handle Empty => ""
+  val compiler_number =
+      Real.floor (100.0 * valOf (Real.fromString version_string_w1))
+      handle Option => 0
 in
-  (true, rest)
+  if null expk andalso compiler_number < 530 then
+    (print "*** Must use experimental kernel due to compiler bug ***\n";
+     (true, rest))
+  else
+    (not (null expk), rest)
 end
 
 (* do self-tests? and to what level *)

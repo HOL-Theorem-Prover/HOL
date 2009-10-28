@@ -52,10 +52,11 @@ val FINITE_LIST_TO_SET = save_thm("FINITE_LIST_TO_SET",
     in bagTheory.
  ---------------------------------------------------------------------------*)
 
-val LIST_TO_BAG =
+val LIST_TO_BAG_def =
   Define
     `(LIST_TO_BAG [] = {||})
  /\  (LIST_TO_BAG (h::t) = BAG_INSERT h (LIST_TO_BAG t))`;
+val _ = export_rewrites ["LIST_TO_BAG_def"]
 
 val BAG_TO_LIST = Hol_defn "BAG_TO_LIST"
     `BAG_TO_LIST bag =
@@ -84,7 +85,7 @@ val BAG_TO_LIST_INV = Q.store_thm("BAG_TO_LIST_INV",
  recInduct BAG_TO_LIST_IND
    THEN RW_TAC bool_ss []
    THEN ONCE_REWRITE_TAC [UNDISCH BAG_TO_LIST_THM]
-   THEN RW_TAC bool_ss [LIST_TO_BAG]
+   THEN RW_TAC bool_ss [LIST_TO_BAG_def]
    THEN PROVE_TAC [BAG_INSERT_CHOICE_REST,FINITE_SUB_BAG,SUB_BAG_REST]);
 
 
@@ -125,31 +126,30 @@ val LIST_TO_BAG_APPEND = store_thm ("LIST_TO_BAG_APPEND",
 LIST_TO_BAG (l1 ++ l2) =
 BAG_UNION (LIST_TO_BAG l1) (LIST_TO_BAG l2)``,
 Induct_on `l1` THENL [
-  SIMP_TAC list_ss [LIST_TO_BAG, BAG_UNION_EMPTY],
-  ASM_SIMP_TAC list_ss [LIST_TO_BAG, BAG_UNION_INSERT]
+  SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_UNION_EMPTY],
+  ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_UNION_INSERT]
 ]);
 
 
 val INN_LIST_TO_BAG = store_thm ("IN_LIST_TO_BAG",
 ``!n h l. BAG_INN h n (LIST_TO_BAG l) = (LENGTH (FILTER ($= h) l) >= n)``,
 Induct_on `l` THENL [
-  SIMP_TAC list_ss [LIST_TO_BAG, BAG_INN_EMPTY_BAG],
-  ASM_SIMP_TAC list_ss [LIST_TO_BAG, BAG_INN_BAG_INSERT, COND_RAND, COND_RATOR]
+  SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_INN_EMPTY_BAG],
+  ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_INN_BAG_INSERT, COND_RAND, COND_RATOR]
 ]);
 
 
 val IN_LIST_TO_BAG = store_thm ("IN_LIST_TO_BAG",
 ``!h l. BAG_IN h (LIST_TO_BAG l) = MEM h l``,
 Induct_on `l` THENL [
-  SIMP_TAC list_ss [LIST_TO_BAG, NOT_IN_EMPTY_BAG],
-  ASM_SIMP_TAC list_ss [LIST_TO_BAG, BAG_IN_BAG_INSERT]
+  SIMP_TAC list_ss [LIST_TO_BAG_def, NOT_IN_EMPTY_BAG],
+  ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_IN_BAG_INSERT]
 ]);
 
 val LIST_TO_BAG_EQ_EMPTY = store_thm ("LIST_TO_BAG_EQ_EMPTY",
 ``!l. (LIST_TO_BAG l = EMPTY_BAG) = (l = [])``,
 Cases_on `l` THEN
-SIMP_TAC list_ss [LIST_TO_BAG,
-		  BAG_INSERT_NOT_EMPTY]);
+SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_INSERT_NOT_EMPTY]);
 
 
 val PERM_LIST_TO_BAG = store_thm ("PERM_LIST_TO_BAG",

@@ -1545,9 +1545,12 @@ fun move_test_reg m (rdn,rm,mode1) =
       read_qualifier >>= (fn q =>
       read_InITBlock >>= (fn InITBlock =>
       read_OutsideOrLastInITBlock >>= (fn OutsideOrLastInITBlock =>
+      arch_version >>= (fn version =>
         let val thumb_sflag = mk_bool (m <> MOV andalso m <> MVN orelse
                                        not InITBlock andalso
-                                       narrow_registers [rdn,rm])
+                                       narrow_registers [rdn,rm] andalso
+                                       (m <> MOV orelse version < 6 orelse
+                                        is_T sflag))
             val narrow_okay = q <> Wide andalso thumb_sflag = sflag andalso
                               (OutsideOrLastInITBlock orelse not (is_PC rdn))
                               andalso narrow_okay_reg m (rdn,rm,mode1)
@@ -1559,7 +1562,7 @@ fun move_test_reg m (rdn,rm,mode1) =
             (return (pick_enc true narrow_okay,
                mk_Data_Processing (dp_opcode m,sflag,rn,rd,mode1)))
         end handle HOL_ERR {message,...} =>
-              other_errorT ("data_processing_register", message))))
+              other_errorT ("data_processing_register", message)))))
     else
       let val r0 = mk_word4 0
           val (rd,rn) = if mem m [MOV,MVN] then (rdn,r0) else (r0,rdn)

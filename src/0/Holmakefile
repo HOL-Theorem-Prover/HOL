@@ -10,11 +10,12 @@ TAG_UID = $(dprot $(SIGOBJ)/Tag.ui)
 LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
 PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
 COUNT_UID = $(dprot $(SIGOBJ)/Count.ui)
+HOLSET_UID = $(dprot $(SIGOBJ)/HOLset.ui)
 
 Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID)
 	HOLMOSMLC -c -toplevel Raw-sig.sml
 
-Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo $(COUNT_UID)
+Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo $(COUNT_UID) $(HOLSET_UID)
 	HOLMOSMLC -c -toplevel Raw-sig.ui Term.ui Kind.ui Type.ui Thm.sml
 
 TheoryPP.uo: TheoryPP.sml Thm.uo
@@ -29,7 +30,7 @@ Definition.uo: Definition.sml Theory.uo
 Net.uo: Net.sml Term.uo Raw-sig.uo
 	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Net.sml
 
-Thm-sig.uo: Thm-sig.sml $(LIB_UID)
+Thm-sig.uo: Thm-sig.sml $(LIB_UID) $(HOLSET_UID)
 	HOLMOSMLC -c -toplevel Thm-sig.sml
 
 TheoryPP-sig.uo: TheoryPP-sig.sml $(PORTABLE_UID)

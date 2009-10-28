@@ -51,6 +51,7 @@ val restr_terms = map prim_mk_const
   {Name = "unsigned_sat", Thy = "arm_opsem"},
   {Name = "encode_psr", Thy = "arm_coretypes"},
   {Name = "decode_psr", Thy = "arm_coretypes"},
+  {Name = "sign_extend", Thy = "arm_coretypes"},
   {Name = "count_leading_zeroes", Thy = "arm_coretypes"}];
 
 val word4 = ``word4 (a,b,c,d)`` |> EVAL |> SYM |> GEN_ALL;
@@ -212,6 +213,7 @@ val _ = computeLib.add_funs
    DECIDE ``n <=/=> ~n``,
    DECIDE ``~((z /\ c) /\ ~z)``,
    WORD_ADD_ASSOC |> Q.SPECL [`v`,`n2w n`,`n2w m`] |> GSYM |> inst_type32,
+   pairTheory.FST_PAIR_MAP, pairTheory.SND_PAIR_MAP,
    bitwise_clauses inst_type32 WORD_AND_CLAUSES,
    bitwise_clauses inst_type32 WORD_XOR_CLAUSES,
    bitwise_clauses inst_type32 WORD_OR_CLAUSES,
@@ -839,7 +841,7 @@ local
      PSR_OF_UPDATES, REG_OF_UPDATES, MEM_OF_UPDATES,
      CPSR_COMPONENTS_OF_UPDATES, SPSR_COMPONENTS_OF_UPDATES,
      ARM_READ_STATUS_UPDATES, ARM_WRITE_SPSR_FROM_MODE,
-     ARM_READ_UNCHANGED,
+     ARM_READ_UNCHANGED, ARM_WRITE_STATUS_Q,
      ARM_READ_CPSR_COMPONENT_UNCHANGED,
      COND_RATOR, EXCEPTION_MODE,
      Q.ISPEC `ARM_WRITE_CPSR` COND_RAND,
@@ -879,8 +881,8 @@ local
          ["v6K", "ARMv6K"],
          ["v6T2", "ARMv6T2"],
          ["v7", "v7_A", "v7-A", "ARMv7", "ARMv7_A", "ARMv7-A"],
-         ["v7_R", "v7-R", "ARMv7_R", "ARMv7-R"],
-         ["v7_M", "v7-M", "ARMv7_M", "ARMv7-M"]]
+         ["v7_R", "v7-R", "ARMv7_R", "ARMv7-R"]
+         (* ["v7_M", "v7-M", "ARMv7_M", "ARMv7-M"] *)]
 
   val mode_options = map (map lowercase)
         [["Usr", "User"],

@@ -21,10 +21,12 @@ datatype frag = datatype Portable.frag
  * Combinators                                                               *
  *---------------------------------------------------------------------------*)
 
-fun curry f x y = f(x,y)
+fun curry f x y = f (x,y)
 fun uncurry f (x,y) = f x y
 infix 3 ##
 fun (f ## g) (x,y) = (f x, g y)
+fun apfst f (x, y) = (f x, y)
+fun apsnd f (x, y) = (x, f y)
 infix |>
 fun x |> f = f x
 fun C f x y = f y x
@@ -628,11 +630,11 @@ fun start_time () = Timer.startCPUTimer()
 fun end_time timer =
   let val {gc,sys,usr} = Timer.checkCPUTimer timer
   in
-     Portable.output(Portable.std_out,
+     TextIO.output(TextIO.stdOut,
           "runtime: "^Time.toString usr ^ "s,\
       \    gctime: "^Time.toString gc ^ "s, \
       \    systime: "^Time.toString sys ^"s.\n");
-     Portable.flush_out(Portable.std_out)
+     TextIO.flushOut TextIO.stdOut
   end
 
 fun time f x =

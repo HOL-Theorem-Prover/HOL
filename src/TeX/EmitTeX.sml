@@ -87,8 +87,17 @@ local
      s ^ "2num_num2" ^ s, "num2" ^ s ^ "_" ^ s ^ "2num"]
 
   fun record_defns s flds =
-    s :: s ^ "_case_def" :: List.concat
-      (map (fn x => let val y = s ^ "_" ^ x in [y, y ^ "_fupd"] end) flds)
+    let val (l,r) = Substring.position "brss__" (Substring.full s)
+        val big = if Substring.isPrefix "brss__" r then
+                    let val n = Substring.string l ^ "brss__sf" ^
+                                Substring.string (Substring.slice (r, 6, NONE))
+                    in [n, n ^ "_fupd"] end
+                  else
+                    []
+    in
+      s :: s ^ "_case_def" :: (big @ List.concat
+        (map (fn x => let val y = s ^ "_" ^ x in [y, y ^ "_fupd"] end) flds))
+    end
 
   fun record_thms s =
     ["EXISTS_" ^ s, "FORALL_" ^ s] @
@@ -282,6 +291,8 @@ local
      | "#"     => (token_string "Prod",1)
      | "{}"    => (token_string "Empty",2)
      | "_"     => (token_string "Underscore",1)
+     | "IN"    => (token_string "In",1)
+     | "NOTIN" => (token_string "NotIn",1)
      | _       => (String.translate char_map s,String.size s)
 in
   val emit_latex =
@@ -335,7 +346,7 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
                ()
              else
                (S " of ";
-                BB PP.CONSISTENT 0;
+                BB PP.INCONSISTENT 0;
                   app (fn x => (TP x; S " "; S "=>"; BR(1,0)))
                       (List.take(l, ll - 2));
                   TP (List.nth(l, ll - 2));
@@ -350,9 +361,9 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
           end
 
     fun pp_constructor_spec (n, l) =
-          (PT n;
-           BB (if enumerated_type n then PP.INCONSISTENT else PP.CONSISTENT) 1;
-             S " = ";
+          (S "datatype "; PT n; BR(1,2);
+           BB (if enumerated_type n then PP.INCONSISTENT else PP.CONSISTENT) 0;
+             S "= ";
              app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
                  (List.take(l, length l - 1));
              pp_clause (last l);
@@ -362,13 +373,13 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
         let val ll = tl l
             fun pp_record x = (PT x; S " : "; TP (type_of x))
         in
-          (PT (hd l); S " = ";
-           BB PP.CONSISTENT 1;
-             S "<|"; BR(1,1);
-             app (fn x => (pp_record x; S ";"; BR(1,1)))
+          (S "datatype "; PT (hd l); S " ="; BR(1,2);
+           BB PP.CONSISTENT 3;
+             S "<| ";
+             app (fn x => (pp_record x; S ";"; BR(1,0)))
                (List.take(ll, length ll - 1));
-             pp_record (last ll); BR(1,0);
-             S "|>";
+             pp_record (last ll);
+             S " |>";
            EB())
         end
 
@@ -387,9 +398,9 @@ in
   EB()
 end;
 
-val datatype_thm_to_string =
-  PP.pp_to_string (!Globals.linewidth)
-    (pp_datatype_theorem PPBackEnd.raw_terminal);
+fun datatype_thm_to_string thm =
+  String.extract(PP.pp_to_string (!Globals.linewidth)
+    (pp_datatype_theorem PPBackEnd.raw_terminal) thm, 9, NONE);
 
 fun print_datatypes s =
   app (fn (_,x) => print (datatype_thm_to_string x ^ "\n"))

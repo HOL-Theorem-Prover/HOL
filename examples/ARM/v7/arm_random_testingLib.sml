@@ -20,7 +20,7 @@ val _ = Feedback.register_btrace ("arm random", arm_random_trace);
 datatype arch = ARMv4 | ARMv4T
               | ARMv5T | ARMv5TE
               | ARMv6 | ARMv6K | ARMv6T2
-              | ARMv7_A | ARMv7_R | ARMv7_M;
+              | ARMv7_A | ARMv7_R (* | ARMv7_M *);
 
 datatype encoding = ARM | Thumb | Thumb2;
 
@@ -88,7 +88,7 @@ fun version_number a =
    | ARMv6T2 => 6
    | ARMv7_A => 7
    | ARMv7_R => 7
-   | ARMv7_M => 7;
+(* | ARMv7_M => 7 *);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -192,14 +192,9 @@ let val rand_term = random_term arch enc
                                        (if wide then T else u,
                                         arm_astSyntax.mk_Mode2_immediate
                                           (mk_word12 (random_const
-                                             (if enc = ARM orelse
-                                                 enc = Thumb2 andalso
-                                                 wide andalso not unpriv
-                                              then 12 else
-                                                if enc <> Thumb orelse
-                                                   is_word4 13 rn orelse
-                                                   is_word4 15 rn
-                                                then 8 else 5))))
+                                            (if enc <> Thumb orelse
+                                                is_word4 13 rn orelse
+                                                is_word4 15 rn then 7 else 5))))
                                      else
                                        (if enc = ARM then u else T,
                                         arm_astSyntax.mk_Mode2_register
@@ -207,7 +202,7 @@ let val rand_term = random_term arch enc
                                             (case enc
                                              of Thumb => 0
                                               | Thumb2 => 2
-                                              | ARM => 5)),
+                                              | ARM => 3)),
                                            mk_word2 (random_const
                                              (if enc = ARM then 2 else 0)),
                                            hd (rand_term ``:'reg word``)))
@@ -243,7 +238,7 @@ let val rand_term = random_term arch enc
                                          wide andalso not unpriv
                                       then
                                         arm_astSyntax.mk_Mode3_immediate
-                                          (mk_word12 (random_const 12))
+                                          (mk_word12 (random_const 7))
                                       else
                                         mode3
                           val h = if is_F s andalso is_F h then T else h
@@ -317,6 +312,13 @@ in
             [pc]
           else if n = ``:'mode`` then
             [random_mode ()]
+          else if n = ``:'offset`` then
+            [let val i = wordsSyntax.mk_wordii (random_const 5, 24) in
+               if random_range 2 = 0 then
+                 eval (wordsSyntax.mk_word_2comp i)
+               else
+                 i
+             end]
           else let val n = Arbnum.toInt (fcpLib.index_to_num n) in
             [wordsSyntax.mk_wordii (random_const n, n)]
           end
@@ -335,7 +337,7 @@ in
    | ("addressing_mode3", []) =>
        [case random_range 2
         of 0 => arm_astSyntax.mk_Mode3_immediate
-                  (mk_word12 (random_const (if enc = Thumb then 5 else 8)))
+                  (mk_word12 (random_const (if enc = Thumb then 5 else 7)))
          | 1 => arm_astSyntax.mk_Mode3_register
                   (mk_word2 (random_const (if enc = Thumb2 then 2 else 0)),
                    hd (rand_term ``:'reg word``))
@@ -361,10 +363,11 @@ in
                             (hd (rand_term ``:word4``))]]
    | ("branch_instruction", []) =>
        [case random_range 6
-        of 0 => arm_astSyntax.mk_Branch_Target (hd (rand_term ``:word24``))
+        of 0 => arm_astSyntax.mk_Branch_Target
+                     (hd (rand_term ``:'offset word``))
          | 1 => arm_astSyntax.mk_Branch_Exchange (hd (rand_term ``:'reg word``))
          | 2 => r3 arm_astSyntax.mk_Branch_Link_Exchange_Immediate
-                     ``:bool -> bool -> word24``
+                     ``:bool -> bool -> 'offset word``
          | 3 => arm_astSyntax.mk_Branch_Link_Exchange_Register
                      (hd (rand_term ``:'reg word``))
          | 4 => r3 arm_astSyntax.mk_Compare_Branch ``:bool -> word6 -> word3``
@@ -459,34 +462,34 @@ in
        else if enc = Thumb orelse random_range 2 = 0 then
          lsm ()
        else
-         case random_range 12
+         case random_range 8
          of 0 => lsd arm_astSyntax.mk_Load_Dual
           | 1 => lsd arm_astSyntax.mk_Store_Dual
           | 2 => r3 arm_astSyntax.mk_Load_Exclusive
                       ``:'reg word -> 'reg word -> word8``
-          | 3 => r4 arm_astSyntax.mk_Store_Exclusive
-                      ``:'reg word -> 'reg word -> 'reg word -> word8``
-          | 4 => let val (t,t2) = double () in
+          | 3 => let val (t,t2) = double () in
                    arm_astSyntax.mk_Load_Exclusive_Doubleword
                      (hd (rand_term  ``:'reg word``), t, t2)
                  end
-          | 5 => let val (t,t2) = double ()
-                     val (n,d) = r2 I ``:'reg word -> 'reg word``
-                 in
-                   arm_astSyntax.mk_Store_Exclusive_Doubleword (n,d,t,t2)
-                 end
-          | 6 => r2 arm_astSyntax.mk_Load_Exclusive_Halfword
+          | 4 => r2 arm_astSyntax.mk_Load_Exclusive_Halfword
                       ``:'reg word -> 'reg word``
-          | 7 => r3 arm_astSyntax.mk_Store_Exclusive_Halfword
-                      ``:'reg word -> 'reg word -> 'reg word``
-          | 8 => r2 arm_astSyntax.mk_Load_Exclusive_Byte
+          | 5 => r2 arm_astSyntax.mk_Load_Exclusive_Byte
                       ``:'reg word -> 'reg word``
-          | 9 => r3 arm_astSyntax.mk_Store_Exclusive_Byte
-                      ``:'reg word -> 'reg word -> 'reg word``
-          | 10 => r4 arm_astSyntax.mk_Store_Return_State
+          | 6 => r4 arm_astSyntax.mk_Store_Return_State
                       ``:bool -> bool -> bool -> 'mode word``
-          | 11 => r4 arm_astSyntax.mk_Return_From_Exception
+          | 7 => r4 arm_astSyntax.mk_Return_From_Exception
                       ``:bool -> bool -> bool -> 'reg word``
+          | 8 => r3 arm_astSyntax.mk_Store_Exclusive_Byte
+                      ``:'reg word -> 'reg word -> 'reg word``
+          | 9 => r4 arm_astSyntax.mk_Store_Exclusive
+                      ``:'reg word -> 'reg word -> 'reg word -> word8``
+          | 10 => r3 arm_astSyntax.mk_Store_Exclusive_Halfword
+                      ``:'reg word -> 'reg word -> 'reg word``
+          | 11 => let val (t,t2) = double ()
+                      val (n,d) = r2 I ``:'reg word -> 'reg word``
+                  in
+                    arm_astSyntax.mk_Store_Exclusive_Doubleword (n,d,t,t2)
+                  end
           | _ => raise ERR "random_term" "load_store_instruction"]
    | ("miscellaneous_instruction", []) =>
        [case enc
@@ -700,7 +703,7 @@ local
      | ARMv6T2 => "ARMv6T2"
      | ARMv7_A => "ARMv7-A"
      | ARMv7_R => "ARMv7-R"
-     | ARMv7_M => "ARMv7-M"
+  (* | ARMv7_M => "ARMv7-M" *)
 
   fun valid_arch_ecoding e a = Lib.mem e
    (case a
@@ -713,7 +716,7 @@ local
      | ARMv6T2 => [ARM, Thumb, Thumb2]
      | ARMv7_A => [ARM, Thumb, Thumb2]
      | ARMv7_R => [ARM, Thumb, Thumb2]
-     | ARMv7_M => [Thumb, Thumb2])
+  (* | ARMv7_M => [Thumb, Thumb2] *))
 
   fun random_code arch enc typ =
         let val tm = hd (random_term arch enc typ)

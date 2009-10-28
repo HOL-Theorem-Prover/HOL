@@ -1,8 +1,9 @@
 open HolKernel boolLib bossLib Parse
 
-open normal_orderTheory churchDBTheory
+open normal_orderTheory churchDBTheory churchlistTheory
 open reductionEval
 
+fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
 val _ = new_theory "steps"
 
@@ -53,6 +54,35 @@ val bnf_steps_upwards_closed = store_thm(
     Cases_on `m` THEN FULL_SIMP_TAC (srw_ss()) []
   ]);
 
+val nstar_steps = store_thm(
+  "nstar_steps",
+  ``∀M N. M -n->* N ⇒ ∃n. N = steps n M``,
+  HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN1
+    (Q.EXISTS_TAC `0` THEN SRW_TAC [][]) THEN
+  FULL_SIMP_TAC (srw_ss()) [noreduct_characterisation] THEN
+  Q.EXISTS_TAC `SUC n` THEN SRW_TAC [][] THEN
+  FULL_SIMP_TAC (srw_ss()) [SYM noreduct_bnf]);
+
+val steps_noreduct = store_thm(
+  "steps_noreduct",
+  ``∀t. ¬bnf (steps n t) ⇒
+        (steps n (THE (noreduct t)) = THE (noreduct (steps n t)))``,
+  Induct_on `n` THEN SRW_TAC [][] THEN
+  POP_ASSUM MP_TAC THEN Cases_on `n` THEN SRW_TAC [][]);
+
+val steps_plus = store_thm(
+  "steps_plus",
+  ``∀t. steps (m + n) t = steps m (steps n t)``,
+  Induct_on `m` THEN SRW_TAC [][arithmeticTheory.ADD_CLAUSES] THENL [
+    Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) [],
+    POP_ASSUM MP_TAC THEN Cases_on `n` THEN SRW_TAC [][],
+    `steps n (THE (noreduct t)) = steps n t`
+      by METIS_TAC [bnf_steps_upwards_closed, steps_def,
+                    DECIDE ``n < SUC n``] THEN
+    Cases_on `m` THEN SRW_TAC [][],
+    SRW_TAC [][steps_noreduct]
+  ]);
+
 val csteps_def = Define`
   csteps =
   LAM "n" (LAM "t"
@@ -64,7 +94,7 @@ val csteps_def = Define`
              @@ VAR "t"))
 `;
 
-val FV_csteps = store_thm(
+val FV_csteps = Store_thm(
   "FV_csteps",
   ``FV csteps = {}``,
   SRW_TAC [][csteps_def, pred_setTheory.EXTENSION]);
@@ -72,15 +102,19 @@ val FV_csteps = store_thm(
 open brackabs
 val csteps_eqn = brackabs_equiv [] csteps_def
 
+val cnoreduct_behaviour' =
+    cnoreduct_behaviour |> Q.SPEC `toTerm t`
+                        |> SIMP_RULE (srw_ss()) []
+
 val csteps_behaviour = store_thm(
   "csteps_behaviour",
   ``∀n t.
-      csteps @@ church n @@ cDB (fromTerm t) -n->* cDB (fromTerm (steps n t))``,
+      csteps @@ church n @@ cDB t -n->* cDB (fromTerm (steps n (toTerm t)))``,
   SIMP_TAC (bsrw_ss()) [csteps_eqn] THEN
   Induct THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.church_thm, cbnf_behaviour] THEN
-  Q.X_GEN_TAC `t` THEN Cases_on `bnf t` THEN
+  Q.X_GEN_TAC `t` THEN Cases_on `dbnf t` THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
-                            cnoreduct_behaviour]);
+                            cnoreduct_behaviour']);
 
 val _ = export_theory ()

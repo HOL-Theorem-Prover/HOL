@@ -208,6 +208,14 @@ val LEAST_EXISTS_IMP = store_thm
    ``!p. (?n. p n) ==> (p ($LEAST p) /\ !n. n < $LEAST p ==> ~p n)``,
    REWRITE_TAC [LEAST_EXISTS]);
 
+val LEAST_EQ = store_thm(
+  "LEAST_EQ",
+  ``((LEAST n. n = x) = x) /\ ((LEAST n. x = n) = x)``,
+  CONJ_TAC THEN
+  Q.SPEC_THEN `\n. n = x` (MATCH_MP_TAC o BETA_RULE) LEAST_ELIM THEN
+  SIMP_TAC (srw_ss()) []);
+val _ = export_rewrites ["LEAST_EQ"]
+
 (* ----------------------------------------------------------------------
     OWHILE ("option while") which returns SOME result if the loop
     terminates, NONE otherwise.

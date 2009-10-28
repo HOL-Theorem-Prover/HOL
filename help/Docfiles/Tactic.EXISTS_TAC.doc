@@ -31,9 +31,8 @@ The goal:
 }
 can be solved by:
 {
-   EXISTS_TAC "T" THEN REFL_TAC
+   EXISTS_TAC ``T`` THEN REFL_TAC
 }
-
 
 \SEEALSO
 Thm.EXISTS.

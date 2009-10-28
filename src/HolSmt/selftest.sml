@@ -188,6 +188,8 @@ in
       [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``(p ==> q) /\ (q ==> p) ==> (p = q)``,
       [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``(p ==> q) /\ (q ==> p) = (p = q)``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``p \/ q ==> p /\ q``, [sat_YO, sat_YSO, sat_CVC, sat_Z3, sat_Z3p]),
     (``if p then (q ==> p) else (p ==> q)``,
       [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),

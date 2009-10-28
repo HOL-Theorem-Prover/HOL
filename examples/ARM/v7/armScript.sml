@@ -1,6 +1,6 @@
 (* ------------------------------------------------------------------------ *)
-(*     ARM Machine Code Semantics                                           *)
-(*     ==========================                                           *)
+(*     ARM Machine Code Semantics (A and R profiles)                        *)
+(*     =============================================                        *)
 (*     Top-level: fetch and run instructions                                *)
 (* ------------------------------------------------------------------------ *)
 
@@ -52,9 +52,11 @@ val fetch_instruction_def = Define`
 
 val arm_next_def = Define`
   arm_next ii =
-    (event_registered ii ||| waiting_for_interrupt ii) >>=
-    (\(registered,wfi).
-      if ~registered \/ wfi then
+    (read_arch ii ||| event_registered ii ||| waiting_for_interrupt ii) >>=
+    (\(arch,registered,wfi).
+      if arch = ARMv7_M then
+        errorT "arm_next: ARMv7-M profile not supported"
+      else if ~registered \/ wfi then
         constT ()
       else
         fetch_instruction ii >>= arm_instr ii)`;
@@ -63,12 +65,6 @@ val arm_run_def = Define`
   arm_run t ii =
     (forT 0 t (K (arm_next ii))) >>=
     (\unit_list:unit list. constT ())`;
-
-val arm_test_def = Define`
-  arm_test (f:'a M) (c:'b) P s =
-    case f s
-    of Error e -> F
-    || ValueState v q -> P q`;
 
 (* ------------------------------------------------------------------------ *)
 
