@@ -79,8 +79,6 @@ fun tac1 THEN tac2 = fn g =>
             ([], let val th = vf (map (fn f => f[]) V) in fn [] => th end)
        | (G,V,lengths) => (G, (vf o mapshape lengths V))
    end
-   handle e as HOL_ERR _ => raise (wrap_exn "Tactical" "THEN" e);
-
 
 (*---------------------------------------------------------------------------
  * fun (tac1:tactic) THENL (tac2l : tactic list) : tactic = fn g =>
@@ -104,11 +102,8 @@ fun (tac1:tactic) THENL (tacl:tactic list) :tactic = fn g =>
      of [] => ([], let val th = vf (map (fn f => f[]) V) in fn [] => th end)
       | _  => (G, (vf o mapshape lengths V))
  end
- handle e as HOL_ERR _ => raise (wrap_exn "Tactical" "THENL" e);
-
 
 fun (tac1 ORELSE tac2) g = tac1 g handle HOL_ERR _ => tac2 g;
-
 
 (*---------------------------------------------------------------------------
  * tac1 THEN1 tac2: A tactical like THEN that applies tac2 only to the
@@ -130,7 +125,6 @@ fun op THEN1 (tac1 : tactic, tac2 : tactic) : tactic =
   in
     (t_gl, fn thl => jf (h_jf [] :: thl))
   end
-  handle e as HOL_ERR _ => raise wrap_exn "Tactical" "THEN1" e;
 
 (*---------------------------------------------------------------------------
  * REVERSE tac: A tactical that reverses the list of subgoals of tac.
@@ -145,7 +139,6 @@ fun REVERSE tac g
   = let val (gl, jf) = tac g
     in (rev gl, jf o rev)
     end
-    handle e as HOL_ERR _ => raise wrap_exn "Tactical" "REVERSE" e;
 
 (*---------------------------------------------------------------------------
  * Fail with the given token.  Useful in tactic programs to check that a
@@ -270,11 +263,13 @@ fun MAP_FIRST tacf lst = FIRST (map tacf lst);
 
 (*---------------------------------------------------------------------------
  * Uses first tactic that proves the goal.
- *    FIRST [TAC1;...;TACn] =  (TAC1 THEN NO_TAC)  ORELSE  ...  ORELSE  (TACn THEN NO_TAC)
+ *    FIRST_PROVE [TAC1;...;TACn] =
+ *      (TAC1 THEN NO_TAC)  ORELSE  ...  ORELSE  (TACn THEN NO_TAC)
  * Fails if no tactic proves the goal.
  *---------------------------------------------------------------------------*)
 
-fun FIRST_PROVE tacl = itlist (fn a => fn b => (a THEN NO_TAC) ORELSE b) tacl NO_TAC;
+fun FIRST_PROVE tacl =
+  itlist (fn a => fn b => (a THEN NO_TAC) ORELSE b) tacl NO_TAC;
 
 (*---------------------------------------------------------------------------
  * Call a thm-tactic for every assumption.
