@@ -110,15 +110,15 @@ val ss = rewrites [x86_exec_def, XREAD_REG_def, XREAD_EFLAG_def,
   read_m32_def, write_m8_def, read_m8_def, seq_monad_thm,
   read_src_ea_byte_def, write_ea_byte_def, read_ea_byte_def,
   write_monop_def, ea_Xr_def, ea_Xi_def, ea_Xrm_base_def,
-  ea_Xrm_index_def, ea_Xrm_def, ea_Xdest_def, ea_Xsrc_def,
-  read_dest_ea_byte_def, ea_Ximm_rm_def, read_ea_def, read_src_ea_def,
-  read_dest_ea_def, write_ea_def, write_PF_def, write_ZF_def,
-  write_SF_def, write_logical_eflags_def, x86_exec_pop_def,
-  x86_exec_pop_eip_def, write_arith_eflags_except_CF_def,
-  write_arith_eflags_def, add_with_carry_out_def,
-  clear_icache_seq_def, sub_with_borrow_out_def,
-  write_arith_result_def, clear_icache_def,
-  write_arith_result_no_CF_def, write_arith_result_no_write_def,
+  read_reg_byte_def, ea_Xrm_index_def, ea_Xrm_def, ea_Xdest_def,
+  ea_Xsrc_def, read_dest_ea_byte_def, ea_Ximm_rm_def, read_ea_def,
+  read_src_ea_def, read_dest_ea_def, write_ea_def, write_PF_def,
+  write_ZF_def, write_SF_def, write_logical_eflags_def,
+  x86_exec_pop_def, x86_exec_pop_eip_def, write_binop_with_carry_def,
+  write_arith_eflags_except_CF_OF_def, write_arith_eflags_def,
+  add_with_carry_out_def, clear_icache_seq_def,
+  sub_with_borrow_out_def, write_arith_result_def, clear_icache_def,
+  write_arith_result_no_CF_OF_def, write_arith_result_no_write_def,
   write_logical_result_def, write_logical_result_no_write_def,
   write_binop_def, write_monop_def, read_cond_def, read_reg_seq_def,
   read_eip_seq_def, write_eip_seq_def, read_m8_seq_def,
@@ -127,8 +127,9 @@ val ss = rewrites [x86_exec_def, XREAD_REG_def, XREAD_EFLAG_def,
   write_reg_seq_def, jump_to_ea_def, x86_exec_push_def,
   x86_exec_push_eip_def, rm_is_memory_access_def, write_eflag_seq_def,
   if_some_lemma, XREAD_CLAUSES, call_dest_from_ea_def,
-  get_ea_address_def, erase_eflags_def, write_result_erase_eflags_def,
-  word_signed_overflow_add_def, word_signed_overflow_sub_def]
+  Xbinop_name_distinct, get_ea_address_def, erase_eflags_def,
+  write_result_erase_eflags_def, word_signed_overflow_add_def,
+  word_signed_overflow_sub_def]
 
 fun x86_step s = let
   val th = x86_decode s
@@ -168,7 +169,7 @@ fun x86_step s = let
   val th = x86_step (x86_encode "jmp esi")
   val th = x86_step (x86_encode "xchg [ebx],eax")
   val th = x86_step (x86_encode "mov BYTE [esi],edx");
-  val th = x86_step "0FB63E";          (* mov_byte edi,[esi] *)
+  val th = x86_step (x86_encode "movzx edx,BYTE [esi]");
   val th = x86_step "0538000000";      (* add eax,56 *)
   val th = x86_step "8B3E";            (* mov edi,[esi] *)
   val th = x86_step "810037020000";    (* add dword [eax],567 *)

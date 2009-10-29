@@ -202,8 +202,6 @@ fun x86_encode s = let
   val e = hd (sort (fn x => fn y => size x <= size y) all)
   in e end
 
-(* fails for [reg+reg+imm], [reg+reg], [4*reg], [2*reg], ... *)
-
 fun x86_supported_instructions () = let
   fun all_distinct [] = []
     | all_distinct (x::xs) = x::all_distinct (filter (fn y => not ((x:string) = y)) xs)

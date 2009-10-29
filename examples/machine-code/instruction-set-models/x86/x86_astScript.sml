@@ -40,7 +40,7 @@ val _ = Hol_datatype `
   Ximm_rm = Xi_rm of Xrm    (* r/m32 *)
           | Xi    of Ximm   (* imm32 or imm8 (sign-extended) *) `;
 
-val _ = Hol_datatype `Xbinop_name = Xadd | Xand | Xcmp | Xor | Xshl | Xshr | Xsar | Xsub | Xtest | Xxor `;
+val _ = Hol_datatype `Xbinop_name = Xadc | Xadd | Xand | Xcmp | Xor | Xshl | Xshr | Xsar | Xsub | Xsbb | Xtest | Xxor `;
 val _ = Hol_datatype `Xmonop_name = Xdec | Xinc | Xnot | Xneg `;
 
 val _ = Hol_datatype `Xcond = (* this list is not complete *)
@@ -64,6 +64,7 @@ val _ = Hol_datatype `
                | Xcall      of Ximm_rm
                | Xret       of Ximm
                | Xmov       of Xcond => Xdest_src
+               | Xmovzx     of Xdest_src
                | Xmov_byte  of Xdest_src
                | Xcmp_byte  of Xdest_src
                | Xdec_byte  of Xrm

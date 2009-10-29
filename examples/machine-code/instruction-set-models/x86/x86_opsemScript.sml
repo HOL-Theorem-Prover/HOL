@@ -71,10 +71,20 @@ val read_src_ea_def = Define `
 val read_dest_ea_def = Define `
   read_dest_ea ii ds = seqT (ea_Xdest ii ds) (\ea. addT ea (read_ea ii ea))`;
 
+val read_reg_byte_def = Define `
+  (read_reg_byte ii EAX = seqT (read_reg ii EAX) (\w. constT ((w2w w):word8))) /\
+  (read_reg_byte ii EBX = seqT (read_reg ii EBX) (\w. constT (w2w w))) /\
+  (read_reg_byte ii ECX = seqT (read_reg ii ECX) (\w. constT (w2w w))) /\
+  (read_reg_byte ii EDX = seqT (read_reg ii EDX) (\w. constT (w2w w))) /\
+  (read_reg_byte ii EBP = seqT (read_reg ii EAX) (\w. constT (w2w (w >>> 8)))) /\
+  (read_reg_byte ii ESI = seqT (read_reg ii EBX) (\w. constT (w2w (w >>> 8)))) /\
+  (read_reg_byte ii EDI = seqT (read_reg ii ECX) (\w. constT (w2w (w >>> 8)))) /\
+  (read_reg_byte ii ESP = seqT (read_reg ii EDX) (\w. constT (w2w (w >>> 8))))`;
+
 val read_ea_byte_def = Define `
-  (read_ea_byte ii (Xea_i i) = constT i) /\
-  (read_ea_byte ii (Xea_r r) = seqT (assertT (r IN {EAX;EBX;ECX;EDX})) (\x. read_reg ii r)) /\
-  (read_ea_byte ii (Xea_m a) = seqT (read_m8 ii a) (\w. constT (w2w w)))`;
+  (read_ea_byte ii (Xea_i i) = constT (w2w i)) /\
+  (read_ea_byte ii (Xea_r r) = read_reg_byte ii r) /\
+  (read_ea_byte ii (Xea_m a) = read_m8 ii a)`;
 
 val read_src_ea_byte_def = Define `
   read_src_ea_byte ii ds = seqT (ea_Xsrc ii ds) (\ea. addT ea (read_ea_byte ii ea))`;
@@ -91,8 +101,8 @@ val write_ea_def = Define `
 
 val write_ea_byte_def = Define `
   (write_ea_byte ii (Xea_i i) x = failureT) /\  (* one cannot store into a constant *)
-  (write_ea_byte ii (Xea_r r) x = write_reg ii r x) /\
-  (write_ea_byte ii (Xea_m a) x = write_m8 ii a (w2w x))`;
+  (write_ea_byte ii (Xea_r r) x = failureT) /\  (* not supported yet *)
+  (write_ea_byte ii (Xea_m a) x = write_m8 ii a x)`;
 
 (* jump_to_ea updates eip according to procedure call *)
 
@@ -137,8 +147,8 @@ val write_logical_eflags_def = Define `
     (parT_unit (write_eflag ii X_CF (SOME F))
                (write_eflag ii X_AF NONE)))))`;  (* not modelled *)
 
-val write_arith_eflags_except_CF_def = Define `
-  write_arith_eflags_except_CF ii w =
+val write_arith_eflags_except_CF_OF_def = Define `
+  write_arith_eflags_except_CF_OF ii w =
      parT_unit (write_PF ii w)
     (parT_unit (write_ZF ii w)
     (parT_unit (write_SF ii w)
@@ -148,7 +158,7 @@ val write_arith_eflags_def = Define `
   write_arith_eflags ii (w,c,x) =
     parT_unit (write_eflag ii X_CF (SOME c))
    (parT_unit (write_eflag ii X_OF (SOME x))
-              (write_arith_eflags_except_CF ii w))`;
+              (write_arith_eflags_except_CF_OF ii w))`;
 
 val erase_eflags_def = Define `
   erase_eflags ii =
@@ -160,6 +170,8 @@ val erase_eflags_def = Define `
                (write_eflag ii X_AF NONE)))))`;
 
 (* binops *)
+
+val bool2num_def = Define `bool2num b = if b then 1 else 0`;
 
 val word_signed_overflow_add_def = Define `
   word_signed_overflow_add a b =
@@ -180,9 +192,9 @@ val sub_with_borrow_out_def = Define `
 val write_arith_result_def = Define `
   write_arith_result ii (w,c,x) ea = parT_unit (write_arith_eflags ii (w,c,x)) (write_ea ii ea w)`;
 
-val write_arith_result_no_CF_def = Define `
-  write_arith_result_no_CF ii w ea =
-    (parT_unit (write_arith_eflags_except_CF ii w) (write_ea ii ea w))`;
+val write_arith_result_no_CF_OF_def = Define `
+  write_arith_result_no_CF_OF ii w ea =
+    (parT_unit (write_arith_eflags_except_CF_OF ii w) (write_ea ii ea w))`;
 
 val write_arith_result_no_write_def = Define `
   write_arith_result_no_write ii (w,c,x) = (write_arith_eflags ii (w,c,x))`;
@@ -206,16 +218,28 @@ val write_binop_def = Define `
   (write_binop ii Xor   x y ea = (write_logical_result ii (x !! y) ea)) /\
   (write_binop ii Xshl  x y ea = (write_result_erase_eflags ii (x << w2n y) ea)) /\
   (write_binop ii Xshr  x y ea = (write_result_erase_eflags ii (x >>> w2n y) ea)) /\
-  (write_binop ii Xsar  x y ea = (write_result_erase_eflags ii (x >> w2n y) ea))`;
+  (write_binop ii Xsar  x y ea = (write_result_erase_eflags ii (x >> w2n y) ea)) /\
+  (write_binop ii _     x y ea = failureT)`;
+
+val write_binop_with_carry_def = Define `
+  (write_binop_with_carry ii Xadc x y cf ea = 
+       parT_unit (write_eflag ii X_CF (SOME (2**32 <= w2n x + w2n y + bool2num cf))) 
+      (parT_unit (write_eflag ii X_OF NONE)
+                 (write_arith_result_no_CF_OF ii (x + y + n2w (bool2num cf)) ea))) /\
+  (write_binop_with_carry ii Xsbb x y cf ea = 
+       parT_unit (write_eflag ii X_CF (SOME (w2n x < w2n y + bool2num cf))) 
+      (parT_unit (write_eflag ii X_OF NONE)
+                 (write_arith_result_no_CF_OF ii (x - (y + n2w (bool2num cf))) ea))) /\
+  (write_binop_with_carry ii _    x y cf ea = failureT)`;
 
 (* monops *)
 
 val write_monop_def = Define `
   (write_monop ii Xnot x ea = write_ea ii ea (~x)) /\
-  (write_monop ii Xdec x ea = write_arith_result_no_CF ii (x - 1w) ea) /\
-  (write_monop ii Xinc x ea = write_arith_result_no_CF ii (x + 1w) ea) /\
+  (write_monop ii Xdec x ea = write_arith_result_no_CF_OF ii (x - 1w) ea) /\
+  (write_monop ii Xinc x ea = write_arith_result_no_CF_OF ii (x + 1w) ea) /\
   (write_monop ii Xneg x ea =
-    parT_unit (write_arith_result_no_CF ii (0w - x) ea)
+    parT_unit (write_arith_result_no_CF_OF ii (0w - x) ea)
                 (write_eflag ii X_CF NONE))`;
 
 (* evaluating conditions of eflags *)
@@ -228,9 +252,9 @@ val read_cond_def = Define `
   (read_cond ii X_NE     = seqT (read_eflag ii X_ZF) (\b. constT (~b))) /\
   (read_cond ii X_NS     = seqT (read_eflag ii X_SF) (\b. constT (~b))) /\
   (read_cond ii X_NB     = seqT (read_eflag ii X_CF) (\b. constT (~b))) /\
-  (read_cond ii X_A     = seqT
+  (read_cond ii X_A      = seqT
      (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (~c /\ ~z))) /\
-  (read_cond ii X_NA    = seqT
+  (read_cond ii X_NA     = seqT
      (parT (read_eflag ii X_CF) (read_eflag ii X_ZF)) (\(c,z). constT (c \/ z)))`;
 
 (* execute stack operations for non-EIP registers *)
@@ -269,10 +293,18 @@ val x86_exec_push_eip_def = Define `
 
 val x86_exec_def = Define `
   (x86_exec ii (Xbinop binop_name ds) len = bump_eip ii len
-     (seqT
-        (parT (read_src_ea ii ds) (read_dest_ea ii ds))
-           (\ ((ea_src,val_src),(ea_dest,val_dest)).
-              write_binop ii binop_name val_dest val_src ea_dest))) /\
+       (if (binop_name = Xadc) \/ (binop_name = Xsbb) then
+          seqT
+            (parT (parT (read_src_ea ii ds) (read_dest_ea ii ds)) 
+                  (read_eflag ii X_CF))
+               (\ (((ea_src,val_src),(ea_dest,val_dest)),val_cf).
+                  write_binop_with_carry ii binop_name 
+                    val_dest val_src val_cf ea_dest)
+        else
+          seqT
+            (parT (read_src_ea ii ds) (read_dest_ea ii ds))
+               (\ ((ea_src,val_src),(ea_dest,val_dest)).
+                  write_binop ii binop_name val_dest val_src ea_dest))) /\
   (x86_exec ii (Xmonop monop_name rm) len = bump_eip ii len
      (seqT
         (seqT (ea_Xrm ii rm) (\ea. addT ea (read_ea ii ea)))
@@ -285,7 +317,7 @@ val x86_exec_def = Define `
         (\ ((ea_src,val_src),eax).
               parT_unit (write_reg ii EAX (eax * val_src))
              (parT_unit (write_reg ii EDX (n2w ((w2n eax * w2n val_src) DIV 2**32)))
-                        (erase_eflags ii)) (* erase_flag is here an over approximation *)))) /\
+                        (erase_eflags ii)) (* here erase_flag is an over approximation *)))) /\
   (x86_exec ii (Xdiv rm) len = bump_eip ii len
      (seqT
         (parT (seqT (ea_Xrm ii rm) (\ea. addT ea (read_ea ii ea)))
@@ -349,8 +381,13 @@ val x86_exec_def = Define `
      (seqT
         (seqT (ea_Xrm ii rm) (\ea. addT ea (read_ea_byte ii ea)))
         (\ (ea_src,val_src).
-           parT_unit (write_ea_byte ii ea_src (w2w ((w2w val_src) - 1w:word8)))
+           parT_unit (write_ea_byte ii ea_src (val_src - 1w))
                      (erase_eflags ii)))) /\
+  (x86_exec ii (Xmovzx ds) len = bump_eip ii len
+     (seqT
+        (parT (read_src_ea_byte ii ds) (ea_Xdest ii ds))
+        (\ ((ea_src,val_src),ea_dest).
+           write_ea ii ea_dest (w2w val_src)))) /\
   (x86_exec ii (Xmov_byte ds) len = bump_eip ii len
      (seqT
         (parT (read_src_ea_byte ii ds) (ea_Xdest ii ds))
@@ -360,7 +397,7 @@ val x86_exec_def = Define `
      (seqT
         (parT (read_src_ea_byte ii ds) (read_dest_ea_byte ii ds))
            (\ ((ea_src,val_src),(ea_dest,val_dest)).
-              write_binop ii Xcmp val_dest val_src ea_dest))) /\
+              write_binop ii Xcmp (w2w val_dest) (w2w val_src) ea_dest))) /\
   (x86_exec ii (Xjcc c imm) len = (
      seqT
        (parT (read_eip ii) (read_cond ii c))
