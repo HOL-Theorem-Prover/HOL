@@ -293,6 +293,9 @@ local
      | "_"     => (token_string "Underscore",1)
      | "IN"    => (token_string "In",1)
      | "NOTIN" => (token_string "NotIn",1)
+     | "\226\134\146" => (token_string "Map", 1) (* → *)
+     | "\226\138\162" => (token_string "Turnstile", 2) (* ⊢ *)
+     | "\226\151\129" => (token_string "LOpenTri", 1) (* ◁ *)
      | _       => (String.translate char_map s,String.size s)
 in
   val emit_latex =
