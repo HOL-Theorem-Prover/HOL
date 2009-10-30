@@ -584,6 +584,11 @@ val NOT_IN_BAG_DIFF = Q.store_thm(
   SRW_TAC [COND_elim_ss, ARITH_ss][FUN_EQ_THM, BAG_IN, BAG_INN, BAG_INSERT,
                                    BAG_DIFF]);
 
+val BAG_IN_DIFF_I = Q.store_thm(
+  "BAG_IN_DIFF_I",
+  `e <: b1 /\ ~(e <: b2) ==> e <: b1 - b2`,
+  SRW_TAC [ARITH_ss][BAG_IN,BAG_DIFF,BAG_INN] );
+
 val BAG_IN_DIFF_E = Q.store_thm(
 "BAG_IN_DIFF_E",
 `e <: b1 - b2 ==> e <: b1`,
