@@ -734,8 +734,21 @@ val PERM_FILTER = store_thm ("PERM_FILTER",
    REWRITE_TAC[FILTER_APPEND_DISTRIB] THEN
    PROVE_TAC []);
 
+val PERM_REVERSE = Q.store_thm(
+  "PERM_REVERSE",
+  `PERM ls (REVERSE ls)`,
+Induct_on `ls` THEN SRW_TAC [][] THEN
+`PERM ([h] ++ REVERSE ls) (REVERSE ls ++ [h])`
+by SRW_TAC [][PERM_APPEND] THEN
+FULL_SIMP_TAC (srw_ss()) [] THEN
+METIS_TAC [PERM_CONS_IFF,PERM_TRANS]);
 
-
+val PERM_REVERSE_EQ = store_thm(
+  "PERM_REVERSE_EQ",
+  ``(PERM (REVERSE l1) l2 = PERM l1 l2) /\
+    (PERM l1 (REVERSE l2) = PERM l1 l2)``,
+  METIS_TAC [PERM_TRANS, PERM_SYM, PERM_REVERSE]);
+val _ = export_rewrites ["PERM_REVERSE_EQ"]
 
 val FOLDR_PERM = store_thm ("FOLDR_PERM",
 ``!f l1 l2 e.
