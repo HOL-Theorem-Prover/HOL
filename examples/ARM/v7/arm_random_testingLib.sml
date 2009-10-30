@@ -758,7 +758,7 @@ let
   val (e,tm) =
     case code
       of arm_parserLib.Instruction (e,_,tm) => (e,tm)
-       | _ => raise ERR "instruction_instance" ""
+       | _ => raise ERR "instruction_type"" ""
   val mode =
     if arm_astSyntax.is_Data_Processing tm then
       let val (_,_,_,_,mode1) = arm_astSyntax.dest_Data_Processing tm in
@@ -769,7 +769,7 @@ let
         else if arm_astSyntax.is_Mode1_immediate mode1 then
           " (imm)"
         else
-          raise ERR "instruction_instance" ""
+          raise ERR "instruction_type"" ""
       end
     else if arm_astSyntax.is_Load tm then
       let val (_,_,_,_,_,n,_,mode2) = arm_astSyntax.dest_Load tm in
@@ -778,7 +778,7 @@ let
         else if arm_astSyntax.is_Mode2_register mode2 then
           " (reg)"
         else
-          raise ERR "instruction_instance" ""
+          raise ERR "instruction_type"" ""
       end
     else if arm_astSyntax.is_Load_Halfword tm then
       let val (_,_,_,_,_,_,n,_,mode3) = arm_astSyntax.dest_Load_Halfword tm in
@@ -787,7 +787,7 @@ let
         else if arm_astSyntax.is_Mode3_register mode3 then
           " (reg)"
         else
-          raise ERR "instruction_instance" ""
+          raise ERR "instruction_type"" ""
       end
     else if arm_astSyntax.is_Load_Dual tm then
       let val (_,_,_,n,_,_,mode3) = arm_astSyntax.dest_Load_Dual tm
@@ -797,7 +797,7 @@ let
         else if arm_astSyntax.is_Mode3_register mode3 then
           " (reg)"
         else
-          raise ERR "instruction_instance" ""
+          raise ERR "instruction_type"" ""
       end
     else if arm_astSyntax.is_Store tm then
       let val (_,_,_,_,_,n,_,mode2) = arm_astSyntax.dest_Store tm in
@@ -806,7 +806,7 @@ let
         else if arm_astSyntax.is_Mode2_register mode2 then
           " (reg)"
         else
-          raise ERR "instruction_instance" ""
+          raise ERR "instruction_type"" ""
       end
     else if arm_astSyntax.is_Store_Halfword tm then
       let val (_,_,_,_,n,_,mode3) = arm_astSyntax.dest_Store_Halfword tm in
@@ -815,7 +815,7 @@ let
         else if arm_astSyntax.is_Mode3_register mode3 then
           " (reg)"
         else
-          raise ERR "instruction_instance" ""
+          raise ERR "instruction_type"" ""
       end
     else if arm_astSyntax.is_Store_Dual tm then
       let val (_,_,_,n,_,_,mode3) = arm_astSyntax.dest_Store_Dual tm in
@@ -824,7 +824,7 @@ let
         else if arm_astSyntax.is_Mode3_register mode3 then
           " (reg)"
         else
-          raise ERR "instruction_instance" ""
+          raise ERR "instruction_type"" ""
       end
     else if arm_astSyntax.is_Preload_Data tm then
       let val (_,_,_,mode2) = arm_astSyntax.dest_Preload_Data tm in
@@ -833,7 +833,7 @@ let
         else if arm_astSyntax.is_Mode2_register mode2 then
           " (reg)"
         else
-          raise ERR "instruction_instance" ""
+          raise ERR "instruction_type"" ""
       end
     else if arm_astSyntax.is_Preload_Instruction tm then
       let val (_,_,mode2) = arm_astSyntax.dest_Preload_Instruction tm in
@@ -842,7 +842,7 @@ let
         else if arm_astSyntax.is_Mode2_register mode2 then
           " (reg)"
         else
-          raise ERR "instruction_instance" ""
+          raise ERR "instruction_type"" ""
       end
     else if arm_astSyntax.is_Branch_Link_Exchange_Immediate tm then
       " (imm)"
