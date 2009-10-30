@@ -768,7 +768,7 @@ in
 end;
 
 fun prove_comp_thm the_state P H G X = Q.prove(
-  `^P ^the_state ==> (^H (^G ^the_state) = SOME ^X)`,
+  `^P ^the_state ==> (^H (^G ^the_state) = ^X)`,
   BETA_TAC \\ STRIP_TAC
     \\ PURE_REWRITE_TAC [arm_state_accfupds]
     \\ computeLib.RESTR_EVAL_TAC restr_terms
@@ -1021,7 +1021,7 @@ in
     val h = some_update ``arm_state_interrupt_wait_fupd`` wfi' h
     val h = some_update ``arm_state_accesses_fupd`` (SOME acc) h
     val h = some_update ``arm_state_monitors_fupd`` mon h
-    val H = mk_abs (the_state,optionSyntax.mk_some h)
+    val H = mk_abs (the_state,h)
     val _ = print_progress "Starting composition proof ...\n"
     val comp_thm = prove_comp_thm the_state P H G X handle HOL_ERR _ =>
                           raise ERR "eval_inst"

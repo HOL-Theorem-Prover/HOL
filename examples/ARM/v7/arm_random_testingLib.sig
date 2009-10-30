@@ -25,4 +25,6 @@ sig
   val generate_random : arch -> encoding -> class ->
                         (string * string * term list * (term * term) list)
 
+  val instruction_type : encoding -> string -> string
+
 end
