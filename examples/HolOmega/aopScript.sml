@@ -351,7 +351,7 @@ val SND_SPLIT = store_thm
 
 val banana_split = store_thm
   ("banana_split",
-  ``ialg phi (alpha : ('t,'a) algebra) /\ functor phi ==>
+  ``ialg (phi:'t functor) (alpha : ('t,'a) algebra) /\ functor phi ==>
     (SPLIT (cata phi alpha (f : ('t,'b) algebra))
            (cata phi alpha (g : ('t,'c) algebra))
        = cata phi alpha (SPLIT (f o phi FST) (g o phi SND)))``,

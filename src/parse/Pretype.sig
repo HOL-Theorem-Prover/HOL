@@ -47,6 +47,7 @@ val dest_abs_type : pretype -> pretype * pretype
 val beta_conv_ty : pretype -> pretype
 val deep_beta_conv_ty : pretype -> pretype
 val do_beta_conv_types : unit -> bool
+val is_universal : pretype -> bool
 
 val pkind_of : pretype -> prekind
 val prank_of : pretype -> prerank

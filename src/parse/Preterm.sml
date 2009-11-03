@@ -58,6 +58,12 @@ datatype preterm = Var   of {Name:string,  Ty:pretype, Locn:locn.locn}
 
 val op --> = Pretype.-->
 
+fun preterm_to_string (Var{Name,Ty,Locn}) = Name
+  | preterm_to_string (Const{Name,Thy,Ty,Locn}) = Name
+  | preterm_to_string (Constrained{Ptm,Ty,Locn}) = preterm_to_string Ptm
+  | preterm_to_string (Pattern{Ptm,Locn}) = preterm_to_string Ptm
+  | preterm_to_string _ = raise ERR "preterm_to_string" "undefined case"
+
 local
   open Pretype
 in
@@ -950,6 +956,9 @@ fun mk_tycomb(tm,ty) = TyComb{Rator=tm, Rand=ty, Locn=locn.Loc_None}
 fun list_mk_tycomb(tm,[]) = tm
   | list_mk_tycomb(tm,ty::tys) = list_mk_tycomb(mk_tycomb(tm,ty),tys)
 
+val univcomplain = ref true
+val _ = register_btrace ("Var of Universal Type Complaint", univcomplain)
+
 local
   val op --> = Pretype.-->
   val op ==> = Prekind.==>
@@ -1033,7 +1042,7 @@ fun TC printers = let
   val checkkind = Pretype.checkkind (case printers of SOME (x,y,z) => SOME (y,z) | NONE => NONE)
   fun mk_not_tyabs tm =
        let open Pretype
-           val ty = Pretype.deep_beta_conv_ty (ptype_of tm)
+           val ty = deep_beta_conv_ty (ptype_of tm)
            val (bvars,body) = strip_univ_type ty
            val args = map (fn bvar => new_uvar(pkind_of bvar,Prerank.new_uvar())) bvars
        in list_mk_tycomb(tm, args)
@@ -1049,7 +1058,24 @@ fun TC printers = let
                   (Pretype.is_not_univ_type (fst (Pretype.dom_rng Rator_ty)) handle HOL_ERR _ => false) then
              check (Comb{Rator=Rator', Rand=mk_not_tyabs Rand', Locn=Locn})
           else
-             (Pretype.unify Rator_ty (Rand_ty --> Pretype.all_new_uvar());
+             (if not (!univcomplain) then () else
+              (* Test if Rator is a var with universal type but no constraint *)
+              let val Var {Name, Ty, Locn} = Rand'
+                  open Pretype
+                  val PT(UVar (r as ref (NONEU (kd,rk))),tylocn) = the_var_type Rand_ty
+                  val dom_ty = #1 (dom_rng Rator_ty)
+                  fun is_uvar_type(PT(UVar r,loc)) = true
+                    | is_uvar_type _ = false
+                  fun deref_uvar r = the_var_type (PT(UVar r,locn.Loc_None))
+                  val uvars = exists is_uvar_type (map deref_uvar (uvars_of dom_ty))
+              in if not uvars orelse not (is_universal dom_ty) then ()
+                 else
+                   HOL_WARNING "Preterm" "type checking"
+                          (locn.toString (locn Rand) ^ ",\n  " ^ Name ^
+                           " should have its universal type indicated by a type constraint.")
+              end handle _ => ();
+              (* end of test to warn if var with universal type but no constraint *)
+              Pretype.unify Rator_ty (Rand_ty --> Pretype.all_new_uvar());
               Comb{Rator=Rator', Rand=Rand', Locn=Locn})
              handle (e as Feedback.HOL_ERR{origin_structure="Pretype",
                                            origin_function="unify",message})
@@ -1093,6 +1119,15 @@ fun TC printers = let
           in
           let val (bvar,body) = Pretype.dest_univ_type Rator_ty
                                 handle HOL_ERR _ => let
+(*
+                                     val tmp = !Globals.show_types
+                                     val _ = Globals.show_types := true
+                                     val Rator_tm = to_term (overloading_resolution0 Rator')
+                                                    handle e => (Globals.show_types := tmp; raise e)
+                                     val Rator_str = " " ^ ptm Rator_tm
+                                     val _ = Globals.show_types := tmp
+*)
+                                     val Rator_str = " (" ^ preterm_to_string Rator' ^ ")" handle HOL_ERR _ => ""
                                      val s = "'a"
                                      val kd = Prekind.new_uvar()
                                      val rk = Prerank.new_uvar()
@@ -1100,7 +1135,12 @@ fun TC printers = let
                                      (*val bvar = new_uvar(kd,rk)*)
                                      val body = Pretype.mk_app_type(Pretype.all_new_uvar(), bvar)
                                      val univ_ty = Pretype.mk_univ_type(bvar, body)
-                                 in checkkind univ_ty;
+                                 in (* if not (!univcomplain) then () else
+                                    HOL_WARNING "Preterm" "type checking"
+                                      (locn.toString (locn Rator) ^ ",\n  " ^
+                                       "expression" ^ Rator_str ^
+                                       " needs its universal type indicated by a type constraint."); *)
+                                    checkkind univ_ty;
                                     Pretype.unify Rator_ty univ_ty;
                                     (bvar,body)
                                  end

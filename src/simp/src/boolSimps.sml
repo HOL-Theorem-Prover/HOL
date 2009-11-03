@@ -301,7 +301,7 @@ val COND_elim_ss =
                             {conv = K (K COND_TY_ABS_CONV),
                              name = "conditional lifting under type abstractions",
                              key = SOME([],
-                                        Term`\:'a. COND p (q [:'a:]:'b) (r [:'a:])`),
+                                        Term`\:'a. COND p ((q:!'a.'b) [:'a:]) ((r:!'a.'b) [:'a:])`),
                              trace = 2}],
                   dprocs = [], filter = NONE,
                   rewrs = [boolTheory.COND_RATOR, boolTheory.COND_TY_COMB, boolTheory.COND_EXPAND,
@@ -320,7 +320,7 @@ val LIFT_COND_ss = simpLib.SSFRAG
              trace = 2},
             {conv = K (K COND_TY_ABS_CONV),
              name = "conditional lifting under type abstractions",
-             key = SOME([], Term`\:'a. COND p (q [:'a:]:'b) (r [:'a:])`),
+             key = SOME([], Term`\:'a. COND p ((q:!'a.'b) [:'a:]) ((r:!'a.'b) [:'a:])`),
              trace = 2}],
    dprocs = [], filter = NONE,
    rewrs = [boolTheory.COND_RATOR, boolTheory.COND_TY_COMB, NESTED_COND]}

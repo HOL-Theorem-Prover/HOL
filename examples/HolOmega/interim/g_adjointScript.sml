@@ -812,6 +812,98 @@ val tm14e = ``category (idC,compC) ∧ category (idD,compD) ==>
     (eta = ETA (idD,compD) star) /\ (eps = EPS (idC,compC) hash) /\
     (F' = (\:'a 'b. (\f. hash [:'a, 'b 'F:] (compC eta f)))) /\
     (G = (\:'a 'b. (\g. star [:'b, 'a 'G:] (compD g eps)))))``  ;
+
+val q = `category (idC,compC) ∧ category (idD,compD) ==>
+  (g_adjf1 [:'C,'D:] (idC,compC) G eta hash /\
+    g_functor (idD,compD) (idC,compC) G /\
+    g_nattransf [:'C:] (idC, compC) eta (g_I [:'C:]) (G g_oo F') /\ 
+    (star = STAR (idC, compC) G eta) = 
+  g_adjf4 [:'C,'D:] (idC,compC) (idD,compD) hash star /\
+    (eta = ETA (idD,compD) star) /\ (eps = EPS (idC,compC) hash) /\
+    (F' = (\:'a 'b. (\f. hash [:'a, 'b 'F:] (compC eta f)))) /\
+    (G = (\:'a 'b. (\g. star [:'b, 'a 'G:] (compD g eps)))))` : term frag list;
+
+val tm14e0 = ``category (idC,compC) ∧ category (idD,compD) ==>
+  (g_adjf1 [:'C,'D:] (idC,compC) G eta hash /\
+    g_functor (idD,compD) (idC,compC) G /\
+    g_nattransf [:'C:] (idC, compC) eta (g_I [:'C:]) (G g_oo F') /\ 
+    (star = STAR (idC, compC) G eta) = 
+   (g_adjf4 :!('E) ('H).
+     ((!'a. (('a,'a) 'E)) #
+      (!'a 'b 'c. (('b,'c) 'E) -> (('a,'b) 'E) -> (('a,'c) 'E))
+     ) ->
+     ((!'a. (('a,'a) 'H)) #
+      (!'a 'b 'c. (('b,'c) 'H) -> (('a,'b) 'H) -> (('a,'c) 'H))
+     ) ->
+     ((!'a 'b. (('a,('b 'G:ar 1)) 'E) -> ((('a 'F:ar 1),'b) 'H)) ->
+      (!'b 'a. ((('a 'F:ar 1),'b) 'H) -> (('a,('b 'G:ar 1)) 'E)) ->
+      bool
+     )
+   )
+       [:'C,'D:] (idC,compC) (idD,compD) hash star /\
+    (eta = ETA (idD,compD) star) /\ (eps = EPS (idC,compC) hash) /\
+    (F' = (\:'a 'b. (\f. hash [:'a, 'b 'F:] (compC eta f)))) /\
+    (G = (\:'a 'b. (\g. star [:'b, 'a 'G:] (compD g eps)))))``  ;
+
+val tm14e1 = ``category (idC,compC) ∧ category (idD,compD) ==>
+  (g_adjf1 [:'C,'D:] (idC,compC) G eta hash /\
+    g_functor (idD,compD) (idC,compC) G /\
+    g_nattransf [:'C:] (idC, compC) eta (g_I [:'C:]) (G g_oo F') /\ 
+    (star = STAR (idC, compC) G eta) = 
+   g_adjf4 [:'C,'D:] (idC,compC) (idD,compD)
+                 (hash : !'a 'b. (('a,('b 'G:ar 1)) 'C) -> ((('a 'F:ar 1),'b) 'D))
+                 (star : !'b 'a. ((('a 'F:ar 1),'b) 'D) -> (('a,('b 'G:ar 1)) 'C)) /\
+    (eta = ETA (idD,compD) star) /\ (eps = EPS (idC,compC) hash) /\
+    (F' = (\:'a 'b. (\f. hash [:'a, 'b 'F:] (compC eta f)))) /\
+    (G = (\:'a 'b. (\g. star [:'b, 'a 'G:] (compD g eps)))))``  ;
+
+val tm14e1 = ``category (idC,compC) ∧ category (idD,compD) ==>
+  (g_adjf1 [:'C,'D:] (idC,compC) G eta hash /\
+    g_functor (idD,compD) (idC,compC) G /\
+    g_nattransf [:'C:] (idC, compC) eta (g_I [:'C:]) (G g_oo F') /\ 
+    (star = STAR (idC, compC) G eta) = 
+   g_adjf4 [:'C,'D:] (idC,compC) (idD,compD)
+                 (hash : !'a 'b. ('a,'b 'G)'C -> ('a 'F,'b)'D)
+                 star /\
+    (eta = ETA (idD,compD) star) /\ (eps = EPS (idC,compC) hash) /\
+    (F' = (\:'a 'b. (\f. hash [:'a, 'b 'F:] (compC eta f)))) /\
+    (G  = (\:'a 'b. (\g. star [:'b, 'a 'G:] (compD g eps)))))``  ;
+
+val tm14e2 = ``category (idC,compC) ∧ category (idD,compD) ==>
+  (g_adjf1 [:'C,'D:] (idC,compC) G eta hash /\
+    g_functor (idD,compD) (idC,compC) G /\
+    g_nattransf [:'C:] (idC, compC) eta (g_I [:'C:]) (G g_oo F') /\ 
+    (star = STAR (idC, compC) G eta) = 
+   g_adjf4 [:'C,'D:] (idC,compC) (idD,compD)
+                 (hash : ('C,'D,'F,'G)g_hash)
+                 star /\
+    (eta = ETA (idD,compD) star) /\ (eps = EPS (idC,compC) hash) /\
+    (F' = (\:'a 'b. (\f. hash [:'a, 'b 'F:] (compC eta f)))) /\
+    (G  = (\:'a 'b. (\g. star [:'b, 'a 'G:] (compD g eps)))))``  ;
+
+val tm14e3 = ``category (idC,compC) ∧ category (idD,compD) ==>
+  (g_adjf1 [:'C,'D:] (idC,compC) G eta (hash : ('C,'D,'F,'G)g_hash) /\
+    g_functor (idD,compD) (idC,compC) G /\
+    g_nattransf [:'C:] (idC, compC) eta (g_I [:'C:]) (G g_oo F') /\ 
+    (star = STAR (idC, compC) G eta) = 
+   g_adjf4 [:'C,'D:] (idC,compC) (idD,compD) hash star /\
+    (eta = ETA (idD,compD) star) /\ (eps = EPS (idC,compC) hash) /\
+    (F' = (\:'a 'b. (\f. hash [:'a, 'b 'F:] (compC eta f)))) /\
+    (G  = (\:'a 'b. (\g. star [:'b, 'a 'G:] (compD g eps)))))``  ;
+
+look at definition g_adjf1_def.
+
+val tm1 = rand tm14e3;
+val tm2 = rand tm1;
+val tm3 = rand tm2;
+val tm4 = rand tm3;
+val tm5 = rand tm4;
+val tm6 = rator tm5;
+val tm7 = rand tm6;
+val tm8 = rator tm7;
+val tm9 = rand tm8;
+val tm10 = rand tm7;
+
 *)
 
 (* there must be an easier way than this !! *)

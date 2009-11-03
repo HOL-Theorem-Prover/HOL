@@ -16,6 +16,7 @@ open combinTheory pairTheory
 
 val _ = set_trace "Unicode" 1;
 val _ = set_trace "kinds" 0;
+val _ = set_trace "Var of Universal Type Complaint" 1; (* set to 0 to suppress warnings *)
 
 val _ = new_theory "category";
 
@@ -150,7 +151,8 @@ val g_oo_def = Define
 val _ = add_infix("g_oo", 800, HOLgrammars.RIGHT);
 
 val g_oo_thm = store_thm ("g_oo_thm",
-  ``G g_oo F' = \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]``,
+  ``(G : ('D, 'E, 'G) g_functor) g_oo (F' : ('C, 'D, 'F) g_functor) =
+    \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]``,
   EVERY [(REWRITE_TAC [g_oo_def]), TY_BETA_TAC, BETA_TAC, REFL_TAC ]) ;
 
 val tmo = ``$g_oo G F' = \:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a,'b:]`` ;
