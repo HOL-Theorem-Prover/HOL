@@ -140,9 +140,9 @@ let val rand_term = random_term arch enc
                          val (rd,rn) = if test_or_compare opc then
                                          (p,c)
                                        else
-                                         (d,if (opc = 13 orelse opc = 15)
-					       andalso enc <> Thumb2 andalso
-                                               random_range 2 = 0
+                                         (d,if opc = 13 orelse opc = 15 andalso
+                                                (enc <> Thumb2 orelse
+                                                 random_range 2 = 0)
                                             then p else c)
                          val sflag = if enc = Thumb orelse test_or_compare opc
                                      then T else b
