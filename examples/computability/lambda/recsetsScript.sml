@@ -262,8 +262,6 @@ val EXISTS_GENLIST = prove(
     DISJ2_TAC THEN Q.EXISTS_TAC `n'` THEN SRW_TAC [ARITH_ss][]
   ]);
 
-
-
 val re_semirecursive1 = prove(
   ``re s ⇒ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
   SRW_TAC [][re_def] THEN
@@ -438,13 +436,118 @@ val re_semirecursive1 = prove(
     ]
   ]);
 
-(*
+val cbnf_of_works1' =
+    cbnf_of_works1 |> Q.INST [`M` |-> `toTerm dM`, `N` |-> `toTerm dN`]
+                   |> SIMP_RULE (srw_ss()) []
+
+val re_semirecursive2 = prove(
+  ``(∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m) ⇒ re s``,
+  SRW_TAC [][re_def] THEN
+  Q.EXISTS_TAC `
+    dBnum (fromTerm (
+     LAM "e" (cbnf_ofk @@ (K @@ VAR "e")
+                       @@ (cdAPP @@ cDB (numdB N) @@ (cchurch @@ VAR "e")))))
+  ` THEN
+  SRW_TAC [][EQ_IMP_THM, Phi_def] THENL [
+    MAP_EVERY Q.EXISTS_TAC [`e`, `church e`] THEN
+    SIMP_TAC (bsrw_ss()) [cchurch_behaviour, cdAPP_behaviour] THEN
+    `cbnf_ofk
+          @@ (K @@ church e)
+          @@ cDB (dAPP (numdB N) (fromTerm (church e))) ==
+     K @@ church e @@ cDB (fromTerm z)`
+        by (MATCH_MP_TAC cbnf_of_works1' THEN
+            ASM_SIMP_TAC (srw_ss()) []) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
+
+    FULL_SIMP_TAC (bsrw_ss()) [cchurch_behaviour, cdAPP_behaviour] THEN
+    IMP_RES_TAC bnf_of_SOME THEN
+    `∃M'. (bnf_of (toTerm (dAPP (numdB N) (fromTerm (church j)))) =
+           SOME (toTerm M')) ∧
+          K @@ church j @@ cDB M' -n->* z`
+       by METIS_TAC [cbnf_ofk_works2] THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    POP_ASSUM MP_TAC THEN ASM_SIMP_TAC (bsrw_ss()) [] THEN
+    STRIP_TAC THEN
+    Q_TAC SUFF_TAC `z = church j` THEN1 SRW_TAC [][] THEN
+    Q_TAC SUFF_TAC `z -β->* church j` THEN1
+       METIS_TAC [chap3Theory.bnf_reduction_to_self] THEN
+    METIS_TAC [chap3Theory.betastar_lameq_bnf, churchnumTheory.bnf_church,
+               chap2Theory.lam_eq_rules]
+  ]);
+
+val re_semidp = store_thm(
+  "re_semidp",
+  ``re s ⇔ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
+  METIS_TAC [re_semirecursive1, re_semirecursive2]);
+
 val recursive_re = store_thm(
   "recursive_re",
   ``recursive s ⇒ re s``,
-  SRW_TAC [][recursive_def, re_def] THEN
-  `dBnum (fromTerm
+  SRW_TAC [][recursive_def, re_semidp] THEN
+  Q.EXISTS_TAC `
+    dBnum (fromTerm (
+      LAM "e" (cbnf_ofk @@ (LAM "n" (ceqnat @@ church 0
+                                            @@ (cforce_num @@ VAR "n")
+                                            @@ Ω
+                                            @@ VAR "n"))
+                        @@ (cdAPP @@ cDB (numdB M)
+                                  @@ (cchurch @@ VAR "e")))))
+  ` THEN
+  FULL_SIMP_TAC (srw_ss()) [Phi_def] THEN
+  SIMP_TAC (bsrw_ss()) [cdAPP_behaviour, cchurch_behaviour] THEN
+  SRW_TAC [][EQ_IMP_THM] THENL [
+    FIRST_X_ASSUM (Q.SPEC_THEN `e` MP_TAC) THEN
+    SRW_TAC [][] THEN
+    Q.HO_MATCH_ABBREV_TAC
+      `∃z. bnf_of (cbnf_ofk @@ KK @@ cDB TT) = SOME z` THEN
+    `cbnf_ofk @@ KK @@ cDB TT == KK @@ cDB (fromTerm z)`
+       by (MATCH_MP_TAC cbnf_of_works1' THEN
+           SRW_TAC [][Abbr`TT`]) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Abbr`KK`, cforce_num_behaviour] THEN
+    Q.PAT_ASSUM `1 = force_num z` (SUBST_ALL_TAC o SYM) THEN
+    SIMP_TAC (bsrw_ss()) [bnf_bnf_of, churchnumTheory.ceqnat_behaviour,
+                          churchboolTheory.cB_behaviour],
 
+    IMP_RES_TAC bnf_of_SOME THEN
+    IMP_RES_THEN MP_TAC
+                 (REWRITE_RULE [GSYM AND_IMP_INTRO] cbnf_ofk_works2) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [] THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN `e` (Q.X_CHOOSE_THEN `zz` MP_TAC)) THEN
+    Cases_on `e ∈ s` THEN SRW_TAC [][] THEN
+    SIMP_TAC (bsrw_ss()) [cforce_num_behaviour,
+                          churchnumTheory.ceqnat_behaviour,
+                          churchboolTheory.cB_behaviour] THEN
+    STRIP_TAC THEN
+    `Ω -β->* z` by METIS_TAC [chap3Theory.betastar_lameq_bnf] THEN
+    `z = Ω` by METIS_TAC [chap3Theory.Omega_starloops] THEN
+    METIS_TAC [chap2Theory.bnf_Omega]
+  ]);
+
+(* yet another K - this one is the set of machines that terminate when
+   given their own index as input *)
+val K_def = Define`
+  K = { Mi | ∃z. Phi Mi Mi = SOME z }
+`;
+
+val K_re = store_thm(
+  "K_re",
+  ``re K``,
+  SRW_TAC [][K_def, re_semidp] THEN
+  Q.EXISTS_TAC
+    `dBnum (fromTerm (LAM "e" (UM @@ (cnpair @@ VAR "e" @@ VAR "e"))))` THEN
+  GEN_TAC THEN
+  CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [Phi_def])) THEN
+  SRW_TAC [][] THEN
+  SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour] THEN
+  EQ_TAC THEN1
+    (SRW_TAC [][PhiSOME_UM] THEN ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of]) THEN
+  METIS_TAC [UM_bnf, bnf_of_SOME, nstar_lameq]);
+
+(*
+val K_not_recursive = store_thm(
+  "K_not_recursive",
+  ``¬recursive K``,
+  SRW_TAC [][recursive_def, K_def] THEN
 *)
 
 
