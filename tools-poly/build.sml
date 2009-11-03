@@ -42,7 +42,7 @@ val (use_expk, cmdline) =   let
       handle Option => 0
 in
   if null expk andalso compiler_number < 530 then
-    (print "*** Must use experimental kernel due to compiler bug ***\n";
+    (print "*** Using the experimental kernel (standard kernel requires Poly/ML 5.3 or\n*** higher)\n";
      (true, rest))
   else
     (not (null expk), rest)
