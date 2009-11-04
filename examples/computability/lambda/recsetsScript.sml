@@ -5,7 +5,7 @@ val _ = new_theory "recsets"
 open recfunsTheory reductionEval
 open binderLib
 open stepsTheory
-open churchlistTheory churchDBTheory
+open churchlistTheory churchDBTheory churchnumTheory churchboolTheory
 open normal_orderTheory
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
@@ -44,11 +44,11 @@ val union_recursive_I = Store_thm(
   Q.X_GEN_TAC `n` THEN
   REPEAT (FIRST_X_ASSUM (Q.SPEC_THEN `n` STRIP_ASSUME_TAC)) THEN
   IMP_RES_TAC PhiSOME_UM_I THEN
-  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour,
-                            churchnumTheory.ceqnat_behaviour] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cnpair_behaviour,
+                            ceqnat_behaviour] THEN
   Cases_on `n ∈ s₁` THEN Cases_on `n ∈ s₂` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cor_behaviour,
-                            churchboolTheory.cB_behaviour,
+  ASM_SIMP_TAC (bsrw_ss()) [cor_behaviour,
+                            cB_behaviour,
                             bnf_bnf_of]);
 
 val inter_recursive_I = Store_thm(
@@ -63,8 +63,8 @@ val inter_recursive_I = Store_thm(
   Q.X_GEN_TAC `n` THEN
   REPEAT (FIRST_X_ASSUM (Q.SPEC_THEN `n` STRIP_ASSUME_TAC)) THEN
   IMP_RES_TAC PhiSOME_UM_I THEN
-  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour,
-                            churchnumTheory.cmult_behaviour,
+  ASM_SIMP_TAC (bsrw_ss()) [cnpair_behaviour,
+                            cmult_behaviour,
                             bnf_bnf_of] THEN
   Cases_on `n ∈ s₁` THEN SRW_TAC [][]);
 
@@ -80,8 +80,8 @@ val compl_recursive_I = store_thm(
   Q.X_GEN_TAC `n` THEN
   POP_ASSUM (Q.SPEC_THEN `n` STRIP_ASSUME_TAC) THEN
   IMP_RES_TAC PhiSOME_UM_I THEN
-  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour,
-                            churchnumTheory.cminus_behaviour,
+  ASM_SIMP_TAC (bsrw_ss()) [cnpair_behaviour,
+                            cminus_behaviour,
                             bnf_bnf_of] THEN
   Cases_on `n ∈ s` THEN SRW_TAC [][]);
 
@@ -106,14 +106,14 @@ val finite_recursive = Store_thm(
                   @@ church 0)))` THEN
   Q.X_GEN_TAC `n` THEN FIRST_X_ASSUM (Q.SPEC_THEN `n` STRIP_ASSUME_TAC) THEN
   IMP_RES_TAC PhiSOME_UM_I THEN
-  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour,
-                            churchnumTheory.ceqnat_behaviour,
-                            churchboolTheory.cor_behaviour] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cnpair_behaviour,
+                            ceqnat_behaviour,
+                            cor_behaviour] THEN
   Cases_on `n = e` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
+  ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour,
                             bnf_bnf_of] THEN
   Cases_on `n ∈ s` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
+  ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour,
                             bnf_bnf_of]);
 
 (* an r.e. set is one that can be enumerated.  In this world, I take enumerable
@@ -293,7 +293,7 @@ val re_semirecursive1 = prove(
       FULL_SIMP_TAC (srw_ss()) [] THEN
       ASM_SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
                    [ctabulate_cvlist, Cong cvlist_genlist_cong,
-                    churchnumTheory.csuc_behaviour,
+                    csuc_behaviour,
                     cchurch_behaviour, cnumdB_behaviour,
                     cdAPP_behaviour, csteps_behaviour,
                     cfilter_cvlist, MEM_GENLIST, cbnf_behaviour,
@@ -303,11 +303,11 @@ val re_semirecursive1 = prove(
                                EXISTS_FILTER, EXISTS_GENLIST] THEN
       Q.MATCH_ABBREV_TAC `cB P @@ church 0 @@ X == church 0` THEN
       Q_TAC SUFF_TAC `P` THEN1
-        SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour] THEN
+        SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
       markerLib.UNABBREV_ALL_TAC THEN
       Q.EXISTS_TAC `j` THEN
       SIMP_TAC (bsrw_ss()) [cforce_num_behaviour,
-                            churchnumTheory.ceqnat_behaviour,
+                            ceqnat_behaviour,
                             cbnf_behaviour] THEN
       `steps (MAX (j + 1) n) (toTerm (numdB Mi) @@ church j) = z`
          by (SRW_TAC [][] THEN Cases_on `MAX (j + 1) n = n`
@@ -321,7 +321,7 @@ val re_semirecursive1 = prove(
       SIMP_TAC (bsrw_ss()) [Abbr`E`, Once enum2semi_eqn] THEN
       ASM_SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
                    [ctabulate_cvlist, Cong cvlist_genlist_cong,
-                    churchnumTheory.csuc_behaviour,
+                    csuc_behaviour,
                     cchurch_behaviour, cnumdB_behaviour,
                     cdAPP_behaviour, csteps_behaviour,
                     cfilter_cvlist, MEM_GENLIST, cbnf_behaviour,
@@ -336,7 +336,7 @@ val re_semirecursive1 = prove(
       ASM_SIMP_TAC (bsrw_ss()) [Once chap2Theory.lameq_Y] THEN
       Q.MATCH_ABBREV_TAC `cB P @@ X @@ X == X` THEN
       Cases_on `P` THEN
-      ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour]
+      ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour]
     ],
 
     (* other direction: that if our enum2semi function does terminate on an
@@ -378,7 +378,7 @@ val re_semirecursive1 = prove(
        by (SIMP_TAC (bsrw_ss()) [Abbr`BoolTerm`] THEN
            ASM_SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
                         [ctabulate_cvlist, Cong cvlist_genlist_cong,
-                         churchnumTheory.csuc_behaviour,
+                         csuc_behaviour,
                          cchurch_behaviour, cnumdB_behaviour,
                          cdAPP_behaviour, csteps_behaviour,
                          cfilter_cvlist, MEM_GENLIST, cbnf_behaviour,
@@ -391,7 +391,7 @@ val re_semirecursive1 = prove(
       SIMP_TAC (bsrw_ss()) [Abbr`BoolTerm`] THEN
       ASM_SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
                    [ctabulate_cvlist, Cong cvlist_genlist_cong,
-                    churchnumTheory.csuc_behaviour,
+                    csuc_behaviour,
                     cchurch_behaviour, cnumdB_behaviour,
                     cdAPP_behaviour, csteps_behaviour,
                     cfilter_cvlist, MEM_GENLIST, cbnf_behaviour,
@@ -402,11 +402,11 @@ val re_semirecursive1 = prove(
                             cchurch_behaviour, cdAPP_behaviour,
                             csteps_behaviour, cbnf_behaviour,
                             cforce_num_behaviour,
-                            churchnumTheory.ceqnat_behaviour] THEN
+                            ceqnat_behaviour] THEN
       METIS_TAC [],
 
       Q.RM_ABBREV_TAC `BoolTerm` THEN
-      IMP_RES_TAC churchboolTheory.whead_tests THEN
+      IMP_RES_TAC whead_tests THEN
       `BoolTerm @@ church 0 @@ Loop -n->* Loop` by METIS_TAC [whstar_nstar] THEN
       `∃n2. Loop = steps n2 (BoolTerm @@ church 0 @@ Loop)`
          by METIS_TAC [nstar_steps] THEN
@@ -432,7 +432,7 @@ val re_semirecursive1 = prove(
       ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
       DISCH_THEN (fn th => MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] th)) THEN
       MAP_EVERY Q.EXISTS_TAC [`csuc @@ t`, `SUC m`] THEN
-      ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.csuc_behaviour]
+      ASM_SIMP_TAC (bsrw_ss()) [csuc_behaviour]
     ]
   ]);
 
@@ -471,7 +471,7 @@ val re_semirecursive2 = prove(
     Q_TAC SUFF_TAC `z = church j` THEN1 SRW_TAC [][] THEN
     Q_TAC SUFF_TAC `z -β->* church j` THEN1
        METIS_TAC [chap3Theory.bnf_reduction_to_self] THEN
-    METIS_TAC [chap3Theory.betastar_lameq_bnf, churchnumTheory.bnf_church,
+    METIS_TAC [chap3Theory.betastar_lameq_bnf, bnf_church,
                chap2Theory.lam_eq_rules]
   ]);
 
@@ -505,8 +505,8 @@ val recursive_re = store_thm(
            SRW_TAC [][Abbr`TT`]) THEN
     ASM_SIMP_TAC (bsrw_ss()) [Abbr`KK`, cforce_num_behaviour] THEN
     Q.PAT_ASSUM `1 = force_num z` (SUBST_ALL_TAC o SYM) THEN
-    SIMP_TAC (bsrw_ss()) [bnf_bnf_of, churchnumTheory.ceqnat_behaviour,
-                          churchboolTheory.cB_behaviour],
+    SIMP_TAC (bsrw_ss()) [bnf_bnf_of, ceqnat_behaviour,
+                          cB_behaviour],
 
     IMP_RES_TAC bnf_of_SOME THEN
     IMP_RES_THEN MP_TAC
@@ -514,9 +514,8 @@ val recursive_re = store_thm(
     ASM_SIMP_TAC (bsrw_ss()) [] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN `e` (Q.X_CHOOSE_THEN `zz` MP_TAC)) THEN
     Cases_on `e ∈ s` THEN SRW_TAC [][] THEN
-    SIMP_TAC (bsrw_ss()) [cforce_num_behaviour,
-                          churchnumTheory.ceqnat_behaviour,
-                          churchboolTheory.cB_behaviour] THEN
+    SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, ceqnat_behaviour,
+                          cB_behaviour] THEN
     STRIP_TAC THEN
     `Ω -β->* z` by METIS_TAC [chap3Theory.betastar_lameq_bnf] THEN
     `z = Ω` by METIS_TAC [chap3Theory.Omega_starloops] THEN
@@ -538,19 +537,38 @@ val K_re = store_thm(
   GEN_TAC THEN
   CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [Phi_def])) THEN
   SRW_TAC [][] THEN
-  SIMP_TAC (bsrw_ss()) [churchnumTheory.cnpair_behaviour] THEN
+  SIMP_TAC (bsrw_ss()) [cnpair_behaviour] THEN
   EQ_TAC THEN1
     (SRW_TAC [][PhiSOME_UM] THEN ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of]) THEN
   METIS_TAC [UM_bnf, bnf_of_SOME, nstar_lameq]);
 
-(*
 val K_not_recursive = store_thm(
   "K_not_recursive",
   ``¬recursive K``,
-  SRW_TAC [][recursive_def, K_def] THEN
-*)
+  STRIP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [recursive_def, K_def] THEN
+  Q.ABBREV_TAC `
+   Gbody = LAM "z" (ceqnat @@ church 1
+                           @@ (UM @@ (cnpair @@ church M @@ VAR "z"))
+                           @@ Ω
+                           @@ church 1)
+  ` THEN
+  Q.ABBREV_TAC `G = dBnum (fromTerm Gbody)` THEN
+  `toTerm (numdB G) = Gbody` by SRW_TAC [][Abbr`G`] THEN
+  Cases_on `Phi G G` THENL [
+    FIRST_ASSUM MP_TAC THEN SIMP_TAC (srw_ss()) [Phi_def] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Abbr`Gbody`, cnpair_behaviour] THEN
+    `Phi M G = SOME 0` by SRW_TAC [][] THEN
+    `UM @@ church (M ⊗ G) -n->* church 0`
+       by FULL_SIMP_TAC (srw_ss()) [PhiSOME_UM] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [ceqnat_behaviour, cB_behaviour, bnf_bnf_of],
 
-
-
+    FIRST_ASSUM MP_TAC THEN SIMP_TAC (srw_ss()) [Phi_def] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Abbr`Gbody`, cnpair_behaviour] THEN
+    `Phi M G = SOME 1` by SRW_TAC [][] THEN
+    `UM @@ church (M ⊗ G) -n->* church 1`
+       by FULL_SIMP_TAC (srw_ss()) [PhiSOME_UM] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [ceqnat_behaviour, cB_behaviour]
+  ]);
 
 val _ = export_theory ()
