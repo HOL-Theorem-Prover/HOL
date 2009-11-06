@@ -125,10 +125,11 @@ fun which_hol () =
   | Full => (fullPath [HOLDIR, "bin", "hol.builder"], "");
 
 
-fun Holmake dir =
-let val (wp, hol) = which_hol ();
+fun Holmake dir = let
+  val (wp, hol) = which_hol ()
+  val hmstatus = SYSTEML [HOLMAKE, "--qof", "--poly", wp, hol]
 in
-  if OS.Process.isSuccess (SYSTEML [HOLMAKE, "--qof", "--poly", wp, hol]) then
+  if OS.Process.isSuccess hmstatus then
     if do_selftests > 0 andalso
        OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
     then
@@ -141,7 +142,19 @@ in
          die ("Selftest failed in directory "^dir))
     else
       ()
-  else die ("Build failed in directory "^dir)
+  else let
+      open Posix.Process
+      val info =
+          case fromStatus hmstatus of
+            W_EXITSTATUS w8 => "exited with code "^Word8.toString w8
+          | W_EXITED => "exited normally???"
+          | W_SIGNALED sg => "with signal " ^
+                              SysWord.toString (Posix.Signal.toWord sg)
+          | W_STOPPED sg => "stopped with signal " ^
+                            SysWord.toString (Posix.Signal.toWord sg)
+    in
+      die ("Build failed in directory "^dir^" ("^info^")")
+    end
 end
 
 fun Gnumake dir =
