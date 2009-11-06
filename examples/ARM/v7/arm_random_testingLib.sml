@@ -850,7 +850,10 @@ let
       " (reg)"
     else
       ""
-  fun remove_suffix (s,_) = hd (String.tokens (fn c => c = #".") s)
+  fun remove_suffix (s,_) =
+        let val m = hd (String.tokens (fn c => c = #".") s) in
+          if String.isPrefix "it" m then "it" else m
+        end
   val code' = arm_parserLib.Instruction (e,``14w:word4``,tm)
 in
   remove_suffix (armLib.arm_disassemble code') ^ mode
