@@ -425,6 +425,9 @@ fun pp_type_as_tex ostrm ty =
      (type_pp.pp_type (Feedback.trace ("Unicode", 0) Parse.type_grammar ())
         emit_latex ostrm) ty;
 
+val print_thm_turnstile = ref true
+val _ = register_btrace ("EmitTeX: print thm turnstiles", print_thm_turnstile)
+
 fun pp_theorem_as_tex ostrm thm =
   if is_datatype_thm thm then
     pp_datatype_theorem emit_latex ostrm thm
@@ -433,8 +436,9 @@ fun pp_theorem_as_tex ostrm thm =
                PPBackEnd.with_ppstream emit_latex ostrm
     in
       begin_block Portable.INCONSISTENT 0;
-      PP.add_stringsz ostrm (token_string "Turnstile",2);
-      add_string " ";
+      if (!print_thm_turnstile) then
+        (PP.add_stringsz ostrm (token_string "Turnstile",2); add_string " ")
+      else ();
       pp_term_as_tex ostrm (concl thm);
       end_block ()
     end;
