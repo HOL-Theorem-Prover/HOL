@@ -1430,9 +1430,12 @@ in
                                                  orelse (let val uvars_ty2 = uvars_of ty2
                                                              val uvars_args1 = uvars_ofl args1
                                                          in subset uvars_ty2 uvars_args1   (* ??? experimental *)
+                                                            andalso subset uvars_args1 uvars_ty2
+(*
                                                        (**) andalso (null uvars_args1
                                                                      orelse not (null (intersect uvars_args1
                                                                                                  uvars_ty2)) (**) )
+*)
                                                          end))
            val ho_2 = has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
                                         andalso not same_opr
@@ -1441,9 +1444,12 @@ in
                                                  orelse (let val uvars_ty1 = uvars_of ty1
                                                              val uvars_args2 = uvars_ofl args2
                                                          in subset uvars_ty1 uvars_args2   (* ??? experimental *)
+                                                            andalso subset uvars_args2 uvars_ty1
+(*
                                                        (**) andalso (null uvars_args2
                                                                      orelse not (null (intersect uvars_args2
                                                                                                  uvars_ty1)) (**) )
+*)
                                                          end))
        in if is_abs_type opr1 then
             gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
