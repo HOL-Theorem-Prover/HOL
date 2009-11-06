@@ -37,9 +37,16 @@ local
   fun unquote_to file1 file2 =
       systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
 
-fun quse s =
-  if has_dq s then
-    let
+fun quse s = let
+  val _ = if OS.FileSys.access (s, [OS.FileSys.A_READ]) then ()
+          else let
+              val msg = "Use: non-existent file "^s
+            in
+              TextIO.output(TextIO.stdErr, msg ^ "\n");
+              raise Fail msg
+            end
+in
+  if has_dq s then let
       val filename = OS.FileSys.tmpName()
     in
       (if OS.Process.isSuccess (unquote_to s filename) then
@@ -47,9 +54,10 @@ fun quse s =
        else (TextIO.output(TextIO.stdOut,
                            ("Failed to translate file: "^s^"\n"));
              raise Fail "use"))
-        handle e => (try_remove filename; raise e)
+      handle e => (try_remove filename; raise e)
     end
-  else PolyML.use s;
+  else PolyML.use s
+end
 
 fun myuse f =
   let val op ^ = OS.Path.concat
