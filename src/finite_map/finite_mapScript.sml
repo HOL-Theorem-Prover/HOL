@@ -1151,6 +1151,15 @@ val o_f_FRANGE = store_thm(
   SRW_TAC [][FRANGE_DEF] THEN METIS_TAC [o_f_FAPPLY]);
 val _ = export_rewrites ["o_f_FRANGE"]
 
+val FRANGE_FLOOKUP = store_thm(
+  "FRANGE_FLOOKUP",
+  ``v IN FRANGE f <=> ?k. FLOOKUP f k = SOME v``,
+  SRW_TAC [][FLOOKUP_DEF,FRANGE_DEF, EQ_IMP_THM] THENL [
+    METIS_TAC [],
+    Cases_on `k IN FDOM f` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    METIS_TAC []
+  ]);
+
 (*---------------------------------------------------------------------------
         Range restriction
  ---------------------------------------------------------------------------*)
