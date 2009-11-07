@@ -106,15 +106,87 @@ val finite_recursive = Store_thm(
                   @@ church 0)))` THEN
   Q.X_GEN_TAC `n` THEN FIRST_X_ASSUM (Q.SPEC_THEN `n` STRIP_ASSUME_TAC) THEN
   IMP_RES_TAC PhiSOME_UM_I THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cnpair_behaviour,
-                            ceqnat_behaviour,
+  ASM_SIMP_TAC (bsrw_ss()) [cnpair_behaviour, ceqnat_behaviour,
                             cor_behaviour] THEN
   Cases_on `n = e` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour,
-                            bnf_bnf_of] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, bnf_bnf_of] THEN
   Cases_on `n ∈ s` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour,
-                            bnf_bnf_of]);
+  ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, bnf_bnf_of]);
+
+(* ----------------------------------------------------------------------
+    cfindleast
+   ---------------------------------------------------------------------- *)
+
+val cfindbody_def = Define`
+  cfindbody P n =
+    let lp = NEW (FV P) in
+    let nv = NEW (FV P ∪ {lp})
+    in
+        Yf (LAM lp (LAM nv (P @@ VAR nv
+                              @@ VAR nv
+                              @@ (VAR lp @@ (csuc @@ VAR nv))))) @@ church n
+`;
+
+val fresh_cfindbody = store_thm(
+  "fresh_cfindbody",
+  ``lp ∉ FV P ∧ nv ≠ lp ∧ nv ∉ FV P ⇒
+    (cfindbody P n = Yf (LAM lp (LAM nv (P @@ VAR nv @@ VAR nv
+                                           @@ (VAR lp @@ (csuc @@ VAR nv))))) @@
+                        church n)``,
+  SRW_TAC [][LET_THM, cfindbody_def] THEN
+  binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
+  binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
+  AP_TERM_TAC THEN SRW_TAC [][termTheory.LAM_eq_thm, termTheory.tpm_fresh] THEN
+  Cases_on `nv = v` THEN SRW_TAC [][termTheory.tpm_fresh] THEN
+  Cases_on `lp = v'` THEN SRW_TAC [][termTheory.tpm_fresh]);
+
+val cfindbody_SUB = store_thm(
+  "cfindbody_SUB",
+  ``[N/v] (cfindbody P n) = cfindbody ([N/v]P) n``,
+  Q_TAC (NEW_TAC "lp") `FV P ∪ FV N ∪ {v}` THEN
+  Q_TAC (NEW_TAC "nv") `FV P ∪ FV N ∪ {v;lp}` THEN
+  `cfindbody P n = Yf (LAM lp (LAM nv (P @@ VAR nv @@ VAR nv
+                                         @@ (VAR lp @@ (csuc @@ VAR nv))))) @@
+                    church n`
+    by SRW_TAC [][fresh_cfindbody] THEN
+  `cfindbody ([N/v]P) n =
+   Yf (LAM lp (LAM nv ([N/v]P @@ VAR nv @@ VAR nv
+                            @@ (VAR lp @@ (csuc @@ VAR nv))))) @@ church n`
+    by (MATCH_MP_TAC (GEN_ALL fresh_cfindbody) THEN
+        SRW_TAC [][chap2Theory.NOT_IN_FV_SUB]) THEN
+  SRW_TAC [][termTheory.lemma14b]);
+
+
+(*val cfindleast_def = Define`
+  cfindleast =
+  LAM "P" (chap2$Y
+                @@ (LAM "loop" (LAM "n" (
+                     VAR "P" @@ VAR "n"
+                         @@ VAR "n"
+                         @@ (VAR "loop" @@ (csuc @@ VAR "n")))))
+             @@ church 0)
+`;
+
+val cfindleast_eqn = brackabs.brackabs_equiv [] cfindleast_def
+
+
+
+val cfindleast_terminates = store_thm(
+  "cfindleast_terminates",
+  ``P @@ church n == cB T ⇒
+    cfindleast @@ P == church (LEAST n. P @@ church n == cB T)``,
+  STRIP_TAC THEN numLib.LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
+  POP_ASSUM (K ALL_TAC) THEN
+    SIMP_TAC (bsrw_ss()) [cfindleast_eqn, chap2Theory.YYf,
+                          Once chap2Theory.YffYf,
+                          cB_behaviour],
+
+
+    STRIP_TAC THEN numLib.LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
+    SRW_TAC [][] THEN Cases_on `n` THEN SRW_TAC [][] THEN
+    METIS_TAC [DECIDE ``0 < SUC n``],
+
+*)
 
 (* an r.e. set is one that can be enumerated.  In this world, I take enumerable
    to mean there exists a function that returns values at successive indices.
@@ -570,5 +642,64 @@ val K_not_recursive = store_thm(
        by FULL_SIMP_TAC (srw_ss()) [PhiSOME_UM] THEN
     ASM_SIMP_TAC (bsrw_ss()) [ceqnat_behaviour, cB_behaviour]
   ]);
+
+(* ----------------------------------------------------------------------
+    r.e. closure properties
+   ---------------------------------------------------------------------- *)
+
+
+val re_INTER_I = store_thm(
+  "re_INTER_I",
+  ``re s ∧ re t ⇒ re (s ∩ t)``,
+  SRW_TAC [][re_semidp] THEN
+  Q.EXISTS_TAC `
+    dBnum (fromTerm (LAM "e" (
+      cbnf_ofk @@ (K @@ (cbnf_ofk @@ I
+                                  @@ (cdAPP @@ cDB (numdB N')
+                                            @@ (cchurch @@ VAR "e"))))
+               @@ (cdAPP @@ cDB (numdB N) @@ (cchurch @@ VAR "e")))))
+  ` THEN
+  SIMP_TAC (bsrw_ss()) [Phi_def, cchurch_behaviour, cdAPP_behaviour] THEN
+  Q.X_GEN_TAC `e` THEN Cases_on `e ∈ s` THENL [
+    `∃z. Phi N e = SOME z` by METIS_TAC [] THEN
+    IMP_RES_TAC PhiSOME_cbnf_ofk THEN
+    ASM_SIMP_TAC (bsrw_ss()) [] THEN
+    Cases_on `e ∈ t` THENL [
+      `∃w. Phi N' e = SOME w` by METIS_TAC [] THEN
+      FIRST_ASSUM (STRIP_ASSUME_TAC o MATCH_MP (GEN_ALL PhiSOME_cbnf_ofk)) THEN
+      ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
+
+      `Phi N' e = NONE` by METIS_TAC [TypeBase.nchotomy_of ``:'a option``] THEN
+      ASM_SIMP_TAC (srw_ss()) [PhiNONE_cbnf_ofk]
+    ],
+
+    `Phi N e = NONE` by METIS_TAC [TypeBase.nchotomy_of ``:'a option``] THEN
+    ASM_SIMP_TAC (srw_ss()) [PhiNONE_cbnf_ofk]
+  ]);
+
+(* val re_UNION_I = store_thm(
+  "re_UNION_I",
+  ``re s ∧ re t ⇒ re (s ∪ t)``,
+  SRW_TAC [][re_semidp] THEN
+  Q.EXISTS_TAC `
+    dBnum (fromTerm (LAM "e" (
+      chap2$Y @@ (LAM "loop" (LAM "n" (
+        cor @@ (cbnf @@ (csteps @@ VAR "n"
+                                @@ (cdAPP @@ cDB (numdB N)
+                                          @@ (cchurch @@ VAR "e"))))
+            @@ (cor
+                  @@ (cbnf @@ (csteps @@ VAR "n"
+                               @@ (cdAPP @@ cDB (numdB N')
+                                         @@ (cchurch @@ VAR "e"))))
+                  @@ (VAR "loop" @@ (csuc @@ VAR "n"))))))
+           @@ church 0)))` THEN
+  SIMP_TAC (bsrw_ss())[Phi_def, chap2Theory.YYf,
+                       Once chap2Theory.YffYf,
+                       cchurch_behaviour, cdAPP_behaviour,
+                       cbnf_behaviour] THEN
+*)
+
+
+
 
 val _ = export_theory ()
