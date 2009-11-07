@@ -25,6 +25,13 @@ val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
 val DYNLIB = Systeml.DYNLIB
 
+val machine_flags = if OS = "macosx"
+                    then ["-segprot", "POLY", "rwx", "rwx"] @
+                           (if PolyML.architecture() = "I386"
+                            then ["-arch", "i386"]
+                            else [])
+                    else [];
+
 (* ----------------------------------------------------------------------
     Analysing the command-line
    ---------------------------------------------------------------------- *)
@@ -366,8 +373,8 @@ fun upload ((src, regulardir), target, symlink) =
  ---------------------------------------------------------------------------*)
 
 fun compile (systeml : string list -> OS.Process.status) exe obj : unit =
-  (systeml [Systeml.CC, "-o", exe, obj, "-L" ^ POLYMLLIBDIR,
-            "-lpolymain", "-lpolyml"];
+  (systeml ([Systeml.CC, "-o", exe, obj, "-L" ^ POLYMLLIBDIR,
+             "-lpolymain", "-lpolyml"] @ machine_flags);
    OS.FileSys.remove obj);
 
 fun make_exe (name:string) (POLY : string) (target:string) : unit = let
