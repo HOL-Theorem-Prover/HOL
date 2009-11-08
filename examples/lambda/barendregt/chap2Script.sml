@@ -513,6 +513,11 @@ val S_beta_normal = Store_thm("S_beta_normal", ``bnf S``, SRW_TAC [][S_def]);
 (* because I have defined them in terms of applications of S and K, C and B
    are not in bnf *)
 
+val Yf_bnf = Store_thm(
+  "Yf_bnf",
+  ``¬bnf (Yf f)``,
+  SRW_TAC [][Yf_def] THEN SRW_TAC [][]);
+
 val bnf_vsubst_invariant = Store_thm(
   "bnf_vsubst_invariant",
   ``!t. bnf ([VAR v/u] t) = bnf t``,

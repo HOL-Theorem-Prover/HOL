@@ -156,35 +156,130 @@ val cfindbody_SUB = store_thm(
         SRW_TAC [][chap2Theory.NOT_IN_FV_SUB]) THEN
   SRW_TAC [][termTheory.lemma14b]);
 
+val cfindbody_thm = store_thm(
+  "cfindbody_thm",
+  ``cfindbody P n == P @@ church n @@ church n @@ cfindbody P (n + 1)``,
+  Q_TAC (NEW_TAC "z") `FV P` THEN
+  Q_TAC (NEW_TAC "nv") `FV P ∪ {z}` THEN
+  `∀n. cfindbody P n = Yf (LAM z (LAM nv (P @@ VAR nv @@ VAR nv
+                                        @@ (VAR z @@ (csuc @@ VAR nv)))))
+                          @@ church n`
+     by SRW_TAC [][fresh_cfindbody] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [Once chap2Theory.YffYf,
+                            csuc_behaviour, arithmeticTheory.ADD1]);
 
-(*val cfindleast_def = Define`
-  cfindleast =
-  LAM "P" (chap2$Y
-                @@ (LAM "loop" (LAM "n" (
-                     VAR "P" @@ VAR "n"
-                         @@ VAR "n"
-                         @@ (VAR "loop" @@ (csuc @@ VAR "n")))))
-             @@ church 0)
+val cfindleast_def = Define`
+  cfindleast = LAM "P" (cfindbody (VAR "P") 0)
 `;
 
-val cfindleast_eqn = brackabs.brackabs_equiv [] cfindleast_def
-
-
-
-val cfindleast_terminates = store_thm(
-  "cfindleast_terminates",
-  ``P @@ church n == cB T ⇒
+val cfindleast_termI = store_thm(
+  "cfindleast_termI",
+  ``(∀n. ∃b. P @@ church n == cB b) ∧ P @@ church n == cB T ⇒
     cfindleast @@ P == church (LEAST n. P @@ church n == cB T)``,
   STRIP_TAC THEN numLib.LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
   POP_ASSUM (K ALL_TAC) THEN
-    SIMP_TAC (bsrw_ss()) [cfindleast_eqn, chap2Theory.YYf,
-                          Once chap2Theory.YffYf,
-                          cB_behaviour],
+  SIMP_TAC (bsrw_ss()) [cfindleast_def, cfindbody_SUB] THEN
+  Q_TAC SUFF_TAC
+    `∀p n. p ≤ n ∧
+           (∀m. m < n ⇒ ¬(P @@ church m == cB T)) ∧
+           P @@ church n == cB T ⇒
+           cfindbody P p == church n`
+    THEN1 METIS_TAC [DECIDE ``0 ≤ n``] THEN
+  Induct_on `n - p` THEN REPEAT STRIP_TAC THENL [
+    `p = n` by DECIDE_TAC THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Once cfindbody_thm, cB_behaviour],
+
+    `p < n` by DECIDE_TAC THEN
+    `∃r. P @@ church p == cB r` by METIS_TAC [] THEN
+    `r = F` by (Cases_on `r` THEN METIS_TAC []) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Once cfindbody_thm, cB_behaviour] THEN
+    FIRST_X_ASSUM (fn th => MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] th)) THEN
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+  ]);
+
+val noreduct_Yf = Store_thm(
+  "noreduct_Yf",
+  ``(noreduct (Yf f) = SOME (f @@ Yf f)) ∧
+    (noreduct (Yf f @@ x) = SOME (f @@ Yf f @@ x))``,
+  Q_TAC (NEW_TAC "z") `FV f` THEN
+  `Yf f = LAM z (f @@ (VAR z @@ VAR z)) @@ LAM z (f @@ (VAR z @@ VAR z))`
+    by SRW_TAC [][chap2Theory.Yf_fresh] THEN
+  SRW_TAC [][noreduct_thm, termTheory.lemma14b]);
+
+val lameq_triangle = store_thm(
+  "lameq_triangle",
+  ``M == N ∧ M == P ∧ bnf N ∧ bnf P ⇒ (N = P)``,
+  METIS_TAC [chap3Theory.betastar_lameq_bnf, chap2Theory.lam_eq_rules,
+             chap3Theory.bnf_reduction_to_self]);
+
+(* val cfindleast_bnfE = store_thm(
+  "cfindleast_bnfE",
+  ``(∀n. ∃b. P @@ church n == cB b) ∧
+    cfindleast @@ P == r ∧ bnf r ⇒
+    ∃m. (r = church m) ∧ P @@ r == cB T ∧
+        ∀m₀. m₀ < m ⇒ P @@ church m₀ == cB F``,
+  SIMP_TAC (bsrw_ss()) [cfindleast_def, cfindbody_SUB] THEN
+  REPEAT STRIP_TAC THEN
+  `∃N. steps N (cfindbody P 0) = r`
+    by METIS_TAC [nstar_steps, nstar_betastar_bnf,
+                  chap3Theory.betastar_lameq_bnf] THEN
+  Q_TAC SUFF_TAC
+    `∀N cn. (steps N (cfindbody P cn) = r) ⇒
+            (∀c0. c0 < cn ⇒ P @@ church c0 == cB F) ⇒
+            ∃m. (r = church m) ∧ P @@ r == cB T ∧
+                ∀m₀. m₀ < m ⇒ P @@ church m₀ == cB F`
+    THEN1 METIS_TAC [DECIDE ``¬(x < 0)``] THEN
+  REPEAT (FIRST_X_ASSUM (fn th => if free_in ``cfindbody`` (concl th) then
+                                    ALL_TAC
+                                  else NO_TAC)) THEN
+  completeInduct_on `N` THEN
+  Q.X_GEN_TAC `cn` THEN
+  Q_TAC (NEW_TAC "lp") `FV P` THEN
+  Q_TAC (NEW_TAC "nv") `FV P ∪ {lp}` THEN
+  `∀cn.
+     cfindbody P cn =
+       Yf (LAM lp (LAM nv (P @@ VAR nv @@ VAR nv
+                             @@ (VAR lp @@ (csuc @@ VAR nv))))) @@
+       church cn`
+    by SRW_TAC [][fresh_cfindbody] THEN
+  `(N = 0) ∨ ∃N₀. N = SUC N₀` by (Cases_on `N` THEN SRW_TAC [][]) THEN1
+     (SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN
+  `(N₀ = 0) ∨ ∃N₁. N₀ = SUC N₁` by (Cases_on `N₀` THEN SRW_TAC [][]) THEN1
+     (SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+  ASM_SIMP_TAC (srw_ss()) [noreduct_thm, termTheory.lemma14b] THEN
+  `(N₁ = 0) ∨ ∃N₂. N₁ = SUC N₂` by (Cases_on `N₁` THEN SRW_TAC [][]) THEN1
+     (SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+  ASM_SIMP_TAC (srw_ss()) [noreduct_thm, termTheory.lemma14b] THEN
+  `∃b. P @@ church cn == cB b` by METIS_TAC [] THEN
+  Cases_on `b` THENL [
+    Q.MATCH_ABBREV_TAC `(steps N₂ TT = r) ⇒ MINCL ⇒ CONCL` THEN
+    `TT == church cn`
+      by ASM_SIMP_TAC (bsrw_ss()) [Abbr`TT`, cB_behaviour] THEN
+    STRIP_TAC THEN
+    `TT -n->* r` by METIS_TAC [steps_nstar] THEN
+    `church cn = r` by METIS_TAC [lameq_triangle, bnf_church,
+                                  nstar_betastar,
+                                  chap3Theory.betastar_lameq_bnf] THEN
+    Q.UNABBREV_TAC `CONCL` THEN SRW_TAC [][],
+
+    Q.MATCH_ABBREV_TAC `(steps N₂ (P @@ church cn @@ church cn @@ Loop) = r) ⇒
+                        MINCL ⇒ CONCL` THEN
+    IMP_RES_TAC whead_tests THEN
+    `P @@ church cn @@ church cn @@ Loop -n->* Loop`
+      by METIS_TAC [whstar_nstar] THEN
+    `∃n2. Loop = steps n2 (P @@ church cn @@ church cn @@ Loop)`
+      by METIS_TAC [nstar_steps] THEN
+    `¬bnf Loop` by (SRW_TAC [][Abbr`Loop`]) THEN
+    REPEAT STRIP_TAC THEN
+      `n2 < n1` by METIS_TAC [DECIDE ``n:num < m ∨ (n = m) ∨ m < n``,
+                              bnf_steps_upwards_closed] THEN
+      `∃rest. n1 = rest + n2` by (Q.EXISTS_TAC `n1 - n2` THEN DECIDE_TAC) THEN
 
 
-    STRIP_TAC THEN numLib.LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
-    SRW_TAC [][] THEN Cases_on `n` THEN SRW_TAC [][] THEN
-    METIS_TAC [DECIDE ``0 < SUC n``],
+
+
+
 
 *)
 
