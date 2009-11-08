@@ -118,21 +118,21 @@ val finite_recursive = Store_thm(
    ---------------------------------------------------------------------- *)
 
 val cfindbody_def = Define`
-  cfindbody P n =
+  cfindbody P N =
     let lp = NEW (FV P) in
     let nv = NEW (FV P ∪ {lp})
     in
         Yf (LAM lp (LAM nv (P @@ VAR nv
                               @@ VAR nv
-                              @@ (VAR lp @@ (csuc @@ VAR nv))))) @@ church n
+                              @@ (VAR lp @@ (csuc @@ VAR nv))))) @@ N
 `;
 
 val fresh_cfindbody = store_thm(
   "fresh_cfindbody",
   ``lp ∉ FV P ∧ nv ≠ lp ∧ nv ∉ FV P ⇒
-    (cfindbody P n = Yf (LAM lp (LAM nv (P @@ VAR nv @@ VAR nv
+    (cfindbody P N = Yf (LAM lp (LAM nv (P @@ VAR nv @@ VAR nv
                                            @@ (VAR lp @@ (csuc @@ VAR nv))))) @@
-                        church n)``,
+                        N)``,
   SRW_TAC [][LET_THM, cfindbody_def] THEN
   binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
   binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
@@ -142,34 +142,59 @@ val fresh_cfindbody = store_thm(
 
 val cfindbody_SUB = store_thm(
   "cfindbody_SUB",
-  ``[N/v] (cfindbody P n) = cfindbody ([N/v]P) n``,
-  Q_TAC (NEW_TAC "lp") `FV P ∪ FV N ∪ {v}` THEN
-  Q_TAC (NEW_TAC "nv") `FV P ∪ FV N ∪ {v;lp}` THEN
-  `cfindbody P n = Yf (LAM lp (LAM nv (P @@ VAR nv @@ VAR nv
+  ``[Q/v] (cfindbody P N) = cfindbody ([Q/v]P) ([Q/v]N)``,
+  Q_TAC (NEW_TAC "lp") `FV P ∪ FV Q ∪ {v}` THEN
+  Q_TAC (NEW_TAC "nv") `FV P ∪ FV Q ∪ {v;lp}` THEN
+  `cfindbody P N = Yf (LAM lp (LAM nv (P @@ VAR nv @@ VAR nv
                                          @@ (VAR lp @@ (csuc @@ VAR nv))))) @@
-                    church n`
+                    N`
     by SRW_TAC [][fresh_cfindbody] THEN
-  `cfindbody ([N/v]P) n =
-   Yf (LAM lp (LAM nv ([N/v]P @@ VAR nv @@ VAR nv
-                            @@ (VAR lp @@ (csuc @@ VAR nv))))) @@ church n`
+  `cfindbody ([Q/v]P) ([Q/v]N) =
+   Yf (LAM lp (LAM nv ([Q/v]P @@ VAR nv @@ VAR nv
+                            @@ (VAR lp @@ (csuc @@ VAR nv))))) @@ [Q/v]N`
     by (MATCH_MP_TAC (GEN_ALL fresh_cfindbody) THEN
         SRW_TAC [][chap2Theory.NOT_IN_FV_SUB]) THEN
   SRW_TAC [][termTheory.lemma14b]);
 
 val cfindbody_thm = store_thm(
   "cfindbody_thm",
-  ``cfindbody P n == P @@ church n @@ church n @@ cfindbody P (n + 1)``,
-  Q_TAC (NEW_TAC "z") `FV P` THEN
-  Q_TAC (NEW_TAC "nv") `FV P ∪ {z}` THEN
-  `∀n. cfindbody P n = Yf (LAM z (LAM nv (P @@ VAR nv @@ VAR nv
-                                        @@ (VAR z @@ (csuc @@ VAR nv)))))
-                          @@ church n`
+  ``cfindbody P N -w->* P @@ N @@ N @@ cfindbody P (csuc @@ N)``,
+  unvarify_tac head_reductionTheory.whstar_substitutive THEN
+  SRW_TAC [][cfindbody_SUB, termTheory.lemma14b] THEN
+  Q_TAC (NEW_TAC "z") `{Ps}` THEN
+  Q_TAC (NEW_TAC "nv") `{Ps; z}` THEN
+  `∀N. cfindbody (VAR Ps) N =
+       Yf (LAM z (LAM nv (VAR Ps @@ VAR nv @@ VAR nv
+                              @@ (VAR z @@ (csuc @@ VAR nv)))))
+       @@ N`
      by SRW_TAC [][fresh_cfindbody] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [Once chap2Theory.YffYf,
-                            csuc_behaviour, arithmeticTheory.ADD1]);
+  ASM_SIMP_TAC (whfy (srw_ss())) [MATCH_MP relationTheory.RTC_SUBSET
+                                           head_reductionTheory.whY2]);
+
+
+val cfindbody_cong = store_thm(
+  "cfindbody_cong",
+  ``P == P' ⇒ N == N' ⇒ cfindbody P N == cfindbody P' N'``,
+  Q_TAC (NEW_TAC "lp") `FV P ∪ FV P'` THEN
+  Q_TAC (NEW_TAC "nv") `FV P ∪ FV P' ∪ {lp}` THEN
+  REPEAT STRIP_TAC THEN
+  `(cfindbody P N = Yf (LAM lp (LAM nv (P @@ VAR nv @@ VAR nv
+                                         @@ (VAR lp @@ (csuc @@ VAR nv))))) @@
+                   N) ∧
+   (cfindbody P' N' =
+      Yf (LAM lp (LAM nv (P' @@ VAR nv @@ VAR nv
+                             @@ (VAR lp @@ (csuc @@ VAR nv))))) @@
+      N')`
+    by SRW_TAC [][fresh_cfindbody] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [Cong Yf_cong]);
+
+val bnf_cfindbody = Store_thm(
+  "bnf_cfindbody",
+  ``¬bnf (cfindbody P N)``,
+  SRW_TAC [][cfindbody_def, LET_THM]);
 
 val cfindleast_def = Define`
-  cfindleast = LAM "P" (cfindbody (VAR "P") 0)
+  cfindleast = LAM "P" (cfindbody (VAR "P") (church 0))
 `;
 
 val cfindleast_termI = store_thm(
@@ -183,7 +208,7 @@ val cfindleast_termI = store_thm(
     `∀p n. p ≤ n ∧
            (∀m. m < n ⇒ ¬(P @@ church m == cB T)) ∧
            P @@ church n == cB T ⇒
-           cfindbody P p == church n`
+           cfindbody P (church p) == church n`
     THEN1 METIS_TAC [DECIDE ``0 ≤ n``] THEN
   Induct_on `n - p` THEN REPEAT STRIP_TAC THENL [
     `p = n` by DECIDE_TAC THEN
@@ -192,7 +217,8 @@ val cfindleast_termI = store_thm(
     `p < n` by DECIDE_TAC THEN
     `∃r. P @@ church p == cB r` by METIS_TAC [] THEN
     `r = F` by (Cases_on `r` THEN METIS_TAC []) THEN
-    ASM_SIMP_TAC (bsrw_ss()) [Once cfindbody_thm, cB_behaviour] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Once cfindbody_thm, cB_behaviour,
+                              csuc_behaviour, Cong cfindbody_cong] THEN
     FIRST_X_ASSUM (fn th => MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] th)) THEN
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
   ]);
@@ -212,7 +238,23 @@ val lameq_triangle = store_thm(
   METIS_TAC [chap3Theory.betastar_lameq_bnf, chap2Theory.lam_eq_rules,
              chap3Theory.bnf_reduction_to_self]);
 
-(* val cfindleast_bnfE = store_thm(
+val cfindbody_11 = Store_thm(
+  "cfindbody_11",
+  ``(cfindbody P1 N1 = cfindbody P2 N2) = (P1 = P2) ∧ (N1 = N2)``,
+  Q_TAC (NEW_TAC "lp") `FV P1 ∪ FV P2` THEN
+  Q_TAC (NEW_TAC "nv") `FV P1 ∪ FV P2 ∪ {lp}` THEN
+  `(cfindbody P1 N1 = Yf (LAM lp (LAM nv (P1 @@ VAR nv @@ VAR nv
+                                            @@ (VAR lp @@ (csuc @@ VAR nv)))))
+                       @@ N1) ∧
+   (cfindbody P2 N2 = Yf (LAM lp (LAM nv (P2 @@ VAR nv @@ VAR nv
+                                            @@ (VAR lp @@ (csuc @@ VAR nv)))))
+                       @@ N2)`
+      by SRW_TAC [][fresh_cfindbody] THEN
+  SRW_TAC [][]);
+
+(*
+
+val cfindleast_bnfE = store_thm(
   "cfindleast_bnfE",
   ``(∀n. ∃b. P @@ church n == cB b) ∧
     cfindleast @@ P == r ∧ bnf r ⇒
@@ -220,61 +262,47 @@ val lameq_triangle = store_thm(
         ∀m₀. m₀ < m ⇒ P @@ church m₀ == cB F``,
   SIMP_TAC (bsrw_ss()) [cfindleast_def, cfindbody_SUB] THEN
   REPEAT STRIP_TAC THEN
-  `∃N. steps N (cfindbody P 0) = r`
+  `∃N. steps N (cfindbody P (church 0)) = r`
     by METIS_TAC [nstar_steps, nstar_betastar_bnf,
                   chap3Theory.betastar_lameq_bnf] THEN
   Q_TAC SUFF_TAC
-    `∀N cn. (steps N (cfindbody P cn) = r) ⇒
-            (∀c0. c0 < cn ⇒ P @@ church c0 == cB F) ⇒
-            ∃m. (r = church m) ∧ P @@ r == cB T ∧
-                ∀m₀. m₀ < m ⇒ P @@ church m₀ == cB F`
-    THEN1 METIS_TAC [DECIDE ``¬(x < 0)``] THEN
+    `∀N cn ct. (steps N (cfindbody P ct) = r) ⇒
+               (∀c0. c0 < cn ⇒ P @@ church c0 == cB F) ⇒
+               (ct == church cn) ⇒
+               ∃m. (r = church m) ∧ P @@ r == cB T ∧
+                   ∀m₀. m₀ < m ⇒ P @@ church m₀ == cB F`
+    THEN1 METIS_TAC [DECIDE ``¬(x < 0)``, chap2Theory.lameq_refl] THEN
   REPEAT (FIRST_X_ASSUM (fn th => if free_in ``cfindbody`` (concl th) then
                                     ALL_TAC
                                   else NO_TAC)) THEN
   completeInduct_on `N` THEN
-  Q.X_GEN_TAC `cn` THEN
-  Q_TAC (NEW_TAC "lp") `FV P` THEN
-  Q_TAC (NEW_TAC "nv") `FV P ∪ {lp}` THEN
-  `∀cn.
-     cfindbody P cn =
-       Yf (LAM lp (LAM nv (P @@ VAR nv @@ VAR nv
-                             @@ (VAR lp @@ (csuc @@ VAR nv))))) @@
-       church cn`
-    by SRW_TAC [][fresh_cfindbody] THEN
-  `(N = 0) ∨ ∃N₀. N = SUC N₀` by (Cases_on `N` THEN SRW_TAC [][]) THEN1
-     (SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
-  ASM_SIMP_TAC (srw_ss()) [] THEN
-  `(N₀ = 0) ∨ ∃N₁. N₀ = SUC N₁` by (Cases_on `N₀` THEN SRW_TAC [][]) THEN1
-     (SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
-  ASM_SIMP_TAC (srw_ss()) [noreduct_thm, termTheory.lemma14b] THEN
-  `(N₁ = 0) ∨ ∃N₂. N₁ = SUC N₂` by (Cases_on `N₁` THEN SRW_TAC [][]) THEN1
-     (SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
-  ASM_SIMP_TAC (srw_ss()) [noreduct_thm, termTheory.lemma14b] THEN
+  MAP_EVERY Q.X_GEN_TAC [`cn`,`ct`] THEN REPEAT STRIP_TAC THEN
+  `cfindbody P ct -n->* P @@ ct @@ ct @@ (cfindbody P (csuc @@ ct))`
+     by METIS_TAC [cfindbody_thm, whstar_nstar] THEN
   `∃b. P @@ church cn == cB b` by METIS_TAC [] THEN
   Cases_on `b` THENL [
-    Q.MATCH_ABBREV_TAC `(steps N₂ TT = r) ⇒ MINCL ⇒ CONCL` THEN
-    `TT == church cn`
-      by ASM_SIMP_TAC (bsrw_ss()) [Abbr`TT`, cB_behaviour] THEN
-    STRIP_TAC THEN
-    `TT -n->* r` by METIS_TAC [steps_nstar] THEN
+    `cfindbody P ct == church cn`
+      by ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
+    `cfindbody P ct -n->* r` by METIS_TAC [steps_nstar] THEN
     `church cn = r` by METIS_TAC [lameq_triangle, bnf_church,
                                   nstar_betastar,
                                   chap3Theory.betastar_lameq_bnf] THEN
-    Q.UNABBREV_TAC `CONCL` THEN SRW_TAC [][],
+    SRW_TAC [][],
 
-    Q.MATCH_ABBREV_TAC `(steps N₂ (P @@ church cn @@ church cn @@ Loop) = r) ⇒
-                        MINCL ⇒ CONCL` THEN
-    IMP_RES_TAC whead_tests THEN
-    `P @@ church cn @@ church cn @@ Loop -n->* Loop`
-      by METIS_TAC [whstar_nstar] THEN
-    `∃n2. Loop = steps n2 (P @@ church cn @@ church cn @@ Loop)`
+    `P @@ ct == cB F` by ASM_SIMP_TAC (bsrw_ss()) [] THEN
+    POP_ASSUM (STRIP_ASSUME_TAC o
+               MATCH_MP (GEN_ALL (CONJUNCT2 whead_tests))) THEN
+    `cfindbody P ct -n->* cfindbody P (csuc @@ ct)`
+      by METIS_TAC [whstar_nstar, relationTheory.RTC_CASES_RTC_TWICE] THEN
+    `∃n1. cfindbody P (csuc @@ ct) = steps n1 (cfindbody P ct)`
       by METIS_TAC [nstar_steps] THEN
-    `¬bnf Loop` by (SRW_TAC [][Abbr`Loop`]) THEN
-    REPEAT STRIP_TAC THEN
-      `n2 < n1` by METIS_TAC [DECIDE ``n:num < m ∨ (n = m) ∨ m < n``,
-                              bnf_steps_upwards_closed] THEN
-      `∃rest. n1 = rest + n2` by (Q.EXISTS_TAC `n1 - n2` THEN DECIDE_TAC) THEN
+    `¬bnf (cfindbody P (csuc @@ ct))` by SRW_TAC [][] THEN
+    `n1 < N` by METIS_TAC [DECIDE ``n:num < m ∨ (n = m) ∨ m < n``,
+                           bnf_steps_upwards_closed] THEN
+    `∃rest. N = rest + n1` by (Q.EXISTS_TAC `N - n1` THEN DECIDE_TAC) THEN
+    FULL_SIMP_TAC (srw_ss()) [steps_plus] THEN
+    `n1 ≠ 0` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) [])
+
 
 
 

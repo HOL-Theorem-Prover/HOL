@@ -392,6 +392,26 @@ val Yf_SUB = Store_thm(
      by SRW_TAC [][Yf_fresh, NOT_IN_FV_SUB] THEN
   SRW_TAC [][]);
 
+val Yf_11 = Store_thm(
+  "Yf_11",
+  ``(Yf f = Yf g) = (f = g)``,
+  SRW_TAC [][Yf_def, LET_THM] THEN
+  NTAC 2 (binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC) THEN
+  SRW_TAC [][termTheory.LAM_eq_thm, EQ_IMP_THM] THEN
+  SRW_TAC [][termTheory.tpm_fresh]);
+
+val Yf_cong = store_thm(
+  "Yf_cong",
+  ``f == g ⇒ Yf f == Yf g``,
+  Q_TAC (NEW_TAC "fv") `FV f ∪ FV g` THEN
+  `(Yf f = LAM fv (f @@ (VAR fv @@ VAR fv)) @@
+           LAM fv (f @@ (VAR fv @@ VAR fv))) ∧
+   (Yf g = LAM fv (g @@ (VAR fv @@ VAR fv)) @@
+           LAM fv (g @@ (VAR fv @@ VAR fv)))`
+     by SRW_TAC [][Yf_fresh] THEN
+  STRIP_TAC THEN ASM_SIMP_TAC (srw_ss()) [] THEN
+  METIS_TAC [lam_eq_rules]);
+
 val SK_incompatible = store_thm( (* example 2.18, p23 *)
   "SK_incompatible",
   ``incompatible S K``,
