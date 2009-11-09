@@ -25,6 +25,13 @@ val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
 val DYNLIB = Systeml.DYNLIB
 
+val machine_flags = if OS = "macosx"
+                    then ["-segprot", "POLY", "rwx", "rwx"] @
+                           (if PolyML.architecture() = "I386"
+                            then ["-arch", "i386"]
+                            else [])
+                    else [];
+
 (* ----------------------------------------------------------------------
     Analysing the command-line
    ---------------------------------------------------------------------- *)
@@ -42,7 +49,7 @@ val (use_expk, cmdline) =   let
       handle Option => 0
 in
   if null expk andalso compiler_number < 530 then
-    (print "*** Must use experimental kernel due to compiler bug ***\n";
+    (print "*** Using the experimental kernel (standard kernel requires Poly/ML 5.3 or\n*** higher)\n";
      (true, rest))
   else
     (not (null expk), rest)
@@ -125,10 +132,11 @@ fun which_hol () =
   | Full => (fullPath [HOLDIR, "bin", "hol.builder"], "");
 
 
-fun Holmake dir =
-let val (wp, hol) = which_hol ();
+fun Holmake dir = let
+  val (wp, hol) = which_hol ()
+  val hmstatus = SYSTEML [HOLMAKE, "--qof", "--poly", wp, hol]
 in
-  if OS.Process.isSuccess (SYSTEML [HOLMAKE, "--qof", "--poly", wp, hol]) then
+  if OS.Process.isSuccess hmstatus then
     if do_selftests > 0 andalso
        OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
     then
@@ -141,7 +149,19 @@ in
          die ("Selftest failed in directory "^dir))
     else
       ()
-  else die ("Build failed in directory "^dir)
+  else let
+      open Posix.Process
+      val info =
+          case fromStatus hmstatus of
+            W_EXITSTATUS w8 => "exited with code "^Word8.toString w8
+          | W_EXITED => "exited normally???"
+          | W_SIGNALED sg => "with signal " ^
+                              SysWord.toString (Posix.Signal.toWord sg)
+          | W_STOPPED sg => "stopped with signal " ^
+                            SysWord.toString (Posix.Signal.toWord sg)
+    in
+      die ("Build failed in directory "^dir^" ("^info^")")
+    end
 end
 
 fun Gnumake dir =
@@ -353,8 +373,8 @@ fun upload ((src, regulardir), target, symlink) =
  ---------------------------------------------------------------------------*)
 
 fun compile (systeml : string list -> OS.Process.status) exe obj : unit =
-  (systeml [Systeml.CC, "-o", exe, obj, "-L" ^ POLYMLLIBDIR,
-            "-lpolymain", "-lpolyml"];
+  (systeml ([Systeml.CC, "-o", exe, obj, "-L" ^ POLYMLLIBDIR,
+             "-lpolymain", "-lpolyml"] @ machine_flags);
    OS.FileSys.remove obj);
 
 fun make_exe (name:string) (POLY : string) (target:string) : unit = let

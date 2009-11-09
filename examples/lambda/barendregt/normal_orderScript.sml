@@ -811,6 +811,11 @@ val bnf_bnf_of = store_thm(
   ``bnf M ⇒ (bnf_of M = SOME M)``,
   SRW_TAC [][Once bnf_of_thm]);
 
+val bnf_of_Omega = Store_thm(
+  "bnf_of_Omega",
+  ``bnf_of Ω = NONE``,
+  METIS_TAC [Omega_has_no_bnf, bnf_of_NONE]);
+
 (* ----------------------------------------------------------------------
     weak head reduction gives a congruence rule for -n->* of sorts
    ---------------------------------------------------------------------- *)

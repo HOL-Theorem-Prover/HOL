@@ -1100,6 +1100,17 @@ in
     file_dependencies
 end
 
+fun posix_diagnostic stat = let
+  open Posix.Process
+in
+  case fromStatus stat of
+    W_EXITSTATUS w8 => "exited with code "^Word8.toString w8
+  | W_EXITED => "exited normally"
+  | W_SIGNALED sg => "with signal " ^
+                     SysWord.toString (Posix.Signal.toWord sg)
+  | W_STOPPED sg => "stopped with signal " ^
+                    SysWord.toString (Posix.Signal.toWord sg)
+end
 
 
 fun get_explicit_dependencies (f : File) : File list =
@@ -1204,11 +1215,13 @@ in
           app (fn s => OS.FileSys.remove s handle OS.SysErr _ => ())
           [thysmlfile, thysigfile]
         val res2 = systeml [fullPath [OS.FileSys.getDir(), script']];
-        val _       = app OS.FileSys.remove [script', scriptuo, scriptui]
-        val ()      = if not (isSuccess res2) then
-                        failed_script_cache :=
-                        Binaryset.add(!failed_script_cache, s)
-                      else ()
+        val _ = app OS.FileSys.remove [script', scriptuo, scriptui]
+        val () =
+            if not (isSuccess res2) then
+              (failed_script_cache := Binaryset.add(!failed_script_cache, s);
+               warn ("Failed script build for "^script^" - "^
+                     posix_diagnostic res2))
+            else ()
       in
         (isSuccess res2) andalso
         (exists_readable thysmlfile orelse

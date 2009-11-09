@@ -87,5 +87,54 @@ val PhiSOME_UM = store_thm(
     (UM_bnf |> Q.INST [`M` |-> `church p`] |> SIMP_RULE (srw_ss()) []) THEN
   ASM_SIMP_TAC (bsrw_ss()) []);
 
+(* Phi and its connection to cbnf_ofk *)
+val cbnf_of_works1' =
+    cbnf_of_works1 |> Q.INST [`M` |-> `toTerm dM`, `N` |-> `toTerm dN`]
+                   |> SIMP_RULE (srw_ss()) []
+
+val PhiSOME_cbnf_ofk = store_thm(
+  "PhiSOME_cbnf_ofk",
+  ``(Phi N e = SOME z) ⇒
+    ∃v.
+      (∀k. cbnf_ofk @@ k @@ cDB (dAPP (numdB N) (fromTerm (church e))) ==
+           k @@ cDB v) ∧
+      (z = force_num (toTerm v))``,
+  STRIP_TAC THEN
+  `UM @@ church (N ⊗ e) -n->* church z`
+    by FULL_SIMP_TAC (srw_ss()) [PhiSOME_UM] THEN
+  FULL_SIMP_TAC (bsrw_ss()) [UM_def, cnfst_behaviour,
+                             cchurch_behaviour, cnsnd_behaviour,
+                             cnumdB_behaviour, cdAPP_behaviour] THEN
+  `∃z'. (bnf_of (toTerm (dAPP (numdB N) (fromTerm (church e)))) =
+         SOME (toTerm z')) ∧
+        cforce_num @@ cDB z' -n->* church z`
+      by METIS_TAC [cbnf_ofk_works2, bnf_church, nstar_betastar_bnf,
+                    chap3Theory.betastar_lameq_bnf] THEN
+  POP_ASSUM MP_TAC THEN
+  SIMP_TAC (bsrw_ss()) [cforce_num_behaviour] THEN STRIP_TAC THEN
+  IMP_RES_TAC cbnf_of_works1' THEN
+  ASM_SIMP_TAC (bsrw_ss()) [] THEN
+  METIS_TAC [chap2Theory.lameq_refl]);
+
+val optlemma = prove(
+  ``(x ≠ NONE) ⇔ ∃z. x = SOME z``,
+  Cases_on `x` THEN SRW_TAC [][]);
+
+val PhiNONE_cbnf_ofk = store_thm(
+  "PhiNONE_cbnf_ofk",
+  ``(Phi N e = NONE) ⇒
+    (bnf_of (cbnf_ofk @@ k @@ cDB (dAPP (numdB N) (fromTerm (church e)))) =
+     NONE)``,
+  ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN
+  STRIP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [optlemma] THEN
+  `cbnf_ofk @@ k @@ cDB (dAPP (numdB N) (fromTerm (church e))) -n->* z ∧
+   bnf z`
+     by METIS_TAC [bnf_of_SOME] THEN
+  `∃v. (bnf_of (toTerm (dAPP (numdB N) (fromTerm (church e)))) =
+        SOME (toTerm v)) ∧
+       k @@ cDB v -n->* z`
+     by METIS_TAC [cbnf_ofk_works2] THEN
+  SRW_TAC [][Phi_def] THEN FULL_SIMP_TAC (srw_ss()) []);
 
 val _ = export_theory()

@@ -1293,8 +1293,8 @@ val signed_16_multiply_32_accumulate_instr_def = iDefine`
               (d = 15w) \/ (n = 15w) \/ (m = 15w) \/ (a = 15w)))
       ((read_reg ii m ||| read_reg ii n ||| read_reg ii a) >>=
        (\(rm,rn,ra).
-          let operand1 = if n_high then (31 -- 16) rn else (15 -- 0) rn
-          and operand2 = if m_high then (31 -- 16) rm else (15 -- 0) rm
+          let operand1 = if n_high then top_half rn else bot_half rn
+          and operand2 = if m_high then top_half rm else bot_half rm
           in
           let result = SInt operand1 * SInt operand2 + SInt ra in
           let result32 = i2w result
@@ -1319,8 +1319,8 @@ val signed_16_multiply_32_result_instr_def = iDefine`
               (d = 15w) \/ (n = 15w) \/ (m = 15w)))
       ((read_reg ii m ||| read_reg ii n) >>=
        (\(rm,rn).
-          let operand1 = if n_high then (31 -- 16) rn else (15 -- 0) rn
-          and operand2 = if m_high then (31 -- 16) rm else (15 -- 0) rm
+          let operand1 = if n_high then top_half rn else bot_half rn
+          and operand2 = if m_high then top_half rm else bot_half rm
           in
           let result = SInt operand1 * SInt operand2
           in
@@ -1342,7 +1342,7 @@ val signed_16x32_multiply_32_accumulate_instr_def = iDefine`
               (d = 15w) \/ (n = 15w) \/ (m = 15w) \/ (a = 15w)))
       ((read_reg ii m ||| read_reg ii n ||| read_reg ii a) >>=
        (\(rm,rn,ra).
-          let operand2 = if m_high then (31 -- 16) rm else (15 -- 0) rm
+          let operand2 = if m_high then top_half rm else bot_half rm
           and sh16 = 2i ** 16
           in
           let result = (SInt rn * SInt operand2 + (SInt ra * sh16)) / sh16
@@ -1369,7 +1369,7 @@ val signed_16x32_multiply_32_result_instr_def = iDefine`
               (d = 15w) \/ (n = 15w) \/ (m = 15w)))
       ((read_reg ii m ||| read_reg ii n) >>=
        (\(rm,rn).
-          let operand2 = if m_high then (31 -- 16) rm else (15 -- 0) rm
+          let operand2 = if m_high then top_half rm else bot_half rm
           in
           let result = (SInt rn * SInt operand2) / 2 ** 16
           in
@@ -1393,8 +1393,8 @@ val signed_16_multiply_64_accumulate_instr_def = iDefine`
       ((read_reg ii m   ||| read_reg ii n |||
         read_reg ii dhi ||| read_reg ii dlo) >>=
        (\(rm,rn,rdhi,rdlo).
-          let operand1 = if n_high then (31 -- 16) rn else (15 -- 0) rn
-          and operand2 = if m_high then (31 -- 16) rm else (15 -- 0) rm
+          let operand1 = if n_high then top_half rn else bot_half rn
+          and operand2 = if m_high then top_half rm else bot_half rm
           in
           let result = (SInt operand1 * SInt operand2) +
                        (SInt ((rdhi @@ rdlo) : word64))
@@ -1700,14 +1700,14 @@ val saturate_16_instr_def = iDefine`
          let ((result1:word16,sat1),(result2:word16,sat2)) =
            if unsigned then
              let saturate_to = w2n sat_imm in
-               unsigned_sat_q (SInt (( 15 --  0 ) rn), saturate_to),
-               unsigned_sat_q (SInt (( 31 -- 16 ) rn), saturate_to)
+               unsigned_sat_q (SInt (bot_half rn), saturate_to),
+               unsigned_sat_q (SInt (top_half rn), saturate_to)
            else
              let saturate_to = w2n sat_imm + 1 in
                (sign_extend saturate_to ## I)
-                 (signed_sat_q (SInt (( 15 --  0 ) rn), saturate_to)),
+                 (signed_sat_q (SInt (bot_half rn), saturate_to)),
                (sign_extend saturate_to ## I)
-                 (signed_sat_q (SInt (( 31 -- 16 ) rn), saturate_to))
+                 (signed_sat_q (SInt (top_half rn), saturate_to))
          in
            (increment_pc ii enc |||
             write_reg ii d (result2 @@ result1) |||
@@ -2086,8 +2086,10 @@ val store_instr_def = iDefine`
                          ~indx \/ ~add \/ w
                        else
                          indx \/ ~w) \/
-            store_byte /\
-              (if enc = Encoding_Thumb2 then BadReg t else t = 15w) \/
+            (if enc = Encoding_Thumb2 then
+               store_byte /\ (t = 13w) \/ (t = 15w)
+             else
+               store_byte /\ (t = 15w)) \/
             wback /\ ((n = 15w) \/ (n = t)) \/
             (case mode2
              of Mode2_register imm5 type m ->

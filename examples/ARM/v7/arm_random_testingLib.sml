@@ -140,9 +140,9 @@ let val rand_term = random_term arch enc
                          val (rd,rn) = if test_or_compare opc then
                                          (p,c)
                                        else
-                                         (d,if (opc = 13 orelse opc = 15)
-					       andalso enc <> Thumb2 andalso
-                                               random_range 2 = 0
+                                         (d,if opc = 13 orelse opc = 15 andalso
+                                                (enc <> Thumb2 orelse
+                                                 random_range 2 = 0)
                                             then p else c)
                          val sflag = if enc = Thumb orelse test_or_compare opc
                                      then T else b
@@ -744,6 +744,119 @@ in
         |> mk_code aa
         |> step_updates a
     end
+end;
+
+fun instruction_type enc opc =
+let
+  val is_PC = term_eq ``15w:word4``
+  val code =
+    case enc
+      of ARM => armLib.arm_decode opc
+       | Thumb => armLib.thumb_decode 0 (String.extract(opc,4,NONE))
+       | Thumb2 => armLib.thumb_decode 0 (String.extract(opc,4,NONE) ^
+                                          String.extract(opc,0,SOME 4))
+  val (e,tm) =
+    case code
+      of arm_parserLib.Instruction (e,_,tm) => (e,tm)
+       | _ => raise ERR "instruction_type" ""
+  val mode =
+    if arm_astSyntax.is_Data_Processing tm then
+      let val (_,_,_,_,mode1) = arm_astSyntax.dest_Data_Processing tm in
+        if arm_astSyntax.is_Mode1_register_shifted_register mode1 then
+          " (reg-sh-reg)"
+        else if arm_astSyntax.is_Mode1_register mode1 then
+          " (reg)"
+        else if arm_astSyntax.is_Mode1_immediate mode1 then
+          " (imm)"
+        else
+          raise ERR "instruction_type" ""
+      end
+    else if arm_astSyntax.is_Load tm then
+      let val (_,_,_,_,_,n,_,mode2) = arm_astSyntax.dest_Load tm in
+        if arm_astSyntax.is_Mode2_immediate mode2 then
+          (if is_PC n then " (lit)" else " (imm)")
+        else if arm_astSyntax.is_Mode2_register mode2 then
+          " (reg)"
+        else
+          raise ERR "instruction_type" ""
+      end
+    else if arm_astSyntax.is_Load_Halfword tm then
+      let val (_,_,_,_,_,_,n,_,mode3) = arm_astSyntax.dest_Load_Halfword tm in
+        if arm_astSyntax.is_Mode3_immediate mode3 then
+          if is_PC n then " (lit)" else " (imm)"
+        else if arm_astSyntax.is_Mode3_register mode3 then
+          " (reg)"
+        else
+          raise ERR "instruction_type" ""
+      end
+    else if arm_astSyntax.is_Load_Dual tm then
+      let val (_,_,_,n,_,_,mode3) = arm_astSyntax.dest_Load_Dual tm
+      in
+        if arm_astSyntax.is_Mode3_immediate mode3 then
+          if is_PC n then " (lit)" else " (imm)"
+        else if arm_astSyntax.is_Mode3_register mode3 then
+          " (reg)"
+        else
+          raise ERR "instruction_type" ""
+      end
+    else if arm_astSyntax.is_Store tm then
+      let val (_,_,_,_,_,n,_,mode2) = arm_astSyntax.dest_Store tm in
+        if arm_astSyntax.is_Mode2_immediate mode2 then
+          " (imm)"
+        else if arm_astSyntax.is_Mode2_register mode2 then
+          " (reg)"
+        else
+          raise ERR "instruction_type" ""
+      end
+    else if arm_astSyntax.is_Store_Halfword tm then
+      let val (_,_,_,_,n,_,mode3) = arm_astSyntax.dest_Store_Halfword tm in
+        if arm_astSyntax.is_Mode3_immediate mode3 then
+          " (imm)"
+        else if arm_astSyntax.is_Mode3_register mode3 then
+          " (reg)"
+        else
+          raise ERR "instruction_type" ""
+      end
+    else if arm_astSyntax.is_Store_Dual tm then
+      let val (_,_,_,n,_,_,mode3) = arm_astSyntax.dest_Store_Dual tm in
+        if arm_astSyntax.is_Mode3_immediate mode3 then
+          " (imm)"
+        else if arm_astSyntax.is_Mode3_register mode3 then
+          " (reg)"
+        else
+          raise ERR "instruction_type" ""
+      end
+    else if arm_astSyntax.is_Preload_Data tm then
+      let val (_,_,_,mode2) = arm_astSyntax.dest_Preload_Data tm in
+        if arm_astSyntax.is_Mode2_immediate mode2 then
+          " (imm)"
+        else if arm_astSyntax.is_Mode2_register mode2 then
+          " (reg)"
+        else
+          raise ERR "instruction_type" ""
+      end
+    else if arm_astSyntax.is_Preload_Instruction tm then
+      let val (_,_,mode2) = arm_astSyntax.dest_Preload_Instruction tm in
+        if arm_astSyntax.is_Mode2_immediate mode2 then
+          " (imm)"
+        else if arm_astSyntax.is_Mode2_register mode2 then
+          " (reg)"
+        else
+          raise ERR "instruction_type" ""
+      end
+    else if arm_astSyntax.is_Branch_Link_Exchange_Immediate tm then
+      " (imm)"
+    else if arm_astSyntax.is_Branch_Link_Exchange_Register tm then
+      " (reg)"
+    else
+      ""
+  fun remove_suffix (s,_) =
+        let val m = hd (String.tokens (fn c => c = #".") s) in
+          if String.isPrefix "it" m then "it" else m
+        end
+  val code' = arm_parserLib.Instruction (e,``14w:word4``,tm)
+in
+  remove_suffix (armLib.arm_disassemble code') ^ mode
 end;
 
 end;

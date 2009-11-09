@@ -46,9 +46,26 @@ val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 
+local
+fun assoc item =
+  let fun assc ((key,ob)::rst) = if item=key then ob else assc rst
+        | assc [] = raise Match
+  in assc
+  end
+val machine_env = Posix.ProcEnv.uname()
+val sysname = assoc "sysname" machine_env
+in
+val machine_flags = if sysname = "Darwin" (* Mac OS X *)
+                    then ["-segprot", "POLY", "rwx", "rwx"] @
+                           (if PolyML.architecture() = "I386"
+                            then ["-arch", "i386"]
+                            else [])
+                    else []
+end;
+
 fun compile systeml exe obj =
-  (systeml [CC, "-o", exe, obj, "-L" ^ polymllibdir,
-            "-lpolymain", "-lpolyml"];
+  (systeml ([CC, "-o", exe, obj, "-L" ^ polymllibdir,
+             "-lpolymain", "-lpolyml"] @ machine_flags);
    OS.FileSys.remove obj);
 
 (*---------------------------------------------------------------------------

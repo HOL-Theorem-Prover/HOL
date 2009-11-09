@@ -9,7 +9,7 @@ val _ = new_theory "toy_core2";
 (*  Type definitions                                                          *)
 (* -------------------------------------------------------------------------- *)
 
-(* This theroy defines a toy processor core which handles the 
+(* This theory defines a toy processor core which handles the 
    following instructions: *)
 
 val _ = type_abbrev ("reg",``:word4``); 

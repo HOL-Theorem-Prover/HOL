@@ -935,3 +935,9 @@ struct
 
   end (* structure Path *)
 end
+
+structure Real =
+struct
+  open Real
+  structure Math = Math
+end

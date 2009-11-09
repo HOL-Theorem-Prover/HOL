@@ -92,7 +92,9 @@ val x86_match_step_def = Define `
 (* syntax classes *)
 
 val x86_binop_def = Define `x86_binop =
-  [("ADD",Xadd); ("AND",Xand); ("CMP",Xcmp); ("OR",Xor); ("SAR",Xsar); ("SHR",Xshr); ("SHL",Xshl); ("SUB",Xsub); ("TEST",Xtest); ("XOR",Xxor)]`;
+  [("ADC",Xadc); ("ADD",Xadd); ("AND",Xand); ("CMP",Xcmp); 
+   ("OR",Xor); ("SAR",Xsar); ("SHR",Xshr); ("SHL",Xshl); 
+   ("SBB",Xsbb); ("SUB",Xsub); ("TEST",Xtest); ("XOR",Xxor)]`;
 
 val x86_monop_def = Define `x86_monop =
   [("DEC",Xdec); ("INC",Xinc); ("NOT",Xnot); ("NEG",Xneg)]`;
@@ -176,6 +178,7 @@ val x86_syntax_def = Define `
     if (HD ts = "CMP") /\ MEM "r/m8" ts then X_SOME (\g. Xcmp_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
     if (HD ts = "MOV") /\ MEM "r/m8" ts then X_SOME (\g. Xmov_byte (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
     if (HD ts = "DEC") /\ MEM "r/m8" ts then X_SOME (\g. Xdec_byte (decode_Xrm32 g (EL 1 ts))) else
+    if HD ts = "MOVZX" then X_SOME (\g. Xmovzx (decode_Xdest_src g (EL 1 ts) (EL 2 ts))) else
     if MEM (HD ts) (MAP FST x86_binop) then X_SOME (\g. ^x86_syntax_binop) else
     if MEM (HD ts) (MAP FST x86_monop) then X_SOME (\g. ^x86_syntax_monop) else
     if HD ts = "POP"  then X_SOME (\g. Xpop  (decode_Xrm32 g (EL 1 ts))) else
@@ -218,6 +221,11 @@ val x86_syntax_def = Define `
 
 val x86_syntax_list = `` [
 
+    " 15 id     | ADC EAX, imm32    ";
+    " 83 /2 ib  | ADC r/m32, imm8   ";
+    " 81 /2 id  | ADC r/m32, imm32  ";
+    " 11 /r     | ADC r/m32, r32    ";
+    " 13 /r     | ADC r32, r/m32    ";
     " 05 id     | ADD EAX, imm32    ";
     " 83 /0 ib  | ADD r/m32, imm8   ";
     " 81 /0 id  | ADD r/m32, imm32  ";
@@ -242,6 +250,11 @@ val x86_syntax_list = `` [
     " 83 /1 ib  | OR r/m32, imm8    ";
     " 09 /r     | OR r/m32, r32     ";
     " 0B /r     | OR r32, r/m32     ";
+    " 1D id     | SBB EAX, imm32    ";
+    " 83 /3 ib  | SBB r/m32, imm8   ";
+    " 81 /3 id  | SBB r/m32, imm32  ";
+    " 19 /r     | SBB r/m32, r32    ";
+    " 1B /r     | SBB r32, r/m32    ";
     " 2D id     | SUB EAX, imm32    ";
     " 83 /5 ib  | SUB r/m32, imm8   ";
     " 81 /5 id  | SUB r/m32, imm32  ";
@@ -326,7 +339,7 @@ val x86_syntax_list = `` [
 
     " C6 /0 ib  | MOV r/m8, imm8    ";
     " 88 /r     | MOV r/m8, r8      ";
-    " 0F B6 /r  | MOV r32, r/m8     "; (* encodes MOVZX *)
+    " 0F B6 /r  | MOVZX r32, r/m8   "; 
     " 38 /r     | CMP r/m8, r8      ";
     " 3A /r     | CMP r8, r/m8      ";
     " 80 /7 ib  | CMP r/m8, imm8    ";

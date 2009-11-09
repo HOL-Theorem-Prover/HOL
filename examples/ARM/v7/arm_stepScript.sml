@@ -4238,9 +4238,9 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
 val arm_next_thm = Q.store_thm("arm_next_thm",
   `!s x P h g.
      (!s. P s ==> (g s = s)) /\
-     (P s ==> (h (g s) = SOME x)) /\
+     (P s ==> (h (g s) = x)) /\
      (arm_next <| proc := 0 |> (g s) = ValueState () x) ==>
-     (P s ==> (ARM_NEXT s = h s))`,
+     (P s ==> (ARM_NEXT s = SOME (h s)))`,
   SRW_TAC [] [STATE_OPTION_def,ARM_NEXT_def]
     \\ `g s = s` by RES_TAC \\ POP_ASSUM SUBST_ALL_TAC
     \\ Cases_on `arm_next <|proc := 0|> s`
