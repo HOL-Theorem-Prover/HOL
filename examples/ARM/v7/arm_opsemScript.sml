@@ -2086,8 +2086,10 @@ val store_instr_def = iDefine`
                          ~indx \/ ~add \/ w
                        else
                          indx \/ ~w) \/
-            store_byte /\
-              (if enc = Encoding_Thumb2 then BadReg t else t = 15w) \/
+            (if enc = Encoding_Thumb2 then
+               store_byte /\ (t = 13w) \/ (t = 15w)
+             else
+               store_byte /\ (t = 15w)) \/
             wback /\ ((n = 15w) \/ (n = t)) \/
             (case mode2
              of Mode2_register imm5 type m ->
