@@ -136,7 +136,7 @@ val fresh_cfindbody = store_thm(
   SRW_TAC [][LET_THM, cfindbody_def] THEN
   binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
   binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
-  AP_TERM_TAC THEN SRW_TAC [][termTheory.LAM_eq_thm, termTheory.tpm_fresh] THEN
+  SRW_TAC [][termTheory.LAM_eq_thm, termTheory.tpm_fresh] THEN
   Cases_on `nv = v` THEN SRW_TAC [][termTheory.tpm_fresh] THEN
   Cases_on `lp = v'` THEN SRW_TAC [][termTheory.tpm_fresh]);
 
@@ -186,7 +186,7 @@ val cfindbody_cong = store_thm(
                              @@ (VAR lp @@ (csuc @@ VAR nv))))) @@
       N')`
     by SRW_TAC [][fresh_cfindbody] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [Cong Yf_cong]);
+  ASM_SIMP_TAC (bsrw_ss()) []);
 
 val bnf_cfindbody = Store_thm(
   "bnf_cfindbody",
@@ -196,6 +196,12 @@ val bnf_cfindbody = Store_thm(
 val cfindleast_def = Define`
   cfindleast = LAM "P" (cfindbody (VAR "P") (church 0))
 `;
+
+val FV_cfindleast = Store_thm(
+  "FV_cfindleast",
+  ``FV cfindleast = {}``,
+  SRW_TAC [][cfindleast_def, cfindbody_def, LET_THM,
+             pred_setTheory.EXTENSION]);
 
 val cfindleast_termI = store_thm(
   "cfindleast_termI",
@@ -252,8 +258,6 @@ val cfindbody_11 = Store_thm(
       by SRW_TAC [][fresh_cfindbody] THEN
   SRW_TAC [][]);
 
-(*
-
 val cfindleast_bnfE = store_thm(
   "cfindleast_bnfE",
   ``(∀n. ∃b. P @@ church n == cB b) ∧
@@ -301,15 +305,17 @@ val cfindleast_bnfE = store_thm(
                            bnf_steps_upwards_closed] THEN
     `∃rest. N = rest + n1` by (Q.EXISTS_TAC `N - n1` THEN DECIDE_TAC) THEN
     FULL_SIMP_TAC (srw_ss()) [steps_plus] THEN
-    `n1 ≠ 0` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) [])
+    `n1 ≠ 0` by (STRIP_TAC THEN
+                 FULL_SIMP_TAC (srw_ss()) [termTheory.APP_acyclic]) THEN
+    `rest < rest + n1` by DECIDE_TAC THEN
+    POP_ASSUM (fn th1 => FIRST_X_ASSUM (MP_TAC o C MATCH_MP th1)) THEN
+    DISCH_THEN (Q.SPECL_THEN [`SUC cn`, `csuc @@ ct`] MP_TAC) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [csuc_behaviour] THEN
+    DISCH_THEN MATCH_MP_TAC THEN
+    REPEAT STRIP_TAC THEN
+    `(c0 = cn) ∨ c0 < cn` by DECIDE_TAC THEN SRW_TAC [][]
+  ]);
 
-
-
-
-
-
-
-*)
 
 (* an r.e. set is one that can be enumerated.  In this world, I take enumerable
    to mean there exists a function that returns values at successive indices.
@@ -327,106 +333,6 @@ val re_def = Define`
    evaluating [Mi 0, Mi 1, Mi 2, ... Mi n] for n steps.  For all the bnfs in
    this list, see if one of them is equal to e.  If so, terminate.
 *)
-val enum2semibody_def = Define`
-  enum2semibody Mi e loop n j =
-    LAM loop (LAM n
-      (cmem @@ e
-            @@ (cmap @@ cforce_num
-                     @@ (cfilter
-                           @@ cbnf
-                           @@ (ctabulate
-                                 @@ (csuc @@ VAR n)
-                                 @@ (LAM j
-                                       (csteps
-                                          @@ VAR n
-                                          @@ (cdAPP
-                                                @@ (cnumdB @@ church Mi)
-                                                @@ (cchurch @@ VAR j)))))))
-            @@ church 0
-            @@ (VAR loop @@ (csuc @@ VAR n))))
-`;
-
-val enum2semi_def = Define`
-  enum2semi Mi e =
-    let loop = NEW (FV e) in
-    let n = NEW ({loop} ∪ FV e) in
-    let j = NEW {n}
-    in
-       enum2semibody Mi e loop n j
-`;
-
-val FV_enum2semi = Store_thm(
-  "FV_enum2semi",
-  ``FV (enum2semi n t) = FV t``,
-  SRW_TAC [][enum2semi_def, LET_THM, pred_setTheory.EXTENSION,
-             enum2semibody_def] THEN
-  binderLib.NEW_ELIM_TAC THEN REPEAT GEN_TAC THEN
-  binderLib.NEW_ELIM_TAC THEN SRW_TAC [][] THEN
-  METIS_TAC []);
-
-val FV_enum2semibody = Store_thm(
-  "FV_enum2semibody",
-  ``FV (enum2semibody n t x y z) = FV t DELETE x DELETE y``,
-  SRW_TAC [][enum2semibody_def, pred_setTheory.EXTENSION] THEN
-  METIS_TAC []);
-
-val enum2semi_fresh = prove(
-  ``loop ∉ FV e ∧ n ≠ loop ∧ n ∉ FV e ∧ j ≠ n ⇒
-     (enum2semi Mi e = enum2semibody Mi e loop n j)``,
-  SRW_TAC [][enum2semi_def, LET_THM] THEN
-  binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
-  binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
-  binderLib.NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
-  SRW_TAC [][enum2semibody_def, termTheory.LAM_eq_thm,
-             termTheory.tpm_fresh] THEN
-  Cases_on `loop = v` THEN SRW_TAC [][] THEN1
-    (SRW_TAC [][basic_swapTheory.swapstr_def] THEN METIS_TAC []) THEN
-  Cases_on `v = n` THEN SRW_TAC [][] THEN
-  Cases_on `loop = n` THEN SRW_TAC [][] THENL [
-    Cases_on `loop = j` THEN SRW_TAC [][] THEN
-    SRW_TAC [][basic_swapTheory.swapstr_def, termTheory.tpm_fresh] THEN
-    METIS_TAC [],
-
-    Cases_on `loop = j` THEN SRW_TAC [][] THEN1
-      (SRW_TAC [][basic_swapTheory.swapstr_def, termTheory.tpm_fresh] THEN
-       METIS_TAC []) THEN
-    Cases_on `v = j` THEN SRW_TAC [][] THEN
-    SRW_TAC [][basic_swapTheory.swapstr_def, termTheory.tpm_fresh] THEN
-    METIS_TAC []
-  ]);
-
-val enum2semi_SUB = store_thm(
-  "enum2semi_SUB",
-  ``[N/v] (enum2semi n t) = enum2semi n ([N/v]t)``,
-  Q_TAC (NEW_TAC "loop") `FV N ∪ {v} ∪ FV t` THEN
-  Q_TAC (NEW_TAC "m") `FV N ∪ {v; loop} ∪ FV t` THEN
-  Q_TAC (NEW_TAC "j") `FV N ∪ {v;m}` THEN
-  `enum2semi n t = enum2semibody n t loop m j`
-     by METIS_TAC [enum2semi_fresh] THEN
-  `enum2semi n ([N/v]t) = enum2semibody n ([N/v]t) loop m j`
-     by (MATCH_MP_TAC enum2semi_fresh THEN
-         SRW_TAC [][chap2Theory.NOT_IN_FV_SUB]) THEN
-  SRW_TAC [][enum2semibody_def, termTheory.lemma14b]);
-
-val freshlemma = prove(
-  ``NEW (FV e) ∉ FV e ∧ NEW (FV e ∪ {NEW (FV e)}) ≠ NEW (FV e) ∧
-    NEW (FV e ∪ {NEW (FV e)}) ∉ FV e ∧
-    NEW {NEW (FV e ∪ {NEW (FV e)})} ≠ NEW (FV e ∪ {NEW (FV e)})``,
-  binderLib.NEW_ELIM_TAC THEN NTAC 2 STRIP_TAC THEN
-  binderLib.NEW_ELIM_TAC THEN NTAC 2 STRIP_TAC THEN
-  binderLib.NEW_ELIM_TAC);
-
-val enum2semi_eqn =
-    enum2semi_fresh
-      |> REWRITE_RULE [enum2semibody_def]
-      |> UNDISCH
-      |> brackabs.brackabs_equiv
-          (CONJUNCTS
-               (ASSUME ``loop ∉ FV e ∧ n ≠ loop ∧ n ∉ FV e ∧ j ≠ n``))
-      |> DISCH_ALL
-      |> Q.INST [`j` |-> `NEW {n}`]
-      |> Q.INST [`loop` |-> `NEW (FV e)`, `n` |-> `NEW (FV e ∪ {NEW (FV e)})`]
-      |> C MP freshlemma
 
 val MEM_GENLIST = prove(
   ``MEM e (GENLIST f n) = ∃i. i < n ∧ (e = f i)``,
@@ -462,173 +368,75 @@ val re_semirecursive1 = prove(
   SRW_TAC [][re_def] THEN
   Q.EXISTS_TAC
     `dBnum (fromTerm
-              (LAM "e" (chap2$Y @@ enum2semi Mi (VAR "e") @@ church 0)))` THEN
-  SRW_TAC [][Phi_def, EQ_IMP_THM] THENL [
-    SIMP_TAC (bsrw_ss()) [churchDBTheory.cnumdB_behaviour,
-                          Once chap2Theory.lameq_Y, enum2semi_SUB] THEN
+      (LAM "e" (cfindleast @@ (LAM "n"
+        (cmem
+           @@ VAR "e"
+           @@ (cmap
+                 @@ cforce_num
+                 @@ (cfilter
+                       @@ cbnf
+                       @@ (ctabulate
+                             @@ VAR "n"
+                             @@ (LAM "j"
+                                 (csteps
+                                    @@ VAR "n"
+                                    @@ (cdAPP
+                                          @@ (cnumdB @@ church Mi)
+                                          @@ (cchurch @@ VAR "j"))))))))))))
+  ` THEN
+  SIMP_TAC (bsrw_ss()) [Phi_def, cnumdB_behaviour] THEN
+  Q.X_GEN_TAC `e` THEN
+  Q.HO_MATCH_ABBREV_TAC `e ∈ s ⇔ ∃r. bnf_of (cfindleast @@ P) = SOME r` THEN
+  `∀n. P @@ church n ==
+       cB (MEM e (MAP force_num
+            (FILTER bnf (GENLIST
+                          (λj. steps n (toTerm (numdB Mi) @@ church j))
+                          n))))`
+     by (SIMP_TAC (bsrw_ss()) [Abbr`P`, ctabulate_cvlist] THEN
+         SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
+                  [cfilter_cvlist, MEM_GENLIST,
+                   csteps_behaviour, cchurch_behaviour,
+                   cdAPP_behaviour, cbnf_behaviour,
+                   Cong cvlist_genlist_cong, cmap_cvlist,
+                   cmem_cvlist, cforce_num_behaviour,
+                   listTheory.MEM_MAP, listTheory.MEM_FILTER] THEN
+         SIMP_TAC (bsrw_ss()) [listTheory.EXISTS_MAP, EXISTS_FILTER,
+                               EXISTS_GENLIST, cdAPP_behaviour,
+                               csteps_behaviour, cchurch_behaviour,
+                               cbnf_behaviour, cforce_num_behaviour,
+                               ceqnat_behaviour] THEN
+         METIS_TAC []) THEN
+  `∀n. ∃b. P @@ church n == cB b` by METIS_TAC [] THEN
+  Q.RM_ABBREV_TAC `P` THEN
+  SRW_TAC [][EQ_IMP_THM, Phi_def] THENL [
     `toTerm (numdB Mi) @@ church j -n->* z ∧ bnf z`
-       by METIS_TAC [bnf_of_SOME] THEN
+      by METIS_TAC [bnf_of_SOME] THEN
     `∃n. steps n (toTerm (numdB Mi) @@ church j) = z`
-       by METIS_TAC [stepsTheory.bnf_steps] THEN
-    Q.MATCH_ABBREV_TAC
-      `∃r. bnf_of (E @@ (chap2$Y @@ E) @@ church 0) = SOME r` THEN
-    Q_TAC SUFF_TAC `∀st. st ≤ MAX (j + 1) n ⇒
-                         E @@ (chap2$Y @@ E) @@ church st == church 0`
-          THEN1 (DISCH_THEN (Q.SPEC_THEN `0` MP_TAC) THEN
-                 SIMP_TAC (bsrw_ss()) [bnf_bnf_of]) THEN
-    Q_TAC SUFF_TAC
-          `∀m st. (m = MAX (j + 1) n - st) ∧
-                  st ≤ MAX (j + 1) n ⇒
-                  E @@ (chap2$Y @@ E) @@ church st == church 0`
-          THEN1 METIS_TAC [] THEN
-    Induct THEN REPEAT STRIP_TAC THENL [
-      `st = MAX (j + 1) n` by DECIDE_TAC THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      SIMP_TAC (bsrw_ss()) [Abbr`E`, enum2semi_eqn] THEN
-      FULL_SIMP_TAC (srw_ss()) [] THEN
-      ASM_SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
-                   [ctabulate_cvlist, Cong cvlist_genlist_cong,
-                    csuc_behaviour,
-                    cchurch_behaviour, cnumdB_behaviour,
-                    cdAPP_behaviour, csteps_behaviour,
-                    cfilter_cvlist, MEM_GENLIST, cbnf_behaviour,
-                    cmap_cvlist, cmem_cvlist, listTheory.MEM_MAP,
-                    listTheory.MEM_FILTER, cforce_num_behaviour] THEN
-      ASM_SIMP_TAC (srw_ss()) [listTheory.EXISTS_MAP,
-                               EXISTS_FILTER, EXISTS_GENLIST] THEN
-      Q.MATCH_ABBREV_TAC `cB P @@ church 0 @@ X == church 0` THEN
-      Q_TAC SUFF_TAC `P` THEN1
-        SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
-      markerLib.UNABBREV_ALL_TAC THEN
-      Q.EXISTS_TAC `j` THEN
-      SIMP_TAC (bsrw_ss()) [cforce_num_behaviour,
-                            ceqnat_behaviour,
-                            cbnf_behaviour] THEN
-      `steps (MAX (j + 1) n) (toTerm (numdB Mi) @@ church j) = z`
-         by (SRW_TAC [][] THEN Cases_on `MAX (j + 1) n = n`
-               THEN1 SRW_TAC [][] THEN
-             MATCH_MP_TAC bnf_steps_upwards_closed THEN
-             FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)
-                           [arithmeticTheory.MAX_DEF]) THEN
-      SRW_TAC [ARITH_ss][arithmeticTheory.MAX_DEF],
-
-      `st < MAX (j + 1) n` by DECIDE_TAC THEN
-      SIMP_TAC (bsrw_ss()) [Abbr`E`, Once enum2semi_eqn] THEN
-      ASM_SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
-                   [ctabulate_cvlist, Cong cvlist_genlist_cong,
-                    csuc_behaviour,
-                    cchurch_behaviour, cnumdB_behaviour,
-                    cdAPP_behaviour, csteps_behaviour,
-                    cfilter_cvlist, MEM_GENLIST, cbnf_behaviour,
-                    cmap_cvlist, cmem_cvlist, listTheory.MEM_MAP,
-                    listTheory.MEM_FILTER, cforce_num_behaviour] THEN
-      ASM_SIMP_TAC (srw_ss()) [listTheory.EXISTS_MAP,
-                               EXISTS_FILTER, EXISTS_GENLIST] THEN
-      Q.ABBREV_TAC `MX = MAX (j + 1) n`  THEN
-      FIRST_X_ASSUM (Q.SPEC_THEN `SUC st` MP_TAC) THEN
-      ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
-      STRIP_TAC THEN
-      ASM_SIMP_TAC (bsrw_ss()) [Once chap2Theory.lameq_Y] THEN
-      Q.MATCH_ABBREV_TAC `cB P @@ X @@ X == X` THEN
-      Cases_on `P` THEN
-      ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour]
-    ],
+      by METIS_TAC [stepsTheory.bnf_steps] THEN
+    `steps (MAX (j + 1) n) (toTerm (numdB Mi) @@ church j) = z`
+      by (SRW_TAC [][] THEN Cases_on `MAX (j + 1) n = n`
+            THEN1 SRW_TAC [][] THEN
+          MATCH_MP_TAC bnf_steps_upwards_closed THEN
+          FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)
+                        [arithmeticTheory.MAX_DEF]) THEN
+    `P @@ church (MAX (j + 1) n) == cB T`
+      by (ASM_SIMP_TAC (bsrw_ss()) [listTheory.MEM_MAP, listTheory.MEM_FILTER,
+                                    MEM_GENLIST] THEN
+          METIS_TAC [DECIDE ``j < j + 1``]) THEN
+    `cfindleast @@ P == church (LEAST n. P @@ church n == cB T)`
+      by (MATCH_MP_TAC (GEN_ALL cfindleast_termI) THEN METIS_TAC []) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
 
     (* other direction: that if our enum2semi function does terminate on an
        x, then x does indeed appear in the enumeration
     *)
-    FULL_SIMP_TAC (bsrw_ss())
-                  [enum2semi_SUB,
-                   Once (MATCH_MP relationTheory.RTC_SINGLE
-                                  head_reductionTheory.whY1),
-                   Once (MATCH_MP relationTheory.RTC_SINGLE
-                                  head_reductionTheory.whY2)] THEN
-    FULL_SIMP_TAC (bsrw_ss()) [bnf_steps] THEN
-    NTAC 2 (POP_ASSUM MP_TAC) THEN POP_ASSUM (K ALL_TAC) THEN
-    Q.MATCH_ABBREV_TAC `(steps n (TT @@ church 0) = z) ⇒ bnf z ⇒ Concl` THEN
-    Q_TAC SUFF_TAC
-          `∀n t m. (t == church m) ⇒ (steps n (TT @@ t) = z) ∧ bnf z ⇒
-                   Concl` THEN1 METIS_TAC [chap2Theory.lameq_refl] THEN
-    markerLib.UNABBREV_ALL_TAC THEN
-    completeInduct_on `n` THEN
-    MAP_EVERY Q.X_GEN_TAC [`t`,`m`] THEN STRIP_TAC THEN
-    `lp ∉ FV (church e)` by SRW_TAC [][] THEN
-    Q_TAC (NEW_TAC "nm") `{lp}` THEN
-    Q_TAC (NEW_TAC "jm") `{nm}` THEN
-    `enum2semi Mi (church e) = enum2semibody Mi (church e) lp nm jm`
-       by (MATCH_MP_TAC enum2semi_fresh THEN SRW_TAC [][]) THEN
-    `(n = 0) ∨ (∃n0. n = SUC n0)`
-       by METIS_TAC [TypeBase.nchotomy_of ``:num``]
-       THEN1 (SRW_TAC [][enum2semibody_def] THEN
-              FULL_SIMP_TAC (srw_ss()) []) THEN
-    ASM_SIMP_TAC (srw_ss()) [Once enum2semibody_def, noreduct_thm,
-                             termTheory.lemma14b] THEN
-    `(n0 = 0) ∨ (∃n1. n0 = SUC n1)`
-       by METIS_TAC [TypeBase.nchotomy_of ``:num``]
-       THEN1 (SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
-    ASM_SIMP_TAC (srw_ss()) [noreduct_thm, termTheory.lemma14b] THEN
-    Q.MATCH_ABBREV_TAC
-      `(steps n1 (BoolTerm @@ church 0 @@ Loop) = z) ∧ bnf z ⇒ Concl` THEN
-    `∃b. BoolTerm == cB b`
-       by (SIMP_TAC (bsrw_ss()) [Abbr`BoolTerm`] THEN
-           ASM_SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
-                        [ctabulate_cvlist, Cong cvlist_genlist_cong,
-                         csuc_behaviour,
-                         cchurch_behaviour, cnumdB_behaviour,
-                         cdAPP_behaviour, csteps_behaviour,
-                         cfilter_cvlist, MEM_GENLIST, cbnf_behaviour,
-                         cmap_cvlist, cmem_cvlist, listTheory.MEM_MAP,
-                         listTheory.MEM_FILTER, cforce_num_behaviour]) THEN
-    Cases_on `b` THENL [
-      DISCH_THEN (K ALL_TAC) THEN
-      Q.UNABBREV_TAC `Concl` THEN
-      POP_ASSUM MP_TAC THEN
-      SIMP_TAC (bsrw_ss()) [Abbr`BoolTerm`] THEN
-      ASM_SIMP_TAC (bsrw_ss() ++ boolSimps.DNF_ss)
-                   [ctabulate_cvlist, Cong cvlist_genlist_cong,
-                    csuc_behaviour,
-                    cchurch_behaviour, cnumdB_behaviour,
-                    cdAPP_behaviour, csteps_behaviour,
-                    cfilter_cvlist, MEM_GENLIST, cbnf_behaviour,
-                    cmap_cvlist, cmem_cvlist, listTheory.MEM_MAP,
-                    listTheory.MEM_FILTER, cforce_num_behaviour] THEN
-      SIMP_TAC (bsrw_ss()) [listTheory.EXISTS_MAP, EXISTS_FILTER,
-                            EXISTS_GENLIST,
-                            cchurch_behaviour, cdAPP_behaviour,
-                            csteps_behaviour, cbnf_behaviour,
-                            cforce_num_behaviour,
-                            ceqnat_behaviour] THEN
-      METIS_TAC [],
-
-      Q.RM_ABBREV_TAC `BoolTerm` THEN
-      IMP_RES_TAC whead_tests THEN
-      `BoolTerm @@ church 0 @@ Loop -n->* Loop` by METIS_TAC [whstar_nstar] THEN
-      `∃n2. Loop = steps n2 (BoolTerm @@ church 0 @@ Loop)`
-         by METIS_TAC [nstar_steps] THEN
-      `¬bnf Loop` by (SRW_TAC [][Abbr`Loop`, chap2Theory.Yf_def] THEN
-                      SRW_TAC [][]) THEN
-      REPEAT STRIP_TAC THEN
-      `n2 < n1` by METIS_TAC [DECIDE ``n:num < m ∨ (n = m) ∨ m < n``,
-                              bnf_steps_upwards_closed] THEN
-      `∃rest. n1 = rest + n2` by (Q.EXISTS_TAC `n1 - n2` THEN DECIDE_TAC) THEN
-      FULL_SIMP_TAC (srw_ss()) [steps_plus] THEN
-      `steps rest Loop = z` by METIS_TAC [] THEN
-      `∃r1. rest = SUC r1`
-         by METIS_TAC [TypeBase.nchotomy_of ``:num``, steps_def] THEN
-      Q.ABBREV_TAC `EE = enum2semibody Mi (church e) lp nm jm` THEN
-      `Loop -n-> EE @@ Yf EE @@ (csuc @@ t)`
-         by SRW_TAC [][head_reductionTheory.whY2, Abbr`Loop`, whead_normorder,
-                       head_reductionTheory.weak_head_rules] THEN
-      `noreduct Loop = SOME (EE @@ Yf EE @@ (csuc @@ t))`
-         by FULL_SIMP_TAC (srw_ss()) [noreduct_characterisation] THEN
-      `steps r1 (EE @@ Yf EE @@ (csuc @@ t)) = z`
-         by FULL_SIMP_TAC (srw_ss()) [ASSUME ``¬bnf Loop``] THEN
-      FIRST_X_ASSUM (Q.SPEC_THEN `r1` MP_TAC) THEN
-      ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
-      DISCH_THEN (fn th => MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] th)) THEN
-      MAP_EVERY Q.EXISTS_TAC [`csuc @@ t`, `SUC m`] THEN
-      ASM_SIMP_TAC (bsrw_ss()) [csuc_behaviour]
-    ]
+    `cfindleast @@ P == r ∧ bnf r` by METIS_TAC [bnf_of_SOME, nstar_lameq] THEN
+    `∃m. (r = church m) ∧ P @@ r == cB T`
+       by METIS_TAC [cfindleast_bnfE] THEN
+    Q.PAT_ASSUM `P @@ r == cB T` MP_TAC THEN
+    ASM_SIMP_TAC (bsrw_ss()) [listTheory.MEM_MAP, listTheory.MEM_FILTER,
+                              MEM_GENLIST] THEN
+    METIS_TAC [bnf_steps]
   ]);
 
 val cbnf_of_works1' =
@@ -800,29 +608,55 @@ val re_INTER_I = store_thm(
     ASM_SIMP_TAC (srw_ss()) [PhiNONE_cbnf_ofk]
   ]);
 
-(* val re_UNION_I = store_thm(
+val re_UNION_I = store_thm(
   "re_UNION_I",
   ``re s ∧ re t ⇒ re (s ∪ t)``,
   SRW_TAC [][re_semidp] THEN
   Q.EXISTS_TAC `
     dBnum (fromTerm (LAM "e" (
-      chap2$Y @@ (LAM "loop" (LAM "n" (
-        cor @@ (cbnf @@ (csteps @@ VAR "n"
-                                @@ (cdAPP @@ cDB (numdB N)
-                                          @@ (cchurch @@ VAR "e"))))
-            @@ (cor
-                  @@ (cbnf @@ (csteps @@ VAR "n"
-                               @@ (cdAPP @@ cDB (numdB N')
-                                         @@ (cchurch @@ VAR "e"))))
-                  @@ (VAR "loop" @@ (csuc @@ VAR "n"))))))
-           @@ church 0)))` THEN
-  SIMP_TAC (bsrw_ss())[Phi_def, chap2Theory.YYf,
-                       Once chap2Theory.YffYf,
-                       cchurch_behaviour, cdAPP_behaviour,
-                       cbnf_behaviour] THEN
-*)
+      cfindleast @@ (LAM "n" (
+        cor @@ (cbnf @@ (csteps @@ VAR "n" @@ (cdAPP @@ cDB (numdB N)
+                                                     @@ (cchurch @@ VAR "e"))))
+            @@ (cbnf @@ (csteps @@ VAR "n"
+                                @@ (cdAPP @@ cDB (numdB N')
+                                          @@ (cchurch @@ VAR "e")))))))))` THEN
+  SIMP_TAC (bsrw_ss()) [Phi_def, cchurch_behaviour, cdAPP_behaviour] THEN
+  Q.X_GEN_TAC `e` THEN
+  Q.HO_MATCH_ABBREV_TAC
+    `e ∈ s ∨ e ∈ t ⇔ ∃r. bnf_of (cfindleast @@ P) = SOME r` THEN
+  `∀n. P @@ church n == cB (bnf (steps n (toTerm (numdB N) @@ church e)) ∨
+                            bnf (steps n (toTerm (numdB N') @@ church e)))`
+     by (SIMP_TAC (bsrw_ss()) [Abbr`P`] THEN
+         SIMP_TAC (bsrw_ss()) [cbnf_behaviour, csteps_behaviour,
+                               cor_behaviour]) THEN
+  Q.RM_ABBREV_TAC `P` THEN
+  `∀n. ∃b. P @@ church n == cB b` by METIS_TAC [] THEN
+  SRW_TAC [][Phi_def, EQ_IMP_THM] THENL [
+    `toTerm (numdB N) @@ church e == z ∧ bnf z`
+      by METIS_TAC [bnf_of_SOME, nstar_lameq] THEN
+    `∃n. bnf (steps n (toTerm (numdB N) @@ church e))`
+      by METIS_TAC [bnf_steps] THEN
+    `P @@ church n == cB T` by ASM_SIMP_TAC (bsrw_ss()) [] THEN
+    `cfindleast @@ P == church (LEAST n. P @@ church n == cB T)`
+      by (MATCH_MP_TAC (GEN_ALL cfindleast_termI) THEN
+          METIS_TAC []) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
 
+    `toTerm (numdB N') @@ church e == z ∧ bnf z`
+      by METIS_TAC [bnf_of_SOME, nstar_lameq] THEN
+    `∃n. bnf (steps n (toTerm (numdB N') @@ church e))`
+      by METIS_TAC [bnf_steps] THEN
+    `P @@ church n == cB T` by ASM_SIMP_TAC (bsrw_ss()) [] THEN
+    `cfindleast @@ P == church (LEAST n. P @@ church n == cB T)`
+      by (MATCH_MP_TAC (GEN_ALL cfindleast_termI) THEN
+          METIS_TAC []) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
 
-
+    `cfindleast @@ P == r ∧ bnf r` by METIS_TAC [bnf_of_SOME, nstar_lameq] THEN
+    `∃n. (r = church n) ∧ P @@ r == cB T` by METIS_TAC [cfindleast_bnfE] THEN
+    Q.PAT_ASSUM `P @@ r == cB T` MP_TAC THEN
+    ASM_SIMP_TAC (bsrw_ss()) [] THEN
+    METIS_TAC [bnf_steps]
+  ]);
 
 val _ = export_theory ()
