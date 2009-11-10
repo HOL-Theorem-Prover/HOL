@@ -1344,13 +1344,6 @@ val FV_cbnf_of = Store_thm(
   ``FV cbnf_of = {}``,
   SRW_TAC [][cbnf_of_def]);
 
-val FV_Yf = Store_thm(
-  "FV_Yf",
-  ``FV (Yf t) = FV t``,
-  SRW_TAC [boolSimps.CONJ_ss][chap2Theory.Yf_def, EXTENSION, LET_THM] THEN
-  NEW_ELIM_TAC THEN METIS_TAC []);
-
-
 val cbnf_ofk_lemma = prove(
   ``∀t. (OWHILE ((~) o bnf) (THE o noreduct) t0 = SOME t) ⇒
         Y @@ (cbnfof_body @@ k) @@ cDB (fromTerm t0) ==
@@ -1522,5 +1515,43 @@ val cbnf_force_num_fails = store_thm(
   POP_ASSUM (Q.SPEC_THEN `cforce_num` MP_TAC) THEN
   SIMP_TAC (bsrw_ss()) [cforce_num_behaviour] THEN
   METIS_TAC [bnf_church, betastar_lameq_bnf, has_bnf_thm]);
+
+(* ----------------------------------------------------------------------
+    computable steps function, csteps
+   ---------------------------------------------------------------------- *)
+
+val csteps_def = Define`
+  csteps =
+  LAM "n" (LAM "t"
+    (VAR "n" @@ (LAM "u" (VAR "u"))
+             @@ (LAM "f" (LAM "u"
+                   (cbnf @@ VAR "u"
+                         @@ VAR "u"
+                         @@ (VAR "f" @@ (cnoreduct @@ VAR "u")))))
+             @@ VAR "t"))
+`;
+
+val FV_csteps = Store_thm(
+  "FV_csteps",
+  ``FV csteps = {}``,
+  SRW_TAC [][csteps_def, pred_setTheory.EXTENSION]);
+
+open brackabs
+val csteps_eqn = brackabs_equiv [] csteps_def
+
+val cnoreduct_behaviour' =
+    cnoreduct_behaviour |> Q.SPEC `toTerm t`
+                        |> SIMP_RULE (srw_ss()) []
+
+val csteps_behaviour = store_thm(
+  "csteps_behaviour",
+  ``∀n t.
+      csteps @@ church n @@ cDB t -n->* cDB (fromTerm (steps n (toTerm t)))``,
+  SIMP_TAC (bsrw_ss()) [csteps_eqn] THEN
+  Induct THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.church_thm, cbnf_behaviour] THEN
+  Q.X_GEN_TAC `t` THEN Cases_on `dbnf t` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
+                            cnoreduct_behaviour']);
 
 val _ = export_theory()
