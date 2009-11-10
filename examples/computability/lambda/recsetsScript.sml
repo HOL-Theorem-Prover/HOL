@@ -167,8 +167,8 @@ val re_semirecursive1 = prove(
   SRW_TAC [][re_def] THEN
   Q.EXISTS_TAC
     `dBnum (fromTerm
-      (LAM "e" (cfindleast @@ (LAM "n"
-        (cmem
+      (LAM "e" (cfindleast
+        @@ (LAM "n" (cmem
            @@ VAR "e"
            @@ (cmap
                  @@ cforce_num
@@ -181,11 +181,13 @@ val re_semirecursive1 = prove(
                                     @@ VAR "n"
                                     @@ (cdAPP
                                           @@ (cnumdB @@ church Mi)
-                                          @@ (cchurch @@ VAR "j"))))))))))))
+                                          @@ (cchurch @@ VAR "j")))))))))
+        @@ I)))
   ` THEN
   SIMP_TAC (bsrw_ss()) [Phi_def, cnumdB_behaviour] THEN
   Q.X_GEN_TAC `e` THEN
-  Q.HO_MATCH_ABBREV_TAC `e ∈ s ⇔ ∃r. bnf_of (cfindleast @@ P) = SOME r` THEN
+  Q.HO_MATCH_ABBREV_TAC
+    `e ∈ s ⇔ ∃r. bnf_of (cfindleast @@ P @@ I) = SOME r` THEN
   `∀n. P @@ church n ==
        cB (MEM e (MAP force_num
             (FILTER bnf (GENLIST
@@ -222,17 +224,18 @@ val re_semirecursive1 = prove(
       by (ASM_SIMP_TAC (bsrw_ss()) [listTheory.MEM_MAP, listTheory.MEM_FILTER,
                                     MEM_GENLIST] THEN
           METIS_TAC [DECIDE ``j < j + 1``]) THEN
-    `cfindleast @@ P == church (LEAST n. P @@ church n == cB T)`
+    `cfindleast @@ P @@ I == I @@ church (LEAST n. P @@ church n == cB T)`
       by (MATCH_MP_TAC (GEN_ALL cfindleast_termI) THEN METIS_TAC []) THEN
     ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
 
     (* other direction: that if our enum2semi function does terminate on an
        x, then x does indeed appear in the enumeration
     *)
-    `cfindleast @@ P == r ∧ bnf r` by METIS_TAC [bnf_of_SOME, nstar_lameq] THEN
-    `∃m. (r = church m) ∧ P @@ r == cB T`
+    `cfindleast @@ P @@ I == r ∧ bnf r`
+       by METIS_TAC [bnf_of_SOME, nstar_lameq] THEN
+    `∃m. P @@ church m == cB T`
        by METIS_TAC [cfindleast_bnfE] THEN
-    Q.PAT_ASSUM `P @@ r == cB T` MP_TAC THEN
+    Q.PAT_ASSUM `P @@ church m == cB T` MP_TAC THEN
     ASM_SIMP_TAC (bsrw_ss()) [listTheory.MEM_MAP, listTheory.MEM_FILTER,
                               MEM_GENLIST] THEN
     METIS_TAC [bnf_steps]
@@ -377,7 +380,6 @@ val K_not_recursive = store_thm(
     r.e. closure properties
    ---------------------------------------------------------------------- *)
 
-
 val re_INTER_I = store_thm(
   "re_INTER_I",
   ``re s ∧ re t ⇒ re (s ∩ t)``,
@@ -418,11 +420,12 @@ val re_UNION_I = store_thm(
                                                      @@ (cchurch @@ VAR "e"))))
             @@ (cbnf @@ (csteps @@ VAR "n"
                                 @@ (cdAPP @@ cDB (numdB N')
-                                          @@ (cchurch @@ VAR "e")))))))))` THEN
+                                          @@ (cchurch @@ VAR "e"))))))
+                 @@ I)))` THEN
   SIMP_TAC (bsrw_ss()) [Phi_def, cchurch_behaviour, cdAPP_behaviour] THEN
   Q.X_GEN_TAC `e` THEN
   Q.HO_MATCH_ABBREV_TAC
-    `e ∈ s ∨ e ∈ t ⇔ ∃r. bnf_of (cfindleast @@ P) = SOME r` THEN
+    `e ∈ s ∨ e ∈ t ⇔ ∃r. bnf_of (cfindleast @@ P @@ I) = SOME r` THEN
   `∀n. P @@ church n == cB (bnf (steps n (toTerm (numdB N) @@ church e)) ∨
                             bnf (steps n (toTerm (numdB N') @@ church e)))`
      by (SIMP_TAC (bsrw_ss()) [Abbr`P`] THEN
@@ -436,7 +439,7 @@ val re_UNION_I = store_thm(
     `∃n. bnf (steps n (toTerm (numdB N) @@ church e))`
       by METIS_TAC [bnf_steps] THEN
     `P @@ church n == cB T` by ASM_SIMP_TAC (bsrw_ss()) [] THEN
-    `cfindleast @@ P == church (LEAST n. P @@ church n == cB T)`
+    `cfindleast @@ P @@ I == I @@ church (LEAST n. P @@ church n == cB T)`
       by (MATCH_MP_TAC (GEN_ALL cfindleast_termI) THEN
           METIS_TAC []) THEN
     ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
@@ -446,14 +449,15 @@ val re_UNION_I = store_thm(
     `∃n. bnf (steps n (toTerm (numdB N') @@ church e))`
       by METIS_TAC [bnf_steps] THEN
     `P @@ church n == cB T` by ASM_SIMP_TAC (bsrw_ss()) [] THEN
-    `cfindleast @@ P == church (LEAST n. P @@ church n == cB T)`
+    `cfindleast @@ P @@ I == I @@ church (LEAST n. P @@ church n == cB T)`
       by (MATCH_MP_TAC (GEN_ALL cfindleast_termI) THEN
           METIS_TAC []) THEN
     ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
 
-    `cfindleast @@ P == r ∧ bnf r` by METIS_TAC [bnf_of_SOME, nstar_lameq] THEN
-    `∃n. (r = church n) ∧ P @@ r == cB T` by METIS_TAC [cfindleast_bnfE] THEN
-    Q.PAT_ASSUM `P @@ r == cB T` MP_TAC THEN
+    `cfindleast @@ P @@ I == r ∧ bnf r`
+      by METIS_TAC [bnf_of_SOME, nstar_lameq] THEN
+    `∃n. P @@ church n == cB T` by METIS_TAC [cfindleast_bnfE] THEN
+    Q.PAT_ASSUM `P @@ X == cB T` MP_TAC THEN
     ASM_SIMP_TAC (bsrw_ss()) [] THEN
     METIS_TAC [bnf_steps]
   ]);
