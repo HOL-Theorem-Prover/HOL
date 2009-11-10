@@ -296,6 +296,8 @@ local
      | "\226\134\146" => (token_string "Map", 1) (* → *)
      | "\226\138\162" => (token_string "Turnstile", 2) (* ⊢ *)
      | "\226\151\129" => (token_string "LOpenTri", 1) (* ◁ *)
+     | "^*"    => (token_string "SupStar", 1)
+     | "^+"    => (token_string "SupPlus", 1)
      | _       => (String.translate char_map s,String.size s)
 in
   val emit_latex =
