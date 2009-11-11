@@ -68,6 +68,7 @@ sig
    val LEFT_IMP_EXISTS_CONV  : conv
    val RIGHT_IMP_FORALL_CONV : conv
    val EXISTS_IMP_CONV       : conv
+   val BOTH_EXISTS_IMP_CONV  : conv
    val LEFT_IMP_FORALL_CONV  : conv
    val RIGHT_IMP_EXISTS_CONV : conv
    val X_SKOLEM_CONV         : term -> conv
@@ -82,6 +83,21 @@ sig
    val SWAP_EXISTS_CONV      : conv
    val SWAP_FORALL_CONV      : conv
    val RESORT_FORALL_CONV    : (term list -> term list) -> conv
+   val RESORT_EXISTS_CONV    : (term list -> term list) -> conv
+   val FORALL_SIMP_CONV      : conv
+   val EXISTS_SIMP_CONV      : conv
+   val LIST_FORALL_SIMP_CONV : conv
+   val LIST_FORALL_AND_CONV  : conv
+   val LIST_FORALL_IMP_CONV  : bool -> conv
+   val LIST_FORALL_OR_CONV   : conv
+   val LIST_FORALL_NOT_CONV  : conv
+   val MINISCOPE_FORALL_CONV : bool -> conv
+   val LIST_EXISTS_SIMP_CONV : conv
+   val LIST_EXISTS_AND_CONV  : conv
+   val LIST_EXISTS_IMP_CONV  : bool -> conv
+   val LIST_EXISTS_OR_CONV   : conv
+   val LIST_EXISTS_NOT_CONV  : conv
+   val MINISCOPE_EXISTS_CONV : bool -> conv
    val SWAP_VARS_CONV        : conv
    val bool_EQ_CONV          : conv
    val EXISTS_UNIQUE_CONV    : conv
