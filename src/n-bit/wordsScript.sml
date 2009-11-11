@@ -554,8 +554,8 @@ val word_1_n2w = store_thm("word_1_n2w",
   `w2n 1w = 1`, SIMP_TAC arith_ss [w2n_n2w, ONE_LT_dimword]);
 
 val w2n_eq_0 = store_thm("w2n_eq_0",
-  `(w2n w = 0) = (w = 0w)`,
-  Q.SPEC_THEN `w` STRUCT_CASES_TAC word_nchotomy \\ SRW_TAC [][]);
+  `!w. (w2n w = 0) = (w = 0w)`,
+  STRIP_TAC \\ Q.SPEC_THEN `w` STRUCT_CASES_TAC word_nchotomy \\ SRW_TAC [][]);
 
 val _ = export_rewrites ["w2n_eq_0"];
 
@@ -1036,7 +1036,7 @@ val word_signed_bits_n2w = Q.store_thm("word_signed_bits_n2w",
                   [SIGN_EXTEND_def, BIT_ZERO, BITS_ZERO]]]);
 
 val word_index_n2w = store_thm("word_index_n2w",
-  `!n. ((n2w n):'a word) ' i =
+  `!n i. ((n2w n):'a word) ' i =
       if i < dimindex (:'a) then
         BIT i n
       else
@@ -1055,7 +1055,7 @@ val MIN_FST = prove(
   `!x y. x <= y ==> (MIN x y = x)`, RW_TAC arith_ss [MIN_DEF]);
 
 val word_bits_w2w = store_thm("word_bits_w2w",
-  `!w. (h -- l) (w2w (w:'a word)):'b word =
+  `!w h l. (h -- l) (w2w (w:'a word)):'b word =
        w2w ((MIN h (dimindex (:'b) - 1) -- l) w)`,
   Cases \\ SIMP_TAC arith_ss [word_bits_n2w,w2w_def,w2n_n2w,dimword_def]
     \\ STRIP_ASSUME_TAC EXISTS_HB
@@ -1170,7 +1170,7 @@ val WORD_BITS_EXTRACT = store_thm("WORD_BITS_EXTRACT",
   SRW_TAC [fcpLib.FCP_ss] [word_bits_def, word_extract_def, w2w]);
 
 val WORD_BITS_LSR = store_thm("WORD_BITS_LSR",
-  `!h l w. (h -- l) w >>> n = (h -- (l + n)) w`,
+  `!h l w n. (h -- l) w >>> n = (h -- (l + n)) w`,
   FIELD_WORD_TAC \\ Cases_on `i + n < dimindex (:'a)`
     \\ ASM_SIMP_TAC (fcp_ss++ARITH_ss) []);
 
@@ -1220,7 +1220,7 @@ val WORD_SLICE_ZERO = store_thm("WORD_SLICE_ZERO",
     \\ RW_TAC arith_ss [word_slice_n2w,SLICE_ZERO,MIN_DEF]);
 
 val WORD_SLICE_ZERO2 = save_thm("WORD_SLICE_ZERO2",
-  SIMP_CONV std_ss [word_slice_n2w, SLICE_ZERO2] ``(h '' l) 0w``);
+  GEN_ALL (SIMP_CONV std_ss [word_slice_n2w, SLICE_ZERO2] ``(h '' l) 0w``));
 
 val WORD_SLICE_BITS_THM = store_thm("WORD_SLICE_BITS_THM",
   `!h w. (h '' 0) w = (h -- 0) w`, FIELD_WORD_TAC);
@@ -1238,7 +1238,7 @@ val WORD_SLICE_COMP_THM = store_thm("WORD_SLICE_COMP_THM",
     \\ ASM_SIMP_TAC arith_ss []);
 
 val WORD_EXTRACT_COMP_THM = store_thm("WORD_EXTRACT_COMP_THM",
-  `!w:'c word. (h >< l) ((m >< n) w :'b word) =
+  `!w:'c word h l m n. (h >< l) ((m >< n) w :'b word) =
          (MIN m (MIN (h + n)
            (MIN (dimindex(:'c) - 1) (dimindex(:'b) + n - 1))) >< l + n) w`,
   SRW_TAC [fcpLib.FCP_ss] [word_extract_def,word_bits_def,w2w,word_0]
@@ -1260,12 +1260,12 @@ val word_extract = (GSYM o SIMP_RULE std_ss [] o
   REWRITE_RULE [FUN_EQ_THM]) word_extract_def;
 
 val WORD_EXTRACT_BITS_COMP = save_thm("WORD_EXTRACT_BITS_COMP",
- (SIMP_RULE std_ss [word_extract] o
+ (GEN_ALL o SIMP_RULE std_ss [word_extract] o
   SIMP_CONV std_ss [word_extract_def,WORD_BITS_COMP_THM])
   ``(j >< k) ((h -- l) n)``);
 
 val WORD_ALL_BITS = store_thm("WORD_ALL_BITS",
-  `!w:'a word. (dimindex (:'a) - 1 <= h) ==> ((h -- 0) w = w)`,
+  `!w:'a word h. (dimindex (:'a) - 1 <= h) ==> ((h -- 0) w = w)`,
   Cases
     \\ SRW_TAC [] [word_bits_n2w,GSYM MOD_DIMINDEX,DIVISION,DIMINDEX_GT_0,
          simpLib.SIMP_PROVE arith_ss [MIN_DEF] ``l <= h ==> (MIN h l = l)``]);
@@ -1275,7 +1275,7 @@ val EXTRACT_ALL_BITS = store_thm("EXTRACT_ALL_BITS",
   SRW_TAC [] [word_extract_def, WORD_ALL_BITS]);
 
 val WORD_BITS_MIN_HIGH = store_thm("WORD_BITS_MIN_HIGH",
-  `!w:'a word. dimindex(:'a) - 1 < h ==>
+  `!w:'a word h l. dimindex(:'a) - 1 < h ==>
      ((h -- l) w = (dimindex(:'a) - 1 -- l) w)`,
   SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_bits_def]
     \\ Cases_on `i + l < dimindex(:'a)`
@@ -1330,7 +1330,7 @@ val EXTRACT_CONCAT = store_thm("EXTRACT_CONCAT",
      word_or_def, word_lsl_def, w2w, fcpTheory.index_sum]);
 
 val EXTRACT_JOIN = store_thm("EXTRACT_JOIN",
-  `!h m l w:'a word.
+  `!h m m' l s w:'a word.
        l <= m /\ m' <= h /\ (m' = m + 1) /\ (s = m' - l) ==>
        ((h >< m') w << s !! (m >< l) w =
          (MIN h (MIN (dimindex(:'b) + l - 1)
@@ -1355,7 +1355,7 @@ val EXTRACT_JOIN = store_thm("EXTRACT_JOIN",
         \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss] []]);
 
 val EXTRACT_JOIN_ADD = store_thm("EXTRACT_JOIN_ADD",
-  `!h m l w:'a word.
+  `!h m m' l s w:'a word.
        l <= m /\ m' <= h /\ (m' = m + 1) /\ (s = m' - l) ==>
        ((h >< m') w << s + (m >< l) w =
          (MIN h (MIN (dimindex(:'b) + l - 1)
@@ -1450,7 +1450,7 @@ val EXTRACT_OVER_ADD_lem = Q.prove(
     \\ SRW_TAC [ARITH_ss] [BITS_COMP_THM2, MIN_DEF]);
 
 val WORD_EXTRACT_OVER_ADD = Q.store_thm("WORD_EXTRACT_OVER_ADD",
-  `!a b:'a word.
+  `!a b:'a word h.
      dimindex(:'b) - 1 <= h /\ dimindex(:'b) <= dimindex(:'a) ==>
      ((h >< 0) (a + b) = (h >< 0) a + (h >< 0) b : 'b word)`,
   REPEAT STRIP_TAC
@@ -1845,7 +1845,7 @@ val WORD_ADD_SUB3 = save_thm("WORD_ADD_SUB3",
    SPECL [`v`,`v`]) WORD_SUB_PLUS);
 
 val WORD_SUB_SUB3 = save_thm("WORD_SUB_SUB3",
-  (REWRITE_RULE [WORD_ADD_SUB3] o ONCE_REWRITE_RULE [WORD_ADD_COMM] o
+  (GEN_ALL o REWRITE_RULE [WORD_ADD_SUB3] o ONCE_REWRITE_RULE [WORD_ADD_COMM] o
    SPECL [`v`,`w`,`v`] o GSYM) WORD_SUB_PLUS);
 
 val WORD_EQ_NEG = store_thm("WORD_EQ_NEG",
@@ -1853,7 +1853,7 @@ val WORD_EQ_NEG = store_thm("WORD_EQ_NEG",
   REWRITE_TAC [GSYM WORD_SUB_LZERO,WORD_RCANCEL_SUB]);
 
 val WORD_NEG_EQ = save_thm("WORD_NEG_EQ",
-  (REWRITE_RULE [WORD_NEG_NEG] o SPECL [`v`,`- w`]) WORD_EQ_NEG);
+  (GEN_ALL o REWRITE_RULE [WORD_NEG_NEG] o SPECL [`v`,`- w`]) WORD_EQ_NEG);
 
 val WORD_NEG_EQ_0 = save_thm("WORD_NEG_EQ_0",
   (REWRITE_RULE [WORD_NEG_0] o SPECL [`v`,`0w`]) WORD_EQ_NEG);
@@ -1866,7 +1866,7 @@ val WORD_SUB_NEG = save_thm("WORD_SUB_NEG",
   (GEN_ALL o REWRITE_RULE [WORD_SUB] o SPEC `- v`) WORD_SUB_RNEG);
 
 val WORD_NEG_SUB = save_thm("WORD_NEG_SUB",
-  (REWRITE_RULE [WORD_SUB_NEG,GSYM word_sub_def] o
+  (GEN_ALL o REWRITE_RULE [WORD_SUB_NEG,GSYM word_sub_def] o
    SPECL [`v`,`- w`] o GSYM) WORD_SUB_LNEG);
 
 val WORD_SUB_TRIANGLE = store_thm("WORD_SUB_TRIANGLE",
@@ -2389,7 +2389,7 @@ val WORD_EXTRACT_LSL = store_thm("WORD_EXTRACT_LSL",
       FULL_SIMP_TAC arith_ss [NOT_LESS]]);
 
 val EXTRACT_JOIN_LSL = store_thm("EXTRACT_JOIN_LSL",
-  `!h m l w:'a word.
+  `!h m  m' l s n w:'a word.
        l <= m /\ m' <= h /\ (m' = m + 1) /\ (s = m' - l + n) ==>
        ((h >< m') w << s !! (m >< l) w << n =
          ((MIN h (MIN (dimindex(:'b) + l - 1)
@@ -2400,7 +2400,7 @@ val EXTRACT_JOIN_LSL = store_thm("EXTRACT_JOIN_LSL",
     \\ ASM_SIMP_TAC std_ss [EXTRACT_JOIN]);
 
 val EXTRACT_JOIN_ADD_LSL = store_thm("EXTRACT_JOIN_ADD_LSL",
-  `!h m l w:'a word.
+  `!h m m' l s n w:'a word.
        l <= m /\ m' <= h /\ (m' = m + 1) /\ (s = m' - l + n) ==>
        ((h >< m') w << s + (m >< l) w << n =
          ((MIN h (MIN (dimindex(:'b) + l - 1)
@@ -2639,7 +2639,7 @@ val WORD_0_POS = store_thm("WORD_0_POS",
 
 val TWO_COMP_POS = save_thm("TWO_COMP_POS",
   METIS_PROVE [TWO_COMP_POS, WORD_NEG_0, WORD_0_POS]
-  ``~word_msb a ==> (a = 0w) \/ word_msb (- a)``);
+  ``!a. ~word_msb a ==> (a = 0w) \/ word_msb (- a)``);
 
 val WORD_H_POS = store_thm("WORD_H_POS",
   `~word_msb word_H`,
@@ -3341,10 +3341,11 @@ val sw2sw_word_T = store_thm("sw2sw_word_T",
     \\ SRW_TAC [] [word_T]);
 
 val word_div_1 = save_thm("word_div_1",
-  SIMP_CONV std_ss [word_1_n2w, word_div_def, n2w_w2n] ``v // 1w``);
+  GEN_ALL (SIMP_CONV std_ss [word_1_n2w, word_div_def, n2w_w2n] ``v // 1w``));
 
 val word_bit_0 = save_thm("word_bit_0",
-  EQF_ELIM (SIMP_CONV std_ss [word_bit_n2w, BIT_ZERO] ``word_bit h 0w``));
+  GEN_ALL (EQF_ELIM
+    (SIMP_CONV std_ss [word_bit_n2w, BIT_ZERO] ``word_bit h 0w``)));
 
 val word_lsb_word_T = store_thm("word_lsb_word_T",
   `word_lsb (- 1w)`,

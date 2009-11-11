@@ -335,7 +335,7 @@ val ADD_IS_PTREE = store_thm("ADD_IS_PTREE",
 val _ = export_rewrites ["EMPTY_IS_PTREE", "ADD_IS_PTREE"];
 
 val EVERY_LEAF_BRANCH = store_thm("EVERY_LEAF_BRANCH",
-  `!p m l r. EVERY_LEAF P (BRANCH (p, m, l, r)) =
+  `!P p m l r. EVERY_LEAF P (BRANCH (p, m, l, r)) =
              EVERY_LEAF P l /\ EVERY_LEAF P r`,
   Cases_on `l` \\ Cases_on `r` \\ SRW_TAC [] [BRANCH_def, EVERY_LEAF_def]);
 
@@ -367,7 +367,7 @@ val PEEK_NONE_LEFT = SPEC `\k d. MOD_2EXP_EQ n k n0 /\ BIT n k` PEEK_NONE;
 val PEEK_NONE_RIGHT = SPEC `\k d. MOD_2EXP_EQ n k n0 /\ ~BIT n k` PEEK_NONE;
 
 val PEEK_ADD = store_thm("PEEK_ADD",
-  `!t k d. IS_PTREE t ==>
+  `!t k d j. IS_PTREE t ==>
        (PEEK (ADD t (k,d)) j = if k = j then SOME d else PEEK t j)`,
   Induct_on `t`
     \\ SRW_TAC [boolSimps.LET_ss] [ADD_def, PEEK_def, JOIN_def, IS_PTREE_def]
@@ -552,7 +552,7 @@ val REMOVE_REMOVE = store_thm("REMOVE_REMOVE",
 val _ = export_rewrites ["REMOVE_REMOVE"];
 
 val REMOVE_ADD = store_thm("REMOVE_ADD",
-  `!t k d. IS_PTREE t ==>
+  `!t k d j. IS_PTREE t ==>
           (REMOVE (ADD t (k,d)) j =
            if k = j then REMOVE t j else ADD (REMOVE t j) (k,d))`,
   SRW_TAC [] [GSYM PTREE_EQ, PEEK_REMOVE, PEEK_ADD]
@@ -681,7 +681,7 @@ val PEEK_INSERT_PTREE = save_thm("PEEK_INSERT_PTREE",
     ISPEC `t:ptreeset`) PEEK_ADD);
 
 val MEM_TRAVERSE_INSERT_PTREE = store_thm("MEM_TRAVERSE_INSERT_PTREE",
-  `!t x. IS_PTREE t ==>
+  `!t x h. IS_PTREE t ==>
          (MEM x (TRAVERSE (h INSERT_PTREE t)) =
           (x = h) \/ ~(x = h) /\ MEM x (TRAVERSE t))`,
   SRW_TAC [] [MEM_TRAVERSE_PEEK, PEEK_INSERT_PTREE]);
@@ -745,7 +745,7 @@ val PTREE_EXTENSION = store_thm("PTREE_EXTENSION",
 
 val PTREE_OF_NUMSET_NUMSET_OF_PTREE = store_thm(
   "PTREE_OF_NUMSET_NUMSET_OF_PTREE",
-  `!s n. IS_PTREE t /\ FINITE s ==>
+  `!t s n. IS_PTREE t /\ FINITE s ==>
          (PTREE_OF_NUMSET Empty (NUMSET_OF_PTREE t UNION s) =
           PTREE_OF_NUMSET t s)`,
   SRW_TAC [] [PTREE_EXTENSION, pred_setTheory.FINITE_UNION, IN_PTREE_OF_NUMSET]
@@ -953,8 +953,8 @@ val PERM_DELETE_PTREE = store_thm("PERM_DELETE_PTREE",
     \\ ASM_SIMP_TAC (srw_ss()) [GSYM ALL_DISTINCT_FILTER]);
 
 val FILTER_NONE = store_thm("FILTER_NONE",
-  `!l. (!n. n < LENGTH l ==> P (EL n l)) ==> (FILTER P l = l)`,
-  Induct \\ SRW_TAC [] []
+  `!P l. (!n. n < LENGTH l ==> P (EL n l)) ==> (FILTER P l = l)`,
+  Induct_on `l` \\ SRW_TAC [] []
     >> POP_ASSUM (fn th => ASM_SIMP_TAC std_ss
          [(GEN_ALL o SIMP_RULE (srw_ss()) [] o SPEC `SUC n`) th])
     \\ POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE (srw_ss()) [] o SPEC `0`));
