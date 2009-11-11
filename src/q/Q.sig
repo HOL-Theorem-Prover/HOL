@@ -16,6 +16,7 @@ sig
   val DISJ2                 : tmquote -> thm -> thm
   val EXISTS                : tmquote * tmquote -> thm -> thm
   val EXISTS_TAC            : tmquote -> tactic
+  val LIST_EXISTS_TAC       : tmquote list -> tactic
   val ID_EX_TAC             : tactic
   val REFINE_EXISTS_TAC     : tmquote -> tactic
   val GEN                   : tmquote -> thm -> thm
