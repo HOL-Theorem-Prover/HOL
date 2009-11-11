@@ -192,9 +192,13 @@ let val rand_term = random_term arch enc
                                        (if wide then T else u,
                                         arm_astSyntax.mk_Mode2_immediate
                                           (mk_word12 (random_const
-                                            (if enc <> Thumb orelse
+                                            (if enc = ARM orelse
+                                                enc = Thumb2 andalso
+	                                        wide andalso not unpriv
+	                                     then 12 else
+                                               if enc <> Thumb orelse
                                                 is_word4 13 rn orelse
-                                                is_word4 15 rn then 7 else 5))))
+                                                is_word4 15 rn then 8 else 5))))
                                      else
                                        (if enc = ARM then u else T,
                                         arm_astSyntax.mk_Mode2_register
@@ -202,7 +206,7 @@ let val rand_term = random_term arch enc
                                             (case enc
                                              of Thumb => 0
                                               | Thumb2 => 2
-                                              | ARM => 3)),
+                                              | ARM => 5)),
                                            mk_word2 (random_const
                                              (if enc = ARM then 2 else 0)),
                                            hd (rand_term ``:'reg word``)))
@@ -238,7 +242,7 @@ let val rand_term = random_term arch enc
                                          wide andalso not unpriv
                                       then
                                         arm_astSyntax.mk_Mode3_immediate
-                                          (mk_word12 (random_const 7))
+                                          (mk_word12 (random_const 12))
                                       else
                                         mode3
                           val h = if is_F s andalso is_F h then T else h
@@ -337,7 +341,7 @@ in
    | ("addressing_mode3", []) =>
        [case random_range 2
         of 0 => arm_astSyntax.mk_Mode3_immediate
-                  (mk_word12 (random_const (if enc = Thumb then 5 else 7)))
+                  (mk_word12 (random_const (if enc = Thumb then 5 else 8)))
          | 1 => arm_astSyntax.mk_Mode3_register
                   (mk_word2 (random_const (if enc = Thumb2 then 2 else 0)),
                    hd (rand_term ``:'reg word``))
