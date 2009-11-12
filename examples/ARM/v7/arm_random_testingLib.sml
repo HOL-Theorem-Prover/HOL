@@ -264,17 +264,9 @@ let val rand_term = random_term arch enc
                            val n = if random_range 2 = 0 then mk_word4 13 else n
                            val list = wordsSyntax.mk_wordii
                                         (random_const
-                                           (if enc = Thumb then 8 else 13), 16)
-                           val list = if (enc = Thumb andalso is_word4 13 n
-                                          orelse enc = ARM) andalso
-                                         random_range 3 = 0
-                                      then
-                                        let val p = if load
-                                                      then ``15n``
-                                                      else ``14n``
-                                        in eval ``(^p :+ T) ^list`` end
-                                      else
-                                        list
+                                           (if enc = Thumb then 8 else 16), 16)
+                           val list = wordsSyntax.mk_word_and(list,
+                                        ``0b0101111111111100w:word16``) |> eval
                        in
                          (if load then arm_astSyntax.mk_Load_Multiple
                                   else arm_astSyntax.mk_Store_Multiple)
