@@ -1,23 +1,24 @@
 (* Redblackmap -- applicative maps as Red-black trees *)
 signature Redblackmap =
 sig
-type ('key, 'a) dict
+  type ('key, 'a) dict
 
-exception NotFound
+  exception NotFound
 
-val mkDict    : ('key * 'key -> order) -> ('key, 'a) dict
-val insert    : ('key, 'a) dict * 'key * 'a -> ('key, 'a) dict
-val find      : ('key, 'a) dict * 'key -> 'a
-val peek      : ('key, 'a) dict * 'key -> 'a option
-val remove    : ('key, 'a) dict * 'key -> ('key, 'a) dict * 'a
-val numItems  : ('key, 'a) dict -> int
-val listItems : ('key, 'a) dict -> ('key * 'a) list
-val app       : ('key * 'a -> unit) -> ('key,'a) dict -> unit
-val revapp    : ('key * 'a -> unit) -> ('key,'a) dict -> unit
-val foldr     : ('key * 'a * 'b -> 'b)-> 'b -> ('key,'a) dict -> 'b
-val foldl     : ('key * 'a * 'b -> 'b) -> 'b -> ('key,'a) dict -> 'b
-val map       : ('key * 'a -> 'b) -> ('key,'a) dict -> ('key, 'b) dict
-val transform : ('a -> 'b) -> ('key,'a) dict -> ('key, 'b) dict
+  val mkDict    : ('key * 'key -> order) -> ('key, 'a) dict
+  val insert    : ('key, 'a) dict * 'key * 'a -> ('key, 'a) dict
+  val find      : ('key, 'a) dict * 'key -> 'a
+  val peek      : ('key, 'a) dict * 'key -> 'a option
+  val remove    : ('key, 'a) dict * 'key -> ('key, 'a) dict * 'a
+  val numItems  : ('key, 'a) dict -> int
+  val listItems : ('key, 'a) dict -> ('key * 'a) list
+  val isEmpty   : ('key, 'a) dict -> bool
+  val app       : ('key * 'a -> unit) -> ('key,'a) dict -> unit
+  val revapp    : ('key * 'a -> unit) -> ('key,'a) dict -> unit
+  val foldr     : ('key * 'a * 'b -> 'b)-> 'b -> ('key,'a) dict -> 'b
+  val foldl     : ('key * 'a * 'b -> 'b) -> 'b -> ('key,'a) dict -> 'b
+  val map       : ('key * 'a -> 'b) -> ('key,'a) dict -> ('key, 'b) dict
+  val transform : ('a -> 'b) -> ('key,'a) dict -> ('key, 'b) dict
 end
 
 (*
@@ -44,6 +45,8 @@ end
 
    [listItems m] returns a list of the entries (k, v) of keys k and
    the corresponding values v in m, in order of increasing key values.
+
+   [isEmpty m] returns true if the map m is empty, and false otherwise.
 
    [app f m] applies function f to the entries (k, v) in m, in
    increasing order of k (according to the ordering ordr used to

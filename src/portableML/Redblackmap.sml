@@ -17,6 +17,8 @@ struct
 
   fun numItems (_, _, n) = n
 
+  fun isEmpty (_, _, n) = (n = 0)
+
   fun find ((compare, tree, n), key) =
       let fun loopShared k x left right =
               case compare(key, k) of
