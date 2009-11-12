@@ -7,13 +7,12 @@
  * later on (except with external conv).
  *---------------------------------------------------------------------------*)
 
-structure clauses =
+structure clauses :> clauses =
 struct
 
-local open HolKernel boolSyntax Drule compute_rules
-      val CL_ERR = mk_HOL_ERR "clauses"
-      infix ##
-in
+open HolKernel boolSyntax Drule compute_rules
+val CL_ERR = mk_HOL_ERR "clauses"
+infix ##
 
 (*---------------------------------------------------------------------------
  * Checking that a given thm is a reduction rule we can handle:
@@ -281,7 +280,5 @@ fun scrub_thms lthm rws =
  end
  handle e => raise wrap_exn "clauses" "del_list" e;
 
-
-end
 
 end

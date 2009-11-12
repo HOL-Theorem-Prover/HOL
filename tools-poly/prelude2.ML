@@ -1,3 +1,4 @@
+(* this is an -*- sml -*- file *)
 val _ = PolyML.print_depth 0;
 
 local (* install prettyprinters for simpsets and ssfrags *)
@@ -14,7 +15,8 @@ fun with_pp ppfn pps x =
     Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
 in
   val _ = PolyML.install_pp (pp2polypp (with_pp simpLib.pp_ssfrag));
-  val _ = PolyML.install_pp (pp2polypp (with_pp simpLib.pp_simpset))
+  val _ = PolyML.install_pp (pp2polypp (with_pp simpLib.pp_simpset));
+  val _ = PolyML.install_pp (pp2polypp (with_pp computeLib.pp_compset));
 end;
 
 open bossLib;  (* Any others? *)
