@@ -42,6 +42,8 @@ end;
 val is_T = term_eq T;
 val is_F = term_eq F;
 
+val is_PC = term_eq ``15w:word4``;
+
 fun mk_bool b = if b then T else F;
 
 fun pow2 0 = 1
@@ -169,18 +171,18 @@ let val rand_term = random_term arch enc
                                   'reg word -> 'reg word``
                 of [p,u,b,w,n,t] =>
                      let val load = random_range 2 = 0
+                         val p = if enc = Thumb then T else p
                          val immediate = (enc <> ARM andalso is_F p) orelse
                                          random_range 2 = 0
+                         val w = mk_bool (enc = ARM andalso is_T w orelse
+                                          is_F p)
                          val imm_no_wb = immediate andalso is_F w
-                         val rn = if imm_no_wb andalso random_range 4 = 0 then
+                         val rn = if imm_no_wb andalso random_range 2 = 0 then
                                     mk_word4
-                                      (if load andalso random_range 2 = 0
+                                      (if load andalso random_range 4 < 3
                                        then 15 else 13)
                                   else
                                     n
-                         val p = if enc = Thumb then T else p
-                         val w = mk_bool (enc = ARM andalso is_T w orelse
-                                          is_F p)
                          val wide = imm_no_wb andalso is_T p andalso is_T u
                          val unpriv =
                                     case enc
@@ -192,13 +194,18 @@ let val rand_term = random_term arch enc
                                        (if wide then T else u,
                                         arm_astSyntax.mk_Mode2_immediate
                                           (mk_word12 (random_const
-                                            (if enc = ARM orelse
-                                                enc = Thumb2 andalso
-	                                        wide andalso not unpriv
-	                                     then 12 else
-                                               if enc <> Thumb orelse
-                                                is_word4 13 rn orelse
-                                                is_word4 15 rn then 8 else 5))))
+                                            (if is_PC rn
+                                             then 4
+                                             else
+                                               if enc = ARM orelse
+                                                  enc = Thumb2 andalso
+            	                                  wide andalso not unpriv
+	                                       then 12
+                                               else
+                                                 if enc <> Thumb orelse
+                                                    is_word4 13 rn orelse
+                                                    is_word4 15 rn
+                                                 then 8 else 5))))
                                      else
                                        (if enc = ARM then u else T,
                                         arm_astSyntax.mk_Mode2_register
@@ -221,12 +228,12 @@ let val rand_term = random_term arch enc
                  of [p,u,w,s,h,n,t,mode3] =>
                       let val load = random_range 2 = 0
                           val immediate = arm_astSyntax.is_Mode3_immediate mode3
-                          val imm_no_wb = immediate andalso is_F w
                           val p = if enc = Thumb orelse enc <> ARM andalso
                                      not immediate
                                   then T else p
                           val w = mk_bool (enc = ARM andalso is_T w orelse
                                            is_F p)
+                          val imm_no_wb = immediate andalso is_F w
                           val wide = imm_no_wb andalso is_T p andalso is_T u
                           val unpriv =
                                      case enc
@@ -238,21 +245,28 @@ let val rand_term = random_term arch enc
                                     if wide then T else u
                                   else
                                     if enc = ARM then u else T
+                          val rn = if load andalso imm_no_wb andalso
+                                      enc <> Thumb andalso random_range 3 = 0
+                                   then
+                                     pc
+                                   else
+                                     n
                           val mode3 = if enc = Thumb2 andalso immediate andalso
                                          wide andalso not unpriv
                                       then
                                         arm_astSyntax.mk_Mode3_immediate
-                                          (mk_word12 (random_const 12))
+                                          (mk_word12 (random_const
+                                             (if is_PC rn then 4 else 12)))
                                       else
                                         mode3
                           val h = if is_F s andalso is_F h then T else h
                       in
                         if load then
                           arm_astSyntax.mk_Load_Halfword
-                            (p,u,w,s,h,mk_bool unpriv,n,t,mode3)
+                            (p,u,w,s,h,mk_bool unpriv,rn,t,mode3)
                         else
                           arm_astSyntax.mk_Store_Halfword
-                            (p,u,w,mk_bool unpriv,n,t,mode3)
+                            (p,u,w,mk_bool unpriv,rn,t,mode3)
                       end
                   | _ => raise ERR "random_term" "lsh"
     fun lsm () = case rand_term ``:bool -> bool -> bool -> 'reg word``
@@ -279,11 +293,27 @@ let val rand_term = random_term arch enc
                       end
                     else
                       r2 I ``:'reg word -> 'reg word``
-    fun lsd p = case rand_term ``:bool -> bool -> bool -> 'reg word ->
+    fun lsd load = case rand_term ``:bool -> bool -> bool -> 'reg word ->
                                   addressing_mode3``
                 of [a,b,c,d,e] =>
-                     let val (t,t2) = double () in
-                       p (a,b,c,d,t,t2,e)
+                     let val (t,t2) = double ()
+                         val (rn,mode3) =
+                                  if load andalso random_range 3 = 0 andalso
+                                     arm_astSyntax.is_Mode3_immediate e andalso
+                                     (enc = Thumb2 orelse is_T a) andalso
+                                     is_T b andalso is_F d
+                                  then
+                                    (pc,
+                                     arm_astSyntax.mk_Mode3_immediate
+                                       (mk_word12 (random_const 4)))
+                                  else
+                                    (d,e)
+                     in
+                       (if load then
+                          arm_astSyntax.mk_Load_Dual
+                        else
+                          arm_astSyntax.mk_Store_Dual)
+                         (a,b,c,rn,t,t2,mode3)
                      end
                  | _ => raise ERR "random_term" "lsd"
 in
@@ -459,8 +489,8 @@ in
          lsm ()
        else
          case random_range 8
-         of 0 => lsd arm_astSyntax.mk_Load_Dual
-          | 1 => lsd arm_astSyntax.mk_Store_Dual
+         of 0 => lsd true
+          | 1 => lsd false
           | 2 => r3 arm_astSyntax.mk_Load_Exclusive
                       ``:'reg word -> 'reg word -> word8``
           | 3 => let val (t,t2) = double () in
@@ -717,8 +747,12 @@ local
   fun random_code arch enc typ =
         let val tm = hd (random_term arch enc typ)
             val cond = mk_word4
-                         (if enc = ARM andalso arm_uncoditional tm
-                          then 15 else 14)
+                         (if enc = ARM andalso arm_uncoditional tm then
+                            15
+                          else if arm_astSyntax.is_Branch tm then
+                            random_range 14
+                          else
+                            14)
         in
           (encoding enc, cond, tm)
         end
@@ -744,7 +778,6 @@ end;
 
 fun instruction_type enc opc =
 let
-  val is_PC = term_eq ``15w:word4``
   val code =
     case enc
       of ARM => armLib.arm_decode opc
