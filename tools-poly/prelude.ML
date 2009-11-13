@@ -26,8 +26,16 @@ val _ = let
   fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
   fun locpp pps l = PP.add_string pps (locn.toShortString l)
   open PolyML
+  val version_string_w1 =
+      hd (String.tokens Char.isSpace Compiler.compilerVersion)
+      handle Empty => ""
+  val compiler_number =
+      Real.floor (100.0 * valOf (Real.fromString version_string_w1))
+      handle Option => 0
 in
-  install_pp (pp2polypp (with_pp HOLset.pp_holset));
+  if compiler_number >= 530 then
+    install_pp (pp2polypp (with_pp HOLset.pp_holset))
+  else ();
   install_pp (pp2polypp
                   (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
   install_pp (pp2polypp
