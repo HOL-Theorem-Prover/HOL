@@ -1130,7 +1130,7 @@ val thumb2_decode_aux8_def = with_flag (priming, SOME "_") Define`
       else
         case (a 7,b 7,b 6)
         of (F,F, F) ->
-            if ib2 3 = 0w then
+            if ib2 4 = 0w then
               DP 0b1101w (a 4) 0w (rb 8) (SHIFTED (rb 0) (ia2 5) (ra 0))
             else
               Undefined
