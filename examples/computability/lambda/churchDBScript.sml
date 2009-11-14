@@ -1308,215 +1308,6 @@ val cnumdB_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cnumdB_def, cnumdB0_behaviour]);
 
 (* ----------------------------------------------------------------------
-    Computable version of bnf_of, bringing us pretty well all the way to
-    a universal machine
-   ---------------------------------------------------------------------- *)
-
-val cbnfof_body_def = Define`
-  cbnfof_body =
-  LAM "c" (LAM "f" (LAM "t"
-    (cbnf @@ VAR "t"
-          @@ (VAR "c" @@ VAR "t")
-          @@ (VAR "f" @@ (cnoreduct @@ VAR "t")))))
-`;
-
-val cbnfof_body_equiv = brackabs_equiv [] cbnfof_body_def
-
-val FV_cbnfof_body = Store_thm(
-  "FV_cbnfof_body",
-  ``FV cbnfof_body = {}``,
-  SRW_TAC [][cbnfof_body_def, EXTENSION]);
-
-val _ = reveal "Y"
-
-
-val cbnf_ofk_def = Define`
-  cbnf_ofk = B @@ Y @@ cbnfof_body
-`;
-val FV_cbnf_ofk = Store_thm(
-  "FV_cbnf_ofk",
-  ``FV cbnf_ofk = {}``,
-  SRW_TAC [][EXTENSION, cbnf_ofk_def]);
-
-val cbnf_of_def = Define`cbnf_of = cbnf_ofk @@ I`
-val FV_cbnf_of = Store_thm(
-  "FV_cbnf_of",
-  ``FV cbnf_of = {}``,
-  SRW_TAC [][cbnf_of_def]);
-
-val cbnf_ofk_lemma = prove(
-  ``∀t. (OWHILE ((~) o bnf) (THE o noreduct) t0 = SOME t) ⇒
-        Y @@ (cbnfof_body @@ k) @@ cDB (fromTerm t0) ==
-          Y @@ (cbnfof_body @@ k) @@ cDB (fromTerm t)``,
-  HO_MATCH_MP_TAC whileTheory.OWHILE_INV_IND THEN SRW_TAC [][] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [Once chap2Theory.lameq_Y] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cbnfof_body_equiv, cbnf_behaviour,
-                            cnoreduct_behaviour, cB_behaviour]);
-
-
-val cbnf_of_works1 = store_thm(
-  "cbnf_of_works1",
-  ``(bnf_of M = SOME N) ⇒
-    cbnf_ofk @@ c @@ cDB (fromTerm M) == c @@ cDB (fromTerm N)``,
-  SRW_TAC [][cbnf_ofk_def, bnf_of_def] THEN
-  IMP_RES_TAC cbnf_ofk_lemma THEN
-  ASM_SIMP_TAC (bsrw_ss()) [] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [Once chap2Theory.lameq_Y] THEN
-  IMP_RES_TAC whileTheory.OWHILE_ENDCOND THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cbnfof_body_equiv, cB_behaviour,
-                            cbnf_behaviour]);
-
-(*   SRW_TAC [][cbnf_ofk_def, bnf_of_def] THEN
-  ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
-  Q.EXISTS_TAC `Y @@ (cbnfof_body @@ c) @@ cDB (fromTerm M)` THEN
-  CONJ_TAC THEN1
-    (MATCH_MP_TAC whead_norm_congL THEN SRW_TAC [][wh_B]) THEN
-*)
-
-
-(* proving the other direction is rather involved *)
-val cbnf_of_lemma1 = prove(
-  ``t -n->* cDB M ∧ (FV t = {}) ⇒
-    Yf (cbnfof_body @@ k) @@ t -n->*
-      cB (dbnf M) @@ (k @@ t) @@ (Yf (cbnfof_body @@ k) @@ (cnoreduct @@ t))``,
-  STRIP_TAC THEN
-  REWRITE_TAC [Once relationTheory.RTC_CASES_RTC_TWICE] THEN
-  Q.EXISTS_TAC `cbnfof_body @@ k @@ Yf (cbnfof_body @@ k) @@ t` THEN
-  CONJ_TAC THEN1
-    METIS_TAC [relationTheory.RTC_SINGLE, head_reductionTheory.whY2,
-               whead_norm_congL] THEN
-  REWRITE_TAC [Once cbnfof_body_def] THEN
-  MATCH_MP_TAC RTC1 THEN FRESH_TAC THEN SRW_TAC [][tpm_fresh] THEN
-  Q.EXISTS_TAC `LAM f (LAM t0 (cbnf @@ VAR t0 @@ (k @@ VAR t0) @@
-                         (VAR f @@ (cnoreduct @@ VAR t0))))
-                 @@ Yf (cbnfof_body @@ k)
-                 @@ t` THEN
-  CONJ_TAC THEN1
-    SRW_TAC [][normorder_rwts, lemma14b] THEN
-  MATCH_MP_TAC RTC1 THEN
-  Q.EXISTS_TAC `LAM t0 (cbnf @@ VAR t0 @@ (k @@ VAR t0)
-                             @@ (Yf (cbnfof_body @@ k)
-                                    @@ (cnoreduct @@ VAR t0))) @@ t` THEN
-  CONJ_TAC THEN1
-    SRW_TAC [][normorder_rwts, lemma14b] THEN
-  MATCH_MP_TAC RTC1 THEN
-  Q.EXISTS_TAC
-    `cbnf @@ t @@ (k @@ t) @@ (Yf (cbnfof_body @@ k) @@ (cnoreduct @@ t))` THEN
-  CONJ_TAC THEN1
-    SRW_TAC [][normorder_rwts, lemma14b] THEN
-  MATCH_MP_TAC whead_norm_congL THEN
-  MATCH_MP_TAC wh_app_congL THEN
-  IMP_RES_TAC wh_cbnf);
-
-val cbnfof_body_loops = prove(
-  ``t -n->* cDB M ∧ (FV t = {}) ∧ ¬dbnf M ⇒
-    Yf (cbnfof_body @@ k) @@ t -n->*
-       Yf (cbnfof_body @@ k) @@ (cnoreduct @@ t)``,
-  STRIP_TAC THEN IMP_RES_TAC cbnf_of_lemma1 THEN
-  POP_ASSUM (MP_TAC o SPEC_ALL) THEN SRW_TAC [][] THEN
-  ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
-  POP_ASSUM (fn th => EXISTS_TAC (rand (concl th)) THEN ASSUME_TAC th) THEN
-  SRW_TAC [][cB_behaviour]);
-
-val cbnfof_body_finishes = prove(
-  ``t -n->* cDB M ∧ (FV t = {}) ∧ dbnf M ⇒
-    Yf (cbnfof_body @@ k) @@ t -n->* k @@ t``,
-  STRIP_TAC THEN IMP_RES_TAC cbnf_of_lemma1 THEN
-  POP_ASSUM (MP_TAC o SPEC_ALL) THEN SRW_TAC [][] THEN
-  ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] THEN
-  POP_ASSUM (fn th => EXISTS_TAC (rand (concl th)) THEN ASSUME_TAC th) THEN
-  SRW_TAC [][] THEN
-  ASM_SIMP_TAC (srw_ss()) [cB_behaviour]);
-
-val cbnf_of_works2_lemma = prove(
-  ``∀t t' M.
-      (FV t = {}) ∧ t -n->* cDB M ∧
-      Yf (cbnfof_body @@ k) @@ t -n->* t' ∧ bnf t' ⇒
-      ∃M'. (bnf_of (toTerm M) = SOME (toTerm M')) ∧
-           k @@ cDB M' -n->* t'``,
-  completeInduct_on `THE (length (nopath (Yf (cbnfof_body @@ k) @@ t)))` THEN
-  FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [] THEN
-  REPEAT STRIP_TAC THEN
-  Cases_on `dbnf M` THENL [
-    Q.EXISTS_TAC `M` THEN IMP_RES_TAC cbnfof_body_finishes THEN
-    `k @@ t -β->* t'` by METIS_TAC [bnf_triangle, nstar_betastar] THEN
-    `t' == k @@ t`
-       by METIS_TAC [betastar_lameq_bnf, chap2Theory.lam_eq_rules] THEN
-    ASM_SIMP_TAC (bsrw_ss()) [] THEN
-    SRW_TAC [][bnf_of_def, Once whileTheory.OWHILE_THM],
-    ALL_TAC
-  ] THEN
-  IMP_RES_TAC cbnfof_body_loops THEN POP_ASSUM (ASSUME_TAC o SPEC_ALL) THEN
-  `Yf (cbnfof_body @@ k) @@ (cnoreduct @@ t) -n->* t'`
-     by METIS_TAC [nstar_bnf_triangle] THEN
-  `FV (cnoreduct @@ t) = {}` by SRW_TAC [][] THEN
-  `cnoreduct @@ t -n->* cDB (fromTerm (THE (noreduct (toTerm M))))`
-     by ASM_SIMP_TAC (bsrw_ss()) [cnoreduct_behaviour
-                                    |> Q.SPEC `toTerm M`
-                                    |> SIMP_RULE (srw_ss()) []] THEN
-  `Yf (cbnfof_body @@ k) @@ t ≠ Yf (cbnfof_body @@ k) @@ (cnoreduct @@ t)`
-     by SRW_TAC [][APP_acyclic] THEN
-  `finite (nopath (Yf (cbnfof_body @@ k) @@ t))`
-     by METIS_TAC [has_bnf_thm, nstar_betastar, has_bnf_finite_nopath] THEN
-  FIRST_X_ASSUM (Q.SPECL_THEN [`k`, `cnoreduct @@ t`, `t'`,
-                               `fromTerm (THE (noreduct (toTerm M)))`]
-                              MP_TAC) THEN
-  ASM_SIMP_TAC (srw_ss()) [] THEN
-  FIRST_X_ASSUM
-    (fn red => FIRST_X_ASSUM (fn ne => FIRST_X_ASSUM (fn fin =>
-      REWRITE_TAC [MP (MATCH_MP nopath_smaller red) (CONJ ne fin)]))) THEN
-  STRIP_TAC THEN
-  Q.EXISTS_TAC `M'` THEN SRW_TAC [][] THEN
-  SRW_TAC [][bnf_of_def, Once whileTheory.OWHILE_THM] THEN
-  SRW_TAC [][GSYM bnf_of_def]);
-
-val cbnf_ofk_works2 = store_thm(
-  "cbnf_ofk_works2",
-  ``cbnf_ofk @@ k @@ cDB M -n->* t' ∧ bnf t' ⇒
-    ∃M'. (bnf_of (toTerm M) = SOME (toTerm M')) ∧ k @@ cDB M' -n->* t'``,
-  STRIP_TAC THEN Q.PAT_ASSUM `XX -n->* YY` MP_TAC THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cbnf_ofk_def,
-                            MATCH_MP relationTheory.RTC_SINGLE whY1] THEN
-  STRIP_TAC THEN
-  `Yf (cbnfof_body @@ k) @@ cDB M -β->* t'`
-     by METIS_TAC [betastar_lameq_bnf] THEN
-  `Yf (cbnfof_body @@ k) @@ cDB M -n->* t'`
-     by METIS_TAC [nstar_betastar_bnf] THEN
-  Q.SPECL_THEN [`cDB M`, `t'`, `M`] MP_TAC cbnf_of_works2_lemma THEN
-  SRW_TAC [][] THEN METIS_TAC [nstar_lameq]);
-
-val bnfNONE_cbnf_ofk_fails = store_thm(
-  "bnfNONE_cbnf_ofk_fails",
-  ``(bnf_of M = NONE) ⇒ ¬has_bnf (cbnf_ofk @@ k @@ cDB (fromTerm M))``,
-  REPEAT STRIP_TAC THEN
-  `∃t'. cbnf_ofk @@ k @@ cDB (fromTerm M) -n->* t' ∧ bnf t'`
-     by METIS_TAC [has_bnf_thm, nstar_betastar_bnf] THEN
-  IMP_RES_TAC (REWRITE_RULE [GSYM AND_IMP_INTRO] cbnf_ofk_works2) THEN
-  FULL_SIMP_TAC (srw_ss()) []);
-
-val cbnf_of_fails = store_thm(
-  "cbnf_of_fails",
-  ``(bnf_of M = NONE) ⇔ ¬has_bnf (cbnf_of @@ cDB (fromTerm M))``,
-  SRW_TAC [][EQ_IMP_THM, bnfNONE_cbnf_ofk_fails, cbnf_of_def] THEN
-  Cases_on `bnf_of M` THEN SRW_TAC [][] THEN
-  IMP_RES_TAC cbnf_of_works1 THEN
-  `cbnf_ofk @@ I @@ cDB (fromTerm M) == cDB (fromTerm x)`
-    by METIS_TAC [chap2Theory.lam_eq_rules, chap2Theory.lameq_I] THEN
-  METIS_TAC [bnf_cDB, betastar_lameq_bnf, has_bnf_thm]);
-
-val cbnf_force_num_fails = store_thm(
-  "cbnf_force_num_fails",
-  ``¬has_bnf (cbnf_ofk @@ cforce_num @@ cDB (fromTerm M)) ⇒
-    (bnf_of M = NONE)``,
-  REPEAT STRIP_TAC THEN Cases_on `bnf_of M` THEN SRW_TAC [][] THEN
-  IMP_RES_TAC cbnf_of_works1 THEN
-  POP_ASSUM (Q.SPEC_THEN `cforce_num` MP_TAC) THEN
-  SIMP_TAC (bsrw_ss()) [cforce_num_behaviour] THEN
-  METIS_TAC [bnf_church, betastar_lameq_bnf, has_bnf_thm]);
-
-(* ----------------------------------------------------------------------
     computable steps function, csteps
    ---------------------------------------------------------------------- *)
 
@@ -1553,5 +1344,99 @@ val csteps_behaviour = store_thm(
   Q.X_GEN_TAC `t` THEN Cases_on `dbnf t` THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
                             cnoreduct_behaviour']);
+
+(* ----------------------------------------------------------------------
+    Computable version of bnf_of, bringing us pretty well all the way to
+    a universal machine
+   ---------------------------------------------------------------------- *)
+
+val cbnf_ofk_def = Define`
+  cbnf_ofk =
+  LAM "k" (LAM "t" (
+    cfindleast @@ (LAM "n" (cbnf @@ (csteps @@ VAR "n" @@ VAR "t")))
+               @@ (B @@ VAR "k" @@ (C @@ csteps @@ VAR "t"))))
+`;
+
+val cbnf_ofk_eqn = brackabs_equiv [] cbnf_ofk_def
+
+val FV_cbnf_ofk = Store_thm(
+  "FV_cbnf_ofk",
+  ``FV cbnf_ofk = {}``,
+  SRW_TAC [][EXTENSION, cbnf_ofk_def]);
+
+val cbnf_of_works1 = store_thm(
+  "cbnf_of_works1",
+  ``(bnf_of M = SOME N) ⇒
+    cbnf_ofk @@ c @@ cDB (fromTerm M) == c @@ cDB (fromTerm N)``,
+  STRIP_TAC THEN
+  SIMP_TAC (bsrw_ss()) [cbnf_ofk_eqn] THEN
+  Q.MATCH_ABBREV_TAC `cfindleast @@ P @@ k == c @@ cDB (fromTerm N)` THEN
+  `∀n. P @@ church n == cB (bnf (steps n M))`
+     by SIMP_TAC (bsrw_ss()) [Abbr`P`, csteps_behaviour, cbnf_behaviour] THEN
+  Q.RM_ABBREV_TAC `P` THEN
+  `∀n. ∃b. P @@ church n == cB b` by METIS_TAC [] THEN
+  `∃n. (steps n M = N) ∧ bnf N` by METIS_TAC [stepsTheory.bnf_steps] THEN
+  `P @@ church n == cB T` by ASM_SIMP_TAC (bsrw_ss()) [] THEN
+  `cfindleast @@ P @@ k == k @@ church (LEAST n. P @@ church n == cB T)`
+    by METIS_TAC [cfindleast_termI] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [Abbr`k`, csteps_behaviour] THEN
+  Q_TAC SUFF_TAC `steps (LEAST n. bnf (steps n M)) M = N` THEN1
+        SRW_TAC [][] THEN
+  numLib.LEAST_ELIM_TAC THEN SRW_TAC [][] THEN
+  METIS_TAC [stepsTheory.bnf_steps_upwards_closed,
+            DECIDE ``(n:num) < m ∨ (n = m) ∨ m < n``]);
+
+val cbnf_ofk_works2 = store_thm(
+  "cbnf_ofk_works2",
+  ``cbnf_ofk @@ k @@ cDB M -n->* t' ∧ bnf t' ⇒
+    ∃M'. (bnf_of (toTerm M) = SOME (toTerm M')) ∧ k @@ cDB M' -n->* t'``,
+  SIMP_TAC (bsrw_ss() ++ boolSimps.CONJ_ss) [cbnf_ofk_eqn] THEN
+  Q.MATCH_ABBREV_TAC
+    `cfindleast @@ P @@ kk == t' ∧ bnf t' ⇒ CONCL` THEN
+  `∀n. P @@ church n == cB (bnf (steps n (toTerm M)))`
+     by SIMP_TAC (bsrw_ss()) [Abbr`P`, csteps_behaviour, cbnf_behaviour] THEN
+  Q.RM_ABBREV_TAC `P` THEN
+  `∀n. ∃b. P @@ church n == cB b` by METIS_TAC [] THEN
+  STRIP_TAC THEN
+  `∃m. t' == kk @@ church m ∧ P @@ church m == cB T`
+     by METIS_TAC [cfindleast_bnfE] THEN
+  NTAC 2 (POP_ASSUM MP_TAC) THEN
+  ASM_SIMP_TAC (bsrw_ss()) [Abbr`kk`, Abbr`CONCL`, csteps_behaviour,
+                            stepsTheory.bnf_steps] THEN
+  REPEAT STRIP_TAC THEN
+  Q.EXISTS_TAC `fromTerm (steps m (toTerm M))` THEN
+  SRW_TAC [][] THEN METIS_TAC []);
+
+val bnfNONE_cbnf_ofk_fails = store_thm(
+  "bnfNONE_cbnf_ofk_fails",
+  ``(bnf_of M = NONE) ⇒ ¬has_bnf (cbnf_ofk @@ k @@ cDB (fromTerm M))``,
+  REPEAT STRIP_TAC THEN
+  `∃t'. cbnf_ofk @@ k @@ cDB (fromTerm M) -n->* t' ∧ bnf t'`
+     by METIS_TAC [has_bnf_thm, nstar_betastar_bnf] THEN
+  IMP_RES_TAC (REWRITE_RULE [GSYM AND_IMP_INTRO] cbnf_ofk_works2) THEN
+  FULL_SIMP_TAC (srw_ss()) []);
+
+val _ = overload_on ("cbnf_of", ``cbnf_ofk @@ I``);
+
+val cbnf_of_fails = store_thm(
+  "cbnf_of_fails",
+  ``(bnf_of M = NONE) ⇔ ¬has_bnf (cbnf_of @@ cDB (fromTerm M))``,
+  SRW_TAC [][EQ_IMP_THM, bnfNONE_cbnf_ofk_fails] THEN
+  Cases_on `bnf_of M` THEN SRW_TAC [][] THEN
+  IMP_RES_TAC cbnf_of_works1 THEN
+  `cbnf_ofk @@ I @@ cDB (fromTerm M) == cDB (fromTerm x)`
+    by METIS_TAC [chap2Theory.lam_eq_rules, chap2Theory.lameq_I] THEN
+  METIS_TAC [bnf_cDB, betastar_lameq_bnf, has_bnf_thm]);
+
+val cbnf_force_num_fails = store_thm(
+  "cbnf_force_num_fails",
+  ``¬has_bnf (cbnf_ofk @@ cforce_num @@ cDB (fromTerm M)) ⇒
+    (bnf_of M = NONE)``,
+  REPEAT STRIP_TAC THEN Cases_on `bnf_of M` THEN SRW_TAC [][] THEN
+  IMP_RES_TAC cbnf_of_works1 THEN
+  POP_ASSUM (Q.SPEC_THEN `cforce_num` MP_TAC) THEN
+  SIMP_TAC (bsrw_ss()) [cforce_num_behaviour] THEN
+  METIS_TAC [bnf_church, betastar_lameq_bnf, has_bnf_thm]);
+
 
 val _ = export_theory()
