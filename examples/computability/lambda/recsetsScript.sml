@@ -462,4 +462,79 @@ val re_UNION_I = store_thm(
     METIS_TAC [bnf_steps]
   ]);
 
+val re_compl_recursive = store_thm(
+  "re_compl_recursive",
+  ``re s ∧ re (COMPL s) ⇒ recursive s``,
+  SRW_TAC [][re_semidp, recursive_def] THEN
+  Q.EXISTS_TAC `dBnum (fromTerm
+    (LAM "e"
+         (cfindleast @@ (LAM "n"
+            (cor @@ (cbnf @@ (csteps @@ VAR "n"
+                                     @@ (cdAPP @@ (cnumdB @@ church N')
+                                               @@ (cchurch @@ VAR "e"))))
+                 @@ (cbnf @@ (csteps @@ VAR "n"
+                                     @@ (cdAPP @@ (cnumdB @@ church N)
+                                               @@ (cchurch @@ VAR "e"))))))
+        @@ (LAM "n" (cbnf @@ (csteps @@ VAR "n"
+                                     @@ (cdAPP @@ (cnumdB @@ church N)
+                                               @@ (cchurch @@ VAR "e")))
+                          @@ church 1
+                          @@ church 0)))))` THEN
+  SIMP_TAC (bsrw_ss()) [Phi_def, cnumdB_behaviour, cchurch_behaviour,
+                        cdAPP_behaviour] THEN
+  Q.X_GEN_TAC `e` THEN
+  Q.MATCH_ABBREV_TAC `∃z. (bnf_of (cfindleast @@ P @@ k) = SOME z) ∧
+                          ((if e ∈ s then 1 else 0) = force_num z)` THEN
+  `∀n.
+    P @@ church n ==
+    cB (bnf (steps n (toTerm (numdB N') @@ church e)) ∨
+        bnf (steps n (toTerm (numdB N) @@ church e)))`
+    by (SIMP_TAC (bsrw_ss()) [Abbr`P`, cor_behaviour,
+                              csteps_behaviour,
+                              cbnf_behaviour]) THEN
+  Q.RM_ABBREV_TAC `P` THEN
+  `∀n. ∃b. P @@ church n == cB b` by METIS_TAC [] THEN
+  Cases_on `e ∈ s` THENL [
+    `∃r. Phi N e = SOME r` by METIS_TAC [] THEN
+    FULL_SIMP_TAC (srw_ss()) [Phi_def] THEN
+    `∃n. (steps n (toTerm (numdB N) @@ church e) = z) ∧ bnf z`
+      by METIS_TAC [bnf_steps] THEN
+    `P @@ church n == cB T` by ASM_SIMP_TAC (bsrw_ss()) [] THEN
+    `cfindleast @@ P @@ k == k @@ church (LEAST m. P @@ church m == cB T)`
+      by METIS_TAC [cfindleast_termI] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Abbr`k`, csteps_behaviour, cdAPP_behaviour,
+                              cbnf_behaviour] THEN
+    Q.EXISTS_TAC `church 1` THEN SRW_TAC [][] THEN
+    Q.MATCH_ABBREV_TAC
+      `bnf_of (cB Test @@ church 1 @@ church 0) = SOME (church 1)` THEN
+    Q_TAC SUFF_TAC `Test`
+      THEN1 SIMP_TAC (bsrw_ss()) [cB_behaviour, bnf_bnf_of] THEN
+    Q.UNABBREV_TAC `Test` THEN numLib.LEAST_ELIM_TAC THEN
+    SRW_TAC [][] THEN1 METIS_TAC [] THEN
+    METIS_TAC [bnf_steps],
+
+    `∃r. Phi N' e = SOME r` by METIS_TAC [] THEN
+    FULL_SIMP_TAC (srw_ss()) [Phi_def] THEN
+    `∃n. (steps n (toTerm (numdB N') @@ church e) = z) ∧ bnf z`
+      by METIS_TAC [bnf_steps] THEN
+    `P @@ church n == cB T` by ASM_SIMP_TAC (bsrw_ss()) [] THEN
+    `cfindleast @@ P @@ k == k @@ church (LEAST m. P @@ church m == cB T)`
+      by METIS_TAC [cfindleast_termI] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Abbr`k`, csteps_behaviour, cdAPP_behaviour,
+                              cbnf_behaviour] THEN
+    Q.EXISTS_TAC `church 0` THEN SRW_TAC [][] THEN
+    Q.MATCH_ABBREV_TAC
+      `bnf_of (cB Test @@ church 1 @@ church 0) = SOME (church 0)` THEN
+    Q_TAC SUFF_TAC `¬Test`
+      THEN1 SIMP_TAC (bsrw_ss()) [cB_behaviour, bnf_bnf_of] THEN
+    Q.UNABBREV_TAC `Test` THEN numLib.LEAST_ELIM_TAC THEN
+    SRW_TAC [][] THEN1 METIS_TAC [] THEN
+    METIS_TAC [bnf_steps]
+  ]);
+
+val COMPL_K_NOT_RE = store_thm(
+  "COMPL_K_NOT_RE",
+  ``¬re (COMPL K)``,
+  METIS_TAC [re_compl_recursive, K_not_recursive, K_re]);
+
 val _ = export_theory ()
