@@ -1438,5 +1438,15 @@ val cbnf_force_num_fails = store_thm(
   SIMP_TAC (bsrw_ss()) [cforce_num_behaviour] THEN
   METIS_TAC [bnf_church, betastar_lameq_bnf, has_bnf_thm]);
 
+val bnf_of_cbnf = store_thm(
+  "bnf_of_cbnf",
+  ``bnf_of (cbnf_of @@ cDB t) =
+    OPTION_MAP (cDB o fromTerm) (bnf_of (toTerm t))``,
+  Cases_on `bnf_of (toTerm t)` THENL [
+    IMP_RES_TAC bnfNONE_cbnf_ofk_fails THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [bnf_of_NONE],
+    IMP_RES_TAC cbnf_of_works1 THEN
+    FULL_SIMP_TAC (bsrw_ss()) [bnf_bnf_of]
+  ]);
 
 val _ = export_theory()

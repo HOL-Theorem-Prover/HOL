@@ -137,4 +137,19 @@ val PhiNONE_cbnf_ofk = store_thm(
      by METIS_TAC [cbnf_ofk_works2] THEN
   SRW_TAC [][Phi_def] THEN FULL_SIMP_TAC (srw_ss()) []);
 
+val bnf_of_UM = store_thm(
+  "bnf_of_UM",
+  ``bnf_of (UM @@ church n) =
+    OPTION_MAP (church o force_num)
+               (bnf_of (toTerm (numdB (nfst n)) @@ church (nsnd n)))``,
+  SIMP_TAC (bsrw_ss()) [UM_def, cnsnd_behaviour, cchurch_behaviour,
+                        cnumdB_behaviour, cnfst_behaviour, cdAPP_behaviour] THEN
+  Cases_on `bnf_of (toTerm (numdB (nfst n)) @@ church (nsnd n))` THENL [
+    IMP_RES_TAC bnfNONE_cbnf_ofk_fails THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [bnf_of_NONE],
+
+    IMP_RES_TAC cbnf_of_works1 THEN
+    FULL_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, bnf_bnf_of]
+  ]);
+
 val _ = export_theory()
