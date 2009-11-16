@@ -400,7 +400,8 @@ fun BAG_DIFF_INSERT_CANCEL_CONV tm =
    let
       val (b1,b2) = bagSyntax.dest_diff tm
       val (n1L,n2L) = get_resort_lists___pred_pair aconv b1 b2
-      val _ = if null n1L then raise UNCHANGED else ();
+      val _ = if null n1L andalso not (bagSyntax.is_empty b1)
+                 andalso not (bagSyntax.is_empty b2) then raise UNCHANGED else ();
 
       val conv1 = ((RATOR_CONV o RAND_CONV) 
                       (BAG_RESORT_CONV n1L)) THENC
