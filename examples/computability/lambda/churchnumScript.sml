@@ -100,9 +100,11 @@ val force_num_church = Store_thm(
   ``force_num (church n) = n``,
   SRW_TAC [][force_num_def]);
 
-
-
-
+val force_num_church_composed = Store_thm(
+  "force_num_church_composed",
+  ``(force_num o church o f = f) ∧
+    (force_num o church = I)``,
+  SRW_TAC [][FUN_EQ_THM]);
 
 val tpm_funpow_app = store_thm(
   "tpm_funpow_app",

@@ -152,4 +152,136 @@ val bnf_of_UM = store_thm(
     FULL_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, bnf_bnf_of]
   ]);
 
+(* ----------------------------------------------------------------------
+    computable functions compose
+   ---------------------------------------------------------------------- *)
+
+local open parmonadsyntax in
+val _ = overload_on ("monad_bind", ``OPTION_BIND``)
+end
+
+val OPTION_MAP_COMPOSE = optionTheory.OPTION_MAP_COMPOSE
+
+val composition_computable = store_thm(
+  "composition_computable",
+  ``∀f g. ∃fg. ∀n. Phi fg n = do x <- Phi g n ; Phi f x od``,
+  SRW_TAC [][] THEN
+  Q.EXISTS_TAC `dBnum (fromTerm (LAM "n" (
+    cbnf_ofk
+      @@ (LAM "r" (UM @@ (cnpair @@ church f @@ (cforce_num @@ VAR "r"))))
+      @@ (cdAPP @@ (cnumdB @@ church g) @@ (cchurch @@ VAR "n")))))` THEN
+  SRW_TAC [][Once Phi_def, SimpLHS] THEN
+  SIMP_TAC (bsrw_ss()) [cchurch_behaviour, cnumdB_behaviour,
+                        cdAPP_behaviour] THEN
+  Cases_on `Phi g n` THEN1 (IMP_RES_TAC PhiNONE_cbnf_ofk THEN SRW_TAC [][]) THEN
+  IMP_RES_TAC PhiSOME_cbnf_ofk THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cnpair_behaviour, cforce_num_behaviour,
+                            bnf_of_UM, OPTION_MAP_COMPOSE] THEN
+  SIMP_TAC (srw_ss()) [Phi_def]);
+
+val computable_composition_def = new_specification(
+  "computable_composition_def", ["computable_composition"],
+  SIMP_RULE (srw_ss()) [SKOLEM_THM] composition_computable);
+val _ = overload_on ("o", ``computable_composition``);
+
+(* ----------------------------------------------------------------------
+    s-m-n theorem for case of m = 1, n = 1
+   ---------------------------------------------------------------------- *)
+
+val _ = temp_overload_on ("ei", (* encoded index *)
+                          ``λt. church (dBnum (fromTerm t))``)
+
+
+
+val s11_exists = prove(
+  ``∃s11. ∀n. ∃fi. (Phi s11 n = SOME fi) ∧
+                   ∀y. Phi fi y = Phi (nfst n) (nsnd n ⊗ y)``,
+  Q.EXISTS_TAC `
+   dBnum (fromTerm (LAM "fx" (
+     cdBnum
+       @@ (cdLAM
+             @@ church (s2n "y")
+             @@ (cdAPP
+                   @@ (cnumdB @@ ei UM)
+                   @@ (cdAPP
+                         @@ (cdAPP
+                               @@ (cnumdB @@ ei cnpair)
+                               @@ (cchurch @@ (cnfst @@ VAR "fx")))
+                         @@ (cdAPP
+                               @@ (cdAPP
+                                     @@ (cnumdB @@ ei cnpair)
+                                     @@ (cchurch @@ (cnsnd @@ VAR "fx")))
+                               @@ (cdV @@ church (s2n "y")))))))))` THEN
+  SRW_TAC [][Phi_def] THEN
+  SIMP_TAC (bsrw_ss()) [cdV_behaviour, cdAPP_behaviour, cnsnd_behaviour,
+                        cnumdB_behaviour, cchurch_behaviour, cnfst_behaviour,
+                        cdLAM_behaviour, cdBnum_behaviour, bnf_bnf_of,
+                        cnpair_behaviour, bnf_of_UM, OPTION_MAP_COMPOSE]);
+
+val s11_def = new_specification("s11_def", ["s11"], s11_exists)
+
+val s11f_def = new_specification(
+  "s11f_def", ["s11f"],
+  s11_def |> Q.SPEC `g ⊗ x` |> Q.GEN `x` |> Q.GEN `g`
+          |> SIMP_RULE (srw_ss()) [SKOLEM_THM]);
+
+(* ----------------------------------------------------------------------
+    Kleene's 2nd recursion theorem.
+
+    Proof and statement of theorem from wikipedia page.
+   ---------------------------------------------------------------------- *)
+
+
+
+val recursion_thm = store_thm(
+  "recursion_thm",
+  ``(∀n. ∃r. Phi fi n = SOME r) ⇒ ∃e. Phi (THE (Phi fi e)) = Phi e``,
+  (* if fi is the index of a total computable function f, then there
+     exists an index e such that Phi e = Phi (f e). *)
+  DISCH_THEN (STRIP_ASSUME_TAC o SIMP_RULE (srw_ss()) [SKOLEM_THM]) THEN
+  Q.ABBREV_TAC
+    `g =
+     LAM "xy" (cbnf_ofk
+                 @@ (LAM "t"
+                         (cbnf_ofk
+                            @@ cforce_num
+                            @@ (cdAPP
+                                  @@ (cnumdB @@ (cforce_num @@ VAR "t"))
+                                  @@ (cchurch @@ (cnsnd @@ VAR "xy")))))
+                 @@ (cdAPP
+                       @@ (cnumdB @@ (cnfst @@ VAR "xy"))
+                       @@ (cchurch @@ (cnfst @@ VAR "xy"))))` THEN
+  Q.ABBREV_TAC `gi = dBnum (fromTerm g)` THEN
+  `∀x y. Phi gi (x ⊗ y) = case Phi x x of NONE -> NONE || SOME e -> Phi e y`
+     by (REPEAT GEN_TAC THEN SRW_TAC [][Phi_def] THEN
+         SIMP_TAC (bsrw_ss()) [Abbr`gi`, Abbr`g`] THEN
+         SIMP_TAC (bsrw_ss()) [cnfst_behaviour, cnsnd_behaviour,
+                               cchurch_behaviour, cdAPP_behaviour,
+                               cnumdB_behaviour] THEN
+         Cases_on `bnf_of (toTerm (numdB x) @@ church x)` THENL [
+           IMP_RES_TAC bnfNONE_cbnf_ofk_fails THEN
+           FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [bnf_of_NONE],
+           IMP_RES_TAC cbnf_of_works1 THEN
+           FULL_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, bnf_bnf_of] THEN
+           SIMP_TAC (bsrw_ss()) [cdAPP_behaviour, cnumdB_behaviour] THEN
+           Cases_on `bnf_of (toTerm (numdB (force_num x')) @@ church y)` THENL [
+             IMP_RES_TAC bnfNONE_cbnf_ofk_fails THEN
+             FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [bnf_of_NONE],
+             IMP_RES_TAC cbnf_of_works1 THEN
+             FULL_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, bnf_bnf_of]
+           ]
+         ]) THEN
+  Q.ABBREV_TAC `hi = s11f s11 gi` THEN
+  Q.ABBREV_TAC `h = λx. THE (Phi hi x)` THEN
+  `∀x r. (Phi x x = SOME r) ⇒ (Phi (h x) = Phi r)`
+     by ASM_SIMP_TAC (srw_ss()) [Abbr`h`, s11f_def, Abbr`hi`, FUN_EQ_THM] THEN
+  Q.SPECL_THEN [`fi`, `hi`] (Q.X_CHOOSE_THEN `e` ASSUME_TAC)
+               composition_computable THEN
+  `Phi e e = SOME (f (s11f gi e))` by SRW_TAC [][s11f_def, Abbr`hi`] THEN
+  Q.EXISTS_TAC `h e` THEN
+  `Phi (h e) = Phi (THE (Phi e e))` by SRW_TAC [][] THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN
+  ASM_SIMP_TAC (srw_ss()) [Abbr`h`, Abbr`hi`, s11f_def]);
+
+
 val _ = export_theory()
