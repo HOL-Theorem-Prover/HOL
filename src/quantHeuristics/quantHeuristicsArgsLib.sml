@@ -238,6 +238,7 @@ val list_qhca =
    convs =         [],
    heuristics =    [],
    final_rewrite_thms = [listTheory.NULL_DEF,
+                         listTheory.TL, listTheory.HD,
                          rich_listTheory.NOT_CONS_NIL,
                          GSYM rich_listTheory.NOT_CONS_NIL]
   }:quant_heuristic_combine_argument
