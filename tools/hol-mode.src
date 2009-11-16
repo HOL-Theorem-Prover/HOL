@@ -1147,6 +1147,38 @@ already loaded.)"
   (message "checking for problematic names done"))))
 
 
+;;indentation and other cleanups
+(defun hol-replace-tabs-with-spaces ()
+   (save-excursion
+      (goto-char (point-min))
+      (while (search-forward "\t" nil t)
+         (delete-region (- (point) 1) (point))
+         (let* ((count (- tab-width (mod (current-column) tab-width))))
+           (dotimes (i count) (insert " "))))))
+
+(defun hol-remove-tailing-whitespaces ()
+   (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward " +$" nil t)
+         (delete-region (match-beginning 0) (match-end 0)))))
+
+
+(defun hol-remove-tailing-empty-lines ()
+   (save-excursion
+      (goto-char (point-max))
+      (while (bolp) (delete-char -1))
+      (insert "\n")))
+
+(defun hol-cleanup-buffer ()
+   (interactive)
+   (hol-replace-tabs-with-spaces)
+   (hol-remove-tailing-whitespaces)
+   (hol-remove-tailing-empty-lines)
+   (message "Buffer cleaned up!"))
+
+
+
+;;load-path
 (defun ml-quote (s)
    (let* (
      (s1 (replace-regexp-in-string "\\\\" "\\\\\\\\" s))
@@ -1350,6 +1382,9 @@ already loaded.)"
   [menu-bar hol-menu hol-misc]
   (cons "Misc" (make-sparse-keymap "Misc")))
 
+(define-key global-map [menu-bar hol-menu hol-misc clean-up]
+   '("Clean up (remove tab, white spaces at end of line, etc...)" . 
+     hol-cleanup-buffer))
 
 (define-key global-map [menu-bar hol-menu hol-misc check-names]
    '("Check names in store_thm, ..." . hol-check-statement-eq-string))
