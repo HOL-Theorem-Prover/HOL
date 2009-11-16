@@ -37,10 +37,7 @@ val permeq_permeq_cong = store_thm(
     ((p1 == p2) = (p1' == p2'))``,
   SRW_TAC [][permeq_def, FUN_EQ_THM] THEN METIS_TAC []);
 
-val permeq_refl = store_thm(
-  "permeq_refl",
-  ``x == x``,
-  SRW_TAC [][permeq_def]);
+val permeq_refl = Store_thm("permeq_refl", ``x == x``, SRW_TAC [][permeq_def]);
 
 val permeq_sym = store_thm(
   "permeq_sym",
