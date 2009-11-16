@@ -213,18 +213,29 @@ sig
 
   val COMBINE_HEURISTIC_FUNS : (unit -> guess_collection) list -> guess_collection;
 
+  (*use this to create sys for debugging own heuristics*)
+  val QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE : quant_heuristic_combine_argument ->
+       quant_heuristic_cache ref option ->
+       term list -> term -> term -> guess_collection
 
 (*The most important functions *)
   val EXTENSIBLE_QUANT_INSTANTIATE_CONV : quant_heuristic_cache ref option ->
-      bool -> (term -> bool) -> bool -> quant_heuristic_combine_argument list -> conv;
+      bool -> (term -> bool) -> bool -> bool -> quant_heuristic_combine_argument list -> conv;
   val QUANT_INSTANTIATE_CONV    : quant_heuristic_combine_argument list -> conv;
   val QUANT_INSTANTIATE_TAC     : quant_heuristic_combine_argument list -> tactic;
   val ASM_QUANT_INSTANTIATE_TAC : quant_heuristic_combine_argument list -> tactic;
+  val FAST_QUANT_INSTANTIATE_CONV    : quant_heuristic_combine_argument list -> conv;
+  val FAST_QUANT_INSTANTIATE_TAC     : quant_heuristic_combine_argument list -> tactic;
+  val ASM_FAST_QUANT_INSTANTIATE_TAC : quant_heuristic_combine_argument list -> tactic;
 
 
-  val EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV :  quant_heuristic_cache ref option ->
-      bool -> (term -> bool) -> quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
+  val EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV : 
+      quant_heuristic_cache ref option -> (term -> bool) -> bool -> quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
+  val EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV : 
+      quant_heuristic_cache ref option -> bool -> (term -> bool) -> bool -> quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
   val QUANT_INSTANTIATE_CONSEQ_CONV :
+      quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
+  val FAST_QUANT_INSTANTIATE_CONSEQ_CONV :
       quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
 
 

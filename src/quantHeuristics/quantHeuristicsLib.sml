@@ -2551,7 +2551,6 @@ in
 end;
 
 
-
 type quant_heuristic_cache =  (Term.term, (Term.term, (term list * guess_collection) list) Redblackmap.dict) Redblackmap.dict
 fun mk_quant_heuristic_cache () = (Redblackmap.mkDict Term.compare):quant_heuristic_cache
 
@@ -2593,6 +2592,7 @@ let
 in
    SOME gc
 end handle Redblackmap.NotFound => NONE;
+
 
 
 (*
@@ -2742,8 +2742,6 @@ in
 end handle HOL_ERR _ => REFL t;
 
 
-
-
 (*
 val BOOL_SIMP_CONV_cs = (computeLib.bool_compset());
 val _ = computeLib.add_conv (boolSyntax.universal,1,QCONV QUANT_SIMP_CONV) BOOL_SIMP_CONV_cs;
@@ -2774,31 +2772,40 @@ fun varfilter x = true
 val heuristic = QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE empty_qhca NONE
 val sys = heuristic;
 val dir = CONSEQ_CONV_UNKNOWN_direction
+
+
+val t = snd (top_goal ())
+
 *)
 
 
-fun QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter heuristic rwL dir t =
+
+fun QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter min_var_occs heuristic rwL dir t =
 if (not (is_exists t)) andalso (not (is_forall t)) andalso (not (is_exists1 t)) then raise UNCHANGED else
 let
    val (v,b) = dest_abs (rand t);
    val _ = if varfilter v then () else raise UNCHANGED;
 in
-  (if not (mem v (free_vars b)) then
-      HO_PART_MATCH lhs
-         (if is_exists t then EXISTS_SIMP else
-	     if is_forall t then FORALL_SIMP else UEXISTS_SIMP) t
+  (if not (free_in v b) then
+     ((if is_exists t then EXISTS_SIMP_CONV else
+         if is_forall t then FORALL_SIMP_CONV else 
+            (HO_PART_MATCH lhs UEXISTS_SIMP)) t)
    else
    if is_exists t then
    let
       val (v,qb) = dest_exists t;
       val (qvL, b0) = strip_exists qb;
 
-      val b_thm = min_var_occur_CONV v b0 handle UNCHANGED => REFL b0;
+
+      val b_thm = if min_var_occs then 
+                      min_var_occur_CONV v b0 handle UNCHANGED => REFL b0
+                  else REFL b0;
       val b = rhs (concl b_thm);
 
       val guessC = correct_guess_collection v b
 		       (heuristic (free_vars t) v b)
                    handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => raise UNCHANGED;
+
 
       val trueL = #true guessC;
       val only_possibleL = append (#only_possible guessC)
@@ -2820,7 +2827,6 @@ in
              let
                 val proof = SPEC_ALL ((valOf proof_opt) ());
 		val proof_body_thm = ASSUME (concl proof);
-
 
                 val thm0 = EXISTS (mk_exists(v,b),i) proof_body_thm
                 val thm1 = MP (DISCH (concl proof) thm0) proof
@@ -2881,15 +2887,19 @@ in
 		 end;
 
       val thm4 = CONSEQ_CONV___APPLY_CONV_RULE thm3 t (BOOL_SIMP_CONV rwL guessC)
-
    in
       thm4
    end else if is_forall t then
    let
-      val neg_t_thm = NOT_FORALL_LIST_CONV (mk_neg t)
-      val neg_t = rhs (concl neg_t_thm)
+      val neg_t = let
+          val (vL, body) = strip_forall t;
+          val n_body = mk_neg body
+          in
+             list_mk_exists (vL, n_body) end
 
-      val thm = QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter heuristic rwL (CONSEQ_CONV_DIRECTION_NEGATE dir) (neg_t)
+      val thm = QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (only_eq,try_eq,expand_eq) varfilter min_var_occs heuristic rwL (CONSEQ_CONV_DIRECTION_NEGATE dir) (neg_t)
+
+      val neg_t_thm = NOT_FORALL_LIST_CONV (mk_neg t)
       val new_conv = TRY_CONV NOT_EXISTS_LIST_CONV THENC (BOOL_SIMP_CONV rwL empty_guess_collection)
 
       val thm2 = if is_eq (concl thm) then
@@ -2946,9 +2956,9 @@ end;
 
 
 
-fun HEURISTIC_QUANT_INSTANTIATE_CONV re filter heuristic expand_eq rwL =
+fun HEURISTIC_QUANT_INSTANTIATE_CONV re filter min_occs heuristic expand_eq rwL =
     (if re then REDEPTH_CONV else DEPTH_CONV)
-(CHANGED_CONV (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,expand_eq) filter heuristic rwL CONSEQ_CONV_UNKNOWN_direction)) THENC
+(CHANGED_CONV (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,expand_eq) filter min_occs heuristic rwL CONSEQ_CONV_UNKNOWN_direction)) THENC
 REWRITE_CONV rwL;
 
 
@@ -3061,15 +3071,18 @@ fun heuristics_qhca hL =
  *     a list of quant_heuristic_combine_arguments
  *****************************************************)
 
-fun EXTENSIBLE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter expand_eq args =
+fun EXTENSIBLE_QUANT_INSTANTIATE_CONV cache_ref_opt re filter min_occs expand_eq args =
     let val arg = (combine_qhcas args) in
-    HEURISTIC_QUANT_INSTANTIATE_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt) expand_eq (#final_rewrite_thms arg)
+    HEURISTIC_QUANT_INSTANTIATE_CONV re filter min_occs (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt) expand_eq (#final_rewrite_thms arg)
     end
 
 (*A simpler interface, here just the
   quant_heuristic_combine_arguments list is needed*)
 val QUANT_INSTANTIATE_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) false
+    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) true false
+
+val FAST_QUANT_INSTANTIATE_CONV =
+    EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) false false
 
 
 (*a stateful heuristic and
@@ -3205,6 +3218,11 @@ fun ASM_QUANT_INSTANTIATE_TAC L =
     DISCH_ASM_CONV_TAC (QUANT_INSTANTIATE_CONV L);
 
 
+fun FAST_QUANT_INSTANTIATE_TAC L =
+    CONV_TAC (FAST_QUANT_INSTANTIATE_CONV L);
+
+fun ASM_FAST_QUANT_INSTANTIATE_TAC L =
+    DISCH_ASM_CONV_TAC (FAST_QUANT_INSTANTIATE_CONV L);
 
 
 
@@ -3288,7 +3306,7 @@ fun QUANT_INST_TAC L (asm,t) =
   in
     REDEPTH_CONSEQ_CONV_TAC
       (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,false,false)
-         (K true) (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L) [])
+         (K true) false (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L) [])
     (asm,t)
   end;
 
@@ -3301,30 +3319,35 @@ fun QUANT_INST_CONV L t =
   in
     DEPTH_CONV
       (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (true,true,false)
-         (K true) (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt true L) [] CONSEQ_CONV_UNKNOWN_direction)
+         (K true) false (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt true L) [] CONSEQ_CONV_UNKNOWN_direction)
     t
   end;
 
 
 
-
-
-
-
-fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter heuristic rwL dir =
+fun HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter min_occs heuristic rwL dir =
 THEN_CONSEQ_CONV
 ((if re then REDEPTH_CONSEQ_CONV else DEPTH_CONSEQ_CONV)
-   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter heuristic rwL) dir)
+   (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter min_occs heuristic rwL) dir)
 (REWRITE_CONV rwL);
 
 
-fun EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter args =
+fun EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV cache_ref_opt re filter min_occs args =
     let val arg = (combine_qhcas args) in
-    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE
+    HEURISTIC_QUANT_INSTANTIATE_CONSEQ_CONV re filter min_occs (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE
        arg cache_ref_opt) (#final_rewrite_thms arg) end;
 
 val QUANT_INSTANTIATE_CONSEQ_CONV =
-    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE true (K true)
+    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE true (K true) true
+
+val FAST_QUANT_INSTANTIATE_CONSEQ_CONV =
+    EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV NONE true (K true) false
+
+fun EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV cache_ref_opt filter min_occs args =
+    let val arg = (combine_qhcas args) in
+    (QUANT_INSTANTIATE_HEURISTIC_STEP_CONSEQ_CONV (false,true,false) filter min_occs
+          (QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE arg cache_ref_opt)
+            (#final_rewrite_thms arg)) end;
 
 
 end
