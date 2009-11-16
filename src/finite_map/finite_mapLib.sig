@@ -20,4 +20,17 @@ sig
   val fevery_EXPAND_CONV : Abbrev.conv
 
 
+  (*Simplies fupdate - sequences by removing the ones that are masked by
+    later appearances.
+
+  ``f |+ (x1, y1) |+ (x2, y2) |+ (x1, y3) |+ (x4, y4)``
+
+  gets for example simplied to to
+
+   |- (f |+ (x1, y1) |+ (x2, y2) |+ (x1, y3) |+ (x4, y4)) =
+      (f |+             (x2, y2) |+ (x1, y3) |+ (x4, y4))
+
+  *)
+  val fupdate_NORMALISE_CONV : Abbrev.conv
+
 end

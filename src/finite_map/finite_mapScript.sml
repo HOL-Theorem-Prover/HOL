@@ -1833,6 +1833,68 @@ val DRESTRICT_IDEMPOT = store_thm ("DRESTRICT_IDEMPOT",
 ``!s vs. DRESTRICT (DRESTRICT s vs) vs = (DRESTRICT s vs)``,
 SRW_TAC [][]);
 
+
+
+(*---------------------------------------------------------------------------
+     Some helpers for fupdate_NORMALISE_CONV
+ ---------------------------------------------------------------------------*)
+
+val fmap_EQ_UPTO_def = Define `
+fmap_EQ_UPTO f1 f2 vs =
+((FDOM f1 INTER (COMPL vs) =
+ (FDOM f2 INTER (COMPL vs))) /\
+(!x. x IN FDOM f1 INTER (COMPL vs) ==>
+     (f1 ' x = f2 ' x)))`
+
+val fmap_EQ_UPTO___EMPTY = store_thm ("fmap_EQ_UPTO___EMPTY",
+``!f1 f2. (fmap_EQ_UPTO f1 f2 EMPTY) = (f1 = f2)``,
+SIMP_TAC std_ss [fmap_EQ_UPTO_def, COMPL_EMPTY, INTER_UNIV, fmap_EQ_THM])
+
+val fmap_EQ_UPTO___EQ = store_thm ("fmap_EQ_UPTO___EQ",
+``!vs f. (fmap_EQ_UPTO f f vs)``,SIMP_TAC std_ss [fmap_EQ_UPTO_def])
+
+val fmap_EQ_UPTO___FUPDATE_BOTH = store_thm ("fmap_EQ_UPTO___FUPDATE_BOTH",
+``!f1 f2 ks k v. 
+    (fmap_EQ_UPTO f1 f2 ks) ==> 
+    (fmap_EQ_UPTO (f1 |+ (k,v)) (f2 |+ (k,v)) (ks DELETE k))``,
+SIMP_TAC std_ss [fmap_EQ_UPTO_def, EXTENSION, IN_INTER,
+   FDOM_FUPDATE, IN_COMPL, IN_INSERT, IN_DELETE] THEN
+REPEAT GEN_TAC THEN STRIP_TAC THEN
+CONJ_TAC THEN GEN_TAC THENL [
+   Cases_on `x = k` THEN ASM_REWRITE_TAC[],
+   Cases_on `x = k` THEN ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM]
+]);
+
+
+val fmap_EQ_UPTO___FUPDATE_BOTH___NO_DELETE = store_thm ("fmap_EQ_UPTO___FUPDATE_BOTH___NO_DELETE",
+``!f1 f2 ks k v. 
+     (fmap_EQ_UPTO f1 f2 ks) ==> 
+     (fmap_EQ_UPTO (f1 |+ (k,v)) (f2 |+ (k,v)) ks)``,
+
+SIMP_TAC std_ss [fmap_EQ_UPTO_def, EXTENSION, IN_INTER,
+   FDOM_FUPDATE, IN_COMPL, IN_INSERT] THEN
+REPEAT GEN_TAC THEN STRIP_TAC THEN
+CONJ_TAC THEN GEN_TAC THENL [
+   Cases_on `x = k` THEN ASM_REWRITE_TAC[],
+   Cases_on `x = k` THEN ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM]
+]);
+
+
+val fmap_EQ_UPTO___FUPDATE_SING = store_thm ("fmap_EQ_UPTO___FUPDATE_SING",
+``!f1 f2 ks k v. 
+     (fmap_EQ_UPTO f1 f2 ks) ==> 
+     (fmap_EQ_UPTO (f1 |+ (k,v)) f2 (k INSERT ks))``,
+
+SIMP_TAC std_ss [fmap_EQ_UPTO_def, EXTENSION, IN_INTER,
+   FDOM_FUPDATE, IN_COMPL, IN_INSERT, IN_DELETE] THEN
+REPEAT GEN_TAC THEN STRIP_TAC THEN
+CONJ_TAC THEN GEN_TAC THENL [
+   Cases_on `x = k` THEN ASM_REWRITE_TAC[],
+   Cases_on `x = k` THEN ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM]
+]);
+
+
+
 (* ----------------------------------------------------------------------
     to close...
    ---------------------------------------------------------------------- *)
