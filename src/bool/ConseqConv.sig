@@ -28,7 +28,7 @@ type conseq_conv = term -> thm;
 type directed_conseq_conv = CONSEQ_CONV_direction -> conseq_conv;
 
 type conseq_conv_congruence_syscall = 
-   term list -> int -> CONSEQ_CONV_direction -> term -> (int * thm option)
+   term list -> thm list -> int -> CONSEQ_CONV_direction -> term -> (int * thm option)
 
 type conseq_conv_congruence = 
    thm list -> conseq_conv_congruence_syscall ->
@@ -91,8 +91,15 @@ val mk_DEPTH_CONSEQ_CONV_CACHE : unit -> depth_conseq_conv_cache;
 *)   
 val CONSEQ_CONV_default_cache_opt : depth_conseq_conv_cache_opt
 
+
+val mk_DEPTH_CONSEQ_CONV_CACHE_OPT : ((term * (int * thm option)) -> bool) -> depth_conseq_conv_cache_opt;
+val mk_PERSISTENT_DEPTH_CONSEQ_CONV_CACHE_OPT : ((term * (int * thm option)) -> bool) -> depth_conseq_conv_cache_opt;
+
 val CONSEQ_CONV_get_context_congruences :
     CONSEQ_CONV_context -> conseq_conv_congruence list;
+
+val clear_CONSEQ_CONV_CACHE     : depth_conseq_conv_cache -> unit
+val clear_CONSEQ_CONV_CACHE_OPT : depth_conseq_conv_cache_opt -> unit
 
 
 
@@ -114,10 +121,10 @@ val FULL_EXT_CONSEQ_REWRITE_CONV        :
    int option ->                  (* steps *)
    bool ->                        (* redepth *)
    bool ->                        (* higher order rewriting ? *)
+   thm list ->                    (* context *)
    (bool * int * (thm list -> conv)) list -> (* conversions *)
    (thm list * thm list * thm list) -> (*consequence rewrites *)
    directed_conseq_conv
-
 
 
 
@@ -134,6 +141,7 @@ val EXT_DEPTH_CONSEQ_CONV  :
                not count
             3: context -> conversion
           *)
+    thm list ->                       (*context that might be used*)
     directed_conseq_conv
    
 
@@ -184,6 +192,8 @@ val WEAKEN_CONSEQ_CONV_RULE      : directed_conseq_conv -> thm -> thm;
 
 (* Tactics *)
 val CONSEQ_CONV_TAC              : directed_conseq_conv -> tactic;
+val ASM_CONSEQ_CONV_TAC          : (thm list -> directed_conseq_conv) -> tactic
+
 val DEPTH_CONSEQ_CONV_TAC        : directed_conseq_conv -> tactic;
 val REDEPTH_CONSEQ_CONV_TAC      : directed_conseq_conv -> tactic;
 val ONCE_DEPTH_CONSEQ_CONV_TAC   : directed_conseq_conv -> tactic;
