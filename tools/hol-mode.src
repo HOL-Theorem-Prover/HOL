@@ -849,6 +849,13 @@ argument N, sets the trace to that value in particular."
   (interactive)
   (hol-toggle-trace "Unicode"))
 
+
+(defun hol-toggle-emacs-tooltips ()
+  "Toggles whether HOL produces tooltip information while pretty-printing."
+  (interactive)
+  (hol-toggle-trace "emacs_terminal show types"))
+
+
 (defun hol-toggle-goalstack-fvs ()
   "Toggles the trace \"goalstack fvs\"."
   (interactive)
@@ -1260,9 +1267,10 @@ already loaded.)"
                                 (goto-char (+ (point) 1))
                                 (skip-chars-forward "^\^@")
                                 (prog1
+                                    (if (equal (+ start 3) (point)) nil
                                     (list 'help-echo
                                           (buffer-substring (+ start 3)
-                                                            (point)))
+                                                            (point))))
                                   (delete-region (+ start 2) (1+ (point)))))
                             nil))))
                        (add-text-properties
@@ -1321,6 +1329,7 @@ already loaded.)"
 (define-key hol-map "\C-l" 'hol-recentre)
 (define-key hol-map "\C-n" 'hol-toggle-show-numeral-types)
 (define-key hol-map "\C-p" 'hol-toggle-ppbackend)
+(define-key hol-map "\M-p" 'hol-toggle-emacs-tooltips)
 (define-key hol-map "\C-q" 'hol-toggle-quietdec)
 (define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
 (define-key hol-map "\C-t" 'hol-toggle-show-types)
@@ -1490,6 +1499,9 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-printing quiet]
    '("Quiet (hide output except errors)" . hol-toggle-quietdec))
+
+(define-key global-map [menu-bar hol-menu hol-printing pptooltip]
+  '("Toggle show tooltips" . hol-toggle-emacs-tooltips))
 
 (define-key global-map [menu-bar hol-menu hol-printing ppbackend]
   '("Toggle pretty-printing backend" . hol-toggle-ppbackend))
