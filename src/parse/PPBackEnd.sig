@@ -4,11 +4,11 @@ sig
   type hol_type = Type.hol_type
   type ppstream = PP.ppstream
   type break_style = PP.break_style
-  datatype annotation = BV of hol_type * string
-                      | FV of hol_type * string
+  datatype annotation = BV of hol_type * (unit -> string)
+                      | FV of hol_type * (unit -> string)
                       | TyV
-                      | TyOp of string
-                      | TySyn of string
+                      | TyOp of (unit -> string)
+                      | TySyn of (unit -> string)
                       | Const of {Thy:string,Name:string,Ty:hol_type} * string
                       | Note of string
 

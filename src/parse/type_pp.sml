@@ -124,9 +124,7 @@ fun pp_type0 (G:grammar) backend = let
     if depth = 0 then add_string "..."
     else
       if is_vartype ty then
-        if !pp_annotations then
-          add_ann_string (uniconvert (dest_vartype ty), TyV)
-        else add_string (uniconvert (dest_vartype ty))
+        add_ann_string (uniconvert (dest_vartype ty), TyV)
       else let
           val s = dest_numtype ty
         in
@@ -147,8 +145,7 @@ fun pp_type0 (G:grammar) backend = let
         end handle HOL_ERR _ =>
         let
           val (Tyop, Args) = type_grammar.abb_dest_type G ty
-          val tooltip =
-              if !pp_annotations then
+          fun tooltip () =
                 case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
                   NONE => let
                     val {Thy,Tyop,...} = dest_thy_type ty
@@ -173,7 +170,6 @@ fun pp_type0 (G:grammar) backend = let
                       end
                     else structure_to_string st
                   end
-              else ""
           fun print_args grav0 args = let
             val parens_needed = case Args of [_] => false | _ => true
             val grav = if parens_needed then Top else grav0
@@ -196,15 +192,13 @@ fun pp_type0 (G:grammar) backend = let
             end_block();
             add_string ")"
           end
-          fun add_ann_string'(p as (s,ann)) =
-              if !pp_annotations then add_ann_string p else add_string s
         in
           case Args of
             [] => let
             in
               case lookup_tyop Tyop of
                 NONE => print_ghastly ()
-              | _ => add_ann_string' (Tyop, TyOp tooltip)
+              | _ => add_ann_string (Tyop, TyOp tooltip)
 
             end
           | [arg1, arg2] => (let
@@ -224,7 +218,7 @@ fun pp_type0 (G:grammar) backend = let
                      here makes no difference. *)
                   print_args Top Args;
                   add_break(1,0);
-                  add_ann_string' (Tyop, TyOp tooltip);
+                  add_ann_string (Tyop, TyOp tooltip);
                   end_block();
                   pend addparens
                 end
@@ -242,7 +236,7 @@ fun pp_type0 (G:grammar) backend = let
                   begin_block INCONSISTENT 0;
                   pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
                   add_break(1,0);
-                  add_ann_string' (printthis, TySyn tooltip);
+                  add_ann_string (printthis, TySyn tooltip);
                   add_break(1,0);
                   pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
                   end_block();
@@ -260,7 +254,7 @@ fun pp_type0 (G:grammar) backend = let
               begin_block INCONSISTENT 0;
               print_args (Sfx prec) Args;
               add_break(1,0);
-              add_ann_string' (Tyop, TyOp tooltip);
+              add_ann_string (Tyop, TyOp tooltip);
               end_block();
               pend addparens
             end handle Option => print_ghastly()

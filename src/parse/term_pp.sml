@@ -606,9 +606,6 @@ fun pp_term (G : grammar) TyG backend = let
     val pr_term =
         pr_term binderp showtypes showtypes_v vars_seen pps ppfns NoCP
     val {add_string,add_break,begin_block,end_block,add_ann_string,...} = ppfns
-    val add_ann_string = if get_tracefn "pp_annotations" () > 0 then
-                           (fn (s,f) => add_ann_string (s, f()))
-                         else (fn (s,f) => add_string s)
     fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
       val needed =
         case #1 (#block_style (rr:rule_record)) of
@@ -1173,13 +1170,13 @@ fun pp_term (G : grammar) TyG backend = let
       val add =
           if is_const tm then
             (fn s => add_ann_string
-                       (s, fn () => PPBackEnd.Const (dest_thy_const tm, s)))
+                       (s, PPBackEnd.Const (dest_thy_const tm, s)))
           else if is_fakeconst tm then
-            (fn s => add_ann_string (s, fn () => PPBackEnd.Const (fakerec, s)))
+            (fn s => add_ann_string (s, PPBackEnd.Const (fakerec, s)))
           else if mem tm (!bvars_seen) orelse binderp then
-            (fn s => add_ann_string (s, fn () => PPBackEnd.BV (ty, tystr ty)))
+            (fn s => add_ann_string (s, PPBackEnd.BV (ty, fn () => tystr ty)))
           else
-            (fn s => add_ann_string (s, fn () => PPBackEnd.FV (ty, tystr ty)))
+            (fn s => add_ann_string (s, PPBackEnd.FV (ty, fn () => tystr ty)))
       val _ = if binderp then bvars_seen := tm :: !bvars_seen else ()
     in
       case nilrule of
@@ -1488,9 +1485,9 @@ fun pp_term (G : grammar) TyG backend = let
             showtypes andalso not isfake andalso (binderp orelse new_freevar)
           fun adds s =
               if mem tm (!bvars_seen) orelse binderp then
-                add_ann_string (s, fn () => PPBackEnd.BV (Ty, s^": "^tystr Ty))
+                add_ann_string (s, PPBackEnd.BV (Ty, fn () => s^": "^tystr Ty))
               else if not isfake then
-                add_ann_string (s, fn () => PPBackEnd.FV (Ty, s^": "^tystr Ty))
+                add_ann_string (s, PPBackEnd.FV (Ty, fn () => s^": "^tystr Ty))
               else add_string s
         in
           begin_block INCONSISTENT 2; pbegin print_type;

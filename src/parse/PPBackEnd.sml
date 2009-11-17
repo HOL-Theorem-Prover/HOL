@@ -4,11 +4,11 @@ struct
 type hol_type = Type.hol_type
 open Portable
 
-datatype annotation = BV of hol_type * string
-                    | FV of hol_type * string
+datatype annotation = BV of hol_type * (unit -> string)
+                    | FV of hol_type * (unit -> string)
                     | TyV
-                    | TyOp of string
-                    | TySyn of string
+                    | TyOp of (unit -> string)
+                    | TySyn of (unit -> string)
                     | Const of {Thy:string,Name:string,Ty:hol_type} * string
                     | Note of string
 
@@ -63,13 +63,19 @@ in
    name = "vt100_terminal"}
 end
 
+
+val emacs_add_type_information = ref true
+val _ = Feedback.register_btrace ("emacs_terminal show types", emacs_add_type_information);
+
 val emacs_terminal = let
   val sz = UTF8.size
-  fun fv s tystr = "(*(*(*FV\000"^tystr^"\000"^s^"*)*)*)"
-  fun bv s tystr = "(*(*(*BV\000"^tystr^"\000"^s^"*)*)*)"
+  fun lazy_string ls = if !emacs_add_type_information then
+       (ls ()) else "";
+  fun fv s tystr = "(*(*(*FV\000"^(lazy_string tystr)^"\000"^s^"*)*)*)"
+  fun bv s tystr = "(*(*(*BV\000"^(lazy_string tystr)^"\000"^s^"*)*)*)"
   fun tyv s = "(*(*(*TV"^s^"*)*)*)"
-  fun tyop info s = "(*(*(*TY\000"^info^"\000"^s^"*)*)*)"
-  fun tysyn info s = "(*(*(*TY\000"^info^"\000"^s^"*)*)*)"
+  fun tyop info s = "(*(*(*TY\000"^(lazy_string info)^"\000"^s^"*)*)*)"
+  fun tysyn info s = "(*(*(*TY\000"^(lazy_string info)^"\000"^s^"*)*)*)"
   fun add_ann_string pps (s, ann) =
       case ann of
         FV (_,tystr) => PP.add_stringsz pps (fv s tystr, sz s)
