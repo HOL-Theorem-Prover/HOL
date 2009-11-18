@@ -111,6 +111,7 @@ val FORALL_OPTION = Q.store_thm
 val SOME_11 = store_thm("SOME_11",
   Term`!x y :'a. (SOME x = SOME y) = (x=y)`,
   REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]);
+val _ = export_rewrites ["SOME_11"]
 
 val (NOT_NONE_SOME,NOT_SOME_NONE) =
  let val thm = TAC_PROOF(([], Term`!x:'a. ~(NONE = SOME x)`),
@@ -120,6 +121,9 @@ val (NOT_NONE_SOME,NOT_SOME_NONE) =
    (save_thm("NOT_NONE_SOME", thm),
     save_thm("NOT_SOME_NONE", GSYM thm))
   end;
+val _ = export_rewrites ["NOT_NONE_SOME"]
+        (* only need one because simplifier automatically flips the equality
+           for us *)
 
 val option_nchotomy = save_thm("option_nchotomy",
  ONCE_REWRITE_RULE [DISJ_SYM] option_CASES_orig);
@@ -260,6 +264,16 @@ val option_case_compute = Q.store_thm
   if IS_SOME x then f (THE x) else e`,
     OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws);
+
+val IF_EQUALS_OPTION = store_thm(
+  "IF_EQUALS_OPTION",
+  ``(((if P then SOME x else NONE) = NONE) <=> ~P) /\
+    (((if P then NONE else SOME x) = NONE) <=> P) /\
+    (((if P then SOME x else NONE) = SOME y) <=> P /\ (x = y)) /\
+    (((if P then NONE else SOME x) = SOME y) <=> ~P /\ (x = y))``,
+  SRW_TAC [][]);
+val _ = export_rewrites ["IF_EQUALS_OPTION"]
+
 
 (* ----------------------------------------------------------------------
     OPTION_MAP theorems
@@ -411,6 +425,6 @@ val _ = BasicProvers.export_rewrites
           ["THE_DEF",
            "IS_SOME_DEF", "IS_NONE_EQ_NONE", "NOT_IS_SOME_EQ_NONE",
            "option_case_ID", "option_case_SOME_ID", "option_case_def",
-           "OPTION_JOIN_DEF", "SOME_11", "NOT_SOME_NONE"];
+           "OPTION_JOIN_DEF"];
 
 val _ = export_theory();

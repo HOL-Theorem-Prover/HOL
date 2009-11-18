@@ -2224,22 +2224,15 @@ val head_reduct_def = Define`
 val head_reduct_unique = store_thm(
   "head_reduct_unique",
   ``!M N. M -h-> N ==> (head_reduct M = SOME N)``,
-  SRW_TAC [][head_reduce1_def, head_reduct_def] THENL [
-    SELECT_ELIM_TAC THEN CONJ_TAC THENL [
-      METIS_TAC [],
-      METIS_TAC [is_head_redex_unique, labelled_redn_det]
-    ],
-    FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  SRW_TAC [][head_reduce1_def, head_reduct_def] THEN1 METIS_TAC [] THEN
+  SELECT_ELIM_TAC THEN METIS_TAC [is_head_redex_unique, labelled_redn_det]);
 
 val head_reduct_NONE = store_thm(
   "head_reduct_NONE",
   ``(head_reduct M = NONE) = !N. ~(M -h-> N)``,
-  SRW_TAC [][head_reduct_def, head_reduce1_def] THENL [
-    METIS_TAC [head_redex_is_redex, IN_term_IN_redex_posns,
-               is_redex_occurrence_def],
-    FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  SRW_TAC [][head_reduct_def, head_reduce1_def] THEN
+  METIS_TAC [head_redex_is_redex, IN_term_IN_redex_posns,
+             is_redex_occurrence_def]);
 
 val head_reduct_SOME = store_thm(
   "head_reduct_SOME",

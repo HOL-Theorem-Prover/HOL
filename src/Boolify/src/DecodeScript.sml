@@ -74,25 +74,20 @@ val enc2dec_some = store_thm
    ``!p e l x t.
        wf_encoder p e ==>
        ((enc2dec p e l = SOME (x, t)) = p x /\ (l = APPEND (e x) t))``,
-   REVERSE (RW_TAC std_ss [enc2dec_def]) >> PROVE_TAC [] ++
-   ONCE_REWRITE_TAC [GSYM (ONCE_DEPTH_CONV ETA_CONV ``@p. q p``)] ++
-   SELECT_TAC ++
-   RW_TAC std_ss [UNCURRY] ++
-   Cases_on `p'` ++
-   EQ_TAC >>
-   (DISCH_THEN (fn th => POP_ASSUM MP_TAC THEN SUBST1_TAC th) ++
-    SIMP_TAC std_ss [] ++
-    DISCH_THEN MATCH_MP_TAC ++
-    PROVE_TAC [FST, SND]) ++
-   POP_ASSUM MP_TAC ++
-   MATCH_MP_TAC
-   (PROVE [] ``(z ==> x) /\ (y ==> z ==> t) ==> (x ==> y) ==> z ==> t``) ++
-   CONJ_TAC >> PROVE_TAC [FST, SND] ++
-   SIMP_TAC std_ss [] ++
-   REPEAT (DISCH_THEN STRIP_ASSUME_TAC) ++
-   Suff `q = x` >> PROVE_TAC [APPEND_11] ++
-   FULL_SIMP_TAC std_ss [wf_encoder_def] ++
-   PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2, IS_PREFIX_REFL]);
+   REPEAT STRIP_TAC THEN SRW_TAC [][enc2dec_def] THEN
+   Cases_on `?y tt. p y /\ (l = e y ++ tt)` THENL [
+     SRW_TAC [][ELIM_UNCURRY] THEN SELECT_ELIM_TAC THEN
+     CONJ_TAC THEN1 (Q.EXISTS_TAC `(y,tt)` THEN SRW_TAC [][]) THEN
+     SIMP_TAC (srw_ss()) [FORALL_PROD] THEN
+     MAP_EVERY Q.X_GEN_TAC [`z`, `uu`] THEN
+     STRIP_TAC THEN EQ_TAC THEN1 (STRIP_TAC THEN SRW_TAC [][]) THEN
+     STRIP_TAC THEN
+     Q_TAC SUFF_TAC `e z <<= e x \/ e x <<= e z`
+           THEN1 METIS_TAC [APPEND_11, wf_encoder_def] THEN
+     METIS_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2, IS_PREFIX_REFL],
+
+     ASM_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
+   ]);
 
 val enc2dec_some_alt = store_thm
   ("enc2dec_some_alt",
