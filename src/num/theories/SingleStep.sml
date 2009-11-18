@@ -7,9 +7,6 @@ val ERR = mk_HOL_ERR "SingleStep";
 
 fun name_eq s M = ((s = fst(dest_var M)) handle HOL_ERR _ => false)
 
-fun tm_free_eq M N P =
-  (aconv N P andalso free_in N M) orelse raise ERR "tm_free_eq" ""
-
 (*---------------------------------------------------------------------------*
  * Mildly altered STRUCT_CASES_TAC, so that it does a SUBST_ALL_TAC instead  *
  * of a SUBST1_TAC.                                                          *
@@ -80,14 +77,13 @@ fun prim_find_subterm FVs tm (asl,w) =
                   in ([v], v)
                   end)
       end
- else Free (tryfind(fn x => find_term (can(tm_free_eq x tm)) x) (w::asl))
-      handle HOL_ERR _
-      => Bound(let val (V,body) = strip_forall w
-                   val M = find_term (can (tm_free_eq body tm)) body
-               in (intersect (free_vars M) V, M)
-               end)
-      handle HOL_ERR _
-      => Alien tm;
+ else if List.exists (free_in tm) (w::asl) then Free tm
+ else let
+     val (V,body) = strip_forall w
+   in
+     if free_in tm body then Bound(intersect (free_vars tm) V, tm)
+     else Alien tm
+   end
 
 fun find_subterm qtm (g as (asl,w)) =
   let val FVs = free_varsl (w::asl)
