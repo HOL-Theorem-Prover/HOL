@@ -261,6 +261,10 @@ val option_case_compute = Q.store_thm
     OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws);
 
+(* ----------------------------------------------------------------------
+    OPTION_MAP theorems
+   ---------------------------------------------------------------------- *)
+
 val OPTION_MAP_EQ_SOME = Q.store_thm(
   "OPTION_MAP_EQ_SOME",
   `!f (x:'a option) y.
@@ -302,7 +306,7 @@ val OPTION_MAP_CONG = store_thm(
   FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [SOME_11])
 val _ = DefnBase.export_cong "OPTION_MAP_CONG"
 
-
+(* and one about OPTION_JOIN *)
 
 val OPTION_JOIN_EQ_SOME = Q.store_thm(
   "OPTION_JOIN_EQ_SOME",
