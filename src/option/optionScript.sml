@@ -327,6 +327,10 @@ val OPTION_BIND_def = Prim_rec.new_recursive_definition
               (OPTION_BIND (SOME x) f = f x)`}
 val _= export_rewrites ["OPTION_BIND_def"]
 
+(* ----------------------------------------------------------------------
+    OPTREL - lift a relation on 'a, 'b to 'a option, 'b option
+   ---------------------------------------------------------------------- *)
+
 val OPTREL_def = new_definition("OPTREL_def",
   ``OPTREL R x y = (x = NONE) /\ (y = NONE) \/
                  ?x0 y0. (x = SOME x0) /\ (y = SOME y0) /\ R x0 y0``);
