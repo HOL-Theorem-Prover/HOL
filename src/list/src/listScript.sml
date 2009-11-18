@@ -17,9 +17,6 @@
 (* ===================================================================== *)
 
 
-structure listScript =
-struct
-
 (*---------------------------------------------------------------------------*
  * Require ancestor theory structures to be present. The parents of list     *
  * are "arithmetic" and "pair".                                              *
@@ -117,11 +114,13 @@ val HD = new_recursive_definition
       {name = "HD",
        rec_axiom = list_Axiom,
        def = --`HD (h::t) = h`--};
+val _ = export_rewrites ["HD"]
 
 val TL = new_recursive_definition
       {name = "TL",
        rec_axiom = list_Axiom,
        def = --`TL (h::t) = t`--};
+val _ = export_rewrites ["TL"]
 
 val SUM = new_recursive_definition
       {name = "SUM",
@@ -172,6 +171,7 @@ val FILTER = new_recursive_definition
              (!(P:'a->bool) h t.
                     FILTER P (h::t) =
                          if P h then (h::FILTER P t) else FILTER P t)`--};
+val _ = export_rewrites ["FILTER"]
 
 val FOLDR = new_recursive_definition
       {name = "FOLDR",
@@ -204,6 +204,7 @@ val EL = new_recursive_definition
        rec_axiom = num_Axiom,
        def = --`(!l. EL 0 l = (HD l:'a)) /\
                 (!l:'a list. !n. EL (SUC n) l = EL n (TL l))`--};
+val _ = export_rewrites ["EL"]
 
 
 (* ---------------------------------------------------------------------*)
@@ -1307,6 +1308,7 @@ val ALL_DISTINCT = new_recursive_definition {
              (ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t)`,
   name = "ALL_DISTINCT",
   rec_axiom = list_Axiom};
+val _ = export_rewrites ["ALL_DISTINCT"]
 
 val lemma = prove(
   ``!l x. (FILTER ((=) x) l = []) = ~MEM x l``,
@@ -1324,55 +1326,34 @@ val ALL_DISTINCT_FILTER = store_thm(
                 FORALL_AND_THM, CONS_11, EQ_IMP_THM, lemma] THEN
   metisLib.METIS_TAC []);
 
-
-
 val FILTER_ALL_DISTINCT = store_thm (
   "FILTER_ALL_DISTINCT",
   ``!P l. ALL_DISTINCT l ==> ALL_DISTINCT (FILTER P l)``,
-
-   GEN_TAC THEN LIST_INDUCT_TAC THEN (
-      ASM_SIMP_TAC bool_ss [ALL_DISTINCT, FILTER,
-			    COND_RAND, COND_RATOR,
-			    MEM_FILTER]
-   ));
-
+  Induct_on `l` THEN SRW_TAC [][MEM_FILTER]);
 
 val ALL_DISTINCT_EL_EQ = store_thm (
    "EL_ALL_DISTINCT_EL_EQ",
    ``!l. ALL_DISTINCT l =
          (!n1 n2. n1 < LENGTH l /\ n2 < LENGTH l ==>
-         ((EL n1 l = EL n2 l) = (n1 = n2)))``,
+                 ((EL n1 l = EL n2 l) = (n1 = n2)))``,
+  Induct THEN SRW_TAC [][] THEN EQ_TAC THENL [
+    REPEAT STRIP_TAC THEN Cases_on `n1` THEN Cases_on `n2` THEN
+    SRW_TAC [numSimps.ARITH_ss][] THEN PROVE_TAC [MEM_EL, LESS_MONO_EQ],
 
-   LIST_INDUCT_TAC THENL [
-      SIMP_TAC arith_ss [ALL_DISTINCT, LENGTH],
+    REPEAT STRIP_TAC THENL [
+      FULL_SIMP_TAC (srw_ss()) [MEM_EL] THEN
+      FIRST_X_ASSUM (Q.SPECL_THEN [`0`, `SUC n`] MP_TAC) THEN
+      SRW_TAC [][],
 
-      ASM_SIMP_TAC arith_ss [ALL_DISTINCT, LENGTH] THEN
-      GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-         Cases_on `n1` THEN Cases_on `n2` THENL [
-            REWRITE_TAC[],
-            SIMP_TAC arith_ss [EL,HD,TL] THEN PROVE_TAC[MEM_EL],
-            SIMP_TAC arith_ss [EL,HD,TL] THEN PROVE_TAC[MEM_EL],
-            ASM_SIMP_TAC arith_ss [EL,HD,TL]
-         ],
-
-         STRIP_TAC THENL [
-            SIMP_TAC bool_ss [MEM_EL] THEN GEN_TAC THEN
-            POP_ASSUM (fn thm => ASSUME_TAC (Q.SPECL [`0`, `SUC n`] thm)) THEN
-            FULL_SIMP_TAC arith_ss [EL, HD, TL] THEN
-            PROVE_TAC[],
-
-            REPEAT GEN_TAC THEN
-            POP_ASSUM (fn thm => ASSUME_TAC (Q.SPECL [`SUC n1`, `SUC n2`] thm)) THEN
-            FULL_SIMP_TAC arith_ss [EL,HD,TL]
-         ]
-      ]
-   ]);
-
+      FIRST_X_ASSUM (Q.SPECL_THEN [`SUC n1`, `SUC n2`] MP_TAC) THEN
+      SRW_TAC [][]
+    ]
+  ]);
 
 val ALL_DISTINCT_EL_IMP = store_thm (
    "ALL_DISTINCT_EL_IMP",
    ``!l n1 n2. ALL_DISTINCT l /\ n1 < LENGTH l /\ n2 < LENGTH l ==>
-         ((EL n1 l = EL n2 l) = (n1 = n2))``,
+               ((EL n1 l = EL n2 l) = (n1 = n2))``,
    PROVE_TAC[ALL_DISTINCT_EL_EQ]);
 
 
@@ -1381,33 +1362,153 @@ val ALL_DISTINCT_APPEND = store_thm (
    ``!l1 l2. ALL_DISTINCT (l1++l2) =
              (ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\
              (!e. MEM e l1 ==> ~(MEM e l2)))``,
-
-   LIST_INDUCT_TAC THEN (
-      ASM_SIMP_TAC bool_ss [ALL_DISTINCT, APPEND, MEM, MEM_APPEND,
-			    DISJ_IMP_THM, FORALL_AND_THM] THEN
-      PROVE_TAC[]
-   ));
+  Induct THEN SRW_TAC [][] THEN PROVE_TAC []);
 
 val ALL_DISTINCT_SING = store_thm(
    "ALL_DISTINCT_SING",
    ``!x. ALL_DISTINCT [x]``,
-   SIMP_TAC bool_ss [ALL_DISTINCT, MEM]);
-
-
+   SRW_TAC [][]);
 
 (* ----------------------------------------------------------------------
-    LIST_TO_SET
+    Theorems relating (finite) sets and lists.  First
+
+       LIST_TO_SET : 'a list -> 'a set
+
+    which is overloaded to "set".
    ---------------------------------------------------------------------- *)
 
 val LIST_TO_SET =
     new_definition("LIST_TO_SET", ``LIST_TO_SET = combin$C MEM``);
 
+val _ = overload_on ("set", ``LIST_TO_SET : 'a list -> 'a set``);
+
 val IN_LIST_TO_SET = store_thm(
   "IN_LIST_TO_SET",
-  ``x IN LIST_TO_SET l = MEM x l``,
+  ``x IN set l = MEM x l``,
   SRW_TAC [][LIST_TO_SET, boolTheory.IN_DEF]);
-
 val _ = export_rewrites ["IN_LIST_TO_SET"]
+
+open pred_setTheory
+val LIST_TO_SET_THM = Q.store_thm
+("LIST_TO_SET_THM",
+ `(set []     = {}) /\
+  (set (h::t) = h INSERT (set t))`,
+ SRW_TAC [][EXTENSION]);
+val _ = export_rewrites ["LIST_TO_SET_THM"];
+
+val LIST_TO_SET_APPEND = Q.store_thm
+("LIST_TO_SET_APPEND",
+ `!l1 l2. set (l1 ++ l2) = set l1 UNION set l2`,
+ Induct THEN SRW_TAC [][INSERT_UNION_EQ]);
+val _ = export_rewrites ["LIST_TO_SET_APPEND"]
+
+val UNION_APPEND = save_thm ("UNION_APPEND", GSYM LIST_TO_SET_APPEND)
+
+val LIST_TO_SET_EQ_EMPTY = store_thm(
+  "LIST_TO_SET_EQ_EMPTY",
+  ``((set l = {}) <=> (l = [])) /\ (({} = set l) <=> (l = []))``,
+  Cases_on `l` THEN SRW_TAC [][]);
+val _ = export_rewrites ["LIST_TO_SET_EQ_EMPTY"]
+
+val FINITE_LIST_TO_SET = Q.store_thm
+("FINITE_LIST_TO_SET",
+ `!l. FINITE (set l)`,
+ Induct THEN SRW_TAC [][]);
+val _ = export_rewrites ["FINITE_LIST_TO_SET"]
+
+(* ----------------------------------------------------------------------
+    SET_TO_LIST : 'a set -> 'a list
+
+    Only defined if the set is finite; order of elements in list is
+    unspecified.
+   ---------------------------------------------------------------------- *)
+
+val _ = Defn.def_suffix := "";
+val SET_TO_LIST_defn = Defn.Hol_defn "SET_TO_LIST"
+  `SET_TO_LIST s =
+     if FINITE s then
+        if s={} then []
+        else CHOICE s :: SET_TO_LIST (REST s)
+     else ARB`;
+
+(*---------------------------------------------------------------------------
+       Termination of SET_TO_LIST.
+ ---------------------------------------------------------------------------*)
+
+val (SET_TO_LIST_EQN, SET_TO_LIST_IND) =
+ Defn.tprove (SET_TO_LIST_defn,
+   TotalDefn.WF_REL_TAC `measure CARD` THEN
+   PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
+
+(*---------------------------------------------------------------------------
+      Desired recursion equation.
+
+      FINITE s |- SET_TO_LIST s = if s = {} then []
+                               else CHOICE s::SET_TO_LIST (REST s)
+
+ ---------------------------------------------------------------------------*)
+
+val SET_TO_LIST_THM = save_thm("SET_TO_LIST_THM",
+ DISCH_ALL (ASM_REWRITE_RULE [ASSUME ``FINITE s``] SET_TO_LIST_EQN));
+
+val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND",SET_TO_LIST_IND);
+
+
+
+(*---------------------------------------------------------------------------
+            Some consequences
+ ---------------------------------------------------------------------------*)
+
+val SET_TO_LIST_INV = Q.store_thm("SET_TO_LIST_INV",
+`!s. FINITE s ==> (LIST_TO_SET(SET_TO_LIST s) = s)`,
+ recInduct SET_TO_LIST_IND
+   THEN RW_TAC bool_ss []
+   THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
+   THEN RW_TAC bool_ss [LIST_TO_SET_THM]
+   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, CHOICE_INSERT_REST]);
+
+val SET_TO_LIST_CARD = Q.store_thm("SET_TO_LIST_CARD",
+`!s. FINITE s ==> (LENGTH (SET_TO_LIST s) = CARD s)`,
+ recInduct SET_TO_LIST_IND
+   THEN REPEAT STRIP_TAC
+   THEN SRW_TAC [][Once (UNDISCH SET_TO_LIST_THM)]
+   THEN `FINITE (REST s)` by METIS_TAC [REST_DEF,FINITE_DELETE]
+   THEN `~(CARD s = 0)` by METIS_TAC [CARD_EQ_0]
+   THEN SRW_TAC [numSimps.ARITH_ss][REST_DEF, CHOICE_DEF]);
+
+val SET_TO_LIST_IN_MEM = Q.store_thm("SET_TO_LIST_IN_MEM",
+`!s. FINITE s ==> !x. x IN s = MEM x (SET_TO_LIST s)`,
+ recInduct SET_TO_LIST_IND
+   THEN RW_TAC bool_ss []
+   THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
+   THEN RW_TAC bool_ss [MEM,NOT_IN_EMPTY]
+   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, IN_INSERT, CHOICE_INSERT_REST]);
+
+(* this version of the above is a more likely rewrite: a complicated LHS
+   turns into a simple RHS *)
+val MEM_SET_TO_LIST = Q.store_thm("MEM_SET_TO_LIST",
+`!s. FINITE s ==> !x. MEM x (SET_TO_LIST s) = x IN s`,
+ METIS_TAC [SET_TO_LIST_IN_MEM]);
+val _ = export_rewrites ["MEM_SET_TO_LIST"];
+
+val SET_TO_LIST_SING = store_thm(
+  "SET_TO_LIST_SING",
+  ``SET_TO_LIST {x} = [x]``,
+  SRW_TAC [][SET_TO_LIST_THM]);
+val _ = export_rewrites ["SET_TO_LIST_SING"]
+
+val ALL_DISTINCT_SET_TO_LIST = store_thm("ALL_DISTINCT_SET_TO_LIST",
+  ``!s. FINITE s ==> ALL_DISTINCT (SET_TO_LIST s)``,
+  recInduct SET_TO_LIST_IND THEN
+  REPEAT STRIP_TAC THEN
+  IMP_RES_TAC SET_TO_LIST_THM THEN
+  `FINITE (REST s)` by PROVE_TAC[pred_setTheory.FINITE_DELETE,
+				 pred_setTheory.REST_DEF] THEN
+  Cases_on `s = EMPTY` THEN
+  FULL_SIMP_TAC bool_ss [ALL_DISTINCT, MEM_SET_TO_LIST,
+			 pred_setTheory.CHOICE_NOT_IN_REST]);
+val _ = export_rewrites ["ALL_DISTINCT_SET_TO_LIST"];
+
 
 (* ----------------------------------------------------------------------
     listRel
@@ -1459,6 +1560,37 @@ val (rules,ind,cases) = IndDefLib.Hol_reln`
 val strong = IndDefLib.derive_strong_induction (rules,ind)
 *)
 
+
+
+(* ----------------------------------------------------------------------
+    isPREFIX
+   ---------------------------------------------------------------------- *)
+
+val isPREFIX = Define`
+  (isPREFIX [] l = T) /\
+  (isPREFIX (h::t) l = case l of [] -> F
+                              || h'::t' -> (h = h') /\ isPREFIX t t')
+`;
+val _ = export_rewrites ["isPREFIX"]
+
+val _ = set_fixity "<<=" (Infix(NONASSOC, 450));
+val _ = overload_on ("<<=", ``isPREFIX``)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x227C, tmnm = "<<="}
+        (* in tex input mode in emacs, produce U+227C with \preceq *)
+        (* tempting to add a not-isprefix macro keyed to U+22E0 \npreceq, but
+           hard to know what the ASCII version should be.  *)
+
+(* type annotations are there solely to make theorem have only one
+   type variable; without them the theorem ends up with three (because the
+   three clauses are independent). *)
+val isPREFIX_THM = store_thm(
+  "isPREFIX_THM",
+  ``(([]:'a list) <<= l = T) /\
+    ((h::t:'a list) <<= [] = F) /\
+    ((h1::t1:'a list) <<= h2::t2 = (h1 = h2) /\ isPREFIX t1 t2)``,
+  SRW_TAC [][])
+val _ = export_rewrites ["isPREFIX_THM"]
+
 (*---------------------------------------------------------------------------*)
 (* Tail recursive versions for better memory usage when applied in ML        *)
 (*---------------------------------------------------------------------------*)
@@ -1496,170 +1628,6 @@ val REVERSE_REV = Q.store_thm
  PROVE_TAC [REV_REVERSE_LEM,APPEND_NIL]);
 
 
-(* ----------------------------------------------------------------------
-    Theorems relating (finite) sets and lists
-   ---------------------------------------------------------------------- *)
-
-open pred_setTheory
-val _ = Defn.def_suffix := "";
-
-(*---------------------------------------------------------------------------
-       Map finite sets into lists.
- ---------------------------------------------------------------------------*)
-
-val SET_TO_LIST_defn = Defn.Hol_defn "SET_TO_LIST"
-  `SET_TO_LIST s =
-     if FINITE s then
-        if s={} then []
-        else CHOICE s :: SET_TO_LIST (REST s)
-     else ARB`;
-
-(*---------------------------------------------------------------------------
-       Termination of SET_TO_LIST.
- ---------------------------------------------------------------------------*)
-
-val (SET_TO_LIST_EQN, SET_TO_LIST_IND) =
- Defn.tprove (SET_TO_LIST_defn,
-   TotalDefn.WF_REL_TAC `measure CARD` THEN
-   PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
-
-(*---------------------------------------------------------------------------
-      Desired recursion equation.
-
-      FINITE s |- SET_TO_LIST s = if s = {} then []
-                               else CHOICE s::SET_TO_LIST (REST s)
-
- ---------------------------------------------------------------------------*)
-
-val SET_TO_LIST_THM = save_thm("SET_TO_LIST_THM",
- DISCH_ALL (ASM_REWRITE_RULE [ASSUME ``FINITE s``] SET_TO_LIST_EQN));
-
-val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND",SET_TO_LIST_IND);
-
-val LIST_TO_SET_THM = Q.store_thm
-("LIST_TO_SET_THM",
- `(LIST_TO_SET []     = {}) /\
-  (LIST_TO_SET (h::t) = h INSERT (LIST_TO_SET t))`,
- SRW_TAC [][EXTENSION]);
-
-val LIST_TO_SET_APPEND = Q.store_thm
-("LIST_TO_SET_APPEND",
- `!l1 l2. LIST_TO_SET (APPEND l1 l2) =
-          LIST_TO_SET l1 UNION LIST_TO_SET l2`,
-
-LIST_INDUCT_TAC THENL [
-   SIMP_TAC arith_ss [LIST_TO_SET_THM, UNION_EMPTY, APPEND],
-   ASM_SIMP_TAC arith_ss [LIST_TO_SET_THM, EXTENSION, IN_UNION, IN_INSERT,
-			  APPEND, DISJ_ASSOC]
-])
-
-val _ = export_rewrites ["LIST_TO_SET_THM"];
-
-
-(*---------------------------------------------------------------------------
-            Some consequences
- ---------------------------------------------------------------------------*)
-
-val SET_TO_LIST_INV = Q.store_thm("SET_TO_LIST_INV",
-`!s. FINITE s ==> (LIST_TO_SET(SET_TO_LIST s) = s)`,
- recInduct SET_TO_LIST_IND
-   THEN RW_TAC bool_ss []
-   THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
-   THEN RW_TAC bool_ss [LIST_TO_SET_THM]
-   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, CHOICE_INSERT_REST]);
-
-val SET_TO_LIST_CARD = Q.store_thm("SET_TO_LIST_CARD",
-`!s. FINITE s ==> (LENGTH (SET_TO_LIST s) = CARD s)`,
- recInduct SET_TO_LIST_IND
-   THEN REPEAT STRIP_TAC
-   THEN SRW_TAC [][Once (UNDISCH SET_TO_LIST_THM)]
-   THEN `FINITE (REST s)` by METIS_TAC [REST_DEF,FINITE_DELETE]
-   THEN `~(CARD s = 0)` by METIS_TAC [CARD_EQ_0]
-   THEN SRW_TAC [numSimps.ARITH_ss][REST_DEF, CHOICE_DEF]);
-
-val SET_TO_LIST_IN_MEM = Q.store_thm("SET_TO_LIST_IN_MEM",
-`!s. FINITE s ==> !x. x IN s = MEM x (SET_TO_LIST s)`,
- recInduct SET_TO_LIST_IND
-   THEN RW_TAC bool_ss []
-   THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
-   THEN RW_TAC bool_ss [MEM,NOT_IN_EMPTY]
-   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, IN_INSERT, CHOICE_INSERT_REST]);
-
-(* this version of the above is a more likely rewrite: a complicated LHS
-   turns into a simple RHS *)
-val MEM_SET_TO_LIST = Q.store_thm("MEM_SET_TO_LIST",
-`!s. FINITE s ==> !x. MEM x (SET_TO_LIST s) = x IN s`,
- METIS_TAC [SET_TO_LIST_IN_MEM]);
-val _ = export_rewrites ["MEM_SET_TO_LIST"];
-
-val SET_TO_LIST_SING = store_thm(
-  "SET_TO_LIST_SING",
-  ``SET_TO_LIST {x} = [x]``,
-  SRW_TAC [][SET_TO_LIST_THM]);
-val _ = export_rewrites ["SET_TO_LIST_SING"]
-
-val UNION_APPEND = Q.store_thm
- ("UNION_APPEND",
-  `!l1 l2.
-     (LIST_TO_SET l1) UNION (LIST_TO_SET l2) = LIST_TO_SET (APPEND l1 l2)`,
-  Induct
-   THEN RW_TAC bool_ss [LIST_TO_SET_THM,UNION_EMPTY,APPEND]
-   THEN PROVE_TAC [INSERT_UNION_EQ]);
-
-(* I think this version is the more likely rewrite *)
-val LIST_TO_SET_APPEND = Q.store_thm
-("LIST_TO_SET_APPEND",
- `!l1 l2. LIST_TO_SET (APPEND l1 l2) = LIST_TO_SET l1 UNION LIST_TO_SET l2`,
- REWRITE_TAC [UNION_APPEND]);
-val _ = export_rewrites ["LIST_TO_SET_APPEND"]
-
-val FINITE_LIST_TO_SET = Q.store_thm
-("FINITE_LIST_TO_SET",
- `!l. FINITE (LIST_TO_SET l)`,
- Induct THEN SRW_TAC [][]);
-
-val ALL_DISTINCT_SET_TO_LIST = store_thm("ALL_DISTINCT_SET_TO_LIST",
-  ``!s. FINITE s ==> ALL_DISTINCT (SET_TO_LIST s)``,
-  recInduct SET_TO_LIST_IND THEN
-  REPEAT STRIP_TAC THEN
-  IMP_RES_TAC SET_TO_LIST_THM THEN
-  `FINITE (REST s)` by PROVE_TAC[pred_setTheory.FINITE_DELETE,
-				 pred_setTheory.REST_DEF] THEN
-  Cases_on `s = EMPTY` THEN
-  FULL_SIMP_TAC bool_ss [ALL_DISTINCT, MEM_SET_TO_LIST,
-			 pred_setTheory.CHOICE_NOT_IN_REST]);
-
-val _ = export_rewrites ["ALL_DISTINCT_SET_TO_LIST", "FINITE_LIST_TO_SET"];
-val _ = overload_on ("set", ``LIST_TO_SET : 'a list -> 'a set``);
-
-(* ----------------------------------------------------------------------
-    isPREFIX
-   ---------------------------------------------------------------------- *)
-
-val isPREFIX = Define`
-  (isPREFIX [] l = T) /\
-  (isPREFIX (h::t) l = case l of [] -> F
-                              || h'::t' -> (h = h') /\ isPREFIX t t')
-`;
-val _ = export_rewrites ["isPREFIX"]
-
-val _ = set_fixity "<<=" (Infix(NONASSOC, 450));
-val _ = overload_on ("<<=", ``isPREFIX``)
-val _ = Unicode.unicode_version {u = UTF8.chr 0x227C, tmnm = "<<="}
-        (* in tex input mode in emacs, produce U+227C with \preceq *)
-        (* tempting to add a not-isprefix macro keyed to U+22E0 \npreceq, but
-           hard to know what the ASCII version should be.  *)
-
-(* type annotations are there solely to make theorem have only one
-   type variable; without them the theorem ends up with three (because the
-   three clauses are independent). *)
-val isPREFIX_THM = store_thm(
-  "isPREFIX_THM",
-  ``(([]:'a list) <<= l = T) /\
-    ((h::t:'a list) <<= [] = F) /\
-    ((h1::t1:'a list) <<= h2::t2 = (h1 = h2) /\ isPREFIX t1 t2)``,
-  SRW_TAC [][])
-
 (* --------------------------------------------------------------------- *)
 
 val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
@@ -1690,15 +1658,15 @@ val _ = adjoin_to_theory
  end)};
 
 val _ = export_rewrites
-          ["APPEND_11", "EL", "FLAT", "HD",
+          ["APPEND_11", "FLAT",
            "MAP", "MAP2", "NULL_DEF",
-           "SUM", "TL", "APPEND_ASSOC", "CONS", "CONS_11",
+           "SUM", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_APPEND", "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",
            "CONS_ACYCLIC", "list_case_def", "ZIP",
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
            "EXISTS_SIMP", "NOT_EVERY", "NOT_EXISTS",
-           "FOLDL", "FOLDR", "FILTER", "ALL_DISTINCT"];
+           "FOLDL", "FOLDR"];
 
 val nil_tm = Term.prim_mk_const{Name="NIL",Thy="list"};
 val cons_tm = Term.prim_mk_const{Name="CONS",Thy="list"};
@@ -1717,4 +1685,3 @@ fun dest_list M =
 
 val _ = export_theory();
 
-end
