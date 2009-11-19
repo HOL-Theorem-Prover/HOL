@@ -48,7 +48,11 @@
     such as Unix <code>xterm</code> (also the standard MacOS Terminal
     application), as well as inside Emacs.  Also, if you are using the
     Emacs mode, then the types of both sorts of variables are
-    available in a mouse-over tooltip.</p></li>
+    available in a mouse-over tooltip.</p>
+
+    <p>Besides this automatic colored pretty-printing depending on
+    the term structure, it is now possible to define syntax highlighting
+    in userprinters.</p></li>
 
 <li><p>Many type variables can now be parsed and printed as lower-case
     Greek letters.  For example, you can input <code>``:'a``</code>,
@@ -140,6 +144,11 @@ Behzad Akbarpour for the report of this bug.</p></li>
 
 <li><p>The overload <code><></code> on <code>words$word_slice</code>
   has been removed and replaced with <code>''</code>.</p></li>
+
+<li><p>The interface of <code>userprinter<code> (user defined pretty printers) changed.
+  Instead of getting just two functions <code>add_string</code> and <code>add_break</code>,
+  it now gets a record of type <code>term_pp_types.ppstream_funs<code> that contains
+  these functions as well as several others.</p></li>
 
 </ul>
 
