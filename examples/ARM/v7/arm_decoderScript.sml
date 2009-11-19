@@ -1062,7 +1062,7 @@ val thumb2_decode_aux7_def = with_flag (priming, SOME "_") Define`
                       (Mode3_register (ib2 4) (rb 0)))
             || ( T, T, F,a5,  b11,b10,b9,b8,b7,b6) ->
                  LoadStore
-                   (Load_Halfword T T F T F a5 rn rt (Mode3_immediate (ib12 0)))
+                   (Load_Halfword T T F T a5 F rn rt (Mode3_immediate (ib12 0)))
             || ( T, F, F,a5,   T ,b10,b9, T,b7,b6) ->
                  LoadStore
                    (Load_Halfword b10 b9 T T a5 F rn rt
@@ -1130,7 +1130,7 @@ val thumb2_decode_aux8_def = with_flag (priming, SOME "_") Define`
       else
         case (a 7,b 7,b 6)
         of (F,F, F) ->
-            if ib2 3 = 0w then
+            if ib2 4 = 0w then
               DP 0b1101w (a 4) 0w (rb 8) (SHIFTED (rb 0) (ia2 5) (ra 0))
             else
               Undefined

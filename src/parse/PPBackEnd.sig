@@ -5,21 +5,48 @@ sig
   type hol_type = Type.hol_type
   type ppstream = PP.ppstream
   type break_style = PP.break_style
-  datatype annotation = BV of hol_type * string
-                      | FV of hol_type * string
+
+  datatype pp_color =
+      Black
+    | RedBrown
+    | Green
+    | BrownGreen
+    | DarkBlue
+    | Purple
+    | BlueGreen
+    | DarkGrey
+    | LightGrey
+    | OrangeRed
+    | VividGreen
+    | Yellow
+    | Blue
+    | PinkPurple
+    | LightBlue
+    | White;
+
+  datatype pp_style =
+      FG of pp_color
+    | BG of pp_color
+    | Bold
+    | Underline
+
+  datatype annotation = BV of hol_type * (unit -> string)
+                      | FV of hol_type * (unit -> string)
                       | TyBV of kind * int (*rank*) * string
                       | TyFV of kind * int (*rank*) * string
-                      | TyOp of string
-                      | TySyn of string
+                      | TyOp of (unit -> string)
+                      | TySyn of (unit -> string)
                       | Const of {Thy:string,Name:string,Ty:hol_type} * string
-                      | Note of string
+                      | Note of string;
 
-  type t = {add_string : ppstream -> string -> unit,
+  type t = {add_string     : ppstream -> string -> unit,
             add_ann_string : ppstream -> string * annotation -> unit,
-            begin_block : ppstream -> PP.break_style -> int -> unit,
-            end_block : ppstream -> unit,
-            add_break : ppstream -> int * int -> unit,
-            add_newline : ppstream -> unit,
+            begin_block    : ppstream -> PP.break_style -> int -> unit,
+            end_block      : ppstream -> unit,
+            add_break      : ppstream -> int * int -> unit,
+            add_newline    : ppstream -> unit,
+            begin_style    : ppstream -> pp_style list -> unit,
+            end_style      : ppstream -> unit,
             name : string}
 
   val with_ppstream : t -> ppstream ->
@@ -28,8 +55,10 @@ sig
                        add_ann_string : string * annotation -> unit,
                        add_string     : string -> unit,
                        begin_block    : break_style -> int -> unit,
-                       clear_ppstream : unit -> unit,
                        end_block      : unit -> unit,
+                       begin_style    : pp_style list -> unit,
+                       end_style      : unit -> unit,
+                       clear_ppstream : unit -> unit,
                        flush_ppstream : unit -> unit}
 
   val raw_terminal : t

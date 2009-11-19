@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib Parse
 
-open normal_orderTheory churchDBTheory churchlistTheory
+open normal_orderTheory
 open reductionEval
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
@@ -82,39 +82,5 @@ val steps_plus = store_thm(
     Cases_on `m` THEN SRW_TAC [][],
     SRW_TAC [][steps_noreduct]
   ]);
-
-val csteps_def = Define`
-  csteps =
-  LAM "n" (LAM "t"
-    (VAR "n" @@ (LAM "u" (VAR "u"))
-             @@ (LAM "f" (LAM "u"
-                   (cbnf @@ VAR "u"
-                         @@ VAR "u"
-                         @@ (VAR "f" @@ (cnoreduct @@ VAR "u")))))
-             @@ VAR "t"))
-`;
-
-val FV_csteps = Store_thm(
-  "FV_csteps",
-  ``FV csteps = {}``,
-  SRW_TAC [][csteps_def, pred_setTheory.EXTENSION]);
-
-open brackabs
-val csteps_eqn = brackabs_equiv [] csteps_def
-
-val cnoreduct_behaviour' =
-    cnoreduct_behaviour |> Q.SPEC `toTerm t`
-                        |> SIMP_RULE (srw_ss()) []
-
-val csteps_behaviour = store_thm(
-  "csteps_behaviour",
-  ``∀n t.
-      csteps @@ church n @@ cDB t -n->* cDB (fromTerm (steps n (toTerm t)))``,
-  SIMP_TAC (bsrw_ss()) [csteps_eqn] THEN
-  Induct THEN
-  ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.church_thm, cbnf_behaviour] THEN
-  Q.X_GEN_TAC `t` THEN Cases_on `dbnf t` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
-                            cnoreduct_behaviour']);
 
 val _ = export_theory ()

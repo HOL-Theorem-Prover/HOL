@@ -2702,7 +2702,7 @@ SIMP_TAC std_ss [quant_best_local_action_def,
 		 GSYM RIGHT_EXISTS_AND_THM,
 		 GSYM LEFT_FORALL_IMP_THM] THEN
 `!y2. best_local_action f (P' y2) (Q' y2) s =
- best_local_action f (P (x,y2)) (Q (x,y2)) s` by ALL_TAC THEN1 (
+ best_local_action f (P (x,y2)) (Q (x,y2)) s` by (
    FULL_SIMP_TAC std_ss [best_local_action_def,
 			 LET_THM, ASL_IS_SUBSTATE_def,
 			 GSYM LEFT_FORALL_IMP_THM,
@@ -2726,8 +2726,9 @@ POP_ASSUM (K ALL_TAC) THEN
 
 MATCH_MP_TAC (prove (``(~A ==> B) ==> (A \/ B)``, METIS_TAC[])) THEN
 SIMP_TAC std_ss [NONE___best_local_action, PAIR_EXISTS_THM] THEN
-STRIP_TAC THEN
-`!y. s1 IN P y ==> (FST y = x)` by ALL_TAC THEN1 (
+DISCH_THEN (EVERY_TCL (map Q.X_CHOOSE_THEN [`x1`, `x2`, `s0`, `s1`])
+                      STRIP_ASSUME_TAC) THEN
+`!y. s1 IN P y ==> (FST y = x)` by (
    FULL_SIMP_TAC std_ss [GSYM LEFT_EXISTS_AND_THM,
 			 fasl_star_REWRITE,
 			 ASL_IS_SUBSTATE_def,
@@ -2742,9 +2743,7 @@ STRIP_TAC THEN
    METIS_TAC[COMM_DEF]
 ) THEN
 CONJ_TAC THEN1 (
-   Q.EXISTS_TAC `x2` THEN
-   Q.EXISTS_TAC `s0` THEN
-   Q.EXISTS_TAC `s1` THEN
+   MAP_EVERY Q.EXISTS_TAC [`x2`,`s0`,`s1`] THEN
    ASM_REWRITE_TAC[] THEN
    RES_TAC THEN
    FULL_SIMP_TAC std_ss []
@@ -2764,34 +2763,22 @@ SIMP_TAC std_ss [SOME___best_local_action, IN_ABS,
 GEN_TAC THEN EQ_TAC THENL [
    REPEAT STRIP_TAC THEN
    `COMM f` by FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
-   `ASL_IS_SUBSTATE f s1 s /\ ASL_IS_SUBSTATE f s1' s /\
+   `ASL_IS_SUBSTATE f s0 s /\ ASL_IS_SUBSTATE f s1 s /\
     ASL_IS_SUBSTATE f s1'' s` by METIS_TAC[ASL_IS_SUBSTATE_def, COMM_DEF] THEN
-   `s1' IN P (x, x'') /\ s1'' IN P (x, x'')` by METIS_TAC[] THEN
-   `x1 = x` by METIS_TAC[] THEN
-
-   Q.PAT_ASSUM `!x1 x2 s0 s1. X x1 x2 s0 s1` (MP_TAC o Q.SPECL [`x1`, `x''`, `s0'`, `s1'`]) THEN
-   FULL_SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
-   Q.EXISTS_TAC `s0''` THEN
-   Q.EXISTS_TAC `s1''` THEN
-   ASM_SIMP_TAC std_ss [],
-
-
+   `(x1' = x)` by METIS_TAC[] THEN
+   REPEAT BasicProvers.VAR_EQ_TAC THEN
+   FIRST_ASSUM (MATCH_MP_TAC o
+                SIMP_RULE (bool_ss ++ boolSimps.DNF_ss) [AND_IMP_INTRO]) THEN
+   METIS_TAC [],
 
    REPEAT STRIP_TAC THEN
    `COMM f` by FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
    `ASL_IS_SUBSTATE f s1 s /\ ASL_IS_SUBSTATE f s1' s /\
     ASL_IS_SUBSTATE f s1'' s` by METIS_TAC[ASL_IS_SUBSTATE_def, COMM_DEF] THEN
-   `x1' = x` by METIS_TAC[] THEN
-   `s1' IN P' x2' /\ s1'' IN P' x2'` by METIS_TAC[] THEN
-   Q.PAT_ASSUM `!x'' s0 s1. X x'' s0 s1` (MP_TAC o Q.SPECL [`x2'`, `s0'`, `s1'`]) THEN
-   FULL_SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
-   Q.EXISTS_TAC `s0''` THEN
-   Q.EXISTS_TAC `s1''` THEN
-   ASM_SIMP_TAC std_ss []
+   FIRST_ASSUM (MATCH_MP_TAC o
+                SIMP_RULE (bool_ss ++ boolSimps.DNF_ss) [AND_IMP_INTRO]) THEN
+   METIS_TAC []
 ]);
-
-
-
 
 
 val ASL_IS_INTUITIONISTIC_def = Define `
@@ -3144,7 +3131,7 @@ REPEAT (Q.PAT_ASSUM `fasla_select_assume P x X = Y` (MP_TAC o GSYM)) THEN
 ASM_SIMP_TAC std_ss [fasla_select_assume_def] THEN
 Cases_on `~(P x s3)` THEN1 (
 	ASM_REWRITE_TAC[] THEN
-	SIMP_TAC std_ss [COND_RAND, COND_RATOR, NOT_IN_EMPTY]
+	SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
 ) THEN
 `P x s1` by PROVE_TAC[] THEN
 FULL_SIMP_TAC std_ss [IN_SING]);
@@ -5694,8 +5681,14 @@ Cases_on `?s1 s2.
          (SOME s = (FST env) (SOME s1) (SOME s2)) /\
          IS_SOME (EVAL_fasl_prim_command env pc1 s1) /\
          IS_SOME (EVAL_fasl_prim_command env pc2 s2)` THEN
-ASM_REWRITE_TAC[] THEN
-METIS_TAC[fasla_seq_def, fasla_seq_skip, fasla_skip_def]);
+SRW_TAC [][] THENL[
+  METIS_TAC [optionTheory.NOT_IS_SOME_EQ_NONE],
+  SRW_TAC [][SUP_fasl_order_def] THEN
+  Q.PAT_ASSUM `NONE <> XX` MP_TAC THEN
+  Q.MATCH_ABBREV_TAC `NONE <> XX ==> FOO` THEN
+  Cases_on `XX` THEN SRW_TAC [][],
+  METIS_TAC [optionTheory.NOT_IS_SOME_EQ_NONE]
+]);
 
 
 
@@ -10553,33 +10546,14 @@ val fasl_slp_opt_THM = store_thm ("fasl_slp_opt_THM",
 	     (!Q. (FASL_PROGRAM_HOARE_TRIPLE xenv penv P prog Q) ==>
 		    (slp SUBSET Q))) = (SOME slp = fasl_slp_opt xenv penv P prog)``,
 
-REPEAT STRIP_TAC THEN
-EQ_TAC THEN STRIP_TAC THENL [
-	ASM_SIMP_TAC std_ss [fasl_slp_opt_def, EXTENSION, IN_BIGINTER, IN_ABS, LET_THM,
-		COND_RAND, COND_RATOR, NOT_IN_EMPTY] THEN
-	CONJ_TAC THEN1 METIS_TAC[] THEN
-	GEN_TAC THEN
-	EQ_TAC THENL [
-		REPEAT STRIP_TAC THEN
-		`slp SUBSET P'` by RES_TAC THEN
-		FULL_SIMP_TAC std_ss [SUBSET_DEF],
-
-		REPEAT STRIP_TAC THEN
-		METIS_TAC[]
-	],
-
-
-	FULL_SIMP_TAC std_ss [fasl_slp_opt_def, LET_THM, COND_RAND, COND_RATOR] THEN
-	FULL_SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY, IN_ABS] THEN
-	CONJ_TAC THENL [
-		FULL_SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_REWRITE,
-			SUBSET_DEF, IN_BIGINTER, IN_ABS] THEN
-		METIS_TAC[SOME_11],
-
-		REPEAT STRIP_TAC THEN
-		SIMP_TAC std_ss [SUBSET_DEF, IN_BIGINTER, IN_ABS] THEN
-		METIS_TAC[]
-	]
+SRW_TAC [][EQ_IMP_THM, LET_THM, fasl_slp_opt_def, IN_ABS] THENL [
+  SRW_TAC [][EXTENSION, IN_ABS] THEN METIS_TAC [],
+  SRW_TAC [][EXTENSION, IN_ABS] THEN METIS_TAC [SUBSET_DEF],
+  FULL_SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_REWRITE,
+			SUBSET_DEF, IN_BIGINTER, IN_ABS,
+                        GSYM MEMBER_NOT_EMPTY] THEN
+  METIS_TAC[SOME_11],
+  FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF, GSYM MEMBER_NOT_EMPTY, IN_ABS]
 ]);
 
 

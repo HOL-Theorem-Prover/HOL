@@ -3,11 +3,11 @@ val _ = PolyML.print_depth 0;
 local in
 open HolKernel Parse boolLib proofManagerLib;
 
-local
-  open PP;
+val _ = let
+  open PP
   fun with_pp ppfn pps x =
-      Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e;
-  fun pp_from_stringfn sf pps x = PP.add_string pps (sf x);
+      Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
+  fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
   fun pp2polypp (f : PP.ppstream -> 'a -> unit)
               (putString : string -> unit,
                beginBlock : int * bool -> unit,
@@ -16,7 +16,7 @@ local
               (dpth_limit : int)
               recursive_print
               (e : 'a) =
-    putString (pp_to_string (!Globals.linewidth) f e);
+    putString (pp_to_string (!Globals.linewidth) f e)
   fun gprint g pps t = let
     val tyg = Parse.type_grammar()
     val (_, ppt) = Parse.print_from_grammars (tyg,g)
@@ -25,27 +25,39 @@ local
   end
   fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
   fun locpp pps l = PP.add_string pps (locn.toShortString l)
+  open PolyML
+  val version_string_w1 =
+      hd (String.tokens Char.isSpace Compiler.compilerVersion)
+      handle Empty => ""
+  val compiler_number =
+      Real.floor (100.0 * valOf (Real.fromString version_string_w1))
+      handle Option => 0
 in
-  val _ = PolyML.install_pp (pp2polypp (with_pp Kind.pp_qkind))
-  val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
-  val _ = PolyML.install_pp (pp2polypp (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type)));
-  val _ = PolyML.install_pp (pp2polypp (with_pp Pretype.pp_pretype))
-  val _ = PolyML.install_pp (pp2polypp (with_pp Hol_pp.pp_thm));
-  val _ = PolyML.install_pp (pp2polypp (with_pp Hol_pp.pp_theory));
-  val _ = PolyML.install_pp (pp2polypp (with_pp kind_grammar.prettyprint_grammar));
-  val _ = PolyML.install_pp (pp2polypp (with_pp type_grammar.prettyprint_grammar));
-  val _ = PolyML.install_pp (pp2polypp (with_pp ppg))
+  if compiler_number >= 530 then
+    install_pp (pp2polypp (with_pp HOLset.pp_holset))
+  else ();
+  install_pp (pp2polypp
+                  (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
+  install_pp (pp2polypp
+                  (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type)));
+  install_pp (pp2polypp (with_pp Kind.pp_qkind));
+  install_pp (pp2polypp (with_pp Pretype.pp_pretype));
+  install_pp (pp2polypp (with_pp Hol_pp.pp_thm));
+  install_pp (pp2polypp (with_pp Hol_pp.pp_theory));
+  install_pp (pp2polypp (with_pp kind_grammar.prettyprint_grammar));
+  install_pp (pp2polypp (with_pp type_grammar.prettyprint_grammar));
+  install_pp (pp2polypp (with_pp ppg));
 
-  val _ = PolyML.install_pp (pp2polypp (with_pp proofManagerLib.pp_proof));
-  val _ = PolyML.install_pp (pp2polypp (with_pp proofManagerLib.pp_proofs));
-  val _ = PolyML.install_pp (pp2polypp (with_pp Rewrite.pp_rewrites))
-  val _ = PolyML.install_pp (pp2polypp (with_pp TypeBasePure.pp_tyinfo))
-  val _ = PolyML.install_pp (pp2polypp (with_pp DefnBase.pp_defn))
-  val _ = PolyML.install_pp (pp2polypp (with_pp Arbnum.pp_num))
-  val _ = PolyML.install_pp (pp2polypp (with_pp Arbint.pp_int))
-  val _ = PolyML.install_pp (pp2polypp (with_pp Arbrat.pp_rat))
-  val _ = PolyML.install_pp (pp2polypp (with_pp locpp))
-end;
+  install_pp (pp2polypp (with_pp proofManagerLib.pp_proof));
+  install_pp (pp2polypp (with_pp proofManagerLib.pp_proofs));
+  install_pp (pp2polypp (with_pp Rewrite.pp_rewrites));
+  install_pp (pp2polypp (with_pp TypeBasePure.pp_tyinfo));
+  install_pp (pp2polypp (with_pp DefnBase.pp_defn));
+  install_pp (pp2polypp (with_pp Arbnum.pp_num));
+  install_pp (pp2polypp (with_pp Arbint.pp_int));
+  install_pp (pp2polypp (with_pp Arbrat.pp_rat));
+  install_pp (pp2polypp (with_pp locpp))
+end
 
 (*---------------------------------------------------------------------------*
  * Set up the help paths.                                                    *

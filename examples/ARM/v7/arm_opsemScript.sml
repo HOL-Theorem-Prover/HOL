@@ -462,7 +462,8 @@ val data_processing_thumb2_upredictable_def = Define`
                  BadReg d \/ BadReg n \/ BadReg m) /\
   (data_processing_thumb2_upredictable
      (Data_Processing opc setflags n d
-        (Mode1_register_shifted_register s typ m)) = T)`;
+        (Mode1_register_shifted_register s typ m)) =
+     opc <> 0b1101w \/ BadReg d \/ BadReg s \/ BadReg m)`;
 
 val i2bits_def = Define `i2bits (i,N) = n2w (Num (i % 2 ** N))`;
 

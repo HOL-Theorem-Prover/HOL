@@ -400,6 +400,12 @@ val Yf_11 = Store_thm(
   SRW_TAC [][termTheory.LAM_eq_thm, EQ_IMP_THM] THEN
   SRW_TAC [][termTheory.tpm_fresh]);
 
+val FV_Yf = Store_thm(
+  "FV_Yf",
+  ``FV (Yf t) = FV t``,
+  SRW_TAC [boolSimps.CONJ_ss][Yf_def, EXTENSION, LET_THM] THEN
+  NEW_ELIM_TAC THEN METIS_TAC []);
+
 val Yf_cong = store_thm(
   "Yf_cong",
   ``f == g ⇒ Yf f == Yf g``,

@@ -349,7 +349,7 @@ fun print_update pps update =
         PP.add_string
             pps
             ("val _ = Unicode.temp_uset_fixity \"" ^ String.toString s ^
-             "\" (" ^ Parse.fixityToString f ^ ")\n")
+             "\" (Parse." ^ Parse.fixityToString f ^ ")\n")
       end
     | OVL (s,t) => let
       in

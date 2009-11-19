@@ -144,8 +144,9 @@ end handle HOL_ERR _ => NONE
          | term_pp_types.UserPP_Failed =>  NONE
 
 
-fun print_monads (tyg, tmg) (sysprinter,strn,brk) (p,l,r) dpth pps t = let
+fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,r) dpth pps t = let
   open term_pp_types term_grammar
+  val (strn,brk) = (#add_string ppfns, #add_break ppfns);
   val (prname, arg1, arg2) = valOf (dest_bind tmg t)
                              handle Option => raise UserPP_Failed
   fun pr_action (v, action) =

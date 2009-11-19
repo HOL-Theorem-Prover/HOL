@@ -60,6 +60,7 @@ end
 
 
 val congs = [lameq_APPcong, SPEC_ALL lameq_LAM,
+             chap2Theory.Yf_cong,
              REWRITE_RULE [GSYM AND_IMP_INTRO]
                           (last (CONJUNCTS chap2Theory.lemma2_12))]
 

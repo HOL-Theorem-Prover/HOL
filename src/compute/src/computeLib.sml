@@ -278,4 +278,10 @@ fun del_persistent_consts [] = ()
               PP.end_block ppstrm))}
      end
 
+(* ----------------------------------------------------------------------
+    compset pretty-printer
+   ---------------------------------------------------------------------- *)
+
+fun pp_compset pps c = PP.add_string pps "<compset>"
+
 end

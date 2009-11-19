@@ -269,20 +269,19 @@ val OWHILE_THM = store_thm(
       POP_ASSUM (fn th => REWRITE_TAC [th]) THEN
       SRW_TAC [][] THEN
       LEAST_ELIM_TAC THEN FULL_SIMP_TAC (srw_ss()) [FUNPOW] THEN CONJ_TAC THEN1
-        METIS_TAC [] THEN
+        (Q.EXISTS_TAC `SUC m` THEN SRW_TAC [][FUNPOW]) THEN
       Q.X_GEN_TAC `N` THEN STRIP_TAC THEN
-      LEAST_ELIM_TAC THEN CONJ_TAC THEN1
-        (Q.EXISTS_TAC `SUC N` THEN SRW_TAC [][FUNPOW]) THEN
+      LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
       REWRITE_TAC [] THEN
       Q.X_GEN_TAC `M` THEN STRIP_TAC THEN
-      Q_TAC SUFF_TAC `M = SUC N` THEN1 SIMP_TAC (srw_ss()) [FUNPOW] THEN
-      Q.SPECL_THEN [`M`, `SUC N`] STRIP_ASSUME_TAC LESS_LESS_CASES THENL [
-        (* M < SUC N *)
-        Q.SUBGOAL_THEN `(M = 0) \/ (?M0. M = SUC M0)` STRIP_ASSUME_TAC THEN1
+      Q_TAC SUFF_TAC `N = SUC M` THEN1 SIMP_TAC (srw_ss()) [FUNPOW] THEN
+      Q.SPECL_THEN [`N`, `SUC M`] STRIP_ASSUME_TAC LESS_LESS_CASES THENL [
+        (* N < SUC M *)
+        Q.SUBGOAL_THEN `(N = 0) \/ (?N0. N = SUC N0)` STRIP_ASSUME_TAC THEN1
           METIS_TAC [num_CASES] THEN
         FULL_SIMP_TAC (srw_ss()) [LESS_MONO_EQ, FUNPOW] THEN
         METIS_TAC [],
-        (* SUC N < M *)
+        (* SUC M < N *)
         RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [FUNPOW]
       ],
 
@@ -317,9 +316,6 @@ val OWHILE_WHILE = store_thm(
   ``(OWHILE G f s = SOME s') ==> (WHILE G f s = s')``,
   SIMP_TAC (srw_ss()) [OWHILE_def] THEN
   STRIP_TAC THEN
-  Q.SUBGOAL_THEN `?n. ~G(FUNPOW f n s)` ASSUME_TAC THEN1
-    (CCONTR_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN
   SRW_TAC [][] THEN LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
   REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC) THEN
   Q.X_GEN_TAC `n` THEN MAP_EVERY Q.ID_SPEC_TAC [`s`, `n`] THEN
@@ -340,8 +336,6 @@ val OWHILE_INV_IND = store_thm(
   ``!G f s. P s /\ (!x. P x /\ G x ==> P (f x)) ==>
             !s'. (OWHILE G f s = SOME s') ==> P s'``,
   SIMP_TAC (srw_ss()) [OWHILE_def] THEN REPEAT STRIP_TAC THEN
-  Q.SUBGOAL_THEN `?n. ~G(FUNPOW f n s)` ASSUME_TAC THEN1
-    (CCONTR_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
   LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
   REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC) THEN Q.X_GEN_TAC `n` THEN

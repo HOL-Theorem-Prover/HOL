@@ -50,7 +50,7 @@ fun categorise c =
 fun constid_categorise c =
     if const_identstartp c then const_identp
     else if const_symbolp c then const_symbolp
-    else raise Fail (c ^ " is not a valid constant name constituent")
+    else raise Fail (c ^ " cannot begin a valid constant name")
 
 
 fun mixed s = let
@@ -167,11 +167,22 @@ in
                           val sfx0_1 = String.extract(sfx0, 1, NONE)
 	                  val c0 = String.sub(sfx0_1, 0)
                           val rest = String.extract(sfx0_1, 1, NONE)
-	                  val (qid2, sfx) =
-                              grab (constid_categorise (str c0)) [str c0] rest
-                              handle Fail s => raise LEX_ERR (s, locn)
-	                in
-	                  (QIdent(pfx0,qid2), sfx)
+                        in
+                          if c0 = #"0" then
+                            (* special case - "0" can be a constant name *)
+                            if rest = "" then (QIdent(pfx0,"0"), "")
+                            else raise LEX_ERR (sfx0_1 ^ " cannot be the name\
+                                                         \ of a constant",
+                                                locn)
+                          else let
+	                      val (qid2, sfx) =
+                                  grab (constid_categorise (str c0))
+                                       [str c0]
+                                       rest
+                                       handle Fail s => raise LEX_ERR (s, locn)
+	                    in
+	                      (QIdent(pfx0,qid2), sfx)
+                            end
                         end
                       else
                         raise LEX_ERR ("Malformed qualified ident", locn)

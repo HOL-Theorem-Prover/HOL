@@ -353,12 +353,16 @@ in
   val is_known_word_size = not o is_vartype o wordsSyntax.dim_of
 
   fun UINT_MAX_CONV t =
-    if wordsSyntax.is_n2w t andalso is_known_word_size t then
-      let val thm = EVAL (wordsSyntax.mk_word_T (wordsSyntax.dim_of t)) in
-        PURE_REWRITE_CONV [GSYM thm, SYM WORD_NEG_1] t
+    if wordsSyntax.is_n2w t then
+      let val dim = wordsSyntax.dim_of t in
+        if not (is_vartype dim) andalso dim <> ``:unit`` then
+          PURE_REWRITE_CONV
+            [GSYM (EVAL (wordsSyntax.mk_word_T dim)), SYM WORD_NEG_1] t
+        else
+          raise UNCHANGED
       end
     else
-     raise UNCHANGED
+      raise UNCHANGED
 
   fun WORD_GROUND_CONV t =
   let
@@ -1238,8 +1242,9 @@ val Induct_word =
 
 (* ------------------------------------------------------------------------- *)
 
-fun print_word f Gs (sys,string,brk) gravs d pps t = let
+fun print_word f Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = let
    open Portable term_pp_types
+   val (string,brk) = (#add_string ppfns, #add_break ppfns);
    val (n,x) = dest_n2w t
    val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
    val v = numSyntax.dest_numeral n
@@ -1297,8 +1302,9 @@ fun remove_word_printer () =
 (* A pretty-printer that shows the types for ><, w2w and @@                  *)
 (* ------------------------------------------------------------------------- *)
 
-fun print_word_cast Gs (sys,str,brk) (pg,lg,rg) d pps t = let
+fun print_word_cast Gs sys (ppfns:term_pp_types.ppstream_funs) (pg,lg,rg) d pps t = let
    open Portable term_pp_types
+   val (str,brk) = (#add_string ppfns, #add_break ppfns);
    fun stype tm = String.extract(type_to_string (type_of tm),1,NONE)
    fun delim i act = case pg of
                         Prec(j,_) => if i <= j then act() else ()

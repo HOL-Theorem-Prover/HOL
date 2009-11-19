@@ -443,10 +443,19 @@ val noreduct_thm = store_thm(
     SRW_TAC [][]
   ]);
 
+val noreduct_Yf = Store_thm(
+  "noreduct_Yf",
+  ``(noreduct (Yf f) = SOME (f @@ Yf f)) ∧
+    (noreduct (Yf f @@ x) = SOME (f @@ Yf f @@ x))``,
+  Q_TAC (NEW_TAC "z") `FV f` THEN
+  `Yf f = LAM z (f @@ (VAR z @@ VAR z)) @@ LAM z (f @@ (VAR z @@ VAR z))`
+    by SRW_TAC [][chap2Theory.Yf_fresh] THEN
+  SRW_TAC [][noreduct_thm, termTheory.lemma14b]);
+
 val noreduct_characterisation = store_thm(
   "noreduct_characterisation",
   ``M -n-> N ⇔ (noreduct M = SOME N)``,
-  SRW_TAC [][noreduct_def] THENL [
+  SRW_TAC [][noreduct_def] THEN Cases_on `bnf M` THEN SRW_TAC [][] THENL [
     METIS_TAC [normorder_bnf],
     `∃N₁. M -n-> N₁` by METIS_TAC [normorder_bnf] THEN
     `∀N₂. M -n-> N₂ ⇔ (N₂ = N₁)` by METIS_TAC [normorder_det] THEN

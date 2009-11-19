@@ -153,6 +153,8 @@ fun EXISTS_TAC q (g as (asl, w)) =
   Tactic.EXISTS_TAC (ptm_with_ctxtty ctxt exvartype q) g
  end
 
+fun LIST_EXISTS_TAC qL = EVERY (map EXISTS_TAC qL)
+
 fun ID_EX_TAC(g as (_,w)) =
   Tactic.EXISTS_TAC (fst(dest_exists w)
                      handle HOL_ERR _ =>

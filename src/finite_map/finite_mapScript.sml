@@ -26,9 +26,6 @@
 
    ===================================================================== *)
 
-structure finite_mapScript =
-struct
-
 open HolKernel Parse boolLib IndDefLib numLib pred_setTheory
      sumTheory pairTheory BasicProvers SingleStep bossLib metisLib
      simpLib;
@@ -576,6 +573,7 @@ val SUBMAP_DEF = new_definition (
        $SUBMAP f g =
        !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)``)
 val _ = set_fixity "SUBMAP" (Infix(NONASSOC, 450));
+val _ = Unicode.unicode_version { u = UTF8.chr 0x2291, tmnm = "SUBMAP"}
 
 
 val SUBMAP_FEMPTY = Q.store_thm
@@ -757,6 +755,9 @@ val union_lemma = Q.prove
 val FUNION_DEF = new_specification
   ("FUNION_DEF", ["FUNION"],
    CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) union_lemma);
+val funion_symbol = UTF8.chr 0x228C
+val _ = Unicode.uset_fixity funion_symbol (Infixl 500)
+val _ = Unicode.uoverload_on (funion_symbol, ``FUNION``)
 
 val FUNION_FEMPTY_1 = Q.store_thm
 ("FUNION_FEMPTY_1",
@@ -1154,11 +1155,7 @@ val _ = export_rewrites ["o_f_FRANGE"]
 val FRANGE_FLOOKUP = store_thm(
   "FRANGE_FLOOKUP",
   ``v IN FRANGE f <=> ?k. FLOOKUP f k = SOME v``,
-  SRW_TAC [][FLOOKUP_DEF,FRANGE_DEF, EQ_IMP_THM] THENL [
-    METIS_TAC [],
-    Cases_on `k IN FDOM f` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-    METIS_TAC []
-  ]);
+  SRW_TAC [][FLOOKUP_DEF,FRANGE_DEF]);
 
 (*---------------------------------------------------------------------------
         Range restriction
@@ -1667,8 +1664,7 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM, FMAP_MAP2_THM,
 val FEVERY_STRENGTHEN_THM =
 store_thm ("FEVERY_STRENGTHEN_THM",
 ``FEVERY P FEMPTY /\
-         ((FEVERY P f /\ P (x,y)) ==>
-          FEVERY P (f |+ (x,y)))``,
+  ((FEVERY P f /\ P (x,y)) ==> FEVERY P (f |+ (x,y)))``,
 
 SIMP_TAC std_ss [FEVERY_DEF, FDOM_FEMPTY,
 		 NOT_IN_EMPTY, FAPPLY_FUPDATE_THM,
@@ -1679,8 +1675,7 @@ METIS_TAC[]);
 
 val FUPDATE_ELIM = store_thm ("FUPDATE_ELIM",
 ``!k v f.
-  ((k IN FDOM f) /\ (f ' k = v)) ==>
-  (f |+ (k,v) = f)``,
+    ((k IN FDOM f) /\ (f ' k = v)) ==> (f |+ (k,v) = f)``,
 
 REPEAT STRIP_TAC THEN
 ONCE_REWRITE_TAC[GSYM fmap_EQ_THM] THEN
@@ -1722,9 +1717,12 @@ val FUNION_EQ_FEMPTY = store_thm ("FUNION_EQ_FEMPTY",
    METIS_TAC[]);
 
 
+
 val SUBMAP_FUNION_EQ = store_thm ("SUBMAP_FUNION_EQ",
-``(!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f2) ==> (((f1 SUBMAP (FUNION f2 f3)) = (f1 SUBMAP f3)))) /\
-  (!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f3 DIFF (FDOM f2)) ==> (((f1 SUBMAP (FUNION f2 f3)) = (f1 SUBMAP f2))))``,
+``(!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f2) ==>
+              ((f1 SUBMAP (FUNION f2 f3) = f1 SUBMAP f3))) /\
+  (!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f3 DIFF (FDOM f2)) ==>
+              ((f1 SUBMAP (FUNION f2 f3) = f1 SUBMAP f2)))``,
 
   SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION,
    NOT_IN_EMPTY, IN_INTER, IN_DIFF] THEN
@@ -1732,15 +1730,16 @@ val SUBMAP_FUNION_EQ = store_thm ("SUBMAP_FUNION_EQ",
 
 
 val SUBMAP_FUNION = store_thm ("SUBMAP_FUNION",
-``!f1 f2 f3. (f1 SUBMAP f2) \/ ((DISJOINT (FDOM f1) (FDOM f2) /\ (f1 SUBMAP f3))) ==> (f1 SUBMAP (FUNION f2 f3))``,
+``!f1 f2 f3. f1 SUBMAP f2 \/ (DISJOINT (FDOM f1) (FDOM f2) /\ f1 SUBMAP f3) ==>
+             f1 SUBMAP FUNION f2 f3``,
 
 SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION,
    NOT_IN_EMPTY, IN_INTER] THEN
 METIS_TAC[]);
 
 val SUBMAP_FUNION_ID = store_thm ("SUBMAP_FUNION_ID",
-``(!f1 f2. (f1 SUBMAP (FUNION f1 f2))) /\
-(!f1 f2. (DISJOINT (FDOM f1) (FDOM f2)) ==> (f2 SUBMAP (FUNION f1 f2)))``,
+``(!f1 f2. f1 SUBMAP FUNION f1 f2) /\
+  (!f1 f2. DISJOINT (FDOM f1) (FDOM f2) ==> f2 SUBMAP (FUNION f1 f2))``,
 
 METIS_TAC[SUBMAP_REFL, SUBMAP_FUNION, DISJOINT_SYM]);
 
@@ -1753,18 +1752,20 @@ val FEMPTY_SUBMAP = store_thm ("FEMPTY_SUBMAP",
 
 
 val FUNION_EQ = store_thm ("FUNION_EQ",
-``!f1 f2 f3. (DISJOINT (FDOM f1) (FDOM f2) /\
-              DISJOINT (FDOM f1) (FDOM f3)) ==>
-             (((FUNION f1 f2) = (FUNION f1 f3)) = (f2 = f3))``,
+``!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f2) /\ DISJOINT (FDOM f1) (FDOM f3) ==>
+             (((FUNION f1 f2) = (FUNION f1 f3)) <=> (f2 = f3))``,
 
   SIMP_TAC std_ss [GSYM SUBMAP_ANTISYM, SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION,
    NOT_IN_EMPTY, IN_INTER, IN_DIFF] THEN
   METIS_TAC[])
 
 val FUNION_EQ_IMPL = store_thm ("FUNION_EQ_IMPL",
-``!f1 f2 f3. (DISJOINT (FDOM f1) (FDOM f2) /\
-              DISJOINT (FDOM f1) (FDOM f3) /\ (f2 = f3)) ==>
-             ((FUNION f1 f2) = (FUNION f1 f3))``,
+``!f1 f2 f3.
+    DISJOINT (FDOM f1) (FDOM f2) /\
+    DISJOINT (FDOM f1) (FDOM f3) /\
+    (f2 = f3)
+  ==>
+    ((FUNION f1 f2) = (FUNION f1 f3))``,
   SIMP_TAC std_ss []);
 
 
@@ -1781,15 +1782,14 @@ REPEAT STRIP_TAC THENL [
 
 val FUNION_COMM = store_thm ("FUNION_COMM",
 ``!f g. (DISJOINT (FDOM f) (FDOM g)) ==> ((FUNION f g) = (FUNION g f))``,
-   SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER] THEN
+   SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, IN_UNION, DISJOINT_DEF,
+                    EXTENSION, NOT_IN_EMPTY, IN_INTER] THEN
    METIS_TAC[]);
-
 
 val FUNION_ASSOC = store_thm ("FUNION_ASSOC",
 ``!f g h. ((FUNION f (FUNION g h)) = (FUNION (FUNION f g) h))``,
    SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, IN_UNION, EXTENSION] THEN
    METIS_TAC[]);
-
 
 val DRESTRICT_FUNION = store_thm ("DRESTRICT_FUNION",
    ``!h s1 s2. FUNION (DRESTRICT h s1) (DRESTRICT h s2) =
@@ -1800,7 +1800,8 @@ val DRESTRICT_FUNION = store_thm ("DRESTRICT_FUNION",
 
 
 val DRESTRICT_EQ_FUNION = store_thm ("DRESTRICT_EQ_FUNION",
-   ``!h h1 h2. (DISJOINT (FDOM h1) (FDOM h2)) /\ (FUNION h1 h2 = h) ==> (h2 = DRESTRICT h (COMPL (FDOM h1)))``,
+   ``!h h1 h2. DISJOINT (FDOM h1) (FDOM h2) /\ (FUNION h1 h2 = h) ==>
+               (h2 = DRESTRICT h (COMPL (FDOM h1)))``,
     SIMP_TAC std_ss [DRESTRICT_DEF, GSYM fmap_EQ_THM, EXTENSION,
       FUNION_DEF, IN_INTER, IN_UNION, IN_COMPL, DISJOINT_DEF,
       NOT_IN_EMPTY] THEN
@@ -1809,7 +1810,7 @@ val DRESTRICT_EQ_FUNION = store_thm ("DRESTRICT_EQ_FUNION",
 
 val IN_FDOM_FOLDR_UNION = store_thm ("IN_FDOM_FOLDR_UNION",
 ``!x hL. x IN FDOM (FOLDR FUNION FEMPTY hL) =
-        ?h. MEM h hL /\ x IN FDOM h``,
+         ?h. MEM h hL /\ x IN FDOM h``,
 
 Induct_on `hL` THENL [
    SIMP_TAC list_ss [FDOM_FEMPTY, NOT_IN_EMPTY],
@@ -1830,8 +1831,71 @@ METIS_TAC[]);
 
 
 val DRESTRICT_IDEMPOT = store_thm ("DRESTRICT_IDEMPOT",
-``!s vs. DRESTRICT (DRESTRICT s vs) vs = (DRESTRICT s vs)``,
+``!s vs. DRESTRICT (DRESTRICT s vs) vs = DRESTRICT s vs``,
 SRW_TAC [][]);
+val _ = export_rewrites ["DRESTRICT_IDEMPOT"]
+
+
+(*---------------------------------------------------------------------------
+     Some helpers for fupdate_NORMALISE_CONV
+ ---------------------------------------------------------------------------*)
+
+val fmap_EQ_UPTO_def = Define `
+fmap_EQ_UPTO f1 f2 vs =
+  (FDOM f1 INTER (COMPL vs) = FDOM f2 INTER (COMPL vs)) /\
+  (!x. x IN FDOM f1 INTER (COMPL vs) ==> (f1 ' x = f2 ' x))`
+
+val fmap_EQ_UPTO___EMPTY = store_thm ("fmap_EQ_UPTO___EMPTY",
+``!f1 f2. (fmap_EQ_UPTO f1 f2 EMPTY) = (f1 = f2)``,
+SIMP_TAC std_ss [fmap_EQ_UPTO_def, COMPL_EMPTY, INTER_UNIV, fmap_EQ_THM])
+val _ = export_rewrites ["fmap_EQ_UPTO___EMPTY"]
+
+val fmap_EQ_UPTO___EQ = store_thm ("fmap_EQ_UPTO___EQ",
+``!vs f. (fmap_EQ_UPTO f f vs)``,SIMP_TAC std_ss [fmap_EQ_UPTO_def])
+val _ = export_rewrites ["fmap_EQ_UPTO___EQ"]
+
+val fmap_EQ_UPTO___FUPDATE_BOTH = store_thm ("fmap_EQ_UPTO___FUPDATE_BOTH",
+``!f1 f2 ks k v.
+    (fmap_EQ_UPTO f1 f2 ks) ==>
+    (fmap_EQ_UPTO (f1 |+ (k,v)) (f2 |+ (k,v)) (ks DELETE k))``,
+SIMP_TAC std_ss [fmap_EQ_UPTO_def, EXTENSION, IN_INTER,
+   FDOM_FUPDATE, IN_COMPL, IN_INSERT, IN_DELETE] THEN
+REPEAT GEN_TAC THEN STRIP_TAC THEN
+CONJ_TAC THEN GEN_TAC THENL [
+   Cases_on `x = k` THEN ASM_REWRITE_TAC[],
+   Cases_on `x = k` THEN ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM]
+]);
+
+
+val fmap_EQ_UPTO___FUPDATE_BOTH___NO_DELETE = store_thm (
+"fmap_EQ_UPTO___FUPDATE_BOTH___NO_DELETE",
+``!f1 f2 ks k v.
+     (fmap_EQ_UPTO f1 f2 ks) ==>
+     (fmap_EQ_UPTO (f1 |+ (k,v)) (f2 |+ (k,v)) ks)``,
+
+SIMP_TAC std_ss [fmap_EQ_UPTO_def, EXTENSION, IN_INTER,
+   FDOM_FUPDATE, IN_COMPL, IN_INSERT] THEN
+REPEAT GEN_TAC THEN STRIP_TAC THEN
+CONJ_TAC THEN GEN_TAC THENL [
+   Cases_on `x = k` THEN ASM_REWRITE_TAC[],
+   Cases_on `x = k` THEN ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM]
+]);
+
+
+val fmap_EQ_UPTO___FUPDATE_SING = store_thm ("fmap_EQ_UPTO___FUPDATE_SING",
+``!f1 f2 ks k v.
+     (fmap_EQ_UPTO f1 f2 ks) ==>
+     (fmap_EQ_UPTO (f1 |+ (k,v)) f2 (k INSERT ks))``,
+
+SIMP_TAC std_ss [fmap_EQ_UPTO_def, EXTENSION, IN_INTER,
+   FDOM_FUPDATE, IN_COMPL, IN_INSERT, IN_DELETE] THEN
+REPEAT GEN_TAC THEN STRIP_TAC THEN
+CONJ_TAC THEN GEN_TAC THENL [
+   Cases_on `x = k` THEN ASM_REWRITE_TAC[],
+   Cases_on `x = k` THEN ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM]
+]);
+
+
 
 (* ----------------------------------------------------------------------
     to close...
@@ -1839,4 +1903,3 @@ SRW_TAC [][]);
 
 val _ = export_theory();
 
-end

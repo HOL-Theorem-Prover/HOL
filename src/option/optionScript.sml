@@ -19,6 +19,7 @@ open HolKernel Parse boolLib metisLib;
  ---------------------------------------------------------------------------*)
 
 local open sumTheory oneTheory in end;
+open BasicProvers
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
@@ -110,6 +111,7 @@ val FORALL_OPTION = Q.store_thm
 val SOME_11 = store_thm("SOME_11",
   Term`!x y :'a. (SOME x = SOME y) = (x=y)`,
   REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]);
+val _ = export_rewrites ["SOME_11"]
 
 val (NOT_NONE_SOME,NOT_SOME_NONE) =
  let val thm = TAC_PROOF(([], Term`!x:'a. ~(NONE = SOME x)`),
@@ -119,6 +121,9 @@ val (NOT_NONE_SOME,NOT_SOME_NONE) =
    (save_thm("NOT_NONE_SOME", thm),
     save_thm("NOT_SOME_NONE", GSYM thm))
   end;
+val _ = export_rewrites ["NOT_NONE_SOME"]
+        (* only need one because simplifier automatically flips the equality
+           for us *)
 
 val option_nchotomy = save_thm("option_nchotomy",
  ONCE_REWRITE_RULE [DISJ_SYM] option_CASES_orig);
@@ -135,6 +140,7 @@ val OPTION_MAP_DEF = Prim_rec.new_recursive_definition
   def =
   Term`(OPTION_MAP (f:'a->'b) (SOME x) = SOME (f x)) /\
        (OPTION_MAP f NONE = NONE)`};
+val _ = export_rewrites ["OPTION_MAP_DEF"]
 
 val IS_SOME_DEF = Prim_rec.new_recursive_definition
   {name="IS_SOME_DEF",
@@ -259,6 +265,20 @@ val option_case_compute = Q.store_thm
     OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws);
 
+val IF_EQUALS_OPTION = store_thm(
+  "IF_EQUALS_OPTION",
+  ``(((if P then SOME x else NONE) = NONE) <=> ~P) /\
+    (((if P then NONE else SOME x) = NONE) <=> P) /\
+    (((if P then SOME x else NONE) = SOME y) <=> P /\ (x = y)) /\
+    (((if P then NONE else SOME x) = SOME y) <=> ~P /\ (x = y))``,
+  SRW_TAC [][]);
+val _ = export_rewrites ["IF_EQUALS_OPTION"]
+
+
+(* ----------------------------------------------------------------------
+    OPTION_MAP theorems
+   ---------------------------------------------------------------------- *)
+
 val OPTION_MAP_EQ_SOME = Q.store_thm(
   "OPTION_MAP_EQ_SOME",
   `!f (x:'a option) y.
@@ -267,6 +287,7 @@ val OPTION_MAP_EQ_SOME = Q.store_thm(
   simpLib.SIMP_TAC boolSimps.bool_ss
     [SOME_11, NOT_NONE_SOME, NOT_SOME_NONE, OPTION_MAP_DEF] THEN
   mesonLib.MESON_TAC []);
+val _ = export_rewrites ["OPTION_MAP_EQ_SOME"]
 
 val OPTION_MAP_EQ_NONE = Q.store_thm(
   "OPTION_MAP_EQ_NONE",
@@ -281,6 +302,12 @@ val OPTION_MAP_EQ_NONE_both_ways = Q.store_thm(
   REWRITE_TAC [OPTION_MAP_EQ_NONE] THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
   REWRITE_TAC [OPTION_MAP_EQ_NONE]);
+val _ = export_rewrites ["OPTION_MAP_EQ_NONE_both_ways"]
+
+val OPTION_MAP_COMPOSE = store_thm(
+  "OPTION_MAP_COMPOSE",
+  ``OPTION_MAP f (OPTION_MAP g (x:'a option)) = OPTION_MAP (f o g) x``,
+  OPTION_CASES_TAC ``x:'a option`` THEN SRW_TAC [][]);
 
 val OPTION_MAP_CONG = store_thm(
   "OPTION_MAP_CONG",
@@ -293,7 +320,7 @@ val OPTION_MAP_CONG = store_thm(
   FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [SOME_11])
 val _ = DefnBase.export_cong "OPTION_MAP_CONG"
 
-
+(* and one about OPTION_JOIN *)
 
 val OPTION_JOIN_EQ_SOME = Q.store_thm(
   "OPTION_JOIN_EQ_SOME",
@@ -306,6 +333,21 @@ val OPTION_JOIN_EQ_SOME = Q.store_thm(
   ] THEN ASM_REWRITE_TAC option_rws THEN
   OPTION_CASES_TAC (--`z:'a option`--) THEN
   ASM_REWRITE_TAC option_rws);
+
+(* ----------------------------------------------------------------------
+    OPTION_BIND - monadic bind operation for options
+   ---------------------------------------------------------------------- *)
+
+val OPTION_BIND_def = Prim_rec.new_recursive_definition
+  {name="OPTION_BIND_def",
+   rec_axiom=option_Axiom,
+   def = Term`(OPTION_BIND NONE f = NONE) /\
+              (OPTION_BIND (SOME x) f = f x)`}
+val _= export_rewrites ["OPTION_BIND_def"]
+
+(* ----------------------------------------------------------------------
+    OPTREL - lift a relation on 'a, 'b to 'a option, 'b option
+   ---------------------------------------------------------------------- *)
 
 val OPTREL_def = new_definition("OPTREL_def",
   ``OPTREL R x y = (x = NONE) /\ (y = NONE) \/
@@ -380,9 +422,9 @@ val _ = TypeBase.write
 
 
 val _ = BasicProvers.export_rewrites
-          ["OPTION_MAP_EQ_SOME", "OPTION_MAP_EQ_NONE_both_ways", "THE_DEF",
+          ["THE_DEF",
            "IS_SOME_DEF", "IS_NONE_EQ_NONE", "NOT_IS_SOME_EQ_NONE",
            "option_case_ID", "option_case_SOME_ID", "option_case_def",
-           "OPTION_MAP_DEF", "OPTION_JOIN_DEF", "SOME_11", "NOT_SOME_NONE"];
+           "OPTION_JOIN_DEF"];
 
 val _ = export_theory();

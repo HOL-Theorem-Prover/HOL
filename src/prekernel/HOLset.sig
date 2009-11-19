@@ -1,1 +1,5 @@
-signature HOLset = sig include Redblackset end
+signature HOLset =
+sig
+  include Redblackset
+  val pp_holset : HOLPP.ppstream -> 'a set -> unit
+end

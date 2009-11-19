@@ -264,9 +264,10 @@ val field_pretty_print = ref true;
 
 val field_pretty_print_max_size = ref 1000;
 
-fun field_print Gs (sys,str,brk) gravs d pp =
+fun field_print Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp =
     let
       open Portable term_pp_types
+      val (str,brk) = (#add_string ppfns, #add_break ppfns);
 
       fun field_num tm =
           let

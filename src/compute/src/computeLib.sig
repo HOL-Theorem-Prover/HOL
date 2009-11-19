@@ -43,5 +43,6 @@ sig
 
   val add_persistent_funs : (string * thm) list -> unit
   val del_persistent_consts : term list -> unit
+  val pp_compset : PP.ppstream -> compset -> unit
 
 end

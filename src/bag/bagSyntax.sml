@@ -21,6 +21,9 @@ val BAG_IMAGE_tm = mk_const("BAG_IMAGE",
    (Type.alpha --> Type.beta) --> (Type.alpha --> num_ty) --> 
       (Type.beta --> num_ty));
 val BAG_ALL_DISTINCT_tm = mk_const("BAG_ALL_DISTINCT", bag_ty --> bool);
+val BAG_EVERY_tm = mk_const("BAG_EVERY", 
+   (Type.alpha --> bool) --> bag_ty --> bool)
+
 
 fun base_type tm = let
   val ty = type_of tm
@@ -52,10 +55,14 @@ in
   (hd args, hd (tl args))
 end
 
+
 val dest_union = dest_binop "BAG_UNION" "dest_union"
 val is_union = can dest_union
 val dest_diff = dest_binop "BAG_DIFF" "dest_diff"
 val is_diff = can dest_diff
+fun mk_every (tm1, tm2) = list_mk_icomb(BAG_EVERY_tm, [tm1, tm2])
+val dest_every = dest_binop "BAG_EVERY" "dest_every"
+val is_every = can dest_every
 
 fun list_mk_union0 bu_t acc tmlist =
   case tmlist of

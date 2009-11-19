@@ -321,7 +321,7 @@ val BITS_ZERO3 = save_thm("BITS_ZERO3",
    SPECL [`h`,`0`]) BITS_THM2);
 
 val BITS_ZERO4 = store_thm("BITS_ZERO4",
-  `!h l n. l <= h ==> (BITS h l (a * 2 ** l) = BITS (h - l) 0 a)`,
+  `!h l a. l <= h ==> (BITS h l (a * 2 ** l) = BITS (h - l) 0 a)`,
   RW_TAC arith_ss [BITS_THM,MULT_DIV,ZERO_LT_TWOEXP,SUB]);
 
 val BITS_ZEROL = store_thm("BITS_ZEROL",
@@ -504,7 +504,7 @@ val BITS_SLICE_THM = store_thm("BITS_SLICE_THM",
   RW_TAC bool_ss [SLICELT_THM,BITS_LT_HIGH,ZERO_LT_TWOEXP,SLICE_THM,MULT_DIV]);
 
 val BITS_SLICE_THM2 = store_thm("BITS_SLICE_THM2",
-  `!h l n. h <= h2 ==> (BITS h2 l (SLICE h l n) = BITS h l n)`,
+  `!h h2 l n. h <= h2 ==> (BITS h2 l (SLICE h l n) = BITS h l n)`,
   REPEAT STRIP_TAC \\ LEFT_REWRITE_TAC [BITS_THM]
     \\ SIMP_TAC bool_ss [SLICE_THM,ZERO_LT_TWOEXP,MULT_DIV]
     \\ `SUC h - l <= SUC h2 - l` by DECIDE_TAC
@@ -538,7 +538,7 @@ val SLICE_ZERO = store_thm("SLICE_ZERO",
   RW_TAC arith_ss [SLICE_THM,BITS_ZERO]);
 
 val SLICE_ZERO2 = save_thm("SLICE_ZERO2",
-  SIMP_CONV std_ss [SLICE_THM, BITS_ZERO2] ``SLICE h l 0``);
+  GEN_ALL (SIMP_CONV std_ss [SLICE_THM, BITS_ZERO2] ``SLICE h l 0``));
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1198,7 +1198,7 @@ val BIT_LOG2 = store_thm("BIT_LOG2",
     \\ SRW_TAC [] [LOG2_def, DIV_MULT_1]);
 
 val LEAST_THM = store_thm("LEAST_THM",
-  `!n. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)`,
+  `!n P. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)`,
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC whileTheory.FULL_LEAST_INTRO
     \\ Cases_on `$LEAST P = n` >> ASM_REWRITE_TAC []

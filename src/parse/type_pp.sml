@@ -234,7 +234,7 @@ fun pp_type0 (G:grammar) backend = let
     end
 
     fun add_ann_string'(p as (s,ann)) =
-              if !pp_annotations then add_ann_string p else add_string s
+              (*if !pp_annotations then*) add_ann_string p (*else add_string s*)
 
     fun print_skr grav annot (s,k,r) =
         if (k <> Kind.typ orelse r <> 0) andalso show_kinds() = 1
@@ -281,7 +281,8 @@ fun pp_type0 (G:grammar) backend = let
             val fullname = Thy ^ "$" ^ Tyop
             val kd_annot = if Kind = Kind.typ then ""
                            else ": " ^ Kind.kind_to_string Kind
-            val annot = TyOp (fullname ^ kd_annot)
+            val annot_str = fullname ^ kd_annot
+            val annot = TyOp (fn () => annot_str)
         in print_skr grav annot (fullname,Kind,Rank)
         end
 
@@ -319,8 +320,7 @@ fun pp_type0 (G:grammar) backend = let
         if Lib.can check_dest_type ty then
         let
           val (Tyop, Args) = type_grammar.abb_dest_type G ty
-          val tooltip =
-              if !pp_annotations then
+          fun tooltip () =
                 case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
                   NONE => let
                     val {Thy,Tyop,...} = dest_thy_type ty
@@ -345,7 +345,6 @@ fun pp_type0 (G:grammar) backend = let
                       end
                     else structure_to_string st
                   end
-              else ""
           fun print_ghastly () = let
             val {Thy,Tyop,...} = dest_thy_type ty
           in
@@ -363,7 +362,7 @@ fun pp_type0 (G:grammar) backend = let
             in
               case lookup_tyop Tyop of
                 NONE => print_ghastly ()
-              | _ => add_ann_string' (Tyop, TyOp tooltip)
+              | _ => add_ann_string (Tyop, TyOp tooltip)
 
             end
           | [arg1, arg2] => (let
@@ -383,7 +382,7 @@ fun pp_type0 (G:grammar) backend = let
                      here makes no difference. *)
                   print_args Top Args;
                   add_break(1,0);
-                  add_ann_string' (Tyop, TyOp tooltip);
+                  add_ann_string (Tyop, TyOp tooltip);
                   end_block();
                   pend addparens
                 end
@@ -401,7 +400,7 @@ fun pp_type0 (G:grammar) backend = let
                   begin_block INCONSISTENT 0;
                   pr_ty binderp pps arg1 (Lfx (prec, printthis)) (depth - 1);
                   add_break(1,0);
-                  add_ann_string' (printthis, TySyn tooltip);
+                  add_ann_string (printthis, TySyn tooltip);
                   add_break(1,0);
                   pr_ty binderp pps arg2 (Rfx (prec, printthis)) (depth -1);
                   end_block();
@@ -419,7 +418,7 @@ fun pp_type0 (G:grammar) backend = let
               begin_block INCONSISTENT 0;
               print_args (Sfx prec) Args;
               add_break(1,0);
-              add_ann_string' (Tyop, TyOp tooltip);
+              add_ann_string (Tyop, TyOp tooltip);
               end_block();
               pend addparens
             end handle Option => print_ghastly()
@@ -436,7 +435,7 @@ fun pp_type0 (G:grammar) backend = let
             in
               case lookup_tyop Tyop of
                 NONE =>  print_const grav ty
-              | _ => add_ann_string' (Tyop, TyOp (Thy ^ "$" ^ Tyop))
+              | _ => add_ann_string' (Tyop, TyOp (fn () => Thy ^ "$" ^ Tyop))
             end
           | TyV_App _ => let
               val (base, args) = strip_app_type ty
