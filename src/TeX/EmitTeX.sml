@@ -308,6 +308,8 @@ in
      add_newline = PP.add_newline,
      begin_block = PP.begin_block,
      end_block = PP.end_block,
+     begin_style = fn pps => fn sty => () ,
+     end_style = fn pps => () ,
      name = "emit_latex"}
 end;
 

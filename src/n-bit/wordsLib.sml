@@ -1242,8 +1242,9 @@ val Induct_word =
 
 (* ------------------------------------------------------------------------- *)
 
-fun print_word f Gs (sys,string,brk) gravs d pps t = let
+fun print_word f Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = let
    open Portable term_pp_types
+   val (string,brk) = (#add_string ppfns, #add_break ppfns);
    val (n,x) = dest_n2w t
    val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
    val v = numSyntax.dest_numeral n
@@ -1301,8 +1302,9 @@ fun remove_word_printer () =
 (* A pretty-printer that shows the types for ><, w2w and @@                  *)
 (* ------------------------------------------------------------------------- *)
 
-fun print_word_cast Gs (sys,str,brk) (pg,lg,rg) d pps t = let
+fun print_word_cast Gs sys (ppfns:term_pp_types.ppstream_funs) (pg,lg,rg) d pps t = let
    open Portable term_pp_types
+   val (str,brk) = (#add_string ppfns, #add_break ppfns);
    fun stype tm = String.extract(type_to_string (type_of tm),1,NONE)
    fun delim i act = case pg of
                         Prec(j,_) => if i <= j then act() else ()

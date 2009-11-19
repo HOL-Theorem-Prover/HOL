@@ -184,8 +184,9 @@ val dest_par = dest_binop monad_par
 val dest_bind = dest_binop monad_bind
 
 
-fun print_monads (tyg, tmg) (sysprinter,strn,brk) (p,l,r) dpth pps t = let
+fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,r) dpth pps t = let
   open term_pp_types term_grammar
+  val (strn,brk) = (#add_string ppfns, #add_break ppfns);
   fun pbegin b = if b then strn "(" else ()
   fun pend b = if b then strn ")" else ()
   val (arg1, arg2) = valOf (dest_bind tmg t)

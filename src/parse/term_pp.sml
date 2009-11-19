@@ -588,7 +588,7 @@ fun pp_term (G : grammar) TyG backend = let
             fun test (pat,_,_) = can (match_term pat) tm
             fun printwith f =
                 (f (TyG, G)
-                   (sysprint,#add_string ppfns,#add_break ppfns)
+                   sysprint ppfns
                    (pgrav, lgrav, rgrav)
                    depth pps tm;
                  raise SimpleExit)
@@ -1818,13 +1818,15 @@ in
   fn pps => fn t =>
     let
       val baseppfns = with_ppstream backend pps
-      val {add_string,add_break,begin_block,end_block,add_ann_string,...} =
+      val {add_string,add_break,begin_block,end_block,add_ann_string,add_newline,begin_style,end_style,...} =
           baseppfns
       val (add_string, add_break, add_ann_string) =
           avoid_merge (add_string, add_break, add_ann_string)
       val ppfns = {add_string = add_string, add_break = add_break,
+                   add_newline = add_newline,
                    begin_block = begin_block, end_block = end_block,
-                   add_ann_string = add_ann_string}
+                   add_ann_string = add_ann_string,
+                   begin_style = begin_style, end_style = end_style}
     in
        begin_block CONSISTENT 0;
        pr_term false
