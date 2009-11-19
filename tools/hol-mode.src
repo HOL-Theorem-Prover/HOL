@@ -1226,6 +1226,76 @@ already loaded.)"
                       " \"" main-term "\"")))
    (send-raw-string-to-hol command-s nil nil)))
 
+
+(defun holpp-decode-color (code)
+  (cond ((equal code "0") "#000000")
+        ((equal code "1") "#840000")
+        ((equal code "2") "#008400")
+        ((equal code "3") "#848400")
+        ((equal code "4") "#000084")
+        ((equal code "5") "#840084")
+        ((equal code "6") "#008484")
+        ((equal code "7") "#848484")
+        ((equal code "8") "#C6C6C6")
+        ((equal code "9") "#FF0000")
+        ((equal code "A") "#00C600")
+        ((equal code "B") "#FFFF00")
+        ((equal code "C") "#0000FF")
+        ((equal code "D") "#FF00FF")
+        ((equal code "E") "#00FFFF")
+        ((equal code "F") "#FFFFFF")
+))
+
+(defun holpp-decode-full-style (style)
+   (let* (
+       (fg (substring style 0 1))
+       (bg (substring style 1 2))
+       (b (substring style 2 3))
+       (u (substring style 3 4))
+       (fg-face (if (equal fg "-") nil
+                    (cons :foreground (cons (holpp-decode-color fg) ()))))
+       (bg-face (if (equal bg "-") nil
+                    (cons :background (cons (holpp-decode-color bg) ()))))
+       (b-face  (if (equal b "-") nil
+                    (cons :weight (cons 'bold ()))))
+       (u-face  (if (equal u "-") nil
+                    (cons :underline (cons t ())))))
+       (cons 'face (cons (append fg-face bg-face b-face u-face) ()))))
+
+
+(defun holpp-find-comment-end (n)
+   (if (not (re-search-forward "\\((\\*(\\*(\\*\\)\\|\\(\\*)\\*)\\*)\\)" nil t 1))
+       nil
+       (if (save-excursion (goto-char (- (point) 6))
+                           (looking-at "(\\*(\\*(\\*"))
+           (progn 
+              (holpp-find-comment-end (+ n 1)))
+           (if (= n 1) t (holpp-find-comment-end (- n 1))))))
+
+(defun holpp-execute-code-face-tooltip (start end toolprop codeface)
+  (let ((tooltipprop
+           (if (equal toolprop nil) nil
+                (list 'help-echo toolprop))))
+       (add-text-properties start end (append codeface tooltipprop))))
+
+
+(defun holpp-execute-code (code arg1 start end)
+  (cond ((equal code "FV") 
+             (holpp-execute-code-face-tooltip start end arg1 
+             '(face hol-free-variable)))
+        ((equal code "BV") 
+             (holpp-execute-code-face-tooltip start end arg1 
+             '(face hol-bound-variable)))
+        ((equal code "TV") 
+             (holpp-execute-code-face-tooltip start end arg1 
+             '(face hol-type-variable)))
+        ((equal code "TY") 
+             (holpp-execute-code-face-tooltip start end arg1
+             '(face hol-type)))
+        ((equal code "ST")
+           (add-text-properties start end 
+             (holpp-decode-full-style arg1)))))
+
 (setq temp-hol-output-buf nil)
 
 (defun holpp-output-filter (s)
@@ -1245,7 +1315,7 @@ already loaded.)"
             (while (and (not end) (search-forward "(*(*(*" nil t))
               (let ((uptoann (- (point) 6))
                     (start (point)))
-                (if (not (search-forward "*)*)*)" nil t))
+                (if (not (holpp-find-comment-end 1))
                     (progn
                       (goto-char uptoann)
                       (setq end t))
@@ -1253,13 +1323,7 @@ already loaded.)"
                   (let*
                       ((start (- start 6))
                        (code (buffer-substring start (+ start 2)))
-                       (codefacelist
-                        (cond ((equal code "FV") '(face hol-free-variable))
-                              ((equal code "BV") '(face hol-bound-variable))
-                              ((equal code "TV") '(face hol-type-variable))
-                              ((equal code "TY") '(face hol-type))
-                              nil))
-                       (tooltipprop
+                       (argument
                         (save-excursion
                           (goto-char (+ start 2))
                           (if (equal (following-char) 0)
@@ -1268,16 +1332,16 @@ already loaded.)"
                                 (skip-chars-forward "^\^@")
                                 (prog1
                                     (if (equal (+ start 3) (point)) nil
-                                    (list 'help-echo
                                           (buffer-substring (+ start 3)
-                                                            (point))))
+                                                            (point)))
                                   (delete-region (+ start 2) (1+ (point)))))
                             nil))))
-                       (add-text-properties
+                       (holpp-execute-code code argument
                         (+ start 2)
-                        (- (point) 6) (append codefacelist tooltipprop))
+                        (- (point) 6))
                     (delete-region start (+ start 2))
-                    (delete-region (- (point) 6) (point))))))
+                       (delete-region (- (point) 6) (point))
+                       (goto-char start)))))
             (if (not end)
                 (progn
                   (goto-char (point-max))
@@ -1500,10 +1564,21 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-printing quiet]
    '("Quiet (hide output except errors)" . hol-toggle-quietdec))
 
-(define-key global-map [menu-bar hol-menu hol-printing pptooltip]
+(define-key
+  global-map
+  [menu-bar hol-menu hol-printing backends]
+  (cons "Pretty-printing backends" (make-sparse-keymap "Pretty-printing backends")))
+
+(define-key global-map [menu-bar hol-menu hol-printing backends ppstyles]
+  '("Toggle use styles" . hol-toggle-pp-styles))
+
+(define-key global-map [menu-bar hol-menu hol-printing backends ppannotations]
+  '("Toggle use annotations" . hol-toggle-pp-annotations))
+
+(define-key global-map [menu-bar hol-menu hol-printing backends pptooltip]
   '("Toggle show tooltips" . hol-toggle-emacs-tooltips))
 
-(define-key global-map [menu-bar hol-menu hol-printing ppbackend]
+(define-key global-map [menu-bar hol-menu hol-printing backends ppbackend]
   '("Toggle pretty-printing backend" . hol-toggle-ppbackend))
 
 (define-key global-map [menu-bar hol-menu hol-printing unicode]
