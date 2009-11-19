@@ -52,7 +52,7 @@ and the type {sysprinter} is another abbreviation
 Thus, when the user's printing function is called, it is passed ten
 parameters, including three "gravity" values in a triple, and two
 grammars.  The second parameter is the system's own printer. The third
-one a record of fucntions to call for adding a string to the output,
+one a record of functions to call for adding a string to the output,
 adding a break, adding new lines, defining some styles for printing
 like the color, etc.  The availability of the system's printer allows
 the user function to use the default printer on sub-terms that it is
@@ -222,7 +222,7 @@ better approach (and certainly a more direct one) would probably be to
 call {strip_conj} and print all of the conjuncts in one fell swoop.
 Additionally, this example demonstrates how easy it is to conceal genuine
 syntactic structure with a pretty-printer. Finally, it shows how
-how styles can be used.
+styles can be used.
 
 
 \USES
