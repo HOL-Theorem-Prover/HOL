@@ -778,8 +778,9 @@ fun eval (n, m, r, s) =
 
 (* ------------------------------------------------------------------------- *)
 
-fun myprint Gs (sys,strn,brk) (pg,lg,rg) d pps t = let
+fun myprint Gs sys (ppfns:term_pp_types.ppstream_funs) (pg,lg,rg) d pps t = let
       open Portable term_pp_types
+      val (strn,brk) = (#add_string ppfns, #add_break ppfns);
       val (l,typ) = listSyntax.dest_list t
       val _ = typ = ``:word32`` andalso not (null l) orelse raise UserPP_Failed
       fun delim act = case pg of
