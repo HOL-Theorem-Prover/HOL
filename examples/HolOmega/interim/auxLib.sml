@@ -76,6 +76,58 @@ val UNDISCH_ALL_TERMS = strip_left UNDISCH_TERM ;
   DISCH a list of terms *)
 val DISCH_TERMS = list_mk_left_cur Thm.DISCH ; 
 
+(* set of functions to take a nested implication and repeatedly remove the
+  antecedents by MATCH_MP against the first matching theorem *)
+
+(* first : ('a -> 'b) -> 'a list -> 'b *) 
+fun first f (x :: xs) = (f x handle _ => first f xs) 
+  | first f [] = raise Empty ;
+
+(* fmmp : thm list -> thm -> thm *) 
+fun fmmp ths imp = first (Drule.MATCH_MP imp) ths 
+  handle Empty => raise HOL_ERR 
+    {message = "MATCH_MP fails in all cases", 
+      origin_function = "fmmp", origin_structure = "g_adjointScript"} ;
+
+(* repeat : ('a -> 'a) -> 'a -> 'a *) 
+fun repeat f x = repeat f (f x) handle _ => x ;
+
+(* thm_from_ass : thm -> thm list -> thm 
+  imp_thm is a (nested) implication theorem 
+  (antecedent(s) may be conjuncts, which are converted to nested implications),
+  try to remove antecedents (from the front only) by resolving with thms *)
+fun thm_from_ass imp_thm thms = repeat (fmmp thms)
+  (Rewrite.REWRITE_RULE [Conv.GSYM boolTheory.AND_IMP_INTRO] imp_thm) ;
+
+(* USE_LIM_RES_TAC : thm_tactic -> thm -> tactic 
+  resolve implication theorem against assumptions (as in thm_from_ass)
+  and use ttac applied to result *)
+fun USE_LIM_RES_TAC ttac imp_thm = 
+  Tactical.ASSUM_LIST (ttac o thm_from_ass imp_thm) ;
+
+(* select a particular assumption to rewrite with,
+  based on the head of the lhs *)
+
+(* lhs_head_var : term -> string
+  get name of var which is head of lhs of quantified equality *)
+fun lhs_head_var tm = 
+  let open boolSyntax
+    val (atys, tm') = strip_tyforall tm ;
+    val (bvs, stm) = strip_forall tm' ;
+    val (lhs, rhs) = dest_eq stm ;
+    val (lhs', args) = strip_comb lhs ;
+    val (head, tyargs) = strip_tycomb lhs' ;
+    val (name, ty) = dest_var head ;
+  in name end ;
+
+(* test_lhs_head_var : string -> thm -> thm
+  error if assn not a quantified equality, with head of lhs Var (name, ...) *)
+fun test_lhs_head_var name assn = 
+  if lhs_head_var (concl assn) = name then assn
+  else raise HOL_ERR {message = "wrong head variable", 
+    origin_function = "test_lhs_head_var",
+    origin_structure = "auxLib"} ; 
+  
 end ; (* local open HolKernel *)
 end ; (* structure auxLib *)
 

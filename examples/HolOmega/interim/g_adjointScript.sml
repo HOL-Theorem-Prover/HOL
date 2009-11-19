@@ -24,25 +24,6 @@ val _ = set_trace "kinds" 0;
 
 val _ = new_theory "g_adjoint";
 
-(* set of functions to take a nested implication and repeatedly remove the
-  antecedents by MATCH_MP against the first matching theorem *)
-
-(* first : ('a -> 'b) -> 'a list -> 'b *) 
-fun first f (x :: xs) = (f x handle _ => first f xs) 
-  | first f [] = raise Empty ;
-
-(* fmmp : thm list -> thm -> thm *) 
-fun fmmp ths imp = first (MATCH_MP imp) ths 
-  handle Empty => raise HOL_ERR 
-    {message = "MATCH_MP fails in all cases", 
-      origin_function = "fmmp", origin_structure = "g_adjointScript"} ;
-
-(* repeat : ('a -> 'a) -> 'a -> 'a *) 
-fun repeat f x = repeat f (f x) handle _ => x ;
-
-fun thm_from_ass thm ths = 
-  (repeat (fmmp ths) (REWRITE_RULE [GSYM AND_IMP_INTRO] thm)) ;
-
 fun uta ttac tfa = (ASSUM_LIST (ttac o tfa)) ;
 
 (* 
@@ -565,13 +546,13 @@ val g_adjf3_nt = store_thm ("g_adjf3_nt", tm3nt,
       (FIRST_ASSUM (MATCH_MP_TAC o MATCH_MP g_adjf3D2)),
       (ASM_REWRITE_TAC []),
       (FIRST_ASSUM (fn th => CHANGED_TAC (REWRITE_TAC [MATCH_MP catDAss th]))),
-      (uta (fn th => ASM_REWRITE_TAC [th]) (thm_from_ass HASH_eta_I))],
+      (USE_LIM_RES_TAC (fn th => ASM_REWRITE_TAC [th]) (HASH_eta_I))],
     EVERY [
       (FIRST_ASSUM (MATCH_MP_TAC o GSYM o MATCH_MP g_adjf3D1)),
       (ASM_REWRITE_TAC []),
       (FIRST_ASSUM (fn th => CHANGED_TAC 
 	(REWRITE_TAC [MATCH_MP (GSYM catDAss) th]))),
-      (uta (fn th => ASM_REWRITE_TAC [th]) (thm_from_ass STAR_eps_I))]] ) ;
+      (USE_LIM_RES_TAC (fn th => ASM_REWRITE_TAC [th]) ( STAR_eps_I))]] ) ;
      
 (* get link between g_adjf2 and g_adjf3 by duality *)
 
@@ -719,8 +700,8 @@ val tm34 = ``g_adjf3 [:'C,'D:] (idC,compC) (idD,compD) F' G eta eps /\
 
 val g_adjf3_4 = store_thm ("g_adjf3_4", tm34, 
   EVERY [ STRIP_TAC,
-    (uta ASSUME_TAC (thm_from_ass heith)),
-    (uta ASSUME_TAC (thm_from_ass seith)),
+    (USE_LIM_RES_TAC ASSUME_TAC ( heith)),
+    (USE_LIM_RES_TAC ASSUME_TAC ( seith)),
     (SRW_TAC [] [g_adjf4_thm, HASH_thm, STAR_thm]),
     (IMP_RES_TAC g_functor_thm),
     (IMP_RES_TAC catDLU), (IMP_RES_TAC catDRU) ] 
@@ -753,7 +734,7 @@ val g_adjf34_equiv = store_thm ("g_adjf34_equiv", tm34e,
   EVERY [ STRIP_TAC, EQ_TAC, STRIP_TAC ] 
     THENL [
       EVERY [
-	(uta ASSUME_TAC (thm_from_ass g_adjf3_4)),
+	(USE_LIM_RES_TAC ASSUME_TAC ( g_adjf3_4)),
 	(ASM_REWRITE_TAC []), (IMP_RES_TAC g_functorD),
 	(IMP_RES_TAC catDLU), (IMP_RES_TAC catDRU),
 	(REPEAT CONJ_TAC) ]
@@ -763,18 +744,18 @@ val g_adjf34_equiv = store_thm ("g_adjf34_equiv", tm34e,
 	EVERY [ (SRW_TAC [] [HASH_thm]),
 	  (FIRST_ASSUM (fn th =>
 	    CHANGED_TAC (REWRITE_TAC [MATCH_MP catDAss th]))),
-	  (uta (fn th => ASM_REWRITE_TAC [th]) (thm_from_ass HASH_eta_I)),
+	  (USE_LIM_RES_TAC (fn th => ASM_REWRITE_TAC [th]) ( HASH_eta_I)),
 	  (CONV_TAC (DEPTH_CONV ETA_CONV)),
 	  (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC],
 	
 	EVERY [ (SRW_TAC [] [STAR_thm]),
 	  (FIRST_ASSUM (fn th =>
 	    CHANGED_TAC (REWRITE_TAC [MATCH_MP (GSYM catDAss) th]))),
-	  (uta (fn th => ASM_REWRITE_TAC [th]) (thm_from_ass STAR_eps_I)),
+	  (USE_LIM_RES_TAC (fn th => ASM_REWRITE_TAC [th]) ( STAR_eps_I)),
 	  (CONV_TAC (DEPTH_CONV ETA_CONV)),
 	  (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC] ],
 
-      (uta (fn th => REWRITE_TAC [th]) (thm_from_ass g_adjf4_3)) ]) ;
+      (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th]) ( g_adjf4_3)) ]) ;
 	
 (* observe that from g_adjf4 we prove that eta and eps are nts,
   but we don't use this to get back to g_adjf4 from g_adjf3 ;
@@ -860,15 +841,15 @@ val g_adjf14_equiv = store_thm ("g_adjf14_equiv", tm14e,
   STRIP_TAC THEN EQ_TAC THEN STRIP_TAC 
   THENL [
     EVERY [
-      (uta (MAP_EVERY ASSUME_TAC o CONJUNCTS) (thm_from_ass g_adjf1_eq3')),
-      (uta (MAP_EVERY ASSUME_TAC o CONJUNCTS) (thm_from_ass g_adjf3_eq4')),
+      (USE_LIM_RES_TAC (MAP_EVERY ASSUME_TAC o CONJUNCTS) ( g_adjf1_eq3')),
+      (USE_LIM_RES_TAC (MAP_EVERY ASSUME_TAC o CONJUNCTS) ( g_adjf3_eq4')),
       (REPEAT CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC)],
     EVERY [
-      (uta (MAP_EVERY ASSUME_TAC o CONJUNCTS) (thm_from_ass g43)),
+      (USE_LIM_RES_TAC (MAP_EVERY ASSUME_TAC o CONJUNCTS) ( g43)),
       (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o GSYM))),
       (FULL_SIMP_TAC simpLib.empty_ss []),
-      (uta (MAP_EVERY ASSUME_TAC o CONJUNCTS) 
-        (thm_from_ass (GSYM g_adjf3_eq1))),
+      (USE_LIM_RES_TAC (MAP_EVERY ASSUME_TAC o CONJUNCTS) 
+        ( (GSYM g_adjf3_eq1))),
       (REPEAT CONJ_TAC THEN (FIRST_ASSUM ACCEPT_TAC ORELSE REFL_TAC))] ]) ;
       
 (*

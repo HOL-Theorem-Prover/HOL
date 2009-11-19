@@ -61,6 +61,25 @@ val [KmonDRU, KmonDLU, KmonDAss] = map DISCH_ALL (CONJUNCTS (UNDISCH KmonadD)) ;
 val _ = map save_thm [("KmonDLU", KmonDLU), ("KmonDRU", KmonDRU),
   ("KmonDAss", KmonDAss)] ;
 
+val _ = type_abbrev ("gunit", Type `: \'A 'M. !'a. ('a, 'a 'M) 'A`);
+val _ = type_abbrev ("gmap",
+   Type `: \'A 'M. !'a 'b. ('a, 'b) 'A -> ('a 'M, 'b 'M) 'A`);
+val _ = type_abbrev ("gjoin", Type `: \'A 'M. !'a. ('a 'M 'M, 'a 'M) 'A`);
+
+val MAPE_def = Define `MAPE ((id, comp) : 'A category) 
+    (unit : ('A, 'M) gunit, ext : ('A, 'M) ext) = 
+  \:'a 'b. \ (f : ('a, 'b) 'A).
+    ext [:'a, 'b:] (comp [:'a, 'b, 'b 'M:] (unit [:'b:]) f)` ;
+
+val JOINE_def = Define `JOINE ((id, comp) : 'A category)
+    (unit : ('A, 'M) gunit, ext : ('A, 'M) ext) =
+  \:'a. ext [:'a 'M, 'a:] (id [:'a 'M:])` ;
+
+val EXT_def = Define 
+  `(EXT ((id, comp) : 'A category) 
+    (map : ('A, 'M) gmap, join: ('A, 'M) gjoin) : ('A, 'M) ext) = 
+    \:'a 'b. \f. comp join (map [:'a, 'b 'M:] f)` ;
+
 (* Kleisli category is a category iff 'M is a monad *)
 
 (* VIEW_GOAL_TAC : ((term list * term) -> tactic) -> tactic *)
@@ -169,7 +188,8 @@ val Kmonad_IMP_uof = store_thm ("Kmonad_IMP_uof",
   ``category [:'A:] (id,comp) /\ Kmonad (id,comp) (unit,ext) ==>
     g_functor [:'A, ('A, 'M) Kleisli :] (id, comp) 
       (unit, Kcomp (id,comp) ext) (\:'a 'b. comp [:'a,'b,'b 'M:] unit)``,
-  EVERY [ (REPEAT (CHANGED_TAC (ONCE_REWRITE_TAC [Kmonad_thm, Kcomp_def, g_functor_thm, category_thm]))),
+  EVERY [ (REPEAT (CHANGED_TAC (ONCE_REWRITE_TAC 
+      [Kmonad_thm, Kcomp_def, g_functor_thm, category_thm]))),
     STRIP_TAC, TY_BETA_TAC, BETA_TAC, (ASM_REWRITE_TAC []) ]) ;
 
 (*
@@ -195,11 +215,21 @@ val Kmonad_IMP_unit_nt = store_thm ("Kmonad_IMP_unit_nt",
   EVERY [ (REWRITE_TAC [Kmonad_thm, Kcomp_def, g_I_def, g_nattransf_thm]),
     STRIP_TAC, TY_BETA_TAC, BETA_TAC, (ASM_REWRITE_TAC [I_THM]) ]) ;
 
-val Kmonad_extomap' = prove (
+val Kmonad_exto_euo' = prove (
   ``category [:'A:] (id, comp) /\ Kmonad [:'A,'M:] (id,comp) (unit,ext) ==> 
     (ext (comp g f) = comp (ext g) (ext (comp unit f)))``,
   EVERY [ (REWRITE_TAC [Kmonad_thm, Kcomp_def, category_thm]),
     STRIP_TAC, (ASM_REWRITE_TAC []) ]) ;
+
+val Kmonad_exto_euo = save_thm ("Kmonad_exto_euo", 
+  (DISCH_ALL o TY_GEN_ALL o GEN_ALL o UNDISCH_ALL) Kmonad_exto_euo') ;
+
+val Kmonad_extomap' = prove (
+  ``category [:'A:] (id, comp) /\ Kmonad [:'A,'M:] (id,comp) (unit,ext) /\
+      (map = MAPE (id, comp) (unit, ext)) ==> 
+    (ext (comp g f) = comp (ext g) (map f))``,
+  SRW_TAC [] [MAPE_def, Kmonad_exto_euo] THEN
+  USE_LIM_RES_TAC MATCH_ACCEPT_TAC Kmonad_exto_euo) ;
 
 val Kmonad_extomap = save_thm ("Kmonad_extomap", 
   (DISCH_ALL o TY_GEN_ALL o GEN_ALL o UNDISCH_ALL) Kmonad_extomap') ;
@@ -229,7 +259,7 @@ val pext_cm = store_thm ("pext_cm", tmpext,
 
 val EQ_IMP_IMP =
   auxLib.sfg (auxLib.ufd CONJUNCT1 o fst o EQ_IMP_RULE) EQ_IMP_THM ;
-val hrk = (hd (RES_CANON Kmonad_extomap)) ;
+val hrk = (hd (RES_CANON Kmonad_exto_euo)) ;
 
 val tmepe = ``category (id, comp) /\ 
   Kmonad [:'A:] (id,comp) (unitM, extM : ('A, 'M) ext) /\ 
@@ -329,7 +359,7 @@ val cm_Kc_J1 = store_thm ("cm_Kc_J1", tm_Kc_J1,
 
 (*---------------------------------------------------------------------------
   Monad predicate, based on unit, map and join term operators,
-  geneeralised to general arrow types and also generalised to be relevant
+  generalised to general arrow types and also generalised to be relevant
   to compound monads 
  ---------------------------------------------------------------------------*)
 
@@ -338,16 +368,6 @@ val _ = type_abbrev ("dmap",
    Type `: \'A 'N 'M. !'a 'b. ('a, 'b 'M) 'A -> ('a 'N 'M, 'b 'N 'M) 'A`);
 val _ = type_abbrev ("djoin",
    Type `: \'A 'N 'M. !'a. ('a 'N 'N 'M, 'a 'N 'M) 'A`);
-
-val _ = type_abbrev ("gunit", Type `: \'A 'M. !'a. ('a, 'a 'M) 'A`);
-val _ = type_abbrev ("gmap",
-   Type `: \'A 'M. !'a 'b. ('a, 'b) 'A -> ('a 'M, 'b 'M) 'A`);
-val _ = type_abbrev ("gjoin", Type `: \'A 'M. !'a. ('a 'M 'M, 'a 'M) 'A`);
-
-val EXT_def = Define 
-  `(EXT ((id, comp) : 'A category) 
-    (map : ('A, 'M) gmap, join: ('A, 'M) gjoin) : ('A, 'M) ext) = 
-    \:'a 'b. \f. comp join (map [:'a, 'b 'M:] f)` ;
 
 val EXTD_def = Define 
   `(EXTD ((id, comp) : 'A category) 
@@ -431,11 +451,10 @@ val Gmonad_djoin = store_thm ("Gmonad_djoin", tmdj,
 val tmm = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
       (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\ 
    (extNM = EXTD (id, comp) (dmap, djoin)) ==> 
-   (mapNM = \:'a 'b. \ (f : ('a, 'b) 'A).
-     extNM [:'a, 'b:] (comp [:'a, 'b, 'b 'N 'M:] (unitNM [:'b:]) f))`` ;
+   (mapNM = MAPE (id, comp) (unitNM, extNM))`` ;
 
 val Gmonad_map = store_thm ("Gmonad_map", tmm,
-  EVERY [ (SRW_TAC [] [EXTD_def]), 
+  EVERY [ (SRW_TAC [] [EXTD_def, MAPE_def]), 
     farwmmp GmD2, farwmmp catDAss, farwmmp GmD6, farwmmp catDLU,
     (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
     (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC ]) ;
@@ -480,8 +499,8 @@ val Gmonad_ext_jm = store_thm ("Gmonad_ext_jm", tmee,
     (SRW_TAC [] [EXTD_def, EXT_def]), 
     farwmmp (GSYM catDAss), farwmmp (GSYM GmD2), farwmmp catDLU ]) ;
 
-fun fix_abs_eq rewr th = 
-  let val th0 = REWRITE_RULE [rewr, TY_FUN_EQ_THM, FUN_EQ_THM] th ; 
+fun fix_abs_eq rewrs th = 
+  let val th0 = REWRITE_RULE ([TY_FUN_EQ_THM, FUN_EQ_THM] @ rewrs) th ; 
     val th1 = CONV_RULE (DEPTH_CONV TY_BETA_CONV) th0 ; 
     val th2 = CONV_RULE (DEPTH_CONV BETA_CONV) th1 ;
   in th2 end ;
@@ -500,7 +519,7 @@ val Gmonad_IMP_Kmonad = store_thm ("Gmonad_IMP_Kmonad", tmgc,
     farwmmp GmD6, 
     EVERY (map farwmmp [GSYM catDAss, GmD2, catDAss, GmD7, GSYM catDAss])
     THEN EVERY [
-     (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o fix_abs_eq EXT_def))),
+     (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o fix_abs_eq [EXT_def]))),
      (ASM_REWRITE_TAC []), farwmmp GmD2,
      (FIRST_ASSUM (fn th => 
        CONV_TAC (DEPTH_CONV (REWR_CONV (MATCH_MP catDAss th))))),
@@ -524,48 +543,97 @@ val Gmonad_dmap = store_thm ("Gmonad_dmap", tmdm,
     (ASM_REWRITE_TAC [EXTD_def]), TY_BETA_TAC, BETA_TAC,
     farwmmp GmD2, farwmmp catDAss,
     farwmmp (GSYM GmD4), farwmmp (GSYM catDAss), 
-    (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o fix_abs_eq EXT_def))),
+    (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o fix_abs_eq [EXT_def]))),
     (ASM_REWRITE_TAC []), farwmmp catDRU,
     (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
     (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC ]) ;
 
-(*
-show_types := true ;
-show_types := false ;
-handle e => Raise e ;
-set_goal ([], it) ;
-val (sgs, goal) = top_goal () ;
-*)
+(* inverse - compound monad gives Gmonad conditions *)
 
-(* compound monad (G axioms) in progress
+(* presumably there's a left-to-right element in parsing,
+  deleting the first instance of Gmonad ... makes parsing fail,
+  and I couldn't work out which annotations were needed to fix it *)
 
+val tmginvx8 = ``
+  Gmonad (id,comp) (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM ==>
+  category (id,comp) /\ Kmonad (id,comp) (unitNM,extNM) /\
+  (djoin = \:'a. extNM [:'a 'N, 'a:] (unitM [:'a 'N:])) /\ 
+  (dmap = \:'a 'b. \ f. extNM [:'a, 'b:] (comp (dunit [:'b:]) f)) /\
+  (!:'a. comp (djoin [:'a:]) (dunit [:'a 'N:]) = id [:'a 'N 'M:]) ==>
+  (extNM = EXTD (id, comp) (dmap, djoin)) `` ;
 
-(*---------------------------------------------------------------------------
-            Monad map and join operations,
-            defined in terms of unit and bind;
-            map is a functor, and join and unit are natural transformations.
- ---------------------------------------------------------------------------*)
+val (_, tmginv8) = dest_imp tmginvx8 ;
 
-val MMAP_def = Define
-   `MMAP (unit: 'M unit, bind: 'M bind) = \:'a 'b. \(f:'a -> 'b) (m : 'a 'M).
-                      bind m (\a. unit (f a))`;
+val Kmonad_extD = store_thm ("Kmonad_extD", tmginv8,
+  EVERY [ STRIP_TAC,
+    (ASM_REWRITE_TAC [FUN_EQ_THM, TY_FUN_EQ_THM, EXTD_def]),
+    TY_BETA_TAC, BETA_TAC, (REPEAT STRIP_TAC),
+    (farwmmp KmonDAss), (farwmmp catDAss),
+    (FIRST_X_ASSUM (fn th => 
+      POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o TY_BETA_RULE o 
+	REWRITE_RULE [test_lhs_head_var "djoin" th])))),
+    (ASM_REWRITE_TAC []), (farwmmp catDLU)]) ;
 
-val JOIN_def = Define
-   `JOIN (unit: 'M unit, bind: 'M bind) = \:'a. \(z : 'a 'M 'M).
-                      bind z I`;
+val tmginvx = ``
+  Gmonad (id,comp) (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM ==>
+  category (id,comp) /\ Kmonad (id,comp) (unitNM,extNM) /\
+  (djoin = \:'a. extNM [:'a 'N, 'a:] (unitM [:'a 'N:])) /\ 
+  (dmap = \:'a 'b. \ f. extNM [:'a, 'b:] (comp (dunit [:'b:]) f)) /\
+  (unitNM = \:'a. comp (dunit [:'a:]) (unitM [:'a:])) /\
+  (!:'a. comp (djoin [:'a:]) (dunit [:'a 'N:]) = id [:'a 'N 'M:]) /\
+  (mapNM = MAPE (id, comp) (unitNM, extNM)) /\
+  (joinNM = JOINE (id, comp) (unitNM, extNM)) ==>
+  Gmonad (id,comp) (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM`` ;
 
+val (_, tmginv) = dest_imp tmginvx ;
 
-(*---------------------------------------------------------------------------
-            Monad bind operation,
-            defined in terms of map and join
- ---------------------------------------------------------------------------*)
+val Kmonad_IMP_Gmonad = store_thm ("Kmonad_IMP_Gmonad", tmginv,
+  EVERY [ STRIP_TAC,
+    (USE_LIM_RES_TAC (fn th => 
+      REWRITE_TAC [Gmonad_thm, GSYM (fix_abs_eq [EXTD_def] th)]) Kmonad_extD),
+    (REPEAT CONJ_TAC THEN REPEAT STRIP_TAC) ]
+  THENL [
+    EVERY [ (FIRST_ASSUM (fn th => MP_TAC (MATCH_MP KmonDLU th))), 
+      (ASM_REWRITE_TAC []), TY_BETA_TAC, BETA_TAC,
+      STRIP_TAC, (ASM_REWRITE_TAC [])],
+    EVERY [ (FIRST_ASSUM (fn th => REWRITE_TAC [test_lhs_head_var "dmap" th])), 
+      TY_BETA_TAC, BETA_TAC, (farwmmp catDAss),
+      (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Kmonad_extomap)],
+    EVERY [ (FIRST_ASSUM (fn th => MP_TAC (MATCH_MP KmonDRU th))), 
+      (ASM_REWRITE_TAC []), TY_BETA_TAC, BETA_TAC,
+      STRIP_TAC, (ASM_REWRITE_TAC [])],
+    EVERY [ (ASM_REWRITE_TAC [JOINE_def]),
+      TY_BETA_TAC, BETA_TAC, (farwmmp KmonDAss), (farwmmp catDRU)],
+    (FIRST_ASSUM MATCH_ACCEPT_TAC),
+    (farwmmp KmonDLU),
+    EVERY [ (ASM_REWRITE_TAC [JOINE_def]),
+      TY_BETA_TAC, (farwmmp KmonDAss), (farwmmp catDRU)]]) ;
 
-val BIND_def = Define
-   `BIND (map: 'M map, join: 'M join) = \:'a 'b. \(m : 'a 'M) (k:'a -> 'b 'M).
-                      join (map k m)`;
+val tmgiffk = ``category (id,comp) ==> 
+  (Gmonad (id,comp) (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\
+    (extNM = EXTD (id,comp) (dmap,djoin)) = 
+  Kmonad (id,comp) (unitNM,extNM) /\ 
+    (djoin = \:'a. extNM [:'a 'N, 'a:] (unitM [:'a 'N:])) /\
+    (dmap = \:'a 'b. \ f. extNM [:'a, 'b:] (comp (dunit [:'b:]) f)) /\
+    (unitNM = \:'a. comp (dunit [:'a:]) (unitM [:'a:])) /\
+    (!:'a. comp (djoin [:'a:]) (dunit [:'a 'N:]) = id [:'a 'N 'M:]) /\
+    (mapNM = MAPE (id, comp) (unitNM, extNM)) /\
+    (joinNM = JOINE (id, comp) (unitNM, extNM)))`` ;
 
-
-*)
+val Gmonad_iff_Kmonad = store_thm ("Gmonad_iff_Kmonad", tmgiffk,
+  EVERY [ STRIP_TAC,
+    EQ_TAC, STRIP_TAC, (REPEAT CONJ_TAC) ] 
+  THENL [ (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_IMP_Kmonad),
+    (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_djoin),
+    (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_dmap),
+    (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_unit),
+    (USE_LIM_RES_TAC ACCEPT_TAC GmD5), (* MATCH_ACCEPT_TAC fails !! *)
+    (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_map),
+    (REWRITE_TAC [JOINE_def]) THEN 
+      (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_join),
+    (* inverse direction *)
+    (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Kmonad_IMP_Gmonad),
+    (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Kmonad_extD) ]) ;
 
 (*
 show_types := true ;
