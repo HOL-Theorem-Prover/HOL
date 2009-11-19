@@ -574,10 +574,6 @@ REPEAT STRIP_TAC THENL [
 	METIS_TAC[option_CLAUSES, var_res_permission_THM2],
 
 
-	REWRITE_TAC [FMERGE_DEF],
-	ASM_SIMP_TAC std_ss [FMERGE_DEF],
-	ASM_SIMP_TAC std_ss [FMERGE_DEF],
-	ASM_SIMP_TAC std_ss [FMERGE_DEF],
 	FULL_SIMP_TAC std_ss [VAR_RES_STACK_IS_SEPARATE_def, FMERGE_DEF],
 
 	ASM_SIMP_TAC std_ss [FMERGE_DEF] THEN
@@ -1008,8 +1004,7 @@ Cases_on `v IN FDOM x` THENL [
 		FDOM_FUPDATE, FDOM_FEMPTY, IN_SING] THEN
 	REPEAT STRIP_TAC THEN
 	MATCH_MP_TAC (prove (``(~B) ==> (~A \/ ~B \/ C)``, METIS_TAC[])) THEN
-	CCONTR_TAC THEN
-	FULL_SIMP_TAC std_ss [IN_UNION, IN_SING]
+        SRW_TAC [][EXTENSION] THEN METIS_TAC []
 ]);
 
 
@@ -1040,13 +1035,8 @@ Cases_on `v IN FDOM x` THENL [
 			DOMSUB_FAPPLY_NEQ, EXTENSION] THEN
 		METIS_TAC[],
 
-		STRIP_TAC THEN
-		Cases_on `v IN FDOM q'` THEN1 (
-			Cases_on `q' ' v` THEN
-			FULL_SIMP_TAC std_ss []
-		) THEN
-		Q.PAT_ASSUM `FDOM x = X` ASSUME_TAC THEN
-		FULL_SIMP_TAC std_ss [IN_UNION, IN_SING]
+		ASM_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss ++
+                              boolSimps.CONJ_ss) []
 	],
 
 	ASM_SIMP_TAC std_ss [VAR_RES_STACK_COMBINE_def,
@@ -1055,8 +1045,7 @@ Cases_on `v IN FDOM x` THENL [
 		FDOM_FUPDATE, FDOM_FEMPTY, IN_SING] THEN
 	REPEAT STRIP_TAC THEN
 	MATCH_MP_TAC (prove (``(~B) ==> (~A \/ ~B \/ C)``, METIS_TAC[])) THEN
-	CCONTR_TAC THEN
-	FULL_SIMP_TAC std_ss [IN_UNION, IN_SING]
+	SRW_TAC [][EXTENSION] THEN METIS_TAC []
 ]);
 
 
