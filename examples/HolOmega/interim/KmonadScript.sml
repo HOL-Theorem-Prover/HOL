@@ -6,7 +6,7 @@ struct
 open HolKernel Parse boolLib
      bossLib
 
-open combinTheory pairTheory categoryTheory ;
+open combinTheory pairTheory categoryTheory monadTheory ;
 open auxLib ;
 (*
 load "auxLib" ;
@@ -634,6 +634,31 @@ val Gmonad_iff_Kmonad = store_thm ("Gmonad_iff_Kmonad", tmgiffk,
     (* inverse direction *)
     (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Kmonad_IMP_Gmonad),
     (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Kmonad_extD) ]) ;
+
+val tmgfn = 
+  ``((id, comp) = (((\:'a. I), (\:'a 'b 'c. combin$o)) : fun category)) ==> 
+  (umj_monad (unitN, mapN, joinN) = 
+  Gmonad (id, comp) [:'N, I:] (unitN, mapN, joinN) (unitN, mapN, joinN) id)`` ;
+
+val tmgfm = ``(Kmonad (id, comp) (unitM, extM) /\
+      (mapM = MAPE (id, comp) (unitM, extM)) /\
+      (joinM = JOINE (id, comp) (unitM, extM)) = 
+    Gmonad (id, comp) [:I, 'M:] 
+     ((\:'a. id [:'a 'M:]), extM, (\:'a. id [:'a 'M:])) 
+      (unitM, mapM, joinM) unitM /\
+      (extM = EXT (id,comp) (mapM, joinM))) `` ;
+
+val Gmonad_N_umj = store_thm ("Gmonad_N_umj", tmgfn,
+  SRW_TAC [] [Gmonad_def, umj_monad_def]) ;
+
+(* reverse implication, needs Gmonad_ext_jm in different form 
+val Gmonad_M_umj = store_thm ("Gmonad_M_umj", tmgfm,
+  SRW_TAC [] [EXT_def, Gmonad_def, umj_monad_def]) ;
+  *)
+
+val _ = MATCH_MP Gmonad_iff_Kmonad categoryTheory.category_fun ;
+val Gmonad_ext_jm' = inst_eqs Gmonad_ext_jm ;
+
 
 (*
 show_types := true ;

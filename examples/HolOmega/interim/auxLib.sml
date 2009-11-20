@@ -128,6 +128,18 @@ fun test_lhs_head_var name assn =
     origin_function = "test_lhs_head_var",
     origin_structure = "auxLib"} ; 
   
+(* to instantiate equality antecedents *)
+fun inst_eqs th = 
+  let open boolLib
+    val (ants, cons) = 
+      strip_imp (concl (REWRITE_RULE [GSYM AND_IMP_INTRO] th)) ;
+    val eqants = filter is_eq ants ;
+    (* assume lhs is a variable *)
+    fun mksub (lhs, rhs) = lhs |-> rhs ;
+    val subs = map (mksub o dest_eq) eqants ;
+  in Rewrite.REWRITE_RULE [] (INST subs th) end ;
+
 end ; (* local open HolKernel *)
+
 end ; (* structure auxLib *)
 
