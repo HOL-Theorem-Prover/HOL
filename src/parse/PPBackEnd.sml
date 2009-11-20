@@ -144,30 +144,45 @@ val raw_terminal = {
 (* vt100 terminal                   *)
 (* -------------------------------- *)
 
-fun color_to_int Black       = 0
-  | color_to_int RedBrown    = 1
-  | color_to_int Green       = 2
-  | color_to_int BrownGreen  = 3
-  | color_to_int DarkBlue    = 4
-  | color_to_int Purple      = 5
-  | color_to_int BlueGreen   = 6
-  | color_to_int DarkGrey    = 7
-  | color_to_int LightGrey   = 8
-  | color_to_int OrangeRed   = 9
-  | color_to_int VividGreen  = 10
-  | color_to_int Yellow      = 11
-  | color_to_int Blue        = 12
-  | color_to_int PinkPurple  = 13
-  | color_to_int LightBlue   = 14
-  | color_to_int White       = 15;
+fun color_to_vt100 Black       = (false, 0)
+  | color_to_vt100 RedBrown    = (false, 1)
+  | color_to_vt100 Green       = (false, 2)
+  | color_to_vt100 BrownGreen  = (false, 3)
+  | color_to_vt100 DarkBlue    = (false, 4)
+  | color_to_vt100 Purple      = (false, 5)
+  | color_to_vt100 BlueGreen   = (false, 6)
+  | color_to_vt100 LightGrey   = (false, 7)
+  | color_to_vt100 DarkGrey    = (true,  0)
+  | color_to_vt100 OrangeRed   = (true,  1)
+  | color_to_vt100 VividGreen  = (true,  2)
+  | color_to_vt100 Yellow      = (true,  3)
+  | color_to_vt100 Blue        = (true,  4)
+  | color_to_vt100 PinkPurple  = (true,  5)
+  | color_to_vt100 LightBlue   = (true,  6)
+  | color_to_vt100 White       = (true,  7);
+
+fun fg_to_vt100 c =
+let
+   val (light, col_ind) = color_to_vt100 c
+in
+   (if light then ";1;3" else "3") ^
+   Int.toString col_ind
+end;
+
+fun bg_to_vt100 c =
+let
+   val (light, col_ind) = color_to_vt100 c
+in
+   ";4"^(Int.toString col_ind)
+end;
 
 
 fun full_style_to_vt100 (fg,bg,b,u) =
    (* reset *)      "\027[0"^ 
-   (* foreground *) (if isSome fg then (";38;5;"^(Int.toString (color_to_int (valOf fg)))) else "") ^ 
-   (* background *) (if isSome bg then (";48;5;"^(Int.toString (color_to_int (valOf bg)))) else "") ^
+   (* foreground *) (if isSome fg then (fg_to_vt100 (valOf fg)) else "") ^ 
+   (* background *) (if isSome bg then (bg_to_vt100 (valOf bg)) else "") ^
    (* bold *)       (if b then ";1" else "") ^
-   (* underline *)  (if u then ";5" else "") ^ 
+   (* underline *)  (if u then ";4" else "") ^ 
    (* done *)       "m";
 
 
@@ -299,7 +314,7 @@ in
    add_string     = #add_string  raw_terminal,
    begin_style    = begin_style,
    end_style      = end_style}
-end
+end;
 
 
 end (* struct *)
