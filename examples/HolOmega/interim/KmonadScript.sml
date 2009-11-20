@@ -117,7 +117,7 @@ val Kcat_IMP_Kmonad = store_thm ("Kcat_IMP_Kmonad",
 
 (* this next doesn't work (doesn't parse properly) without the type 
   parameter for category (even with a type annotation, ie
-  category ((unit, Kcomp (id, comp) ext) : ('A, 'M) Kleisli category)
+  "category ((unit, Kcomp (id, comp) ext) : ('A, 'M) Kleisli category)" )
   so why don't the predicates functor (etc)
   require a type parameter similarly ?? *)
 val Kmonad_IMP_Kcat = store_thm ("Kmonad_IMP_Kcat",
@@ -640,20 +640,87 @@ val tmgfn =
   (umj_monad (unitN, mapN, joinN) = 
   Gmonad (id, comp) [:'N, I:] (unitN, mapN, joinN) (unitN, mapN, joinN) id)`` ;
 
-val tmgfm = ``(Kmonad (id, comp) (unitM, extM) /\
+val tmgfm = ``category (id, comp) ==> (Kmonad (id, comp) (unitM, extM) /\
       (mapM = MAPE (id, comp) (unitM, extM)) /\
       (joinM = JOINE (id, comp) (unitM, extM)) = 
     Gmonad (id, comp) [:I, 'M:] 
      ((\:'a. id [:'a 'M:]), extM, (\:'a. id [:'a 'M:])) 
-      (unitM, mapM, joinM) unitM /\
-      (extM = EXT (id,comp) (mapM, joinM))) `` ;
+      (unitM, mapM, joinM) unitM)`` ;
 
 val Gmonad_N_umj = store_thm ("Gmonad_N_umj", tmgfn,
   SRW_TAC [] [Gmonad_def, umj_monad_def]) ;
 
 (* reverse implication, needs Gmonad_ext_jm in different form 
-val Gmonad_M_umj = store_thm ("Gmonad_M_umj", tmgfm,
-  SRW_TAC [] [EXT_def, Gmonad_def, umj_monad_def]) ;
+val Gmonad_M_Kmonad = store_thm ("Gmonad_M_Kmonad", tmgfm, ) ;
+
+(* to view type eta-conversion issue, start here *)
+sge tmgfm ;
+
+e (EVERY [ STRIP_TAC,
+(FIRST_ASSUM (ASSUME_TAC o MATCH_MP catDLU)),
+(FIRST_ASSUM (ASSUME_TAC o MATCH_MP catDRU)),
+EQ_TAC, STRIP_TAC ]) ;
+
+e (EVERY [ 
+(FIRST_ASSUM (ASSUME_TAC o MATCH_MP KmonDLU)),
+(FIRST_ASSUM (ASSUME_TAC o MATCH_MP KmonDRU)),
+(REWRITE_TAC [Gmonad_def]),
+TY_BETA_TAC,
+(CONV_TAC (TOP_DEPTH_CONV (BETA_CONV ORELSEC TY_BETA_CONV ORELSEC 
+  REWR_CONV UNCURRY_DEF))),
+    (REPEAT CONJ_TAC THEN REPEAT STRIP_TAC THEN 
+     (ASM_REWRITE_TAC [JOINE_def, MAPE_def]) ),
+      
+     TY_BETA_TAC, BETA_TAC, 
+     (farwmmp KmonDAss),
+     (farwmmp catDAss),
+     (ASM_REWRITE_TAC [])]) ;
+
+e (REPEAT CONJ_TAC) ;
+rotate 1 ; (* or instead just continue with what is in the comments following *)
+
+(* (++++++++)
+    e (EVERY [ (USE_LIM_RES_TAC MP_TAC (inst_eqs Gmonad_IMP_Kmonad)),
+(REWRITE_TAC [EXTD_def]),
+    TY_BETA_TAC,
+  (ASM_REWRITE_TAC []),
+    (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
+    (CONV_TAC (DEPTH_CONV TY_ETA_CONV)) ]) ;
+   
+  e (MATCH_MP_TAC iffD1) ;
+  e AP_THM_TAC ;
+  e AP_THM_TAC ;
+  show_types := true ;
+
+
+val (_, goal) = top_goal () ;
+val (lhs, rhs) = dest_eq goal ;
+val (rator, ty) = dest_tycomb lhs ;
+eta_conv_ty ty ;
+deep_eta_ty ty ;
+deep_beta_eta_ty ty ;
+
+beta_conv_ty_in_term ; (* what does this do ? *)
+
+*)
+
+e (EVERY [ (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th, EXTD_def])
+      (inst_eqs Gmonad_map)),
+           TY_BETA_TAC, 
+  (ASM_REWRITE_TAC []),
+	   (* BETA_TAC, *)
+    (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
+    (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC ]) ;
+
+    e (EVERY [ (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th, JOINE_def, EXTD_def])
+      (inst_eqs Gmonad_join)),
+           TY_BETA_TAC, 
+  (ASM_REWRITE_TAC []),
+    (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)), REFL_TAC ]) ;
+
+
+(* now go back to the stuff at (++++++++) *)
+  
   *)
 
 val _ = MATCH_MP Gmonad_iff_Kmonad categoryTheory.category_fun ;

@@ -139,6 +139,11 @@ fun inst_eqs th =
     val subs = map (mksub o dest_eq) eqants ;
   in Rewrite.REWRITE_RULE [] (INST subs th) end ;
 
+(* useful theorems *)
+local open boolLib in
+val iffD1 = 
+  (DISCH_ALL o CONJUNCT1 o UNDISCH o fst o EQ_IMP_RULE o SPEC_ALL) EQ_IMP_THM ;
+end ;
 end ; (* local open HolKernel *)
 
 end ; (* structure auxLib *)
