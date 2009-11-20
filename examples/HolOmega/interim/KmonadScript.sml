@@ -305,7 +305,7 @@ val cm_if_J1 = store_thm ("cm_if_J1", tmpexti,
     (IMP_RES_TAC Kmonad_IMP_Kcat),
     (FIRST_X_ASSUM (fn th => CONJ_TAC THEN1 ACCEPT_TAC th)),
     (FIRST_X_ASSUM (fn th => EVERY [MP_TAC th, MATCH_MP_TAC EQ_IMP_IMP,
-      BETA_TY_TAC, AP_TERM_TAC, AP_TERM_TAC])),
+      AP_TERM_TAC, AP_TERM_TAC])),
     (REWRITE_TAC [Kcomp_def, FUN_EQ_THM, TY_FUN_EQ_THM]),
     (* need tactic for \x. A = \y. A *)
     (REPEAT STRIP_TAC), TY_BETA_TAC, BETA_TAC,
@@ -650,78 +650,71 @@ val tmgfm = ``category (id, comp) ==> (Kmonad (id, comp) (unitM, extM) /\
 val Gmonad_N_umj = store_thm ("Gmonad_N_umj", tmgfn,
   SRW_TAC [] [Gmonad_def, umj_monad_def]) ;
 
-(* reverse implication, needs Gmonad_ext_jm in different form 
-val Gmonad_M_Kmonad = store_thm ("Gmonad_M_Kmonad", tmgfm, ) ;
-
-(* to view type eta-conversion issue, start here *)
-sge tmgfm ;
-
-e (EVERY [ STRIP_TAC,
-(FIRST_ASSUM (ASSUME_TAC o MATCH_MP catDLU)),
-(FIRST_ASSUM (ASSUME_TAC o MATCH_MP catDRU)),
-EQ_TAC, STRIP_TAC ]) ;
-
-e (EVERY [ 
-(FIRST_ASSUM (ASSUME_TAC o MATCH_MP KmonDLU)),
-(FIRST_ASSUM (ASSUME_TAC o MATCH_MP KmonDRU)),
-(REWRITE_TAC [Gmonad_def]),
-TY_BETA_TAC,
-(CONV_TAC (TOP_DEPTH_CONV (BETA_CONV ORELSEC TY_BETA_CONV ORELSEC 
-  REWR_CONV UNCURRY_DEF))),
-    (REPEAT CONJ_TAC THEN REPEAT STRIP_TAC THEN 
-     (ASM_REWRITE_TAC [JOINE_def, MAPE_def]) ),
-      
-     TY_BETA_TAC, BETA_TAC, 
-     (farwmmp KmonDAss),
-     (farwmmp catDAss),
-     (ASM_REWRITE_TAC [])]) ;
-
-e (REPEAT CONJ_TAC) ;
-rotate 1 ; (* or instead just continue with what is in the comments following *)
-
-(* (++++++++)
-    e (EVERY [ (USE_LIM_RES_TAC MP_TAC (inst_eqs Gmonad_IMP_Kmonad)),
-(REWRITE_TAC [EXTD_def]),
-    TY_BETA_TAC,
-  (ASM_REWRITE_TAC []),
-    (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
-    (CONV_TAC (DEPTH_CONV TY_ETA_CONV)) ]) ;
-   
-  e (MATCH_MP_TAC iffD1) ;
-  e AP_THM_TAC ;
-  e AP_THM_TAC ;
-  show_types := true ;
-
-
-val (_, goal) = top_goal () ;
-val (lhs, rhs) = dest_eq goal ;
-val (rator, ty) = dest_tycomb lhs ;
-eta_conv_ty ty ;
-deep_eta_ty ty ;
-deep_beta_eta_ty ty ;
-
-beta_conv_ty_in_term ; (* what does this do ? *)
-
+(* reverse implication *)
+(* these don't work 
+Q.INST [`extNM` |-> `dmap`] Kmonad_IMP_Gmonad ;
+Q.INST_TYPE [`:'N` |-> `:I`] Kmonad_IMP_Gmonad ;
+val th = Q.GEN `extNM` Kmonad_IMP_Gmonad ;
+REWRITE_RULE [GSYM LEFT_EXISTS_IMP_THM] th ;
+val thae = (snd o EQ_IMP_RULE o SPEC_ALL) LEFT_EXISTS_IMP_THM ;
+HO_MATCH_MP thae th ;
 *)
 
-e (EVERY [ (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th, EXTD_def])
-      (inst_eqs Gmonad_map)),
-           TY_BETA_TAC, 
+val gen_KG = GEN_ALL Kmonad_IMP_Gmonad ;
+val kgtacs = [ (MATCH_MP_TAC gen_KG),
+  (Q.EXISTS_TAC `extM`), TY_BETA_TAC, 
+  (FIRST_ASSUM (ASSUME_TAC o MATCH_MP KmonDLU)),
+  (FIRST_ASSUM (ASSUME_TAC o MATCH_MP KmonDRU)),
   (ASM_REWRITE_TAC []),
-	   (* BETA_TAC, *)
-    (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
-    (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC ]) ;
+  (EVERY [(CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
+  (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), 
+  (ASM_REWRITE_TAC []) ]),
+  (* same problem here regarding eta-reduction of types,
+  so require following two lines *)
+  (REWRITE_TAC [Kmonad_thm]),
+  (FIRST_X_ASSUM (ACCEPT_TAC o REWRITE_RULE [Kmonad_thm])) ] ;
 
-    e (EVERY [ (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th, JOINE_def, EXTD_def])
-      (inst_eqs Gmonad_join)),
-           TY_BETA_TAC, 
+val gktacsK = [
+  (USE_LIM_RES_TAC MP_TAC (inst_eqs Gmonad_IMP_Kmonad)),
+  (REWRITE_TAC [EXTD_def]),
+  TY_BETA_TAC,
   (ASM_REWRITE_TAC []),
-    (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)), REFL_TAC ]) ;
+  (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
+  (CONV_TAC (DEPTH_CONV TY_ETA_CONV)),
+  STRIP_TAC,
+  (* (ASM_REWRITE_TAC []) should work here, but problem with 
+    recognising eta-equivalent types
+    val (_, goal) = top_goal () ;
+    val (lhs, rhs) = dest_eq goal ;
+    val (rator, ty) = dest_tycomb lhs ;
+    val ty1 = eta_conv_ty ty ;
+    val ty2 = deep_eta_ty ty ;
+    val ty3 = deep_beta_eta_ty ty ;
+    *)
+  (REWRITE_TAC [Kmonad_thm]),
+  (FIRST_X_ASSUM (ACCEPT_TAC o REWRITE_RULE [Kmonad_thm])) ] ; 
 
+val gktacsM = [ 
+  (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th, EXTD_def])
+    (inst_eqs Gmonad_map)),
+  TY_BETA_TAC, (ASM_REWRITE_TAC []),
+  (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
+  (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC ] ;
 
-(* now go back to the stuff at (++++++++) *)
-  
-  *)
+val gktacsJ = [
+  (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th, JOINE_def, EXTD_def])
+    (inst_eqs Gmonad_join)),
+  TY_BETA_TAC, (ASM_REWRITE_TAC []),
+  (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)), REFL_TAC ] ;
+
+val Gmonad_M_Kmonad = store_thm ("Gmonad_M_Kmonad", tmgfm, 
+  EVERY [ STRIP_TAC,
+    (FIRST_ASSUM (ASSUME_TAC o MATCH_MP catDLU)),
+    (FIRST_ASSUM (ASSUME_TAC o MATCH_MP catDRU)),
+    EQ_TAC, STRIP_TAC ]
+  THENL [ EVERY kgtacs, 
+    (REPEAT CONJ_TAC) THENL [
+      EVERY gktacsK, EVERY gktacsM, EVERY gktacsJ ] ]) ;
 
 val _ = MATCH_MP Gmonad_iff_Kmonad categoryTheory.category_fun ;
 val Gmonad_ext_jm' = inst_eqs Gmonad_ext_jm ;
