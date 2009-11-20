@@ -748,7 +748,7 @@ fun WEAKEN_TAC P :tactic =
 fun MATCH_ACCEPT_TAC thm : tactic =
   let val fmatch = PART_MATCH Lib.I thm
       fun atac (asl,w) = ([], Lib.K (fmatch w))
-  in REPEAT GEN_TAC THEN atac
+  in REPEAT (TY_GEN_TAC ORELSE GEN_TAC) THEN atac
   end
   handle HOL_ERR _ => raise ERR "MATCH_ACCEPT_TAC" "";
 

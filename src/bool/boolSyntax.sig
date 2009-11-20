@@ -146,6 +146,8 @@ sig
   val strip_exists           : term -> term list * term
   val strip_tyforall         : term -> hol_type list * term
   val strip_tyexists         : term -> hol_type list * term
+  val strip_all_forall       : term -> hol_type list * term list * term
+  val strip_all_exists       : term -> hol_type list * term list * term
   val strip_conj             : term -> term list
   val strip_disj             : term -> term list
   val strip_neg              : term -> term * int
