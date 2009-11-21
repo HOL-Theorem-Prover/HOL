@@ -263,6 +263,13 @@ val primrec_pr_eq = Store_thm(
   ``primrec pr_eq 2``,
   SRW_TAC [][pr_eq_def, primrec_rules]);
 
+(* ----------------------------------------------------------------------
+    Proof that Ackermann function is not primitive recursive.
+
+    Taken from
+      http://home.manhattan.edu/~gregory.taylor/thcomp/pdf-files/ackerman.pdf
+   ---------------------------------------------------------------------- *)
+
 val Ackermann_def = Define`
   (Ackermann 0 m = m + 1) ∧
   (Ackermann (SUC n) 0 = Ackermann n 1) ∧
