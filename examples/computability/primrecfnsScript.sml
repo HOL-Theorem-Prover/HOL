@@ -1,14 +1,12 @@
-open HolKernel Parse bossLib
+open HolKernel Parse boolLib bossLib
 
 open numpairTheory
+open arithmeticTheory
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 fun Save_thm (tup as (n,th)) = save_thm tup before export_rewrites [n]
 
 val _ = new_theory "primrecfns"
-
-val ONE = arithmeticTheory.ONE
-val ADD1 = arithmeticTheory.ADD1
 
 val nB_def = Define`(nB T = 1) ∧ (nB F = 0)`
 val _ = export_rewrites ["nB_def"]
@@ -44,9 +42,9 @@ val proj123 = Store_thm(
     (proj 0 2 (n ⊗ m ⊗ p) = n) ∧
     (proj 1 2 (n ⊗ m ⊗ p) = m) ∧
     (proj 2 2 (n ⊗ m ⊗ p) = p)``,
-  SIMP_TAC bool_ss [ONE, arithmeticTheory.TWO, proj_def,
-                    nfst_npair, nsnd_npair, arithmeticTheory.SUB,
-                    arithmeticTheory.LESS_MONO_EQ, prim_recTheory.LESS_0,
+  SIMP_TAC bool_ss [ONE, TWO, proj_def,
+                    nfst_npair, nsnd_npair, SUB,
+                    LESS_MONO_EQ, prim_recTheory.LESS_0,
                     prim_recTheory.NOT_LESS_0]);
 
 val nway_list_def = Define`
@@ -110,8 +108,8 @@ val Pr_thm = Store_thm(
     (Pr b r (SUC m ⊗ n) = r (m ⊗ Pr b r (m ⊗ n) ⊗ n)) ∧
     (Pr b r ((m + 1) ⊗ n) = r (m ⊗ Pr b r (m ⊗ n) ⊗ n)) ∧
     (Pr b r ((1 + m) ⊗ n) = r (m ⊗ Pr b r (m ⊗ n) ⊗ n))``,
-  SIMP_TAC (bool_ss ++ boolSimps.CONJ_ss) [arithmeticTheory.ONE,
-                                           arithmeticTheory.ADD_CLAUSES] THEN
+  SIMP_TAC (bool_ss ++ boolSimps.CONJ_ss) [ONE,
+                                           ADD_CLAUSES] THEN
   CONJ_TAC THEN SRW_TAC [][Once Pr_def, SimpLHS]);
 
 val _ = overload_on ("zerof", ``K 0 : num -> num``)
@@ -167,7 +165,7 @@ val pr_mult_is_multiplication = Store_thm(
   "pr_mult_is_multiplication",
   ``pr_mult (n ⊗ m) = n * m``,
   SRW_TAC [][pr_mult_def] THEN
-  Induct_on `n` THEN SRW_TAC [ARITH_ss][arithmeticTheory.MULT_CLAUSES]);
+  Induct_on `n` THEN SRW_TAC [ARITH_ss][MULT_CLAUSES]);
 
 val primrec_pr_mult = Store_thm(
   "primrec_pr_mult",
@@ -278,11 +276,11 @@ val Alemma1 = prove(
   ``(H 1 n = n + 2) ∧ (H 2 n = 2 * n + 3)``,
   `∀n. H 1 n = n + 2`
     by (Induct_on `n` THEN SRW_TAC [][H_thm] THEN
-        ONCE_REWRITE_TAC [arithmeticTheory.ONE] THEN
+        ONCE_REWRITE_TAC [ONE] THEN
         SRW_TAC [][Ackermann_def] THEN DECIDE_TAC) THEN
   SRW_TAC [][] THEN
   Induct_on `n` THEN SRW_TAC [][H_thm] THEN
-  SIMP_TAC bool_ss [SimpLHS, arithmeticTheory.TWO] THEN
+  SIMP_TAC bool_ss [SimpLHS, TWO] THEN
   SRW_TAC [][Ackermann_def] THEN DECIDE_TAC);
 
 val Alemma2 = prove(
@@ -324,7 +322,7 @@ val MONO_THM = store_thm(
      by (Induct_on `n2 - n1` THEN SRW_TAC [][] THEN1 DECIDE_TAC THEN
          Cases_on `v` THENL [
            `n2 = n1 + 1` by DECIDE_TAC THEN SRW_TAC [][],
-           MATCH_MP_TAC arithmeticTheory.LESS_TRANS THEN
+           MATCH_MP_TAC LESS_TRANS THEN
            Q.EXISTS_TAC `f (n1 + 1)` THEN SRW_TAC [ARITH_ss][]
          ]) THEN
   `∀n1 n2. f n1 < f n2 ⇔ n1 < n2`
@@ -338,7 +336,7 @@ val MONO_THM = store_thm(
          `n1 < n2 ∨ (n1 = n2) ∨ n2 < n1` by DECIDE_TAC THEN
          SRW_TAC [ARITH_ss][] THEN
          METIS_TAC [DECIDE ``¬(x < x)``]) THEN
-  SRW_TAC [][arithmeticTheory.LESS_OR_EQ]);
+  SRW_TAC [][LESS_OR_EQ]);
 
 val A_MONO2 = Save_thm(
   "A_MONO2",
@@ -367,12 +365,12 @@ val A_MONO1 = Save_thm(
 val Alemma4 = prove(
   ``H n1 m + H n2 m < H (MAX n1 n2 + 4) m``,
   `H n1 m + H n2 m ≤ H (MAX n1 n2) m + H (MAX n1 n2) m`
-     by SRW_TAC [][arithmeticTheory.LESS_EQ_LESS_EQ_MONO] THEN
+     by SRW_TAC [][LESS_EQ_LESS_EQ_MONO] THEN
   `H n1 m + H n2 m ≤ 2 * H (MAX n1 n2) m` by DECIDE_TAC THEN
   `H n1 m + H n2 m < 2 * H (MAX n1 n2) m + 3` by DECIDE_TAC THEN
   `H n1 m + H n2 m < H 2 (H (MAX n1 n2) m)` by SRW_TAC [][Alemma1] THEN
   `H 2 (H (MAX n1 n2) m) < H 2 (H (MAX n1 n2 + 3) m)`
-    by SRW_TAC [ARITH_ss][arithmeticTheory.MAX_DEF] THEN
+    by SRW_TAC [ARITH_ss][MAX_DEF] THEN
   `H 2 (H (MAX n1 n2 + 3) m) ≤ H (MAX n1 n2 + 2) (H (MAX n1 n2 + 3) m)`
     by SRW_TAC [][] THEN
   `H (MAX n1 n2 + 2) (H (MAX n1 n2 + 3) m) = H (MAX n1 n2 + 3) (m + 1)`
@@ -387,44 +385,17 @@ val Alemma4 = prove(
 
 val Alemma5 = prove(
   ``H n m + m < H (n + 4) m``,
-  MATCH_MP_TAC arithmeticTheory.LESS_TRANS THEN
+  MATCH_MP_TAC LESS_TRANS THEN
   Q.EXISTS_TAC `H n m + H 0 m` THEN
   CONJ_TAC THEN1 SRW_TAC [ARITH_ss][Ackermann_def] THEN
   Q_TAC SUFF_TAC `n + 4 = MAX n 0 + 4`
     THEN1 (DISCH_THEN SUBST1_TAC THEN SRW_TAC [][Alemma4]) THEN
   SRW_TAC [][]);
 
-val proj_bound = store_thm(
-  "proj_bound",
-  ``∀i n x. proj i n x ≤ x``,
-  HO_MATCH_MP_TAC (theorem "proj_ind") THEN
-  SRW_TAC [][proj_def,nfst_le] THEN
-  MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS THEN
-  Q.EXISTS_TAC `nsnd x`  THEN SRW_TAC[][nsnd_le]);
-
-val sumk_def = Define`
-  (sumk k n = if k = 0 then 0
-              else if k = 1 then n
-              else nfst n + sumk (k - 1) (nsnd n))
-`;
-
-val sumk_thm = Store_thm(
-  "sumk_thm",
-  ``sumk 1 n = n``,
-  SRW_TAC [][Once sumk_def]);
-
 val nway_list1 = Store_thm(
   "nway_list1",
   ``nway_list 1 n = [n]``,
   SIMP_TAC bool_ss [nway_list_def, ONE]);
-
-val sumk_SUM = store_thm(
-  "sumk_SUM",
-  ``∀k n. 0 < k ⇒ (sumk k n = SUM (nway_list k n))``,
-  Induct THEN SRW_TAC [][] THEN Cases_on `k` THEN SRW_TAC [][] THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN
-  SRW_TAC [][Once sumk_def] THEN
-  SRW_TAC [][SimpRHS, Once nway_list_def]);
 
 val proj_EL = store_thm(
   "proj_EL",
@@ -478,12 +449,22 @@ val alem6_lem = prove(
   MAP_EVERY Q.UNABBREV_TAC [`J'`, `JJ`] THEN
   `∃N. LENGTH xs = N + 1`
     by (Cases_on `LENGTH xs` THEN FULL_SIMP_TAC (srw_ss()) [ADD1]) THEN
-  SRW_TAC [ARITH_ss][arithmeticTheory.LEFT_ADD_DISTRIB] THEN
-  SRW_TAC [ARITH_ss][arithmeticTheory.MAX_DEF]);
+  SRW_TAC [ARITH_ss][LEFT_ADD_DISTRIB] THEN
+  SRW_TAC [ARITH_ss][MAX_DEF]);
 
-(*
-val Alemma6 = store_thm(
-  "Alemma6",
+val SUMk1_nway_list = prove(
+  ``0 < n ⇒ (SUM (nway_list (n + 1) (x ⊗ y)) = x + SUM (nway_list n y))``,
+  `n + 1 = SUC n` by DECIDE_TAC THEN
+  SRW_TAC [][SimpLHS, Once nway_list_def]);
+
+val SUMk2_nway_list = prove(
+  ``0 < n ⇒ (SUM (nway_list (n + 2) (x ⊗ y ⊗ z)) =
+              x + y + SUM (nway_list n z))``,
+  `n + 2 = SUC (n + 1)` by DECIDE_TAC THEN
+  SRW_TAC [ARITH_ss][SimpLHS, Once nway_list_def, SUMk1_nway_list])
+
+val Ackermann_grows_too_fast = store_thm(
+  "Ackermann_grows_too_fast",
   ``∀f k. primrec f k ⇒ ∃J. ∀n. f n < H J (SUM (nway_list k n))``,
   HO_MATCH_MP_TAC strong_primrec_ind THEN REPEAT STRIP_TAC THENL [
     Q.EXISTS_TAC `0` THEN SRW_TAC [ARITH_ss][Ackermann_def],
@@ -531,11 +512,10 @@ val Alemma6 = store_thm(
       by SRW_TAC [][DECIDE ``x + 2 = (x + 1) + 1``, Alemma3b] THEN
     Q.EXISTS_TAC `MAX J JJ + 2` THEN
     SRW_TAC [][] THEN
-    METIS_TAC [DECIDE ``x < y ∧ y ≤ z ⇒ x < z``,
-               DECIDE ``x ≤ y ∧ y < z ⇒ x < z``,
-               DECIDE ``x < y ∧ y < z ⇒ x < z``],
+    REPEAT (FIRST_X_ASSUM (Q.SPEC_THEN `n` MP_TAC)) THEN
+    DECIDE_TAC,
 
-    Q.ABBREV_TAC `JJ = MAX J J' + 7` THEN
+    Q.ABBREV_TAC `JJ = MAX J (J'+3) + 5` THEN
     Q.ABBREV_TAC `ff = Pr f f'` THEN
     Q_TAC SUFF_TAC
       `∀m n. ff (m ⊗ n) < H JJ (SUM (nway_list (k + 1) (m ⊗ n)))`
@@ -543,11 +523,75 @@ val Alemma6 = store_thm(
     `0 < k ∧ k ≠ 0` by METIS_TAC [primrec_nzero, DECIDE ``0 < n ⇔ n ≠ 0``] THEN
     Induct THENL [
       SRW_TAC [][Abbr`ff`, Once nway_list_def, GSYM ADD1] THEN
-      MATCH_MP_TAC arithmeticTheory.LESS_TRANS THEN
+      MATCH_MP_TAC LESS_TRANS THEN
       Q.EXISTS_TAC `H J (SUM (nway_list k n))` THEN
-      SRW_TAC [][Abbr`JJ`] THEN SRW_TAC [ARITH_ss][arithmeticTheory.MAX_DEF],
+      SRW_TAC [][Abbr`JJ`] THEN SRW_TAC [ARITH_ss][MAX_DEF],
+
+      POP_ASSUM MP_TAC THEN SRW_TAC [][SUMk1_nway_list] THEN
+      `∀n m. ff (SUC m ⊗ n) = f' (m ⊗ ff (m ⊗ n) ⊗ n)`
+          by SRW_TAC [][Abbr`ff`] THEN
+      SRW_TAC [][] THEN
+      `f' (m ⊗ ff (m ⊗ n) ⊗ n) <
+          H J' (SUM (nway_list (k + 2) (m ⊗ ff (m ⊗ n) ⊗ n)))`
+         by SRW_TAC [][] THEN
+      `SUM (nway_list (k + 2) (m ⊗ ff (m ⊗ n) ⊗ n)) =
+       m + ff (m ⊗ n) + SUM (nway_list k n)`
+         by SRW_TAC [][SUMk2_nway_list] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      Q.ABBREV_TAC `Σ = SUM (nway_list k n)` THEN
+      `H J' (m + ff (m⊗n) + Σ) < H J' (m + ff (m⊗n) + Σ + 1)`
+         by SRW_TAC [][] THEN
+      `H J' (m + ff (m⊗n) + Σ + 1) = H J' (H 0 (Σ + m) + ff (m⊗n))`
+         by SRW_TAC [ARITH_ss][Ackermann_def] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      `H J' (H 0 (Σ + m) + ff (m ⊗ n)) <
+       H J' (H 0 (Σ + m) + H JJ (Σ + m))`
+         by (SRW_TAC [][Abbr`Σ`] THEN METIS_TAC [ADD_COMM]) THEN
+      `H J' (H 0 (Σ + m) + H JJ (Σ + m)) <
+       H J' (H JJ (Σ + m) + H JJ (Σ + m))`
+         by SRW_TAC [ARITH_ss][Abbr`JJ`] THEN
+      `H J' (H JJ (Σ + m) + H JJ (Σ + m)) = H J' (2 * H JJ (Σ + m))`
+         by SRW_TAC [ARITH_ss][] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      `H J' (2 * H JJ (Σ + m)) < H J' (2 * H JJ (Σ + m) + 3)`
+         by SRW_TAC [][] THEN
+      `H J' (2 * H JJ (Σ + m) + 3) = H J' (H 2 (H JJ (Σ + m)))`
+         by SRW_TAC [][Alemma1] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      `H J' (H 2 (H JJ (Σ + m))) < H (J' + 3) (H 2 (H JJ (Σ + m)))`
+         by SRW_TAC [][] THEN
+      `H (J' + 3) (H 2 (H JJ (Σ + m))) < H (J' + 3) (H (J' + 4) (H JJ (Σ + m)))`
+         by SRW_TAC [ARITH_ss][] THEN
+      `H (J' + 3) (H (J' + 4) (H JJ (Σ + m))) = H (J' + 4) (H JJ (Σ + m) + 1)`
+         by SRW_TAC [][Ackermann_def, DECIDE ``x + 4 = SUC (x + 3)``,
+                       GSYM ADD1] THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      `H (J' + 4) (H JJ (Σ + m) + 1) ≤ H (J' + 5) (H JJ (Σ + m))`
+         by SRW_TAC [][Alemma3b, DECIDE ``x + 5 = x + 4 + 1``] THEN
+      `J' + 5 < JJ - 1` by SRW_TAC [ARITH_ss][MAX_DEF, Abbr`JJ`] THEN
+      `H (J' + 5) (H JJ (Σ + m)) < H (JJ - 1) (H JJ (Σ + m))`
+         by SRW_TAC [][] THEN
+      `0 < JJ` by SRW_TAC [ARITH_ss][Abbr`JJ`] THEN
+      `H (JJ - 1) (H JJ (Σ + m)) = H JJ (SUC m + Σ)`
+         by (Cases_on `JJ` THEN1 FULL_SIMP_TAC (srw_ss()) [] THEN
+             SRW_TAC [ARITH_ss][ADD_CLAUSES, Ackermann_def]) THEN
+      POP_ASSUM SUBST_ALL_TAC THEN DECIDE_TAC
+    ]
+  ]);
+
+val Ackermann_not_primrec = store_thm(
+  "Ackermann_not_primrec",
+  ``¬∃f. primrec f 2 ∧ ∀n m. f (n ⊗ m) = H n m``,
+  STRIP_TAC THEN
+  Q.ABBREV_TAC `g = Cn f [proj 0 0; proj 0 0]` THEN
+  `∀n. g n = H n n` by SRW_TAC [][Abbr`g`] THEN
+  `primrec g 1` by SRW_TAC [][Abbr`g`, primrec_rules] THEN
+  `∃J. ∀n. g n < H J n`
+     by (IMP_RES_TAC Ackermann_grows_too_fast THEN
+         RULE_ASSUM_TAC (SIMP_RULE (srw_ss()) []) THEN METIS_TAC []) THEN
+  POP_ASSUM (Q.SPEC_THEN `J` MP_TAC) THEN SRW_TAC [][]);
+
+val _ = export_theory()
 
 
 
-
-*)

@@ -117,6 +117,7 @@ src/llist
 src/datatype/inftree
 src/path
 !examples/lambda/barendregt
+!examples/computability
 !!examples/lambda/other-models
 !!examples/lambda/typing
 !!examples/computability/lambda
