@@ -345,6 +345,23 @@ val OPTION_BIND_def = Prim_rec.new_recursive_definition
               (OPTION_BIND (SOME x) f = f x)`}
 val _= export_rewrites ["OPTION_BIND_def"]
 
+val OPTION_BIND_cong = Q.store_thm(
+  "OPTION_BIND_cong",
+  `!o1 o2 f1 f2.
+     (o1:'a option = o2) /\ (!x. (o2 = SOME x) ==> (f1 x = f2 x)) ==>
+     (OPTION_BIND o1 f1 = OPTION_BIND o2 f2)`,
+  simpLib.SIMP_TAC (srw_ss()) [FORALL_OPTION]);
+val _ = DefnBase.export_cong "OPTION_BIND_cong"
+
+val OPTION_BIND_EQUALS_OPTION = Q.store_thm(
+  "OPTION_BIND_EQUALS_OPTION",
+  `((OPTION_BIND (p:'a option) f = NONE) <=>
+       (p = NONE) \/ ?x. (p = SOME x) /\ (f x = NONE)) /\
+   ((OPTION_BIND p f = SOME y) <=> ?x. (p = SOME x) /\ (f x = SOME y))`,
+  OPTION_CASES_TAC ``p:'a option`` THEN SRW_TAC [][]);
+val _ = export_rewrites ["OPTION_BIND_EQUALS_OPTION"]
+
+
 (* ----------------------------------------------------------------------
     OPTREL - lift a relation on 'a, 'b to 'a option, 'b option
    ---------------------------------------------------------------------- *)
