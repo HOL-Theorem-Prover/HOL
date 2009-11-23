@@ -67,8 +67,9 @@ val category_thm = store_thm ("category_thm",
 val (categoryD, _) = EQ_IMP_RULE (SPEC_ALL category_thm) ;
 val [catDLU, catDRU, catDAss] =
   map (TY_GEN_ALL o GEN_ALL o DISCH_ALL) (CONJUNCTS (UNDISCH categoryD)) ;
+val catDRAss = GSYM catDAss ;
 val _ = map save_thm [("catDLU", catDLU), ("catDRU", catDRU),
-  ("catDAss", catDAss)] ;
+  ("catDAss", catDAss), ("catDRAss", catDRAss)] ;
 
 val category_fun = store_thm ("category_fun",
   ``category (((\:'a. I), (\:'a 'b 'c. combin$o) ) : fun category)``,

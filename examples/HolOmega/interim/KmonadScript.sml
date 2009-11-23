@@ -22,6 +22,9 @@ val _ = set_trace "kinds" 0;
 
 val _ = new_theory "Kmonad";
 
+(* abbreviate a much used tactic *)
+fun farwmmp con = (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP con th])) ; 
+
 (* Kleisli arrow, 'A = arrow type in original category, 'M = monad type *)
 val _ = type_abbrev ("Kleisli", Type `: \'A 'M 'a 'b. ('a, 'b 'M) 'A`) ;
   
@@ -79,6 +82,20 @@ val EXT_def = Define
   `(EXT ((id, comp) : 'A category) 
     (map : ('A, 'M) gmap, join: ('A, 'M) gjoin) : ('A, 'M) ext) = 
     \:'a 'b. \f. comp join (map [:'a, 'b 'M:] f)` ;
+
+val Kdmonad_def = Define `Kdmonad = \:'A 'M. \ ((id, comp) : 'A category)
+    (unit: (!'a. ('a, 'a 'M) 'A), ext: 'M ('A ext),
+      map : ('A, 'M) gmap, join: ('A, 'M) gjoin). 
+    Kmonad (id, comp) (unit, ext) /\
+    (map = MAPE (id,comp) (unit,ext)) ∧
+    (join = JOINE (id,comp) (unit,ext))` ;
+
+val Kdmonad_thm = store_thm ("Kdmonad_thm",
+  ``Kdmonad (id, comp) (unit,ext,map,join) = 
+    Kmonad (id, comp) (unit, ext) /\
+    (map = MAPE (id,comp) (unit,ext)) ∧
+    (join = JOINE (id,comp) (unit,ext))``,
+  SRW_TAC [] [Kdmonad_def]) ;
 
 (* Kleisli category is a category iff 'M is a monad *)
 
@@ -234,6 +251,25 @@ val Kmonad_extomap' = prove (
 val Kmonad_extomap = save_thm ("Kmonad_extomap", 
   (DISCH_ALL o TY_GEN_ALL o GEN_ALL o UNDISCH_ALL) Kmonad_extomap') ;
 
+val Kmonad_t2a = store_thm ("Kmonad_t2a", 
+  ``Kmonad [:'A, 'M:] (id,comp) (unit,ext) /\ category (id, comp) ==>
+    (f = ext [:'a, 'b:] g) ==> (ext [:'a 'M, 'b:] f = comp f (ext id))``,
+  EVERY [ REPEAT STRIP_TAC, (ASM_REWRITE_TAC []),
+    (farwmmp KmonDAss), (farwmmp catDRU) ]) ;
+
+val tmsgx = ``Kmonad [:'A, 'M:] (id,comp) (unit,ext) /\ category (id, comp) ==>
+  (ext [:'a, 'b:] (comp f unit) = 
+    comp (ext f) (ext [:'a, 'a 'M:] (comp unit unit)))`` ;
+val (_, tmsg) = dest_imp tmsgx ;
+
+val Kmonad_t2b = store_thm ("Kmonad_t2b", 
+  ``Kmonad [:'A, 'M:] (id,comp) (unit,ext) /\ category (id, comp) ==>
+    (ext [:'a 'M, 'b:] f = comp f (ext id)) ==> (f = ext (comp f unit))``,
+  (REPEAT STRIP_TAC) THEN (SUBGOAL_THEN tmsg ASSUME_TAC) THENL [
+    MAP_EVERY farwmmp [KmonDAss, catDAss, KmonDRU],
+    ASM_REWRITE_TAC [] THEN MAP_EVERY farwmmp [ catDRAss,
+      KmonDAss, catDAss, KmonDRU, catDLU, KmonDLU, catDRU] ]) ;
+
 (* approach to distributive law for monads;
   a monad in the Kleisli category of another monad *)
 (* first note this type equality *)
@@ -257,19 +293,22 @@ val pext_cm = store_thm ("pext_cm", tmpext,
       (REWR_CONV Kcomp_def ORELSEC TY_BETA_CONV ORELSEC BETA_CONV))))),
     (ASM_REWRITE_TAC [combinTheory.o_THM]) ]) ;
 
+val J1S_def = Define `J1S ((id, comp) : 'A category)
+  (extM : ('A, 'M) ext) extNM = (!: 'a 'b. !f : ('a, 'b 'N 'M) 'A.
+      extM ((extNM : ('A, 'N o 'M) ext) f) = comp (extNM f) (extM id))` ;
+
 val EQ_IMP_IMP =
   auxLib.sfg (auxLib.ufd CONJUNCT1 o fst o EQ_IMP_RULE) EQ_IMP_THM ;
 val hrk = (hd (RES_CANON Kmonad_exto_euo)) ;
 
 val tmepe = ``category (id, comp) /\ 
   Kmonad [:'A:] (id,comp) (unitM, extM : ('A, 'M) ext) /\ 
-  (!: 'a 'b. !f : ('a, 'b 'N 'M) 'A. 
-    extM ((extNM : ('A, 'N o 'M) ext) f) = comp (extNM f) (extM id)) /\
+  J1S (id, comp) extM extNM /\
   (pext = \:'a 'b. \f. comp (extNM f) unitM) ==>
   (!: 'a 'b. !f : ('a, 'b 'N 'M) 'A. extM (pext f) = extNM f)`` ;
 
 val J1_IMP_ext_pext = store_thm ("J1_IMP_ext_pext", tmepe,
-  EVERY [ STRIP_TAC, (ASM_REWRITE_TAC []), 
+  EVERY [ (REWRITE_TAC [J1S_def]), STRIP_TAC, (ASM_REWRITE_TAC []), 
     (REPEAT STRIP_TAC), TY_BETA_TAC, BETA_TAC,
     (FIRST_ASSUM (fn th => 
       let val mat1 = MATCH_MP hrk th 
@@ -289,8 +328,7 @@ val J1_IMP_ext_pext = store_thm ("J1_IMP_ext_pext", tmepe,
 val tmpexti = ``category (id, comp) /\ 
   Kmonad [:'A:] (id,comp) (unitM, extM : ('A, 'M) ext) /\ 
   Kmonad [: 'A, 'N o 'M :] (id, comp) (unitNM, extNM) /\
-  (!: 'a 'b. !f : ('a, 'b 'N 'M) 'A. 
-    extM (extNM f) = comp (extNM f) (extM id)) /\
+  J1S (id, comp) extM extNM /\
   (pext = \:'a 'b. \f. comp (extNM f) unitM) ==>
   Kmonad [: ('A, 'M) Kleisli, 'N :] 
     (unitM, Kcomp (id,comp) extM) (unitNM, pext)`` ;
@@ -298,9 +336,11 @@ val tmpexti = ``category (id, comp) /\
 (* can't do MATCH_MP_TAC (GSYM J1_IMP_ext_pext) ; *)
 val gjs = (DISCH_ALL o GSYM o SPEC_ALL o TY_SPEC_ALL o UNDISCH)
   J1_IMP_ext_pext ;
+val gjs' = (DISCH_ALL o GSYM o SPEC_ALL o TY_SPEC_ALL o UNDISCH)
+  (REWRITE_RULE [J1S_def] J1_IMP_ext_pext) ;
 
 val cm_if_J1 = store_thm ("cm_if_J1", tmpexti,  
-  EVERY [ STRIP_TAC,
+  EVERY [ (REWRITE_TAC [J1S_def]), STRIP_TAC,
     (MATCH_MP_TAC Kcat_IMP_Kmonad),
     (IMP_RES_TAC Kmonad_IMP_Kcat),
     (FIRST_X_ASSUM (fn th => CONJ_TAC THEN1 ACCEPT_TAC th)),
@@ -309,8 +349,10 @@ val cm_if_J1 = store_thm ("cm_if_J1", tmpexti,
     (REWRITE_TAC [Kcomp_def, FUN_EQ_THM, TY_FUN_EQ_THM]),
     (* need tactic for \x. A = \y. A *)
     (REPEAT STRIP_TAC), TY_BETA_TAC, BETA_TAC,
-    AP_THM_TAC, AP_TERM_TAC, (MATCH_MP_TAC gjs),
+    AP_THM_TAC, AP_TERM_TAC, (MATCH_MP_TAC gjs'),
     (ASM_REWRITE_TAC []) ]) ;
+
+val cm_if_J1' = REWRITE_RULE [J1S_def] cm_if_J1 ;
 
 (* equivalence between compound monads arising from a monad in the 
   Kleisli category of another monad, and compound monads satisfying
@@ -318,21 +360,20 @@ val cm_if_J1 = store_thm ("cm_if_J1", tmpexti,
 val tm_Kc_J1 = 
   ``category (id,comp) /\ Kmonad (id,comp) (unitM,extM) ==> 
   (Kmonad [: 'A, 'N o 'M :] (id,comp) (unitNM,extNM) /\
-  (!: 'a 'b. !f : ('a, 'b 'N 'M) 'A. 
-    extM [:'a 'N 'M, 'b 'N:] (extNM f) = 
-      comp (extNM f) (extM [:'a 'N 'M, 'a 'N:] id)) /\
+  J1S (id, comp) extM extNM /\
   (pext = (\:'a 'b. (\f. comp (extNM f) unitM))) = 
   Kmonad [:('A,'M) Kleisli, 'N:] (unitM,Kcomp (id,comp) extM) (unitNM,pext) /\
   (extNM = (\:'a 'b. (\f. extM (pext f)))))`` ;
 
 val cm_Kc_J1 = store_thm ("cm_Kc_J1", tm_Kc_J1, 
-  EVERY [STRIP_TAC, EQ_TAC, REPEAT STRIP_TAC, REPEAT CONJ_TAC]
+  EVERY [ REWRITE_TAC [J1S_def], STRIP_TAC,
+    EQ_TAC, REPEAT STRIP_TAC, REPEAT CONJ_TAC]
   THENL [
-    (MATCH_MP_TAC cm_if_J1 THEN ASM_REWRITE_TAC []),
+    (MATCH_MP_TAC cm_if_J1' THEN ASM_REWRITE_TAC []),
     EVERY [ 
       (REWRITE_TAC [FUN_EQ_THM, TY_FUN_EQ_THM]),
       (REPEAT STRIP_TAC), TY_BETA_TAC, BETA_TAC,
-      MATCH_MP_TAC gjs, (ASM_REWRITE_TAC []) ],
+      MATCH_MP_TAC gjs', (ASM_REWRITE_TAC []) ],
 
     EVERY [ (MP_TAC pext_cm),
       (ASM_REWRITE_TAC []),
@@ -424,9 +465,6 @@ val (GmonadD, _) = EQ_IMP_RULE Gmonad_thm ;
 val [GmD1, GmD2, GmD3, GmD4, GmD5, GmD6, GmD7] = 
   map DISCH_ALL (CONJUNCTS (UNDISCH GmonadD)) ;
 
-(* abbreviate a much used tactic *)
-fun farwmmp con = (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP con th])) ; 
-
 val tmj = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
       (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\ 
    (extNM = EXTD (id, comp) (dmap, djoin)) ==> 
@@ -497,7 +535,7 @@ val tmee = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
 val Gmonad_ext_jm = store_thm ("Gmonad_ext_jm", tmee,
   EVERY [ DISCH_TAC, farwmmp Gmonad_join,
     (SRW_TAC [] [EXTD_def, EXT_def]), 
-    farwmmp (GSYM catDAss), farwmmp (GSYM GmD2), farwmmp catDLU ]) ;
+    farwmmp catDRAss, farwmmp (GSYM GmD2), farwmmp catDLU ]) ;
 
 fun fix_abs_eq rewrs th = 
   let val th0 = REWRITE_RULE ([TY_FUN_EQ_THM, FUN_EQ_THM] @ rewrs) th ; 
@@ -523,7 +561,7 @@ val Gmonad_IMP_Kmonad = store_thm ("Gmonad_IMP_Kmonad", tmgc,
      (ASM_REWRITE_TAC []), farwmmp GmD2,
      (FIRST_ASSUM (fn th => 
        CONV_TAC (DEPTH_CONV (REWR_CONV (MATCH_MP catDAss th))))),
-     farwmmp (GSYM GmD4), farwmmp (GSYM catDAss),
+     farwmmp (GSYM GmD4), farwmmp catDRAss,
      (ASM_REWRITE_TAC []) ]]) ;
 
 val tmdm = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
@@ -542,7 +580,7 @@ val Gmonad_dmap = store_thm ("Gmonad_dmap", tmdm,
     farwmmp (GSYM GmD3),
     (ASM_REWRITE_TAC [EXTD_def]), TY_BETA_TAC, BETA_TAC,
     farwmmp GmD2, farwmmp catDAss,
-    farwmmp (GSYM GmD4), farwmmp (GSYM catDAss), 
+    farwmmp (GSYM GmD4), farwmmp catDRAss, 
     (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o fix_abs_eq [EXT_def]))),
     (ASM_REWRITE_TAC []), farwmmp catDRU,
     (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
@@ -585,10 +623,19 @@ val tmginvx = ``
   (joinNM = JOINE (id, comp) (unitNM, extNM)) ==>
   Gmonad (id,comp) (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM`` ;
 
+val tmginvx = ``
+  Gmonad (id,comp) (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM ==>
+  category (id,comp) /\ Kdmonad (id,comp) (unitNM,extNM,mapNM,joinNM) /\
+  (djoin = \:'a. extNM [:'a 'N, 'a:] (unitM [:'a 'N:])) /\ 
+  (dmap = \:'a 'b. \ f. extNM [:'a, 'b:] (comp (dunit [:'b:]) f)) /\
+  (unitNM = \:'a. comp (dunit [:'a:]) (unitM [:'a:])) /\
+  (!:'a. comp (djoin [:'a:]) (dunit [:'a 'N:]) = id [:'a 'N 'M:]) ==>
+  Gmonad (id,comp) (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM`` ;
+
 val (_, tmginv) = dest_imp tmginvx ;
 
 val Kmonad_IMP_Gmonad = store_thm ("Kmonad_IMP_Gmonad", tmginv,
-  EVERY [ STRIP_TAC,
+  EVERY [ REWRITE_TAC [Kdmonad_thm], STRIP_TAC,
     (USE_LIM_RES_TAC (fn th => 
       REWRITE_TAC [Gmonad_thm, GSYM (fix_abs_eq [EXTD_def] th)]) Kmonad_extD),
     (REPEAT CONJ_TAC THEN REPEAT STRIP_TAC) ]
@@ -609,6 +656,8 @@ val Kmonad_IMP_Gmonad = store_thm ("Kmonad_IMP_Gmonad", tmginv,
     EVERY [ (ASM_REWRITE_TAC [JOINE_def]),
       TY_BETA_TAC, (farwmmp KmonDAss), (farwmmp catDRU)]]) ;
 
+val Kmonad_IMP_Gmonad' = REWRITE_RULE [Kdmonad_thm] Kmonad_IMP_Gmonad ;
+
 val tmgiffk = ``category (id,comp) ==> 
   (Gmonad (id,comp) (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\
     (extNM = EXTD (id,comp) (dmap,djoin)) = 
@@ -620,19 +669,28 @@ val tmgiffk = ``category (id,comp) ==>
     (mapNM = MAPE (id, comp) (unitNM, extNM)) /\
     (joinNM = JOINE (id, comp) (unitNM, extNM)))`` ;
 
+val tmgiffk = ``category (id,comp) ==> 
+  (Gmonad (id,comp) (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\
+    (extNM = EXTD (id,comp) (dmap,djoin)) = 
+  Kdmonad (id,comp) (unitNM,extNM,mapNM,joinNM) /\ 
+    (djoin = \:'a. extNM [:'a 'N, 'a:] (unitM [:'a 'N:])) /\
+    (dmap = \:'a 'b. \ f. extNM [:'a, 'b:] (comp (dunit [:'b:]) f)) /\
+    (unitNM = \:'a. comp (dunit [:'a:]) (unitM [:'a:])) /\
+    (!:'a. comp (djoin [:'a:]) (dunit [:'a 'N:]) = id [:'a 'N 'M:]) )`` ;
+
 val Gmonad_iff_Kmonad = store_thm ("Gmonad_iff_Kmonad", tmgiffk,
-  EVERY [ STRIP_TAC,
+  EVERY [ REWRITE_TAC [Kdmonad_thm], STRIP_TAC,
     EQ_TAC, STRIP_TAC, (REPEAT CONJ_TAC) ] 
   THENL [ (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_IMP_Kmonad),
+    (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_map),
+    (REWRITE_TAC [JOINE_def]) THEN 
+      (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_join),
     (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_djoin),
     (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_dmap),
     (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_unit),
     (USE_LIM_RES_TAC ACCEPT_TAC GmD5), (* MATCH_ACCEPT_TAC fails !! *)
-    (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_map),
-    (REWRITE_TAC [JOINE_def]) THEN 
-      (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Gmonad_join),
     (* inverse direction *)
-    (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Kmonad_IMP_Gmonad),
+    (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Kmonad_IMP_Gmonad'),
     (USE_LIM_RES_TAC MATCH_ACCEPT_TAC Kmonad_extD) ]) ;
 
 val tmgfn = 
@@ -660,15 +718,15 @@ val thae = (snd o EQ_IMP_RULE o SPEC_ALL) LEFT_EXISTS_IMP_THM ;
 HO_MATCH_MP thae th ;
 *)
 
-val gen_KG = GEN_ALL Kmonad_IMP_Gmonad ;
+val gen_KG = GEN_ALL Kmonad_IMP_Gmonad' ;
 val kgtacs = [ (MATCH_MP_TAC gen_KG),
   (Q.EXISTS_TAC `extM`), TY_BETA_TAC, 
   (FIRST_ASSUM (ASSUME_TAC o MATCH_MP KmonDLU)),
   (FIRST_ASSUM (ASSUME_TAC o MATCH_MP KmonDRU)),
   (ASM_REWRITE_TAC []),
-  (EVERY [(CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
+  (CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)),
   (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), 
-  (ASM_REWRITE_TAC []) ]),
+  (ASM_REWRITE_TAC []),
   (* same problem here regarding eta-reduction of types,
   so require following two lines *)
   (REWRITE_TAC [Kmonad_thm]),

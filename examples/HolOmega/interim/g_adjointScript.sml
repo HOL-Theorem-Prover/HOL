@@ -189,7 +189,7 @@ val g_adjf1_hash_comp' = prove (tmhc,
     (REWRITE_TAC [adjf1_conds_thm]), STRIP_TAC, 
     (FIRST_ASSUM (MATCH_MP_TAC o MATCH_MP g_adjf1D1)),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_functorD th])),
-    (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP (GSYM categoryD_assoc) th])),
+    (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP catDRAss th])),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC
       [(REWRITE_RULE [o_THM, I_THM] o TY_BETA_RULE o REWRITE_RULE
       [g_oo_thm, g_I_def] o MATCH_MP g_nattransfD) th])),
@@ -207,7 +207,7 @@ val g_adjf1_hash_eq' = prove (tmhe,
     (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP (GSYM g_adjf1_hash_comp) th])),
     (POP_ASSUM (ASSUME_TAC o CONJUNCT1)),
     (IMP_RES_TAC adjf1_conds_thm),
-    (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP categoryD_idL th])) ]) ;
+    (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP catDLU th])) ]) ;
 
 val g_adjf1_hash_eq = save_thm ("g_adjf1_hash_eq",
   DISCH_ALL (TY_GEN_ALL (GEN_ALL (UNDISCH g_adjf1_hash_eq')))) ;
@@ -219,7 +219,7 @@ val g_adjf1_hash_eta' = prove (
   EVERY [ STRIP_TAC,
     (FIRST_ASSUM (MATCH_MP_TAC o MATCH_MP g_adjf1D1)),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_functorD th])),
-    (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP categoryD_idL)) ]) ;
+    (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP catDLU)) ]) ;
 
 val g_adjf1_hash_eta = save_thm ("g_adjf1_hash_eta",
   DISCH_ALL (TY_GEN_ALL (GEN_ALL (UNDISCH g_adjf1_hash_eta')))) ;
@@ -237,7 +237,7 @@ val g_adjf1_Feq' = prove (tmfc,
     (* (IMP_RES_TAC g_adjf1_hash_eta') doesn't generalise over types *)
     (ASM_REWRITE_TAC []),
     (REPEAT (FIRST_X_ASSUM
-      (fn th => REWRITE_TAC [MATCH_MP categoryD_idL th]))) ]) ;
+      (fn th => REWRITE_TAC [MATCH_MP catDLU th]))) ]) ;
 
 val g_adjf1_Feq = save_thm ("g_adjf1_Feq",
   DISCH_ALL (TY_GEN_ALL (GEN_ALL (UNDISCH g_adjf1_Feq')))) ;
@@ -293,9 +293,9 @@ val g_adjf1_F_fun = store_thm ("g_adjf1_F_fun", tmff,
     (FIRST_ASSUM (fn th => ASM_REWRITE_TAC [MATCH_MP g_functorD th])) ]
   THENL [ (IMP_RES_TAC category_thm) THEN ASM_REWRITE_TAC [],
     EVERY [ 
-      (FIRST_ASSUM (fn th => REWRITE_TAC [GSYM (MATCH_MP categoryD_assoc th)])),
+      (FIRST_ASSUM (fn th => REWRITE_TAC [(MATCH_MP catDRAss th)])),
       (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_adjf1DGh th])),
-      (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP categoryD_assoc th])),
+      (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP catDAss th])),
       (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_adjf1DGh th])) ]] ) ;
 
 val EPS_def = Define
@@ -425,9 +425,9 @@ val g_adjf1_eta_nt = store_thm ("g_adjf1_eta_nt", tment,
     (FIRST_X_ASSUM MATCH_MP_TAC),
     
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_functorD th])),
-    (FIRST_ASSUM (fn th => REWRITE_TAC [GSYM (MATCH_MP categoryD_assoc th)])),
+    (FIRST_ASSUM (fn th => REWRITE_TAC [(MATCH_MP catDRAss th)])),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_adjf1DGh th])),
-    (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP categoryD_idR th])) ]) ;
+    (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP catDRU th])) ]) ;
 
 val tm13 = ``adjf1_conds [:'C:] (idC, compC) (idD,compD) eta F' G /\
        g_adjf1 (idC, compC) G eta hash ==> 
@@ -492,7 +492,7 @@ val HASH_eta_I = store_thm ("HASH_eta_I",
   EVERY [ STRIP_TAC,
     (FIRST_X_ASSUM (MATCH_MP_TAC o MATCH_MP g_adjf3D1)),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_functorD th])),
-    (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP categoryD_idL)) ]) ;
+    (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP catDLU)) ]) ;
 
 val STAR_eps_I = store_thm ("STAR_eps_I", 
   ``g_adjf3 (idC,compC) (idD,compD) F' G (eta : ('C, I, 'F o 'G) g_nattransf)
@@ -502,7 +502,7 @@ val STAR_eps_I = store_thm ("STAR_eps_I",
   EVERY [ STRIP_TAC,
     (FIRST_X_ASSUM (MATCH_MP_TAC o MATCH_MP g_adjf3D2)),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_functorD th])),
-    (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP categoryD_idR)) ]) ;
+    (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP catDRU)) ]) ;
 
 (* this is the actual formulation of the equivalence of two
   characterisations of adjoint functors *)
@@ -551,7 +551,7 @@ val g_adjf3_nt = store_thm ("g_adjf3_nt", tm3nt,
       (FIRST_ASSUM (MATCH_MP_TAC o GSYM o MATCH_MP g_adjf3D1)),
       (ASM_REWRITE_TAC []),
       (FIRST_ASSUM (fn th => CHANGED_TAC 
-	(REWRITE_TAC [MATCH_MP (GSYM catDAss) th]))),
+	(REWRITE_TAC [MATCH_MP catDRAss th]))),
       (USE_LIM_RES_TAC (fn th => ASM_REWRITE_TAC [th]) ( STAR_eps_I))]] ) ;
      
 (* get link between g_adjf2 and g_adjf3 by duality *)
@@ -709,7 +709,7 @@ val g_adjf3_4 = store_thm ("g_adjf3_4", tm34,
     (FIRST_X_ASSUM (MATCH_ACCEPT_TAC o MATCH_MP g_adjf3D)),
     EVERY [ (ASM_REWRITE_TAC []),
       (FIRST_ASSUM (fn th => 
-	CHANGED_TAC (REWRITE_TAC [MATCH_MP (GSYM catDAss) th]))),
+	CHANGED_TAC (REWRITE_TAC [MATCH_MP catDRAss th]))),
       (REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC)),
       (FIRST_ASSUM (fn th => 
 	CHANGED_TAC (ASM_REWRITE_TAC [MATCH_MP catDAss th]))) ],
@@ -718,7 +718,7 @@ val g_adjf3_4 = store_thm ("g_adjf3_4", tm34,
 	CHANGED_TAC (REWRITE_TAC [MATCH_MP catDAss th]))),
       (REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC)),
       (FIRST_ASSUM (fn th => 
-	CHANGED_TAC (ASM_REWRITE_TAC [MATCH_MP (GSYM catDAss) th]))) ]]) ;
+	CHANGED_TAC (ASM_REWRITE_TAC [MATCH_MP catDRAss th]))) ]]) ;
 
 val tm34e = ``category (idC,compC) /\ category (idD,compD) ==> 
   (g_adjf3 [:'C,'D:] (idC,compC) (idD,compD) F' G eta eps /\
@@ -750,7 +750,7 @@ val g_adjf34_equiv = store_thm ("g_adjf34_equiv", tm34e,
 	
 	EVERY [ (SRW_TAC [] [STAR_thm]),
 	  (FIRST_ASSUM (fn th =>
-	    CHANGED_TAC (REWRITE_TAC [MATCH_MP (GSYM catDAss) th]))),
+	    CHANGED_TAC (REWRITE_TAC [MATCH_MP catDRAss th]))),
 	  (USE_LIM_RES_TAC (fn th => ASM_REWRITE_TAC [th]) ( STAR_eps_I)),
 	  (CONV_TAC (DEPTH_CONV ETA_CONV)),
 	  (CONV_TAC (DEPTH_CONV TY_ETA_CONV)), REFL_TAC] ],
@@ -881,8 +881,8 @@ val g_adjf3_jmj_lem = store_thm ("g_adjf3_jmj_lem", tmjmj,
     (* can't here use (ASSUME_TAC tgs), RES_TAC, *) 
     REPEAT (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_functorD th])),
     REPEAT (FIRST_X_ASSUM (fn th => 
-      ASSUME_TAC (MATCH_MP categoryD_idR th) THEN
-      ASM_REWRITE_TAC [GSYM (MATCH_MP categoryD_assoc th)])) ]) ;
+      ASSUME_TAC (MATCH_MP catDRU th) THEN
+      ASM_REWRITE_TAC [(MATCH_MP catDRAss th)])) ]) ;
 
 val jmjth = DISCH_ALL (TY_GEN_ALL (UNDISCH g_adjf3_jmj_lem)) ;
 
@@ -897,7 +897,7 @@ val g_adjf1_monad_lem = store_thm ("g_adjf1_monad_lem", tmass,
   EVERY [ STRIP_TAC,
     (FIRST_ASSUM (MATCH_MP_TAC o MATCH_MP g_adjf1D1)),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_functorD th])),
-    (FIRST_X_ASSUM (fn th => REWRITE_TAC [GSYM (MATCH_MP categoryD_assoc th)])),
+    (FIRST_X_ASSUM (fn th => REWRITE_TAC [(MATCH_MP catDRAss th)])),
     (FIRST_X_ASSUM (fn th => REWRITE_TAC [MATCH_MP g_adjf1DGh th])) ]) ;
 
 val gahe = DISCH_ALL (TY_GEN_ALL (UNDISCH g_adjf1_hash_eta)) ;
