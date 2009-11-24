@@ -178,7 +178,6 @@ val g_adjf4D_eqv2 =
 val (g_functorD, _) = EQ_IMP_RULE g_functor_thm ; 
 val (categoryD, _) = EQ_IMP_RULE category_thm ; 
 val (g_nattransfD, _) = EQ_IMP_RULE g_nattransf_thm ; 
-val [categoryD_idL, categoryD_idR, categoryD_assoc] = RES_CANON categoryD ;
 
 val tmhc = ``adjf1_conds [:'C:] (idC, compC) (idD,compD) eta F' G /\
   g_adjf1 (idC, compC) G eta hash ==> 
