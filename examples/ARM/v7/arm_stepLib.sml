@@ -693,6 +693,12 @@ local
           in
             (armSyntax.Encoding_ARM_tm,armSyntax.mk_arm_decode (mk_bool v4,n))
           end
+
+  val remove_white_space =
+        String.translate (fn c => if Char.isSpace c then
+                                    ""
+                                  else
+                                    Char.toString c)
 in
   fun make_arm_state_and_pre the_state (opt:options) instr =
   let
@@ -707,7 +713,7 @@ in
     val E = endian_to_term endian
     val A = arch_to_term arch
     val Thumb = mk_bool thumb
-    val opc = Arbnum.fromHexString instr
+    val opc = Arbnum.fromHexString (remove_white_space instr)
                 handle Option => raise ERR "make_arm_state_and_pre"
                                            "not a valid hex opcode"
     val (enc,dec) = (I ## eval) (decode_opcode itstate arch thumb opc)

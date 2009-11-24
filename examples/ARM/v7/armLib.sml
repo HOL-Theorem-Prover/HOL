@@ -100,7 +100,7 @@ local
 in
   fun arm_steps_from_parse s l =
     let fun arm_step_from_code (itstate,instr as Instruction (enc,cond,tm)) =
-              let val opc = arm_encode instr
+              let val opc = arm_encoderLib.arm_encode instr
                   val pp = print_progress
                              (if !trace_progress mod 2 = 1 orelse
                                  !label_step_theorems

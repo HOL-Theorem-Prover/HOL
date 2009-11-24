@@ -1323,7 +1323,14 @@ fun encode_instruction (enc,cond,tm) =
          term_list_to_num [(``0b1111011111110000101w:19 word``,13)]
    | _ => raise ERR "encode_instruction" ("cannot encode: " ^
             term_to_string (pairSyntax.mk_pair (enc,tm))))
-     |> Arbnum.toHexString |> pad (if enc = Encoding_Thumb_tm then 4 else 8);
+     |> Arbnum.toHexString
+     |> (if enc = Encoding_Thumb_tm then
+           pad 4
+         else if enc = Encoding_ARM_tm then
+           pad 8
+         else
+           (fn s => String.concat [String.substring (s, 0, 4), " ",
+                                   String.substring (s, 4, 4)]));
 
 (* ------------------------------------------------------------------------- *)
 

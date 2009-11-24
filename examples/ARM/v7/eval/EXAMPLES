@@ -1,0 +1,48 @@
+load "arm_evalLib"; open arm_evalLib;
+
+val _ = patriciaLib.empty
+  |> arm_load_from_quote "100"
+       `ARCH	ARMv4T
+	ARM
+	adr	r0,label
+	orr	r0,#1
+	mov	lr,pc
+	bx	r0
+	SPACE	4
+	THUMB
+label:	movs	r1,#56
+	movs	r2,#12
+	muls	r2,r1
+	str	r3,[r2]
+	bx	lr`
+  |> patriciaLib.Define_mk_ptree "prog";
+
+val _ = time (trace ("arm eval",3)
+          (arm_eval "arch=armv4t,pc=100" ``prog``)) 20;
+
+val _ = patriciaLib.empty
+  |> arm_load_from_quote "100"
+       `ARCH	ARMv5TE
+	ARM
+	blx	label
+	add	r1,#8
+	SPACE	4
+	THUMB
+label:	movs	r1,#56
+	movs	r2,#12
+	muls	r2,r1
+	str	r2,[r1]
+	bx	lr`
+  |> patriciaLib.Define_mk_ptree "prog";
+
+val _ = print_arm_state (time (trace ("arm eval",4)
+          (arm_eval "arch=armv5te,pc=100" ``prog``)) 20);
+
+val _ = patriciaLib.empty
+  |> arm_load_from_quote "100"
+       `srsib	sp!,#0b10001`
+  |> patriciaLib.Define_mk_ptree "prog";
+
+val _ =
+   print_arm_state (time (trace ("arm eval",6)
+     (arm_eval ("lr_irq=10,pc=100,cpsr=" ^ encode_psr "m = irq") ``prog``)) 1);

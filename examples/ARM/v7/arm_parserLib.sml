@@ -1882,14 +1882,12 @@ val arm_parse_branch_link_exchange : (term * term) M =
                         ("arm_parse_branch_link_exchange", message))))))));
 
 val arm_parse_bx : (term * term) M =
-  need_v5 "arm_parse_bx"
-    (thumb_or_arm_okay
-      (fn enc =>
-         arm_parse_register >>= (fn rm =>
-         read_OutsideOrLastInITBlock >>= (fn OutsideOrLastInITBlock =>
-           assertT (enc = Encoding_ARM_tm orelse OutsideOrLastInITBlock)
-             ("arm_parse_bx", "must be outside or last in IT block")
-             (return (enc,mk_Branch_Exchange rm))))));
+  thumb_or_arm_okay (fn enc =>
+  arm_parse_register >>= (fn rm =>
+  read_OutsideOrLastInITBlock >>= (fn OutsideOrLastInITBlock =>
+    assertT (enc = Encoding_ARM_tm orelse OutsideOrLastInITBlock)
+      ("arm_parse_bx", "must be outside or last in IT block")
+      (return (enc,mk_Branch_Exchange rm)))));
 
 val arm_parse_setend : (term * term) M =
   need_v6 "arm_parse_setend"
