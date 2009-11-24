@@ -609,6 +609,26 @@ in
     end
 end
 
+(*---------------------------------------------------------------------------*
+ *  Eta-reduce all types within the term                                     *
+ *                                                                           *
+ *       t                                                                   *
+ *   -----------                                                             *
+ *    |- t = t'   (where t' is t but with all types eta-reduced)             *
+ *---------------------------------------------------------------------------*)
+
+fun ETA_TY_CONV t = ALPHA t (eta_conv_ty_in_term t)
+
+(*---------------------------------------------------------------------------*
+ *  Beta-eta-reduce all types within the term                                *
+ *                                                                           *
+ *       t                                                                   *
+ *   -----------                                                             *
+ *    |- t = t'   (where t' is t but with all types beta-eta-reduced)        *
+ *---------------------------------------------------------------------------*)
+
+fun BETA_ETA_TY_CONV t = ALPHA t (beta_eta_conv_ty_in_term t)
+
 (* =====================================================================*)
 (* What follows is a complete set of conversions for moving ! and ? into*)
 (* and out of the basic logical connectives ~, /\, \/, ==>, and =.      *)

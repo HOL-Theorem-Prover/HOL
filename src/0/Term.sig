@@ -90,6 +90,8 @@ sig
   val ty_beta_conv  : term -> term
   val ty_eta_conv   : term -> term
   val beta_conv_ty_in_term : term -> term
+  val eta_conv_ty_in_term : term -> term
+  val beta_eta_conv_ty_in_term : term -> term
   val subst         : (term,term) Lib.subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term (* general: aligns kinds & ranks *)
   val pure_inst     : (hol_type,hol_type) subst -> term -> term (* expects kinds & ranks match *)

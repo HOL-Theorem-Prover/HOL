@@ -367,7 +367,7 @@ end
 
 fun def_toType deftys ftyvs ty =
   let (* val ty = if Feedback.current_trace "beta_conv_types" > 0
-                      then deep_beta_conv_ty ty
+                      then deep_beta_eta_ty ty
                       else ty *)
       val _ = replace_null_links ty (kindvars ty, (map #1 o tyvars) ty)
   in

@@ -50,6 +50,8 @@ sig
    val ONCE_DEPTH_CONV       : conv -> conv
    val CONV_RULE             : conv -> thm -> thm
    val BETA_TY_CONV          : conv
+   val ETA_TY_CONV           : conv
+   val BETA_ETA_TY_CONV      : conv
    val BETA_RULE             : thm -> thm
    val TY_BETA_RULE          : thm -> thm
    val UNBETA_CONV           : term -> conv

@@ -1674,8 +1674,11 @@ val head_beta_ty = qconv_ty (repeat_ty head_beta1_ty)
 
 
 fun abconv_ty t1 t2 = aconv_ty (deep_beta_ty t1) (deep_beta_ty t2)
+fun abeconv_ty t1 t2 = aconv_ty (deep_beta_eta_ty t1) (deep_beta_eta_ty t2)
 
-fun subtype t1 t2 = asubtype (deep_beta_ty t1) (deep_beta_ty t2)
+val eq_ty = abeconv_ty
+
+fun subtype t1 t2 = asubtype (deep_beta_eta_ty t1) (deep_beta_eta_ty t2)
 
 local
 fun align_types0 [] = (0,([],[]))
@@ -1692,7 +1695,7 @@ fun align_types theta = let
           | inst_redex ({redex,residue} :: s) = let
                 val redex' = inst_rank_kind rkS kdS redex
               in
-                if abconv_ty redex' residue then inst_redex s
+                if eq_ty redex' residue then inst_redex s
                 else (redex' |-> residue) :: inst_redex s
               end
       in
@@ -1826,7 +1829,7 @@ local
   val _ = Feedback.register_trace ("Type.trace_complex_matching",
                                    trace_complex_matching, 1)
   exception NOT_FOUND
-  val eq_ty = abconv_ty (* beta-reduction NOT ASSUMMED before entering these functions *)
+  val eq_ty = abeconv_ty (* beta- and eta-reduction NOT ASSUMMED before entering these functions *)
   fun find_residue red [] = raise NOT_FOUND
     | find_residue red ({redex,residue}::rest) = if red = redex then residue
                                                     else find_residue red rest
@@ -2111,8 +2114,8 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                        let
                          val chop = find_residue_ty vhop insts (* may raise NOT_FOUND *)
                          val _ = if eq_ty vhop chop then raise NOT_FOUND else ()
-                         (* val vty1 = deep_beta_ty (type_subst (map_redexes inst_fn ((vhop |-> chop)::env)) (inst_fn vty)) *)
-                         val vty1 = deep_beta_ty (type_subst (map_redexes inst_fn (env@insts)) (inst_fn vty))
+                         (* val vty1 = deep_beta_eta_ty (type_subst (map_redexes inst_fn ((vhop |-> chop)::env)) (inst_fn vty)) *)
+                         val vty1 = deep_beta_eta_ty (type_subst (map_redexes inst_fn (env@insts)) (inst_fn vty))
                                         handle HOL_ERR _ => vty
                        in
                          if eq_ty vty1 cty then
@@ -2146,7 +2149,7 @@ fun type_homatch kdavoids lconsts rkin kdins (insts, homs) = let
                            val theta = map (op |->) (zip mod_pvars mod_pvars')
                            val vhop' = inst_fn vhop
                            val vty'  = inst_fn vty
-                           val vty1' = deep_beta_ty (type_subst ((vhop' |-> chop)::theta) vty')
+                           val vty1' = deep_beta_eta_ty (type_subst ((vhop' |-> chop)::theta) vty')
                                          handle HOL_ERR _ =>
                                             (if !trace_complex_matching = 0 then () else
                                                 (print ("Formation of new pattern failed: " ^
@@ -2261,12 +2264,12 @@ in
 end handle e => raise (wrap_exn "HolKernel" "ho_match_type" e)
 
 fun check_achieves_target (tyins, kdins, rkin) vty cty = 
-  if abconv_ty (type_subst tyins (inst_rank_kind rkin kdins vty)) cty then ()
+  if eq_ty (type_subst tyins (inst_rank_kind rkin kdins vty)) cty then ()
   else raise ERR "ho_match_type" "higher-order type matching failed to achieve target type"
 
 fun ho_match_type kdavoids lconsts vty cty = let
-  val vty' = deep_beta_ty vty
-  val cty' = deep_beta_ty cty
+  val vty' = deep_beta_eta_ty vty
+  val cty' = deep_beta_eta_ty cty
   val (tyins, kdins, rkin) = ho_match_type0 true kdavoids lconsts vty' cty'
   val _ = check_achieves_target (tyins, kdins, rkin) vty' cty'
 in (tyins, kdins, rkin)
@@ -2293,7 +2296,7 @@ fun raw_kind_match_type pat ob ((tyS,tyId), (kdS,kdId), rkS) =
 fun clean_subst ((tyS,_),(kdS,_),rkS) =
  let fun del A [] = A
        | del A ({redex,residue}::rst) =
-         del (if abconv_ty residue redex then A else (redex |-> residue)::A) rst
+         del (if eq_ty residue redex then A else (redex |-> residue)::A) rst
  in (del [] tyS,kdS,rkS)
  end
 
@@ -2325,17 +2328,17 @@ fun match_type pat ob = fst (raw_match_type pat ob ([],[]))
  ---------------------------------------------------------------------------*)
 
 val raw_dom_rng = dom_rng
-val dom_rng = fn ty => raw_dom_rng ty handle HOL_ERR _ => raw_dom_rng (deep_beta_ty ty)
+val dom_rng = fn ty => raw_dom_rng ty handle HOL_ERR _ => raw_dom_rng (deep_beta_eta_ty ty)
 
 val raw_compare = compare
-val compare = fn (t1,t2) => compare(deep_beta_ty t1, deep_beta_ty t2)
+val compare = fn (t1,t2) => compare(deep_beta_eta_ty t1, deep_beta_eta_ty t2)
 val raw_empty_tyset = empty_tyset
 val empty_tyset = HOLset.empty compare
 val raw_type_eq = type_eq
 fun type_eq t1 t2 = compare(t1,t2) = EQUAL;
 
 fun mapsub f = map (fn {redex,residue} => {redex=f redex, residue=residue})
-val type_subst = fn s => type_subst (mapsub deep_beta_ty s);
+val type_subst = fn s => type_subst (mapsub deep_beta_eta_ty s);
 
 val pure_ty_sub = ty_sub
 fun ty_sub theta ty = let val ty' = type_subst theta ty

@@ -144,7 +144,8 @@ val eq_type = Pretype.eq
 
 fun eq_info {actual_ops=ops1, base_type=bty1, kdavoids=kdavds1, tyavoids=avds1}
             {actual_ops=ops2, base_type=bty2, kdavoids=kdavds2, tyavoids=avds2}
-    = all2 Term.eq ops1 ops2 andalso Type.abconv_ty bty1 bty2 andalso all2 equal kdavds1 kdavds2 andalso all2 Type.abconv_ty avds1 avds2
+    = all2 Term.eq ops1 ops2 andalso Type.eq_ty bty1 bty2 andalso all2 equal kdavds1 kdavds2
+                             andalso all2 Type.eq_ty avds1 avds2
 
 fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...})                   = Name=Name' andalso eq_type Ty Ty'
   | eq (Const{Name=Name,Thy=Thy,Ty=Ty,...})        (Const{Name=Name',Thy=Thy',Ty=Ty',...})        = Name=Name' andalso Thy=Thy' andalso eq_type Ty Ty'
@@ -569,7 +570,7 @@ fun to_term tm =
           val clean = Pretype.clean o Pretype.remove_made_links
           fun prepare Ty =
               let val Ty' = if Pretype.do_beta_conv_types()
-                            then Pretype.deep_beta_conv_ty Ty
+                            then Pretype.deep_beta_eta_ty Ty
                             else Ty
               in Pretype.replace_null_links Ty' >- (fn _ => return Ty')
               end
@@ -651,7 +652,7 @@ fun to_term tm =
                            \guessing_tyvars is false)"
             else Pretype.toType ty
                 (* let val ty = if Pretype.do_beta_conv_types()
-                                then Pretype.deep_beta_conv_ty ty
+                                then Pretype.deep_beta_eta_ty ty
                                 else ty
                         val _ = Pretype.replace_null_links ty (Pretype.kindvars ty, Pretype.tyvars ty)
                  in Pretype.clean (Pretype.remove_made_links ty)
@@ -1042,7 +1043,7 @@ fun TC printers = let
   val checkkind = Pretype.checkkind (case printers of SOME (x,y,z) => SOME (y,z) | NONE => NONE)
   fun mk_not_tyabs tm =
        let open Pretype
-           val ty = deep_beta_conv_ty (ptype_of tm)
+           val ty = deep_beta_eta_ty (ptype_of tm)
            val (bvars,body) = strip_univ_type ty
            val args = map (fn bvar => new_uvar(pkind_of bvar,Prerank.new_uvar())) bvars
        in list_mk_tycomb(tm, args)
@@ -1050,8 +1051,8 @@ fun TC printers = let
   fun check(Comb{Rator, Rand, Locn}) =
       (let val Rator' = check Rator;
            val Rand'  = check Rand;
-           val Rator_ty = Pretype.deep_beta_conv_ty (ptype_of Rator')
-           val Rand_ty = Pretype.deep_beta_conv_ty (ptype_of Rand')
+           val Rator_ty = Pretype.deep_beta_eta_ty (ptype_of Rator')
+           val Rand_ty = Pretype.deep_beta_eta_ty (ptype_of Rand')
        in if Pretype.is_univ_type Rator_ty then
              check (Comb{Rator=mk_not_tyabs Rator', Rand=Rand', Locn=Locn})
           else if Pretype.is_univ_type Rand_ty andalso
@@ -1227,7 +1228,7 @@ fun TC printers = let
               val _   = Feedback.set_trace "kinds" 2
               val Rator_tm = to_term (overloading_resolution0 Rator')
                              handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
-              val Rator_ty = Type.deep_beta_ty (Term.type_of Rator_tm)
+              val Rator_ty = Type.deep_beta_eta_ty (Term.type_of Rator_tm)
               val Pretype.PT(_,rand_locn) = Rand
               val Rand_ty = Pretype.toType Rand
                             handle e => (Globals.show_types := tmp0; Feedback.set_trace "kinds" tmp1; raise e)
@@ -1377,7 +1378,7 @@ fun TC printers = let
             raise ERRloc"kindcheck" (pty_locn Ty (* arbitrary *)) "failed"
           end;
          let val Ptm' = check Ptm
-             val Ptm_ty = Pretype.deep_beta_conv_ty (ptype_of Ptm')
+             val Ptm_ty = Pretype.deep_beta_eta_ty (ptype_of Ptm')
          in if Pretype.is_univ_type Ptm_ty andalso Pretype.is_not_univ_type Ty then
                check (Constrained{Ptm=mk_not_tyabs Ptm', Ty=Ty, Locn=Locn})
             else

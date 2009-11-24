@@ -258,7 +258,7 @@ end;
 (*---------------------------------------------------------------------------*
  *                  Equality of terms                                        *
  *     This does NOT include alpha-equivalence, but                          *
- *     DOES include deep beta conversion of types.                           *
+ *     DOES include deep beta and eta conversion of types.                           *
  *     This discriminates between unequal but alpha-equivalent terms.        *
  *---------------------------------------------------------------------------*)
 
@@ -268,11 +268,11 @@ fun thety (GRND ty) = ty
 in
 fun eq t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
-  of (Fv(M,a),Fv(N,b)) => M=N andalso abconv_ty a b
+  of (Fv(M,a),Fv(N,b)) => M=N andalso eq_ty a b
    | (Bv i,Bv j) => i=j
-   | (Const(M,a),Const(N,b)) => M=N andalso abconv_ty (thety a) (thety b)
+   | (Const(M,a),Const(N,b)) => M=N andalso eq_ty (thety a) (thety b)
    | (Comb(M,N),Comb(P,Q)) => eq N Q andalso eq M P
-   | (TComb(M,a),TComb(N,b)) => abconv_ty a b andalso eq M N
+   | (TComb(M,a),TComb(N,b)) => eq_ty a b andalso eq M N
    | (Abs(u,M),Abs(v,N)) => eq u v andalso eq M N
    | (TAbs(tyv1,M),TAbs(tyv2,N)) => tyv1 = tyv2 andalso eq M N
    | (Clos(e1,b1),Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
@@ -294,12 +294,12 @@ fun thety (GRND ty) = ty
 in
 fun aconv t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
-  of (Fv(M,a),Fv(N,b)) => M=N andalso abconv_ty a b
+  of (Fv(M,a),Fv(N,b)) => M=N andalso eq_ty a b
    | (Bv i,Bv j) => i=j
-   | (Const(M,a),Const(N,b)) => M=N andalso abconv_ty (thety a) (thety b)
+   | (Const(M,a),Const(N,b)) => M=N andalso eq_ty (thety a) (thety b)
    | (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
-   | (TComb(M,a),TComb(N,b)) => abconv_ty a b andalso aconv M N
-   | (Abs(Fv(_,a),M),Abs(Fv(_,b),N)) => abconv_ty a b andalso aconv M N
+   | (TComb(M,a),TComb(N,b)) => eq_ty a b andalso aconv M N
+   | (Abs(Fv(_,a),M),Abs(Fv(_,b),N)) => eq_ty a b andalso aconv M N
    | (TAbs((_,k1,r1),M),TAbs((_,k2,r2),N)) => k1=k2 andalso r1=r2 andalso aconv M N
    | (Clos(e1,b1),Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
                                   orelse aconv (push_clos t1) (push_clos t2)
@@ -574,10 +574,10 @@ fun prim_mk_const (knm as {Name,Thy}) =
 
 fun ground x = Lib.all (fn {redex,residue} => not(Type.polymorphic residue)) x;
 
-val bconv = deep_beta_ty
+(* val bconv = deep_beta_ty *)
 
 fun create_const errstr (const as (r,GRND pat)) Ty =
-      if abconv_ty Ty pat then Const const
+      if eq_ty Ty pat then Const const
       else raise ERR "create_const" ("not a type match: " ^ type_to_string pat
                                      ^ " does not match " ^ type_to_string Ty)
   | create_const errstr (const as (r,POLY pat)) Ty =
@@ -624,19 +624,19 @@ local val INCOMPAT_TYPES  = Lib.C ERR "incompatible types"
         let fun loop (A,_) [] = A
               | loop (A,typ) (tm::rst) =
                  let val (ty1,ty2) = with_exn Type.dom_rng typ err
-                 in if abconv_ty (type_of tm) ty1
+                 in if eq_ty (type_of tm) ty1
                     then loop(Comb(A,tm),ty2) rst
                     else raise err
                  end
-        in fn (f,L) => loop(f, deep_beta_ty (type_of f)) L
+        in fn (f,L) => loop(f, deep_beta_eta_ty (type_of f)) L
         end
       val mk_comb0 = lmk_comb (INCOMPAT_TYPES "mk_comb")
 in
 
 fun mk_comb(r as (Abs(Fv(_,Ty),_), Rand)) =
-      if abconv_ty (type_of Rand) Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
+      if eq_ty (type_of Rand) Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
   | mk_comb(r as (Clos(_,Abs(Fv(_,Ty),_)), Rand)) =
-      if abconv_ty (type_of Rand) Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
+      if eq_ty (type_of Rand) Ty then Comb r else raise INCOMPAT_TYPES "mk_comb"
   | mk_comb(Rator,Rand) = mk_comb0 (Rator,[Rand])
 
 val list_mk_comb = lmk_comb (INCOMPAT_TYPES "list_mk_comb")
@@ -822,6 +822,44 @@ val beta_conv_ty_in_term =
        bconv
      end;
 
+(*---------------------------------------------------------------------------*
+ *       Eta-conversion of all types within a term.                          *
+ *---------------------------------------------------------------------------*)
+
+val eta_conv_ty_in_term =
+     let fun econv(Fv(s,ty))         = Fv(s,deep_eta_ty ty)
+           | econv(Const(Name,Ty))   = Const(Name,econv_pty Ty)
+           | econv(Comb(Rator,Rand)) = Comb(econv Rator,econv Rand)
+           | econv(TComb(Rator,Ty))  = TComb(econv Rator,deep_eta_ty Ty)
+           | econv(Abs(v,Body))      = Abs(econv v,econv Body)
+           | econv(TAbs(a,Body))     = TAbs(a,econv Body)
+           | econv(tm as Clos _)     = econv(push_clos tm)
+           | econv tm = tm (* e.g., bound variables *)
+         and econv_pty (GRND ty)     = GRND (deep_eta_ty ty)
+           | econv_pty (POLY ty)     = POLY (deep_eta_ty ty)
+     in
+       econv
+     end;
+
+(*---------------------------------------------------------------------------*
+ *       Beta-eta-conversion of all types within a term.                     *
+ *---------------------------------------------------------------------------*)
+
+val beta_eta_conv_ty_in_term =
+     let fun beconv(Fv(s,ty))         = Fv(s,deep_beta_eta_ty ty)
+           | beconv(Const(Name,Ty))   = Const(Name,beconv_pty Ty)
+           | beconv(Comb(Rator,Rand)) = Comb(beconv Rator,beconv Rand)
+           | beconv(TComb(Rator,Ty))  = TComb(beconv Rator,deep_beta_eta_ty Ty)
+           | beconv(Abs(v,Body))      = Abs(beconv v,beconv Body)
+           | beconv(TAbs(a,Body))     = TAbs(a,beconv Body)
+           | beconv(tm as Clos _)     = beconv(push_clos tm)
+           | beconv tm = tm (* e.g., bound variables *)
+         and beconv_pty (GRND ty)     = GRND (deep_beta_eta_ty ty)
+           | beconv_pty (POLY ty)     = POLY (deep_beta_eta_ty ty)
+     in
+       beconv
+     end;
+
 
 (*---------------------------------------------------------------------------*
  *       Type Eta-conversion                                                 *
@@ -858,9 +896,9 @@ end;
  *---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*
- * Note: "subtype" could be used below in place of "abconv_ty".              *
+ * Note: "subtype" could be used below in place of "eq_ty".                  *
  * This allows for substitutions of types which are the same up to           *
- * alpha-beta conversion except for having type variables of lower rank.     *
+ * alpha-beta-eta conversion except for having type variables of lower rank. *
  *---------------------------------------------------------------------------*)
 
 val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
@@ -868,7 +906,7 @@ local
   open Binarymap
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
-      addb t (if abconv_ty (type_of residue) (type_of redex)
+      addb t (if eq_ty (type_of residue) (type_of redex)
               then (insert(A,redex,residue),
                     is_var redex andalso b)
               else raise ERR "subst" "redex has different type than residue")
@@ -936,7 +974,7 @@ fun inst1 [] = I
       inst0
     end
 in
-fun pure_inst theta = inst1 (mapsb deep_beta_ty theta)
+fun pure_inst theta = inst1 (mapsb deep_beta_eta_ty theta)
 end;
 
 fun inst_kind [] tm = tm
@@ -1632,7 +1670,7 @@ fun RM [] theta = theta
             in
                RM rst
                ((case lookup v Id tmS
-                  of NONE => if aconv v tm (* can't use = because of abconv_ty *)
+                  of NONE => if aconv v tm (* can't use = because of eq_ty *)
                                      then (tmS,HOLset.add(Id,v))
                                      else ((v |-> tm)::tmS,Id)
                    | SOME tm' => if aconv tm' tm then S1
@@ -1705,7 +1743,7 @@ fun kind_norm_subst ((tmS,_),(tyS,_),(kdS,_),rkS) =
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
               in if aconv residue redex' then A
-                 else if abconv_ty (type_of redex') (type_of residue)
+                 else if eq_ty (type_of redex') (type_of residue)
                       then (redex' |-> residue)::A
                       else raise ERR "kind_match_term" "generated term substitution had different types"
               end) rst
@@ -1746,15 +1784,15 @@ fun match_term pat ob =
 
 local
 fun tymatch pat ob ((lctys,env,insts_homs),kdS,rkS) =
-        let (*val pat = deep_beta_ty pat
-            val ob  = deep_beta_ty ob*)
+        let (*val pat = deep_beta_eta_ty pat
+            val ob  = deep_beta_eta_ty ob*)
             val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
             val (rkS',kdS') = Type.get_rank_kind_insts [] env (fst insts_homs') (rkS,kdS)
         in ((lctys,env,insts_homs'),kdS',rkS')
         end
 in
 fun get_type_kind_rank_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId),rkS) =
-  let (*fun beta_conv_S {redex,residue} = {redex=redex, residue = deep_beta_ty residue}
+  let (*fun beta_conv_S {redex,residue} = {redex=redex, residue = deep_beta_eta_ty residue}
       val tyS = map beta_conv_S tyS*)
       val tyfixed = HOLset.addList(HOLset.addList(empty_tyset, tyavoids), tyId)
       val kdfixed = union kdavoids kdId
@@ -1976,7 +2014,7 @@ local
     | find_residue red ({redex,residue}::rest) = if red = redex then residue
                                                  else find_residue red rest
   fun find_residue_ty red [] = raise NOT_FOUND
-    | find_residue_ty red ({redex,residue}::rest) = if abconv_ty red redex then residue
+    | find_residue_ty red ({redex,residue}::rest) = if eq_ty red redex then residue
                                                     else find_residue_ty red rest
   fun find_residue_tm red [] = raise NOT_FOUND
     | find_residue_tm red ({redex,residue}::rest) = if aconv red redex then residue
@@ -1984,7 +2022,7 @@ local
   fun in_dom x [] = false
     | in_dom x ({redex,residue}::rest) = (x = redex) orelse in_dom x rest
   fun in_dom_ty x [] = false
-    | in_dom_ty x ({redex,residue}::rest) = abconv_ty x redex orelse in_dom_ty x rest
+    | in_dom_ty x ({redex,residue}::rest) = eq_ty x redex orelse in_dom_ty x rest
   fun in_dom_tm x [] = false
     | in_dom_tm x ({redex,residue}::rest) = aconv x redex orelse in_dom_tm x rest
   fun safe_insert (n as {redex,residue}) l = let
@@ -2011,7 +2049,7 @@ local
   fun safe_insert_ty (n as {redex,residue}) l = let
     val z = find_residue_ty redex l
   in
-    if abconv_ty residue z then l
+    if eq_ty residue z then l
     else raise ERR "safe_insert_ty" "match"
   end handle NOT_FOUND => n::l
   local
@@ -2048,13 +2086,13 @@ local
 
   fun find_residue_dum red [] = raise NOT_FOUND
     | find_residue_dum red ({redex,residue}::rest) =
-        (if abconv_ty red (dest_dummy redex) then dest_dummy residue
+        (if eq_ty red (dest_dummy redex) then dest_dummy residue
          else find_residue_dum red rest)
         handle HOL_ERR _ => find_residue_dum red rest
   (* safe_insert_dummy is like safe_insert but specially for dummy terms *)
   fun safe_insert_dummy (n as {redex,residue}) l =
     let val z = find_residue_dum redex l
-    in if abconv_ty residue z then l
+    in if eq_ty residue z then l
        else raise ERR "safe_insert_dummy" "match"
     end handle NOT_FOUND => mk_dummy2 n :: l
 
@@ -2074,7 +2112,7 @@ local
         val {Thy = cthy, Name = cname, Ty = cty} = dest_thy_const ctm
       in
         if vname = cname andalso vthy = cthy then
-          if abconv_ty cty vty then sofar
+          if eq_ty cty vty then sofar
           else (safe_insert_dummy (vty |-> cty) insts, homs)
         else raise ERR "term_pmatch" "constant mismatch"
       end
@@ -2106,7 +2144,7 @@ local
         then let
             val vty = type_of vtm
             val cty = type_of ctm
-            val insts' = if abconv_ty vty cty then insts
+            val insts' = if eq_ty vty cty then insts
                          else safe_insert_dummy (vty |-> cty) insts
           in
             (insts', (tyenv,env,ctm,vtm)::homs)
@@ -2127,7 +2165,7 @@ local
         then let
             val vty = type_of vtm
             val cty = type_of ctm
-            val insts' = if abconv_ty vty cty then insts
+            val insts' = if eq_ty vty cty then insts
                          else safe_insert_dummy (vty |-> cty) insts
           in
             (insts', (tyenv,env,ctm,vtm)::homs)
@@ -2183,21 +2221,21 @@ fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
                    else {redex = x', residue = t}
                  end) realinsts
   val _ = map (fn {redex = x, residue = t} =>
-                   if abconv_ty (type_of x) (type_of t) then ()
+                   if eq_ty (type_of x) (type_of t) then ()
                    else raise ERR "separate_insts" "bad term subst: type mismatch" (* This covers an error in normal HOL *)
               ) tminsts
 in
   (betacounts, tminsts, tyins', kdins, rkin)
 end
 
-fun tyenv_in_dom x (env, idlist) = op_mem abconv_ty x idlist orelse in_dom_ty x env
-fun tyenv_find_residue x (env, idlist) = if op_mem abconv_ty x idlist then x
+fun tyenv_in_dom x (env, idlist) = op_mem eq_ty x idlist orelse in_dom_ty x env
+fun tyenv_find_residue x (env, idlist) = if op_mem eq_ty x idlist then x
                                          else find_residue x env
 fun tyenv_safe_insert (t as {redex,residue}) (E as (env, idlist)) = let
   val existing = tyenv_find_residue redex E
 in
-  if abconv_ty existing residue then E else raise ERR "tyenv_safe_insert" "Type bindings clash"
-end handle NOT_FOUND => if abconv_ty redex residue then (env, redex::idlist)
+  if eq_ty existing residue then E else raise ERR "tyenv_safe_insert" "Type bindings clash"
+end handle NOT_FOUND => if eq_ty redex residue then (env, redex::idlist)
                         else (t::env, idlist)
 
 fun all_aconv [] [] = true
@@ -2205,10 +2243,10 @@ fun all_aconv [] [] = true
   | all_aconv _ [] = false
   | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
 
-fun all_abconv_ty [] [] = true
-  | all_abconv_ty [] _ = false
-  | all_abconv_ty _ [] = false
-  | all_abconv_ty (h1::t1) (h2::t2) = abconv_ty h1 h2 andalso all_abconv_ty t1 t2
+fun all_eq_ty [] [] = true
+  | all_eq_ty [] _ = false
+  | all_eq_ty _ [] = false
+  | all_eq_ty (h1::t1) (h2::t2) = eq_ty h1 h2 andalso all_eq_ty t1 t2
 
 fun determ {redex,residue} =
       if not (is_var redex) orelse not (is_var residue) then NONE
@@ -2294,7 +2332,7 @@ in
                val (ctm0,cargs) = strip_comb ctm
                val (chop,ctyargs) = if null typats then (ctm0,[]) else strip_tycomb ctm0
              in
-               if all_abconv_ty ctyargs typats andalso all_aconv cargs pats then
+               if all_eq_ty ctyargs typats andalso all_aconv cargs pats then
                  if aconv chop vhop then insts
                  else safe_inserta (vhop |-> chop) insts
                else let
@@ -2361,7 +2399,7 @@ in
              val ni = let
                val (chop,ctyargs) = strip_tycomb ctm
              in
-               if all_abconv_ty ctyargs typats then
+               if all_eq_ty ctyargs typats then
                  if aconv chop vhop then insts
                  else safe_inserta (vhop |-> chop) insts
                else let

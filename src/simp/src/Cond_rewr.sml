@@ -164,11 +164,11 @@ fun ac_term_ord(tm1,tm2) =
 
    fun vperm(tm1,tm2) =
     case (dest_term tm1, dest_term tm2)
-     of (VAR v1,VAR v2)   => abconv_ty (snd v1) (snd v2)
+     of (VAR v1,VAR v2)   => eq_ty (snd v1) (snd v2)
       | (LAMB t1,LAMB t2) => vperm(snd t1, snd t2)
       | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
       | (TYLAMB t1,TYLAMB t2) => vperm(snd t1, snd t2)
-      | (TYCOMB t1,TYCOMB t2) => vperm(fst t1,fst t2) andalso abconv_ty (snd t1) (snd t2)
+      | (TYCOMB t1,TYCOMB t2) => vperm(fst t1,fst t2) andalso eq_ty (snd t1) (snd t2)
       | (x,y) => eq tm1 tm2
 
    fun tm_set_eq s t = null (op_set_diff aconv s t) andalso

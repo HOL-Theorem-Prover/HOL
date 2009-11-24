@@ -126,7 +126,7 @@ end
 (*---------------------------------------------------------------------------*
  *                  Equality of terms                                        *
  *     This does NOT include alpha-equivalence, but                          *
- *     DOES include deep beta conversion of types.                           *
+ *     DOES include deep beta and eta conversion of types.                   *
  *     This discriminates between unequal but alpha-equivalent terms.        *
  *---------------------------------------------------------------------------*)
 
@@ -136,10 +136,10 @@ local val EQ = Portable.pointer_eq
 in
 fun eq t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
-  of (Var(M,a),  Var(N,b))   => M=N andalso abconv_ty a b
-   | (Const(M,a),Const(N,b)) => M=N andalso abconv_ty a b
+  of (Var(M,a),  Var(N,b))   => M=N andalso eq_ty a b
+   | (Const(M,a),Const(N,b)) => M=N andalso eq_ty a b
    | (App(M,N),  App(P,Q))   => eq N Q andalso eq M P
-   | (TApp(M,a), TApp(N,b))  => abconv_ty a b andalso eq M N
+   | (TApp(M,a), TApp(N,b))  => eq_ty a b andalso eq M N
    | (Abs(u,M),  Abs(v,N))   => eq u v andalso eq M N
    | (TAbs(a,M), TAbs(b,N))  => a=b andalso eq M N
    | otherwise => false
@@ -192,7 +192,7 @@ end
 (*---------------------------------------------------------------------------*
  *                  Equality of terms                                        *
  *     This does NOT include alpha-equivalence, but                          *
- *     DOES include deep beta conversion of types.                           *
+ *     DOES include deep beta and eta conversion of types.                   *
  *     This discriminates between unequal but alpha-equivalent terms.        *
  *---------------------------------------------------------------------------*)
 
@@ -200,10 +200,10 @@ local val EQ = Portable.pointer_eq
 in
 fun eq t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
-  of (Var(M,a),Var(N,b)) => M=N andalso abconv_ty a b
-   | (Const(M,a),Const(N,b)) => M=N andalso abconv_ty a b
+  of (Var(M,a),Var(N,b)) => M=N andalso eq_ty a b
+   | (Const(M,a),Const(N,b)) => M=N andalso eq_ty a b
    | (App(M,N),App(P,Q)) => eq N Q andalso eq M P
-   | (TApp(M,a),TApp(N,b)) => abconv_ty a b andalso eq M N
+   | (TApp(M,a),TApp(N,b)) => eq_ty a b andalso eq M N
    | (Abs(u,M),Abs(v,N)) => eq u v andalso eq M N
    | (TAbs(a1,M),TAbs(a2,N)) => a1 = a2 andalso eq M N
    | _ => false
@@ -354,18 +354,18 @@ local val INCOMPAT_TYPES  = Lib.C ERR "incompatible types"
         let fun loop (A,_) [] = A
               | loop (A,typ) (tm::rst) =
                  let val (ty1,ty2) = with_exn Type.dom_rng typ err
-                 in if abconv_ty (type_of tm) ty1
+                 in if eq_ty (type_of tm) ty1
                     then loop(App(A,tm),ty2) rst
                     else raise err
                  end
-        in fn (f,L) => loop(f, deep_beta_ty (type_of f)) L
+        in fn (f,L) => loop(f, deep_beta_eta_ty (type_of f)) L
         end
       val lmk_comb = (fn err => (**) Profile.profile "lmk_comb" (**)(lmk_comb err))
       val mk_comb0 = lmk_comb (INCOMPAT_TYPES "mk_comb")
 in
 
 fun mk_comb(r as (Abs(Var(_,Ty),_), Rand)) =
-      if abconv_ty (type_of Rand) Ty then App r else raise INCOMPAT_TYPES "mk_comb"
+      if eq_ty (type_of Rand) Ty then App r else raise INCOMPAT_TYPES "mk_comb"
   | mk_comb(Rator,Rand) = mk_comb0 (Rator,[Rand])
 
 val list_mk_comb = lmk_comb (INCOMPAT_TYPES "list_mk_comb")
@@ -781,7 +781,7 @@ let vsubst =
   fun theta ->
     if null theta then (fun tm -> tm) else
     let atheta = map
-      (fun (t,x) -> if abconv_ty (type_of t) (snd(dest_var x))
+      (fun (t,x) -> if eq_ty (type_of t) (snd(dest_var x))
                     then (lazy frees t,t),x
                     else failwith "vsubst: Bad substitution list") theta in
     qtry(vsubst atheta);;
@@ -1112,7 +1112,7 @@ fun subst theta =
     if null theta then I
     else if List.all (is_var o #redex) theta then let
         fun foldthis ({redex,residue}, acc) = let
-          val _ = abconv_ty (type_of redex) (type_of residue)
+          val _ = eq_ty (type_of redex) (type_of residue)
                   orelse raise ERR "vsubst" "Bad substitution list"
         in
           if eq redex residue then acc
@@ -1125,7 +1125,7 @@ fun subst theta =
       end
     else let
         fun foldthis ({redex,residue}, (theta1, theta2)) = let
-          val _ = abconv_ty (type_of redex) (type_of residue)
+          val _ = eq_ty (type_of redex) (type_of residue)
                   orelse raise ERR "vsubst" "Bad substitution list"
           val gv = genvar (type_of redex)
         in
@@ -1167,7 +1167,7 @@ local
                               | DIFF ty => (true, Var(name, ty))
         in
           case Map.peek (ctxt, nv) of
-            SOME oldtype => if abconv_ty oldtype ty0 then ()
+            SOME oldtype => if eq_ty oldtype ty0 then ()
                             else raise NeedToRename nv
           | NONE => ();
           if changed then nv
@@ -1310,7 +1310,7 @@ in
 
 val pure_inst : (hol_type, hol_type) Lib.subst -> term -> term =
   (fn theta => (check_subst theta;
-                pure_inst1 (map_redex deep_beta_ty theta)))
+                pure_inst1 (map_redex deep_beta_eta_ty theta)))
 end
 
 
@@ -1349,12 +1349,12 @@ local
                       (* may throw Type.Unchanged, Type.NeedToRename *)
         fun inst (v as Var(Name,Ty)) = let
                 val (changed, nv) = let val nTy = inst_ty Ty
-                                    in if abconv_ty nTy Ty then raise Unchanged
+                                    in if eq_ty nTy Ty then raise Unchanged
                                        else (true, Var(Name,nTy))
                                     end handle Unchanged => (false, v)
               in
                 case peek (ctxt, nv) of
-                  SOME oldty => if abconv_ty oldty Ty then ()
+                  SOME oldty => if eq_ty oldty Ty then ()
                                 else raise NeedToRename nv
                 | NONE => ();
                 if changed then nv
@@ -1364,7 +1364,7 @@ local
           | inst (App(Rator,Rand))  = qcomb App inst (Rator,Rand)
           | inst (tm as Abs(v as Var(Name,Ty), Body)) = let
                 val (changed, v') = let val nTy = inst_ty Ty
-                                    in if abconv_ty nTy Ty then raise Unchanged
+                                    in if eq_ty nTy Ty then raise Unchanged
                                        else (true, Var(Name,nTy))
                                     end handle Unchanged => (false, v)
               in let
@@ -1628,6 +1628,36 @@ val beta_conv_ty_in_term =
        bconv
      end;
 
+(*---------------------------------------------------------------------------*
+ *       Eta-conversion of all types within a term.                          *
+ *---------------------------------------------------------------------------*)
+
+val eta_conv_ty_in_term =
+     let fun econv(Var(s,ty))        = Var(s,deep_eta_ty ty)
+           | econv(Const(Name,Ty))   = Const(Name,deep_eta_ty Ty)
+           | econv(App(Rator,Rand))  = App(econv Rator,econv Rand)
+           | econv(Abs(v,Body))      = Abs(econv v,econv Body)
+           | econv(TApp(Rator,Ty))   = TApp(econv Rator,deep_eta_ty Ty)
+           | econv(TAbs(a,Body))     = TAbs(a,econv Body)
+     in
+       econv
+     end;
+
+(*---------------------------------------------------------------------------*
+ *       Beta-eta-conversion of all types within a term.                     *
+ *---------------------------------------------------------------------------*)
+
+val beta_eta_conv_ty_in_term =
+     let fun beconv(Var(s,ty))        = Var(s,deep_beta_eta_ty ty)
+           | beconv(Const(Name,Ty))   = Const(Name,deep_beta_eta_ty Ty)
+           | beconv(App(Rator,Rand))  = App(beconv Rator,beconv Rand)
+           | beconv(Abs(v,Body))      = Abs(beconv v,beconv Body)
+           | beconv(TApp(Rator,Ty))   = TApp(beconv Rator,deep_beta_eta_ty Ty)
+           | beconv(TAbs(a,Body))     = TAbs(a,beconv Body)
+     in
+       beconv
+     end;
+
 
 (*---------------------------------------------------------------------------*
  * Given a variable and a list of variables, if the variable does not exist  *
@@ -1848,7 +1878,7 @@ fun kind_norm_subst ((tmS,_),(tyS,_),(kdS,_),rkS) =
        | del A ({redex,residue}::rst) =
          del (let val redex' = Theta(redex)
               in if aconv residue redex' then A
-                 else if abconv_ty (type_of redex') (type_of residue)
+                 else if eq_ty (type_of redex') (type_of residue)
                       then (redex' |-> residue)::A
                       else raise ERR "kind_match_term" "generated term substitution had different types"
               end) rst
@@ -1889,15 +1919,15 @@ fun match_term pat ob =
 
 local
 fun tymatch pat ob ((lctys,env,insts_homs),kdS,rkS) =
-        let (*val pat = deep_beta_ty pat
-            val ob  = deep_beta_ty ob*)
+        let (*val pat = deep_beta_eta_ty pat
+            val ob  = deep_beta_eta_ty ob*)
             val insts_homs' = Type.type_pmatch lctys env pat ob insts_homs
             val (rkS',kdS') = Type.get_rank_kind_insts [] env (fst insts_homs') (rkS,kdS)
         in ((lctys,env,insts_homs'),kdS',rkS')
         end
 in
 fun get_type_kind_rank_insts kdavoids tyavoids L ((tyS,tyId),(kdS,kdId),rkS) =
-  let (*fun beta_conv_S {redex,residue} = {redex=redex, residue = deep_beta_ty residue}
+  let (*fun beta_conv_S {redex,residue} = {redex=redex, residue = deep_beta_eta_ty residue}
       val tyS = map beta_conv_S tyS*)
       val tyfixed = HOLset.addList(HOLset.addList(raw_empty_tyset, tyavoids), tyId)
       val kdfixed = union kdavoids kdId
@@ -2009,7 +2039,7 @@ local
     | find_residue red ({redex,residue}::rest) = if red = redex then residue
                                                  else find_residue red rest
   fun find_residue_ty red [] = raise NOT_FOUND
-    | find_residue_ty red ({redex,residue}::rest) = if abconv_ty red redex then residue
+    | find_residue_ty red ({redex,residue}::rest) = if eq_ty red redex then residue
                                                     else find_residue_ty red rest
   fun find_residue_tm red [] = raise NOT_FOUND
     | find_residue_tm red ({redex,residue}::rest) = if aconv red redex then residue
@@ -2017,7 +2047,7 @@ local
   fun in_dom x [] = false
     | in_dom x ({redex,residue}::rest) = (x = redex) orelse in_dom x rest
   fun in_dom_ty x [] = false
-    | in_dom_ty x ({redex,residue}::rest) = abconv_ty x redex orelse in_dom_ty x rest
+    | in_dom_ty x ({redex,residue}::rest) = eq_ty x redex orelse in_dom_ty x rest
   fun in_dom_tm x [] = false
     | in_dom_tm x ({redex,residue}::rest) = aconv x redex orelse in_dom_tm x rest
   fun safe_insert (n as {redex,residue}) l = let
@@ -2044,7 +2074,7 @@ local
   fun safe_insert_ty (n as {redex,residue}) l = let
     val z = find_residue_ty redex l
   in
-    if abconv_ty residue z then l
+    if eq_ty residue z then l
     else raise ERR "safe_insert_ty" "match"
   end handle NOT_FOUND => n::l
   local
@@ -2081,13 +2111,13 @@ local
 
   fun find_residue_dum red [] = raise NOT_FOUND
     | find_residue_dum red ({redex,residue}::rest) =
-        (if abconv_ty red (dest_dummy redex) then dest_dummy residue
+        (if eq_ty red (dest_dummy redex) then dest_dummy residue
          else find_residue_dum red rest)
         handle HOL_ERR _ => find_residue_dum red rest
   (* safe_insert_dummy is like safe_insert but specially for dummy terms *)
   fun safe_insert_dummy (n as {redex,residue}) l =
     let val z = find_residue_dum redex l
-    in if abconv_ty residue z then l
+    in if eq_ty residue z then l
        else raise ERR "safe_insert_dummy" "match"
     end handle NOT_FOUND => mk_dummy2 n :: l
 
@@ -2107,7 +2137,7 @@ local
         val {Thy = cthy, Name = cname, Ty = cty} = dest_thy_const ctm
       in
         if vname = cname andalso vthy = cthy then
-          if abconv_ty cty vty then sofar
+          if eq_ty cty vty then sofar
           else (safe_insert_dummy (vty |-> cty) insts, homs)
         else raise ERR "term_pmatch" "constant mismatch"
       end
@@ -2139,7 +2169,7 @@ local
         then let
             val vty = type_of vtm
             val cty = type_of ctm
-            val insts' = if abconv_ty vty cty then insts
+            val insts' = if eq_ty vty cty then insts
                          else safe_insert_dummy (vty |-> cty) insts
           in
             (insts', (tyenv,env,ctm,vtm)::homs)
@@ -2160,7 +2190,7 @@ local
         then let
             val vty = type_of vtm
             val cty = type_of ctm
-            val insts' = if abconv_ty vty cty then insts
+            val insts' = if eq_ty vty cty then insts
                          else safe_insert_dummy (vty |-> cty) insts
           in
             (insts', (tyenv,env,ctm,vtm)::homs)
@@ -2216,21 +2246,21 @@ fun separate_insts kdavoids tyavoids rkS kdS tyS insts = let
                    else {redex = x', residue = t}
                  end) realinsts
   val _ = map (fn {redex = x, residue = t} =>
-                   if abconv_ty (type_of x) (type_of t) then ()
+                   if eq_ty (type_of x) (type_of t) then ()
                    else raise ERR "separate_insts" "bad term subst: type mismatch" (* This covers an error in normal HOL *)
               ) tminsts
 in
   (betacounts, tminsts, tyins', kdins, rkin)
 end
 
-fun tyenv_in_dom x (env, idlist) = op_mem abconv_ty x idlist orelse in_dom_ty x env
-fun tyenv_find_residue x (env, idlist) = if op_mem abconv_ty x idlist then x
+fun tyenv_in_dom x (env, idlist) = op_mem eq_ty x idlist orelse in_dom_ty x env
+fun tyenv_find_residue x (env, idlist) = if op_mem eq_ty x idlist then x
                                          else find_residue x env
 fun tyenv_safe_insert (t as {redex,residue}) (E as (env, idlist)) = let
   val existing = tyenv_find_residue redex E
 in
-  if abconv_ty existing residue then E else raise ERR "tyenv_safe_insert" "Type bindings clash"
-end handle NOT_FOUND => if abconv_ty redex residue then (env, redex::idlist)
+  if eq_ty existing residue then E else raise ERR "tyenv_safe_insert" "Type bindings clash"
+end handle NOT_FOUND => if eq_ty redex residue then (env, redex::idlist)
                         else (t::env, idlist)
 
 fun all_aconv [] [] = true
@@ -2238,10 +2268,10 @@ fun all_aconv [] [] = true
   | all_aconv _ [] = false
   | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
 
-fun all_abconv_ty [] [] = true
-  | all_abconv_ty [] _ = false
-  | all_abconv_ty _ [] = false
-  | all_abconv_ty (h1::t1) (h2::t2) = abconv_ty h1 h2 andalso all_abconv_ty t1 t2
+fun all_eq_ty [] [] = true
+  | all_eq_ty [] _ = false
+  | all_eq_ty _ [] = false
+  | all_eq_ty (h1::t1) (h2::t2) = eq_ty h1 h2 andalso all_eq_ty t1 t2
 
 fun determ {redex,residue} =
       if not (is_var redex) orelse not (is_var residue) then NONE
@@ -2317,7 +2347,7 @@ in
                val (ctm0,cargs) = strip_comb ctm
                val (chop,ctyargs) = if null typats then (ctm0,[]) else strip_tycomb ctm0
              in
-               if all_abconv_ty ctyargs typats andalso all_aconv cargs pats then
+               if all_eq_ty ctyargs typats andalso all_aconv cargs pats then
                  if aconv chop vhop then insts
                  else safe_inserta (vhop |-> chop) insts
                else let
@@ -2384,7 +2414,7 @@ in
              val ni = let
                val (chop,ctyargs) = strip_tycomb ctm
              in
-               if all_abconv_ty ctyargs typats then
+               if all_eq_ty ctyargs typats then
                  if aconv chop vhop then insts
                  else safe_inserta (vhop |-> chop) insts
                else let

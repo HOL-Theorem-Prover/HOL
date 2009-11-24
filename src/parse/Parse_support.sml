@@ -724,7 +724,7 @@ fun cdom M [] = M
   | cdom (Abs{Bvar,Body,Locn}) (ty::rst) =
        Abs{Bvar = Constrained{Ptm=Bvar,Ty=ty,Locn=Locn}, Body = cdom Body rst, Locn = Locn}
   | cdom (Comb{Rator as Const{Name="UNCURRY",...},Rand,Locn}) (ty::rst) =
-       Comb{Rator=Rator, Rand=cdom Rand (split (Pretype.deep_beta_conv_ty ty)@rst), Locn=Locn}
+       Comb{Rator=Rator, Rand=cdom Rand (split (Pretype.deep_beta_eta_ty ty)@rst), Locn=Locn}
   | cdom x y = raise ERRORloc "cdom" (Preterm.locn x) "missing case"
 end;
 

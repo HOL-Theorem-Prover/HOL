@@ -102,7 +102,7 @@ local fun drop [] ty = fst(dom_rng ty)
          let val (dom,rng) = dom_rng (type_of opr)
              val (uvs,dom') = strip_univ_type dom
              val aty = type_of arg
-         in if abconv_ty dom aty then mk_comb(opr,arg)
+         in if eq_ty dom aty then mk_comb(opr,arg)
             else let val (tyS,kdS,rkS) = Type.kind_match_type aty dom'
                      val arg' = inst tyS (inst_rank_kind rkS kdS arg)
                      val arg'' = list_mk_tyabs(uvs, arg')
@@ -155,7 +155,7 @@ fun tysize (theta,omega,gamma) clause ty =
            else if is_abs_type ty then
                     let val (bvar,body) = dest_abs_type ty
                         val bvar_tm = genvar (bvar --> numSyntax.num)
-                        val theta' = (fn ty => if abconv_ty ty bvar then SOME bvar_tm else theta ty)
+                        val theta' = (fn ty => if ty = bvar then SOME bvar_tm else theta ty)
                         val body_tm = tysize (theta',omega,gamma) clause body
                     in mk_abs(bvar_tm, body_tm)
                     end

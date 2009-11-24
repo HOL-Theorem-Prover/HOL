@@ -45,7 +45,10 @@ val mk_abs_type : pretype * pretype -> pretype
 val dest_abs_type : pretype -> pretype * pretype
 
 val beta_conv_ty : pretype -> pretype
-val deep_beta_conv_ty : pretype -> pretype
+val eta_conv_ty  : pretype -> pretype
+val deep_beta_ty : pretype -> pretype
+val deep_eta_ty  : pretype -> pretype
+val deep_beta_eta_ty : pretype -> pretype
 val do_beta_conv_types : unit -> bool
 val is_universal : pretype -> bool
 

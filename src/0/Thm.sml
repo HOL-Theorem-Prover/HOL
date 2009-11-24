@@ -169,7 +169,7 @@ fun hyp_tyvars th =
 fun hyp_frees th =
   HOLset.foldl (fn (h,tms) => Term.FVL[h] tms) empty_tmset (hypset th);
 
-fun is_bool tm = (Type.abconv_ty (type_of tm) bool);
+fun is_bool tm = (Type.eq_ty (type_of tm) bool);
 
 
 (*---------------------------------------------------------------------------

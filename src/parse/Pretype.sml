@@ -1147,9 +1147,11 @@ fun once_depth_conv_ty conv ty =
 fun top_sweep_conv_ty conv ty =
     (repeat_ty conv then_ty sub_conv_ty (top_sweep_conv_ty conv)) ty
 
-val deep_eta_conv_ty = qconv_ty (top_depth_conv_ty eta_conv_ty)
+val deep_beta_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
 
-val deep_beta_conv_ty = qconv_ty (top_depth_conv_ty beta_conv_ty)
+val deep_eta_ty = qconv_ty (top_depth_conv_ty eta_conv_ty)
+
+val deep_beta_eta_ty = qconv_ty (top_depth_conv_ty (beta_conv_ty orelse_ty eta_conv_ty))
 
 fun head_beta_conv (ty as PT(TyApp(ty1,ty2),locn)) =
        if is_abs_type ty1 then beta_conv_ty ty
@@ -1163,9 +1165,9 @@ fun head_beta_conv (ty as PT(TyApp(ty1,ty2),locn)) =
   | head_beta_conv _ = raise ERR "head_beta_conv" "no beta redex found"
 
 
-val dest_univ_type = dest_univ_type0 o deep_beta_conv_ty
+val dest_univ_type = dest_univ_type0 o deep_beta_eta_ty
 
-val is_not_univ_type = is_not_univ_type0 o deep_beta_conv_ty
+val is_not_univ_type = is_not_univ_type0 o deep_beta_eta_ty
 
 fun strip_univ_type ty =
     let fun strip ty =
@@ -1174,7 +1176,7 @@ fun strip_univ_type ty =
        in (bvar::bvars, body)
        end
        handle HOL_ERR _ => ([],ty)
-    in strip (deep_beta_conv_ty ty)
+    in strip (deep_beta_eta_ty ty)
     end
 
 
@@ -1315,8 +1317,8 @@ fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
 (*
   val ty1s = pretype_to_string ty1
   val ty2s = pretype_to_string ty2
-  val ty1bs = pretype_to_string (deep_beta_conv_ty ty1)
-  val ty2bs = pretype_to_string (deep_beta_conv_ty ty2)
+  val ty1bs = pretype_to_string (deep_beta_eta_ty ty1)
+  val ty2bs = pretype_to_string (deep_beta_eta_ty ty2)
   val _ = if is_debug() then print ("gen_unify " ^ ty1s
                                 ^ "\n   (beta) " ^ ty1bs
                                 ^ "\n      vs. " ^ ty2s
@@ -1452,9 +1454,9 @@ in
 *)
                                                          end))
        in if is_abs_type opr1 then
-            gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
+            gen_unify c1 c2 (deep_beta_eta_ty ty1) ty2
           else if is_abs_type opr2 then
-            gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
+            gen_unify c1 c2 ty1 (deep_beta_eta_ty ty2)
           else if ho_1 then
             (* Higher order unification; shift args to other side by abstraction. *)
             let val vs = mk_vs c1 c2 args1
@@ -1478,7 +1480,7 @@ in
        else
        let val (opr1,args1) = strip_app_type ty1
        in if is_abs_type opr1 then
-            gen_unify c1 c2 (deep_beta_conv_ty ty1) ty2
+            gen_unify c1 c2 (deep_beta_eta_ty ty1) ty2
           else if has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
                                     andalso all has_var_type args1
           then
@@ -1494,7 +1496,7 @@ in
        else
        let val (opr2,args2) = strip_app_type ty2
        in if is_abs_type opr2 then
-            gen_unify c1 c2 ty1 (deep_beta_conv_ty ty2)
+            gen_unify c1 c2 ty1 (deep_beta_eta_ty ty2)
           else if has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
                                     andalso all has_var_type args2
           then
@@ -1526,8 +1528,8 @@ val empty_env = ([]:(prekind option ref * prekind option) list,
 fun etype_vars e = type_vars
 
 fun unify t1 t2 =
-  let val t1' = deep_beta_conv_ty t1
-      and t2' = deep_beta_conv_ty t2
+  let val t1' = deep_beta_eta_ty t1
+      and t2' = deep_beta_eta_ty t2
       val _ = if not (is_debug()) then () else let
             val ty1s  = pretype_to_string t1
             val ty2s  = pretype_to_string t2
@@ -1816,7 +1818,7 @@ fun clean (pty as PT(ty, locn)) =
 
 fun toType ty =
   let val ty = if do_beta_conv_types()
-                      then deep_beta_conv_ty ty
+                      then deep_beta_eta_ty ty
                       else ty
       val _ = replace_null_links ty (kindvars ty, tyvars ty)
   in
@@ -1832,7 +1834,7 @@ val fun_tyc0 = Contype{Tyop = "fun", Thy = "min",
 
 fun chase ty =
   let val (dom,rng) = dom_rng ty
-                      handle HOL_ERR _ => dom_rng (deep_beta_conv_ty ty)
+                      handle HOL_ERR _ => dom_rng (deep_beta_eta_ty ty)
   in rng
   end
   handle HOL_ERR _ => raise Fail ("chase applied to non-function type: " ^ pretype_to_string ty)
@@ -2108,7 +2110,7 @@ local
       else p
 in
 fun reconcile_univ_types pat targ =
-    let val pty = reconcile (deep_beta_conv_ty pat) (deep_beta_conv_ty targ)
+    let val pty = reconcile (deep_beta_eta_ty pat) (deep_beta_eta_ty targ)
         val _ = KC NONE pty
     in pty
     end

@@ -85,6 +85,8 @@ sig
   val deep_eta_ty   : hol_type -> hol_type
   val deep_beta_eta_ty : hol_type -> hol_type
   val abconv_ty     : hol_type -> hol_type -> bool
+  val abeconv_ty    : hol_type -> hol_type -> bool
+  val eq_ty         : hol_type -> hol_type -> bool
   val subtype       : hol_type -> hol_type -> bool
   val polymorphic   : hol_type -> bool
   val universal     : hol_type -> bool

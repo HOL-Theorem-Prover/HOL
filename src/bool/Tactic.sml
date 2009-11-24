@@ -904,6 +904,8 @@ val TY_BETA_TAC = CONV_TAC (TOP_DEPTH_CONV TY_BETA_CONV);
  ---------------------------------------------------------------------------*)
 
 val BETA_TY_TAC = CONV_TAC BETA_TY_CONV;
+val ETA_TY_TAC  = CONV_TAC ETA_TY_CONV;
+val BETA_ETA_TY_TAC = CONV_TAC BETA_ETA_TY_CONV;
 
 
 (* ---------------------------------------------------------------------*)

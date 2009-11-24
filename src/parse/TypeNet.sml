@@ -79,7 +79,7 @@ fun ndest_type ty =
     else raise Fail "TypeNet.ndest_type: unrecognized type"
 
 fun insert ((net,sz), ty, item) = let
-  val ty' = deep_beta_ty ty
+  val ty' = deep_beta_eta_ty ty
 (*val _ = (print "\nTypeNet.insert ("; print_type ty'; print ")\n") *)
   fun newnode tys =
       case tys of
@@ -129,7 +129,7 @@ end
 fun numItems (net, sz) = sz
 
 fun peek ((net,sz), ty) = let
-  val ty' = deep_beta_ty ty
+  val ty' = deep_beta_eta_ty ty
 (*val _ = (print "\nTypeNet.peek ("; print_type ty'; print ")\n") *)
   fun trav (net, tys) =
       case (net, tys) of
@@ -159,7 +159,7 @@ fun find (n, ty) =
     valOf (peek (n, ty)) handle Option => raise Binarymap.NotFound
 
 fun match ((net,sz), ty) = let
-  val ty' = deep_beta_ty ty
+  val ty' = deep_beta_eta_ty ty
   val _ = if current_trace "debug_parse_type" = 0 then () else
             (print "TypeNet.match("; print_type ty'; print ")\n")
   fun trav acc (net, tyl) =
@@ -204,7 +204,7 @@ in
 end
 
 fun delete ((net,sz), ty) = let
-  val ty' = deep_beta_ty ty
+  val ty' = deep_beta_eta_ty ty
   fun trav (p as (net, tyl)) =
       case p of
         (EMPTY, _) => raise Binarymap.NotFound

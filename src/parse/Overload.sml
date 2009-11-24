@@ -95,7 +95,7 @@ local
 (* ---------------------------------------------------------------------- *)
 
   fun au0 cntx (ty1, ty2) =
-    if null cntx andalso abconv_ty ty1 ty2 then return ty1
+    if null cntx andalso eq_ty ty1 ty2 then return ty1
     else
       lookup (ty1, ty2) >-
       (fn result =>

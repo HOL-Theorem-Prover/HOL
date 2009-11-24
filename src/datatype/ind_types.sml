@@ -110,7 +110,7 @@ fun striplist dest =
 
 fun tysubst theta ty = Type.type_subst theta ty;
 (*
-  case subst_assoc (abconv_ty ty) theta
+  case subst_assoc (eq_ty ty) theta
    of SOME x => x
     | NONE =>
        if is_vartype ty then ty
@@ -1395,7 +1395,7 @@ local
   fun is_nested vs ty =
     not (is_vartype ty) andalso not (intersect (type_vars ty) vs = [])
   fun modify_type theta ty =
-    case subst_assoc (abconv_ty ty) theta
+    case subst_assoc (eq_ty ty) theta
      of SOME x => x
       | NONE => (let val {Tyop,Thy,Args} = dest_thy_type ty
                  in mk_thy_type{Tyop=Tyop,Thy=Thy,
