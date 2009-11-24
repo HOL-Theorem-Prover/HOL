@@ -21,15 +21,16 @@ sig
   val mk_update : term * term -> term
   val mk_fail   : term * string * term list -> term
 
-  val dest_K      : term -> term * term
-  val dest_K_1    : term -> term
-  val dest_S      : term -> term * term * term
-  val dest_I      : term -> term
-  val dest_C      : term -> term * term * term
-  val dest_W      : term -> term * term
-  val dest_o      : term -> term * term
-  val dest_update : term -> term * term
-  val dest_fail   : term -> term * string * term list
+  val dest_K       : term -> term * term
+  val dest_K_1     : term -> term
+  val dest_S       : term -> term * term * term
+  val dest_I       : term -> term
+  val dest_C       : term -> term * term * term
+  val dest_W       : term -> term * term
+  val dest_o       : term -> term * term
+  val dest_update  : term -> term * term
+  val strip_update : term -> (term * term) list * term
+  val dest_fail    : term -> term * string * term list
 
   val is_K      : term -> bool
   val is_K_1    : term -> bool
