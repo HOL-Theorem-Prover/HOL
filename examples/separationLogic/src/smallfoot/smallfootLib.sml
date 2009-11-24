@@ -6737,13 +6737,13 @@ val quant_heuristic_cache_ref:(quantHeuristicsLib.quant_heuristic_cache ref) = r
 
 val save_quant_guess_TAC =
     CONV_TAC
-	(EXTENSIBLE_QUANT_INSTANTIATE_CONV (SOME quant_heuristic_cache_save_ref) true (K true) false [std_qhca]);
+	(EXTENSIBLE_QUANT_INSTANTIATE_CONV (SOME quant_heuristic_cache_save_ref) true (K true) false false [std_qhca]);
 
 
 val quant_guess_TAC =
 CONSEQ_CONV_TAC
-(EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV (SOME quant_heuristic_cache_ref) false
-    (K true) ([std_qhca, heuristics_qhca
+(EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV (SOME quant_heuristic_cache_ref) false 
+    (K true) false ([std_qhca, heuristics_qhca
                 [QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___COND_IMP,
                  QUANT_INSTANTIATE_HEURISTIC___PROP_IMPLIES___LIST_SAME_DATA]]));
 

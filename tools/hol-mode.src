@@ -858,6 +858,15 @@ argument N, sets the trace to that value in particular."
   (interactive)
   (hol-toggle-trace "emacs_terminal show types"))
 
+(defun hol-toggle-pp-styles ()
+  "Toggles whether HOL produces style informations while pretty-printing."
+  (interactive)
+  (hol-toggle-trace "PPBackEnd use styles"))
+
+(defun hol-toggle-pp-annotations ()
+  "Toggles whether HOL produces annotations while pretty-printing."
+  (interactive)
+  (hol-toggle-trace "PPBackEnd use annotations"))
 
 (defun hol-toggle-goalstack-fvs ()
   "Toggles the trace \"goalstack fvs\"."
@@ -1304,9 +1313,20 @@ already loaded.)"
 
 (setq temp-hol-output-buf nil)
 
+(defun holpp-reset ()
+  (interactive)
+  (let ((tmpbuf (or temp-hol-output-buf
+                     (generate-new-buffer " *HOL output filter*)"))))
+      (setq temp-hol-output-buf tmpbuf)
+      (save-excursion
+         (set-buffer tmpbuf)
+         (delete-region (point-min) (point-max))))
+  (send-raw-string-to-hol "print \"\\n\\n*** hol-mode reset ***\\n\";" nil nil))
+
+
 (defun holpp-output-filter (s)
   "Converts a munged emacs_terminal string into a pretty one with text properties."
-  (interactive)
+  (interactive "sinput: ")
   (let* ((tmpbuf (or temp-hol-output-buf
                      (generate-new-buffer " *HOL output filter*)")))
          end)
@@ -1582,6 +1602,12 @@ already loaded.)"
   [menu-bar hol-menu hol-printing backends]
   (cons "Pretty-printing backends" (make-sparse-keymap "Pretty-printing backends")))
 
+(define-key global-map [menu-bar hol-menu hol-printing backends ppreset]
+  '("Reset hol-mode pretty-printing (error recovery)" . holpp-reset))
+
+(define-key global-map [menu-bar hol-menu hol-printing backends sep1]
+   '(menu-item "--"))
+
 (define-key global-map [menu-bar hol-menu hol-printing backends ppstyles]
   '("Toggle use styles" . hol-toggle-pp-styles))
 
@@ -1590,6 +1616,9 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-printing backends pptooltip]
   '("Toggle show tooltips" . hol-toggle-emacs-tooltips))
+
+(define-key global-map [menu-bar hol-menu hol-printing backends sep2]
+   '(menu-item "--"))
 
 (define-key global-map [menu-bar hol-menu hol-printing backends ppbackend]
   '("Toggle pretty-printing backend" . hol-toggle-ppbackend))

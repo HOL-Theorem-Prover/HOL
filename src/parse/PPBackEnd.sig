@@ -32,8 +32,8 @@ sig
 
   datatype annotation = BV of hol_type * (unit -> string)
                       | FV of hol_type * (unit -> string)
-                      | TyBV of kind * int (*rank*) * string
-                      | TyFV of kind * int (*rank*) * string
+                      | TyBV of kind * int (*rank*) * (unit -> string)
+                      | TyFV of kind * int (*rank*) * (unit -> string)
                       | TyOp of (unit -> string)
                       | TySyn of (unit -> string)
                       | Const of {Thy:string,Name:string,Ty:hol_type} * string

@@ -269,7 +269,7 @@ fun pp_type0 (G:grammar) backend = let
             val kd_annot = (* if k = Kind.typ then "" else *)
                            ": " ^ Kind.kind_to_string k
             val annot = (if bound then TyBV else TyFV)
-                        (k, r, s ^ kd_annot)
+                        (k, r, fn () => s ^ kd_annot)
         in if new then print_skr grav annot (s,k,r)
                   else add_ann_string' (s, annot)
         end

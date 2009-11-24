@@ -51,7 +51,7 @@ fun smallfoot_p_expression_printer (sys,strn,brk) gravs d pps t = let
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 
-fun smallfoot_hide_printer GS (sys,strn,brk) gravs d pps t =
+fun smallfoot_hide_printer GS sys ppfns gravs d pps t =
   let
     val _ = if !use_smallfoot_pretty_printer then () else raise term_pp_types.UserPP_Failed;
     open Portable term_pp_types
@@ -751,10 +751,11 @@ fun smallfoot_specification_printer (sys,strn,brk) gravs d pps t = let
 
 
 
-fun smallfoot_pretty_printer Gs (sys,strn,brk) gravs d pps t =
+fun smallfoot_pretty_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t =
   let
     val _ = if !use_smallfoot_pretty_printer then () else raise term_pp_types.UserPP_Failed;
     val t_type = type_of t;
+    val (strn,brk) = (#add_string ppfns, #add_break ppfns);
   in
     if t_type = smallfoot_prog_type then
        smallfoot_prog_printer (sys,strn,brk) gravs d pps t
@@ -778,6 +779,7 @@ fun smallfoot_pretty_printer Gs (sys,strn,brk) gravs d pps t =
       raise term_pp_types.UserPP_Failed
     )
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+
 
 fun temp_add_smallfoot_pp () =
    (temp_add_user_printer ("smallfoot_pp_print", ``x:'a``, smallfoot_pretty_printer);

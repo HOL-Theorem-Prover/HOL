@@ -64,6 +64,21 @@ val dest_o   = dest_binop o_tm (ERR "dest_o"   "not o")
 
 val dest_update = dest_binop update_tm (ERR "dest_update"   "not =+")
 
+fun strip_update tm =
+let
+  val dest_update_comb = (dest_update ## I) o Term.dest_comb
+  val is_update_comb   = can dest_update_comb
+
+  fun recurse t a =
+        if not (is_update_comb t) then
+          (List.rev a, t)
+        else let val (u,t') = dest_update_comb t in
+          recurse t' (u::a)
+        end
+in
+  recurse tm []
+end
+
 val is_K   = can dest_K
 val is_K_1 = can dest_K_1
 val is_S   = can dest_S
