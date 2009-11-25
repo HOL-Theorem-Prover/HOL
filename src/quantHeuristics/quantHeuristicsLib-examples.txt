@@ -28,7 +28,6 @@ val thm = QUANT_INSTANTIATE_CONV [] t;
 
 
 
-
 (*Quantifiers are resorted to be able to find easy instantations*)
 val t = ``?y x z. (x=y+z) /\ X x y z``;
 val t = ``!y x z. ~(x=y+z) \/ X x y z``;
@@ -135,7 +134,7 @@ val thm = QUANT_INSTANTIATE_CONV [] t
 val t = ``!x. ~(x = 0) ==> P x``
 (*Result !x_n. P (SUC x_n) *)
 
-val thm = QUANT_INSTANTIATE_CONV [TypeBase_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qp] t
 
 
 (*To come up with this result, the case-theorem form TypeBase has been
@@ -144,20 +143,20 @@ val thm = QUANT_INSTANTIATE_CONV [TypeBase_qhca] t
 
 val t = ``!x. (x = 0)``
 (*Result F, distinct theorem of TypeBase used*)
-val thm = QUANT_INSTANTIATE_CONV  [TypeBase_qhca] t
+val thm = QUANT_INSTANTIATE_CONV  [TypeBase_qp] t
 
 
 val t = ``?x. ((x,y) = (0,z)) /\ (P x)``
 (*Result ((0,y) = (0,z)) /\ P 0, one_one theorem of TypeBase used*)
 
-val thm = QUANT_INSTANTIATE_CONV [TypeBase_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qp] t
 
 
 
 (*The main advantage of the new library is however, it is user extensible.
-  TypeBase_qhca uses some theorem from TypeBase. Please
+  TypeBase_qp uses some theorem from TypeBase. Please
   have a look at quantHeuristicsArgsLib for details how
-  to write your own qhcas. A qhca (quant heuristics combine argument)
+  to write your own qps. A qp (quant heuristics combine argument)
   constists of 
 
 distinct_thms
@@ -219,7 +218,7 @@ val t = ``!x. x = 0``
 val t = ``?x. ~(x = SUC n)``
 val t = ``?x. ((x = SUC n) /\ Q x n) ==> P x``
 
-val thm = QUANT_INSTANTIATE_CONV [TypeBase_qhca] t 
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qp] t 
 
 
 (*However, for arbitrary numbers that is not possible yet
@@ -230,14 +229,14 @@ val thm = QUANT_INSTANTIATE_CONV [TypeBase_qhca] t
 val t = ``?x:num. ((x = n) /\ Q x n) ==> P x``
 
 (*the normal one raises UNCHANGED*)
-val thm = QUANT_INSTANTIATE_CONV [TypeBase_qhca] t 
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qp] t 
 val thm = QUANT_INSTANTIATE_CONV [] t 
 
 (*The extended one is able to reduce it to true, by knowing that ~(SUC n = n) holds*)
-val thm = QUANT_INSTANTIATE_CONV [distinct_qhca [prim_recTheory.SUC_ID]] t 
+val thm = QUANT_INSTANTIATE_CONV [distinct_qp [prim_recTheory.SUC_ID]] t 
 
-(*One can also use a ready qhca*)
-val thm = QUANT_INSTANTIATE_CONV [num_qhca] t 
+(*One can also use a ready qp*)
+val thm = QUANT_INSTANTIATE_CONV [num_qp] t 
 
 
 
@@ -256,7 +255,7 @@ val thm = QUANT_INSTANTIATE_CONV [] t;
 
 (*The extended one is able to reduce it*)
 val thm = QUANT_INSTANTIATE_CONV 
-   [cases_qhca [SIMPLE_SET_CASES]] t 
+   [cases_qp [SIMPLE_SET_CASES]] t 
 
 
 
@@ -277,12 +276,12 @@ val thm = QUANT_INSTANTIATE_CONV [] t;
 val IS_SOME_EXPAND = prove (``IS_SOME x = ?x'. x = SOME x'``,
 			      Cases_on `x` THEN SIMP_TAC std_ss []);
 
-val thm = QUANT_INSTANTIATE_CONV [rewrite_qhca [IS_SOME_EXPAND]] t;
+val thm = QUANT_INSTANTIATE_CONV [rewrite_qp [IS_SOME_EXPAND]] t;
 
 
 (*The same works if we use a conversion instead*)
 val thm = QUANT_INSTANTIATE_CONV 
-            [convs_qhca [REWR_CONV IS_SOME_EXPAND]] t;
+            [convs_qp [REWR_CONV IS_SOME_EXPAND]] t;
 
 
 (*notice that here REWR_CONV is used, so the rewrite takes just place at
@@ -295,16 +294,16 @@ val thm = QUANT_INSTANTIATE_CONV
 
 set_trace "QUANT_INSTANTIATE_HEURISTIC" 1;
 val thm = QUANT_INSTANTIATE_CONV 
-          [convs_qhca [REWR_CONV IS_SOME_EXPAND]] t;
+          [convs_qp [REWR_CONV IS_SOME_EXPAND]] t;
   
 val thm = QUANT_INSTANTIATE_CONV 
-          [convs_qhca [REWRITE_CONV [IS_SOME_EXPAND]]] t;
+          [convs_qp [REWRITE_CONV [IS_SOME_EXPAND]]] t;
 
 (*TOP_ONCE_REWRITE_CONV is suitable as well,
   it behaves like REWR_CONV for a list of theorems*)
   
 val thm = QUANT_INSTANTIATE_CONV 
-          [convs_qhca [TOP_ONCE_REWRITE_CONV [IS_SOME_EXPAND]]] t;
+          [convs_qp [TOP_ONCE_REWRITE_CONV [IS_SOME_EXPAND]]] t;
 
 
 set_trace "QUANT_INSTANTIATE_HEURISTIC" 0;
@@ -502,10 +501,10 @@ end;
 val t = ``?x. P x``
 
 val thm = EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE false (K true) true
-             [heuristics_qhca [dummy_heuristic]] t
+             [heuristics_qp [dummy_heuristic]] t
 
 val thm = QUANT_INSTANTIATE_CONV 
-             [heuristics_qhca [dummy_heuristic]] t
+             [heuristics_qp [dummy_heuristic]] t
 
 
 (*result 
@@ -528,7 +527,7 @@ So it was turned of.
 
 (*!!!Infinite loop!!!*)
 val thm = EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) true
-             [heuristics_qhca [dummy_heuristic]] t
+             [heuristics_qp [dummy_heuristic]] t
 *)
 
 
@@ -540,13 +539,13 @@ val thm = EXTENSIBLE_QUANT_INSTANTIATE_CONV NONE true (K true) true
 
 
 
-(*There is a stateful argument stateful_qhca,
+(*There is a stateful argument stateful_qp,
   let's add something to it*)
 
-val _ = clear_stateful_qhca ();
-val _ = stateful_qhca___add_combine_arguments 
-            [distinct_qhca [prim_recTheory.SUC_ID],
-             rewrite_qhca [arithmeticTheory.EQ_ADD_RCANCEL, 
+val _ = clear_stateful_qp ();
+val _ = stateful_qp___add_combine_arguments 
+            [distinct_qp [prim_recTheory.SUC_ID],
+             rewrite_qp [arithmeticTheory.EQ_ADD_RCANCEL, 
                            arithmeticTheory.EQ_ADD_LCANCEL,
                            arithmeticTheory.ADD_CLAUSES]];
 
@@ -562,22 +561,22 @@ val _ = stateful_qhca___add_combine_arguments
 (* There is basic support for numbers. Just very simple stuff. *)
 
 val t = ``!y:num. x = y`` 
-val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t;
-val thm = QUANT_INSTANTIATE_CONV [num_qhca] t;
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qp] t;
 
 val t = ``!x. (SUC x = SUC 3) ==> P x`` 
-val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t;
-val thm = QUANT_INSTANTIATE_CONV [num_qhca] t;
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qp] t;
 
 
 val t = ``!x. (x + z = 3 + z) ==> P x`` 
-val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t;
-val thm = QUANT_INSTANTIATE_CONV [num_qhca] t;
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qp] t;
 
 
 val t = ``!x. P x /\ ~(x = 0) ==> Q x z`` 
-val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t;
-val thm = QUANT_INSTANTIATE_CONV [num_qhca] t;
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qp] t;
 
 
 
@@ -585,63 +584,115 @@ val thm = QUANT_INSTANTIATE_CONV [num_qhca] t;
 (* Pairs *)
 
 val t = ``!p. (x = FST p) ==> Q p`` 
-val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t;
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t;
 
 val t = ``!p. ?t. ((f t = FST p) /\ Z x) ==> Q p`` 
-val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
 
 val t = ``?p. ((SND p) = 7) /\ Q p`` 
-val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
 
 val t = ``?v. (v,X) = Z`` 
-val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
 
 val t = ``?v. (v,X) = (a,9)`` 
-val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
 
 val t = ``?v. (\ (pa, pb, pc). P pa pb pc) v`` 
-val thm = QUANT_INSTANTIATE_CONV [pair_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
 
+val t = ``?v. (\ ((pa, pb), pc). P pa pb pc) v`` 
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
+
+
+(*customising pair_qp*)
+val t = ``?p:('a # ('b # 'c # 'd) # 'a). P (FST p) (SND p) /\ Q p`` 
+
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
+val thm = QUANT_INSTANTIATE_CONV [pair_qp [split_pair___FST_SND___pred true]] t
+val thm = QUANT_INSTANTIATE_CONV [pair_qp [split_pair___FST_SND___pred false]] t
+
+
+val t = ``?p:('a # ('b # 'c # 'd) # 'a). P p`` 
+
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t (*raises unchanged*)
+val thm = QUANT_INSTANTIATE_CONV [pair_qp [split_pair___ALL___pred]] t
 
 
 (*Some things about option types*)
 val t = ``!x. IS_SOME x ==> P x``;
-val thm = QUANT_INSTANTIATE_CONV [option_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [option_qp] t
 
 val t = ``!x. IS_NONE x \/ P x``
-val thm = QUANT_INSTANTIATE_CONV [option_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [option_qp] t
 
 val t = ``!x. IS_SOME x \/ P x``
-val thm = QUANT_INSTANTIATE_CONV [std_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
 
 val t = ``!x. (x = SOME y) /\ P x``
-val thm = QUANT_INSTANTIATE_CONV [std_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
 
 
 
 (*Some things about lists,
   Typebase contains enough for these simple examples*)
 val t = ``!l. (~(l = []) ==> (LENGTH l > 0))``;
-val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t
-val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
 
 val t = ``!l. (l = h::h2) \/ X``
-val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t
-val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
 
 val t = ``!l. (l = h::h2)``
-val thm = QUANT_INSTANTIATE_CONV [stateful_qhca] t
-val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
 
 val t = ``!l. (NULL l)``
-val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
 
 
 val t = ``!l. NULL l ==> P l``
-val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
 
 val t = ``!l. ~(NULL l) ==> P l``
-val thm = QUANT_INSTANTIATE_CONV [list_qhca] t
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
+
+
+
+(*Some things about records and the simplfier*)
+
+Hol_datatype `my_record = <| field1 : bool ;
+                             field2 : num  ;
+                             field3 : bool |>`
+
+(*using the default record_qp. It does not simplify, and applies to everything*)
+val t = ``?r1:my_record. r1.field1``
+val thm = QUANT_INSTANTIATE_CONV [record_default_qp] t
+
+(*turning simplification on*)
+val t = ``?r1:my_record. r1.field1``
+val thm = QUANT_INSTANTIATE_CONV [record_qp true (K (K true))] t;
+
+(*using it as a ssfrag*)
+val t = ``?r1:my_record. r1.field1``
+val thm = SIMP_CONV (std_ss ++ QUANT_INST_ss [record_qp true (K (K true))]) [] t;
+val thm = SIMP_CONV (std_ss ++ QUANT_INST_ss [record_default_qp]) [] t;
+
+set_goal ([], ``?r1:my_record. r1.field1``);
+e (SRW_TAC [QUANT_INST_ss [record_default_qp]] [])
+
+
+
+(*Tactics using the assumption*)
+
+set_goal ([], ``!x y. IS_SOME x /\ IS_SOME y ==> (x = y)``);
+
+e (
+   REPEAT STRIP_TAC THEN
+   ASM_QUANT_INSTANTIATE_TAC [std_qp]
+)
+
 
 
 (*A combination of quantHeuristics with consequence Conversions

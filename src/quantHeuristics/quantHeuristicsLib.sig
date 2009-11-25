@@ -183,7 +183,7 @@ sig
 
 (*Some types*)
   type quant_heuristic = term list -> term -> term -> guess_collection;
-  type quant_heuristic_combine_argument =
+  type quant_param =
     {distinct_thms      : thm list,
      cases_thms         : thm list,
      rewrite_thms       : thm list,
@@ -203,7 +203,12 @@ sig
   val QUANT_INSTANTIATE_HEURISTIC___CONV :
   conv -> quant_heuristic -> quant_heuristic;
   val QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct : thm list -> quant_heuristic -> quant_heuristic;
-  val QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases : thm -> quant_heuristic -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases    : thm -> quant_heuristic -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___one_case          : thm -> quant_heuristic -> quant_heuristic;
+  val QUANT_INSTANTIATE_GUESSES___one_case            : thm -> term -> (term list * term * term) * guess list
+  val QUANT_INSTANTIATE_HEURISTIC___cases             : thm -> quant_heuristic -> quant_heuristic;
+
+
 
   val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth : int ref
 
@@ -213,30 +218,31 @@ sig
 
   val COMBINE_HEURISTIC_FUNS : (unit -> guess_collection) list -> guess_collection;
 
+
   (*use this to create sys for debugging own heuristics*)
-  val QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE : quant_heuristic_combine_argument ->
+  val QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE : quant_param ->
        quant_heuristic_cache ref option ->
        term list -> term -> term -> guess_collection
 
 (*The most important functions *)
   val EXTENSIBLE_QUANT_INSTANTIATE_CONV : quant_heuristic_cache ref option ->
-      bool -> (term -> bool) -> bool -> bool -> quant_heuristic_combine_argument list -> conv;
-  val QUANT_INSTANTIATE_CONV    : quant_heuristic_combine_argument list -> conv;
-  val QUANT_INSTANTIATE_TAC     : quant_heuristic_combine_argument list -> tactic;
-  val ASM_QUANT_INSTANTIATE_TAC : quant_heuristic_combine_argument list -> tactic;
-  val FAST_QUANT_INSTANTIATE_CONV    : quant_heuristic_combine_argument list -> conv;
-  val FAST_QUANT_INSTANTIATE_TAC     : quant_heuristic_combine_argument list -> tactic;
-  val ASM_FAST_QUANT_INSTANTIATE_TAC : quant_heuristic_combine_argument list -> tactic;
+      bool -> (term -> bool) -> bool -> bool -> quant_param list -> conv;
+  val QUANT_INSTANTIATE_CONV    : quant_param list -> conv;
+  val QUANT_INSTANTIATE_TAC     : quant_param list -> tactic;
+  val ASM_QUANT_INSTANTIATE_TAC : quant_param list -> tactic;
+  val FAST_QUANT_INSTANTIATE_CONV    : quant_param list -> conv;
+  val FAST_QUANT_INSTANTIATE_TAC     : quant_param list -> tactic;
+  val ASM_FAST_QUANT_INSTANTIATE_TAC : quant_param list -> tactic;
 
 
   val EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV : 
-      quant_heuristic_cache ref option -> (term -> bool) -> bool -> quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
+      quant_heuristic_cache ref option -> (term -> bool) -> bool -> quant_param list -> ConseqConv.directed_conseq_conv;
   val EXTENSIBLE_QUANT_INSTANTIATE_CONSEQ_CONV : 
-      quant_heuristic_cache ref option -> bool -> (term -> bool) -> bool -> quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
+      quant_heuristic_cache ref option -> bool -> (term -> bool) -> bool -> quant_param list -> ConseqConv.directed_conseq_conv;
   val QUANT_INSTANTIATE_CONSEQ_CONV :
-      quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
+      quant_param list -> ConseqConv.directed_conseq_conv;
   val FAST_QUANT_INSTANTIATE_CONSEQ_CONV :
-      quant_heuristic_combine_argument list -> ConseqConv.directed_conseq_conv;
+      quant_param list -> ConseqConv.directed_conseq_conv;
 
 
   val QUANT_INST_CONV : (string * Parse.term Lib.frag list * Parse.term Parse.frag list list) list
@@ -250,33 +256,37 @@ sig
 
 (*functions to add stuff to QUANT_INSTANTIATE_CONV*)
 
-  val clear_stateful_qhca : unit -> unit
-  val stateful_qhca___add_combine_arguments :
-     quant_heuristic_combine_argument list -> unit;
+  val clear_stateful_qp : unit -> unit
+  val stateful_qp___add_combine_arguments :
+     quant_param list -> unit;
 
   val QUANT_INSTANTIATE_HEURISTIC___STATEFUL : quant_heuristic -> quant_heuristic;
 
-  val empty_qhca           : quant_heuristic_combine_argument;
-  val stateful_qhca        : quant_heuristic_combine_argument;
-  val pure_stateful_qhca   : quant_heuristic_combine_argument;
-  val TypeBase_qhca        : quant_heuristic_combine_argument
-  val get_qhca___for_types : hol_type list -> quant_heuristic_combine_argument
+  val empty_qp           : quant_param;
+  val stateful_qp        : quant_param;
+  val pure_stateful_qp   : quant_param;
+  val TypeBase_qp        : quant_param
+  val get_qp___for_types : hol_type list -> quant_param
 
 
-  val combine_qhca :
-     quant_heuristic_combine_argument -> quant_heuristic_combine_argument ->
-     quant_heuristic_combine_argument;
+  val combine_qp :
+     quant_param -> quant_param ->
+     quant_param;
 
-  val combine_qhcas :
-     quant_heuristic_combine_argument list -> quant_heuristic_combine_argument;
+  val combine_qps :
+     quant_param list -> quant_param;
 
-  val distinct_qhca      : thm list -> quant_heuristic_combine_argument
-  val rewrite_qhca       : thm list -> quant_heuristic_combine_argument
-  val final_rewrite_qhca : thm list -> quant_heuristic_combine_argument
-  val cases_qhca         : thm list -> quant_heuristic_combine_argument
-  val convs_qhca         : conv list -> quant_heuristic_combine_argument
-  val heuristics_qhca    : (quant_heuristic -> quant_heuristic) list ->
-                           quant_heuristic_combine_argument
+  val distinct_qp      : thm list -> quant_param
+  val rewrite_qp       : thm list -> quant_param
+  val final_rewrite_qp : thm list -> quant_param
+  val cases_qp         : thm list -> quant_param
+  val convs_qp         : conv list -> quant_param
+  val heuristics_qp    : (quant_heuristic -> quant_heuristic) list ->
+                           quant_param
+
+
+(*combination with simplifier*)
+  val QUANT_INST_ss      : quant_param list -> simpLib.ssfrag;
 
 (* Traces *)
 (* "QUANT_INSTANTIATE_HEURISTIC" can be used to get debug information on
