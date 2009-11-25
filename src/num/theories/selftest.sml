@@ -1,4 +1,4 @@
-open arithmeticTheory HolKernel boolLib
+open arithmeticTheory HolKernel boolLib Parse
 
 fun tprint s = print (StringCvt.padRight #" " 60 s)
 
@@ -17,3 +17,13 @@ val _ = (Parse.Term`bool$0`; fail()) handle HOL_ERR _ => print "OK\n"
 
 val _ = tprint "Testing that num$01 fails"
 val _ = (Parse.Term`num$01`; fail()) handle HOL_ERR _ => print "OK\n"
+
+val _ = let
+  val _ = tprint "Anthony's pattern-overloading bug"
+  val b2n_def = new_definition("b2n_def", ``b2n b = if b then 1 else 0``)
+  val _ = overload_on ("foo", ``\(x:num#'a),(y:num#'b). b2n (FST x = FST y)``)
+  val res = trace ("PP.catch_withpp_err", 0) term_to_string ``foo(x,y)``
+            handle Fail _ => ""
+in
+  if res <> "" then print "OK\n" else fail()
+end
