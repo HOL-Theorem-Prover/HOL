@@ -274,4 +274,6 @@ in
   register_ftrace ("types", (get,set), 2)
 end;
 
+val () = register_btrace ("PP.catch_withpp_err", HOLPP.catch_withpp_err)
+
 end  (* Feedback *)

@@ -584,14 +584,17 @@ fun add_newline (pps : ppstream) =
 (* Derived form. Builds a ppstream, sends pretty printing commands called in
    f to the ppstream, then flushes ppstream.
 *)
+val catch_withpp_err = ref true
 
-fun with_pp ppconsumer ppfn =
-   let val ppstrm = mk_ppstream ppconsumer
-    in ppfn ppstrm;
-       flush_ppstream0 ppstrm
-   end
-   handle Fail msg =>
-     (TextIO.print (">>>> Pretty-printer failure: " ^ msg ^ "\n"))
+fun with_pp ppconsumer ppfn = let
+  val ppstrm = mk_ppstream ppconsumer
+in
+  ppfn ppstrm;
+  flush_ppstream0 ppstrm
+end handle e as Fail msg =>
+           if !catch_withpp_err then
+             TextIO.print (">>>> Pretty-printer failure: " ^ msg ^ "\n")
+           else raise e
 
 fun pp_to_string linewidth ppfn ob =
     let val l = ref ([]:string list)

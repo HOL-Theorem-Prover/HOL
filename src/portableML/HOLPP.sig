@@ -27,6 +27,7 @@ val flush_ppstream : ppstream -> unit
 val with_pp        : ppconsumer -> (ppstream -> unit) -> unit
 val pp_to_string   : int -> (ppstream -> 'a -> unit) -> 'a -> string
 val lineWidth      : ppstream -> int
+val catch_withpp_err : bool ref
 
 (*
    This structure provides tools for creating customized Oppen-style
