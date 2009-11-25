@@ -46,6 +46,11 @@
   :group 'hol
   :type 'boolean)
 
+(defcustom hol-raise-on-recentre nil
+  "Controls if hol-recentre (\\[hol-recentre]) also raises the HOL frame."
+  :group 'hol
+  :type 'boolean)
+
 (defvar hol-generate-locpragma-p t
   "*Whether or not to generate (*#loc row col *) pragmas for HOL.")
 
@@ -640,12 +645,11 @@ file to \"use\" first."
   "Display the HOL window in such a way that it displays most text."
   (interactive)
   (if (get-buffer-window hol-buffer-name t)
-  (save-selected-window
-    (select-window (get-buffer-window hol-buffer-name t))
-    (goto-char (point-max))
-    (recenter -1))))
-
-
+      (save-selected-window
+        (select-window (get-buffer-window hol-buffer-name t))
+        (and hol-raise-on-recentre (raise-frame))
+        (goto-char (point-max))
+        (recenter -1))))
 
 (defun hol-rotate (arg)
   "Rotate the goal stack N times.  Once by default."
@@ -1277,7 +1281,7 @@ already loaded.)"
        nil
        (if (save-excursion (goto-char (- (point) 6))
                            (looking-at "(\\*(\\*(\\*"))
-           (progn 
+           (progn
               (holpp-find-comment-end (+ n 1)))
            (if (= n 1) t (holpp-find-comment-end (- n 1))))))
 
@@ -1289,20 +1293,20 @@ already loaded.)"
 
 
 (defun holpp-execute-code (code arg1 start end)
-  (cond ((equal code "FV") 
-             (holpp-execute-code-face-tooltip start end arg1 
+  (cond ((equal code "FV")
+             (holpp-execute-code-face-tooltip start end arg1
              '(face hol-free-variable)))
-        ((equal code "BV") 
-             (holpp-execute-code-face-tooltip start end arg1 
+        ((equal code "BV")
+             (holpp-execute-code-face-tooltip start end arg1
              '(face hol-bound-variable)))
-        ((equal code "TV") 
-             (holpp-execute-code-face-tooltip start end arg1 
+        ((equal code "TV")
+             (holpp-execute-code-face-tooltip start end arg1
              '(face hol-type-variable)))
-        ((equal code "TY") 
+        ((equal code "TY")
              (holpp-execute-code-face-tooltip start end arg1
              '(face hol-type)))
         ((equal code "ST")
-           (add-text-properties start end 
+           (add-text-properties start end
              (holpp-decode-full-style arg1)))))
 
 (setq temp-hol-output-buf nil)
@@ -1476,7 +1480,7 @@ already loaded.)"
   (cons "Misc" (make-sparse-keymap "Misc")))
 
 (define-key global-map [menu-bar hol-menu hol-misc clean-up]
-   '("Clean up (remove tab, white spaces at end of line, etc...)" . 
+   '("Clean up (remove tab, white spaces at end of line, etc...)" .
      hol-cleanup-buffer))
 
 (define-key global-map [menu-bar hol-menu hol-misc check-names]
