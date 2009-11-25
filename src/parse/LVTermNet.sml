@@ -86,7 +86,7 @@ fun insert ((net,sz), k, item) = let
           (ND d', inc)
         end
       | (EMPTY, ks) => trav(mkempty(), ks)
-      | _ => raise Fail "TypeNet.insert: catastrophic invariant failure"
+      | _ => raise Fail "LVTermNet.insert: catastrophic invariant failure"
   val (net', inc) = trav(net,[k])
 in
   (net', sz + inc)
@@ -121,7 +121,7 @@ fun peek ((net,sz), k) = let
           | SOME n => trav(n, rest @ ks)
         end
       | (EMPTY, _) => NONE
-      | _ => raise Fail "TypeNet.peek: catastrophic invariant failure"
+      | _ => raise Fail "LVTermNet.peek: catastrophic invariant failure"
 in
   trav(net, [k])
 end
@@ -135,10 +135,10 @@ fun lookup_label tm = let
 in
   case dest_term f of
     CONST{Name, Thy, ...} => (C ({Name=Name,Thy=Thy}, length args), args)
-  | LAMB(Bvar, Body) => (Lam (length args), args)
+  | LAMB(Bvar, Body) => (Lam (length args), Body::args)
   | VAR (s, _) => (LV (s, length args), args)
-  | TYLAMB(Bvar, Body) => (TyLam (length args), args)
-  | TYCOMB(Tm, Ty) => (TyCmb (length args), args)
+  | TYLAMB(Bvar, Body) => (TyLam (length args), Body::args)
+  | TYCOMB(Tm, Ty) => (TyCmb (length args), Tm::args)
   | _ => raise Fail "LVTermNet.lookup_label: catastrophic invariant failure"
 end
 

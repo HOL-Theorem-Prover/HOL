@@ -537,5 +537,93 @@ val COMPL_K_NOT_RE = store_thm(
   ``¬re (COMPL K)``,
   METIS_TAC [re_compl_recursive, K_not_recursive, K_re]);
 
+(* ----------------------------------------------------------------------
+    Rice's Theorem
+   ---------------------------------------------------------------------- *)
+
+open pred_setTheory
+
+val indexes_def = Define`indexes P = { i | P (Phi i) }`
+
+val indexes_COMPL = store_thm(
+  "indexes_COMPL",
+  ``indexes ((~) o P) = COMPL (indexes P)``,
+  SRW_TAC [][EXTENSION, indexes_def]);
+
+
+val wlog_lemma = prove(
+  ``(∀s. P s ⇒ P (COMPL s)) ∧ (!s. e ∉ s ∧ P s ⇒ G) ⇒
+    (∀s. P s ⇒ G)``,
+  REPEAT STRIP_TAC THEN Cases_on `e ∈ s` THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THENL [
+    Q.EXISTS_TAC `COMPL s` THEN SRW_TAC [][],
+    METIS_TAC []
+  ]);
+
+val looper_i_def = Define`
+  looper_i = dBnum (fromTerm (LAM "n" Ω))
+`;
+
+val looper_loops = store_thm(
+  "looper_loops",
+  ``Phi looper_i n = NONE``,
+  SIMP_TAC (bsrw_ss()) [Phi_def, looper_i_def]);
+
+val Rices_Theorem = store_thm(
+  "Rices_Theorem",
+  ``recursive (indexes P) ⇒ (indexes P = {}) ∨ (indexes P = UNIV)``,
+  STRIP_TAC THEN Cases_on `indexes P = {}` THEN SRW_TAC [][] THEN
+  Cases_on `indexes P = UNIV` THEN SRW_TAC [][] THEN
+  `∃Q. recursive (indexes Q) ∧ indexes Q ≠ {} ∧ indexes Q ≠ UNIV ∧
+       looper_i ∉ indexes Q`
+    by (Cases_on `looper_i ∈ indexes P` THENL [
+          Q.EXISTS_TAC `$~ o P` THEN SRW_TAC [][indexes_COMPL] THEN
+          FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN METIS_TAC [],
+          METIS_TAC []
+        ]) THEN
+  `∃a. a ∈ indexes Q` by METIS_TAC [IN_INSERT, SET_CASES] THEN
+  Q.ABBREV_TAC `
+    h = LAM "n" (cbnf_ofk
+                   @@ (LAM "r" (UM @@ (cnpair @@ church a
+                                              @@ (cnsnd @@ VAR "n"))))
+                   @@ (cdAPP @@ (cnumdB @@ (cnfst @@ VAR "n"))
+                             @@ (cchurch @@ (cnfst @@ VAR "n"))))
+  ` THEN
+  Q.ABBREV_TAC `hi = dBnum (fromTerm h)` THEN
+  `∀m n. Phi hi (m ⊗ n) = case Phi m m of
+                             NONE -> NONE
+                          || SOME _ -> Phi a n`
+    by (ASM_SIMP_TAC (bsrw_ss()) [Phi_def, Abbr`hi`, Abbr`h`,
+                                  cnsnd_behaviour, cnfst_behaviour,
+                                  cnpair_behaviour, cnumdB_behaviour,
+                                  cdAPP_behaviour, cchurch_behaviour] THEN
+        REPEAT STRIP_TAC THEN
+        Cases_on `Phi m m` THENL [
+          IMP_RES_TAC PhiNONE_cbnf_ofk THEN SRW_TAC [][] THEN
+          FULL_SIMP_TAC (srw_ss()) [Phi_def],
+          IMP_RES_TAC PhiSOME_cbnf_ofk THEN
+          ASM_SIMP_TAC (bsrw_ss()) [] THEN
+          FULL_SIMP_TAC (srw_ss()) [Phi_def, bnf_of_UM,
+                                    optionTheory.OPTION_MAP_COMPOSE]
+        ]) THEN
+  markerLib.RM_ALL_ABBREVS_TAC THEN
+  Q.SPECL_THEN [`s11`, `hi`] STRIP_ASSUME_TAC s11f_def THEN
+  Q_TAC SUFF_TAC `recursive K` THEN1 METIS_TAC [K_not_recursive] THEN
+  FULL_SIMP_TAC (srw_ss()) [recursive_def] THEN
+  Q.EXISTS_TAC `M' o s11f s11 hi` THEN
+  SRW_TAC [][computable_composition_def] THEN
+  Q.SPEC_THEN `hi ⊗ e` STRIP_ASSUME_TAC s11_def THEN
+  SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
+    `Phi fi = Phi a`
+       by (SRW_TAC [][FUN_EQ_THM] THEN
+           FULL_SIMP_TAC (srw_ss()) [K_def]) THEN
+    FULL_SIMP_TAC (srw_ss()) [indexes_def],
+
+    `Phi fi = Phi looper_i`
+       by (SRW_TAC [][FUN_EQ_THM, looper_loops] THEN
+           FULL_SIMP_TAC (srw_ss()) [K_def] THEN
+           Cases_on `Phi e e` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+    FULL_SIMP_TAC (srw_ss()) [indexes_def]
+  ]);
 
 val _ = export_theory ()

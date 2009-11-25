@@ -19,17 +19,15 @@ val _ = app tpp ["\\(x,y). x /\\ y",
                  "\\((x,y),z). x /\\ y /\\ z",
                  "(\\(x,y,z). x /\\ y /\\ z) p"]
 
-(******************************************************************************)
 (* check LET_INTRO *)
 
-val _ =
-    let val _ = print "*** Testing pairTools.LET_INTRO ..."
-        val _ = pairTools.LET_INTRO (ASSUME ``((x,y) = (zw)) ==> (ARB x y):bool``)
-        val _ = pairTools.LET_INTRO (ASSUME ``((x,y) = (z,w)) ==> (ARB x y):bool``)
-        val _ = print "SUCCESS!\n"
-    in
-        ()
-    end handle e => (print "FAILED!\n"; Process.exit Process.failure)
-
+val _ = let
+  val _ = tprint "Testing pairTools.LET_INTRO"
+  val _ = pairTools.LET_INTRO (ASSUME ``((x,y) = (zw)) ==> (ARB x y):bool``)
+  val _ = pairTools.LET_INTRO (ASSUME ``((x,y) = (z,w)) ==> (ARB x y):bool``)
+  val _ = print "OK\n"
+in
+  ()
+end handle e => (print "FAILED!\n"; Process.exit Process.failure)
 
 val _ = Process.exit Process.success
