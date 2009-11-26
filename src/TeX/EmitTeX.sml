@@ -293,6 +293,8 @@ local
      | "_"     => (token_string "Underscore",1)
      | "IN"    => (token_string "In",1)
      | "NOTIN" => (token_string "NotIn",1)
+     | "UNION" => (token_string "Union",1)
+     | "INTER" => (token_string "Inter",1)
      | "\226\134\146" => (token_string "Map", 1) (* → *)
      | "\226\138\162" => (token_string "Turnstile", 2) (* ⊢ *)
      | "\226\151\129" => (token_string "LOpenTri", 1) (* ◁ *)
