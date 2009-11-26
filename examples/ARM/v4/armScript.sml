@@ -15,6 +15,9 @@ open Q wordsTheory rich_listTheory updateTheory;
 
 val _ = new_theory "arm";
 
+val _ = clear_overloads_on "U";
+val _ = Parse.remove_user_printer "UNIVprinter";
+
 (* ------------------------------------------------------------------------- *)
 (*  The ARM State Space                                                      *)
 (* ------------------------------------------------------------------------- *)
