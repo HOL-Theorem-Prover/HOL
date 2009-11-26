@@ -301,12 +301,21 @@ local
      | "^*"    => (token_string "SupStar", 1)
      | "^+"    => (token_string "SupPlus", 1)
      | _       => (String.translate char_map s,String.size s)
+  fun ann_string pps (s,ann) = let
+    open PPBackEnd
+    fun addann ty s = "\\" ^ !texPrefix ^ ty ^ "{" ^ s ^ "}"
+    val annotation = case ann of BV _ => addann "BoundVar"
+                               | FV _ => addann "FreeVar"
+                               | _ => (fn s => s)
+    val (s',sz) = string_map s
+  in
+    PP.add_stringsz pps (annotation s', sz)
+  end
 in
   val emit_latex =
     {add_break = PP.add_break,
      add_string = (fn pps => fn s => PP.add_stringsz pps (string_map s)),
-     add_ann_string = (fn pps => fn (s,ann) =>
-                                     PP.add_stringsz pps (string_map s)),
+     add_ann_string = ann_string,
      add_newline = PP.add_newline,
      begin_block = PP.begin_block,
      end_block = PP.end_block,
