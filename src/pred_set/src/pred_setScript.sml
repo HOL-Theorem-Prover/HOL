@@ -233,6 +233,43 @@ val EQ_UNIV =
      (--`(!x:'a. x IN s) = (s = UNIV)`--),
      REWRITE_TAC [EXTENSION,IN_UNIV]);
 
+val _ = overload_on ("U", ``\x:'a itself. UNIV: 'a set``)
+
+fun univ_printer (tyg, tmg) printer (ppfns:term_pp_types.ppstream_funs) gravs
+                 depth pps tm =
+let
+  val (elty, _) = dom_rng (type_of tm)
+  val itself_t = Term.inst [alpha |-> elty] boolSyntax.the_value
+in
+  #add_string ppfns "U";
+  printer gravs depth itself_t
+end
+
+val _ = temp_add_user_printer("UNIVprinter", ``UNIV: 'a set``, univ_printer)
+
+val _ = adjoin_to_theory
+            {sig_ps = NONE,
+             struct_ps = SOME (fn pps => PP.add_string pps
+"local\n\
+\  val univ_printing = ref true\n\
+\  val u_t = prim_mk_const{Thy = \"pred_set\", Name = \"UNIV\"}\n\
+\  val _ = Feedback.register_btrace (\"Univ pretty-printing\", univ_printing)\n\
+\  fun univ_printer (tyg, tmg) printer (ppfns:term_pp_types.ppstream_funs) gravs depth pps tm =\n\
+\      if !univ_printing then let\n\
+\          val {add_string, begin_block, end_block,...} = ppfns\n\
+\          val (elty, _) = dom_rng (type_of tm)\n\
+\          val itself_t = Term.inst [{redex=alpha,residue=elty}]\n\
+\                                   boolSyntax.the_value\n\
+\        in\n\
+\          add_string \"U\";\n\
+\          printer gravs depth itself_t\n\
+\        end\n\
+\      else raise term_pp_types.UserPP_Failed\n\
+\  val _ = Parse.temp_add_user_printer(\"UNIVprinter\", u_t, univ_printer)\n\
+\in\n\
+\end")};
+
+
 
 (* ===================================================================== *)
 (* Set inclusion.							 *)
