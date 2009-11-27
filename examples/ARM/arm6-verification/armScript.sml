@@ -15,6 +15,9 @@ open Q wordsLib wordsSyntax rich_listTheory io_onestepTheory;
 
 val _ = new_theory "arm";
 
+val _ = clear_overloads_on "U"
+val _ = remove_user_printer "UNIVprinter"
+
 (* ------------------------------------------------------------------------- *)
 (*  The ARM State Space                                                      *)
 (* ------------------------------------------------------------------------- *)
