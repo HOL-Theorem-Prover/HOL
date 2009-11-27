@@ -3060,6 +3060,7 @@ val PSR_OF_UPDATES = Q.store_thm("PSR_OF_UPDATES",
    (!d s. ARM_READ_CPSR (ARM_WRITE_SPSR d s) = ARM_READ_CPSR s) /\
    (!f d s. ARM_READ_CPSR (ARM_WRITE_STATUS_SPSR f d s) = ARM_READ_CPSR s) /\
    (!d s. ARM_READ_CPSR (ARM_WRITE_GE_SPSR d s) = ARM_READ_CPSR s) /\
+   (!x y s. ARM_READ_CPSR (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_CPSR s) /\
    (!d s. ARM_READ_CPSR (ARM_WRITE_IT_SPSR d s) = ARM_READ_CPSR s) /\
    (!d s. ARM_READ_CPSR (ARM_WRITE_MODE_SPSR d s) = ARM_READ_CPSR s) /\
    (!n m d s. ARM_READ_SPSR (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_SPSR s) /\
@@ -3075,7 +3076,7 @@ val PSR_OF_UPDATES = Q.store_thm("PSR_OF_UPDATES",
                    ARM_WRITE_SPSR_def, ARM_WRITE_CPSR_def, ARM_READ_CPSR_def,
                    ARM_WRITE_STATUS_SPSR_def, ARM_WRITE_GE_SPSR_def,
                    ARM_WRITE_IT_SPSR_def, ARM_WRITE_MODE_SPSR_def,
-                   ARM_READ_SPSR_def]
+                   ARM_READ_SPSR_def, CLEAR_EXCLUSIVE_BY_ADDRESS_def]
     \\ SRW_TAC [] [ARM_WRITE_SPSR_MODE_def, SPSR_MODE_NOT_CPSR, UPDATE_def]
     \\ FULL_SIMP_TAC (srw_ss()) [ARM_MODE_def, SPSR_MODE_NOT_CPSR,
          ARM_READ_SPSR_MODE_def, ARM_READ_CPSR_def]);
@@ -3094,6 +3095,7 @@ val CPSR_COMPONENTS_OF_UPDATES = Q.store_thm("CPSR_COMPONENTS_OF_UPDATES",
    (!f b s. ARM_READ_STATUS f (ARM_WRITE_STATUS f b s) = b) /\
    (!f f2 b s. f2 <> f ==>
         (ARM_READ_STATUS f (ARM_WRITE_STATUS f2 b s) = ARM_READ_STATUS f s)) /\
+   (!f x y s. ARM_READ_STATUS f (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_STATUS f s) /\
    (!f d s. ARM_READ_STATUS f (ARM_WRITE_SPSR d s) = ARM_READ_STATUS f s) /\
    (!f it s. ARM_READ_STATUS f (ARM_WRITE_IT_SPSR it s) =
              ARM_READ_STATUS f s) /\
@@ -3309,12 +3311,15 @@ val REG_MODE_OF_UPDATES = Q.store_thm("REG_MODE_OF_UPDATES",
    (!n1 n2 m d s. n1 <> n2 ==>
       (ARM_READ_REG_MODE (n1,m) (ARM_WRITE_REG n2 d s) =
        ARM_READ_REG_MODE (n1,m) s)) /\
+   (!n m d s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_REG_MODE (n,m) d s) = d) /\
    (!n m a d s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_MEM a d s) =
                 ARM_READ_REG_MODE (n,m) s) /\
    (!n m a d s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_MEM_WRITE a d s) =
                 ARM_READ_REG_MODE (n,m) s) /\
    (!n m a s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_MEM_READ a s) =
               ARM_READ_REG_MODE (n,m) s) /\
+   (!n m x y s. ARM_READ_REG_MODE (n,m) (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = 
+                ARM_READ_REG_MODE (n,m) s) /\
    (!n m it s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_IT it s) =
                ARM_READ_REG_MODE (n,m) s) /\
    (!n m ge s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_GE ge s) =
@@ -3328,7 +3333,8 @@ val REG_MODE_OF_UPDATES = Q.store_thm("REG_MODE_OF_UPDATES",
   SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
               ARM_WRITE_MEM_WRITE_def, ARM_WRITE_MEM_READ_def,
               ARM_WRITE_SPSR_def, ARM_WRITE_IT_def, ARM_WRITE_GE_def,
-              ARM_WRITE_MODE_def, ARM_WRITE_CPSR_def, ARM_READ_REG_MODE_def]
+              ARM_WRITE_MODE_def, ARM_WRITE_CPSR_def, ARM_READ_REG_MODE_def,
+              CLEAR_EXCLUSIVE_BY_ADDRESS_def]
     \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [ARM_WRITE_SPSR_MODE_def, ARM_WRITE_STATUS_def,
                    ARM_WRITE_CPSR_def,  UPDATE_def]
@@ -3339,16 +3345,20 @@ val REG_OF_UPDATES = Q.prove(
       (ARM_READ_REG n1 (ARM_WRITE_REG_MODE (n2,m) d s) = ARM_READ_REG n1 s)) /\
    (!n1 n2 d s. n1 <> n2 ==>
       (ARM_READ_REG n1 (ARM_WRITE_REG n2 d s) = ARM_READ_REG n1 s)) /\
+   (!n d s. ARM_READ_REG n (ARM_WRITE_REG n d s) = d) /\
    (!n a d s. ARM_READ_REG n (ARM_WRITE_MEM a d s) = ARM_READ_REG n s) /\
    (!n a d s. ARM_READ_REG n (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_REG n s) /\
    (!n a s. ARM_READ_REG n (ARM_WRITE_MEM_READ a s) = ARM_READ_REG n s) /\
+   (!n x y s. ARM_READ_REG n (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = 
+              ARM_READ_REG n s) /\
    (!n it s. ARM_READ_REG n (ARM_WRITE_IT it s) = ARM_READ_REG n s) /\
    (!n ge s. ARM_READ_REG n (ARM_WRITE_GE ge s) = ARM_READ_REG n s) /\
    (!n m s. ARM_READ_REG n (ARM_WRITE_MODE m s) = ARM_READ_REG_MODE (n,m) s) /\
    (!n f b s. ARM_READ_REG n (ARM_WRITE_STATUS f b s) = ARM_READ_REG n s) /\
    (!n d s.  ARM_READ_REG n (ARM_WRITE_SPSR d s) = ARM_READ_REG n s)`,
   SRW_TAC []
-    [ARM_READ_REG_def, REG_MODE_OF_UPDATES, CPSR_COMPONENTS_OF_UPDATES]);
+    [ARM_READ_REG_def, ARM_WRITE_REG_def, REG_MODE_OF_UPDATES, 
+     CPSR_COMPONENTS_OF_UPDATES, ARM_MODE_def, PSR_OF_UPDATES]);
 
 val REG_OF_UPDATES = save_thm("REG_OF_UPDATES",
   CONJ REG_MODE_OF_UPDATES REG_OF_UPDATES);
@@ -3358,8 +3368,10 @@ val MEM_OF_UPDATES = Q.store_thm("MEM_OF_UPDATES",
       ARM_READ_MEM a (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_MEM a s) /\
    (!a n d s. ARM_READ_MEM a (ARM_WRITE_REG n d s) = ARM_READ_MEM a s) /\
    (!a d s. ARM_READ_MEM a (ARM_WRITE_MEM a d s) = d) /\
-   (!a d s. ARM_READ_MEM a (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_MEM a s) /\
-   (!a s. ARM_READ_MEM a (ARM_WRITE_MEM_READ a s) = ARM_READ_MEM a s) /\
+   (!a b s. ~(a = b) ==> (ARM_READ_MEM a (ARM_WRITE_MEM b x s) = ARM_READ_MEM a s)) /\
+   (!a b d s. ARM_READ_MEM a (ARM_WRITE_MEM_WRITE b d s) = ARM_READ_MEM a s) /\
+   (!a b s. ARM_READ_MEM a (ARM_WRITE_MEM_READ b s) = ARM_READ_MEM a s) /\
+   (!a x y s. ARM_READ_MEM a (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_MEM a s) /\
    (!a it s. ARM_READ_MEM a (ARM_WRITE_IT it s) = ARM_READ_MEM a s) /\
    (!a ge s. ARM_READ_MEM a (ARM_WRITE_GE ge s) = ARM_READ_MEM a s) /\
    (!a m s. ARM_READ_MEM a (ARM_WRITE_MODE m s) = ARM_READ_MEM a s) /\
@@ -3368,7 +3380,8 @@ val MEM_OF_UPDATES = Q.store_thm("MEM_OF_UPDATES",
   SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
               ARM_WRITE_MEM_READ_def, ARM_WRITE_MEM_WRITE_def,
               ARM_WRITE_SPSR_def, ARM_WRITE_IT_def, ARM_WRITE_GE_def,
-              ARM_WRITE_MODE_def, ARM_WRITE_CPSR_def, ARM_READ_MEM_def]
+              ARM_WRITE_MODE_def, ARM_WRITE_CPSR_def, ARM_READ_MEM_def,
+              CLEAR_EXCLUSIVE_BY_ADDRESS_def]
     \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [ARM_WRITE_SPSR_MODE_def, ARM_WRITE_STATUS_def,
                    ARM_WRITE_CPSR_def, UPDATE_def]);
