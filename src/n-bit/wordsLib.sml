@@ -298,7 +298,8 @@ local
       "num_to_bin_string","num_to_oct_string","num_to_dec_string",
       "num_to_hex_string"]
 
-  val s = name_thy_set (("min","=")::("arithmetic","DIV_2EXP") ::
+  val s = name_thy_set
+           (("min","=")::("arithmetic","DIV_2EXP") ::("fcp","fcp_index")::
              map (pair "words") l1 @ map (pair "bit") l2)
 
   fun is_hex_digit_literal t =

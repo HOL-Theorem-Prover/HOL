@@ -1036,12 +1036,13 @@ val word_signed_bits_n2w = Q.store_thm("word_signed_bits_n2w",
                   [SIGN_EXTEND_def, BIT_ZERO, BITS_ZERO]]]);
 
 val word_index_n2w = store_thm("word_index_n2w",
-  `!n i. ((n2w n):'a word) ' i =
+  `!n i. (n2w n : 'a word) ' i =
       if i < dimindex (:'a) then
         BIT i n
       else
-        ((n2w n):'a word) ' i`,
-  RW_TAC arith_ss [word_bit,word_bit_n2w]);
+        FAIL fcp$fcp_index ^(mk_var("index too large",bool))
+             (n2w n : 'a word) i`,
+  RW_TAC arith_ss [word_bit,word_bit_n2w,combinTheory.FAIL_THM]);
 
 val MIN_lem = prove(
  `(!m n. MIN m (m + n) = m) /\ !m n. MIN (m + n) m = m`,
