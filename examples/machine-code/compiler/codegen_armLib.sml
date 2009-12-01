@@ -62,7 +62,7 @@ val arm_assign2assembly = let
         end
   val temp = get_arm_temp_reg ()
   val temp2 = el 2 (get_arm_temp_regs ())
-  fun swpb (ASSIGN_ADDRESS_REG i,j) = ["swp?b " ^ r temp2 ^ ", " ^ r j ^ ", [" ^ r i ^ "]"]
+  fun swpb (ASSIGN_ADDRESS_REG i,j) = ["swpb? " ^ r temp2 ^ ", " ^ r j ^ ", [" ^ r i ^ "]"]
     | swpb (ASSIGN_ADDRESS_OFFSET_ADD (d,i),j) =
         ["add? " ^ r temp ^ ", " ^ r d ^ ", #" ^ Arbnum.toString i ] @ swpb (ASSIGN_ADDRESS_REG temp,j)
     | swpb (ASSIGN_ADDRESS_OFFSET_SUB (d,i),j) =
@@ -74,7 +74,7 @@ val arm_assign2assembly = let
     | f (ASSIGN_EXP (d, ASSIGN_EXP_MONOP (ASSIGN_MONOP_NOT, ASSIGN_X_REG i))) = ["mvn? " ^ r d ^ ", " ^ r i]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_MONOP (ASSIGN_MONOP_NEG, ASSIGN_X_REG i))) = ["rsb? " ^ r d ^ ", " ^ r i ^ ", #0"]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_MEMORY (ACCESS_WORD,a))) = ["ldr? " ^ r d ^ ", " ^ address a]
-    | f (ASSIGN_EXP (d, ASSIGN_EXP_MEMORY (ACCESS_BYTE,a))) = ["ldr?b " ^ r d ^ ", " ^ address a]
+    | f (ASSIGN_EXP (d, ASSIGN_EXP_MEMORY (ACCESS_BYTE,a))) = ["ldrb? " ^ r d ^ ", " ^ address a]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_LEFT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", LSL #" ^ int_to_string n ]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_RIGHT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", LSR #" ^ int_to_string n ]
     | f (ASSIGN_EXP (d, ASSIGN_EXP_SHIFT_ARITHMETIC_RIGHT (ASSIGN_X_REG i,n))) = ["mov? " ^ r d ^ ", " ^ r i ^ ", ASR #" ^ int_to_string n ]
@@ -129,15 +129,13 @@ fun arm_cond_code tm =
   (* negative *) if tm = ``aS1 sN`` then ("mi","pl") else
   (* overflow *) if tm = ``aS1 sV`` then ("vs","vc") else fail()
 
-fun arm_encode_instruction s = let
-  val tm = mk_comb(``enc``,instructionSyntax.mk_instruction s)
-  in ((Arbnum.toHexString o numSyntax.dest_numeral o cdr o cdr o concl o EVAL) tm,4) end
+fun arm_encode_instruction s = ((snd o hd o armLib.arm_assemble_from_string) s,4)
 
 fun arm_encode_branch forward l cond = let
   fun asm NONE = "b"
     | asm (SOME c) = if hd (explode c) = #"b" then c else "b" ^ c
-  val code = if forward then asm cond ^ " " ^ int_to_string (l + 4)
-                        else asm cond ^ " -" ^ int_to_string l
+  val code = if forward then asm cond ^ " +#" ^ int_to_string (l + 4)
+                        else asm cond ^ " -#" ^ int_to_string l
   in arm_encode_instruction code end
 
 fun arm_branch_to_string NONE = "b"

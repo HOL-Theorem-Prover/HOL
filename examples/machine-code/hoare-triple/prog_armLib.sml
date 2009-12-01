@@ -3,12 +3,14 @@ struct
 
 open HolKernel boolLib bossLib;
 open wordsLib stringLib addressTheory pred_setTheory combinTheory;
-open set_sepTheory arm_auxTheory prog_armTheory helperLib wordsTheory;
-open arm_Lib;
+open set_sepTheory prog_armTheory helperLib wordsTheory;
+
+open armLib;
 
 infix \\
 val op \\ = op THEN;
 
+val arm_enc = snd o hd o arm_assemble_from_string;
 
 val arm_status = aS_HIDE;
 val arm_pc = ``aPC``;
@@ -24,37 +26,37 @@ fun process tm = let
      else if tm = ``sZ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sz",``:bool``))
      else if tm = ``sC:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sc",``:bool``))
      else if tm = ``sV:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sv",``:bool``))
-     else if type_of tm = ``:word30`` then
-       (mk_comb(``aM``,tm),mk_var(name_of_tm tm,``:word32``))
+     else if tm = ``sQ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sq",``:bool``))
+     else if type_of tm = ``:word32`` then
+       (mk_comb(``aM1:word32 -> word8 -> arm_set -> bool``,tm),mk_var(name_of_tm tm,``:word8``))
      else fail() end;
 
-val state = ``s:unit arm_sys_state``
+val state = ``s:arm_state``
+val r15 = mk_var("r15",``:word32``)
 
 fun rewrite_names tm = let
   fun aux v = let val m = match_term tm (car (car v)) in (snd o process o cdr o car) v end
   in replace_terml aux end;
 
-fun arm_pre_post g = let
+fun arm_pre_post g = let 
   val regs = collect_term_of_type ``:word4`` g
-  val bits = if can (find_term (can (match_term ``ARM_WRITE_STATUS x ^state``))) g
-             then [``sN``,``sZ``,``sC``,``sV``] else collect_term_of_type ``:arm_bit`` g
-  val h =  rewrite_names (car (car ``ARM_READ_STATUS a ^state``))
-          (rewrite_names (car (car ``ARM_READ_REG a ^state``)) g)
+  val bits = collect_term_of_type ``:arm_bit`` g
+  val h =  rewrite_names ``ARM_READ_STATUS`` (rewrite_names ``ARM_READ_REG`` g)
   val mems1 = find_terml (can (match_term ``ARM_READ_MEM a ^state``)) h
   val mems2 = find_terms (can (match_term ``ARM_WRITE_MEM a x ^state``)) h
   val mems = map (cdr o car) mems1 @ map (cdr o car o car) mems2
-  val mems = filter (fn tm => not (fst (dest_var (cdr tm)) = "r15") handle e => true) mems
-  val h2 = rewrite_names (car (car ``ARM_READ_MEM a ^state``)) h
+  val mems = filter (fn x => not (mem x [``r15 + 3w:word32``,
+               ``r15 + 2w:word32``,``r15 + 1w:word32``,r15])) mems
+  val h2 = rewrite_names ``ARM_READ_MEM`` h
   val reg_assign = find_terml_all (can (match_term ``ARM_WRITE_REG r x ^state``)) h2
   val mem_assign = find_terml_all (can (match_term ``ARM_WRITE_MEM a x ^state``)) h2
-  val sts_assign = find_terml_all (can (match_term ``ARM_WRITE_STATUS x ^state``)) h2
+  val sts_assign = find_terml_all (can (match_term ``ARM_WRITE_STATUS f x ^state``)) h2
   val assignments = map (fn x => (cdr (car (car x)),cdr (car x))) reg_assign
   val assignments = map (fn x => (cdr (car (car x)),cdr (car x))) mem_assign @ assignments
-  val assignments = assignments @ (if 0 = length sts_assign then [] else
-    (Lib.zip [``sN``,``sZ``,``sC``,``sV``] ((list_dest pairSyntax.dest_pair o cdr o car o hd) sts_assign)))
+  val assignments = map (fn x => (cdr (car (car x)),cdr (car x))) sts_assign @ assignments 
   fun all_distinct [] = []
     | all_distinct (x::xs) = x :: filter (fn y => not (x = y)) (all_distinct xs)
-  val mems = all_distinct mems
+  val mems = rev (all_distinct mems)
   fun get_assigned_value_aux x y [] = y
     | get_assigned_value_aux x y ((q,z)::zs) =
         if x = q then z else get_assigned_value_aux x y zs
@@ -66,10 +68,25 @@ fun arm_pre_post g = let
   val pre_post = map mk_pre_post_assertion (regs @ bits @ mems)
   val pre = list_mk_star (map fst pre_post) ((type_of o fst o hd) pre_post)
   val post = list_mk_star (map snd pre_post) ((type_of o fst o hd) pre_post)
-  fun pass tm =
-    not (can (match_term ``~(^state).undefined``) tm) andalso
-    not (can (match_term ``ARM_READ_MEM (addr30 (r:word32)) ^state = n2w n``) tm)
+  fun match_any [] tm = fail ()
+    | match_any (x::xs) tm = match_term x tm handle HOL_ERR _ => match_any xs tm
+  fun pass tm = let
+    val (s,i) = match_any [``ARMv4T_OK s``,
+                           ``ALIGNED r15``,
+                           ``ARM_READ_MEM (r15 + 3w) s = n2w n``,
+                           ``ARM_READ_MEM (r15 + 2w) s = n2w n``,
+                           ``ARM_READ_MEM (r15 + 1w) s = n2w n``,
+                           ``ARM_READ_MEM (r15 + 0w) s = n2w n``,
+                           ``ARM_READ_MEM r15 s = n2w n``] tm
+    in not (subst s r15 = r15) end handle HOL_ERR _ => true
   val pre_conds = (filter pass o list_dest dest_conj o fst o dest_imp) h
+  val pre_conds = filter (not o can (find_term (fn x => x = ``ARM_READ_MEM``))) pre_conds
+  val pre_conds = filter (fn x => not (is_neg x andalso is_eq (cdr x) andalso mem r15 (free_vars x))) pre_conds
+  fun all_bool tm = (filter (fn x => not (type_of x = ``:bool``)) (free_vars tm)) = []
+  val bools = filter all_bool pre_conds
+  val pre_conds = if bools = [] then pre_conds else let
+                    val pre_bool = (fst o dest_eq o concl o SPEC (list_mk_conj bools)) markerTheory.Abbrev_def
+                    in pre_bool :: filter (not o all_bool) pre_conds end 
   val pc_post = snd (hd (filter (fn x => (fst x = ``15w:word4``)) assignments))
   val pc = mk_var("r15",``:word32``)
   val pre_conds = if mem pc (free_vars pc_post) then pre_conds else mk_comb(``ALIGNED``,pc_post) :: pre_conds
@@ -78,20 +95,24 @@ fun arm_pre_post g = let
   in (ss pre,ss post) end;
 
 fun introduce_aBYTE_MEMORY th = let
-  val th = REWRITE_RULE [systemTheory.addr30_def,GSYM ADDR30_def] th
   val (_,p,c,q) = dest_spec(concl th)
-  val tm3 = find_term (can (match_term ``FORMAT UnsignedByte``)) q handle e =>
-            find_term (can (match_term ``SET_BYTE``)) q
-  val tm3 = find_term (can (match_term ``aM x y``)) p
-  val c = MOVE_OUT_CONV (car tm3)
+  val tm0 = find_term (can (match_term ``aM1 x y``)) p
+  val c = MOVE_OUT_CONV (car tm0) THENC STAR_REVERSE_CONV
   val th = CONV_RULE (POST_CONV c THENC PRE_CONV c) th
-  val i = INST [``a:word32`` |-> (cdr o cdr o car) tm3] aBYTE_MEMORY_INTRO
-  val i2 = INST [``a:word32`` |-> (cdr o cdr o car) tm3] aBYTE_MEMORY_INTRO2
-  val tm = find_term (can (match_term ``FORMAT x y w``)) (concl i)
-  val th = INST [cdr tm3 |-> cdr tm ] th
-  val th = CONV_RULE ((RAND_CONV o RATOR_CONV o RAND_CONV) (UNBETA_CONV tm)) th
-  val th = CONV_RULE (DEPTH_CONV BETA_CONV) (MATCH_MP i th handle e => MATCH_MP i2 th)
-  val th = REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND,ALIGNED_def,STAR_ASSOC,EXTRACT_BYTE] th
+  val f = cdr o cdr
+  val h = REWRITE_RULE [GSYM STAR_ASSOC,bit_listTheory.bytes2word_thm]
+  val th = MATCH_MP (h aBYTE_MEMORY_INTRO) (h th)
+  val th = RW [wordsTheory.WORD_ADD_0,GSYM progTheory.SPEC_MOVE_COND] th
+  fun replace_access_in_pre th = let
+    val (_,p,c,q) = dest_spec(concl th)
+    val tm = find_term (can (match_term ``(a:'a =+ w:'b) f``)) p
+    val (tm,y) = dest_comb tm
+    val (tm,x) = dest_comb tm
+    val a = snd (dest_comb tm)
+    val th = REWRITE_RULE [APPLY_UPDATE_ID] (INST [x |-> mk_comb(y,a)] th)
+    in th end handle e => th
+  val th = replace_access_in_pre th
+  val th = RW [STAR_ASSOC] th
   in th end handle e => th;
 
 fun remove_primes th = let
@@ -111,6 +132,27 @@ val SING_SUBSET = prove(
   ``!x:'a y. {x} SUBSET y = x IN y``,
   REWRITE_TAC [INSERT_SUBSET,EMPTY_SUBSET]);
 
+fun introduce_aM th = let
+  val index = ref 0
+  fun next_var () = (index := (!index)+1; mk_var("w" ^ int_to_string (!index),``:word32``))
+  val lemma = (el 2 o CONJUNCTS o SPEC_ALL) bit_listTheory.bytes2word_thm
+  val f = SIMP_RULE std_ss [WORD_ADD_0] o
+          SIMP_RULE std_ss [word_arith_lemma3,word_arith_lemma4] o
+          SIMP_RULE std_ss [word_arith_lemma1,word_arith_lemma2] 
+  val th = f th
+  fun foo th = let
+    val tm = (fst o dest_eq o concl o SPEC (next_var()) o GEN_ALL) lemma
+    val tm2 = find_term (fn t => car t = car tm handle HOL_ERR _ => false) (concl th)
+    in RW [lemma] (INST (fst (match_term tm2 tm)) th) end
+  fun hoo th = let
+    val (_,p,_,_) = dest_spec(concl th)
+    fun is_aM1 tm = (``aM1`` = repeat car tm)
+    val xs = (filter is_aM1 o list_dest dest_star) p
+    val _ = if length xs < 4 then fail() else ()
+    val th = RW [f (SPEC ((cdr o car o hd) xs) aM_INTRO),bit_listTheory.bytes2word_INTRO] th
+    in repeat foo th end
+  in repeat hoo th end;
+
 fun introduce_aMEMORY th = if
   not (can (find_term (can (match_term ``aM``))) (concl th))
   then th else let
@@ -121,21 +163,20 @@ fun introduce_aMEMORY th = if
   val xs = (rev o list_dest dest_star) p
   val tm = (fst o dest_eq o concl o SPEC_ALL) aM_def
   val xs = filter (can (match_term tm)) xs
-  fun foo tm = cdr tm |-> mk_comb(mk_var("f",``:word32->word32``),(cdr o cdr o car) tm)
+  fun foo tm = cdr tm |-> mk_comb(mk_var("f",``:word32->word32``),(cdr o car) tm)
   val th = INST (map foo xs) th
   in if xs = [] then th else let
     val (_,p,_,q) = dest_spec(concl th)
     val xs = (rev o list_dest dest_star) p
     val tm = (fst o dest_eq o concl o SPEC_ALL) aM_def
     val xs = filter (can (match_term tm)) xs
-    val ys = (map (cdr o cdr o car) xs)
+    val ys = (map (cdr o car) xs)
     fun foo [] = mk_var("df",``:word32 set``)
       | foo (v::vs) = pred_setSyntax.mk_delete(foo vs,v)
     val frame = mk_comb(mk_comb(``aMEMORY``,foo ys),mk_var("f",``:word32->word32``))
     val th = SPEC frame (MATCH_MP progTheory.SPEC_FRAME th)
     val th = RW [GSYM STAR_ASSOC] th
     val fff = (fst o dest_eq o concl o UNDISCH_ALL o SPEC_ALL) aMEMORY_INSERT
-    val th = RW [GSYM ADDR30_def,systemTheory.addr30_def] th
     fun compact th = let
       val x = find_term (can (match_term fff)) ((car o car o concl o UNDISCH_ALL) th)
       val rw = (INST (fst (match_term fff x)) o SPEC_ALL) aMEMORY_INSERT
@@ -191,41 +232,44 @@ fun calculate_length_and_jump th =
 fun post_process_thm th = let
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
+  val th = introduce_aM th
   val th = introduce_aBYTE_MEMORY th
   val th = introduce_aMEMORY th
   val th = RW [WORD_EQ_XOR_ZERO,wordsTheory.WORD_EQ_SUB_ZERO,ALIGNED_def,
                WORD_TIMES2,WORD_SUB_INTRO] th
   in calculate_length_and_jump th end;
 
-fun arm_prove_one_spec th = let
+fun arm_prove_one_spec s th = let
   val g = concl th
-  val c = cdr (find_term (can (match_term ``(ARM_READ_MEM ((addr30 (ARM_READ_REG (15w:word4) s)):word30) (s:unit arm_sys_state) = (n2w n):word32)``)) g)
-  val s = cdr (find_term (can (match_term ``NEXT_ARM_MMU (cp :unit coproc) s = s'``)) g)
+  val next = cdr (find_term (can (match_term ``ARM_NEXT s = s'``)) g)
   val (pre,post) = arm_pre_post g
-  val tm = ``SPEC ARM_MODEL pre {(p,c)} post``
+  val tm = ``SPEC ARM_MODEL pre {(p,n2w c)} post``
   val tm = subst [mk_var("pre",type_of pre) |-> pre,
                   mk_var("post",type_of post) |-> post,
-                  mk_var("c",type_of c) |-> c] tm
+                  mk_var("c",``:num``) |-> numSyntax.mk_numeral(Arbnum.fromHexString s)] tm
   val FLIP_TAC = CONV_TAC (ONCE_REWRITE_CONV [EQ_SYM_EQ])
 (*
   set_goal([],tm)
 *)
   val result = prove(tm,
-    MATCH_MP_TAC IMP_ARM_SPEC \\ REPEAT STRIP_TAC \\ EXISTS_TAC s
+    MATCH_MP_TAC IMP_ARM_SPEC \\ REPEAT STRIP_TAC \\ EXISTS_TAC (cdr next)
     \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) [GSYM STAR_ASSOC,
          STAR_arm2set, CODE_POOL_arm2set, aPC_def, IN_DELETE,
          APPLY_UPDATE_THM, GSYM ALIGNED_def, wordsTheory.n2w_11,
-         arm_bit_distinct, Q.SPECL [`s`,`x INSERT t`] SET_EQ_SUBSET,
-         INSERT_SUBSET, EMPTY_SUBSET,ARM_READ_WRITE, GSYM
-         systemTheory.addr30_def,ADDR30_def]
+         arm_stepTheory.arm_bit_distinct, Q.SPECL [`s`,`x INSERT t`] SET_EQ_SUBSET,
+         INSERT_SUBSET, EMPTY_SUBSET, ARM_READ_WRITE, GSYM ADDR30_def]
     \\ NTAC 3 (FLIP_TAC \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO])
     \\ FLIP_TAC \\ REWRITE_TAC [AND_IMP_INTRO, GSYM CONJ_ASSOC]
     \\ SIMP_TAC std_ss [] \\ FLIP_TAC \\ STRIP_TAC \\ STRIP_TAC
     THEN1 (FLIP_TAC \\ MATCH_MP_TAC th
-           \\ FULL_SIMP_TAC std_ss [ALIGNED_def,ARM_READ_UNDEF_def,markerTheory.Abbrev_def,CONTAINER_def])
-    \\ ASM_SIMP_TAC std_ss [UPDATE_arm2set'',ALIGNED_CLAUSES]
+           \\ FULL_SIMP_TAC std_ss [ALIGNED_def,ARM_READ_UNDEF_def,
+                markerTheory.Abbrev_def,CONTAINER_def,aligned4_thm,WORD_ADD_0]
+           \\ REPEAT (POP_ASSUM MP_TAC) \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
+           \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC \\ EVAL_TAC)
+    \\ ASM_SIMP_TAC std_ss [UPDATE_arm2set'',ALIGNED_CLAUSES,
+                            ARM_WRITE_STS_INTRO,ARM_READ_WRITE]
     \\ ONCE_REWRITE_TAC [ALIGNED_MOD_4]
-    \\ ASM_SIMP_TAC std_ss [wordsTheory.WORD_ADD_0]
+    \\ ASM_SIMP_TAC std_ss [wordsTheory.WORD_ADD_0,ARM_READ_WRITE]
     \\ FULL_SIMP_TAC bool_ss [markerTheory.Abbrev_def,CONTAINER_def])
   in RW [STAR_ASSOC,CONTAINER_def] result end;
 
@@ -238,18 +282,17 @@ val precond_INTRO = prove(
   SIMP_TAC (std_ss) [SEP_CLAUSES,precond_def,markerTheory.Abbrev_def]);
 
 fun arm_prove_specs s = let
-  val thms = arm_step s
+  val thms = [arm_step "v4T" s]
+  val thms = (thms @ [arm_step "v4T,fail" s]) handle HOL_ERR _ => thms
 (*
   val th = hd thms
 *)
   fun derive_spec th = let
-    val th = INST_TYPE [``:'a``|->``:unit``] th
-    val th = Q.INST [`state`|->`s`,`cp`|->`NO_CP`] th
-    val xs = find_terml (can (match_term ``FORMAT UnsignedWord ((1 >< 0) (a:'a word)) x``)) (concl th)
-    val ys = map ((fn x => mk_comb(``ALIGNED``,x)) o cdr o cdr o car) xs
-    val th = foldr (uncurry DISCH) th ys
-    val th = SIMP_RULE bool_ss [FORMAT_ALIGNED,AND_IMP_INTRO,GSYM systemTheory.addr30_def] th
-    val th = arm_prove_one_spec th
+    val th = SPEC state th
+    val tm = (fst o dest_eq o concl o SPEC state) ARMv4T_OK_def
+    val th = (RW [AND_IMP_INTRO] o RW [GSYM ARMv4T_OK_def] o SIMP_RULE bool_ss [ARMv4T_OK_def] o DISCH tm) th
+    val th = RW [aligned4_thm] th
+    val th = arm_prove_one_spec s th
     in post_process_thm th end
   val result = map derive_spec thms
   in if length result < 2 then let
@@ -267,11 +310,9 @@ fun arm_prove_specs s = let
 
 fun arm_jump tm1 tm2 jump_length forward = let
   fun arm_mk_jump cond jump_length = let
-    val s = "b" ^ cond ^ " " ^ (int_to_string jump_length)
-    val th1 = EVAL(mk_comb(``enc``,instructionSyntax.mk_instruction s))
-    val s = (Arbnum.toHexString o numSyntax.dest_numeral o cdr o snd o dest_eq o concl) th1
+    val s = "b" ^ cond ^ (if forward then " +#" else " -#") ^ (int_to_string jump_length)
     fun prefix_zero s = if length (explode s) < 8 then prefix_zero ("0"^s) else s
-    in prefix_zero s end;
+    in prefix_zero (arm_enc s) end;
   val (x,y) = if tm2 = ``aS1 sN`` then ("mi","pl") else
               if tm2 = ``aS1 sZ`` then ("eq","ne") else
               if tm2 = ``aS1 sC`` then ("cs","cc") else
@@ -285,13 +326,9 @@ val arm_tools  = (arm_spec, arm_jump, arm_status, arm_pc)
 
 (*
 
-fun enc s =
-  (Arbnum.toHexString o numSyntax.dest_numeral o cdr o snd o dest_eq o concl o EVAL)
-  (mk_comb(``enc``,instructionSyntax.mk_instruction s))
+  fun enc s = let val _ = print ("\n\n"^s^"\n\n") in arm_enc s end
 
-fun from_hex s = instructionSyntax.dest_instruction NONE
-              (instructionSyntax.decode_instruction_hex s);
-
+  val thms = arm_spec (enc "ADD r1, #10");
   val thms = arm_spec (enc "CMP r1, #10");
   val thms = arm_spec (enc "TST r2, #6");
   val thms = arm_spec (enc "SUBCS r1, r1, #10");
@@ -299,16 +336,18 @@ fun from_hex s = instructionSyntax.dest_instruction NONE
   val thms = arm_spec (enc "CMP r1, #0");
   val thms = arm_spec (enc "ADDNE r0, r0, #1");
   val thms = arm_spec (enc "LDRNE r1, [r1]");
-  val thms = arm_spec (enc "BNE -12; relative");
+  val thms = arm_spec (enc "BNE -#12");
   val thms = arm_spec (enc "MOVGT r2, #5");
   val thms = arm_spec (enc "LDRB r2, [r3]");
   val thms = arm_spec (enc "STRB r2, [r3]");
   val thms = arm_spec (enc "SWPB r2, r4, [r3]");
-  val thms = arm_spec (enc "LDRB r2, [r3]");
-  val thms = arm_spec (enc "LDRNEB r2, [r3]");
-  val thms = arm_spec (enc "LDR r1, [pc, #1020]");
-  val thms = arm_spec (enc "LDRLS pc, [r8], #-4");
-  val thms = arm_spec (enc "BLS 420; relative");
+  val thms = arm_spec (enc "LDR r2, [r3,#12]");
+  val thms = arm_spec (enc "STR r2, [r3,#12]");
+  val thms = arm_spec (enc "SWP r2, r4, [r3]");
+  val thms = arm_spec (enc "LDMIB r4, {r5-r7}");
+  val thms = arm_spec (enc "STMIA r4, {r5-r6}");
+  val thms = arm_spec (enc "LDRBNE r2, [r3]");
+  val thms = arm_spec (enc "BNE +#420");
   val thms = arm_spec (enc "LDRLS r2, [r11, #-40]");
   val thms = arm_spec (enc "SUBLS r2, r2, #1");
   val thms = arm_spec (enc "SUBLS r11, r11, #4");
@@ -316,27 +355,12 @@ fun from_hex s = instructionSyntax.dest_instruction NONE
   val thms = arm_spec (enc "STRB r2, [r3]");
   val thms = arm_spec (enc "STMIA r4, {r5-r10}");
   val thms = arm_spec (enc "LDMIA r4, {r5-r10}");
-  val thms = arm_spec (enc "STMDB sp!, {r0-r2, r15}");
-  val thms = arm_spec (enc "LDMIA sp!, {r0-r2, r15}");
+  val thms = arm_spec (enc "MSR CPSR, r1");
+  val thms = arm_spec (enc "MSR CPSR, #219");
   val thms = arm_spec (enc "ADD r0, pc, #16");
   val thms = arm_spec (enc "SUB r0, pc, #60");
-  val thms = arm_spec (enc "LDR r0, [pc, #4056]");
-  val thms = arm_spec (enc "LDR r8, [pc, #3988]");
-  val thms = arm_spec (enc "LDR r2, [pc, #3984]");
-  val thms = arm_spec (enc "LDR r12, [pc, #3880]");
-  val thms = arm_spec (enc "LDR r12, [pc, #3856]");
-  val thms = arm_spec (enc "LDRLS r2, [r11, #-40]");
-  val thms = arm_spec (enc "LDRLS pc, [r8], #-4");
   val thms = arm_spec (enc "SUBLS r2, r2, #1");
   val thms = arm_spec (enc "SUBLS r11, r11, #4");
-  val thms = arm_spec (enc "BLS 4020; relative");
-  val thms = arm_spec (enc "BLS 8084; relative");
-  val thms = arm_spec (enc "BLE 420; relative");
-  val thms = arm_spec (enc "BLE 40; relative");
-  val thms = arm_spec (enc "BGT -96; relative");
-  val thms = arm_spec (enc "BHI 72; relative");
-  val thms = arm_spec (enc "BHI 680; relative");
-  val thms = arm_spec (enc "BHI 616; relative");
   val thms = arm_spec (enc "LDRGT r0, [r11, #-44]");
   val thms = arm_spec (enc "MOVGT r1, r3");
   val thms = arm_spec (enc "MOVGT r12, r5");
@@ -348,12 +372,36 @@ fun from_hex s = instructionSyntax.dest_instruction NONE
   val thms = arm_spec (enc "STRB r3, [r1], #1");
   val thms = arm_spec (enc "STMIB r8!, {r14}");
   val thms = arm_spec (enc "STMIB r8!, {r0, r14}");
+  val thms = arm_spec (enc "LDR pc, [r8]");
+  val thms = arm_spec (enc "LDRLS pc, [r8], #-4");
+  val thms = arm_spec (enc "LDMIA sp!, {r0-r2, r15}");
   val thms = arm_spec (enc "LDR r0, [pc, #308]");
+  val thms = arm_spec (enc "LDR r0, [pc, #4056]");
+  val thms = arm_spec (enc "LDR r8, [pc, #3988]");
+  val thms = arm_spec (enc "LDR r2, [pc, #3984]");
+  val thms = arm_spec (enc "LDR r12, [pc, #3880]");
+  val thms = arm_spec (enc "LDR r12, [pc, #3856]");
+  val thms = arm_spec (enc "LDR r1, [pc, #1020]");
+  val thms = arm_spec (enc "STMDB sp!, {r0-r2, r15}");
 
-  (* handle later *)
-  val s = "MSR CPSR_c, #219"
-  val s = "MRS r6, CPSR"
+  (* doesn't work, yet *)
+  
+  val thms = arm_spec (enc "MRS r1, CPSR");
 
+  val s = arm_spec 
+val s = 
+
+open armLib;
+open prog_ppcLib prog_x86Lib;
+
+armLib.arm_step "v4T" "E3A00000"
+
+
+  val s = arm_spec "E3510000"
+  val s = arm_spec "12800001"
+  val s = arm_spec "15911000"
+  val s = arm_spec "1AFFFFFB"
+  
 *)
 
 end

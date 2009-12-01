@@ -140,12 +140,24 @@ fun basic_term2assign t1 t2 = let
   fun dest_asr tm =
     if not ((fst o dest_const o car o car) tm = "word_asr") then fail() else
       ((dest_x o cdr o car) tm, (Arbnum.toInt o numSyntax.dest_numeral o cdr) tm)
-  fun dest_memory_update tm =
-    if not (is_var (cdr tm) andalso (fst o dest_const o car o car o car) tm = "UPDATE")
-    then fail() else (ACCESS_WORD, (dest_address o cdr o car o car) tm, (dest_x o cdr o car) tm)
-    handle e => (ACCESS_BYTE, (dest_address o cdr o car o car) tm,
-                 (dest_x o cdr o cdr o car) tm
-                 handle e => (ASSIGN_X_CONST o dest_n2w_byte o cdr o car) tm)
+  fun dest_memory_update tm = let
+    val (i,_) = match_term ``(a =+ w) (m:word32->word32)`` tm
+    val addr = dest_address (subst i ``a:word32``)
+    val x = dest_x (subst i ``w:word32``)
+    val _ = if is_var (subst i ``m:word32->word32``) then () else fail()
+    val _ = if is_var (subst i ``w:word32``) then () else fail()
+    in (ACCESS_WORD,addr,x) end handle HOL_ERR _ => let
+    val (i,_) = match_term ``(a =+ w2w (w:word32)) (m:word32->word8)`` tm
+    val addr = dest_address (subst i ``a:word32``)
+    val x = dest_x (subst i ``w:word32``)
+    val _ = if is_var (subst i ``m:word32->word8``) then () else fail()
+    val _ = if is_var (subst i ``w:word32``) then () else fail()
+    in (ACCESS_BYTE,addr,x) end handle HOL_ERR _ => let
+    val (i,_) = match_term ``(a =+ n2w n) (m:word32->word8)`` tm
+    val addr = dest_address (subst i ``a:word32``)
+    val x = dest_n2w_byte (subst i ``(n2w n):word8``)
+    val _ = if is_var (subst i ``m:word32->word8``) then () else fail()
+    in (ACCESS_BYTE,addr,ASSIGN_X_CONST x) end
   in ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_REG (dest_reg t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_CONST (dest_n2w t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_STACK (dest_stack t2)) handle e =>

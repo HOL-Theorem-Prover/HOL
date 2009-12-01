@@ -1,8 +1,12 @@
 
 open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
-open set_sepTheory progTheory armTheory arm_auxTheory systemTheory;
-open listTheory pairTheory combinTheory addressTheory;
+open listTheory pairTheory combinTheory addressTheory bit_listTheory;
+
+open set_sepTheory progTheory;
+
+open armTheory arm_coretypesTheory arm_stepTheory armLib;
+
 
 val _ = new_theory "prog_arm";
 
@@ -20,7 +24,7 @@ val RW1 = ONCE_REWRITE_RULE;
 
 val _ = Hol_datatype `
   arm_el =  aReg of word4 => word32
-          | aMem of word30 => word32
+          | aMem of word32 => word8
           | aStatus of arm_bit => bool
           | aUndef of bool`;
 
@@ -34,8 +38,20 @@ val _ = Parse.type_abbrev("arm_set",``:arm_el set``);
 (* Converting from ARM-state record to arm_set                                   *)
 (* ----------------------------------------------------------------------------- *)
 
+val ARMv4T_OK_def = Define `
+  ARMv4T_OK state = 
+    (ARM_ARCH state = ARMv4T) /\ (ARM_EXTENSIONS state = {}) /\
+    (ARM_UNALIGNED_SUPPORT state) /\ (ARM_READ_EVENT_REGISTER state) /\
+    ~(ARM_READ_INTERRUPT_WAIT state) /\ ~(ARM_READ_SCTLR cV state) /\
+    (ARM_READ_SCTLR cA state) /\ ~(ARM_READ_SCTLR cU state) /\
+    (ARM_READ_IT state = 0w) /\ ~(ARM_READ_STATUS sJ state) /\
+    ~(ARM_READ_STATUS sT state) /\ ~(ARM_READ_STATUS sE state) /\
+    (ARM_MODE state = 16w)`;
+
+val ARM_READ_UNDEF_def = Define `ARM_READ_UNDEF s = ~(ARMv4T_OK s)`;
+
 val arm2set'_def = Define `
-  arm2set' (rs,ms,st,ud) (s:unit arm_sys_state) =
+  arm2set' (rs,ms,st,ud) (s:arm_state) =
     IMAGE (\a. aReg a (ARM_READ_REG a s)) rs UNION
     IMAGE (\a. aMem a (ARM_READ_MEM a s)) ms UNION
     IMAGE (\a. aStatus a (ARM_READ_STATUS a s)) st UNION
@@ -144,22 +160,37 @@ val EMPTY_arm2set = prove(``
 (* ----------------------------------------------------------------------------- *)
 
 val aR_def = Define `aR a x = SEP_EQ {aReg a x}`;
-val aM_def = Define `aM a x = SEP_EQ {aMem a x}`;
+val aM1_def = Define `aM1 a x = SEP_EQ {aMem a x}`;
 val aS1_def = Define `aS1 a x = SEP_EQ {aStatus a x}`;
 val aU1_def = Define `aU1 x = SEP_EQ {aUndef x}`;
+
+val aM_def = Define `
+  aM a (w:word32) = 
+    aM1 a        ((7 >< 0) w) *
+    aM1 (a + 1w) ((7 >< 0) (w >> 8)) *
+    aM1 (a + 2w) ((7 >< 0) (w >> 16)) *
+    aM1 (a + 3w) ((7 >< 0) (w >> 24))`;
 
 val aPC_def = Define `aPC x = aR 15w x * aU1 F * cond (ALIGNED x)`;
 
 val aS_def = Define `aS (n,z,c,v) = aS1 sN n * aS1 sZ z * aS1 sC c * aS1 sV v`;
 
-val ARM_NEXT_REL_def = Define `ARM_NEXT_REL s s' = (NEXT_ARM_MMU NO_CP (s:unit arm_sys_state) = s')`;
+val ARM_NEXT_REL_def = Define `ARM_NEXT_REL s s' = (ARM_NEXT s = SOME s')`;
 
-val ARM_INSTR_def = Define `ARM_INSTR (a:word32,c:word32) = { aMem (ADDR30 a) c }`;
+val ARM_INSTR_def    = Define `ARM_INSTR (a,w:word32) =
+  { aMem (a+3w) ((31 >< 24) w) ;
+    aMem (a+2w) ((23 >< 16) w) ;
+    aMem (a+1w) ((15 ><  8) w) ;
+    aMem (a+0w) (( 7 ><  0) w) }`;
 
 val ARM_MODEL_def = Define `
-  ARM_MODEL = (arm2set, ARM_NEXT_REL, ARM_INSTR, (\x y. (x = (y:unit arm_sys_state))))`;
+  ARM_MODEL = (arm2set, ARM_NEXT_REL, ARM_INSTR, (\x y. x = (y:arm_state)))`;
 
-val aLR_def = Define `aLR x = aR 14w x * cond (ALIGNED x)`;
+val aST_LIST_def = Define `
+  (aST_LIST a [] = emp) /\
+  (aST_LIST a (x::xs) = aM a x * aST_LIST (a-4w) xs)`;
+
+val aST_def = Define `aST a xs = aR 13w a * aST_LIST a xs * cond (ALIGNED a)`; 
 
 (* theorems *)
 
@@ -187,7 +218,7 @@ val ARM_SPEC_SEMANTICS = store_thm("ARM_SPEC_SEMANTICS",
 val STAR_arm2set = store_thm("STAR_arm2set",
   ``((aR a x * p) (arm2set' (rs,ms,st,ud) s) =
       (x = ARM_READ_REG a s) /\ a IN rs /\ p (arm2set' (rs DELETE a,ms,st,ud) s)) /\
-    ((aM b y * p) (arm2set' (rs,ms,st,ud) s) =
+    ((aM1 b y * p) (arm2set' (rs,ms,st,ud) s) =
       (y = ARM_READ_MEM b s) /\ b IN ms /\ p (arm2set' (rs,ms DELETE b,st,ud) s)) /\
     ((aS1 c z * p) (arm2set' (rs,ms,st,ud) s) =
       (z = ARM_READ_STATUS c s) /\ c IN st /\ p (arm2set' (rs,ms,st DELETE c,ud) s)) /\
@@ -195,7 +226,7 @@ val STAR_arm2set = store_thm("STAR_arm2set",
       (q = ARM_READ_UNDEF s) /\ ud /\ p (arm2set' (rs,ms,st,F) s)) /\
     ((cond g * p) (arm2set' (rs,ms,st,ud) s) =
       g /\ p (arm2set' (rs,ms,st,ud) s))``,
-  SIMP_TAC std_ss [aR_def,aS1_def,aM_def,EQ_STAR,INSERT_SUBSET,cond_STAR,aU1_def,
+  SIMP_TAC std_ss [aR_def,aS1_def,aM1_def,EQ_STAR,INSERT_SUBSET,cond_STAR,aU1_def,
     EMPTY_SUBSET,IN_arm2set,GSYM DELETE_DEF]
   \\ Cases_on `x = ARM_READ_REG a s` \\ ASM_SIMP_TAC bool_ss [DELETE_arm2set]
   \\ Cases_on `y = ARM_READ_MEM b s` \\ ASM_SIMP_TAC bool_ss [DELETE_arm2set]
@@ -209,29 +240,64 @@ val CODE_POOL_arm2set_LEMMA = prove(
 
 val CODE_POOL_arm2set = store_thm("CODE_POOL_arm2set",
   ``CODE_POOL ARM_INSTR {(p,c)} (arm2set' (rs,ms,st,ud) s) =
-      ({ADDR30 p} = ms) /\ (rs = {}) /\ (st = {}) /\ ~ud /\ (ARM_READ_MEM (ADDR30 p) s = c)``,
+      ({p+3w;p+2w;p+1w;p} = ms) /\ (rs = {}) /\ (st = {}) /\ ~ud /\    
+      (ARM_READ_MEM (p + 0w) s = ( 7 ><  0) c) /\    
+      (ARM_READ_MEM (p + 1w) s = (15 ><  8) c) /\    
+      (ARM_READ_MEM (p + 2w) s = (23 >< 16) c) /\    
+      (ARM_READ_MEM (p + 3w) s = (31 >< 24) c)``,
   SIMP_TAC bool_ss [CODE_POOL_def,IMAGE_INSERT,IMAGE_EMPTY,BIGUNION_INSERT,
     BIGUNION_EMPTY,UNION_EMPTY,ARM_INSTR_def,CODE_POOL_arm2set_LEMMA,
     GSYM DELETE_DEF, INSERT_SUBSET, EMPTY_SUBSET,IN_arm2set]
-  \\ Cases_on `c = ARM_READ_MEM (ADDR30 p) s`
-  \\ ASM_SIMP_TAC std_ss [DELETE_arm2set,EMPTY_arm2set]
-  \\ ASM_SIMP_TAC std_ss [AC CONJ_COMM CONJ_ASSOC]);
+  \\ Cases_on `(31 >< 24) c = ARM_READ_MEM (p + 3w) s` \\ ASM_SIMP_TAC std_ss []
+  \\ Cases_on `(23 >< 16) c = ARM_READ_MEM (p + 2w) s` \\ ASM_SIMP_TAC std_ss []
+  \\ Cases_on `(15 ><  8) c = ARM_READ_MEM (p + 1w) s` \\ ASM_SIMP_TAC std_ss []
+  \\ Cases_on `( 7 ><  0) c = ARM_READ_MEM (p + 0w) s` \\ ASM_SIMP_TAC std_ss [WORD_ADD_0]
+  \\ ASM_SIMP_TAC std_ss [DELETE_arm2set,EMPTY_arm2set,DIFF_INSERT]
+  \\ ASM_SIMP_TAC std_ss [AC CONJ_COMM CONJ_ASSOC,DIFF_EMPTY,EMPTY_arm2set]);
+
+val ARM_WRITE_STS_def = Define `
+  ARM_WRITE_STS a x s = if a IN {sN;sZ;sC;sV;sQ} then ARM_WRITE_STATUS a x s else s`;
+
+val ARM_WRITE_STS_INTRO = store_thm("ARM_WRITE_STS_INTRO",
+  ``(ARM_WRITE_STATUS sN x s = ARM_WRITE_STS sN x s) /\
+    (ARM_WRITE_STATUS sZ x s = ARM_WRITE_STS sZ x s) /\
+    (ARM_WRITE_STATUS sC x s = ARM_WRITE_STS sC x s) /\
+    (ARM_WRITE_STATUS sV x s = ARM_WRITE_STS sV x s) /\
+    (ARM_WRITE_STATUS sQ x s = ARM_WRITE_STS sQ x s)``,
+  SIMP_TAC std_ss [ARM_WRITE_STS_def,IN_INSERT]);
+
+val UNDEF_OF_UPDATES = prove(
+  ``(!a x. ARM_READ_UNDEF (ARM_WRITE_REG a x s) = ARM_READ_UNDEF s) /\ 
+    (!a x. ARM_READ_UNDEF (ARM_WRITE_MEM a x s) = ARM_READ_UNDEF s) /\ 
+    (!a x. ARM_READ_UNDEF (ARM_WRITE_STS a x s) = ARM_READ_UNDEF s) /\ 
+    (!a x. ARM_READ_UNDEF (ARM_WRITE_MEM_WRITE a x s) = ARM_READ_UNDEF s) /\ 
+    (!a. ARM_READ_UNDEF (ARM_WRITE_MEM_READ a s) = ARM_READ_UNDEF s) /\
+    (!a x y. ARM_READ_UNDEF (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_UNDEF s)``,
+  SIMP_TAC std_ss [ARM_READ_UNDEF_def,ARMv4T_OK_def] \\ REPEAT STRIP_TAC 
+  \\ EVAL_TAC \\ SRW_TAC [] [] \\ EVAL_TAC);
+
+val ARM_READ_WRITE = LIST_CONJ [REG_OF_UPDATES,MEM_OF_UPDATES,
+                                UNDEF_OF_UPDATES,CPSR_COMPONENTS_OF_UPDATES]
+val _ = save_thm("ARM_READ_WRITE",ARM_READ_WRITE);
 
 val UPDATE_arm2set'' = store_thm("UPDATE_arm2set''",
   ``(!a x. a IN rs ==> (arm2set'' (rs,ms,st,ud) (ARM_WRITE_REG a x s) = arm2set'' (rs,ms,st,ud) s)) /\
     (!a x. a IN ms ==> (arm2set'' (rs,ms,st,ud) (ARM_WRITE_MEM a x s) = arm2set'' (rs,ms,st,ud) s)) /\
-    (!b. (arm2set'' (rs,ms,st,T) (ARM_WRITE_UNDEF b s) = arm2set'' (rs,ms,st,T) s)) /\
-    (!x. sN IN st /\ sZ IN st /\ sC IN st /\ sV IN st ==>
-      (arm2set'' (rs,ms,st,ud) (ARM_WRITE_STATUS x s) = arm2set'' (rs,ms,st,ud) s))``,
+    (!b x. b IN st ==> (arm2set'' (rs,ms,st,ud) (ARM_WRITE_STS b x s) = arm2set'' (rs,ms,st,ud) s)) /\
+    (!a x. arm2set'' (rs,ms,st,ud) (ARM_WRITE_MEM_WRITE a x s) = arm2set'' (rs,ms,st,ud) s) /\
+    (!a. arm2set'' (rs,ms,st,ud) (ARM_WRITE_MEM_READ a s) = arm2set'' (rs,ms,st,ud) s) /\
+    (!x y. arm2set'' (rs,ms,st,ud) (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = 
+           arm2set'' (rs,ms,st,ud) s)``,
   SIMP_TAC std_ss [arm2set_def,arm2set''_def,arm2set'_def,EXTENSION,IN_UNION,
     IN_IMAGE,IN_DIFF,IN_UNIV,NOT_IN_EMPTY,IN_INSERT,ARM_READ_WRITE,PUSH_IN_INTO_IF]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss [arm_el_distinct,arm_el_11] \\ METIS_TAC []);
-
-val FORMAT_ALIGNED = store_thm("FORMAT_ALIGNED",
-  ``ALIGNED a ==> (FORMAT UnsignedWord ((1 >< 0) a) x = x)``,
-  REWRITE_TAC [ALIGNED_def] THEN STRIP_TAC THEN IMP_RES_TAC EXISTS_ADDR30
-  THEN ASM_SIMP_TAC bool_ss [ADDR32_eq_0] THEN SRW_TAC [] [armTheory.FORMAT_def]);
+  \\ Q.PAT_ASSUM `xx = yy` (fn th => FULL_SIMP_TAC std_ss [th])
+  \\ FULL_SIMP_TAC std_ss [arm_el_distinct,arm_el_11]
+  \\ IMP_RES_TAC (METIS_PROVE [] ``x IN s /\ ~(y IN s) ==> ~(x = y:'a)``)
+  \\ ASM_SIMP_TAC std_ss [ARM_READ_WRITE,UNDEF_OF_UPDATES]
+  \\ SIMP_TAC std_ss [ARM_WRITE_STS_def] \\ TRY (Cases_on `b IN {sN; sZ; sC; sV; sQ}`)
+  \\ FULL_SIMP_TAC std_ss [ARM_READ_WRITE,UNDEF_OF_UPDATES]
+  \\ METIS_TAC []);
 
 val ARM_SPEC_CODE = (RW [GSYM ARM_MODEL_def] o SIMP_RULE std_ss [ARM_MODEL_def] o prove)
   (``SPEC ARM_MODEL (CODE_POOL (FST (SND (SND ARM_MODEL))) c * p) {}
@@ -243,12 +309,14 @@ val IMP_ARM_SPEC_LEMMA = prove(
   ``!p q.
       (!rs ms st ud s. ?s'.
         (p (arm2set' (rs,ms,st,ud) s) ==>
-        (NEXT_ARM_MMU NO_CP s = s') /\ q (arm2set' (rs,ms,st,ud) s') /\
+        (ARM_NEXT s = SOME s') /\ q (arm2set' (rs,ms,st,ud) s') /\
         (arm2set'' (rs,ms,st,ud) s = arm2set'' (rs,ms,st,ud) s'))) ==>
       SPEC ARM_MODEL p {} q``,
-  REWRITE_TAC [ARM_SPEC_SEMANTICS] \\ REPEAT STRIP_TAC \\ RES_TAC
+  SIMP_TAC std_ss [RIGHT_EXISTS_IMP_THM] \\ REWRITE_TAC [ARM_SPEC_SEMANTICS]
+  \\ SIMP_TAC std_ss [FORALL_PROD]
+  \\ REPEAT STRIP_TAC \\ RES_TAC
   \\ FULL_SIMP_TAC bool_ss [rel_sequence_def,ARM_NEXT_REL_def]
-  \\ Q.EXISTS_TAC `SUC 0` \\ METIS_TAC [PAIR]);
+  \\ Q.EXISTS_TAC `SUC 0` \\ METIS_TAC [PAIR,optionTheory.SOME_11]);
 
 val IMP_ARM_SPEC = save_thm("IMP_ARM_SPEC",
   (RW1 [STAR_COMM] o RW [ARM_SPEC_CODE] o
@@ -260,225 +328,173 @@ val aS_HIDE = store_thm("aS_HIDE",
   SIMP_TAC std_ss [SEP_HIDE_def,aS_def,SEP_CLAUSES,FUN_EQ_THM]
   \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC [aS_def,PAIR]);
 
+val _ = wordsLib.guess_lengths();
+val aM_INTRO_LEMMA1 = prove(
+  ``!a x0 x1 x2 x3 p.   
+     (p * aM1 a x0 * aM1 (a + 1w) x1 * aM1 (a + 2w) x2 * aM1 (a + 3w) x3 = 
+      p * aM a (bytes2word [x0;x1;x2;x3]))``,
+ SRW_TAC [wordsLib.WORD_EXTRACT_ss] [bit_listTheory.bytes2word_def,aM_def,STAR_ASSOC]);
+
+val aM_INTRO_LEMMA2 = prove(
+  ``!a x0 x1 x2 x3 p.   
+     (p * aM1 a x3 * aM1 (a - 1w) x2 * aM1 (a - 2w) x1 * aM1 (a - 3w) x0 =
+     p * aM (a - 3w) (bytes2word [x0; x1; x2; x3]))``,
+  SIMP_TAC std_ss [GSYM aM_INTRO_LEMMA1,word_arith_lemma3,WORD_ADD_0,
+     AC STAR_ASSOC STAR_COMM]);
+
+val aM_INTRO = save_thm("aM_INTRO",
+  GEN_ALL (CONJ (Q.SPEC `a` aM_INTRO_LEMMA1) 
+                (Q.SPEC `a` aM_INTRO_LEMMA2)));
+
 
 (* ----------------------------------------------------------------------------- *)
-(* Improved memory predicates -- word-sized entities                             *)
+(* Byte-sized data memory                                                        *)
 (* ----------------------------------------------------------------------------- *)
+
+val aBYTE_MEMORY_SET_def = Define `
+  aBYTE_MEMORY_SET df f = { aMem a (f a) | a | a IN df }`;
+
+val aBYTE_MEMORY_def = Define `aBYTE_MEMORY df f = SEP_EQ (aBYTE_MEMORY_SET df f)`;
+
+val IN_aBYTE_MEMORY_SET = prove(
+  ``a IN df ==>
+    (aBYTE_MEMORY_SET df g = (aMem a (g a)) INSERT aBYTE_MEMORY_SET (df DELETE a) g)``,
+  SIMP_TAC std_ss [EXTENSION,IN_INSERT,aBYTE_MEMORY_SET_def,GSPECIFICATION]
+  \\ REWRITE_TAC [IN_DELETE] \\ METIS_TAC []);
+
+val DELETE_aBYTE_MEMORY_SET = prove(
+  ``aBYTE_MEMORY_SET (df DELETE a) ((a =+ w) g) =
+    aBYTE_MEMORY_SET (df DELETE a) g``,
+  SIMP_TAC std_ss [EXTENSION,IN_INSERT,aBYTE_MEMORY_SET_def,GSPECIFICATION]
+  \\ REWRITE_TAC [IN_DELETE,APPLY_UPDATE_THM] \\ METIS_TAC []);
+
+val aBYTE_MEMORY_INSERT = prove(
+  ``a IN df ==>
+    (aBYTE_MEMORY df ((a =+ w) g) = aM1 a w * aBYTE_MEMORY (df DELETE a) g)``,
+  SIMP_TAC std_ss [aBYTE_MEMORY_def,aM1_def,FUN_EQ_THM,EQ_STAR]
+  \\ SIMP_TAC std_ss [SEP_EQ_def] \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC (GEN_ALL IN_aBYTE_MEMORY_SET)
+  \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET,DIFF_INSERT,DIFF_EMPTY]
+  \\ REWRITE_TAC [DELETE_aBYTE_MEMORY_SET,APPLY_UPDATE_THM]
+  \\ REWRITE_TAC [EXTENSION,IN_INSERT,IN_DELETE]
+  \\ REVERSE (`~(aMem a w IN aBYTE_MEMORY_SET (df DELETE a) g)` by ALL_TAC)
+  THEN1 METIS_TAC []
+  \\ SIMP_TAC std_ss [aBYTE_MEMORY_SET_def,GSPECIFICATION,IN_DELETE,arm_el_11]);
+
+val aBYTE_MEMORY_INTRO = store_thm("aBYTE_MEMORY_INTRO",
+  ``SPEC m (aM1 a v * P) c (aM1 a w * Q) ==>
+    a IN df ==>
+    SPEC m (aBYTE_MEMORY df ((a =+ v) f) * P) c (aBYTE_MEMORY df ((a =+ w) f) * Q)``,
+  ONCE_REWRITE_TAC [STAR_COMM]
+  \\ SIMP_TAC std_ss [aBYTE_MEMORY_INSERT,STAR_ASSOC]
+  \\ METIS_TAC [SPEC_FRAME]);
+
+
+(* ----------------------------------------------------------------------------- *)
+(* Word-sized data memory                                                        *)
+(* ----------------------------------------------------------------------------- *)
+
+val aMEMORY_WORD_def = Define `
+  aMEMORY_WORD (a:word32) (w:word32) =
+    { aMem a      (((7 >< 0) (w))) ;
+      aMem (a+1w) (((7 >< 0) (w >> 8))) ;
+      aMem (a+2w) (((7 >< 0) (w >> 16))) ;
+      aMem (a+3w) (((7 >< 0) (w >> 24))) }`;
 
 val aMEMORY_SET_def = Define `
-  aMEMORY_SET df f = { aMem (ADDR30 a) (f a) | a | a IN df /\ ALIGNED a }`;
+  aMEMORY_SET df f = BIGUNION { aMEMORY_WORD a (f a) | a | a IN df /\ ALIGNED a  }`;
 
 val aMEMORY_def = Define `aMEMORY df f = SEP_EQ (aMEMORY_SET df f)`;
 
-val ADDR30_11 = prove(
-  ``!a a'. ALIGNED a /\ ALIGNED a' /\ (ADDR30 a = ADDR30 a') ==> (a = a')``,
-  METIS_TAC [EXISTS_ADDR30,ALIGNED_def,ADDR30_ADDR32]);
+val aMEMORY_SET_SING = prove(
+  ``!a f. ALIGNED a ==> (aMEMORY_SET {a} f = aMEMORY_WORD a (f a))``,
+  ASM_SIMP_TAC std_ss [GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,APPLY_UPDATE_THM,
+    EXTENSION,aMEMORY_SET_def,IN_BIGUNION] \\ METIS_TAC [IN_INSERT]);
 
-val aMEMORY_INSERT = store_thm("aMEMORY_INSERT",
+val aMEMORY_ARITH_LEMMA = prove(
+  ``!a:word32. ~(a = a + 1w) /\ ~(a = a + 2w) /\ ~(a = a + 3w) /\
+               ~(a + 1w = a + 2w) /\ ~(a + 1w = a + 3w) /\ ~(a + 2w = a + 3w)``,
+  SIMP_TAC (std_ss++wordsLib.SIZES_ss) [WORD_EQ_ADD_LCANCEL,n2w_11,
+    RW [WORD_ADD_0] (Q.SPECL [`x`,`0w`] WORD_EQ_ADD_LCANCEL)]);
+
+val aMEMORY_LEMMA = prove(
+  ``!a f w. ALIGNED a ==> (aMEMORY {a} ((a =+ w) f) = aM a w)``,
+  SIMP_TAC std_ss [aMEMORY_def,aMEMORY_SET_SING,aM_def] \\ REPEAT STRIP_TAC
+  \\ ONCE_REWRITE_TAC [FUN_EQ_THM]
+  \\ SIMP_TAC std_ss [aM1_def,EQ_STAR,GSYM STAR_ASSOC,APPLY_UPDATE_THM]
+  \\ SIMP_TAC std_ss [SEP_EQ_def]
+  \\ STRIP_TAC \\ Cases_on `x = aMEMORY_WORD a w` \\ ASM_SIMP_TAC std_ss []
+  \\ FULL_SIMP_TAC std_ss [aMEMORY_WORD_def,INSERT_SUBSET,IN_INSERT,NOT_IN_EMPTY,
+                           GSYM DELETE_DEF,EMPTY_SUBSET,IN_DELETE,arm_el_11,EXTENSION]
+  THEN1 METIS_TAC [aMEMORY_ARITH_LEMMA,arm_el_11,arm_el_distinct]
+  \\ SIMP_TAC std_ss [aMEMORY_ARITH_LEMMA]
+  \\ Cases_on `aMem (a + 3w) (((7 >< 0) (w >> 24))) IN x` THEN1 METIS_TAC []
+  \\ Cases_on `aMem (a + 2w) (((7 >< 0) (w >> 16))) IN x` THEN1 METIS_TAC []
+  \\ Cases_on `aMem (a + 1w) (((7 >< 0) (w >> 8))) IN x` THEN1 METIS_TAC []
+  \\ ASM_SIMP_TAC std_ss []);
+
+val aMEMORY_INSERT_LEMMA = prove(
   ``!s. ALIGNED a /\ ~(a IN s) ==>
-        (aM (ADDR30 a) w * aMEMORY s f = aMEMORY (a INSERT s) ((a =+ w) f))``,
-  SIMP_TAC bool_ss [FUN_EQ_THM,cond_STAR,aMEMORY_def,APPLY_UPDATE_THM,aM_def]
+        (aMEMORY {a} ((a =+ w) g) * aMEMORY s f = aMEMORY (a INSERT s) ((a =+ w) f))``,
+  STRIP_TAC
+  \\ SIMP_TAC bool_ss [FUN_EQ_THM,cond_STAR,aMEMORY_def,aMEMORY_SET_SING,APPLY_UPDATE_THM]
   \\ SIMP_TAC std_ss [STAR_def,SEP_EQ_def,SPLIT_def]
   \\ REPEAT STRIP_TAC
-  \\ `DISJOINT {aMem (ADDR30 a) w} (aMEMORY_SET s f)` by
+  \\ `DISJOINT (aMEMORY_WORD a w) (aMEMORY_SET s f)` by
    (SIMP_TAC std_ss [DISJOINT_DEF,EXTENSION,NOT_IN_EMPTY,IN_INTER,
-      aMEMORY_SET_def,IN_BIGUNION,GSPECIFICATION,IN_INSERT,arm_el_11]
-    \\ STRIP_TAC \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss []
+                     aMEMORY_SET_def,IN_BIGUNION,GSPECIFICATION]
+    \\ REWRITE_TAC [GSYM IMP_DISJ_THM] \\ REPEAT STRIP_TAC
+    \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss []
+    \\ Q.PAT_ASSUM `!x. b` (K ALL_TAC)
     \\ `~(a = a')` by METIS_TAC []
-    \\ METIS_TAC [ADDR30_11,ADDR30_def])
-  \\ `{aMem (ADDR30 a) w} UNION aMEMORY_SET s f =
+    \\ NTAC 2 (FULL_SIMP_TAC bool_ss [aMEMORY_WORD_def,IN_INSERT,
+         NOT_IN_EMPTY,arm_el_11,WORD_EQ_ADD_RCANCEL])
+    \\ FULL_SIMP_TAC std_ss [word_arith_lemma5,word_arith_lemma4]
+    \\ METIS_TAC [NOT_ALIGNED])
+  \\ `aMEMORY_WORD a w UNION aMEMORY_SET s f =
       aMEMORY_SET (a INSERT s) ((a =+ w) f)` by
    (SIMP_TAC std_ss [IN_UNION,EXTENSION,NOT_IN_EMPTY,IN_INTER,IN_INSERT,
                      aMEMORY_SET_def,IN_BIGUNION,GSPECIFICATION]
-    \\ METIS_TAC [APPLY_UPDATE_THM])
+    \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THENL [
+      Q.EXISTS_TAC `aMEMORY_WORD a w` \\ ASM_SIMP_TAC std_ss []
+      \\ Q.EXISTS_TAC `a` \\ ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM],
+      Q.EXISTS_TAC `s'` \\ ASM_SIMP_TAC std_ss []
+      \\ Q.EXISTS_TAC `a'` \\ ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM] \\ METIS_TAC [],
+      FULL_SIMP_TAC bool_ss [APPLY_UPDATE_THM],
+      `~(a = a')` by METIS_TAC [] \\ FULL_SIMP_TAC bool_ss [APPLY_UPDATE_THM]
+      \\ METIS_TAC []])
   \\ ASM_SIMP_TAC bool_ss [] \\ METIS_TAC []);
 
+val aMEMORY_INSERT = save_thm("aMEMORY_INSERT",
+  SIMP_RULE std_ss [aMEMORY_LEMMA] aMEMORY_INSERT_LEMMA);
+
 val aMEMORY_INTRO = store_thm("aMEMORY_INTRO",
-  ``SPEC ARM_MODEL (aM (ADDR30 a) v * P) c (aM (ADDR30 a) w * Q) ==>
+  ``SPEC ARM_MODEL (aM a v * P) c (aM a w * Q) ==>
     ALIGNED a /\ a IN df ==>
     SPEC ARM_MODEL (aMEMORY df ((a =+ v) f) * P) c (aMEMORY df ((a =+ w) f) * Q)``,
   REPEAT STRIP_TAC
   \\ (IMP_RES_TAC o GEN_ALL o REWRITE_RULE [AND_IMP_INTRO] o
      SIMP_RULE std_ss [INSERT_DELETE,IN_DELETE] o
-     DISCH ``a:word32 IN df`` o Q.SPEC `df DELETE a` o GSYM) aMEMORY_INSERT
-  \\ ASM_REWRITE_TAC []
+     DISCH ``a:word32 IN df`` o Q.SPEC `df DELETE a` o GSYM) aMEMORY_INSERT_LEMMA
+  \\ ASM_REWRITE_TAC [] \\ ASM_SIMP_TAC bool_ss [aMEMORY_LEMMA]
   \\ ONCE_REWRITE_TAC [STAR_COMM] \\ REWRITE_TAC [STAR_ASSOC]
   \\ MATCH_MP_TAC SPEC_FRAME
   \\ FULL_SIMP_TAC bool_ss [AC STAR_COMM STAR_ASSOC]);
 
 
 (* ----------------------------------------------------------------------------- *)
-(* Improved memory predicates -- byte-sized entities                             *)
+(* Extra                                                                         *)
 (* ----------------------------------------------------------------------------- *)
 
-val BYTE_MEMORY_MAP_def = Define `
-  (BYTE_MEMORY_MAP (f:word32->word8) x):word32 =
-    (SET_BYTE 0w (f (ADDR32 (ADDR30 x) + 0w)) o
-     SET_BYTE 1w (f (ADDR32 (ADDR30 x) + 1w)) o
-     SET_BYTE 2w (f (ADDR32 (ADDR30 x) + 2w)) o
-     SET_BYTE 3w (f (ADDR32 (ADDR30 x) + 3w))) 0w`;
-
-
-val aBYTE_MEMORY_def = Define `
-  aBYTE_MEMORY (df:word32 set) (f:word32->word8) =
-    aMEMORY { ADDR32 (ADDR30 x) | x IN df } (BYTE_MEMORY_MAP f)`;
-
-val SET_BYTE_EQ = prove(
-  ``!x y z w. SET_BYTE x y (SET_BYTE x z w) = SET_BYTE x y w``,
-  REPEAT STRIP_TAC
-  \\ REWRITE_TAC [fcpTheory.CART_EQ]
-  \\ SIMP_TAC std_ss [word_modify_def,n2w_11,fcpTheory.FCP_BETA,SET_BYTE_def]
-  \\ REPEAT STRIP_TAC
-  \\ Cases_on `i < 8`
-  THEN1 (`~(8 <= i) /\ ~(16 <= i) /\ ~(24 <= i)` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss [])
-  \\ Cases_on `i < 16`
-  THEN1 (`8 <= i /\ ~(16 <= i) /\ ~(24 <= i)` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss [])
-  \\ Cases_on `i < 24`
-  THEN1 (`8 <= i /\ 16 <= i /\ ~(24 <= i)` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss [])
-  \\ `8 <= i /\ 16 <= i /\ 24 <= i` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []
-  \\ METIS_TAC []);
-
-val SET_BYTE_NEQ = prove(
-  ``!x y z w. ~(x = y) ==> (SET_BYTE x z (SET_BYTE y q w) = SET_BYTE y q (SET_BYTE x z w))``,
-  Cases_word \\ Cases_word \\ SIMP_TAC std_ss [SET_BYTE_def]
-  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [n2w_11]
-  \\ REWRITE_TAC [fcpTheory.CART_EQ]
-  \\ SIMP_TAC std_ss [word_modify_def,n2w_11,fcpTheory.FCP_BETA,SET_BYTE_def]
-  \\ REPEAT STRIP_TAC
-  \\ Cases_on `i < 8`
-  THEN1 (`~(8 <= i) /\ ~(16 <= i) /\ ~(24 <= i)` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [])
-  \\ Cases_on `i < 16`
-  THEN1 (`8 <= i /\ ~(16 <= i) /\ ~(24 <= i)` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [])
-  \\ Cases_on `i < 24`
-  THEN1 (`8 <= i /\ 16 <= i /\ ~(24 <= i)` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [])
-  \\ `8 <= i /\ 16 <= i /\ 24 <= i` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []
-  \\ METIS_TAC []);
-
-val GET_BYTE_SET_BYTE_EQ = prove(
-  ``!x y w. GET_BYTE x (SET_BYTE x y w) = y``,
-  REVERSE (SRW_TAC [] [fcpTheory.CART_EQ]
-  \\ `i < dimindex (:32)` by (SRW_TAC [] [] \\ DECIDE_TAC)
-  \\ `i + 8 < dimindex (:32)` by (SRW_TAC [] [] \\ DECIDE_TAC)
-  \\ `i + 16 < dimindex (:32)` by (SRW_TAC [] [] \\ DECIDE_TAC)
-  \\ `i + 24 < dimindex (:32)` by (SRW_TAC [] [] \\ DECIDE_TAC)
-  \\ `i + 16 < 24 /\ i + 8 < 16` by DECIDE_TAC
-  \\ Cases_on `x = 0w` \\ ASM_SIMP_TAC std_ss []
-  \\ Cases_on `x = 1w` \\ ASM_SIMP_TAC std_ss []
-  \\ Cases_on `x = 2w` \\ ASM_SIMP_TAC std_ss []
-  \\ Cases_on `x = 3w` \\ ASM_SIMP_TAC std_ss [])
-  THEN1
-   (REPEAT (POP_ASSUM MP_TAC) \\ Q.SPEC_TAC (`x`,`x`) \\ Cases
-    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [n2w_11]
-    \\ REPEAT STRIP_TAC \\ `F` by DECIDE_TAC)
-  \\ (SRW_TAC [] [GET_BYTE_def,word_extract_def,w2w,word_bits_def]
-    \\ ASM_SIMP_TAC std_ss [fcpTheory.FCP_BETA]
-    \\ SIMP_TAC (std_ss++SIZES_ss) [SET_BYTE_def,n2w_11]
-    \\ ASM_SIMP_TAC std_ss [word_modify_def,fcpTheory.FCP_BETA]
-    \\ REPEAT STRIP_TAC \\ REPEAT EQ_TAC \\ REPEAT STRIP_TAC
-    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) []
-    \\ REPEAT (`F` by DECIDE_TAC) \\ REPEAT DECIDE_TAC));
-
-val WORD2_CASES = prove(
-  ``!x:word2. (x = 0w) \/ (x = 1w) \/ (x = 2w) \/ (x = 3w)``,
-  Cases \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [n2w_11] \\ DECIDE_TAC);
-
-val GET_BYTE_SET_BYTE_NEQ = prove(
-  ``!x y w. ~(x = y) ==> (GET_BYTE x (SET_BYTE y z w) = GET_BYTE x w)``,
-  STRIP_TAC \\ STRIP_TAC
-  \\ STRIP_ASSUME_TAC (Q.SPEC `x` WORD2_CASES)
-  \\ STRIP_ASSUME_TAC (Q.SPEC `y` WORD2_CASES)
-  \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [] \\ REPEAT STRIP_TAC
-  \\ (SRW_TAC [] [GET_BYTE_def,SET_BYTE_def]
-    \\ SRW_TAC [] [fcpTheory.CART_EQ]
-    \\ SRW_TAC [] [GET_BYTE_def,word_extract_def,w2w,word_bits_def]
-    \\ `i + 8 < 16 /\ i + 16 < 24 /\ i + 24 < 32 /\ i + 16 < 32 /\ i + 8 < 32 /\ i < 32` by DECIDE_TAC
-    \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [fcpTheory.FCP_BETA,word_modify_def]
-    \\ REPEAT STRIP_TAC \\ REPEAT EQ_TAC \\ REPEAT STRIP_TAC
-    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) []
-    \\ REPEAT (`F` by DECIDE_TAC) \\ REPEAT DECIDE_TAC));
-
-val GET_BYTE_SET_BYTE = prove(
-  ``!x y w. GET_BYTE x (SET_BYTE y z w) = if x = y then z else GET_BYTE x w``,
-  METIS_TAC [GET_BYTE_SET_BYTE_EQ,GET_BYTE_SET_BYTE_NEQ]);
-
-val aBYTE_MEMORY_INTRO_LEMMA = prove(
-  ``SPEC ARM_MODEL (P * aM (ADDR30 (ADDR32 (ADDR30 a))) (BYTE_MEMORY_MAP f a)) c
-                   (Q (FORMAT UnsignedByte ((1 >< 0) a) (BYTE_MEMORY_MAP f a)) *
-                        aM (ADDR30 (ADDR32 (ADDR30 a))) (SET_BYTE ((1 >< 0) a) w (BYTE_MEMORY_MAP f a))) ==>
-    a IN df ==>
-    SPEC ARM_MODEL (P * aBYTE_MEMORY df f) c
-                   (Q (w2w (f a)) * aBYTE_MEMORY df ((a =+ w) f))``,
-  ONCE_REWRITE_TAC [STAR_COMM] \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC aMEMORY_INTRO
-  \\ REPEAT (Q.PAT_ASSUM `!x.b` (K ALL_TAC))
-  \\ FULL_SIMP_TAC std_ss [ALIGNED_ADDR32,aBYTE_MEMORY_def]
-  \\ Q.PAT_ASSUM `!x.b` (ASSUME_TAC o Q.SPEC `{ADDR32 (ADDR30 x) | x IN df}`)
-  \\ `ADDR32 (ADDR30 a) IN {ADDR32 (ADDR30 x) | x IN df}` by
-    (FULL_SIMP_TAC std_ss [GSPECIFICATION] \\ METIS_TAC [])
-  \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!x.b` (ASSUME_TAC o Q.SPEC `BYTE_MEMORY_MAP f`)
-  \\ `(ADDR32 (ADDR30 a) =+ BYTE_MEMORY_MAP f a) (BYTE_MEMORY_MAP f) = BYTE_MEMORY_MAP f` by
-   (SIMP_TAC std_ss [FUN_EQ_THM,BYTE_MEMORY_MAP_def,APPLY_UPDATE_THM]
-    \\ STRIP_TAC \\ Cases_on `x = ADDR32 (ADDR30 a)`
-    \\ ASM_SIMP_TAC std_ss [ADDR30_ADDR32])
-  \\ `w2w (f a) = FORMAT UnsignedByte ((1 >< 0) a) (BYTE_MEMORY_MAP f a)` by
-   (SRW_TAC [] [FORMAT_def,BYTE_MEMORY_MAP_def]
-    \\ STRIP_ASSUME_TAC (Q.SPEC `a` EXISTS_ADDR32)
-    \\ ASM_SIMP_TAC std_ss [ADDR30_ADDR32,lower_ADDR32_ADD,
-           EVAL ``((1 >< 0) (0w:word32)):word2``, EVAL ``((1 >< 0) (1w:word32)):word2``,
-           EVAL ``((1 >< 0) (2w:word32)):word2``, EVAL ``((1 >< 0) (3w:word32)):word2``]
-    \\ SIMP_TAC (std_ss++SIZES_ss) [GET_BYTE_SET_BYTE,n2w_11]
-    \\ REWRITE_TAC [WORD_ADD_0])
-  \\ REVERSE (`!y. aMEMORY y ((ADDR32 (ADDR30 a) =+ SET_BYTE ((1 >< 0) a) w (BYTE_MEMORY_MAP f a))
-                   (BYTE_MEMORY_MAP f)) = aMEMORY y (BYTE_MEMORY_MAP ((a =+ w) f))` by ALL_TAC)
-  THEN1 FULL_SIMP_TAC std_ss []
-  \\ `!b. ALIGNED b ==> (((ADDR32 (ADDR30 a) =+ SET_BYTE ((1 >< 0) a) w (BYTE_MEMORY_MAP f a))
-                   (BYTE_MEMORY_MAP f) b = BYTE_MEMORY_MAP ((a =+ w) f) b))` by ALL_TAC THENL [
-    REPEAT STRIP_TAC \\ IMP_RES_TAC (RW [ALIGNED_INTRO] EXISTS_ADDR30)
-    \\ ASM_SIMP_TAC std_ss [BYTE_MEMORY_MAP_def,ADDR30_ADDR32,APPLY_UPDATE_THM,ADDR32_11]
-    \\ REVERSE (Cases_on `y = ADDR30 a` \\ ASM_SIMP_TAC std_ss []) THENL [
-      STRIP_ASSUME_TAC (Q.SPEC `a` EXISTS_ADDR32)
-      \\ FULL_SIMP_TAC std_ss [ADDR30_ADDR32,ADDR32_NEQ_ADDR32,ADDR32_11],
-      STRIP_ASSUME_TAC (Q.SPEC `a` EXISTS_ADDR32)
-      \\ FULL_SIMP_TAC std_ss [ADDR30_ADDR32,ADDR32_NEQ_ADDR32,ADDR32_11,lower_ADDR32_ADD,
-           EVAL ``((1 >< 0) (0w:word32)):word2``, EVAL ``((1 >< 0) (1w:word32)):word2``,
-           EVAL ``((1 >< 0) (2w:word32)):word2``, EVAL ``((1 >< 0) (3w:word32)):word2``]
-      \\ METIS_TAC [SET_BYTE_EQ,SET_BYTE_NEQ,
-           EVAL ``~(0w = 1w:word2) /\ ~(0w = 2w:word2) /\ ~(0w = 3w:word2) /\
-                  ~(1w = 2w:word2) /\ ~(1w = 3w:word2) /\ ~(2w = 3w:word2)``]],
-    SIMP_TAC std_ss [aMEMORY_def] \\ REPEAT STRIP_TAC
-    \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (SEQ_EQ x = SEQ_EQ y)``)
-    \\ REWRITE_TAC [aMEMORY_SET_def]
-    \\ SIMP_TAC std_ss [EXTENSION,GSPECIFICATION]
-    \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
-    \\ ASM_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `a'`
-    \\ RES_TAC \\ ASM_SIMP_TAC std_ss []]);
-
-val aBYTE_MEMORY_INTRO = save_thm("aBYTE_MEMORY_INTRO",
-  RW [ADDR30_ADDR32] aBYTE_MEMORY_INTRO_LEMMA);
-
-val SET_BYTE_BYTE_MEMORY_MAP = prove(
-  ``!f a. SET_BYTE ((1 >< 0) a) (f a) (BYTE_MEMORY_MAP f a) = BYTE_MEMORY_MAP f a``,
-  REPEAT STRIP_TAC
-  \\ STRIP_ASSUME_TAC (Q.SPEC `a` EXISTS_ADDR32)
-  \\ ASM_SIMP_TAC std_ss [BYTE_MEMORY_MAP_def,lower_ADDR32_ADD,ADDR30_ADDR32,
-           EVAL ``((1 >< 0) (0w:word32)):word2``, EVAL ``((1 >< 0) (1w:word32)):word2``,
-           EVAL ``((1 >< 0) (2w:word32)):word2``, EVAL ``((1 >< 0) (3w:word32)):word2``]
-  \\ METIS_TAC [SET_BYTE_EQ,SET_BYTE_NEQ,
-           EVAL ``~(0w = 1w:word2) /\ ~(0w = 2w:word2) /\ ~(0w = 3w:word2) /\
-                  ~(1w = 2w:word2) /\ ~(1w = 3w:word2) /\ ~(2w = 3w:word2)``]);
-
-val lemma = prove(``!a f. (a =+ f a) f = f``,SIMP_TAC std_ss [APPLY_UPDATE_THM,FUN_EQ_THM]);
-
-val aBYTE_MEMORY_INTRO2 = save_thm("aBYTE_MEMORY_INTRO2",
-  RW [lemma,SET_BYTE_BYTE_MEMORY_MAP] (Q.INST [`w`|->`f a`] aBYTE_MEMORY_INTRO));
-
-val EXTRACT_BYTE = store_thm("EXTRACT_BYTE",
-  ``!w:word32. (7 >< 0) w = (w2w w):word8``,
-  Cases \\ SIMP_TAC (std_ss++SIZES_ss) [w2w_def,word_extract_def,word_bits_n2w]
-  \\ SIMP_TAC (std_ss++SIZES_ss) [bitTheory.BITS_THM,w2n_n2w,n2w_11]
-  \\ SIMP_TAC bool_ss [GSYM (EVAL ``256 * 16777216``),MOD_MULT_MOD,
-       EVAL ``0 < 256``, EVAL ``0 < 16777216``,MOD_MOD]);
-
+val aligned4_thm = store_thm("aligned4_thm",
+  ``!a. aligned (a,4) = ALIGNED a``,
+  Cases \\ ASM_SIMP_TAC std_ss [arm_coretypesTheory.aligned_def,
+      arm_coretypesTheory.align_def,w2n_n2w,ALIGNED_n2w,n2w_11]
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) []
+  \\ (STRIP_ASSUME_TAC o Q.SPEC `n` o GSYM o 
+      RW1 [arithmeticTheory.MULT_COMM] o MATCH_MP arithmeticTheory.DIVISION) (DECIDE ``0 < 4:num``)
+  \\ Cases_on `n MOD 4 = 0` \\ FULL_SIMP_TAC std_ss []  
+  \\ `(4 * (n DIV 4)) < 4294967296` by DECIDE_TAC
+  \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC);
 
 val _ = export_theory();

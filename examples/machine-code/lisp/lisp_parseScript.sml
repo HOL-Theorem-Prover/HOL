@@ -17,7 +17,6 @@ val RW1 = ONCE_REWRITE_RULE;
 val _ = codegen_x86Lib.set_x86_regs
   [(3,"eax"),(4,"ecx"),(5,"edx"),(6,"ebx"),(7,"edi"),(8,"esi"),(9,"ebp")]
 
-
 (* --- READ NUMBER --- *)
 
 val (th1,arm_read_loop_def,arm_read_loop_pre_def) = compile_all ``
