@@ -28,60 +28,59 @@ val arm_step_trace = ref 0;
 val _ = Feedback.register_trace ("arm step", arm_step_trace, 3);
 
 val _ = overload_on ("CARRY_OUT",
-          ``\a:word32 b c. FST (SND (add_with_carry (a,b,c)))``);
+          ``\a:word32 b c. FST (SND (arm_opsem$add_with_carry (a,b,c)))``);
 
 val _ = overload_on ("OVERFLOW",
-          ``\a:word32 b c. SND (SND (add_with_carry (a,b,c)))``);
+          ``\a:word32 b c. SND (SND (arm_opsem$add_with_carry (a,b,c)))``);
 
 (* ------------------------------------------------------------------------- *)
 (* Facilitate evaluation                                                     *)
 (* ------------------------------------------------------------------------- *)
 
+val mk_constants =
+  List.concat o map (fn (thy, l) =>
+     map (fn name => prim_mk_const {Thy = thy, Name = name}) l);
+
 (* Things to avoid evaluating *)
 
-val restr_terms = map prim_mk_const
- [{Name = "word_div", Thy = "words"},
-  {Name = "word_sdiv", Thy = "words"},
-  {Name = "w2i", Thy = "integer_word"},
-  {Name = "i2w", Thy = "integer_word"},
-  {Name = "add_with_carry", Thy = "arm_opsem"},
-  {Name = "signed_sat_q", Thy = "arm_opsem"},
-  {Name = "unsigned_sat_q", Thy = "arm_opsem"},
-  {Name = "unsigned_sat", Thy = "arm_opsem"},
-  {Name = "unsigned_sat", Thy = "arm_opsem"},
-  {Name = "encode_psr", Thy = "arm_coretypes"},
-  {Name = "decode_psr", Thy = "arm_coretypes"},
-  {Name = "sign_extend", Thy = "arm_coretypes"},
-  {Name = "count_leading_zeroes", Thy = "arm_coretypes"}];
+val restr_terms = mk_constants
+  [("words",         ["word_div", "word_sdiv"]),
+   ("integer_word",  ["w2i", "i2w"]),
+   ("arm_opsem",     ["add_with_carry", "signed_sat_q", "unsigned_sat_q",
+                      "unsigned_sat", "signed_sat"]),
+   ("arm_coretypes", ["encode_psr", "decode_psr", "sign_extend",
+                      "count_leading_zeroes"])];
 
-val word4 = ``word4 (a,b,c,d)`` |> EVAL |> SYM |> GEN_ALL;
+val word4 = ``arm_step$word4 (a,b,c,d)`` |> EVAL |> SYM |> GEN_ALL;
 
-val _ = computeLib.del_consts
-  [``word4``,
-   ``branch_write_pc``, ``bx_write_pc``, ``load_write_pc``, ``alu_write_pc``,
-   ``cpsr_write_by_instr``, ``spsr_write_by_instr``,
-   ``branch_target_instr``,
-   ``branch_exchange_instr``,
-   ``branch_link_exchange_imm_instr``,
-   ``branch_link_exchange_reg_instr``,
-   ``compare_branch_instr``,
-   ``table_branch_byte_instr``,
-   ``add_sub_instr``,
-   ``data_processing_instr``,
-   ``load_instr``,
-   ``load_multiple_instr``,
-   ``return_from_exception_instr``,
-   ``immediate_to_status_instr``,
-   ``register_to_status_instr``,
-   ``change_processor_state_instr``,
-   ``saturating_add_subtract_instr``,
-   ``signed_16_multiply_32_accumulate_instr``,
-   ``signed_16x32_multiply_32_accumulate_instr``,
-   ``signed_multiply_dual_instr``,
-   ``saturate_instr``, ``saturate_16_instr``,
-   ``branch_instruction``, ``data_processing_instruction``,
-   ``load_store_instruction``, ``status_access_instruction``,
-   ``arm_instr``, ``arm_next``];
+val _ = computeLib.del_consts (mk_constants
+  [("arm_step", ["word4"]),
+   ("arm_opsem",
+     ["branch_write_pc", "bx_write_pc", "load_write_pc", "alu_write_pc",
+     "cpsr_write_by_instr", "spsr_write_by_instr",
+     "branch_target_instr",
+     "branch_exchange_instr",
+     "branch_link_exchange_imm_instr",
+     "branch_link_exchange_reg_instr",
+     "compare_branch_instr",
+     "table_branch_byte_instr",
+     "add_sub_instr",
+     "data_processing_instr",
+     "load_instr",
+     "load_multiple_instr",
+     "return_from_exception_instr",
+     "immediate_to_status_instr",
+     "register_to_status_instr",
+     "change_processor_state_instr",
+     "saturating_add_subtract_instr",
+     "signed_16_multiply_32_accumulate_instr",
+     "signed_16x32_multiply_32_accumulate_instr",
+     "signed_multiply_dual_instr",
+     "saturate_instr", "saturate_16_instr",
+     "branch_instruction", "data_processing_instruction",
+     "load_store_instruction", "status_access_instruction",
+     "arm_instr"]),
+    ("arm", ["arm_next"])]);
 
 val cpsr_write_by_instr =
   SIMP_RULE (std_ss++boolSimps.LET_ss) [cpsr_write_by_instr_thm]
@@ -252,55 +251,61 @@ local
 in
   fun set_flags state cond pass =
     let fun test_flag t = mk_read_status (t,state)
-        val flag_n = test_flag ``sN``
-        val flag_z = test_flag ``sZ``
-        val flag_c = test_flag ``sC``
-        val flag_v = test_flag ``sV``
+        val flag_n = test_flag ``arm_step$sN``
+        val flag_z = test_flag ``arm_step$sZ``
+        val flag_c = test_flag ``arm_step$sC``
+        val flag_v = test_flag ``arm_step$sV``
         val not_flag_n = mk_neg flag_n
         val not_flag_z = mk_neg flag_z
         val not_flag_c = mk_neg flag_c
         val not_flag_v = mk_neg flag_v
     in
       case (Arbnum.toInt (wordsLib.dest_word_literal cond),pass)
-      of (0,true)   => (``ARMpsr_Z_fupd (K T)``,flag_z)
-       | (0,false)  => (``ARMpsr_Z_fupd (K F)``,not_flag_z)
-       | (1,true)   => (``ARMpsr_Z_fupd (K F)``,not_flag_z)
-       | (1,false)  => (``ARMpsr_Z_fupd (K T)``,flag_z)
-       | (2,true)   => (``ARMpsr_C_fupd (K T)``,flag_c)
-       | (2,false)  => (``ARMpsr_C_fupd (K F)``,not_flag_c)
-       | (3,true)   => (``ARMpsr_C_fupd (K F)``,not_flag_c)
-       | (3,false)  => (``ARMpsr_C_fupd (K T)``,flag_c)
-       | (4,true)   => (``ARMpsr_N_fupd (K T)``,flag_n)
-       | (4,false)  => (``ARMpsr_N_fupd (K F)``,not_flag_n)
-       | (5,true)   => (``ARMpsr_N_fupd (K F)``,not_flag_n)
-       | (5,false)  => (``ARMpsr_N_fupd (K T)``,flag_n)
-       | (6,true)   => (``ARMpsr_V_fupd (K T)``,flag_v)
-       | (6,false)  => (``ARMpsr_V_fupd (K F)``,not_flag_v)
-       | (7,true)   => (``ARMpsr_V_fupd (K F)``,not_flag_v)
-       | (7,false)  => (``ARMpsr_V_fupd (K T)``,flag_v)
-       | (8,true)   => (``ARMpsr_C_fupd (K T) o ARMpsr_Z_fupd (K F)``,
+      of (0,true)   => (``arm_coretypes$ARMpsr_Z_fupd (K T)``,flag_z)
+       | (0,false)  => (``arm_coretypes$ARMpsr_Z_fupd (K F)``,not_flag_z)
+       | (1,true)   => (``arm_coretypes$ARMpsr_Z_fupd (K F)``,not_flag_z)
+       | (1,false)  => (``arm_coretypes$ARMpsr_Z_fupd (K T)``,flag_z)
+       | (2,true)   => (``arm_coretypes$ARMpsr_C_fupd (K T)``,flag_c)
+       | (2,false)  => (``arm_coretypes$ARMpsr_C_fupd (K F)``,not_flag_c)
+       | (3,true)   => (``arm_coretypes$ARMpsr_C_fupd (K F)``,not_flag_c)
+       | (3,false)  => (``arm_coretypes$ARMpsr_C_fupd (K T)``,flag_c)
+       | (4,true)   => (``arm_coretypes$ARMpsr_N_fupd (K T)``,flag_n)
+       | (4,false)  => (``arm_coretypes$ARMpsr_N_fupd (K F)``,not_flag_n)
+       | (5,true)   => (``arm_coretypes$ARMpsr_N_fupd (K F)``,not_flag_n)
+       | (5,false)  => (``arm_coretypes$ARMpsr_N_fupd (K T)``,flag_n)
+       | (6,true)   => (``arm_coretypes$ARMpsr_V_fupd (K T)``,flag_v)
+       | (6,false)  => (``arm_coretypes$ARMpsr_V_fupd (K F)``,not_flag_v)
+       | (7,true)   => (``arm_coretypes$ARMpsr_V_fupd (K F)``,not_flag_v)
+       | (7,false)  => (``arm_coretypes$ARMpsr_V_fupd (K T)``,flag_v)
+       | (8,true)   => (``arm_coretypes$ARMpsr_C_fupd (K T) o
+                          arm_coretypes$ARMpsr_Z_fupd (K F)``,
                           mk_conj (flag_c,not_flag_z))
-       | (8,false)  => (``ARMpsr_C_fupd (K (^flag_z /\ ^flag_c))``,
+       | (8,false)  => (``arm_coretypes$ARMpsr_C_fupd (K(^flag_z /\ ^flag_c))``,
                           mk_neg (mk_conj (flag_c,not_flag_z)))
-       | (9,true)   => (``ARMpsr_C_fupd (K (^flag_z /\ ^flag_c))``,
+       | (9,true)   => (``arm_coretypes$ARMpsr_C_fupd (K(^flag_z /\ ^flag_c))``,
                           mk_neg (mk_conj (flag_c,not_flag_z)))
-       | (9,false)  => (``ARMpsr_C_fupd (K T) o ARMpsr_Z_fupd (K F)``,
+       | (9,false)  => (``arm_coretypes$ARMpsr_C_fupd (K T) o
+                          arm_coretypes$ARMpsr_Z_fupd (K F)``,
                           mk_conj (flag_c,not_flag_z))
-       | (10,true)  => (``ARMpsr_V_fupd (K ^flag_n)``, mk_eq (flag_n,flag_v))
-       | (10,false) => (``ARMpsr_V_fupd (K (~^flag_n))``,
+       | (10,true)  => (``arm_coretypes$ARMpsr_V_fupd (K ^flag_n)``,
+                          mk_eq (flag_n,flag_v))
+       | (10,false) => (``arm_coretypes$ARMpsr_V_fupd (K (~^flag_n))``,
                           mk_neg (mk_eq (flag_n,flag_v)))
-       | (11,true)  => (``ARMpsr_V_fupd (K (~^flag_n))``,
+       | (11,true)  => (``arm_coretypes$ARMpsr_V_fupd (K (~^flag_n))``,
                           mk_neg (mk_eq (flag_n,flag_v)))
-       | (11,false) => (``ARMpsr_V_fupd (K ^flag_n)``, mk_eq (flag_n,flag_v))
-       | (12,true)  => (``ARMpsr_V_fupd (K ^flag_n) o ARMpsr_C_fupd (K F)``,
+       | (11,false) => (``arm_coretypes$ARMpsr_V_fupd (K ^flag_n)``,
+                          mk_eq (flag_n,flag_v))
+       | (12,true)  => (``arm_coretypes$ARMpsr_V_fupd (K ^flag_n) o
+                          arm_coretypes$ARMpsr_C_fupd (K F)``,
                           mk_conj (mk_eq (flag_n,flag_v),not_flag_c))
-       | (12,false) => (``ARMpsr_V_fupd
+       | (12,false) => (``arm_coretypes$ARMpsr_V_fupd
                             (K (if ^flag_c then ^flag_v else ~^flag_n))``,
                           mk_neg (mk_conj (mk_eq (flag_n,flag_v),not_flag_c)))
-       | (13,true)  => (``ARMpsr_V_fupd
+       | (13,true)  => (``arm_coretypes$ARMpsr_V_fupd
                             (K (if ^flag_c then ^flag_v else ~^flag_n))``,
                           mk_neg (mk_conj (mk_eq (flag_n,flag_v),not_flag_c)))
-       | (13,false) => (``ARMpsr_V_fupd (K ^flag_n) o ARMpsr_C_fupd (K F)``,
+       | (13,false) => (``arm_coretypes$ARMpsr_V_fupd (K ^flag_n) o
+                          arm_coretypes$ARMpsr_C_fupd (K F)``,
                           mk_conj (mk_eq (flag_n,flag_v),not_flag_c))
        | (14,true)  => (``I : ARMpsr -> ARMpsr``,T)
        | (15,true)  => (``I : ARMpsr -> ARMpsr``,T)
@@ -374,7 +379,8 @@ local
   val ALIGN_CONV = SIMP_CONV (srw_ss()) [aligned_n2w, align_n2w]
   val ALIGN_ss = simpLib.conv_ss
         {conv = K (K (ALIGN_CONV)), trace = 3,
-         name = "ALIGN_CONV", key = SOME ([], ``aligned (n2w a:'a word,n)``)}
+         name = "ALIGN_CONV",
+         key = SOME ([], ``arm_coretypes$aligned (n2w a:'a word,n)``)}
 in
   fun mk_precondition the_state arch itstate thumb endian flags regs memory =
         apply_conv
@@ -390,13 +396,13 @@ in
             mk_test (unaligned_support_tm,[the_state],T),
             mk_test (read_event_register_tm,[the_state],T),
             mk_test (read_interrupt_wait_tm,[the_state],F),
-            mk_test (read_sctlr_tm,[``cV``,the_state],F),
-            mk_test (read_sctlr_tm,[``cA``,the_state],T),
-            mk_test (read_sctlr_tm,[``cU``,the_state],F),
+            mk_test (read_sctlr_tm,[``arm_step$cV``,the_state],F),
+            mk_test (read_sctlr_tm,[``arm_step$cA``,the_state],T),
+            mk_test (read_sctlr_tm,[``arm_step$cU``,the_state],F),
             mk_test (read_it_tm,[the_state],itstate),
-            mk_test (read_status_tm,[``sJ``,the_state],F),
-            mk_test (read_status_tm,[``sT``,the_state],thumb),
-            mk_test (read_status_tm,[``sE``,the_state],endian),
+            mk_test (read_status_tm,[``arm_step$sJ``,the_state],F),
+            mk_test (read_status_tm,[``arm_step$sT``,the_state],thumb),
+            mk_test (read_status_tm,[``arm_step$sE``,the_state],endian),
             flags, regs, memory])
 end;
 
@@ -485,7 +491,9 @@ local
 
   fun mk_psrs_updates (the_state,state') =
         let val updates = arm_psrs_updates state' in
-          case List.find (fn tm => not (term_eq ``(0n,CPSR)`` (fst tm))) updates
+          case List.find
+                 (fn tm => not (term_eq ``(0n,arm_coretypes$CPSR)`` (fst tm)))
+                 updates
             of SOME (t,v) =>
                  (case total (find_term is_cond) v
                      of SOME tm => let val (b,_,_) = dest_cond tm in [b] end
@@ -526,7 +534,7 @@ fun bits32 (n,h,l) =
 local
   val read_mem_tm = ``arm_seq_monad$arm_state_memory``
   val read_reg_tm = ``arm_seq_monad$arm_state_registers``
-  val pc_tm = ``(0n,RName_PC)``
+  val pc_tm = ``(0n,arm_coretypes$RName_PC)``
   fun mk_word32 x = wordsSyntax.mk_wordii (x,32)
 
   fun make_bytes t =
@@ -707,7 +715,7 @@ in
     val endian = #endian opt
     val _ = not (arch = ARMv4 andalso thumb) orelse
               raise ERR "make_arm_state_and_pre" "ARMv4 does not support Thumb."
-    val ii = ``<| proc := 0 |>``
+    val ii = ``<| proc := 0 |> : arm_coretypes$iiid``
     val itstate = wordsSyntax.mk_wordii (#itblock opt,8)
     val M = mode_to_term (#mode opt)
     val E = endian_to_term endian
@@ -726,15 +734,16 @@ in
     val opc' = if not thumb orelse arch_version arch >= 5
                then opc else ``0w:word32``
     val npass = if #pass opt then F else T
-    val tm = list_mk_comb
-               (``ARM_ALIGN_BX``, [ii,npass,opc',enc,instruction,state'])
+    val tm = list_mk_comb (``arm_step$ARM_ALIGN_BX``,
+                           [ii,npass,opc',enc,instruction,state'])
     val (bx,state') = get_valuestate "ARM_ALIGN_BX" (restr_eval tm)
-    val tm = list_mk_comb
-               (``ARM_MEMORY_FOOTPRINT``, [ii,npass,instruction,state'])
+    val tm = list_mk_comb (``arm_step$ARM_MEMORY_FOOTPRINT``,
+                           [ii,npass,instruction,state'])
     val (aligns,state') = get_valuestate "ARM_MEMORY_FOOTPRINT" (restr_eval tm)
     val (nmem,memory_fupd,memory_pre) =
            mk_arm_memory state' endian arch enc opc bx aligns
-    val state' = list_mk_comb (``arm_state_memory_fupd``, [memory_fupd,state'])
+    val state' = list_mk_comb (``arm_seq_monad$arm_state_memory_fupd``,
+                               [memory_fupd,state'])
     val state' = restr_eval state'
     val state' = apply_conv (PURE_REWRITE_CONV [UPDATE_ID_o2]) state'
     val (nreg,reg_pre) = mk_reg_pre (the_state,M,state')
@@ -791,7 +800,7 @@ val bfc = Q.prove(
 
 local
   val lem1 = trace ("metis",0) (METIS_PROVE [WORD_EQ_ADD_RCANCEL])
-    ``((state.memory p = x) ==>
+    ``(((state:arm_seq_monad$arm_state).memory p = x) ==>
          ((if p = a then x else state.memory a) = state.memory a)) /\
       ((state.memory (p + n) = x) ==>
          ((if p = a then x else state.memory (a + n)) = state.memory (a + n)))``
@@ -861,7 +870,7 @@ in
   val BFC_ss = simpLib.conv_ss
              {conv = K (K (wordsLib.WORD_EVAL_CONV)), trace = 3,
               name = "WORD_EVAL_CONV",
-              key = SOME ([], ``word_modify f 0xFFFFFFFFw : word32``)}
+              key = SOME ([], ``words$word_modify f 0xFFFFFFFFw : word32``)}
   val ARM_ALIGN_ss = simpLib.merge_ss [rewrites align_rws, wordsLib.SIZES_ss,
                                        numSimps.REDUCE_ss,
                                        SatisfySimps.SATISFY_ss]
@@ -988,8 +997,8 @@ in
 end;
 
 local
-  val the_state = mk_var ("state",``:arm_state``)
-  fun mk_arm_next t = ``arm_next <| proc := 0 |> ^t``
+  val the_state = mk_var ("state",``:arm_seq_monad$arm_state``)
+  fun mk_arm_next t = ``arm$arm_next <| proc := 0 |> ^t``
   fun some_update fupd v s =
         case v of SOME u => list_mk_comb (fupd, [u,s])
                 | NONE => s
@@ -1020,13 +1029,14 @@ in
     val psr' = dropn_o (psr, 1)
     val evt' = maybe_dropn_o evt
     val wfi' = maybe_dropn_o wfi
-    val h = some_update ``arm_state_registers_fupd`` reg' the_state
-    val h = some_update ``arm_state_memory_fupd`` mem' h
-    val h = some_update ``arm_state_psrs_fupd`` psr' h
-    val h = some_update ``arm_state_event_register_fupd`` evt' h
-    val h = some_update ``arm_state_interrupt_wait_fupd`` wfi' h
-    val h = some_update ``arm_state_accesses_fupd`` (SOME acc) h
-    val h = some_update ``arm_state_monitors_fupd`` mon h
+    val h = some_update
+              ``arm_seq_monad$arm_state_registers_fupd`` reg' the_state
+    val h = some_update ``arm_seq_monad$arm_state_memory_fupd`` mem' h
+    val h = some_update ``arm_seq_monad$arm_state_psrs_fupd`` psr' h
+    val h = some_update ``arm_seq_monad$arm_state_event_register_fupd`` evt' h
+    val h = some_update ``arm_seq_monad$arm_state_interrupt_wait_fupd`` wfi' h
+    val h = some_update ``arm_seq_monad$arm_state_accesses_fupd`` (SOME acc) h
+    val h = some_update ``arm_seq_monad$arm_state_monitors_fupd`` mon h
     val H = mk_abs (the_state,h)
     val _ = print_progress "Starting composition proof ...\n"
     val comp_thm = prove_comp_thm the_state P H G X handle HOL_ERR _ =>
