@@ -182,6 +182,7 @@ val word_asr_compute =
 
 val thms =
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
+   SUC_RULE rich_listTheory.GENLIST, rich_listTheory.SNOC, combinTheory.K_THM,
    iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SBIT_def,
    NUM_RULE [BIT_ZERO] `n` SIGN_EXTEND_def,
    DIVMOD_2EXP, NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP, NUMERAL_iDIV2,
@@ -198,6 +199,7 @@ val thms =
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w ^n` sw2sw_def,
    word_len_def, word_L_def, word_H_def, word_T_def,
    word_join_def, SPECL [`^n2w ^n`,`n2w ^m:'b word`] word_concat_def,
+   SPEC `^a` word_replicate_concat_word_list, concat_word_list_def,
    word_reverse_n2w, word_modify_n2w, SPEC `^a` word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
    word_2comp_compute, word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
@@ -286,6 +288,7 @@ local
       "word_to_hex_string",
       "word_reduce", "reduce_and", "reduce_or", "reduce_xor",
       "reduce_nand", "reduce_nor", "reduce_xnor",
+      "word_replicate", "concat_word_list",
       "w2w","w2n","sw2sw","word_log2","word_reverse","word_msb",
       "word_join","word_concat","word_bit","word_bits","word_signed_bits",
       "word_slice","word_extract","word_asr","word_lsr","word_lsl","word_ror",
@@ -310,18 +313,17 @@ local
         numSyntax.is_numeral t andalso
         numSyntax.int_of_term t < 16;
 
-  fun is_hex_digit_list t =
-        listSyntax.is_list t andalso
-        Lib.all is_hex_digit_literal (fst (listSyntax.dest_list t));
-
-  fun is_bool_list t =
-        listSyntax.is_list t andalso
-        Lib.all (fn t => term_eq F t orelse term_eq T t)
-          (fst (listSyntax.dest_list t));
-
-  fun is_hex_string t =
-        stringSyntax.is_string_literal t andalso
-        Lib.all Char.isHexDigit (String.explode (stringSyntax.fromHOLstring t));
+  fun is_ground_list t =
+         let val (l,ty) = listSyntax.dest_list t in
+           if ty = ``:num`` then
+             Lib.all is_hex_digit_literal l
+           else if ty = ``:char`` then
+             Lib.all (Char.isHexDigit o stringSyntax.fromHOLchar) l
+           else if ty = ``:bool`` then
+             Lib.all (fn tm => term_eq F tm orelse term_eq T tm) l
+           else
+             wordsSyntax.is_word_type ty
+         end handle HOL_ERR _ => false;
 
   fun is_ground_arg t =
     if pairSyntax.is_pair t then
@@ -334,9 +336,7 @@ local
       is_uintmax t orelse
       term_eq t T orelse
       term_eq t F orelse
-      is_hex_digit_list t orelse
-      is_bool_list t orelse
-      is_hex_string t orelse
+      is_ground_list t orelse
       term_eq t ``bit$HEX`` orelse
       term_eq t ``bit$UNHEX`` orelse
       term_eq t ``bool$/\`` orelse
@@ -1371,101 +1371,9 @@ fun remove_word_cast_printer () =
   (Parse.remove_user_printer "wordsLib.print_word_cast"; ());
 
 (* ------------------------------------------------------------------------- *)
-(* Guessing the word length for the result of extraction (><) and            *)
-(* concatenate (@@)                                                          *)
+(* Guessing the word length for the result of extraction (><),               *)
+(* concatenate (@@) and word_replicate                                       *)
 (* ------------------------------------------------------------------------- *)
-
-val extract_tm = ``words$word_extract ^m ^n :'a word -> 'b word``;
-
-datatype WordOp =
-   word_concat of hol_type * hol_type * hol_type
- | word_extract of num * hol_type;
-
-fun get_word_ops t =
-  case total (match_term extract_tm) t of
-    NONE =>
-      (case dest_term t of
-         VAR (a, b) => []
-       | CONST a =>
-           if #Name a = "word_concat" then
-            (case dest_type (#Ty a) of
-               ("fun", [x,y]) =>
-                 (case dest_type y of
-                    ("fun", [v,w]) =>
-                       (let val fv = trye hd (type_vars w)
-                            val xn = wordsSyntax.dest_word_type x
-                            val vn = wordsSyntax.dest_word_type v
-                        in
-                          [word_concat (xn, vn, fv)]
-                        end handle HOL_ERR _ => [])
-                  | _ => [])
-             | _ => [])
-           else
-             []
-       | COMB (a,b) => get_word_ops a @ get_word_ops b
-       | LAMB (a,b) => get_word_ops b)
-  | SOME ([a,b],_) =>
-      (case dest_type (type_of t) of
-         ("fun", [x, y]) =>
-            (let val fv = trye hd (type_vars y)
-                 val na = numSyntax.dest_numeral (#residue a)
-                 val nb = numSyntax.dest_numeral (#residue b)
-                 val n = Arbnum.-(Arbnum.plus1 na, nb)
-             in
-               if n = Arbnum.zero then [] else [word_extract (n, fv)]
-             end handle HOL_ERR _ => [])
-      | _ => [])
-  | _ => [];
-
-fun word_op_compare(a, b) =
-  case (a, b) of
-    (word_concat(a,b,c),word_concat(d,e,f)) =>
-      (case (is_vartype a, is_vartype b, is_vartype d, is_vartype e)
-       of (false,false,true,_) => LESS
-        | (false,false,_,true) => LESS
-        | (true,_,false,false) => GREATER
-        | (_,true,false,false) => GREATER
-        | _ =>
-           (if a = f orelse b = f then
-              if d = c orelse e = c then Type.compare(c, f) else GREATER
-            else
-              if d = c orelse e = c then LESS else Type.compare(c, f)))
-  | (word_concat(a,b,c),word_extract(n,f)) => GREATER
-  | (word_extract(m,c),word_concat(d,e,f)) => LESS
-  | (word_extract(m,c),word_extract(n,f))  => Type.compare(c, f);
-
-local
-  open Redblackmap
-
-  fun mk_word_op_var_map vmap [] = vmap
-    | mk_word_op_var_map vmap (word_extract (n, ty)::tl) =
-       (case peek(vmap, ty) of
-          NONE   => mk_word_op_var_map (insert(vmap,ty,n)) tl
-        | SOME m => mk_word_op_var_map (if Arbnum.<(n, m) then vmap
-                                        else insert(vmap,ty,n)) tl)
-    | mk_word_op_var_map vmap (word_concat (a, b, ty)::tl) =
-       (let val na = if Type.is_vartype a then
-                       trye find (vmap, a)
-                     else
-                       fcpLib.index_to_num a
-            val nb = if Type.is_vartype b then
-                       trye find (vmap, b)
-                     else
-                       fcpLib.index_to_num b
-            val n = Arbnum.+(na, nb)
-        in
-          case peek(vmap, ty) of
-            NONE   => mk_word_op_var_map (insert(vmap,ty,n)) tl
-          | SOME m => mk_word_op_var_map (if Arbnum.<(n, m) then vmap
-                                          else insert(vmap,ty,n)) tl
-        end handle HOL_ERR _ => mk_word_op_var_map vmap tl)
-in
-  fun mk_vmap t = mk_word_op_var_map (mkDict Type.compare)
-                    (Listsort.sort word_op_compare (get_word_ops t))
-end;
-
-fun word_op_type_inst (ty:hol_type, n) =
-  {redex = ty, residue = fcpLib.index_type n};
 
 val notify_on_word_length_guess = ref true;
 val guessing_word_lengths = ref false;
@@ -1476,34 +1384,68 @@ val _ = Feedback.register_btrace("notify word length guesses",
 val _ = Feedback.register_btrace("guess word lengths",
                                   guessing_word_lengths);
 
-local
-  fun comma_separate_acc [] l = l
-    | comma_separate_acc (h::t) "" = comma_separate_acc t h
-    | comma_separate_acc [h] l = l ^ " and " ^ h
-    | comma_separate_acc (h::t) l = comma_separate_acc t (l ^ ", " ^ h)
-  fun comma_separate l = comma_separate_acc l ""
+fun guess_lengths ()      = set_trace "guess word lengths" 1;
+fun dont_guess_lengths () = set_trace "guess word lengths" 0;
 
-  fun type_name t = String.extract(Hol_pp.type_to_string t, 1, NONE);
+fun dest_strip t =
+let val (l,r) = strip_comb t in
+  (fst (dest_const l), r)
+end;
 
-  fun guess_to_string {redex = a, residue = b} =
-    type_name a ^ " <- " ^ type_name b;
+fun t2s t = String.extract(Hol_pp.type_to_string t, 1, NONE);
 
-  fun print_guesses l = Feedback.HOL_MESG
-    ("assigning word length(s): " ^ comma_separate (map guess_to_string l));
+fun LENGTH_INST t =
+let open numSyntax
+    val word_type = wordsSyntax.dest_word_type o type_of
+    val ty = word_type t
 in
-  fun inst_word_lengths t =
-  let val assigns = map word_op_type_inst (Redblackmap.listItems (mk_vmap t))
-      val _ = if !Globals.interactive andalso
-                 !notify_on_word_length_guess andalso
-                 not (null assigns)
-              then
-                print_guesses assigns
-              else
-                ()
-  in
-    inst assigns t
-  end
-end
+  if Type.polymorphic ty then
+    case dest_strip t
+    of ("word_extract", [h,l,_]) =>
+          let val nh = dest_numeral h
+              val nl = dest_numeral l
+              val nt = Arbnum.- (Arbnum.plus1 nh, nl)
+          in
+            ty |-> fcpLib.index_type nt
+          end
+     | ("word_concat", [a,b]) =>
+          let val na = fcpLib.index_to_num (word_type a)
+              val nb = fcpLib.index_to_num (word_type b)
+              val nt = Arbnum.+ (na, nb)
+          in
+            ty |-> fcpLib.index_type nt
+          end
+     | ("word_replicate", [m,a]) =>
+          let val nm = dest_numeral m
+              val na = fcpLib.index_to_num (word_type a)
+              val nt = Arbnum.* (nm, na)
+          in
+            ty |-> fcpLib.index_type nt
+          end
+     | ("concat_word_list", [l]) =>
+          let val (ls,tyl) = listSyntax.dest_list l
+              val nl = fcpLib.index_to_num (wordsSyntax.dest_word_type tyl)
+              val nt = Arbnum.* (Arbnum.fromInt (length ls), nl)
+          in
+            ty |-> fcpLib.index_type nt
+          end
+     | _ => raise ERR "LENGTH_INST" ""
+  else
+    raise ERR "LENGTH_INST" ""
+end;
+
+fun inst_word_lengths tm =
+let val t = HolKernel.find_term (Lib.can LENGTH_INST) tm
+    val {redex,residue} = LENGTH_INST t
+    val _ = if !Globals.interactive andalso !notify_on_word_length_guess then
+              Feedback.HOL_MESG
+                (String.concat ["assigning word length: ",
+                                t2s redex, " <- ", t2s residue])
+            else
+              ()
+in
+  inst_word_lengths (Term.inst [redex |-> residue] tm)
+end handle HOL_ERR _ => tm;
 
 fun word_post_process_term t =
   if !guessing_word_lengths then
@@ -1513,9 +1455,6 @@ fun word_post_process_term t =
 
 val _ = Parse.post_process_term :=
   (word_post_process_term o !Parse.post_process_term);
-
-fun guess_lengths ()      = set_trace "guess word lengths" 1;
-fun dont_guess_lengths () = set_trace "guess word lengths" 0;
 
 val operators = [("+", "word_add"), ("-", "word_sub"),
                  ("numeric_negate", "word_2comp"),

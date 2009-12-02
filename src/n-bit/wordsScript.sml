@@ -363,6 +363,19 @@ val word_join_def = with_flag (computeLib.auto_import_definitions, true) Define`
 val word_concat_def = Define`
   word_concat (v:'a word) (w:'b word) = w2w (word_join v w)`;
 
+val word_replicate_def = Define`
+  word_replicate n (w : 'a word) =
+    FCP i. i < n * dimindex(:'a) /\ w ' (i MOD dimindex(:'a))`;
+
+val _ = ai := true;
+
+val concat_word_list_def = Define`
+  (concat_word_list ([]:'a word list) = 0w) /\
+  (concat_word_list (h::t) =
+     w2w h !! (concat_word_list t << dimindex(:'a)))`;
+
+val _ = ai := false;
+
 val _ = overload_on ("@@",Term`$word_concat`);
 
 val _ = add_infix("@@",700,HOLgrammars.RIGHT);
@@ -1622,6 +1635,27 @@ val WORD_LITERAL_XOR = store_thm("WORD_LITERAL_XOR",
   `!n m. n2w n ?? n2w m =
          n2w (BITWISE (SUC (MAX (LOG2 n) (LOG2 m))) (\x y. ~(x = y)) n m)`,
   RW_TAC arith_ss [word_xor_n2w, GSYM WORD_EQ, word_bit_n2w, bitwise_log_max]);
+
+val SNOC_GENLIST_K = Q.prove(
+  `!n c. SNOC c (GENLIST (K c) n) = c::(GENLIST (K c) n)`,
+  Induct \\ SRW_TAC [] [rich_listTheory.GENLIST, rich_listTheory.SNOC]);
+
+val word_replicate_concat_word_list = Q.store_thm
+ ("word_replicate_concat_word_list",
+  `!n w. word_replicate n w = concat_word_list (GENLIST (K w) n)`,
+  Induct 
+     \\ SRW_TAC [] [word_replicate_def, concat_word_list_def,
+          rich_listTheory.GENLIST, SNOC_GENLIST_K]
+     >> SRW_TAC [fcpLib.FCP_ss] [word_0]
+     \\ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
+     \\ SRW_TAC [fcpLib.FCP_ss,ARITH_ss]
+          [word_replicate_def, word_or_def, word_lsl_def, w2w]
+     \\ ASSUME_TAC DIMINDEX_GT_0
+     \\ Q.ABBREV_TAC `A = dimindex(:'a)`
+     \\ Cases_on `i < A` \\ SRW_TAC [ARITH_ss] [MULT_SUC]
+     \\ `?x. i = x + A` by METIS_TAC [NOT_LESS, LESS_EQ_ADD_EXISTS, ADD_COMM]
+     \\ SRW_TAC [ARITH_ss] [ADD_MODULUS_RIGHT]
+     \\ Cases_on `n` \\ SRW_TAC [ARITH_ss] [ZERO_LESS_MULT]);
 
 (* ------------------------------------------------------------------------- *)
 (*  Word redection: theorems                                                 *)
