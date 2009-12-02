@@ -27,12 +27,6 @@ val arm_step_trace = ref 0;
 
 val _ = Feedback.register_trace ("arm step", arm_step_trace, 3);
 
-val _ = overload_on ("CARRY_OUT",
-          ``\a:word32 b c. FST (SND (arm_opsem$add_with_carry (a,b,c)))``);
-
-val _ = overload_on ("OVERFLOW",
-          ``\a:word32 b c. SND (SND (arm_opsem$add_with_carry (a,b,c)))``);
-
 (* ------------------------------------------------------------------------- *)
 (* Facilitate evaluation                                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -44,10 +38,10 @@ val mk_constants =
 (* Things to avoid evaluating *)
 
 val restr_terms = mk_constants
-  [("words",         ["word_div", "word_sdiv"]),
+  [("words",         ["word_div", "word_sdiv", "add_with_carry"]),
    ("integer_word",  ["w2i", "i2w"]),
-   ("arm_opsem",     ["add_with_carry", "signed_sat_q", "unsigned_sat_q",
-                      "unsigned_sat", "signed_sat"]),
+   ("arm_opsem",     ["signed_sat_q", "unsigned_sat_q",
+                      "signed_sat", "unsigned_sat"]),
    ("arm_coretypes", ["encode_psr", "decode_psr", "sign_extend",
                       "count_leading_zeroes"])];
 

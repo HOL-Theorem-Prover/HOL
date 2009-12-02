@@ -5,16 +5,18 @@
 (* ------------------------------------------------------------------------ *)
 
 (* interactive use:
-  app load ["armTheory", "wordsLib", "pred_setSyntax", "emitLib", "EmitTeX",
-            "option_emitTheory",  "set_emitTheory", "int_emitTheory"];
+  app load ["arm_evalTheory", "wordsLib", "pred_setSyntax", "emitLib",
+            "EmitTeX", "patricia_emitTheory", "option_emitTheory",
+            "set_emitTheory", "int_emitTheory", "rich_list_emitTheory"];
 *)
 
 open HolKernel boolLib bossLib Parse wordsLib;
 
 open arm_coretypesTheory arm_astTheory arm_seq_monadTheory
-     arm_decoderTheory arm_opsemTheory armTheory;
+     arm_decoderTheory arm_opsemTheory arm_evalTheory;
 
-open emitLib set_emitTheory int_emitTheory;
+open emitLib set_emitTheory int_emitTheory rich_list_emitTheory
+     patricia_emitTheory;
 
 val _ = new_theory "arm_emit";
 
@@ -77,6 +79,36 @@ val parallel_add_sub_thumb_op2 = Q.prove(
   Cases THEN FULL_SIMP_TAC (srw_ss())
     [parallel_add_sub_thumb_op2_def, LESS_THM, combinTheory.FAIL_THM]);
 
+local
+  val dp_thm = ONCE_REWRITE_RULE [LET_THM]
+                 (fetch "arm_opsem" "data_processing_instr")
+  fun mk_dp_opc (i,tm) =
+        let val opc = wordsSyntax.mk_wordii(i, 4) in
+          boolSyntax.mk_cond
+            (boolSyntax.mk_eq (``opc:word4``,opc),
+            ``arm_opsem$data_processing_instr ii enc
+                (Data_Processing ^opc setflags n d mode1)``,tm)
+        end
+  val tm = List.foldr mk_dp_opc ``ARB:unit M`` (List.tabulate(16,I))
+  val thm = Q.prove(
+              `data_processing_instr ii enc
+                 (Data_Processing opc setflags n d mode1) = ^tm`,
+              SRW_TAC [] [] THEN Cases_on `opc`
+                THEN FULL_SIMP_TAC (srw_ss()) [LESS_THM]
+                THEN FULL_SIMP_TAC std_ss [])
+  val pos = Lib.index (Lib.equal "data_processing_instr")
+              arm_opsemTheory.instruction_list
+  val data_processing_instr =
+        CONV_RULE (RHS_CONV
+           (SIMP_CONV (srw_ss()) [dp_thm, data_processing_alu_def]
+              THENC DEPTH_CONV (pairLib.LET_SIMP_CONV false))) thm
+  val l = map (fetch "arm_opsem") arm_opsemTheory.instruction_list
+in
+  val instruction_list =
+        let val (l,r) = Lib.split_after pos l in
+          l @ [data_processing_instr] @ (tl r)
+        end
+end;
 
 fun REDEX_ALPHA_CONV {redex, residue} t =
 let val v = if is_forall t then fst (dest_forall t) else
@@ -169,6 +201,7 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
   [OPEN  ["num", "set", "string", "fcp", "bit", "words"],
    MLSIG "type num = numML.num",
    MLSIG "type int = intML.int",
+   MLSIG "type 'a ptree = 'a patriciaML.ptree",
    MLSIG "type 'a set = 'a setML.set",
    MLSIG "type 'a itself = 'a fcpML.itself",
    MLSIG "type 'a bit0 = 'a fcpML.bit0",
@@ -176,7 +209,8 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
    MLSIG "type 'a word = 'a wordsML.word",
    MLSIG "type ('a,'b) cart = ('a,'b) fcpML.cart",
    MLSIG "type ('a,'b) sum = ('a,'b) sumML.sum",
-   MLSTRUCT "type int = intML.int"] @
+   MLSTRUCT "type int = intML.int",
+   MLSTRUCT "type 'a ptree = 'a patriciaML.ptree"] @
   map mk_word [2,3,4,5,6,8,12,16,24,32,64] @
   [DATATYPE (f datatype_ARMextensions),
    MLSIG    "type ARMextensions_set = ARMextensions set",
@@ -207,7 +241,7 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
   map (DATATYPE o f)
     [datatype_ExclusiveMonitors, datatype_Coprocessors,
      datatype_arm_state, datatype_error_option] @
-  [MLSIG    "type 'a M",
+  [MLSIG    "type 'a M = arm_state -> ('a, arm_state) error_option",
    MLSTRUCT "type 'a M = arm_state -> ('a, arm_state) error_option"] @
   map (DEFN o SIMP_RULE (srw_ss())
          [Q.ISPEC `FST` COND_RAND, combinTheory.o_THM,
@@ -282,7 +316,7 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      shift_c_def, shift_def, arm_expand_imm_c_def, thumb_expand_imm_c_def,
      arm_expand_imm_def,
      address_mode1_def, address_mode2_def, address_mode3_def,
-     address_mode5_def, n2w_rule add_with_carry_def, data_processing_alu_def,
+     address_mode5_def, data_processing_alu_def,
      signed_parallel_add_sub_16_def, signed_normal_add_sub_16_def,
      signed_saturating_add_sub_16_def, signed_halving_add_sub_16_def,
      signed_parallel_add_sub_8_def, signed_normal_add_sub_8_def,
@@ -294,14 +328,13 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      parallel_add_sub_def, barrier_option_def, exc_vector_base_def,
      take_undef_instr_exception_def, take_svc_exception_def,
      take_smc_exception_def, take_prefetch_abort_exception_def,
-     integer_zero_divide_trapping_enabled_def] @
-    map (fetch "arm_opsem") arm_opsemTheory.instruction_list @
+     integer_zero_divide_trapping_enabled_def] @ instruction_list @
     [condition_passed_def, branch_instruction_def,
      data_processing_instruction_def, status_access_instruction_def,
      load_store_instruction_def, miscellaneous_instruction_def,
      coprocessor_instruction_def, arm_instr_def,
 
-     (* arm_decode and arm *)
+     (* arm_decode and arm_eval *)
      hint_decode_def, parallel_add_sub_op1, parallel_add_sub_op2,
      parallel_add_sub_thumb_op2, parallel_add_sub_decode_def,
      parallel_add_sub_thumb_decode_def, InITBlock_def, LastInITBlock_def,
@@ -309,7 +342,7 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      thumb2_decode_aux1_def, thumb2_decode_aux2_def, thumb2_decode_aux3_def,
      thumb2_decode_aux4_def, thumb2_decode_aux5_def, thumb2_decode_aux6_def,
      thumb2_decode_aux7_def, thumb2_decode_aux8_def, thumb2_decode_aux9_def,
-     thumb2_decode_def, fetch_instruction_def, arm_next_def, arm_run_def]));
+     thumb2_decode_def, proc_def, ptree_fetch_instruction_def]));
 
 (* ------------------------------------------------------------------------ *)
 

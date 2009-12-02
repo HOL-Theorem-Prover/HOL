@@ -362,23 +362,6 @@ val UPDATE_ID_o2 = Q.store_thm("UPDATE_ID_o2",
    (!a b c g. (a =+ b) o ((a =+ c) o g) = (a =+ b) o g)`,
   SRW_TAC [] [FUN_EQ_THM, UPDATE_def]);
 
-val FST_ADD_WITH_CARRY = Q.prove(
-  `(!a b. FST (add_with_carry (a,b,F)) = a + b) /\
-   (!a b. FST (add_with_carry (a,~b,T)) = a - b) /\
-   (!a b. FST (add_with_carry (~a,b,T)) = b - a)`,
-  SRW_TAC [boolSimps.LET_ss]
-    [GSYM word_add_def, add_with_carry_def,
-     GSYM word_add_n2w, WORD_NOT]);
-
-val FST_ADD_WITH_CARRY = save_thm("FST_ADD_WITH_CARRY",
-  CONJ FST_ADD_WITH_CARRY
-   (case CONJUNCTS (CONJUNCT2 FST_ADD_WITH_CARRY) of
-      [thm1,thm2] =>
-        (CONJ (thm1 |> Q.SPECL [`a`,`~(n2w n)`] |> GEN_ALL)
-              (thm2 |> Q.SPEC `~(n2w n)` |> GEN_ALL))
-          |> REWRITE_RULE [WORD_NOT_NOT]
-    | _ => raise ERR "" ""));
-
 val FST_SHIFT_C = Q.store_thm("FST_SHIFT_C",
   `(!w s. s <> 0 ==> (FST (LSL_C (w, s)) = w << s)) /\
    (!w s. s <> 0 ==> (FST (LSR_C (w, s)) = w >>> s)) /\

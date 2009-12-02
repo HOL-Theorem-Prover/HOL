@@ -387,15 +387,6 @@ val address_mode5_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
-val add_with_carry_def = Define`
-  add_with_carry (x:'a word, y:'a word, carry_in:bool) =
-    let unsigned_sum = w2n x + w2n y + (if carry_in then 1 else 0) in
-    let result = n2w unsigned_sum : 'a word in
-    let carry_out = ~(w2n result = unsigned_sum)
-    and overflow = (word_msb x = word_msb y) /\ (word_msb x <> word_msb result)
-    in
-       (result,carry_out,overflow)`;
-
 val data_processing_alu_def = Define`
   data_processing_alu (opc:word4) (a:word32) b c =
     case opc

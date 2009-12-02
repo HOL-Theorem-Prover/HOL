@@ -36,23 +36,28 @@ val ptree_fetch_instruction_def = Define`
     : (Encoding # word4 # ARMinstruction) option =
     let bytes = [prog ' pc; prog ' (pc + 1);
                  prog ' (pc + 2); prog ' (pc + 3)] in
-    let the_bytes = MAP THE bytes in
+    let check_bytes = EVERY IS_SOME
+    and the_bytes = MAP THE
+    in
       if cpsr.T /\ arch <> ARMv4 then (* Thumb *)
-        let (b1,ireg1) = (TAKE 2 bytes, word16 (TAKE 2 the_bytes)) in
-          if EVERY IS_SOME b1 then
-            if ((15 -- 13) ireg1 = 0b111w) /\ (12 -- 11) ireg1 <> 0b00w then
-              let (b2,ireg2) = (DROP 2 bytes, word16 (DROP 2 the_bytes)) in
-                if EVERY IS_SOME b2 then
-                  SOME (Encoding_Thumb2, thumb2_decode cpsr.IT (ireg1,ireg2))
+        let bytes1 = TAKE 2 bytes
+        and bytes2 = DROP 2 bytes
+        in
+          if check_bytes bytes1 then
+            let ireg1 = word16 (the_bytes bytes1) in
+              if ((15 -- 13) ireg1 = 0b111w) /\ (12 -- 11) ireg1 <> 0b00w then
+                if check_bytes bytes2 then
+                  let ireg2 = word16 (the_bytes bytes2) in
+                    SOME (Encoding_Thumb2, thumb2_decode cpsr.IT (ireg1,ireg2))
                 else
                   NONE
-            else (* 16-bit Thumb *)
-              SOME (Encoding_Thumb, thumb_decode arch cpsr.IT ireg1)
+              else (* 16-bit Thumb *)
+                SOME (Encoding_Thumb, thumb_decode arch cpsr.IT ireg1)
           else
             NONE
-      else if EVERY IS_SOME bytes then
+      else if check_bytes bytes then
         SOME (Encoding_ARM,
-              arm_decode (version_number arch < 5) (word32 the_bytes))
+              arm_decode (version_number arch < 5) (word32 (the_bytes bytes)))
       else
         NONE`;
 

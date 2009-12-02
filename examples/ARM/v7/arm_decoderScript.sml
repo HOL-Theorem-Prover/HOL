@@ -1394,12 +1394,8 @@ val decode_lem = Q.prove(
      [BIT_def,BITS_THM,DIVMOD_2EXP_def,DIV_2EXP_def,DIV_1,
       DIV2_def,ODD_MOD2_LEM,DIV_DIV_DIV_MULT,MOD_2EXP_def]);
 
-val n2w = wordsTheory.word_index_n2w
-            |> SPEC_ALL
-            |> Q.DISCH `i < dimindex (:'a)`
-
-val n2w = CONJ (INST_TYPE [alpha |-> ``:16``] n2w)
-               (INST_TYPE [alpha |-> ``:32``] n2w)
+val n2w = CONJ (INST_TYPE [alpha |-> ``:16``] wordsTheory.word_index)
+               (INST_TYPE [alpha |-> ``:32``] wordsTheory.word_index)
             |> SIMP_RULE (srw_ss()) [];
 
 val EQ_BITS =
