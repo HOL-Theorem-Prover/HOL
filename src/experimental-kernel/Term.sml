@@ -614,7 +614,8 @@ local
 
   fun ssubst theta t =
       (* only used to substitute in fresh variables (genvars), so no
-         capture check.  *)
+         capture check -- potentially unsound (because there is no
+         guarantee that genvars are actually fresh) *)
       if numItems theta = 0 then raise Unchanged
       else
         case peek(theta, t) of
@@ -638,6 +639,13 @@ local
       insert(fm, k, (delay (fn () => free_names v), v))
 
 in
+
+(* Due to the missing capture check in ssubst, subst can produce wrong results
+   (with accidental variable capture) unless all redexes in theta are
+   variables.
+
+   Therefore, all calls to subst that occur in Thm must ensure this
+   precondition. *)
 
 fun subst theta =
     if null theta then I
@@ -668,12 +676,6 @@ fun subst theta =
         (fn tm => vsubst theta2 (ssubst theta1 tm)
                   handle Unchanged => tm)
       end
-
-(*
-val subst0 = subst
-fun subst theta = Profile.profile "subst" (subst0 theta)
-*)
-
 
 end (* local *)
 
