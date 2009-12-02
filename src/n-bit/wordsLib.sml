@@ -998,7 +998,7 @@ val OR_AND_COMM_RULE = ONCE_REWRITE_RULE [WORD_ADD_COMM, WORD_OR_COMM];
 
 val WORD_REPLICATE_ss =
   simpLib.conv_ss
-    {conv = K (K (wordsLib.WORD_EVAL_CONV)), trace = 3, name = "WORD_EVAL_CONV",
+    {conv = K (K (WORD_EVAL_CONV)), trace = 3, name = "WORD_EVAL_CONV",
      key = SOME([], ``words$word_replicate ^a ^w:'a word``)};
 
 val WORD_EXTRACT_ss = simpLib.merge_ss [WORD_REPLICATE_ss,
