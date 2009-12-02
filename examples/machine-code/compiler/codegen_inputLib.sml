@@ -157,7 +157,12 @@ fun basic_term2assign t1 t2 = let
     val addr = dest_address (subst i ``a:word32``)
     val x = dest_n2w_byte (subst i ``(n2w n):word8``)
     val _ = if is_var (subst i ``m:word32->word8``) then () else fail()
-    in (ACCESS_BYTE,addr,ASSIGN_X_CONST x) end
+    in (ACCESS_BYTE,addr,ASSIGN_X_CONST x) end handle HOL_ERR _ => let
+    val (i,_) = match_term ``(a =+ n2w n) (m:word32->word32)`` tm
+    val addr = dest_address (subst i ``a:word32``)
+    val x = dest_n2w (subst i ``(n2w n):word32``)
+    val _ = if is_var (subst i ``m:word32->word32``) then () else fail()
+    in (ACCESS_WORD,addr,ASSIGN_X_CONST x) end
   in ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_REG (dest_reg t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_CONST (dest_n2w t2)) handle e =>
      ASSIGN_EXP (dest_reg t1, ASSIGN_EXP_STACK (dest_stack t2)) handle e =>
