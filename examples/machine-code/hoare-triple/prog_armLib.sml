@@ -261,7 +261,7 @@ fun arm_prove_one_spec s th = let
     \\ NTAC 3 (FLIP_TAC \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO])
     \\ FLIP_TAC \\ REWRITE_TAC [AND_IMP_INTRO, GSYM CONJ_ASSOC]
     \\ SIMP_TAC std_ss [] \\ FLIP_TAC \\ STRIP_TAC \\ STRIP_TAC
-    THEN1 (FLIP_TAC \\ MATCH_MP_TAC th
+    THEN1 (SIMP_TAC std_ss [ALIGNED_def] \\ FLIP_TAC \\ MATCH_MP_TAC th
            \\ FULL_SIMP_TAC std_ss [ALIGNED_def,ARM_READ_UNDEF_def,
                 markerTheory.Abbrev_def,CONTAINER_def,aligned4_thm,WORD_ADD_0]
            \\ REPEAT (POP_ASSUM MP_TAC) \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
@@ -289,6 +289,8 @@ fun arm_prove_specs s = let
 *)
   fun derive_spec th = let
     val th = SPEC state th
+    val th = RW [ADD_WITH_CARRY_SUB,pairTheory.FST,pairTheory.SND,ADD_WITH_CARRY_SUB_n2w] th
+    val th = SIMP_RULE std_ss [] th
     val tm = (fst o dest_eq o concl o SPEC state) ARMv4T_OK_def
     val th = (RW [AND_IMP_INTRO] o RW [GSYM ARMv4T_OK_def] o SIMP_RULE bool_ss [ARMv4T_OK_def] o DISCH tm) th
     val th = RW [aligned4_thm] th
@@ -328,6 +330,7 @@ val arm_tools  = (arm_spec, arm_jump, arm_status, arm_pc)
 
   fun enc s = let val _ = print ("\n\n"^s^"\n\n") in arm_enc s end
 
+  val thms = arm_spec (enc "TST r5, #3");
   val thms = arm_spec (enc "ADD r1, #10");
   val thms = arm_spec (enc "CMP r1, #10");
   val thms = arm_spec (enc "TST r2, #6");
@@ -388,20 +391,6 @@ val arm_tools  = (arm_spec, arm_jump, arm_status, arm_pc)
   
   val thms = arm_spec (enc "MRS r1, CPSR");
 
-  val s = arm_spec 
-val s = 
-
-open armLib;
-open prog_ppcLib prog_x86Lib;
-
-armLib.arm_step "v4T" "E3A00000"
-
-
-  val s = arm_spec "E3510000"
-  val s = arm_spec "12800001"
-  val s = arm_spec "15911000"
-  val s = arm_spec "1AFFFFFB"
-  
 *)
 
 end

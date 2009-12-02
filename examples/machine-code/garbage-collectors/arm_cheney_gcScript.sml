@@ -275,12 +275,10 @@ val ref_cheney_move_lemma = prove(
         \\ MATCH_MP_TAC ALIGNED_add_1_and_1
         \\ MATCH_MP_TAC ALIGNED_ref_addr
         \\ ASM_REWRITE_TAC [ALIGNED_def])
-      \\ ONCE_REWRITE_TAC [WORD_AND_COMM]
       \\ ASM_SIMP_TAC std_ss []
       \\ `ref_mem x (REF n) (a,xs)` by METIS_TAC [ref_cheney_def]
       \\ FULL_SIMP_TAC std_ss [ref_mem_def,WORD_ADD_SUB]
       \\ IMP_RES_TAC ref_cheney_d \\ IMP_RES_TAC ref_cheney_ALIGNED
-      \\ ONCE_REWRITE_TAC [WORD_AND_COMM]
       \\ ASM_SIMP_TAC bool_ss [INSERT_SUBSET,EMPTY_SUBSET,ALIGNED_def])
   \\ SIMP_TAC std_ss [heap_type_distinct]
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ SIMP_TAC std_ss []
@@ -295,9 +293,7 @@ val ref_cheney_move_lemma = prove(
         \\ FULL_SIMP_TAC bool_ss [ref_mem_def]
         \\ MATCH_MP_TAC ALIGNED_and_1 \\ MATCH_MP_TAC ALIGNED_ref_addr
         \\ ASM_REWRITE_TAC [ALIGNED_def])
-  \\ ONCE_REWRITE_TAC [WORD_AND_COMM]
   \\ FULL_SIMP_TAC std_ss [PAIR_EQ,WORD_ADD_0,word_arith_lemma4]
-  \\ ONCE_REWRITE_TAC [WORD_AND_COMM]
   \\ NTAC 4 STRIP_TAC
   \\ `~(j = 0)` by METIS_TAC []
   \\ IMP_RES_TAC ref_cheney_d \\ IMP_RES_TAC ref_cheney_ALIGNED

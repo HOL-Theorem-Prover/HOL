@@ -193,8 +193,8 @@ val arm_div_lemma = store_thm("arm_div_lemma",
          (FULL_SIMP_TAC std_ss [] THEN DECIDE_TAC)
   THEN `m DIV n * n + m MOD n < n * 2 ** SUC i` by
    (ASM_SIMP_TAC std_ss [EXP,TIMES2,LEFT_ADD_DISTRIB]
-    THEN `2 ** i <> 0` by SIMP_TAC std_ss []
-    THEN `n * 2 ** i <> 0` by ASM_SIMP_TAC std_ss [MULT_EQ_0]
+    THEN `~(2 ** i = 0:num)` by SIMP_TAC std_ss [EXP_EQ_0]
+    THEN `n * 2 ** i <> 0:num` by ASM_SIMP_TAC std_ss [MULT_EQ_0]
     THEN DECIDE_TAC)
   THEN MP_TAC (Q.SPECL [`i`,`n`,`0`,`m DIV n`,`m MOD n`] sub_and_shift_lemma)
   THEN FULL_SIMP_TAC std_ss []

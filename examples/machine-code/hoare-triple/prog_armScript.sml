@@ -497,4 +497,13 @@ val aligned4_thm = store_thm("aligned4_thm",
   \\ `(4 * (n DIV 4)) < 4294967296` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC);
 
+val ADD_WITH_CARRY_SUB_n2w = save_thm("ADD_WITH_CARRY_SUB_n2w",
+  ((RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) 
+    (ONCE_REWRITE_CONV [GSYM WORD_NOT_NOT] THENC
+     ONCE_REWRITE_CONV [word_1comp_n2w] THENC
+     SIMP_CONV (std_ss++wordsLib.SIZES_ss) []) THENC
+   REWRITE_CONV [ADD_WITH_CARRY_SUB])
+      ``add_with_carry (x:word32,n2w n,T)``);
+
+
 val _ = export_theory();
