@@ -50,8 +50,15 @@ val TIMES_2EXP1 =
     (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
      Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def
 
+val word_reduce = Q.prove(
+  `!b. $FCP (K b) = n2w (if b then 1 else 0) : 1 word`,
+  SRW_TAC [fcpLib.FCP_ss]
+     [word_index, DECIDE ``x < 1 = (x = 0n)``, fcpTheory.index_one,
+      bitTheory.BITS_THM, bitTheory.BIT_def]);
+
 val n2w_w2n_RULE = REWRITE_RULE [n2w_w2n] o Q.SPEC `w2n w`
 val word_eq_n2w = REWRITE_RULE [n2w_11] (Q.SPECL [`n2w m`,`n2w n`] word_eq_def)
+val word_reduce_n2w = REWRITE_RULE [word_reduce] word_reduce_n2w
 val word_eq_n2w = n2w_w2n_RULE (GEN_ALL word_eq_n2w)
 val word_or_n2w = n2w_w2n_RULE word_or_n2w
 val word_and_n2w = n2w_w2n_RULE word_and_n2w
@@ -71,7 +78,13 @@ val word_div_n2w = Q.SPEC `n2w m` word_div_def
 val word_asr_n2w = Q.SPECL [`n`,`n2w m`] word_asr_n2w
 val word_lsr_n2w = Q.SPEC `n2w m` word_lsr_n2w
 val word_rol_n2w = Q.SPEC `n2w m` word_rol_def
+val reduce_and_n2w = Q.SPEC `n2w m` reduce_and
+val reduce_or_n2w = Q.SPEC `n2w m` reduce_or
 val sw2sw_n2w = Q.SPEC `n2w n` sw2sw_def
+val add_with_carry_n2w = Q.SPEC `n2w n` add_with_carry_def
+
+val reduce_xnor = ONCE_REWRITE_RULE [METIS_PROVE [] ``(<=>) = (\x y. x = y)``]
+                   reduce_xnor_def
 
 val defs =
   map (DEFN o REWRITE_RULE [GSYM n2w_itself_def, GSYM w2w_itself_def,
@@ -83,7 +96,7 @@ val defs =
        word_bits_n2w, word_signed_bits_n2w, Q.SPEC `c` word_bit_n2w,
        word_join_n2w, sw2sw_n2w, word_extract_n2w, word_slice_n2w,
        word_concat_def, word_log2_n2w, word_reverse_n2w, word_modify_n2w,
-       word_lsb_n2w, word_msb_n2w,
+       word_lsb_n2w, word_msb_n2w, add_with_carry_n2w,
        word_1comp_n2w, word_and_n2w, word_xor_n2w,
        word_2comp_n2w, word_div_n2w, word_sdiv_def,
        MOD_WL word_add_n2w, word_sub_def, MOD_WL word_mul_n2w,
@@ -91,6 +104,8 @@ val defs =
        word_rrx_n2w, REWRITE_RULE [GSYM word_index_def] word_index_n2w,
        word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
        word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
+       word_reduce_n2w, reduce_and_n2w, reduce_or_n2w, reduce_xor_def,
+       reduce_xnor, reduce_nand_def, reduce_nor_def,
        w2l_def,w2s_def,
        word_to_bin_list_def,word_to_oct_list_def,
        word_to_dec_list_def,word_to_hex_list_def,

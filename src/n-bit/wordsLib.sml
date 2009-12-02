@@ -193,7 +193,7 @@ val thms =
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
    (SIMP_RULE std_ss [GSYM ODD_MOD2_LEM,arithmeticTheory.MOD_2EXP_def,
       BITS_def,SUC_SUB] o NUM_RULE [BITS_ZERO2] `n`) BIT_def,
-   INT_MIN_SUM, SUC_RULE MOD_2EXP_EQ,
+   INT_MIN_SUM, SUC_RULE MOD_2EXP_EQ, SUC_RULE BOOLIFY_def,
    numeral_log2,numeral_ilog2,LOG_compute,LOWEST_SET_BIT_compute,
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w ^n` sw2sw_def,
    word_len_def, word_L_def, word_H_def, word_T_def,
@@ -208,6 +208,8 @@ val thms =
    word_lsb_n2w, word_msb_n2w, word_bit_n2w, fcp_n2w,
    NUM_RULE [DIMINDEX_GT_0] `i` word_index_n2w,
    word_bits_n2w, word_signed_bits_n2w, word_slice_n2w, word_extract_n2w,
+   word_reduce_n2w, Q.SPEC `^n2w ^n` reduce_and, Q.SPEC `^n2w ^n` reduce_or,
+   reduce_xor_def, reduce_xnor_def, reduce_nand_def, reduce_nor_def,
    word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
    word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
    l2n_def,n2l_def,s2n_def,n2s_def,l2w_def,w2l_def,s2w_def,w2s_def,
@@ -275,13 +277,15 @@ local
   end
 
   val l1 =
-     ["l2w","w2l","s2w","w2s",
+     ["l2w","w2l","s2w","w2s","add_with_carry",
       "word_from_bin_list","word_from_oct_list","word_from_dec_list",
       "word_from_hex_list","word_to_bin_list","word_to_oct_list",
       "word_to_dec_list","word_to_hex_list","word_from_bin_string",
       "word_from_oct_string","word_from_dec_string","word_from_hex_string",
       "word_to_bin_string","word_to_oct_string","word_to_dec_string",
       "word_to_hex_string",
+      "word_reduce", "reduce_and", "reduce_or", "reduce_xor",
+      "reduce_nand", "reduce_nor", "reduce_xnor",
       "w2w","w2n","sw2sw","word_log2","word_reverse","word_msb",
       "word_join","word_concat","word_bit","word_bits","word_signed_bits",
       "word_slice","word_extract","word_asr","word_lsr","word_lsl","word_ror",
@@ -290,7 +294,7 @@ local
   val l2 =
      ["l2n","n2l","s2n","n2s","HEX","UNHEX","SBIT","BIT","BITS","BITV",
       "SLICE","TIMES_2EXP","DIVMOD_2EXP","LSB","LOG2","LOG","BITWISE",
-      "BIT_REVERSE","SIGN_EXTEND",
+      "BIT_REVERSE","SIGN_EXTEND", "BOOLIFY",
       "num_from_bin_list","num_from_oct_list","num_from_dec_list",
       "num_from_hex_list","num_to_bin_list","num_to_oct_list",
       "num_to_dec_list","num_to_hex_list","num_from_bin_string",
@@ -308,11 +312,16 @@ local
 
   fun is_hex_digit_list t =
         listSyntax.is_list t andalso
-        all is_hex_digit_literal (fst (listSyntax.dest_list t));
+        Lib.all is_hex_digit_literal (fst (listSyntax.dest_list t));
+
+  fun is_bool_list t =
+        listSyntax.is_list t andalso
+        Lib.all (fn t => term_eq F t orelse term_eq T t)
+          (fst (listSyntax.dest_list t));
 
   fun is_hex_string t =
         stringSyntax.is_string_literal t andalso
-        all Char.isHexDigit (String.explode (stringSyntax.fromHOLstring t));
+        Lib.all Char.isHexDigit (String.explode (stringSyntax.fromHOLstring t));
 
   fun is_ground_arg t =
     if pairSyntax.is_pair t then
@@ -323,10 +332,11 @@ local
       numSyntax.is_numeral t orelse
       wordsSyntax.is_word_literal t orelse
       is_uintmax t orelse
-      is_hex_digit_list t orelse
-      is_hex_string t orelse
       term_eq t T orelse
       term_eq t F orelse
+      is_hex_digit_list t orelse
+      is_bool_list t orelse
+      is_hex_string t orelse
       term_eq t ``bit$HEX`` orelse
       term_eq t ``bit$UNHEX`` orelse
       term_eq t ``bool$/\`` orelse
@@ -339,7 +349,7 @@ local
           val typ = type_of (prim_mk_const{Name=name,Thy=thy})
       in
          (length (fst (strip_fun typ)) = length l) andalso
-         Redblackset.member(s,tn) andalso all is_ground_arg l
+         Redblackset.member(s,tn) andalso Lib.all is_ground_arg l
       end
 
   val alpha_rws =
