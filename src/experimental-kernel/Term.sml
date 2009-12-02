@@ -1,14 +1,11 @@
 structure Term :> Term =
 struct
 
-
 open Feedback Lib Type
 
 infixr --> |->
 
-fun ERR f msg = HOL_ERR {origin_structure = "Term",
-                         origin_function = f,
-                         message = msg}
+val ERR = mk_HOL_ERR "Term"
 val WARN = HOL_WARNING "Term"
 
 (* used internally to avoid term rebuilding during substitution and
@@ -27,7 +24,6 @@ end handle Unchanged => let val fy = f y
                         in
                           con(x, fy)
                         end
-
 
 
 type const_key = KernelSig.kernelname
