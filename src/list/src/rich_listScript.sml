@@ -3249,6 +3249,22 @@ val EVERY_GENLIST = store_thm("EVERY_GENLIST",
   ``!n. (!i. i < n ==> P (f i)) ==> EVERY P (GENLIST f n)``,
   Induct_on `n` THEN ASM_SIMP_TAC list_ss [GENLIST,ALL_EL_SNOC] )
 
+val EXISTS_GENLIST = Q.store_thm ("EXISTS_GENLIST",
+  `!n. (?i. i < n /\ P (f i)) ==> EXISTS P (GENLIST f n)`,
+  Induct THEN RW_TAC std_ss [GENLIST, SOME_EL_SNOC]
+    THEN Cases_on `i = n` THEN1 metisLib.METIS_TAC []
+    THEN `i < n` by DECIDE_TAC THEN metisLib.METIS_TAC []);
+
+val TL_GENLIST = Q.store_thm ("TL_GENLIST",
+  `!f n. TL (GENLIST f (SUC n)) = GENLIST (f o SUC) n`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC listTheory.LIST_EQ
+    THEN SRW_TAC [listSimps.LIST_ss]
+           [EL_GENLIST, LENGTH_GENLIST, listTheory.LENGTH_TL]
+    THEN ONCE_REWRITE_TAC [EL |> CONJUNCT2 |> GSYM]
+    THEN `SUC x < SUC n` by DECIDE_TAC
+    THEN IMP_RES_TAC EL_GENLIST
+    THEN ASM_SIMP_TAC std_ss []);
+
 val ZIP_GENLIST = store_thm("ZIP_GENLIST",
   ``!l f n. (LENGTH l = n) ==>
       (ZIP (l,GENLIST f n) = GENLIST (\x. (EL x l,f x)) n)``,
