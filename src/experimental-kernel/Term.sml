@@ -769,30 +769,21 @@ end (* local *)
 val list_mk_abs = list_mk_binder NONE
 
 
-
-fun beta_conv t =
-    case t of
-      App(f, x) => let
-      in
-        case f of
-          Abs(v, body) => if x = v then body else subst [v |-> x] body
-        | _ => raise ERR "beta_conv" "LHS not an abstraction"
-      end
-    | _ => raise ERR "beta_conv" "Term not an application"
+fun beta_conv (App (Abs (v, body), x)) =
+  if x = v then body else subst [v |-> x] body
+  | beta_conv (App _) =
+  raise ERR "beta_conv" "LHS not an abstraction"
+  | beta_conv _ =
+  raise ERR "beta_conv" "Term not an application"
 
 val lazy_beta_conv = beta_conv
 
-fun eta_conv t =
-    case t of
-      Abs(x, body) => let
-      in
-        case body of
-          App(f, x') => if x = x' andalso not (free_in x f) then
-                          f
-                        else raise ERR "eta_conv" "Term not an eta-redex"
-        | _ => raise ERR "eta_conv" "Term not an eta-redex"
-      end
-    | _ => raise ERR "eta_conv" "Term not an eta-redex"
+fun eta_conv (Abs (x, App (f, x'))) =
+  if x = x' andalso not (free_in x f) then
+    f
+  else raise ERR "eta_conv" "Term not an eta-redex"
+  | eta_conv _ =
+  raise ERR "eta_conv" "Term not an eta-redex"
 
 
 (*---------------------------------------------------------------------------*
