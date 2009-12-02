@@ -996,7 +996,12 @@ val WORD_MUL_LSL_ss =
 val LET_RULE = SIMP_RULE (bool_ss++boolSimps.LET_ss) [];
 val OR_AND_COMM_RULE = ONCE_REWRITE_RULE [WORD_ADD_COMM, WORD_OR_COMM];
 
-val WORD_EXTRACT_ss =
+val WORD_REPLICATE_ss =
+  simpLib.conv_ss
+    {conv = K (K (wordsLib.WORD_EVAL_CONV)), trace = 3, name = "WORD_EVAL_CONV",
+     key = SOME([], ``words$word_replicate ^a ^w:'a word``)};
+
+val WORD_EXTRACT_ss = simpLib.merge_ss [WORD_REPLICATE_ss,
   rewrites ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
       WORD_EXTRACT_LSL, word_concat_def, LET_RULE word_join_def,
       word_rol_def, LET_RULE word_ror, word_asr, word_lsr_n2w,
@@ -1009,7 +1014,7 @@ val WORD_EXTRACT_ss =
       (GEN_ALL o ISPEC `words$word_extract h l :'a word -> 'b word`) COND_RAND,
       WORD_BITS_EXTRACT, WORD_w2w_EXTRACT, sw2sw_w2w, word_lsb, word_msb] @
     map (REWRITE_RULE [WORD_BITS_EXTRACT])
-     [WORD_ALL_BITS, WORD_SLICE_THM, WORD_BIT_BITS]);
+     [WORD_ALL_BITS, WORD_SLICE_THM, WORD_BIT_BITS])];
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1085,7 +1090,7 @@ local
              SPEC `^a` n2w_def, pred_setTheory.NOT_IN_EMPTY,
              ISPEC `0n` pred_setTheory.IN_INSERT,
              ISPEC `^a` pred_setTheory.IN_INSERT]
-  val rw2 = [fcpTheory.FCP_UPDATE_def,LESS_COR,sw2sw,w2w,
+  val rw2 = [fcpTheory.FCP_UPDATE_def,LESS_COR,sw2sw,w2w,word_replicate_def,
              word_join,word_concat_def,word_reverse_def,word_modify_def,
              word_lsl_def,word_lsr_def,word_asr_def,word_ror_def,
              word_rol_def,word_rrx_def,word_msb_def,word_lsb_def,
@@ -1372,7 +1377,7 @@ fun remove_word_cast_printer () =
 
 (* ------------------------------------------------------------------------- *)
 (* Guessing the word length for the result of extraction (><),               *)
-(* concatenate (@@) and word_replicate                                       *)
+(* concatenate (@@), word_replicate and concat_word_list                     *)
 (* ------------------------------------------------------------------------- *)
 
 val notify_on_word_length_guess = ref true;
