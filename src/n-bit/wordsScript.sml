@@ -1750,8 +1750,8 @@ val reduce_and = Q.store_thm ("reduce_and",
     \\ Cases_on `w ' n`
     \\ SRW_TAC [listSimps.LIST_ss]
          [NOT_EVERY_HD_F, GSYM rich_listTheory.AND_EL_FOLDL,
-          rich_listTheory.AND_EL_DEF, rich_listTheory.TL_GENLIST]
-    \\ MATCH_MP_TAC rich_listTheory.EXISTS_GENLIST
+          rich_listTheory.AND_EL_DEF, rich_listTheory.TL_GENLIST,
+          rich_listTheory.EXISTS_GENLIST]
     \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
     \\ IMP_RES_TAC NOT_UINTMAXw
     \\ Cases_on `0 < n`
@@ -1777,8 +1777,8 @@ val reduce_or = Q.store_thm ("reduce_or",
     \\ Cases_on `w ' n`
     \\ SRW_TAC [listSimps.LIST_ss]
          [EXISTS_HD_T, GSYM rich_listTheory.OR_EL_FOLDL,
-          rich_listTheory.OR_EL_DEF, rich_listTheory.TL_GENLIST]
-    \\ MATCH_MP_TAC rich_listTheory.EXISTS_GENLIST
+          rich_listTheory.OR_EL_DEF, rich_listTheory.TL_GENLIST,
+          rich_listTheory.EXISTS_GENLIST]
     \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
     \\ IMP_RES_TAC NOT_0w
     \\ Cases_on `0 < n`
