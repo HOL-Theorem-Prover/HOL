@@ -25,7 +25,7 @@ quietdec := false;
 
 
 (*---------------------------------------------------------------------------
- * generalise a variable in an implication of ==>
+ * generalise a variable in an implication
  *
  *   A |- t1 v ==> t2 v
  * ---------------------------------------------
@@ -44,6 +44,22 @@ fun GEN_IMP v thm =
 fun LIST_GEN_IMP vL thm =
    foldr (uncurry GEN_IMP) thm vL
 
+
+
+(*---------------------------------------------------------------------------
+ * generalise a variable in an equation
+ *
+ *   A |- t1 v = t2 v
+ * ---------------------------------------------
+ *   A |- (!v. t1 v) = (!v. t2 v)
+ *
+ *---------------------------------------------------------------------------*)
+
+fun GEN_EQ v thm =
+   QUANT_CONV (K thm) (mk_forall (v, lhs (concl thm)))
+
+fun LIST_GEN_EQ vL thm =
+   foldr (uncurry GEN_EQ) thm vL
 
 (*---------------------------------------------------------------------------
  * Introduces EXISTS on both sides of an implication
@@ -907,6 +923,8 @@ fun mk_context2 l [] = l
         in
           mk_context2 l (thm1::thmL)
         end
+     else if (is_eq body) then
+        mk_context2 (thm::(GSYM thm)::l) thmL
      else if (is_disj body) then
         let
           val (t1,t2) = dest_disj body
