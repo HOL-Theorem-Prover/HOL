@@ -24,7 +24,7 @@ fun AUTO_ALPHA_CONV () = let
   in doit end
 
 val COMPILER_TAC =
-    SIMP_TAC bool_ss [LET_DEF,word_div_def,word_mod_def]
+    SIMP_TAC bool_ss [LET_DEF,word_div_def,word_mod_def,w2w_CLAUSES]
     THEN SIMP_TAC std_ss [WORD_OR_CLAUSES]
     THEN REWRITE_TAC [WORD_CMP_NORMALISE]
     THEN REWRITE_TAC [WORD_HIGHER,WORD_GREATER,WORD_HIGHER_EQ,

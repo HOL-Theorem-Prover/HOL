@@ -8,4 +8,6 @@ sig
 
     val arm_tools         : decompiler_tools
 
+    val arm_enc           : string -> string
+
 end

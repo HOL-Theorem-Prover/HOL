@@ -107,7 +107,8 @@ fun prove_spec th imp def pre_tm post_tm = let
     \\ SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
     \\ AUTO_EXISTS_TAC
     \\ FULL_SIMP_TAC std_ss []
-    \\ FULL_SIMP_TAC (std_ss++star_ss) [] \\ METIS_TAC [])
+    \\ FULL_SIMP_TAC (std_ss++star_ss) [AC WORD_MULT_COMM WORD_MULT_ASSOC] 
+    \\ METIS_TAC [])
   val th = MATCH_MP th lemma
   val th = RW [GSYM SPEC_MOVE_COND] (DISCH_ALL th)
   val tm = (cdr o concl o SPEC_ALL) def

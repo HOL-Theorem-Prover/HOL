@@ -169,7 +169,7 @@ fun post_process_thm th = let
     in th end
   val th = repeat f th
   val th = RW [ALIGNED_def] th
-  val th = SIMP_RULE std_ss [wordsTheory.WORD_EQ_SUB_ZERO,w2w_eq_n2w] th
+  val th = SIMP_RULE std_ss [wordsTheory.WORD_EQ_SUB_ZERO,w2w_eq_n2w,w2w_CLAUSES] th
   in calculate_length_and_jump th end;
 
 fun calc_code th = let

@@ -136,7 +136,7 @@ fun x86_guard2assembly (GUARD_NOT t) = let
   | x86_guard2assembly (GUARD_OTHER tm) = let
       val (t1,t2) = dest_eq tm
       val code = hd (x86_assign2assembly (term2assign t1 t2))
-      val code = "cmp" ^ (implode o tl o tl o tl o explode) code
+      val code = "cmp" ^ (implode o tl o tl o tl o tl o tl o explode) code
       in ([code], ("e","ne")) end;
 
 

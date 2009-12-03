@@ -63,7 +63,7 @@ val builtin_symbols_set_def = Define `
       (w + 176w,"atomp"); (w + 192w,"consp"); (w + 208w,"numberp");
       (w + 224w,"symbolp"); (w + 240w,"lambda")}`;
 
-val set_add_def = Define `set_add a x (b,s) = (b - a, s) IN x`;
+val set_add_def = Define `set_add a x (b,s) = (b - (a:'a word), s) IN x`;
 
 val lisp_symbol_table_def = Define `
   lisp_symbol_table x (a,dm,m,dg,g) =
@@ -336,13 +336,13 @@ val lisp_inv_test_lemma = prove(
   THEN1 (IMP_RES_TAC NOT_ALIGNED \\ FULL_SIMP_TAC std_ss [WORD_SUB_ADD])
   \\ FULL_SIMP_TAC std_ss [ALIGNED_and_1]
   \\ FULL_SIMP_TAC std_ss [ADDR32_n2w,word_add_n2w]
-  \\ REWRITE_TAC [DECIDE ``4 * n + 2 = 2 * (2 * n + 1)``]
+  \\ REWRITE_TAC [DECIDE ``4 * n + 2 = 2 * (2 * n + 1):num``]
   \\ REWRITE_TAC [GSYM word_mul_n2w,n2w_and_1_lemma]
   \\ STRIP_ASSUME_TAC (Q.SPEC `w1` EXISTS_ADDR32)
   \\ FULL_SIMP_TAC std_ss [ALIGNED_ADDR32,ALIGNED_ADD_EQ,
        word_arith_lemma4,ALIGNED_n2w]
   \\ Q.SPEC_TAC (`a'`,`q`) \\ Cases_word
-  \\ REWRITE_TAC [ADDR32_n2w,word_add_n2w,DECIDE ``4*n+3 = 2*(2*n+1)+1``]
+  \\ REWRITE_TAC [ADDR32_n2w,word_add_n2w,DECIDE ``4*n+3 = 2*(2*n+1)+1:num``]
   \\ REWRITE_TAC [GSYM word_mul_n2w,GSYM word_add_n2w,n2w_and_1_lemma]);
 
 val lisp_inv_test = save_thm("lisp_inv_test",let
@@ -644,7 +644,7 @@ val lisp_inv_ADD = store_thm("lisp_inv_ADD",
     lisp_inv (LISP_ADD x1 x2,x2,x3,x4,x5,x6,limit) (w1+w2-2w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
   isVal_TAC
   \\ ASM_REWRITE_TAC [LISP_ADD_def,GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_ADD_SUB]
-  \\ ASM_REWRITE_TAC [word_add_n2w,DECIDE ``4*m+2+4*n = (m+n) * 4 + 2``]
+  \\ ASM_REWRITE_TAC [word_add_n2w,DECIDE ``4*m+2+4*n = (m+n) * 4 + 2:num``]
   \\ (MATCH_MP_TAC o RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH) lisp_inv_Val
   \\ SIMP_TAC std_ss [] \\ METIS_TAC []);
 
@@ -654,7 +654,7 @@ val lisp_inv_ADD1 = store_thm("lisp_inv_ADD1",
     lisp_inv (LISP_ADD x1 (Val 1),x2,x3,x4,x5,x6,limit) (w1 + 4w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
   isVal_TAC
   \\ ASM_REWRITE_TAC [LISP_ADD_def,GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_ADD_SUB]
-  \\ ASM_REWRITE_TAC [word_add_n2w,DECIDE ``4*m+2+4 = (m+1) * 4 + 2``]
+  \\ ASM_REWRITE_TAC [word_add_n2w,DECIDE ``4*m+2+4 = (m+1) * 4 + 2:num``]
   \\ (MATCH_MP_TAC o GEN_ALL o RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH) lisp_inv_Val
   \\ SIMP_TAC std_ss [] \\ METIS_TAC []);
 
@@ -702,7 +702,7 @@ val word_lsr_n2w = store_thm("word_lsr_n2w",
   ONCE_REWRITE_TAC [GSYM n2w_w2n] THEN REWRITE_TAC [w2n_lsr]
   THEN REWRITE_TAC [n2w_w2n] THEN SIMP_TAC std_ss [w2n_n2w]);
 
-val LEMMA_MULT_4 = DECIDE ``!n. n < 1073741824 ==> 4 * n + 2 < 4294967296``
+val LEMMA_MULT_4 = DECIDE ``!n. n < 1073741824 ==> 4 * n + 2 < 4294967296:num``
 
 val lisp_inv_Val_nil_nil = let
   val imp = ((UNDISCH o SPEC_ALL o UNDISCH) lisp_inv_Val)
