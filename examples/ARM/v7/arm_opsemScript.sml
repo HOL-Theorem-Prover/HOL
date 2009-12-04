@@ -1894,14 +1894,8 @@ val bit_field_clear_insert_instr_def = iDefine`
         ((read_reg ii d |||
           (if n = 15w then constT 0w else read_reg ii n)) >>=
          (\(rd,rn).
-            let result = word_modify (\i b.
-                           if lsbit <= i /\ i <= msbit then
-                             rn ' (i - lsbit)
-                           else
-                             b) rd
-            in
-              (increment_pc ii enc |||
-               write_reg ii d result) >>= unit2))`;
+            (increment_pc ii enc |||
+             write_reg ii d (bit_field_insert msbit lsbit rn rd)) >>= unit2))`;
 
 (* ........................................................................
    T2: PLD{W}<c> [<Rn>,#<imm12>]
