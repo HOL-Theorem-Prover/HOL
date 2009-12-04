@@ -27,10 +27,12 @@ val I_DEF = Q.new_definition("I_DEF",        `I = S K (K:'a->'a->'a)`);
 val C_DEF = Q.new_definition("C_DEF",        `C = \f x y. f y x`);
 val W_DEF = Q.new_definition("W_DEF",        `W = \f x. f x x`);
 val o_DEF = Q.new_infixr_definition("o_DEF", `$o f g = \x. f(g x)`, 800);
+val APP_DEF = Q.new_definition ("APP_DEF",   `$:> x f = f x`);
 
 val UPDATE_def = Q.new_definition("UPDATE_def",
    `UPDATE a b = \f c. if a = c then b else f c`);
 
+val _ = set_fixity ":>" (Infixl 310);
 val _ = set_fixity "=+" (Infix(NONASSOC, 320));
 val _ = overload_on("=+", ``UPDATE``);
 
@@ -279,19 +281,16 @@ val FAIL_THM = Q.store_thm("FAIL_THM", `FAIL x y = x`,
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in
-    S "val _ = Parse.hide \"C\";"; NL();
-    S "val _ ="; NL();
-    S "   let open computeLib" ; NL();
-    S "       val K_tm = Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}"; NL();
-    S "   in add_funs"; NL();
-    S "       [K_THM,S_DEF,I_THM,C_DEF,W_DEF,o_THM,K_o_THM,APPLY_UPDATE_THM];";
-    NL();
-    S "      set_skip the_compset K_tm (SOME 1)"; NL();
-    S "   end;";
-    NL()
+  let fun S s = (PP.add_string ppstrm s; PP.add_newline ppstrm) in
+    S "val _ = Parse.hide \"C\";";
+    S "val _ =";
+    S "   let open computeLib";
+    S "       val K_tm = Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}";
+    S "   in add_funs";
+    S "       [K_THM,S_DEF,I_THM,C_DEF,W_DEF,o_THM,K_o_THM,";
+    S "        APP_DEF,APPLY_UPDATE_THM];";
+    S "      set_skip the_compset K_tm (SOME 1)";
+    S "   end;"
   end)};
 
 val _ = export_theory();
