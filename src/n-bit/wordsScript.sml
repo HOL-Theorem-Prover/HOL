@@ -211,6 +211,10 @@ val BIT_SET_def = Define`
 
 val _ = ai := true;
 
+val bit_field_insert_def = Define`
+  bit_field_insert h l a =
+    word_modify (\i. COND (l <= i /\ i <= h) (a ' (i - l)))`;
+
 val word_len_def = Define`
   word_len (w:'a word) = dimindex (:'a)`;
 
