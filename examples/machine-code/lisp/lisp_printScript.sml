@@ -846,7 +846,7 @@ val arm_print_loop_lemma = prove(
              (arm_copy_symbol (r3 + r9,r7,dm,m,dg,g,df,f) =
                (c,dm,m,dg,g,df,fi)) /\
              (p * one_string r7 a c) (fun2set (fi,df))` by
-              METIS_TAC [EVAL ``2**32``,arm_copy_symbol_lemma]
+              METIS_TAC [EVAL ``(2:num)**32``,arm_copy_symbol_lemma]
     \\ Q.EXISTS_TAC `h`
     \\ Q.EXISTS_TAC `fi`
     \\ ASM_SIMP_TAC std_ss [arm_print_loop1_def]
@@ -1419,7 +1419,7 @@ val (arm_print_sexp_thms,arm_print_sexp_def,arm_print_sexp_pre_def) = compile_al
 
 val one_space_LESS_EQ = prove(
   ``!n a b df f. one_space a n b ((fun2set (f,df)):(word32 # 'a) set) ==> n <= 2**32``,
-  ONCE_REWRITE_TAC [DECIDE ``n<=m = ~(m+1<=n):num``]
+  ONCE_REWRITE_TAC [DECIDE ``n<=m = ~(m+1<=n:num)``]
   \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC bool_ss [LESS_EQ_EXISTS,GSYM ADD_ASSOC]
   \\ FULL_SIMP_TAC std_ss [one_space_ADD]

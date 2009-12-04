@@ -271,11 +271,7 @@ val arm_string_length_thm = prove(
 
 (* --- TEST STRING EQUALITY --- *)
 
-val (th1,arm_streq_def,arm_streq_pre_def) = 
-
-compile 
-val target = "x86" 
-val tm = ``
+val (th1,arm_streq_def,arm_streq_pre_def) = compile_all ``
   arm_streq (r4:word32,r5:word32,r6:word32,r7:word32,df:word32 set,dg:word32 set,f:word32->word8,g:word32->word8) =
     if r7 = 0x0w then
       (let r5 = r7 + r5 in (r4,r5,r6,r7,df,dg,f,g))
@@ -356,7 +352,7 @@ val arm_strcopy_lemma = prove(
   \\ FULL_SIMP_TAC std_ss [string_mem_def,string_mem_dom_def,INSERT_SUBSET]
   \\ Cases_on `s` THENL [
     SIMP_TAC std_ss [LENGTH,string_mem_def,APPLY_UPDATE_THM]
-    \\ SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w,prog_armTheory.EXTRACT_BYTE]
+    \\ SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w]
     \\ `ORD h < 256` by REWRITE_TAC [ORD_BOUND]
     \\ `ORD h < 4294967296` by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [GSYM WORD_NOT_LOWER_EQUAL]
@@ -367,7 +363,7 @@ val arm_strcopy_lemma = prove(
     \\ ASM_SIMP_TAC std_ss []
     \\ `~(LENGTH (STRING h (STRING h' t)) = 1)` by
          (SIMP_TAC std_ss [LENGTH] \\ DECIDE_TAC)
-    \\ ASM_SIMP_TAC std_ss [prog_armTheory.EXTRACT_BYTE]
+    \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [NOT_CONS_NIL]
     \\ `(w2n b + 1) < 4294967296` by
          (FULL_SIMP_TAC std_ss [LENGTH] \\ DECIDE_TAC)
@@ -611,8 +607,8 @@ val arm_symbol_add_lemma = prove(
   \\ `(STRLEN s + 3) DIV 4 * 4 <= STRLEN s + 3` by
      (ASSUME_TAC (Q.SPEC `STRLEN s + 3` (SIMP_RULE std_ss [] (Q.SPEC `4` DIVISION)))
       \\ `(STRLEN s + 3) MOD 4 < 4` by SIMP_TAC std_ss [MOD_LESS] \\ DECIDE_TAC)
-  THENL [
-      Q.ABBREV_TAC `a2 = a + n2w (8 + (LENGTH h + 3) DIV 4 * 4)`
+  THEN1 
+     (Q.ABBREV_TAC `a2 = a + n2w (8 + (LENGTH h + 3) DIV 4 * 4)`
       \\ `w2n a + 4 < 4294967296 /\
           (w2n a + (8 + (STRLEN h + 3) DIV 4 * 4)) < 4294967296 /\
           8 + (STRLEN h + 3) DIV 4 * 4 < 4294967296` by
@@ -634,8 +630,9 @@ val arm_symbol_add_lemma = prove(
       \\ Q.UNABBREV_TAC `a2`
       \\ `8 + STRLEN h < 4294967296 /\
           w2n a + (8 + STRLEN h) < 4294967296` by DECIDE_TAC
-      \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [WORD_LS,word_add_def,w2n_n2w,LESS_EQ_DIV_MULT],
-      STRIP_ASSUME_TAC (UNDISCH_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO, EVAL ``2**32``]
+      \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [WORD_LS,word_add_def,w2n_n2w,LESS_EQ_DIV_MULT])
+  THEN1
+     (STRIP_ASSUME_TAC (UNDISCH_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO, EVAL ``(2:num)**32``]
         (Q.SPECL [`s`,`h`,`k`,`a + 8w`,`n2w (STRLEN s)`] arm_streq_lemma)))
       \\ ASM_SIMP_TAC std_ss [WORD_ADD_SUB]
       \\ Q.ABBREV_TAC `a2 = a + n2w (8 + (STRLEN s + 3) DIV 4 * 4)`
@@ -660,7 +657,7 @@ val arm_symbol_add_lemma = prove(
       \\ Q.UNABBREV_TAC `a2`
       \\ `8 + STRLEN s < 4294967296 /\
           w2n a + (8 + STRLEN s) < 4294967296` by DECIDE_TAC
-      \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [WORD_LS,word_add_def,w2n_n2w,LESS_EQ_DIV_MULT]]);
+      \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [WORD_LS,word_add_def,w2n_n2w,LESS_EQ_DIV_MULT]));
 
 
 (* --- UPDATE SYMBOL TABLE --- *)

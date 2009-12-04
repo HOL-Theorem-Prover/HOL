@@ -4,6 +4,8 @@ open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
 open lisp_typeTheory lisp_semanticsTheory;
 open lisp_evalTheory;
 
+val _ = numLib.prefer_num();
+
 (* translating the semantics' s-expressions into implementation s-expressions *)
 
 val atom2sexp_def = Define `
