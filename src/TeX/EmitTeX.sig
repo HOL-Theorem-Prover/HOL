@@ -12,6 +12,11 @@ sig
     val print_datatypes           : string -> unit
     val datatype_thm_to_string    : thm -> string
 
+    type override_map = string -> (string * int) option
+    val raw_pp_term_as_tex        : override_map -> ppstream -> term -> unit
+    val raw_pp_type_as_tex        : override_map -> ppstream -> hol_type -> unit
+    val raw_pp_theorem_as_tex     : override_map -> ppstream -> thm -> unit
+
     val pp_term_as_tex            : ppstream -> term -> unit
     val pp_type_as_tex            : ppstream -> hol_type -> unit
     val pp_theorem_as_tex         : ppstream -> thm -> unit

@@ -13,6 +13,7 @@ sig
  val LET_EQ_TAC       : thm list -> tactic
  val TUPLE            : term -> thm -> thm
  val TUPLE_TAC        : term -> tactic
+ val SPLIT_QUANT_CONV : term -> conv
  val ELIM_TUPLED_QUANT_CONV : conv
 
  val PABS_ELIM_CONV   : conv

@@ -50,6 +50,8 @@ val CONSEQ_CONV___APPLY_CONV_RULE     : thm -> term -> (term -> thm) -> thm;
 val GEN_ASSUM               : term -> thm -> thm;
 val GEN_IMP                 : term -> thm -> thm;
 val LIST_GEN_IMP            : term list -> thm -> thm;
+val GEN_EQ                  : term -> thm -> thm;
+val LIST_GEN_EQ             : term list -> thm -> thm;
 val EXISTS_INTRO_IMP        : term -> thm -> thm;
 val LIST_EXISTS_INTRO_IMP   : term list -> thm -> thm;
 val SPEC_ALL_TAC            : tactic;

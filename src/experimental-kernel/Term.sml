@@ -16,14 +16,11 @@ app load ["Feedback","Lib","Type","KernelSig","Lexis",
           "Redblackmap","Binarymap"];
 *)
 
-
 open Feedback Lib Type Kind
 
 infixr --> |->
 
-fun ERR f msg = HOL_ERR {origin_structure = "Term",
-                         origin_function = f,
-                         message = msg}
+val ERR = mk_HOL_ERR "Term"
 val WARN = HOL_WARNING "Term"
 
 val ==> = Kind.==>;   infixr 3 ==>;
@@ -44,7 +41,6 @@ end handle Unchanged => let val fy = f y
                         in
                           con(x, fy)
                         end
-
 
 
 type tyvar = string * kind * int (* rank *)
@@ -1076,7 +1072,9 @@ local
 
   fun ssubst theta t =
       (* only used to substitute in fresh variables (genvars), so no
-         capture check.  The free type vars of the type of the genvar
+         capture check -- potentially unsound (because there is no
+         guarantee that genvars are actually fresh).
+         The free type vars of the type of the genvar
          will be a subset of the free type vars of the redex. *)
       if numItems theta = 0 then raise Unchanged
       else
@@ -1108,6 +1106,13 @@ local
 
 in
 
+(* Due to the missing capture check in ssubst, subst can produce wrong results
+   (with accidental variable capture) unless all redexes in theta are
+   variables.
+
+   Therefore, all calls to subst that occur in Thm must ensure this
+   precondition. *)
+
 fun subst theta =
     if null theta then I
     else if List.all (is_var o #redex) theta then let
@@ -1137,12 +1142,6 @@ fun subst theta =
         (fn tm => vsubst theta2 (ssubst theta1 tm)
                   handle Unchanged => tm)
       end
-
-(*
-val subst0 = subst
-fun subst theta = Profile.profile "subst" (subst0 theta)
-*)
-
 
 end (* local *)
 
@@ -1566,52 +1565,39 @@ end (* local *)
 val list_mk_tyabs = list_mk_tybinder NONE
 
 
-
-fun beta_conv t =
-    case t of
-      App(f, x) => let
-      in
-        case f of
-          Abs(v, body) => if eq x v then body else subst [v |-> x] body
-        | _ => raise ERR "beta_conv" "LHS not an abstraction"
-      end
-    | _ => raise ERR "beta_conv" "Term not an application"
+fun beta_conv (App (Abs (v, body), x)) =
+  if eq x v then body else subst [v |-> x] body
+  | beta_conv (App _) =
+  raise ERR "beta_conv" "LHS not an abstraction"
+  | beta_conv _ =
+  raise ERR "beta_conv" "Term not an application"
 
 val lazy_beta_conv = beta_conv
 
-fun eta_conv t =
-    case t of
-      Abs(x, body) => let
-      in
-        case body of
-          App(f, x') => if eq x x' andalso not (free_in x f) then
-                          f
-                        else raise ERR "eta_conv" "Term not an eta-redex"
-        | _ => raise ERR "eta_conv" "Term not an eta-redex"
-      end
-    | _ => raise ERR "eta_conv" "Term not an eta-redex"
+fun eta_conv (Abs (x, App (f, x'))) =
+  if eq x x' andalso not (free_in x f) then
+    f
+  else raise ERR "eta_conv" "Term not an eta-redex"
+  | eta_conv _ =
+  raise ERR "eta_conv" "Term not an eta-redex"
 
-fun ty_beta_conv t =
-    case t of
-      TApp(f, ty) => let
-      in
-        case f of
-          TAbs(a, body) => if ty = a then body else inst [a |-> ty] body
-        | _ => raise ERR "ty_beta_conv" "LHS not a type abstraction"
-      end
-    | _ => raise ERR "ty_beta_conv" "Term not a type application"
 
-fun ty_eta_conv t =
-    case t of
-      TAbs(a, body) => let
-      in
-        case body of
-          TApp(f, a') => if a = a' andalso not (mem a (type_vars_in_term f)) then
-                          f
-                        else raise ERR "ty_eta_conv" "Term not a type eta-redex"
-        | _ => raise ERR "ty_eta_conv" "Term not a type eta-redex"
-      end
-    | _ => raise ERR "ty_eta_conv" "Term not an eta-redex"
+fun ty_beta_conv (TApp (TAbs (a, body), ty)) =
+  if ty = a then body else inst [a |-> ty] body
+  | ty_beta_conv (TApp _) =
+  raise ERR "ty_beta_conv" "LHS not a type abstraction"
+  | ty_beta_conv _ =
+  raise ERR "ty_beta_conv" "Term not a type application"
+
+fun ty_eta_conv (TAbs(a, TApp(f, a'))) =
+  if a = a' andalso not (mem a (type_vars_in_term f)) then
+    f
+  else raise ERR "ty_eta_conv" "Term not a type eta-redex"
+  | ty_eta_conv (TAbs _) =
+  raise ERR "ty_eta_conv" "Term not a type eta-redex"
+  | ty_eta_conv _ =
+  raise ERR "ty_eta_conv" "Term not a type eta-redex"
+
 
 (*---------------------------------------------------------------------------*
  *       Beta-conversion of all types within a term.                         *

@@ -327,44 +327,55 @@ val is_universal   = same_const boolSyntax.universal
 val is_existential = same_const boolSyntax.existential;
 
 local
-  val PQUANT_ELIM_STEP_CONV = HO_REWR_CONV ELIM_PFORALL ORELSEC
-                              HO_REWR_CONV ELIM_PEXISTS;
-  fun PQUANT_ELIM_CONV tm = 
-      (REPEATC (PQUANT_ELIM_STEP_CONV) THENC
-       TRY_CONV (QUANT_CONV PQUANT_ELIM_CONV)) tm
-
-  fun CONV tm = ((RAND_CONV PABS_ELIM_CONV) THENC
-                 PQUANT_ELIM_CONV) tm
+  val ELIM_PEXISTS2 = prove (``(?p:('a#'b). P (FST p) (SND p) p) = ?p1 p2. P p1 p2 (p1,p2)``,
+                         CONV_TAC (LHS_CONV (HO_REWR_CONV EXISTS_PROD)) THEN
+                         REWRITE_TAC[FST, SND])
+  val ELIM_PFORALL2 = prove (``(!p:('a#'b). P (FST p) (SND p) p) = !p1 p2. P p1 p2 (p1,p2)``,
+                         CONV_TAC (LHS_CONV (HO_REWR_CONV FORALL_PROD)) THEN
+                         REWRITE_TAC[FST, SND]);
+                            
+  val ELIM_PEXISTS_CONV = HO_REWR_CONV ELIM_PEXISTS2;
+  val ELIM_PFORALL_CONV = HO_REWR_CONV ELIM_PFORALL2;
 
   fun dest_tupled_quant tm =
     case total dest_comb tm
      of NONE => NONE
       | SOME(f,x) =>
         if is_comb x andalso is_uncurry_tm (rator x)
-        then if is_existential f then SOME (dest_exists, list_mk_exists) else
-             if is_universal f   then SOME (dest_forall, list_mk_forall)
+        then if is_existential f then SOME ELIM_PEXISTS_CONV else
+             if is_universal f   then SOME ELIM_PFORALL_CONV
              else NONE
         else NONE
-  fun ndest_quant dquant 0 tm = ([],tm)
-    | ndest_quant dquant n tm =
-       let val (v,M) = dquant tm
-           val (V,body) = ndest_quant dquant (n-1) M
-       in (v::V,body)
-       end
-in
-fun ELIM_TUPLED_QUANT_CONV tm =
- case dest_tupled_quant tm
-  of NONE => raise PERR "TUPLED_QUANT_CONV" ""
-   | SOME (dest_quant, list_mk_quant) =>
-     let val V = strip_pair(fst(dest_pabs(rand tm)))
-         val thm = CONV tm
-         val rside = rhs (concl thm)
-         val (W,body) = ndest_quant dest_quant (length V) rside
-     in TRANS thm
-          (ALPHA rside
-              (list_mk_quant(V, subst(map2 (curry op|->) W V) body)))
- end
-end ;
 
+  fun PQUANT_ELIM_CONV quant_elim vc = 
+      if (is_var vc) then (RAND_CONV (ALPHA_CONV vc)) else
+      let
+         val (vc1, vc2) = pairSyntax.dest_pair vc;
+         val conv = (quant_elim THENC
+                    (QUANT_CONV (PQUANT_ELIM_CONV quant_elim vc2)) THENC
+                    (PQUANT_ELIM_CONV quant_elim vc1));
+      in
+         conv
+      end;
+in 
+   fun ELIM_TUPLED_QUANT_CONV tm =
+      case dest_tupled_quant tm
+         of NONE => raise PERR "TUPLED_QUANT_CONV" ""
+          | SOME (quant_elim) =>
+               ((RAND_CONV PABS_ELIM_CONV) THENC
+                PQUANT_ELIM_CONV quant_elim (fst (dest_pabs(rand tm)))) tm
+
+   fun SPLIT_QUANT_CONV vc tm =
+      let
+         val quant_elim = 
+                 if is_universal (rator tm) then ELIM_PFORALL_CONV else
+                 if is_existential (rator tm) then ELIM_PEXISTS_CONV else
+                 raise PERR "SPLIT_QUANT_CONV" ""
+         val (v, _) = dest_abs (rand tm) handle HOL_ERR _ => raise PERR "SPLIT_QUANT_CONV" ""
+         val _ = if (type_of vc = type_of v) then () else raise PERR "SPLIT_QUANT_CONV" "";
+      in
+         PQUANT_ELIM_CONV quant_elim vc tm
+      end;
+end;
 
 end

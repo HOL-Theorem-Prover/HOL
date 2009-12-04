@@ -1,7 +1,7 @@
 structure ConseqConvScript =
 struct
 
-open HolKernel Parse boolLib Drule;
+open HolKernel Parse Drule Tactical Tactic Conv Rewrite boolTheory;
 
 val _ = new_theory "ConseqConv";
 

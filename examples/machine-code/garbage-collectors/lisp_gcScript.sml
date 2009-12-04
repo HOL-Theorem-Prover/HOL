@@ -266,7 +266,6 @@ val ref_cheney_move_lemma = prove(
     ref_cheney (m1,e) (a,d,xs2,ys) /\ (x2 = ref_field a (x1,xx)) /\ (j2 = ref_addr a j1) /\ (d2 = d) /\
     arm_move_pre(ref_addr a j,ref_field a (x,xx),r7,r8, d, xs)``,
   SIMP_TAC std_ss [def1,GSYM AND_IMP_INTRO]
-  \\ ONCE_REWRITE_TAC [WORD_AND_COMM]
   \\ STRIP_TAC \\ IMP_RES_TAC ref_field_and_3
   \\ ASM_SIMP_TAC bool_ss []
   \\ Q.PAT_ASSUM `!xnn.nnn` (K ALL_TAC)
@@ -303,7 +302,6 @@ val ref_cheney_move_lemma = prove(
         \\ `ref_field a (q,q'') && 3w = 1w` by METIS_TAC []
         \\ METIS_TAC [ALIGNED_def,ref_field_and_3_EQ_1])
   \\ FULL_SIMP_TAC std_ss [PAIR_EQ,WORD_ADD_0,word_arith_lemma4]
-  \\ ONCE_REWRITE_TAC [WORD_AND_COMM]
   \\ REVERSE (NTAC 6 STRIP_TAC) THEN1
     (`~(j = 0)` by METIS_TAC []
      \\ IMP_RES_TAC ref_cheney_d \\ IMP_RES_TAC ref_cheney_ALIGNED
@@ -1350,7 +1348,7 @@ val ok_data_IMP_ref_field_heap_el = prove(
             (ref_field a (heap_el a v) = v)``,
   Cases_on `ALIGNED v`
   \\ ASM_SIMP_TAC std_ss [ok_data_def,ref_field_def,heap_el_def]
-  \\ REWRITE_TAC [GSYM (EVAL ``2**32``)]
+  \\ REWRITE_TAC [GSYM (EVAL ``(2**32):num``)]
   \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC (IN_ch_active_set2)
   \\ REPEAT (Q.PAT_ASSUM `!v.bbb` (K ALL_TAC)) THENL [
@@ -1371,7 +1369,7 @@ val ref_field_heap_el = prove(
   \\ ASM_SIMP_TAC std_ss [word_tree_def,heap_el_def,NOT_ALIGNED_LEMMA,
        ref_field_def,ADDR30_ADDR32,word_arith_lemma4,WORD_ADD_0,
        ALIGNED_ADDR32,ref_addr_def]
-  \\ REWRITE_TAC [GSYM (EVAL ``2**32``)]
+  \\ REWRITE_TAC [GSYM (EVAL ``(2**32):num``)]
   \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC (IN_ch_active_set2)
   \\ REPEAT (Q.PAT_ASSUM `!v.bbb` (K ALL_TAC))

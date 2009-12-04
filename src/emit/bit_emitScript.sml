@@ -99,6 +99,14 @@ val MOD_2EXP_EQ_compute = Q.prove(
                (ODD a = ODD b) /\ MOD_2EXP_EQ (n - 1) (DIV2 a) (DIV2 b)`,
   Cases \\ SRW_TAC [] [MOD_2EXP_EQ])
 
+val BOOLIFY_compute = Q.prove(
+  `!n. BOOLIFY n m a =
+         if n = 0 then
+           a
+         else
+           BOOLIFY (PRE n) (DIV2 m) (ODD m::a)`,
+  Cases THEN SRW_TAC [] [BOOLIFY_def]);
+
 val HEX_compute = Q.prove(
   `!n. HEX n =
           if n = 0 then #"0"
@@ -164,7 +172,7 @@ val defs =
         BIT_MODF_compute, BIT_MODIFY_EVAL,
         BIT_REV_compute, BIT_REVERSE_EVAL,
         LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def, MOD_2EXP_EQ_compute,
-        BITV_def, BIT_def, SLICE_def, LSB_def, SIGN_EXTEND_def]
+        BITV_def, BIT_def, SLICE_def, LSB_def, SIGN_EXTEND_def, BOOLIFY_compute]
 
 val _ = eSML "bit"
   (MLSIG  "type num = numML.num" ::

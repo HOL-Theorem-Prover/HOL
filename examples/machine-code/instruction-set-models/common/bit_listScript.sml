@@ -85,6 +85,19 @@ val bytes2word_lemma = prove(
   THEN `i - 24 < 8 /\ (i - 24 + 24 = i) /\ i < 56 /\ i <= 31` by DECIDE_TAC
   THEN ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [word_bits_def,bytes2word_lem]);
 
+val _ = wordsLib.guess_lengths();
+val bytes2word_INTRO = store_thm("bytes2word_INTRO", 
+  ``!x1 x2 x3 x4.
+      (($@@ :word8 -> word24 -> word32)
+                  (x1 :word8)
+                      (($@@ :word8 -> word16 -> word24)
+                         (x2 :word8)
+                         (($@@ :word8 -> word8 -> word16)
+                            (x3 :word8) (x4 :word8) :
+                            word16) :word24) :word32) =
+      bytes2word [x4;x3;x2;x1]``,
+ SRW_TAC [wordsLib.WORD_EXTRACT_ss] [bytes2word_def]);
+
 val bytes2word_thm = store_thm("bytes2word_thm",
   ``!w:word32 x.
       (bytes2word [(7 >< 0) w; (7 >< 0) (w >> 8); (7 >< 0) (w >> 16); (7 >< 0) (w >> 24)] = w) /\

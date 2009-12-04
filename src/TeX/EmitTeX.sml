@@ -293,18 +293,34 @@ local
      | "_"     => (token_string "Underscore",1)
      | "IN"    => (token_string "In",1)
      | "NOTIN" => (token_string "NotIn",1)
+     | "UNION" => (token_string "Union",1)
+     | "INTER" => (token_string "Inter",1)
      | "\226\134\146" => (token_string "Map", 1) (* → *)
      | "\226\138\162" => (token_string "Turnstile", 2) (* ⊢ *)
      | "\226\151\129" => (token_string "LOpenTri", 1) (* ◁ *)
      | "^*"    => (token_string "SupStar", 1)
      | "^+"    => (token_string "SupPlus", 1)
      | _       => (String.translate char_map s,String.size s)
+
+  fun smap overrides s =
+      case overrides s of
+        NONE => string_map s
+      | SOME r => r
+  fun ann_string overrides pps (s,ann) = let
+    open PPBackEnd
+    fun addann ty s = "\\" ^ !texPrefix ^ ty ^ "{" ^ s ^ "}"
+    val annotation = case ann of BV _ => addann "BoundVar"
+                               | FV _ => addann "FreeVar"
+                               | _ => (fn s => s)
+    val (s',sz) = smap overrides s
+  in
+    PP.add_stringsz pps (annotation s', sz)
+  end
 in
-  val emit_latex =
+  fun emit_latex overrides =
     {add_break = PP.add_break,
-     add_string = (fn pps => fn s => PP.add_stringsz pps (string_map s)),
-     add_ann_string = (fn pps => fn (s,ann) =>
-                                     PP.add_stringsz pps (string_map s)),
+     add_string = (fn pps => fn s => PP.add_stringsz pps (smap overrides s)),
+     add_ann_string = ann_string overrides,
      add_newline = PP.add_newline,
      begin_block = PP.begin_block,
      end_block = PP.end_block,
@@ -326,15 +342,13 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
     val BB = begin_block
     val NL = add_newline
     val EB = end_block
-    fun PT tm = Feedback.trace ("Unicode", 0) (Feedback.trace ("types", 0)
-                  (term_pp.pp_term
-                     (Feedback.trace ("Unicode", 0) Parse.term_grammar())
-                     (Feedback.trace ("Unicode", 0) Parse.type_grammar())
-                   backend ostrm)) tm
-    fun TP ty = Feedback.trace ("Unicode", 0)
-                  (type_pp.pp_type
-                     (Feedback.trace ("Unicode", 0) Parse.type_grammar())
-                   backend ostrm) ty
+    val trace = Feedback.trace
+    fun PT0 tm =
+        term_pp.pp_term (Parse.term_grammar()) (Parse.type_grammar())
+                        backend ostrm tm
+    val PT = PT0 |> trace ("Unicode", 0) |> trace ("types", 0)
+    fun TP0 ty = type_pp.pp_type (Parse.type_grammar()) backend ostrm ty
+    val TP = TP0 |> trace ("Unicode", 0)
 
     fun strip_type t =
       if is_vartype t then
@@ -417,35 +431,48 @@ fun print_datatypes s =
 (* Various pretty-printers                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-fun pp_term_as_tex ostrm tm =
-  Feedback.trace ("pp_dollar_escapes", 0)
-    (Feedback.trace ("Unicode", 0)
-      (term_pp.pp_term (Feedback.trace ("Unicode", 0) Parse.term_grammar ())
-                       (Feedback.trace ("Unicode", 0) Parse.type_grammar ())
-         emit_latex ostrm)) tm;
+type override_map = string -> (string * int) option
 
-fun pp_type_as_tex ostrm ty =
-   Feedback.trace ("Unicode", 0)
-     (type_pp.pp_type (Feedback.trace ("Unicode", 0) Parse.type_grammar ())
-        emit_latex ostrm) ty;
+fun UnicodeOff f = trace ("Unicode", 0) f
+  (* can't eta-convert because of value restriction *)
+
+fun raw_pp_term_as_tex overrides ostrm tm =
+    term_pp.pp_term (Parse.term_grammar())
+                    (Parse.type_grammar())
+                    (emit_latex overrides)
+                    ostrm
+                    tm
+
+fun pp_term_as_tex ostrm =
+    raw_pp_term_as_tex (K NONE) ostrm
+       |> UnicodeOff |> trace ("pp_dollar_escape", 0)
+
+fun raw_pp_type_as_tex overrides ostrm ty =
+    type_pp.pp_type (Parse.type_grammar()) (emit_latex overrides) ostrm ty
+
+fun pp_type_as_tex ostrm = UnicodeOff (raw_pp_type_as_tex (K NONE) ostrm)
 
 val print_thm_turnstile = ref true
 val _ = register_btrace ("EmitTeX: print thm turnstiles", print_thm_turnstile)
 
-fun pp_theorem_as_tex ostrm thm =
+fun raw_pp_theorem_as_tex overrides ostrm thm =
   if is_datatype_thm thm then
-    pp_datatype_theorem emit_latex ostrm thm
+    pp_datatype_theorem (emit_latex overrides) ostrm thm
   else
     let val {add_string,begin_block,end_block,...} =
-               PPBackEnd.with_ppstream emit_latex ostrm
+               PPBackEnd.with_ppstream (emit_latex overrides) ostrm
     in
       begin_block Portable.INCONSISTENT 0;
       if (!print_thm_turnstile) then
         (PP.add_stringsz ostrm (token_string "Turnstile",2); add_string " ")
       else ();
-      pp_term_as_tex ostrm (concl thm);
+      raw_pp_term_as_tex overrides ostrm (concl thm);
       end_block ()
     end;
+
+fun pp_theorem_as_tex ostrm =
+    raw_pp_theorem_as_tex (K NONE) ostrm |> UnicodeOff
+                                         |> trace ("pp_dollar_escape", 0)
 
 val print_term_as_tex = Portable.pprint pp_term_as_tex;
 val print_type_as_tex = Portable.pprint pp_type_as_tex;

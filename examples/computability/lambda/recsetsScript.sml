@@ -543,12 +543,12 @@ val COMPL_K_NOT_RE = store_thm(
 
 open pred_setTheory
 
-val indexes_def = Define`indexes P = { i | P (Phi i) }`
+val indices_def = Define`indices P = { i | P (Phi i) }`
 
-val indexes_COMPL = store_thm(
-  "indexes_COMPL",
-  ``indexes ((~) o P) = COMPL (indexes P)``,
-  SRW_TAC [][EXTENSION, indexes_def]);
+val indices_COMPL = store_thm(
+  "indices_COMPL",
+  ``indices ((~) o P) = COMPL (indices P)``,
+  SRW_TAC [][EXTENSION, indices_def]);
 
 
 val wlog_lemma = prove(
@@ -571,17 +571,17 @@ val looper_loops = store_thm(
 
 val Rices_Theorem = store_thm(
   "Rices_Theorem",
-  ``recursive (indexes P) ⇒ (indexes P = {}) ∨ (indexes P = UNIV)``,
-  STRIP_TAC THEN Cases_on `indexes P = {}` THEN SRW_TAC [][] THEN
-  Cases_on `indexes P = UNIV` THEN SRW_TAC [][] THEN
-  `∃Q. recursive (indexes Q) ∧ indexes Q ≠ {} ∧ indexes Q ≠ UNIV ∧
-       looper_i ∉ indexes Q`
-    by (Cases_on `looper_i ∈ indexes P` THENL [
-          Q.EXISTS_TAC `$~ o P` THEN SRW_TAC [][indexes_COMPL] THEN
+  ``recursive (indices P) ⇒ (indices P = {}) ∨ (indices P = UNIV)``,
+  STRIP_TAC THEN Cases_on `indices P = {}` THEN SRW_TAC [][] THEN
+  Cases_on `indices P = UNIV` THEN SRW_TAC [][] THEN
+  `∃Q. recursive (indices Q) ∧ indices Q ≠ {} ∧ indices Q ≠ UNIV ∧
+       looper_i ∉ indices Q`
+    by (Cases_on `looper_i ∈ indices P` THENL [
+          Q.EXISTS_TAC `$~ o P` THEN SRW_TAC [][indices_COMPL] THEN
           FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN METIS_TAC [],
           METIS_TAC []
         ]) THEN
-  `∃a. a ∈ indexes Q` by METIS_TAC [IN_INSERT, SET_CASES] THEN
+  `∃a. a ∈ indices Q` by METIS_TAC [IN_INSERT, SET_CASES] THEN
   Q.ABBREV_TAC `
     h = LAM "n" (cbnf_ofk
                    @@ (LAM "r" (UM @@ (cnpair @@ church a
@@ -617,13 +617,13 @@ val Rices_Theorem = store_thm(
     `Phi fi = Phi a`
        by (SRW_TAC [][FUN_EQ_THM] THEN
            FULL_SIMP_TAC (srw_ss()) [K_def]) THEN
-    FULL_SIMP_TAC (srw_ss()) [indexes_def],
+    FULL_SIMP_TAC (srw_ss()) [indices_def],
 
     `Phi fi = Phi looper_i`
        by (SRW_TAC [][FUN_EQ_THM, looper_loops] THEN
            FULL_SIMP_TAC (srw_ss()) [K_def] THEN
            Cases_on `Phi e e` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
-    FULL_SIMP_TAC (srw_ss()) [indexes_def]
+    FULL_SIMP_TAC (srw_ss()) [indices_def]
   ]);
 
 val _ = export_theory ()

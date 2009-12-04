@@ -610,11 +610,11 @@ val EQ_FDOM_SUBMAP = Q.store_thm(
 SIMP_TAC (srw_ss()) [fmap_EXT, SUBMAP_DEF] THEN METIS_TAC []);
 
 val SUBMAP_FUPDATE_EQN = Q.store_thm(
-"SUBMAP_FUPDATE_EQN",
-`f SUBMAP f |+ (x,y) <=> x NOTIN FDOM f \/ (f ' x = y)`,
-SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss ++ boolSimps.COND_elim_ss)
-         [FAPPLY_FUPDATE_THM,SUBMAP_DEF,EQ_IMP_THM] THEN
-METIS_TAC []);
+  "SUBMAP_FUPDATE_EQN",
+  `f SUBMAP f |+ (x,y) <=> x NOTIN FDOM f \/ (f ' x = y) /\ x IN FDOM f`,
+  SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss ++ boolSimps.COND_elim_ss)
+           [FAPPLY_FUPDATE_THM,SUBMAP_DEF,EQ_IMP_THM] THEN
+  METIS_TAC []);
 val _ = export_rewrites ["SUBMAP_FUPDATE_EQN"]
 
 (*---------------------------------------------------------------------------
@@ -996,6 +996,10 @@ val FLOOKUP_SUBMAP = store_thm(
   ``f SUBMAP g /\ (FLOOKUP f k = SOME v) ==> (FLOOKUP g k = SOME v)``,
   SRW_TAC [][FLOOKUP_DEF, SUBMAP_DEF] THEN METIS_TAC []);
 
+val SUBMAP_FUPDATE_FLOOKUP = store_thm(
+  "SUBMAP_FUPDATE_FLOOKUP",
+  ``f SUBMAP (f |+ (x,y)) <=> (FLOOKUP f x = NONE) \/ (FLOOKUP f x = SOME y)``,
+  SRW_TAC [][FLOOKUP_DEF, AC CONJ_ASSOC CONJ_COMM]);
 
 (*---------------------------------------------------------------------------
        Universal quantifier on finite maps

@@ -3211,7 +3211,7 @@ val IS_PREFIX_APPENDS = store_thm
 
 
 (*---------------------------------------------------------------------------
-   Theorems about genlist. From Antony Fox's theories. Added by Thomas Tuerk
+   Theorems about genlist. From Anthony Fox's theories. Added by Thomas Tuerk
  ---------------------------------------------------------------------------*)
 
 val MAP_GENLIST = store_thm("MAP_GENLIST",
@@ -3236,7 +3236,7 @@ val HD_GENLIST = save_thm("HD_GENLIST",
   (SIMP_RULE arith_ss [EL] o Q.SPECL [`f`,`SUC n`,`0`]) EL_GENLIST);
 
 val GENLIST_FUN_EQ = store_thm("GENLIST_FUN_EQ",
-  ``!n f g. (!x. x < n ==> (f x = g x)) ==> (GENLIST f n = GENLIST g n)``,
+  ``!n f g. (GENLIST f n = GENLIST g n) = (!x. x < n ==> (f x = g x))``,
   SIMP_TAC bool_ss [listTheory.LIST_EQ_REWRITE, LENGTH_GENLIST, EL_GENLIST]);
 
 val GENLIST_APPEND = store_thm("GENLIST_APPEND",
@@ -3246,8 +3246,24 @@ val GENLIST_APPEND = store_thm("GENLIST_APPEND",
 );
 
 val EVERY_GENLIST = store_thm("EVERY_GENLIST",
-  ``!n. (!i. i < n ==> P (f i)) ==> EVERY P (GENLIST f n)``,
-  Induct_on `n` THEN ASM_SIMP_TAC list_ss [GENLIST,ALL_EL_SNOC] )
+  ``!n. EVERY P (GENLIST f n) = (!i. i < n ==> P (f i))``,
+  Induct_on `n` THEN ASM_SIMP_TAC list_ss [GENLIST,ALL_EL_SNOC]
+    THEN metisLib.METIS_TAC [prim_recTheory.LESS_THM]);
+
+val EXISTS_GENLIST = store_thm ("EXISTS_GENLIST",
+  ``!n. EXISTS P (GENLIST f n) = (?i. i < n /\ P (f i))``,
+  Induct THEN RW_TAC std_ss [GENLIST, SOME_EL_SNOC, SOME_EL]
+    THEN metisLib.METIS_TAC [prim_recTheory.LESS_THM]);
+
+val TL_GENLIST = Q.store_thm ("TL_GENLIST",
+  `!f n. TL (GENLIST f (SUC n)) = GENLIST (f o SUC) n`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC listTheory.LIST_EQ
+    THEN SRW_TAC [listSimps.LIST_ss]
+           [EL_GENLIST, LENGTH_GENLIST, listTheory.LENGTH_TL]
+    THEN ONCE_REWRITE_TAC [EL |> CONJUNCT2 |> GSYM]
+    THEN `SUC x < SUC n` by DECIDE_TAC
+    THEN IMP_RES_TAC EL_GENLIST
+    THEN ASM_SIMP_TAC std_ss []);
 
 val ZIP_GENLIST = store_thm("ZIP_GENLIST",
   ``!l f n. (LENGTH l = n) ==>
@@ -3261,7 +3277,7 @@ val ZIP_GENLIST = store_thm("ZIP_GENLIST",
 
 
 (*---------------------------------------------------------------------------
-   General theorems about lists. From Antony Fox's and Thomas Tuerk's theories.
+   General theorems about lists. From Anthony Fox's and Thomas Tuerk's theories.
    Added by Thomas Tuerk
  ---------------------------------------------------------------------------*)
 

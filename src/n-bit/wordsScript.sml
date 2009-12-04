@@ -144,6 +144,28 @@ val _ = Unicode.unicode_version{u=Unicode.UChar.or, tmnm="!!"}
 val _ = Unicode.unicode_version{u=Unicode.UChar.xor, tmnm="??"}
 
 (* ------------------------------------------------------------------------- *)
+(*  Reduction operations : definitions                                       *)
+(* ------------------------------------------------------------------------- *)
+
+val word_reduce_def = Define`
+  word_reduce f (w : 'a word) =
+    $FCP (K
+      (let l = GENLIST (\i. w ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) in
+         FOLDL f (HD l) (TL l))) : 1 word`;
+
+val reduce_and_def  = Define `reduce_and  = word_reduce (/\)`;
+val reduce_or_def   = Define `reduce_or   = word_reduce (\/)`;
+
+val _ = ai := true;
+
+val reduce_xor_def  = Define `reduce_xor  = word_reduce (<>)`;
+val reduce_nand_def = Define `reduce_nand = word_reduce (\a b. ~(a /\ b))`;
+val reduce_nor_def  = Define `reduce_nor  = word_reduce (\a b. ~(a \/ b))`;
+val reduce_xnor_def = Define `reduce_xnor = word_reduce (=)`;
+
+val _ = ai := false;
+
+(* ------------------------------------------------------------------------- *)
 (*  Bit field operations : definitions                                       *)
 (* ------------------------------------------------------------------------- *)
 
@@ -224,6 +246,19 @@ val word_log2_def = Define`
   word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`;
 
 val _ = ai := true;
+
+val add_with_carry_def = Define`
+  add_with_carry (x:'a word, y:'a word, carry_in:bool) =
+    let unsigned_sum = w2n x + w2n y + (if carry_in then 1 else 0) in
+    let result = n2w unsigned_sum : 'a word in
+    let carry_out = ~(w2n result = unsigned_sum)
+    and overflow = (word_msb x = word_msb y) /\ (word_msb x <> word_msb result)
+    in
+       (result,carry_out,overflow)`;
+
+val _ =
+  (overload_on ("CARRY_OUT", ``\a b c. FST (SND (add_with_carry (a,b,c)))``);
+   overload_on ("OVERFLOW",  ``\a b c. SND (SND (add_with_carry (a,b,c)))``));
 
 val word_sub_def = Define`
   word_sub (v:'a word) (w:'a word) = word_add v (word_2comp w)`;
@@ -327,6 +362,19 @@ val word_join_def = with_flag (computeLib.auto_import_definitions, true) Define`
 
 val word_concat_def = Define`
   word_concat (v:'a word) (w:'b word) = w2w (word_join v w)`;
+
+val word_replicate_def = Define`
+  word_replicate n (w : 'a word) =
+    FCP i. i < n * dimindex(:'a) /\ w ' (i MOD dimindex(:'a))`;
+
+val _ = ai := true;
+
+val concat_word_list_def = Define`
+  (concat_word_list ([]:'a word list) = 0w) /\
+  (concat_word_list (h::t) =
+     w2w h !! (concat_word_list t << dimindex(:'a)))`;
+
+val _ = ai := false;
 
 val _ = overload_on ("@@",Term`$word_concat`);
 
@@ -1036,12 +1084,20 @@ val word_signed_bits_n2w = Q.store_thm("word_signed_bits_n2w",
                   [SIGN_EXTEND_def, BIT_ZERO, BITS_ZERO]]]);
 
 val word_index_n2w = store_thm("word_index_n2w",
-  `!n i. ((n2w n):'a word) ' i =
+  `!n i. (n2w n : 'a word) ' i =
       if i < dimindex (:'a) then
         BIT i n
       else
-        ((n2w n):'a word) ' i`,
-  RW_TAC arith_ss [word_bit,word_bit_n2w]);
+        FAIL fcp$fcp_index ^(mk_var("index too large",bool))
+             (n2w n : 'a word) i`,
+  RW_TAC arith_ss [word_bit,word_bit_n2w,combinTheory.FAIL_THM]);
+
+val word_index = save_thm("word_index",
+  word_index_n2w
+    |> SPEC_ALL
+    |> Q.DISCH `i < dimindex (:'a)`
+    |> SIMP_RULE bool_ss []
+    |> GEN_ALL);
 
 val MIN_lem = prove(
  `(!m n. MIN m (m + n) = m) /\ !m n. MIN (m + n) m = m`,
@@ -1461,7 +1517,7 @@ val WORD_EXTRACT_OVER_ADD = Q.store_thm("WORD_EXTRACT_OVER_ADD",
          DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
     \\ SRW_TAC [ARITH_ss] [word_extract_n2w, MOD_DIMINDEX, BITS_COMP_THM2,
          MIN_DEF, BITS_ZEROL]
-    \\ SRW_TAC [ARITH_ss] [word_add_n2w, word_extract_n2w,  MOD_DIMINDEX,
+    \\ SRW_TAC [ARITH_ss] [word_add_n2w, word_extract_n2w, MOD_DIMINDEX,
          BITS_COMP_THM2]
     \\ SRW_TAC [ARITH_ss] [MIN_DEF, EXTRACT_OVER_ADD_lem]);
 
@@ -1579,6 +1635,162 @@ val WORD_LITERAL_XOR = store_thm("WORD_LITERAL_XOR",
   `!n m. n2w n ?? n2w m =
          n2w (BITWISE (SUC (MAX (LOG2 n) (LOG2 m))) (\x y. ~(x = y)) n m)`,
   RW_TAC arith_ss [word_xor_n2w, GSYM WORD_EQ, word_bit_n2w, bitwise_log_max]);
+
+val SNOC_GENLIST_K = Q.prove(
+  `!n c. SNOC c (GENLIST (K c) n) = c::(GENLIST (K c) n)`,
+  Induct \\ SRW_TAC [] [rich_listTheory.GENLIST, rich_listTheory.SNOC]);
+
+val word_replicate_concat_word_list = Q.store_thm
+ ("word_replicate_concat_word_list",
+  `!n w. word_replicate n w = concat_word_list (GENLIST (K w) n)`,
+  Induct 
+     \\ SRW_TAC [] [word_replicate_def, concat_word_list_def,
+          rich_listTheory.GENLIST, SNOC_GENLIST_K]
+     >> SRW_TAC [fcpLib.FCP_ss] [word_0]
+     \\ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
+     \\ SRW_TAC [fcpLib.FCP_ss,ARITH_ss]
+          [word_replicate_def, word_or_def, word_lsl_def, w2w]
+     \\ ASSUME_TAC DIMINDEX_GT_0
+     \\ Q.ABBREV_TAC `A = dimindex(:'a)`
+     \\ Cases_on `i < A` \\ SRW_TAC [ARITH_ss] [MULT_SUC]
+     \\ `?x. i = x + A` by METIS_TAC [NOT_LESS, LESS_EQ_ADD_EXISTS, ADD_COMM]
+     \\ SRW_TAC [ARITH_ss] [ADD_MODULUS_RIGHT]
+     \\ Cases_on `n` \\ SRW_TAC [ARITH_ss] [ZERO_LESS_MULT]);
+
+(* ------------------------------------------------------------------------- *)
+(*  Word redection: theorems                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+val BOOLIFY = Q.prove(
+  `!n m a. GENLIST (\i. BIT (n - 1 - i) (BITS (n - 1) 0 m)) n ++ a =
+           BOOLIFY n m a`,
+  Induct
+    \\ SRW_TAC []
+         [BOOLIFY_def, DIV2_def, rich_listTheory.GENLIST,
+          rich_listTheory.APPEND_SNOC1]
+    \\ POP_ASSUM (fn thm => REWRITE_TAC [GSYM thm])
+    \\ SRW_TAC [ARITH_ss] [GSYM LSB_def, LSB_ODD, BIT_OF_BITS_THM,
+          rich_listTheory.GENLIST_FUN_EQ, BIT_DIV2,
+          DECIDE ``x < n ==> (n - x = SUC (n - 1 - x))``]);
+
+val GENLIST_FCP_INDEX = Q.prove(
+  `!n.
+     GENLIST (\i. (n2w n : 'a word) ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) =
+     GENLIST (\i. BIT (dimindex(:'a) - 1 - i) (n MOD dimword(:'a)))
+             (dimindex(:'a))`,
+  SRW_TAC [ARITH_ss]
+    [rich_listTheory.GENLIST_FUN_EQ, BIT_OF_BITS_THM,
+     MOD_DIMINDEX, word_index]);
+
+val word_reduce_n2w = save_thm("word_reduce_n2w",
+  word_reduce_def
+    |> Q.SPECL [`f`,`n2w n`]
+    |> REWRITE_RULE
+         [BOOLIFY |> Q.SPECL [`dimindex(:'a)`,`n`,`[]`]
+                  |> SIMP_RULE (srw_ss()) [GSYM MOD_DIMINDEX,
+                        GSYM GENLIST_FCP_INDEX]]
+    |> GEN_ALL);
+
+val GENLIST_UINT_MAXw = Q.prove(
+  `GENLIST (\i. (UINT_MAXw:'a word) ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) =
+   GENLIST (K T) (dimindex(:'a))`,
+   SRW_TAC [ARITH_ss] [rich_listTheory.GENLIST_FUN_EQ, word_T]);
+
+val GENLIST_0w = Q.prove(
+  `GENLIST (\i. (0w:'a word) ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) =
+   GENLIST (K F) (dimindex(:'a))`,
+   SRW_TAC [ARITH_ss] [rich_listTheory.GENLIST_FUN_EQ, word_0]);
+
+val WORD_REDUCE_LIFT = Q.prove(
+  `(!b. ($FCP (K b) = 1w: 1 word) = b) /\
+    !b. ($FCP (K b) = 0w: 1 word) = ~b`,
+  STRIP_TAC \\ Cases
+    \\ SRW_TAC [fcpLib.FCP_ss]
+         [DECIDE ``i < 1 = (i = 0)``, n2w_def, BIT_ZERO, fcpTheory.index_one,
+          GSYM LSB_def, LSB_ODD]);
+
+val TL_GENLIST_K = Q.prove(
+  `!c n. TL (GENLIST (K c) (SUC n)) = GENLIST (K c) n`,
+  REPEAT STRIP_TAC \\ MATCH_MP_TAC listTheory.LIST_EQ
+    \\ SRW_TAC [listSimps.LIST_ss]
+         [rich_listTheory.EL_GENLIST, rich_listTheory.LENGTH_GENLIST,
+          listTheory.LENGTH_TL]
+    \\ ONCE_REWRITE_TAC [rich_listTheory.EL |> CONJUNCT2 |> GSYM]
+    \\ `SUC x < SUC n` by DECIDE_TAC
+    \\ IMP_RES_TAC rich_listTheory.EL_GENLIST
+    \\ ASM_SIMP_TAC std_ss []);
+
+val NOT_EVERY_HD_F = Q.prove(
+  `!l. ~(FOLDL (/\) F l)`, Induct \\ SRW_TAC [listSimps.LIST_ss] []);
+
+val EXISTS_HD_T = Q.prove(
+  `!l. (FOLDL (\/) T l)`, Induct \\ SRW_TAC [listSimps.LIST_ss] []);
+
+val NOT_UINTMAXw = Q.store_thm ("NOT_UINTMAXw",
+  `!w:'a word. w <> UINT_MAXw ==> ?i. i < dimindex(:'a) /\ ~(w ' i)`,
+  STRIP_TAC \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
+     \\ Q.PAT_ASSUM `a <> b` MP_TAC
+     \\ SRW_TAC [fcpLib.FCP_ss] [word_T]);
+
+val NOT_0w = Q.store_thm ("NOT_0w",
+  `!w:'a word. w <> 0w ==> ?i. i < dimindex(:'a) /\ w ' i`,
+  STRIP_TAC \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
+     \\ Q.PAT_ASSUM `a <> b` MP_TAC
+     \\ SRW_TAC [fcpLib.FCP_ss] [word_0]);
+
+val reduce_and = Q.store_thm ("reduce_and",
+  `!w. reduce_and w = if w = UINT_MAXw then 1w else 0w`,
+  SRW_TAC [boolSimps.LET_ss]
+       [GENLIST_UINT_MAXw, WORD_REDUCE_LIFT, reduce_and_def, word_reduce_def]
+    \\ (Cases_on `dimindex (:'a)` >>
+          FULL_SIMP_TAC bool_ss [DECIDE ``0 < a ==> a <> 0n``, DIMINDEX_GT_0])
+    \\ SRW_TAC [] [rich_listTheory.HD_GENLIST, TL_GENLIST_K,
+         rich_listTheory.EVERY_GENLIST, GSYM rich_listTheory.AND_EL_FOLDL,
+         rich_listTheory.AND_EL_DEF]
+    \\ Cases_on `w ' n`
+    \\ SRW_TAC [listSimps.LIST_ss]
+         [NOT_EVERY_HD_F, GSYM rich_listTheory.AND_EL_FOLDL,
+          rich_listTheory.AND_EL_DEF, rich_listTheory.TL_GENLIST,
+          rich_listTheory.EXISTS_GENLIST]
+    \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
+    \\ IMP_RES_TAC NOT_UINTMAXw
+    \\ Cases_on `0 < n`
+    << [Cases_on `i = n` >> FULL_SIMP_TAC std_ss []
+          \\ `i < n` by DECIDE_TAC
+          \\ `n - i - 1 < n` by DECIDE_TAC
+          \\ Q.PAT_ASSUM `!i. P` (Q.SPEC_THEN ` n - i - 1` IMP_RES_TAC)
+          \\ FULL_SIMP_TAC std_ss []
+          \\ METIS_TAC
+               [DECIDE ``0 < n /\ i < n ==> (n - SUC (n - i - 1) = i)``],
+        `(n = 0) /\ (i = 0)` by DECIDE_TAC
+          \\ FULL_SIMP_TAC bool_ss []]);
+
+val reduce_or = Q.store_thm ("reduce_or",
+  `!w. reduce_or w = if w = 0w then 0w else 1w`,
+  SRW_TAC [boolSimps.LET_ss]
+       [GENLIST_0w, WORD_REDUCE_LIFT, reduce_or_def, word_reduce_def]
+    \\ (Cases_on `dimindex (:'a)` >>
+          FULL_SIMP_TAC bool_ss [DECIDE ``0 < a ==> a <> 0n``, DIMINDEX_GT_0])
+    \\ SRW_TAC [] [rich_listTheory.HD_GENLIST, TL_GENLIST_K,
+         rich_listTheory.EVERY_GENLIST, GSYM rich_listTheory.OR_EL_FOLDL,
+         rich_listTheory.OR_EL_DEF]
+    \\ Cases_on `w ' n`
+    \\ SRW_TAC [listSimps.LIST_ss]
+         [EXISTS_HD_T, GSYM rich_listTheory.OR_EL_FOLDL,
+          rich_listTheory.OR_EL_DEF, rich_listTheory.TL_GENLIST,
+          rich_listTheory.EXISTS_GENLIST]
+    \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
+    \\ IMP_RES_TAC NOT_0w
+    \\ Cases_on `0 < n`
+    << [Cases_on `i = n` >> FULL_SIMP_TAC std_ss []
+          \\ `i < n` by DECIDE_TAC
+          \\ `n - i - 1 < n` by DECIDE_TAC
+          \\ Q.PAT_ASSUM `!i. P` (Q.SPEC_THEN ` n - i - 1` IMP_RES_TAC)
+          \\ FULL_SIMP_TAC std_ss []
+          \\ METIS_TAC
+               [DECIDE ``0 < n /\ i < n ==> (n - SUC (n - i - 1) = i)``],
+        `(n = 0) /\ (i = 0)` by DECIDE_TAC
+          \\ FULL_SIMP_TAC bool_ss []]);
 
 (* ------------------------------------------------------------------------- *)
 (*  Word arithmetic: theorems                                                *)
@@ -3245,6 +3457,60 @@ val WORD_ADD_RIGHT_LS2 = save_thm("WORD_ADD_RIGHT_LS2",
       WORD_LOWER_OR_EQ, WORD_NEG_EQ, Once WORD_LESS_NEG_RIGHT,
       DECIDE ``a \/ ~a /\ b = a \/ b``] o
    SPECL [`a`, `a`, `c`]) WORD_ADD_RIGHT_LS);
+
+(*---------------------------------------------------------------------------*)
+
+val FST_ADD_WITH_CARRY = Q.prove(
+  `(!a b. FST (add_with_carry (a,b,F)) = a + b) /\
+   (!a b. FST (add_with_carry (a,~b,T)) = a - b) /\
+   (!a b. FST (add_with_carry (~a,b,T)) = b - a)`,
+  SRW_TAC [boolSimps.LET_ss]
+    [GSYM word_add_def, add_with_carry_def,
+     GSYM word_add_n2w, word_sub_def, WORD_NOT]
+    \\ METIS_TAC [WORD_ADD_LINV, WORD_ADD_RINV, WORD_ADD_0,
+                  WORD_ADD_ASSOC, WORD_ADD_COMM]);
+
+val FST_ADD_WITH_CARRY = save_thm("FST_ADD_WITH_CARRY",
+  CONJ FST_ADD_WITH_CARRY
+   (case CONJUNCTS (CONJUNCT2 FST_ADD_WITH_CARRY) of
+      [thm1,thm2] =>
+        (CONJ (thm1 |> Q.SPECL [`a`,`~(n2w n)`] |> GEN_ALL)
+              (thm2 |> Q.SPEC `~(n2w n)` |> GEN_ALL))
+          |> REWRITE_RULE [WORD_NOT_NOT]
+    | _ => raise ERR "" ""));
+
+val ADD_WITH_CARRY_SUB = Q.store_thm("ADD_WITH_CARRY_SUB",
+ `!x y.
+     add_with_carry (x,~y,T) =
+       (x - y, y <=+ x,
+        ~(word_msb x = word_msb y) /\ ~(word_msb (x - y) = word_msb x))`,
+ SIMP_TAC std_ss [add_with_carry_def,LET_DEF]
+ \\ SIMP_TAC std_ss [pairTheory.PAIR_EQ]
+ \\ NTAC 3 STRIP_TAC THEN1 (SIMP_TAC std_ss
+   [GSYM word_add_n2w,n2w_w2n,WORD_NEG,word_sub_def,WORD_ADD_ASSOC])
+ \\ REVERSE STRIP_TAC
+ THEN1 (SIMP_TAC std_ss [WORD_MSB_1COMP, GSYM word_add_n2w,
+   n2w_w2n,WORD_NEG,word_sub_def,WORD_ADD_ASSOC] \\ METIS_TAC [])
+ \\ SIMP_TAC std_ss [word_lo_def,nzcv_def,GSYM WORD_NOT_LOWER,LET_DEF]
+ \\ Q.SPEC_TAC (`y`,`y`) \\ Q.SPEC_TAC (`x`,`x`) \\ Cases \\ Cases
+ \\ ASSUME_TAC ZERO_LT_dimword
+ \\ ASM_SIMP_TAC std_ss [w2n_n2w,n2w_11,word_1comp_n2w,word_2comp_n2w]
+ \\ `dimword (:'a) - 1 - n' < dimword (:'a)` by DECIDE_TAC
+ \\ ASM_SIMP_TAC std_ss []
+ \\ `n + (dimword (:'a) - 1 - n') + 1 = n + (dimword (:'a) - n')` by DECIDE_TAC
+ \\ ASM_SIMP_TAC std_ss [BIT_def,BITS_THM,DECIDE ``SUC n - n = 1``,
+GSYM dimword_def]
+ \\ POP_ASSUM (K ALL_TAC)
+ \\ Cases_on `n' = 0` \\ ASM_SIMP_TAC std_ss [DECIDE ``~(m + n < n:num)``]
+ \\ `dimword (:'a) - n' < dimword (:'a)` by DECIDE_TAC
+ \\ ASM_SIMP_TAC std_ss []
+ \\ Cases_on `n + (dimword (:'a) - n') < dimword (:'a)`
+ \\ ASM_SIMP_TAC std_ss [LESS_DIV_EQ_ZERO]
+ \\ Q.ABBREV_TAC `k = n + (dimword (:'a) - n')`
+ \\ `k = dimword (:'a) + (k - dimword (:'a))` by DECIDE_TAC
+ \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
+ \\ `(k - dimword (:'a)) < dimword (:'a)` by (Q.UNABBREV_TAC `k` \\ DECIDE_TAC)
+ \\ ASM_SIMP_TAC std_ss [DIV_MULT_1]);
 
 (* ------------------------------------------------------------------------- *)
 

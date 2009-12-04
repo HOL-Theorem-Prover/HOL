@@ -80,6 +80,10 @@ val MOD_2EXP_MAX_def = Define`
 
 val _ = computeLib.auto_import_definitions := true;
 
+val BOOLIFY_def = Define`
+  (BOOLIFY 0 m a = a) /\
+  (BOOLIFY (SUC n) m a = BOOLIFY n (DIV2 m) (ODD m::a))`;
+
 val l2n_def = Define`
   (l2n b [] = 0) /\
   (l2n b (h::t) = h MOD b + b * l2n b t)`;

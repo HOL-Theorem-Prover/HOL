@@ -13,29 +13,29 @@ fun is_uncurry_tm c = same_const uncurry_tm c;
 fun is_uncurry x = is_uncurry_tm (rator x) handle HOL_ERR _ => false;
 
 (* ---------------------------------------------------------------------*)
-(* PAIRED_BETA_CONV: Generalized beta conversions for tupled lambda	*)
-(*		    abstractions applied to tuples (i.e. redexes)	*)
-(*									*)
-(* Given the term:                                    			*)
+(* PAIRED_BETA_CONV: Generalized beta conversions for tupled lambda     *)
+(*                  abstractions applied to tuples (i.e. redexes)       *)
 (*                                                                      *)
-(*   "(\(x1, ... ,xn).t) (t1, ... ,tn)"                                	*)
+(* Given the term:                                                      *)
 (*                                                                      *)
-(* PAIRED_BETA_CONV proves that:					*)
+(*   "(\(x1, ... ,xn).t) (t1, ... ,tn)"                                 *)
+(*                                                                      *)
+(* PAIRED_BETA_CONV proves that:                                        *)
 (*                                                                      *)
 (*   |- (\(x1, ... ,xn).t) (t1, ... ,tn) = t[t1, ... ,tn/x1, ... ,xn]   *)
 (*                                                                      *)
-(* where t[t1,...,tn/x1,...,xn] is the result of substituting ti for xi	*)
-(* in parallel in t, with suitable renaming of variables to prevent	*)
-(* free variables in t1,...,tn becoming bound in the result.     	*)
+(* where t[t1,...,tn/x1,...,xn] is the result of substituting ti for xi *)
+(* in parallel in t, with suitable renaming of variables to prevent     *)
+(* free variables in t1,...,tn becoming bound in the result.            *)
 (*                                                                      *)
-(* The conversion works for arbitrarily nested tuples.  For example:	*)
-(*									*)
-(*   PAIRED_BETA_CONV "(\((a,b),(c,d)).t) ((1,2),(3,4))"		*)
-(*									*)
-(* gives:								*)
-(*									*)
-(*  |- (\((a,b),(c,d)).t) ((1,2),(3,4)) = t[1,2,3,4/a,b,c,d]     	*)
-(*									*)
+(* The conversion works for arbitrarily nested tuples.  For example:    *)
+(*                                                                      *)
+(*   PAIRED_BETA_CONV "(\((a,b),(c,d)).t) ((1,2),(3,4))"                *)
+(*                                                                      *)
+(* gives:                                                               *)
+(*                                                                      *)
+(*  |- (\((a,b),(c,d)).t) ((1,2),(3,4)) = t[1,2,3,4/a,b,c,d]            *)
+(*                                                                      *)
 (* Bugfix: INST used instead of SPEC to avoid priming.    [TFM 91.04.17]*)
 (* ---------------------------------------------------------------------*)
 
@@ -119,13 +119,13 @@ val GEN_BETA_TAC  = CONV_TAC (DEPTH_CONV GEN_BETA_CONV)
 
 (* ---------------------------------------------------------------------*)
 (* Internal function: ITER_BETA_CONV (iterated, tupled beta-conversion).*)
-(*									*)
-(* The conversion ITER_BETA_CONV reduces terms of the form:		*)
-(*									*)
-(*     (\v1 v2...vn.tm) x1 x2 ... xn xn+1 ... xn+i			*)
-(*									*)
-(* where the v's can be varstructs. The behaviour is similar to		*)
-(* LIST_BETA_CONV, but this function also does paired abstractions.	*)
+(*                                                                      *)
+(* The conversion ITER_BETA_CONV reduces terms of the form:             *)
+(*                                                                      *)
+(*     (\v1 v2...vn.tm) x1 x2 ... xn xn+1 ... xn+i                      *)
+(*                                                                      *)
+(* where the v's can be varstructs. The behaviour is similar to         *)
+(* LIST_BETA_CONV, but this function also does paired abstractions.     *)
 (* ---------------------------------------------------------------------*)
 
 fun ITER_BETA_CONV tm =
@@ -140,10 +140,10 @@ fun ITER_BETA_CONV tm =
 
 
 (* ---------------------------------------------------------------------*)
-(* Internal function: ARGS_CONV (apply a list of conversions to the 	*)
-(* arguments of a curried function application).			*)
-(*									*)
-(* ARGS_CONV [conv1;...;convn] "f a1 ... an" applies convi to ai.	*)
+(* Internal function: ARGS_CONV (apply a list of conversions to the     *)
+(* arguments of a curried function application).                        *)
+(*                                                                      *)
+(* ARGS_CONV [conv1;...;convn] "f a1 ... an" applies convi to ai.       *)
 (* ---------------------------------------------------------------------*)
 
 local fun appl [] [] = []
@@ -157,11 +157,11 @@ fun ARGS_CONV cs tm =
 end;
 
 (* ---------------------------------------------------------------------*)
-(* Internal function RED_WHERE.						*)
-(*									*)
-(* Given the arguments "f" and "tm[f]", this function produces a 	*)
-(* conversion that will apply ITER_BETA_CONV to its argument at all	*)
-(* subterms that correspond to occurrences of f (bottom-up).		*)
+(* Internal function RED_WHERE.                                         *)
+(*                                                                      *)
+(* Given the arguments "f" and "tm[f]", this function produces a        *)
+(* conversion that will apply ITER_BETA_CONV to its argument at all     *)
+(* subterms that correspond to occurrences of f (bottom-up).            *)
 (* ---------------------------------------------------------------------*)
 
 fun RED_WHERE fnn body =
@@ -181,26 +181,26 @@ fun RED_WHERE fnn body =
     end;
 
 (* ---------------------------------------------------------------------*)
-(* Internal function: REDUCE						*)
-(* 									*)
-(* This function does the appropriate beta-reductions in the result of	*)
-(* expanding a let-term.  For terms of the form:			*)
-(*									*)
-(*      "let f x1 ... xn = t in tm[f]"					*)
-(*									*)
-(* we have that:							*)
-(*									*)
-(*      th |- <let term> = tm[\x1 ... xn. t/f]				*)
-(*									*)
-(* And the arguments x and f will be:					*)
-(*									*)
-(*       x = \x1 ... xn. t						*)
-(*       f = \f. tm[f]							*)
-(*									*)
-(* REDUCE searches in tm[f] for places in which f occurs, and then does	*)
-(* an iterated beta-reduction (possibly of varstruct-abstractions) in	*)
-(* the right-hand side of the input theorem th, at the places that	*)
-(* correspond to occurrences of f in tm[f].				*)
+(* Internal function: REDUCE                                            *)
+(*                                                                      *)
+(* This function does the appropriate beta-reductions in the result of  *)
+(* expanding a let-term.  For terms of the form:                        *)
+(*                                                                      *)
+(*      "let f x1 ... xn = t in tm[f]"                                  *)
+(*                                                                      *)
+(* we have that:                                                        *)
+(*                                                                      *)
+(*      th |- <let term> = tm[\x1 ... xn. t/f]                          *)
+(*                                                                      *)
+(* And the arguments x and f will be:                                   *)
+(*                                                                      *)
+(*       x = \x1 ... xn. t                                              *)
+(*       f = \f. tm[f]                                                  *)
+(*                                                                      *)
+(* REDUCE searches in tm[f] for places in which f occurs, and then does *)
+(* an iterated beta-reduction (possibly of varstruct-abstractions) in   *)
+(* the right-hand side of the input theorem th, at the places that      *)
+(* correspond to occurrences of f in tm[f].                             *)
 (* ---------------------------------------------------------------------*)
 
 fun REDUCE f x th =
@@ -210,30 +210,30 @@ fun REDUCE f x th =
        end;
 
 (* ---------------------------------------------------------------------*)
-(* let_CONV: conversion for reducing "let" terms.			*)
-(*									*)
-(* Given a term:                                    			*)
+(* let_CONV: conversion for reducing "let" terms.                       *)
 (*                                                                      *)
-(*   "let v1 = x1 and ... and vn = xn in tm[v1,...,vn]"			*)
+(* Given a term:                                                        *)
 (*                                                                      *)
-(* let_CONV proves that:						*)
+(*   "let v1 = x1 and ... and vn = xn in tm[v1,...,vn]"                 *)
 (*                                                                      *)
-(*   |- let v1 = x1 and ... and vn = xn in tm[v1,...,vn] 		*)
-(*	=								*)
-(*      tm[x1,...,xn/v1,...,vn]						*)
+(* let_CONV proves that:                                                *)
 (*                                                                      *)
-(* where t[t1,...,tn/x1,...,xn] is the result of "substituting" the 	*)
-(* value xi for vi  in parallel in tm (see below).			*)
-(*									*)
-(* Note that the vi's can take any one of the following forms:  	*)
-(*									*)
-(*    Variables:    "x" etc.    					*)
-(*    Tuples:       "(x,y)" "(a,b,c)" "((a,b),(c,d))" etc.		*)
-(*    Applications: "f (x,y) z" "f x" etc.				*)
-(*									*)
-(* Variables are just substituted for. With tuples, the substitution is	*)
-(* done component-wise, and function applications are effectively	*)
-(* rewritten in the body of the let-term.				*)
+(*   |- let v1 = x1 and ... and vn = xn in tm[v1,...,vn]                *)
+(*      =                                                               *)
+(*      tm[x1,...,xn/v1,...,vn]                                         *)
+(*                                                                      *)
+(* where t[t1,...,tn/x1,...,xn] is the result of "substituting" the     *)
+(* value xi for vi  in parallel in tm (see below).                      *)
+(*                                                                      *)
+(* Note that the vi's can take any one of the following forms:          *)
+(*                                                                      *)
+(*    Variables:    "x" etc.                                            *)
+(*    Tuples:       "(x,y)" "(a,b,c)" "((a,b),(c,d))" etc.              *)
+(*    Applications: "f (x,y) z" "f x" etc.                              *)
+(*                                                                      *)
+(* Variables are just substituted for. With tuples, the substitution is *)
+(* done component-wise, and function applications are effectively       *)
+(* rewritten in the body of the let-term.                               *)
 (* ---------------------------------------------------------------------*)
 
 local
@@ -254,6 +254,76 @@ in
 fun let_CONV tm = conv tm
  handle HOL_ERR _ => raise ERR "let_CONV" "cannot reduce the let"
 end;
+
+
+
+(* ---------------------------------------------------------------------*)
+(* LET_SIMP_CONV: conversion for eliminating unused lets                *)
+(*                                                                      *)
+(* Given a term:                                                        *)
+(*                                                                      *)
+(*   "let (v1, v2) = (x1,x2) in tm[v1]"                                 *)
+(*                                                                      *)
+(* LET_SIMP_CONV gen                                                    *)
+(*                                                                      *)
+(*   |- let (v1, v2) = (x1,x2) in tm[v1]                                *)
+(*      =                                                               *)
+(*      let v1 = x1 in tm[v1]                                           *)
+(*                                                                      *)
+(* Pairs of arbitrary nestings can be handled and more than one         *)
+(* variable might be removed. If all variables are unused, the let      *)
+(* is eliminated completely.                                            *)
+(*                                                                      *)
+(* The parameter gen determines, whether FST and SND are introduced     *)
+(* to handle values that are not explicitly pairs                       *)
+(* ---------------------------------------------------------------------*)
+
+fun LET_SIMP_CONV gen tm =
+let
+   (*destruct the original term ``let vars = v in b vars``,
+     ab = \vars. b vars*)
+   val (ab, v) = dest_let tm;
+   val (vars,b) = dest_pabs ab
+
+   (*check which variables are used / unused. Abort if
+     all variables are really needed*)
+   val vars_set = FVL [vars] empty_tmset;
+   val unused_vars_set = HOLset.difference (vars_set, FVL [b] empty_tmset);
+   val _ = if HOLset.isEmpty unused_vars_set then raise UNCHANGED else ();
+
+   val used_vars_list = HOLset.listItems (
+        HOLset.difference (vars_set, unused_vars_set));
+
+   val beta_conv = if gen then GEN_BETA_CONV else 
+       (PAIRED_BETA_CONV ORELSEC BETA_CONV);
+
+   (*generate the new result term
+     if no variable is needed just return b*)
+   val result_term = if null used_vars_list then b else
+       let
+          (*otherwise abstract with just the needed variables
+            and get the new value of v by using GEN_BETA_CONV*)
+          val new_vars = list_mk_pair used_vars_list;
+          val new_ab = mk_pabs (new_vars, b);
+          val new_v0 = mk_comb (mk_pabs (vars, new_vars), v);
+          val new_v_thm = beta_conv new_v0
+          val new_v = (rhs o concl) new_v_thm
+       in
+          mk_let (new_ab, new_v)
+       end;
+
+   (*prove equality between the original term and the constructed one by
+     removing LET and simplifying using GEN_BETA_CONV. if LET was removed,
+     an error will occur, so use reflexivity in that case*)
+   fun my_let_CONV t =
+       (REWR_CONV LET_THM THENC beta_conv) t handle HOL_ERR _ =>
+       REFL t
+
+   val tm_thm = my_let_CONV tm
+   val result_thm = my_let_CONV result_term
+in
+   TRANS tm_thm (GSYM result_thm)
+end handle HOL_ERR _ => raise UNCHANGED;
 
 
 end

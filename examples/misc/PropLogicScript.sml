@@ -486,6 +486,7 @@ val Andrews_Lemma = Q.store_thm(
 (* provable.                                                                 *)
 (*---------------------------------------------------------------------------*)
 
+val _ = temp_clear_overloads_on "U"
 val Completeness_Lemma = Q.prove
 (`!p V. Tautology p /\ (V SUBSET (Vars p))
         ==>

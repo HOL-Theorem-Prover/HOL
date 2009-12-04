@@ -511,14 +511,23 @@ local
                   (fn pps => fn b => ())
                   (fn pps => fn x => PP.add_string pps (line x)) ~1
 in
-  fun output_program ostrm t =
+  fun output_program_to_stream ostrm t =
   let val pps = PP.mk_ppstream { consumer = fn s => TextIO.output(ostrm, s),
                                  linewidth = 11,
                                  flush = fn () => TextIO.flushOut ostrm }
   in
     pp_code pps t before PP.flush_ppstream pps
   end
-end
+end;
+
+fun output_program opt t =
+  case opt
+  of SOME s =>
+       let val ostrm = TextIO.openOut s in
+         output_program_to_stream ostrm t before TextIO.closeOut ostrm
+       end
+   | NONE =>
+       output_program_to_stream TextIO.stdOut t;
 
 (* val _ = installPP (mosmlpp patriciaLib.pp_term_ptree); *)
 

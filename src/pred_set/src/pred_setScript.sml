@@ -214,12 +214,14 @@ val IN_UNIV =
      (--`!x:'a. x IN UNIV`--),
      GEN_TAC THEN PURE_REWRITE_TAC [UNIV_DEF,SPECIFICATION] THEN
      CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH);
+val _ = export_rewrites ["IN_UNIV"]
 
 val UNIV_NOT_EMPTY =
     store_thm
     ("UNIV_NOT_EMPTY",
      (--`~(UNIV:'a set = EMPTY)`--),
      REWRITE_TAC [EXTENSION,IN_UNIV,NOT_IN_EMPTY]);
+val _ = export_rewrites ["UNIV_NOT_EMPTY"]
 
 val EMPTY_NOT_UNIV =
     store_thm
@@ -232,6 +234,43 @@ val EQ_UNIV =
     ("EQ_UNIV",
      (--`(!x:'a. x IN s) = (s = UNIV)`--),
      REWRITE_TAC [EXTENSION,IN_UNIV]);
+
+val _ = overload_on ("U", ``\x:'a itself. UNIV: 'a set``)
+
+fun univ_printer (tyg, tmg) printer (ppfns:term_pp_types.ppstream_funs) gravs
+                 depth pps tm =
+let
+  val (elty, _) = dom_rng (type_of tm)
+  val itself_t = Term.inst [alpha |-> elty] boolSyntax.the_value
+in
+  #add_string ppfns "U";
+  printer gravs depth itself_t
+end
+
+val _ = temp_add_user_printer("UNIVprinter", ``UNIV: 'a set``, univ_printer)
+
+val _ = adjoin_to_theory
+            {sig_ps = NONE,
+             struct_ps = SOME (fn pps => PP.add_string pps
+"local\n\
+\  val univ_printing = ref true\n\
+\  val u_t = prim_mk_const{Thy = \"pred_set\", Name = \"UNIV\"}\n\
+\  val _ = Feedback.register_btrace (\"Univ pretty-printing\", univ_printing)\n\
+\  fun univ_printer (tyg, tmg) printer (ppfns:term_pp_types.ppstream_funs) gravs depth pps tm =\n\
+\      if !univ_printing then let\n\
+\          val {add_string, begin_block, end_block,...} = ppfns\n\
+\          val (elty, _) = dom_rng (type_of tm)\n\
+\          val itself_t = Term.inst [{redex=alpha,residue=elty}]\n\
+\                                   boolSyntax.the_value\n\
+\        in\n\
+\          add_string \"U\";\n\
+\          printer gravs depth itself_t\n\
+\        end\n\
+\      else raise term_pp_types.UserPP_Failed\n\
+\  val _ = Parse.temp_add_user_printer(\"UNIVprinter\", u_t, univ_printer)\n\
+\in\n\
+\end")};
+
 
 
 (* ===================================================================== *)
@@ -2999,6 +3038,7 @@ val CROSS_DEF = Q.new_definition(
   "CROSS_DEF",
   `CROSS P Q = { p | FST p IN P /\ SND p IN Q }`);
 val _ = set_fixity "CROSS" (Infixl 600);
+val _ = Unicode.unicode_version {tmnm = "CROSS", u = UTF8.chr 0xD7}
 
 val IN_CROSS = store_thm(
   "IN_CROSS",
@@ -4139,12 +4179,9 @@ val count_EQN = Q.store_thm
 
 (* Theorems about countability added by Scott Owens on 2009-03-20, plus a few
 * misc. theorems *)
-local
 
 fun FSTAC thms = FULL_SIMP_TAC (srw_ss()) thms;
 fun RWTAC thms = SRW_TAC [] thms;
-
-in
 
 val UNIQUE_MEMBER_SING = Q.store_thm ("UNIQUE_MEMBER_SING",
 `!x s. x IN s /\ (!y. y IN s ==> (x = y)) = (s = {x})`,
@@ -4178,13 +4215,12 @@ val chooser_def = TotalDefn.Define `
 val chooser_lem1 = Q.prove (
 `!n s t. INFINITE s /\ s SUBSET t ==> chooser s n IN t`,
 Induct THEN
-RWTAC [chooser_def, SUBSET_DEF] THENL
-[`s <> {}`
-          by (RWTAC [EXTENSION] THEN
-              METIS_TAC [INFINITE_INHAB]) THEN
-     METIS_TAC [CHOICE_DEF],
- `REST s SUBSET s` by RWTAC [REST_SUBSET] THEN
-     METIS_TAC [infinite_rest]]);
+RWTAC [chooser_def, SUBSET_DEF] THENL [
+  `s <> {}` by (RWTAC [EXTENSION] THEN METIS_TAC [INFINITE_INHAB]) THEN
+  METIS_TAC [CHOICE_DEF],
+  `REST s SUBSET s` by RWTAC [REST_SUBSET] THEN
+  METIS_TAC [infinite_rest]
+]);
 
 val chooser_lem2 = Q.prove (
 `!n s. INFINITE s ==> chooser (REST s) n <> CHOICE s`,
@@ -4214,22 +4250,19 @@ Q.PAT_ASSUM `!f. (?x. f x NOTIN s) \/ P f` MP_TAC THEN
 RWTAC [] THEN
 Cases_on `?y. f y = e` THEN
 FSTAC [] THEN
-RWTAC [] THENL
-[Q.EXISTS_TAC `\x. if x < y then f x else f (SUC x)` THEN
-     RWTAC [] THEN
-     FSTAC [METIS_PROVE [] ``! a b. a \/ b = ~a==>b``] THEN
-     RWTAC [] THENL
-     [`x <> y` by FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [] THEN
-          METIS_TAC [],
-      `SUC x <> y`by FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [] THEN
-          METIS_TAC [],
-      `x = SUC y'` by METIS_TAC [] THEN
-          FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [],
-      `SUC x = y'` by METIS_TAC [] THEN
-          FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [],
-      `SUC x = SUC y'` by METIS_TAC [] THEN
-          FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) []],
- METIS_TAC []]);
+RWTAC [] THENL [
+  Q.EXISTS_TAC `\x. if x < y then f x else f (SUC x)` THEN
+  RWTAC [] THEN
+  FSTAC [METIS_PROVE [] ``! a b. a \/ b = ~a==>b``] THEN
+  RWTAC [] THENL [
+    `x <> y` by DECIDE_TAC THEN METIS_TAC [],
+    `SUC x <> y` by DECIDE_TAC THEN METIS_TAC [],
+    `x = SUC y'` by METIS_TAC [] THEN DECIDE_TAC,
+    `SUC x = y'` by METIS_TAC [] THEN DECIDE_TAC,
+    `SUC x = SUC y'` by METIS_TAC [] THEN DECIDE_TAC
+  ],
+  METIS_TAC []
+]);
 
 val infinite_num_inj = Q.store_thm ("infinite_num_inj",
 `!s. INFINITE s = ?f. INJ f (UNIV:num set) s`,
@@ -4286,70 +4319,36 @@ RWTAC [countable_def] THEN
 FSTAC [INJ_DEF, IN_UNIV] THEN
 Q.EXISTS_TAC `\x. if x IN s then f x else SUC (MAX_SET (IMAGE f s))` THEN
 RWTAC [] THEN
-`IMAGE f s <> {}`
-           by (CCONTR_TAC THEN
-               FSTAC [IMAGE_DEF]) THENL
-[`MAX_SET (IMAGE f s) IN IMAGE f s /\
-  (f x <= MAX_SET (IMAGE f s))`
+`IMAGE f s <> {}` by (CCONTR_TAC THEN FSTAC [IMAGE_DEF])
+THENL [
+  `MAX_SET (IMAGE f s) IN IMAGE f s /\
+   (f x <= MAX_SET (IMAGE f s))`
+       by METIS_TAC [MAX_SET_DEF, IMAGE_FINITE, IN_IMAGE] THEN
+  METIS_TAC [DECIDE ``~(SUC x <= x)``],
+  `MAX_SET (IMAGE f s) IN IMAGE f s /\
+   (f y <= MAX_SET (IMAGE f s))`
           by METIS_TAC [MAX_SET_DEF, IMAGE_FINITE, IN_IMAGE] THEN
-     METIS_TAC [Q.prove (`!x. ~(SUC x <= x)`,
-                         FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [])],
- `MAX_SET (IMAGE f s) IN IMAGE f s /\
-  (f y <= MAX_SET (IMAGE f s))`
-          by METIS_TAC [MAX_SET_DEF, IMAGE_FINITE, IN_IMAGE] THEN
-     METIS_TAC [Q.prove (`!x. ~(SUC x <= x)`,
-                         FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [])]]);
+     METIS_TAC [DECIDE ``!x. ~(SUC x <= x)``]
+]);
 
-val num_to_pair_def = TotalDefn.Define `
-  (num_to_pair 0 = (0, 0)) /\
-  (num_to_pair (SUC n) =
-    case num_to_pair n of
-       (0, y) -> (SUC y, 0)
-    || (SUC x, y) -> (x, SUC y))`;
+open numpairTheory
 
-val pair_to_num_def = TotalDefn.tDefine "pair_to_num" `
-  (pair_to_num (0, 0) = 0) /\
-  (pair_to_num (SUC x, 0) = SUC (pair_to_num (0, x))) /\
-  (pair_to_num (x, SUC y) = SUC (pair_to_num (SUC x, y)))`
-(TotalDefn.WF_REL_TAC `inv_image ($< LEX $<) (\(x, y). (x + y, y))`);
-
-val pair_to_num_ind = fetch "-" "pair_to_num_ind";
+val num_to_pair_def = TotalDefn.Define `num_to_pair n = (nfst n, nsnd n)`
+val pair_to_num_def = TotalDefn.Define `pair_to_num (m,n) = m *, n`
 
 val pair_to_num_formula = Q.store_thm ("pair_to_num_formula",
-`!x y. pair_to_num (x, y) = (x + y + 1) * (x + y) DIV 2 + y`,
-recInduct pair_to_num_ind THEN
-RWTAC [pair_to_num_def] THEN
-RWTAC [LEFT_ADD_DISTRIB, GSYM ADD_DIV_ADD_DIV, ADD1, RIGHT_ADD_DISTRIB,
-       METIS_PROVE [ADD_DIV_ADD_DIV, ADD_COMM]
-                   ``!n. 0 < n ==>
-                         !x r. r DIV n + x = (x * n + r) DIV n``] THEN
-SRW_TAC [numSimps.ARITH_ss] []);
+  `!x y. pair_to_num (x, y) = (x + y + 1) * (x + y) DIV 2 + y`,
+  SRW_TAC [][pair_to_num_def, tri_formula, npair_def, MULT_COMM]);
 
 val pair_to_num_inv = Q.store_thm ("pair_to_num_inv",
-`(!x. pair_to_num (num_to_pair x) = x) /\
- (!x y. num_to_pair (pair_to_num (x, y)) = (x, y))`,
-STRIP_TAC THENL
-[Induct THEN
-     RWTAC [pair_to_num_def, num_to_pair_def] THEN
-     Cases_on `num_to_pair x` THEN
-     STRIP_ASSUME_TAC (Q.SPEC `q` num_CASES) THEN
-     RWTAC [pair_to_num_def] THEN
-     STRIP_ASSUME_TAC (Q.SPEC `n` num_CASES) THEN
-     STRIP_ASSUME_TAC (Q.SPEC `r` num_CASES) THEN
-     RWTAC [pair_to_num_def],
- recInduct pair_to_num_ind THEN
-     RWTAC [pair_to_num_def, num_to_pair_def] THEN
-     SIMP_TAC bool_ss [ONE] THEN
-     RWTAC []]);
+  `(!x. pair_to_num (num_to_pair x) = x) /\
+   (!x y. num_to_pair (pair_to_num (x, y)) = (x, y))`,
+  SRW_TAC [][pair_to_num_def, num_to_pair_def]);
 
 val num_cross_countable = Q.prove (
-`countable (UNIV:num set CROSS UNIV:num set)`,
-RWTAC [countable_surj, SURJ_DEF, CROSS_DEF, IN_UNIV, UNIV_NOT_EMPTY] THEN
-Q.EXISTS_TAC `num_to_pair` THEN
-RWTAC [UNIV_NOT_EMPTY] THEN
-Q.EXISTS_TAC `pair_to_num x` THEN
-Cases_on `x` THEN
-METIS_TAC [pair_to_num_inv]);
+  `countable (UNIV:num set CROSS UNIV:num set)`,
+  RWTAC [countable_surj, SURJ_DEF, CROSS_DEF] THEN
+  METIS_TAC [PAIR, pair_to_num_inv]);
 
 val cross_countable = Q.store_thm ("cross_countable",
 `!s t. countable s /\ countable t ==> countable (s CROSS t)`,
@@ -4430,7 +4429,7 @@ RWTAC [countable_surj, infinite_num_inj] THENL
  IMP_RES_TAC inj_surj THEN
      FSTAC [UNIV_NOT_EMPTY] THEN
      METIS_TAC [pow_no_surj, SURJ_COMPOSE]]);
-end;
+
 (* END countability theorems *)
 
 
@@ -4565,9 +4564,7 @@ val _ = export_rewrites
      "SUBSET_INSERT", "SUBSET_REFL",
      (* "UNION" *)
      "UNION_IDEMPOT", "UNION_SUBSET",
-     "SUBSET_UNION",
-     (* UNIV *)
-     "IN_UNIV", "EMPTY_NOT_UNIV"
+     "SUBSET_UNION"
 ];
 
 val sspec_conv_str =

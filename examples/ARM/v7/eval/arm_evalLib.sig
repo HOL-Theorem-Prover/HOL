@@ -10,7 +10,8 @@ sig
   val arm_load_from_quote  : string -> string frag list ->
                              patriciaLib.term_ptree -> patriciaLib.term_ptree
 
-  val output_program  : TextIO.outstream -> patriciaLib.term_ptree -> unit
+  val output_program  : string option -> patriciaLib.term_ptree -> unit
+
   val encode_psr      : string -> string
   val arm_eval        : string -> Term.term -> int -> Thm.thm
   val print_arm_state : Thm.thm -> unit
