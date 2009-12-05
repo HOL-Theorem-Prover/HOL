@@ -26,6 +26,11 @@ val nB_eq0 = Store_thm(
   ``(nB p = 0) ⇔ ¬p``,
   Cases_on `p` THEN SRW_TAC [][])
 
+val nB_eq1 = Store_thm(
+  "nB_eq1",
+  ``(nB p = 1) ⇔ p``,
+  Cases_on `p` THEN SRW_TAC [][]);
+
 
 
 val proj_def = Define`
@@ -253,7 +258,7 @@ val pr_eq_def = Define`
   pr_eq = Cn pr_mult [pr_le; cflip pr_le]
 `;
 
-val pr_eq_thm = store_thm(
+val pr_eq_thm = Store_thm(
   "pr_eq_thm",
   ``pr_eq (n ⊗ m) = nB (n = m)``,
   SRW_TAC [ARITH_ss][pr_eq_def]);
@@ -262,6 +267,131 @@ val primrec_pr_eq = Store_thm(
   "primrec_pr_eq",
   ``primrec pr_eq 2``,
   SRW_TAC [][pr_eq_def, primrec_rules]);
+
+val primrec_K = Store_thm(
+  "primrec_K",
+  ``∀n. primrec (K n) 1``,
+  Induct THEN SRW_TAC [][primrec_rules] THEN
+  Q_TAC SUFF_TAC `K (SUC n) = Cn SUC [K n]`
+    THEN1 SRW_TAC [][primrec_rules] THEN
+  SRW_TAC [][FUN_EQ_THM]);
+
+(* need a function f (Pr,x,y) = Pr * x + (1 - Pr) * y
+     Cn + [Cn * [p13, p12], Cn * [Cn - [K 1, p11]; p13]]
+*)
+val pr_cond_def = Define`
+  pr_cond P f g =
+    Cn (Cn pr_add [Cn pr_mult [proj 0 2; proj 1 2];
+                   Cn pr_mult [Cn pr_sub [Cn (K 1) [proj 0 2]; proj 0 2];
+                               proj 2 2]])
+       [P;f;g]
+`;
+
+val pr_predicate_def = Define`
+  pr_predicate P = ∀n. (P n = 0) ∨ (P n = 1)
+`;
+
+val Cn_pr_eq_predicate = Store_thm(
+  "Cn_pr_eq_predicate",
+  ``pr_predicate (Cn pr_eq [f; g])``,
+  SRW_TAC [][pr_predicate_def, pr_eq_thm]);
+
+val pr_cond_thm = Store_thm(
+  "pr_cond_thm",
+  ``pr_predicate P ⇒
+    (pr_cond P f g n = if P n = 1 then f n else g n)``,
+  SRW_TAC [][pr_cond_def, pr_predicate_def] THEN
+  `P n = 0` by METIS_TAC [] THEN
+  SRW_TAC [][]);
+
+
+val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
+
+val primrec_pr_cond = Store_thm(
+  "primrec_pr_cond",
+  ``primrec P n ∧ primrec f n ∧ primrec g n ⇒ primrec (pr_cond P f g) n``,
+  SRW_TAC [][pr_cond_def] THEN
+  MATCH_MP_TAC primrec_cn THEN SRW_TAC [][] THEN
+  MATCH_MP_TAC primrec_cn THEN SRW_TAC [][] THEN
+  MATCH_MP_TAC primrec_cn THEN SRW_TAC [][] THEN
+  SRW_TAC [][primrec_rules]);
+
+(* 0 div m = 0 /\
+   (n + 1) div m = let r = n div m
+                   in
+                       if n + 1 - r * m = m then r + 1 else r
+
+  In recursive case, h is called with (n, r, m)
+
+*)
+val pr_div_def = Define`
+  pr_div =
+  Pr (K 0)
+     (pr_cond (Cn pr_eq [Cn pr_sub [Cn pr_add [proj 0 2; Cn (K 1) [proj 0 2]];
+                                    Cn pr_mult [proj 1 2; proj 2 2]];
+                         proj 2 2])
+              (Cn SUC [proj 1 2])
+              (proj 1 2))
+`;
+
+val primrec_pr_div = Store_thm(
+  "primrec_pr_div",
+  ``primrec pr_div 2``,
+  SRW_TAC [][pr_div_def] THEN
+  MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][] THEN
+  MATCH_MP_TAC primrec_pr_cond THEN SRW_TAC [][primrec_rules] THEN
+  MATCH_MP_TAC primrec_cn THEN SRW_TAC [][primrec_rules]);
+
+val pr_div_recursion = store_thm(
+  "pr_div_recursion",
+  ``(pr_div (0 ⊗ m) = 0) ∧
+    (pr_div ((n + 1) ⊗ m) = let r = pr_div (n ⊗ m)
+                            in
+                              if n + 1 - r * m = m then r + 1 else r)``,
+  SIMP_TAC (srw_ss()) [pr_div_def, LET_THM] THEN
+  SIMP_TAC (srw_ss()) [GSYM pr_div_def, ADD1]);
+
+val pr_div_thm = Store_thm(
+  "pr_div_thm",
+  ``0 < m ⇒ (pr_div (n ⊗ m) = n DIV m)``,
+  STRIP_TAC THEN Induct_on `n` THEN1
+    SRW_TAC [][pr_div_recursion, ZERO_DIV] THEN
+  SRW_TAC [][pr_div_recursion, ADD1, LET_THM] THENL [
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN MATCH_MP_TAC DIV_UNIQUE THEN
+    Q.EXISTS_TAC `0` THEN SRW_TAC [ARITH_ss][RIGHT_ADD_DISTRIB],
+
+    Q.SPEC_THEN `m` (IMP_RES_THEN MP_TAC) DIVISION THEN
+    NTAC 2 (DISCH_THEN (Q.SPEC_THEN `n` ASSUME_TAC)) THEN
+    Q.ABBREV_TAC `q = n DIV m` THEN
+    Q.ABBREV_TAC `r = n MOD m` THEN
+    markerLib.RM_ALL_ABBREVS_TAC THEN
+    Q.PAT_ASSUM `pr_div X = Y` (K ALL_TAC) THEN
+    SRW_TAC [][] THEN
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN MATCH_MP_TAC DIV_UNIQUE THEN
+    Q.EXISTS_TAC `r + 1` THEN DECIDE_TAC
+  ]);
+
+val pr_mod_def = Define`
+  pr_mod = Cn pr_sub [proj 0 1; Cn pr_mult [pr_div; proj 1 1]]
+`;
+
+val pr_mod_eqn = store_thm(
+  "pr_mod_eqn",
+  ``pr_mod (n ⊗ m) = n - pr_div (n ⊗ m) * m``,
+  SRW_TAC [][pr_mod_def]);
+
+val pr_mod_thm = Store_thm(
+  "pr_mod_thm",
+  ``0 < m ⇒ (pr_mod (n ⊗ m) = n MOD m)``,
+  SRW_TAC [][pr_mod_eqn] THEN
+  Q.SPEC_THEN `m` (IMP_RES_THEN MP_TAC) DIVISION THEN
+  NTAC 2 (DISCH_THEN (Q.SPEC_THEN `n` ASSUME_TAC)) THEN
+  DECIDE_TAC);
+
+val primrec_pr_mod = Store_thm(
+  "primrec_pr_mod",
+  ``primrec pr_mod 2``,
+  SRW_TAC [][pr_mod_def, primrec_rules]);
 
 (* ----------------------------------------------------------------------
     Proof that Ackermann function is not primitive recursive.
