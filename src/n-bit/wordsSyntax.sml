@@ -29,49 +29,63 @@ fun dim_of tm = dest_word_type(type_of tm);
 (* Constants for word operations                                             *)
 (*---------------------------------------------------------------------------*)
 
-val fcp_index_tm    = prim_mk_const{Name = "fcp_index", Thy = "fcp"}
-val word_T_tm       = prim_mk_const{Name = "word_T", Thy = "words"}
-val word_L_tm       = prim_mk_const{Name = "word_L", Thy = "words"}
-val word_H_tm       = prim_mk_const{Name = "word_H", Thy = "words"}
-val word_L2_tm      = prim_mk_const{Name = "word_L2", Thy = "words"};
-val word_modify_tm  = prim_mk_const{Name = "word_modify", Thy = "words"}
-val word_reverse_tm = prim_mk_const{Name = "word_reverse", Thy="words"}
-val nzcv_tm         = prim_mk_const{Name = "nzcv", Thy = "words"}
-val word_lt_tm      = prim_mk_const{Name = "word_lt", Thy="words"}
-val word_le_tm      = prim_mk_const{Name = "word_le", Thy="words"}
-val word_gt_tm      = prim_mk_const{Name = "word_gt", Thy="words"}
-val word_ge_tm      = prim_mk_const{Name = "word_ge", Thy="words"}
-val word_add_tm     = prim_mk_const{Name = "word_add", Thy="words"}
-val word_sub_tm     = prim_mk_const{Name = "word_sub", Thy="words"}
-val word_rrx_tm     = prim_mk_const{Name = "word_rrx", Thy="words"}
-val word_mul_tm     = prim_mk_const{Name = "word_mul", Thy="words"}
-val word_log2_tm    = prim_mk_const{Name = "word_log2", Thy="words"}
-val word_msb_tm     = prim_mk_const{Name = "word_msb", Thy="words"}
-val word_lsb_tm     = prim_mk_const{Name = "word_lsb", Thy="words"}
-val word_join_tm    = prim_mk_const{Name = "word_join", Thy="words"}
-val word_concat_tm  = prim_mk_const{Name = "word_concat", Thy="words"}
-val word_slice_tm   = prim_mk_const{Name = "word_slice", Thy="words"}
-val word_bit_tm     = prim_mk_const{Name = "word_bit", Thy="words"}
-val word_bits_tm    = prim_mk_const{Name = "word_bits", Thy="words"}
-val word_extract_tm = prim_mk_const{Name = "word_extract", Thy="words"}
-val word_lsl_tm     = prim_mk_const{Name = "word_lsl", Thy="words"}
-val word_lsr_tm     = prim_mk_const{Name = "word_lsr", Thy="words"}
-val word_asr_tm     = prim_mk_const{Name = "word_asr", Thy="words"}
-val word_ror_tm     = prim_mk_const{Name = "word_ror", Thy="words"}
-val word_rol_tm     = prim_mk_const{Name = "word_rol", Thy="words"}
-val word_hi_tm      = prim_mk_const{Name = "word_hi", Thy="words"}
-val word_lo_tm      = prim_mk_const{Name = "word_lo", Thy="words"}
-val word_hs_tm      = prim_mk_const{Name = "word_hs", Thy="words"}
-val word_ls_tm      = prim_mk_const{Name = "word_ls", Thy="words"}
-val word_and_tm     = prim_mk_const{Name = "word_and", Thy="words"}
-val word_or_tm      = prim_mk_const{Name = "word_or", Thy="words"}
-val word_xor_tm     = prim_mk_const{Name = "word_xor", Thy="words"}
-val word_1comp_tm   = prim_mk_const{Name = "word_1comp", Thy = "words"}
-val word_2comp_tm   = prim_mk_const{Name = "word_2comp", Thy="words"}
-val w2w_tm          = prim_mk_const{Name = "w2w", Thy="words"}
-val n2w_tm          = prim_mk_const{Name = "n2w", Thy="words"}
-val w2n_tm          = prim_mk_const{Name = "w2n", Thy="words"}
-val sw2sw_tm        = prim_mk_const{Name = "sw2sw", Thy="words"};
+fun mk_word_tm s = prim_mk_const{Name = s, Thy = "words"}
+
+val fcp_index_tm        = prim_mk_const{Name = "fcp_index", Thy = "fcp"}
+val word_T_tm           = mk_word_tm "word_T"
+val word_L_tm           = mk_word_tm "word_L"
+val word_H_tm           = mk_word_tm "word_H"
+val word_L2_tm          = mk_word_tm "word_L2"
+val word_modify_tm      = mk_word_tm "word_modify"
+val word_reverse_tm     = mk_word_tm "word_reverse"
+val nzcv_tm             = mk_word_tm "nzcv"
+val word_lt_tm          = mk_word_tm "word_lt"
+val word_le_tm          = mk_word_tm "word_le"
+val word_gt_tm          = mk_word_tm "word_gt"
+val word_ge_tm          = mk_word_tm "word_ge"
+val word_add_tm         = mk_word_tm "word_add"
+val word_sub_tm         = mk_word_tm "word_sub"
+val word_rrx_tm         = mk_word_tm "word_rrx"
+val word_mul_tm         = mk_word_tm "word_mul"
+val word_log2_tm        = mk_word_tm "word_log2"
+val word_msb_tm         = mk_word_tm "word_msb"
+val word_lsb_tm         = mk_word_tm "word_lsb"
+val word_join_tm        = mk_word_tm "word_join"
+val word_concat_tm      = mk_word_tm "word_concat"
+val word_slice_tm       = mk_word_tm "word_slice"
+val word_bit_tm         = mk_word_tm "word_bit"
+val word_bits_tm        = mk_word_tm "word_bits"
+val word_extract_tm     = mk_word_tm "word_extract"
+val word_lsl_tm         = mk_word_tm "word_lsl"
+val word_lsr_tm         = mk_word_tm "word_lsr"
+val word_asr_tm         = mk_word_tm "word_asr"
+val word_ror_tm         = mk_word_tm "word_ror"
+val word_rol_tm         = mk_word_tm "word_rol"
+val word_hi_tm          = mk_word_tm "word_hi"
+val word_lo_tm          = mk_word_tm "word_lo"
+val word_hs_tm          = mk_word_tm "word_hs"
+val word_ls_tm          = mk_word_tm "word_ls"
+val word_and_tm         = mk_word_tm "word_and"
+val word_or_tm          = mk_word_tm "word_or"
+val word_xor_tm         = mk_word_tm "word_xor"
+val word_nand_tm        = mk_word_tm "word_nand"
+val word_nor_tm         = mk_word_tm "word_nor"
+val word_xnor_tm        = mk_word_tm "word_xnor"
+val word_1comp_tm       = mk_word_tm "word_1comp"
+val word_2comp_tm       = mk_word_tm "word_2comp"
+val word_replicate_tm   = mk_word_tm "word_replicate"
+val concat_word_list_tm = mk_word_tm "concat_word_list"
+val word_reduce_tm      = mk_word_tm "word_reduce"
+val reduce_and_tm       = mk_word_tm "reduce_and"
+val reduce_or_tm        = mk_word_tm "reduce_or"
+val reduce_xor_tm       = mk_word_tm "reduce_xor"
+val reduce_nand_tm      = mk_word_tm "reduce_nand"
+val reduce_nor_tm       = mk_word_tm "reduce_nor"
+val reduce_xnor_tm      = mk_word_tm "reduce_xnor"
+val w2w_tm              = mk_word_tm "w2w"
+val n2w_tm              = mk_word_tm "n2w"
+val w2n_tm              = mk_word_tm "w2n"
+val sw2sw_tm            = mk_word_tm "sw2sw"
 
 (*---------------------------------------------------------------------------*)
 (* Constructors                                                              *)
@@ -233,6 +247,18 @@ fun mk_word_xor(w1,w2) =
   list_mk_comb(inst[alpha |-> dim_of w1]word_xor_tm,[w1,w2])
   handle HOL_ERR _ => raise ERR "mk_word_xor" "";
 
+fun mk_word_nand(w1,w2) =
+  list_mk_comb(inst[alpha |-> dim_of w1]word_nand_tm,[w1,w2])
+  handle HOL_ERR _ => raise ERR "mk_word_nand" "";
+
+fun mk_word_nor(w1,w2) =
+  list_mk_comb(inst[alpha |-> dim_of w1]word_nor_tm,[w1,w2])
+  handle HOL_ERR _ => raise ERR "mk_word_nor" "";
+
+fun mk_word_xnor(w1,w2) =
+  list_mk_comb(inst[alpha |-> dim_of w1]word_xnor_tm,[w1,w2])
+  handle HOL_ERR _ => raise ERR "mk_word_xnor" "";
+
 fun mk_word_1comp w =
   mk_comb(inst[alpha |-> dim_of w]word_1comp_tm,w)
   handle HOL_ERR _ => raise ERR "mk_word_1comp" "";
@@ -260,6 +286,44 @@ fun mk_sw2sw(w,ty) =
 fun mk_word   (v,n) = mk_n2w (numSyntax.mk_numeral v, fcpLib.index_type n);
 fun mk_wordi  (v,i) = mk_word (v, Arbnum.fromInt i);
 fun mk_wordii (v,i) = mk_wordi (Arbnum.fromInt v, i);
+
+fun mk_word_reduce (f,w) =
+  list_mk_comb(inst[alpha |-> dim_of w]word_reduce_tm,[f,w])
+  handle HOL_ERR _ => raise ERR "mk_word_reduce" "";
+
+fun mk_reduce_and w =
+  mk_comb(inst[alpha |-> dim_of w]reduce_and_tm,w)
+  handle HOL_ERR _ => raise ERR "mk_reduce_and" "";
+
+fun mk_reduce_or w =
+  mk_comb(inst[alpha |-> dim_of w]reduce_or_tm,w)
+  handle HOL_ERR _ => raise ERR "mk_reduce_or" "";
+
+fun mk_reduce_xor w =
+  mk_comb(inst[alpha |-> dim_of w]reduce_xor_tm,w)
+  handle HOL_ERR _ => raise ERR "mk_reduce_xor" "";
+
+fun mk_reduce_nand w =
+  mk_comb(inst[alpha |-> dim_of w]reduce_nand_tm,w)
+  handle HOL_ERR _ => raise ERR "mk_reduce_nand" "";
+
+fun mk_reduce_nor w =
+  mk_comb(inst[alpha |-> dim_of w]reduce_nor_tm,w)
+  handle HOL_ERR _ => raise ERR "mk_reduce_nor" "";
+
+fun mk_reduce_xnor w =
+  mk_comb(inst[alpha |-> dim_of w]reduce_xnor_tm,w)
+  handle HOL_ERR _ => raise ERR "mk_reduce_xnor" "";
+
+fun mk_word_replicate (n,w) =
+  list_mk_comb(inst[alpha |-> dim_of w]word_replicate_tm,[n,w])
+  handle HOL_ERR _ => raise ERR "mk_word_replicate" "";
+
+fun mk_concat_word_list l =
+  mk_comb(inst[alpha |-> (l |> type_of
+                            |> listSyntax.dest_list_type
+                            |> dest_word_type)]concat_word_list_tm,l)
+  handle HOL_ERR _ => raise ERR "mk_concat_word_list" "";
 
 (*---------------------------------------------------------------------------*)
 (* Destructors                                                               *)
@@ -385,6 +449,15 @@ val dest_word_xor =
 val dest_word_or =
   dest_binop word_or_tm (ERR "dest_word_or" "");
 
+val dest_word_nand =
+  dest_binop word_nand_tm (ERR "dest_word_nand" "");
+
+val dest_word_xnor =
+  dest_binop word_xnor_tm (ERR "dest_word_xnor" "");
+
+val dest_word_nor =
+  dest_binop word_nor_tm (ERR "dest_word_nor" "");
+
 val dest_word_1comp =
   dest_monop word_1comp_tm (ERR "dest_word_1comp" "");
 
@@ -403,6 +476,32 @@ fun dest_sw2sw M =
 val dest_w2n =
   dest_monop w2n_tm (ERR "dest_w2n" "");
 
+val dest_word_reduce =
+  dest_binop word_reduce_tm (ERR "dest_word_reduce" "");
+
+val dest_reduce_and =
+  dest_monop reduce_and_tm (ERR "dest_reduce_and" "");
+
+val dest_reduce_or =
+  dest_monop reduce_or_tm (ERR "dest_reduce_or" "");
+
+val dest_reduce_xor =
+  dest_monop reduce_xor_tm (ERR "dest_reduce_xor" "");
+
+val dest_reduce_nand =
+  dest_monop reduce_nand_tm (ERR "dest_reduce_nand" "");
+
+val dest_reduce_nor =
+  dest_monop reduce_nor_tm (ERR "dest_reduce_nor" "");
+
+val dest_reduce_xnor =
+  dest_monop reduce_xnor_tm (ERR "dest_reduce_xnor" "");
+
+val dest_word_replicate =
+  dest_binop word_replicate_tm (ERR "dest_word_replicate" "");
+
+val dest_concat_word_list =
+  dest_monop concat_word_list_tm (ERR "dest_concat_word_list" "");
 
 (*---------------------------------------------------------------------------*)
 (* Discriminators                                                            *)
@@ -444,8 +543,20 @@ val is_word_ls =Lib.can dest_word_ls
 val is_word_and =Lib.can dest_word_and
 val is_word_or = Lib.can dest_word_or
 val is_word_xor = Lib.can dest_word_xor
+val is_word_nand =Lib.can dest_word_nand
+val is_word_nor = Lib.can dest_word_nor
+val is_word_xnor = Lib.can dest_word_xnor
 val is_word_1comp = Lib.can dest_word_1comp
 val is_word_2comp = Lib.can dest_word_2comp
+val is_word_reduce = Lib.can dest_word_reduce
+val is_reduce_and = Lib.can dest_reduce_and
+val is_reduce_or = Lib.can dest_reduce_or
+val is_reduce_xor = Lib.can dest_reduce_xor
+val is_reduce_nand = Lib.can dest_reduce_nand
+val is_reduce_nor = Lib.can dest_reduce_nor
+val is_reduce_xnor = Lib.can dest_reduce_xnor
+val is_word_replicate = Lib.can dest_word_replicate
+val is_concat_word_list = Lib.can dest_concat_word_list
 val is_w2w = Lib.can dest_w2w
 val is_n2w = Lib.can dest_n2w
 val is_w2n = Lib.can dest_w2n
