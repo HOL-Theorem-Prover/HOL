@@ -125,16 +125,34 @@ val word_xor_def = Define`
   word_xor (v:'a word) (w:'a word) =
     (FCP i. ~((v ' i) = (w ' i))):'a word`;
 
+val word_nand_def = Define`
+  word_nand (v:'a word) (w:'a word) =
+    (FCP i. ~((v ' i) /\ (w ' i))):'a word`;
+
+val word_nor_def = Define`
+  word_nor (v:'a word) (w:'a word) =
+    (FCP i. ~((v ' i) \/ (w ' i))):'a word`;
+
+val word_xnor_def = Define`
+  word_xnor (v:'a word) (w:'a word) =
+    (FCP i. (v ' i) = (w ' i)):'a word`;
+
 val _ = overload_on ("~", ``words$word_1comp``)
 val _ = send_to_back_overload "~" {Name = "word_1comp", Thy = "words"};
 
 val _ = add_infix("&&",400,HOLgrammars.RIGHT)
 val _ = add_infix("??",375,HOLgrammars.RIGHT)
 val _ = add_infix("!!",300,HOLgrammars.RIGHT)
+val _ = add_infix("~&&",400,HOLgrammars.RIGHT)
+val _ = add_infix("~??",375,HOLgrammars.RIGHT)
+val _ = add_infix("~!!",300,HOLgrammars.RIGHT)
 
 val _ = overload_on ("&&",``words$word_and``)
 val _ = overload_on ("??",``words$word_xor``)
 val _ = overload_on ("!!",``words$word_or``)
+val _ = overload_on ("~&&",``words$word_nand``)
+val _ = overload_on ("~??",``words$word_xnor``)
+val _ = overload_on ("~!!",``words$word_nor``)
 val _ = overload_on ("Tw",``words$word_T``)
 val _ = overload_on ("UINT_MAXw",``words$word_T``)
 val _ = overload_on ("INT_MAXw",``words$word_H``)
@@ -702,9 +720,20 @@ val word_or_n2w = store_thm("word_or_n2w",
   SIMP_TAC fcp_ss [word_or_def,n2w_11,n2w_def,BITWISE_THM]);
 
 val word_xor_n2w = store_thm("word_xor_n2w",
-  `!n m. (n2w n):'a word ?? (n2w m) =
-     n2w (BITWISE ^WL (\x y. ~(x = y)) n m)`,
+  `!n m. (n2w n):'a word ?? (n2w m) = n2w (BITWISE ^WL (\x y. ~(x = y)) n m)`,
   SIMP_TAC fcp_ss [word_xor_def,n2w_11,n2w_def,BITWISE_THM]);
+
+val word_nand_n2w = store_thm("word_nand_n2w",
+  `!n m. (n2w n):'a word ~&& (n2w m) = n2w (BITWISE ^WL (\x y. ~(x /\ y)) n m)`,
+  SIMP_TAC fcp_ss [word_nand_def,n2w_11,n2w_def,BITWISE_THM]);
+
+val word_nor_n2w = store_thm("word_nor_n2w",
+  `!n m. (n2w n):'a word ~!! (n2w m) = n2w (BITWISE ^WL (\x y. ~(x \/ y)) n m)`,
+  SIMP_TAC fcp_ss [word_nor_def,n2w_11,n2w_def,BITWISE_THM]);
+
+val word_xnor_n2w = store_thm("word_xnor_n2w",
+  `!n m. (n2w n):'a word ~?? (n2w m) = n2w (BITWISE ^WL (=) n m)`,
+  SIMP_TAC fcp_ss [word_xnor_def,n2w_11,n2w_def,BITWISE_THM]);
 
 (* ......................................................................... *)
 
@@ -810,7 +839,7 @@ val WORD_MSB_1COMP = store_thm("WORD_MSB_1COMP",
 
 val WORD_ss =
   rewrites [word_1comp_def,word_and_def,word_or_def,word_xor_def,
-    word_0,word_T];
+    word_nand_def,word_nor_def,word_xnor_def,word_0,word_T];
 
 val BOOL_WORD_TAC = SIMP_TAC (fcp_ss++WORD_ss) [] \\ DECIDE_TAC;
 
@@ -901,6 +930,15 @@ val WORD_LEFT_AND_OVER_XOR = store_thm("WORD_LEFT_AND_OVER_XOR",
 
 val WORD_XOR = store_thm("WORD_XOR",
   `!a b. a ?? b = a && ~b !! b && ~a`, BOOL_WORD_TAC);
+
+val WORD_NAND_NOT_AND = store_thm("WORD_NAND_NOT_AND",
+  `!a b. a ~&& b = ~(a && b)`, BOOL_WORD_TAC);
+
+val WORD_NOR_NOT_OR = store_thm("WORD_NOR_NOT_OR",
+  `!a b. a ~!! b = ~(a !! b)`, BOOL_WORD_TAC);
+
+val WORD_XNOR_NOT_XOR = store_thm("WORD_XNOR_NOT_XOR",
+  `!a b. a ~?? b = ~(a ?? b)`, BOOL_WORD_TAC);
 
 val ADD_OR_lem_ = prove(
   `!a b n. ~BIT n a \/ ~BIT n b ==>

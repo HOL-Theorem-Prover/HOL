@@ -204,7 +204,8 @@ val thms =
    word_reverse_n2w, word_modify_n2w, bit_field_insert_def,
    SPEC `^a` word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
-   word_2comp_compute, word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
+   word_2comp_compute, word_nor_n2w, word_xnor_n2w, word_nand_n2w,
+   word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
    MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
    word_asr_compute, word_lsr_compute, SPEC `^a` word_lsl_n2w,
    SHIFT_ZERO, SPEC `^a` word_ror_n2w,
@@ -905,13 +906,15 @@ val WORD_COMP_ss =
        key = SOME ([], ``words$word_1comp (^n2w ^n) :'a word``)}];
 
 val WORD_AND_ss =
-  simpLib.merge_ss [rewrites [WORD_AND_CLAUSES2, SYM WORD_NEG_1, WORD_AND_COMP],
+  simpLib.merge_ss [rewrites
+    [WORD_AND_CLAUSES2, SYM WORD_NEG_1, WORD_AND_COMP, WORD_NAND_NOT_AND],
   simpLib.conv_ss
     {conv = K (K (WORD_AND_CANON_CONV)), trace = 3,
      name = "WORD_AND_CANON_CONV", key = SOME ([], ``words$word_and ^w ^y``)}];
 
 val WORD_XOR_ss =
-  simpLib.merge_ss [rewrites [WORD_XOR_CLAUSES2, SYM WORD_NEG_1, WORD_NOT_XOR],
+  simpLib.merge_ss [rewrites
+    [WORD_XOR_CLAUSES2, SYM WORD_NEG_1, WORD_NOT_XOR, WORD_XNOR_NOT_XOR],
   simpLib.conv_ss
     {conv = K (K (WORD_XOR_CANON_CONV)), trace = 3,
      name = "WORD_XOR_CANON_CONV", key = SOME ([], ``words$word_xor ^w ^y``)}];
@@ -920,7 +923,7 @@ val WORD_OR_ss = let val thm = REWRITE_RULE [SYM WORD_NEG_1] WORD_OR_COMP in
   simpLib.merge_ss
   [rewrites [WORD_OR_CLAUSES2, SYM WORD_NEG_1, WORD_AND_ABSORD, thm,
    ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD,
-   ONCE_REWRITE_RULE [WORD_OR_COMM] thm],
+   ONCE_REWRITE_RULE [WORD_OR_COMM] thm, WORD_NOR_NOT_OR],
    simpLib.conv_ss
      {conv = K (K (WORD_OR_CANON_CONV)), trace = 3,
       name = "WORD_OR_CANON_CONV", key = SOME ([], ``words$word_or ^w ^y``)}]
