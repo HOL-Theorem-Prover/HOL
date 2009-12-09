@@ -75,6 +75,7 @@ val word_1comp_tm       = mk_word_tm "word_1comp"
 val word_2comp_tm       = mk_word_tm "word_2comp"
 val word_replicate_tm   = mk_word_tm "word_replicate"
 val concat_word_list_tm = mk_word_tm "concat_word_list"
+val bit_field_insert_tm = mk_word_tm "bit_field_insert"
 val word_reduce_tm      = mk_word_tm "word_reduce"
 val reduce_and_tm       = mk_word_tm "reduce_and"
 val reduce_or_tm        = mk_word_tm "reduce_or"
@@ -325,6 +326,12 @@ fun mk_concat_word_list l =
                             |> dest_word_type)]concat_word_list_tm,l)
   handle HOL_ERR _ => raise ERR "mk_concat_word_list" "";
 
+fun mk_bit_field_insert (h,l,w1,w2) =
+  list_mk_comb
+   (inst[alpha |-> dim_of w2, beta |-> dim_of w1]bit_field_insert_tm,
+    [h,l,w1,w2])
+  handle HOL_ERR _ => raise ERR "mk_bit_field_insert" "";
+
 (*---------------------------------------------------------------------------*)
 (* Destructors                                                               *)
 (*---------------------------------------------------------------------------*)
@@ -503,6 +510,14 @@ val dest_word_replicate =
 val dest_concat_word_list =
   dest_monop concat_word_list_tm (ERR "dest_concat_word_list" "");
 
+fun dest_op4 c e tm =
+  case with_exn strip_comb tm e of
+    (t,[t1,t2,t3,t4]) => if same_const t c then (t1,t2,t3,t4) else raise e
+  | _ => raise e;
+
+val dest_bit_field_insert =
+  dest_op4 bit_field_insert_tm (ERR "dest_bit_field_insert" "");
+
 (*---------------------------------------------------------------------------*)
 (* Discriminators                                                            *)
 (*---------------------------------------------------------------------------*)
@@ -557,6 +572,7 @@ val is_reduce_nor = Lib.can dest_reduce_nor
 val is_reduce_xnor = Lib.can dest_reduce_xnor
 val is_word_replicate = Lib.can dest_word_replicate
 val is_concat_word_list = Lib.can dest_concat_word_list
+val is_bit_field_insert = Lib.can dest_bit_field_insert
 val is_w2w = Lib.can dest_w2w
 val is_n2w = Lib.can dest_n2w
 val is_w2n = Lib.can dest_w2n

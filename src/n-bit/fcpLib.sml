@@ -88,7 +88,14 @@ fun SIZE n = PURE_REWRITE_RULE [DIMINDEX n]
 
 val FCP_ss = rewrites [FCP_BETA,FCP_ETA,CART_EQ];
 
+val notify_on_length_guess = ref true;
+
+val _ = Feedback.register_btrace("notify FCP length guesses",
+                                  notify_on_length_guess);
+
 local
+  fun t2s t = String.extract(Hol_pp.type_to_string t, 1, NONE)
+
   val L2V_tm = prim_mk_const{Name="L2V",Thy="fcp"}
 
   fun dest_L2V tm =
@@ -113,13 +120,24 @@ local
         val ty' = index_type (Arbnum.fromInt n)
         val _ = ty <> ty' orelse raise ERR "infer_fcp_type" ""
       in
-        inst [ty |-> ty']
+        ty |-> ty'
       end;
 in
   fun inst_fcp_lengths tm =
       case total (find_term (can infer_fcp_type)) tm of
         NONE => tm
-      | SOME subtm => inst_fcp_lengths (infer_fcp_type subtm tm);
+      | SOME subtm =>
+          let val (theinst as {redex,residue}) = infer_fcp_type subtm
+              val _ = if !Globals.interactive andalso !notify_on_length_guess
+                      then
+                        Feedback.HOL_MESG
+                          (String.concat ["assigning FCP length: ",
+                                          t2s redex, " <- ", t2s residue])
+                      else
+                        ()
+          in
+            inst_fcp_lengths (Term.inst [theinst] tm)
+          end
 end;
 
 end

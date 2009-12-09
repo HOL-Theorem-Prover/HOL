@@ -64,6 +64,7 @@ sig
   val reduce_nor_tm       : term
   val reduce_xnor_tm      : term
   val concat_word_list_tm : term
+  val bit_field_insert_tm : term
   val w2w_tm              : term
   val n2w_tm              : term
   val w2n_tm              : term
@@ -120,6 +121,7 @@ sig
   val mk_word_1comp       : term -> term
   val mk_word_2comp       : term -> term
   val mk_concat_word_list : term -> term
+  val mk_bit_field_insert : term * term * term * term -> term
   val mk_w2w              : term * hol_type -> term
   val mk_n2w              : term * hol_type -> term
   val mk_w2n              : term -> term
@@ -176,6 +178,7 @@ sig
   val dest_word_1comp       : term -> term
   val dest_word_2comp       : term -> term
   val dest_concat_word_list : term -> term
+  val dest_bit_field_insert : term -> term * term * term * term
   val dest_w2w              : term -> term * hol_type
   val dest_n2w              : term -> term * hol_type
   val dest_sw2sw            : term -> term * hol_type
@@ -229,6 +232,7 @@ sig
   val is_reduce_nor       : term -> bool
   val is_reduce_xnor      : term -> bool
   val is_concat_word_list : term -> bool
+  val is_bit_field_insert : term -> bool
   val is_word_1comp       : term -> bool
   val is_word_2comp       : term -> bool
   val is_w2w              : term -> bool
