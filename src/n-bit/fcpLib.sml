@@ -116,9 +116,9 @@ local
   fun infer_fcp_type tm =
       let
         val (l,ty) = dest_L2V tm
+        val _ = Type.polymorphic ty orelse raise ERR "infer_fcp_type" ""
         val n = list_length l
         val ty' = index_type (Arbnum.fromInt n)
-        val _ = ty <> ty' orelse raise ERR "infer_fcp_type" ""
       in
         ty |-> ty'
       end;
