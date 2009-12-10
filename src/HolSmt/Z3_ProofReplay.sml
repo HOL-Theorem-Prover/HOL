@@ -7,42 +7,27 @@ struct
 
   open Z3_Proof
 
-  val ALL_DISTINCT_NIL = simpLib.SIMP_PROVE bossLib.list_ss []
-    ``ALL_DISTINCT [] = T``
-  val ALL_DISTINCT_CONS = simpLib.SIMP_PROVE bossLib.list_ss []
-    ``!h t. ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t``
-  val NOT_MEM_NIL = simpLib.SIMP_PROVE bossLib.list_ss []
-    ``!x. ~MEM x [] = T``
-  val NOT_MEM_CONS = simpLib.SIMP_PROVE bossLib.list_ss []
-    ``!x h t. ~MEM x (h::t) = (x <> h) /\ ~MEM x t``
-  val NOT_MEM_CONS_SWAP = simpLib.SIMP_PROVE bossLib.list_ss
-    [boolTheory.EQ_SYM_EQ] ``!x h t. ~MEM x (h::t) = (h <> x) /\ ~MEM x t``
-  val AND_T = bossLib.DECIDE ``!p. p /\ T <=> p``
-
-  val T_AND = bossLib.DECIDE ``!p q. (T /\ p <=> T /\ q) ==> (p <=> q)``
-  val F_OR = bossLib.DECIDE ``!p q. (F \/ p <=> F \/ q) ==> (p <=> q)``
-
-  val CONJ_CONG = bossLib.DECIDE
-    ``!p q r s. (p <=> q) ==> (r <=> s) ==> (p /\ r <=> q /\ s)``
-
-  val NOT_NOT_ELIM = bossLib.DECIDE ``!p. ~~p ==> p``
-  val NOT_FALSE = bossLib.DECIDE ``!p. p ==> ~p ==> F``
-
-  val NNF_CONJ = bossLib.DECIDE
-    ``!p q r s. (~p <=> r) ==> (~q <=> s) ==> (~(p /\ q) <=> r \/ s)``
-  val NNF_DISJ = bossLib.DECIDE
-    ``!p q r s. (~p <=> r) ==> (~q <=> s) ==> (~(p \/ q) <=> r /\ s)``
-  val NNF_NOT_NOT = bossLib.DECIDE ``!p q. (p <=> q) ==> (~~p <=> q)``
-
-  val NEG_IFF_1 = bossLib.DECIDE ``!p q. (p <=> q) ==> ~(q <=> ~p)``
-  val NEG_IFF_2 = bossLib.DECIDE ``!p q. ~(p <=> ~q) ==> (q <=> p)``
-
-  val DISJ_ELIM_1 = bossLib.DECIDE ``!p q r. (p \/ q ==> r) ==> p ==> r``
-  val DISJ_ELIM_2 = bossLib.DECIDE ``!p q r. (p \/ q ==> r) ==> q ==> r``
-
-  val IMP_DISJ_1 = bossLib.DECIDE ``!p q. (p ==> q) ==> ~p \/ q``
-  val IMP_DISJ_2 = bossLib.DECIDE ``!p q. (~p ==> q) ==> p \/ q``
-  val IMP_FALSE = bossLib.DECIDE ``!p. (~p ==> F) ==> p``
+  val ALL_DISTINCT_NIL = HolSmtTheory.ALL_DISTINCT_NIL
+  val ALL_DISTINCT_CONS = HolSmtTheory.ALL_DISTINCT_CONS
+  val NOT_MEM_NIL = HolSmtTheory.NOT_MEM_NIL
+  val NOT_MEM_CONS = HolSmtTheory.NOT_MEM_CONS
+  val NOT_MEM_CONS_SWAP = HolSmtTheory.NOT_MEM_CONS_SWAP
+  val AND_T = HolSmtTheory.AND_T
+  val T_AND = HolSmtTheory.T_AND
+  val F_OR = HolSmtTheory.F_OR
+  val CONJ_CONG = HolSmtTheory.CONJ_CONG
+  val NOT_NOT_ELIM = HolSmtTheory.NOT_NOT_ELIM
+  val NOT_FALSE = HolSmtTheory.NOT_FALSE
+  val NNF_CONJ = HolSmtTheory.NNF_CONJ
+  val NNF_DISJ = HolSmtTheory.NNF_DISJ
+  val NNF_NOT_NOT = HolSmtTheory.NNF_NOT_NOT
+  val NEG_IFF_1 = HolSmtTheory.NEG_IFF_1
+  val NEG_IFF_2 = HolSmtTheory.NEG_IFF_2
+  val DISJ_ELIM_1 = HolSmtTheory.DISJ_ELIM_1
+  val DISJ_ELIM_2 = HolSmtTheory.DISJ_ELIM_2
+  val IMP_DISJ_1 = HolSmtTheory.IMP_DISJ_1
+  val IMP_DISJ_2 = HolSmtTheory.IMP_DISJ_2
+  val IMP_FALSE = HolSmtTheory.IMP_FALSE
 
   fun check_proof prf =
   let

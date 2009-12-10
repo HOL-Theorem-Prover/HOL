@@ -8,6 +8,7 @@ CVC3.sml                Functions to invoke the CVC3 SMT solver.
 Holmakefile             Makefile for Holmake (to build selftest.exe).
 HolSmtLib.{sig,sml}     Entry point into HolSmtLib. Provides GENERIC_SMT_TAC
                         and derived tactics to call SMT solvers.
+HolSmtScript.sml        Various theorems for HolSmtLib.
 Library.sml             Common auxiliary functions.
 README                  This file.
 selftest.sml            Unit tests for HolSmtLib.
