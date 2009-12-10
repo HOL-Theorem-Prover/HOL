@@ -116,6 +116,7 @@ src/rational
 src/llist
 src/datatype/inftree
 src/path
+!examples/lambda/basics
 !examples/lambda/barendregt
 !examples/computability
 !!examples/lambda/other-models
