@@ -180,6 +180,11 @@ val word_asr_compute =
      word_lsr_compute, arithmeticTheory.MIN_IDEM] o
    SPECL [`^a`, `^n2w ^n`]) word_asr_n2w;
 
+val bit_update_compute =
+   BIT_UPDATE |> REWRITE_RULE [FUN_EQ_THM]
+              |> (fn th => CONJ (SPECL [`^a`, `F`,`^n2w ^n`] th)
+                                (SPECL [`^a`, `T`,`^n2w ^n`] th))
+
 val thms =
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
    SUC_RULE rich_listTheory.GENLIST, rich_listTheory.SNOC, combinTheory.K_THM,
@@ -195,7 +200,7 @@ val thms =
    (SIMP_RULE std_ss [GSYM ODD_MOD2_LEM,arithmeticTheory.MOD_2EXP_def,
       BITS_def,SUC_SUB] o NUM_RULE [BITS_ZERO2] `n`) BIT_def,
    UINT_MAX_def, INT_MAX_def, INT_MIN_SUM,
-   SUC_RULE MOD_2EXP_EQ, SUC_RULE BOOLIFY_def,
+   SUC_RULE MOD_2EXP_EQ, SUC_RULE BOOLIFY_def, bit_update_compute,
    numeral_log2,numeral_ilog2,LOG_compute,LOWEST_SET_BIT_compute,
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w ^n` sw2sw_def,
    word_len_def, word_L_def, word_H_def, word_T_def,
