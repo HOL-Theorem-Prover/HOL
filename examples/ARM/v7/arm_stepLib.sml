@@ -202,7 +202,7 @@ val _ = computeLib.add_funs
    Q.ISPEC `ARMpsr_IT_fupd f` COND_RAND,
    FST_ADD_WITH_CARRY,
    DECIDE ``if b then b else T``,
-   DECIDE ``~((n <=> if c then v else ~n) /\ ~c)``,
+   DECIDE ``~((n <=> if z then v else ~n) /\ ~z)``,
    DECIDE ``n <=/=> ~n``,
    DECIDE ``~((z /\ c) /\ ~z)``,
    WORD_ADD_ASSOC |> Q.SPECL [`v`,`n2w n`,`n2w m`] |> GSYM |> inst_type32,
@@ -290,17 +290,17 @@ in
        | (11,false) => (``arm_coretypes$ARMpsr_V_fupd (K ^flag_n)``,
                           mk_eq (flag_n,flag_v))
        | (12,true)  => (``arm_coretypes$ARMpsr_V_fupd (K ^flag_n) o
-                          arm_coretypes$ARMpsr_C_fupd (K F)``,
-                          mk_conj (mk_eq (flag_n,flag_v),not_flag_c))
+                          arm_coretypes$ARMpsr_Z_fupd (K F)``,
+                          mk_conj (mk_eq (flag_n,flag_v),not_flag_z))
        | (12,false) => (``arm_coretypes$ARMpsr_V_fupd
-                            (K (if ^flag_c then ^flag_v else ~^flag_n))``,
-                          mk_neg (mk_conj (mk_eq (flag_n,flag_v),not_flag_c)))
+                            (K (if ^flag_z then ^flag_v else ~^flag_n))``,
+                          mk_neg (mk_conj (mk_eq (flag_n,flag_v),not_flag_z)))
        | (13,true)  => (``arm_coretypes$ARMpsr_V_fupd
-                            (K (if ^flag_c then ^flag_v else ~^flag_n))``,
-                          mk_neg (mk_conj (mk_eq (flag_n,flag_v),not_flag_c)))
+                            (K (if ^flag_z then ^flag_v else ~^flag_n))``,
+                          mk_neg (mk_conj (mk_eq (flag_n,flag_v),not_flag_z)))
        | (13,false) => (``arm_coretypes$ARMpsr_V_fupd (K ^flag_n) o
-                          arm_coretypes$ARMpsr_C_fupd (K F)``,
-                          mk_conj (mk_eq (flag_n,flag_v),not_flag_c))
+                          arm_coretypes$ARMpsr_Z_fupd (K F)``,
+                          mk_conj (mk_eq (flag_n,flag_v),not_flag_z))
        | (14,true)  => (``I : ARMpsr -> ARMpsr``,T)
        | (15,true)  => (``I : ARMpsr -> ARMpsr``,T)
        | _ => raise ERR "set_flags" "Invalid pass status."
