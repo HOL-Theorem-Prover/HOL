@@ -218,7 +218,7 @@ fn  (asl,w) =>
       val bind = mk_eq(vstr', arg)
   in
   ([(asl,mk_imp(bind,body'))],
-   fn [th] => let val let_thm = LET_INTRO th
+   fn ths => let val let_thm = LET_INTRO (hd ths)
                in EQ_MP (ALPHA (concl let_thm) w) let_thm end)
   end
 end;
@@ -240,7 +240,7 @@ fun LET_EQ_TAC thml =
   THEN REPEAT (LET_INTRO_TAC THEN DISCH_TAC);
 
 (*---------------------------------------------------------------------------
- * Eliminate PABS 
+ * Eliminate PABS
  *
 
        -----------------------------------  PABS_ELIM_CONV (\<vstr>. P vstr)
@@ -256,7 +256,7 @@ local
              ((RATOR_CONV UNCURRY_ELIM_CONV) THENC
              BETA_CONV THENC
              UNCURRY_ELIM_CONV)) THENC
-          BETA_CONV))) t 
+          BETA_CONV))) t
       handle HOL_ERR _ => raise UNCHANGED;
 in
 
@@ -291,7 +291,7 @@ end;
 
 
 (*---------------------------------------------------------------------------
- * Introduces PABS 
+ * Introduces PABS
  *
 
        -----------------------------------  PABS_ELIM_CONV <vstr> (\x. P x)
@@ -333,7 +333,7 @@ local
   val ELIM_PFORALL2 = prove (``(!p:('a#'b). P (FST p) (SND p) p) = !p1 p2. P p1 p2 (p1,p2)``,
                          CONV_TAC (LHS_CONV (HO_REWR_CONV FORALL_PROD)) THEN
                          REWRITE_TAC[FST, SND]);
-                            
+
   val ELIM_PEXISTS_CONV = HO_REWR_CONV ELIM_PEXISTS2;
   val ELIM_PFORALL_CONV = HO_REWR_CONV ELIM_PFORALL2;
 
@@ -347,7 +347,7 @@ local
              else NONE
         else NONE
 
-  fun PQUANT_ELIM_CONV quant_elim vc = 
+  fun PQUANT_ELIM_CONV quant_elim vc =
       if (is_var vc) then (RAND_CONV (ALPHA_CONV vc)) else
       let
          val (vc1, vc2) = pairSyntax.dest_pair vc;
@@ -357,7 +357,7 @@ local
       in
          conv
       end;
-in 
+in
    fun ELIM_TUPLED_QUANT_CONV tm =
       case dest_tupled_quant tm
          of NONE => raise PERR "TUPLED_QUANT_CONV" ""
@@ -367,7 +367,7 @@ in
 
    fun SPLIT_QUANT_CONV vc tm =
       let
-         val quant_elim = 
+         val quant_elim =
                  if is_universal (rator tm) then ELIM_PFORALL_CONV else
                  if is_existential (rator tm) then ELIM_PEXISTS_CONV else
                  raise PERR "SPLIT_QUANT_CONV" ""
