@@ -40,6 +40,7 @@ sig
   val mk_hd          : term -> term
   val mk_tl          : term -> term
   val mk_append      : term * term -> term
+  val list_mk_append : term list -> term
   val mk_flat        : term -> term
   val mk_length      : term -> term
   val mk_map         : term * term -> term
@@ -68,6 +69,7 @@ sig
   val dest_hd        : term -> term
   val dest_tl        : term -> term
   val dest_append    : term -> term * term
+  val strip_append   : term -> term list
   val dest_flat      : term -> term
   val dest_length    : term -> term
   val dest_map       : term -> term * term
