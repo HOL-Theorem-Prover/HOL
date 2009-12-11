@@ -39,6 +39,8 @@ fun rewrite_names tm = let
   in replace_terml aux end;
 
 fun arm_pre_post g = let 
+  val cpsr_var = mk_var("cpsr",``:word32``)
+  val g = subst [``ARM_READ_MASKED_CPSR s``|->cpsr_var] g
   val regs = collect_term_of_type ``:word4`` g
   val bits = collect_term_of_type ``:arm_bit`` g
   val h =  rewrite_names ``ARM_READ_STATUS`` (rewrite_names ``ARM_READ_REG`` g)
@@ -68,6 +70,9 @@ fun arm_pre_post g = let
   val pre_post = map mk_pre_post_assertion (regs @ bits @ mems)
   val pre = list_mk_star (map fst pre_post) ((type_of o fst o hd) pre_post)
   val post = list_mk_star (map snd pre_post) ((type_of o fst o hd) pre_post)
+  val (pre,post) = if not (mem cpsr_var (free_vars g)) then (pre,post) else let
+    val res = (fst o dest_eq o concl o SPEC cpsr_var) aCPSR_def
+    in (mk_star(pre,res),mk_star(post,res)) end
   fun match_any [] tm = fail ()
     | match_any (x::xs) tm = match_term x tm handle HOL_ERR _ => match_any xs tm
   fun pass tm = let
@@ -293,7 +298,15 @@ fun arm_prove_specs s = let
     val th = SIMP_RULE std_ss [] th
     val tm = (fst o dest_eq o concl o SPEC state) ARMv4T_OK_def
     val th = (RW [AND_IMP_INTRO] o RW [GSYM ARMv4T_OK_def] o SIMP_RULE bool_ss [ARMv4T_OK_def] o DISCH tm) th
-    val th = RW [aligned4_thm] th
+    val th = SIMP_RULE std_ss [aligned4_thm,ARM_READ_MASKED_CPSR_INTRO] th
+    val th = if not (can (find_term (fn x => x = ``ARM_READ_MASKED_CPSR``)) (concl th)) then th else let
+               val th = SIMP_RULE std_ss [FCP_UPDATE_WORD_AND] th
+               val gg = SIMP_RULE (std_ss++SIZES_ss) [bitTheory.BIT_def,bitTheory.BITS_THM] o 
+                        RW1 [fcpTheory.FCP_APPLY_UPDATE_THM,word_index_n2w]
+               fun f th = let
+                 val t2 = find_term (can (match_term ``(n :+ F) ((n2w k):word32)``)) (concl th) 
+                 in RW [EVAL t2] th end
+               in repeat f ((gg o gg o gg o gg o gg)th) end
     val th = arm_prove_one_spec s th
     in post_process_thm th end
   val result = map derive_spec thms
@@ -358,8 +371,6 @@ val arm_tools  = (arm_spec, arm_jump, arm_status, arm_pc)
   val thms = arm_spec (enc "STRB r2, [r3]");
   val thms = arm_spec (enc "STMIA r4, {r5-r10}");
   val thms = arm_spec (enc "LDMIA r4, {r5-r10}");
-  val thms = arm_spec (enc "MSR CPSR, r1");
-  val thms = arm_spec (enc "MSR CPSR, #219");
   val thms = arm_spec (enc "ADD r0, pc, #16");
   val thms = arm_spec (enc "SUB r0, pc, #60");
   val thms = arm_spec (enc "SUBLS r2, r2, #1");
@@ -386,9 +397,8 @@ val arm_tools  = (arm_spec, arm_jump, arm_status, arm_pc)
   val thms = arm_spec (enc "LDR r12, [pc, #3856]");
   val thms = arm_spec (enc "LDR r1, [pc, #1020]");
   val thms = arm_spec (enc "STMDB sp!, {r0-r2, r15}");
-
-  (* doesn't work, yet *)
-  
+  val thms = arm_spec (enc "MSR CPSR, r1");
+  val thms = arm_spec (enc "MSR CPSR, #219");
   val thms = arm_spec (enc "MRS r1, CPSR");
 
 *)
