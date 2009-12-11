@@ -1,6 +1,8 @@
 
 structure auxLib = struct
 
+local open HolKernel boolLib bossLib in
+
 (* strip_left : ('a -> 'b * 'a) -> 'a -> 'b list * 'a
   repeatedly strip off something on the left *)
 fun strip_left f th =
@@ -41,10 +43,8 @@ fun rec2 f th =
   in rec2' (th, []) end ;
 
 (* SPEC_VARL : thm -> term list * thm, like SPECL and SPEC_VAR *)
-val SPEC_VARL = strip_left Drule.SPEC_VAR ;
-val SPEC_TYVARL = strip_left Drule.SPEC_TYVAR ;
-
-local open HolKernel in 
+val SPEC_VARL = strip_left SPEC_VAR ;
+val SPEC_TYVARL = strip_left SPEC_TYVAR ;
 
 (* sfg : (thm -> thm) -> thm -> thm
   remove universal quantifiers, apply f, add quantifiers back *)
@@ -56,18 +56,18 @@ fun sfg f thm =
   remove type universal quantifiers, apply f, add quantifiers back *)
 fun tsfg f thm =
   let val (tyvars, sthm) = SPEC_TYVARL thm ;
-  in Drule.TY_GENL tyvars (f sthm) end ;
+  in TY_GENL tyvars (f sthm) end ;
 
 (* ufd : (thm -> thm) -> thm -> thm
   removes implication antecedents, apply f, restores antecedents,
   assumes thm has no assumptions *)
-fun ufd f thm = Drule.DISCH_ALL (f (Drule.UNDISCH_ALL thm)) ;
+fun ufd f thm = DISCH_ALL (f (UNDISCH_ALL thm)) ;
 
 (* UNDISCH_TERM : thm -> term * thm
   like UNDISCH, but also returns term *) 
 fun UNDISCH_TERM th = 
   let val (hy, _) = boolSyntax.dest_imp (concl th) ;
-  in (hy, Drule.UNDISCH th) end ; 
+  in (hy, UNDISCH th) end ; 
 
 (* UNDISCH_ALL_TERMS : thm -> term list * thm *) 
 val UNDISCH_ALL_TERMS = strip_left UNDISCH_TERM ;
@@ -84,7 +84,7 @@ fun first f (x :: xs) = (f x handle _ => first f xs)
   | first f [] = raise Empty ;
 
 (* fmmp : thm list -> thm -> thm *) 
-fun fmmp ths imp = first (Drule.MATCH_MP imp) ths 
+fun fmmp ths imp = first (MATCH_MP imp) ths 
   handle Empty => raise HOL_ERR 
     {message = "MATCH_MP fails in all cases", 
       origin_function = "fmmp", origin_structure = "g_adjointScript"} ;
@@ -97,13 +97,20 @@ fun repeat f x = repeat f (f x) handle _ => x ;
   (antecedent(s) may be conjuncts, which are converted to nested implications),
   try to remove antecedents (from the front only) by resolving with thms *)
 fun thm_from_ass imp_thm thms = repeat (fmmp thms)
-  (Rewrite.REWRITE_RULE [Conv.GSYM boolTheory.AND_IMP_INTRO] imp_thm) ;
+  (REWRITE_RULE [GSYM boolTheory.AND_IMP_INTRO] imp_thm) ;
 
 (* USE_LIM_RES_TAC : thm_tactic -> thm -> tactic 
   resolve implication theorem against assumptions (as in thm_from_ass)
   and use ttac applied to result *)
 fun USE_LIM_RES_TAC ttac imp_thm = 
-  Tactical.ASSUM_LIST (ttac o thm_from_ass imp_thm) ;
+  ASSUM_LIST (ttac o thm_from_ass imp_thm) ;
+
+(* FIRST_REP_RES : thm_tactic -> thm_tactic *)
+fun FIRST_REP_RES ttac impth =
+  FIRST_ASSUM (fn ass => FIRST_REP_RES ttac (MATCH_MP impth ass))
+  (* following delayed evaluation since ttac impth can cause an 
+    error if called with an impth without antecedents removed *)
+  ORELSE (fn asg => ttac impth asg) ;
 
 (* select a particular assumption to rewrite with,
   based on the head of the lhs *)
@@ -140,11 +147,10 @@ fun inst_eqs th =
   in Rewrite.REWRITE_RULE [] (INST subs th) end ;
 
 (* useful theorems *)
-local open boolLib in
 val iffD1 = 
   (DISCH_ALL o CONJUNCT1 o UNDISCH o fst o EQ_IMP_RULE o SPEC_ALL) EQ_IMP_THM ;
-end ;
-end ; (* local open HolKernel *)
+
+end ; (* local open HolKernel bossLib *)
 
 end ; (* structure auxLib *)
 
