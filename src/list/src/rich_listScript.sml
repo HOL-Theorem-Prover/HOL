@@ -1125,6 +1125,22 @@ val APPEND_LENGTH_EQ = store_thm("APPEND_LENGTH_EQ",
     THEN REWRITE_TAC[CONS_11,CONJ_ASSOC]
     end);
 
+val APPEND_11_LENGTH = save_thm ("APPEND_11_LENGTH", 
+ SIMP_RULE std_ss [DISJ_IMP_THM, FORALL_AND_THM] (prove (
+ (--`!l1 l2 l1' l2'. 
+        ((LENGTH l1 = LENGTH l1') \/ (LENGTH l2 = LENGTH l2')) ==>
+        (((l1 ++ l2) = (l1' ++ l2')) = ((l1 = l1') /\ (l2 = l2')))`--),
+     REPEAT GEN_TAC 
+     THEN Tactical.REVERSE 
+        (Cases_on `(LENGTH l1 = LENGTH l1') /\ (LENGTH l2 = LENGTH l2')`) THEN1 (
+           DISCH_TAC 
+           THEN `~((l1 = l1') /\ (l2 = l2'))` by PROVE_TAC[] 
+           THEN ASM_REWRITE_TAC[] 
+           THEN Tactical.REVERSE 
+              (`~(LENGTH (l1 ++ l2) = LENGTH (l1' ++ l2'))` by ALL_TAC) THEN1 PROVE_TAC[]
+           THEN FULL_SIMP_TAC arith_ss [LENGTH_APPEND]
+     ) THEN PROVE_TAC[APPEND_LENGTH_EQ])));
+
 val FILTER_APPEND = store_thm("FILTER_APPEND",
     (--`!f l1 (l2:'a list).
      FILTER f (APPEND l1 l2) = APPEND (FILTER f l1) (FILTER f l2)`--),
