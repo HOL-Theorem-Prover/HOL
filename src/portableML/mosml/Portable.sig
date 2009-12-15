@@ -75,4 +75,6 @@ sig
 
 
   val norm_quote : 'a quotation -> 'a quotation
+
+  val catch_SIGINT : unit -> unit
 end

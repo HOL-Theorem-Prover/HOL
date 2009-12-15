@@ -17,7 +17,7 @@ struct
 
 exception Div = General.Div
 exception Mod = General.Div
-exception Interrupt = SML90.Interrupt
+exception Interrupt = General.Interrupt
 
 (*---------------------------------------------------------------------------
       Refs
@@ -39,22 +39,11 @@ val explode = map Char.toString o String.explode;
     System
  ---------------------------------------------------------------------------*)
 
-structure Process = OS.Process
-structure FileSys = OS.FileSys
 val getEnv   = Process.getEnv
 val cd       = FileSys.chDir
 val pwd      = FileSys.getDir
-fun listDir s = let
-  val ds = FileSys.openDir s
-  fun recurse acc =
-      case FileSys.readDir ds of
-        NONE => acc
-      | SOME f => recurse (f :: acc)
-in
-  recurse [] before FileSys.closeDir ds
-end
-
-fun system s = if Process.isSuccess (Process.system s) then 0 else 1
+val listDir  = Mosml.listDir
+fun system s = if Process.system s = Process.success then 0 else 1
 val getArgs  = CommandLine.arguments
 val argv     = getArgs
 fun exit()   = Process.exit Process.success
@@ -70,28 +59,28 @@ type outstream     = TextIO.outstream
 val std_out        = TextIO.stdOut
 val stdin          = TextIO.stdIn
 fun open_in file   = TextIO.openIn file
-                     handle IO.Io{cause=OS.SysErr(s,_),...} => raise (Io s)
+                     handle General.Io{cause=SysErr(s,_),...} => raise (Io s)
                                    (* handle OS.SysErr (s,_) => raise Io s; *)
 fun open_out file  = TextIO.openOut file
-                     handle IO.Io{cause=OS.SysErr(s,_),...} => raise (Io s)
+                     handle General.Io{cause=SysErr(s,_),...} => raise (Io s)
                                    (* handle OS.SysErr (s,_) => raise Io s; *)
 val output         = TextIO.output
 fun outputc strm s = output(strm,s)
 val close_in       = TextIO.closeIn
 val close_out      = TextIO.closeOut
 val flush_out      = TextIO.flushOut
-fun input_line strm =
-  case TextIO.inputLine strm of
-    NONE => ""
-  | SOME s => s
+fun input_line is  = case TextIO.inputLine is of NONE => "" | SOME s => s
 val end_of_stream  = TextIO.endOfStream
 
 (*---------------------------------------------------------------------------
     Efficiency hack.
  ---------------------------------------------------------------------------*)
 
-fun pointer_eq (x:'a, y:'a) = PolyML.pointerEq(x,y)
-fun ref_to_int (x : 'a ref) = 0 (* needs fixing *)
+local val cast : 'a -> int = Obj.magic
+in
+fun pointer_eq (x:'a, y:'a) = (cast x = cast y)
+fun ref_to_int (r : 'a ref) = cast r
+end;
 
 (*---------------------------------------------------------------------------
     Time
@@ -196,6 +185,8 @@ fun pprint pp x =
    end handle e => (flush_ppstream strm; raise e)
  end;
 
+
+
 (*---------------------------------------------------------------------------
       MoscowML returns lists of QUOTE'd strings when a quote is spread
       over more than one line. "norm_quote" concatenates all adjacent
@@ -206,5 +197,16 @@ fun norm_quote [] = []
   | norm_quote [x] = [x]
   | norm_quote (QUOTE s1::QUOTE s2::rst) = norm_quote (QUOTE(s1^s2)::rst)
   | norm_quote (h::rst) = h::norm_quote rst;
+
+local
+  (* magic to ensure that interruptions (SIGINTs) are actually seen by the
+    linked executable as Interrupt exceptions *)
+prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
+in
+
+fun catch_SIGINT () = ignore (catch_interrupt true)
+
+end
+
 
 end (* Portable *)

@@ -33,6 +33,8 @@
 
 tools/mlyacc/mlyacclib
 src/portableML
+[mosml]src/portableML/mosml
+[poly]src/portableML/poly
 src/prekernel
 **KERNEL**
 # these three directories are required to even run hol.bare.unquote

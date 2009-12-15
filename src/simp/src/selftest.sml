@@ -1,9 +1,6 @@
 open HolKernel Parse boolLib simpLib
 
-(* magic to ensure that interruptions (SIGINTs) are actually seen by the
-   linked executable as Interrupt exceptions *)
-prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
-val _ = catch_interrupt true;
+val _ = Portable.catch_SIGINT()
 
 fun infloop_protect (startstr : string) (endfn : 'a -> bool)
     (f : 'b -> 'a) (x : 'b) =
