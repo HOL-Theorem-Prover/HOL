@@ -112,6 +112,10 @@ fun remove_primes th = let
   val i = foo (free_varsl (concl th :: hyp th)) [] []
   in INST i th end
 
+val SING_SUBSET = prove(
+  ``!x:'a y. {x} SUBSET y = x IN y``,
+  REWRITE_TAC [INSERT_SUBSET,EMPTY_SUBSET]);
+
 fun introduce_aBYTE_MEMORY th = if
   not (can (find_term (can (match_term ``aM1``))) (concl th))
   then th else let
@@ -176,10 +180,6 @@ fun introduce_aBYTE_MEMORY th = if
     val th = REWRITE_RULE [SING_SUBSET] th
     val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
     in th end end
-
-val SING_SUBSET = prove(
-  ``!x:'a y. {x} SUBSET y = x IN y``,
-  REWRITE_TAC [INSERT_SUBSET,EMPTY_SUBSET]);
 
 fun introduce_aM th = let
   val index = ref 0
