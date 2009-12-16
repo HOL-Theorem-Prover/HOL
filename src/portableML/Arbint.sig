@@ -39,6 +39,6 @@ sig
   val min        : int * int -> int
   val max        : int * int -> int
 
-  val pp_int     : Portable.ppstream -> int -> unit
+  val pp_int     : HOLPP.ppstream -> int -> unit
 
 end

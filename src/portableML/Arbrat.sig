@@ -44,6 +44,6 @@ sig
   val floor      : rat -> aint
   val ceil       : rat -> aint
 
-  val pp_rat     : Portable.ppstream -> rat -> unit
+  val pp_rat     : HOLPP.ppstream -> rat -> unit
 
 end
