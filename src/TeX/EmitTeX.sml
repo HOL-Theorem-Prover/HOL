@@ -445,7 +445,7 @@ fun raw_pp_term_as_tex overrides ostrm tm =
 
 fun pp_term_as_tex ostrm =
     raw_pp_term_as_tex (K NONE) ostrm
-       |> UnicodeOff |> trace ("pp_dollar_escape", 0)
+       |> UnicodeOff |> trace ("pp_dollar_escapes", 0)
 
 fun raw_pp_type_as_tex overrides ostrm ty =
     type_pp.pp_type (Parse.type_grammar()) (emit_latex overrides) ostrm ty
@@ -472,7 +472,7 @@ fun raw_pp_theorem_as_tex overrides ostrm thm =
 
 fun pp_theorem_as_tex ostrm =
     raw_pp_theorem_as_tex (K NONE) ostrm |> UnicodeOff
-                                         |> trace ("pp_dollar_escape", 0)
+                                         |> trace ("pp_dollar_escapes", 0)
 
 val print_term_as_tex = Portable.pprint pp_term_as_tex;
 val print_type_as_tex = Portable.pprint pp_type_as_tex;

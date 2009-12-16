@@ -1269,4 +1269,197 @@ val AND_EL_CONV =
 val OR_EL_CONV =
     list_FOLD_CONV rich_listTheory.OR_EL_FOLDR (REWRITE_CONV[OR_CLAUSES]);
 
+
+
+(*-==============================================================-*)
+(*- CONVERSIONS added by TT 03 Dec 2009                          -*)
+(*-==============================================================-*)
+
+(* --------------------------------------------------------------------- *)
+(* NORM_CONS_APPEND_CONV : conv                                          *)
+(* bring appends and conses into normal form. The resulting list is      *)
+(* consists of appending serveral lists. Cons operations are put into    *)
+(* lists just containing these elements. Empty lists are removed and     *)
+(* associative of append used.                                           *)
+(* |- x1::x2::l1 ++ ([] ++ l2 ++ l3) ++ [x3; x4] ++ ([x5] ++ x6::l5) =   *)
+(*    x1::x2::(l1 ++ l2 ++ l3 ++ [x3; x4; x5; x6] ++ l5)                 *)
+(* lists just containing these elements. Empty lists are removed and     *)
+(* --------------------------------------------------------------------- *)
+
+val APPEND_EVAL_CONV = PURE_REWRITE_CONV [listTheory.APPEND_NIL, listTheory.APPEND];
+
+fun NORM_CONS_CONV t =
+  let
+     val (eL, r) = strip_cons t;
+     val _ = if null eL orelse is_nil r then raise UNCHANGED else ()     
+     val v = genvar (type_of r);
+     val t' = mk_append (listSyntax.mk_list (eL, type_of (hd eL)), v);
+     val thm0 = APPEND_EVAL_CONV t'
+     val thm1 = INST [v |-> r] thm0
+  in
+     GSYM thm1
+  end;
+
+fun APPEND_SIMPLE_LISTS_CONV t =
+  let
+     val (l1, l2) = dest_append t;
+     val _ = if is_list l1 andalso is_list l2 then () else raise UNCHANGED;
+  in
+      APPEND_EVAL_CONV t
+  end handle HOL_ERR _ => raise UNCHANGED;
+
+
+fun APPEND_SIMPLE_LISTS_ASSOC_CONV t =
+  let
+     val (l1, l2) = dest_append t;
+     val (l11, l12) = dest_append l1;
+     val _ = if is_list l2 andalso is_list l12 then () else raise UNCHANGED;
+  in
+     ((REWR_CONV (GSYM listTheory.APPEND_ASSOC)) THENC
+     RAND_CONV (APPEND_EVAL_CONV)) t
+  end handle HOL_ERR _ => raise UNCHANGED;
+
+
+val NORM_APPEND_CONV =
+   PURE_REWRITE_CONV [listTheory.APPEND_NIL, listTheory.APPEND_ASSOC,
+      rich_listTheory.SNOC_APPEND]
+
+
+val NORM_CONS_APPEND_CONV =
+   (TOP_DEPTH_CONV NORM_CONS_CONV) THENC
+   NORM_APPEND_CONV THENC
+   (DEPTH_CONV ((QCHANGED_CONV APPEND_SIMPLE_LISTS_ASSOC_CONV) ORELSEC					    
+                (QCHANGED_CONV APPEND_SIMPLE_LISTS_CONV))) THENC
+   APPEND_EVAL_CONV
+
+
+val GSYM_CONS_APPEND_CONV = PURE_REWRITE_CONV [GSYM (CONJUNCT2 listTheory.APPEND)]
+ 
+
+(* --------------------------------------------------------------------- *)
+(* LIST_EQ_SIMP_CONV : conv                                              *)
+(* --------------------------------------------------------------------- *)
+
+(*examples
+val t = ``[x1;x2] ++ l1 ++ l2 ++ [x3] ++ l3 = x1::x2'::l1' ++ l3``
+ |- ([x1; x2] ++ l1 ++ l2 ++ [x3] ++ l3 = x1::x2'::l1' ++ l3) <=>
+    (x2 = x2') /\ (l1 ++ l2 ++ [x3] = l1') 
+
+val t = ``[x1;x2] ++ l1 ++ l2 ++ [x3] ++ [x4;x5;x6] = x1'::l1' ++ [x5;x6]``
+
+ |- ([x1; x2] ++ l1 ++ l2 ++ [x3] ++ [x4; x5; x6] = x1'::l1' ++ [x5; x6]) <=>
+     (x1 = x1') /\ (x2::(l1 ++ l2 ++ [x3; x4]) = l1') : thm
+
+val t = ``l1 ++ l2 ++ [x3] ++ l3 = l1 ++ l2' ++ x3'::l3``
+
+ |- (l1 ++ l2 ++ [x3] ++ l3 = l1 ++ l2' ++ x3'::l3) <=>
+    (l2 = l2') /\ (x3 = x3') 
+
+val t = ``[x1;x2;x3] ++ l2 ++ [x3] ++ l3 = [x1;x2] ++ l1 ++ l2' ++ l3``
+
+ |- ([x1; x2; x3] ++ l2 ++ [x3] ++ l3 = [x1; x2] ++ l1 ++ l2' ++ l3) <=>
+     (x3::(l2 ++ [x3]) = l1 ++ l2') 
+
+
+ListConv1.LIST_EQ_SIMP_CONV t
+
+*)
+
+local
+   fun strip_cons_append tt = 
+   let
+      val (eL, b) = strip_cons tt;
+      val lL = strip_append b
+   in
+      (eL, lL)
+   end;
+
+
+   fun is_both_cons eL1 eL2 = not (null eL1) andalso not (null eL2)
+   fun is_left_same ([], (l1::lL1)) ([], l2::lL2) = (aconv l1 l2)
+     | is_left_same _ _ = false                       
+   fun is_right_cons lL1 lL2 = (is_list (last lL1)) andalso (is_list (last lL2))
+   fun is_right_same lL1 lL2 = aconv (last lL1) (last lL2)
+
+   fun EQ_CONV c = LHS_CONV c THENC RHS_CONV c   
+
+   fun LIST_EQ_SIMP_CONV___internal l =
+   let
+      val (l1, l2) = Psyntax.dest_eq l
+      val (eL1, lL1) = strip_cons_append l1
+      val (eL2, lL2) = strip_cons_append l2
+   in
+      if is_both_cons eL1 eL2 then
+         ((REWR_CONV listTheory.CONS_11) THENC
+          (RAND_CONV LIST_EQ_SIMP_CONV___internal)) l
+      else if (is_right_same lL1 lL2) then
+         ((EQ_CONV GSYM_CONS_APPEND_CONV) THENC
+          (REWR_CONV (CONJUNCT2 listTheory.APPEND_11)) THENC
+          (EQ_CONV (TRY_CONV APPEND_EVAL_CONV)) THENC
+          LIST_EQ_SIMP_CONV___internal) l
+      else if (is_right_cons lL1 lL2) then
+         let
+           val (L1,_) = dest_list (last lL1)
+           val (L2,_) = dest_list (last lL2)
+           val n1 = length L1;
+           val n2 = length L2;
+           val (turn, L1, L2, n1, n2) =
+               if n1 <= n2 then (false, L1, L2, n1, n2) else
+                                (true,  L2, L1, n2, n1)
+
+           val thm0 = if turn then SYM_CONV l else REFL l;
+           val thm1 = CONV_RULE (RHS_CONV (EQ_CONV GSYM_CONS_APPEND_CONV)) thm0
+
+           val thm2 = if n1 = n2 then thm1 else
+               let
+                  val (L21, L22) = Lib.split_after (n2 - n1) L2
+                  val ty = type_of (hd L21)
+                  val L21_t = listSyntax.mk_list (L21, ty)
+                  val L22_t = listSyntax.mk_list (L22, ty)
+                  val split_thm = GSYM (APPEND_EVAL_CONV (mk_append (L21_t, L22_t)))        
+               in
+                  CONV_RULE ((RHS_CONV o RHS_CONV) 
+                     (RAND_CONV (K split_thm) THENC
+                      REWR_CONV listTheory.APPEND_ASSOC)) thm1
+               end;
+
+           val r = rhs (concl thm2);
+           val thm3a = PART_MATCH (lhs o rand) (CONJUNCT2 rich_listTheory.APPEND_11_LENGTH) r
+           val thm3b = CONV_RULE ((RATOR_CONV o RAND_CONV)
+                       (REWRITE_CONV [listTheory.LENGTH, prim_recTheory.INV_SUC_EQ])) thm3a
+           val thm3c = MP thm3b TRUTH
+           val thm3 = TRANS thm2 thm3c
+
+           val thm4 = if turn then 
+              CONV_RULE ((RHS_CONV o RATOR_CONV o RAND_CONV) SYM_CONV) thm3 else thm3
+
+           val thm5 = CONV_RULE ((RHS_CONV o RATOR_CONV o RAND_CONV) 
+                        ((EQ_CONV (TRY_CONV APPEND_EVAL_CONV)) THENC
+                         LIST_EQ_SIMP_CONV___internal)) thm4
+         in
+           thm5
+         end
+      else if (is_left_same (eL1, lL1) (eL2,lL2)) then
+         ((EQ_CONV (PURE_REWRITE_CONV [GSYM listTheory.APPEND_ASSOC])) THENC
+          (REWR_CONV (CONJUNCT1 listTheory.APPEND_11)) THENC
+          (EQ_CONV (PURE_REWRITE_CONV [listTheory.APPEND_ASSOC])) THENC
+          LIST_EQ_SIMP_CONV___internal) l
+      else raise UNCHANGED
+   end;
+
+in
+
+fun LIST_EQ_SIMP_CONV t =
+let
+   val (l1', _) = Psyntax.dest_eq t
+   val _ = if is_list_type (type_of l1') then () else raise UNCHANGED;
+in
+   ((EQ_CONV NORM_CONS_APPEND_CONV) THENC
+     LIST_EQ_SIMP_CONV___internal THENC
+     REWRITE_CONV [listTheory.CONS_11]) t
+end;
+
+end;
+
+
 end; (* List_conv1 *)

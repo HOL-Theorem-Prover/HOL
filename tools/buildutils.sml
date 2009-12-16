@@ -34,14 +34,14 @@ val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
 val DYNLIB = Systeml.DYNLIB
 
-fun read_buildsequence ssall readline bseq_fname = let
+fun read_buildsequence {ssfull,inputLine=readline,kernelpath} bseq_fname = let
   fun read_file acc fstr =
       case readline fstr of
         NONE => List.rev acc
       | SOME s => let
           (* drop final \n char *)
           val s = String.substring(s, 0, size s - 1)
-          val ss = ssall s
+          val ss = ssfull s
           val ss = Substring.dropl Char.isSpace ss
           (* drop leading w-space *)
           val (ss, _) = Substring.position "#" ss
@@ -70,7 +70,8 @@ fun read_buildsequence ssall readline bseq_fname = let
               val (mlsys,s) = extract_mlsys s
               val (dirname0,testcount) = extract_testcount (s,0)
               val dirname =
-                  if Path.isAbsolute dirname0 then dirname0
+                  if dirname0 = "**KERNEL**" then kernelpath
+                  else if Path.isAbsolute dirname0 then dirname0
                   else fullPath [HOLDIR, dirname0]
               open FileSys
             in

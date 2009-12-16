@@ -56,6 +56,14 @@ val word_reduce = Q.prove(
      [word_index, DECIDE ``x < 1 = (x = 0n)``, fcpTheory.index_one,
       bitTheory.BITS_THM, bitTheory.BIT_def]);
 
+val bit_field_insert = Q.prove(
+  `!h l a.
+     bit_field_insert h l a w =
+       word_modify
+         (\i b. if l <= i /\ i <= h then word_index a (i - l) else b) w`,
+  SRW_TAC [fcpLib.FCP_ss]
+    [word_index_def, bit_field_insert_def, word_modify_def]);
+
 val n2w_w2n_RULE = REWRITE_RULE [n2w_w2n] o Q.SPEC `w2n w`
 val word_eq_n2w = REWRITE_RULE [n2w_11] (Q.SPECL [`n2w m`,`n2w n`] word_eq_def)
 val word_reduce_n2w = REWRITE_RULE [word_reduce] word_reduce_n2w
@@ -63,6 +71,9 @@ val word_eq_n2w = n2w_w2n_RULE (GEN_ALL word_eq_n2w)
 val word_or_n2w = n2w_w2n_RULE word_or_n2w
 val word_and_n2w = n2w_w2n_RULE word_and_n2w
 val word_xor_n2w = n2w_w2n_RULE word_xor_n2w
+val word_nor_n2w = n2w_w2n_RULE word_nor_n2w
+val word_nand_n2w = n2w_w2n_RULE word_nand_n2w
+val word_xnor_n2w = n2w_w2n_RULE word_xnor_n2w
 val word_add_n2w = n2w_w2n_RULE word_add_n2w
 val word_mul_n2w = n2w_w2n_RULE word_mul_n2w
 val word_ge_n2w = n2w_w2n_RULE word_ge_n2w
@@ -82,7 +93,6 @@ val reduce_and_n2w = Q.SPEC `n2w m` reduce_and
 val reduce_or_n2w = Q.SPEC `n2w m` reduce_or
 val sw2sw_n2w = Q.SPEC `n2w n` sw2sw_def
 val add_with_carry_n2w = Q.SPEC `n2w n` add_with_carry_def
-
 val reduce_xnor = ONCE_REWRITE_RULE [METIS_PROVE [] ``(<=>) = (\x y. x = y)``]
                    reduce_xnor_def
 
@@ -105,7 +115,7 @@ val defs =
        word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
        word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
        word_reduce_n2w, reduce_and_n2w, reduce_or_n2w, reduce_xor_def,
-       reduce_xnor, reduce_nand_def, reduce_nor_def,
+       reduce_xnor, reduce_nand_def, reduce_nor_def, bit_field_insert,
        w2l_def,w2s_def,
        word_to_bin_list_def,word_to_oct_list_def,
        word_to_dec_list_def,word_to_hex_list_def,

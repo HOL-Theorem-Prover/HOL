@@ -31,6 +31,11 @@
 # annotation should come first, i.e., [mosml]!!foo, not !![mosml]foo.
 
 tools/mlyacc/mlyacclib
+src/portableML
+[mosml]src/portableML/mosml
+[poly]src/portableML/poly
+src/prekernel
+**KERNEL**
 # these three directories are required to even run hol.bare.unquote
 src/parse
 src/bool
@@ -114,6 +119,7 @@ src/llist
 src/datatype/inftree
 src/path
 !examples/HolOmega
+!examples/lambda/basics
 !examples/lambda/barendregt
 !examples/computability
 !!examples/lambda/other-models
@@ -121,5 +127,6 @@ src/path
 !!examples/computability/lambda
 src/Boolify/src
 src/float
+!!examples/miller/ho_prover
 !!examples/miller/miller
 !examples/ordinal

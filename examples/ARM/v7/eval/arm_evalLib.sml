@@ -1,12 +1,16 @@
 (* ------------------------------------------------------------------------ *)
 (*  Ground-term evaluator                                                   *)
+(*  =====================                                                   *)
+(*  HOL evaluation works best with Moscow ML (standard kernel).             *)
+(*  Under Poly/ML 5.3 (experimental kernel) a stack overflow occurs with    *)
+(*  all but short runs (Dec. 2009).                                         *)
 (* ------------------------------------------------------------------------ *)
 
 structure arm_evalLib :> arm_evalLib =
 struct
 
 (* interactive use:
-  app load ["arm_evalTheory", "sort_updateTheory", "armLib", "patriciaLib"];
+  app load ["arm_evalTheory", "armLib", "patriciaLib"];
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -43,14 +47,16 @@ fun mk_bool s =
      | "false" => boolSyntax.F
      | _       => raise ERR "mk_bool" ("invalid option: " ^ s);
 
-fun hex w = StringCvt.padLeft #"0" w o Arbnum.toHexString o
-            numSyntax.dest_numeral o fst o wordsSyntax.dest_n2w;
+val toNum = numSyntax.dest_numeral o fst o wordsSyntax.dest_n2w;
+fun toHex w = StringCvt.padLeft #"0" w o Arbnum.toHexString;
+fun hex w = toHex w o toNum;
 
 local
   fun objdump infile outfile =
   let val _ = OS.FileSys.access (infile, [OS.FileSys.A_READ]) orelse
               raise OS.SysErr ("Cannot read file: " ^ infile,NONE)
-      val s = String.concat ["arm-elf-objdump -d -j .text ",                            infile, " > ", outfile]
+      val s = String.concat ["arm-elf-objdump -d -j .text -j .data -j .rodata ",
+                             infile, " > ", outfile]
       val _ = OS.Process.isSuccess (OS.Process.system s) orelse
               raise OS.SysErr ("Failed to run arm-elf-objdump",NONE)
   in
@@ -72,7 +78,7 @@ local
             of (n::instr::rest) =>
                   (n, remove_padding
                         (hd (String.tokens (fn c => c = #"\t") instr)))
-             | _ => raise OS.SysErr ("Failed to parse objdump",NONE)
+             | _ => raise ERR "parse_objdump" "failed to parse line"
   in
     Lib.mapfilter get_tokens l
   end
@@ -122,15 +128,6 @@ in
   val arm_load_from_file   = arm_load_from armLib.arm_assemble_from_file
   val arm_load_from_quote  = arm_load_from armLib.arm_assemble_from_quote
   val arm_load_from_string = arm_load_from armLib.arm_assemble_from_string
-end;
-
-val SORT_UPDATE_CONV =
-let open combinTheory sort_updateTheory
-    val compset = wordsLib.words_compset ()
-    val _ = computeLib.add_thms
-              [o_THM,SYM Ua_def,UPDATE_EQ_RULE,SORT_WORD_THM] compset
-in
-  computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [Ua_def,Ub_def]
 end;
 
 val arm_eval_trace = ref 6;
@@ -202,7 +199,7 @@ fun psrcname i =
    | _ => raise ERR "psrcname" (Int.toString i);
 
 local
-  fun out l = TextIO.output (TextIO.stdOut, String.concat (l @ ["\n"]))
+  fun out l = print (String.concat (l @ ["\n"]))
 
   val ptree_arm_next =
         REWRITE_RULE [FUN_EQ_THM] arm_evalTheory.ptree_arm_next_def
@@ -221,7 +218,11 @@ local
                                          | _ => NONE)
                 | _ => NONE
 
-  fun memory s = ``^s.memory`` |> eval |> combinSyntax.strip_update |> fst
+  fun memory s = ``^s.memory``
+                    |> eval
+                    |> combinSyntax.strip_update |> fst
+                    |> map (toNum ## I)
+                    |> Listsort.sort (fn ((m,_),(n,_)) => Arbnum.compare (m,n))
 
   fun print_cycle cycle =
         out ["Cycle:\t\t", cycle |> numSyntax.dest_numeral |> Arbnum.toString]
@@ -304,8 +305,7 @@ in
   fun PTREE_ARM_NEXT_CONV tm =
     case dest_strip tm
     of ("ptree_arm_next", [ii,instr,pc,cycle,s]) =>
-           let val thm = (REWR_CONV ptree_arm_next THENC
-                            EVAL THENC RAND_CONV SORT_UPDATE_CONV) tm
+           let val thm = (REWR_CONV ptree_arm_next THENC EVAL) tm
                val s' = case (thm |> concl |> rhs |> dest_strip)
                         of ("ValueState", [_,x]) => SOME x
                          | _ => NONE
@@ -345,13 +345,13 @@ in
               else
                 ();
               List.app
-                (fn (a,d) => (out [pad 11 ("[" ^ hex 8 a ^ "]"), hex 2 d])) m
+                (fn (a,d) => (out [pad 11 ("[" ^ toHex 8 a ^ "]"), hex 2 d])) m
             end
           else if optionSyntax.is_none s then
             out ["state upredictable"]
           else
             out ["cannot print state"]
-        end handle HOL_ERR _ => raise ERR "print_state" "cannot print state"
+        end handle HOL_ERR _ => raise ERR "print_arm_state" "cannot print state"
 end;
 
 val _ = computeLib.add_conv
@@ -414,7 +414,7 @@ local
                              | NONE => wordsSyntax.mk_wordii (0,32)
         val default_psr = case Redblackmap.peek (cmap,"psr_default")
                             of SOME tm => decode_psr (mk_word32 tm)
-                             | NONE => decode_psr (mk_word32 "210")
+                             | NONE => decode_psr (mk_word32 "10")
         val default_mem = case Redblackmap.peek (cmap,"mem_default")
                             of SOME tm => mk_word8 tm
                              | NONE => wordsSyntax.mk_wordii (0,8)
@@ -528,6 +528,59 @@ fun output_program opt t =
        end
    | NONE =>
        output_program_to_stream TextIO.stdOut t;
+
+(* Standalone assembler (Poly/ML):
+
+fun main () =
+let val opt =
+          case CommandLine.arguments()
+          of [infile] =>
+                SOME {base = "0", infile = infile, outfile = NONE}
+           | [infile,outfile] =>
+                SOME {base = "0", infile = infile, outfile = SOME outfile}
+           | ["-b", base, infile] =>
+                if Lib.can Arbnum.fromHexString base then
+                  SOME {base = base, infile = infile, outfile = NONE}
+                else
+                  NONE
+           | ["-b", base,infile,outfile] =>
+                if Lib.can Arbnum.fromHexString base then
+                  SOME {base = base, infile = infile, outfile = SOME outfile}
+                else
+                  NONE
+           | _ => NONE
+in
+  case opt
+  of SOME {base,infile,outfile} => let
+         val e = OS.Path.ext infile
+         val elf = case e
+                   of SOME "o" => true
+                    | SOME _ => false
+                    | NONE => true
+         val (load,m) = if elf then
+                          (arm_load_from_elf, "converted ")
+                        else
+                          (arm_load_from_file, "assembled ")
+         val tree = load base infile patriciaLib.empty
+         val _ = output_program outfile tree
+       in
+         case outfile
+         of SOME s =>
+              print ("Successfully " ^ m ^ infile ^ " to " ^ s  ^ "\n")
+          | NONE => ()
+       end
+   | NONE => print ("usage: " ^ CommandLine.name() ^
+                    " [-b <base address>] <input file> [<output file>]\n")
+end handle
+   HOL_ERR {origin_function,message,...} =>
+     print (origin_function ^ ": " ^ message ^ "\n")
+ | Io {name, cause = SysErr (s, _), function} =>
+     print (function ^ ": " ^ s ^ ": " ^ name ^ "\n");
+
+val _ = PolyML.export("HOLas", main);
+
+gcc -O4 -o HOLas HOLas.o -L$HOME/polyml/lib -lpolymain -lpolyml
+*)
 
 (* val _ = installPP (mosmlpp patriciaLib.pp_term_ptree); *)
 

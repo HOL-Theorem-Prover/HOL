@@ -1894,14 +1894,8 @@ val bit_field_clear_insert_instr_def = iDefine`
         ((read_reg ii d |||
           (if n = 15w then constT 0w else read_reg ii n)) >>=
          (\(rd,rn).
-            let result = word_modify (\i b.
-                           if lsbit <= i /\ i <= msbit then
-                             rn ' (i - lsbit)
-                           else
-                             b) rd
-            in
-              (increment_pc ii enc |||
-               write_reg ii d result) >>= unit2))`;
+            (increment_pc ii enc |||
+             write_reg ii d (bit_field_insert msbit lsbit rn rd)) >>= unit2))`;
 
 (* ........................................................................
    T2: PLD{W}<c> [<Rn>,#<imm12>]
@@ -3257,7 +3251,7 @@ val condition_passed_def = Define`
          || 0b011w -> v                (* VS or VC *)
          || 0b100w -> c /\ ~z          (* HI or LS *)
          || 0b101w -> n = v            (* GE or LT *)
-         || 0b110w -> (n = v) /\ ~c    (* GT or LE *)
+         || 0b110w -> (n = v) /\ ~z    (* GT or LE *)
          || 0b111w -> T)               (* AL       *)
       in
        if cond ' 0 /\ (cond <> 15w) then
@@ -3500,7 +3494,7 @@ val eval_ss =
 
 val instruction_rule = SIMP_RULE eval_ss
   [(GEN_ALL o SIMP_RULE std_ss [] o Q.ISPEC `\x. a NOTIN x`) COND_RAND,
-   DECIDE ``~(a >= b) = a < b:num``,
+   DECIDE ``~(a >= b) = a < b:num``,  condT_def,
    arm_coretypesTheory.NOT_IN_EMPTY_SPECIFICATION, instruction_def,
    dsp_support_def, kernel_support_def, arm_coretypesTheory.thumb2_support_def];
 

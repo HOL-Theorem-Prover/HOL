@@ -130,6 +130,7 @@ end
     two different implementations of binary addition are equivalent
    ---------------------------------------------------------------------- *)
 
+(*
 fun halfsum x y = mk_eq(x,mk_neg y)
 fun halfcarry x y = mk_conj(x,y)
 fun ha x y s c = mk_conj(mk_eq(s,halfsum x y), mk_eq(c,halfcarry x y))
@@ -197,5 +198,5 @@ end
 
 val example = gen_all (mk_adder_test 3 2)
 
-
+*)
 end

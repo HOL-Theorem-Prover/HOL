@@ -1892,13 +1892,15 @@ val PCHOOSE_TAC = PCHOOSE_THEN ASSUME_TAC ;
 (*    A ?- t[u]                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-fun PEXISTS_TAC v :tactic = fn (a, t) =>
-    let val (p,b) = dest_pexists t
-    in
-	([(a, rhs (concl (PBETA_CONV (mk_comb(mk_pabs(p,b),v)))))
-         ],
-	 fn [th] => PEXISTS (t,v) th)
-    end
+fun PEXISTS_TAC v (a,t) = let
+  val (p,b) = dest_pexists t
+  fun just ths =
+      case ths of
+        [th] => PEXISTS (t,v) th
+      | _ => raise ERR "PEXISTS_TAC" "Justification Bind"
+in
+  ([(a, rhs (concl (PBETA_CONV (mk_comb(mk_pabs(p,b),v)))))], just)
+end
 handle HOL_ERR _ => failwith "PEXISTS_TAC" ;
 
 (* ------------------------------------------------------------------------- *)
@@ -2401,17 +2403,23 @@ val PMATCH_MP_TAC : thm_tactic =
 	    val eps = filter (fn p => not (occs_in p con)) tps
 	    val th2 = uncurry DISCH (itlist efn eps (ant,th1))
 	in
-	    fn (A,g) =>
-	    let val (gps,gl) = strip_pforall g
-		val ins = match_term con gl handle HOL_ERR _ =>
-                raise ERR "PMATCH_MP_TAC" "no match"
-		val ith = INST_TY_TERM ins th2
-		val newg = fst(dest_imp(concl ith))
-		val gth = PGENL gps (UNDISCH ith) handle HOL_ERR _ =>
-                raise ERR "PMATCH_MP_TAC" "generalized pair(s)"
-	    in
-		([(A,newg)], fn [th] => PROVE_HYP th gth)
-	    end
+	    fn (A,g) => let
+                 val (gps,gl) = strip_pforall g
+		 val ins = match_term con gl
+                     handle HOL_ERR _ =>
+                            raise ERR "PMATCH_MP_TAC" "no match"
+		 val ith = INST_TY_TERM ins th2
+		 val newg = fst(dest_imp(concl ith))
+		 val gth = PGENL gps (UNDISCH ith)
+                     handle HOL_ERR _ =>
+                           raise ERR "PMATCH_MP_TAC" "generalized pair(s)"
+                 fun just ths =
+                     case ths of
+                       [th] => PROVE_HYP th gth
+                     | _ => raise ERR "PMATCH_MP_TAC" "Justification Bind"
+	       in
+		 ([(A,newg)], just)
+	       end
 	end
     end;
 

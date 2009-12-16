@@ -73,7 +73,7 @@ structure Z3 = struct
               val thm = Drule.INST_TY_TERM (tm_subst, ty_subst) thm
               (* discharging definitions: INT_MIN, INT_MAX, ABS *)
               val INT_ABS = intLib.ARITH_PROVE
-                ``!x. ABS (x:int) = if x < 0 then 0 - x else x``
+                ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
               (* bool_case is replaced by if_then_else by the translation to
                  SMT-LIB format; this must therefore be done in the goal as
                  well *)

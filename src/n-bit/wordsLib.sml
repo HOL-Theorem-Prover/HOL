@@ -180,6 +180,11 @@ val word_asr_compute =
      word_lsr_compute, arithmeticTheory.MIN_IDEM] o
    SPECL [`^a`, `^n2w ^n`]) word_asr_n2w;
 
+val bit_update_compute =
+   BIT_UPDATE |> REWRITE_RULE [FUN_EQ_THM]
+              |> (fn th => CONJ (SPECL [`^a`, `F`,`^n2w ^n`] th)
+                                (SPECL [`^a`, `T`,`^n2w ^n`] th))
+
 val thms =
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
    SUC_RULE rich_listTheory.GENLIST, rich_listTheory.SNOC, combinTheory.K_THM,
@@ -194,20 +199,23 @@ val thms =
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
    (SIMP_RULE std_ss [GSYM ODD_MOD2_LEM,arithmeticTheory.MOD_2EXP_def,
       BITS_def,SUC_SUB] o NUM_RULE [BITS_ZERO2] `n`) BIT_def,
-   INT_MIN_SUM, SUC_RULE MOD_2EXP_EQ, SUC_RULE BOOLIFY_def,
+   UINT_MAX_def, INT_MAX_def, INT_MIN_SUM,
+   SUC_RULE MOD_2EXP_EQ, SUC_RULE BOOLIFY_def, bit_update_compute,
    numeral_log2,numeral_ilog2,LOG_compute,LOWEST_SET_BIT_compute,
    n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w ^n` sw2sw_def,
    word_len_def, word_L_def, word_H_def, word_T_def,
    word_join_def, SPECL [`^n2w ^n`,`n2w ^m:'b word`] word_concat_def,
    SPEC `^a` word_replicate_concat_word_list, concat_word_list_def,
-   word_reverse_n2w, word_modify_n2w, SPEC `^a` word_log2_n2w,
+   word_reverse_n2w, word_modify_n2w, bit_field_insert_def,
+   SPEC `^a` word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
-   word_2comp_compute, word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
+   word_2comp_compute, word_nor_n2w, word_xnor_n2w, word_nand_n2w,
+   word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
    MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
    word_asr_compute, word_lsr_compute, SPEC `^a` word_lsl_n2w,
    SHIFT_ZERO, SPEC `^a` word_ror_n2w,
    SPECL [`^w`,`^a`] word_rol_def, word_rrx_n2w,
-   word_lsb_n2w, word_msb_n2w, word_bit_n2w, fcp_n2w,
+   word_lsb_n2w, word_msb_n2w, word_bit_n2w, fcp_n2w, fcpTheory.L2V_def,
    NUM_RULE [DIMINDEX_GT_0] `i` word_index_n2w,
    word_bits_n2w, word_signed_bits_n2w, word_slice_n2w, word_extract_n2w,
    word_reduce_n2w, Q.SPEC `^n2w ^n` reduce_and, Q.SPEC `^n2w ^n` reduce_or,
@@ -288,7 +296,7 @@ local
       "word_to_hex_string",
       "word_reduce", "reduce_and", "reduce_or", "reduce_xor",
       "reduce_nand", "reduce_nor", "reduce_xnor",
-      "word_replicate", "concat_word_list",
+      "word_replicate", "concat_word_list", "bit_field_insert",
       "w2w","w2n","sw2sw","word_log2","word_reverse","word_msb",
       "word_join","word_concat","word_bit","word_bits","word_signed_bits",
       "word_slice","word_extract","word_asr","word_lsr","word_lsl","word_ror",
@@ -903,13 +911,15 @@ val WORD_COMP_ss =
        key = SOME ([], ``words$word_1comp (^n2w ^n) :'a word``)}];
 
 val WORD_AND_ss =
-  simpLib.merge_ss [rewrites [WORD_AND_CLAUSES2, SYM WORD_NEG_1, WORD_AND_COMP],
+  simpLib.merge_ss [rewrites
+    [WORD_AND_CLAUSES2, SYM WORD_NEG_1, WORD_AND_COMP, WORD_NAND_NOT_AND],
   simpLib.conv_ss
     {conv = K (K (WORD_AND_CANON_CONV)), trace = 3,
      name = "WORD_AND_CANON_CONV", key = SOME ([], ``words$word_and ^w ^y``)}];
 
 val WORD_XOR_ss =
-  simpLib.merge_ss [rewrites [WORD_XOR_CLAUSES2, SYM WORD_NEG_1, WORD_NOT_XOR],
+  simpLib.merge_ss [rewrites
+    [WORD_XOR_CLAUSES2, SYM WORD_NEG_1, WORD_NOT_XOR, WORD_XNOR_NOT_XOR],
   simpLib.conv_ss
     {conv = K (K (WORD_XOR_CANON_CONV)), trace = 3,
      name = "WORD_XOR_CANON_CONV", key = SOME ([], ``words$word_xor ^w ^y``)}];
@@ -918,7 +928,7 @@ val WORD_OR_ss = let val thm = REWRITE_RULE [SYM WORD_NEG_1] WORD_OR_COMP in
   simpLib.merge_ss
   [rewrites [WORD_OR_CLAUSES2, SYM WORD_NEG_1, WORD_AND_ABSORD, thm,
    ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD,
-   ONCE_REWRITE_RULE [WORD_OR_COMM] thm],
+   ONCE_REWRITE_RULE [WORD_OR_COMM] thm, WORD_NOR_NOT_OR],
    simpLib.conv_ss
      {conv = K (K (WORD_OR_CANON_CONV)), trace = 3,
       name = "WORD_OR_CANON_CONV", key = SOME ([], ``words$word_or ^w ^y``)}]
@@ -1440,17 +1450,20 @@ in
 end;
 
 fun inst_word_lengths tm =
-let val t = HolKernel.find_term (Lib.can LENGTH_INST) tm
-    val {redex,residue} = LENGTH_INST t
-    val _ = if !Globals.interactive andalso !notify_on_word_length_guess then
-              Feedback.HOL_MESG
-                (String.concat ["assigning word length: ",
-                                t2s redex, " <- ", t2s residue])
-            else
-              ()
-in
-  inst_word_lengths (Term.inst [redex |-> residue] tm)
-end handle HOL_ERR _ => tm;
+  case Lib.total (HolKernel.find_term (Lib.can LENGTH_INST)) tm
+  of NONE => tm
+   | SOME subtm =>
+       let val (theinst as {redex,residue}) = LENGTH_INST subtm
+           val _ = if !Globals.interactive andalso !notify_on_word_length_guess
+                   then
+                     Feedback.HOL_MESG
+                       (String.concat ["assigning word length: ",
+                                       t2s redex, " <- ", t2s residue])
+                   else
+                     ()
+       in
+         inst_word_lengths (Term.inst [theinst] tm)
+       end
 
 fun word_post_process_term t =
   if !guessing_word_lengths then

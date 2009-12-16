@@ -774,6 +774,19 @@ in
         |> mk_code aa
         |> step_updates a
     end
+
+  fun generate_opcode arch enc opc = let
+    val _ = valid_arch_ecoding enc arch orelse
+              raise ERR "generate_opcode"
+		        "Architecture does not support encoding"
+    val arm = enc = ARM
+    val ass = if arm then
+                armLib.arm_disassemble_decode opc
+              else
+                armLib.thumb_disassemble_decode 0 opc
+  in
+    step_updates (arch_to_string arch) (opc,ass,arm)
+  end
 end;
 
 fun instruction_type enc opc =

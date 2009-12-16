@@ -3,9 +3,10 @@ sig
   type time      = Time.time
   type instream  = TextIO.instream
   type outstream = TextIO.outstream
-  include PP where type break_style = PP.break_style
-                   and type ppstream = PP.ppstream
 
+  include HOLPP where type break_style = HOLPP.break_style
+                  and type ppstream = HOLPP.ppstream
+                  and type 'a frag = 'a HOLPP.frag
 
   val with_ppstream : ppstream
                        -> {add_break      : int * int -> unit,
@@ -72,8 +73,8 @@ sig
   exception Div
   exception Interrupt
 
-  datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a
-  type 'a quotation = 'a frag list
 
   val norm_quote : 'a quotation -> 'a quotation
+
+  val catch_SIGINT : unit -> unit
 end

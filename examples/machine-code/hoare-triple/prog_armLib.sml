@@ -40,6 +40,8 @@ fun rewrite_names tm = let
   in replace_terml aux end;
 
 fun arm_pre_post g = let 
+  val cpsr_var = mk_var("cpsr",``:word32``)
+  val g = subst [``ARM_READ_MASKED_CPSR s``|->cpsr_var] g
   val regs = collect_term_of_type ``:word4`` g
   val bits = collect_term_of_type ``:arm_bit`` g
   val h =  rewrite_names ``ARM_READ_STATUS`` (rewrite_names ``ARM_READ_REG`` g)
@@ -69,6 +71,9 @@ fun arm_pre_post g = let
   val pre_post = map mk_pre_post_assertion (regs @ bits @ mems)
   val pre = list_mk_star (map fst pre_post) ((type_of o fst o hd) pre_post)
   val post = list_mk_star (map snd pre_post) ((type_of o fst o hd) pre_post)
+  val (pre,post) = if not (mem cpsr_var (free_vars g)) then (pre,post) else let
+    val res = (fst o dest_eq o concl o SPEC cpsr_var) aCPSR_def
+    in (mk_star(pre,res),mk_star(post,res)) end
   fun match_any [] tm = fail ()
     | match_any (x::xs) tm = match_term x tm handle HOL_ERR _ => match_any xs tm
   fun pass tm = let
@@ -95,27 +100,6 @@ fun arm_pre_post g = let
   val ss = subst [``aR 15w``|->``aPC``,pc|->``p:word32``]
   in (ss pre,ss post) end;
 
-fun introduce_aBYTE_MEMORY th = let
-  val (_,p,c,q) = dest_spec(concl th)
-  val tm0 = find_term (can (match_term ``aM1 x y``)) p
-  val c = MOVE_OUT_CONV (car tm0) THENC STAR_REVERSE_CONV
-  val th = CONV_RULE (POST_CONV c THENC PRE_CONV c) th
-  val f = cdr o cdr
-  val h = REWRITE_RULE [GSYM STAR_ASSOC,bit_listTheory.bytes2word_thm]
-  val th = MATCH_MP (h aBYTE_MEMORY_INTRO) (h th)
-  val th = RW [wordsTheory.WORD_ADD_0,GSYM progTheory.SPEC_MOVE_COND] th
-  fun replace_access_in_pre th = let
-    val (_,p,c,q) = dest_spec(concl th)
-    val tm = find_term (can (match_term ``(a:'a =+ w:'b) f``)) p
-    val (tm,y) = dest_comb tm
-    val (tm,x) = dest_comb tm
-    val a = snd (dest_comb tm)
-    val th = REWRITE_RULE [APPLY_UPDATE_ID] (INST [x |-> mk_comb(y,a)] th)
-    in th end handle e => th
-  val th = replace_access_in_pre th
-  val th = RW [STAR_ASSOC] th
-  in th end handle e => th;
-
 fun remove_primes th = let
   fun last s = substring(s,size s-1,1)
   fun delete_last_prime s = if last s = "'" then substring(s,0,size(s)-1) else fail()
@@ -132,6 +116,71 @@ fun remove_primes th = let
 val SING_SUBSET = prove(
   ``!x:'a y. {x} SUBSET y = x IN y``,
   REWRITE_TAC [INSERT_SUBSET,EMPTY_SUBSET]);
+
+fun introduce_aBYTE_MEMORY th = if
+  not (can (find_term (can (match_term ``aM1``))) (concl th))
+  then th else let
+  val th = CONV_RULE (PRE_CONV STAR_REVERSE_CONV) th
+  val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
+  val th = CONV_RULE (PRE_CONV STAR_REVERSE_CONV) th
+  val (_,p,_,q) = dest_spec(concl th)
+  val xs = (rev o list_dest dest_star) p
+  val tm = (fst o dest_eq o concl o SPEC_ALL) aM1_def
+  val xs = filter (can (match_term tm)) xs
+  fun foo tm = cdr tm |-> mk_comb(mk_var("f",``:word32->word8``),(cdr o car) tm)
+  val th = INST (map foo xs) th
+  in if xs = [] then th else let
+    val (_,p,_,q) = dest_spec(concl th)
+    val xs = (rev o list_dest dest_star) p
+    val tm = (fst o dest_eq o concl o SPEC_ALL) aM1_def
+    val xs = filter (can (match_term tm)) xs
+    val ys = (map (cdr o car) xs)
+    fun foo [] = mk_var("df",``:word32 set``)
+      | foo (v::vs) = pred_setSyntax.mk_delete(foo vs,v)
+    val frame = mk_comb(mk_comb(``aBYTE_MEMORY``,foo ys),mk_var("f",``:word32->word8``))
+    val th = SPEC frame (MATCH_MP progTheory.SPEC_FRAME th)
+    val th = RW [GSYM STAR_ASSOC] th
+    val fff = (fst o dest_eq o concl o UNDISCH_ALL o SPEC_ALL o GSYM) aBYTE_MEMORY_INSERT
+    fun compact th = let
+      val x = find_term (can (match_term fff)) ((car o car o concl o UNDISCH_ALL) th)
+      val rw = (INST (fst (match_term fff x)) o SPEC_ALL o GSYM) aBYTE_MEMORY_INSERT
+      val th = DISCH ((fst o dest_imp o concl) rw) th
+      val th = SIMP_RULE bool_ss [GSYM aBYTE_MEMORY_INSERT] th
+      in th end
+    val th = repeat compact th
+    val th = RW [STAR_ASSOC,AND_IMP_INTRO,GSYM CONJ_ASSOC] th
+    val th = RW [APPLY_UPDATE_ID] th
+    (* val te = (cdr o car o find_term (can (match_term (cdr fff))) o concl) th
+    val t1 = repeat (snd o pred_setSyntax.dest_insert) te
+    val t2 = repeat (fst o pred_setSyntax.dest_delete) t1
+    val th = SIMP_RULE bool_ss [] (DISCH (mk_eq(te,t2)) th)
+    val th = RW [AND_IMP_INTRO] th *)
+    val v = hd (filter (is_var) ys @ ys) 
+    fun ss [] = ``{}:word32 set``
+      | ss (v::vs) = pred_setSyntax.mk_insert(v,ss vs) 
+    val u1 = pred_setSyntax.mk_subset(ss (rev ys),mk_var("df",``:word32 set``))
+    val u2 = u1
+    val u3 = (fst o dest_imp o concl) th
+    val goal = mk_imp(u2,u3)
+    val imp = prove(goal,
+      ONCE_REWRITE_TAC [ALIGNED_MOD_4]
+      THEN SIMP_TAC std_ss [WORD_ADD_0,WORD_SUB_RZERO]
+      THEN SIMP_TAC std_ss [WORD_EQ_ADD_CANCEL,word_sub_def]
+      THEN SIMP_TAC (std_ss++SIZES_ss) [n2w_11,word_2comp_n2w]
+      THEN SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_DELETE,INSERT_SUBSET]
+      THEN SIMP_TAC std_ss [WORD_EQ_ADD_CANCEL,word_sub_def]
+      THEN SIMP_TAC (std_ss++SIZES_ss) [n2w_11,word_2comp_n2w]
+      THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
+      THEN ASM_SIMP_TAC std_ss []
+      THEN CCONTR_TAC
+      THEN FULL_SIMP_TAC std_ss []
+      THEN FULL_SIMP_TAC std_ss [])
+    val th = DISCH_ALL (MATCH_MP th (UNDISCH imp))
+    val th = RW [GSYM progTheory.SPEC_MOVE_COND] th
+    val th = remove_primes th
+    val th = REWRITE_RULE [SING_SUBSET] th
+    val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
+    in th end end
 
 fun introduce_aM th = let
   val index = ref 0
@@ -234,6 +283,7 @@ fun post_process_thm th = let
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
   val th = introduce_aM th
+
   val th = introduce_aBYTE_MEMORY th
   val th = introduce_aMEMORY th
   val th = RW [WORD_EQ_XOR_ZERO,wordsTheory.WORD_EQ_SUB_ZERO,ALIGNED_def,
@@ -294,7 +344,15 @@ fun arm_prove_specs s = let
     val th = SIMP_RULE std_ss [] th
     val tm = (fst o dest_eq o concl o SPEC state) ARMv4T_OK_def
     val th = (RW [AND_IMP_INTRO] o RW [GSYM ARMv4T_OK_def] o SIMP_RULE bool_ss [ARMv4T_OK_def] o DISCH tm) th
-    val th = RW [aligned4_thm] th
+    val th = SIMP_RULE std_ss [aligned4_thm,aligned2_thm,ARM_READ_MASKED_CPSR_INTRO] th
+    val th = if not (can (find_term (fn x => x = ``ARM_READ_MASKED_CPSR``)) (concl th)) then th else let
+               val th = SIMP_RULE std_ss [FCP_UPDATE_WORD_AND] th
+               val gg = SIMP_RULE (std_ss++SIZES_ss) [bitTheory.BIT_def,bitTheory.BITS_THM] o 
+                        RW1 [fcpTheory.FCP_APPLY_UPDATE_THM,word_index_n2w]
+               fun f th = let
+                 val t2 = find_term (can (match_term ``(n :+ F) ((n2w k):word32)``)) (concl th) 
+                 in RW [EVAL t2] th end
+               in repeat f ((gg o gg o gg o gg o gg)th) end
     val th = arm_prove_one_spec s th
     in post_process_thm th end
   val result = map derive_spec thms
@@ -342,25 +400,12 @@ val arm_tools  = (arm_spec, arm_jump, arm_status, arm_pc)
   val thms = arm_spec (enc "LDRNE r1, [r1]");
   val thms = arm_spec (enc "BNE -#12");
   val thms = arm_spec (enc "MOVGT r2, #5");
-  val thms = arm_spec (enc "LDRB r2, [r3]");
-  val thms = arm_spec (enc "STRB r2, [r3]");
-  val thms = arm_spec (enc "SWPB r2, r4, [r3]");
-  val thms = arm_spec (enc "LDR r2, [r3,#12]");
-  val thms = arm_spec (enc "STR r2, [r3,#12]");
-  val thms = arm_spec (enc "SWP r2, r4, [r3]");
-  val thms = arm_spec (enc "LDMIB r4, {r5-r7}");
-  val thms = arm_spec (enc "STMIA r4, {r5-r6}");
   val thms = arm_spec (enc "LDRBNE r2, [r3]");
   val thms = arm_spec (enc "BNE +#420");
   val thms = arm_spec (enc "LDRLS r2, [r11, #-40]");
   val thms = arm_spec (enc "SUBLS r2, r2, #1");
   val thms = arm_spec (enc "SUBLS r11, r11, #4");
   val thms = arm_spec (enc "MOVGT r12, r0");
-  val thms = arm_spec (enc "STRB r2, [r3]");
-  val thms = arm_spec (enc "STMIA r4, {r5-r10}");
-  val thms = arm_spec (enc "LDMIA r4, {r5-r10}");
-  val thms = arm_spec (enc "MSR CPSR, r1");
-  val thms = arm_spec (enc "MSR CPSR, #219");
   val thms = arm_spec (enc "ADD r0, pc, #16");
   val thms = arm_spec (enc "SUB r0, pc, #60");
   val thms = arm_spec (enc "SUBLS r2, r2, #1");
@@ -372,6 +417,9 @@ val arm_tools  = (arm_spec, arm_jump, arm_status, arm_pc)
   val thms = arm_spec (enc "MOVGT r0, r6");
   val thms = arm_spec (enc "ADD r5, pc, #4096");
   val thms = arm_spec (enc "ADD r6, pc, #4096");
+  val thms = arm_spec (enc "STRB r2, [r3]");
+  val thms = arm_spec (enc "STMIA r4, {r5-r10}");
+  val thms = arm_spec (enc "LDMIA r4, {r5-r10}");
   val thms = arm_spec (enc "STRB r2, [r1], #1");
   val thms = arm_spec (enc "STRB r3, [r1], #1");
   val thms = arm_spec (enc "STMIB r8!, {r14}");
@@ -387,9 +435,18 @@ val arm_tools  = (arm_spec, arm_jump, arm_status, arm_pc)
   val thms = arm_spec (enc "LDR r12, [pc, #3856]");
   val thms = arm_spec (enc "LDR r1, [pc, #1020]");
   val thms = arm_spec (enc "STMDB sp!, {r0-r2, r15}");
-
-  (* doesn't work, yet *)
-  
+  val thms = arm_spec (enc "LDRB r2, [r3]");
+  val thms = arm_spec (enc "STRB r2, [r3]");
+  val thms = arm_spec (enc "SWPB r2, r4, [r3]");
+  val thms = arm_spec (enc "LDR r2, [r3,#12]");
+  val thms = arm_spec (enc "STR r2, [r3,#12]");
+  val thms = arm_spec (enc "SWP r2, r4, [r3]");
+  val thms = arm_spec (enc "LDMIB r4, {r5-r7}");
+  val thms = arm_spec (enc "STMIA r4, {r5-r6}");
+  val thms = arm_spec (enc "LDRH r2, [r3]");
+  val thms = arm_spec (enc "STRH r2, [r3]");
+  val thms = arm_spec (enc "MSR CPSR, r1");
+  val thms = arm_spec (enc "MSR CPSR, #219");
   val thms = arm_spec (enc "MRS r1, CPSR");
 
 *)

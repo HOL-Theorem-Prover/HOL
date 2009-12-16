@@ -783,6 +783,7 @@ in
                       "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); OS.Process.exit OS.Process.failure);");
   p "__end-of-file__";
   TextIO.closeOut out;
+  Systeml.mk_xable result;
   OS.Process.success
 end
 handle IO.Io _ => OS.Process.failure
@@ -1208,14 +1209,13 @@ in
     in
       if isSuccess (poly_link script (List.map OS.Path.base objectfiles))
       then let
-        val script' = Systeml.mk_xable script
         val thysmlfile = s^"Theory.sml"
         val thysigfile = s^"Theory.sig"
         val _ =
           app (fn s => OS.FileSys.remove s handle OS.SysErr _ => ())
           [thysmlfile, thysigfile]
-        val res2 = systeml [fullPath [OS.FileSys.getDir(), script']];
-        val _ = app OS.FileSys.remove [script', scriptuo, scriptui]
+        val res2 = systeml [fullPath [OS.FileSys.getDir(), script]];
+        val _ = app OS.FileSys.remove [script, scriptuo, scriptui]
         val () =
             if not (isSuccess res2) then
               (failed_script_cache := Binaryset.add(!failed_script_cache, s);
@@ -1225,11 +1225,11 @@ in
       in
         (isSuccess res2) andalso
         (exists_readable thysmlfile orelse
-         (print ("Script file "^script'^" didn't produce "^thysmlfile^"; \n\
+         (print ("Script file "^script^" didn't produce "^thysmlfile^"; \n\
                  \  maybe need export_theory() at end of "^scriptsml^"\n");
          false)) andalso
         (exists_readable thysigfile orelse
-         (print ("Script file "^script'^" didn't produce "^thysigfile^"; \n\
+         (print ("Script file "^script^" didn't produce "^thysigfile^"; \n\
                  \  maybe need export_theory() at end of "^scriptsml^"\n");
          false))
       end
@@ -1471,7 +1471,7 @@ fun generate_all_plausible_targets () = let
   fun src_to_target (SIG (Script s)) = UO (Theory s)
     | src_to_target (SML (Script s)) = UO (Theory s)
     | src_to_target (SML s) = (UO s)
-    | src_to_target (SIG s) = (UO s)
+    | src_to_target (SIG s) = (UI s)
     | src_to_target _ = raise Fail "Can't happen"
   val initially = map (src_to_target o toFile) src_files @ extra_targets
   fun remove_sorted_dups [] = []

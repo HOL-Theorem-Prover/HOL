@@ -458,11 +458,10 @@ fun perm_reducer_get_context e =
     (raise e)
     handle perm_reducer_context thmL => thmL;
 
-val thm_ref = ref []
 val PERM_REDUCER =
   Traverse.REDUCER {name = SOME "PERM_REDUCER",
            initial = perm_reducer_context [],
-           addcontext = fn (ctx, thmL) => (thm_ref := thmL :: !thm_ref;
+           addcontext = fn (ctx, thmL) => (
 			       perm_reducer_context (append (filter (is_PERM o concl)
                                                     (flatten (map BODY_CONJUNCTS thmL)))
                                (perm_reducer_get_context ctx))),

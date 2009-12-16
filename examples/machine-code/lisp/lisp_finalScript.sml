@@ -250,7 +250,7 @@ val arm_sexp2string_th = let
     THEN CONV_TAC (REPEATC (DEPTH_CONV SEP_EXISTS_CONV))
     THEN SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR,Once one_space_EXPAND]
     THEN NTAC 2 STRIP_TAC
-    THEN EX_TAC [`r3'`,`r4'`,`r5'`,`r6'`,`r7'`,`r8'`,`a`]
+    THEN EX_TAC [`r3`,`r4`,`r5`,`r6`,`r7`,`r8`,`a`]
     THEN EX_TAC [`x2`,`x3`,`x4`,`x5`,`x6`]
     THEN EX_TAC [`df`,`f`,`dg`,`g`,`dm`,`m`,`df'`,`f'`,`s'`]
     THEN IMP_RES_TAC imp
@@ -261,7 +261,7 @@ val arm_sexp2string_th = let
     THEN SIMP_TAC (std_ss++sep_cond_ss) [Q.ISPEC `aR 7w` SEP_HIDE_def,SEP_CLAUSES]
     THEN SIMP_TAC (std_ss++sep_cond_ss) [Q.ISPEC `aR 8w` SEP_HIDE_def,SEP_CLAUSES]
     THEN CONV_TAC (REPEATC (DEPTH_CONV SEP_EXISTS_CONV))
-    THEN EX_TAC [`r4'`,`r5'`,`r6'`,`r7'`,`r8'`]
+    THEN EX_TAC [`r4`,`r5`,`r6`,`r7`,`r8`]
     THEN FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]
   val th = MP th (prove(goal,tac))
   in th end;
@@ -311,7 +311,7 @@ val ppc_sexp2string_th = let
     THEN CONV_TAC ((REDEPTH_CONV SEP_EXISTS_CONV))
     THEN SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR,Once one_space_EXPAND]
     THEN NTAC 2 STRIP_TAC
-    THEN EX_TAC [`r3'`,`r4'`,`r5'`,`r6'`,`r7'`,`r8'`,`a`]
+    THEN EX_TAC [`r3`,`r4`,`r5`,`r6`,`r7`,`r8`,`a`]
     THEN EX_TAC [`x2`,`x3`,`x4`,`x5`,`x6`]
     THEN EX_TAC [`df`,`f`,`dg`,`g`,`dm`,`m`,`df'`,`f'`,`s'`]
     THEN IMP_RES_TAC imp
@@ -322,7 +322,7 @@ val ppc_sexp2string_th = let
     THEN SIMP_TAC (std_ss++sep_cond_ss) [Q.ISPEC `pR 7w` SEP_HIDE_def,SEP_CLAUSES]
     THEN SIMP_TAC (std_ss++sep_cond_ss) [Q.ISPEC `pR 8w` SEP_HIDE_def,SEP_CLAUSES]
     THEN CONV_TAC (REPEATC (DEPTH_CONV SEP_EXISTS_CONV))
-    THEN EX_TAC [`r4'`,`r5'`,`r6'`,`r7'`,`r8'`]
+    THEN EX_TAC [`r4`,`r5`,`r6`,`r7`,`r8`]
     THEN FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]
   val th = MP th (prove(goal,tac))
   in th end;
@@ -473,26 +473,26 @@ val x86_sexp2string_th = let
     THEN CONV_TAC ((REDEPTH_CONV SEP_EXISTS_CONV))
     THEN SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR,Once one_space_EXPAND]
     THEN NTAC 2 STRIP_TAC
-    THEN EX_TAC [`r3'`,`r4'`,`r5'`,`r6'`,`r7'`,`r8'`,`a`]
+    THEN EX_TAC [`r3`,`r4`,`r5`,`r6`,`r7`,`r8`,`a`]
     THEN EX_TAC [`x2`,`x3`,`x4`,`x5`,`x6`]
     THEN EX_TAC [`df`,`f`,`dg`,`g`,`dm`,`m`,`df'`,`f'`,`s'`]
     THEN IMP_RES_TAC imp
     THEN ASM_SIMP_TAC std_ss [LET_DEF,WORD_OR_CLAUSES]
     THEN SIMP_TAC (std_ss++sep_cond_ss) [Q.ISPEC `xR ESI` SEP_HIDE_def,SEP_CLAUSES]
     THEN CONV_TAC (REPEATC (DEPTH_CONV SEP_EXISTS_CONV))
-    THEN EX_TAC [`r8'`]
+    THEN EX_TAC [`r8`]
     THEN SIMP_TAC (std_ss++sep_cond_ss) [Q.ISPEC `xR EDI` SEP_HIDE_def,SEP_CLAUSES]
     THEN CONV_TAC (REPEATC (DEPTH_CONV SEP_EXISTS_CONV))
-    THEN EX_TAC [`r7'`]
+    THEN EX_TAC [`r7`]
     THEN SIMP_TAC (std_ss++sep_cond_ss) [Q.ISPEC `xR EBX` SEP_HIDE_def,SEP_CLAUSES]
     THEN CONV_TAC (REPEATC (DEPTH_CONV SEP_EXISTS_CONV))
-    THEN EX_TAC [`r6'`]
+    THEN EX_TAC [`r6`]
     THEN SIMP_TAC (std_ss++sep_cond_ss) [Q.ISPEC `xR EDX` SEP_HIDE_def,SEP_CLAUSES]
     THEN CONV_TAC (REPEATC (DEPTH_CONV SEP_EXISTS_CONV))
-    THEN EX_TAC [`r5'`]
+    THEN EX_TAC [`r5`]
     THEN SIMP_TAC (std_ss++sep_cond_ss) [Q.ISPEC `xR ECX` SEP_HIDE_def,SEP_CLAUSES]
     THEN CONV_TAC (REPEATC (DEPTH_CONV SEP_EXISTS_CONV))
-    THEN EX_TAC [`r4'`]
+    THEN EX_TAC [`r4`]
     THEN FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]
   val th = MP th (prove(goal,tac))
   in th end;

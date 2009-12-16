@@ -103,15 +103,15 @@ fun readline strm =
       "" => NONE
     | s => SOME s
 
-val SRCDIRS0 =
-    if cmdline = ["help"] then []
-    else read_buildsequence Substring.all readline bseq_fname
+val kpath = if use_expk then fullPath [HOLDIR, "src", "experimental-kernel"]
+            else fullPath [HOLDIR, "src", "0"]
 
 val SRCDIRS =
-    map (fn s => (fullPath [HOLDIR, s], 0))
-        ["src/portableML", "src/prekernel",
-         if use_expk then "src/experimental-kernel"
-         else "src/0"] @ SRCDIRS0
+    if cmdline = ["help"] then []
+    else read_buildsequence {ssfull = Substring.all,
+                             inputLine = readline,
+                             kernelpath = kpath}
+                            bseq_fname
 
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]

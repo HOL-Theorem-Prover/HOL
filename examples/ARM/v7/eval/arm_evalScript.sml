@@ -90,6 +90,47 @@ val ptree_arm_run_def = Define`
     of Error s -> (s, NONE)
     || ValueState v s -> (v, SOME s)`;
 
+(* version that uses a ptree for the data memory:
+val ptree_arm_loop_def = Define`
+  ptree_arm_loop ii cycle prog md dmem t =
+    let done s = constT ("at cycle " ++ num_to_dec_string cycle ++ ": " ++ s) in
+      if t = 0 then
+        done "finished"
+      else
+       (read_arch ii ||| waiting_for_interrupt ii ||| read_cpsr ii |||
+        read_pc ii ||| writeT (\s. s with accesses := [])) >>=
+       (\(arch,wfi,cpsr,pc,u).
+          if arch = ARMv7_M then
+            errorT "ARMv7-M profile not supported"
+          else if wfi then
+            done "waiting for interrupt"
+          else
+            case ptree_fetch_instruction arch cpsr (w2n pc) prog
+            of SOME x ->
+                ptree_arm_next ii x pc cycle >>=
+                (\u.
+                   readT (\s. s.accesses) >>=
+                   (\l.
+                     let dmem' =
+                            FOLDL (\m x. case x
+                                         of MEM_WRITE a d -> m |+ (w2n a,d)
+                                         || _ -> m) dmem l
+                     in
+                       writeT (\s. s with memory :=
+                          (\a. case patricia$PEEK dmem' (w2n a)
+                               of SOME d -> d
+                               || NONE -> md)) >>=
+                       (\u.
+                          ptree_arm_loop ii (cycle + 1) prog md dmem' (t - 1))))
+            || NONE -> done "couldn't fetch an instruction")`;
+
+val ptree_arm_run_def = Define`
+  ptree_arm_run prog md s t =
+    case ptree_arm_loop <| proc := 0 |> 0 prog md prog t s
+    of Error s -> (s, NONE)
+    || ValueState v s -> (v, SOME s)`;
+*)
+
 (* ------------------------------------------------------------------------ *)
 
 val proc_def =

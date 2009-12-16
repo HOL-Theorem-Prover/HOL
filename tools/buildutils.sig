@@ -8,7 +8,9 @@ sig
   val warn : string -> unit
 
   val read_buildsequence :
-      (string -> Substring.substring) -> (TextIO.instream -> string option) ->
+      { ssfull : string -> Substring.substring,
+        inputLine : TextIO.instream -> string option,
+        kernelpath : string } ->
       string -> (string * int) list
 
 end

@@ -187,7 +187,7 @@ val is_list = can dest_list;
 
 (*---------------------------------------------------------------------------*)
 (* Strips leading occurences of cons                                         *)
-(* Added 17 July 2009 by Thomas Tuerk                                          *)
+(* Added 17 July 2009 by Thomas Tuerk                                        *)
 (*---------------------------------------------------------------------------*)
 val strip_cons =
   let fun strip A M =
@@ -196,6 +196,26 @@ val strip_cons =
           | SOME(h,tl) => strip (h::A) tl
   in strip []
   end;
+
+(*---------------------------------------------------------------------------*)
+(* Strips occurences of append                                               *)
+(* Added 03 December 2009 by Thomas Tuerk                                    *)
+(*---------------------------------------------------------------------------*)
+val strip_append =
+  let fun strip A M =
+        case total dest_append M
+         of NONE => (M::A)
+          | SOME(l1,l2) => strip (l2::A) l1
+  in strip []
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* Added 03 December 2009 by Thomas Tuerk                                    *)
+(*---------------------------------------------------------------------------*)
+fun list_mk_append [] = raise ERR "list_mk_append" "empty append list"
+  | list_mk_append [l] = l
+  | list_mk_append (l1::l2::ls) =
+       list_mk_append ((mk_append (l1,l2))::ls)
 
 (*---------------------------------------------------------------------------*)
 (* Lift ML lists to HOL lists                                                *)
