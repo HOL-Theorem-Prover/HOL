@@ -1153,16 +1153,31 @@ val deep_eta_ty = qconv_ty (top_depth_conv_ty eta_conv_ty)
 
 val deep_beta_eta_ty = qconv_ty (top_depth_conv_ty (beta_conv_ty orelse_ty eta_conv_ty))
 
-fun head_beta_conv (ty as PT(TyApp(ty1,ty2),locn)) =
+(*  head_ty returns the head of the given type. *)
+fun head_ty (PT(TyApp(ty1,ty2)            ,locn)) = head_ty ty1
+  | head_ty (PT(TyKindConstr{Ty,Kind}     ,locn)) = head_ty Ty
+  | head_ty (PT(TyRankConstr{Ty,Rank}     ,locn)) = head_ty Ty
+  | head_ty (PT(UVar (r as ref (SOMEU ty)),locn)) = head_ty ty
+  | head_ty ty = ty
+
+(*  head_beta1_ty reduces the head beta redex; fails if one does not exist. *)
+fun head_beta1_ty (ty as PT(TyApp(ty1,ty2),locn)) =
+       (rator_conv_ty head_beta1_ty orelse_ty beta_conv_ty) ty
+(*
        if is_abs_type ty1 then beta_conv_ty ty
-       else PT(TyApp(head_beta_conv ty1,ty2),locn)
-  | head_beta_conv (PT(TyKindConstr{Ty,Kind},locn)) =
-       PT(TyKindConstr{Ty=head_beta_conv Ty,Kind=Kind},locn)
-  | head_beta_conv (PT(TyRankConstr{Ty,Rank},locn)) =
-       PT(TyRankConstr{Ty=head_beta_conv Ty,Rank=Rank},locn)
-  | head_beta_conv (PT(UVar (r as ref (SOMEU ty)),locn)) =
-       (r := SOMEU (head_beta_conv ty); PT(UVar r,locn))
-  | head_beta_conv _ = raise ERR "head_beta_conv" "no beta redex found"
+       else PT(TyApp(head_beta1_ty ty1,ty2),locn)
+*)
+  | head_beta1_ty (PT(TyKindConstr{Ty,Kind},locn)) =
+       PT(TyKindConstr{Ty=head_beta1_ty Ty,Kind=Kind},locn)
+  | head_beta1_ty (PT(TyRankConstr{Ty,Rank},locn)) =
+       PT(TyRankConstr{Ty=head_beta1_ty Ty,Rank=Rank},locn)
+  | head_beta1_ty (PT(UVar (r as ref (SOMEU ty)),locn)) =
+       (r := SOMEU (head_beta1_ty ty); PT(UVar r,locn))
+  | head_beta1_ty _ = raise ERR "head_beta1_ty" "no beta redex found"
+
+(*  head_beta_ty repeatedly reduces any head beta redexes; never fails *)
+(*  result has at its top level its actual shape *)
+val head_beta_ty = qconv_ty (repeat_ty head_beta1_ty)
 
 
 val dest_univ_type = dest_univ_type0 o deep_beta_eta_ty
@@ -1386,16 +1401,6 @@ fun gen_unify (kind_unify   :prekind -> prekind -> ('a -> 'a * unit option))
   fun uvars_ofl tys = filter is_uvar_type (foldl (fn (ty,tys) => Lib.union (tyvars e ty) tys) [] tys)
   fun subset s1 s2 = all (fn v => op_mem eq v s2) s1
   fun mk_vs c1 c2 args = map (shift_context c1 c2) args
-  fun beta_conv_head (ty as PT(TyApp(ty1,ty2),locn)) =
-         if is_abs_type ty1 then beta_conv_ty ty
-         else PT(TyApp(beta_conv_head ty1,ty2),locn)
-    | beta_conv_head (PT(TyKindConstr{Ty,Kind},locn)) =
-         PT(TyKindConstr{Ty=beta_conv_head Ty,Kind=Kind},locn)
-    | beta_conv_head (PT(TyRankConstr{Ty,Rank},locn)) =
-         PT(TyRankConstr{Ty=beta_conv_head Ty,Rank=Rank},locn)
-    | beta_conv_head (PT(UVar (r as ref (SOMEU ty)),locn)) =
-         (r := SOMEU (beta_conv_head ty); PT(UVar r,locn))
-    | beta_conv_head _ = raise ERR "beta_conv_head" "no beta redex found"
 in
   case (t1, t2) of
     (UVar (r as ref (NONEU(kd,rk))), _) =>
@@ -1417,10 +1422,10 @@ in
        rank_unify rk1 (prank_of ty1') >> gen_unify c1 c2 ty1' ty2 >> return ()
   | (_, TyRankConstr _) => gen_unify c2 c1 ty2 ty1
   | (TyApp(ty11, ty12), TyApp(ty21, ty22)) =>
-       if is_abs_type ty11 then
-           gen_unify c1 c2 (beta_conv_head ty1) ty2
-       else if is_abs_type ty21 then
-            gen_unify c1 c2 ty1 (beta_conv_head ty2)
+       if is_abs_type (head_ty ty11) then
+           gen_unify c1 c2 (head_beta_ty ty1) ty2
+       else if is_abs_type (head_ty ty21) then
+            gen_unify c1 c2 ty1 (head_beta_ty ty2)
        else
        let val (opr1,args1) = strip_app_type ty1
            val (opr2,args2) = strip_app_type ty2
@@ -1453,11 +1458,8 @@ in
                                                                                                  uvars_ty1)) (**) )
 *)
                                                          end))
-       in if is_abs_type opr1 then
-            gen_unify c1 c2 (deep_beta_eta_ty ty1) ty2
-          else if is_abs_type opr2 then
-            gen_unify c1 c2 ty1 (deep_beta_eta_ty ty2)
-          else if ho_1 then
+       in
+          if ho_1 then
             (* Higher order unification; shift args to other side by abstraction. *)
             let val vs = mk_vs c1 c2 args1
              in if list_eq vs args2
@@ -1475,14 +1477,13 @@ in
             gen_unify c1 c2 ty11 ty21 >> gen_unify c1 c2 ty12 ty22 >> return ()
        end
   | (TyApp(ty11, ty12), _) =>
-       if is_abs_type ty11 then
-           gen_unify c1 c2 (beta_conv_head ty1) ty2
+       if is_abs_type (head_ty ty11) then
+           gen_unify c1 c2 (head_beta_ty ty1) ty2
        else
        let val (opr1,args1) = strip_app_type ty1
-       in if is_abs_type opr1 then
-            gen_unify c1 c2 (deep_beta_eta_ty ty1) ty2
-          else if has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
-                                    andalso all has_var_type args1
+       in
+          if has_var_type opr1 andalso is_uvar_type(the_var_type opr1)
+                               andalso all has_var_type args1
           then
             (* Higher order unification; shift args to other side by abstraction. *)
             let val vs = mk_vs c1 c2 args1
@@ -1491,14 +1492,13 @@ in
           else fail (* normal structural unification *)
        end
   | (_, TyApp(ty21, ty22)) =>
-       if is_abs_type ty21 then
-            gen_unify c1 c2 ty1 (beta_conv_head ty2)
+       if is_abs_type (head_ty ty21) then
+            gen_unify c1 c2 ty1 (head_beta_ty ty2)
        else
        let val (opr2,args2) = strip_app_type ty2
-       in if is_abs_type opr2 then
-            gen_unify c1 c2 ty1 (deep_beta_eta_ty ty2)
-          else if has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
-                                    andalso all has_var_type args2
+       in
+          if has_var_type opr2 andalso is_uvar_type(the_var_type opr2)
+                               andalso all has_var_type args2
           then
             (* Higher order unification; shift args to other side by abstraction. *)
             let val vs = mk_vs c2 c1 args2
