@@ -407,7 +407,7 @@ val DELETE_aBYTE_MEMORY_SET = prove(
   SIMP_TAC std_ss [EXTENSION,IN_INSERT,aBYTE_MEMORY_SET_def,GSPECIFICATION]
   \\ REWRITE_TAC [IN_DELETE,APPLY_UPDATE_THM] \\ METIS_TAC []);
 
-val aBYTE_MEMORY_INSERT = prove(
+val aBYTE_MEMORY_INSERT = store_thm("aBYTE_MEMORY_INSERT",
   ``a IN df ==>
     (aBYTE_MEMORY df ((a =+ w) g) = aM1 a w * aBYTE_MEMORY (df DELETE a) g)``,
   SIMP_TAC std_ss [aBYTE_MEMORY_def,aM1_def,FUN_EQ_THM,EQ_STAR]
@@ -535,6 +535,21 @@ val aligned4_thm = store_thm("aligned4_thm",
   \\ Cases_on `n MOD 4 = 0` \\ FULL_SIMP_TAC std_ss []  
   \\ `(4 * (n DIV 4)) < 4294967296` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC);
+
+val aligned2_thm = store_thm("aligned2_thm",
+  ``!a:word32. aligned (a,2) = (a && 1w = 0w)``,
+  Cases \\ ASM_SIMP_TAC std_ss [arm_coretypesTheory.aligned_def,
+      arm_coretypesTheory.align_def,w2n_n2w,n2w_and_1,n2w_11]
+  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) []
+  \\ (STRIP_ASSUME_TAC o Q.SPEC `n` o GSYM o 
+      RW1 [arithmeticTheory.MULT_COMM] o MATCH_MP arithmeticTheory.DIVISION) (DECIDE ``0 < 2:num``)
+  \\ Cases_on `n MOD 2 = 0` \\ FULL_SIMP_TAC std_ss []  
+  \\ `(2 * (n DIV 2)) < 4294967296` by DECIDE_TAC
+  \\ `0 < 2:num` by DECIDE_TAC
+  \\ `n MOD 2 < 2` by METIS_TAC [arithmeticTheory.MOD_LESS]
+  \\ `n MOD 2 < 4294967296` by DECIDE_TAC
+  \\ ASM_SIMP_TAC std_ss []
+  \\ DECIDE_TAC);
 
 val ADD_WITH_CARRY_SUB_n2w = save_thm("ADD_WITH_CARRY_SUB_n2w",
   ((RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) 

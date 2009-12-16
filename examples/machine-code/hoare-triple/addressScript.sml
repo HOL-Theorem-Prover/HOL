@@ -70,6 +70,13 @@ val n2w_and_3 = store_thm("n2w_and_3",
     \\ Cases_on `i = 0` \\ Cases_on `i = 1`
     \\ SRW_TAC [ARITH_ss] [BIT_def, BITS_ZERO, BITS_COMP_THM2]);
 
+val n2w_and_7 = store_thm("n2w_and_7",
+  ``!n. (n2w n) && 7w = n2w (n MOD 8):'a word``,
+  SIMP_TAC std_ss [(SIMP_RULE std_ss [] o GSYM o Q.SPEC `2`) BITS_ZERO3]
+    \\ SRW_TAC [WORD_BIT_EQ_ss, BIT_ss] [n2w_def]
+    \\ Cases_on `i = 0` \\ Cases_on `i = 1` \\ Cases_on `i = 2`
+    \\ SRW_TAC [ARITH_ss] [BIT_def, BITS_ZERO, BITS_COMP_THM2]);
+
 val ALIGNED_n2w = store_thm("ALIGNED_n2w",
   ``!n. ALIGNED (n2w n) = (n MOD 4 = 0)``,
   STRIP_TAC \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) [n2w_and_3,ALIGNED_def,n2w_11]
