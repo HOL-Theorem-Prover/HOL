@@ -377,11 +377,29 @@ end
     Top-level pretty-printing entry-points
    ---------------------------------------------------------------------- *)
 
+fun pp_style_string ppstrm (st, s) =
+ let open Portable PPBackEnd
+    val {add_string,begin_style,end_style,...} = PPBackEnd.with_ppstream (!current_backend) ppstrm
+ in
+    begin_style st;
+    add_string s;
+    end_style ()
+ end
+
+fun print_with_style st s = 
+   Portable.output(Portable.std_out, (Portable.pp_to_string (!Globals.linewidth) pp_style_string) (st, s));
+
 fun pp_term pps t = (update_term_fns(); !term_printer pps t)
 fun term_to_string t =
     Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
                   (Portable.pp_to_string (!Globals.linewidth) pp_term) t;
 fun print_term t = Portable.output(Portable.std_out, term_to_string t);
+
+fun term_to_backend_string t =
+   (Portable.pp_to_string (!Globals.linewidth) pp_term) t;
+fun print_backend_term t = 
+  Portable.output(Portable.std_out, term_to_backend_string t);
+
 
 fun term_pp_with_delimiters ppfn pp tm =
   let open Portable Globals
@@ -422,6 +440,11 @@ fun thm_to_string thm =
     Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
                   (Portable.pp_to_string (!Globals.linewidth) pp_thm) thm;
 fun print_thm thm     = Portable.output(Portable.std_out, thm_to_string thm);
+
+fun thm_to_backend_string thm =
+   (Portable.pp_to_string (!Globals.linewidth) pp_thm) thm;
+fun print_backend_thm thm = 
+  Portable.output(Portable.std_out, thm_to_backend_string thm);
 
 (*---------------------------------------------------------------------------
        Construction of the term parser
