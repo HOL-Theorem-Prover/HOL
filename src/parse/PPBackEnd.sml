@@ -165,7 +165,7 @@ fun fg_to_vt100 c =
 let
    val (light, col_ind) = color_to_vt100 c
 in
-   (if light then ";1;3" else "3") ^
+   (if light then ";1;3" else ";3") ^
    Int.toString col_ind
 end;
 
