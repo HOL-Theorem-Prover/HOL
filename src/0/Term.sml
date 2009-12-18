@@ -258,7 +258,7 @@ end;
 (*---------------------------------------------------------------------------*
  *                  Equality of terms                                        *
  *     This does NOT include alpha-equivalence, but                          *
- *     DOES include deep beta and eta conversion of types.                           *
+ *     DOES include deep beta and eta conversion of types.                   *
  *     This discriminates between unequal but alpha-equivalent terms.        *
  *---------------------------------------------------------------------------*)
 

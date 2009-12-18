@@ -677,11 +677,10 @@ fun compare p = if Portable.pointer_eq p then EQUAL
 
 val empty_tyset = HOLset.empty compare
 
-fun aconv_ty t1 t2 = compare(t1, t2) = EQUAL
-val type_eq = aconv_ty
-
 local val EQ = Portable.pointer_eq
 in
+fun aconv_ty t1 t2 = EQ(t1,t2) orelse compare(t1, t2) = EQUAL
+val type_eq = aconv_ty
 fun asubtype t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
   of (u as Tyv _, v as Tyv _ ) => type_var_subtype(u,v)
@@ -1578,8 +1577,13 @@ fun head_beta1_ty ty = (rator_conv_ty head_beta1_ty orelse_ty beta_conv_ty) ty
 val head_beta_ty = qconv_ty (repeat_ty head_beta1_ty)
 
 
-fun abconv_ty t1 t2 = aconv_ty (deep_beta_ty t1) (deep_beta_ty t2)
-fun abeconv_ty t1 t2 = aconv_ty (deep_beta_eta_ty t1) (deep_beta_eta_ty t2)
+local val EQ = Portable.pointer_eq
+in
+fun abconv_ty t1 t2  = EQ(t1,t2) orelse
+                       aconv_ty (deep_beta_ty t1) (deep_beta_ty t2)
+fun abeconv_ty t1 t2 = EQ(t1,t2) orelse
+                       aconv_ty (deep_beta_eta_ty t1) (deep_beta_eta_ty t2)
+end
 
 val eq_ty = abeconv_ty
 
