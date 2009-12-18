@@ -43,6 +43,7 @@ sig
   val time_to_string: time -> string
   val dest_time: time -> {sec : Arbnum.num, usec : Arbnum.num}
   val time_lt: time -> time -> bool
+  val time : ('a -> 'b) -> 'a -> 'b
 
   val getEnv: string -> string option
   val getArgs: unit -> string list
@@ -77,4 +78,5 @@ sig
   val norm_quote : 'a quotation -> 'a quotation
 
   val catch_SIGINT : unit -> unit
+  val md5sum : string -> string
 end

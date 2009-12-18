@@ -23,6 +23,9 @@ in
 
 fun catch_SIGINT () = ignore (catch_interrupt true)
 
+val md5sum = Mosml.md5sum
+val time = Mosml.time
+
 end
 
 end (* struct *)

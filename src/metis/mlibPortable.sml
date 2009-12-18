@@ -10,34 +10,31 @@ struct
 (* The ML implementation.                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val ml = "mosml";
+val ml = Systeml.ML_SYSNAME;
 
 (* ------------------------------------------------------------------------- *)
 (* Ensuring that interruptions (SIGINTs) are actually seen by the            *)
 (* linked executable as Interrupt exceptions.                                *)
 (* ------------------------------------------------------------------------- *)
 
-prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
-val _ = catch_interrupt true;
+val _ = Portable.catch_SIGINT();
 
 (* ------------------------------------------------------------------------- *)
 (* Pointer equality using the run-time system.                               *)
 (* ------------------------------------------------------------------------- *)
 
-local val address : 'a -> int = Obj.magic
-in fun pointer_eq (x : 'a) (y : 'a) = address x = address y
-end;
+fun pointer_eq x y = Portable.pointer_eq(x,y)
 
 (* ------------------------------------------------------------------------- *)
 (* Timing function applications a la Mosml.time.                             *)
 (* ------------------------------------------------------------------------- *)
 
-val time = Mosml.time;
+val time = Portable.time;
 
 (* ------------------------------------------------------------------------- *)
 (* MD5 cryptographic hashing.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val md5 = Mosml.md5sum;
+val md5 = Portable.md5sum;
 
 end
