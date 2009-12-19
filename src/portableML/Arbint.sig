@@ -1,7 +1,7 @@
 signature Arbint =
 sig
 
-  include Arbintcore
+  include Arbintcore where type int = Arbintcore.int
   val pp_int     : HOLPP.ppstream -> int -> unit
 
 end
