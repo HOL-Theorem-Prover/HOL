@@ -2454,6 +2454,8 @@ correct_guess_list v t
 rew_thm
 *)
 
+
+
 fun QUANT_INSTANTIATE_HEURISTIC___REWRITE sys (fv:term list) (v:term) rew_thm =
 let
    val (lt,rt) = dest_eq (concl rew_thm);
@@ -2825,7 +2827,8 @@ fun QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE
 	     QUANT_INSTANTIATE_HEURISTIC___cases_list cases_thmL,
        	     QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct distinct_thmL]
     (append (map QUANT_INSTANTIATE_HEURISTIC___CONV (
-       (TOP_ONCE_REWRITE_CONV rewrite_thmL)::(markerLib.DEST_LABEL_CONV)::convL))
+       (TOP_ONCE_REWRITE_CONV rewrite_thmL)::(markerLib.DEST_LABEL_CONV)::
+            asm_marker_ELIM_CONV::convL))
 	    heuristicL));
 
 
@@ -3267,68 +3270,9 @@ fun get_qp___for_types typeL =
         final_rewrite_thms = [],
         convs=[],heuristics=[]}:quant_param;
 
-
-
-(*
-
-set_goal ([``l = [0:num]``], ``?x. l = 0::x``)
-
-
-fun conv t = snd (EQ_IMP_RULE (QUANT_INSTANTIATE_CONV [] t));
-val conv = QUANT_INSTANTIATE_CONV [];
-
-val (asm,t) = top_goal();
-
-DISCH_ASM_CONV_TAC conv
-*)
-
-
-(*dishes all the assumptions, then applies the conversions
-  and undisches the results*)
-
-val DISCH_ASM_CONV_TAC:(conv -> tactic) = fn conv => fn (asm,t) =>
-let
-   val label = "QUANT_INSTANTIATE_HEURISTIC___ASM_CONV_TAC___BODY";
-   val mt = markerSyntax.mk_label (label, t);
-   val asm_t = foldl (fn (a,t) => mk_imp (a, t)) mt asm;
-   val fv = Term.free_vars asm_t;
-   val qasm_t = list_mk_forall (fv, asm_t);
-
-   val thm0 = conv qasm_t;
-   val thm1 = if (is_eq (concl thm0)) then
-		  snd (EQ_IMP_RULE thm0)
-	      else thm0;
-
-   val new_qasm_t = (fst o dest_imp o concl) thm1;
-   val (new_fv,new_asm_t) = strip_forall new_qasm_t
-   val (new_asm, new_mt) = strip_imp_only new_asm_t;
-
-   val (_,new_t) = markerSyntax.dest_label new_mt;
-
-(*
-val thmL = [mk_thm (new_asm,new_t)]*)
-in
-   ([(new_asm,new_t)], fn thmL =>
-    let
-        val new_thm = hd thmL;
-        val new_m_thm = markerLib.MK_LABEL (label,new_thm);
-
-        val new_asm_thm = foldr (fn (a,thm) => DISCH a thm) new_m_thm new_asm;
-        val new_qasm_thm = GENL new_fv new_asm_thm;
-        val qasm_thm = MP thm1 new_qasm_thm;
-	val asm_thm = SPECL fv qasm_thm;
-        val m_thm = UNDISCH_ALL asm_thm;
-        val thm = markerLib.DEST_LABEL m_thm
-    in
-        thm
-    end)
-end handle UNCHANGED => ALL_TAC (asm,t);
-
-fun DISCH_ASM_CONSEQ_CONV_TAC c = DISCH_ASM_CONV_TAC (c CONSEQ_CONV_STRENGTHEN_direction);
-
-
 fun QUANT_INSTANTIATE_TAC L =
     CONV_TAC (QUANT_INSTANTIATE_CONV L);
+
 
 fun ASM_QUANT_INSTANTIATE_TAC L =
     DISCH_ASM_CONV_TAC (QUANT_INSTANTIATE_CONV L);
@@ -3475,6 +3419,8 @@ fun QUANT_INST_ss qpL = simpLib.conv_ss
     trace = 2,
     key = NONE,
     conv = K (K (QUANT_INSTANTIATE_CONV qpL))}
+
+
 
 
 end

@@ -23,10 +23,6 @@ sig
   val AND_NOT_CONV                 : conv;
   val OR_NOT_CONV                  : conv;
 
-
-  val DISCH_ASM_CONV_TAC           : conv -> tactic;
-  val DISCH_ASM_CONSEQ_CONV_TAC    : ConseqConv.directed_conseq_conv -> tactic;
-
   val VARIANT_TAC                  : term list -> tactic
   val VARIANT_CONV                 : term list -> conv
 
