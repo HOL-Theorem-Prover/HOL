@@ -184,6 +184,7 @@ signature Parse = sig
                                ppstream -> term -> unit
 
   val minprint               : term -> string
+  val add_style_to_string    : PPBackEnd.pp_style list -> string -> string
   val print_with_style       : PPBackEnd.pp_style list -> string -> unit
   val term_to_string         : term -> string
   val term_to_backend_string : term -> string

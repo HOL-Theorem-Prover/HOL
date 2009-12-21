@@ -386,8 +386,9 @@ fun pp_style_string ppstrm (st, s) =
     end_style ()
  end
 
-fun print_with_style st s = 
-   Portable.output(Portable.std_out, (Portable.pp_to_string (!Globals.linewidth) pp_style_string) (st, s));
+fun add_style_to_string st s = (Portable.pp_to_string (!Globals.linewidth) pp_style_string) (st, s);
+fun print_with_style st s =  Portable.output(Portable.std_out, add_style_to_string st s);
+
 
 fun pp_term pps t = (update_term_fns(); !term_printer pps t)
 fun term_to_string t =
