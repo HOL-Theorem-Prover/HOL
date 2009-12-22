@@ -129,7 +129,10 @@ end;
  * Increasing the rank of all types in a term.                               *
  *---------------------------------------------------------------------------*)
 
-fun inst_rank i tm =
+fun inst_rank i =
+  if i = 0 then Lib.I
+  else if i < 0 then raise ERR "inst_rank" "increment is negative"
+  else
   let val inc_rk_ty = Type.inst_rank i
       fun inc_rk (Fv (s,ty))            = Fv (s, inc_rk_ty ty)
         | inc_rk (Const(s,GRND ty))     = Const(s,GRND (inc_rk_ty ty))
@@ -141,9 +144,7 @@ fun inst_rank i tm =
         | inc_rk (TAbs((s,kd,rk),body)) = TAbs((s,kd,rk+i), inc_rk body)
         | inc_rk (t as Clos _)          = inc_rk (push_clos t)
         | inc_rk _ = raise ERR "inst_rank" "term construction"
-  in if i = 0 then tm
-     else if i < 0 then raise ERR "inst_rank" "increment is negative"
-     else inc_rk tm
+  in inc_rk
   end;
 
 
@@ -246,8 +247,8 @@ fun prim_eq t1 t2 = EQ(t1,t2) orelse
    | (Bv i,Bv j) => i=j
    | (Const(M,a),Const(N,b)) => M=N andalso (thety a)=(thety b)
    | (Comb(M,N),Comb(P,Q)) => prim_eq N Q andalso prim_eq M P
-   | (TComb(M,a),TComb(N,b)) => a=b andalso prim_eq M N
    | (Abs(u,M),Abs(v,N)) => prim_eq u v andalso prim_eq M N
+   | (TComb(M,a),TComb(N,b)) => a=b andalso prim_eq M N
    | (TAbs(tyv1,M),TAbs(tyv2,N)) => tyv1=tyv2 andalso prim_eq M N
    | (Clos _, _) => prim_eq (push_clos t1) t2
    | (_, Clos _) => prim_eq t1 (push_clos t2)
@@ -272,8 +273,8 @@ fun eq t1 t2 = EQ(t1,t2) orelse
    | (Bv i,Bv j) => i=j
    | (Const(M,a),Const(N,b)) => M=N andalso eq_ty (thety a) (thety b)
    | (Comb(M,N),Comb(P,Q)) => eq N Q andalso eq M P
-   | (TComb(M,a),TComb(N,b)) => eq_ty a b andalso eq M N
    | (Abs(u,M),Abs(v,N)) => eq u v andalso eq M N
+   | (TComb(M,a),TComb(N,b)) => eq_ty a b andalso eq M N
    | (TAbs(tyv1,M),TAbs(tyv2,N)) => tyv1 = tyv2 andalso eq M N
    | (Clos(e1,b1),Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
                                   orelse eq (push_clos t1) (push_clos t2)
@@ -298,8 +299,8 @@ fun aconv t1 t2 = EQ(t1,t2) orelse
    | (Bv i,Bv j) => i=j
    | (Const(M,a),Const(N,b)) => M=N andalso eq_ty (thety a) (thety b)
    | (Comb(M,N),Comb(P,Q)) => aconv N Q andalso aconv M P
-   | (TComb(M,a),TComb(N,b)) => eq_ty a b andalso aconv M N
    | (Abs(Fv(_,a),M),Abs(Fv(_,b),N)) => eq_ty a b andalso aconv M N
+   | (TComb(M,a),TComb(N,b)) => eq_ty a b andalso aconv M N
    | (TAbs((_,k1,r1),M),TAbs((_,k2,r2),N)) => k1=k2 andalso r1=r2 andalso aconv M N
    | (Clos(e1,b1),Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
                                   orelse aconv (push_clos t1) (push_clos t2)

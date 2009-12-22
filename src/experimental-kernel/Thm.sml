@@ -343,9 +343,12 @@ fun GEN_TY_ABS opt vlist (th as THM(ocl,asl,c)) =
  *
  *---------------------------------------------------------------------------*)
 
-fun INST_RANK n (THM(ocl,asl,c)) =
-    if n < 0 then raise ERR "INST_RANK" "rank instantiation cannot lower the rank"
-    else make_thm Count.InstRank(ocl, hypset_map (Term.inst_rank n) asl, Term.inst_rank n c)
+fun INST_RANK n (th as THM(ocl,asl,c)) =
+    if n = 0 then th
+    else if n < 0 then raise ERR "INST_RANK" "rank instantiation cannot lower the rank"
+    else let val instfn = Term.inst_rank n
+         in make_thm Count.InstRank(ocl, hypset_map instfn asl, instfn c)
+         end
 
 (*---------------------------------------------------------------------------
  *         A |- M
@@ -356,7 +359,9 @@ fun INST_RANK n (THM(ocl,asl,c)) =
 
 fun INST_KIND [] th = th
   | INST_KIND theta (THM(ocl,asl,c)) =
-    make_thm Count.InstKind(ocl, hypset_map (inst_kind theta) asl, inst_kind theta c)
+    let val instfn = Term.inst_kind theta
+    in make_thm Count.InstKind(ocl, hypset_map instfn asl, instfn c)
+    end
 
 (*---------------------------------------------------------------------------
  *         A |- M
@@ -368,8 +373,11 @@ fun INST_KIND [] th = th
 fun INST_TYPE [] th = th
   | INST_TYPE theta (THM(ocl,asl,c)) =
     let val r = Type.subst_rank theta
-    in if r = 0 then
-         make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c)
+    in if r = 0 then let
+         val instfn = inst theta
+       in
+         make_thm Count.InstType(ocl, hypset_map instfn asl, instfn c)
+       end
        else let
          val theta' = Type.inst_rank_subst r theta
          val asl'   = hypset_map (Term.inst_rank r) asl
@@ -1296,7 +1304,6 @@ fun INST [] th = th
         end
       else
         raise ERR "INST" "can only instantiate variables"
-
 
 (*---------------------------------------------------------------------------*
  * Now some derived rules optimized for computations, avoiding most          *

@@ -135,8 +135,8 @@ fun eq t1 t2 = EQ(t1,t2) orelse
   of (Var(M,a),  Var(N,b))   => M=N andalso eq_ty a b
    | (Const(M,a),Const(N,b)) => M=N andalso eq_ty a b
    | (App(M,N),  App(P,Q))   => eq N Q andalso eq M P
-   | (TApp(M,a), TApp(N,b))  => eq_ty a b andalso eq M N
    | (Abs(u,M),  Abs(v,N))   => eq u v andalso eq M N
+   | (TApp(M,a), TApp(N,b))  => eq_ty a b andalso eq M N
    | (TAbs(a,M), TAbs(b,N))  => a=b andalso eq M N
    | otherwise => false
 end
@@ -1317,7 +1317,10 @@ end
  * Increasing the rank of all types in a term.                               *
  *---------------------------------------------------------------------------*)
 
-fun inst_rank i tm =
+fun inst_rank i =
+  if i = 0 then Lib.I
+  else if i < 0 then raise ERR "inst_rank" "increment is negative"
+  else
   let val inc_rk_ty = Type.inst_rank i
       fun inc_rk (Var(s,ty))            = Var(s, inc_rk_ty ty)
         | inc_rk (Const(s,ty))          = Const(s, inc_rk_ty ty)
@@ -1328,9 +1331,7 @@ fun inst_rank i tm =
                                           in TAbs(mk_var_type(s,kd,rk+i), inc_rk body)
                                           end
         | inc_rk _ = raise ERR "inst_rank" "term construction"
-  in if i = 0 then tm
-     else if i < 0 then raise ERR "inst_rank" "increment is negative"
-     else inc_rk tm
+  in inc_rk
   end;
 
 (*---------------------------------------------------------------------------*

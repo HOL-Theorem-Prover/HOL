@@ -679,7 +679,7 @@ val empty_tyset = HOLset.empty compare
 
 local val EQ = Portable.pointer_eq
 in
-fun aconv_ty t1 t2 = EQ(t1,t2) orelse compare(t1, t2) = EQUAL
+fun aconv_ty t1 t2 = compare(t1, t2) = EQUAL
 val type_eq = aconv_ty
 fun asubtype t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
