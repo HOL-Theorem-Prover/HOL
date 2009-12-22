@@ -1,7 +1,6 @@
 open HolKernel Parse;
 
-prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
-val _ = catch_interrupt true;
+val _ = Portable.catch_SIGINT()
 
 val result = test_cases.perform_tests Omega.OMEGA_CONV Omega.OMEGA_TAC andalso
              test_cases.perform_omega_tests Omega.OMEGA_CONV
