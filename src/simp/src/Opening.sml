@@ -155,6 +155,7 @@ in fn {relation,solver,depther,freevars} =>
        will be sub-congruences of the form (--`A = ?A`--)  *)
 
       fun process_subgoals (0,match_thm,_) = match_thm
+        | process_subgoals (_,_,[]) = raise Fail "process_subgoals BIND"
         | process_subgoals (n,match_thm,flags::more_flags) =
         let val condition = #1 (dest_imp (concl match_thm))
 
@@ -171,8 +172,9 @@ in fn {relation,solver,depther,freevars} =>
               (f,[x,y])
             end handle HOL_ERR _ => strip_comb bdy2
         in
-          if (length args = 2 andalso mem (#1 (strip_comb (el 2 args))) genvars) then
-            let val [orig,res] = args
+          if length args = 2 andalso mem (#1 (strip_comb (el 2 args))) genvars
+          then let
+                val (orig,res) = case args of [x,y] => (x,y) | _ => raise Bind
                 val genv = #1 (strip_comb res)
                 val assum_thms = map ASSUME assums
                 fun reprocess thm flag =

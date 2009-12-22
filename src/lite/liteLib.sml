@@ -68,7 +68,9 @@ fun foldl f e L =
 fun end_foldr f =
    let fun endit [] = failwith "end_foldr: list too short"
          | endit alist =
-            let val (base::ralist) = rev alist
+            let val (base,ralist) = case rev alist of
+                                      h::t => (h,t)
+                                    | _ => raise Bind
             in foldr f base (rev ralist)
             end
    in endit
