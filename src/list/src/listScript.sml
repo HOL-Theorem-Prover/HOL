@@ -1416,6 +1416,19 @@ val FINITE_LIST_TO_SET = Q.store_thm
  Induct THEN SRW_TAC [][]);
 val _ = export_rewrites ["FINITE_LIST_TO_SET"]
 
+local open numLib in
+val CARD_LIST_TO_SET = Q.store_thm(
+"CARD_LIST_TO_SET",
+`CARD (set ls) ≤ LENGTH ls`,
+Induct_on `ls` THEN SRW_TAC [][] THEN
+DECIDE_TAC);
+end
+
+val ALL_DISTINCT_CARD_LIST_TO_SET = Q.store_thm(
+"ALL_DISTINCT_CARD_LIST_TO_SET",
+`∀ls. ALL_DISTINCT ls ⇒ (CARD (set ls) = LENGTH ls)`,
+Induct THEN SRW_TAC [][]);
+
 (* ----------------------------------------------------------------------
     SET_TO_LIST : 'a set -> 'a list
 

@@ -121,6 +121,19 @@ val _ = export_rewrites ["MEM_BAG_TO_LIST"];
 
 
 
+val FINITE_LIST_TO_BAG = Q.store_thm(
+"FINITE_LIST_TO_BAG",
+`FINITE_BAG (LIST_TO_BAG ls)`,
+Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]);
+val _ = export_rewrites["FINITE_LIST_TO_BAG"];
+
+
+val EVERY_LIST_TO_BAG = Q.store_thm(
+"EVERY_LIST_TO_BAG",
+`BAG_EVERY P (LIST_TO_BAG ls) ⇔ EVERY P ls`,
+Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]);
+
+
 val LIST_TO_BAG_APPEND = store_thm ("LIST_TO_BAG_APPEND",
 ``!l1 l2.
 LIST_TO_BAG (l1 ++ l2) =
