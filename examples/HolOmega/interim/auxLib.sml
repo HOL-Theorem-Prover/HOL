@@ -105,7 +105,10 @@ fun thm_from_ass imp_thm thms = repeat (fmmp thms)
 fun USE_LIM_RES_TAC ttac imp_thm = 
   ASSUM_LIST (ttac o thm_from_ass imp_thm) ;
 
-(* FIRST_REP_RES : thm_tactic -> thm_tactic *)
+(* FIRST_REP_RES : thm_tactic -> thm_tactic
+  resolves implication theorem against assumptions as much as possible
+  and applies ttac to result - backtracking in regard to choice of assumption
+  and whether to fully resolve implication theorem *)
 fun FIRST_REP_RES ttac impth =
   FIRST_ASSUM (fn ass => FIRST_REP_RES ttac (MATCH_MP impth ass))
   (* following delayed evaluation since ttac impth can cause an 
@@ -149,6 +152,25 @@ fun inst_eqs th =
 (* useful theorems *)
 val iffD1 = 
   (DISCH_ALL o CONJUNCT1 o UNDISCH o fst o EQ_IMP_RULE o SPEC_ALL) EQ_IMP_THM ;
+
+(* abbreviate much used tactics *)
+(* farwmmp, frrc_rewr : thm -> tactic,
+  for resolving an implicative theorem against the assumptions, 
+  in a way which will rewrite, and change, the goal;
+  farwmmp resolves implication exactly once, frrc_rewr any number of times *)
+fun farwmmp con = (FIRST_ASSUM (fn th =>
+  CHANGED_TAC (REWRITE_TAC [MATCH_MP con th]))) ;
+
+fun frrc_rewr impth =
+  FIRST_REP_RES (fn th => CHANGED_TAC (REWRITE_TAC [th])) impth ;
+
+(* given f = \x. ..., put into more usual form *)
+fun fix_abs_eq rewrs th =
+  let val th0 = REWRITE_RULE ([TY_FUN_EQ_THM, FUN_EQ_THM] @ rewrs) th ;
+    val th1 = CONV_RULE (DEPTH_CONV TY_BETA_CONV) th0 ;
+    val th2 = CONV_RULE (DEPTH_CONV BETA_CONV) th1 ;
+  in th2 end ;
+
 
 end ; (* local open HolKernel bossLib *)
 
