@@ -130,7 +130,7 @@ val _ = export_rewrites["FINITE_LIST_TO_BAG"];
 
 val EVERY_LIST_TO_BAG = Q.store_thm(
 "EVERY_LIST_TO_BAG",
-`BAG_EVERY P (LIST_TO_BAG ls) ⇔ EVERY P ls`,
+`BAG_EVERY P (LIST_TO_BAG ls) <=> EVERY P ls`,
 Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]);
 
 
