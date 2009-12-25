@@ -1370,6 +1370,57 @@ val ALL_DISTINCT_SING = store_thm(
    SRW_TAC [][]);
 
 (* ----------------------------------------------------------------------
+    LRC
+      Where NRC has the number of steps in a transitive path,
+      LRC has a list of the elements in the path (excluding the rightmost)
+   ---------------------------------------------------------------------- *)
+
+val LRC_def = Define`
+  (LRC R [] x y = (x = y)) /\
+  (LRC R (h::t) x y = 
+   (x = h) /\ ?z. R x z /\ LRC R t z y)`;
+
+val NRC_LRC = Q.store_thm(
+"NRC_LRC",
+`NRC R n x y <=> ?ls. LRC R ls x y /\ (LENGTH ls = n)`,
+MAP_EVERY Q.ID_SPEC_TAC [`y`,`x`] THEN
+Induct_on `n` THEN SRW_TAC [][] THEN1 (
+  SRW_TAC [][EQ_IMP_THM] THEN1 (
+    Q.EXISTS_TAC `[]` THEN SRW_TAC [][LRC_def] ) THEN
+  Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [LRC_def]
+) THEN
+SRW_TAC [][arithmeticTheory.NRC,EQ_IMP_THM] THEN1 (
+  Q.EXISTS_TAC `x::ls` THEN
+  SRW_TAC [][LRC_def] THEN
+  METIS_TAC [] ) THEN
+Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [LRC_def] THEN
+SRW_TAC [][] THEN METIS_TAC []);
+
+val LRC_MEM = Q.store_thm(
+"LRC_MEM",
+`LRC R ls x y /\ MEM e ls ==> ?z t. R e z /\ LRC R t z y`,
+Q_TAC SUFF_TAC
+`!ls x y. LRC R ls x y ==> !e. MEM e ls ==> ?z t. R e z /\ LRC R t z y`
+THEN1 METIS_TAC [] THEN
+Induct THEN SRW_TAC [][LRC_def] THEN METIS_TAC []);
+
+val LRC_MEM_right = Q.store_thm(
+"LRC_MEM_right",
+`LRC R (h::t) x y /\ MEM e t ==> ?z p. R z e /\ LRC R p x z`,
+Q_TAC SUFF_TAC
+`!ls x y. LRC R ls x y ==> !h t e. (ls = h::t) /\ MEM e t ==> ?z p. R z e /\ LRC R p x z`
+THEN1 METIS_TAC [] THEN
+Induct THEN SRW_TAC [][LRC_def] THEN
+Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [LRC_def] THEN
+SRW_TAC [][] THENL [
+  MAP_EVERY Q.EXISTS_TAC [`h`,`[]`] THEN SRW_TAC [][LRC_def],
+  RES_TAC THEN
+  MAP_EVERY Q.EXISTS_TAC  [`z''`,`h::p`] THEN
+  SRW_TAC [][LRC_def] THEN
+  METIS_TAC []
+]);
+
+(* ----------------------------------------------------------------------
     Theorems relating (finite) sets and lists.  First
 
        LIST_TO_SET : 'a list -> 'a set
@@ -1572,8 +1623,6 @@ val (rules,ind,cases) = IndDefLib.Hol_reln`
 `
 val strong = IndDefLib.derive_strong_induction (rules,ind)
 *)
-
-
 
 (* ----------------------------------------------------------------------
     isPREFIX
