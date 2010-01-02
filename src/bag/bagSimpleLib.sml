@@ -288,7 +288,7 @@ in
   in
      find_pairs p [] [] 0 l1 l2
   end
-end
+end;
 
 fun get_resort_positions___pred_pair P b1 b2 =
 let
@@ -300,7 +300,7 @@ let
          fn n2 => fn e2 => if (P e1 e2) then SOME n2 else NONE) l2))) l1
 in
    found_opt
-end
+end;
 
 local
    fun get_resort_list___pred_int p n nL [] = rev nL
@@ -315,10 +315,10 @@ in
   in
       get_resort_list___pred_int p 0 [] tl
   end
-end
+end;
 
 fun get_resort_position___pred p t =
-    first_opt (fn n => fn e => if (p e) then SOME n else NONE) (fst (strip_insert t))
+    first_opt (fn n => fn e => if (p e) then SOME n else NONE) (fst (strip_insert t));
 
 
 
@@ -342,10 +342,10 @@ fun get_resort_position___pred p t =
 (******************************************************************************)
 local
    val sub_bag_empty1 = prove (
-     ``!b. SUB_BAG EMPTY_BAG b = T``, REWRITE_TAC [bagTheory.SUB_BAG_EMPTY])
+     ``!b:'a->num. SUB_BAG EMPTY_BAG b = T``, REWRITE_TAC [bagTheory.SUB_BAG_EMPTY])
    val sub_bag_empty2 = CONJUNCT2 bagTheory.SUB_BAG_EMPTY;
    val sub_bag_refl = prove (
-     ``!b. SUB_BAG b b = T``, REWRITE_TAC [bagTheory.SUB_BAG_REFL])
+     ``!b:'a -> num. SUB_BAG b b = T``, REWRITE_TAC [bagTheory.SUB_BAG_REFL])
 
    val conv2 = TRY_CONV (PART_MATCH lhs bagTheory.SUB_BAG_INSERT)
    val conv3 = TRY_CONV (PART_MATCH lhs sub_bag_empty1)
@@ -480,7 +480,7 @@ end
 local
   val bag_card_eq_thm = prove (
      ``!(b1:'a -> num) b2. ~(BAG_CARD b1 = BAG_CARD b2) ==> ((b1 = b2) = F)``,
-     PROVE_TAC[])
+       REPEAT GEN_TAC THEN Cases_on `b1 = b2` THEN ASM_REWRITE_TAC[])
 in
 fun BAG_EQ_INSERT_CANCEL_CONV tm =
    let
