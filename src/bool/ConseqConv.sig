@@ -140,6 +140,9 @@ val FULL_EXT_CONSEQ_REWRITE_CONV        :
 
 
 
+val step_opt_sub          : int option -> int -> int option
+val step_opt_allows_steps : int option -> int -> int option -> bool
+
 (* Depth consequence conversions *)
 val EXT_DEPTH_CONSEQ_CONV  : 
     conseq_conv_congruence list ->    (*congruence_list*)

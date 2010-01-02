@@ -556,7 +556,10 @@ in
    (el 1 aL, el 2 aL)
 end
 fun mk_asm_marker l t = list_mk_comb(asm_marker_tm, [l,t])
-fun mk_asm_marker_random t = mk_asm_marker (genvar bool) t
+fun mk_asm_marker_random_pair t = 
+   let val v = genvar bool in (v, mk_asm_marker v t) end
+fun mk_asm_marker_random t = snd (mk_asm_marker_random_pair t)
+
 val is_asm_marker = can dest_asm_marker
 fun dest_neg_asm_marker tt = dest_asm_marker (dest_neg tt)
 val is_neg_asm_marker = can dest_neg_asm_marker
@@ -756,7 +759,7 @@ end
 
 fun CONSEQ_CONV_CONGRUENCE___imp_full_context context (sys:conseq_conv_congruence_syscall) dir t =
   let
-     val (b1,b2) = dest_imp t;
+     val (b1,b2) = dest_imp_only t;
 
      val a1 = b1;
      val (n1, thm1_opt) = sys [a1] context 0 dir b2;
@@ -780,7 +783,7 @@ fun CONSEQ_CONV_CONGRUENCE___imp_full_context context (sys:conseq_conv_congruenc
 
 fun CONSEQ_CONV_CONGRUENCE___imp_no_context context (sys:conseq_conv_congruence_syscall) dir t =
   let
-     val (b1,b2) = dest_imp t;
+     val (b1,b2) = dest_imp_only t;
 
      val (n1, thm1_opt) = sys [] context 0 dir b2;
      val a2 = CONSEQ_CONV___OPT_GET_SIMPLIFIED_TERM thm1_opt dir b2;       
@@ -800,14 +803,13 @@ fun CONSEQ_CONV_CONGRUENCE___imp_no_context context (sys:conseq_conv_congruence_
 
 fun CONSEQ_CONV_CONGRUENCE___imp_simple_context context (sys:conseq_conv_congruence_syscall) dir t =
   let
-     val (b1,b2) = dest_imp t;
+     val (b1,b2) = dest_imp_only t;
 
      val (n1, thm1_opt) = sys [] context 0 (CONSEQ_CONV_DIRECTION_NEGATE dir) b1;
      val a2 = CONSEQ_CONV___OPT_GET_SIMPLIFIED_TERM thm1_opt (CONSEQ_CONV_DIRECTION_NEGATE dir) b1;       
      val abort_cond = same_const a2 F;
      val (n2, thm2_opt) = if abort_cond then (n1, NONE) else
             sys [a2] context n1 dir b2;
-
      val _ = if (isSome thm1_opt) orelse (isSome thm2_opt) orelse abort_cond then () else raise UNCHANGED;
      val thm1 = conseq_conv_congruence_EXPAND_THM_OPT (thm1_opt, b1, NONE);
      val thm2 = conseq_conv_congruence_EXPAND_THM_OPT (thm2_opt, b2, SOME a2);
@@ -1648,14 +1650,14 @@ val EXT_CONSEQ_HO_REWRITE_TAC  =
 
 (*
 
-set_goal ([``x ++ y = x ++ [32]:num list``, ``l = [0:num]``], ``?x. y ++ l = 0::x``)
+set_goal ([``x ++ y = x ++ [32]:num list``, ``l = [0:num]``, ``aa:bool``, ``bb:bool``, ``cc:bool``], ``?x. y ++ l = 0::x``)
 
 open quantHeuristicsLib
 fun conv t = snd (EQ_IMP_RULE (QUANT_INSTANTIATE_CONV [] t));
-val conv = QUANT_INSTANTIATE_CONV [] ;
+val conv = QUANT_INSTANTIATE_CONV [] THENC SIMP_CONV std_ss [AND_IMP_INTRO];
 
 val (asm,t) = top_goal();
-
+ASSUME_TAC TRUTH
 DISCH_ASM_CONV_TAC conv
    val conv = QUANT_INSTANTIATE_CONV []
 *)
@@ -1665,49 +1667,88 @@ DISCH_ASM_CONV_TAC conv
   and undisches the results, ASM_MARKER is used to separate these
   assumptions*)
 
+
+fun cases_rule [] t =
+   if aconv t T then TRUTH else EQT_ELIM (REWRITE_CONV [] t)
+ | cases_rule (c::cL) t  =
+   if aconv t T then TRUTH else
+   let
+      val thm_f1 = EQT_ELIM (REWRITE_CONV [ASSUME (mk_neg c)] t)
+      val thm_f = ADD_ASSUM (mk_neg c) thm_f1
+
+      val thm_t1 = REWRITE_CONV [ASSUME c] t
+      val thm_t2 = cases_rule cL (rhs (concl thm_t1))
+      val thm_t3 = EQ_MP (GSYM thm_t1) thm_t2
+      val thm_t = ADD_ASSUM c thm_t3
+
+      val em_thm = SPEC c EXCLUDED_MIDDLE
+   in
+      DISJ_CASES em_thm thm_t thm_f
+   end;
+
+fun ASM_MARKER_CONV (m_base, mL, m_top) tt =
+let
+   val (fv, body) = strip_forall tt;
+   val (m, body') = dest_asm_marker body
+   val _ = if aconv m m_top then () else Feedback.fail()
+
+   val tL = find_terms is_asm_marker body';
+   val tmL = map (fn t => (fst (dest_asm_marker t), t)) tL
+   fun find_mark m = snd (first (fn (m', t) => aconv m m') tmL)
+       handle HOL_ERR _ => mk_asm_marker m T
+
+   val asm_list = map find_mark mL
+   val base_t = find_mark m_base   
+
+   val body''= subst (map (fn t => t |-> (rand (rator t))) (base_t::asm_list)) body'
+   val thm_t = mk_eq (body'', list_mk_imp (rev mL, m_base));
+   val thm0 = cases_rule mL thm_t
+
+   val thm1 = INST (map (fn t => (rand (rator t)) |-> t) (base_t::asm_list)) thm0
+   val thm2 = STRIP_QUANT_CONV (RAND_CONV (K thm1)) tt
+
+   val new_asm = map rand asm_list
+   val new_t = rand base_t
+in
+   (new_asm, new_t, fv, thm2)
+end
+
+
 val DISCH_ASM_CONV_TAC:(conv -> tactic) = fn conv => fn (asm,t) =>
 let
    val fv = HOLset.listItems (FVL (t::asm) empty_tmset)
-   val mt = mk_asm_marker_random t
-   val asm_t = foldl (fn (a,t) => mk_imp (mk_asm_marker_random a, t)) mt asm;
-   val qasm_t = list_mk_forall (fv, mk_asm_marker_random asm_t);
+   val (m_base, mt) = mk_asm_marker_random_pair t
+   val asm_mL = map mk_asm_marker_random_pair asm
+   val asm_t = foldl (fn (a,t) => mk_imp (snd a, t)) mt asm_mL;
+   val (m_top, m_asm_t) = mk_asm_marker_random_pair asm_t
+   val qasm_t = list_mk_forall (fv, m_asm_t);
 
+   val mL = map fst asm_mL
    val thm0 = conv qasm_t;
    val thm1 = if (is_eq (concl thm0)) then
 		  snd (EQ_IMP_RULE thm0)
 	      else thm0;
+   
+   val (new_asm, new_t, new_fv, thm2a) = ASM_MARKER_CONV (m_base, mL, m_top) ((fst o dest_imp o concl) thm1)
+   val thm2 = CONV_RULE (RATOR_CONV (RAND_CONV (K thm2a))) thm1
 
-   val new_qasm_t = (fst o dest_imp o concl) thm1;
-   val (new_fv,new_asm_t0) = strip_forall new_qasm_t
-   val (q_m, new_asm_t) = dest_asm_marker new_asm_t0
-
-   fun strip_asm_marker l t =
-      let
-         val (t1,t2) = dest_imp_only t;
-         val (m, t1') = dest_asm_marker t1;
-      in
-         strip_asm_marker ((m,t1')::l) t2
-      end handle HOL_ERR _ => (l,t)
-   val (new_asm_m, new_mt) = strip_asm_marker [] new_asm_t;
-   val new_asm = map snd new_asm_m
-   val (last_m,new_t) = dest_asm_marker new_mt;
-
-(*val thmL = [mk_thm (new_asm,new_t)]*)
+(*val thmL = [mk_thm (new_asm,new_t)] 
+  val thmL = []*)
 in
    (if aconv new_t T then [] else [(new_asm,new_t)], fn thmL =>
     let
         val new_thm = if null thmL then TRUTH else hd thmL;
 
         (*build precondition thm*)
-        val new_m_thm = CONV_RULE (asm_marker_INTRO_CONV last_m) new_thm;
+        val new_m_thm = CONV_RULE (asm_marker_INTRO_CONV m_base) new_thm;
         val new_asm_thm = foldl (fn ((m,a),thm) => 
            CONV_RULE (RATOR_CONV (RAND_CONV (asm_marker_INTRO_CONV m)))
-             (DISCH a thm)) new_m_thm new_asm_m;
-        val new_qasm_thm0 = CONV_RULE (asm_marker_INTRO_CONV q_m) new_asm_thm
+             (DISCH a thm)) new_m_thm (zip mL  new_asm)
+        val new_qasm_thm0 = CONV_RULE (asm_marker_INTRO_CONV m_top) new_asm_thm
         val new_qasm_thm = GENL new_fv new_qasm_thm0;
 
         (*use modus ponens*)
-        val qasm_thm = MP thm1 new_qasm_thm;
+        val qasm_thm = MP thm2 new_qasm_thm;
 
         (*get rid of markers again*)
 	val asm_thm_m = SPECL fv qasm_thm;
@@ -1868,6 +1909,20 @@ val thm = EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list true
    NONE (SOME 3) true [(true,1,K (K c_conv))]
    CONSEQ_CONV_STRENGTHEN_direction ``B /\ A ==> c 0``;
 
+
+fun c d t = if (aconv t ``aaa:bool``) then Feedback.fail() else raise UNCHANGED
+fun d d t = if (aconv t ``aaa:bool``) then mk_thm ([], ``T ==> aaa``) else raise UNCHANGED
+
+ EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list NONE (SOME 1) false
+    [(true, SOME 1, K c)] [] CONSEQ_CONV_STRENGTHEN_direction
+   ``aaa ==> aaa /\ ccc /\ bbb``
+
+ EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list NONE (SOME 1) false
+    [(false, SOME 1, K c), (false, SOME 1, K d)] [] CONSEQ_CONV_STRENGTHEN_direction
+   ``aaa ==> aaa /\ ccc /\ bbb``
+
+
+DEPTH_CONSEQ_CONV c CONSEQ_CONV_STRENGTHEN_direction ``ccc ==> aaa /\ bbb``
 
 *)
 
