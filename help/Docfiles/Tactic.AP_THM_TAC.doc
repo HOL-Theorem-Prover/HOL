@@ -29,5 +29,5 @@ Fails unless the goal has the above form, namely an equation both sides of
 which consist of function applications to the same arguments.
 
 \SEEALSO
-Thm.AP_TERM, Tactic.AP_TERM_TAC, Thm.AP_THM, Drule.EXT.
+Thm.AP_TERM, Tactic.AP_TERM_TAC, Thm.AP_THM, Tactic.ABS_TAC, Drule.EXT.
 \ENDDOC
