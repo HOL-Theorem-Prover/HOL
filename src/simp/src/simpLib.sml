@@ -283,7 +283,9 @@ fun dest_binop t = let
 in
   (f,x,y)
 end
+
 datatype munge_action = TH of thm | POP
+
 fun munge base subsets asms (thlistlist, n) = let
   val munge = munge base subsets
 in
@@ -577,8 +579,8 @@ fun pp_ssfrag ppstrm (SSFRAG {name,convs,rewrs,ac,dprocs,congs,...}) =
            add_string (n^", keyed on pattern"); add_break(2,0); pp_term tm;
            end_block())
        | pp_conv_info (n,NONE) = add_string n
-     fun nl2() = (add_newline();add_newline());
-     fun vspace l = if null l then () else nl2();
+     fun nl2() = (add_newline();add_newline())
+     fun vspace l = if null l then () else nl2()
      fun vblock(header, ob_pr, obs) =
        if null obs then ()
        else
