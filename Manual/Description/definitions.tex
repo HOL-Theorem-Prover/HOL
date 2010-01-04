@@ -293,9 +293,9 @@ at present be built with \ml{Hol\_datatype}:
 \end{hol}
 %
 Types may not recurse on either side of function arrows.  Recursion on
-the left is consistent (see the theory \theoryimp{inftree}), but
+the right is consistent (see the theory \theoryimp{inftree}), but
 \ml{Hol\_datatype} is not capable of defining algebraic types that
-require it.  In other words, examples such as the following will fail:
+require it.  Thus, examples such as the following will fail:
 %
 \begin{hol}
 \begin{verbatim}
@@ -305,7 +305,7 @@ require it.  In other words, examples such as the following will fail:
 \end{verbatim}
 \end{hol}
 %
-On the right, recursion must fail for for cardinality reasons. For
+Recursion on the left must fail for for cardinality reasons. For
 example, HOL does not allow the following attempt to model the untyped
 lambda calculus as a set (note the \holtxt{->} in the clause for the
 \holtxt{Abs} constructor):
