@@ -84,6 +84,10 @@ val (primrec_rules, primrec_ind, primrec_cases) = Hol_reln`
   (∀b r n. primrec b n ∧ primrec r (n + 2) ⇒ primrec (Pr b r) (n + 1))
 `;
 
+val strong_primrec_ind = IndDefLib.derive_strong_induction(primrec_rules,
+                                                           primrec_ind)
+
+
 val primrec_nzero = store_thm(
   "primrec_nzero",
   ``∀f k. primrec f k ⇒ 0 < k``,
@@ -128,6 +132,63 @@ val primrec_arg_too_long = store_thm(
     SRW_TAC [][]
   ]);
 
+open rich_listTheory
+
+val GENLIST1 = prove(``GENLIST f 1 = [f 0]``,
+                     SIMP_TAC bool_ss [ONE, GENLIST, SNOC]);
+val GENLIST_CONS = prove(
+  ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
+  Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
+
+val primrec_nil = store_thm(
+  "primrec_nil",
+  ``∀f n. primrec f n ⇒ (f [] = f (GENLIST (K 0) n))``,
+  HO_MATCH_MP_TAC primrec_ind THEN SIMP_TAC (srw_ss()) [GENLIST1] THEN
+  REPEAT CONJ_TAC THENL [
+    SIMP_TAC bool_ss [Once EQ_SYM_EQ] THEN
+    Induct_on `n` THEN SRW_TAC [][GENLIST_CONS] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN DECIDE_TAC,
+
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN SRW_TAC [][Cn_def] THEN
+    AP_TERM_TAC THEN Q.PAT_ASSUM `f X = f []` (K ALL_TAC) THEN
+    Induct_on `gs` THEN SRW_TAC [][],
+
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN SRW_TAC [][] THEN
+    SRW_TAC [][Once Pr_def, SimpRHS] THEN
+    Cases_on `n` THEN SRW_TAC [][GENLIST1, ADD_CLAUSES, GENLIST_CONS] THEN
+    SRW_TAC [][GSYM ADD1]
+  ]);
+
+val primrec_short = store_thm(
+  "primrec_short",
+  ``∀f n. primrec f n ⇒
+          ∀l. LENGTH l < n ⇒ (f l = f (l ++ GENLIST (K 0) (n - LENGTH l)))``,
+  HO_MATCH_MP_TAC strong_primrec_ind THEN SIMP_TAC (srw_ss()) [GENLIST1] THEN
+  REPEAT CONJ_TAC THENL [
+    SRW_TAC [][] THEN
+    `LENGTH l = 0` by DECIDE_TAC THEN
+    FULL_SIMP_TAC (srw_ss()) [LENGTH_NIL, GENLIST1],
+
+    SRW_TAC [][proj_def] THEN
+    SRW_TAC [ARITH_ss][EL_GENLIST, EL_APPEND1, EL_APPEND2],
+
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN SRW_TAC [][Cn_def] THEN
+    AP_TERM_TAC THEN
+    Q.PAT_ASSUM `∀l. LENGTH l < N ⇒ (f X = f Y)` (K ALL_TAC) THEN
+    Q.PAT_ASSUM `primrec f N` (K ALL_TAC) THEN
+    Induct_on `gs` THEN SRW_TAC [][],
+
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN SRW_TAC [ARITH_ss][] THEN
+    `(l = []) ∨ ∃m ms. l = m :: ms` by (Cases_on `l` THEN SRW_TAC [][]) THEN1
+      (SRW_TAC [][] THEN METIS_TAC [primrec_nil, primrec_rules]) THEN
+    SRW_TAC [][] THEN
+    FULL_SIMP_TAC (srw_ss()) [DECIDE ``SUC x < y + 1 <=> x < y``] THEN
+    SRW_TAC [ARITH_ss][ADD1] THEN
+    Induct_on `m` THEN SRW_TAC [][] THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN `m::Pr f f' (m::ms)::ms` MP_TAC) THEN
+    SRW_TAC [ARITH_ss][ADD1]
+  ]);
+
 val alt_Pr_rule = Store_thm(
   "alt_Pr_rule",
   ``∀b r m. primrec b (m - 1) ∧ primrec r (m + 1) ⇒ primrec (Pr b r) m``,
@@ -135,6 +196,18 @@ val alt_Pr_rule = Store_thm(
   Cases_on `m` THEN1 (IMP_RES_TAC primrec_nzero THEN
                       FULL_SIMP_TAC (srw_ss()) []) THEN
   FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ADD1, primrec_rules]);
+
+val pr1_def = Define`
+  pr1 f [x:num] = f x:num
+`;
+val _ = export_rewrites ["pr1_def"]
+
+val pr2_def = Define`
+  (pr2 f [] = f 0 0 : num) ∧
+  (pr2 f [x] = f x 0) ∧
+  (pr2 f (x::y::t) = f x y)
+`;
+val _ = export_rewrites ["pr2_def"]
 
 val pr_add_def = Define`
   pr_add = Pr (proj 0) (Cn succ [proj 1])
@@ -149,8 +222,38 @@ val pr_add_is_addition = Store_thm(
 val _ = temp_set_fixity "+." (Infixl 500)
 val _ = temp_overload_on ("+.", ``λn m. Cn pr_add [n; m]``)
 
+
+(* val binary_primrec = store_thm(
+  "binary_primrec",
+  ``primrec f 2 ∧ (∀n m. f [n; m] = g n m) ⇒ (f = pr2 g)``,
+  SRW_TAC [][] THEN SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
+  Q.X_GEN_TAC `l` THEN
+*)
+
 val primrec_pr_add = Store_thm(
   "primrec_pr_add",
+  ``primrec (pr2 (+)) 2``,
+  Q_TAC SUFF_TAC `pr2 (+) = Pr (proj 0) (Cn succ [proj 1])`
+        THEN1 SRW_TAC [][primrec_rules, alt_Pr_rule] THEN
+  SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN Q.X_GEN_TAC `l` THEN
+  `(l = []) ∨ ∃n t. l = n::t` by (Cases_on `l` THEN SRW_TAC [][]) THEN1
+    SRW_TAC [][Pr_def] THEN
+  SRW_TAC [][Once Pr_def] THEN
+  `(t = []) ∨ ∃m ms. t = m::ms` by (Cases_on `t` THEN SRW_TAC [][]) THENL [
+     `(n = 0) ∨ ∃n₀. n = SUC n₀` by (Cases_on `n` THEN SRW_TAC [][]) THEN
+     SRW_TAC [][] THEN Induct_on `n₀` THEN
+     SRW_TAC [][Once Pr_def] THEN
+     Cases_on `n₀` THEN FULL_SIMP_TAC (srw_ss()) [],
+
+     SRW_TAC [][] THEN
+     MAP_EVERY Q.ID_SPEC_TAC [`ms`, `m`, `n`] THEN Induct THEN
+     SRW_TAC [][ADD_CLAUSES] THEN
+     POP_ASSUM (CONV_TAC o LAND_CONV o REWR_CONV) THEN
+     Cases_on `n` THEN SRW_TAC [][]
+   ]);
+
+val primrec_pr_add0 = Store_thm(
+  "primrec_pr_add0",
   ``primrec pr_add 2``,
   SRW_TAC [][primrec_rules, pr_add_def, alt_Pr_rule]);
 
@@ -693,8 +796,6 @@ val EL_SUM = store_thm(
   Cases_on `i` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   RES_TAC THEN DECIDE_TAC);
 
-val strong_primrec_ind = IndDefLib.derive_strong_induction(primrec_rules,
-                                                           primrec_ind)
 
 val SUM_MAP_LT_pwise = store_thm(
   "SUM_MAP_LT_pwise",
