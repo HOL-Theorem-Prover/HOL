@@ -198,9 +198,26 @@ val alt_Pr_rule = Store_thm(
   FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ADD1, primrec_rules]);
 
 val pr1_def = Define`
-  pr1 f [x:num] = f x:num
+  (pr1 f [] = f 0: num) ∧
+  (pr1 f (x::t) = f x)
 `;
 val _ = export_rewrites ["pr1_def"]
+
+val unary_primrec_eq = store_thm(
+  "unary_primrec_eq",
+  ``primrec f 1 ∧ (∀n. f [n] = g n) ⇒ (f = pr1 g)``,
+  SRW_TAC [][] THEN SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
+  Q.X_GEN_TAC `l` THEN
+  `(l = []) ∨ ∃n ns. l = n :: ns` by (Cases_on `l` THEN SRW_TAC [][]) THEN
+  SRW_TAC [][] THENL [
+    IMP_RES_THEN MP_TAC primrec_nil THEN SRW_TAC [][GENLIST1],
+    IMP_RES_THEN (Q.SPEC_THEN `n::ns` MP_TAC) primrec_arg_too_long THEN
+    SRW_TAC [ARITH_ss][]
+  ]);
+val primrec_pr1 = store_thm(
+  "primrec_pr1",
+  ``(∃g. primrec g 1 ∧ (∀n. g [n] = f n)) ⇒ primrec (pr1 f) 1``,
+  METIS_TAC [unary_primrec_eq]);
 
 val pr2_def = Define`
   (pr2 f [] = f 0 0 : num) ∧
@@ -209,111 +226,72 @@ val pr2_def = Define`
 `;
 val _ = export_rewrites ["pr2_def"]
 
-val pr_add_def = Define`
-  pr_add = Pr (proj 0) (Cn succ [proj 1])
-`;
-
-val pr_add_is_addition = Store_thm(
-  "pr_add_is_addition",
-  ``pr_add [n; m] = n + m``,
-  REWRITE_TAC [pr_add_def] THEN Induct_on `n` THEN
-  SRW_TAC [ARITH_ss][]);
-
-val _ = temp_set_fixity "+." (Infixl 500)
-val _ = temp_overload_on ("+.", ``λn m. Cn pr_add [n; m]``)
-
-
-(* val binary_primrec = store_thm(
-  "binary_primrec",
+val GENLIST2 = prove(
+  ``GENLIST f 2 = [f 0; f 1]``,
+  SIMP_TAC bool_ss [TWO, ONE, GENLIST, SNOC]);
+val binary_primrec_eq = store_thm(
+  "binary_primrec_eq",
   ``primrec f 2 ∧ (∀n m. f [n; m] = g n m) ⇒ (f = pr2 g)``,
   SRW_TAC [][] THEN SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
   Q.X_GEN_TAC `l` THEN
-*)
+  `(l = []) ∨ ∃n ns. l = n :: ns` by (Cases_on `l` THEN SRW_TAC [][]) THENL [
+    SRW_TAC [][] THEN
+    `f [] = f (GENLIST (K 0) 2)` by METIS_TAC [primrec_nil] THEN
+    SRW_TAC [][GENLIST2],
+
+    `(ns = []) ∨ ∃m ms. ns = m::ms` by (Cases_on `ns` THEN SRW_TAC [][]) THEN
+    SRW_TAC [][] THENL [
+      IMP_RES_THEN (Q.SPEC_THEN `[n]` MP_TAC) primrec_short THEN
+      SRW_TAC [][GENLIST1],
+
+      IMP_RES_THEN (Q.SPEC_THEN `n::m::ms` MP_TAC) primrec_arg_too_long THEN
+      SRW_TAC [ARITH_ss][]
+    ]
+  ])
+
+val primrec_pr2 = store_thm(
+  "primrec_pr2",
+  ``(∃g. primrec g 2 ∧ (∀m n. g [m; n] = f m n)) ⇒ primrec (pr2 f) 2``,
+  METIS_TAC [binary_primrec_eq]);
 
 val primrec_pr_add = Store_thm(
   "primrec_pr_add",
   ``primrec (pr2 (+)) 2``,
-  Q_TAC SUFF_TAC `pr2 (+) = Pr (proj 0) (Cn succ [proj 1])`
-        THEN1 SRW_TAC [][primrec_rules, alt_Pr_rule] THEN
-  SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN Q.X_GEN_TAC `l` THEN
-  `(l = []) ∨ ∃n t. l = n::t` by (Cases_on `l` THEN SRW_TAC [][]) THEN1
-    SRW_TAC [][Pr_def] THEN
-  SRW_TAC [][Once Pr_def] THEN
-  `(t = []) ∨ ∃m ms. t = m::ms` by (Cases_on `t` THEN SRW_TAC [][]) THENL [
-     `(n = 0) ∨ ∃n₀. n = SUC n₀` by (Cases_on `n` THEN SRW_TAC [][]) THEN
-     SRW_TAC [][] THEN Induct_on `n₀` THEN
-     SRW_TAC [][Once Pr_def] THEN
-     Cases_on `n₀` THEN FULL_SIMP_TAC (srw_ss()) [],
-
-     SRW_TAC [][] THEN
-     MAP_EVERY Q.ID_SPEC_TAC [`ms`, `m`, `n`] THEN Induct THEN
-     SRW_TAC [][ADD_CLAUSES] THEN
-     POP_ASSUM (CONV_TAC o LAND_CONV o REWR_CONV) THEN
-     Cases_on `n` THEN SRW_TAC [][]
-   ]);
-
-val primrec_pr_add0 = Store_thm(
-  "primrec_pr_add0",
-  ``primrec pr_add 2``,
-  SRW_TAC [][primrec_rules, pr_add_def, alt_Pr_rule]);
-
-val pr_mult_def = Define`
-  pr_mult = Pr zerof (proj 1 +. proj 2)
-`;
-
-val pr_mult_is_multiplication = Store_thm(
-  "pr_mult_is_multiplication",
-  ``pr_mult [n; m] = n * m``,
-  SRW_TAC [][pr_mult_def] THEN
-  Induct_on `n` THEN SRW_TAC [ARITH_ss][MULT_CLAUSES]);
+  MATCH_MP_TAC primrec_pr2 THEN
+  Q.EXISTS_TAC `Pr (proj 0) (Cn succ [proj 1])` THEN
+  SRW_TAC [][primrec_rules, alt_Pr_rule] THEN
+  Induct_on `m` THEN SRW_TAC [][ADD_CLAUSES]);
+val _ = temp_set_fixity "+." (Infixl 500)
+val _ = temp_overload_on ("+.", ``λn m. Cn (pr2 (+)) [n; m]``)
 
 val primrec_pr_mult = Store_thm(
   "primrec_pr_mult",
-  ``primrec pr_mult 2``,
-  SRW_TAC [][pr_mult_def, primrec_rules]);
-
+  ``primrec (pr2 $*) 2``,
+  MATCH_MP_TAC primrec_pr2 THEN
+  Q.EXISTS_TAC `Pr zerof (proj 1 +. proj 2)` THEN
+  SRW_TAC [][primrec_rules, alt_Pr_rule] THEN
+  Induct_on `m` THEN SRW_TAC [][MULT_CLAUSES]);
 val _ = temp_set_fixity "*." (Infixl 600)
-val _ = temp_overload_on ("*.", ``λn m. Cn pr_mult [n; m]``)
-
-val pr_pred0_def = Define`
-  pr_pred0 = Pr zerof (proj 0)
-`
-val pr_pred0_thm = prove(
-  ``pr_pred0 [n;  m] = PRE n``,
-  Cases_on `n` THEN SRW_TAC [][pr_pred0_def]);
-
-val primrec_pred0 = prove(
-  ``primrec pr_pred0 2``,
-  SRW_TAC [][pr_pred0_def, primrec_rules]);
-
-val pr_pred_def = Define`
-  pr_pred = Cn pr_pred0 [proj 0; zerof]
-`;
-
-val pr_pred_thm = Store_thm(
-  "pr_pred_thm",
-  ``pr_pred [n] = PRE n``,
-  SRW_TAC [][pr_pred0_thm, pr_pred_def]);
+val _ = temp_overload_on ("*.", ``λn m. Cn (pr2 $*) [n; m]``)
 
 val primrec_pr_pred = Store_thm(
   "primrec_pr_pred",
-  ``primrec pr_pred 1``,
-  SRW_TAC [][primrec_rules, primrec_pred0, pr_pred_def]);
+  ``primrec (pr1 PRE) 1``,
+  MATCH_MP_TAC primrec_pr1 THEN
+  Q.EXISTS_TAC `Cn (Pr zerof (proj 0)) [proj 0; zerof]` THEN
+  SRW_TAC [][primrec_rules] THEN
+  Induct_on `n` THEN SRW_TAC [][]);
 
-val pr_iszero_def = Define`
-  pr_iszero = Cn (Pr (Cn succ [zerof])
-                     (Cn zerof [proj 0])) [proj 0; zerof]
-`;
-
-val pr_iszero = Store_thm(
-  "pr_iszero",
-  ``pr_iszero [n] = nB (n = 0)``,
-  Cases_on `n` THEN SRW_TAC [][pr_iszero_def]);
+val _ = overload_on ("pr_iszero", ``pr1 (λn. nB (n = 0))``)
 
 val primrec_pr_iszero = Store_thm(
   "primrec_pr_iszero",
   ``primrec pr_iszero 1``,
-  SRW_TAC [][pr_iszero_def, primrec_rules]);
+  MATCH_MP_TAC primrec_pr1 THEN
+  Q.EXISTS_TAC `Cn (Pr (Cn succ [zerof])
+                       (Cn zerof [proj 0])) [proj 0; zerof]` THEN
+  SRW_TAC [][primrec_rules] THEN
+  Cases_on `n` THEN SRW_TAC [][]);
 
 val cflip_def = Define`
   cflip f = Cn f [proj 1; proj 0]
@@ -328,38 +306,28 @@ val primrec_cflip = Store_thm(
   ``primrec f 2 ⇒ primrec (cflip f) 2``,
   SRW_TAC [][primrec_rules, cflip_def]);
 
-val pr_sub_def = Define`
-  pr_sub = cflip (Pr (proj 0) (Cn pr_pred [proj 1]))
-`;
-
-val pr_sub_thm = Store_thm(
-  "pr_sub_thm",
-  ``pr_sub [n; m] = n - m``,
-  SRW_TAC [][pr_sub_def] THEN Induct_on `m` THEN SRW_TAC [ARITH_ss][]);
-
 val primrec_pr_sub = Store_thm(
   "primrec_pr_sub",
-  ``primrec pr_sub 2``,
-  SRW_TAC [][primrec_rules, pr_sub_def])
-
+  ``primrec (pr2 $-) 2``,
+  MATCH_MP_TAC primrec_pr2 THEN
+  Q.EXISTS_TAC `cflip (Pr (proj 0) (Cn (pr1 PRE) [proj 1]))` THEN
+  SRW_TAC [][primrec_rules] THEN Induct_on `n` THEN SRW_TAC [ARITH_ss][])
 val _ = temp_set_fixity "-." (Infixl 500);
-val _ = temp_overload_on ("-.", ``λn m. Cn pr_sub [n; m]``)
+val _ = temp_overload_on ("-.", ``λn m. Cn (pr2 $-) [n; m]``)
 
-val pr_le_def = Define`pr_le = Cn pr_iszero [pr_sub]`
+val _ = overload_on ("pr_le", ``pr2 (λx y. nB (x ≤ y))``)
 val _ = temp_set_fixity "<=." (Infix(NONASSOC, 450))
 val _ = temp_overload_on ("<=.", ``λn m. Cn pr_le [n; m]``)
 
-val pr_le_thm = Store_thm(
-  "pr_le_thm",
-  ``pr_le [n; m] = nB (n ≤ m)``,
-  SRW_TAC [ARITH_ss][pr_le_def, pr_iszero]);
 val primrec_pr_le = Store_thm(
   "primrec_pr_le",
   ``primrec pr_le 2``,
-  SRW_TAC [][primrec_rules, pr_le_def]);
+  MATCH_MP_TAC primrec_pr2 THEN
+  Q.EXISTS_TAC `Cn pr_iszero [pr2 $-]` THEN
+  SRW_TAC [][primrec_rules]);
 
 val pr_eq_def = Define`
-  pr_eq = Cn pr_mult [pr_le; cflip pr_le]
+  pr_eq = Cn (pr2 $*) [pr_le; cflip pr_le]
 `;
 
 val pr_eq_thm = Store_thm(
@@ -404,7 +372,7 @@ val Cn_pr_eq_predicate = Store_thm(
 val Cn_pr_le_predicate = Store_thm(
   "Cn_pr_le_predicate",
   ``pr_predicate (Cn pr_le [f;g])``,
-  SRW_TAC [][pr_predicate_def, pr_le_thm]);
+  SRW_TAC [][pr_predicate_def]);
 
 val pr_cond_thm = Store_thm(
   "pr_cond_thm",
@@ -446,8 +414,7 @@ val primrec_pr_div = Store_thm(
   ``primrec pr_div 2``,
   SRW_TAC [][pr_div_def] THEN
   MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][] THEN
-  MATCH_MP_TAC primrec_pr_cond THEN SRW_TAC [][primrec_rules] THEN
-  MATCH_MP_TAC primrec_cn THEN SRW_TAC [][primrec_rules]);
+  MATCH_MP_TAC primrec_pr_cond THEN SRW_TAC [][primrec_rules]);
 
 val pr_div_recursion = store_thm(
   "pr_div_recursion",
@@ -455,8 +422,7 @@ val pr_div_recursion = store_thm(
     (pr_div [n + 1; m] = let r = pr_div [n; m]
                          in
                            if n + 1 - r * m = m then r + 1 else r)``,
-  SIMP_TAC (srw_ss()) [pr_div_def, LET_THM] THEN
-  SIMP_TAC (srw_ss()) [GSYM pr_div_def, ADD1]);
+  SIMP_TAC (srw_ss()) [pr_div_def, LET_THM, ADD1]);
 
 val pr_div_thm = Store_thm(
   "pr_div_thm",
