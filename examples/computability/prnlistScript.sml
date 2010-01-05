@@ -100,21 +100,22 @@ val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
   ``primrec (pr2 napp) 2``,
   MATCH_MP_TAC primrec_pr2 THEN
   Q.EXISTS_TAC `
-    Pr (Cn (pr2 ncons) [proj 0; zerof])
-       (* n, r, 2nd arg *)
-       (let sucn = Cn succ [proj 0] in
-        let tl = Cn (pr1 ntl) [sucn] in
-        let hd = Cn (pr1 nhd) [sucn] in
-        let pos = Cn (pr2 $-) [sucn; tl] in
-        let rres = Cn (pr2 nel) [pos; proj 1] in
-        let res = Cn (pr2 ncons) [hd; rres]
-        in
-          Cn (pr2 ncons) [res; proj 1])
+    Cn (pr1 nhd)
+       [Pr (Cn (pr2 ncons) [proj 0; zerof])
+           (* n, r, 2nd arg *)
+           (let sucn = Cn succ [proj 0] in
+            let tl = Cn (pr1 ntl) [sucn] in
+            let hd = Cn (pr1 nhd) [sucn] in
+            let pos = Cn (pr2 $-) [sucn; tl] in
+            let rres = Cn (pr2 nel) [pos; proj 1] in
+            let res = Cn (pr2 ncons) [hd; rres]
+            in
+              Cn (pr2 ncons) [res; proj 1])]
   ` THEN
   CONJ_TAC THENL [
-    SRW_TAC [][] THEN MATCH_MP_TAC alt_Pr_rule THEN
-    SRW_TAC [][primrec_rules] THEN1
-      (MATCH_MP_TAC primrec_cn THEN SRW_TAC [][]
+    SRW_TAC [][] THEN MATCH_MP_TAC primrec_cn THEN
+    SRW_TAC [][primrec_rules] THEN
+    MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][primrec_rules] THEN
     MATCH_MP_TAC primrec_cn THEN SRW_TAC [][primrec_rules] THEN
     Q.UNABBREV_TAC `res` THEN
     MATCH_MP_TAC primrec_cn THEN
@@ -127,8 +128,8 @@ val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
     `primrec tl 3` by SRW_TAC [][primrec_rules, Abbr`tl`] THEN
     SRW_TAC [][primrec_rules, Abbr`pos`],
 
-    HO_MATCH_MP_TAC nlist_ind THEN SRW_TAC [][LET_THM] THEN1
-      SRW_TAC [][ncons_def]
+    HO_MATCH_MP_TAC nlist_ind THEN SRW_TAC [][LET_THM] THEN
+    `∃c0. ncons h m = SUC c0` ...
 
 
 *)
