@@ -99,6 +99,7 @@ src/n-bit
 !!examples/ARM/arm6-verification/correctness
 src/ring/src
 src/integer
+!src/integer/testing
 src/patricia
 src/emit
 !!examples/ARM/v4
