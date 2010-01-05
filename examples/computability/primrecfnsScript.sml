@@ -473,45 +473,23 @@ val pr_tri_def = Define`
   pr_tri = Cn (Pr zerof (proj 0 +. K 1 +. proj 1)) [proj 0; proj 0]
 `;
 
-val _ = temp_overload_on ("tri.", ``λn. Cn pr_tri [n]``);
+val _ = temp_overload_on ("tri.", ``λn. Cn (pr1 tri) [n]``);
 
 val primrec_tri = Store_thm(
   "primrec_tri",
-  ``primrec pr_tri 1``,
-  SRW_TAC [][pr_tri_def] THEN MATCH_MP_TAC primrec_cn THEN
-  SRW_TAC [][primrec_rules]);
-
-
-
-val pr_tri_correct = Store_thm(
-  "pr_tri_correct",
-  ``pr_tri [n] = tri n``,
-  SRW_TAC [][pr_tri_def] THEN
+  ``primrec (pr1 tri) 1``,
+  MATCH_MP_TAC primrec_pr1 THEN
+  Q.EXISTS_TAC `Cn (Pr zerof (proj 0 +. K 1 +. proj 1)) [proj 0; proj 0]` THEN
+  CONJ_TAC THEN1
+    (MATCH_MP_TAC primrec_cn THEN SRW_TAC [][primrec_rules]) THEN
+  SRW_TAC [][] THEN
   Q_TAC SUFF_TAC `∀n m. Pr zerof (proj 0 +. K 1 +. proj 1) [n;m] = tri n`
         THEN1 METIS_TAC [] THEN
   Induct THEN SRW_TAC [][tri_def, ADD1]);
 
 (* inverse triangular - start at the input value n, and try successively smaller
    values until an m <= n comes up such that tri (m) <= the original n *)
-val pr_invtri_def = Define`
-  pr_invtri =
-  Cn (Pr zerof (pr_cond (tri. (proj 0 +. K 1) <=. proj 2)
-                        (proj 0 +. K 1)
-                        (proj 1)))
-     [proj 0; proj 0]
-`;
-
-val _ = temp_overload_on ("invtri.", ``λn. Cn pr_invtri [n]``)
-
-val primrec_invtri = Store_thm(
-  "primrec_invtri",
-  ``primrec pr_invtri 1``,
-  SRW_TAC [][pr_invtri_def] THEN MATCH_MP_TAC primrec_cn THEN
-  SRW_TAC [][primrec_rules] THEN
-  MATCH_MP_TAC alt_Pr_rule THEN
-  SRW_TAC [][primrec_rules] THEN
-  MATCH_MP_TAC primrec_pr_cond THEN
-  SRW_TAC [][primrec_rules]);
+val _ = temp_overload_on ("invtri.", ``λn. Cn (pr1 tri⁻¹) [n]``)
 
 val Pr_eval = prove(
   ``0 < m ==> (Pr b r (m :: t) = r (m - 1 :: Pr b r (m - 1 :: t) :: t))``,
@@ -524,100 +502,96 @@ val tri_bounds_lemma = prove(
   ``∀n. n + 3 ≤ tri (n + 2)``,
   Induct THEN SRW_TAC [ARITH_ss][ADD_CLAUSES, tri_eval, tri_def]);
 
-val pr_invtri_correct = Store_thm(
-  "pr_invtri_correct",
-  ``pr_invtri [n] = tri⁻¹ n``,
-  ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
-  MATCH_MP_TAC invtri_unique THEN CONJ_TAC THENL [
-    SRW_TAC [][pr_invtri_def] THEN
-    Q.MATCH_ABBREV_TAC `tri (Pr zerof recn [n;n]) ≤ n` THEN
-    Q_TAC SUFF_TAC `∀n m. tri (Pr zerof recn [n;m]) ≤ m`
-      THEN1 METIS_TAC [] THEN
-    Induct THEN SRW_TAC [][tri_def] THEN
-    markerLib.UNABBREV_ALL_TAC THEN
-    SRW_TAC [][pr_cond_thm],
 
-    SRW_TAC [][pr_invtri_def] THEN
-    Q.MATCH_ABBREV_TAC `n < tri (Pr zerof recn [n;n] + 1)` THEN
-    Q_TAC SUFF_TAC
-      `∀n m. (∀p. n < p /\ p ≤ m ⇒ m < tri p) ⇒
-             m < tri (Pr zerof recn [n;m] + 1)`
-      THEN1 (DISCH_THEN (Q.SPECL_THEN [`n`,`n`] STRIP_ASSUME_TAC) THEN
-             FIRST_X_ASSUM MATCH_MP_TAC THEN DECIDE_TAC) THEN
-    Induct THEN SRW_TAC [][] THENL [
-      Cases_on `m = 0` THEN1
-        (ASM_SIMP_TAC bool_ss [ONE, tri_def] THEN DECIDE_TAC) THEN
-      `1 ≤ m ∧ 0 < 1` by DECIDE_TAC THEN METIS_TAC [],
 
-      SRW_TAC [][] THEN markerLib.UNABBREV_ALL_TAC THEN
-      SRW_TAC [][] THENL [
-        Cases_on `n = 0` THENL [
-          SRW_TAC [][tri_def] THEN
-          Cases_on `m = 1` THEN1 SRW_TAC [][tri_eval] THEN
-          FIRST_X_ASSUM MATCH_MP_TAC THEN
-          FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [tri_eval],
+val primrec_invtri = Store_thm(
+  "primrec_invtri",
+  ``primrec (pr1 tri⁻¹) 1``,
+  MATCH_MP_TAC primrec_pr1 THEN
+  Q.EXISTS_TAC `
+    Cn (Pr zerof (pr_cond (tri. (proj 0 +. K 1) <=. proj 2)
+                          (proj 0 +. K 1)
+                          (proj 1)))
+       [proj 0; proj 0]
+  ` THEN
+  CONJ_TAC THENL [
+    MATCH_MP_TAC primrec_cn THEN
+    SRW_TAC [][primrec_rules] THEN
+    MATCH_MP_TAC alt_Pr_rule THEN
+    SRW_TAC [][primrec_rules] THEN
+    MATCH_MP_TAC primrec_pr_cond THEN
+    SRW_TAC [][primrec_rules],
 
-          FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [ARITH_ss][] THEN
-          MATCH_MP_TAC LESS_EQ_TRANS THEN
-          Q.EXISTS_TAC `tri (n + 1)` THEN
-          SRW_TAC [][] THEN
-          Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-          SRW_TAC [ARITH_ss][ADD_CLAUSES, ADD1, tri_bounds_lemma]
-        ],
+    Q.X_GEN_TAC `n` THEN
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
+    MATCH_MP_TAC invtri_unique THEN SRW_TAC [][] THENL [
+      Q.MATCH_ABBREV_TAC `tri (Pr zerof recn [n;n]) ≤ n` THEN
+      Q_TAC SUFF_TAC `∀n m. tri (Pr zerof recn [n;m]) ≤ m`
+        THEN1 METIS_TAC [] THEN
+      Induct THEN SRW_TAC [][tri_def] THEN
+      markerLib.UNABBREV_ALL_TAC THEN
+      SRW_TAC [][pr_cond_thm],
 
-        Q.PAT_ASSUM `∀m. (∀p:num. P p) ⇒ Q m` MATCH_MP_TAC THEN
-        SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL] THEN
-        Cases_on `p = n + 1` THEN1 SRW_TAC [][] THEN
-        FIRST_X_ASSUM MATCH_MP_TAC THEN DECIDE_TAC
+      Q.MATCH_ABBREV_TAC `n < tri (Pr zerof recn [n;n] + 1)` THEN
+      Q_TAC SUFF_TAC
+        `∀n m. (∀p. n < p /\ p ≤ m ⇒ m < tri p) ⇒
+               m < tri (Pr zerof recn [n;m] + 1)`
+        THEN1 (DISCH_THEN (Q.SPECL_THEN [`n`,`n`] STRIP_ASSUME_TAC) THEN
+               FIRST_X_ASSUM MATCH_MP_TAC THEN DECIDE_TAC) THEN
+      Induct THEN SRW_TAC [][] THENL [
+        Cases_on `m = 0` THEN1
+          (ASM_SIMP_TAC bool_ss [ONE, tri_def] THEN DECIDE_TAC) THEN
+        `1 ≤ m ∧ 0 < 1` by DECIDE_TAC THEN METIS_TAC [],
+
+        SRW_TAC [][] THEN markerLib.UNABBREV_ALL_TAC THEN
+        SRW_TAC [][] THENL [
+          Cases_on `n = 0` THENL [
+            SRW_TAC [][tri_def] THEN
+            Cases_on `m = 1` THEN1 SRW_TAC [][tri_eval] THEN
+            FIRST_X_ASSUM MATCH_MP_TAC THEN
+            FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [tri_eval],
+
+            FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [ARITH_ss][] THEN
+            MATCH_MP_TAC LESS_EQ_TRANS THEN
+            Q.EXISTS_TAC `tri (n + 1)` THEN
+            SRW_TAC [][] THEN
+            Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+            SRW_TAC [ARITH_ss][ADD_CLAUSES, ADD1, tri_bounds_lemma]
+          ],
+
+          Q.PAT_ASSUM `∀m. (∀p:num. P p) ⇒ Q m` MATCH_MP_TAC THEN
+          SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL] THEN
+          Cases_on `p = n + 1` THEN1 SRW_TAC [][] THEN
+          FIRST_X_ASSUM MATCH_MP_TAC THEN DECIDE_TAC
+        ]
       ]
     ]
   ]);
 
 (* --- npair *)
-val pr_npair_def = Define`
-  pr_npair = tri. (proj 0 +. proj 1) +. proj 1
-`;
-
 val primrec_npair = Store_thm(
   "primrec_npair",
-  ``primrec pr_npair 2``,
-  SRW_TAC [][pr_npair_def, primrec_rules]);
-
-val pr_npair_thm = Store_thm(
-  "pr_npair_thm",
-  ``pr_npair [n;m] = n ⊗ m``,
-  SRW_TAC [][pr_npair_def, npair_def]);
+  ``primrec (pr2 npair) 2``,
+  MATCH_MP_TAC primrec_pr2 THEN
+  Q.EXISTS_TAC `tri. (proj 0 +. proj 1) +. proj 1` THEN
+  SRW_TAC [][primrec_rules, npair_def]);
 
 (* --- nfst *)
-val pr_nfst_def = Define`
-  pr_nfst = tri. (invtri. (proj 0)) +. invtri. (proj 0) -. proj 0
-`;
-
 val primrec_nfst = Store_thm(
   "primrec_nfst",
-  ``primrec pr_nfst 1``,
-  SRW_TAC [][pr_nfst_def, primrec_rules] THEN
+  ``primrec (pr1 nfst) 1``,
+  MATCH_MP_TAC primrec_pr1 THEN
+  Q.EXISTS_TAC `tri. (invtri. (proj 0)) +. invtri. (proj 0) -. proj 0` THEN
+  SRW_TAC [][primrec_rules, nfst_def] THEN
   MATCH_MP_TAC primrec_cn THEN SRW_TAC [][primrec_rules]);
 
-val pr_nfst_thm = Store_thm(
-  "pr_nfst_thm",
-  ``pr_nfst [n] = nfst n``,
-  SRW_TAC [][pr_nfst_def, nfst_def]);
-
 (* --- nsnd *)
-val pr_nsnd_def = Define`
-  pr_nsnd = proj 0 -. tri. (invtri. (proj 0))
-`;
-
 val primrec_nsnd = Store_thm(
   "primrec_nsnd",
-  ``primrec pr_nsnd 1``,
-  SRW_TAC [][primrec_rules, pr_nsnd_def]);
-
-val pr_nsnd_thm = Store_thm(
-  "pr_nsnd_thm",
-  ``pr_nsnd [n] = nsnd n``,
-  SRW_TAC [][pr_nsnd_def, nsnd_def]);
+  ``primrec (pr1 nsnd) 1``,
+  MATCH_MP_TAC primrec_pr1 THEN
+  Q.EXISTS_TAC `proj 0 -. tri. (invtri. (proj 0))` THEN
+  SRW_TAC [][primrec_rules, nsnd_def]);
 
 (* ----------------------------------------------------------------------
     Proof that Ackermann function is not primitive recursive.
