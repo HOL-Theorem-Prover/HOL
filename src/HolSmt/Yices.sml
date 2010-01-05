@@ -166,11 +166,44 @@ structure Yices = struct
                   in
                     ((ty_dict', fresh + 1, defs'), name)
                   end
+      fun data_type tyinfo (acc as (ty_dict, _, _), ty) =
+        case Redblackmap.peek (ty_dict, ty) of
+          SOME s => (acc, s)
+        | NONE => let val (_, tyargs) = Type.dest_type ty
+                      val ((ty_dict, fresh, defs), _) = Lib.foldl_map
+                        translate_type (acc, tyargs)
+                      val name = "t" ^ Int.toString fresh
+                      val ty_dict' = Redblackmap.insert (ty_dict, ty, name)
+                      val acc' = (ty_dict', fresh, defs)
+                      val (_, constructors) = Lib.foldl_map (fn (i, c) =>
+                        let val cname = "c_" ^ name ^ "_" ^ Int.toString i
+                            val c = TypeBasePure.cinst ty c
+                            val (doms, _) = boolSyntax.strip_fun
+                              (Term.type_of c)
+                            val (_, doms) = Lib.foldl_map (fn (j, dom) =>
+                              let val aname = "a_" ^ name ^ "_" ^
+                                Int.toString i ^ "_" ^ Int.toString j
+                                  val (_, atype) = translate_type (acc', dom)
+                              in
+                                (j + 1, aname ^ "::" ^ atype)
+                              end) (0, doms)
+                            val cdef = String.concatWith " " (cname :: doms)
+                            val cdef = if List.null doms then cdef
+                              else "(" ^ cdef ^ ")"
+                        in
+                          (i + 1, cdef)
+                        end) (0, TypeBasePure.constructors_of tyinfo)
+                      val constructors = String.concatWith " " constructors
+                      val datatype_def = "(datatype " ^ constructors ^ ")"
+                      val defs' = "(define-type " ^ name ^ " " ^ datatype_def ^
+                        ")" :: defs
+                  in
+                    ((ty_dict', fresh + 1, defs'), name)
+                  end
     in
       if wordsSyntax.is_word_type ty then
         (* bit-vector types *)
-        let val dim_ty = wordsSyntax.dest_word_type ty
-            val dim = fcpLib.index_to_num dim_ty
+        let val dim = fcpLib.index_to_num (wordsSyntax.dest_word_type ty)
         in
           (acc, "(bitvector " ^ Arbnum.toString dim ^ ")")
         end handle Feedback.HOL_ERR _ => (* index_to_num can fail *)
@@ -194,7 +227,12 @@ structure Yices = struct
                else "(" ^ name ^ " " ^ yices_Args' ^ ")")
             end
           | NONE =>
-            uninterpreted_type (acc, ty)
+            (* perhaps a data type? *)
+            (case TypeBase.fetch ty of
+              SOME tyinfo =>
+                data_type tyinfo (acc, ty)
+            | NONE =>
+                uninterpreted_type (acc, ty))
         end
       else uninterpreted_type (acc, ty)
     end
@@ -213,13 +251,13 @@ structure Yices = struct
       end
     else if intSyntax.is_int_literal tm then
       let val i = intSyntax.int_of_term tm
-          val s = Arbint.toString i
+          val s = Arbint.toString i ^ "i"  (*TODO*)
       in
         (acc, String.substring (s, 0, String.size s - 1))
       end
     else if realSyntax.is_real_literal tm then
       let val i = realSyntax.int_of_term tm
-          val s = Arbint.toString i
+          val s = Arbint.toString i ^ "i"  (*TODO*)
       in
         (acc, String.substring (s, 0, String.size s - 1))
       end
@@ -364,13 +402,111 @@ structure Yices = struct
               val (dict, fresh, ty_dict, ty_fresh, defs) = acc'
               val defs' = if def = "" orelse Lib.mem def defs then defs else
                 def :: defs
-              val yices_rands' = String.concat (Lib.separate " " yices_rands)
+              val yices_rands' = String.concatWith " " yices_rands
           in
             ((dict, fresh, ty_dict, ty_fresh, defs'),
              if yices_rands = [] then name
              else "(" ^ name ^ " " ^ yices_rands' ^ ")")
           end
         | NONE =>
+
+          (* data type constructors + arguments *)
+          let val ty = Term.type_of rator
+              val (_, data_ty) = boolSyntax.strip_fun ty
+          in
+            case TypeBase.fetch data_ty of
+              SOME tyinfo =>
+                let val i = Lib.index (Term.same_const rator)
+                      (TypeBasePure.constructors_of tyinfo)  (* may fail *)
+                    (* also collect type definitions *)
+                    val (dict, fresh, ty_dict, ty_fresh, defs) = acc
+                    val ((ty_dict, ty_fresh, defs), _) = translate_type
+                      ((ty_dict, ty_fresh, defs), ty)
+                    val ty_name = Redblackmap.find (ty_dict, data_ty)
+                    val cname = "c_" ^ ty_name ^ "_" ^ Int.toString i
+                    (* translate argument terms *)
+                    val (acc, yices_rands) = Lib.foldl_map translate_term
+                      ((dict, fresh, ty_dict, ty_fresh, defs), rands)
+                    val name = String.concatWith " " (cname :: yices_rands)
+                    val name = if List.null yices_rands then name
+                      else "(" ^ name ^ ")"
+                in
+                  (acc, name)
+                end
+            | NONE =>
+                raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                  "not a data type constructor (range type is not a data type)"
+          end
+          handle Feedback.HOL_ERR _ =>  (* not a data type constructor *)
+
+          (* FIXME: There's a problem with the use of data type constructors
+             (which are not curried in Yices, e.g., of type "-> X Y Z") as
+             arguments to case constants, which expect curried functions (of
+             type, e.g., "-> X (-> Y Z)").  Perhaps eta-expansion currently
+             prevents this problem from showing up, but a good (clean) solution
+             is still missing. *)
+
+          (* case constants on data types + arguments *)
+          (if List.null rands then
+            raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+              "not a case constant (no operands)"
+          else
+            let val (cases, elem) = Lib.front_last rands
+                val data_ty = Term.type_of elem
+            in
+              case TypeBase.fetch data_ty of
+                SOME tyinfo =>
+                  if Term.same_const rator (TypeBasePure.case_const_of tyinfo)
+                  then
+                    let (* constructors *)
+                        val cs = TypeBasePure.constructors_of tyinfo
+                        val _ = if List.length cs = List.length cases then ()
+                          else
+                            raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                              "not a case constant (wrong number of cases)"
+                        (* translate argument terms *)
+                        val (acc, yices_cases) = Lib.foldl_map translate_term
+                          (acc, cases)
+                        val (acc, yices_elem) = translate_term (acc, elem)
+                        val (_, _, ty_dict, _, _) = acc
+                        val ty_name = Redblackmap.find (ty_dict, data_ty)
+                        (* recognizers, accessors *)
+                        val cs = List.map (List.length o Lib.fst o
+                          boolSyntax.strip_fun o Term.type_of) cs
+                        val (_, cs) = Lib.foldl_map (fn (i, n) =>
+                          let val cname = "c_" ^ ty_name ^ "_" ^ Int.toString i
+                              fun aname j =
+                                "a_" ^ ty_name ^ "_" ^ Int.toString i ^ "_" ^
+                                  Int.toString j
+                              val anames = List.tabulate (n, aname)
+                          in
+                            (i + 1, (cname, anames))
+                          end) (0, cs)
+                        (* build the cascaded ite expression *)
+                        val mk_case = List.foldl (fn (aname, yices_case) =>
+                          "(" ^ yices_case ^ " (" ^ aname ^ " " ^ yices_elem ^
+                          "))")
+                        fun cascaded_ite [ycase] [(_, anames)] =
+                          mk_case ycase anames
+                          | cascaded_ite (ycase::ys) ((cname, anames)::cs) =
+                          "(ite (" ^ cname ^ "? " ^ yices_elem ^ ") " ^
+                            mk_case ycase anames ^ " " ^ cascaded_ite ys cs ^
+                            ")"
+                          | cascaded_ite _ _ =
+                          raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                            "not a case constant (error in cascaded_ite)"
+                    in
+                      (acc, cascaded_ite yices_cases cs)
+                    end
+                  else
+                    raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                      "not a case constant (different constant)"
+              | NONE =>
+                  raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                    "not a case constant (last argument is not a data type)"
+            end)
+
+          handle Feedback.HOL_ERR _ =>  (* not a case constant *)
           (* function application *)
           if Term.is_comb tm then
           (* Yices considers "-> X Y Z" and "-> X (-> Y Z)" different types. We

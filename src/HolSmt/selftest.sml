@@ -175,6 +175,15 @@ local
                   (fn t => (expect_sat "Z3 (proofs)" Z3.Z3_SMT_Prover t;
                             print "."))
                 else Lib.K ()
+
+(*****************************************************************************)
+(* HOL definitions (e.g., user-defined data types)                           *)
+(*****************************************************************************)
+
+val _ = bossLib.Hol_datatype `dt1 = foo | bar | baz`
+
+val _ = bossLib.Hol_datatype `person = <| employed :bool; age :num |>`
+
 in
   val tests = [
 
@@ -890,7 +899,25 @@ in
      (b <=+ a /\ a <> b <=> b <+ a) /\ (a <> b /\ b <=+ a <=> b <+ a) /\
      (b <= a /\ a <> b <=> b < a) /\ (a <> b /\ b <= a <=> b < a) /\
      (((v:word32) - w = 0w) <=> (v = w)) /\ (w - 0w = w)``,
-      [(*TODO: thm_AUTO,*) thm_YO])
+      [(*TODO: thm_AUTO,*) thm_YO]),
+
+    (* data types: constructors *)
+
+    (``foo <> bar``, [thm_AUTO, thm_YO]),
+    (``foo <> baz``, [thm_AUTO, thm_YO]),
+    (``bar <> baz``, [thm_AUTO, thm_YO]),
+    (``[] <> x::xs``, [thm_AUTO, thm_YO]),
+    (``xs <> x::xs``, [thm_AUTO, thm_YO]),
+    (``(x::xs = y::ys) = (x = y) /\ (xs = ys)``, [thm_AUTO, thm_YO]),
+
+    (* data types: case constants *)
+
+    (``dt1_case f b z foo = f``, [thm_AUTO, thm_YO]),
+    (``dt1_case f b z bar = b``, [thm_AUTO, thm_YO]),
+    (``dt1_case f b z baz = z``, [thm_AUTO, thm_YO]),
+    (``dt1_case c c c x = c``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``list_case n c [] = n``, [thm_AUTO, thm_YO]),
+    (``list_case n c (x::xs) = c x xs``, [thm_AUTO, thm_YO])
 
   ]  (* tests *)
 end
