@@ -811,8 +811,7 @@ struct
           Hol_pp.thm_to_string thm1 ^ ", " ^ Hol_pp.thm_to_string thm2 ^ ", " ^
           Hol_pp.term_to_string t))
     and true_axiom t =
-        raise (Feedback.mk_HOL_ERR "Z3_ProofReplay" "check_proof"
-          ("true_axiom: " ^ Hol_pp.term_to_string t))
+      boolTheory.TRUTH
     (* l1 \/ l2 \/ ... \/ ln \/ t   ~l1   ~l2   ...   ~ln
        --------------------------------------------------
                                 t
