@@ -81,18 +81,6 @@ structure SmtLib = struct
     (* no lambda abstraction in SMT-LIB syntax *)
   ]
 
-  (* strip_fn_types "A --> (B --> C)" = ([A, B], C), where C is not a function
-     type *)
-  fun strip_fn_types ty =
-  let fun strip ty acc =
-        let val (dom, rng) = Type.dom_rng ty
-        in
-          strip rng (dom :: acc)
-        end handle Feedback.HOL_ERR _ => (List.rev acc, ty)
-  in
-    strip ty []
-  end
-
   (* ty_dict: dictionary that maps types to names
      fresh: next fresh index to generate a new type name *)
   fun translate_type (acc, ty) =
@@ -113,7 +101,7 @@ structure SmtLib = struct
                         ((ty_dict, fresh + 1), name)
                       end
           end
-      val (doms, rng) = strip_fn_types ty
+      val (doms, rng) = boolSyntax.strip_fun ty
       val types = if rng = Type.bool then doms else doms @ [rng]
       val (acc, smtlib_types) = Lib.foldl_map translate (acc, types)
   in
@@ -275,7 +263,7 @@ structure SmtLib = struct
     val (smtlib_As, smtlib_g) = Lib.front_last smtlib_As_g
 
     fun is_pred tm =
-      Lib.snd (strip_fn_types (Term.type_of tm)) = Type.bool
+      Lib.snd (boolSyntax.strip_fun (Term.type_of tm)) = Type.bool
 
     val sorts = map Lib.snd (Redblackmap.listItems ty_dict)
 
