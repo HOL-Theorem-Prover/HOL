@@ -1,0 +1,47 @@
+tl;
+
+merge(r;p,q) [list(p) * list(q)] {
+  local t;
+  if(q == NULL) r = p;
+  else if(p == NULL) r = q;
+  else {
+    if(q < p) {
+      t = q;
+      q = q->tl;
+    } else {
+      t = p;
+      p = p->tl;
+    }
+    merge(r;p,q);
+    t->tl = r;
+    r = t;
+  }
+} [list(r)]
+
+split(r;p) [list(p)] {
+  local t1,t2;
+  if(p == NULL) r = NULL;
+  else {
+    t1 = p->tl;
+    if(t1 == NULL) r = NULL;
+    else {
+      t2 = t1->tl;
+      split(r;t2);
+      p->tl = t2;
+      t1->tl = r;
+      r = t1;
+    }
+  }
+} [list(p) * list(r)]
+
+mergesort(r;p) [list(p)] {
+  local q,q1,p1;
+  if(p == NULL) r = p;
+  else {
+    split(q;p);
+    mergesort(q1;q);
+    mergesort(p1;p);
+    merge(r;p1,q1);
+  }
+} [list(r)]
+

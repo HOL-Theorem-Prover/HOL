@@ -1,0 +1,47 @@
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+
+(******************************************************************************)
+(* Useful theorems                                                            *)
+(******************************************************************************)
+
+val LENGTH_FRONT_CONS = prove (
+``!x xs. LENGTH (FRONT (x::xs)) = LENGTH xs``,
+Induct_on `xs` THEN FULL_SIMP_TAC list_ss [])
+
+val DROP_TAKE_PRE_LENGTH = prove (
+``!xs. ~(xs = []) ==> ((DROP (LENGTH xs - 1) xs = [LAST xs]) /\
+                       (TAKE (LENGTH xs - 1) xs = FRONT xs))``,
+Induct_on `xs` THEN1 REWRITE_TAC [] THEN
+Cases_on `xs` THEN FULL_SIMP_TAC list_ss [] THEN
+Cases_on `t` THEN FULL_SIMP_TAC list_ss []);
+
+(******************************************************************************)
+(* Parse the main file                                                        *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/queue.dsf"];
+val spec_t = parse_holfoot_file file
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+(* set_goal ([], spec_t) *)
+
+val spec_thm = prove (spec_t,
+VC_SOLVE_TAC THEN
+REPEAT STRIP_TAC THEN1 (
+   ELIM_COMMENTS_TAC THEN
+   Cases_on `data_t` THEN 
+   FULL_SIMP_TAC list_ss []
+) THEN
+`~(data_t = [])` by ALL_TAC THEN1 (
+   Cases_on `data_t` THEN FULL_SIMP_TAC list_ss []
+) THEN
+FULL_SIMP_TAC list_ss [LENGTH_FRONT_CONS,
+   DROP_TAKE_PRE_LENGTH] THEN
+Cases_on `data_t` THEN FULL_SIMP_TAC list_ss [] THEN
+ELIM_COMMENTS_TAC);
+
+

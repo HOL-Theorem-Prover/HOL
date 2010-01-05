@@ -1,0 +1,13 @@
+/* No race */
+c;
+
+proc(x,y) [x|-> ] {
+  x->c = y;
+} [x|-> c:y]
+
+/*local variables x,z were moved to arguments. Then the postcondition can
+  talk about them*/
+main(x,z;)[emp] { 
+  x = new(); z= new(); x->c=3; z->c=3;
+  proc(x,4) || proc(z,5);
+} [x|->c:4 * z|-> c:5]

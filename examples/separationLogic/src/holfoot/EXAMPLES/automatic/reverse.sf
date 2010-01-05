@@ -1,0 +1,11 @@
+list_reverse(i;) [list(i)] {
+  local p, x;
+  p = NULL;
+  while (i != NULL) [list(i) * list(p)] {
+    x = i->tl;
+    i->tl = p;
+    p = i;
+    i = x;
+  }
+  i = p;
+} [list(i)]

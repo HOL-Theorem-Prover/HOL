@@ -1,0 +1,16 @@
+tree_sum(r;t) [data_tree(t; data)] {
+  local i;
+  if (t == NULL) { r = 0; }
+  else { 
+    r = t->dta;
+
+    i = t->l;
+    tree_sum(i;i);
+    r = r + i;
+
+    i = t->r;
+    tree_sum(i;i);
+    r = r + i;
+ }
+} [data_tree(t;data) * (r == ``TREE_SUM (data: num list tree)``)]
+ 

@@ -1,0 +1,14 @@
+tree_depth(r1,r2;t) [data_tree(t; data)] {
+  local i, j, di1, di2, dj1, dj2;
+  if (t == NULL) { r1 = 0; r2 = 0; }
+  else { 
+    i = t->l;
+    j = t->r;
+    tree_depth(di1, di2; i);
+    tree_depth(dj1, dj2; j);
+    if (di1 < dj1) r1 = dj1 + 1; else r1 = di1 + 1; 
+    if (di2 < dj2) r2 = di2 + 1; else r2 = dj2 + 1;
+ }
+} [data_tree(t;data) * (r1 == ``MAX_DEPTH (data: num list tree)``) *
+   (r2 == ``MIN_DEPTH (data: num list tree)``)]
+ 

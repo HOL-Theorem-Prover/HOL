@@ -1,0 +1,144 @@
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+
+(******************************************************************************)
+(* Some useful REWRITES                                                       *)
+(******************************************************************************)
+
+open sortingTheory sortingTheory
+
+val SORTED_CONS_IMP = prove (``!R x xs.
+  (SORTED R (x::xs) ==> SORTED R xs)``,
+Cases_on `xs` THEN SIMP_TAC list_ss [SORTED_DEF])
+
+val transitive_LE = prove (``transitive (($<=): num -> num -> bool)``,
+SIMP_TAC arith_ss [relationTheory.transitive_def]);
+
+val LESS_LESS_EQ2 = prove (``!n1 n2 n3:num. (n1 < n2 /\ n2 <= n3) ==> (n1 <= n3)``,
+DECIDE_TAC)
+val LESS_LESS_EQ3 = prove (``!n1 n2 n3:num. (~(n1 < n2) /\ n1 <= n3) ==> (n2 <= n3)``,
+DECIDE_TAC)
+
+
+(******************************************************************************)
+(* Parse the main file                                                        *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/mergesort.dsf"];
+val spec_t = parse_holfoot_file file
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val param = ([SORTED_DEF, PERM_REFL],[],[permLib.PERM_ss])
+
+(* set_goal ([], spec_t) *)
+
+val spec_thm = prove (spec_t, 
+
+xCONTINUE_TAC (true, true, true) param THEN
+REPEAT STRIP_TAC THENL [
+   IMP_RES_TAC SORTED_CONS_IMP THEN
+   ASM_REWRITE_TAC[],
+
+   ELIM_COMMENTS_TAC THEN
+   FULL_SIMP_TAC arith_ss [SORTED_EQ, transitive_LE] THEN
+   `!y. MEM y rdata = MEM y (pdata_h::(pdata_t ++ qdata_t))` by
+      METIS_TAC[PERM_MEM_EQ] THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   REPEAT STRIP_TAC THEN
+   RES_TAC THEN
+   DECIDE_TAC,
+
+   IMP_RES_TAC SORTED_CONS_IMP THEN
+   ASM_REWRITE_TAC[],
+
+   ELIM_COMMENTS_TAC THEN
+   FULL_SIMP_TAC arith_ss [SORTED_EQ, transitive_LE] THEN
+   `!y. MEM y rdata = MEM y (qdata_h::(pdata_t ++ qdata_t))` by
+      METIS_TAC[PERM_MEM_EQ] THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   REPEAT STRIP_TAC THEN
+   RES_TAC THEN
+   DECIDE_TAC,
+
+   ELIM_COMMENTS_TAC THEN
+   Q.PAT_ASSUM `PERM X rdata'''` (
+      ASSUME_TAC o (CONV_RULE (REWR_CONV PERM_SYM))) THEN
+   ASM_SIMP_TAC (std_ss++permLib.PERM_ss) []
+]);
+
+
+(* using interactive prover, to see better what works and what does not *)
+val imp_thm = holfoot_interactive_verify_spec true 
+               {do_case_splits = true,
+                fast = true,
+                use_asms = true,
+                do_prop_simps = true,
+                generate_vcs = true} param file
+
+val spec_thm = holfoot_prove_remaining (imp_thm, 
+ELIM_COMMENTS_TAC THEN
+REPEAT STRIP_TAC THENL [
+   IMP_RES_TAC SORTED_CONS_IMP,
+
+   FULL_SIMP_TAC arith_ss [SORTED_EQ, transitive_LE] THEN
+   `!y. MEM y rdata = MEM y (pdata_h::(pdata_t ++ qdata_t))` by
+      METIS_TAC[PERM_MEM_EQ] THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   METIS_TAC[LESS_LESS_EQ2],
+
+   IMP_RES_TAC SORTED_CONS_IMP,
+
+   FULL_SIMP_TAC arith_ss [SORTED_EQ, transitive_LE] THEN
+   `!y. MEM y rdata = MEM y (qdata_h::(pdata_t ++ qdata_t))` by
+      METIS_TAC[PERM_MEM_EQ] THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   METIS_TAC[LESS_LESS_EQ3],
+   
+   Q.PAT_ASSUM `PERM X rdata'''` (
+      ASSUME_TAC o (CONV_RULE (REWR_CONV PERM_SYM))) THEN
+   ASM_SIMP_TAC (std_ss++permLib.PERM_ss) []
+])
+
+
+
+
+(******************************************************************************)
+(* try the parallel one                                                       *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/mergesort_parallel.dsf"];
+
+(*exactly the same proof works*)
+val imp_thm = holfoot_interactive_verify_spec true 
+               {do_case_splits = true,
+                fast = true,
+                use_asms = true,
+                do_prop_simps = true,
+                generate_vcs = true} param file
+val spec_thm = holfoot_prove_remaining (imp_thm, 
+ELIM_COMMENTS_TAC THEN
+REPEAT STRIP_TAC THENL [
+   IMP_RES_TAC SORTED_CONS_IMP,
+
+   FULL_SIMP_TAC arith_ss [SORTED_EQ, transitive_LE] THEN
+   `!y. MEM y rdata = MEM y (pdata_h::(pdata_t ++ qdata_t))` by
+      METIS_TAC[PERM_MEM_EQ] THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   METIS_TAC[LESS_LESS_EQ2],
+
+   IMP_RES_TAC SORTED_CONS_IMP,
+
+   FULL_SIMP_TAC arith_ss [SORTED_EQ, transitive_LE] THEN
+   `!y. MEM y rdata = MEM y (qdata_h::(pdata_t ++ qdata_t))` by
+      METIS_TAC[PERM_MEM_EQ] THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   METIS_TAC[LESS_LESS_EQ3],
+   
+   Q.PAT_ASSUM `PERM X rdata'''` (
+      ASSUME_TAC o (CONV_RULE (REWR_CONV PERM_SYM))) THEN
+   ASM_SIMP_TAC (std_ss++permLib.PERM_ss) []
+]);
+

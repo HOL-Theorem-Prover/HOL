@@ -1,0 +1,39 @@
+INCLUDES=..
+
+
+MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
+MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
+
+EXTRA_CLEANS = holfoot.grm-sig.sml holfoot.grm.sml holfoot.lex.sig \
+               holfoot.lex.sml holfoot.grm.sig 
+
+all: holfoot_command_line.exe
+
+Parsetree.uo : Parsetree.sml
+	HOLMOSMLC -c Parsetree.sml
+
+holfoot.grm.sml holfoot.grm-sig.sml: holfoot.grm Parsetree.uo
+	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
+	$(MV) holfoot.grm.sig holfoot.grm-sig.sml
+
+holfoot.grm-sig.uo: holfoot.grm-sig.sml Parsetree.uo
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
+
+holfoot.grm.uo: holfoot.grm.sml holfoot.grm-sig.uo Parsetree.uo 
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holfoot.grm-sig.ui $<
+
+holfoot.lex.sml: holfoot.lex Parsetree.uo
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
+
+holfoot.lex.uo: holfoot.lex.sml Parsetree.uo
+	$(HOLMOSMLC) -toplevel -c Parsetree.uo holfoot.grm-sig.ui $<
+
+AssembleHolfootParser.uo: AssembleHolfootParser.sml AssembleHolfootParser.ui holfoot.grm.uo holfoot.lex.uo Parsetree.uo
+	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holfoot.grm.ui holfoot.lex.ui $<
+
+holfoot: holfoot.o
+	cc -o holfoot holfoot.o -L/usr/local/lib -lpolymain -lpolyml
+
+holfootLib.uo: holfootLib.sml
+	$(HOLMOSMLC) -c -toplevel ListConv1.uo treeTheory.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo bagLib.uo vars_as_resourceFunctor.uo vars_as_resourceBaseFunctor.uo holfootLib.sml $<
+
