@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Unit tests for HolSmtLib *)
 
@@ -8,10 +8,10 @@ val _ = Globals.show_assums := true
 val _ = Globals.show_types := true
 *)
 
-(*
-val _ = Feedback.set_trace "HolSmtLib" 3
-*)
 val _ = Feedback.set_trace "HolSmtLib" 0
+(*
+val _ = Feedback.set_trace "HolSmtLib" 4
+*)
 
 (*****************************************************************************)
 (* utility functions                                                         *)
@@ -917,7 +917,24 @@ in
     (``dt1_case f b z baz = z``, [thm_AUTO, thm_YO]),
     (``dt1_case c c c x = c``, [(*TODO: thm_AUTO,*) thm_YO]),
     (``list_case n c [] = n``, [thm_AUTO, thm_YO]),
-    (``list_case n c (x::xs) = c x xs``, [thm_AUTO, thm_YO])
+    (``list_case n c (x::xs) = c x xs``, [thm_AUTO, thm_YO]),
+
+    (* records: field selectors *)
+
+    (``(x = y) = (x.employed = y.employed) /\ (x.age = y.age)``,
+      [(*TODO: thm_AUTO,*) thm_YO]),
+
+    (* records: field updates *)
+
+    (``(x with employed := e).employed = e``, [thm_AUTO, thm_YO]),
+
+    (``x with <| employed := e; age := a |> =
+     y with <| employed := e; age := a |>``, [thm_AUTO, thm_YO]),
+
+    (* records: literals *)
+
+    (``(<| employed := e1; age := a1 |> = <| employed := e2; age := a2 |>)
+     = (e1 = e2) /\ (a1 = a2)``, [thm_AUTO, thm_YO])
 
   ]  (* tests *)
 end

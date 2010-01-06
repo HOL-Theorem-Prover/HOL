@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Functions to invoke the Yices SMT solver *)
 
@@ -9,12 +9,14 @@ structure Yices = struct
 
   (* translation of HOL terms into Yices' input syntax -- currently, all types
      and terms except the following are treated as uninterpreted:
-     - types: 'bool', 'num', 'int', 'real', 'fun', 'prod', word types
+     - types: 'bool', 'num', 'int', 'real', 'fun', 'prod', word types, data
+              types, record types
      - terms: Boolean connectives (T, F, ==>, /\, \/, ~, if-then-else,
               bool-case), quantifiers (!, ?), numeric literals, arithmetic
               operators (SUC, +, -, *, /, ~, DIV, MOD, ABS, MIN, MAX), function
               application, lambda abstraction, tuple selectors FST and SND,
-              various word operations *)
+              various word operations, data type constructors, data type case
+              constants, record field selectors, record updates *)
 
   val Yices_types = [
     (("min", "bool"), "bool", ""),
@@ -166,39 +168,48 @@ structure Yices = struct
                   in
                     ((ty_dict', fresh + 1, defs'), name)
                   end
-      fun data_type tyinfo (acc as (ty_dict, _, _), ty) =
+      (* data types, record types *)
+      fun data_type tyinfo (acc as (ty_dict, fresh, defs), ty) =
         case Redblackmap.peek (ty_dict, ty) of
           SOME s => (acc, s)
-        | NONE => let val (_, tyargs) = Type.dest_type ty
-                      val ((ty_dict, fresh, defs), _) = Lib.foldl_map
-                        translate_type (acc, tyargs)
-                      val name = "t" ^ Int.toString fresh
+        | NONE => let val name = "t" ^ Int.toString fresh
                       val ty_dict' = Redblackmap.insert (ty_dict, ty, name)
-                      val acc' = (ty_dict', fresh, defs)
-                      val (_, constructors) = Lib.foldl_map (fn (i, c) =>
+                      val acc = (ty_dict', fresh + 1, defs)
+                      val is_record = not (List.null (TypeBasePure.fields_of
+                        tyinfo))
+                      val ((acc, _), constructors) = Lib.foldl_map
+                        (fn ((acc, i), c) =>
                         let val cname = "c_" ^ name ^ "_" ^ Int.toString i
                             val c = TypeBasePure.cinst ty c
                             val (doms, _) = boolSyntax.strip_fun
                               (Term.type_of c)
-                            val (_, doms) = Lib.foldl_map (fn (j, dom) =>
-                              let val aname = "a_" ^ name ^ "_" ^
-                                Int.toString i ^ "_" ^ Int.toString j
-                                  val (_, atype) = translate_type (acc', dom)
+                            val ((acc, _), doms) = Lib.foldl_map
+                              (fn ((acc, j), dom) =>
+                              let val aname = if is_record then
+                                      "f_" ^ name ^ "_" ^ Int.toString j
+                                    else
+                                      "a_" ^ name ^ "_" ^ Int.toString i ^ "_" ^
+                                        Int.toString j
+                                  val (acc, atype) = translate_type (acc, dom)
                               in
-                                (j + 1, aname ^ "::" ^ atype)
-                              end) (0, doms)
-                            val cdef = String.concatWith " " (cname :: doms)
-                            val cdef = if List.null doms then cdef
-                              else "(" ^ cdef ^ ")"
+                                ((acc, j + 1), aname ^ "::" ^ atype)
+                              end) ((acc, 0), doms)
+                            val doms = String.concatWith " " doms
                         in
-                          (i + 1, cdef)
-                        end) (0, TypeBasePure.constructors_of tyinfo)
-                      val constructors = String.concatWith " " constructors
-                      val datatype_def = "(datatype " ^ constructors ^ ")"
+                          ((acc, i + 1), (cname, doms))
+                        end) ((acc, 0), TypeBasePure.constructors_of tyinfo)
+                      val datatype_def = if is_record then
+                          "(record " ^ Lib.snd (List.hd constructors) ^ ")"
+                        else
+                          "(datatype " ^ String.concatWith " " (List.map
+                            (fn (cname, doms) => if doms = "" then cname else
+                              "(" ^ cname ^ " " ^ doms ^ ")") constructors) ^
+                          ")"
+                      val (ty_dict, fresh, defs) = acc
                       val defs' = "(define-type " ^ name ^ " " ^ datatype_def ^
                         ")" :: defs
                   in
-                    ((ty_dict', fresh + 1, defs'), name)
+                    ((ty_dict, fresh, defs'), name)
                   end
     in
       if wordsSyntax.is_word_type ty then
@@ -391,7 +402,7 @@ structure Yices = struct
             end) Yices_binder_terms of
         SOME result => result
       | NONE =>
-    (* operators *)
+    (* operators + arguments *)
       let val (rator, rands) = boolSyntax.strip_comb tm
       in
         case List.find (fn (t, _, _) => Term.same_const t rator)
@@ -446,7 +457,7 @@ structure Yices = struct
              prevents this problem from showing up, but a good (clean) solution
              is still missing. *)
 
-          (* case constants on data types + arguments *)
+          (* case constants for data types (+ arguments) *)
           (if List.null rands then
             raise Feedback.mk_HOL_ERR "Yices" "translate_term"
               "not a case constant (no operands)"
@@ -505,8 +516,67 @@ structure Yices = struct
                   raise Feedback.mk_HOL_ERR "Yices" "translate_term"
                     "not a case constant (last argument is not a data type)"
             end)
-
           handle Feedback.HOL_ERR _ =>  (* not a case constant *)
+
+          (* record field selectors *)
+          let val (select, x) = Term.dest_comb tm
+              val (select_name, select_ty) = Term.dest_const select
+              val (record_ty, rng_ty) = Type.dom_rng select_ty
+              val (record_name, _) = Type.dest_type record_ty
+              (* FIXME: This check for matching types may be too liberal, as it
+                 does not take the record type into account. On the other hand,
+                 it may not be needed at all: ensuring that the constant name
+                 is identical to the field selector name may already be
+                 sufficient. *)
+              val j = Lib.index (fn (field_name, field_ty) =>
+                  select_name = record_name ^ "_" ^ field_name andalso
+                    Lib.can (Type.match_type field_ty) rng_ty)
+                (TypeBase.fields_of record_ty)
+              (* translate argument *)
+              val (acc, yices_x) = translate_term (acc, x)
+              val (_, _, ty_dict, _, _) = acc
+              val ty_name = Redblackmap.find (ty_dict, record_ty)
+              val yices_field = "f_" ^ ty_name ^ "_" ^ Int.toString j
+          in
+            (acc, "(select " ^ yices_x ^ " " ^ yices_field ^ ")")
+          end
+          handle Feedback.HOL_ERR _ =>  (* not a record field selector *)
+
+          (* record field updates *)
+          let 
+              val (update_f, x) = Term.dest_comb tm
+              val (update, f) = Term.dest_comb update_f
+              (* FIXME: Only field updates using the K combinator (in eta-long
+                 form) are supported at the moment. *)
+              val (var1, body) = Term.dest_abs f
+              val (f, var2) = Term.dest_comb body
+              val _ = (var1 = var2) orelse
+                raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                  "not a field selector (update function not in eta-long form)"
+              val new_val = combinSyntax.dest_K_1 f
+              val (update_name, _) = Term.dest_const update
+              val record_ty = Term.type_of x
+              val (record_name, _) = Type.dest_type record_ty
+              val val_ty = Term.type_of new_val
+              (* FIXME: This check for matching types may be too liberal, as it
+                 does not take the record type into account. On the other hand,
+                 it may not be needed at all: ensuring that the constant name
+                 is identical to the field update function's name may already be
+                 sufficient. *)
+              val j = Lib.index (fn (field_name, field_ty) =>
+                  update_name = record_name ^ "_" ^ field_name ^ "_fupd" andalso
+                    Lib.can (Type.match_type field_ty) val_ty)
+                (TypeBase.fields_of record_ty)
+              val (acc, yices_x) = translate_term (acc, x)
+              val (acc, yices_val) = translate_term (acc, new_val)
+              val (_, _, ty_dict, _, _) = acc
+              val ty_name = Redblackmap.find (ty_dict, record_ty)
+              val fname = "f_" ^ ty_name ^ "_" ^ Int.toString j
+          in
+            (acc, "(update " ^ yices_x ^ " " ^ fname ^ " " ^ yices_val ^ ")")
+          end
+          handle Feedback.HOL_ERR _ =>  (* not a record field selector *)
+
           (* function application *)
           if Term.is_comb tm then
           (* Yices considers "-> X Y Z" and "-> X (-> Y Z)" different types. We
