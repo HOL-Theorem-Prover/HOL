@@ -4,15 +4,14 @@ open HolKernel boolLib
 
 open TextIO
 fun readterm is = let
-  fun readtilemptyline acc = let
-    val line = inputLine is
-  in
-    if line = "\n" then
-      SOME (SOME (Parse.Term [QUOTE (String.concat (List.rev acc))]))
-      handle HOL_ERR _ => SOME NONE
-    else if line = "" then NONE
-    else readtilemptyline (line::acc)
-  end
+  fun readtilemptyline acc =
+      case inputLine is of
+        SOME s => if s = "\n" then
+                    SOME (SOME (Parse.Term
+                                    [QUOTE (String.concat (List.rev acc))]))
+                    handle HOL_ERR _ => SOME NONE
+                  else readtilemptyline (s::acc)
+      | NONE => NONE
 in
   readtilemptyline []
 end
