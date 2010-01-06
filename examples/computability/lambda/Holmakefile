@@ -1,2 +1,3 @@
-INCLUDES = ../../lambda/barendregt ../../lambda/basics ../../lambda/other-models
+INCLUDES = ../../lambda/barendregt ../../lambda/basics \
+           ../../lambda/other-models ../
 OPTIONS = QUIT_ON_FAILURE

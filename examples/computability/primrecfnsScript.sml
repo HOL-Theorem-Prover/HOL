@@ -31,6 +31,11 @@ val nB_eq1 = Store_thm(
   ``(nB p = 1) ⇔ p``,
   Cases_on `p` THEN SRW_TAC [][]);
 
+val nB_sub1 = Store_thm(
+  "nB_sub1",
+  ``1 - nB p = nB (¬p)``,
+  Cases_on `p` THEN SRW_TAC [][]);
+
 val proj_def = Define`
   proj n l = if LENGTH l <= n then 0 else EL n l
 `;
