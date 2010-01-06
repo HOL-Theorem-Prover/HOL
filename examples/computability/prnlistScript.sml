@@ -81,21 +81,31 @@ val primrec_nel = Store_thm(
   Q.EXISTS_TAC `Cn (pr1 nhd) [pr2 ndrop]` THEN
   SRW_TAC [][primrec_rules, nel_def]);
 
-(* nappend *)
-val napp_def = Define`
-  napp l1 l2 = nlistrec l2 (λn t r. ncons n r) l1
-`;
-
-val napp_thm = Store_thm(
-  "napp_thm",
-  ``(napp 0 nlist = nlist) ∧
-    (napp (ncons h t) nlist = ncons h (napp t nlist))``,
-  SRW_TAC [][napp_def]);
 val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
 
 
-(* representing this primitive recursively is trickier *)
-(* val primrec_napp = Store_thm(
+val nlist_of_def = Define`
+  (nlist_of [] = 0) ∧
+  (nlist_of (h::t) = ncons h (nlist_of t))
+`;
+val _ = export_rewrites ["nlist_of_def"]
+
+val nel_nlist_of = store_thm(
+  "nel_nlist_of",
+  ``∀n l. n < LENGTH l ⇒ (nel n (nlist_of l) = EL n l)``,
+  Induct THEN1 (Cases_on `l` THEN SRW_TAC [][]) THEN
+  Q.X_GEN_TAC `list` THEN
+  Cases_on `list` THEN SRW_TAC [][]);
+
+open rich_listTheory
+val GENLIST_CONS = prove(
+  ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
+  Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
+val GENLIST1 = prove(``GENLIST f 1 = [f 0]``,
+                     SIMP_TAC bool_ss [ONE, GENLIST, SNOC]);
+
+
+val primrec_napp = Store_thm(
   "primrec_napp",
   ``primrec (pr2 napp) 2``,
   MATCH_MP_TAC primrec_pr2 THEN
@@ -106,7 +116,7 @@ val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
            (let sucn = Cn succ [proj 0] in
             let tl = Cn (pr1 ntl) [sucn] in
             let hd = Cn (pr1 nhd) [sucn] in
-            let pos = Cn (pr2 $-) [sucn; tl] in
+            let pos = Cn (pr2 $-) [proj 0; tl] in
             let rres = Cn (pr2 nel) [pos; proj 1] in
             let res = Cn (pr2 ncons) [hd; rres]
             in
@@ -128,9 +138,28 @@ val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
     `primrec tl 3` by SRW_TAC [][primrec_rules, Abbr`tl`] THEN
     SRW_TAC [][primrec_rules, Abbr`pos`],
 
-    HO_MATCH_MP_TAC nlist_ind THEN SRW_TAC [][LET_THM] THEN
-    `∃c0. ncons h m = SUC c0` ...
+    SIMP_TAC (srw_ss()) [] THEN
+    Q.MATCH_ABBREV_TAC `∀m n. nhd (prf [m; n]) = napp m n` THEN
+    Q_TAC SUFF_TAC
+          `∀m n. prf [m;n] = nlist_of (GENLIST (λp. napp (m - p) n) (m + 1))`
+          THEN1 SRW_TAC [][GENLIST_CONS, GSYM ADD1] THEN
+    Induct THEN SRW_TAC [][Abbr`prf`, GENLIST1, LET_THM] THEN
+    SRW_TAC [][ADD_CLAUSES, GENLIST_CONS] THENL [
+      POP_ASSUM (K ALL_TAC) THEN
+      `∃h t. SUC m = ncons h t`
+        by METIS_TAC [DECIDE ``0 ≠ SUC m``, nlist_cases] THEN
+      `t < SUC m` by (FULL_SIMP_TAC (srw_ss()) [ncons_def, GSYM ADD1] THEN
+                      `nsnd (h ⊗ t) = t` by SRW_TAC [][] THEN
+                      `t ≤ h ⊗ t` by METIS_TAC [nsnd_le] THEN
+                      DECIDE_TAC) THEN
+      `(nhd (SUC m) = h) ∧ (ntl (SUC m) = t) ∧
+       (napp (SUC m) n = ncons h (napp t n))` by SRW_TAC [][] THEN
+      Q.PAT_ASSUM `SUC m = ncons h t` (K ALL_TAC) THEN
+      ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [nel_nlist_of, LENGTH_GENLIST,
+                                           EL_GENLIST],
 
+      SRW_TAC [][combinTheory.o_DEF]
+    ]
+  ]);
 
-*)
 val _ = export_theory ()
