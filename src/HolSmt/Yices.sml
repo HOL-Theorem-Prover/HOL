@@ -231,11 +231,11 @@ structure Yices = struct
                   translate_type (acc, Args)
                 val defs' = if def = "" orelse Lib.mem def defs then defs else
                   def :: defs
-                val yices_Args' = String.concat (Lib.separate " " yices_Args)
+                val yices_Args = String.concatWith " " yices_Args
             in
               ((ty_dict, fresh, defs'),
-               if yices_Args = [] then name
-               else "(" ^ name ^ " " ^ yices_Args' ^ ")")
+               if yices_Args = "" then name
+               else "(" ^ name ^ " " ^ yices_Args ^ ")")
             end
           | NONE =>
             (* perhaps a data type? *)
@@ -394,8 +394,8 @@ structure Yices = struct
                 Redblackmap.foldl (fn (t, _, d) =>
                   (Lib.fst o Redblackmap.remove) (d, t)) dict1 dict2
               val dict = union dict (diff body_dict bound_dict)
-              val yices_bounds = String.concat (Lib.separate " " (List.map
-                (fn (v, t) => v ^ "::" ^ t) (Lib.zip yices_vars yices_typs)))
+              val yices_bounds = String.concatWith " " (List.map (fn (v, t) =>
+                v ^ "::" ^ t) (Lib.zip yices_vars yices_typs))
             in
               SOME ((dict, fresh, ty_dict, ty_fresh, defs),
                 "(" ^ name ^ " (" ^ yices_bounds ^ ") " ^ yices_body ^ ")")

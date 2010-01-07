@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Proof reconstruction for Z3: parsing of Z3's proofs *)
 
@@ -546,7 +546,7 @@ struct
             (get_tokens [] (String.explode line)))
           val _ = if !SolverSpec.trace > 2 then
               Feedback.HOL_MESG ("HolSmtLib: parsing token(s) " ^
-                String.concat (Lib.separate ", " tokens))
+                String.concatWith ", " tokens)
             else ()
         in
           parse_lines (parse_token_line (decl, dict, proof) tokens)

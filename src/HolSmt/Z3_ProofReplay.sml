@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Proof reconstruction for Z3: replaying Z3's proofs in HOL *)
 
@@ -408,8 +408,8 @@ struct
       end
       handle Feedback.HOL_ERR _ =>
         raise (Feedback.mk_HOL_ERR "Z3_ProofReplay" "check_proof"
-          ("monotonicity: " ^ String.concat (Lib.separate ", " (List.map
-          Hol_pp.thm_to_string thms)) ^ ", " ^ Hol_pp.term_to_string t))
+          ("monotonicity: " ^ String.concatWith ", " (List.map
+          Hol_pp.thm_to_string thms) ^ ", " ^ Hol_pp.term_to_string t))
     fun mp (thm1, thm2, t) =
       Thm.MP thm2 thm1
       handle Feedback.HOL_ERR _ =>
@@ -475,8 +475,8 @@ struct
       end
       handle Feedback.HOL_ERR _ =>
         raise (Feedback.mk_HOL_ERR "Z3_ProofReplay" "check_proof" ("nnf_neg: " ^
-          String.concat (Lib.separate ", " (List.map Hol_pp.thm_to_string thms))
-          ^ ", " ^ Hol_pp.term_to_string t))
+          String.concatWith ", " (List.map Hol_pp.thm_to_string thms) ^ ", " ^
+          Hol_pp.term_to_string t))
     fun nnf_pos (thms, t) =
       let val concl = boolSyntax.list_mk_imp (List.map Thm.concl thms, t)
           val th = tautLib.TAUT_PROVE concl
@@ -490,8 +490,8 @@ struct
            raise (Feedback.mk_HOL_ERR "" "" ""))
       handle Feedback.HOL_ERR _ =>
         raise (Feedback.mk_HOL_ERR "Z3_ProofReplay" "check_proof" ("nnf_pos: " ^
-          String.concat (Lib.separate ", " (List.map Hol_pp.thm_to_string thms))
-          ^ ", " ^ Hol_pp.term_to_string t))
+          String.concatWith ", " (List.map Hol_pp.thm_to_string thms) ^ ", " ^
+          Hol_pp.term_to_string t))
     (* ~(... \/ p \/ ...)
        ------------------
                ~p         *)
@@ -706,8 +706,8 @@ struct
           Hol_pp.term_to_string t))
     and rewrite_star (thms, t) =
       raise (Feedback.mk_HOL_ERR "Z3_ProofReplay" "check_proof" ("rewrite*: " ^
-        String.concat (Lib.separate ", " (List.map Hol_pp.thm_to_string thms))
-        ^ ", " ^ Hol_pp.term_to_string t))
+        String.concatWith ", " (List.map Hol_pp.thm_to_string thms) ^ ", " ^
+        Hol_pp.term_to_string t))
     and sk t = (* (~ (not (forall x (p x y))) (not (p (sk y) y)))
                   (~ (exists x (p x y)) (p (sk y) y)) *)
       let fun NOT_FORALL_CONV tm =  (* |- ~(!x y z. P) = (?x y z. ~P) *)
@@ -798,8 +798,8 @@ struct
       end
       handle Feedback.HOL_ERR _ =>
         raise (Feedback.mk_HOL_ERR "Z3_ProofReplay" "check_proof" ("th_lemma: "
-          ^ String.concat (Lib.separate ", " (List.map Hol_pp.thm_to_string
-          thms)) ^ ", " ^ Hol_pp.term_to_string t))
+          ^ String.concatWith ", " (List.map Hol_pp.thm_to_string thms) ^ ", " ^
+          Hol_pp.term_to_string t))
     and trans (thm1, thm2, t) =
       Thm.TRANS thm1 thm2
       handle Feedback.HOL_ERR _ =>
@@ -875,8 +875,8 @@ struct
     end
     handle Feedback.HOL_ERR _ =>
       raise (Feedback.mk_HOL_ERR "Z3_ProofReplay" "check_proof"
-        ("unit_resolution: " ^ String.concat (Lib.separate ", " (List.map
-        Hol_pp.thm_to_string thms)) ^ ", " ^ Hol_pp.term_to_string t))
+        ("unit_resolution: " ^ String.concatWith ", " (List.map
+        Hol_pp.thm_to_string thms) ^ ", " ^ Hol_pp.term_to_string t))
     (*** end of inference rule implementations ***)
 
     fun verify_theorem rule id t thm =

@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Functions to translate HOL terms into the SMT-LIB format. *)
 
@@ -107,7 +107,7 @@ structure SmtLib = struct
   in
     (* a (possibly empty!) string giving the argument types and range type of a
        function, or the argument types of a predicate *)
-    (acc, String.concat (Lib.separate " " smtlib_types))
+    (acc, String.concatWith " " smtlib_types)
   end
 
   (* dict: dictionary that maps terms to names
@@ -182,9 +182,9 @@ structure SmtLib = struct
                 Redblackmap.foldl (fn (t, _, d) =>
                   (Lib.fst o Redblackmap.remove) (d, t)) dict1 dict2
               val dict = union dict (diff body_dict bound_dict)
-              val smtlib_bounds = String.concat (Lib.separate " "
+              val smtlib_bounds = String.concatWith " "
                 (List.map (fn (v, t) => "(" ^ v ^ " " ^ t ^ ")")
-                  (Lib.zip smtlib_vars smtlib_typs)))
+                  (Lib.zip smtlib_vars smtlib_typs))
             in
               SOME ((dict, fresh, ty_dict, ty_fresh, funs, defs),
                 "(" ^ name ^ " " ^ smtlib_bounds ^ " " ^ smtlib_body ^ ")")
@@ -203,7 +203,7 @@ structure SmtLib = struct
                                           (acc, rands)
           in
             (acc, "(" ^ smtlib_rator ^ " " ^
-                    String.concat (Lib.separate " " smtlib_rands) ^ ")")
+                    String.concatWith " " smtlib_rands ^ ")")
           end
         else
           (* base case: operator or uninterpreted term *)
