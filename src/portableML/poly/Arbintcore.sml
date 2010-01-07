@@ -12,10 +12,10 @@ val one = 1
 val two = 2
 
 fun toString x = 
-  if x < 0 then
+  (if x < 0 then
     "-" ^ (IntInf.toString (~x))
   else
-    IntInf.toString x 
+    IntInf.toString x) ^ "i"
 
 fun fromString s = let
   open Substring
