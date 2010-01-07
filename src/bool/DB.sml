@@ -24,6 +24,9 @@ type theory = Hol_pp.theory;
 val ERR = mk_HOL_ERR "DB";
 
 datatype class = Thm | Axm | Def
+fun indef_class2string Thm = "a theorem"
+  | indef_class2string Axm = "an axiom"
+  | indef_class2string Def = "a definition"
 
 
 (*---------------------------------------------------------------------------
@@ -216,22 +219,23 @@ fun listDB () =
       Some other lookup functions
  ---------------------------------------------------------------------------*)
 
-fun thm_class thy name =
-    let val db = CT()
-       val thymap = #1 (Map.find(db, toLower (norm_thyname thy)))
-                     handle Map.NotFound =>
-                            raise ERR "thm_class" "no such theory"
-        val result = Map.find(thymap, toLower name)
-                     handle Map.NotFound =>
-                            raise ERR "thm_class" "not found"
-    in
-      case filter (equal (norm_thyname thy,name) o fst) result of
-        [(_,p)] => p
-      | [] => raise ERR "thm_class" "not found"
-      | other => raise ERR "thm_class" "multiple things with the same name"
-    end
+fun thm_class origf thy name = let
+  val db = CT()
+  val thy = norm_thyname thy
+  val nosuchthm = ("theorem "^thy^"$"^name^" not found")
+  val thymap = #1 (Map.find(db, toLower thy))
+               handle Map.NotFound => raise ERR origf ("no such theory: "^thy)
+  val result = Map.find(thymap, toLower name)
+               handle Map.NotFound => raise ERR origf nosuchthm
+in
+  case filter (equal (norm_thyname thy,name) o fst) result of
+    [(_,p)] => p
+  | [] => raise ERR origf nosuchthm
+  | other => raise ERR origf
+                       ("multiple things in theory "^thy^" with name "^name)
+end
 
-fun fetch s1 s2 = fst (thm_class s1 s2);
+fun fetch s1 s2 = fst (thm_class "fetch" s1 s2);
 
 fun thm_of ((_,n),(th,_)) = (n,th);
 fun is x (_,(_,cl)) = (cl=x)
@@ -242,28 +246,27 @@ val definitions = List.map thm_of o Lib.filter (is Def) o thy
 val axioms      = List.map thm_of o Lib.filter (is Axm) o thy
 
 fun theorem s = let
-  val (thm,c) = thm_class "-" s
-      handle HOL_ERR _ => raise ERR "theorem" ("No theorem of name "^s)
+  val (thm,c) = thm_class "theorem" "-" s
 in
-  if c = Thm  then thm
-  else raise ERR "theorem" ("No theorem of name "^s)
+  if c = Thm then thm
+  else raise ERR "theorem" ("No theorem in current theory of name "^s^
+                            " (but there is "^indef_class2string c^")")
 end
 
 fun definition s = let
-  val (thm,c) = thm_class "-" s
-      handle HOL_ERR _ => raise ERR "definition"
-                                    ("No definition of name "^s)
+  val (thm,c) = thm_class "definition" "-" s
 in
   if c = Def then thm
-  else raise ERR "theorem" ("No definition of name "^s)
+  else raise ERR "theorem" ("No definition in current theory of name "^s^
+                            " (but there is "^indef_class2string c^")")
 end
 
 fun axiom s = let
-  val (thm,c) = thm_class "-" s
-      handle HOL_ERR _ => raise ERR "axiom" ("No axiom of name "^s)
+  val (thm,c) = thm_class "axiom" "-" s
 in
   if c = Axm then thm
-  else raise ERR "axiom" ("No axiom of name "^s)
+  else raise ERR "axiom" ("No axiom in current theory of name "^s^
+                          " (but there is "^indef_class2string c^")")
 end
 (*---------------------------------------------------------------------------
      Support for print_theory
