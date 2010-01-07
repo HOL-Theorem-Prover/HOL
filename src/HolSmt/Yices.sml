@@ -262,13 +262,13 @@ structure Yices = struct
       end
     else if intSyntax.is_int_literal tm then
       let val i = intSyntax.int_of_term tm
-          val s = Arbint.toString i ^ "i"  (*TODO*)
+          val s = Arbint.toString i
       in
         (acc, String.substring (s, 0, String.size s - 1))
       end
     else if realSyntax.is_real_literal tm then
       let val i = realSyntax.int_of_term tm
-          val s = Arbint.toString i ^ "i"  (*TODO*)
+          val s = Arbint.toString i
       in
         (acc, String.substring (s, 0, String.size s - 1))
       end
