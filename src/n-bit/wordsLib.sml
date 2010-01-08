@@ -14,7 +14,7 @@ val _ = Feedback.emit_MESG := false;
 
 val ISPEC = Q.ISPEC;
 val SPEC  = Q.SPEC;
-val SPECL = Q.SPECL;;
+val SPECL = Q.SPECL;
 val INST  = Q.INST;
 
 val ERR = mk_HOL_ERR "wordsLib";
@@ -104,7 +104,8 @@ end;
 fun size_conv t = {conv = K (K (SIZES_CONV)), trace = 3,
                    name = "SIZES_CONV", key = SOME ([], t)};
 
-val SIZES_ss = simpLib.merge_ss (rewrites [ONE_LT_dimword, DIMINDEX_GT_0]::
+val SIZES_ss = simpLib.merge_ss
+  (simpLib.named_rewrites "sizes" [ONE_LT_dimword, DIMINDEX_GT_0]::
   (map (simpLib.conv_ss o size_conv)
     [``fcp$dimindex(:'a)``, ``pred_set$FINITE (pred_set$UNIV:'a set)``,
      ``words$INT_MIN(:'a)``, ``words$dimword(:'a)``]));
@@ -314,7 +315,7 @@ local
       "num_to_hex_string"]
 
   val s = name_thy_set
-           (("min","=")::("arithmetic","DIV_2EXP") ::("fcp","fcp_index")::
+           (("min","=")::("arithmetic","DIV_2EXP")::("fcp","fcp_index")::
              map (pair "words") l1 @ map (pair "bit") l2)
 
   fun is_hex_digit_literal t =
@@ -393,7 +394,8 @@ in
      computeLib.CBV_CONV (words_compset()) THENC UINT_MAX_CONV) t
   end
 
-  val WORD_GROUND_ss = simpLib.merge_ss [rewrites alpha_rws,
+  val WORD_GROUND_ss = simpLib.merge_ss
+    [simpLib.named_rewrites "word ground" alpha_rws,
      simpLib.conv_ss
       {conv = K (K (CHANGED_CONV WORD_GROUND_CONV)), trace = 3,
        name = "WORD_GROUND_CONV", key = NONE}]
@@ -415,21 +417,12 @@ val BIT_SET_CONV =
             ISPEC `^a` pred_setTheory.IN_INSERT];
 
 val BIT_ss =
-  simpLib.merge_ss [rewrites [BIT_ZERO],
+  simpLib.merge_ss [simpLib.named_rewrites "bit" [BIT_ZERO],
     simpLib.conv_ss
       {conv = K (K (BIT_SET_CONV)), trace = 3,
        name = "BITS_CONV", key = SOME ([], ``bit$BIT ^n ^a``)}];
 
-val BIT2_ss =
-  simpLib.merge_ss [rewrites [BIT_ZERO],
-    simpLib.conv_ss
-      {conv = K (K (BIT_SET_CONV)), trace = 3,
-       name = "BITS_CONV", key = SOME ([], ``bit$BIT 0n ^a``)},
-    simpLib.conv_ss
-      {conv = K (K (BIT_SET_CONV)), trace = 3,
-       name = "BITS_CONV", key = SOME ([], ``bit$BIT ^a ^b``)}];
-
-val WORD_ORDER_ss = rewrites
+val WORD_ORDER_ss = simpLib.named_rewrites "word order"
   [WORD_HIGHER, WORD_HIGHER_EQ,
    WORD_GREATER, WORD_GREATER_EQ,
    WORD_NOT_LOWER, WORD_NOT_LOWER_EQUAL,
@@ -661,7 +654,8 @@ fun WORD_ADD_CANON_CONV t =
    else
      raise ERR "WORD_ADD_CANON_CONV" "Can only be applied to word terms";
 
-val WORD_MULT_ss = simpLib.merge_ss [rewrites (NEG_EQ_0::word_mult_clauses),
+val WORD_MULT_ss = simpLib.merge_ss
+ [simpLib.named_rewrites "word mult" (NEG_EQ_0::word_mult_clauses),
   simpLib.conv_ss
     {conv = K (K (CHANGED_CONV WORD_MULT_CANON_CONV)), trace = 3,
      name = "WORD_MULT_CANON_CONV", key = SOME([], ``words$word_mul ^w ^y``)}];
@@ -670,7 +664,8 @@ val WORD_ADD_ss = simpLib.conv_ss
   {conv = K (K (CHANGED_CONV WORD_ADD_CANON_CONV)), trace = 3,
    name = "WORD_ADD_CANON_CONV", key = SOME([], ```words$word_add ^w ^y``)};
 
-val WORD_SUB_ss = simpLib.merge_ss [rewrites [word_sub_def],
+val WORD_SUB_ss = simpLib.merge_ss
+ [simpLib.named_rewrites "word sub" [word_sub_def],
   simpLib.conv_ss
     {conv = K (K (WORD_NEG_CONV)), trace = 3,
      name = "WORD_NEG_CONV", key = SOME([], ``words$word_2comp ^w``)},
@@ -678,8 +673,8 @@ val WORD_SUB_ss = simpLib.merge_ss [rewrites [word_sub_def],
     {conv = K (K (WORD_NEG_CONV)), trace = 3,
      name = "WORD_NEG_CONV", key = SOME([], ``words$word_sub ^w ^y``)}];
 
-val WORD_w2n_ss = simpLib.merge_ss [
-  rewrites [word_0_n2w],
+val WORD_w2n_ss = simpLib.merge_ss
+ [simpLib.named_rewrites "word w2n" [word_0_n2w],
   simpLib.conv_ss
     {conv = K (K (WORD_w2n_CONV)), trace = 3,
      name = "WORD_w2n_CONV", key = SOME([], ``words$w2n (^n2w ^a)``)}];
@@ -706,8 +701,9 @@ val WORD_CONST_ss = simpLib.merge_ss [
      name = "WORD_CONST_CONV", key = SOME([], ``words$word_T :'a word``)}];
 
 val WORD_ARITH_EQ_ss = simpLib.merge_ss
- [rewrites [WORD_LEFT_ADD_DISTRIB,WORD_RIGHT_ADD_DISTRIB,
-            WORD_LSL_NUMERAL,WORD_NOT,hd (CONJUNCTS SHIFT_ZERO)],
+ [simpLib.named_rewrites "word arith eq"
+    [WORD_LEFT_ADD_DISTRIB,WORD_RIGHT_ADD_DISTRIB,
+     WORD_LSL_NUMERAL,WORD_NOT,hd (CONJUNCTS SHIFT_ZERO)],
   simpLib.conv_ss
     {conv = K (K (WORD_ARITH_EQ_CONV)), trace = 3,
      name = "WORD_ARITH_EQ_CONV", key = SOME([], ``^w = ^y :'a word``)}];
@@ -900,8 +896,9 @@ fun WORD_XOR_CANON_CONV t =
 
 val WORD_COMP_ss =
   simpLib.merge_ss [
-    rewrites [WORD_DE_MORGAN_THM, WORD_NOT_NOT, WORD_NOT_NEG_0,
-      REWRITE_RULE [GSYM arithmeticTheory.PRE_SUB1] WORD_NOT_NEG_NUMERAL],
+    simpLib.named_rewrites "word comp"
+      [WORD_DE_MORGAN_THM, WORD_NOT_NOT, WORD_NOT_NEG_0,
+       REWRITE_RULE [GSYM arithmeticTheory.PRE_SUB1] WORD_NOT_NEG_NUMERAL],
     simpLib.conv_ss
       {conv = K (K (reduceLib.PRE_CONV)), trace = 3,
        name = "PRE_CONV", key = SOME ([], ``prim_rec$PRE ^a``)},
@@ -911,14 +908,14 @@ val WORD_COMP_ss =
        key = SOME ([], ``words$word_1comp (^n2w ^n) :'a word``)}];
 
 val WORD_AND_ss =
-  simpLib.merge_ss [rewrites
+  simpLib.merge_ss [simpLib.named_rewrites "word and"
     [WORD_AND_CLAUSES2, SYM WORD_NEG_1, WORD_AND_COMP, WORD_NAND_NOT_AND],
   simpLib.conv_ss
     {conv = K (K (WORD_AND_CANON_CONV)), trace = 3,
      name = "WORD_AND_CANON_CONV", key = SOME ([], ``words$word_and ^w ^y``)}];
 
 val WORD_XOR_ss =
-  simpLib.merge_ss [rewrites
+  simpLib.merge_ss [simpLib.named_rewrites "word xor"
     [WORD_XOR_CLAUSES2, SYM WORD_NEG_1, WORD_NOT_XOR, WORD_XNOR_NOT_XOR],
   simpLib.conv_ss
     {conv = K (K (WORD_XOR_CANON_CONV)), trace = 3,
@@ -926,9 +923,10 @@ val WORD_XOR_ss =
 
 val WORD_OR_ss = let val thm = REWRITE_RULE [SYM WORD_NEG_1] WORD_OR_COMP in
   simpLib.merge_ss
-  [rewrites [WORD_OR_CLAUSES2, SYM WORD_NEG_1, WORD_AND_ABSORD, thm,
-   ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD,
-   ONCE_REWRITE_RULE [WORD_OR_COMM] thm, WORD_NOR_NOT_OR],
+  [simpLib.named_rewrites "word or"
+     [WORD_OR_CLAUSES2, SYM WORD_NEG_1, WORD_AND_ABSORD, thm,
+      ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD,
+      ONCE_REWRITE_RULE [WORD_OR_COMM] thm, WORD_NOR_NOT_OR],
    simpLib.conv_ss
      {conv = K (K (WORD_OR_CANON_CONV)), trace = 3,
       name = "WORD_OR_CANON_CONV", key = SOME ([], ``words$word_or ^w ^y``)}]
@@ -951,7 +949,7 @@ val ROL_ROR_MOD_RWT = prove(
   SRW_TAC [] [Once (GSYM ROL_MOD), Once (GSYM ROR_MOD)]);
 
 val WORD_SHIFT_ss =
-  rewrites
+  simpLib.named_rewrites "word shift"
     ([SHIFT_ZERO, ZERO_SHIFT, word_rrx_0, word_rrx_word_T, lsr_1_word_T,
       LSL_ADD, LSR_ADD, ASR_ADD, ROR_ROL, ROR_ADD, ROL_ADD, ROL_ROR_MOD_RWT,
       WORD_ADD_LSL, GSYM WORD_2COMP_LSL,
@@ -1012,7 +1010,8 @@ val WORD_REPLICATE_ss =
      key = SOME([], ``words$word_replicate ^a ^w:'a word``)};
 
 val WORD_EXTRACT_ss = simpLib.merge_ss [WORD_REPLICATE_ss,
-  rewrites ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
+  simpLib.named_rewrites "word extract"
+    ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
       WORD_EXTRACT_LSL, word_concat_def, LET_RULE word_join_def,
       word_rol_def, LET_RULE word_ror, word_asr, word_lsr_n2w,
       WORD_EXTRACT_COMP_THM, WORD_EXTRACT_MIN_HIGH,
@@ -1097,7 +1096,7 @@ local
   val word_join = SIMP_RULE (std_ss++boolSimps.LET_ss) [] word_join_def
   val rw1 = [word_0,word_T,word_L,word_xor_def,word_or_def,word_and_def,
              word_1comp_def, REWRITE_RULE [SYM WORD_NEG_1] word_T,
-             SPEC `^a` n2w_def, pred_setTheory.NOT_IN_EMPTY,
+             pred_setTheory.NOT_IN_EMPTY,
              ISPEC `0n` pred_setTheory.IN_INSERT,
              ISPEC `^a` pred_setTheory.IN_INSERT]
   val rw2 = [fcpTheory.FCP_UPDATE_def,LESS_COR,sw2sw,w2w,word_replicate_def,
@@ -1128,17 +1127,16 @@ local
 in
   fun WORD_BIT_EQ_CONV t =
         if is_eq t orelse wordsSyntax.is_index t then
-          ((SIMP_CONV (std_ss++fcpLib.FCP_ss++BIT_ss) rw1
+          ((SIMP_CONV (std_ss++fcpLib.FCP_ss++BIT_ss) (SPEC `^a` n2w_def :: rw1)
              THENC TRY_CONV DECIDE_CONV
-             THENC SIMP_CONV (arith_ss++fcpLib.FCP_ss++SIZES_ss++
-                     BIT_ss) (rw1 @ rw2)
+             THENC SIMP_CONV (arith_ss++fcpLib.FCP_ss++SIZES_ss) (rw1 @ rw2)
              THENC REDEPTH_CONV FORALL_AND_CONV
              THENC SIMP_CONV arith_ss []) t)
         else
           raise ERR "WORD_BIT_EQ_CONV" "Not a word equality"
   val WORD_BIT_EQ_ss =
-        simpLib.merge_ss [ARITH_ss, fcpLib.FCP_ss, SIZES_ss, BIT2_ss,
-          rewrites rw1, rewrites rw2,
+        simpLib.merge_ss [ARITH_ss, fcpLib.FCP_ss, SIZES_ss,
+          simpLib.named_rewrites "word bit eq" (rw1 @ rw2),
           simpLib.conv_ss
             {conv = K (K (CHANGED_CONV FORALL_AND_CONV)), trace = 3,
              name = "FORALL_AND_CONV",
