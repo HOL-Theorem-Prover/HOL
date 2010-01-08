@@ -2839,6 +2839,11 @@ thm
 (* ========================================================================== *)
 (*
 *)
+type var_res_inference_group = 
+ string * (term -> bool) * bool * bool * (string * var_res_inference) list;
+
+
+
 
 val VAR_RES_INFERENCES_LIST___simulate_command = ("simulate command", 
    is_VAR_RES_COND_HOARE_TRIPLE, false, true, [
@@ -2860,7 +2865,8 @@ val VAR_RES_INFERENCES_LIST___simulate_command = ("simulate command",
    ("hoare_triple_solve",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___final___CONSEQ_CONV)]@
-   var_res_param.INFERENCES_LIST___simulate_command)
+   var_res_param.INFERENCES_LIST___simulate_command):var_res_inference_group;
+
 
 
 val VAR_RES_INFERENCES_LIST___simulate_minor_command = ("simulate minor command", 
@@ -2889,14 +2895,15 @@ val VAR_RES_INFERENCES_LIST___simulate_minor_command = ("simulate minor command"
    ("cond_best_local_action___cond_star",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___cond_best_local_action___asl_cond_star___CONSEQ_CONV)]@
-   var_res_param.INFERENCES_LIST___simulate_minor_command);
+   var_res_param.INFERENCES_LIST___simulate_minor_command):
+     var_res_inference_group;
 
 
 val VAR_RES_INFERENCES_LIST___mayor_step = ("mayor step",
    K true, false, true, [
   ("specification",
        no_context_strengthen_conseq_conv
-       VAR_RES_SPECIFICATION___CONSEQ_CONV)]);
+       VAR_RES_SPECIFICATION___CONSEQ_CONV)]):var_res_inference_group;
 
 val VAR_RES_INFERENCES_LIST___entailment_steps = ("entailment",
    is_VAR_RES_FRAME_SPLIT, false, true, [
@@ -2909,13 +2916,13 @@ val VAR_RES_INFERENCES_LIST___entailment_steps = ("entailment",
    ("simp___bool_pred",
        simpset_strengthen_conseq_conv
        VAR_RES_FRAME_SPLIT_INFERENCE___bool_pred___CONV)]@
-   var_res_param.INFERENCES_LIST___entailment_steps);
+   var_res_param.INFERENCES_LIST___entailment_steps):var_res_inference_group;
 
 val VAR_RES_INFERENCES_LIST___entailment_solve = ("entailment",
    (K true), false, true,
    [("entailment_solve",
        fn fast => (K (K (K 
-       (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV false (not fast))))))]);
+       (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV false (not fast))))))]):var_res_inference_group;
 
 
 val VAR_RES_INFERENCES_LIST___cheap_simplifications = ("cheap simps",
@@ -2958,7 +2965,7 @@ val VAR_RES_INFERENCES_LIST___cheap_simplifications = ("cheap simps",
        VAR_RES_FRAME_SPLIT_INFERENCE___asl_exists___CONV),
    ("comment_block",
        no_context_strengthen_conseq_conv
-       VAR_RES_COND_INFERENCE___block_comment___CONV)])
+       VAR_RES_COND_INFERENCE___block_comment___CONV)]):var_res_inference_group
 
 (*
 ("quantifier instantiation",
@@ -2971,7 +2978,7 @@ val VAR_RES_INFERENCES_LIST___expensive_simplifications___general = ("expensive 
        fasl_comment_location___TF_ELIM___CONV),                                      
    ("quantifier instantiation",
        simpset_strengthen_conseq_conv VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV)]@
-   var_res_param.INFERENCES_LIST___expensive_simplifications)
+   var_res_param.INFERENCES_LIST___expensive_simplifications):var_res_inference_group
 
 val VAR_RES_INFERENCES_LIST___expensive_simplifications___hoare_triple = ("expensive simps",
    is_VAR_RES_COND_HOARE_TRIPLE, false, true, [
@@ -2983,24 +2990,27 @@ val VAR_RES_INFERENCES_LIST___expensive_simplifications___hoare_triple = ("expen
        (VAR_RES_COND_INFERENCE___CONST_INTRO_PROPAGATE_EQ___CONSEQ_CONV false)),   
    ("flatten_block",
        no_context_strengthen_conseq_conv
-       VAR_RES_COND_INFERENCE___block_flatten___CONSEQ_CONV)]);
+       VAR_RES_COND_INFERENCE___block_flatten___CONSEQ_CONV)]):var_res_inference_group;
 
 
 val VAR_RES_INFERENCES_LIST___expands = ("expands",
-   (K true), false, true, [
+   (K true), false, false, [
    ("precond_enrich",
        context_strengthen_conseq_conv
        (VAR_RES_COND_INFERENCE___enrich_precond___CONV)),
    ("precond_simp___intro_constants",
        no_context_strengthen_conseq_conv
-       VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV),
+       VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV)]):var_res_inference_group;
+
+
+val VAR_RES_INFERENCES_LIST___expands_entailment = ("expands_entailment",
+   (K true), false, true, [
    ("entailment_enrich",
        context_strengthen_conseq_conv
        VAR_RES_FRAME_SPLIT_INFERENCE___enrich_split___CONV),
    ("entailment___intro_constants",
        no_context_strengthen_conseq_conv
-       VAR_RES_FRAME_SPLIT_INFERENCE___ALL_CONST_INTRO___CONV)])
-
+       VAR_RES_FRAME_SPLIT_INFERENCE___ALL_CONST_INTRO___CONV)]):var_res_inference_group;
 
 val VAR_RES_INFERENCES_LIST___case_splits = ("case_splits",
    (K true), false, false, [
@@ -3009,14 +3019,14 @@ val VAR_RES_INFERENCES_LIST___case_splits = ("case_splits",
        VAR_RES_FRAME_SPLIT_INFERENCE___case_split___CONV),
    ("hoare_triple case split",
        no_context_strengthen_conseq_conv
-       VAR_RES_COND_INFERENCE___case_split___CONV)]);
+       VAR_RES_COND_INFERENCE___case_split___CONV)]):var_res_inference_group;
 
 
 val VAR_RES_INFERENCES_LIST___expensive_simplifications___frame_split = ("expensive simps",
    is_VAR_RES_FRAME_SPLIT, false, true, [
    ("entailment_prop_rewrites",
        simpset_strengthen_conseq_conv
-       VAR_RES_FRAME_SPLIT_INFERENCE___PROP_REWRITE___CONV)])
+       VAR_RES_FRAME_SPLIT_INFERENCE___PROP_REWRITE___CONV)]):var_res_inference_group
 
 
 val VAR_RES_INFERENCES_LIST = [
@@ -3029,6 +3039,7 @@ val VAR_RES_INFERENCES_LIST = [
    (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___hoare_triple),
    (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___frame_split),
    (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___general),
+   (2, VAR_RES_INFERENCES_LIST___expands_entailment),
    (2, VAR_RES_INFERENCES_LIST___expands)]
 
 

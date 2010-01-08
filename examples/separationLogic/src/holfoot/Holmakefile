@@ -7,7 +7,7 @@ MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 EXTRA_CLEANS = holfoot.grm-sig.sml holfoot.grm.sml holfoot.lex.sig \
                holfoot.lex.sml holfoot.grm.sig 
 
-all: holfoot_command_line.exe
+all: holfoot
 
 Parsetree.uo : Parsetree.sml
 	HOLMOSMLC -c Parsetree.sml

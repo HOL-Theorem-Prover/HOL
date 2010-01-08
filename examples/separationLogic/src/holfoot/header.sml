@@ -20,7 +20,7 @@ val examplesDir =
             "/examples/separationLogic/src/holfoot/EXAMPLES"];
 
 
-val _ = holfoot_auto_verify_spec true (examplesDir ^ "/automatic/mergesort.sf")
+val _ = holfoot_auto_verify_spec true (examplesDir ^ "/automatic/list.sf")
 
 val _ = holfoot_interactive_verify_spec true    
                {do_case_splits = true,

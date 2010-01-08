@@ -501,6 +501,7 @@ fun FASL_PROGRAM_HOARE_TRIPLE___ABSTRACTION___CONSEQ_CONV fL abstL t =
    val t = ``FASL_PROGRAM_IS_ABSTRACTION xenv penv p1 p2``
 
    val SOME (fL, abstL, t) = !t_opt
+
 *)
 
 fun FASL_PROGRAM_IS_ABSTRACTION___ABSTRACTION___CONSEQ_CONV fL abstL t =   
@@ -515,14 +516,14 @@ fun FASL_PROGRAM_IS_ABSTRACTION___ABSTRACTION___CONSEQ_CONV fL abstL t =
          fun mk_list_term x a =
            let
                val ty = listSyntax.dest_list_type (type_of x)
-               val sL = map stringLib.fromHOLstring (fst (listSyntax.dest_list a))
+               val sL = map (fst o dest_var) (fst (listSyntax.dest_list a))
                val vL = map (fn s => mk_var (s, ty)) sL;
            in
                listSyntax.mk_list (vL, ty)
            end;
-         val l1 = mk_list_term x1 a1
+         val l1 = mk_list_term x1 a1;
          val l2 = mk_list_term x2 a2
-         val su = subst [x1 |-> l1, x2 |-> l2]
+         val su = subst [x1 |-> l1, x2 |-> l2]                   
      in
          fn p1 => (rhs (concl (SIMP_CONV list_ss [] (su p1)))) handle UNCHANGED => su p1
      end handle UNCHANGED => I

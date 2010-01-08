@@ -2,7 +2,8 @@ search_tree_init(r;) {
    r = 0;
 } [data_tree(r;_data) * ``BIN_SEARCH_TREE data EMPTY``]
  
-search_tree_insert(t;k) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys`` * (k == ``k_v:num``)] {
+
+search_tree_insert(t;k) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys``] {
    local k0, tt;
    if (t == NULL) { 
       t = new();
@@ -23,9 +24,11 @@ search_tree_insert(t;k) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys`` * (k 
          }
       }
    }
-} [data_tree(t;_data) * ``BIN_SEARCH_TREE data (k_v INSERT keys)``]
+} [data_tree(t;_data) * ``BIN_SEARCH_TREE data (k INSERT keys)``]
 
-search_tree_delete_min (t,m;) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys /\ ~(keys = EMPTY)``] {
+
+search_tree_delete_min (t,m;) [data_tree(t;data) * 
+      ``BIN_SEARCH_TREE data keys /\ ~(keys = EMPTY)``] {
    local tt;
    tt = t->l;
    if (tt != NULL) {
@@ -42,9 +45,7 @@ search_tree_delete_min (t,m;) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys /
      (mk IN keys) /\ (!k. k IN keys ==> mk <= k)``]
 
 
-search_tree_delete(t;k) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys`` * 
-     (k == ``k_v:num``)] {
-
+search_tree_delete(t;k) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys``] {
    local k0, tt_l, tt_r;
    if (t == NULL) { 
    } else {
@@ -72,13 +73,10 @@ search_tree_delete(t;k) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys`` *
         }
       }
    }
-} [data_tree(t;_data) * ``BIN_SEARCH_TREE data (keys DELETE k_v)``]
+} [data_tree(t;_data) * ``BIN_SEARCH_TREE _data (keys DELETE k)``]
 
 
-
-search_tree_lookup(r;t,k) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys`` * 
-     (k == ``k_v:num``)] {
-
+search_tree_lookup(r;t,k) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys``] {
    local k0, tt;
 
    if (t == NULL) { 
@@ -96,14 +94,15 @@ search_tree_lookup(r;t,k) [data_tree(t;data) * ``BIN_SEARCH_TREE data keys`` *
       }
    }
 } [data_tree(t;data) * ``BIN_SEARCH_TREE data keys`` *
-   (r == ``if (k_v:num) IN keys then 1 else 0``)]
+   (r == ``if (k:num) IN keys then 1 else 0``)]
 
 
-search_tree_to_list (r;t) [data_tree(t;data_t) * data_list(r, data_l) * ``BIN_SEARCH_TREE data_t keys``] {
+search_tree_to_list___rec (r;t) [data_tree(t;data_t) * 
+      data_list(r, data_l) * ``BIN_SEARCH_TREE data_t keys``] {
    local n, tt;
    if (t == NULL) { } else {
       tt = t->r;
-      search_tree_to_list(r;tt);
+      search_tree_to_list___rec (r;tt);
 
       n = new();
       n->tl = r;
@@ -113,8 +112,17 @@ search_tree_to_list (r;t) [data_tree(t;data_t) * data_list(r, data_l) * ``BIN_SE
       n->dta = tt;   
 
       tt = t->l;
-      search_tree_to_list(r;tt);
+      search_tree_to_list___rec (r;tt);
    }
 } [data_tree(t;data_t) * data_list(r,``_data_lt ++ data_l``) *
+   ``(BIN_SEARCH_TREE data_t keys) /\ (LIST_TO_SET data_lt = keys) /\
+     (SORTED $< data_lt)``]
+
+
+search_tree_to_list (r;t) [data_tree(t;data_t) * 
+      ``BIN_SEARCH_TREE data_t keys``] {
+   r = 0;
+   search_tree_to_list___rec (r;t);
+} [data_tree(t;data_t) * data_list(r,_data_lt) *
    ``(BIN_SEARCH_TREE data_t keys) /\ (LIST_TO_SET data_lt = keys) /\
      (SORTED $< data_lt)``]

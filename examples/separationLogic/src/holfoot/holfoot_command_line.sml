@@ -59,15 +59,11 @@ let
        val proof = proofManagerLib.p ()
        val _ = proofManagerLib.pp_proof out proof;
        val _ = Portable.flush_ppstream out
-       val _ = TextIO.output (TextIO.stdOut, "\n\n");
-       val _ = TextIO.flushOut TextIO.stdOut
        in () end;
    fun print_goals () =  let
        val proofs = proofManagerLib.status ()
        val _ = proofManagerLib.pp_proofs out proofs;
        val _ = Portable.flush_ppstream out
-       val _ = TextIO.output (TextIO.stdOut, "\n\n");
-       val _ = TextIO.flushOut TextIO.stdOut
        in () end;
 
    val _ = print_goals ();
@@ -102,10 +98,9 @@ end;
 fun holfoot_run () = let
    val _ = Feedback.set_trace "PPBackEnd use annotations" 0
 
-   val args = CommandLine.arguments ();
-
-   val args = ((Lib.pluck (fn x => x = "-h") args);print_help();[])
-      handle _ => args;
+   val orgargs = CommandLine.arguments ();
+   val args = ((Lib.pluck (fn x => x = "-h") orgargs);print_help();[])
+      handle _ => orgargs;
    val args = ((Lib.pluck (fn x => x = "-hi") args);print_interactive_help();[])
       handle _ => args;
 
@@ -129,12 +124,10 @@ fun holfoot_run () = let
       (prover file) handle
          _ => Parse.print_with_style [PPBackEnd.FG PPBackEnd.OrangeRed] "\nException raised!!!\n\n\n"
 
-   val _ = if args = [] then print_help () else ();
+   val _ = if orgargs = [] then print_help () else ();
 in
    ((map check_file args);())
 end
-
-
 
 val _ = PolyML.export (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/holfoot", holfoot_run)
 

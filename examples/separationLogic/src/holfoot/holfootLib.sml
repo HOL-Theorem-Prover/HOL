@@ -1936,15 +1936,18 @@ val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot
 (* 27.5 s *) val file = concat [examplesDir, "working/business1.sf"];
 (* 27.5 s *) val file = concat [examplesDir, "working/parallel_mergesort.sf"];
 
+(* 27.5 s *) val file = concat [examplesDir, "interactive/bst.dsf"];
 holfoot_set_goal file
 holfoot_auto_verify_spec true file
+val t = parse_holfoot_file_restrict ["search_tree_lookup"] file
+
 
 holfoot_interactive_verify_spec true (true,true,true) ([],[],[]) file
 
 CONTINUE_TAC ([],[],[])
 STEP_TAC ([],[],[]) 
 SIMP_TAC std_ss []
-STEP_TAC ([],[],[]) 1
+STEP_TAC 1
 FULL_SIMP_TAC list_ss []
 REPEAT STRIP_TAC
 Cases_on `data1 = []`

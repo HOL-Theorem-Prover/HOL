@@ -1077,9 +1077,11 @@ fun Pfundecl2hol_final (funname, (ref_args, write_var_set, read_var_set, local_v
 
    val arg_val_varL = map (fn s => mk_comb (holfoot_exp_var_term, string2holfoot_var s)) val_args;
    val arg_val_expL = map (fn c => mk_comb (holfoot_exp_const_term, c)) arg_valL;
-   val arg_val_subst = map (fn (vt, s) => (vt |-> s)) (zip arg_val_varL arg_val_expL);
+   val arg_val_subst1 = map (fn (vt, s) => (vt |-> s)) (zip arg_val_varL arg_val_expL);
 
-
+   val arg_val_numL = map (fn s => mk_var (s, numLib.num)) val_args;
+   val arg_val_subst2 = map (fn (vt, s) => (vt |-> s)) (zip arg_val_numL arg_valL);
+   val arg_val_subst = append arg_val_subst1 arg_val_subst2;
 
    val preCond2 = mk_holfoot_prop_input write_var_set read_var_set (SOME arg_ref_varL) preCond;
    val postCond2 = mk_holfoot_prop_input write_var_set read_var_set (SOME arg_ref_varL) postCond;
