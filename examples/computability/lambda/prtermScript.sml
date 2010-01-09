@@ -105,6 +105,14 @@ val prCn2 = prove(
   `(λl. f [g l; h l]) = Cn f [g; h]` by SRW_TAC [][FUN_EQ_THM] THEN
   SRW_TAC [][primrec_rules]);
 
+val prCn4 = prove(
+  ``primrec f 4 ∧ primrec g1 n ∧ primrec g2 n ∧ primrec g3 n ∧ primrec g4 n ⇒
+    primrec (λl. f [g1 l; g2 l; g3 l; g4 l]) n``,
+  STRIP_TAC THEN
+  `(λl. f [g1 l; g2 l; g3 l; g4 l]) = Cn f [g1; g2; g3; g4]`
+      by SRW_TAC [][FUN_EQ_THM, Cn_def] THEN
+  SRW_TAC [][primrec_rules]);
+
 val prpred = prove(
   ``pr_predicate (λl. nB (f l = g l))``,
   SRW_TAC [][pr_predicate_def]);
@@ -337,40 +345,54 @@ val napp11 = Store_thm(
       [(`l3`,`ll3`), (`l2`,`ll2`), (`l1`,`ll1`)] THEN
   SRW_TAC [][GSYM nlist_of_append]);
 
+val Pr1_def = Define`
+  Pr1 n f = Cn (Pr (K n) (Cn f [proj 0; proj 1]))
+               [proj 0; K 0]
+`;
+
+val Pr1_correct = Store_thm(
+  "Pr1_correct",
+  ``(Pr1 n f [0] = n) ∧
+    (Pr1 n f [SUC m] = f [m; Pr1 n f [m]])``,
+  SRW_TAC [][Pr1_def]);
+
+val primrec_Pr1 = Store_thm(
+  "primrec_Pr1",
+  ``primrec f 2 ⇒ primrec (Pr1 n f) 1``,
+  SRW_TAC [][Pr1_def, primrec_rules, alt_Pr_rule]);
 
 val prtermrec0_def = Define`
   prtermrec0 v c a =
    (λl. nel (l ' 0)
-            (Pr (λl. ncons (v (0::l)) nnil)
+            (Pr1 (ncons (v [0]) nnil)
               (λl.
                  let n = l ' 0 + 1 in
                  let r = l ' 1 in
-                 let m = n MOD 3 in
-                 let t = NTL (NTL l)
+                 let m = n MOD 3
                  in
-                   if m = 0 then napp r (ncons (v (n DIV 3::t)) nnil)
+                   if m = 0 then napp r (ncons (v [n DIV 3]) nnil)
                    else if m = 1 then
                      let t1 = nfst (n DIV 3) in
                      let t2 = nsnd (n DIV 3) in
                      let r1 = nel t1 r in
                      let r2 = nel t2 r
                      in
-                       napp r (ncons (c (t1::t2::r1::r2::t)) nnil)
+                       napp r (ncons (c [t1; t2; r1; r2]) nnil)
                    else
                      let t0 = n DIV 3 in
                      let r0 = nel t0 r
                      in
-                       napp r (ncons (a (t0::r0::t)) nnil))
+                       napp r (ncons (a [t0; r0]) nnil))
               l))`
 
 val prtermrec0_correct = store_thm(
   "prtermrec0_correct",
-  ``prtermrec0 v c a (n::t) = prtermrec v c a (n::t)``,
+  ``prtermrec0 v c a [n] = prtermrec v c a [n]``,
   SRW_TAC [][prtermrec0_def] THEN
-  Q.MATCH_ABBREV_TAC `nel n (f (n::t)) = prtermrec v c a (n::t)` THEN
+  Q.MATCH_ABBREV_TAC `nel n (f [n]) = prtermrec v c a [n]` THEN
   Q_TAC SUFF_TAC
-    `∀n t. f (n::t) = nlist_of (GENLIST (λp. prtermrec v c a (p::t))
-                                        (n + 1))`
+    `∀n. f [n] = nlist_of (GENLIST (λp. prtermrec v c a [p])
+                                   (n + 1))`
     THEN1 SRW_TAC [][nel_nlist_of, LENGTH_GENLIST, EL_GENLIST] THEN
   Induct THEN1
     (SRW_TAC [][Abbr`f`, GENLIST1, Once prtermrec_def]) THEN
@@ -389,35 +411,68 @@ val prtermrec0_correct = store_thm(
     SRW_TAC [ARITH_ss][nel_nlist_of, DIV_LESS, LENGTH_GENLIST, EL_GENLIST]
   ]);
 
-(* val primrec_termrec = Store_thm(
+val primrec_termrec = Store_thm(
   "primrec_prtermrec",
-  ``primrec v n ∧ primrec c (n + 4) ∧ primrec a (n + 2) ⇒
-    primrec (prtermrec0 v c a) (n + 1)``,
+  ``primrec v 1 ∧ primrec c 4 ∧ primrec a 2 ⇒
+    primrec (prtermrec0 v c a) 1``,
   SRW_TAC [][] THEN
-  `0 < n` by METIS_TAC [primrec_nzero] THEN
   SRW_TAC [][prtermrec0_def] THEN
   HO_MATCH_MP_TAC (i2 `nel`) THEN SRW_TAC [ARITH_ss][prproj] THEN
   SRW_TAC [boolSimps.ETA_ss][] THEN
-  MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [ARITH_ss][] THEN1
-    (HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [][prK, primrec_cons]) THEN
+  MATCH_MP_TAC primrec_Pr1 THEN
   SRW_TAC [][LET_THM] THEN
   HO_MATCH_MP_TAC prCOND THEN SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
     HO_MATCH_MP_TAC (i2 `napp`) THEN SRW_TAC [ARITH_ss][prproj] THEN
     HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [ARITH_ss][prK] THEN
-    HO_MATCH_MP_TAC fcons_ntl2 THEN
-    SRW_TAC [ARITH_ss][prDIV, prproj, i2 `$+`, prK],
+    HO_MATCH_MP_TAC prCn1 THEN SRW_TAC [][] THEN
+    SRW_TAC [][prDIV, i2 `$+`, prproj, prK],
 
     HO_MATCH_MP_TAC prCOND THEN
     SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
+      HO_MATCH_MP_TAC (i2 `napp`) THEN SRW_TAC [][prproj] THEN
+      HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [][prK] THEN
+      HO_MATCH_MP_TAC prCn4 THEN SRW_TAC [][] THEN
+      SRW_TAC [][i1 `nfst`, prDIV, prproj, prK, i2 `$+`, i1 `nsnd`] THEN
+      HO_MATCH_MP_TAC (i2 `nel`) THEN
+      SRW_TAC [][i1 `nfst`, prDIV, prproj, prK, i2 `$+`, i1 `nsnd`],
+
+      HO_MATCH_MP_TAC (i2 `napp`) THEN SRW_TAC [][prproj] THEN
+      HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [][prK] THEN
+      HO_MATCH_MP_TAC prCn2 THEN
+      SRW_TAC [][i2 `nel`, i2 `$+`, prDIV, prproj, prK],
+
+      SRW_TAC [][pr_eq, prK, prMOD, prproj, i2 `$+`]
+    ],
+
+    SRW_TAC [][pr_eq, prK, prMOD, prproj, i2 `$+`]
+  ]);
+
+val MOD3_thm = prove(
+  ``((3 * n) MOD 3 = 0) ∧
+    ((3 * n + r) MOD 3 = r MOD 3)``,
+  Q.SPEC_THEN `3` (MP_TAC o ONCE_REWRITE_RULE [arithmeticTheory.MULT_COMM])
+              arithmeticTheory.MOD_TIMES THEN
+  SRW_TAC [][] THEN
+  METIS_TAC [DECIDE ``0 < 3``, arithmeticTheory.MULT_COMM,
+             arithmeticTheory.MOD_EQ_0]);
+val DIV3_thm = prove(
+  ``((3 * n) DIV 3 = n) ∧
+    ((3 * n + r) DIV 3 = n + r DIV 3)``,
+  ONCE_REWRITE_TAC [MULT_COMM] THEN
+  SRW_TAC [][ADD_DIV_ADD_DIV, MULT_DIV]);
 
 
-
-    SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN prtermrec_def
-
-
-
-*)
-
+val prtermrec0_thm = Store_thm(
+  "prtermrec0_thm",
+  ``(prtermrec0 v c a [dBnum (dV i)] = v [i]) ∧
+    (prtermrec0 v c a [dBnum (dAPP t1 t2)] =
+      c [dBnum t1; dBnum t2;
+         prtermrec0 v c a [dBnum t1]; prtermrec0 v c a [dBnum t2]]) ∧
+    (prtermrec0 v c a [dBnum (dABS t)] =
+      a [dBnum t; prtermrec0 v c a [dBnum t]])``,
+  SRW_TAC [][prtermrec0_correct] THEN
+  SRW_TAC [][SimpLHS, Once prtermrec_def, LET_THM, dBnum_def, MOD3_thm,
+             DIV3_thm]);
 
 
 val pr_is_abs_def = Define`
@@ -429,14 +484,6 @@ val primrec_is_abs = Store_thm(
   ``primrec pr_is_abs 1``,
   SRW_TAC [][pr_is_abs_def, prMOD, prproj, prK, pr_eq]);
 
-val MOD3_thm = prove(
-  ``((3 * n) MOD 3 = 0) ∧
-    ((3 * n + r) MOD 3 = r MOD 3)``,
-  Q.SPEC_THEN `3` (MP_TAC o ONCE_REWRITE_RULE [arithmeticTheory.MULT_COMM])
-              arithmeticTheory.MOD_TIMES THEN
-  SRW_TAC [][] THEN
-  METIS_TAC [DECIDE ``0 < 3``, arithmeticTheory.MULT_COMM,
-             arithmeticTheory.MOD_EQ_0]);
 
 
 val pr_is_abs_thm = Store_thm(
@@ -454,98 +501,89 @@ val pr_is_abs_correct = store_thm(
 
 val pr_bnf_def = Define`
   pr_bnf =
-  (λl. nel
-       (l ' 0)
-       (Pr (λl. ncons 1 nnil)
-           (λl. let n = l ' 0 + 1 in
-                let rlist = l ' 1 in
-                let m = n MOD 3
-                in
-                  if m = 0 then napp rlist (ncons 1 nnil)
-                  else if m = 2 then
-                    let subpos = n DIV 3 in
-                    let rres = nel subpos rlist
-                    in
-                      napp rlist (ncons rres nnil)
-                  else
-                    let subpos = n DIV 3 in
-                    let arg1 = nfst subpos in
-                    let arg1r = nel (nfst subpos) rlist in
-                    let arg2r = nel (nsnd subpos) rlist in
-                    let res = (arg1r * arg2r * (1 - pr_is_abs [arg1]))
-                    in
-                      napp rlist (ncons res nnil))
-           [l ' 0; 0]))
+  prtermrec0 (K 1)
+             (λl. let t1 = l ' 0 in
+                  let r1 = l ' 2 in
+                  let r2 = l ' 3
+                  in
+                    r1 * r2 * (1 - pr_is_abs [t1]))
+             (proj 1)
 `;
-
-
 
 val primrec_pr_bnf = Store_thm(
   "primrec_pr_bnf",
   ``primrec pr_bnf 1``,
   SIMP_TAC (srw_ss()) [pr_bnf_def] THEN
-  HO_MATCH_MP_TAC (GEN_ALL (Q.INST [`f` |-> `nel`] prf2)) THEN
-  SRW_TAC [][prK, prproj] THEN
-  HO_MATCH_MP_TAC prCn2 THEN SRW_TAC [][prK, prproj] THEN
-  HO_MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][i2 `ncons`, prK] THEN
+  HO_MATCH_MP_TAC primrec_termrec THEN SRW_TAC [][primrec_rules] THEN
   SRW_TAC [][LET_THM] THEN
-  HO_MATCH_MP_TAC prCOND THEN
-  SRW_TAC [][combinTheory.o_ABS_R, i2 `napp`, prproj, prK, i2 `ncons`, prMOD,
-             pr_eq, prpred, i2 `$+`] THEN
-  HO_MATCH_MP_TAC prCOND THEN
-  SRW_TAC [][combinTheory.o_ABS_R, prMOD, pr_eq, prproj, prK, prpred,
-             i2 `$+`] THEN1
-    (HO_MATCH_MP_TAC (i2 `napp`) THEN SRW_TAC [][prproj] THEN
-     HO_MATCH_MP_TAC (i2 `ncons`) THEN
-     SRW_TAC [][i2 `nel`, prDIV, prK, prproj, i2 `$+`]) THEN
-  HO_MATCH_MP_TAC (i2 `napp`) THEN SRW_TAC [][prproj] THEN
-  HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [][prK] THEN
-  HO_MATCH_MP_TAC (i2 `$*`) THEN SRW_TAC [][] THENL [
-    HO_MATCH_MP_TAC (i2 `$*`) THEN SRW_TAC [][] THEN
-    HO_MATCH_MP_TAC (i2 `nel`) THEN
-    SRW_TAC [][i1 `nfst`, prproj, prDIV, prK, i1 `nsnd`, i2 `$+`],
+  HO_MATCH_MP_TAC (i2 `$*`) THEN
+  SRW_TAC [][prproj, i2 `$*`, prK] THEN
+  HO_MATCH_MP_TAC (i2 `$-`) THEN
+  SRW_TAC [][prCn1, prK, primrec_is_abs, prproj]);
 
-    HO_MATCH_MP_TAC (i2 `$-`) THEN SRW_TAC [][prK] THEN
-    HO_MATCH_MP_TAC prCn1 THEN SRW_TAC [][i1 `nfst`, prDIV, prK, prproj,
-                                          i2 `$+`]
-  ]);
-
-val GENLIST_CONS = prove(
-  ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
-  Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
-val GENLIST1 = prove(``GENLIST f 1 = [f 0]``,
-                     SIMP_TAC bool_ss [ONE, GENLIST, SNOC]);
-
+val nfst_snd_div3 = Store_thm(
+  "nfst_snd_div3",
+  ``0 < n ⇒ nfst (n DIV 3) < n ∧ nsnd (n DIV 3) < n``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
+  Q.EXISTS_TAC `n DIV 3` THEN
+  SRW_TAC [ARITH_ss][DIV_LESS, nfst_le, nsnd_le])
 
 val pr_bnf_correct = Store_thm(
   "pr_bnf_correct",
   ``pr_bnf [n] = nB (bnf (toTerm (numdB n)))``,
-  SRW_TAC [][pr_bnf_def] THEN
-  Q.MATCH_ABBREV_TAC `nel n (f [n; 0]) = nB (dbnf (numdB n))` THEN
-  Q_TAC SUFF_TAC
-    `∀n. f [n; 0] = nlist_of (GENLIST (λp. nB (bnf (toTerm (numdB p))))
-                                      (n + 1))`
-    THEN1 SRW_TAC [][nel_nlist_of, LENGTH_GENLIST, EL_GENLIST] THEN
-  Induct THEN1
-    SRW_TAC [][Abbr`f`, GENLIST1, Once numdB_def] THEN
-  SRW_TAC [][Abbr`f`, LET_THM, GENLIST, ADD_CLAUSES, SNOC_APPEND,
-             nlist_of_append] THEN
-  Q.PAT_ASSUM `Pr f g X = Y` (K ALL_TAC) THENL [
+  SRW_TAC [][pr_bnf_def, prtermrec0_correct, LET_THM] THEN
+  completeInduct_on `n` THEN SRW_TAC [][Once prtermrec_def, LET_THM] THENL [
     SRW_TAC [][Once numdB_def],
-    SRW_TAC [][Once numdB_def, SimpRHS] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-    SRW_TAC [ARITH_ss][nel_nlist_of, EL_GENLIST, DIV_LESS, LENGTH_GENLIST],
 
-    SRW_TAC [][Once numdB_def, SimpRHS] THENL [
-      `nfst ((n + 1) DIV 3) < n + 1 ∧
-       nsnd ((n + 1) DIV 3) < n + 1`
-         by (CONJ_TAC THEN MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
-             Q.EXISTS_TAC `(n + 1) DIV 3` THEN
-             SRW_TAC [ARITH_ss][DIV_LESS, nfst_le, nsnd_le]) THEN
-      SRW_TAC [][nel_nlist_of, EL_GENLIST, LENGTH_GENLIST, pr_is_abs_correct,
-                 CONJ_ASSOC],
+    SRW_TAC [][Once numdB_def] THEN
+    `0 < n` by (Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+    SRW_TAC [][pr_is_abs_correct, CONJ_ASSOC],
 
-      `(n + 1) MOD 3 < 3` by SRW_TAC [][MOD_LESS] THEN DECIDE_TAC
-    ]
+    SRW_TAC [][Once numdB_def] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+    MATCH_MP_TAC DIV_LESS THEN SRW_TAC [][] THEN
+    Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) []
+  ]);
+
+val max_abs_def = Define`
+  (max_abs (dV i) = 0) ∧
+  (max_abs (dAPP t1 t2) = MAX (max_abs t1) (max_abs t2)) ∧
+  (max_abs (dABS t) = 1 + max_abs t)
+`;
+val _ = export_rewrites ["max_abs_def"]
+
+val primrec_MAX = Store_thm(
+  "primrec_max",
+  ``primrec (pr2 MAX) 2``,
+  HO_MATCH_MP_TAC primrec_pr2 THEN
+  Q.EXISTS_TAC `pr_cond (Cn pr_le [proj 0; proj 1]) (proj 1) (proj 0)` THEN
+  SRW_TAC [][primrec_rules] THEN
+  ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [MAX_DEF]);
+
+val pr_max_abs_def = Define`
+  pr_max_abs = prtermrec0 (K 0)
+                          (Cn (pr2 MAX) [proj 2; proj 3])
+                          (Cn succ [proj 1])
+`;
+
+val primrec_pr_max_abs = Store_thm(
+  "primrec_pr_max_abs",
+  ``primrec pr_max_abs 1``,
+  SRW_TAC [][primrec_rules, primrec_termrec, pr_max_abs_def]);
+
+val pr_max_abs_thm = Store_thm(
+  "pr_max_abs_thm",
+  ``pr_max_abs [n] = max_abs (numdB n)``,
+  SRW_TAC [][pr_max_abs_def, prtermrec0_correct] THEN
+  completeInduct_on `n` THEN
+  SRW_TAC [][Once prtermrec_def, LET_THM] THENL [
+    SRW_TAC [][Once numdB_def],
+    `0 < n` by (Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+    SRW_TAC [][] THEN SRW_TAC [][Once numdB_def, SimpRHS] THEN
+    FULL_SIMP_TAC (srw_ss()) [],
+
+    `0 < n` by (Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+    SRW_TAC [][] THEN SRW_TAC [][Once numdB_def, SimpRHS] THEN
+    DECIDE_TAC
   ]);
 
 val _ = export_theory()
