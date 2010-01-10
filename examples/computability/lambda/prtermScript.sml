@@ -586,4 +586,101 @@ val pr_max_abs_thm = Store_thm(
     DECIDE_TAC
   ]);
 
+(* ----------------------------------------------------------------------
+    primitive recursive "lift"
+
+    Recall the defining equations
+       lift (dV i) k = if i < k then dV i else dV (i + 1)
+       lift (dAPP s t) k = dAPP (lift s k) (lift t k)
+       lift (dABS s) k = dABS (lift s (k + 1))
+   ---------------------------------------------------------------------- *)
+
+
+val pr_lift_def = Define`
+  pr_lift =
+  (λns. let t = ns ' 0 in
+        let k = ns ' 1 in
+        let mx = pr_max_abs [t] + k + 1
+        in
+          nel (t * mx + k)
+          (Pr1
+             (ncons 3 nnil)
+             (λl. let n = l ' 0 + 1 in
+                  let t = n DIV mx in
+                  let k = n MOD mx in
+                  let r = l ' 1
+                  in
+                    if t MOD 3 = 0 then
+                      if ¬(k <= t DIV 3) then napp r (ncons t nnil)
+                      else napp r (ncons (t + 3) nnil)
+                    else if t MOD 3 = 1 then
+                      let t1 = nfst (t DIV 3) in
+                      let t2 = nsnd (t DIV 3) in
+                      let t1k = t1 * mx + k in
+                      let t2k = t2 * mx + k
+                      in
+                        napp r (ncons (3 * (npair (nel t1k r) (nel t2k r)) + 1)
+                                      nnil)
+                    else
+                      let t0 = t DIV 3 in
+                      let t0k = t0 * mx + k + 1
+                      in
+                        napp r (ncons (3 * nel t0k r + 2) nnil))
+             [t * mx + k]))
+`;
+(*
+
+val pr_lift_correct = Store_thm(
+  "pr_lift_correct",
+  ``pr_lift [tn; k] = dBnum (lift (numdB tn) k)``,
+  SRW_TAC [][pr_lift_def] THEN
+  Q.MATCH_ABBREV_TAC `
+    nel (tn * mx + k) (f [tn * mx + k]) = dBnum (lift (numdB tn) k)
+  ` THEN
+  `0 < mx ∧ k < mx` by SRW_TAC [ARITH_ss][Abbr`mx`] THEN
+  Q_TAC SUFF_TAC `
+    ∀n. f [n] = nlist_of
+                  (GENLIST (λi. dBnum (lift (numdB (i DIV mx)) (i MOD mx)))
+                           (n + 1))
+  ` THEN1 SRW_TAC [][nel_nlist_of, LENGTH_GENLIST, EL_GENLIST,
+                     ADD_DIV_ADD_DIV, LESS_DIV_EQ_ZERO, MOD_TIMES] THEN
+  Induct THEN1
+    (SRW_TAC [][GENLIST1, Abbr`f`, ZERO_DIV, Once numdB_def, dBnum_def]) THEN
+  SRW_TAC [][Abbr`f`, LET_THM, GENLIST, ADD_CLAUSES, SNOC_APPEND,
+             nlist_of_append, NOT_LESS_EQUAL] THEN
+  Q.PAT_ASSUM `Pr1 NN FF LL = Z` (K ALL_TAC) THENL [
+    SRW_TAC [][Once numdB_def, dBnum_def] THEN
+    Q.ABBREV_TAC `t = (n + 1) DIV mx` THEN
+    Q.SPEC_THEN `3` MP_TAC DIVISION THEN SIMP_TAC (srw_ss()) [] THEN
+    DISCH_THEN (Q.SPEC_THEN `t` MP_TAC) THEN SRW_TAC [][Once MULT_COMM],
+
+    SRW_TAC [][Once numdB_def, dBnum_def] THEN
+    Q.ABBREV_TAC `t = (n + 1) DIV mx` THEN
+    `t = 3 * (t DIV 3) + t MOD 3`
+       by METIS_TAC [DECIDE ``0 < 3``, DIVISION, MULT_COMM] THEN
+    POP_ASSUM (MP_TAC o SYM) THEN SRW_TAC [][LEFT_ADD_DISTRIB],
+
+    Q.ABBREV_TAC `t = (n + 1) DIV mx` THEN
+    Q.ABBREV_TAC `kk = (n + 1) MOD mx` THEN
+    `kk < mx ∧ (kk MOD mx = kk)` by SRW_TAC [][Abbr`kk`] THEN
+    SRW_TAC [][Once numdB_def, dBnum_def, SimpRHS] THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    Q_TAC SUFF_TAC `nfst (t DIV 3) * mx + kk < n + 1 ∧
+                    nsnd (t DIV 3) * mx + kk < n + 1`
+    THEN1 SRW_TAC [][nel_nlist_of, LENGTH_GENLIST, EL_GENLIST,
+                     ADD_DIV_ADD_DIV, LESS_DIV_EQ_ZERO, MOD_TIMES] THEN
+    ...
+*)
+
+
+
+
+
+
+
+
+
+
+
+
 val _ = export_theory()
