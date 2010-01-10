@@ -101,7 +101,7 @@ val perm_recur_inv1_w128 = Q.store_thm(
     ~((permu d permFun block) ' to)`,
  Induct_on `d` THEN
  SRW_TAC [ARITH_ss] [permu_def,LET_THM] THEN
- SRW_TAC [WORD_BIT_EQ_ss] []);
+ SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def]);
 
 val perm_recur_inv2_w128 = Q.store_thm(
 "perm_recur_inv2_w128",
@@ -115,9 +115,9 @@ val perm_recur_inv2_w128 = Q.store_thm(
     ((permu d permFun block) ' to = block ' from)`,
  Induct_on `d` THEN
  SRW_TAC [ARITH_ss] [permu_def,LET_THM] THEN
- SRW_TAC [WORD_BIT_EQ_ss] [] THEN
+ SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def] THEN
  Cases_on `to <= d`  THEN Cases_on `to = d` THEN
- SRW_TAC [WORD_BIT_EQ_ss] [] THEN
+ SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def] THEN
  FULL_SIMP_TAC arith_ss [] THEN
  `to > d /\ (to = SUC d)` by DECIDE_TAC THEN
  ASM_SIMP_TAC arith_ss [perm_recur_inv1_w128]);
