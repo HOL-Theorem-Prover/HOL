@@ -863,7 +863,7 @@ val pr_nsub_def = Define`
   (λns. let s = ns ' 0 in
         let k = ns ' 1 in
         let t = ns ' 2 in
-        let gmx = scopesz (s ⊗ k) t + s ⊗ k
+        let gmx = scopesz (s ⊗ k) t + s ⊗ k + 1
         in
           nel (s ⊗ k)
               (prtermrec1
@@ -900,9 +900,30 @@ val pr_nsub_def = Define`
                               ncons (3 * nel 0 (zs ' 0) ⊗ nel 0 (zs ' 1) + 1)
                                     0)
                            (λss. let i = ss ' 0 + 1 in
-                                   i)
+                                 let r = ss ' 1 in
+                                 let r1 = nel i (ss ' 2) in
+                                 let r2 = nel i (ss ' 3)
+                                 in
+                                   napp r (ncons (3 * (r1 ⊗ r2) + 1) 0))
                            [gmx - mx; r1s; r2s])
-                 (λabs. 0)
+                 (λabs. let t = abs ' 0 in
+                        let rs = abs ' 1 in
+                        let sk = nfst (abs ' 2) in
+                        let gmx = nsnd (abs ' 2) in
+                        let mx = scopesz sk (3 * t + 2)
+                        in
+                          Pr (λzs.
+                                ncons (3 * nel (3 ⊗ 1) rs + 2) 0)
+                             (λss. let sk = ss ' 0 + 1 in
+                                   let r = ss ' 1 in
+                                   let rs = ss ' 2 in
+                                   let s = nfst sk in
+                                   let k = nsnd sk in
+                                   let j = pr_lift [s; 0] ⊗ (k + 1) in
+                                   let recresult = nel j rs
+                                   in
+                                     napp r (ncons (3 * recresult + 2) 0))
+                             [gmx - mx; rs])
                  [t; (s ⊗ k) ⊗ gmx]))
 `;
 
@@ -910,6 +931,19 @@ val npair_le_mono = store_thm(
   "npair_le_mono",
   ``x ≤ y ∧ a ≤ b ⇒ x ⊗ a ≤ y ⊗ b``,
   SRW_TAC [][npair_def, LESS_EQ_LESS_EQ_MONO]);
+
+val npair_lt_mono = store_thm(
+  "npair_lt_mono",
+  ``x < y ∧ a ≤ b ∨ x ≤ y ∧ a < b ⇒ x ⊗ a < y ⊗ b``,
+  SRW_TAC [ARITH_ss][LESS_OR_EQ] THEN
+  SRW_TAC [][npair_def] THENL [
+    `tri (x + a) ≤ tri (y + b)` by SRW_TAC [ARITH_ss][] THEN
+    DECIDE_TAC,
+    `tri (x + a) ≤ tri (y + b)` by SRW_TAC [ARITH_ss][] THEN
+    DECIDE_TAC,
+    `tri (x + a) ≤ tri (x + b)` by SRW_TAC [ARITH_ss][] THEN
+    DECIDE_TAC
+  ]);
 
 val funpow_le = prove(
   ``(∀x. x ≤ f x) ∧ m ≤ n ⇒ FUNPOW f m x ≤ FUNPOW f n x``,
@@ -939,10 +973,33 @@ val scopesz_lt1 = prove(
   Q.EXISTS_TAC `scopesz sk (dBnum (dAPP d1 d2))` THEN
   SRW_TAC [][scopesz_lt0]);
 
+val _ = temp_overload_on (
+  "sklift",
+  ``λn. dBnum (lift (numdB (nfst n)) 0) ⊗ (nsnd n + 1)``);
+
+val scopesz_lt2 = prove(
+  ``scopesz sk (dBnum d) < scopesz sk (dBnum (dABS d))``,
+  SRW_TAC [][scopesz_def, LET_THM, dBnum_def] THEN
+  MATCH_MP_TAC (GEN_ALL npair_lt_mono) THEN
+  SRW_TAC [ARITH_ss][] THEN DISJ2_TAC THEN
+  MATCH_MP_TAC funpow_le THEN SRW_TAC [][] THEN
+  Q.SPEC_THEN `numdB x` MP_TAC lift_larger THEN SRW_TAC [][]);
+
+(*
+val scopesz_lt2 = prove(
+  ``scopesz sk (dBnum (dABS d)) = scopesz sk (dBnum d) + sklift sk``,
+  SRW_TAC [][scopesz_def, LET_THM, dBnum_def] THEN
+  MATCH_MP_TAC (GEN_ALL npair_lt_mono) THEN
+  SRW_TAC [ARITH_ss][] THEN DISJ2_TAC THEN
+  MATCH_MP_TAC funpow_le THEN SRW_TAC [][] THEN
+  Q.SPEC_THEN `numdB x` MP_TAC lift_larger THEN SRW_TAC [][]);
+*)
+
 val nfstsnd0 = Store_thm(
   "nfstsnd0",
   ``(nfst 0 = 0) ∧ (nsnd 0 = 0)``,
   METIS_TAC [nfst_le, nsnd_le, DECIDE ``x ≤ 0 ⇔ (x = 0)``])
+
 (*
 val pr_nsub_correct = Store_thm(
   "pr_nsub_correct",
@@ -953,7 +1010,7 @@ val pr_nsub_correct = Store_thm(
   Q.MATCH_ABBREV_TAC `nel (s ⊗ k) (prtermrec1 v c a [dBnum d; (s ⊗ k) ⊗ gmx]) =
                       dBnum (nsub (numdB s) k d)` THEN
   Q_TAC SUFF_TAC `
-    ∀d. scopesz (s ⊗ k) (dBnum d) ≤ gmx ⇒
+    ∀d. scopesz (s ⊗ k) (dBnum d) < gmx ⇒
         (prtermrec1 v c a [dBnum d; (s ⊗ k) ⊗ gmx] =
          nlist_of (GENLIST (λi. dBnum (nsub (numdB (nfst i)) (nsnd i) d))
                            (gmx - scopesz (s ⊗ k) (dBnum d) + 1)))
@@ -980,8 +1037,10 @@ val pr_nsub_correct = Store_thm(
     ],
 
     MAP_EVERY Q.RM_ABBREV_TAC [`v`, `a`] THEN
-    IMP_RES_TAC scopesz_lt1 THEN
-    FULL_SIMP_TAC (srw_ss()) [] THEN
+    `scopesz (s ⊗ k) (dBnum dd) ≤ scopesz (s ⊗ k) (dBnum (dAPP dd dd')) ∧
+     scopesz (s ⊗ k) (dBnum dd') ≤ scopesz (s ⊗ k) (dBnum (dAPP dd dd'))`
+       by SRW_TAC [][scopesz_lt0] THEN
+    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
     SRW_TAC [][Abbr`c`] THEN
     REPEAT (Q.PAT_ASSUM `prtermrec1 VV CC AA LL = RR` (K ALL_TAC)) THEN
     `3 * (dBnum dd ⊗ dBnum dd') + 1 = dBnum (dAPP dd dd')`
@@ -991,14 +1050,49 @@ val pr_nsub_correct = Store_thm(
                         nlist_of (GENLIST gfr M3)` THEN
     `M3 = M + 1` by SRW_TAC [ARITH_ss][Abbr`M3`, Abbr`M`] THEN
     Q.RM_ABBREV_TAC `M3` THEN POP_ASSUM SUBST_ALL_TAC THEN
-    `M ≤ M1 ∧ M ≤ M2`
-      by (SRW_TAC [ARITH_ss][Abbr`M`, Abbr`M1`, Abbr`M2`] THEN
-          STRIP_ASSUME_TAC (Q.INST [`d1` |-> `dd`, `d2` |-> `dd'`,
-                                    `sk` |-> `s ⊗ k`] scopesz_lt0) THEN
-          DECIDE_TAC) THEN
+    `M < M1 ∧ M < M2 ∧ 0 < M1 ∧ 0 < M2`
+      by SRW_TAC [ARITH_ss][Abbr`M`, Abbr`M1`, Abbr`M2`] THEN
     MAP_EVERY Q.RM_ABBREV_TAC [`M`, `M1`, `M2`] THEN
     Induct_on `M` THEN
-    SRW_TAC [][Abbr`gf1`, Abbr`gf2`, Abbr`gfr`, Abbr`zf`, Abbr`sf`]
+    SRW_TAC [][Abbr`gf1`, Abbr`gf2`, Abbr`gfr`, Abbr`zf`, Abbr`sf`] THENL [
+      ASM_SIMP_TAC bool_ss [nel_nlist_of, LENGTH_GENLIST, EL_GENLIST] THEN
+      SRW_TAC [][GENLIST1, dBnum_def],
+
+      FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
+      Q.PAT_ASSUM `Pr ZZ FF LL = RR` (K ALL_TAC) THEN
+      SRW_TAC [ARITH_ss][GENLIST, ADD_CLAUSES, nel_nlist_of, LENGTH_GENLIST,
+                         EL_GENLIST, SNOC_APPEND, nlist_of_append, dBnum_def]
+    ],
+
+    MAP_EVERY Q.RM_ABBREV_TAC [`v`, `c`] THEN
+    `scopesz (s ⊗ k) (dBnum dd) < scopesz (s ⊗ k) (dBnum (dABS dd))`
+       by SRW_TAC [][scopesz_lt2] THEN
+    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
+    SRW_TAC [][Abbr`a`] THEN
+    Q.PAT_ASSUM `pretermrec1 VV CC AA LL = RR` (K ALL_TAC) THEN
+    Q.MATCH_ABBREV_TAC `Pr zf sf [M; nlist_of (GENLIST gf M1)] =
+                        nlist_of (GENLIST gfr M2)` THEN
+    `3 * dBnum dd + 2 = dBnum (dABS dd)` by SRW_TAC [][dBnum_def] THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    `M2 = M + 1` by SRW_TAC [ARITH_ss][Abbr`M`, Abbr`M2`] THEN
+    Q.RM_ABBREV_TAC `M2` THEN POP_ASSUM SUBST_ALL_TAC THEN
+    Q.RM_ABBREV_TAC `M` THEN Induct_on `M` THENL [
+      SRW_TAC [][Abbr`zf`, Abbr`gf`, Abbr`gfr`, GENLIST1] THEN
+      SRW_TAC [][Once numdB_def, SimpRHS] THEN
+      SRW_TAC [][dBnum_def] THEN
+      Q_TAC SUFF_TAC `3 ⊗ 1 < M1` THEN1
+        (SRW_TAC [][nel_nlist_of, LENGTH_GENLIST, EL_GENLIST] THEN
+         SRW_TAC [][Once numdB_def]) THEN
+      ...,
+
+      SRW_TAC [][Abbr`sf`, Abbr`gf`, Abbr`gfr`] THEN
+      Q.PAT_ASSUM `Pr ZZ SS LL = RR` (K ALL_TAC) THEN
+      SRW_TAC [][ADD_CLAUSES, GENLIST, SNOC_APPEND, nlist_of_append]
+
+
+
+
+
 
 
 
