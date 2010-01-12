@@ -1,4 +1,6 @@
 
+(* $Id$ *)
+
 (* proof of various results in Barr & Wells about distributive law for monads,
   and in Jones & Duponcheel re prod, dorp, swap constructions *)
 

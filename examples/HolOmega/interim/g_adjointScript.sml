@@ -1,3 +1,4 @@
+(* $Id$ *)
 structure g_adjointScript =
 struct
 

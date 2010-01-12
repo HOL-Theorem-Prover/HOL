@@ -1,3 +1,4 @@
+
 (*---------------------------------------------------------------------------
 	     Categories, Functors and Natural Transformations
 	      $Id$
@@ -203,9 +204,9 @@ val g_functor_oo = store_thm ("g_functor_oo",
   regarding the order of quantifying over the two objects 
   (source and target of an arrow) *)
 
-val g_dual_functor_def = new_definition ("g_dual_functor_def",
-  ``g_dual_functor (F': 'F (('C, 'D) g_functor)) =
-    (\:'a 'b. F' [:'b, 'a:]) : 'F (('C, 'D) g_functor_dual)``) ;
+val g_dual_functor_def = Define
+  `g_dual_functor (F': 'F (('C, 'D) g_functor)) =
+    (\:'a 'b. F' [:'b, 'a:]) : 'F (('C, 'D) g_functor_dual)` ;
 
 val g_functor_dual = store_thm ("g_functor_dual",
   ``g_functor [:'C, 'D:] ((idC, compC) : 'C category)
