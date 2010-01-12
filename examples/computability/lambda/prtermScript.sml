@@ -87,6 +87,7 @@ val prf2 = prove(
 fun i2 q = GEN_ALL (Q.INST [`f` |-> q] prf2)
 
 fun intro2 q = HO_MATCH_MP_TAC (i2 q)
+val intro = HO_MATCH_MP_TAC
 
 val prf1 = prove(
   ``primrec g n ∧ primrec (pr1 f) 1 ⇒ primrec (λl. f (g l)) n``,
@@ -339,7 +340,7 @@ val nlist_of11 = Store_thm(
 val nlist_of_onto = store_thm(
   "nlist_of_onto",
   ``∀n. ∃l. nlist_of l = n``,
-  HO_MATCH_MP_TAC nlist_ind THEN SRW_TAC [][] THENL [
+  intro nlist_ind THEN SRW_TAC [][] THENL [
     Q.EXISTS_TAC `[]` THEN SRW_TAC [][],
     Q.EXISTS_TAC `h::l` THEN SRW_TAC [][]
   ]);
@@ -347,13 +348,13 @@ val nlist_of_onto = store_thm(
 val napp_nil2 = Store_thm(
   "napp_nil2",
   ``∀l1. napp l1 nnil = l1``,
-  HO_MATCH_MP_TAC nlist_ind THEN SRW_TAC [][]);
+  intro nlist_ind THEN SRW_TAC [][]);
 
 val napp_ASSOC = store_thm(
   "napp_ASSOC",
   ``napp l1 (napp l2 l3) = napp (napp l1 l2) l3``,
   MAP_EVERY Q.ID_SPEC_TAC [`l3`, `l2`, `l1`] THEN
-  HO_MATCH_MP_TAC nlist_ind THEN SRW_TAC [][])
+  intro nlist_ind THEN SRW_TAC [][])
 
 val napp11 = Store_thm(
   "napp11",
@@ -444,24 +445,24 @@ val primrec_termrec = Store_thm(
   MATCH_MP_TAC alt_Pr_rule THEN
   SRW_TAC [][LET_THM] THEN1
     SRW_TAC [][prCn2, i2 `ncons`] THEN
-  HO_MATCH_MP_TAC prCOND THEN SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
+  intro prCOND THEN SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
     intro2 `napp` THEN SRW_TAC [ARITH_ss][] THEN
     intro2 `ncons` THEN SRW_TAC [ARITH_ss][] THEN
-    HO_MATCH_MP_TAC prCn2 THEN SRW_TAC [][] THEN
+    intro prCn2 THEN SRW_TAC [][] THEN
     SRW_TAC [][prDIV, i2 `$+`],
 
-    HO_MATCH_MP_TAC prCOND THEN
+    intro prCOND THEN
     SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
       intro2 `napp` THEN SRW_TAC [][] THEN
       intro2 `ncons` THEN SRW_TAC [][prK] THEN
-      HO_MATCH_MP_TAC prCn5 THEN SRW_TAC [][] THEN
+      intro prCn5 THEN SRW_TAC [][] THEN
       SRW_TAC [][i1 `nfst`, prDIV, i2 `$+`, i1 `nsnd`] THEN
       intro2 `nel` THEN
       SRW_TAC [][i1 `nfst`, prDIV, i2 `$+`, i1 `nsnd`],
 
       intro2 `napp` THEN SRW_TAC [][] THEN
       intro2 `ncons` THEN SRW_TAC [][] THEN
-      HO_MATCH_MP_TAC prCn3 THEN
+      intro prCn3 THEN
       SRW_TAC [][i2 `nel`, i2 `$+`, prDIV],
 
       SRW_TAC [][pr_eq, prMOD, i2 `$+`]
@@ -557,7 +558,7 @@ val primrec_pr_bnf = Store_thm(
   "primrec_pr_bnf",
   ``primrec pr_bnf 1``,
   SIMP_TAC (srw_ss()) [pr_bnf_def] THEN
-  HO_MATCH_MP_TAC primrec_prtermrec0 THEN SRW_TAC [][primrec_rules] THEN
+  intro primrec_prtermrec0 THEN SRW_TAC [][primrec_rules] THEN
   SRW_TAC [][LET_THM] THEN
   intro2 `$*` THEN
   SRW_TAC [][i2 `$*`, prK] THEN
@@ -582,7 +583,7 @@ val _ = export_rewrites ["max_abs_def"]
 val primrec_MAX = Store_thm(
   "primrec_max",
   ``primrec (pr2 MAX) 2``,
-  HO_MATCH_MP_TAC primrec_pr2 THEN
+  intro primrec_pr2 THEN
   Q.EXISTS_TAC `pr_cond (Cn pr_le [proj 0; proj 1]) (proj 1) (proj 0)` THEN
   SRW_TAC [][primrec_rules] THEN
   ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [MAX_DEF]);
@@ -771,12 +772,12 @@ val primrec_pr_lift = Store_thm(
   ``primrec pr_lift 2``,
   SRW_TAC [][LET_THM, pr_lift_def] THEN
   intro2 `nel` THEN SRW_TAC [][] THEN
-  HO_MATCH_MP_TAC prCn2 THEN SRW_TAC [][] THENL [
+  intro prCn2 THEN SRW_TAC [][] THENL [
     MATCH_MP_TAC primrec_termrec THEN SRW_TAC [][] THENL [
-      HO_MATCH_MP_TAC prCn2 THEN SRW_TAC [][] THEN
+      intro prCn2 THEN SRW_TAC [][] THEN
       MATCH_MP_TAC alt_Pr_rule THEN
       SRW_TAC [][i2 `ncons`, i2 `$+`, i2 `$*`] THEN
-      HO_MATCH_MP_TAC prCOND THEN
+      intro prCOND THEN
       SRW_TAC [][combinTheory.o_ABS_R, i2 `napp`, i2 `$*`, i2 `ncons`, prpred]
       THENL [
         intro2 `napp` THEN
@@ -784,7 +785,7 @@ val primrec_pr_lift = Store_thm(
         SRW_TAC [][i2 `$+`]
       ],
 
-      HO_MATCH_MP_TAC prCn3 THEN SRW_TAC [][] THENL [
+      intro prCn3 THEN SRW_TAC [][] THENL [
         MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][] THENL [
           intro2 `ncons` THEN SRW_TAC [][prK] THEN
           intro2 `$+` THEN
@@ -800,7 +801,7 @@ val primrec_pr_lift = Store_thm(
         SRW_TAC [][prmxabs]
       ],
 
-      HO_MATCH_MP_TAC prCn2 THEN
+      intro prCn2 THEN
       SRW_TAC [][prmxabs, i2 `$-`, i2 `$+`] THEN
       MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][] THENL [
         intro2 `ncons` THEN
@@ -815,4 +816,58 @@ val primrec_pr_lift = Store_thm(
     SRW_TAC [][prmxabs, i2 `$+`]
   ]);
 
+(* ----------------------------------------------------------------------
+    de Bruijn Substitution à la Shankar, Huet and Nipkow:
+
+      nsub s k (dV i) =
+        if k < i then dV (i − 1) else if i = k then s else dV i
+
+      nsub s k (dAPP t u) = dAPP (nsub s k t) (nsub s k u)
+
+      nsub s k (dABS t) = dABS (nsub (lift s 0) (k + 1) t)
+   ---------------------------------------------------------------------- *)
+
+val lift_larger = prove(
+  ``∀t i. dBnum t ≤ dBnum (lift t i)``,
+  Induct THEN SRW_TAC [][dBnum_def] THEN
+  REPEAT (FIRST_X_ASSUM (Q.SPEC_THEN `i` MP_TAC)) THEN
+  SRW_TAC [][LESS_EQ_LESS_EQ_MONO, npair_def]);
+
+val primrec_FUNPOW = Store_thm(
+  "primrec_FUNPOW",
+  ``primrec (pr1 f) 1 ∧ primrec g n ∧ primrec cf n ⇒
+    primrec (λl. FUNPOW f (cf l) (g l)) n``,
+  STRIP_TAC THEN IMP_RES_TAC primrec_nzero THEN
+  Q_TAC SUFF_TAC `(λl. FUNPOW f (cf l) (g l)) =
+                  (λl. Pr (proj 0) (Cn (pr1 f) [proj 1]) [cf l; g l])`
+  THEN1 (SRW_TAC [][] THEN MATCH_MP_TAC prCn2 THEN
+         SRW_TAC [][primrec_rules]) THEN
+  SRW_TAC [][FUN_EQ_THM] THEN
+  Q.ABBREV_TAC `m = cf l` THEN Q.RM_ABBREV_TAC `m` THEN
+  Induct_on `m` THEN1 SRW_TAC [][FUNPOW] THEN
+  SRW_TAC [][FUNPOW_SUC]);
+
+(*
+val pr_nsub_def = Define`
+  pr_nsub =
+  (λns. let s = ns ' 0 in
+        let k = ns ' 1 in
+        let t = ns ' 2 in
+        let mxa = max_abs (numdB t) in
+        let mxs = FUNPOW (λt. dBnum (lift (numdB t) 0)) mxa s
+        in
+          prtermrec1
+            (λvs.
+
+(mxa ⊗ mxs))
+`;
+
+val primrec_pr_nsub = Store_thm(
+  "primrec_pr_nsub",
+  ``primrec pr_nsub 3``,
+  SRW_TAC [][LET_THM, pr_nsub_def] THEN intro2 `npair` THEN
+  SRW_TAC [][prmxabs] THEN intro primrec_FUNPOW THEN
+  SRW_TAC [][prmxabs] THEN intro primrec_pr1 THEN
+  Q.EXISTS_TAC `Cn pr_lift [proj 0; K 0]` THEN SRW_TAC [][primrec_rules]);
+*)
 val _ = export_theory()
