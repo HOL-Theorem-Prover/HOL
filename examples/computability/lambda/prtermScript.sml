@@ -86,6 +86,8 @@ val prf2 = prove(
   SRW_TAC [][primrec_rules]);
 fun i2 q = GEN_ALL (Q.INST [`f` |-> q] prf2)
 
+fun intro2 q = HO_MATCH_MP_TAC (i2 q)
+
 val prf1 = prove(
   ``primrec g n ∧ primrec (pr1 f) 1 ⇒ primrec (λl. f (g l)) n``,
   STRIP_TAC THEN
@@ -437,28 +439,28 @@ val primrec_termrec = Store_thm(
   ``primrec v 2 ∧ primrec c 5 ∧ primrec a 3 ⇒
     primrec (prtermrec1 v c a) 2``,
   SRW_TAC [][prtermrec1_def] THEN
-  HO_MATCH_MP_TAC (i2 `nel`) THEN SRW_TAC [ARITH_ss][] THEN
+  intro2 `nel` THEN SRW_TAC [ARITH_ss][] THEN
   SRW_TAC [boolSimps.ETA_ss][] THEN
   MATCH_MP_TAC alt_Pr_rule THEN
   SRW_TAC [][LET_THM] THEN1
     SRW_TAC [][prCn2, i2 `ncons`] THEN
   HO_MATCH_MP_TAC prCOND THEN SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
-    HO_MATCH_MP_TAC (i2 `napp`) THEN SRW_TAC [ARITH_ss][] THEN
-    HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [ARITH_ss][] THEN
+    intro2 `napp` THEN SRW_TAC [ARITH_ss][] THEN
+    intro2 `ncons` THEN SRW_TAC [ARITH_ss][] THEN
     HO_MATCH_MP_TAC prCn2 THEN SRW_TAC [][] THEN
     SRW_TAC [][prDIV, i2 `$+`],
 
     HO_MATCH_MP_TAC prCOND THEN
     SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
-      HO_MATCH_MP_TAC (i2 `napp`) THEN SRW_TAC [][] THEN
-      HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [][prK] THEN
+      intro2 `napp` THEN SRW_TAC [][] THEN
+      intro2 `ncons` THEN SRW_TAC [][prK] THEN
       HO_MATCH_MP_TAC prCn5 THEN SRW_TAC [][] THEN
       SRW_TAC [][i1 `nfst`, prDIV, i2 `$+`, i1 `nsnd`] THEN
-      HO_MATCH_MP_TAC (i2 `nel`) THEN
+      intro2 `nel` THEN
       SRW_TAC [][i1 `nfst`, prDIV, i2 `$+`, i1 `nsnd`],
 
-      HO_MATCH_MP_TAC (i2 `napp`) THEN SRW_TAC [][] THEN
-      HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [][] THEN
+      intro2 `napp` THEN SRW_TAC [][] THEN
+      intro2 `ncons` THEN SRW_TAC [][] THEN
       HO_MATCH_MP_TAC prCn3 THEN
       SRW_TAC [][i2 `nel`, i2 `$+`, prDIV],
 
@@ -557,9 +559,9 @@ val primrec_pr_bnf = Store_thm(
   SIMP_TAC (srw_ss()) [pr_bnf_def] THEN
   HO_MATCH_MP_TAC primrec_prtermrec0 THEN SRW_TAC [][primrec_rules] THEN
   SRW_TAC [][LET_THM] THEN
-  HO_MATCH_MP_TAC (i2 `$*`) THEN
+  intro2 `$*` THEN
   SRW_TAC [][i2 `$*`, prK] THEN
-  HO_MATCH_MP_TAC (i2 `$-`) THEN
+  intro2 `$-` THEN
   SRW_TAC [][prCn1, primrec_is_abs]);
 
 
@@ -768,7 +770,7 @@ val primrec_pr_lift = Store_thm(
   "primrec_pr_lift",
   ``primrec pr_lift 2``,
   SRW_TAC [][LET_THM, pr_lift_def] THEN
-  HO_MATCH_MP_TAC (i2 `nel`) THEN SRW_TAC [][] THEN
+  intro2 `nel` THEN SRW_TAC [][] THEN
   HO_MATCH_MP_TAC prCn2 THEN SRW_TAC [][] THENL [
     MATCH_MP_TAC primrec_termrec THEN SRW_TAC [][] THENL [
       HO_MATCH_MP_TAC prCn2 THEN SRW_TAC [][] THEN
@@ -777,35 +779,35 @@ val primrec_pr_lift = Store_thm(
       HO_MATCH_MP_TAC prCOND THEN
       SRW_TAC [][combinTheory.o_ABS_R, i2 `napp`, i2 `$*`, i2 `ncons`, prpred]
       THENL [
-        HO_MATCH_MP_TAC (i2 `napp`) THEN
+        intro2 `napp` THEN
         SRW_TAC [][i2 `ncons`, i2 `$+`, i2 `$*`],
         SRW_TAC [][i2 `$+`]
       ],
 
       HO_MATCH_MP_TAC prCn3 THEN SRW_TAC [][] THENL [
         MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][] THENL [
-          HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [][prK] THEN
-          HO_MATCH_MP_TAC (i2 `$+`) THEN
+          intro2 `ncons` THEN SRW_TAC [][prK] THEN
+          intro2 `$+` THEN
           SRW_TAC [][i2 `$+`, i2 `$*`, i2 `npair`, i2 `nel`],
-          HO_MATCH_MP_TAC (i2 `napp`) THEN SRW_TAC [][] THEN
-          HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [][] THEN
-          HO_MATCH_MP_TAC (i2 `$+`) THEN SRW_TAC [][] THEN
-          HO_MATCH_MP_TAC (i2 `$*`) THEN SRW_TAC [][] THEN
+          intro2 `napp` THEN SRW_TAC [][] THEN
+          intro2 `ncons` THEN SRW_TAC [][] THEN
+          intro2 `$+` THEN SRW_TAC [][] THEN
+          intro2 `$*` THEN SRW_TAC [][] THEN
           SRW_TAC [][i2 `$+`, i2 `$*`, i2 `npair`, i2 `nel`]
         ],
-        HO_MATCH_MP_TAC (i2 `$-`) THEN SRW_TAC [][] THEN
-        HO_MATCH_MP_TAC (i2 `MAX`) THEN SRW_TAC [][] THEN
+        intro2 `$-` THEN SRW_TAC [][] THEN
+        intro2 `MAX` THEN SRW_TAC [][] THEN
         SRW_TAC [][prmxabs]
       ],
 
       HO_MATCH_MP_TAC prCn2 THEN
       SRW_TAC [][prmxabs, i2 `$-`, i2 `$+`] THEN
       MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][] THENL [
-        HO_MATCH_MP_TAC (i2 `ncons`) THEN
+        intro2 `ncons` THEN
         SRW_TAC [][i2 `nel`, i2 `$*`, i2 `$+`],
-        HO_MATCH_MP_TAC (i2 `napp`) THEN SRW_TAC [][] THEN
-        HO_MATCH_MP_TAC (i2 `ncons`) THEN SRW_TAC [][] THEN
-        HO_MATCH_MP_TAC (i2 `$+`) THEN SRW_TAC [][] THEN
+        intro2 `napp` THEN SRW_TAC [][] THEN
+        intro2 `ncons` THEN SRW_TAC [][] THEN
+        intro2 `$+` THEN SRW_TAC [][] THEN
         SRW_TAC [][i2 `nel`, i2 `$+`, i2 `$*`]
       ]
     ],
