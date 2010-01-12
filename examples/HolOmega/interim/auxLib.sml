@@ -3,21 +3,39 @@ structure auxLib = struct
 
 local open HolKernel boolLib bossLib in
 
+infix THENC ORELSEC ;
+
 (* strip_left : ('a -> 'b * 'a) -> 'a -> 'b list * 'a
-  repeatedly strip off something on the left *)
+  strip_left_n : int -> ('a -> 'b * 'a) -> 'a -> 'b list * 'a
+  repeatedly, or n times, strip off something on the left *)
 fun strip_left f th =
   let val (v, th1) = f th ;
     val (vs, thf) = strip_left f th1 ;
   in (v :: vs, thf) end
   handle _ => ([], th) ;
 
+fun strip_left_n 0 f th = ([], th)
+  | strip_left_n n f th =
+    let val (v, th1) = f th ;
+      val (vs, thf) = strip_left_n (n-1) f th1 ;
+    in (v :: vs, thf) end
+    handle _ => ([], th) ;
+
 (* strip_right : ('a -> 'a * 'b) -> 'a -> 'a * 'b list
+  strip_right_n : int -> ('a -> 'a * 'b) -> 'a -> 'a * 'b list
   repeatedly strip off something on the right *)
 fun strip_right f th =
   let fun strip_right' (th', vs) =
       let val (th1, v) = f th' in strip_right' (th1, v :: vs) end
       handle _ => (th', vs)
   in strip_right' (th, []) end ;
+
+fun strip_right_n 0 f th = (th, [])
+  | strip_right_n n f th =
+    let fun strip_right_n' n (th', vs) =
+	let val (th1, v) = f th' in strip_right_n' (n-1) (th1, v :: vs) end
+	handle _ => (th', vs)
+    in strip_right_n' n (th, []) end ;
 
 (* list_mk_left : ('b * 'a -> 'a) -> 'b list * 'a -> 'a
   repeatedly join something on the left *)
@@ -58,23 +76,67 @@ fun tsfg f thm =
   let val (tyvars, sthm) = SPEC_TYVARL thm ;
   in TY_GENL tyvars (f sthm) end ;
 
-(* ufd : (thm -> thm) -> thm -> thm
-  removes implication antecedents, apply f, restores antecedents,
-  assumes thm has no assumptions *)
-fun ufd f thm = DISCH_ALL (f (UNDISCH_ALL thm)) ;
-
 (* UNDISCH_TERM : thm -> term * thm
   like UNDISCH, but also returns term *) 
 fun UNDISCH_TERM th = 
   let val (hy, _) = boolSyntax.dest_imp (concl th) ;
   in (hy, UNDISCH th) end ; 
 
-(* UNDISCH_ALL_TERMS : thm -> term list * thm *) 
+(* UNDISCH_ALL_TERMS : thm -> term list * thm  
+  UNDISCH_N_TERMS : int -> thm -> term list * thm *) 
 val UNDISCH_ALL_TERMS = strip_left UNDISCH_TERM ;
+fun UNDISCH_N_TERMS n = strip_left_n n UNDISCH_TERM ;
 
 (* DISCH_TERMS : term list -> thm -> thm
   DISCH a list of terms *)
 val DISCH_TERMS = list_mk_left_cur Thm.DISCH ; 
+
+(* reo_prems : (term list -> term list) -> thm -> thm
+  reorder premises of implication theorem 
+  (or can leave some undischarged) *)
+fun reo_prems f thm = 
+  let val (ps, c) = UNDISCH_ALL_TERMS thm ;
+  in DISCH_TERMS (f ps) c end ;
+
+(* ufd : (thm -> thm) -> thm -> thm
+  ufdn : int -> (thm -> thm) -> thm -> thm
+  ufdl : (thm -> thm list) -> thm -> thm list
+  removes implication antecedents, apply f, restores antecedents,
+  assumes thm has no assumptions *)
+fun ufd f thm = DISCH_ALL (f (UNDISCH_ALL thm)) ;
+fun ufdl f thm = map DISCH_ALL (f (UNDISCH_ALL thm)) ;
+fun ufdn n f thm = 
+  let val (ps, cth) = UNDISCH_N_TERMS n thm ;
+  in DISCH_TERMS ps (f cth) end ;
+
+(* takeDrop : int -> 'a list -> 'a list * 'a list
+  splits list into two, with n (if there are that many) in first part *) 
+fun takeDrop n [] = ([], []) (* ok if list too short *)
+  | takeDrop 0 l = ([], l)
+  | takeDrop n (h :: t) = 
+    let val (tk, dp) = takeDrop (n-1) t in (h :: tk, dp) end ;
+
+infix RS RSN ;
+(* RSN : thm * (int * thm) -> thm
+  RS : thm * thm -> thm
+  as in Isabelle, but doesn't instantiate th *)
+fun th RS ith = ufd (fn cth => MATCH_MP ith cth) th ;
+
+fun mf n ps = 
+  let val (fps, ant :: rps) = takeDrop (n-1) ps ;
+  in ant :: fps @ rps end ;
+
+fun raa m n ps = 
+  let val (mps, qps) = takeDrop m ps ;
+    val (nps, rps) = takeDrop n qps ;
+  in nps @ mps @ rps end ;
+
+fun th RSN (n, ith) = 
+  let val (lps, cth) = UNDISCH_ALL_TERMS th ;
+    val rith = reo_prems (mf n) ith ;
+    val mth = MATCH_MP rith cth ;
+    val dmth = DISCH_TERMS lps mth ;
+  in reo_prems (raa (length lps) (n-1)) dmth end ;
 
 (* set of functions to take a nested implication and repeatedly remove the
   antecedents by MATCH_MP against the first matching theorem *)
@@ -170,6 +232,40 @@ fun fix_abs_eq rewrs th =
     val th1 = CONV_RULE (DEPTH_CONV TY_BETA_CONV) th0 ;
     val th2 = CONV_RULE (DEPTH_CONV BETA_CONV) th1 ;
   in th2 end ;
+
+fun fix_abs_eq_conv rewrs =
+  let val conv0 = REWRITE_CONV ([TY_FUN_EQ_THM, FUN_EQ_THM] @ rewrs) ;
+    val conv1 = (DEPTH_CONV (BETA_CONV ORELSEC TY_BETA_CONV)) ;
+  in conv0 THENC conv1 end ;
+
+fun fix_abs_eq rewrs = CONV_RULE (fix_abs_eq_conv rewrs) ;
+
+(* given a definition of the form f = \:'a b. \ (c,d) (e,f,g). body
+  make it into f [:'a,'b:] (c,d) (e,f,g) = body
+  look at making this more efficient ; mk_exp_thm'' seems quickest *)
+
+val exp_convs = [ TY_BETA_CONV, BETA_CONV,
+  HO_REWR_CONV pairTheory.FORALL_PROD, REWR_CONV pairTheory.UNCURRY_DEF,
+  REWR_CONV TY_FUN_EQ_THM, REWR_CONV FUN_EQ_THM ] ;
+
+val mk_exp_thm = CONV_RULE (REDEPTH_CONV (FIRST_CONV exp_convs)) ;
+val mk_exp_thm' = CONV_RULE (TOP_DEPTH_CONV (FIRST_CONV exp_convs)) ;
+
+val exp_rwdconvs = [ HO_REWR_CONV pairTheory.FORALL_PROD, 
+  REWR_CONV TY_FUN_EQ_THM, REWR_CONV FUN_EQ_THM ] ;
+
+fun mk_exp_thm'' th0 = 
+  let val th2 = CONV_RULE (TOP_SWEEP_CONV (FIRST_CONV exp_rwdconvs)) th0 ;
+    val th4 = CONV_RULE (DEPTH_CONV (FIRST_CONV [
+      (REWR_CONV pairTheory.UNCURRY_DEF THENC RATOR_CONV BETA_CONV),
+      BETA_CONV, TY_BETA_CONV])) th2 ;
+  in th4 end ;
+
+(*
+mk_exp_thm dist_law_def ;
+mk_exp_thm' dist_law_def ;
+mk_exp_thm'' dist_law_def ;
+*)
 
 
 end ; (* local open HolKernel bossLib *)

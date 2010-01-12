@@ -32,13 +32,13 @@ val _ = new_theory "category";
 val _ = type_abbrev ("id", Type `: \'A. !'a. ('a ('a 'A))`);
 
 val _ = type_abbrev ("o_arrow", Type `: \'A. 
-  (!'a 'b 'c. ('c ('b 'A)) -> ('b ('a 'A)) -> ('c ('a 'A)))`);
+  (!'a 'b 'c. (('b,'c) 'A) -> (('a,'b) 'A) -> (('a,'c) 'A))`);
 
-val _ = type_abbrev ("category", Type `: \'A. (!'a. ('a ('a 'A))) # 
-  (!'a 'b 'c. ('c ('b 'A)) -> ('b ('a 'A)) -> ('c ('a 'A)))`) ;
+val _ = type_abbrev ("category", Type `: \'A. 'A id # 'A o_arrow`) ;
 
 (*
-val _ = type_abbrev ("C", Type `: \'A 'a 'b. ('b, 'a) 'A`) ;
+val _ = type_abbrev ("category", Type `: \'A. (!'a. ('a ('a 'A))) # 
+  (!'a 'b 'c. ('c ('b 'A)) -> ('b ('a 'A)) -> ('c ('a 'A)))`) ;
 *)
 
 val category_def = new_definition("category_def", 
@@ -77,9 +77,15 @@ val category_fun = store_thm ("category_fun",
 
 (** reversing direction of arrows to form the dual category **)
   
+(*
 val dual_comp_def = new_definition ("dual_comp_def",
   ``dual_comp (comp : 'A o_arrow) : ('A C) o_arrow = 
     (\:'c 'b 'a. \f g. comp [:'a,'b,'c:] g f)``) ;
+*)
+
+val dual_comp_def = Define
+  `dual_comp (comp : 'A o_arrow) : ('A C) o_arrow = 
+    (\:'c 'b 'a. \f g. comp [:'a,'b,'c:] g f)` ;
 
 (* this fails to parse without the type argument to category,
   even with the annotation category ((id, dual_comp comp) : ('A C) category),
@@ -138,6 +144,10 @@ val g_functor_thm = store_thm ("g_functor_thm",
 
 val g_I_def = Define 
   `g_I = \:'C. \:'a 'b. I : ('a, 'b) 'C -> ('a, 'b) 'C` ;
+
+val g_I_thm = store_thm ("g_I_thm", 
+  ``g_I [:'C, 'a, 'b:] = I : ('a, 'b) 'C -> ('a, 'b) 'C``,
+  EVERY [(REWRITE_TAC [g_I_def]), TY_BETA_TAC, REFL_TAC ]) ;
 
 val g_functor_I = store_thm ("g_functor_I", 
   ``g_functor (idC, compC : 'C o_arrow) (idC, compC) (g_I [:'C:])``,

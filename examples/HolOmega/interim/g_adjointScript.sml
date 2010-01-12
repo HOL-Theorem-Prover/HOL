@@ -72,6 +72,14 @@ val g_adjf4_def = new_definition("g_adjf4_def",
     (!: 'a 'c 'b. ! h g. star (compD [:'a 'F, 'b,'c :] h g) = 
         compC (star (compD h (hash idC))) (star g)) ``);
 
+val g_adjf5_def = new_definition("g_adjf5_def",
+  ``g_adjf5 = \: 'C 'D. 
+    \ (idC : 'C id, compC : 'C o_arrow) (idD : 'D id, compD : 'D o_arrow)
+    (F' : ('C, 'D, 'F) g_functor) (G : ('D, 'C, 'G) g_functor)
+    (eta : ('C, I, 'F o 'G) g_nattransf) (eps : ('D, 'G o 'F, I) g_nattransf).
+    (!: 'b. (compC (G eps) eta = idC [:'b 'G:])) /\
+    (!: 'a. (compD eps (F' eta) = idD [:'a 'F:]))``);
+
 (* note, [:'b,'a:] required in g_adjf2_thm,
   [:'a,'b:] not required in g_adjf1_thm *)
 val g_adjf1_thm = store_thm ("g_adjf1_thm",
@@ -100,6 +108,15 @@ val mk_exp_thm = CONV_RULE (REDEPTH_CONV (FIRST_CONV exp_convs)) ;
 
 val g_adjf4_thm = save_thm ("g_adjf4_thm",
   SPEC_ALL (TY_SPEC_ALL (mk_exp_thm g_adjf4_def))) ;
+
+val g_adjf5_thm = store_thm ("g_adjf5_thm",
+  ``g_adjf5 [:'C, 'D:] (idC : 'C id, compC : 'C o_arrow)
+    (idD : 'D id, compD : 'D o_arrow)
+    (F' : ('C, 'D, 'F) g_functor) (G : ('D, 'C, 'G) g_functor)
+    (eta : ('C, I, 'F o 'G) g_nattransf) (eps : ('D, 'G o 'F, I) g_nattransf) =
+    ((!: 'b. (compC (G eps) eta = idC [:'b 'G:])) /\
+    (!: 'a. (compD eps (F' eta) = idD [:'a 'F:])))``,
+   SRW_TAC [] [g_adjf5_def]);
 
 (* duality - g_adjf3 is self-dual and g_adjf2 is dual of g_adjf1 *)
 
@@ -836,6 +853,8 @@ val tm14e = ``category (idC,compC) /\ category (idD,compD) ==>
     (F' = (\:'a 'b. (\f. hash (compC eta f)))) /\
     (G = (\:'a 'b. (\g. star (compD g (EPS (idC,compC) hash))))))`` ;
 
+(* note that the second and third conditions in g_adjf4 are equivalent,
+  in the presence of the first condition - TO BE PROVED *)
 val g_adjf14_equiv = store_thm ("g_adjf14_equiv", tm14e,
   STRIP_TAC THEN EQ_TAC THEN STRIP_TAC 
   THENL [
@@ -851,6 +870,36 @@ val g_adjf14_equiv = store_thm ("g_adjf14_equiv", tm14e,
         ( (GSYM g_adjf3_eq1))),
       (REPEAT CONJ_TAC THEN (FIRST_ASSUM ACCEPT_TAC ORELSE REFL_TAC))] ]) ;
       
+(* assumptions of this theorem are the definition of adjoint pair
+  currently (Jan 2010) on Wikipedia, under the heading
+  Definition via counit-unit adjunction *)
+val tm53 = ``g_adjf5 [:'C,'D:] (idC,compC) (idD,compD) F' G eta eps /\
+  category (idC,compC) /\ category (idD,compD) /\ 
+  g_functor (idC,compC) (idD,compD) F' /\
+  g_functor (idD,compD) (idC,compC) G /\
+  g_nattransf [:'C:] (idC, compC) eta (g_I [:'C:]) (G g_oo F') /\ 
+  g_nattransf (idD,compD) eps (F' g_oo G) (g_I [:'D:]) ==>
+  g_adjf3 [:'C,'D:] (idC,compC) (idD,compD) F' G eta eps `` ;
+
+val g_adjf5_3 = store_thm ("g_adjf5_3", tm53,
+  EVERY [ (REWRITE_TAC [g_adjf5_thm, g_adjf3_thm]),
+    (REPEAT STRIP_TAC), EQ_TAC,
+    (DISCH_THEN (fn th => REWRITE_TAC [GSYM th])), (farwmmp g_functorD) ]
+  THENL [
+    EVERY [ (farwmmp catDAss),
+      (FIRST_X_ASSUM (CHANGED_TAC o 
+        (fn th => REWRITE_TAC [g_I_thm, I_THM, th]) o REWRITE_RULE [o_THM] o
+	  TY_BETA_RULE o REWRITE_RULE [g_oo_thm] o 
+	  MATCH_MP (GSYM g_nattransfD))),
+      (farwmmp catDRAss)],
+    EVERY [ (farwmmp catDRAss),
+      (FIRST_X_ASSUM (CHANGED_TAC o 
+        (fn th => REWRITE_TAC [g_I_thm, I_THM, th]) o REWRITE_RULE [o_THM] o
+	  TY_BETA_RULE o REWRITE_RULE [g_oo_thm] o MATCH_MP g_nattransfD)),
+      (farwmmp catDAss)] ]
+  THEN (ASM_REWRITE_TAC []) THEN (farwmmp categoryD) ) ;
+
+(* TODO - prove a converse to tm53 *)
 (*
 show_types := true ;
 show_types := false ;
