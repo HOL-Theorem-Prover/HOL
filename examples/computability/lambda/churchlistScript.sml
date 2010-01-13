@@ -341,14 +341,7 @@ val cvlist_thm = Store_thm(
     (cvlist (h::t) = cvcons h (cvlist t))``,
   SRW_TAC [][cvlist_def]);
 
-val GENLIST_ALT = store_thm(
-  "GENLIST_ALT",
-  ``GENLIST f (SUC n) = f 0 :: GENLIST (f o SUC) n``,
-  SIMP_TAC std_ss [rich_listTheory.GENLIST_APPEND, arithmeticTheory.ADD1] THEN
-  SIMP_TAC bool_ss [rich_listTheory.GENLIST, arithmeticTheory.ONE] THEN
-  SRW_TAC [][rich_listTheory.SNOC] THEN
-  Q_TAC SUFF_TAC `(λt. f (t + 1)) = f o SUC` THEN1 SRW_TAC [][] THEN
-  SRW_TAC [][FUN_EQ_THM, arithmeticTheory.ADD1]);
+val GENLIST_CONS = rich_listTheory.GENLIST_CONS
 
 val cvlist_genlist_cong = store_thm(
   "cvlist_genlist_cong",
@@ -356,7 +349,7 @@ val cvlist_genlist_cong = store_thm(
     cvlist (GENLIST f n) == cvlist (GENLIST g n)``,
   MAP_EVERY Q.ID_SPEC_TAC [`g`, `f`] THEN
   Induct_on `n` THEN1 SRW_TAC [][rich_listTheory.GENLIST] THEN
-  SRW_TAC [][GENLIST_ALT] THEN
+  SRW_TAC [][GENLIST_CONS] THEN
   ASM_SIMP_TAC (bsrw_ss()) [Cong cvcons_cong, combinTheory.o_DEF] THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`f o SUC`, `g o SUC`] MP_TAC) THEN
   ASM_SIMP_TAC (bsrw_ss()) [Cong cvcons_cong, combinTheory.o_DEF]);
@@ -365,9 +358,8 @@ val ctabulate_cvlist = store_thm(
   "ctabulate_cvlist",
   ``∀f. ctabulate @@ church n @@ f == cvlist (GENLIST (λm. f @@ church m) n)``,
   Induct_on `n` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [ctabulate_behaviour, GENLIST_ALT,
-                            Cong cvcons_cong, cnil_def]
-    THEN1 SRW_TAC [][rich_listTheory.GENLIST, cnil_def] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [ctabulate_behaviour, GENLIST_CONS,
+                            Cong cvcons_cong, cnil_def] THEN
   GEN_TAC THEN MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] cvcons_cong) THEN
   SRW_TAC [][] THEN
   HO_MATCH_MP_TAC cvlist_genlist_cong THEN

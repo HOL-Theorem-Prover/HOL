@@ -143,11 +143,6 @@ val NTL_def = Define`(NTL [] = []) ∧ (NTL ((h:num)::t) = t)`
 val strong_primrec_ind = IndDefLib.derive_strong_induction(primrec_rules,
                                                            primrec_ind)
 
-val GENLIST_CONS = prove(
-  ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
-  Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
-val GENLIST1 = prove(``GENLIST f 1 = [f 0]``,
-                     SIMP_TAC bool_ss [ONE, GENLIST, SNOC]);
 val MAP_EQ_GENLIST = prove(
   ``MAP f l = GENLIST (λi. f (EL i l)) (LENGTH l)``,
   Induct_on `l` THEN1 SRW_TAC [][GENLIST] THEN
@@ -422,9 +417,9 @@ val prtermrec1_correct = store_thm(
   Q_TAC SUFF_TAC
     `∀n p. f [n; p] = nlist_of (GENLIST (λi. prtermrec v c a [i; p])
                                         (n + 1))`
-    THEN1 SRW_TAC [][nel_nlist_of, LENGTH_GENLIST, EL_GENLIST] THEN
+    THEN1 SRW_TAC [][nel_nlist_of] THEN
   Induct THEN1
-    (SRW_TAC [][Abbr`f`, GENLIST1, Once prtermrec_def]) THEN
+    (SRW_TAC [][Abbr`f`, Once prtermrec_def]) THEN
   SRW_TAC [][Abbr`f`, LET_THM, ADD_CLAUSES, GENLIST, SNOC_APPEND,
              nlist_of_append, NTL_def]
   THENL [
@@ -701,8 +696,7 @@ val pr_lift_correct = Store_thm(
   Q.X_GEN_TAC `dd` THEN Induct_on `dd` THEN SRW_TAC [][] THENL [
     SRW_TAC [][Abbr`v`, NOT_LESS_EQUAL] THEN
     REPEAT (FIRST_X_ASSUM (K ALL_TAC)) THEN Induct_on `mx` THEN
-    SRW_TAC [][GENLIST1, dBnum_def, ADD_CLAUSES, GENLIST, SNOC_APPEND,
-               nlist_of_append],
+    SRW_TAC [][dBnum_def, ADD_CLAUSES, GENLIST, SNOC_APPEND, nlist_of_append],
 
     FULL_SIMP_TAC (srw_ss()) [] THEN Q.UNABBREV_TAC `c` THEN
     REPEAT (FIRST_X_ASSUM (K ALL_TAC)) THEN
@@ -716,7 +710,7 @@ val pr_lift_correct = Store_thm(
           SRW_TAC [ARITH_ss][MAX_DEF]) THEN
     MAP_EVERY markerLib.RM_ABBREV_TAC ["M", "ddn", "ddn'"] THEN
     Induct_on `M` THENL [
-      SRW_TAC [ARITH_ss][nel_nlist_of, LENGTH_GENLIST, GENLIST1, Abbr`zf`,
+      SRW_TAC [ARITH_ss][nel_nlist_of, Abbr`zf`,
                          dBnum_def, GENLIST_CONS, GSYM ADD1, Abbr`gf`,
                          Abbr`gf'`, Abbr`gfr`],
       REPEAT STRIP_TAC THEN
@@ -740,7 +734,7 @@ val pr_lift_correct = Store_thm(
     Q.RM_ABBREV_TAC `M` THEN Induct_on `M` THEN
     SRW_TAC [ARITH_ss][Abbr`zf`, Abbr`sf`, Abbr`gf`, Abbr`gfr`] THENL [
       ASM_SIMP_TAC (bool_ss ++ ARITH_ss) [nel_nlist_of, LENGTH_GENLIST,
-                                          EL_GENLIST, GENLIST1] THEN
+                                          EL_GENLIST] THEN
       SRW_TAC [][dBnum_def],
 
       SRW_TAC [ARITH_ss][GENLIST, ADD_CLAUSES, dBnum_def, SNOC_APPEND,
@@ -847,7 +841,7 @@ val primrec_FUNPOW = Store_thm(
   Induct_on `m` THEN1 SRW_TAC [][FUNPOW] THEN
   SRW_TAC [][FUNPOW_SUC]);
 
-val scopesz_def = Define`
+(* val scopesz_def = Define`
   scopesz sk t = let s = nfst sk in
                  let k = nsnd sk in
                  let mxa = max_abs (numdB t) in
@@ -1206,7 +1200,7 @@ val sknlift_le10 = prove(
     ]
   ]);
 
-(*val pr_nsub_correct = Store_thm(
+val pr_nsub_correct = Store_thm(
   "pr_nsub_correct",
   ``pr_nsub [s; k; t] = dBnum (nsub (numdB s) k (numdB t))``,
   SRW_TAC [][pr_nsub_def] THEN
@@ -1227,7 +1221,7 @@ val sknlift_le10 = prove(
     Q.MATCH_ABBREV_TAC `Pr zf sf [M; n] = nlist_of (GENLIST gf (M + 1))` THEN
     MAP_EVERY Q.RM_ABBREV_TAC [`M`, `a`, `c`, `gmx`] THEN
     Induct_on `M` THEN
-    SRW_TAC [ARITH_ss][Abbr`zf`, Abbr`sf`, Abbr`gf`, dBnum_def, GENLIST1]
+    SRW_TAC [ARITH_ss][Abbr`zf`, Abbr`sf`, Abbr`gf`, dBnum_def]
     THENL [
       Q.PAT_ASSUM `Pr ZZ SS LL = RR` (K ALL_TAC) THEN
       SRW_TAC [][ADD_CLAUSES, GENLIST, SNOC_APPEND, nlist_of_append],

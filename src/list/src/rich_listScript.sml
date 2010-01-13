@@ -228,6 +228,7 @@ val TL = store_thm("TL",   --`!(x:'a) l. TL (CONS x l) = l`--,
 val SNOC = new_list_rec_definition ("SNOC",
  (--`(!x.      SNOC (x:'a) ([]:'a list) = [x]) /\
      (!x x' l. SNOC (x:'a) (CONS x' l) = CONS x' (SNOC x l))`--));
+val _ = BasicProvers.export_rewrites ["SNOC"]
 
 
 (*-------------------------------------------------------------- *)
@@ -1125,18 +1126,18 @@ val APPEND_LENGTH_EQ = store_thm("APPEND_LENGTH_EQ",
     THEN REWRITE_TAC[CONS_11,CONJ_ASSOC]
     end);
 
-val APPEND_11_LENGTH = save_thm ("APPEND_11_LENGTH", 
+val APPEND_11_LENGTH = save_thm ("APPEND_11_LENGTH",
  SIMP_RULE std_ss [DISJ_IMP_THM, FORALL_AND_THM] (prove (
- (--`!l1 l2 l1' l2'. 
+ (--`!l1 l2 l1' l2'.
         ((LENGTH l1 = LENGTH l1') \/ (LENGTH l2 = LENGTH l2')) ==>
         (((l1 ++ l2) = (l1' ++ l2')) = ((l1 = l1') /\ (l2 = l2')))`--),
-     REPEAT GEN_TAC 
-     THEN Tactical.REVERSE 
+     REPEAT GEN_TAC
+     THEN Tactical.REVERSE
         (Cases_on `(LENGTH l1 = LENGTH l1') /\ (LENGTH l2 = LENGTH l2')`) THEN1 (
-           DISCH_TAC 
-           THEN `~((l1 = l1') /\ (l2 = l2'))` by PROVE_TAC[] 
-           THEN ASM_REWRITE_TAC[] 
-           THEN Tactical.REVERSE 
+           DISCH_TAC
+           THEN `~((l1 = l1') /\ (l2 = l2'))` by PROVE_TAC[]
+           THEN ASM_REWRITE_TAC[]
+           THEN Tactical.REVERSE
               (`~(LENGTH (l1 ++ l2) = LENGTH (l1' ++ l2'))` by ALL_TAC) THEN1 PROVE_TAC[]
            THEN FULL_SIMP_TAC arith_ss [LENGTH_APPEND]
      ) THEN PROVE_TAC[APPEND_LENGTH_EQ])));
@@ -3057,6 +3058,7 @@ val LENGTH_GENLIST = store_thm("LENGTH_GENLIST",
     (--`!(f:num->'a) n. LENGTH(GENLIST f n) = n`--),
     GEN_TAC THEN INDUCT_TAC
     THEN ASM_REWRITE_TAC[GENLIST,LENGTH,LENGTH_SNOC]);
+val _ = export_rewrites ["LENGTH_GENLIST"]
 
 val LENGTH_REPLICATE = store_thm("LENGTH_REPLICATE",
     (--`!n (x:'a). LENGTH(REPLICATE n x) = n`--),
@@ -3247,6 +3249,7 @@ val EL_GENLIST = store_thm("EL_GENLIST",
   `x = LENGTH (GENLIST f n)` by FULL_SIMP_TAC arith_ss [LENGTH_GENLIST] THEN
   ASM_SIMP_TAC bool_ss [EL_LENGTH_SNOC] THEN
   REWRITE_TAC [LENGTH_GENLIST]);
+val _ = export_rewrites ["EL_GENLIST"]
 
 val HD_GENLIST = save_thm("HD_GENLIST",
   (SIMP_RULE arith_ss [EL] o Q.SPECL [`f`,`SUC n`,`0`]) EL_GENLIST);
@@ -3290,7 +3293,10 @@ val ZIP_GENLIST = store_thm("ZIP_GENLIST",
   ASM_SIMP_TAC arith_ss [listTheory.LIST_EQ_REWRITE, LENGTH_GENLIST, LENGTH_ZIP,
                          listTheory.EL_ZIP, EL_GENLIST]);
 
-
+val GENLIST_CONS = store_thm(
+  "GENLIST_CONS",
+  ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
+  Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
 
 (*---------------------------------------------------------------------------
    General theorems about lists. From Anthony Fox's and Thomas Tuerk's theories.
@@ -3485,6 +3491,7 @@ val ELL_compute = save_thm("ELL_compute", SUC_RULE ELL);
 val SEG_compute = save_thm("SEG_compute", SUC_RULE SEG);
 val FIRSTN_compute = save_thm("FIRSTN_compute", SUC_RULE FIRSTN);
 val GENLIST_compute = save_thm("GENLIST_compute", SUC_RULE GENLIST);
+val _ = export_rewrites ["GENLIST_compute"]
 val BUTFIRSTN_compute = save_thm("BUTFIRSTN_compute", SUC_RULE BUTFIRSTN);
 val IS_SUFFIX_compute = save_thm("IS_SUFFIX_compute", GSYM IS_PREFIX_REVERSE);
 val REPLICATE_compute = save_thm("REPLICATE_compute", SUC_RULE REPLICATE);
