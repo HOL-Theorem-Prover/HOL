@@ -744,6 +744,22 @@ fun deinitcommentss ss =                   deinitcomment0               ss  0
 fun deinitcomment   s  = Substring.string (deinitcomment0 (Substring.full s) 0)
 
 (*---------------------------------------------------------------------------*)
+(* The sum type                                                              *)
+(*---------------------------------------------------------------------------*)
+
+datatype ('a,'b) sum = inL of 'a | inR of 'b;
+
+fun outL (inL (x:'a)) = x
+  | outL _ = raise ERR "outL" "value not of the left type"
+
+fun outR (inR (y:'b)) = y
+  | outR _ = raise ERR "outR" "value not of the right type"
+
+infix 3 +++
+fun (f +++ g) (inL x) = inL (f x)
+  | (f +++ g) (inR y) = inR (g y)
+
+(*---------------------------------------------------------------------------*)
 (* Yet another variant of the sum type, used for the failure monad           *)
 (*---------------------------------------------------------------------------*)
 

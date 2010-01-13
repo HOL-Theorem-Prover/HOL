@@ -31,6 +31,10 @@ sig
   val SPECL            : term list -> thm -> thm
   val TY_GENL          : hol_type list -> thm -> thm
   val TY_SPECL         : hol_type list -> thm -> thm
+  val TY_TM_GEN        : (hol_type,term)Lib.sum -> thm -> thm
+  val TY_TM_SPEC       : (hol_type,term)Lib.sum -> thm -> thm
+  val TY_TM_GENL       : (hol_type,term)Lib.sum list -> thm -> thm
+  val TY_TM_SPECL      : (hol_type,term)Lib.sum list -> thm -> thm
   val SELECT_INTRO     : thm -> thm
   val SELECT_ELIM      : thm -> term * thm -> thm
   val SELECT_RULE      : thm -> thm
@@ -65,6 +69,7 @@ sig
   val UNDISCH_ALL      : thm -> thm
   val SPEC_ALL         : thm -> thm
   val TY_SPEC_ALL      : thm -> thm
+  val TY_TM_SPEC_ALL   : thm -> thm
   val PROVE_HYP        : thm -> thm -> thm
   val CONJ_PAIR        : thm -> thm * thm
   val LIST_CONJ        : thm list -> thm

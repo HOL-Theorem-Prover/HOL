@@ -204,6 +204,7 @@ val strip_tyexists   = HolKernel.strip_tybinder (SOME ty_existential)
 val strip_conj       = strip_binop (total dest_conj)
 val strip_disj       = strip_binop (total dest_disj)
 
+(*
 fun strip_all_forall M =
   let val (tyvs, M1) = strip_tyforall M
       val (  vs, M2) = strip_forall M1
@@ -225,6 +226,127 @@ fun strip_all_exists M =
           in (tyvs @ tyvs', vs @ vs', M')
           end
   end;
+*)
+
+fun avoid_dest_abs (tyvs,tmvs) tm =
+  let val (bv,body) = dest_abs tm
+  in if op_mem eq bv tmvs then
+       let val bv' = variant tmvs bv
+           val body' = subst [bv |-> bv'] body
+       in (bv',body')
+       end
+     else (bv,body)
+  end
+
+fun avoid_dest_tyabs (tyvs,tmvs) tm =
+  let val (btyv,body) = dest_tyabs tm
+  in if mem btyv tyvs then
+       let val btyv' = variant_type tyvs btyv
+           val body' = inst [btyv |-> btyv'] body
+       in (btyv',body')
+       end
+     else (btyv,body)
+  end
+
+local
+  val universal_name = fst (dest_const universal)
+  val ty_universal_name = fst (dest_const ty_universal)
+in
+fun strip_all_forall_avoid (avoid as (tyvs,tmvs)) M =
+  let val (opr,arg) = dest_comb M
+      val (name,ty) = dest_const opr
+  in
+    if name = universal_name then
+      let val (v,body) = avoid_dest_abs avoid arg
+          val tyvs' = Lib.union (type_vars_in_term v) tyvs
+          val tmvs' = Lib.op_union eq [v] tmvs
+          val (tyms,M') = strip_all_forall_avoid (tyvs',tmvs') body
+      in (inR v :: tyms, M')
+      end
+    else if name = ty_universal_name then
+      let val (tyv,body) = avoid_dest_tyabs avoid arg
+          val tyvs' = Lib.union [tyv] tyvs
+          val (tyms,M') = strip_all_forall_avoid (tyvs',tmvs) body
+      in (inL tyv :: tyms, M')
+      end
+    else raise ERR "" ""
+  end
+  handle HOL_ERR _ => ([], M)
+
+fun strip_all_forall M =
+  let val (tyvs,M1) = strip_tyforall M
+      val (tmvs,M2) = strip_forall M1
+  in
+    if is_tyforall M2 then (* need to be careful about scoping *)
+      let val tyvs' = Lib.union (type_vars_in_terml tmvs) tyvs
+          val (tymvs3,M3) = strip_all_forall_avoid (tyvs',tmvs) M2
+      in
+        (foldr (fn (tyv,tymvs) => inL tyv :: tymvs)
+               (foldr (fn (tmv,tymvs) => inR tmv :: tymvs)
+                      tymvs3
+                      tmvs)
+               tyvs,
+         M3)
+      end
+    else (* no type/term scoping issues *)
+      (foldr (fn (tyv,tymvs) => inL tyv :: tymvs)
+             (foldr (fn (tmv,tymvs) => inR tmv :: tymvs)
+                    []
+                    tmvs)
+             tyvs,
+       M2)
+  end
+end
+
+local
+  val existential_name = fst (dest_const existential)
+  val ty_existential_name = fst (dest_const ty_existential)
+in
+fun strip_all_exists_avoid (avoid as (tyvs,tmvs)) M =
+  let val (opr,arg) = dest_comb M
+      val (name,ty) = dest_const opr
+  in
+    if name = existential_name then
+      let val (v,body) = avoid_dest_abs avoid arg
+          val tyvs' = Lib.union (type_vars_in_term v) tyvs
+          val tmvs' = Lib.op_union eq [v] tmvs
+          val (tyms,M') = strip_all_exists_avoid (tyvs',tmvs') body
+      in (inR v :: tyms, M')
+      end
+    else if name = ty_existential_name then
+      let val (tyv,body) = avoid_dest_tyabs avoid arg
+          val tyvs' = Lib.union [tyv] tyvs
+          val (tyms,M') = strip_all_exists_avoid (tyvs',tmvs) body
+      in (inL tyv :: tyms, M')
+      end
+    else raise ERR "" ""
+  end
+  handle HOL_ERR _ => ([], M)
+
+fun strip_all_exists M =
+  let val (tyvs,M1) = strip_tyexists M
+      val (tmvs,M2) = strip_exists M1
+  in
+    if is_tyexists M2 then (* need to be careful about scoping *)
+      let val tyvs' = Lib.union (type_vars_in_terml tmvs) tyvs
+          val (tymvs3,M3) = strip_all_exists_avoid (tyvs',tmvs) M2
+      in
+        (foldr (fn (tyv,tymvs) => inL tyv :: tymvs)
+               (foldr (fn (tmv,tymvs) => inR tmv :: tymvs)
+                      tymvs3
+                      tmvs)
+               tyvs,
+         M3)
+      end
+    else (* no type/term scoping issues *)
+      (foldr (fn (tyv,tymvs) => inL tyv :: tymvs)
+             (foldr (fn (tmv,tymvs) => inR tmv :: tymvs)
+                    []
+                    tmvs)
+             tyvs,
+       M2)
+  end
+end
 
 val strip_imp =
   let val desti = total dest_imp
@@ -271,7 +393,7 @@ val strip_fun   = HolKernel.strip_fun
  ---------------------------------------------------------------------------*)
 
 fun dest t =
-  let val (lhs,rhs) = dest_eq (snd(strip_forall t))
+  let val (lhs,rhs) = dest_eq (snd(strip_all_forall t))
       val (f,args) = strip_comb lhs
   in if all is_var args
      then (args, mk_eq(f, list_mk_abs(args,rhs)))

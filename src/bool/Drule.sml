@@ -14,6 +14,9 @@ struct
 
 open Feedback HolKernel Parse boolTheory boolSyntax Abbrev;
 
+val +++ = Lib.+++
+infix +++
+
 val ERR = mk_HOL_ERR "Drule";
 
 (*---------------------------------------------------------------------------*
@@ -409,6 +412,16 @@ fun SPECL tml th =
 fun TY_SPECL tyl th =
   rev_itlist TY_SPEC tyl th handle HOL_ERR _ => raise ERR "TY_SPECL" "";
 
+fun TY_TM_SPEC (inL ty) th = (TY_SPEC ty th handle e => (print "TY_TM_SPEC fails for type "; print_type ty; print "\n";
+                                                         print "and theorem "; trace ("types",1) print_thm th; print "\n"; Raise e))
+  | TY_TM_SPEC (inR tm) th = (   SPEC tm th handle e => (print "TY_TM_SPEC fails for term "; trace ("types",1) print_term tm; print "\n";
+                                                         print "and theorem "; trace ("types",1) print_thm th; print "\n"; Raise e))
+
+fun TY_TM_SPECL tyml th =
+  rev_itlist TY_TM_SPEC tyml th handle e => (print ("TY_TM_SPECL("^Int.toString(length tyml)^") fails on ");
+                                             trace ("types",1) print_thm th; print "\n";
+                                             raise wrap_exn "Drule" "TY_TM_SPECL" e);
+
 (*---------------------------------------------------------------------------*
  *          |- t[tyi]                                                        *
  *    --------------------------	TY_GENL [ty1; ...; tyn]              *
@@ -416,7 +429,13 @@ fun TY_SPECL tyl th =
  *---------------------------------------------------------------------------*)
 
 fun TY_GENL tyl th =
-  rev_itlist TY_GEN tyl th handle HOL_ERR _ => raise ERR "TY_GENL" "";
+  itlist TY_GEN tyl th handle HOL_ERR _ => raise ERR "TY_GENL" "";
+
+fun TY_TM_GEN (inL ty) = TY_GEN ty
+  | TY_TM_GEN (inR tm) =    GEN tm
+
+fun TY_TM_GENL tyl th =
+  itlist TY_TM_GEN tyl th handle e => raise wrap_exn "Drule" "TY_TM_GENL" e;
 
 
 (*---------------------------------------------------------------------------*
@@ -884,6 +903,8 @@ fun TY_GEN_ALL th =
        th
       (HOLset.difference (HOLset.addList(empty_tyset, type_vars_in_term(concl th)), hyp_tyvars th))
 
+fun TY_TM_GEN_ALL th = TY_GEN_ALL (GEN_ALL th)
+
 
 (*---------------------------------------------------------------------------*
  *  Discharge all hypotheses                                                 *
@@ -958,6 +979,27 @@ fun TY_SPEC_ALL th =
         TY_SPECL (snd(itlist varyAcc vars (hvs@fvs,[]))) th
       end
     else th
+end;
+
+local fun varyAcc (inR v) (TV,V,l) =
+       let val v' = prim_variant V v in (TV, v'::V, inR v'::l) end
+        | varyAcc (inL v) (TV,V,l) =
+       let val v' = prim_variant_type TV v in (v'::TV, V, inL v'::l) end
+in
+fun TY_TM_SPEC_ALL th =
+  let val con = concl th
+  in
+    if is_tyforall con orelse is_forall con then let
+        val htvs = HOLset.listItems (hyp_tyvars th)
+        val hvs  = HOLset.listItems (hyp_frees th)
+        val ftvs = type_vars_in_term con
+        val fvs  = free_vars con
+        val vars = fst(strip_all_forall con)
+      in
+        TY_TM_SPECL (#3(itlist varyAcc vars (htvs@ftvs,hvs@fvs,[]))) th
+      end
+    else th
+  end
 end;
 
 
@@ -1338,7 +1380,7 @@ fun GSPEC th =
   end
 
 (*---------------------------------------------------------------------------*
- *   |- !x y z. w   --->  |- w[g1/x][g2/y][g3/z]                             *
+ *   |- !:x y z. w   --->  |- w[g1/x][g2/y][g3/z]                            *
  *---------------------------------------------------------------------------*)
 
 fun TY_GSPEC th =
@@ -1358,7 +1400,7 @@ fun TY_GSPEC th =
  *---------------------------------------------------------------------------*)
 
 fun PART_MATCH partfn th = let
-  val th = SPEC_ALL (TY_SPEC_ALL th)
+  val th = TY_TM_SPEC_ALL th
   val conclfvs = Term.FVL [concl th] empty_tmset
   val hypfvs = Thm.hyp_frees th
   val hyptyvars = HOLset.listItems (Thm.hyp_tyvars th)
@@ -1380,49 +1422,92 @@ end
  * Matches all types in conclusion except those mentioned in hypotheses.*
  * -------------------------------------------------------------------- *)
 
+(*
+val +++ = Lib.+++;
+infix +++;
+
+val ith = Kdmonad_umj1';
+val th = cat;
+*)
+
 local fun variants (_,[]) = []
         | variants (av, h::rst) =
             let val vh = variant av h in vh::variants (vh::av, rst) end
+      fun variant_types (_,[]) = []
+        | variant_types (av, h::rst) =
+            let val vh = variant_type av h in vh::variant_types (vh::av, rst) end
+      fun rassoc_total1 x theta =
+         case subst_assoc (equal x) theta
+          of SOME y => y
+           | NONE => x
       fun rassoc_total x theta =
          case subst_assoc (eq x) theta
           of SOME y => y
            | NONE => x
-      fun req {redex,residue} = (eq redex residue)
+      fun neq1 {redex,residue} = not (equal redex residue)
+      fun neq  {redex,residue} = not (eq redex residue)
 in
 fun MATCH_MP ith =
- let val (ial,ibod) = strip_tyforall(concl ith)
-     val ias = HOLset.addList(empty_tyset, ial)
-     val bod = fst(dest_imp(snd(strip_forall ibod)))
-     val hyptyvars = HOLset.listItems (HOLset.difference(hyp_tyvars ith, ias))
+ let val hyptyvars = hyp_tyvars ith
+     val hyptmvars = hyp_frees  ith
+     val hyptyvarl = HOLset.listItems hyptyvars
+     val hyptmvarl = HOLset.listItems hyptmvars
+     (* val (ial2,ibod) = strip_all_forall_avoid (hyptyvarl,hyptmvarl) (concl ith) *)
+     val (ial2,ibod) = strip_all_forall (concl ith)
+     val ityl = mapfilter outL ial2
+     val itml = mapfilter outR ial2
+     val itys = HOLset.addList(empty_tyset, ityl)
+     val bod = fst(dest_imp ibod)
      val hypkdvars = HOLset.listItems (hyp_kdvars ith)
+     val hyptyvars = HOLset.listItems (HOLset.difference(hyptyvars, itys))
+(* or,
+     val hyptyvars = HOLset.listItems (HOLset.intersection
+                     (HOLset.addList(empty_tyset, type_vars_in_term (concl ith)),
+                      hyptyvars))
+*)
      val lconsts = HOLset.intersection
-                     (FVL [concl ith] empty_tmset, hyp_frees ith)
+                     (FVL [concl ith] empty_tmset, hyptmvars)
  in fn th =>
    let val mfn = C (Term.kind_match_terml hypkdvars hyptyvars lconsts) (concl th)
        val (_,tyS,kdS,rkS) = mfn bod
-       val (atyS,tyS) = partition (fn {redex,residue} => mem redex ial) tyS
-       val tth0 = INST_TYPE tyS (INST_KIND kdS (INST_RANK rkS ith))
-       val tth = TY_SPECL (map (type_subst atyS) ial) tth0
-       val tbod = fst(dest_imp(snd(strip_forall(concl tth))))
-       val tmin = #1(mfn tbod)
+       val (atyS,tyS) = partition (fn {redex,residue} => mem redex ityl) tyS
+       val tth = INST_TYPE tyS (INST_KIND kdS (INST_RANK rkS ith))
+       val (avs,tbody) = strip_all_forall (concl tth)
+       val (ant,conseq) = dest_imp tbody
+       val (tmin,tyin,_,_) = mfn ant
+       val tyhy1 = HOLset.listItems (hyp_tyvars tth)
+       and tyhy2 = HOLset.listItems (hyp_tyvars th)
        val hy1 = HOLset.listItems (hyp_frees tth)
        and hy2 = HOLset.listItems (hyp_frees th)
-       val (avs,(ant,conseq)) = (I ## dest_imp) (strip_forall (concl tth))
+       val (rtyvs,ftyvs) = partition (C type_var_occurs ant) (type_vars_in_term conseq)
        val (rvs,fvs) = partition (C free_in ant) (free_vars conseq)
-       val afvs = Lib.op_set_diff eq fvs (Lib.op_set_diff eq hy1 avs)
-       val cvs = free_varsl (map (C rassoc_total tmin) rvs)
+       val atyvs = mapfilter outL avs
+       val atmvs = mapfilter outR avs
+       val aftyvs = Lib.set_diff ftyvs (Lib.set_diff tyhy1 atyvs)
+       val ctyvs = type_varsl (map (C rassoc_total1 tyin) rtyvs)
+       val vftyvs = map (op |->) (zip aftyvs (variant_types (ctyvs@tyhy1@tyhy2, aftyvs)))
+       val atyin = (filter neq1 vftyvs)@tyin
+       val atmvs' = map (inst atyin) atmvs
+       val fvs' = map (inst atyin) fvs
+       val afvs = Lib.op_set_diff eq fvs' (Lib.op_set_diff eq hy1 atmvs')
+       val cvs = free_varsl (map (C rassoc_total tmin o inst tyin(*or atyin*)) rvs)
        val vfvs = map (op |->) (zip afvs (variants (cvs@hy1@hy2, afvs)))
-       val atmin = (filter (op not o op req) vfvs)@tmin
-       val (spl,ill) = partition (C (op_mem eq) avs o #redex) atmin
-       val fspl = map (C rassoc_total spl) avs
-       val mth = MP (SPECL fspl (INST ill tth)) th
+       val atmin = (filter neq vfvs)@tmin
+       val (sptyl,iltyl) = partition (C mem atyvs o #redex) atyin
+       val (spl,ill) = partition (C (op_mem eq) atmvs' o #redex) atmin
+       val fspl = map (C rassoc_total1 sptyl +++ (C rassoc_total spl o inst atyin)) avs
+       val mth = MP (TY_TM_SPECL fspl (INST ill (INST_TYPE iltyl tth))) th
        fun loop [] = []
-         | loop (tm::rst) =
-              case subst_assoc (eq tm) vfvs
+         | loop (inR tm::rst) =
+             (case subst_assoc (eq (inst atyin tm)) vfvs
                 of NONE => loop rst
-                 | SOME x => x::loop rst
+                 | SOME x => inR x::loop rst)
+         | loop (inL ty::rst) =
+             (case subst_assoc (equal ty) vftyvs
+                of NONE => loop rst
+                 | SOME x => inL x::loop rst)
    in
-     GENL (loop avs) mth
+     TY_TM_GENL (loop avs) mth
    end
  end
 end
@@ -1924,7 +2009,7 @@ end
 
 
 fun HO_PART_MATCH partfn th =
- let val sth = SPEC_ALL (TY_SPEC_ALL th)
+ let val sth = TY_TM_SPEC_ALL th
      val bod = concl sth
      val pbod = partfn bod
      val posstybetas = mapfilter (fn v => (v,TY_BETA_VAR v bod))

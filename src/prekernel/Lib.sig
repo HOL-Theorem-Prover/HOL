@@ -156,6 +156,11 @@ sig
   val deinitcommentss : substring -> substring
   val deinitcomment : string -> string
 
+  datatype ('a,'b) sum = inL of 'a | inR of 'b
+  val outL : ('a,'b) sum -> 'a
+  val outR : ('a,'b) sum -> 'b
+  val +++  : ('a -> 'b) * ('c -> 'd) -> ('a,'c) sum -> ('b,'d) sum
+
   datatype ('a,'b) verdict = PASS of 'a | FAIL of 'b
   val verdict : ('a -> 'b) -> ('a -> 'c) -> 'a -> ('b, 'c*exn)verdict
   val ?>      : ('a,'c)verdict * ('a -> ('b,'c)verdict) -> ('b,'c)verdict
