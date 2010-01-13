@@ -3249,12 +3249,14 @@ val IN_COUNT = store_thm
   ("IN_COUNT",
    ``!m n. m IN count n = m < n``,
    RW_TAC bool_ss [GSPECIFICATION, count_def]);
+val _ = export_rewrites ["IN_COUNT"]
 
 val COUNT_ZERO = store_thm
   ("COUNT_ZERO",
    ``count 0 = {}``,
    RW_TAC bool_ss [EXTENSION, IN_COUNT, NOT_IN_EMPTY]
    THEN CONV_TAC Arith.ARITH_CONV);
+val _ = export_rewrites ["COUNT_ZERO"]
 
 val COUNT_SUC = store_thm
   ("COUNT_SUC",
@@ -3268,6 +3270,7 @@ val FINITE_COUNT = store_thm
    Induct THENL
    [RW_TAC bool_ss [COUNT_ZERO, FINITE_EMPTY],
     RW_TAC bool_ss [COUNT_SUC, FINITE_INSERT]]);
+val _ = export_rewrites ["FINITE_COUNT"]
 
 val CARD_COUNT = store_thm
   ("CARD_COUNT",
@@ -3277,6 +3280,7 @@ val CARD_COUNT = store_thm
     RW_TAC bool_ss [COUNT_SUC, CARD_INSERT, FINITE_COUNT, IN_COUNT]
     THEN POP_ASSUM MP_TAC
     THEN CONV_TAC Arith.ARITH_CONV]);
+val _ = export_rewrites ["CARD_COUNT"]
 
 (*---------------------------------------------------------------------------
     A "fold"-like operation for sets.
@@ -3611,10 +3615,14 @@ val SUM_SET_THM = store_thm(
     (!x s. FINITE s ==> (SUM_SET (x INSERT s) = x + SUM_SET (s DELETE x)))``,
   SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_THM]);
 
+val SUM_SET_EMPTY = save_thm("SUM_SET_EMPTY", CONJUNCT1 SUM_SET_THM)
+val _ = export_rewrites ["SUM_SET_EMPTY"]
+
 val SUM_SET_SING = store_thm(
   "SUM_SET_SING",
   ``!n. SUM_SET {n} = n``,
   SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_SING]);
+val _ = export_rewrites ["SUM_SET_SING"]
 
 val SUM_SET_SUBSET_LE = store_thm(
   "SUM_SET_SUBSET_LE",
