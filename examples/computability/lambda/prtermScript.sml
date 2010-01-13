@@ -863,7 +863,7 @@ val pr_nsub_def = Define`
   (λns. let s = ns ' 0 in
         let k = ns ' 1 in
         let t = ns ' 2 in
-        let gmx = scopesz (s ⊗ k) t + s ⊗ k + 1
+        let gmx = scopesz (s ⊗ k) t + s ⊗ k + 20
         in
           nel (s ⊗ k)
               (prtermrec1
@@ -985,23 +985,228 @@ val scopesz_lt2 = prove(
   MATCH_MP_TAC funpow_le THEN SRW_TAC [][] THEN
   Q.SPEC_THEN `numdB x` MP_TAC lift_larger THEN SRW_TAC [][]);
 
-(*
-val scopesz_lt2 = prove(
-  ``scopesz sk (dBnum (dABS d)) = scopesz sk (dBnum d) + sklift sk``,
+val tri_sub1 = prove(
+  ``(tri (n + 1) - tri n = n + 1) ∧
+    (tri (SUC n) - tri n = SUC n)``,
+  SRW_TAC [][tri_def, GSYM ADD1]);
+
+val SUBSET_FINITE_I =
+    SIMP_RULE (srw_ss() ++ boolSimps.DNF_ss) [AND_IMP_INTRO]
+              pred_setTheory.SUBSET_FINITE
+
+val _ = temp_add_rule {fixity = Closefix,
+                  term_name = "lterange",
+                  block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
+                  paren_style = OnlyIfNecessary,
+                  pp_elements = [TOK "{", HardSpace 1, TM, BreakSpace(1,0),
+                                 TOK "<..", BreakSpace(1,0), TM, HardSpace 1,
+                                 TOK "}"]}
+val _ = overload_on ("lterange", ``λm n. { i | m < i ∧ i ≤ n}``)
+
+val tri_sub = prove(
+  ``tri n - tri m = SUM_SET { m <.. n }``,
+  Induct_on `n` THEN SRW_TAC [][] THEN
+  SRW_TAC [boolSimps.CONJ_ss][pred_setTheory.SUM_SET_THM] THEN
+  SRW_TAC [][tri_def] THEN
+  Cases_on `m ≤ n` THENL [
+    `{ m <.. SUC n} = (SUC n) INSERT { m <.. n}`
+       by SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
+    POP_ASSUM SUBST1_TAC THEN
+    `FINITE { m <.. n}`
+       by (MATCH_MP_TAC SUBSET_FINITE_I THEN Q.EXISTS_TAC `count (n + 1)` THEN
+           SRW_TAC [ARITH_ss][pred_setTheory.SUBSET_DEF,
+                              pred_setTheory.FINITE_COUNT,
+                              pred_setTheory.IN_COUNT]) THEN
+    SRW_TAC [][pred_setTheory.SUM_SET_THM] THEN
+    `SUC n ∉ {m <.. n}` by SRW_TAC [][] THEN
+    FULL_SIMP_TAC (srw_ss()) [pred_setTheory.DELETE_NON_ELEMENT] THEN
+    `tri m ≤ tri n` by SRW_TAC [ARITH_ss][] THEN
+    DECIDE_TAC,
+
+    `{ m <.. SUC n} = {}`
+       by SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
+    `SUC n ≤ m` by DECIDE_TAC THEN
+    `tri (SUC n) ≤ tri m` by SRW_TAC [][] THEN
+    POP_ASSUM MP_TAC THEN REWRITE_TAC [tri_def] THEN
+    SRW_TAC [ARITH_ss][pred_setTheory.SUM_SET_THM]
+  ]);
+
+val npair_subx = prove(
+  ``x₁ ⊗ y - x₂ ⊗ y = SUM_SET {x₂ + y <.. x₁ + y}``,
+  SRW_TAC [][npair_def] THEN
+  `∀x y z. (x + y) - (z + y) = x - z` by DECIDE_TAC THEN
+  SRW_TAC [][tri_sub]);
+
+val npair_suby = prove(
+  ``x ⊗ y₁ - x ⊗ y₂ = SUM_SET { x + y₂ <.. x + y₁ } + (y₁ - y₂)``,
+  SRW_TAC [][npair_def] THEN
+  Cases_on `y₂ ≤ y₁` THENL [
+    `tri (x + y₂) ≤ tri (x + y₁)` by SRW_TAC [][] THEN
+    `tri (x + y₁) - tri (x + y₂) = SUM_SET { x + y₂ <.. x + y₁ }`
+       by SRW_TAC [][tri_sub] THEN
+    DECIDE_TAC,
+    `¬(tri (x + y₂) ≤ tri (x + y₁))` by SRW_TAC [][] THEN
+    `{ x + y₂ <.. x + y₁ } = {}` by
+       SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
+    SRW_TAC [ARITH_ss][pred_setTheory.SUM_SET_THM]
+  ]);
+
+val npair_sub = prove(
+  ``a ≤ x ∧ b ≤ y ⇒ (x ⊗ y − a ⊗ b = SUM_SET { a + b <.. x + y } + (y - b))``,
+  SRW_TAC [][npair_def] THEN
+  `tri (a + b) ≤ tri (x + y)` by SRW_TAC [ARITH_ss][] THEN
+  Q.MATCH_ABBREV_TAC `LHS = RHS` THEN
+  `LHS = (tri (x + y) − tri (a + b)) + (y - b)`
+     by SRW_TAC [ARITH_ss][Abbr`LHS`] THEN
+  markerLib.UNABBREV_ALL_TAC THEN SRW_TAC [][tri_sub])
+
+val FINITE_rangelte = prove(
+  ``FINITE { x <.. y }``,
+  MATCH_MP_TAC SUBSET_FINITE_I THEN Q.EXISTS_TAC `count (y + 1)` THEN
+  SRW_TAC [ARITH_ss]
+          [pred_setTheory.FINITE_COUNT, pred_setTheory.SUBSET_DEF,
+           pred_setTheory.IN_COUNT]);
+
+val SUM_SET_range_removetop = prove(
+  ``lo < hi ⇒ (SUM_SET { lo <.. hi } = hi + SUM_SET { lo <.. (hi − 1)})``,
+  STRIP_TAC THEN
+  `({ lo <.. hi } = hi INSERT { lo <.. hi − 1 }) ∧ hi ∉ { lo <.. hi − 1 }`
+     by SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
+  SRW_TAC [][pred_setTheory.SUM_SET_THM, FINITE_rangelte] THEN
+  FULL_SIMP_TAC (srw_ss()) [pred_setTheory.DELETE_NON_ELEMENT]);
+
+val CARD_rangelte = prove(
+  ``CARD { x <.. y } = y − x``,
+  Induct_on `y` THEN1 SRW_TAC [ARITH_ss, boolSimps.CONJ_ss][] THEN
+  Cases_on `x < SUC y` THENL [
+    `{x <.. SUC y} = SUC y INSERT {x <.. y}`
+       by SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
+    `SUC y ∉ {x <.. y}` by SRW_TAC [][pred_setTheory.EXTENSION] THEN
+    SRW_TAC [ARITH_ss][FINITE_rangelte],
+
+    `{x <.. SUC y} = {}` by SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
+    SRW_TAC [ARITH_ss][]
+  ]);
+
+val rangelte_empty = prove(
+  ``hi ≤ lo ⇒ ({ lo <.. hi } = {})``,
+  SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION]);
+
+val rangelte0 = prove(
+  ``{ lo <.. 0 } = {}``,
+  SRW_TAC [][rangelte_empty]);
+
+val SUM_SET_extract = prove(
+  ``SUM_SET { x + y <.. x + z } = (z - y) * x + SUM_SET {y <.. z}``,
+  Induct_on `z` THEN1 SRW_TAC [][rangelte_empty] THEN
+  Cases_on `SUC z ≤ y` THEN1
+    SRW_TAC [ARITH_ss][rangelte_empty, pred_setTheory.SUM_SET_THM] THEN
+  `y < SUC z ∧ x + y < x + SUC z` by DECIDE_TAC THEN
+  SRW_TAC [(* put ARITH_ss here for BAD PERF *)]
+          [SUM_SET_range_removetop,
+           DECIDE ``x + SUC y − 1 = x + y``] THEN
+  `x * y ≤ x * z` by SRW_TAC [ARITH_ss][] THEN
+  SRW_TAC [ARITH_ss][LEFT_SUB_DISTRIB, MULT_CLAUSES]);
+
+val SUM_SET_0arg1 = prove(
+  ``SUM_SET { 0 <.. n } = tri n``,
+  Induct_on `n` THEN
+  SRW_TAC [][tri_def, pred_setTheory.SUM_SET_THM,
+             rangelte_empty, SUM_SET_range_removetop]);
+
+val _ = temp_overload_on ("sknlift",
+                          ``FUNPOW (λt. dBnum (lift (numdB t) 0))``)
+
+val scopesz_sub = prove(
+  ``scopesz sk (dBnum (dABS d)) - scopesz sk (dBnum d) =
+    SUM_SET {
+      max_abs d + nsnd sk + sknlift (max_abs d) (nfst sk) <..
+      max_abs d + nsnd sk + sknlift (max_abs d + 1) (nfst sk) + 1} + 1``,
   SRW_TAC [][scopesz_def, LET_THM, dBnum_def] THEN
-  MATCH_MP_TAC (GEN_ALL npair_lt_mono) THEN
-  SRW_TAC [ARITH_ss][] THEN DISJ2_TAC THEN
-  MATCH_MP_TAC funpow_le THEN SRW_TAC [][] THEN
-  Q.SPEC_THEN `numdB x` MP_TAC lift_larger THEN SRW_TAC [][]);
-*)
+  `sknlift (max_abs d) (nfst sk) ≤ sknlift (1 + max_abs d) (nfst sk)`
+    by (MATCH_MP_TAC funpow_le THEN SRW_TAC [ARITH_ss][] THEN
+        Q.SPEC_THEN `numdB x` MP_TAC lift_larger THEN SRW_TAC [][]) THEN
+  SRW_TAC [ARITH_ss][npair_sub]);
 
 val nfstsnd0 = Store_thm(
   "nfstsnd0",
   ``(nfst 0 = 0) ∧ (nsnd 0 = 0)``,
   METIS_TAC [nfst_le, nsnd_le, DECIDE ``x ≤ 0 ⇔ (x = 0)``])
 
-(*
-val pr_nsub_correct = Store_thm(
+val sknlift_0 = prove(
+  ``sknlift n 0 = 3 * n``,
+  Induct_on `n` THEN1 SRW_TAC [][FUNPOW] THEN
+  SRW_TAC [][FUNPOW_SUC] THEN
+  SRW_TAC [ARITH_ss][Once numdB_def, DIV3_thm, MOD3_thm, dBnum_def]);
+
+val SUM_SET_range_lowerbound = prove(
+  ``lo < hi ⇒ hi ≤ SUM_SET { lo <.. hi}``,
+  SRW_TAC [][SUM_SET_range_removetop]);
+
+val sknlift_le = prove(
+  ``t ≤ sknlift n t``,
+  Induct_on `n` THEN1 SRW_TAC [][] THEN
+  SRW_TAC [][FUNPOW_SUC] THEN MATCH_MP_TAC LESS_EQ_TRANS THEN
+  Q.EXISTS_TAC `sknlift n t` THEN SRW_TAC [][] THEN
+  METIS_TAC [lift_larger, dBnumdB]);
+
+val sknlift_notle = prove(
+  ``y < x ⇒ ¬(sknlift n x ≤ y)``,
+  REPEAT STRIP_TAC THEN
+  `x ≤ sknlift n x` by SRW_TAC [][sknlift_le] THEN
+  DECIDE_TAC);
+
+val sknlift_le10 = prove(
+  ``sknlift (n + 1) t ≤ 10 ⇔
+      (t = 0) ∧ n < 3 ∨ (t = 2) ∨ (t = 3) ∧ n < 2 ∨
+      (t = 5) ∨ (t = 6) ∧ (n = 0) ∨ (t = 8)``,
+  EQ_TAC THENL [
+    STRIP_TAC THEN
+    `t ≤ 10` by (MATCH_MP_TAC LESS_EQ_TRANS THEN
+                 Q.EXISTS_TAC `sknlift (n + 1) t` THEN
+                 SRW_TAC [][sknlift_le]) THEN
+    `t ∈ count 11` by SRW_TAC [ARITH_ss][pred_setTheory.IN_COUNT] THEN
+    ASSUME_TAC (EVAL ``count 11``) THEN
+    MAP_EVERY (fn n => ASSUME_TAC (EVAL
+     ``dBnum (lift (numdB ^(numSyntax.mk_numeral (Arbnum.fromInt n))) 0)``))
+              [10,9,7,6,4,3,1] THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    FULL_SIMP_TAC (srw_ss()) [GSYM ADD1, sknlift_0, FUNPOW, sknlift_notle]
+    THENL [
+      Cases_on `n` THEN SRW_TAC [][] THEN
+      FULL_SIMP_TAC (srw_ss()) [FUNPOW, sknlift_notle],
+      Cases_on `n` THEN
+      FULL_SIMP_TAC (srw_ss()) [FUNPOW] THEN
+      Cases_on `n'` THEN
+      FULL_SIMP_TAC (srw_ss()) [FUNPOW, sknlift_notle],
+
+      `3 * SUC n < 12` by DECIDE_TAC THEN
+      `12 = 3 * 4` by SRW_TAC [][] THEN
+      `SUC n < 4` by METIS_TAC [LT_MULT_LCANCEL] THEN
+      DECIDE_TAC
+    ],
+
+    SRW_TAC [][] THENL [
+      `(n = 0) ∨ (n = 1) ∨ (n = 2)` by DECIDE_TAC THEN
+      SRW_TAC [][] THEN EVAL_TAC,
+
+      Q_TAC SUFF_TAC `∀n. sknlift n 2 = 2` THEN1 SRW_TAC [][] THEN
+      Induct THEN1 EVAL_TAC THEN SRW_TAC [][FUNPOW_SUC] THEN EVAL_TAC,
+
+      `(n = 0) ∨ (n = 1)` by DECIDE_TAC THEN SRW_TAC [][] THEN
+      EVAL_TAC,
+
+      Q_TAC SUFF_TAC `∀n. sknlift n 5 = 5` THEN1 SRW_TAC [][] THEN
+      Induct THEN1 EVAL_TAC THEN SRW_TAC [][FUNPOW_SUC] THEN EVAL_TAC,
+
+      EVAL_TAC,
+
+      Q_TAC SUFF_TAC `∀n. sknlift n 8 = 8` THEN1 SRW_TAC [][] THEN
+      Induct THEN1 EVAL_TAC THEN SRW_TAC [][FUNPOW_SUC] THEN EVAL_TAC
+    ]
+  ]);
+
+(*val pr_nsub_correct = Store_thm(
   "pr_nsub_correct",
   ``pr_nsub [s; k; t] = dBnum (nsub (numdB s) k (numdB t))``,
   SRW_TAC [][pr_nsub_def] THEN
@@ -1010,13 +1215,13 @@ val pr_nsub_correct = Store_thm(
   Q.MATCH_ABBREV_TAC `nel (s ⊗ k) (prtermrec1 v c a [dBnum d; (s ⊗ k) ⊗ gmx]) =
                       dBnum (nsub (numdB s) k d)` THEN
   Q_TAC SUFF_TAC `
-    ∀d. scopesz (s ⊗ k) (dBnum d) < gmx ⇒
-        (prtermrec1 v c a [dBnum d; (s ⊗ k) ⊗ gmx] =
-         nlist_of (GENLIST (λi. dBnum (nsub (numdB (nfst i)) (nsnd i) d))
-                           (gmx - scopesz (s ⊗ k) (dBnum d) + 1)))
+    ∀dd. scopesz (s ⊗ k) (dBnum dd) ≤ scopesz (s ⊗ k) (dBnum d) ⇒
+         (prtermrec1 v c a [dBnum dd; (s ⊗ k) ⊗ gmx] =
+          nlist_of (GENLIST (λi. dBnum (nsub (numdB (nfst i)) (nsnd i) dd))
+                            (gmx - scopesz (s ⊗ k) (dBnum dd) + 1)))
   ` THEN1 SRW_TAC [ARITH_ss][LENGTH_GENLIST, EL_GENLIST, nel_nlist_of,
                              Abbr`gmx`] THEN
-  Q.X_GEN_TAC `dd` THEN Induct_on `dd` THEN SRW_TAC [][] THENL [
+  Induct_on `dd` THEN SRW_TAC [][] THENL [
     SRW_TAC [][Abbr`v`] THEN
     SRW_TAC [][scopesz_def, LET_THM] THEN
     Q.MATCH_ABBREV_TAC `Pr zf sf [M; n] = nlist_of (GENLIST gf (M + 1))` THEN
@@ -1073,17 +1278,18 @@ val pr_nsub_correct = Store_thm(
     Q.MATCH_ABBREV_TAC `Pr zf sf [M; nlist_of (GENLIST gf M1)] =
                         nlist_of (GENLIST gfr M2)` THEN
     `3 * dBnum dd + 2 = dBnum (dABS dd)` by SRW_TAC [][dBnum_def] THEN
-    FULL_SIMP_TAC (srw_ss()) [] THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN POP_ASSUM (K ALL_TAC) THEN
     `M2 = M + 1` by SRW_TAC [ARITH_ss][Abbr`M`, Abbr`M2`] THEN
     Q.RM_ABBREV_TAC `M2` THEN POP_ASSUM SUBST_ALL_TAC THEN
+    `3 ⊗ 1 < M1`
+      by SRW_TAC [ARITH_ss][Abbr`M1`, Abbr`gmx`, EVAL ``3 ⊗ 1``] THEN
+    Q.RM_ABBREV_TAC `M1` THEN
     Q.RM_ABBREV_TAC `M` THEN Induct_on `M` THENL [
       SRW_TAC [][Abbr`zf`, Abbr`gf`, Abbr`gfr`, GENLIST1] THEN
       SRW_TAC [][Once numdB_def, SimpRHS] THEN
       SRW_TAC [][dBnum_def] THEN
-      Q_TAC SUFF_TAC `3 ⊗ 1 < M1` THEN1
-        (SRW_TAC [][nel_nlist_of, LENGTH_GENLIST, EL_GENLIST] THEN
-         SRW_TAC [][Once numdB_def]) THEN
-      ...,
+      SRW_TAC [][nel_nlist_of, LENGTH_GENLIST, EL_GENLIST] THEN
+      SRW_TAC [][Once numdB_def],
 
       SRW_TAC [][Abbr`sf`, Abbr`gf`, Abbr`gfr`] THEN
       Q.PAT_ASSUM `Pr ZZ SS LL = RR` (K ALL_TAC) THEN
