@@ -1,0 +1,186 @@
+rb_tree_init(r;) {
+   r = 0;
+} [data_tree(r;[k,v,c],_data) * ``RED_BLACK_TREE _data FEMPTY``]
+ 
+rb_tree_mk_node (r; k, v) {
+   r = new();
+   r->k = k;
+   r->v = v;
+   r->c = 1;
+   r->l = 0;
+   r->r = 0;
+} [data_tree(r;[k,v,c],``PROGRAM_FUN___mk_node k v``)]
+
+rb_tree_is_red (r;t) [data_tree(t;[k,v,c],data)] {
+   local x;
+   if (t == 0) {
+     r = 0;
+   } else {
+     x = t->c;
+     if (x == 1) {
+       r = 1;
+     } else {
+       r = 0;
+     }
+   }
+} [data_tree(t;[k,v,c],data) * (r == ``BOOL_TO_NUM (RED_BLACK_TREE___IS_RED data)``)]
+
+rb_tree_left_rotate (r;) [data_tree(r;[k,v,c],data) * ``PROGRAM_PRED___can_left_rotate data``] {
+   local s, x;
+   s = r->r;
+   x = s->l; r->r = x;
+   s->l = r; 
+   r->c = 1;
+   s->c = 0;
+   r = s;
+} [data_tree(r;[k,v,c],``PROGRAM_FUN___left_rotate data``)]
+
+rb_tree_left_double_rotate (r;) [data_tree(r;[k,v,c],data) * ``PROGRAM_PRED___can_left_double_rotate data``] {
+   local x;
+   x = r->r;
+   rb_tree_right_rotate (x;);
+   r->r = x;
+   rb_tree_left_rotate (r;);
+}  [data_tree(r;[k,v,c],``PROGRAM_FUN___left_double_rotate data``)]
+
+rb_tree_right_rotate (r;) [data_tree(r;[k,v,c],data) * ``PROGRAM_PRED___can_right_rotate data``] {
+   local s, x;
+   s = r->l;
+   x = s->r; r->l = x;
+   s->r = r; 
+   r->c = 1;
+   s->c = 0;
+   r = s;
+} [data_tree(r;[k,v,c],``PROGRAM_FUN___right_rotate data``)]
+
+rb_tree_right_double_rotate (r;) [data_tree(r;[k,v,c],data) * ``PROGRAM_PRED___can_right_double_rotate data``] {
+   local x;
+   x = r->l;
+   rb_tree_left_rotate (x;);
+   r->l = x;
+   rb_tree_right_rotate (r;);
+}  [data_tree(r;[k,v,c],``PROGRAM_FUN___right_double_rotate data``)]
+
+rb_tree_color_flip (r;) [data_tree(r;[k,v,c],data) * ``PROGRAM_PRED___can_color_flip data``] {
+   local x;
+   r->c = 1;
+   x = r->l; x->c = 0;  
+   x = r->r; x->c = 0;
+} [data_tree(r;[k,v,c],``PROGRAM_FUN___color_flip data``)]
+
+rb_tree_left_balance (r;) [data_tree(r;[k,v,c],data) * ``PROGRAM_PRED___can_left_balance data``] {
+   local rl, rr, x, y;
+
+   x  = r->c;   
+   if (x == 0) {
+      rl = r->l;
+      rr = r->r;   
+      rb_tree_is_red (x; rl);
+      if (x == 1) {
+         rb_tree_is_red (x; rr);
+         if (x == 1) {
+            rb_tree_color_flip (r;);
+         } else {
+            y = rl->l;
+            rb_tree_is_red (x; y);
+            if (x == 1) {
+               rb_tree_right_rotate (r;);
+            } else {
+               y = rl->r;
+               rb_tree_is_red (x; y);
+               if (x == 1) {
+                  rb_tree_right_double_rotate (r;);
+               } 
+            }
+         }
+      }
+   }
+} [data_tree(r;[k,v,c],``PROGRAM_FUN___left_balance data``)]
+
+rb_tree_right_balance (r;) [data_tree(r;[k,v,c],data) * ``PROGRAM_PRED___can_right_balance data``] {
+   local rl, rr, x, y;
+
+   x  = r->c;   
+   if (x == 0) {
+      rl = r->l;
+      rr = r->r;
+      rb_tree_is_red (x; rr);
+      if (x == 1) {
+         rb_tree_is_red (x; rl);
+         if (x == 1) {
+            rb_tree_color_flip (r;);
+         } else {
+            y = rr->r;
+            rb_tree_is_red (x; y);
+            if (x == 1) {
+               rb_tree_left_rotate (r;);
+            } else {
+               y = rr->l;
+               rb_tree_is_red (x; y);
+               if (x == 1) {
+                  rb_tree_left_double_rotate (r;);
+               } 
+           }
+         }
+      }
+  }
+} [data_tree(r;[k,v,c],``PROGRAM_FUN___right_balance data``)]
+
+
+rb_tree_insert_r (r; k, v) [data_tree(r;[k,v,c],data) * ``PROGRAM_PRED___can_insert_r data``] {
+   local rk, rl, rr, rlc, rrc;
+   if (r == NULL) {
+     rb_tree_mk_node (r;k,v);
+   } else {
+      rk = r->k;
+      if (rk == k) {
+        r->v = v;
+      } else {
+        rl = r->l;
+        rr = r->r;
+        if (k < rk) {
+           rb_tree_insert_r (rl;k,v);
+           r->l = rl;
+           rb_tree_left_balance (r;);
+        } else {
+           rb_tree_insert_r (rr;k,v);
+           r->r = rr;
+           rb_tree_right_balance (r;);
+        }
+      }
+   }
+} [data_tree(r;[k,v,c],``PROGRAM_FUN___insert_r data k v``)]
+
+
+
+rb_tree_insert (r; k, v) [
+   data_tree(r;[k,v,c],data) * ``RED_BLACK_TREE data f``] {
+   rb_tree_insert_r (r; k, v);
+   r->c = 0;
+} [data_tree(r;[k,v,c],_data) * 
+   ``RED_BLACK_TREE _data (f |+ (k,v))``]
+
+
+rb_tree_lookup(r,v;t,k) [data_tree(t;[k,v,c],data) * ``BIN_SEARCH_TREE data f`` * (v == #vc)] {
+   local k0, tt;
+
+   if (t == NULL) { 
+     r = 0;
+   } else {
+      k0 = t->k;
+      if (k == k0) {
+         r = 1;
+         v = t->v;
+      } else if (k < k0) {
+         tt = t->l;
+         rb_tree_lookup (r,v;tt,k);
+      } else {
+         tt = t->r;
+         rb_tree_lookup (r,v;tt,k);
+      }
+   }
+} [data_tree(t;[k,v,c],data) *
+   (r == ``BOOL_TO_NUM ((k:num) IN FDOM (f:num |-> num))``) *
+   (v == ``if (k IN FDOM (f:num |-> num)) then f ' k else vc``)]
+
+
