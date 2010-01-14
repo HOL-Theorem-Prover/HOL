@@ -78,6 +78,7 @@ sig
    type user_rewrite_param = (Abbrev.thm list * Abbrev.conv list * simpLib.ssfrag list);
    type gen_step_param = {use_asms       : bool,
                           do_case_splits : bool,
+                          do_expands     : bool,
                           generate_vcs   : bool,
                           fast           : bool,
                           do_prop_simps  : bool};
@@ -88,7 +89,7 @@ sig
    val xSTEP_TAC            : user_rewrite_param -> int -> Abbrev.tactic;
    val xSTEP_TAC_n          : user_rewrite_param -> int -> int option -> Abbrev.tactic;
    val xSOLVE_TAC           : user_rewrite_param -> Abbrev.tactic;
-   val xCONTINUE_TAC        : (bool * bool * bool) -> user_rewrite_param -> Abbrev.tactic;
+   val xCONTINUE_TAC        : (bool * bool * bool * bool) -> user_rewrite_param -> Abbrev.tactic;
    val xVC_STEP_TAC_n       : user_rewrite_param -> int -> int option -> Abbrev.tactic;
    val xVC_STEP_TAC         : user_rewrite_param -> int -> Abbrev.tactic;
    val xVC_SOLVE_TAC        : user_rewrite_param -> Abbrev.tactic;
@@ -96,7 +97,7 @@ sig
    val STEP_TAC             : int -> Abbrev.tactic;
    val STEP_TAC_n           : int -> int option -> Abbrev.tactic;
    val SOLVE_TAC            : Abbrev.tactic;
-   val CONTINUE_TAC         : (bool * bool * bool) -> Abbrev.tactic;
+   val CONTINUE_TAC         : (bool * bool * bool * bool) -> Abbrev.tactic;
    val VC_STEP_TAC_n        : int -> int option -> Abbrev.tactic;
    val VC_STEP_TAC          : int -> Abbrev.tactic;
    val VC_SOLVE_TAC         : Abbrev.tactic;
@@ -3038,15 +3039,14 @@ val VAR_RES_INFERENCES_LIST = [
    (1, VAR_RES_INFERENCES_LIST___mayor_step),
    (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___hoare_triple),
    (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___frame_split),
-   (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___general),
-   (2, VAR_RES_INFERENCES_LIST___expands_entailment),
-   (2, VAR_RES_INFERENCES_LIST___expands)]
+   (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___general)];
 
 
 
 type gen_step_param =
   {use_asms       : bool,
    do_case_splits : bool,
+   do_expands     : bool,
    generate_vcs   : bool,
    fast           : bool,
    do_prop_simps  : bool};
@@ -3126,7 +3126,7 @@ fun vc_conv vc step_opt =
    if not vc then (K (0, NONE)) else
    EXT_DEPTH_NUM_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___var_res_list NONE step_opt true
      [(true, SOME 1, K (K (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV true false)))] []
-   CONSEQ_CONV_STRENGTHEN_direction
+   CONSEQ_CONV_STRENGTHEN_direction;
 
 (*
    val ((fast, vc, cs), ssp, step_opt, n, context) =
@@ -3135,7 +3135,10 @@ fun vc_conv vc step_opt =
 
 fun GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  = 
    let
-      val list = if (#do_case_splits p) then VAR_RES_INFERENCES_LIST@[(2, VAR_RES_INFERENCES_LIST___case_splits)] else VAR_RES_INFERENCES_LIST;
+      val list0 = VAR_RES_INFERENCES_LIST;
+      val list1 = if (#do_expands p) then list0@[(2, VAR_RES_INFERENCES_LIST___expands_entailment),(2, VAR_RES_INFERENCES_LIST___expands)] else list0;
+      val list2 = if (#do_case_splits p) then list1@[(2, VAR_RES_INFERENCES_LIST___case_splits)] else list1;
+      val list = list2
       val cL = convL (#fast p) (#do_prop_simps p, mk_ssfrag ssp) n list;
 
       fun mc step_opt = 
@@ -3193,9 +3196,9 @@ fun GEN_STEP_TAC (p:gen_step_param) ss step_opt n =
       (CONSEQ_CONV_TAC (K (GEN_STEP_CONSEQ_CONV p ss step_opt n [])));
 
 val empty_pss = ([],[],[])
-
 fun xSTEP_TAC_n ss m n = GEN_STEP_TAC 
         {do_case_splits = true,
+         do_expands = true,
          fast = true,
          use_asms = true,
          do_prop_simps = true,
@@ -3208,9 +3211,9 @@ val STEP_TAC_n = xSTEP_TAC_n empty_pss;
 val STEP_TAC = xSTEP_TAC empty_pss;
 val SOLVE_TAC = xSOLVE_TAC empty_pss;
 
-
-fun xCONTINUE_TAC (vcs, asms, simp) ss = GEN_STEP_TAC 
+fun xCONTINUE_TAC (vcs, expands, asms, simp) ss = GEN_STEP_TAC 
         {do_case_splits = false,
+         do_expands = expands,
          fast = true,
          use_asms = asms,
          do_prop_simps = simp,
@@ -3220,6 +3223,7 @@ fun CONTINUE_TAC x = xCONTINUE_TAC x empty_pss
 
 fun xVC_STEP_TAC_n ss m n = GEN_STEP_TAC 
         {do_case_splits = true,
+         do_expands = true,
          fast = true,
          use_asms = true,
          do_prop_simps = true,
@@ -3230,7 +3234,6 @@ fun xVC_SOLVE_TAC ss = xVC_STEP_TAC_n ss 1 NONE;
 val VC_STEP_TAC_n = xVC_STEP_TAC_n empty_pss;
 val VC_STEP_TAC = xVC_STEP_TAC empty_pss;
 val VC_SOLVE_TAC = xVC_SOLVE_TAC empty_pss;
-
 
 
 val _ = Rewrite.add_implicit_rewrites [fasl_comments_TF_ELIM];

@@ -717,6 +717,7 @@ local
          var_res_bool_proposition_TF,
          var_res_prop_binexpression___emp___consts,
          asl_trivial_cond_TF,
+         BOOL_TO_NUM_REWRITE,
          asl_trivial_cond___asl_false,
          asl_trivial_cond___var_res_stack_true,
          var_res_exp_binop___const_eval,

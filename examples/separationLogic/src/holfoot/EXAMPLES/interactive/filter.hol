@@ -25,7 +25,7 @@ val spec_thm = prove (spec_t,
   STEP_TAC_n 1 (SOME 5) THEN
   Tactical.REVERSE CONJ_TAC THEN1 (
      (*body of original function*)
-     CONTINUE_TAC (false,false,true) THEN
+     CONTINUE_TAC (false,false,false,true) THEN
      (*at the beginning of the loop nothing is filtered*)
      REPEAT GEN_TAC THEN Q.EXISTS_TAC `[]` THEN
      SOLVE_TAC THEN

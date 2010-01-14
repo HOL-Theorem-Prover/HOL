@@ -6,80 +6,67 @@ use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
 
 open treeTheory rich_listTheory pred_setTheory ConseqConv listTheory sortingTheory
 
-val TREE_KEYS_def = Define `
-   TREE_KEYS = TREE_FOLD (EMPTY, \v tL. (HD v) INSERT
-       (FOLDL $UNION EMPTY tL))`;
-
-val TREE_KEYS_THM = prove (``
-   (TREE_KEYS leaf = EMPTY) /\
-   (TREE_KEYS (node v tL) =
-      (HD v) INSERT
-       (FOLDL (\x t. x UNION TREE_KEYS t) EMPTY tL))``,
-SIMP_TAC std_ss [TREE_KEYS_def, TREE_FOLD_def,
-   FOLDL_MAP]);
-
-
-val BIN_SEARCH_TREE_defn = Hol_defn "BIN_SEARCH_TREE" 
-  `(BIN_SEARCH_TREE leaf keys = (keys = EMPTY)) /\
-   (BIN_SEARCH_TREE (node [k] [t1; t2]) keys = 
+val BIN_SEARCH_TREE_SET_defn = Hol_defn "BIN_SEARCH_TREE_SET" 
+  `(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
+   (BIN_SEARCH_TREE_SET (node [k] [t1; t2]) keys = 
        ?k1 k2. (keys = k INSERT (k1 UNION k2)) /\
                (!k':num. k' IN k1 ==> k' < k) /\
                (!k':num. k' IN k2 ==> k' > k) /\
-               (BIN_SEARCH_TREE t1 k1) /\
-               (BIN_SEARCH_TREE t2 k2)) /\
-   (BIN_SEARCH_TREE _ _ = F)`;
+               (BIN_SEARCH_TREE_SET t1 k1) /\
+               (BIN_SEARCH_TREE_SET t2 k2)) /\
+   (BIN_SEARCH_TREE_SET _ _ = F)`;
 
-val (BIN_SEARCH_TREE_def, _) =
-Defn.tprove (BIN_SEARCH_TREE_defn,
+val (BIN_SEARCH_TREE_SET_def, _) =
+Defn.tprove (BIN_SEARCH_TREE_SET_defn,
  Q.EXISTS_TAC `(measure (\ (t,_). MAX_DEPTH t))` THEN
  REWRITE_TAC [prim_recTheory.WF_measure] THEN
  SIMP_TAC arith_ss [prim_recTheory.measure_thm,
                     MEM,
                     MAX_DEPTH___DIRECT_SUBTREES___NODE]);
 
-val BIN_SEARCH_TREE_THM = prove (
- ``(BIN_SEARCH_TREE leaf keys = (keys = EMPTY)) /\
-   (BIN_SEARCH_TREE (node v tL) keys = 
+val BIN_SEARCH_TREE_SET_THM = prove (
+ ``(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
+   (BIN_SEARCH_TREE_SET (node v tL) keys = 
        ?k t1 t2 k1 k2. 
                (v = [k]) /\ (tL = [t1;t2]) /\
                (keys = k INSERT (k1 UNION k2)) /\
                (!k':num. k' IN k1 ==> k' < k) /\
                (!k':num. k' IN k2 ==> k' > k) /\
-               (BIN_SEARCH_TREE t1 k1) /\
-               (BIN_SEARCH_TREE t2 k2))``,
+               (BIN_SEARCH_TREE_SET t1 k1) /\
+               (BIN_SEARCH_TREE_SET t2 k2))``,
 
-SIMP_TAC std_ss [BIN_SEARCH_TREE_def] THEN
-Cases_on `v` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_def] THEN
-Cases_on `t` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_def] THEN
-Cases_on `tL` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_def] THEN
-Cases_on `t` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_def] THEN
-Cases_on `t'` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_def]);
+SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_def] THEN
+Cases_on `v` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def] THEN
+Cases_on `t` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def] THEN
+Cases_on `tL` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def] THEN
+Cases_on `t` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def] THEN
+Cases_on `t'` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def]);
 
 
-val BIN_SEARCH_TREE_BIN_THM = prove (
- ``(BIN_SEARCH_TREE leaf keys = (keys = EMPTY)) /\
-   (BIN_SEARCH_TREE (node [k] [t1; t2]) keys = 
+val BIN_SEARCH_TREE_SET_BIN_THM = prove (
+ ``(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
+   (BIN_SEARCH_TREE_SET (node [k] [t1; t2]) keys = 
        ?k1 k2. (keys = k INSERT (k1 UNION k2)) /\
                (!k':num. k' IN k1 ==> k' < k) /\
                (!k':num. k' IN k2 ==> k' > k) /\
-               (BIN_SEARCH_TREE t1 k1) /\
-               (BIN_SEARCH_TREE t2 k2))``,
-SIMP_TAC list_ss [BIN_SEARCH_TREE_THM]);
+               (BIN_SEARCH_TREE_SET t1 k1) /\
+               (BIN_SEARCH_TREE_SET t2 k2))``,
+SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_THM]);
 
 
-val BIN_SEARCH_TREE_BIN_REWRITE = prove (
- ``(BIN_SEARCH_TREE leaf keys = (keys = EMPTY)) /\
-   (BIN_SEARCH_TREE (node [k] [t1; t2]) keys = 
+val BIN_SEARCH_TREE_SET_BIN_REWRITE = prove (
+ ``(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
+   (BIN_SEARCH_TREE_SET (node [k] [t1; t2]) keys = 
        ?k1 k2. (keys = k INSERT (k1 UNION k2)) /\
                (!k':num. k' IN k1 ==> k' < k) /\
                (!k':num. k' IN k2 ==> k' > k) /\
                ~(k IN k1) /\ ~(k IN k2) /\
                (!k. ~(k IN k1) \/ ~(k IN k2)) /\
                (!k k'. k IN k1 /\ k' IN k2 ==> k < k') /\ 
-               (BIN_SEARCH_TREE t1 k1) /\
-               (BIN_SEARCH_TREE t2 k2))``,
+               (BIN_SEARCH_TREE_SET t1 k1) /\
+               (BIN_SEARCH_TREE_SET t2 k2))``,
 
-SIMP_TAC list_ss [BIN_SEARCH_TREE_BIN_THM] THEN
+SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_BIN_THM] THEN
 REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THENL [
@@ -93,12 +80,14 @@ REPEAT STRIP_TAC THENL [
 ]);
 
 
-val BIN_SEARCH_TREE_EMPTY_KEYS = prove (
- ``BIN_SEARCH_TREE data EMPTY = (IS_LEAF data)``,
+val BIN_SEARCH_TREE_SET_EMPTY_KEYS = prove (
+ ``BIN_SEARCH_TREE_SET data EMPTY = (IS_LEAF data)``,
 Cases_on `data` THEN
-  SIMP_TAC std_ss [BIN_SEARCH_TREE_THM, IS_LEAF_REWRITE,
+  SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_THM, IS_LEAF_REWRITE,
      NOT_EMPTY_INSERT, tree_distinct]
 );
+
+
 
 
 (******************************************************************************)
@@ -106,44 +95,31 @@ Cases_on `data` THEN
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/binary_search_tree.dsf"];
-val file = concat [examplesDir, "/interactive/bst.dsf"];
 val spec_t = parse_holfoot_file file
+
+fun init_fun file f =
+   ((set_goal ([], parse_holfoot_file_restrict [f] file));
+   (e (HOLFOOT_SPECIFICATION_TAC THEN REPEAT CONJ_TAC)));
 
 
 (******************************************************************************)
 (* Verify specification                                                       *)
 (******************************************************************************)
 
-
-
-(* -------------------------------------------------------------------------- *)
-(* this verification requieres                                                                            *)
-(*                                                                            *)
-(*                                                                            *)
-(* -------------------------------------------------------------------------- *)
-
-(*
-set_goal ([], parse_holfoot_file_restrict ["search_tree_init"] file)
-STEP_TAC 1 THEN
-REPEAT STRIP_TAC 
-*)
+(* init_fun file "search_tree_init" *)
 
 val search_tree_init_TAC =
    VC_SOLVE_TAC THEN
-   REWRITE_TAC [BIN_SEARCH_TREE_def, IS_LEAF_REWRITE]
+   REWRITE_TAC [BIN_SEARCH_TREE_SET_def, IS_LEAF_REWRITE];
 
-(*
-set_goal ([], parse_holfoot_file_restrict ["search_tree_insert"] file)
-STEP_TAC 1 THEN
-REPEAT STRIP_TAC 
-*)
 
+(* init_fun file "search_tree_insert" *)
 val search_tree_insert_TAC =
    (* search_tree_insert *)
-   VC_SOLVE_TAC THEN
+   CONTINUE_TAC (true, false, false, true) THEN
    REPEAT STRIP_TAC THENL [
       ELIM_COMMENTS_TAC THEN
-      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM, IS_LEAF_REWRITE,
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_THM, IS_LEAF_REWRITE,
          UNION_EMPTY, NOT_IN_EMPTY],
 
       ELIM_COMMENTS_TAC THEN
@@ -153,10 +129,10 @@ val search_tree_insert_TAC =
          ) THEN
          FULL_SIMP_TAC std_ss []
       ) THEN
-      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM, IN_INSERT],
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_THM, IN_INSERT],
 
       ELIM_COMMENTS_TAC THEN
-      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM] THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_THM] THEN
       Q.EXISTS_TAC `k1` THEN
       ASM_REWRITE_TAC[] THEN
       REPEAT STRIP_TAC THEN
@@ -165,7 +141,7 @@ val search_tree_insert_TAC =
          DISJ_IMP_THM],
 
       ELIM_COMMENTS_TAC THEN
-      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM] THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_THM] THEN
       Q.EXISTS_TAC `k2` THEN
       ASM_REWRITE_TAC[] THEN
       REPEAT STRIP_TAC THEN
@@ -176,29 +152,23 @@ val search_tree_insert_TAC =
    ];
 
 
-(*
-set_goal ([], parse_holfoot_file_restrict ["search_tree_delete_min"] file)
-STEP_TAC 1 THEN
-REPEAT STRIP_TAC 
-*)
-
+(* init_fun file "search_tree_delete_min" *)
 val search_tree_delete_min_TAC =
-   (* search_tree_delete_min *)
    SOLVE_TAC THEN
    REPEAT STRIP_TAC THEN
    (*tree not empty because keys != EMPTY*)
    Cases_on `t'_const = 0` THEN1 (
       SOLVE_TAC THEN
       REPEAT STRIP_TAC THEN
-      FULL_SIMP_TAC std_ss [IS_LEAF_REWRITE, BIN_SEARCH_TREE_def]
+      FULL_SIMP_TAC std_ss [IS_LEAF_REWRITE, BIN_SEARCH_TREE_SET_def]
    ) THEN
    (*Ok, now the real case *)
-   CONTINUE_TAC (false, true, true) THEN
+   CONTINUE_TAC (false, false, true, true) THEN
    Tactical.REVERSE CONJ_TAC THEN1 (
       (* Base case *)
       PURE_VC_TAC THEN ELIM_COMMENTS_TAC THEN
       STRIP_TAC THEN
-      FULL_SIMP_TAC arith_ss [BIN_SEARCH_TREE_BIN_REWRITE, IS_LEAF_REWRITE,
+      FULL_SIMP_TAC arith_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE, IS_LEAF_REWRITE,
          UNION_EMPTY, NOT_IN_EMPTY, IN_INSERT, DISJ_IMP_THM] THEN
       REPEAT STRIP_TAC THENL [
          `(t'_const_dta' INSERT k2) DELETE t'_const_dta' = k2` by ALL_TAC THEN1 (
@@ -211,21 +181,21 @@ val search_tree_delete_min_TAC =
       ]
    ) THEN
    (* recursive call *)
-   FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_REWRITE] THEN
+   FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE] THEN
    REPEAT GEN_TAC THEN
    Q.EXISTS_TAC `k1` THEN
    Cases_on `k1 = EMPTY` THEN1 (
-      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_EMPTY_KEYS, IS_LEAF_REWRITE,
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_EMPTY_KEYS, IS_LEAF_REWRITE,
          NOT_IN_EMPTY] THEN
       REPEAT STRIP_TAC THEN
-      CONTINUE_TAC (false, true, true)
+      CONTINUE_TAC (false, false, true, true)
    ) THEN
    ASM_SIMP_TAC std_ss [] THEN
-   CONTINUE_TAC (true, false, true) THEN
+   CONTINUE_TAC (true, false, false, true) THEN
    ELIM_COMMENTS_TAC THEN
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [IN_INSERT, IN_UNION, DISJ_IMP_THM,
-      FORALL_AND_THM, BIN_SEARCH_TREE_BIN_THM] THEN
+      FORALL_AND_THM, BIN_SEARCH_TREE_SET_BIN_THM] THEN
    REPEAT CONJ_TAC THENL [
       Q.EXISTS_TAC `k1 DELETE mk` THEN
       Q.EXISTS_TAC `k2` THEN
@@ -239,254 +209,154 @@ val search_tree_delete_min_TAC =
    ];
 
 
-
-
-(*
-set_goal ([], parse_holfoot_file_restrict ["search_tree_delete"] file)
-STEP_TAC 1 THEN
-REPEAT STRIP_TAC 
-*)
-
+(* init_fun file "search_tree_delete" *)
 val search_tree_delete_TAC =
-   (* search_tree_delete *)
-   STEP_TAC_n 1 (SOME 2) THEN
-   CONJ_TAC THEN1 (
-      (*t = 0*)
-      VC_SOLVE_TAC THEN
-      ELIM_COMMENTS_TAC THEN
-      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_def, EMPTY_DELETE]
-   ) THEN
-   STEP_TAC 1 THEN
-   FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_REWRITE] THEN
-   REPEAT STRIP_TAC THEN
-   CONTINUE_TAC (false, false, true) THEN
+   CONTINUE_TAC (false, false, false, true) THEN
+   ELIM_COMMENTS_TAC THEN
    REPEAT STRIP_TAC THENL [
-      Q.EXISTS_TAC `k1` THEN
-      REPEAT STRIP_TAC THEN
-      CONTINUE_TAC (true, false, true) THEN
-      ASM_SIMP_TAC std_ss [] THEN
-      ELIM_COMMENTS_TAC THEN
-      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM] THEN
-      REPEAT STRIP_TAC THEN
-      Q.EXISTS_TAC `k1 DELETE k_const'` THEN
-      Q.EXISTS_TAC `k2` THEN
-      ASM_SIMP_TAC std_ss [IN_DELETE, EXTENSION, IN_UNION, IN_INSERT] THEN
-      `~(k_const' IN k2)` by ALL_TAC THEN1 (
-          CCONTR_TAC THEN
-          `k_const' > t'_const_dta'` by METIS_TAC[] THEN
-          DECIDE_TAC
-      ) THEN
-      REPEAT STRIP_TAC THEN
-      Cases_on ` x = k_const'` THEN ASM_SIMP_TAC arith_ss [],
-
-
-      Q.EXISTS_TAC `k2` THEN
-      REPEAT STRIP_TAC THEN
-      CONTINUE_TAC (true, false, true) THEN
-      ASM_SIMP_TAC std_ss [] THEN
-      ELIM_COMMENTS_TAC THEN
-      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM] THEN
-      REPEAT STRIP_TAC THEN
-      Q.EXISTS_TAC `k1` THEN
-      Q.EXISTS_TAC `k2 DELETE k_const'` THEN
-      ASM_SIMP_TAC std_ss [IN_DELETE, EXTENSION, IN_UNION, IN_INSERT] THEN
-      `~(k_const' IN k1)` by ALL_TAC THEN1 (
-          CCONTR_TAC THEN
-          `k_const' < t'_const_dta'` by METIS_TAC[] THEN
-          DECIDE_TAC
-      ) THEN
-      REPEAT STRIP_TAC THEN
-      Cases_on `x = k_const'` THEN ASM_SIMP_TAC arith_ss [],
-
-
-      PURE_VC_TAC THEN
-      ELIM_COMMENTS_TAC THEN
-      `t'_const_dta' = k_const'` by DECIDE_TAC THEN
-      FULL_SIMP_TAC std_ss [IS_LEAF_REWRITE, BIN_SEARCH_TREE_def, UNION_EMPTY, NOT_IN_EMPTY] THEN      
-      Tactical.REVERSE (`~(k_const' IN k2)` by ALL_TAC) THEN1 (
-         `(k_const' INSERT k2) DELETE k_const' = k2` by ALL_TAC THEN1 (
-             FULL_SIMP_TAC std_ss [EXTENSION, IN_DELETE, IN_INSERT] THEN
-             METIS_TAC[]
-         ) THEN
-         ASM_SIMP_TAC std_ss []
-      ) THEN
-      CCONTR_TAC THEN
-      `k_const' > t'_const_dta'` by METIS_TAC[] THEN
-      DECIDE_TAC,
-
-
-      PURE_VC_TAC THEN
-      ELIM_COMMENTS_TAC THEN
-      `t'_const_dta' = k_const'` by DECIDE_TAC THEN
-      FULL_SIMP_TAC std_ss [IS_LEAF_REWRITE, BIN_SEARCH_TREE_def, UNION_EMPTY, NOT_IN_EMPTY] THEN      
-      Tactical.REVERSE (`~(k_const' IN k1)` by ALL_TAC) THEN1 (
-         `(k_const' INSERT k1) DELETE k_const' = k1` by ALL_TAC THEN1 (
-             FULL_SIMP_TAC std_ss [EXTENSION, IN_DELETE, IN_INSERT] THEN
-             METIS_TAC[]
-         ) THEN
-         ASM_SIMP_TAC std_ss []
-      ) THEN
-      CCONTR_TAC THEN
-      `k_const' < t'_const_dta'` by METIS_TAC[] THEN
-      DECIDE_TAC,
-
-      
-      Q.EXISTS_TAC `k2` THEN
-      FULL_SIMP_TAC std_ss [] THEN
-      Cases_on `k2 = EMPTY` THEN1 (
-         FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_EMPTY_KEYS, IS_LEAF_REWRITE] THEN
-         REPEAT STRIP_TAC THEN
-         CONTINUE_TAC (false, false, true) THEN
-         ASM_SIMP_TAC std_ss []
-      ) THEN
-      REPEAT STRIP_TAC THEN
-      CONTINUE_TAC (true, false, true) THEN
-      ASM_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM] THEN
-      ELIM_COMMENTS_TAC THEN
-      REPEAT STRIP_TAC THEN
-      Q.EXISTS_TAC `k1` THEN Q.EXISTS_TAC `k2 DELETE mk` THEN
-      ASM_SIMP_TAC std_ss [IN_DELETE, DISJ_IMP_THM, FORALL_AND_THM,
-         EXTENSION, IN_UNION, IN_INSERT] THEN
-      `t'_const_dta' = k_const'` by DECIDE_TAC THEN
-      FULL_SIMP_TAC std_ss [] THEN
-      REPEAT STRIP_TAC THENL [
-         METIS_TAC[],
-         RES_TAC THEN DECIDE_TAC
-      ]
-  ]
-
-
-
-
-
-(*
-set_goal ([], parse_holfoot_file_restrict ["search_tree_lookup"] file)
-STEP_TAC 1 THEN
-REPEAT STRIP_TAC 
-*)
-
-val search_tree_lookup_TAC =
-   CONTINUE_TAC (false, true, true) THEN
-   REPEAT STRIP_TAC THENL [
-      FULL_SIMP_TAC std_ss [IS_LEAF_REWRITE, BIN_SEARCH_TREE_BIN_THM,
-        NOT_IN_EMPTY] THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_def, EMPTY_DELETE] THEN
       SOLVE_TAC,
 
-      FULL_SIMP_TAC std_ss [IS_LEAF_REWRITE, BIN_SEARCH_TREE_BIN_REWRITE,
-        NOT_IN_EMPTY, IN_INSERT] THEN
-      CONTINUE_TAC (false, false, true),
 
-      Q.PAT_ASSUM `BIN_SEARCH_TREE x y` MP_TAC THEN
-      ASM_REWRITE_TAC[] THEN
-      CONV_TAC (RATOR_CONV (RAND_CONV (
-         SIMP_CONV std_ss [BIN_SEARCH_TREE_BIN_REWRITE]))) THEN
-      STRIP_TAC THEN
-      Q.EXISTS_TAC `k1` THEN
-      ASM_SIMP_TAC std_ss [] THEN
-      CONTINUE_TAC (true, false, true) THEN
+      CONTINUE_TAC (true, false, false, true) THEN
       ELIM_COMMENTS_TAC THEN
-      STRIP_TAC THEN
-      ASM_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM, IN_INSERT,
-         IN_UNION] THEN
-      CONJ_TAC THENL [
-         Q.EXISTS_TAC `k1` THEN Q.EXISTS_TAC `k2` THEN
-         ASM_SIMP_TAC std_ss [],
-         
-         Tactical.REVERSE (`~(k_const' IN k2)` by ALL_TAC) THEN1 (
-            METIS_TAC[]
-         ) THEN
-         REPEAT STRIP_TAC THEN
-         RES_TAC THEN DECIDE_TAC
-      ],
+      SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_THM] THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE] THEN
+      Q.EXISTS_TAC `k1` THEN
+      ASM_SIMP_TAC std_ss [] THEN      
+      REPEAT STRIP_TAC THEN
+      MAP_EVERY Q.EXISTS_TAC [`k1 DELETE k_const'`, `k2`] THEN
+      ASM_SIMP_TAC std_ss [IN_DELETE, EXTENSION, IN_INSERT, IN_UNION] THEN
+      Tactical.REVERSE (`~(k_const' IN k2) /\ ~(t'_dta = k_const')` by ALL_TAC) THEN1 METIS_TAC[] THEN
+      METIS_TAC[arithmeticTheory.LESS_ANTISYM, arithmeticTheory.GREATER_DEF],
 
 
-      Q.PAT_ASSUM `BIN_SEARCH_TREE x y` MP_TAC THEN
-      ASM_REWRITE_TAC[] THEN
-      CONV_TAC (RATOR_CONV (RAND_CONV (
-         SIMP_CONV std_ss [BIN_SEARCH_TREE_BIN_REWRITE]))) THEN
-      STRIP_TAC THEN
+      CONTINUE_TAC (true, false, false, true) THEN
+      ELIM_COMMENTS_TAC THEN
+      SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_THM] THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE] THEN
       Q.EXISTS_TAC `k2` THEN
       ASM_SIMP_TAC std_ss [] THEN
-      CONTINUE_TAC (true, false, true) THEN
-      ELIM_COMMENTS_TAC THEN
-      STRIP_TAC THEN
-      ASM_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM, IN_INSERT,
-         IN_UNION] THEN
-      CONJ_TAC THENL [
-         Q.EXISTS_TAC `k1` THEN Q.EXISTS_TAC `k2` THEN
-         ASM_SIMP_TAC std_ss [],
-         
-         Tactical.REVERSE (`~(k_const' IN k1)` by ALL_TAC) THEN1 (
-            METIS_TAC[]
-         ) THEN
-         REPEAT STRIP_TAC THEN
-         RES_TAC THEN DECIDE_TAC
-      ]
-   ];
-
-
-
-(*
-set_goal ([], parse_holfoot_file_restrict ["search_tree_to_list___rec"] file)
-STEP_TAC 1 THEN
-REPEAT STRIP_TAC 
-*)
-
-val search_tree_to_list___rec_TAC =
-   SOLVE_TAC THEN
-   REPEAT STRIP_TAC THEN1 (
-      (* t == 0 *)
-      Q.EXISTS_TAC `[]` THEN
       REPEAT STRIP_TAC THEN
-      FULL_SIMP_TAC list_ss [IS_LEAF_REWRITE, BIN_SEARCH_TREE_BIN_THM,
-         SORTED_DEF] THEN
-      SOLVE_TAC
-   ) THEN
-   Q.PAT_ASSUM `BIN_SEARCH_TREE x y` MP_TAC THEN
-   ASM_REWRITE_TAC[] THEN
-   CONV_TAC (RATOR_CONV (RAND_CONV (
-      SIMP_CONV std_ss [BIN_SEARCH_TREE_BIN_REWRITE]))) THEN
-   STRIP_TAC THEN
-   Q.EXISTS_TAC `k2` THEN
-   ASM_SIMP_TAC std_ss [] THEN
-   CONTINUE_TAC (false, false, true) THEN
-   REPEAT STRIP_TAC THEN
-   Q.EXISTS_TAC `k1` THEN
-   ASM_SIMP_TAC std_ss [] THEN
-   CONTINUE_TAC (true, false, true) THEN
-   ELIM_COMMENTS_TAC THEN 
-   REPEAT GEN_TAC THEN STRIP_TAC THEN
-   `(!x. MEM x data_lt' = x IN k1) /\
-    (!x. MEM x data_lt = x IN k2)` by METIS_TAC[IN_LIST_TO_SET] THEN
-   REPEAT STRIP_TAC THENL [
-      ASM_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM] THEN
-      Q.EXISTS_TAC `k1` THEN Q.EXISTS_TAC `k2` THEN
-      ASM_SIMP_TAC std_ss [],
+      MAP_EVERY Q.EXISTS_TAC [`k1`, `k2 DELETE k_const'`] THEN
+      ASM_SIMP_TAC std_ss [IN_DELETE, EXTENSION, IN_INSERT, IN_UNION] THEN
+      Tactical.REVERSE (`~(k_const' IN k1) /\ ~(t'_dta = k_const')` by ALL_TAC) THEN1 METIS_TAC[] THEN
+      METIS_TAC[arithmeticTheory.LESS_ANTISYM, arithmeticTheory.GREATER_DEF],
 
-      ASM_SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [EXTENSION, IN_UNION, IN_INSERT, NOT_IN_EMPTY,
-         IN_LIST_TO_SET],
-   
-      `transitive (($<):num -> num -> bool)` by ALL_TAC THEN1 (
-         SIMP_TAC arith_ss [relationTheory.transitive_def]
+
+      PURE_VC_TAC THEN ELIM_COMMENTS_TAC THEN
+      `k_const' = t'_dta` by DECIDE_TAC THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE, UNION_EMPTY] THEN
+      Tactical.REVERSE (`k2 DELETE t'_dta = k2` by ALL_TAC) THEN1 (
+         ASM_SIMP_TAC std_ss [DELETE_INSERT]
       ) THEN
-      MATCH_MP_TAC SORTED_APPEND THEN
-      ASM_SIMP_TAC std_ss [MEM_APPEND, MEM] THEN
-      Tactical.REVERSE CONJ_TAC THEN1 (
-         REPEAT STRIP_TAC THEN1 METIS_TAC[] THEN
-         RES_TAC THEN FULL_SIMP_TAC std_ss [arithmeticTheory.GREATER_DEF]
+      ASM_SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [EXTENSION, IN_DELETE],
+
+
+      PURE_VC_TAC THEN ELIM_COMMENTS_TAC THEN
+      `k_const' = t'_dta` by DECIDE_TAC THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE, UNION_EMPTY] THEN
+      Tactical.REVERSE (`k1 DELETE t'_dta = k1` by ALL_TAC) THEN1 (
+         ASM_SIMP_TAC std_ss [DELETE_INSERT]
       ) THEN
-      MATCH_MP_TAC SORTED_APPEND THEN
-      ASM_SIMP_TAC std_ss [SORTED_DEF, MEM]
+      ASM_SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [EXTENSION, IN_DELETE],
+
+
+      SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_THM] THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE] THEN
+      Q.EXISTS_TAC `k2` THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      REPEAT STRIP_TAC THEN
+      Cases_on `data_r = leaf` THEN1 (
+         ASM_REWRITE_TAC[] THEN
+         CONTINUE_TAC (false, false, false, true) THEN
+         ASM_REWRITE_TAC[]
+      ) THEN
+      `~(k2 = EMPTY)` by ALL_TAC THEN1 (
+          STRIP_TAC THEN
+          FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_EMPTY_KEYS, IS_LEAF_REWRITE]
+      ) THEN
+      ASM_REWRITE_TAC[] THEN
+      CONTINUE_TAC (true, false, false, true) THEN       
+      SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE] THEN
+      REPEAT STRIP_TAC THEN ELIM_COMMENTS_TAC THEN
+      Q.EXISTS_TAC `k1` THEN Q.EXISTS_TAC `k2 DELETE mk` THEN
+      ASM_SIMP_TAC std_ss [IN_DELETE, EXTENSION, IN_INSERT, IN_UNION, FORALL_AND_THM] THEN
+      `k_const' = t'_dta` by DECIDE_TAC THEN
+      `~(mk IN k1)` by METIS_TAC[] THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      REPEAT STRIP_TAC THENL [
+         METIS_TAC[],
+         RES_TAC THEN DECIDE_TAC,
+         METIS_TAC[]
+      ]
    ]
 
 
 
 
-(*
-set_goal ([], parse_holfoot_file_restrict ["search_tree_to_list"] file)
-STEP_TAC 1 THEN
-REPEAT STRIP_TAC 
-*)
+
+
+(* init_fun file "search_tree_lookup" *)
+val search_tree_lookup_TAC =
+   CONTINUE_TAC (true, false, false, true) THEN
+   ELIM_COMMENTS_TAC THEN
+   REPEAT CONJ_TAC THENL [
+      SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_def, NOT_IN_EMPTY],
+      
+      REPEAT STRIP_TAC THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE, IN_INSERT],
+
+      REPEAT STRIP_TAC THEN
+      SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_THM] THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE, arithmeticTheory.GREATER_DEF] THEN
+      Q.EXISTS_TAC `k1` THEN
+      `~(k_const' IN k2)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+      ASM_SIMP_TAC std_ss [IN_INSERT, IN_UNION],
+
+      REPEAT STRIP_TAC THEN
+      SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_THM] THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE, arithmeticTheory.GREATER_DEF] THEN
+      Q.EXISTS_TAC `k2` THEN
+      `~(k_const' IN k1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+      ASM_SIMP_TAC std_ss [IN_INSERT, IN_UNION]
+   ];
+
+
+(* init_fun file "search_tree_to_list___rec" *)
+val search_tree_to_list___rec_TAC =
+   CONTINUE_TAC (false, false, false, true) THEN
+   REPEAT STRIP_TAC THEN1 (
+      PURE_VC_TAC THEN ELIM_COMMENTS_TAC THEN
+      Q.EXISTS_TAC `[]` THEN
+      FULL_SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def, SORTED_DEF]
+   ) THEN
+   Q.PAT_ASSUM `BIN_SEARCH_TREE_SET X Y` (STRIP_ASSUME_TAC o REWRITE_RULE [BIN_SEARCH_TREE_SET_BIN_REWRITE]) THEN
+   Q.EXISTS_TAC `k2` THEN ASM_REWRITE_TAC[] THEN
+   CONTINUE_TAC (false, false, false, true) THEN
+   REPEAT STRIP_TAC THEN
+   CONV_TAC SWAP_EXISTS_CONV THEN Q.EXISTS_TAC `k1` THEN
+   ASM_REWRITE_TAC[] THEN
+   CONTINUE_TAC (true, true, false, true) THEN
+   REPEAT STRIP_TAC THEN ELIM_COMMENTS_TAC THEN
+   ASM_SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [BIN_SEARCH_TREE_SET_BIN_THM, EXTENSION, IN_INSERT, IN_UNION, NOT_IN_EMPTY] THEN
+   CONJ_TAC THEN1 (
+      MAP_EVERY Q.EXISTS_TAC [`k1`, `k2`] THEN
+      ASM_SIMP_TAC std_ss []
+   ) THEN
+   `transitive (($<):num -> num -> bool)` by ALL_TAC THEN1 (
+      SIMP_TAC arith_ss [relationTheory.transitive_def]
+   ) THEN
+   REPEAT (Q.PAT_ASSUM `LIST_TO_SET x = y` (ASSUME_TAC o GSYM)) THEN
+   FULL_SIMP_TAC std_ss [IN_LIST_TO_SET] THEN
+   MATCH_MP_TAC SORTED_APPEND THEN
+   FULL_SIMP_TAC std_ss [MEM_APPEND, MEM, RIGHT_AND_OVER_OR, DISJ_IMP_THM, FORALL_AND_THM,
+      arithmeticTheory.GREATER_DEF] THEN
+   MATCH_MP_TAC SORTED_APPEND THEN
+   ASM_SIMP_TAC std_ss [MEM, SORTED_DEF]
+
+
+(* init_fun file "search_tree_to_list" *)
 
 val search_tree_to_list_TAC =
    SOLVE_TAC THEN
@@ -497,8 +367,8 @@ val search_tree_to_list_TAC =
 
 (* set_goal ([], parse_holfoot_file file) *)
 val main_thm = prove (spec_t,
-STEP_TAC 1 THEN
-REPEAT STRIP_TAC THENL [
+HOLFOOT_SPECIFICATION_TAC THEN
+REPEAT CONJ_TAC THENL [
    search_tree_init_TAC,
    search_tree_insert_TAC,
    search_tree_delete_min_TAC,

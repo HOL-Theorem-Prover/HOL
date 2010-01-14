@@ -5,6 +5,7 @@ sig
   type user_rewrite_param = (Abbrev.thm list * Abbrev.conv list * simpLib.ssfrag list);
   type gen_step_param = {use_asms       : bool,
                          do_case_splits : bool,
+                         do_expands     : bool,
                          generate_vcs   : bool,
                          fast           : bool,
                          do_prop_simps  : bool};
@@ -16,7 +17,7 @@ sig
    val xSTEP_TAC            : user_rewrite_param -> int -> Abbrev.tactic;
    val xSTEP_TAC_n          : user_rewrite_param -> int -> int option -> Abbrev.tactic;
    val xSOLVE_TAC           : user_rewrite_param -> Abbrev.tactic;
-   val xCONTINUE_TAC        : (bool * bool * bool) -> user_rewrite_param -> Abbrev.tactic;
+   val xCONTINUE_TAC        : (bool * bool * bool * bool) -> user_rewrite_param -> Abbrev.tactic;
    val xVC_STEP_TAC_n       : user_rewrite_param -> int -> int option -> Abbrev.tactic;
    val xVC_STEP_TAC         : user_rewrite_param -> int -> Abbrev.tactic;
    val xVC_SOLVE_TAC        : user_rewrite_param -> Abbrev.tactic;
@@ -24,7 +25,7 @@ sig
    val STEP_TAC             : int -> Abbrev.tactic;
    val STEP_TAC_n           : int -> int option -> Abbrev.tactic;
    val SOLVE_TAC            : Abbrev.tactic;
-   val CONTINUE_TAC         : (bool * bool * bool) -> Abbrev.tactic;
+   val CONTINUE_TAC         : (bool * bool * bool * bool) -> Abbrev.tactic;
    val VC_STEP_TAC_n        : int -> int option -> Abbrev.tactic;
    val VC_STEP_TAC          : int -> Abbrev.tactic;
    val VC_SOLVE_TAC         : Abbrev.tactic;

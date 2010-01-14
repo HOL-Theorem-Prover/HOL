@@ -21,7 +21,7 @@ datatype a_space_pred =
   | Aspred_data_listseg of a_component * a_expression * a_component * string * a_expression
   | Aspred_dlseg of dlink_kind * a_component * a_expression * a_expression * a_component * a_expression * a_expression
   | Aspred_tree of a_component * a_component * a_expression
-  | Aspred_data_tree of a_component * a_component * a_expression * a_component * string
+  | Aspred_data_tree of a_component list * a_expression * a_component list * string
   | Aspred_empty
   | Aspred_hol of string
   | Aspred_pointsto of a_expression * (a_component * a_expression) list

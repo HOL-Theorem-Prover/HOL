@@ -23,6 +23,7 @@ val param = ([TREE_MAP_THM],[], []);
 
 val spec_thm = holfoot_interactive_verify_spec true 
                {do_case_splits = true,
+                do_expands = true,
                 fast = true,
                 use_asms = true,
                 do_prop_simps = true,

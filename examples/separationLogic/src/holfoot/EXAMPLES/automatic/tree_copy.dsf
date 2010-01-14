@@ -1,5 +1,3 @@
-l,r;
-
 tree_copy(s;t) [data_tree(t; data)] {
   local i, j, k, ii, jj;
   if(t == NULL) s = t;
@@ -14,4 +12,4 @@ tree_copy(s;t) [data_tree(t; data)] {
     s->r = jj;
     s->dta = k;
   }
-} [data_tree(l,r;s;dta,data) * data_tree(t;dta,data)]
+} [data_tree([l,r];s;[dta],data) * data_tree(t;[dta],data)]

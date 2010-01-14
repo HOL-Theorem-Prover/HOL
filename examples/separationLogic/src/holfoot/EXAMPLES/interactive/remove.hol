@@ -29,6 +29,7 @@ val spec_t = parse_holfoot_file file
 (* set_goal ([], spec_t) *)
 val spec_thm = holfoot_interactive_verify_spec true 
                {do_case_splits = true,
+                do_expands = false,
                 fast = true,
                 use_asms = true,
                 do_prop_simps = true,

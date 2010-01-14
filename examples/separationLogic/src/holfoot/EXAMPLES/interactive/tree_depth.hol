@@ -11,7 +11,7 @@ open treeTheory
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/tree_depth.dsf"];
-val spec_t = parse_holfoot_file file
+val spec_t = parse_holfoot_file file;
 
 
 
@@ -27,6 +27,7 @@ val param = ([MIN_MAX_DEPTH_THM, arithmeticTheory.MIN_DEF,
 
 val spec_thm = holfoot_interactive_verify_spec true 
                {do_case_splits = true,
+                do_expands = true,
                 fast = true,
                 use_asms = true,
                 do_prop_simps = true,

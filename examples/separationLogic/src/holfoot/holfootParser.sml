@@ -276,15 +276,16 @@ fun holfoot_a_space_pred2term contextOpt ex_vars (Aspred_list (tag,aexp1)) =
         in
             (comb_term, HOLset.union (var_set1, HOLset.union (var_set2, var_set3)), ex_vars4)
         end
-|     holfoot_a_space_pred2term contextOpt ex_vars (Aspred_data_tree (tag1,tag2,aexp,data_tag,data)) =
+|     holfoot_a_space_pred2term contextOpt ex_vars (Aspred_data_tree (tagL,aexp,dtagL,data)) =
         let
             val (exp_term1, var_set1, ex_vars2) = holfoot_a_expression2term ex_vars aexp;
             val (data_term, var_set2, ex_vars3) =
                hol_parse contextOpt ex_vars2 (``leaf:num list tree``) ["num list tree"] data;
-            val data_tag_term = string2holfoot_tag data_tag;
-            val data2_term = ``([^data_tag_term], ^data_term)``;
+            val tree_dtag_t = listSyntax.mk_list (
+                 (map string2holfoot_tag dtagL), Type `:holfoot_tag`)
+            val data2_term = pairSyntax.mk_pair (tree_dtag_t, data_term)
             val tree_tag_t = listSyntax.mk_list (
-                 [string2holfoot_tag tag1, string2holfoot_tag tag2], Type `:holfoot_tag`)
+                 (map string2holfoot_tag tagL), Type `:holfoot_tag`)
             val comb_term = list_mk_icomb(holfoot_ap_data_tree_term, [
                 tree_tag_t, exp_term1, data2_term]);
         in

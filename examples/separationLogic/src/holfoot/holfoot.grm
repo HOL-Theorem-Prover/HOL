@@ -138,6 +138,7 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
   |  a_component_expression_seq of (string * Parsetree.a_expression) list
   |  a_component_expression_notempty_seq of (string * Parsetree.a_expression) list
   |  data_list_exp of string
+  |  data_tree_exp of string
 
 %start program
 %pos (int * int)
@@ -351,17 +352,19 @@ a_space_pred:
 	  ( Aspred_dlseg(XL,IDENT1,a_expression1,a_expression2,IDENT2,a_expression3,a_expression4) )
   | XLSEG LPAREN a_expression COMMA a_expression COMMA a_expression COMMA a_expression RPAREN
 	  ( Aspred_dlseg(XL, dl_Llink_tag, a_expression1, a_expression2, dl_Llink_tag,a_expression3, a_expression4) )
-  | TREE LPAREN IDENT COMMA IDENT SEMI a_expression RPAREN
+  | TREE LPAREN LBRACKET IDENT COMMA IDENT RBRACKET SEMI a_expression RPAREN
           ( Aspred_tree(IDENT1,IDENT2,a_expression) )
   | TREE LPAREN a_expression RPAREN
           ( Aspred_tree(#1 tree_link_tags, #2 tree_link_tags,
 			a_expression) )
-  | DATA_TREE LPAREN IDENT COMMA IDENT SEMI a_expression SEMI IDENT COMMA data_list_exp RPAREN
-	  ( Aspred_data_tree(IDENT1,IDENT2,a_expression,IDENT3,data_list_exp) )
-  | DATA_TREE LPAREN a_expression SEMI IDENT COMMA data_list_exp RPAREN 
-	  ( Aspred_data_tree(#1 tree_link_tags,#2 tree_link_tags,a_expression,IDENT,data_list_exp) )
-  | DATA_TREE LPAREN a_expression SEMI data_list_exp RPAREN
-	  ( Aspred_data_tree(#1 tree_link_tags,#2 tree_link_tags,a_expression,tree_data_tag,data_list_exp) )
+  | DATA_TREE LPAREN LBRACKET ident_notempty_seq RBRACKET SEMI a_expression SEMI LBRACKET ident_notempty_seq RBRACKET COMMA data_tree_exp RPAREN
+	  ( Aspred_data_tree(ident_notempty_seq1,a_expression,ident_notempty_seq2,data_tree_exp) )
+  | DATA_TREE LPAREN a_expression SEMI LBRACKET ident_notempty_seq RBRACKET COMMA data_tree_exp RPAREN
+	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],a_expression,ident_notempty_seq,data_tree_exp) )
+  | DATA_TREE LPAREN a_expression SEMI IDENT COMMA data_tree_exp RPAREN 
+	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],a_expression,[IDENT],data_tree_exp) )
+  | DATA_TREE LPAREN a_expression SEMI data_tree_exp RPAREN
+	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],a_expression,[tree_data_tag],data_tree_exp) )
   | EMPTY
           ( Aspred_empty )
   | HOL_TERM
@@ -411,6 +414,9 @@ data_list_exp:
     IDENT                                 ( IDENT )
   | HOL_TERM                              ( HOL_TERM )
 
+data_tree_exp:
+    IDENT                                 ( IDENT )
+  | HOL_TERM                              ( HOL_TERM )
 
 
 

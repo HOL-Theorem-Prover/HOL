@@ -603,7 +603,8 @@ end;
 local
    val my_compset = listLib.list_compset ()
    val _ = computeLib.add_thms [asl_bigstar_list_REWRITE, 
-      asl_star_holfoot_THM, LIST_TO_FMAP_THM] my_compset
+      asl_star_holfoot_THM, LIST_TO_FMAP_THM, asl_trivial_cond_TF,
+      pairTheory.SND, pairTheory.FST] my_compset
 in
    val tree_prop_implies_eq_SIMP_CONV = computeLib.CBV_CONV my_compset
 end
@@ -679,12 +680,56 @@ in
 end;
 
 
+fun points_to_intro___var_res_prop_implies_eq___data_tree___NODE ss context wpb rpb e sfb1 sfb2 sfb12_thm =
+let
+   val sfb12 = rhs (concl sfb12_thm)
+   val sfs2 = fst (dest_bag sfb2)
+   val found_opt = first_opt (fn n => fn ttt =>
+     let
+        val (_,e1,tagL_data) = dest_holfoot_ap_data_tree ttt;
+        val _ = if (aconv e1 e) then () else Feedback.fail();
+        val (_, data_t) = pairSyntax.dest_pair tagL_data
+        val _ = if (is_node data_t) then () else Feedback.fail();
+     in
+        SOME (n, ttt)
+     end) sfs2
+   val _ = if isSome found_opt then () else Feedback.fail();
+
+   val (pos, ls_t) = valOf found_opt
+
+   (*sort it to front*)
+   val sfb2_thm = BAG_RESORT_CONV [pos] sfb2;
+   val sfb12_thm' = AP_TERM (mk_icomb (bagSyntax.BAG_UNION_tm, sfb1)) sfb2_thm
+   val (_, sfb2') = bagSyntax.dest_insert (rhs (concl sfb2_thm))   
+
+
+   (*combine everything*)
+   val (tagL_t, _, data') = dest_holfoot_ap_data_tree ls_t;
+   val (dtagL, data) = pairSyntax.dest_pair data';
+   val (v_t, tL_t) = dest_node data;
+   val thm0 =  ISPECL [tagL_t, e, dtagL, v_t, tL_t, sfb1, sfb2', wpb,rpb] 
+                  holfoot_ap_data_tree___var_res_prop_implies_eq___split___NODE
+   val thm1 = var_res_precondition_prove thm0;
+   val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV) 
+          (K (GSYM sfb2_thm))) thm1
+   fun my_asl_exists_list_CONV b = asl_exists_list_CONV (holfoot_term_to_string b) holfoot_term_to_string
+
+   val exists_list_CONV =  my_asl_exists_list_CONV e
+   val thm3 = CONV_RULE (RAND_CONV (RATOR_CONV (RAND_CONV
+              (exists_list_CONV THENC
+               tree_prop_implies_eq_SIMP_CONV)))) thm2
+in
+   thm3
+end;
+
+
 fun points_to_intro___var_res_prop_implies_eq ss context wpb rpb e sfb1 sfb2 =
 let
    val sfb12_thm = bagLib.SIMPLE_BAG_NORMALISE_CONV (bagSyntax.mk_union(sfb1, sfb2))
 in
    tryfind (fn f => f ss context wpb rpb e sfb1 sfb2 sfb12_thm)
       [points_to_intro___var_res_prop_implies_eq___list_seg,
+       points_to_intro___var_res_prop_implies_eq___data_tree___NODE,
        points_to_intro___var_res_prop_implies_eq___tree]
 end
 
@@ -1655,8 +1700,6 @@ rotate 1
 *)
 
 
-
-
 type var_res_inference = bool -> simpLib.ssfrag -> thm list -> ConseqConv.directed_conseq_conv
 
 structure holfoot_param = 
@@ -1892,6 +1935,7 @@ fun holfoot_auto_verify_spec verbose file =
    fst (holfoot_verify_spec_internal verbose true (file, 
          GEN_STEP_CONSEQ_CONV 
                {do_case_splits = true,
+                do_expands = true,
                 fast = false,
                 use_asms = true,
                 do_prop_simps = true,

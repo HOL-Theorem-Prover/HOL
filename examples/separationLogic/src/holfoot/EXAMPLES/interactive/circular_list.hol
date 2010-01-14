@@ -18,7 +18,6 @@ val spec_t = parse_holfoot_file file
 
 (* set_goal ([], spec_t) *)
 
-
 val spec_thm = prove (spec_t,
 SOLVE_TAC THEN
 REPEAT STRIP_TAC THENL [
@@ -36,10 +35,12 @@ REPEAT STRIP_TAC THENL [
 (*or alternatively*)
 val imp_thm = holfoot_interactive_verify_spec true 
    {do_case_splits = true,
+    do_expands = true,
     fast = true,
     use_asms = true,
     do_prop_simps = true,
     generate_vcs = false} ([],[],[]) file
+
 val spec_thm = holfoot_prove_remaining (imp_thm, 
 REPEAT STRIP_TAC THENL [
    (* enqueue, provide witness the automation can't guess *)

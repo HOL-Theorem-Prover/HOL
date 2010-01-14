@@ -2531,6 +2531,38 @@ SIMP_TAC std_ss [asl_exists_list_def,
 METIS_TAC[]);
 
 
+
+val holfoot_ap_data_tree___var_res_prop_implies_eq___split___NODE = 
+store_thm ("holfoot_ap_data_tree___var_res_prop_implies_eq___split___NODE",
+``!tagL e1 dtagL v tL sfb1 sfb2 wpb rpb.
+  IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1) ==>
+
+  (var_res_prop_implies_eq DISJOINT_FMAP_UNION (wpb, rpb) sfb1
+     (BAG_INSERT (holfoot_ap_data_tree tagL e1 (dtagL, node v tL)) sfb2) 
+
+     (BAG_INSERT (asl_exists_list tagL (\lL. 
+                  asl_trivial_cond ((NULL tagL ==> ALL_DISTINCT dtagL) /\ 
+                     (LENGTH v = LENGTH dtagL) /\ (LENGTH tL = LENGTH tagL))
+                     (asl_bigstar_list holfoot_separation_combinator
+                        (holfoot_ap_points_to e1 (LIST_TO_FMAP (ZIP (tagL ++ dtagL, MAP var_res_exp_const (lL ++ v))))::
+                        MAP (\lt. holfoot_ap_data_tree tagL
+                            (var_res_exp_const (FST lt)) (dtagL,(SND lt))) (ZIP (lL,tL))))))
+      sfb2))``,
+
+REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC std_ss [holfoot_ap_data_tree___REWRITE,
+   IS_LEAF_REWRITE, tree_distinct, asl_trivial_cond_TF, asl_bool_REWRITES,
+   tree_11] THEN
+SIMP_TAC std_ss [var_res_prop_implies_eq_def] THEN
+AP_TERM_TAC THEN AP_TERM_TAC THEN
+AP_THM_TAC THEN AP_TERM_TAC THEN
+SIMP_TAC std_ss [asl_exists_list_def,
+   IN_ABS, GSYM RIGHT_EXISTS_AND_THM, asl_bool_EVAL,
+   EXTENSION] THEN
+METIS_TAC[]);
+
+
+
 val VAR_RES_FRAME_SPLIT___points_to___tree___REWRITE = prove (
 ``!v tL e tagL L wpb rpb sfb_context sfb_split sfb_imp.
 

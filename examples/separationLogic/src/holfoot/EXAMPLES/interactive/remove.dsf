@@ -1,4 +1,4 @@
-list_remove(l;x) [data_list(l,data) * (x == #c)] {
+list_remove(l;x) [data_list(l,data)] {
   local v,t;
   if (l!=NULL) {
     v = l->dta;
@@ -12,4 +12,4 @@ list_remove(l;x) [data_list(l,data) * (x == #c)] {
       l->tl = t;
     }
   }
-} [data_list(l, ``REMOVE (c:num) data``)]
+} [data_list(l, ``REMOVE (x:num) data``)]

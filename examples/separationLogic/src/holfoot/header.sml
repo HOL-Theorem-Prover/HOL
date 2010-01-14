@@ -24,6 +24,7 @@ val _ = holfoot_auto_verify_spec true (examplesDir ^ "/automatic/list.sf")
 
 val _ = holfoot_interactive_verify_spec true    
                {do_case_splits = true,
+                do_expands = true,
                 fast = false,
                 use_asms = true,
                 do_prop_simps = true,

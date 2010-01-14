@@ -5,7 +5,7 @@ struct
 
 val print_help =
 let
-  val s =   "Syntax: "^(CommandLine.name ())^" [Mode and printing options]... FILES+\n\n";
+  val s =   "Syntax: holfoot [options] INPUT-FILES\n\n";
   val s = s^"Modes:\n";
   val s = s^"  -q   quiet mode, verify specifications automatically and just print end results\n";
   val s = s^"  -i   interactive mode, verify specifications step by step\n\n";

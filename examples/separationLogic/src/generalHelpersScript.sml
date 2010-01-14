@@ -31,6 +31,20 @@ val COND_EXISTS = store_thm ("COND_EXISTS",
 ``!P Q v c. (?v. if c then P v else Q v) = if c then ?v. P v else ?v. Q v``,
 METIS_TAC[])
 
+val BOOL_TO_NUM_def = Define `
+(BOOL_TO_NUM T = 1:num) /\
+(BOOL_TO_NUM F = 0)`;
+
+val BOOL_TO_NUM_REWRITE = store_thm ("BOOL_TO_NUM_REWRITE",
+ ``((BOOL_TO_NUM c = 0) = ~c) /\
+   ((BOOL_TO_NUM c = 1) = c) /\
+   (BOOL_TO_NUM T = 1:num) /\
+   (BOOL_TO_NUM F = 0) /\
+   ((BOOL_TO_NUM c = BOOL_TO_NUM d) = (c = d))``,
+
+Cases_on `c` THEN Cases_on `d` THEN
+SIMP_TAC std_ss [BOOL_TO_NUM_def]);
+
 
 (******************************************************************
   BAG

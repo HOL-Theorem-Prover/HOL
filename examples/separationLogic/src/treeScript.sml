@@ -615,4 +615,50 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC list_ss []);
 
 
+
+val TREE_PATHS_def = Define `
+   TREE_PATHS = TREE_FOLD ({[]},
+      (\v ps. IMAGE (\l. v::l) (FOLDR $UNION EMPTY ps)))` 
+
+val TREE_PATHS_THM = store_thm ("TREE_PATHS_THM",
+ ``(TREE_PATHS leaf = {[]}) /\
+   (TREE_PATHS (node v tL) = \p.
+      ?t' p'. MEM t' tL /\ p' IN TREE_PATHS t' /\
+              (p = v::p'))``,
+
+REPEAT STRIP_TAC THEN1 (
+   SIMP_TAC std_ss [TREE_PATHS_def, TREE_FOLD_def]
+) THEN
+Induct_on `tL` THEN1 (
+   SIMP_TAC list_ss [TREE_PATHS_def, TREE_FOLD_def,
+      IMAGE_EMPTY] THEN
+   SIMP_TAC std_ss [GSYM EMPTY_DEF]
+) THEN
+FULL_SIMP_TAC list_ss [TREE_PATHS_def,
+   TREE_FOLD_def, IMAGE_UNION] THEN
+SIMP_TAC std_ss [EXTENSION, IN_ABS, IN_IMAGE,
+   IN_UNION] THEN
+METIS_TAC[]);
+
+
+val TREE_PATHS_NOT_EMPTY = store_thm ("TREE_PATHS_NOT_EMPTY",
+  ``!t. (TREE_PATHS t = EMPTY) ==> (0 IN WIDTH t)``,
+   HO_MATCH_MP_TAC tree_INDUCT THEN
+   SIMP_TAC std_ss [TREE_PATHS_THM, NOT_IN_EMPTY,
+      IN_ABS, IN_INSERT, EVERY_MEM, WIDTH_THM, NOT_INSERT_EMPTY] THEN
+   REPEAT GEN_TAC THEN STRIP_TAC THEN 
+   ONCE_REWRITE_TAC[EXTENSION] THEN
+   SIMP_TAC std_ss [IN_ABS, NOT_IN_EMPTY, IN_BIGUNION, IN_LIST_TO_SET,
+      MEM_MAP, GSYM RIGHT_EXISTS_AND_THM] THEN
+   ASM_SIMP_TAC std_ss [prove (``(~x \/ b) = (x ==> b)``, PROVE_TAC[]),
+      RIGHT_FORALL_IMP_THM, prove (``(!x. ~(x IN X)) = (X = EMPTY)``,
+         SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY])] THEN
+   REPEAT STRIP_TAC THEN
+   Cases_on `tL` THEN
+   FULL_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   Q.EXISTS_TAC `h` THEN
+   ASM_REWRITE_TAC[]
+);
+
+
 val _ = export_theory();
