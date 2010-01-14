@@ -295,6 +295,8 @@ local
      | "NOTIN" => (token_string "NotIn",1)
      | "UNION" => (token_string "Union",1)
      | "INTER" => (token_string "Inter",1)
+     | "SUBSET" => (token_string "Subset",1)
+     | "SUBMAP" => (token_string "Submap",1)
      | "\226\134\146" => (token_string "Map", 1) (* → *)
      | "\226\138\162" => (token_string "Turnstile", 2) (* ⊢ *)
      | "\226\151\129" => (token_string "LOpenTri", 1) (* ◁ *)
