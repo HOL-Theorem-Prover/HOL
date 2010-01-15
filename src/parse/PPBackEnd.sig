@@ -59,8 +59,10 @@ sig
                        clear_ppstream : unit -> unit,
                        flush_ppstream : unit -> unit}
 
-  val raw_terminal : t
+  val raw_terminal   : t
   val vt100_terminal : t
   val emacs_terminal : t
+  val html_terminal  : t
+
 
 end
