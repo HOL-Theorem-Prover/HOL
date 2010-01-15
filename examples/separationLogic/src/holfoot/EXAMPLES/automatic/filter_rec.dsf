@@ -1,4 +1,4 @@
-list_filter(l;x) [data_list(l,data) * x == #fc] {
+list_filter(l;x) [data_list(l,data)] {
   local e, m;
 
   if (l == NULL) {}
@@ -15,7 +15,7 @@ list_filter(l;x) [data_list(l,data) * x == #fc] {
       l->tl = m;
     }
   }
-} [data_list(l, ``FILTER (\e:num. ~(e = fc)) data``)]
+} [data_list(l, ``FILTER (\e:num. ~(e = x)) data``)]
 
 
 

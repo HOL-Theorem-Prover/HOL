@@ -1,6 +1,3 @@
-dta,tl;
-
-/* list(l_DATA,l) */
 list_remove(l;x) [list(l)] {
   local v,t;
   if(l!=NULL) {
@@ -16,4 +13,3 @@ list_remove(l;x) [list(l)] {
     }
   }
 } [list(l)]
-/* list(remove (x,l_DATA),l) */

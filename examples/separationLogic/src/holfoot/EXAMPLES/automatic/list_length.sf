@@ -1,5 +1,3 @@
-tl;
-
 list_length(r;c) [list(c)] {
   local t;
   if (c == NULL) {

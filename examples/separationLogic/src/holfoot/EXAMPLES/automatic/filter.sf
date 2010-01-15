@@ -1,6 +1,3 @@
-dta,tl;
-
-/* list(l_DATA,l) */
 list_filter(l;x) [list(l)] {
   local y, z, e;
   y = l;
@@ -24,4 +21,4 @@ list_filter(l;x) [list(l)] {
     }
   }
 } [list(l)]
-/* list(filter(x,l_DATA),l) */
+
