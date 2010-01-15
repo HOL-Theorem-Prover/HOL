@@ -760,42 +760,6 @@ val pr_nsub_def = Define`
                  [t; (s ⊗ k) ⊗ gmx]))
 `;
 
-val npair_le_mono = store_thm(
-  "npair_le_mono",
-  ``x ≤ y ∧ a ≤ b ⇒ x ⊗ a ≤ y ⊗ b``,
-  SRW_TAC [][npair_def, LESS_EQ_LESS_EQ_MONO]);
-
-val npair_lt_mono = store_thm(
-  "npair_lt_mono",
-  ``x < y ∧ a ≤ b ∨ x ≤ y ∧ a < b ⇒ x ⊗ a < y ⊗ b``,
-  SRW_TAC [ARITH_ss][LESS_OR_EQ] THEN
-  SRW_TAC [][npair_def] THENL [
-    `tri (x + a) ≤ tri (y + b)` by SRW_TAC [ARITH_ss][] THEN
-    DECIDE_TAC,
-    `tri (x + a) ≤ tri (y + b)` by SRW_TAC [ARITH_ss][] THEN
-    DECIDE_TAC,
-    `tri (x + a) ≤ tri (x + b)` by SRW_TAC [ARITH_ss][] THEN
-    DECIDE_TAC
-  ]);
-
-val funpow_le = prove(
-  ``(∀x. x ≤ f x) ∧ m ≤ n ⇒ FUNPOW f m x ≤ FUNPOW f n x``,
-  STRIP_TAC THEN
-  `n = n - m + m` by DECIDE_TAC THEN
-  POP_ASSUM SUBST1_TAC THEN
-  REWRITE_TAC [FUNPOW_ADD] THEN
-  Q.ABBREV_TAC `X = FUNPOW f m x` THEN
-  Q.ABBREV_TAC `N = n - m` THEN
-  markerLib.RM_ALL_ABBREVS_TAC THEN Q.ID_SPEC_TAC `X` THEN Induct_on `N` THEN
-  SRW_TAC [][] THEN SRW_TAC [][FUNPOW_SUC] THEN
-  MATCH_MP_TAC LESS_EQ_TRANS THEN Q.EXISTS_TAC `FUNPOW f N X` THEN
-  SRW_TAC [][]);
-
-val tri_sub1 = prove(
-  ``(tri (n + 1) - tri n = n + 1) ∧
-    (tri (SUC n) - tri n = SUC n)``,
-  SRW_TAC [][tri_def, GSYM ADD1]);
-
 val SUBSET_FINITE_I =
     SIMP_RULE (srw_ss() ++ boolSimps.DNF_ss) [AND_IMP_INTRO]
               pred_setTheory.SUBSET_FINITE
@@ -1168,7 +1132,223 @@ val pr_steps_correct = store_thm(
     SRW_TAC [ARITH_ss][GSYM steps_plus]
   ]);
 
+(* ----------------------------------------------------------------------
+    bnf_of (requires minimisation - and thus recursivefnsTheory
+   ---------------------------------------------------------------------- *)
+
+open recursivefnsTheory
+val pr_steps_pred_def = Define`
+  pr_steps_pred =
+  Cn (pr2 $-) [K 1; Cn pr_bnf [pr_steps]]
+`
+val pr_steps_pred_correct = store_thm(
+  "pr_steps_pred_correct",
+  ``pr_steps_pred [n; t] = nB (¬dbnf (fromTerm (steps n (toTerm (numdB t)))))``,
+  SRW_TAC [][pr_steps_pred_def, pr_steps_correct]);
+
+val pr_steps_pred_EQ0 = store_thm(
+  "pr_steps_pred_EQ0",
+  ``(pr_steps_pred [n; t] = 0) ⇔ bnf (steps n (toTerm (numdB t)))``,
+  SRW_TAC [][pr_steps_pred_correct]);
+
+val primrec_steps_pred = Store_thm(
+  "primrec_steps_pred",
+  ``primrec pr_steps_pred 2``,
+  SRW_TAC [][primrec_rules, pr_steps_pred_def]);
 
 
+val recbnf_of_def = Define`
+  recbnf_of =
+  recCn (SOME o pr_steps)
+        [minimise (SOME o pr_steps_pred); SOME o proj 0]
+`;
+
+val recfn_recbnf_of = Store_thm(
+  "recfn_recbnf_of",
+  ``recfn recbnf_of 1``,
+  SRW_TAC [][recbnf_of_def] THEN MATCH_MP_TAC recfnCn THEN
+  SRW_TAC [][primrec_recfn, primrec_rules, recfn_rules]);
+
+val recbnf_of_correct = Store_thm(
+  "recbnf_of_correct",
+  ``recbnf_of [t] = OPTION_MAP (dBnum o fromTerm) (bnf_of (toTerm (numdB t)))``,
+  SRW_TAC [][recbnf_of_def, recCn_def, LET_THM] THENL [
+    FULL_SIMP_TAC (srw_ss()) [minimise_def, pr_steps_pred_EQ0] THEN
+    Q.EXISTS_TAC `steps n (toTerm (numdB t))` THEN CONJ_TAC THENL [
+      METIS_TAC [bnf_steps],
+      Tactical.REVERSE (SRW_TAC [][]) THEN1 METIS_TAC [] THEN
+      SELECT_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
+      Q.X_GEN_TAC `N` THEN REPEAT STRIP_TAC THEN
+      SRW_TAC [][pr_steps_correct, fromTerm_11] THEN
+      Q.MATCH_ABBREV_TAC
+        `steps NN (toTerm (numdB t)) = steps MM (toTerm (numdB t))` THEN
+      MAP_EVERY Q.RM_ABBREV_TAC [`NN`, `MM`] THEN
+      Q_TAC SUFF_TAC `NN = MM` THEN1 SRW_TAC [][] THEN
+      `NN < MM ∨ (NN = MM) ∨ MM < NN` by DECIDE_TAC THENL [
+        `pr_steps_pred [NN; t] ≠ 0`
+          by METIS_TAC [DECIDE ``0 < n ⇔ n ≠ 0``] THEN
+        FULL_SIMP_TAC (srw_ss()) [pr_steps_pred_EQ0],
+        `pr_steps_pred [MM; t] ≠ 0`
+          by METIS_TAC [DECIDE ``0 < n ⇔ n ≠ 0``] THEN
+        FULL_SIMP_TAC (srw_ss()) [pr_steps_pred_EQ0]
+      ]
+    ],
+
+    FULL_SIMP_TAC (srw_ss()) [minimise_def, DECIDE ``¬(0 < n) ⇔ (n = 0)``,
+                              pr_steps_pred_EQ0] THEN
+    `∀n. ¬bnf (steps n (toTerm (numdB t)))`
+       by (completeInduct_on `n` THEN METIS_TAC []) THEN
+    METIS_TAC [optionTheory.option_CASES, bnf_steps]
+  ]);
+
+open recfunsTheory
+val pr_is_ichurch_def = Define`
+  pr_is_ichurch = prtermrec0
+                      (Cn pr_eq [proj 0; K 1])
+                      (λls. let t1 = ls ' 0 in
+                            let r2 = ls ' 3
+                            in
+                              nB (t1 = 0) * r2)
+                      (K 0)
+`;
+
+val pr_is_ichurch_correct = store_thm(
+  "pr_is_ichurch_correct",
+  ``pr_is_ichurch [n] = nB (∃m. numdB n = FUNPOW (dAPP (dV 0)) m (dV 1))``,
+  SRW_TAC [][pr_is_ichurch_def, LET_THM] THEN
+  `∃d. n = dBnum d` by METIS_TAC [dBnum_onto] THEN
+  SRW_TAC [][] THEN Induct_on `d` THEN SRW_TAC [][] THENL [
+    EQ_TAC THEN SRW_TAC [][] THEN1 (Q.EXISTS_TAC `0` THEN SRW_TAC [][]) THEN
+    Cases_on `m` THEN FULL_SIMP_TAC (srw_ss()) [FUNPOW_SUC],
+    SRW_TAC [][EQ_IMP_THM] THENL [
+      Q.EXISTS_TAC `SUC m` THEN SRW_TAC [][FUNPOW_SUC] THEN
+      Cases_on `d` THEN FULL_SIMP_TAC (srw_ss()) [dBnum_def],
+      Cases_on `m` THEN FULL_SIMP_TAC (srw_ss()) [dBnum_def, FUNPOW_SUC],
+      Cases_on `m` THEN FULL_SIMP_TAC (srw_ss()) [dBnum_def, FUNPOW_SUC] THEN
+      METIS_TAC []
+    ],
+    Cases_on `m` THEN SRW_TAC [][FUNPOW_SUC]
+  ]);
+
+val primrec_is_ichurch = Store_thm(
+  "primrec_is_ichurch",
+  ``primrec pr_is_ichurch 1``,
+  SRW_TAC [][pr_is_ichurch_def] THEN MATCH_MP_TAC primrec_prtermrec0 THEN
+  SRW_TAC [][primrec_rules, LET_THM] THEN intro2 `$*` THEN
+  SRW_TAC [][pr_eq]);
+
+val pr_is_church_def = Define`
+  pr_is_church =
+  prtermrec0 (K 0) (K 0)
+             (Cn (prtermrec0 (K 0) (K 0) (Cn pr_is_ichurch [proj 0])) [proj 0])
+`
+
+val primrec_pr_is_church = Store_thm(
+  "primrec_pr_is_church",
+  ``primrec pr_is_church 1``,
+  SRW_TAC [][pr_is_church_def] THEN
+  MATCH_MP_TAC primrec_prtermrec0 THEN
+  SRW_TAC [][primrec_prtermrec0, primrec_rules]);
+
+val is_church_def = churchnumTheory.is_church_def
+val pr_is_church_correct = Store_thm(
+  "pr_is_church_correct",
+  ``pr_is_church [t] = nB (is_church (toTerm (numdB t)))``,
+  `∃d. t = dBnum d` by METIS_TAC [dBnum_onto] THEN
+  SRW_TAC [][pr_is_church_def] THEN
+  Cases_on `d` THEN SRW_TAC [][] THENL [
+    SRW_TAC [][is_church_def],
+    SRW_TAC [][is_church_def],
+    Q.MATCH_ABBREV_TAC `
+      prtermrec0 (K 0) (K 0) (Cn pr_is_ichurch [proj 0]) [dBnum t] =
+      nB (is_church (toTerm (dABS t)))
+    ` THEN TRY (Q.RM_ABBREV_TAC `t`) THEN
+    Cases_on `t` THEN SRW_TAC [][] THENL [
+      `s2n (n2s n) + 1 ∉ dFV (dV n)` by SRW_TAC [ARITH_ss][] THEN
+      IMP_RES_TAC toTerm_dABS THEN POP_ASSUM SUBST_ALL_TAC THEN
+      SRW_TAC [][is_church_def, termTheory.LAM_eq_thm],
+
+      Q.MATCH_ABBREV_TAC `¬is_church (toTerm (dABS (dAPP t1 t2)))` THEN
+      MAP_EVERY (fn q => TRY (Q.RM_ABBREV_TAC q)) [`t1`, `t2`] THEN
+      Q_TAC (binderLib.NEW_TAC "zz") `dFVs (dABS (dAPP t1 t2))` THEN
+      FULL_SIMP_TAC (srw_ss()) [GSYM IN_dFV] THEN
+      `s2n zz + 1 ∉ dFV (dAPP t1 t2)` by SRW_TAC [][] THEN
+      POP_ASSUM (ASSUME_TAC o MATCH_MP (GEN_ALL toTerm_dABS)) THEN
+      SRW_TAC [][termTheory.LAM_eq_thm, is_church_def],
+
+      SRW_TAC[][pr_is_ichurch_correct] THEN
+      Q.HO_MATCH_ABBREV_TAC `(∃n. t = FUNPOW (dAPP (dV 0)) n (dV 1)) ⇔
+                             is_church (toTerm (dABS (dABS t)))` THEN
+      Q.RM_ABBREV_TAC `t` THEN
+      SRW_TAC [][is_church_def, toTerm_eqn,
+                 churchDBTheory.fromTerm_funpow_app] THEN
+      SRW_TAC [][dLAM_def] THEN EQ_TAC THENL [
+        SRW_TAC [][] THEN
+        MAP_EVERY Q.EXISTS_TAC [`n2s 2`, `n2s 3`, `n`] THEN SRW_TAC [][] THEN
+        SRW_TAC [][churchDBTheory.fromTerm_funpow_app] THEN
+        Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC],
+
+        SRW_TAC [][] THEN Q.EXISTS_TAC `n` THEN SRW_TAC [ARITH_ss][] THEN
+        Induct_on `n` THEN SRW_TAC [ARITH_ss][FUNPOW_SUC]
+      ]
+    ]
+  ]);
+
+(* size of a λ-term *)
+val pr_dbsize_def = Define`
+  pr_dbsize = prtermrec0 (K 1)
+                         (Cn succ [Cn (pr2 $+) [proj 2; proj 3]])
+                         (Cn succ [proj 1])
+`;
+val pr_dbsize_correct = Store_thm(
+  "pr_dbsize_correct",
+  ``pr_dbsize [n] = dbsize (numdB n)``,
+  `∃d. n = dBnum d` by METIS_TAC [dBnum_onto] THEN
+  SRW_TAC [][pr_dbsize_def] THEN Induct_on `d` THEN
+  SRW_TAC [ARITH_ss][]);
+val primrec_dbsize = Store_thm(
+  "primrec_dbsize",
+  ``primrec pr_dbsize 1``,
+  SRW_TAC [][pr_dbsize_def] THEN intro primrec_prtermrec0 THEN
+  SRW_TAC [][primrec_rules]);
+
+(* turn a term into a number *)
+val pr_forcenum_def = Define`
+  pr_forcenum =
+  (λl. if pr_is_church [l ' 0] = 1 then pr_dbsize [l ' 0] DIV 2 − 1 else 0)
+`;
+val pr_forcenum_correct = Store_thm(
+  "pr_forcenum_correct",
+  ``pr_forcenum [n] = force_num (toTerm (numdB n))``,
+  SRW_TAC [][pr_forcenum_def, pr_is_church_correct,
+             churchnumTheory.force_num_size] THEN
+  SRW_TAC [][churchnumTheory.force_num_def]);
+
+val primrec_forcenum = Store_thm(
+  "primrec_forcenum",
+  ``primrec pr_forcenum 1``,
+  SRW_TAC [][pr_forcenum_def] THEN intro prCOND THEN
+  SRW_TAC [][combinTheory.o_ABS_R, prpred] THENL [
+    Q.MATCH_ABBREV_TAC `primrec f 1` THEN
+    Q_TAC SUFF_TAC `f = Cn (pr2 $-) [Cn pr_div [Cn pr_dbsize [proj 0]; K 2];
+                                     K 1]` THEN
+    SRW_TAC [][primrec_rules] THEN
+    SRW_TAC [][FUN_EQ_THM, Abbr`f`, pr_dbsize_correct],
+    Q.MATCH_ABBREV_TAC `primrec f 1` THEN
+    Q_TAC SUFF_TAC `f = Cn pr_is_church [proj 0]` THEN
+    SRW_TAC [][primrec_rules] THEN
+    SRW_TAC [][FUN_EQ_THM, Abbr`f`]
+  ]);
+
+
+(*
+
+
+val Phi_recursive = store_thm(
+  "Phi_recursive",
+  ``∀i. ∃f. recfn f 1 ∧ ∀n. Phi i n = f [n]``,
+  SRW_TAC [][Phi_def] THEN churchnumTheory.force_num_def
+
+*)
 
 val _ = export_theory()
