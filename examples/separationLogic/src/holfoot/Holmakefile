@@ -31,8 +31,14 @@ holfoot.lex.uo: holfoot.lex.sml Parsetree.uo
 AssembleHolfootParser.uo: AssembleHolfootParser.sml AssembleHolfootParser.ui holfoot.grm.uo holfoot.lex.uo Parsetree.uo
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holfoot.grm.ui holfoot.lex.ui $<
 
+holfoot.o: holfoot.state holfoot_command_line.sml
+	hol < build-cl.hol
+
+holfoot.state: holfootLib.uo
+	hol < build-state.hol
+
 holfoot: holfoot.o
-	cc -o holfoot holfoot.o -L/usr/local/lib -lpolymain -lpolyml
+	cc -o holfoot holfoot.o -static -L/usr/local/lib -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread
 
 holfootLib.uo: holfootLib.sml
 	$(HOLMOSMLC) -c -toplevel ListConv1.uo treeTheory.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo bagLib.uo vars_as_resourceFunctor.uo vars_as_resourceBaseFunctor.uo holfootLib.sml $<

@@ -1,6 +1,5 @@
 A formalisation of a tool similar to Smallfoot in HOL
 
-
 (**************************************************************************)
 (*                             ACKNOWLEDGEMENT                            *)
 (*                                                                        *)
@@ -22,15 +21,22 @@ A formalisation of a tool similar to Smallfoot in HOL
 (* when using the standard kernel.                                        *)
 (*                                                                        *)
 (* To build Holfoot, please do                                            *)
-(*   - call Holmake                                                       *)
-(*   - open "header.sml" and use it to create a state to be loaded in     *)
-(*     the future                                                         *)
-(*   - open "holfoot_command_line.sml" and use it to create "holfoot.o"   *)
-(*   - use "Holmake holfoot" to compile holfoot.o into the command-line   *)
-(*     version of holfoot                                                 *)
+(*   - build HOL (using experimental kernal and PolyML 5.3)               *)
+(*   - call "Holmake --qof -k" in directory                               *)
+(*         "examples/separationLogic/src/holfoot"                         *)
+(*   - there should be a file holfoot.state and holfoot now               *)
 (*   - for instructions on how to use this command-line tool, call        *)
 (*     "holfoot -h" or test it on the examples in EXAMPLES/automatic via  *)
 (*     "holfoot EXAMPLES/automatic/*"                                     *)
+(*                                                                        *)
+(**************************************************************************)
+
+(**************************************************************************)
+(*                              MOSML                                     *)
+(*                                                                        *)
+(* Moscow ML users will have to adapt "header.sml". Please replace        *)
+(* it with the contents of "build-state.hol", where the call to export    *)
+(* the state has been removed.                                            *)
 (**************************************************************************)
 
 (**************************************************************************)

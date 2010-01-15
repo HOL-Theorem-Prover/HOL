@@ -1,0 +1,8 @@
+(* build command line tool *)
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/holfoot_command_line.sml");
+
+val _ = PolyML.export (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/holfoot", holfoot_run);
+
+
+

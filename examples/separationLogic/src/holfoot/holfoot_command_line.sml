@@ -1,20 +1,20 @@
+(*
 use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
-
-structure holfoot_command_line =
-struct
+*)
 
 val print_help =
 let
   val s =   "Syntax: holfoot [options] INPUT-FILES\n\n";
   val s = s^"Modes:\n";
-  val s = s^"  -q   quiet mode, verify specifications automatically and just print end results\n";
-  val s = s^"  -i   interactive mode, verify specifications step by step\n\n";
+  val s = s^"  -q     quiet mode, verify specifications automatically and just print end results\n";
+  val s = s^"  -i     interactive mode, verify specifications step by step\n\n";
   val s = s^"Printing switches:\n";
-  val s = s^"  -u   use unicode\n";
-  val s = s^"  -r   raw output, disable VT100 specials\n\n";
+  val s = s^"  -u     use unicode\n";
+  val s = s^"  -r     raw output, disable VT100 specials\n";
+  val s = s^"  --html html output\n\n";
   val s = s^"Help:\n";
-  val s = s^"  -h   this help\n";
-  val s = s^"  -hi  help on interactive mode\n\n";
+  val s = s^"  -h     this help\n";
+  val s = s^"  -hi    help on interactive mode\n\n";
 in
    fn () => print s
 end
@@ -112,9 +112,13 @@ fun holfoot_run () = let
       handle _ => (false, args);
    val (raw_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-r") args)) 
       handle _ => (false, args);
+   val (html_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--html") args)) 
+      handle _ => (false, args);
 
-   val _ = Parse.current_backend := (if (raw_output) then PPBackEnd.raw_terminal else PPBackEnd.vt100_terminal);
+   val _ = Parse.current_backend := (if (raw_output) then PPBackEnd.raw_terminal else 
+                                    (if (html_output) then PPBackEnd.html_terminal else PPBackEnd.vt100_terminal));
    val _ = Feedback.set_trace "Unicode" (if unicode then 1 else 0)
+   val _ = Feedback.set_trace "holfoot print file" (if html_output then 0 else 1);
 
    fun prover file = ((if intera then interactive_verify file else
                        ((holfootLib.holfoot_auto_verify_spec (not quiet) file);()));
@@ -129,7 +133,5 @@ in
    ((map check_file args);())
 end
 
-val _ = PolyML.export (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/holfoot", holfoot_run)
 
-end;
 

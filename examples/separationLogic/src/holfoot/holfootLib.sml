@@ -1828,6 +1828,9 @@ fun print_width left i s =
     print s;
     if left then (print_space (i - size s)) else ());
 
+val print_file = ref true
+val _ = Feedback.register_btrace ("holfoot print file", print_file);
+
 fun holfoot_verbose_verify_spec_internal print_remaining (file, conv) =
   let
      open PPBackEnd;
@@ -1846,7 +1849,8 @@ fun holfoot_verbose_verify_spec_internal print_remaining (file, conv) =
      val t_start = Time.now();
 
      val _ = start_timer ();
-     val _ = print ("\nparsing file \""^file^"\" ... ");
+     val _ = print (if !print_file then ("\nparsing file \""^file^"\" ... ") else
+                                        ("\nparsing ... "));
      val t = parse_holfoot_file file;
      val _ = print_timer true;
      val _ = print "\n";
@@ -1914,7 +1918,8 @@ fun holfoot_quiet_verify_spec_internal (file, conv) =
   let
      open PPBackEnd;
      val timer = Time.now();
-     val _ = print ("\n"^file^" ...\n");
+     val _ = print (if !print_file then ("\n"^file^" ...\n") else
+                                        ("\nparsing ...\n"));
      val t = parse_holfoot_file file;
      val p_thm =  conv t;
      val p_thm_precond = (fst o dest_imp o concl) p_thm
