@@ -138,8 +138,6 @@ val prpred = prove(
   ``pr_predicate (λl. nB (P l))``,
   SRW_TAC [][pr_predicate_def]);
 
-val NTL_def = Define`(NTL [] = []) ∧ (NTL ((h:num)::t) = t)`
-
 val strong_primrec_ind = IndDefLib.derive_strong_induction(primrec_rules,
                                                            primrec_ind)
 
@@ -238,89 +236,6 @@ val primrec_cons = store_thm(
     ]
   ]);
 
-
-val fcons_ntl2 = store_thm(
-  "fcons_ntl2",
-  ``primrec f n ∧ primrec g (n + 2) ⇒
-    primrec (λl. f (g l :: NTL (NTL l))) (n + 2)``,
-  STRIP_TAC THEN
-  `0 < n` by METIS_TAC [primrec_nzero] THEN
-  Q.MATCH_ABBREV_TAC `primrec h (n + 2)` THEN
-  Q_TAC SUFF_TAC `h = Cn f (g::GENLIST (λi. proj (i + 2)) (n - 1))`
-  THEN1
-    (DISCH_THEN SUBST1_TAC THEN
-     MATCH_MP_TAC primrec_cn THEN
-     SRW_TAC [ARITH_ss][LENGTH_GENLIST, EVERY_GENLIST, ADD1,
-                        primrec_rules]) THEN
-  Q.UNABBREV_TAC `h` THEN SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
-  Q.X_GEN_TAC `l` THEN SRW_TAC [][Cn_def,MAP_GENLIST, combinTheory.o_ABS_R] THEN
-  Q.PAT_ASSUM `primrec g (n + 2)` (K ALL_TAC) THEN
-  Cases_on `LENGTH (NTL (NTL l)) + 1 < n` THENL [
-    IMP_RES_THEN (Q.SPEC_THEN `g l :: NTL (NTL l)` MP_TAC) primrec_short THEN
-    SRW_TAC [ARITH_ss][ADD1] THEN AP_TERM_TAC  THEN SRW_TAC [][] THEN
-    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [listTheory.LIST_EQ_REWRITE,
-                                         LENGTH_GENLIST, EL_GENLIST] THEN
-    Q.X_GEN_TAC `i` THEN STRIP_TAC THEN
-    Cases_on `l` THEN1 SRW_TAC [][EL_GENLIST, proj_def, NTL_def] THEN
-    SRW_TAC [ARITH_ss][NTL_def] THEN
-    Cases_on `t` THEN1 SRW_TAC [][EL_GENLIST, proj_def, NTL_def] THEN
-    SRW_TAC [ARITH_ss][NTL_def, proj_def, EL_APPEND1, EL_APPEND2,
-                       EL_GENLIST],
-
-    IMP_RES_THEN (Q.SPEC_THEN `g l :: NTL (NTL l)` MP_TAC)
-                 primrec_arg_too_long THEN
-    SRW_TAC [ARITH_ss][ADD1, TAKE_EQ_GENLIST] THEN AP_TERM_TAC THEN
-    SRW_TAC [][] THEN
-    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [listTheory.LIST_EQ_REWRITE,
-                                         LENGTH_GENLIST, EL_GENLIST] THEN
-    Cases_on `l` THEN FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [NTL_def] THEN
-    Cases_on `t` THEN FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [NTL_def]
-  ]);
-
-
-val primrec_consNTL = store_thm(
-  "primrec_consNTL",
-  ``primrec f n ⇒ primrec (λl. f (c::NTL l)) n``,
-  STRIP_TAC THEN
-  `0 < n` by METIS_TAC [primrec_nzero] THEN
-  Q_TAC SUFF_TAC
-    `(λl. f (c::NTL l)) = Cn f (K c::GENLIST (λi. proj (i + 1)) (n - 1))`
-  THENL [
-    DISCH_THEN SUBST1_TAC THEN
-    MATCH_MP_TAC primrec_cn THEN
-    SRW_TAC [ARITH_ss][LENGTH_GENLIST, ADD1, EVERY_GENLIST, primrec_rules],
-
-    SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN Q.X_GEN_TAC `l` THEN
-    SRW_TAC [][Cn_def, MAP_GENLIST, combinTheory.o_DEF] THEN
-    `LENGTH l < n ∨ n ≤ LENGTH l` by DECIDE_TAC THENL [
-       IMP_RES_THEN (Q.SPEC_THEN `c::NTL l` MP_TAC) primrec_short THEN
-       `(l = []) ∨ ∃h t. l = h::t` by (Cases_on `l` THEN SRW_TAC [][]) THENL [
-          SRW_TAC [][NTL_def] THEN
-          `(n = 1) ∨ 1 < n` by DECIDE_TAC THEN
-          SRW_TAC [][GENLIST, combinTheory.K_DEF],
-
-          SRW_TAC [][NTL_def,ADD1] THEN
-          FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ADD1] THEN
-          AP_TERM_TAC THEN
-          SRW_TAC [][] THEN
-          ASM_SIMP_TAC (srw_ss() ++ ARITH_ss)
-                       [listTheory.LIST_EQ_REWRITE, LENGTH_GENLIST,
-                        EL_GENLIST] THEN
-          Q.X_GEN_TAC `i` THEN STRIP_TAC THEN
-          `i < LENGTH t ∨ LENGTH t ≤ i` by DECIDE_TAC THEN
-          ASM_SIMP_TAC (srw_ss() ++ ARITH_ss)[EL_APPEND1, EL_APPEND2, proj_def,
-                                              EL_GENLIST]
-       ],
-
-       IMP_RES_THEN (Q.SPEC_THEN `c::NTL l` MP_TAC) primrec_arg_too_long THEN
-       `LENGTH (NTL l) = LENGTH l - 1`
-          by (Cases_on `l` THEN
-              FULL_SIMP_TAC (srw_ss() ++ARITH_ss) [NTL_def]) THEN
-       ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [TAKE_EQ_GENLIST] THEN
-       DISCH_THEN (K ALL_TAC) THEN
-       Cases_on `l` THEN FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [NTL_def]
-     ]
-   ]);
 
 val nlist_of_append = store_thm(
   "nlist_of_append",
@@ -421,7 +336,7 @@ val prtermrec1_correct = store_thm(
   Induct THEN1
     (SRW_TAC [][Abbr`f`, Once prtermrec_def]) THEN
   SRW_TAC [][Abbr`f`, LET_THM, ADD_CLAUSES, GENLIST, SNOC_APPEND,
-             nlist_of_append, NTL_def]
+             nlist_of_append]
   THENL [
     SRW_TAC [ARITH_ss][Once prtermrec_def, SimpRHS, LET_THM],
     SRW_TAC [ARITH_ss][Once prtermrec_def, SimpRHS, LET_THM, DIV_LESS] THEN
