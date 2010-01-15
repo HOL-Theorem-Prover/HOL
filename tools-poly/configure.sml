@@ -393,7 +393,11 @@ val _ =
       ["(defcustom hol-executable HOL-EXECUTABLE\n"
         -->
        ("(defcustom hol-executable \n  "^
-        quote (fullPath [holdir, "bin", "hol"])^"\n")]
+        quote (fullPath [holdir, "bin", "hol"])^"\n"),
+       "(defcustom holmake-executable HOLMAKE-EXECUTABLE\n"
+        -->
+       ("(defcustom holmake-executable \n  "^
+        quote (fullPath [holdir, "bin/Holmake"])^"\n")]
  end;
 
 
