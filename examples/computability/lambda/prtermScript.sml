@@ -1091,4 +1091,34 @@ val pr_noreduct_correct = store_thm(
     SRW_TAC [][] THEN IMP_RES_TAC notbnf_dnoreduct THEN
     SRW_TAC [][dBnum_def]
   ]);
+
+val prnsub = store_thm(
+  "prnsub",
+  ``primrec f n ∧ primrec g n ∧ primrec h n ⇒
+    primrec (λl. dBnum (nsub (numdB (f l)) (g l) (numdB (h l)))) n``,
+  STRIP_TAC THEN Q.MATCH_ABBREV_TAC `primrec FF n` THEN
+  Q_TAC SUFF_TAC `FF = Cn pr_nsub [f;g;h]` THEN1 SRW_TAC [][primrec_rules] THEN
+  SRW_TAC [][Abbr`FF`, FUN_EQ_THM]);
+
+val prdbnf = store_thm(
+  "prdbnf",
+  ``primrec f n ⇒ primrec (λl. nB (dbnf (numdB (f l)))) n``,
+  STRIP_TAC THEN Q.MATCH_ABBREV_TAC `primrec FF n` THEN
+  Q_TAC SUFF_TAC `FF = Cn pr_bnf [f]` THEN SRW_TAC [][primrec_rules] THEN
+  SRW_TAC [][Abbr`FF`, FUN_EQ_THM]);
+
+val primrec_noreduct = Store_thm(
+  "primrec_noreduct",
+  ``primrec pr_noreduct 1``,
+  SRW_TAC [][pr_noreduct_def, LET_THM] THEN
+  intro primrec_prtermrec0 THEN SRW_TAC [][i2 `$*`, i2 `$+`] THEN
+  intro prCOND THEN SRW_TAC [][combinTheory.o_ABS_R, prpred] THENL [
+    intro prnsub THEN
+    SRW_TAC [][primrec_prtermrec0, primrec_rules, prCn1],
+    intro prCOND THEN
+    SRW_TAC [][prpred, combinTheory.o_ABS_R, i2 `$*`, i2 `npair`, i2 `$+`,
+               prdbnf],
+    intro pr_eq THEN SRW_TAC [][prCn1]
+  ]);
+
 val _ = export_theory()
