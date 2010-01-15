@@ -887,7 +887,7 @@ argument N, sets the trace to that value in particular."
 (defun hol-toggle-emacs-tooltips ()
   "Toggles whether HOL produces tooltip information while pretty-printing."
   (interactive)
-  (hol-toggle-trace "emacs_terminal show types"))
+  (hol-toggle-trace "PPBackEnd show types"))
 
 (defun hol-toggle-pp-styles ()
   "Toggles whether HOL produces style informations while pretty-printing."
