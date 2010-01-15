@@ -88,6 +88,7 @@ val (primrec_rules, primrec_ind, primrec_cases) = Hol_reln`
             primrec (Cn f gs) m) ∧
   (∀b r n. primrec b n ∧ primrec r (n + 2) ⇒ primrec (Pr b r) (n + 1))
 `;
+val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
 
 val strong_primrec_ind = IndDefLib.derive_strong_induction(primrec_rules,
                                                            primrec_ind)
@@ -202,6 +203,34 @@ val alt_Pr_rule = Store_thm(
                       FULL_SIMP_TAC (srw_ss()) []) THEN
   FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ADD1, primrec_rules]);
 
+val primrec_K = Store_thm(
+  "primrec_K",
+  ``∀n m. 0 < m ⇒ primrec (K n) m``,
+  Induct THEN SRW_TAC [][primrec_rules] THENL [
+    Q_TAC SUFF_TAC `zerof = Cn zerof [proj 0]` THEN1
+      (DISCH_THEN SUBST1_TAC THEN SRW_TAC [][primrec_rules]) THEN
+    SRW_TAC [][FUN_EQ_THM],
+    Q_TAC SUFF_TAC `K (SUC n) = Cn succ [K n]`
+      THEN1 SRW_TAC [][primrec_rules] THEN
+    SRW_TAC [][FUN_EQ_THM]
+  ]);
+
+val Pr1_def = Define`
+  Pr1 n f = Cn (Pr (K n) (Cn f [proj 0; proj 1]))
+               [proj 0; K 0]
+`;
+
+val Pr1_correct = Store_thm(
+  "Pr1_correct",
+  ``(Pr1 n f [0] = n) ∧
+    (Pr1 n f [SUC m] = f [m; Pr1 n f [m]])``,
+  SRW_TAC [][Pr1_def]);
+
+val primrec_Pr1 = Store_thm(
+  "primrec_Pr1",
+  ``primrec f 2 ⇒ primrec (Pr1 n f) 1``,
+  SRW_TAC [][Pr1_def, primrec_rules, alt_Pr_rule]);
+
 val pr1_def = Define`
   (pr1 f [] = f 0: num) ∧
   (pr1 f (x::t) = f x)
@@ -282,19 +311,16 @@ val _ = temp_overload_on ("*.", ``λn m. Cn (pr2 $*) [n; m]``)
 val primrec_pr_pred = Store_thm(
   "primrec_pr_pred",
   ``primrec (pr1 PRE) 1``,
-  MATCH_MP_TAC primrec_pr1 THEN
-  Q.EXISTS_TAC `Cn (Pr zerof (proj 0)) [proj 0; zerof]` THEN
+  MATCH_MP_TAC primrec_pr1 THEN Q.EXISTS_TAC `Pr1 0 (proj 0)` THEN
   SRW_TAC [][primrec_rules] THEN
-  Induct_on `n` THEN SRW_TAC [][]);
+  Cases_on `n` THEN SRW_TAC [][]);
 
 val _ = overload_on ("pr_iszero", ``pr1 (λn. nB (n = 0))``)
 
 val primrec_pr_iszero = Store_thm(
   "primrec_pr_iszero",
   ``primrec pr_iszero 1``,
-  MATCH_MP_TAC primrec_pr1 THEN
-  Q.EXISTS_TAC `Cn (Pr (Cn succ [zerof])
-                       (Cn zerof [proj 0])) [proj 0; zerof]` THEN
+  MATCH_MP_TAC primrec_pr1 THEN Q.EXISTS_TAC `Pr1 1 (K 0)` THEN
   SRW_TAC [][primrec_rules] THEN
   Cases_on `n` THEN SRW_TAC [][]);
 
@@ -348,18 +374,6 @@ val primrec_pr_eq = Store_thm(
 val _ = temp_set_fixity "=." (Infix(NONASSOC, 450))
 val _ = temp_overload_on ("=.", ``λn m. Cn pr_eq [n; m]``)
 
-val primrec_K = Store_thm(
-  "primrec_K",
-  ``∀n m. 0 < m ⇒ primrec (K n) m``,
-  Induct THEN SRW_TAC [][primrec_rules] THENL [
-    Q_TAC SUFF_TAC `zerof = Cn zerof [proj 0]` THEN1
-      (DISCH_THEN SUBST1_TAC THEN SRW_TAC [][primrec_rules]) THEN
-    SRW_TAC [][FUN_EQ_THM],
-    Q_TAC SUFF_TAC `K (SUC n) = Cn succ [K n]`
-      THEN1 SRW_TAC [][primrec_rules] THEN
-    SRW_TAC [][FUN_EQ_THM]
-  ]);
-
 val pr_cond_def = Define`
   pr_cond P f g =
     Cn (proj 0 *. proj 1 +. (K 1 -. proj 0) *. proj 2) [P;f;g]
@@ -386,8 +400,6 @@ val pr_cond_thm = Store_thm(
   SRW_TAC [][pr_cond_def, pr_predicate_def] THEN
   `P n = 0` by METIS_TAC [] THEN
   SRW_TAC [][]);
-
-val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
 
 val primrec_pr_cond = Store_thm(
   "primrec_pr_cond",
@@ -474,23 +486,15 @@ val primrec_pr_mod = Store_thm(
    ---------------------------------------------------------------------- *)
 
 (* triangular number calculation *)
-val pr_tri_def = Define`
-  pr_tri = Cn (Pr zerof (proj 0 +. K 1 +. proj 1)) [proj 0; proj 0]
-`;
-
 val _ = temp_overload_on ("tri.", ``λn. Cn (pr1 tri) [n]``);
 
 val primrec_tri = Store_thm(
   "primrec_tri",
   ``primrec (pr1 tri) 1``,
   MATCH_MP_TAC primrec_pr1 THEN
-  Q.EXISTS_TAC `Cn (Pr zerof (proj 0 +. K 1 +. proj 1)) [proj 0; proj 0]` THEN
-  CONJ_TAC THEN1
-    (MATCH_MP_TAC primrec_cn THEN SRW_TAC [][primrec_rules]) THEN
-  SRW_TAC [][] THEN
-  Q_TAC SUFF_TAC `∀n m. Pr zerof (proj 0 +. K 1 +. proj 1) [n;m] = tri n`
-        THEN1 METIS_TAC [] THEN
-  Induct THEN SRW_TAC [][tri_def, ADD1]);
+  Q.EXISTS_TAC `Pr1 0 (proj 0 +. K 1 +. proj 1)` THEN
+  SRW_TAC [][primrec_rules] THEN
+  Induct_on `n` THEN SRW_TAC [][tri_def, ADD1]);
 
 (* inverse triangular - start at the input value n, and try successively smaller
    values until an m <= n comes up such that tri (m) <= the original n *)
@@ -506,8 +510,6 @@ val tri_eval = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV tri_def
 val tri_bounds_lemma = prove(
   ``∀n. n + 3 ≤ tri (n + 2)``,
   Induct THEN SRW_TAC [ARITH_ss][ADD_CLAUSES, tri_eval, tri_def]);
-
-
 
 val primrec_invtri = Store_thm(
   "primrec_invtri",

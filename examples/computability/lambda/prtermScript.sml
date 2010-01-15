@@ -276,22 +276,6 @@ val napp11 = Store_thm(
       [(`l3`,`ll3`), (`l2`,`ll2`), (`l1`,`ll1`)] THEN
   SRW_TAC [][GSYM nlist_of_append]);
 
-val Pr1_def = Define`
-  Pr1 n f = Cn (Pr (K n) (Cn f [proj 0; proj 1]))
-               [proj 0; K 0]
-`;
-
-val Pr1_correct = Store_thm(
-  "Pr1_correct",
-  ``(Pr1 n f [0] = n) ∧
-    (Pr1 n f [SUC m] = f [m; Pr1 n f [m]])``,
-  SRW_TAC [][Pr1_def]);
-
-val primrec_Pr1 = Store_thm(
-  "primrec_Pr1",
-  ``primrec f 2 ⇒ primrec (Pr1 n f) 1``,
-  SRW_TAC [][Pr1_def, primrec_rules, alt_Pr_rule]);
-
 val prtermrec1_def = Define`
   prtermrec1 v c a =
    (λl. nel (l ' 0)
