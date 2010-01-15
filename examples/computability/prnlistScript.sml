@@ -98,12 +98,6 @@ val nel_nlist_of = store_thm(
   Cases_on `list` THEN SRW_TAC [][]);
 
 open rich_listTheory
-val GENLIST_CONS = prove(
-  ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
-  Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
-val GENLIST1 = prove(``GENLIST f 1 = [f 0]``,
-                     SIMP_TAC bool_ss [ONE, GENLIST, SNOC]);
-
 
 val primrec_napp = Store_thm(
   "primrec_napp",
@@ -143,7 +137,7 @@ val primrec_napp = Store_thm(
     Q_TAC SUFF_TAC
           `∀m n. prf [m;n] = nlist_of (GENLIST (λp. napp (m - p) n) (m + 1))`
           THEN1 SRW_TAC [][GENLIST_CONS, GSYM ADD1] THEN
-    Induct THEN SRW_TAC [][Abbr`prf`, GENLIST1, LET_THM] THEN
+    Induct THEN SRW_TAC [][Abbr`prf`, LET_THM] THEN
     SRW_TAC [][ADD_CLAUSES, GENLIST_CONS] THENL [
       POP_ASSUM (K ALL_TAC) THEN
       `∃h t. SUC m = ncons h t`
