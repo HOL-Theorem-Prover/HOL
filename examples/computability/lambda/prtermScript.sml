@@ -1211,60 +1211,28 @@ val bnf_noreduct = prove(
   ``¬bnf t ⇒ ∃u. noreduct t = SOME u``,
   Cases_on `noreduct t` THEN FULL_SIMP_TAC (srw_ss())[noreduct_bnf]);
 
-(*
+open dnoreductTheory
 val pr_noreduct_correct = store_thm(
   "pr_noreduct_correct",
   ``pr_noreduct [n] =
-      if bnf (toTerm (numdB n)) then n
-      else dBnum (fromTerm (THE (noreduct (toTerm (numdB n)))))``,
+      if dbnf (numdB n) then n
+      else dBnum (THE (dnoreduct (numdB n)))``,
   ASM_SIMP_TAC (srw_ss()) [pr_noreduct_def] THEN
   `∃d. n = dBnum d` by METIS_TAC [dBnum_onto] THEN
   ASM_SIMP_TAC (srw_ss()) [] THEN POP_ASSUM SUBST_ALL_TAC THEN
   Induct_on `d` THEN ASM_SIMP_TAC (srw_ss()) [dBnum_def, LET_THM] THENL [
     REPEAT (Q.PAT_ASSUM `prtermrec0 VV CC AA L = RR` (K ALL_TAC)) THEN
     SIMP_TAC (srw_ss()) [pr_is_abs_correct] THEN
-    Cases_on `is_dABS d` THENL [
-      SRW_TAC [][] THEN
+    Cases_on `is_dABS d` THEN SRW_TAC [][] THENL [
       `∃d0. d = dABS d0` by (Cases_on `d` THEN
                              FULL_SIMP_TAC (srw_ss()) []) THEN
-      SRW_TAC [][] THEN
-      `∃mx. ∀n. mx < n ⇒ n ∉ dFV d0` by METIS_TAC [fv_exists] THEN
-      `mx + 2 ∉ dFV d0` by SRW_TAC [ARITH_ss][] THEN
-      `s2n (n2s (mx + 1)) + 1 ∉ dFV d0` by SRW_TAC [ARITH_ss][] THEN
-      POP_ASSUM (fn th => th |> MATCH_MP (GEN_ALL toTerm_dABS)
-                             |> ASSUME_TAC) THEN
-      SRW_TAC [][noreduct_thm] THEN
-      SRW_TAC [][fromTerm_subst] THEN
-      SRW_TAC [ARITH_ss][sub_nsub15a],
-
-      ASM_SIMP_TAC (srw_ss()) [] THEN Cases_on `dbnf d` THENL [
-        SRW_TAC [][noreduct_thm] THEN
-        `∃u. noreduct (toTerm d') = SOME u`
-          by METIS_TAC [bnf_noreduct, bnf_toTerm] THEN
-        SRW_TAC [][dBnum_def],
-
-        SRW_TAC [][noreduct_thm] THEN
-        `∃u. noreduct (toTerm d) = SOME u`
-          by METIS_TAC [bnf_noreduct, bnf_toTerm] THEN
-        SRW_TAC [][dBnum_def]
-      ]
+      SRW_TAC [][],
+      FULL_SIMP_TAC (srw_ss()) [],
+      IMP_RES_TAC notbnf_dnoreduct THEN SRW_TAC [][dBnum_def],
+      IMP_RES_TAC notbnf_dnoreduct THEN SRW_TAC [][dBnum_def]
     ],
 
-    POP_ASSUM (K ALL_TAC) THEN
-    SRW_TAC [][] THEN
-    `∃u. noreduct (toTerm d) = SOME u`
-        by METIS_TAC [bnf_noreduct, bnf_toTerm] THEN
-    `∃mx. ∀n. mx < n ⇒ n ∉ dFV d` by METIS_TAC [fv_exists] THEN
-    `mx + 2 ∉ dFV d` by SRW_TAC [ARITH_ss][] THEN
-    `s2n (n2s (mx + 1)) + 1 ∉ dFV d` by SRW_TAC [ARITH_ss][] THEN
-    POP_ASSUM (fn th => th |> MATCH_MP (GEN_ALL toTerm_dABS)
-                           |> ASSUME_TAC) THEN
-    SRW_TAC [][noreduct_thm]nsub_def
-
-
-
-      Q_TAC (binderLib.NEW_TAC "z") `{n2s 0} ∪ dFVs p` THEN
-      `
-
-*)
+    SRW_TAC [][] THEN IMP_RES_TAC notbnf_dnoreduct THEN
+    SRW_TAC [][dBnum_def]
+  ]);
 val _ = export_theory()
