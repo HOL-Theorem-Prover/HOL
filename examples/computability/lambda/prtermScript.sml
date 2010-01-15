@@ -138,9 +138,6 @@ val prpred = prove(
   ``pr_predicate (λl. nB (P l))``,
   SRW_TAC [][pr_predicate_def]);
 
-val strong_primrec_ind = IndDefLib.derive_strong_induction(primrec_rules,
-                                                           primrec_ind)
-
 val MAP_EQ_GENLIST = prove(
   ``MAP f l = GENLIST (λi. f (EL i l)) (LENGTH l)``,
   Induct_on `l` THEN1 SRW_TAC [][GENLIST] THEN
@@ -195,14 +192,12 @@ val primrec_swap2 = store_thm(
           IMP_RES_THEN (Q.SPEC_THEN `p::m::ps` MP_TAC) primrec_short THEN
           SRW_TAC [ARITH_ss][ADD1] THEN AP_TERM_TAC THEN SRW_TAC [][] THEN
           FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ADD1] THEN
-          ASM_SIMP_TAC (srw_ss() ++ ARITH_ss)
-                       [listTheory.LIST_EQ_REWRITE, LENGTH_GENLIST,
-                        EL_GENLIST] THEN
+          ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [listTheory.LIST_EQ_REWRITE] THEN
           Q.X_GEN_TAC `i` THEN STRIP_TAC THEN
           Cases_on `i < LENGTH ps` THEN1
             SRW_TAC [ARITH_ss][EL_APPEND1, proj_def] THEN
           `LENGTH ps ≤ i` by DECIDE_TAC THEN
-          SRW_TAC [ARITH_ss][EL_APPEND2, EL_GENLIST, proj_def]
+          SRW_TAC [ARITH_ss][EL_APPEND2, proj_def]
         ]
       ]
     ]
@@ -237,44 +232,6 @@ val primrec_cons = store_thm(
   ]);
 
 
-val nlist_of_append = store_thm(
-  "nlist_of_append",
-  ``nlist_of (l1 ++ l2) = napp (nlist_of l1) (nlist_of l2)``,
-  Induct_on `l1` THEN SRW_TAC [][]);
-
-val nlist_of11 = Store_thm(
-  "nlist_of11",
-  ``∀l1 l2. (nlist_of l1 = nlist_of l2) ⇔ (l1 = l2)``,
-  Induct THEN SRW_TAC [][] THEN Cases_on `l2` THEN SRW_TAC [][]);
-
-val nlist_of_onto = store_thm(
-  "nlist_of_onto",
-  ``∀n. ∃l. nlist_of l = n``,
-  intro nlist_ind THEN SRW_TAC [][] THENL [
-    Q.EXISTS_TAC `[]` THEN SRW_TAC [][],
-    Q.EXISTS_TAC `h::l` THEN SRW_TAC [][]
-  ]);
-
-val napp_nil2 = Store_thm(
-  "napp_nil2",
-  ``∀l1. napp l1 nnil = l1``,
-  intro nlist_ind THEN SRW_TAC [][]);
-
-val napp_ASSOC = store_thm(
-  "napp_ASSOC",
-  ``napp l1 (napp l2 l3) = napp (napp l1 l2) l3``,
-  MAP_EVERY Q.ID_SPEC_TAC [`l3`, `l2`, `l1`] THEN
-  intro nlist_ind THEN SRW_TAC [][])
-
-val napp11 = Store_thm(
-  "napp11",
-  ``((napp l1 l2 = napp l1 l3) ⇔ (l2 = l3)) ∧
-    ((napp l2 l1 = napp l3 l1) ⇔ (l2 = l3))``,
-  MAP_EVERY
-      (fn (nq, lq) => Q.SPEC_THEN nq (Q.X_CHOOSE_THEN lq (SUBST1_TAC o SYM))
-                                  nlist_of_onto)
-      [(`l3`,`ll3`), (`l2`,`ll2`), (`l1`,`ll1`)] THEN
-  SRW_TAC [][GSYM nlist_of_append]);
 
 val prtermrec1_def = Define`
   prtermrec1 v c a =
