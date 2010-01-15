@@ -1121,4 +1121,54 @@ val primrec_noreduct = Store_thm(
     intro pr_eq THEN SRW_TAC [][prCn1]
   ]);
 
+
+(* ----------------------------------------------------------------------
+    steps function
+   ---------------------------------------------------------------------- *)
+
+val pr_steps_def = Define`
+  pr_steps =
+  Pr (proj 0)
+     (λl. let r = l ' 1
+          in
+            if pr_bnf [r] = 1 then r
+            else pr_noreduct [r])
+`;
+
+val primrec_steps = Store_thm(
+  "primrec_steps",
+  ``primrec pr_steps 2``,
+  SRW_TAC [][pr_steps_def] THEN MATCH_MP_TAC alt_Pr_rule THEN
+  SRW_TAC [][LET_THM, primrec_rules] THEN
+  intro prCOND THEN SRW_TAC [][prCn1, prpred, combinTheory.o_ABS_R, prdbnf]);
+
+open stepsTheory
+val pr_steps_correct = store_thm(
+  "pr_steps_correct",
+  ``pr_steps [n; t] = dBnum (fromTerm (steps n (toTerm (numdB t))))``,
+  `∃d. t = dBnum d` by METIS_TAC [dBnum_onto] THEN
+  SRW_TAC [][pr_steps_def, LET_THM] THEN
+  `∃M. d = fromTerm M` by METIS_TAC [fromTerm_onto] THEN SRW_TAC [][] THEN
+  Induct_on `n` THEN SRW_TAC [][fromTerm_11] THENL [
+    SRW_TAC [][bnf_steps_fixpoint],
+    `∃N. noreduct M = SOME N` by METIS_TAC [bnf_noreduct] THEN
+    SRW_TAC [][] THEN
+    `steps n N = steps (SUC n) M` by SRW_TAC [][steps_def] THEN
+    METIS_TAC [bnf_steps_upwards_closed, DECIDE ``n < SUC n``],
+    METIS_TAC [bnf_steps_fixpoint],
+    SRW_TAC [][pr_noreduct_correct] THEN
+    `∃Mn' M'. (noreduct M = SOME M') ∧ (noreduct (steps n M) = SOME Mn')`
+      by METIS_TAC [bnf_noreduct] THEN
+    SRW_TAC [][fromTerm_11] THEN
+    `Mn' = steps (1 + n) M`
+       by (SRW_TAC [][steps_plus] THEN ASM_REWRITE_TAC [ONE, steps_def] THEN
+           SRW_TAC [][]) THEN
+    `M' = steps 1 M` by (ASM_REWRITE_TAC [ONE, steps_def] THEN
+                         SRW_TAC [][]) THEN
+    SRW_TAC [ARITH_ss][GSYM steps_plus]
+  ]);
+
+
+
+
 val _ = export_theory()
