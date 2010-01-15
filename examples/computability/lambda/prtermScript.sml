@@ -3,6 +3,7 @@ open HolKernel boolLib bossLib Parse
 open prnlistTheory numpairTheory pure_dBTheory
 open enumerationsTheory primrecfnsTheory
 open rich_listTheory arithmeticTheory
+open reductionEval churchnumTheory churchboolTheory
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -1340,15 +1341,153 @@ val primrec_forcenum = Store_thm(
     SRW_TAC [][FUN_EQ_THM, Abbr`f`]
   ]);
 
+(* Term constructors - abstractions *)
+val pr_dABS_def = Define`
+  pr_dABS = Cn (pr2 $+) [Cn (pr2 $*) [K 3; proj 0]; K 2]
+`;
+val primrec_pr_dABS = Store_thm(
+  "primrec_pr_dABS",
+  ``primrec pr_dABS 1``,
+  SRW_TAC [][primrec_rules, pr_dABS_def]);
+val pr_dABS_thm = Store_thm(
+  "pr_dABS_thm",
+  ``pr_dABS [n] = dBnum (dABS (numdB n))``,
+  SRW_TAC [][pr_dABS_def, dBnum_def]);
+
+(* Term constructors - applications *)
+val pr_dAPP_def = Define`
+  pr_dAPP = Cn (pr2 $+) [Cn (pr2 $*) [K 3; pr2 npair]; K 1]
+`;
+val primrec_dAPP = Store_thm(
+  "primrec_dAPP",
+  ``primrec pr_dAPP 2``,
+  SRW_TAC [][pr_dAPP_def, primrec_rules]);
+val pr_dAPP_thm = Store_thm(
+  "pr_dAPP_thm",
+  ``pr_dAPP [t1; t2] = dBnum (dAPP (numdB t1) (numdB t2))``,
+  SRW_TAC [][pr_dAPP_def, dBnum_def]);
+
+(* create a church numeral *)
+val pr_church_def = Define`
+  pr_church = Cn pr_dABS [Cn pr_dABS [Pr1 3 (Cn pr_dAPP [K 0; proj 1])]]
+`;
+val primrec_church = Store_thm(
+  "primrec_church",
+  ``primrec pr_church 1``,
+  SRW_TAC [][pr_church_def] THEN intro primrec_cn THEN
+  SRW_TAC [][primrec_rules]);
+val pr_church_thm = Store_thm(
+  "pr_church_thm",
+  ``pr_church [n] = dBnum (fromTerm (church n))``,
+  SRW_TAC [ARITH_ss][pr_church_def, churchnumTheory.church_def, dLAM_def,
+                     churchDBTheory.fromTerm_funpow_app,
+                     churchDBTheory.lift_funpow_dAPP,
+                     churchDBTheory.sub_funpow_dAPP] THEN
+  Q.MATCH_ABBREV_TAC `numdB N = D` THEN
+  Q_TAC SUFF_TAC `N = dBnum D` THEN SRW_TAC [][] THEN
+  markerLib.UNABBREV_ALL_TAC THEN
+  Induct_on `n` THEN SRW_TAC [][dBnum_def, FUNPOW_SUC]);
+
+
+val recPhi_def = Define`
+  recPhi = recCn (SOME o pr_forcenum)
+                 [recCn recbnf_of
+                        [SOME o
+                         Cn pr_dAPP [proj 0; Cn pr_church [proj 1]]]]
+`
+
+val recfn_recPhi = Store_thm(
+  "recfn_recPhi",
+  ``recfn recPhi 2``,
+  SRW_TAC [][recPhi_def] THEN intro recfnCn THEN
+  SRW_TAC [][primrec_recfn] THEN intro recfnCn THEN
+  SRW_TAC [][primrec_recfn] THEN intro primrec_recfn THEN
+  SRW_TAC [][primrec_rules]);
+
+val recPhi_correct = Store_thm(
+  "recPhi_correct",
+  ``recPhi [i; n] = Phi i n``,
+  SRW_TAC [][Phi_def, recPhi_def, recCn_def, LET_THM] THEN
+  Cases_on `bnf_of (toTerm (numdB i) @@ church n)` THEN
+  FULL_SIMP_TAC (srw_ss()) []);
+
+(* the other way - every recursive function can be emulated in the λ-calculus *)
+val cnel_def = Define`
+  cnel =
+  natrec
+    @@ (LAM "ns" (cis_zero @@ VAR "ns" @@ church 0
+                           @@ (cnfst @@ (cminus @@ VAR "ns" @@ church 1))))
+    @@ (LAM "n" (LAM "r" (LAM "ns" (
+         cis_zero @@ VAR "ns" @@ church 0
+                  @@ (VAR "r" @@ (cnsnd @@ (cminus @@ VAR "ns"
+                                                   @@ church 1)))))))
+`;
+
+val cnel_equiv = brackabs.brackabs_equiv [] cnel_def
+val ndrop_0 = prove(``ndrop n 0 = 0``,
+                    Induct_on `n` THEN SRW_TAC [][ndrop_def, ntl_def]);
+
+val cnel_behaviour = store_thm(
+  "cnel_behaviour",
+  ``cnel @@ church i @@ church n -n->* church (nel i n)``,
+  SIMP_TAC (bsrw_ss()) [cnel_equiv] THEN
+  Q.ID_SPEC_TAC `n` THEN Induct_on `i` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, cis_zero_behaviour] THENL [
+    Q.X_GEN_TAC `n` THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC nlist_cases THENL [
+      SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
+      SRW_TAC [][nel_def, ndrop_def, nhd_def],
+      SIMP_TAC (bsrw_ss()) [cB_behaviour, cminus_behaviour,
+                            cnfst_behaviour] THEN
+      SIMP_TAC (srw_ss() ++ ARITH_ss) [ncons_def]
+    ],
+
+    Q.X_GEN_TAC `n` THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC nlist_cases THENL [
+      SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
+      SRW_TAC [][nel_def, ndrop_def, nhd_def, ndrop_0, ntl_def],
+
+      ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, cminus_behaviour,
+                                cnsnd_behaviour] THEN
+      SRW_TAC [ARITH_ss][ncons_def]
+    ]
+  ]);
+val nel_proj = prove(
+  ``nel i (nlist_of l) = proj i l``,
+  SRW_TAC [ARITH_ss][proj_def, nel_nlist_of] THEN
+  POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `l` THEN Induct_on `i` THEN
+  SRW_TAC [][] THENL [
+    Cases_on `l` THEN FULL_SIMP_TAC (srw_ss()) [nel_def, ndrop_def, nhd_def],
+    Cases_on `l` THEN1 SRW_TAC [][nel_def, ndrop_0, nhd_def] THEN
+    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
+  ]);
 
 (*
+val recfns_in_Phi = Store_thm(
+  "recfns_in_Phi",
+  ``∀f n. recfn f n ⇒ ∃i. ∀l. Phi i (nlist_of l) = f l``,
+  HO_MATCH_MP_TAC recfn_ind THEN SRW_TAC [][] THENL [
+    Q.EXISTS_TAC `dBnum (fromTerm (LAM "x" (church 0)))` THEN
+    SRW_TAC [][Phi_def] THEN
+    SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
 
+    Q.EXISTS_TAC `
+      dBnum (fromTerm (LAM "ns"
+                       (cis_zero @@ VAR "ns"
+                                 @@ church 1
+                                 @@ (csuc @@ (cnfst @@ (cminus @@ VAR "ns"
+                                                               @@ church 1))))))
+    ` THEN SRW_TAC [][Phi_def] THEN
+    SIMP_TAC (bsrw_ss()) [cis_zero_behaviour, cminus_behaviour] THEN
+    Cases_on `l` THEN
+    SIMP_TAC (bsrw_ss() ++ ARITH_ss) [cB_behaviour, bnf_bnf_of, ncons_def,
+                                      cnfst_behaviour, csuc_behaviour],
 
-val Phi_recursive = store_thm(
-  "Phi_recursive",
-  ``∀i. ∃f. recfn f 1 ∧ ∀n. Phi i n = f [n]``,
-  SRW_TAC [][Phi_def] THEN churchnumTheory.force_num_def
+    Q.EXISTS_TAC `dBnum (fromTerm (cnel @@ church i))` THEN
+    SRW_TAC [][Phi_def] THEN
+    SIMP_TAC (bsrw_ss()) [cnel_behaviour, bnf_bnf_of, nel_proj],
+
+    ..
 
 *)
+
 
 val _ = export_theory()
