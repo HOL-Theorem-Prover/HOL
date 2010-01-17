@@ -1460,6 +1460,136 @@ val nel_proj = prove(
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
   ]);
 
+open churchlistTheory churchDBTheory
+val cnlist_of_def = Define`
+  cnlist_of =
+  LAM "ns" (VAR "ns"
+                @@ church 0
+                @@ (LAM "h" (LAM "tr" (
+                      csuc @@ (cnpair @@ VAR "h" @@ VAR "tr")))))
+`;
+val FV_cnlist_of = Store_thm(
+  "FV_cnlist_of",
+  ``FV cnlist_of = {}``,
+  SRW_TAC [][cnlist_of_def, pred_setTheory.EXTENSION] THEN METIS_TAC []);
+
+val cnlist_of_equiv = brackabs.brackabs_equiv [] cnlist_of_def
+
+val cnlist_of_behaviour = store_thm(
+  "cnlist_of_behaviour",
+  ``cnlist_of @@ cvlist (MAP church ns) -n->* church (nlist_of ns)``,
+  SIMP_TAC (bsrw_ss()) [cnlist_of_equiv] THEN Induct_on `ns` THEN1
+    SIMP_TAC (bsrw_ss()) [cnil_def] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [wh_cvcons, cnpair_behaviour, csuc_behaviour,
+                            numpairTheory.ncons_def,
+                            arithmeticTheory.ADD1]);
+
+val crecCn_def = Define`
+  crecCn =
+  LAM "f" (LAM "gs" (LAM "x" (
+    VAR "gs"
+        @@ (LAM "k" (cbnf_ofk
+                       @@ cforce_num
+                       @@ (cdAPP @@ (cnumdB @@ VAR "f")
+                                 @@ (cchurch @@ (cnlist_of @@ VAR "k")))))
+        @@ (LAM "h" (LAM "tr" (LAM "k1" (
+              (cbnf_ofk
+                 @@ (LAM "k2" (VAR "tr" @@ (cappend
+                                              @@ VAR "k1"
+                                              @@ (ccons
+                                                    @@ (cforce_num @@ VAR "k2")
+                                                    @@ cnil))))
+                 @@ (cdAPP @@ (cnumdB @@ VAR "h")
+                           @@ (cchurch @@ VAR "x")))))))
+        @@ cnil)))
+`;
+
+val FV_crecCn = Store_thm(
+  "FV_crecCn",
+  ``FV crecCn = {}``,
+  SRW_TAC [][crecCn_def, pred_setTheory.EXTENSION]);
+
+val crecCn_equiv = brackabs.brackabs_equiv [] crecCn_def
+
+val crecCn_fails = store_thm(
+  "crecCn_fails",
+  ``∀i f gs x.
+      MEM i gs ∧ (Phi i x = NONE) ⇒
+      (bnf_of (crecCn @@ f @@ cvlist (MAP church gs) @@ church x) = NONE)``,
+  SIMP_TAC (bsrw_ss()) [crecCn_equiv] THEN
+  Q.HO_MATCH_ABBREV_TAC `
+    ∀i f gs x. MEM i gs ∧ (Phi i x = NONE) ⇒
+               (bnf_of (LL gs @@ NN f @@ CC x @@ cnil) = NONE)
+  ` THEN
+  Q_TAC SUFF_TAC `
+    ∀i f gs k x. MEM i gs ∧ (Phi i x = NONE) ⇒
+                 (bnf_of (LL gs @@ NN f @@ CC x @@ k) = NONE)
+  ` THEN1 METIS_TAC [] THEN
+  markerLib.UNABBREV_ALL_TAC THEN BETA_TAC THEN
+  SIMP_TAC (bsrw_ss()) [cchurch_behaviour] THEN
+  Induct_on `gs` THEN
+  SIMP_TAC (bsrw_ss()) [wh_cvcons, cchurch_behaviour,
+                        cnumdB_behaviour, cdAPP_behaviour] THEN
+  MAP_EVERY Q.X_GEN_TAC [`h`, `i`, `f`, `k`, `x`] THEN
+  Cases_on `i = h` THEN1 SRW_TAC [][PhiNONE_cbnf_ofk] THEN
+  SRW_TAC [][] THEN
+  `(Phi h x = NONE) ∨ ∃n. Phi h x = SOME n`
+      by (Cases_on `Phi h x` THEN SRW_TAC [][])
+  THEN1 SRW_TAC [][PhiNONE_cbnf_ofk] THEN
+  IMP_RES_TAC PhiSOME_cbnf_ofk THEN
+  ASM_SIMP_TAC (bsrw_ss()) [] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC []);
+
+
+val crecCn_succeeds1 = store_thm(
+  "crecCn_succeeds1",
+  ``∀f gs x.
+      (∀i. MEM i gs ⇒ ∃j. Phi i x = SOME j) ⇒
+      (bnf_of (crecCn @@ f @@ cvlist (MAP church gs) @@ church x) =
+       bnf_of
+       (cbnf_ofk
+          @@ cforce_num
+          @@ (cdAPP @@ (cnumdB @@ f)
+                    @@ (cchurch
+                          @@ (cnlist_of
+                                @@ cvlist
+                                     (MAP church
+                                          (MAP (λg. THE (Phi g x))
+                                               gs)))))))``,
+  SIMP_TAC (bsrw_ss()) [crecCn_equiv, cchurch_behaviour,
+                        cnlist_of_behaviour] THEN
+  Q.HO_MATCH_ABBREV_TAC `
+    ∀f gs x.
+      PRECOND gs x ⇒
+      (bnf_of (LL gs @@ NN f @@ CC x @@ cnil) = RHS f gs x)` THEN
+  Q_TAC SUFF_TAC `
+    ∀f gs x ks.
+      PRECOND gs x ⇒
+      (bnf_of (LL gs @@ NN f @@ CC x @@ cvlist (MAP church ks)) =
+       bnf_of (cbnf_ofk
+                 @@ cforce_num
+                 @@ (cdAPP @@ (cnumdB @@ f)
+                           @@ (cDB (fromTerm (church
+                                  (nlist_of (ks ++
+                                             MAP (λg. THE (Phi g x)) gs))))))))
+  ` THEN1 (Q.UNABBREV_TAC `RHS` THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
+           FIRST_X_ASSUM (Q.SPECL_THEN [`f`, `gs`, `x`, `[]`] MP_TAC) THEN
+           SRW_TAC [][]) THEN
+  markerLib.UNABBREV_ALL_TAC THEN BETA_TAC THEN Induct_on `gs` THEN1
+    SIMP_TAC (bsrw_ss()) [cnil_def, cnlist_of_behaviour, cchurch_behaviour] THEN
+  SRW_TAC [][] THEN
+  SIMP_TAC (bsrw_ss()) [wh_cvcons, cnumdB_behaviour, cdAPP_behaviour] THEN
+  `∃j. Phi h x = SOME j` by METIS_TAC [] THEN
+  IMP_RES_TAC PhiSOME_cbnf_ofk THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, wh_ccons, wh_cvcons] THEN
+  `∀i. MEM i gs ⇒ ∃j. Phi i x = SOME j` by METIS_TAC [] THEN
+  FIRST_X_ASSUM (Q.SPECL_THEN [`f`, `x`, `ks ++ [force_num (toTerm v)]`]
+                              MP_TAC) THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cappend_snoc] THEN
+  DISCH_THEN (K ALL_TAC) THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND]);
+
+val MAP_CONG' = SPEC_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] listTheory.MAP_CONG)
+
 (*
 val recfns_in_Phi = Store_thm(
   "recfns_in_Phi",
@@ -1485,9 +1615,40 @@ val recfns_in_Phi = Store_thm(
     SRW_TAC [][Phi_def] THEN
     SIMP_TAC (bsrw_ss()) [cnel_behaviour, bnf_bnf_of, nel_proj],
 
-    ..
+    FULL_SIMP_TAC (srw_ss()) [listTheory.EVERY_MEM,
+                              GSYM RIGHT_EXISTS_IMP_THM] THEN
+    POP_ASSUM (STRIP_ASSUME_TAC o CONV_RULE (SKOLEM_CONV THENC
+                                             RENAME_VARS_CONV ["gf"])) THEN
+    Q.EXISTS_TAC `
+      dBnum (fromTerm (crecCn @@ church i
+                              @@ cvlist (MAP church (MAP gf gs))))
+    ` THEN
+    SRW_TAC [][Phi_def, recCn_def, LET_THM] THENL [
+      `∀nopt : num option. (nopt ≠ NONE) ⇔ ∃j. nopt = SOME j`
+         by SIMP_TAC (srw_ss()) [optionTheory.FORALL_OPTION] THEN
+      FULL_SIMP_TAC (srw_ss()) [listTheory.EVERY_MAP] THEN
+      FULL_SIMP_TAC (srw_ss()) [listTheory.EVERY_MEM] THEN
+      `∀i. MEM i (MAP gf gs) ⇒ ∃j. Phi i (nlist_of l) = SOME j`
+         by (SRW_TAC [][listTheory.MEM_MAP] THEN METIS_TAC []) THEN
+      POP_ASSUM (ASSUME_TAC o MATCH_MP crecCn_succeeds1) THEN
+      POP_ASSUM (fn th => SIMP_TAC (srw_ss())[th]) THEN
+      SIMP_TAC (bsrw_ss()) [cnlist_of_behaviour, cchurch_behaviour,
+                            cnumdB_behaviour, cdAPP_behaviour] THEN
+      SRW_TAC [][MAP_MAP_o, combinTheory.o_DEF, Cong MAP_CONG'] THEN
+      Q.ABBREV_TAC `result = MAP (λx. THE (x l)) gs` THEN
+      Cases_on `Phi i (nlist_of result)` THENL [
+        SRW_TAC [][PhiNONE_cbnf_ofk] THEN METIS_TAC [],
+        IMP_RES_TAC PhiSOME_cbnf_ofk THEN
+        ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of, cforce_num_behaviour] THEN
+        METIS_TAC []
+      ],
 
-*)
+      FULL_SIMP_TAC (srw_ss()) [listTheory.EXISTS_MEM, listTheory.MEM_MAP] THEN
+      `Phi (gf g) (nlist_of l) = NONE` by METIS_TAC [] THEN
+      `MEM (gf g) (MAP gf gs)` by METIS_TAC [listTheory.MEM_MAP] THEN
+      METIS_TAC [crecCn_fails]
+    ],
 
 
-val _ = export_theory()
+
+*)val _ = export_theory()

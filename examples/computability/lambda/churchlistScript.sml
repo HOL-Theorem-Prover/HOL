@@ -115,6 +115,8 @@ val cappend_def = Define`
   cappend = LAM "l1" (LAM "l2" (VAR "l1" @@ VAR "l2" @@ ccons))
 `
 
+val cappend_equiv = brackabs.brackabs_equiv [] cappend_def
+
 val FV_cappend = Store_thm(
   "FV_cappend",
   ``FV cappend = {}``,
@@ -340,6 +342,13 @@ val cvlist_thm = Store_thm(
   ``(cvlist [] = cnil) ∧
     (cvlist (h::t) = cvcons h (cvlist t))``,
   SRW_TAC [][cvlist_def]);
+
+val cappend_snoc = store_thm(
+  "cappend_snoc",
+  ``cappend @@ cvlist l @@ cvcons h cnil == cvlist (l ++ [h])``,
+  SIMP_TAC (bsrw_ss()) [cappend_equiv, cnil_def] THEN
+  Induct_on `l` THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cnil_def, wh_cvcons, wh_ccons]);
 
 val GENLIST_CONS = rich_listTheory.GENLIST_CONS
 
