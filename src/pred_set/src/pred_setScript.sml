@@ -342,6 +342,7 @@ val PSUBSET_DEF =  new_definition(
   "PSUBSET_DEF",
   ``PSUBSET (s:'a set) t <=> s SUBSET t /\ ~(s = t)``);
 val _ = set_fixity "PSUBSET" (Infix(NONASSOC, 450))
+val _ = unicode_version { u = UTF8.chr 0x2282, tmnm = "PSUBSET"}
 
 val PSUBSET_TRANS = store_thm ("PSUBSET_TRANS",
    (--`!s:'a set. !t u. (s PSUBSET t /\ t PSUBSET u) ==> (s PSUBSET u)`--),
