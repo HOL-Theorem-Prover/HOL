@@ -110,7 +110,6 @@ val [g_umjD1, g_umjD2, g_umjD3, g_umjD4, g_umjD5, g_umjD6, g_umjD7] =
 val _ = ListPair.map save_thm (["g_umjD1",
     "g_umjD2", "g_umjD3", "g_umjD4", "g_umjD5", "g_umjD6", "g_umjD7"],
   [g_umjD1, g_umjD2, g_umjD3, g_umjD4, g_umjD5, g_umjD6, g_umjD7]) ;
-  
 
 val tmj = ``category (id, comp) /\ Gmonad (id,comp) [:'N,'M:]
       (dunit,dmap,djoin) (unitNM,mapNM,joinNM) unitM /\ 

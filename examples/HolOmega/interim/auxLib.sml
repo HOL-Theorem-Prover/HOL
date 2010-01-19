@@ -261,6 +261,11 @@ fun mk_exp_thm'' th0 =
       BETA_CONV, TY_BETA_CONV])) th2 ;
   in th4 end ;
 
+val mk_exp_conv'' = (TOP_SWEEP_CONV (FIRST_CONV exp_rwdconvs)) THENC
+  (DEPTH_CONV (FIRST_CONV [
+    (REWR_CONV pairTheory.UNCURRY_DEF THENC RATOR_CONV BETA_CONV),
+    BETA_CONV, TY_BETA_CONV])) ;
+
 (*
 mk_exp_thm dist_law_def ;
 mk_exp_thm' dist_law_def ;

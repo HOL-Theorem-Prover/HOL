@@ -35,6 +35,9 @@ val _ = type_abbrev ("id", Type `: \'A. !'a. ('a ('a 'A))`);
 val _ = type_abbrev ("o_arrow", Type `: \'A. 
   (!'a 'b 'c. (('b,'c) 'A) -> (('a,'b) 'A) -> (('a,'c) 'A))`);
 
+val _ = type_abbrev ("kl_arrow", Type `: \'A 'M. 
+  (!'a 'b 'c. (('b,'c 'M) 'A) -> (('a,'b 'M) 'A) -> (('a,'c 'M) 'A))`);
+
 val _ = type_abbrev ("category", Type `: \'A. 'A id # 'A o_arrow`) ;
 
 (*
@@ -122,17 +125,17 @@ val _ = type_abbrev ("g_functor_dual",
             Functor predicate
  ---------------------------------------------------------------------------*)
 
-val g_functor_def = new_definition("g_functor_def", 
-   ``g_functor = \:'C 'D. \ (idC : 'C id, compC : 'C o_arrow) 
+val g_functor_def = Define
+   `g_functor = \:'C 'D 'F. \ (idC : 'C id, compC : 'C o_arrow) 
      (idD : 'D id, compD : 'D o_arrow) (F': 'F (('C, 'D) g_functor)).
       (* Identity *) 
           (!:'a. F' [:'a, 'a:] idC = idD) /\
       (* Composition *)
           (!:'a 'b 'c. !(f:('a, 'b) 'C) (g:('b, 'c) 'C).
-	    F' (compC g f) = compD (F' g) (F' f)) `` );
+	    F' (compC g f) = compD (F' g) (F' f)) ` ;
 
 val g_functor_thm = store_thm ("g_functor_thm", 
-   ``g_functor [:'C, 'D:] (idC : 'C id, compC : 'C o_arrow) 
+   ``g_functor [:'C, 'D, 'F:] (idC : 'C id, compC : 'C o_arrow) 
      (idD : 'D id, compD : 'D o_arrow) (F': 'F (('C, 'D) g_functor)) =
       (* Identity *) 
           (!:'a. F' [:'a, 'a:] idC = idD) /\
