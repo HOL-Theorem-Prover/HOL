@@ -1590,7 +1590,143 @@ val crecCn_succeeds1 = store_thm(
 
 val MAP_CONG' = SPEC_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] listTheory.MAP_CONG)
 
-(*
+val cntl_def = Define`
+  cntl = LAM "ns" (cnsnd @@ (cminus @@ VAR "ns" @@ church 1))
+`;
+val FV_cntl = Store_thm("FV_cntl", ``FV cntl = {}``,
+                        SRW_TAC [][pred_setTheory.EXTENSION, cntl_def]);
+val cntl_behaviour = store_thm(
+  "cntl_behaviour",
+  ``cntl @@ church n == church (ntl n)``,
+  SIMP_TAC (bsrw_ss()) [cntl_def, cminus_behaviour, ntl_def, cnsnd_behaviour]);
+
+val cnhd_def = Define`
+  cnhd = LAM "ns" (cnfst @@ (cminus @@ VAR "ns" @@ church 1))
+`;
+val FV_cnhd = Store_thm("FV_cnhd", ``FV cnhd = {}``,
+                        SRW_TAC [][pred_setTheory.EXTENSION, cnhd_def]);
+val cnhd_behaviour = store_thm(
+  "cnhd_behaviour",
+  ``cnhd @@ church n == church (nhd n)``,
+  SIMP_TAC (bsrw_ss()) [cnhd_def, cminus_behaviour, nhd_def, cnfst_behaviour]);
+
+val cncons_def = Define`
+  cncons = LAM "h" (LAM "t" (csuc @@ (cnpair @@ VAR "h" @@ VAR "t")))
+`;
+val cncons_equiv = brackabs.brackabs_equiv [] cncons_def
+val FV_cncons = Store_thm(
+  "FV_cncons",
+  ``FV cncons = {}``,
+  SRW_TAC [][pred_setTheory.EXTENSION, cncons_def]);
+
+val cncons_behaviour = store_thm(
+  "cncons_behaviour",
+  ``cncons @@ church h @@ church (nlist_of t) == church (nlist_of (h::t))``,
+  SIMP_TAC (bsrw_ss()) [cncons_equiv, cnpair_behaviour, ncons_def,
+                        csuc_behaviour, ADD1]);
+
+val crecPr_def = Define`
+  crecPr =
+  LAM "b" (LAM "s" (LAM "ns" (
+    cis_zero @@ VAR "ns"
+             @@ (cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ VAR "b")
+                                                  @@ (cchurch @@ VAR "ns")))
+             @@ (natrec
+                   @@ (LAM "k" (
+                         cbnf_ofk
+                           @@ (B @@ VAR "k" @@ cforce_num)
+                           @@ (cdAPP @@ (cnumdB @@ VAR "b")
+                                     @@ (cchurch @@ (cntl @@ VAR "ns")))))
+                   @@ (LAM "n" (LAM "r" (LAM "k1" (
+                        VAR "r" @@ (LAM "k2" (
+                         cbnf_ofk
+                           @@ (B @@ VAR "k1" @@ cforce_num)
+                           @@ (cdAPP
+                                 @@ (cnumdB @@ VAR "s")
+                                 @@ (cchurch
+                                       @@ (cncons
+                                             @@ VAR "n"
+                                             @@ (cncons
+                                                   @@ VAR "k2"
+                                                   @@ (cntl
+                                                         @@ VAR "ns")))))))))))
+                   @@ (cnhd @@ VAR "ns")
+                   @@ I))))
+`;
+
+val FV_crecPr = Store_thm(
+  "FV_crecPr",
+  ``FV crecPr = {}``,
+  SRW_TAC [][pred_setTheory.EXTENSION, crecPr_def] );
+val crecPr_equiv = brackabs.brackabs_equiv [] crecPr_def
+
+val crecPr_nil = store_thm(
+  "crecPr_nil",
+  ``crecPr @@ b @@ s @@ church 0 ==
+    cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ b)
+                                     @@ cDB (fromTerm (church 0)))``,
+  SIMP_TAC(bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
+                       cchurch_behaviour]);
+
+(* val crecPr_cons0 = store_thm(
+  "crecPr_cons0",
+  ``crecPr @@ b @@ s @@ church (nlist_of (0::t)) ==
+    cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ b)
+                                     @@ cDB (fromTerm (church (nlist_of t))))``,
+  SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
+                        cnhd_behaviour, cntl_behaviour, natrec_behaviour,
+                        cchurch_behaviour] THEN
+  Q_TAC SUFF_TAC `B @@ I @@ cforce_num == cforce_num` THEN1
+    SIMP_TAC (bsrw_ss()) [] THEN
+  SIMP_TAC (bsrw_ss()) [chap2Theory.B_def, cforce_num_def] THEN
+  SIMP_TAC (bsrw_ss()) [chap2Theory.S_def] THEN
+  Q.MATCH_ABBREV_TAC `T1 == T2` THEN
+  Q_TAC SUFF_TAC `T1 = T2` THEN1 SRW_TAC [][] THEN
+  SRW_TAC [][termTheory.LAM_eq_thm, Abbr`T1`, Abbr`T2`, termTheory.tpm_fresh]);
+
+val crecPr_consSUC = store_thm(
+  "crecPr_consSUC",
+  ``bnf_of (crecPr @@ b @@ s @@ church (nlist_of (SUC n::t))) =
+      case bnf_of (crecPr @@ b @@ s @@ church (nlist_of (n::t))) of
+         NONE -> NONE
+      || SOME tm -> bnf_of (s @@ church n @@ tm @@ church (nlist_of t))``,
+  SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
+                        cntl_behaviour, cnhd_behaviour, natrec_behaviour] THEN
+  Q.HO_MATCH_ABBREV_TAC `
+    bnf_of (natrec @@ ZZ @@ SS @@ church n @@ k) =
+    case bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I) of
+       NONE -> NONE
+    || SOME tm -> bnf_of (tm2 tm)
+  ` THEN
+  Q_TAC SUFF_TAC `
+    bnf_of (natrec @@ ZZ @@ SS @@ church n @@ k) =
+    case bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I) of
+       NONE -> NONE
+    || SOME tm -> bnf_of (k @@ tm)
+  ` THEN1 (DISCH_THEN SUBST1_TAC THEN
+           Cases_on `bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)` THEN1
+             SRW_TAC [][] THEN
+           SRW_TAC [][Abbr`tm2`, Abbr`k`] THEN SIMP_TAC (bsrw_ss()) []) THEN
+  Q.RM_ABBREV_TAC `tm2` THEN Q.RM_ABBREV_TAC `k` THEN Q.ID_SPEC_TAC `k` THEN
+  Induct_on `n` THENL [
+    SIMP_TAC (bsrw_ss()) [Abbr`ZZ`, natrec_behaviour] ...,
+
+    SIMP_TAC (bsrw_ss()) [Abbr`SS`, natrec_behaviour] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    Q.X_GEN_TAC `k` THEN
+    Q.MATCH_ABBREV_TAC `
+      option_case NNONE SSOME (bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)) =
+      FOO
+    ` THEN MAP_EVERY Q.UNABBREV_TAC [`NNONE`, `SSOME`, `FOO`] THEN
+    Cases_on `bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)` THEN
+    SRW_TAC [][] THEN
+    SIMP_TAC (bsrw_ss()) []
+
+
+
+
+
+
 val recfns_in_Phi = Store_thm(
   "recfns_in_Phi",
   ``∀f n. recfn f n ⇒ ∃i. ∀l. Phi i (nlist_of l) = f l``,
@@ -1648,6 +1784,22 @@ val recfns_in_Phi = Store_thm(
       `MEM (gf g) (MAP gf gs)` by METIS_TAC [listTheory.MEM_MAP] THEN
       METIS_TAC [crecCn_fails]
     ],
+
+    Q.EXISTS_TAC `
+      dBnum (fromTerm (crecPr @@ church i @@ church i'))
+    ` THEN
+    SRW_TAC [][Phi_def] THEN
+    Cases_on `l` THEN1
+      (SIMP_TAC (bsrw_ss()) [recPr_def, crecPr_nil, cdAPP_behaviour,
+                             cnumdB_behaviour] THEN
+       Cases_on `Phi i 0` THEN1
+         (SRW_TAC [][PhiNONE_cbnf_ofk] THEN METIS_TAC [nlist_of_def]) THEN
+       IMP_RES_TAC PhiSOME_cbnf_ofk THEN
+       ASM_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, bnf_bnf_of] THEN
+       METIS_TAC [nlist_of_def]) THEN
+    SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
+                          cnhd_behaviour, cntl_behaviour, cchurch_behaviour,
+                          cnumdB_behaviour, cdAPP_behaviour] THEN
 
 
 
