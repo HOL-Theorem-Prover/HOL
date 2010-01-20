@@ -3142,6 +3142,143 @@ val BOUNDED_EXISTS_THM = Q.store_thm("BOUNDED_EXISTS_THM",
    METIS_TAC [num_CASES,LESS_REFL,SUC_SUB1,LESS_SUC_REFL],
    METIS_TAC [SUB_LEFT_LESS,ADD1,SUC_LESS]]);
 
+(*---------------------------------------------------------------------------*)
+(* Theorems about sequences                                                  *)
+(*---------------------------------------------------------------------------*)
+
+val transitive_monotone = Q.store_thm(
+"transitive_monotone",
+`!R f. transitive R /\ (!n. R (f n) (f (SUC n))) ==> !m n. m < n ==> R (f m) (f n)`,
+NTAC 3 STRIP_TAC THEN INDUCT_TAC THEN
+(INDUCT_TAC THEN1 REWRITE_TAC [NOT_LESS_0])
+THEN1 (
+  POP_ASSUM MP_TAC THEN
+  Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
+  METIS_TAC [LESS_0,relationTheory.transitive_def]) THEN
+METIS_TAC [LESS_THM,relationTheory.transitive_def])
+
+val STRICTLY_INCREASING_TC = save_thm(
+"STRICTLY_INCREASING_TC",
+(* !f. (!n. f n < f (SUC n)) ==> !m n. m < n ==> f m < f n *)
+transitive_monotone |> Q.ISPEC `$<` |>
+SIMP_RULE bool_ss [
+  Q.prove(`transitive $<`,
+    METIS_TAC [relationTheory.transitive_def,LESS_TRANS])])
+
+val STRICTLY_INCREASING_ONE_ONE = Q.store_thm(
+"STRICTLY_INCREASING_ONE_ONE",
+`!f. (!n. f n < f (SUC n)) ==> ONE_ONE f`,
+REWRITE_TAC [ONE_ONE_THM] THEN
+METIS_TAC [STRICTLY_INCREASING_TC,NOT_LESS,LESS_OR_EQ,LESS_EQUAL_ANTISYM])
+
+val ONE_ONE_UNBOUNDED = Q.store_thm(
+"ONE_ONE_UNBOUNDED",
+`!f. ONE_ONE (f:num->num) ==> !b.?n. b < f n`,
+Q_TAC SUFF_TAC
+`!b (f:num->num). (!n. f n <= b) ==> ~ONE_ONE f`
+THEN1 METIS_TAC [NOT_LESS_EQUAL] THEN
+INDUCT_TAC THEN1 (
+  REWRITE_TAC [LESS_EQ_0,ONE_ONE_THM] THEN
+  METIS_TAC [SUC_NOT] ) THEN
+NTAC 2 STRIP_TAC THEN
+Q.SPEC_THEN `!n. f n <= b` STRIP_ASSUME_TAC BOOL_CASES_AX
+THEN1 METIS_TAC [] THEN
+FULL_SIMP_TAC bool_ss [NOT_LESS_EQUAL] THEN
+Q.SUBGOAL_THEN `f n = SUC b` STRIP_ASSUME_TAC THEN1 (
+  CCONTR_TAC THEN
+  POP_ASSUM (ASSUME_TAC o GSYM) THEN
+  IMP_RES_TAC LESS_SUC_EQ_COR THEN
+  METIS_TAC [LESS_OR_EQ,LESS_ANTISYM] ) THEN
+Q.SPEC_THEN `?m. m <> n /\ (f m = SUC b)` STRIP_ASSUME_TAC BOOL_CASES_AX THEN
+FULL_SIMP_TAC bool_ss [LESS_SUC_REFL] THEN1 (
+  METIS_TAC [ONE_ONE_THM] ) THEN
+SRW_TAC [][] THEN
+Q.SPEC_THEN `!r. r <= b ==> ?x. (f x = r)` STRIP_ASSUME_TAC BOOL_CASES_AX THEN
+FULL_SIMP_TAC bool_ss [] THEN1 (
+  Q.SUBGOAL_THEN `?g.!n. n <= SUC b ==> (f (g n) = n)` STRIP_ASSUME_TAC THEN1 (
+    Q.EXISTS_TAC `\n. if n <= SUC b then @z. (f z = n) else 0` THEN
+    SRW_TAC [][] THEN
+    SELECT_ELIM_TAC THEN
+    METIS_TAC [LESS_OR_EQ,LESS_THM,LESS_OR_EQ] ) THEN
+  (num_Axiom |>
+    Q.ISPECL [`g:num->num 0`,`\x y. MAX (g (SUC x)) y`] |>
+    STRIP_ASSUME_TAC) THEN
+  Q.SUBGOAL_THEN `!n. fn n <= fn (SUC n)` STRIP_ASSUME_TAC THEN1 (
+    SRW_TAC [][MAX_0,MAX_LE,LESS_EQ_REFL] ) THEN
+  (transitive_monotone |> Q.ISPECL [`$<=`,`fn:num->num`] |> MP_TAC) THEN
+  Q.SUBGOAL_THEN `transitive $<=` STRIP_ASSUME_TAC THEN1 (
+    METIS_TAC [relationTheory.transitive_def,LESS_EQ_TRANS] ) THEN
+  ASM_SIMP_TAC bool_ss [] THEN
+  STRIP_TAC THEN
+  SRW_TAC [][ONE_ONE_THM] THEN
+  Q.SUBGOAL_THEN `!m. g m <= fn m` STRIP_ASSUME_TAC THEN1 (
+    SRW_TAC [][] THEN
+    Q.SPEC_THEN `m` STRIP_ASSUME_TAC num_CASES THEN
+    SRW_TAC [][LESS_EQ_REFL,MAX_LE] ) THEN
+  MAP_EVERY Q.EXISTS_TAC [`SUC (fn (SUC b))`, `g (f (SUC (fn (SUC b))))`] THEN
+  ASM_SIMP_TAC bool_ss [] THEN
+  Q.SUBGOAL_THEN `g (SUC b) = n` STRIP_ASSUME_TAC THEN1 (
+    Q.SUBGOAL_THEN `f (g (SUC b)) = SUC b` STRIP_ASSUME_TAC
+      THEN1 METIS_TAC [LESS_EQ_REFL] THEN
+    METIS_TAC [] ) THEN
+  FULL_SIMP_TAC bool_ss [] THEN
+  Q.MATCH_ABBREV_TAC `X <> g (f X)` THEN
+  Q_TAC SUFF_TAC `g (f X) < X` THEN1
+    METIS_TAC [LESS_NOT_EQ] THEN
+  Q_TAC SUFF_TAC `fn (f X) < X` THEN1 (
+    METIS_TAC [LESS_EQ_LESS_TRANS] ) THEN
+  Q.SUBGOAL_THEN `f X < SUC b` STRIP_ASSUME_TAC THEN1 (
+    FULL_SIMP_TAC bool_ss [LESS_OR_EQ] THEN
+    Q_TAC SUFF_TAC `f X <> SUC b` THEN1 METIS_TAC [] THEN
+    Q_TAC SUFF_TAC `X <> n` THEN1 METIS_TAC [] THEN
+    Q_TAC SUFF_TAC `n < X` THEN1 METIS_TAC [LESS_NOT_EQ] THEN
+    SRW_TAC [][Abbr`X`,LESS_THM,MAX] ) THEN
+  Q_TAC SUFF_TAC `fn (SUC b) < X` THEN1 (
+    METIS_TAC [LESS_EQ_LESS_TRANS] ) THEN
+  ASM_SIMP_TAC bool_ss [] THEN
+  Q.UNABBREV_TAC `X` THEN
+  REWRITE_TAC [LESS_SUC_REFL]) THEN
+Q.ABBREV_TAC `g = \y. if y = n then r else f y` THEN
+Q.SUBGOAL_THEN `!n. g n <= b` STRIP_ASSUME_TAC THEN1 (
+  SRW_TAC [][Abbr`g`] THEN
+  METIS_TAC [LESS_OR_EQ,LESS_THM] ) THEN
+RES_TAC THEN
+FULL_SIMP_TAC bool_ss [ONE_ONE_THM,Abbr`g`] THEN
+MAP_EVERY Q.EXISTS_TAC [`y`,`y'`] THEN
+Q.SPEC_THEN `y = n` STRIP_ASSUME_TAC BOOL_CASES_AX THEN
+FULL_SIMP_TAC bool_ss [] THEN1 METIS_TAC [] THEN
+Q.SPEC_THEN `y' = n` STRIP_ASSUME_TAC BOOL_CASES_AX THEN
+FULL_SIMP_TAC bool_ss [] THEN METIS_TAC [])
+
+val STRICTLY_INCREASING_UNBOUNDED = Q.store_thm(
+"STRICTLY_INCREASING_UNBOUNDED",
+`!f. (!n. f n < f (SUC n)) ==> !b.?n. b < f n`,
+METIS_TAC [STRICTLY_INCREASING_ONE_ONE,ONE_ONE_UNBOUNDED])
+
+val STRICTLY_DECREASING_TC = Q.prove(
+`!f. (!n. f (SUC n) < f n) ==> !m n. m < n ==> f n < f m`,
+NTAC 2 STRIP_TAC THEN
+(transitive_monotone |> Q.ISPECL [`\x y. y < x`,`f:num->num`] |>
+ SIMP_RULE bool_ss [] |> MATCH_MP_TAC) THEN
+SRW_TAC [][relationTheory.transitive_def] THEN
+METIS_TAC [LESS_TRANS])
+
+val STRICTLY_DECREASING_ONE_ONE = Q.prove(
+`!f. (!n. f (SUC n) < f n) ==> ONE_ONE f`,
+SRW_TAC [] [ONE_ONE_THM] THEN
+METIS_TAC [STRICTLY_DECREASING_TC,NOT_LESS,LESS_OR_EQ,LESS_EQUAL_ANTISYM])
+
+val NOT_STRICTLY_DECREASING = Q.store_thm(
+"NOT_STRICTLY_DECREASING",
+`!f. ~(!n. f (SUC n) < f n)`,
+NTAC 2 STRIP_TAC THEN
+IMP_RES_TAC STRICTLY_DECREASING_TC THEN
+IMP_RES_TAC STRICTLY_DECREASING_ONE_ONE THEN
+IMP_RES_TAC ONE_ONE_UNBOUNDED THEN
+POP_ASSUM (Q.SPEC_THEN `f 0` STRIP_ASSUME_TAC) THEN
+Q.SPEC_THEN `n` STRIP_ASSUME_TAC num_CASES THEN1
+  METIS_TAC [LESS_NOT_EQ] THEN
+METIS_TAC [LESS_ANTISYM,LESS_0])
 
 (* ********************************************************************** *)
 val _ = print "Miscellaneous theorems\n"
