@@ -351,6 +351,7 @@ val LENGTH_APPEND = store_thm ("LENGTH_APPEND",
  --`!(l1:'a list) (l2:'a list).
      LENGTH (APPEND l1 l2) = (LENGTH l1) + (LENGTH l2)`--,
      LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH, APPEND, ADD_CLAUSES]);
+val _ = export_rewrites ["LENGTH_APPEND"]
 
 val MAP_APPEND = store_thm ("MAP_APPEND",
  --`!(f:'a->'b).!l1 l2. MAP f (APPEND l1 l2) = APPEND (MAP f l1) (MAP f l2)`--,
@@ -581,6 +582,12 @@ CONJ_TAC THEN
    THEN REWRITE_TAC [CONS_11,NOT_NIL_CONS, NOT_CONS_NIL,APPEND]
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
 val _ = export_rewrites ["APPEND_eq_NIL"]
+
+val APPEND_EQ_SING = store_thm(
+  "APPEND_EQ_SING",
+  ``(l1 ++ l2 = [e:'a]) <=>
+      (l1 = [e]) /\ (l2 = []) \/ (l1 = []) /\ (l2 = [e])``,
+  Cases_on `l1` THEN SRW_TAC [][CONJ_ASSOC]);
 
 val APPEND_11 = store_thm(
   "APPEND_11",
@@ -1177,9 +1184,25 @@ val MEM_REVERSE = store_thm(
   "MEM_REVERSE",
   ``!l x. MEM x (REVERSE l) = MEM x l``,
   Induct THEN SRW_TAC [][] THEN PROVE_TAC []);
-
 val _ = export_rewrites ["MEM_REVERSE"]
 
+val LENGTH_REVERSE = store_thm(
+  "LENGTH_REVERSE",
+  ``!l. LENGTH (REVERSE l) = LENGTH l``,
+  Induct THEN SRW_TAC [][arithmeticTheory.ADD1]);
+val _ = export_rewrites ["LENGTH_REVERSE"]
+
+val REVERSE_EQ_NIL = store_thm(
+  "REVERSE_EQ_NIL",
+  ``(REVERSE l = []) <=> (l = [])``,
+  Cases_on `l` THEN SRW_TAC [][]);
+val _ = export_rewrites ["REVERSE_EQ_NIL"]
+
+val REVERSE_EQ_SING = store_thm(
+  "REVERSE_EQ_SING",
+  ``(REVERSE l = [e:'a]) <=> (l = [e])``,
+  Cases_on `l` THEN SRW_TAC [][APPEND_EQ_SING, CONJ_COMM]);
+val _ = export_rewrites ["REVERSE_EQ_SING"]
 
 (* ----------------------------------------------------------------------
     FRONT and LAST
@@ -1377,7 +1400,7 @@ val ALL_DISTINCT_SING = store_thm(
 
 val LRC_def = Define`
   (LRC R [] x y = (x = y)) /\
-  (LRC R (h::t) x y = 
+  (LRC R (h::t) x y =
    (x = h) /\ ?z. R x z /\ LRC R t z y)`;
 
 val NRC_LRC = Q.store_thm(
@@ -1479,6 +1502,12 @@ val ALL_DISTINCT_CARD_LIST_TO_SET = Q.store_thm(
 "ALL_DISTINCT_CARD_LIST_TO_SET",
 `!ls. ALL_DISTINCT ls ==> (CARD (set ls) = LENGTH ls)`,
 Induct THEN SRW_TAC [][]);
+
+val LIST_TO_SET_REVERSE = store_thm(
+  "LIST_TO_SET_REVERSE",
+  ``!ls: 'a list. set (REVERSE ls) = set ls``,
+  Induct THEN SRW_TAC [][pred_setTheory.EXTENSION]);
+val _ = export_rewrites ["LIST_TO_SET_REVERSE"]
 
 (* ----------------------------------------------------------------------
     SET_TO_LIST : 'a set -> 'a list
@@ -1723,7 +1752,7 @@ val _ = export_rewrites
           ["APPEND_11", "FLAT",
            "MAP", "MAP2", "NULL_DEF",
            "SUM", "APPEND_ASSOC", "CONS", "CONS_11",
-           "LENGTH_APPEND", "LENGTH_MAP", "MAP_APPEND",
+           "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",
            "CONS_ACYCLIC", "list_case_def", "ZIP",
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",
