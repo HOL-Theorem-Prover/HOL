@@ -122,6 +122,29 @@ val permeq_swap_ends = store_thm(
         THEN1 METIS_TAC [permeq_trans, permeq_cons_monotone] THEN
   SRW_TAC [][FUN_EQ_THM, permeq_def]);
 
+val app_permeq_left_cancel = store_thm(
+  "app_permeq_left_cancel",
+  ``!p1 p1' p2 p2'. p1 == p1' /\ p1 ++ p2 == p1' ++ p2' ==> p2 == p2'``,
+  REPEAT STRIP_TAC THEN
+  `REVERSE p1 == REVERSE p1'` by METIS_TAC [permof_REVERSE_monotone] THEN
+  `(REVERSE p1) ++ p1 ++ p2 == (REVERSE p1') ++ p1' ++ p2'`
+    by (METIS_TAC [app_permeq_monotone, listTheory.APPEND_ASSOC]) THEN
+  `[] ++ p2 == (REVERSE p1) ++ p1 ++ p2 /\
+   [] ++ p2' == (REVERSE p1') ++ p1' ++ p2'`
+    by (METIS_TAC [app_permeq_monotone, permeq_refl, permeq_sym, permof_inverse]) THEN
+  METIS_TAC [listTheory.APPEND, permeq_refl, permeq_sym, permeq_trans]);
+
+val app_permeq_right_cancel = store_thm(
+  "app_permeq_right_cancel",
+  ``!p1 p1' p2 p2'. p1 == p1' /\ p2 ++ p1 == p2' ++ p1' ==> p2 == p2'``,
+  REPEAT STRIP_TAC THEN
+  `REVERSE p1 == REVERSE p1'` by METIS_TAC [permof_REVERSE_monotone] THEN
+  `p2 ++ (p1 ++ (REVERSE p1)) == p2' ++ (p1' ++ (REVERSE p1'))`
+    by (METIS_TAC [app_permeq_monotone, listTheory.APPEND_ASSOC]) THEN
+  `p2 ++ [] == p2 ++ (p1 ++ (REVERSE p1)) /\
+   p2' ++ [] == p2' ++ (p1' ++ (REVERSE p1'))`
+    by (METIS_TAC [app_permeq_monotone, permeq_refl, permeq_sym, permof_inverse]) THEN
+  METIS_TAC [listTheory.APPEND_NIL, permeq_refl, permeq_trans, permeq_sym]);
 
 (* ----------------------------------------------------------------------
     Define what it is to be a permutation action on a type
