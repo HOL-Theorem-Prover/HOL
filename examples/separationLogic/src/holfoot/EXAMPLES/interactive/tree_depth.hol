@@ -11,6 +11,7 @@ open treeTheory
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/tree_depth.dsf"];
+val file2 = concat [examplesDir, "/interactive/tree_depth.dsf2"];
 val spec_t = parse_holfoot_file file;
 
 
@@ -31,4 +32,13 @@ val spec_thm = holfoot_interactive_verify_spec true
                 fast = true,
                 use_asms = true,
                 do_prop_simps = true,
-                generate_vcs = true} param file
+                generate_vcs = true} param file;
+
+val spec_thm2 = holfoot_interactive_verify_spec true 
+               {do_case_splits = true,
+                do_expands = true,
+                fast = true,
+                use_asms = true,
+                do_prop_simps = true,
+                generate_vcs = true} param file2;
+

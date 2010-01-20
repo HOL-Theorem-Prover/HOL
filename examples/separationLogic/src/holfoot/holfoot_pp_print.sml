@@ -248,6 +248,45 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           add_string "}";
           end_block ()
        end
+    ) else if (same_const op_term fasl_comment_block_spec_term) orelse
+              (same_const op_term fasl_comment_loop_spec_term) then (
+       let
+          val (pre_term, post_term) = pairSyntax.dest_pair (el 1 args);
+          val prog_term = el 2 args;
+          val loop = same_const op_term fasl_comment_loop_spec_term;
+
+          val (v,pre_body) = pairSyntax.dest_pabs pre_term;
+          val (_,post_body) = pairSyntax.dest_pabs post_term;
+          val vL = free_vars v;
+          val vL' = map (prefix_var_name "!") vL;
+          val su = map (op |->) (zip vL vL');
+          val pre_body' = subst su pre_body;
+          val post_body' = subst su post_body;
+       in
+          begin_block CONSISTENT 0;
+          begin_style [FG LightGrey];
+          add_string (if loop then "loop-specification" else "block-specification");
+          add_string " ";
+          add_string "[";
+          sys (Top, Top, Top) (d - 1) pre_body';
+          add_string "]";
+          end_style ();
+          add_string " ";
+          add_string "{";
+          add_break (1,(!holfoot_pretty_printer_block_indent));
+          begin_block INCONSISTENT 0;
+          sys (Top, Top, Top) (d - 1) prog_term;
+          end_block ();
+          add_break (1,0);
+          add_string "}";
+          add_string " ";
+          begin_style [FG LightGrey];
+          add_string "[";
+          sys (Top, Top, Top) (d - 1) post_body';
+          add_string "]";
+          end_style ();
+          end_block ()
+       end
     ) else if (same_const op_term fasl_prog_cond_critical_section_term)  then (
        let
           val res_term = el 1 args;

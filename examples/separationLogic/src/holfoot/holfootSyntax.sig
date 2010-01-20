@@ -43,6 +43,9 @@ val holfoot_exp_add_term : term
 val holfoot_exp_binop_term : term;
 val holfoot_exp_const_term : term
 val holfoot_exp_mult_term : term
+val holfoot_exp_div_term : term
+val holfoot_exp_mod_term : term
+val holfoot_exp_exp_term : term
 val holfoot_exp_sub_term : term
 val holfoot_exp_var_term : term
 val holfoot_pred_and_term : term

@@ -3,23 +3,23 @@ type arg = int;
 open Tokens;
 type lexresult  = (svalue,pos) token
 
+val linestart_pos = ref 0;
 
 fun mkTok f text pos line =
-  (f text, (pos - String.size text, line), (pos, line));
+  (f text, ((pos - !linestart_pos) - String.size text, line), 
+            (pos - !linestart_pos, line));
 
 fun mkMtTok text pos line = 
-  ((pos - String.size text, line), (pos, line));
+  (((pos - !linestart_pos) - String.size text, line), 
+    (pos - !linestart_pos, line));
 
 fun I x = x;
-val yylineno = ref 0;
-
 fun eof () = EOF ((~1, ~1), (~1, ~1));
 
 
-
-exception LexicalError of string * string * int (* (message, loc1, loc2) *)
+exception LexicalError of string * int * int;
 fun lexError msg text pos line =
-  (raise (LexicalError (msg, text, line)))
+  (raise (LexicalError (text, pos, line)))
 
 
 (* The table of keywords *)
@@ -37,6 +37,9 @@ List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
   ("resource",  RESOURCE),
   ("then",      IFTHEN),
   ("when",      WHEN),
+  ("while",     WHILE),
+  ("block_spec",BLOCK_SPEC),
+  ("loop_spec", LOOP_SPEC),
   ("while",     WHILE),
   ("with",      WITH),
   ("dlseg",     DLSEG),
@@ -67,7 +70,7 @@ fun mkKeyword text pos line =
 %%
 %header (functor HolfootLexFun(structure Tokens : Holfoot_TOKENS));
 %s Comment;
-
+%count
 
 newline=(\010 | \013 | "\013\010");
 blank = [\ | \009 | \012];
@@ -84,7 +87,7 @@ hol_quote = "``" [^ `\``]* "``";
 %%
 
 
-<INITIAL>{newline} => ( continue () );
+<INITIAL>{newline} => ( ((linestart_pos := yypos); continue ()) );
 <INITIAL>{blank} => ( continue () );
 <INITIAL>"/*" =>
   ( (YYBEGIN Comment; lex ()) );
@@ -126,7 +129,7 @@ hol_quote = "``" [^ `\``]* "``";
   ( INFIXOP1 (mkTok I yytext yypos (!yylineno)) );
 <INITIAL>("+" | "-") =>
   ( INFIXOP2 (mkTok I yytext yypos (!yylineno)) );
-<INITIAL>("/" | "%") =>
+<INITIAL>("/" | "%" | "**") =>
   ( INFIXOP3 (mkTok I yytext yypos (!yylineno)) );
 <INITIAL>"*" =>
   ( STAR (mkMtTok yytext yypos (!yylineno)) );

@@ -1,0 +1,13 @@
+list_length(r;c) [data_list(c,cdata)] {
+  local t;
+  r = 0;
+  t = c;
+  loop_spec [(t == #tc) * (r == #rc) * data_list (t, data)] {
+     while (t != NULL) {
+        t = t->tl;
+        r = r + 1;
+     }
+  } [data_list(#tc, data) * (r == ``LENGTH (data:num list) + rc``)]
+} [data_list(c,cdata) * 
+   r == ``LENGTH (cdata:num list)``]
+

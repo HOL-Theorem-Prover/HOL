@@ -152,7 +152,7 @@ open var_res_param.var_res_base;
 
 val verbose_level = ref 0
 val verbose_level_try = ref 0
-val do_profile_ref = ref (Profile.profile_with_exn)
+fun do_profile_ref () = ref (Profile.profile_with_exn)
 
 
 
@@ -1398,7 +1398,7 @@ end;
 (*
 val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
 *)
-fun VAR_RES_COND_INFERENCE___while___CONSEQ_CONV tt =
+fun VAR_RES_COND_INFERENCE___while___invariant___CONSEQ_CONV tt =
 let
     (* destruct everything *)
     val (p1_0,c_opt,_,_,_,thm0_fun) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location tt;
@@ -1481,6 +1481,241 @@ let
 in
    thm6
 end;
+
+
+
+(*
+val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
+*)
+fun VAR_RES_COND_INFERENCE___while___loop_spec___CONSEQ_CONV tt =
+let
+    (* destruct everything *)
+    val (p1_0,c_opt,_,_,_,thm0_fun) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location tt;
+    val (PQ',p1) = dest_fasl_comment_loop_spec p1_0;
+    val (P',Q') = pairSyntax.dest_pair PQ';
+
+    val (pL',_) = listSyntax.dest_list (dest_fasl_prog_block p1);
+    val (p1,pL) = (hd pL', tl pL');
+
+    val (co, while_body') = dest_fasl_prog_while p1;
+    val while_body = dest_fasl_prog_block while_body'
+    val c = if isSome c_opt then valOf c_opt else empty_label_list;
+
+    (*introduce constants*)
+    val thm_const = CONV_RULE (RHS_CONV 
+         VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) (thm0_fun())
+    val (vs, tt') = strip_forall (rhs (concl thm_const))
+   
+
+    (*apply inference*)
+    val (vc, _) = pairSyntax.dest_pabs P';
+    val P_thm = pairTools.PABS_ELIM_CONV P' handle UNCHANGED => REFL P';
+    val Q_thm = pairTools.PABS_ELIM_CONV Q' handle UNCHANGED => REFL Q';
+
+    val pair_PQ_CONV = (RAND_CONV (K Q_thm)) THENC
+                       (RATOR_CONV (RAND_CONV (K P_thm)))  
+    
+    val thm0a = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV 
+                   (RATOR_CONV (RAND_CONV pair_PQ_CONV)) tt'
+
+    val thm0b = HO_PART_MATCH (snd o dest_imp o snd o dest_imp)
+                   VAR_RES_COND_INFERENCE___loop_spec 
+                   (rhs (concl thm0a))
+
+    val thm0 = CONV_RULE ((RAND_CONV o RAND_CONV) ((DEPTH_CONV BETA_CONV) THENC 
+                                        (K (GSYM thm0a)))) thm0b
+
+    (*elim precond*)
+    val precond = (fst o dest_imp o concl) thm0
+    val precond_thm1 = PART_MATCH (fst o dest_imp) var_res_prop___IMPLIES_VAR_DISTINCT 
+            ((fst o dest_imp) precond)
+    val precond_thm2_term = mk_imp ((snd o dest_imp o concl) precond_thm1,
+                                    (snd o dest_imp) precond)
+    val precond_thm2 = var_res_prove precond_thm2_term;
+    val precond_thm = IMP_TRANS precond_thm1 precond_thm2;
+
+    val thm1 = MP thm0 precond_thm;
+
+    (*simplify invariant*)
+    val post_prop = (rand o snd o dest_forall o rand o rator o fst o dest_imp o concl) thm1;
+    val post_prop_thm = ((DEPTH_CONV BETA_CONV) THENC
+                        var_res_prop_input_distinct___ELIM_CONV NONE THENC
+                        COND_PROP___STRONG_EXISTS_NORMALISE_CONV) post_prop;
+
+    val pre_prop = (rand o rator o rator o snd o dest_forall o rand o rator o fst o dest_imp o concl) thm1;
+    val pre_prop_thm = ((DEPTH_CONV BETA_CONV) THENC
+                        var_res_prop_input_distinct___ELIM_CONV NONE THENC
+                        COND_PROP___STRONG_EXISTS_NORMALISE_CONV) pre_prop;
+
+    val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV) (DEPTH_CONV (
+               (REWR_CONV pre_prop_thm) ORELSEC (REWR_CONV post_prop_thm)))) thm1
+
+    (*reintroduce orginal variable names*)
+    val my_intro_conv = (pairTools.SPLIT_QUANT_CONV vc THENC
+                         TRY_CONV LIST_EXISTS_SIMP_CONV)
+    val my_abs_intro_conv = pairTools.PABS_INTRO_CONV vc
+
+    val thm3 = CONV_RULE ((RATOR_CONV o RAND_CONV)
+                  ((RATOR_CONV (RAND_CONV my_intro_conv)) THENC
+                   (RAND_CONV (RAND_CONV (my_intro_conv)) THENC
+                   (RAND_CONV (RATOR_CONV (RAND_CONV (
+                      my_intro_conv THENC
+                      ((STRIP_QUANT_CONV o RATOR_CONV o RAND_CONV o RAND_CONV o
+                        RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) 
+                        (RAND_CONV my_abs_intro_conv THENC
+                         RATOR_CONV (RAND_CONV my_abs_intro_conv)))))))))) thm2
+
+    (*introduce comment while-abstraction*)
+    val new_c1 = fasl_comment_modify_APPEND ("abstracted while-loop block") c
+    val thm4a = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV o
+                   STRIP_QUANT_CONV o 
+                   RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
+                  ((fasl_comment_location2_INTRO_CONV new_c1) THENC
+                   (fasl_comment_abstraction_INTRO_CONV "while-loop block"))) thm3
+
+    (*introduce comment while-skip*)
+    val new_c2 = fasl_comment_modify_APPEND ("while-loop block unroll skip") c
+    val thm4b = CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV o
+                   RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV o
+                   (fn conv => fn t => if listSyntax.is_nil t then conv t else 
+                       (RATOR_CONV o RAND_CONV) conv t))
+                  (fasl_comment_location_INTRO_CONV new_c2)) thm4a
+
+
+    (*introduce comment while-*)
+    val new_c3 = fasl_comment_modify_APPEND ("while-loop block unroll iterate") c
+
+    fun block_list_CONV conv t =
+       if listSyntax.is_nil t then conv t else 
+          (RATOR_CONV o RAND_CONV) conv t
+    fun block_first_CONV conv t =
+         if is_fasl_prog_block t then RAND_CONV (block_list_CONV conv) t else 
+            conv t
+
+    val thm4c = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV o
+                   RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o
+                   block_first_CONV) 			       
+                     (fasl_comment_location_INTRO_CONV new_c3)) thm4b
+
+    val thm4d = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV o
+                   RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
+                  (fasl_comment_abstraction_INTRO_CONV "re-enter while-loop")) thm4c
+
+    (*introduce flatten blocks-*)
+   val block_flatten_conv =
+      (REWR_CONV VAR_RES_COND_INFERENCE___prog_block3) THENC
+      ((RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV) 
+       (list_append_norm_CONV))
+
+    val thm4 = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV) 
+                   block_flatten_conv) thm4d handle HOL_ERR _ => thm4d
+
+   (*combine with thm_const*)
+   val thm5a = LIST_GEN_IMP vs thm4
+   val thm5 = CONV_RULE (RAND_CONV (K (GSYM thm_const))) thm5a
+in
+   thm5
+end;
+
+
+
+
+(******************************************************************************)
+(* HANDLE block specs                                                         *)
+(******************************************************************************)
+
+(*
+val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
+*)
+fun VAR_RES_COND_INFERENCE___block_spec___CONSEQ_CONV tt =
+let
+    (* destruct everything *)
+    val (p1_0,c_opt,_,_,_,thm0_fun) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location tt;
+    val (PQ',p1) = dest_fasl_comment_block_spec p1_0;
+    val (P',Q') = pairSyntax.dest_pair PQ';
+    val c = if isSome c_opt then valOf c_opt else empty_label_list;
+
+    (*introduce constants*)
+    val thm_const = CONV_RULE (RHS_CONV 
+         VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) (thm0_fun())
+    val (vs, tt') = strip_forall (rhs (concl thm_const))
+   
+
+    (*apply inference*)
+    val (vc, _) = pairSyntax.dest_pabs P';
+    val P_thm = pairTools.PABS_ELIM_CONV P' handle UNCHANGED => REFL P';
+    val Q_thm = pairTools.PABS_ELIM_CONV Q' handle UNCHANGED => REFL Q';
+
+    val pair_PQ_CONV = (RAND_CONV (K Q_thm)) THENC
+                       (RATOR_CONV (RAND_CONV (K P_thm)))  
+    
+    val thm0a = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV 
+                   (RATOR_CONV (RAND_CONV pair_PQ_CONV)) tt'
+
+    val thm0b = HO_PART_MATCH (snd o dest_imp o snd o dest_imp)
+                   VAR_RES_COND_INFERENCE___block_spec 
+                   (rhs (concl thm0a))
+
+    val thm0 = CONV_RULE ((RAND_CONV o RAND_CONV) ((DEPTH_CONV BETA_CONV) THENC 
+                                        (K (GSYM thm0a)))) thm0b
+
+    (*elim precond*)
+    val precond = (fst o dest_imp o concl) thm0
+    val precond_thm1 = PART_MATCH (fst o dest_imp) var_res_prop___IMPLIES_VAR_DISTINCT 
+            ((fst o dest_imp) precond)
+    val precond_thm2_term = mk_imp ((snd o dest_imp o concl) precond_thm1,
+                                    (snd o dest_imp) precond)
+    val precond_thm2 = var_res_prove precond_thm2_term;
+    val precond_thm = IMP_TRANS precond_thm1 precond_thm2;
+    val thm1 = MP thm0 precond_thm;
+
+    (*simplify invariant*)
+    val post_prop = (rand o snd o dest_forall o rand o rator o fst o dest_imp o concl) thm1;
+    val post_prop_thm = ((DEPTH_CONV BETA_CONV) THENC
+                        var_res_prop_input_distinct___ELIM_CONV NONE THENC
+                        COND_PROP___STRONG_EXISTS_NORMALISE_CONV) post_prop;
+
+    val pre_prop = (rand o rator o rator o snd o dest_forall o rand o rator o fst o dest_imp o concl) thm1;
+    val pre_prop_thm = ((DEPTH_CONV BETA_CONV) THENC
+                        var_res_prop_input_distinct___ELIM_CONV NONE THENC
+                        COND_PROP___STRONG_EXISTS_NORMALISE_CONV) pre_prop;
+
+    val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV) (DEPTH_CONV (
+               (REWR_CONV pre_prop_thm) ORELSEC (REWR_CONV post_prop_thm)))) thm1
+
+    (*reintroduce orginal variable names*)
+    val my_intro_conv = (pairTools.SPLIT_QUANT_CONV vc THENC
+                         TRY_CONV LIST_EXISTS_SIMP_CONV)
+
+    val thm3 = CONV_RULE ((RATOR_CONV o RAND_CONV)
+                  ((RATOR_CONV (RAND_CONV my_intro_conv)) THENC
+                   (RAND_CONV (my_intro_conv)))) thm2
+
+    (*introduce comment while-abstraction*)
+    val new_c1 = fasl_comment_modify_APPEND ("abstracted block-spec") c
+    val thm4a = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o
+                   STRIP_QUANT_CONV o
+                   RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
+                  ((fasl_comment_location2_INTRO_CONV new_c1) THENC
+                   (fasl_comment_abstraction_INTRO_CONV "block-spec"))) thm3
+
+    (*introduce comment while-skip*)
+    val new_c2 = fasl_comment_modify_APPEND ("block-spec body") c
+    val thm4 = CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV o
+                   RATOR_CONV o RAND_CONV o RAND_CONV o 
+                   (fn conv => fn t => if listSyntax.is_nil t then conv t else 
+                       (RATOR_CONV o RAND_CONV) conv t))
+                  (fasl_comment_location_INTRO_CONV new_c2)) thm4a
+
+   (*combine with thm_const*)
+   val thm5a = LIST_GEN_IMP vs thm4
+   val thm5 = CONV_RULE (RAND_CONV (K (GSYM thm_const))) thm5a
+in
+   thm5
+end;
+
+
+   
 
 
 
@@ -1668,6 +1903,7 @@ in
 end 
 end;
 
+
 (*
    val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
 *)
@@ -1676,7 +1912,9 @@ let
    (*destruct*)
    val (p1,_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
    val (c,p1',p1_thm_fun) = save_dest_fasl_comment_location2 p1 
-   val (pre, _) = dest_var_res_prog_quant_best_local_action p1'
+   val (has_cond, (pre, _)) = 
+        (false, dest_var_res_prog_quant_best_local_action p1') handle HOL_ERR _ =>
+        (true, dest_var_res_prog_cond_quant_best_local_action p1')
    val vc = fst (pairSyntax.dest_pabs pre)
 
    (*elim comment*)
@@ -1687,9 +1925,10 @@ let
 
 
    (*apply inference*)
-   val thm1 = (HO_PART_MATCH (snd o dest_imp)
-          VAR_RES_COND_INFERENCE___var_res_prog_quant_best_local_action) 
-          tt'
+   val base_thm = if has_cond then
+          VAR_RES_COND_INFERENCE___var_res_prog_cond_quant_best_local_action else
+          VAR_RES_COND_INFERENCE___var_res_prog_quant_best_local_action
+   val thm1 = (HO_PART_MATCH (snd o dest_imp) base_thm)  tt'
 
    (*use PBETA_CONV*)
    val thm2 = ANTE_CONV_RULE 
@@ -1724,7 +1963,6 @@ end
 (*
    val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
 *)
-
 fun VAR_RES_COND_INFERENCE___best_local_action___CONV tt =
 let
    (*destruct*)
@@ -2401,12 +2639,15 @@ in
    ISPECL [c, tt] case_split_thm
 end;
 
+(*
+   val tt = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
+*)
 fun VAR_RES_FRAME_SPLIT_INFERENCE___case_split___CONV tt =
 let
    val _ = if is_VAR_RES_FRAME_SPLIT tt then () else raise UNCHANGED;
    val heuristicL = (case_split_heuristic___is_cond)::
       var_res_param.frame_split_case_splitL
-   val c = tryfind (fn h => h tt) heuristicL;
+   val c = tryfind (fn h => h (rator tt)) heuristicL;
 in
    ISPECL [c, tt] case_split_thm
 end;
@@ -2857,15 +3098,21 @@ val VAR_RES_INFERENCES_LIST___simulate_command = ("simulate command",
    ("local_vars_arg",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___local_vars_args___CONSEQ_CONV),
-   ("while", 
+   ("while_invariant", 
        no_context_strengthen_conseq_conv
-       VAR_RES_COND_INFERENCE___while___CONSEQ_CONV),
+       VAR_RES_COND_INFERENCE___while___invariant___CONSEQ_CONV),
+   ("while_loop_spec", 
+       no_context_strengthen_conseq_conv
+       VAR_RES_COND_INFERENCE___while___loop_spec___CONSEQ_CONV),
    ("abstractions",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___abstracted_code___CONV),
    ("hoare_triple_solve",
        no_context_strengthen_conseq_conv
-       VAR_RES_COND_INFERENCE___final___CONSEQ_CONV)]@
+       VAR_RES_COND_INFERENCE___final___CONSEQ_CONV),
+   ("block_spec", 
+       no_context_strengthen_conseq_conv
+       VAR_RES_COND_INFERENCE___block_spec___CONSEQ_CONV)]@
    var_res_param.INFERENCES_LIST___simulate_command):var_res_inference_group;
 
 
@@ -3060,7 +3307,7 @@ fun step_conv_map_fun l s1 (s2, c:var_res_inference) =
   let
      val s = s1 ^ " - "^s2;
      fun conv fast ss context dir t = 
-        (((!do_profile_ref) s (fn () =>
+        (((!(do_profile_ref ())) s (fn () =>
          (c fast ss context dir t))) ())
      fun conv2 fast ss context dir = if !verbose_level = 0 then conv fast ss context dir else
          (fn t => let

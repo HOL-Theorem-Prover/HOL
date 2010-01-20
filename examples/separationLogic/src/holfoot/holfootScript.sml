@@ -5559,7 +5559,6 @@ ASM_REWRITE_TAC[]);
 
 
 
-
 val VAR_RES_FRAME_SPLIT___data_list_seg_num___REMOVE_START___REWRITE___not_in_heap = store_thm (
 "VAR_RES_FRAME_SPLIT___data_list_seg_num___REMOVE_START___REWRITE___not_in_heap",
 ``!wpb rpb wpb' e2 e3 tl n m e1 data1 data2 sfb_context sfb_split sfb_imp.
@@ -6139,9 +6138,6 @@ REPEAT STRIP_TAC THEN
 MATCH_MP_TAC VAR_RES_FRAME_SPLIT___REWRITE_OK___THM THEN
 MATCH_MP_TAC (MP_CANON VAR_RES_FRAME_SPLIT___data_list_seg___REMOVE_START___REWRITE) THEN
 ASM_REWRITE_TAC[]);
-
-
-
 
 
 

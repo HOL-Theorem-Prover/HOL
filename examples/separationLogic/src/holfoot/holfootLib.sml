@@ -1470,7 +1470,7 @@ let
 
    (*apply inference*)
    val thm1 = PART_MATCH (lhs o snd o dest_imp o snd o dest_imp)
-      VAR_RES_FRAME_SPLIT___data_list_seg___REMOVE_START 
+      VAR_RES_FRAME_SPLIT___data_list_seg___REMOVE_START
       (rhs (concl thm0))
    val thm2 = MP thm1 imp_thm
    val thm3 = var_res_precondition_prove thm2

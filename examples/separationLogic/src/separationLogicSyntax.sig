@@ -133,6 +133,15 @@ val dest_fasl_comment_loop_invariant : term -> term * term;
 val is_fasl_comment_loop_invariant : term -> bool;
 
 
+val fasl_comment_block_spec_term : term
+val dest_fasl_comment_block_spec : term -> term * term;
+val is_fasl_comment_block_spec : term -> bool;
+
+val fasl_comment_loop_spec_term : term
+val dest_fasl_comment_loop_spec : term -> term * term;
+val is_fasl_comment_loop_spec : term -> bool;
+
+
 val fasl_comment_location_term : term
 val dest_fasl_comment_location : term -> term * term
 val save_dest_fasl_comment_location : term -> term * term * (unit -> thm)

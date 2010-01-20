@@ -3,12 +3,18 @@ val _ = loadPath :=
             (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) :: 
             !loadPath;
 
+use (Globals.HOLDIR ^ "/tools/hol-mode.sml");
+
 val _ = map load ["holfootParser", "holfoot_pp_print", "holfootLib"];
 open holfootParser;
 open holfoot_pp_print;
 open holfootLib;
 
 val _ = Feedback.set_trace "Unicode" 0;
+val _ = Feedback.set_trace "PPBackEnd use annotations" 0;
+val _ = Feedback.set_trace "PPBackEnd use styles" 1;
+val _ = Feedback.set_trace "PPBackEnd show types" 0;
+val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 
 val examplesDir = 
     concat [Globals.HOLDIR, 

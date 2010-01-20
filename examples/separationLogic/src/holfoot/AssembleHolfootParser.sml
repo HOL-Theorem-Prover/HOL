@@ -14,10 +14,27 @@ struct
           structure LrParser = LrParser)
 
   fun invoke lexstream = let
+    open PPBackEnd;
+    val error_count = ref 0;
     fun print_error (s,(j:int,i:int),_) =
-        TextIO.output(TextIO.stdErr, Int.toString i ^ ": " ^ s ^ "\n")
+        ((if (!error_count > 0) then () else print "\n");
+        (error_count := !error_count + 1);
+        Parse.print_with_style [FG OrangeRed, Bold, Underline] "Error:";
+        Parse.print_with_style [FG OrangeRed] (" "^
+            " line "^(Int.toString (i+1)) ^ ", char " ^ 
+               (Int.toString (j+2)) ^": " ^ s ^ "\n");
+       (if (!error_count > 15) then Feedback.fail() else ()));
+
+    val r = (#1 (DiskFileParser.parse(15,lexstream,print_error,())))
+        handle HolfootLex.UserDeclarations.LexicalError (tok, j, i) =>
+           let
+              val s = "lex error - ill formed token \""^tok^"\"";
+              val _ = print_error (s, (j, i), (j,i));
+           in
+              Feedback.fail()
+           end;
   in
-    #1 (DiskFileParser.parse(15,lexstream,print_error,()))
+    (if (!error_count > 0) then Feedback.fail() else r)
   end
 
   fun raw_read_stream strm = let

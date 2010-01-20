@@ -244,6 +244,13 @@ val fasl_comment_loop_invariant_term = asl_mk_const "fasl_comment_loop_invariant
 val dest_fasl_comment_loop_invariant = strip_comb_2 fasl_comment_loop_invariant_term;
 val is_fasl_comment_loop_invariant = (can dest_fasl_comment_loop_invariant);
 
+val fasl_comment_block_spec_term = asl_mk_const "fasl_comment_block_spec"
+val dest_fasl_comment_block_spec = strip_comb_2 fasl_comment_block_spec_term;
+val is_fasl_comment_block_spec = (can dest_fasl_comment_block_spec);
+
+val fasl_comment_loop_spec_term = asl_mk_const "fasl_comment_loop_spec"
+val dest_fasl_comment_loop_spec = strip_comb_2 fasl_comment_loop_spec_term;
+val is_fasl_comment_loop_spec = (can dest_fasl_comment_loop_spec);
 
 val fasl_comment_location_string_term = asl_mk_const "fasl_comment_location_string"
 val dest_fasl_comment_location_string = strip_comb_2 fasl_comment_location_string_term;
@@ -298,6 +305,10 @@ fun dest_fasl_comment t =
             fasl_comment_loop_invariant_def
          else if (same_const op_term fasl_comment_abstraction_term) then 
             fasl_comment_abstraction_def
+         else if (same_const op_term fasl_comment_loop_spec_term) then 
+            fasl_comment_loop_spec_def
+         else if (same_const op_term fasl_comment_block_spec_term) then 
+            fasl_comment_block_spec_def
          else Feedback.fail();
    in
      (op_term, arg1, arg2, def_thm)   

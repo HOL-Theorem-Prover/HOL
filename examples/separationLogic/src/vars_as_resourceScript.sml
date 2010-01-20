@@ -4950,6 +4950,20 @@ MATCH_MP_TAC (MP_CANON FASL_PROGRAM_IS_ABSTRACTION___block) THEN
 ASM_REWRITE_TAC[FASL_PROGRAM_IS_ABSTRACTION___REFL]);
 
 
+val VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block_simple = store_thm (
+"VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block_simple",
+``!f P prog1 prog2 progL Q.
+  (VAR_RES_PROGRAM_IS_ABSTRACTION f prog1 prog2) ==>
+  (VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (prog2::progL)) Q ==>
+   VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (prog1::progL)) Q)``,
+
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC (MP_CANON VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_EVAL) THEN
+Q.EXISTS_TAC `fasl_prog_block (prog2::progL)` THEN
+FULL_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
+MATCH_MP_TAC (MP_CANON FASL_PROGRAM_IS_ABSTRACTION___block) THEN
+ASM_REWRITE_TAC[FASL_PROGRAM_IS_ABSTRACTION___REFL]);
+
 val var_res_best_local_action_def = Define `
     var_res_best_local_action f P Q =
     quant_best_local_action f (\x s. s IN P /\ (s = x))
@@ -5235,6 +5249,22 @@ ASM_SIMP_TAC std_ss [var_res_prog_quant_best_local_action_def,
    FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
    VAR_RES_HOARE_TRIPLE_def, PAIR_FORALL_THM]);
 
+
+
+val FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action =
+store_thm ("FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action",
+``!xenv penv P prog Q.
+  IS_VAR_RES_COMBINATOR (FST xenv) ==>
+
+  (FASL_PROGRAM_IS_ABSTRACTION xenv penv prog
+     (var_res_prog_best_local_action P Q) =
+  VAR_RES_HOARE_TRIPLE xenv penv P prog Q)``,
+
+REPEAT STRIP_TAC THEN
+IMP_RES_TAC IS_SEPARATION_COMBINATOR___IS_VAR_RES_COMBINATOR THEN
+ASM_SIMP_TAC std_ss [var_res_prog_best_local_action_def,
+   FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
+   VAR_RES_HOARE_TRIPLE_def]);
 
 
 val VAR_RES_HOARE_TRIPLE___comment___ELIM_preserve_names =
@@ -7226,8 +7256,8 @@ REPEAT STRIP_TAC THENL [
 
 
 
-val VAR_RES_COND_INFERENCE___var_res_prog_quant_cond_best_local_action = store_thm (
-"VAR_RES_COND_INFERENCE___var_res_prog_quant_cond_best_local_action",
+val VAR_RES_COND_INFERENCE___var_res_prog_cond_quant_best_local_action = store_thm (
+"VAR_RES_COND_INFERENCE___var_res_prog_cond_quant_best_local_action",
 ``!f P qP qQ progL Q.
 
   (?x.
@@ -11964,7 +11994,7 @@ Q.EXISTS_TAC `var_res_prog_cond_quant_best_local_action
 ASM_REWRITE_TAC [GSYM fasl_prog_assume_def] THEN
 Tactical.REVERSE CONJ_TAC THEN1 (
    FULL_SIMP_TAC std_ss [GSYM VAR_RES_COND_INFERENCE___prog_block] THEN
-   MATCH_MP_TAC VAR_RES_COND_INFERENCE___var_res_prog_quant_cond_best_local_action THEN
+   MATCH_MP_TAC VAR_RES_COND_INFERENCE___var_res_prog_cond_quant_best_local_action THEN
    Q.EXISTS_TAC `x` THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
@@ -11989,6 +12019,104 @@ REPEAT STRIP_TAC THEN
 ) THEN
 ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___var_res_quant_best_local_action,
    VAR_RES_INFERENCE___prog_kleene_star]);
+
+
+
+val VAR_RES_COND_INFERENCE___block_spec =
+store_thm ("VAR_RES_COND_INFERENCE___block_spec",
+``!f P wp rp d P' Q' p prog Q.
+(FST P ==> ALL_DISTINCT d) ==>
+((!x. VAR_RES_COND_HOARE_TRIPLE f
+        (var_res_prop_input_distinct f (wp,rp) d (P' x))
+        p
+        (var_res_prop_input_distinct f (wp,rp) d (Q' x))) /\
+
+?x. VAR_RES_COND_HOARE_TRIPLE f P
+   (fasl_prog_block (
+       (var_res_prog_cond_best_local_action
+            (var_res_prop_input_distinct f (wp,rp) d (P' x))
+            (var_res_prop_input_distinct f (wp,rp) d (Q' x)))::
+       prog)) Q) ==>
+
+VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (
+(fasl_comment_block_spec ((\x. var_res_prop_input_ap_distinct f (wp,rp) d (P' x)),
+                          (\x. var_res_prop_input_ap_distinct f (wp,rp) d (Q' x))) 
+                         p)::prog)) Q``,
+
+REPEAT STRIP_TAC THEN
+Tactical.REVERSE (Cases_on `FST P /\ IS_SEPARATION_COMBINATOR f /\ FST Q`) THEN1 (
+   FULL_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def]
+) THEN
+MATCH_MP_TAC (MP_CANON VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block_simple) THEN
+SIMP_TAC std_ss [fasl_comment_block_spec_def] THEN
+Q.EXISTS_TAC `var_res_prog_cond_best_local_action
+              (var_res_prop_input_distinct f (wp,rp) d (P' x))
+              (var_res_prop_input_distinct f (wp,rp) d (Q' x))` THEN
+FULL_SIMP_TAC std_ss [] THEN
+Q.PAT_ASSUM `ALL_DISTINCT d` ASSUME_TAC THEN
+`IS_VAR_RES_COMBINATOR (VAR_RES_COMBINATOR f)` by METIS_TAC[IS_VAR_RES_COMBINATOR_def] THEN
+FULL_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
+   var_res_prog_cond_best_local_action_def, COND_RAND, 
+   COND_RATOR, var_res_prop_input_distinct_def,
+   FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action,
+   VAR_RES_COND_HOARE_TRIPLE_def]);
+
+
+
+val VAR_RES_COND_INFERENCE___loop_spec =
+store_thm ("VAR_RES_COND_INFERENCE___loop_spec",
+``!f P wp rp d P' Q' p prog1 prog2 c Q.
+(FST P ==> ALL_DISTINCT d) ==>
+((!x. VAR_RES_COND_HOARE_TRIPLE f
+        (var_res_prop_input_distinct f (wp,rp) d (P' x))
+        (fasl_prog_block (fasl_prog_assume (fasl_pred_neg c)::prog1))
+        (var_res_prop_input_distinct f (wp,rp) d (Q' x))) /\
+
+(!x. VAR_RES_COND_HOARE_TRIPLE f (var_res_prop_input_distinct f (wp,rp) d (P' x))
+  (fasl_prog_block [fasl_prog_assume c;p;
+      (var_res_prog_cond_quant_best_local_action
+           (\x. (var_res_prop_input_distinct f (wp,rp) d (P' x)))
+           (\x. (var_res_prop_input_distinct f (wp,rp) d (Q' x))))]) 
+    (var_res_prop_input_distinct f (wp,rp) d (Q' x))) /\
+
+?x. VAR_RES_COND_HOARE_TRIPLE f P
+   (fasl_prog_block (
+       (var_res_prog_cond_best_local_action
+            (var_res_prop_input_distinct f (wp,rp) d (P' x))
+            (var_res_prop_input_distinct f (wp,rp) d (Q' x)))::
+       prog2)) Q) ==>
+
+VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (
+   (fasl_comment_loop_spec ((\x. var_res_prop_input_ap_distinct f (wp,rp) d (P' x)),
+                            (\x. var_res_prop_input_ap_distinct f (wp,rp) d (Q' x))) 
+   (fasl_prog_block ((fasl_prog_while c p)::prog1)))::prog2)) Q``,
+
+
+
+REPEAT STRIP_TAC THEN
+Tactical.REVERSE (Cases_on `FST P /\ IS_SEPARATION_COMBINATOR f /\ FST Q`) THEN1 (
+   FULL_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def]
+) THEN
+
+REWRITE_TAC [prove (``fasl_comment_loop_spec = fasl_comment_block_spec``, 
+   SIMP_TAC std_ss [FUN_EQ_THM, fasl_comment_block_spec_def, 
+       fasl_comment_loop_spec_def])] THEN
+MATCH_MP_TAC (MP_CANON VAR_RES_COND_INFERENCE___block_spec) THEN
+ASM_REWRITE_TAC[] THEN
+Tactical.REVERSE CONJ_TAC THEN1 METIS_TAC[] THEN
+
+FULL_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
+   var_res_prop_input_distinct_def, VAR_RES_HOARE_TRIPLE_def] THEN
+Q.PAT_ASSUM `ALL_DISTINCT d` ASSUME_TAC THEN
+SIMP_TAC std_ss [GSYM pairTheory.ELIM_PFORALL] THEN
+HO_MATCH_MP_TAC FASL_INFERENCE_prog_while_frame THEN
+
+FULL_SIMP_TAC std_ss [GSYM VAR_RES_HOARE_TRIPLE_def,
+   var_res_prog_cond_quant_best_local_action_def,
+   GSYM var_res_prog_quant_best_local_action_def,
+   IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
+   pairTheory.ELIM_PFORALL]
+);
 
 
 

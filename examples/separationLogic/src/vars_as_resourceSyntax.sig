@@ -13,6 +13,7 @@ val VAR_RES_PROP_IS_EQUIV_FALSE_term : term
 val var_res_best_local_action_term : term
 val var_res_bool_proposition_term : term
 val var_res_cond_best_local_action_term : term
+val var_res_prog_cond_quant_best_local_action_term : term
 val var_res_exp_binop_term : term
 val var_res_exp_const_term : term
 val var_res_exp_var_term : term
@@ -52,10 +53,10 @@ val var_res_prop_unequal_term : term
 val var_res_prop_varlist_update_term : term
 val var_res_strip_local_vars : term -> (term * term option) list * term
 
+val VAR_RES_COND_HOARE_TRIPLE___location_inc_CONV : conv
 val dest_VAR_RES_COND_HOARE_TRIPLE : term -> term * term * term * term
 val dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND : term -> term * term * term * term * term
 val dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location : term -> term * term option * term * term * term * (unit -> thm)
-val VAR_RES_COND_HOARE_TRIPLE___location_inc_CONV : conv
 val dest_VAR_RES_FRAME_SPLIT : term -> term * term * term * term * term * term * term * term
 val dest_VAR_RES_HOARE_TRIPLE : term -> term * term * term * term * term
 val dest_VAR_RES_IS_PURE_PROPOSITION : term -> term * term
@@ -80,6 +81,7 @@ val dest_var_res_prog_assign : term -> term * term
 val dest_var_res_prog_best_local_action : term -> term * term
 val dest_var_res_prog_call_by_value_arg : term -> term * term * term
 val dest_var_res_prog_cond_best_local_action : term -> term * term
+val dest_var_res_prog_cond_quant_best_local_action : term -> term * term
 val dest_var_res_prog_eval_expressions : term -> term * term
 val dest_var_res_prog_local_var : term -> term * term
 val dest_var_res_prog_parallel_procedure_call : term -> term * term * term * term
@@ -126,6 +128,7 @@ val is_var_res_prog_assign : term -> bool
 val is_var_res_prog_best_local_action : term -> bool
 val is_var_res_prog_call_by_value_arg : term -> bool
 val is_var_res_prog_cond_best_local_action : term -> bool
+val is_var_res_prog_cond_quant_best_local_action : term -> bool
 val is_var_res_prog_eval_expressions : term -> bool
 val is_var_res_prog_local_var : term -> bool
 val is_var_res_prog_parallel_procedure_call : term -> bool

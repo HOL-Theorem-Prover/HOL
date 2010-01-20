@@ -239,7 +239,9 @@ val var_res_prog_cond_best_local_action_term = var_res_mk_const "var_res_prog_co
 val dest_var_res_prog_cond_best_local_action = strip_comb_2 var_res_prog_cond_best_local_action_term;
 val is_var_res_prog_cond_best_local_action = (can dest_var_res_prog_cond_best_local_action);
 
-
+val var_res_prog_cond_quant_best_local_action_term = var_res_mk_const "var_res_prog_cond_quant_best_local_action";
+val dest_var_res_prog_cond_quant_best_local_action = strip_comb_2 var_res_prog_cond_quant_best_local_action_term;
+val is_var_res_prog_cond_quant_best_local_action = (can dest_var_res_prog_cond_quant_best_local_action);
 
 
 val dest_var_res_prog_procedure_call = strip_comb_2 var_res_prog_procedure_call_term;

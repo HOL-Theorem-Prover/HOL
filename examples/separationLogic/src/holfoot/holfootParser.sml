@@ -98,6 +98,9 @@ fun holfoot_p_expression2term (Pexp_ident x) =
       val opterm = if (opstring = "-") then holfoot_exp_sub_term else
                              if (opstring = "+") then holfoot_exp_add_term else
                              if (opstring = "*") then holfoot_exp_mult_term else
+                             if (opstring = "/") then holfoot_exp_div_term else
+                             if (opstring = "%") then holfoot_exp_mod_term else
+                             if (opstring = "^") then holfoot_exp_exp_term else
                                 Raise (holfoot_unsupported_feature_exn ("Pexp_infix "^opstring));
       val (t1,vs1) = holfoot_p_expression2term e1;
       val (t2,vs2) = holfoot_p_expression2term e2;
@@ -889,6 +892,51 @@ fun holfoot_p_statement2term resL funL (Pstm_assign (v, expr)) =
          end
    in
       (i_term, read_var_set, write_var_set, funcalls)
+   end
+| holfoot_p_statement2term resL funL (Pstm_block_spec (loop, rwOpt, pre, stm1, post)) =
+   let
+      val (pre_term,pre_read_var_set) = holfoot_a_proposition2term pre;
+      val (post_term,post_read_var_set) = holfoot_a_proposition2term post;
+      val (force_user_wr, write_var_set_user, read_var_set_user) = decode_rwOpt rwOpt;
+
+      val (stm1_term, stm_read_var_set, stm_write_var_set, funcalls) = holfoot_p_statement2term resL funL stm1;
+
+      val write_var_set = HOLset.union (stm_write_var_set, write_var_set_user);
+      val read_var_set = HOLset.union (pre_read_var_set, HOLset.union (post_read_var_set, 
+                            HOLset.union (stm_read_var_set, read_var_set_user)));
+      val read_var_set = HOLset.difference (read_var_set, write_var_set);
+      val (write_var_set, read_var_set) = if force_user_wr then
+          (write_var_set_user, read_var_set_user) else (write_var_set, read_var_set); 
+
+      val (pre_term2, post_term2) = 
+         let
+            val pre_t = mk_holfoot_prop_input write_var_set read_var_set NONE pre_term
+            val post_t = mk_holfoot_prop_input write_var_set read_var_set NONE post_term
+            val cond_free_var_list = 
+               let
+                  val set1 = FVL [pre_t, post_t] empty_tmset;
+                  val set2 = FVL [stm1_term] empty_tmset;
+                  val set3 = HOLset.difference (set1, set2);
+               in
+                  HOLset.listItems set3
+               end;
+            val pre_t' = mk_list_pabs cond_free_var_list pre_t
+            val post_t' = mk_list_pabs cond_free_var_list post_t
+         in
+            (pre_t', post_t')
+         end
+      val stm1_term = if not loop then stm1_term else
+          let
+             val stm1_term' = if is_fasl_prog_block stm1_term then stm1_term else 
+                 (mk_comb (holfoot_prog_block_term, listSyntax.mk_list ([stm1_term], Type `:holfoot_program`)));
+          in
+             stm1_term'
+          end;
+      val spec_term = list_mk_icomb (
+          (if loop then fasl_comment_loop_spec_term else fasl_comment_block_spec_term),
+          [pairSyntax.mk_pair (pre_term2, post_term2), stm1_term]);
+   in
+      (spec_term, read_var_set, write_var_set, funcalls)
    end
 | holfoot_p_statement2term resL funL (Pstm_withres (res, cond, stm1)) =
    let

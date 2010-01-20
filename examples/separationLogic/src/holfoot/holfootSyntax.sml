@@ -135,7 +135,10 @@ val holfoot_exp_binop_term = ``(var_res_exp_binop :(num -> num -> num) ->
 val holfoot_exp_add_term = mk_comb (holfoot_exp_binop_term, numSyntax.plus_tm)
 val holfoot_exp_sub_term = mk_comb (holfoot_exp_binop_term, numSyntax.minus_tm)
 val holfoot_exp_mult_term = mk_comb (holfoot_exp_binop_term, numSyntax.mult_tm)
-
+val holfoot_exp_div_term = mk_comb (holfoot_exp_binop_term, numSyntax.div_tm)
+val holfoot_exp_mod_term = mk_comb (holfoot_exp_binop_term, numSyntax.mod_tm)
+val holfoot_exp_exp_term = mk_comb (holfoot_exp_binop_term, numSyntax.exp_tm)
+open numSyntax
 
 val holfoot_prog_best_local_action_term =
    ``var_res_prog_best_local_action : holfoot_a_proposition -> holfoot_a_proposition ->

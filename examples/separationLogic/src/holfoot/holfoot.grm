@@ -42,7 +42,6 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
 %name Holfoot
 %eop EOF
 %term AMPERAMPER 
-  |  BANGEQUAL
   |  BARBAR
   |  COLON
   |  COMMA
@@ -53,6 +52,7 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
   |  EOF
   |  EQUAL
   |  EQUALEQUAL
+  |  BANGEQUAL
   |  FF
   |  IDENT of string
   |  QIDENT of string
@@ -89,6 +89,8 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
   |  TT
   |  WHEN
   |  WHILE
+  |  BLOCK_SPEC
+  |  LOOP_SPEC
   |  WITH
   |  XLSEG
   |  XOR
@@ -225,6 +227,10 @@ statement:
 	  ( Pstm_if(condition, statement1, statement2) )
   | WHILE LPAREN condition RPAREN read_write_decl invariant statement
 	  ( Pstm_while(read_write_decl, invariant, condition, statement) )
+  | BLOCK_SPEC read_write_decl LBRACKET a_proposition RBRACKET statement LBRACKET a_proposition RBRACKET
+	  ( Pstm_block_spec(false, read_write_decl, a_proposition1, statement, a_proposition2) )
+  | LOOP_SPEC read_write_decl LBRACKET a_proposition RBRACKET statement LBRACKET a_proposition RBRACKET
+	  ( Pstm_block_spec(true, read_write_decl, a_proposition1, statement, a_proposition2) )
   | WITH IDENT WHEN LPAREN condition RPAREN statement
           ( Pstm_withres(IDENT,condition,statement) )
   | IDENT LPAREN actual_params RPAREN SEMI
@@ -282,6 +288,8 @@ expression:
 	  ( (Pexp_infix("^", expression1, expression2)) )
   | expression INFIXOP2 expression
 	  ( (Pexp_infix(INFIXOP2, expression1, expression2)) )
+  | expression STAR expression
+	  ( (Pexp_infix("*", expression1, expression2)) )
   | expression INFIXOP3 expression
 	  ( (Pexp_infix(INFIXOP3, expression1, expression2)) )
 

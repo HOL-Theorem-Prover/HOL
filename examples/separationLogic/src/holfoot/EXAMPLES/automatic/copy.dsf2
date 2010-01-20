@@ -1,0 +1,28 @@
+list_copy(z;c) [data_list(c,data)] {
+  local x,y,w,d;
+  if (c==NULL) {z=NULL;} 
+  else {
+    z=new();
+    z->tl=NULL;
+    x = c->dta; 
+    z->dta = x;
+    w=z; 
+    y=c->tl; 
+    
+    loop_spec [(w |-> tl:0,dta:#date) * 
+               (w == #wc) * (y == #yc) *
+               (data_list (y, data2))] {
+      while (y!=NULL) {
+        d=new();
+        d->tl=NULL;
+        x=y->dta;
+        d->dta=x;
+        w->tl=d; 
+        w=d; 
+        y=y->tl;
+      }
+    } [data_list(#wc, ``date::data2``) * 
+       data_list(#yc, data2)]
+  }
+} [data_list(c,data) * data_list(z,data)]
+

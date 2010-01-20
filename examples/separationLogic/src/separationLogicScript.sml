@@ -2268,6 +2268,20 @@ Cases_on `a1 s` THENL [
 ]);
 
 
+val HOARE_INFERENCE___SUP_fasl_action_order = store_thm (
+ "HOARE_INFERENCE___SUP_fasl_action_order",
+``HOARE_TRIPLE P (SUP_fasl_action_order M) Q =
+  (!m. m IN M ==> (HOARE_TRIPLE P m Q))``,
+SIMP_TAC std_ss [HOARE_TRIPLE_def, 
+   fasl_order_THM2, SOME___SUP_fasl_action_order,
+   SUBSET_DEF, IN_BIGUNION, IN_IMAGE,
+   GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
+   GSYM LEFT_FORALL_IMP_THM] THEN
+REPEAT STRIP_TAC THEN EQ_TAC THEN (
+   REPEAT STRIP_TAC THEN
+   RES_TAC THEN
+   FULL_SIMP_TAC std_ss [IS_SOME_EXISTS]
+));
 
 
 val INF_fasl_action_order_def = Define `
@@ -8652,6 +8666,20 @@ SIMP_TAC std_ss [FUN_EQ_THM]);
 
 
 
+val FASL_PROGRAM_SEM___prog_quant_best_local_action = store_thm (
+"FASL_PROGRAM_SEM___prog_quant_best_local_action",
+``!xenv penv qP qQ. 
+   IS_SEPARATION_COMBINATOR (FST xenv) ==>
+   (FASL_PROGRAM_SEM xenv penv (fasl_prog_quant_best_local_action qP qQ) =
+    (quant_best_local_action (FST xenv) qP qQ))``,
+
+Cases_on `xenv` THEN
+SIMP_TAC std_ss [fasl_prog_quant_best_local_action_def,
+   FASL_PROGRAM_SEM___prim_command,
+   FASL_ATOMIC_ACTION_SEM_def, EVAL_fasl_prim_command_THM,
+   quant_best_local_action_THM]);
+
+
 val FASL_INFERENCE_prog_quant_best_local_action = store_thm ("FASL_INFERENCE_prog_quant_best_local_action",
 ``!xenv penv qP qQ arg.
 (IS_SEPARATION_COMBINATOR (FST xenv)) ==>
@@ -9251,8 +9279,34 @@ SIMP_TAC std_ss [SUP_fasl_action_order_def, IMAGE_EMPTY,
                  BIGUNION_EMPTY, fasla_diverge_def]);
 
 
+val SUP_fasl_action_order___SING = store_thm (
+"SUP_fasl_action_order___SING",
+``!a. SUP_fasl_action_order {a:'a fasl_action} = a``,
+
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+SIMP_TAC std_ss [SUP_fasl_action_order_def, 
+  SUP_fasl_order_def, IN_SING,
+  IN_IMAGE, COND_RAND, COND_RATOR,
+  IMAGE_INSERT, IMAGE_EMPTY,
+  BIGUNION_EMPTY, BIGUNION_INSERT,
+  UNION_EMPTY] THEN
+GEN_TAC THEN
+Cases_on `a x` THEN
+SIMP_TAC std_ss []);
 
 
+
+val fasla_seq___SUP_fasl_action_order___left = store_thm ("fasla_seq___SUP_fasl_action_order___left",
+``!M a2. 
+(fasla_seq (SUP_fasl_action_order M ) a2 =
+ SUP_fasl_action_order (\a. ?a1. (a1 IN M) /\ (a = fasla_seq a1 a2)))``,
+
+REPEAT STRIP_TAC THEN
+CONV_TAC (LHS_CONV (RAND_CONV (REWR_CONV (GSYM SUP_fasl_action_order___SING)))) THEN
+
+SIMP_TAC std_ss [fasla_seq___SUP_fasl_action_order, NOT_SING_EMPTY,
+   IN_SING]);
+    
 
 val FASL_PROGRAM_SEM___fasl_prog_critical_section =
 store_thm ("FASL_PROGRAM_SEM___fasl_prog_critical_section",
@@ -9688,6 +9742,12 @@ METIS_TAC[FASL_INFERENCE_assume, pairTheory.FST]);
 val fasl_comment_loop_invariant_def = Define `
 fasl_comment_loop_invariant x p = p`
 
+val fasl_comment_block_spec_def = Define `
+fasl_comment_block_spec x p = p`
+
+val fasl_comment_loop_spec_def = Define `
+fasl_comment_loop_spec x p = p`
+
 val fasl_comment_location_def = Define `
 fasl_comment_location (x:label list) p = p`
 
@@ -9706,25 +9766,19 @@ val fasl_comment_abstraction_def = Define `
 fasl_comment_abstraction (x:label) p = p`
 
 
-val fasl_comments_ELIM = save_thm ("fasl_comments_ELIM",
-LIST_CONJ [fasl_comment_location_def,
-           fasl_comment_location2_def,
-           fasl_comment_location_string_def,
-           fasl_comment_loop_invariant_def,
-           fasl_comment_abstraction_def]);
-
-
 val comments_thmL = [fasl_comment_location_def,
            fasl_comment_location2_def,
            fasl_comment_location_string_def,
            fasl_comment_loop_invariant_def,
-           fasl_comment_abstraction_def]
+           fasl_comment_abstraction_def,
+           fasl_comment_loop_spec_def,
+           fasl_comment_block_spec_def];
 val fasl_comments_ELIM = save_thm ("fasl_comments_ELIM",
 LIST_CONJ comments_thmL);
 
 val fasl_comments_TF_ELIM = save_thm ("fasl_comments_TF_ELIM",
 let
-   val thmL = map (CONV_RULE SWAP_FORALL_CONV) comments_thmL;
+   val thmL = map (CONV_RULE (RESORT_FORALL_CONV rev)) comments_thmL;
    val thmLT = map (ISPEC T) thmL
    val thmLF = map (ISPEC F) thmL
 in
@@ -9764,6 +9818,8 @@ REPEAT STRIP_TAC THENL [
         IMP_RES_TAC fasl_predicate_IS_DECIDED_NEGATION THEN
         ASM_SIMP_TAC std_ss [FASL_INFERENCE_assume]
 ]);
+
+
 
 
 val fasl_prog_forall_def = Define `
@@ -10962,6 +11018,8 @@ ASM_REWRITE_TAC[]);
 
 
 
+
+
 val FASL_PROGRAM_IS_ABSTRACTION___ndet_1 = store_thm (
 "FASL_PROGRAM_IS_ABSTRACTION___ndet_1",
 ``!xenv penv pset prog.
@@ -11055,6 +11113,72 @@ SIMP_TAC std_ss [IN_IMAGE, IN_UNIV, GSYM LEFT_FORALL_IMP_THM,
 GEN_TAC THEN
 Q.EXISTS_TAC `x` THEN
 ASM_REWRITE_TAC[]);
+
+
+val FASL_INFERENCE_prog_while_frame = store_thm  ("FASL_INFERENCE_prog_while_frame",
+``!xenv penv c P Q p pL.
+
+IS_SEPARATION_COMBINATOR (FST xenv) /\
+(!x. (FASL_PROGRAM_HOARE_TRIPLE xenv penv (P x)
+   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg c))::pL)) (Q x))) /\
+(!x. (FASL_PROGRAM_HOARE_TRIPLE xenv penv (P x)
+   (fasl_prog_block [(fasl_prog_assume c);p;
+         (fasl_prog_quant_best_local_action P Q)]) (Q x))) ==>
+(!x. FASL_PROGRAM_HOARE_TRIPLE xenv penv (P x) 
+           (fasl_prog_block ((fasl_prog_while c p)::pL)) (Q x))``,
+
+
+REWRITE_TAC [fasl_prog_while_def, 
+   FASL_PROGRAM_HOARE_TRIPLE_def,
+   FASL_PROGRAM_SEM___prog_block,
+   FASL_PROGRAM_SEM___prog_seq,
+   GSYM fasl_prog_assume_def,
+   FASL_PROGRAM_SEM___prog_kleene_star] THEN
+SIMP_TAC std_ss [fasla_seq___SUP_fasl_action_order___left,
+   IN_ABS, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM,
+   GSYM LEFT_EXISTS_AND_THM, IN_UNIV,
+   HOARE_INFERENCE___SUP_fasl_action_order,
+   GSYM LEFT_FORALL_IMP_THM] THEN
+REPEAT GEN_TAC THEN STRIP_TAC THEN
+Induct_on `n` THEN1 (
+   ASM_SIMP_TAC std_ss [fasl_prog_repeat_num_def,
+      FASL_PROGRAM_SEM___skip, fasla_seq_skip]
+) THEN
+FULL_SIMP_TAC std_ss [FASL_PROGRAM_SEM___prog_repeat,
+   REWRITE_RULE [ASSOC_SYM] fasla_seq___ASSOC,
+   fasla_seq_skip,
+   FASL_PROGRAM_SEM___prog_seq] THEN
+GEN_TAC THEN
+Q.MATCH_ABBREV_TAC `HOARE_TRIPLE (P x)
+  (fasla_seq p1 (fasla_seq p2 (fasla_seq p3 p4))) (Q x)` THEN
+Q.ABBREV_TAC `p12 = fasla_seq p1 p2` THEN
+Q.ABBREV_TAC `p34 = fasla_seq p3 p4` THEN
+FULL_SIMP_TAC std_ss [REWRITE_RULE [ASSOC_DEF] fasla_seq___ASSOC] THEN
+
+Q.ABBREV_TAC `P12 = fasl_prog_seq (fasl_prog_assume c) p` THEN
+`p12 = FASL_PROGRAM_SEM xenv penv P12` by ALL_TAC THEN1 (
+   MAP_EVERY Q.UNABBREV_TAC [`P12`, `p12`] THEN
+   ASM_SIMP_TAC std_ss [FASL_PROGRAM_SEM___prog_seq]
+) THEN
+Q.ABBREV_TAC `P34 = fasl_prog_block (
+     (fasl_prog_repeat_num n P12)::
+     (fasl_prog_assume (fasl_pred_neg c))::pL)` THEN
+`p34 = FASL_PROGRAM_SEM xenv penv P34` by ALL_TAC THEN1 (
+   MAP_EVERY Q.UNABBREV_TAC [`P34`, `p34`] THEN
+   ASM_SIMP_TAC std_ss [FASL_PROGRAM_SEM___prog_block]
+) THEN
+FULL_SIMP_TAC std_ss [GSYM FASL_PROGRAM_SEM___prog_seq,
+   GSYM FASL_PROGRAM_HOARE_TRIPLE_def] THEN
+
+Tactical.REVERSE (`FASL_PROGRAM_IS_ABSTRACTION xenv penv 
+    (fasl_prog_seq P12 P34) (fasl_prog_seq P12 (fasl_prog_quant_best_local_action P Q))` by ALL_TAC) THEN1 (
+   FULL_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF]
+) THEN
+
+MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___seq THEN
+ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___REFL,
+   FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action]);
+
 
 
 
@@ -13080,6 +13204,10 @@ store_thm ("fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___comments",
   (!c p. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_comment_location2 c p) =
    fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE p) /\
   (!c p. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_comment_abstraction c p) =
+   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE p) /\
+  (!c p. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_comment_block_spec c p) =
+   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE p) /\
+  (!c p. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_comment_loop_spec c p) =
    fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE p) /\
   (!c p. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_comment_loop_invariant c p) =
    fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE p)``,

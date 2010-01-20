@@ -34,12 +34,16 @@ AssembleHolfootParser.uo: AssembleHolfootParser.sml AssembleHolfootParser.ui hol
 holfoot.o: holfoot.state holfoot_command_line.sml
 	hol < build-cl.hol
 
-holfoot.state: holfootLib.uo
+holfoot.state: holfootLib.uo holfootLib.ui holfootTheory.ui AssembleHolfootParser.uo AssembleHolfootParser.ui
 	hol < build-state.hol
 
 holfoot: holfoot.o
-	cc -o holfoot holfoot.o -static -L/usr/local/lib -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread
+	cc -O4 -o holfoot holfoot.o -static -L/usr/local/lib -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread
 
-holfootLib.uo: holfootLib.sml
+holfootLib.uo: holfootLib.sml holfootParser.ui holfootParser.uo
 	$(HOLMOSMLC) -c -toplevel ListConv1.uo treeTheory.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo bagLib.uo vars_as_resourceFunctor.uo vars_as_resourceBaseFunctor.uo holfootLib.sml $<
 
+clean-lib:
+	rm -f holfootLib.uo holfootLib.ui
+
+force-tools: clean-lib holfootLib.uo holfoot 
