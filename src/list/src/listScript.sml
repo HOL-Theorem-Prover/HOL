@@ -1735,7 +1735,8 @@ val _ = adjoin_to_theory
    S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
    S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
    S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
-   S "              FOLDL, REVERSE_DEF, EL_compute, ALL_DISTINCT,";
+   S "              FOLDL, REVERSE_DEF, ALL_DISTINCT,";
+   S "              Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV EL,";
    S "              computeLib.lazyfy_thm list_case_compute,";
    S "              list_size_def,FRONT_DEF,LAST_DEF,isPREFIX]";
    S "        end;";

@@ -218,6 +218,8 @@ val thms =
    SPECL [`^w`,`^a`] word_rol_def, word_rrx_n2w,
    word_lsb_n2w, word_msb_n2w, word_bit_n2w, fcp_n2w, fcpTheory.L2V_def,
    NUM_RULE [DIMINDEX_GT_0] `i` word_index_n2w,
+   SPECL [`f`,`^a`] fcpTheory.index_comp,
+   SPECL [`m`,`^a`,`w`,`^b`] fcpTheory.FCP_APPLY_UPDATE_THM,
    word_bits_n2w, word_signed_bits_n2w, word_slice_n2w, word_extract_n2w,
    word_reduce_n2w, Q.SPEC `^n2w ^n` reduce_and, Q.SPEC `^n2w ^n` reduce_or,
    reduce_xor_def, reduce_xnor_def, reduce_nand_def, reduce_nor_def,
