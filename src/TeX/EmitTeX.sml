@@ -315,6 +315,7 @@ local
      | "\226\134\146" => (token_string "Map", 1) (* → *)
      | "\226\138\162" => (token_string "Turnstile", 2) (* ⊢ *)
      | "\226\151\129" => (token_string "LOpenTri", 1) (* ◁ *)
+     | "\226\129\187\194\185" => (token_string "Inverse", 1) (* ⁻¹ *)
      | "^*"    => (token_string "SupStar", 1)
      | "^+"    => (token_string "SupPlus", 1)
      | _       => (String.translate char_map s,String.size s)
@@ -326,14 +327,14 @@ local
   fun varmunge s = let
     open Substring
     val ss = full s
-    val (pfx,primes) = splitR (equal #"'") ss
+    val (pfx,primes) = splitr (equal #"'") ss
     val prime_str_interior = translate (fn _ => "\\prime") primes
     val prime_str = "\\sp{" ^ prime_str_interior ^ "}"
-    val (core,digits) = splitR Char.isDigit digits
+    val (core,digits) = splitr Char.isDigit pfx
     val dsz = size digits
     val digitstr = if 0 < dsz andalso dsz <= 2 then
                      "\\sb{" ^ string digits ^ "}"
-                   else digits
+                   else string digits
   in
     string core ^ digitstr ^ prime_str
   end
