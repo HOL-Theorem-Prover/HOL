@@ -323,9 +323,24 @@ local
       case overrides s of
         NONE => string_map s
       | SOME r => r
+  fun varmunge s = let
+    open Substring
+    val ss = full s
+    val (pfx,primes) = splitR (equal #"'") ss
+    val prime_str_interior = translate (fn _ => "\\prime") primes
+    val prime_str = "\\sp{" ^ prime_str_interior ^ "}"
+    val (core,digits) = splitR Char.isDigit digits
+    val dsz = size digits
+    val digitstr = if 0 < dsz andalso dsz <= 2 then
+                     "\\sb{" ^ string digits ^ "}"
+                   else digits
+  in
+    string core ^ digitstr ^ prime_str
+  end
+
   fun ann_string overrides pps (s,ann) = let
     open PPBackEnd
-    fun addann ty s = "\\" ^ !texPrefix ^ ty ^ "{" ^ s ^ "}"
+    fun addann ty s = "\\" ^ !texPrefix ^ ty ^ "{" ^ varmunge s ^ "}"
     val annotation = case ann of BV _ => addann "BoundVar"
                                | FV _ => addann "FreeVar"
                                | _ => (fn s => s)
