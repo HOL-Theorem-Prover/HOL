@@ -52,16 +52,21 @@ val Kcm_P3 = store_thm ("Kcm_P3",
    (ASM_REWRITE_TAC []) ]) ;
 
 val tm_Kom_P14e = 
-  ``category (id, comp) /\ Komonad (id,comp) (unitM,extM,kcomp) /\
-    Komonad [: ('A, 'M) Kleisli, 'N :] (unitM, kcomp) (unitNM, pext, oNM) /\
+  ``category (id, comp) ==> Komonad (id,comp) (unitM,extM,kcomp) ==>
+    Komonad [: ('A, 'M) Kleisli, 'N :] (unitM, kcomp) (unitNM, pext, oNM) ==>
     (extNM = (\:'a 'b. (\f. extM (pext [:'a, 'b:] f)))) ==>
     (pext (comp (extNM f) g) = comp (extNM f) (pext g))`` ;
 
 val Kom_P14e = store_thm ("Kom_P14e", tm_Kom_P14e,
-  EVERY [ STRIP_TAC, (frrc_rewr Ko_cmD_pext),
+  EVERY [ REPEAT STRIP_TAC, (frrc_rewr Ko_cmD_pext),
     TY_BETA_TAC, BETA_TAC,
     (USE_LIM_RES_TAC ASSUME_TAC Ko_cmD_cm),
     (farwmmp catDAss), (frrc_rewr (KomonadDK RS KmonDAss)) ]) ;
+
+(* note, KomonadI RSN (3, Kom_P14e) fails because 
+   Komonad (unitM, kcomp) (unitNM, pext, oNM)
+   has the type of the Kleisli category, and so types of KomonadI
+   would need to be instantiated *)
 
 (* note, to get Jones & Duponcheel P1 to P4,
   have yet to show / assume (these are equivalent)
@@ -234,6 +239,9 @@ val Kdc_mon = (KdcmonadDK RS KdmonadDK) ;
 val KdcmonDRU = (Kdc_mon RS KmonDRU) ;
 val KdmonDRU = (KdmonadDK RS KmonDRU) ;
   
+val Kdo_mon = (KdomonadDKd RS KdmonadDK) ;
+val KdomonDRU = (Kdo_omonadD RS KomonDRU) ;
+  
 (* showing how JD S1 to S4 give the BW D1 to D4 and swap is nt ;
   have that S2 is BWD2, S3 is BWD1, S1 is swap is nt ;
   need to show 
@@ -301,6 +309,7 @@ val _ = ListPair.map save_thm (["dlDnt", "dlD1", "dlD2", "dlD3", "dlD4"],
 val tmBWD_cm' = ``category (id, comp) ==>
     Kdmonad [:'A, 'M:] (id,comp) (unitM, extM, mapM, joinM) ==> 
     Kdcmonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp, mapM, joinM) ==> 
+    Kdomonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp, mapM, joinM) ==> 
     g_umj_monad [:'A, 'N:] (id,comp) (unitN, mapN, joinN) ==> 
     dist_law (id,comp) (unitM,extM,mapM,joinM) (unitN,mapN,joinN) swap ==>
     (kjoin = \:'a. comp unitM (joinN [:'a:])) ==>
@@ -321,7 +330,7 @@ val tmBWD_cm' = ``category (id, comp) ==>
         comp (comp (extM (swap [:'a:])) (prod [:'a 'M:]))
 	  (mapN (mapM (unitN [:'a 'M:])))) )`` ;
   
-val ([cic, KdmonM, KdcmonM, umjN, dl, kjoin, kmap, unitNM,
+val ([cic, KdmonM, KdcmonM, KdomonM, umjN, dl, kjoin, kmap, unitNM,
   pext, umjK, S14, KdK], S4os) = strip_imp tmBWD_cm' ;
 
 val tm_S_IMP_DL = list_mk_imp ([cic, KdmonM, umjN, S14], dl) ;
@@ -426,6 +435,7 @@ val S_IFF_DL = store_thm ("S_IFF_DL", tm_S_IFF_DL,
   THENL [ FIRST_REP_RES ACCEPT_TAC S_IMP_DL,
     FIRST_REP_RES ACCEPT_TAC DL_IMP_S]) ;
 
+(* REPLACED BY BELOW
 val tmBWD_cm = list_mk_imp
   ([cic, KdcmonM, umjN, dl, kjoin, kmap, unitNM], umjK);
 val tmBWD_cmK = list_mk_imp
@@ -495,6 +505,86 @@ val BWD_cmK = store_thm ("BWD_cmK", tmBWD_cmK,
   EVERY [ REPEAT STRIP_TAC,
     (USE_LIM_RES_TAC ASSUME_TAC BWD_cm),
     (USE_LIM_RES_TAC ASSUME_TAC (Kdc_cmonadD RSN (2, Kcmonad_IMP_Kcat))),
+    (USE_LIM_RES_TAC MATCH_MP_TAC g_umj_imp_Kmonad),
+    (ASM_REWRITE_TAC []), (CONV_TAC (fix_abs_eq_conv [])),
+    REPEAT STRIP_TAC, REFL_TAC ]) ;
+END REPLACED BY BELOW *)
+
+(*
+show_types := true ;
+show_types := false ;
+handle e => Raise e ;
+set_goal ([], it) ;
+val (sgs, goal) = top_goal () ;
+*)
+
+val tmBWD_cm = list_mk_imp
+  ([cic, KdomonM, umjN, dl, kjoin, kmap, unitNM], umjK);
+val tmBWD_cmK = list_mk_imp
+  ([cic, KdomonM, umjN, dl, kjoin, kmap, unitNM, pext], KdK);
+
+(* note also, extM kjoin = mapM joinN, ie, J2 holds,
+   def'n of pext, and Kdmonad result omitted above is 
+    (pext = \:'a 'b. \f. kcomp kjoin (kmap [:'a, 'b 'N:] f)) ==>
+  Kdmonad [:('A,'M) Kleisli, 'N:] (unitM, kcomp) (unitNM, pext, kmap, kjoin)`` ;
+*)
+
+val ktacs2 = [
+  (FIRST_REP_RES (fn th => REWRITE_TAC [Kcomp_thm', th]) KdomonadD_Kcomp),
+  (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th]) KdmonadD_EXTe),
+  (farwmmp g_umjD2), (farwmmp catDAss), (farwmmp dlD3),
+  (REPEAT STRIP_TAC), AP_THM_TAC, AP_TERM_TAC,
+  (farwmmp catDRAss), (farwmmp dlDnt), (farwmmp catDAss),
+  AP_THM_TAC, AP_TERM_TAC,
+  (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th]) Kdmonad_umj2),
+  (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th]) KdmonadD_EXTe),
+  (farwmmp catDAss)] ;
+
+val ktacs3 = [ 
+  (FIRST_REP_RES (fn th => REWRITE_TAC [Kcomp_thm', th]) KdomonadD_Kcomp),
+  (farwmmp catDAss), (farwmmp KdomonDRU), 
+  (farwmmp catDRAss), (farwmmp g_umjD3),
+  (farwmmp catDAss), (farwmmp dlD1), (farwmmp KdmonadD_MAPe)] ;
+
+val ktacs4 = [ 
+  (FIRST_REP_RES (fn th => REWRITE_TAC [Kcomp_thm', th]) KdomonadD_Kcomp),
+  (farwmmp catDAss), (farwmmp KdomonDRU),
+  (farwmmp catDRAss), (farwmmp g_umjD4),
+  (farwmmp catDAss), (farwmmp dlD4),
+  (farwmmp g_umjD2), (farwmmp catDAss), (farwmmp KdmonadD_MAPe)] ;
+
+val ktacs5 = [ 
+  (FIRST_REP_RES (fn th => REWRITE_TAC [Kcomp_thm', th]) KdomonadD_Kcomp),
+  (farwmmp catDAss), (farwmmp KdomonDRU),
+  (farwmmp catDRAss), (farwmmp g_umjD5), (farwmmp catDRU)] ;
+
+val ktacs6 = [ (farwmmp g_umjD2), (farwmmp catDAss), (farwmmp dlD2),
+  (FIRST_REP_RES (fn th => REWRITE_TAC [Kcomp_thm', th]) KdomonadD_Kcomp),
+  (farwmmp catDAss), (farwmmp KdomonDRU),
+  (farwmmp catDRAss), (farwmmp g_umjD6), (farwmmp catDRU)] ;
+
+val ktacs7 = [ (farwmmp g_umjD2), (farwmmp catDAss), (farwmmp dlD2),
+  (FIRST_REP_RES (fn th => REWRITE_TAC [Kcomp_thm', th]) KdomonadD_Kcomp),
+  (farwmmp catDAss), (farwmmp KdomonDRU),
+  (farwmmp catDRAss), (farwmmp g_umjD7)] ;
+
+val BWD_cm = store_thm ("BWD_cm", tmBWD_cm, 
+  EVERY [ REPEAT STRIP_TAC,
+    (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o fix_abs_eq []))),
+    ASM_REWRITE_TAC [g_umj_monad_exp], 
+    (FIRST_REP_RES ASSUME_TAC KdomonadDKd),
+    REPEAT CONJ_TAC]
+  THENL (farwmmp dlD2 :: map EVERY 
+    [ ktacs2, ktacs3, ktacs4, ktacs5, ktacs6, ktacs7]) ) ;
+
+val g_umj_imp_Kmonad' = ufd (fst o EQ_IMP_RULE) g_umj_iff_Kmonad ;
+val g_umj_imp_Kmonad = 
+  fix_abs_eq [EXT_def, GSYM AND_IMP_INTRO] g_umj_imp_Kmonad' ; 
+
+val BWD_cmK = store_thm ("BWD_cmK", tmBWD_cmK, 
+  EVERY [ REPEAT STRIP_TAC,
+    (USE_LIM_RES_TAC ASSUME_TAC BWD_cm),
+    (USE_LIM_RES_TAC ASSUME_TAC (Kdo_omonadD RSN (2, Komonad_IMP_Kcat))),
     (USE_LIM_RES_TAC MATCH_MP_TAC g_umj_imp_Kmonad),
     (ASM_REWRITE_TAC []), (CONV_TAC (fix_abs_eq_conv [])),
     REPEAT STRIP_TAC, REFL_TAC ]) ;

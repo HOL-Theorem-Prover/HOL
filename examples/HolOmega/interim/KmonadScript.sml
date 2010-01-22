@@ -249,6 +249,26 @@ val Kdc_cmonadD = store_thm ("Kdc_cmonadD",
     Kcmonad [:'A, 'M:] (id, comp) (unit,ext,kcomp)``,
   SRW_TAC [] [Kcmonad_thm, Kdcmonad_thm, Kdmonad_thm]) ;
 
+val (KdomonadD, _) = EQ_IMP_RULE Kdomonad_thm ;
+val Kdo_omonadD = save_thm ("Kdo_omonadD",
+  ufd CONJUNCT1 KdomonadD) ;
+
+val Kdomonad_iff = store_thm ("Kdomonad_iff", 
+  ``category (id, comp) ==>
+    (Kdomonad [:'A, 'M:] (id, comp) (unit, ext, kcomp, map, join) =
+    Kdmonad [:'A, 'M:] (id, comp) (unit, ext, map, join) /\
+      (kcomp = Kcomp (id, comp) ext))``,
+  EVERY [ (REWRITE_TAC [Kdomonad_thm, Kdmonad_thm]), STRIP_TAC, 
+    (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP Komonad_iff th])),
+    EQ_TAC, STRIP_TAC, ASM_REWRITE_TAC []]) ;
+  
+val KdomonadDKd = save_thm ("KdomonadDKd",
+  ufd (ufd CONJUNCT1 o fst o EQ_IMP_RULE) Kdomonad_iff) ;
+val KdomonadD_Kcomp = save_thm ("KdomonadD_Kcomp",
+  ufd (ufd CONJUNCT2 o fst o EQ_IMP_RULE) Kdomonad_iff) ;
+val KdomonadI = save_thm ("KdomonadI",
+  inst_eqs (ufd (snd o EQ_IMP_RULE) Kdomonad_iff)) ;
+
 val KdmonadD_EXT = store_thm ("KdmonadD_EXT",
   ``category (id, comp) ==> Kdmonad (id, comp) (unit,ext,map,join) ==> 
     (ext = EXT (id, comp) (map, join))``,
@@ -578,48 +598,6 @@ val (sgs, goal) = top_goal () ;
 val true = Type `: (('A, 'M) Kleisli, 'N) Kleisli` =
   Type `: ('A, 'N o 'M) Kleisli` ;
 
-val kmcr = reo_prems rev Kmonad_IMP_Kcat ;
-val kcmcr = reo_prems rev Kcmonad_IMP_Kcat ;
-val komcr = reo_prems rev Komonad_IMP_Kcat ;
-val Kcat_IMP_Kmonad' = REWRITE_RULE [GSYM AND_IMP_INTRO] Kcat_IMP_Kmonad ;
-
-(* REDUNDANT
-(* pext_cm and Kc_pext_cm probably obsolete due Ko_pext_cm *)
-(* following fails typechecking when both monad type arguments 
-  ('N and 'N o 'M) are deleted (even after temp_clear_overloads_on "o") *)
-val tmpext = ``category (id, comp) /\ 
-  Kmonad [:'A:] (id,comp) (unitM, extM : ('A, 'M) ext) /\ 
-  Kmonad [: ('A, 'M) Kleisli, 'N :] 
-    (unitM, Kcomp (id,comp) extM) (unitNM, pext) ==>
-  Kmonad [: 'A, 'N o 'M :] (id, comp) (unitNM, \:'a 'b. extM o pext)`` ;
-
-val pext_cm = store_thm ("pext_cm", tmpext,
-  EVERY [ STRIP_TAC,
-    (MATCH_MP_TAC Kcat_IMP_Kmonad),
-    (ASM_REWRITE_TAC [Kcomp_def]), TY_BETA_TAC,
-    (IMP_RES_TAC Kmonad_IMP_Kcat),
-    (IMP_RES_TAC kmcr), 
-    (* Kmonad_IMP_Kcat won't work here, this is the same error
-      described in dist_monadsScript.sml, proof of Kcm_S3 *)
-    (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o CONV_RULE (REDEPTH_CONV
-      (REWR_CONV Kcomp_def ORELSEC TY_BETA_CONV ORELSEC BETA_CONV))))),
-    (ASM_REWRITE_TAC [combinTheory.o_THM]) ]) ;
-
-val tmKcpext = ``category (id, comp) ==> 
-  Kcmonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp) ==> 
-  Kmonad [: ('A, 'M) Kleisli, 'N :] (unitM, kcomp) (unitNM, pext) ==>
-  Kmonad [: 'A, 'N o 'M :] (id, comp) (unitNM, \:'a 'b. extM o pext)`` ;
-
-val Kc_pext_cm = store_thm ("Kc_pext_cm", tmKcpext,
-  EVERY [ REPEAT STRIP_TAC,
-    (FIRST_ASSUM (MATCH_MP_TAC o MATCH_MP Kcat_IMP_Kmonad')),
-    (USE_LIM_RES_TAC ASSUME_TAC kcmcr),
-    (USE_LIM_RES_TAC MP_TAC kmcr),
-    (FIRST_ASSUM (fn th => REWRITE_TAC 
-      [MATCH_MP KcmonadD_Kcomp th, Kcomp_def])),
-    TY_BETA_TAC, BETA_TAC, (ASM_REWRITE_TAC [combinTheory.o_THM]) ]) ;
-END REDUNDANT *)
-
 val tmKopext = ``category (id, comp) ==> 
   Komonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp) ==> 
   Komonad [: ('A, 'M) Kleisli, 'N :] (unitM, kcomp) (unitNM, pext, oNM) ==>
@@ -676,38 +654,6 @@ val J1_IMP_ext_pext = store_thm ("J1_IMP_ext_pext", tmepe,
     (FIRST_X_ASSUM (fn th => (REWRITE_TAC [MATCH_MP KmonDLU th]))),
     (FIRST_X_ASSUM (fn th => (REWRITE_TAC [MATCH_MP catDRU th]))) ]) ;
 
-(* can't do MATCH_MP_TAC (GSYM J1_IMP_ext_pext) ; *)
-val gjs = (DISCH_ALL o GSYM o SPEC_ALL o TY_SPEC_ALL o UNDISCH)
-  J1_IMP_ext_pext ;
-val gjs' = (DISCH_ALL o GSYM o SPEC_ALL o TY_SPEC_ALL o UNDISCH)
-  (REWRITE_RULE [J1S_def] J1_IMP_ext_pext) ;
-val gjs'' = REWRITE_RULE [GSYM AND_IMP_INTRO] gjs' ;
-val gjs3 = KcmonadDK RSN (2, gjs'') ;
-
-(* REDUNDANT 
-(* cm_if_J1o makes cm_if_J1c redundant *)
-val tmpextic = ``category (id, comp) /\ 
-  Kcmonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp) ==> 
-  Kmonad [: 'A, 'N o 'M :] (id, comp) (unitNM, extNM) /\
-  J1S (id, comp) extM extNM /\
-  (pext = \:'a 'b. \f. comp (extNM f) unitM) ==>
-  Kmonad [: ('A, 'M) Kleisli, 'N :] (unitM, kcomp) (unitNM, pext)`` ;
-
-val cm_if_J1c = store_thm ("cm_if_J1c", tmpextic,  
-  EVERY [ (REWRITE_TAC [J1S_def]), REPEAT STRIP_TAC,
-    (USE_LIM_RES_TAC ASSUME_TAC kcmcr), 
-    (MATCH_MP_TAC Kcat_IMP_Kmonad),
-    (FIRST_X_ASSUM (fn th => CONJ_TAC THEN1 ACCEPT_TAC th)),
-    (USE_LIM_RES_TAC MP_TAC kmcr), 
-    (FIRST_ASSUM (fn th => 
-      REWRITE_TAC [Kcomp_def, MATCH_MP KcmonadD_Kcomp th])),
-    (USE_LIM_RES_TAC ((fn th => REWRITE_TAC [th]) o
-      TY_GEN_ALL o GEN_ALL) gjs3), 
-    TY_BETA_TAC, BETA_TAC, (REWRITE_TAC []) ]) ;
-
-val cm_if_J1c' = REWRITE_RULE [J1S_def, GSYM AND_IMP_INTRO] cm_if_J1c ;
-END REDUNDANT  *)
-
 val tmpextio = ``category (id, comp) ==> 
   Komonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp) ==> 
   Komonad [: 'A, 'N o 'M :] (id, comp) (unitNM, extNM, oNM) ==>
@@ -756,41 +702,6 @@ val Ko_cmD = save_thm ("Ko_cmD", REWRITE_RULE [GSYM AND_IMP_INTRO]
   (ufd CONJUNCT2 (REWRITE_RULE [EQ_IMP_THM] cm_Ko_J1S))) ;
 val [Ko_cmD_cm, Ko_cmD_J1S, Ko_cmD_pext] = ListPair.map save_thm
   (["Ko_cmD_cm", "Ko_cmD_J1S", "Ko_cmD_pext"], ufdl CONJUNCTS Ko_cmD) ;
-
-(* REDUNDANT (* given cm_Ko_J1S, cm_Kc_J1c seems redundant *)
-val tm_Kc_J1c = 
-  ``category (id,comp) /\ Kcmonad (id,comp) (unitM, extM, kcomp) ==> 
-  (Kmonad [: 'A, 'N o 'M :] (id,comp) (unitNM,extNM) /\
-  J1S (id, comp) extM extNM /\
-  (pext = (\:'a 'b. (\f. comp (extNM f) unitM))) = 
-  Kmonad [:('A,'M) Kleisli, 'N:] (unitM, kcomp) (unitNM,pext) /\
-  (extNM = (\:'a 'b. (\f. extM (pext f)))))`` ;
-
-val cm_Kc_J1c = store_thm ("cm_Kc_J1c", tm_Kc_J1c, 
-  EVERY [ REWRITE_TAC [J1S_def], STRIP_TAC,
-    EQ_TAC, REPEAT STRIP_TAC, REPEAT CONJ_TAC]
-  THENL [
-    (USE_LIM_RES_TAC ACCEPT_TAC cm_if_J1c'),
-    EVERY [ 
-      (USE_LIM_RES_TAC ((fn th => REWRITE_TAC 
-          [FUN_EQ_THM, TY_FUN_EQ_THM, th]) o TY_GEN_ALL o GEN_ALL) gjs3), 
-      (REPEAT STRIP_TAC), TY_BETA_TAC, BETA_TAC, REFL_TAC ],
-    EVERY [ 
-      (USE_LIM_RES_TAC MP_TAC Kc_pext_cm),
-      (ASM_REWRITE_TAC [combinTheory.o_DEF]) ],
-    EVERY [
-      (ASM_REWRITE_TAC []), TY_BETA_TAC, BETA_TAC,
-      (farwmmp (KcmonadDK RS KmonDAss)), (farwmmp catDRU) ],
-    EVERY [
-      (ASM_REWRITE_TAC []), TY_BETA_TAC, BETA_TAC, 
-      (farwmmp (KcmonadDK RS KmonDRU)),
-      (CONV_TAC (fix_abs_eq_conv [])), (ASM_REWRITE_TAC []) ] ]) ;
-
-val Kc_cmD = save_thm ("Kc_cmD", REWRITE_RULE [GSYM AND_IMP_INTRO]
-  (ufd CONJUNCT2 (REWRITE_RULE [EQ_IMP_THM] cm_Kc_J1c))) ;
-val [Kc_cmD_cm, Kc_cmD_J1S, Kc_cmD_pext] = ListPair.map save_thm
-  (["Kc_cmD_cm", "Kc_cmD_J1S", "Kc_cmD_pext"], ufdl CONJUNCTS Kc_cmD) ;
-END REDUNDANT  *)
 
 (* see also Barr & Wells, conditions (C3) and (C4) for compatible monads,
   (C3) is a special case of C3S, (C4) is a special case of J1S *)
