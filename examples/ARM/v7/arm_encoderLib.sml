@@ -15,6 +15,15 @@ val _ = wordsLib.prefer_word();
 
 val ERR = Feedback.mk_HOL_ERR "arm_encoderLib";
 
+local
+  val tm_g = Parse.term_grammar ()
+  val ty_g = Parse.type_grammar ()
+in
+  val term_to_string =
+        Portable.pp_to_string 70
+          (term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
+end
+
 (* ------------------------------------------------------------------------- *)
 
 val eval = rhs o concl o EVAL;

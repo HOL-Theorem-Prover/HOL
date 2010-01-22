@@ -327,7 +327,7 @@ val ARM_NEXT_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val condT_set_q = Q.store_thm("condT_set_q",
-  `!b ii. condT b (set_q ii) =
+  `!b ii. (if b then set_q ii else constT ()) =
           seqT (read_cpsr ii)
           (\cpsr. write_cpsr ii (if b then cpsr with Q := T else cpsr))`,
   SRW_TAC [] [FUN_EQ_THM, APPLY_UPDATE_ID, arm_state_component_equality,

@@ -29,6 +29,15 @@ datatype class = DataProcessing | LoadStore | Branch
 
 (* ------------------------------------------------------------------------- *)
 
+local
+  val tm_g = Parse.term_grammar ()
+  val ty_g = Parse.type_grammar ()
+in
+  val term_to_string =
+        Portable.pp_to_string 70
+          (term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
+end
+
 val generator = Random.newgen();
 (* val generator = Random.newgenseed 1.0; *)
 

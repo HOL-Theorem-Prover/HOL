@@ -70,6 +70,15 @@ fun directive_line s1 s2 = code_line (uppercase s1) s2;
 
 fun disassemble_ascii s = directive_line "ascii" (Lib.quote s);
 
+local
+  val tm_g = Parse.term_grammar ()
+  val ty_g = Parse.type_grammar ()
+in
+  val term_to_string =
+        Portable.pp_to_string 70
+          (term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
+end
+
 fun disassemble_byte l =
   l |> map term_to_string |> commy |> directive_line "byte"
 
