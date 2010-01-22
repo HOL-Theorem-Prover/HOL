@@ -51,18 +51,17 @@ val Kcm_P3 = store_thm ("Kcm_P3",
    (FIRST_ASSUM (ASSUME_TAC o GSYM o MATCH_MP KmonDLU)),
    (ASM_REWRITE_TAC []) ]) ;
 
-val tm_Kcm_P14e = 
-  ``category (id, comp) /\ Kcmonad (id,comp) (unitM,extM,kcomp) /\
-    Kmonad [: ('A, 'M) Kleisli, 'N :] (unitM, kcomp) (unitNM, pext) /\
+val tm_Kom_P14e = 
+  ``category (id, comp) /\ Komonad (id,comp) (unitM,extM,kcomp) /\
+    Komonad [: ('A, 'M) Kleisli, 'N :] (unitM, kcomp) (unitNM, pext, oNM) /\
     (extNM = (\:'a 'b. (\f. extM (pext [:'a, 'b:] f)))) ==>
     (pext (comp (extNM f) g) = comp (extNM f) (pext g))`` ;
 
-val Kcm_P14e = store_thm ("Kcm_P14e", tm_Kcm_P14e,
-  EVERY [ STRIP_TAC,
-    (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th]) Kc_cmD_pext),
+val Kom_P14e = store_thm ("Kom_P14e", tm_Kom_P14e,
+  EVERY [ STRIP_TAC, (frrc_rewr Ko_cmD_pext),
     TY_BETA_TAC, BETA_TAC,
-    (USE_LIM_RES_TAC ASSUME_TAC Kc_cmD_cm),
-    (farwmmp catDAss), (frrc_rewr KmonDAss) ]) ;
+    (USE_LIM_RES_TAC ASSUME_TAC Ko_cmD_cm),
+    (farwmmp catDAss), (frrc_rewr (KomonadDK RS KmonDAss)) ]) ;
 
 (* note, to get Jones & Duponcheel P1 to P4,
   have yet to show / assume (these are equivalent)
@@ -233,6 +232,7 @@ val Kcm_S1 = store_thm ("Kcm_S1", tm_Kcm_S1,
 
 val Kdc_mon = (KdcmonadDK RS KdmonadDK) ;
 val KdcmonDRU = (Kdc_mon RS KmonDRU) ;
+val KdmonDRU = (KdmonadDK RS KmonDRU) ;
   
 (* showing how JD S1 to S4 give the BW D1 to D4 and swap is nt ;
   have that S2 is BWD2, S3 is BWD1, S1 is swap is nt ;
@@ -299,6 +299,7 @@ val _ = ListPair.map save_thm (["dlDnt", "dlD1", "dlD2", "dlD3", "dlD4"],
 (* converse - assume swap is nt, and BW D1 to D4, show how to 
   define a compound monad satisfying J1 and J2 *)
 val tmBWD_cm' = ``category (id, comp) ==>
+    Kdmonad [:'A, 'M:] (id,comp) (unitM, extM, mapM, joinM) ==> 
     Kdcmonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp, mapM, joinM) ==> 
     g_umj_monad [:'A, 'N:] (id,comp) (unitN, mapN, joinN) ==> 
     dist_law (id,comp) (unitM,extM,mapM,joinM) (unitN,mapN,joinN) swap ==>
@@ -320,11 +321,12 @@ val tmBWD_cm' = ``category (id, comp) ==>
         comp (comp (extM (swap [:'a:])) (prod [:'a 'M:]))
 	  (mapN (mapM (unitN [:'a 'M:])))) )`` ;
   
-val ([cic, KmonM, umjN, dl, kjoin, kmap, unitNM, pext, umjK, S14, KdK], S4os) = 
-  strip_imp tmBWD_cm' ;
+val ([cic, KdmonM, KdcmonM, umjN, dl, kjoin, kmap, unitNM,
+  pext, umjK, S14, KdK], S4os) = strip_imp tmBWD_cm' ;
 
-(* TODO - prove S1to4 implies dist_law *)
-val tm_S_DL = list_mk_imp ([cic, KmonM, umjN, S14], dl) ;
+val tm_S_IMP_DL = list_mk_imp ([cic, KdmonM, umjN, S14], dl) ;
+val tm_DL_IMP_S = list_mk_imp ([cic, KdmonM, umjN, dl], S14) ;
+val tm_S_IFF_DL = list_mk_imp ([cic, KdmonM, umjN], mk_eq (S14, dl)) ;
 (*
 show_types := true ;
 show_types := false ;
@@ -333,10 +335,11 @@ set_goal ([], it) ;
 val (sgs, goal) = top_goal () ;
 *)
 
-val S_DL = store_thm ("S_DL", tm_S_DL,
+val S_IMP_DL = store_thm ("S_IMP_DL", tm_S_IMP_DL,
   EVERY [ (REWRITE_TAC [S1to4_thm, dist_law_thm, LET_THM]),
-    BETA_TAC, TY_BETA_TAC, (STRIP_TAC), (STRIP_TAC), 
-    (STRIP_TAC), (STRIP_TAC), (SUBGOAL_THEN S4os MP_TAC) ]
+    BETA_TAC, TY_BETA_TAC, 
+    (REPEAT (DISCH_THEN STRIP_ASSUME_TAC)),
+    (SUBGOAL_THEN S4os MP_TAC) ]
 
   THENL [
     EVERY [ (REWRITE_TAC [LET_THM]),
@@ -347,9 +350,8 @@ val S_DL = store_thm ("S_DL", tm_S_DL,
 
       (* first one ie BWD4 *)
       (farwmmp catDRAss), (farwmmp (GSYM g_umjD2)),
-      (farwmmp KdcmonDRU), (ASM_REWRITE_TAC []),
-      (FIRST_ASSUM (ASSUME_TAC o MATCH_MP KdcmonadDK)),
-      (frrc_rewr Kdmonad_umj3_r), (farwmmp catDAss), (farwmmp KdcmonDRU),
+      (farwmmp KdmonDRU), (ASM_REWRITE_TAC []),
+      (frrc_rewr Kdmonad_umj3_r), (farwmmp catDAss), (farwmmp KdmonDRU),
       (* second one ie BWD3, some already done *)
       (FIRST_ASSUM (CONV_TAC o CHANGED_CONV o
 	DEPTH_CONV o REWR_CONV o MATCH_MP catDRAss)),
@@ -364,9 +366,70 @@ val S_DL = store_thm ("S_DL", tm_S_DL,
       (frrc_rewr Kdmonad_umj1_r), (farwmmp catDLU),
       (farwmmp KdmonadD_JOINe), (SRW_TAC [] []) ] ]) ;
 
-val tmBWD_cm = list_mk_imp ([cic, KmonM, umjN, dl, kjoin, kmap, unitNM], umjK);
-val tmBWD_cmK = list_mk_imp ([cic, KmonM, umjN, dl, kjoin, kmap, unitNM, pext],
-  KdK);
+(* lemma to help rewriting deep inside a term *)
+val tmrl' = ``category (id,comp) ==> 
+  ((comp [:'b,'c,'d:] x y = w) = 
+  (!: 'a. !z. comp [:'a,'c,'d:] x (comp [:'a,'b,'c:] y z) = comp w z)) ==>
+  (comp [:'b,'c,'d:] x (comp y (id [:'b:])) = comp w (id [:'b:]))`` ;
+
+val ([cat, eq], xyiwi) = strip_imp tmrl' ;
+
+val rewr_o_lem = store_thm ("rewr_o_lem", (mk_imp (cat, eq)),
+  STRIP_TAC THEN EQ_TAC
+  THENL [ (farwmmp catDAss) THEN (SRW_TAC [] []),
+    DISCH_TAC THEN (SUBGOAL_THEN xyiwi MP_TAC)
+    THENL [ (FIRST_ASSUM MATCH_ACCEPT_TAC), (farwmmp catDRU) ] ]) ;
+
+val rewr_o_lem_gen = DISCH_ALL (TY_GEN_ALL (GEN_ALL (UNDISCH rewr_o_lem))) ;
+
+val KdmonadD_EXTe = (fix_abs_eq [EXT_def] KdmonadD_EXT) ;
+
+fun userl rl = 
+  let val conv = ONCE_DEPTH_CONV (REWR_CONV rl) ;
+  in ASSUM_LIST (MAP_EVERY (ASSUME_TAC o CONV_RULE conv)) end ;
+
+fun userl2 rl = 
+  let 
+    val conv = ONCE_DEPTH_CONV (REWR_CONV rl) ;
+    val g2 = CONV_RULE conv (GSYM Kdmonad_umj2) ;
+    (* shouldn't need this for rewriting to work - BUG! *)
+    val g2' = ufd (TY_GEN_ALL o GEN_ALL o SPEC_ALL o
+      TY_SPEC_ALL o SPEC_ALL) g2 ;
+  in (frrc_rewr g2') end ;
+
+val DL_IMP_S = prove (tm_DL_IMP_S,
+  EVERY [ (REWRITE_TAC [S1to4_thm, dist_law_thm, LET_THM]),
+    BETA_TAC, TY_BETA_TAC, 
+    (REPEAT (DISCH_THEN STRIP_ASSUME_TAC)),
+    (REPEAT CONJ_TAC THEN TRY (FIRST_ASSUM ACCEPT_TAC)),
+    (* now only S(4) remains to be proved *)
+    (frrc_rewr KdmonadD_EXTe), (farwmmp g_umjD2), 
+    (* convert all equalities in the assumptions *)
+    (FIRST_ASSUM (userl o MATCH_MP rewr_o_lem)),
+    (farwmmp catDRAss),
+    (* substitute for BWD3 *)
+    (FIRST_X_ASSUM (fn th => CHANGED_TAC (REWRITE_TAC [th]))),
+    (* deal with (mapM swap) o (mapM joinN) *)
+    (FIRST_ASSUM (ASSUME_TAC o MATCH_MP rewr_o_lem_gen)),
+    (POP_ASSUM userl2),
+    (* substitute for BWD4 *)
+    (FIRST_X_ASSUM (fn th => CHANGED_TAC (REWRITE_TAC [th]))),
+    (frrc_rewr Kdmonad_umj2), (frrc_rewr KdmonadD_EXTe), (farwmmp catDAss),
+    (FIRST_REP_RES (fn umj4 => 
+      (FIRST_REP_RES (fn ext => REWRITE_TAC [REWRITE_RULE [ext] umj4]) 
+        KdmonadD_EXTe)) Kdmonad_umj4),
+    (frrc_rewr Kdmonad_umj1), (farwmmp catDRU), (farwmmp catDRAss),
+    STRIP_TAC, REPEAT AP_TERM_TAC, (FIRST_ASSUM MATCH_ACCEPT_TAC) ]) ;
+      
+val S_IFF_DL = store_thm ("S_IFF_DL", tm_S_IFF_DL,
+  EVERY [REPEAT STRIP_TAC, EQ_TAC, STRIP_TAC]
+  THENL [ FIRST_REP_RES ACCEPT_TAC S_IMP_DL,
+    FIRST_REP_RES ACCEPT_TAC DL_IMP_S]) ;
+
+val tmBWD_cm = list_mk_imp
+  ([cic, KdcmonM, umjN, dl, kjoin, kmap, unitNM], umjK);
+val tmBWD_cmK = list_mk_imp
+  ([cic, KdcmonM, umjN, dl, kjoin, kmap, unitNM, pext], KdK);
 
 (* note also, extM kjoin = mapM joinN, ie, J2 holds,
    def'n of pext, and Kdmonad result omitted above is 

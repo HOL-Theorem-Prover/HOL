@@ -40,11 +40,6 @@ val _ = type_abbrev ("kl_arrow", Type `: \'A 'M.
 
 val _ = type_abbrev ("category", Type `: \'A. 'A id # 'A o_arrow`) ;
 
-(*
-val _ = type_abbrev ("category", Type `: \'A. (!'a. ('a ('a 'A))) # 
-  (!'a 'b 'c. ('c ('b 'A)) -> ('b ('a 'A)) -> ('c ('a 'A)))`) ;
-*)
-
 val category_def = new_definition("category_def", 
   ``category = \:'A. \ (id: 'A id, comp: 'A o_arrow).
     (* Left Identity *)
@@ -81,12 +76,6 @@ val category_fun = store_thm ("category_fun",
 
 (** reversing direction of arrows to form the dual category **)
   
-(*
-val dual_comp_def = new_definition ("dual_comp_def",
-  ``dual_comp (comp : 'A o_arrow) : ('A C) o_arrow = 
-    (\:'c 'b 'a. \f g. comp [:'a,'b,'c:] g f)``) ;
-*)
-
 val dual_comp_def = Define
   `dual_comp (comp : 'A o_arrow) : ('A C) o_arrow = 
     (\:'c 'b 'a. \f g. comp [:'a,'b,'c:] g f)` ;
@@ -121,18 +110,22 @@ val _ = type_abbrev ("g_functor",
 val _ = type_abbrev ("g_functor_dual", 
   Type `: \'C 'D 'F. !'b 'a. ('a, 'b) 'C -> ('a 'F, 'b 'F) 'D`);
 
+(* thus 
+``(x : ('C, 'D, 'F) g_functor_dual) = (y : ('C C, 'D C, 'F) g_functor)`` ;
+typechecks *)
+
 (*---------------------------------------------------------------------------
             Functor predicate
  ---------------------------------------------------------------------------*)
 
 val g_functor_def = Define
-   `g_functor = \:'C 'D 'F. \ (idC : 'C id, compC : 'C o_arrow) 
-     (idD : 'D id, compD : 'D o_arrow) (F': 'F (('C, 'D) g_functor)).
+   `g_functor = \:'C 'D 'F. \ ((idC, compC) : 'C category) 
+     ((idD, compD) : 'D category) (F': 'F (('C, 'D) g_functor)).
       (* Identity *) 
           (!:'a. F' [:'a, 'a:] idC = idD) /\
       (* Composition *)
-          (!:'a 'b 'c. !(f:('a, 'b) 'C) (g:('b, 'c) 'C).
-	    F' (compC g f) = compD (F' g) (F' f)) ` ;
+          (!:'a 'b 'c. !f g.
+	    F' (compC [:'a,'b,'c:] g f) = compD (F' g) (F' f)) ` ;
 
 val g_functor_thm = store_thm ("g_functor_thm", 
    ``g_functor [:'C, 'D, 'F:] (idC : 'C id, compC : 'C o_arrow) 
@@ -140,8 +133,8 @@ val g_functor_thm = store_thm ("g_functor_thm",
       (* Identity *) 
           (!:'a. F' [:'a, 'a:] idC = idD) /\
       (* Composition *)
-          (!:'a 'b 'c. !(f:('a, 'b) 'C) (g:('b, 'c) 'C).
-	    F' (compC g f) = compD (F' g) (F' f)) ``,
+          (!:'a 'b 'c. !f g.
+	    F' (compC [:'a,'b,'c:] g f) = compD (F' g) (F' f)) ``,
     SRW_TAC [] [g_functor_def]) ;
 
 (* identity g_functors is a g_functor *)
@@ -209,12 +202,12 @@ val g_functor_oo = store_thm ("g_functor_oo",
 
 val g_dual_functor_def = Define
   `g_dual_functor (F': 'F (('C, 'D) g_functor)) =
-    (\:'a 'b. F' [:'b, 'a:]) : 'F (('C, 'D) g_functor_dual)` ;
+    (\:'a 'b. F' [:'b, 'a:]) : 'F (('C C, 'D C) g_functor)` ;
 
 val g_functor_dual = store_thm ("g_functor_dual",
-  ``g_functor [:'C, 'D:] ((idC, compC) : 'C category)
-      ((idD, compD) : 'D category) (F': 'F (('C, 'D) g_functor)) =
-    g_functor [:'C C, 'D C:] ((idC, dual_comp compC) : 'C C category)
+  ``g_functor [:'C, 'D, 'F:] (idC, compC)
+      ((idD, compD) : 'D category) F' =
+    g_functor [:'C C, 'D C, 'F:] (idC, dual_comp compC)
       ((idD, dual_comp compD) : 'D C category) (g_dual_functor F') ``,
   EQ_TAC THEN
   SRW_TAC [] [g_functor_def, g_dual_functor_def, dual_comp_def]) ;

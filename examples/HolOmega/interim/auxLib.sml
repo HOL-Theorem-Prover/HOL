@@ -105,6 +105,13 @@ fun reo_prems f thm =
   assumes thm has no assumptions *)
 fun ufd f thm = DISCH_ALL (f (UNDISCH_ALL thm)) ;
 fun ufdl f thm = map DISCH_ALL (f (UNDISCH_ALL thm)) ;
+(* no longer assume thm has no assumptions *)
+fun ufd f thm = 
+  let val (ps, cth) = UNDISCH_ALL_TERMS thm ;
+  in DISCH_TERMS ps (f cth) end ;
+fun ufdl f thm = 
+  let val (ps, cth) = UNDISCH_ALL_TERMS thm ;
+  in map (DISCH_TERMS ps) (f cth) end ;
 fun ufdn n f thm = 
   let val (ps, cth) = UNDISCH_N_TERMS n thm ;
   in DISCH_TERMS ps (f cth) end ;
