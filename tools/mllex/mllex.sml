@@ -564,10 +564,10 @@ fun AdvanceTok () : unit = let
 			if c = #">" then ARROW else (ungetch(!LexBuf); ASSIGN)
 		end
 			(* character set *)
-		| #"[" => let val rec classch = fn () => let val x = skipws()
-				in if x = #"\\" then escaped() else x
+		| #"[" => let val classch = fn () => let val x = skipws()
+				in if x = #"\\" then (true,escaped()) else (false,x)
 				end;
-			val first = classch();
+			val (_,first) = classch();
 			val flag = (first <> #"^");
 			val c = array(!CharSetSize,not flag);
 			fun add NONE = ()
@@ -581,17 +581,17 @@ fun AdvanceTok () : unit = let
 				  i := !i + 1)
 				end
 			and getClass last = (case classch()
-			     of #"]" => (add(last); c)
-			      | #"-" => (case last
+			     of (false,#"]") => (add(last); c)
+			      | (_,#"-") => (case last
 				   of NONE => getClass(SOME #"-")
-				    | (SOME last') => let val x = classch()
+				    | (SOME last') => let val (esc,x) = classch()
 					in
-					  if x = #"]"
+					  if not esc andalso x = #"]"
 					    then (add(last); add(SOME #"-"); c)
 					    else (range(last',x); getClass(NONE))
 					end
 				  (* end case *))
-			      | x => (add(last); getClass(SOME x))
+			      | (_,x) => (add(last); getClass(SOME x))
 			    (* end case *))
 		in CHARS(getClass(if first = #"^" then NONE else SOME first))
 		end
