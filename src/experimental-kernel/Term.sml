@@ -12,19 +12,17 @@ val WARN = HOL_WARNING "Term"
    type instantiation *)
 exception Unchanged
 
-(* apply a function f under "constructor" con, handling Unchanged *)
-fun qcomb con f (x,y) = let
-  val fx = f x
-in
-  let val fy = f y
+fun qcomb2 con (f, g) (x, y) =
+  let val fx = f x
   in
-    con(fx, fy)
-  end handle Unchanged => con(fx, y)
-end handle Unchanged => let val fy = f y
-                        in
-                          con(x, fy)
-                        end
+    let val gy = g y
+    in
+      con (fx, gy)
+    end handle Unchanged => con (fx, y)
+  end handle Unchanged => let val gy = g y in con (x, gy) end
 
+(* apply a function f under "constructor" con, handling Unchanged *)
+fun qcomb con f = qcomb2 con (f, f)
 
 type const_key = KernelSig.kernelname
 type const_info = (KernelSig.kernelid * hol_type)
@@ -108,9 +106,6 @@ fun type_of t = let
 in
   ty_of t Lib.I
 end
-
-(* val type_of = Profile.profile "type_of" type_of *)
-
 
 
 (* discriminators *)
@@ -282,8 +277,6 @@ in
 fun free_vars tm = FV tm [] Lib.I
 end
 
-(* val free_vars = Profile.profile "free_vars" free_vars *)
-
 fun free_vars_lr tm = let
   fun FV (v as Var _) A = Lib.insert v A
     | FV (App(f, x)) A = FV x (FV f A)
@@ -295,6 +288,7 @@ end
 
 
 fun safe_delete(s, i) = HOLset.delete(s, i) handle HOLset.NotFound => s
+
 datatype FVaction = FVTM of term | DELvar of term
 
 fun FVL0 tlist acc =
@@ -313,11 +307,6 @@ fun FVL0 tlist acc =
     | DELvar v :: ts => FVL0 ts (safe_delete(acc, v))
 
 fun FVL tlist = FVL0 (map FVTM tlist)
-
-(*
-val FVL0 = FVL
-fun FVL tlist = Profile.profile "FVL" (FVL0 tlist)
-*)
 
 
 local
@@ -381,8 +370,6 @@ in
   cmp 0 (empty_env, empty_env) p
 end
 
-(* val compare = Profile.profile "tm_compare" compare *)
-
 val empty_tmset = HOLset.empty compare
 
 fun aconv t1 t2 = compare(t1, t2) = EQUAL
@@ -433,16 +420,17 @@ end
 val emptyvsubst = Map.mkDict compare
 val emptysubst = Map.mkDict compare
 
+val empty_stringset = HOLset.empty String.compare
+
 (* it's hard to calculate free names simply by traversing a term because
    of the situation where \x:ty1. body has x:ty1 and x:ty2 as free variables
    in body.  So, though it may be slightly less efficient, my solution here
    is to just calculate the free variables and then calculate the image of
    this set under name extraction *)
-val empty_stringset = HOLset.empty String.compare
 val free_names = let
   fun fold_name (v, acc) = HOLset.add(acc, #1 (dest_var v))
 in
-  (fn t => HOLset.foldl fold_name empty_stringset (FVL [t] empty_tmset))
+  (fn t => HOLset.foldl fold_name empty_stringset (FVL [t] empty_varset))
 end
 
 (* jrh's caml light HOL Light code
@@ -498,37 +486,75 @@ end
 
 
 local
-  open Map Susp
+  open Map
 
-  type termset = term HOLset.set
-  val fvsingle = HOLset.singleton compare
-
-  datatype fvinfo = FVI of { current : termset,
-                             left : fvinfo option,
-                             right : fvinfo option,
-                             inabs : fvinfo option}
-  fun leaf s = FVI {current = s, left = NONE, right = NONE, inabs = NONE}
+  datatype fvinfo = FVI of { current : term HOLset.set,
+                             is_full : bool,
+                             left : fvinfo option, (* also used for Abs *)
+                             right : fvinfo option }
+  fun leaf (s, b) =
+    FVI {current = s, is_full = b, left = NONE, right = NONE}
+  fun current (FVI r) = #current r
+  fun is_full (FVI r) = #is_full r
   fun left (FVI r) = valOf (#left r)
   fun right (FVI r) = valOf (#right r)
-  fun inabs (FVI r) = valOf (#inabs r)
-  fun current (FVI r) = #current r
-  fun calculate_fvinfo t =
-      case t of
-        v as Var _ => leaf (fvsingle v)
-      | Const _ => leaf empty_tmset
-      | App(f, x) => let
-          val fvs = calculate_fvinfo f
-          val xvs = calculate_fvinfo x
+  (* computes a tree with information about the set of free variables in tm,
+     returns early when all redexes in theta have become bound *)
+  fun calculate_fvinfo theta_opt tm =
+      case tm of
+        Var _ => leaf (HOLset.singleton var_compare tm, true)
+      | Const _ => leaf (empty_varset, true)
+      | App (f, x) =>
+        let
+          val fvs = calculate_fvinfo theta_opt f
+          val xvs = calculate_fvinfo theta_opt x
         in
-          FVI {current = HOLset.union(current fvs, current xvs),
-               left = SOME fvs, right = SOME xvs, inabs = NONE}
+          FVI {current = HOLset.union (current fvs, current xvs),
+               is_full = is_full fvs andalso is_full xvs,
+               left = SOME fvs, right = SOME xvs}
         end
-      | Abs(v, body) => let
-          val bodyvs = calculate_fvinfo body
+      | Abs (v, body) =>
+        let
+          val theta'_opt = Option.map
+            (fn theta => #1 (remove (theta, v)) handle NotFound => theta)
+            theta_opt
         in
-          FVI {current = safe_delete(current bodyvs, v),
-               left = NONE, right = NONE, inabs = SOME bodyvs}
+          if isSome theta'_opt andalso numItems (valOf theta'_opt) = 0 then
+            (* return early *)
+            leaf (empty_varset, false)
+          else
+            let
+              val bodyvs = calculate_fvinfo theta'_opt body
+            in
+              FVI {current = safe_delete (current bodyvs, v),
+                   is_full = is_full bodyvs,
+                   left = SOME bodyvs, right = NONE}
+            end
         end
+  (* expands a (possibly partial) tree with information about the set of free
+     variables in tm into a tree with full information *)
+  fun expand_partial_fvinfo tm fvi =
+    if is_full fvi then
+      raise Unchanged
+    else
+      case tm of
+        App (f, x) =>
+          qcomb2 (fn (fvs, xvs) =>
+              FVI {current = HOLset.union (current fvs, current xvs),
+                   is_full = true,
+                   left = SOME fvs, right = SOME xvs})
+            (expand_partial_fvinfo f, expand_partial_fvinfo x)
+            (left fvi, right fvi)
+      | Abs (v, body) =>
+          let
+            val bodyvs = expand_partial_fvinfo body (left fvi)
+              handle Option => calculate_fvinfo NONE body
+          in
+            FVI {current = safe_delete (current bodyvs, v),
+                 is_full = true,
+                 left = SOME bodyvs, right = NONE}
+          end
+      | _ => raise Fail "expand_partial_fvinfo: catastrophic invariant failure"
 
   fun filtertheta theta fvset = let
     (* Removes entries in theta for things not in fvset.  theta likely to
@@ -540,62 +566,52 @@ local
     foldl foldthis emptyvsubst theta
   end
 
-
-
   fun augvsubst theta fvi tm =
       case tm of
-        Var _ => (case peek(theta, tm) of NONE => raise Unchanged
-                                        | SOME (_, t) => t)
+        Var _ => (case peek (theta, tm) of NONE => raise Unchanged
+                                         | SOME (_, t) => t)
       | Const _ => raise Unchanged
-      | App(f, x) => let
-          val xfvi = right fvi
-        in
-          let
-            val ffvi = left fvi
-            val f' = augvsubst theta ffvi f
-          in
-            let val x' = augvsubst theta xfvi x
-            in
-              App(f', x')
-            end handle Unchanged => App(f', x)
-          end handle Unchanged => let val x' = augvsubst theta xfvi x
-                                  in
-                                    App(f, x')
-                                  end
-        end
-      | Abs(v, body) => let
-          val theta = #1 (remove(theta, v)) handle NotFound => theta
+      | App p => qcomb2 App
+          (augvsubst theta (left fvi), augvsubst theta (right fvi)) p
+      | Abs (v, body) => let
+          val theta' = #1 (remove (theta, v)) handle NotFound => theta
+          val _ = if numItems theta' = 0 then raise Unchanged else ()
           val (vname, vty) = dest_var v
           val currentfvs = current fvi
+          val body_fvi = left fvi
           (* first calculate the new names we are about to introduce into
              the term *)
-          fun foldthis (k,v,acc) =
-              if HOLset.member(currentfvs, k) then
-                HOLset.union(acc, force (#1 v))
+          fun foldthis (k, v, acc) =
+              if HOLset.member (currentfvs, k) then
+                HOLset.union (acc, Susp.force (#1 v))
               else acc
-          val newnames = foldl foldthis empty_stringset theta
-          val new_fvi = inabs fvi
+          val newnames = foldl foldthis empty_stringset theta'
         in
-          if HOLset.member(newnames, vname) then let
+          if HOLset.member (newnames, vname) then
+            let
               (* now need to vary v, avoiding both newnames, and also the
                  existing free-names of the whole term. *)
-              fun foldthis (fv, acc) = HOLset.add(acc, #1 (dest_var fv))
-              val allfreenames = HOLset.foldl foldthis newnames (current fvi)
+              val body_fvi = expand_partial_fvinfo body body_fvi
+                handle Unchanged => body_fvi
+              val bodyfvs = current body_fvi
+              fun foldthis (fv, acc) = HOLset.add (acc, #1 (dest_var fv))
+              val allfreenames = HOLset.foldl foldthis newnames bodyfvs
               val new_vname = set_name_variant allfreenames vname
-              val new_v = mk_var(new_vname, vty)
+              val new_v = mk_var (new_vname, vty)
               val new_theta =
-                  if HOLset.member(current new_fvi, v) then let
-                      val singleton = HOLset.singleton String.compare new_vname
-                    in
-                      insert(theta, v, (Susp.delay (fn () => singleton),
-                                        new_v))
-                    end
-                  else theta
+                if HOLset.member (bodyfvs, v) then
+                  let
+                    val singleton = HOLset.singleton String.compare new_vname
+                  in
+                    insert (theta', v,
+                      (Susp.delay (fn () => singleton), new_v))
+                  end
+                else theta'
             in
-              Abs(new_v, augvsubst new_theta new_fvi body)
+              Abs (new_v, augvsubst new_theta body_fvi body)
             end
           else
-            Abs(v, augvsubst theta new_fvi body)
+            Abs (v, augvsubst theta' body_fvi body)
         end
 
   fun vsubst theta tm =
@@ -605,7 +621,7 @@ local
       | Const _ => raise Unchanged
       | App p  => qcomb App (vsubst theta) p
       | Abs _ => let
-          val fvi = calculate_fvinfo tm
+          val fvi = calculate_fvinfo (SOME theta) tm
           val theta' = filtertheta theta (current fvi)
         in
           if numItems theta' = 0 then raise Unchanged
@@ -614,7 +630,7 @@ local
 
   fun ssubst theta t =
       (* only used to substitute in fresh variables (genvars), so no
-         capture check -- potentially unsound (because there is no
+         capture check -- potentially incorrect (because there is no
          guarantee that genvars are actually fresh) *)
       if numItems theta = 0 then raise Unchanged
       else
@@ -635,9 +651,8 @@ local
             | _ => raise Unchanged
           end
 
-  fun vsub_insert(fm, k, v) =
-      insert(fm, k, (delay (fn () => free_names v), v))
-
+  fun vsubst_insert (map, k, v) =
+      insert (map, k, (Susp.delay (fn () => free_names v), v))
 in
 
 (* Due to the missing capture check in ssubst, subst can produce wrong results
@@ -650,12 +665,12 @@ in
 fun subst theta =
     if null theta then I
     else if List.all (is_var o #redex) theta then let
-        fun foldthis  ({redex,residue}, acc) = let
+        fun foldthis ({redex, residue}, acc) = let
           val _ = type_of redex = type_of residue
                   orelse raise ERR "vsubst" "Bad substitution list"
         in
           if redex = residue then acc
-          else vsub_insert(acc, redex, residue)
+          else vsubst_insert (acc, redex, residue)
         end
         val atheta = List.foldl foldthis emptyvsubst theta
       in
@@ -668,7 +683,7 @@ fun subst theta =
                   orelse raise ERR "vsubst" "Bad substitution list"
           val gv = genvar (type_of redex)
         in
-          (insert(theta1, redex, gv), vsub_insert (theta2, gv, residue))
+          (insert (theta1, redex, gv), vsubst_insert (theta2, gv, residue))
         end
         val (theta1, theta2) =
             List.foldl foldthis (emptysubst, emptyvsubst) theta
