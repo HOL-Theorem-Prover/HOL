@@ -329,7 +329,8 @@ local
     val ss = full s
     val (pfx,primes) = splitr (equal #"'") ss
     val prime_str_interior = translate (fn _ => "\\prime") primes
-    val prime_str = "\\sp{" ^ prime_str_interior ^ "}"
+    val prime_str = if prime_str_interior = "" then ""
+                    else "\\sp{" ^ prime_str_interior ^ "}"
     val (core,digits) = splitr Char.isDigit pfx
     val dsz = size digits
     val digitstr = if 0 < dsz andalso dsz <= 2 then
