@@ -208,15 +208,16 @@ fun test_lhs_head_var name assn =
     origin_structure = "auxLib"} ; 
   
 (* to instantiate equality antecedents *)
-fun inst_eqs th = 
+fun eq_subs th = 
   let open boolLib
     val (ants, cons) = 
       strip_imp (concl (REWRITE_RULE [GSYM AND_IMP_INTRO] th)) ;
     val eqants = filter is_eq ants ;
     (* assume lhs is a variable *)
     fun mksub (lhs, rhs) = lhs |-> rhs ;
-    val subs = map (mksub o dest_eq) eqants ;
-  in Rewrite.REWRITE_RULE [] (INST subs th) end ;
+  in map (mksub o dest_eq) eqants end ;
+  
+fun inst_eqs th =  Rewrite.REWRITE_RULE [] (INST (eq_subs th) th) ;
 
 (* useful theorems *)
 val iffD1 = 

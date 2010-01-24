@@ -235,10 +235,7 @@ val Kcm_S1 = store_thm ("Kcm_S1", tm_Kcm_S1,
     (farwmmp KdmonadD_MAPe), (REWRITE_TAC [Kcomp_thm']), 
     (farwmmp catDAss), (farwmmp (KdmonadDK RS KmonDRU)) ]) ;
 
-val Kdc_mon = (KdcmonadDK RS KdmonadDK) ;
-val KdcmonDRU = (Kdc_mon RS KmonDRU) ;
-val KdmonDRU = (KdmonadDK RS KmonDRU) ;
-  
+val KdmonDRU = (KdmonadDK RS KmonDRU) ; 
 val Kdo_mon = (KdomonadDKd RS KdmonadDK) ;
 val KdomonDRU = (Kdo_omonadD RS KomonDRU) ;
   
@@ -308,7 +305,6 @@ val _ = ListPair.map save_thm (["dlDnt", "dlD1", "dlD2", "dlD3", "dlD4"],
   define a compound monad satisfying J1 and J2 *)
 val tmBWD_cm' = ``category (id, comp) ==>
     Kdmonad [:'A, 'M:] (id,comp) (unitM, extM, mapM, joinM) ==> 
-    Kdcmonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp, mapM, joinM) ==> 
     Kdomonad [:'A, 'M:] (id,comp) (unitM, extM, kcomp, mapM, joinM) ==> 
     g_umj_monad [:'A, 'N:] (id,comp) (unitN, mapN, joinN) ==> 
     dist_law (id,comp) (unitM,extM,mapM,joinM) (unitN,mapN,joinN) swap ==>
@@ -316,9 +312,15 @@ val tmBWD_cm' = ``category (id, comp) ==>
     (kmap = \:'a 'b. \f. comp swap (mapN [:'a, 'b 'M:] f)) ==>
     (unitNM = \:'a. comp (unitM [:'a 'N:]) (unitN [:'a:])) ==>
     (pext = \:'a 'b. \f. kcomp kjoin (kmap [:'a, 'b 'N:] f)) ==>
+    (pext [:'a,'c:] (comp g f) = 
+      comp (pext [:'b,'c:] g) (mapN [:'a,'b:] f)) ==>
+    (!: 'a 'b 'c. !g f. pext [:'a,'c:] (comp g f) = 
+      comp (pext [:'b,'c:] g) (mapN [:'a,'b:] f)) ==>
   g_umj_monad [:('A,'M) Kleisli, 'N:] (unitM, kcomp) (unitNM, kmap, kjoin) ==>
   S1to4 (id,comp) (unitM,extM,mapM,joinM) (unitN,mapN,joinN) swap ==> 
   Kdmonad [:('A,'M) Kleisli, 'N:] (unitM,kcomp) (unitNM,pext,kmap,kjoin) ==>
+  (extM (pext unitM) = mapM joinN) ==> 
+  (extM (pext (comp unitNM f)) = mapM (mapN f)) ==> 
     (* S4 o extra *) (let (prod : (! 'a. ('a 'N 'M 'N, 'a 'N 'M) 'A)) =
         \:'a. comp (mapM (joinN [:'a:])) (swap [:'a 'N:]) in
       (!: 'a. comp (comp (prod [:'a:]) (mapN (extM (swap [:'a:])))) 
@@ -330,8 +332,8 @@ val tmBWD_cm' = ``category (id, comp) ==>
         comp (comp (extM (swap [:'a:])) (prod [:'a 'M:]))
 	  (mapN (mapM (unitN [:'a 'M:])))) )`` ;
   
-val ([cic, KdmonM, KdcmonM, KdomonM, umjN, dl, kjoin, kmap, unitNM,
-  pext, umjK, S14, KdK], S4os) = strip_imp tmBWD_cm' ;
+val ([cic, KdmonM, KdomonM, umjN, dl, kjoin, kmap, unitNM,
+  pext, pc', pc, umjK, S14, KdK, J2, meq], S4os) = strip_imp tmBWD_cm' ;
 
 val tm_S_IMP_DL = list_mk_imp ([cic, KdmonM, umjN, S14], dl) ;
 val tm_DL_IMP_S = list_mk_imp ([cic, KdmonM, umjN, dl], S14) ;
@@ -435,81 +437,6 @@ val S_IFF_DL = store_thm ("S_IFF_DL", tm_S_IFF_DL,
   THENL [ FIRST_REP_RES ACCEPT_TAC S_IMP_DL,
     FIRST_REP_RES ACCEPT_TAC DL_IMP_S]) ;
 
-(* REPLACED BY BELOW
-val tmBWD_cm = list_mk_imp
-  ([cic, KdcmonM, umjN, dl, kjoin, kmap, unitNM], umjK);
-val tmBWD_cmK = list_mk_imp
-  ([cic, KdcmonM, umjN, dl, kjoin, kmap, unitNM, pext], KdK);
-
-(* note also, extM kjoin = mapM joinN, ie, J2 holds,
-   def'n of pext, and Kdmonad result omitted above is 
-    (pext = \:'a 'b. \f. kcomp kjoin (kmap [:'a, 'b 'N:] f)) ==>
-  Kdmonad [:('A,'M) Kleisli, 'N:] (unitM, kcomp) (unitNM, pext, kmap, kjoin)`` ;
-*)
-
-val ktacs2 = [ (FIRST_ASSUM (fn th => REWRITE_TAC [Kcomp_thm',
-    MATCH_MP KdcmonadD_Kcomp th])),
-  (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th]) KdmonadD_EXTe),
-  (farwmmp g_umjD2), (farwmmp catDAss), (farwmmp dlD3),
-  (REPEAT STRIP_TAC), AP_THM_TAC, AP_TERM_TAC,
-  (farwmmp catDRAss), (farwmmp dlDnt), (farwmmp catDAss),
-  AP_THM_TAC, AP_TERM_TAC,
-  (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th]) Kdmonad_umj2),
-  (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th]) KdmonadD_EXTe),
-  (farwmmp catDAss)] ;
-
-val ktacs3 = [ (FIRST_ASSUM (fn th => REWRITE_TAC [Kcomp_thm',
-    MATCH_MP KdcmonadD_Kcomp th])),
-  (farwmmp catDAss), (farwmmp KdcmonDRU), 
-  (farwmmp catDRAss), (farwmmp g_umjD3),
-  (farwmmp catDAss), (farwmmp dlD1), (farwmmp KdmonadD_MAPe)] ;
-
-val ktacs4 = [ (FIRST_ASSUM (fn th => REWRITE_TAC [Kcomp_thm',
-    MATCH_MP KdcmonadD_Kcomp th])),
-  (farwmmp catDAss), (farwmmp KdcmonDRU),
-  (farwmmp catDRAss), (farwmmp g_umjD4),
-  (farwmmp catDAss), (farwmmp dlD4),
-  (farwmmp g_umjD2), (farwmmp catDAss), (farwmmp KdmonadD_MAPe)] ;
-
-val ktacs5 = [ (FIRST_ASSUM (fn th => REWRITE_TAC [Kcomp_thm',
-    MATCH_MP KdcmonadD_Kcomp th])),
-  (farwmmp catDAss), (farwmmp KdcmonDRU),
-  (farwmmp catDRAss), (farwmmp g_umjD5), (farwmmp catDRU)] ;
-
-val ktacs6 = [ (farwmmp g_umjD2), (farwmmp catDAss), (farwmmp dlD2),
-  (FIRST_ASSUM (fn th => REWRITE_TAC [Kcomp_thm',
-    MATCH_MP KdcmonadD_Kcomp th])),
-  (farwmmp catDAss), (farwmmp KdcmonDRU),
-  (farwmmp catDRAss), (farwmmp g_umjD6), (farwmmp catDRU)] ;
-
-val ktacs7 = [ (farwmmp g_umjD2), (farwmmp catDAss), (farwmmp dlD2),
-  (FIRST_ASSUM (fn th => REWRITE_TAC [Kcomp_thm',
-    MATCH_MP KdcmonadD_Kcomp th])),
-  (farwmmp catDAss), (farwmmp KdcmonDRU),
-  (farwmmp catDRAss), (farwmmp g_umjD7)] ;
-
-val BWD_cm = store_thm ("BWD_cm", tmBWD_cm, 
-  EVERY [ REPEAT STRIP_TAC,
-    (POP_ASSUM_LIST (MAP_EVERY (ASSUME_TAC o fix_abs_eq []))),
-    ASM_REWRITE_TAC [g_umj_monad_exp], 
-    (FIRST_ASSUM (ASSUME_TAC o MATCH_MP KdcmonadDK)),
-    REPEAT CONJ_TAC]
-  THENL (farwmmp dlD2 :: map EVERY 
-    [ ktacs2, ktacs3, ktacs4, ktacs5, ktacs6, ktacs7]) ) ;
-
-val g_umj_imp_Kmonad' = ufd (fst o EQ_IMP_RULE) g_umj_iff_Kmonad ;
-val g_umj_imp_Kmonad = 
-  fix_abs_eq [EXT_def, GSYM AND_IMP_INTRO] g_umj_imp_Kmonad' ; 
-
-val BWD_cmK = store_thm ("BWD_cmK", tmBWD_cmK, 
-  EVERY [ REPEAT STRIP_TAC,
-    (USE_LIM_RES_TAC ASSUME_TAC BWD_cm),
-    (USE_LIM_RES_TAC ASSUME_TAC (Kdc_cmonadD RSN (2, Kcmonad_IMP_Kcat))),
-    (USE_LIM_RES_TAC MATCH_MP_TAC g_umj_imp_Kmonad),
-    (ASM_REWRITE_TAC []), (CONV_TAC (fix_abs_eq_conv [])),
-    REPEAT STRIP_TAC, REFL_TAC ]) ;
-END REPLACED BY BELOW *)
-
 (*
 show_types := true ;
 show_types := false ;
@@ -519,9 +446,17 @@ val (sgs, goal) = top_goal () ;
 *)
 
 val tmBWD_cm = list_mk_imp
-  ([cic, KdomonM, umjN, dl, kjoin, kmap, unitNM], umjK);
+  ([cic, KdomonM, umjN, dl, kjoin, kmap, unitNM], umjK) ;
 val tmBWD_cmK = list_mk_imp
-  ([cic, KdomonM, umjN, dl, kjoin, kmap, unitNM, pext], KdK);
+  ([cic, KdomonM, umjN, dl, kjoin, kmap, unitNM, pext], KdK) ;
+val tmBWD_cmKJ = list_mk_imp
+  ([cic, KdomonM, umjN, dl, kjoin, kmap, unitNM, pext],
+    mk_conj (KdK, J2)) ;
+val tmBWD_cmKM = list_mk_imp
+  ([cic, KdomonM, umjN, kmap, unitNM, pext, KdK], meq) ;
+val tmBWD_cmKJM = list_mk_imp
+  ([cic, KdomonM, umjN, kjoin, kmap, unitNM, pext, KdK], 
+    mk_conj (J2, meq)) ;
 
 (* note also, extM kjoin = mapM joinN, ie, J2 holds,
    def'n of pext, and Kdmonad result omitted above is 
@@ -577,17 +512,36 @@ val BWD_cm = store_thm ("BWD_cm", tmBWD_cm,
   THENL (farwmmp dlD2 :: map EVERY 
     [ ktacs2, ktacs3, ktacs4, ktacs5, ktacs6, ktacs7]) ) ;
 
-val g_umj_imp_Kmonad' = ufd (fst o EQ_IMP_RULE) g_umj_iff_Kmonad ;
-val g_umj_imp_Kmonad = 
-  fix_abs_eq [EXT_def, GSYM AND_IMP_INTRO] g_umj_imp_Kmonad' ; 
+val g_umj_imp_Kdomonad = ufd (fst o EQ_IMP_RULE) g_umj_iff_Kdomonad ;
+val gkd1 = (g_umj_imp_Kdomonad RSN (2, KdomonadDKd)) ;
+
+val gkd2 = (REWRITE_RULE [GSYM AND_IMP_INTRO] (reo_prems tl gkd1)) ; 
+val [es, kcs] = eq_subs gkd2 ;
+val gkd3 = REWRITE_RULE [] (INST [kcs] gkd2) ;
+val g_umj_imp_Kdmonad = fix_abs_eq [EXT_def] gkd3 ;
 
 val BWD_cmK = store_thm ("BWD_cmK", tmBWD_cmK, 
   EVERY [ REPEAT STRIP_TAC,
     (USE_LIM_RES_TAC ASSUME_TAC BWD_cm),
     (USE_LIM_RES_TAC ASSUME_TAC (Kdo_omonadD RSN (2, Komonad_IMP_Kcat))),
-    (USE_LIM_RES_TAC MATCH_MP_TAC g_umj_imp_Kmonad),
+    (USE_LIM_RES_TAC MATCH_MP_TAC g_umj_imp_Kdmonad),
     (ASM_REWRITE_TAC []), (CONV_TAC (fix_abs_eq_conv [])),
     REPEAT STRIP_TAC, REFL_TAC ]) ;
+
+val BWD_cmKJM = store_thm ("BWD_cmKJM", tmBWD_cmKJM,
+  REPEAT STRIP_TAC 
+  THENL [
+    EVERY [ (farwmmp KdmonadD_JOIN_SYM), (ASM_REWRITE_TAC []), TY_BETA_TAC, 
+    (FIRST_REP_RES MATCH_ACCEPT_TAC (KdomonadDKd RS KdmonadD_MAP_SYM))],
+    (SUBGOAL_THEN pc (fn th => REWRITE_TAC [th]))
+    THENL [
+      EVERY [ (ASM_REWRITE_TAC []),
+	(frrc_rewr KdomonadD_Kcomp), (REWRITE_TAC [Kcomp_def]),
+	TY_BETA_TAC, BETA_TAC, (farwmmp g_umjD2), (farwmmp catDAss) ],
+      (farwmmp (KdmonadDK RS KmonDLU)) THEN
+	(frrc_rewr (KdomonadDKd RS KdmonadD_MAP_SYM)) ] ]) ;
+
+(* now need to combine this with Ko_pext_cm to get that NM is a monad *)
 
 (*
 show_types := true ;

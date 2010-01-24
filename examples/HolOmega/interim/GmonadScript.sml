@@ -398,7 +398,7 @@ val tmumjiffk = ``category (id,comp) ==>
   (g_umj_monad (id,comp) (unit,map,join) /\ (ext = EXT (id,comp) (map,join)) = 
   Kdmonad (id,comp) (unit,ext,map,join))`` ;
 
-val g_umj_iff_Kmonad = store_thm ("g_umj_iff_Kmonad", tmumjiffk,
+val g_umj_iff_Kdmonad = store_thm ("g_umj_iff_Kdmonad", tmumjiffk,
   EVERY [ (REWRITE_TAC [g_umj_monad_thm, EXT_def]), STRIP_TAC,
     (* note how EXTD_def and EXT_def become the same here *)
     (FIRST_ASSUM ((fn th => REWRITE_TAC [REWRITE_RULE [EXTD_def] th]) o 
@@ -413,6 +413,17 @@ val g_umj_iff_Kmonad = store_thm ("g_umj_iff_Kmonad", tmumjiffk,
       (CONV_TAC (ONCE_DEPTH_CONV TY_ETA_CONV)), REFL_TAC],
     (USE_LIM_RES_TAC (fn th => REWRITE_TAC [th]) Kdmonad_umj5) ]
   THEN EVERY [ TY_BETA_TAC, BETA_TAC, (REPEAT STRIP_TAC), REFL_TAC]) ;
+
+val tmumjiffko = ``category (id,comp) ==> 
+  (g_umj_monad (id,comp) (unit,map,join) /\ (ext = EXT (id,comp) (map,join))
+    /\ (kcomp = Kcomp (id, comp) ext) =
+  Kdomonad (id,comp) (unit,ext,kcomp,map,join))`` ;
+
+val g_umj_iff_Kdomonad = store_thm ("g_umj_iff_Kdomonad", tmumjiffko,
+  EVERY [ STRIP_TAC,
+    (FIRST_ASSUM (fn th => REWRITE_TAC [MATCH_MP Kdomonad_iff th])),
+    (FIRST_ASSUM (fn th => REWRITE_TAC [GSYM (MATCH_MP g_umj_iff_Kdmonad th)])),
+    (MATCH_ACCEPT_TAC CONJ_ASSOC)]) ;
 
 (*
 show_types := true ;

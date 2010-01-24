@@ -190,16 +190,6 @@ val Kdomonad_def = Define `Kdomonad = \:'A 'M. \ (id, comp)
     (map = MAPE (id,comp) (unit,ext)) ∧
     (join = JOINE (id,comp) (unit,ext))` ;
 
-val Kdcmonad_def = Define `Kdcmonad =
-    \:'A 'M. \ (id, comp) (unit, ext, kcomp, map, join).
-    Kdmonad [:'A, 'M:] (id, comp) (unit,ext,map,join) /\
-      (kcomp = Kcomp (id, comp) ext)` ;
-
-val Kcmonad_def = Define `Kcmonad =
-    \:'A 'M. \ (id, comp) (unit, ext, kcomp).
-    Kmonad [:'A, 'M:] (id, comp) (unit,ext) /\
-      (kcomp = Kcomp (id, comp) ext)` ;
-
 val Kdmonad_thm = store_thm ("Kdmonad_thm",
   ``Kdmonad [:'A, 'M:] (id, comp) (unit,ext,map,join) = 
     Kmonad [:'A, 'M:] (id, comp) (unit, ext) /\
@@ -214,44 +204,15 @@ val Kdomonad_thm = store_thm ("Kdomonad_thm",
     (join = JOINE (id,comp) (unit,ext))``,
   SRW_TAC [] [Kdomonad_def]) ;
 
-val Kdcmonad_thm = store_thm ("Kdcmonad_thm",
-  ``Kdcmonad [:'A, 'M:] (id, comp) (unit,ext,kcomp,map,join) = 
-    Kdmonad [:'A, 'M:] (id, comp) (unit,ext,map,join) /\
-      (kcomp = Kcomp (id, comp) ext)``,
-  SRW_TAC [] [Kdcmonad_def]) ;
-
-val Kcmonad_thm = store_thm ("Kcmonad_thm",
-  ``Kcmonad [:'A, 'M:] (id, comp) (unit,ext,kcomp) = 
-    Kmonad [:'A, 'M:] (id, comp) (unit,ext) /\
-      (kcomp = Kcomp (id, comp) ext)``,
-  SRW_TAC [] [Kcmonad_def]) ;
-
-(* note the connection between Komonad and Kcmonad ;
-  TODO - avoid duplication *)
-val Ko_iff_cmonad = save_thm ("Ko_iff_cmonad",
-  REWRITE_RULE [GSYM Kcmonad_thm] Komonad_iff) ;
-
 val (KdmonadD, KdmonadI) = EQ_IMP_RULE Kdmonad_thm ;
 val KdmonadDK = save_thm ("KdmonadDK", ufd CONJUNCT1 KdmonadD) ;
 val KdmonadD_JOIN = ufd (CONJUNCT2 o CONJUNCT2) KdmonadD ;
 val KdmonadD_MAP = ufd (CONJUNCT1 o CONJUNCT2) KdmonadD ;
 
-val (KdcmonadD, KdcmonadI) = EQ_IMP_RULE Kdcmonad_thm ;
-val KdcmonadDK = save_thm ("KdcmonadDK", ufd CONJUNCT1 KdcmonadD) ;
-val KdcmonadD_Kcomp = save_thm ("KdcmonadD_Kcomp", ufd CONJUNCT2 KdcmonadD) ;
-
-val (KcmonadD, KcmonadI) = EQ_IMP_RULE Kcmonad_thm ;
-val KcmonadDK = save_thm ("KcmonadDK", ufd CONJUNCT1 KcmonadD) ;
-val KcmonadD_Kcomp = save_thm ("KcmonadD_Kcomp", ufd CONJUNCT2 KcmonadD) ;
-
-val Kdc_cmonadD = store_thm ("Kdc_cmonadD",
-  ``Kdcmonad [:'A, 'M:] (id, comp) (unit,ext,kcomp,map,join) ==>
-    Kcmonad [:'A, 'M:] (id, comp) (unit,ext,kcomp)``,
-  SRW_TAC [] [Kcmonad_thm, Kdcmonad_thm, Kdmonad_thm]) ;
-
 val (KdomonadD, _) = EQ_IMP_RULE Kdomonad_thm ;
 val Kdo_omonadD = save_thm ("Kdo_omonadD",
   ufd CONJUNCT1 KdomonadD) ;
+val KdomonadDKo = save_thm ("KdomonadDKo", ufd CONJUNCT1 KdomonadD) ;
 
 val Kdomonad_iff = store_thm ("Kdomonad_iff", 
   ``category (id, comp) ==>
@@ -333,16 +294,6 @@ val Kcat_IMP_Kmonad = store_thm ("Kcat_IMP_Kmonad",
   so why don't the predicates functor (etc)
   require a type parameter similarly ?? *)
 
-(* 
-val Kmonad_IMP_Kcat = store_thm ("Kmonad_IMP_Kcat",
-  ``category [:'A:] (id, comp) ==>
-    Kmonad (id, comp) (unit, ext) ==> 
-    category [: ('A, 'M) Kleisli :] (unit, Kcomp (id, comp) ext)``,
-  EVERY [ (REWRITE_TAC [category_thm, Kmonad_thm, Kcomp_def]),
-    (CONV_TAC (TOP_DEPTH_CONV (BETA_CONV ORELSEC TY_BETA_CONV))),
-    (REPEAT STRIP_TAC), (ASM_REWRITE_TAC []) ]) ;
-*)
-
 val Komonad_IMP_Kcat = store_thm ("Komonad_IMP_Kcat",
   ``category [:'A:] (id, comp) ==>
     Komonad (id, comp) (unit, ext, kcomp) ==> 
@@ -354,13 +305,8 @@ val Komonad_IMP_Kcat = store_thm ("Komonad_IMP_Kcat",
 val Kmonad_IMP_Kcat = save_thm ("Kmonad_IMP_Kcat",
   reo_prems tl (KomonadI RSN (2, Komonad_IMP_Kcat))) ;
 
-val Kcmonad_IMP_Kcat = store_thm ("Kcmonad_IMP_Kcat",
-  ``category [:'A:] (id, comp) ==>
-    Kcmonad (id, comp) (unit, ext, kcomp) ==> 
-    category [: ('A, 'M) Kleisli :] (unit, kcomp)``,
-  EVERY [ (REWRITE_TAC [Kcmonad_thm]), (REPEAT STRIP_TAC),
-    (USE_LIM_RES_TAC ASSUME_TAC Kmonad_IMP_Kcat),
-    (ASM_REWRITE_TAC []) ]) ;
+val Kdomonad_IMP_Kcat = save_thm ("Kdomonad_IMP_Kcat",
+  KdomonadDKo RSN (2, Komonad_IMP_Kcat)) ;
 
 (*** PVH:
   If the second type parameter [: ('M, 'A) Kleisli :] is left out,
