@@ -346,31 +346,26 @@ ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) []);
 (* -------------------------------------------------------------------------- *)
 
 val file = concat [examplesDir, "/interactive/red_black_tree.dsf"];
-fun init_fun file f =
-   ((set_goal ([], parse_holfoot_file_restrict [f] file));
-   (e (HOLFOOT_SPECIFICATION_TAC THEN REPEAT CONJ_TAC)));
 
 (* -------------------------------------------------------------------------- *)
 
-(* init_fun file "rb_tree_init" *)
-val rb_tree_init_TAC =  (
-   VC_SOLVE_TAC THEN
-   REWRITE_TAC [RED_BLACK_TREE_FEMPTY, IS_LEAF_REWRITE]);
+(* holfoot_set_goal_procedures file ["rb_tree_init"] *)
+val rb_tree_init_TAC =  
+   xHF_CONTINUE_TAC [add_rewrites [ RED_BLACK_TREE_FEMPTY, IS_LEAF_REWRITE] ];
 
 (* -------------------------------------------------------------------------- *)
 
 val PROGRAM_FUN___mk_node_def = Define `
-   PROGRAM_FUN___mk_node k v =
-   node [k;v;1:num] [leaf;leaf]`
+   PROGRAM_FUN___mk_node k v = node [k;v;1:num] [leaf;leaf]`
 
-(* init_fun file "rb_tree_mk_node" *)
-val rb_tree_mk_node_TAC = xSOLVE_TAC ([PROGRAM_FUN___mk_node_def],[],[]);
+(* holfoot_set_goal_procedures file ["rb_tree_mk_node"] *)
+val rb_tree_mk_node_TAC = xHF_CONTINUE_TAC [ add_rewrites [PROGRAM_FUN___mk_node_def] ];
 
 (* -------------------------------------------------------------------------- *)
 
-(* init_fun file "rb_tree_is_red" *)
+(* holfoot_set_goal_procedures file ["rb_tree_is_red"] *)
 val rb_tree_is_red_TAC = 
-   xSOLVE_TAC ([RED_BLACK_TREE___IS_RED_BLACK___REWRITE],[],[])
+   xHF_CONTINUE_TAC [add_rewrites [RED_BLACK_TREE___IS_RED_BLACK___REWRITE] ]
 
 (* -------------------------------------------------------------------------- *)
 
@@ -394,12 +389,12 @@ val PROGRAM_FUN___left_rotate_def = Define `
       (node [k1:num;v1;c1] [a; node [k2;v2;c2] [b;c]]) =
       (node [k2;v2;0] [node [k1;v1;1] [a;b]; c])`
 
-(* init_fun file "rb_tree_left_rotate" *)
+(* holfoot_set_goal_procedures file ["rb_tree_left_rotate"] *)
 val rb_tree_left_rotate_TAC = 
-   SOLVE_TAC THEN
+   HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_left_rotate___REWRITE] THEN
-   xCONTINUE_TAC (false, false, false, true) ([PROGRAM_FUN___left_rotate_def], [], [])
+   xHF_CONTINUE_TAC [add_rewrites [PROGRAM_FUN___left_rotate_def]]
 
 (* -------------------------------------------------------------------------- *)
 
@@ -423,12 +418,12 @@ val PROGRAM_FUN___right_rotate_def = Define `
       (node [k2;v2;c2] [node [k1;v1;c1] [a;b]; c]) =
       (node [k1:num;v1;0] [a; node [k2;v2;1] [b;c]])`;
 
-(* init_fun file "rb_tree_right_rotate" *)
+(* holfoot_set_goal_procedures file ["rb_tree_right_rotate"] *)
 val rb_tree_right_rotate_TAC = 
-   SOLVE_TAC THEN
+   HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_right_rotate___REWRITE] THEN
-   xCONTINUE_TAC (false, false, false, true) ([PROGRAM_FUN___right_rotate_def], [], [])
+   xHF_CONTINUE_TAC [add_rewrites [PROGRAM_FUN___right_rotate_def]]
 
 (* -------------------------------------------------------------------------- *)
 
@@ -461,19 +456,19 @@ val PROGRAM_FUN___left_double_rotate_REWRITE = prove (
 SIMP_TAC std_ss [PROGRAM_FUN___left_double_rotate_def,
    PROGRAM_FUN___right_rotate_def, PROGRAM_FUN___left_rotate_def]);
 
-(* init_fun file "rb_tree_left_double_rotate" *)
+(* holfoot_set_goal_procedures file ["rb_tree_left_double_rotate"] *)
 val rb_tree_left_double_rotate_TAC = 
-   SOLVE_TAC THEN
+   HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_left_double_rotate___REWRITE,
       PROGRAM_FUN___left_double_rotate_REWRITE] THEN
-   CONTINUE_TAC (true, false, false, true) THEN
+   xHF_CONTINUE_TAC [generate_vcs] THEN
+   HF_ELIM_COMMENTS_TAC THEN
    ASM_SIMP_TAC list_ss [PROGRAM_PRED___can_right_rotate___REWRITE, tree_11,
        PROGRAM_PRED___can_left_rotate___REWRITE,
        PROGRAM_FUN___right_rotate_def, 
        PROGRAM_FUN___left_rotate_def] THEN
-   SIMP_TAC std_ss [IN_INSERT] THEN
-   ELIM_COMMENTS_TAC 
+   SIMP_TAC std_ss [IN_INSERT]
 
 
 (* -------------------------------------------------------------------------- *)
@@ -509,19 +504,20 @@ SIMP_TAC std_ss [PROGRAM_FUN___right_double_rotate_def,
    PROGRAM_FUN___left_rotate_def, PROGRAM_FUN___right_rotate_def]);
 
 
-(* init_fun file "rb_tree_right_double_rotate" *)
+(* holfoot_set_goal_procedures file ["rb_tree_right_double_rotate"] *)
 val rb_tree_right_double_rotate_TAC = 
-   SOLVE_TAC THEN
+   HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_right_double_rotate___REWRITE,
       PROGRAM_FUN___right_double_rotate_REWRITE] THEN
-   CONTINUE_TAC (true, false, false, true) THEN
+   xHF_CONTINUE_TAC [generate_vcs] THEN
+   HF_ELIM_COMMENTS_TAC THEN
    ASM_SIMP_TAC list_ss [PROGRAM_PRED___can_right_rotate___REWRITE, tree_11,
        PROGRAM_PRED___can_left_rotate___REWRITE,
        PROGRAM_FUN___right_rotate_def, 
        PROGRAM_FUN___left_rotate_def] THEN
-   SIMP_TAC std_ss [IN_INSERT] THEN
-   ELIM_COMMENTS_TAC 
+   SIMP_TAC std_ss [IN_INSERT];
+
 
 (* -------------------------------------------------------------------------- *)
 
@@ -548,13 +544,13 @@ val PROGRAM_FUN___color_flip_def = Define `
       (node [k1:num;v1;c1] [node [k2;v2;c2] [a;b];node [k3;v3;c3] [c;d]]) =
       (node [k1:num;v1;1]  [node [k2;v2;0]  [a;b];node [k3;v3;0]  [c;d]])`;
 
-(* init_fun file "rb_tree_color_flip" *)
+(* holfoot_set_goal_procedures file ["rb_tree_color_flip"] *)
 val rb_tree_color_flip_TAC = 
-   SOLVE_TAC THEN
+   HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_color_flip___REWRITE,
       PROGRAM_FUN___color_flip_def] THEN
-   CONTINUE_TAC (true, false, false, true)
+   HF_CONTINUE_TAC 
 
 (* -------------------------------------------------------------------------- *)
 
@@ -577,13 +573,13 @@ val PROGRAM_FUN___left_balance_def = Define `
       )
    ) else (node [k; v; c] [t1; t2]))`
 
-(* init_fun file "rb_tree_left_balance" *)
+(* holfoot_set_goal_procedures file ["rb_tree_left_balance"] *)
 val rb_tree_left_balance_TAC =
-   SOLVE_TAC THEN
+   HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_left_balance_def,
       IS_RED_BLACK_TREE_NODE_THM] THEN
-   CONTINUE_TAC (true, false, false, true) THEN
+   xHF_CONTINUE_TAC [generate_vcs] THEN
    REPEAT STRIP_TAC THENL [
       FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
          PROGRAM_PRED___can_color_flip___REWRITE, tree_11] THEN
@@ -596,13 +592,13 @@ val rb_tree_left_balance_TAC =
       `?k v t11 t12. t1 = node [k;v;1] [t11;t12]` by  
          FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, tree_11] THEN
       ASM_SIMP_TAC std_ss [] THEN
-      CONTINUE_TAC (true, false, false, true) THEN
+      xHF_CONTINUE_TAC [generate_vcs] THEN      
       FULL_SIMP_TAC list_ss [PROGRAM_PRED___can_right_rotate___REWRITE, tree_11,
          PROGRAM_PRED___can_right_double_rotate___REWRITE,
          PROGRAM_FUN___left_balance_def, RED_BLACK_TREE___LEFT_SUBTREE_def,
          RED_BLACK_TREE___RIGHT_SUBTREE_def,
          RED_BLACK_TREE___IS_RED_BLACK___EVAL] THEN
-      ELIM_COMMENTS_TAC THEN 
+      HF_ELIM_COMMENTS_TAC THEN 
       SIMP_TAC std_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, IN_INSERT, NOT_IN_EMPTY] THEN
       REPEAT STRIP_TAC THEN
       ASM_SIMP_TAC list_ss [tree_11],
@@ -632,13 +628,13 @@ val PROGRAM_FUN___right_balance_def = Define `
       )
    ) else (node [k; v; c] [t1; t2]))`
        
-(* init_fun file "rb_tree_right_balance" *)
+(* holfoot_set_goal_procedures file ["rb_tree_right_balance"] *)
 val rb_tree_right_balance_TAC =
-   SOLVE_TAC THEN
+   HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_right_balance_def,
       IS_RED_BLACK_TREE_NODE_THM] THEN
-   CONTINUE_TAC (true, false, false, true) THEN
+   xHF_CONTINUE_TAC [generate_vcs] THEN
    REPEAT STRIP_TAC THENL [
       FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
          PROGRAM_PRED___can_color_flip___REWRITE, tree_11] THEN
@@ -651,12 +647,12 @@ val rb_tree_right_balance_TAC =
       `?k v t21 t22. t2 = node [k;v;1] [t21;t22]` by  
          FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, tree_11] THEN
       ASM_SIMP_TAC std_ss [] THEN
-      CONTINUE_TAC (true, false, false, true) THEN
+      xHF_CONTINUE_TAC [generate_vcs] THEN
       FULL_SIMP_TAC list_ss [PROGRAM_PRED___can_left_rotate___REWRITE, tree_11,
          PROGRAM_PRED___can_left_double_rotate___REWRITE,
          PROGRAM_FUN___right_balance_def, RED_BLACK_TREE___LEFT_SUBTREE_def,
          RED_BLACK_TREE___RIGHT_SUBTREE_def] THEN
-      ELIM_COMMENTS_TAC THEN 
+      HF_ELIM_COMMENTS_TAC THEN 
       SIMP_TAC std_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, IN_INSERT, NOT_IN_EMPTY] THEN
       REPEAT STRIP_TAC THEN
       ASM_SIMP_TAC list_ss [tree_11],
@@ -682,37 +678,37 @@ val PROGRAM_FUN___insert_r_def = Define `
              PROGRAM_FUN___right_balance (node [k2;v2;c2]
                   [t1; (PROGRAM_FUN___insert_r t2 k v)]))))`
 
-(* init_fun file "rb_tree_insert_r" *)
+(* holfoot_set_goal_procedures file ["rb_tree_insert_r"] *)
 val rb_tree_insert_r_TAC =
-   xCONTINUE_TAC(false, false, false, true) ([PROGRAM_FUN___insert_r_def,
-      PROGRAM_PRED___can_insert_r_def],[],[]) THEN
+   xHF_CONTINUE_TAC [add_rewrites [PROGRAM_FUN___insert_r_def,
+      PROGRAM_PRED___can_insert_r_def]] THEN
    SIMP_TAC list_ss [RED_BLACK_TREE___NODES_OK___REWRITE] THEN
-   xCONTINUE_TAC(false, false, false, true) ([PROGRAM_PRED___can_left_balance_def, 
+   xHF_CONTINUE_TAC [add_rewrites [PROGRAM_PRED___can_left_balance_def, 
       PROGRAM_PRED___can_right_balance_def, IS_RED_BLACK_TREE_NODE_def,
-      PROGRAM_FUN___insert_r_def], [], [])
+      PROGRAM_FUN___insert_r_def]]
 
 
 (* -------------------------------------------------------------------------- *)    
 
-(* init_fun file "rb_tree_lookup" *)
+(* holfoot_set_goal_procedures file ["rb_tree_lookup"] *)
 val rb_tree_lookup_TAC =
-   CONTINUE_TAC (true, false, false, true) THEN
+   xHF_CONTINUE_TAC [generate_vcs] THEN
    REPEAT STRIP_TAC THENL [
-      ELIM_COMMENTS_TAC THEN
+      HF_ELIM_COMMENTS_TAC THEN
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_def, FDOM_FEMPTY, NOT_IN_EMPTY],
 
-      ELIM_COMMENTS_TAC THEN
+      HF_ELIM_COMMENTS_TAC THEN
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM,
          FDOM_FUPDATE, IN_INSERT, FAPPLY_FUPDATE_THM],
 
-      ELIM_COMMENTS_TAC THEN
+      HF_ELIM_COMMENTS_TAC THEN
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_REWRITE, arithmeticTheory.GREATER_DEF] THEN
       Q.EXISTS_TAC `f1` THEN
       `~(k_const' IN FDOM f2)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
       ASM_SIMP_TAC std_ss [FDOM_FUPDATE, FDOM_FUNION, IN_UNION, IN_INSERT,
          FAPPLY_FUPDATE_THM, FUNION_DEF],
 
-      ELIM_COMMENTS_TAC THEN
+      HF_ELIM_COMMENTS_TAC THEN
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_REWRITE, arithmeticTheory.GREATER_DEF] THEN
       Q.EXISTS_TAC `f2` THEN
       `~(k_const' IN FDOM f1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
@@ -1605,11 +1601,11 @@ Cases_on `k < k'` THENL [
 (******************************************************************************)
 (******************************************************************************)
 
-(* init_fun file "rb_tree_insert" *)
+(* holfoot_set_goal_procedures file ["rb_tree_insert"] *)
 val rb_tree_insert_TAC =
-   VC_SOLVE_TAC THEN
+   HF_VC_SOLVE_TAC THEN
    CONJ_TAC THEN1 (
-      ELIM_COMMENTS_TAC THEN
+      HF_ELIM_COMMENTS_TAC THEN
       SIMP_TAC std_ss [RED_BLACK_TREE_def, PROGRAM_PRED___can_insert_r_def]
    ) THEN
    REPEAT STRIP_TAC THEN
@@ -1629,12 +1625,12 @@ val rb_tree_insert_TAC =
          BIN_SEARCH_TREE_def, NOT_EQ_FEMPTY_FUPDATE, tree_11,
          RED_BLACK_TREE___NODES_OK___REWRITE]
    ) THEN
-   VC_SOLVE_TAC THEN
+   HF_VC_SOLVE_TAC THEN
    `(node [k'; v'; 0] [t1; t2]) = RED_BLACK_TREE___MAKE_BLACK 
        (PROGRAM_FUN___insert_r data k_const' v_const')` by ALL_TAC THEN1 (
       ASM_SIMP_TAC std_ss [RED_BLACK_TREE___MAKE_BLACK_def]
    ) THEN
-   ELIM_COMMENTS_TAC THEN
+   HF_ELIM_COMMENTS_TAC THEN
    METIS_TAC[RED_BLACK_TREE___MAKE_BLACK_THM]
    
 
@@ -1644,24 +1640,22 @@ val rb_tree_insert_TAC =
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/red_black_tree.dsf"];
-val spec_t = parse_holfoot_file file
 
-(* set_goal ([], spec_t) *)
-val RED_BLACK_SPEC_THM = prove (spec_t,
-   HOLFOOT_SPECIFICATION_TAC THEN REPEAT CONJ_TAC THENL [
-      rb_tree_init_TAC,
-      rb_tree_mk_node_TAC,
-      rb_tree_is_red_TAC,
-      rb_tree_left_rotate_TAC,
-      rb_tree_left_double_rotate_TAC,
-      rb_tree_right_rotate_TAC,
-      rb_tree_right_double_rotate_TAC,
-      rb_tree_color_flip_TAC,
-      rb_tree_left_balance_TAC,
-      rb_tree_right_balance_TAC,
-      rb_tree_insert_r_TAC,
-      rb_tree_insert_TAC,
-      rb_tree_lookup_TAC
-]);
+val spec_thm = holfoot_interactive_verify_spec true file NONE 
+    [("rb_tree_init",                    rb_tree_init_TAC),
+     ("rb_tree_mk_node",                 rb_tree_mk_node_TAC),
+     ("rb_tree_is_red",                  rb_tree_is_red_TAC),
+     ("rb_tree_left_rotate",             rb_tree_left_rotate_TAC),
+     ("rb_tree_right_rotate",            rb_tree_right_rotate_TAC),
+     ("rb_tree_left_double_rotate",      rb_tree_left_double_rotate_TAC), 
+     ("rb_tree_right_double_rotate",     rb_tree_right_double_rotate_TAC),
+     ("rb_tree_color_flip",              rb_tree_color_flip_TAC),
+     ("rb_tree_left_balance",            rb_tree_left_balance_TAC),
+     ("rb_tree_right_balance",           rb_tree_right_balance_TAC),
+     ("rb_tree_insert_r",                rb_tree_insert_r_TAC),
+     ("rb_tree_insert",                  rb_tree_insert_TAC),
+     ("rb_tree_lookup",                  rb_tree_lookup_TAC)]
+
+
 
 

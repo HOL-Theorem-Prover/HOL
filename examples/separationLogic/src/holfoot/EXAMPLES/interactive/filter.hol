@@ -19,42 +19,47 @@ val spec_t = parse_holfoot_file file
 (******************************************************************************)
 
 (* set_goal ([], spec_t) *)
-
-val spec_thm = prove (spec_t,
+val filter_TAC = 
   (*do everything till while loop*)
-  STEP_TAC_n 1 (SOME 5) THEN
+  xHF_SOLVE_TAC [stop_at_while] THEN
+  HF_STEP_TAC 1 THEN
   Tactical.REVERSE CONJ_TAC THEN1 (
      (*body of original function*)
-     CONTINUE_TAC (false,false,false,true) THEN
+     HF_CONTINUE_TAC THEN
      (*at the beginning of the loop nothing is filtered*)
      REPEAT GEN_TAC THEN Q.EXISTS_TAC `[]` THEN
-     SOLVE_TAC THEN
+     xHF_CONTINUE_TAC [do_case_splits] THEN
      SIMP_TAC list_ss [GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
         GSYM LEFT_FORALL_IMP_THM, FILTER_APPEND] THEN
-     SOLVE_TAC THEN
-     SIMP_TAC list_ss [NULL_EQ, FILTER_EQ_NIL] THEN
-     SOLVE_TAC
+     xHF_SOLVE_TAC [ add_rewrites [NULL_EQ, FILTER_EQ_NIL] ] 
   ) THEN
 
   (* while loop *)
-  SOLVE_TAC THEN
+  HF_SOLVE_TAC THEN
   REPEAT STRIP_TAC THENL [
      FULL_SIMP_TAC list_ss [] THEN
-     SOLVE_TAC,
+     HF_SOLVE_TAC,
 
      Q.EXISTS_TAC `data_fc'` THEN
      ASM_SIMP_TAC list_ss [NULL_EQ, FILTER_EQ_NIL] THEN
-     SOLVE_TAC,
+     HF_SOLVE_TAC,
 
      Q.EXISTS_TAC `data1` THEN
-     SOLVE_TAC,
+     HF_SOLVE_TAC,
 
      Q.EXISTS_TAC `data1 ++ [date] ++ data_fc'` THEN
-     xSOLVE_TAC ([FILTER_APPEND],[],[]) THEN
+     xHF_CONTINUE_TAC [add_rewrites [FILTER_APPEND]] THEN
      ASM_SIMP_TAC list_ss [NULL_EQ, FILTER_EQ_NIL] THEN
-     SOLVE_TAC
+     HF_SOLVE_TAC
   ]
-);
+
+val spec_thm = prove (spec_t, filter_TAC)
+
+(*or*)
+
+val spec_thm = holfoot_interactive_verify_spec true file NONE 
+   [("list_filter", filter_TAC)]
+
 
 
 
@@ -62,35 +67,37 @@ val spec_thm = prove (spec_t,
 (* Using loop specs                                                           *)
 (******************************************************************************)
 
-val file = concat [examplesDir, "/interactive/filter.dsf2"];
-val spec_t = parse_holfoot_file file
+val file2 = concat [examplesDir, "/interactive/filter.dsf2"];
+val spec_t2 = parse_holfoot_file file2
 
 
 (******************************************************************************)
 (* Verify specification                                                       *)
 (******************************************************************************)
 
-(* set_goal ([], spec_t) *)
-
-val spec_thm = prove (spec_t,
-STEP_TAC_n 1 (SOME 5) THEN
+(* set_goal ([], spec_t2) *)
+val filter2_TAC = 
+xHF_SOLVE_TAC [stop_at_while] THEN HF_STEP_TAC 1 THEN
 REPEAT STRIP_TAC THENL [
-   SOLVE_TAC,
+   HF_SOLVE_TAC,
 
    Cases_on ` yc = lc` THEN ASM_SIMP_TAC std_ss [] THENL [
-      CONTINUE_TAC (false, false, true, true) THEN
-      SOLVE_TAC,
+      xHF_SOLVE_TAC [no_case_splits],
 
-      SOLVE_TAC THEN
+      HF_SOLVE_TAC THEN
       REPEAT STRIP_TAC THEN
       Q.EXISTS_TAC `data++[zdata]` THEN
-      CONTINUE_TAC (false, false, true, true) THEN
+      xHF_CONTINUE_TAC [use_asms] THEN
       SIMP_TAC std_ss [GSYM APPEND_ASSOC, APPEND] THEN
-      SOLVE_TAC
+      HF_SOLVE_TAC
    ],
 
-   SOLVE_TAC
-]);
+   HF_SOLVE_TAC
+];
 
+val spec2_thm = prove (spec_t2, filter2_TAC) 
 
+(*or*)
 
+val spec2_thm = holfoot_interactive_verify_spec true file2 NONE 
+   [("list_filter", filter2_TAC)]

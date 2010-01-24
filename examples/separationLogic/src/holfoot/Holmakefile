@@ -40,7 +40,7 @@ holfoot.state: holfootLib.uo holfootLib.ui holfootTheory.ui AssembleHolfootParse
 holfoot: holfoot.o
 	cc -O4 -o holfoot holfoot.o -static -L/usr/local/lib -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread
 
-holfootLib.uo: holfootLib.sml holfootParser.ui holfootParser.uo
+holfootLib.uo: holfootLib.sml holfootParser.ui holfootParser.uo 
 	$(HOLMOSMLC) -c -toplevel ListConv1.uo treeTheory.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo bagLib.uo vars_as_resourceFunctor.uo vars_as_resourceBaseFunctor.uo holfootLib.sml $<
 
 clean-lib:

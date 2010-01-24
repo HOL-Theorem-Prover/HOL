@@ -112,10 +112,10 @@ val search_tree_delete_min_TAC =
    (*tree not empty because keys != EMPTY*)
    Cases_on `p_const = 0` THEN1 (
       SOLVE_TAC THEN
-      REPEAT STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [IS_LEAF_REWRITE, BIN_SEARCH_TREE_SET_def]
    ) THEN
    (*Ok, now the real case *)
+   xSOLVE_TAC [stop_at_while] THEN
    STEP_TAC 1 THEN
    REPEAT CONJ_TAC THENL [
       (*skipping the loop*)
@@ -137,26 +137,23 @@ val search_tree_delete_min_TAC =
 
 
       (*iterate through the loop*)
-      STEP_TAC_n 1 (SOME 3) THEN
+      xSOLVE_TAC [stop_at_abstraction] THEN
       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
       REPEAT STRIP_TAC THEN
       Q.PAT_ASSUM `BIN_SEARCH_TREE_SET X keys` (
            STRIP_ASSUME_TAC o ONCE_REWRITE_RULE [BIN_SEARCH_TREE_SET_BIN_REWRITE]) THEN
-      STEP_TAC 2 THEN REPEAT GEN_TAC THEN
-      MAP_EVERY Q.EXISTS_TAC [`data_l_l'`, `data_l_r'`, `lc_dta'`,
-         `dc`, `k1`] THEN
-      Cases_on `p_const = 0` THEN1 (
-         ASM_SIMP_TAC std_ss [] THEN
-         CONTINUE_TAC (false, false, false, true)
-      ) THEN
-      CONTINUE_TAC (false, false, false, true) THEN
+      xCONTINUE_TAC [do_expands] THEN REPEAT GEN_TAC THEN
+      Q.EXISTS_TAC `k1` THEN
+      REPEAT STRIP_TAC THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      CONTINUE_TAC THEN
       Cases_on `ppc = 0` THEN (
          ASM_SIMP_TAC std_ss [] THEN
-         CONTINUE_TAC (false, false, false, true) THEN
+         CONTINUE_TAC THEN
          REPEAT STRIP_TAC THEN
          FULL_SIMP_TAC std_ss [] THEN
-         CONTINUE_TAC (false, false, false, true) THEN
-         PURE_VC_TAC THEN ELIM_COMMENTS_TAC THEN
+         CONTINUE_TAC THEN
+         VC_FINAL_TAC THEN
          ASM_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE,
             IN_INSERT, IN_DELETE, IN_UNION, DISJ_IMP_THM, FORALL_AND_THM,
             GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
@@ -181,7 +178,7 @@ val search_tree_delete_min_TAC =
 
 (* init_fun file "search_tree_lookup" *)
 val search_tree_lookup_TAC =
-   CONTINUE_TAC (true, false, false, true) THEN
+   xCONTINUE_TAC [generate_vcs] THEN
    ELIM_COMMENTS_TAC THEN
    REPEAT CONJ_TAC THENL [
       SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_def, NOT_IN_EMPTY, IN_INSERT,

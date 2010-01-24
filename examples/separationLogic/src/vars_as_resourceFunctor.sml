@@ -81,29 +81,57 @@ sig
                           do_expands     : bool,
                           generate_vcs   : bool,
                           fast           : bool,
+                          stop_evals     : (term -> bool) list,
                           do_prop_simps  : bool};
 
-   val GEN_STEP_CONSEQ_CONV : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.thm list -> Abbrev.conv
-   val GEN_STEP_TAC         : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.tactic
+   datatype gen_step_tac_opt =
+       case_splits_flag of bool
+     | expands_flag of bool
+     | fast_flag of bool
+     | prop_simp_flag of bool
+     | use_asms_flag of bool
+     | generate_vcs_flag of bool
+     | add_rewrites of thm list
+     | add_convs of conv list
+     | add_ssfrags of simpLib.ssfrag list
+     | stop_evals of (term -> bool) list
+     | combined_gen_step_tac_opt of gen_step_tac_opt list
 
-   val xSTEP_TAC            : user_rewrite_param -> int -> Abbrev.tactic;
-   val xSTEP_TAC_n          : user_rewrite_param -> int -> int option -> Abbrev.tactic;
-   val xSOLVE_TAC           : user_rewrite_param -> Abbrev.tactic;
-   val xCONTINUE_TAC        : (bool * bool * bool * bool) -> user_rewrite_param -> Abbrev.tactic;
-   val xVC_STEP_TAC_n       : user_rewrite_param -> int -> int option -> Abbrev.tactic;
-   val xVC_STEP_TAC         : user_rewrite_param -> int -> Abbrev.tactic;
-   val xVC_SOLVE_TAC        : user_rewrite_param -> Abbrev.tactic;
+   val no_case_splits        : gen_step_tac_opt;
+   val do_case_splits        : gen_step_tac_opt;
+   val no_expands            : gen_step_tac_opt;
+   val do_expands            : gen_step_tac_opt;
+   val no_case_split_expands : gen_step_tac_opt;
+   val generate_vcs          : gen_step_tac_opt;
+   val dont_generate_vcs     : gen_step_tac_opt;
+   val no_asms               : gen_step_tac_opt;
+   val use_asms              : gen_step_tac_opt;
+   val no_prop_simps         : gen_step_tac_opt;
+   val conservative          : gen_step_tac_opt; (* not fast *)
+   val careful               : gen_step_tac_opt; (* no asms. no case splits, no expands *)
+   val stop_at_cond          : gen_step_tac_opt;
+   val stop_at_while         : gen_step_tac_opt;
+   val stop_at_abstraction   : gen_step_tac_opt;
+   val stop_at_frame_calc    : gen_step_tac_opt;
+   val stop_at_hoare_triple  : gen_step_tac_opt;
+   val stop_at_block_spec    : gen_step_tac_opt;
 
-   val STEP_TAC             : int -> Abbrev.tactic;
-   val STEP_TAC_n           : int -> int option -> Abbrev.tactic;
-   val SOLVE_TAC            : Abbrev.tactic;
-   val CONTINUE_TAC         : (bool * bool * bool * bool) -> Abbrev.tactic;
-   val VC_STEP_TAC_n        : int -> int option -> Abbrev.tactic;
-   val VC_STEP_TAC          : int -> Abbrev.tactic;
-   val VC_SOLVE_TAC         : Abbrev.tactic;
+   val gen_step_param___update_use_asms   : gen_step_param -> bool -> gen_step_param
+   val gen_step_param___update_cs         : gen_step_param -> bool -> gen_step_param
+   val gen_step_param___update_vcs        : gen_step_param -> bool -> gen_step_param
+   val gen_step_param___update_expands    : gen_step_param -> bool -> gen_step_param
+   val gen_step_param___update_fast       : gen_step_param -> bool -> gen_step_param
+   val gen_step_param___update_prop_simps : gen_step_param -> bool -> gen_step_param
+   val gen_step_param___update_stop_evals : gen_step_param -> (term -> bool) list -> gen_step_param
 
-   val PURE_VC_TAC          : Abbrev.tactic;
-   val ELIM_COMMENTS_TAC    : Abbrev.tactic
+   val VAR_RES_GEN_STEP_CONSEQ_CONV : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.thm list -> Abbrev.conv
+   val VAR_RES_GEN_STEP_TAC         : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.tactic
+   val xVAR_RES_GEN_STEP_CONSEQ_CONV: gen_step_tac_opt list -> int option -> int -> Abbrev.conv
+   val xVAR_RES_GEN_STEP_TAC        : gen_step_tac_opt list -> int option -> int -> Abbrev.tactic
+
+   val VAR_RES_PURE_VC_TAC          : Abbrev.tactic;
+   val VAR_RES_ELIM_COMMENTS_TAC    : Abbrev.tactic
+   val VAR_RES_VC_TAC               : Abbrev.tactic;
    val VAR_RES_SPECIFICATION___CONSEQ_CONV : ConseqConv.conseq_conv
    val VAR_RES_SPECIFICATION_TAC : Abbrev.tactic
 end  =
@@ -3296,7 +3324,122 @@ type gen_step_param =
    do_expands     : bool,
    generate_vcs   : bool,
    fast           : bool,
-   do_prop_simps  : bool};
+   do_prop_simps  : bool,
+   stop_evals     : (term -> bool) list};
+
+
+fun gen_step_param___update_stop_evals 
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param) l =
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   do_prop_simps  = ps,
+   stop_evals     = l}:gen_step_param);
+
+
+fun gen_step_param___update_use_asms 
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param) b =
+ ({use_asms       = b,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param);
+
+fun gen_step_param___update_cs
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param) b =
+ ({use_asms       = asms,
+   do_case_splits = b,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param);
+
+fun gen_step_param___update_vcs
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param) b =
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = b,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param);
+
+fun gen_step_param___update_expands
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param) b =
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = b,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param);
+
+fun gen_step_param___update_fast
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param) b =
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = b,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param);
+
+fun gen_step_param___update_prop_simps
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = ps}:gen_step_param) b =
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   do_expands     = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   do_prop_simps  = b}:gen_step_param);
 
 
 local
@@ -3320,13 +3463,13 @@ fun step_conv_map_fun l s1 (s2, c:var_res_inference) =
   in conv2 end
 *)
 
-fun convL fast ss n list =
+fun convL fast stops ss n list =
   let
      fun pre (l, (s1, guard, before_flag, continue_simp, cL)) =
        let
           val cL' = map (step_conv_map_fun l s1) cL
           fun conv context dir t =
-             if not (guard t) then raise UNCHANGED else
+             if (not (guard t) orelse (stops t)) then raise UNCHANGED else
              tryfind (fn c => c fast ss context dir t) cL'
           val w = (if l <= n then SOME 1 else if continue_simp then NONE else SOME 0);
        in
@@ -3380,13 +3523,17 @@ fun vc_conv vc step_opt =
        ((false, false, true), ([],[],[]), NONE, 2, [])
 *)
 
-fun GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  = 
+fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  = 
    let
       val list0 = VAR_RES_INFERENCES_LIST;
       val list1 = if (#do_expands p) then list0@[(2, VAR_RES_INFERENCES_LIST___expands_entailment),(2, VAR_RES_INFERENCES_LIST___expands)] else list0;
       val list2 = if (#do_case_splits p) then list1@[(2, VAR_RES_INFERENCES_LIST___case_splits)] else list1;
       val list = list2
-      val cL = convL (#fast p) (#do_prop_simps p, mk_ssfrag ssp) n list;
+      val stops = if null (#stop_evals p) then K false else 
+                      (fn t => (exists (fn pp => (pp t) handle Interrupt => raise Interrupt 
+                                                            | _ => false) 
+                                 (#stop_evals p)))
+      val cL = convL (#fast p) stops (#do_prop_simps p, mk_ssfrag ssp) n list;
 
       fun mc step_opt = 
          EXT_DEPTH_NUM_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___var_res_list NONE step_opt true
@@ -3436,56 +3583,141 @@ fun GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
 end;
 
 
-fun GEN_STEP_TAC (p:gen_step_param) ss step_opt n = 
+fun VAR_RES_GEN_STEP_TAC (p:gen_step_param) ss step_opt n = 
    if (#use_asms p) then
-      (DISCH_ASM_CONSEQ_CONV_TAC (K (GEN_STEP_CONSEQ_CONV p ss step_opt n [])))
+      (DISCH_ASM_CONSEQ_CONV_TAC (K (VAR_RES_GEN_STEP_CONSEQ_CONV p ss step_opt n [])))
    else
-      (CONSEQ_CONV_TAC (K (GEN_STEP_CONSEQ_CONV p ss step_opt n [])));
-
-val empty_pss = ([],[],[])
-fun xSTEP_TAC_n ss m n = GEN_STEP_TAC 
-        {do_case_splits = true,
-         do_expands = true,
-         fast = true,
-         use_asms = true,
-         do_prop_simps = true,
-         generate_vcs = false} ss n m;
-fun xSTEP_TAC ss m = xSTEP_TAC_n ss m (SOME 1);
-fun xSOLVE_TAC ss = xSTEP_TAC_n ss 1 NONE;
+      (CONSEQ_CONV_TAC (K (VAR_RES_GEN_STEP_CONSEQ_CONV p ss step_opt n [])));
 
 
-val STEP_TAC_n = xSTEP_TAC_n empty_pss;
-val STEP_TAC = xSTEP_TAC empty_pss;
-val SOLVE_TAC = xSOLVE_TAC empty_pss;
+datatype gen_step_tac_opt =
+    case_splits_flag of bool
+  | expands_flag of bool
+  | fast_flag of bool
+  | prop_simp_flag of bool
+  | use_asms_flag of bool
+  | generate_vcs_flag of bool
+  | add_rewrites of thm list
+  | add_convs of conv list
+  | add_ssfrags of simpLib.ssfrag list
+  | stop_evals of (term -> bool) list
+  | combined_gen_step_tac_opt of gen_step_tac_opt list
 
-fun xCONTINUE_TAC (vcs, expands, asms, simp) ss = GEN_STEP_TAC 
-        {do_case_splits = false,
-         do_expands = expands,
-         fast = true,
-         use_asms = asms,
-         do_prop_simps = simp,
-         generate_vcs = vcs} ss NONE 1;
-fun CONTINUE_TAC x = xCONTINUE_TAC x empty_pss
+val no_case_splits        = case_splits_flag false;
+val no_expands            = expands_flag false;
+val no_case_split_expands = combined_gen_step_tac_opt [no_case_splits, no_expands]
+val do_case_splits        = case_splits_flag true;
+val do_expands            = expands_flag true;
+val generate_vcs          = generate_vcs_flag true;
+val dont_generate_vcs     = generate_vcs_flag false;
+val no_asms               = use_asms_flag false;
+val use_asms              = use_asms_flag true;
+val no_prop_simps         = prop_simp_flag false;
+val conservative          = fast_flag false;
+val careful               = combined_gen_step_tac_opt [no_case_splits, no_expands, no_asms];
+
+val stop_at_while = stop_evals [fn t =>
+    let
+       val (p1_0,_,_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location t;
+    in
+       is_fasl_comment_loop_invariant p1_0 orelse
+       is_fasl_comment_loop_spec p1_0 orelse
+       is_fasl_prog_while p1_0
+    end]
+
+val stop_at_cond = stop_evals [fn t =>
+    let
+       val (p1_0,_,_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location t;
+    in
+       is_fasl_prog_cond p1_0
+    end]
+
+val stop_at_abstraction = stop_evals [fn t =>
+    let
+       val (p1_0,_,_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location t;
+    in
+       is_fasl_comment_abstraction p1_0
+    end]
+
+val stop_at_block_spec = stop_evals [fn t =>
+    let
+       val (p1_0,_,_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location t;
+    in
+       is_fasl_comment_block_spec p1_0
+    end]
 
 
-fun xVC_STEP_TAC_n ss m n = GEN_STEP_TAC 
-        {do_case_splits = true,
-         do_expands = true,
-         fast = true,
-         use_asms = true,
-         do_prop_simps = true,
-         generate_vcs = true} ss n m;
-fun xVC_STEP_TAC ss m = xVC_STEP_TAC_n ss m (SOME 1);
-fun xVC_SOLVE_TAC ss = xVC_STEP_TAC_n ss 1 NONE;
+val stop_at_frame_calc = stop_evals [is_VAR_RES_FRAME_SPLIT]
+val stop_at_hoare_triple = stop_evals [is_VAR_RES_COND_HOARE_TRIPLE]
 
-val VC_STEP_TAC_n = xVC_STEP_TAC_n empty_pss;
-val VC_STEP_TAC = xVC_STEP_TAC empty_pss;
-val VC_SOLVE_TAC = xVC_SOLVE_TAC empty_pss;
+
+
+fun gen_step_tac_opt_eval (p:gen_step_param, ssp) [] = (p, ssp)
+  | gen_step_tac_opt_eval (p, (rw, cv, ss)) 
+       ((add_rewrites thmL)::gstoL) =
+    gen_step_tac_opt_eval (p, (rw@thmL, cv, ss)) gstoL
+  | gen_step_tac_opt_eval (p, (rw, cv, ss)) 
+       ((add_convs convL)::gstoL) =
+    gen_step_tac_opt_eval (p, (rw, cv@convL, ss)) gstoL
+  | gen_step_tac_opt_eval (p, (rw, cv, ss)) 
+       ((add_ssfrags ssfL)::gstoL) =
+    gen_step_tac_opt_eval (p, (rw, cv, ss@ssfL)) gstoL
+  | gen_step_tac_opt_eval (p, ssp) 
+       ((case_splits_flag b)::gstoL) =
+    gen_step_tac_opt_eval (gen_step_param___update_cs p b, ssp) gstoL
+  | gen_step_tac_opt_eval (p, ssp) 
+       ((expands_flag b)::gstoL) =
+    gen_step_tac_opt_eval (gen_step_param___update_expands p b, ssp) gstoL
+  | gen_step_tac_opt_eval (p, ssp) 
+       ((fast_flag b)::gstoL) =
+    gen_step_tac_opt_eval (gen_step_param___update_fast p b, ssp) gstoL
+  | gen_step_tac_opt_eval (p, ssp) 
+       ((prop_simp_flag b)::gstoL) =
+    gen_step_tac_opt_eval (gen_step_param___update_prop_simps p b, ssp) gstoL
+  | gen_step_tac_opt_eval (p, ssp) 
+       ((use_asms_flag b)::gstoL) =
+    gen_step_tac_opt_eval (gen_step_param___update_use_asms p b, ssp) gstoL
+  | gen_step_tac_opt_eval (p, ssp) 
+       ((generate_vcs_flag b)::gstoL) =
+    gen_step_tac_opt_eval (gen_step_param___update_vcs p b, ssp) gstoL
+  | gen_step_tac_opt_eval (p, ssp) 
+       ((stop_evals b)::gstoL) =
+    gen_step_tac_opt_eval (gen_step_param___update_stop_evals p b, ssp) gstoL
+  | gen_step_tac_opt_eval (p, ssp) 
+       ((combined_gen_step_tac_opt optL)::gstoL) =
+    gen_step_tac_opt_eval (p, ssp) (optL@gstoL)
+
+
+val default_params = (
+   {do_case_splits = true,
+    do_expands = true,
+    fast = true,
+    use_asms = true,
+    do_prop_simps = true,
+    stop_evals = [],
+    generate_vcs = false}, ([],[],[]))
+
+
+
+fun xVAR_RES_GEN_STEP_TAC optL = 
+   let
+      val (p,ssp) = gen_step_tac_opt_eval default_params optL;
+   in
+      VAR_RES_GEN_STEP_TAC p ssp
+   end;
+
+fun xVAR_RES_GEN_STEP_CONSEQ_CONV optL n m = 
+   let
+      val (p,ssp) = gen_step_tac_opt_eval default_params optL
+   in
+      VAR_RES_GEN_STEP_CONSEQ_CONV p ssp n m []
+   end;
+
 
 
 val _ = Rewrite.add_implicit_rewrites [fasl_comments_TF_ELIM];
 
-val PURE_VC_TAC =
+val VAR_RES_PURE_VC_TAC =
  CONSEQ_CONV_TAC (K (fn t => 
      let
         val (_, thm_opt) = vc_conv true NONE t
@@ -3493,22 +3725,9 @@ val PURE_VC_TAC =
         if isSome thm_opt then valOf thm_opt else raise UNCHANGED
      end))
 
-val ELIM_COMMENTS_TAC = REWRITE_TAC [fasl_comments_ELIM]
+val VAR_RES_ELIM_COMMENTS_TAC = REWRITE_TAC [fasl_comments_ELIM]
+val VAR_RES_VC_TAC = (TRY VAR_RES_PURE_VC_TAC) THEN VAR_RES_ELIM_COMMENTS_TAC
 
-(*
-SOLVE_TAC ([],[],[])
-FULL_SIMP_TAC list_ss []
-SIMP_TAC list_ss []
-REPEAT STRIP_TAC
-
-MP_TAC (
-GEN_STEP_CONSEQ_CONV (fast, vc, cs) ([],[],[]) (SOME 1) 100 [] t
-
-val (_, t) = top_goal()
-
-print_profile_results (results ());
-reset_all ()
-*)
 
 end
 

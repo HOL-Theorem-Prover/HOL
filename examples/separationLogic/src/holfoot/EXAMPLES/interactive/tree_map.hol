@@ -7,26 +7,9 @@ use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
 open treeTheory rich_listTheory
 
 (******************************************************************************)
-(* Parse the main file                                                        *)
-(******************************************************************************)
-
-val file = concat [examplesDir, "/interactive/tree_map.dsf"];
-val spec_t = parse_holfoot_file file
-
-(******************************************************************************)
 (* Verify specification                                                       *)
 (******************************************************************************)
 
-(* set_goal ([], spec_t) *)
-
-val param = ([TREE_MAP_THM],[], []);
-
-val spec_thm = holfoot_interactive_verify_spec true 
-               {do_case_splits = true,
-                do_expands = true,
-                fast = true,
-                use_asms = true,
-                do_prop_simps = true,
-                generate_vcs = true} param file
-
-
+val file = concat [examplesDir, "/interactive/tree_map.dsf"];
+val spec_thm = holfoot_verify_spec true file 
+                 [ add_rewrites [ TREE_MAP_THM ] ]

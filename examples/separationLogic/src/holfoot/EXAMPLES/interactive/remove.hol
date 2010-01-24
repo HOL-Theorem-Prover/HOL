@@ -8,31 +8,11 @@ val REMOVE_def = Define `
    (REMOVE x [] = []) /\
    (REMOVE x (x'::xs) = if (x = x') then xs else (x'::REMOVE x xs))`
 
-val REMOVE_REWRITE = prove (``
-   (!x. REMOVE x [] = []) /\
-   (!x xs. (REMOVE x (x::xs) = xs)) /\
-   (!x y xs. ~(x = y) ==> (REMOVE x (y::xs) = y::(REMOVE x xs)))``,
-SIMP_TAC std_ss [REMOVE_def]);
-
-(******************************************************************************)
-(* Parse the main file                                                        *)
-(******************************************************************************)
-
-val file = concat [examplesDir, "/interactive/remove.dsf"];
-val spec_t = parse_holfoot_file file
-
-
 (******************************************************************************)
 (* Verify specification                                                       *)
 (******************************************************************************)
 
-(* set_goal ([], spec_t) *)
-val spec_thm = holfoot_interactive_verify_spec true 
-               {do_case_splits = true,
-                do_expands = false,
-                fast = true,
-                use_asms = true,
-                do_prop_simps = true,
-                generate_vcs = true} ([REMOVE_REWRITE],[],[]) file
+val file = concat [examplesDir, "/interactive/remove.dsf"];
+val spec_thm = holfoot_verify_spec true file [ add_rewrites [REMOVE_def] ] 
 
 

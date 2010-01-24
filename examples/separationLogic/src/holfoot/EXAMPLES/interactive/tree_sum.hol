@@ -19,28 +19,11 @@ SIMP_TAC (std_ss++boolSimps.ETA_ss) [TREE_SUM_def, TREE_FOLD_def,
 
 
 (******************************************************************************)
-(* Parse the main file                                                        *)
-(******************************************************************************)
-
-val file = concat [examplesDir, "/interactive/tree_sum.dsf"];
-val spec_t = parse_holfoot_file file
-
-
-
-(******************************************************************************)
 (* Verify specification                                                       *)
 (******************************************************************************)
 
-(* set_goal ([], spec_t) *)
+val file = concat [examplesDir, "/interactive/tree_sum.dsf"];
+val spec_thm = holfoot_verify_spec true file [ add_rewrites [TREE_SUM_REWRITE] ] 
 
-val param = ([TREE_SUM_REWRITE],[], []);
-
-val spec_thm = holfoot_interactive_verify_spec true 
-               {do_case_splits = true,
-                do_expands = true,
-                fast = true,
-                use_asms = true,
-                do_prop_simps = true,
-                generate_vcs = true} param file
 
 

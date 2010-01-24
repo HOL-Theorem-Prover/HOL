@@ -3,18 +3,18 @@ val _ = loadPath :=
             (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) :: 
             !loadPath;
 
-use (Globals.HOLDIR ^ "/tools/hol-mode.sml");
-
 val _ = map load ["holfootParser", "holfoot_pp_print", "holfootLib"];
 open holfootParser;
 open holfoot_pp_print;
 open holfootLib;
 
+use (Globals.HOLDIR ^ "/tools/hol-mode.sml");
+
 val _ = Feedback.set_trace "Unicode" 0;
 val _ = Feedback.set_trace "PPBackEnd use annotations" 0;
 val _ = Feedback.set_trace "PPBackEnd use styles" 1;
 val _ = Feedback.set_trace "PPBackEnd show types" 0;
-val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
+val _ = Feedback.set_trace "metis" 0
 
 val examplesDir = 
     concat [Globals.HOLDIR, 
@@ -23,15 +23,7 @@ val examplesDir =
 
 (*testing*)
 val _ = holfoot_auto_verify_spec true (examplesDir ^ "/automatic/list.sf")
-
-val _ = holfoot_interactive_verify_spec true    
-               {do_case_splits = true,
-                do_expands = true,
-                fast = false,
-                use_asms = true,
-                do_prop_simps = true,
-                generate_vcs = false} ([],[],[])
-           (examplesDir ^ "/automatic/mergesort.sf")
+val _ = holfoot_verify_spec true (examplesDir ^ "/automatic/mergesort.sf") [] 
 
 
 (* save state *)

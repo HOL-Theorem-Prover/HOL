@@ -6,39 +6,21 @@ use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
 
 open treeTheory
 
+
 (******************************************************************************)
-(* Parse the main file                                                        *)
+(* Verify specifications                                                      *)
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/tree_depth.dsf"];
 val file2 = concat [examplesDir, "/interactive/tree_depth.dsf2"];
-val spec_t = parse_holfoot_file file;
 
-
-
-(******************************************************************************)
-(* Verify specification                                                       *)
-(******************************************************************************)
-
-(* set_goal ([], spec_t) *)
-
-val param = ([MIN_MAX_DEPTH_THM, arithmeticTheory.MIN_DEF,
+val rewriteL = [MIN_MAX_DEPTH_THM, arithmeticTheory.MIN_DEF,
     MIN_MAX_LIST_THM, arithmeticTheory.MAX_DEF,
-    MIN_MAX_DEPTH_THM],[], []);
+    MIN_MAX_DEPTH_THM];
 
-val spec_thm = holfoot_interactive_verify_spec true 
-               {do_case_splits = true,
-                do_expands = true,
-                fast = true,
-                use_asms = true,
-                do_prop_simps = true,
-                generate_vcs = true} param file;
+val spec_thm = holfoot_verify_spec true file 
+                 [ add_rewrites rewriteL ]
 
-val spec_thm2 = holfoot_interactive_verify_spec true 
-               {do_case_splits = true,
-                do_expands = true,
-                fast = true,
-                use_asms = true,
-                do_prop_simps = true,
-                generate_vcs = true} param file2;
+val spec_thm2 = holfoot_verify_spec true file2
+                 [ add_rewrites rewriteL ] 
 

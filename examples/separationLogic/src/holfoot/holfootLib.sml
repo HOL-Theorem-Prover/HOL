@@ -9,12 +9,10 @@ loadPath :=
             (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) :: 
             !loadPath;
 
-
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
    "rich_listTheory", "generalHelpersTheory", "latticeTheory", "separationLogicTheory",
    "stringTheory", "vars_as_resourceTheory", "stringLib", "listLib",
     "holfootTheory"]; 
-
 
 show_assums := true; *)
 
@@ -128,7 +126,12 @@ struct
         TAKE_APPEND1, TAKE_APPEND2,
         BUTFIRSTN_APPEND1, BUTFIRSTN_APPEND2,
         BUTFIRSTN_LENGTH_NIL, BUTFIRSTN_LENGTH_APPEND,
-        TAKE_LENGTH_ID])
+        TAKE_LENGTH_ID,
+        FRONT_CONS_EQ_NULL,
+        LENGTH_FRONT_CONS,
+        LAST_DROP_THM,
+        FRONT_TAKE_THM
+     ])
 
    val varlist_rwts = [holfoot___varlist_update_NO_VAR_THM];
 
@@ -1679,27 +1682,6 @@ in
 end;
 
 
-(*
-val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot/EXAMPLES/"]
-val file = concat [examplesDir, "mergesort.dsf"]; 
-val file = concat [examplesDir, "mergesort.sf"]; 
-
-val t = parse_holfoot_file file
-val t = parse_holfoot_file_restrict ["mergesort"] file
-
-
-set_goal ([], t)
-
-
-HOLFOOT_SPECIFICATION___CONSEQ_CONV t
-HOLFOOT_SPECIFICATION_TAC 
-SOLVE_TAC
-REPEAT STRIP_TAC
-
-rotate 1
-*)
-
-
 type var_res_inference = bool -> simpLib.ssfrag -> thm list -> ConseqConv.directed_conseq_conv
 
 structure holfoot_param = 
@@ -1800,14 +1782,35 @@ struct
 
    structure var_res_base = holfoot_base;
 end
-
 structure var_res_param = holfoot_param
 
 structure holtactics = vars_as_resourceFunctor (var_res_param)
 open holtactics
 
-val HOLFOOT_SPECIFICATION_TAC = VAR_RES_SPECIFICATION_TAC;
 
+val HF_GEN_STEP_CONSEQ_CONV  = VAR_RES_GEN_STEP_CONSEQ_CONV;
+val HF_GEN_STEP_TAC          = VAR_RES_GEN_STEP_TAC;
+val xHF_GEN_STEP_CONSEQ_CONV = xVAR_RES_GEN_STEP_CONSEQ_CONV;
+val xHF_GEN_STEP_TAC         = xVAR_RES_GEN_STEP_TAC;
+
+
+fun xHF_STEP_TAC_n optL n m = xHF_GEN_STEP_TAC optL m n
+fun xHF_STEP_TAC optL m = xHF_STEP_TAC_n optL m (SOME 1);
+fun xHF_SOLVE_TAC optL = xHF_STEP_TAC_n optL 1 NONE;
+
+val HF_STEP_TAC_n = xHF_STEP_TAC_n [];
+val HF_STEP_TAC = xHF_STEP_TAC []
+val HF_SOLVE_TAC = xHF_SOLVE_TAC []
+
+fun xHF_CONTINUE_TAC optL = xHF_SOLVE_TAC (careful::optL);
+val HF_CONTINUE_TAC = xHF_CONTINUE_TAC [];
+val HF_VC_SOLVE_TAC = xHF_SOLVE_TAC [generate_vcs_flag true];
+val HF_SPECIFICATION_TAC = VAR_RES_SPECIFICATION_TAC;
+val HF_SPECIFICATION_CONSEQ_CONV = VAR_RES_SPECIFICATION___CONSEQ_CONV;
+
+val HF_ELIM_COMMENTS_TAC = VAR_RES_ELIM_COMMENTS_TAC;
+val HF_PURE_VC_TAC = VAR_RES_PURE_VC_TAC;
+val HF_VC_TAC = VAR_RES_VC_TAC;
 
 
 fun print s = Portable.output(Portable.std_out, s)
@@ -1815,11 +1818,17 @@ fun print s = Portable.output(Portable.std_out, s)
 fun holfoot_set_goal file =
      proofManagerLib.set_goal([], parse_holfoot_file file);
 
+fun holfoot_set_goal_preprocess file =
+   ((proofManagerLib.set_goal([], parse_holfoot_file file));
+    (e (HF_SPECIFICATION_TAC));
+    (proofManagerLib.forget_history());
+    (proofManagerLib.status()));
 
-val AND_IMP_INTRO_SYM = prove (
-Term `!t1 t2 t3. t1 ==> t2 ==> t3 <=> t2 /\ t1 ==> t3`,
-SIMP_TAC std_ss [AND_IMP_INTRO, CONJ_COMM])
-
+fun holfoot_set_goal_procedures file fL =
+   ((proofManagerLib.set_goal ([], parse_holfoot_file_restrict fL file));
+   (e (HF_SPECIFICATION_TAC THEN REPEAT CONJ_TAC));
+   (proofManagerLib.forget_history());
+   (proofManagerLib.status ()));
 
 fun print_space n = if n > 0 then (print " ";print_space (n-1)) else ()
 
@@ -1831,17 +1840,53 @@ fun print_width left i s =
 val print_file = ref true
 val _ = Feedback.register_btrace ("holfoot print file", print_file);
 
-fun holfoot_verbose_verify_spec_internal print_remaining (file, conv) =
+
+fun CONJ_ASSUME [] = TRUTH
+  | CONJ_ASSUME [t] = ASSUME t
+  | CONJ_ASSUME (t::tL) =
+      CONJ (ASSUME t) (CONJ_ASSUME tL)
+
+fun ASSUME_CONJ [] = [TRUTH]
+  | ASSUME_CONJ tmL =
+      let
+         val ct = list_mk_conj tmL         
+         val thm0 = ASSUME ct
+         val thmL = let
+             val (thmL', lthm) =
+                foldr (fn (_, (thmL, thm)) =>
+                  ((CONJUNCT1 thm)::thmL, CONJUNCT2 thm)) ([], thm0) (tl tmL)
+             in
+                rev (lthm::thmL')
+             end;
+      in
+         thmL
+      end;
+
+fun DISCH_ALL_CONJ thm =
+let
+   val (trueL, hL) = partition (same_const T) (hyp thm)
+   val thmL = ASSUME_CONJ (rev hL)
+   val thmL' = if null trueL then thmL else TRUTH::thmL
+
+   val thm' = foldr (fn (thm_asm, thm) =>
+                MP (DISCH (concl thm_asm) thm) thm_asm) thm thmL'
+in 
+   DISCH_ALL thm'
+end;
+
+fun holfoot_verify_spec_internal verbose print_remaining (file, defaultConseqConv_opt, tacL) =
   let
      open PPBackEnd;
      val timer = ref (Time.now())
      fun start_timer () = timer := Time.now();
-     fun print_timer ok = 
+     fun print_timer false ok = ()
+       | print_timer true (ok,skipped) =
      let
         val d_time = Time.- (Time.now(), !timer);
         val _ = print_width false 8 (Time.toString d_time);
         val _ = print " s - ";
-        val _ = if ok then print_with_style [FG Green] "OK\n" else print_with_style [FG OrangeRed] "failed\n";
+        val _ = if skipped then print_with_style [FG Yellow] "skipped\n" else
+                if ok then print_with_style [FG Green] "OK\n" else print_with_style [FG OrangeRed] "failed\n";
      in
         ()
      end
@@ -1849,13 +1894,15 @@ fun holfoot_verbose_verify_spec_internal print_remaining (file, conv) =
      val t_start = Time.now();
 
      val _ = start_timer ();
-     val _ = print (if !print_file then ("\nparsing file \""^file^"\" ... ") else
-                                        ("\nparsing ... "));
-     val t = parse_holfoot_file file;
-     val _ = print_timer true;
-     val _ = print "\n";
-     val _ = print_backend_term t;
-     val _ = print "\n\n";
+     val _ = print (if !print_file then 
+                         (if verbose then ("\nparsing file \""^file^"\" ... ") else
+                                          ("\n"^file^" ... ")) else
+                         ("\nparsing ... "))
+
+     val t = parse_holfoot_file file;    
+
+     val _ = if verbose then (print_timer true (true,false); print "\n\n"; print_backend_term t; print "\n\n")
+                        else (print "\n");
 
      val procedure_names =
      let
@@ -1867,93 +1914,81 @@ fun holfoot_verbose_verify_spec_internal print_remaining (file, conv) =
      end;
 
      val max_width = foldl (fn (a,b:int) => if a > b then a else b) 23 (map (fn s => size s + 5) procedure_names)
-     fun print_dots s = (print_width true max_width s;print " ... ");
+     fun print_dots false s = ()
+       | print_dots true  s = (print_width true max_width s;print " ... ";Portable.flush_out Portable.std_out);
 
      val _ = start_timer ();
-     val _ = print_dots "preprocessing";   
-     val thm_spec = VAR_RES_SPECIFICATION___CONSEQ_CONV t;
-     val _ = print_timer true;
+     val _ = print_dots verbose "preprocessing";   
+     val thm_spec = HF_SPECIFICATION_CONSEQ_CONV t;
+     val _ = print_timer verbose (true, false)
 
-     val _ = (print_dots "verifying specification";print "\n");
+     val _ = if (verbose) then (print_dots true "verifying specification";print "\n") else ();
      val procedure_conds = (strip_conj o fst o dest_imp o concl) thm_spec
      val pc = hd procedure_conds
      fun verify_proc pc = let
         val p_name = (fst o dest_var o rand o rator o rand o rator) (find_term is_fasl_comment_location pc)
-        val _ = print_dots ("   * "^p_name);
+        val my_TAC_opt = SOME (Lib.assoc p_name tacL) handle HOL_ERR _ => NONE
+        val _ = print_dots verbose ("   * "^p_name);
         val _ = start_timer();
-        val p_thm =  conv pc;
-        val p_thm_precond = (fst o dest_imp o concl) p_thm
-        val p_thm_ok = aconv T p_thm_precond
-        val p_thm' = if p_thm_ok then MP p_thm TRUTH else UNDISCH p_thm
-        val _ = print_timer p_thm_ok;
-        val _ = if p_thm_ok orelse (not print_remaining) then () else let
+        val (p_thm_ok, skipped, p_thm) = (if isSome my_TAC_opt then
+            (true, false, prove (pc, valOf my_TAC_opt)) else
+            (if isSome defaultConseqConv_opt then 
+               let
+                  val p_thm =  (valOf defaultConseqConv_opt) pc;
+                  val p_thm_precond = (fst o dest_imp o concl) p_thm
+                  val p_thm_ok = aconv T p_thm_precond
+                  val p_thm' = if p_thm_ok then MP p_thm TRUTH else UNDISCH p_thm
+               in
+                  (p_thm_ok, false, p_thm')
+               end else (false, true, ASSUME pc))) handle HOL_ERR _ =>
+               (false, false, ASSUME pc);
+
+        val _ = print_timer verbose (p_thm_ok, skipped);
+        val _ = if p_thm_ok orelse (not verbose) orelse (not print_remaining) then () else let
                   val _ = print "   remaining proof obligations:\n"
-                  val _ = print_backend_term p_thm_precond
-                  val _ = print "\n\n";
+                  val _ = foldl (fn (t, _) => (print_backend_term t;print "\n\n")) () 
+                             (hyp p_thm)
                 in () end;
      in
-        (p_thm', if p_thm_ok then NONE else SOME p_thm_precond)
+        (p_thm, if p_thm_ok then NONE else SOME (hyp p_thm))
      end;
      val procedure_proofs = map verify_proc procedure_conds
-     val preconds = map valOf (filter isSome (map snd procedure_proofs))
+     val preconds = flatten (map valOf (filter isSome (map snd procedure_proofs)));
 
-     val _ = if null preconds then print_with_style [FG Green] "done!\n" else print_with_style [FG OrangeRed] "failed!\n";
 
      val d_time = Time.- (Time.now(), t_start);
-     val _ = print ("time needed: ");
-     val _ = print (Time.toString d_time);
-     val _ = print " s\n";
+
+     val _ = if verbose then () else
+                (print_width false 8 (Time.toString d_time);
+                 print " s - ");
+     val _ = if null preconds then print_with_style [FG Green] "done\n" else print_with_style [FG OrangeRed] "failed\n";
+
+     val _ = if verbose then
+                   (print ("time needed: "); print (Time.toString d_time); print " s\n")
+             else ();
 
      (*build final theorem*)
      val thm0 = MP thm_spec (LIST_CONJ (map fst procedure_proofs))
-     val thm1 = foldl (fn (t, thm) => (CONV_RULE (TRY_CONV (
-            REWR_CONV AND_IMP_INTRO_SYM))
-             (DISCH t thm))) thm0 preconds
+     val thm1 = DISCH_ALL_CONJ thm0
   in
      (thm1, null preconds)
   end;
 
 
-fun holfoot_quiet_verify_spec_internal (file, conv) =
-  let
-     open PPBackEnd;
-     val timer = Time.now();
-     val _ = print (if !print_file then ("\n"^file^" ...\n") else
-                                        ("\nparsing ...\n"));
-     val t = parse_holfoot_file file;
-     val p_thm =  conv t;
-     val p_thm_precond = (fst o dest_imp o concl) p_thm
-     val p_thm_ok = aconv T p_thm_precond
-     val d_time = Time.- (Time.now(), timer);
-     val _ = print_width false 8 (Time.toString d_time);
-     val _ = print " s - ";
-     val _ = if p_thm_ok then print_with_style [FG Green] "OK\n" else print_with_style [FG OrangeRed] "failed\n";
-  in
-     (p_thm, p_thm_ok)
-  end;
-    
-fun holfoot_verify_spec_internal true print_err = holfoot_verbose_verify_spec_internal print_err
-  | holfoot_verify_spec_internal false _ = holfoot_quiet_verify_spec_internal
-
-
 fun holfoot_auto_verify_spec verbose file =
-   fst (holfoot_verify_spec_internal verbose true (file, 
-         GEN_STEP_CONSEQ_CONV 
-               {do_case_splits = true,
-                do_expands = true,
-                fast = false,
-                use_asms = true,
-                do_prop_simps = true,
-                generate_vcs = false} ([],[],[]) NONE 0 []));
+   fst (holfoot_verify_spec_internal verbose true (file, SOME
+         (xHF_GEN_STEP_CONSEQ_CONV [generate_vcs] NONE 1), []));
 
 
 fun holfoot_set_remaining_goal thm_imp =
 let
    val (a,p) = dest_imp (concl thm_imp);
    val _ = proofManagerLib.set_goal ([], p)
-in
-   (Lib.with_flag (proofManagerLib.chatting, false)
+   val _ = (Lib.with_flag (proofManagerLib.chatting, false)
        proofManagerLib.expand) (fn _ => ([([],a)], fn thmL => (MP thm_imp (hd thmL))))
+   val _ = proofManagerLib.forget_history ();
+in
+   proofManagerLib.status ()
 end;
 
 fun holfoot_prove_remaining (thm_imp,tac) =
@@ -1965,10 +2000,12 @@ in
 end;
 
 
-fun holfoot_interactive_verify_spec verbose p ssp file =
+fun holfoot_interactive_verify_spec verbose file optL_opt tacL =
 let
    val (thm, ok) = holfoot_verify_spec_internal verbose false (file, 
-         GEN_STEP_CONSEQ_CONV p ssp NONE 0 []);
+      (if isSome optL_opt then         
+         SOME (xHF_GEN_STEP_CONSEQ_CONV (valOf optL_opt) NONE 1)
+       else NONE), tacL);
    val _ = if ok then () else (
       proofManagerLib.set_goal ([],(fst o dest_imp o concl) thm);());
 in
@@ -1976,6 +2013,9 @@ in
 end;
 
 
+fun holfoot_verify_spec verbose file optL =
+  holfoot_interactive_verify_spec verbose file (SOME optL) []
+				  
 (*
 val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot/EXAMPLES/"]
 (* 27.5 s *) val file = concat [examplesDir, "automatic/mergesort.sf"];
@@ -1996,7 +2036,8 @@ holfoot_interactive_verify_spec true (true,true,true) ([],[],[]) file
 CONTINUE_TAC ([],[],[])
 STEP_TAC ([],[],[]) 
 SIMP_TAC std_ss []
-STEP_TAC 1
+add_holfoot_pp()
+xHF_STEP_TAC [careful] 100
 FULL_SIMP_TAC list_ss []
 REPEAT STRIP_TAC
 Cases_on `data1 = []`

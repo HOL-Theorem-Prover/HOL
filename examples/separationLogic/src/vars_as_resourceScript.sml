@@ -2859,6 +2859,24 @@ Cases_on `c` THEN
 SIMP_TAC std_ss [asl_trivial_cond_TF, VAR_RES_IS_STACK_IMPRECISE___asl_false]);
 
 
+val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___cond = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE___USED_VARS___cond",
+``!exS c P1 P2.
+(if c then VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS P1 else
+           VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS P2) ==>
+VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (if c then P1 else P2)``,
+Cases_on `c` THEN REWRITE_TAC[]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE___cond = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE___cond",
+``!c P1 P2.
+(if c then VAR_RES_IS_STACK_IMPRECISE P1 else
+           VAR_RES_IS_STACK_IMPRECISE P2) ==>
+VAR_RES_IS_STACK_IMPRECISE (if c then P1 else P2)``,
+Cases_on `c` THEN REWRITE_TAC[]);
+
+
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_exists = store_thm (
 "VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_exists",
 ``!exS P.
@@ -12680,6 +12698,7 @@ val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___VAR_RES_REWRITES =
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_false,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_trivial_cond,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_exists_direct,
+     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___cond,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_star,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_is_defined,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_binexpression_cond,
