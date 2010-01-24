@@ -61,12 +61,9 @@ fun hd_proj f (PRFS (p::_)) = f p
 (* Common operations on managers.                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun new_goalstack g f
-  = GOALSTACK(new_history{obj=goalStack.new_goal g f, limit=15});
-
-fun new_goaltree g
-  = GOALTREE(new_history{obj=goalTree.new_gtree g, limit=15});
-
+fun new_history_default obj = new_history{obj=obj, limit=15}
+fun new_goalstack g f = GOALSTACK(new_history_default (goalStack.new_goal g f));
+fun new_goaltree g  = GOALTREE(new_history_default (goalTree.new_gtree g));
 fun set_goal g = new_goalstack g Lib.I;  (* historical *)
 
 fun backup (GOALSTACK s) = GOALSTACK(undo s)
@@ -74,6 +71,9 @@ fun backup (GOALSTACK s) = GOALSTACK(undo s)
 
 fun set_backup i (GOALSTACK s) = GOALSTACK(set_limit s i)
   | set_backup i (GOALTREE t) = GOALTREE (set_limit t i);
+
+fun forget_history (GOALSTACK s) = GOALSTACK(remove_past s)
+  | forget_history (GOALTREE t) = GOALTREE (remove_past t);
 
 fun expandf tac (GOALSTACK s) = GOALSTACK (apply (goalStack.expandf tac) s)
   | expandf _ _ = raise ERR "expandf" "not implemented for goal trees";
@@ -104,9 +104,8 @@ fun rotate i (GOALSTACK s) = GOALSTACK(apply (C goalStack.rotate i) s)
   | rotate i (GOALTREE t) = raise ERR "rotate"
                                "not implemented for goal trees";
 
-fun restart (x as GOALSTACK _) = new_goalstack (initial_goal x) (finalizer x)
-  | restart (x as GOALTREE _) = new_goaltree (initial_goal x);
-
+fun restart (GOALSTACK s) = GOALSTACK (new_history_default (initialValue s))
+  | restart (GOALTREE t) = GOALTREE (new_history_default (initialValue t));
 
 (*---------------------------------------------------------------------------*)
 (* Prettyprinting of goalstacks and goaltrees.                               *)
