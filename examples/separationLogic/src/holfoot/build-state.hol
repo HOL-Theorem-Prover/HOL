@@ -22,8 +22,8 @@ val examplesDir =
 
 
 (*testing*)
-val _ = holfoot_auto_verify_spec true (examplesDir ^ "/automatic/list.sf")
-val _ = holfoot_verify_spec true (examplesDir ^ "/automatic/mergesort.sf") [] 
+val _ = holfoot_auto_verify_spec (examplesDir ^ "/automatic/list.sf")
+val _ = holfoot_verify_spec (examplesDir ^ "/automatic/mergesort.sf") [] 
 
 
 (* save state *)

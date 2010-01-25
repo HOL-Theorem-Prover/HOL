@@ -13,7 +13,7 @@ let
   val s = s^"  -i     interactive mode, verify specifications step by step\n\n";
   val _ = print s;
   val _ = print_with_style [Bold] "Printing switches:\n";
-  val s =   "  -u     use unicode\n";
+  val s =   "  -nu    turn unicode off\n";
   val s = s^"  -r     raw output, disable VT100 specials\n";
   val s = s^"  --html html output\n\n";
   val _ = print s;
@@ -77,13 +77,17 @@ let
 
    fun print_goal () =  let
        val proof = proofManagerLib.p ()
+       val _ = print "\n";
        val _ = proofManagerLib.pp_proof out proof;
        val _ = Portable.flush_ppstream out
+       val _ = print "\n";
        in () end;
    fun print_goals () =  let
        val proofs = proofManagerLib.status ()
+       val _ = print "\n";
        val _ = proofManagerLib.pp_proofs out proofs;
        val _ = Portable.flush_ppstream out
+       val _ = print "\n";
        in () end;
    val _ = print_goals ();
    
@@ -103,21 +107,21 @@ let
       val c = valOf c_opt;
    in
       (((case c of
-          #"1" => (apply_step 1;print_goals())
-        | #"2" => (apply_step 2;print_goals())
-        | #"3" => (apply_step 3;print_goals())
-        | #"4" => (apply_step 4;print_goals())
-        | #"5" => (apply_step 5;print_goals())
+          #"1" => (apply_step 1;print_goal())
+        | #"2" => (apply_step 2;print_goal())
+        | #"3" => (apply_step 3;print_goal())
+        | #"4" => (apply_step 4;print_goal())
+        | #"5" => (apply_step 5;print_goal())
         | #"s" => (apply_solve ();print_goals())
-        | #"w" => (apply_solve_till stop_at_while;print_goals())
-        | #"i" => (apply_solve_till stop_at_cond;print_goals())
-        | #"a" => (apply_solve_till stop_at_abstraction;print_goals())
-        | #"h" => (apply_solve_till stop_at_hoare_triple;print_goals())
-        | #"f" => (apply_solve_till stop_at_frame_calc;print_goals())
+        | #"w" => (apply_solve_till stop_at_while;print_goal())
+        | #"i" => (apply_solve_till stop_at_cond;print_goal())
+        | #"a" => (apply_solve_till stop_at_abstraction;print_goal())
+        | #"h" => (apply_solve_till stop_at_hoare_triple;print_goal())
+        | #"f" => (apply_solve_till stop_at_frame_calc;print_goal())
         | #"p" => (print_goals())
-        | #"b" => (apply_backup ();print_goals())
-        | #"R" => (apply_restart ();print_goals())
-        | #"c" => (apply_strip ();print_goals())
+        | #"b" => (apply_backup ();print_goal())
+        | #"R" => (apply_restart ();print_goal())
+        | #"c" => (apply_strip ();print_goal())
         | #"q" => (Portable.exit ())
         | #"?" => (print_interactive_help ())
         | _ => (print_error c)
@@ -138,8 +142,8 @@ fun holfoot_run () = let
       handle _ => (false, args);
    val (intera, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-i") args)) 
       handle _ => (false, args);
-   val (unicode, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-u") args)) 
-      handle _ => (false, args);
+   val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args)) 
+      handle _ => (true, args);
    val (raw_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-r") args)) 
       handle _ => (false, args);
    val (html_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--html") args)) 

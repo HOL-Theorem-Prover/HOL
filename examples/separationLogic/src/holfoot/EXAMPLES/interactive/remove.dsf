@@ -12,4 +12,4 @@ list_remove(l;x) [data_list(l,data)] {
       l->tl = t;
     }
   }
-} [data_list(l, ``REMOVE (x:num) data``)]
+} [data_list(l, ``REMOVE (x:num) (data:num list)``)]

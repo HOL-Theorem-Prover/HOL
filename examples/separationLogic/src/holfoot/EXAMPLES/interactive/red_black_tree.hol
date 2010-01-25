@@ -1641,7 +1641,7 @@ val rb_tree_insert_TAC =
 
 val file = concat [examplesDir, "/interactive/red_black_tree.dsf"];
 
-val spec_thm = holfoot_interactive_verify_spec true file NONE 
+val spec_thm = holfoot_tac_verify_spec file NONE 
     [("rb_tree_init",                    rb_tree_init_TAC),
      ("rb_tree_mk_node",                 rb_tree_mk_node_TAC),
      ("rb_tree_is_red",                  rb_tree_is_red_TAC),

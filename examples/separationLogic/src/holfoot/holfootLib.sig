@@ -76,9 +76,10 @@ sig
    val holfoot_set_goal                : string -> proofManagerLib.proofs
    val holfoot_set_goal_preprocess     : string -> proofManagerLib.proofs
    val holfoot_set_goal_procedures     : string -> string list -> proofManagerLib.proofs
-   val holfoot_auto_verify_spec        : bool -> string -> thm
-   val holfoot_verify_spec             : bool -> string -> gen_step_tac_opt list -> thm
-   val holfoot_interactive_verify_spec : bool -> string -> (gen_step_tac_opt list) option -> (string * tactic) list -> thm
+   val holfoot_auto_verify_spec        : string -> thm
+   val holfoot_verify_spec             : string -> gen_step_tac_opt list -> thm
+   val holfoot_tac_verify_spec         : string -> (gen_step_tac_opt list) option -> (string * tactic) list -> thm
+   val holfoot_interactive_verify_spec : bool -> bool -> string -> (gen_step_tac_opt list) option -> (string * tactic) list -> thm
    val holfoot_prove_remaining         : (thm * tactic) -> thm
    val holfoot_set_remaining_goal      : thm -> proofManagerLib.proofs
 end

@@ -24,11 +24,11 @@ val test2_TAC =
    Cases_on `b' = r'_const'` THEN HF_SOLVE_TAC
 
 
-val spec_thm = holfoot_interactive_verify_spec true file (SOME []) [
+val spec_thm = holfoot_tac_verify_spec file (SOME []) [
     ("enqueue", enqueue_TAC),
     ("test", test_TAC)]
 
-val spec2_thm = holfoot_interactive_verify_spec true file2 (SOME []) [
+val spec2_thm = holfoot_tac_verify_spec file2 (SOME []) [
     ("enqueue", enqueue_TAC),
     ("test", test2_TAC)]
 

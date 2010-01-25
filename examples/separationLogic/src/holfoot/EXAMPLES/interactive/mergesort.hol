@@ -82,7 +82,7 @@ mergesort_VC_TAC)
 (* custom proofs to get rid of remaining conditions                           *)
 (* -------------------------------------------------------------------------- *)
 
-val imp_thm = holfoot_verify_spec true file
+val imp_thm = holfoot_verify_spec file
                 [careful, generate_vcs, mergesort_gen_step_opt]
 val spec_thm = holfoot_prove_remaining (imp_thm, 
    mergesort_VC_TAC);
@@ -98,13 +98,13 @@ val mergesort_TAC =
 
 (*use the tool to do as before, but now provide own tactic for
   procedure mergesort*)
-val imp_thm = holfoot_interactive_verify_spec true file
+val imp_thm = holfoot_tac_verify_spec file
                 (SOME [careful, generate_vcs, mergesort_gen_step_opt])
                 [("mergesort", mergesort_TAC)]
 
 (*perhaps you don't want a default behaviour, just do nothing, if no
   custom tactic is provided *)
-val imp_thm = holfoot_interactive_verify_spec true file NONE
+val imp_thm = holfoot_tac_verify_spec file NONE
                 [("mergesort", mergesort_TAC)]
 
 (*lets add the other two procedures*)
@@ -117,7 +117,7 @@ val merge_TAC =
 (* holfoot_set_goal_procedures file ["split"] *)
 val split_TAC = xHF_CONTINUE_TAC [mergesort_gen_step_opt]
 
-val imp_thm = holfoot_interactive_verify_spec true file NONE
+val imp_thm = holfoot_tac_verify_spec file NONE
                 [("mergesort", mergesort_TAC),
                  ("merge",     merge_TAC),
                  ("split",     split_TAC)]
@@ -130,13 +130,13 @@ val imp_thm = holfoot_interactive_verify_spec true file NONE
 val file = concat [examplesDir, "/interactive/mergesort_parallel.dsf"];
 
 (*exactly the same proof works, for convinience copied from above*)
-val imp_thm = holfoot_interactive_verify_spec true file NONE
+val imp_thm = holfoot_tac_verify_spec file NONE
                 [("mergesort", mergesort_TAC),
                  ("merge",     merge_TAC),
                  ("split",     split_TAC)]
 
 (*perhaps more quiet ?*)
-val imp_thm = holfoot_interactive_verify_spec false file NONE
+val imp_thm = holfoot_interactive_verify_spec false false file NONE
                 [("mergesort", mergesort_TAC),
                  ("merge",     merge_TAC),
                  ("split",     split_TAC)]

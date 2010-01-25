@@ -23,7 +23,7 @@ SIMP_TAC (std_ss++boolSimps.ETA_ss) [TREE_SUM_def, TREE_FOLD_def,
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/tree_sum.dsf"];
-val spec_thm = holfoot_verify_spec true file [ add_rewrites [TREE_SUM_REWRITE] ] 
+val spec_thm = holfoot_verify_spec file [ add_rewrites [TREE_SUM_REWRITE] ] 
 
 
 

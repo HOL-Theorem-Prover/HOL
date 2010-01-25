@@ -57,7 +57,7 @@ val spec_thm = prove (spec_t, filter_TAC)
 
 (*or*)
 
-val spec_thm = holfoot_interactive_verify_spec true file NONE 
+val spec_thm = holfoot_tac_verify_spec file NONE 
    [("list_filter", filter_TAC)]
 
 
@@ -75,7 +75,7 @@ val spec_t2 = parse_holfoot_file file2
 (* Verify specification                                                       *)
 (******************************************************************************)
 
-(* set_goal ([], spec_t2) *)
+(* holfoot_set_goal_procedures file2 ["list_filter"] *)
 val filter2_TAC = 
 xHF_SOLVE_TAC [stop_at_while] THEN HF_STEP_TAC 1 THEN
 REPEAT STRIP_TAC THENL [
@@ -99,5 +99,5 @@ val spec2_thm = prove (spec_t2, filter2_TAC)
 
 (*or*)
 
-val spec2_thm = holfoot_interactive_verify_spec true file2 NONE 
+val spec2_thm = holfoot_tac_verify_spec file2 NONE 
    [("list_filter", filter2_TAC)]

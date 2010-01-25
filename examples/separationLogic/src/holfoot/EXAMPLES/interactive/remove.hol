@@ -13,6 +13,12 @@ val REMOVE_def = Define `
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/remove.dsf"];
-val spec_thm = holfoot_verify_spec true file [ add_rewrites [REMOVE_def] ] 
+val imp_thm = holfoot_auto_verify_spec file
+val spec_thm = holfoot_prove_remaining (imp_thm,
+   SIMP_TAC list_ss [REMOVE_def] THEN
+   HF_ELIM_COMMENTS_TAC)
+
+val spec_thm = holfoot_verify_spec file [ add_rewrites [REMOVE_def] ] 
+
 
 

@@ -1,12 +1,12 @@
-list_filter(l;x) [data_list(l,data) * (x == #fc)] {
+list_filter(l;x) [data_list(l,data)] {
   local y, z, e;
   y = l;
   z = NULL;
   loop_spec [(x == #fc) * (y == #yc) * (l == #lc) *
-             (if (y == l) then 
-                 data_lseg(l, data, y) 
+             (if (y != l) then 
+                 data_lseg (l, data, z) * (z |-> tl:y,dta:#zdata)
               else
-                 data_lseg (l, data, z) * (z |-> tl:y,dta:#zdata)) *
+                 emp) *
              data_list (y, data2)] {
     while (y != NULL) {
       e = y->dta;
@@ -27,11 +27,11 @@ list_filter(l;x) [data_list(l,data) * (x == #fc)] {
       }
     }
   } [if (#yc == #lc) then
-       data_list(l, ``data ++ (FILTER (\e:num. ~(e = fc)) data2)``)
+       data_list(l, ``FILTER (\e:num. ~(e = fc)) data2``)
      else
        (data_list(l, ``data ++ [zdata] ++ (FILTER (\e:num. ~(e = fc)) data2)``) * 
        (l != y))]
-} [data_list(l, ``FILTER (\e:num. ~(e = fc)) data``)]
+} [data_list(l, ``FILTER (\e:num. ~(e = x:num)) data``)]
 
 
 

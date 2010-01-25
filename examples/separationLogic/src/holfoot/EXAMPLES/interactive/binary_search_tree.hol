@@ -353,7 +353,7 @@ val search_tree_to_list_TAC =
 (* Finally combine everything                                                 *)
 (******************************************************************************)
 
-val thm = holfoot_interactive_verify_spec true file NONE [
+val thm = holfoot_tac_verify_spec file NONE [
    ("search_tree_init",          search_tree_init_TAC),
    ("search_tree_insert",        search_tree_insert_TAC),
    ("search_tree_delete_min",    search_tree_delete_min_TAC),
@@ -472,7 +472,7 @@ val search_tree_lookup2_TAC =
    ];
 
 
-val thm2 = holfoot_interactive_verify_spec true file2 NONE [
+val thm2 = holfoot_tac_verify_spec file2 NONE [
    ("search_tree_delete_min",    search_tree_delete_min2_TAC),
    ("search_tree_lookup",        search_tree_lookup2_TAC)]
 

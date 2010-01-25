@@ -1874,6 +1874,7 @@ in
    DISCH_ALL thm'
 end;
 
+
 fun holfoot_verify_spec_internal verbose print_remaining (file, defaultConseqConv_opt, tacL) =
   let
      open PPBackEnd;
@@ -1975,10 +1976,6 @@ fun holfoot_verify_spec_internal verbose print_remaining (file, defaultConseqCon
   end;
 
 
-fun holfoot_auto_verify_spec verbose file =
-   fst (holfoot_verify_spec_internal verbose true (file, SOME
-         (xHF_GEN_STEP_CONSEQ_CONV [generate_vcs] NONE 1), []));
-
 
 fun holfoot_set_remaining_goal thm_imp =
 let
@@ -2000,7 +1997,7 @@ in
 end;
 
 
-fun holfoot_interactive_verify_spec verbose file optL_opt tacL =
+fun holfoot_interactive_verify_spec (verbose,print_err) file optL_opt tacL =
 let
    val (thm, ok) = holfoot_verify_spec_internal verbose false (file, 
       (if isSome optL_opt then         
@@ -2012,9 +2009,28 @@ in
    thm
 end;
 
+fun holfoot_interactive_verify_spec verbose print_err file optL_opt tacL =
+let
+   val (thm, ok) = holfoot_verify_spec_internal verbose print_err (file, 
+      (if isSome optL_opt then         
+         SOME (xHF_GEN_STEP_CONSEQ_CONV (valOf optL_opt) NONE 1)
+       else NONE), tacL);
+   val _ = if ok then () else (
+      proofManagerLib.set_goal ([],(fst o dest_imp o concl) thm);());
+in
+   thm
+end;
 
-fun holfoot_verify_spec verbose file optL =
-  holfoot_interactive_verify_spec verbose file (SOME optL) []
+
+fun holfoot_verify_spec file optL =
+  holfoot_interactive_verify_spec true false file (SOME optL) []
+
+fun holfoot_tac_verify_spec file optL_opt tacL =
+  holfoot_interactive_verify_spec true false file optL_opt tacL
+
+fun holfoot_auto_verify_spec file =
+  holfoot_interactive_verify_spec true true file (SOME [generate_vcs]) []
+
 				  
 (*
 val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot/EXAMPLES/"]
