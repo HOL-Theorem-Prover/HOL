@@ -160,7 +160,7 @@ fun holfoot_run () = let
       handle _ => args;
 
    fun prover file = ((if intera then interactive_verify file else
-                       ((holfootLib.holfoot_auto_verify_spec (not quiet) file);()));
+                       ((holfootLib.holfoot_interactive_verify_spec (not quiet) (not quiet) file (SOME [generate_vcs]) []);()));
                      (if quiet then () else (print "\n\n\n"; ())));
 
    fun check_file file =
