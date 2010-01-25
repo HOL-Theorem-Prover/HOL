@@ -1328,62 +1328,69 @@ fun remove_word_printer () =
 (* A pretty-printer that shows the types for ><, w2w and @@                  *)
 (* ------------------------------------------------------------------------- *)
 
-fun print_word_cast Gs sys (ppfns:term_pp_types.ppstream_funs) (pg,lg,rg) d pps t = let
+fun word_cast Gs sys (ppfns:term_pp_types.ppstream_funs) (pg,lg,rg) d pps t =
+let
    open Portable term_pp_types
    val (str,brk) = (#add_string ppfns, #add_break ppfns);
    fun stype tm = String.extract(type_to_string (type_of tm),1,NONE)
    fun delim i act = case pg of
                         Prec(j,_) => if i <= j then act() else ()
                       | _ => ()
+   val (f,x) = strip_comb t
 in
-  case ((fst o dest_const) ## I) (strip_comb t)
+  case (fst (dest_const f), x)
     of ("w2w",[a]) =>
-          let val prec = Prec (700,"w2w") in            delim 700 (fn () => str "(");
+          let val prec = Prec (700,"w2w") in
             begin_block pps INCONSISTENT 0;
-            str ("(w2w" ^ type_to_string (type_of a));
-            str "->"; brk(1,0);
-            str (stype t ^ ")");
-            end_block pps;
-            sys (prec,prec,prec) (d - 1) a;
-            delim 700 (fn () => str ")")
+            delim 200 (fn () => str "(");
+            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
+            sys (prec,lg,rg) (d - 1) a;
+            delim 200 (fn () => str ")");
+            end_block pps
           end
-     | ("word_concat",[a,b]) =>          let val prec = Prec (700,"word_concat") in
-            delim 700 (fn () => str "(");
+     | ("sw2sw",[a]) =>
+          let val prec = Prec (700,"sw2sw") in
             begin_block pps INCONSISTENT 0;
-            str ("(" ^ "(@@)" ^ type_to_string (type_of a));
-            str "->"; brk(1,0);
-            str (stype b);
-            str "->"; brk(1,0);
-            str (stype t ^ ")");
-            end_block pps;
-            sys (prec,prec,prec) (d - 1) a; brk(1,0);
-            sys (prec,prec,prec) (d - 1) b;
-            delim 700 (fn () => str ")")
+            delim 200 (fn () => str "(");
+            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
+            sys (prec,lg,rg) (d - 1) a;
+            delim 200 (fn () => str ")");
+            end_block pps
+          end
+     | ("word_concat",[a,b]) =>
+          let val prec = Prec (700,"word_concat") in
+            begin_block pps INCONSISTENT 0;
+            delim 200 (fn () => str "(");
+            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
+            sys (prec,lg,rg) (d - 1) a; brk (1,0);
+            sys (prec,lg,rg) (d - 1) b;
+            delim 200 (fn () => str ")");
+            end_block pps
           end
      | ("word_extract",[h,l,a]) =>
           let val prec = Prec (700,"word_extract") in
-            delim 700 (fn () => str "(");
             begin_block pps INCONSISTENT 0;
-            str "((";
-            sys (prec,prec,prec) (d - 1) h; brk(1,0);
-            str "><"; brk(1,0);
-            sys (prec,prec,prec) (d - 1) l;
-            str ")"; brk(1,0);
-            str (type_to_string (type_of a));
-            str "->"; brk(1,0);
-            str (stype t ^ ")");
-            end_block pps;
-            sys (prec,prec,prec) (d - 1) a;
-            delim 700 (fn () => str ")")
+            delim 200 (fn () => str "(");
+            str "(";
+            str "(";
+            sys (prec,Top,prec) (d - 1) h; brk(1,2);
+            str "><"; brk (1,2);
+            sys (prec,prec,Top) (d - 1) l;
+            str ")"; brk (1,2);
+            pp_type pps (type_of (list_mk_comb (f,[h,l])));
+            str ")"; brk (1,2);
+            sys (prec,lg,rg) (d - 1) a;
+            delim 200 (fn () => str ")");
+            end_block pps
           end
      | _ => raise term_pp_types.UserPP_Failed
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 fun add_word_cast_printer () = Parse.temp_add_user_printer
-  ("wordsLib.print_word_cast", ``f:'b word``, print_word_cast);
+  ("wordsLib.word_cast", ``f:'b word``, word_cast);
 
 fun remove_word_cast_printer () =
-  (Parse.remove_user_printer "wordsLib.print_word_cast"; ());
+  (Parse.remove_user_printer "wordsLib.word_cast"; ());
 
 (* ------------------------------------------------------------------------- *)
 (* Guessing the word length for the result of extraction (><),               *)
