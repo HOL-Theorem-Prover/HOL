@@ -1,0 +1,14 @@
+HolQbfLib is a library for integrating Quantified Boolean Formula (QBF)
+solvers with the HOL theorem prover.
+
+Files:
+
+COPYRIGHT               Copyright notice, license and disclaimer.
+Library.sml             Common auxiliary functions.
+QbfCertificate.sml      QBF Certificates and proof reconstruction.
+QDimacs.sml             Translation between HOL terms and the QDIMACS file
+                        format.
+README                  This file.
+
+Further documentation can be found in the HOL Description (in
+HOL/Manual/Description).
