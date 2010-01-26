@@ -1,6 +1,7 @@
 (* Copyright (c) 2010 Tjark Weber. All rights reserved. *)
 
-(* Translation between HOL terms and the QDIMACS file format.
+(* Translation between (the QBF-in-prenex-form subset of) HOL terms and the
+   QDIMACS file format.
 
    This file implements (parts of) the QDIMACS standard, version 1.1 (released
    on December 21, 2005), as described at http://www.qbflib.org/qdimacs.html
@@ -21,7 +22,7 @@ struct
 
 (* ------------------------------------------------------------------------- *)
 (* write_qdimacs_file: serializes a QBF 't' to a file in QDIMACS format. 't' *)
-(*      must have the following structure:                                   *)
+(*      must have the following form:                                        *)
 (*        Q1 x1. Q2 x2. ... Qn xn. phi(x1, ..., xn)                          *)
 (*      where n>=0, each Qi is a quantifier (either ? or !), Qn is ? (i.e.,  *)
 (*      the existential quantifier), each xi is a Boolean variable, and phi  *)
@@ -40,8 +41,8 @@ struct
 (*      quantified at the outermost level: e.g., "!x. x \/ y" is not a       *)
 (*      theorem in HOL.                                                      *)
 (*                                                                           *)
-(*      Returns a map from subterms of 't' to QDIMACS variable indices       *)
-(*      (i.e., positive integers).                                           *)
+(*      Returns a dictionary mapping subterms of 't' to QDIMACS variable     *)
+(*      indices (i.e., positive integers).                                   *)
 (* ------------------------------------------------------------------------- *)
 
   fun write_qdimacs_file path t =
@@ -71,7 +72,7 @@ struct
     (* term -> string *)
     fun literal_to_qdimacs tm =
       "-" ^ variable_to_qdimacs (boolSyntax.dest_neg tm)
-      handle Feedback.HOL_ERR _ =>
+      handle Feedback.HOL_ERR _ =>  (* 'tm' is not a negation *)
         variable_to_qdimacs tm
     (* term -> string *)
     fun clause_to_qdimacs tm =
@@ -92,12 +93,12 @@ struct
         val _ = Term.type_of bvar = Type.bool orelse
           raise ERR "write_qdimacs_file"
             ("term is not a QBF (quantified variable '" ^
-            Hol_pp.term_to_string bvar ^ "' is not of type bool)")
+              Hol_pp.term_to_string bvar ^ "' is not of type bool)")
         (* QDIMACS requires each bound variable to occur in the matrix *)
         val _ = Term.free_in bvar body orelse
           raise ERR "write_qdimacs_file"
             ("term is not a QBF (quantified variable '" ^
-            Hol_pp.term_to_string bvar ^ "' not free in the body)")
+              Hol_pp.term_to_string bvar ^ "' not free in the body)")
       in
         Lib.apfst (Lib.cons bvar) (strip_bool_quantifier dest_fn body)
       end
@@ -249,27 +250,17 @@ struct
             ^ Hol_pp.term_to_string var ^
             " (and perhaps others) not free in matrix")
       end
-      handle Feedback.HOL_ERR _ =>  (* 'tm' is not quantified *)
+      handle Feedback.HOL_ERR _ =>  (* 'tm' is not existentially quantified *)
         ()
-    val _ = if !trace < 1 then
-        ()
-      else
-        check_bvars tm
+    val _ = if !trace > 0 then check_bvars tm else ()
     (* Because the semantics of free variables differs in QDIMACS (where they
        are implicitly existential) vs. HOL (where they are implicitly
        universal), we inform the user if there are any free variables. *)
-    val _ = if !trace < 1 then
-        ()
-      else
-        let
-          val n = HOLset.numItems (Term.FVL [tm] Term.empty_varset)
-        in
-          if n > 0 then
-            Feedback.HOL_WARNING "QDimacs" "read_qdimacs_file"
-              "QDIMACS problem contains free variables"
-          else
-            ()
-        end
+    val _ = if !trace > 0 andalso
+      HOLset.numItems (Term.FVL [tm] Term.empty_varset) > 0 then
+        Feedback.HOL_WARNING "QDimacs" "read_qdimacs_file"
+          "QDIMACS problem contains free variables"
+      else ()
   in
     tm
   end

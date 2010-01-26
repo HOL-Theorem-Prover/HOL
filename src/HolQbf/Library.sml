@@ -209,24 +209,12 @@ end
     raise Match
 
 (* ------------------------------------------------------------------------- *)
-(*        A |- x1 /\ ... /\ xn                                               *)
-(* ---------------------------------- QBF_CONJUNCTS vars                     *)
-(* i |-> (A_i |- x_i, vars_i, lits_i)                                        *)
-(*                                                                           *)
-(* Flattens a conjunctive conclusion (similar to Drule.CONJUNCTS). In        *)
-(* addition, 'vars' must be a list of triples (as returned by                *)
-(* 'enumerate_quantified_vars'), each of the form (index, var, is_forall),   *)
-(* with innermost variables coming first.  The resulting theorems have these *)
-(* variables bound in A_i (by the correct quantifier) if they do not contain *)
-(* any variable in their conclusion x_i that is (more) inner.                *)
-(*                                                                           *)
-(* Moreover, each resulting theorem is accompanied by a list of negated      *)
-(* literals that occur in its conclusion (cf. neg_literals_in_clause).       *)
-(*                                                                           *)
-(* The resulting theorems are stored in a dictionary, indexed by positive    *)
-(* clause identifiers.                                                       *)
-(*                                                                           *)
-(* TODO: fix this comment                                                    *)
+(* QBF_CONJUNCTS: takes a QBF in prenex form (i.e., a term of the form       *)
+(*      Q1 x1 ... Qn xn. phi, where each Qi is ? or !, each xi is a Boolean  *)
+(*      variable, and phi is a propositional formula in CNF). Suppose phi is *)
+(*      C1 /\ ... /\ Ck. Then a dictionary is returned that maps clause      *)
+(*      indices i to 4-tuples ("phi |- Ci", [Qn xn, ..., Q1 x1], phi,        *)
+(*      [~l1, ..., ~lm]), where Ci is l1 \/ ... \/ lm.                       *)
 (* ------------------------------------------------------------------------- *)
 
   fun QBF_CONJUNCTS qbf =
@@ -307,26 +295,13 @@ end
   end
 
 (* ------------------------------------------------------------------------- *)
-(* A, p |- F   B, ~p |- F                                                    *)
-(* ---------------------- QRESOLVE_CLAUSES                                   *)
-(*       A, B |- F                                                           *)
-(*                                                                           *)
-(* Fails if there is no pivot variable that occurs positively in one premise *)
-(* and negatively in the other.                                              *)
-(*                                                                           *)
-(* Also removes definitions and literals whose variable does not occur from  *)
-(* the resulting clause (cf. remove_defs_and_lits).                          *)
-(*                                                                           *)
-(* TODO: fix this comment                                                    *)
+(* QRESOLVE_CLAUSES: performs propositional resolution of clauses in sequent *)
+(*      form, followed by forall-reduction.                                  *)
 (* ------------------------------------------------------------------------- *)
-
-  val QRESOLVE_counter = ref 0
 
   fun QRESOLVE_CLAUSES ((th1, vars1, hyp1, lits1),
                         (th2, vars2, hyp2, lits2)) =
   let
-    val _ = QRESOLVE_counter := !QRESOLVE_counter + 1
-
     (* returns the resulting set of literals, along with the pivot as it occurs
        in lits1 and lits2, respectively; cf. merge *)
     fun find_pivot acc [] _ =
