@@ -2,9 +2,11 @@ OPTIONS = NO_OVERLAY
 FTAG_UI = $(protect $(SIGOBJ)/FinalTag-sig.ui)
 FTYPE_UI = $(protect $(SIGOBJ)/FinalType-sig.ui)
 FTERM_UI = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
+FTHEORY_UI = $(protect $(SIGOBJ)/FinalTheory-sig.ui)
 
 FTAG_UID = $(dprot $(SIGOBJ)/FinalTag-sig.ui)
 FTERM_UID = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
+FTHEORY_UID = $(dprot $(SIGOBJ)/FinalTheory-sig.ui)
 TAG_UID = $(dprot $(SIGOBJ)/Tag.ui)
 LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
 PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
@@ -36,8 +38,8 @@ Thm-sig.uo: Thm-sig.sml $(LIB_UID) $(HOLSET_UID)
 TheoryPP-sig.uo: TheoryPP-sig.sml $(PORTABLE_UID)
 	HOLMOSMLC -c -toplevel TheoryPP-sig.sml
 
-Theory-sig.uo: Theory-sig.sml $(PORTABLE_UID)
-	HOLMOSMLC -c -toplevel Theory-sig.sml
+Theory-sig.uo: Theory-sig.sml $(PORTABLE_UID) $(FTHEORY_UID)
+	HOLMOSMLC -c -toplevel $(FTHEORY_UI) Theory-sig.sml
 
 Definition-sig.uo: Definition-sig.sml
 	HOLMOSMLC -c -toplevel Definition-sig.sml

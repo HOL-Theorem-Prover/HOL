@@ -9,6 +9,9 @@ FTYPE = $(protect $(SIGOBJ)/FinalType-sig.ui)
 FTERMD = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
 FTERM = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
 
+FTHEORYD = $(dprot $(SIGOBJ)/FinalTheory-sig.ui)
+FTHEORY = $(protect $(SIGOBJ)/FinalTheory-sig.ui)
+
 LIBD = $(dprot $(SIGOBJ)/Lib.ui)
 
 HOLSETD = $(dprot $(SIGOBJ)/HOLset.ui)
@@ -23,3 +26,5 @@ Type.ui : Type.sig $(FTYPED) $(dprot $(SIGOBJ)/KernelSig.ui) $(LIBD)
 Term.ui: Term.sig $(FTERMD) Type.ui
 	$(HOLMOSMLC) -c $(FTERM) Term.sig
 
+Theory.ui: Theory.sig $(FTHEORYD) Term.ui Type.ui Thm.ui
+	$(HOLMOSMLC) -c $(FTHEORY) Theory.sig
