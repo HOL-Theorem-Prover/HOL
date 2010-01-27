@@ -1,4 +1,4 @@
-functor vars_as_resourceFunctor (var_res_param : 
+functor vars_as_resourceFunctor (var_res_param :
 sig
     include Abbrev;
 
@@ -29,7 +29,7 @@ sig
        val var_res_prove___no_expn    : Abbrev.term -> Abbrev.thm
        val var_res_assumptions_prove  : Abbrev.thm -> Abbrev.thm
        val var_res_precondition_prove : Abbrev.thm -> Abbrev.thm
-       val var_res_precondition_assumption_prove : 
+       val var_res_precondition_assumption_prove :
                                         Abbrev.term option -> Abbrev.thm -> Abbrev.thm
        val raise_var_res_prove_expn   : exn -> 'a
 
@@ -75,6 +75,9 @@ sig
     end
 end) :
 sig
+   type term = Term.term
+   type conv = Abbrev.conv
+   type thm = Abbrev.thm
    type user_rewrite_param = (Abbrev.thm list * Abbrev.conv list * simpLib.ssfrag list);
    type gen_step_param = {use_asms       : bool,
                           do_case_splits : bool,
@@ -250,7 +253,7 @@ val exp =
 val resource_and_proc_call_free_PROVE___failed_expn(_, tt, _) = exp
 *)
 
-val resource_and_proccall_free_CONV = 
+val resource_and_proccall_free_CONV =
    EXT_CONSEQ_REWRITE_CONV
         [K (DEPTH_CONV BETA_CONV)] [EVERY_DEF]
         ([], append (var_res_param.resource_proccall_free_thmL)
@@ -338,9 +341,9 @@ end;
 (*
    val tref = ref [T]
    val _ = tref := []
-   val tt = (el (length (!tref)) (!tref))	    
+   val tt = (el (length (!tref)) (!tref))
    val tt = find_term is_var_res_prop_internal ((rhs o concl) thm1)
-   val tt = find_term 
+   val tt = find_term
       (fn t => is_FASL_PROGRAM_IS_ABSTRACTION (snd (strip_forall t)))
        (concl current_theorem)
 
@@ -682,7 +685,7 @@ fun FASL_PROGRAM_ABSTRACTION___var_res_prog_parallel_procedure_call pf abstL sys
    let
       val (name1, args1, name2, args2) = dest_var_res_prog_parallel_procedure_call p handle HOL_ERR _ => raise UNCHANGED;
 
-      val thm0 = ISPECL [xenv,penv,args1,args2,name1,name2] 
+      val thm0 = ISPECL [xenv,penv,args1,args2,name1,name2]
           FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_parallel_procedure_call
 
       (*elim combinator precond*)
@@ -778,33 +781,33 @@ fun FASL_PROGRAM_ABSTRACTION___var_res_cond_critical_section pf abstL sys xenv p
       val wpL_thm = REWRITE_CONV [LIST_TO_SET_THM] wpL_t;
 
       val i_thm = ((REWR_CONV var_res_prop_input_def) THENC
-                    ((RATOR_CONV o RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) 
-                        (K wpL_thm)) THENC 
+                    ((RATOR_CONV o RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
+                        (K wpL_thm)) THENC
                     (var_res_prop_input_distinct___ELIM_CONV NONE)) i_t
 
       (*use it to simplify aquire*)
       val a_t = (rand o rator o rand o rand o concl) thm1;
       val a_thm0 = RAND_CONV (K i_thm) a_t
-      val a_thm1 = PART_MATCH (lhs o snd o dest_imp) 
+      val a_thm1 = PART_MATCH (lhs o snd o dest_imp)
                       var_res_prog_aquire_lock___INTRO (rhs (concl a_thm0))
       val a_thm2 = CONV_RULE ((RAND_CONV o LHS_CONV) (K (GSYM a_thm0))) a_thm1
 
       val set_eq_precond = (fst o dest_imp o concl) a_thm2
       val set_eq_precond_thm = EQT_ELIM (REWRITE_CONV [LIST_TO_SET_THM, SET_OF_BAG_INSERT,
             BAG_OF_EMPTY, SET_EQ_SUBSET, SUBSET_REFL,
-            INSERT_SUBSET, IN_INSERT, NOT_IN_EMPTY, EMPTY_SUBSET] set_eq_precond) handle e => 
+            INSERT_SUBSET, IN_INSERT, NOT_IN_EMPTY, EMPTY_SUBSET] set_eq_precond) handle e =>
                  (print "!!!could not prove set_eq_precond!"; raise e)
       val a_thm3 = MP a_thm2 set_eq_precond_thm
       val res_s = stringLib.fromHOLstring res
       val a_c = "aquire-resource "^(term_to_string (pf cond))^" "^res_s
       val a_thm = CONV_RULE (RHS_CONV (fasl_comment_abstraction_INTRO_CONV a_c)) a_thm3
-      val thm2 = CONV_RULE ((RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) 
+      val thm2 = CONV_RULE ((RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
                      (K a_thm)) thm1
 
       (*use it to simplify release*)
       val r_t = (rand o rator o rand o rand o rand o rand o concl) thm1;
       val r_thm0 = RAND_CONV (K i_thm) r_t
-      val r_thm1 = PART_MATCH (lhs o snd o dest_imp) 
+      val r_thm1 = PART_MATCH (lhs o snd o dest_imp)
                       var_res_prog_release_lock___INTRO (rhs (concl r_thm0))
       val r_thm2 = CONV_RULE ((RAND_CONV o LHS_CONV) (K (GSYM r_thm0))) r_thm1
       val r_thm3 = MP r_thm2 set_eq_precond_thm
@@ -918,9 +921,9 @@ local
 
    (*bring pre and post conditions in normal form*)
    val intro_var_res_prop =
-       ANTE_CONV_RULE 
+       ANTE_CONV_RULE
          (ONCE_DEPTH_CONV (QCHANGED_CONV (var_res_prop_input_distinct___ELIM_CONV NONE)))
-       
+
 
    fun elim_exists_pre thm =
       let
@@ -941,7 +944,7 @@ fun VAR_RES_SPECIFICATION___CONSEQ_CONV t = let
    val current_theorem4 = elim_exists_pre current_theorem3
 in
    current_theorem4
-end 
+end
 
 end
 
@@ -971,10 +974,10 @@ local
 
    fun strip_local_vars_args_CONV c p =
      if (is_var_res_prog_call_by_value_arg p) then
-        ((RATOR_CONV o RAND_CONV o ABS_CONV) 
+        ((RATOR_CONV o RAND_CONV o ABS_CONV)
          (strip_local_vars_args_CONV c)) p else
      if (is_var_res_prog_local_var p) then
-        ((RAND_CONV o ABS_CONV) 
+        ((RAND_CONV o ABS_CONV)
          (strip_local_vars_args_CONV c)) p else
         c p
 
@@ -988,7 +991,7 @@ in
 
       val (vp, post_thm) = COND_PROP___STRONG_EXISTS_INTRO___CONV post;
       val prog_thm0 = prog_thm_fun ()
-      val prog_thm = CONV_RULE (RHS_CONV (strip_local_vars_args_CONV 
+      val prog_thm = CONV_RULE (RHS_CONV (strip_local_vars_args_CONV
            (fasl_comment_location_BLOCK_INTRO_CONV (fasl_comment_modify_INC c)))) prog_thm0
 
       val thm0 = ((RAND_CONV (K post_thm)) THENC
@@ -1021,7 +1024,7 @@ let
    val _ = if is_fasl_prog_block prog' then () else raise UNCHANGED
 
    val conv1 = K (ISPECL [c, prog'] fasl_comment_location_def)
-   val conv2 = fasl_comment_location_BLOCK_INTRO_CONV (fasl_comment_modify_COPY_INIT c) 
+   val conv2 = fasl_comment_location_BLOCK_INTRO_CONV (fasl_comment_modify_COPY_INIT c)
    val conv = conv1 THENC conv2
 in
    RATOR_CONV (RAND_CONV conv) tt
@@ -1053,7 +1056,7 @@ let
       in
          (xenv, penv)
       end;
-    val abst_opt = 
+    val abst_opt =
           FASL_PROGRAM_ABSTRACTION___block_flatten___no_rec xenv penv prog1
     val _ = if isSome abst_opt then () else raise UNCHANGED;
 
@@ -1100,17 +1103,17 @@ let
 
    val ttt = (fst o dest_conj o fst o dest_imp o concl) thm1
 
-   fun list_first_conv conv ttt = 
+   fun list_first_conv conv ttt =
       if listSyntax.is_nil ttt then conv ttt else
       (RATOR_CONV (RAND_CONV conv)) ttt
    fun comment_conv c =
       (TRY_CONV (REWR_CONV VAR_RES_COND_INFERENCE___prog_block3)) THENC
-      ((RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV) 
+      ((RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV)
        (list_append_norm_CONV THENC
         list_first_conv (fasl_comment_location_INTRO_CONV c)))
 
    val thm2 = CONV_RULE (
-      (RATOR_CONV o RAND_CONV) 
+      (RATOR_CONV o RAND_CONV)
       (RAND_CONV (comment_conv cf) THENC
        (RATOR_CONV (RAND_CONV (comment_conv ct))))) thm1
 in
@@ -1159,7 +1162,7 @@ let
     val thm1 = if (is_imp_only ((snd o dest_imp o concl) thm0)) then
                    var_res_precondition_prove thm0
                else thm0
-    val thm2 = STRENGTHEN_CONSEQ_CONV_RULE 
+    val thm2 = STRENGTHEN_CONSEQ_CONV_RULE
                   (K (VAR_RES_COND_INFERENCE___assume___internal))
                   thm1 handle UNCHANGED => thm1
                             | HOL_ERR _ => thm1
@@ -1175,10 +1178,10 @@ let
 
    fun conv_pre t = thm0_fun ();
    val conv_post = VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV (
-                      DEPTH_CONV BETA_CONV THENC				 
+                      DEPTH_CONV BETA_CONV THENC
                       REWRITE_CONV [var_res_prop_binexpression_ELIM])
 in
-   (EVERY_CONSEQ_CONV [conv_pre, 
+   (EVERY_CONSEQ_CONV [conv_pre,
     VAR_RES_COND_INFERENCE___assume___internal, conv_post]) tt
 end;
 
@@ -1225,7 +1228,7 @@ let
    val b''_eq_t = mk_eq (b', b'');
    val b''_eq_thm = EQT_ELIM (BAG_NORMALISE_CONV b''_eq_t)
    val b_thm = TRANS b_resort_thm b''_eq_thm
-in 
+in
    (vcL_t, b_thm)
 end;
 
@@ -1290,8 +1293,8 @@ let
 
    fun is_subterm st t =
       (find_term (aconv st) t; true) handle HOL_ERR _ => false
-   fun var_is_needed v = 
-      let 
+   fun var_is_needed v =
+      let
          val sfs' = filter (is_subterm v) sfs;
       in
          if length sfs' > 1 then true else
@@ -1300,7 +1303,7 @@ let
             val (_, v', c) = dest_var_res_prop_equal (hd sfs');
             val _ = dest_var_res_exp_const c
             val v'' = dest_var_res_exp_var v'
-         in  
+         in
             not (aconv v v'')
          end handle HOL_ERR _ => true
       end
@@ -1310,12 +1313,12 @@ let
    val _ = if null needed_vars then raise UNCHANGED else ();
 
 
-   val expression_ty = 
+   val expression_ty =
       mk_var_res_expr_type (fst (dest_var_res_ext_state_type (
          dest_var_res_cond_proposition (type_of P))))
 
    (*instantiate needed constants*)
-   val thm0 = VAR_RES_COND_INFERENCE___CONST_LIST_INTRO___CONV 
+   val thm0 = VAR_RES_COND_INFERENCE___CONST_LIST_INTRO___CONV
       (map (fn v => (mk_var_res_exp_var v expression_ty, NONE)) needed_vars) tt;
 
    val (vL, tt') = (strip_forall o rhs o concl) thm0
@@ -1330,7 +1333,7 @@ end;
 
 
 (*
-   val tL = find_terms is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))   
+   val tL = find_terms is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
    val tt = el 1 tL
 val thm = VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV tt
 *)
@@ -1340,7 +1343,7 @@ let
    val (_, wpb, rpb, _) = dest_var_res_prop pre
    val var_list = append (fst (dest_bag wpb)) (fst (dest_bag rpb))
 
-   val expression_ty = 
+   val expression_ty =
       mk_var_res_expr_type (fst (dest_var_res_ext_state_type (
          dest_var_res_cond_proposition (type_of pre))))
 
@@ -1360,7 +1363,7 @@ let
    val (wpb, rpb) = pairSyntax.dest_pair wprpb
    val var_list = append (fst (dest_bag wpb)) (fst (dest_bag rpb))
 
-   val expression_ty = 
+   val expression_ty =
       mk_var_res_expr_type (fst (dest_var_res_ext_state_type (
          dest_var_res_proposition (bagSyntax.base_type context_sfb))))
 
@@ -1403,7 +1406,7 @@ let
    val new_comment = fasl_comment_modify_APPEND "final" c;
    val rfc = pairSyntax.mk_pair (F, optionSyntax.mk_some new_comment)
 
-   val pre_thm0 = PART_MATCH (rand o rand) 
+   val pre_thm0 = PART_MATCH (rand o rand)
        (SPEC rfc VAR_RES_COND_HOARE_TRIPLE___SOLVE) trip
    val pre_thm1 = var_res_precondition_prove pre_thm0
 
@@ -1438,10 +1441,10 @@ let
     val c = if isSome c_opt then valOf c_opt else empty_label_list;
 
     (*introduce constants*)
-    val thm_const = CONV_RULE (RHS_CONV 
+    val thm_const = CONV_RULE (RHS_CONV
          VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) (thm0_fun())
     val (vs, tt') = strip_forall (rhs (concl thm_const))
-   
+
 
     (*apply inference*)
     val inv_thm = pairTools.PABS_ELIM_CONV inv_t handle UNCHANGED => REFL inv_t;
@@ -1458,12 +1461,12 @@ let
     val thm0b = ISPECL [f, P, wp,rp, d, mk_abs (v, sfb),
            co, while_body, pL, Q] VAR_RES_COND_INFERENCE___prog_while
 
-    val thm0 = CONV_RULE ((RAND_CONV o RAND_CONV) ((DEPTH_CONV BETA_CONV) THENC 
+    val thm0 = CONV_RULE ((RAND_CONV o RAND_CONV) ((DEPTH_CONV BETA_CONV) THENC
                                         (K (GSYM thm0a)))) thm0b
 
     (*elim precond*)
     val precond = (fst o dest_imp o concl) thm0
-    val precond_thm1 = PART_MATCH (fst o dest_imp) var_res_prop___IMPLIES_VAR_DISTINCT 
+    val precond_thm1 = PART_MATCH (fst o dest_imp) var_res_prop___IMPLIES_VAR_DISTINCT
             ((fst o dest_imp) precond)
     val precond_thm2_term = mk_imp ((snd o dest_imp o concl) precond_thm1,
                                     (snd o dest_imp) precond)
@@ -1499,7 +1502,7 @@ let
     val new_c2 = fasl_comment_modify_APPEND ("while loop") c
     val thm5 = CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV o
                    RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV o
-                   (fn conv => fn t => if listSyntax.is_nil t then conv t else 
+                   (fn conv => fn t => if listSyntax.is_nil t then conv t else
                        (RATOR_CONV o RAND_CONV) conv t))
                   (fasl_comment_location_INTRO_CONV new_c2)) thm4
 
@@ -1530,10 +1533,10 @@ let
     val c = if isSome c_opt then valOf c_opt else empty_label_list;
 
     (*introduce constants*)
-    val thm_const = CONV_RULE (RHS_CONV 
+    val thm_const = CONV_RULE (RHS_CONV
          VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) (thm0_fun())
     val (vs, tt') = strip_forall (rhs (concl thm_const))
-   
+
 
     (*apply inference*)
     val (vc, _) = pairSyntax.dest_pabs P';
@@ -1541,21 +1544,21 @@ let
     val Q_thm = pairTools.PABS_ELIM_CONV Q' handle UNCHANGED => REFL Q';
 
     val pair_PQ_CONV = (RAND_CONV (K Q_thm)) THENC
-                       (RATOR_CONV (RAND_CONV (K P_thm)))  
-    
-    val thm0a = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV 
+                       (RATOR_CONV (RAND_CONV (K P_thm)))
+
+    val thm0a = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV
                    (RATOR_CONV (RAND_CONV pair_PQ_CONV)) tt'
 
     val thm0b = HO_PART_MATCH (snd o dest_imp o snd o dest_imp)
-                   VAR_RES_COND_INFERENCE___loop_spec 
+                   VAR_RES_COND_INFERENCE___loop_spec
                    (rhs (concl thm0a))
 
-    val thm0 = CONV_RULE ((RAND_CONV o RAND_CONV) ((DEPTH_CONV BETA_CONV) THENC 
+    val thm0 = CONV_RULE ((RAND_CONV o RAND_CONV) ((DEPTH_CONV BETA_CONV) THENC
                                         (K (GSYM thm0a)))) thm0b
 
     (*elim precond*)
     val precond = (fst o dest_imp o concl) thm0
-    val precond_thm1 = PART_MATCH (fst o dest_imp) var_res_prop___IMPLIES_VAR_DISTINCT 
+    val precond_thm1 = PART_MATCH (fst o dest_imp) var_res_prop___IMPLIES_VAR_DISTINCT
             ((fst o dest_imp) precond)
     val precond_thm2_term = mk_imp ((snd o dest_imp o concl) precond_thm1,
                                     (snd o dest_imp) precond)
@@ -1589,14 +1592,14 @@ let
                    (RAND_CONV (RATOR_CONV (RAND_CONV (
                       my_intro_conv THENC
                       ((STRIP_QUANT_CONV o RATOR_CONV o RAND_CONV o RAND_CONV o
-                        RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) 
+                        RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
                         (RAND_CONV my_abs_intro_conv THENC
                          RATOR_CONV (RAND_CONV my_abs_intro_conv)))))))))) thm2
 
     (*introduce comment while-abstraction*)
     val new_c1 = fasl_comment_modify_APPEND ("abstracted while-loop block") c
     val thm4a = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV o
-                   STRIP_QUANT_CONV o 
+                   STRIP_QUANT_CONV o
                    RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
                   ((fasl_comment_location2_INTRO_CONV new_c1) THENC
                    (fasl_comment_abstraction_INTRO_CONV "while-loop block"))) thm3
@@ -1605,7 +1608,7 @@ let
     val new_c2 = fasl_comment_modify_APPEND ("while-loop block unroll skip") c
     val thm4b = CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV o
                    RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV o
-                   (fn conv => fn t => if listSyntax.is_nil t then conv t else 
+                   (fn conv => fn t => if listSyntax.is_nil t then conv t else
                        (RATOR_CONV o RAND_CONV) conv t))
                   (fasl_comment_location_INTRO_CONV new_c2)) thm4a
 
@@ -1614,15 +1617,15 @@ let
     val new_c3 = fasl_comment_modify_APPEND ("while-loop block unroll iterate") c
 
     fun block_list_CONV conv t =
-       if listSyntax.is_nil t then conv t else 
+       if listSyntax.is_nil t then conv t else
           (RATOR_CONV o RAND_CONV) conv t
     fun block_first_CONV conv t =
-         if is_fasl_prog_block t then RAND_CONV (block_list_CONV conv) t else 
+         if is_fasl_prog_block t then RAND_CONV (block_list_CONV conv) t else
             conv t
 
     val thm4c = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV o
                    RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o
-                   block_first_CONV) 			       
+                   block_first_CONV)
                      (fasl_comment_location_INTRO_CONV new_c3)) thm4b
 
     val thm4d = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV o
@@ -1632,10 +1635,10 @@ let
     (*introduce flatten blocks-*)
    val block_flatten_conv =
       (REWR_CONV VAR_RES_COND_INFERENCE___prog_block3) THENC
-      ((RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV) 
+      ((RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV)
        (list_append_norm_CONV))
 
-    val thm4 = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV) 
+    val thm4 = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV)
                    block_flatten_conv) thm4d handle HOL_ERR _ => thm4d
 
    (*combine with thm_const*)
@@ -1664,10 +1667,10 @@ let
     val c = if isSome c_opt then valOf c_opt else empty_label_list;
 
     (*introduce constants*)
-    val thm_const = CONV_RULE (RHS_CONV 
+    val thm_const = CONV_RULE (RHS_CONV
          VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) (thm0_fun())
     val (vs, tt') = strip_forall (rhs (concl thm_const))
-   
+
 
     (*apply inference*)
     val (vc, _) = pairSyntax.dest_pabs P';
@@ -1675,21 +1678,21 @@ let
     val Q_thm = pairTools.PABS_ELIM_CONV Q' handle UNCHANGED => REFL Q';
 
     val pair_PQ_CONV = (RAND_CONV (K Q_thm)) THENC
-                       (RATOR_CONV (RAND_CONV (K P_thm)))  
-    
-    val thm0a = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV 
+                       (RATOR_CONV (RAND_CONV (K P_thm)))
+
+    val thm0a = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV
                    (RATOR_CONV (RAND_CONV pair_PQ_CONV)) tt'
 
     val thm0b = HO_PART_MATCH (snd o dest_imp o snd o dest_imp)
-                   VAR_RES_COND_INFERENCE___block_spec 
+                   VAR_RES_COND_INFERENCE___block_spec
                    (rhs (concl thm0a))
 
-    val thm0 = CONV_RULE ((RAND_CONV o RAND_CONV) ((DEPTH_CONV BETA_CONV) THENC 
+    val thm0 = CONV_RULE ((RAND_CONV o RAND_CONV) ((DEPTH_CONV BETA_CONV) THENC
                                         (K (GSYM thm0a)))) thm0b
 
     (*elim precond*)
     val precond = (fst o dest_imp o concl) thm0
-    val precond_thm1 = PART_MATCH (fst o dest_imp) var_res_prop___IMPLIES_VAR_DISTINCT 
+    val precond_thm1 = PART_MATCH (fst o dest_imp) var_res_prop___IMPLIES_VAR_DISTINCT
             ((fst o dest_imp) precond)
     val precond_thm2_term = mk_imp ((snd o dest_imp o concl) precond_thm1,
                                     (snd o dest_imp) precond)
@@ -1730,8 +1733,8 @@ let
     (*introduce comment while-skip*)
     val new_c2 = fasl_comment_modify_APPEND ("block-spec body") c
     val thm4 = CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o STRIP_QUANT_CONV o
-                   RATOR_CONV o RAND_CONV o RAND_CONV o 
-                   (fn conv => fn t => if listSyntax.is_nil t then conv t else 
+                   RATOR_CONV o RAND_CONV o RAND_CONV o
+                   (fn conv => fn t => if listSyntax.is_nil t then conv t else
                        (RATOR_CONV o RAND_CONV) conv t))
                   (fasl_comment_location_INTRO_CONV new_c2)) thm4a
 
@@ -1743,7 +1746,7 @@ in
 end;
 
 
-   
+
 
 
 
@@ -1762,7 +1765,7 @@ let
 
    (* intro var *)
    val thm0a = thm0_fun();
-   val (intro, c, thm0b) = VAR_RES_COND_INFERENCE___CONST_INTRO___CONV 
+   val (intro, c, thm0b) = VAR_RES_COND_INFERENCE___CONST_INTRO___CONV
        (mk_var_res_exp_var v (type_of e)) NONE (rhs (concl thm0a))
    val thm0 = TRANS thm0a thm0b
    val t' = let val ttt = rhs (concl thm0) in
@@ -1798,7 +1801,7 @@ let
    val thm4 = CONV_RULE (RAND_CONV (K (GSYM thm0))) thm3
 
    (*eliminate new const, if not used*)
-   val thm5 = ANTE_CONV_RULE (REWR_CONV FORALL_SIMP) thm4 handle 
+   val thm5 = ANTE_CONV_RULE (REWR_CONV FORALL_SIMP) thm4 handle
                   UNCHANGED => thm4
                 | HOL_ERR _ => thm4
 in
@@ -1836,7 +1839,7 @@ let
    val c_conv = (K c1_thm) THENC c2_conv
    (*put into the context*)
    val thm0 = ((K (thm0_fun ()))  THENC
-       (VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV 
+       (VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV
         c_conv)) tt
 in
    thm0
@@ -1852,11 +1855,11 @@ end;
 *)
 local
 val my_ss1 = simpLib.conv_ss {conv = K (K fasl_procedure_call_preserve_names_wrapper_ELIM_CONV),
-                 key = NONE, name = "procedure_call_preserve_names_wrapper_ELIM", 
+                 key = NONE, name = "procedure_call_preserve_names_wrapper_ELIM",
                  trace = 2}
 
 val my_ss2 = simpLib.conv_ss {conv = K (K pairLib.GEN_BETA_CONV),
-                 key = NONE, name = "GEN_BETA_CONV", 
+                 key = NONE, name = "GEN_BETA_CONV",
                  trace = 2}
 
 val my_conv = SIMP_CONV (list_ss++my_ss1++my_ss2) []
@@ -1869,10 +1872,10 @@ let
    val (c,p1',p1_thm_fun) = save_dest_fasl_comment_location2 p1;
    val (p1'',expL_t) = dest_var_res_prog_eval_expressions p1'
    val (expL,_) = listSyntax.dest_list expL_t
-   
+
    (*introduce expressions if necessary*)
    val thm0a = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV (K (p1_thm_fun ())) tt
-   val thm0 = CONV_RULE (RHS_CONV (VAR_RES_COND_INFERENCE___CONST_LIST_INTRO___CONV 
+   val thm0 = CONV_RULE (RHS_CONV (VAR_RES_COND_INFERENCE___CONST_LIST_INTRO___CONV
       (map (fn x => (x, NONE)) expL))) thm0a
 
    (*destruct again*)
@@ -1920,15 +1923,15 @@ let
          my_conv) thm2
 
    (*reintroduce comment*)
-   val (p1''',_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND 
+   val (p1''',_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND
        (snd (strip_forall (rhs (concl thm3))));
 
    val p1'''_thm = GSYM (ISPECL [c, p1'''] fasl_comment_location2_def)
-   val thm4 = CONV_RULE (STRIP_QUANT_CONV (RHS_CONV 
+   val thm4 = CONV_RULE (STRIP_QUANT_CONV (RHS_CONV
          (VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV (K p1'''_thm)))) thm3
 in
    thm4
-end 
+end
 end;
 
 
@@ -1939,15 +1942,15 @@ fun VAR_RES_COND_INFERENCE___quant_best_local_action___CONSEQ_CONV tt =
 let
    (*destruct*)
    val (p1,_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
-   val (c,p1',p1_thm_fun) = save_dest_fasl_comment_location2 p1 
-   val (has_cond, (pre, _)) = 
+   val (c,p1',p1_thm_fun) = save_dest_fasl_comment_location2 p1
+   val (has_cond, (pre, _)) =
         (false, dest_var_res_prog_quant_best_local_action p1') handle HOL_ERR _ =>
         (true, dest_var_res_prog_cond_quant_best_local_action p1')
    val vc = fst (pairSyntax.dest_pabs pre)
 
    (*elim comment*)
-   val thm0a = p1_thm_fun (); 
-   val thm0  = (VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV (K thm0a) 
+   val thm0a = p1_thm_fun ();
+   val thm0  = (VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV (K thm0a)
                 THENC VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) tt
    val (vs, tt') = strip_forall (rhs (concl thm0))
 
@@ -1959,23 +1962,23 @@ let
    val thm1 = (HO_PART_MATCH (snd o dest_imp) base_thm)  tt'
 
    (*use PBETA_CONV*)
-   val thm2 = ANTE_CONV_RULE 
+   val thm2 = ANTE_CONV_RULE
                  (VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV
                   (TRY_CONV (RAND_CONV PairRules.PBETA_CONV) THENC
                    TRY_CONV (RATOR_CONV (RAND_CONV PairRules.PBETA_CONV))))
                  thm1
 
    (*introduce comments*)
-   val (p1'',_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND 
+   val (p1'',_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND
            ((snd o dest_exists o fst o dest_imp o concl) thm2);
    val p1''_thm = ISPECL [c, p1''] fasl_comment_location2_def;
 
    val thm3 = CONV_RULE (
           (RATOR_CONV o RAND_CONV o QUANT_CONV o
-           VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV) 
+           VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV)
           (K (GSYM p1''_thm))) thm2
 
- 
+
    (*use correct vars*)
    val thm4 = ANTE_CONV_RULE (pairTools.SPLIT_QUANT_CONV vc) thm3
 
@@ -1985,7 +1988,7 @@ let
 
 in
    thm5
-end 
+end
 
 
 (*
@@ -1997,13 +2000,13 @@ let
    val (p1,progL,f,P,Q) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
    val (c,p1',p1_thm_fun) = save_dest_fasl_comment_location2 p1
    val need_star = is_asl_star (rand p1')
-  
+
    (*apply_rewrite*)
    val thm1a = HO_PART_MATCH (lhs o snd o dest_imp)
           (if need_star then
              var_res_prog_cond_best_local_action_INTRO_star
            else
-             var_res_prog_cond_best_local_action_INTRO) p1';   
+             var_res_prog_cond_best_local_action_INTRO) p1';
    val a = (fst o dest_imp o concl) thm1a;
    val thm1b = UNDISCH thm1a;
    val thm1 = RAND_CONV (K thm1b) (mk_fasl_comment_location2 (c, p1'))
@@ -2012,7 +2015,7 @@ let
    val norm_conv = var_res_prop_input_distinct___ELIM_CONV (SOME a) THENC
                    TRY_CONV COND_PROP___STRONG_EXISTS_NORMALISE_CONV
    val thm2 = DISCH a (CONV_RULE (RHS_CONV (DEPTH_CONV norm_conv)) thm1)
-   
+
    (*put it in context*)
    val p1' = (rhs o snd o dest_imp o concl) thm2;
    val (_, wpb, rpb, sfb) = dest_var_res_prop P
@@ -2026,7 +2029,7 @@ let
    val thm3 = MP thm3a precond_thm
 in
    thm3
-end 
+end
 
 (*
    val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
@@ -2071,7 +2074,7 @@ let
    val thm2 = ANTE_CONV_RULE (K new_tt_thm) thm1
 in
    thm2
-end 
+end
 
 local
 
@@ -2118,12 +2121,12 @@ let
    val (vc_post2,  post2_thm)  = COND_PROP___STRONG_EXISTS_INTRO___CONV (rand post);
 
 
-   val pre_thm0 = (((RAND_CONV (K pre2_thm)) THENC 
+   val pre_thm0 = (((RAND_CONV (K pre2_thm)) THENC
                   ((RATOR_CONV (RAND_CONV (K pre1_thm))))) pre)
    val pre_thm = CONV_RULE (RHS_CONV (
                     (HO_PART_MATCH lhs asl_cond_star___COND_PROP___STRONG_EXISTS___BOTH))) pre_thm0
 
-   val post_thm0 = (((RAND_CONV (K post2_thm)) THENC 
+   val post_thm0 = (((RAND_CONV (K post2_thm)) THENC
                   ((RATOR_CONV (RAND_CONV (K post1_thm))))) post)
    val post_thm = CONV_RULE (RHS_CONV (
                     (HO_PART_MATCH lhs asl_cond_star___COND_PROP___STRONG_EXISTS___BOTH))) post_thm0
@@ -2135,8 +2138,8 @@ let
                  RATOR_CONV (RAND_CONV (K pre_thm)))) tt
 
    (*remove asl_cond_star*)
-   val (cond_pre, cond_post) = 
-           (dest_var_res_prog_cond_best_local_action o #1 o 
+   val (cond_pre, cond_post) =
+           (dest_var_res_prog_cond_best_local_action o #1 o
             dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND o rhs o concl) thm0
 
    val (cond_pre_thm, pre_pre) =   COND_PROP___STRONG_IMP___strong_exists_asl_cond_star___ELIM cond_pre
@@ -2145,7 +2148,7 @@ let
 
    val thm1a = (MATCH_MP (ISPEC f var_res_prog_cond_best_local_action___STRONG_IMP___pre_post)
                  (CONJ cond_pre_thm cond_post_thm));
-   val (pre,thm1b) = if (aconv pre_pre pre_post) then (pre_pre,thm1a) else 
+   val (pre,thm1b) = if (aconv pre_pre pre_post) then (pre_pre,thm1a) else
           let
              val pre = mk_conj (pre_pre, pre_post);
              val pre_thm = ASSUME pre
@@ -2155,7 +2158,7 @@ let
              (pre, xthm2)
           end;
 
-       
+
    val pre_imp_t = mk_imp (bagSyntax.mk_all_distinct (bagSyntax.mk_union (wpb,rpb)), pre);
    val pre_imp_thm = var_res_prove pre_imp_t;
    val thm1c = DISCH (fst (dest_imp pre_imp_t)) (MP (DISCH pre thm1b) (UNDISCH pre_imp_thm))
@@ -2188,7 +2191,7 @@ let
 
 
    fun mk_vc NONE    NONE    = NONE
-     | mk_vc vc1_opt vc2_opt = 
+     | mk_vc vc1_opt vc2_opt =
        let
           val vc1 = if isSome vc1_opt then (valOf vc1_opt) else (genvar (Type `:unit`));
           val vc2 = if isSome vc2_opt then (valOf vc2_opt) else (genvar (Type `:unit`));
@@ -2206,7 +2209,7 @@ let
 
 in
    thm3
-end 
+end
 
 end
 
@@ -2227,9 +2230,9 @@ let
          val _ = if is_var_res_prog_release_lock p1' then () else raise UNCHANGED
          val c_thm = ISPECL [c, p1'] fasl_comment_location2_def;
          val thm0a = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV (K c_thm) tt
-      in 
+      in
          (p1', c, thm0a)
-      end handle UNCHANGED => 
+      end handle UNCHANGED =>
         if is_var_res_prog_release_lock p1 then (p1, empty_label_list, REFL tt) else raise UNCHANGED
    val thm0 = CONV_RULE (RHS_CONV VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) thm0a
    val (vs, tt') = strip_forall (rhs (concl thm0))
@@ -2246,7 +2249,7 @@ let
    val thm2 = CONV_RULE (RAND_CONV (K (GSYM thm0))) thm2a
 in
    thm2
-end 
+end
 
 
 (*
@@ -2261,9 +2264,9 @@ let
          val _ = if is_var_res_prog_aquire_lock p1' then () else raise UNCHANGED
          val c_thm = ISPECL [c, p1'] fasl_comment_location2_def;
          val thm0a = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV (K c_thm) tt
-      in 
+      in
          (p1', thm0a)
-      end handle UNCHANGED => 
+      end handle UNCHANGED =>
         if is_var_res_prog_aquire_lock p1 then (p1, REFL tt) else raise UNCHANGED
    val thm0 = CONV_RULE (RHS_CONV VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) thm0a
    val (vs, tt') = strip_forall (rhs (concl thm0))
@@ -2277,7 +2280,7 @@ let
 
    (*simplify*)
    val bag_conv = bagLib.SIMPLE_BAG_NORMALISE_CONV
-   val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV o VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV) 
+   val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV o VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV)
                  ((RAND_CONV bag_conv) THENC
                   ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) bag_conv))) thm1
 
@@ -2286,7 +2289,7 @@ let
    val thm3 = CONV_RULE (RAND_CONV (K (GSYM thm0))) thm3a
 in
    thm3
-end 
+end
 
 (******************************************************************************)
 (* Simplify preconds                                                          *)
@@ -2296,7 +2299,7 @@ end
 *)
 fun VAR_RES_COND_INFERENCE___PRECOND_bool_pred___CONV ss context tt =
 let
-   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV 
+   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV
                  is_var_res_bool_proposition tt
    val thm1 = CONV_RULE (RHS_CONV (
         REWR_CONV VAR_RES_COND_INFERENCE___var_res_bool_proposition)) thm0
@@ -2308,18 +2311,18 @@ end;
 
 fun VAR_RES_COND_INFERENCE___PRECOND_trivial_cond___CONV tt =
 let
-   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV 
+   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV
                  is_asl_trivial_cond tt
    val thm1 = CONV_RULE (RHS_CONV (
         REWR_CONV VAR_RES_COND_INFERENCE___asl_trivial_cond)) thm0
 in
    thm1
 end;
-   
+
 
 fun VAR_RES_COND_INFERENCE___PRECOND_stack_true___CONV tt =
 let
-   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV 
+   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV
                  is_var_res_prop_stack_true tt
    val thm1 = CONV_RULE (RHS_CONV (
         REWR_CONV VAR_RES_COND_INFERENCE___var_res_prop_stack_true)) thm0
@@ -2330,7 +2333,7 @@ end;
 
 fun VAR_RES_COND_INFERENCE___PRECOND_false___CONV tt =
 let
-   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV 
+   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV
                  is_asl_false tt
    val thm1 = EQT_INTRO (PART_MATCH I VAR_RES_COND_INFERENCE___false_precond (rhs (concl thm0)))
    val thm2 = TRANS thm0 thm1
@@ -2340,14 +2343,14 @@ end;
 
 
 fun VAR_RES_COND_INFERENCE___PRECOND_REWRITE___CONV ss context t =
-      VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV 
+      VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV
          (VAR_RES_PROP_REWRITE_CONV ss context) t;
-   
+
 
 
 fun VAR_RES_COND_INFERENCE___PRECOND_asl_exists___CONV tt =
 let
-   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV 
+   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV
                  is_asl_exists tt
 
    val thm1 = HO_PART_MATCH (lhs o snd o dest_imp) VAR_RES_COND_INFERENCE___asl_exists_pre
@@ -2361,7 +2364,7 @@ end;
 
 fun VAR_RES_COND_INFERENCE___PRECOND_asl_star___CONV tt =
 let
-   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV 
+   val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIND_RESORT_PRECOND_CONV
                  is_asl_star tt
 
    val thm1 = PART_MATCH (lhs o snd o dest_imp) VAR_RES_COND_INFERENCE___asl_star_pre
@@ -2379,7 +2382,7 @@ end;
 (******************************************************************************)
 
 fun VAR_RES_FRAME_SPLIT_INFERENCE___PROP_REWRITE___CONV ss context t =
-   VAR_RES_FRAME_SPLIT___PROP_CONV 
+   VAR_RES_FRAME_SPLIT___PROP_CONV
          (VAR_RES_PROP_REWRITE_CONV ss context) t;
 
 
@@ -2404,11 +2407,11 @@ let
 
 
    (*update vars*)
-   val (_, _, wr, _, context_sfb, split_sfb, imp_sfb, _) = 
+   val (_, _, wr, _, context_sfb, split_sfb, imp_sfb, _) =
         dest_VAR_RES_FRAME_SPLIT ((fst o dest_imp) (concl thm2));
    val (wpb,rpb) = dest_pair wr
    val (precond, rewrL) = GENERATE___var_res_exp_varlist_update___REWRITES wpb rpb vcL_t;
- 
+
    fun save_conv t = (cond_rewrite___varlist_update rewrL t) handle UNCHANGED => REFL t
    val context_thm = save_conv context_sfb
    val split_thm = save_conv split_sfb
@@ -2462,7 +2465,7 @@ let
    val context_nl = resort_list context_sfb
    val split_nl = resort_list split_sfb
    val imp_nl = resort_list imp_sfb
-   
+
    val _ = if (null context_nl) andalso (null split_nl) andalso (null imp_nl) then
               raise UNCHANGED else ()
    (*resort*)
@@ -2495,7 +2498,7 @@ let
    val context_nl = resort_list context_sfb
    val split_nl = resort_list split_sfb
    val imp_nl = resort_list imp_sfb
-   
+
    val _ = if (null context_nl) andalso (null split_nl) andalso (null imp_nl) then
               raise UNCHANGED else ()
 
@@ -2541,7 +2544,7 @@ let
           (c (BAG_RESORT_CONV nl) tt, thm)
        end;
 
-   val (resort_thm, thm) = get_resort_thm 
+   val (resort_thm, thm) = get_resort_thm
          [(context_sfb, VAR_RES_FRAME_SPLIT___context_CONV, VAR_RES_FRAME_SPLIT___asl_star___context),
           (imp_sfb, VAR_RES_FRAME_SPLIT___imp_CONV, VAR_RES_FRAME_SPLIT___asl_star___imp),
           (split_sfb, VAR_RES_FRAME_SPLIT___split_CONV, VAR_RES_FRAME_SPLIT___asl_star___split)]
@@ -2573,7 +2576,7 @@ let
           (c (BAG_RESORT_CONV nl) tt, thm, has_precond)
        end;
 
-   val (resort_thm, thm, has_precond) = get_resort_thm 
+   val (resort_thm, thm, has_precond) = get_resort_thm
          [(context_sfb, VAR_RES_FRAME_SPLIT___context_CONV, VAR_RES_FRAME_SPLIT___trivial_cond___context, false),
           (imp_sfb, VAR_RES_FRAME_SPLIT___imp_CONV, VAR_RES_FRAME_SPLIT___trivial_cond___imp, true),
           (split_sfb, VAR_RES_FRAME_SPLIT___split_CONV, VAR_RES_FRAME_SPLIT___trivial_cond___split, false)]
@@ -2604,7 +2607,7 @@ let
           (c (BAG_RESORT_CONV nl) tt, thm)
        end;
 
-   val (resort_thm, thm) = get_resort_thm 
+   val (resort_thm, thm) = get_resort_thm
          [(context_sfb, VAR_RES_FRAME_SPLIT___context_CONV, VAR_RES_FRAME_SPLIT___asl_false___context),
           (split_sfb, VAR_RES_FRAME_SPLIT___split_CONV, VAR_RES_FRAME_SPLIT___asl_false___split)]
 
@@ -2628,7 +2631,7 @@ let
           (c (BAG_RESORT_CONV nl) tt, thm)
        end;
 
-   val (resort_thm, thm) = get_resort_thm 
+   val (resort_thm, thm) = get_resort_thm
          [(context_sfb, VAR_RES_FRAME_SPLIT___context_CONV, VAR_RES_FRAME_SPLIT___asl_exists___context),
           (imp_sfb, VAR_RES_FRAME_SPLIT___imp_CONV, VAR_RES_FRAME_SPLIT___asl_exists___imp),
           (split_sfb, VAR_RES_FRAME_SPLIT___split_CONV, VAR_RES_FRAME_SPLIT___asl_exists___split)]
@@ -2645,7 +2648,7 @@ end;
 (******************************************************************************)
 
 
-val case_split_thm = prove (Term `!c B. 
+val case_split_thm = prove (Term `!c B.
 (B = ((c ==> B) /\ (~c ==> B)))`, Cases_on `c` THEN REWRITE_TAC[])
 
 fun case_split_heuristic___is_cond ttt =
@@ -2699,7 +2702,7 @@ end
 
 
 fun VAR_RES_IS_PURE_PROPOSITION___prove f p =
-   tryfind (fn pr => pr f p) 
+   tryfind (fn pr => pr f p)
      ([VAR_RES_IS_PURE_PROPOSITION___prove___BASIC]@
      (var_res_param.VAR_RES_IS_PURE_PROPOSITION___provers))
 
@@ -2710,7 +2713,7 @@ fun VAR_RES_FRAME_SPLIT_INFERENCE___strong_stack_proposition_to_context___CONV t
 let
    val (f, _, _, _, context_sfb, split_sfb, _, _) =  dest_VAR_RES_FRAME_SPLIT tt;
    val (split_sfs,_) = dest_bag split_sfb
-   
+
    val found_opt = first_opt (fn n => fn ttt =>
        SOME (n, VAR_RES_IS_PURE_PROPOSITION___prove f ttt)) split_sfs
    val _ = if isSome found_opt then () else raise UNCHANGED
@@ -2752,11 +2755,11 @@ let
    val (f, _, _, _, context_sfb, _, _, _) =  dest_VAR_RES_FRAME_SPLIT tt;
    val (context_sfs,_) = dest_bag context_sfb
    val imprecise_t = (rand o rator o concl) imprecise_thm
-   
+
    val found_opt = first_opt (fn n => fn ttt =>
        let
           val ssp_thm = VAR_RES_IS_PURE_PROPOSITION___prove f ttt;
-          val imp_thm = var_res_prove___no_expn (mk_comb (imprecise_t, ttt)) 
+          val imp_thm = var_res_prove___no_expn (mk_comb (imprecise_t, ttt))
        in
           SOME (n, ssp_thm, imp_thm, ttt)
        end) context_sfs
@@ -2824,22 +2827,22 @@ let
 
    val (wpb,rpb) = dest_pair wpbrpb;
    val solve_thm1 = ISPECL [sr, f,wpb,rpb,wpb'] solve_thm0
-   val solve_thm = CONV_RULE 
-      ((STRIP_QUANT_CONV o RATOR_CONV o RAND_CONV o 
-        RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV) 
+   val solve_thm = CONV_RULE
+      ((STRIP_QUANT_CONV o RATOR_CONV o RAND_CONV o
+        RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV)
        SIMPLE_BAG_NORMALISE_CONV) solve_thm1
-   val imprecise_t = (rand o rator o fst o dest_imp o snd o strip_forall o concl) solve_thm   
+   val imprecise_t = (rand o rator o fst o dest_imp o snd o strip_forall o concl) solve_thm
 
    (*move strong_stack_propositions to context*)
    val thm0 = (REPEATC VAR_RES_FRAME_SPLIT_INFERENCE___strong_stack_proposition_to_context___CONV) tt
               handle UNCHANGED => REFL tt
 
-   (*check whether variable conditions are met*)   
+   (*check whether variable conditions are met*)
    val (_, sr, _, _, _, split_sfb, _, _) =  dest_VAR_RES_FRAME_SPLIT (rhs (concl thm0));
    val sr_b = aconv (fst (pairSyntax.dest_pair sr)) T handle HOL_ERR _ => false
    val _ = if sr_b orelse bagSyntax.is_empty split_sfb then () else raise UNCHANGED
 
-   val split_thm = var_res_prove___no_expn (mk_every (imprecise_t, split_sfb)) 
+   val split_thm = var_res_prove___no_expn (mk_every (imprecise_t, split_sfb))
                    handle HOL_ERR _ => raise UNCHANGED
 
    (*move strong_stack_propositions to *)
@@ -2847,7 +2850,7 @@ let
        VAR_RES_FRAME_SPLIT___strong_stack_proposition_to_split else I)
        (thm0, split_thm)
 
- 
+
    (*combine it*)
    val thm2a = PART_MATCH (snd o dest_imp o snd o dest_imp) solve_thm (rhs (concl thm1))
    val thm2b = MP thm2a precond_thm
@@ -2856,14 +2859,14 @@ let
    val c_opt = SOME (optionSyntax.dest_some (snd (pairSyntax.dest_pair sr))) handle HOL_ERR _ => NONE
    val comment_intro_CONV = if not has_bool orelse not (isSome c_opt) then ALL_CONV else
        (RATOR_CONV o RAND_CONV) (fasl_comment_location_INTRO_CONV (fasl_comment_modify_APPEND "condition" (valOf c_opt)))
-       
+
    val restP_conv = if not sr_b then (REWRITE_CONV [BAG_EVERY_THM]) else
        (DEPTH_CONV BETA_CONV THENC
         DEPTH_CONV SIMPLE_BAG_NORMALISE_CONV)
-   val thm2d = CONV_RULE ((RATOR_CONV o RAND_CONV o 
-             (if preserve_fallback then RAND_CONV else I)) 
+   val thm2d = CONV_RULE ((RATOR_CONV o RAND_CONV o
+             (if preserve_fallback then RAND_CONV else I))
                      (comment_intro_CONV THENC restP_conv)) thm2c
-   val thm2e = if preserve_fallback then CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o RAND_CONV) 
+   val thm2e = if preserve_fallback then CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o RAND_CONV)
              (SIMPLE_BAG_NORMALISE_CONV)) thm2d else thm2d
 
    val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV) imp_true_simp) thm2e handle HOL_ERR _ => thm2e;
@@ -2883,8 +2886,8 @@ end;
 *)
 
 fun var_res_prop_implies_COMBINE [] = Feedback.fail()
-  | var_res_prop_implies_COMBINE [thm] = 
-    (CONV_RULE (RAND_CONV (bagLib.SIMPLE_BAG_NORMALISE_CONV)) thm handle HOL_ERR _ => thm)   
+  | var_res_prop_implies_COMBINE [thm] =
+    (CONV_RULE (RAND_CONV (bagLib.SIMPLE_BAG_NORMALISE_CONV)) thm handle HOL_ERR _ => thm)
   | var_res_prop_implies_COMBINE (thm1::thm2::thmL) =
     var_res_prop_implies_COMBINE (
        (MATCH_MP var_res_prop_implies___UNION (CONJ thm1 thm2))::thmL)
@@ -2901,7 +2904,7 @@ let
    val implies_thm = var_res_prop_implies_COMBINE implies_list;
    val sfb' = rand (concl implies_thm)
    val thm0 = ISPECL [f, wpb,rpb, sfb, sfb', prog, post]
-      VAR_RES_COND_INFERENCE___prop_implies 
+      VAR_RES_COND_INFERENCE___prop_implies
    val thm1 = MP thm0 implies_thm
    val thm2 = CONV_RULE (RHS_CONV (VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV
         (RAND_CONV bagLib.SIMPLE_BAG_NORMALISE_CONV))) thm1
@@ -2915,8 +2918,8 @@ end;
 *)
 fun VAR_RES_FRAME_SPLIT_INFERENCE___enrich_split___CONV context tt =
 let
-   val (f, _, wr, _, context_sfb, split_sfb, imp_sfb, _) = 
-        dest_VAR_RES_FRAME_SPLIT tt	    
+   val (f, _, wr, _, context_sfb, split_sfb, imp_sfb, _) =
+        dest_VAR_RES_FRAME_SPLIT tt
    val (wpb,rpb) = dest_pair wr
    val sfb = bagSyntax.mk_union (context_sfb, split_sfb)
 
@@ -2928,7 +2931,7 @@ let
    val sfb = rand (concl implies_thm)
    val thm0 = PART_MATCH (lhs o snd o dest_imp)
       (ISPEC sfb VAR_RES_FRAME_SPLIT___var_res_prop_implies___split) tt
-   
+
    val thm1 = MP thm0 implies_thm
 
    val thm2 = CONV_RULE (RHS_CONV (RATOR_CONV (RATOR_CONV (
@@ -2956,7 +2959,7 @@ val VAR_RES_STRUCTURE_NORMALISE_CONV =
   NO_MARKER___AND_IMP_INTRO ORELSEC
   NO_MARKER___RIGHT_IMP_FORALL_CONV ORELSEC
   (PART_MATCH lhs IMP_CONJ_THM) ORELSEC
-  LIST_EXISTS_SIMP_CONV 
+  LIST_EXISTS_SIMP_CONV
 
 
 (******************************************************************************)
@@ -2984,7 +2987,7 @@ let
      end;
    val guesses = map mk_only_possible relevant_guesses
 in
-  {rewrites            = #rewrites gC, 
+  {rewrites            = #rewrites gC,
    general             = [],
    true                = [],
    false               = [],
@@ -2996,7 +2999,7 @@ end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
 
 val VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main  =
-   EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV NONE (K true) false 
+   EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV NONE (K true) false
      ({distinct_thms = [],
       cases_thms =    [],
       rewrite_thms =  [fasl_comments_ELIM],
@@ -3044,7 +3047,7 @@ in
       end
    else Feedback.fail()
 end
-      
+
    SIMP_CONV std_ss [] tt
 end;
 *)
@@ -3052,7 +3055,7 @@ end;
 
 (*
 fun VAR_RES_COND_INFERENCE___comment_quant_best_local_action___CONV var_res_param =
-  fasl_comment_location_CONSEQ_CONV 
+  fasl_comment_location_CONSEQ_CONV
      (VAR_RES_COND_INFERENCE___quant_best_local_action___CONV var_res_param)
 
 
@@ -3109,27 +3112,27 @@ thm
 (* ========================================================================== *)
 (*
 *)
-type var_res_inference_group = 
+type var_res_inference_group =
  string * (term -> bool) * bool * bool * (string * var_res_inference) list;
 
 
 
 
-val VAR_RES_INFERENCES_LIST___simulate_command = ("simulate command", 
+val VAR_RES_INFERENCES_LIST___simulate_command = ("simulate command",
    is_VAR_RES_COND_HOARE_TRIPLE, false, true, [
-   ("cond", 
+   ("cond",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___cond___CONSEQ_CONV),
-   ("assignment", 
+   ("assignment",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___assign___CONSEQ_CONV),
    ("local_vars_arg",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___local_vars_args___CONSEQ_CONV),
-   ("while_invariant", 
+   ("while_invariant",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___while___invariant___CONSEQ_CONV),
-   ("while_loop_spec", 
+   ("while_loop_spec",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___while___loop_spec___CONSEQ_CONV),
    ("abstractions",
@@ -3138,14 +3141,14 @@ val VAR_RES_INFERENCES_LIST___simulate_command = ("simulate command",
    ("hoare_triple_solve",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___final___CONSEQ_CONV),
-   ("block_spec", 
+   ("block_spec",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___block_spec___CONSEQ_CONV)]@
    var_res_param.INFERENCES_LIST___simulate_command):var_res_inference_group;
 
 
 
-val VAR_RES_INFERENCES_LIST___simulate_minor_command = ("simulate minor command", 
+val VAR_RES_INFERENCES_LIST___simulate_minor_command = ("simulate minor command",
    is_VAR_RES_COND_HOARE_TRIPLE, false, true, [
    ("assume",
        no_context_strengthen_conseq_conv
@@ -3158,7 +3161,7 @@ val VAR_RES_INFERENCES_LIST___simulate_minor_command = ("simulate minor command"
        VAR_RES_COND_INFERENCE___quant_best_local_action___CONSEQ_CONV),
    ("best_local_action",
        no_context_strengthen_conseq_conv
-       VAR_RES_COND_INFERENCE___best_local_action___CONV),   
+       VAR_RES_COND_INFERENCE___best_local_action___CONV),
    ("cond_best_local_action",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___cond_best_local_action___CONV),
@@ -3197,20 +3200,20 @@ val VAR_RES_INFERENCES_LIST___entailment_steps = ("entailment",
 val VAR_RES_INFERENCES_LIST___entailment_solve = ("entailment",
    (K true), false, true,
    [("entailment_solve",
-       fn fast => (K (K (K 
+       fn fast => (K (K (K
        (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV false (not fast))))))]):var_res_inference_group;
 
 
 val VAR_RES_INFERENCES_LIST___cheap_simplifications = ("cheap simps",
    (K true), false, true, [
    ("precond_simp___false",
-       no_context_strengthen_conseq_conv 
+       no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___PRECOND_false___CONV),
    ("entail_simp___false",
        no_context_strengthen_conseq_conv
        VAR_RES_FRAME_SPLIT_INFERENCE___asl_false___CONV),
    ("precond_simp___stack_true",
-       no_context_strengthen_conseq_conv 
+       no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___PRECOND_stack_true___CONV),
    ("precond_simp___bool_pred",
        simpset_strengthen_conseq_conv
@@ -3222,13 +3225,13 @@ val VAR_RES_INFERENCES_LIST___cheap_simplifications = ("cheap simps",
        no_context_strengthen_conseq_conv
        VAR_RES_FRAME_SPLIT_INFERENCE___stack_true___CONV),
    ("precond_simp___asl_exists",
-       no_context_strengthen_conseq_conv 
+       no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___PRECOND_asl_exists___CONV),
    ("precond_simp___strong_exists",
-       no_context_strengthen_conseq_conv 
+       no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___EXISTS_PRE___CONSEQ_CONV),
    ("precond_simp___asl_star",
-       no_context_strengthen_conseq_conv 
+       no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___PRECOND_asl_star___CONV),
    ("entail_simp___asl_star",
        no_context_strengthen_conseq_conv
@@ -3251,7 +3254,7 @@ val VAR_RES_INFERENCES_LIST___expensive_simplifications___general = ("expensive 
    (K true), false, true, [
    ("eliminate_comment",
        no_context_strengthen_conseq_conv
-       fasl_comment_location___TF_ELIM___CONV),                                      
+       fasl_comment_location___TF_ELIM___CONV),
    ("quantifier instantiation",
        simpset_strengthen_conseq_conv VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV)]@
    var_res_param.INFERENCES_LIST___expensive_simplifications):var_res_inference_group
@@ -3263,7 +3266,7 @@ val VAR_RES_INFERENCES_LIST___expensive_simplifications___hoare_triple = ("expen
        VAR_RES_COND_INFERENCE___PRECOND_REWRITE___CONV),
    ("precond_simp___propagate_eq",
        no_context_strengthen_conseq_conv
-       (VAR_RES_COND_INFERENCE___CONST_INTRO_PROPAGATE_EQ___CONSEQ_CONV false)),   
+       (VAR_RES_COND_INFERENCE___CONST_INTRO_PROPAGATE_EQ___CONSEQ_CONV false)),
    ("flatten_block",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___block_flatten___CONSEQ_CONV)]):var_res_inference_group;
@@ -3328,7 +3331,7 @@ type gen_step_param =
    stop_evals     : (term -> bool) list};
 
 
-fun gen_step_param___update_stop_evals 
+fun gen_step_param___update_stop_evals
  ({use_asms       = asms,
    do_case_splits = cs,
    do_expands     = ex,
@@ -3345,7 +3348,7 @@ fun gen_step_param___update_stop_evals
    stop_evals     = l}:gen_step_param);
 
 
-fun gen_step_param___update_use_asms 
+fun gen_step_param___update_use_asms
  ({use_asms       = asms,
    do_case_splits = cs,
    do_expands     = ex,
@@ -3446,10 +3449,10 @@ local
 
 fun step_conv_map_fun l s1 (s2, c) = c;
 (*
-fun step_conv_map_fun l s1 (s2, c:var_res_inference) = 
+fun step_conv_map_fun l s1 (s2, c:var_res_inference) =
   let
      val s = s1 ^ " - "^s2;
-     fun conv fast ss context dir t = 
+     fun conv fast ss context dir t =
         (((!(do_profile_ref ())) s (fn () =>
          (c fast ss context dir t))) ())
      fun conv2 fast ss context dir = if !verbose_level = 0 then conv fast ss context dir else
@@ -3483,8 +3486,8 @@ in
 
 (*
 val cache_opt = SOME (mk_DEPTH_CONSEQ_CONV_CACHE,
-           fn (t, (n, thm_opt)) => 
-           not ((isSome thm_opt) orelse 
+           fn (t, (n, thm_opt)) =>
+           not ((isSome thm_opt) orelse
                 (is_forall t) orelse (is_exists t) orelse
                 (is_imp_only t) orelse (is_disj t) orelse
                 (is_conj t) orelse (is_neg t)))
@@ -3500,7 +3503,7 @@ type user_rewrite_param = (Abbrev.thm list * Abbrev.conv list * simpLib.ssfrag l
 fun mk_ssfrag (thmL, convL, ssfragL) =
    let
        val ss1 = simpLib.rewrites thmL;
-       val ss2 = simpLib.SSFRAG {name=NONE, convs = 
+       val ss2 = simpLib.SSFRAG {name=NONE, convs =
             (map (fn c => {conv = K (K c), key = NONE, name = "user-conversion", trace = 2}) convL),
             filter = NONE, ac=[], dprocs=[], congs=[], rewrs = []};
    in
@@ -3523,21 +3526,21 @@ fun vc_conv vc step_opt =
        ((false, false, true), ([],[],[]), NONE, 2, [])
 *)
 
-fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  = 
+fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
    let
       val list0 = VAR_RES_INFERENCES_LIST;
       val list1 = if (#do_expands p) then list0@[(2, VAR_RES_INFERENCES_LIST___expands_entailment),(2, VAR_RES_INFERENCES_LIST___expands)] else list0;
       val list2 = if (#do_case_splits p) then list1@[(2, VAR_RES_INFERENCES_LIST___case_splits)] else list1;
       val list = list2
-      val stops = if null (#stop_evals p) then K false else 
-                      (fn t => (exists (fn pp => (pp t) handle Interrupt => raise Interrupt 
-                                                            | _ => false) 
+      val stops = if null (#stop_evals p) then K false else
+                      (fn t => (exists (fn pp => (pp t) handle Interrupt => raise Interrupt
+                                                            | _ => false)
                                  (#stop_evals p)))
       val cL = convL (#fast p) stops (#do_prop_simps p, mk_ssfrag ssp) n list;
 
-      fun mc step_opt = 
+      fun mc step_opt =
          EXT_DEPTH_NUM_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___var_res_list NONE step_opt true
-            cL context CONSEQ_CONV_STRENGTHEN_direction 
+            cL context CONSEQ_CONV_STRENGTHEN_direction
       val vcc = vc_conv (#generate_vcs p);
 
       fun fc step_opt t =
@@ -3547,21 +3550,21 @@ fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
            val t' = if (isSome thm1_opt) then ((fst o dest_imp o concl o valOf) thm1_opt) else t
 
 
-           val (n2, thm2_opt) = 
-               (0, SOME (snd (EQ_IMP_RULE (((REDEPTH_CONV VAR_RES_STRUCTURE_NORMALISE_CONV) THENC 
+           val (n2, thm2_opt) =
+               (0, SOME (snd (EQ_IMP_RULE (((REDEPTH_CONV VAR_RES_STRUCTURE_NORMALISE_CONV) THENC
                                             REWRITE_CONV []) t'))))
                handle UNCHANGED => (0, NONE)
-                    | HOL_ERR _ => (0, NONE)                  
-           val (n2, thm2_opt) = if (isSome thm2_opt) then (n2, thm2_opt) else 
+                    | HOL_ERR _ => (0, NONE)
+           val (n2, thm2_opt) = if (isSome thm2_opt) then (n2, thm2_opt) else
                 (if step_opt_allows_steps step_opt' 0 (SOME 1) then
                  vcc step_opt' t' else (0, NONE))
-           val thm = 
+           val thm =
               if (isSome thm1_opt) then
-                 (if (isSome thm2_opt) then 
+                 (if (isSome thm2_opt) then
                     IMP_TRANS (valOf thm2_opt) (valOf thm1_opt)
                   else valOf thm1_opt)
-              else 
-                 (if (isSome thm2_opt) then 
+              else
+                 (if (isSome thm2_opt) then
                     valOf thm2_opt
                   else raise UNCHANGED)
         in
@@ -3572,18 +3575,18 @@ fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
               val thm3_opt = SOME (fc step_opt'' t'') handle UNCHANGED => NONE
            in
               if (isSome thm3_opt) then
-                IMP_TRANS (valOf thm3_opt) thm 
+                IMP_TRANS (valOf thm3_opt) thm
               else thm
            end
         end;
    in
-      fc step_opt 
+      fc step_opt
    end;
 
 end;
 
 
-fun VAR_RES_GEN_STEP_TAC (p:gen_step_param) ss step_opt n = 
+fun VAR_RES_GEN_STEP_TAC (p:gen_step_param) ss step_opt n =
    if (#use_asms p) then
       (DISCH_ASM_CONSEQ_CONV_TAC (K (VAR_RES_GEN_STEP_CONSEQ_CONV p ss step_opt n [])))
    else
@@ -3653,37 +3656,37 @@ val stop_at_hoare_triple = stop_evals [is_VAR_RES_COND_HOARE_TRIPLE]
 
 
 fun gen_step_tac_opt_eval (p:gen_step_param, ssp) [] = (p, ssp)
-  | gen_step_tac_opt_eval (p, (rw, cv, ss)) 
+  | gen_step_tac_opt_eval (p, (rw, cv, ss))
        ((add_rewrites thmL)::gstoL) =
     gen_step_tac_opt_eval (p, (rw@thmL, cv, ss)) gstoL
-  | gen_step_tac_opt_eval (p, (rw, cv, ss)) 
+  | gen_step_tac_opt_eval (p, (rw, cv, ss))
        ((add_convs convL)::gstoL) =
     gen_step_tac_opt_eval (p, (rw, cv@convL, ss)) gstoL
-  | gen_step_tac_opt_eval (p, (rw, cv, ss)) 
+  | gen_step_tac_opt_eval (p, (rw, cv, ss))
        ((add_ssfrags ssfL)::gstoL) =
     gen_step_tac_opt_eval (p, (rw, cv, ss@ssfL)) gstoL
-  | gen_step_tac_opt_eval (p, ssp) 
+  | gen_step_tac_opt_eval (p, ssp)
        ((case_splits_flag b)::gstoL) =
     gen_step_tac_opt_eval (gen_step_param___update_cs p b, ssp) gstoL
-  | gen_step_tac_opt_eval (p, ssp) 
+  | gen_step_tac_opt_eval (p, ssp)
        ((expands_flag b)::gstoL) =
     gen_step_tac_opt_eval (gen_step_param___update_expands p b, ssp) gstoL
-  | gen_step_tac_opt_eval (p, ssp) 
+  | gen_step_tac_opt_eval (p, ssp)
        ((fast_flag b)::gstoL) =
     gen_step_tac_opt_eval (gen_step_param___update_fast p b, ssp) gstoL
-  | gen_step_tac_opt_eval (p, ssp) 
+  | gen_step_tac_opt_eval (p, ssp)
        ((prop_simp_flag b)::gstoL) =
     gen_step_tac_opt_eval (gen_step_param___update_prop_simps p b, ssp) gstoL
-  | gen_step_tac_opt_eval (p, ssp) 
+  | gen_step_tac_opt_eval (p, ssp)
        ((use_asms_flag b)::gstoL) =
     gen_step_tac_opt_eval (gen_step_param___update_use_asms p b, ssp) gstoL
-  | gen_step_tac_opt_eval (p, ssp) 
+  | gen_step_tac_opt_eval (p, ssp)
        ((generate_vcs_flag b)::gstoL) =
     gen_step_tac_opt_eval (gen_step_param___update_vcs p b, ssp) gstoL
-  | gen_step_tac_opt_eval (p, ssp) 
+  | gen_step_tac_opt_eval (p, ssp)
        ((stop_evals b)::gstoL) =
     gen_step_tac_opt_eval (gen_step_param___update_stop_evals p b, ssp) gstoL
-  | gen_step_tac_opt_eval (p, ssp) 
+  | gen_step_tac_opt_eval (p, ssp)
        ((combined_gen_step_tac_opt optL)::gstoL) =
     gen_step_tac_opt_eval (p, ssp) (optL@gstoL)
 
@@ -3699,14 +3702,14 @@ val default_params = (
 
 
 
-fun xVAR_RES_GEN_STEP_TAC optL = 
+fun xVAR_RES_GEN_STEP_TAC optL =
    let
       val (p,ssp) = gen_step_tac_opt_eval default_params optL;
    in
       VAR_RES_GEN_STEP_TAC p ssp
    end;
 
-fun xVAR_RES_GEN_STEP_CONSEQ_CONV optL n m = 
+fun xVAR_RES_GEN_STEP_CONSEQ_CONV optL n m =
    let
       val (p,ssp) = gen_step_tac_opt_eval default_params optL
    in
@@ -3718,7 +3721,7 @@ fun xVAR_RES_GEN_STEP_CONSEQ_CONV optL n m =
 val _ = Rewrite.add_implicit_rewrites [fasl_comments_TF_ELIM];
 
 val VAR_RES_PURE_VC_TAC =
- CONSEQ_CONV_TAC (K (fn t => 
+ CONSEQ_CONV_TAC (K (fn t =>
      let
         val (_, thm_opt) = vc_conv true NONE t
      in
