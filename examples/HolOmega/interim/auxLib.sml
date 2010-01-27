@@ -145,35 +145,6 @@ fun th RSN (n, ith) =
     val dmth = DISCH_TERMS lps mth ;
   in reo_prems (raa (length lps) (n-1)) dmth end ;
 
-(* set of functions to take a nested implication and repeatedly remove the
-  antecedents by MATCH_MP against the first matching theorem *)
-
-(* first : ('a -> 'b) -> 'a list -> 'b *) 
-fun first f (x :: xs) = (f x handle _ => first f xs) 
-  | first f [] = raise Empty ;
-
-(* fmmp : thm list -> thm -> thm *) 
-fun fmmp ths imp = first (MATCH_MP imp) ths 
-  handle Empty => raise HOL_ERR 
-    {message = "MATCH_MP fails in all cases", 
-      origin_function = "fmmp", origin_structure = "g_adjointScript"} ;
-
-(* repeat : ('a -> 'a) -> 'a -> 'a *) 
-fun repeat f x = repeat f (f x) handle _ => x ;
-
-(* thm_from_ass : thm -> thm list -> thm 
-  imp_thm is a (nested) implication theorem 
-  (antecedent(s) may be conjuncts, which are converted to nested implications),
-  try to remove antecedents (from the front only) by resolving with thms *)
-fun thm_from_ass imp_thm thms = repeat (fmmp thms)
-  (REWRITE_RULE [GSYM boolTheory.AND_IMP_INTRO] imp_thm) ;
-
-(* USE_LIM_RES_TAC : thm_tactic -> thm -> tactic 
-  resolve implication theorem against assumptions (as in thm_from_ass)
-  and use ttac applied to result *)
-fun USE_LIM_RES_TAC ttac imp_thm = 
-  ASSUM_LIST (ttac o thm_from_ass imp_thm) ;
-
 (* FIRST_REP_RES : thm_tactic -> thm_tactic
   resolves implication theorem against assumptions as much as possible
   and applies ttac to result - backtracking in regard to choice of assumption
@@ -183,6 +154,13 @@ fun FIRST_REP_RES ttac impth =
   (* following delayed evaluation since ttac impth can cause an 
     error if called with an impth without antecedents removed *)
   ORELSE (fn asg => ttac impth asg) ;
+
+val GSYM_AND_IMP_INTRO = GSYM boolTheory.AND_IMP_INTRO ;
+
+fun FIRST_REP_RES_MKI ttac imp_thm = FIRST_REP_RES ttac 
+  (REWRITE_RULE [GSYM_AND_IMP_INTRO] imp_thm) ;
+
+val USE_LIM_RES_TAC = FIRST_REP_RES_MKI ; 
 
 (* select a particular assumption to rewrite with,
   based on the head of the lhs *)

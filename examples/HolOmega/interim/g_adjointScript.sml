@@ -4,7 +4,7 @@ struct
 
 open HolKernel Parse boolLib bossLib
 
-open categoryTheory KmonadTheory auxLib ;
+open categoryTheory KmonadTheory auxLib ; infix RS RSN ;
 val UNCURRY_DEF = pairTheory.UNCURRY_DEF ;
 val o_THM = combinTheory.o_THM ;
 val o_DEF = combinTheory.o_DEF ;
@@ -618,32 +618,17 @@ val tm12e = mk_imp (mk_conj (catC, catD),
 
 val (ga13, ga31) = EQ_IMP_RULE (UNDISCH g_adjf13_equiv) ;
 val (ga23, ga32) = EQ_IMP_RULE (UNDISCH g_adjf23_equiv) ;
-(* this function takes [h] |- a ==> c to a ==> h ==> c, 
-  then turns conjuncts in a and h into more nested ==> , 
-  thus the first antecedent of the result
-  won't be one that might match the wrong hypothesis *)
-fun insa th = let val h = hd (hyp th) ;
-    val th' = DISCH_ALL (DISCH h (UNDISCH th)) ;
-  in REWRITE_RULE [GSYM AND_IMP_INTRO] th' end ;
-  
-fun etac gathm = (ASSUM_LIST (fn ths => 
-  MAP_EVERY ASSUME_TAC (CONJUNCTS (repeat (fmmp ths) (insa gathm))))) ;
 
-(* neater version than above, suggested by Michael Norrish,
-  works for etac ga13, not for etac ga32,
-  not for etac ga23, works for etac ga31 - why ?? 
-  because at the point of MATCH_MP imp, the assumption of imp 
-  stops MATCH_MP from instantiating the free type variables *)
-fun etac' gathm = MP_TAC (insa gathm) THEN
-  REPEAT (DISCH_THEN (fn imp => 
-      FIRST_ASSUM (fn th => MP_TAC (MATCH_MP imp th)))) 
-  THEN DISCH_THEN (MAP_EVERY ASSUME_TAC o CONJUNCTS) ;
+val [ga13', ga31', ga23', ga32'] = 
+  map (reo_prems rev o DISCH_ALL) [ga13, ga31, ga23, ga32] ;
+
+fun usega th = (CHANGED_TAC (REWRITE_TAC [th]) THEN
+  MAP_EVERY ASSUME_TAC (CONJUNCTS th)) ;
 
 val g_adjf12_equiv = store_thm ("g_adjf12_equiv", tm12e,
   EVERY [ STRIP_TAC, EQ_TAC, STRIP_TAC ]
-  THENL [ etac ga13 THEN etac ga32, etac ga23 THEN etac ga31 ]
-  THEN EVERY [ (ONCE_ASM_REWRITE_TAC []), (REWRITE_TAC []),
-    CONJ_TAC, AP_TERM_TAC, (FIRST_ASSUM ACCEPT_TAC) ]) ;
+  THENL [ FIRST_REP_RES_MKI usega ga13' THEN FIRST_REP_RES_MKI usega ga32',
+    FIRST_REP_RES_MKI usega ga23' THEN FIRST_REP_RES_MKI usega ga31' ]) ;
 
 val seith = DISCH_ALL (TY_GEN_ALL (UNDISCH FLATT_eps_I)) ;
 val heith = DISCH_ALL (TY_GEN_ALL (UNDISCH SHARP_eta_I)) ;
