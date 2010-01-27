@@ -16,6 +16,7 @@ sig
   val TRY            : tactic -> tactic
   val REPEAT         : tactic -> tactic
   val VALID          : tactic -> tactic
+  val VALID_LTAC     : list_tactic -> list_tactic
   val EVERY          : tactic list -> tactic
   val FIRST          : tactic list -> tactic
   val MAP_EVERY      : ('a -> tactic) -> 'a list -> tactic

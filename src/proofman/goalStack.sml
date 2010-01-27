@@ -97,7 +97,7 @@ fun rotate(GSTK{prop=PROVED _, ...}) _ =
                             validation=validation o funpow n rotr} :: rst};
 
 
-local
+local 
   fun imp_err s = raise ERR "expandf" ("implementation error: "^s)
   fun return(GSTK{stack={goals=[],validation}::rst, prop as POSED g,final}) =
       let val th = validation []
@@ -145,9 +145,33 @@ fun expandf _ (GSTK{prop=PROVED _, ...}) =
          ;
          gs
      end
+
+(* bwd_tr : (tac_result -> tac_result) -> gstk -> gstk
+  transforms the result of a tactic, and changes top of gstk *)
+
+fun bwd_tr tr (GSTK{prop=PROVED _, ...}) =
+      raise ERR "bwd_tr" "goal has already been proved"
+  | bwd_tr tr (GSTK{prop as POSED g, stack, final}) =
+    case stack of [] =>
+        (* case of initial goal - get notional subgoal/validation list *)
+        let val tacres' = tr {goals = [g], validation = fn [th] => th}
+        in GSTK{prop=prop, final=final, stack = [tacres']} end
+      | tacres::rst =>
+         (* note - we change the top {goals, validation},
+           we don't put a new one as in expand *)
+         GSTK{prop=prop, final=final, stack= tr tacres :: rst} ;
+
+(* tr_of_ltac : list_tactic -> tac_result -> tac_result
+  get tac_result transformer from list_tactic *)
+fun tr_of_ltac ltac {goals, validation} =
+  let val (goals', lv') = ltac goals ;
+  in {goals = goals', validation = validation o lv'} end ;
+
+fun expandlf ltac = return o bwd_tr (tr_of_ltac ltac) ;
 end;
 
 fun expand tac gs = expandf (Tactical.VALID tac) gs;
+fun expandl ltac gs = expandlf (Tactical.VALID_LTAC ltac) gs;
 
 fun extract_thm (GSTK{prop=PROVED(th,_), ...}) = th
   | extract_thm _ = raise ERR "extract_thm" "no theorem proved";
@@ -287,3 +311,4 @@ fun pp_gstk ppstrm  =
  end
 
 end (* goalStack *)
+

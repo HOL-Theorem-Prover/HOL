@@ -2,12 +2,27 @@ signature goalStack =
 sig
    include Abbrev
 
-   type gstk
+   type gstk 
+(*
+datatype proposition = POSED of goal
+                     | PROVED of thm * goal;
+
+type tac_result = {goals      : goal list,
+                   validation : thm list -> thm}
+
+datatype gstk = GSTK of {prop  : proposition,
+                         final : thm -> thm,
+                         stack : tac_result list}
+
+val return : gstk -> gstk ;
+*)
 
    val chatting : bool ref
 
    val expand       : tactic -> gstk -> gstk
    val expandf      : tactic -> gstk -> gstk
+   val expandl      : list_tactic -> gstk -> gstk
+   val expandlf     : list_tactic -> gstk -> gstk
    val extract_thm  : gstk -> thm
    val initial_goal : gstk -> goal
    val finalizer    : gstk -> thm -> thm

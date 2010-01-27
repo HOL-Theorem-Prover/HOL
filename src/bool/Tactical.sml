@@ -171,24 +171,33 @@ fun TRY tac = tac ORELSE ALL_TAC;
 fun REPEAT tac g = ((tac THEN REPEAT tac) ORELSE ALL_TAC) g ;
 
 (*---------------------------------------------------------------------------
- * Tactical to make any tactic valid.
+ * Tacticals to ensure that any (list-)tactic is valid.
  *
  *    VALID tac
+ *    VALID_LTAC ltac
  *
- * is the same as "tac", except it will fail in the cases where "tac"
- * returns an invalid proof.
+ * are the same as "tac" and "ltac", except they will fail 
+ * in the cases where "tac" or "ltac" returns an invalid proof.
  *---------------------------------------------------------------------------*)
 
 local val validity_tag = "ValidityCheck"
       fun masquerade goal = Thm.mk_oracle_thm validity_tag goal
-      fun achieves th (asl,w) =
+      fun achieves (th, (asl,w)) =
         Term.aconv (concl th) w andalso
         Lib.all (fn h => (Lib.exists (aconv h)) asl) (hyp th)
 in
 fun VALID (tac:tactic) :tactic = fn (g:goal) =>
    let val (result as (glist,prf)) = tac g
-   in if achieves (prf (map masquerade glist)) g then result
+   in if achieves (prf (map masquerade glist), g) then result
       else raise ERR "VALID" "Invalid tactic"
+   end
+
+fun VALID_LTAC (ltac:list_tactic) (gs:goal list) =
+   let val (result as (glist,prf)) = ltac gs
+     val ps = prf (map masquerade glist) ;
+   in if length ps = length gs andalso
+        ListPair.all achieves (ps, gs) then result
+      else raise ERR "VALID_LTAC" "Invalid list_tactic"
    end
 end;
 

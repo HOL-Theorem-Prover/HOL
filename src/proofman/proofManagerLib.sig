@@ -27,6 +27,9 @@ sig
 
     val e             : tactic -> proof
     val et            : string * tactic -> proof
+    val apply 	      : (proof -> proof) -> proof 
+    val expandl       : list_tactic -> proof
+    val expandlf      : list_tactic -> proof
     val expand        : tactic -> proof
     val expandf       : tactic -> proof
     val expandv       : string * tactic -> proof
@@ -46,6 +49,7 @@ sig
     val R             : int -> proofs
     val rotate        : int -> proof
     val rotate_proofs : int -> proofs
+    val top_proof     : unit -> proof
 
     (* Switch to a different prettyprinter for all goals *)
 

@@ -78,6 +78,16 @@ fun expandv (s,tac) =
 val e = expand;
 val et = expandv;
 
+(* above could be simplified using this *)
+fun apply f = 
+   (say "OK..\n";
+    the_proofs := Manager.hd_opr f (proofs());
+    top_proof())
+  handle e => Raise e;
+
+fun expandlf ltac = apply (Manager.expandlf ltac) ;
+fun expandl ltac = apply (Manager.expandl ltac) ;
+
 val top_thm      = Manager.hd_proj Manager.top_thm o proofs;
 val initial_goal = Manager.hd_proj Manager.initial_goal o proofs;
 val top_goal     = Manager.hd_proj Manager.top_goal o proofs;

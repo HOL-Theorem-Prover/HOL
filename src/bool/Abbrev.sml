@@ -10,6 +10,8 @@ struct
   type goal         = term list * term
   type validation   = thm list -> thm
   type tactic       = goal -> goal list * validation
+  type list_validation = thm list -> thm list ;
+  type list_tactic = goal list -> goal list * list_validation ;
   type thm_tactic   = thm -> tactic
   type thm_tactical = thm_tactic -> thm_tactic
   type ppstream     = Portable.ppstream
