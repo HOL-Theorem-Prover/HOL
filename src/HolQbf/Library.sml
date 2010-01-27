@@ -61,70 +61,79 @@ struct
     (1, [], t)
 
 (* ------------------------------------------------------------------------- *)
-(* merge: merges two lists of tuples whose first components are integers     *)
-(*      sorted wrt. absolute value into a single list sorted wrt. absolute   *)
-(*      value; drops duplicates that occur in both lists                     *)
+(* A |- p1 \/ ... \/ pn                                                      *)
+(* --------------------- CLAUSE_TO_SEQUENT                                   *)
+(* A, ~p1, ..., ~pn |- F                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-  fun merge xs [] = xs
-    | merge [] ys = ys
-    | merge (xs as xhd :: xtails) (ys as yhd :: ytails) =
-    let
-      val absx = Int.abs (#1 xhd)
-      val absy = Int.abs (#1 yhd)
-    in
-      if absx = absy then
-        (* drop 'yhd' *)
-        xhd :: merge xtails ytails
-      else if absx < absy then
-        xhd :: merge xtails ys
-      else
-        yhd :: merge xs ytails
-    end
-
-(* ------------------------------------------------------------------------- *)
-(* neg_literals_in_clause: takes a clause 't' (i.e., a disjunction of        *)
-(*      literals, where a literal is a possibly negated variable) and a      *)
-(*      function 'index_fn' that maps variables to a positive integer index  *)
-(*      and a Boolean q; returns a list of triples (~ index, neg_literal, q) *)
-(*      (using integer negation for propositional negation) sorted by        *)
-(*      absolute value                                                       *)
-(* ------------------------------------------------------------------------- *)
-
-  fun neg_literals_in_clause index_fn t =
+  fun CLAUSE_TO_SEQUENT thm =
   let
-    fun aux t =
-    let
-      val (p, q) = boolSyntax.dest_disj t
-    in
-      merge (aux p) (aux q)
-    end
-    handle Feedback.HOL_ERR _ =>  (* 't' is not a disjunction *)
-      let
-        val var = boolSyntax.dest_neg t
-        val (index, q) = index_fn var
-      in
-        [(index, var, q)]
-      end
-    handle Feedback.HOL_ERR _ =>  (* 't' is not a negation *)
-      let
-        val (index, q) = index_fn t
-      in
-        [(~ index, boolSyntax.mk_neg t, q)]
-      end
+    val concl = Thm.concl thm
   in
-    aux t
+    let
+      val (p, q) = boolSyntax.dest_disj concl
+    in
+      Thm.DISJ_CASES thm
+        (CLAUSE_TO_SEQUENT (Thm.ASSUME p)) (CLAUSE_TO_SEQUENT (Thm.ASSUME q))
+    end
+    handle Feedback.HOL_ERR _ =>  (* 'concl' is not a disjunction *)
+      if concl = boolSyntax.F then
+        thm
+      else (
+        Thm.MP (Thm.NOT_ELIM thm) (Thm.ASSUME (boolSyntax.dest_neg concl))
+        handle Feedback.HOL_ERR _ =>  (* 'concl' is not a negation *)
+          Thm.MP (Thm.NOT_ELIM (Thm.ASSUME (boolSyntax.mk_neg concl))) thm
+      )
   end
 
 (* ------------------------------------------------------------------------- *)
-(* discharge_lit: discharges a literal 'lit' from a theorem 'thm' by         *)
-(*      instantiating its variable to (either) "T" or "F".                   *)
+(* literals_in_clause: takes a function 'index_fn' that maps variables to a  *)
+(*      pair consisting of a positive integer i and a Boolean q, and a       *)
+(*      clause theorem 'thm' in sequent form, as produced by                 *)
+(*      'CLAUSE_TO_SEQUENT'. Returns a list of triples ([~]i, [~]var, q),    *)
+(*      with one element for every hypothesis of 'thm' that is a literal     *)
+(*      (i.e., a possibly negated variable).  The list is sorted with        *)
+(*      respect to the absolute value of its elements first component, [~]i. *)
+(* ------------------------------------------------------------------------- *)
+
+  fun literals_in_clause index_fn thm =
+  let
+    val set = HOLset.foldl (fn (t, set) =>
+      let
+        val (i, q) = index_fn (boolSyntax.dest_neg t)
+      in
+        HOLset.add (set, (~ i, t, q))
+      end
+      handle Feedback.HOL_ERR _ =>  (* 't' is not a negation *)
+      let
+        val (i, q) = index_fn t
+      in
+        HOLset.add (set, (i, t, q))
+      end
+      handle Feedback.HOL_ERR _ =>  (* 't' is not a variable *)
+        set) (HOLset.empty (Int.compare o Lib.## (Int.abs o #1, Int.abs o #1)))
+        (Thm.hypset thm)
+  in
+    HOLset.listItems set
+  end
+
+(* ------------------------------------------------------------------------- *)
+(* discharge_lit: discharges a possibly negated variable (i.e., a literal)   *)
+(*      from a theorem 'thm' by instantiating it to (either) "T" or "F".     *)
+(*                                                                           *)
+(*    A, v |- t                                                              *)
+(* ---------------- discharge_lit v                                          *)
+(* A[T/v] |- t[T/v]                                                          *)
+(*                                                                           *)
+(*    A, ~v |- t                                                             *)
+(* ---------------- discharge_lit ~v                                         *)
+(* A[F/v] |- t[F/v]                                                          *)
 (* ------------------------------------------------------------------------- *)
 
 local
   val NOT_FALSE = bossLib.DECIDE ``~F``
 in
-  fun discharge_lit thm lit =
+  fun discharge_lit lit thm =
   let
     val var = boolSyntax.dest_neg lit
   in
@@ -190,7 +199,7 @@ end
         val (thm, lits') = if i < Int.abs j then
             (thm, lits)
           else  (* i = Int.abs j *)
-            ((*Profile.profile "discharge_lit"*) (discharge_lit thm) lit,
+            ((*Profile.profile "discharge_lit"*) (discharge_lit lit) thm,
               littail)
       in
         forall_reduce (thm, vartail, hyp, lits')
@@ -209,90 +218,26 @@ end
     raise Match
 
 (* ------------------------------------------------------------------------- *)
-(* QBF_CONJUNCTS: takes a QBF in prenex form (i.e., a term of the form       *)
-(*      Q1 x1 ... Qn xn. phi, where each Qi is ? or !, each xi is a Boolean  *)
-(*      variable, and phi is a propositional formula in CNF). Suppose phi is *)
-(*      C1 /\ ... /\ Ck. Then a dictionary is returned that maps clause      *)
-(*      indices i to 4-tuples ("phi |- Ci", [Qn xn, ..., Q1 x1], phi,        *)
-(*      [~l1, ..., ~lm]), where Ci is l1 \/ ... \/ lm.                       *)
+(* merge: merges two lists of tuples whose first components are integers     *)
+(*      sorted wrt. absolute value into a single list sorted wrt. absolute   *)
+(*      value; drops duplicates that occur in both lists                     *)
 (* ------------------------------------------------------------------------- *)
 
-  fun QBF_CONJUNCTS qbf =
-  let
-    val (_, vars, body) = enumerate_quantified_vars qbf
-    val vars = List.rev vars
-    val var_dict = List.foldl (fn ((i, var, is_forall), dict) =>
-      Redblackmap.insert (dict, var, (i, is_forall)))
-      (Redblackmap.mkDict Term.var_compare) vars
-    fun index_fn var =
-      Redblackmap.find (var_dict, var)
-
-    val clauses = boolSyntax.strip_conj body
-    (* number the clauses, compute their (negated) literals *)
-    fun foldl_map_this (id, clause) =
-      (id + 1, (id, clause, neg_literals_in_clause index_fn clause))
-    val clauses = Lib.snd (Lib.foldl_map foldl_map_this (1, clauses))
-
-    val thm = Thm.ASSUME body
-
-(*
-    (* sort the clauses wrt. the index of their innermost variable *)
-    fun compare ((id1, _, lits1), (id2, _, lits2)) =
-      let
-        val idx1 = Int.abs (#1 (List.hd lits1))
-        val idx2 = Int.abs (#1 (List.hd lits2))
-      in
-        case Int.compare (idx1, idx2) of
-          EQUAL => Int.compare (id1, id2)
-        | ord => ord
-      end
-    val clauses = Redblackset.listItems (Redblackset.addList
-      (Redblackset.empty compare, clauses))
-    val new_body = boolSyntax.list_mk_conj (List.map #2 clauses)
-    (* sort the conclusion of 'thm' accordingly *)
-    val thm = Thm.EQ_MP (Drule.CONJUNCTS_AC (body, new_body)) thm
-*)
-
-    fun aux th [(id, _, lits)] hyp vars dict =
-      Redblackmap.insert (dict, id, (th, vars, hyp, lits))
-      | aux th (hd::tl) hyp vars dict =
-      let
-        val dict = aux (Thm.CONJUNCT1 th) [hd] hyp vars dict
-        val th = Thm.CONJUNCT2 th
-      in
-        aux th tl hyp vars dict
-      end
-      | aux _ [] _ _ _ =
-      raise Match
-  in
-    aux thm clauses body vars (Redblackmap.mkDict Int.compare)
-  end
-
-(* ------------------------------------------------------------------------- *)
-(* A |- p1 \/ ... \/ pn                                                      *)
-(* --------------------- CLAUSE_TO_SEQUENT                                   *)
-(* A, ~p1, ..., ~pn |- F                                                     *)
-(* ------------------------------------------------------------------------- *)
-
-  fun CLAUSE_TO_SEQUENT thm =
-  let
-    val concl = Thm.concl thm
-  in
+  fun merge xs [] = xs
+    | merge [] ys = ys
+    | merge (xs as xhd :: xtails) (ys as yhd :: ytails) =
     let
-      val (p, q) = boolSyntax.dest_disj concl
+      val absx = Int.abs (#1 xhd)
+      val absy = Int.abs (#1 yhd)
     in
-      Thm.DISJ_CASES thm
-        (CLAUSE_TO_SEQUENT (Thm.ASSUME p)) (CLAUSE_TO_SEQUENT (Thm.ASSUME q))
+      if absx = absy then
+        (* drop 'yhd' *)
+        xhd :: merge xtails ytails
+      else if absx < absy then
+        xhd :: merge xtails ys
+      else
+        yhd :: merge xs ytails
     end
-    handle Feedback.HOL_ERR _ =>  (* 'concl' is not a disjunction *)
-      if concl = boolSyntax.F then
-        thm
-      else (
-        Thm.MP (Thm.NOT_ELIM thm) (Thm.ASSUME (boolSyntax.dest_neg concl))
-        handle Feedback.HOL_ERR _ =>  (* 'concl' is not a negation *)
-          Thm.MP (Thm.NOT_ELIM (Thm.ASSUME (boolSyntax.mk_neg concl))) thm
-      )
-  end
 
 (* ------------------------------------------------------------------------- *)
 (* QRESOLVE_CLAUSES: performs propositional resolution of clauses in sequent *)

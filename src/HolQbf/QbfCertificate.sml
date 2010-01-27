@@ -164,14 +164,39 @@ struct
     let
       (* pre-processing: break the problem apart into clauses in sequent form
          suitable for Q-resolution *)
-      (* We assume that there are no free variables in 't'. *)
-      val clause_dict = Library.QBF_CONJUNCTS t
-      val _ = print (Int.toString (Redblackmap.numItems clause_dict) ^
-        " clause(s)\n")
 
-      val clause_dict = Redblackmap.transform (fn (clause, vars, hyp, lits) =>
-        (Library.CLAUSE_TO_SEQUENT clause, vars, hyp, lits)) clause_dict
-      val clause_dict = Redblackmap.transform Library.forall_reduce clause_dict
+      (* We assume that there are no free variables in 't', so that *all*
+         variables in the matrix occur in 'vars'. *)
+      val (_, vars, matrix) = Library.enumerate_quantified_vars t
+
+      (* a dictionary that maps each variable to a pair, which consists of the
+         variable's index and a Boolean that is true if the variable is
+         universally quantified, and false if it is existentially quantified *)
+      val var_dict = List.foldl (fn ((i, var, is_forall), var_dict) =>
+        Redblackmap.insert (var_dict, var, (i, is_forall)))
+        (Redblackmap.mkDict Term.var_compare) vars
+      fun index_fn var =
+        Redblackmap.find (var_dict, var)
+
+      val vars = List.rev vars
+      fun foldthis (clause, (i, clause_dict)) =
+        let
+          val clause = Library.CLAUSE_TO_SEQUENT clause
+          val lits = Library.literals_in_clause index_fn clause
+        in
+          (i + 1, Redblackmap.insert (clause_dict, i,
+            Library.forall_reduce (clause, vars, matrix, lits)))
+        end
+
+      (* a dictionary that maps each clause identifier to a 4-tuple, which
+         consists of 1. the clause theorem (in sequent form, cf.
+         'Library.CLAUSE_TO_SEQUENT'), 2. the list of missing variables (cf.
+         'Library.enumerate_quantified_vars', 3. the hypothesis (initially,
+         this is 'matrix'), and 4. the list of literals in the clause (cf.
+         'Library.literals_in_clause' *)
+      val clause_dict = Lib.snd (List.foldl foldthis
+        (1, Redblackmap.mkDict Int.compare)
+        (Drule.CONJUNCTS (Thm.ASSUME matrix)))
 
       (* depth-first recursion over the certificate (which represents a DAG),
          using QRESOLVE_CLAUSES to derive new clauses from existing ones *)
@@ -199,8 +224,7 @@ struct
           end
 
       (* derive "t |- F", using the certificate *)
-      val thm = #1 (Lib.snd (Profile.profile "check:derive" derive
-        (clause_dict, cindex)))
+      val thm = #1 (Lib.snd (derive (clause_dict, cindex)))
 
       (* sanity checks *)
       val _ = if HOLset.numItems (Thm.hypset thm) = 1 andalso
