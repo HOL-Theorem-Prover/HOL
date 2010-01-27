@@ -792,6 +792,7 @@ fun parse_term (G : grammar) typeparser = let
     fun handle_list_reduction rhs = let
       exception Hah
       fun possible_list pattern = let
+        val _ = length pattern >= 5 orelse raise Hah
         val poss_left = case (hd pattern) of TOK x => x | _ => raise Hah
         val poss_right =
           case (List.last pattern) of TOK x => x | _ => raise Hah
