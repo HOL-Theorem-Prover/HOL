@@ -30,6 +30,10 @@ fun ptm_with_ctxtty ctxt ty q =
  in Parse.parse_in_context ctxt (normalise_quotation q')
 end
 
+val TC_OFF = trace ("show_typecheck_errors", 0)
+fun ptm_with_ctxtty' ctxt ty = TC_OFF (ptm_with_ctxtty ctxt ty)
+
+
 fun ptm_with_ty q ty = ptm_with_ctxtty [] ty q;
 fun btm q = !Parse.post_process_term (ptm_with_ty q Type.bool);
 
@@ -85,7 +89,7 @@ val ID_SPEC = W(Thm.SPEC o (fst o dest_forall o concl))
 fun SPEC_THEN q ttac thm (g as (asl,w)) = let
   val ctxt = free_varsl (w::asl)
   val (Bvar,_) = dest_forall (concl thm)
-  val t = ptm_with_ctxtty ctxt (type_of Bvar) q
+  val t = ptm_with_ctxtty' ctxt (type_of Bvar) q
 in
   ttac (Thm.SPEC t thm) g
 end
@@ -97,7 +101,7 @@ fun SPECL_THEN ql ttac thm (g as (asl,w)) = let
       [] => thm
     | (q::qs) => let
         val (Bvar,_) = dest_forall (concl thm)
-        val t = ptm_with_ctxtty ctxt (type_of Bvar) q
+        val t = ptm_with_ctxtty' ctxt (type_of Bvar) q
       in
         spec qs (Thm.SPEC t thm)
       end
@@ -122,7 +126,7 @@ end
 fun SPEC_TAC (q1,q2) (g as (asl,w)) = let
   val ctxt = free_varsl (w::asl)
   val T1 = Parse.parse_in_context ctxt q1
-  val T2 = ptm_with_ctxtty ctxt (type_of T1) q2
+  val T2 = ptm_with_ctxtty' ctxt (type_of T1) q2
 in
   Tactic.SPEC_TAC(T1, T2) g
 end;
@@ -150,7 +154,7 @@ fun EXISTS_TAC q (g as (asl, w)) =
      val exvartype = type_of (fst (dest_exists w))
        handle HOL_ERR _ => raise ERR "EXISTS_TAC" "goal not an exists"
  in
-  Tactic.EXISTS_TAC (ptm_with_ctxtty ctxt exvartype q) g
+  Tactic.EXISTS_TAC (ptm_with_ctxtty' ctxt exvartype q) g
  end
 
 fun LIST_EXISTS_TAC qL = EVERY (map EXISTS_TAC qL)
@@ -164,7 +168,7 @@ fun ID_EX_TAC(g as (_,w)) =
 fun REFINE_EXISTS_TAC q (asl, w) = let
   val (qvar, body) = dest_exists w
   val ctxt = free_varsl (w::asl)
-  val t = ptm_with_ctxtty ctxt (type_of qvar) q
+  val t = ptm_with_ctxtty' ctxt (type_of qvar) q
   val qvars = set_diff (free_vars t) ctxt
   val newgoal = subst [qvar |-> t] body
 in
@@ -179,7 +183,7 @@ fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) =
           raise ERR "X_CHOOSE_THEN" "provided thm not an exists"
      val ctxt = free_varsl (w::asl)
  in
-   Thm_cont.X_CHOOSE_THEN (ptm_with_ctxtty ctxt ty q) ttac thm g
+   Thm_cont.X_CHOOSE_THEN (ptm_with_ctxtty' ctxt ty q) ttac thm g
  end
 
 val X_CHOOSE_TAC = C X_CHOOSE_THEN Tactic.ASSUME_TAC;
@@ -193,7 +197,7 @@ fun DISCH q th =
 
 fun PAT_UNDISCH_TAC q (g as (asl,w)) =
 let val ctxt = free_varsl (w::asl)
-    val pat = ptm_with_ctxtty ctxt Type.bool q
+    val pat = ptm_with_ctxtty' ctxt Type.bool q
     val asm =
         first (can (ho_match_term [] Term.empty_tmset pat)) asl
 in Tactic.UNDISCH_TAC asm g
@@ -201,17 +205,18 @@ end;
 
 fun PAT_ASSUM q ttac (g as (asl,w)) =
  let val ctxt = free_varsl (w::asl)
- in Tactical.PAT_ASSUM (ptm_with_ctxtty ctxt Type.bool q) ttac g
+ in Tactical.PAT_ASSUM (ptm_with_ctxtty' ctxt Type.bool q) ttac g
  end
 
-fun SUBGOAL_THEN q ttac (g as (asl,w)) =
-let val ctxt = free_varsl (w::asl)
-in Tactical.SUBGOAL_THEN (ptm_with_ctxtty ctxt Type.bool q) ttac g
+fun SUBGOAL_THEN q ttac (g as (asl,w)) = let
+  val ctxt = free_varsl (w::asl)
+in
+  Tactical.SUBGOAL_THEN (ptm_with_ctxtty' ctxt Type.bool q) ttac g
 end
 
 fun UNDISCH_TAC q (g as (asl, w)) = let
   val ctxt = free_varsl (w::asl)
-in Tactic.UNDISCH_TAC (ptm_with_ctxtty ctxt Type.bool q) g
+in Tactic.UNDISCH_TAC (ptm_with_ctxtty' ctxt Type.bool q) g
 end
 
 fun UNDISCH_THEN q ttac = UNDISCH_TAC q THEN DISCH_THEN ttac;
@@ -222,14 +227,14 @@ fun X_GEN_TAC q (g as (asl, w)) =
  let val ctxt = free_varsl (w::asl)
      val ty = type_of (fst(dest_forall w))
  in
-   Tactic.X_GEN_TAC (ptm_with_ctxtty ctxt ty q) g
+   Tactic.X_GEN_TAC (ptm_with_ctxtty' ctxt ty q) g
  end
 
 fun X_FUN_EQ_CONV q tm =
  let val ctxt = free_vars tm
      val ty = #1 (dom_rng (type_of (lhs tm)))
  in
-   Conv.X_FUN_EQ_CONV (ptm_with_ctxtty ctxt ty q) tm
+   Conv.X_FUN_EQ_CONV (ptm_with_ctxtty' ctxt ty q) tm
  end
 
 fun skolem_ty tm =
@@ -266,7 +271,7 @@ fun AP_THM th q =
 
 fun ASM_CASES_TAC q (g as (asl,w)) =
  let val ctxt = free_varsl (w::asl)
- in Tactic.ASM_CASES_TAC (ptm_with_ctxtty ctxt bool q) g
+ in Tactic.ASM_CASES_TAC (ptm_with_ctxtty' ctxt bool q) g
  end
 
 fun AC_CONV p = Conv.AC_CONV p o ptm;
@@ -303,7 +308,7 @@ fun PAT_ABBREV_TAC q (gl as (asl,w)) =
 fun MATCH_ABBREV_TAC q (gl as (asl,w)) =
  let val fv_set = FVL (w::asl) empty_tmset
      val ctxt = HOLset.listItems fv_set
-     val pattern = ptm_with_ctxtty ctxt bool q
+     val pattern = ptm_with_ctxtty' ctxt bool q
  in
   markerLib.MATCH_ABBREV_TAC fv_set pattern
  end gl;
@@ -311,7 +316,7 @@ fun MATCH_ABBREV_TAC q (gl as (asl,w)) =
 fun HO_MATCH_ABBREV_TAC q (gl as (asl,w)) =
  let val fv_set = FVL (w::asl) empty_tmset
      val ctxt = HOLset.listItems fv_set
-     val pattern = ptm_with_ctxtty ctxt bool q
+     val pattern = ptm_with_ctxtty' ctxt bool q
 in
   markerLib.HO_MATCH_ABBREV_TAC fv_set pattern
 end gl;
