@@ -13,8 +13,7 @@ sig
   val parse_term :
       term_grammar.grammar ->
       (''a qbuf -> Pretype.pretype) ->
-      (''a qbuf * ''a PStack) ->
-      (''a qbuf * ''a PStack) * unit option
+      (''a qbuf * ''a PStack, unit, string locn.located) errormonad.t
 
   (* not used externally, but can be useful for debugging *)
   datatype mx_src = Ifx | Pfx | MS_Other | MS_Multi

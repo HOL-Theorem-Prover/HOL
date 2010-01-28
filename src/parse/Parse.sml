@@ -304,21 +304,28 @@ fun do_parse G ty = let
   open base_tokens qbuf
 in
 fn q => let
-     val ((qb,p), _) = pt (new_buffer q, initial_pstack)
+     open errormonad
+     val ((qb,p), fsres) = pt (new_buffer q, initial_pstack)
          handle base_tokens.LEX_ERR (s,locn) =>
                 raise (ERRORloc "Absyn" locn ("Lexical error - "^s))
    in
-     if is_final_pstack p then
-       case current qb of
-         (BT_EOI,locn) => (top_nonterminal p
-                           handle ParseTermError (s,locn) =>
-                                  raise (ERRORloc "Term" locn s))
-       | (_,locn) => raise (ERRORloc "Absyn" locn
-                                     (String.concat
-                                          ["Can't make sense of remaining: ",
-                                           Lib.quote (toString qb)]))
-     else
-       raise (ERRORloc "Absyn" (snd (current qb)) "Parse failed")
+     case fsres of
+       Some () => let
+       in
+         if is_final_pstack p then
+           case current qb of
+             (BT_EOI,locn) => (top_nonterminal p
+                               handle ParseTermError (s,locn) =>
+                                      raise (ERRORloc "Term" locn s))
+           | (_,locn) =>
+             raise (ERRORloc "Absyn" locn
+                             (String.concat
+                                  ["Can't make sense of remaining: ",
+                                   Lib.quote (toString qb)]))
+         else
+           raise (ERRORloc "Absyn" (snd (current qb)) "Parse failed")
+       end
+     | Error (s,locn) => raise mk_HOL_ERRloc "Absyn" "Absyn" locn s
    end
 end;
 
@@ -398,7 +405,7 @@ fun print_term t = Portable.output(Portable.std_out, term_to_string t);
 
 fun term_to_backend_string t =
    (Portable.pp_to_string (!Globals.linewidth) pp_term) t;
-fun print_backend_term t = 
+fun print_backend_term t =
   Portable.output(Portable.std_out, term_to_backend_string t);
 
 
@@ -444,7 +451,7 @@ fun print_thm thm     = Portable.output(Portable.std_out, thm_to_string thm);
 
 fun thm_to_backend_string thm =
    (Portable.pp_to_string (!Globals.linewidth) pp_thm) thm;
-fun print_backend_thm thm = 
+fun print_backend_thm thm =
   Portable.output(Portable.std_out, thm_to_backend_string thm);
 
 (*---------------------------------------------------------------------------
