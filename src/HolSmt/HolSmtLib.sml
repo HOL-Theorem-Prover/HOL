@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Entry point into HolSmtLib. Provides GENERIC_SMT_TAC and derived tactics to
    call SMT solvers. *)
@@ -29,7 +29,9 @@ structure HolSmtLib :> HolSmtLib = struct
       | SolverSpec.UNKNOWN (SOME message) =>
         raise ERR ("solver reports 'unknown' (" ^ message ^ ")")
   in
-    Tactical.THENL (Tactical.REPEAT Tactic.GEN_TAC, [SMT_TAC])
+    Tactical.THENL (Tactical.REPEAT Tactic.GEN_TAC,
+      [Tactical.THEN (Library.SET_SIMP_TAC,
+        Tactical.THEN (Tactic.BETA_TAC, SMT_TAC))])
   end
 
   val YICES_TAC = GENERIC_SMT_TAC Yices.Yices_Oracle

@@ -608,11 +608,6 @@ structure Yices = struct
             end
       end
 
-  (* performs full beta normalization *)
-  fun full_beta_conv tm =
-    boolSyntax.rhs (Thm.concl ((Conv.REDEPTH_CONV Thm.BETA_CONV) tm))
-    handle Conv.UNCHANGED => tm
-
   (* returns the eta-long form of a term, i.e., every variable/constant is
      applied to the correct number of arguments, as determined by its type *)
   fun full_eta_long_conv tm =
@@ -646,9 +641,8 @@ structure Yices = struct
   fun goal_to_Yices (As, g) =
   let
     val g = boolSyntax.mk_neg g
-    (* beta-normal, eta-long form (because Yices cannot handle partial
-       applications) *)
-    val As_g = List.map (full_eta_long_conv o full_beta_conv) (As @ [g])
+    (* eta-long form (because Yices cannot handle partial applications) *)
+    val As_g = List.map full_eta_long_conv (As @ [g])
     val empty = Redblackmap.mkDict Term.compare
     val empty_ty = Redblackmap.mkDict Type.compare
     val ((_, _, _, _, defs), yices_As_g) = Lib.foldl_map translate_term
