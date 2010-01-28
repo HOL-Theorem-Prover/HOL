@@ -593,6 +593,9 @@ datatype 'a PStack =
   PStack of {stack : ('a stack_item locn.located * 'a lookahead_item) list,
              lookahead : 'a lookahead_item locn.located list,
              in_vstruct : (vsres_state * int) list}
+type tqbuf = term qbuf.qbuf
+type tPStack = term PStack
+
 
 (* dummy lookahead token *)
 val XXX = Token (Ident "XXX")
