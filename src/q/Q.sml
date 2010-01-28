@@ -333,4 +333,39 @@ fun RM_ABBREV_TAC q (gl as (asl,w)) =
    markerLib.RM_ABBREV_TAC (fst(dest_var v))
  end gl;
 
+(*---------------------------------------------------------------------------*)
+(*    Renaming tactics                                                       *)
+(*---------------------------------------------------------------------------*)
+
+fun make_rename_tac s fvs except ERR =
+let val (sf,sb) = partition (fn {redex=l,residue=r} => mem l fvs) s in
+  if exists (fn {redex=l,residue=r} => (not (l = r))) sf
+  then raise ERR "Double bind"
+  else MAP_EVERY
+         (fn {redex=l,residue=r} => 
+            CHOOSE_THEN SUBST_ALL_TAC
+            (Thm.EXISTS(mk_exists(l, mk_eq(r, l)), r) (Thm.REFL r)))
+       (filter (fn {redex=l,residue=r} => not (mem (fst(dest_var l)) except)) sb)
+end
+
+fun MATCH_RENAME_TAC q except (g as (asl,t)) = let
+  val fvs = free_varsl(t::asl)
+  val pat = Parse.parse_in_context fvs q
+in
+  make_rename_tac
+    (fst (match_term pat t)) fvs except (ERR "MATCH_RENAME_TAC")
+end g
+
+fun MATCH_ASSUM_RENAME_TAC q except (g as (asl,t)) = let
+  val ERR = ERR "MATCH_ASSUM_RENAME_TAC"
+  val fvs = free_varsl(t::asl)
+  val pat = Parse.parse_in_context fvs q
+  fun find [] = raise ERR "No matching assumption found"
+    | find (asm::tl) =
+      case (total (match_term pat)) asm of
+          NONE => find tl
+        | SOME (s,_) => make_rename_tac s fvs except ERR
+                      handle HOL_ERR e => find tl
+in find asl end g
+
 end (* Q *)
