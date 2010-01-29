@@ -26,13 +26,7 @@
 
        hol < DOT
 
-    Only works for Poly/ML.
    ====================================================================== *)
-
-val _ = if Systeml.ML_SYSNAME = "mosml" then
-          (TextIO.output(TextIO.stdErr, "DOT only works with Poly/ML\n");
-           Process.exit Process.failure)
-        else ()
 
 val HTML_DIR   = Path.toString(Path.fromString(Path.concat
                     (Globals.HOLDIR,"help/theorygraph")));
@@ -164,20 +158,22 @@ in
   else raise Fail "gen_map_file: failed "
 end;
 
-fun dir_theories dir =
- let open Substring FileSys
-     val dstrm = openDir dir
-     fun thys () =
-       case readDir dstrm
-        of NONE => []
-         | SOME file =>
-            let val (ss1,ss2) = position "Theory.sig" (all file)
-            in if isEmpty ss1 orelse isEmpty ss2
-               then thys()
-               else string ss1 :: thys()
-            end
- in thys()
- end;
+fun dir_theories dir = let
+  open Substring FileSys
+  val dstrm = openDir dir
+  fun thys () =
+      case readDir dstrm of
+        NONE => []
+      | SOME file => let
+          val (ss1,ss2) = position "Theory.sig" (full file)
+        in
+          if isEmpty ss1 orelse isEmpty ss2 orelse string ss1 = "Final" then
+            thys()
+          else string ss1 :: thys()
+        end
+in
+  thys()
+end;
 
 
 fun load_theories thyl = app (load o C (curry op^) "Theory") thyl;
@@ -196,7 +192,11 @@ val ancs = ancestor_nodes "-";
 
 val all_theories = "min"::sys_theories;
 val paths = map(fn s => Path.concat (HTML_DIR,s^"Theory.html")) all_theories;
-map2 print_theory_as_html all_theories paths;
+val _ = HOLPP.catch_withpp_err := false
+fun mapthis (thy,path) =
+    print_theory_as_html thy path
+    handle Fail s => print (">>> PP failure on "^thy^": "^s^"\n")
+val _ = ListPair.map mapthis (all_theories, paths);
 
 (* The following works on Unix with dot version 1.10.2003xxxxxxx *)
 

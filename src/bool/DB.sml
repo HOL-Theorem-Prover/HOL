@@ -320,28 +320,26 @@ fun pp_theory_as_html ppstrm theory_name = let
   fun colour thing col =
       String.concat["<font color=\"",col,"\">",thing,"</font>"];
   fun strong s =
-      (add_string"<STRONG>"; add_string (colour s "black");
-       add_string"</STRONG>")
+      (add_string"<span class=\"strong\">"; add_string s;
+       add_string"</span>")
   fun STRONG s =
-      (add_string"<STRONG>";
-       add_string
-         (String.concat["<font size=+3 color=\"black\">",s,"</font>"]);
-       add_string"</STRONG>")
-  fun title s = add_string(String.concat
-                             ["<H1><font color=\"black\">",s,"</font></H1>"]);
+      (add_string"<span class=\"vstrong\">";
+       add_string s;
+       add_string"</span>")
+  fun title s = add_string(String.concat ["<h1>",s,"</h1>"]);
   fun link (l,s) =
-      (add_string("<A HREF = "^Lib.quote l^">");
+      (add_string("<a href = "^Lib.quote l^">");
        strong s;
-       add_string"</A>")
-  fun HR() = (add_newline();add_string"<HR>";add_newline());
+       add_string"</a>")
+  fun HR() = (add_newline();add_string"<hr>";add_newline());
 
   fun pblock(ob_pr, obs) =
       ( begin_block CONSISTENT 4;
-        STRONG "Parents";
-        add_string "&nbsp;&nbsp;&nbsp;&nbsp;";
-        add_break (1,0);
-        pr_list ob_pr (fn () => add_string"&nbsp;&nbsp;")
-                (fn () => add_break (1,0)) obs;
+          STRONG "Parents";
+          add_string "&nbsp;&nbsp;&nbsp;&nbsp;";
+          add_break (1,0);
+          pr_list ob_pr (fn () => add_string"&nbsp;&nbsp;")
+                  (fn () => add_break (1,0)) obs;
         end_block();
         add_newline();
         add_newline())
@@ -351,58 +349,58 @@ fun pp_theory_as_html ppstrm theory_name = let
       else
         ( title "Signature"; add_newline();
           begin_block CONSISTENT 4;
+            begin_block CONSISTENT 0;
+              add_string "<center>"; add_newline();
+              add_string "<table BORDER=4 CELLPADDING=10 CELLSPACING=1>";
+              add_newline();
+            end_block();
+            add_newline();
+            if null types then ()
+            else
+              (begin_block CONSISTENT 0;
+                 add_string "<tr>"; add_break (1,0);
+                 add_string "<th>"; add_break (1,0);
+                 add_string "Type"; add_break (1,0);
+                 add_string "<th>"; add_break (1,0);
+                 add_string "Arity";
+               end_block();
+               pr_list (fn x => (add_string"<tr>"; ob_pr1 x))
+                       (fn () => ()) add_newline obs1;
+               add_newline());
+            if null consts then ()
+            else
+              (begin_block CONSISTENT 0;
+                 add_string "<tr>"; add_break (1,0);
+                 add_string "<th>"; add_break (1,0);
+                 add_string "Constant"; add_break (1,0);
+                 add_string "<th>"; add_break (1,0);
+                 add_string "Type" ;
+               end_block();
+               pr_list (fn x => (add_string"<tr>"; ob_pr2 x))
+                       (fn () => ()) add_newline obs2;
+               add_newline());
+          end_block(); add_newline();
           begin_block CONSISTENT 0;
-          add_string "<center>"; add_newline();
-          add_string "<table BORDER=4 CELLPADDING=10 CELLSPACING=1>";
-          add_newline();
-          end_block();
-          add_newline();
-          if null types then ()
-          else
-            (begin_block CONSISTENT 0;
-             add_string "<tr>"; add_break (1,0);
-             add_string "<th>"; add_break (1,0);
-             add_string (colour"Type" "crimson"); add_break (1,0);
-             add_string "<th>"; add_break (1,0);
-             add_string (colour"Arity" "crimson");
-             end_block();
-             pr_list (fn x => (add_string"<tr>"; ob_pr1 x))
-                     (fn () => ()) add_newline obs1;
-             add_newline())
-        ; if null consts then ()
-          else
-            (begin_block CONSISTENT 0;
-             add_string "<tr>"; add_break (1,0);
-             add_string "<th>"; add_break (1,0);
-             add_string (colour"Constant" "crimson"); add_break (1,0);
-             add_string "<th>"; add_break (1,0);
-             add_string (colour"Type" "crimson");
-             end_block();
-             pr_list (fn x => (add_string"<tr>"; ob_pr2 x))
-                     (fn () => ()) add_newline obs2;
-             add_newline())
-        ; end_block(); add_newline();
-          begin_block CONSISTENT 0;
-          add_string "</table>"; add_newline();
-          add_string "</center>"; add_newline();
+            add_string "</table>"; add_newline();
+            add_string "</center>"; add_newline();
           end_block();
           add_newline())
 
   fun dl_block(header, ob_pr, obs) =
       ( begin_block CONSISTENT 0;
-        title header;
-        add_newline();
-        add_string"<DL>"; add_newline();
-        pr_list
-          (fn (x,ob) =>
-              (begin_block CONSISTENT 0;
-               add_string"<DT>"; strong x; add_newline();
-               add_string"<DD>"; add_newline();
-               ob_pr ob;
-               end_block()))
-          (fn () => ()) add_newline obs;
-        add_newline();
-        add_string"</DL>";
+          title header;
+          add_newline();
+          add_string"<DL>"; add_newline();
+          pr_list
+            (fn (x,ob) =>
+                (begin_block CONSISTENT 0;
+                   add_string"<DT>"; strong x; add_newline();
+                   add_string"<DD>"; add_newline();
+                   ob_pr ob;
+                 end_block()))
+            (fn () => ()) add_newline obs;
+          add_newline();
+          add_string"</DL>";
         end_block();
         add_newline();
         add_newline())
@@ -410,67 +408,93 @@ fun pp_theory_as_html ppstrm theory_name = let
   fun pr_thm (heading, ths) =
       dl_block(heading,
                (fn th => (begin_block CONSISTENT 0;
-                          add_string"<PRE>";
-                          add_newline();
-                          pp_thm th;
-                          add_newline();
-                          add_string"</PRE>";
-                          add_newline();
+                            add_string"<pre>";
+                            add_newline();
+                            pp_thm th;
+                            add_newline();
+                            add_string"</pre>";
+                            add_newline();
                           end_block())),    ths)
+  fun NL() = add_newline()
 in
    begin_block CONSISTENT 0;
-   add_string "<HTML>"; add_newline();
-   add_string("<HEAD><TITLE>Theory: "^theory_name^"</TITLE>");
-   add_string("<meta http-equiv=\"content-type\"\
-              \ content=\"text/html;charset=UTF-8\">");
-   add_newline();
-   add_string("</HEAD>");
-   add_newline();
-   add_string "<BODY bgcolor=linen text=midnightblue>";
-   add_newline();
-   title ("Theory \""^theory_name^"\"");
-   add_newline() ;
+     add_string "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\">";
+     add_newline();
 
-   if null parents then ()
-   else pblock ((fn n => link(n^"Theory.html",n)), parents) ;
-   sig_block((fn (Name,Arity) =>
-                 (begin_block CONSISTENT 0;
-                  add_string"<td>"; add_break(1,0); strong Name;
-                  add_break(1,0);
-                  add_string"<td>"; add_break(1,0);
-                  add_string (Lib.int_to_string Arity); end_block())),
-             types,
-             (fn (Name,Ty) =>
-                 (begin_block CONSISTENT 0;
-                  add_string"<td>"; add_break(1,0); strong Name;
-                  add_break(1,0);
-                  add_string"<td>"; add_break(1,0); pp_type Ty;
-                  end_block())), consts)
- ; if null axioms then () else pr_thm ("Axioms", axioms)
- ; if null definitions then ()
-   else (if null axioms then () else (HR();HR());
-         pr_thm ("Definitions", definitions))
- ; if null theorems then ()
-   else (if null axioms andalso null definitions then ()
-         else (HR();HR());
-         pr_thm ("Theorems", theorems));
-   add_newline();
-   HR();
-   add_string "</BODY>"; add_newline();
-   add_string "</HTML>"; add_newline();
+     add_string "<html>"; add_newline();
+     add_string("<head><title>Theory: "^theory_name^"</title>");
+     add_string("<meta http-equiv=\"content-type\"\
+                \ content=\"text/html;charset=UTF-8\">");
+     add_newline();
+     add_string("<style type=\"text/css\">"); NL();
+     add_string "<!--\n\
+                \  body {background: #faf0e6; color: #191970; }\n\
+                \  span.freevar  { color: blue}\n\
+                \  span.boundvar { color: green}\n\
+                \  span.typevar  { color: purple}\n\
+                \  span.type     { color: teal}\n\
+                \  span.strong   { color: black; font-weight: bold}\n\
+                \  span.vstrong  { color: black; \n\
+                \                  font-weight: bold;\n\
+                \                  font-size: larger}\n\
+                \  h1 {color: black}\n\
+                \  th {color: crimson}\n\
+                \-->";
+     NL(); add_string "</style>"; NL();
+     add_string("</head>");
+     add_newline();
+     add_string "<body>";
+     add_newline();
+     title ("Theory \""^theory_name^"\"");
+     add_newline() ;
+
+     if null parents then ()
+     else pblock ((fn n => link(n^"Theory.html",n)), parents) ;
+     sig_block((fn (Name,Arity) =>
+                   (begin_block CONSISTENT 0;
+                      add_string"<td>"; add_break(1,0); strong Name;
+                      add_break(1,0);
+                      add_string"<td>"; add_break(1,0);
+                      add_string (Lib.int_to_string Arity);
+                    end_block())),
+               types,
+               (fn (Name,Ty) =>
+                   (begin_block CONSISTENT 0;
+                      add_string"<td>"; add_break(1,0); strong Name;
+                      add_break(1,0);
+                      add_string"<td>"; add_break(1,0); pp_type Ty;
+                    end_block())), consts)
+   ; if null axioms then () else pr_thm ("Axioms", axioms)
+   ; if null definitions then ()
+     else (if null axioms then () else (HR();HR());
+           pr_thm ("Definitions", definitions))
+   ; if null theorems then ()
+     else (if null axioms andalso null definitions then ()
+           else (HR();HR());
+           pr_thm ("Theorems", theorems));
+     add_newline();
+     HR();
+     add_string "</body>"; add_newline();
+     add_string "</html>"; add_newline();
    end_block()
 end;
 
-fun print_theory_as_html s path =
-   let val name = (case s of "-" => current_theory() | other => s)
-       val ostrm = Portable.open_out path
-   in
-     PP.with_pp {consumer = Portable.outputc ostrm, linewidth = 78,
-                 flush = fn () => Portable.flush_out ostrm}
-        (Lib.C pp_theory_as_html name)
-     handle e => (Portable.close_out ostrm; raise e);
-     Portable.close_out ostrm
-   end;
+fun print_theory_as_html s path = let
+  val name = (case s of "-" => current_theory() | other => s)
+  val ostrm = Portable.open_out path
+  val oldbackend = !Parse.current_backend
+  val _ = Parse.current_backend := PPBackEnd.raw_terminal
+          (* would like this to be html_terminal, but it causes
+             occasional exceptions *)
+  fun finalise() = (Parse.current_backend := oldbackend; TextIO.closeOut ostrm)
+in
+  PP.with_pp {consumer = (fn s => TextIO.output(ostrm,s)),
+              linewidth = 78,
+              flush = fn () => TextIO.flushOut ostrm}
+             (Lib.C pp_theory_as_html name)
+             handle e => (finalise(); raise e);
+  finalise()
+end;
 
 fun html_theory s = print_theory_as_html s (s^"Theory.html");
 
