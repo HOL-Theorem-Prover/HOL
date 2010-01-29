@@ -1,6 +1,6 @@
 val () = PolyML.print_depth 0;
 local
-  val fifoPath = Globals.HOLDIR^"/fifo"
+  val fifoPath = Globals.HOLDIR^"/tools/vim/fifo"
   structure Queue :> (* Modified from http://mlton.org/MLtonThread *)
      sig
         type 'a t

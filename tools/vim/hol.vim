@@ -7,7 +7,7 @@ if $HOLDIR == ""
   finish
 endif
 
-let s:holpipe = $HOLDIR . "/fifo"
+let s:holpipe = $HOLDIR . "/tools/vim/fifo"
 let s:holtogglequiet = "val _ = HOL_Interactive.toggle_quietdec();"
 
 new
