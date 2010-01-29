@@ -869,7 +869,7 @@ in
   Map.numItems bvmap = 0 orelse recurse empty_varset tm
 end
 
-fun MERR s = raise ERR "raw_match_term error" s
+fun MERR s = raise ERR "raw_match_term" s
 
 fun add_id v {ids, patbvars, obbvars, theta, n} =
     {ids = HOLset.add(ids, v), patbvars = patbvars, obbvars = obbvars, n = n,
