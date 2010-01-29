@@ -12,7 +12,7 @@ Applies {CONSEQ_REWRITE_CONV} interleaved with conversions and rewrites.
       something
 }
 The problem is that CONSEQ_REWRITE_CONV applies consequence
-conversions, but no normal convs or simplificatiosn. This is changed
+conversions, but no normal convs or simplifications. This is changed
 by {EXT_CONSEQ_REWRITE_CONV}.  {EXT_CONSEQ_REWRITE_CONV} gets a list
 of conversions and a list of rewrite theorems. Moreover there are the
 parameters of {CONSEQ_REWRITE_CONV}. It then applies these conversions

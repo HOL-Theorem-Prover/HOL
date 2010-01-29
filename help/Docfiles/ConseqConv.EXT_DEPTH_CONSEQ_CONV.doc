@@ -14,14 +14,15 @@ consequence conversion by breaking down the structure of a term using
 lemmata about {/\}, {\/}, {~}, {==>} and quantification.  Thereby,
 these conversions collect various amounts of context information.
 
-{EXT_DEPTH_CONSEQ_CONV congruence_list cache_opt step_opt redepth
-convL} is the conversion used by these other depth conversions. Its
-interface allows one to add to the given list of boolean combinations
-and thus allow the conversion of parts of user-defined
-predicates. This is done using {congruence_list}.  However, let's
-consider the other parameters first: {cache_opt} determines which
-cache to use: {NONE} means no caching; a standard cache that stores
-everything is configured by {CONSEQ_CONV_default_cache_opt}.
+{EXT_DEPTH_CONSEQ_CONV} {congruence_list} {cache_opt} {step_opt}
+{redepth} {convL} is the conversion used by these other depth
+conversions. Its interface allows one to add to the given list of
+boolean combinations and thus allow the conversion of parts of
+user-defined predicates. This is done using {congruence_list}.
+However, let's consider the other parameters first: {cache_opt}
+determines which cache to use: {NONE} means no caching; a standard
+cache that stores everything is configured by
+{CONSEQ_CONV_default_cache_opt}.
 
 The number of steps taken is determined by {step_opt}. {NONE} means
 arbitrarily many; {SOME n} means at most n. {ONCE_DEPTH_CONSEQ_CONV}
