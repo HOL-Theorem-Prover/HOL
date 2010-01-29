@@ -3942,6 +3942,11 @@ val CARD_POW = Q.store_thm
 
 val sspec_tac = CONV_TAC (DEPTH_CONV SET_SPEC_CONV)
 
+val GSPEC_ETA = store_thm(
+  "GSPEC_ETA",
+  ``{x | P x} = P``,
+  SRW_TAC [] [EXTENSION, SPECIFICATION]);
+
 val GSPEC_F = store_thm(
   "GSPEC_F",
   ``{ x | F} = {}``,

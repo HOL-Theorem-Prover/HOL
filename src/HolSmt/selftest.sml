@@ -936,17 +936,17 @@ in
     (``(<| employed := e1; age := a1 |> = <| employed := e2; age := a2 |>)
      = (e1 = e2) /\ (a1 = a2)``, [thm_AUTO, thm_YO]),
 
-    (* sets *)
+    (* sets (as predicates -- every set expression must be applied to an
+       argument!) *)
 
     (``x IN P = P x``, [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
 
-    (*TODO: (``{x | P x} = P``,
-      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),*)
+    (``x IN {x | P x} = P x``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
 
     (``x NOTIN {}``, [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
-    (``x IN UNIV``, [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p])
+    (``x IN UNIV``, [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
 
-(* TODO:
     (``x IN P UNION Q = P x \/ Q x``,
       [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``x IN P UNION {} = x IN P``,
@@ -958,7 +958,7 @@ in
     (``x IN P UNION (Q UNION R) = x IN (P UNION Q) UNION R``,
       [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
 
-    (``x IN P INTER Q = P x \/ Q x``,
+    (``x IN P INTER Q = P x /\ Q x``,
       [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``x NOTIN P INTER {}``,
       [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
@@ -967,8 +967,7 @@ in
     (``x IN P INTER Q = x IN Q INTER P``,
       [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
     (``x IN P INTER (Q INTER R) = x IN (P INTER Q) INTER R``,
-      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
-*)
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p])
 
   ]  (* tests *)
 end
