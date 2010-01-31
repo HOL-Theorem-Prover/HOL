@@ -1063,10 +1063,10 @@ local
       fun lt_thm () = size_rule (Drule.ISPEC x w2n_lt)
       val word_type = wordsSyntax.dest_word_type o type_of
     in
-      if wordsSyntax.is_word_literal x then
+      if not (is_known_word_size x) orelse wordsSyntax.is_word_literal x then
         raise ERR "mk_bounds_thm" "Term is word literal"
       else
-        case dest_strip x
+       (case dest_strip x
         of ("word_extract", [h,l,w]) => let
                open Arbnum
                val hi = numSyntax.dest_numeral h
@@ -1089,7 +1089,7 @@ local
                    |> size_rule
                else
                  lt_thm ()
-         | _ => lt_thm ()
+         | _ => lt_thm ()) handle HOL_ERR _ => lt_thm ()
     end
 
   fun removeDuplicates l = let open Binaryset in
