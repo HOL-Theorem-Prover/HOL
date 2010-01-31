@@ -1190,6 +1190,23 @@ val w2n_w2w = store_thm("w2n_w2w",
     \\ RW_TAC arith_ss [MIN_DEF]
     \\ `m' = m` by DECIDE_TAC \\ ASM_REWRITE_TAC []);
 
+val w2n_w2w_le = Q.store_thm("w2n_w2w_le",
+  `!w:'a word. w2n (w2w w) <= w2n w`,
+  SRW_TAC [] [w2n_w2w]
+  \\ Cases_on `w`
+  \\ SRW_TAC [] [w2n_n2w, word_bits_n2w, MOD_DIMINDEX, MIN_DEF, BITS_COMP_THM2]
+  \\ FULL_SIMP_TAC arith_ss
+       [BITS_ZERO3,SUB1_SUC, DIMINDEX_GT_0, GSYM dimword_def]
+  \\ Cases_on `n < dimword(:'b)`
+  \\ SRW_TAC [] []
+  \\ `n MOD dimword (:'b) < dimword (:'b)`
+  by SRW_TAC [] [DIMINDEX_GT_0, MOD_LESS]
+  \\ DECIDE_TAC);
+
+val w2w_lt = Q.store_thm("w2w_lt",
+  `!w:'a word. w2n (w2w w) < dimword(:'a)`,
+  METIS_TAC [w2n_w2w_le, w2n_lt, LESS_EQ_LESS_TRANS]);
+
 val w2w_n2w = store_thm("w2w_n2w",
   `!n. w2w ((n2w n):'a word):'b word =
          if dimindex (:'b) <= ^WL then
@@ -1295,6 +1312,12 @@ val WORD_BITS_LT = store_thm("WORD_BITS_LT",
     << [`SUC m - l <= SUC h - l` by DECIDE_TAC,
      `SUC (l + m) - l <= SUC h - l` by DECIDE_TAC]
     \\ PROVE_TAC [TWOEXP_MONO2,BITSLT_THM,LESS_LESS_EQ_TRANS]);
+
+val WORD_EXTRACT_LT = Q.store_thm("WORD_EXTRACT_LT",
+  `!h l w:'a word. w2n ((h >< l) w) < 2 ** (SUC h - l)`,
+  SRW_TAC [] [word_extract_def]
+  \\ METIS_TAC [w2w_lt,  w2n_w2w_le,
+       WORD_BITS_LT, LESS_EQ_LESS_TRANS, LESS_TRANS]);
 
 val WORD_EXTRACT_ZERO = store_thm("WORD_EXTRACT_ZERO",
   `!h l w. h < l ==> ((h >< l) w = 0w)`,

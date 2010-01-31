@@ -1049,26 +1049,55 @@ val LESS_COR = REWRITE_RULE [DISJ_IMP_THM] (CONJ
   ((GEN_ALL o REWRITE_CONV [LESS_THM])
      ``(prim_rec$< ^m (arithmetic$NUMERAL (BIT2 ^n))) ==> ^P``));
 
+fun dest_strip t =
+let val (l,r) = strip_comb t in
+  (fst (dest_const l), r)
+end;
+
 local
-  fun w2n_of_known_size t =
-    let val x = wordsSyntax.dest_w2n t in
-      (is_known_word_size x andalso not (wordsSyntax.is_word_literal x))
-    end handle HOL_ERR _ => false
+  val word_size = fcpLib.index_to_num o wordsSyntax.dest_word_type o type_of
+
+  fun mk_bounds_thm t = let
+      val x = wordsSyntax.dest_w2n t
+      val size_rule = CONV_RULE (DEPTH_CONV SIZES_CONV)
+      fun lt_thm () = size_rule (Drule.ISPEC x w2n_lt)
+      val word_type = wordsSyntax.dest_word_type o type_of
+    in
+      if wordsSyntax.is_word_literal x then
+        raise ERR "mk_bounds_thm" "Term is word literal"
+      else
+        case dest_strip x
+        of ("word_extract", [h,l,w]) => let
+               open Arbnum
+               val hi = numSyntax.dest_numeral h
+               val li = numSyntax.dest_numeral l
+               val m = plus1 hi - li
+             in
+               if m < word_size x then
+                 WORD_EXTRACT_LT
+                   |> Drule.ISPECL [h,l,w]
+                   |> Thm.INST_TYPE [beta |-> word_type x]
+                   |> numLib.REDUCE_RULE
+               else
+                 lt_thm ()
+             end
+         | ("w2w", [w]) =>
+               if Arbnum.<(word_size w, word_size x) then
+                 w2w_lt
+                   |> Drule.ISPEC w
+                   |> Thm.INST_TYPE [beta |-> word_type x]
+                   |> size_rule
+               else
+                 lt_thm ()
+         | _ => lt_thm ()
+    end
 
   fun removeDuplicates l = let open Binaryset in
-     listItems (addList (empty compare, l))
+     listItems (addList (empty Term.compare, l))
   end
-
-  fun mk_bounds_thm t =
-    let val x = wordsSyntax.dest_w2n t in
-      if is_known_word_size x then
-        (CONV_RULE (DEPTH_CONV SIZES_CONV) o Drule.ISPEC x) w2n_lt
-      else
-        raise ERR "mk_bounds_thm" "Unknown size"
-    end
 in
   fun mk_bounds_thms t =
-  let val l = removeDuplicates (find_terms w2n_of_known_size t)
+  let val l = removeDuplicates (find_terms (Lib.can mk_bounds_thm) t)
   in
     if null l then
       TRUTH
@@ -1126,6 +1155,8 @@ local
   val DECIDE_CONV = EQT_INTRO o DECIDE
   fun EQ_CONV t = (if term_eq T t orelse term_eq F t then
                      ALL_CONV else NO_CONV) t
+  val trace_word_decide = ref 0
+  val _ = Feedback.register_trace ("word decide", trace_word_decide, 1)
 in
   fun WORD_BIT_EQ_CONV t =
         if is_eq t orelse wordsSyntax.is_index t then
@@ -1155,26 +1186,30 @@ in
             val t1 = rhs (concl thm1)
             val bnds = mk_bounds_thms t1
             val t2 = mk_imp (concl bnds, t1)
+            val _ = if 0 < !trace_word_decide then
+                      (print ("Trying to prove:\n");
+                       Parse.print_term t2;
+                       print "\n")
+                    else
+                      ()
             val thm2 = dp t2
             val conv = RAND_CONV (PURE_ONCE_REWRITE_CONV [GSYM thm1])
         in
           MP (CONV_RULE conv thm2) bnds
         end
-   fun WORD_DP dp tm =
+   fun WORD_DP pre_conv dp tm =
           let fun conv t =
                 if term_eq T t then
                   ALL_CONV t
-                else if is_forall t then
-                  STRIP_QUANT_CONV (EQT_INTRO o (WORD_DP_PROVE dp)) t
                 else
-                  (EQT_INTRO o WORD_DP_PROVE dp) t
+                  STRIP_QUANT_CONV (EQT_INTRO o (WORD_DP_PROVE dp)) t
           in
             EQT_ELIM
-              ((WORD_CONV THENC DEPTH_CONV (WORD_BIT_EQ_CONV THENC EQ_CONV)
-                 THENC DEPTH_CONV (conv THENC EQ_CONV)
-                 THENC REWRITE_CONV []) tm)
+              ((pre_conv THENC DEPTH_CONV (WORD_BIT_EQ_CONV THENC EQ_CONV)
+                         THENC DEPTH_CONV (conv THENC EQ_CONV)
+                         THENC REWRITE_CONV []) tm)
           end handle UNCHANGED => raise ERR "WORD_DP" "Failed to prove goal"
-   val WORD_DECIDE = WORD_DP DECIDE
+   val WORD_DECIDE = WORD_DP WORD_CONV DECIDE
 end;
 
 fun is_word_term tm = let open numSyntax in
@@ -1206,7 +1241,7 @@ fun MP_ASSUM_TAC tm (asl, w) =
 
 fun WORD_DECIDE_TAC (asl, w) =
   (EVERY (map MP_ASSUM_TAC (List.filter is_word_term asl)) THEN
-    CONV_TAC (EQT_INTRO o WORD_DP DECIDE)) (asl, w);
+    CONV_TAC (EQT_INTRO o WORD_DECIDE)) (asl, w);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1408,11 +1443,6 @@ val _ = Feedback.register_btrace("guess word lengths",
 
 fun guess_lengths ()      = set_trace "guess word lengths" 1;
 fun dont_guess_lengths () = set_trace "guess word lengths" 0;
-
-fun dest_strip t =
-let val (l,r) = strip_comb t in
-  (fst (dest_const l), r)
-end;
 
 fun t2s t = String.extract(Hol_pp.type_to_string t, 1, NONE);
 
