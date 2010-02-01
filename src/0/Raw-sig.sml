@@ -91,6 +91,7 @@ sig
     axioms      : (string * thm) list,
     definitions : (string * thm) list,
     theorems    : (string * thm) list,
+    thydata     : (string,LoadableThyData.t)Binarymap.dict,
     struct_ps   : (ppstream -> unit) option list}
   -> ppstream
   -> unit
@@ -140,6 +141,17 @@ sig
   val store_definition   : string * string list * witness * thm -> thm
   val store_type_definition : string * string * witness * thm -> thm
   val try_theory_extension : ('a->'b) -> 'a -> 'b
+
+  val segment_data : {thy: string, thydataty: string} ->
+                     LoadableThyData.t option
+
+  val write_data_update : {thy : string, thydataty : string,
+                           data : LoadableThyData.t} -> unit
+  val temp_encoded_update : {thy : string, thydataty : string,
+                             data : string} -> unit
+  val register_onload : (string -> unit) -> unit
+  val load_complete : string -> unit
+
 end
 
 

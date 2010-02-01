@@ -6,7 +6,7 @@ open simpLib listTheory;
 (*---------------------------------------------------------------------------
         For the simplifier.
  ---------------------------------------------------------------------------*)
-val LIST_ss = listTheory.list_rwts
+val LIST_ss = BasicProvers.thy_ssfrag "list"
 
  val list_rws = computeLib.add_thms
      [ APPEND,APPEND_NIL, FLAT, HD, TL, LENGTH, MAP, MAP2,

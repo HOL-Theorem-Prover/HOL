@@ -44,6 +44,25 @@ sig
   val export_theory      : unit -> unit
   val after_new_theory   : (string * string -> unit) -> unit
 
+(* -- and persistent data added to theories *)
+  val segment_data : {thy: string, thydataty: string} ->
+                     LoadableThyData.t option
+
+  val write_data_update : {thy : string, thydataty : string,
+                           data : LoadableThyData.t} -> unit
+    (* call in a session to record something for later -
+       updates segment data, and if the segment is the current one, will
+       eventually cause a call to temp_encoded_update to
+       appear in the theory file. *)
+
+  val temp_encoded_update : {thy : string, thydataty : string,
+                             data : string} -> unit
+    (* updates segment data using an encoded string *)
+
+(* Register function to be called when a theory loads *)
+  val register_onload : (string -> unit) -> unit
+  val load_complete : string -> unit
+
 (* Freshness information on HOL objects *)
 
   val uptodate_type      : hol_type -> bool

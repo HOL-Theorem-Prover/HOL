@@ -170,9 +170,18 @@ fun drop_Axkind (Axiom rth) = rth
  * Also lacks a field for the theory graph, which is held in Graph.          *
  *---------------------------------------------------------------------------*)
 
-type segment = {thid  : thyid,                                 (* unique id  *)
-                facts : (string * thmkind) list,    (* stored ax,def,and thm *)
-                adjoin       : thy_addon list}         (*  extras for export *)
+datatype thydata = Loaded of LoadableThyData.t
+                 | Pending of string list
+type ThyDataMap = (string,thydata)Binarymap.dict
+                  (* map from string identifying the "type" of the data,
+                     e.g., "simp", "mono", "cong", "grammar_update",
+                     "LaTeX map", to the data itself. *)
+val empty_datamap : ThyDataMap = Binarymap.mkDict String.compare
+
+type segment = {thid    : thyid,                               (* unique id  *)
+                facts   : (string * thmkind) list,  (* stored ax,def,and thm *)
+                thydata : ThyDataMap,                   (* extra theory data *)
+                adjoin  : thy_addon list}              (*  extras for export *)
 
 
 (*---------------------------------------------------------------------------*
@@ -183,7 +192,8 @@ type segment = {thid  : thyid,                                 (* unique id  *)
  * gets created (the file is only created on export).                        *
  *---------------------------------------------------------------------------*)
 
-fun fresh_segment s :segment = {thid=new_thyid s,  facts=[],  adjoin=[]};
+fun fresh_segment s :segment = {thid=new_thyid s,  facts=[],  adjoin=[],
+                               thydata = empty_datamap};
 
 
 local val CT = ref (fresh_segment "scratch")
@@ -268,12 +278,12 @@ local fun pluck1 x L =
          NONE => p::l
        | SOME ((_,f'),l') => p::l'
 in
-fun add_fact (th as (s,_)) {thid, facts,adjoin} =
-    {facts= overwrite th facts, thid=thid, adjoin=adjoin}
+fun add_fact (th as (s,_)) {thid, facts,adjoin,thydata} =
+    {facts= overwrite th facts, thid=thid, adjoin=adjoin,thydata=thydata}
 end;
 
-fun new_addon a {thid, facts, adjoin} =
-    {adjoin = a::adjoin, facts=facts, thid=thid};
+fun new_addon a {thid, facts, adjoin, thydata} =
+    {adjoin = a::adjoin, facts=facts, thid=thid, thydata=thydata};
 
 local fun plucky x L =
        let fun get [] A = NONE
@@ -282,12 +292,12 @@ local fun plucky x L =
        in get L []
        end
 in
-fun set_MLbind (s1,s2) (rcd as {thid, facts, adjoin}) =
+fun set_MLbind (s1,s2) (rcd as {thid, facts, adjoin, thydata}) =
     case plucky s1 facts of
       NONE => (WARN "set_MLbind" (Lib.quote s1^" not found in current theory");
                rcd)
     | SOME (X,(_,b),Y) =>
-      {facts=X@((s2,b)::Y), adjoin=adjoin,thid=thid}
+      {facts=X@((s2,b)::Y), adjoin=adjoin,thid=thid, thydata=thydata}
 end;
 
 (*---------------------------------------------------------------------------
@@ -304,8 +314,9 @@ fun del_type (name,thyname) thy =
 fun del_const (name,thyname) thy =
     (Term.prim_delete_const {Thy = thyname, Name = name} ; thy)
 
-fun del_binding name {thid,facts,adjoin} =
-  {facts = filter (fn (s, _) => not(s=name)) facts, thid=thid, adjoin=adjoin};
+fun del_binding name {thid,facts,adjoin,thydata} =
+  {facts = filter (fn (s, _) => not(s=name)) facts, thid=thid, adjoin=adjoin,
+   thydata = thydata};
 
 (*---------------------------------------------------------------------------
    Clean out the segment. Note: this clears out the segment, and the
@@ -315,7 +326,7 @@ fun del_binding name {thid,facts,adjoin} =
 
 fun zap_segment s (thy : segment) =
     (Type.del_segment s; Term.del_segment s;
-     {adjoin=[], facts=[],thid= #thid thy})
+     {adjoin=[], facts=[],thid= #thid thy, thydata = empty_datamap})
 
 (*---------------------------------------------------------------------------
        Wrappers for functions that alter the segment.
@@ -411,26 +422,22 @@ and uptodate_axioms [] = true
       Lib.all (uptodate_term o Thm.concl o Lib.C Lib.assoc axs) rlist
     end handle HOL_ERR _ => false
 
-fun scrub_ax {thid,facts,adjoin} =
+fun scrub_ax {thid,facts,adjoin,thydata} =
    let fun check (_, Thm _ ) = true
          | check (_, Defn _) = true
          | check (_, Axiom(_,th)) = uptodate_term (Thm.concl th)
    in
-      {thid=thid, adjoin=adjoin, facts=Lib.gather check facts}
+      {thid=thid, adjoin=adjoin, facts=Lib.gather check facts, thydata=thydata}
    end
 
-fun scrub_thms {thid,facts,adjoin} =
+fun scrub_thms {thid,facts,adjoin, thydata} =
    let fun check (_, Axiom _) = true
          | check (_, Thm th ) = uptodate_thm th
          | check (_, Defn th) = uptodate_thm th
-   in {thid=thid, adjoin=adjoin, facts=Lib.gather check facts}
+   in {thid=thid, adjoin=adjoin, facts=Lib.gather check facts, thydata=thydata}
    end
 
-fun scrub () = let
-  val {thid,facts,adjoin} = scrub_thms (scrub_ax (theCT()))
-in
-  makeCT {thid=thid,facts=facts, adjoin=adjoin}
-end
+fun scrub () = makeCT (scrub_thms (scrub_ax (theCT())))
 
 fun scrubCT() = (scrub(); theCT());
 
@@ -579,7 +586,7 @@ local
   end
 in
 fun export_theory () = let
-  val {thid,facts,adjoin} = scrubCT()
+  val {thid,facts,adjoin,thydata} = scrubCT()
   val concat = String.concat
   val thyname = thyid_name thid
   val name = CTname()^"Theory"
@@ -591,6 +598,14 @@ fun export_theory () = let
                  definitions = D,
                  theorems = T,
                  sig_ps = sig_ps}
+  fun mungethydata dmap = let
+    fun foldthis (k,v,acc) =
+        case v of
+          Loaded t => Binarymap.insert(acc,k,t)
+        | _ => acc
+  in
+    Binarymap.foldl foldthis (Binarymap.mkDict String.compare) dmap
+  end
   val structthry =
       {theory = dest_thyid thid,
        parents = map dest_thyid (Graph.fringe()),
@@ -599,7 +614,8 @@ fun export_theory () = let
        axioms = A,
        definitions = D,
        theorems = T,
-       struct_ps = struct_ps}
+       struct_ps = struct_ps,
+       thydata = mungethydata thydata}
  in
    case filter (not o Lexis.ok_sml_identifier) (map fst (A@D@T)) of
      [] =>
@@ -631,6 +647,100 @@ fun export_theory () = let
 end
 end;
 
+(* ----------------------------------------------------------------------
+    Theory data functions
+
+    In addition to the data in the current segment, we want to track the data
+    associated with all previous segments.  We do this with another reference
+    variable (yuck).
+   ---------------------------------------------------------------------- *)
+
+val allthydata = ref (Binarymap.mkDict String.compare :
+                      (string, ThyDataMap) Binarymap.dict)
+
+fun ThyMap() = let
+  val {thydata,thid,...} = theCT()
+  val nm = thyid_name thid
+in
+  Binarymap.insert(!allthydata, nm, thydata)
+end
+
+fun segment_data {thy,thydataty} =
+    case Binarymap.peek(ThyMap(), thy) of
+      NONE => NONE
+    | SOME dmap => let
+      in
+        case Binarymap.peek(dmap, thydataty) of
+          NONE => NONE
+        | SOME (Loaded value) => SOME value
+        | SOME (Pending _) => raise ERR "segment_data"
+                                        "Can't interpret pending loads"
+      end
+
+fun write_data_update {thy,thydataty,data} = let
+  val {thydata,thid,adjoin,facts} = theCT()
+  open LoadableThyData Binarymap
+  fun updatemap inmap = let
+    val newdata =
+        case peek(inmap, thydataty) of
+          NONE => Loaded data
+        | SOME (Loaded t) => Loaded (merge(t, data))
+        | SOME (Pending ds) => let
+            fun foldthis (d, acc) = merge(acc, read_update acc d)
+          in
+            Loaded (List.foldl foldthis data ds)
+          end
+  in
+    insert(inmap,thydataty,newdata)
+  end
+in
+  if thy = thyid_name thid then
+    makeCT {thydata = updatemap thydata, thid=thid, adjoin=adjoin, facts=facts}
+  else let
+      val newsubmap = case peek (!allthydata, thy) of
+                        NONE => updatemap empty_datamap
+                      | SOME dm => updatemap dm
+    in
+      allthydata := insert(!allthydata, thy, newsubmap)
+    end
+end
+
+fun temp_encoded_update {thy, thydataty, data} = let
+  val {thydata, thid, adjoin, facts} = theCT()
+  open LoadableThyData Binarymap
+  fun updatemap inmap = let
+    val newdata =
+        case peek(inmap, thydataty) of
+            NONE => Pending [data]
+          | SOME (Loaded t) => Loaded (merge(t, read_update t data))
+          | SOME (Pending ds) => Pending (data::ds)
+    in
+      insert(inmap, thydataty, newdata)
+    end
+in
+  if thy = thyid_name thid then
+    makeCT {thydata = updatemap thydata, thid=thid, facts=facts, adjoin=adjoin}
+  else let
+      val newsubmap =
+          case peek (!allthydata, thy) of
+            NONE => updatemap empty_datamap
+          | SOME dm => updatemap dm
+    in
+      allthydata := insert(!allthydata, thy, newsubmap)
+    end
+end
+
+
+(* ----------------------------------------------------------------------
+    "on load" stuff
+   ---------------------------------------------------------------------- *)
+
+val onloadfns = ref ([] : (string -> unit) list)
+fun register_onload f = (onloadfns := !onloadfns @ [f])
+
+fun load_complete thyname = List.app (fn f => f thyname) (!onloadfns)
+
+
 (*---------------------------------------------------------------------------*
  *    Allocate a new theory segment over an existing one. After              *
  *    that, initialize any registered packages. A package registers          *
@@ -661,30 +771,27 @@ end;
 
 
 fun new_theory str =
-  if not(Lexis.ok_identifier str)
-  then raise ERR "new_theory"
-         ("proposed theory name "^Lib.quote str^" is not an identifier")
-  else
-  let val thy as {thid, facts, adjoin} = theCT()
-      val thyname = thyid_name thid
-      fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
-                        makeCT(fresh_segment str); initialize thyname)
-      val _ = new_theory_time := Timer.checkCPUTimer Globals.hol_clock
-  in
-   if str=thyname
-      then (HOL_MESG("Restarting theory "^Lib.quote str);
-            zapCT str; initialize thyname)
-   else
-   if mem str (ancestry thyname)
-      then raise ERR"new_theory" ("theory: "^Lib.quote str^" already exists.")
-   else
-   if thyname="scratch" andalso empty_segment thy
-      then mk_thy()
-   else
-    (export_theory ();
-     Graph.add (thid, Graph.fringe()); mk_thy ()
-    )
-  end;
+    if not(Lexis.ok_identifier str) then
+      raise ERR "new_theory"
+                ("proposed theory name "^Lib.quote str^" is not an identifier")
+    else let
+        val thy as {thid, ...} = theCT()
+        val thyname = thyid_name thid
+        fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
+                         makeCT(fresh_segment str); initialize thyname)
+        val _ = new_theory_time := Timer.checkCPUTimer Globals.hol_clock
+      in
+        if str=thyname then
+          (HOL_MESG("Restarting theory "^Lib.quote str);
+           zapCT str; initialize thyname)
+        else if mem str (ancestry thyname) then
+          raise ERR"new_theory" ("theory: "^Lib.quote str^" already exists.")
+        else if thyname="scratch" andalso empty_segment thy then
+          mk_thy()
+        else
+          (export_theory ();
+           Graph.add (thid, Graph.fringe()); mk_thy ())
+      end
 
 
 (* ----------------------------------------------------------------------

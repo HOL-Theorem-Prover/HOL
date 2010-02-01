@@ -25,6 +25,7 @@ sig
   val SRW_TAC         : simpLib.ssfrag list -> thm list -> tactic
   val augment_srw_ss  : simpLib.ssfrag list -> unit
   val export_rewrites : string list -> unit
+  val thy_ssfrag      : string -> simpLib.ssfrag
 
   (* LET manoeuvres *)
   val LET_ELIM_TAC    : tactic
