@@ -8,7 +8,7 @@ type t = { value : ut,
            merge : ut * ut -> ut}
 
 
-fun make {merge=m, read_update, write_update} = let
+fun 'a make {merge=m, read_update, write_update} = let
   val (mk : 'a -> ut,dest) = UniversalType.embed()
   fun vdest v = valOf (dest v)
   val read = mk o read_update
