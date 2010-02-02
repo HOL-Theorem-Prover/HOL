@@ -21,6 +21,7 @@ iab .? .∃
 iab IN ∈
 iab NOTIN ∉
 iab UNION ∪
+iab SUBSET ⊆
 set iskeyword+=!,<,=,>,~
 fu! HOLUnab ()
   s/∧/\/\\/eg
@@ -37,4 +38,5 @@ fu! HOLUnab ()
   s/∈/IN/eg
   s/∉/NOTIN/eg
   s/∪/UNION/eg
+  s/⊆/SUBSET/eg
 endf
