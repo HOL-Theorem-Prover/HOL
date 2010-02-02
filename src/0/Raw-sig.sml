@@ -100,57 +100,16 @@ end
 
 signature RawTheory =
 sig
-  type hol_type = KernelTypes.hol_type
-  type term     = KernelTypes.term
-  type thm      = KernelTypes.thm
-  type witness  = KernelTypes.witness
-  type ppstream = Portable.ppstream
-  type thy_addon = {sig_ps    : (ppstream -> unit) option,
-                    struct_ps : (ppstream -> unit) option}
-  type num = Arbnum.num
 
-  val new_type       : string * int -> unit
-  val new_constant   : string * hol_type -> unit
-  val new_axiom      : string * term -> thm
-  val save_thm       : string * thm -> thm
-  val delete_type    : string -> unit
-  val delete_const   : string -> unit
-  val delete_binding : string -> unit
-  val current_theory : unit -> string
-  val stamp          : string -> Time.time
-  val parents        : string -> string list
-  val ancestry       : string -> string list
-  val types          : string -> (string * int) list
-  val constants      : string -> term list
-  val current_axioms : unit -> (string * thm) list
-  val current_definitions : unit -> (string * thm) list
-  val current_theorems : unit -> (string * thm) list
-  val new_theory       : string -> unit
-  val after_new_theory : (string * string -> unit) -> unit
-  val adjoin_to_theory : thy_addon -> unit
-  val export_theory    : unit -> unit
-  val pp_thm           : (ppstream -> thm -> unit) ref
-  val link_parents     : string*num*num -> (string*num*num)list -> unit
-  val incorporate_types  : string -> (string*int) list -> unit
+  include FinalTheory
+          where type hol_type = KernelTypes.hol_type
+            and type term     = KernelTypes.term
+            and type thm      = KernelTypes.thm
+  type witness  = KernelTypes.witness
+
   val incorporate_consts : string -> (string*hol_type)list -> unit
-  val uptodate_type      : hol_type -> bool
-  val uptodate_term      : term -> bool
-  val uptodate_thm       : thm -> bool
-  val scrub              : unit -> unit
-  val set_MLname         : string -> string -> unit
   val store_definition   : string * string list * witness * thm -> thm
   val store_type_definition : string * string * witness * thm -> thm
-  val try_theory_extension : ('a->'b) -> 'a -> 'b
-
-  val segment_data : {thy: string, thydataty: string} ->
-                     LoadableThyData.t option
-
-  val write_data_update : {thy : string, thydataty : string,
-                           data : LoadableThyData.t} -> unit
-  val temp_encoded_update : {thy : string, thydataty : string,
-                             data : string} -> unit
-  val register_onload : (string -> unit) -> unit
-  val load_complete : string -> unit
 
 end
 

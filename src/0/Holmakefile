@@ -13,8 +13,8 @@ PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
 COUNT_UID = $(dprot $(SIGOBJ)/Count.ui)
 HOLSET_UID = $(dprot $(SIGOBJ)/HOLset.ui)
 
-Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID)
-	HOLMOSMLC -c -toplevel Raw-sig.sml
+Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID) $(FTHEORY_UID)
+	HOLMOSMLC -c -toplevel $(FTHEORY_UI) Raw-sig.sml
 
 Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo $(COUNT_UID) $(HOLSET_UID) \
         $(dprot $(SIGOBJ)/Susp.ui)
