@@ -92,7 +92,7 @@ fu! HOLSendQuiet()
 endf
 
 fu! HOLGoal()
-  silent normal pG$
+  silent keepjumps normal pG$
   keepjumps normal G$a)
   while search(',\_s*)\%$','bW')
     silent keepjumps normal vG$2h"_dG$
@@ -105,7 +105,7 @@ let s:stripEnd   = '(\|['
 let s:stripBoth  = ',\|THEN[1L]\?\|<<\|>>\|++\|\\\\'
 
 fu! HOLExpand()
-  silent normal pgg0
+  silent keepjumps normal pgg0
   while search('\%^\_s*\('.s:stripBoth.'\|'.s:stripStart.'\)','cWe')
     silent keepjumps normal vgg0"_d
   endw
