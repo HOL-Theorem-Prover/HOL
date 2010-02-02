@@ -95,23 +95,25 @@ fu! HOLGoal()
   silent keepjumps normal pG$
   keepjumps normal G$a)
   while search(',\_s*)\%$','bW')
-    silent keepjumps normal vG$2h"_dG$
+    silent keepjumps normal vG$"_dG$a)
   endw
   keepjumps normal gg0ig(
 endf
 
-let s:stripStart = ')\|]\|['
-let s:stripEnd   = '(\|['
-let s:stripBoth  = ',\|THEN[1L]\?\|<<\|>>\|++\|\\\\'
+let s:stripStart     = ')\|\]\|\['
+let s:stripEnd       = '(\|\['
+let s:stripBothWords = 'THEN[1L]\?\|by'
+let s:stripBoth      = ',\|<<\|>>\|++\|\\\\'
+let s:delim          = '\_[[:space:]()]'
 
 fu! HOLExpand()
   silent keepjumps normal pgg0
-  while search('\%^\_s*\('.s:stripBoth.'\|'.s:stripStart.'\)','cWe')
+  while search('\%^\_s*\%(\%('.s:stripBoth.'\|'.s:stripStart.'\)\|\%('.s:stripBothWords.'\)\ze'.s:delim.'\)','cWe')
     silent keepjumps normal vgg0"_d
   endw
   keepjumps normal G$a)
-  while search('\('.s:stripBoth.'\|'.s:stripEnd.'\)\_s*)\%$','bW')
-    silent keepjumps normal vG$2h"_dG$
+  while search('\%(\%('.s:stripBoth.'\|'.s:stripEnd.'\)\|'.s:delim.'\zs\%('.s:stripBothWords.'\)\)\_s*)\%$','bW')
+    silent keepjumps normal vG$"_dG$a)
   endw
   keepjumps normal gg0ie(
 endf
@@ -119,7 +121,10 @@ endf
 fu! HOLSubgoal()
   keepjumps normal ie(
   silent normal p
-  keepjumps normal Goby ALL_TAC);
+  if search(s:delim.'by'.s:delim.'\_.*','cW')
+    silent keepjumps normal vG$"_d
+  en
+  silent keepjumps normal G$a by ALL_TAC)
 endf
 
 fu! HOLF(f)

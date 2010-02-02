@@ -67,14 +67,16 @@ hc          Interrupt execution (of whichever of the things sent is running).
 
 === Automatic stripping ===
 
-hL and hl don't "load" these words: local open in end
+hL and hl don't "load" these words: local open in end.
 
-hg strips commas from the end of the region
+hg strips commas from the end of the region.
+
+hS strips everything including and after the first "by" in the region, if any.
 
 he strips these tokens from the ends of the region
   start: ) ] [
   end:   ( [
-  both:  , THEN THENL THEN1 << >> ++ \\
+  both:  , THEN THENL THEN1 << >> ++ \\ by
 
 == Unicode ==
 
