@@ -11,3 +11,5 @@ FinalTerm-sig.uo: FinalTerm-sig.sml HOLset.ui Lib.uo
 FinalType-sig.uo: FinalType-sig.sml Lib.ui
 	$(HOLMOSMLC) -c -toplevel $<
 
+FinalTheory-sig.uo: FinalTheory-sig.sml Lib.uo $(PORTABLED)
+	$(HOLMOSMLC) -c -toplevel $<
