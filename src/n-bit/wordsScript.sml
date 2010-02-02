@@ -1532,36 +1532,6 @@ val WORD_EXTRACT_OVER_BITWISE = store_thm("WORD_EXTRACT_OVER_BITWISE",
   SIMP_TAC std_ss
     [word_extract_def, GSYM WORD_BITS_OVER_BITWISE, WORD_w2w_OVER_BITWISE]);
 
-val WORD_w2w_OVER_ADD = Q.store_thm("WORD_w2w_OVER_ADD",
-  `!a b:'a word.
-     (w2w (a + b) = (dimindex(:'a) - 1 -- 0) (w2w a + w2w b))`,
-  REPEAT STRIP_TAC
-    \\ Cases_on `a:'a word`
-    \\ Cases_on `b:'a word`
-    \\ `n < 2 ** SUC (dimindex (:'a) - 1) /\ n' < 2 ** SUC (dimindex (:'a) - 1)`
-    by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
-         DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
-    \\ SRW_TAC [ARITH_ss] [WORD_w2w_EXTRACT, word_extract_n2w, word_bits_n2w,
-         MOD_DIMINDEX, BITS_COMP_THM2, MIN_DEF, BITS_ZEROL, WORD_BITS_EXTRACT]
-    \\ SRW_TAC [ARITH_ss] [word_add_n2w, word_extract_n2w,  MOD_DIMINDEX,
-         BITS_COMP_THM2]
-    \\ SRW_TAC [ARITH_ss] [MIN_DEF]);
-
-val WORD_w2w_OVER_MUL = Q.store_thm("WORD_w2w_OVER_MUL",
-  `!a b:'a word.
-     (w2w (a * b) = (dimindex(:'a) - 1 -- 0) (w2w a * w2w b))`,
-  REPEAT STRIP_TAC
-    \\ Cases_on `a:'a word`
-    \\ Cases_on `b:'a word`
-    \\ `n < 2 ** SUC (dimindex (:'a) - 1) /\ n' < 2 ** SUC (dimindex (:'a) - 1)`
-    by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
-         DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
-    \\ SRW_TAC [ARITH_ss] [WORD_w2w_EXTRACT, word_extract_n2w, word_bits_n2w,
-         MOD_DIMINDEX, BITS_COMP_THM2, MIN_DEF, BITS_ZEROL, WORD_BITS_EXTRACT]
-    \\ SRW_TAC [ARITH_ss] [word_mul_n2w, word_extract_n2w,  MOD_DIMINDEX,
-         BITS_COMP_THM2]
-    \\ SRW_TAC [ARITH_ss] [MIN_DEF]);
-
 val EXTRACT_OVER_ADD_lem = Q.prove(
    `!h1 h2 a b.
        h1 <= h2 ==>
@@ -1570,21 +1540,72 @@ val EXTRACT_OVER_ADD_lem = Q.prove(
     \\ Q.SPEC_THEN `h1` (fn thm => ONCE_REWRITE_TAC [GSYM thm]) BITS_SUM3
     \\ SRW_TAC [ARITH_ss] [BITS_COMP_THM2, MIN_DEF]);
 
+val EXTRACT_OVER_MUL_lem = Q.prove(
+   `!h1 h2 a b.
+       h1 <= h2 ==>
+       (BITS h1 0 (BITS h2 0 a * BITS h2 0 b) = BITS h1 0 (a * b))`,
+  REPEAT STRIP_TAC
+    \\ Q.SPEC_THEN `h1` (fn thm => ONCE_REWRITE_TAC [GSYM thm]) BITS_MUL
+    \\ SRW_TAC [ARITH_ss] [BITS_COMP_THM2, MIN_DEF]);
+
+val tac =
+  REPEAT STRIP_TAC
+  \\ Cases_on `a:'a word`
+  \\ Cases_on `b:'a word`
+  \\ `n < 2 ** SUC (dimindex (:'a) - 1) /\ n' < 2 ** SUC (dimindex (:'a) - 1)`
+  by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
+       DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
+  \\ SRW_TAC [ARITH_ss] [WORD_w2w_EXTRACT, word_extract_n2w, word_bits_n2w,
+       MOD_DIMINDEX, BITS_COMP_THM2, MIN_DEF, BITS_ZEROL, WORD_BITS_EXTRACT]
+  \\ SRW_TAC [ARITH_ss] [word_add_n2w, word_mul_n2w, word_extract_n2w,
+       MOD_DIMINDEX, BITS_COMP_THM2]
+  \\ SRW_TAC [ARITH_ss] [MIN_DEF, EXTRACT_OVER_ADD_lem, EXTRACT_OVER_MUL_lem]
+
+val WORD_w2w_OVER_ADD = Q.store_thm("WORD_w2w_OVER_ADD",
+  `!a b:'a word. (w2w (a + b) = (dimindex(:'a) - 1 -- 0) (w2w a + w2w b))`,
+  tac);
+
+val WORD_w2w_OVER_MUL = Q.store_thm("WORD_w2w_OVER_MUL",
+  `!a b:'a word. (w2w (a * b) = (dimindex(:'a) - 1 -- 0) (w2w a * w2w b))`,
+  tac);
+
 val WORD_EXTRACT_OVER_ADD = Q.store_thm("WORD_EXTRACT_OVER_ADD",
   `!a b:'a word h.
      dimindex(:'b) - 1 <= h /\ dimindex(:'b) <= dimindex(:'a) ==>
      ((h >< 0) (a + b) = (h >< 0) a + (h >< 0) b : 'b word)`,
-  REPEAT STRIP_TAC
-    \\ Cases_on `a:'a word`
-    \\ Cases_on `b:'a word`
-    \\ `n < 2 ** SUC (dimindex (:'a) - 1) /\ n' < 2 ** SUC (dimindex (:'a) - 1)`
-    by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
-         DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
-    \\ SRW_TAC [ARITH_ss] [word_extract_n2w, MOD_DIMINDEX, BITS_COMP_THM2,
-         MIN_DEF, BITS_ZEROL]
-    \\ SRW_TAC [ARITH_ss] [word_add_n2w, word_extract_n2w, MOD_DIMINDEX,
-         BITS_COMP_THM2]
-    \\ SRW_TAC [ARITH_ss] [MIN_DEF, EXTRACT_OVER_ADD_lem]);
+  tac);
+
+val WORD_EXTRACT_OVER_MUL = Q.store_thm("WORD_EXTRACT_OVER_MUL",
+  `!a b:'a word h.
+     dimindex(:'b) - 1 <= h /\ dimindex(:'b) <= dimindex(:'a) ==>
+     ((h >< 0) (a * b) = (h >< 0) a * (h >< 0) b : 'b word)`,
+  tac);
+
+val WORD_EXTRACT_OVER_ADD2 = Q.store_thm("WORD_EXTRACT_OVER_ADD2",
+  `!a b:'a word h.
+     h < dimindex(:'a) ==>
+       ((h >< 0) (((h >< 0) a + (h >< 0) b) : 'b word) =
+        (h >< 0) (a + b) :'b word)`,
+  tac \\ `dimindex(:'a) - 1 = h` by DECIDE_TAC \\ SRW_TAC [] []);
+
+val WORD_EXTRACT_OVER_MUL2 = Q.store_thm("WORD_EXTRACT_OVER_MUL2",
+  `!a b:'a word h.
+     h < dimindex(:'a) ==>
+       ((h >< 0) (((h >< 0) a * (h >< 0) b) :'b word) =
+        (h >< 0) (a * b) :'b word)`,
+  tac \\ `dimindex(:'a) - 1 = h` by DECIDE_TAC \\ SRW_TAC [] []);
+
+val WORD_EXTRACT_ID = Q.store_thm("WORD_EXTRACT_ID",
+  `!w:'a word.  w2n w < 2 ** SUC h ==> ((h >< 0) w = w)`,
+  Cases
+  \\ `n < 2 ** SUC (dimindex (:'a) - 1)`
+  by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
+       DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
+  \\ SRW_TAC [] [w2w_n2w, word_extract_n2w, word_bits_n2w,
+       BITS_COMP_THM2, MOD_DIMINDEX, MIN_DEF, BITS_ZEROL]
+  \\ FULL_SIMP_TAC arith_ss [BITS_ZEROL]
+  \\ METIS_TAC
+       [prim_recTheory.LESS_SUC_REFL, TWOEXP_MONO, LESS_TRANS, BITS_ZEROL]);
 
 val BIT_SET_lem_ = prove(
   `!i j n. i < j ==> ~(i IN BIT_SET j n)`,

@@ -1379,7 +1379,7 @@ in
             begin_block pps INCONSISTENT 0;
             delim 200 (fn () => str "(");
             trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
-            sys (prec,lg,rg) (d - 1) a;
+            sys (prec,prec,prec) (d - 1) a;
             delim 200 (fn () => str ")");
             end_block pps
           end
@@ -1388,7 +1388,7 @@ in
             begin_block pps INCONSISTENT 0;
             delim 200 (fn () => str "(");
             trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
-            sys (prec,lg,rg) (d - 1) a;
+            sys (prec,prec,prec) (d - 1) a;
             delim 200 (fn () => str ")");
             end_block pps
           end
@@ -1397,8 +1397,8 @@ in
             begin_block pps INCONSISTENT 0;
             delim 200 (fn () => str "(");
             trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
-            sys (prec,lg,rg) (d - 1) a; brk (1,0);
-            sys (prec,lg,rg) (d - 1) b;
+            sys (prec,prec,prec) (d - 1) a; brk (1,0);
+            sys (prec,prec,prec) (d - 1) b;
             delim 200 (fn () => str ")");
             end_block pps
           end
@@ -1408,13 +1408,13 @@ in
             delim 200 (fn () => str "(");
             str "(";
             str "(";
-            sys (prec,Top,prec) (d - 1) h; brk(1,2);
+            sys (prec,prec,prec) (d - 1) h; brk(1,2);
             str "><"; brk (1,2);
-            sys (prec,prec,Top) (d - 1) l;
+            sys (prec,prec,prec) (d - 1) l;
             str ")"; brk (1,2);
             pp_type pps (type_of (list_mk_comb (f,[h,l])));
             str ")"; brk (1,2);
-            sys (prec,lg,rg) (d - 1) a;
+            sys (prec,prec,prec) (d - 1) a;
             delim 200 (fn () => str ")");
             end_block pps
           end
