@@ -97,6 +97,18 @@ fu! HOLFSend(f)
   keepjumps normal Go);
 endf
 
+fu! HOLExpand()
+  silent normal pgg0
+  while search('\%^\_s*\(THEN1\?\|)\)\zs','cW')
+    silent keepjumps normal vgg0"_d
+  endw
+  keepjumps normal G$a)
+  while search('\(THEN1\?\|(\)\_s*)\%$','bW')
+    silent keepjumps normal vG$2h"_dG$
+  endw
+  keepjumps normal gg0ie(
+endf
+
 fu! HOLSubgoal()
   keepjumps normal ie(
   silent normal p
@@ -137,18 +149,18 @@ fu! HOLINT()
   call HOLCRestore()
 endf
 
-vn <silent> Hl :call YankThenHOLCall(function("HOLLoad"),[])<CR>
-vn <silent> HL :call YankThenHOLCall(function("HOLLoadSendQuiet"),[])<CR>
-vn <silent> HS :call YankThenHOLCall(function("HOLSend"),[])<CR>
-vn <silent> HU :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR>
-vn <silent> He :call YankThenHOLCall(function("HOLFSend"),["e"])<CR>
-vn <silent> Hg :call YankThenHOLCall(function("HOLFSend"),["g"])<CR>
-vn <silent> Hs :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
-nn <silent> Hb :<C-U>call HOLRepeat("b();")<CR>
-nn <silent> Hd :<C-U>call HOLRepeat("drop();")<CR>
-nn <silent> Hp :call HOLCall(function("HOLF"),["p();"])<CR>
-nn <silent> HR :call HOLCall(function("HOLF"),["restart();"])<CR>
-nn <silent> Hr :<C-U>call HOLRotate()<CR>
-nn <silent> Hc :call HOLINT()<CR>
+vn <silent> hl :call YankThenHOLCall(function("HOLLoadSendQuiet"),[])<CR>
+vn <silent> hL :call YankThenHOLCall(function("HOLLoad"),[])<CR>
+vn <silent> hs :call YankThenHOLCall(function("HOLSend"),[])<CR>
+vn <silent> hu :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR>
+vn <silent> hg :call YankThenHOLCall(function("HOLFSend"),["g"])<CR>
+vn <silent> he :call YankThenHOLCall(function("HOLExpand"),[])<CR>
+vn <silent> hS :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
+nn <silent> hR :<C-U>call HOLRotate()<CR>
+nn <silent> hb :<C-U>call HOLRepeat("b();")<CR>
+nn <silent> hd :<C-U>call HOLRepeat("drop();")<CR>
+nn <silent> hp :call HOLCall(function("HOLF"),["p();"])<CR>
+nn <silent> hr :call HOLCall(function("HOLF"),["restart();"])<CR>
+nn <silent> hc :call HOLINT()<CR>
 
 let b:did_hol = 1
