@@ -45,26 +45,34 @@ You must make sure you turn :filetype on (e.g. by putting "filetype on" in your 
 
 The following commands work in visual mode (only):
 
-HS          Send region to HOL.
-HU          Send region to HOL in quiet mode.
+hs          Send region to HOL.
+hu          Send region to HOL in quiet mode.
 
-Hl          Send region to be split into words and each word "load"ed.
-HL          Same as above, but also send the region as a command afterwards.
-            In both cases keywords like "open", "local", and "in" aren't loaded.
+hL          Send region to be split into words and each word "load"ed.
+hl          Same as above, but also send the region as a command afterwards.
 
-Hg          Send region (should be a quotation) to g, to start a new proof.
-He          Send region (should be a tactic) to e, to expand a tactic.
-Hs          Send region (should be a quotation) as a new subgoal.
+hg          Send region (should be a quotation) to g, to start a new proof.
+he          Send region (should be a tactic) to e, to expand a tactic.
+hS          Send region (should be a quotation) as a new subgoal.
 
 The following commands work in normal mode (only):
 
-<count>Hb   Back up proof <count> times (by calling b) (default 1).
-<count>Hd   Drop <count> proof attempts (by calling d) (default 1).
-Hp          Print the proof manager status (by calling p).
-HR          Restart the current proof (by calling restart).
-<count>Hr   Rotate subgoals <count> times (default 1).
+<count>hR   Rotate subgoals <count> times (default 1).
+<count>hb   Back up proof <count> times (by calling b) (default 1).
+<count>hd   Drop <count> proof attempts (by calling d) (default 1).
+hp          Print the proof manager status (by calling p).
+hr          Restart the current proof (by calling restart).
 
-Hc          Interrupt execution (of whichever of the things sent is running).
+hc          Interrupt execution (of whichever of the things sent is running).
+
+=== Automatic stripping ===
+
+hL and hl don't "load" these words: local open in end
+
+he strips these tokens from the ends of the region
+  start: ) [ ]
+  end:   ( [
+  both:  , THEN THENL THEN1
 
 == Unicode ==
 

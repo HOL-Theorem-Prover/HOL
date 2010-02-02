@@ -99,11 +99,11 @@ endf
 
 fu! HOLExpand()
   silent normal pgg0
-  while search('\%^\_s*\(THEN1\?\|)\)\zs','cW')
+  while search('\%^\_s*\(THEN[1L]\?\|)\|]\|[\|,\)','cWe')
     silent keepjumps normal vgg0"_d
   endw
   keepjumps normal G$a)
-  while search('\(THEN1\?\|(\)\_s*)\%$','bW')
+  while search('\(THEN[1L]\?\|(\|[\|,\)\_s*)\%$','bW')
     silent keepjumps normal vG$2h"_dG$
   endw
   keepjumps normal gg0ie(
