@@ -255,14 +255,14 @@ fun pr_thydata thyname thymap = let
                           add_string ("\""^String.toString v^"\"" ^
                                       (if commap then "," else "")))
   fun one_entry (s, data) =
-      (add_string "val _ = Theory.temp_encoded_update {" >>
+      (add_string "val _ = Theory.LoadableThyData.temp_encoded_update {" >>
        add_break(0,2) >>
        block CONSISTENT 0
          (keyval true ("thy", thyname) >>
           add_break(1,0) >>
           keyval true ("thydataty", s) >>
           add_break(1,0) >>
-          keyval false ("data", LoadableThyData.write_update data)) >>
+          keyval false ("data", data)) >>
        add_break(0,0) >>
        add_string "}" >>
        add_newline)

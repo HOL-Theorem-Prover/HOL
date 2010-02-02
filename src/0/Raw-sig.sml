@@ -66,35 +66,9 @@ end;
 
 signature RawTheoryPP =
 sig
- type thm      = KernelTypes.thm
- type hol_type = KernelTypes.hol_type
- type ppstream = Portable.ppstream
- type num = Arbnum.num
 
- val pp_type : string -> string -> ppstream -> hol_type -> unit
- val pp_sig :
-   (ppstream -> thm -> unit)
-    -> {name        : string,
-        parents     : string list,
-        axioms      : (string * thm) list,
-        definitions : (string * thm) list,
-        theorems    : (string * thm) list,
-        sig_ps      : (ppstream -> unit) option list}
-    -> ppstream
-    -> unit
-
- val pp_struct :
-   {theory      : string*num*num,
-    parents     : (string*num*num) list,
-    types       : (string*int) list,
-    constants   : (string*hol_type) list,
-    axioms      : (string * thm) list,
-    definitions : (string * thm) list,
-    theorems    : (string * thm) list,
-    thydata     : (string,LoadableThyData.t)Binarymap.dict,
-    struct_ps   : (ppstream -> unit) option list}
-  -> ppstream
-  -> unit
+  include TheoryPP where type thm = KernelTypes.thm
+                     and type hol_type = KernelTypes.hol_type
 end
 
 

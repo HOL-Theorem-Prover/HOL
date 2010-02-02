@@ -45,19 +45,21 @@ sig
   val after_new_theory   : (string * string -> unit) -> unit
 
 (* -- and persistent data added to theories *)
-  val segment_data : {thy: string, thydataty: string} ->
-                     LoadableThyData.t option
-
-  val write_data_update : {thy : string, thydataty : string,
-                           data : LoadableThyData.t} -> unit
+  structure LoadableThyData : sig
+    type t
+    val new : {thydataty : string, merge : 'a * 'a -> 'a,
+               read : string -> 'a option, write : 'a -> string} ->
+              ('a -> t) * (t -> 'a option)
+    val segment_data : {thy: string, thydataty: string} -> t option
+    val write_data_update : {thydataty : string, data : t} -> unit
     (* call in a session to record something for later -
-       updates segment data, and if the segment is the current one, will
-       eventually cause a call to temp_encoded_update to
-       appear in the theory file. *)
+       updates segment data, and  will eventually cause a call to
+       temp_encoded_update to appear in the theory file. *)
 
-  val temp_encoded_update : {thy : string, thydataty : string,
-                             data : string} -> unit
+    val temp_encoded_update : {thy : string, thydataty : string,
+                               data : string} -> unit
     (* updates segment data using an encoded string *)
+  end
 
 (* Register function to be called when a theory loads *)
   val register_onload : (string -> unit) -> unit

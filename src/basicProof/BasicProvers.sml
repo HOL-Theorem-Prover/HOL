@@ -423,41 +423,34 @@ val Abbr = markerSyntax.Abbr
        Make some additions to the srw_ss persistent
  ---------------------------------------------------------------------------*)
 
-fun initthy thy = write_data_update {thy = thy, thydataty = "simp",
-                                     data = ThmSetData.nullset}
-
-(* first write the nullset into the ancestry *)
-val ancs = ancestry "-"
-val _ = List.app initthy ancs
+open LoadableThyData
+val (mk,dest) = ThmSetData.new "simp"
 
 val thy_ssfrags = ref (Binarymap.mkDict String.compare)
 
 fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
 
-fun onload thyname = let
-  val _ = initthy thyname
-in
-  case segment_data {thy = thyname, thydataty = "simp"} of
-    NONE => ()
-  | SOME d => let
-      val thmset = valOf (ThmSetData.destData d)
-      val ssfrag = simpLib.named_rewrites thyname (map #2 thmset)
-    in
-      thy_ssfrags := Binarymap.insert(!thy_ssfrags, thyname, ssfrag);
-      augment_srw_ss [ssfrag]
-    end
-end
+fun onload thyname =
+    case segment_data {thy = thyname, thydataty = "simp"} of
+      NONE => ()
+    | SOME d => let
+        val thmset = valOf (dest d)
+        val ssfrag = simpLib.named_rewrites thyname (map #2 thmset)
+      in
+        thy_ssfrags := Binarymap.insert(!thy_ssfrags, thyname, ssfrag);
+        augment_srw_ss [ssfrag]
+      end
 val _ = register_onload onload
 
-val _ = List.app onload ancs
+val _ = List.app onload (ancestry "-")
 
 fun export_rewrites slist = let
-  val data = ThmSetData.mkData (map (fn s => current_theory() ^ "." ^ s) slist)
-  val set = valOf (ThmSetData.destData data)
+  val data = mk (map (fn s => current_theory() ^ "." ^ s) slist)
+  val set = valOf (dest data)
   val thms = map #2 set
 in
   augment_srw_ss [simpLib.named_rewrites (current_theory()) thms];
-  write_data_update {thy = current_theory(), thydataty = "simp", data = data}
+  write_data_update {thydataty = "simp", data = data}
 end
 
 end

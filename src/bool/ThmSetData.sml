@@ -1,7 +1,9 @@
 structure ThmSetData :> ThmSetData =
 struct
 
-open DB LoadableThyData Lib
+open DB Theory.LoadableThyData Lib HolKernel
+
+type data = t
 
 fun splitnm nm = let
   val comps = String.fields (equal #".") nm
@@ -12,7 +14,9 @@ end
 fun lookup nm = uncurry DB.fetch (splitnm nm)
 
 fun read s =
-  map (fn n => (n, lookup n)) (String.fields Char.isSpace s)
+  SOME (map (fn n => (n, lookup n)) (String.fields Char.isSpace s))
+  handle HOL_ERR _ => NONE
+
 
 fun write slist = String.concatWith " " slist
 
@@ -27,18 +31,13 @@ in
   String.concatWith " " list
 end
 
-val {mk,dest} = LoadableThyData.make {merge = op@,
-                                      read_update = read,
-                                      write_update = writeset}
-
-fun mkData names = let
+fun new s = let
+  val (mk,dest) = Theory.LoadableThyData.new {merge = op@, read = read,
+                                              write = writeset, thydataty = s}
   fun foldthis (nm,set) = (nm, lookup nm) :: set
+  fun mk' slist = mk (foldl foldthis [] slist)
 in
-  mk (foldl foldthis [] names)
+  (mk',dest)
 end
-
-val destData = dest
-
-val nullset = mkData []
 
 end (* struct *)
