@@ -107,6 +107,8 @@ fun strip_string s = let
         if mem x [#" ",#"\t",#"\n"] then strip_space xs else x::xs
   in (implode o rev o strip_space o rev o strip_space o explode) s end;  
   
+fun strings_to_qcode strs = [(QUOTE o concat o map (fn x => x ^ "\n")) strs]
+
 fun quote_to_strings q = let (* turns a quote `...` into a list of strings *)
   fun get_QUOTE (QUOTE t) = t | get_QUOTE _ = fail()
   val xs = explode (get_QUOTE (hd q))
@@ -148,6 +150,9 @@ fun get_output_list def = let
   val result = dest_tuple (hd res)
   fun deprime x = mk_var(replace_char #"'" "" (fst (dest_var x)), type_of x) handle HOL_ERR e => x
   in pairSyntax.list_mk_pair(map deprime result) end;
+
+val GUARD_THM = prove(``!m n x. GUARD n x = GUARD m x``, REWRITE_TAC [GUARD_def]);
+
 
 (* ------------------------------------------------------------------------------ *)
 (* Implementation of STAGE 1                                                      *)
@@ -293,7 +298,7 @@ fun derive_individual_specs tools (code:string list) = let
       val name = substring(name,7,length (explode name) - 7)
       val (name,(th,i,j)) = hd (filter (fn (x,y) => x = name) (!decompiler_memory)) handle _ => fail()
       val th = RW [sidecond_def,hide_th,STAR_ASSOC] th
-      val th = ABBREV_CALL ("s"^(int_to_string n)^"@") th
+      val th = ABBREV_CALL ("new@") th
       val _ = echo 1 "  (insert command)\n"
       in (n+1,(ys @ [(n,(th,i,j),NONE)])) end
     else let
@@ -301,7 +306,7 @@ fun derive_individual_specs tools (code:string list) = let
       val _ = echo 1 ("  "^instruction^":")
       val _ = prog_x86Lib.set_x86_exec_flag exec_flag
       val i = int_to_string n
-      val g = RW [precond_def] o ABBREV_ALL dont_abbrev_list ("s"^i^"@") o renamer
+      val g = RW [precond_def] o ABBREV_ALL dont_abbrev_list ("new@") o renamer
       val (x,y) = pair_apply g (f instruction)
       val _ = prog_x86Lib.set_x86_exec_flag false
       val _ = echo 1 ".\n"
@@ -496,10 +501,43 @@ fun stage_12 name tools qcode = let
 
 (* STAGE 3, part a -------------------------------------------------------------- *)
 
+local val varname_counter = ref 1 in
+  fun varname_reset () = (varname_counter := 1);
+  fun varname_next () = let
+    val v = !varname_counter
+    val _ = (varname_counter := v+1)
+    in v end
+end;
+
 (* functions for composing SPEC theorems *)
 
-fun SPEC_COMPOSE th1 th2 = SPEC_COMPOSE_RULE [th1,th2];
+fun replace_new_vars v th = let
+  fun mk_new_var prefix v = let 
+    val (n,ty) = dest_var v
+    val _ = if String.isPrefix "new@" n then () else fail() 
+    in mk_var (prefix ^ "@" ^ (implode o drop 4 o explode) n, ty) end
+  fun rename_new tm = 
+    if is_comb tm then (RATOR_CONV rename_new THENC RAND_CONV rename_new) tm else 
+    if not (is_abs tm) then ALL_CONV tm else let
+      val (x,y) = dest_abs tm
+      val conv = ALPHA_CONV (mk_new_var v x) handle HOL_ERR e => ALL_CONV 
+      in (conv THENC ABS_CONV rename_new) tm end 
+  val th = GEN_ALL (DISCH_ALL th)
+  val th = CONV_RULE rename_new th
+  val th = UNDISCH_ALL (SPEC_ALL th)
+  in th end;
 
+fun SPEC_COMPOSE th1 th2 = let
+  (* replace "new@..." variables with fresh numbered variables *)
+  val th2a = replace_new_vars ("s" ^ int_to_string (varname_next ())) th2
+  in SPEC_COMPOSE_RULE [th1,th2a] end;
+
+fun number_GUARD (x,y,z) = let
+  val rw = SPEC (numSyntax.term_of_int (varname_next ())) GUARD_THM
+  fun f (th1,y1,y2) = (RW1[rw]th1,y1,y2)
+  fun apply_option g NONE = NONE
+    | apply_option g (SOME x) = SOME (g x)
+  in (x,f y,apply_option f z) end;
 
 (* functions for deriving one-pass theorems *)
 
@@ -547,7 +585,7 @@ fun find_first i [] = fail()
 fun tree_composition (th,i:int,thms,entry,exit,conds,firstTime) =
   if i = entry andalso not firstTime then LEAF (th,i) else
   if i = exit then LEAF (th,i) else let
-    val (_,thi1,thi2) = find_first i thms
+    val (_,thi1,thi2) = number_GUARD (find_first i thms)
     in let (* try composing second branch *)
        val (cond,(th2,_,i2)) = find_cond_composition th thi2
        val cond' = remove_guard cond
@@ -571,6 +609,7 @@ fun map_spectree f (LEAF (thm,i)) = LEAF (f thm,i)
   | map_spectree f (BRANCH (j,t1,t2)) = BRANCH (j, map_spectree f t1, map_spectree f t2)
 
 fun generate_spectree thms (entry,exit) = let
+  val _ = varname_reset ()
   val (_,(th,_,_),_) = hd thms
   val hide_th = get_status()
   fun apply_to_th f (i,(th,k,l),NONE) = (i,(f th,k,l),NONE)
@@ -1442,7 +1481,7 @@ fun extract_function name th entry exit function_in_out = let
 (* ------------------------------------------------------------------------------ *)
 
 fun prepare_for_reuse n (th,i,j) = let
-  val prefix = ("s"^(int_to_string n)^"@")
+  val prefix = ("new@")
   in (n,(ABBREV_CALL prefix th,i,j),NONE) end;
 
 fun decompile_part name thms (entry,exit) (function_in_out: (term * term) option) = let
@@ -1473,6 +1512,8 @@ fun decompile (tools :decompiler_tools) name (qcode :term quotation) = let
   val result = if (get_abbreviate_code()) then result else UNABBREV_CODE_RULE result
   in (result,CONJ def pre) end;
 
+fun decompile_strings tools name strs = decompile tools name (strings_to_qcode strs);
+
 val decompile_arm = decompile arm_tools
 val decompile_ppc = decompile ppc_tools
 val decompile_x86 = decompile x86_tools
@@ -1485,6 +1526,8 @@ fun basic_decompile (tools :decompiler_tools) name function_in_out (qcode :term 
   val _ = add_decompiled (name,result,exit,SOME exit)
   val result = if (get_abbreviate_code()) then result else UNABBREV_CODE_RULE result
   in (result,CONJ def pre) end;
+
+fun basic_decompile_strings tools name fio strs = basic_decompile tools name fio (strings_to_qcode strs);
 
 val basic_decompile_arm = basic_decompile arm_tools
 val basic_decompile_ppc = basic_decompile ppc_tools
