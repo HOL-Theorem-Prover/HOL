@@ -339,7 +339,8 @@ val precond_INTRO = prove(
   ``!x. cond (Abbrev x) = precond x:'a set -> bool``,
   SIMP_TAC (std_ss) [SEP_CLAUSES,precond_def,markerTheory.Abbrev_def]);
 
-fun arm_prove_specs s = let
+fun arm_prove_specs m_pred s = let
+  val _ = set_arm_memory_pred m_pred
   val thms = [arm_step "v4T" s]
   val thms = (thms @ [arm_step "v4T,fail" s]) handle HOL_ERR _ => thms
 (*
@@ -389,10 +390,13 @@ fun arm_jump tm1 tm2 jump_length forward = let
   val jump_length = if forward then jump_length + 4 else 0 - jump_length
   in (arm_mk_jump z jump_length,4) end
 
-val arm_spec_no_cache = arm_prove_specs;
-val arm_spec = cache arm_prove_specs;
+val arm_spec = cache (arm_prove_specs "auto");
+val arm_spec_m1 = cache (arm_prove_specs "aM1");
+val arm_spec_byte_memory = cache (arm_prove_specs "aBYTE_MEMORY");
+
 val arm_tools = (arm_spec, arm_jump, arm_status, arm_pc);
 val arm_tools_no_status = (arm_spec, arm_jump, TRUTH, arm_pc);
+
 
 (*
 
