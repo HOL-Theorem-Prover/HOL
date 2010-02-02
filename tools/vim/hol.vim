@@ -91,19 +91,26 @@ fu! HOLSendQuiet()
   exe "keepjumps normal Go" . s:holtogglequiet
 endf
 
-fu! HOLFSend(f)
-  exe "keepjumps normal" "i" . a:f . "("
-  silent normal p
-  keepjumps normal Go);
+fu! HOLGoal()
+  silent normal pG$
+  keepjumps normal G$a)
+  while search(',\_s*)\%$','bW')
+    silent keepjumps normal vG$2h"_dG$
+  endw
+  keepjumps normal gg0ig(
 endf
+
+let s:stripStart = ')\|]\|['
+let s:stripEnd   = '(\|['
+let s:stripBoth  = ',\|THEN[1L]\?\|<<\|>>\|++\|\\\\'
 
 fu! HOLExpand()
   silent normal pgg0
-  while search('\%^\_s*\(THEN[1L]\?\|)\|]\|[\|,\)','cWe')
+  while search('\%^\_s*\('.s:stripBoth.'\|'.s:stripStart.'\)','cWe')
     silent keepjumps normal vgg0"_d
   endw
   keepjumps normal G$a)
-  while search('\(THEN[1L]\?\|(\|[\|,\)\_s*)\%$','bW')
+  while search('\('.s:stripBoth.'\|'.s:stripEnd.'\)\_s*)\%$','bW')
     silent keepjumps normal vG$2h"_dG$
   endw
   keepjumps normal gg0ie(
@@ -153,7 +160,7 @@ vn <silent> hl :call YankThenHOLCall(function("HOLLoadSendQuiet"),[])<CR>
 vn <silent> hL :call YankThenHOLCall(function("HOLLoad"),[])<CR>
 vn <silent> hs :call YankThenHOLCall(function("HOLSend"),[])<CR>
 vn <silent> hu :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR>
-vn <silent> hg :call YankThenHOLCall(function("HOLFSend"),["g"])<CR>
+vn <silent> hg :call YankThenHOLCall(function("HOLGoal"),[])<CR>
 vn <silent> he :call YankThenHOLCall(function("HOLExpand"),[])<CR>
 vn <silent> hS :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
 nn <silent> hR :<C-U>call HOLRotate()<CR>

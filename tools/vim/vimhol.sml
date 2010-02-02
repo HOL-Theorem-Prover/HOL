@@ -44,19 +44,21 @@ local
   val m = Mutex.mutex ()
   val c = ConditionVar.conditionVar ()
   val q = Queue.new ()
+  val keepFiles = ref false
   fun tryRemove s = remove s handle SysErr _ => ()
-  fun tryRemoveAll() = let
+  fun checkTryRemove s = if !keepFiles then () else tryRemove s
+  fun removeQueue() = let
     fun loop() = case Queue.deque q of
       NONE => () |
-      SOME tmp => (tryRemove tmp; loop())
+      SOME tmp => (checkTryRemove tmp; loop())
     open Mutex
   in
     lock m; loop(); unlock m
   end
   local
     fun removeAfterUse tmp =
-      (use tmp handle e => (tryRemove tmp; raise e);
-       tryRemove tmp)
+      (use tmp handle e => (checkTryRemove tmp; raise e);
+       checkTryRemove tmp)
     open Mutex ConditionVar
   in
     fun runner () =
@@ -92,7 +94,7 @@ local
           end
         | [] => ()
         | _ => warn ("Got this rubbish from Vim: "^line);
-    Thread.testInterrupt () handle Interrupt => (tryRemoveAll(); Thread.exit());
+    Thread.testInterrupt () handle Interrupt => (removeQueue(); Thread.exit());
     poller ()
   end
   val () = Process.atExit stopTail
@@ -107,7 +109,8 @@ in
     fun stop() = (if rActive() then Thread.interrupt (!rpid) else ();
                   if pActive() then Thread.interrupt (!ppid) else ())
     fun restart() = (stop(); ppid := Thread.fork(poller,[]))
+    val keepFiles = keepFiles
     val queue = q
-    val tryRemoveAll = tryRemoveAll
+    val removeQueue = removeQueue
   end
 end
