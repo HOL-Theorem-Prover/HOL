@@ -90,28 +90,42 @@ handle e => raise (wrap_exn "IndDefLib" "Hol_mono_reln" e);
 
 val the_monoset = ref InductiveDefinition.bool_monoset
 
-fun add_mono_thm th = let
-  open boolLib InductiveDefinition
-  val (ant, con) = dest_imp (concl th)
-  val hdc_name = #1 (dest_const (#1 (strip_comb (#1 (dest_imp con)))))
+fun mono_name th = let
+  open boolLib
+  val (_, con) = dest_imp (concl th)
 in
-  the_monoset := (hdc_name, th) :: (!the_monoset)
+  #1 (dest_const (#1 (strip_comb (#1 (dest_imp con)))))
 end
+
+fun add_mono_thm th = the_monoset := (mono_name th, th) :: (!the_monoset)
+
+(* making it exportable *)
+open LoadableThyData
+val (mk,dest) = ThmSetData.new "mono"
+fun onload thyname =
+    case segment_data {thy = thyname, thydataty = "mono"} of
+      NONE => ()
+    | SOME d => let
+        val thms = valOf (dest d)
+      in
+        the_monoset := map (fn (_,th) => (mono_name th, th)) thms @
+                       !the_monoset
+      end
+val _ = register_onload onload
+val _ = List.app onload (ancestry "-")
 
 fun export_mono s = let
   val th = DB.fetch "-" s
-  fun sps pps = (PP.add_string pps "val _ =";
-                 PP.add_break pps (1,0);
-                 PP.add_string pps "IndDefLib.add_mono_thm";
-                 PP.add_break pps (1,0);
-                 PP.add_string pps s;
-                 PP.add_string pps ";";
-                 PP.add_newline pps)
+  val data = mk [current_theory() ^ "." ^ s]
 in
-  add_mono_thm th; (* do this first so that if it fails, nothing gets added to
-                      the theory *)
-  adjoin_to_theory {sig_ps = NONE, struct_ps = SOME sps}
+  add_mono_thm th;
+  write_data_update {thydataty = "mono", data = data}
 end
+
+fun thy_monos thyname =
+    case segment_data {thy = thyname, thydataty = "mono"} of
+      NONE => []
+    | SOME d => map #2 (valOf (dest d))
 
 (* ----------------------------------------------------------------------
     the standard entry-point
