@@ -115,8 +115,8 @@ val _ = register_onload onload
 val _ = List.app onload (ancestry "-")
 
 fun export_mono s = let
-  val th = DB.fetch "-" s
-  val data = mk [current_theory() ^ "." ^ s]
+  val (data, thms) = mk [s]
+  val th = #2 (hd thms)
 in
   add_mono_thm th;
   write_data_update {thydataty = "mono", data = data}

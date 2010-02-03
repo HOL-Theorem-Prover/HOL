@@ -445,9 +445,8 @@ val _ = register_onload onload
 val _ = List.app onload (ancestry "-")
 
 fun export_rewrites slist = let
-  val data = mk (map (fn s => current_theory() ^ "." ^ s) slist)
-  val set = valOf (dest data)
-  val thms = map #2 set
+  val (data, namedthms) = mk slist
+  val thms = map #2 namedthms
 in
   augment_srw_ss [simpLib.named_rewrites (current_theory()) thms];
   write_data_update {thydataty = "simp", data = data}

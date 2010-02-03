@@ -64,6 +64,12 @@ val congs = [lameq_APPcong, SPEC_ALL lameq_LAM,
              REWRITE_RULE [GSYM AND_IMP_INTRO]
                           (last (CONJUNCTS chap2Theory.lemma2_12))]
 
+val user_rewrites = ref (SSFRAG {dprocs = [], ac = [], rewrs = [],
+                                 congs = [], filter = NONE,
+                                 name = SOME "betasimps", convs = []})
+fun add_rwts ths =
+    user_rewrites := simpLib.merge_ss [!user_rewrites, simpLib.rewrites ths]
+
 fun betafy ss = let
   open chap2Theory head_reductionTheory
 in
@@ -76,8 +82,30 @@ in
                                 lameq_B, lameq_beta]} ss ++
   rewrites [termTheory.lemma14b, normal_orderTheory.nstar_betastar_bnf,
             betastar_lameq_bnf, lameq_refl] ++
+  !user_rewrites ++
   SSFRAG {dprocs = [], ac = [], rewrs = [], congs = congs, filter = NONE,
           name = NONE, convs = []}
+end
+
+open LoadableThyData
+val (mk,dest) = ThmSetData.new "betasimp"
+fun onload thyname =
+    case segment_data {thy = thyname, thydataty = "betasimp"} of
+      NONE => ()
+    | SOME d => let
+        val thms = valOf (dest d)
+      in
+        add_rwts (map #2 thms)
+      end
+val _ = register_onload onload
+val _ = List.app onload (ancestry "-")
+
+fun export_betarwt s = let
+  val (data, namedthms) = mk [s]
+  val thms = map #2 namedthms
+in
+  add_rwts thms;
+  write_data_update {thydataty = "betasimp", data = data}
 end
 
 fun bsrw_ss() = betafy(srw_ss())

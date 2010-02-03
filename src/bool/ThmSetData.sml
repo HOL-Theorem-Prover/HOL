@@ -8,7 +8,10 @@ type data = t
 fun splitnm nm = let
   val comps = String.fields (equal #".") nm
 in
-  (hd comps, hd (tl comps))
+  case comps of
+    (thy::nm::_) => (thy, nm)
+  | [name] => (current_theory(), name)
+  | [] => raise Fail "String.fields returns empty list??"
 end
 
 fun lookup nm = uncurry DB.fetch (splitnm nm)
@@ -21,10 +24,10 @@ fun read s =
 fun write slist = String.concatWith " " slist
 
 fun writeset set = let
-  fun foldthis ((nm,th), acc) = let
-    val _ = lookup nm
+  fun foldthis ((nm,_), acc) = let
+    val (thy,nm) = splitnm nm
   in
-    nm::acc
+    (thy^"."^nm)::acc
   end
   val list = List.foldr foldthis [] set
 in
@@ -35,7 +38,10 @@ fun new s = let
   val (mk,dest) = Theory.LoadableThyData.new {merge = op@, read = read,
                                               write = writeset, thydataty = s}
   fun foldthis (nm,set) = (nm, lookup nm) :: set
-  fun mk' slist = mk (foldl foldthis [] slist)
+  fun mk' slist = let val unencoded = foldl foldthis [] slist
+                  in
+                    (mk unencoded, unencoded)
+                  end
 in
   (mk',dest)
 end
