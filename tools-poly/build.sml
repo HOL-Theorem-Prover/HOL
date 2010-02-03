@@ -313,10 +313,6 @@ in
                               " temporal Lib has NOT been built!! ",
                               "(continuing anyway).\n\n"])
                    else ()
-  | "HolCheck" => if not DYNLIB then
-                    warn "*** Not building HolCheck as Dynlib, and hence \
-                         \HolBddLib, not available\n"
-                  else Holmake dir
   | "minisat" => let
     in case OS of
 	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",

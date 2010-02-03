@@ -112,10 +112,11 @@ src/real
 src/HolSmt
 !examples/misc
 src/prob
-!examples/muddy/muddyC
-!examples/muddy
-!examples/HolBdd
-!!examples/HolCheck
+# these examples require Muddy, which is MoscowML specific
+[mosml]!examples/muddy/muddyC
+[mosml]!examples/muddy
+[mosml]!examples/HolBdd
+[mosml]!!examples/HolCheck
 src/temporal/src
 src/temporal/smv.2.4.3
 src/rational
