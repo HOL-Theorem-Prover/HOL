@@ -344,7 +344,7 @@ fun IMP_EQ_CANON thm =
         else if (is_conj conc) then
           (op @ o (IMP_EQ_CANON##IMP_EQ_CANON) o CONJ_PAIR) undisch_thm
         else if (is_forall conc) then IMP_EQ_CANON (snd (SPEC_VAR undisch_thm))
-        else if (is_tyforall conc) then IMP_EQ_CANON (snd (SPEC_TYVAR undisch_thm))
+        else if (is_tyforall conc) then IMP_EQ_CANON (snd (TY_SPEC_VAR undisch_thm))
         else if (is_neg conc) then
           if (is_eq (dest_neg conc)) then
             [EQF_INTRO undisch_thm, EQF_INTRO (GSYM undisch_thm)]

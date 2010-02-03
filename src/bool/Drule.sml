@@ -156,11 +156,21 @@ fun SPEC_VAR th =
  *  |- !:a. t    ---->    a', |- t[a'/a]
  *---------------------------------------------------------------------------*)
 
-fun SPEC_TYVAR th =
+fun TY_SPEC_VAR th =
    let val (Bvar,_) = dest_tyforall (concl th)
        val bv' = prim_variant_type (HOLset.listItems (hyp_tyvars th)) Bvar
    in (bv', TY_SPEC bv' th)
    end;
+
+fun TY_TM_SPEC_VAR th =
+  let val (x, sth) = SPEC_VAR th
+  in (inR x, sth)
+  end
+  handle HOL_ERR _ =>
+  let val (a, sth) = TY_SPEC_VAR th
+  in (inL a, sth)
+  end
+  handle HOL_ERR _ => raise ERR "TY_TM_SPEC_VAR" "";
 
 (*---------------------------------------------------------------------------*
  *       A |-  (!x. t1 = t2)                                                 *
@@ -189,7 +199,7 @@ fun MK_EXISTS bodyth =
  *---------------------------------------------------------------------------*)
 
 fun MK_TY_EXISTS bodyth =
- let val (x, sth) = SPEC_TYVAR bodyth
+ let val (x, sth) = TY_SPEC_VAR bodyth
      val (a,b) = dest_eq (concl sth)
      val (abimp,baimp) = EQ_IMP_RULE sth
      fun HALF (p,q) pqimp =
@@ -201,6 +211,8 @@ fun MK_TY_EXISTS bodyth =
     IMP_ANTISYM_RULE (HALF (a,b) abimp) (HALF (b,a) baimp)
  end
  handle HOL_ERR _ => raise ERR "MK_TY_EXISTS" "";
+
+fun MK_TY_TM_EXISTS th = MK_EXISTS th handle HOL_ERR _ => MK_TY_EXISTS th;
 
 
 (*---------------------------------------------------------------------------*
@@ -220,10 +232,17 @@ fun LIST_MK_EXISTS l th = itlist (fn x => fn th => MK_EXISTS(GEN x th)) l th
 
 fun LIST_MK_TY_EXISTS l th = itlist (fn x => fn th => MK_TY_EXISTS(TY_GEN x th)) l th;
 
+fun LIST_MK_TY_TM_EXISTS l th =
+  itlist (fn (inL a) => (fn th => MK_TY_EXISTS(TY_GEN a th))
+           | (inR x) => (fn th =>    MK_EXISTS(   GEN x th))) l th;
+
 
 fun SIMPLE_EXISTS v th = EXISTS (mk_exists(v, concl th), v) th
 
 fun SIMPLE_TY_EXISTS v th = TY_EXISTS (mk_tyexists(v, concl th), v) th
+
+fun SIMPLE_TY_TM_EXISTS (inL a) th = SIMPLE_TY_EXISTS a th
+  | SIMPLE_TY_TM_EXISTS (inR v) th =    SIMPLE_EXISTS v th;
 
 fun SIMPLE_CHOOSE v th =
   case HOLset.find (fn _ => true) (Thm.hypset th) of
@@ -234,6 +253,9 @@ fun SIMPLE_TY_CHOOSE v th =
   case HOLset.find (fn _ => true) (Thm.hypset th) of
     SOME h => TY_CHOOSE(v, ASSUME (boolSyntax.mk_tyexists(v,h))) th
   | NONE => raise ERR "SIMPLE_TY_CHOOSE" "";
+
+fun SIMPLE_TY_TM_CHOOSE (inL a) th = SIMPLE_TY_CHOOSE a th
+  | SIMPLE_TY_TM_CHOOSE (inR v) th =    SIMPLE_CHOOSE v th;
 
 (*---------------------------------------------------------------------------*
  *     A1 |- t1 = u1   ...   An |- tn = un       A |- t[ti]                  *
@@ -412,15 +434,11 @@ fun SPECL tml th =
 fun TY_SPECL tyl th =
   rev_itlist TY_SPEC tyl th handle HOL_ERR _ => raise ERR "TY_SPECL" "";
 
-fun TY_TM_SPEC (inL ty) th = (TY_SPEC ty th handle e => (print "TY_TM_SPEC fails for type "; print_type ty; print "\n";
-                                                         print "and theorem "; trace ("types",1) print_thm th; print "\n"; Raise e))
-  | TY_TM_SPEC (inR tm) th = (   SPEC tm th handle e => (print "TY_TM_SPEC fails for term "; trace ("types",1) print_term tm; print "\n";
-                                                         print "and theorem "; trace ("types",1) print_thm th; print "\n"; Raise e))
+fun TY_TM_SPEC (inL ty) = TY_SPEC ty
+  | TY_TM_SPEC (inR tm) =    SPEC tm
 
 fun TY_TM_SPECL tyml th =
-  rev_itlist TY_TM_SPEC tyml th handle e => (print ("TY_TM_SPECL("^Int.toString(length tyml)^") fails on ");
-                                             trace ("types",1) print_thm th; print "\n";
-                                             raise wrap_exn "Drule" "TY_TM_SPECL" e);
+  rev_itlist TY_TM_SPEC tyml th handle e => raise wrap_exn "Drule" "TY_TM_SPECL" e;
 
 (*---------------------------------------------------------------------------*
  *          |- t[tyi]                                                        *
@@ -584,7 +602,6 @@ fun RIGHT_BETA th =
  TRANS th (BETA_CONV(rhs(concl th)))
  handle HOL_ERR _ => raise ERR "RIGHT_BETA" ""
 
-
 (*---------------------------------------------------------------------------
  * Type beta-conversion to the rhs of an equation
  *
@@ -596,6 +613,11 @@ fun RIGHT_BETA th =
 fun RIGHT_TY_BETA th =
  TRANS th (TY_BETA_CONV(rhs(concl th)))
  handle HOL_ERR _ => raise ERR "RIGHT_TY_BETA" "";
+
+fun RIGHT_TY_TM_BETA th = RIGHT_BETA th
+ handle HOL_ERR _ => RIGHT_TY_BETA th
+ handle HOL_ERR _ => raise ERR "RIGHT_TY_TM_BETA" "";
+
 
 (*---------------------------------------------------------------------------
  *  "(\x1 ... xn.t)t1 ... tn" -->
@@ -617,10 +639,26 @@ fun LIST_TY_BETA_CONV tm =
    in RIGHT_TY_BETA (TY_COMB (LIST_TY_BETA_CONV Rator) Rand)
    end handle HOL_ERR _ => REFL tm;
 
+fun TY_TM_BETA_CONV tm =
+   BETA_CONV tm
+   handle HOL_ERR _ =>
+   TY_BETA_CONV tm
+   handle HOL_ERR _ => raise ERR "TY_TM_BETA_CONV" "";
+
+fun LIST_TY_TM_BETA_CONV tm =
+   let val (Rator,Rand) = dest_comb tm
+   in RIGHT_BETA (AP_THM (LIST_TY_TM_BETA_CONV Rator) Rand)
+   end handle HOL_ERR _ =>
+   let val (Rator,Rand) = dest_tycomb tm
+   in RIGHT_TY_BETA (TY_COMB (LIST_TY_TM_BETA_CONV Rator) Rand)
+   end handle HOL_ERR _ => REFL tm;
+
 
 fun RIGHT_LIST_BETA th = TRANS th (LIST_BETA_CONV(rhs(concl th)))
 
 fun RIGHT_LIST_TY_BETA th = TRANS th (LIST_TY_BETA_CONV(rhs(concl th)))
+
+fun RIGHT_LIST_TY_TM_BETA th = TRANS th (LIST_TY_TM_BETA_CONV(rhs(concl th)))
 
 (*---------------------------------------------------------------------------*
  * "A |- t1 /\ ... /\ tn"   --->   ["A|-t1", ..., "A|-tn"],  where n>0       *
@@ -1217,8 +1255,19 @@ fun ALPHA_CONV x t = let
                       (ERR "ALPHA_CONV" "First term not a variable")
   val _ = Type.compare(dty, xty) = EQUAL
           orelse raise ERR "ALPHA_CONV"
-                           "Type of variable not compatible with abstraction"
+                           ("Type of variable not compatible with abstraction"
+                            ^": "^type_to_string dty^" : "^type_to_string xty)
   val t' = rename_bvar xstr t
+in
+  ALPHA t t'
+end
+
+fun ALPHA_NAME_CONV s t = let
+  (* avoid calling dest_abs *)
+  val (dty, _) = dom_rng (type_of t)
+                 handle HOL_ERR _ =>
+                        raise ERR "ALPHA_NAME_CONV" "Term not an abstraction"
+  val t' = rename_bvar s t
 in
   ALPHA t t'
 end
@@ -1294,6 +1343,12 @@ fun GEN_TY_ALPHA_CONV a t =
         in AP_TERM Rator (TY_ALPHA_CONV a Rand)
         end
         handle HOL_ERR _ => raise ERR "GEN_TY_ALPHA_CONV" "";
+
+fun GEN_TY_TM_ALPHA_CONV v t =
+   (case v of
+      inL a => GEN_TY_ALPHA_CONV a t
+    | inR x =>    GEN_ALPHA_CONV x t)
+   handle HOL_ERR _ => raise ERR "GEN_TY_TM_ALPHA_CONV" "";
 
 (* ---------------------------------------------------------------------*)
 (*  A1 |- P ==> Q    A2 |- R ==> S					*)
@@ -1545,50 +1600,42 @@ fun trytyalpha a tm =
 (* ------------------------------------------------------------------------- *)
 
 (* first argument is actual term, second is from theorem being matched *)
-fun match_bvs t1 t2 acc =
+fun match_bvs t1 t2 (acc as (tyacc,tmacc)) =
  case (dest_term t1, dest_term t2)
   of (LAMB(v1,b1), LAMB(v2,b2))
       => let val n1 = fst(dest_var v1)
              val n2 = fst(dest_var v2)
-             val newacc = if n1 = n2 then acc else insert(n1, n2) acc
+             val newacc = if n1 = n2 then acc else (tyacc, insert(n1, n2) tmacc)
          in
            match_bvs b1 b2 newacc
          end
   | (COMB(l1,r1), COMB(l2,r2)) => match_bvs l1 l2 (match_bvs r1 r2 acc)
-  | (TYLAMB(a1,b1), TYLAMB(a2,b2)) => match_bvs b1 b2 acc
-  | (TYCOMB(tm1,ty1), TYCOMB(tm2,ty2)) => match_bvs tm1 tm2 acc
-  | otherwise => acc
-
-(* first argument is actual term, second is from theorem being matched *)
-fun match_btvs t1 t2 acc =
- case (dest_term t1, dest_term t2)
-  of (TYLAMB(a1,b1), TYLAMB(a2,b2))
+  | (TYLAMB(a1,b1), TYLAMB(a2,b2))
       => let val n1 = #1(dest_var_type a1)
              val n2 = #1(dest_var_type a2)
-             val newacc = if n1 = n2 then acc else insert(n1, n2) acc
+             val newacc = if n1 = n2 then acc else (insert(n1, n2) tyacc, tmacc)
          in
-           match_btvs b1 b2 newacc
+           match_bvs b1 b2 newacc
          end
-  | (COMB(l1,r1), COMB(l2,r2)) => match_btvs l1 l2 (match_btvs r1 r2 acc)
-  | (LAMB(v1,b1), LAMB(v2,b2)) => match_btvs b1 b2 acc
-  | (TYCOMB(tm1,ty1), TYCOMB(tm2,ty2)) => match_btvs tm1 tm2 acc
-  | otherwise => acc;
+  | (TYCOMB(tm1,ty1), TYCOMB(tm2,ty2)) => match_bvs tm1 tm2 acc
+  | otherwise => acc
 
 (* bindings come from match_bvs, telling us which bound variables are going
    to get renamed, and thmc is the conclusion of the pattern theorem.
    acc is a set of free variables that need to get instantiated away *)
 fun look_for_avoids bindings thmc acc = let
   val lfa = look_for_avoids bindings
+  val (tybindings,tmbindings) = bindings
 in
   case dest_term thmc of
     LAMB (v, b) => let
       val (thm_n, _) = dest_var v
     in
-      case Lib.total (rev_assoc thm_n) bindings of
+      case Lib.total (rev_assoc thm_n) tmbindings of
         SOME n => let
           val fvs = FVL [b] empty_tmset
-          fun f (v, acc) =
-              if #1 (dest_var v) = n then HOLset.add(acc, v)
+          fun f (v, acc as (tyacc,tmacc)) =
+              if #1 (dest_var v) = n then (tyacc, HOLset.add(tmacc, v))
               else acc
         in
           lfa b (HOLset.foldl f acc fvs)
@@ -1596,34 +1643,20 @@ in
       | NONE => lfa b acc
     end
   | COMB (l,r) => lfa l (lfa r acc)
-  | TYLAMB (a, b) => lfa b acc
-  | TYCOMB (t, ty) => lfa t acc
-  | _ => acc
-end
-
-(* bindings come from match_bvs, telling us which bound variables are going
-   to get renamed, and thmc is the conclusion of the pattern theorem.
-   acc is a set of free variables that need to get instantiated away *)
-fun look_for_tyavoids bindings thmc acc = let
-  val lfa = look_for_tyavoids bindings
-in
-  case dest_term thmc of
-    TYLAMB (a, b) => let
+  | TYLAMB (a, b) => let
       val (thm_n, _, _) = dest_var_type a
     in
-      case Lib.total (rev_assoc thm_n) bindings of
+      case Lib.total (rev_assoc thm_n) tybindings of
         SOME n => let
           val ftvs = HOLset.addList(empty_tyset, type_vars_in_term b)
-          fun f (a, acc) =
-              if #1 (dest_var_type a) = n then HOLset.add(acc, a)
+          fun f (a, acc as (tyacc,tmacc)) =
+              if #1 (dest_var_type a) = n then (HOLset.add(tyacc, a), tmacc)
               else acc
         in
           lfa b (HOLset.foldl f acc ftvs)
         end
       | NONE => lfa b acc
     end
-  | COMB (l,r) => lfa l (lfa r acc)
-  | LAMB (v, b) => lfa b acc
   | TYCOMB (t, ty) => lfa t acc
   | _ => acc
 end
@@ -1633,36 +1666,27 @@ end
 (* Modify bound variable names at depth. (Not very efficient...)             *)
 (* ------------------------------------------------------------------------- *)
 
-fun deep_alpha [] tm = tm
-  | deep_alpha env tm =
+fun deep_alpha ([],[]) tm = tm
+  | deep_alpha (env as (tyenv,tmenv)) tm =
      case dest_term tm
       of LAMB(Bvar,Body) =>
           (let val (Name,Ty) = dest_var Bvar
-               val ((vn',_),newenv) = Lib.pluck (fn (_,x) => x = Name) env
+               val ((vn',_),newenv) = Lib.pluck (fn (_,x) => x = Name) tmenv
                val tm' = tryalpha (mk_var(vn', Ty)) tm
                val (iv,ib) = dest_abs tm'
-           in mk_abs(iv, deep_alpha newenv ib)
+           in mk_abs(iv, deep_alpha (tyenv,newenv) ib)
            end
            handle HOL_ERR _ => mk_abs(Bvar,deep_alpha env Body))
        | COMB(Rator,Rand) => mk_comb(deep_alpha env Rator, deep_alpha env Rand)
-       | TYLAMB(Bvar,Body) => mk_tyabs(Bvar, deep_alpha env Body)
-       | TYCOMB(Rator,Rand) => mk_tycomb(deep_alpha env Rator, Rand)
-       | otherwise => tm
-
-fun deep_tyalpha [] tm = tm
-  | deep_tyalpha env tm =
-     case dest_term tm
-      of TYLAMB(Bvar,Body) =>
+       | TYLAMB(Bvar,Body) =>
           (let val (Name,Kind,Rank) = dest_var_type Bvar
-               val ((vn',_),newenv) = Lib.pluck (fn (_,x) => x = Name) env
+               val ((vn',_),newenv) = Lib.pluck (fn (_,x) => x = Name) tyenv
                val tm' = trytyalpha (mk_var_type(vn', Kind, Rank)) tm
                val (iv,ib) = dest_tyabs tm'
-           in mk_tyabs(iv, deep_tyalpha newenv ib)
+           in mk_tyabs(iv, deep_alpha (newenv,tmenv) ib)
            end
-           handle HOL_ERR _ => mk_tyabs(Bvar,deep_tyalpha env Body))
-       | COMB(Rator,Rand) => mk_comb(deep_tyalpha env Rator, deep_tyalpha env Rand)
-       | LAMB(Bvar,Body) => mk_abs(Bvar, deep_tyalpha env Body)
-       | TYCOMB(Rator,Rand) => mk_tycomb(deep_tyalpha env Rator, Rand)
+           handle HOL_ERR _ => mk_tyabs(Bvar,deep_alpha env Body))
+       | TYCOMB(Rator,Rand) => mk_tycomb(deep_alpha env Rator, Rand)
        | otherwise => tm
 
 (* -------------------------------------------------------------------------
@@ -1731,12 +1755,12 @@ fun deep_tyalpha [] tm = tm
 
  * PART_MATCH lhs FORALL_SIMP (--`!x. y + 1 = 2`--);
  * PART_MATCH lhs FORALL_SIMP (--`!x. x + 1 = 2`--); (* fails *)
- * PART_MATCH lhs CET (--`!b. ~(f (b => t | e))`--);
+ * PART_MATCH lhs CET (--`!b. ~(f (if b then t else e))`--);
  * PART_MATCH lhs option_CASE_ELIM (--`!b. ~(P (option_CASE e f b))`--);
  * PART_MATCH lhs (MK_FORALL (--`c:bool`--) COND_ELIM_THM)
- *                (--`!b. ~(f (b => t | e))`--);
+ *                (--`!b. ~(f (if b then t else e))`--);
  * PART_MATCH lhs (MK_FORALL (--`c:bool`--) COND_ELIM_THM)
- *                 (--`!b. ~(f (b => t | e))`--);
+ *                 (--`!b. ~(f (if b then t else e))`--);
  * ho_term_match [] (--`!c.  P ($COND c x y)`--)
  *
  * BUG FIXES & TEST CASES
@@ -1774,7 +1798,7 @@ fun deep_tyalpha [] tm = tm
  *      ~(const = const')`--)
  * ------------------------------------------------------------------------- *)
 
-nonfix THENC
+nonfix THENC ORELSEC
 local fun COMB_CONV2 c1 c2 M =
         let val (f,x) = dest_comb M in MK_COMB(c1 f, c2 x) end
       fun ABS_CONV c M =
@@ -1790,6 +1814,9 @@ local fun COMB_CONV2 c1 c2 M =
       fun TRY_CONV c M = c M handle HOL_ERR _ => REFL M
       fun THENC c1 c2 M =
         let val th = c1 M in TRANS th (c2 (rhs (concl th))) end
+      fun ORELSEC c1 c2 M =
+        c1 M handle HOL_ERR _ => c2 M
+      fun TY_TM_RATOR_CONV c = ORELSEC (RATOR_CONV c) (TY_COMB_CONV c)
       fun EVERY_CONV convl = itlist THENC convl REFL
       fun CONV_RULE conv th = EQ_MP (conv(concl th)) th
       fun BETA_CONVS n =
@@ -1798,7 +1825,11 @@ local fun COMB_CONV2 c1 c2 M =
       fun TY_BETA_CONVS n =
         if n = 1 then TRY_CONV TY_BETA_CONV
         else THENC (TY_COMB_CONV (TY_BETA_CONVS (n-1))) (TRY_CONV TY_BETA_CONV)
+      fun TY_TM_BETA_CONVS n =
+        if n = 1 then TRY_CONV TY_TM_BETA_CONV
+        else THENC (TY_TM_RATOR_CONV (TY_TM_BETA_CONVS (n-1))) (TRY_CONV TY_TM_BETA_CONV)
 in
+
 fun BETA_VAR v tm =
  if is_abs tm
  then let val (Bvar,Body) = dest_abs tm
@@ -1807,7 +1838,8 @@ fun BETA_VAR v tm =
  else
  if is_tyabs tm
  then let val (Bvar,Body) = dest_tyabs tm
-      in TY_ABS_CONV(BETA_VAR v Body) end
+      in if type_var_occurs Bvar v then failwith "BETA_VAR: UNCHANGED"
+         else TY_ABS_CONV(BETA_VAR v Body) end
  else
  if is_tycomb tm
  then let val (Tm,Ty) = dest_tycomb tm
@@ -1853,12 +1885,71 @@ fun TY_BETA_VAR v tm =
            in TY_COMB_CONV (TY_BETA_VAR v Rator)
            end
 
+local
+fun strip_ty_tm_comb1 tm acc =
+  let val (rator,rand) = dest_comb tm
+  in strip_ty_tm_comb1 rator (inR rand::acc)
+  end
+  handle HOL_ERR _ =>
+  let val (rator,rand) = dest_tycomb tm
+  in strip_ty_tm_comb1 rator (inL rand::acc)
+  end
+  handle HOL_ERR _ =>
+  (tm,acc)
+in
+fun strip_ty_tm_comb tm = strip_ty_tm_comb1 tm []
+end
+
+
+fun strip_ty_tm_abs tm =
+  let val (bvar,body) = dest_abs tm
+      val (bvars,core) = strip_ty_tm_abs body
+  in (inR bvar::bvars,core)
+  end
+  handle HOL_ERR _ =>
+  let val (bvar,body) = dest_tyabs tm
+      val (bvars,core) = strip_ty_tm_abs body
+  in (inL bvar::bvars,core)
+  end
+  handle HOL_ERR _ =>
+  ([],tm)
+
+(* v is a term variable of a function type or a universal type. *)
+fun TY_TM_BETA_VAR v tm =
+ if is_abs tm
+ then let val (Bvar,Body) = dest_abs tm
+      in if eq v Bvar then failwith "TY_TM_BETA_VAR: UNCHANGED"
+         else ABS_CONV(TY_TM_BETA_VAR v Body)
+      end
+ else
+ if is_tyabs tm
+ then let val (Bvar,Body) = dest_tyabs tm
+      in if type_var_occurs Bvar v then failwith "TY_TM_BETA_VAR: UNCHANGED"
+         else TY_ABS_CONV(TY_TM_BETA_VAR v Body)
+      end
+ else
+ case strip_ty_tm_comb tm
+  of (_,[]) => failwith "TY_TM_BETA_VAR: UNCHANGED"
+   | (oper,args) =>
+      if eq oper v then TY_TM_BETA_CONVS (length args)
+      else let val (Rator,Rand) = dest_comb tm
+           in let val lconv = TY_TM_BETA_VAR v Rator
+              in let val rconv = TY_TM_BETA_VAR v Rand
+                 in COMB_CONV2 lconv rconv
+                 end handle HOL_ERR _ => RATOR_CONV lconv
+              end handle HOL_ERR _ => RAND_CONV (TY_TM_BETA_VAR v Rand)
+           end
+           handle HOL_ERR _ =>
+           let val (Rator,Rand) = dest_tycomb tm
+           in TY_COMB_CONV (TY_TM_BETA_VAR v Rator)
+           end
+
 structure Map = Redblackmap
 
 (* count from zero to indicate last argument, up to #args - 1 to indicate
    first argument *)
 fun arg_CONV 0 c t = RAND_CONV c t
-  | arg_CONV n c t = RATOR_CONV (arg_CONV (n - 1) c) t
+  | arg_CONV n c t = TY_TM_RATOR_CONV (arg_CONV (n - 1) c) t
 
 fun foldri f acc list = let
   fun foldthis (e, (acc, n)) = (f(n, e, acc), n + 1)
@@ -1866,8 +1957,61 @@ in
   #1 (foldr foldthis (acc,0) list)
 end
 
+
+fun print_ty_tm (inL ty) = (print "TY "; print_type ty)
+  | print_ty_tm (inR tm) = (print "TM "; print_term tm)
+
+fun print_ty_tms1 [] = print "]\n"
+  | print_ty_tms1 [x] = (print_ty_tm x; print "]\n")
+  | print_ty_tms1 (x::xs) = (print_ty_tm x; print ", "; print_ty_tms1 xs)
+fun print_ty_tms xs = (print "["; print_ty_tms1 xs)
+
+
 fun munge_bvars absmap th = let
-  fun recurse curposn bvarposns (donebvars, acc) t =
+  fun recurse curposn btyvarposns bvarposns (donebtyvars, donebvars, acc) t =
+    let fun ty_tm_comb t = let
+          val (f, args) = strip_ty_tm_comb t
+          fun argfold (n, inR arg, A) =
+              recurse (curposn o arg_CONV n) btyvarposns bvarposns A arg
+            | argfold (n, inL (tyarg:hol_type), A) = A
+        in
+          case Map.peek(absmap, f) of
+            NONE => foldri argfold (donebtyvars, donebvars, acc) args
+          | SOME abs_t => let
+              val (abs_bvars, _) = strip_ty_tm_abs abs_t
+              val paired_up = ListPair.zip (args, abs_bvars)
+              fun foldthis ((inR arg, inR absv), acc as (env, (dbtyvars, dbvars, actionlist))) =
+                  if HOLset.member(dbvars, arg) then acc
+                  else (case Map.peek(bvarposns, arg) of
+                          NONE => acc
+                        | SOME p =>
+                          let val absv_name = fst (dest_var absv)
+                 (* or,   let val absv' = inst env absv *)
+                          in
+                            (env,
+                             (dbtyvars, HOLset.add(dbvars, arg),
+                              p (ALPHA_NAME_CONV absv_name):: actionlist))
+                 (* or,       p (ALPHA_CONV absv'):: actionlist))  *)
+                          end)
+                | foldthis ((inL arg, inL absv), (env, acc as (dbtyvars, dbvars, actionlist))) =
+                  let val env' = (absv |-> arg)::env
+                  in
+                    if HOLset.member(dbtyvars, arg) then (env', acc)
+                    else (case Map.peek(btyvarposns, arg) of
+                            NONE => (env', acc)
+                          | SOME p =>
+                            (env',
+                             (HOLset.add(dbtyvars, arg), dbvars,
+                              p (TY_ALPHA_CONV absv):: actionlist)))
+                  end
+                | foldthis _ = raise ERR "munge_bvars.COMB(foldthis)" "impossible type vs term"
+              val (env, A as (newdbtyvars, newdbvars, newacc)) =
+                  List.foldl foldthis ([], (donebtyvars, donebvars, acc)) paired_up
+            in
+              foldri argfold A args
+            end
+        end
+    in
       case dest_term t of
         LAMB(bv, body) => let
           val newposnmap = Map.insert(bvarposns, bv, curposn)
@@ -1876,103 +2020,30 @@ fun munge_bvars absmap th = let
               handle HOLset.NotFound =>
                      (donebvars, (fn m => HOLset.delete(m, bv)
                                      handle HOLset.NotFound => m))
-          val (dbvars, actions) =
-              recurse (curposn o ABS_CONV) newposnmap (newdonemap, acc) body
+          val (dbtyvars, dbvars, actions) =
+              recurse (curposn o ABS_CONV) btyvarposns newposnmap (donebtyvars, newdonemap, acc) body
         in
-          (restore dbvars, actions)
+          (dbtyvars, restore dbvars, actions)
         end
-      | COMB _ => let
-          val (f, args) = strip_comb t
-          fun argfold (n, arg, A) =
-              recurse (curposn o arg_CONV n) bvarposns A arg
-        in
-          case Map.peek(absmap, f) of
-            NONE => foldri argfold (donebvars, acc) args
-          | SOME abs_t => let
-              val (abs_bvars, _) = strip_abs abs_t
-              val paired_up = ListPair.zip (args, abs_bvars)
-              fun foldthis ((arg, absv), acc as (dbvars, actionlist)) =
-                  if HOLset.member(dbvars, arg) then acc
-                  else case Map.peek(bvarposns, arg) of
-                         NONE => acc
-                       | SOME p =>
-                         (HOLset.add(dbvars, arg),
-                          p (ALPHA_CONV absv):: actionlist)
-              val (A as (newdbvars, newacc)) =
-                  List.foldl foldthis (donebvars, acc) paired_up
-            in
-              foldri argfold A args
-            end
-        end
-      | TYCOMB _ => let
-          val (f, arg) = dest_tycomb t
-        in
-          recurse (curposn o TY_COMB_CONV) bvarposns (donebvars, acc) f
-        end
-      | TYLAMB _ => let
-          val (a, body) = dest_tyabs t
-        in
-          recurse (curposn o TY_ABS_CONV) bvarposns (donebvars, acc) body
-        end
-      | _ => (donebvars, acc)
-in
-  recurse I (Map.mkDict Term.compare) (empty_tmset, []) (concl th)
-end
-
-
-fun munge_btyvars absmap th = let
-  fun recurse curposn bvarposns (donebvars, acc) t =
-      case dest_term t of
-        TYLAMB(bv, body) => let
-          val newposnmap = Map.insert(bvarposns, bv, curposn)
+      | COMB _ => ty_tm_comb t
+      | TYCOMB _ => ty_tm_comb t
+      | TYLAMB(bv, body) => let
+          val newposnmap = Map.insert(btyvarposns, bv, curposn)
           val (newdonemap, restore) =
-              (HOLset.delete(donebvars, bv), (fn m => HOLset.add(m, bv)))
+              (HOLset.delete(donebtyvars, bv), (fn m => HOLset.add(m, bv)))
               handle HOLset.NotFound =>
-                     (donebvars, (fn m => HOLset.delete(m, bv)
-                                     handle HOLset.NotFound => m))
-          val (dbvars, actions) =
-              recurse (curposn o TY_ABS_CONV) newposnmap (newdonemap, acc) body
+                     (donebtyvars, (fn m => HOLset.delete(m, bv)
+                                       handle HOLset.NotFound => m))
+          val (dbtyvars, dbvars, actions) =
+              recurse (curposn o TY_ABS_CONV) newposnmap bvarposns (newdonemap, donebvars, acc) body
         in
-          (restore dbvars, actions)
+          (restore dbtyvars, dbvars, actions)
         end
-      | TYCOMB _ => let
-          val (f, args) = strip_tycomb t
-          fun argfold (n, arg, A) =
-              A
-        in
-          case Map.peek(absmap, f) of
-            NONE => foldri argfold (donebvars, acc) args
-          | SOME abs_t => let
-              val (abs_bvars, _) = strip_tyabs abs_t
-              val paired_up = ListPair.zip (args, abs_bvars)
-              fun foldthis ((arg, absv), acc as (dbvars, actionlist)) =
-                  if HOLset.member(dbvars, arg) then acc
-                  else case Map.peek(bvarposns, arg) of
-                         NONE => acc
-                       | SOME p =>
-                         (HOLset.add(dbvars, arg),
-                          p (TY_ALPHA_CONV absv):: actionlist)
-              val (A as (newdbvars, newacc)) =
-                  List.foldl foldthis (donebvars, acc) paired_up
-            in
-              foldri argfold A args
-            end
-        end
-      | COMB _ => let
-          val (f, arg) = dest_comb t
-          val (dbvars, actions) =
-              recurse (curposn o RATOR_CONV) bvarposns (donebvars, acc) f
-        in
-          recurse (curposn o RAND_CONV) bvarposns (dbvars, actions) arg
-        end
-      | LAMB _ => let
-          val (v, body) = dest_abs t
-        in
-          recurse (curposn o ABS_CONV) bvarposns (donebvars, acc) body
-        end
-      | _ => (donebvars, acc)
+      | _ => (donebtyvars, donebvars, acc)
+    end
 in
-  recurse I (Map.mkDict Type.compare) (empty_tyset, []) (concl th)
+  recurse I (Map.mkDict Type.compare) (Map.mkDict Term.compare)
+            (empty_tyset, empty_tmset, []) (concl th)
 end
 
 
@@ -1981,30 +2052,18 @@ end
    repaired by tightening "foldthis" condition for entry to "bound_to_abs";
    see longish note at bottom for more details. *)
 
-(* "bound_vars" returns set of bound variables within term t *)
-(* "t" argument is actual term, "acc" is accumulating set, orig. empty *)
+(* "bound_vars" returns set of bound type and term variables within term t *)
+(* "t" argument is actual term, "acc" is pair of accumulating sets, orig. empty *)
 local
- fun bound_vars1 t acc =
+ fun bound_vars1 t (acc as (tvs,vs)) =
   case dest_term t
-   of LAMB(v,b) => bound_vars1 b (HOLset.add(acc, v))
+   of LAMB(v,b) => bound_vars1 b (tvs,HOLset.add(vs, v))
     | COMB(l,r) => bound_vars1 l (bound_vars1 r acc)
-    | TYLAMB(a,b) => bound_vars1 b acc
+    | TYLAMB(a,b) => bound_vars1 b (HOLset.add(tvs, a),vs)
     | TYCOMB(f,a) => bound_vars1 f acc
     | otherwise => acc
 in
-fun bound_vars t = bound_vars1 t empty_tmset
-end
-
-local
- fun bound_tyvars1 t acc =
-  case dest_term t
-   of LAMB(v,b) => bound_tyvars1 b acc
-    | COMB(l,r) => bound_tyvars1 l (bound_tyvars1 r acc)
-    | TYLAMB(a,b) => bound_tyvars1 b (HOLset.add(acc, a))
-    | TYCOMB(f,a) => bound_tyvars1 f acc
-    | otherwise => acc
-in
-fun bound_tyvars t = bound_tyvars1 t empty_tyset
+fun bound_vars t = bound_vars1 t (empty_tyset,empty_tmset)
 end
 
 
@@ -2012,113 +2071,82 @@ fun HO_PART_MATCH partfn th =
  let val sth = TY_TM_SPEC_ALL th
      val bod = concl sth
      val pbod = partfn bod
-     val posstybetas = mapfilter (fn v => (v,TY_BETA_VAR v bod))
-                                 (filter (can dest_univ_type o type_of) (free_vars bod))
-     val possbetas = mapfilter (fn v => (v,BETA_VAR v bod))
-                               (filter (can dom_rng o type_of) (free_vars bod))
+     val atys = type_vars_in_term bod
+     fun is_fun_or_univ_type ty = can dom_rng ty orelse can dest_univ_type ty
+     val possbetas = mapfilter (fn v => (v,TY_TM_BETA_VAR v bod))
+                               (filter (is_fun_or_univ_type o type_of) (free_vars bod))
      fun finish_fn rkin kdin tyin ivs =
-       let val nposstybetas =
-            if rkin = 0 andalso null kdin andalso null tyin then posstybetas
-               else map ((inst tyin o inst_rank_kind rkin kdin) ## I) posstybetas
-           val npossbetas =
+       let val npossbetas =
             if rkin = 0 andalso null kdin andalso null tyin then possbetas
-               else map ((inst tyin o inst_rank_kind rkin kdin) ## I) possbetas
-           val ty_fn =
-            if null nposstybetas then Lib.I
-            else CONV_RULE (EVERY_CONV (mapfilter
-                                          (TRY_CONV o C (op_assoc eq) nposstybetas)
-                                          ivs))
-           val tm_fn =
-            if null npossbetas then Lib.I
-            else CONV_RULE (EVERY_CONV (mapfilter
-                                          (TRY_CONV o C (op_assoc eq) npossbetas)
-                                          ivs))
-       in ty_fn o tm_fn
+            else map ((inst tyin o inst_rank_kind rkin kdin) ## I) possbetas
+       in if null npossbetas then Lib.I
+          else CONV_RULE (EVERY_CONV (mapfilter
+                                        (TRY_CONV o C (op_assoc eq) npossbetas)
+                                        ivs))
        end
      val lconsts = HOLset.intersection (FVL[pbod]empty_tmset, hyp_frees th)
      val lkdconsts = HOLset.listItems (hyp_kdvars th)
      val ltyconsts = HOLset.listItems (hyp_tyvars th)
  in fn tm =>
     let val (tmin,tyin,kdin,rkin) = ho_kind_match_term lkdconsts ltyconsts lconsts pbod tm
-        val tmbtvs = bound_tyvars tm
-        val tmbvs = bound_vars tm
-        fun foldthisty ({redex,residue}, acc) =
-            if is_tyabs residue andalso
-               all (fn a => HOLset.member(tmbtvs, a)) (fst (strip_tyabs residue))
-            then (*Map*)Redblackmap.insert(acc, redex, residue)
-            else acc
-        val bound_to_tyabs = List.foldl foldthisty ((*Map*)Redblackmap.mkDict Term.compare) tmin
+        val (tmbtvs,tmbvs) = bound_vars tm
         fun foldthis ({redex,residue}, acc) =
-            if is_abs residue andalso
-               all (fn v => HOLset.member(tmbvs, v)) (fst (strip_abs residue))
-            then (*Map*)Redblackmap.insert(acc, redex, residue)
+            if (is_abs residue orelse is_tyabs residue) andalso
+               all (fn inR v => HOLset.member(tmbvs, v)
+                     | inL a => HOLset.member(tmbtvs, a))
+                   (fst (strip_ty_tm_abs residue))
+            then Map.insert(acc, redex, residue)
             else acc
-        val bound_to_abs = List.foldl foldthis ((*Map*)Redblackmap.mkDict Term.compare) tmin
+        val bound_to_abs = List.foldl foldthis (Map.mkDict Term.compare) tmin
         val sth0 = INST_TYPE tyin (INST_KIND kdin (INST_RANK rkin sth))
         val sth0c = concl sth0
-        val (sth1, tmin') =
-            case match_bvs tm (partfn sth0c) [] of
-              [] => (sth0, tmin)
+        val (sth1, tyin', tmin') =
+            case match_bvs tm (partfn sth0c) ([],[]) of
+              ([],[]) => (sth0, [], tmin)
             | bvms => let
-                val avoids = look_for_avoids bvms sth0c empty_tmset
+                val (tyavoids,avoids) = look_for_avoids bvms sth0c (empty_tyset,empty_tmset)
+                fun g (a, acc) = (a |-> gen_var_type (kind_of a, rank_of a)) :: acc
+                val tyin' = HOLset.foldl g [] tyavoids
                 fun f (v, acc) = (v |-> genvar (type_of v)) :: acc
                 val newinst = HOLset.foldl f [] avoids
-                val newthm = INST newinst sth0
+                val newthm = INST newinst (INST_TYPE tyin' sth0)
                 val tmin' = map (fn {residue, redex} =>
                                     {residue = residue,
-                                     redex = Term.subst newinst redex}) tmin
+                                     redex = Term.subst newinst (Term.inst tyin' redex)}) tmin
                 val thmc = concl newthm
               in
-                (EQ_MP (ALPHA thmc (deep_alpha bvms thmc)) newthm, tmin')
+                (EQ_MP (ALPHA thmc (deep_alpha bvms thmc)) newthm, tyin', tmin')
               end
-        val sth1c = concl sth1
-        val (sth2, tmin'') =
-            case match_btvs tm (partfn sth1c) [] of
-              [] => (sth1, tmin')
-            | bvms => let
-                val avoids = look_for_tyavoids bvms sth1c empty_tyset
-                fun f (a, acc) = (a |-> gen_var_type (kind_of a, rank_of a)) :: acc
-                val newinst = HOLset.foldl f [] avoids
-                val newthm = INST_TYPE newinst sth1
-                val tmin'' = map (fn {residue, redex} =>
-                                     {residue = residue,
-                                      redex = Term.subst_type newinst redex}) tmin'
-                val thmc = concl newthm
-              in
-                (EQ_MP (ALPHA thmc (deep_tyalpha bvms thmc)) newthm, tmin'')
-              end
-        val sth3 =
-            if Map.numItems bound_to_abs = 0 then sth2
+        val sth2 =
+            if Map.numItems bound_to_abs = 0 then sth1
             else
-              CONV_RULE (EVERY_CONV (#2 (munge_bvars bound_to_abs sth2))) sth2
-        val sth4 =
-            if Map.numItems bound_to_tyabs = 0 then sth3
-            else
-              CONV_RULE (EVERY_CONV (#2 (munge_btyvars bound_to_tyabs sth3))) sth3
-        val th0 = INST tmin'' sth4
+              (* The actions accumulated by munge_bvars are consed as they are encountered;
+                 so the list must be reversed in order to execute them in the order found. *)
+              CONV_RULE (EVERY_CONV (rev (#3 (munge_bvars bound_to_abs sth1)))) sth1
+        val th0 = INST tmin' (INST_TYPE tyin' sth2)
         val th1 = finish_fn rkin kdin tyin (map #redex tmin) th0
     in
       th1
     end
  end
+
 end
+
+
+infix +-+;
+fun (f +-+ g) (inL x) = f x
+  | (f +-+ g) (inR y) = g y;
 
 fun HO_MATCH_MP ith =
  let val sth =
        let val tm = concl ith
-           val (atvs,tbod) = strip_tyforall tm
-           val (avs,bod) = strip_forall tbod
+           val (avs,bod) = strip_all_forall tm
            val (ant,_) = dest_imp_only bod
-           val (ant_tvs,nant_tvs) = partition (C type_var_occurs ant) atvs
-       in case partition (C free_in ant) avs
-           of (_,[]) => if null nant_tvs then ith else
-              let val th1 = SPECL avs (TY_SPECL atvs (ASSUME tm))
-                  val th2 = TY_GENL ant_tvs (GENL avs (DISCH ant (TY_GENL nant_tvs (UNDISCH th1))))
-              in MP (DISCH tm th2) ith
-              end
+       in case partition (C type_var_occurs ant +-+ C free_in ant) avs
+           of (_,[]) => ith
             | (svs,pvs) =>
-              let val th1 = SPECL avs (TY_SPECL atvs (ASSUME tm))
-                  val th2 = TY_GENL ant_tvs (GENL svs (DISCH ant (TY_GENL nant_tvs (GENL pvs (UNDISCH th1)))))
+              let val th1 = TY_TM_SPECL avs (ASSUME tm)
+                  val th2 = TY_TM_GENL svs (DISCH ant (TY_TM_GENL pvs (UNDISCH th1)))
               in MP (DISCH tm th2) ith
               end
        end handle HOL_ERR _ => raise ERR "MATCH_MP" "Not an implication"
@@ -2624,8 +2652,9 @@ the pattern theorem before it was instantiated.  So, I look at
 
   P /\ ?x. Q x
 
-compare it to P x /\ ?y. Q y, and see that bound x needs to be
-replaced by y throughout the theorem, giving
+compare it to P x /\ ?y. Q y ("match_bvs"), and see that bound x 
+needs to be replaced by y throughout the theorem ("deep_alpha bvms"), 
+giving
 
   (P /\ ?y. Q y) = (?y. P /\ Q y)
 
@@ -2648,10 +2677,10 @@ get
 
 The free variables in the theorem itself get in the way.  The fix is
 to examine whether or not the new bound variable clashes with a named
-variable in the body of the theorem.  If so, then the theorem has that
-variable instantiated to a genvar.  (The instantiation returned by
-ho_match_term also needs to be adjusted because it may be expecting to
-instantiate some of the pattern theorem's free variables.)
+variable in the body of the theorem ("look_for_avoids bvms").  If so, then 
+the theorem has that variable instantiated to a genvar.  (The instantiation 
+returned by ho_kind_match_term also needs to be adjusted because it may be 
+expecting to instantiate some of the pattern theorem's free variables.)
 
 So, the code in match_bvs figures out what renamings of bound
 variables need to happen, and then a traversal of the *whole* theorem
@@ -2679,8 +2708,8 @@ things like the congruence rule for RES_FORALL_CONG,
 
 HO_PART_MATCH only gets called with its "partfn" being to look at the
 LHS of the last equation.  Then, when the side conditions are looked
-over, x gets picked as a bound variable, and any bound variable in f
-gets ignored.
+over, x gets picked as a bound variable, and any bound variable in 
+what f will be instantiated with gets ignored.
 
 The code in munge_bvars gets around this failing by searching the
 whole theorem for instances of variables that are going to be

@@ -62,7 +62,7 @@ fun rec2 f th =
 
 (* SPEC_VARL : thm -> term list * thm, like SPECL and SPEC_VAR *)
 val SPEC_VARL = strip_left SPEC_VAR ;
-val SPEC_TYVARL = strip_left SPEC_TYVAR ;
+val TY_SPEC_VARL = strip_left TY_SPEC_VAR ;
 
 (* sfg : (thm -> thm) -> thm -> thm
   remove universal quantifiers, apply f, add quantifiers back *)
@@ -73,7 +73,7 @@ fun sfg f thm =
 (* tsfg : (thm -> thm) -> thm -> thm
   remove type universal quantifiers, apply f, add quantifiers back *)
 fun tsfg f thm =
-  let val (tyvars, sthm) = SPEC_TYVARL thm ;
+  let val (tyvars, sthm) = TY_SPEC_VARL thm ;
   in TY_GENL tyvars (f sthm) end ;
 
 (* UNDISCH_TERM : thm -> term * thm

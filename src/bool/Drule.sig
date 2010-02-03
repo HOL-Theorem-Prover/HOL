@@ -11,12 +11,16 @@ sig
   val MK_TY_ABS        : thm -> thm
   val MK_EXISTS        : thm -> thm
   val MK_TY_EXISTS     : thm -> thm
+  val MK_TY_TM_EXISTS  : thm -> thm
   val LIST_MK_EXISTS   : term list -> thm -> thm
   val LIST_MK_TY_EXISTS: hol_type list -> thm -> thm
+  val LIST_MK_TY_TM_EXISTS: (hol_type,term) Lib.sum list -> thm -> thm
   val SIMPLE_EXISTS    : term -> thm -> thm
   val SIMPLE_TY_EXISTS : hol_type -> thm -> thm
+  val SIMPLE_TY_TM_EXISTS : (hol_type,term) Lib.sum -> thm -> thm
   val SIMPLE_CHOOSE    : term -> thm -> thm
   val SIMPLE_TY_CHOOSE : hol_type -> thm -> thm
+  val SIMPLE_TY_TM_CHOOSE : (hol_type,term) Lib.sum -> thm -> thm
   val EQT_INTRO        : thm -> thm
   val GSUBS            : ((term,term)subst -> term -> term)
                            -> thm list -> thm -> thm
@@ -39,7 +43,7 @@ sig
   val SELECT_ELIM      : thm -> term * thm -> thm
   val SELECT_RULE      : thm -> thm
   val SPEC_VAR         : thm -> term * thm
-  val SPEC_TYVAR       : thm -> hol_type * thm
+  val TY_SPEC_VAR      : thm -> hol_type * thm
   val FORALL_EQ        : term -> thm -> thm
   val TY_FORALL_EQ     : hol_type -> thm -> thm
   val EXISTS_EQ        : term -> thm -> thm
@@ -49,10 +53,14 @@ sig
   val SUBS_OCCS        : (int list * thm) list -> thm -> thm
   val RIGHT_BETA       : thm -> thm
   val RIGHT_TY_BETA    : thm -> thm
+  val RIGHT_TY_TM_BETA : thm -> thm
   val LIST_BETA_CONV   : term -> thm
-  val LIST_TY_BETA_CONV: term -> thm
+  val LIST_TY_BETA_CONV : term -> thm
+  val TY_TM_BETA_CONV  : term -> thm
+  val LIST_TY_TM_BETA_CONV : term -> thm
   val RIGHT_LIST_BETA  : thm -> thm
   val RIGHT_LIST_TY_BETA : thm -> thm
+  val RIGHT_LIST_TY_TM_BETA : thm -> thm
   val CONJUNCTS_AC     : term * term -> thm
   val DISJUNCTS_AC     : term * term -> thm
   val CONJ_DISCH       : term -> thm -> thm
@@ -65,6 +73,7 @@ sig
   val ISPECL           : term list -> thm -> thm
   val GEN_ALL          : thm -> thm
   val TY_GEN_ALL       : thm -> thm
+  val TY_TM_GEN_ALL    : thm -> thm
   val DISCH_ALL        : thm -> thm
   val UNDISCH_ALL      : thm -> thm
   val SPEC_ALL         : thm -> thm
@@ -86,7 +95,8 @@ sig
   val ALPHA_CONV       : term -> term -> thm
   val TY_ALPHA_CONV    : hol_type -> term -> thm
   val GEN_ALPHA_CONV   : term -> term -> thm
-  val GEN_TY_ALPHA_CONV: hol_type -> term -> thm
+  val GEN_TY_ALPHA_CONV : hol_type -> term -> thm
+  val GEN_TY_TM_ALPHA_CONV : (hol_type,term) Lib.sum -> term -> thm
   val IMP_CONJ         : thm -> thm -> thm
   val EXISTS_IMP       : term -> thm -> thm
   val TY_EXISTS_IMP    : hol_type -> thm -> thm
@@ -98,9 +108,14 @@ sig
   val GSPEC            : thm -> thm
   val TY_GSPEC         : thm -> thm
 
+  val strip_ty_tm_comb : term -> term * (hol_type,term) Lib.sum list
+  val strip_ty_tm_abs  : term -> (hol_type,term) Lib.sum list * term
+
   val PART_MATCH       : (term -> term) -> thm -> term -> thm
   val MATCH_MP         : thm -> thm -> thm
   val BETA_VAR         : term -> term -> term -> thm
+  val TY_BETA_VAR      : term -> term -> term -> thm
+  val TY_TM_BETA_VAR   : term -> term -> term -> thm
   val HO_PART_MATCH    : (term -> term) -> thm -> term -> thm
   val HO_MATCH_MP      : thm -> thm -> thm
   val RES_CANON        : thm -> thm list
