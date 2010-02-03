@@ -126,7 +126,6 @@ structure Yices = struct
     (wordsSyntax.word_lsr_tm, "bv-shift-right0", ""),
     (* word_concat in HOL has a more general type than bv-concat in Yices *)
     (wordsSyntax.word_concat_tm, "bv-concat", ""),
-    (wordsSyntax.word_extract_tm, "bv-extract", ""),
     (wordsSyntax.word_add_tm, "bv-add", ""),
     (wordsSyntax.word_sub_tm, "bv-sub", ""),
     (wordsSyntax.word_mul_tm, "bv-mul", ""),
@@ -323,18 +322,48 @@ structure Yices = struct
       in
         (acc, "(= (bv-extract " ^ sn ^ " " ^ sn ^ " " ^ s1 ^ ") 0b1)")
       end
+    (* word_extract -- applies w2w after extraction to adjust the dimension of
+       the result in HOL *)
+    else if wordsSyntax.is_word_extract tm then
+      let val (n1, n2, w, dim_ty) = wordsSyntax.dest_word_extract tm
+          val n1 = numSyntax.dest_numeral n1
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "word_extract: upper index is not a numeral")
+          val n2 = numSyntax.dest_numeral n2
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "word_extract: lower index is not a numeral")
+          val dim = fcpLib.index_to_num dim_ty
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "word_extract: result bit-vector type of unknown size")
+          val old_dim = Arbnum.+ (Arbnum.- (n1, n2), Arbnum.one)
+          val (acc, s1) = translate_term (acc, w)
+          val s1 = "(bv-extract " ^ Arbnum.toString n1 ^ " " ^
+            Arbnum.toString n2 ^ " " ^ s1 ^ ")"
+      in
+        if dim = old_dim then
+          (acc, s1)
+        else if Arbnum.< (dim, old_dim) then
+          (acc, "(bv-extract " ^ Arbnum.toString (Arbnum.- (dim, Arbnum.one)) ^
+             " 0 " ^ s1 ^ ")")
+        else  (* dim > old_dim *)
+          (acc, "(bv-concat (mk-bv " ^ Arbnum.toString
+             (Arbnum.- (dim, old_dim)) ^ " 0) " ^ s1 ^ ")")
+      end
     (* w2w *)
     else if wordsSyntax.is_w2w tm then
       let val (t1, dim_ty) = wordsSyntax.dest_w2w tm
           val dim = fcpLib.index_to_num dim_ty
-                      handle Feedback.HOL_ERR _ =>
-                        raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
-                               "w2w: result bit-vector type of unknown size")
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "w2w: result bit-vector type of unknown size")
           val old_dim_ty = wordsSyntax.dim_of t1
           val old_dim = fcpLib.index_to_num old_dim_ty
-                      handle Feedback.HOL_ERR _ =>
-                        raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
-                               "w2w: argument bit-vector type of unknown size")
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "w2w: argument bit-vector type of unknown size")
           val (acc, s1) = translate_term (acc, t1)
       in
         if Arbnum.<= (dim, old_dim) then
@@ -343,6 +372,27 @@ structure Yices = struct
         else
           (acc, "(bv-concat (mk-bv " ^ Arbnum.toString
              (Arbnum.- (dim, old_dim)) ^ " 0) " ^ s1 ^ ")")
+      end
+    (* sw2sw *)
+    else if wordsSyntax.is_sw2sw tm then
+      let val (t1, dim_ty) = wordsSyntax.dest_sw2sw tm
+          val dim = fcpLib.index_to_num dim_ty
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "sw2sw: result bit-vector type of unknown size")
+          val old_dim_ty = wordsSyntax.dim_of t1
+          val old_dim = fcpLib.index_to_num old_dim_ty
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "sw2sw: argument bit-vector type of unknown size")
+          val (acc, s1) = translate_term (acc, t1)
+      in
+        if Arbnum.< (dim, old_dim) then
+          (acc, "(bv-extract " ^ Arbnum.toString (Arbnum.- (dim, Arbnum.one)) ^
+             " 0 " ^ s1 ^ ")")
+        else
+          (acc, "(bv-sign-extend " ^ s1 ^ " " ^ Arbnum.toString
+             (Arbnum.- (dim, old_dim)) ^ ")")
       end
     (* word_msb *)
     else if wordsSyntax.is_word_msb tm then

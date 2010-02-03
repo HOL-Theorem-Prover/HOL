@@ -901,6 +901,11 @@ in
      (((v:word32) - w = 0w) <=> (v = w)) /\ (w - 0w = w)``,
       [(*TODO: thm_AUTO,*) thm_YO]),
 
+    (* from Yogesh Mahajan *)
+    (``!(w: 18 word). (sw2sw w): 32 word = w2w ((16 >< 0) w: 17 word) +
+     0xfffe0000w + ((0 >< 0) (~(17 >< 17) w: bool[unit]) << 17): 32 word``,
+      [(*TODO: thm_AUTO,*) thm_YO]),
+
     (* data types: constructors *)
 
     (``foo <> bar``, [thm_AUTO, thm_YO]),
