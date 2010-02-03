@@ -30,7 +30,7 @@ README       Documentation. (This file.)
    to your ~/.hol-config.sml file
 3  Run hol to start the HOL session
 4. Run vim, open a HOL script, and type :source $HOLDIR/tools/vim/hol.vim
-5. Select some SML value or declaration and type HS to send it to the HOL session
+5. Select some SML value or declaration and type hs to send it to the HOL session
    See below for more key mappings
 
 To have hol.vim run automatically on script files, you could use the following in ~/.vim/filetype.vim:
@@ -43,7 +43,7 @@ You must make sure you turn :filetype on (e.g. by putting "filetype on" in your 
 
 (These are all set up at the bottom of hol.vim)
 
-The following commands work in visual mode (only):
+The following commands work in visual mode:
 
 hs          Send region to HOL.
 hu          Send region to HOL in quiet mode.
@@ -55,6 +55,9 @@ hg          Send region (should be a quotation) to g, to start a new proof.
 he          Send region (should be a tactic) to e, to expand a tactic.
 hS          Send region (should be a quotation) as a new subgoal.
 
+If a visual mode command above is given in normal mode, the region will be the
+line containing the cursor.
+
 The following commands work in normal mode (only):
 
 <count>hR   Rotate subgoals <count> times (default 1).
@@ -64,6 +67,9 @@ hp          Print the proof manager status (by calling p).
 hr          Restart the current proof (by calling restart).
 
 hc          Interrupt execution (of whichever of the things sent is running).
+
+hh          A normal h (usually means move cursor left).
+            This one works in both normal and visual modes.
 
 === Automatic stripping ===
 

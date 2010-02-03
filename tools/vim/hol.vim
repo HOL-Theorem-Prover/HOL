@@ -168,11 +168,19 @@ vn <silent> hu :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR>
 vn <silent> hg :call YankThenHOLCall(function("HOLGoal"),[])<CR>
 vn <silent> he :call YankThenHOLCall(function("HOLExpand"),[])<CR>
 vn <silent> hS :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
+nm <silent> hl Vhl
+nm <silent> hL VhL
+nm <silent> hs Vhs
+nm <silent> hu Vhu
+nm <silent> hg Vhg
+nm <silent> he Vhe
+nm <silent> hS VhS
 nn <silent> hR :<C-U>call HOLRotate()<CR>
 nn <silent> hb :<C-U>call HOLRepeat("b();")<CR>
 nn <silent> hd :<C-U>call HOLRepeat("drop();")<CR>
 nn <silent> hp :call HOLCall(function("HOLF"),["p();"])<CR>
 nn <silent> hr :call HOLCall(function("HOLF"),["restart();"])<CR>
 nn <silent> hc :call HOLINT()<CR>
+no hh h
 
 let b:did_hol = 1
