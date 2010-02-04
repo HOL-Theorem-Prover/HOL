@@ -1,5 +1,3 @@
-tl;
-
 list_length(r;c) [data_list(c,cdata)] {
   local t;
   if (c == NULL) {
@@ -9,6 +7,5 @@ list_length(r;c) [data_list(c,cdata)] {
     list_length(r;t);
     r = r + 1;
   }
-} [data_list(c,cdata) * 
-   r == ``LENGTH (cdata:num list)``]
+} [data_list(c,cdata) *  (r == ``LENGTH (cdata:num list)``)]
 
