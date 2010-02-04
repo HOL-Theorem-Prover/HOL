@@ -15,15 +15,21 @@ open separationLogicSyntax
 open vars_as_resourceSyntax
 open holfootSyntax
 
-
 (*
 quietdec := false;
 *)
 
-
 val holfoot_pretty_printer_block_indent = ref 3;
 
 
+val _ = register_UserStyle NONE "holfoot_comment" [FG LightGrey]
+val _ = register_UserStyle NONE "holfoot_spec"    [FG OrangeRed]
+val _ = register_UserStyle NONE "holfoot_alert_0" [Bold, Underline]
+val _ = register_UserStyle NONE "holfoot_alert_1" [Bold]
+val _ = register_UserStyle NONE "holfoot_alert_2" [Underline]
+val _ = register_UserStyle NONE "holfoot_frame_split___context" [FG LightGrey]
+val _ = register_UserStyle NONE "holfoot_frame_split___imp"     [FG OrangeRed]
+val _ = register_UserStyle NONE "holfoot_frame_split___split"   [FG Green]
 
 fun holfoot_var_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = let
     open Portable term_pp_types
@@ -264,7 +270,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           val post_body' = subst su post_body;
        in
           begin_block CONSISTENT 0;
-          begin_style [FG LightGrey];
+          begin_style [UserStyle "holfoot_comment"];
           add_string (if loop then "loop-specification" else "block-specification");
           add_string " ";
           add_string "[";
@@ -280,7 +286,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           add_break (1,0);
           add_string "}";
           add_string " ";
-          begin_style [FG LightGrey];
+          begin_style [UserStyle "holfoot_comment"];
           add_string "[";
           sys (Top, Top, Top) (d - 1) post_body';
           add_string "]";
@@ -372,7 +378,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
       in
          begin_block CONSISTENT 0;             
             begin_block INCONSISTENT 0;
-               begin_style [FG LightGrey];
+               begin_style [UserStyle "holfoot_comment"];
                add_string "/*";
                add_break (1,3);
                add_loc_add_string 3 add_string add_break loc_add_strings;
@@ -390,7 +396,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
       in
          begin_block CONSISTENT 0;             
             begin_block INCONSISTENT 0;
-               begin_style [FG LightGrey];
+               begin_style [UserStyle "holfoot_comment"];
                add_string "/**";
                add_break (1,3);
                add_loc_add_string 3 add_string add_break loc_add_strings;
@@ -412,10 +418,10 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
       in
          begin_block CONSISTENT 0;             
             begin_block INCONSISTENT 0;
-               begin_style [FG LightGrey];
+               begin_style [UserStyle "holfoot_comment"];
                add_string "/*";
                add_string " ";
-               begin_style [Underline];
+               begin_style [UserStyle "holfoot_alert_2"];
                add_string "Loop Invariant:";
                end_style ();
                add_break (1,3);
@@ -440,7 +446,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
       in
          begin_block CONSISTENT 0;             
             begin_block INCONSISTENT 0;
-               begin_style [FG LightGrey];
+               begin_style [UserStyle "holfoot_comment"];
                add_string "/***";
                add_break (1,3);
                add_loc_add_string 3 add_string add_break loc_add_strings;
@@ -888,7 +894,7 @@ fun holfoot_specification_printer GS sys (ppfns:term_pp_types.ppstream_funs) gra
     val funtL = map funt_preprocess funtL_term;
   in
      begin_block CONSISTENT 0;
-     begin_style [Bold, Underline];
+     begin_style [UserStyle "holfoot_alert_0"];
      add_string ("HOLFOOT_SPECIFICATION");
      end_style ();
      add_string " ";
@@ -900,7 +906,7 @@ fun holfoot_specification_printer GS sys (ppfns:term_pp_types.ppstream_funs) gra
                 begin_block INCONSISTENT 0;
                 add_string "resource";
                 add_string " ";
-                begin_style [Bold];
+                begin_style [UserStyle "holfoot_alert_1"];
                 add_string (stringLib.fromHOLstring s);
                 end_style ();
                 add_break (1, (!holfoot_pretty_printer_block_indent));
@@ -915,7 +921,7 @@ fun holfoot_specification_printer GS sys (ppfns:term_pp_types.ppstream_funs) gra
      map (fn (assume_opt, fun_name, argL_term, pre_term, body_term, post_term) => (
                 begin_block INCONSISTENT 0;
                 (if (not assume_opt) then (add_string "assume") else ());
-                begin_style [Bold];
+                begin_style [UserStyle "holfoot_alert_1"];
                 add_string (stringLib.fromHOLstring fun_name);
                 end_style ();
                 holfoot_proccall_args_printer sys (ppfns:term_pp_types.ppstream_funs) gravs (d - 1) pps argL_term;
@@ -923,7 +929,7 @@ fun holfoot_specification_printer GS sys (ppfns:term_pp_types.ppstream_funs) gra
                     else (add_break (1,2)));
                 add_string "[";
 
-                begin_style [FG OrangeRed];
+                begin_style [UserStyle "holfoot_spec"];
                 begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);
                 sys (Top, Top, Top) (d - 1) pre_term;
                 end_block ();
@@ -946,7 +952,7 @@ fun holfoot_specification_printer GS sys (ppfns:term_pp_types.ppstream_funs) gra
                 (if (not assume_opt) then (add_newline(); add_string "  ")
                     else (add_string " "));
                 add_string "[";
-                begin_style [FG OrangeRed];
+                begin_style [UserStyle "holfoot_spec"];
                 begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);
                 sys (Top, Top, Top) (d - 1) post_term;
                 end_style ();
@@ -999,7 +1005,7 @@ in
     begin_block CONSISTENT 0;       
     (if (optionSyntax.is_some comment_opt) then
          (begin_block INCONSISTENT 0;
-            begin_style [FG LightGrey];
+            begin_style [UserStyle "holfoot_comment"];
             add_string "/*";
             add_break (1,3);
             add_loc_add_string 3 add_string add_break 
@@ -1022,7 +1028,7 @@ in
        end_block ();
        add_break (1,0);       
        begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);       
-          begin_style [FG LightGrey]; 
+          begin_style [UserStyle "holfoot_frame_split___context"]; 
           pretty_print_list_sep " *" (sys, add_string, add_break) d (fst_dest_bag context);
           end_style ();
           add_string " ";
@@ -1030,7 +1036,7 @@ in
        end_block ();
        add_break (1,0);
        begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);       
-           begin_style [FG Green]; 
+           begin_style [UserStyle "holfoot_frame_split___split"]; 
            pretty_print_list_sep " *" (sys, add_string, add_break) d (fst_dest_bag split);
            end_style();
            add_string " ";
@@ -1038,7 +1044,7 @@ in
        end_block ();
        add_break (1,0);
        begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);       
-          begin_style [FG OrangeRed]; 
+          begin_style [UserStyle "holfoot_frame_split___imp"]; 
           pretty_print_list_sep " *" (sys, add_string, add_break) d (fst_dest_bag imp);
           end_style ();
           (if (aconv mode T) then
@@ -1122,23 +1128,39 @@ val pretty_printer_list =
  ]:(string * Parse.term * term_grammar.userprinter) list;
 
 
+val use_holfoot_pp = ref true
+val _ = Feedback.register_btrace ("use holfoot_pp", use_holfoot_pp);
+
+
+fun trace_user_printer (up:term_grammar.userprinter) =
+   (fn GS => fn sys => fn ppfns => fn gravs => fn d => fn pps => fn t =>
+   if (!use_holfoot_pp) then 
+       up GS sys ppfns gravs d pps t
+   else
+      raise term_pp_types.UserPP_Failed):term_grammar.userprinter
+
+
+val pretty_printer_list_trace = map (fn (s, t, p) =>
+   (s, t, trace_user_printer p)) pretty_printer_list
+
+
 fun temp_add_holfoot_pp () = 
-   (map temp_add_user_printer pretty_printer_list;
+   (map temp_add_user_printer pretty_printer_list_trace;
     print "HOLFOOT pretty printing activated!\n");
 
 fun temp_remove_holfoot_pp () = 
-   (map (temp_remove_user_printer o #1) pretty_printer_list;
+   (map (temp_remove_user_printer o #1) pretty_printer_list_trace;
     print "HOLFOOT pretty printing deactivated!\n");
 
 fun add_holfoot_pp_quiet () =
-   (map add_user_printer pretty_printer_list;());
+   (map add_user_printer pretty_printer_list_trace;());
 
 fun add_holfoot_pp () = 
     (add_holfoot_pp_quiet();
      print "HOLFOOT pretty printing activated!\n");
 
 fun remove_holfoot_pp_quiet () =
-   (map (remove_user_printer o #1) pretty_printer_list;());
+   (map (remove_user_printer o #1) pretty_printer_list_trace;());
 
 fun remove_holfoot_pp () = 
    (remove_holfoot_pp_quiet ();
@@ -1148,8 +1170,7 @@ fun remove_holfoot_pp () =
 (*
 open holfootParser
 open holfoot_pp_print
-val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot/EXAMPLES/"]
-val file = concat [examplesDir, "list.sf"]; 
+val file = concat [examplesDir, "/automatic/list.sf"]; 
 val t = parse_holfoot_file file
 
 temp_remove_holfoot_pp ();temp_add_holfoot_pp ();t
