@@ -28,6 +28,7 @@ sig
     | BG of pp_color
     | Bold
     | Underline
+    | UserStyle of string
 
   datatype annotation = BV of hol_type * (unit -> string)
                       | FV of hol_type * (unit -> string)
@@ -59,10 +60,15 @@ sig
                        clear_ppstream : unit -> unit,
                        flush_ppstream : unit -> unit}
 
+  val known_UserStyles   : unit -> string list
+  val lookup_UserStyle   : string -> string -> pp_style list
+  val register_UserStyle : string option -> string -> pp_style list -> unit
+
   val raw_terminal   : t
   val vt100_terminal : t
   val emacs_terminal : t
   val html_terminal  : t
+  val html_escape    : string -> string
 
 
 end
