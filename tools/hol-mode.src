@@ -627,6 +627,16 @@ file to \"use\" first."
   (interactive)
   (send-raw-string-to-hol "proofManagerLib.b()" hol-echo-commands-p t))
 
+(defun hol-user-backup ()
+  "Perform a HOL backup to a user-defined save-point."
+  (interactive)
+  (send-raw-string-to-hol "proofManagerLib.Backup()" hol-echo-commands-p t))
+
+(defun hol-user-save-backup ()
+  "Saves the current status of the proof for later backups to this point."
+  (interactive)
+  (send-raw-string-to-hol "proofManagerLib.save_proof()" hol-echo-commands-p t))
+
 (defun hol-print-goal ()
   "Print the current HOL goal."
   (interactive)
@@ -1499,6 +1509,8 @@ already loaded.)"
 (define-key hol-map "\M-s" 'hol-subgoal-tactic)
 (define-key hol-map "\M-v" 'hol-scroll-down)
 (define-key hol-map "b"    'hol-backup)
+(define-key hol-map "B"    'hol-user-backup)
+(define-key hol-map "S"    'hol-user-save-backup)
 (define-key hol-map "d"    'hol-drop-goal)
 (define-key hol-map "D"    'hol-drop-all-goals)
 (define-key hol-map "e"    'copy-region-as-hol-tactic)
@@ -1783,6 +1795,12 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-goalstack rotate]
    '("Rotate" . hol-rotate))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack back-up-user]
+   '("User Back-up" . hol-user-backup))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack back-up-save-user]
+   '("Set User-Back-up point" . hol-user-save-backup))
 
 (define-key global-map [menu-bar hol-menu hol-goalstack back-up]
    '("Back up" . hol-backup))
