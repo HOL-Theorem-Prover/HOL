@@ -1,3 +1,5 @@
+val _ = HOL_Interactive.toggle_quietdec();
+
 val _ = loadPath := 
             (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) :: 
             (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) :: 
@@ -27,6 +29,7 @@ val _ = holfoot_verify_spec (examplesDir ^ "/automatic/mergesort.sf") []
 
 
 (* save state *)
-val state_file = (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/holfoot.state");
+val state_file = (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/holfoot.state");
 val _ = PolyML.SaveState.saveState state_file;
 
+val _ = HOL_Interactive.toggle_quietdec();

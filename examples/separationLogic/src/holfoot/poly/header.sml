@@ -1,6 +1,6 @@
 (* load the state *)
 val _ = HOL_Interactive.toggle_quietdec();
-val state_file = (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/holfoot.state");
+val state_file = (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/holfoot.state");
 val _ = PolyML.SaveState.loadState state_file;
 
 (* do some modifications *)
