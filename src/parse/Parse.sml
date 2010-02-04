@@ -192,8 +192,16 @@ fun pp_type pps ty = let in
    !type_printer (!current_backend) pps ty
  end
 
-val type_to_string = Portable.pp_to_string 75 pp_type
+
+fun type_to_string ty =
+    Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+                  (Portable.pp_to_string (!Globals.linewidth) pp_type) ty;
 fun print_type ty = Portable.output(Portable.std_out, type_to_string ty);
+
+fun type_to_backend_string ty =
+   (Portable.pp_to_string (!Globals.linewidth) pp_type) ty;
+fun print_backend_type ty =
+  Portable.output(Portable.std_out, type_to_backend_string ty);
 
 fun type_pp_with_delimiters ppfn pp ty =
   let open Portable Globals

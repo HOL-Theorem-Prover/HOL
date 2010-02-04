@@ -189,12 +189,14 @@ signature Parse = sig
   val term_to_string         : term -> string
   val term_to_backend_string : term -> string
   val type_to_string         : hol_type -> string
+  val type_to_backend_string : hol_type -> string
   val thm_to_string          : thm -> string
   val thm_to_backend_string  : thm -> string
 
   val print_thm              : thm -> unit
   val print_backend_thm      : thm -> unit
   val print_type             : hol_type -> unit
+  val print_backend_type     : hol_type -> unit
   val print_term             : term -> unit
   val print_backend_term     : term -> unit
 
