@@ -23,6 +23,8 @@ sig
     val dropn         : int -> proofs
     val restart       : unit -> proof
     val backup        : unit -> proof
+    val Backup        : unit -> proof
+    val save_proof    : unit -> proof
     val set_backup    : int -> unit
     val forget_history: unit -> unit
 
