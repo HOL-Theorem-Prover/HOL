@@ -832,10 +832,8 @@ struct
             let val (l, r) = boolSyntax.dest_disj disj
                 (* |- l \/ r ==> ... *)
                 val thm = Thm.DISCH disj thm
-                val l_th = Thm.DISJ1 (Thm.ASSUME l) r
-                val r_th = Thm.DISJ2 l (Thm.ASSUME r)
-                val l_imp_concl = Thm.MP thm l_th
-                val r_imp_concl = Thm.MP thm r_th
+                val l_imp_concl = Thm.MP thm (Thm.DISJ1 (Thm.ASSUME l) r)
+                val r_imp_concl = Thm.MP thm (Thm.DISJ2 l (Thm.ASSUME r))
             in
               disjuncts (disjuncts dict (l, l_imp_concl)) (r, r_imp_concl)
             end
@@ -868,6 +866,9 @@ struct
           in
             Redblackmap.insert (dict, neg_lit, th)
           end) dict (List.tl thms)
+        (* derive 't' from ``F`` (just in case ``F`` is a disjunct) *)
+        val dict = Redblackmap.insert
+          (dict, boolSyntax.F, Thm.CCONTR t (Thm.ASSUME boolSyntax.F))
         val clause = Thm.concl (List.hd thms)
         val clause_imp_t = prove_from_disj dict clause
     in
