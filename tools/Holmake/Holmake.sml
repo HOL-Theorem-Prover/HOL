@@ -626,7 +626,7 @@ val hmakefile_env = let
   val stdincludes =
       spacify (map Systeml.protect (hmake_preincludes @ std_include_flags)) ^
       " " ^ addincludes
-  val basis_string = if nob2002 then [] else [LIT "basis2002.ui"]
+  val basis_string = if nob2002 then [] else [LIT " basis2002.ui"]
 in
   (fn s =>
       case s of
