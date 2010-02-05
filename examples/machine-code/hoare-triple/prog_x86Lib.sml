@@ -165,7 +165,7 @@ fun post_process_thm th = let
     val x = find_term (can (match_term ``(THE x):'a``)) (concl th)
     val y = optionSyntax.mk_some(mk_var(fst (dest_var (cdr x)),type_of x))
     val th = INST [cdr x |-> y] th
-    val th = SIMP_RULE (bool_ss++optionTheory.option_rwts) [SEP_CLAUSES] th
+    val th = SIMP_RULE bool_ss [SEP_CLAUSES,optionLib.option_rws] th
     in th end
   val th = repeat f th
   val th = RW [ALIGNED_def] th
