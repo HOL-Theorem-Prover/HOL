@@ -43,6 +43,20 @@ sig
   val Leftarrow : string
   val longdoublerightarrow : string
   val longdoubleleftarrow : string
+  val mapsto         : string
+  val mapsfrom       : string
+  val longmapsto     : string
+  val longmapsfrom   : string
+  val hookleftarrow  : string
+  val hookrightarrow : string
+
+  (*stars*)
+  val blackstar      : string
+  val whitestar      : string
+  val bigasterisk    : string
+  val asterisk       : string
+  val circlestar     : string
+  val stardiaeresis  : string
 
   (* boolTheory connectives *)
   val forall : string
