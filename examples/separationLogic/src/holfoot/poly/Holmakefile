@@ -4,7 +4,7 @@ EXTRA_CLEANS = holfoot.o holfoot holfoot-web.o holfoot-web
 
 all: holfoot holfoot-web
 
-holfoot.o: holfoot.state ../holfoot_command_line.sml
+holfoot.o: holfoot.state holfoot_command_line.sml
 	hol < build-cl.hol
 
 holfoot.state: ../holfootLib.uo ../holfootLib.ui ../holfootTheory.ui ../AssembleHolfootParser.uo ../AssembleHolfootParser.ui

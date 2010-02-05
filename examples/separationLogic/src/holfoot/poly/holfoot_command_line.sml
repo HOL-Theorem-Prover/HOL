@@ -1,5 +1,5 @@
 (*
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/header.sml");
 *)
 
 val _ = load "DiskThms";

@@ -75,16 +75,13 @@ sig
     end
 end) :
 sig
-   type term = Term.term
-   type conv = Abbrev.conv
-   type thm = Abbrev.thm
    type user_rewrite_param = (Abbrev.thm list * Abbrev.conv list * simpLib.ssfrag list);
    type gen_step_param = {use_asms       : bool,
                           do_case_splits : bool,
                           do_expands     : bool,
                           generate_vcs   : bool,
                           fast           : bool,
-                          stop_evals     : (term -> bool) list,
+                          stop_evals     : (Abbrev.term -> bool) list,
                           do_prop_simps  : bool};
 
    datatype gen_step_tac_opt =
@@ -94,10 +91,10 @@ sig
      | prop_simp_flag of bool
      | use_asms_flag of bool
      | generate_vcs_flag of bool
-     | add_rewrites of thm list
-     | add_convs of conv list
+     | add_rewrites of Abbrev.thm list
+     | add_convs of Abbrev.conv list
      | add_ssfrags of simpLib.ssfrag list
-     | stop_evals of (term -> bool) list
+     | stop_evals of (Abbrev.term -> bool) list
      | combined_gen_step_tac_opt of gen_step_tac_opt list
 
    val no_case_splits        : gen_step_tac_opt;
@@ -125,7 +122,7 @@ sig
    val gen_step_param___update_expands    : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_fast       : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_prop_simps : gen_step_param -> bool -> gen_step_param
-   val gen_step_param___update_stop_evals : gen_step_param -> (term -> bool) list -> gen_step_param
+   val gen_step_param___update_stop_evals : gen_step_param -> (Abbrev.term -> bool) list -> gen_step_param
 
    val VAR_RES_GEN_STEP_CONSEQ_CONV : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.thm list -> Abbrev.conv
    val VAR_RES_GEN_STEP_TAC         : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.tactic
