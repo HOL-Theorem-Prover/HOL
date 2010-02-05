@@ -415,7 +415,7 @@ fun html_escape s = valOf (String.fromString (String.translate char_html_escape 
 val html_terminal = 
 let
   val name = "html_terminal";
-  fun add_string pps s = PP.add_stringsz pps (html_escape s, String.size s);
+  fun add_string pps s = PP.add_stringsz pps (html_escape s, UTF8.size s);
 
   val style_stack = ref ([]:pp_full_style list);
   fun set_style pps fsty =
