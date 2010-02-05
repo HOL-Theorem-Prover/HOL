@@ -14,6 +14,7 @@ open HolKernel boolLib bossLib PPBackEnd Parse
 open separationLogicSyntax
 open vars_as_resourceSyntax
 open holfootSyntax
+open Unicode
 
 (*
 quietdec := false;
@@ -21,6 +22,8 @@ quietdec := false;
 
 val holfoot_pretty_printer_block_indent = ref 3;
 
+fun unicode_choice snu su =
+  if (current_trace "Unicode" = 1) then su else snu
 
 val _ = register_UserStyle NONE "holfoot_comment" [FG LightGrey]
 val _ = register_UserStyle NONE "holfoot_spec"    [FG OrangeRed]
@@ -123,7 +126,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           add_string " =";
           add_break (1,1);
           sys (Top, Top, Top) (d - 1) exp_term;
-	  add_string ("->");
+	  add_string (unicode_choice "->" UChar.rightarrow);
           sys (Top, Top, Top) (d - 1) tag_term;
 	  end_block ()
        end
@@ -135,7 +138,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
        in
           begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);
           sys (Top, Top, Top) (d - 1) exp_term;
-	  add_string ("->");
+	  add_string (unicode_choice "->" UChar.rightarrow);
           sys (Top, Top, Top) (d - 1) tag_term;
           add_string " =";
           add_break (1,1);
@@ -612,18 +615,18 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
        (same_const op_term fasl_star_term) then (
       sys (Top, Top, Top) (d - 1) (el 2 args);
       add_string " ";
-      add_string "-*-";
+      add_string (unicode_choice "-*-" UChar.blackstar);
       add_break (1,0);
       sys (Top, Top, Top) (d - 1) (el 3 args)
     ) else if (same_const op_term asl_bigstar_list_term) then (
-      add_string "-**-";
+      add_string (unicode_choice "-**-" UChar.circlestar);
       add_break (1,0);
       sys (Top, Top, Top) (d - 1) (el 2 args)
     ) else if (same_const op_term var_res_prop_equal_term)  then (
       begin_block INCONSISTENT 0;       
       add_string "(";
       sys (Top, Top, Top) (d - 1) (el 2 args);
-      add_string " ==";
+      add_string (" "^(unicode_choice "==" "="));
       add_break (1,!holfoot_pretty_printer_block_indent);
       sys (Top, Top, Top) (d - 1) (el 3 args);
       add_string ")";
@@ -632,7 +635,7 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
       begin_block INCONSISTENT 0;       
       add_string "(";
       sys (Top, Top, Top) (d - 1) (el 2 args);
-      add_string " !="; add_break (1,0);
+      add_string (" "^(unicode_choice "!=" UChar.neq)); add_break (1,0);
       sys (Top, Top, Top) (d - 1) (el 3 args);
       add_string ")";
       end_block ()
@@ -718,7 +721,8 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
     ) else if (same_const op_term holfoot_ap_points_to_term) then (
       begin_block INCONSISTENT 0;       
       sys (Top, Top, Top) (d - 1) (el 1 args);
-      add_string " |->";
+      add_string " ";
+      add_string (unicode_choice "|->" UChar.longmapsto);
       add_break(1, !holfoot_pretty_printer_block_indent);
       finite_map_printer (sys,add_string,add_break) (Top,Top,Top) (d-1) pps (el 2 args);
       end_block ()
