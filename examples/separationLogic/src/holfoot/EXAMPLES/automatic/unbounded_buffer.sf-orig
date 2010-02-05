@@ -1,0 +1,40 @@
+/* Version of program from "Resources, Concurrency and Local Reasoning"
+   but not using a counting semaphore*/
+
+tl;
+
+init() {
+  last = new(); first = last; l = last; f = first;
+} [f==first * last|->]
+
+resource buf (l) [l==last * lseg(f,l)]
+
+prepare_item_for_buffer() [last|->]{
+ /* fill last->hd */ y = new(); last->tl = y;
+} [last|->tl:y * y|->]
+
+swallow() [last|->tl:y * y|->]
+   { with buf when(true) { l = l->tl; last = l; }
+} [last|->]
+
+use_item_from_buffer() [first|->tl:f]  {
+  x = first; first = first->tl; /* use x->hd */ dispose(x);
+} [f==first]
+
+release() [f==first] {  with buf when(f!=l) { f = first->tl; }
+} [first|->tl:f]
+
+producer() [last|->] {
+  prepare_item_for_buffer();
+  swallow();
+  producer(); } [false]
+
+consumer() [f==first] {
+  release();
+  use_item_from_buffer();
+  consumer();
+} [false]
+
+main() [f==first * last|->] {
+  producer() || consumer();
+} 
