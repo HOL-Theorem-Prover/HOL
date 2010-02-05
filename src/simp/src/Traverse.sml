@@ -42,6 +42,10 @@ datatype reducer =
               };
 fun dest_reducer (REDUCER x) = x
 
+fun addctxt ths (REDUCER {name,initial,addcontext,apply}) =
+    REDUCER{name = name, initial = addcontext(initial,ths), apply = apply,
+            addcontext = addcontext}
+
 
 (* ---------------------------------------------------------------------
  * Traversal states

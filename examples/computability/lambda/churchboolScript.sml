@@ -54,6 +54,7 @@ val wh_cB = store_thm(
   ``cB T @@ x @@ y -w->* x ∧ cB F @@ x @@ y -w->* y``,
   REWRITE_TAC [cB_def] THEN CONJ_TAC THEN unvarify_tac whstar_substitutive THEN
   ASM_SIMP_TAC (whfy (srw_ss())) []);
+val _ = export_betarwt "wh_cB"
 
 val cnot_def = Define`
   cnot = LAM "b" (VAR "b" @@ cB F @@ cB T)
@@ -70,7 +71,7 @@ val cnot_behaviour = store_thm(
   "cnot_behaviour",
   ``cnot @@ cB p -n->* cB (¬p)``,
   Cases_on `p` THEN
-  SIMP_TAC (bsrw_ss()) [cnot_def, cB_behaviour]);
+  SIMP_TAC (bsrw_ss()) [cnot_def]);
 
 val cand_def = Define`
   cand = LAM "p" (LAM "q" (VAR "p" @@ VAR "q" @@ cB F))

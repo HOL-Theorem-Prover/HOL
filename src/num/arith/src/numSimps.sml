@@ -344,8 +344,13 @@ fun contains_forall sense tm =
    into negative ones in the context of the wider goal, and thus cause
    the goal to be rejected.  *)
 
-fun is_arith_thm thm =
-  is_arith (concl thm) andalso not (contains_forall true (concl thm))
+fun is_arith_thm thm = let
+  val con = concl thm
+in
+  (not (null (hyp thm)) orelse null (free_vars con)) andalso
+  not (contains_forall true con) andalso is_arith con
+end
+
 
 val is_arith_asm = is_arith_thm o ASSUME
 

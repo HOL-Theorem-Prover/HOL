@@ -218,11 +218,14 @@ with
         val newconvdata = convs @ List.mapPartial mk_rewr_convdata rewrs'
         val net = net_add_convs initial_net newconvdata
         val TRAVRULES{relations,...} = travrules
+        (* give the existing dprocs the rewrs as additional context -
+           assume the provided dprocs in the frag have already been primed *)
+        val new_dprocs = map (Traverse.addctxt rewrs) dprocs' @ dprocs
     in
        SS {mk_rewrs=mk_rewrs,
            ssfrags = Lib.op_insert same_frag f ssfrags,
            initial_net=net, limit = limit,
-           dprocs=dprocs @ dprocs',
+           dprocs=new_dprocs,
            travrules=merge_travrules [travrules,mk_travrules relations congs]}
     end;
 
@@ -284,6 +287,16 @@ in
   (f,x,y)
 end
 
+fun vperm(tm1,tm2) =
+    case (dest_term tm1, dest_term tm2) of
+      (VAR v1,VAR v2)   => (snd v1 = snd v2)
+    | (LAMB t1,LAMB t2) => vperm(snd t1, snd t2)
+    | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
+    | (x,y) => (x = y)
+
+fun is_var_perm(tm1,tm2) =
+    vperm(tm1,tm2) andalso set_eq (free_vars tm1) (free_vars tm2)
+
 datatype munge_action = TH of thm | POP
 
 fun munge base subsets asms (thlistlist, n) = let
@@ -308,8 +321,14 @@ in
                 fun foldthis (t,th) = DISCH t th
                 fun insert (t,th0) n = let
                   val (bound,th) = dest_tagged_rewrite th0
+                  val looksloopy = aconv from to orelse
+                                   (is_var_perm (from,to) andalso
+                                    case bound of UNBOUNDED => true
+                                                | _ => false)
                 in
-                  Net.insert (t, (bound, List.foldl foldthis th asms)) n
+                  if looksloopy then n
+                  else
+                    Net.insert (t, (bound, List.foldl foldthis th asms)) n
                 end
               in
                 if aconv R base then
