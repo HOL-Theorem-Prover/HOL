@@ -14,6 +14,7 @@ val _ = new_theory "churchDB"
 
 val _ = set_trace "Unicode" 1
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
+fun bstore_thm (trip as (n,t,tac)) = store_thm trip before export_betarwt n
 
 val DISJ_IMP_EQ = Store_thm(
   "DISJ_IMP_EQ",
@@ -148,14 +149,12 @@ val FV_cdFV = Store_thm(
   "FV_cdFV",
   ``FV cdFV = {}``,
   SRW_TAC [][cdFV_def, FV_EMPTY]);
-val cdFV_behaviour = store_thm(
+val cdFV_behaviour = bstore_thm(
   "cdFV_behaviour",
   ``∀i. cdFV @@ church i @@ cDB t -n->* cB (i ∈ dFV t)``,
   SIMP_TAC (bsrw_ss()) [cdFV_def] THEN
   Induct_on `t` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, ceqnat_behaviour,
-                            cor_behaviour, csuc_behaviour,
-                            arithmeticTheory.ADD1] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, arithmeticTheory.ADD1] THEN
   SRW_TAC [][EQ_SYM_EQ]);
 
 (* ----------------------------------------------------------------------
@@ -170,7 +169,7 @@ val FV_cdV = Store_thm(
   ``FV cdV = {}``,
   SRW_TAC [][cdV_def, FV_EMPTY]);
 val bnf_cdV = Store_thm("bnf_cdV", ``bnf cdV``, SRW_TAC [][cdV_def])
-val cdV_behaviour = store_thm(
+val cdV_behaviour = bstore_thm(
   "cdV_behaviour",
   ``cdV @@ church n -w->* cDB (dV n)``,
   SIMP_TAC (whfy (srw_ss())) [cdV_def, cDB_def, ciDB_def]);
@@ -190,7 +189,7 @@ val is_abs_cdAPP = Store_thm(
   ``is_abs cdAPP``,
   SRW_TAC [][cdAPP_def]);
 
-val cdAPP_behaviour = store_thm(
+val cdAPP_behaviour = bstore_thm(
   "cdAPP_behaviour",
   ``cdAPP @@ cDB M @@ cDB N -n->* cDB (dAPP M N)``,
   SIMP_TAC (bsrw_ss()) [cdAPP_def] THEN
@@ -209,7 +208,7 @@ val is_abs_cdABS = Store_thm(
   "is_abs_cdABS",
   ``is_abs cdABS``,
   SRW_TAC [][cdABS_def])
-val cdABS_behaviour = store_thm(
+val cdABS_behaviour = bstore_thm(
   "cdABS_behaviour",
   ``cdABS @@ cDB M -n->* cDB (dABS M)``,
   SIMP_TAC (bsrw_ss()) [cdABS_def] THEN
@@ -245,17 +244,13 @@ val is_abs_clift = Store_thm(
   ``is_abs clift``,
   SRW_TAC [][clift_def]);
 
-val clift_behaviour = store_thm(
+val clift_behaviour = bstore_thm(
   "clift_behaviour",
   ``clift @@ cDB M @@ church k -n->* cDB (lift M k)``,
   SIMP_TAC (bsrw_ss()) [clift_def] THEN
   Q.ID_SPEC_TAC `k` THEN Induct_on `M` THEN
-  ASM_SIMP_TAC (bsrw_ss())
-               [cDB_thm, cless_behaviour, cdV_behaviour,
-                csuc_behaviour, cdAPP_behaviour, cdABS_behaviour,
-                arithmeticTheory.ADD1] THEN
-  SRW_TAC [][] THEN
-  SIMP_TAC (bsrw_ss()) [cB_behaviour]);
+  ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, arithmeticTheory.ADD1] THEN
+  SRW_TAC [][] THEN SIMP_TAC (bsrw_ss()) []);
 
 (* ----------------------------------------------------------------------
     substitution
@@ -284,16 +279,13 @@ val FV_csub = Store_thm(
   ``FV csub = {}``,
   SRW_TAC [][csub_def, FV_EMPTY]);
 
-val csub_behaviour = store_thm(
+val csub_behaviour = bstore_thm(
   "csub_behaviour",
   ``csub @@ cDB s @@ church k @@ cDB t -n->* cDB (sub s k t)``,
   SIMP_TAC (bsrw_ss()) [csub_def] THEN
   MAP_EVERY Q.ID_SPEC_TAC [`s`, `k`] THEN Induct_on `t` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, ceqnat_behaviour, cdV_behaviour,
-                            cdAPP_behaviour, cdABS_behaviour,
-                            csuc_behaviour, arithmeticTheory.ADD1,
-                            clift_behaviour] THEN
-  SRW_TAC [][] THEN SIMP_TAC (bsrw_ss()) [cB_behaviour])
+  ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, arithmeticTheory.ADD1] THEN
+  SRW_TAC [][] THEN SIMP_TAC (bsrw_ss()) [])
 
 val cdLAM_def = Define`
   cdLAM = LAM "v" (LAM "body"
@@ -307,12 +299,10 @@ val FV_cdLAM = Store_thm(
   ``FV cdLAM = {}``,
   SRW_TAC [][FV_EMPTY, cdLAM_def]);
 
-val cdLAM_behaviour = store_thm(
+val cdLAM_behaviour = bstore_thm(
   "cdLAM_behaviour",
   ``cdLAM @@ church i @@ cDB t -n->* cDB (dLAM i t)``,
-  SIMP_TAC (bsrw_ss()) [cdLAM_def, cdV_behaviour, cplus_behaviour,
-                        clift_behaviour, csub_behaviour, cdABS_behaviour,
-                        dLAM_def]);
+  SIMP_TAC (bsrw_ss()) [cdLAM_def, dLAM_def]);
 
 (* ----------------------------------------------------------------------
     term recursion operator, termrec
@@ -323,15 +313,12 @@ val is_abs_cdV = Store_thm(
   "is_abs_cdV",
   ``is_abs cdV``,
   SRW_TAC [][cdV_def]);
-val is_abs_cdAPP = Store_thm(
-  "is_abs_cdAPP",
-  ``is_abs cdAPP``,
-  SRW_TAC [][cdAPP_def]);
 
 val termrec_var_def = Define`
   termrec_var = S @@ (B @@ cpair @@ cdV)
                 (* λv i. cpair (dV i) (v i) *)
 `;
+
 val termrec_var_eta = store_thm(
   "termrec_var_eta",
   ``LAM x (termrec_var @@ VAR x) == termrec_var``,

@@ -72,6 +72,7 @@ val cnot_behaviour = store_thm(
   ``cnot @@ cB p -n->* cB (¬p)``,
   Cases_on `p` THEN
   SIMP_TAC (bsrw_ss()) [cnot_def]);
+val _ = export_betarwt "cnot_behaviour"
 
 val cand_def = Define`
   cand = LAM "p" (LAM "q" (VAR "p" @@ VAR "q" @@ cB F))
@@ -92,7 +93,8 @@ val cand_behaviour = store_thm(
   "cand_behaviour",
   ``cand @@ cB p @@ cB q -n->* cB (p /\ q)``,
   SIMP_TAC (bsrw_ss()) [cand_def] THEN
-  Cases_on `p` THEN SIMP_TAC (bsrw_ss()) [cB_behaviour]);
+  Cases_on `p` THEN SIMP_TAC (bsrw_ss()) []);
+val _ = export_betarwt "cand_behaviour"
 
 val wh_cand = store_thm(
   "wh_cand",
@@ -100,16 +102,17 @@ val wh_cand = store_thm(
   REWRITE_TAC [cand_def] THEN unvarify_tac whstar_substitutive THEN
   ASM_SIMP_TAC (whfy(srw_ss())) []);
 
-
 val cand_F1 = store_thm(
   "cand_F1",
   ``cand @@ cB F @@ X -n->* cB F``,
-  SIMP_TAC (bsrw_ss()) [cand_def, cB_behaviour]);
+  SIMP_TAC (bsrw_ss()) [cand_def]);
+val _ = export_betarwt "cand_F1"
 
 val cand_T1 = store_thm(
   "cand_T1",
-  ``cand @@ cB T @@ X -n->* X``,
-  SRW_TAC [NORMSTAR_ss][cB_behaviour, cand_def]);
+  ``cand @@ cB T @@ X -w->* X``,
+  unvarify_tac whstar_substitutive THEN
+  SIMP_TAC (whfy(srw_ss())) [wh_cand, wh_cB]);
 
 val cor_def = Define`
   cor = LAM "p" (LAM "q" (VAR "p" @@ cB T @@ VAR "q"))
@@ -127,17 +130,20 @@ val cor_behaviour = store_thm(
   "cor_behaviour",
   ``cor @@ cB p @@ cB q -n->* cB (p ∨ q)``,
   SIMP_TAC (bsrw_ss()) [cor_def] THEN
-  Cases_on `p` THEN SIMP_TAC (bsrw_ss()) [cB_behaviour]);
+  Cases_on `p` THEN SIMP_TAC (bsrw_ss()) []);
+val _ = export_betarwt "cor_behaviour"
 
 val cor_T1 = store_thm(
   "cor_T1",
   ``cor @@ cB T @@ X == cB T``,
-  SIMP_TAC (bsrw_ss()) [cor_def, cB_behaviour]);
+  SIMP_TAC (bsrw_ss()) [cor_def]);
+val _ = export_betarwt "cor_T1"
 
 val cor_F1 = store_thm(
   "cor_F1",
   ``cor @@ cB F @@ X == X``,
-  SIMP_TAC (bsrw_ss()) [cor_def, cB_behaviour]);
+  SIMP_TAC (bsrw_ss()) [cor_def]);
+val _ = export_betarwt "cor_F1"
 
 val cB_mynames = prove(
   ``x ≠ y ⇒ (cB p = LAM x (LAM y (VAR (if p then x else y))))``,

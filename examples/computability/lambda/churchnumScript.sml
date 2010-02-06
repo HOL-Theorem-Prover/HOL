@@ -11,6 +11,7 @@ open reductionEval
 open stepsTheory
 
 fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
+fun bstore_thm(n,t,tac) = store_thm(n,t,tac) before export_betarwt n
 
 val _ = new_theory "churchnum"
 
@@ -160,7 +161,7 @@ val SUB_funpow_app = store_thm(
   Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
 val _ = export_rewrites ["SUB_funpow_app"]
 
-val church_thm = store_thm(
+val church_thm = bstore_thm(
   "church_thm",
   ``church 0 @@ x @@ f == x ∧
     church (SUC n) @@ x @@ f == f @@ (church n @@ x @@ f)``,
@@ -185,7 +186,7 @@ val bnf_csuc = Store_thm(
   ``bnf csuc``,
   SRW_TAC [][csuc_def]);
 
-val csuc_behaviour = store_thm(
+val csuc_behaviour = bstore_thm(
   "csuc_behaviour",
   ``∀n. (csuc @@ (church n)) -n->* church (SUC n)``,
   SIMP_TAC (bsrw_ss()) [csuc_def, church_def, FUNPOW_SUC]);
@@ -218,7 +219,7 @@ val lameq_sub = chap2Theory.lemma2_12 |> CONJUNCTS
                                       |> DISCH_ALL
                                       |> GEN_ALL
 
-val natrec_behaviour = store_thm(
+val natrec_behaviour = bstore_thm(
   "natrec_behaviour",
   ``natrec @@ z @@ f @@ church 0 == z ∧
     natrec @@ z @@ f @@ church (SUC n) ==
@@ -226,24 +227,15 @@ val natrec_behaviour = store_thm(
   CONJ_TAC THENL [
     SIMP_TAC (srw_ss()) [natrec_def] THEN FRESH_TAC THEN
     SRW_TAC [][tpm_fresh, lemma14b] THEN
-    ASM_SIMP_TAC (bsrw_ss()) [church_thm, csnd_pair],
+    ASM_SIMP_TAC (bsrw_ss()) [],
 
     SIMP_TAC (srw_ss()) [natrec_def] THEN unvarify_tac lameq_sub THEN
     ASM_SIMP_TAC (bsrw_ss()) [] THEN
     Q.MATCH_ABBREV_TAC
-      `csnd @@ (church (SUC n) @@ Z @@ FF) ==
-       VAR fs @@ church n @@ (csnd @@ (church n @@ Z @@ FF))` THEN
-    `∀n. cfst @@ (church n @@ Z @@ FF) == church n`
-       by (Induct THEN ASM_SIMP_TAC (bsrw_ss()) [church_thm] THENL [
-             SIMP_TAC (bsrw_ss()) [cfst_pair, Abbr`Z`],
-             Q.MATCH_ABBREV_TAC `cfst @@ (FF @@ Arg) == church (SUC n)` THEN
-             `∀v. v ∉ FV Arg ⇔ v ≠ zs ∧ v ≠ fs`
-                  by (SRW_TAC [][Abbr`Arg`, Abbr`FF`, Abbr`Z`, EQ_IMP_THM] THEN
-                      METIS_TAC []) THEN
-             ASM_SIMP_TAC (bsrw_ss()) [Abbr`FF`, csuc_behaviour, cfst_pair]
-           ]) THEN
-    ASM_SIMP_TAC (bsrw_ss()) [church_thm] THEN
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`FF`, csnd_pair]
+      `VAR fs @@ NN0 @@ YY == VAR fs @@ NN1 @@ YY` THEN
+    Q_TAC SUFF_TAC `NN0 == NN1` THEN1 SIMP_TAC (bsrw_ss()) [] THEN
+    markerLib.UNABBREV_ALL_TAC THEN
+    Q.ID_SPEC_TAC `n` THEN Induct THEN ASM_SIMP_TAC (bsrw_ss()) []
   ]);
 
 val cplus_def = Define`
@@ -259,12 +251,11 @@ val is_abs_cplus = Store_thm(
   ``is_abs cplus``,
   SRW_TAC [][cplus_def]);
 
-val cplus_behaviour = store_thm(
+val cplus_behaviour = bstore_thm(
   "cplus_behaviour",
   ``cplus @@ church m @@ church n -n->* church (m + n)``,
   SIMP_TAC (bsrw_ss()) [cplus_def] THEN Induct_on `m` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [church_thm, csuc_behaviour,
-                            arithmeticTheory.ADD_CLAUSES]);
+  ASM_SIMP_TAC (bsrw_ss()) [arithmeticTheory.ADD_CLAUSES]);
 
 val cpred_def = Define`
   cpred = LAM "n" (natrec @@ church 0
@@ -281,14 +272,14 @@ val _ = export_rewrites ["FV_cpred"]
 val cpred_0 = store_thm(
   "cpred_0",
   ``cpred @@ church 0 -n->* church 0``,
-  SIMP_TAC (bsrw_ss()) [natrec_behaviour, cpred_def]);
+  SIMP_TAC (bsrw_ss()) [cpred_def]);
 
 val cpred_SUC = store_thm(
   "cpred_SUC",
   ``cpred @@ church (SUC n) -n->* church n``,
-  SIMP_TAC (bsrw_ss()) [natrec_behaviour, cpred_def]);
+  SIMP_TAC (bsrw_ss()) [cpred_def]);
 
-val cpred_behaviour = store_thm(
+val cpred_behaviour = bstore_thm(
   "cpred_behaviour",
   ``cpred @@ church n -n->* church (PRE n)``,
   Cases_on `n` THEN SRW_TAC [][cpred_SUC, cpred_0]);
@@ -305,13 +296,12 @@ val is_abs_cminus = Store_thm(
   ``is_abs cminus``,
   SRW_TAC [][cminus_def]);
 
-val cminus_behaviour = store_thm(
+val cminus_behaviour = bstore_thm(
   "cminus_behaviour",
   ``cminus @@ church m @@ church n -n->* church (m - n)``,
   SIMP_TAC (bsrw_ss()) [cminus_def] THEN
   Q.ID_SPEC_TAC `m` THEN Induct_on `n` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cpred_behaviour, church_thm,
-                            DECIDE ``m - SUC n = PRE (m - n)``]);
+  ASM_SIMP_TAC (bsrw_ss()) [DECIDE ``m - SUC n = PRE (m - n)``]);
 
 val cmult_def = Define`
   cmult = LAM "m" (LAM "n" (VAR "m" @@ church 0 @@ (cplus @@ VAR "n")))
@@ -321,12 +311,11 @@ val FV_cmult = Store_thm(
   ``FV cmult = {}``,
   SRW_TAC [][cmult_def, EXTENSION] THEN METIS_TAC []);
 
-val cmult_behaviour = store_thm(
+val cmult_behaviour = bstore_thm(
   "cmult_behaviour",
   ``cmult @@ church m @@ church n -n->* church (m * n)``,
   SIMP_TAC (bsrw_ss()) [cmult_def] THEN Induct_on `m` THEN
-  ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) [cplus_behaviour, church_thm,
-                                        arithmeticTheory.MULT_CLAUSES]);
+  ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) [arithmeticTheory.MULT_CLAUSES]);
 
 (* predicates/relations *)
 val cis_zero_def = Define`
@@ -341,11 +330,11 @@ val bnf_cis_zero = Store_thm(
   ``bnf cis_zero``,
   SRW_TAC [][cis_zero_def]);
 
-val cis_zero_behaviour = store_thm(
+val cis_zero_behaviour = bstore_thm(
   "cis_zero_behaviour",
   ``cis_zero @@ church n -n->* cB (n = 0)``,
   Cases_on `n` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cis_zero_def, church_thm]);
+  ASM_SIMP_TAC (bsrw_ss()) [cis_zero_def]);
 
 val wh_cis_zero = store_thm(
   "wh_cis_zero",
@@ -354,8 +343,6 @@ val wh_cis_zero = store_thm(
   ASM_SIMP_TAC (whfy(srw_ss())) [] THEN
   Cases_on `n` THEN SRW_TAC [][FUNPOW_SUC] THEN
   ASM_SIMP_TAC (whfy(srw_ss())) []);
-
-
 
 val ceqnat_def = Define`
   ceqnat =
@@ -371,16 +358,13 @@ val FV_ceqnat = Store_thm(
   ``FV ceqnat = {}``,
   SRW_TAC [][ceqnat_def, EXTENSION] THEN METIS_TAC []);
 
-val ceqnat_behaviour = store_thm(
+val ceqnat_behaviour = bstore_thm(
   "ceqnat_behaviour",
   ``ceqnat @@ church n @@ church m -n->* cB (n = m)``,
   SIMP_TAC (bsrw_ss()) [ceqnat_def] THEN
   Q.ID_SPEC_TAC `m` THEN Induct_on `n` THEN1
-    SIMP_TAC (bsrw_ss()) [church_thm, cis_zero_behaviour,
-                          EQ_SYM_EQ] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cis_zero_behaviour, church_thm,
-                            cnot_behaviour, cand_behaviour,
-                            cpred_behaviour] THEN
+    SIMP_TAC (bsrw_ss()) [EQ_SYM_EQ] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [] THEN
   Cases_on `m` THEN SRW_TAC [][])
 
 (* $< 0 = λn. not (is_zero n)
@@ -403,15 +387,13 @@ val is_abs_cless = Store_thm(
   ``is_abs cless``,
   SRW_TAC [][cless_def]);
 
-val cless_behaviour = store_thm(
+val cless_behaviour = bstore_thm(
   "cless_behaviour",
   ``cless @@ church m @@ church n -n->* cB (m < n)``,
   SIMP_TAC (bsrw_ss()) [cless_def] THEN
   Q.ID_SPEC_TAC `n` THEN Induct_on `m` THENL [
-    SIMP_TAC (bsrw_ss()) [cnot_behaviour, cis_zero_behaviour, church_thm,
-                          arithmeticTheory.NOT_ZERO_LT_ZERO],
-    ASM_SIMP_TAC (bsrw_ss()) [cis_zero_behaviour, cnot_behaviour, church_thm,
-                              cpred_behaviour, cand_behaviour] THEN
+    SIMP_TAC (bsrw_ss()) [arithmeticTheory.NOT_ZERO_LT_ZERO],
+    ASM_SIMP_TAC (bsrw_ss()) [] THEN
     Cases_on `n` THEN SRW_TAC [][]
   ]);
 
@@ -470,20 +452,15 @@ val cdivmodt_behaviour = store_thm(
        0 < q ∧ p ≤ n ⇒
        cdivmodt @@ church q @@ church n @@ church a @@ church p -n->*
        cvpr (church (a + p DIV q)) (church (p MOD q))``,
-  SIMP_TAC (bsrw_ss()) [cdivmodt_def] THEN Induct_on `n` THENL [
-    SIMP_TAC (bsrw_ss()) [arithmeticTheory.ZERO_DIV,
-                          cpair_behaviour, natrec_behaviour,
-                          csnd_cvpr],
+  SIMP_TAC (bsrw_ss()) [cdivmodt_def, cpair_behaviour] THEN
+  Induct_on `n` THENL [
+    SIMP_TAC (bsrw_ss()) [arithmeticTheory.ZERO_DIV, cpair_behaviour],
 
-    ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, csuc_behaviour,
-                              ceqnat_behaviour, cless_behaviour,
-                              cminus_behaviour] THEN
-
+    ASM_SIMP_TAC (bsrw_ss()) [] THEN
     REPEAT STRIP_TAC THEN
-    Cases_on `p = SUC n` THEN ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THENL [
-      Cases_on `SUC n < q` THEN ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THENL [
-        ASM_SIMP_TAC (bsrw_ss()) [arithmeticTheory.LESS_DIV_EQ_ZERO,
-                                  cpair_behaviour],
+    Cases_on `p = SUC n` THEN ASM_SIMP_TAC (bsrw_ss()) [] THENL [
+      Cases_on `SUC n < q` THEN ASM_SIMP_TAC (bsrw_ss()) [] THENL [
+        ASM_SIMP_TAC (bsrw_ss()) [arithmeticTheory.LESS_DIV_EQ_ZERO],
         ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) [] THEN
         `(SUC n - q) DIV q = SUC n DIV q - 1`
            by (MP_TAC (Q.INST [`n` |-> `q`, `q` |-> `1`,
@@ -515,11 +492,11 @@ val FV_cdiv = Store_thm(
   SIMP_TAC bool_ss [cdiv_def, EXTENSION, NOT_IN_EMPTY] THEN
   SRW_TAC [][FRESH_APP, FRESH_LAM]);
 
-val cdiv_behaviour = store_thm(
+val cdiv_behaviour = bstore_thm(
   "cdiv_behaviour",
   ``0 < q ⇒
       cdiv @@ church p @@ church q -n->* church (p DIV q)``,
-  SIMP_TAC (bsrw_ss()) [cdivmodt_behaviour, cdiv_def, cfst_cvpr]);
+  SIMP_TAC (bsrw_ss()) [cdivmodt_behaviour, cdiv_def]);
 
 val cmod_def = Define`
   cmod = LAM "p" (LAM "q"
@@ -530,11 +507,11 @@ val FV_cmod = Store_thm(
   ``FV cmod = {}``,
   SRW_TAC [][cmod_def, EXTENSION] THEN METIS_TAC [])
 
-val cmod_behaviour = store_thm(
+val cmod_behaviour = bstore_thm(
   "cmod_behaviour",
   ``0 < q ⇒
      cmod @@ church p @@ church q -n->* church (p MOD q)``,
-  SIMP_TAC (bsrw_ss()) [cdivmodt_behaviour, cmod_def, csnd_cvpr]);
+  SIMP_TAC (bsrw_ss()) [cdivmodt_behaviour, cmod_def]);
 
 (* ----------------------------------------------------------------------
     Pairs of numbers
@@ -554,14 +531,14 @@ val FV_cnvpr = Store_thm(
   ``FV (cnvpr p) = {}``,
   Cases_on `p` THEN SRW_TAC [][cnvpr_def]);
 
-val cfst_cnvpr = store_thm(
+val cfst_cnvpr = bstore_thm(
   "cfst_cnvpr",
   ``cfst @@ cnvpr p -n->* church (FST p)``,
-  Cases_on `p` THEN SIMP_TAC (bsrw_ss())[cnvpr_def, cfst_cvpr]);
-val csnd_cnvpr = store_thm(
+  Cases_on `p` THEN SIMP_TAC (bsrw_ss())[cnvpr_def]);
+val csnd_cnvpr = bstore_thm(
   "csnd_cnvpr",
   ``csnd @@ cnvpr p -n->* church (SND p)``,
-  Cases_on `p` THEN SIMP_TAC (bsrw_ss())[cnvpr_def, csnd_cvpr]);
+  Cases_on `p` THEN SIMP_TAC (bsrw_ss())[cnvpr_def]);
 
 
 (* ----------------------------------------------------------------------
@@ -582,13 +559,12 @@ val FV_ctri = Store_thm(
   ``FV ctri = {}``,
   SRW_TAC [][ctri_def, EXTENSION] THEN METIS_TAC []);
 
-val ctri_behaviour = store_thm(
+val ctri_behaviour = bstore_thm(
   "ctri_behaviour",
   ``ctri @@ church n -n->* church (tri n)``,
   SIMP_TAC (bsrw_ss()) [ctri_def] THEN
   Induct_on `n` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, tri_def,
-                            csuc_behaviour, cplus_behaviour]);
+  ASM_SIMP_TAC (bsrw_ss()) [tri_def]);
 
 (* invtri0
     |- ∀n a.
@@ -629,20 +605,19 @@ val cinvtri0_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cinvtri0_def] THEN
   Q.ID_SPEC_TAC `n` THEN Q.ID_SPEC_TAC `a` THEN
   Induct_on `t` THENL [
-    SIMP_TAC (bsrw_ss()) [natrec_behaviour] THEN
+    SIMP_TAC (bsrw_ss()) [] THEN
     ONCE_REWRITE_TAC [invtri0_def] THEN
     SIMP_TAC (srw_ss() ++ ARITH_ss) [cnvpr_def],
 
-    SIMP_TAC (bsrw_ss()) [natrec_behaviour, csuc_behaviour,
-                          ceqnat_behaviour, cless_behaviour] THEN
+    SIMP_TAC (bsrw_ss()) [] THEN
     REPEAT STRIP_TAC THEN Cases_on `n = SUC t` THEN
-    ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, cminus_behaviour] THENL [
+    ASM_SIMP_TAC (bsrw_ss()) [] THENL [
       Cases_on `t < a` THENL [
-        ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
+        ASM_SIMP_TAC (bsrw_ss()) [] THEN
         ONCE_REWRITE_TAC [invtri0_def] THEN
         SRW_TAC [ARITH_ss][cnvpr_def],
 
-        ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
+        ASM_SIMP_TAC (bsrw_ss()) [] THEN
         CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [invtri0_def])) THEN
         SRW_TAC [ARITH_ss][] THEN
         `SUC t - (a + 1) = t - a` by DECIDE_TAC THEN
@@ -664,11 +639,10 @@ val FV_cinvtri = Store_thm(
   ``FV cinvtri = {}``,
   SRW_TAC [][cinvtri_def, EXTENSION] THEN METIS_TAC []);
 
-val cinvtri_behaviour = store_thm(
+val cinvtri_behaviour = bstore_thm(
   "cinvtri_behaviour",
   ``cinvtri @@ church n -n->* church (tri⁻¹ n)``,
-  SIMP_TAC (bsrw_ss()) [cinvtri_def, cinvtri0_behaviour,
-                        invtri_def, csnd_cnvpr]);
+  SIMP_TAC (bsrw_ss()) [cinvtri_def, cinvtri0_behaviour, invtri_def]);
 
 (* -- The pairing function and fst and snd *)
 
@@ -683,11 +657,10 @@ val FV_cnpair = Store_thm(
   ``FV cnpair = {}``,
   SRW_TAC [][cnpair_def, EXTENSION] THEN METIS_TAC []);
 
-val cnpair_behaviour = store_thm(
+val cnpair_behaviour = bstore_thm(
   "cnpair_behaviour",
   ``cnpair @@ church n @@ church m -n->* church (n ⊗ m)``,
-  SIMP_TAC (bsrw_ss()) [cnpair_def, cplus_behaviour, ctri_behaviour,
-                        npair_def]);
+  SIMP_TAC (bsrw_ss()) [cnpair_def, npair_def]);
 
 (* cnfst *)
 val cnfst_def = Define`
@@ -702,11 +675,10 @@ val FV_cnfst = Store_thm(
   ``FV cnfst = {}``,
   SRW_TAC [][cnfst_def, EXTENSION] THEN METIS_TAC []);
 
-val cnfst_behaviour = store_thm(
+val cnfst_behaviour = bstore_thm(
   "cnfst_behaviour",
   ``cnfst @@ church p -n->* church (nfst p)``,
-  SIMP_TAC (bsrw_ss()) [cnfst_def, cminus_behaviour, cplus_behaviour,
-                        cinvtri_behaviour, ctri_behaviour, nfst_def]);
+  SIMP_TAC (bsrw_ss()) [cnfst_def, nfst_def]);
 
 (* cnsnd *)
 val cnsnd_def = Define`
@@ -719,11 +691,10 @@ val FV_cnsnd = Store_thm(
   ``FV cnsnd = {}``,
   SRW_TAC [][cnsnd_def, EXTENSION] THEN METIS_TAC []);
 
-val cnsnd_behaviour = store_thm(
+val cnsnd_behaviour = bstore_thm(
   "cnsnd_behaviour",
   ``cnsnd @@ church p -n->* church (nsnd p)``,
-  SIMP_TAC (bsrw_ss()) [cnsnd_def, nsnd_def, cminus_behaviour,
-                        cinvtri_behaviour, ctri_behaviour]);
+  SIMP_TAC (bsrw_ss()) [cnsnd_def, nsnd_def]);
 
 (* ----------------------------------------------------------------------
     cfindleast
@@ -852,13 +823,12 @@ val cfindleast_termI = store_thm(
     THEN1 METIS_TAC [DECIDE ``0 ≤ n``] THEN
   Induct_on `n - p` THEN REPEAT STRIP_TAC THENL [
     `p = n` by DECIDE_TAC THEN
-    ASM_SIMP_TAC (bsrw_ss()) [Once cfindbody_thm, cB_behaviour],
+    ASM_SIMP_TAC (bsrw_ss()) [Once cfindbody_thm],
 
     `p < n` by DECIDE_TAC THEN
     `∃r. P @@ church p == cB r` by METIS_TAC [] THEN
     `r = F` by (Cases_on `r` THEN METIS_TAC []) THEN
-    ASM_SIMP_TAC (bsrw_ss()) [Once cfindbody_thm, cB_behaviour,
-                              csuc_behaviour, Cong cfindbody_cong] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Once cfindbody_thm, Cong cfindbody_cong] THEN
     FIRST_X_ASSUM (fn th => MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] th)) THEN
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
   ]);
@@ -912,7 +882,7 @@ val cfindleast_bnfE = store_thm(
   `∃b. P @@ church cn == cB b` by METIS_TAC [] THEN
   Cases_on `b` THENL [
     `cfindbody P ct k == k @@ church cn`
-      by ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
+      by ASM_SIMP_TAC (bsrw_ss()) [] THEN
     `cfindbody P ct k -n->* r` by METIS_TAC [steps_nstar] THEN
     METIS_TAC [nstar_lameq, chap2Theory.lam_eq_rules],
 
@@ -933,7 +903,7 @@ val cfindleast_bnfE = store_thm(
     `rest < rest + n1` by DECIDE_TAC THEN
     POP_ASSUM (fn th1 => FIRST_X_ASSUM (MP_TAC o C MATCH_MP th1)) THEN
     DISCH_THEN (Q.SPECL_THEN [`SUC cn`, `csuc @@ ct`] MP_TAC) THEN
-    ASM_SIMP_TAC (bsrw_ss()) [csuc_behaviour] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [] THEN
     DISCH_THEN MATCH_MP_TAC THEN
     REPEAT STRIP_TAC THEN
     `(c0 = cn) ∨ c0 < cn` by DECIDE_TAC THEN SRW_TAC [][]
