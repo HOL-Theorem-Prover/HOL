@@ -1,0 +1,25 @@
+\DOC Backup
+
+\TYPE {Backup : unit -> proof}
+
+\SYNOPSIS
+Restores the proof state of the last save point, undoing the effects of expansions after the save point.
+
+\DESCRIBE
+The function {Backup} is part of the subgoal package. A call to {Backup}
+restores the proof state to the last save point (a proof state saved by
+{save_proof}). If the current state is a save point then {Backup} clears the
+current save point and returns to the last save point. If there are no save
+points in the history, then {Backup} returns to the initial goal and is
+equivalent to {restart}. For a description of the subgoal package, see
+{set_goal}.
+
+\FAILURE
+The function {Backup} will fail only if no goalstack is being managed.
+
+\USES
+Back tracking in a goal-directed proof to a user-defined save point.
+
+\SEEALSO
+proofManagerLib.set_goal, proofManagerLib.set_goaltree, proofManagerLib.set_goalstack, proofManagerLib.new_goaltree, proofManagerLib.add, proofManagerLib.drop, proofManagerLib.dropn, proofManagerLib.restart, proofManagerLib.backup, proofManagerLib.save_proof, proofManagerLib.set_backup, proofManagerLib.forget_history, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.expandv, proofManagerLib.p, proofManagerLib.initial_goal, proofManagerLib.top_thm, proofManagerLib.top_goal, proofManagerLib.top_goals, proofManagerLib.status, proofManagerLib.rotate, proofManagerLib.rotate_proofs.
+\ENDDOC
