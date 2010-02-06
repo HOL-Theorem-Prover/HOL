@@ -2,12 +2,7 @@ if exists("b:did_hol")
   finish
 endif
 
-if $HOLDIR == ""
-  echoe "HOLDIR is not set"
-  finish
-endif
-
-let s:holpipe = $HOLDIR . "/tools/vim/fifo"
+let s:holpipe =
 let s:holtogglequiet = "val _ = HOL_Interactive.toggle_quietdec();"
 
 new
@@ -17,12 +12,13 @@ set noswapfile
 let s:holnr = bufnr("")
 hide
 
+let s:tmpprefix =
 fu! TempName()
   let l:n = 0
-  while glob("/tmp/vimhol".l:n) != ""
+  while glob(s:tmpprefix.l:n) != ""
     let l:n = l:n + 1
   endwhile
-  return "/tmp/vimhol".l:n
+  return s:tmpprefix.l:n
 endf
 
 fu! HOLCStart()

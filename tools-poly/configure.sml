@@ -380,7 +380,7 @@ val _ =
 end;
 
 (*---------------------------------------------------------------------------
-    Instantiate tools-poly/hol-mode.src, and put it in tools-poly/hol-mode.el
+    Instantiate tools/hol-mode.src, and put it in tools/hol-mode.el
  ---------------------------------------------------------------------------*)
 
 val _ =
@@ -400,6 +400,41 @@ val _ =
         quote (fullPath [holdir, "bin/Holmake"])^"\n")]
  end;
 
+(*---------------------------------------------------------------------------
+    Instantiate tools/vim/*.src
+ ---------------------------------------------------------------------------*)
+
+val _ =
+  let open TextIO
+    val _ = echo "Making tools/vim/*"
+    val pref = fullPath [holdir, "tools", "vim"]
+    val src1 = fullPath [pref, "hol.src"]
+    val tar1 = fullPath [pref, "hol.vim"]
+    val src2 = fullPath [pref, "vimhol.src"]
+    val tar2 = fullPath [pref, "vimhol.sml"]
+    val tar3 = openOut (fullPath [pref, "hol-config.sml"])
+    val tar4 = openOut (fullPath [pref, "filetype.vim"])
+    fun qstr s = (quote s)^"\n"
+    val holpipe = qstr(fullPath [pref, "fifo"])
+    val tmpprefix = qstr("/tmp/vimhol")
+  in
+    fill_holes (src1,tar1)
+      ["let s:holpipe =" -->
+       "let s:holpipe = "^holpipe,
+       "let s:tmpprefix =" -->
+       "let s:tmpprefix = "^tmpprefix];
+    fill_holes (src2,tar2)
+      ["val fifoPath ="-->
+       "val fifoPath = "^holpipe];
+    output(tar3, "use "^(qstr tar2));
+    closeOut tar3;
+    output(tar4,"augroup filetypedetect\n");
+    output(tar4,"  au BufRead,BufNewFile *?Script.sml source "^tar1^"\n");
+    output(tar4,"  \"Uncomment the line below to automatically load Unicode\n");
+    output(tar4,"  \"au BufRead,BufNewFile *?Script.sml source "^fullPath [pref, "holabs.vim"]^"\n");
+    output(tar4,"augroup END\n");
+    closeOut tar4
+  end;
 
 (*---------------------------------------------------------------------------
       Generate shell scripts for running HOL.
