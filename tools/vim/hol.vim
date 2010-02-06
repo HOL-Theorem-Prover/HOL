@@ -177,6 +177,8 @@ nm <silent> he Vhe
 nm <silent> hS VhS
 nn <silent> hR :<C-U>call HOLRotate()<CR>
 nn <silent> hb :<C-U>call HOLRepeat("b();")<CR>
+nn <silent> hB :<C-U>call HOLRepeat("Backup();")<CR>
+nn <silent> hv :call HOLCall(function("HOLF"),["save_proof();"])<CR>
 nn <silent> hd :<C-U>call HOLRepeat("drop();")<CR>
 nn <silent> hp :call HOLCall(function("HOLF"),["p();"])<CR>
 nn <silent> hr :call HOLCall(function("HOLF"),["restart();"])<CR>

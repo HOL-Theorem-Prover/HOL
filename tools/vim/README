@@ -65,6 +65,8 @@ The following commands work in normal mode (only):
 <count>hd   Drop <count> proof attempts (by calling d) (default 1).
 hp          Print the proof manager status (by calling p).
 hr          Restart the current proof (by calling restart).
+hv          Save the proof state (by calling save_proof).
+<count>hB   Back up to the <count>th last save point (by calling Backup) (default 1).
 
 hc          Interrupt execution (of whichever of the things sent is running).
 
