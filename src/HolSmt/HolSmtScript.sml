@@ -50,6 +50,7 @@ struct
   val _ = s ("th001", D ``~(p <=> q) \/ ~p \/ q``)
   val _ = s ("th002", D ``~(p <=> q) \/ p \/ ~q``)
   val _ = s ("th003", D ``(p <=> ~q) \/ ~p \/ q``)
+  val _ = s ("th003a", D ``(p <=> q) \/ ~p \/ ~q``)
   val _ = s ("th004", D ``(p <=> q) \/ p \/ q``)
   val _ = s ("th005", D ``~(~p <=> q) \/ p \/ q``)
   val _ = s ("th006", D ``~(p <=> ~q) \/ p \/ q``)
