@@ -711,7 +711,7 @@ fun GetExp () : exp =
 		| LP => let val e = exp0() in
 		 if !NextTok = RP then
 		  (AdvanceTok(); exp1(e))
-		 else (prSynErr "missing '('") end
+		 else (prSynErr "missing ')'") end
 		| ID(name) => exp1(lookup' name)
 		| _ => raise SyntaxError
 
