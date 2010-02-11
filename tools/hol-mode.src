@@ -630,12 +630,12 @@ file to \"use\" first."
 (defun hol-user-backup ()
   "Perform a HOL backup to a user-defined save-point."
   (interactive)
-  (send-raw-string-to-hol "proofManagerLib.Backup()" hol-echo-commands-p t))
+  (send-raw-string-to-hol "proofManagerLib.restore()" hol-echo-commands-p t))
 
 (defun hol-user-save-backup ()
   "Saves the current status of the proof for later backups to this point."
   (interactive)
-  (send-raw-string-to-hol "proofManagerLib.save_proof()" hol-echo-commands-p t))
+  (send-raw-string-to-hol "proofManagerLib.save()" hol-echo-commands-p t))
 
 (defun hol-print-goal ()
   "Print the current HOL goal."
@@ -1797,10 +1797,10 @@ already loaded.)"
    '("Rotate" . hol-rotate))
 
 (define-key global-map [menu-bar hol-menu hol-goalstack back-up-user]
-   '("User Back-up" . hol-user-backup))
+   '("Restore" . hol-user-backup))
 
 (define-key global-map [menu-bar hol-menu hol-goalstack back-up-save-user]
-   '("Set User-Back-up point" . hol-user-save-backup))
+   '("Save" . hol-user-save-backup))
 
 (define-key global-map [menu-bar hol-menu hol-goalstack back-up]
    '("Back up" . hol-backup))
