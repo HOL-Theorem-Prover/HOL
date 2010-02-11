@@ -478,11 +478,12 @@ in
      that we have accumulated a contradictory context. *)
 end;
 
-val ARITH_REDUCER = let
+fun ARITH_REDUCER fil = let
   exception CTXT of thm list;
   fun get_ctxt e = (raise e) handle CTXT c => c
   fun add_ctxt(ctxt, newthms) = let
-    val addthese = filter is_arith_thm (flatten (map CONJUNCTS newthms))
+    val addthese = filter (fn thm => 
+        (is_arith_thm thm andalso fil thm)) (flatten (map CONJUNCTS newthms))
   in
     CTXT (addthese @ get_ctxt ctxt)
   end
@@ -497,18 +498,20 @@ end;
 (* Finally, a simpset including the arithmetic decision procedure            *)
 (*---------------------------------------------------------------------------*)
 
-val ARITH_DP_ss =
+fun ARITH_DP_FILTER_ss fil =
     SSFRAG {name=SOME"ARITH_DP",
             convs = [{conv = K (K MUL_CANON_CONV),
                       key = SOME([], ``x * y``),
                       name = "MUL_CANON_CONV", trace = 2}],
             rewrs = [], congs = [],
-            filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+            filter = NONE, ac = [], dprocs = [ARITH_REDUCER fil]};
+
+val ARITH_DP_ss = ARITH_DP_FILTER_ss (K true);
 
 val old_dp_ss =
     SSFRAG {name=SOME"OLD_ARITH_DP",
             convs = [], rewrs = [], congs = [], filter = NONE, ac = [],
-            dprocs = [ARITH_REDUCER]};
+            dprocs = [ARITH_REDUCER (K true)]};
 
 (*---------------------------------------------------------------------------*)
 (* And one containing the dec. proc. and the set of arithmetic rewrites. But *)
