@@ -130,11 +130,13 @@ val build_stamp =
 
 val _ =
 TextIO.output(TextIO.stdOut,
-  "\n-----------------------------------------------------------------\n"
+   "\n---------------------------------------------------------------------\n"
   ^"       HOL-4 ["
-  ^Globals.release^" "^Lib.int_to_string(Globals.version)^build_stamp
-  ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
-  ^"-----------------------------------------------------------------\n\n");
+  ^Globals.release^" "^Lib.int_to_string(Globals.version)
+  ^" ("^kernelid^", "^build_stamp^")"
+  ^"]\n\n       For introductory HOL help, type: help \"hol\";"
+  ^"\n---------------------------------------------------------------------\n\
+   \\n")
 
 val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
             open Holmake_types;

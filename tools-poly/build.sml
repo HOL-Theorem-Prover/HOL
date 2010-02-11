@@ -523,7 +523,7 @@ fun make_buildstamp () =
      val stamp_stream = openOut stamp_filename
      val date_string = Date.toString (Date.fromTimeLocal (Time.now()))
  in
-    output(stamp_stream, " (built "^date_string^")");
+    output(stamp_stream, "built "^date_string);
     closeOut stamp_stream
 end
 
