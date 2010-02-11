@@ -86,29 +86,10 @@ in
   SSFRAG {dprocs = [], ac = [], rewrs = [], congs = congs, filter = NONE,
           name = NONE, convs = []}
 end
-
-open LoadableThyData
-val (mk,dest) = ThmSetData.new "betasimp"
-fun onload thyname =
-    case segment_data {thy = thyname, thydataty = "betasimp"} of
-      NONE => ()
-    | SOME d => let
-        val thms = valOf (dest d)
-      in
-        add_rwts (map #2 thms)
-      end
-val _ = register_onload onload
-val _ = List.app onload (ancestry "-")
-
-fun export_betarwt s = let
-  val (data, namedthms) = mk [s]
-  val thms = map #2 namedthms
-in
-  add_rwts thms;
-  write_data_update {thydataty = "betasimp", data = data}
-end
-
 fun bsrw_ss() = betafy(srw_ss())
+
+val {export = export_betarwt,...} = ThmSetData.new_exporter "betasimp" add_rwts
+
 
 (* ----------------------------------------------------------------------
     A reducer for weak head reduction.
