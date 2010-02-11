@@ -36,7 +36,7 @@ fun undo (HISTORY{past=[], ...}) = raise CANT_BACKUP_ANYMORE
   | undo (HISTORY{past=h::rst, limit, orig,save_points,...}) =
           HISTORY{obj=h, past=rst, orig=orig, limit=limit,save_points=save_points}
 
-fun Undo (HISTORY{obj,past,orig,limit,save_points}) =
+fun restore (HISTORY{obj,past,orig,limit,save_points}) =
   let
      val (save_points',obj') = if (null save_points) then ([], orig) else
          (if not (null past) then (save_points, hd save_points) else
@@ -46,7 +46,7 @@ fun Undo (HISTORY{obj,past,orig,limit,save_points}) =
      HISTORY{obj=obj', past=[], orig=orig, limit=limit, save_points=save_points'}     
   end;
 
-fun set_Undo (HISTORY{obj,past,orig,limit,save_points}) =
+fun save (HISTORY{obj,past,orig,limit,save_points}) =
      HISTORY{obj=obj, past=[], orig=orig, limit=limit, save_points=obj::save_points}     
 
 end

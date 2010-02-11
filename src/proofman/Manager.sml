@@ -72,11 +72,11 @@ fun backup (GOALSTACK s) = GOALSTACK(undo s)
 fun set_backup i (GOALSTACK s) = GOALSTACK(set_limit s i)
   | set_backup i (GOALTREE t) = GOALTREE (set_limit t i);
 
-fun Backup (GOALSTACK s) = GOALSTACK(Undo s)
-  | Backup (GOALTREE t) = GOALTREE(Undo t);
+fun restore (GOALSTACK s) = GOALSTACK(History.restore s)
+  | restore (GOALTREE  t) = GOALTREE (History.restore t);
 
-fun save_proof (GOALSTACK s) = GOALSTACK(set_Undo s)
-  | save_proof (GOALTREE t) = GOALTREE(set_Undo t);
+fun save (GOALSTACK s) = GOALSTACK(History.save s)
+  | save (GOALTREE t) = GOALTREE(History.save t);
 
 fun forget_history (GOALSTACK s) = GOALSTACK(remove_past s)
   | forget_history (GOALTREE t) = GOALTREE (remove_past t);
