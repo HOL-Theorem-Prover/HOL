@@ -111,11 +111,11 @@ fu! HOLExpand()
   while search('\%(\%('.s:stripBoth.'\|'.s:stripEnd.'\)\|'.s:delim.'\zs\%('.s:stripBothWords.'\)\)\_s*)\%$','bW')
     silent keepjumps normal vG$"_dG$a)
   endw
-  keepjumps normal gg0ie(
+  keepjumps normal gg0iproofManagerLib.expand(
 endf
 
 fu! HOLSubgoal()
-  keepjumps normal ie(
+  keepjumps normal iproofManagerLib.expand(
   silent normal p
   if search(s:delim.'by'.s:delim.'\_.*','cW')
     silent keepjumps normal vG$"_d
@@ -147,7 +147,7 @@ endf
 
 fu! HOLRotate()
   call HOLCStart()
-  exe "normal ir(" . v:count1 .");"
+  exe "normal iproofManagerLib.rotate(" . v:count1 .")"
   call HOLCEnd()
 endf
 
@@ -172,13 +172,14 @@ nm <silent> hg Vhg
 nm <silent> he Vhe
 nm <silent> hS VhS
 nn <silent> hR :<C-U>call HOLRotate()<CR>
-nn <silent> hb :<C-U>call HOLRepeat("b();")<CR>
-nn <silent> hB :<C-U>call HOLRepeat("Backup();")<CR>
-nn <silent> hv :call HOLCall(function("HOLF"),["save_proof();"])<CR>
-nn <silent> hd :<C-U>call HOLRepeat("drop();")<CR>
-nn <silent> hp :call HOLCall(function("HOLF"),["p();"])<CR>
-nn <silent> hr :call HOLCall(function("HOLF"),["restart();"])<CR>
+nn <silent> hb :<C-U>call HOLRepeat("proofManagerLib.backup();")<CR>
+nn <silent> hB :<C-U>call HOLRepeat("proofManagerLib.restore();")<CR>
+nn <silent> hv :call HOLCall(function("HOLF"),["proofManagerLib.save()"])<CR>
+nn <silent> hd :<C-U>call HOLRepeat("proofManagerLib.drop();")<CR>
+nn <silent> hp :call HOLCall(function("HOLF"),["proofManagerLib.p()"])<CR>
+nn <silent> hr :call HOLCall(function("HOLF"),["proofManagerLib.restart()"])<CR>
 nn <silent> hc :call HOLINT()<CR>
 no hh h
 
 let b:did_hol = 1
+" vim: ft=vim
