@@ -17,5 +17,5 @@ As for {backup}.
 Back tracking in a goal-directed proof to undo errors or try different tactics.
 
 \SEEALSO
-proofManagerLib.set_goal, proofManagerLib.set_goaltree, proofManagerLib.set_goalstack, proofManagerLib.new_goaltree, proofManagerLib.add, proofManagerLib.drop, proofManagerLib.dropn, proofManagerLib.restart, proofManagerLib.backup, proofManagerLib.BBackup, proofManagerLib.save_proof, proofManagerLib.set_backup, proofManagerLib.forget_history, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.expandv, proofManagerLib.p, proofManagerLib.initial_goal, proofManagerLib.top_thm, proofManagerLib.top_goal, proofManagerLib.top_goals, proofManagerLib.status, proofManagerLib.rotate, proofManagerLib.rotate_proofs.
+proofManagerLib.set_goal, proofManagerLib.set_goaltree, proofManagerLib.set_goalstack, proofManagerLib.new_goaltree, proofManagerLib.add, proofManagerLib.drop, proofManagerLib.dropn, proofManagerLib.restart, proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save, proofManagerLib.set_backup, proofManagerLib.forget_history, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.expandv, proofManagerLib.p, proofManagerLib.initial_goal, proofManagerLib.top_thm, proofManagerLib.top_goal, proofManagerLib.top_goals, proofManagerLib.status, proofManagerLib.rotate, proofManagerLib.rotate_proofs.
 \ENDDOC

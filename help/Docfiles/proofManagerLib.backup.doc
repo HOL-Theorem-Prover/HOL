@@ -8,13 +8,12 @@ Restores the proof state, undoing the effects of a previous expansion.
 \DESCRIBE
 The function {backup} is part of the subgoal package.  It may be abbreviated by
 the function {b}. It allows backing up from the last state change (caused by
-calls to {expand}, {set_goal}, {rotate} and their abbreviations). The package
+calls to {expand}, {rotate} and similar functions). The package
 maintains a backup list of previous proof states. A call to {backup}  restores
 the state to the previous state (which was on top of the backup list). The
 current state and the state on top of the backup list are discarded. The
-maximum number of proof states saved on the backup list is one greater than the
-value of the assignable variable {backup_limit}. This variable is initially set
-to 12. Adding new proof states after the maximum is reached causes the earliest
+maximum number of proof states saved on the backup list can be set using
+{set_backup}. It defaults to 15. Adding new proof states after the maximum is reached causes the earliest
 proof state on the list to be discarded. The user may backup repeatedly until
 the list is exhausted.  The state restored includes all unproven subgoals or,
 if a goal had  been proved in the previous state, the corresponding theorem.
@@ -65,5 +64,5 @@ OK..
 Back tracking in a goal-directed proof to undo errors or try different tactics.
 
 \SEEALSO
-proofManagerLib.b, proofManagerLib.set_goal, proofManagerLib.set_goaltree, proofManagerLib.set_goalstack, proofManagerLib.new_goaltree, proofManagerLib.add, proofManagerLib.drop, proofManagerLib.dropn, proofManagerLib.restart, proofManagerLib.BBackup, proofManagerLib.save_proof, proofManagerLib.set_backup, proofManagerLib.forget_history, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.expandv, proofManagerLib.p, proofManagerLib.initial_goal, proofManagerLib.top_thm, proofManagerLib.top_goal, proofManagerLib.top_goals, proofManagerLib.status, proofManagerLib.rotate, proofManagerLib.rotate_proofs.
+proofManagerLib.b, proofManagerLib.set_goal, proofManagerLib.set_goaltree, proofManagerLib.set_goalstack, proofManagerLib.new_goaltree, proofManagerLib.add, proofManagerLib.drop, proofManagerLib.dropn, proofManagerLib.restart, proofManagerLib.restore, proofManagerLib.save, proofManagerLib.set_backup, proofManagerLib.forget_history, proofManagerLib.expand, proofManagerLib.expandf, proofManagerLib.expandv, proofManagerLib.p, proofManagerLib.initial_goal, proofManagerLib.top_thm, proofManagerLib.top_goal, proofManagerLib.top_goals, proofManagerLib.status, proofManagerLib.rotate, proofManagerLib.rotate_proofs.
 \ENDDOC
