@@ -134,18 +134,7 @@ fun drop_cong c =
             ^Lib.quote(Thy^"$"^Name)
             ^" was not found")) e;
 
-fun export_cong thmname = let
-  val th = DB.fetch "-" thmname
-  fun sps pps = (PP.add_string pps "val _ = ";
-                 PP.add_break pps (1,0);
-                 PP.add_string pps "DefnBase.add_cong";
-                 PP.add_break pps (1,0);
-                 PP.add_string pps thmname;
-                 PP.add_string pps ";";
-                 PP.add_newline pps)
-in
-  add_cong th;
-  adjoin_to_theory { sig_ps = NONE, struct_ps = SOME sps}
-end
+val {export = export_cong,...} =
+    ThmSetData.new_exporter "defncong" (app add_cong)
 
 end
