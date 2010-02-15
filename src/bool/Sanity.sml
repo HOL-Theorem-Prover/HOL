@@ -8,7 +8,7 @@
 structure Sanity :> Sanity =
 struct
 
-open HolKernel DB Abbrev;
+open HolKernel DB Abbrev Parse boolSyntax;
 type theory = Hol_pp.theory;
 
 
