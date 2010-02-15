@@ -671,7 +671,7 @@ fun AdvanceTok () : unit = let
                   end
                 | #";" => SEMI
                 | c => (prSynErr ("invalid character " ^
-                                  String.toString (String.str c)))
+                                  String.toString (String.str c))))
 	| _ => raise LexError
 end
 handle eof => NextTok := EOF ;
