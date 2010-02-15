@@ -13,6 +13,8 @@
    (set_goal ([], ``f y = F``))
 *)
 
+val _ = load "Sanity";
+
 local 
    fun repeat_print s n = if (n <= 0) then () else (print s; repeat_print s (n-1));
    val print_space = repeat_print " ";
