@@ -34,6 +34,7 @@ open holfoot_pp_print
 open holfootTheory 
 open bagLib bagTheory
 open separationLogicLib
+open simpLib
 
 (*
 open vars_as_resourceBaseFunctor
@@ -102,8 +103,20 @@ struct
         REWRITE_RULE [holfoot_separation_combinator_def] IS_SEPARATION_COMBINATOR___holfoot_separation_combinator];
    val LENGTH_NIL_GSYM = CONV_RULE ((QUANT_CONV o LHS_CONV) SYM_CONV) LENGTH_NIL
 
-   val predicate_simpset = simpLib.++ (list_ss, simpLib.merge_ss [stringSimps.STRING_ss,
-      ListConv1.list_eq_simp_ss,
+   fun is_no_proper_diseq thm = 
+   let
+      val (t1, t2) = dest_eq (dest_neg (concl thm));
+   in
+      (same_const t1 numSyntax.zero_tm) orelse
+      (same_const t2 numSyntax.zero_tm)
+   end handle HOL_ERR _ => true;
+
+
+   val predicate_simpset = simpLib.++ (
+       std_ss, simpLib.merge_ss [numSimps.ARITH_RWTS_ss, listSimps.LIST_ss,
+      (numSimps.ARITH_DP_FILTER_ss is_no_proper_diseq),
+      stringSimps.STRING_ss,
+      listLib.list_eq_simp_ss,
       simpLib.rewrites [
         LENGTH_NIL, LENGTH_NIL_GSYM,
         LIST_TO_FMAP_THM,

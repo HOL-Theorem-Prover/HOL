@@ -28,7 +28,7 @@ val _ = new_theory "generalHelpers";
  ******************************************************************)
 
 val COND_EXISTS = store_thm ("COND_EXISTS",
-``!P Q v c. (?v. if c then P v else Q v) = if c then ?v. P v else ?v. Q v``,
+``!P Q c. (?v. if c then P v else Q v) = if c then ?v. P v else ?v. Q v``,
 METIS_TAC[])
 
 val BOOL_TO_NUM_def = Define `
@@ -49,14 +49,6 @@ SIMP_TAC std_ss [BOOL_TO_NUM_def]);
 (******************************************************************
   BAG
  ******************************************************************)
-val FINITE_LIST_TO_BAG = store_thm ("FINITE_LIST_TO_BAG",
-``!l. FINITE_BAG (LIST_TO_BAG l)``,
-Induct_on `l` THEN (
-   ASM_SIMP_TAC std_ss [containerTheory.LIST_TO_BAG_def,
-       FINITE_EMPTY_BAG, FINITE_BAG_INSERT]
-));
-
-
 val BAG_IN_LIST_TO_BAG = store_thm ("BAG_IN_LIST_TO_BAG",
 ``!x l. BAG_IN x (LIST_TO_BAG l) = MEM x l``,
 Induct_on `l` THEN (
@@ -461,7 +453,6 @@ val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
 val LENGTH_EQ_NUM_EVAL = save_thm ("LENGTH_EQ_NUM_EVAL",
         SUC_RULE LENGTH_EQ_NUM);
-
 
 
 val ZIP_APPEND = store_thm ("ZIP_APPEND",
@@ -1001,14 +992,6 @@ SIMP_TAC list_ss [LIST_TO_FMAP_def, FUPDATE_LIST_THM,
    FUPDATE_LIST_APPEND]);
 
 
-val LIST_TO_SET_REVERSE = store_thm ("LIST_TO_SET_REVERSE",
-``LIST_TO_SET (REVERSE L) = LIST_TO_SET L``,
-Induct_on `L` THEN
-ASM_SIMP_TAC list_ss [] THEN
-SIMP_TAC std_ss [EXTENSION, IN_INSERT, IN_UNION, IN_SING] THEN
-PROVE_TAC[]);
-
-
 val FDOM_LIST_TO_FMAP = store_thm ("FDOM_LIST_TO_FMAP",
 ``!L. (FDOM (LIST_TO_FMAP L) = LIST_TO_SET (MAP FST L))``,
 SIMP_TAC std_ss [LIST_TO_FMAP_def, FDOM_FUPDATE_LIST, FDOM_FEMPTY,
@@ -1108,17 +1091,13 @@ METIS_TAC[pairTheory.FST]);
 
 
 
-val PERM_REVERSE = store_thm ("PERM_REVERSE",
-``PERM (REVERSE L) L``,
-Induct_on `L` THEN
-ASM_SIMP_TAC list_ss [PERM_REFL, PERM_FUN_APPEND_CONS,
-   PERM_CONS_IFF]);
-
-
 val ALL_DISTINCT_REVERSE = store_thm ("ALL_DISTINCT_REVERSE",
-``ALL_DISTINCT (REVERSE L) = ALL_DISTINCT L``,
+``!L. ALL_DISTINCT (REVERSE L) = ALL_DISTINCT L``,
+GEN_TAC THEN
 MATCH_MP_TAC ALL_DISTINCT_PERM THEN
-REWRITE_TAC [PERM_REVERSE]);
+METIS_TAC [PERM_REVERSE, PERM_SYM]);
+
+
 
 
 val LIST_TO_FMAP___ALL_DISTINCT = store_thm (

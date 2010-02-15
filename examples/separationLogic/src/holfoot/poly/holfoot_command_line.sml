@@ -4,6 +4,8 @@ use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/header.sml");
 
 val _ = load "DiskThms";
 
+val build_date = Date.toString (Date.fromTimeLocal (Time.now()));
+
 fun print_help () =
 let
   open PPBackEnd Parse
@@ -23,6 +25,8 @@ let
   val s =   "  -h     this help\n";
   val s = s^"  -hi    help on interactive mode\n\n";
   val _ = print s;
+  val _ = print_with_style [Bold] "Build time: ";
+  val _ = print ("\n  "^build_date^"\n\n");
 in
    ()
 end
