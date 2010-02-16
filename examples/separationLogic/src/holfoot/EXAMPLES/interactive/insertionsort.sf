@@ -1,0 +1,41 @@
+sortlist(i;) [list(i)] {
+   local m, j;
+   if (i == NULL) {} else {
+      m = i->dta;
+      min(m;i);
+      delete(i,j;m);
+      sortlist(i;);
+      j->tl = i;
+      i = j;
+   }
+} [list(i)]
+
+
+min(m;i) [list(i)] {
+  local ih, it;
+  if (i == NULL) {} else {
+    ih = i->dta;
+    it = i->tl;
+    if (ih < m) {
+      m = ih;
+    }
+    min (m;it);
+  }
+} [list(i)]
+
+
+/* this specification should fail! One has to guarentee that
+   m occurs in the list */
+delete(i,j;m) [list(i)] {
+  local ih, it;
+
+  ih = i->dta;
+  it = i->tl;
+  if (ih == m) {
+     j = i;
+     i = it;
+  } else {
+     delete(it,j;m);
+     i->tl = it;
+  }
+} [list(i) * (j |-> [])]

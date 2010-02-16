@@ -1,0 +1,43 @@
+sortlist(i;) [data_list(i,data)] {
+   local m, j;
+   if (i == NULL) {} else {
+      m = i->dta;
+      min(m;i);
+      delete(i,j;m);
+      sortlist(i;);
+      j->tl = i;
+      i = j;
+   }
+} [data_list(i,_idata) * 
+   ``(SORTED $<= (_idata:num list)) /\
+     (PERM data _idata)``]
+
+
+min(m;i) [data_list(i,data) * (m == #mc)] {
+  local ih, it;
+  if (i == NULL) {} else {
+    ih = i->dta;
+    it = i->tl;
+    if (ih < m) {
+      m = ih;
+    }
+    min (m;it);
+  }
+} [data_list(i,data) * (m == _mc2) *
+   ``(MEM (_mc2:num) (mc::data)) /\
+     (EVERY (\n:num. (_mc2:num) <= n) (mc::data))``]
+
+
+delete(i,j;m) [data_list(i,data) * ``MEM (m:num) data``] {
+  local ih, it;
+
+  ih = i->dta;
+  it = i->tl;
+  if (ih == m) {
+     j = i;
+     i = it;
+  } else {
+     delete(it,j;m);
+     i->tl = it;
+  }
+} [data_list(i,``REMOVE (m:num) data``) * (j |-> dta:m)]
