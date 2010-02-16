@@ -90,8 +90,6 @@ sig
 
   (* User code additions *)
   (* Users can add special-purpose printers and parsers to grammars *)
-  (* The key for printers specifies a TYPE, not a term; the user's
-     printer will be called onto print out all terms of that type *)
   type term = Term.term
   type userprinter = (type_grammar.grammar * grammar) term_pp_types.userprinter
   val add_user_printer :
