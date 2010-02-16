@@ -376,14 +376,14 @@ val PEEK_ADD = store_thm("PEEK_ADD",
          MOD_2EXP_EQ_BIT_EQ, NOT_MOD_2EXP_EQ, PEEK_NONE_LEFT, PEEK_NONE_RIGHT]);
 
 val BRANCH = store_thm("BRANCH",
-  `!k p m l r. BRANCH (p,m,l,r) =
-               if l = Empty then r
-               else if r = Empty then l
-               else Branch p m l r`,
+  `!p m l r. BRANCH (p,m,l,r) =
+             if l = Empty then r
+             else if r = Empty then l
+             else Branch p m l r`,
   Cases_on `l` \\ Cases_on `r` \\ SRW_TAC [] [BRANCH_def]);
 
 val PEEK_REMOVE = store_thm("PEEK_REMOVE",
-  `!t k j d. IS_PTREE t ==>
+  `!t k j. IS_PTREE t ==>
        (PEEK (REMOVE t k) j = if k = j then NONE else PEEK t j)`,
   Induct_on `t`
     \\ SRW_TAC [boolSimps.LET_ss]
@@ -565,16 +565,6 @@ val ADD_ADD_SYM = store_thm("ADD_ADD_SYM",
 
 (* ------------------------------------------------------------------------- *)
 
-val LIST_EQ = store_thm("LIST_EQ",
-  `!a b. (LENGTH a = LENGTH b) /\
-         (!x. x < LENGTH a ==> (EL x a = EL x b)) ==>
-         (a = b)`,
-  Induct_on `b` >> SIMP_TAC list_ss [LENGTH_NIL]
-    \\ Induct_on `a` \\ RW_TAC list_ss []
-    >> POP_ASSUM (fn th => PROVE_TAC [(SIMP_RULE list_ss [] o SPEC `0`) th])
-    \\ POP_ASSUM (fn th => PROVE_TAC
-         [(GEN_ALL o SIMP_RULE list_ss [] o SPEC `SUC x`) th]));
-
 val FILTER_ALL = store_thm("FILTER_ALL",
   `!P l. (!n. n < LENGTH l ==> ~P (EL n l)) = (FILTER P l = [])`,
   Induct_on `l` \\ SRW_TAC [] []
@@ -648,7 +638,7 @@ val MEM_ALL_DISTINCT_IMP_PERM = store_thm("MEM_ALL_DISTINCT_IMP_PERM",
   `!l1 l2. ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\ (!x. MEM x l1 = MEM x l2) ==>
            PERM l1 l2`,
   SRW_TAC [] [PERM_DEF, ALL_DISTINCT_FILTER]
-    \\ MATCH_MP_TAC LIST_EQ
+    \\ MATCH_MP_TAC listTheory.LIST_EQ
     \\ Cases_on `MEM x l1` >> METIS_TAC []
     \\ SPEC_THEN `$= x` ASSUME_TAC FILTER_ALL
     \\ METIS_TAC [MEM_EL]);
@@ -677,8 +667,8 @@ val IS_PTREE_FOLDR_INSERT_PTREE = prove(
   Induct_on `l` \\ SRW_TAC [] []);
 
 val PEEK_INSERT_PTREE = save_thm("PEEK_INSERT_PTREE",
-   (GEN_ALL o ONCE_REWRITE_RULE [oneTheory.one] o REWRITE_RULE [ADD_INSERT] o
-    ISPEC `t:ptreeset`) PEEK_ADD);
+   (GEN_ALL o SPEC_ALL o ONCE_REWRITE_RULE [oneTheory.one] o
+    REWRITE_RULE [ADD_INSERT] o ISPEC `t:ptreeset`) PEEK_ADD);
 
 val MEM_TRAVERSE_INSERT_PTREE = store_thm("MEM_TRAVERSE_INSERT_PTREE",
   `!t x h. IS_PTREE t ==>
@@ -745,7 +735,7 @@ val PTREE_EXTENSION = store_thm("PTREE_EXTENSION",
 
 val PTREE_OF_NUMSET_NUMSET_OF_PTREE = store_thm(
   "PTREE_OF_NUMSET_NUMSET_OF_PTREE",
-  `!t s n. IS_PTREE t /\ FINITE s ==>
+  `!t s. IS_PTREE t /\ FINITE s ==>
          (PTREE_OF_NUMSET Empty (NUMSET_OF_PTREE t UNION s) =
           PTREE_OF_NUMSET t s)`,
   SRW_TAC [] [PTREE_EXTENSION, pred_setTheory.FINITE_UNION, IN_PTREE_OF_NUMSET]
@@ -938,7 +928,7 @@ val PERM_NOT_REMOVE = store_thm("PERM_NOT_REMOVE",
     \\ METIS_TAC []);
 
 val PERM_DELETE_PTREE = store_thm("PERM_DELETE_PTREE",
-  `!t:unit ptree k d.
+  `!t:unit ptree k.
            IS_PTREE t /\ MEM k (TRAVERSE t) ==>
            PERM (TRAVERSE (REMOVE t k))
                 (FILTER (\x. ~(x = k)) (TRAVERSE t))`,
@@ -974,9 +964,9 @@ val LENGTH_FILTER_ONE_ALL_DISTINCT = prove(
     \\ METIS_TAC [MEM_EL]);
 
 val PERM_REMOVE = store_thm("PERM_REMOVE",
-  `!t k d. IS_PTREE t /\ MEM k (TRAVERSE t) ==>
+  `!t k. IS_PTREE t /\ MEM k (TRAVERSE t) ==>
            PERM (TRAVERSE (REMOVE t k)) (FILTER (\x. ~(x = k)) (TRAVERSE t))`,
-  NTAC 3 STRIP_TAC
+  NTAC 2 STRIP_TAC
     \\ `TRAVERSE (REMOVE t k) = TRAVERSE (REMOVE (TRANSFORM (K ()) t) k)`
     by REWRITE_TAC [TRAVERSE_TRANSFORM, (GSYM o SIMP_RULE (srw_ss()) [] o
                       ISPEC `K ()`) REMOVE_TRANSFORM]
@@ -996,7 +986,7 @@ val SIZE_ADD = store_thm("SIZE_ADD",
     \\ METIS_TAC [PERM_ADD, PERM_LENGTH, LENGTH, ADD1]);
 
 val SIZE_REMOVE = store_thm("SIZE_REMOVE",
-  `!t k d.
+  `!t k.
       IS_PTREE t ==>
      (SIZE (REMOVE t k) =
       if MEM k (TRAVERSE t) then
