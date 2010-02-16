@@ -390,7 +390,7 @@ val NOT_MOD2_LEM = store_thm("NOT_MOD2_LEM",
   `!n. ~(n MOD 2 = 0) = (n MOD 2 = 1)`, RW_TAC arith_ss [MOD_2]);
 
 val NOT_MOD2_LEM2 = store_thm("NOT_MOD2_LEM2",
-  `!n a. ~(n MOD 2 = 1) = (n MOD 2 = 0)`, RW_TAC bool_ss [GSYM NOT_MOD2_LEM]);
+  `!n. ~(n MOD 2 = 1) = (n MOD 2 = 0)`, RW_TAC bool_ss [GSYM NOT_MOD2_LEM]);
 
 val ODD_MOD2_LEM = store_thm("ODD_MOD2_LEM",
  `!n. ODD n = ((n MOD 2) = 1)`, RW_TAC arith_ss [ODD_EVEN,MOD_2]);

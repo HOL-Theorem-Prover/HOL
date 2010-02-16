@@ -737,7 +737,7 @@ val word_xnor_n2w = store_thm("word_xnor_n2w",
 
 (* ......................................................................... *)
 
-val l2w_w2l = store_thm("l2n_n2l",
+val l2w_w2l = store_thm("l2w_w2l",
   `!b w. 1 < b ==> (l2w b (w2l b w) = w)`,
   SRW_TAC [ARITH_ss] [l2w_def, w2l_def, l2n_n2l]);
 
@@ -1224,7 +1224,7 @@ val word_extract_n2w = save_thm("word_extract_n2w",
    SPECL [`h`,`l`,`n2w n`] o SIMP_RULE std_ss [FUN_EQ_THM]) word_extract_def);
 
 val word_extract_w2w = store_thm("word_extract_w2w",
-  `!w:'a word. dimindex(:'a) <= dimindex(:'b) ==>
+  `!w:'a word h l. dimindex(:'a) <= dimindex(:'b) ==>
       ((h >< l) (w2w w : 'b word) = (h >< l) w : 'c word)`,
   SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_extract_def, w2w, word_bits_def]
     \\ Cases_on `i < dimindex(:'a)`
@@ -1596,7 +1596,7 @@ val WORD_EXTRACT_OVER_MUL2 = Q.store_thm("WORD_EXTRACT_OVER_MUL2",
   tac \\ `dimindex(:'a) - 1 = h` by DECIDE_TAC \\ SRW_TAC [] []);
 
 val WORD_EXTRACT_ID = Q.store_thm("WORD_EXTRACT_ID",
-  `!w:'a word.  w2n w < 2 ** SUC h ==> ((h >< 0) w = w)`,
+  `!w:'a word h.  w2n w < 2 ** SUC h ==> ((h >< 0) w = w)`,
   Cases
   \\ `n < 2 ** SUC (dimindex (:'a) - 1)`
   by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
@@ -2325,7 +2325,7 @@ val ASR_LIMIT = store_thm("ASR_LIMIT",
   SHIFT_WORD_TAC);
 
 val ASR_UINT_MAX = store_thm("ASR_UINT_MAX",
-  `!w:'a word n. Tw >> n = Tw`, SHIFT_WORD_TAC);
+  `!n. Tw >> n = Tw`, SHIFT_WORD_TAC);
 
 val LSR_LIMIT = store_thm("LSR_LIMIT",
   `!w:'a word n. ^WL <= n ==> (w >>> n = 0w)`,
@@ -2630,7 +2630,7 @@ val ROL_BITWISE = store_thm("ROL_BITWISE",
   SRW_TAC [] [word_rol_def, ROR_BITWISE]);
 
 val WORD_2COMP_LSL = store_thm("WORD_2COMP_LSL",
-  `!n a b. (- a) << n = - (a << n)`,
+  `!n a. (- a) << n = - (a << n)`,
   SRW_TAC [] [WORD_MUL_LSL, WORD_NEG_RMUL]);
 
 val w2w_LSL = store_thm("w2w_LSL",
