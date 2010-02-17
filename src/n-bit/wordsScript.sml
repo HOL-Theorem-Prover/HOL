@@ -2686,6 +2686,15 @@ val WORD_EXTRACT_LSL = store_thm("WORD_EXTRACT_LSL",
         \\ ASM_SIMP_TAC std_ss [MIN_FST],
       FULL_SIMP_TAC arith_ss [NOT_LESS]]);
 
+val WORD_EXTRACT_LSL2 = Q.store_thm("WORD_EXTRACT_LSL2",
+  `!h l n w:'a word. dimindex(:'b) + l <= h + n ==>
+     ((h >< l) w << n =
+      (((dimindex(:'b) + l - (n + 1)) >< l) w << n) : 'b word)`,
+  SRW_TAC [ARITH_ss, fcpLib.FCP_ss]
+    [DIMINDEX_GT_0, word_lsl_def, word_extract_def, w2w, word_bits_def]
+  THEN Cases_on `i < n + dimindex(:'a)`
+  THEN SRW_TAC [ARITH_ss, fcpLib.FCP_ss,boolSimps.CONJ_ss] [DIMINDEX_GT_0]);
+
 val EXTRACT_JOIN_LSL = store_thm("EXTRACT_JOIN_LSL",
   `!h m  m' l s n w:'a word.
        l <= m /\ m' <= h /\ (m' = m + 1) /\ (s = m' - l + n) ==>
