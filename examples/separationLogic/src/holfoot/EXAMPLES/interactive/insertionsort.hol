@@ -71,38 +71,23 @@ val min_TAC =
 
 (* holfoot_set_goal_procedures file ["sortlist"] *)
 val sortlist_TAC =
-   xHF_CONTINUE_TAC [add_rewrites [SORTED_DEF, PERM_REFL, REMOVE_def],
-     generate_vcs] THEN   
-   CONJ_TAC THEN1 (
-      REPEAT STRIP_TAC THEN
-      HF_ELIM_COMMENTS_TAC THEN
-      ASM_REWRITE_TAC []    
-   ) THEN
-   REPEAT GEN_TAC THEN
-   Cases_on `mc2 = data_h` THENL [
-      ASM_SIMP_TAC list_ss [] THEN
-      xHF_SOLVE_TAC [generate_vcs] THEN
-      SIMP_TAC (std_ss++permLib.PERM_ss) [SORTED_EQ, transitive_LE, EVERY_MEM] THEN
-      HF_ELIM_COMMENTS_TAC THEN
-      REPEAT STRIP_TAC THEN
+   xHF_SOLVE_TAC [generate_vcs,
+       add_rewrites [SORTED_EQ, transitive_LE, EVERY_MEM, SORTED_DEF],
+       add_ssfrags [permLib.PERM_ss]] THEN     
+   SIMP_TAC (std_ss++boolSimps.CONJ_ss) [GSYM FORALL_AND_THM] THEN
+   REPEAT GEN_TAC THEN HF_ELIM_COMMENTS_TAC THEN
+   Cases_on `mc2 = data_h` THEN ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [REMOVE_def] THEN
+   REPEAT STRIP_TAC THENL [
       METIS_TAC [PERM_MEM_EQ],
 
+     `MEM y (data_h::REMOVE mc2 data_t)` by METIS_TAC [PERM_MEM_EQ] THEN
+      FULL_SIMP_TAC list_ss [] THEN
+      METIS_TAC[MEM_REMOVE_IMP],
 
-      ASM_SIMP_TAC list_ss [] THEN
-      xHF_SOLVE_TAC [generate_vcs] THEN
-      SIMP_TAC (std_ss++permLib.PERM_ss) [SORTED_EQ, transitive_LE, EVERY_MEM] THEN
-      HF_ELIM_COMMENTS_TAC THEN
-      REPEAT STRIP_TAC THENL [
-         `MEM y (data_h::REMOVE mc2 data_t)` by METIS_TAC [PERM_MEM_EQ] THEN
-         FULL_SIMP_TAC list_ss [] THEN
-         METIS_TAC[MEM_REMOVE_IMP],
-
-         Q.PAT_ASSUM `PERM X Y` (ASSUME_TAC o ONCE_REWRITE_RULE [PERM_SYM]) THEN
-         ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [] THEN
-         METIS_TAC[PERM_REMOVE]
-      ]
-   ]
-
+      Q.PAT_ASSUM `PERM X Y` (ASSUME_TAC o ONCE_REWRITE_RULE [PERM_SYM]) THEN
+      ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [] THEN
+      METIS_TAC[PERM_REMOVE]
+   ];
 
 
 val thm = holfoot_tac_verify_spec file NONE
@@ -119,4 +104,6 @@ val spec_t = parse_holfoot_file file
 (* The version without data fails, since delete is not properly specified     *)
 (******************************************************************************)
 val file2 = concat [examplesDir, "/interactive/insertionsort.sf"];
-val thm = holfoot_auto_verify_spec file
+val thm = holfoot_auto_verify_spec file2
+
+	  

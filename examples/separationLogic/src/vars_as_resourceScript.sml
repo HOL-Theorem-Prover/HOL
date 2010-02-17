@@ -14,7 +14,7 @@ show_assums := true;
 open generalHelpersTheory finite_mapTheory pred_setTheory 
    listTheory rich_listTheory arithmeticTheory separationLogicTheory
    bagTheory bagSimps containerTheory relationTheory operatorTheory optionTheory;
-open ConseqConv boolSimps quantHeuristicsLib quantHeuristicsArgsLib
+open ConseqConv boolSimps quantHeuristicsLib quantHeuristicsArgsLib Sanity
 
 
 (*
@@ -2422,6 +2422,8 @@ val var_res_bigstar_def = Define `var_res_bigstar f b =
 val var_res_bigstar_list_def = Define `var_res_bigstar_list f l = 
    asl_bigstar_list (VAR_RES_COMBINATOR f) ((var_res_prop_stack_true f)::l)`
 
+val var_res_map_def = Define `var_res_map f P l =
+   var_res_bigstar_list f (MAP P l)`;
 
 val VAR_RES_IS_PURE_PROPOSITION_def = Define
 `VAR_RES_IS_PURE_PROPOSITION f (P:('a,'b,'c) var_res_proposition) =
@@ -3094,6 +3096,50 @@ SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
 
 
 
+val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_map = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_map",
+``!f P L exS. (IS_SEPARATION_COMBINATOR f /\
+         EVERY (\l. VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (P l)) L) ==>
+(VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (var_res_map f P L))``,
+
+REWRITE_TAC[var_res_map_def] THEN
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC (MP_CANON VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bigstar_list) THEN
+FULL_SIMP_TAC std_ss [EVERY_MAP]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE___var_res_map = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE___var_res_map",
+``!f P L. (IS_SEPARATION_COMBINATOR f /\
+           EVERY (\l. VAR_RES_IS_STACK_IMPRECISE (P l)) L) ==>
+(VAR_RES_IS_STACK_IMPRECISE (var_res_map f P L))``,
+SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
+   EVERY_MEM, VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_map]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_map___SIMPLE = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_map___SIMPLE",
+``!f P L exS. (IS_SEPARATION_COMBINATOR f /\
+              (!l. VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (P l))) ==>
+(VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (var_res_map f P L))``,
+
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_map THEN
+ASM_SIMP_TAC std_ss [EVERY_MEM]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE___var_res_map___SIMPLE = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE___var_res_map___SIMPLE",
+``!f P L. (IS_SEPARATION_COMBINATOR f /\
+           (!l. VAR_RES_IS_STACK_IMPRECISE (P l))) ==>
+(VAR_RES_IS_STACK_IMPRECISE (var_res_map f P L))``,
+
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE___var_res_map THEN
+ASM_SIMP_TAC std_ss [EVERY_MEM]);
+
+
+
 
 (******************************************************
  Expressions Imprecise
@@ -3703,6 +3749,25 @@ SIMP_TAC std_ss [asl_star___swap_var_res_prop_stack_true,
 METIS_TAC[ASSOC_DEF, COMM_DEF, asl_star___PROPERTIES,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    asl_star___swap_var_res_prop_stack_true]);
+
+
+val var_res_map_REWRITE = store_thm ("var_res_map_REWRITE",
+``(!f P. IS_SEPARATION_COMBINATOR f ==>
+    (var_res_map f P [] = var_res_prop_stack_true f)) /\
+  (!f P p pL. IS_SEPARATION_COMBINATOR f ==>
+    (var_res_map f P (p::pL) = 
+     asl_star (VAR_RES_COMBINATOR f) (P p)
+       (var_res_map f P pL)))``,
+SIMP_TAC list_ss [var_res_map_def, var_res_bigstar_list_REWRITE]);
+
+
+val var_res_map_APPEND = store_thm ("var_res_map_APPEND",
+``!f P l1 l2. IS_SEPARATION_COMBINATOR f ==>
+    (var_res_map f P (l1++l2) = 
+     asl_star (VAR_RES_COMBINATOR f) 
+       (var_res_map f P l1)
+       (var_res_map f P l2))``,
+SIMP_TAC std_ss [var_res_map_def, var_res_bigstar_list_APPEND, MAP_APPEND]);
 
 
 val var_res_bigstar_UNION = store_thm ("var_res_bigstar_UNION",
