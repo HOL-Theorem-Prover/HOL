@@ -57,6 +57,11 @@ val LTAKE_thm = prove(
   Cases_on `OPTION_MAP (CONS x) (LTAKE (n - 1) (THE (LTL t)))` THEN
   SRW_TAC [][]);
 
+val toList_llcases = prove(
+  ``toList ll = llcases (SOME []) (\(h,t). OPTION_MAP (\t. h::t) (toList t)) ll``,
+  Q.ISPEC_THEN `ll` STRUCT_CASES_TAC llist_CASES THEN
+  SRW_TAC [boolSimps.ETA_ss][llcases_LCONS, llcases_LNIL, toList_THM])
+
 fun insert_const c = let val t = Parse.Term [QUOTE c] in
   ConstMapML.prim_insert(t, (false, "", c, type_of t))
 end
@@ -92,7 +97,9 @@ val _ = eSML "llist"
          MLSTRUCT "val LNIL = seq.empty"::
          MLSTRUCT "fun :::(h,t) = LCONS h t"::
          MLSTRUCT "fun LUNFOLD f x = seq.delay (fn () => case f x of NONE => LNIL | SOME (y,e) => LCONS e (LUNFOLD f y))" ::
-         [DEFN LAPPEND_llcases, DEFN LMAP_llcases, DEFN LFILTER_llcases,
-          DEFN LHD_llcases, DEFN LTL_llcases, DEFN LTAKE_thm])
+         map DEFN [
+           LAPPEND_llcases, LMAP_llcases, LFILTER_llcases,
+           LHD_llcases, LTL_llcases, LTAKE_thm,
+           toList_llcases])
 
 val _ = export_theory()
