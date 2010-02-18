@@ -57,15 +57,25 @@ val LTAKE_thm = prove(
   Cases_on `OPTION_MAP (CONS x) (LTAKE (n - 1) (THE (LTL t)))` THEN
   SRW_TAC [][]);
 
-val _ = ConstMapML.prim_insert (
-                                ``llcases``, (false, "", "llcases",
-                                              type_of ``llcases``))
-val _ = ConstMapML.prim_insert(``LCONS``, (false, "", "LCONS",
-                                           type_of ``LCONS``))
-val _ = ConstMapML.prim_insert(``LNIL``, (false, "", "LNIL",
-                                           type_of ``LNIL``))
-val _ = ConstMapML.prim_insert(``LUNFOLD``, (false, "", "LUNFOLD",
-                                           type_of ``LUNFOLD``))
+fun insert_const c = let val t = Parse.Term [QUOTE c] in
+  ConstMapML.prim_insert(t, (false, "", c, type_of t))
+end
+val _ = insert_const "llcases"
+val _ = insert_const "LCONS"
+val _ = insert_const "LNIL"
+val _ = insert_const "LUNFOLD"
+val _ = adjoin_to_theory
+{sig_ps = NONE, struct_ps = SOME (fn ppstrm =>
+  let val S = PP.add_string ppstrm
+      fun NL() = PP.add_newline ppstrm
+  in S "fun insert_const c = let val t = Parse.Term [QUOTE c] in"; NL();
+     S "  ConstMapML.prim_insert(t, (false, \"\", c, type_of t))"; NL();
+     S "end"; NL();
+     S "val _ = insert_const \"llcases\""; NL();
+     S "val _ = insert_const \"LCONS\""; NL();
+     S "val _ = insert_const \"LNIL\""; NL();
+     S "val _ = insert_const \"LUNFOLD\""
+  end)}
 
 val _ = eSML "llist"
         (MLSIG "type 'a llist" ::
@@ -74,6 +84,7 @@ val _ = eSML "llist"
          MLSIG "val ::: : 'a * 'a llist -> 'a llist" ::
          MLSIG "val llcases : 'b -> ('a * 'a llist -> 'b) -> 'a llist -> 'b" ::
          MLSIG "val LUNFOLD : ('a -> ('a * 'b) option) -> 'a -> 'b llist" ::
+         MLSIG "type num = numML.num" ::
          OPEN ["num", "list"] ::
          MLSTRUCT "type 'a llist = 'a seq.seq" ::
          MLSTRUCT "fun llcases n c seq = seq.fcases seq (n,c)" ::
@@ -85,4 +96,3 @@ val _ = eSML "llist"
           DEFN LHD_llcases, DEFN LTL_llcases, DEFN LTAKE_thm])
 
 val _ = export_theory()
-
