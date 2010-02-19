@@ -18,21 +18,24 @@ val llcases_LNIL = llcases_def |> SPEC_ALL |> Q.INST [`l` |-> `LNIL`]
 val llcases_LCONS = llcases_def |> SPEC_ALL |> Q.INST [`l` |-> `h:::t`]
                                |> SIMP_RULE (srw_ss()) []
 
+val LLCONS_def = Define`
+  LLCONS h t = LCONS h (t ())`;
+
 val LAPPEND_llcases = prove(
-  ``LAPPEND l1 l2 = llcases l2 (\(h,t). h:::LAPPEND t l2) l1``,
+  ``LAPPEND l1 l2 = llcases l2 (\(h,t). LLCONS h (\(). LAPPEND t l2)) l1``,
   Q.SPEC_THEN `l1` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
 
 val LMAP_llcases = prove(
-  ``LMAP f l = llcases LNIL (\(h,t). f h ::: LMAP f t) l``,
+  ``LMAP f l = llcases LNIL (\(h,t). LLCONS (f h) (\(). LMAP f t)) l``,
   Q.ISPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
 
 val LFILTER_llcases = prove(
-  ``LFILTER P l = llcases LNIL (\(h,t). if P h then h ::: LFILTER P t
+  ``LFILTER P l = llcases LNIL (\(h,t). if P h then LLCONS h (\(). LFILTER P t)
                                         else LFILTER P t) l``,
   Q.ISPEC_THEN `l` STRUCT_CASES_TAC llist_CASES THEN
-  SRW_TAC [][llcases_LCONS, llcases_LNIL]);
+  SRW_TAC [][LLCONS_def, llcases_LCONS, llcases_LNIL]);
 
 val LHD_llcases = prove(
   ``LHD ll = llcases NONE (\(h,t). SOME h) ll``,
@@ -66,6 +69,7 @@ fun insert_const c = let val t = Parse.Term [QUOTE c] in
   ConstMapML.prim_insert(t, (false, "", c, type_of t))
 end
 val _ = insert_const "llcases"
+val _ = insert_const "LLCONS"
 val _ = insert_const "LCONS"
 val _ = insert_const "LNIL"
 val _ = insert_const "LUNFOLD"
@@ -77,6 +81,7 @@ val _ = adjoin_to_theory
      S "  ConstMapML.prim_insert(t, (false, \"\", c, type_of t))"; NL();
      S "end"; NL();
      S "val _ = insert_const \"llcases\""; NL();
+     S "val _ = insert_const \"LLCONS\""; NL();
      S "val _ = insert_const \"LCONS\""; NL();
      S "val _ = insert_const \"LNIL\""; NL();
      S "val _ = insert_const \"LUNFOLD\""
@@ -85,6 +90,7 @@ val _ = adjoin_to_theory
 val _ = eSML "llist"
         (MLSIG "type 'a llist" ::
          MLSIG "val LNIL : 'a llist" ::
+         MLSIG "val LLCONS : 'a -> (unit -> 'a llist) -> 'a llist" ::
          MLSIG "val LCONS : 'a -> 'a llist -> 'a llist" ::
          MLSIG "val ::: : 'a * 'a llist -> 'a llist" ::
          MLSIG "val llcases : 'b -> ('a * 'a llist -> 'b) -> 'a llist -> 'b" ::
@@ -93,6 +99,7 @@ val _ = eSML "llist"
          OPEN ["num", "list"] ::
          MLSTRUCT "type 'a llist = 'a seq.seq" ::
          MLSTRUCT "fun llcases n c seq = seq.fcases seq (n,c)" ::
+         MLSTRUCT "fun LLCONS h t = seq.cons h (seq.delay t)"::
          MLSTRUCT "fun LCONS h t = seq.cons h t"::
          MLSTRUCT "val LNIL = seq.empty"::
          MLSTRUCT "fun :::(h,t) = LCONS h t"::
