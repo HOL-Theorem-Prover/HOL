@@ -16,9 +16,8 @@ HOLSET_UID = $(dprot $(SIGOBJ)/HOLset.ui)
 Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID) $(FTHEORY_UID) TheoryPP-sig.ui
 	HOLMOSMLC -c -toplevel $(FTHEORY_UI) TheoryPP-sig.ui Raw-sig.sml
 
-Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo $(COUNT_UID) $(HOLSET_UID) \
-        $(dprot $(SIGOBJ)/Susp.ui)
-	HOLMOSMLC -c -toplevel Raw-sig.ui Term.ui Type.ui Thm.sml
+Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo $(COUNT_UID) $(HOLSET_UID)
+	$(HOLMOSMLC) -c -toplevel Raw-sig.ui Term.ui Type.ui Thm.sml
 
 TheoryPP.uo: TheoryPP.sml Thm.uo
 	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Thm.ui TheoryPP.sml

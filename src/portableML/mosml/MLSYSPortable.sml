@@ -28,4 +28,6 @@ val time = Mosml.time
 
 end
 
+structure HOLSusp = Susp
+
 end (* struct *)
