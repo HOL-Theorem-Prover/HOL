@@ -7,6 +7,13 @@ open qbuf
 
 exception InternalFailure of locn.locn
 
+type ('a,'b) tyconstructors =
+     {vartype : string locn.located -> 'a,
+      tyop : (string locn.located * 'a list) -> 'a,
+      qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
+      antiq : 'b -> 'a}
+
+
 val ERR = Feedback.mk_HOL_ERR "Parse" "parse_type"
 val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_type"
 

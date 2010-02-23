@@ -1,14 +1,17 @@
 signature parse_type =
 sig
 
-  val parse_type :
-    {vartype : string locn.located -> 'a,
-     tyop : (string locn.located * 'a list) -> 'a,
-     qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
-     antiq : 'b -> 'a} ->
-    bool ->
-    type_grammar.grammar ->
-    'b qbuf.qbuf -> 'a
+  type ('a,'b) tyconstructors =
+       {vartype : string locn.located -> 'a,
+        tyop : (string locn.located * 'a list) -> 'a,
+        qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
+        antiq : 'b -> 'a}
+
+  val parse_type : ('a,'b) tyconstructors ->
+                   bool ->
+                   type_grammar.grammar ->
+                   'b qbuf.qbuf ->
+                   'a
 
     (* The record of functions specify how to deal with the need to
        construct variable types, type operators and antiquotations
