@@ -1082,41 +1082,52 @@ fun make_up_to_date ctxt target = let
            " seems to depend on itself - failing to build it");
      raise CircularDependency)
   val cached_result = Polyhash.peek up_to_date_cache target
+  val termstr = if keep_going_flag then "" else "  Stop."
 in
   if isSome cached_result then
     valOf cached_result
   else
-   if Path.dir (string_part target) <> "" then (* path outside of currDir *)
-     (print (fromFile target ^" outside current directory; considered OK.\n");
-      cache_insert (target, true))
+    if Path.dir (string_part target) <> "" then (* path outside of currDir *)
+      if exists_readable (fromFile target) then
+        (print (fromFile target ^
+                " outside current directory; considered OK.\n");
+         cache_insert (target, true))
+      else
+        (tgtfatal ("*** Remote dependency "^fromFile target^" doesn't exist."^
+                   termstr);
+         cache_insert (target, false))
     else
       if isSome pdep andalso no_full_extra_rule target then let
-        val pdep = valOf pdep
-      in
-        if make_up_to_date (target::ctxt) pdep then let
-          val secondaries = set_union (get_implicit_dependencies target)
-                                      (get_explicit_dependencies target)
-          val _ =
-            (print ("Secondary dependencies for "^fromFile target^" are: ");
-             print (print_list (map fromFile secondaries) ^ "\n"))
+          val pdep = valOf pdep
         in
-          if List.all (make_up_to_date (target::ctxt)) secondaries then
-            if (List.exists
-                (fn dep =>
-                 (fromFile dep) forces_update_of (fromFile target))
-                (pdep::secondaries))
-            then
-              (done_some_work := true;
-               cache_insert (target,
-                             do_a_build_command target pdep secondaries))
-            else
-              cache_insert (target, true)
+          if make_up_to_date (target::ctxt) pdep then let
+              val secondaries = set_union (get_implicit_dependencies target)
+                                          (get_explicit_dependencies target)
+              val _ =
+                  (print ("Secondary dependencies for "^fromFile target^
+                          " are: ");
+                   print (print_list (map fromFile secondaries) ^ "\n"))
+            in
+              if List.all (make_up_to_date (target::ctxt)) secondaries then let
+                  fun testthis dep =
+                      fromFile dep forces_update_of fromFile target
+                in
+                  case List.find testthis (pdep::secondaries) of
+                    NONE => cache_insert (target, true)
+                  | SOME d => let
+                    in
+                      print ("Dependency: "^fromFile d^" forces rebuild\n");
+                      done_some_work := true;
+                      cache_insert (target,
+                                    do_a_build_command target pdep secondaries)
+                    end
+                end
+              else
+                cache_insert (target, false)
+            end
           else
             cache_insert (target, false)
         end
-        else
-          cache_insert (target, false)
-      end
       else let
           val tgt_str = fromFile target
         in
@@ -1127,8 +1138,6 @@ in
                        else ();
                        cache_insert(target, true))
                     else let
-                        val termstr = if keep_going_flag then ""
-                                      else "  Stop."
                       in
                         case ctxt of
                           [] => tgtfatal ("*** No rule to make target `"^
@@ -1150,7 +1159,6 @@ in
                    List.exists
                      (fn dep => dep forces_update_of tgt_str)
                      dependencies orelse
-                   List.exists (not o exists_readable) dependencies orelse
                    tgt_str in_target ".PHONY"
                 then
                   if null commands then
