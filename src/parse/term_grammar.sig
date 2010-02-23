@@ -223,4 +223,7 @@ sig
   val prettyprint_grammar : (grammar -> ppstream -> term -> unit) ->
                             ppstream -> grammar -> unit
 
+  val grule_reader : grammar_rule Coding.reader
+  val grule_encode : grammar_rule -> string
+
 end

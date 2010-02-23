@@ -9,6 +9,7 @@ sig
   val >- : 'a reader * ('a -> 'b reader) -> 'b reader
   val >> : 'a reader * 'b reader -> 'b reader
   val >* : 'a reader * 'b reader -> ('a * 'b) reader
+  val >-> : 'a reader * 'b reader -> 'a reader
   val fail : 'a reader
   val return : 'a -> 'a reader
   val eof : unit reader
@@ -16,6 +17,7 @@ sig
   val length_encoded : (string -> 'a option) -> 'a reader
   val lift : 'a reader -> string -> 'a option
   val map : ('a -> 'b) -> 'a reader -> 'b reader
+  val many : 'a reader -> 'a list reader
 
   structure StringData : sig
     val encode : string -> string
