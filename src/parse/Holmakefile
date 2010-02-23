@@ -1,8 +1,7 @@
 EXTRA_CLEANS = base_lexer.sml
 
 SELFTEST_DEPS = $(dprot $(SIGOBJ)/Lib.uo) $(dprot $(SIGOBJ)/Type.uo) \
-                $(dprot $(SIGOBJ)/PPBackEnd.uo) \
-	        $(dprot $(SIGOBJ)/PP.uo)
+                PPBackEnd.uo $(dprot $(SIGOBJ)/Overlay.uo)
 
 all: base_lexer.sml selftest.exe
 
