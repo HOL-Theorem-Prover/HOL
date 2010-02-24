@@ -263,4 +263,26 @@ in
   pp_pty pps none pty
 end
 
+fun remove_ty_aq t =
+  if parse_type.is_ty_antiq t then parse_type.dest_ty_antiq t
+  else raise mk_HOL_ERR "Parse" "type parser" "antiquotation is not of a type"
+
+fun tyop_to_qtyop ((tyop,locn), args) =
+  case Type.decls tyop of
+    [] => raise mk_HOL_ERRloc "Parse" "type parser" locn
+                              (tyop^" not a known type operator")
+  | {Thy,Tyop = tyop} :: _ => Tyop{Thy = Thy, Tyop = tyop, Args = args}
+
+fun do_qtyop {Thy,Tyop=tyop,Locn,Args} = Tyop {Thy=Thy,Tyop=tyop,Args=Args}
+
+val termantiq_constructors =
+    {vartype = fn x => Vartype (fst x), qtyop = do_qtyop,
+     tyop = tyop_to_qtyop,
+     antiq = fn x => fromType (remove_ty_aq x)}
+
+val typantiq_constructors =
+    {vartype = fn x => Vartype (fst x), qtyop = do_qtyop,
+     tyop = tyop_to_qtyop,
+     antiq = fromType}
+
 end;

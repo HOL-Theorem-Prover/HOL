@@ -44,4 +44,7 @@ val chase : pretype -> pretype
 
 val pp_pretype : PP.ppstream -> pretype -> unit
 
+val termantiq_constructors : (pretype,Term.term) parse_type.tyconstructors
+val typantiq_constructors : (pretype,Type.hol_type) parse_type.tyconstructors
+
 end
