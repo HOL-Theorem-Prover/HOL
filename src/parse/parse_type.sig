@@ -6,12 +6,18 @@ sig
         tyop : (string locn.located * 'a list) -> 'a,
         qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
         antiq : 'b -> 'a}
+  type term = Term.term
 
   val parse_type : ('a,'b) tyconstructors ->
                    bool ->
                    type_grammar.grammar ->
                    'b qbuf.qbuf ->
                    'a
+
+  val ty_antiq      : Type.hol_type -> term
+  val dest_ty_antiq : term -> Type.hol_type
+  val is_ty_antiq   : term -> bool
+
 
     (* The record of functions specify how to deal with the need to
        construct variable types, type operators and antiquotations

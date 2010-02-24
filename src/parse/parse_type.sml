@@ -1,9 +1,11 @@
 structure parse_type :> parse_type =
 struct
 
-open type_tokens type_grammar HOLgrammars
+open type_tokens type_grammar HOLgrammars Feedback
 
 open qbuf
+
+type term = Term.term
 
 exception InternalFailure of locn.locn
 
@@ -13,6 +15,16 @@ type ('a,'b) tyconstructors =
       qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
       antiq : 'b -> 'a}
 
+(* antiquoting types into terms *)
+fun ty_antiq ty = Term.mk_var("ty_antiq",ty)
+
+fun dest_ty_antiq tm =
+  case Lib.with_exn Term.dest_var tm
+                (mk_HOL_ERR "Parse" "dest_ty_antiq" "not a type antiquotation")
+   of ("ty_antiq",Ty) => Ty
+    |  _ => raise mk_HOL_ERR "Parse" "dest_ty_antiq" "not a type antiquotation";
+
+val is_ty_antiq = Lib.can dest_ty_antiq
 
 val ERR = Feedback.mk_HOL_ERR "Parse" "parse_type"
 val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_type"

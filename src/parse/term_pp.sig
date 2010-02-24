@@ -6,9 +6,6 @@ sig
     term_grammar.grammar -> type_grammar.grammar -> PPBackEnd.t ->
     Portable.ppstream -> term -> unit
 
-  val ty_antiq      : Type.hol_type -> term
-  val dest_ty_antiq : term -> Type.hol_type
-  val is_ty_antiq   : term -> bool
 
   (* this initialises a reference storing a function for pulling apart
      case splits.  It's expected that the initialisation will be called
