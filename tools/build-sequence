@@ -99,6 +99,8 @@ src/n-bit
 !!examples/ARM/arm6-verification/correctness
 src/ring/src
 src/integer
+src/llist
+src/path
 !src/integer/testing
 src/patricia
 src/emit
@@ -107,22 +109,17 @@ src/emit
 src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
+src/rational
 src/real
 !!examples/separationLogic/src/
 src/HolSmt
 !examples/misc
-src/prob
 # these examples require Muddy, which is MoscowML specific
 [mosml]!examples/muddy/muddyC
 [mosml]!examples/muddy
 [mosml]!examples/HolBdd
 [mosml]!!examples/HolCheck
-src/temporal/src
-src/temporal/smv.2.4.3
-src/rational
-src/llist
 src/datatype/inftree
-src/path
 !examples/lambda/basics
 !examples/lambda/barendregt
 !examples/computability
@@ -131,6 +128,9 @@ src/path
 !!examples/computability/lambda
 src/Boolify/src
 src/float
+src/prob
+src/temporal/src
+src/temporal/smv.2.4.3
 
 #
 # Examples only from here on
