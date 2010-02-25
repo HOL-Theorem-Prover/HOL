@@ -3,25 +3,28 @@ FTAG_UI = $(protect $(SIGOBJ)/FinalTag-sig.ui)
 FKIND_UI = $(protect $(SIGOBJ)/FinalKind-sig.ui)
 FTYPE_UI = $(protect $(SIGOBJ)/FinalType-sig.ui)
 FTERM_UI = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
+FTHEORY_UI = $(protect $(SIGOBJ)/FinalTheory-sig.ui)
 
 FTAG_UID = $(dprot $(SIGOBJ)/FinalTag-sig.ui)
 FTERM_UID = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
+FTHEORY_UID = $(dprot $(SIGOBJ)/FinalTheory-sig.ui)
 TAG_UID = $(dprot $(SIGOBJ)/Tag.ui)
 LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
 PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
 COUNT_UID = $(dprot $(SIGOBJ)/Count.ui)
 HOLSET_UID = $(dprot $(SIGOBJ)/HOLset.ui)
 
-Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID)
-	HOLMOSMLC -c -toplevel Raw-sig.sml
+Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID) $(FTHEORY_UID) TheoryPP-sig.ui
+	HOLMOSMLC -c -toplevel $(FTHEORY_UI) TheoryPP-sig.ui Raw-sig.sml
 
-Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo $(COUNT_UID) $(HOLSET_UID)
+Thm.uo: Thm.sml Term.uo $(TAG_UID) Raw-sig.uo $(COUNT_UID) $(HOLSET_UID) \
+        $(dprot $(SIGOBJ)/Susp.ui)
 	HOLMOSMLC -c -toplevel Raw-sig.ui Term.ui Kind.ui Type.ui Thm.sml
 
 TheoryPP.uo: TheoryPP.sml Thm.uo
 	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Thm.ui TheoryPP.sml
 
-Theory.uo: Theory.sml TheoryPP.uo $(dprot $(SIGOBJ)/Systeml.ui)
+Theory.uo: Theory.sml TheoryPP.uo $(dprot $(SIGOBJ)/Systeml.ui) $(dprot $(SIGOBJ)/UniversalType.uo)
 	HOLMOSMLC -c -toplevel Raw-sig.ui Kind.ui Type.ui Term.ui Thm.ui TheoryPP.ui Theory.sml
 
 Definition.uo: Definition.sml Theory.uo
@@ -33,11 +36,11 @@ Net.uo: Net.sml Term.uo Raw-sig.uo
 Thm-sig.uo: Thm-sig.sml $(LIB_UID) $(HOLSET_UID)
 	HOLMOSMLC -c -toplevel Thm-sig.sml
 
-TheoryPP-sig.uo: TheoryPP-sig.sml $(PORTABLE_UID)
+TheoryPP-sig.uo TheoryPP-sig.ui: TheoryPP-sig.sml $(PORTABLE_UID)
 	HOLMOSMLC -c -toplevel TheoryPP-sig.sml
 
-Theory-sig.uo: Theory-sig.sml $(PORTABLE_UID)
-	HOLMOSMLC -c -toplevel Theory-sig.sml
+Theory-sig.uo: Theory-sig.sml $(PORTABLE_UID) $(FTHEORY_UID)
+	HOLMOSMLC -c -toplevel $(FTHEORY_UI) Theory-sig.sml
 
 Definition-sig.uo: Definition-sig.sml
 	HOLMOSMLC -c -toplevel Definition-sig.sml

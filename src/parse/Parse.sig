@@ -244,18 +244,25 @@ signature Parse = sig
   val set_term_printer : (ppstream -> term -> unit) ->
                                ppstream -> term -> unit
 
-  val minprint : term -> string
-  val term_to_string : term -> string
-  val terms_to_string : term list -> string
-  val type_to_string : hol_type -> string
-  val kind_to_string : kind -> string
-  val thm_to_string : thm -> string
+  val minprint               : term -> string
+  val add_style_to_string    : PPBackEnd.pp_style list -> string -> string
+  val print_with_style       : PPBackEnd.pp_style list -> string -> unit
+  val term_to_string         : term -> string
+  val terms_to_string        : term list -> string
+  val term_to_backend_string : term -> string
+  val type_to_string         : hol_type -> string
+  val kind_to_string         : kind -> string
+  val thm_to_string          : thm -> string
+  val thm_to_backend_string  : thm -> string
 
-  val print_thm : thm -> unit
-  val print_type : hol_type -> unit
-  val print_kind : kind -> unit
-  val print_term : term -> unit
-  val print_terms : term list -> unit
+  val print_thm              : thm -> unit
+  val print_backend_thm      : thm -> unit
+  val print_type             : hol_type -> unit
+  val print_kind             : kind -> unit
+  val print_term             : term -> unit
+  val print_terms            : term list -> unit
+  val print_backend_term     : term -> unit
+
 
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit
 

@@ -1,0 +1,10 @@
+/*Race */
+
+proc(x,y) [x|->] {
+  x->tl = y;
+} [x|->y]
+
+main(x;) {
+  x = new(); 
+  proc(x,NULL) || proc(x,NULL);
+} [x|->NULL]

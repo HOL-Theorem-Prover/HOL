@@ -20,13 +20,17 @@ val the_proofs = ref (Manager.initial_proofs());
 fun proofs() = !the_proofs;
 fun top_proof() = Manager.current_proof(proofs());
 
-fun set_goal g =
-   (the_proofs := Manager.add (Manager.set_goal g) (proofs());
+
+fun new_goalstack g f =
+   (the_proofs := Manager.add (Manager.new_goalstack g f) (proofs());
     proofs());
 
-fun set_goaltree g =
+fun new_goaltree g =
    (the_proofs := Manager.add (Manager.new_goaltree g) (proofs());
     proofs());
+
+fun set_goal g = new_goalstack g Lib.I;
+fun set_goaltree g = new_goaltree g;
 
 fun g q = set_goal([],Parse.Term q);
 fun gt q = set_goaltree([],Parse.Term q);
@@ -43,6 +47,9 @@ val b = backup;
 
 fun set_backup i =
   (the_proofs := Manager.hd_opr (Manager.set_backup i) (proofs()));
+
+fun forget_history () =
+  (the_proofs := Manager.hd_opr (Manager.forget_history) (proofs()));
 
 fun restart() =
    (the_proofs := Manager.hd_opr Manager.restart (proofs());

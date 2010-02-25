@@ -1,0 +1,24 @@
+list_filter(l;x) [list(l)] {
+  local y, z, e;
+  y = l;
+  z = NULL;
+  while(y != NULL) [if y==l then list(l) else lseg(l,z) * z |-> tl:y * list(y)] {
+    e = y->dta;
+    if(e == x) { /* need to remove y */
+      if(y == l) { /* first link */
+        l = y->tl;
+        dispose y;
+        y = l;
+      } else { /* not first link */
+        e = y->tl;
+        z->tl = e;
+        dispose y;
+        y = z->tl;
+      }
+    } else { /* don't need to remove y */
+      z = y;
+      y = y->tl;
+    }
+  }
+} [list(l)]
+

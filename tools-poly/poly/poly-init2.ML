@@ -12,7 +12,7 @@ val _ = use "Holmake/ReadHMF.sml";
 
 local
 
-  val redirected_files = ["mlibPortable.sml", "mlibOmegaint.sml"];
+  val redirected_files = ["mlibOmegaint.sml"];
 
   (* used to stand for "has double quote", but the same analysis is necessary
      even for files that contain single quotes because of the special
@@ -170,15 +170,3 @@ exception Interrupt = SML90.Interrupt;
 exception Io = IO.Io;
 exception SysErr = OS.SysErr;
 
-val _ = use "poly/Dynarray.sig";
-val _ = use "poly/Dynarray.sml";
-val _ = use "poly/MD5.sig";
-val _ = use "poly/MD5.sml";
-val _ = use "poly/Susp.sig";
-val _ = use "poly/Susp.sml";
-val _ = use "poly/Random.sig";
-val _ = use "poly/Random.sml";
-val _ = use "poly/Intset.sig";
-val _ = use "poly/Intset.sml";
-val _ = use "poly/Intmap.sig";
-val _ = use "poly/Intmap.sml";

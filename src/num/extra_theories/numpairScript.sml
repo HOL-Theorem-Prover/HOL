@@ -280,6 +280,25 @@ val nfoldl_thm = Store_thm(
   ``(nfoldl f a nnil = a) ∧ (nfoldl f a (ncons h t) = nfoldl f (f h a) t)``,
   SRW_TAC [][nfoldl_def]);
 
+(* nappend *)
+val napp_def = Define`
+  napp l1 l2 = nlistrec l2 (λn t r. ncons n r) l1
+`;
+
+val napp_thm = Store_thm(
+  "napp_thm",
+  ``(napp 0 nlist = nlist) ∧
+    (napp (ncons h t) nlist = ncons h (napp t nlist))``,
+  SRW_TAC [][napp_def]);
+
+(* cases theorem *)
+val nlist_cases = store_thm(
+  "nlist_cases",
+  ``∀n. (n = nnil) ∨ ∃h t. n = ncons h t``,
+  Cases_on `n` THEN SRW_TAC [][ncons_def, GSYM ADD1] THEN
+  Q.MATCH_ABBREV_TAC `∃h t. n = h ⊗ t` THEN
+  MAP_EVERY Q.EXISTS_TAC [`nfst n`, `nsnd n`] THEN SRW_TAC [][]);
+
 
 val _ = export_theory()
 

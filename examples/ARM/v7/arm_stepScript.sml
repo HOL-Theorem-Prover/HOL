@@ -327,7 +327,7 @@ val ARM_NEXT_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val condT_set_q = Q.store_thm("condT_set_q",
-  `!b ii. condT b (set_q ii) =
+  `!b ii. (if b then set_q ii else constT ()) =
           seqT (read_cpsr ii)
           (\cpsr. write_cpsr ii (if b then cpsr with Q := T else cpsr))`,
   SRW_TAC [] [FUN_EQ_THM, APPLY_UPDATE_ID, arm_state_component_equality,
@@ -504,17 +504,17 @@ val align_bits_sum = Q.store_thm("align_bits_sum",
     \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_BIT_EQ_ss) []);
 
 val align_or = Q.prove(
-  `(!a:'a word. align (a,2) + 1w = align (a,2) !! 1w) /\
-   (!a:'a word. align (a,4) + 1w = align (a,4) !! 1w) /\
-   (!a:'a word. align (a,4) + 2w = align (a,4) !! 2w) /\
-   (!a:32 word. align (a,4) + 3w = align (a,4) !! 3w)`, (* /\
-   (!a:'a word. align (a,8) + 1w = align (a,8) !! 1w) /\
-   (!a:'a word. align (a,8) + 2w = align (a,8) !! 2w) /\
-   (!a:32 word. align (a,8) + 3w = align (a,8) !! 3w) /\
-   (!a:32 word. align (a,8) + 4w = align (a,8) !! 4w) /\
-   (!a:32 word. align (a,8) + 5w = align (a,8) !! 5w) /\
-   (!a:32 word. align (a,8) + 6w = align (a,8) !! 6w) /\
-   (!a:32 word. align (a,8) + 7w = align (a,8) !! 7w)`, *)
+  `(!a:word32. align (a,2) + 1w = align (a,2) !! 1w) /\
+   (!a:word32. align (a,4) + 1w = align (a,4) !! 1w) /\
+   (!a:word32. align (a,4) + 2w = align (a,4) !! 2w) /\
+   (!a:word32. align (a,4) + 3w = align (a,4) !! 3w)`, (* /\
+   (!a:word32. align (a,8) + 1w = align (a,8) !! 1w) /\
+   (!a:word32. align (a,8) + 2w = align (a,8) !! 2w) /\
+   (!a:word32. align (a,8) + 3w = align (a,8) !! 3w) /\
+   (!a:word32. align (a,8) + 4w = align (a,8) !! 4w) /\
+   (!a:word32. align (a,8) + 5w = align (a,8) !! 5w) /\
+   (!a:word32. align (a,8) + 6w = align (a,8) !! 6w) /\
+   (!a:word32. align (a,8) + 7w = align (a,8) !! 7w)`, *)
   REPEAT STRIP_TAC \\ MATCH_MP_TAC WORD_ADD_OR
     \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [align_248]);
 
@@ -1185,7 +1185,7 @@ val lem2 = Q.prove(
          [word_extract_def, w2w, word_bits_def]
     \\ Q.EXISTS_TAC `0`
     \\ SRW_TAC [fcpLib.FCP_ss,ARITH_ss] []
-    \\SIMP_TAC (std_ss++wordsLib.WORD_BIT_EQ_ss) [Once WORD_ADD_BIT0]);
+    \\ SIMP_TAC (srw_ss()++wordsLib.WORD_BIT_EQ_ss) [Once WORD_ADD_BIT0]);
 
 val lem3 = Q.prove(
   `(!x:word32. (1 >< 0) (~(x << 2) + 1w) <> 2w:word2) /\

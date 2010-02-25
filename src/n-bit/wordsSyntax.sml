@@ -578,8 +578,11 @@ val is_n2w = Lib.can dest_n2w
 val is_w2n = Lib.can dest_w2n
 val is_sw2sw = Lib.can dest_sw2sw
 
-fun is_word_literal t =
-  is_n2w t andalso numSyntax.is_numeral (fst (dest_n2w t));
+val dest_word_literal = numSyntax.dest_numeral o fst o dest_n2w
+
+val is_word_literal = Lib.can dest_word_literal
+
+val uint_of_word = numSyntax.int_of_term o fst o dest_n2w
 
 end
 

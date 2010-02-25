@@ -13,6 +13,14 @@ val eq = Term.eq;
 
 val arm_enc = snd o hd o arm_assemble_from_string;
 
+local val arm_memory_pred = ref "auto"
+in
+  fun get_arm_memory_pred () = !arm_memory_pred;    
+  fun set_arm_memory_pred s = 
+    if mem s ["auto","aM1","aBYTE_MEMORY"] 
+    then (arm_memory_pred := s) else fail();
+end;
+
 val arm_status = aS_HIDE;
 val arm_pc = ``aPC``;
 
@@ -282,10 +290,10 @@ fun calculate_length_and_jump th =
 fun post_process_thm th = let
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
-  val th = introduce_aM th
-
-  val th = introduce_aBYTE_MEMORY th
-  val th = introduce_aMEMORY th
+  val th = if get_arm_memory_pred() = "auto" then introduce_aM th else th
+  val th = if mem (get_arm_memory_pred()) ["auto","aBYTE_MEMORY"] 
+           then introduce_aBYTE_MEMORY th else th
+  val th = if get_arm_memory_pred() = "auto" then introduce_aMEMORY th else th
   val th = RW [WORD_EQ_XOR_ZERO,wordsTheory.WORD_EQ_SUB_ZERO,ALIGNED_def,
                WORD_TIMES2,WORD_SUB_INTRO] th
   in calculate_length_and_jump th end;
@@ -332,7 +340,8 @@ val precond_INTRO = prove(
   ``!x. cond (Abbrev x) = precond x:'a set -> bool``,
   SIMP_TAC (std_ss) [SEP_CLAUSES,precond_def,markerTheory.Abbrev_def]);
 
-fun arm_prove_specs s = let
+fun arm_prove_specs m_pred s = let
+  val _ = set_arm_memory_pred m_pred
   val thms = [arm_step "v4T" s]
   val thms = (thms @ [arm_step "v4T,fail" s]) handle HOL_ERR _ => thms
 (*
@@ -382,8 +391,13 @@ fun arm_jump tm1 tm2 jump_length forward = let
   val jump_length = if forward then jump_length + 4 else 0 - jump_length
   in (arm_mk_jump z jump_length,4) end
 
-val arm_spec = cache arm_prove_specs;
-val arm_tools  = (arm_spec, arm_jump, arm_status, arm_pc)
+val arm_spec = cache (arm_prove_specs "auto");
+val arm_spec_m1 = cache (arm_prove_specs "aM1");
+val arm_spec_byte_memory = cache (arm_prove_specs "aBYTE_MEMORY");
+
+val arm_tools = (arm_spec, arm_jump, arm_status, arm_pc);
+val arm_tools_no_status = (arm_spec, arm_jump, TRUTH, arm_pc);
+
 
 (*
 

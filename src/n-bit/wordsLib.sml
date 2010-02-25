@@ -14,7 +14,7 @@ val _ = Feedback.emit_MESG := false;
 
 val ISPEC = Q.ISPEC;
 val SPEC  = Q.SPEC;
-val SPECL = Q.SPECL;;
+val SPECL = Q.SPECL;
 val INST  = Q.INST;
 
 val ERR = mk_HOL_ERR "wordsLib";
@@ -104,7 +104,8 @@ end;
 fun size_conv t = {conv = K (K (SIZES_CONV)), trace = 3,
                    name = "SIZES_CONV", key = SOME ([], t)};
 
-val SIZES_ss = simpLib.merge_ss (rewrites [ONE_LT_dimword, DIMINDEX_GT_0]::
+val SIZES_ss = simpLib.merge_ss
+  (simpLib.named_rewrites "sizes" [ONE_LT_dimword, DIMINDEX_GT_0]::
   (map (simpLib.conv_ss o size_conv)
     [``fcp$dimindex(:'a)``, ``pred_set$FINITE (pred_set$UNIV:'a set)``,
      ``words$INT_MIN(:'a)``, ``words$dimword(:'a)``]));
@@ -217,6 +218,8 @@ val thms =
    SPECL [`^w`,`^a`] word_rol_def, word_rrx_n2w,
    word_lsb_n2w, word_msb_n2w, word_bit_n2w, fcp_n2w, fcpTheory.L2V_def,
    NUM_RULE [DIMINDEX_GT_0] `i` word_index_n2w,
+   NUM_RULE [DIMINDEX_GT_0] `n` fcpTheory.index_comp,
+   NUM_RULE [DIMINDEX_GT_0] `b` fcpTheory.FCP_APPLY_UPDATE_THM,
    word_bits_n2w, word_signed_bits_n2w, word_slice_n2w, word_extract_n2w,
    word_reduce_n2w, Q.SPEC `^n2w ^n` reduce_and, Q.SPEC `^n2w ^n` reduce_or,
    reduce_xor_def, reduce_xnor_def, reduce_nand_def, reduce_nor_def,
@@ -314,7 +317,7 @@ local
       "num_to_hex_string"]
 
   val s = name_thy_set
-           (("min","=")::("arithmetic","DIV_2EXP") ::("fcp","fcp_index")::
+           (("min","=")::("arithmetic","DIV_2EXP")::("fcp","fcp_index")::
              map (pair "words") l1 @ map (pair "bit") l2)
 
   fun is_hex_digit_literal t =
@@ -393,7 +396,8 @@ in
      computeLib.CBV_CONV (words_compset()) THENC UINT_MAX_CONV) t
   end
 
-  val WORD_GROUND_ss = simpLib.merge_ss [rewrites alpha_rws,
+  val WORD_GROUND_ss = simpLib.merge_ss
+    [simpLib.named_rewrites "word ground" alpha_rws,
      simpLib.conv_ss
       {conv = K (K (CHANGED_CONV WORD_GROUND_CONV)), trace = 3,
        name = "WORD_GROUND_CONV", key = NONE}]
@@ -415,21 +419,12 @@ val BIT_SET_CONV =
             ISPEC `^a` pred_setTheory.IN_INSERT];
 
 val BIT_ss =
-  simpLib.merge_ss [rewrites [BIT_ZERO],
+  simpLib.merge_ss [simpLib.named_rewrites "bit" [BIT_ZERO],
     simpLib.conv_ss
       {conv = K (K (BIT_SET_CONV)), trace = 3,
        name = "BITS_CONV", key = SOME ([], ``bit$BIT ^n ^a``)}];
 
-val BIT2_ss =
-  simpLib.merge_ss [rewrites [BIT_ZERO],
-    simpLib.conv_ss
-      {conv = K (K (BIT_SET_CONV)), trace = 3,
-       name = "BITS_CONV", key = SOME ([], ``bit$BIT 0n ^a``)},
-    simpLib.conv_ss
-      {conv = K (K (BIT_SET_CONV)), trace = 3,
-       name = "BITS_CONV", key = SOME ([], ``bit$BIT ^a ^b``)}];
-
-val WORD_ORDER_ss = rewrites
+val WORD_ORDER_ss = simpLib.named_rewrites "word order"
   [WORD_HIGHER, WORD_HIGHER_EQ,
    WORD_GREATER, WORD_GREATER_EQ,
    WORD_NOT_LOWER, WORD_NOT_LOWER_EQUAL,
@@ -661,7 +656,8 @@ fun WORD_ADD_CANON_CONV t =
    else
      raise ERR "WORD_ADD_CANON_CONV" "Can only be applied to word terms";
 
-val WORD_MULT_ss = simpLib.merge_ss [rewrites (NEG_EQ_0::word_mult_clauses),
+val WORD_MULT_ss = simpLib.merge_ss
+ [simpLib.named_rewrites "word mult" (NEG_EQ_0::word_mult_clauses),
   simpLib.conv_ss
     {conv = K (K (CHANGED_CONV WORD_MULT_CANON_CONV)), trace = 3,
      name = "WORD_MULT_CANON_CONV", key = SOME([], ``words$word_mul ^w ^y``)}];
@@ -670,7 +666,8 @@ val WORD_ADD_ss = simpLib.conv_ss
   {conv = K (K (CHANGED_CONV WORD_ADD_CANON_CONV)), trace = 3,
    name = "WORD_ADD_CANON_CONV", key = SOME([], ```words$word_add ^w ^y``)};
 
-val WORD_SUB_ss = simpLib.merge_ss [rewrites [word_sub_def],
+val WORD_SUB_ss = simpLib.merge_ss
+ [simpLib.named_rewrites "word sub" [word_sub_def],
   simpLib.conv_ss
     {conv = K (K (WORD_NEG_CONV)), trace = 3,
      name = "WORD_NEG_CONV", key = SOME([], ``words$word_2comp ^w``)},
@@ -678,8 +675,8 @@ val WORD_SUB_ss = simpLib.merge_ss [rewrites [word_sub_def],
     {conv = K (K (WORD_NEG_CONV)), trace = 3,
      name = "WORD_NEG_CONV", key = SOME([], ``words$word_sub ^w ^y``)}];
 
-val WORD_w2n_ss = simpLib.merge_ss [
-  rewrites [word_0_n2w],
+val WORD_w2n_ss = simpLib.merge_ss
+ [simpLib.named_rewrites "word w2n" [word_0_n2w],
   simpLib.conv_ss
     {conv = K (K (WORD_w2n_CONV)), trace = 3,
      name = "WORD_w2n_CONV", key = SOME([], ``words$w2n (^n2w ^a)``)}];
@@ -706,8 +703,9 @@ val WORD_CONST_ss = simpLib.merge_ss [
      name = "WORD_CONST_CONV", key = SOME([], ``words$word_T :'a word``)}];
 
 val WORD_ARITH_EQ_ss = simpLib.merge_ss
- [rewrites [WORD_LEFT_ADD_DISTRIB,WORD_RIGHT_ADD_DISTRIB,
-            WORD_LSL_NUMERAL,WORD_NOT,hd (CONJUNCTS SHIFT_ZERO)],
+ [simpLib.named_rewrites "word arith eq"
+    [WORD_LEFT_ADD_DISTRIB,WORD_RIGHT_ADD_DISTRIB,
+     WORD_LSL_NUMERAL,WORD_NOT,hd (CONJUNCTS SHIFT_ZERO)],
   simpLib.conv_ss
     {conv = K (K (WORD_ARITH_EQ_CONV)), trace = 3,
      name = "WORD_ARITH_EQ_CONV", key = SOME([], ``^w = ^y :'a word``)}];
@@ -900,8 +898,9 @@ fun WORD_XOR_CANON_CONV t =
 
 val WORD_COMP_ss =
   simpLib.merge_ss [
-    rewrites [WORD_DE_MORGAN_THM, WORD_NOT_NOT, WORD_NOT_NEG_0,
-      REWRITE_RULE [GSYM arithmeticTheory.PRE_SUB1] WORD_NOT_NEG_NUMERAL],
+    simpLib.named_rewrites "word comp"
+      [WORD_DE_MORGAN_THM, WORD_NOT_NOT, WORD_NOT_NEG_0,
+       REWRITE_RULE [GSYM arithmeticTheory.PRE_SUB1] WORD_NOT_NEG_NUMERAL],
     simpLib.conv_ss
       {conv = K (K (reduceLib.PRE_CONV)), trace = 3,
        name = "PRE_CONV", key = SOME ([], ``prim_rec$PRE ^a``)},
@@ -911,14 +910,14 @@ val WORD_COMP_ss =
        key = SOME ([], ``words$word_1comp (^n2w ^n) :'a word``)}];
 
 val WORD_AND_ss =
-  simpLib.merge_ss [rewrites
+  simpLib.merge_ss [simpLib.named_rewrites "word and"
     [WORD_AND_CLAUSES2, SYM WORD_NEG_1, WORD_AND_COMP, WORD_NAND_NOT_AND],
   simpLib.conv_ss
     {conv = K (K (WORD_AND_CANON_CONV)), trace = 3,
      name = "WORD_AND_CANON_CONV", key = SOME ([], ``words$word_and ^w ^y``)}];
 
 val WORD_XOR_ss =
-  simpLib.merge_ss [rewrites
+  simpLib.merge_ss [simpLib.named_rewrites "word xor"
     [WORD_XOR_CLAUSES2, SYM WORD_NEG_1, WORD_NOT_XOR, WORD_XNOR_NOT_XOR],
   simpLib.conv_ss
     {conv = K (K (WORD_XOR_CANON_CONV)), trace = 3,
@@ -926,9 +925,10 @@ val WORD_XOR_ss =
 
 val WORD_OR_ss = let val thm = REWRITE_RULE [SYM WORD_NEG_1] WORD_OR_COMP in
   simpLib.merge_ss
-  [rewrites [WORD_OR_CLAUSES2, SYM WORD_NEG_1, WORD_AND_ABSORD, thm,
-   ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD,
-   ONCE_REWRITE_RULE [WORD_OR_COMM] thm, WORD_NOR_NOT_OR],
+  [simpLib.named_rewrites "word or"
+     [WORD_OR_CLAUSES2, SYM WORD_NEG_1, WORD_AND_ABSORD, thm,
+      ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD,
+      ONCE_REWRITE_RULE [WORD_OR_COMM] thm, WORD_NOR_NOT_OR],
    simpLib.conv_ss
      {conv = K (K (WORD_OR_CANON_CONV)), trace = 3,
       name = "WORD_OR_CANON_CONV", key = SOME ([], ``words$word_or ^w ^y``)}]
@@ -951,7 +951,7 @@ val ROL_ROR_MOD_RWT = prove(
   SRW_TAC [] [Once (GSYM ROL_MOD), Once (GSYM ROR_MOD)]);
 
 val WORD_SHIFT_ss =
-  rewrites
+  simpLib.named_rewrites "word shift"
     ([SHIFT_ZERO, ZERO_SHIFT, word_rrx_0, word_rrx_word_T, lsr_1_word_T,
       LSL_ADD, LSR_ADD, ASR_ADD, ROR_ROL, ROR_ADD, ROL_ADD, ROL_ROR_MOD_RWT,
       WORD_ADD_LSL, GSYM WORD_2COMP_LSL,
@@ -1012,7 +1012,8 @@ val WORD_REPLICATE_ss =
      key = SOME([], ``words$word_replicate ^a ^w:'a word``)};
 
 val WORD_EXTRACT_ss = simpLib.merge_ss [WORD_REPLICATE_ss,
-  rewrites ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
+  simpLib.named_rewrites "word extract"
+    ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
       WORD_EXTRACT_LSL, word_concat_def, LET_RULE word_join_def,
       word_rol_def, LET_RULE word_ror, word_asr, word_lsr_n2w,
       WORD_EXTRACT_COMP_THM, WORD_EXTRACT_MIN_HIGH,
@@ -1048,26 +1049,55 @@ val LESS_COR = REWRITE_RULE [DISJ_IMP_THM] (CONJ
   ((GEN_ALL o REWRITE_CONV [LESS_THM])
      ``(prim_rec$< ^m (arithmetic$NUMERAL (BIT2 ^n))) ==> ^P``));
 
+fun dest_strip t =
+let val (l,r) = strip_comb t in
+  (fst (dest_const l), r)
+end;
+
 local
-  fun w2n_of_known_size t =
-    let val x = wordsSyntax.dest_w2n t in
-      (is_known_word_size x andalso not (wordsSyntax.is_word_literal x))
-    end handle HOL_ERR _ => false
+  val word_size = fcpLib.index_to_num o wordsSyntax.dest_word_type o type_of
+
+  fun mk_bounds_thm t = let
+      val x = wordsSyntax.dest_w2n t
+      val size_rule = CONV_RULE (DEPTH_CONV SIZES_CONV)
+      fun lt_thm () = size_rule (Drule.ISPEC x w2n_lt)
+      val word_type = wordsSyntax.dest_word_type o type_of
+    in
+      if not (is_known_word_size x) orelse wordsSyntax.is_word_literal x then
+        raise ERR "mk_bounds_thm" "Term is word literal"
+      else
+       (case dest_strip x
+        of ("word_extract", [h,l,w]) => let
+               open Arbnum
+               val hi = numSyntax.dest_numeral h
+               val li = numSyntax.dest_numeral l
+               val m = plus1 hi - li
+             in
+               if m < word_size x then
+                 WORD_EXTRACT_LT
+                   |> Drule.ISPECL [h,l,w]
+                   |> Thm.INST_TYPE [beta |-> word_type x]
+                   |> numLib.REDUCE_RULE
+               else
+                 lt_thm ()
+             end
+         | ("w2w", [w]) =>
+               if Arbnum.<(word_size w, word_size x) then
+                 w2w_lt
+                   |> Drule.ISPEC w
+                   |> Thm.INST_TYPE [beta |-> word_type x]
+                   |> size_rule
+               else
+                 lt_thm ()
+         | _ => lt_thm ()) handle HOL_ERR _ => lt_thm ()
+    end
 
   fun removeDuplicates l = let open Binaryset in
-     listItems (addList (empty compare, l))
+     listItems (addList (empty Term.compare, l))
   end
-
-  fun mk_bounds_thm t =
-    let val x = wordsSyntax.dest_w2n t in
-      if is_known_word_size x then
-        (CONV_RULE (DEPTH_CONV SIZES_CONV) o Drule.ISPEC x) w2n_lt
-      else
-        raise ERR "mk_bounds_thm" "Unknown size"
-    end
 in
   fun mk_bounds_thms t =
-  let val l = removeDuplicates (find_terms w2n_of_known_size t)
+  let val l = removeDuplicates (find_terms (Lib.can mk_bounds_thm) t)
   in
     if null l then
       TRUTH
@@ -1097,7 +1127,7 @@ local
   val word_join = SIMP_RULE (std_ss++boolSimps.LET_ss) [] word_join_def
   val rw1 = [word_0,word_T,word_L,word_xor_def,word_or_def,word_and_def,
              word_1comp_def, REWRITE_RULE [SYM WORD_NEG_1] word_T,
-             SPEC `^a` n2w_def, pred_setTheory.NOT_IN_EMPTY,
+             pred_setTheory.NOT_IN_EMPTY,
              ISPEC `0n` pred_setTheory.IN_INSERT,
              ISPEC `^a` pred_setTheory.IN_INSERT]
   val rw2 = [fcpTheory.FCP_UPDATE_def,LESS_COR,sw2sw,w2w,word_replicate_def,
@@ -1125,20 +1155,21 @@ local
   val DECIDE_CONV = EQT_INTRO o DECIDE
   fun EQ_CONV t = (if term_eq T t orelse term_eq F t then
                      ALL_CONV else NO_CONV) t
+  val trace_word_decide = ref 0
+  val _ = Feedback.register_trace ("word decide", trace_word_decide, 1)
 in
   fun WORD_BIT_EQ_CONV t =
         if is_eq t orelse wordsSyntax.is_index t then
-          ((SIMP_CONV (std_ss++fcpLib.FCP_ss++BIT_ss) rw1
+          ((SIMP_CONV (std_ss++fcpLib.FCP_ss++BIT_ss) (SPEC `^a` n2w_def :: rw1)
              THENC TRY_CONV DECIDE_CONV
-             THENC SIMP_CONV (arith_ss++fcpLib.FCP_ss++SIZES_ss++
-                     BIT_ss) (rw1 @ rw2)
+             THENC SIMP_CONV (arith_ss++fcpLib.FCP_ss++SIZES_ss) (rw1 @ rw2)
              THENC REDEPTH_CONV FORALL_AND_CONV
              THENC SIMP_CONV arith_ss []) t)
         else
           raise ERR "WORD_BIT_EQ_CONV" "Not a word equality"
   val WORD_BIT_EQ_ss =
-        simpLib.merge_ss [ARITH_ss, fcpLib.FCP_ss, SIZES_ss, BIT2_ss,
-          rewrites rw1, rewrites rw2,
+        simpLib.merge_ss [ARITH_ss, fcpLib.FCP_ss, SIZES_ss,
+          simpLib.named_rewrites "word bit eq" (rw1 @ rw2),
           simpLib.conv_ss
             {conv = K (K (CHANGED_CONV FORALL_AND_CONV)), trace = 3,
              name = "FORALL_AND_CONV",
@@ -1155,26 +1186,30 @@ in
             val t1 = rhs (concl thm1)
             val bnds = mk_bounds_thms t1
             val t2 = mk_imp (concl bnds, t1)
+            val _ = if 0 < !trace_word_decide then
+                      (print ("Trying to prove:\n");
+                       Parse.print_term t2;
+                       print "\n")
+                    else
+                      ()
             val thm2 = dp t2
             val conv = RAND_CONV (PURE_ONCE_REWRITE_CONV [GSYM thm1])
         in
           MP (CONV_RULE conv thm2) bnds
         end
-   fun WORD_DP dp tm =
+   fun WORD_DP pre_conv dp tm =
           let fun conv t =
                 if term_eq T t then
                   ALL_CONV t
-                else if is_forall t then
-                  STRIP_QUANT_CONV (EQT_INTRO o (WORD_DP_PROVE dp)) t
                 else
-                  (EQT_INTRO o WORD_DP_PROVE dp) t
+                  STRIP_QUANT_CONV (EQT_INTRO o (WORD_DP_PROVE dp)) t
           in
             EQT_ELIM
-              ((WORD_CONV THENC DEPTH_CONV (WORD_BIT_EQ_CONV THENC EQ_CONV)
-                 THENC DEPTH_CONV (conv THENC EQ_CONV)
-                 THENC REWRITE_CONV []) tm)
+              ((pre_conv THENC DEPTH_CONV (WORD_BIT_EQ_CONV THENC EQ_CONV)
+                         THENC DEPTH_CONV (conv THENC EQ_CONV)
+                         THENC REWRITE_CONV []) tm)
           end handle UNCHANGED => raise ERR "WORD_DP" "Failed to prove goal"
-   val WORD_DECIDE = WORD_DP DECIDE
+   val WORD_DECIDE = WORD_DP WORD_CONV DECIDE
 end;
 
 fun is_word_term tm = let open numSyntax in
@@ -1206,7 +1241,7 @@ fun MP_ASSUM_TAC tm (asl, w) =
 
 fun WORD_DECIDE_TAC (asl, w) =
   (EVERY (map MP_ASSUM_TAC (List.filter is_word_term asl)) THEN
-    CONV_TAC (EQT_INTRO o WORD_DP DECIDE)) (asl, w);
+    CONV_TAC (EQT_INTRO o WORD_DECIDE)) (asl, w);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1328,62 +1363,69 @@ fun remove_word_printer () =
 (* A pretty-printer that shows the types for ><, w2w and @@                  *)
 (* ------------------------------------------------------------------------- *)
 
-fun print_word_cast Gs sys (ppfns:term_pp_types.ppstream_funs) (pg,lg,rg) d pps t = let
+fun word_cast Gs sys (ppfns:term_pp_types.ppstream_funs) (pg,lg,rg) d pps t =
+let
    open Portable term_pp_types
    val (str,brk) = (#add_string ppfns, #add_break ppfns);
    fun stype tm = String.extract(type_to_string (type_of tm),1,NONE)
    fun delim i act = case pg of
                         Prec(j,_) => if i <= j then act() else ()
                       | _ => ()
+   val (f,x) = strip_comb t
 in
-  case ((fst o dest_const) ## I) (strip_comb t)
+  case (fst (dest_const f), x)
     of ("w2w",[a]) =>
-          let val prec = Prec (700,"w2w") in            delim 700 (fn () => str "(");
+          let val prec = Prec (700,"w2w") in
             begin_block pps INCONSISTENT 0;
-            str ("(w2w" ^ type_to_string (type_of a));
-            str "->"; brk(1,0);
-            str (stype t ^ ")");
-            end_block pps;
+            delim 200 (fn () => str "(");
+            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
             sys (prec,prec,prec) (d - 1) a;
-            delim 700 (fn () => str ")")
+            delim 200 (fn () => str ")");
+            end_block pps
           end
-     | ("word_concat",[a,b]) =>          let val prec = Prec (700,"word_concat") in
-            delim 700 (fn () => str "(");
+     | ("sw2sw",[a]) =>
+          let val prec = Prec (700,"sw2sw") in
             begin_block pps INCONSISTENT 0;
-            str ("(" ^ "(@@)" ^ type_to_string (type_of a));
-            str "->"; brk(1,0);
-            str (stype b);
-            str "->"; brk(1,0);
-            str (stype t ^ ")");
-            end_block pps;
-            sys (prec,prec,prec) (d - 1) a; brk(1,0);
+            delim 200 (fn () => str "(");
+            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
+            sys (prec,prec,prec) (d - 1) a;
+            delim 200 (fn () => str ")");
+            end_block pps
+          end
+     | ("word_concat",[a,b]) =>
+          let val prec = Prec (700,"word_concat") in
+            begin_block pps INCONSISTENT 0;
+            delim 200 (fn () => str "(");
+            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
+            sys (prec,prec,prec) (d - 1) a; brk (1,0);
             sys (prec,prec,prec) (d - 1) b;
-            delim 700 (fn () => str ")")
+            delim 200 (fn () => str ")");
+            end_block pps
           end
      | ("word_extract",[h,l,a]) =>
           let val prec = Prec (700,"word_extract") in
-            delim 700 (fn () => str "(");
             begin_block pps INCONSISTENT 0;
-            str "((";
-            sys (prec,prec,prec) (d - 1) h; brk(1,0);
-            str "><"; brk(1,0);
+            delim 200 (fn () => str "(");
+            str "(";
+            str "(";
+            sys (prec,prec,prec) (d - 1) h; brk(1,2);
+            str "><"; brk (1,2);
             sys (prec,prec,prec) (d - 1) l;
-            str ")"; brk(1,0);
-            str (type_to_string (type_of a));
-            str "->"; brk(1,0);
-            str (stype t ^ ")");
-            end_block pps;
+            str ")"; brk (1,2);
+            pp_type pps (type_of (list_mk_comb (f,[h,l])));
+            str ")"; brk (1,2);
             sys (prec,prec,prec) (d - 1) a;
-            delim 700 (fn () => str ")")
+            delim 200 (fn () => str ")");
+            end_block pps
           end
      | _ => raise term_pp_types.UserPP_Failed
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 fun add_word_cast_printer () = Parse.temp_add_user_printer
-  ("wordsLib.print_word_cast", ``f:'b word``, print_word_cast);
+  ("wordsLib.word_cast", ``f:'b word``, word_cast);
 
 fun remove_word_cast_printer () =
-  (Parse.remove_user_printer "wordsLib.print_word_cast"; ());
+  (Parse.remove_user_printer "wordsLib.word_cast"; ());
 
 (* ------------------------------------------------------------------------- *)
 (* Guessing the word length for the result of extraction (><),               *)
@@ -1401,11 +1443,6 @@ val _ = Feedback.register_btrace("guess word lengths",
 
 fun guess_lengths ()      = set_trace "guess word lengths" 1;
 fun dont_guess_lengths () = set_trace "guess word lengths" 0;
-
-fun dest_strip t =
-let val (l,r) = strip_comb t in
-  (fst (dest_const l), r)
-end;
 
 fun t2s t = String.extract(Hol_pp.type_to_string t, 1, NONE);
 

@@ -16,7 +16,6 @@
   "Customising the Emacs interface to the HOL4 proof assistant."
   :group 'external)
 
-
 (define-prefix-command 'hol-map)
 (define-prefix-command 'hol-d-map)
 (make-variable-buffer-local 'hol-buffer-name)
@@ -31,13 +30,25 @@
   :group 'hol
   :type '(file :must-match t))
 
-(defvar sml-executable SML-EXECUTABLE
-  "*Path-name for the Standard ML executable.")
+(defcustom sml-executable SML-EXECUTABLE
+  "Path-name for the Standard ML executable."
+  :group 'hol
+  :type '(file :must-match t))
+
+(defcustom holmake-executable HOLMAKE-EXECUTABLE
+  "Path-name for the Holmake executable."
+  :group 'hol
+  :type '(file :must-match t))
 
 (defun hol-set-executable (filename)
   "*Set hol executable variable to be NAME."
   (interactive "fHOL executable: ")
   (setq hol-executable filename))
+
+(defun holmake-set-executable (filename)
+  "*Set holmake executable variable to be NAME."
+  (interactive "fHOL executable: ")
+  (setq holmake-executable filename))
 
 (defvar hol-mode-sml-init-command
    "use (Globals.HOLDIR ^ \"/tools/hol-mode.sml\")"
@@ -727,7 +738,6 @@ region instead. With prefix ARG prompt for a file-name to load."
    (send-raw-string-to-hol hol-mode-sml-init-command nil nil)
    (hol-toggle-quiet-quietdec))
 
-
 (defun turn-off-hol-font-lock (oldvar)
   (interactive)
   (if (not oldvar)
@@ -735,6 +745,27 @@ region instead. With prefix ARG prompt for a file-name to load."
         (message "Turning on font-lock mode does nothing in HOL mode")
         (setq font-lock-defaults nil)))
   (setq font-lock-mode nil))
+
+(defun holmake (&optional dir)
+   (interactive "DRun Holmake in dir: ")
+   (if (not (null dir))
+      (save-excursion
+         (set-buffer (get-buffer-create "*Holmake*"))   
+         (delete-region (point-min) (point-max))
+         (cd (expand-file-name dir)))
+      )
+   (let* ((buf (make-comint "Holmake" 
+                  holmake-executable nil "--qof" "-k")))
+      (save-excursion
+         (set-buffer buf)   
+         (font-lock-mode 0)
+         (make-local-variable 'font-lock-function)
+         (setq font-lock-function 'turn-off-hol-font-lock)
+         (setq comint-preoutput-filter-functions '(holmakepp-output-filter)))
+         (setq comint-scroll-show-maximum-output t)
+         (setq comint-scroll-to-bottom-on-output t)
+      (display-buffer buf)
+   ))
 
 ;** hol map keys and function definitions
 (defun hol (niceness)
@@ -762,6 +793,7 @@ or at level 10 with a bare prefix. "
     (make-local-variable 'font-lock-function)
     (setq font-lock-function 'turn-off-hol-font-lock)
     (make-local-variable 'comint-preoutput-filter-functions)
+    (holpp-quiet-reset)
     (setq comint-preoutput-filter-functions '(holpp-output-filter))
     (setq comint-scroll-show-maximum-output t)
     (setq comint-scroll-to-bottom-on-output t)
@@ -860,7 +892,7 @@ argument N, sets the trace to that value in particular."
 (defun hol-toggle-emacs-tooltips ()
   "Toggles whether HOL produces tooltip information while pretty-printing."
   (interactive)
-  (hol-toggle-trace "emacs_terminal show types"))
+  (hol-toggle-trace "PPBackEnd show types"))
 
 (defun hol-toggle-pp-styles ()
   "Toggles whether HOL produces style informations while pretty-printing."
@@ -1251,8 +1283,8 @@ already loaded.)"
         ((equal code "4") "#000084")
         ((equal code "5") "#840084")
         ((equal code "6") "#008484")
-        ((equal code "7") "#848484")
-        ((equal code "8") "#C6C6C6")
+        ((equal code "7") "#555555")
+        ((equal code "8") "#949494")
         ((equal code "9") "#FF0000")
         ((equal code "A") "#00C600")
         ((equal code "B") "#FFFF00")
@@ -1296,37 +1328,39 @@ already loaded.)"
 
 
 (defun holpp-execute-code (code arg1 start end)
-  (cond ((equal code "FV")
-             (holpp-execute-code-face-tooltip start end arg1
+  (cond ((equal code "FV") 
+             (holpp-execute-code-face-tooltip start end arg1 
              '(face hol-free-variable)))
-        ((equal code "BV")
-             (holpp-execute-code-face-tooltip start end arg1
+        ((equal code "BV") 
+             (holpp-execute-code-face-tooltip start end arg1 
              '(face hol-bound-variable)))
         ((equal code "TF") 
-             (holpp-execute-code-face-tooltip start end arg1
+             (holpp-execute-code-face-tooltip start end arg1 
              '(face hol-free-type-variable)))
         ((equal code "TB") 
              (holpp-execute-code-face-tooltip start end arg1
              '(face hol-bound-type-variable)))
-        ((equal code "TY")
+        ((equal code "TY") 
              (holpp-execute-code-face-tooltip start end arg1
              '(face hol-type)))
         ((equal code "ST")
-           (add-text-properties start end
+           (add-text-properties start end 
              (holpp-decode-full-style arg1)))))
 
 (setq temp-hol-output-buf nil)
 
-(defun holpp-reset ()
-  (interactive)
+(defun holpp-quiet-reset ()
   (let ((tmpbuf (or temp-hol-output-buf
                      (generate-new-buffer " *HOL output filter*)"))))
       (setq temp-hol-output-buf tmpbuf)
       (save-excursion
          (set-buffer tmpbuf)
-         (delete-region (point-min) (point-max))))
-  (send-raw-string-to-hol "print \"\\n\\n*** hol-mode reset ***\\n\";" nil nil))
+         (delete-region (point-min) (point-max)))))
 
+(defun holpp-reset ()
+  (interactive)
+  (holpp-quiet-reset)
+  (send-raw-string-to-hol "print \"\\n\\n*** hol-mode reset ***\\n\";" nil nil))
 
 (defun holpp-output-filter (s)
   "Converts a munged emacs_terminal string into a pretty one with text properties."
@@ -1362,14 +1396,14 @@ already loaded.)"
                                 (skip-chars-forward "^\^@")
                                 (prog1
                                     (if (equal (+ start 3) (point)) nil
-                                          (buffer-substring (+ start 3)
+                                    (buffer-substring (+ start 3)
                                                             (point)))
                                   (delete-region (+ start 2) (1+ (point)))))
                             nil))))
                        (holpp-execute-code code argument
                         (+ start 2)
                         (- (point) 6))
-                    (delete-region start (+ start 2))
+                       (delete-region start (+ start 2))
                        (delete-region (- (point) 6) (point))
                        (goto-char start)))))
             (if (not end)
@@ -1380,9 +1414,49 @@ already loaded.)"
                 (buffer-substring (point-min) (point))
               (delete-region (point-min) (point))))))))
 
+(defun holmakepp-mark-error (start end)
+   (add-text-properties start end '(face holmake-error)))
+
+
+(defun holmakepp-mark-mosml-error ()
+  (interactive)
+  (goto-char (point-min))
+  (while (re-search-forward "^!" nil t)
+     (let* ((start (match-beginning 0)))
+     (forward-line)
+     (while (or (looking-at "!") (looking-at " ")) (forward-line))
+     (holmakepp-mark-error start (- (point) 1))))
+)
+
+(setq temp-holmake-output-buf nil)
+(defun holmakepp-output-filter (s)
+  "Converts a munged emacs_terminal string into a pretty one with text properties."
+  (interactive "sinput: ")
+  (let* ((tmpbuf (or temp-holmake-output-buf
+                     (generate-new-buffer " *HOLMAKE output filter*)")))
+         end)
+    (setq temp-holmake-output-buf tmpbuf)
+    (save-excursion
+      (set-buffer tmpbuf)
+      (unwind-protect
+          (progn
+            (goto-char (point-max))
+            (insert s)
+            (holmakepp-mark-mosml-error)
+            (prog1
+                (buffer-substring (point-min) (point-max))
+              (delete-region (point-min) (point-max))))))))
+
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces
   :group 'hol)
+
+(defface holmake-error
+  '((((class color))
+     :foreground "red"
+     :weight bold))
+  "The face for errors shown by HOLMAKE."
+  :group 'hol-faces)
 
 (defface hol-free-variable
   '((((class color))
@@ -1419,22 +1493,17 @@ already loaded.)"
   :group 'hol-faces)
 
 
+
 ;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
+(define-prefix-command 'holpp-map)
+(define-key hol-map "\M-p" 'holpp-map)
 
-(define-key hol-map "\C-a" 'hol-toggle-show-assums)
+
 (define-key hol-map "\C-c" 'hol-interrupt)
-(define-key hol-map "\C-f" 'hol-toggle-goalstack-fvs)
-(define-key hol-map "\C-o" 'hol-toggle-goalstack-print-goal-at-top)
-(define-key hol-map "\M-a" 'hol-toggle-goalstack-num-assums)
 (define-key hol-map "\C-l" 'hol-recentre)
-(define-key hol-map "\C-n" 'hol-toggle-show-numeral-types)
-(define-key hol-map "\C-p" 'hol-toggle-ppbackend)
-(define-key hol-map "\M-p" 'hol-toggle-emacs-tooltips)
 (define-key hol-map "\C-q" 'hol-toggle-quietdec)
 (define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
-(define-key hol-map "\C-t" 'hol-toggle-show-types)
-(define-key hol-map "\C-u" 'hol-toggle-unicode)
 (define-key hol-map "\C-v" 'hol-scroll-up)
 (define-key hol-map "\M-f" 'forward-hol-tactic)
 (define-key hol-map "\M-b" 'backward-hol-tactic)
@@ -1452,6 +1521,7 @@ already loaded.)"
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "G"    'hol-do-goaltree)
 (define-key hol-map "h"    'hol)
+(define-key hol-map "\M-m" 'holmake)
 (define-key hol-map "4"    'hol-display)
 (define-key hol-map "3"    'hol-horizontal)
 (define-key hol-map "2"    'hol-vertical)
@@ -1475,6 +1545,26 @@ already loaded.)"
 (define-key hol-map "\M-x" 'hol-template-store-thm)
 
 
+(define-key hol-map   "\C-a" 'hol-toggle-show-assums)
+(define-key holpp-map "a"    'hol-toggle-show-assums)
+(define-key hol-map   "\C-t" 'hol-toggle-show-types)
+(define-key holpp-map "\C-t" 'hol-toggle-show-types)
+(define-key hol-map   "\C-n" 'hol-toggle-show-numeral-types)
+(define-key holpp-map "n"    'hol-toggle-show-numeral-types)
+(define-key hol-map   "\C-f" 'hol-toggle-goalstack-fvs)
+(define-key holpp-map "f"    'hol-toggle-goalstack-fvs)
+(define-key hol-map   "\C-o" 'hol-toggle-goalstack-print-goal-at-top)
+(define-key holpp-map "o"    'hol-toggle-goalstack-print-goal-at-top)
+(define-key hol-map   "\M-a" 'hol-toggle-goalstack-num-assums)
+(define-key holpp-map "\M-a" 'hol-toggle-goalstack-num-assums)
+(define-key hol-map   "\C-u" 'hol-toggle-unicode)
+(define-key holpp-map "u"    'hol-toggle-unicode)
+(define-key hol-map   "\C-p" 'hol-toggle-ppbackend)
+(define-key holpp-map "p"    'hol-toggle-ppbackend)
+(define-key holpp-map "b"    'hol-toggle-emacs-tooltips)
+(define-key holpp-map "t"    'hol-toggle-pp-annotations)
+(define-key holpp-map "s"    'hol-toggle-pp-styles)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; The definition of the HOL menu
@@ -1493,7 +1583,7 @@ already loaded.)"
   (cons "Misc" (make-sparse-keymap "Misc")))
 
 (define-key global-map [menu-bar hol-menu hol-misc clean-up]
-   '("Clean up (remove tab, white spaces at end of line, etc...)" .
+   '("Clean up (remove tab, white spaces at end of line, etc...)" . 
      hol-cleanup-buffer))
 
 (define-key global-map [menu-bar hol-menu hol-misc check-names]
@@ -1758,6 +1848,15 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-process hol-interrupt]
    '("Interrupt HOL" . hol-interrupt))
+
+(define-key global-map [menu-bar hol-menu hol-process sep02]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-process holmake]
+   '("Run Holmake" . holmake))
+
+(define-key global-map [menu-bar hol-menu hol-process sep01]
+   '(menu-item "--"))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-display]
    '("Display HOL buffer" . hol-display))

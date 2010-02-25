@@ -124,6 +124,7 @@ in
                           raise mk_HOL_ERRloc "monadsyntax" "clean_do" loc
                                               "Empty do-od pair illegal"
                         else a
+      | TYPED(l,a,pty) => TYPED(l,clean_do a,pty)
       | _ => a
     end
 end

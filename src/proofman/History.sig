@@ -8,6 +8,7 @@ sig
   val apply        : ('a -> 'a) -> 'a history -> 'a history
   val set_limit    : 'a history -> int -> 'a history
   val initialValue : 'a history -> 'a
+  val remove_past  : 'a history -> 'a history
   val project      : ('a -> 'b) -> 'a history -> 'b
   val undo         : 'a history -> 'a history
 

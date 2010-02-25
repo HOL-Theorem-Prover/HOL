@@ -744,90 +744,53 @@ val FV_cnoreduct = Store_thm(
 
 val cnoreduct_equiv = brackabs_equiv [] cnoreduct_def
 
+open dnoreductTheory
+val cnoreduct_correct = store_thm(
+  "cnoreduct_correct",
+  ``∀d. cnoreduct @@ cDB d -n->* if dbnf d then cDB d
+                                 else cDB (THE (dnoreduct d))``,
+  Q_TAC SUFF_TAC `
+    ∀d. (dbnf d ⇒ cnoreduct @@ cDB d -n->* cDB d) ∧
+        (¬dbnf d ⇒ cnoreduct @@ cDB d -n->* cDB (THE (dnoreduct d)))
+  ` THEN1 METIS_TAC[] THEN
+  SIMP_TAC (bsrw_ss()) [cnoreduct_equiv] THEN
+  Q.MATCH_ABBREV_TAC
+    `∀d. (dbnf d ⇒ termrec @@ cdV @@ COMB @@ ABS @@ cDB d == cDB d) ∧
+         (¬dbnf d ⇒
+            termrec @@ cdV @@ COMB @@ ABS @@ cDB d ==
+            cDB (THE (dnoreduct d)))` THEN
+  Induct THEN
+  ASM_SIMP_TAC (bsrw_ss()) [termrec_behaviour, cdV_behaviour] THENL [
+    Cases_on `is_dABS d` THEN ASM_SIMP_TAC (srw_ss()) [] THENL [
+      Cases_on `d` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+      ASM_SIMP_TAC (bsrw_ss()) [Abbr`COMB`, cis_abs_behaviour, cB_behaviour,
+                                termrec_behaviour, cnsub_behaviour],
+
+      Cases_on `dbnf d` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
+        ASM_SIMP_TAC (bsrw_ss()) [Abbr`COMB`, cis_abs_behaviour, cB_behaviour,
+                                  cbnf_behaviour, cdAPP_behaviour] THEN
+        STRIP_TAC THEN IMP_RES_TAC notbnf_dnoreduct THEN
+        SRW_TAC [][],
+        IMP_RES_TAC notbnf_dnoreduct THEN
+        ASM_SIMP_TAC (bsrw_ss()) [Abbr`COMB`, cis_abs_behaviour, cB_behaviour,
+                                  cbnf_behaviour, cdAPP_behaviour]
+      ]
+    ],
+
+    ASM_SIMP_TAC (bsrw_ss()) [Abbr`ABS`, cdABS_behaviour] THEN
+    STRIP_TAC THEN IMP_RES_TAC notbnf_dnoreduct THEN
+    SRW_TAC [][]
+  ]);
+
+
 val cnoreduct_behaviour = store_thm(
   "cnoreduct_behaviour",
   ``∀t. ¬bnf t ⇒
            cnoreduct @@ cDB (fromTerm t) -n->*
            cDB (fromTerm (THE (noreduct t)))``,
-  SIMP_TAC (bsrw_ss()) [cnoreduct_equiv] THEN
-  Q.MATCH_ABBREV_TAC
-    `∀t. ¬bnf t ⇒ termrec @@ cdV @@ COMB @@ ABS @@ cDB (fromTerm t) ==
-                   cDB (fromTerm (THE (noreduct t)))` THEN
-  completeInduct_on `size t` THEN Q.X_GEN_TAC `t` THEN
-  FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [] THEN
-  Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THENL [
-    SRW_TAC [][],
-    Cases_on `is_abs t1` THENL [
-      ASM_SIMP_TAC (bsrw_ss()) [termrec_behaviour, Abbr`COMB`,
-                                cis_abs_behaviour, cB_behaviour] THEN
-      `∃v t0. t1 = LAM v t0`
-         by (Q.SPEC_THEN `t1` FULL_STRUCT_CASES_TAC term_CASES THEN
-             FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC[]) THEN
-      ASM_SIMP_TAC (bsrw_ss()) [dLAM_def, termrec_behaviour,
-                                cnsub_behaviour, GSYM sub_nsub,
-                                noreduct_thm,
-                                GSYM fromTerm_subst],
-
-      Cases_on `bnf t1` THEN
-      ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss)
-                   [termrec_behaviour, Abbr`COMB`,
-                    cis_abs_behaviour, cB_behaviour,
-                    cbnf_behaviour, cdAPP_behaviour,
-                    noreduct_thm]
-      THENL [
-        Cases_on `noreduct t2` THEN
-        FULL_SIMP_TAC (srw_ss()) [noreduct_bnf],
-        Cases_on `noreduct t1` THEN
-        FULL_SIMP_TAC (srw_ss()) [noreduct_bnf]
-      ]
-    ],
-
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`ABS`, termrec_behaviour, dLAM_def] THEN
-    Q.RM_ABBREV_TAC `COMB` THEN
-    Q.MATCH_ABBREV_TAC `(v = size t0 + 1) ⇒
-                        ¬bnf t0 ⇒
-                        cdABS @@ (termrec @@ cdV @@ COMB @@ (K @@ cdABS)
-                                          @@ cDB XX) ==
-                        cDB (fromTerm (THE (noreduct (LAM u t0))))` THEN
-    Q.ABBREV_TAC
-      `YY = [VAR (n2s 0)/n2s (s2n u + 1)] (toTerm (lift (fromTerm t0) 0))` THEN
-    `XX = fromTerm YY` by SRW_TAC [][fromTerm_subst, Abbr`XX`, Abbr`YY`] THEN
-    REPEAT STRIP_TAC THEN
-    Q.ABBREV_TAC `MX = if dFV (fromTerm t0) = {} then 0
-                       else MAX_SET (dFV (fromTerm t0))` THEN
-    `∀i. i ∈ dFV (fromTerm t0) ⇒ i ≤ MX`
-       by SRW_TAC [][Abbr`MX`, MAX_SET_DEF] THEN
-    Q.ABBREV_TAC `π = lifting_pm 0 MX` THEN
-    `lift (fromTerm t0) 0 = dpm π (fromTerm t0)`
-       by SRW_TAC [][lifts_are_specific_dpms, Abbr`π`] THEN
-    `_ = fromTerm (tpm π t0)` by METIS_TAC [fromTerm_swap_invariant] THEN
-    `YY = [VAR (n2s 0)/n2s (s2n u + 1)] (tpm π t0)`
-        by METIS_TAC [tofromTerm] THEN
-    `size YY = size t0` by SRW_TAC [][] THEN
-    `¬bnf YY` by SRW_TAC [][] THEN
-    `size YY < v` by DECIDE_TAC THEN
-    Q.PAT_ASSUM `YY = ZZZ` (ASSUME_TAC o SYM) THEN
-    ASM_SIMP_TAC (bsrw_ss()) [cdABS_behaviour,
-                              noreduct_thm] THEN
-    `(noreduct t0 = NONE) ∨ (∃tt. noreduct t0 = SOME tt)`
-       by (Cases_on `noreduct t0` THEN SRW_TAC [][]) THEN1
-      FULL_SIMP_TAC (srw_ss()) [noreduct_bnf] THEN
-    ASM_SIMP_TAC (srw_ss()) [dLAM_def] THEN
-    SRW_TAC [][noreduct_vsubst, noreduct_tpm, fromTerm_subst] THEN
-    REWRITE_TAC [GSYM fromTerm_swap_invariant] THEN
-    `∀i. i ∈ dFV (fromTerm tt) ⇒ i ∈ dFV (fromTerm t0)`
-       by (`t0 -n-> tt` by METIS_TAC [noreduct_characterisation] THEN
-           `t0 -β-> tt` by IMP_RES_TAC normorder_ccbeta THEN
-           `FV tt ⊆ FV t0` by IMP_RES_TAC chap3Theory.cc_beta_FV_SUBSET THEN
-           `∀v. v ∈ FV tt ⇒ v ∈ FV t0` by METIS_TAC [SUBSET_DEF] THEN
-           `∀v. v ∈ dFVs (fromTerm tt) ⇒ v ∈ dFVs (fromTerm t0)`
-              by SRW_TAC [][dFVs_fromTerm] THEN
-           SRW_TAC [][IN_dFV]) THEN
-    `∀i. i ∈ dFV (fromTerm tt) ⇒ i ≤ MX` by METIS_TAC [] THEN
-    `lift (fromTerm tt) 0 = dpm π (fromTerm tt)`
-      by SRW_TAC [][lifts_are_specific_dpms, Abbr`π`] THEN
-    SRW_TAC [][fromTerm_swap_invariant]
-  ]);
+  SIMP_TAC (bsrw_ss()) [cnoreduct_correct] THEN
+  REPEAT STRIP_TAC THEN
+  Cases_on `noreduct t` THEN FULL_SIMP_TAC (srw_ss()) [noreduct_bnf]);
 
 val cnoreduct_behaviour' =
     SIMP_RULE (srw_ss()) [] (SPEC ``toTerm d`` cnoreduct_behaviour)

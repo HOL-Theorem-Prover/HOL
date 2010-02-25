@@ -1,0 +1,21 @@
+list_filter(l;x) [data_list(l,data)] {
+  local e, m;
+
+  if (l == NULL) {}
+  else {
+    e = l->dta;
+    m = l->tl;
+
+    list_filter(m;x);
+
+    if (e == x) { 
+      dispose l;
+      l = m;
+    } else { 
+      l->tl = m;
+    }
+  }
+} [data_list(l, ``FILTER (\e:num. ~(e = x)) data``)]
+
+
+

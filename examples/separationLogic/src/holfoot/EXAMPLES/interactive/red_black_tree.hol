@@ -1,0 +1,1661 @@
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+
+(******************************************************************************)
+(* First, get the necessary HOL definitions in place                          *)
+(******************************************************************************)
+
+open treeTheory rich_listTheory pred_setTheory ConseqConv listTheory sortingTheory 
+     finite_mapTheory boolSimps generalHelpersTheory
+
+(* -------------------------------------------------------------------------- *)
+(* Basic definitions of what a RED_BLACK_TREE is and some very simple         *)
+(* rewrites                                                                   *)
+(* -------------------------------------------------------------------------- *)
+
+val BIN_SEARCH_TREE_defn = Hol_defn "BIN_SEARCH_TREE" 
+  `(BIN_SEARCH_TREE leaf f = (f = FEMPTY)) /\
+   (BIN_SEARCH_TREE (node [k;v;c] [t1; t2]) f = 
+       ?f1 f2. (f = (FUNION f1 f2)|+(k,v)) /\
+               (!k':num. k' IN FDOM f1 ==> k' < k) /\
+               (!k':num. k' IN FDOM f2 ==> k' > k) /\
+               (BIN_SEARCH_TREE t1 f1) /\
+               (BIN_SEARCH_TREE t2 f2)) /\
+   (BIN_SEARCH_TREE _ _ = F)`;
+
+val (BIN_SEARCH_TREE_def, _) =
+Defn.tprove (BIN_SEARCH_TREE_defn,
+ Q.EXISTS_TAC `(measure (\ (t,_). MAX_DEPTH t))` THEN
+ REWRITE_TAC [prim_recTheory.WF_measure] THEN
+ SIMP_TAC arith_ss [prim_recTheory.measure_thm,
+                    MEM,
+                    MAX_DEPTH___DIRECT_SUBTREES___NODE]);
+
+
+val RED_BLACK_TREE___IS_BLACK_def = Define `
+   (RED_BLACK_TREE___IS_BLACK leaf = T) /\
+   (RED_BLACK_TREE___IS_BLACK (node [k;v;c] [t1;t2]) = (c = 0:num)) /\
+   (RED_BLACK_TREE___IS_BLACK _ = F)`;
+
+val RED_BLACK_TREE___IS_RED_def = Define `
+   (RED_BLACK_TREE___IS_RED leaf = F) /\
+   (RED_BLACK_TREE___IS_RED (node [k;v;c] [t1;t2]) = (c=1:num)) /\
+   (RED_BLACK_TREE___IS_RED _ = F)`;
+
+val RED_BLACK_TREE___IS_RED_BLACK___REWRITE = prove (
+ ``(RED_BLACK_TREE___IS_BLACK t = 
+     ((t = leaf) \/ ?t1 t2 k v. (t = node [k;v;0] [t1;t2]))) /\
+   (RED_BLACK_TREE___IS_RED t =
+      ?t1 t2 k v. (t = node [k;v;1] [t1;t2]))``,
+
+Cases_on `t` THEN 
+SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_def,
+                  RED_BLACK_TREE___IS_BLACK_def, tree_distinct,
+                  tree_11] THEN
+Cases_on `a` THEN 
+SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_def,
+                  RED_BLACK_TREE___IS_BLACK_def] THEN
+Cases_on `t` THEN 
+SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_def,
+                  RED_BLACK_TREE___IS_BLACK_def] THEN
+Cases_on `t'` THEN 
+SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_def,
+                  RED_BLACK_TREE___IS_BLACK_def] THEN
+Cases_on `t` THEN 
+SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_def,
+                  RED_BLACK_TREE___IS_BLACK_def] THEN
+Cases_on `l` THEN 
+SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_def,
+                  RED_BLACK_TREE___IS_BLACK_def] THEN
+Cases_on `t` THEN 
+SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_def,
+                  RED_BLACK_TREE___IS_BLACK_def] THEN
+Cases_on `t'` THEN 
+SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_def,
+                  RED_BLACK_TREE___IS_BLACK_def]);
+
+
+val RED_BLACK_TREE___IS_RED_BLACK___EVAL = prove (
+ ``(RED_BLACK_TREE___IS_BLACK leaf) /\ 
+   ~(RED_BLACK_TREE___IS_RED leaf) /\ 
+   (RED_BLACK_TREE___IS_BLACK (node [k;v;c] [t1;t2]) = (c = 0)) /\ 
+   (RED_BLACK_TREE___IS_RED (node [k;v;c] [t1;t2]) = (c = 1))``,
+
+SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
+  tree_11, tree_distinct]);
+
+
+val RED_BLACK_TREE___PROP_NO_RED_RED_def =
+Define `RED_BLACK_TREE___PROP_NO_RED_RED t =
+!t' t''. (t' IN SUBTREES t /\ t'' IN DIRECT_SUBTREES t') ==> 
+    ~(RED_BLACK_TREE___IS_RED t' /\ RED_BLACK_TREE___IS_RED t'')`
+
+val RED_BLACK_TREE___PROP_BLACK_BALANCED_def =
+Define `RED_BLACK_TREE___PROP_BLACK_BALANCED n t =
+!p. p IN TREE_PATHS t ==> (LENGTH (FILTER (\t. (EL 2 t) = 0:num) p) = n)`
+
+val IS_RED_BLACK_TREE_NODE_def = Define `
+   (IS_RED_BLACK_TREE_NODE leaf = F) /\
+   (IS_RED_BLACK_TREE_NODE (node v tL) =
+      (LENGTH v = 3) /\ ((EL 2 v) IN {0:num;1}) /\ (LENGTH tL = 2))`
+
+val IS_RED_BLACK_TREE_NODE_THM = prove (
+``IS_RED_BLACK_TREE_NODE t =
+  ?k v c t1 t2. (t = node [k;v;c] [t1;t2]) /\ (c IN {0;1})``,
+Cases_on `t` THEN
+SIMP_TAC (list_ss++CONJ_ss) [IS_RED_BLACK_TREE_NODE_def, tree_distinct,
+   tree_11, LENGTH_EQ_NUM_EVAL, GSYM RIGHT_EXISTS_AND_THM,
+   GSYM LEFT_EXISTS_AND_THM] THEN
+METIS_TAC[]);
+
+val IS_RED_BLACK_TREE_NODE_LEAF_def = Define `
+   IS_RED_BLACK_TREE_NODE_LEAF t =
+   (t = leaf) \/ (IS_RED_BLACK_TREE_NODE t)`;
+
+val RED_BLACK_TREE___NODES_OK_def =
+Define `RED_BLACK_TREE___NODES_OK t =
+!t'. t' IN SUBTREES t /\ ~(IS_LEAF t') ==>
+     IS_RED_BLACK_TREE_NODE t'`;
+
+val RED_BLACK_TREE_def = Define `
+   RED_BLACK_TREE t f =
+   ((BIN_SEARCH_TREE t f) /\ 
+    (RED_BLACK_TREE___NODES_OK t) /\
+    (RED_BLACK_TREE___IS_BLACK t) /\
+    (RED_BLACK_TREE___PROP_NO_RED_RED t) /\
+    (?n. RED_BLACK_TREE___PROP_BLACK_BALANCED n t))`
+
+
+
+(* -------------------------------------------------------------------------- *)
+(* Some useful definitions and lemmata for RED_BLACK_TREES                    *)
+(* -------------------------------------------------------------------------- *)
+
+val BIN_SEARCH_TREE_THM = prove (
+ ``(BIN_SEARCH_TREE leaf f = (f = FEMPTY)) /\
+   (BIN_SEARCH_TREE (node kvc tL) f = 
+       ?k v c t1 t2 f1 f2. 
+               (kvc = [k;v;c]) /\ (tL = [t1;t2]) /\
+               (f = (FUNION f1 f2)|+(k,v)) /\
+               (!k':num. k' IN FDOM f1 ==> k' < k) /\
+               (!k':num. k' IN FDOM f2 ==> k' > k) /\
+               (BIN_SEARCH_TREE t1 f1) /\
+               (BIN_SEARCH_TREE t2 f2))``,
+
+SIMP_TAC std_ss [BIN_SEARCH_TREE_def] THEN
+Tactical.REVERSE (Cases_on `?k v c. kvc = [k;v;c]`) THEN1 (
+   Cases_on `kvc` THEN1 SIMP_TAC list_ss [BIN_SEARCH_TREE_def] THEN
+   Cases_on `t` THEN1 SIMP_TAC list_ss [BIN_SEARCH_TREE_def] THEN
+   Cases_on `t'` THEN1 SIMP_TAC list_ss [BIN_SEARCH_TREE_def] THEN
+   Cases_on `t` THEN FULL_SIMP_TAC list_ss [BIN_SEARCH_TREE_def]
+) THEN
+FULL_SIMP_TAC list_ss [] THEN
+Tactical.REVERSE (Cases_on `?t1 t2. tL = [t1;t2]`) THEN1 (
+   Cases_on `tL` THEN1 SIMP_TAC list_ss [BIN_SEARCH_TREE_def] THEN
+   Cases_on `t`  THEN1 SIMP_TAC list_ss [BIN_SEARCH_TREE_def] THEN
+   Cases_on `t'` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_def] THEN
+   FULL_SIMP_TAC list_ss []
+) THEN
+FULL_SIMP_TAC list_ss [BIN_SEARCH_TREE_def]);
+
+  
+val BIN_SEARCH_TREE_BIN_THM = prove (
+ ``(BIN_SEARCH_TREE leaf f = (f = FEMPTY)) /\
+   (BIN_SEARCH_TREE (node [k;v;c] [t1;t2]) f = 
+       ?f1 f2. (f = (FUNION f1 f2)|+(k,v)) /\
+               (!k':num. k' IN FDOM f1 ==> k' < k) /\
+               (!k':num. k' IN FDOM f2 ==> k' > k) /\
+               (BIN_SEARCH_TREE t1 f1) /\
+               (BIN_SEARCH_TREE t2 f2))``,
+SIMP_TAC list_ss [BIN_SEARCH_TREE_THM]);
+
+
+val BIN_SEARCH_TREE_BIN_REWRITE = prove (
+ ``(BIN_SEARCH_TREE leaf f = (f = FEMPTY)) /\
+   (BIN_SEARCH_TREE (node [k;v;c] [t1;t2]) f = 
+       ?f1 f2. (f = (FUNION f1 f2)|+(k,v)) /\
+               (!k':num. k' IN FDOM f1 ==> k' < k) /\
+               (!k':num. k' IN FDOM f2 ==> k' > k) /\
+               ~(k IN FDOM f1) /\ ~(k IN FDOM f2) /\
+               (!k. ~(k IN FDOM f1) \/ ~(k IN FDOM f2)) /\
+               (!k k'. k IN FDOM f1 /\ k' IN FDOM f2 ==> k < k') /\ 
+               (BIN_SEARCH_TREE t1 f1) /\
+               (BIN_SEARCH_TREE t2 f2))``,
+
+SIMP_TAC list_ss [BIN_SEARCH_TREE_BIN_THM] THEN
+REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [] THEN
+REPEAT STRIP_TAC THENL [
+   RES_TAC THEN DECIDE_TAC,
+   RES_TAC THEN DECIDE_TAC,
+
+   CCONTR_TAC THEN FULL_SIMP_TAC std_ss [] THEN
+   RES_TAC THEN DECIDE_TAC,
+
+   RES_TAC THEN DECIDE_TAC
+]);
+
+val BIN_SEARCH_TREE_FEMPTY = prove (
+ ``BIN_SEARCH_TREE data FEMPTY = (IS_LEAF data)``,
+Cases_on `data` THEN
+  SIMP_TAC std_ss [BIN_SEARCH_TREE_THM, IS_LEAF_REWRITE,
+     NOT_EQ_FEMPTY_FUPDATE, tree_distinct]
+);
+
+
+val RED_BLACK_TREE___LEFT_SUBTREE_def = Define `
+   RED_BLACK_TREE___LEFT_SUBTREE (node [k;v;c] [t1;t2]) = t1`
+
+val RED_BLACK_TREE___RIGHT_SUBTREE_def = Define `
+   RED_BLACK_TREE___RIGHT_SUBTREE (node [k;v;c] [t1;t2]) = t2`
+
+val RED_BLACK_TREE___LEFT_RIGHT_SUBTREE_def = Define `
+   RED_BLACK_TREE___LEFT_RIGHT_SUBTREE d (node [k;v;c] [t1;t2]) = if d then t1 else t2`
+
+
+val RED_BLACK_TREE_FEMPTY = prove (
+ ``RED_BLACK_TREE data FEMPTY = (IS_LEAF data)``,
+
+   SIMP_TAC (list_ss++boolSimps.CONJ_ss) [RED_BLACK_TREE_def,
+      RED_BLACK_TREE___PROP_BLACK_BALANCED_def,
+      RED_BLACK_TREE___PROP_NO_RED_RED_def,
+      RED_BLACK_TREE___NODES_OK_def,
+      BIN_SEARCH_TREE_FEMPTY, IS_LEAF_REWRITE,
+      PSUBTREES_THM, SUBTREES_THM, IN_SING,
+      RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
+      NOT_IN_EMPTY, tree_distinct,
+      TREE_PATHS_THM]);
+
+val RED_BLACK_TREE_leaf = prove (
+ ``RED_BLACK_TREE leaf f = (f = FEMPTY)``,
+
+   SIMP_TAC list_ss [RED_BLACK_TREE_def,
+      BIN_SEARCH_TREE_THM, IS_LEAF_def,
+      RED_BLACK_TREE___PROP_BLACK_BALANCED_def,
+      RED_BLACK_TREE___PROP_NO_RED_RED_def,
+      RED_BLACK_TREE___NODES_OK_def,
+      PSUBTREES_THM, SUBTREES_THM, IN_SING,
+      RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
+      NOT_IN_EMPTY, tree_distinct,
+      TREE_PATHS_THM]);
+
+
+val BIN_SEARCH_TREE___UPDATE_VALUE = prove (
+``BIN_SEARCH_TREE (node [k;v; c] [tl;tr]) f ==>
+  BIN_SEARCH_TREE (node [k;v';c] [tl;tr]) (f |+ (k,v'))``,
+
+SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM] THEN
+REPEAT STRIP_TAC THEN
+Q.EXISTS_TAC `f1` THEN Q.EXISTS_TAC `f2` THEN
+ASM_SIMP_TAC std_ss [FUPDATE_EQ]);
+
+
+val RED_BLACK_TREE___NODES_OK___REWRITE = prove (
+``(RED_BLACK_TREE___NODES_OK leaf) /\
+  (RED_BLACK_TREE___NODES_OK (node a tL) =
+     ?k v c t1 t2. (a = [k;v;c]) /\ (c IN {0;1}) /\ (tL = [t1;t2]) /\
+         RED_BLACK_TREE___NODES_OK t1 /\ RED_BLACK_TREE___NODES_OK t2)``,
+SIMP_TAC std_ss [RED_BLACK_TREE___NODES_OK_def,
+   SUBTREES_THM, PSUBTREES_THM, IN_SING, IS_LEAF_def,
+   IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM] THEN
+SIMP_TAC (list_ss++CONJ_ss) [IS_RED_BLACK_TREE_NODE_THM,
+   GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
+   IN_UNION, IN_LIST_TO_SET, tree_11, MEM, IN_BIGUNION,
+   DISJ_IMP_THM, FORALL_AND_THM, MEM_MAP,
+   IN_INSERT, NOT_IN_EMPTY, RIGHT_AND_OVER_OR,
+   IS_LEAF_def] THEN
+EQ_TAC THEN REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC list_ss [] THEN
+METIS_TAC[]);
+
+val RED_BLACK_TREE___NODES_OK___IMPLIES_NODE_LEAF = prove (
+``RED_BLACK_TREE___NODES_OK t ==>
+  IS_RED_BLACK_TREE_NODE_LEAF t``,
+Cases_on `t` THEN 
+SIMP_TAC list_ss [RED_BLACK_TREE___NODES_OK___REWRITE,
+  GSYM LEFT_FORALL_IMP_THM, IS_RED_BLACK_TREE_NODE_LEAF_def,
+  IS_RED_BLACK_TREE_NODE_def]);
+
+
+val RED_BLACK_TREE___NODES_OK___WIDTH = prove (
+``!t. RED_BLACK_TREE___NODES_OK t ==>
+      WIDTH t SUBSET {2}``,
+HO_MATCH_MP_TAC tree_INDUCT THEN
+SIMP_TAC std_ss [RED_BLACK_TREE___NODES_OK___REWRITE,
+   WIDTH_THM, EMPTY_SUBSET, GSYM LEFT_FORALL_IMP_THM] THEN
+SIMP_TAC list_ss [BIGUNION_INSERT, BIGUNION_EMPTY, UNION_EMPTY, 
+   GSYM RIGHT_FORALL_IMP_THM, INSERT_SUBSET, UNION_SUBSET] THEN
+SIMP_TAC std_ss [IN_INSERT]);
+
+
+val RED_BLACK_TREE___PROP_BLACK_BALANCED___REWRITE = prove (
+``(RED_BLACK_TREE___PROP_BLACK_BALANCED n leaf = (n = 0)) /\
+  ((RED_BLACK_TREE___NODES_OK t1) ==>
+   (RED_BLACK_TREE___PROP_BLACK_BALANCED n (node [k;v;c] [t1;t2]) = 
+      if (c = 0) then 
+         ((n > 0) /\
+          RED_BLACK_TREE___PROP_BLACK_BALANCED (PRE n) t1 /\
+          RED_BLACK_TREE___PROP_BLACK_BALANCED (PRE n) t2) 
+      else
+         (RED_BLACK_TREE___PROP_BLACK_BALANCED n t1 /\
+          RED_BLACK_TREE___PROP_BLACK_BALANCED n t2)))``,
+SIMP_TAC list_ss [RED_BLACK_TREE___PROP_BLACK_BALANCED_def, TREE_PATHS_THM,
+   IN_ABS, GSYM LEFT_FORALL_IMP_THM, IN_SING] THEN
+REPEAT STRIP_TAC THEN 
+Cases_on `c = 0` THENL [
+   ASM_SIMP_TAC list_ss [RIGHT_AND_OVER_OR, DISJ_IMP_THM, FORALL_AND_THM] THEN
+   Cases_on `n` THENL [
+      SIMP_TAC list_ss [MEMBER_NOT_EMPTY] THEN
+      IMP_RES_TAC RED_BLACK_TREE___NODES_OK___WIDTH THEN
+      DISJ1_TAC THEN
+      REPEAT STRIP_TAC THEN
+      IMP_RES_TAC TREE_PATHS_NOT_EMPTY THEN
+      FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_SING] THEN
+      `0:num = 2` by RES_TAC THEN
+      DECIDE_TAC,
+
+      SIMP_TAC std_ss []
+   ],
+
+   ASM_SIMP_TAC std_ss [RIGHT_AND_OVER_OR, DISJ_IMP_THM, FORALL_AND_THM]
+]);
+  
+
+val RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE = prove (
+``(RED_BLACK_TREE___PROP_NO_RED_RED leaf) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED (node [k;v;c] [t1;t2]) = 
+     (RED_BLACK_TREE___PROP_NO_RED_RED t1 /\
+      RED_BLACK_TREE___PROP_NO_RED_RED t2 /\
+      ((c = 1) ==>  ((~(RED_BLACK_TREE___IS_RED t1)) /\ ~(RED_BLACK_TREE___IS_RED t2)))))``,
+
+SIMP_TAC list_ss [RED_BLACK_TREE___PROP_NO_RED_RED_def, SUBTREES_THM, PSUBTREES_THM,
+   IN_SING, NOT_IN_EMPTY, BIGUNION_EMPTY, BIGUNION_INSERT, UNION_EMPTY,
+   DIRECT_SUBTREES_def] THEN
+SIMP_TAC (list_ss++CONJ_ss) [IN_INSERT, IN_UNION, RIGHT_AND_OVER_OR, DISJ_IMP_THM, FORALL_AND_THM,
+   PSUBTREES_THM, BIGUNION_INSERT, BIGUNION_EMPTY, UNION_EMPTY, NOT_IN_EMPTY,
+   DIRECT_SUBTREES_def] THEN
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [RED_BLACK_TREE___IS_RED_def] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `c = 1` THEN	       
+ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) []);
+
+
+
+(* -------------------------------------------------------------------------- *)
+(* Predicates and functions that describe exactly the behavior of the code    *)
+(* with the tacticas that proof the correspondence with the code              *)
+(* -------------------------------------------------------------------------- *)
+
+val file = concat [examplesDir, "/interactive/red_black_tree.dsf"];
+
+(* -------------------------------------------------------------------------- *)
+
+(* holfoot_set_goal_procedures file ["rb_tree_init"] *)
+val rb_tree_init_TAC =  
+   xHF_CONTINUE_TAC [add_rewrites [ RED_BLACK_TREE_FEMPTY, IS_LEAF_REWRITE] ];
+
+(* -------------------------------------------------------------------------- *)
+
+val PROGRAM_FUN___mk_node_def = Define `
+   PROGRAM_FUN___mk_node k v = node [k;v;1:num] [leaf;leaf]`
+
+(* holfoot_set_goal_procedures file ["rb_tree_mk_node"] *)
+val rb_tree_mk_node_TAC = xHF_CONTINUE_TAC [ add_rewrites [PROGRAM_FUN___mk_node_def] ];
+
+(* -------------------------------------------------------------------------- *)
+
+(* holfoot_set_goal_procedures file ["rb_tree_is_red"] *)
+val rb_tree_is_red_TAC = 
+   xHF_CONTINUE_TAC [add_rewrites [RED_BLACK_TREE___IS_RED_BLACK___REWRITE] ]
+
+(* -------------------------------------------------------------------------- *)
+
+val PROGRAM_PRED___can_left_rotate_def = Define 
+  `PROGRAM_PRED___can_left_rotate t = 
+     IS_RED_BLACK_TREE_NODE t /\
+     IS_RED_BLACK_TREE_NODE (RED_BLACK_TREE___RIGHT_SUBTREE t)`
+
+val PROGRAM_PRED___can_left_rotate___REWRITE = prove (
+``PROGRAM_PRED___can_left_rotate t =
+  ?k v c k2 v2 c2 t1 t2 t3. (t = node [k;v;c] [t1; node [k2;v2;c2] [t2;t3]]) /\
+     (c IN {0;1}) /\ (c2 IN {0;1})``,
+SIMP_TAC (list_ss++CONJ_ss) [PROGRAM_PRED___can_left_rotate_def, tree_11, tree_distinct,
+   IS_RED_BLACK_TREE_NODE_THM, GSYM RIGHT_EXISTS_AND_THM, 
+   GSYM LEFT_EXISTS_AND_THM, RED_BLACK_TREE___RIGHT_SUBTREE_def] THEN
+EQ_TAC THEN REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC list_ss [tree_11]);
+ 
+val PROGRAM_FUN___left_rotate_def = Define `
+   PROGRAM_FUN___left_rotate 
+      (node [k1:num;v1;c1] [a; node [k2;v2;c2] [b;c]]) =
+      (node [k2;v2;0] [node [k1;v1;1] [a;b]; c])`
+
+(* holfoot_set_goal_procedures file ["rb_tree_left_rotate"] *)
+val rb_tree_left_rotate_TAC = 
+   HF_CONTINUE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_left_rotate___REWRITE] THEN
+   xHF_CONTINUE_TAC [add_rewrites [PROGRAM_FUN___left_rotate_def]]
+
+(* -------------------------------------------------------------------------- *)
+
+val PROGRAM_PRED___can_right_rotate_def = Define 
+  `PROGRAM_PRED___can_right_rotate t = 
+      IS_RED_BLACK_TREE_NODE t /\
+      IS_RED_BLACK_TREE_NODE (RED_BLACK_TREE___LEFT_SUBTREE t)`
+		 
+val PROGRAM_PRED___can_right_rotate___REWRITE = prove (
+``PROGRAM_PRED___can_right_rotate t =
+  ?k v c k2 v2 c2 t1 t2 t3. (t = node [k;v;c] [node [k2;v2;c2] [t1;t2];t3]) /\
+     (c IN {0;1}) /\ (c2 IN {0;1})``,
+SIMP_TAC (list_ss++CONJ_ss) [PROGRAM_PRED___can_right_rotate_def, tree_11, tree_distinct,
+   IS_RED_BLACK_TREE_NODE_THM, GSYM RIGHT_EXISTS_AND_THM, 
+   GSYM LEFT_EXISTS_AND_THM, RED_BLACK_TREE___LEFT_SUBTREE_def] THEN
+EQ_TAC THEN REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC list_ss [tree_11])
+
+val PROGRAM_FUN___right_rotate_def = Define `
+   PROGRAM_FUN___right_rotate 
+      (node [k2;v2;c2] [node [k1;v1;c1] [a;b]; c]) =
+      (node [k1:num;v1;0] [a; node [k2;v2;1] [b;c]])`;
+
+(* holfoot_set_goal_procedures file ["rb_tree_right_rotate"] *)
+val rb_tree_right_rotate_TAC = 
+   HF_CONTINUE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_right_rotate___REWRITE] THEN
+   xHF_CONTINUE_TAC [add_rewrites [PROGRAM_FUN___right_rotate_def]]
+
+(* -------------------------------------------------------------------------- *)
+
+val PROGRAM_PRED___can_left_double_rotate_def = Define 
+  `PROGRAM_PRED___can_left_double_rotate t =
+      IS_RED_BLACK_TREE_NODE t /\
+      (PROGRAM_PRED___can_right_rotate (RED_BLACK_TREE___RIGHT_SUBTREE t))`;
+
+val PROGRAM_PRED___can_left_double_rotate___REWRITE = prove (
+``PROGRAM_PRED___can_left_double_rotate t =
+  ?k v c k2 v2 c2 k3 v3 c3 t1 t2 t3 t4. (t = node [k;v;c] [t1; node [k2;v2;c2] [node [k3;v3;c3] [t2;t3];t4]]) /\
+     (c IN {0;1}) /\ (c2 IN {0;1}) /\ (c3 IN {0;1})``,
+SIMP_TAC (list_ss++CONJ_ss) [PROGRAM_PRED___can_left_double_rotate_def, tree_11, tree_distinct,
+   IS_RED_BLACK_TREE_NODE_THM, GSYM RIGHT_EXISTS_AND_THM, 
+   GSYM LEFT_EXISTS_AND_THM, PROGRAM_PRED___can_right_rotate___REWRITE,
+   RED_BLACK_TREE___RIGHT_SUBTREE_def] THEN
+EQ_TAC THEN REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC list_ss [tree_11]);
+
+val PROGRAM_FUN___left_double_rotate_def = Define `
+   PROGRAM_FUN___left_double_rotate 
+      (node [k:num;v;c] [a;b]) =
+      PROGRAM_FUN___left_rotate 
+          (node [k;v;c] [a;PROGRAM_FUN___right_rotate b])`;
+
+val PROGRAM_FUN___left_double_rotate_REWRITE = prove (
+``PROGRAM_FUN___left_double_rotate (node [k1:num;v1;c1] [a;
+      node [k2;v2;c2] [node [k3;v3;c3] [b;c]; d]]) = 
+  node [k3; v3; 0] [node [k1; v1; 1] [a; b]; node [k2; v2; 1] [c; d]] ``,
+SIMP_TAC std_ss [PROGRAM_FUN___left_double_rotate_def,
+   PROGRAM_FUN___right_rotate_def, PROGRAM_FUN___left_rotate_def]);
+
+(* holfoot_set_goal_procedures file ["rb_tree_left_double_rotate"] *)
+val rb_tree_left_double_rotate_TAC = 
+   HF_CONTINUE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_left_double_rotate___REWRITE,
+      PROGRAM_FUN___left_double_rotate_REWRITE] THEN
+   xHF_CONTINUE_TAC [generate_vcs] THEN
+   HF_ELIM_COMMENTS_TAC THEN
+   ASM_SIMP_TAC list_ss [PROGRAM_PRED___can_right_rotate___REWRITE, tree_11,
+       PROGRAM_PRED___can_left_rotate___REWRITE,
+       PROGRAM_FUN___right_rotate_def, 
+       PROGRAM_FUN___left_rotate_def] THEN
+   SIMP_TAC std_ss [IN_INSERT]
+
+
+(* -------------------------------------------------------------------------- *)
+
+val PROGRAM_PRED___can_right_double_rotate_def = Define 
+  `PROGRAM_PRED___can_right_double_rotate t = 
+      IS_RED_BLACK_TREE_NODE t /\
+      (PROGRAM_PRED___can_left_rotate (RED_BLACK_TREE___LEFT_SUBTREE t))`
+
+val PROGRAM_PRED___can_right_double_rotate___REWRITE = prove (
+``PROGRAM_PRED___can_right_double_rotate t =
+  ?k v c k2 v2 c2 k3 v3 c3 t1 t2 t3 t4. (t = node [k;v;c] [
+         node [k2;v2;c2] [t1; node [k3;v3;c3] [t2;t3]]; t4]) /\
+     (c IN {0;1}) /\ (c2 IN {0;1}) /\ (c3 IN {0;1})``,
+SIMP_TAC (list_ss++CONJ_ss) [PROGRAM_PRED___can_right_double_rotate_def, tree_11, tree_distinct,
+   IS_RED_BLACK_TREE_NODE_THM, GSYM RIGHT_EXISTS_AND_THM, 
+   GSYM LEFT_EXISTS_AND_THM, PROGRAM_PRED___can_left_rotate___REWRITE,
+   RED_BLACK_TREE___LEFT_SUBTREE_def] THEN
+EQ_TAC THEN REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC list_ss [tree_11]);
+					 
+val PROGRAM_FUN___right_double_rotate_def = Define `
+   PROGRAM_FUN___right_double_rotate 
+      (node [k:num;v;c] [a;b]) =
+      PROGRAM_FUN___right_rotate 
+          (node [k;v;c] [PROGRAM_FUN___left_rotate a; b])`;
+
+val PROGRAM_FUN___right_double_rotate_REWRITE = prove (
+``PROGRAM_FUN___right_double_rotate (node [k1:num;v1;c1] [
+      node [k2;v2;c2] [a; node [k3;v3;c3] [b;c]]; d]) = 
+  node [k3; v3; 0] [node [k2; v2; 1] [a; b]; node [k1; v1; 1] [c; d]] ``,
+SIMP_TAC std_ss [PROGRAM_FUN___right_double_rotate_def,
+   PROGRAM_FUN___left_rotate_def, PROGRAM_FUN___right_rotate_def]);
+
+
+(* holfoot_set_goal_procedures file ["rb_tree_right_double_rotate"] *)
+val rb_tree_right_double_rotate_TAC = 
+   HF_CONTINUE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_right_double_rotate___REWRITE,
+      PROGRAM_FUN___right_double_rotate_REWRITE] THEN
+   xHF_CONTINUE_TAC [generate_vcs] THEN
+   HF_ELIM_COMMENTS_TAC THEN
+   ASM_SIMP_TAC list_ss [PROGRAM_PRED___can_right_rotate___REWRITE, tree_11,
+       PROGRAM_PRED___can_left_rotate___REWRITE,
+       PROGRAM_FUN___right_rotate_def, 
+       PROGRAM_FUN___left_rotate_def] THEN
+   SIMP_TAC std_ss [IN_INSERT];
+
+
+(* -------------------------------------------------------------------------- *)
+
+val PROGRAM_PRED___can_color_flip_def = Define 
+  `PROGRAM_PRED___can_color_flip t = 
+      (IS_RED_BLACK_TREE_NODE t /\
+       IS_RED_BLACK_TREE_NODE (RED_BLACK_TREE___LEFT_SUBTREE t) /\
+       IS_RED_BLACK_TREE_NODE (RED_BLACK_TREE___RIGHT_SUBTREE t))`;
+					 
+val PROGRAM_PRED___can_color_flip___REWRITE = prove (
+``PROGRAM_PRED___can_color_flip t =
+  ?k v c k2 v2 c2 k3 v3 c3 t1 t2 t3 t4. (t = node [k;v;c] [
+         node [k2;v2;c2] [t1; t2]; node [k3;v3;c3] [t3;t4]]) /\
+     (c IN {0;1}) /\ (c2 IN {0;1}) /\ (c3 IN {0;1})``,
+SIMP_TAC (list_ss++CONJ_ss) [PROGRAM_PRED___can_color_flip_def, tree_distinct,
+   tree_11, IS_RED_BLACK_TREE_NODE_THM,
+   GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
+   RED_BLACK_TREE___RIGHT_SUBTREE_def, RED_BLACK_TREE___LEFT_SUBTREE_def] THEN
+EQ_TAC THEN REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC list_ss [tree_11]);
+
+val PROGRAM_FUN___color_flip_def = Define `
+   PROGRAM_FUN___color_flip
+      (node [k1:num;v1;c1] [node [k2;v2;c2] [a;b];node [k3;v3;c3] [c;d]]) =
+      (node [k1:num;v1;1]  [node [k2;v2;0]  [a;b];node [k3;v3;0]  [c;d]])`;
+
+(* holfoot_set_goal_procedures file ["rb_tree_color_flip"] *)
+val rb_tree_color_flip_TAC = 
+   HF_CONTINUE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_color_flip___REWRITE,
+      PROGRAM_FUN___color_flip_def] THEN
+   HF_CONTINUE_TAC 
+
+(* -------------------------------------------------------------------------- *)
+
+val PROGRAM_PRED___can_left_balance_def = Define `
+   PROGRAM_PRED___can_left_balance = IS_RED_BLACK_TREE_NODE`
+
+val PROGRAM_FUN___left_balance_def = Define `
+   PROGRAM_FUN___left_balance (node [k;v;c] [t1;t2]) =
+   (if ((c = 0) /\ RED_BLACK_TREE___IS_RED t1) then (
+      if RED_BLACK_TREE___IS_RED t2 then 
+         (PROGRAM_FUN___color_flip (node [k; v; c] [t1; t2]))
+      else (
+         if RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___LEFT_SUBTREE t1) then
+            (PROGRAM_FUN___right_rotate (node [k; v; c] [t1; t2]))
+         else
+            (if RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___RIGHT_SUBTREE t1) then
+               (PROGRAM_FUN___right_double_rotate (node [k; v; c] [t1; t2]))
+            else
+               (node [k; v; c] [t1; t2]))
+      )
+   ) else (node [k; v; c] [t1; t2]))`
+
+(* holfoot_set_goal_procedures file ["rb_tree_left_balance"] *)
+val rb_tree_left_balance_TAC =
+   HF_CONTINUE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_left_balance_def,
+      IS_RED_BLACK_TREE_NODE_THM] THEN
+   xHF_CONTINUE_TAC [generate_vcs] THEN
+   REPEAT STRIP_TAC THENL [
+      FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
+         PROGRAM_PRED___can_color_flip___REWRITE, tree_11] THEN
+      ASM_REWRITE_TAC [IN_INSERT],
+   
+      ASM_REWRITE_TAC [PROGRAM_FUN___left_balance_def],
+
+      Q.PAT_ASSUM `0 = c` (ASSUME_TAC o GSYM) THEN 
+      FULL_SIMP_TAC std_ss [IN_INSERT] THEN
+      `?k v t11 t12. t1 = node [k;v;1] [t11;t12]` by  
+         FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, tree_11] THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      xHF_CONTINUE_TAC [generate_vcs] THEN      
+      FULL_SIMP_TAC list_ss [PROGRAM_PRED___can_right_rotate___REWRITE, tree_11,
+         PROGRAM_PRED___can_right_double_rotate___REWRITE,
+         PROGRAM_FUN___left_balance_def, RED_BLACK_TREE___LEFT_SUBTREE_def,
+         RED_BLACK_TREE___RIGHT_SUBTREE_def,
+         RED_BLACK_TREE___IS_RED_BLACK___EVAL] THEN
+      HF_ELIM_COMMENTS_TAC THEN 
+      SIMP_TAC std_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, IN_INSERT, NOT_IN_EMPTY] THEN
+      REPEAT STRIP_TAC THEN
+      ASM_SIMP_TAC list_ss [tree_11],
+
+      ASM_REWRITE_TAC [PROGRAM_FUN___left_balance_def],
+      ASM_REWRITE_TAC [PROGRAM_FUN___left_balance_def]
+   ];
+
+(* -------------------------------------------------------------------------- *)    
+
+val PROGRAM_PRED___can_right_balance_def = Define `
+   PROGRAM_PRED___can_right_balance = IS_RED_BLACK_TREE_NODE`
+
+val PROGRAM_FUN___right_balance_def = Define `
+   PROGRAM_FUN___right_balance (node [k;v;c] [t1;t2]) =
+   (if ((c = 0) /\ RED_BLACK_TREE___IS_RED t2) then (
+      if RED_BLACK_TREE___IS_RED t1 then 
+         (PROGRAM_FUN___color_flip (node [k; v; c] [t1; t2]))
+      else (
+         if RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___RIGHT_SUBTREE t2) then
+            (PROGRAM_FUN___left_rotate (node [k; v; c] [t1; t2]))
+         else
+            (if RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___LEFT_SUBTREE t2) then
+               (PROGRAM_FUN___left_double_rotate (node [k; v; c] [t1; t2]))
+            else
+               (node [k; v; c] [t1; t2]))
+      )
+   ) else (node [k; v; c] [t1; t2]))`
+       
+(* holfoot_set_goal_procedures file ["rb_tree_right_balance"] *)
+val rb_tree_right_balance_TAC =
+   HF_CONTINUE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_right_balance_def,
+      IS_RED_BLACK_TREE_NODE_THM] THEN
+   xHF_CONTINUE_TAC [generate_vcs] THEN
+   REPEAT STRIP_TAC THENL [
+      FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
+         PROGRAM_PRED___can_color_flip___REWRITE, tree_11] THEN
+      ASM_REWRITE_TAC [IN_INSERT],
+   
+      ASM_REWRITE_TAC [PROGRAM_FUN___right_balance_def],
+
+      Q.PAT_ASSUM `0 = c` (ASSUME_TAC o GSYM) THEN 
+      FULL_SIMP_TAC std_ss [IN_INSERT] THEN
+      `?k v t21 t22. t2 = node [k;v;1] [t21;t22]` by  
+         FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, tree_11] THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      xHF_CONTINUE_TAC [generate_vcs] THEN
+      FULL_SIMP_TAC list_ss [PROGRAM_PRED___can_left_rotate___REWRITE, tree_11,
+         PROGRAM_PRED___can_left_double_rotate___REWRITE,
+         PROGRAM_FUN___right_balance_def, RED_BLACK_TREE___LEFT_SUBTREE_def,
+         RED_BLACK_TREE___RIGHT_SUBTREE_def] THEN
+      HF_ELIM_COMMENTS_TAC THEN 
+      SIMP_TAC std_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, IN_INSERT, NOT_IN_EMPTY] THEN
+      REPEAT STRIP_TAC THEN
+      ASM_SIMP_TAC list_ss [tree_11],
+
+      ASM_REWRITE_TAC [PROGRAM_FUN___right_balance_def],
+      ASM_REWRITE_TAC [PROGRAM_FUN___right_balance_def]
+   ];
+
+(* -------------------------------------------------------------------------- *)    
+
+val PROGRAM_PRED___can_insert_r_def = Define `
+    PROGRAM_PRED___can_insert_r = RED_BLACK_TREE___NODES_OK`          
+
+val PROGRAM_FUN___insert_r_def = Define `
+   (PROGRAM_FUN___insert_r (leaf:num list tree) k v =
+       PROGRAM_FUN___mk_node k v) /\
+   (PROGRAM_FUN___insert_r (node [k2;v2;c2] [t1;t2]) k v = 
+       (if (k = k2) then (node [k;v;c2] [t1;t2]) else
+        (if (k < k2) then 
+             PROGRAM_FUN___left_balance (node [k2;v2;c2]
+                  [(PROGRAM_FUN___insert_r t1 k v); t2])
+         else
+             PROGRAM_FUN___right_balance (node [k2;v2;c2]
+                  [t1; (PROGRAM_FUN___insert_r t2 k v)]))))`
+
+(* holfoot_set_goal_procedures file ["rb_tree_insert_r"] *)
+val rb_tree_insert_r_TAC =
+   xHF_CONTINUE_TAC [add_rewrites [PROGRAM_FUN___insert_r_def,
+      PROGRAM_PRED___can_insert_r_def]] THEN
+   SIMP_TAC list_ss [RED_BLACK_TREE___NODES_OK___REWRITE] THEN
+   xHF_CONTINUE_TAC [add_rewrites [PROGRAM_PRED___can_left_balance_def, 
+      PROGRAM_PRED___can_right_balance_def, IS_RED_BLACK_TREE_NODE_def,
+      PROGRAM_FUN___insert_r_def]]
+
+
+(* -------------------------------------------------------------------------- *)    
+
+(* holfoot_set_goal_procedures file ["rb_tree_lookup"] *)
+val rb_tree_lookup_TAC =
+   xHF_CONTINUE_TAC [generate_vcs] THEN
+   REPEAT STRIP_TAC THENL [
+      HF_ELIM_COMMENTS_TAC THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_def, FDOM_FEMPTY, NOT_IN_EMPTY],
+
+      HF_ELIM_COMMENTS_TAC THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM,
+         FDOM_FUPDATE, IN_INSERT, FAPPLY_FUPDATE_THM],
+
+      HF_ELIM_COMMENTS_TAC THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_REWRITE, arithmeticTheory.GREATER_DEF] THEN
+      Q.EXISTS_TAC `f1` THEN
+      `~(k_const' IN FDOM f2)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+      ASM_SIMP_TAC std_ss [FDOM_FUPDATE, FDOM_FUNION, IN_UNION, IN_INSERT,
+         FAPPLY_FUPDATE_THM, FUNION_DEF],
+
+      HF_ELIM_COMMENTS_TAC THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_REWRITE, arithmeticTheory.GREATER_DEF] THEN
+      Q.EXISTS_TAC `f2` THEN
+      `~(k_const' IN FDOM f1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+      ASM_SIMP_TAC std_ss [FDOM_FUPDATE, FDOM_FUNION, IN_UNION, IN_INSERT,
+         FAPPLY_FUPDATE_THM, FUNION_DEF]
+   ];
+
+
+(******************************************************************************)
+(* This takes care of all the auxiliary functions for insertion. Insertion    *)
+(* itself must be handled differently, in order to show the high-level        *)
+(* property, that it inserts something into a red-black tree. In order to do  *)
+(* this, one has to reason about the effect of the modification of the tree   *)
+(* by the above defined functions                                             *)
+(******************************************************************************)
+
+val RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START_def = Define `
+    RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START (c:num) b t1 t2 =
+    (((c = 1) /\ b) ==>
+     ~RED_BLACK_TREE___IS_RED t1 /\ ~RED_BLACK_TREE___IS_RED t2) /\
+    (((c = 1) /\ ~b) ==>
+     (~RED_BLACK_TREE___IS_RED t1) \/ (~RED_BLACK_TREE___IS_RED t2))`;
+
+val RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___REWRITE = prove (``
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START 0 b t1 t2) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b leaf leaf) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c F leaf t2) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c F t1 leaf) /\
+
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c F (node [k;v;0] [t1;t2]) t3) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c F t3 (node [k;v;0] [t1;t2])) /\
+
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b (node [k;v;0] [t1;t2]) (node [k';v';0] [t3;t4])) /\
+
+  (~(RED_BLACK_TREE___IS_RED t1) ==> (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c F t1 t2)) /\
+  (~(RED_BLACK_TREE___IS_RED t2) ==> (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c F t1 t2)) /\
+
+  ((~(RED_BLACK_TREE___IS_RED t1) /\ ~(RED_BLACK_TREE___IS_RED t2)) ==> 
+       (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t1 t2))``,
+
+SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START_def,
+   RED_BLACK_TREE___IS_RED_BLACK___EVAL]);
+
+val RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND = prove (``
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c T t1 t2 =
+    ((c = 1) ==> ~RED_BLACK_TREE___IS_RED t1 /\ ~RED_BLACK_TREE___IS_RED t2)) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b (node [k;v;1] [t1;t2]) t3 =
+    (((c = 1) ==> (~b /\ ~RED_BLACK_TREE___IS_RED t3)))) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t3 (node [k;v;1] [t1;t2]) =
+    ((c = 1) ==> (~b /\ ~RED_BLACK_TREE___IS_RED t3))) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b (node [k;v;0] [t1;t2]) t3 =
+    (((c = 1) /\ b ==> (~RED_BLACK_TREE___IS_RED t3)))) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t3 (node [k;v;0] [t1;t2]) =
+    ((c = 1) /\ b ==> ~RED_BLACK_TREE___IS_RED t3)) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b leaf t3 =
+    (((c = 1) /\ b ==> (~RED_BLACK_TREE___IS_RED t3)))) /\
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t3 leaf =
+    ((c = 1) /\ b ==> ~RED_BLACK_TREE___IS_RED t3)) /\
+  ((RED_BLACK_TREE___IS_RED t1) ==>
+    ((RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t1 t2) =
+    ((c = 1) ==> ~b /\ ~RED_BLACK_TREE___IS_RED t2))) /\
+  ((RED_BLACK_TREE___IS_RED t2) ==>
+    ((RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t1 t2) =
+    ((c = 1) ==> ~b /\ ~RED_BLACK_TREE___IS_RED t1))) /\
+  (~(RED_BLACK_TREE___IS_RED t1) ==>
+    ((RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t1 t2) =
+    ((c = 1) /\ b ==> ~RED_BLACK_TREE___IS_RED t2))) /\
+  (~(RED_BLACK_TREE___IS_RED t2) ==>
+    ((RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t1 t2) =
+    ((c = 1) /\ b ==> ~RED_BLACK_TREE___IS_RED t1)))``,
+
+SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START_def,
+   RED_BLACK_TREE___IS_RED_BLACK___EVAL] THEN
+METIS_TAC[]);
+
+
+
+
+
+val RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def = Define `
+   (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK b leaf = T) /\
+   (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK b (node [k; v; c] [t1; t2]) =
+    RED_BLACK_TREE___PROP_NO_RED_RED t1 /\
+    RED_BLACK_TREE___PROP_NO_RED_RED t2 /\
+    RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t1 t2)`;
+
+val RED_BLACK_TREE___PROP_NO_RED_RED___WEAK___IMP = prove (
+``IS_RED_BLACK_TREE_NODE_LEAF t ==>
+  RED_BLACK_TREE___PROP_NO_RED_RED t ==>
+  RED_BLACK_TREE___PROP_NO_RED_RED___WEAK b t``,
+SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def,
+   IS_LEAF_def, RED_BLACK_TREE___LEFT_SUBTREE_def,
+   IS_RED_BLACK_TREE_NODE_THM, IS_RED_BLACK_TREE_NODE_LEAF_def, tree_distinct,
+   GSYM LEFT_FORALL_IMP_THM, DISJ_IMP_THM,
+   RED_BLACK_TREE___RIGHT_SUBTREE_def, RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE,
+   RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START_def]);
+
+val RED_BLACK_TREE___PROP_NO_RED_RED___WEAK___EQ = prove (
+``IS_RED_BLACK_TREE_NODE_LEAF t ==>    
+  (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK T t =
+   RED_BLACK_TREE___PROP_NO_RED_RED t)``,
+SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def,
+   IS_LEAF_def, RED_BLACK_TREE___LEFT_SUBTREE_def, DISJ_IMP_THM,
+   IS_RED_BLACK_TREE_NODE_LEAF_def, GSYM LEFT_FORALL_IMP_THM,
+   IS_RED_BLACK_TREE_NODE_THM, RED_BLACK_TREE___RIGHT_SUBTREE_def, 
+   RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE,
+   RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START_def]);
+
+
+val RED_BLACK_TREE___PROP_NO_RED_RED___WEAK___WEAKEN = prove (
+``IS_RED_BLACK_TREE_NODE_LEAF t ==>
+  RED_BLACK_TREE___PROP_NO_RED_RED___WEAK T t ==>
+  RED_BLACK_TREE___PROP_NO_RED_RED___WEAK b t``,
+
+SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK___EQ,
+  RED_BLACK_TREE___PROP_NO_RED_RED___WEAK___IMP]);
+
+
+val RED_BLACK_TREE___WEAK_def = Define `
+   RED_BLACK_TREE___WEAK n b t f =
+   ((BIN_SEARCH_TREE t f) /\ 
+    (RED_BLACK_TREE___NODES_OK t) /\
+    (RED_BLACK_TREE___PROP_NO_RED_RED___WEAK b t) /\
+    (RED_BLACK_TREE___PROP_BLACK_BALANCED n t))`;
+
+val RED_BLACK_TREE___WEAK___EQ = prove (
+``RED_BLACK_TREE t f =
+  ?n. RED_BLACK_TREE___WEAK n T t f /\
+      RED_BLACK_TREE___IS_BLACK t``,
+
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [RED_BLACK_TREE_def, RED_BLACK_TREE___WEAK_def,
+   LEFT_EXISTS_AND_THM, RIGHT_EXISTS_AND_THM] THEN
+REPEAT STRIP_TAC THEN
+`IS_RED_BLACK_TREE_NODE_LEAF t` by ALL_TAC THEN1 (
+   Cases_on `t` THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___NODES_OK___REWRITE,
+      IS_RED_BLACK_TREE_NODE_def, IS_RED_BLACK_TREE_NODE_LEAF_def]
+) THEN
+ASM_SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK___EQ]);
+
+
+val RED_BLACK_TREE___WEAK___WEAKEN = prove (
+``RED_BLACK_TREE___WEAK n T t f ==>
+  RED_BLACK_TREE___WEAK n b t f``,
+SIMP_TAC std_ss [RED_BLACK_TREE___WEAK_def,
+   RED_BLACK_TREE___PROP_NO_RED_RED___WEAK___IMP] THEN
+METIS_TAC[RED_BLACK_TREE___NODES_OK___IMPLIES_NODE_LEAF, 
+          RED_BLACK_TREE___PROP_NO_RED_RED___WEAK___WEAKEN]);
+
+
+
+val RED_BLACK_TREE___WEAK___IMP = prove (
+``RED_BLACK_TREE t f ==>
+  ?n. RED_BLACK_TREE___WEAK n T t f``,
+METIS_TAC[RED_BLACK_TREE___WEAK___EQ]);
+
+
+val RED_BLACK_TREE___MAKE_BLACK_def = Define `
+   (RED_BLACK_TREE___MAKE_BLACK leaf = leaf) /\
+   (RED_BLACK_TREE___MAKE_BLACK (node [k;v;c] [t1;t2]) =
+      (node [k;v;0:num] [t1;t2]))`;
+
+val RED_BLACK_TREE___MAKE_BLACK_THM = prove (
+``!n b t f. RED_BLACK_TREE___WEAK n b t f ==>
+          RED_BLACK_TREE (RED_BLACK_TREE___MAKE_BLACK t) f``,
+Cases_on `t` THEN1 (
+   SIMP_TAC std_ss [RED_BLACK_TREE___MAKE_BLACK_def,
+      RED_BLACK_TREE___WEAK_def,
+      BIN_SEARCH_TREE_THM, RED_BLACK_TREE_FEMPTY, IS_LEAF_def]
+) THEN
+SIMP_TAC (std_ss++CONJ_ss) [RED_BLACK_TREE___WEAK_def,
+   RED_BLACK_TREE___NODES_OK___REWRITE, GSYM LEFT_EXISTS_AND_THM,
+   GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
+SIMP_TAC list_ss [RED_BLACK_TREE___MAKE_BLACK_def, RED_BLACK_TREE_def,
+   RED_BLACK_TREE___NODES_OK___REWRITE, IS_LEAF_def,
+   RED_BLACK_TREE___IS_RED_BLACK___REWRITE, tree_11] THEN
+REPEAT STRIP_TAC THENL [
+   FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM] THEN
+   METIS_TAC[],
+
+   REWRITE_TAC[IN_INSERT],
+
+   FULL_SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def],
+      
+   Cases_on `c = 0` THEN1 METIS_TAC[] THEN
+   Q.EXISTS_TAC `SUC n` THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___PROP_BLACK_BALANCED_def,
+      TREE_PATHS_THM, IN_ABS, GSYM LEFT_FORALL_IMP_THM] THEN
+   METIS_TAC[]
+]);
+
+
+val RED_BLACK_TREE___WEAK___mk_node = prove (
+``!k v. RED_BLACK_TREE___WEAK 0 T (PROGRAM_FUN___mk_node k v) (FEMPTY |+ (k,v))``,
+SIMP_TAC std_ss [RED_BLACK_TREE___WEAK_def, PROGRAM_FUN___mk_node_def] THEN
+REPEAT STRIP_TAC THENL [
+   SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM, FUNION_FEMPTY_1, FDOM_FEMPTY, NOT_IN_EMPTY],
+
+   SIMP_TAC list_ss [RED_BLACK_TREE___NODES_OK___REWRITE, IN_INSERT],
+
+   SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def,
+                    RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE,
+                    RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___REWRITE],
+
+   SIMP_TAC list_ss [RED_BLACK_TREE___PROP_BLACK_BALANCED_def, TREE_PATHS_THM,
+      IN_ABS, GSYM LEFT_FORALL_IMP_THM, IN_SING]
+]);
+   
+
+
+val RED_BLACK_TREE___WEAK___UPDATE_VALUE = prove (
+``!k b v v' c t1 t2 n. 
+     RED_BLACK_TREE___WEAK n b (node [k;v ;c] [t1;t2]) f ==> 
+     RED_BLACK_TREE___WEAK n b (node [k;v';c] [t1;t2]) (f|+(k,v'))``,
+
+SIMP_TAC std_ss [RED_BLACK_TREE___WEAK_def, 
+   RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def] THEN
+REPEAT STRIP_TAC THENL [
+   METIS_TAC[BIN_SEARCH_TREE___UPDATE_VALUE],
+
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___NODES_OK___REWRITE],
+
+   Cases_on `c = 0` THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___PROP_BLACK_BALANCED_def,
+      TREE_PATHS_THM, IN_ABS, GSYM LEFT_FORALL_IMP_THM]  THEN
+   METIS_TAC[]
+]);
+
+
+val RED_BLACK_TREE___WEAK___THM = prove (``
+   ((RED_BLACK_TREE___WEAK n b leaf f) = ((n = 0) /\ (f = FEMPTY))) /\
+   ((RED_BLACK_TREE___WEAK n b (node a tL) f) =
+      ?k v c t1 t2 f1 f2 n'.
+         (if (c = 1) then (n' = n)
+          else (~(n = 0) /\ (n' = PRE n))) /\
+         (a = [k;v;c]) /\ (tL = [t1;t2]) /\ (c IN {0;1}) /\
+         RED_BLACK_TREE___WEAK n' T t1 f1 /\
+         RED_BLACK_TREE___WEAK n' T t2 f2 /\
+         RED_BLACK_TREE___PROP_NO_RED_RED t1 /\
+         RED_BLACK_TREE___PROP_NO_RED_RED t2 /\
+         RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t1 t2 /\
+         (f = FUNION f1 f2 |+ (k,v)) /\ (!k'. k' IN FDOM f1 ==> k' < k) /\
+         (!k'. k' IN FDOM f2 ==> k' > k))``,
+
+REPEAT STRIP_TAC THEN1 (
+   SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [RED_BLACK_TREE___WEAK_def,
+      BIN_SEARCH_TREE_BIN_THM, RED_BLACK_TREE___NODES_OK___REWRITE,
+      RED_BLACK_TREE___PROP_BLACK_BALANCED_def, TREE_PATHS_THM, IN_SING,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def]
+) THEN
+SIMP_TAC (std_ss++CONJ_ss) [RED_BLACK_TREE___WEAK_def, 
+   RED_BLACK_TREE___NODES_OK___REWRITE, GSYM LEFT_EXISTS_AND_THM,
+   GSYM RIGHT_EXISTS_AND_THM, BIN_SEARCH_TREE_BIN_THM,
+   RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def] THEN
+REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+REPEAT STRIP_TAC THEN
+`RED_BLACK_TREE___PROP_NO_RED_RED___WEAK T t1 /\
+ RED_BLACK_TREE___PROP_NO_RED_RED___WEAK T t2` by ALL_TAC THEN1 (
+   IMP_RES_TAC RED_BLACK_TREE___NODES_OK___IMPLIES_NODE_LEAF THEN
+   ASM_SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK___EQ]
+) THEN
+ASM_SIMP_TAC std_ss [RED_BLACK_TREE___PROP_BLACK_BALANCED___REWRITE] THEN
+
+Cases_on `c = 1` THENL [
+   ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [],
+
+   `c = 0` by PROVE_TAC [IN_INSERT, NOT_IN_EMPTY] THEN
+   ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+   REPEAT STRIP_TAC THEN
+   DECIDE_TAC
+]);
+
+
+val RED_BLACK_TREE___WEAK___REWRITE = prove (``
+   ((RED_BLACK_TREE___WEAK n b leaf f) = ((n = 0) /\ (f = FEMPTY))) /\
+   ((RED_BLACK_TREE___WEAK n b (node a tL) f) =
+      ?k v c t1 t2 f1 f2 n'.
+         (if (c = 1) then (n' = n)
+          else (~(n = 0) /\ (n' = PRE n))) /\
+         (a = [k;v;c]) /\ (tL = [t1;t2]) /\ (c IN {0;1}) /\
+         RED_BLACK_TREE___WEAK n' T t1 f1 /\
+         RED_BLACK_TREE___WEAK n' T t2 f2 /\
+         RED_BLACK_TREE___PROP_NO_RED_RED t1 /\
+         RED_BLACK_TREE___PROP_NO_RED_RED t2 /\
+         RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START c b t1 t2 /\
+         (f = FUNION f1 f2 |+ (k,v)) /\ (!k'. k' IN FDOM f1 ==> k' < k) /\
+         (!k'. k' IN FDOM f2 ==> k' > k) /\ 
+         k NOTIN FDOM f1 /\ k NOTIN FDOM f2 /\
+         (!k. k NOTIN FDOM f1 \/ k NOTIN FDOM f2) /\
+         (!k k'. k IN FDOM f1 /\ k' IN FDOM f2 ==> k < k'))``,
+
+
+REPEAT STRIP_TAC THEN1 (
+   REWRITE_TAC [RED_BLACK_TREE___WEAK___THM]
+) THEN
+SIMP_TAC (std_ss++CONJ_ss) [RED_BLACK_TREE___WEAK_def, 
+   RED_BLACK_TREE___NODES_OK___REWRITE, GSYM LEFT_EXISTS_AND_THM,
+   GSYM RIGHT_EXISTS_AND_THM, BIN_SEARCH_TREE_BIN_REWRITE,
+   RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def] THEN
+REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+REPEAT STRIP_TAC THEN
+`RED_BLACK_TREE___PROP_NO_RED_RED___WEAK T t1 /\
+ RED_BLACK_TREE___PROP_NO_RED_RED___WEAK T t2` by ALL_TAC THEN1 (
+   IMP_RES_TAC RED_BLACK_TREE___NODES_OK___IMPLIES_NODE_LEAF THEN
+   ASM_SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK___EQ]
+) THEN
+ASM_SIMP_TAC std_ss [RED_BLACK_TREE___PROP_BLACK_BALANCED___REWRITE] THEN
+Cases_on `c = 1` THENL [
+   ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [],
+
+   `c = 0` by PROVE_TAC [IN_INSERT, NOT_IN_EMPTY] THEN
+   ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+   REPEAT STRIP_TAC THEN
+   DECIDE_TAC
+]);
+
+
+
+
+
+val PROGRAM_PRED___left_balance___no_change_case_def = Define `
+PROGRAM_PRED___left_balance___no_change_case (c:num) (t1:num list tree) t2 =
+  (~(c = 0) \/ ~(RED_BLACK_TREE___IS_RED t1) \/
+    (~(RED_BLACK_TREE___IS_RED t2) /\
+     ~(RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___LEFT_SUBTREE t1)) /\
+     ~(RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___RIGHT_SUBTREE t1))))`;
+
+
+val PROGRAM_PRED___left_balance___no_change_case_THM = prove (
+  ``PROGRAM_PRED___left_balance___no_change_case c t1 t2 ==>
+    (PROGRAM_FUN___left_balance (node [k;v;c] [t1;t2]) = (node [k;v;c] [t1;t2]))``,
+
+SIMP_TAC std_ss [PROGRAM_PRED___left_balance___no_change_case_def,
+   PROGRAM_FUN___left_balance_def] THEN
+Cases_on `c = 0` THEN ASM_REWRITE_TAC[] THEN
+Cases_on `RED_BLACK_TREE___IS_RED t1` THEN ASM_REWRITE_TAC[] THEN
+SIMP_TAC std_ss []);
+
+
+
+local    
+
+val left_balance_cases = prove (
+``!c:num t1 t2. 
+    (*Case color flip*)
+    ((c = 0) /\ (RED_BLACK_TREE___IS_RED t1) /\ (RED_BLACK_TREE___IS_RED t2)) \/
+
+    (*Case right rotate*)
+    ((c = 0) /\ (RED_BLACK_TREE___IS_RED t1) /\ ~(RED_BLACK_TREE___IS_RED t2) /\
+                (RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___LEFT_SUBTREE t1))) \/
+
+    (*Case double right rotate*)
+    ((c = 0:num) /\ (RED_BLACK_TREE___IS_RED t1) /\ ~(RED_BLACK_TREE___IS_RED t2) /\
+                ~(RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___LEFT_SUBTREE t1)) /\
+                 (RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___RIGHT_SUBTREE t1))) \/
+
+    (*Case no change *)
+    (PROGRAM_PRED___left_balance___no_change_case c t1 t2)``,
+METIS_TAC[PROGRAM_PRED___left_balance___no_change_case_def]);
+
+in
+
+fun PROGRAM_FUN___left_balance___CASES_TAC c t1 t2 =
+   FULL_STRUCT_CASES_TAC (Q.SPECL [c,t1,t2] left_balance_cases) THENL [
+      ASM_REWRITE_TAC[PROGRAM_FUN___left_balance_def],
+      ASM_REWRITE_TAC[PROGRAM_FUN___left_balance_def],
+      ASM_REWRITE_TAC[PROGRAM_FUN___left_balance_def],
+      ASM_SIMP_TAC std_ss [PROGRAM_PRED___left_balance___no_change_case_THM]];
+
+
+
+end;
+
+
+
+val RED_BLACK_TREE___WEAK___left_balance = prove (
+``!k v f k' v' n t1 t2.
+  RED_BLACK_TREE___WEAK n T (node [k'; v'; c'] [t1; t2]) f /\
+  (!f n. RED_BLACK_TREE___WEAK n T t1 f ==>
+         RED_BLACK_TREE___WEAK n (~(RED_BLACK_TREE___IS_RED t1)) t1' (f |+ (k,v))) /\
+  k < k' ==>
+
+  (RED_BLACK_TREE___WEAK n (~(c' = 1))
+  (PROGRAM_FUN___left_balance (node [k'; v'; c'] [t1'; t2]))
+  (f |+ (k,v)))``,
+
+
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK___REWRITE,
+   RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE] THEN
+Q.PAT_ASSUM `!f. X f` (MP_TAC o Q.SPECL [`f1`, `n'`]) THEN
+ASM_SIMP_TAC std_ss [] THEN
+STRIP_TAC THEN
+PROGRAM_FUN___left_balance___CASES_TAC `c'` `t1'` `t2` THENL [
+   (*color flip*)
+   NTAC 2 (POP_ASSUM MP_TAC) THEN
+   SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
+      PROGRAM_FUN___color_flip_def, GSYM LEFT_FORALL_IMP_THM, RED_BLACK_TREE___WEAK___THM,
+      tree_11] THEN   
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK___REWRITE, tree_11] THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___EVAL, tree_11,
+      GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
+      RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___REWRITE] THEN
+   FULL_SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND,
+       RED_BLACK_TREE___IS_RED_BLACK___EVAL] THEN
+   MAP_EVERY Q.EXISTS_TAC [`f1''`, `f2''`, `f1'`, `f2'`] THEN
+   Q.PAT_ASSUM `n' = X` ASSUME_TAC THEN
+   Q.PAT_ASSUM `f2 = X` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_ASSUM `f1 |+ (k,v) = X` (ASSUME_TAC o GSYM) THEN
+   FULL_SIMP_TAC std_ss [] THEN
+   REWRITE_TAC[IN_INSERT] THEN
+   REPEAT CONJ_TAC THENL [
+      `~(k = k')` by PROVE_TAC[prim_recTheory.LESS_REFL] THEN
+      SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [GSYM fmap_EQ_THM, FDOM_FUPDATE, FDOM_FUNION,
+         EXTENSION, IN_INSERT, IN_UNION] THEN
+      ASM_SIMP_TAC std_ss [DISJ_IMP_THM, FORALL_AND_THM, FAPPLY_FUPDATE_THM,
+        FUNION_DEF, FDOM_FUPDATE, IN_INSERT] THEN
+      METIS_TAC[],
+
+      ASM_SIMP_TAC std_ss [FDOM_FUPDATE, IN_INSERT, DISJ_IMP_THM]
+   ],
+
+
+   (*right rotate*)     
+   Q.PAT_ASSUM `RED_BLACK_TREE___IS_RED t1'` MP_TAC THEN
+   SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, GSYM LEFT_FORALL_IMP_THM,
+     PROGRAM_FUN___right_rotate_def, RED_BLACK_TREE___LEFT_SUBTREE_def] THEN
+   SIMP_TAC std_ss [RED_BLACK_TREE___WEAK___THM] THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK___REWRITE, tree_11,
+      GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
+      RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE,
+      RED_BLACK_TREE___IS_RED_BLACK___EVAL,
+      RED_BLACK_TREE___LEFT_SUBTREE_def,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___REWRITE,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND] THEN   
+   FULL_SIMP_TAC std_ss [] THEN
+   Q.PAT_ASSUM `n' = X` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_ASSUM `f = X` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_ASSUM `f1 |+ (k,v) = X` (ASSUME_TAC o GSYM) THEN
+   MAP_EVERY Q.EXISTS_TAC [`f1'`, `f2'`, `f2`] THEN
+   FULL_SIMP_TAC (std_ss++CONJ_ss) [] THEN
+   `!x. x IN FDOM (FUNION f1' f2' |+ (k'',v'')) ==> x < k'` by ALL_TAC THEN1 (
+      ASM_REWRITE_TAC[] THEN
+      ASM_SIMP_TAC std_ss [FDOM_FUPDATE, IN_INSERT, DISJ_IMP_THM]
+   ) THEN
+   FULL_SIMP_TAC arith_ss [FDOM_FUPDATE, FDOM_FUNION, IN_INSERT, IN_UNION,
+      DISJ_IMP_THM, FORALL_AND_THM, arithmeticTheory.GREATER_DEF] THEN
+   REPEAT STRIP_TAC THENL [
+      PROVE_TAC[prim_recTheory.LESS_REFL],
+      METIS_TAC[arithmeticTheory.LESS_ANTISYM],
+      METIS_TAC[arithmeticTheory.LESS_TRANS],
+
+      Q.PAT_ASSUM `X = f` (ASSUME_TAC o GSYM) THEN
+      Q.PAT_ASSUM `X = f1 |+ (k,v)` (ASSUME_TAC o GSYM) THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      `FUNION f1 f2 |+ (k',v') |+ (k,v) =
+       (FUNION (f1 |+ (k,v)) f2) |+ (k', v')` by ALL_TAC THEN1 (
+          SIMP_TAC std_ss [FUNION_FUPDATE_1] THEN
+          MATCH_MP_TAC FUPDATE_COMMUTES THEN
+          METIS_TAC[prim_recTheory.LESS_REFL]
+      ) THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      `~(k' IN FDOM f1')` by METIS_TAC[prim_recTheory.LESS_REFL] THEN
+      ASM_SIMP_TAC std_ss [FUNION_ASSOC, FUNION_FUPDATE_2,
+         FUNION_FUPDATE_1] THEN
+      MATCH_MP_TAC FUPDATE_COMMUTES THEN
+      METIS_TAC[prim_recTheory.LESS_REFL],
+
+      METIS_TAC[arithmeticTheory.LESS_TRANS]
+   ],
+
+
+   (*right double rotate*)     
+   Q.PAT_ASSUM `RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___RIGHT_SUBTREE t1')` MP_TAC THEN
+   Q.PAT_ASSUM `RED_BLACK_TREE___IS_RED t1'` MP_TAC THEN
+   SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, GSYM LEFT_FORALL_IMP_THM,
+     PROGRAM_FUN___right_double_rotate_REWRITE, RED_BLACK_TREE___LEFT_SUBTREE_def,
+     RED_BLACK_TREE___RIGHT_SUBTREE_def] THEN
+   SIMP_TAC std_ss [RED_BLACK_TREE___WEAK___THM] THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK___REWRITE, tree_11,
+      GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
+      RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE,
+      RED_BLACK_TREE___IS_RED_BLACK___EVAL,
+      RED_BLACK_TREE___LEFT_SUBTREE_def,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___REWRITE,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND] THEN   
+   FULL_SIMP_TAC std_ss [IN_INSERT, NOT_IN_EMPTY] THEN
+   Q.PAT_ASSUM `n' = X` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_ASSUM `f = X` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_ASSUM `f1 |+ (k,v) = X` (ASSUME_TAC o GSYM) THEN
+   MAP_EVERY Q.EXISTS_TAC [`f2'`, `f2`, `f1'`, `f1''`] THEN
+   FULL_SIMP_TAC (std_ss++CONJ_ss) [] THEN
+   `!x. x IN FDOM (FUNION f1' (FUNION f1'' f2' |+ (k''',v''')) |+ (k'',v'')) ==> x < k'` by ALL_TAC THEN1 (
+      ASM_REWRITE_TAC[] THEN
+      ASM_SIMP_TAC std_ss [FDOM_FUPDATE, IN_INSERT, DISJ_IMP_THM]
+   ) THEN
+   FULL_SIMP_TAC arith_ss [FDOM_FUPDATE, FDOM_FUNION, IN_INSERT, IN_UNION,
+      DISJ_IMP_THM, FORALL_AND_THM, arithmeticTheory.GREATER_DEF] THEN
+   REPEAT STRIP_TAC THENL [
+      METIS_TAC[arithmeticTheory.LESS_ANTISYM],
+      PROVE_TAC[prim_recTheory.LESS_REFL],
+      METIS_TAC[arithmeticTheory.LESS_ANTISYM],
+      METIS_TAC[arithmeticTheory.LESS_TRANS],
+
+      Q.PAT_ASSUM `X = f` (ASSUME_TAC o GSYM) THEN
+      Q.PAT_ASSUM `X = f1 |+ (k,v)` (ASSUME_TAC o GSYM) THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      `FUNION f1 f2 |+ (k',v') |+ (k,v) =
+       (FUNION (f1 |+ (k,v)) f2) |+ (k', v')` by ALL_TAC THEN1 (
+          SIMP_TAC std_ss [FUNION_FUPDATE_1] THEN
+          MATCH_MP_TAC FUPDATE_COMMUTES THEN
+          METIS_TAC[prim_recTheory.LESS_REFL]
+      ) THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      `~(k' IN FDOM f1') /\ ~(k' IN FDOM f1'') /\ ~(k''' IN FDOM f1')` by METIS_TAC[prim_recTheory.LESS_REFL] THEN
+      ASM_SIMP_TAC std_ss [FUNION_ASSOC, FUNION_FUPDATE_2,
+         FUNION_FUPDATE_1, FDOM_FUNION, IN_UNION] THEN
+      Tactical.REVERSE (`~(k''' = k') /\ ~(k''' = k'') /\ ~(k'' = k')` by ALL_TAC) THEN1 (
+          NTAC 3 (POP_ASSUM MP_TAC) THEN
+          REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+          METIS_TAC [FUPDATE_COMMUTES]
+      ) THEN
+      METIS_TAC[prim_recTheory.LESS_REFL, arithmeticTheory.LESS_TRANS],
+
+      METIS_TAC[arithmeticTheory.LESS_TRANS]
+   ],
+
+   
+   ASM_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK___THM] THEN
+   MAP_EVERY Q.EXISTS_TAC [`f1 |+ (k,v)`, `f2`, `n'`] THEN
+   FULL_SIMP_TAC std_ss [FDOM_FUPDATE,
+      FUNION_FUPDATE_1, RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND] THEN
+   ASM_SIMP_TAC std_ss [IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM] THEN
+   `IS_RED_BLACK_TREE_NODE t1'` by ALL_TAC THEN1 (
+       Q.PAT_ASSUM `RED_BLACK_TREE___WEAK n' X t1' Y` MP_TAC THEN
+       SIMP_TAC std_ss [RED_BLACK_TREE___WEAK_def] THEN
+       Cases_on `t1'` THEN (
+          SIMP_TAC std_ss [BIN_SEARCH_TREE_def, NOT_EQ_FEMPTY_FUPDATE, IS_LEAF_def]
+       ) THEN
+       REPEAT STRIP_TAC THEN
+       IMP_RES_TAC RED_BLACK_TREE___NODES_OK___IMPLIES_NODE_LEAF THEN
+       FULL_SIMP_TAC list_ss [IS_RED_BLACK_TREE_NODE_LEAF_def, tree_distinct, tree_11]
+   ) THEN
+   Q.PAT_ASSUM `RED_BLACK_TREE___WEAK n' X t1' Y` MP_TAC THEN
+   POP_ASSUM MP_TAC THEN
+   SIMP_TAC std_ss [RED_BLACK_TREE___WEAK_def,
+       IS_RED_BLACK_TREE_NODE_THM, GSYM LEFT_FORALL_IMP_THM] THEN
+   REPEAT GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [RED_BLACK_TREE___IS_RED_BLACK___EVAL,
+      RED_BLACK_TREE___LEFT_SUBTREE_def, RED_BLACK_TREE___RIGHT_SUBTREE_def,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___REWRITE,
+      RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE] THEN
+   FULL_SIMP_TAC (std_ss++CONJ_ss) [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START_def] THEN
+   Tactical.REVERSE CONJ_TAC THEN1 (
+      MATCH_MP_TAC FUPDATE_COMMUTES THEN
+      METIS_TAC[prim_recTheory.LESS_REFL]
+   ) THEN
+   STRIP_TAC THEN FULL_SIMP_TAC std_ss [] THEN
+   Q.PAT_ASSUM `PROGRAM_PRED___left_balance___no_change_case c' X Y` MP_TAC THEN
+   SIMP_TAC std_ss [PROGRAM_PRED___left_balance___no_change_case_def,
+      RED_BLACK_TREE___IS_RED_BLACK___EVAL, RED_BLACK_TREE___LEFT_SUBTREE_def,
+      RED_BLACK_TREE___RIGHT_SUBTREE_def, DISJ_IMP_THM] THEN
+   STRIP_TAC THEN 
+   `c' = 1` by METIS_TAC[IN_INSERT, NOT_IN_EMPTY] THEN
+   FULL_SIMP_TAC std_ss []
+]);
+
+
+
+
+val PROGRAM_PRED___right_balance___no_change_case_def = Define `
+PROGRAM_PRED___right_balance___no_change_case (c:num) (t1:num list tree) t2 =
+  (~(c = 0) \/ ~(RED_BLACK_TREE___IS_RED t2) \/
+    (~(RED_BLACK_TREE___IS_RED t1) /\
+     ~(RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___LEFT_SUBTREE t2)) /\
+     ~(RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___RIGHT_SUBTREE t2))))`;
+
+
+val PROGRAM_PRED___right_balance___no_change_case_THM = prove (
+  ``PROGRAM_PRED___right_balance___no_change_case c t1 t2 ==>
+    (PROGRAM_FUN___right_balance (node [k;v;c] [t1;t2]) = (node [k;v;c] [t1;t2]))``,
+
+SIMP_TAC std_ss [PROGRAM_PRED___right_balance___no_change_case_def,
+   PROGRAM_FUN___right_balance_def] THEN
+Cases_on `c = 0` THEN ASM_REWRITE_TAC[] THEN
+Cases_on `RED_BLACK_TREE___IS_RED t2` THEN ASM_REWRITE_TAC[] THEN
+SIMP_TAC std_ss []);
+
+
+
+local    
+
+val right_balance_cases = prove (
+``!c:num t1 t2. 
+    (*Case color flip*)
+    ((c = 0) /\ (RED_BLACK_TREE___IS_RED t2) /\ (RED_BLACK_TREE___IS_RED t1)) \/
+
+    (*Case right rotate*)
+    ((c = 0) /\ (RED_BLACK_TREE___IS_RED t2) /\ ~(RED_BLACK_TREE___IS_RED t1) /\
+                (RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___RIGHT_SUBTREE t2))) \/
+
+    (*Case double right rotate*)
+    ((c = 0:num) /\ (RED_BLACK_TREE___IS_RED t2) /\ ~(RED_BLACK_TREE___IS_RED t1) /\
+                ~(RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___RIGHT_SUBTREE t2)) /\
+                 (RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___LEFT_SUBTREE t2))) \/
+
+    (*Case no change *)
+    (PROGRAM_PRED___right_balance___no_change_case c t1 t2)``,
+METIS_TAC[PROGRAM_PRED___right_balance___no_change_case_def]);
+
+in
+
+fun PROGRAM_FUN___right_balance___CASES_TAC c t1 t2 =
+   FULL_STRUCT_CASES_TAC (Q.SPECL [c,t1,t2] right_balance_cases) THENL [
+      ASM_REWRITE_TAC[PROGRAM_FUN___right_balance_def],
+      ASM_REWRITE_TAC[PROGRAM_FUN___right_balance_def],
+      ASM_REWRITE_TAC[PROGRAM_FUN___right_balance_def],
+      ASM_SIMP_TAC std_ss [PROGRAM_PRED___right_balance___no_change_case_THM]];
+
+
+
+end;
+
+
+
+val RED_BLACK_TREE___WEAK___right_balance = prove (
+``!k v f k' v' n t1 t2 t2'.
+  RED_BLACK_TREE___WEAK n T (node [k'; v'; c'] [t1; t2]) f /\
+  (!f n. RED_BLACK_TREE___WEAK n T t2 f ==>
+         RED_BLACK_TREE___WEAK n (~(RED_BLACK_TREE___IS_RED t2)) t2' (f |+ (k,v))) /\
+  k' < k ==>
+
+  (RED_BLACK_TREE___WEAK n (~(c' = 1))
+  (PROGRAM_FUN___right_balance (node [k'; v'; c'] [t1; t2']))
+  (f |+ (k,v)))``,
+
+
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK___REWRITE,
+   RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE] THEN
+Q.PAT_ASSUM `!f. X f` (MP_TAC o Q.SPECL [`f2`, `n'`]) THEN
+ASM_SIMP_TAC std_ss [] THEN
+STRIP_TAC THEN
+PROGRAM_FUN___right_balance___CASES_TAC `c'` `t1` `t2'` THENL [
+   (*color flip*)
+   NTAC 2 (POP_ASSUM MP_TAC) THEN
+   SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
+      PROGRAM_FUN___color_flip_def, GSYM LEFT_FORALL_IMP_THM, RED_BLACK_TREE___WEAK___THM,
+      tree_11] THEN   
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK___REWRITE, tree_11] THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___EVAL, tree_11,
+      GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
+      RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___REWRITE] THEN
+   FULL_SIMP_TAC std_ss [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND,
+       RED_BLACK_TREE___IS_RED_BLACK___EVAL] THEN
+   MAP_EVERY Q.EXISTS_TAC [`f1'`, `f2'`,`f1''`, `f2''`] THEN
+   Q.PAT_ASSUM `n' = X` ASSUME_TAC THEN
+   Q.PAT_ASSUM `f1 = X` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_ASSUM `f2 |+ (k,v) = X` (ASSUME_TAC o GSYM) THEN 
+   FULL_SIMP_TAC std_ss [] THEN
+   REPEAT CONJ_TAC THENL [
+      `~(k IN FDOM f1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+      `~(k = k')` by PROVE_TAC[prim_recTheory.LESS_REFL] THEN
+      SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [GSYM fmap_EQ_THM, FDOM_FUPDATE, FDOM_FUNION,
+         EXTENSION, IN_INSERT, IN_UNION] THEN
+      ASM_SIMP_TAC std_ss [DISJ_IMP_THM, FORALL_AND_THM, FAPPLY_FUPDATE_THM,
+        FUNION_DEF, FDOM_FUPDATE, IN_INSERT] THEN
+      METIS_TAC[],
+
+     FULL_SIMP_TAC std_ss [FDOM_FUPDATE, IN_INSERT, DISJ_IMP_THM, arithmeticTheory.GREATER_DEF]
+   ],
+
+
+   (*left rotate*)     
+   Q.PAT_ASSUM `RED_BLACK_TREE___IS_RED t2'` MP_TAC THEN
+   SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, GSYM LEFT_FORALL_IMP_THM,
+     PROGRAM_FUN___left_rotate_def, RED_BLACK_TREE___RIGHT_SUBTREE_def] THEN
+   SIMP_TAC std_ss [RED_BLACK_TREE___WEAK___THM] THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK___REWRITE, tree_11,
+      GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
+      RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE,
+      RED_BLACK_TREE___IS_RED_BLACK___EVAL,
+      RED_BLACK_TREE___RIGHT_SUBTREE_def,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___REWRITE,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND] THEN   
+   FULL_SIMP_TAC std_ss [] THEN
+   Q.PAT_ASSUM `n' = X` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_ASSUM `f = X` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_ASSUM `f2 |+ (k,v) = X` (ASSUME_TAC o GSYM) THEN
+   MAP_EVERY Q.EXISTS_TAC [`f2'`, `f1`, `f1'`] THEN
+   FULL_SIMP_TAC (std_ss++CONJ_ss) [] THEN
+   `!x. x IN FDOM (FUNION f1' f2' |+ (k'',v'')) ==> x > k'` by ALL_TAC THEN1 (
+      ASM_REWRITE_TAC[] THEN
+      ASM_SIMP_TAC arith_ss [FDOM_FUPDATE, IN_INSERT, DISJ_IMP_THM]
+   ) THEN
+   FULL_SIMP_TAC arith_ss [FDOM_FUPDATE, FDOM_FUNION, IN_INSERT, IN_UNION,
+      DISJ_IMP_THM, FORALL_AND_THM, arithmeticTheory.GREATER_DEF] THEN
+   REPEAT STRIP_TAC THENL [
+      PROVE_TAC[prim_recTheory.LESS_REFL],
+      METIS_TAC[arithmeticTheory.LESS_ANTISYM],
+      METIS_TAC[arithmeticTheory.LESS_TRANS],
+
+      Q.PAT_ASSUM `X = f` (ASSUME_TAC o GSYM) THEN
+      Q.PAT_ASSUM `X = f2 |+ (k,v)` (ASSUME_TAC o GSYM) THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      `~(k IN FDOM f1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+      `FUNION f1 f2 |+ (k',v') |+ (k,v) =
+       (FUNION f1 (f2 |+ (k,v))) |+ (k', v')` by ALL_TAC THEN1 (
+          ASM_SIMP_TAC std_ss [FUNION_FUPDATE_2] THEN
+          MATCH_MP_TAC FUPDATE_COMMUTES THEN
+          METIS_TAC[prim_recTheory.LESS_REFL]
+      ) THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      `~(k'' IN FDOM f1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+      ASM_SIMP_TAC std_ss [GSYM FUNION_ASSOC, FUNION_FUPDATE_2,
+         FUNION_FUPDATE_1] THEN
+      MATCH_MP_TAC FUPDATE_COMMUTES THEN
+      METIS_TAC[prim_recTheory.LESS_REFL],
+
+      METIS_TAC[arithmeticTheory.LESS_TRANS]
+   ],
+
+
+   (*left double rotate*)     
+   Q.PAT_ASSUM `RED_BLACK_TREE___IS_RED (RED_BLACK_TREE___LEFT_SUBTREE t2')` MP_TAC THEN
+   Q.PAT_ASSUM `RED_BLACK_TREE___IS_RED t2'` MP_TAC THEN
+   SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, GSYM LEFT_FORALL_IMP_THM,
+     PROGRAM_FUN___left_double_rotate_REWRITE, RED_BLACK_TREE___LEFT_SUBTREE_def,
+     RED_BLACK_TREE___RIGHT_SUBTREE_def] THEN
+   SIMP_TAC std_ss [RED_BLACK_TREE___WEAK___THM] THEN
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK___REWRITE, tree_11,
+      GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
+      RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE,
+      RED_BLACK_TREE___IS_RED_BLACK___EVAL,
+      RED_BLACK_TREE___RIGHT_SUBTREE_def,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___REWRITE,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND] THEN   
+   FULL_SIMP_TAC std_ss [IN_INSERT, NOT_IN_EMPTY] THEN
+   Q.PAT_ASSUM `n' = X` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_ASSUM `f = X` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_ASSUM `f2 |+ (k,v) = X` (ASSUME_TAC o GSYM) THEN
+   FULL_SIMP_TAC std_ss [] THEN
+   MAP_EVERY Q.EXISTS_TAC [`f2''`, `f2'`, `f1`, `f1'`] THEN
+   FULL_SIMP_TAC (std_ss++CONJ_ss) [] THEN
+   `!x. x IN FDOM (FUNION (FUNION f1' f2'' |+ (k''',v''')) f2' |+ (k'',v'')) ==> k' < x` by ALL_TAC THEN1 (
+      ASM_REWRITE_TAC[] THEN
+      FULL_SIMP_TAC std_ss [FDOM_FUPDATE, IN_INSERT, DISJ_IMP_THM, arithmeticTheory.GREATER_DEF, 
+         FORALL_AND_THM]
+   ) THEN
+   FULL_SIMP_TAC arith_ss [FDOM_FUPDATE, FDOM_FUNION, IN_INSERT, IN_UNION,
+      DISJ_IMP_THM, FORALL_AND_THM, arithmeticTheory.GREATER_DEF] THEN
+   REPEAT STRIP_TAC THENL [
+      METIS_TAC[arithmeticTheory.LESS_ANTISYM],
+      METIS_TAC[arithmeticTheory.LESS_ANTISYM],
+      METIS_TAC[arithmeticTheory.LESS_TRANS],
+      METIS_TAC[arithmeticTheory.LESS_ANTISYM],
+
+      Q.PAT_ASSUM `X = f` (ASSUME_TAC o GSYM) THEN
+      Q.PAT_ASSUM `X = f2 |+ (k,v)` (ASSUME_TAC o GSYM) THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      `FUNION f1 f2 |+ (k',v') |+ (k,v) =
+       (FUNION f1 (f2 |+ (k,v))) |+ (k', v')` by ALL_TAC THEN1 (
+          `~(k IN FDOM f1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+          ASM_SIMP_TAC std_ss [FUNION_FUPDATE_2] THEN
+          MATCH_MP_TAC FUPDATE_COMMUTES THEN
+          METIS_TAC[prim_recTheory.LESS_REFL]
+      ) THEN
+      ASM_SIMP_TAC std_ss [] THEN
+      `~(k'' IN FDOM f1) /\ ~(k''' IN FDOM f1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+      ASM_SIMP_TAC std_ss [FUNION_ASSOC, FUNION_FUPDATE_2,
+         FUNION_FUPDATE_1, FDOM_FUNION, IN_UNION] THEN
+      Tactical.REVERSE (`~(k''' = k') /\ ~(k''' = k'') /\ ~(k'' = k')` by ALL_TAC) THEN1 (
+          NTAC 3 (POP_ASSUM MP_TAC) THEN
+          REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+          METIS_TAC [FUPDATE_COMMUTES]
+      ) THEN
+      METIS_TAC[prim_recTheory.LESS_REFL, arithmeticTheory.LESS_TRANS],
+
+      METIS_TAC[arithmeticTheory.LESS_TRANS]
+   ],
+
+ 
+   (* no change *)  
+   ASM_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK___THM] THEN
+   MAP_EVERY Q.EXISTS_TAC [`f1`, `f2 |+ (k,v)`, `n'`] THEN
+   FULL_SIMP_TAC std_ss [FDOM_FUPDATE,
+      FUNION_FUPDATE_1, RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND] THEN
+   ASM_SIMP_TAC std_ss [IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM] THEN
+   `IS_RED_BLACK_TREE_NODE t2'` by ALL_TAC THEN1 (
+       Q.PAT_ASSUM `RED_BLACK_TREE___WEAK n' X t2' Y` MP_TAC THEN
+       SIMP_TAC std_ss [RED_BLACK_TREE___WEAK_def] THEN
+       Cases_on `t2'` THEN (
+          SIMP_TAC std_ss [BIN_SEARCH_TREE_def, NOT_EQ_FEMPTY_FUPDATE, IS_LEAF_def]
+       ) THEN
+       REPEAT STRIP_TAC THEN
+       IMP_RES_TAC RED_BLACK_TREE___NODES_OK___IMPLIES_NODE_LEAF THEN
+       FULL_SIMP_TAC list_ss [IS_RED_BLACK_TREE_NODE_LEAF_def, tree_distinct, tree_11]
+   ) THEN
+   Q.PAT_ASSUM `RED_BLACK_TREE___WEAK n' X t2' Y` MP_TAC THEN
+   POP_ASSUM MP_TAC THEN
+   SIMP_TAC std_ss [RED_BLACK_TREE___WEAK_def,
+       IS_RED_BLACK_TREE_NODE_THM, GSYM LEFT_FORALL_IMP_THM] THEN
+   REPEAT GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [RED_BLACK_TREE___IS_RED_BLACK___EVAL,
+      RED_BLACK_TREE___LEFT_SUBTREE_def, RED_BLACK_TREE___RIGHT_SUBTREE_def,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_def,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___EXPAND,
+      RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START___REWRITE,
+      RED_BLACK_TREE___PROP_NO_RED_RED___REWRITE] THEN
+   FULL_SIMP_TAC (std_ss++CONJ_ss) [RED_BLACK_TREE___PROP_NO_RED_RED___WEAK_START_def,
+       arithmeticTheory.GREATER_DEF] THEN
+   Tactical.REVERSE CONJ_TAC THEN1 (
+      `~(k IN FDOM f1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN     
+      ASM_SIMP_TAC std_ss [FUNION_FUPDATE_2] THEN
+      MATCH_MP_TAC FUPDATE_COMMUTES THEN
+      METIS_TAC[prim_recTheory.LESS_REFL]
+   ) THEN
+   STRIP_TAC THEN FULL_SIMP_TAC std_ss [] THEN
+   Q.PAT_ASSUM `PROGRAM_PRED___right_balance___no_change_case c' X Y` MP_TAC THEN
+   SIMP_TAC std_ss [PROGRAM_PRED___right_balance___no_change_case_def,
+      RED_BLACK_TREE___IS_RED_BLACK___EVAL, RED_BLACK_TREE___LEFT_SUBTREE_def,
+      RED_BLACK_TREE___RIGHT_SUBTREE_def, DISJ_IMP_THM] THEN
+   STRIP_TAC THEN 
+   `c' = 1` by METIS_TAC[IN_INSERT, NOT_IN_EMPTY] THEN
+   FULL_SIMP_TAC std_ss []
+]);
+
+
+
+val RED_BLACK_TREE___WEAK___insert_r = prove (
+``!k v t f n.
+RED_BLACK_TREE___WEAK n T t f ==>
+RED_BLACK_TREE___WEAK n (~(RED_BLACK_TREE___IS_RED t)) (PROGRAM_FUN___insert_r t k v) (f |+ (k,v))``,
+
+NTAC 2 GEN_TAC THEN 
+HO_MATCH_MP_TAC tree_INDUCT THEN
+REPEAT STRIP_TAC THEN1 (
+   `(f = FEMPTY) /\ (n = 0)` by FULL_SIMP_TAC std_ss [RED_BLACK_TREE___WEAK_def, BIN_SEARCH_TREE_BIN_THM,
+      RED_BLACK_TREE___PROP_BLACK_BALANCED___REWRITE] THEN
+   ASM_SIMP_TAC list_ss [PROGRAM_FUN___insert_r_def, RED_BLACK_TREE___WEAK___mk_node, RED_BLACK_TREE___IS_RED_def]
+) THEN
+REPEAT STRIP_TAC THEN
+`?k' v' c' t1 t2. (n = [k';v';c']) /\ (c' IN {0;1}) /\ (tL = [t1;t2])` by ALL_TAC THEN1 (
+   FULL_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK_def,
+       RED_BLACK_TREE___NODES_OK___REWRITE]
+) THEN
+FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_def] THEN
+Cases_on `k = k'` THEN1 (
+   ASM_SIMP_TAC std_ss [PROGRAM_FUN___insert_r_def] THEN
+   MATCH_MP_TAC RED_BLACK_TREE___WEAK___WEAKEN THEN
+   METIS_TAC[RED_BLACK_TREE___WEAK___UPDATE_VALUE]
+) THEN 
+Cases_on `k < k'` THENL [
+   ASM_SIMP_TAC std_ss [PROGRAM_FUN___insert_r_def] THEN
+   METIS_TAC[RED_BLACK_TREE___WEAK___left_balance],
+
+
+   ASM_SIMP_TAC std_ss [PROGRAM_FUN___insert_r_def] THEN
+   `k' < k` by DECIDE_TAC THEN
+   METIS_TAC[RED_BLACK_TREE___WEAK___right_balance]
+]);
+
+
+
+
+
+
+
+
+(******************************************************************************)
+(******************************************************************************)
+(******************************************************************************)
+(*                                                                            *)
+(* Finally all the lemmas about red-black trees are there to verify insert    *)
+(*                                                                            *)
+(******************************************************************************)
+(******************************************************************************)
+(******************************************************************************)
+
+(* holfoot_set_goal_procedures file ["rb_tree_insert"] *)
+val rb_tree_insert_TAC =
+   HF_VC_SOLVE_TAC THEN
+   CONJ_TAC THEN1 (
+      HF_ELIM_COMMENTS_TAC THEN
+      SIMP_TAC std_ss [RED_BLACK_TREE_def, PROGRAM_PRED___can_insert_r_def]
+   ) THEN
+   REPEAT STRIP_TAC THEN
+   `?n. RED_BLACK_TREE___WEAK n T (PROGRAM_FUN___insert_r data k_const' v_const') (f |+ (k_const',v_const'))` by ALL_TAC THEN1 (
+       FULL_SIMP_TAC std_ss [RED_BLACK_TREE___WEAK___EQ] THEN 
+       Q.EXISTS_TAC `n` THEN
+       IMP_RES_TAC RED_BLACK_TREE___WEAK___insert_r THEN
+       `~(RED_BLACK_TREE___IS_RED data)` by ALL_TAC THEN1 (
+           Cases_on `data` THEN
+           FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, tree_11, tree_distinct]
+       ) THEN
+       FULL_SIMP_TAC std_ss []
+   ) THEN
+   `?k v c t1 t2. (PROGRAM_FUN___insert_r data k_const' v_const' = node [k; v; c] [t1;t2])` by ALL_TAC THEN1 (
+      Cases_on `PROGRAM_FUN___insert_r data k_const' v_const'` THEN
+      FULL_SIMP_TAC list_ss [RED_BLACK_TREE___WEAK_def,
+         BIN_SEARCH_TREE_def, NOT_EQ_FEMPTY_FUPDATE, tree_11,
+         RED_BLACK_TREE___NODES_OK___REWRITE]
+   ) THEN
+   HF_VC_SOLVE_TAC THEN
+   `(node [k'; v'; 0] [t1; t2]) = RED_BLACK_TREE___MAKE_BLACK 
+       (PROGRAM_FUN___insert_r data k_const' v_const')` by ALL_TAC THEN1 (
+      ASM_SIMP_TAC std_ss [RED_BLACK_TREE___MAKE_BLACK_def]
+   ) THEN
+   HF_ELIM_COMMENTS_TAC THEN
+   METIS_TAC[RED_BLACK_TREE___MAKE_BLACK_THM]
+   
+
+
+(******************************************************************************)
+(* Put everything together                                                    *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/red_black_tree.dsf"];
+
+val spec_thm = holfoot_tac_verify_spec file NONE 
+    [("rb_tree_init",                    rb_tree_init_TAC),
+     ("rb_tree_mk_node",                 rb_tree_mk_node_TAC),
+     ("rb_tree_is_red",                  rb_tree_is_red_TAC),
+     ("rb_tree_left_rotate",             rb_tree_left_rotate_TAC),
+     ("rb_tree_right_rotate",            rb_tree_right_rotate_TAC),
+     ("rb_tree_left_double_rotate",      rb_tree_left_double_rotate_TAC), 
+     ("rb_tree_right_double_rotate",     rb_tree_right_double_rotate_TAC),
+     ("rb_tree_color_flip",              rb_tree_color_flip_TAC),
+     ("rb_tree_left_balance",            rb_tree_left_balance_TAC),
+     ("rb_tree_right_balance",           rb_tree_right_balance_TAC),
+     ("rb_tree_insert_r",                rb_tree_insert_r_TAC),
+     ("rb_tree_insert",                  rb_tree_insert_TAC),
+     ("rb_tree_lookup",                  rb_tree_lookup_TAC)]
+
+
+
+

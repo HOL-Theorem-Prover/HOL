@@ -1,0 +1,142 @@
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+
+(******************************************************************************)
+(* Some useful REWRITES                                                       *)
+(******************************************************************************)
+
+open sortingTheory sortingTheory
+
+val SORTED_CONS_IMP = prove (``!R x xs.
+  (SORTED R (x::xs) ==> SORTED R xs)``,
+Cases_on `xs` THEN SIMP_TAC list_ss [SORTED_DEF])
+
+val transitive_LE = prove (``transitive (($<=): num -> num -> bool)``,
+SIMP_TAC arith_ss [relationTheory.transitive_def]);
+
+val LESS_LESS_EQ2 = prove (``!n1 n2 n3:num. (n1 < n2 /\ n2 <= n3) ==> (n1 <= n3)``,
+DECIDE_TAC)
+val LESS_LESS_EQ3 = prove (``!n1 n2 n3:num. (~(n1 < n2) /\ n1 <= n3) ==> (n2 <= n3)``,
+DECIDE_TAC)
+
+
+(******************************************************************************)
+(* Parse the main file                                                        *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/mergesort.dsf"];
+val spec_t = parse_holfoot_file file
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+(* -------------------------------------------------------------------------- *)
+(* do it all in one go, all manually                                          *)
+(* -------------------------------------------------------------------------- *)
+
+val mergesort_TAC_0 =    
+   HF_ELIM_COMMENTS_TAC THEN
+   REPEAT STRIP_TAC THEN
+   Q.PAT_ASSUM `PERM X rdata'''` (
+      ASSUME_TAC o (CONV_RULE (REWR_CONV PERM_SYM))) THEN
+   ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [];
+
+val merge_TAC_0 = 
+HF_ELIM_COMMENTS_TAC THEN
+REPEAT STRIP_TAC THENL [
+   IMP_RES_TAC SORTED_CONS_IMP,
+
+   FULL_SIMP_TAC arith_ss [SORTED_EQ, transitive_LE] THEN
+   `!y. MEM y rdata = MEM y (pdata_h::(pdata_t ++ qdata_t))` by
+      METIS_TAC[PERM_MEM_EQ] THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   REPEAT STRIP_TAC THEN
+   RES_TAC THEN
+   DECIDE_TAC,
+
+   IMP_RES_TAC SORTED_CONS_IMP,
+
+   FULL_SIMP_TAC arith_ss [SORTED_EQ, transitive_LE] THEN
+   `!y. MEM y rdata = MEM y (qdata_h::(pdata_t ++ qdata_t))` by
+      METIS_TAC[PERM_MEM_EQ] THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   REPEAT STRIP_TAC THEN
+   RES_TAC THEN
+   DECIDE_TAC
+]
+
+val mergesort_VC_TAC = CONJ_TAC THENL [merge_TAC_0, mergesort_TAC_0]
+
+val mergesort_gen_step_opt = combined_gen_step_tac_opt [
+    add_rewrites [SORTED_DEF, PERM_REFL],
+    add_ssfrags [permLib.PERM_ss] ]
+
+(* set_goal ([], spec_t) *)
+val spec_thm = prove (spec_t, 
+xHF_CONTINUE_TAC [generate_vcs, mergesort_gen_step_opt ] THEN
+mergesort_VC_TAC)
+
+(* -------------------------------------------------------------------------- *)
+(* an alternative is to use the tools as far as possible and then use         *)
+(* custom proofs to get rid of remaining conditions                           *)
+(* -------------------------------------------------------------------------- *)
+
+val imp_thm = holfoot_verify_spec file
+                [careful, generate_vcs, mergesort_gen_step_opt]
+val spec_thm = holfoot_prove_remaining (imp_thm, 
+   mergesort_VC_TAC);
+
+(* -------------------------------------------------------------------------- *)
+(* yet another way is to do is procedure-wise                                 *)
+(* -------------------------------------------------------------------------- *)
+
+(* holfoot_set_goal_procedures file ["mergesort"] *)
+val mergesort_TAC =
+   xHF_CONTINUE_TAC [mergesort_gen_step_opt, generate_vcs] THEN   
+   mergesort_TAC_0;
+
+(*use the tool to do as before, but now provide own tactic for
+  procedure mergesort*)
+val imp_thm = holfoot_tac_verify_spec file
+                (SOME [careful, generate_vcs, mergesort_gen_step_opt])
+                [("mergesort", mergesort_TAC)]
+
+(*perhaps you don't want a default behaviour, just do nothing, if no
+  custom tactic is provided *)
+val imp_thm = holfoot_tac_verify_spec file NONE
+                [("mergesort", mergesort_TAC)]
+
+(*lets add the other two procedures*)
+
+(* holfoot_set_goal_procedures file ["merge"] *)
+val merge_TAC =
+   xHF_CONTINUE_TAC [mergesort_gen_step_opt, generate_vcs] THEN
+   merge_TAC_0;
+
+(* holfoot_set_goal_procedures file ["split"] *)
+val split_TAC = xHF_CONTINUE_TAC [mergesort_gen_step_opt]
+
+val imp_thm = holfoot_tac_verify_spec file NONE
+                [("mergesort", mergesort_TAC),
+                 ("merge",     merge_TAC),
+                 ("split",     split_TAC)]
+
+
+(******************************************************************************)
+(* try the parallel one                                                       *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/mergesort_parallel.dsf"];
+
+(*exactly the same proof works, for convinience copied from above*)
+val imp_thm = holfoot_tac_verify_spec file NONE
+                [("mergesort", mergesort_TAC),
+                 ("merge",     merge_TAC),
+                 ("split",     split_TAC)]
+
+(*perhaps more quiet ?*)
+val imp_thm = holfoot_interactive_verify_spec false false file NONE
+                [("mergesort", mergesort_TAC),
+                 ("merge",     merge_TAC),
+                 ("split",     split_TAC)]

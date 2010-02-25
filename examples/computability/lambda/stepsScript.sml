@@ -83,4 +83,9 @@ val steps_plus = store_thm(
     SRW_TAC [][steps_noreduct]
   ]);
 
+val bnf_steps_fixpoint = store_thm(
+  "bnf_steps_fixpoint",
+  ``bnf M ⇒ (steps n M = M)``,
+  METIS_TAC [bnf_steps_upwards_closed, DECIDE ``0 < n ∨ (n = 0)``, steps_def]);
+
 val _ = export_theory ()

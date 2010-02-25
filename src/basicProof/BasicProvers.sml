@@ -423,49 +423,33 @@ val Abbr = markerSyntax.Abbr
        Make some additions to the srw_ss persistent
  ---------------------------------------------------------------------------*)
 
-val exports = ref ([] : string list)
+open LoadableThyData
+val (mk,dest) = ThmSetData.new "simp"
 
-fun setup_exports (oldname, thyname) = let
-  val rwts_name = thyname ^ "_rwts"
-  fun print_sig pps =
-      if not (null (!exports)) then
-        Portable.add_string pps ("val "^rwts_name^" : simpLib.ssfrag")
-      else ()
-  fun print_export pps =
-      if not (null (!exports)) then let
-          open Portable
-          val {add_string, add_break, begin_block, end_block,add_newline,...} =
-              with_ppstream pps
-        in
-          add_string ("val "^rwts_name^" = simpLib.named_rewrites "
-                           ^Lib.quote rwts_name^" [");
-          add_break(0,10);
-          begin_block INCONSISTENT 0;
-          pr_list add_string (fn () => add_string ",")
-                  (fn () => add_break(1,0)) (!exports);
-          end_block();
-          add_string "];";
-          add_newline();
-          add_string ("val _ = BasicProvers.augment_srw_ss ["^rwts_name^"]\n")
-        end
-      else ()
-in
-  if not (null (!exports)) andalso thyname <> oldname then
-    HOL_WARNING "BasicProvers" "setup_exports"
-                ("\"new_theory\" is throwing away rewrite exports for "^
-                 "theory "^Lib.quote oldname)
-  else ();
-  exports := [];
-  adjoin_to_theory {sig_ps = SOME print_sig, struct_ps = SOME print_export}
-end
+val thy_ssfrags = ref (Binarymap.mkDict String.compare)
 
-val _ = Theory.after_new_theory setup_exports
+fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
+
+fun onload thyname =
+    case segment_data {thy = thyname, thydataty = "simp"} of
+      NONE => ()
+    | SOME d => let
+        val thmset = valOf (dest d)
+        val ssfrag = simpLib.named_rewrites thyname (map #2 thmset)
+      in
+        thy_ssfrags := Binarymap.insert(!thy_ssfrags, thyname, ssfrag);
+        augment_srw_ss [ssfrag]
+      end
+val _ = register_onload onload
+
+val _ = List.app onload (ancestry "-")
 
 fun export_rewrites slist = let
+  val (data, namedthms) = mk slist
+  val thms = map #2 namedthms
 in
-  exports := !exports @ slist;
-  augment_srw_ss [simpLib.named_rewrites (current_theory())
-                                         (map (DB.fetch "-") slist)]
+  augment_srw_ss [simpLib.named_rewrites (current_theory()) thms];
+  write_data_update {thydataty = "simp", data = data}
 end
 
 end

@@ -172,9 +172,19 @@ fun drop_Axkind (Axiom rth) = rth
  * Also lacks a field for the theory graph, which is held in Graph.          *
  *---------------------------------------------------------------------------*)
 
+datatype thydata = Loaded of UniversalType.t
+                 | Pending of string list
+type ThyDataMap = (string,thydata)Binarymap.dict
+                  (* map from string identifying the "type" of the data,
+                     e.g., "simp", "mono", "cong", "grammar_update",
+                     "LaTeX map", to the data itself. *)
+val empty_datamap : ThyDataMap = Binarymap.mkDict String.compare
+
+
 type segment = {thid  : thyid,                                 (* unique id  *)
                 facts : (string * thmkind) list,    (* stored ax,def,and thm *)
                 con_wrt_disk : bool,                (* consistency with disk *)
+                thydata : ThyDataMap,                   (* extra theory data *)
                 adjoin       : thy_addon list}         (*  extras for export *)
 
 
@@ -187,7 +197,8 @@ type segment = {thid  : thyid,                                 (* unique id  *)
  *---------------------------------------------------------------------------*)
 
 fun fresh_segment s :segment =
-   {thid=new_thyid s,  facts=[], con_wrt_disk=false, adjoin=[]};
+   {thid=new_thyid s,  facts=[], con_wrt_disk=false, adjoin=[],
+    thydata = empty_datamap};
 
 
 local val CT = ref (fresh_segment "scratch")
@@ -288,14 +299,16 @@ local fun pluck1 x L =
               of Thm _ => (p::l', false)
                |  _    => (p::l', true))
 in
-fun add_fact (th as (s,_)) {thid, con_wrt_disk,facts,adjoin}
+fun add_fact (th as (s,_)) {thid, con_wrt_disk,facts,adjoin, thydata}
   = let val (X,b) = overwrite th facts
-    in {facts=X, thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin}
+    in {facts=X, thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
+        thydata=thydata}
     end
 end;
 
-fun new_addon a {thid, con_wrt_disk, facts, adjoin} =
-    {adjoin = a::adjoin, facts=facts, thid=thid, con_wrt_disk=con_wrt_disk};
+fun new_addon a {thid, con_wrt_disk, facts, adjoin, thydata} =
+    {adjoin = a::adjoin, facts=facts, thid=thid, con_wrt_disk=con_wrt_disk,
+     thydata = thydata};
 
 local fun plucky x L =
        let fun get [] A = NONE
@@ -304,13 +317,13 @@ local fun plucky x L =
        in get L []
        end
 in
-fun set_MLbind (s1,s2) (rcd as {thid, con_wrt_disk,facts, adjoin})
+fun set_MLbind (s1,s2) (rcd as {thid, con_wrt_disk,facts, adjoin, thydata})
  = case plucky s1 facts
    of NONE => (WARN "set_MLbind"
                (Lib.quote s1^" not found in current theory"); rcd)
     | SOME (X,(_,b),Y) =>
         {facts=X@((s2,b)::Y), adjoin=adjoin,thid=thid,
-         con_wrt_disk=con_wrt_disk}
+         con_wrt_disk=con_wrt_disk, thydata = thydata}
 end;
 
 (*---------------------------------------------------------------------------
@@ -339,9 +352,9 @@ in
   thy
 end
 
-fun del_binding name {thid,facts,con_wrt_disk,adjoin} =
+fun del_binding name {thid,facts,con_wrt_disk,adjoin,thydata} =
   {facts = filter (fn (s, _) => not(s=name)) facts,
-   thid=thid, adjoin=adjoin, con_wrt_disk=con_wrt_disk};
+   thid=thid, adjoin=adjoin, con_wrt_disk=con_wrt_disk,thydata=thydata};
 
 (*---------------------------------------------------------------------------
    Clean out the segment. Note: this clears out the segment, and the
@@ -349,14 +362,15 @@ fun del_binding name {thid,facts,con_wrt_disk,adjoin} =
    still be there, with its parents.
  ---------------------------------------------------------------------------*)
 
-fun zap_segment s {thid, con_wrt_disk, facts, adjoin} =
+fun zap_segment s {thid, con_wrt_disk, facts, adjoin, thydata} =
  let val _ = KernelSig.del_segment(Type.typesig, s)
      val _ = KernelSig.del_segment(Term.termsig, s)
- in {adjoin=[], facts=[], con_wrt_disk=con_wrt_disk, thid=thid}
+ in {adjoin=[], facts=[], con_wrt_disk=con_wrt_disk, thid=thid,
+     thydata = empty_datamap}
  end;
 
-fun set_consistency b {thid, con_wrt_disk, facts, adjoin} =
-{con_wrt_disk=b, thid=thid,facts=facts, adjoin=adjoin}
+fun set_consistency b {thid, con_wrt_disk, facts, adjoin, thydata} =
+{con_wrt_disk=b, thid=thid,facts=facts, adjoin=adjoin, thydata=thydata}
 ;
 
 (*---------------------------------------------------------------------------
@@ -522,29 +536,30 @@ fun scrub_sig () =
       KernelSig.app (appthis termsig) termsig
     end
 
-fun scrub_ax {thid,con_wrt_disk,facts,adjoin} =
+fun scrub_ax {thid,con_wrt_disk,facts,adjoin,thydata} =
     let fun check (_, Thm _ ) = true
           | check (_, Defn _) = true
           | check (_, Axiom(_,th)) = uptodate_term (Thm.concl th)
     in
       {thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-       facts=Lib.gather check facts}
+       facts=Lib.gather check facts, thydata=thydata}
     end
 
-fun scrub_thms {thid,con_wrt_disk,facts,adjoin} =
+fun scrub_thms {thid,con_wrt_disk,facts,adjoin, thydata} =
     let fun check (_, Axiom _) = true
           | check (_, Thm th ) = uptodate_thm th
           | check (_, Defn th) = uptodate_thm th
     in {thid=thid, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-        facts=Lib.gather check facts}
+        facts=Lib.gather check facts, thydata=thydata}
     end
 
 fun scrub () = let
   val  _  = scrub_sig ()
-  val {thid,con_wrt_disk,facts,adjoin} =
+  val {thid,con_wrt_disk,facts,adjoin,thydata} =
       scrub_thms (scrub_ax (theCT()))
 in
-  makeCT {thid=thid, con_wrt_disk=con_wrt_disk, facts=facts, adjoin=adjoin}
+  makeCT {thid=thid, con_wrt_disk=con_wrt_disk, facts=facts, adjoin=adjoin,
+          thydata = thydata}
 end
 
 fun scrubCT() = (scrub(); theCT());
@@ -643,6 +658,154 @@ fun incorporate_consts thy consts =
   end;
 
 
+(* ----------------------------------------------------------------------
+    Theory data functions
+
+    In addition to the data in the current segment, we want to track the data
+    associated with all previous segments.  We do this with another reference
+    variable (yuck).
+   ---------------------------------------------------------------------- *)
+
+structure LoadableThyData =
+struct
+
+  type t = UniversalType.t
+  type DataOps = {merge : t * t -> t, read : string -> t option,
+                  write : t -> string}
+  val allthydata = ref (Binarymap.mkDict String.compare :
+                        (string, ThyDataMap) Binarymap.dict)
+  val dataops = ref (Binarymap.mkDict String.compare :
+                     (string,DataOps) Binarymap.dict)
+
+  fun ThyMap() = let
+    val {thydata,thid,...} = theCT()
+    val nm = thyid_name thid
+  in
+    Binarymap.insert(!allthydata, nm, thydata)
+  end
+
+  fun segment_data {thy,thydataty} =
+      case Binarymap.peek(ThyMap(), thy) of
+        NONE => NONE
+      | SOME dmap => let
+        in
+          case Binarymap.peek(dmap, thydataty) of
+            NONE => NONE
+          | SOME (Loaded value) => SOME value
+          | SOME (Pending _) => raise ERR "segment_data"
+                                          "Can't interpret pending loads"
+        end
+
+fun write_data_update {thydataty,data} =
+    case Binarymap.peek(!dataops, thydataty) of
+      NONE => raise ERR "write_data_update"
+                        ("No operations defined for "^thydataty)
+    | SOME {merge,read,write} => let
+        val {thydata,thid,adjoin,facts,con_wrt_disk} = theCT()
+        open Binarymap
+        fun updatemap inmap = let
+          val newdata =
+              case peek(inmap, thydataty) of
+                NONE => Loaded data
+              | SOME (Loaded t) => Loaded (merge(t, data))
+              | SOME (Pending ds) =>
+                  raise Fail "write_data_update invariant failure"
+        in
+          insert(inmap,thydataty,newdata)
+        end
+      in
+        makeCT {thydata = updatemap thydata, thid=thid, adjoin=adjoin,
+                facts=facts, con_wrt_disk = con_wrt_disk}
+      end
+
+  fun temp_encoded_update {thy, thydataty, data} = let
+    val {thydata, thid, adjoin, facts, con_wrt_disk} = theCT()
+    open Binarymap
+    fun updatemap inmap = let
+      val baddecode = ERR "temp_encoded_update"
+                          ("Bad decode for "^thydataty^" ("^data^")")
+      val newdata =
+        case (peek(inmap, thydataty), peek(!dataops,thydataty)) of
+          (NONE, NONE) => Pending [data]
+        | (NONE, SOME {read,...}) =>
+            Loaded (valOf (read data) handle Option => raise baddecode)
+        | (SOME (Loaded t), NONE) =>
+             raise Fail "temp_encoded_update invariant failure 1"
+        | (SOME (Loaded t), SOME {merge,read,...}) =>
+             Loaded (merge(t, valOf (read data)
+                              handle Option => raise baddecode))
+        | (SOME (Pending ds), NONE) => Pending (data::ds)
+        | (SOME (Pending _), SOME _) =>
+             raise Fail "temp_encoded_update invariant failure 2"
+    in
+      insert(inmap, thydataty, newdata)
+    end
+  in
+    if thy = thyid_name thid then
+      makeCT {thydata = updatemap thydata, thid=thid, facts=facts,
+              adjoin=adjoin, con_wrt_disk = con_wrt_disk}
+    else let
+        val newsubmap =
+          case peek (!allthydata, thy) of
+            NONE => updatemap empty_datamap
+          | SOME dm => updatemap dm
+      in
+        allthydata := insert(!allthydata, thy, newsubmap)
+      end
+  end
+
+  fun update_pending (m,r) thydataty = let
+    open Binarymap
+    fun update1 inmap =
+        case peek(inmap, thydataty) of
+          NONE => inmap
+        | SOME (Loaded t) => raise Fail "update_pending invariant failure 1"
+        | SOME (Pending []) => raise Fail "update_pending invariant failure 2"
+        | SOME (Pending (ds as (_ :: _))) => let
+            fun foldthis (d,acc) = m(acc, valOf (r d))
+            val ds' = List.rev ds
+          in
+            insert(inmap,thydataty,
+                   Loaded (List.foldl foldthis (valOf (r (hd ds'))) (tl ds')))
+          end
+    fun foldthis (k,v,acc) = insert(acc,k,update1 v)
+    val _ = allthydata := Binarymap.foldl foldthis
+                                          (Binarymap.mkDict String.compare)
+                                          (!allthydata)
+    val {thid,facts,adjoin,thydata,con_wrt_disk} = theCT()
+  in
+    makeCT {thid=thid,facts=facts,adjoin=adjoin,thydata = update1 thydata,
+            con_wrt_disk = con_wrt_disk}
+  end
+
+  fun 'a new {thydataty, merge, read, write} = let
+    val (mk : 'a -> t, dest) = UniversalType.embed ()
+    fun vdest t = valOf (dest t)
+    fun merge' (t1, t2) = mk(merge(vdest t1, vdest t2))
+    fun read' s = Option.map mk (read s)
+    fun write' t = write (vdest t)
+  in
+    dataops := Binarymap.insert(!dataops,
+                                thydataty,
+                                {merge=merge', read=read', write=write'});
+    update_pending (merge',read') thydataty;
+    (mk,dest)
+  end
+
+
+end (* struct *)
+
+
+(* ----------------------------------------------------------------------
+    "on load" stuff
+   ---------------------------------------------------------------------- *)
+
+val onloadfns = ref ([] : (string -> unit) list)
+fun register_onload f = (onloadfns := !onloadfns @ [f])
+
+fun load_complete thyname = List.app (fn f => f thyname) (!onloadfns)
+
+
 (*---------------------------------------------------------------------------*
  *         PRINTING THEORIES OUT AS ML STRUCTURES AND SIGNATURES.            *
  *---------------------------------------------------------------------------*)
@@ -707,7 +870,7 @@ local
   end
 in
 fun export_theory () =
- let val {thid,con_wrt_disk,facts,adjoin} = scrubCT()
+ let val {thid,con_wrt_disk,facts,adjoin,thydata} = scrubCT()
  in
  if con_wrt_disk
  then HOL_MESG ("\nTheory "^Lib.quote(thyid_name thid)^" already \
@@ -724,15 +887,29 @@ fun export_theory () =
                     definitions = D,
                     theorems = T,
                     sig_ps = sig_ps}
-     val structthry
-     = {theory = dest_thyid thid,
-        parents = map dest_thyid (Graph.fringe()),
-        types = thy_types thyname,
-        constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
-        axioms = A,
-        definitions = D,
-        theorems = T,
-        struct_ps = struct_ps}
+   fun mungethydata dmap = let
+     fun foldthis (k,v,acc) =
+         case v of
+           Loaded t => let
+             val {write,...} = Binarymap.find (!LoadableThyData.dataops, k)
+           in
+             Binarymap.insert(acc,k,write t)
+           end
+         | _ => acc
+   in
+     Binarymap.foldl foldthis (Binarymap.mkDict String.compare) dmap
+   end
+
+     val structthry =
+         {theory = dest_thyid thid,
+          parents = map dest_thyid (Graph.fringe()),
+          types = thy_types thyname,
+          constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
+          axioms = A,
+          definitions = D,
+          theorems = T,
+          struct_ps = struct_ps,
+          thydata = mungethydata thydata}
  in
    case filter (not o Lexis.ok_sml_identifier) (map fst (A@D@T))
     of [] =>
@@ -801,7 +978,7 @@ fun new_theory str =
   then raise ERR "new_theory"
          ("proposed theory name "^Lib.quote str^" is not an identifier")
   else
-  let val thy as {thid, facts, con_wrt_disk,adjoin} = theCT()
+  let val thy as {thid, con_wrt_disk,...} = theCT()
       val thyname = thyid_name thid
       fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
                         makeCT(fresh_segment str); initialize thyname)

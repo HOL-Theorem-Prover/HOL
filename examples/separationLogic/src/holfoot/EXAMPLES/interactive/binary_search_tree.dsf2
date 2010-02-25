@@ -1,0 +1,61 @@
+search_tree_delete_min (t,m;) [data_tree(t;data) * 
+      ``BIN_SEARCH_TREE_SET data keys /\ ~(keys = EMPTY)``] {
+   local tt, pp, p;
+
+   pp = 0;
+   p = t;
+   tt = t->l;
+   loop_spec [(tt == #lc) * (pp == #ppc) * (t == #tc) *
+              data_tree(#lc;data_l) * 
+              data_tree(#rc;data_r) *
+              (p |-> [l:tt,r:#rc,dta:#dc]) *
+              ``BIN_SEARCH_TREE_SET (node [dc:num] [data_l;data_r]) keys`` *
+              (if (pp == 0) then (t == p) else 
+                  (pp |-> [l:p,r:#rc2,dta:#dc2]))] {
+      while (tt != NULL) {
+         pp = p;
+         p = tt;
+         tt = p->l;
+      }
+      m = p->dta;
+      tt = p->r;
+      dispose (p);
+      if (pp == 0) {
+         t = tt;
+      } else {
+         pp->l = tt;
+      }
+   } [(m == _mk) *      
+      (if (#ppc == 0) then data_tree(t;_data) else 
+          ((#ppc |-> [l:_new_p,r:#rc2,dta:#dc2]) * (t == #tc) *
+           data_tree(_new_p;_data))) *
+      ``BIN_SEARCH_TREE_SET _data (keys DELETE mk) /\
+        (mk:num IN keys) /\ (!k. k IN keys ==> mk <= k)``]
+} [data_tree(t;_data) * (m == _mk) * 
+   ``BIN_SEARCH_TREE_SET data (keys DELETE mk) /\ 
+     (mk IN keys) /\ (!k. k IN keys ==> mk <= k)``]
+
+
+search_tree_lookup(r;t,k) [data_tree(t;data) * ``BIN_SEARCH_TREE_SET data keys``] {
+   local k0, tt;
+
+   tt = t;
+   r = 0;
+   loop_spec [(k == #kv) * (r == #rc) * (tt == #tc) *
+               data_tree(tt;data) * ``BIN_SEARCH_TREE_SET data keys /\ (rc IN {0;1:num})``] {
+     while ((tt != NULL) and (r == 0)) { 
+       k0 = tt->dta;
+       if (k == k0) {
+          r = 1;
+       } else if (k < k0) {
+          tt = tt->l;
+       } else {
+          tt = tt->r;
+       } 
+     }
+   } [(k == #kv) * data_tree(#tc;data) * 
+      (r == ``BOOL_TO_NUM ((rc = 1:num) \/ ((kv:num) IN keys))``)]
+} [data_tree(t;data) * ``BIN_SEARCH_TREE_SET data keys`` *
+   (r == ``BOOL_TO_NUM ((k:num) IN keys)``)]
+
+

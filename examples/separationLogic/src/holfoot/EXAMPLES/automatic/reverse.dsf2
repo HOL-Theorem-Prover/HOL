@@ -1,0 +1,14 @@
+list_reverse(i;) [data_list(i,data)] {
+  local p, x;
+  p = NULL;
+  loop_spec [data_list(i,data) * data_list(p, data2)] {
+     while (i != NULL) {
+        x = i->tl;
+        i->tl = p;
+        p = i;
+        i = x;
+     }
+  } [data_list(p, ``(REVERSE data)++data2``)]
+  i = p;
+} [data_list(i,``REVERSE data``)]
+

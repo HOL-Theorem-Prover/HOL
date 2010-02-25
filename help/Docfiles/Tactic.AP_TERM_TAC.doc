@@ -29,5 +29,5 @@ Fails unless the goal is equational, with both sides being applications
 of the same function.
 
 \SEEALSO
-Thm.AP_TERM, Thm.AP_THM, Tactic.AP_THM_TAC.
+Thm.AP_TERM, Thm.AP_THM, Tactic.AP_THM_TAC, Tactic.ABS_TAC.
 \ENDDOC

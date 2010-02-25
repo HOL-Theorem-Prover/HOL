@@ -3,6 +3,6 @@ struct
 
 open HolKernel bossLib;
 
-val WORD_DECIDE = wordsLib.WORD_DP intLib.COOPER_PROVE
+val WORD_DECIDE = wordsLib.WORD_DP wordsLib.WORD_CONV intLib.COOPER_PROVE
 
 end

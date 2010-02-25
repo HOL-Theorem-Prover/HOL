@@ -1,0 +1,5 @@
+vars_as_resourceBaseFunctor.uo: vars_as_resourceBaseFunctor.sml vars_as_resourceSyntax.uo
+	$(HOLMOSMLC) -c -toplevel Overlay.ui vars_as_resourceBaseFunctor.sml
+
+vars_as_resourceFunctor.uo: vars_as_resourceFunctor.sml vars_as_resourceBaseFunctor.uo
+	$(HOLMOSMLC) -c -toplevel Overlay.ui vars_as_resourceFunctor.sml

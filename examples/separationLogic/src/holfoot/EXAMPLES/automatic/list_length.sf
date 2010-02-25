@@ -1,0 +1,10 @@
+list_length(r;c) [list(c)] {
+  local t;
+  if (c == NULL) {
+    r = 0;
+  } else {
+    t = c->tl;
+    list_length(r;t);
+    r = r + 1;
+  }
+} [list(c)]

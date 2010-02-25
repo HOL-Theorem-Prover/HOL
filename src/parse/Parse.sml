@@ -512,21 +512,28 @@ fun do_parse G ty tyv = let
   open base_tokens qbuf
 in
 fn q => let
-     val ((qb,p), _) = pt (new_buffer q, initial_pstack)
+     open errormonad
+     val ((qb,p), fsres) = pt (new_buffer q, initial_pstack)
          handle base_tokens.LEX_ERR (s,locn) =>
                 raise (ERRORloc "Absyn" locn ("Lexical error - "^s))
    in
-     if is_final_pstack p then
-       case current qb of
-         (BT_EOI,locn) => (top_nonterminal p
-                           handle ParseTermError (s,locn) =>
-                                  raise (ERRORloc "Term" locn s))
-       | (_,locn) => raise (ERRORloc "Absyn" locn
-                                     (String.concat
-                                          ["Can't make sense of remaining: ",
-                                           Lib.quote (toString qb)]))
-     else
-       raise (ERRORloc "Absyn" (snd (current qb)) "Parse failed")
+     case fsres of
+       Some () => let
+       in
+         if is_final_pstack p then
+           case current qb of
+             (BT_EOI,locn) => (top_nonterminal p
+                               handle ParseTermError (s,locn) =>
+                                      raise (ERRORloc "Term" locn s))
+           | (_,locn) =>
+             raise (ERRORloc "Absyn" locn
+                             (String.concat
+                                  ["Can't make sense of remaining: ",
+                                   Lib.quote (toString qb)]))
+         else
+           raise (ERRORloc "Absyn" (snd (current qb)) "Parse failed")
+       end
+     | Error (s,locn) => raise mk_HOL_ERRloc "Absyn" "Absyn" locn s
    end
 end;
 
@@ -591,6 +598,19 @@ end
     Top-level pretty-printing entry-points
    ---------------------------------------------------------------------- *)
 
+fun pp_style_string ppstrm (st, s) =
+ let open Portable PPBackEnd
+    val {add_string,begin_style,end_style,...} = PPBackEnd.with_ppstream (!current_backend) ppstrm
+ in
+    begin_style st;
+    add_string s;
+    end_style ()
+ end
+
+fun add_style_to_string st s = (Portable.pp_to_string (!Globals.linewidth) pp_style_string) (st, s);
+fun print_with_style st s =  Portable.output(Portable.std_out, add_style_to_string st s);
+
+
 fun pp_term pps t = (update_term_fns(); !term_printer pps t)
 fun term_to_string t =
     Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
@@ -616,6 +636,12 @@ fun pp_terms pps ts =
 
 fun terms_to_string ts = Portable.pp_to_string (!Globals.linewidth) pp_terms ts;
 fun print_terms ts = Portable.output(Portable.std_out, terms_to_string ts);
+
+fun term_to_backend_string t =
+   (Portable.pp_to_string (!Globals.linewidth) pp_term) t;
+fun print_backend_term t =
+  Portable.output(Portable.std_out, term_to_backend_string t);
+
 
 fun term_pp_with_delimiters ppfn pp tm =
   let open Portable Globals
@@ -656,6 +682,11 @@ fun thm_to_string thm =
     Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
                   (Portable.pp_to_string (!Globals.linewidth) pp_thm) thm;
 fun print_thm thm     = Portable.output(Portable.std_out, thm_to_string thm);
+
+fun thm_to_backend_string thm =
+   (Portable.pp_to_string (!Globals.linewidth) pp_thm) thm;
+fun print_backend_thm thm =
+  Portable.output(Portable.std_out, thm_to_backend_string thm);
 
 (*---------------------------------------------------------------------------
        Construction of the term parser

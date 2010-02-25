@@ -103,30 +103,6 @@ fun DISJ_LINEAR_CONV tm =
 (* to the right. Each disjunct is a linear conjunction.                      *)
 (*---------------------------------------------------------------------------*)
 
-fun DISJ_NORM_FORM_CONV tm =
- (if (is_conj tm) then
-     (if (is_disj (arg1 tm)) then
-         ((RATOR_CONV (RAND_CONV (ARGS_CONV DISJ_NORM_FORM_CONV))) THENC
-          (RAND_CONV DISJ_NORM_FORM_CONV) THENC
-          RIGHT_DIST_NORM_CONV THENC
-          (ARGS_CONV DISJ_NORM_FORM_CONV) THENC
-          (TRY_CONV DISJ_LINEAR_CONV)) tm
-      else if (is_disj (arg2 tm)) then
-         ((RATOR_CONV (RAND_CONV DISJ_NORM_FORM_CONV)) THENC
-          (RAND_CONV (ARGS_CONV DISJ_NORM_FORM_CONV)) THENC
-          LEFT_DIST_NORM_CONV THENC
-          (ARGS_CONV DISJ_NORM_FORM_CONV) THENC
-          (TRY_CONV DISJ_LINEAR_CONV)) tm
-      else if (is_conj (arg1 tm)) then
-         (CONJ_ASSOC_NORM_CONV THENC DISJ_NORM_FORM_CONV) tm
-      else ((RAND_CONV DISJ_NORM_FORM_CONV) THENC
-            (fn tm' => if (is_disj (arg2 tm'))
-                       then DISJ_NORM_FORM_CONV tm'
-                       else ALL_CONV tm')) tm)
-  else if (is_disj tm) then
-     ((ARGS_CONV DISJ_NORM_FORM_CONV) THENC
-      (TRY_CONV DISJ_LINEAR_CONV)) tm
-  else ALL_CONV tm
- ) handle (HOL_ERR _) => failwith "DISJ_NORM_FORM_CONV";
+val DISJ_NORM_FORM_CONV = Canon.DNF_CONV
 
 end

@@ -29,6 +29,15 @@ datatype class = DataProcessing | LoadStore | Branch
 
 (* ------------------------------------------------------------------------- *)
 
+local
+  val tm_g = Parse.term_grammar ()
+  val ty_g = Parse.type_grammar ()
+in
+  val term_to_string =
+        Portable.pp_to_string 70
+          (term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
+end
+
 val generator = Random.newgen();
 (* val generator = Random.newgenseed 1.0; *)
 
@@ -626,16 +635,17 @@ local
     recurse (component_substs tm) []
   end
 in
-  fun step_updates arch (opc,ass:string,arm) =
-    let val opt = arch ^ ", " ^ (if arm then "arm" else "thumb")
-        val _ = if !arm_random_trace then
-                  print (String.concat ["Processing... ", ass, "\n"])
-                else
-                  ()
-        val tm = opc |> try (armLib.arm_step opt)
-                     |> try_dest_label
-                     |> SPEC_ALL |> concl
-        val (l,r) = boolSyntax.dest_imp tm
+  fun step_updates (pass,arch) (opc,ass:string,arm) = let
+      val opt = String.concat [arch, ", ", if arm then "arm" else "thumb",
+                                     ", ", if pass then "pass" else "fail"]
+      val _ = if !arm_random_trace then
+                print (String.concat ["Processing... ", ass, "\n"])
+              else
+                ()
+      val tm = opc |> try (armLib.arm_step opt)
+                   |> try_dest_label
+                   |> SPEC_ALL |> concl
+      val (l,r) = boolSyntax.dest_imp tm
     in
       (opc,ass,
        l |> component_substs
@@ -756,6 +766,19 @@ local
         in
           (encoding enc, cond, tm)
         end
+
+  fun generate_opcode_cond pass arch enc opc = let
+    val _ = valid_arch_ecoding enc arch orelse
+              raise ERR "generate_opcode"
+		        "Architecture does not support encoding"
+    val arm = enc = ARM
+    val ass = if arm then
+                armLib.arm_disassemble_decode opc
+              else
+                armLib.thumb_disassemble_decode 0 opc
+  in
+    step_updates (pass,arch_to_string arch) (opc,ass,arm)
+  end
 in
   fun generate_random arch enc class =
     let val _ = valid_arch_ecoding enc arch orelse
@@ -772,21 +795,11 @@ in
     in
       random_code arch enc typ
         |> mk_code aa
-        |> step_updates a
+        |> step_updates (true,a)
     end
 
-  fun generate_opcode arch enc opc = let
-    val _ = valid_arch_ecoding enc arch orelse
-              raise ERR "generate_opcode"
-		        "Architecture does not support encoding"
-    val arm = enc = ARM
-    val ass = if arm then
-                armLib.arm_disassemble_decode opc
-              else
-                armLib.thumb_disassemble_decode 0 opc
-  in
-    step_updates (arch_to_string arch) (opc,ass,arm)
-  end
+  val generate_opcode     = generate_opcode_cond true
+  val generate_opcode_nop = generate_opcode_cond false
 end;
 
 fun instruction_type enc opc =
@@ -886,9 +899,11 @@ let
         else
           raise ERR "instruction_type" ""
       end
-    else if arm_astSyntax.is_Branch_Link_Exchange_Immediate tm then
+    else if arm_astSyntax.is_Branch_Link_Exchange_Immediate tm orelse
+            arm_astSyntax.is_Immediate_to_Status tm then
       " (imm)"
-    else if arm_astSyntax.is_Branch_Link_Exchange_Register tm then
+    else if arm_astSyntax.is_Branch_Link_Exchange_Register tm orelse
+            arm_astSyntax.is_Register_to_Status tm then
       " (reg)"
     else
       ""

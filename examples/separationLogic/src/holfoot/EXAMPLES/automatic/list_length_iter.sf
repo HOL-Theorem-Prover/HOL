@@ -1,0 +1,10 @@
+list_length(r;c) [list(c)] {
+  local t;
+  r = 0;
+  t = c;
+  while (t != NULL) [lseg(c, t) * list(t)] {
+    t = t->tl;
+    r = r + 1;
+  }
+} [list(c)]
+

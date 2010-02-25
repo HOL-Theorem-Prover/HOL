@@ -1,0 +1,12 @@
+l,r;
+
+tree_deallocate(t) [tree(t)] {
+  local i, j;
+  if(t == NULL) {}
+  else {
+    i = t->l;
+    j = t->r;
+    tree_deallocate(i) || tree_deallocate(j);
+    dispose t;
+  }
+} [emp]

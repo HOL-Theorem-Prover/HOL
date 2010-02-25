@@ -251,30 +251,42 @@ local
   fun string_map s =
     case s
     of "!"     => (token_string "Forall",1)
+     | "∀"     => (token_string "Forall",1)
      | "?"     => (token_string "Exists",1)
+     | "∃"     => (token_string "Exists",1)
      | "?!"    => (token_string "Unique",2)
+     | "∃!"    => (token_string "Unique",2)
      | "\\"    => (token_string "Lambda",1)
+     | "λ"     => (token_string "Lambda",1)
      | "|->"   => (token_string "Mapto",1)
      | " <-"   => (" " ^ token_string "Leftmap",2)
      | "->"    => (token_string "Map",1)
      | "-->"   => (token_string "Longmap",2)
      | "><"    => (token_string "Extract",2)
      | "<>"    => (token_string "NotEqual",1)
+     | "≠"     => (token_string "NotEqual",1)
      | "<=>"   => (token_string "Equiv",2)
+     | "⇔"     => (token_string "Equiv",2)
      | "<=/=>" => (token_string "NotEquiv",2)
      | "=>"    => (token_string "Imp",1)
      | "==>"   => (token_string "Imp",1)
+     | "⇒"     => (token_string "Imp",1)
      | "===>"  => (token_string "Longimp",2)
      | "/\\"   => (token_string "Conj",1)
+     | "∧"     => (token_string "Conj",1)
      | "\\/"   => (token_string "Disj",1)
+     | "∨"     => (token_string "Disj",1)
      | "<|"    => (token_string "Leftrec",2)
      | "|>"    => (token_string "Rightrec",2)
      | "|"     => (token_string "Bar",1)
      | "~"     => (token_string "Neg",1)
+     | "¬"     => (token_string "Neg",1)
      | "<"     => (token_string "Lt",1)
      | ">"     => (token_string "Gt",1)
      | "<="    => (token_string "Leq",1)
+     | "≤"     => (token_string "Leq",1)
      | ">="    => (token_string "Geq",1)
+     | "≥"     => (token_string "Geq",1)
      | "<+"    => (token_string "Lo",1)
      | ">+"    => (token_string "Hi",1)
      | "<=+"   => (token_string "Ls",1)
@@ -292,12 +304,18 @@ local
      | "{}"    => (token_string "Empty",2)
      | "_"     => (token_string "Underscore",1)
      | "IN"    => (token_string "In",1)
+     | "∈"     => (token_string "In",1)
      | "NOTIN" => (token_string "NotIn",1)
+     | "∉"     => (token_string "NotIn",1)
      | "UNION" => (token_string "Union",1)
+     | "∪"     => (token_string "Union",1)
      | "INTER" => (token_string "Inter",1)
+     | "SUBSET" => (token_string "Subset",1)
+     | "SUBMAP" => (token_string "Submap",1)
      | "\226\134\146" => (token_string "Map", 1) (* → *)
      | "\226\138\162" => (token_string "Turnstile", 2) (* ⊢ *)
      | "\226\151\129" => (token_string "LOpenTri", 1) (* ◁ *)
+     | "\226\129\187\194\185" => (token_string "Inverse", 1) (* ⁻¹ *)
      | "^*"    => (token_string "SupStar", 1)
      | "^+"    => (token_string "SupPlus", 1)
      | _       => (String.translate char_map s,String.size s)
@@ -306,9 +324,25 @@ local
       case overrides s of
         NONE => string_map s
       | SOME r => r
+  fun varmunge s = let
+    open Substring
+    val ss = full s
+    val (pfx,primes) = splitr (equal #"'") ss
+    val prime_str_interior = translate (fn _ => "\\prime") primes
+    val prime_str = if prime_str_interior = "" then ""
+                    else "\\sp{" ^ prime_str_interior ^ "}"
+    val (core,digits) = splitr Char.isDigit pfx
+    val dsz = size digits
+    val digitstr = if 0 < dsz andalso dsz <= 2 then
+                     "\\sb{" ^ string digits ^ "}"
+                   else string digits
+  in
+    string core ^ digitstr ^ prime_str
+  end
+
   fun ann_string overrides pps (s,ann) = let
     open PPBackEnd
-    fun addann ty s = "\\" ^ !texPrefix ^ ty ^ "{" ^ s ^ "}"
+    fun addann ty s = "\\" ^ !texPrefix ^ ty ^ "{" ^ varmunge s ^ "}"
     val annotation = case ann of BV _ => addann "BoundVar"
                                | FV _ => addann "FreeVar"
                                | _ => (fn s => s)

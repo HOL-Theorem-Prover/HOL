@@ -58,6 +58,7 @@ sig
   val AP_THM_TAC            : tactic
   val MK_COMB_TAC           : tactic
   val BINOP_TAC             : tactic
+  val ABS_TAC               : tactic
   val NTAC                  : int -> tactic -> tactic
   val WEAKEN_TAC            : (term -> bool) -> tactic
   val MATCH_ACCEPT_TAC      : thm -> tactic

@@ -103,15 +103,18 @@ end;
 
 local fun trav tm A =
          trav (mk_fst tm) (trav (mk_snd tm) A) handle HOL_ERR _ => (tm::A)
+      fun hd1 [th] = th
+        | hd1 _ = raise Bind
 in
 fun TUPLE v thm = GEN v (SPECL (trav v []) thm)
+
 
 fun TUPLE_TAC vtuple:tactic = fn (asl,w) =>
    let val (Bvar,Body) = dest_forall w
        val w1 = subst [Bvar |-> vtuple] Body
        val w2 = list_mk_forall(strip_pair vtuple,w1)
    in ([(asl,w2)],
-       fn [th] => PURE_REWRITE_RULE[pairTheory.PAIR] (TUPLE Bvar th))
+       PURE_REWRITE_RULE[pairTheory.PAIR] o TUPLE Bvar o hd1)
    end
 end;
 

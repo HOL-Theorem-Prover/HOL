@@ -1,0 +1,30 @@
+init(){ c = NULL; }
+
+resource buf (c) [if c==NULL then emp else c|->] 
+
+put(x) [x|->] {
+  with buf when (c==NULL) { c = x; }
+} [emp]
+
+get(y;) [emp] {
+  with buf when (c!=NULL) { y = c; c = NULL; }
+} [y|->]
+
+putter() {
+  local x;
+  x = new();
+  put(x);
+  putter();
+}
+
+getter() {
+  local y;
+  get(y;);
+  /* use y */
+  dispose(y);
+  getter();
+}
+
+main() {
+  putter() || getter();
+}

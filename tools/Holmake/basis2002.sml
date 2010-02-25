@@ -941,3 +941,5 @@ struct
   open Real
   structure Math = Math
 end
+
+exception Option = Option.Option

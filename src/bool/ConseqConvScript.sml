@@ -120,6 +120,47 @@ val IMP_CLAUSES_XF = save_thm ("IMP_CLAUSES_XF", el 5 IMP_CLAUSES_THML)
 
 
 
+val IMP_CONG_cond_simple = store_thm ("IMP_CONG_cond_simple",
+``!c x x' y y'.
+  ((x' ==> x) /\ (y' ==> y)) ==>
+  ((if c then x' else y') ==> (if c then x else y))``,
+Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
+
+val IMP_CONG_cond = store_thm ("IMP_CONG_cond",
+``!c x x' y y'.
+  ((c ==> (x' ==> x)) /\ (~c ==> (y' ==> y))) ==>
+  ((if c then x' else y') ==> (if c then x else y))``,
+Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
+
+
+
+val COND_CLAUSES_THML =
+     (CONJUNCTS (Ho_Rewrite.PURE_REWRITE_RULE [FORALL_AND_THM] COND_CLAUSES))
+fun bool_save_thm (s,t) = store_thm (s, t, Ho_Rewrite.REWRITE_TAC [FORALL_BOOL])
+
+val COND_CLAUSES_CT = save_thm ("COND_CLAUSES_CT", el 1 COND_CLAUSES_THML)
+val COND_CLAUSES_CF = save_thm ("COND_CLAUSES_CF", el 2 COND_CLAUSES_THML)
+val COND_CLAUSES_ID = save_thm ("COND_CLAUSES_ID", COND_ID)
+val COND_CLAUSES_TT = bool_save_thm ("COND_CLAUSES_TT",
+       ``!c x. (if c then T else x) = (~c ==> x)``)
+val COND_CLAUSES_FT = bool_save_thm ("COND_CLAUSES_FT",
+       ``!c x. (if c then x else T) = (c ==> x)``)
+val COND_CLAUSES_TF = bool_save_thm ("COND_CLAUSES_TF",
+       ``!c x. (if c then F else x) = (~c /\ x)``)
+val COND_CLAUSES_FF = bool_save_thm ("COND_CLAUSES_FF",
+       ``!c x. (if c then x else F) = (c /\ x)``)
+
+
+val ASM_MARKER_DEF =
+ Definition.new_definition
+   ("ASM_MARKER_DEF", Term `ASM_MARKER = (\ (y:bool) x:bool. x)`);
+
+val ASM_MARKER_THM = store_thm ("ASM_MARKER_THM",
+``!y x. ASM_MARKER y x = x``, 
+REWRITE_TAC[ASM_MARKER_DEF] THEN
+BETA_TAC THEN REWRITE_TAC [])
+
+
 val _ = export_theory();
 
 end (* boolScript *)

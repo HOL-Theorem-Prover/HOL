@@ -15,7 +15,7 @@ following publications:
 \item Tjark Weber: {\it SMT Solvers: New Oracles for the HOL Theorem
   Prover}.  Accepted for publication at VSTTE 2009.%TODO
 \item Sascha B{\"o}hme, Tjark Weber: {\it Fast LCF-Style Proof
-  Reconstruction for Z3}. Submitted for publication, 2009.%TODO
+  Reconstruction for Z3}. Submitted for publication, 2010.%TODO
 \end{itemize}
 \ml{HolSmtLib} uses external SMT solvers to prove instances of SMT
 tautologies, \ie, formulas that are provable using (a combination of)
@@ -37,15 +37,13 @@ $\varphi$ is the goal's conclusion), each tactic returns an empty list
 of new goals and a validation function that returns a theorem~$\Gamma'
 \vdash \varphi$ (with $\Gamma' \subseteq \Gamma$), or fails if the SMT
 solver cannot prove the goal.\footnote{Internally, the goal's
-  conclusion is first generalized, \ie, outermost universal
-  quantifiers are stripped.  Then the assumptions and the
-  \emph{negated} conclusion are passed to the SMT solver.  If the SMT
-  solver determines that these formulas are unsatisfiable, then the
-  (unnegated) conclusion must be provable from the assumptions.}  In
-other words, these tactics solve the goal (or fail).  As with other
-tactics, \ml{Tactical.TAC\_PROOF} and \ml{Tactical.prove} can be used
-to derive functions of type \ml{goal -> thm} or \ml{term -> thm} from
-them.
+  assumptions and the \emph{negated} conclusion are passed to the SMT
+  solver.  If the SMT solver determines that these formulas are
+  unsatisfiable, then the (unnegated) conclusion must be provable from
+  the assumptions.}  In other words, these tactics solve the goal (or
+fail).  As with other tactics, \ml{Tactical.TAC\_PROOF} and
+\ml{Tactical.prove} can be used to derive functions of type \ml{goal
+  -> thm} or \ml{term -> thm} from them.
 
 \paragraph{Oracles vs.\ proof reconstruction}
 
@@ -58,6 +56,12 @@ tag. \ml{Z3\_TAC}, on the other hand, performs proof reconstruction.
 One obtains a proper \HOL{} theorem, without (additional) oracle tags.
 
 \paragraph{Supported subsets of higher-order logic}
+
+All tactics first generalize the goal's conclusion by stripping
+outermost universal quantifiers, and attempt to eliminate certain set
+expressions by rewriting them into predicate applications: \eg,
+\holtxt{y IN \{x | P x\}} is replaced by \holtxt{P y}.  The resulting
+term is $\beta$-normalized.
 
 \ml{YICES\_TAC} employs a translation into Yices's native input
 format.  The interface supports types \holtxt{bool}, \holtxt{num},
@@ -93,7 +97,7 @@ Communication between \HOL{} and external SMT solvers is via temporary
 files.  These files are located in the standard temporary directory,
 typically {\tt /tmp} on Unix machines.  The actual file names are
 generated at run-time, and can be shown by setting the above tracing
-variable to a suitable value.
+variable to a sufficiently high value.
 
 The default behavior of \ml{HolSmtLib} is to delete temporary files
 after successful invocation of the SMT solver.  This also can be
@@ -130,7 +134,7 @@ delete temporary files automatically, \eg, when \HOL{} exits).
 
 \subsection{Installing SMT solvers}
 
-\ml{HolSmtLib} has been tested with CVC3~1.5, Yices~1.0.18 and Z3~2.0.
+\ml{HolSmtLib} has been tested with CVC3~1.5, Yices~1.0.26 and Z3~2.4.
 Later versions of these SMT solvers might work as well.  To use
 \ml{HolSmtLib}, you need to install at least one of these SMT solvers
 on your machine.  As mentioned before, Yices supports a much larger
@@ -147,17 +151,15 @@ location and name of the Yices executable.
 CVC3 can be obtained from \url{http://www.cs.nyu.edu/acsys/cvc3/}.
 The CVC3 executable must be made available as {\tt cvc3-optimized}.
 
-Z3 is probably hardest to set up.  The Z3 website,
+The Z3 website,
 \url{http://research.microsoft.com/en-us/um/redmond/projects/z3/},
-only provides a Windows version of the solver.  To install this on
-Linux and Mac OS~X, see the instructions at
-\url{http://www4.in.tum.de/~boehmes/z3.html}.  Alternatively, a
-(slightly outdated) Linux version of Z3 can be obtained from
-\url{http://why.lri.fr/provers.en.html}.  The executable must be made
-available as {\tt z3} after installation.  Additionally, to enable
-proofs, you must create a file {\tt z3.ini} in your current directory
-(\ie, the directory you're running \HOL{} in) that contains (at least)
-the following lines:
+provides Windows and Linux versions of the solver.  Alternatively, the
+Windows version can be installed on Linux and Mac OS~X---see the
+instructions at \url{http://www4.in.tum.de/~boehmes/z3.html}.  The
+executable must be made available as {\tt z3} after installation.
+Additionally, to enable proofs, you must create a file {\tt z3.ini} in
+your current directory (\ie, the directory you're running \HOL{} in)
+that contains (at least) the following lines:
 \begin{verbatim}
 PROOF_MODE=2
 DISPLAY_PROOF=true
@@ -197,17 +199,24 @@ The current implementation of \ml{HolSmtLib} uses version~1.2 of the
 SMT-LIB language.  An update to version~2.0 could greatly simplify the
 translation from higher-order logic into SMT-LIB format.
 
+\paragraph{Support for Z3's SMT-LIB extensions}
+
+Z3 supports extensions of the SMT-LIB language, \eg, data types.
+\ml{HolSmtLib} does not utilize these extensions yet when calling Z3.
+This would require the translation for Z3 to be distinct from the
+generic SMT-LIB translation.
+
 \paragraph{SMT solvers as a web service}
 
 The need to install an SMT solver locally poses an entry barrier.  It
 would be much more convenient to have a web server running one (or
 several) SMT solvers, roughly similar to the ``System on TPTP''
-interface that G.~Sutcliffe provides for first-order theorem provers.
-For Isabelle/HOL, such a web service has been installed by
-S.~B{\"o}hme in Munich, but unfortunately it is not publicly
-available.  Perhaps the SMT-EXEC initiative
-(\url{http://www.smtexec.org/}) could offer hardware or implementation
-support.
+interface that G.~Sutcliffe provides for first-order theorem provers
+(\url{http://www.cs.miami.edu/~tptp/cgi-bin/SystemOnTPTP}).  For
+Isabelle/HOL, such a web service has been installed by S.~B{\"o}hme in
+Munich, but unfortunately it is not publicly available.  Perhaps the
+SMT-EXEC initiative (\url{http://www.smtexec.org/}) could offer
+hardware or implementation support.
 
 \index{HolSmtLib|)}
 

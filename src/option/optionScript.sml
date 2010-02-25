@@ -157,6 +157,13 @@ val THE_DEF = Prim_rec.new_recursive_definition
    rec_axiom=option_Axiom,
    def = Term `THE (SOME x) = x`};
 
+val OPTION_MAP2_DEF = Q.new_definition(
+  "OPTION_MAP2_DEF",
+  `OPTION_MAP2 f x y =
+     if IS_SOME x /\ IS_SOME y
+     then SOME (f (THE x) (THE y))
+     else NONE`);
+
 val OPTION_JOIN_DEF = Prim_rec.new_recursive_definition
   {name = "OPTION_JOIN_DEF",
    rec_axiom = option_Axiom,
@@ -167,6 +174,16 @@ val option_rws =
     [IS_SOME_DEF, THE_DEF, IS_NONE_DEF, option_nchotomy,
      NOT_NONE_SOME,NOT_SOME_NONE, SOME_11, option_case_def,
      OPTION_MAP_DEF, OPTION_JOIN_DEF];
+
+val OPTION_MAP2_THM = Q.store_thm("OPTION_MAP2_THM",
+  `(OPTION_MAP2 f (SOME x) (SOME y) = SOME (f x y)) /\
+   (OPTION_MAP2 f (SOME x) NONE = NONE) /\
+   (OPTION_MAP2 f NONE (SOME y) = NONE) /\
+   (OPTION_MAP2 f NONE NONE = NONE)`,
+  REWRITE_TAC (OPTION_MAP2_DEF::option_rws));
+val _ = export_rewrites ["OPTION_MAP2_THM"];
+
+val option_rws = OPTION_MAP2_THM::option_rws;
 
 val ex1_rw = prove(Term`!x. (?y. x = y) /\ (?y. y = x)`,
    GEN_TAC THEN CONJ_TAC THEN EXISTS_TAC (Term`x`) THEN REFL_TAC);
@@ -333,6 +350,36 @@ val OPTION_JOIN_EQ_SOME = Q.store_thm(
   ] THEN ASM_REWRITE_TAC option_rws THEN
   OPTION_CASES_TAC (--`z:'a option`--) THEN
   ASM_REWRITE_TAC option_rws);
+
+(* and some about OPTION_MAP2 *)
+
+val OPTION_MAP2_SOME = Q.store_thm(
+  "OPTION_MAP2_SOME",
+  `(OPTION_MAP2 f (o1:'a option) (o2:'b option) = SOME v) <=>
+   (?x1 x2. (o1 = SOME x1) /\ (o2 = SOME x2) /\ (v = f x1 x2))`,
+  OPTION_CASES_TAC (--`o1:'a option`--) THEN
+  OPTION_CASES_TAC (--`o2:'b option`--) THEN
+  SRW_TAC [][EQ_IMP_THM]);
+val _ = export_rewrites["OPTION_MAP2_SOME"];
+
+val OPTION_MAP2_NONE = Q.store_thm(
+  "OPTION_MAP2_NONE",
+  `(OPTION_MAP2 f (o1:'a option) (o2:'b option) = NONE) <=> (o1 = NONE) \/ (o2 = NONE)`,
+  OPTION_CASES_TAC (--`o1:'a option`--) THEN
+  OPTION_CASES_TAC (--`o2:'b option`--) THEN
+  SRW_TAC [][]);
+val _ = export_rewrites["OPTION_MAP2_NONE"];
+
+val OPTION_MAP2_cong = store_thm("OPTION_MAP2_cong",
+  ``!x1 x2 y1 y2 f1 f2.
+       (x1 = x2) /\ (y1 = y2) /\
+       (!x y. (x2 = SOME x) /\ (y2 = SOME y) ==> (f1 x y = f2 x y)) ==>
+       (OPTION_MAP2 f1 x1 y1 = OPTION_MAP2 f2 x2 y2)``,
+  SRW_TAC [][] THEN
+  Q.SPEC_THEN `x1` FULL_STRUCT_CASES_TAC option_nchotomy THEN
+  Q.ISPEC_THEN `y1` FULL_STRUCT_CASES_TAC option_nchotomy THEN
+  SRW_TAC [][]);
+val _ = DefnBase.export_cong "OPTION_MAP2_cong";
 
 (* ----------------------------------------------------------------------
     OPTION_BIND - monadic bind operation for options

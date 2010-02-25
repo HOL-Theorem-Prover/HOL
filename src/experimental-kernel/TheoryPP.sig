@@ -11,7 +11,6 @@ sig
  type hol_type = Type.hol_type
  type kind = Kind.kind
  type ppstream = Portable.ppstream
- type num = Arbnum.num
 
  val pp_type : string -> string -> string -> string -> string -> string ->
                string -> string -> ppstream -> hol_type -> unit
@@ -30,14 +29,15 @@ sig
      -> unit
 
  val pp_struct
-   : {theory      : string*num*num,
-      parents     : (string*num*num) list,
+   : {theory      : string*Arbnum.num*Arbnum.num,
+      parents     : (string*Arbnum.num*Arbnum.num) list,
       types       : (string*kind*int) list,
       constants   : (string*hol_type) list,
       axioms      : (string * thm) list,
       definitions : (string * thm) list,
       theorems    : (string * thm) list,
-      struct_ps   : (ppstream -> unit) option list}
+      struct_ps   : (ppstream -> unit) option list,
+      thydata     : (string,string)Binarymap.dict}
    -> ppstream
    -> unit
 

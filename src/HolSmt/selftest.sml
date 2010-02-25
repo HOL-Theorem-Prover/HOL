@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Unit tests for HolSmtLib *)
 
@@ -8,10 +8,10 @@ val _ = Globals.show_assums := true
 val _ = Globals.show_types := true
 *)
 
-(*
-val _ = Feedback.set_trace "HolSmtLib" 3
-*)
 val _ = Feedback.set_trace "HolSmtLib" 0
+(*
+val _ = Feedback.set_trace "HolSmtLib" 4
+*)
 
 (*****************************************************************************)
 (* utility functions                                                         *)
@@ -175,6 +175,15 @@ local
                   (fn t => (expect_sat "Z3 (proofs)" Z3.Z3_SMT_Prover t;
                             print "."))
                 else Lib.K ()
+
+(*****************************************************************************)
+(* HOL definitions (e.g., user-defined data types)                           *)
+(*****************************************************************************)
+
+val _ = bossLib.Hol_datatype `dt1 = foo | bar | baz`
+
+val _ = bossLib.Hol_datatype `person = <| employed :bool; age :num |>`
+
 in
   val tests = [
 
@@ -890,7 +899,80 @@ in
      (b <=+ a /\ a <> b <=> b <+ a) /\ (a <> b /\ b <=+ a <=> b <+ a) /\
      (b <= a /\ a <> b <=> b < a) /\ (a <> b /\ b <= a <=> b < a) /\
      (((v:word32) - w = 0w) <=> (v = w)) /\ (w - 0w = w)``,
-      [(*TODO: thm_AUTO,*) thm_YO])
+      [(*TODO: thm_AUTO,*) thm_YO]),
+
+    (* from Yogesh Mahajan *)
+    (``!(w: 18 word). (sw2sw w): 32 word = w2w ((16 >< 0) w: 17 word) +
+     0xfffe0000w + ((0 >< 0) (~(17 >< 17) w: bool[unit]) << 17): 32 word``,
+      [(*TODO: thm_AUTO,*) thm_YO]),
+
+    (* data types: constructors *)
+
+    (``foo <> bar``, [thm_AUTO, thm_YO]),
+    (``foo <> baz``, [thm_AUTO, thm_YO]),
+    (``bar <> baz``, [thm_AUTO, thm_YO]),
+    (``[] <> x::xs``, [thm_AUTO, thm_YO]),
+    (``xs <> x::xs``, [thm_AUTO, thm_YO]),
+    (``(x::xs = y::ys) = (x = y) /\ (xs = ys)``, [thm_AUTO, thm_YO]),
+
+    (* data types: case constants *)
+
+    (``dt1_case f b z foo = f``, [thm_AUTO, thm_YO]),
+    (``dt1_case f b z bar = b``, [thm_AUTO, thm_YO]),
+    (``dt1_case f b z baz = z``, [thm_AUTO, thm_YO]),
+    (``dt1_case c c c x = c``, [(*TODO: thm_AUTO,*) thm_YO]),
+    (``list_case n c [] = n``, [thm_AUTO, thm_YO]),
+    (``list_case n c (x::xs) = c x xs``, [thm_AUTO, thm_YO]),
+
+    (* records: field selectors *)
+
+    (``(x = y) = (x.employed = y.employed) /\ (x.age = y.age)``,
+      [(*TODO: thm_AUTO,*) thm_YO]),
+
+    (* records: field updates *)
+
+    (``(x with employed := e).employed = e``, [thm_AUTO, thm_YO]),
+
+    (``x with <| employed := e; age := a |> =
+     y with <| employed := e; age := a |>``, [thm_AUTO, thm_YO]),
+
+    (* records: literals *)
+
+    (``(<| employed := e1; age := a1 |> = <| employed := e2; age := a2 |>)
+     = (e1 = e2) /\ (a1 = a2)``, [thm_AUTO, thm_YO]),
+
+    (* sets (as predicates -- every set expression must be applied to an
+       argument!) *)
+
+    (``x IN P = P x``, [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+
+    (``x IN {x | P x} = P x``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+
+    (``x NOTIN {}``, [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``x IN UNIV``, [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+
+    (``x IN P UNION Q = P x \/ Q x``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``x IN P UNION {} = x IN P``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``x IN P UNION UNIV``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``x IN P UNION Q = x IN Q UNION P``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``x IN P UNION (Q UNION R) = x IN (P UNION Q) UNION R``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+
+    (``x IN P INTER Q = P x /\ Q x``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``x NOTIN P INTER {}``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``x IN P INTER UNIV = x IN P``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``x IN P INTER Q = x IN Q INTER P``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``x IN P INTER (Q INTER R) = x IN (P INTER Q) INTER R``,
+      [thm_AUTO, thm_YO, thm_YSO, thm_CVC, thm_Z3, thm_Z3p])
 
   ]  (* tests *)
 end

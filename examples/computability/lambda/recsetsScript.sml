@@ -132,12 +132,12 @@ val re_def = Define`
    evaluating [Mi 0, Mi 1, Mi 2, ... Mi n] for n steps.  For all the bnfs in
    this list, see if one of them is equal to e.  If so, terminate.
 *)
-
+open rich_listTheory
 val MEM_GENLIST = prove(
   ``MEM e (GENLIST f n) = ∃i. i < n ∧ (e = f i)``,
   Q.ID_SPEC_TAC `f` THEN
   Induct_on `n` THEN1 SRW_TAC [][rich_listTheory.GENLIST] THEN
-  SRW_TAC [][GENLIST_ALT, EQ_IMP_THM] THENL [
+  SRW_TAC [][GENLIST_CONS, EQ_IMP_THM] THENL [
     Cases_on `e = f 0` THENL [
       Q.EXISTS_TAC `0` THEN SRW_TAC [][],
       FULL_SIMP_TAC (srw_ss()) [] THEN Q.EXISTS_TAC `SUC i` THEN
@@ -151,16 +151,6 @@ val EXISTS_FILTER = store_thm(
   "EXISTS_FILTER",
   ``EXISTS P (FILTER Q l) = EXISTS (λe. Q e ∧ P e) l``,
   Induct_on `l` THEN SRW_TAC [][]);
-
-val EXISTS_GENLIST = prove(
-  ``∀n f. EXISTS P (GENLIST f n) = ∃i. i < n ∧ P (f i)``,
-  Induct THEN1 SRW_TAC [][rich_listTheory.GENLIST] THEN
-  SRW_TAC [][GENLIST_ALT, EQ_IMP_THM] THENL [
-    Q.EXISTS_TAC `0` THEN SRW_TAC [][],
-    Q.EXISTS_TAC `SUC i` THEN SRW_TAC [][],
-    Cases_on `i` THEN SRW_TAC [][] THEN
-    DISJ2_TAC THEN Q.EXISTS_TAC `n'` THEN SRW_TAC [ARITH_ss][]
-  ]);
 
 val re_semirecursive1 = prove(
   ``re s ⇒ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,

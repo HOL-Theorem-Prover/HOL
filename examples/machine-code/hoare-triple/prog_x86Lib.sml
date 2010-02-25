@@ -267,6 +267,7 @@ fun x86_spec s = let
   in ((th,i,j),other) end
 
 val x86_tools = (x86_spec, x86_jump, x86_status, x86_pc)
+val x86_tools_no_status = (x86_spec, x86_jump, TRUTH, x86_pc);
 
 (*
 

@@ -717,6 +717,32 @@ end;
 
 val BINOP_TAC = MK_COMB_TAC THENL [AP_TERM_TAC, ALL_TAC];
 
+  
+(*---------------------------------------------------------------------------*
+ * ABS_TAC: inverts the ABS inference rule.	 		             *
+ *									     *
+ *   \x. f x = \x. g x					                     *
+ * =====================                               			     *
+ *       f x = g x							     *
+ *									     *
+ * Added: TT 2009.12.23							     *
+ *---------------------------------------------------------------------------*)
+
+local fun ER s = ERR "ABS_TAC" s
+in
+fun ABS_TAC (asl:term list,gl) =
+ let val (lhs,rhs) = with_exn dest_eq gl (ER "not an equation")
+   val (x,g) = with_exn dest_abs lhs (ER "lhs not an abstraction")
+   val (y,f) = with_exn dest_abs rhs (ER "rhs not an abstraction")
+   val f_thm = if (aconv x y) then REFL rhs else ALPHA_CONV x rhs
+   val (_,f') = dest_abs (rand (concl f_thm));
+ in
+   ([(asl, mk_eq(g, f'))],
+         CONV_RULE (RHS_CONV (K (GSYM f_thm))) o 
+         ABS x o Lib.trye hd)
+ end
+end;
+
 
 (*---------------------------------------------------------------------------*)
 (* NTAC n tac - Applies the tactic the given number of times.                *)

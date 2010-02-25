@@ -1,0 +1,55 @@
+merge(r;p,q) [data_list(p,pdata) * data_list(q,qdata) *
+	      ``(SORTED $<= (pdata:num list)) /\
+	        (SORTED $<= (qdata:num list))``] {
+  local t, q_date, p_date;
+  if(q == NULL) r = p;
+  else if(p == NULL) r = q;
+  else {
+    p_date = p->dta;
+    q_date = q->dta;
+    if(q_date < p_date) {
+      t = q;
+      q = q->tl;
+    } else {
+      t = p;
+      p = p->tl;
+    }
+    merge(r;p,q);
+    t->tl = r;
+    r = t;
+  }
+} [data_list(r,_rdata) * 
+   ``(SORTED $<= (_rdata:num list)) /\
+     (PERM (pdata ++ qdata) _rdata)``]
+
+
+
+split(r;p) [data_list(p,data)] {
+  local t1,t2;
+  if(p == NULL) r = NULL;
+  else {
+    t1 = p->tl;
+    if(t1 == NULL) r = NULL;
+    else {
+      t2 = t1->tl;
+      split(r;t2);
+      p->tl = t2;
+      t1->tl = r;
+      r = t1;
+    }
+  }
+} [data_list(p,_pdata) * data_list(r,_rdata) *
+   ``PERM (_pdata ++ _rdata) (data:num list)``]
+
+mergesort(r;p) [data_list(p,data)] {
+  local q,q1,p1;
+  if(p == NULL) r = p;
+  else {
+    split(q;p);
+    mergesort(q1;q) || mergesort(p1;p);
+    merge(r;p1,q1);
+  }
+} [data_list(r,_rdata) * 
+   ``(SORTED $<= (_rdata:num list)) /\
+     (PERM data _rdata)``]
+

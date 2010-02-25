@@ -15,5 +15,6 @@ sig
   val the_monoset   : monoset ref
   val add_mono_thm  : thm -> unit
   val export_mono   : string -> unit
+  val thy_monos     : string -> thm list
 
 end

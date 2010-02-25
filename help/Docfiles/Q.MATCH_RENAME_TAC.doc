@@ -1,0 +1,43 @@
+\DOC MATCH_RENAME_TAC
+
+\TYPE {Q.MATCH_RENAME_TAC : term quotation -> string list -> tactic}
+
+\SYNOPSIS
+Replaces selected terms with new variables by matching a pattern against the goal statement.
+
+\DESCRIBE
+When applied to the goal {(asl, w)}, the tactic {Q.MATCH_RENAME_TAC q ls}
+parses the quotation {q} in the context of the goal, producing a term to use as
+a pattern. The tactic then attempts a (first order) match of the pattern
+against the term {w}.
+
+For each variable {v} in the pattern, there will be an instantiation term {t},
+such that the substitution {pattern[v1 |-> t1, v2 |-> t2, ...]} produces {w}.
+The effect of the tactic is to then replace each {t} with the corresponding
+{v}, yielding a new goal. The list {ls} is of exceptions: if a variable {v}'s
+name appears in {ls}, then no replacement of {v} for {t} is made.
+
+\FAILURE
+{MATCH_RENAME_TAC} fails if the pattern provided does not match the
+goal, or if variables from the goal are used in the pattern in ways
+that make the pattern fail to type-check.
+
+\EXAMPLE
+If the current goal is
+{
+   ?- (f x = Pair C'' C0') ==> (f C'' = f C0')
+}
+then applying the tactic {Q.MATCH_RENAME_TAC `(f x = Pair c1 c2) ==> X` ["X"]} results in
+the goal
+{
+   ?- (f x = Pair c1 c2) ==> (f c1 = f c2)
+}
+
+\COMMENTS
+This tactic is equivalent to first applying {Q.MATCH_ABBREV_TAC q}, then
+applying {Q.RM_ABBREV_TAC `v`} for each {v} in {q} whose name is not in {ls}.
+
+\SEEALSO
+Q.MATCH_ABBREV_TAC, Q.MATCH_ASSUM_RENAME_TAC
+
+\ENDDOC

@@ -1,0 +1,15 @@
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+
+(******************************************************************************)
+(* Some useful REWRITES                                                       *)
+(******************************************************************************)
+
+open treeTheory rich_listTheory
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/tree_map.dsf"];
+val spec_thm = holfoot_verify_spec file 
+                 [ add_rewrites [ TREE_MAP_THM ] ]

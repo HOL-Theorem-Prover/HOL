@@ -74,6 +74,16 @@ val EXISTS_EQ___CONSEQ_CONV : conseq_conv;
 val TRUE_FALSE_REFL_CONSEQ_CONV : directed_conseq_conv
 
 
+(*Some things about asm_marker*)
+val asm_marker_tm         : term
+val dest_asm_marker       : term -> term * term
+val is_asm_marker         : term -> bool
+val mk_asm_marker         : term -> term -> term
+val mk_asm_marker_random  : term -> term 
+val dest_neg_asm_marker   : term -> term * term
+val is_neg_asm_marker     : term -> bool
+val asm_marker_ELIM_CONV  : conv
+val asm_marker_INTRO_CONV : term -> conv
 
 (* Cache and congruence options *)
 
@@ -124,11 +134,14 @@ val FULL_EXT_CONSEQ_REWRITE_CONV        :
    bool ->                        (* redepth *)
    bool ->                        (* higher order rewriting ? *)
    thm list ->                    (* context *)
-   (bool * int * (thm list -> conv)) list -> (* conversions *)
+   (bool * int option * (thm list -> conv)) list -> (* conversions *)
    (thm list * thm list * thm list) -> (*consequence rewrites *)
    directed_conseq_conv
 
 
+
+val step_opt_sub          : int option -> int -> int option
+val step_opt_allows_steps : int option -> int -> int option -> bool
 
 (* Depth consequence conversions *)
 val EXT_DEPTH_CONSEQ_CONV  : 
@@ -136,7 +149,7 @@ val EXT_DEPTH_CONSEQ_CONV  :
     depth_conseq_conv_cache_opt ->    (*use cache*)
     int option ->                     (*no of steps, NONE for unbounded *)
     bool ->                           (*redepth ?*)
-    (bool * int * (thm list -> directed_conseq_conv)) list -> 
+    (bool * int option * (thm list -> directed_conseq_conv)) list -> 
          (*conversion list:
            (1: apply before or after descending in subterms
             2: weight, how many steps are counted, 0 means that it does
@@ -146,6 +159,21 @@ val EXT_DEPTH_CONSEQ_CONV  :
     thm list ->                       (*context that might be used*)
     directed_conseq_conv
    
+val EXT_DEPTH_NUM_CONSEQ_CONV  : 
+    conseq_conv_congruence list ->    (*congruence_list*)
+    depth_conseq_conv_cache_opt ->    (*use cache*)
+    int option ->                     (*no of steps, NONE for unbounded *)
+    bool ->                           (*redepth ?*)
+    (bool * int option * (thm list -> directed_conseq_conv)) list -> 
+         (*conversion list:
+           (1: apply before or after descending in subterms
+            2: weight, how many steps are counted, 0 means that it does
+               not count
+            3: context -> conversion
+          *)
+    thm list ->                       (*context that might be used*)
+    CONSEQ_CONV_direction -> term ->
+    (int * thm option)
 
 val DEPTH_CONSEQ_CONV      : directed_conseq_conv -> directed_conseq_conv;
 val REDEPTH_CONSEQ_CONV    : directed_conseq_conv -> directed_conseq_conv;
@@ -195,6 +223,9 @@ val WEAKEN_CONSEQ_CONV_RULE      : directed_conseq_conv -> thm -> thm;
 (* Tactics *)
 val CONSEQ_CONV_TAC              : directed_conseq_conv -> tactic;
 val ASM_CONSEQ_CONV_TAC          : (thm list -> directed_conseq_conv) -> tactic
+
+val DISCH_ASM_CONV_TAC           : conv -> tactic;
+val DISCH_ASM_CONSEQ_CONV_TAC    : directed_conseq_conv -> tactic;
 
 val DEPTH_CONSEQ_CONV_TAC        : directed_conseq_conv -> tactic;
 val REDEPTH_CONSEQ_CONV_TAC      : directed_conseq_conv -> tactic;

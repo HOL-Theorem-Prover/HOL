@@ -216,7 +216,8 @@ fun ppc_prove_specs s = let
 fun ppc_jump (tm1:term) (tm2:term) (jump_length:int) (forward:bool) = ("",0)
 
 val ppc_spec = cache ppc_prove_specs;
-val ppc_tools  = (ppc_spec, ppc_jump, ppc_status, ppc_pc)
+val ppc_tools = (ppc_spec, ppc_jump, ppc_status, ppc_pc)
+val ppc_tools_no_status = (ppc_spec, ppc_jump, TRUTH, ppc_pc);
 
 
 (*

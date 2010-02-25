@@ -1,0 +1,15 @@
+list_remove(l;x) [list(l)] {
+  local v,t;
+  if(l!=NULL) {
+    v = l->dta;
+    if(v==x) {
+      t = l;
+      l = l->tl;
+      dispose(t);
+    } else {
+      t = l->tl;
+      list_remove(t;x);
+      l->tl = t;
+    }
+  }
+} [list(l)]

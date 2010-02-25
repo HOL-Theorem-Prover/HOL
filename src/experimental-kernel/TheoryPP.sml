@@ -11,7 +11,6 @@ type thm      = Thm.thm;
 type term     = Term.term
 type hol_type = Type.hol_type
 type kind     = Kind.kind
-type num = Arbnum.num
 
 open Feedback Lib Portable;
 
@@ -106,7 +105,6 @@ fun pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype muniv
  let open Portable Type
      val pp_kind = pp_kind mvarkind pps
      val pp_type = pp_type mvarkind mvartype mvartypeopr mtype mcontype mapptype mabstype munivtype pps
-  (* val pp_type = pp_type mvartype mtype pps *)
      val {add_string,add_break,begin_block,end_block,
           add_newline,flush_ppstream,...} = with_ppstream pps
      fun pp_type_par ty = if mem ty [alpha,beta,gamma,delta] then pp_type ty
@@ -345,213 +343,270 @@ in
   (f, recurse [hd args] (hd (tl args)))
 end
 
-val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
+infix >>
+fun (f1 >> f2) pps = (f1 pps ; f2 pps)
 
-fun pp_struct info_record ppstrm =
- let open Type Term Thm
-     val {theory as (name,i1,i2), parents=parents0,
-        axioms,definitions,theorems,types,constants,struct_ps} = info_record
-     val parents1 = filter (fn (s,_,_) => not ("min"=s)) parents0
-     val {add_string,add_break,begin_block,end_block, add_newline,
-          flush_ppstream,...} = Portable.with_ppstream ppstrm
-     val thml = axioms@definitions@theorems
-     val (all_term_types_set,all_term_atoms_set) =
-          thml_atoms (map #2 thml) (empty_tyset,empty_tmset)
-     open SharingTables
-     fun dotypes (ty, tables) = let
-       val (_, tables) = make_shared_type ty tables
-     in
-       tables
-     end
-     val (idtable, kdtable, tytable) =
-         List.foldl dotypes (empty_idtable, empty_kdtable, empty_tytable) (map #2 constants)
-     fun dotypes (ty, tables) = #2 (make_shared_type ty tables)
-     val (idtable, kdtable, tytable) =
-         HOLset.foldl dotypes (idtable, kdtable, tytable)
-                      all_term_types_set
-     fun doterms (c, tables) = #2 (make_shared_term c tables)
-     val (idtable, kdtable, tytable, tmtable) =
-         HOLset.foldl doterms (idtable, kdtable, tytable, empty_termtable)
-                      all_term_atoms_set
-     fun pp_kind1 kd = let
-         open Kind
-       in
-         if kd = typ then add_string "typ"
-         else if is_arity kd then add_string ("mk_arity "^Int.toString(arity_of kd))
-         else if is_var_kind kd then add_string ("mk_var_kind \""^dest_var_kind kd^"\"")
-         else (* must be arrow kind *) let
-             val (kd1,kd2) = dest_arrow_kind kd
-           in
-             add_string "(";
-             pp_kind1 kd1;
-             add_string " ==>";
-             add_break (1,0);
-             pp_kind1 kd2;
-             add_string ")"
-           end
-       end
-     fun pp_ty_dec (s,kd,rk) =
-         (add_string ("(" ^ stringify s ^ ", ");
-          pp_kind1 kd;
-          add_string (", " ^ Int.toString rk ^ ")"))
-     fun pp_const_dec (s, ty) =
-         add_string ("("^stringify s^", "^
-                     Int.toString (Map.find(#tymap tytable, ty)) ^ ")")
-     fun pblock(header, ob_pr, obs) =
-         case obs
-         of [] => ()
-          |  _ =>
-            ( begin_block CONSISTENT 0;
-              add_string ("(*  Parents *)");
-              add_newline();
-              add_string "local open ";
-              begin_block INCONSISTENT 0;
-              pr_list ob_pr (fn () => ()) (fn () => add_break (1,0)) obs;
-              end_block();
-              add_newline(); add_string "in end;";
-              end_block())
-     fun pp_sml_list pfun L =
-       (begin_block CONSISTENT 0; add_string "[";
-        begin_block INCONSISTENT 0;
-        pr_list pfun (fn () => add_string",") (fn () => add_break(1,0)) L;
-        end_block(); add_string "]"; end_block())
-     fun pp_thid(s,i,j) =
-          (begin_block CONSISTENT 0; add_string"(";
-            add_string (stringify s); add_string",";
-            add_break(0,0);
-            add_string("Arbnum.fromString \""^Arbnum.toString i^"\"");
-            add_string","; add_break(0,0);
-            add_string("Arbnum.fromString \""^Arbnum.toString j^"\"");
-            add_string")"; end_block())
-     fun pp_incorporate_upto_types theory parents types =
-         (begin_block CONSISTENT 8;
-            add_string "val _ = Theory.link_parents"; add_break(1,0);
-            pp_thid theory; add_break(1,0); pp_sml_list pp_thid parents;
-            add_string ";" ;end_block(); add_newline();
-          begin_block CONSISTENT 5;
-            add_string ("val _ = Theory.incorporate_types "^stringify name);
-            add_break(1,0); pp_sml_list pp_ty_dec types;add_string ";" ;
-          end_block(); add_newline())
-     fun pp_incorporate_constants constants =
-         (begin_block CONSISTENT 3;
-          add_string ("val _ = Theory.incorporate_consts "^stringify name^" ");
-          add_string "tyvector";
-          add_break(1,0); pp_sml_list pp_const_dec constants;
-          add_string ";" ; end_block(); add_newline())
+fun block state brkdepth f pps = (HOLPP.begin_block pps state brkdepth ;
+                                  f pps;
+                                  HOLPP.end_block pps)
+fun add_string s pps = HOLPP.add_string pps s
+val add_newline = HOLPP.add_newline
+fun add_break ipr pps = HOLPP.add_break pps ipr
+fun pr_list f g h obs pps = Portable.pr_list (fn x => f x pps)
+                                             (fn () => g pps)
+                                             (fn () => h pps)
+                                             obs
+val flush = HOLPP.flush_ppstream
+fun nothing pps = ()
 
-     fun pparent (s,i,j) = Thry s
+fun pr_thydata thyname thymap = let
+  fun keyval commap (k,v) =
+      block CONSISTENT 2 (add_string (k^" =") >> add_break(1,2) >>
+                          add_string ("\""^String.toString v^"\"" ^
+                                      (if commap then "," else "")))
+  fun one_entry (s, data) =
+      (add_string "val _ = Theory.LoadableThyData.temp_encoded_update {" >>
+       add_break(0,2) >>
+       block CONSISTENT 0
+         (keyval true ("thy", thyname) >>
+          add_break(1,0) >>
+          keyval true ("thydataty", s) >>
+          add_break(1,0) >>
+          keyval false ("data", data)) >>
+       add_break(0,0) >>
+       add_string "}" >>
+       add_newline)
+in
+  Binarymap.foldl (fn (k, data, rest) => one_entry (k,data) >> rest)
+                  nothing
+                  thymap
+end
 
-     fun pp_tm tm =
-         (add_string "read\"";
-          add_string (RawParse.pp_raw_term
-                        (fn ty => Map.find(#tymap tytable, ty))
-                        (fn t => Map.find(#termmap tmtable, t))
-                        tm);
-          add_string "\"")
-     fun pr_bind(s, th) = let
-       val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
-     in
-       begin_block INCONSISTENT 2;
-       add_string "val"; add_break(1,0); add_string s; add_break(1,0);
-       add_string "="; add_break(1,0);
-       add_string "DT("; begin_block INCONSISTENT 0;
-                       Tag.pp_to_disk ppstrm tg;
-                       add_string ","; add_break(1,0);
-                       pp_sml_list pp_tm (w::asl);
-                       end_block(); add_string")";
-       end_block()
-     end
-
-     fun stringbrk s = (add_string s; add_break(1,0))
-     fun bind_theorems () =
-         if null thml then ()
-         else
-           (begin_block CONSISTENT 0;
-            stringbrk "local";
-            begin_block CONSISTENT 0;
-            stringbrk"val DT = Thm.disk_thm";
-            stringbrk"fun read s = RawParse.readTerm tyvector tmvector s";
-            end_block();
-            add_newline();
-            add_string"in"; add_newline();
-            begin_block CONSISTENT 0;
-            pr_list pr_bind (fn () => ()) add_newline thml;
-            end_block();
-            add_newline();
-            add_string"end"; end_block())
-
-     fun pr_dbtriple (class,th) =
-        (begin_block CONSISTENT 1;
-         add_string"("; add_string (stringify th); add_string",";
-         add_break (0,0); add_string th; add_string","; add_break(0,0);
-         add_string class; add_string ")"; end_block())
-
-     fun dblist () =
-        let val axl  = map (fn (s,_) => ("DB.Axm",s)) axioms
-            val defl = map (fn (s,_) => ("DB.Def",s)) definitions
-            val thml = map (fn (s,_) => ("DB.Thm",s)) theorems
+fun pp_struct info_record = let
+  open Type Term Thm
+  val {theory as (name,i1,i2), parents=parents0, thydata,
+       axioms,definitions,theorems,types,constants,struct_ps} = info_record
+  val parents1 = filter (fn (s,_,_) => not ("min"=s)) parents0
+  val thml = axioms@definitions@theorems
+  val (all_term_types_set,all_term_atoms_set) = thml_atoms (map #2 thml) (empty_tyset,empty_tmset)
+  open SharingTables
+  fun dotypes (ty, (idtable, kdtable, tytable)) = let
+    val (_, (idtable, kdtable, tytable)) = make_shared_type ty (idtable, kdtable, tytable)
+  in
+    (idtable, kdtable, tytable)
+  end
+  val (idtable, kdtable, tytable) =
+      List.foldl dotypes (empty_idtable, empty_kdtable, empty_tytable) (map #2 constants)
+  fun dotypes (ty, tables) = #2 (make_shared_type ty tables)
+  val (idtable, kdtable, tytable) =
+      HOLset.foldl dotypes (idtable, kdtable, tytable)
+                   all_term_types_set
+  fun doterms (c, tables) = #2 (make_shared_term c tables)
+  val (idtable, kdtable, tytable, tmtable) =
+      HOLset.foldl doterms (idtable, kdtable, tytable, empty_termtable)
+                   all_term_atoms_set
+  fun pp_kind1 kd = let
+      open Kind
+    in
+      if kd = typ then add_string "typ"
+      else if is_arity kd then add_string ("mk_arity "^Int.toString(arity_of kd))
+      else if is_var_kind kd then add_string ("mk_var_kind \""^dest_var_kind kd^"\"")
+      else (* must be arrow kind *) let
+          val (kd1,kd2) = dest_arrow_kind kd
         in
-           begin_block INCONSISTENT 0;
-           add_string "val _ = DB.bindl"; add_break(1,0);
-           add_string (stringify name); add_break(1,0);
-           pp_sml_list pr_dbtriple (axl@defl@thml);
-           add_newline();
-           end_block()
+          block CONSISTENT 0
+            (add_string "(">>
+             pp_kind1 kd1 >>
+             add_string " ==>">>
+             add_break (1,0) >>
+             pp_kind1 kd2 >>
+             add_string ")")
         end
-     fun pr_ps NONE = ()
-       | pr_ps (SOME pp) = (begin_block CONSISTENT 0; pp ppstrm; end_block());
-     fun pr_psl l =
-          (begin_block CONSISTENT 0;
-            pr_list pr_ps (fn () => ())
-              (fn () => (add_newline(); add_newline())) l;
-            end_block());
+    end
+  fun pp_ty_dec (s,kd,rk) =
+       block CONSISTENT 0
+        (add_string ("(" ^ stringify s ^ ", ") >>
+         pp_kind1 kd >>
+         add_string (", " ^ Int.toString rk ^ ")"))
+  fun pp_const_dec (s, ty) =
+      add_string ("("^stringify s^", "^
+                  Int.toString (Map.find(#tymap tytable, ty)) ^ ")")
+  fun pblock(header, ob_pr, obs) =
+      case obs of
+        [] => nothing
+      |  _ =>
+         block CONSISTENT 0
+               (add_string ("(*  Parents *)") >>
+                add_newline >>
+                add_string "local open " >>
+                block INCONSISTENT 0
+                (pr_list ob_pr nothing (add_break (1,0)) obs) >>
+                add_newline >>
+                add_string "in end;")
+  fun pp_sml_list pfun L =
+    block CONSISTENT 0
+          (add_string "[">>
+           block INCONSISTENT 0
+             (pr_list pfun (add_string",") (add_break(1,0)) L) >>
+           add_string "]")
+  fun pp_thid(s,i,j) =
+       block CONSISTENT 0
+         (add_string"(">>
+          add_string (stringify s)>>
+          add_string",">>
+          add_break(0,0)>>
+          add_string("Arbnum.fromString \""^Arbnum.toString i^"\"")>>
+          add_string",">>
+          add_break(0,0)>>
+          add_string("Arbnum.fromString \""^Arbnum.toString j^"\"")>>
+          add_string")")
+  fun pp_incorporate_upto_types theory parents types =
+      (block CONSISTENT 8
+         (add_string "val _ = Theory.link_parents">> add_break(1,0)>>
+          pp_thid theory>> add_break(1,0)>>
+          pp_sml_list pp_thid parents >>
+          add_string ";")>>
+       add_newline>>
+       block CONSISTENT 5
+         (add_string ("val _ = Theory.incorporate_types "^stringify name)>>
+          add_break(1,0)>>
+          pp_sml_list pp_ty_dec types>>
+          add_string ";")>>
+       add_newline)
+  fun pp_incorporate_constants constants =
+      (block CONSISTENT 3
+         (add_string ("val _ = Theory.incorporate_consts "^
+                      stringify name^" ")>>
+          add_string "tyvector">>
+          add_break(1,0)>>
+          pp_sml_list pp_const_dec constants>>
+          add_string ";")>>
+       add_newline)
 
-   in
-      begin_block CONSISTENT 0;
-      add_string (String.concat
-           ["structure ",Thry name," :> ", ThrySig name," ="]);
-      add_newline();
-      begin_block CONSISTENT 2;
-      add_string "struct"; add_newline();
-      begin_block CONSISTENT 0;
-      add_string ("val _ = if !Globals.print_thy_loads then print \"Loading "^
-                  Thry name^" ... \" else ()"); add_newline();
-      add_string "open Kind Type Term Thm"; add_newline();
-      add_string "infixr ==> -->"; add_newline();
-      add_newline();
-      add_string"fun C s t ty  = mk_thy_const{Name=s,Thy=t,Ty=ty}";   add_newline();
-      add_string"fun T s t A   = mk_thy_type{Tyop=s, Thy=t,Args=A}";  add_newline();
-      add_string"fun V s q     = mk_var(s,q)";                        add_newline();
-      add_string"val K         = mk_var_kind";                        add_newline();
-      add_string"val U         = mk_vartype";                         add_newline();
-      add_string"fun R s k r   = mk_var_type(s,k,r)";                 add_newline();
-      add_string"fun O s t k r = mk_thy_con_type{Tyop=s,Thy=t,Kind=k,Rank=r}";  add_newline();
-      add_string"fun P a b     = mk_app_type(a,b)";                   add_newline();
-      add_string"fun B a b     = mk_abs_type(a,b)";                   add_newline();
-      add_string"fun N a b     = mk_univ_type(a,b)";                  add_newline();
-      pblock ("Parents", add_string o pparent,
-              thid_sort parents1);
-      add_newline();
-      pp_incorporate_upto_types theory parents0 types; add_newline();
-      output_idtable ppstrm "idvector" idtable;
-      output_kindtable ppstrm {kdtable_nm = "kdvector"} kdtable;
-      output_typetable ppstrm {idtable_nm = "idvector",
+  fun pparent (s,i,j) = Thry s
+
+  fun pp_tm tm =
+      (add_string "read\"">>
+       add_string (RawParse.pp_raw_term
+                     (fn ty => Map.find(#tymap tytable, ty))
+                     (fn t => Map.find(#termmap tmtable, t))
+                     tm)>>
+       add_string "\"")
+  fun pr_bind(s, th) = let
+    val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
+  in
+    block INCONSISTENT 2
+      (add_string "val">>
+       add_break(1,0)>> add_string s>> add_break(1,0)>>
+       add_string "=">> add_break(1,0)>>
+       add_string "DT(">>
+       block INCONSISTENT 0
+          (C Tag.pp_to_disk tg>>
+           add_string ",">> add_break(1,0)>>
+           pp_sml_list pp_tm (w::asl))>>
+       add_string")")
+  end
+
+  fun stringbrk s = (add_string s >> add_break(1,0))
+  val bind_theorems =
+      if null thml then nothing
+      else
+        block CONSISTENT 0
+           (stringbrk "local" >>
+            block CONSISTENT 0
+              (stringbrk"val DT = Thm.disk_thm" >>
+               stringbrk"fun read s = RawParse.readTerm tyvector tmvector s") >>
+            add_newline >>
+            add_string"in" >> add_newline >>
+            block CONSISTENT 0
+               (pr_list pr_bind nothing add_newline thml) >>
+            add_newline >>
+            add_string"end")
+
+  fun pr_dbtriple (class,th) =
+     block CONSISTENT 1
+        (add_string"(" >> add_string (stringify th) >> add_string"," >>
+         add_break (0,0) >> add_string th >> add_string"," >>
+         add_break(0,0) >> add_string class >> add_string ")")
+
+  fun dblist () =
+     let val axl  = map (fn (s,_) => ("DB.Axm",s)) axioms
+         val defl = map (fn (s,_) => ("DB.Def",s)) definitions
+         val thml = map (fn (s,_) => ("DB.Thm",s)) theorems
+     in
+        block INCONSISTENT 0
+          (add_string "val _ = DB.bindl" >> add_break(1,0) >>
+           add_string (stringify name) >> add_break(1,0) >>
+           pp_sml_list pr_dbtriple (axl@defl@thml) >>
+           add_newline)
+     end
+  fun pr_ps NONE = nothing
+    | pr_ps (SOME pp) = block CONSISTENT 0 pp
+
+  fun pr_psl l =
+       block CONSISTENT 0
+         (pr_list pr_ps nothing (add_newline >> add_newline) l)
+
+  fun output_idtable s tab pps = SharingTables.output_idtable pps s tab
+  fun output_kindtable recd tab pps =
+      SharingTables.output_kindtable pps recd tab
+  fun output_typetable recd tab pps =
+      SharingTables.output_typetable pps recd tab
+  fun output_termtable recd tab pps =
+      SharingTables.output_termtable pps recd tab
+
+in
+  block CONSISTENT 0
+      (add_string (String.concat
+                     ["structure ",Thry name," :> ", ThrySig name," ="]) >>
+       add_newline >>
+       block CONSISTENT 2
+         (add_string "struct" >> add_newline >>
+          block CONSISTENT 0
+            (add_string ("val _ = if !Globals.print_thy_loads then \
+                         \print \"Loading "^
+                         Thry name^" ... \" else ()") >> add_newline >>
+             add_string "open Kind Type Term Thm" >> add_newline >>
+             add_string "infixr -->" >> add_newline >>
+             add_newline >>
+             add_string"fun C s t ty  = mk_thy_const{Name=s,Thy=t,Ty=ty}" >>
+             add_newline >>
+             add_string"fun T s t A   = mk_thy_type{Tyop=s, Thy=t,Args=A}" >>
+             add_newline >>
+             add_string"fun V s q     = mk_var(s,q)" >> add_newline >>
+             add_string"val K         = mk_var_kind" >> add_newline >>
+             add_string"val U         = mk_vartype"  >> add_newline >>
+             add_string"fun R s k r   = mk_var_type(s,k,r)" >> add_newline >>
+             add_string"fun O s t k r = mk_thy_con_type{Tyop=s,Thy=t,Kind=k,Rank=r}" >>
+             add_newline >>
+             add_string"fun P a b     = mk_app_type(a,b)"   >> add_newline >>
+             add_string"fun B a b     = mk_abs_type(a,b)"   >> add_newline >>
+             add_string"fun N a b     = mk_univ_type(a,b)"  >> add_newline >>
+             pblock ("Parents", add_string o pparent,
+                     thid_sort parents1) >>
+             add_newline >>
+             pp_incorporate_upto_types theory parents0 types >> add_newline >>
+             output_idtable "idvector" idtable >>
+             output_kindtable {kdtable_nm = "kdvector"} kdtable >>
+             output_typetable {idtable_nm = "idvector",
                                kdtable_nm = "kdvector",
-                               tytable_nm = "tyvector"} tytable;
-      pp_incorporate_constants constants; add_newline();
-      output_termtable ppstrm {idtable_nm = "idvector",
+                               tytable_nm = "tyvector"} tytable >>
+             pp_incorporate_constants constants >> add_newline >>
+             output_termtable {idtable_nm = "idvector",
                                tytable_nm = "tyvector",
-                               termtable_nm = "tmvector"} tmtable;
-      bind_theorems (); add_newline();
-      dblist(); add_newline();
-      pr_psl struct_ps;
-      end_block();
-      end_block();
-      add_break(0,0);
-      add_string "val _ = if !Globals.print_thy_loads then print \"done\\n\" else ()"; add_newline();
-      add_string"end"; add_newline();
-      end_block();
-      flush_ppstream()
-   end;
+                               termtable_nm = "tmvector"} tmtable >>
+             bind_theorems >> add_newline >>
+             dblist() >> add_newline >>
+             pr_psl struct_ps >>
+             pr_thydata name thydata)) >>
+         add_break(0,0) >>
+         add_string "val _ = if !Globals.print_thy_loads then print \
+                    \\"done\\n\" else ()" >> add_newline >>
+         add_string ("val _ = Theory.load_complete \""^String.toString name^
+                    "\"") >>
+         add_newline >>
+         add_string"end" >> add_newline) >>
+      flush
+   end
 
 end;  (* TheoryPP *)

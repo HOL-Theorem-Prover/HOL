@@ -1,4 +1,0 @@
-EXTRA_CLEANS = selftest.exe
-
-selftest.exe: selftest.uo
-	$(HOLMOSMLC) -o $@ $<

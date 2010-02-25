@@ -116,14 +116,17 @@ end;
 (* Traces                           *)
 (* -------------------------------- *)
 
-val emacs_add_type_information = ref true
-val _ = Feedback.register_btrace ("emacs_terminal show types", emacs_add_type_information);
+val add_type_information = ref true
+val _ = Feedback.register_btrace ("PPBackEnd show types", add_type_information);
 
 val backend_use_annotations = ref true
 val _ = Feedback.register_btrace ("PPBackEnd use annotations", backend_use_annotations);
 
 val backend_use_styles = ref true
 val _ = Feedback.register_btrace ("PPBackEnd use styles", backend_use_styles);
+
+val backend_use_css = ref true
+val _ = Feedback.register_btrace ("PPBackEnd use css", backend_use_styles);
 
 
 (* -------------------------------- *)
@@ -167,7 +170,7 @@ fun fg_to_vt100 c =
 let
    val (light, col_ind) = color_to_vt100 c
 in
-   (if light then ";1;3" else "3") ^
+   (if light then ";1;3" else ";3") ^
    Int.toString col_ind
 end;
 
@@ -270,7 +273,7 @@ fun full_style_to_emacs_string (fg,bg,b,u) =
 
 val emacs_terminal = let
   val sz = UTF8.size
-  fun lazy_string ls = if !emacs_add_type_information then (ls ()) else "";
+  fun lazy_string ls = if !add_type_information then (ls ()) else "";
   fun fv s tystr = "(*(*(*FV\000"^(lazy_string tystr)^"\000"^s^"*)*)*)"
   fun bv s tystr = "(*(*(*BV\000"^(lazy_string tystr)^"\000"^s^"*)*)*)"
   fun tyfv s kdstr = "(*(*(*TF\000"^(lazy_string kdstr)^"\000"^s^"*)*)*)"
@@ -320,6 +323,118 @@ in
    begin_style    = begin_style,
    end_style      = end_style}
 end;
+
+
+
+(* -------------------------------- *)
+(* html terminal                    *)
+(* -------------------------------- *)
+
+fun color_to_html Black       = "black"
+  | color_to_html RedBrown    = "maroon"
+  | color_to_html Green       = "green"
+  | color_to_html BrownGreen  = "olive"
+  | color_to_html DarkBlue    = "navy"
+  | color_to_html Purple      = "purple"
+  | color_to_html BlueGreen   = "teal"
+  | color_to_html DarkGrey    = "gray"
+  | color_to_html LightGrey   = "silver"
+  | color_to_html OrangeRed   = "red"
+  | color_to_html VividGreen  = "lime"
+  | color_to_html Yellow      = "yellow"
+  | color_to_html Blue        = "blue"
+  | color_to_html PinkPurple  = "magenta"
+  | color_to_html LightBlue   = "cyan"
+  | color_to_html White       = "white";
+
+
+fun full_style_to_html (fg,bg,b,u) =
+   (* foreground *) (if isSome fg then ("color:"^(color_to_html (valOf fg))^"; ") else "") ^ 
+   (* background *) (if isSome bg then ("background-color:"^(color_to_html (valOf bg))^"; ") else "") ^
+   (* bold *)       (if b then "font-weight:bold; " else "") ^
+   (* underline *)  (if u then "text-decoration:underline; " else "")
+
+val html_terminal = 
+let
+  val style_stack = ref ([]:pp_full_style list);
+  fun set_style pps fsty =
+      PP.add_stringsz pps ("<span style=\""^(full_style_to_html fsty)^"\">", 0)
+
+  fun reset_style pps = PP.add_stringsz pps ("</span>", 0);
+
+  fun begin_style pps styL = if not (!backend_use_styles) then () else
+        (push_styleL style_stack styL;
+         set_style pps (top_style style_stack));
+
+  fun end_style pps = if not (!backend_use_styles) then () else
+        (pop_style style_stack;
+         PP.add_stringsz pps ("</span>", 0));
+
+  fun add_color_string pps c s =
+     (set_style pps (SOME c, NONE, false, false);
+      PP.add_string pps s;
+      reset_style pps);
+
+
+  fun add_ann_string_general pps ty ls_opt s =
+  let
+     val _ = PP.add_stringsz pps ("<span class=\""^ty^"\"", 0);
+     val _ = if ((!add_type_information) andalso (isSome ls_opt)) then
+             (PP.add_stringsz pps (" title=\""^((valOf ls_opt) ())^"\"", 0)) else ();
+     val _ = PP.add_stringsz pps (">", 0);
+     val _ = PP.add_string pps s;
+     val _ = PP.add_stringsz pps ("</span>", 0);
+  in
+     ()
+  end;
+
+(* When using CSS you need a style-sheet like
+   <style type="text/css">
+      span.freevar  {color: blue}
+      span.boundvar {color: green}
+      span.freetypevar  {color: purple}
+      span.boundtypevar {color: olive}
+      span.type     {color: teal}
+   </style>
+*)
+  fun add_ann_string___css pps (s, ann) =
+      if not (!backend_use_annotations) then PP.add_string pps s else
+      case ann of
+        FV (_,tystr) => add_ann_string_general pps "freevar" (SOME tystr) s
+      | BV (_,tystr) => add_ann_string_general pps "boundvar" (SOME tystr) s
+      | TyFV (_,_,kdstr) => add_ann_string_general pps "freetypevar" (SOME kdstr) s
+      | TyBV (_,_,kdstr) => add_ann_string_general pps "boundtypevar" (SOME kdstr) s
+      | TyOp thy => add_ann_string_general pps "type" (SOME thy) s
+      | TySyn r => add_ann_string_general pps "type" (SOME r) s
+      | _ => PP.add_string pps s
+
+  fun add_ann_string___simple pps (s, ann) =
+      if not (!backend_use_annotations) then PP.add_string pps s else
+
+      case ann of
+        FV _    => add_color_string pps Blue s
+      | BV _    => add_color_string pps Green s
+      | TyFV _  => add_color_string pps Purple s
+      | TyBV _  => add_color_string pps BrownGreen s
+      | TyOp _  => add_color_string pps BlueGreen s
+      | TySyn _ => add_color_string pps BlueGreen s
+      | _ => PP.add_string pps s
+
+  fun add_ann_string pps (s, ann) =
+     if (!backend_use_css) then add_ann_string___css pps (s, ann) else
+        add_ann_string___simple pps (s, ann)
+      
+in
+  {name           = "html_terminal",
+   add_ann_string = add_ann_string,
+   add_break      = #add_break   raw_terminal,
+   add_newline    = #add_newline raw_terminal,
+   begin_block    = #begin_block raw_terminal,
+   end_block      = #end_block   raw_terminal,
+   add_string     = #add_string  raw_terminal,
+   begin_style    = begin_style,
+   end_style      = end_style}
+end
 
 
 end (* struct *)

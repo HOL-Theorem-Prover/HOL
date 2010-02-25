@@ -419,7 +419,7 @@ val LTFunVal = Q.store_thm(
 (LTFun 125 = [ 68;110;121])  /\
 (LTFun 126 = [ 5;11;26;80;122;126])  /\
 (LTFun 127 = [ 32;86;99])`,
-EVAL_TAC);
+REPEAT STRIP_TAC THEN EVAL_TAC);
 
 (* linear transformation table used in decryption *)
 
@@ -554,7 +554,7 @@ val invLTFunVal = Q.store_thm(
 (invLTFun 125 = [1;16;86;97;125])  /\
 (invLTFun 126 = [11;98])  /\
 (invLTFun 127 = [4;27;86;97;113;115;127])`,
-EVAL_TAC);
+REPEAT STRIP_TAC THEN EVAL_TAC);
 
 
 (* compute the parity on select bits *)
@@ -626,7 +626,7 @@ val transform_inv1_w128 = Q.store_thm(
      ==>
      ~((transform transFun d w) ' to)`,
   Induct_on `d` THEN
-  SRW_TAC [ARITH_ss,WORD_BIT_EQ_ss] [transform_def,LET_THM]);
+  SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def,transform_def,LET_THM]);
 
 val transform_inv2_w128 = Q.store_thm(
  "transform_inv2_w128",
@@ -637,12 +637,12 @@ val transform_inv2_w128 = Q.store_thm(
      ==>
      ((transform transFun d w) ' to = selParity w (transFun to))`,
  Induct_on `d` THEN
-  SRW_TAC [ARITH_ss,WORD_BIT_EQ_ss] [transform_def,LET_THM] THEN
+  SRW_TAC [WORD_BIT_EQ_ss] [transform_def,LET_THM] THEN
   `d < 128` by DECIDE_TAC THEN
   Cases_on `to <= d` THEN
   ASM_SIMP_TAC arith_ss [] THEN
   `to = SUC d` by DECIDE_TAC THEN
-  ASM_SIMP_TAC arith_ss [transform_inv1_w128]);
+  SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def,transform_inv1_w128]);
 
 (* the composite of two linear transformations *)
 

@@ -1,7 +1,8 @@
 signature parse_term =
 sig
   type 'a PStack
-  type 'a qbuf= 'a qbuf.qbuf
+  type tPStack = Term.term PStack
+  type tqbuf = Term.term qbuf.qbuf
   type stack_terminal = term_grammar.stack_terminal
   val initial_pstack : 'a PStack
   val is_final_pstack : 'a PStack -> bool
@@ -12,10 +13,9 @@ sig
 
   val parse_term :
       term_grammar.grammar ->
-      ('a qbuf -> Pretype.pretype) -> (* type parser *)
-      ('a qbuf -> Pretype.pretype) -> (* type variable parser *)
-      ('a qbuf * 'a PStack) ->
-      ('a qbuf * 'a PStack) * unit option
+      (tqbuf -> Pretype.pretype) -> (* type parser *)
+      (tqbuf -> Pretype.pretype) -> (* type variable parser *)
+      (tqbuf * tPStack, unit, string locn.located) errormonad.t
 
   (* not used externally, but can be useful for debugging *)
   datatype mx_src = Ifx | Pfx | MS_Other | MS_Multi

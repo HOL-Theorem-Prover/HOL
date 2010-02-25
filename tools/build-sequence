@@ -31,9 +31,9 @@
 # annotation should come first, i.e., [mosml]!!foo, not !![mosml]foo.
 
 tools/mlyacc/mlyacclib
-src/portableML
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly
+src/portableML
 src/prekernel
 **KERNEL**
 # these three directories are required to even run hol.bare.unquote
@@ -97,10 +97,12 @@ src/n-bit
 !!examples/ARM/arm6-verification/correctness
 src/ring/src
 src/integer
+!src/integer/testing
 src/patricia
 src/emit
 # src/emit/theories
-!!examples/ARM/v7
+!examples/ARM/v7
+!!examples/machine-code/garbage-collectors
 src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma

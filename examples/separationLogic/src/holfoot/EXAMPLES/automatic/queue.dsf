@@ -1,0 +1,31 @@
+/* queues represented as a linked list with front and back pointers
+ * queue(f,r) iff if f==NULL then emp else lseg(f,r) * r|->NULL) */
+
+/* insert new node at rear */
+/* without pointers into the stack, have to pass in f */
+insert(f,r;d) [if f==NULL then 
+                  ``data = []:num list`` 
+               else 
+                  ``~(data = []:num list)`` * 
+                  data_lseg(f,``FRONT data``,r) * 
+                  r|->[tl:NULL,dta:``LAST data``]] {
+  local t;
+  t = new();
+  t->tl = NULL;
+  t->dta = d;
+  if(f == NULL) {
+    f = t;
+    r = t;
+  } else {
+    r->tl = t;
+    r = t;
+  }
+} [f != NULL * data_lseg(f,``data``,r) * r|->[tl:NULL,dta:d]]
+
+/* delete node from front */
+delete(f;r) [data_lseg(f, data, r) * r|->[tl:NULL,dta:#data_last]] {
+  local t;
+  t = f;
+  f = f->tl;
+  dispose t;
+} [if f==NULL then emp else data_lseg(f,``(TL data):num list``, r) * r|->[tl:NULL,dta:#data_last]]

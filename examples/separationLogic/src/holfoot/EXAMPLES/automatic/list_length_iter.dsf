@@ -1,0 +1,15 @@
+list_length(r;c) [data_list(c,cdata)] {
+  local t;
+  r = 0;
+  t = c;
+  while (t != NULL) [
+     data_lseg(c, _cdata1, t) *
+     data_list(t, _cdata2) * 
+     r == ``LENGTH (_cdata1:num list)`` *
+     ``cdata:num list = _cdata1 ++ _cdata2``] {
+    t = t->tl;
+    r = r + 1;
+  }
+} [data_list(c,cdata) * 
+   r == ``LENGTH (cdata:num list)``]
+

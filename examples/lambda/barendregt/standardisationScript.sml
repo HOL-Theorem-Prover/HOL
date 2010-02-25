@@ -7,6 +7,13 @@ struct
 
      Poly/ML doesn't have this problem. *)
 
+(* For interactive use:
+app load ["binderLib","finite_developmentsTheory","labelledTermsTheory",
+          "termTheory","chap2Theory","chap3Theory","term_posnsTheory",
+          "pathTheory","chap11_1Theory","head_reductionTheory",
+          "containerTheory","OldAbbrevTactics","SatisfySimps"];
+*)
+
 open HolKernel Parse boolLib bossLib BasicProvers metisLib
 
 open boolSimps

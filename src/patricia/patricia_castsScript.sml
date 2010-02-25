@@ -326,10 +326,10 @@ val IMAGE_string_to_num = store_thm("IMAGE_string_to_num",
           \\ SRW_TAC [] [string_to_num_def, s2n_STRING_STRING1]
           >> EVAL_TAC \\ DISJ2_TAC
           \\ `LENGTH (MAP ORD (REVERSE s) ++ [ORD c]) =
-              LENGTH (REVERSE s) + 1`
+              LENGTH s + 1`
           by SRW_TAC [] []
           \\ `l2n 256 (MAP ORD (REVERSE s) ++ [ORD c]) <
-              256 ** (LENGTH (REVERSE s) + 1)`
+              256 ** (LENGTH s + 1)`
           by METIS_TAC [l2n_LENGTH, DECIDE ``1 < 256``]
           \\ SRW_TAC [ARITH_ss] [s2n_def, LOG_ADD_COMM, DIV_MULT_1,
                SPECL [`256`, `a ++ b`] l2n_APPEND]]);

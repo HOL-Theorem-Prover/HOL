@@ -43,14 +43,21 @@ structure parse_term :> parse_term =
 struct
 
 open Lib
-open optmonad term_tokens term_grammar HOLgrammars
+open errormonad term_tokens term_grammar HOLgrammars
 open GrammarSpecials
 infix >> >- ++ >->
 
 val WARN = Feedback.HOL_WARNING "parse_term";
 val WARNloc = Feedback.HOL_WARNINGloc "parse_term";
 
-fun FAILloc locn s = raise Fail (locn.toString locn^":\n"^s)
+fun noloc s = (s, locn.Loc_None)
+val qfail = error (noloc "")
+fun WARNloc_string loc s = (s, loc)
+
+
+
+exception Failloc of (locn.locn * string)
+fun FAILloc locn s = raise Failloc (locn, s)
 
 fun liftlocn f (x,locn) = (f x,locn)
 
@@ -649,6 +656,9 @@ datatype 'a PStack =
   PStack of {stack : ('a stack_item locn.located * 'a lookahead_item) list,
              lookahead : 'a lookahead_item locn.located list,
              in_vstruct : (vsres_state * int) list}
+type tqbuf = term qbuf.qbuf
+type tPStack = term PStack
+
 
 (* dummy lookahead token *)
 val XXX = Token (Ident "XXX")
@@ -671,35 +681,37 @@ fun fupd_snd f (x,y) = (x, f y)
 fun fupd_vs0 f (PStack{in_vstruct,lookahead,stack}) =
   PStack{stack = stack, lookahead = lookahead, in_vstruct = f in_vstruct}
 
-fun invstructp (cs, p) = ((cs, p), SOME (invstructp0 p))
+fun invstructp (cs, p) = ((cs, p), Some (invstructp0 p))
 
 fun inc_paren (cs, p) = ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n + 1))) p),
-                         SOME ())
+                         Some ())
 fun dec_paren (cs, p) = ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n - 1))) p),
-                         SOME ())
+                         Some ())
 fun enter_binder (cs,p) =
-  ((cs, fupd_vs0 (fn rest => (VSRES_VS, 0)::rest) p), SOME ())
+  ((cs, fupd_vs0 (fn rest => (VSRES_VS, 0)::rest) p), Some ())
 fun enter_restm (cs, p) =
-  ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_RESTM))) p), SOME ())
+  ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_RESTM))) p), Some ())
 fun leave_restm (cs, p) =
-  ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_VS))) p), SOME ())
-fun leave_binder (cs, p) = ((cs, fupd_vs0 tl p), SOME ())
+  ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_VS))) p), Some ())
+fun leave_binder (cs, p) = ((cs, fupd_vs0 tl p), Some ())
 
 fun push_pstack p i = upd_stack p (i::pstack p)
 fun top_pstack p = hd (pstack p)
 fun pop_pstack p = upd_stack p (tl (pstack p))
 
-fun push t (cs, p) = ((cs, push_pstack p t), SOME ())
+fun push t (cs, p) = ((cs, push_pstack p t), Some ())
 fun topterm (cs, p) =
-  ((cs, p), List.find (is_terminal o #1) (pstack p))
+  ((cs, p), case List.find (is_terminal o #1) (pstack p) of
+              NONE => Error (noloc "No terminal in stack")
+            | SOME x => Some x)
 fun pop (cs, p) =
-    ((cs, pop_pstack p), SOME (top_pstack p))
-    handle Empty => ((cs, p), NONE)
-fun getstack (cs, p) = ((cs, p), SOME (pstack p))
+    ((cs, pop_pstack p), Some (top_pstack p))
+    handle Empty => ((cs, p), Error (noloc "pop: empty stack"))
+fun getstack (cs, p) = ((cs, p), Some (pstack p))
 
 
-fun set_la tt (cs, p) = ((cs, upd_la p tt), SOME ())
-fun current_la (cs, p) = ((cs, p), SOME (pla p))
+fun set_la tt (cs, p) = ((cs, upd_la p tt), Some ())
+fun current_la (cs, p) = ((cs, p), Some (pla p))
 
 fun findpos P [] = NONE
   | findpos P (x::xs) = if P x then SOME(0,x)
@@ -774,10 +786,10 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
   in
     fn (qb, ps) (* (qb : ''a qbuf, ps : ''a PStack) *) =>
        case ttlex qb of
-         NONE => ((qb, ps), NONE)
-       | SOME t => ((qb, ps), SOME t)
+         NONE => ((qb, ps), Error (noloc "Token-lexing failed"))
+       | SOME t => ((qb, ps), Some t)
   end
-  fun lifted_typeparser (qb, ps) = ((qb, ps), SOME (typeparser qb))
+  fun lifted_typeparser (qb, ps) = ((qb, ps), Some (typeparser qb))
   fun lifted_type_list_parser (qb, ps) =
      let open type_tokens
          fun recurse tys =
@@ -786,7 +798,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
                    Comma => (adv(); recurse (typeparser qb :: tys))
                  | _ => List.rev tys
              end
-     in ((qb, ps), SOME (recurse [typeparser qb]))
+     in ((qb, ps), Some (recurse [typeparser qb]))
      end
   fun lifted_type_var_list_parser (qb, ps) =
      let open type_tokens
@@ -796,7 +808,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
                    Period => List.rev tys
                  | _ => (recurse (type_var_parser qb :: tys))
              end
-     in ((qb, ps), SOME (recurse [type_var_parser qb]))
+     in ((qb, ps), Some (recurse [type_var_parser qb]))
      end
 
 
@@ -840,7 +852,8 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
      has the equality relation between components and such that the first
      element not in the segment is less than than the last one in the
      segment *)
-  (* NB: the FAILloc invocations in this function raise untrapped Fail exceptions *)
+  (* NB: the FAILloc invocations in this function raise Failloc exceptions that
+         are trapped at the bottom of the perform_reduction function *)
   fun find_reduction stack =
     case stack of
       [] => raise Fail "find_reduction: stack empty!"
@@ -904,6 +917,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
     fun handle_list_reduction rhs = let
       exception Hah
       fun possible_list pattern = let
+        val _ = length pattern >= 5 orelse raise Hah
         val poss_left = case (hd pattern) of TOK x => x | _ => raise Hah
         val poss_right =
           case (List.last pattern) of TOK x => x | _ => raise Hah
@@ -1085,7 +1099,8 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
                  above *)
         in
            push (thing_to_push, Token tt)
-        end handle Temp s => (WARNloc "parse_term" locn s; fail))
+        end handle Temp s => (WARNloc "parse_term" locn s;
+                              error (WARNloc_string locn s)))
       end
     | (((Terminal (STD_HOL_TOK type_rbracket),rlocn), _)::
        ((Terminal TypeListTok,tlocn), PreTypeList tys)::((Terminal TypeBracket,_), _)::
@@ -1109,9 +1124,12 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
     | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
        ((NonTermVS vsl,llocn), _)::rest) => let
        in
-         repeatn 3 pop >> push ((NonTermVS (map (fn (v as (_,locn)) => (TYPEDV(v,(ty,rlocn)),locn)) vsl),
-                                 locn.between llocn rlocn),
-                                XXX)
+         repeatn 3 pop >>
+         push ((NonTermVS
+                    (map (fn (v as (_,locn)) => (TYPEDV(v,(ty,rlocn)),locn))
+                         vsl),
+                    locn.between llocn rlocn),
+               XXX)
        end
     | [((Terminal TypeTok,rlocn), PreType ty), ((Terminal TypeColon,_), _)] =>
       let
@@ -1203,7 +1221,8 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
       in
         repeatn 4 pop >> push (liftlocn NonTerminal abs_t, XXX)
       end handle Urk s => (WARNloc "parse_term" (locn.between llocn rlocn) s;
-                           fail) end
+                           error (WARNloc_string (locn.between llocn rlocn) s))
+      end
     | (((NonTerminal t,rlocn), _)::((Terminal EndBinding,_), _)::
        ((Terminal TypeListTok,tlocn), PreTypeList tys)::
        ((Terminal (STD_HOL_TOK binder),llocn), _)::rest) => let
@@ -1229,17 +1248,21 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
              2. bracket-removal in the remove_specials code won't see
                 the parentheses in the binding "var-struct" position
         *)
-        repeatn 3 pop >> push vsl  (* don't bother expanding locn; would add no
-                                      useful info *)
+        repeatn 3 pop >>
+        push vsl  (* don't bother expanding locn; would add no useful info *)
       end
     | (((NonTermVS vsl1,rlocn), _)::((Terminal(STD_HOL_TOK ","),_), _)::
        ((NonTermVS vsl2,llocn), _)::rest) => let val lrlocn = locn.between llocn rlocn
        in
-         if length vsl1 <> 1 orelse length vsl2 <> 1 then
-           (WARNloc "parse_term" lrlocn "Can't have lists of atoms as arguments to , in binder"; fail)
-           else
-             repeatn 3 pop >> push ((NonTermVS [(VPAIR(hd vsl2, hd vsl1),lrlocn)],lrlocn),
-                                    XXX)
+         if length vsl1 <> 1 orelse length vsl2 <> 1 then let
+             val msg = "Can't have lists of atoms as arguments to , in binder"
+           in
+             (WARNloc "parse_term" lrlocn msg;
+              error (WARNloc_string lrlocn msg))
+           end
+         else
+           repeatn 3 pop >>
+           push ((NonTermVS [(VPAIR(hd vsl2, hd vsl1),lrlocn)],lrlocn), XXX)
        end
     | (((NonTerminal t,rlocn), _)::((Terminal ResquanOpTok,_), _)::
        ((NonTermVS vsl,llocn), _)::rest) => let
@@ -1272,10 +1295,17 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
         push ((NonTermVS(List.concat (List.mapPartial get_vsls rhs)),lrlocn),
               XXX)
       else
-        (WARNloc "parse_term" lrlocn "Can't do this sort of reduction"; fail)
+        (WARNloc "parse_term" lrlocn "Can't do this sort of reduction";
+         error (WARNloc_string lrlocn "Can't do this sort of reduction"))
     end
-  end handle Fail s => (if !syntax_error_trace then (print s; print "\n")
-                        else (); fail)
+  end handle Failloc (loc,s) =>
+             (if !syntax_error_trace then
+                (print (locn.toString loc);
+                 print ":\n";
+                 print s;
+                 print "\n")
+              else ();
+              error (WARNloc_string loc s))
 
 
   val do_reduction =
@@ -1296,7 +1326,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
     (fn la => invstructp >- (return o hd) >-
      (fn in_vs =>
       case la of
-        [] => fail
+        [] => error (noloc "No lookahead")
       | (x0::xs) => let
           val (terminal,locn,x) = transform in_vs (SOME x0)
         in
@@ -1332,7 +1362,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
             if mem input_term fnapp_closed_lefts then
               current_la >- (fn oldla => set_la (fnt::oldla))
             else
-              fail
+              qfail
           end
         | ((NonTermVS _,locn), _) :: _ => let
             val fnt = (LA_Symbol VS_cons,locn.Loc_Near locn)
@@ -1340,9 +1370,9 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
             if mem input_term fnapp_closed_lefts then
               current_la >- (fn oldla => set_la (fnt::oldla))
             else
-              fail
+              qfail
           end
-        | _ => fail
+        | _ => qfail
 
     (* a "paren escape" is a CAML style escaping of what would otherwise
        be a special token by parenthesising it.  Thus (/\) instead of $/\.
@@ -1353,7 +1383,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
     val check_for_paren_escape = let
       fun require (s:string option) =
           getstack >-
-          (fn [] => fail
+          (fn [] => error (noloc "Stack empty")
             | (tt :: _ ) => let
               in
                 case tt of
@@ -1361,17 +1391,20 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
                   in
                     case s of
                       NONE => pop >> return (s',locn)
-                    | SOME s'' => if s' = s'' then pop >> return (s',locn)
-                                  else fail
+                    | SOME s'' =>
+                        if s' = s'' then pop >> return (s',locn)
+                        else error (WARNloc_string
+                                       locn
+                                       ("Expected "^s''^", found "^s'))
                   end
-                | _ => fail
+                | _ => error (noloc "Expected a terminal")
               end)
     in
       if input_term = STD_HOL_TOK ")" then
           require NONE >-
           (fn (s,_) =>
               if s = ")" orelse s = "(" then
-                fail  (* don't want to paren-escape "())" or  "(()" *)
+                qfail (* don't want to paren-escape "())" or  "(()" *)
               else
                 require (SOME "(") >-
                 (fn (_,locn) => let val lrlocn = locn.between locn itlocn
@@ -1385,7 +1418,7 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
                       else
                         push ((NonTermVS [(SIMPLE s,lrlocn)],lrlocn), XXX))
                   end ))
-      else fail
+      else qfail
     end
     fun top_might_be_infix stk =
         case stk of
@@ -1402,14 +1435,14 @@ fun parse_term (G : grammar) typeparser type_var_parser = let
       fun check_order (topntp,stk) =
           case Polyhash.peek prec_matrix ((top,topntp), input_term) of
             NONE => let
+              val msg = "Don't expect to find a "^STtoString G input_term^
+                        " in this position after a "^STtoString G top^"\n"^
+                        locn.toString itlocn^" and " ^
+                        locn.toString toplocn^".\n"
             in
-              if !syntax_error_trace then
-                print ("Don't expect to find a "^STtoString G input_term^
-                       " in this position after a "^STtoString G top^"\n"^
-                       locn.toString itlocn^" and " ^
-                       locn.toString toplocn^".\n")
+              if !syntax_error_trace then print msg
               else ();
-              fail
+              error (msg, toplocn)
             end
           | SOME order => let
               fun byorder GREATER = do_reduction

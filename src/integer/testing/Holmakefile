@@ -1,32 +1,36 @@
 PRE_INCLUDES = ..
-TEST_PROGS = test_coopers.exe test_omega.exe
+TEST_PROGS = test_coopers.exe test_omega.exe selftest.exe
 
 EXTRA_CLEANS = $(TEST_PROGS) tcooper genproblem gen_bc_problem \
                testdp
 
-all: $(TEST_PROGS)
-
-test_coopers.exe: test_coopers.uo ../Cooper.uo ../CooperShell.uo \
+COOPER_DEPS = test_coopers.uo ../Cooper.uo ../CooperShell.uo \
               ../CooperMath.uo ../CooperSyntax.uo ../CooperCore.uo \
               ../jrhCore.uo ../IntDP_Munge.uo test_cases.uo
-	HOLMOSMLC -o $@ test_coopers.uo
 
-test_omega.exe: test_omega.uo ../Omega.uo ../OmegaShell.uo ../OmegaSimple.uo \
+OMEGA_DEPS = test_omega.uo ../Omega.uo ../OmegaShell.uo ../OmegaSimple.uo \
             ../IntDP_Munge.uo test_cases.uo ../OmegaMath.uo ../CSimp.uo
-	HOLMOSMLC -o $@ test_omega.uo
+
+all: $(TEST_PROGS)
+
+test_coopers.exe: $(COOPER_DEPS)
+	$(HOLMOSMLC) -o $@ test_coopers.uo
+
+test_omega.exe: $(OMEGA_DEPS)
+	$(HOLMOSMLC) -o $@ test_omega.uo
 
 tcooper: tcooper.c
 	gcc -o tcooper tcooper.c
 
 genproblem: genproblem.uo
-	HOLMOSMLC -o genproblem genproblem.uo
+	$(HOLMOSMLC) -o genproblem genproblem.uo
 
 gen_bc_problem: gen_bc_problem.uo
-	HOLMOSMLC -o gen_bc_problem gen_bc_problem.uo
+	$(HOLMOSMLC) -o gen_bc_problem gen_bc_problem.uo
 
 testdp: testdp.uo ../Cooper.uo readproblemfile.uo
-	HOLMOSMLC -o testdp testdp.uo
+	$(HOLMOSMLC) -o testdp testdp.uo
 
-#testdp2: testdp2.uo ../Cooper.uo
-#	HOLMOSMLC -o testdp2 testdp2.uo
+selftest.exe: selftest.uo $(COOPER_DEPS) $(OMEGA_DEPS)
+	$(HOLMOSMLC) -o $@ $<
 

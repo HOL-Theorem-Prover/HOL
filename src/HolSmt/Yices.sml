@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Functions to invoke the Yices SMT solver *)
 
@@ -9,12 +9,14 @@ structure Yices = struct
 
   (* translation of HOL terms into Yices' input syntax -- currently, all types
      and terms except the following are treated as uninterpreted:
-     - types: 'bool', 'num', 'int', 'real', 'fun', 'prod', word types
+     - types: 'bool', 'num', 'int', 'real', 'fun', 'prod', word types, data
+              types, record types
      - terms: Boolean connectives (T, F, ==>, /\, \/, ~, if-then-else,
               bool-case), quantifiers (!, ?), numeric literals, arithmetic
               operators (SUC, +, -, *, /, ~, DIV, MOD, ABS, MIN, MAX), function
               application, lambda abstraction, tuple selectors FST and SND,
-              various word operations *)
+              various word operations, data type constructors, data type case
+              constants, record field selectors, record updates *)
 
   val Yices_types = [
     (("min", "bool"), "bool", ""),
@@ -124,7 +126,6 @@ structure Yices = struct
     (wordsSyntax.word_lsr_tm, "bv-shift-right0", ""),
     (* word_concat in HOL has a more general type than bv-concat in Yices *)
     (wordsSyntax.word_concat_tm, "bv-concat", ""),
-    (wordsSyntax.word_extract_tm, "bv-extract", ""),
     (wordsSyntax.word_add_tm, "bv-add", ""),
     (wordsSyntax.word_sub_tm, "bv-sub", ""),
     (wordsSyntax.word_mul_tm, "bv-mul", ""),
@@ -166,11 +167,53 @@ structure Yices = struct
                   in
                     ((ty_dict', fresh + 1, defs'), name)
                   end
+      (* data types, record types *)
+      fun data_type tyinfo (acc as (ty_dict, fresh, defs), ty) =
+        case Redblackmap.peek (ty_dict, ty) of
+          SOME s => (acc, s)
+        | NONE => let val name = "t" ^ Int.toString fresh
+                      val ty_dict' = Redblackmap.insert (ty_dict, ty, name)
+                      val acc = (ty_dict', fresh + 1, defs)
+                      val is_record = not (List.null (TypeBasePure.fields_of
+                        tyinfo))
+                      val ((acc, _), constructors) = Lib.foldl_map
+                        (fn ((acc, i), c) =>
+                        let val cname = "c_" ^ name ^ "_" ^ Int.toString i
+                            val c = TypeBasePure.cinst ty c
+                            val (doms, _) = boolSyntax.strip_fun
+                              (Term.type_of c)
+                            val ((acc, _), doms) = Lib.foldl_map
+                              (fn ((acc, j), dom) =>
+                              let val aname = if is_record then
+                                      "f_" ^ name ^ "_" ^ Int.toString j
+                                    else
+                                      "a_" ^ name ^ "_" ^ Int.toString i ^ "_" ^
+                                        Int.toString j
+                                  val (acc, atype) = translate_type (acc, dom)
+                              in
+                                ((acc, j + 1), aname ^ "::" ^ atype)
+                              end) ((acc, 0), doms)
+                            val doms = String.concatWith " " doms
+                        in
+                          ((acc, i + 1), (cname, doms))
+                        end) ((acc, 0), TypeBasePure.constructors_of tyinfo)
+                      val datatype_def = if is_record then
+                          "(record " ^ Lib.snd (List.hd constructors) ^ ")"
+                        else
+                          "(datatype " ^ String.concatWith " " (List.map
+                            (fn (cname, doms) => if doms = "" then cname else
+                              "(" ^ cname ^ " " ^ doms ^ ")") constructors) ^
+                          ")"
+                      val (ty_dict, fresh, defs) = acc
+                      val defs' = "(define-type " ^ name ^ " " ^ datatype_def ^
+                        ")" :: defs
+                  in
+                    ((ty_dict, fresh, defs'), name)
+                  end
     in
       if wordsSyntax.is_word_type ty then
         (* bit-vector types *)
-        let val dim_ty = wordsSyntax.dest_word_type ty
-            val dim = fcpLib.index_to_num dim_ty
+        let val dim = fcpLib.index_to_num (wordsSyntax.dest_word_type ty)
         in
           (acc, "(bitvector " ^ Arbnum.toString dim ^ ")")
         end handle Feedback.HOL_ERR _ => (* index_to_num can fail *)
@@ -187,14 +230,19 @@ structure Yices = struct
                   translate_type (acc, Args)
                 val defs' = if def = "" orelse Lib.mem def defs then defs else
                   def :: defs
-                val yices_Args' = String.concat (Lib.separate " " yices_Args)
+                val yices_Args = String.concatWith " " yices_Args
             in
               ((ty_dict, fresh, defs'),
-               if yices_Args = [] then name
-               else "(" ^ name ^ " " ^ yices_Args' ^ ")")
+               if yices_Args = "" then name
+               else "(" ^ name ^ " " ^ yices_Args ^ ")")
             end
           | NONE =>
-            uninterpreted_type (acc, ty)
+            (* perhaps a data type? *)
+            (case TypeBase.fetch ty of
+              SOME tyinfo =>
+                data_type tyinfo (acc, ty)
+            | NONE =>
+                uninterpreted_type (acc, ty))
         end
       else uninterpreted_type (acc, ty)
     end
@@ -274,18 +322,48 @@ structure Yices = struct
       in
         (acc, "(= (bv-extract " ^ sn ^ " " ^ sn ^ " " ^ s1 ^ ") 0b1)")
       end
+    (* word_extract -- applies w2w after extraction to adjust the dimension of
+       the result in HOL *)
+    else if wordsSyntax.is_word_extract tm then
+      let val (n1, n2, w, dim_ty) = wordsSyntax.dest_word_extract tm
+          val n1 = numSyntax.dest_numeral n1
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "word_extract: upper index is not a numeral")
+          val n2 = numSyntax.dest_numeral n2
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "word_extract: lower index is not a numeral")
+          val dim = fcpLib.index_to_num dim_ty
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "word_extract: result bit-vector type of unknown size")
+          val old_dim = Arbnum.+ (Arbnum.- (n1, n2), Arbnum.one)
+          val (acc, s1) = translate_term (acc, w)
+          val s1 = "(bv-extract " ^ Arbnum.toString n1 ^ " " ^
+            Arbnum.toString n2 ^ " " ^ s1 ^ ")"
+      in
+        if dim = old_dim then
+          (acc, s1)
+        else if Arbnum.< (dim, old_dim) then
+          (acc, "(bv-extract " ^ Arbnum.toString (Arbnum.- (dim, Arbnum.one)) ^
+             " 0 " ^ s1 ^ ")")
+        else  (* dim > old_dim *)
+          (acc, "(bv-concat (mk-bv " ^ Arbnum.toString
+             (Arbnum.- (dim, old_dim)) ^ " 0) " ^ s1 ^ ")")
+      end
     (* w2w *)
     else if wordsSyntax.is_w2w tm then
       let val (t1, dim_ty) = wordsSyntax.dest_w2w tm
           val dim = fcpLib.index_to_num dim_ty
-                      handle Feedback.HOL_ERR _ =>
-                        raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
-                               "w2w: result bit-vector type of unknown size")
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "w2w: result bit-vector type of unknown size")
           val old_dim_ty = wordsSyntax.dim_of t1
           val old_dim = fcpLib.index_to_num old_dim_ty
-                      handle Feedback.HOL_ERR _ =>
-                        raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
-                               "w2w: argument bit-vector type of unknown size")
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "w2w: argument bit-vector type of unknown size")
           val (acc, s1) = translate_term (acc, t1)
       in
         if Arbnum.<= (dim, old_dim) then
@@ -294,6 +372,27 @@ structure Yices = struct
         else
           (acc, "(bv-concat (mk-bv " ^ Arbnum.toString
              (Arbnum.- (dim, old_dim)) ^ " 0) " ^ s1 ^ ")")
+      end
+    (* sw2sw *)
+    else if wordsSyntax.is_sw2sw tm then
+      let val (t1, dim_ty) = wordsSyntax.dest_sw2sw tm
+          val dim = fcpLib.index_to_num dim_ty
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "sw2sw: result bit-vector type of unknown size")
+          val old_dim_ty = wordsSyntax.dim_of t1
+          val old_dim = fcpLib.index_to_num old_dim_ty
+            handle Feedback.HOL_ERR _ =>
+              raise (Feedback.mk_HOL_ERR "Yices" "translate_term"
+                "sw2sw: argument bit-vector type of unknown size")
+          val (acc, s1) = translate_term (acc, t1)
+      in
+        if Arbnum.< (dim, old_dim) then
+          (acc, "(bv-extract " ^ Arbnum.toString (Arbnum.- (dim, Arbnum.one)) ^
+             " 0 " ^ s1 ^ ")")
+        else
+          (acc, "(bv-sign-extend " ^ s1 ^ " " ^ Arbnum.toString
+             (Arbnum.- (dim, old_dim)) ^ ")")
       end
     (* word_msb *)
     else if wordsSyntax.is_word_msb tm then
@@ -345,15 +444,15 @@ structure Yices = struct
                 Redblackmap.foldl (fn (t, _, d) =>
                   (Lib.fst o Redblackmap.remove) (d, t)) dict1 dict2
               val dict = union dict (diff body_dict bound_dict)
-              val yices_bounds = String.concat (Lib.separate " " (List.map
-                (fn (v, t) => v ^ "::" ^ t) (Lib.zip yices_vars yices_typs)))
+              val yices_bounds = String.concatWith " " (List.map (fn (v, t) =>
+                v ^ "::" ^ t) (Lib.zip yices_vars yices_typs))
             in
               SOME ((dict, fresh, ty_dict, ty_fresh, defs),
                 "(" ^ name ^ " (" ^ yices_bounds ^ ") " ^ yices_body ^ ")")
             end) Yices_binder_terms of
         SOME result => result
       | NONE =>
-    (* operators *)
+    (* operators + arguments *)
       let val (rator, rands) = boolSyntax.strip_comb tm
       in
         case List.find (fn (t, _, _) => Term.same_const t rator)
@@ -364,13 +463,170 @@ structure Yices = struct
               val (dict, fresh, ty_dict, ty_fresh, defs) = acc'
               val defs' = if def = "" orelse Lib.mem def defs then defs else
                 def :: defs
-              val yices_rands' = String.concat (Lib.separate " " yices_rands)
+              val yices_rands' = String.concatWith " " yices_rands
           in
             ((dict, fresh, ty_dict, ty_fresh, defs'),
              if yices_rands = [] then name
              else "(" ^ name ^ " " ^ yices_rands' ^ ")")
           end
         | NONE =>
+
+          (* data type constructors + arguments *)
+          let val ty = Term.type_of rator
+              val (_, data_ty) = boolSyntax.strip_fun ty
+          in
+            case TypeBase.fetch data_ty of
+              SOME tyinfo =>
+                let val i = Lib.index (Term.same_const rator)
+                      (TypeBasePure.constructors_of tyinfo)  (* may fail *)
+                    (* also collect type definitions *)
+                    val (dict, fresh, ty_dict, ty_fresh, defs) = acc
+                    val ((ty_dict, ty_fresh, defs), _) = translate_type
+                      ((ty_dict, ty_fresh, defs), ty)
+                    val ty_name = Redblackmap.find (ty_dict, data_ty)
+                    val cname = "c_" ^ ty_name ^ "_" ^ Int.toString i
+                    (* translate argument terms *)
+                    val (acc, yices_rands) = Lib.foldl_map translate_term
+                      ((dict, fresh, ty_dict, ty_fresh, defs), rands)
+                    val name = String.concatWith " " (cname :: yices_rands)
+                    val name = if List.null yices_rands then name
+                      else "(" ^ name ^ ")"
+                in
+                  (acc, name)
+                end
+            | NONE =>
+                raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                  "not a data type constructor (range type is not a data type)"
+          end
+          handle Feedback.HOL_ERR _ =>  (* not a data type constructor *)
+
+          (* FIXME: There's a problem with the use of data type constructors
+             (which are not curried in Yices, e.g., of type "-> X Y Z") as
+             arguments to case constants, which expect curried functions (of
+             type, e.g., "-> X (-> Y Z)").  Perhaps eta-expansion currently
+             prevents this problem from showing up, but a good (clean) solution
+             is still missing. *)
+
+          (* case constants for data types (+ arguments) *)
+          (if List.null rands then
+            raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+              "not a case constant (no operands)"
+          else
+            let val (cases, elem) = Lib.front_last rands
+                val data_ty = Term.type_of elem
+            in
+              case TypeBase.fetch data_ty of
+                SOME tyinfo =>
+                  if Term.same_const rator (TypeBasePure.case_const_of tyinfo)
+                  then
+                    let (* constructors *)
+                        val cs = TypeBasePure.constructors_of tyinfo
+                        val _ = if List.length cs = List.length cases then ()
+                          else
+                            raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                              "not a case constant (wrong number of cases)"
+                        (* translate argument terms *)
+                        val (acc, yices_cases) = Lib.foldl_map translate_term
+                          (acc, cases)
+                        val (acc, yices_elem) = translate_term (acc, elem)
+                        val (_, _, ty_dict, _, _) = acc
+                        val ty_name = Redblackmap.find (ty_dict, data_ty)
+                        (* recognizers, accessors *)
+                        val cs = List.map (List.length o Lib.fst o
+                          boolSyntax.strip_fun o Term.type_of) cs
+                        val (_, cs) = Lib.foldl_map (fn (i, n) =>
+                          let val cname = "c_" ^ ty_name ^ "_" ^ Int.toString i
+                              fun aname j =
+                                "a_" ^ ty_name ^ "_" ^ Int.toString i ^ "_" ^
+                                  Int.toString j
+                              val anames = List.tabulate (n, aname)
+                          in
+                            (i + 1, (cname, anames))
+                          end) (0, cs)
+                        (* build the cascaded ite expression *)
+                        val mk_case = List.foldl (fn (aname, yices_case) =>
+                          "(" ^ yices_case ^ " (" ^ aname ^ " " ^ yices_elem ^
+                          "))")
+                        fun cascaded_ite [ycase] [(_, anames)] =
+                          mk_case ycase anames
+                          | cascaded_ite (ycase::ys) ((cname, anames)::cs) =
+                          "(ite (" ^ cname ^ "? " ^ yices_elem ^ ") " ^
+                            mk_case ycase anames ^ " " ^ cascaded_ite ys cs ^
+                            ")"
+                          | cascaded_ite _ _ =
+                          raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                            "not a case constant (error in cascaded_ite)"
+                    in
+                      (acc, cascaded_ite yices_cases cs)
+                    end
+                  else
+                    raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                      "not a case constant (different constant)"
+              | NONE =>
+                  raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                    "not a case constant (last argument is not a data type)"
+            end)
+          handle Feedback.HOL_ERR _ =>  (* not a case constant *)
+
+          (* record field selectors *)
+          let val (select, x) = Term.dest_comb tm
+              val (select_name, select_ty) = Term.dest_const select
+              val (record_ty, rng_ty) = Type.dom_rng select_ty
+              val (record_name, _) = Type.dest_type record_ty
+              (* FIXME: This check for matching types may be too liberal, as it
+                 does not take the record type into account. On the other hand,
+                 it may not be needed at all: ensuring that the constant name
+                 is identical to the field selector name may already be
+                 sufficient. *)
+              val j = Lib.index (fn (field_name, field_ty) =>
+                  select_name = record_name ^ "_" ^ field_name andalso
+                    Lib.can (Type.match_type field_ty) rng_ty)
+                (TypeBase.fields_of record_ty)
+              (* translate argument *)
+              val (acc, yices_x) = translate_term (acc, x)
+              val (_, _, ty_dict, _, _) = acc
+              val ty_name = Redblackmap.find (ty_dict, record_ty)
+              val yices_field = "f_" ^ ty_name ^ "_" ^ Int.toString j
+          in
+            (acc, "(select " ^ yices_x ^ " " ^ yices_field ^ ")")
+          end
+          handle Feedback.HOL_ERR _ =>  (* not a record field selector *)
+
+          (* record field updates *)
+          let 
+              val (update_f, x) = Term.dest_comb tm
+              val (update, f) = Term.dest_comb update_f
+              (* FIXME: Only field updates using the K combinator (in eta-long
+                 form) are supported at the moment. *)
+              val (var1, body) = Term.dest_abs f
+              val (f, var2) = Term.dest_comb body
+              val _ = (var1 = var2) orelse
+                raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                  "not a field selector (update function not in eta-long form)"
+              val new_val = combinSyntax.dest_K_1 f
+              val (update_name, _) = Term.dest_const update
+              val record_ty = Term.type_of x
+              val (record_name, _) = Type.dest_type record_ty
+              val val_ty = Term.type_of new_val
+              (* FIXME: This check for matching types may be too liberal, as it
+                 does not take the record type into account. On the other hand,
+                 it may not be needed at all: ensuring that the constant name
+                 is identical to the field update function's name may already be
+                 sufficient. *)
+              val j = Lib.index (fn (field_name, field_ty) =>
+                  update_name = record_name ^ "_" ^ field_name ^ "_fupd" andalso
+                    Lib.can (Type.match_type field_ty) val_ty)
+                (TypeBase.fields_of record_ty)
+              val (acc, yices_x) = translate_term (acc, x)
+              val (acc, yices_val) = translate_term (acc, new_val)
+              val (_, _, ty_dict, _, _) = acc
+              val ty_name = Redblackmap.find (ty_dict, record_ty)
+              val fname = "f_" ^ ty_name ^ "_" ^ Int.toString j
+          in
+            (acc, "(update " ^ yices_x ^ " " ^ fname ^ " " ^ yices_val ^ ")")
+          end
+          handle Feedback.HOL_ERR _ =>  (* not a record field selector *)
+
           (* function application *)
           if Term.is_comb tm then
           (* Yices considers "-> X Y Z" and "-> X (-> Y Z)" different types. We
@@ -401,11 +657,6 @@ structure Yices = struct
                 end
             end
       end
-
-  (* performs full beta normalization *)
-  fun full_beta_conv tm =
-    boolSyntax.rhs (Thm.concl ((Conv.REDEPTH_CONV Thm.BETA_CONV) tm))
-    handle Conv.UNCHANGED => tm
 
   (* returns the eta-long form of a term, i.e., every variable/constant is
      applied to the correct number of arguments, as determined by its type *)
@@ -440,9 +691,8 @@ structure Yices = struct
   fun goal_to_Yices (As, g) =
   let
     val g = boolSyntax.mk_neg g
-    (* beta-normal, eta-long form (because Yices cannot handle partial
-       applications) *)
-    val As_g = List.map (full_eta_long_conv o full_beta_conv) (As @ [g])
+    (* eta-long form (because Yices cannot handle partial applications) *)
+    val As_g = List.map full_eta_long_conv (As @ [g])
     val empty = Redblackmap.mkDict Term.compare
     val empty_ty = Redblackmap.mkDict Type.compare
     val ((_, _, _, _, defs), yices_As_g) = Lib.foldl_map translate_term

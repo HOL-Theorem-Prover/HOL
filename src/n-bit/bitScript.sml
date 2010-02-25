@@ -584,6 +584,10 @@ val BITS_SUM3 = Q.store_thm("BITS_SUM3",
   `!h a b. BITS h 0 (BITS h 0 a + BITS h 0 b) = BITS h 0 (a + b)`,
   SRW_TAC [] [BITS_ZERO3, ZERO_LT_TWOEXP, MOD_PLUS]);
 
+val BITS_MUL = Q.store_thm("BITS_MUL",
+  `!h a b. BITS h 0 (BITS h 0 a * BITS h 0 b) = BITS h 0 (a * b)`,
+  SRW_TAC [] [BITS_ZERO3, ZERO_LT_TWOEXP, MOD_TIMES2]);
+
 (* ------------------------------------------------------------------------- *)
 
 val lem  = prove(`!c a b. (a = b) ==> (a DIV c = b DIV c)`, RW_TAC arith_ss []);

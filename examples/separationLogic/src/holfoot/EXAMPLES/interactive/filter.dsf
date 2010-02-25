@@ -1,0 +1,37 @@
+list_filter(l;x) [data_list(l,data)] {
+  local y, z, e;
+  y = l;
+  z = NULL;
+  while(y != NULL) [x == #fc *
+                    if (y == l) then
+                       data_list(l,_data1) * 
+          	       ``?data_fc. (EVERY (\x. x = fc:num) data_fc) /\
+                                (data:num list = data_fc ++ _data1)``
+                    else
+                    data_lseg(l,``FILTER (\e:num. ~(e = fc)) _data1``,z) * 
+	            z |-> [tl:y, dta:_date] *
+                    data_list(y,_data2) *
+	            ``?data_fc. (EVERY (\x. x = fc:num) data_fc) /\
+                                (data:num list = _data1 ++ _date::(data_fc++_data2)) /\
+	              (~(_date = fc))``] {
+    e = y->dta;
+    if(e == x) { /* need to remove y */
+      if(y == l) { /* first link */
+        l = y->tl;
+        dispose y;
+        y = l;
+      } else { /* not first link */
+        e = y->tl;
+        z->tl = e;
+        dispose y;
+        y = z->tl;
+      }
+    } else { /* don't need to remove y */
+      z = y;
+      y = y->tl;
+    }
+  }
+} [data_list(l, ``FILTER (\e:num. ~(e = (x:num))) data``)]
+
+
+

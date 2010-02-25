@@ -830,8 +830,8 @@ val FCP_APPLY_UPDATE_THM = store_thm("FCP_APPLY_UPDATE_THM",
        if b < dimindex(:'b) then
          if a = b then w else m ' b
        else
-         ((a :+ w) m) ' b`,
-  SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
+         FAIL (fcp_index) ^(mk_var("index out of range", bool)) ((a :+ w) m) b`,
+  SRW_TAC [FCP_ss] [FCP_UPDATE_def, combinTheory.FAIL_THM]);
 
 (* ------------------------------------------------------------------------ *)
 

@@ -531,10 +531,45 @@ end;
  *     (- name thy type)  for  GRND constant (with unbound type)
  *---------------------------------------------------------------------------*)
 
+infix >>
+fun (f1 >> f2) pps = (f1 pps ; f2 pps)
+
+fun block state brkdepth f pps = (HOLPP.begin_block pps state brkdepth ;
+                                  f pps;
+                                  HOLPP.end_block pps)
+fun add_string s pps = HOLPP.add_string pps s
+val add_newline = HOLPP.add_newline
+fun add_break ipr pps = HOLPP.add_break pps ipr
+val flush = HOLPP.flush_ppstream
+fun nothing pps = ()
+
+fun pr_thydata thyname thymap = let
+  fun keyval commap (k,v) =
+      block CONSISTENT 2 (add_string (k^" =") >> add_break(1,2) >>
+                          add_string ("\""^String.toString v^"\"" ^
+                                      (if commap then "," else "")))
+  fun one_entry (s, data) =
+      (add_string "val _ = Theory.LoadableThyData.temp_encoded_update {" >>
+       add_break(0,2) >>
+       block CONSISTENT 0
+         (keyval true ("thy", thyname) >>
+          add_break(1,0) >>
+          keyval true ("thydataty", s) >>
+          add_break(1,0) >>
+          keyval false ("data", data)) >>
+       add_break(0,0) >>
+       add_string "}" >>
+       add_newline)
+in
+  Binarymap.foldl (fn (k, data, rest) => one_entry (k,data) >> rest)
+                  nothing
+                  thymap
+end
+
 fun pp_struct info_record ppstrm =
  let open Term
-     val {theory as (name,i1,i2), parents=parents0,
-        axioms,definitions,theorems,types,constants,struct_ps} = info_record
+     val {theory as (name,i1,i2), parents=parents0, thydata,
+          axioms,definitions,theorems,types,constants,struct_ps} = info_record
      val parents1 = filter (fn (s,_,_) => not ("min"=s)) parents0
      val {add_string,add_break,begin_block,end_block, add_newline,
           flush_ppstream,...} = Portable.with_ppstream ppstrm
@@ -711,9 +746,12 @@ fun pp_struct info_record ppstrm =
       bind_theorems (); add_newline();
       dblist(); add_newline();
       pr_psl struct_ps;
+      pr_thydata name thydata ppstrm;
       end_block();
       end_block();
       add_string "val _ = if !Globals.print_thy_loads then print \"done\\n\" else ()"; add_newline();
+      add_string ("val _ = Theory.load_complete \""^String.toString name^ "\"");
+      add_newline();
       add_break(0,0); add_string"end"; add_newline();
       end_block();
       flush_ppstream()

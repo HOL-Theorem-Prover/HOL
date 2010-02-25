@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Functions to translate HOL terms into the SMT-LIB format. *)
 
@@ -81,18 +81,6 @@ structure SmtLib = struct
     (* no lambda abstraction in SMT-LIB syntax *)
   ]
 
-  (* strip_fn_types "A --> (B --> C)" = ([A, B], C), where C is not a function
-     type *)
-  fun strip_fn_types ty =
-  let fun strip ty acc =
-        let val (dom, rng) = Type.dom_rng ty
-        in
-          strip rng (dom :: acc)
-        end handle Feedback.HOL_ERR _ => (List.rev acc, ty)
-  in
-    strip ty []
-  end
-
   (* ty_dict: dictionary that maps types to names
      fresh: next fresh index to generate a new type name *)
   fun translate_type (acc, ty) =
@@ -113,13 +101,13 @@ structure SmtLib = struct
                         ((ty_dict, fresh + 1), name)
                       end
           end
-      val (doms, rng) = strip_fn_types ty
+      val (doms, rng) = boolSyntax.strip_fun ty
       val types = if rng = Type.bool then doms else doms @ [rng]
       val (acc, smtlib_types) = Lib.foldl_map translate (acc, types)
   in
     (* a (possibly empty!) string giving the argument types and range type of a
        function, or the argument types of a predicate *)
-    (acc, String.concat (Lib.separate " " smtlib_types))
+    (acc, String.concatWith " " smtlib_types)
   end
 
   (* dict: dictionary that maps terms to names
@@ -194,9 +182,9 @@ structure SmtLib = struct
                 Redblackmap.foldl (fn (t, _, d) =>
                   (Lib.fst o Redblackmap.remove) (d, t)) dict1 dict2
               val dict = union dict (diff body_dict bound_dict)
-              val smtlib_bounds = String.concat (Lib.separate " "
+              val smtlib_bounds = String.concatWith " "
                 (List.map (fn (v, t) => "(" ^ v ^ " " ^ t ^ ")")
-                  (Lib.zip smtlib_vars smtlib_typs)))
+                  (Lib.zip smtlib_vars smtlib_typs))
             in
               SOME ((dict, fresh, ty_dict, ty_fresh, funs, defs),
                 "(" ^ name ^ " " ^ smtlib_bounds ^ " " ^ smtlib_body ^ ")")
@@ -215,7 +203,7 @@ structure SmtLib = struct
                                           (acc, rands)
           in
             (acc, "(" ^ smtlib_rator ^ " " ^
-                    String.concat (Lib.separate " " smtlib_rands) ^ ")")
+                    String.concatWith " " smtlib_rands ^ ")")
           end
         else
           (* base case: operator or uninterpreted term *)
@@ -275,7 +263,7 @@ structure SmtLib = struct
     val (smtlib_As, smtlib_g) = Lib.front_last smtlib_As_g
 
     fun is_pred tm =
-      Lib.snd (strip_fn_types (Term.type_of tm)) = Type.bool
+      Lib.snd (boolSyntax.strip_fun (Term.type_of tm)) = Type.bool
 
     val sorts = map Lib.snd (Redblackmap.listItems ty_dict)
 

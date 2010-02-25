@@ -310,7 +310,6 @@ fun UNDISCH_ALL th =
   if is_imp (concl th) then UNDISCH_ALL (UNDISCH th)
   else th;;
 
-
 val truth_tm = boolSyntax.T
 val false_tm = boolSyntax.F
 val Abbrev_tm = prim_mk_const {Name = "Abbrev", Thy = "marker"}
@@ -326,12 +325,11 @@ fun IMP_EQ_CANON thm =
             (trace(1,IGNORE("looping rewrite (but adding EQT versions)",thm));
              [EQT_INTRO undisch_thm, EQT_INTRO (SYM undisch_thm)])
           else let
-              val base = if null (op_subtract aconv
-                                           (free_vars (rhs conc))
-			                   (free_varsl (hyp thm)@
-                                            free_vars(lhs conc)))
+             val base = if null (op_subtract eq (free_vars (rhs conc))
+                                          (free_varsl (lhs conc::hyp thm)))
 		         then undisch_thm
-		         else EQT_INTRO undisch_thm
+		         else (trace(1,IGNORE("rewrite with existential vars (adding EQT version(s))",thm));
+                               EQT_INTRO undisch_thm)
               val flip_eqp = let val (l,r) = dest_eq (concl base)
                              in
                                is_eq l andalso not (is_eq r)

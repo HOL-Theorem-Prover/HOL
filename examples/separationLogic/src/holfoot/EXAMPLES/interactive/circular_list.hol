@@ -1,0 +1,36 @@
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+ 
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file  = concat [examplesDir, "/interactive/circular_list.sf"];
+val file2 = concat [examplesDir, "/interactive/circular_list___logical_vars.sf"];
+
+(* holfoot_set_goal_procedures file ["enqueue"] *)
+val enqueue_TAC = 
+   HF_CONTINUE_TAC THEN REPEAT STRIP_TAC THEN
+   Q.EXISTS_TAC `r_const'` THEN HF_CONTINUE_TAC
+
+(* holfoot_set_goal_procedures file ["test"] *)
+val test_TAC = 
+   HF_SOLVE_TAC THEN REPEAT STRIP_TAC THEN
+   Cases_on `b' = tf` THEN HF_SOLVE_TAC
+
+(* holfoot_set_goal_procedures file2 ["test"] *)
+val test2_TAC = 
+   HF_SOLVE_TAC THEN REPEAT STRIP_TAC THEN
+   Cases_on `b' = r'_const'` THEN HF_SOLVE_TAC
+
+
+val spec_thm = holfoot_tac_verify_spec file (SOME []) [
+    ("enqueue", enqueue_TAC),
+    ("test", test_TAC)]
+
+val spec2_thm = holfoot_tac_verify_spec file2 (SOME []) [
+    ("enqueue", enqueue_TAC),
+    ("test", test2_TAC)]
+
+
+

@@ -1264,7 +1264,7 @@ end
 
 fun ALPHA_NAME_CONV s t = let
   (* avoid calling dest_abs *)
-  val (dty, _) = dom_rng (type_of t)
+  val _ = dom_rng (type_of t)
                  handle HOL_ERR _ =>
                         raise ERR "ALPHA_NAME_CONV" "Term not an abstraction"
   val t' = rename_bvar s t
@@ -1294,6 +1294,16 @@ fun TY_ALPHA_CONV x t = let
           orelse raise ERR "TY_ALPHA_CONV"
                            "Rank of type variable not compatible with type abstraction"
   val t' = rename_btyvar xstr t
+in
+  ALPHA t t'
+end
+
+fun TY_ALPHA_NAME_CONV s t = let
+  (* avoid calling dest_tyabs *)
+  val _ = dest_univ_type (type_of t)
+                 handle HOL_ERR _ =>
+                        raise ERR "TY_ALPHA_NAME_CONV" "Term is not a type abstraction"
+  val t' = rename_btyvar s t
 in
   ALPHA t t'
 end
@@ -1980,40 +1990,38 @@ fun munge_bvars absmap th = let
           | SOME abs_t => let
               val (abs_bvars, _) = strip_ty_tm_abs abs_t
               val paired_up = ListPair.zip (args, abs_bvars)
-              fun foldthis ((inR arg, inR absv), acc as (env, (dbtyvars, dbvars, actionlist))) =
+              fun foldthis ((inR arg, inR absv), acc as (dbtyvars, dbvars, actionlist)) =
                   if HOLset.member(dbvars, arg) then acc
                   else (case Map.peek(bvarposns, arg) of
                           NONE => acc
                         | SOME p =>
                           let val absv_name = fst (dest_var absv)
-                 (* or,   let val absv' = inst env absv *)
                           in
-                            (env,
-                             (dbtyvars, HOLset.add(dbvars, arg),
-                              p (ALPHA_NAME_CONV absv_name):: actionlist))
-                 (* or,       p (ALPHA_CONV absv'):: actionlist))  *)
+                            (dbtyvars, HOLset.add(dbvars, arg),
+                             p (ALPHA_NAME_CONV absv_name):: actionlist)
                           end)
-                | foldthis ((inL arg, inL absv), (env, acc as (dbtyvars, dbvars, actionlist))) =
-                  let val env' = (absv |-> arg)::env
-                  in
-                    if HOLset.member(dbtyvars, arg) then (env', acc)
-                    else (case Map.peek(btyvarposns, arg) of
-                            NONE => (env', acc)
-                          | SOME p =>
-                            (env',
-                             (HOLset.add(dbtyvars, arg), dbvars,
-                              p (TY_ALPHA_CONV absv):: actionlist)))
-                  end
+                | foldthis ((inL arg, inL absv), acc as (dbtyvars, dbvars, actionlist)) =
+                  if HOLset.member(dbtyvars, arg) then acc
+                  else (case Map.peek(btyvarposns, arg) of
+                          NONE => acc
+                        | SOME p =>
+                          let val absv_name = #1 (dest_var_type absv)
+                          in
+                            (HOLset.add(dbtyvars, arg), dbvars,
+                             p (TY_ALPHA_NAME_CONV absv_name):: actionlist)
+                          end)
                 | foldthis _ = raise ERR "munge_bvars.COMB(foldthis)" "impossible type vs term"
-              val (env, A as (newdbtyvars, newdbvars, newacc)) =
-                  List.foldl foldthis ([], (donebtyvars, donebvars, acc)) paired_up
+              val A as (newdbtyvars, newdbvars, newacc) =
+                  List.foldl foldthis (donebtyvars, donebvars, acc) paired_up
             in
               foldri argfold A args
             end
         end
     in
       case dest_term t of
-        LAMB(bv, body) => let
+        COMB _ => ty_tm_comb t
+      | TYCOMB _ => ty_tm_comb t
+      | LAMB(bv, body) => let
           val newposnmap = Map.insert(bvarposns, bv, curposn)
           val (newdonemap, restore) =
               (HOLset.delete(donebvars, bv), (fn m => HOLset.add(m, bv)))
@@ -2025,8 +2033,6 @@ fun munge_bvars absmap th = let
         in
           (dbtyvars, restore dbvars, actions)
         end
-      | COMB _ => ty_tm_comb t
-      | TYCOMB _ => ty_tm_comb t
       | TYLAMB(bv, body) => let
           val newposnmap = Map.insert(btyvarposns, bv, curposn)
           val (newdonemap, restore) =
@@ -2120,9 +2126,7 @@ fun HO_PART_MATCH partfn th =
         val sth2 =
             if Map.numItems bound_to_abs = 0 then sth1
             else
-              (* The actions accumulated by munge_bvars are consed as they are encountered;
-                 so the list must be reversed in order to execute them in the order found. *)
-              CONV_RULE (EVERY_CONV (rev (#3 (munge_bvars bound_to_abs sth1)))) sth1
+              CONV_RULE (EVERY_CONV (#3 (munge_bvars bound_to_abs sth1))) sth1
         val th0 = INST tmin' (INST_TYPE tyin' sth2)
         val th1 = finish_fn rkin kdin tyin (map #redex tmin) th0
     in

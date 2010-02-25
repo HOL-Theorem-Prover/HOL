@@ -12,6 +12,8 @@ sig
     val gt            : term quotation -> proofs
     val set_goal      : goal -> proofs
     val set_goaltree  : goal -> proofs
+    val new_goalstack : goal -> (thm -> thm) -> proofs
+    val new_goaltree  : goal -> proofs
     val add           : proof -> proofs
 
     (* Undo *)
@@ -22,6 +24,7 @@ sig
     val restart       : unit -> proof
     val backup        : unit -> proof
     val set_backup    : int -> unit
+    val forget_history: unit -> unit
 
     (* Applying a tactic to the current goal *)
 

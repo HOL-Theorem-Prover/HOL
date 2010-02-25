@@ -544,7 +544,46 @@ fun check_sys_call sys new_context old_context n dir t =
       (n, valOf thm_opt)
    end;
 
-exception CONSEQ_CONV_congruence_expection;
+exception CONSEQ_CONV_congruence_exn;
+
+val asm_marker_tm = Term `ASM_MARKER`
+fun dest_asm_marker tt =
+let
+   val (oper, aL) = strip_comb tt
+   val _ = if (same_const oper asm_marker_tm) andalso
+              (length aL = 2) then () else Feedback.fail()
+in
+   (el 1 aL, el 2 aL)
+end
+fun mk_asm_marker l t = list_mk_comb(asm_marker_tm, [l,t])
+fun mk_asm_marker_random_pair t = 
+   let val v = genvar bool in (v, mk_asm_marker v t) end
+fun mk_asm_marker_random t = snd (mk_asm_marker_random_pair t)
+
+val is_asm_marker = can dest_asm_marker
+fun dest_neg_asm_marker tt = dest_asm_marker (dest_neg tt)
+val is_neg_asm_marker = can dest_neg_asm_marker
+
+fun asm_marker_ELIM_CONV tt =
+   let
+      val (l, tt) =  (dest_asm_marker tt)
+   in
+      SPECL [l,tt]  ASM_MARKER_THM
+   end;
+
+fun asm_marker_INTRO_CONV l tt = 
+   SPECL [l, tt] (GSYM ASM_MARKER_THM)
+
+
+fun CONSEQ_CONV_CONGRUENCE___asm_marker context (sys:conseq_conv_congruence_syscall) dir t =
+  let
+     val (l,b1) = dest_asm_marker t;
+     val (n1, thm1) = check_sys_call sys [] context 0 dir b1;
+     val thm2 = CONV_RULE (BINOP_CONV (asm_marker_INTRO_CONV l)) thm1
+  in
+     (n1, thm2)
+  end  handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn
+
 
 fun trivial_neg_simp t =
 let
@@ -569,7 +608,7 @@ fun CONSEQ_CONV_CONGRUENCE___neg context (sys:conseq_conv_congruence_syscall) di
      val thm3 = CONV_RULE (dir_conv dir trivial_neg_simp) thm2 handle HOL_ERR _ => thm2
   in
      (n1, thm3)
-  end  handle HOL_ERR _ => raise CONSEQ_CONV_congruence_expection
+  end  handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn
 
 
 
@@ -610,7 +649,7 @@ fun CONSEQ_CONV_CONGRUENCE___conj context sys dir t =
      val thm4 = CONV_RULE (dir_conv dir trivial_conj_simp) thm3 handle HOL_ERR _ => thm3
   in
      (n2, thm4)
-  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_expection
+  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn
 
 
 
@@ -632,7 +671,7 @@ fun CONSEQ_CONV_CONGRUENCE___conj_no_context context sys dir t =
      val thm4 = CONV_RULE (dir_conv dir trivial_conj_simp) thm3 handle HOL_ERR _ => thm3
   in
      (n2, thm4)
-  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_expection
+  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn
 
 
 
@@ -675,7 +714,7 @@ fun CONSEQ_CONV_CONGRUENCE___disj context (sys:conseq_conv_congruence_syscall) d
      val thm4 = CONV_RULE (dir_conv dir trivial_disj_simp) thm3 handle HOL_ERR _ => thm3
   in
      (n2, thm4)
-  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_expection
+  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn
 
 
 fun CONSEQ_CONV_CONGRUENCE___disj_no_context context (sys:conseq_conv_congruence_syscall) dir t =
@@ -695,7 +734,7 @@ fun CONSEQ_CONV_CONGRUENCE___disj_no_context context (sys:conseq_conv_congruence
      val thm4 = CONV_RULE (dir_conv dir trivial_disj_simp) thm3 handle HOL_ERR _ => thm3
   in
      (n2, thm4)
-  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_expection
+  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn
 
 
 fun trivial_imp_simp t =
@@ -720,7 +759,7 @@ end
 
 fun CONSEQ_CONV_CONGRUENCE___imp_full_context context (sys:conseq_conv_congruence_syscall) dir t =
   let
-     val (b1,b2) = dest_imp t;
+     val (b1,b2) = dest_imp_only t;
 
      val a1 = b1;
      val (n1, thm1_opt) = sys [a1] context 0 dir b2;
@@ -738,13 +777,13 @@ fun CONSEQ_CONV_CONGRUENCE___imp_full_context context (sys:conseq_conv_congruenc
      val thm4 = CONV_RULE (dir_conv dir trivial_imp_simp) thm3 handle HOL_ERR _ => thm3
   in
      (n2, thm4)
-  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_expection;
+  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn;
 
 
 
 fun CONSEQ_CONV_CONGRUENCE___imp_no_context context (sys:conseq_conv_congruence_syscall) dir t =
   let
-     val (b1,b2) = dest_imp t;
+     val (b1,b2) = dest_imp_only t;
 
      val (n1, thm1_opt) = sys [] context 0 dir b2;
      val a2 = CONSEQ_CONV___OPT_GET_SIMPLIFIED_TERM thm1_opt dir b2;       
@@ -759,19 +798,18 @@ fun CONSEQ_CONV_CONGRUENCE___imp_no_context context (sys:conseq_conv_congruence_
      val thm4 = CONV_RULE (dir_conv dir trivial_imp_simp) thm3 handle HOL_ERR _ => thm3
   in
      (n2, thm4)
-  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_expection;
+  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn;
 
 
 fun CONSEQ_CONV_CONGRUENCE___imp_simple_context context (sys:conseq_conv_congruence_syscall) dir t =
   let
-     val (b1,b2) = dest_imp t;
+     val (b1,b2) = dest_imp_only t;
 
      val (n1, thm1_opt) = sys [] context 0 (CONSEQ_CONV_DIRECTION_NEGATE dir) b1;
      val a2 = CONSEQ_CONV___OPT_GET_SIMPLIFIED_TERM thm1_opt (CONSEQ_CONV_DIRECTION_NEGATE dir) b1;       
      val abort_cond = same_const a2 F;
      val (n2, thm2_opt) = if abort_cond then (n1, NONE) else
             sys [a2] context n1 dir b2;
-
      val _ = if (isSome thm1_opt) orelse (isSome thm2_opt) orelse abort_cond then () else raise UNCHANGED;
      val thm1 = conseq_conv_congruence_EXPAND_THM_OPT (thm1_opt, b1, NONE);
      val thm2 = conseq_conv_congruence_EXPAND_THM_OPT (thm2_opt, b2, SOME a2);
@@ -783,7 +821,66 @@ fun CONSEQ_CONV_CONGRUENCE___imp_simple_context context (sys:conseq_conv_congrue
      val thm4 = CONV_RULE (dir_conv dir trivial_imp_simp) thm3 handle HOL_ERR _ => thm3
   in
      (n2, thm4)
-  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_expection;
+  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn;
+
+
+
+
+fun trivial_cond_simp t =
+let
+   val (c, t1, t2) = dest_cond t
+in
+   if (same_const c T) then
+      ISPECL [t1,t2] COND_CLAUSES_CT
+   else if (same_const c F) then
+      ISPECL [t1,t2] COND_CLAUSES_CF
+   else if (same_const t1 T) then
+      SPECL [c, t2] COND_CLAUSES_TT
+   else if (same_const t1 F) then
+      SPECL [c, t2] COND_CLAUSES_TF
+   else if (same_const t2 T) then
+      SPECL [c, t1] COND_CLAUSES_FT
+   else if (same_const t2 F) then
+      SPECL [c, t1] COND_CLAUSES_FF
+   else if (aconv t1 t2) then
+      ISPECL [c,t1] COND_CLAUSES_ID
+   else Feedback.fail()
+end
+
+
+fun CONSEQ_CONV_CONGRUENCE___cond_no_context context (sys:conseq_conv_congruence_syscall) dir t =
+  let
+     val (c,b1,b2) = dest_cond t;
+     val (n1, thm1_opt) = sys [] context 0  dir b1;
+     val (n2, thm2_opt) = sys [] context n1 dir b2;
+
+     val _ = if (isSome thm1_opt) orelse (isSome thm2_opt) then () else raise UNCHANGED;
+     val thm1 = conseq_conv_congruence_EXPAND_THM_OPT (thm1_opt, b1, NONE);
+     val thm2 = conseq_conv_congruence_EXPAND_THM_OPT (thm2_opt, b2, NONE);
+
+     val thm3 = MATCH_MP (ISPEC c IMP_CONG_cond_simple) (CONJ thm1 thm2)
+     val thm4 = CONV_RULE (dir_conv dir trivial_cond_simp) thm3 handle HOL_ERR _ => thm3
+  in
+     (n2, thm4)
+  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn;
+
+
+fun CONSEQ_CONV_CONGRUENCE___cond_context context (sys:conseq_conv_congruence_syscall) dir t =
+  let
+     val (c,b1,b2) = dest_cond t;
+     val (n1, thm1_opt) = sys [c] context 0  dir b1;
+     val (n2, thm2_opt) = sys [mk_neg c] context n1 dir b2;
+
+     val _ = if (isSome thm1_opt) orelse (isSome thm2_opt) then () else raise UNCHANGED;
+     val thm1 = conseq_conv_congruence_EXPAND_THM_OPT (thm1_opt, b1, SOME c);
+     val thm2 = conseq_conv_congruence_EXPAND_THM_OPT (thm2_opt, b2, SOME (mk_neg c));
+
+     val thm3 = MATCH_MP (ISPEC c IMP_CONG_cond) (CONJ thm1 thm2)
+     val thm4 = CONV_RULE (dir_conv dir trivial_cond_simp) thm3 handle HOL_ERR _ => thm3
+  in
+     (n2, thm4)
+  end handle HOL_ERR _ => raise CONSEQ_CONV_congruence_exn;
+
 
 
 fun var_filter_context v =
@@ -794,13 +891,6 @@ fun var_filter_context v =
        not (HOLset.member (fv, v))
     end)
 
-fun trivial_forall_simp t =
-let
-   val (x,t1) = dest_forall t
-in
-   if (free_in x t1) then Feedback.fail() else
-      REWR_CONV FORALL_SIMP t
-end;
 
 fun CONSEQ_CONV_CONGRUENCE___forall context (sys:conseq_conv_congruence_syscall) dir t =
   let
@@ -809,19 +899,11 @@ fun CONSEQ_CONV_CONGRUENCE___forall context (sys:conseq_conv_congruence_syscall)
      val _ = if (isSome thm1_opt) then () else raise UNCHANGED;
 
      val thm2 = HO_MATCH_MP MONO_ALL (GEN_ASSUM v (valOf thm1_opt))
-     val thm3 = CONV_RULE (dir_conv dir trivial_forall_simp) thm2 handle HOL_ERR _ => thm2
+     val thm3 = CONV_RULE (dir_conv dir FORALL_SIMP_CONV) thm2 handle HOL_ERR _ => thm2
   in
      (n1, thm3)
   end
 
-
-fun trivial_exists_simp t =
-let
-   val (x,t1) = dest_exists t
-in
-   if (free_in x t1) then Feedback.fail () else
-      REWR_CONV EXISTS_SIMP t
-end
 
 fun CONSEQ_CONV_CONGRUENCE___exists context (sys:conseq_conv_congruence_syscall) dir t =
   let
@@ -830,10 +912,11 @@ fun CONSEQ_CONV_CONGRUENCE___exists context (sys:conseq_conv_congruence_syscall)
      val _ = if (isSome thm1_opt) then () else raise UNCHANGED;
 
      val thm2 = HO_MATCH_MP boolTheory.MONO_EXISTS (GEN_ASSUM v (valOf thm1_opt))
-     val thm3 = CONV_RULE (dir_conv dir trivial_exists_simp) thm2 handle HOL_ERR _ => thm2
+     val thm3 = CONV_RULE (dir_conv dir EXISTS_SIMP_CONV) thm2 handle HOL_ERR _ => thm2
   in
      (n1, thm3)
   end
+
 
 
 
@@ -843,7 +926,9 @@ val CONSEQ_CONV_CONGRUENCE___basic_list___full_context = [
    CONSEQ_CONV_CONGRUENCE___neg,
    CONSEQ_CONV_CONGRUENCE___imp_full_context,
    CONSEQ_CONV_CONGRUENCE___forall,
-   CONSEQ_CONV_CONGRUENCE___exists]
+   CONSEQ_CONV_CONGRUENCE___exists,
+   CONSEQ_CONV_CONGRUENCE___cond_context,
+   CONSEQ_CONV_CONGRUENCE___asm_marker]
 
 
 val CONSEQ_CONV_CONGRUENCE___basic_list___no_context = [
@@ -852,7 +937,9 @@ val CONSEQ_CONV_CONGRUENCE___basic_list___no_context = [
    CONSEQ_CONV_CONGRUENCE___neg,
    CONSEQ_CONV_CONGRUENCE___imp_no_context,
    CONSEQ_CONV_CONGRUENCE___forall,
-   CONSEQ_CONV_CONGRUENCE___exists]
+   CONSEQ_CONV_CONGRUENCE___exists,
+   CONSEQ_CONV_CONGRUENCE___cond_no_context,
+   CONSEQ_CONV_CONGRUENCE___asm_marker]
 
 val CONSEQ_CONV_CONGRUENCE___basic_list = [
    CONSEQ_CONV_CONGRUENCE___conj_no_context,
@@ -860,7 +947,9 @@ val CONSEQ_CONV_CONGRUENCE___basic_list = [
    CONSEQ_CONV_CONGRUENCE___neg,
    CONSEQ_CONV_CONGRUENCE___imp_simple_context,
    CONSEQ_CONV_CONGRUENCE___forall,
-   CONSEQ_CONV_CONGRUENCE___exists]
+   CONSEQ_CONV_CONGRUENCE___exists,
+   CONSEQ_CONV_CONGRUENCE___cond_context,
+   CONSEQ_CONV_CONGRUENCE___asm_marker]
 
 
 fun CONSEQ_CONV_get_context_congruences 
@@ -874,8 +963,10 @@ fun CONSEQ_CONV_get_context_congruences
 fun step_opt_sub NONE n = NONE
   | step_opt_sub (SOME m) n = SOME (m - n)
 
-fun step_opt_allows_steps NONE n = true
-  | step_opt_allows_steps (SOME m) n = (n <= m);
+fun step_opt_allows_steps NONE _ _  = true
+  | step_opt_allows_steps (SOME m) n NONE = (n <= m)
+  | step_opt_allows_steps (SOME m) n (SOME w) = 
+        (n < m) andalso (n+w <= m);
 
 (*
    some test data for debugging
@@ -950,7 +1041,10 @@ fun mk_context2 l [] = l
         in
           mk_context2 l (thm2::thmL)
         end
-     else mk_context2 (thm::l) thmL
+     else if (is_asm_marker body) then
+       mk_context2 l ((CONV_RULE (RAND_CONV asm_marker_ELIM_CONV) thm)::thmL)
+     else
+       mk_context2 (thm::l) thmL
   end)
   else if (same_const (concl thm) F) then [thm]
   else if (same_const (concl thm) T) then
@@ -958,6 +1052,8 @@ fun mk_context2 l [] = l
   else if ((is_forall (concl thm) orelse
                 (is_conj (concl thm)))) then
       mk_context2 l ((BODY_CONJUNCTS thm)@thmL)
+  else if (is_asm_marker (concl thm)) then
+       mk_context2 l ((CONV_RULE asm_marker_ELIM_CONV thm)::thmL)
   else mk_context2 (thm::l) thmL
 
 
@@ -1004,7 +1100,7 @@ let
        let
           val (n, thm_opt) = valOf cached_result;
        in
-          if step_opt_allows_steps step_opt (n+m) then
+          if step_opt_allows_steps step_opt n (SOME m) then
              SOME (true, n+m, thm_opt)
           else
              NONE
@@ -1046,17 +1142,17 @@ fun STEP_CONSEQ_CONV congruence_list convL =
 let
   fun conv_trans (_,w,c) =
      (w, true, fn sys => fn context => fn dir => fn t =>
-     (true, (w, CONSEQ_CONV_WRAPPER (c context) dir t)))
+     (true, (if isSome w then valOf w else 0, CONSEQ_CONV_WRAPPER (c context) dir t)))
 
   val (beforeL, afterL) = partition (fn (b,w,c) => b) convL
   val fL =
           (map conv_trans beforeL)@
-          (map (fn c => (0, false, fn sys => fn context => fn dir => fn t => (false, c context sys dir t))) congruence_list)@
+          (map (fn c => (NONE, false, fn sys => fn context => fn dir => fn t => (false, c context sys dir t))) congruence_list)@
           (map conv_trans afterL)
 
   fun check_fun n step_opt sys context use_congs dir t (w,is_not_cong,c) =
   if not (is_not_cong orelse use_congs) then Feedback.fail() else
-  if not (step_opt_allows_steps step_opt (n+w)) then Feedback.fail() else
+  if not (step_opt_allows_steps step_opt n w) then Feedback.fail() else
   let
      val (rec_flag, (w', thm)) = c sys context dir t handle UNCHANGED => Feedback.fail();
   in
@@ -1184,7 +1280,7 @@ val dir = CONSEQ_CONV_STRENGTHEN_direction;
 val t = ``c 0``
 *)
 
-fun EXT_DEPTH_CONSEQ_CONV congruence_list (cache:depth_conseq_conv_cache_opt) step_opt redepth convL context =
+fun EXT_DEPTH_NUM_CONSEQ_CONV congruence_list (cache:depth_conseq_conv_cache_opt) step_opt redepth convL context =
  let
     val step_conv = STEP_CONSEQ_CONV congruence_list convL;
     fun internal_call cache_opt = DEPTH_CONSEQ_CONV_num step_conv cache_opt
@@ -1194,17 +1290,24 @@ fun EXT_DEPTH_CONSEQ_CONV congruence_list (cache:depth_conseq_conv_cache_opt) st
     fn dir => fn t =>
        let
           val cache_opt = if isSome cache then SOME ((fst (valOf cache)) (), snd (valOf cache)) else NONE
-          val (_, thm_opt) = internal_call cache_opt dir t;
-          val _ = if isSome thm_opt then () else raise UNCHANGED;
        in
-          valOf thm_opt
+          internal_call cache_opt dir t
        end
+ end;
+
+
+fun EXT_DEPTH_CONSEQ_CONV congruence_list (cache:depth_conseq_conv_cache_opt) step_opt redepth convL context dir t =
+ let
+    val (_, thm_opt) = EXT_DEPTH_NUM_CONSEQ_CONV congruence_list (cache:depth_conseq_conv_cache_opt) step_opt redepth convL context dir t
+    val _ = if isSome thm_opt then () else raise UNCHANGED;
+ in
+    valOf thm_opt
  end;
 
 
 fun CONTEXT_DEPTH_CONSEQ_CONV context conv =
   EXT_DEPTH_CONSEQ_CONV (CONSEQ_CONV_get_context_congruences context)
-     NONE NONE false [(true, 1, conv)] []
+     NONE NONE false [(true, SOME 1, conv)] []
 fun DEPTH_CONSEQ_CONV conv = 
   CONTEXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_NO_CONTEXT (K conv)
 
@@ -1212,18 +1315,18 @@ fun DEPTH_CONSEQ_CONV conv =
 
 fun CONTEXT_REDEPTH_CONSEQ_CONV context conv =
    EXT_DEPTH_CONSEQ_CONV (CONSEQ_CONV_get_context_congruences context)
-     CONSEQ_CONV_default_cache_opt NONE true [(true,1,conv)] []
+     CONSEQ_CONV_default_cache_opt NONE true [(true,SOME 1,conv)] []
 fun REDEPTH_CONSEQ_CONV conv = 
    CONTEXT_REDEPTH_CONSEQ_CONV CONSEQ_CONV_NO_CONTEXT (K conv)
 
 fun CONTEXT_NUM_DEPTH_CONSEQ_CONV context conv n =
   EXT_DEPTH_CONSEQ_CONV (CONSEQ_CONV_get_context_congruences context)
-     CONSEQ_CONV_default_cache_opt (SOME n) true [(true, 1, conv)] []
+     CONSEQ_CONV_default_cache_opt (SOME n) true [(true, SOME 1, conv)] []
 fun NUM_DEPTH_CONSEQ_CONV conv = CONTEXT_NUM_DEPTH_CONSEQ_CONV CONSEQ_CONV_NO_CONTEXT (K conv)
 
 fun CONTEXT_NUM_REDEPTH_CONSEQ_CONV conv n =
   EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list 
-     CONSEQ_CONV_default_cache_opt (SOME n) true [(true, 1, conv)] []
+     CONSEQ_CONV_default_cache_opt (SOME n) true [(true, SOME 1, conv)] []
 fun NUM_REDEPTH_CONSEQ_CONV conv = CONTEXT_NUM_REDEPTH_CONSEQ_CONV (K conv)
 
 fun CONTEXT_ONCE_DEPTH_CONSEQ_CONV context conv = CONTEXT_NUM_DEPTH_CONSEQ_CONV context conv 1
@@ -1470,7 +1573,7 @@ fun CONSEQ_TOP_REWRITE_CONV___ho_opt ho (both_thmL,strengthen_thmL,weaken_thmL) 
 fun FULL_EXT_CONSEQ_REWRITE_CONV congruence_list cache step_opt redepth ho
        context convL thmLs =
    EXT_DEPTH_CONSEQ_CONV congruence_list cache step_opt redepth
-      (((false, 1, K (CONSEQ_TOP_REWRITE_CONV___ho_opt ho thmLs)))::
+      (((false, SOME 1, K (CONSEQ_TOP_REWRITE_CONV___ho_opt ho thmLs)))::
         (map (fn (b,w,c) =>
             (b,w, (fn context => K (CHANGED_CONV (c context))))) convL)) context;
 
@@ -1508,8 +1611,8 @@ fun ONCE_CONSEQ_HO_REWRITE_TAC thmLs =
 fun EXT_CONTEXT_CONSEQ_REWRITE_CONV___ho_opt congruence_list cache step_opt ho context convL thmL =
     FULL_EXT_CONSEQ_REWRITE_CONV congruence_list
        cache step_opt true ho context
-       ((map (fn c => (true, 1, c)) convL)@
-       [(false, 0, K (REWRITE_CONV thmL)), (false, 0, fn context =>
+       ((map (fn c => (true, SOME 1, c)) convL)@
+       [(false, NONE, K (REWRITE_CONV thmL)), (false, NONE, fn context =>
            REWRITE_CONV (context@thmL))]);
 
 
@@ -1542,6 +1645,127 @@ fun EXT_CONTEXT_CONSEQ_HO_REWRITE_TAC context convL thmL thmLs =
 val EXT_CONSEQ_HO_REWRITE_TAC  =
     EXT_CONTEXT_CONSEQ_HO_REWRITE_TAC CONSEQ_CONV_IMP_CONTEXT
 
+
+
+
+(*
+
+set_goal ([``x ++ y = x ++ [32]:num list``, ``l = [0:num]``, ``aa:bool``, ``bb:bool``, ``cc:bool``], ``?x. y ++ l = 0::x``)
+
+open quantHeuristicsLib
+fun conv t = snd (EQ_IMP_RULE (QUANT_INSTANTIATE_CONV [] t));
+val conv = QUANT_INSTANTIATE_CONV [] THENC SIMP_CONV std_ss [AND_IMP_INTRO];
+
+val (asm,t) = top_goal();
+ASSUME_TAC TRUTH
+DISCH_ASM_CONV_TAC conv
+   val conv = QUANT_INSTANTIATE_CONV []
+*)
+
+
+(*dishes all the assumptions, then applies the conversions
+  and undisches the results, ASM_MARKER is used to separate these
+  assumptions*)
+
+
+fun cases_rule [] t =
+   if aconv t T then TRUTH else EQT_ELIM (REWRITE_CONV [] t)
+ | cases_rule (c::cL) t  =
+   if aconv t T then TRUTH else
+   let
+      val thm_f1 = EQT_ELIM (REWRITE_CONV [ASSUME (mk_neg c)] t)
+      val thm_f = ADD_ASSUM (mk_neg c) thm_f1
+
+      val thm_t1 = REWRITE_CONV [ASSUME c] t
+      val thm_t2 = cases_rule cL (rhs (concl thm_t1))
+      val thm_t3 = EQ_MP (GSYM thm_t1) thm_t2
+      val thm_t = ADD_ASSUM c thm_t3
+
+      val em_thm = SPEC c EXCLUDED_MIDDLE
+   in
+      DISJ_CASES em_thm thm_t thm_f
+   end;
+
+fun ASM_MARKER_CONV (m_base, mL, m_top) tt =
+let
+   val (fv, body) = strip_forall tt;
+   val (m, body') = dest_asm_marker body
+   val _ = if aconv m m_top then () else Feedback.fail()
+
+   val tL = find_terms is_asm_marker body';
+   val tmL = map (fn t => (fst (dest_asm_marker t), t)) tL
+   fun find_mark m = snd (first (fn (m', t) => aconv m m') tmL)
+       handle HOL_ERR _ => mk_asm_marker m T
+
+   val asm_list = map find_mark mL
+   val base_t = find_mark m_base   
+
+   val body''= subst (map (fn t => t |-> (rand (rator t))) (base_t::asm_list)) body'
+   val thm_t = mk_eq (body'', list_mk_imp (rev mL, m_base));
+   val thm0 = cases_rule mL thm_t
+
+   val thm1 = INST (map (fn t => (rand (rator t)) |-> t) (base_t::asm_list)) thm0
+   val thm2 = STRIP_QUANT_CONV (RAND_CONV (K thm1)) tt
+
+   val new_asm = map rand asm_list
+   val new_t = rand base_t
+in
+   (new_asm, new_t, fv, thm2)
+end
+
+
+val DISCH_ASM_CONV_TAC:(conv -> tactic) = fn conv => fn (asm,t) =>
+let
+   val fv = HOLset.listItems (FVL (t::asm) empty_tmset)
+   val (m_base, mt) = mk_asm_marker_random_pair t
+   val asm_mL = map mk_asm_marker_random_pair asm
+   val asm_t = foldl (fn (a,t) => mk_imp (snd a, t)) mt asm_mL;
+   val (m_top, m_asm_t) = mk_asm_marker_random_pair asm_t
+   val qasm_t = list_mk_forall (fv, m_asm_t);
+
+   val mL = map fst asm_mL
+   val thm0 = conv qasm_t;
+   val thm1 = if (is_eq (concl thm0)) then
+		  snd (EQ_IMP_RULE thm0)
+	      else thm0;
+   
+   val (new_asm, new_t, new_fv, thm2a) = ASM_MARKER_CONV (m_base, mL, m_top) ((fst o dest_imp o concl) thm1)
+   val thm2 = CONV_RULE (RATOR_CONV (RAND_CONV (K thm2a))) thm1
+
+(*val thmL = [mk_thm (new_asm,new_t)] 
+  val thmL = []*)
+in
+   (if aconv new_t T then [] else [(new_asm,new_t)], fn thmL =>
+    let
+        val new_thm = if null thmL then TRUTH else hd thmL;
+
+        (*build precondition thm*)
+        val new_m_thm = CONV_RULE (asm_marker_INTRO_CONV m_base) new_thm;
+        val new_asm_thm = foldl (fn ((m,a),thm) => 
+           CONV_RULE (RATOR_CONV (RAND_CONV (asm_marker_INTRO_CONV m)))
+             (DISCH a thm)) new_m_thm (zip mL  new_asm)
+        val new_qasm_thm0 = CONV_RULE (asm_marker_INTRO_CONV m_top) new_asm_thm
+        val new_qasm_thm = GENL new_fv new_qasm_thm0;
+
+        (*use modus ponens*)
+        val qasm_thm = MP thm2 new_qasm_thm;
+
+        (*get rid of markers again*)
+	val asm_thm_m = SPECL fv qasm_thm;
+        val asm_thm = CONV_RULE asm_marker_ELIM_CONV asm_thm_m
+
+        fun ASM_MARKER_UNDISCH thm = (
+            ASM_MARKER_UNDISCH (
+            UNDISCH (CONV_RULE (RATOR_CONV (RAND_CONV asm_marker_ELIM_CONV)) thm))
+        ) handle HOL_ERR _ => thm
+        val m_thm = ASM_MARKER_UNDISCH asm_thm;
+        val thm = CONV_RULE asm_marker_ELIM_CONV m_thm
+    in
+        thm
+    end)
+end handle UNCHANGED => ALL_TAC (asm,t);
+
+fun DISCH_ASM_CONSEQ_CONV_TAC c = DISCH_ASM_CONV_TAC (c CONSEQ_CONV_STRENGTHEN_direction);
 
 
 
@@ -1662,7 +1886,7 @@ EXT_CONTEXT_CONSEQ_REWRITE_CONV CONSEQ_CONV_FULL_CONTEXT [] [] ([],[rewrite_ever
 
 
 EXT_CONTEXT_CONSEQ_REWRITE_CONV CONSEQ_CONV_FULL_CONTEXT [] [] ([],[],[]) CONSEQ_CONV_STRENGTHEN_direction
-   ``A ==> A``
+   ``A ==> if c then A else B``
 
 EXT_CONTEXT_CONSEQ_REWRITE_CONV CONSEQ_CONV_FULL_CONTEXT [] [] ([],[],[]) CONSEQ_CONV_STRENGTHEN_direction
    ``A n ==> ?n. A n``
@@ -1685,6 +1909,20 @@ val thm = EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list true
    NONE (SOME 3) true [(true,1,K (K c_conv))]
    CONSEQ_CONV_STRENGTHEN_direction ``B /\ A ==> c 0``;
 
+
+fun c d t = if (aconv t ``aaa:bool``) then Feedback.fail() else raise UNCHANGED
+fun d d t = if (aconv t ``aaa:bool``) then mk_thm ([], ``T ==> aaa``) else raise UNCHANGED
+
+ EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list NONE (SOME 1) false
+    [(true, SOME 1, K c)] [] CONSEQ_CONV_STRENGTHEN_direction
+   ``aaa ==> aaa /\ ccc /\ bbb``
+
+ EXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___basic_list NONE (SOME 1) false
+    [(false, SOME 1, K c), (false, SOME 1, K d)] [] CONSEQ_CONV_STRENGTHEN_direction
+   ``aaa ==> aaa /\ ccc /\ bbb``
+
+
+DEPTH_CONSEQ_CONV c CONSEQ_CONV_STRENGTHEN_direction ``ccc ==> aaa /\ bbb``
 
 *)
 

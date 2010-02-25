@@ -26,7 +26,7 @@ sig
     val WORD_CONV         : conv
     val WORD_BIT_EQ_CONV  : conv
 
-    val WORD_DP           : conv -> conv
+    val WORD_DP           : conv -> conv -> conv
     val WORD_DECIDE       : conv
     val WORD_DECIDE_TAC   : tactic
 

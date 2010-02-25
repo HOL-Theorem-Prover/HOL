@@ -1,0 +1,128 @@
+"HOL mode" for Vim.
+
+Send the visually selected region of a Vim buffer to a HOL interactive session.
+
+Feedback to: Ramana Kumar <firstname.lastname@gmail.com>
+
+== Dependencies ==
+
+HOL4, PolyML, Vim, and a POSIXly correct tail.
+
+Uses the Thread structure from PolyML, and Unix and Posix structures from the
+standard basis. Could be ported to another ML providing similar functionality.
+
+== Contents ==
+
+All files are located under $HOLDIR/tools/vim
+
+Filename     Description
+----------   ------------------------------------------------------------------
+vimhol.sml   The extra code loaded with the prelude for a Vimhol session.
+hol.vim      Vim script to prepare a Vim buffer for sending to HOL.
+holabs.vim   Vim abbreviations for Unicode characters. (Optional.)
+README       Documentation. (This file.)
+
+== Quickstart ==
+
+1. Ensure $HOLDIR environment variable is set to the location of your HOL installation.
+2. Add the line
+     use (Globals.HOLDIR^"/tools/vim/vimhol.sml)
+   to your ~/.hol-config.sml file
+3  Run hol to start the HOL session
+4. Run vim, open a HOL script, and type :source $HOLDIR/tools/vim/hol.vim
+5. Select some SML value or declaration and type hs to send it to the HOL session
+   See below for more key mappings
+
+To have hol.vim run automatically on script files, you could use the following in ~/.vim/filetype.vim:
+augroup filetypedetect
+  au! BufRead,BufNewFile *?Script.sml source $HOLDIR/tools/vim/hol.vim
+augroup END
+You must make sure you turn :filetype on (e.g. by putting "filetype on" in your ~/.vimrc) for this to work.
+
+== Key mappings == 
+
+(These are all set up at the bottom of hol.vim)
+
+The following commands work in visual mode:
+
+hs          Send region to HOL.
+hu          Send region to HOL in quiet mode.
+
+hL          Send region to be split into words and each word "load"ed.
+hl          Same as above, but also send the region as a command afterwards.
+
+hg          Send region (should be a quotation) to g, to start a new proof.
+he          Send region (should be a tactic) to e, to expand a tactic.
+hS          Send region (should be a quotation) as a new subgoal.
+
+If a visual mode command above is given in normal mode, the region will be the
+line containing the cursor.
+
+The following commands work in normal mode (only):
+
+<count>hR   Rotate subgoals <count> times (default 1).
+<count>hb   Back up proof <count> times (by calling b) (default 1).
+<count>hd   Drop <count> proof attempts (by calling d) (default 1).
+hp          Print the proof manager status (by calling p).
+hr          Restart the current proof (by calling restart).
+
+hc          Interrupt execution (of whichever of the things sent is running).
+
+hh          A normal h (usually means move cursor left).
+            This one works in both normal and visual modes.
+
+=== Automatic stripping ===
+
+hL and hl don't "load" these words: local open in end.
+
+hg strips commas from the end of the region.
+
+hS strips everything including and after the first "by" in the region, if any.
+
+he strips these tokens from the ends of the region
+  start: ) ] [
+  end:   ( [
+  both:  , THEN THENL THEN1 << >> ++ \\ by
+
+== Unicode ==
+
+- The holabs.vim file contains abbreviations from ASCII strings to Unicode strings.
+- Examples: <> to ≠, and UNION to ∪.
+- When you type the ASCII, you get the Unicode.
+- To turn unicode on, :run holabs.vim.
+- You can set this up as an autocommand as was described before for hol.vim.
+- Sometimes might need CTRL-] or ESC or space after an abbreviation to make it happen.
+- During an editing session, use :abc to stop all abbreviation key maps.
+  (Removes non holabs.vim stuff too.)
+- Undo abbreviations in selected text with :call HOLUnab() in visual mode.
+
+== Architecture, and the Vimhol structure ==
+
+Vim sends short commands to $HOLDIR/fifo containing the names of temporary files.
+Vim writes the real code to be run to those temporary files.
+Vimhol "use"es and deletes the temporary files in the order that their names were received.
+
+Vimhol runs four threads in total.
+1. Main thread, which accepts input from stdIn and displays output in the terminal.
+2. Tail thread, which is just tail following the end of $HOLDIR/fifo for commands from Vim.
+3. Polling thread, which waits for and reads the output of the tail thread.
+   The polling thread automatically starts the tail thread and the running thread when it needs to.
+4. Running thread, which runs the code from Vim.
+   The running thread is the one interrupted by Hc.
+
+In the main thread, the Vimhol structure will be in scope, containing the following values.
+They're probably not useful except for debugging.
+Value                          Description
+-----------------------------  ------------------------------------------
+pActive      : unit -> bool    whether the polling thread is active
+rActive      : unit -> bool    whether the running thread is active
+stopTail     : unit -> unit    kill the tail thread
+restartTail  : unit -> unit    restart the tail thread
+stop         : unit -> unit    stop the polling and running threads
+restart      : unit -> unit    restart the polling thread
+keepFiles    : bool ref        don't delete temporary files (default: false)
+queue        : Vimhol.Queue.t  queue containing names of temporary files
+removeQueue  : unit -> unit    delete all the files in the queue (respects keepFiles)
+
+$HOLDIR/fifo is generated by vimhol whenever it doesn't exist.
+Temporary files are generated (usually in /tmp) and should be automatically removed by vimhol.

@@ -1,2 +1,2 @@
-selftest.exe: selftest.uo $(dprot $(SIGOBJ)/term_pp.uo)
+selftest.exe: selftest.uo $(dprot $(SIGOBJ)/term_pp.uo) state_transformerTheory.uo
 	$(HOLMOSMLC) -o $@ $<

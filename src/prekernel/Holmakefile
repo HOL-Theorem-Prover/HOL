@@ -13,3 +13,6 @@ FinalType-sig.uo: FinalType-sig.sml Lib.ui
 
 FinalKind-sig.uo: FinalKind-sig.sml
 	$(HOLMOSMLC) -c -toplevel $<
+
+FinalTheory-sig.uo: FinalTheory-sig.sml Lib.uo $(PORTABLED)
+	$(HOLMOSMLC) -c -toplevel $<

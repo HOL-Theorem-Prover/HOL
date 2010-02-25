@@ -394,10 +394,14 @@ val _ =
         -->
        ("(defcustom hol-executable \n  "^
         quote (fullPath [holdir, "bin", "hol"])^"\n"),
-       "(defvar sml-executable SML-EXECUTABLE\n"
+       "(defcustom sml-executable SML-EXECUTABLE\n"
         -->
-       ("(defvar sml-executable \n  "^
-        quote (fullPath [poly])^"\n")]
+       ("(defcustom sml-executable \n  "^
+        quote (fullPath [poly])^"\n"),
+       "(defcustom holmake-executable HOLMAKE-EXECUTABLE\n"
+        -->
+       ("(defcustom holmake-executable \n  "^
+        quote (fullPath [holdir, "bin/Holmake"])^"\n")]
  end;
 
 

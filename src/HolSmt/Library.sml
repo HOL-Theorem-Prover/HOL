@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Common auxiliary functions *)
 
@@ -100,6 +100,17 @@ struct
     val th2 = conj_elim (thm, neg)
   in
     Thm.MP (Thm.NOT_ELIM th2) th1
+  end
+
+  (* A tactic that unfolds operations of set theory, replacing them by
+     propositional logic (representing sets as predicates). *)
+  val SET_SIMP_TAC =
+  let
+    val thms = [pred_setTheory.SPECIFICATION, pred_setTheory.GSPEC_ETA,
+      pred_setTheory.EMPTY_DEF, pred_setTheory.UNIV_DEF,
+      pred_setTheory.UNION_DEF, pred_setTheory.INTER_DEF]
+  in
+    simpLib.SIMP_TAC (simpLib.mk_simpset [pred_setTheory.SET_SPEC_ss]) thms 
   end
 
 end

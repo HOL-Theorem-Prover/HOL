@@ -77,7 +77,7 @@ val INT_AC_ss = merge_ss [INT_ADD_AC_ss,INT_MUL_AC_ss]
 (* decision procedure.                                                       *)
 (*---------------------------------------------------------------------------*)
 
-val INT_RWTS_ss = integerTheory.integer_rwts;
+val INT_RWTS_ss = BasicProvers.thy_ssfrag "integer"
 
 val int_ss =
   boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++

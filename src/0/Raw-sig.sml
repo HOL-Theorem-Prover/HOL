@@ -82,85 +82,27 @@ end;
 
 signature RawTheoryPP =
 sig
- type thm      = KernelTypes.thm
- type hol_type = KernelTypes.hol_type
- type kind     = KernelTypes.kind
- type ppstream = Portable.ppstream
- type num = Arbnum.num
 
- val pp_type : string -> string -> string -> string -> string -> string ->
-               string -> string -> ppstream -> hol_type -> unit
-
- val pp_sig :
-   (ppstream -> thm -> unit)
-    -> {name        : string,
-        parents     : string list,
-        axioms      : (string * thm) list,
-        definitions : (string * thm) list,
-        theorems    : (string * thm) list,
-        sig_ps      : (ppstream -> unit) option list}
-    -> ppstream
-    -> unit
-
- val pp_struct :
-   {theory      : string*num*num,
-    parents     : (string*num*num) list,
-    types       : (string*kind*int) list,
-    constants   : (string*hol_type) list,
-    axioms      : (string * thm) list,
-    definitions : (string * thm) list,
-    theorems    : (string * thm) list,
-    struct_ps   : (ppstream -> unit) option list}
-  -> ppstream
-  -> unit
+  include TheoryPP where type thm = KernelTypes.thm
+                     and type hol_type = KernelTypes.hol_type
+                     and type kind = KernelTypes.kind
 end
 
 
 signature RawTheory =
 sig
-  type kind     = KernelTypes.kind
-  type hol_type = KernelTypes.hol_type
-  type term     = KernelTypes.term
-  type thm      = KernelTypes.thm
-  type witness  = KernelTypes.witness
-  type ppstream = Portable.ppstream
-  type thy_addon = {sig_ps    : (ppstream -> unit) option,
-                    struct_ps : (ppstream -> unit) option}
-  type num = Arbnum.num
 
-  val new_type       : string * int -> unit
-  val new_type_opr   : string * kind * int -> unit
-  val new_constant   : string * hol_type -> unit
-  val new_axiom      : string * term -> thm
-  val save_thm       : string * thm -> thm
-  val delete_type    : string -> unit
-  val delete_const   : string -> unit
-  val delete_binding : string -> unit
-  val current_theory : unit -> string
-  val stamp          : string -> Time.time
-  val parents        : string -> string list
-  val ancestry       : string -> string list
-  val types          : string -> (string * kind * int) list
-  val constants      : string -> term list
-  val current_axioms : unit -> (string * thm) list
-  val current_definitions : unit -> (string * thm) list
-  val current_theorems : unit -> (string * thm) list
-  val new_theory       : string -> unit
-  val after_new_theory : (string * string -> unit) -> unit
-  val adjoin_to_theory : thy_addon -> unit
-  val export_theory    : unit -> unit
-  val pp_thm           : (ppstream -> thm -> unit) ref
-  val link_parents     : string*num*num -> (string*num*num)list -> unit
-  val incorporate_types  : string -> (string*kind*int)list -> unit
+  include FinalTheory
+          where type hol_type = KernelTypes.hol_type
+            and type kind     = KernelTypes.kind
+            and type term     = KernelTypes.term
+            and type thm      = KernelTypes.thm
+  type witness  = KernelTypes.witness
+
   val incorporate_consts : string -> (string*hol_type)list -> unit
-  val uptodate_type      : hol_type -> bool
-  val uptodate_term      : term -> bool
-  val uptodate_thm       : thm -> bool
-  val scrub              : unit -> unit
-  val set_MLname         : string -> string -> unit
   val store_definition   : string * string list * witness * thm -> thm
   val store_type_definition : string * string * witness * thm -> thm
-  val try_theory_extension : ('a->'b) -> 'a -> 'b
+
 end
 
 

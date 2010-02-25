@@ -15,9 +15,11 @@
 structure Portable :> Portable =
 struct
 
+structure Process = OS.Process
+structure FileSys = OS.FileSys
+
 exception Div = General.Div
 exception Mod = General.Div
-exception Interrupt = General.Interrupt
 
 (*---------------------------------------------------------------------------
       Refs
@@ -42,8 +44,7 @@ val explode = map Char.toString o String.explode;
 val getEnv   = Process.getEnv
 val cd       = FileSys.chDir
 val pwd      = FileSys.getDir
-val listDir  = Mosml.listDir
-fun system s = if Process.system s = Process.success then 0 else 1
+fun system s = if Process.isSuccess (Process.system s) then 0 else 1
 val getArgs  = CommandLine.arguments
 val argv     = getArgs
 fun exit()   = Process.exit Process.success
@@ -59,10 +60,10 @@ type outstream     = TextIO.outstream
 val std_out        = TextIO.stdOut
 val stdin          = TextIO.stdIn
 fun open_in file   = TextIO.openIn file
-                     handle General.Io{cause=SysErr(s,_),...} => raise (Io s)
+                     handle IO.Io{cause=SysErr(s,_),...} => raise (Io s)
                                    (* handle OS.SysErr (s,_) => raise Io s; *)
 fun open_out file  = TextIO.openOut file
-                     handle General.Io{cause=SysErr(s,_),...} => raise (Io s)
+                     handle IO.Io{cause=SysErr(s,_),...} => raise (Io s)
                                    (* handle OS.SysErr (s,_) => raise Io s; *)
 val output         = TextIO.output
 fun outputc strm s = output(strm,s)
@@ -71,16 +72,6 @@ val close_out      = TextIO.closeOut
 val flush_out      = TextIO.flushOut
 fun input_line is  = case TextIO.inputLine is of NONE => "" | SOME s => s
 val end_of_stream  = TextIO.endOfStream
-
-(*---------------------------------------------------------------------------
-    Efficiency hack.
- ---------------------------------------------------------------------------*)
-
-local val cast : 'a -> int = Obj.magic
-in
-fun pointer_eq (x:'a, y:'a) = (cast x = cast y)
-fun ref_to_int (r : 'a ref) = cast r
-end;
 
 (*---------------------------------------------------------------------------
     Time
@@ -198,15 +189,10 @@ fun norm_quote [] = []
   | norm_quote (QUOTE s1::QUOTE s2::rst) = norm_quote (QUOTE(s1^s2)::rst)
   | norm_quote (h::rst) = h::norm_quote rst;
 
-local
-  (* magic to ensure that interruptions (SIGINTs) are actually seen by the
-    linked executable as Interrupt exceptions *)
-prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
-in
+(* suck in implementation specific stuff *)
+open MLSYSPortable
 
-fun catch_SIGINT () = ignore (catch_interrupt true)
-
-end
-
+(* rebinding the exception seems to be necessary in Moscow ML 2.01 *)
+exception Interrupt = MLSYSPortable.Interrupt
 
 end (* Portable *)

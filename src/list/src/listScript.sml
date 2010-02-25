@@ -351,6 +351,7 @@ val LENGTH_APPEND = store_thm ("LENGTH_APPEND",
  --`!(l1:'a list) (l2:'a list).
      LENGTH (APPEND l1 l2) = (LENGTH l1) + (LENGTH l2)`--,
      LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH, APPEND, ADD_CLAUSES]);
+val _ = export_rewrites ["LENGTH_APPEND"]
 
 val MAP_APPEND = store_thm ("MAP_APPEND",
  --`!(f:'a->'b).!l1 l2. MAP f (APPEND l1 l2) = APPEND (MAP f l1) (MAP f l2)`--,
@@ -581,6 +582,12 @@ CONJ_TAC THEN
    THEN REWRITE_TAC [CONS_11,NOT_NIL_CONS, NOT_CONS_NIL,APPEND]
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
 val _ = export_rewrites ["APPEND_eq_NIL"]
+
+val APPEND_EQ_SING = store_thm(
+  "APPEND_EQ_SING",
+  ``(l1 ++ l2 = [e:'a]) <=>
+      (l1 = [e]) /\ (l2 = []) \/ (l1 = []) /\ (l2 = [e])``,
+  Cases_on `l1` THEN SRW_TAC [][CONJ_ASSOC]);
 
 val APPEND_11 = store_thm(
   "APPEND_11",
@@ -1177,9 +1184,25 @@ val MEM_REVERSE = store_thm(
   "MEM_REVERSE",
   ``!l x. MEM x (REVERSE l) = MEM x l``,
   Induct THEN SRW_TAC [][] THEN PROVE_TAC []);
-
 val _ = export_rewrites ["MEM_REVERSE"]
 
+val LENGTH_REVERSE = store_thm(
+  "LENGTH_REVERSE",
+  ``!l. LENGTH (REVERSE l) = LENGTH l``,
+  Induct THEN SRW_TAC [][arithmeticTheory.ADD1]);
+val _ = export_rewrites ["LENGTH_REVERSE"]
+
+val REVERSE_EQ_NIL = store_thm(
+  "REVERSE_EQ_NIL",
+  ``(REVERSE l = []) <=> (l = [])``,
+  Cases_on `l` THEN SRW_TAC [][]);
+val _ = export_rewrites ["REVERSE_EQ_NIL"]
+
+val REVERSE_EQ_SING = store_thm(
+  "REVERSE_EQ_SING",
+  ``(REVERSE l = [e:'a]) <=> (l = [e])``,
+  Cases_on `l` THEN SRW_TAC [][APPEND_EQ_SING, CONJ_COMM]);
+val _ = export_rewrites ["REVERSE_EQ_SING"]
 
 (* ----------------------------------------------------------------------
     FRONT and LAST
@@ -1370,6 +1393,57 @@ val ALL_DISTINCT_SING = store_thm(
    SRW_TAC [][]);
 
 (* ----------------------------------------------------------------------
+    LRC
+      Where NRC has the number of steps in a transitive path,
+      LRC has a list of the elements in the path (excluding the rightmost)
+   ---------------------------------------------------------------------- *)
+
+val LRC_def = Define`
+  (LRC R [] x y = (x = y)) /\
+  (LRC R (h::t) x y =
+   (x = h) /\ ?z. R x z /\ LRC R t z y)`;
+
+val NRC_LRC = Q.store_thm(
+"NRC_LRC",
+`NRC R n x y <=> ?ls. LRC R ls x y /\ (LENGTH ls = n)`,
+MAP_EVERY Q.ID_SPEC_TAC [`y`,`x`] THEN
+Induct_on `n` THEN SRW_TAC [][] THEN1 (
+  SRW_TAC [][EQ_IMP_THM] THEN1 (
+    Q.EXISTS_TAC `[]` THEN SRW_TAC [][LRC_def] ) THEN
+  Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [LRC_def]
+) THEN
+SRW_TAC [][arithmeticTheory.NRC,EQ_IMP_THM] THEN1 (
+  Q.EXISTS_TAC `x::ls` THEN
+  SRW_TAC [][LRC_def] THEN
+  METIS_TAC [] ) THEN
+Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [LRC_def] THEN
+SRW_TAC [][] THEN METIS_TAC []);
+
+val LRC_MEM = Q.store_thm(
+"LRC_MEM",
+`LRC R ls x y /\ MEM e ls ==> ?z t. R e z /\ LRC R t z y`,
+Q_TAC SUFF_TAC
+`!ls x y. LRC R ls x y ==> !e. MEM e ls ==> ?z t. R e z /\ LRC R t z y`
+THEN1 METIS_TAC [] THEN
+Induct THEN SRW_TAC [][LRC_def] THEN METIS_TAC []);
+
+val LRC_MEM_right = Q.store_thm(
+"LRC_MEM_right",
+`LRC R (h::t) x y /\ MEM e t ==> ?z p. R z e /\ LRC R p x z`,
+Q_TAC SUFF_TAC
+`!ls x y. LRC R ls x y ==> !h t e. (ls = h::t) /\ MEM e t ==> ?z p. R z e /\ LRC R p x z`
+THEN1 METIS_TAC [] THEN
+Induct THEN SRW_TAC [][LRC_def] THEN
+Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [LRC_def] THEN
+SRW_TAC [][] THENL [
+  MAP_EVERY Q.EXISTS_TAC [`h`,`[]`] THEN SRW_TAC [][LRC_def],
+  RES_TAC THEN
+  MAP_EVERY Q.EXISTS_TAC  [`z''`,`h::p`] THEN
+  SRW_TAC [][LRC_def] THEN
+  METIS_TAC []
+]);
+
+(* ----------------------------------------------------------------------
     Theorems relating (finite) sets and lists.  First
 
        LIST_TO_SET : 'a list -> 'a set
@@ -1415,6 +1489,25 @@ val FINITE_LIST_TO_SET = Q.store_thm
  `!l. FINITE (set l)`,
  Induct THEN SRW_TAC [][]);
 val _ = export_rewrites ["FINITE_LIST_TO_SET"]
+
+local open numLib in
+val CARD_LIST_TO_SET = Q.store_thm(
+"CARD_LIST_TO_SET",
+`CARD (set ls) <= LENGTH ls`,
+Induct_on `ls` THEN SRW_TAC [][] THEN
+DECIDE_TAC);
+end
+
+val ALL_DISTINCT_CARD_LIST_TO_SET = Q.store_thm(
+"ALL_DISTINCT_CARD_LIST_TO_SET",
+`!ls. ALL_DISTINCT ls ==> (CARD (set ls) = LENGTH ls)`,
+Induct THEN SRW_TAC [][]);
+
+val LIST_TO_SET_REVERSE = store_thm(
+  "LIST_TO_SET_REVERSE",
+  ``!ls: 'a list. set (REVERSE ls) = set ls``,
+  Induct THEN SRW_TAC [][pred_setTheory.EXTENSION]);
+val _ = export_rewrites ["LIST_TO_SET_REVERSE"]
 
 (* ----------------------------------------------------------------------
     SET_TO_LIST : 'a set -> 'a list
@@ -1560,8 +1653,6 @@ val (rules,ind,cases) = IndDefLib.Hol_reln`
 val strong = IndDefLib.derive_strong_induction (rules,ind)
 *)
 
-
-
 (* ----------------------------------------------------------------------
     isPREFIX
    ---------------------------------------------------------------------- *)
@@ -1644,7 +1735,8 @@ val _ = adjoin_to_theory
    S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
    S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
    S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
-   S "              FOLDL, REVERSE_DEF, EL_compute, ALL_DISTINCT,";
+   S "              FOLDL, REVERSE_DEF, ALL_DISTINCT,";
+   S "              Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV EL,";
    S "              computeLib.lazyfy_thm list_case_compute,";
    S "              list_size_def,FRONT_DEF,LAST_DEF,isPREFIX]";
    S "        end;";
@@ -1661,7 +1753,7 @@ val _ = export_rewrites
           ["APPEND_11", "FLAT",
            "MAP", "MAP2", "NULL_DEF",
            "SUM", "APPEND_ASSOC", "CONS", "CONS_11",
-           "LENGTH_APPEND", "LENGTH_MAP", "MAP_APPEND",
+           "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL", "APPEND_NIL",
            "CONS_ACYCLIC", "list_case_def", "ZIP",
            "UNZIP", "EVERY_APPEND", "EXISTS_APPEND", "EVERY_SIMP",

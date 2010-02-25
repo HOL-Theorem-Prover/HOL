@@ -25,6 +25,9 @@ fun set_limit (HISTORY{obj,past,orig,limit}) n =
   else HISTORY{obj=obj, past=chop n past, orig=orig, limit=n}
 end;
 
+fun remove_past (HISTORY{obj,past,orig,limit}) =
+  new_history {obj=obj,limit=limit};
+
 fun initialValue (HISTORY{orig, ...}) = orig;
 
 fun project f (HISTORY{obj, ...}) = f obj;
