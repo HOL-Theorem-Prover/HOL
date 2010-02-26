@@ -414,6 +414,21 @@ fun disable_abbrev_printing s (arg as TYG(G,abbs,pmap)) =
         if s = s' then TYG(G, abbs, pmap')
         else arg
       end handle Binarymap.NotFound => arg
+(* ----------------------------------------------------------------------
+    min grammar
+
+    Grammar that knows about types bool and ind, as well as the operator
+    fun, which also has an infix -> presentation
+   ---------------------------------------------------------------------- *)
+
+open Lib
+val min_grammar =
+    empty_grammar |> C new_tyop "bool"
+                  |> C new_tyop "ind"
+                  |> C new_binary_tyop {opname = "fun",
+                                        associativity = RIGHT,
+                                        infix_form = SOME "->",
+                                        precedence = 50}
 
 
 end

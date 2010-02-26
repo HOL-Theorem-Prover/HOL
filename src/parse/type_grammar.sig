@@ -14,6 +14,7 @@ sig
   type grammar
 
   val empty_grammar    : grammar
+  val min_grammar      : grammar
   val rules            : grammar -> (int * grammar_rule) list
   val abbreviations    : grammar -> (string,type_structure) Binarymap.dict
 

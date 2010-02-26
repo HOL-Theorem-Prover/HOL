@@ -1157,7 +1157,38 @@ in
   end_block ()
 end
 
-(* theory data stuff *)
+fun add_const (s,t) =
+    fupdate_overload_info (Overload.add_overloading(s,t))
+val min_grammar = let
+  open Term Portable
+in
+  stdhol |> add_const ("==>", prim_mk_const{Name = "==>", Thy = "min"})
+         |> add_const ("=", prim_mk_const{Name = "=", Thy = "min"})
+         |> add_const ("@", prim_mk_const{Name = "@", Thy = "min"})
+         |> C add_binder ({term_name="@", tok = "@"}, std_binder_precedence)
+
+         (* Using the standard rules for infixes for ==> and = seems
+            to result in bad pretty-printing of goals.  I think the
+            following customised printing spec works better.  The crucial
+            difference is that the blocking style is CONSISTENT rather than
+            INCONSISTENT. *)
+         |> C add_rule {term_name   = "==>",
+                        block_style = (AroundSamePrec, (CONSISTENT, 0)),
+                        fixity      = Infix(RIGHT, 200),
+                        pp_elements = [HardSpace 1, RE (TOK "==>"),
+                                       BreakSpace(1,0)],
+                        paren_style = OnlyIfNecessary}
+         |> C add_rule {term_name   = "=",
+                        block_style = (AroundSamePrec, (CONSISTENT, 0)),
+                        fixity      = Infix(NONASSOC, 100),
+                        pp_elements = [HardSpace 1, RE (TOK "="),
+                                       BreakSpace(1,0)],
+                        paren_style = OnlyIfNecessary}
+
+end
+(* ----------------------------------------------------------------------
+    encoding and decoding grammars to and from strings
+   ---------------------------------------------------------------------- *)
 open Coding
 infix || >- >> >* >->
 

@@ -81,6 +81,7 @@ sig
   type grammar
 
   val stdhol         : grammar
+  val min_grammar    : grammar
   val merge_grammars : grammar * grammar -> grammar
   val fupdate_overload_info :
     (overload_info -> overload_info) -> grammar -> grammar
