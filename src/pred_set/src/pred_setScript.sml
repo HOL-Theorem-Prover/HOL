@@ -3240,6 +3240,11 @@ val COMPL_INTER = store_thm(
   SRW_TAC [][EXTENSION, IN_COMPL, IN_INTER]);
 val _ = export_rewrites ["COMPL_INTER"]
 
+val COMPL_UNION = Q.store_thm(
+"COMPL_UNION",
+`COMPL (s UNION t) = COMPL s INTER COMPL t`,
+SRW_TAC [][EXTENSION,COMPL_DEF,IN_INTER]);
+
 (* ====================================================================== *)
 (* Sets of size n.                                                        *)
 (* ====================================================================== *)

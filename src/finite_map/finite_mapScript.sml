@@ -798,7 +798,6 @@ val DRESTRICT_FUNION = Q.store_thm
  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, FUNION_DEF, FAPPLY_FUPDATE_THM,
             EXTENSION, DRESTRICT_DEF] THEN PROVE_TAC []);
 
-
 (*---------------------------------------------------------------------------
      Merging of finite maps (added 17 March 2009 by Thomas Tuerk)
  ---------------------------------------------------------------------------*)
@@ -1002,6 +1001,14 @@ val SUBMAP_FUPDATE_FLOOKUP = store_thm(
   ``f SUBMAP (f |+ (x,y)) <=> (FLOOKUP f x = NONE) \/ (FLOOKUP f x = SOME y)``,
   SRW_TAC [][FLOOKUP_DEF, AC CONJ_ASSOC CONJ_COMM]);
 
+val FLOOKUP_FUNION = Q.store_thm(
+"FLOOKUP_FUNION",
+`FLOOKUP (FUNION f1 f2) k =
+ case FLOOKUP f1 k of
+    NONE -> FLOOKUP f2 k
+ || SOME v -> SOME v`,
+SRW_TAC [][FLOOKUP_DEF,FUNION_DEF] THEN FULL_SIMP_TAC (srw_ss()) []);
+
 (*---------------------------------------------------------------------------
        Universal quantifier on finite maps
  ---------------------------------------------------------------------------*)
@@ -1023,6 +1030,11 @@ val FEVERY_FUPDATE = Q.store_thm
      P (x,y) /\ FEVERY P (DRESTRICT f (COMPL {x}))`,
  SRW_TAC [][FEVERY_DEF, FDOM_FUPDATE, FAPPLY_FUPDATE_THM,
             DRESTRICT_DEF, EQ_IMP_THM] THEN PROVE_TAC []);
+
+val FEVERY_FLOOKUP = Q.store_thm(
+"FEVERY_FLOOKUP",
+`FEVERY P f /\ (FLOOKUP f k = SOME v) ==> P (k,v)`,
+SRW_TAC [][FEVERY_DEF,FLOOKUP_DEF] THEN RES_TAC);
 
 (*---------------------------------------------------------------------------
       Composition of finite maps
@@ -1112,6 +1124,10 @@ val o_f_o_f = store_thm(
   SRW_TAC [][GSYM fmap_EQ_THM, o_f_FAPPLY]);
 val _ = export_rewrites ["o_f_o_f"]
 
+val FLOOKUP_o_f = Q.store_thm(
+"FLOOKUP_o_f",
+`FLOOKUP (f o_f fm) k = case FLOOKUP fm k of NONE -> NONE || SOME v -> SOME (f v)`,
+SRW_TAC [][FLOOKUP_DEF,o_f_FAPPLY]);
 
 (*---------------------------------------------------------------------------
           Range of a finite map
@@ -1431,6 +1447,46 @@ val FUPDATE_LIST_APPLY_NOT_MEM = store_thm(
   ``!kvl f k. ~MEM k (MAP FST kvl) ==> ((f |++ kvl) ' k = f ' k)``,
   Induct THEN SRW_TAC [][FUPDATE_LIST_THM] THEN
   Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [FAPPLY_FUPDATE_THM]);
+
+val FUPDATE_LIST_APPEND = Q.store_thm(
+"FUPDATE_LIST_APPEND",
+`fm |++ (kvl1 ++ kvl2) = fm |++ kvl1 |++ kvl2`,
+Q.ID_SPEC_TAC `fm` THEN Induct_on `kvl1` THEN SRW_TAC [][FUPDATE_LIST_THM]);
+
+val FUPDATE_FUPDATE_LIST_COMMUTES = Q.store_thm(
+"FUPDATE_FUPDATE_LIST_COMMUTES",
+`~MEM k (MAP FST kvl) ==> (fm |+ (k,v) |++ kvl = (fm |++ kvl) |+ (k,v))`,
+let open rich_listTheory in
+Q.ID_SPEC_TAC `kvl` THEN
+HO_MATCH_MP_TAC SNOC_INDUCT THEN
+SRW_TAC [][FUPDATE_LIST_THM] THEN
+FULL_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM,MAP_SNOC,SNOC_APPEND,FUPDATE_LIST_APPEND] THEN
+Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [FUPDATE_COMMUTES]
+end);
+
+val FUPDATE_FUPDATE_LIST_MEM = Q.store_thm(
+"FUPDATE_FUPDATE_LIST_MEM",
+`MEM k (MAP FST kvl) ==> (fm |+ (k,v) |++ kvl = fm |++ kvl)`,
+Q.ID_SPEC_TAC `fm` THEN
+Induct_on `kvl` THEN SRW_TAC [][FUPDATE_LIST_THM] THEN
+Cases_on `h` THEN SRW_TAC [][] THEN
+FULL_SIMP_TAC (srw_ss()) [] THEN
+Cases_on `k = q` THEN SRW_TAC [][] THEN
+METIS_TAC [FUPDATE_COMMUTES]);
+
+val FEVERY_FUPDATE_LIST = Q.store_thm(
+"FEVERY_FUPDATE_LIST",
+`ALL_DISTINCT (MAP FST kvl) ==>
+ (FEVERY P (fm |++ kvl) <=> EVERY P kvl /\ FEVERY P (DRESTRICT fm (COMPL (set (MAP FST kvl)))))`,
+Q.ID_SPEC_TAC `fm` THEN
+Induct_on `kvl` THEN SRW_TAC [][FUPDATE_LIST_THM,DRESTRICT_UNIV] THEN
+Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+SRW_TAC [][FUPDATE_FUPDATE_LIST_COMMUTES,FEVERY_FUPDATE] THEN
+FULL_SIMP_TAC (srw_ss()) [GSYM COMPL_UNION] THEN
+SRW_TAC [][Once UNION_COMM] THEN
+SRW_TAC [][Once (GSYM INSERT_SING_UNION)] THEN
+SRW_TAC [][EQ_IMP_THM]);
+
 
 (* ----------------------------------------------------------------------
     More theorems
