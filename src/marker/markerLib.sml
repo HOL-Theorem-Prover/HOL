@@ -104,25 +104,35 @@ fun PAT_ABBREV_TAC fv_set eq (g as (asl, w)) =
    | SOME t => ABB l' t g
  end
 
+fun fixed_tyvars ctxt pattern =
+  Lib.U (map type_vars_in_term (Lib.intersect ctxt (free_vars pattern)))
+
+fun ABB' {redex=l,residue=r} = ABB l r
+
 fun MATCH_ABBREV_TAC fv_set pattern (g as (asl, w)) = let
   val ctxt = HOLset.listItems fv_set
-  val fixed_tyvars = Lib.U (map type_vars_in_term
-                                (Lib.intersect ctxt (free_vars pattern)))
-  val (tminst,_) = match_terml fixed_tyvars fv_set pattern w
-  fun ABB' {redex=l,residue=r} = ABB l r
+  val (tminst,_) = match_terml (fixed_tyvars ctxt pattern) fv_set pattern w
 in
   MAP_EVERY ABB' tminst g
 end
 
+fun MATCH_ASSUM_ABBREV_TAC fv_set pattern (g as (asl, w)) = let
+  val ctxt = HOLset.listItems fv_set
+  val fixed = fixed_tyvars ctxt pattern
+  fun find [] = raise ERR "MATCH_ASSUM_ABBREV_TAC" "No matching assumption found"
+    | find (asm::tl) =
+      case total (match_terml fixed fv_set pattern) asm of
+        NONE => find tl
+      | SOME (tminst,_) => MAP_EVERY ABB' tminst g
+                           handle HOL_ERR e => find tl
+in find asl end
+
 fun HO_MATCH_ABBREV_TAC fv_set pattern (gl as (asl,w)) =
  let val ctxt = HOLset.listItems fv_set
-     val fixed_tyvars = Lib.U (map type_vars_in_term
-                                (Lib.intersect ctxt (free_vars pattern)))
-     val (tminst, tyinst) = ho_match_term fixed_tyvars fv_set pattern w
+     val (tminst, tyinst) = ho_match_term (fixed_tyvars ctxt pattern) fv_set pattern w
      val unbeta_goal =
         Tactical.default_prover(mk_eq(w, subst tminst (inst tyinst pattern)),
                                 BETA_TAC THEN REFL_TAC)
-  fun ABB' {redex=l,residue=r} = ABB l r
 in
   CONV_TAC (K unbeta_goal) THEN MAP_EVERY ABB' tminst
 end gl;

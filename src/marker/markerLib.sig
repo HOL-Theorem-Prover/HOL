@@ -26,6 +26,7 @@ sig
   val ABBREV_TAC          : term -> tactic
   val PAT_ABBREV_TAC      : term set -> term -> tactic
   val MATCH_ABBREV_TAC    : term set -> term -> tactic
+  val MATCH_ASSUM_ABBREV_TAC : term set -> term -> tactic
   val HO_MATCH_ABBREV_TAC : term set -> term -> tactic
   val UNABBREV_TAC        : string -> tactic
   val UNABBREV_ALL_TAC    : tactic
