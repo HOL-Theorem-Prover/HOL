@@ -13,6 +13,7 @@ iab IN ∈
 iab NOTIN ∉
 iab UNION ∪
 iab SUBSET ⊆
+set iskeyword+=>,/
 fu! HOLUnab ()
   s/∧/\/\\/eg
   s/∨/\\\//eg
