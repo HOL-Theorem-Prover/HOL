@@ -743,6 +743,9 @@ fun tagged_var_to_num v = let
   val s = if s = "" then "100000" else s
   in string_to_int s end
 
+val GUARD_T = prove(``!x. x = (x = GUARD 0 T)``,REWRITE_TAC [GUARD_def])
+val GUARD_F = prove(``!x. ~x = (x = GUARD 0 F)``,REWRITE_TAC [GUARD_def])
+
 fun init_clean th = let
   fun side2guard_conv tm =
     if not (can (match_term ``(\x.x:bool) y``) tm)
@@ -754,10 +757,18 @@ fun init_clean th = let
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV)
                      (SIMP_CONV bool_ss [GSYM CONJ_ASSOC,NOT_IF])) th
   val th = remove_primes th
+  fun bool_var_assign_conv tm = 
+    if is_conj tm then BINOP_CONV bool_var_assign_conv tm else
+    if is_cond tm then BINOP_CONV bool_var_assign_conv tm else
+    if is_var tm andalso type_of tm = ``:bool`` then SPEC tm GUARD_T else
+    if is_neg tm andalso is_var (cdr tm ) then SPEC (cdr tm) GUARD_F else ALL_CONV tm
+  val th = CONV_RULE ((RATOR_CONV o RAND_CONV) bool_var_assign_conv) th
   in th end;
 
 fun guard_to_num tm = (numSyntax.int_of_term o cdr o car) tm
 fun assum_to_num tm =
+  if is_var tm then tagged_var_to_num tm else
+  if is_neg tm andalso is_var (cdr tm) then tagged_var_to_num (cdr tm) else
   if is_cond tm then 100000 else
   if can (match_term ``GUARD b x``) tm then guard_to_num tm else
   if can (match_term ``~(GUARD b x)``) tm then guard_to_num (cdr tm) else
@@ -1274,6 +1285,7 @@ fun extract_function name th entry exit function_in_out = let
     val th = RW [PUSH_IF_LEMMA] th
     in th end
   val th = foldr new_abbrev th output
+
   val th = introduce_lets th
   val th = INST [mk_var("new@p",``:word32``) |-> mk_var("set@p",``:word32``)] th
   val t = tm2ftree ((cdr o car o concl o RW [WORD_ADD_0]) th)
@@ -1492,14 +1504,18 @@ fun decompile_part name thms (entry,exit) (function_in_out: (term * term) option
   val (th,def) = (!decompiler_finalise) (th,def)
   in (def,pre,th) end;
 
-fun decompile (tools :decompiler_tools) name (qcode :term quotation) = let
+val fio = (NONE: (term * term) option)
+
+fun decompile_io (tools :decompiler_tools) name fio (qcode :term quotation) = let
   val _ = set_tools tools
   val (thms,loops) = stage_12 name tools qcode
   val loops = map (fn (x,y) => (hd x, hd y)) loops
   fun decompile_all thms (defs,pres) [] prev = (LIST_CONJ defs,LIST_CONJ pres,prev)
     | decompile_all thms (defs,pres) ((entry,exit)::loops) prev = let
-      val part_name = if length loops = 0 then name else (name ^ int_to_string (length loops))
       val function_in_out = (NONE: (term * term) option)
+      val suff = int_to_string (length loops)
+      val (part_name,function_in_out) = if length loops = 0 then (name,fio) 
+                                        else (name ^ suff,function_in_out)
       val (def,pre,result) = decompile_part part_name thms (entry,exit) function_in_out
       val thms = prepare_for_reuse entry (result,0,SOME exit) :: thms
       in decompile_all thms (def::defs,pre::pres) loops result end
@@ -1512,6 +1528,9 @@ fun decompile (tools :decompiler_tools) name (qcode :term quotation) = let
   val result = if (get_abbreviate_code()) then result else UNABBREV_CODE_RULE result
   in (result,CONJ def pre) end;
 
+fun decompile tools name qcode = decompile_io tools name NONE qcode;
+
+fun decompile_io_strings tools name fio strs = decompile_io tools name fio (strings_to_qcode strs);
 fun decompile_strings tools name strs = decompile tools name (strings_to_qcode strs);
 
 val decompile_arm = decompile arm_tools

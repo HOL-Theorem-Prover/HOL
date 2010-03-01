@@ -70,6 +70,7 @@ sig
 
     val MATCH_INST             : thm -> term -> thm
 
+    val SUBST_INST             : {redex: term, residue: term} list -> thm -> thm
     val UNHIDE_PRE_RULE        : term -> thm -> thm
     val HIDE_PRE_RULE          : term -> thm -> thm
     val HIDE_POST_RULE         : term -> thm -> thm
@@ -93,6 +94,14 @@ sig
     val SEP_READ_TAC           : tactic
     val SEP_WRITE_TAC          : tactic
     val SEP_NEQ_TAC            : tactic
+
+    val CLEAN_TAC              : tactic
+    val EXPAND_TAC             : tactic
+    val SEP_F_TAC              : tactic
+    val SEP_I_TAC              : string -> tactic
+    val SEP_W_TAC              : tactic
+    val SEP_R_TAC              : tactic
+    val SEP_S_TAC              : string list -> thm -> tactic
 
     val auto_prove             : string -> term * tactic -> thm
 

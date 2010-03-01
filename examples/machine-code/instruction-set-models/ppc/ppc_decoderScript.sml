@@ -37,6 +37,8 @@ val ppc_match_step_def = Define `
 val ppc_syntax = ``
   [("0 1 1 1 1 1 D A B 0 1 0 0 0 0 1 0 1 0 0",
      (\v. Padd (b2w v "D") (b2w v "A") (b2w v "B")));
+   ("0 1 1 1 1 1 D A B 0 0 1 0 0 0 1 0 1 0 0",
+     (\v. Padde (b2w v "D") (b2w v "A") (b2w v "B")));
    ("0 0 1 1 1 0 D A SIMM",
      (\v. Paddi (b2w v "D") (b2w v "A") (b2w v "SIMM")));
    ("0 0 1 1 1 1 D A SIMM",
@@ -149,6 +151,8 @@ val ppc_syntax = ``
      (\v. Psubfc (b2w v "D") (b2w v "A") (b2w v "B")));
    ("0 0 1 0 0 0 D A SIMM",
      (\v. Psubfic (b2w v "D") (b2w v "A") (b2w v "SIMM")));
+   ("0 1 1 1 1 1 D A B 0 0 1 0 0 0 1 0 0 0 0",
+     (\v. Psubfe (b2w v "D") (b2w v "A") (b2w v "B")));
    ("0 1 1 1 1 1 S A B 0 1 0 0 1 1 1 1 0 0 0",
      (\v. Pxor (b2w v "A") (b2w v "S") (b2w v "B")));
    ("0 1 1 0 1 0 S A UIMM",

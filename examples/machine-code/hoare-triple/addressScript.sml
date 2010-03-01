@@ -307,6 +307,11 @@ val ALIGNED_ADD = store_thm("ALIGNED_ADD",
   REWRITE_TAC [ALIGNED_THM] \\ REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [GSYM WORD_RIGHT_ADD_DISTRIB] \\ METIS_TAC []);
 
+val ALIGNED_SUB = store_thm("ALIGNED_SUB",
+  ``!x y. ALIGNED x /\ ALIGNED y ==> ALIGNED (x - y)``,
+  SIMP_TAC std_ss [word_sub_def] \\ METIS_TAC [ALIGNED_ADD,ALIGNED_NEG]);
+
+
 val word_arith_lemma1 = store_thm("word_arith_lemma1",
   ``!n m. (n2w n + n2w m = n2w (n + m):'a word) /\
           (x + n2w n + n2w m = x + n2w (n + m):'a word) /\
