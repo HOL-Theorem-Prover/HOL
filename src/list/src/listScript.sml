@@ -1756,6 +1756,10 @@ val SNOC_APPEND = store_thm("SNOC_APPEND",
    ``!x (l:('a) list). SNOC x l = APPEND l [x]``,
    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC,APPEND]);
 
+val LIST_TO_SET_SNOC = Q.store_thm("LIST_TO_SET_SNOC",
+    `set (SNOC x ls) = x INSERT set ls`,
+    Induct_on `ls` THEN SRW_TAC [][INSERT_COMM]);
+
 (*---------------------------------------------------------------------------*)
 (* Tail recursive versions for better memory usage when applied in ML        *)
 (*---------------------------------------------------------------------------*)
