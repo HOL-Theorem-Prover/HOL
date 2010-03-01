@@ -195,7 +195,7 @@ val write_thumb = fn t => writeT (fn s =>
     thumb       = t,
     linenumber  = #linenumber s,
     arch        = #arch s,
-    itstate     = #itstate s,
+    itstate     = (boolSyntax.arb,[]),
     tokens      = #tokens s });
 
 val write_arch = fn a => writeT (fn s =>
@@ -203,7 +203,7 @@ val write_arch = fn a => writeT (fn s =>
     thumb       = a = ARMv7_M orelse a <> ARMv4 andalso #thumb s,
     linenumber  = #linenumber s,
     arch        = a,
-    itstate     = #itstate s,
+    itstate     = (boolSyntax.arb,[]),
     tokens      = #tokens s });
 
 val write_itcond = fn c => writeT (fn s =>
@@ -415,7 +415,7 @@ fun mk_word16 i  = wordsSyntax.mk_wordii (i,16);
 fun mk_word24 i  = wordsSyntax.mk_wordii (i,24);
 fun mk_word32 n  = wordsSyntax.mk_wordi (n,32);
 val mk_integer   = intSyntax.mk_injected o numSyntax.mk_numeral;
-val uint_of_word = numSyntax.int_of_term o fst o wordsSyntax.dest_n2w;
+val uint_of_word = wordsSyntax.uint_of_word;
 
 fun sint_of_term tm =
   tm |> intSyntax.int_of_term |> Arbint.toInt
@@ -1383,15 +1383,24 @@ let val v = sint_of_term i handle HOL_ERR _ => 1024 in
     m = RSB andalso v = 0 andalso narrow_registers [rd,rn]
 end
 
-fun narrow_okay_reg m (rd,rn,rm,mode1) =
+fun narrow_okay_reg m q sflag has_thumb2 InITBlock OutsideOrLastInITBlock
+                    (rd,rn,rm,mode1) =
+  q <> Wide andalso
   is_mode1_register mode1 andalso
   (case m
-   of ADD => rd = rn orelse narrow_registers [rd,rn,rm]
-    | SUB => narrow_registers [rd,rn,rm]
+   of ADD => if narrow_registers [rd,rn] then
+               sflag = not InITBlock andalso narrow_register rm orelse
+               not sflag andalso rd = rn andalso
+               (not (narrow_register rm) orelse has_thumb2)
+             else
+               not sflag andalso rd = rn andalso
+               (not (is_PC rd) orelse OutsideOrLastInITBlock)
+    | SUB => sflag = not InITBlock andalso narrow_registers [rd,rn,rm]
     | RSC => false
     | RSB => false
     | ORN => false
-    | _   => rd = rn andalso narrow_registers [rn,rm]);
+    | _   => sflag = not InITBlock andalso rd = rn andalso
+             narrow_registers [rn,rm]);
 
 fun wide_okay_reg m mode1 =
   m <> RSC andalso not (is_Mode1_register_shifted_register mode1);
@@ -1431,19 +1440,17 @@ fun data_processing_register m (rd,rn,rm,mode1) =
   read_thumb >>= (fn thumb =>
   read_sflag >>= (fn sflag =>
     if thumb then
+      read_arch >>= (fn arch =>
       read_qualifier >>= (fn q =>
       read_InITBlock >>= (fn InITBlock =>
       read_OutsideOrLastInITBlock >>= (fn OutsideOrLastInITBlock =>
         let val mode1'      = mode1_register rn
-            val thumb_sflag = mk_bool (not InITBlock andalso
-                                       narrow_registers [rd,rn,rm])
-            val narrow_poss = q <> Wide andalso thumb_sflag = sflag andalso
-                              (OutsideOrLastInITBlock orelse not (is_PC rd))
-            val narrow_okay = narrow_poss andalso
-                              narrow_okay_reg m (rd,rn,rm,mode1)
-            val swap_okay   = narrow_poss andalso not narrow_okay andalso
+            val thumb_test  = narrow_okay_reg m q (is_T sflag) (has_thumb2 arch)
+                                InITBlock OutsideOrLastInITBlock
+            val narrow_okay = thumb_test (rd,rn,rm,mode1)
+            val swap_okay   = not narrow_okay andalso
                               m <> SUB andalso is_mode1_register mode1 andalso
-                              narrow_okay_reg m (rd,rm,rn,mode1')
+                              thumb_test (rd,rm,rn,mode1')
             val wide_okay   = wide_okay_reg m mode1
             val (mode1,rn)  = if swap_okay then (mode1',rm) else (mode1,rn)
             val narrow_okay = narrow_okay orelse swap_okay
@@ -1452,7 +1459,7 @@ fun data_processing_register m (rd,rn,rm,mode1) =
             (return (pick_enc true narrow_okay,
                mk_Data_Processing (dp_opcode m,sflag,rn,rd,mode1)))
         end handle HOL_ERR {message,...} =>
-              other_errorT ("data_processing_register", message))))
+              other_errorT ("data_processing_register", message)))))
     else
       assertT (m <> ORN)
         ("data_processing_immediate", "not a valid ARM instruction")
@@ -1598,10 +1605,11 @@ val arm_parse_data_processing2 : instruction_mnemonic -> (term * term) M =
 
 (* ....................................................................... *)
 
-fun shift_immediate m thumb q sflag (rd,rm,i) =
+fun shift_immediate m thumb q InITBlock sflag (rd,rm,i) =
 let val v = sint_of_term i
     val wide_okay = 1 <= v andalso v <= (if mem m [LSR,ASR] then 32 else 31)
     val narrow_okay = q <> Wide andalso wide_okay andalso m <> ROR andalso
+                      mk_bool InITBlock <> sflag andalso
                       narrow_registers [rd,rm]
     val imm5 = mk_word5 (if v = 32 then 0 else Int.abs v)
     val rn = mk_word4 (if thumb then 15 else 0)
@@ -1615,8 +1623,9 @@ in
            mk_Mode1_register (imm5,shift_type m,rm)))))
 end handle HOL_ERR {message,...} => other_errorT ("shift_immediate", message);
 
-fun shift_register m thumb q sflag (rd,rn,rm) =
+fun shift_register m thumb q InITBlock sflag (rd,rn,rm) =
 let val narrow_okay = q <> Wide andalso rd = rn andalso
+                      mk_bool InITBlock <> sflag andalso
                       narrow_registers [rd,rn,rm]
     val rn' = mk_word4 (if thumb then 15 else 0)
 in
@@ -1633,18 +1642,19 @@ val arm_parse_mov_shift : instruction_mnemonic -> (term * term) M =
     read_thumb >>= (fn thumb =>
     read_qualifier >>= (fn q =>
     read_sflag >>= (fn sflag =>
+    read_InITBlock >>= (fn InITBlock =>
     tryT arm_parse_constant
-      (fn i => shift_immediate m thumb q sflag (rd,rd,i))
+      (fn i => shift_immediate m thumb q InITBlock sflag (rd,rd,i))
       (fn _ =>
          arm_parse_register >>= (fn rn =>
          tryT arm_parse_comma
            (fn _ =>
               tryT arm_parse_constant
-                (fn i => shift_immediate m thumb q sflag (rd,rn,i))
+                (fn i => shift_immediate m thumb q InITBlock sflag (rd,rn,i))
                 (fn _ =>
                    arm_parse_register >>= (fn rm =>
-                     shift_register m thumb q sflag (rd,rn,rm))))
-           (fn _ => shift_register m thumb q sflag (rd,rd,rn))))))));
+                     shift_register m thumb q InITBlock sflag (rd,rn,rm))))
+           (fn _ => shift_register m thumb q InITBlock sflag (rd,rd,rn)))))))));
 
 val arm_parse_rrx : (term * term) M =
   thumb2_or_arm_okay "arm_parse_rrx"
@@ -1708,19 +1718,17 @@ val arm_parse_adr : (term * term) M =
       if thumb then
         read_qualifier >>= (fn q =>
           let val offset = sint_of_term i - 4
-              val narrow_okay = narrow_register rd andalso
+              val narrow_okay = q <> Wide andalso narrow_register rd andalso
                                 offset mod 4 = 0 andalso
                                 0 <= offset andalso offset <= 1020
-              val wide_okay = ~4095 <= offset andalso offset <= 4095
+              val wide_okay = q <> Narrow andalso
+                              ~4095 <= offset andalso offset <= 4095
           in
-            if q <> Wide andalso narrow_okay then
-              return (Encoding_Thumb_tm,
-                mk_Add_Sub (mk_bool (0 <= offset andalso not (i == ``-0i``)),
-                  mk_word4 15,rd,mk_word12 (Int.abs offset div 4)))
-            else if q <> Narrow andalso wide_okay then
-              return (Encoding_Thumb2_tm,
-                mk_Add_Sub (mk_bool (0 <= offset andalso not (i == ``-0i``)),
-                  mk_word4 15,rd,mk_word12 (Int.abs offset)))
+            if narrow_okay orelse wide_okay then
+              return
+                (if narrow_okay then Encoding_Thumb_tm else Encoding_Thumb2_tm,
+                 mk_Add_Sub (mk_bool (0 <= offset andalso not (i == ``-0i``)),
+                   mk_word4 15,rd,mk_word12 offset))
             else
               other_errorT ("arm_parse_adr",
                  "bad register, unaligned or offset beyond permitted range")
@@ -1978,7 +1986,34 @@ local
           | [false,false,false] => [nc0, nc0, nc0, 1]
           | _ => raise ERR "mk_it_mask" ""))
   end
+
+  fun is_then "then" = true
+    | is_then "t"    = true
+    | is_then "else" = false
+    | is_then "e"    = false
+    | is_then _ = raise ERR "mk_itstate" "unexpected input"
+
 in
+  fun calc_itstate (c,s) = let
+        val toks = String.tokens (equal #"-") s
+        val l = Lib.mapfilter is_then toks
+        val itstate =
+              case l
+              of [] => mk_word8 0
+               | (b::t) => let
+                    val cond = condition_to_word4 c
+                    val mask = mk_it_mask (cond,t)
+                    val cond = if b then
+                                 cond
+                               else
+                                 wordsSyntax.mk_word_xor (mk_word4 1,cond)
+                  in
+                    eval (wordsSyntax.mk_word_concat (cond,mask))
+                  end
+      in
+        uint_of_word itstate
+      end
+
   val arm_parse_it : (term * term) M =
     need_t2 "arm_parse_it"
       (read_thumb >>= (fn thumb =>
@@ -2001,9 +2036,13 @@ in
                                    "Cannot have -else- cases for AL condition")
                                   (write_itcond cond >>-
                                    next_token >>-
-                                     return (Encoding_Thumb_tm,
-                                       mk_If_Then
-                                         (cond,mk_it_mask (cond,tl l)))))
+                                   tryT arm_parse_exclaim
+                                     (K (return boolSyntax.arb))
+                                     (K (return Encoding_Thumb_tm)) >>=
+                                     (fn enc =>
+                                       return (enc,
+                                         mk_If_Then
+                                           (cond,mk_it_mask (cond,tl l))))))
                               end
                             else
                               syntax_errorT ("condition",Substring.string s)
@@ -3536,9 +3575,9 @@ in
     else if ls = "apsr" then
       (F,mk_word4 12)
     else if ls = "cpsr" then
-      (F,mk_word4 9)
+      (F,mk_word4 15)
     else if ls = "spsr" then
-      (T,mk_word4 9)
+      (T,mk_word4 15)
     else if String.isPrefix "cpsr_" ls then
       (F,psr_fields (List.drop (String.explode ls,5)))
     else if String.isPrefix "spsr_" ls then
@@ -4047,11 +4086,14 @@ val arm_parse_instruction : line M =
                other_errorT
                  ("arm_parse_instruction", "not supported yet"))) >>=
    (fn (enc,tm) =>
-      read_cond >>= (fn cond =>
-      write_instruction NONE >>-
-      (if m <> IT then next_itstate else return ()) >>-
-      read_linenumber >>= (fn line =>
-        return (Instruction1 (line,enc,cond,tm))))));
+      if m = IT andalso enc = boolSyntax.arb then
+        write_instruction NONE >>- return (Space ``0i``)
+      else
+        read_cond >>= (fn cond =>
+        write_instruction NONE >>-
+        (if m <> IT then next_itstate else return ()) >>-
+        read_linenumber >>= (fn line =>
+          return (Instruction1 (line,enc,cond,tm))))));
 
 local
   val arch_versions =

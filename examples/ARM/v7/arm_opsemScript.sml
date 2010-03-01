@@ -107,12 +107,15 @@ val write_e_def = Define`
 
 val IT_advance_def = Define`
   IT_advance ii =
-    read_cpsr ii >>=
-    (\cpsr.
-       if (cpsr.IT = 0w) \/ cpsr.T then
-         write_cpsr ii (cpsr with IT := ITAdvance cpsr.IT)
-       else
-         errorT "IT_advance: unpredictable")`;
+    read_arch ii >>=
+    (\arch.
+      condT (arch IN thumb2_support)
+       (read_cpsr ii >>=
+        (\cpsr.
+           if (cpsr.IT = 0w) \/ cpsr.T then
+             write_cpsr ii (cpsr with IT := ITAdvance cpsr.IT)
+           else
+             errorT "IT_advance: unpredictable")))`;
 
 val cpsr_write_by_instr_def = Define`
   cpsr_write_by_instr ii (value:word32, bytemask:word4, affect_execstate:bool) =
@@ -957,10 +960,10 @@ val add_sub_instr_def = iDefine`
       (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
       (\v. (enc = Encoding_Thumb2) /\ if n = 13w then d = 15w else BadReg d)
       ((read_reg_literal ii n |||
-        (if enc = Encoding_Thumb2 then
-           constT (w2w imm12)
+        (if enc = Encoding_ARM then
+           arm_expand_imm ii imm12
          else
-           arm_expand_imm ii imm12)) >>=
+           constT (w2w imm12))) >>=
        (\(rn,imm32).
           let result = if add then rn + imm32 else rn - imm32 in
             if d = 15w then
@@ -1066,8 +1069,8 @@ val add_sub_instr_def = iDefine`
    A:    <opc>{S}<c>   <Rd>,<Rm>,#<imm5>
    T:    <opc>S        <Rdn>,<Rm>                  (Outside IT block)
    T:    <opc><c>      <Rdn>,<Rm>                  (Inside IT block)
-   T2:   <opc><c>.W    <Rd>,<Rn>,<Rm>
-   A:    <opc><c>      <Rd>,<Rn>,<Rm>
+   T2:   <opc>{S}<c>.W <Rd>,<Rn>,<Rm>
+   A:    <opc>{S}<c>   <Rd>,<Rn>,<Rm>
    T2,A: ROR{S}<c>     <Rd>,<Rm>,#<imm5>
    T:    RORS          <Rdn>,<Rm>                  (Outside IT block)
    T:    ROR<c>        <Rdn>,<Rm>                  (Inside IT block)
@@ -2884,8 +2887,8 @@ val breakpoint_instr_def = iDefine`
       (take_prefetch_abort_exception ii)`;
 
 (* ........................................................................
-   T2: DMB<c> #<option>
-   A:  DMB    #<option>
+   T2: DMB<c> <option>
+   A:  DMB    <option>
    where <option> is SY, ST, ISH, ISHST, NSH, NSHST, OSH or OSHST.
    ```````````````````````````````````````````````````````````````````````` *)
 (* Unpredictable for ARMv4*. *)
@@ -2896,8 +2899,8 @@ val data_memory_barrier_instr_def = iDefine`
         data_memory_barrier ii (barrier_option option)) >>= unit2)`;
 
 (* ........................................................................
-   T2: DSB<c> #<option>
-   A:  DSB    #<option>
+   T2: DSB<c> <option>
+   A:  DSB    <option>
    where <option> is SY, ST, ISH, ISHST, NSH, NSHST, OSH or OSHST.
    ```````````````````````````````````````````````````````````````````````` *)
 (* Unpredictable for ARMv4*. *)
@@ -2910,8 +2913,8 @@ val data_synchronization_barrier_instr_def = iDefine`
         data_synchronization_barrier ii (barrier_option option)) >>= unit2)`;
 
 (* ........................................................................
-   T2: ISB<c> #<option>
-   A:  ISB    #<option>
+   T2: ISB<c> <option>
+   A:  ISB    <option>
    where <option> is optionally SY.
    ```````````````````````````````````````````````````````````````````````` *)
 (* Unpredictable for ARMv4*. *)

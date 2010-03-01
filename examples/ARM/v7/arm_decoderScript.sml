@@ -365,6 +365,7 @@ val arm_decode_def =
 val thumb_decode_def =
   with_flag (computeLib.auto_import_definitions,false) Define`
   thumb_decode arch IT (ireg : word16) =
+    let IT = if arch IN thumb2_support then IT else 0w in
     let b n = ireg ' n
     and r n  = ( n + 2  >< n ) ireg : word4
     and r4 n = ( n + 3  >< n ) ireg : word4
@@ -1427,7 +1428,7 @@ val arm_decode_not_v4 = save_thm("arm_decode_not_v4",
     |> REWRITE_RULE []);
 
 val thumb_decode = save_thm("thumb_decode",
-  rule [`arch`,`n2w it`,`n2w n`] thumb_decode_def);
+  rule [`arch`,`IT`,`n2w n`] thumb_decode_def);
 
 val thumb2_decode_aux1 = save_thm("thumb2_decode_aux1",
   rule [`n2w it`, `n2w m`, `n2w n`] thumb2_decode_aux1_def);

@@ -30,7 +30,7 @@ val eval = rhs o concl o EVAL;
 
 val pad = StringCvt.padLeft #"0"
 
-val uint_of_word = numSyntax.int_of_term o fst o wordsSyntax.dest_n2w;
+val uint_of_word = wordsSyntax.uint_of_word;
 val sint_of_term = Arbint.toInt o intSyntax.int_of_term;
 
 fun mk_bool b  = if b then T else F;
@@ -47,10 +47,7 @@ val is_LR = is_AL;
 
 fun NOT tm = if is_T tm then F else if is_F tm then T else raise ERR "NOT" "";
 
-fun dest_strip t =
-let val (l,r) = strip_comb t in
-  (fst (dest_const l), r)
-end;
+val dest_strip = armSyntax.dest_strip;
 
 infix $;
 
@@ -584,8 +581,11 @@ in
                           val _ = checkdp
                                     (fn _ => is_0 imm5 andalso is_0 typ) []
                       in
-                        if d = n then (* ADD(4) *)
+                        if is_F sflag andalso d = n then (* ADD(4) *)
                           [(``0b10001w:word5``,10), (d$(3,3),7), (m,3),
+                           (d$(2,0),0)]
+                        else if is_F sflag andalso d = m then (* ADD(4) *)
+                          [(``0b10001w:word5``,10), (d$(3,3),7), (n,3),
                            (d$(2,0),0)]
                         else
                           checkdp (*  ADD(3) *)
@@ -624,7 +624,7 @@ in
                       end
                     else if is_Mode1_register mode1 then
                       let val (imm5,typ,m) = dest_Mode1_register mode1 in
-                        if is_T sflag andalso Lib.all (width_okay 3) [d,m] then
+                        if Lib.all (width_okay 3) [d,m] then
                           checkdp (fn _ => not (term_eq typ ``0b11w:word2``))
                             [(typ,11), (imm5,6), (m,3), (d,0)]
                         else

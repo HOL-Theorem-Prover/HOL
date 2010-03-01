@@ -9,8 +9,9 @@ sig
     | Instruction of Abbrev.term * Abbrev.term * Abbrev.term
 
   val expr : int -> string
+  val calc_itstate : string * string -> int
 
-  (* val arm_lex_from_file     : string -> Substring.substring list *)
+(*val arm_lex_from_file     : string -> Substring.substring list *)
 
   val arm_parse_from_file   : string -> (Arbnum.num * arm_code) list
 

@@ -19,7 +19,7 @@ val ERR = Feedback.mk_HOL_ERR "arm_disassemblerLib";
 
 val eval = rhs o concl o EVAL;
 
-val uint_of_word = numSyntax.int_of_term o fst o wordsSyntax.dest_n2w;
+val uint_of_word = wordsSyntax.uint_of_word;
 val sint_of_term = Arbint.toInt o intSyntax.int_of_term;
 val hex_of_word = Int.fmt StringCvt.HEX o uint_of_word;
 
@@ -38,10 +38,7 @@ val is_PC = term_eq PC;
 
 fun is_0 tm = uint_of_word tm = 0;
 
-fun dest_strip t =
-let val (l,r) = strip_comb t in
-  (fst (dest_const l), r)
-end;
+val dest_strip = armSyntax.dest_strip;
 
 fun i2l i =
 let fun recurse n l =
@@ -523,13 +520,14 @@ in
         f (if is_T h then "movt" else "movw")
           (commy [register d, constant imm16])
    | ("Add_Sub", [a,n,d,imm12]) =>
-        if enc = Encoding_Thumb2_tm then
-          f (if is_T a then "addw" else "subw")
-            (commy [register d, register n, constant imm12])
-        else
+        if enc = Encoding_ARM_tm then
           f (if is_T a then "add" else "sub")
             (commy [register d, register n,
                     disassemble_mode1 false (mk_Mode1_immediate imm12)])
+        else
+          f (if enc = Encoding_Thumb_tm then "add" else
+               if is_T a then "addw" else "subw")
+            (commy [register d, register n, constant imm12])
    | ("Multiply", [acc,s,d,a,m,n]) =>
         f ((if is_T acc then "mla" else "mul") ^ (if is_T s then "s" else ""))
           (ocommy (is_T acc) [d,n,m] a)
