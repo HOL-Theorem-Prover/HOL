@@ -1724,7 +1724,7 @@ val WORD_LITERAL_XOR = store_thm("WORD_LITERAL_XOR",
 
 val SNOC_GENLIST_K = Q.prove(
   `!n c. SNOC c (GENLIST (K c) n) = c::(GENLIST (K c) n)`,
-  Induct \\ SRW_TAC [] [rich_listTheory.GENLIST, rich_listTheory.SNOC]);
+  Induct \\ FULL_SIMP_TAC (srw_ss())  [rich_listTheory.GENLIST, listTheory.SNOC]);
 
 val word_replicate_concat_word_list = Q.store_thm
  ("word_replicate_concat_word_list",
