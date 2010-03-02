@@ -6,8 +6,15 @@ open errormonad term_tokens term_grammar HOLgrammars
 open GrammarSpecials
 infix >> >- ++ >->
 
-val WARN = Feedback.HOL_WARNING "parse_term";
-val WARNloc = Feedback.HOL_WARNINGloc "parse_term";
+val syntax_error_trace = ref true
+val _ = Feedback.register_btrace ("syntax_error", syntax_error_trace)
+
+fun WARN f msg = if !syntax_error_trace then
+                   Feedback.HOL_WARNING "parse_term" f msg
+                 else ()
+fun WARNloc f loc msg = if !syntax_error_trace then
+                          Feedback.HOL_WARNINGloc "parse_term" f loc msg
+                        else ()
 
 fun noloc s = (s, locn.Loc_None)
 val qfail = error (noloc "")
@@ -653,9 +660,6 @@ fun current_la (cs, p) = ((cs, p), Some (pla p))
 fun findpos P [] = NONE
   | findpos P (x::xs) = if P x then SOME(0,x)
                         else Option.map (fn (n,x) => (n + 1, x)) (findpos P xs)
-
-val syntax_error_trace = ref true
-val _ = Feedback.register_btrace ("syntax_error", syntax_error_trace)
 
 fun parse_term (G : grammar) typeparser = let
   val Grules = grammar_rules G
