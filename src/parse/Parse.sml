@@ -480,6 +480,163 @@ fun pending_updates() = !grm_updates
 fun update_grms fname (x,y) = grm_updates := ((x,y,NONE) :: !grm_updates);
 fun full_update_grms (x,y,opt) = grm_updates := ((x,y,opt) :: !grm_updates)
 
+fun temp_remove_termtok r = let open term_grammar in
+  the_term_grammar := remove_form_with_tok (term_grammar()) r;
+  term_grammar_changed := true
+ end
+
+fun remove_termtok (r as {term_name, tok}) = let in
+   temp_remove_termtok r;
+   update_grms "remove_termtok" ("temp_remove_termtok",
+                                 String.concat
+                                   ["{term_name = ", quote term_name,
+                                    ", tok = ", quote tok, "}"])
+ end
+
+fun temp_prefer_form_with_tok r = let open term_grammar in
+    the_term_grammar := prefer_form_with_tok (term_grammar()) r;
+    term_grammar_changed := true
+ end
+
+fun prefer_form_with_tok (r as {term_name,tok}) = let in
+    temp_prefer_form_with_tok r;
+    update_grms "prefer_form_with_tok"
+                ("temp_prefer_form_with_tok",
+                 String.concat ["{term_name = ", quote term_name,
+                                ", tok = ", quote tok, "}"])
+ end
+
+fun temp_overload_on (s, t) =
+    (the_term_grammar := fupdate_overload_info
+                             (Overload.add_overloading (s, t))
+                             (term_grammar());
+     term_grammar_changed := true)
+
+fun overload_on (s, t) = let
+in
+  temp_overload_on (s, t);
+  full_update_grms
+    ("temp_overload_on",
+     String.concat ["(", quote s, ", ", minprint t, ")"],
+    SOME t)
+end
+
+fun temp_set_grammars(tyG, tmG) = let
+in
+  the_term_grammar := tmG;
+  the_type_grammar := tyG;
+  term_grammar_changed := true;
+  type_grammar_changed := true
+end
+
+fun standard_spacing name fixity =
+ let open term_grammar  (* to get fixity constructors *)
+     val bstyle = (AroundSamePrec, (Portable.INCONSISTENT, 0))
+     val pstyle = OnlyIfNecessary
+     val pels =  (* not sure if Closefix case will ever arise *)
+       case fixity
+        of RF (Infix _)      => [HardSpace 1, RE (TOK name), BreakSpace(1,0)]
+         | RF (TruePrefix _) => [RE(TOK name), HardSpace 1]
+         | RF (Suffix _)     => [HardSpace 1, RE(TOK name)]
+         | RF Closefix       => [RE(TOK name)]
+         | Prefix => []
+         | Binder => []
+in
+  {term_name = name, fixity = fixity, pp_elements = pels,
+   paren_style = pstyle, block_style = bstyle}
+end
+
+val std_binder_precedence = 0;
+
+structure Unicode =
+struct
+
+  fun temp_set_term_grammar tmg = temp_set_grammars(type_grammar(), tmg)
+
+  val master_unicode_switch = ref true
+  fun lift0 f = temp_set_term_grammar (f (term_grammar()))
+  fun lift f x = lift0 (f (!master_unicode_switch) x)
+  fun unicode_version r = lift ProvideUnicode.unicode_version r
+  fun uoverload_on r = lift ProvideUnicode.uoverload_on r
+  fun temp_unicode_version r = lift ProvideUnicode.temp_unicode_version r
+  fun temp_uoverload_on r = lift ProvideUnicode.temp_uoverload_on r
+
+  fun fixity_prec f = let
+    open term_grammar
+  in
+    case f of
+      RF (Infix(_, p)) => SOME p
+    | RF (Suffix p) => SOME p
+    | RF (TruePrefix p) => SOME p
+    | RF Closefix => NONE
+    | Prefix => NONE
+    | Binder => SOME std_binder_precedence
+  end
+
+  exception foo
+  fun uset_fixity0 setter s fxty = let
+    open term_grammar
+    val rule =
+      case fxty of
+        Prefix => (HOL_MESG "Fixities of Prefix do not affect the grammar";
+                   raise foo)
+      | Binder => (SOME std_binder_precedence,
+                   PREFIX (BINDER [BinderString {tok = s, term_name = s,
+                                                 preferred = true}]))
+      | RF rf => let
+          val {term_name,pp_elements,paren_style,block_style,...} =
+              standard_spacing s fxty
+          val irule = {term_name = term_name, elements = pp_elements,
+                       preferred = true, block_style = block_style,
+                       paren_style = paren_style}
+        in
+          case rf of
+            Infix (ass, prec) => (SOME prec, INFIX (STD_infix([irule], ass)))
+          | TruePrefix prec => (SOME prec, PREFIX (STD_prefix [irule]))
+          | Suffix prec => (SOME prec, SUFFIX (STD_suffix [irule]))
+          | Closefix => (NONE, CLOSEFIX [irule])
+        end
+  in
+    lift setter {u = s, term_name = s, newrule = rule, oldtok = NONE}
+  end handle foo => ()
+
+  val temp_uset_fixity = uset_fixity0 ProvideUnicode.temp_uadd_rule
+  val uset_fixity = uset_fixity0 ProvideUnicode.uadd_rule
+
+  structure UChar = UnicodeChars
+  fun fupd_lambda f {type_intro,lambda,endbinding,restr_binders,res_quanop} =
+      {type_intro = type_intro, lambda = f lambda, endbinding = endbinding,
+       restr_binders = restr_binders, res_quanop = res_quanop}
+
+
+  fun bare_lambda() =
+      temp_set_term_grammar (fupdate_specials (fupd_lambda (fn _ => ["\\"]))
+                                              (term_grammar()))
+
+  fun unicode_lambda () =
+      temp_set_term_grammar (fupdate_specials (fupd_lambda (cons UChar.lambda))
+                                              (term_grammar()))
+
+  fun traceset n = if n = 0 then (master_unicode_switch := false;
+                                  set_trace "Greek tyvars" 0;
+                                  bare_lambda();
+                                  lift0 ProvideUnicode.disable_all)
+                   else (master_unicode_switch := true;
+                         set_trace "Greek tyvars" 1;
+                         unicode_lambda();
+                         lift0 ProvideUnicode.enable_all)
+  fun traceget () = if !master_unicode_switch then 1 else 0
+
+  val _ = register_ftrace ("Unicode", (traceget, traceset), 1)
+
+  val _ = traceset 1
+
+  val _ = Theory.register_onload (fn s => lift ProvideUnicode.apply_thydata s)
+
+end
+
+
+
 
 fun temp_add_type s = let open parse_type in
    the_type_grammar := new_tyop (!the_type_grammar) s;
@@ -639,31 +796,8 @@ and
   | pplistToString (x::xs) = ppToString x ^ ", " ^ pplistToString xs
 
 
-fun standard_spacing name fixity =
- let open term_grammar  (* to get fixity constructors *)
-     val bstyle = (AroundSamePrec, (Portable.INCONSISTENT, 0))
-     val pstyle = OnlyIfNecessary
-     val pels =  (* not sure if Closefix case will ever arise *)
-       case fixity
-        of RF (Infix _)      => [HardSpace 1, RE (TOK name), BreakSpace(1,0)]
-         | RF (TruePrefix _) => [RE(TOK name), HardSpace 1]
-         | RF (Suffix _)     => [HardSpace 1, RE(TOK name)]
-         | RF Closefix       => [RE(TOK name)]
-         | Prefix => []
-         | Binder => []
-in
-  {term_name = name, fixity = fixity, pp_elements = pels,
-   paren_style = pstyle, block_style = bstyle}
-end
 
 
-fun temp_set_grammars(tyG, tmG) = let
-in
-  the_term_grammar := tmG;
-  the_type_grammar := tyG;
-  term_grammar_changed := true;
-  type_grammar_changed := true
-end
 
 (*---------------------------------------------------------------------------*)
 (* Apply a function to its argument. If it fails, revert the grammars        *)
@@ -680,8 +814,6 @@ fun try_grammar_extension f x =
         type_grammar_changed := true;
         grm_updates := updates; raise e)
  end;
-
-val std_binder_precedence = 0;
 
 fun temp_add_binder(name, prec) = let in
    the_term_grammar := add_binder (!the_term_grammar)
@@ -815,18 +947,6 @@ fun remove_rules_for_term s = let in
    update_grms "remove_rules_for_term" ("temp_remove_rules_for_term", quote s)
  end
 
-fun temp_remove_termtok r = let open term_grammar in
-  the_term_grammar := remove_form_with_tok (term_grammar()) r;
-  term_grammar_changed := true
- end
-
-fun remove_termtok (r as {term_name, tok}) = let in
-   temp_remove_termtok r;
-   update_grms "remove_termtok" ("temp_remove_termtok",
-                                 String.concat
-                                   ["{term_name = ", quote term_name,
-                                    ", tok = ", quote tok, "}"])
- end
 
 fun temp_set_fixity s f = let in
   temp_remove_termtok {term_name=s, tok=s};
@@ -839,18 +959,6 @@ fun set_fixity s f = let in
                 ("(temp_set_fixity "^quote s^")", "("^fixityToString f^")")
  end
 
-fun temp_prefer_form_with_tok r = let open term_grammar in
-    the_term_grammar := prefer_form_with_tok (term_grammar()) r;
-    term_grammar_changed := true
- end
-
-fun prefer_form_with_tok (r as {term_name,tok}) = let in
-    temp_prefer_form_with_tok r;
-    update_grms "prefer_form_with_tok"
-                ("temp_prefer_form_with_tok",
-                 String.concat ["{term_name = ", quote term_name,
-                                ", tok = ", quote tok, "}"])
- end
 
 fun temp_clear_prefs_for_term s = let open term_grammar in
     the_term_grammar := clear_prefs_for s (term_grammar());
@@ -944,20 +1052,6 @@ fun bring_to_front_overload s (r as {Name, Thy}) = let in
      )
  end
 
-fun temp_overload_on (s, t) =
-    (the_term_grammar := fupdate_overload_info
-                             (Overload.add_overloading (s, t))
-                             (term_grammar());
-     term_grammar_changed := true)
-
-fun overload_on (s, t) = let
-in
-  temp_overload_on (s, t);
-  full_update_grms
-    ("temp_overload_on",
-     String.concat ["(", quote s, ", ", minprint t, ")"],
-    SOME t)
-end
 
 fun temp_clear_overloads_on s = let
   open term_grammar

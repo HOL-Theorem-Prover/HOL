@@ -12,7 +12,8 @@
 structure boolScript =
 struct
 
-open HolKernel Parse Unicode;
+open HolKernel Parse
+open Unicode
 
 val _ = new_theory "bool";
 

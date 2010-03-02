@@ -257,4 +257,17 @@ signature Parse = sig
   val current_lgrms : unit -> type_grammar.grammar * term_grammar.grammar
   val current_grammars : unit -> type_grammar.grammar * term_grammar.grammar
 
+  structure Unicode : sig
+    val unicode_version : {u:string,tmnm:string} -> unit
+    val uoverload_on : string * term -> unit
+    val uset_fixity : string -> fixity -> unit
+
+    val temp_unicode_version : {u:string,tmnm:string} -> unit
+    val temp_uoverload_on : string * term -> unit
+    val temp_uset_fixity : string -> fixity -> unit
+
+    structure UChar : UnicodeChars
+  end
+
+
 end
