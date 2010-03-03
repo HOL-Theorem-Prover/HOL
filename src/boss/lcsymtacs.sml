@@ -21,7 +21,7 @@ struct
   val qexists_tac : term quotation -> tactic = Q.EXISTS_TAC
 
 
-  val metis_tac : thm list -> tactic = METIS_TAC
+  val metis_tac : thm list -> tactic = metisLib.METIS_TAC
   val prove_tac : thm list -> tactic = PROVE_TAC
 
   val simp_tac = SIMP_TAC
