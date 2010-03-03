@@ -30,9 +30,32 @@ sig
   val Omega : string
 
   (* superscripts *)
+  val sup_0 : string
+  val sup_1 : string
+  val sup_2 : string
+  val sup_3 : string
+  val sup_4 : string
+  val sup_5 : string
+  val sup_6 : string
+  val sup_7 : string
+  val sup_8 : string
+  val sup_9 : string
+  val sup_lparen : string
+  val sup_rparen : string
+  val sup_eq : string
   val sup_plus : string
   val sup_minus : string
-  val sup_1 : string
+  val sup_h : string
+  val sup_i : string
+  val sup_j : string
+  val sup_l : string
+  val sup_n : string
+  val sup_r : string
+  val sup_s : string
+  val sup_w : string
+  val sup_x : string
+  val sup_y : string
+  val sup_gamma : string
 
   (* arrows *)
   val rightarrow : string
