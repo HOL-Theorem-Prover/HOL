@@ -1379,6 +1379,13 @@ val DOMSUB_IDEM = store_thm(
   SRW_TAC [][GSYM fmap_EQ_THM, DOMSUB_FAPPLY_THM]);
 val _ = export_rewrites ["DOMSUB_IDEM"]
 
+val DOMSUB_COMMUTES = store_thm(
+  "DOMSUB_COMMUTES",
+  ``fm \\ k1 \\ k2 = fm \\ k2 \\ k1``,
+  SRW_TAC [][GSYM fmap_EQ,DELETE_COMM] THEN
+  SRW_TAC [][FUN_EQ_THM,DOMSUB_FAPPLY_THM] THEN
+  SRW_TAC [][]);
+
 val o_f_FUPDATE = store_thm(
   "o_f_FUPDATE",
   ``f o_f (fm |+ (k,v)) = (f o_f (fm \\ k)) |+ (k, f v)``,
