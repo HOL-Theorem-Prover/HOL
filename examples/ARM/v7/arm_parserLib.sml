@@ -2353,6 +2353,7 @@ val arm_parse_mode2_offset :
              return (mk_bool (thumb orelse not thumb andalso is_T unpriv))) >>=
           (fn w =>
              let val v = sint_of_term i
+                 val u = mk_bool (0 <= v andalso not (i == ``-0i``))
                  val narrow_okay = q <> Wide andalso narrow_register rt andalso
                                    is_F w andalso 0 <= v andalso
                                    if is_T byte then
@@ -2364,10 +2365,12 @@ val arm_parse_mode2_offset :
                                      else
                                        narrow_register rn andalso v <= 124
                  val wide_okay = ~255 <= v andalso
-                                 if indx andalso is_F w then
+                                 if indx andalso is_T u andalso is_F w then
                                    v <= 4095
                                  else
-                                   v <= 255
+                                   v <= 255 andalso not (is_T byte andalso
+                                     is_PC rt andalso indx andalso is_F u
+                                     andalso is_F w)
                  val arm_okay = ~4095 <= v andalso v <= 4095
                  val imm12 = mk_word12 (Int.abs v)
              in
@@ -2380,9 +2383,8 @@ val arm_parse_mode2_offset :
                  (return
                     (pick_enc thumb narrow_okay,
                      (if ld then mk_Load else mk_Store)
-                        (mk_bool indx,
-                         mk_bool (0 <= v andalso not (i == ``-0i``)),
-                         byte,w,unpriv,rn,rt,mk_Mode2_immediate imm12)))
+                        (mk_bool indx,u,byte,w,unpriv,rn,rt,
+                         mk_Mode2_immediate imm12)))
              end handle HOL_ERR {message,...} =>
                other_errorT ("arm_parse_mode2_offset", message)))
         (fn _ =>
@@ -2545,6 +2547,7 @@ val arm_parse_mode3_offset :
              return (mk_bool thumb)) >>=
           (fn w =>
              let val v = sint_of_term i
+                 val u = mk_bool (0 <= v andalso not (i == ``-0i``))
                  val narrow_okay = q <> Wide andalso narrow_registers [rt,rn]
                                      andalso is_F w andalso v mod 2 = 0 andalso
                                    0 <= v andalso v <= 62 andalso
@@ -2552,10 +2555,11 @@ val arm_parse_mode3_offset :
                                      SOME (s,h) => is_F s andalso is_T h
                                    | NONE => true
                  val wide_okay = ~255 <= v andalso
-                                 if indx andalso is_F w then
+                                 if indx andalso is_T u andalso is_F w then
                                    v <= 4095
                                  else
-                                   v <= 255
+                                   v <= 255 andalso not (is_PC rt andalso
+                                     indx andalso is_F u andalso is_F w)
                  val arm_okay = ~255 <= v andalso v <= 255
                  val imm12 = mk_word12 (Int.abs v)
              in
@@ -2570,15 +2574,11 @@ val arm_parse_mode3_offset :
                      case opt
                      of SOME (signed,half) =>
                           mk_Load_Halfword
-                            (mk_bool indx,
-                             mk_bool (0 <= v andalso not (i == ``-0i``)),
-                             w,signed,half,unpriv,rn,rt,
+                            (mk_bool indx,u,w,signed,half,unpriv,rn,rt,
                              mk_Mode3_immediate imm12)
                       | NONE =>
-                          mk_Store_Halfword
-                            (mk_bool indx,
-                             mk_bool (0 <= v andalso not (i == ``-0i``)),w,
-                             unpriv,rn,rt,mk_Mode3_immediate imm12)))
+                          mk_Store_Halfword (mk_bool indx,u,w,unpriv,rn,rt,
+                            mk_Mode3_immediate imm12)))
              end handle HOL_ERR {message,...} =>
                other_errorT ("arm_parse_mode3_offset", message)))
         (fn _ =>

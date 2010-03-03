@@ -410,15 +410,24 @@ val data_processing_alu_def = Define`
     || 0b1110w -> ( a && ~b , ARB , ARB)    (* BIC *)
     || _       -> ( a !! ~b , ARB , ARB)`;  (* MVN/ORN *)
 
-val data_processing_thumb2_upredictable_def = Define`
-  (data_processing_thumb2_upredictable
+val data_processing_thumb2_unpredictable_def = Define`
+  (data_processing_thumb2_unpredictable
      (Data_Processing opc setflags n d (Mode1_immediate imm12)) =
    case opc
-   of 0b0010w -> (* SUB *)
-                 ((d <> 15w) \/ (n <> 14w) \/ ~setflags) /\
-                 (if n = 13w then d = 15w else BadReg d \/ (n = 15w))
+   of 0b0000w -> (* AND *)
+                 (d = 13w) \/ (d = 15w) /\ ~setflags \/ BadReg n
+   || 0b0001w -> (* EOR *)
+                 (d = 13w) \/ (d = 15w) /\ ~setflags \/ BadReg n
+   || 0b0010w -> (* SUB *)
+                 (if n = 13w then
+                    (d = 15w) /\ ~setflags
+                 else
+                    (d = 13w) \/ (d = 15w) /\ ~setflags \/ (n = 15w))
    || 0b0100w -> (* ADD *)
-                 if n = 13w then d = 15w else BadReg d \/ (n = 15w)
+                 if n = 13w then
+                   (d = 15w) /\ ~setflags
+                 else
+                   (d = 13w) \/ (d = 15w) /\ ~setflags \/ (n = 15w)
    || 0b0111w -> T                                       (* RSC *)
    || 0b1000w -> BadReg n                                (* TST *)
    || 0b1001w -> BadReg n                                (* TEQ *)
@@ -426,35 +435,41 @@ val data_processing_thumb2_upredictable_def = Define`
    || 0b1011w -> n = 15w                                 (* CMN *)
    || 0b1101w -> BadReg d                                (* MOV *)
    || 0b1111w -> BadReg d \/ (n = 13w)                   (* MVN/ORN *)
-   || _       -> (* AND,EOR,RSB,ADC,SBC,ORR,BIC *)
+   || _       -> (* RSB,ADC,SBC,ORR,BIC *)
                  BadReg d \/ BadReg n) /\
-  (data_processing_thumb2_upredictable
+  (data_processing_thumb2_unpredictable
      (Data_Processing opc setflags n d (Mode1_register imm5 typ m)) =
    case opc
-   of 0b0010w -> (* SUB *)
+   of 0b0000w -> (* AND *)
+                 (d = 13w) \/ (d = 15w) /\ ~setflags \/ BadReg n
+   || 0b0001w -> (* EOR *)
+                 (d = 13w) \/ (d = 15w) /\ ~setflags \/ BadReg n
+   || 0b0010w -> (* SUB *)
                  if n = 13w then
                    (d = 13w) /\ (typ <> 0w \/ w2n imm5 > 3) \/
                    (d = 15w) \/ BadReg m
                  else
-                   BadReg d \/ (n = 15w) \/ BadReg m
+                   (d = 13w) \/ (d = 15w) /\ ~setflags \/ (n = 15w) \/ BadReg m
    || 0b0100w -> (* ADD *)
                  if n = 13w then
                    (d = 13w) /\ (typ <> 0w \/ w2n imm5 > 3) \/
                    (d = 15w) \/ BadReg m
                  else
-                   BadReg d \/ (n = 15w) \/ BadReg m
+                   (d = 13w) \/ (d = 15w) /\ ~setflags \/ (n = 15w) \/ BadReg m
    || 0b0111w -> T                                       (* RSC *)
    || 0b1000w -> BadReg n \/ BadReg m                    (* TST *)
    || 0b1001w -> BadReg n \/ BadReg m                    (* TEQ *)
    || 0b1010w -> (n = 15w) \/ BadReg m                   (* CMP *)
    || 0b1011w -> (n = 15w) \/ BadReg m                   (* CMN *)
    || 0b1101w -> (* MOV *)
-                 ((d = 13w) \/ BadReg m) /\ setflags \/
-                  (d = 13w) /\ BadReg m \/ (d = 15w)
+                 if setflags then
+                   BadReg d \/ BadReg m
+                 else
+                   (d = 15w) \/ (m = 15w) \/ (d = 13w) /\ (m = 13w)
    || 0b1111w -> BadReg d \/ (n = 13w) \/ BadReg m       (* MVN/ORN *)
-   || _       -> (* AND,EOR,RSB,ADC,SBC,ORR,BIC *)
+   || _       -> (* RSB,ADC,SBC,ORR,BIC *)
                  BadReg d \/ BadReg n \/ BadReg m) /\
-  (data_processing_thumb2_upredictable
+  (data_processing_thumb2_unpredictable
      (Data_Processing opc setflags n d
         (Mode1_register_shifted_register s typ m)) =
      opc <> 0b1101w \/ BadReg d \/ BadReg s \/ BadReg m)`;
@@ -829,23 +844,34 @@ val branch_link_exchange_imm_instr_def = iDefine`
          ARCH {a | version_number a >= 5}
        else
          ALL) {}
-      ((read_reg ii 15w ||| current_instr_set ii) >>=
-       (\(pc,iset).
-          let imm32 = sw2sw imm24 << 2 in
-          let imm32 = if toARM then imm32 else (1 :+ H) imm32
-          and next_instr_addr = if iset = InstrSet_ARM then pc - 4w else pc
-          in
-            (if iset = InstrSet_ARM then
-               write_reg ii 14w next_instr_addr
-             else
-               write_reg ii 14w ((0 :+ T) next_instr_addr)) >>=
-            (\u.
-              if toARM then
-                select_instr_set ii InstrSet_ARM >>=
-                (\u. branch_write_pc ii (align(pc,4) + imm32))
-              else
-                select_instr_set ii InstrSet_Thumb >>=
-                (\u. branch_write_pc ii (pc + imm32)))))`;
+      (current_instr_set ii >>=
+       (\CurrentInstrSet.
+          if toARM /\ (CurrentInstrSet = InstrSet_ThumbEE) then
+            take_undef_instr_exception ii
+          else
+            let targetInstrSet =
+                  if toARM then
+                    InstrSet_ARM
+                  else if enc = Encoding_ARM then
+                    InstrSet_Thumb
+                  else
+                    CurrentInstrSet
+            and imm32 = sw2sw imm24 << 2 in
+            let imm32 = if toARM then imm32 else (1 :+ H) imm32
+            in
+              read_reg ii 15w >>=
+              (\pc.
+                (if CurrentInstrSet = InstrSet_ARM then
+                   write_reg ii 14w (pc - 4w)
+                 else
+                   write_reg ii 14w ((0 :+ T) pc)) >>=
+                (\u. let targetAddress = if targetInstrSet = InstrSet_ARM then
+                                           align(pc,4) + imm32
+                                         else
+                                           pc + imm32
+                     in
+                       select_instr_set ii targetInstrSet >>=
+                       (\u. branch_write_pc ii targetAddress)))))`;
 
 (* ........................................................................
    T,A: BLX<c> <Rm>
@@ -1084,7 +1110,7 @@ val data_processing_instr_def = iDefine`
       instruction ii "data_processing"
         (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
         (\v. (enc = Encoding_Thumb2) /\
-               data_processing_thumb2_upredictable
+               data_processing_thumb2_unpredictable
                  (Data_Processing opc setflags n d mode1) \/
              (case mode1
               of Mode1_register_shifted_register s type m ->
@@ -1921,7 +1947,10 @@ val preload_data_instr_def = iDefine`
                   Extension_Multiprocessing IN e /\ version_number a >= 7)}
       (\v. case mode2
            of Mode2_register imm5 type m ->
-                if enc = Encoding_Thumb2 then BadReg m else m = 15w
+                if enc = Encoding_Thumb2 then
+                  BadReg m
+                else
+                  (m = 15w) \/ (n = 15w) /\ is_pldw
            || Mode2_immediate imm12 -> F)
       ((if is_mode2_immediate mode2 then
           read_reg_literal ii n
@@ -2393,7 +2422,7 @@ val store_multiple_instr_def = iDefine`
 val load_dual_instr_def = iDefine`
   load_dual_instr ii enc (Load_Dual indx add w n t t2 mode3) =
     let wback = ~indx \/ w in
-      instruction ii "load_dual" (ARCH2 enc {a | a IN dsp_support /\ ~(t ' 0)})
+      instruction ii "load_dual" (ARCH2 enc {a | a IN dsp_support})
         (\version.
            (if enc = Encoding_Thumb2 then
               BadReg t \/ BadReg t2 \/ (t = t2)
@@ -2433,7 +2462,7 @@ val load_dual_instr_def = iDefine`
 val store_dual_instr_def = iDefine`
   store_dual_instr ii enc (Store_Dual indx add w n t t2 mode3) =
     let wback = ~indx \/ w in
-      instruction ii "store_dual" (ARCH2 enc {a | a IN dsp_support /\ ~(t ' 0)})
+      instruction ii "store_dual" (ARCH2 enc {a | a IN dsp_support})
         (\version.
            (if enc = Encoding_Thumb2 then
               (n = 15w) \/ BadReg t \/ BadReg t2

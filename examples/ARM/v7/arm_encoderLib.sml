@@ -1099,7 +1099,9 @@ let val checkls = check ("thumb2_encode_load_store",tm) in
                 [(``0b11w:word2``,27), (u,23), (NOT b,22), (T,20), (n,16),
                  (t,12), (imm12,0)]
               else
-                checkls (fn _ => width_okay 8 imm12)
+                checkls (fn _ => width_okay 8 imm12 andalso
+                     not (is_T b andalso is_PC t andalso is_T p andalso is_F u
+                          andalso is_F w))
                   [(``0b11w:word2``,27), (NOT b,22), (T,20), (n,16), (t,12),
                    (T,11), (p,10), (u,9), (w,8), (imm12,0)]
             end
@@ -1141,7 +1143,8 @@ let val checkls = check ("thumb2_encode_load_store",tm) in
                 [(``0b11w:word2``,27), (s,24), (u,23), (h,21), (T,20), (n,16),
                  (t,12), (imm12,0)]
               else
-                checkls (fn _ => width_okay 8 imm12)
+                checkls (fn _ => width_okay 8 imm12 andalso
+                    not (is_PC t andalso is_T p andalso is_F u andalso is_F w))
                   [(``0b11w:word2``,27), (s,24), (h,21), (T,20), (n,16), (t,12),
                    (T,11), (p,10), (u,9), (w,8), (imm12,0)]
             end

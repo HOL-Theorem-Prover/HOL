@@ -599,9 +599,9 @@ val thumb2_decode_aux1_def = with_flag (priming, SOME "_") Define`
              else
                LoadStore (Load_Multiple a8 a7 F a5 (ra 0) ireg2))
       || ( F, F, T, F, F, b7,b6,b5,b4) ->
-            LoadStore (Store_Exclusive (ra 0) (rb 8) (rb 12) ((7 >< 0) ireg2))
+           LoadStore (Store_Exclusive (ra 0) (rb 8) (rb 12) ((7 >< 0) ireg2))
       || ( F, F, T, F, T, b7,b6,b5,b4) ->
-            LoadStore (Load_Exclusive (ra 0) (rb 12) ((7 >< 0) ireg2))
+           LoadStore (Load_Exclusive (ra 0) (rb 12) ((7 >< 0) ireg2))
       || ( F, T, T, F, F, F, T, F,b4) ->
            LoadStore
               (if b4 then Store_Exclusive_Halfword (ra 0) (rb 0) (rb 12)
@@ -647,14 +647,13 @@ val thumb2_decode_aux2_def = with_flag (priming, SOME "_") Define`
     in
       case (a 8,a 7,a 6,a 5)
       of (F, F, F, F) ->
-           (let S = a 4 in
-              if rd = 15w then
-                if S then
-                  DP 0b1000w T rn 0w (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
-                else
-                  Unpredictable
+           (if rd = 15w then
+              if S then
+                DP 0b1000w T rn 0w (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
               else
-                DP 0b0000w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0)))
+                Unpredictable
+            else
+              DP 0b0000w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0)))
       || (F, F, F, T) ->
            DP 0b1110w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
       || (F, F, T, F) ->
@@ -663,38 +662,39 @@ val thumb2_decode_aux2_def = with_flag (priming, SOME "_") Define`
       || (F, F, T, T) ->
            DP 0b1111w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
       || (F, T, F, F) ->
-           (let S = a 4 in
-              if rd = 15w then
-                if S then
-                  DP 0b1001w T rn 0w (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
-                else
-                  Unpredictable
+           (if rd = 15w then
+              if S then
+                DP 0b1001w T rn 0w (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
               else
-                DP 0b0001w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0)))
+                Unpredictable
+            else
+              DP 0b0001w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0)))
       || (F, T, T, F) ->
-           DataProcessing (Pack_Halfword rn rd (ib3 12 @@ ib2 6) (b 5) (rb 0))
+           (if S \/ b 4 then
+              Undefined
+            else
+              DataProcessing
+                (Pack_Halfword rn rd (ib3 12 @@ ib2 6) (b 5) (rb 0)))
       || (T, F, F, F) ->
-           (let S = a 4 in
-              if rd = 15w then
-                if S then
-                  DP 0b1011w T rn 0w (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
-                else
-                  Unpredictable
+           (if rd = 15w then
+              if S then
+                DP 0b1011w T rn 0w (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
               else
-                DP 0b0100w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0)))
+                Unpredictable
+            else
+              DP 0b0100w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0)))
       || (T, F, T, F) ->
            DP 0b0101w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
       || (T, F, T, T) ->
            DP 0b0110w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
       || (T, T, F, T) ->
-           (let S = a 4 in
-              if rd = 15w then
-                if S then
-                  DP 0b1010w T rn 0w (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
-                else
-                  Unpredictable
+           (if rd = 15w then
+              if S then
+                DP 0b1010w T rn 0w (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
               else
-                DP 0b0010w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0)))
+                Unpredictable
+            else
+              DP 0b0010w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0)))
       || (T, T, T, F) ->
            DP 0b0011w S rn rd (REG (ib3 12 @@ ib2 6) (ib2 4) (rb 0))
       || _ -> Undefined`;
@@ -916,12 +916,14 @@ val thumb2_decode_aux6_def = with_flag (priming, SOME "_") Define`
                 let I1 = ~(J1 ?? S) and I2 = ~(J2 ?? S) in
              Branch (Branch_Target (S @@ I1 @@ I2 @@ ia10 0 @@ ib11 0)))
       || (a10,a9,a8,a7,a6,a5,a4,  T ,b13,b12,b11,b10,b9,b8,b7,b6,b5,b4) ->
-          (if InITBlock /\ ~LastInITBlock then
+          (if ~b12 /\ b 0 then
+             Undefined
+           else if InITBlock /\ ~LastInITBlock then
              Unpredictable
            else let S = ia1 10 and J1 = ib1 13 and J2 = ib1 11 in
                 let I1 = ~(J1 ?? S) and I2 = ~(J2 ?? S) in
              Branch
-               (Branch_Link_Exchange_Immediate (b12 /\ b 0) (~b12)
+               (Branch_Link_Exchange_Immediate (b 0) (~b12)
                   (S @@ I1 @@ I2 @@ ia10 0 @@ ib10 1)))`;
 
 (* Load/store, memory hints *)
@@ -932,6 +934,7 @@ val thumb2_decode_aux7_def = with_flag (priming, SOME "_") Define`
     and ra   n = ( n + 3  >< n ) ireg1 : word4
     and ib2  n = ( n + 1  >< n ) ireg2 : word2
     and rb   n = ( n + 3  >< n ) ireg2 : word4
+    and ib5  n = ( n + 4  >< n ) ireg2 : word5
     and ib12 n = ( n + 11 >< n ) ireg2 : word12
     in
     let rn = ra 0 and rt = rb 12
@@ -1093,9 +1096,12 @@ val thumb2_decode_aux7_def = with_flag (priming, SOME "_") Define`
                  else
                    Undefined)
           || (F, F,a6, F,   F ) ->
-               LoadStore
-                 (Store T T (~a6) F F rn rt
-                   (Mode2_register ((5 >< 4) ireg2) 0w (rb 0)))
+               if ib5 6 = 0w then
+                 LoadStore
+                   (Store T T (~a6) F F rn rt
+                     (Mode2_register ((5 >< 4) ireg2) 0w (rb 0)))
+               else
+                 Undefined
           || (F, T, F, T,  b11) ->
                LoadStore
                  (Store_Halfword T T F F rn rt (Mode3_immediate (ib12 0)))
@@ -1108,8 +1114,12 @@ val thumb2_decode_aux7_def = with_flag (priming, SOME "_") Define`
                  else
                    Undefined)
           || (F, F, F, T,   F ) ->
-               LoadStore
-                 (Store_Halfword T T F F rn rt (Mode3_register (ib2 4) (rb 0)))
+               if ib5 6 = 0w then
+                 LoadStore
+                   (Store_Halfword T T F F rn rt
+                      (Mode3_register (ib2 4) (rb 0)))
+               else
+                 Undefined
           || _ -> Undefined`;
 
 (* Data-processing (register) *)
