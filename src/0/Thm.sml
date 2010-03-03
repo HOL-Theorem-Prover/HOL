@@ -48,6 +48,7 @@ val empty_tag = Tag.empty_tag
     The following are here because I didn't want to Thm to be dependent
     on some derived syntax (now in boolSyntax).
  ---------------------------------------------------------------------------*)
+structure Susp = Portable.HOLSusp
 
 val F = Susp.delay (fn () => mk_thy_const{Name="F", Thy="bool", Ty=bool});
 

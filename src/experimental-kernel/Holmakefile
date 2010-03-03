@@ -16,7 +16,6 @@ FTHEORYD = $(dprot $(SIGOBJ)/FinalTheory-sig.ui)
 FTHEORY = $(protect $(SIGOBJ)/FinalTheory-sig.ui)
 
 LIBD = $(dprot $(SIGOBJ)/Lib.ui)
-SUSPD = $(dprot $(SIGOBJ)/Susp.ui)
 
 HOLSETD = $(dprot $(SIGOBJ)/HOLset.ui)
 
@@ -27,7 +26,7 @@ Overlay.uo: Overlay.sml Definition.ui Net.ui $(FTAGD) $(FKINDD) $(FTYPED) $(FTER
 Kind.ui : Kind.sig $(FKINDD) $(dprot $(SIGOBJ)/KernelSig.ui) $(LIBD)
 	$(HOLMOSMLC) -c $(FKIND) Kind.sig
 
-Type.ui : Type.sig $(FTYPED) Kind.ui $(SUSPD)
+Type.ui : Type.sig $(FTYPED) Kind.ui
 	$(HOLMOSMLC) -c $(FTYPE) Type.sig
 
 Term.ui: Term.sig $(FTERMD) Type.ui

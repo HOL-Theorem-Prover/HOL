@@ -44,6 +44,7 @@ signature Parse = sig
   val to_ptyInEnv  : Pretype.pretype -> Parse_support.env ->
                         Pretype.pretype * Parse_support.env
 
+(*
   val typ1_rec :
     {antiq : term -> Pretype.pretype,
      kindcast : {Kind : Prekind.prekind, Locn : locn.locn, Ty : Pretype.pretype} -> Pretype.pretype,
@@ -71,6 +72,7 @@ signature Parse = sig
      tyop : (string * locn.locn) * Pretype.pretype list -> Pretype.pretype,
      tyuniv : Pretype.pretype * Pretype.pretype -> Pretype.pretype,
      vartype : (string * Prekind.prekind * Prerank.prerank) * locn.locn -> Pretype.pretype}
+*)
 
   val add_type : string -> unit
   val temp_add_type : string -> unit
@@ -98,9 +100,11 @@ signature Parse = sig
       (string * (Absyn.absyn->Absyn.absyn)) -> unit
   val absyn_to_term    : term_grammar.grammar -> Absyn.absyn -> term
   val absyn_to_preterm : Absyn.absyn -> Preterm.preterm
+(*
   val absyn_to_preterm_in_env : Overload.overload_info -> Absyn.absyn
                                    -> Parse_support.env
                                    -> Preterm.preterm * Parse_support.env
+*)
   val Absyn            : term frag list -> Absyn.absyn
   val Preterm          : term frag list -> Preterm.preterm
   val Term             : term frag list -> term
@@ -251,14 +255,18 @@ signature Parse = sig
   val terms_to_string        : term list -> string
   val term_to_backend_string : term -> string
   val type_to_string         : hol_type -> string
+  val type_to_backend_string : hol_type -> string
   val kind_to_string         : kind -> string
+  val kind_to_backend_string : kind -> string
   val thm_to_string          : thm -> string
   val thm_to_backend_string  : thm -> string
 
   val print_thm              : thm -> unit
   val print_backend_thm      : thm -> unit
   val print_type             : hol_type -> unit
+  val print_backend_type     : hol_type -> unit
   val print_kind             : kind -> unit
+  val print_backend_kind     : kind -> unit
   val print_term             : term -> unit
   val print_terms            : term list -> unit
   val print_backend_term     : term -> unit

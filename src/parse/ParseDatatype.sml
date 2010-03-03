@@ -571,9 +571,9 @@ fun tyop ((s,locn), args) =
 
 (* Building the kind parser: *)
 
-val kd_antiq = type_pp.kd_antiq;
-val dest_kd_antiq = type_pp.dest_kd_antiq;
-val is_kd_antiq = type_pp.is_kd_antiq;
+val kd_antiq = parse_kind.kd_antiq;
+val dest_kd_antiq = parse_kind.dest_kd_antiq;
+val is_kd_antiq = parse_kind.is_kd_antiq;
 
 fun remove_kd_aq t =
   if is_kd_antiq t then dest_kd_antiq t
@@ -613,8 +613,8 @@ fun parse_type strm =
   parse_type.parse_type {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop,
                          antiq = dAQ, kindcast = kindcast, rankcast = rankcast,
                          tycon = mk_conty, tyapp = dTyApp,
-                         tyuniv = dTyUniv, tyabs = dTyAbst,
-                         kindparser = kindparser} true
+                         tyuniv = dTyUniv, tyabs = dTyAbst}
+                        kindparser true
   (Parse.type_grammar()) strm
 
 

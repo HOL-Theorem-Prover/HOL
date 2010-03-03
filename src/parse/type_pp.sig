@@ -17,9 +17,4 @@ sig
 
  val ftyvars_seen : Type.hol_type list ref
  val btyvars_seen : Type.hol_type list ref
-
- (* Kind antiquotations (required in type parser) *)
- val kd_antiq  : Kind.kind -> Type.hol_type
- val dest_kd_antiq : Type.hol_type -> Kind.kind
- val is_kd_antiq : Type.hol_type -> bool
 end

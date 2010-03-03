@@ -585,6 +585,7 @@ val SUBMAP_REFL = Q.store_thm
 ("SUBMAP_REFL",
  `!(f:('a,'b) fmap). f SUBMAP  f`,
  REWRITE_TAC [SUBMAP_DEF]);
+val _ = export_rewrites["SUBMAP_REFL"];
 
 val SUBMAP_ANTISYM = Q.store_thm
 ("SUBMAP_ANTISYM",

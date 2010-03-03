@@ -1,9 +1,5 @@
 use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
 
-(******************************************************************************)
-(* Some useful REWRITES                                                       *)
-(******************************************************************************)
-
 open listTheory rich_listTheory
 
 (******************************************************************************)
@@ -11,14 +7,13 @@ open listTheory rich_listTheory
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/filter.dsf"];
-val spec_t = parse_holfoot_file file
 
 
 (******************************************************************************)
 (* Verify specification                                                       *)
 (******************************************************************************)
 
-(* set_goal ([], spec_t) *)
+(* holfoot_set_goal_procedures file ["list_filter"] *)
 val filter_TAC = 
   (*do everything till while loop*)
   xHF_SOLVE_TAC [stop_at_while] THEN
@@ -28,29 +23,33 @@ val filter_TAC =
      HF_CONTINUE_TAC THEN
      (*at the beginning of the loop nothing is filtered*)
      REPEAT GEN_TAC THEN Q.EXISTS_TAC `[]` THEN
-     xHF_CONTINUE_TAC [do_case_splits] THEN
+     xHF_CONTINUE_TAC [do_case_splits] THEN     
      SIMP_TAC list_ss [GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
         GSYM LEFT_FORALL_IMP_THM, FILTER_APPEND] THEN
      xHF_SOLVE_TAC [ add_rewrites [NULL_EQ, FILTER_EQ_NIL] ] 
   ) THEN
 
   (* while loop *)
-  HF_SOLVE_TAC THEN
+  xHF_SOLVE_TAC [generate_vcs] THEN
   REPEAT STRIP_TAC THENL [
      FULL_SIMP_TAC list_ss [] THEN
-     HF_SOLVE_TAC,
+     HF_ELIM_COMMENTS_TAC,
 
-     Q.EXISTS_TAC `data_fc'` THEN
-     ASM_SIMP_TAC list_ss [NULL_EQ, FILTER_EQ_NIL] THEN
-     HF_SOLVE_TAC,
+     HF_ELIM_COMMENTS_TAC THEN
+     Q.EXISTS_TAC `data_fc` THEN
+     FULL_SIMP_TAC (list_ss++ListConv1.list_eq_simp_ss) [NULL_EQ, FILTER_EQ_NIL],
 
+     HF_ELIM_COMMENTS_TAC THEN
      Q.EXISTS_TAC `data1` THEN
-     HF_SOLVE_TAC,
+     FULL_SIMP_TAC (list_ss++ListConv1.list_eq_simp_ss) [],
 
+     HF_ELIM_COMMENTS_TAC THEN
      Q.EXISTS_TAC `data1 ++ [date] ++ data_fc'` THEN
-     xHF_CONTINUE_TAC [add_rewrites [FILTER_APPEND]] THEN
-     ASM_SIMP_TAC list_ss [NULL_EQ, FILTER_EQ_NIL] THEN
-     HF_SOLVE_TAC
+     FULL_SIMP_TAC (list_ss++ListConv1.list_eq_simp_ss) [
+        NULL_EQ, FILTER_EQ_NIL, FILTER_APPEND,
+        BUTFIRSTN_APPEND1, TAKE_APPEND1,
+        BUTFIRSTN_APPEND2, TAKE_APPEND2,
+        BUTFIRSTN_LENGTH_APPEND, BUTFIRSTN_LENGTH_NIL]
   ]
 
 val spec_thm = prove (spec_t, filter_TAC)

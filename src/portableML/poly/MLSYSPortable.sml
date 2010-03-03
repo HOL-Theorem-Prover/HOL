@@ -56,4 +56,6 @@ fun time f x =
     y
   end;
 
+structure HOLSusp = Susp
+
 end;

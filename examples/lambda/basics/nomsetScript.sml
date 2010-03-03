@@ -75,6 +75,14 @@ val permof_inverse = store_thm(
  ``(p ++ REVERSE p == []) /\ (REVERSE p ++ p == [])``,
   METIS_TAC [permof_inverse_lemma, listTheory.REVERSE_REVERSE]);
 
+val permof_inverse_append = store_thm (
+  "permof_inverse_append",
+  ``(p ++ q) ++ REVERSE q == p ∧ (p ++ REVERSE q) ++ q == p``,
+  SIMP_TAC bool_ss [GSYM listTheory.APPEND_ASSOC] THEN
+  CONJ_TAC THEN
+  SIMP_TAC bool_ss [Once (GSYM listTheory.APPEND_NIL), SimpR ``(==)``] THEN
+  MATCH_MP_TAC app_permeq_monotone THEN SRW_TAC [][permof_inverse]);
+
 val permof_inverse_applied = lswapstr_inverse
 
 val permof_dups = store_thm(

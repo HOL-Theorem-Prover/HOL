@@ -1,0 +1,9 @@
+list_append(x;y) [list(x) * list(y) * (x != 0) * (y != 0)] {
+  local n, p;  
+  n = x;
+  while (n != NULL) [list(n) * (if (n != x) then (lseg (x, p) * p |-> n) else emp)] {
+    p = n;
+    n = p->tl;
+  }
+  p->tl = y;
+} [list(x) * (x != 0)]

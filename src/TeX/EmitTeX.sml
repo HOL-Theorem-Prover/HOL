@@ -416,7 +416,7 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
           end
 
     fun pp_constructor_spec (n, l) =
-          (S "datatype "; PT n; BR(1,2);
+          (PT n; BR(1,2);
            BB (if enumerated_type n then PP.INCONSISTENT else PP.CONSISTENT) 0;
              S "= ";
              app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
@@ -428,7 +428,7 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
         let val ll = tl l
             fun pp_record x = (PT x; S " : "; TP (type_of x))
         in
-          (S "datatype "; PT (hd l); S " ="; BR(1,2);
+          (PT (hd l); S " ="; BR(1,2);
            BB PP.CONSISTENT 3;
              S "<| ";
              app (fn x => (pp_record x; S ";"; BR(1,0)))
@@ -453,9 +453,9 @@ in
   EB()
 end;
 
-fun datatype_thm_to_string thm =
-  String.extract(PP.pp_to_string (!Globals.linewidth)
-    (pp_datatype_theorem PPBackEnd.raw_terminal) thm, 9, NONE);
+val datatype_thm_to_string =
+    PP.pp_to_string (!Globals.linewidth)
+                    (pp_datatype_theorem PPBackEnd.raw_terminal)
 
 fun print_datatypes s =
   app (fn (_,x) => print (datatype_thm_to_string x ^ "\n"))

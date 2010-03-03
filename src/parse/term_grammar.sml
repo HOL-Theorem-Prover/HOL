@@ -1264,5 +1264,212 @@ in
   end_block ()
 end
 
+fun add_const (s,t) =
+    fupdate_overload_info (Overload.add_overloading(s,t))
+val min_grammar = let
+  open Term Portable
+in
+  stdhol |> add_const ("==>", prim_mk_const{Name = "==>", Thy = "min"})
+         |> add_const ("=", prim_mk_const{Name = "=", Thy = "min"})
+         |> add_const ("@", prim_mk_const{Name = "@", Thy = "min"})
+         |> C add_binder ({term_name="@", tok = "@"}, std_binder_precedence)
+
+         (* Using the standard rules for infixes for ==> and = seems
+            to result in bad pretty-printing of goals.  I think the
+            following customised printing spec works better.  The crucial
+            difference is that the blocking style is CONSISTENT rather than
+            INCONSISTENT. *)
+         |> C add_rule {term_name   = "==>",
+                        block_style = (AroundSamePrec, (CONSISTENT, 0)),
+                        fixity      = Infix(RIGHT, 200),
+                        pp_elements = [HardSpace 1, RE (TOK "==>"),
+                                       BreakSpace(1,0)],
+                        paren_style = OnlyIfNecessary}
+         |> C add_rule {term_name   = "=",
+                        block_style = (AroundSamePrec, (CONSISTENT, 0)),
+                        fixity      = Infix(NONASSOC, 100),
+                        pp_elements = [HardSpace 1, RE (TOK "="),
+                                       BreakSpace(1,0)],
+                        paren_style = OnlyIfNecessary}
+
+end
+(* ----------------------------------------------------------------------
+    encoding and decoding grammars to and from strings
+   ---------------------------------------------------------------------- *)
+open Coding
+infix || >- >> >* >->
+
+fun assoc_encode LEFT = "L"
+  | assoc_encode RIGHT = "R"
+  | assoc_encode NONASSOC = "N"
+val assoc_reader =
+    (literal "L" >> return LEFT) ||
+    (literal "R" >> return RIGHT) ||
+    (literal "N" >> return NONASSOC)
+
+fun binfo_encode (brks,i) =
+    (case brks of
+       Portable.CONSISTENT => "C"
+     | Portable.INCONSISTENT => "I") ^
+    IntData.encode i
+val binfo_reader =
+    ((literal "C" >> return Portable.CONSISTENT) ||
+     (literal "I" >> return Portable.INCONSISTENT)) >*
+    IntData.reader
+
+fun block_style_encode (pbs, binfo) =
+    (case pbs of
+       AroundEachPhrase => "H"
+     | AroundSamePrec => "C"
+     | AroundSameName => "M"
+     | NoPhrasing => "N") ^
+    binfo_encode binfo
+
+val block_style_reader =
+    ((literal "H" >> return AroundEachPhrase) ||
+     (literal "C" >> return AroundSamePrec) ||
+     (literal "M" >> return AroundSameName) ||
+     (literal "N" >> return NoPhrasing)) >*
+    binfo_reader
+
+fun rule_element_encode rel =
+    case rel of
+      TOK s => "K" ^ StringData.encode s
+    | TM => "M"
+val rule_element_reader =
+    (literal "K" >> map TOK StringData.reader) ||
+    (literal "M" >> return TM)
+
+
+fun paren_style_encode Always = "A"
+  | paren_style_encode OnlyIfNecessary = "O"
+  | paren_style_encode ParoundPrec = "C"
+  | paren_style_encode ParoundName = "N"
+val paren_style_reader =
+    (literal "A" >> return Always) ||
+    (literal "O" >> return OnlyIfNecessary) ||
+    (literal "C" >> return ParoundPrec) ||
+    (literal "N" >> return ParoundName)
+
+fun ppel_encode ppel =
+    case ppel of
+      PPBlock (ppels, binfo) => "P" ^ String.concat
+                                          (List.map ppel_encode ppels) ^
+                                "X" ^ binfo_encode binfo
+    | EndInitialBlock binfo => "E" ^ binfo_encode binfo
+    | BeginFinalBlock binfo => "B" ^ binfo_encode binfo
+    | HardSpace i => "H" ^ IntData.encode i
+    | BreakSpace (x,y) => "S" ^ IntData.encode x ^ IntData.encode y
+    | RE rel => "R" ^ rule_element_encode rel
+    | LastTM => "L"
+    | FirstTM => "F"
+fun ppel_reader s =
+    ((literal "P" >>
+      map PPBlock ((many ppel_reader >-> literal "X") >* binfo_reader)) ||
+     (literal "E" >> map EndInitialBlock binfo_reader) ||
+     (literal "B" >> map BeginFinalBlock binfo_reader) ||
+     (literal "H" >> map HardSpace IntData.reader) ||
+     (literal "S" >> map BreakSpace (IntData.reader >* IntData.reader)) ||
+     (literal "R" >> map RE rule_element_reader)) s
+
+
+
+fun rrule_encode {term_name,elements,preferred,block_style,paren_style} =
+    String.concat (StringData.encode term_name ::
+                   BoolData.encode preferred ::
+                   block_style_encode block_style ::
+                   paren_style_encode paren_style ::
+                   (List.map ppel_encode elements @ ["E"]))
+val rrule_reader = let
+  fun f ((((term_name, preferred), block_style), paren_style), elements) =
+      {term_name = term_name, preferred = preferred,
+       block_style = block_style, paren_style = paren_style,
+       elements = elements}
+in
+  map f (StringData.reader >* BoolData.reader >*
+         block_style_reader >* paren_style_reader >*
+         ((many ppel_reader >-> literal "E") || fail))
+end
+
+fun binder_encode b =
+    case b of
+      LAMBDA => "L"
+    | BinderString{tok,term_name,preferred} => "B" ^ StringData.encode tok ^
+                                               StringData.encode term_name ^
+                                               BoolData.encode preferred
+val binder_reader = let
+  fun f ((tok,term_name),preferred) =
+      BinderString {tok = tok, term_name = term_name,
+                    preferred = preferred}
+in
+  (literal "L" >> return LAMBDA) ||
+  (literal "B" >> (map f (StringData.reader >* StringData.reader >*
+                          BoolData.reader)))
+end
+
+fun RRL s rrl = String.concat (s :: List.map rrule_encode rrl)
+fun pfxrule_encode prule =
+    case prule of
+      STD_prefix rrl => RRL "S" rrl
+    | BINDER bl => String.concat ("B"::List.map binder_encode bl)
+val pfxrule_reader =
+    (literal "S" >> map STD_prefix (many rrule_reader)) ||
+    (literal "B" >> map BINDER (many binder_reader))
+
+fun sfxrule_encode srule =
+    case srule of
+      STD_suffix rrl => RRL "S" rrl
+    | TYPE_annotation => "T"
+val sfxrule_reader =
+    (literal "S" >> map STD_suffix (many rrule_reader)) ||
+    (literal "T" >> return TYPE_annotation)
+
+fun ifxrule_encode irule =
+    case irule of
+      STD_infix (rrl,a) => RRL "S" rrl ^ assoc_encode a
+    | RESQUAN_OP => "R"
+    | VSCONS => "V"
+    | FNAPP rrl => RRL "F" rrl
+val ifxrule_reader =
+    (literal "S" >> map STD_infix (many rrule_reader >* assoc_reader)) ||
+    (literal "R" >> return RESQUAN_OP) ||
+    (literal "V" >> return VSCONS) ||
+    (literal "F" >> map FNAPP (many rrule_reader))
+
+fun lspec_encode {separator, leftdelim, rightdelim, block_info, cons, nilstr} =
+    String.concat (List.map ppel_encode separator) ^
+    StringData.encode cons ^
+    String.concat (List.map ppel_encode leftdelim) ^
+    StringData.encode nilstr ^
+    String.concat (List.map ppel_encode rightdelim) ^
+    binfo_encode block_info
+
+val lspec_reader = let
+  fun f (((((separator,cons),leftdelim),nilstr),rightdelim),binfo) =
+      {separator = separator, leftdelim = leftdelim, nilstr = nilstr,
+       block_info = binfo, cons = cons, rightdelim = rightdelim}
+in
+  map f (many ppel_reader >* StringData.reader >* many ppel_reader >*
+         StringData.reader >* many ppel_reader >* binfo_reader)
+end
+
+
+
+
+fun grule_encode grule =
+    case grule of
+      PREFIX pr => "P" ^ pfxrule_encode pr
+    | SUFFIX sr => "S" ^ sfxrule_encode sr
+    | INFIX ir => "I" ^ ifxrule_encode ir
+    | CLOSEFIX rrl => String.concat ("C"::List.map rrule_encode rrl)
+    | LISTRULE lspecl => String.concat ("L"::List.map lspec_encode lspecl)
+
+val grule_reader =
+    (literal "P" >> pfxrule_reader >- (return o PREFIX)) ||
+    (literal "S" >> sfxrule_reader >- (return o SUFFIX)) ||
+    (literal "I" >> ifxrule_reader >- (return o INFIX)) ||
+    (literal "C" >> many rrule_reader >- (return o CLOSEFIX)) ||
+    (literal "L" >> many lspec_reader >- (return o LISTRULE))
+
 
 end; (* struct *)

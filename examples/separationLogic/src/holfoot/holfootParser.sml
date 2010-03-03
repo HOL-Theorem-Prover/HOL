@@ -32,7 +32,7 @@ fun hol_parse contextOpt ex_vars default tyL s =
    else
       (let
          val s_ty = if (tyL = []) then s else "("^s^"):"^(hd tyL);
-         val s_term = Parse.parse_in_context [valOf contextOpt] [QUOTE s_ty];
+         val s_term = Parse.parse_in_context (free_vars(valOf contextOpt)) [QUOTE s_ty];
 
          val fvL = free_vars s_term;
          val ex_fvL = filter (fn v => 
@@ -1237,5 +1237,18 @@ fun Pprogram2term procL_opt (Pprogram (ident_decl, program_item_decl)) =
 
 val parse_holfoot_file = (Pprogram2term NONE) o parse;
 fun parse_holfoot_file_restrict procL = (Pprogram2term (SOME procL)) o parse;
+
+fun print_file_contents file =
+   let
+      val is = Portable.open_in file
+      val _ = print ("\nContents of file \""^file^"\":\n\n");
+      val _ = print "--------------------------------------------\n";
+      val _ = while (not (Portable.end_of_stream is)) do
+        (print (Portable.input_line is));
+      val _ = Portable.close_in is;
+      val _ = print "--------------------------------------------\n\n";
+   in
+      ()
+   end
 
 end

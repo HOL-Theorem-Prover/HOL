@@ -142,4 +142,7 @@ datatype kcheck_error =
 
 val last_kcerror : (kcheck_error * locn.locn) option ref
 
+val termantiq_constructors : (pretype,Term.term) parse_type.tyconstructors
+val typantiq_constructors : (pretype,Type.hol_type) parse_type.tyconstructors
+
 end

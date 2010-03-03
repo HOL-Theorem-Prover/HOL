@@ -7,8 +7,60 @@ open qbuf
 
 exception InternalFailure of locn.locn
 
+type ('a,'b) kindconstructors =
+     {varkind : string locn.located -> 'a,
+      kindop : (string locn.located * 'a list) -> 'a,
+      qkindop : {Thy:string, Kindop:string, Locn:locn.locn, Args: 'a list} -> 'a,
+      arity : (string locn.located * int) -> 'a,
+      antiq : 'b -> 'a}
+
 val ERR = Feedback.mk_HOL_ERR "Parse" "parse_kind"
+
 val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_kind"
+
+(* antiquoting kinds into types *)
+local
+  val ERR2 = Feedback.mk_HOL_ERR "Parse" "dest_kd_antiq" "not a kind antiquotation"
+in
+fun kd_antiq kd = Type.mk_var_type("'kd_antiq",kd,0)
+
+fun dest_kd_antiq ty =
+  case Lib.with_exn Type.dest_var_type ty ERR2
+   of ("'kd_antiq",Kd,0) => Kd
+    |  _ => raise ERR2
+
+val is_kd_antiq = Lib.can dest_kd_antiq
+end
+
+(* antiquoting types into terms *)
+local
+  open Term Type Kind
+  infixr ==>
+  val ERR2 = Feedback.mk_HOL_ERR "Parse" "dest_ty_antiq" "not a type antiquotation"
+in
+fun ty_antiq ty = let val kd = kind_of ty
+                      val a = mk_var_type("'ty_antiq", kd ==> typ, 0)
+                      val ty' = mk_app_type(a, ty)
+                  in mk_var("ty_antiq",ty')
+                  end
+
+fun dest_ty_antiq tm =
+  case Lib.with_exn dest_var tm ERR2
+   of ("ty_antiq",ty) =>
+        let val (a,ty') = Lib.with_exn dest_app_type ty ERR2
+        in case Lib.with_exn dest_var_type a ERR2
+            of ("'ty_antiq",_,0) => ty'
+             | _ => raise ERR2
+        end
+    |  _ => raise ERR2
+
+val is_ty_antiq = Lib.can dest_ty_antiq
+end
+
+(* antiquoting kinds into terms *)
+val kd_ty_antiq = ty_antiq o kd_antiq;
+val dest_kd_ty_antiq = dest_kd_antiq o dest_ty_antiq;
+val is_kd_ty_antiq = Lib.can dest_kd_ty_antiq
 
 fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 

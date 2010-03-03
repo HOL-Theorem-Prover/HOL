@@ -1014,11 +1014,10 @@ val WORD_REPLICATE_ss =
 val WORD_EXTRACT_ss = simpLib.merge_ss [WORD_REPLICATE_ss,
   simpLib.named_rewrites "word extract"
     ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
-      WORD_EXTRACT_LSL, word_concat_def, LET_RULE word_join_def,
-      word_rol_def, LET_RULE word_ror, word_asr, word_lsr_n2w,
-      WORD_EXTRACT_COMP_THM, WORD_EXTRACT_MIN_HIGH,
-      EXTRACT_JOIN, EXTRACT_JOIN_LSL,
-      EXTRACT_JOIN_ADD, EXTRACT_JOIN_ADD_LSL,
+      WORD_EXTRACT_LSL, WORD_EXTRACT_LSL2, word_concat_def,
+      LET_RULE word_join_def, word_rol_def, LET_RULE word_ror, word_asr,
+      word_lsr_n2w, WORD_EXTRACT_COMP_THM, WORD_EXTRACT_MIN_HIGH, EXTRACT_JOIN,
+      EXTRACT_JOIN_LSL, EXTRACT_JOIN_ADD, EXTRACT_JOIN_ADD_LSL,
       OR_AND_COMM_RULE EXTRACT_JOIN, OR_AND_COMM_RULE EXTRACT_JOIN_LSL,
       OR_AND_COMM_RULE EXTRACT_JOIN_ADD, OR_AND_COMM_RULE EXTRACT_JOIN_ADD_LSL,
       GSYM WORD_EXTRACT_OVER_BITWISE,
@@ -1303,14 +1302,18 @@ val Induct_word =
 
 (* ------------------------------------------------------------------------- *)
 
+val word_pp_mode = ref 0;
+val word_cast_on = ref false;
+
 fun print_word f Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = let
    open Portable term_pp_types
-   val (string,brk) = (#add_string ppfns, #add_break ppfns);
+   val (str,brk) = (#add_string ppfns, #add_break ppfns);
    val (n,x) = dest_n2w t
    val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
    val v = numSyntax.dest_numeral n
 in
-  string
+  (if !Globals.show_types orelse !word_cast_on then str "(" else ());
+  str
    ((case f (Arbnum.toInt m, v) of
        StringCvt.DEC => Arbnum.toString v
      | StringCvt.BIN => "0b"^(Arbnum.toBinString v)
@@ -1322,13 +1325,14 @@ in
                           (Feedback.HOL_MESG "Octal output is only supported \
                              \when base_tokens.allow_octal_input is true.";
                            Arbnum.toString v)
-     | StringCvt.HEX => "0x"^(Arbnum.toHexString v)) ^ "w")
+     | StringCvt.HEX => "0x"^(Arbnum.toHexString v)) ^ "w");
+  (if !Globals.show_types orelse !word_cast_on then
+    (brk (1,2); pp_type pps (type_of t); str ")")
+   else ())
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 fun output_words_as f = Parse.temp_add_user_printer
   ("wordsLib.print_word", ``words$n2w x : 'a word``, print_word f);
-
-val word_pp_mode = ref 0;
 
 val _ = Feedback.register_trace("word printing", word_pp_mode, 4);
 
@@ -1374,8 +1378,17 @@ let
    val (f,x) = strip_comb t
 in
   case (fst (dest_const f), x)
-    of ("w2w",[a]) =>
-          let val prec = Prec (700,"w2w") in
+    of ("n2w",[a]) =>
+          let val prec = Prec (2000,"n2w") in
+            begin_block pps INCONSISTENT 0;
+            delim 200 (fn () => str "(");
+            trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
+            sys (prec,prec,prec) (d - 1) a;
+            delim 200 (fn () => str ")");
+            end_block pps
+          end
+     | ("w2w",[a]) =>
+          let val prec = Prec (2000,"w2w") in
             begin_block pps INCONSISTENT 0;
             delim 200 (fn () => str "(");
             trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
@@ -1384,7 +1397,7 @@ in
             end_block pps
           end
      | ("sw2sw",[a]) =>
-          let val prec = Prec (700,"sw2sw") in
+          let val prec = Prec (2000,"sw2sw") in
             begin_block pps INCONSISTENT 0;
             delim 200 (fn () => str "(");
             trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
@@ -1403,7 +1416,7 @@ in
             end_block pps
           end
      | ("word_extract",[h,l,a]) =>
-          let val prec = Prec (700,"word_extract") in
+          let val prec = Prec (2000,"word_extract") in
             begin_block pps INCONSISTENT 0;
             delim 200 (fn () => str "(");
             str "(";
@@ -1421,11 +1434,11 @@ in
      | _ => raise term_pp_types.UserPP_Failed
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-fun add_word_cast_printer () = Parse.temp_add_user_printer
-  ("wordsLib.word_cast", ``f:'b word``, word_cast);
+fun add_word_cast_printer () = (word_cast_on := true;
+  Parse.temp_add_user_printer ("wordsLib.word_cast", ``f:'b word``, word_cast));
 
 fun remove_word_cast_printer () =
-  (Parse.remove_user_printer "wordsLib.word_cast"; ());
+  (word_cast_on := false; Parse.remove_user_printer "wordsLib.word_cast"; ());
 
 (* ------------------------------------------------------------------------- *)
 (* Guessing the word length for the result of extraction (><),               *)

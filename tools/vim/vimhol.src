@@ -1,6 +1,6 @@
 val () = PolyML.print_depth 0;
 local
-  val fifoPath = Globals.HOLDIR^"/tools/vim/fifo"
+  val fifoPath =
   structure Queue :> (* Modified from http://mlton.org/MLtonThread *)
      sig
         type 'a t
@@ -22,14 +22,10 @@ local
             | x :: l => (front := l; SOME x)
      end
   open TextIO Thread FileSys Unix
-  fun warn s = output(stdErr, s)
-  local open Process Posix.FileSys Globals in
+  val quiet = ref false
+  fun warn s = if !quiet then () else output(stdErr, s)
+  local open Process Posix.FileSys in
     fun die s = (warn s; exit failure)
-    val () = case getEnv "HOLDIR" of
-               NONE => die "Please set HOLDIR environment variable\n"
-             | SOME s => if s <> HOLDIR then
-                           die ("HOLDIR environment variable "^s^" should be "^HOLDIR^"\n")
-                         else ()
     val () = if access(fifoPath, []) then let
                val st = stat fifoPath
              in
@@ -110,7 +106,9 @@ in
                   if pActive() then Thread.interrupt (!ppid) else ())
     fun restart() = (stop(); ppid := Thread.fork(poller,[]))
     val keepFiles = keepFiles
+    val quiet = quiet
     val queue = q
     val removeQueue = removeQueue
   end
 end
+(* vim: set ft=sml:*)

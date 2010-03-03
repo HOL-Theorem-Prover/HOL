@@ -1,21 +1,31 @@
 signature parse_type =
 sig
 
-  val parse_type :
-    {vartype : (string * Prekind.prekind * Prerank.prerank) locn.located -> 'a,
-     tyop : (string locn.located * 'a list) -> 'a,
-     qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
-     antiq : 'b -> 'a,
-     kindcast : {Ty: 'a, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
-     rankcast : {Ty: 'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
-     tycon  : {Thy:string, Tyop:string, Kind:Prekind.prekind, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
-     tyapp  : ('a * 'a) -> 'a,
-     tyuniv : ('a * 'a) -> 'a,
-     tyabs  : ('a * 'a) -> 'a,
-     kindparser : 'b qbuf.qbuf -> Prekind.prekind} ->
-    bool ->
-    type_grammar.grammar ->
-    'b qbuf.qbuf -> 'a
+  type ('a,'b) tyconstructors =
+     {vartype : (string * Prekind.prekind * Prerank.prerank) locn.located -> 'a,
+      tyop : (string locn.located * 'a list) -> 'a,
+      qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
+      antiq : 'b -> 'a,
+      kindcast : {Ty:'a, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
+      rankcast : {Ty:'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
+      tycon : {Thy:string, Tyop:string, Kind:Prekind.prekind, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
+      tyapp  : 'a * 'a -> 'a,
+      tyuniv : 'a * 'a -> 'a,
+      tyabs  : 'a * 'a -> 'a
+     }
+  type term = Term.term
+
+  val parse_type : ('a,'b) tyconstructors ->
+                   ('b qbuf.qbuf -> Prekind.prekind) ->
+                   bool ->
+                   type_grammar.grammar ->
+                   'b qbuf.qbuf ->
+                   'a
+
+  val ty_antiq      : Type.hol_type -> term
+  val dest_ty_antiq : term -> Type.hol_type
+  val is_ty_antiq   : term -> bool
+
 
     (* The record of functions specify how to deal with the need to
        construct variable types, type operators and antiquotations

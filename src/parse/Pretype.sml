@@ -2116,4 +2116,48 @@ fun reconcile_univ_types pat targ =
     end
 end
 
-end; (* Pretype *)
+fun remove_ty_aq t =
+  if parse_type.is_ty_antiq t then parse_type.dest_ty_antiq t
+  else raise mk_HOL_ERR "Parse" "type parser" "antiquotation is not of a type"
+
+(* "qtyop" refers to "qualified" type operator, i.e., qualified by theory name. *)
+
+fun mk_conty{Thy,Tyop,Kind,Rank,Locn} =
+  PT(Contype {Thy=Thy, Tyop=Tyop, Kind=Kind, Rank=Rank}, Locn)
+
+fun do_qtyop {Thy,Tyop,Locn,Args} =
+  List.foldl (fn (arg,acc) => PT(TyApp(acc,arg),Locn))
+             (mk_conty{Thy=Thy,Tyop=Tyop,Kind=Prekind.mk_arity(length Args),Rank=Prerank.Zerorank,Locn=Locn})
+             Args
+
+fun tyop_to_qtyop ((tyop,locn), args) =
+  case Type.decls tyop of
+    [] => raise mk_HOL_ERRloc "Parse" "type parser" locn
+                              (tyop^" not a known type operator")
+  | {Thy,Tyop} :: _ => do_qtyop {Thy = Thy, Tyop = Tyop, Locn = locn, Args = args}
+
+fun do_kindcast {Ty,Kind,Locn} =
+  PT(TyKindConstr {Ty=Ty,Kind=Kind}, Locn)
+
+fun do_rankcast {Ty,Rank,Locn} =
+  PT(TyRankConstr {Ty=Ty,Rank=Rank}, Locn)
+
+fun mk_basevarty((s,kd,rk),locn) = PT(Vartype(s,kd,rk), locn)
+
+val termantiq_constructors =
+    {vartype = mk_basevarty, qtyop = do_qtyop,
+     tyop = tyop_to_qtyop,
+     antiq = fn x => fromType (remove_ty_aq x),
+     kindcast = do_kindcast, rankcast = do_rankcast,
+     tycon = mk_conty, tyapp = mk_app_type,
+     tyuniv = mk_univ_type, tyabs = mk_abs_type}
+
+val typantiq_constructors =
+    {vartype = mk_basevarty, qtyop = do_qtyop,
+     tyop = tyop_to_qtyop,
+     antiq = fromType,
+     kindcast = do_kindcast, rankcast = do_rankcast,
+     tycon = mk_conty, tyapp = mk_app_type,
+     tyuniv = mk_univ_type, tyabs = mk_abs_type}
+
+end;

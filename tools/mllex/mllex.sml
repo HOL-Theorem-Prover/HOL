@@ -533,7 +533,8 @@ fun AdvanceTok () : unit = let
 			     end
 			in ID(getID [ch])
 			end
-		      else (prSynErr ("bad character: " ^ String.str ch))
+		      else (prSynErr ("bad character: " ^
+                                      String.toString (String.str ch)))
 	in NextTok := makeTok()
 	end
 	| 1 => let val rec makeTok = fn () =>
@@ -610,8 +611,8 @@ fun AdvanceTok () : unit = let
 			let fun getID matched = (case nextch()
 			  of #"}" => matched
 			   | x => if (isIdentChr x) then
-				getID(matched ^ String.str x)
-				else (prErr "invalid char. class name")
+				    getID(matched ^ String.str x)
+				  else (prErr "invalid char. class name")
 			 (* end case *))
 			in ID(getID(String.str ch))
 			end
@@ -669,7 +670,8 @@ fun AdvanceTok () : unit = let
                     ACTION (GetAct (0,nil))
                   end
                 | #";" => SEMI
-                | c => (prSynErr ("invalid character " ^ String.str c)))
+                | c => (prSynErr ("invalid character " ^
+                                  String.toString (String.str c))))
 	| _ => raise LexError
 end
 handle eof => NextTok := EOF ;
@@ -686,7 +688,7 @@ fun GetExp () : exp =
 	    and lookup' = fn name =>
 		lookup(!SymTab) name
 		handle LOOKUP => prErr ("bad regular expression name: "^
-					    name)
+					name)
 
 	and newline = fn () => let val c = array(!CharSetSize,false) in
 		update(c,10,true); c
@@ -711,7 +713,7 @@ fun GetExp () : exp =
 		| LP => let val e = exp0() in
 		 if !NextTok = RP then
 		  (AdvanceTok(); exp1(e))
-		 else (prSynErr "missing '('") end
+		 else (prSynErr "missing ')'") end
 		| ID(name) => exp1(lookup' name)
 		| _ => raise SyntaxError
 

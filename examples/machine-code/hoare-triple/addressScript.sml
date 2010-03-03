@@ -130,7 +130,7 @@ val EXISTS_ADDR30 = store_thm("EXISTS_ADDR30",
   ``!x. (x && 3w = 0w) ==> ?y. x = ADDR32 y``,
   SRW_TAC [] [ADDR32_def] \\ Q.EXISTS_TAC `(31 >< 2) x`
     \\ SRW_TAC [WORD_EXTRACT_ss] []
-    \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss) []);
+    \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss++wordsLib.BIT_ss) [n2w_def]);
 
 val add32_ADDR30 = store_thm("ADDR32_ADDR30",
   ``!x. (x && 3w = 0w) ==> (ADDR32 (ADDR30 x) = x)``,
@@ -257,7 +257,7 @@ val ALIGNED_THM = store_thm("ALIGNED_THM",
   ``!p. ALIGNED p = ?k. p = k * 4w``,
   SRW_TAC [] [ALIGNED_def] \\ EQ_TAC \\ SRW_TAC [WORD_MUL_LSL_ss] []
   THENL [Q.EXISTS_TAC `(31 >< 2) p`, ALL_TAC]
-  \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss) []);
+  \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss++wordsLib.BIT_ss) [n2w_def]);
 
 val ALIGNED_NEG_lemma = prove(
   ``!x. ALIGNED x ==> ALIGNED (- x)``,

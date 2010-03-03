@@ -75,16 +75,13 @@ sig
     end
 end) :
 sig
-   type term = Term.term
-   type conv = Abbrev.conv
-   type thm = Abbrev.thm
    type user_rewrite_param = (Abbrev.thm list * Abbrev.conv list * simpLib.ssfrag list);
    type gen_step_param = {use_asms       : bool,
                           do_case_splits : bool,
                           do_expands     : bool,
                           generate_vcs   : bool,
                           fast           : bool,
-                          stop_evals     : (term -> bool) list,
+                          stop_evals     : (Abbrev.term -> bool) list,
                           do_prop_simps  : bool};
 
    datatype gen_step_tac_opt =
@@ -94,10 +91,10 @@ sig
      | prop_simp_flag of bool
      | use_asms_flag of bool
      | generate_vcs_flag of bool
-     | add_rewrites of thm list
-     | add_convs of conv list
+     | add_rewrites of Abbrev.thm list
+     | add_convs of Abbrev.conv list
      | add_ssfrags of simpLib.ssfrag list
-     | stop_evals of (term -> bool) list
+     | stop_evals of (Abbrev.term -> bool) list
      | combined_gen_step_tac_opt of gen_step_tac_opt list
 
    val no_case_splits        : gen_step_tac_opt;
@@ -125,7 +122,7 @@ sig
    val gen_step_param___update_expands    : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_fast       : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_prop_simps : gen_step_param -> bool -> gen_step_param
-   val gen_step_param___update_stop_evals : gen_step_param -> (term -> bool) list -> gen_step_param
+   val gen_step_param___update_stop_evals : gen_step_param -> (Abbrev.term -> bool) list -> gen_step_param
 
    val VAR_RES_GEN_STEP_CONSEQ_CONV : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.thm list -> Abbrev.conv
    val VAR_RES_GEN_STEP_TAC         : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.tactic
@@ -1353,6 +1350,24 @@ in
 end;
 
 
+(* while preparing for the introduction of a "VAR_RES_FRAME_SPLIT" 
+   predicate, existential quantifiers are moved to the outer level.
+   This may cause trouble, because the choices for these variables have to
+   hold under all other (later) case-splits. Therefore, obvious case splits
+   are done first, like ones acoording to if-then-else. Moreover, 
+   concrete values for variables are introduced as well before the existential
+   quantifiers. *)
+
+fun VAR_RES_COND_INFERENCE___PREPARE_FOR_FRAME___CONV tt =
+let
+   val (_, pre, _, _) = dest_VAR_RES_COND_HOARE_TRIPLE tt;
+   fun not_ok t = is_cond t orelse is_var_res_prop_binexpression_cond t
+   val is_ok = (find_term not_ok pre; false) handle HOL_ERR _ => true;
+   val _ = if (is_ok) then () else Feedback.fail();
+in
+   VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV tt
+end;
+
 
 (*
    val tt = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
@@ -1392,7 +1407,7 @@ let
 
    (*elim comment / intro constants *)
    val thm0 = (((RATOR_CONV o RAND_CONV o RAND_CONV) (K (bl_eq_fun ()))) THENC
-               VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) tt
+               VAR_RES_COND_INFERENCE___PREPARE_FOR_FRAME___CONV) tt
    val (vs, tt') = strip_forall (rhs (concl thm0))
 
    (*elim existentials in post-condition*)
@@ -1442,7 +1457,7 @@ let
 
     (*introduce constants*)
     val thm_const = CONV_RULE (RHS_CONV
-         VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) (thm0_fun())
+         VAR_RES_COND_INFERENCE___PREPARE_FOR_FRAME___CONV) (thm0_fun())
     val (vs, tt') = strip_forall (rhs (concl thm_const))
 
 
@@ -1534,7 +1549,7 @@ let
 
     (*introduce constants*)
     val thm_const = CONV_RULE (RHS_CONV
-         VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) (thm0_fun())
+         VAR_RES_COND_INFERENCE___PREPARE_FOR_FRAME___CONV) (thm0_fun())
     val (vs, tt') = strip_forall (rhs (concl thm_const))
 
 
@@ -1668,7 +1683,7 @@ let
 
     (*introduce constants*)
     val thm_const = CONV_RULE (RHS_CONV
-         VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) (thm0_fun())
+         VAR_RES_COND_INFERENCE___PREPARE_FOR_FRAME___CONV) (thm0_fun())
     val (vs, tt') = strip_forall (rhs (concl thm_const))
 
 
@@ -1951,7 +1966,7 @@ let
    (*elim comment*)
    val thm0a = p1_thm_fun ();
    val thm0  = (VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV (K thm0a)
-                THENC VAR_RES_COND_INFERENCE___ALL_CONST_INTRO___CONV) tt
+                THENC VAR_RES_COND_INFERENCE___PREPARE_FOR_FRAME___CONV) tt
    val (vs, tt') = strip_forall (rhs (concl thm0))
 
 

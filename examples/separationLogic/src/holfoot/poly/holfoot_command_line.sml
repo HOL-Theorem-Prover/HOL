@@ -1,6 +1,10 @@
 (*
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/header.sml");
 *)
+
+val _ = load "DiskThms";
+
+val build_date = Date.toString (Date.fromTimeLocal (Time.now()));
 
 fun print_help () =
 let
@@ -21,6 +25,8 @@ let
   val s =   "  -h     this help\n";
   val s = s^"  -hi    help on interactive mode\n\n";
   val _ = print s;
+  val _ = print_with_style [Bold] "Build time: ";
+  val _ = print ("\n  "^build_date^"\n\n");
 in
    ()
 end
@@ -34,10 +40,10 @@ let
   val s = s^"  2   perform next frame computation step\n";
   val s = s^"  3   simulate next minor statement (like assumptions etc.)\n";
   val s = s^"  4   perform next minor step\n"
-  val s = s^"  5   do the smallest step you can\n\n";
+  val s = s^"  5   do the smallest step possible\n\n";
   val _ = print s;
   val _ = print_with_style [Bold] "continue forward analysis\n";
-  val s =   "  s   as far as you can\n";
+  val s =   "  s   as far as possible\n";
   val s = s^"  w   till next while-loop\n";
   val s = s^"  i   till next if-then-else\n";
   val s = s^"  a   till next abstraction\n";
@@ -58,21 +64,21 @@ in
    ()
 end
 
+fun apply_step n =
+      proofManagerLib.e (xHF_STEP_TAC [generate_vcs] n)
+fun apply_solve () =
+      proofManagerLib.e (xHF_SOLVE_TAC [generate_vcs])
+fun apply_strip () = proofManagerLib.e (REPEAT STRIP_TAC)
+val apply_restart = proofManagerLib.restart
+val apply_backup = proofManagerLib.b
+fun apply_solve_till sp = proofManagerLib.e 
+       (xHF_SOLVE_TAC [generate_vcs, sp])
+val apply_restart = proofManagerLib.restart
+val apply_backup = proofManagerLib.b
+
 fun interactive_verify file =
 let
    val g = holfoot_set_goal file
-
-   fun apply_step n =
-      proofManagerLib.e (xHF_STEP_TAC [generate_vcs] n)
-   fun apply_solve () =
-      proofManagerLib.e (xHF_SOLVE_TAC [generate_vcs])
-   fun apply_strip () = proofManagerLib.e (REPEAT STRIP_TAC)
-   val apply_restart = proofManagerLib.restart
-   val apply_backup = proofManagerLib.b
-   fun apply_solve_till sp = proofManagerLib.e 
-       (xHF_SOLVE_TAC [generate_vcs, sp])
-   val apply_restart = proofManagerLib.restart
-   val apply_backup = proofManagerLib.b
    val out = Portable.stdOut_ppstream ()
 
    fun print_goal () =  let
@@ -112,7 +118,7 @@ let
         | #"3" => (apply_step 3;print_goal())
         | #"4" => (apply_step 4;print_goal())
         | #"5" => (apply_step 5;print_goal())
-        | #"s" => (apply_solve ();print_goals())
+        | #"s" => (apply_solve ();print_goal())
         | #"w" => (apply_solve_till stop_at_while;print_goal())
         | #"i" => (apply_solve_till stop_at_cond;print_goal())
         | #"a" => (apply_solve_till stop_at_abstraction;print_goal())
@@ -131,6 +137,69 @@ let
 in
    loop()
 end;
+
+
+
+fun web_interface_print_goals gL =
+   let
+      val nthmL = map (fn g => ("", mk_thm (valOf g))) (filter isSome gL);
+      val _ = DiskThms.write_stream Portable.std_out nthmL;
+      val _ = Portable.output (Portable.std_out, ("\n\n"));
+      val out = Portable.stdOut_ppstream ();
+      fun print_goal (SOME g) =
+          (Portable.output (Portable.std_out, ("*************************************\n"));
+           Portable.flush_out Portable.std_out;
+           goalStack.pp_goal out g;
+           Portable.flush_ppstream out)
+        | print_goal NONE =
+          (Portable.output (Portable.std_out, ("*SOLVED******************************\n"));
+           Portable.flush_out Portable.std_out)
+
+      val _ = map print_goal gL;
+   in
+      ()
+   end;
+
+
+
+fun holfoot_web_interface () = let
+   val _ = Feedback.set_trace "PPBackEnd use annotations" 0
+   val _ = Parse.current_backend := PPBackEnd.html_terminal;
+   val _ = Feedback.set_trace "Unicode" 1
+   val _ = Feedback.set_trace "goalstack chatting" 0
+   val args = CommandLine.arguments ();
+in
+   if length args = 1 then
+   let
+      val spec_t = parse_holfoot_file (hd args);
+      val _ = web_interface_print_goals [SOME ([], spec_t)]
+   in () end else let
+      val gL = map (fn (_,thm) => (hyp thm, concl thm)) 
+           (DiskThms.read_stream Portable.stdin);
+      val pos = valOf (Int.fromString (el 1 args))
+      val command = String.sub ((el 2 args), 0)
+
+      val (gLs, cg::gLe) = Lib.split_after pos gL;
+      val _ = set_goal cg;
+      val _ = ((case command of
+                  #"1" => (apply_step 1)
+                | #"2" => (apply_step 2)
+                | #"3" => (apply_step 3)
+                | #"4" => (apply_step 4)
+                | #"5" => (apply_step 5)
+                | #"s" => (apply_solve ())
+                | #"c" => (apply_strip ())
+                | #"w" => (apply_solve_till stop_at_while)
+                | #"i" => (apply_solve_till stop_at_cond)
+                | #"a" => (apply_solve_till stop_at_abstraction)
+                | #"h" => (apply_solve_till stop_at_hoare_triple)
+                | #"f" => (apply_solve_till stop_at_frame_calc)
+                | _ => Feedback.fail());()) handle HOL_ERR _ => ();
+      val cgL = map SOME (top_goals ()) handle HOL_ERR _ => [NONE];
+      val gL' = Lib.flatten [map SOME gLs, cgL, map SOME gLe];
+      val _ = web_interface_print_goals gL'
+   in () end
+end
 
 
 fun holfoot_run () = let

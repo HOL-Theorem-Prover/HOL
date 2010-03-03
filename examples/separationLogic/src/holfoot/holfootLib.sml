@@ -34,6 +34,7 @@ open holfoot_pp_print
 open holfootTheory 
 open bagLib bagTheory
 open separationLogicLib
+open simpLib
 
 (*
 open vars_as_resourceBaseFunctor
@@ -102,8 +103,20 @@ struct
         REWRITE_RULE [holfoot_separation_combinator_def] IS_SEPARATION_COMBINATOR___holfoot_separation_combinator];
    val LENGTH_NIL_GSYM = CONV_RULE ((QUANT_CONV o LHS_CONV) SYM_CONV) LENGTH_NIL
 
-   val predicate_simpset = (list_ss ++ stringSimps.STRING_ss ++
-      ListConv1.list_eq_simp_ss ++
+   fun is_no_proper_diseq thm = 
+   let
+      val (t1, t2) = dest_eq (dest_neg (concl thm));
+   in
+      (same_const t1 numSyntax.zero_tm) orelse
+      (same_const t2 numSyntax.zero_tm)
+   end handle HOL_ERR _ => true;
+
+
+   val predicate_simpset = simpLib.++ (
+       std_ss, simpLib.merge_ss [numSimps.ARITH_RWTS_ss, listSimps.LIST_ss,
+      (numSimps.ARITH_DP_FILTER_ss is_no_proper_diseq),
+      stringSimps.STRING_ss,
+      listLib.list_eq_simp_ss,
       simpLib.rewrites [
         LENGTH_NIL, LENGTH_NIL_GSYM,
         LIST_TO_FMAP_THM,
@@ -131,7 +144,7 @@ struct
         LENGTH_FRONT_CONS,
         LAST_DROP_THM,
         FRONT_TAKE_THM
-     ])
+     ]])
 
    val varlist_rwts = [holfoot___varlist_update_NO_VAR_THM];
 
@@ -176,7 +189,7 @@ local
    in
        if no_turn orelse turn then SOME (n, turn) else NONE
    end;
-   val BAG_IN_TRIVIAL_THM = prove (``!e:'a b. BAG_IN e (BAG_INSERT e b)``,
+   val BAG_IN_TRIVIAL_THM = prove (Term `!e:'a b. BAG_IN e (BAG_INSERT e b)`,
        REWRITE_TAC [bagTheory.BAG_IN_BAG_INSERT])
 
    val var_res_implies_unequal___trivial_unequal_1 =
@@ -672,8 +685,8 @@ let
          val (_, data) = pairSyntax.dest_pair data';
       in
          QUANT_CONV (QUANT_CONV (my_asl_exists_list_CONV data)) THENC
-         QUANT_CONV (my_asl_exists_list_CONV e) THENC
-         my_asl_exists_list_CONV e
+         (QUANT_CONV (my_asl_exists_list_CONV e)) THENC
+         (my_asl_exists_list_CONV e)
       end
    val thm4 = CONV_RULE (RAND_CONV (RATOR_CONV (RAND_CONV
               (exists_list_CONV THENC
@@ -1820,13 +1833,13 @@ fun holfoot_set_goal file =
 
 fun holfoot_set_goal_preprocess file =
    ((proofManagerLib.set_goal([], parse_holfoot_file file));
-    (e (HF_SPECIFICATION_TAC));
+    (proofManagerLib.e (HF_SPECIFICATION_TAC));
     (proofManagerLib.forget_history());
     (proofManagerLib.status()));
 
 fun holfoot_set_goal_procedures file fL =
    ((proofManagerLib.set_goal ([], parse_holfoot_file_restrict fL file));
-   (e (HF_SPECIFICATION_TAC THEN REPEAT CONJ_TAC));
+   (proofManagerLib.e (HF_SPECIFICATION_TAC THEN REPEAT CONJ_TAC));
    (proofManagerLib.forget_history());
    (proofManagerLib.status ()));
 
@@ -1996,31 +2009,16 @@ in
    MP thm_imp a_thm
 end;
 
-
-fun holfoot_interactive_verify_spec (verbose,print_err) file optL_opt tacL =
-let
-   val (thm, ok) = holfoot_verify_spec_internal verbose false (file, 
-      (if isSome optL_opt then         
-         SOME (xHF_GEN_STEP_CONSEQ_CONV (valOf optL_opt) NONE 1)
-       else NONE), tacL);
-   val _ = if ok then () else (
-      proofManagerLib.set_goal ([],(fst o dest_imp o concl) thm);());
-in
-   thm
-end;
-
 fun holfoot_interactive_verify_spec verbose print_err file optL_opt tacL =
 let
    val (thm, ok) = holfoot_verify_spec_internal verbose print_err (file, 
       (if isSome optL_opt then         
          SOME (xHF_GEN_STEP_CONSEQ_CONV (valOf optL_opt) NONE 1)
        else NONE), tacL);
-   val _ = if ok then () else (
-      proofManagerLib.set_goal ([],(fst o dest_imp o concl) thm);());
+   val _ = if ok then () else (holfoot_set_remaining_goal thm; ())
 in
    thm
 end;
-
 
 fun holfoot_verify_spec file optL =
   holfoot_interactive_verify_spec true false file (SOME optL) []

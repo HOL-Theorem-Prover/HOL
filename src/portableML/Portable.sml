@@ -191,6 +191,7 @@ fun norm_quote [] = []
 
 (* suck in implementation specific stuff *)
 open MLSYSPortable
+structure HOLSusp = MLSYSPortable.HOLSusp
 
 (* rebinding the exception seems to be necessary in Moscow ML 2.01 *)
 exception Interrupt = MLSYSPortable.Interrupt

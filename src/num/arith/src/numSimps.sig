@@ -7,6 +7,7 @@ sig
      val REDUCE_ss          : simpLib.ssfrag
      val SUC_FILTER_ss      : simpLib.ssfrag
      val ARITH_DP_ss        : simpLib.ssfrag
+     val ARITH_DP_FILTER_ss : (thm -> bool) -> simpLib.ssfrag
      val ARITH_RWTS_ss      : simpLib.ssfrag
      val ARITH_AC_ss        : simpLib.ssfrag
      val CTXT_ARITH         : ctxt -> conv

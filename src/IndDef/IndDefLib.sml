@@ -100,30 +100,11 @@ end
 fun add_mono_thm th = the_monoset := (mono_name th, th) :: (!the_monoset)
 
 (* making it exportable *)
-open LoadableThyData
-val (mk,dest) = ThmSetData.new "mono"
-fun onload thyname =
-    case segment_data {thy = thyname, thydataty = "mono"} of
-      NONE => ()
-    | SOME d => let
-        val thms = valOf (dest d)
-      in
-        the_monoset := map (fn (_,th) => (mono_name th, th)) thms @
-                       !the_monoset
-      end
-val _ = register_onload onload
-val _ = List.app onload (ancestry "-")
-
-fun export_mono s = let
-  val (data, thms) = mk [s]
-  val th = #2 (hd thms)
-in
-  add_mono_thm th;
-  write_data_update {thydataty = "mono", data = data}
-end
+val {export = export_mono, dest, ...} =
+    ThmSetData.new_exporter "mono" (app add_mono_thm)
 
 fun thy_monos thyname =
-    case segment_data {thy = thyname, thydataty = "mono"} of
+    case LoadableThyData.segment_data {thy = thyname, thydataty = "mono"} of
       NONE => []
     | SOME d => map #2 (valOf (dest d))
 

@@ -65,4 +65,9 @@ val clean : prekind -> Kind.kind
 val toKind : prekind -> Kind.kind
 val chase : prekind -> prekind
 val pp_prekind : ppstream -> prekind -> unit
+
+val termantiq_constructors : (prekind,Term.term) parse_kind.kindconstructors
+val typeantiq_constructors : (prekind,Type.hol_type) parse_kind.kindconstructors
+val kindantiq_constructors : (prekind,Kind.kind) parse_kind.kindconstructors
+
 end

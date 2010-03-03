@@ -352,8 +352,7 @@ local val ty_tyV = Type.type_vars
                                          k (union q (ty_tyV Ty)))
         | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 =>
                                      tyV Bvar (fn q2 => k (union q2 q1)))
-        | tyV (TAbs(Btvar,Body)) k = tyV Body (fn bq =>
-                                         k (set_diff bq [mk_var_type Btvar]))
+        | tyV (TAbs(Btvar,Body)) k = tyV Body k
         | tyV (t as Clos _) k      = tyV (push_clos t) k
       fun tyVs (t::ts) k           = tyV t (fn q1 =>
                                      tyVs ts (fn q2 => k (union q2 q1)))
@@ -1586,7 +1585,7 @@ fun break_abs(Abs(_,Body)) = Body
   | break_abs _ = raise ERR "break_abs" "not an abstraction";
 
 fun break_tyabs(TAbs(_,Body)) = Body
-  | break_tyabs(t as Clos _) = break_abs (push_clos t)
+  | break_tyabs(t as Clos _) = break_tyabs (push_clos t)
   | break_tyabs _ = raise ERR "break_tyabs" "not a type abstraction";
 
 

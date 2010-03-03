@@ -1,4 +1,4 @@
-open simpLib Parse boolLib HolKernel
+open simpLib Parse HolKernel boolLib
 
 fun die s = (print s; Process.exit Process.failure)
 

@@ -55,6 +55,15 @@ val SUB_cvpr = Store_thm(
    (cvpr ([M/v]N) ([M/v]P) = LAM z (VAR z @@ [M/v]N @@ [M/v]P))`
      by SRW_TAC [][cvpr_fresh] THEN
   SRW_TAC [][]);
+val tpm_cvpr = Store_thm(
+  "tpm_cvpr",
+  ``tpm pi (cvpr x y) = cvpr (tpm pi x) (tpm pi y)``,
+  SRW_TAC [][cvpr_def, LET_THM] THEN
+  NTAC 2 (NEW_ELIM_TAC THEN SRW_TAC [][]) THEN
+  SRW_TAC [CONJ_ss][LAM_eq_thm] THEN
+  Cases_on `lswapstr pi v = v'` THEN SRW_TAC [][] THEN
+  ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
+  MATCH_MP_TAC tpm_fresh THEN SRW_TAC [][]);
 
 val cpair_def = Define`
   cpair = LAM "x" (LAM "y" (LAM "f" (VAR "f" @@ VAR "x" @@ VAR "y")))
@@ -119,24 +128,28 @@ val cfst_pair = store_thm(
   ``cfst @@ (cpair @@ M @@ N) -n->* M``,
   SRW_TAC [][cfst_def, cpair_def] THEN FRESH_TAC THEN
   SRW_TAC [NORMSTAR_ss][tpm_fresh, cB_behaviour]);
+val _ = export_betarwt "cfst_pair"
 
 val csnd_pair = store_thm(
   "csnd_pair",
   ``csnd @@ (cpair @@ M @@ N) -n->* N``,
   SRW_TAC [][csnd_def, cpair_def] THEN FRESH_TAC THEN
   SRW_TAC [NORMSTAR_ss][tpm_fresh, cB_behaviour])
+val _ = export_betarwt "csnd_pair"
 
 val cfst_cvpr = store_thm(
   "cfst_cvpr",
   ``cfst @@ cvpr M N -n->* M``,
   SRW_TAC [][cfst_def, cvpr_def, LET_THM] THEN NEW_ELIM_TAC THEN
   SRW_TAC [NORMSTAR_ss][cB_behaviour]);
+val _ = export_betarwt "cfst_cvpr"
 
 val csnd_cvpr = store_thm(
   "csnd_cvpr",
   ``csnd @@ cvpr M N -n->* N``,
   SRW_TAC [][csnd_def, cvpr_def, LET_THM] THEN NEW_ELIM_TAC THEN
   SRW_TAC [NORMSTAR_ss][cB_behaviour]);
+val _ = export_betarwt "csnd_cvpr"
 
 val _ = export_theory()
 

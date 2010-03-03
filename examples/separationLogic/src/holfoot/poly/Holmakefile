@@ -1,0 +1,19 @@
+INCLUDES=..
+
+EXTRA_CLEANS = holfoot.o holfoot holfoot-web.o holfoot-web
+
+all: holfoot holfoot-web
+
+holfoot.o: holfoot.state holfoot_command_line.sml
+	hol < build-cl.hol
+
+holfoot.state: ../holfootLib.uo ../holfootLib.ui ../holfootTheory.ui ../AssembleHolfootParser.uo ../AssembleHolfootParser.ui
+	hol < build-state.hol
+
+holfoot: holfoot.o 
+	cc -O4 -o holfoot holfoot.o -static -L/usr/local/lib -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread
+
+holfoot-web: holfoot-web.o
+	cc -O4 -o holfoot-web holfoot-web.o -static -L/usr/local/lib -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread
+
+force-tools: holfoot holfoot-web

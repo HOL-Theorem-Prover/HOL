@@ -2,6 +2,8 @@ signature holfoot_pp_print =
 sig
   include Abbrev
 
+  (* trace "use holfoot_pp" for turning pretty printing on and off *);
+
   val holfoot_pretty_printer_block_indent : int ref
 
   val temp_add_holfoot_pp     : unit -> unit  

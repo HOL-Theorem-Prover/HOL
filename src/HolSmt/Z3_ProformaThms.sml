@@ -18,8 +18,8 @@ local
   open HolSmtTheory
 in
   val def_axiom_thms = thm_net_from_list
-    [th001, th002, th003, th004, th005, th006, th007, th008, th009, th010, th011, th012,
-     th013, th014, th015, th016]
+    [th001, th002, th003, th003a, th004, th005, th006, th007, th008, th009, th010, th011,
+     th012, th013, th014, th015, th016]
 
   val rewrite_thms = thm_net_from_list
     [th017, th018, th019, th020, th021, th022, th023, th024, th025, th026, th027, th028,

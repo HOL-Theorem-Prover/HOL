@@ -20,6 +20,9 @@ or
 
 and type Ctrl-j.
 
+Then while viewing this file,
+type Meta-H H to start a new Moscow ML session, and execute the following:
+
 For Moscow ML:
 
 quotation := true;
@@ -28,32 +31,42 @@ loadPath := "/Users/palantir" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 quotation := true;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/sigobj" :: !loadPath;
 loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/bool" :: !loadPath;
-loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/marker" :: !loadPath;
-loadPath := "/Users/pvhomei" ^ "/hol/hol-omega/src/HolSat" :: !loadPath;
 
-app load ["Kind","Type","Term","Thm","Theory","Globals","HolKernel","Parse","Unicode"];
+load "PP";
+structure MosmlPP = PP;
+app load ["Kind","Type","Term","Thm","Theory","Globals","HolKernel","Parse","Unicode","Hol_pp"];
 (*app load ["boolTheory","boolSyntax","Drule","Abbrev"];*)
 (*app load ["Globals","Drule","boolTheory","Tactical","Tactic","Rewrite"];*)
 
-quietdec := true;
----------------------
-For PolyML:
+fun emacs_hol_mode_loaded () =
+   ["HOL_Interactive", "Meta",
+  "Array", "ArraySlice", "BinIO", "BinPrimIO", "Bool", "Byte",
+  "CharArray", "CharArraySlice", "Char", "CharVector",
+  "CharVectorSlice", "CommandLine.name", "Date", "General", "IEEEReal",
+  "Int", "IO", "LargeInt", "LargeReal", "LargeWord", "List", "ListPair",
+  "Math", "Option", "OS", "Position", "Real", "StringCvt", "String",
+  "Substring", "TextIO", "TextPrimIO", "Text", "Timer", "Time",
+  "VectorSlice", "Vector", "Word8Array", "Word8ArraySlice",
+  "Word8Vector", "Word8VectorSlice", "Word8", "Word"] @ (Meta.loaded());
 
+structure HOL_Interactive : sig
+  val toggle_quietdec : unit -> bool
+  val amquiet : unit -> bool
+end =
+struct
+  fun toggle_quietdec () = (Meta.quietdec := not (!Meta.quietdec) ;
+                            !Meta.quietdec)
+  fun amquiet () = !Meta.quietdec
+end;
 
 *)
 
 open HolKernel Parse Unicode;
 
-(*
-quietdec := false;
-*)
-
 val _ = new_theory "bool";
 
 (*
 local
-  fun with_pp ppfn pps x =
-      Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
   fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
   fun gprint g pps t = let
     val tyg = Parse.type_grammar()
@@ -64,17 +77,57 @@ local
   fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
   fun timepp pps t = PP.add_string pps (Time.toString t ^ "s")
   fun locpp pps l = PP.add_string pps (locn.toShortString l)
-
+  structure MPP = MosmlPP
 in
-  val _ = installPP (with_pp (Kind.pp_qkind))
-  val _ = installPP (with_pp Pretype.pp_pretype)
-  val _ = installPP (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
-  val _ = installPP (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
-  val _ = installPP (with_pp Hol_pp.pp_thm)
-  val _ = installPP (with_pp Hol_pp.pp_theory)
-  val _ = installPP (with_pp kind_grammar.prettyprint_grammar)
-  val _ = installPP (with_pp type_grammar.prettyprint_grammar)
-  val _ = installPP (with_pp ppg)
+  fun mosmlpp ppfn pps x = let
+    val slist = ref ([] : string list)
+    fun output_slist () = (app (MPP.add_string pps) (List.rev (!slist));
+                           slist := [])
+    fun flush ()= output_slist()
+    fun consume_string s = let
+      open Substring
+      val (pfx,sfx) = splitl (fn c => c <> #"\n") (full s)
+    in
+      if size sfx = 0 then slist := s :: !slist
+      else
+        (output_slist();
+         MPP.add_newline pps;
+         if size sfx > 1 then consume_string (string (triml 1 sfx))
+         else ())
+    end
+    val consumer = {consumer = consume_string,
+                    linewidth = !Globals.linewidth,
+                    flush = flush}
+    val newpps = HOLPP.mk_ppstream consumer
+  in
+    MPP.begin_block pps MPP.INCONSISTENT 0;
+    HOLPP.begin_block newpps HOLPP.INCONSISTENT 0;
+    ppfn newpps x;
+    HOLPP.end_block newpps;
+    HOLPP.flush_ppstream newpps;
+    MPP.end_block pps
+  end
+  val _ = installPP (mosmlpp Kind.pp_qkind)
+  val _ = installPP (mosmlpp Pretype.pp_pretype)
+  val _ = installPP (mosmlpp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
+  val _ = installPP (mosmlpp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
+  val _ = installPP (mosmlpp Hol_pp.pp_thm)
+  val _ = installPP (mosmlpp Hol_pp.pp_theory)
+  val _ = installPP (mosmlpp kind_grammar.prettyprint_grammar)
+  val _ = installPP (mosmlpp type_grammar.prettyprint_grammar)
+  val _ = installPP (mosmlpp ppg)
+(*
+  val _ = installPP (mosmlpp proofManagerLib.pp_proof)
+  val _ = installPP (mosmlpp proofManagerLib.pp_proofs)
+  val _ = installPP (mosmlpp Rewrite.pp_rewrites)
+  val _ = installPP (mosmlpp TypeBasePure.pp_tyinfo)
+  val _ = installPP (mosmlpp DefnBase.pp_defn)
+  val _ = installPP (mosmlpp Arbnum.pp_num)
+  val _ = installPP (mosmlpp Arbint.pp_int)
+  val _ = installPP (mosmlpp Arbrat.pp_rat)
+  val _ = installPP (mosmlpp timepp)
+  val _ = installPP (mosmlpp locpp)
+*)
 end;
 *)
 
@@ -121,7 +174,7 @@ val EXISTS_DEF =
    ("EXISTS_DEF",     Term `? = \P:'a->bool. P ($@ P)`);
 
 val _ = (add_binder("?", std_binder_precedence); add_const "?");
-val _ = unicode_version {u = UChar.exists, tmnm = "?"}
+val _ = unicode_version {u = UChar.exists, tmnm = "?"};
 
 val AND_DEF =
  Definition.new_definition
@@ -135,7 +188,7 @@ val OR_DEF =
    ("OR_DEF",         Term `\/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t`)
 
 val _ = (add_infix ("\\/", 300, RIGHT); add_const "\\/");
-val _ = unicode_version {u = UChar.disj, tmnm = "\\/"}
+val _ = unicode_version {u = UChar.disj, tmnm = "\\/"};
 
 val F_DEF =
  Definition.new_definition
@@ -156,7 +209,7 @@ Definition.new_definition
 
 val _ = (add_binder ("?!", std_binder_precedence); add_const "?!");
 
-val _ = unicode_version { u = UChar.exists ^ "!", tmnm = "?!"}
+val _ = unicode_version { u = UChar.exists ^ "!", tmnm = "?!"};
 
 (* HOL-Omega type universal and existential quantification: *)
 

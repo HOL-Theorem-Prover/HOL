@@ -116,5 +116,5 @@ Invalid tactic
 Doing a step in an interactive goal-directed proof.
 
 \SEEALSO
-proofManagerLib.b, proofManagerLib.backup, proofManagerLib.e, proofManagerLib.expandf, proofManagerLib.g, proofManagerLib.set_goal, proofManagerLib.p, proofManagerLib.r, proofManagerLib.rotate, proofManagerLib.top_goal, proofManagerLib.top_thm, Tactical.VALID.
+proofManagerLib.e, proofManagerLib.set_goal, proofManagerLib.set_goaltree, proofManagerLib.set_goalstack, proofManagerLib.new_goaltree, proofManagerLib.add, proofManagerLib.drop, proofManagerLib.dropn, proofManagerLib.restart, proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save, proofManagerLib.set_backup, proofManagerLib.forget_history, proofManagerLib.expandf, proofManagerLib.expandv, proofManagerLib.p, proofManagerLib.initial_goal, proofManagerLib.top_thm, proofManagerLib.top_goal, proofManagerLib.top_goals, proofManagerLib.status, proofManagerLib.rotate, proofManagerLib.rotate_proofs, Tactical.VALID.
 \ENDDOC

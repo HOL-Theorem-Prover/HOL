@@ -257,8 +257,7 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
           in  TY_COMB th Rand
           end
    | TYLAMB(Bvar,Body) =>
-          let val _ = trace(4,TEXT "no alpha conversion")
-              val Bth = depther ([],equality) Body
+          let val Bth = depther ([],equality) Body
           in TY_ABS Bvar Bth
           end
    | _ => failwith "unchanged";

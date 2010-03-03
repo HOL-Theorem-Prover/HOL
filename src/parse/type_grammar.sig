@@ -38,6 +38,7 @@ TApp   ::= Leaf | Tuple Leaf
   type special_info   = {lambda : string list,
                          forall : string list}
   val empty_grammar    : grammar
+  val min_grammar      : grammar
   val rules            : grammar -> (int * grammar_rule) list
   val abbreviations    : grammar -> (string,type_structure) Binarymap.dict
   val specials         : grammar -> special_info

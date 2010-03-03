@@ -17,20 +17,6 @@ val PP_ERR = mk_HOL_ERR "type_pp";
 
 val ERR = mk_HOL_ERR "type_pp" "pp_type";
 
-(*---------------------------------------------------------------------------
-       Kind antiquotations (required in type parser)
- ---------------------------------------------------------------------------*)
-
-fun kd_antiq kd = mk_var_type("'kd_antiq",kd,0)
-
-fun dest_kd_antiq ty =
-  case Lib.with_exn dest_var_type ty (PP_ERR "dest_kd_antiq" "not a kind antiquotation")
-   of ("'kd_antiq",Kd,0) => Kd
-    |  _ => raise PP_ERR "dest_kd_antiq" "not a kind antiquotation";
-
-val is_kd_antiq = Lib.can dest_kd_antiq
-
-
 val pp_num_types = ref true
 val _ = register_btrace("pp_num_types", pp_num_types)
 

@@ -87,28 +87,6 @@ fun apply_absargs f abs =
        Type antiquotations (required in term parser)
  ---------------------------------------------------------------------------*)
 
-fun ty_antiq ty = let val kd = kind_of ty
-                      val a = mk_var_type("'ty_antiq", kd ==> typ, 0)
-                      val ty' = mk_app_type(a, ty)
-                  in mk_var("ty_antiq",ty')
-                  end
-
-fun dest_ty_antiq tm =
-  case with_exn dest_var tm (ERR "dest_ty_antiq" "not a type antiquotation")
-   of ("ty_antiq",ty) =>
-        let val (a,ty') = dest_app_type ty
-        in case with_exn dest_var_type a (ERR "dest_ty_antiq" "not a type antiquotation")
-            of ("'ty_antiq",_,0) => ty'
-             | _ => raise ERR "dest_ty_antiq" "not a type antiquotation"
-        end
-    |  _ => raise ERR "dest_ty_antiq" "not a type antiquotation";
-
-val is_ty_antiq = Lib.can dest_ty_antiq
-
-val kd_ty_antiq = ty_antiq o type_pp.kd_antiq;
-val dest_kd_ty_antiq = type_pp.dest_kd_antiq o dest_ty_antiq;
-val is_kd_ty_antiq = Lib.can dest_kd_ty_antiq
-
 val casesplit_munger = ref (NONE: (term -> term * (term * term)list) option)
 fun init_casesplit_munger f =
     case casesplit_munger of
@@ -1624,7 +1602,7 @@ fun pp_term (G : grammar) TyG backend = let
     end
 
     fun print_ty_antiq tm = let
-      val ty = dest_ty_antiq tm
+      val ty = parse_type.dest_ty_antiq tm
     in
       begin_block CONSISTENT 2;
       add_string "(ty_antiq(";
@@ -1636,7 +1614,8 @@ fun pp_term (G : grammar) TyG backend = let
       end_block()
     end
 
-    val _ = if is_ty_antiq tm then (print_ty_antiq tm; raise SimpleExit)
+    val _ = if parse_type.is_ty_antiq tm then
+              (print_ty_antiq tm; raise SimpleExit)
             else ()
 
 

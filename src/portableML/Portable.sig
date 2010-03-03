@@ -79,4 +79,10 @@ sig
 
   val catch_SIGINT : unit -> unit
   val md5sum : string -> string
+
+  structure HOLSusp : sig
+    type 'a susp
+    val delay : (unit -> 'a) -> 'a susp
+    val force : 'a susp -> 'a
+  end
 end

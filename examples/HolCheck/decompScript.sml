@@ -66,6 +66,8 @@ THEN RW_TAC std_ss ([IMF_def,MU_SUB_def,NNF_def,RVNEG_def,AP_EXT_def]@(tsimps ``
  THEN METIS_TAC [APEXT_RVNEG,IMF_INV_RVNEG]
 ]))
 
+val pair_rwts = BasicProvers.thy_ssfrag "pair"
+
 (* gen ap extension proof *)
 (* basic idea is that if f holds in some model then it should hold in the same model with extra ap's thrown in,
    where the new ap's may possibly introduce new state vars*)
@@ -128,7 +130,7 @@ val AP_EXT_THM = store_thm(
      REPEAT STRIP_TAC
      THEN RES_TAC
      THEN Q.EXISTS_TAC `FST q`
-     THEN METIS_TAC ([wfKS_def,IN_UNIV]@(get_ss_rewrs pairTheory.pair_rwts))
+     THEN METIS_TAC ([wfKS_def,IN_UNIV]@(get_ss_rewrs pair_rwts))
     ], (* <> *)
 
     RW_TAC std_ss [STATES_def,SET_SPEC,IN_UNIV,AP_EXT_def]
@@ -138,11 +140,11 @@ val AP_EXT_THM = store_thm(
     THEN EQ_TAC THENL [
     REPEAT STRIP_TAC THENL [
      FULL_SIMP_TAC std_ss [wfKS_def,IN_UNIV],
-     RES_TAC THEN METIS_TAC (get_ss_rewrs pairTheory.pair_rwts)
+     RES_TAC THEN METIS_TAC (get_ss_rewrs pair_rwts)
      ],
     REPEAT STRIP_TAC THENL [
      FULL_SIMP_TAC std_ss [wfKS_def,IN_UNIV],
-     RES_TAC THEN  METIS_TAC (get_ss_rewrs pairTheory.pair_rwts)
+     RES_TAC THEN  METIS_TAC (get_ss_rewrs pair_rwts)
      ]
     ],(* [] *)
 

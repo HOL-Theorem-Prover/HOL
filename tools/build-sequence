@@ -30,6 +30,7 @@
 # is [mosml].)  If combining this with exclamation marks, the [system]
 # annotation should come first, i.e., [mosml]!!foo, not !![mosml]foo.
 
+
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly
@@ -91,36 +92,36 @@ src/quotient/src
 !src/quotient/examples
 src/finite_map
 !examples/ind_def
+!!examples/decidable_separationLogic/src/
 src/bag
 src/n-bit
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
 src/ring/src
 src/integer
+src/llist
+src/path
 !src/integer/testing
 src/patricia
 src/emit
-# src/emit/theories
+!!examples/ARM/v4
 !examples/ARM/v7
-!!examples/machine-code/garbage-collectors
 src/hol88
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
+src/rational
 src/real
+!!examples/separationLogic/src/
 src/HolSmt
 !examples/misc
-src/prob
-!examples/muddy/muddyC
-!examples/muddy
-!examples/HolBdd
-!!examples/HolCheck
-src/temporal/src
-src/temporal/smv.2.4.3
-src/rational
-src/llist
+# these examples require Muddy, which is MoscowML specific
+[mosml]!examples/muddy/muddyC
+[mosml]!examples/muddy
+[mosml]!examples/HolBdd
+[mosml]!!examples/HolCheck
 src/datatype/inftree
-src/path
 !examples/HolOmega
+!examples/HolOmega/interim
 !examples/lambda/basics
 !examples/lambda/barendregt
 !examples/computability
@@ -129,6 +130,28 @@ src/path
 !!examples/computability/lambda
 src/Boolify/src
 src/float
+src/prob
+src/temporal/src
+src/temporal/smv.2.4.3
+
+#
+# Examples only from here on
+#
 !!examples/miller/ho_prover
 !!examples/miller/miller
 !examples/ordinal
+
+# Crypto examples
+!!examples/Crypto/AES
+!!examples/Crypto/IDEA
+!!examples/Crypto/MARS
+!!examples/Crypto/RC6
+# the Crypto/Serpent/Reference example causes Poly/ML to crash
+[mosml]!!examples/Crypto/Serpent/Reference
+!!examples/Crypto/Serpent/Bitslice
+!!examples/Crypto/SHA-1
+!!examples/Crypto/TEA
+!!examples/Crypto/TWOFISH
+
+[poly]!!examples/machine-code/garbage-collectors
+[poly]!!examples/machine-code/lisp

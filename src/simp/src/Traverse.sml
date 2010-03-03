@@ -42,6 +42,10 @@ datatype reducer =
               };
 fun dest_reducer (REDUCER x) = x
 
+fun addctxt ths (REDUCER {name,initial,addcontext,apply}) =
+    REDUCER{name = name, initial = addcontext(initial,ths), apply = apply,
+            addcontext = addcontext}
+
 
 (* ---------------------------------------------------------------------
  * Traversal states
@@ -244,7 +248,7 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
     val descend = FIRSTCQC_CONV (mapfilter apply_congproc congprocs)
     val weaken = FIRST_CONV (mapfilter apply_congproc weakenprocs)
     val op IFCQC = GEN_IFCQC relation
-    val op THENCQC = GEN_THENCQC relation
+    val op THENCQC = GEN_THENCQC relation : (term -> thm) * (term -> thm) -> term -> thm
     val op THENQC = GEN_THENQC relation
     val REPEATQC = GEN_REPEATQC relation
 

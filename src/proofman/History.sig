@@ -11,5 +11,7 @@ sig
   val remove_past  : 'a history -> 'a history
   val project      : ('a -> 'b) -> 'a history -> 'b
   val undo         : 'a history -> 'a history
+  val restore      : 'a history -> 'a history
+  val save         : 'a history -> 'a history
 
 end

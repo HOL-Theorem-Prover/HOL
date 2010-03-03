@@ -66,7 +66,7 @@ sig
          apply: {solver:term list -> term -> thm,
                  context: context,
                  stack:term list,
-     relation : Travrules.preorder} -> conv
+                 relation : Travrules.preorder} -> conv
        }
 
   val dest_reducer : reducer ->
@@ -77,6 +77,8 @@ sig
                  context: context,
                  stack:term list,
          relation : Travrules.preorder} -> conv}
+
+  val addctxt : thm list -> reducer -> reducer
 
  (* ----------------------------------------------------------------------
      TRAVERSE : {rewriters: reducer list,

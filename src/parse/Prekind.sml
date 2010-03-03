@@ -354,4 +354,52 @@ fun pp_prekind pps kd =
    end_block()
  end;
 
+
+fun remove_kd_aq t =
+  if parse_kind.is_kd_antiq t then parse_kind.dest_kd_antiq t
+  else raise mk_HOL_ERR "Parse" "kind parser" "antiquotation is not of a kind"
+
+fun remove_kd_ty_aq t =
+  if parse_kind.is_kd_ty_antiq t then parse_kind.dest_kd_ty_antiq t
+  else raise mk_HOL_ERR "Parse" "kind parser" "antiquotation is not of a kind"
+
+(* "qkindop" refers to "qualified" kind operator, i.e., qualified by theory name. *)
+
+fun kindop_to_qkindop ((kindop,locn), args) =
+  if kindop = "ty" then
+    if null args then PK(Typekind,locn)
+    else raise mk_HOL_ERRloc "Parse" "kind parser" locn
+                             (kindop ^ " is given arguments")
+  else if kindop = "=>" then
+    if length args = 2 then PK(Arrowkind(hd args, hd(tl args)), locn)
+    else raise mk_HOL_ERRloc "Parse" "kind parser" locn
+                             (kindop ^ " is not given exactly two arguments")
+  else raise mk_HOL_ERRloc "Parse" "kind parser" locn
+                           (kindop ^ " not a known kind operator")
+
+fun do_qkindop {Thy:string, Kindop, Locn:locn.locn, Args} =
+    kindop_to_qkindop ((Kindop,Locn), Args)
+
+fun arity ((s, locn), n) = mk_arity n
+
+fun mk_basevarkd(s,locn) = PK(Varkind s, locn)
+
+(* val kind_p0_rec *)
+val termantiq_constructors =
+    {varkind = mk_basevarkd, qkindop = do_qkindop,
+     kindop = kindop_to_qkindop, arity = arity,
+     antiq = fn x => fromKind (remove_kd_ty_aq x)}
+
+(* kind_p1_rec *)
+val typeantiq_constructors =
+    {varkind = mk_basevarkd, qkindop = do_qkindop,
+     kindop = kindop_to_qkindop, arity = arity,
+     antiq = fn x => fromKind (remove_kd_aq x)}
+
+(* kind_p2_rec *)
+val kindantiq_constructors =
+    {varkind = mk_basevarkd, qkindop = do_qkindop,
+     kindop = kindop_to_qkindop, arity = arity,
+     antiq = fromKind}
+
 end;

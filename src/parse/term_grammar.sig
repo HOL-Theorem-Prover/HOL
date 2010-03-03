@@ -84,6 +84,7 @@ sig
   type grammar
 
   val stdhol         : grammar
+  val min_grammar    : grammar
   val merge_grammars : grammar * grammar -> grammar
   val fupdate_overload_info :
     (overload_info -> overload_info) -> grammar -> grammar
@@ -93,8 +94,6 @@ sig
 
   (* User code additions *)
   (* Users can add special-purpose printers and parsers to grammars *)
-  (* The key for printers specifies a TYPE, not a term; the user's
-     printer will be called onto print out all terms of that type *)
   type term = Term.term
   type userprinter = (type_grammar.grammar * grammar) term_pp_types.userprinter
   val add_user_printer :
@@ -237,5 +236,8 @@ sig
 
   val prettyprint_grammar : (grammar -> ppstream -> term -> unit) ->
                             ppstream -> grammar -> unit
+
+  val grule_reader : grammar_rule Coding.reader
+  val grule_encode : grammar_rule -> string
 
 end

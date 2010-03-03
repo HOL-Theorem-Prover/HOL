@@ -1,14 +1,33 @@
 structure parse_type :> parse_type =
 struct
 
-open type_tokens type_grammar HOLgrammars
+open type_tokens type_grammar HOLgrammars Feedback
 
 open qbuf
 
+type term = Term.term
+
 exception InternalFailure of locn.locn
+
+type ('a,'b) tyconstructors =
+     {vartype : (string * Prekind.prekind * Prerank.prerank) locn.located -> 'a,
+      tyop : (string locn.located * 'a list) -> 'a,
+      qtyop : {Thy:string, Tyop:string, Locn:locn.locn, Args: 'a list} -> 'a,
+      antiq : 'b -> 'a,
+      kindcast : {Ty:'a, Kind:Prekind.prekind, Locn:locn.locn} -> 'a,
+      rankcast : {Ty:'a, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
+      tycon : {Thy:string, Tyop:string, Kind:Prekind.prekind, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
+      tyapp  : 'a * 'a -> 'a,
+      tyuniv : 'a * 'a -> 'a,
+      tyabs  : 'a * 'a -> 'a
+     }
 
 val ERR = Feedback.mk_HOL_ERR "Parse" "parse_type"
 val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_type"
+
+val ty_antiq = parse_kind.ty_antiq
+val dest_ty_antiq = parse_kind.dest_ty_antiq
+val is_ty_antiq = parse_kind.is_ty_antiq
 
 val debug = ref 0
 val _ = Feedback.register_trace("debug_parse_type", debug, 1)
@@ -29,16 +48,15 @@ fun parse_type (tyfns :
      tycon  : {Thy:string, Tyop:string, Kind:Prekind.prekind, Rank:Prerank.prerank, Locn:locn.locn} -> 'a,
      tyapp  : ('a * 'a) -> 'a,
      tyuniv : ('a * 'a) -> 'a,
-     tyabs  : ('a * 'a) -> 'a,
-     kindparser : 'b qbuf.qbuf -> Prekind.prekind})
+     tyabs  : ('a * 'a) -> 'a})
+               (kindparser : 'b qbuf.qbuf -> Prekind.prekind)
                allow_unknown_suffixes G = let
   val G = rules G and abbrevs = abbreviations G and specials = specials G
   val {lambda = lambda, forall = forall} = specials
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop,
        kindcast, rankcast,
        tycon = pConType,
-       tyapp = pAppType, tyuniv = pUnivType, tyabs = pAbstType,
-       kindparser} = tyfns
+       tyapp = pAppType, tyuniv = pUnivType, tyabs = pAbstType} = tyfns
   fun structure_num_args st =
     let val max = Int.max
         fun nargs (PARAM (n,kd,rk)) = n + 1

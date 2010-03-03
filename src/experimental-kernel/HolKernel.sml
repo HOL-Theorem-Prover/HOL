@@ -12,6 +12,8 @@ infixr ==>;  infixr -->;  infix |->;
 
 val ERR = mk_HOL_ERR "HolKernel";
 
+val kernelid = "expknl"
+
 (*---------------------------------------------------------------------------
        Type antiquotations (required in term parser)
  ---------------------------------------------------------------------------*)

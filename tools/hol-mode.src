@@ -632,6 +632,16 @@ file to \"use\" first."
   (interactive)
   (send-raw-string-to-hol "proofManagerLib.b()" hol-echo-commands-p t))
 
+(defun hol-user-backup ()
+  "Perform a HOL backup to a user-defined save-point."
+  (interactive)
+  (send-raw-string-to-hol "proofManagerLib.restore()" hol-echo-commands-p t))
+
+(defun hol-user-save-backup ()
+  "Saves the current status of the proof for later backups to this point."
+  (interactive)
+  (send-raw-string-to-hol "proofManagerLib.save()" hol-echo-commands-p t))
+
 (defun hol-print-goal ()
   "Print the current HOL goal."
   (interactive)
@@ -1036,6 +1046,17 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   (send-raw-string-to-hol (format "DB.print_find \"%s\"" tm)
                           hol-echo-commands-p t))
 
+(defun hol-db-check (ty)
+  "Does a sanity check on the current theory."
+  (interactive "sTheory name: ")
+  (send-raw-string-to-hol (format "Sanity.sanity_check_theory \"%s\"" ty)
+                          hol-echo-commands-p t))
+
+(defun hol-db-check-current ()
+  "Does a sanity check on the current theory."
+  (interactive)
+  (send-raw-string-to-hol "Sanity.sanity_check()"
+                          hol-echo-commands-p t))
 
 (defun hol-drop-all-goals ()
   "Drops all HOL goals from the current proofs object."
@@ -1514,6 +1535,8 @@ already loaded.)"
 (define-key hol-map "\M-s" 'hol-subgoal-tactic)
 (define-key hol-map "\M-v" 'hol-scroll-down)
 (define-key hol-map "b"    'hol-backup)
+(define-key hol-map "B"    'hol-user-backup)
+(define-key hol-map "S"    'hol-user-save-backup)
 (define-key hol-map "d"    'hol-drop-goal)
 (define-key hol-map "D"    'hol-drop-all-goals)
 (define-key hol-map "e"    'copy-region-as-hol-tactic)
@@ -1538,6 +1561,7 @@ already loaded.)"
 (define-key hol-map "i"    'hol-type-info)
 (define-key hol-map "s"    'interactive-send-string-to-hol)
 (define-key hol-map "u"    'hol-use-file)
+(define-key hol-map "c"    'hol-db-check-current)
 (define-key hol-map "*"    'hol-template-comment-star)
 (define-key hol-map "-"    'hol-template-comment-minus)
 (define-key hol-map "="    'hol-template-comment-equal)
@@ -1588,6 +1612,15 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-misc check-names]
    '("Check names in store_thm, ..." . hol-check-statement-eq-string))
+
+(define-key global-map [menu-bar hol-menu hol-misc sep4]
+   '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-misc check-theory-current]
+   '("Sanity check current theory" . hol-db-check-current))
+
+(define-key global-map [menu-bar hol-menu hol-misc check-theory]
+   '("Sanity check theory" . hol-db-check))
 
 (define-key global-map [menu-bar hol-menu hol-misc sep3]
    '(menu-item "--"))
@@ -1799,6 +1832,12 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-goalstack rotate]
    '("Rotate" . hol-rotate))
 
+(define-key global-map [menu-bar hol-menu hol-goalstack back-up-user]
+   '("Restore" . hol-user-backup))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack back-up-save-user]
+   '("Save" . hol-user-save-backup))
+
 (define-key global-map [menu-bar hol-menu hol-goalstack back-up]
    '("Back up" . hol-backup))
 
@@ -1869,7 +1908,6 @@ already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-process hol-start]
    '("Start HOL" . hol))
-
 
 
 

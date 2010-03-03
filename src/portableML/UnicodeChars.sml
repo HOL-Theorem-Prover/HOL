@@ -60,6 +60,20 @@ val longdoublerightarrow = U 0x27F9
    good for implication if available - actually seems OK also on
    Leopard's Courier font, which is supposedly fixed-width *)
 
+val mapsto               = U 0x21A6
+val mapsfrom             = U 0x21A4
+val longmapsto           = U 0x27FC
+val longmapsfrom         = U 0x27FB
+val hookleftarrow        = U 0x21A9
+val hookrightarrow       = U 0x21AA
+
+(*stars*)
+val blackstar            = U 0x2605
+val whitestar            = U 0x2606
+val bigasterisk          = U 0x229B
+val asterisk             = U 0x2217
+val circlestar           = U 0x235F
+val stardiaeresis        = U 0x2363
 
 (* superscripts *)
 val sup_plus = UTF8.chr 0x207A

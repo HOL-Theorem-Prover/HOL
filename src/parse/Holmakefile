@@ -1,5 +1,8 @@
 EXTRA_CLEANS = base_lexer.sml
 
+SELFTEST_DEPS = $(dprot $(SIGOBJ)/Lib.uo) $(dprot $(SIGOBJ)/Type.uo) \
+                PPBackEnd.uo $(dprot $(SIGOBJ)/Overlay.uo)
+
 all: base_lexer.sml selftest.exe
 
 base_lexer.sml: base_lexer
@@ -7,5 +10,5 @@ base_lexer.sml: base_lexer
 
 Unicode.ui: $(dprot $(SIGOBJ)/UnicodeChars.ui)
 
-selftest.exe: selftest.uo
+selftest.exe: selftest.uo $(SELFTEST_DEPS)
 	$(HOLMOSMLC) -o $@ $<

@@ -148,11 +148,13 @@ val build_stamp =
 
 val _ =
 TextIO.output(TextIO.stdOut,
-  "\n-----------------------------------------------------------------\n"
+   "\n---------------------------------------------------------------------\n"
   ^"    HOL-Omega ["
-  ^Globals.release^" "^Lib.int_to_string(Globals.version)^build_stamp
-  ^"]\n\n    For introductory HOL help, type: help \"hol\";\n"
-  ^"-----------------------------------------------------------------\n\n");
+  ^Globals.release^" "^Lib.int_to_string(Globals.version)
+  ^" ("^kernelid^", "^build_stamp
+  ^")]\n\n    For introductory HOL help, type: help \"hol\";\n"
+  ^"\n---------------------------------------------------------------------\n\
+   \\n");
 
 (* ----------------------------------------------------------------------
     if present, look at a Holmakefile in the current directory to see

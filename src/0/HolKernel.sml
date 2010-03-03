@@ -16,6 +16,8 @@ val ERR = mk_HOL_ERR "HolKernel";
           General term operations
  ---------------------------------------------------------------------------*)
 
+val kernelid = "stdknl"
+
 fun dest_monop c e M =
  let val (c1,N) = with_exn dest_comb M e
  in if same_const c c1 then N else raise e end
