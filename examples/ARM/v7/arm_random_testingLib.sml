@@ -43,10 +43,7 @@ val generator = Random.newgen();
 
 val eval = rhs o concl o EVAL;
 
-fun dest_strip t =
-let val (l,r) = strip_comb t in
-  (fst (dest_const l), r)
-end;
+val dest_strip = armSyntax.dest_strip;
 
 val is_T = term_eq T;
 val is_F = term_eq F;
@@ -82,9 +79,6 @@ in
   fun random_thumb_register ()  = random_from_list valid_thumb_registers
   fun random_thumb2_register () = random_from_list valid_thumb2_registers
 end;
-
-val int_of_word =
-  Arbnum.toInt o numLib.dest_numeral o fst o wordsSyntax.dest_n2w;
 
 fun test_or_compare i = (i div 4) = 2;
 
@@ -146,7 +140,7 @@ let val rand_term = random_term arch enc
     fun dp () = case rand_term ``:word4 -> bool -> 'reg word -> 'reg word ->
                                   addressing_mode1``
                 of [a,b,c,d,e] =>
-                     let val opc = int_of_word a
+                     let val opc = wordsSyntax.uint_of_word a
                          val p = mk_word4 (if enc = ARM then 0 else 15)
                          val (rd,rn) = if test_or_compare opc then
                                          (p,c)
@@ -581,60 +575,100 @@ end
 (* ------------------------------------------------------------------------- *)
 
 local
+  val uint_of_word = wordsSyntax.uint_of_word
   fun try_dest_label thm = markerLib.DEST_LABEL thm handle HOL_ERR _ => thm;
-  fun reg tm = mk_var ("r" ^ Int.toString (int_of_word tm), ``:word32``);
+  fun reg tm = mk_var ("r" ^ Int.toString (uint_of_word tm), ``:word32``);
   fun flag tm = mk_var (fst (dest_const tm), bool);
-  val cpsr = mk_var ("cpsr", ``:ARMpsr``)
-  val GE   = mk_var ("GE", ``:word4``)
-  val IT   = mk_var ("IT", ``:word8``)
-  val mode = mk_var ("mode", ``:word5``)
-  val mem  = mk_var ("mem", ``:word32 -> word8``)
-
-  fun is_read tm =
-       (case dest_strip tm
-        of ("ARM_READ_REG", [_,_])    => true
-         | ("ARM_READ_MEM", [_,_])    => true
-         | ("ARM_READ_STATUS", [_,_]) => true
-         | ("ARM_READ_SCTLR", [_,_])  => true
-         | ("ARM_READ_CPSR", [_])     => true
-         | ("ARM_READ_GE", [_])       => true
-         | ("ARM_READ_IT", [_])       => true
-         | ("ARM_MODE", [_])          => true
-         | _ => false) handle HOL_ERR _ => false;
+  val arch     = mk_var ("architecture",``:ARMarch``)
+  val cpsr     = mk_var ("cpsr", ``:ARMpsr``)
+  val spsr     = mk_var ("spsr", ``:ARMpsr``)
+  val GE       = mk_var ("GE", ``:word4``)
+  val IT       = mk_var ("IT", ``:word8``)
+  val mode     = mk_var ("mode", ``:word5``)
+  val mem      = mk_var ("mem", ``:word32 -> word8``)
+  val spsrGE   = mk_var ("spsrGE", ``:word4``)
+  val spsrIT   = mk_var ("spsrIT", ``:word8``)
+  val spsrmode = mk_var ("spsrmode", ``:word5``)
+  fun mode_str tm = case uint_of_word tm
+                    of 16 => "usr"
+                     | 17 => "fiq"
+                     | 18 => "irq"
+                     | 19 => "svc"
+                     | 22 => "mon"
+                     | 23 => "abt"
+                     | 27 => "und"
+                     | 31 => "usr"
+                     | _  => "??"
+  fun reg_mode tm = let val (r,m) =  pairSyntax.dest_pair tm in
+          mk_var (String.concat
+            ["r", Int.toString (uint_of_word r), "_", mode_str m], ``:word32``)
+        end
+  fun spsr_mode tm =
+          mk_var (String.concat ["spsr", "_", mode_str tm], ``:word32``)
+  fun spsr_flag tm = mk_var ("s" ^ fst (dest_const tm), bool);
 
   fun component_subst tm =
         tm |-> (case dest_strip tm
-                of ("ARM_READ_REG", [a,_])    => reg a
-                 | ("ARM_READ_MEM", [a,_])    => mk_comb (mem, a)
-                 | ("ARM_READ_STATUS", [a,_]) => flag a
-                 | ("ARM_READ_SCTLR", [a,_])  => flag a
-                 | ("ARM_READ_CPSR", _)       => cpsr
-                 | ("ARM_READ_GE", _)         => GE
-                 | ("ARM_READ_IT", _)         => IT
-                 | ("ARM_MODE", _)            => mode
+                of ("ARM_READ_MEM", [a,_])         => mk_comb (mem, a)
+                 | ("ARM_READ_REG", [a,_])         => reg a
+                 | ("ARM_READ_REG_MODE", [x,_])    => reg_mode x
+                 | ("ARM_READ_STATUS", [a,_])      => flag a
+                 | ("ARM_READ_STATUS_SPSR", [a,_]) => spsr_flag a
+                 | ("ARM_READ_CPSR", [_])          => cpsr
+                 | ("ARM_READ_SPSR", [_])          => spsr
+                 | ("ARM_READ_SPSR_MODE", [m,_])   => spsr_mode m
+                 | ("ARM_READ_GE", [_])            => GE
+                 | ("ARM_READ_IT", [_])            => IT
+                 | ("ARM_MODE", [_])               => mode
+                 | ("ARM_READ_GE_SPSR", [_])       => spsrGE
+                 | ("ARM_READ_IT_SPSR", [_])       => spsrIT
+                 | ("ARM_READ_MODE_SPSR", [_])     => spsrmode
+                 | ("ARM_READ_SCTLR", [a,_])       => flag a
+                 | ("ARM_READ_SCR", [a,_])         => flag a
+                 | ("ARM_ARCH", [_])               => arch
                  | _ => raise ERR "component_subst" "")
 
   fun component_substs tm =
-        Term.subst (map component_subst (find_terms is_read tm)) tm
+        Term.subst
+          (map component_subst (find_terms (Lib.can component_subst) tm)) tm
 
-  val component_substs = component_substs o component_substs;
+  val component_substs = component_substs o component_substs
 
   fun get_updates tm =
   let
     fun recurse tm l =
-         (case dest_strip tm
-          of ("ARM_WRITE_MEM", [a,d,s]) => recurse s ((mk_comb (mem,a), d)::l)
-           | ("ARM_WRITE_REG", [a,d,s]) => recurse s ((reg a, d)::l)
-           | ("ARM_WRITE_STATUS", [f,d,s]) => recurse s ((flag f,d)::l)
-           | ("ARM_WRITE_SCTLR", [f,d,s]) => recurse s ((flag f,d)::l)
-           | ("ARM_WRITE_CPSR", [d,s]) => recurse s ((cpsr,d)::l)
-           | ("ARM_WRITE_GE", [d,s]) => recurse s ((GE,d)::l)
-           | ("ARM_WRITE_IT", [d,s]) => recurse s ((IT,d)::l)
-           | (_,tml) => recurse (last tml) l) handle HOL_ERR _ => List.rev l
+       (case dest_strip tm
+        of ("ARM_WRITE_MEM", [a,d,s]) => recurse s ((mk_comb (mem,a), d)::l)
+         | ("ARM_WRITE_REG", [a,d,s]) => recurse s ((reg a, d)::l)
+         | ("ARM_WRITE_REG_MODE", [x,d,s]) => recurse s ((reg_mode x, d)::l)
+         | ("ARM_WRITE_STATUS", [f,d,s]) => recurse s ((flag f,d)::l)
+         | ("ARM_WRITE_STATUS_SPSR", [f,d,s]) => recurse s ((spsr_flag f,d)::l)
+         | ("ARM_WRITE_CPSR", [d,s]) => recurse s ((cpsr,d)::l)
+         | ("ARM_WRITE_SPSR", [d,s]) => recurse s ((spsr,d)::l)
+         | ("ARM_WRITE_SPSR_MODE", [m,d,s]) => recurse s ((spsr_mode m,d)::l)
+         | ("ARM_WRITE_GE", [d,s]) => recurse s ((GE,d)::l)
+         | ("ARM_WRITE_IT", [d,s]) => recurse s ((IT,d)::l)
+         | ("ARM_WRITE_MODE", [d,s]) => recurse s ((mode,d)::l)
+         | ("ARM_WRITE_GE_SPSR", [d,s]) => recurse s ((spsrGE,d)::l)
+         | ("ARM_WRITE_IT_SPSR", [d,s]) => recurse s ((spsrIT,d)::l)
+         | ("ARM_WRITE_MODE_SPSR", [d,s]) => recurse s ((spsrmode,d)::l)
+         | (_,tml) => recurse (List.last tml) l) handle HOL_ERR _ => List.rev l
   in
     recurse (component_substs tm) []
   end
 in
+  fun arm_step_updates opt opc = let
+        val tm = opc |> try (armLib.arm_step opt)
+                     |> try_dest_label
+                     |> SPEC_ALL |> concl
+        val (l,r) = boolSyntax.dest_imp tm
+      in
+        (l |> component_substs
+           |> boolSyntax.strip_conj,
+         r |> boolSyntax.dest_eq |> snd
+           |> optionSyntax.dest_some
+           |> get_updates)
+      end
   fun step_updates (pass,arch) (opc,ass:string,arm) = let
       val opt = String.concat [arch, ", ", if arm then "arm" else "thumb",
                                      ", ", if pass then "pass" else "fail"]
@@ -642,18 +676,9 @@ in
                 print (String.concat ["Processing... ", ass, "\n"])
               else
                 ()
-      val tm = opc |> try (armLib.arm_step opt)
-                   |> try_dest_label
-                   |> SPEC_ALL |> concl
-      val (l,r) = boolSyntax.dest_imp tm
+      val (l,r) = arm_step_updates opt opc
     in
-      (opc,ass,
-       l |> component_substs
-         |> boolSyntax.strip_conj
-         |> (fn l => List.drop(l,8)),
-       r |> boolSyntax.dest_eq |> snd
-         |> optionSyntax.dest_some
-         |> get_updates)
+      (opc, ass, List.drop(l,8), r)
     end
 end;
 

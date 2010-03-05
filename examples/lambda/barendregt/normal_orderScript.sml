@@ -894,8 +894,8 @@ val norm_varhead0 = prove(
   ``∀M N. M -n-> N ⇒
           ∀v Ms. (M = VAR v ·· Ms) ⇒
                  ∃p s M0 N0.
-                    (Ms = p ++ (M0 :: s)) ∧
-                    (N = VAR v ·· (p ++ (N0 :: s))) ∧
+                    (Ms = p ++ [M0] ++ s) ∧
+                    (N = VAR v ·· (p ++ [N0] ++ s)) ∧
                     EVERY bnf p ∧
                     M0 -n-> N0``,
   HO_MATCH_MP_TAC normorder_strong_ind THEN
@@ -926,28 +926,25 @@ val normstar_varhead0 = prove(
                  ∃Ns. (N = VAR v ·· Ns) ∧ (LENGTH Ns = LENGTH Ms) ∧
                       ∀i. i < LENGTH Ms ⇒ EL i Ms -n->* EL i Ns``,
   HO_MATCH_MP_TAC relationTheory.RTC_STRONG_INDUCT THEN SRW_TAC [][] THEN
-  `∃p s M0 N0.  (Ms = p ++ (M0 :: s)) ∧
-                (M' = VAR v ·· (p ++ (N0 :: s))) ∧
+  `∃p s M0 N0.  (Ms = p ++ [M0] ++ s) ∧
+                (M' = VAR v ·· (p ++ [N0] ++ s)) ∧
                 M0 -n-> N0`
       by METIS_TAC [norm_varhead] THEN
-  `∃Ns. (N = VAR v ·· Ns) ∧ (LENGTH Ns = LENGTH (p ++ N0::s)) ∧
-        ∀i. i < LENGTH (p ++ N0::s) ⇒ EL i (p ++ N0::s) -n->* EL i Ns`
+  `∃Ns. (N = VAR v ·· Ns) ∧ (LENGTH Ns = LENGTH (p ++ [N0] ++ s)) ∧
+        ∀i. i < LENGTH (p ++ [N0] ++ s) ⇒ EL i (p ++ [N0] ++ s) -n->* EL i Ns`
       by METIS_TAC [] THEN
   Q.EXISTS_TAC `Ns` THEN SRW_TAC [][] THEN
-  Cases_on `i < LENGTH p` THENL [
-    SRW_TAC [][rich_listTheory.EL_APPEND1] THEN
-    `i < LENGTH (p ++ N0::s)` by SRW_TAC [][] THEN
-    METIS_TAC [rich_listTheory.EL_APPEND1],
-    ALL_TAC
-  ] THEN Cases_on `i = LENGTH p` THENL [
+  Cases_on `i < LENGTH p` THEN1
+    (SRW_TAC [ARITH_ss][rich_listTheory.EL_APPEND1] THEN
+     FIRST_X_ASSUM (Q.SPEC_THEN `i` MP_TAC) THEN
+     SRW_TAC [ARITH_ss][rich_listTheory.EL_APPEND1]) THEN
+  Cases_on `i = LENGTH p` THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `LENGTH p` MP_TAC) THEN
-    SRW_TAC [][rich_listTheory.EL_APPEND2] THEN
+    SRW_TAC [ARITH_ss][rich_listTheory.EL_APPEND2,
+                       rich_listTheory.EL_APPEND1] THEN
     METIS_TAC [relationTheory.RTC_RULES],
     FIRST_X_ASSUM (Q.SPEC_THEN `i` MP_TAC) THEN
-    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [rich_listTheory.EL_APPEND2] THEN
-    `∃m. i - LENGTH p = SUC m`
-      by (Cases_on `i - LENGTH p` THEN SRW_TAC [ARITH_ss][]) THEN
-    SRW_TAC [][]
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [rich_listTheory.EL_APPEND2]
   ]);
 
 val normstar_varhead = save_thm(

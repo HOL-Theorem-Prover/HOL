@@ -29,6 +29,13 @@ val ppc_uint_cmp_def = Define `
     (parT_unit (write_status ii (PPC_CR0 2w) (SOME (a = b)))
                (write_status ii (PPC_CR0 3w) NONE))))`;
 
+val ppc_clear_CR0_def = Define `
+  ppc_clear_CR0 ii =
+    (parT_unit (write_status ii (PPC_CR0 0w) NONE)
+    (parT_unit (write_status ii (PPC_CR0 1w) NONE)
+    (parT_unit (write_status ii (PPC_CR0 2w) NONE)
+               (write_status ii (PPC_CR0 3w) NONE))))`;
+
 val OK_nextinstr_def = Define `
   OK_nextinstr ii f =
     parT_unit f (seqT (read_reg ii PPC_PC) (\x. write_reg ii PPC_PC (x + 4w)))`;
@@ -141,6 +148,12 @@ val ppc_branch_condition_def = Define `
 val ppc_exec_instr_def = Define `
   (ppc_exec_instr ii (Padd rd r1 r2) =
        OK_nextinstr ii (reg_update ii rd $+ (read_ireg ii r1) (read_ireg ii r2))) /\
+
+  (ppc_exec_instr ii (Padde rd r1 r2) =
+       OK_nextinstr ii 
+         (seqT (parT (read_ireg ii r1) (parT (read_ireg ii r2) (read_status ii PPC_CARRY)))
+            (\(w1,w2,c1). parT_unit (write_reg ii (PPC_IR rd) (FST (add_with_carry (w1,w2,c1))))
+                                    (write_status ii PPC_CARRY (SOME (FST (SND (add_with_carry (w1,w2,c1))))))))) /\
 
   (ppc_exec_instr ii (Paddi rd r1 cst) =
        OK_nextinstr ii (reg_update ii rd $+ (gpr_or_zero ii r1) (const_low_s cst))) /\
@@ -364,6 +377,12 @@ val ppc_exec_instr_def = Define `
   (ppc_exec_instr ii (Psubfic rd r1 cst) =
       OK_nextinstr ii (parT_unit (reg_update ii rd $- (const_low_s cst) (read_ireg ii r1))
                                  (no_carry ii))) /\
+
+  (ppc_exec_instr ii (Psubfe rd r1 r2) =
+       OK_nextinstr ii 
+         (seqT (parT (read_ireg ii r1) (parT (read_ireg ii r2) (read_status ii PPC_CARRY)))
+            (\(w1,w2,c1). parT_unit (write_reg ii (PPC_IR rd) (FST (add_with_carry (w2,~w1,c1))))
+                                    (write_status ii PPC_CARRY (SOME (FST (SND (add_with_carry (w2,~w1,c1))))))))) /\
 
   (ppc_exec_instr ii (Pxor rd r1 r2) =
       OK_nextinstr ii (reg_update ii rd $?? (read_ireg ii r1) (read_ireg ii r2))) /\

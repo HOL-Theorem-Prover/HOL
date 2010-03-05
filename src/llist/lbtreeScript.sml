@@ -523,7 +523,9 @@ val exists_bf_flatten = store_thm(
        by FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [combinTheory.o_DEF] THEN
     `~(Lf = x)` by FULL_SIMP_TAC (srw_ss()) [] THEN
     `?a t1 t2. x = Nd a t1 t2` by METIS_TAC [lbtree_cases] THEN
-    FULL_SIMP_TAC (srw_ss()) [bf_flatten_append, bf_flatten_def],
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    (bf_flatten_append |> Q.SPEC `l1` |> Q.INST [`l2`|->`[Nd a t1 t2] ++ l2`] |> MP_TAC) THEN
+    SRW_TAC [][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [],
     `~EVERY ($= Lf) tlist`
        by METIS_TAC [LCONS_NOT_NIL, bf_flatten_eq_lnil] THEN
     `EXISTS ($~ o $= Lf) tlist`
@@ -537,7 +539,9 @@ val exists_bf_flatten = store_thm(
     `?a t1 t2. y = Nd a t1 t2` by METIS_TAC [lbtree_cases] THEN
     FULL_SIMP_TAC (srw_ss()) [bf_flatten_def, bf_flatten_append] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN `l2 ++ [t1;t2]` MP_TAC) THEN
-    SRW_TAC [][] THEN SRW_TAC [][]
+    SRW_TAC [][] THEN SRW_TAC [][] THEN
+    (bf_flatten_append |> Q.SPEC `l1` |> Q.INST [`l2`|->`[Nd a t1 t2] ++ l2`] |> MP_TAC) THEN
+    SRW_TAC [][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
   ]);
 
 (* ----------------------------------------------------------------------

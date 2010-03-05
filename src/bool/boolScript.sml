@@ -61,7 +61,8 @@ end;
 
 *)
 
-open HolKernel Parse Unicode;
+open HolKernel Parse
+open Unicode
 
 val _ = new_theory "bool";
 

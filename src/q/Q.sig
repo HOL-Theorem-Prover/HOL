@@ -53,6 +53,7 @@ sig
   val ABBREV_TAC             : tmquote -> tactic
   val PAT_ABBREV_TAC         : tmquote -> tactic
   val MATCH_ABBREV_TAC       : tmquote -> tactic
+  val MATCH_ASSUM_ABBREV_TAC : tmquote -> tactic
   val HO_MATCH_ABBREV_TAC    : tmquote -> tactic
   val UNABBREV_TAC           : tmquote -> tactic
   val RM_ABBREV_TAC          : tmquote -> tactic

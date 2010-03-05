@@ -1654,20 +1654,20 @@ val EL_APPEND2 = prove(
 
 val ireduces_to_fold_app = store_thm(
   "ireduces_to_fold_app",
-  ``M i_reduces FOLDL (@@) t args ==>
-    ?t0 args0.
-        (M = FOLDL (@@) t0 args0) /\ (LENGTH args0 = LENGTH args) /\
-        reduction beta t0 t /\
-        EVERY (\p. reduction beta (FST p) (SND p)) (ZIP (args0, args))``,
+  ``M i_reduces FOLDL (@@) t args ⇒
+    ∃t0 args0.
+        (M = FOLDL (@@) t0 args0) ∧ (LENGTH args0 = LENGTH args) ∧
+        reduction beta t0 t ∧
+        EVERY (λp. reduction beta (FST p) (SND p)) (ZIP (args0, args))``,
   SIMP_TAC (srw_ss()) [i_reduces_RTC_i_reduce1] THEN
   Q_TAC SUFF_TAC
-     `!M N. RTC (i_reduce1) M N ==>
-            !t args. (N = FOLDL (@@) t args) ==>
-                     ?t0 args0.
-                        (M = FOLDL (@@) t0 args0) /\
-                        (LENGTH args0 = LENGTH args) /\
-                        reduction beta t0 t /\
-                        EVERY (\p. reduction beta (FST p) (SND p))
+     `∀M N. RTC (i_reduce1) M N ⇒
+            ∀t args. (N = FOLDL (@@) t args) ⇒
+                     ∃t0 args0.
+                        (M = FOLDL (@@) t0 args0) ∧
+                        (LENGTH args0 = LENGTH args) ∧
+                        reduction beta t0 t ∧
+                        EVERY (λp. reduction beta (FST p) (SND p))
                               (ZIP (args0, args))`
       THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT_RIGHT1 THEN
@@ -1685,22 +1685,22 @@ val ireduces_to_fold_app = store_thm(
       SRW_TAC [][] THEN
       PROVE_TAC [reduction_rules, labelled_redn_cc, i_reduce1_def],
       RES_TAC THEN
-      MAP_EVERY Q.EXISTS_TAC [`t0`, `args0`] THEN SRW_TAC [][] THEN
+      MAP_EVERY Q.EXISTS_TAC [`t0`, `args0`] THEN SRW_TAC [ARITH_ss][] THEN
       Q.PAT_ASSUM `EVERY f l` MP_TAC THEN
-      ASM_SIMP_TAC (srw_ss()) [listTheory.EVERY_MEM, listTheory.MEM_ZIP,
-                               GSYM LEFT_FORALL_IMP_THM] THEN
+      FULL_SIMP_TAC (srw_ss()) [] THEN
+      ASM_SIMP_TAC (srw_ss() ++ ARITH_ss)
+                   [listTheory.EVERY_MEM, listTheory.MEM_ZIP,
+                    GSYM LEFT_FORALL_IMP_THM] THEN
       STRIP_TAC THEN GEN_TAC THEN STRIP_TAC THEN
       Cases_on `n < LENGTH pfx` THENL [
         FIRST_X_ASSUM (Q.SPEC_THEN `n` MP_TAC) THEN
         SRW_TAC [numSimps.ARITH_ss][EL_APPEND1],
         `LENGTH pfx <= n` by DECIDE_TAC THEN
         FIRST_X_ASSUM (Q.SPEC_THEN `n` MP_TAC) THEN
-        SRW_TAC [numSimps.ARITH_ss][EL_APPEND2] THEN
-        Cases_on `n = LENGTH pfx` THENL [
-          FULL_SIMP_TAC (srw_ss()) [] THEN
+        Cases_on `n = LENGTH pfx` THEN
+        SRW_TAC [numSimps.ARITH_ss][EL_APPEND2, EL_APPEND1] THENL [
           PROVE_TAC [reduction_rules, labelled_redn_cc],
-          `~(n - LENGTH pfx = 0)` by DECIDE_TAC THEN
-          Cases_on `n  - LENGTH pfx` THEN
+          `n − LENGTH pfx = SUC (n - (LENGTH pfx +1))` by DECIDE_TAC THEN
           FULL_SIMP_TAC (srw_ss()) []
         ]
       ]

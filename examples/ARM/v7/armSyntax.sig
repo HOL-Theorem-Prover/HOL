@@ -3,6 +3,7 @@ sig
 
   include Abbrev
 
+  val dest_strip : term -> string * term list
   val dest_monad_type : hol_type -> hol_type
 
   val valuestate_tm                 : term

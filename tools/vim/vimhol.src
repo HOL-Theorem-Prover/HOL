@@ -68,7 +68,7 @@ local
   val tail = ref (execute("/usr/bin/env",["tail","/dev/null"]))
   val fifo = ref (openString "")
   fun stopTail () = (kill(!tail,Posix.Signal.term); reap (!tail); ())
-  fun restartTail () = (stopTail();
+  fun restartTail () = (stopTail() handle SysErr _ => ();
                         tail := execute("/usr/bin/env", ["tail", "-f", fifoPath]);
                         fifo := textInstreamOf (!tail))
   fun poller () = let in

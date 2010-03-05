@@ -64,6 +64,7 @@ fun structure_to_kind st =
     | KDVAR str => Kind.mk_var_kind str
 
 val std_prefix_precedence = 100
+val arity_precedence = 120
 
 
 
@@ -144,14 +145,15 @@ end
 fun new_kindop (KINDG(G (*,abbrevs,pmap*) )) name =
   KINDG (insert_sorted (std_prefix_precedence, PREFIX[name]) G (*, abbrevs, pmap*) )
 
-val empty_grammar = new_binary_kindop
-                    (KINDG ([(120, PREFIX ["ar"]),(700, NONFIX)] (*,
+fun new_arityop (KINDG(G (*,abbrevs,pmap*) )) name =
+  KINDG (insert_sorted (arity_precedence, PREFIX[name]) G (*, abbrevs, pmap*) )
+
+val empty_grammar = KINDG ([(700, NONFIX)] (*,
                           Binarymap.mkDict String.compare, 
-                          TypeNet.empty *) ))
-                    {precedence=70, infix_form=NONE, opname="=>",
-                     associativity=HOLgrammars.RIGHT}
+                          TypeNet.empty *) )
 
 fun rules (KINDG (G (*, dict, pmap*) )) = G
+
 (*
 fun abbreviations (KINDG (G, dict, pmap)) = dict
 
@@ -394,6 +396,21 @@ fun disable_abbrev_printing s (arg as KINDG(G,abbs,pmap)) =
         else arg
       end handle Binarymap.NotFound => arg
 *)
+
+(* ----------------------------------------------------------------------
+    min grammar
+
+    Grammar that knows about the infix operator =>,
+    as well as the arity prefix operator "ar".
+   ---------------------------------------------------------------------- *)
+
+open Lib
+val min_grammar =
+    empty_grammar |> C new_arityop "ar"
+                  |> C new_binary_kindop {opname = "=>",
+                                          associativity = RIGHT,
+                                          infix_form = NONE,
+                                          precedence = 70}
 
 
 end

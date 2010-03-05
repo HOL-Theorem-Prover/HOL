@@ -22,6 +22,8 @@ sig
                  | StatusAccess
                  | Miscellaneous
 
+  val arm_step_updates : string -> string -> term list * (term * term) list
+
   val generate_random : arch -> encoding -> class ->
                         (string * string * term list * (term * term) list)
 

@@ -19,7 +19,7 @@ open generalHelpersTheory finite_mapTheory relationTheory bagTheory pred_setTheo
 open quantHeuristicsLib quantHeuristicsArgsLib
 
 (*
-open Sanity
+open Sanity;
 quietdec := false;
 *)
 
@@ -538,7 +538,7 @@ BIN_OPTION_MAP FUNION (\m1 m2. DISJOINT (FDOM m1) (FDOM m2))`
 
 val DISJOINT_FMAP_UNION___REWRITE_helper = prove (
    ``!x1 x2. COMM (DISJOINT_FMAP_UNION:('a |-> 'b) bin_option_function) /\
-   ((DISJOINT_FMAP_UNION:('a |-> 'b) bin_option_function (SOME x1) (SOME x2) = (SOME x1)) = (x2 = FEMPTY)) /\
+   (((DISJOINT_FMAP_UNION:('a |-> 'b) bin_option_function) (SOME x1) (SOME x2) = (SOME x1)) = (x2 = FEMPTY)) /\
    ((DISJOINT_FMAP_UNION (SOME x1) (SOME x2) = (SOME x2)) = (x1 = FEMPTY))``,
 
 SIMP_TAC std_ss [FORALL_AND_THM] THEN

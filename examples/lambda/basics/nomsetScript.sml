@@ -1014,6 +1014,14 @@ val fmpm_FUPDATE = store_thm(
   ]);
 val _ = export_rewrites ["fmpm_FUPDATE"]
 
+val fmpm_DOMSUB = store_thm(
+  "fmpm_DOMSUB",
+  ``is_perm dpm ⇒ (fmpm dpm rpm pi (fm \\ k) = fmpm dpm rpm pi fm \\ (dpm pi k))``,
+  SRW_TAC [][fmap_EXT,fmpm_FDOM,EXTENSION] THEN1
+    METIS_TAC [is_perm_eql] THEN
+  SRW_TAC [][fmpm_applied,DOMSUB_FAPPLY_THM] THEN
+  POP_ASSUM MP_TAC THEN SRW_TAC [][is_perm_inverse] )
+val _ = export_rewrites ["fmpm_DOMSUB"];
 
 val fcond_def = Define`
   fcond pm f = is_perm pm ∧ FINITE (supp (fnpm perm_of pm) f) ∧

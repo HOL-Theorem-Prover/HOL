@@ -24,11 +24,7 @@ val ERR = Feedback.mk_HOL_ERR "arm_evalLib";
 
 (* ------------------------------------------------------------------------- *)
 
-fun dest_strip t =
-let val (l,r) = strip_comb t in
-  (fst (dest_const l), r)
-end;
-
+val dest_strip = armSyntax.dest_strip;
 val eval = rhs o concl o EVAL;
 
 val lower_string = String.implode o map Char.toLower o String.explode;

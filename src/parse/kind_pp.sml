@@ -24,7 +24,7 @@ fun dest_arity_kind kd = Kind.arity_of kd
 val show_kinds = ref 1
 val _ = Feedback.register_trace("kinds", show_kinds, 2)
 
-fun pp_kind0 (G:grammar) = let
+fun pp_kind0 (G:grammar) backend = let
   fun lookup_kindop s = let
     fun recurse [] = NONE
       | recurse (x::xs) = let
@@ -144,14 +144,14 @@ in
   pr_kd
 end
 
-fun pp_kind G = let
-  val baseprinter = pp_kind0 G
+fun pp_kind G backend = let
+  val baseprinter = pp_kind0 G backend
 in
   (fn pps => fn kd => baseprinter pps kd Top (!Globals.max_print_depth))
 end
 
-fun pp_kind_with_depth G = let
-  val baseprinter = pp_kind0 G
+fun pp_kind_with_depth G backend = let
+  val baseprinter = pp_kind0 G backend
 in
   (fn pps => fn depth => fn kd => baseprinter pps kd Top depth)
 end

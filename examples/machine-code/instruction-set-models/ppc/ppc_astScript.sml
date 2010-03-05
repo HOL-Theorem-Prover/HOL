@@ -22,15 +22,18 @@ val _ = new_theory "ppc_ast";
 
   Types ireg, freg, ppc_constant, and crbit are used from ppc_coretypesTheory.
 
+  Also added adde and subfe which is used for multiword arithmetic.
+
 <* ---------------------------------------------------------------------------------- *)
 
 
 val _ = Hol_datatype `
   instruction =
     Padd of ireg => ireg => ireg            (* integer addition *)
+  | Padde of ireg => ireg => ireg           (* add include carry bit *)
   | Paddi of ireg => ireg => ppc_constant   (* add immediate *)
   | Paddis of ireg => ireg => ppc_constant  (* add immediate high *)
-  | Paddze of ireg => ireg                  (* add Carry bit *)
+  | Paddze of ireg => ireg                  (* add carry bit *)
   | Pand_ of ireg => ireg => ireg           (* bitwise and *)
   | Pandc of ireg => ireg => ireg           (* bitwise and-complement *)
   | Pandi_ of ireg => ireg => ppc_constant  (* and immediate and set conditions *)
@@ -106,6 +109,7 @@ val _ = Hol_datatype `
   | Pstw of ireg => ppc_constant => ireg    (* store 32-bit word*)
   | Pstwx of ireg => ireg => ireg           (* same, with 2 index regs *)
   | Psubfc of ireg => ireg => ireg          (* reversed integer subtraction *)
+  | Psubfe of ireg => ireg => ireg          (* reversed integer subtraction, carry bit *)
   | Psubfic of ireg => ireg => ppc_constant (* integer subtraction from immediate *)
   | Pxor of ireg => ireg => ireg            (* bitwise xor *)
   | Pxori of ireg => ireg => ppc_constant   (* bitwise xor with immediate *)

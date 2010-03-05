@@ -181,7 +181,8 @@ let val (enc,tm) = decode_opcode itstate (Arbnum.fromHexString s)
     val (cond,tm) = tm |> eval |> pairSyntax.dest_pair
 in
   Instruction (enc,cond,tm)
-end;
+end handle Option =>
+  raise ERR "decode_from_string" "could not parse HEX string";
 
 val arm_decode = decode_from_string NONE;
 
@@ -241,7 +242,7 @@ fun arm_assemble_to_file_from_string s f =
 fun arm_assemble_to_file_from_file s f =
   arm_assemble_to_file_parse s f o arm_parse_from_file;
 
-fun join (a,b) = String.concat [a, " ", b];
+fun join (a,b) = case b of "" => a | _ => String.concat [a, " ", b];
 
 val arm_disassemble_decode = join o arm_disassemble o arm_decode;
 fun thumb_disassemble_decode i = join o arm_disassemble o (thumb_decode i);

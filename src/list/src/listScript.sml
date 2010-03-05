@@ -612,6 +612,36 @@ val APPEND_11 = store_thm(
     ]
   ]);
 
+val APPEND_LENGTH_EQ = store_thm(
+  "APPEND_LENGTH_EQ",
+  ``!l1 l1'. (LENGTH l1 = LENGTH l1') ==>
+    !l2 l2'. (LENGTH l2 = LENGTH l2') ==>
+             ((l1 ++ l2 = l1' ++ l2') = (l1 = l1') /\ (l2 = l2'))``,
+  Induct THEN1
+     (GEN_TAC THEN STRIP_TAC THEN `l1' = []` by METIS_TAC [LENGTH_NIL] THEN
+      SRW_TAC [][]) THEN
+  MAP_EVERY Q.X_GEN_TAC [`h`,`l1'`] THEN SRW_TAC [][] THEN
+  `?h' t'. l1' = h'::t'` by METIS_TAC [LENGTH_CONS] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []);
+
+val APPEND_11_LENGTH = save_thm ("APPEND_11_LENGTH",
+ SIMP_RULE bool_ss [DISJ_IMP_THM, FORALL_AND_THM] (prove (
+ (--`!l1 l2 l1' l2'.
+        ((LENGTH l1 = LENGTH l1') \/ (LENGTH l2 = LENGTH l2')) ==>
+        (((l1 ++ l2) = (l1' ++ l2')) = ((l1 = l1') /\ (l2 = l2')))`--),
+     REPEAT GEN_TAC
+     THEN Tactical.REVERSE
+        (Cases_on `(LENGTH l1 = LENGTH l1') /\ (LENGTH l2 = LENGTH l2')`) THEN1
+(
+           DISCH_TAC
+           THEN `~((l1 = l1') /\ (l2 = l2'))` by PROVE_TAC[]
+           THEN ASM_REWRITE_TAC[]
+           THEN Tactical.REVERSE
+              (`~(LENGTH (l1 ++ l2) = LENGTH (l1' ++ l2'))` by ALL_TAC) THEN1 PROVE_TAC[]
+           THEN FULL_SIMP_TAC arith_ss [LENGTH_APPEND]
+     ) THEN PROVE_TAC[APPEND_LENGTH_EQ])))
+
+
 val APPEND_eq_ID = store_thm(
 "APPEND_EQ_SELF",
 ``(!l1 l2:'a list. ((l1 ++ l2 = l1) = (l2 = []))) /\
@@ -1681,6 +1711,54 @@ val isPREFIX_THM = store_thm(
     ((h1::t1:'a list) <<= h2::t2 = (h1 = h2) /\ isPREFIX t1 t2)``,
   SRW_TAC [][])
 val _ = export_rewrites ["isPREFIX_THM"]
+
+(* ----------------------------------------------------------------------
+    SNOC
+   ---------------------------------------------------------------------- *)
+
+(* use new_recursive_definition to get quantification and variable names
+   exactly as they were in rich_listTheory *)
+val SNOC = new_recursive_definition {
+  def = ``(!x:'a. SNOC x [] = [x]) /\
+          (!x:'a x' l. SNOC x (CONS x' l) = CONS x' (SNOC x l))``,
+  name = "SNOC",
+  rec_axiom = list_Axiom
+};
+val _ = BasicProvers.export_rewrites ["SNOC"]
+
+val LENGTH_SNOC = store_thm(
+  "LENGTH_SNOC",
+  ``!(x:'a) l. LENGTH (SNOC x l) = SUC (LENGTH l)``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH,SNOC]);
+val _ = export_rewrites ["LENGTH_SNOC"]
+
+val LAST_SNOC = store_thm(
+  "LAST_SNOC",
+  ``!x:'a l. LAST (SNOC x l) = x``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  RW_TAC bool_ss [SNOC, LAST_DEF] THEN
+  POP_ASSUM MP_TAC THEN
+  Q.SPEC_THEN `l`  STRUCT_CASES_TAC list_CASES THEN
+  RW_TAC bool_ss [SNOC]);
+val _ = export_rewrites ["LAST_SNOC"]
+
+val FRONT_SNOC = store_thm(
+  "FRONT_SNOC",
+  ``!x:'a l. FRONT (SNOC x l) = l``,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  RW_TAC bool_ss [SNOC, FRONT_DEF] THEN
+  POP_ASSUM MP_TAC THEN
+  Q.SPEC_THEN `l` STRUCT_CASES_TAC list_CASES THEN
+  RW_TAC bool_ss [SNOC]);
+val _ = export_rewrites ["FRONT_SNOC"]
+
+val SNOC_APPEND = store_thm("SNOC_APPEND",
+   ``!x (l:('a) list). SNOC x l = APPEND l [x]``,
+   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC,APPEND]);
+
+val LIST_TO_SET_SNOC = Q.store_thm("LIST_TO_SET_SNOC",
+    `set (SNOC x ls) = x INSERT set ls`,
+    Induct_on `ls` THEN SRW_TAC [][INSERT_COMM]);
 
 (*---------------------------------------------------------------------------*)
 (* Tail recursive versions for better memory usage when applied in ML        *)

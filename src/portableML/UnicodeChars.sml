@@ -76,9 +76,32 @@ val circlestar           = U 0x235F
 val stardiaeresis        = U 0x2363
 
 (* superscripts *)
+val sup_0 = UTF8.chr 0x2070
+val sup_1 = UTF8.chr 0xB9
+val sup_2 = UTF8.chr 0xB2
+val sup_3 = UTF8.chr 0xB3
+val sup_4 = UTF8.chr 0x2074
+val sup_5 = UTF8.chr 0x2075
+val sup_6 = UTF8.chr 0x2076
+val sup_7 = UTF8.chr 0x2077
+val sup_8 = UTF8.chr 0x2078
+val sup_9 = UTF8.chr 0x2079
 val sup_plus = UTF8.chr 0x207A
 val sup_minus = UTF8.chr 0x207B
-val sup_1 = UTF8.chr 0x2071
+val sup_eq = UTF8.chr 0x207C
+val sup_lparen = UTF8.chr 0x207D
+val sup_rparen = UTF8.chr 0x207E
+val sup_h = UTF8.chr 0x2B0
+val sup_i = UTF8.chr 0x2071
+val sup_j = UTF8.chr 0x2B2
+val sup_l = UTF8.chr 0x2E1
+val sup_n = UTF8.chr 0x207F
+val sup_r = UTF8.chr 0x2B3
+val sup_s = UTF8.chr 0x2E2
+val sup_w = UTF8.chr 0x2B7
+val sup_x = UTF8.chr 0x2E3
+val sup_y = UTF8.chr 0x2B8
+val sup_gamma = UTF8.chr 0x2E0
 
 (* arithmetic *)
 val leq = "\u00e2\u0089\u00a4"

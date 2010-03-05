@@ -43,10 +43,10 @@ val ARMv4T_OK_def = Define `
   ARMv4T_OK state = 
     (ARM_ARCH state = ARMv4T) /\ (ARM_EXTENSIONS state = {}) /\
     (ARM_UNALIGNED_SUPPORT state) /\ (ARM_READ_EVENT_REGISTER state) /\
-    ~(ARM_READ_INTERRUPT_WAIT state) /\ ~(ARM_READ_SCTLR cV state) /\
-    (ARM_READ_SCTLR cA state) /\ ~(ARM_READ_SCTLR cU state) /\
-    (ARM_READ_IT state = 0w) /\ ~(ARM_READ_STATUS sJ state) /\
-    ~(ARM_READ_STATUS sT state) /\ ~(ARM_READ_STATUS sE state) /\
+    ~(ARM_READ_INTERRUPT_WAIT state) /\ ~(ARM_READ_SCTLR sctlrV state) /\
+    (ARM_READ_SCTLR sctlrA state) /\ ~(ARM_READ_SCTLR sctlrU state) /\
+    (ARM_READ_IT state = 0w) /\ ~(ARM_READ_STATUS psrJ state) /\
+    ~(ARM_READ_STATUS psrT state) /\ ~(ARM_READ_STATUS psrE state) /\
     (ARM_MODE state = 16w)`;
 
 val ARM_READ_UNDEF_def = Define `ARM_READ_UNDEF s = ~(ARMv4T_OK s)`;
@@ -193,7 +193,7 @@ val aM_def = Define `
 
 val aPC_def = Define `aPC x = aR 15w x * aU1 F * cond (ALIGNED x)`;
 
-val aS_def = Define `aS (n,z,c,v) = aS1 sN n * aS1 sZ z * aS1 sC c * aS1 sV v`;
+val aS_def = Define `aS (n,z,c,v) = aS1 psrN n * aS1 psrZ z * aS1 psrC c * aS1 psrV v`;
 
 val ARM_NEXT_REL_def = Define `ARM_NEXT_REL s s' = (ARM_NEXT s = SOME s')`;
 
@@ -279,14 +279,14 @@ val CODE_POOL_arm2set = store_thm("CODE_POOL_arm2set",
   \\ ASM_SIMP_TAC std_ss [AC CONJ_COMM CONJ_ASSOC,DIFF_EMPTY,EMPTY_arm2set]);
 
 val ARM_WRITE_STS_def = Define `
-  ARM_WRITE_STS a x s = if a IN {sN;sZ;sC;sV;sQ} then ARM_WRITE_STATUS a x s else s`;
+  ARM_WRITE_STS a x s = if a IN {psrN;psrZ;psrC;psrV;psrQ} then ARM_WRITE_STATUS a x s else s`;
 
 val ARM_WRITE_STS_INTRO = store_thm("ARM_WRITE_STS_INTRO",
-  ``(ARM_WRITE_STATUS sN x s = ARM_WRITE_STS sN x s) /\
-    (ARM_WRITE_STATUS sZ x s = ARM_WRITE_STS sZ x s) /\
-    (ARM_WRITE_STATUS sC x s = ARM_WRITE_STS sC x s) /\
-    (ARM_WRITE_STATUS sV x s = ARM_WRITE_STS sV x s) /\
-    (ARM_WRITE_STATUS sQ x s = ARM_WRITE_STS sQ x s)``,
+  ``(ARM_WRITE_STATUS psrN x s = ARM_WRITE_STS psrN x s) /\
+    (ARM_WRITE_STATUS psrZ x s = ARM_WRITE_STS psrZ x s) /\
+    (ARM_WRITE_STATUS psrC x s = ARM_WRITE_STS psrC x s) /\
+    (ARM_WRITE_STATUS psrV x s = ARM_WRITE_STS psrV x s) /\
+    (ARM_WRITE_STATUS psrQ x s = ARM_WRITE_STS psrQ x s)``,
   SIMP_TAC std_ss [ARM_WRITE_STS_def,IN_INSERT]);
 
 val UNDEF_OF_UPDATES = prove(
@@ -308,7 +308,7 @@ val MASKED_CPSR_OF_UPDATES = prove(
     (!a x y. ARM_READ_MASKED_CPSR (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_MASKED_CPSR s)``,
   SIMP_TAC std_ss [ARM_READ_MASKED_CPSR_THM,ARMv4T_OK_def] \\ REPEAT STRIP_TAC THEN1
    (SIMP_TAC std_ss [ARM_WRITE_STS_def]
-    \\ Cases_on `a IN {sN; sZ; sC; sV; sQ}` \\ ASM_SIMP_TAC std_ss []
+    \\ Cases_on `a IN {psrN; psrZ; psrC; psrV; psrQ}` \\ ASM_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (f x = f y)``)
     \\ SIMP_TAC std_ss [FUN_EQ_THM] \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [IN_INSERT,NOT_IN_EMPTY] \\ EVAL_TAC)
@@ -334,7 +334,7 @@ val UPDATE_arm2set'' = store_thm("UPDATE_arm2set''",
   \\ FULL_SIMP_TAC std_ss [arm_el_distinct,arm_el_11]
   \\ IMP_RES_TAC (METIS_PROVE [] ``x IN s /\ ~(y IN s) ==> ~(x = y:'a)``)
   \\ ASM_SIMP_TAC std_ss [ARM_READ_WRITE,UNDEF_OF_UPDATES]
-  \\ SIMP_TAC std_ss [ARM_WRITE_STS_def] \\ TRY (Cases_on `b IN {sN; sZ; sC; sV; sQ}`)
+  \\ SIMP_TAC std_ss [ARM_WRITE_STS_def] \\ TRY (Cases_on `b IN {psrN; psrZ; psrC; psrV; psrQ}`)
   \\ FULL_SIMP_TAC std_ss [ARM_READ_WRITE,UNDEF_OF_UPDATES]
   \\ METIS_TAC []);
 
@@ -363,7 +363,7 @@ val IMP_ARM_SPEC = save_thm("IMP_ARM_SPEC",
           ``CODE_POOL ARM_INSTR {(p,c)} * q'``]) IMP_ARM_SPEC_LEMMA);
 
 val aS_HIDE = store_thm("aS_HIDE",
-  ``~aS = ~aS1 sN * ~aS1 sZ * ~aS1 sC * ~aS1 sV``,
+  ``~aS = ~aS1 psrN * ~aS1 psrZ * ~aS1 psrC * ~aS1 psrV``,
   SIMP_TAC std_ss [SEP_HIDE_def,aS_def,SEP_CLAUSES,FUN_EQ_THM]
   \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC [aS_def,PAIR]);
 
@@ -567,11 +567,11 @@ val UPDATE_FCP = prove(
 
 val ARM_READ_MASKED_CPSR_INTRO = store_thm("ARM_READ_MASKED_CPSR_INTRO",
   ``encode_psr (ARM_READ_CPSR s) = 
-     (31 :+ ARM_READ_STATUS sN s) 
-    ((30 :+ ARM_READ_STATUS sZ s) 
-    ((29 :+ ARM_READ_STATUS sC s) 
-    ((28 :+ ARM_READ_STATUS sV s) 
-    ((27 :+ ARM_READ_STATUS sQ s) (ARM_READ_MASKED_CPSR s)))))``,
+     (31 :+ ARM_READ_STATUS psrN s) 
+    ((30 :+ ARM_READ_STATUS psrZ s) 
+    ((29 :+ ARM_READ_STATUS psrC s) 
+    ((28 :+ ARM_READ_STATUS psrV s) 
+    ((27 :+ ARM_READ_STATUS psrQ s) (ARM_READ_MASKED_CPSR s)))))``,
   SIMP_TAC std_ss [ARM_READ_CPSR_def,ARM_READ_MASKED_CPSR_THM,UPDATE_FCP,encode_psr_def]
   \\ SIMP_TAC std_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA]  
   \\ SIMP_TAC std_ss [ARM_READ_STATUS_def,ARM_READ_CPSR_def]

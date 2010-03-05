@@ -34,9 +34,14 @@ val op >> = op THEN1;
 (* ------------------------------------------------------------------------- *)
 
 val _ = Hol_datatype`
-  arm_bit = sN | sZ | sC | sV | sQ | sJ | sE | sA | sI | sF | sT`;
+  arm_bit = psrN | psrZ | psrC | psrV | psrQ | psrJ
+          | psrE | psrA | psrI | psrF | psrT`;
 
-val _ = Hol_datatype `arm_sctlr_bit = cV | cU | cA | cEE | cTE | cNMFI`;
+val _ = Hol_datatype
+  `arm_sctlr_bit = sctlrV | sctlrU | sctlrA | sctlrEE | sctlrTE | sctlrNMFI`;
+
+val _ = Hol_datatype
+  `arm_scr_bit = scrnET | scrAW | scrFW | scrEA | scrFIQ | scrIRQ | scrNS`;
 
 val ARM_ARCH_def = Define`
   ARM_ARCH s = s.information.arch`;
@@ -76,49 +81,58 @@ val ARM_WRITE_IT_def = Define`
   ARM_WRITE_IT it s = ARM_WRITE_CPSR (ARM_READ_CPSR s with IT := it) s`;
 
 val ARM_READ_STATUS_def = Define`
-  (ARM_READ_STATUS sN s = (ARM_READ_CPSR s).N) /\
-  (ARM_READ_STATUS sZ s = (ARM_READ_CPSR s).Z) /\
-  (ARM_READ_STATUS sC s = (ARM_READ_CPSR s).C) /\
-  (ARM_READ_STATUS sV s = (ARM_READ_CPSR s).V) /\
-  (ARM_READ_STATUS sQ s = (ARM_READ_CPSR s).Q) /\
-  (ARM_READ_STATUS sJ s = (ARM_READ_CPSR s).J) /\
-  (ARM_READ_STATUS sE s = (ARM_READ_CPSR s).E) /\
-  (ARM_READ_STATUS sA s = (ARM_READ_CPSR s).A) /\
-  (ARM_READ_STATUS sI s = (ARM_READ_CPSR s).I) /\
-  (ARM_READ_STATUS sF s = (ARM_READ_CPSR s).F) /\
-  (ARM_READ_STATUS sT s = (ARM_READ_CPSR s).T)`;
+  (ARM_READ_STATUS psrN s = (ARM_READ_CPSR s).N) /\
+  (ARM_READ_STATUS psrZ s = (ARM_READ_CPSR s).Z) /\
+  (ARM_READ_STATUS psrC s = (ARM_READ_CPSR s).C) /\
+  (ARM_READ_STATUS psrV s = (ARM_READ_CPSR s).V) /\
+  (ARM_READ_STATUS psrQ s = (ARM_READ_CPSR s).Q) /\
+  (ARM_READ_STATUS psrJ s = (ARM_READ_CPSR s).J) /\
+  (ARM_READ_STATUS psrE s = (ARM_READ_CPSR s).E) /\
+  (ARM_READ_STATUS psrA s = (ARM_READ_CPSR s).A) /\
+  (ARM_READ_STATUS psrI s = (ARM_READ_CPSR s).I) /\
+  (ARM_READ_STATUS psrF s = (ARM_READ_CPSR s).F) /\
+  (ARM_READ_STATUS psrT s = (ARM_READ_CPSR s).T)`;
 
 val ARM_WRITE_STATUS_def = Define`
-  (ARM_WRITE_STATUS sN b s =
+  (ARM_WRITE_STATUS psrN b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with N := b) s) /\
-  (ARM_WRITE_STATUS sZ b s =
+  (ARM_WRITE_STATUS psrZ b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with Z := b) s) /\
-  (ARM_WRITE_STATUS sC b s =
+  (ARM_WRITE_STATUS psrC b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with C := b) s) /\
-  (ARM_WRITE_STATUS sV b s =
+  (ARM_WRITE_STATUS psrV b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with V := b) s) /\
-  (ARM_WRITE_STATUS sQ b s =
+  (ARM_WRITE_STATUS psrQ b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with Q := b) s) /\
-  (ARM_WRITE_STATUS sJ b s =
+  (ARM_WRITE_STATUS psrJ b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with J := b) s) /\
-  (ARM_WRITE_STATUS sE b s =
+  (ARM_WRITE_STATUS psrE b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with E := b) s) /\
-  (ARM_WRITE_STATUS sA b s =
+  (ARM_WRITE_STATUS psrA b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with A := b) s) /\
-  (ARM_WRITE_STATUS sI b s =
+  (ARM_WRITE_STATUS psrI b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with I := b) s) /\
-  (ARM_WRITE_STATUS sF b s =
+  (ARM_WRITE_STATUS psrF b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with F := b) s) /\
-  (ARM_WRITE_STATUS sT b s =
+  (ARM_WRITE_STATUS psrT b s =
      ARM_WRITE_CPSR (ARM_READ_CPSR s with T := b) s)`;
 
 val ARM_READ_SCTLR_def = Define`
-  (ARM_READ_SCTLR cV s = s.coprocessors.state.SCTLR.V) /\
-  (ARM_READ_SCTLR cA s = s.coprocessors.state.SCTLR.A) /\
-  (ARM_READ_SCTLR cU s = s.coprocessors.state.SCTLR.U) /\
-  (ARM_READ_SCTLR cEE s = s.coprocessors.state.SCTLR.EE) /\
-  (ARM_READ_SCTLR cTE s = s.coprocessors.state.SCTLR.TE) /\
-  (ARM_READ_SCTLR cNMFI s = s.coprocessors.state.SCTLR.NMFI)`;
+  (ARM_READ_SCTLR sctlrV s = s.coprocessors.state.SCTLR.V) /\
+  (ARM_READ_SCTLR sctlrA s = s.coprocessors.state.SCTLR.A) /\
+  (ARM_READ_SCTLR sctlrU s = s.coprocessors.state.SCTLR.U) /\
+  (ARM_READ_SCTLR sctlrEE s = s.coprocessors.state.SCTLR.EE) /\
+  (ARM_READ_SCTLR sctlrTE s = s.coprocessors.state.SCTLR.TE) /\
+  (ARM_READ_SCTLR sctlrNMFI s = s.coprocessors.state.SCTLR.NMFI)`;
+
+val ARM_READ_SCR_def = Define`
+  (ARM_READ_SCR scrnET s = s.coprocessors.state.SCR.nET) /\
+  (ARM_READ_SCR scrAW s = s.coprocessors.state.SCR.AW) /\
+  (ARM_READ_SCR scrFW s = s.coprocessors.state.SCR.FW) /\
+  (ARM_READ_SCR scrEA s = s.coprocessors.state.SCR.EA) /\
+  (ARM_READ_SCR scrFIQ s = s.coprocessors.state.SCR.FIQ) /\
+  (ARM_READ_SCR scrIRQ s = s.coprocessors.state.SCR.IRQ) /\
+  (ARM_READ_SCR scrNS s = s.coprocessors.state.SCR.NS)`;
 
 val SPSR_MODE_def = Define`
   SPSR_MODE (m:word5) =
@@ -174,40 +188,40 @@ val ARM_WRITE_IT_SPSR_def = Define`
   ARM_WRITE_IT_SPSR it s = ARM_WRITE_SPSR (ARM_READ_SPSR s with IT := it) s`;
 
 val ARM_READ_STATUS_SPSR_def = Define`
-  (ARM_READ_STATUS_SPSR sN s = (ARM_READ_SPSR s).N) /\
-  (ARM_READ_STATUS_SPSR sZ s = (ARM_READ_SPSR s).Z) /\
-  (ARM_READ_STATUS_SPSR sC s = (ARM_READ_SPSR s).C) /\
-  (ARM_READ_STATUS_SPSR sV s = (ARM_READ_SPSR s).V) /\
-  (ARM_READ_STATUS_SPSR sQ s = (ARM_READ_SPSR s).Q) /\
-  (ARM_READ_STATUS_SPSR sJ s = (ARM_READ_SPSR s).J) /\
-  (ARM_READ_STATUS_SPSR sE s = (ARM_READ_SPSR s).E) /\
-  (ARM_READ_STATUS_SPSR sA s = (ARM_READ_SPSR s).A) /\
-  (ARM_READ_STATUS_SPSR sI s = (ARM_READ_SPSR s).I) /\
-  (ARM_READ_STATUS_SPSR sF s = (ARM_READ_SPSR s).F) /\
-  (ARM_READ_STATUS_SPSR sT s = (ARM_READ_SPSR s).T)`;
+  (ARM_READ_STATUS_SPSR psrN s = (ARM_READ_SPSR s).N) /\
+  (ARM_READ_STATUS_SPSR psrZ s = (ARM_READ_SPSR s).Z) /\
+  (ARM_READ_STATUS_SPSR psrC s = (ARM_READ_SPSR s).C) /\
+  (ARM_READ_STATUS_SPSR psrV s = (ARM_READ_SPSR s).V) /\
+  (ARM_READ_STATUS_SPSR psrQ s = (ARM_READ_SPSR s).Q) /\
+  (ARM_READ_STATUS_SPSR psrJ s = (ARM_READ_SPSR s).J) /\
+  (ARM_READ_STATUS_SPSR psrE s = (ARM_READ_SPSR s).E) /\
+  (ARM_READ_STATUS_SPSR psrA s = (ARM_READ_SPSR s).A) /\
+  (ARM_READ_STATUS_SPSR psrI s = (ARM_READ_SPSR s).I) /\
+  (ARM_READ_STATUS_SPSR psrF s = (ARM_READ_SPSR s).F) /\
+  (ARM_READ_STATUS_SPSR psrT s = (ARM_READ_SPSR s).T)`;
 
 val ARM_WRITE_STATUS_SPSR_def = Define`
-  (ARM_WRITE_STATUS_SPSR sN b s =
+  (ARM_WRITE_STATUS_SPSR psrN b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with N := b) s) /\
-  (ARM_WRITE_STATUS_SPSR sZ b s =
+  (ARM_WRITE_STATUS_SPSR psrZ b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with Z := b) s) /\
-  (ARM_WRITE_STATUS_SPSR sC b s =
+  (ARM_WRITE_STATUS_SPSR psrC b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with C := b) s) /\
-  (ARM_WRITE_STATUS_SPSR sV b s =
+  (ARM_WRITE_STATUS_SPSR psrV b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with V := b) s) /\
-  (ARM_WRITE_STATUS_SPSR sQ b s =
+  (ARM_WRITE_STATUS_SPSR psrQ b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with Q := b) s) /\
-  (ARM_WRITE_STATUS_SPSR sJ b s =
+  (ARM_WRITE_STATUS_SPSR psrJ b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with J := b) s) /\
-  (ARM_WRITE_STATUS_SPSR sE b s =
+  (ARM_WRITE_STATUS_SPSR psrE b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with E := b) s) /\
-  (ARM_WRITE_STATUS_SPSR sA b s =
+  (ARM_WRITE_STATUS_SPSR psrA b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with A := b) s) /\
-  (ARM_WRITE_STATUS_SPSR sI b s =
+  (ARM_WRITE_STATUS_SPSR psrI b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with I := b) s) /\
-  (ARM_WRITE_STATUS_SPSR sF b s =
+  (ARM_WRITE_STATUS_SPSR psrF b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with F := b) s) /\
-  (ARM_WRITE_STATUS_SPSR sT b s =
+  (ARM_WRITE_STATUS_SPSR psrT b s =
      ARM_WRITE_SPSR (ARM_READ_SPSR s with T := b) s)`;
 
 val ARM_READ_EVENT_REGISTER_def = Define`
@@ -337,8 +351,8 @@ val condT_set_q = Q.store_thm("condT_set_q",
 
 val ARM_WRITE_STATUS_Q = Q.store_thm("ARM_WRITE_STATUS_Q",
   `!b s.
-     (if b then ARM_WRITE_STATUS sQ T s else s) =
-     ARM_WRITE_STATUS sQ (b \/ ARM_READ_STATUS sQ s) s`,
+     (if b then ARM_WRITE_STATUS psrQ T s else s) =
+     ARM_WRITE_STATUS psrQ (b \/ ARM_READ_STATUS psrQ s) s`,
   SRW_TAC [] [ARM_WRITE_STATUS_def, ARM_READ_STATUS_def,
     ARM_WRITE_CPSR_def, ARM_READ_CPSR_def, arm_state_component_equality]
     \\ MATCH_MP_TAC (GSYM UPDATE_APPLY_IMP_ID)
@@ -484,9 +498,9 @@ val aligned_align = Q.store_thm("aligned_align",
   METIS_TAC [aligned_def,aligned_thm,align_1,align_id_248]);
 
 val aligned_sum = Q.store_thm("aligned_sum",
-  `(!a:word32. aligned(align(a,2) + b,2) = aligned(b,2)) /\
-   (!a:word32. aligned(align(a,4) + b,2) = aligned(b,2)) /\
-   (!a:word32. aligned(align(a,4) + b,4) = aligned(b,4))`,
+  `(!a:word32 b. aligned(align(a,2) + b,2) = aligned(b,2)) /\
+   (!a:word32 b. aligned(align(a,4) + b,2) = aligned(b,2)) /\
+   (!a:word32 b. aligned(align(a,4) + b,4) = aligned(b,4))`,
    SIMP_TAC (srw_ss()++wordsLib.WORD_ARITH_EQ_ss)
         [align_aligned, align_aligned2, aligned_def]);
 
@@ -497,7 +511,7 @@ val align_bits = Q.store_thm("align_bits",
   SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]);
 
 val align_bits_sum = Q.store_thm("align_bits_sum",
-  `!a:word32. (1 >< 0) (align (a,4) + n) = (1 >< 0) n : word2`,
+  `!a:word32 n. (1 >< 0) (align (a,4) + n) = (1 >< 0) n : word2`,
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []
     \\ SIMP_TAC (srw_ss()) [Once WORD_ADD_BIT]
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]
@@ -797,11 +811,11 @@ val aligned_bx_branch = Q.store_thm("aligned_bx_branch",
   SRW_TAC [] [aligned_bx_def, aligned_bx_0w]);
 
 val aligned_bx_1comp = Q.store_thm("aligned_bx_1comp",
-  `!a:word32 b. aligned_bx (~(if aligned_bx (~a) then a else 0w))`,
+  `!a:word32. aligned_bx (~(if aligned_bx (~a) then a else 0w))`,
   SRW_TAC [] [aligned_bx_def]);
 
 val aligned_bx_2comp = Q.store_thm("aligned_bx_2comp",
-  `!a:word32 b. aligned_bx (-(if aligned_bx (-a) then a else 0w))`,
+  `!a:word32. aligned_bx (-(if aligned_bx (-a) then a else 0w))`,
   SRW_TAC [] [aligned_bx_def]);
 
 val aligned_bx_and = Q.store_thm("aligned_bx_and",
@@ -1311,7 +1325,7 @@ val aligned_bx_add_with_carry_literal_pc =
     \\ SRW_TAC [] [WORD_NOT, WORD_LEFT_ADD_DISTRIB]);
 
 val aligned_bx_1comp_pc = Q.store_thm("aligned_bx_1comp_pc",
-  `!a:word32 c. aligned_bx (~(align (a,4) + 8w))`,
+  `!a:word32. aligned_bx (~(align (a,4) + 8w))`,
   STRIP_TAC \\ REWRITE_TAC [word_plus8]
     \\ Q.ABBREV_TAC `x = align (a,4) >>> 2 + 2w : word32`
     \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]);
@@ -1677,14 +1691,14 @@ val aligned_bx_and_aligned_rrx = save_thm("aligned_bx_and_aligned_rrx",
 val aligned_aligned = Q.store_thm("aligned_aligned",
   `(!a:word32 b. aligned(if b then align(a,4) else 0xFFFFFFF8w,4)) /\
    (!a:word32 b. aligned (if aligned (a,4) /\ b then a else 0xFFFFFFF8w, 4)) /\
-   (!a:word8 b. aligned (if aligned (a,4) then a else 0w, 4)) /\
+   (!a:word8. aligned (if aligned (a,4) then a else 0w, 4)) /\
    (!a:word32 b c.
       aligned
         ((if b /\ aligned (a + 8w,4) /\ c then a else 0xFFFFFFF8w) + 8w, 4)) /\
    (!a:word32. aligned(if aligned(a,4) then a else 0w,4)) /\
    (!a:word32. aligned(~(if aligned(~a,4) then a else 0xFFFFFFFFw),4)) /\
-   (!a:word32. aligned((if aligned(a && b,4) then a else 0w) && b,4)) /\
-   (!a:word32. aligned((if aligned(a ?? b,4) then a else b) ?? b,4)) /\
+   (!a:word32 b. aligned((if aligned(a && b,4) then a else 0w) && b,4)) /\
+   (!a:word32 b. aligned((if aligned(a ?? b,4) then a else b) ?? b,4)) /\
    (!a:word32 b:word32.
       aligned((if aligned(a,4) /\ aligned(b,4) then a else 0w),4) /\
       aligned((if aligned(a,4) /\ aligned(b,4) then b else 0w),4)) /\
@@ -2024,7 +2038,7 @@ val aligned_bitwise_thm = Q.store_thm("aligned_bitwise_thm",
       aligned (a,4) /\ aligned (b,4) ==> (align (a !! b, 4) = a !! b)) /\
    (!a:word32 b.
       aligned (a,4) /\ aligned (b,4) ==> (align (a ?? b, 4) = a ?? b)) /\
-   (!a:word32. aligned (a,4) ==> (align (a && b,4) = a && b))`,
+   (!a:word32 b. aligned (a,4) ==> (align (a && b,4) = a && b))`,
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_248, align_248]);
 
 (* ------------------------------------------------------------------------- *)
@@ -2199,9 +2213,22 @@ val neq_pc_plus4_plus = Q.prove(
     \\ FULL_SIMP_TAC (srw_ss())
          [align_aligned |> ONCE_REWRITE_RULE [WORD_ADD_COMM]]);
 
+val neq_pc_plus4_plus_extra = Q.prove(
+  `(!a b: word32. (a + 1w = b + 5w) = (a = b + 4w)) /\
+   (!a b: word32. (a + 2w = b + 6w) = (a = b + 4w)) /\
+   (!a b: word32. (a + 3w = b + 7w) = (a = b + 4w)) /\
+   (!a b: word32. (a + 1w = b + 9w) = (a = b + 8w)) /\
+   (!a b: word32. (a + 2w = b + 10w) = (a = b + 8w)) /\
+   (!a b: word32. (a + 3w = b + 11w) = (a = b + 8w)) /\
+   (!a b: word32. (a + 1w = b + 0xFFFFFFFDw) = (a = b + 0xFFFFFFFCw)) /\
+   (!a b: word32. (a + 2w = b + 0xFFFFFFFEw) = (a = b + 0xFFFFFFFCw)) /\
+   (!a b: word32. (a + 3w = b + 0xFFFFFFFFw) = (a = b + 0xFFFFFFFCw))`,
+  SRW_TAC [wordsLib.WORD_ARITH_EQ_ss] []);
+
 val neq_pc_plus4_plus = save_thm("neq_pc_plus4_plus",
   LIST_CONJ
-    (map (fn thm => GEN_ALL (MATCH_MP (SPEC_ALL thm)
+    ((* CONJUNCTS neq_pc_plus4_plus_extra @ *)
+     map (fn thm => GEN_ALL (MATCH_MP (SPEC_ALL thm)
                    (aligned_numeric |> CONJUNCT2 |> SPEC_ALL)))
      (CONJUNCTS neq_pc_plus4_plus)));
 
@@ -2675,17 +2702,17 @@ val ARM_READ_SPSR_FROM_MODE = Q.store_thm("ARM_READ_SPSR_FROM_MODE",
   SRW_TAC [] [ARM_READ_SPSR_def]);
 
 val ARM_WRITE_SPSR_FROM_MODE = Q.store_thm("ARM_WRITE_SPSR_FROM_MODE",
-  `(!s. (ARM_MODE s = 0b10001w) ==>
+  `(!d s. (ARM_MODE s = 0b10001w) ==>
      (ARM_WRITE_SPSR_MODE 0b10001w d s = ARM_WRITE_SPSR d s)) /\
-   (!s. (ARM_MODE s = 0b10010w) ==>
+   (!d s. (ARM_MODE s = 0b10010w) ==>
      (ARM_WRITE_SPSR_MODE 0b10010w d s = ARM_WRITE_SPSR d s)) /\
-   (!s. (ARM_MODE s = 0b10011w) ==>
+   (!d s. (ARM_MODE s = 0b10011w) ==>
      (ARM_WRITE_SPSR_MODE 0b10011w d s = ARM_WRITE_SPSR d s)) /\
-   (!s. (ARM_MODE s = 0b10110w) ==>
+   (!d s. (ARM_MODE s = 0b10110w) ==>
      (ARM_WRITE_SPSR_MODE 0b10110w d s = ARM_WRITE_SPSR d s)) /\
-   (!s. (ARM_MODE s = 0b10111w) ==>
+   (!d s. (ARM_MODE s = 0b10111w) ==>
      (ARM_WRITE_SPSR_MODE 0b10111w d s = ARM_WRITE_SPSR d s)) /\
-   (!s. (ARM_MODE s = 0b11011w) ==>
+   (!d s. (ARM_MODE s = 0b11011w) ==>
      (ARM_WRITE_SPSR_MODE 0b11011w d s = ARM_WRITE_SPSR d s))`,
   SRW_TAC [] [ARM_WRITE_SPSR_def]);
 
@@ -2693,47 +2720,47 @@ val ARM_WRITE_CPSR = Q.store_thm("ARM_WRITE_CPSR",
   `(!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with N := b) state =
-         ARM_WRITE_STATUS sN b state)) /\
+         ARM_WRITE_STATUS psrN b state)) /\
    (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with Z := b) state =
-         ARM_WRITE_STATUS sZ b state)) /\
+         ARM_WRITE_STATUS psrZ b state)) /\
    (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with C := b) state =
-         ARM_WRITE_STATUS sC b state)) /\
+         ARM_WRITE_STATUS psrC b state)) /\
    (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with V := b) state =
-         ARM_WRITE_STATUS sV b state)) /\
+         ARM_WRITE_STATUS psrV b state)) /\
    (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with Q := b) state =
-         ARM_WRITE_STATUS sQ b state)) /\
+         ARM_WRITE_STATUS psrQ b state)) /\
    (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with J := b) state =
-         ARM_WRITE_STATUS sJ b state)) /\
+         ARM_WRITE_STATUS psrJ b state)) /\
    (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with E := b) state =
-         ARM_WRITE_STATUS sE b state)) /\
+         ARM_WRITE_STATUS psrE b state)) /\
    (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with A := b) state =
-         ARM_WRITE_STATUS sA b state)) /\
+         ARM_WRITE_STATUS psrA b state)) /\
    (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with I := b) state =
-         ARM_WRITE_STATUS sI b state)) /\
+         ARM_WRITE_STATUS psrI b state)) /\
    (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with F := b) state =
-         ARM_WRITE_STATUS sF b state)) /\
+         ARM_WRITE_STATUS psrF b state)) /\
    (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with T := b) state =
-         ARM_WRITE_STATUS sT b state)) /\
+         ARM_WRITE_STATUS psrT b state)) /\
    (!ge state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with GE := ge) state =
@@ -2754,47 +2781,47 @@ val ARM_WRITE_SPSR = Q.store_thm("ARM_WRITE_SPSR",
   `(!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with N := b) state =
-         ARM_WRITE_STATUS_SPSR sN b state)) /\
+         ARM_WRITE_STATUS_SPSR psrN b state)) /\
    (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with Z := b) state =
-         ARM_WRITE_STATUS_SPSR sZ b state)) /\
+         ARM_WRITE_STATUS_SPSR psrZ b state)) /\
    (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with C := b) state =
-         ARM_WRITE_STATUS_SPSR sC b state)) /\
+         ARM_WRITE_STATUS_SPSR psrC b state)) /\
    (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with V := b) state =
-         ARM_WRITE_STATUS_SPSR sV b state)) /\
+         ARM_WRITE_STATUS_SPSR psrV b state)) /\
    (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with Q := b) state =
-         ARM_WRITE_STATUS_SPSR sQ b state)) /\
+         ARM_WRITE_STATUS_SPSR psrQ b state)) /\
    (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with J := b) state =
-         ARM_WRITE_STATUS_SPSR sJ b state)) /\
+         ARM_WRITE_STATUS_SPSR psrJ b state)) /\
    (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with E := b) state =
-         ARM_WRITE_STATUS_SPSR sE b state)) /\
+         ARM_WRITE_STATUS_SPSR psrE b state)) /\
    (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with A := b) state =
-         ARM_WRITE_STATUS_SPSR sA b state)) /\
+         ARM_WRITE_STATUS_SPSR psrA b state)) /\
    (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with I := b) state =
-         ARM_WRITE_STATUS_SPSR sI b state)) /\
+         ARM_WRITE_STATUS_SPSR psrI b state)) /\
    (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with F := b) state =
-         ARM_WRITE_STATUS_SPSR sF b state)) /\
+         ARM_WRITE_STATUS_SPSR psrF b state)) /\
    (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with T := b) state =
-         ARM_WRITE_STATUS_SPSR sT b state)) /\
+         ARM_WRITE_STATUS_SPSR psrT b state)) /\
    (!ge state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with GE := ge) state =
@@ -2839,7 +2866,7 @@ val MARK_AND_CLEAR_EXCLUSIVE = Q.store_thm("MARK_AND_CLEAR_EXCLUSIVE",
       MARK_EXCLUSIVE_GLOBAL (a,n)
         (s with monitors := mon with state := mstate)) /\
      (s with monitors := mon with state := mon.state = s)) /\
-   (!mon mstate a n s.
+   (!mon mstate s.
      (mon = s.monitors) ==>
      (s with monitors := mon with state :=
        SND (mon.ClearExclusiveLocal 0 mstate) =
@@ -2857,7 +2884,7 @@ val ARM_WRITE_MEM_o = Q.store_thm("ARM_WRITE_MEM_o",
    (!a w g s.
      (ARM_WRITE_MEM_WRITE a w (s with accesses updated_by g) =
        (s with accesses updated_by (CONS (MEM_WRITE a w)) o g))) /\
-   (!a w g s.
+   (!a g s.
      (ARM_WRITE_MEM_READ a (s with accesses updated_by g) =
        (s with accesses updated_by (CONS (MEM_READ a)) o g)))`,
   SRW_TAC []
@@ -2896,37 +2923,37 @@ val ARM_WRITE_PSR_o = Q.store_thm("ARM_WRITE_PSR_o",
 val ARM_WRITE_CPSR_o = Q.store_thm("ARM_WRITE_CPSR_o",
   `(!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_N_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sN b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrN b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_Z_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sZ b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrZ b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_C_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sC b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrC b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_V_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sV b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrV b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_Q_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sQ b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrQ b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_J_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sJ b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrJ b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_E_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sE b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrE b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_A_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sA b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrA b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_I_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sI b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrI b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_F_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sF b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrF b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_T_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS sT b (ARM_WRITE_CPSR cpsr state)) /\
+       ARM_WRITE_STATUS psrT b (ARM_WRITE_CPSR cpsr state)) /\
    (!ge state cpsr.
        ARM_WRITE_CPSR (ARMpsr_GE_fupd (K ge) cpsr) state =
        ARM_WRITE_GE ge (ARM_WRITE_CPSR cpsr state)) /\
@@ -2945,37 +2972,37 @@ val SPSR_MODE_NOT_CPSR = Q.prove(
 val ARM_WRITE_SPSR_o = Q.store_thm("ARM_WRITE_SPSR_o",
   `(!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_N_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sN b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrN b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_Z_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sZ b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrZ b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_C_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sC b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrC b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_V_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sV b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrV b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_Q_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sQ b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrQ b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_J_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sJ b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrJ b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_E_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sE b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrE b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_A_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sA b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrA b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_I_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sI b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrI b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_F_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sF b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrF b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_T_fupd (K b) cpsr) state =
-       ARM_WRITE_STATUS_SPSR sT b (ARM_WRITE_SPSR cpsr state))) /\
+       ARM_WRITE_STATUS_SPSR psrT b (ARM_WRITE_SPSR cpsr state))) /\
    (!ge state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_GE_fupd (K ge) cpsr) state =
        ARM_WRITE_GE_SPSR ge (ARM_WRITE_SPSR cpsr state))) /\
@@ -3088,30 +3115,30 @@ val CPSR_COMPONENTS_OF_UPDATES = Q.store_thm("CPSR_COMPONENTS_OF_UPDATES",
             ARM_READ_STATUS f s) /\
    (!f f2 b s. ARM_READ_STATUS f (ARM_WRITE_STATUS_SPSR f2 b s) =
                ARM_READ_STATUS f s) /\
-   (!f n m d s. ARM_READ_IT (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_IT s) /\
-   (!f n d s. ARM_READ_IT (ARM_WRITE_REG n d s) = ARM_READ_IT s) /\
-   (!f a d s. ARM_READ_IT (ARM_WRITE_MEM a d s) = ARM_READ_IT s) /\
-   (!f a d s. ARM_READ_IT (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_IT s) /\
-   (!f a s. ARM_READ_IT (ARM_WRITE_MEM_READ a s) = ARM_READ_IT s) /\
+   (!n m d s. ARM_READ_IT (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_IT s) /\
+   (!n d s. ARM_READ_IT (ARM_WRITE_REG n d s) = ARM_READ_IT s) /\
+   (!a d s. ARM_READ_IT (ARM_WRITE_MEM a d s) = ARM_READ_IT s) /\
+   (!a d s. ARM_READ_IT (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_IT s) /\
+   (!a s. ARM_READ_IT (ARM_WRITE_MEM_READ a s) = ARM_READ_IT s) /\
    (!ge s. ARM_READ_IT (ARM_WRITE_GE ge s) = ARM_READ_IT s) /\
    (!it s. ARM_READ_IT (ARM_WRITE_IT it s) = it) /\
-   (!f m s. ARM_READ_IT (ARM_WRITE_MODE m s) = ARM_READ_IT s) /\
+   (!m s. ARM_READ_IT (ARM_WRITE_MODE m s) = ARM_READ_IT s) /\
    (!f b s. ARM_READ_IT (ARM_WRITE_STATUS f b s) = ARM_READ_IT s) /\
-   (!f d s. ARM_READ_IT (ARM_WRITE_SPSR d s) = ARM_READ_IT s) /\
+   (!d s. ARM_READ_IT (ARM_WRITE_SPSR d s) = ARM_READ_IT s) /\
    (!it s. ARM_READ_IT (ARM_WRITE_IT_SPSR it s) = ARM_READ_IT s) /\
    (!ge s. ARM_READ_IT (ARM_WRITE_GE_SPSR ge s) = ARM_READ_IT s) /\
    (!m s. ARM_READ_IT (ARM_WRITE_MODE_SPSR m s) = ARM_READ_IT s) /\
    (!f b s. ARM_READ_IT (ARM_WRITE_STATUS_SPSR f b s) = ARM_READ_IT s) /\
-   (!f n m d s. ARM_READ_GE (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_GE s) /\
-   (!f n d s. ARM_READ_GE (ARM_WRITE_REG n d s) = ARM_READ_GE s) /\
-   (!f a d s. ARM_READ_GE (ARM_WRITE_MEM a d s) = ARM_READ_GE s) /\
-   (!f a d s. ARM_READ_GE (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_GE s) /\
-   (!f a s. ARM_READ_GE (ARM_WRITE_MEM_READ a s) = ARM_READ_GE s) /\
+   (!n m d s. ARM_READ_GE (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_GE s) /\
+   (!n d s. ARM_READ_GE (ARM_WRITE_REG n d s) = ARM_READ_GE s) /\
+   (!a d s. ARM_READ_GE (ARM_WRITE_MEM a d s) = ARM_READ_GE s) /\
+   (!a d s. ARM_READ_GE (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_GE s) /\
+   (!a s. ARM_READ_GE (ARM_WRITE_MEM_READ a s) = ARM_READ_GE s) /\
    (!ge s. ARM_READ_GE (ARM_WRITE_GE ge s) = ge) /\
    (!it s. ARM_READ_GE (ARM_WRITE_IT it s) = ARM_READ_GE s) /\
-   (!f m s. ARM_READ_GE (ARM_WRITE_MODE m s) = ARM_READ_GE s) /\
+   (!m s. ARM_READ_GE (ARM_WRITE_MODE m s) = ARM_READ_GE s) /\
    (!f b s. ARM_READ_GE (ARM_WRITE_STATUS f b s) = ARM_READ_GE s) /\
-   (!f d s. ARM_READ_GE (ARM_WRITE_SPSR d s) = ARM_READ_GE s) /\
+   (!d s. ARM_READ_GE (ARM_WRITE_SPSR d s) = ARM_READ_GE s) /\
    (!it s. ARM_READ_GE (ARM_WRITE_IT_SPSR it s) = ARM_READ_GE s) /\
    (!ge s. ARM_READ_GE (ARM_WRITE_GE_SPSR ge s) = ARM_READ_GE s) /\
    (!m s. ARM_READ_GE (ARM_WRITE_MODE_SPSR m s) = ARM_READ_GE s) /\
@@ -3351,10 +3378,12 @@ val MEM_OF_UPDATES = Q.store_thm("MEM_OF_UPDATES",
       ARM_READ_MEM a (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_MEM a s) /\
    (!a n d s. ARM_READ_MEM a (ARM_WRITE_REG n d s) = ARM_READ_MEM a s) /\
    (!a d s. ARM_READ_MEM a (ARM_WRITE_MEM a d s) = d) /\
-   (!a b s. ~(a = b) ==> (ARM_READ_MEM a (ARM_WRITE_MEM b x s) = ARM_READ_MEM a s)) /\
+   (!a b x s. ~(a = b) ==>
+      (ARM_READ_MEM a (ARM_WRITE_MEM b x s) = ARM_READ_MEM a s)) /\
    (!a b d s. ARM_READ_MEM a (ARM_WRITE_MEM_WRITE b d s) = ARM_READ_MEM a s) /\
    (!a b s. ARM_READ_MEM a (ARM_WRITE_MEM_READ b s) = ARM_READ_MEM a s) /\
-   (!a x y s. ARM_READ_MEM a (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_MEM a s) /\
+   (!a x y s.
+      ARM_READ_MEM a (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_MEM a s) /\
    (!a it s. ARM_READ_MEM a (ARM_WRITE_IT it s) = ARM_READ_MEM a s) /\
    (!a ge s. ARM_READ_MEM a (ARM_WRITE_GE ge s) = ARM_READ_MEM a s) /\
    (!a m s. ARM_READ_MEM a (ARM_WRITE_MODE m s) = ARM_READ_MEM a s) /\
@@ -3390,27 +3419,27 @@ val MONITORS_OF_UPDATES = Q.store_thm("MONITORS_OF_UPDATES",
 
 val ARM_READ_CPSR_COMPONENT_UNCHANGED =
   Q.store_thm("ARM_READ_CPSR_COMPONENT_UNCHANGED",
-  `(!b s. (ARM_READ_STATUS sN s = b) ==>
+  `(!b s. (ARM_READ_STATUS psrN s = b) ==>
           ((ARM_READ_CPSR s with N := b) = ARM_READ_CPSR s)) /\
-   (!b s. (ARM_READ_STATUS sZ s = b) ==>
+   (!b s. (ARM_READ_STATUS psrZ s = b) ==>
           ((ARM_READ_CPSR s with Z := b) = ARM_READ_CPSR s)) /\
-   (!b s. (ARM_READ_STATUS sC s = b) ==>
+   (!b s. (ARM_READ_STATUS psrC s = b) ==>
           ((ARM_READ_CPSR s with C := b) = ARM_READ_CPSR s)) /\
-   (!b s. (ARM_READ_STATUS sV s = b) ==>
+   (!b s. (ARM_READ_STATUS psrV s = b) ==>
           ((ARM_READ_CPSR s with V := b) = ARM_READ_CPSR s)) /\
-   (!b s. (ARM_READ_STATUS sQ s = b) ==>
+   (!b s. (ARM_READ_STATUS psrQ s = b) ==>
           ((ARM_READ_CPSR s with Q := b) = ARM_READ_CPSR s)) /\
-   (!b s. (ARM_READ_STATUS sJ s = b) ==>
+   (!b s. (ARM_READ_STATUS psrJ s = b) ==>
           ((ARM_READ_CPSR s with J := b) = ARM_READ_CPSR s)) /\
-   (!b s. (ARM_READ_STATUS sE s = b) ==>
+   (!b s. (ARM_READ_STATUS psrE s = b) ==>
           ((ARM_READ_CPSR s with E := b) = ARM_READ_CPSR s)) /\
-   (!b s. (ARM_READ_STATUS sA s = b) ==>
+   (!b s. (ARM_READ_STATUS psrA s = b) ==>
           ((ARM_READ_CPSR s with A := b) = ARM_READ_CPSR s)) /\
-   (!b s. (ARM_READ_STATUS sI s = b) ==>
+   (!b s. (ARM_READ_STATUS psrI s = b) ==>
           ((ARM_READ_CPSR s with I := b) = ARM_READ_CPSR s)) /\
-   (!b s. (ARM_READ_STATUS sF s = b) ==>
+   (!b s. (ARM_READ_STATUS psrF s = b) ==>
           ((ARM_READ_CPSR s with F := b) = ARM_READ_CPSR s)) /\
-   (!b s. (ARM_READ_STATUS sT s = b) ==>
+   (!b s. (ARM_READ_STATUS psrT s = b) ==>
           ((ARM_READ_CPSR s with T := b) = ARM_READ_CPSR s)) /\
    (!it s. (ARM_READ_IT s = it) ==>
           ((ARM_READ_CPSR s with IT := it) = ARM_READ_CPSR s)) /\
@@ -3440,7 +3469,7 @@ val ARM_READ_UNCHANGED = Q.store_thm("ARM_READ_UNCHANGED",
    (!it s. (ARM_READ_IT_SPSR s = it) ==> (ARM_WRITE_IT_SPSR it s = s)) /\
    (!ge s. (ARM_READ_GE_SPSR s = ge) ==> (ARM_WRITE_GE_SPSR ge s = s)) /\
    (!m s. (ARM_READ_MODE_SPSR s = m) ==> (ARM_WRITE_MODE_SPSR m s = s)) /\
-   (!n w s. (ARM_READ_SPSR s = w) ==> (ARM_WRITE_SPSR w s = s)) /\
+   (!w s. (ARM_READ_SPSR s = w) ==> (ARM_WRITE_SPSR w s = s)) /\
    (!n w s. (ARM_READ_REG n s = w) ==> (ARM_WRITE_REG n w s = s)) /\
    (!n m w s. (ARM_READ_REG_MODE (n,m) s = w) ==>
               (ARM_WRITE_REG_MODE (n,m) w s = s))`, (* /\
@@ -3465,15 +3494,15 @@ val ARM_READ_UNCHANGED = Q.store_thm("ARM_READ_UNCHANGED",
 
 val ARM_READ_STATUS_UPDATES = Q.store_thm("ARM_READ_STATUS_UPDATES",
   `(!state state'.
-       (ARM_READ_STATUS sN state <=/=> ARM_READ_STATUS sV state) /\
-       (ARM_READ_STATUS sV state' = ARM_READ_STATUS sV state) ==>
-       (ARM_WRITE_STATUS sV (~ARM_READ_STATUS sN state) state' = state')) /\
+       (ARM_READ_STATUS psrN state <=/=> ARM_READ_STATUS psrV state) /\
+       (ARM_READ_STATUS psrV state' = ARM_READ_STATUS psrV state) ==>
+       (ARM_WRITE_STATUS psrV (~ARM_READ_STATUS psrN state) state' = state')) /\
    (!state state'.
-       ~(ARM_READ_STATUS sC state /\ ~ARM_READ_STATUS sZ state) /\
-       (ARM_READ_STATUS sC state' = ARM_READ_STATUS sC state) ==>
-       (ARM_WRITE_STATUS sC
-          (ARM_READ_STATUS sZ state /\
-           ARM_READ_STATUS sC state) state' = state'))`,
+       ~(ARM_READ_STATUS psrC state /\ ~ARM_READ_STATUS psrZ state) /\
+       (ARM_READ_STATUS psrC state' = ARM_READ_STATUS psrC state) ==>
+       (ARM_WRITE_STATUS psrC
+          (ARM_READ_STATUS psrZ state /\
+           ARM_READ_STATUS psrC state) state' = state'))`,
   REPEAT STRIP_TAC
     \\ MATCH_MP_TAC (CONJUNCT1 ARM_READ_UNCHANGED)
     \\ METIS_TAC []);
@@ -4045,9 +4074,9 @@ val ARM_ALIGN_BX_def = Define`
                     then rn else rn + 4w) >>=
                  (\u:unit. constT (SOME F))))
       || StatusAccess (Register_to_Status _ mask n) ->
-           align_pc >>=
-           (\u:unit.
-              condT (mask ' 0 /\ n <> 15w)
+           (align_pc ||| current_mode_is_priviledged ii) >>=
+           (\(u:unit,priviledged).
+              condT (mask ' 0 /\ priviledged /\ n <> 15w)
                 (read_reg ii n >>=
                  (\rn.
                     write___reg n

@@ -44,8 +44,19 @@ val (hastype_rules, hastype_ind, hastype_cases) = Hol_reln`
   (∀x m A B Γ. (x,A) :: Γ ⊢ m ◁ B         ⇒ Γ ⊢ LAM x m ◁ A → B)
 `;
 
-val _ = set_fixity "·" (Infixl 600)
+val _ = add_rule { term_name = "·",
+                   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
+                   paren_style = OnlyIfNecessary,
+                   fixity = Infixl 600,
+                   pp_elements = [TOK "·"]}
+
 val _ = overload_on ("·", ``tpm``)
+val _ = overload_on ("·", ``lswapstr``)
+val _ = overload_on ("·", ``ctxtswap``)
+
+val _ = set_fixity "#" (Infix(NONASSOC, 450))
+val _ = overload_on ("#", ``λv Γ. v ∉ ctxtFV Γ``)
+val _ = overload_on ("#", ``λv M. v ∉ FV M``)
 
 val _ = set_fixity "⁻¹" (Suffix 2100)
 val _ = overload_on ("⁻¹",
@@ -54,7 +65,7 @@ val _ = overload_on ("⁻¹",
 (* typing relation respects permutation *)
 val hastype_swap = store_thm(
   "hastype_swap",
-  ``∀Γ m τ. Γ ⊢ m ◁ τ ⇒ ∀π. ctxtswap π Γ ⊢ π·m ◁ τ``,
+  ``∀Γ m τ. Γ ⊢ m ◁ τ ⇒ ∀π. π·Γ ⊢ π·m ◁ τ``,
   HO_MATCH_MP_TAC hastype_ind THEN SRW_TAC [][] THENL [
     METIS_TAC [valid_ctxt_swap, MEM_ctxtswap, hastype_rules],
     METIS_TAC [hastype_rules],
@@ -63,7 +74,7 @@ val hastype_swap = store_thm(
 
 val hastype_swap_eqn = store_thm(
   "hastype_swap_eqn",
-  ``Γ ⊢ π·m ◁ A = ctxtswap π⁻¹ Γ ⊢ m ◁ A``,
+  ``Γ ⊢ π·m ◁ A = π⁻¹ · Γ ⊢ m ◁ A``,
   METIS_TAC [hastype_swap, tpm_inverse, ctxtswap_inverse]);
 
 val hastype_valid_ctxt = store_thm(
@@ -75,6 +86,12 @@ val strong_hastype_ind = save_thm(
   "strong_hastype_ind",
   IndDefLib.derive_strong_induction (hastype_rules, hastype_ind))
 
+val ctxtswap_fresh_cons = store_thm(
+  "ctxtswap_fresh_cons",
+  ``x # (π·(G:'a ctxt)) ∧ y # (π·G) ⇒ (((x,y)::π)·G = π·G)``,
+  `(x,y)::π = [(x,y)] ++ π` by SRW_TAC [][] THEN
+  METIS_TAC [ctxtswap_APPEND, ctxtswap_fresh]);
+
 val hastype_bvc_ind = store_thm(
   "hastype_bvc_ind",
   ``∀P fv.
@@ -85,40 +102,38 @@ val hastype_bvc_ind = store_thm(
           G ⊢ m ◁ A → B ∧ G ⊢ n ◁ A
         ⇒
           P G (m @@ n) B x) ∧
-       (∀G v m A B x. (∀y. P ((v,A)::G) m B y) ∧ v ∉ fv x ∧ v ∉ ctxtFV G ∧
+       (∀G v m A B x. (∀y. P ((v,A)::G) m B y) ∧ v ∉ fv x ∧ v # G ∧
                       (v,A) :: G ⊢ m ◁ B
                     ⇒
                       P G (LAM v m) (A → B) x) ⇒
        ∀G m A. G ⊢ m ◁ A ⇒ ∀x. P G m A x``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `∀G m A. G ⊢ m ◁ A ⇒
-                          ∀x π. P (ctxtswap π G) (π·m) A x`
+                          ∀x π. P (π·G) (π·m) A x`
         THEN1 METIS_TAC [tpm_NIL, ctxtswap_NIL] THEN
   HO_MATCH_MP_TAC strong_hastype_ind THEN SRW_TAC [][hastype_rules] THENL [
     METIS_TAC [hastype_rules, hastype_swap],
     Q.MATCH_ABBREV_TAC
-      `P (ctxtswap π G) (LAM (lswapstr π v) (π·m)) (A → B) c` THEN
+      `P (π·G) (LAM (π·v) (π·m)) (A → B) c` THEN
     markerLib.RM_ALL_ABBREVS_TAC THEN
-    Q_TAC (NEW_TAC "z") `lswapstr π v INSERT ctxtFV (ctxtswap π G) ∪
+    Q_TAC (NEW_TAC "z") `(π·v) INSERT ctxtFV (π·G) ∪
                          FV (π·m) ∪ fv c` THEN
-    `LAM (lswapstr π v) (π·m) =
-     LAM z ([(z,lswapstr π v)]·(π·m))` by SRW_TAC [][tpm_ALPHA] THEN
+    `LAM (π·v) (π·m) =
+     LAM z ([(z,π·v)]·(π·m))` by SRW_TAC [][tpm_ALPHA] THEN
     SRW_TAC [][GSYM tpm_APPEND] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     `valid_ctxt ((v,A)::G)` by METIS_TAC [hastype_valid_ctxt] THEN
-    `v ∉ ctxtFV G` by FULL_SIMP_TAC (srw_ss()) [ctxtFV_MEM] THEN
+    `v # G` by FULL_SIMP_TAC (srw_ss()) [ctxtFV_MEM] THEN
     SRW_TAC [][] THENL [
       Q_TAC SUFF_TAC
-         `((z,A)::ctxtswap π G =
-           (lswapstr ([(z,lswapstr π v)] ++ π) v,A)::
-           ctxtswap ([(z,lswapstr π v)] ++ π) G) ∧
-          (tpm ((z,lswapstr π v)::π) m = tpm ([(z,lswapstr π v)] ++ π) m)`
+         `((z,A) :: (π·G) = (([(z,π·v)] ++ π)·v,A) :: ([(z,π·v)] ++ π)·G) ∧
+          (((z,π·v)::π) · m = ([(z,π·v)] ++ π) · m)`
          THEN1
            (DISCH_THEN (CONJUNCTS_THEN SUBST1_TAC) THEN
             FIRST_X_ASSUM MATCH_ACCEPT_TAC) THEN
       SRW_TAC [][GSYM basic_swapTheory.lswapstr_APPEND,
                  ctxtswap_APPEND] THEN
-      SRW_TAC [][ctxtswap_fresh],
+      SRW_TAC [][ctxtswap_fresh_cons],
       SRW_TAC [][hastype_swap_eqn, basic_swapTheory.lswapstr_APPEND,
                  ctxtswap_APPEND, ctxtswap_fresh]
     ]
@@ -131,17 +146,17 @@ val hastype_indX = save_thm(
 
 val hastype_lam_inv = store_thm(
   "hastype_lam_inv",
-  ``v ∉ ctxtFV Γ ⇒
-        (Γ ⊢ LAM v M ◁ τ ⇔
-         ∃τ₁ τ₂. ((v,τ₁) :: Γ) ⊢ M ◁ τ₂ ∧
-                 (τ = τ₁ → τ₂))``,
+  ``v # Γ ⇒
+      (Γ ⊢ LAM v M ◁ τ ⇔
+       ∃τ₁ τ₂. ((v,τ₁)::Γ) ⊢ M ◁ τ₂  ∧  (τ = τ₁ → τ₂))``,
   SRW_TAC [][LAM_eq_thm, Once hastype_cases] THEN SRW_TAC [][EQ_IMP_THM] THENL [
-    Q.MATCH_ABBREV_TAC `(v,τ₁)::Γ ⊢ [(v,x)] · m ◁ τ₂` THEN markerLib.RM_ALL_ABBREVS_TAC THEN
-    `ctxtswap [(v,x)] ((x,τ₁) :: Γ) ⊢ tpm [(v,x)] m ◁ τ₂`
+    Q.MATCH_ABBREV_TAC `(v,τ₁)::Γ ⊢ [(v,x)] · m ◁ τ₂` THEN
+    markerLib.RM_ALL_ABBREVS_TAC THEN
+    `[(v,x)] · ((x,τ₁) :: Γ) ⊢ [(v,x)] · m ◁ τ₂`
        by SRW_TAC [][hastype_swap] THEN
     POP_ASSUM MP_TAC THEN
     `valid_ctxt ((x,τ₁):: Γ)` by METIS_TAC [hastype_valid_ctxt] THEN
-    `x ∉ ctxtFV Γ` by (FULL_SIMP_TAC (srw_ss()) [] THEN
+    `x # Γ` by (FULL_SIMP_TAC (srw_ss()) [] THEN
                            METIS_TAC [ctxtFV_MEM]) THEN
     SRW_TAC [][ctxtswap_fresh],
     METIS_TAC []
@@ -149,13 +164,13 @@ val hastype_lam_inv = store_thm(
 
 val hastype_var_inv = store_thm(
   "hastype_var_inv",
-  ``Γ ⊢ VAR v ◁ τ = MEM (v,τ) Γ ∧ valid_ctxt Γ``,
+  ``Γ ⊢ VAR v ◁ τ ⇔ MEM (v,τ) Γ ∧ valid_ctxt Γ``,
   SRW_TAC [][Once hastype_cases] THEN METIS_TAC []);
 val _ = export_rewrites ["hastype_var_inv"]
 
 val hastype_app_inv = store_thm(
   "hastype_app_inv",
-  ``Γ ⊢ M @@ N ◁ τ₂ = ∃ τ₁. Γ ⊢ M ◁ τ₁ → τ₂ ∧ Γ ⊢ N ◁ τ₁``,
+  ``Γ ⊢ M @@ N ◁ τ₂ ⇔ ∃τ₁. Γ ⊢ M ◁ τ₁ → τ₂ ∧ Γ ⊢ N ◁ τ₁``,
   SRW_TAC [][Once hastype_cases]);
 
 val weakening = store_thm(
@@ -201,7 +216,8 @@ val strengthening_FV = store_thm(
 
     SRW_TAC [][hastype_lam_inv] THEN
     `valid_ctxt ((v,A) :: (Γ ∩ FV m))`
-       by METIS_TAC[hastype_valid_ctxt, valid_ctxt_def, IN_ctxtFV_domfilter] THEN
+       by METIS_TAC[hastype_valid_ctxt, valid_ctxt_def,
+                    IN_ctxtFV_domfilter] THEN
     `(Γ ∩ FV m) ⊆ ((v,A) :: (Γ ∩ FV m))`
         by SRW_TAC [][subctxt_def] THEN
     METIS_TAC [weakening]
@@ -209,7 +225,7 @@ val strengthening_FV = store_thm(
 
 val hastype_FV = store_thm(
   "hastype_FV",
-  ``∀ Γ m A. Γ ⊢ m ◁ A ⇒ ∀v. v ∈ FV m ⇒ v ∈ ctxtFV Γ``,
+  ``∀Γ m A. Γ ⊢ m ◁ A ⇒ ∀v. v ∈ FV m ⇒ v ∈ ctxtFV Γ``,
   HO_MATCH_MP_TAC hastype_ind THEN SRW_TAC [][] THEN
   METIS_TAC [ctxtFV_MEM]);
 

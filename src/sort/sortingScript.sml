@@ -248,7 +248,7 @@ val _ = print "Proving perm has primitive recursive characterisation\n"
 val perm_cons_append = prove(
   ``^perm_t ==> !l1 l2. perm l1 l2 ==>
                         !M N. (l2 = M ++ N) ==>
-                              !h. perm (h::l1) (M ++ h::N)``,
+                              !h. perm (h::l1) (M ++ [h] ++ N)``,
   STRIP_TAC THEN HO_MATCH_MP_TAC perm_ind THEN SRW_TAC [][] THENL [
     SRW_TAC [][perm_rules],
     Cases_on `M` THEN SRW_TAC [][] THENL [

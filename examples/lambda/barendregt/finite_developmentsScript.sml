@@ -2813,7 +2813,7 @@ val weighted_reduction_reduces_ordering = store_thm(
       `strip_label ([u/v] t) = [strip_label u/v] (strip_label t)`
          by SRW_TAC [][strip_label_subst] THEN
       FULL_SIMP_TAC bool_ss [] THEN
-      `APPEND p1 [Rt] IN valid_posns ([strip_label u/v](strip_label t))`
+      `p1 ++ [Rt] ∈ valid_posns ([strip_label u/v](strip_label t))`
         by PROVE_TAC [n_posn_valid_posns] THEN
       SRW_TAC [][weight_at_subst] THENL [
         SIMP_TAC (srw_ss() ++ DNF_ss) [bv_posns_thm, update_weighing_def,
@@ -2826,20 +2826,20 @@ val weighted_reduction_reduces_ordering = store_thm(
                 redex within t.  On its own, gives the position within u of
                 that.
            p2 : position of a bound variable within the LHS of the redex *)
-        `APPEND p1 [Lt] IN lam_posns ([strip_label u/v] (strip_label t))`
+        `p1 ++ [Lt] ∈ lam_posns ([strip_label u/v] (strip_label t))`
            by PROVE_TAC [n_posns_lam_posns] THEN
-        `p2 IN var_posns ([strip_label u/v] (strip_label t))`
+        `p2 ∈ var_posns ([strip_label u/v] (strip_label t))`
            by PROVE_TAC [bv_posns_at_SUBSET_var_posns] THEN
         ASM_SIMP_TAC (srw_ss()) [weight_at_var_posn] THEN
         Q.ASM_CASES_TAC
-          `?bvp m. bvp IN v_posns v (strip_label t) /\ (APPEND bvp m = p2)`
+          `∃bvp m. bvp ∈ v_posns v (strip_label t) /\ (bvp ++ m = p2)`
         THENL [
           (* the bound variable was also within u, meaning that the whole
              redex was within u *)
           ASM_SIMP_TAC (srw_ss()) [] THEN
-          `vp IN var_posns (strip_label t)`
+          `vp ∈ var_posns (strip_label t)`
             by PROVE_TAC [v_posns_SUBSET_var_posns] THEN
-          `?p'. (p1 = APPEND vp p') /\ (p' IN n_posns n u)`
+          `?p'. (p1 = vp ++ p') /\ (p' ∈ n_posns n u)`
               by (`p2 IN var_posns (strip_label t) /\
                    ~(p2 IN v_posns v (strip_label t)) \/
                    ?bvp' m'. (p2 = APPEND bvp' m') /\
@@ -2978,13 +2978,13 @@ val weighted_reduction_reduces_ordering = store_thm(
                                APPEND_var_posns,
                                v_posns_SUBSET_var_posns]
                   ]) THEN
-          `APPEND bvp m IN
+          `bvp ++ m ∈
              IMAGE (APPEND vp) (bv_posns_at (APPEND p' [Lt]) (strip_label u))`
              by PROVE_TAC [bv_posns_at_subst2, listTheory.APPEND_ASSOC] THEN
           POP_ASSUM MP_TAC THEN
           ASM_SIMP_TAC (srw_ss() ++ SatisfySimps.SATISFY_ss)
                        [APPEND_var_posns] THEN SRW_TAC [][] THEN
-          `m IN var_posns (strip_label u)`
+          `m ∈ var_posns (strip_label u)`
              by PROVE_TAC [bv_posns_at_SUBSET_var_posns] THEN
           `w0 (Rt::m) = weight_at m (\p. w0 (Rt::p)) (strip_label u)`
               by SRW_TAC [][weight_at_var_posn] THEN
@@ -2993,15 +2993,16 @@ val weighted_reduction_reduces_ordering = store_thm(
 
           ASM_SIMP_TAC (srw_ss()) [] THEN
           SELECT_ELIM_TAC THEN CONJ_TAC THEN1 PROVE_TAC [] THEN
-          `p1 IN n_posns n t`
+          `p1 ∈ n_posns n t`
               by (FULL_SIMP_TAC (srw_ss()) [n_posns_sub, lv_posns_def] THEN
                   REPEAT VAR_EQ_TAC THEN
-                  `?m. p2 = APPEND (APPEND (APPEND vp' np) [Lt]) m`
-                      by PROVE_TAC [bv_posns_at_prefix_posn] THEN
-                  `p2 = APPEND vp' (APPEND np (APPEND [Lt] m))`
+                  `∃m. p2 = vp' ++ np ++ [Lt] ++ m`
+                      by PROVE_TAC [bv_posns_at_prefix_posn,
+                                    listTheory.APPEND_ASSOC] THEN
+                  `p2 = vp' ++ (np ++ ([Lt] ++ m))`
                       by FULL_SIMP_TAC (srw_ss()) [] THEN
                   PROVE_TAC []) THEN
-          `APPEND p1 [Lt] IN lam_posns (strip_label t)`
+          `p1 ++ [Lt] ∈ lam_posns (strip_label t)`
               by PROVE_TAC [n_posns_lam_posns] THEN
           FULL_SIMP_TAC (srw_ss()) [bv_posns_at_subst] THEN
           Q.X_GEN_TAC `m` THEN
@@ -3021,9 +3022,9 @@ val weighted_reduction_reduces_ordering = store_thm(
                            listTheory.NOT_NIL_CONS,
                            v_posns_SUBSET_var_posns],
                 Cases_on `m` THEN FULL_SIMP_TAC (srw_ss()) [],
-                `?p. p2 = APPEND (APPEND p1 [Lt]) (In::p)`
+                `?p. p2 = p1 ++ [Lt] ++ [In] ++ p`
                     by PROVE_TAC [bv_posns_at_prefix_posn] THEN
-                `p2 = APPEND vp (APPEND m (APPEND [Lt] (In::p)))`
+                `p2 = vp ++ (m ++ ([Lt] ++ In::p))`
                     by FULL_SIMP_TAC (srw_ss()) [] THEN
                 PROVE_TAC []
               ]) THEN

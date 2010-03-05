@@ -1,9 +1,22 @@
 val _ = quietdec := true;
-
+fun emacs_hol_mode_loaded () =
+   ["HOL_Interactive", "Meta",
+  "Array", "ArraySlice", "BinIO", "BinPrimIO", "Bool", "Byte",
+  "CharArray", "CharArraySlice", "Char", "CharVector",
+  "CharVectorSlice", "CommandLine.name", "Date", "General", "IEEEReal",
+  "Int", "IO", "LargeInt", "LargeReal", "LargeWord", "List", "ListPair",
+  "Math", "Option", "OS", "Position", "Real", "StringCvt", "String",
+  "Substring", "TextIO", "TextPrimIO", "Text", "Timer", "Time",
+  "VectorSlice", "Vector", "Word8Array", "Word8ArraySlice",
+  "Word8Vector", "Word8VectorSlice", "Word8", "Word"] @ (Meta.loaded());
 
 (* ----------------------------------------------------------------------
     Establish the basic environment and bring in the HOL kernel
    ---------------------------------------------------------------------- *)
+
+load "PP";
+structure MosmlPP = PP
+
 
 val _ = app load
   ["Mosml", "Process", "Path", "Arbrat", "HolKernel", "Parse", "Hol_pp",
@@ -30,18 +43,49 @@ local
   end
   fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
   fun timepp pps t = PP.add_string pps (Time.toString t ^ "s")
+  fun locpp pps l = PP.add_string pps (locn.toShortString l)
+  structure MPP = MosmlPP
 in
-  val _ = installPP (with_pp Pretype.pp_pretype)
-  val _ = installPP (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
-  val _ = installPP (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
-  val _ = installPP (with_pp Hol_pp.pp_thm)
-  val _ = installPP (with_pp Hol_pp.pp_theory)
-  val _ = installPP (with_pp type_grammar.prettyprint_grammar)
-  val _ = installPP (with_pp ppg)
-  val _ = installPP (with_pp Arbnum.pp_num)
-  val _ = installPP (with_pp Arbint.pp_int)
-  val _ = installPP (with_pp Arbrat.pp_rat)
-  val _ = installPP (with_pp timepp)
+  fun mosmlpp ppfn pps x = let
+    val slist = ref ([] : string list)
+    fun output_slist () = (app (MPP.add_string pps) (List.rev (!slist));
+                           slist := [])
+    fun flush ()= output_slist()
+    fun consume_string s = let
+      open Substring
+      val (pfx,sfx) = splitl (fn c => c <> #"\n") (full s)
+    in
+      if size sfx = 0 then slist := s :: !slist
+      else
+        (output_slist();
+         MPP.add_newline pps;
+         if size sfx > 1 then consume_string (string (triml 1 sfx))
+         else ())
+    end
+    val consumer = {consumer = consume_string,
+                    linewidth = !Globals.linewidth,
+                    flush = flush}
+    val newpps = HOLPP.mk_ppstream consumer
+  in
+    MPP.begin_block pps MPP.INCONSISTENT 0;
+    HOLPP.begin_block newpps HOLPP.INCONSISTENT 0;
+    ppfn newpps x;
+    HOLPP.end_block newpps;
+    HOLPP.flush_ppstream newpps;
+    MPP.end_block pps
+  end
+  val _ = installPP (mosmlpp Pretype.pp_pretype)
+  val _ = installPP (mosmlpp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
+  val _ = installPP (mosmlpp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
+  val _ = installPP (mosmlpp Hol_pp.pp_thm)
+  val _ = installPP (mosmlpp Hol_pp.pp_theory)
+  val _ = installPP (mosmlpp type_grammar.prettyprint_grammar)
+  val _ = installPP (mosmlpp ppg)
+  val _ = installPP (mosmlpp Arbnum.pp_num)
+  val _ = installPP (mosmlpp Arbint.pp_int)
+  val _ = installPP (mosmlpp Arbrat.pp_rat)
+  val _ = installPP (mosmlpp timepp)
+  val _ = installPP (mosmlpp locpp)
 end;
 
 

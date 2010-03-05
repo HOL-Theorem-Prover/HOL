@@ -31,11 +31,11 @@ fun process tm = let
   in if type_of tm = ``:word4`` then let
        val f = int_to_string o numSyntax.int_of_term o snd o dest_comb
        in (mk_comb(``aR``,tm),mk_var("r" ^ f tm,``:word32``)) end
-     else if eq tm ``sN:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sn",``:bool``))
-     else if eq tm ``sZ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sz",``:bool``))
-     else if eq tm ``sC:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sc",``:bool``))
-     else if eq tm ``sV:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sv",``:bool``))
-     else if tm = ``sQ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sq",``:bool``))
+     else if eq tm ``psrN:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sn",``:bool``))
+     else if eq tm ``psrZ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sz",``:bool``))
+     else if eq tm ``psrC:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sc",``:bool``))
+     else if eq tm ``psrV:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sv",``:bool``))
+     else if eq tm ``sQ:arm_bit``   then (mk_comb(``aS1``,tm),mk_var("sq",``:bool``))
      else if type_of tm = ``:word32`` then
        (mk_comb(``aM1:word32 -> word8 -> arm_set -> bool``,tm),mk_var(name_of_tm tm,``:word8``))
      else fail() end;
@@ -383,10 +383,10 @@ fun arm_jump tm1 tm2 jump_length forward = let
     val s = "b" ^ cond ^ (if forward then " +#" else " -#") ^ (int_to_string jump_length)
     fun prefix_zero s = if length (explode s) < 8 then prefix_zero ("0"^s) else s
     in prefix_zero (arm_enc s) end;
-  val (x,y) = if eq tm2 ``aS1 sN`` then ("mi","pl") else
-              if eq tm2 ``aS1 sZ`` then ("eq","ne") else
-              if eq tm2 ``aS1 sC`` then ("cs","cc") else
-              if eq tm2 ``aS1 sV`` then ("vs","vc") else ("","")
+  val (x,y) = if eq tm2 ``aS1 psrN`` then ("mi","pl") else
+              if eq tm2 ``aS1 psrZ`` then ("eq","ne") else
+              if eq tm2 ``aS1 psrC`` then ("cs","cc") else
+              if eq tm2 ``aS1 psrV`` then ("vs","vc") else ("","")
   val z = if is_neg tm1 then y else x
   val jump_length = if forward then jump_length + 4 else 0 - jump_length
   in (arm_mk_jump z jump_length,4) end

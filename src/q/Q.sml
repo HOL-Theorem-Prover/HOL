@@ -333,6 +333,14 @@ fun RM_ABBREV_TAC q (gl as (asl,w)) =
    markerLib.RM_ABBREV_TAC (fst(dest_var v))
  end gl;
 
+fun MATCH_ASSUM_ABBREV_TAC q (gl as (asl,w)) =
+ let val fv_set = FVL (w::asl) empty_tmset
+     val ctxt = HOLset.listItems fv_set
+     val pattern = ptm_with_ctxtty' ctxt bool q
+ in
+  markerLib.MATCH_ASSUM_ABBREV_TAC fv_set pattern
+ end gl;
+
 (*---------------------------------------------------------------------------*)
 (*    Renaming tactics                                                       *)
 (*---------------------------------------------------------------------------*)
@@ -342,7 +350,7 @@ let val (sf,sb) = partition (fn {redex=l,residue=r} => mem l fvs) s in
   if exists (fn {redex=l,residue=r} => (not (l = r))) sf
   then raise ERR "Double bind"
   else MAP_EVERY
-         (fn {redex=l,residue=r} => 
+         (fn {redex=l,residue=r} =>
             CHOOSE_THEN SUBST_ALL_TAC
             (Thm.EXISTS(mk_exists(l, mk_eq(r, l)), r) (Thm.REFL r)))
        (filter (fn {redex=l,residue=r} => not (mem (fst(dest_var l)) except)) sb)

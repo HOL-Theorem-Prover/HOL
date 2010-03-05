@@ -225,10 +225,7 @@ val TL = store_thm("TL",   --`!(x:'a) l. TL (CONS x l) = l`--,
 (*----------------------------------------------------------------*)
 
 
-val SNOC = new_list_rec_definition ("SNOC",
- (--`(!x.      SNOC (x:'a) ([]:'a list) = [x]) /\
-     (!x x' l. SNOC (x:'a) (CONS x' l) = CONS x' (SNOC x l))`--));
-val _ = BasicProvers.export_rewrites ["SNOC"]
+val SNOC = save_thm("SNOC", listTheory.SNOC)
 
 
 (*-------------------------------------------------------------- *)
@@ -435,27 +432,9 @@ open BasicProvers
 val _ = overload_on("BUTLAST", ``FRONT``);
 val _ = overload_on("FRONT", ``FRONT``);
 
-val LENGTH_SNOC = prove(
-    (--`!(x:'a) l. LENGTH (SNOC x l) = SUC (LENGTH l)`--),
-    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH,SNOC]);
-
-val LAST = store_thm(
-  "LAST",
-  ``!x:'a l. LAST (SNOC x l) = x``,
-  GEN_TAC THEN LIST_INDUCT_TAC THEN
-  RW_TAC bool_ss [SNOC, listTheory.LAST_DEF] THEN
-  POP_ASSUM MP_TAC THEN
-  Q.SPEC_THEN `l`  STRUCT_CASES_TAC listTheory.list_CASES THEN
-  RW_TAC bool_ss [SNOC]);
-
-val BUTLAST = store_thm(
-  "BUTLAST",
-  ``!x:'a l. BUTLAST (SNOC x l) = l``,
-  GEN_TAC THEN LIST_INDUCT_TAC THEN
-  RW_TAC bool_ss [SNOC, listTheory.FRONT_DEF] THEN
-  POP_ASSUM MP_TAC THEN
-  Q.SPEC_THEN `l` STRUCT_CASES_TAC listTheory.list_CASES THEN
-  RW_TAC bool_ss [SNOC]);
+val LENGTH_SNOC = save_thm("LENGTH_SNOC", listTheory.LENGTH_SNOC)
+val LAST = save_thm("LAST", listTheory.LAST_SNOC)
+val BUTLAST = save_thm("BUTLAST", listTheory.FRONT_SNOC)
 
 val LASTN =
     let val thm1 = prove_rec_fn_exists num_Axiom
@@ -546,10 +525,7 @@ val IS_PREFIX = save_thm("IS_PREFIX",
 
 (*---------------------------------------------------------------*)
 
-val SNOC_APPEND = store_thm("SNOC_APPEND",
-   (--`!x (l:('a) list). SNOC x l = APPEND l [x]`--),
-   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC,APPEND]);
-
+val SNOC_APPEND = save_thm("SNOC_APPEND", listTheory.SNOC_APPEND);
 val REVERSE_DEF = listTheory.REVERSE_DEF
 val REVERSE_REVERSE = listTheory.REVERSE_REVERSE
 
@@ -880,10 +856,6 @@ val LENGTH_NOT_NULL = store_thm("LENGTH_NOT_NULL",
 val SNOC_INDUCT = save_thm("SNOC_INDUCT", prove_induction_thm SNOC_Axiom_old);
 val SNOC_CASES =  save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
 
-val LENGTH_SNOC = store_thm("LENGTH_SNOC",
-    (--`!(x:'a) l. LENGTH (SNOC x l) = SUC (LENGTH l)`--),
-    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH,SNOC]);
-
 val NOT_NULL_SNOC = prove(
     (--`!(x:'a) l. ~NULL(SNOC x l)`--),
     GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC,NULL]);
@@ -1097,50 +1069,9 @@ val MONOID_APPEND_NIL = store_thm ("MONOID_APPEND_NIL",
     REWRITE_TAC[MONOID_DEF,APPEND,APPEND_NIL,APPEND_ASSOC,
             LEFT_ID_DEF,ASSOC_DEF,RIGHT_ID_DEF]);
 
-val APPEND_LENGTH_EQ = store_thm("APPEND_LENGTH_EQ",
- (--`!l1 l1'. (LENGTH l1 = LENGTH l1') ==>
-     !l2 l2':'a list. (LENGTH l2 = LENGTH l2') ==>
-     ((APPEND l1 l2 = APPEND l1' l2') = ((l1 = l1') /\ (l2 = l2')))`--),
-    let val APPEND_11 = prove(
-        (--`!(x:'a list) (y:'a list) (z:'a list).
-         ((APPEND x y) = (APPEND x z)) = (y = z)`--),
-        LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [APPEND,CONS_11])
-    and EQ_LENGTH_INDUCT_TAC =
-        LIST_INDUCT_TAC THENL[
-         LIST_INDUCT_TAC THENL[
-          REPEAT (CONV_TAC FORALL_IMP_CONV) THEN DISCH_THEN (fn t => ALL_TAC),
-          REWRITE_TAC[LENGTH,SUC_NOT]],
-         GEN_TAC THEN LIST_INDUCT_TAC
-         THEN REWRITE_TAC[LENGTH,NOT_SUC,INV_SUC_EQ]
-         THEN GEN_TAC THEN REPEAT (CONV_TAC FORALL_IMP_CONV) THEN DISCH_TAC]
-    in
-    EQ_LENGTH_INDUCT_TAC THEN REWRITE_TAC[APPEND]
-    THEN EQ_LENGTH_INDUCT_TAC THEN REWRITE_TAC[APPEND_11,CONS_11,APPEND_NIL]
-    THEN FIRST_ASSUM (fn t => ASSUME_TAC
-      (MATCH_MP t (ASSUME(--`LENGTH (l1:'a list) = LENGTH (l1':'a list)`--))))
-    THEN POP_ASSUM (ASSUME_TAC o (REWRITE_RULE[LENGTH,INV_SUC_EQ]) o
-    (SPECL[(--`CONS x'' l2:'a list`--),(--`CONS x''' l2':'a list`--)]))
-(* **list_Axiom** variable dependancy *)
-(*     (SPECL[(--`CONS h'' l2:'a list`--),(--`CONS h''' l2':'a list`--)])) *)
-    THEN POP_ASSUM (fn t1 => FIRST_ASSUM (fn t2 =>  SUBST1_TAC (MP t1 t2)))
-    THEN REWRITE_TAC[CONS_11,CONJ_ASSOC]
-    end);
-
+val APPEND_LENGTH_EQ = save_thm("APPEND_LENGTH_EQ", listTheory.APPEND_LENGTH_EQ)
 val APPEND_11_LENGTH = save_thm ("APPEND_11_LENGTH",
- SIMP_RULE std_ss [DISJ_IMP_THM, FORALL_AND_THM] (prove (
- (--`!l1 l2 l1' l2'.
-        ((LENGTH l1 = LENGTH l1') \/ (LENGTH l2 = LENGTH l2')) ==>
-        (((l1 ++ l2) = (l1' ++ l2')) = ((l1 = l1') /\ (l2 = l2')))`--),
-     REPEAT GEN_TAC
-     THEN Tactical.REVERSE
-        (Cases_on `(LENGTH l1 = LENGTH l1') /\ (LENGTH l2 = LENGTH l2')`) THEN1 (
-           DISCH_TAC
-           THEN `~((l1 = l1') /\ (l2 = l2'))` by PROVE_TAC[]
-           THEN ASM_REWRITE_TAC[]
-           THEN Tactical.REVERSE
-              (`~(LENGTH (l1 ++ l2) = LENGTH (l1' ++ l2'))` by ALL_TAC) THEN1 PROVE_TAC[]
-           THEN FULL_SIMP_TAC arith_ss [LENGTH_APPEND]
-     ) THEN PROVE_TAC[APPEND_LENGTH_EQ])));
+                                 listTheory.APPEND_11_LENGTH)
 
 val FILTER_APPEND = store_thm("FILTER_APPEND",
     (--`!f l1 (l2:'a list).

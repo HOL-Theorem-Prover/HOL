@@ -22,6 +22,7 @@ Kind   ::= 'ty' | KindIdent | Kind '=>' Kind | 'ar' Numeral | '(' Kind ')'
   type grammar
 
   val empty_grammar    : grammar
+  val min_grammar      : grammar
   val rules            : grammar -> (int * grammar_rule) list
 (*
   val abbreviations    : grammar -> (string,kind_structure) Binarymap.dict
@@ -41,6 +42,7 @@ Kind   ::= 'ty' | KindIdent | Kind '=>' Kind | 'ar' Numeral | '(' Kind ')'
   (* removes by infix symbol, i.e. "+", not "sum" *)
 
   val new_kindop       : grammar -> string -> grammar
+  val new_arityop      : grammar -> string -> grammar
 (*
   val new_abbreviation : grammar -> string * kind_structure -> grammar
   val remove_abbreviation : grammar -> string -> grammar

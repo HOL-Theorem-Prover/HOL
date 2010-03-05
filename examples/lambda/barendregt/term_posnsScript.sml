@@ -514,8 +514,8 @@ val bv_posns_at_subst2 = store_thm(
 
 val bv_posns_at_prefix_posn = store_thm(
   "bv_posns_at_prefix_posn",
-  ``!p t bvp. p IN lam_posns t /\ bvp IN bv_posns_at p t ==>
-              ?m. bvp = APPEND p (In::m)``,
+  ``∀p t bvp. p ∈ lam_posns t /\ bvp ∈ bv_posns_at p t ==>
+              ∃m. bvp = p ++ [In] ++ m``,
   Induct THEN
   REPEAT GEN_TAC THEN SIMP_TAC (srw_ss()) [bv_posns_at_def] THEN
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN

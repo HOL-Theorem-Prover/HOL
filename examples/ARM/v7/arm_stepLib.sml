@@ -38,18 +38,16 @@ val mk_constants =
 (* Things to avoid evaluating *)
 
 val restr_terms = mk_constants
-  [("words",         ["word_div", "word_sdiv", "add_with_carry"]),
+  [("words",         ["word_div", "word_sdiv", "add_with_carry",
+                      "bit_field_insert"]),
    ("integer_word",  ["w2i", "i2w"]),
    ("arm_opsem",     ["signed_sat_q", "unsigned_sat_q",
                       "signed_sat", "unsigned_sat"]),
    ("arm_coretypes", ["encode_psr", "decode_psr", "sign_extend",
                       "count_leading_zeroes"])];
 
-val word4 = ``arm_step$word4 (a,b,c,d)`` |> EVAL |> SYM |> GEN_ALL;
-
 val _ = computeLib.del_consts (mk_constants
-  [("arm_step", ["word4"]),
-   ("arm_opsem",
+  [("arm_opsem",
      ["branch_write_pc", "bx_write_pc", "load_write_pc", "alu_write_pc",
      "cpsr_write_by_instr", "spsr_write_by_instr",
      "branch_target_instr",
@@ -177,7 +175,7 @@ val _ = computeLib.add_funs
    neq_pc_plus4, neq_pc_plus4_t2, neq_pc_plus4_plus, aligned_over_memread,
    aligned_bx_aligned_bx, aligned_concat, aligned_bx_concat,
    it_mode_concat, it_con_thm,
-   word_add_sub2, word_add_sub3, word_add_sub4, word_add_sub5, word4,
+   word_add_sub2, word_add_sub3, word_add_sub4, word_add_sub5,
    WORD_ADD_RINV, WORD_NEG_NEG, WORD_ADD_0, UPDATE_ID_o,
    wordsLib.WORD_ARITH_CONV ``~(n2w n + -a) : word32``,
    wordsLib.WORD_ARITH_CONV ``~-a : word32``,
@@ -223,11 +221,7 @@ val rhsc = rhs o concl;
 val eval = rhsc o EVAL;
 fun apply_conv conv = rhsc o (QCONV conv);
 val restr_eval = apply_conv (computeLib.RESTR_EVAL_CONV restr_terms);
-
-fun dest_strip t =
-let val (l,r) = strip_comb t in
-  (fst (dest_const l), r)
-end;
+val dest_strip = armSyntax.dest_strip;
 
 fun dest_arm_state_updates tm =
  (case dest_strip tm
@@ -245,10 +239,10 @@ local
 in
   fun set_flags state cond pass =
     let fun test_flag t = mk_read_status (t,state)
-        val flag_n = test_flag ``arm_step$sN``
-        val flag_z = test_flag ``arm_step$sZ``
-        val flag_c = test_flag ``arm_step$sC``
-        val flag_v = test_flag ``arm_step$sV``
+        val flag_n = test_flag ``arm_step$psrN``
+        val flag_z = test_flag ``arm_step$psrZ``
+        val flag_c = test_flag ``arm_step$psrC``
+        val flag_v = test_flag ``arm_step$psrV``
         val not_flag_n = mk_neg flag_n
         val not_flag_z = mk_neg flag_z
         val not_flag_c = mk_neg flag_c
@@ -360,6 +354,8 @@ fun arch_version s =
    | ARMv7_R => 7
    | ARMv7_M => 7;
 
+fun thumb2_support a = Lib.mem a [ARMv6T2, ARMv7_A, ARMv7_R, ARMv7_M]
+
 local
   val arch_tm                = mk_arm_const "ARM_ARCH"
   val extensions_tm          = mk_arm_const "ARM_EXTENSIONS"
@@ -384,20 +380,22 @@ in
              ARM_READ_CPSR_def, ARM_MODE_def, ARM_READ_STATUS_def,
              ARM_READ_IT_def])
          (list_mk_conj
-           [mk_test (arch_tm,[the_state],arch),
+          ([mk_test (arch_tm,[the_state],arch),
             mk_test (extensions_tm,[the_state],
                     pred_setSyntax.mk_empty ``:ARMextensions``),
             mk_test (unaligned_support_tm,[the_state],T),
             mk_test (read_event_register_tm,[the_state],T),
             mk_test (read_interrupt_wait_tm,[the_state],F),
-            mk_test (read_sctlr_tm,[``arm_step$cV``,the_state],F),
-            mk_test (read_sctlr_tm,[``arm_step$cA``,the_state],T),
-            mk_test (read_sctlr_tm,[``arm_step$cU``,the_state],F),
-            mk_test (read_it_tm,[the_state],itstate),
-            mk_test (read_status_tm,[``arm_step$sJ``,the_state],F),
-            mk_test (read_status_tm,[``arm_step$sT``,the_state],thumb),
-            mk_test (read_status_tm,[``arm_step$sE``,the_state],endian),
-            flags, regs, memory])
+            mk_test (read_sctlr_tm,[``arm_step$sctlrV``,the_state],F),
+            mk_test (read_sctlr_tm,[``arm_step$sctlrA``,the_state],T),
+            mk_test (read_sctlr_tm,[``arm_step$sctlrU``,the_state],F)] @
+           [case itstate
+            of SOME IT => mk_test (read_it_tm,[the_state],IT)
+             | NONE => boolSyntax.T] @
+           [mk_test (read_status_tm,[``arm_step$psrJ``,the_state],F),
+            mk_test (read_status_tm,[``arm_step$psrT``,the_state],thumb),
+            mk_test (read_status_tm,[``arm_step$psrE``,the_state],endian),
+            flags, regs, memory]))
 end;
 
 fun list_dest_o t =
@@ -676,18 +674,31 @@ local
 
   fun mk_bool b = if b then T else F
 
-  fun decode_opcode itstate arch thumb opc =
+  fun mk_cpsr the_state flags_fupd itstate T E M = let
+        val cpsr = case itstate
+                   of SOME IT =>
+                     ``^the_state.psrs (0,CPSR) with
+                          <| IT := ^IT; J := F; T := ^T; E := ^E; M := ^M |>``
+                   | _ => ``^the_state.psrs (0,CPSR) with
+                              <| J := F; T := ^T; E := ^E; M := ^M |>``
+      in
+        eval (mk_comb (flags_fupd, cpsr))
+      end
+
+  fun decode_opcode IT arch thumb opc =
         if thumb then
           let val n = wordsSyntax.mk_wordi (bits32 (opc,15,0),16)
           in
             if bits32 (opc,31,29) = Arbnum.fromBinString "111" andalso
                bits32 (opc,28,27) <> Arbnum.zero
             then
-              (armSyntax.Encoding_Thumb2_tm,armSyntax.mk_thumb2_decode (itstate,
+              (armSyntax.Encoding_Thumb2_tm,armSyntax.mk_thumb2_decode (IT,
                 wordsSyntax.mk_wordi (bits32 (opc,31,16),16),n))
-            else
+            else if bits32 (opc,31,16) = Arbnum.zero then
               (armSyntax.Encoding_Thumb_tm,
-               armSyntax.mk_thumb_decode (arch_to_term arch,itstate,n))
+               armSyntax.mk_thumb_decode (arch_to_term arch,IT,n))
+            else
+              raise ERR "decode_opcode" "not a valid thumb op-code"
           end
         else
           let val n = wordsSyntax.mk_wordi (opc,32)
@@ -710,7 +721,9 @@ in
     val _ = not (arch = ARMv4 andalso thumb) orelse
               raise ERR "make_arm_state_and_pre" "ARMv4 does not support Thumb."
     val ii = ``<| proc := 0 |> : arm_coretypes$iiid``
-    val itstate = wordsSyntax.mk_wordii (#itblock opt,8)
+    val T2 = thumb2_support arch
+    val IT = wordsSyntax.mk_wordii (if T2 then #itblock opt else 0,8)
+    val itstate = if T2 then SOME IT else NONE
     val M = mode_to_term (#mode opt)
     val E = endian_to_term endian
     val A = arch_to_term arch
@@ -718,11 +731,10 @@ in
     val opc = Arbnum.fromHexString (remove_white_space instr)
                 handle Option => raise ERR "make_arm_state_and_pre"
                                            "not a valid hex opcode"
-    val (enc,dec) = (I ## eval) (decode_opcode itstate arch thumb opc)
+    val (enc,dec) = (I ## eval) (decode_opcode IT arch thumb opc)
     val (cond,instruction) = pairSyntax.dest_pair dec
     val (flags_fupd,flags_pre) = set_flags the_state cond (#pass opt)
-    val CPSR = eval (mk_comb (flags_fupd, ``^the_state.psrs (0,CPSR) with
-                 <| IT := ^itstate; J := F; T := ^Thumb; E := ^E; M := ^M |>``))
+    val CPSR = mk_cpsr the_state flags_fupd itstate Thumb E M
     val state' = init the_state CPSR A
     val opc = wordsSyntax.mk_wordi (opc,32)
     val opc' = if not thumb orelse arch_version arch >= 5
@@ -758,7 +770,7 @@ in
     STRIP_TAC
       \\ PURE_REWRITE_TAC [ARM_ARCH_def, ARM_EXTENSIONS_def,
            ARM_UNALIGNED_SUPPORT_def, ARM_READ_EVENT_REGISTER_def,
-           ARM_READ_INTERRUPT_WAIT_def, ARM_READ_SCTLR_def]
+           ARM_READ_INTERRUPT_WAIT_def, ARM_READ_SCTLR_def, ARM_READ_SCR_def]
       \\ Cases_on `s`
       \\ SIMP_TAC (srw_ss())
            [WORD_NOT, WORD_LEFT_ADD_DISTRIB, IT_concat0,
@@ -785,13 +797,6 @@ fun prove_comp_thm the_state P H G X = Q.prove(
          [UPD11_SAME_KEY_AND_BASE, UPDATE_EQ, UPDATE_ID_o2, APPLY_UPDATE_THM,
           WORD_EQ_ADD_LCANCEL_0, align_aligned]);
 
-val bfc = Q.prove(
-  `!w:word32 h l.
-      word_modify (\i. COND (l <= i /\ i <= h) ((0w:word32) ' i)) w =
-      w && word_modify (\i. COND (l <= i /\ i <= h) F) 0xFFFFFFFFw`,
-  RW_TAC (std_ss++fcpLib.FCP_ss) [word_and_def, word_modify_def, word_0, word_T,
-    ``UINT_MAXw : word32`` |> EVAL |> SYM] \\ DECIDE_TAC);
-
 local
   val lem1 = trace ("metis",0) (METIS_PROVE [WORD_EQ_ADD_RCANCEL])
     ``(((state:arm_seq_monad$arm_state).memory p = x) ==>
@@ -811,6 +816,11 @@ local
                  |> EQT_ELIM |> EVAL_RULE
                  |> REWRITE_RULE [GSYM word_sub_def] |> GEN_ALL
   val lem8 = intLib.ARITH_PROVE ``(a + b * 65536i) / 65536 = a / 65536 + b``
+  val lem9 = ``arm_step$word4 (a,b,c,d)`` |> EVAL |> SYM |> GEN_ALL
+  val lem10 = DECIDE ``~((a <=> b) /\ ~c) ==> ((if c then b else ~a) = b)``
+  val lem11 = simpLib.SIMP_PROVE std_ss [COND_RAND]
+                 ``(if b then align (x:word32,m) else align (x,n)) =
+                   align (x,if b then m else n)``
 
   val align_rws = [lem1, lem7, aligned_thm, aligned_n2w, align_n2w,
      aligned_bitwise_thm, aligned_pc_thm, optionTheory.option_CLAUSES,
@@ -827,7 +837,8 @@ local
      GSYM ARM_READ_IT_def, GSYM ARM_READ_GE_def,
      GSYM ARM_READ_CPSR_def, GSYM ARM_WRITE_CPSR_def,
      ARM_READ_SCTLR_def |> SIMP_RULE (srw_ss()) [] |> GSYM,
-     GSYM ARM_READ_STATUS_def, GSYM ARM_READ_SCTLR_def,
+     ARM_READ_SCR_def   |> SIMP_RULE (srw_ss()) [] |> GSYM,
+     GSYM ARM_READ_STATUS_def, GSYM ARM_READ_SCTLR_def, GSYM ARM_READ_SCR_def,
      GSYM ARM_READ_STATUS_SPSR_def, GSYM ARM_READ_MODE_SPSR_def,
      GSYM ARM_READ_IT_SPSR_def, GSYM ARM_READ_GE_SPSR_def,
      GSYM ARM_WAIT_FOR_EVENT_def, GSYM ARM_SEND_EVENT_def,
@@ -843,7 +854,7 @@ local
      integer_wordTheory.word_add_i2w,
      integer_wordTheory.word_sub_i2w,
      GSYM integer_wordTheory.WORD_GEi, GSYM WORD_HS, WORD_EQ_SUB_ZERO,
-     bfc, lem2, lem4, lem5, lem6, lem8]
+     lem2, lem4, lem5, lem6, lem8, lem9, lem10]
 
   val updates_rws =
     [ARM_WRITE_CPSR, ARM_WRITE_SPSR,
@@ -855,7 +866,7 @@ local
      COND_RATOR, EXCEPTION_MODE,
      Q.ISPEC `ARM_WRITE_CPSR` COND_RAND,
      Q.ISPEC `ARM_WRITE_IT n` COND_RAND,
-     arm_bit_distinct]
+     arm_bit_distinct, lem11]
 in
   val WORD_EQ_ss = simpLib.conv_ss
              {conv = K (K (wordsLib.word_EQ_CONV)), trace = 3,
