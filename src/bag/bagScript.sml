@@ -1519,6 +1519,18 @@ val BAG_INSERT_CHOICE_REST = Q.store_thm
         [BAG_INSERT,BAG_REST_DEF,BAG_DIFF,EL_BAG,BAG_IN,BAG_INN,
          EMPTY_BAG,combinTheory.K_DEF,FUN_EQ_THM]);
 
+val BAG_CHOICE_SING = Q.store_thm
+("BAG_CHOICE_SING",
+ `BAG_CHOICE {|x|} = x`,
+  Q.SPEC_THEN `{|x|}` MP_TAC BAG_CHOICE_DEF THEN SRW_TAC [][])
+before export_rewrites ["BAG_CHOICE_SING"];
+
+val BAG_REST_SING = Q.store_thm
+("BAG_REST_SING",
+ `BAG_REST {|x|} = {||}`,
+ SRW_TAC [][BAG_REST_DEF,EL_BAG])
+before export_rewrites ["BAG_REST_SING"];
+
 val SUB_BAG_REST = Q.store_thm
 ("SUB_BAG_REST",
  `!b:'a bag. SUB_BAG (BAG_REST b) b`,
