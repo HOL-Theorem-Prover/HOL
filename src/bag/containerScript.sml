@@ -188,11 +188,17 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC list_ss [MEM_FILTER] THEN
 METIS_TAC[]);
 
+val CARD_LIST_TO_BAG = Q.store_thm(
+"CARD_LIST_TO_BAG",
+`BAG_CARD (LIST_TO_BAG ls) = LENGTH ls`,
+Induct_on `ls` THEN SRW_TAC [][BAG_CARD_THM,arithmeticTheory.ADD1])
+before export_rewrites ["CARD_LIST_TO_BAG"];
+
 val BAG_TO_LIST_EQ_NIL = Q.store_thm(
 "BAG_TO_LIST_EQ_NIL",
-`FINITE_BAG b ⇒
- (([] = BAG_TO_LIST b) ⇔ (b = {||})) ∧
- ((BAG_TO_LIST b = []) ⇔ (b = {||}))`,
+`FINITE_BAG b ==>
+ (([] = BAG_TO_LIST b) <=> (b = {||})) /\
+ ((BAG_TO_LIST b = []) <=> (b = {||}))`,
 Q.SPEC_THEN `b` STRUCT_CASES_TAC BAG_cases THEN
 SRW_TAC [][BAG_TO_LIST_THM])
 before export_rewrites ["BAG_TO_LIST_EQ_NIL"];
