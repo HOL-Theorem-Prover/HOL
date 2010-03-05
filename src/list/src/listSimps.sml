@@ -32,17 +32,23 @@ open Parse
 val APPEND_EVAL_CONV = PURE_REWRITE_CONV [listTheory.APPEND_NIL,
                                           listTheory.APPEND];
 
-fun NORM_CONS_CONV t =
+local
+  val NORM_CONV_conv1 = REWR_CONV (CONJUNCT2 listTheory.APPEND)
+  val NORM_CONV_conv2 = REWR_CONV (CONJUNCT1 listTheory.APPEND)
+  fun NORM_CONV_conv t = ((NORM_CONV_conv1 THENC RAND_CONV NORM_CONV_conv)
+ORELSEC
+                          NORM_CONV_conv2) t
+in
+
+fun NORM_CONS_CONV tt =
   let
-     val (eL, r) = strip_cons t;
+     val (eL, r) = strip_cons tt;
      val _ = if null eL orelse is_nil r then raise UNCHANGED else ()
-     val v = genvar (type_of r);
-     val t' = mk_append (listSyntax.mk_list (eL, type_of (hd eL)), v);
-     val thm0 = APPEND_EVAL_CONV t'
-     val thm1 = INST [v |-> r] thm0
+     val t' = mk_append (listSyntax.mk_list (eL, type_of (hd eL)), r);
   in
-     GSYM thm1
-  end;
+     GSYM (NORM_CONV_conv t')
+  end
+end
 
 fun APPEND_SIMPLE_LISTS_CONV t =
   let
