@@ -994,7 +994,8 @@ val arm_parse_branch_offset : term M =
 
 local
   val has_sflags =
-    [AND,EOR,ADC,SBC,ORR,BIC,ADD,SUB,RSB,RSC,MOV,MVN,ORN,LSL,LSR,ASR,ROR,MUL]
+    [AND,EOR,ADC,SBC,ORR,BIC,ADD,SUB,RSB,RSC,MOV,MVN,ORN,
+     LSL,LSR,ASR,ROR,RRX,MUL]
 
   val arm_only_sflags = [MLA,UMULL,UMLAL,SMULL,SMLAL]
 in

@@ -1100,7 +1100,7 @@ val add_sub_instr_def = iDefine`
    T2,A: ROR{S}<c>     <Rd>,<Rm>,#<imm5>
    T:    RORS          <Rdn>,<Rm>                  (Outside IT block)
    T:    ROR<c>        <Rdn>,<Rm>                  (Inside IT block)
-   T2:   ROR{S}.W      <Rd>,<Rn>,<Rm>
+   T2:   ROR{S}<c>.W   <Rd>,<Rn>,<Rm>
    A:    ROR{S}<c>     <Rd>,<Rn>,<Rm>
    T2,A: RRX{S}<c>     <Rd>,<Rm>
    ```````````````````````````````````````````````````````````````````````` *)
