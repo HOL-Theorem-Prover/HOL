@@ -234,8 +234,8 @@ val MAP_11 = store_thm("MAP_11",
 
 val REVERSE_11 = store_thm("REVERSE_11",
   `!l1 l2. ((REVERSE l1 = REVERSE l2) = (l1 = l2))`,
-  Induct_on `l1` \\ Induct_on `l2`
-     \\ SRW_TAC [] [REWRITE_RULE [SNOC_APPEND] SNOC_11]);
+  Induct_on `l1` \\ Induct_on `l2` 
+     \\ SRW_TAC [] [] \\ PROVE_TAC []);
 
 val string_to_num_11 = store_thm("string_to_num_11",
   `!s t. (string_to_num s = string_to_num t) = (s = t)`,
