@@ -39,7 +39,7 @@ fun holfoot_var_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t
     val v_term = dest_holfoot_var t;
   in
     (#add_string ppfns) (stringLib.fromHOLstring v_term)
-  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+  end
 
 
 
@@ -48,7 +48,7 @@ fun holfoot_tag_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t
     val t_term = dest_holfoot_tag t;
   in
     (#add_string ppfns) (stringLib.fromHOLstring t_term)
-  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+  end
 
 
 fun pretty_print_list not_last oper [] = () |
@@ -464,7 +464,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
     ) else( 
       raise term_pp_types.UserPP_Failed
     )
-  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+  end
 
 
 
@@ -497,6 +497,18 @@ fun coded_expression_to_term e1 e2 p =
       tt1
    end;
 
+fun gencoded_expression_to_term p eL_t = 
+   let
+      val (eL,_) = listSyntax.dest_list eL_t;
+      val esL = map Parse.term_to_string eL;
+      val evL = map (fn n => mk_var (n, numSyntax.num)) esL;
+      val evL_t = listSyntax.mk_list (evL, numSyntax.num);
+      val tt0 = mk_comb(p, evL_t)
+      val tt1 = rhs (concl ((BETA_CONV THENC SIMP_CONV list_ss []) tt0)) handle HOL_ERR _ => tt0;
+   in
+      tt1
+   end;
+
 fun holfoot_expression_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = 
   let 
     open Portable term_pp_types
@@ -512,11 +524,15 @@ fun holfoot_expression_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs 
       add_string "(";
       sys (Top, Top, Top) (d - 1) (coded_expression_to_term (el 2 args) (el 3 args) (el 1 args));
       add_string ")"
+    ) else if (same_const op_term var_res_exp_op_term)  then (
+      add_string "(";
+      sys (Top, Top, Top) (d - 1) (gencoded_expression_to_term
+         (el 1 args) (el 2 args));
+      add_string ")"
     ) else (
       raise term_pp_types.UserPP_Failed
     )
-  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
-
+  end 
 
 fun holfoot_pred_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = 
   let 
@@ -552,10 +568,15 @@ fun holfoot_pred_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
       add_string ("(");
       sys (Top, Top, Top) (d - 1) (coded_expression_to_term (el 2 args) (el 3 args) (el 1 args));
       add_string (")")
+    ) else if (same_const op_term var_res_pred_term)  then (
+      add_string "(";
+      sys (Top, Top, Top) (d - 1) (gencoded_expression_to_term
+         (el 1 args) (el 2 args));
+      add_string ")"
     ) else (
       raise term_pp_types.UserPP_Failed
     )
-  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+  end 
 
 
 
@@ -664,24 +685,55 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
       add_string ")";
       end_block ()
     ) else if (same_const op_term holfoot_ap_data_list_seg_term)  then (
-      begin_block INCONSISTENT 0;       
-      add_string (if (same_const (el 3 args) listSyntax.nil_tm) then
-              "lseg" else "data_lseg");
-      add_string "(";
-      add_break (0,!holfoot_pretty_printer_block_indent);
-      sys (Top, Top, Top) (d - 1) (el 1 args);
-      add_string ";";
-      add_break (1,!holfoot_pretty_printer_block_indent);
-      sys (Top, Top, Top) (d - 1) (el 2 args);
-      if not (same_const (el 3 args) listSyntax.nil_tm) then
-           (add_string ",";add_break (1,!holfoot_pretty_printer_block_indent);
-            tag_list_printer (sys, add_string, add_break) (Top,Top,Top) (d-1) pps (el 3 args)
-           ) else ();
-      add_string ",";
-      add_break (1,!holfoot_pretty_printer_block_indent);
-      sys (Top, Top, Top) (d - 1) (el 4 args);
-      add_string ")";
-      end_block ()
+      let
+         val end_is_null = is_holfoot_exp_null (el 4 args);
+         val has_data = not (same_const (el 3 args) listSyntax.nil_tm);
+         val desc = if has_data then
+                 (if end_is_null then "data_list" else "data_lseg") else
+                 (if end_is_null then "list" else "lseg") 
+      in
+         begin_block INCONSISTENT 0;       
+         add_string desc;
+         add_string "(";
+         add_break (0,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 1 args);
+         add_string ";";
+         add_break (1,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 2 args);
+         if has_data then
+              (add_string ",";add_break (1,!holfoot_pretty_printer_block_indent);
+               tag_list_printer (sys, add_string, add_break) (Top,Top,Top) (d-1) pps (el 3 args)
+              ) else ();
+         if (end_is_null) then () else (
+         add_string ",";
+         add_break (1,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 4 args));
+         add_string ")";
+         end_block ()
+      end
+    ) else if (same_const op_term holfoot_ap_data_queue_term)  then (
+      let
+         val has_data = not (same_const (el 3 args) listSyntax.nil_tm);
+         val desc = if has_data then "data_queue" else "queue";
+      in
+         begin_block INCONSISTENT 0;       
+         add_string desc;
+         add_string "(";
+         add_break (0,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 1 args);
+         add_string ";";
+         add_break (1,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 2 args);
+         if has_data then
+              (add_string ",";add_break (1,!holfoot_pretty_printer_block_indent);
+               tag_list_printer (sys, add_string, add_break) (Top,Top,Top) (d-1) pps (el 3 args)
+              ) else ();
+         add_string ",";
+         add_break (1,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 4 args);
+         add_string ")";
+         end_block ()
+      end
     ) else if (same_const op_term holfoot_ap_bintree_term)  then (
       begin_block INCONSISTENT 0;       
       add_string "bin_tree";
@@ -726,6 +778,26 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
       add_break(1, !holfoot_pretty_printer_block_indent);
       finite_map_printer (sys,add_string,add_break) (Top,Top,Top) (d-1) pps (el 2 args);
       end_block ()
+    ) else if (same_const op_term var_res_map_term) then (
+      let 
+         val (vc, b) = pairSyntax.dest_pabs (el 2 args);
+         val vl = pairSyntax.strip_pair vc;
+      in
+         begin_block INCONSISTENT 0;       
+         add_string "map";
+         add_string " ";
+         add_string "(\\";
+         pretty_print_list_sep "" (sys, add_string, add_break) d vl;
+         add_string ".";
+         add_break (1,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) b;
+         add_string ")";
+         add_break (1,!holfoot_pretty_printer_block_indent);
+         add_string "(";
+         sys (Top, Top, Top) (d - 1) (el 3 args);
+         add_string ")";
+         end_block ()
+      end
     ) else if (same_const op_term var_res_prop_binexpression_cond_term)  then (
       begin_block INCONSISTENT 0;       
       add_string "if";
@@ -811,7 +883,7 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
     ) else (
       raise term_pp_types.UserPP_Failed
     )
-  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+  end 
 
 
 
@@ -831,7 +903,7 @@ fun holfoot_cond_a_prop_printer sys (ppfns:term_pp_types.ppstream_funs) gravs d 
     ) else (
       raise term_pp_types.UserPP_Failed
     )
-  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+  end 
 
 
 
@@ -969,7 +1041,7 @@ fun holfoot_specification_printer GS sys (ppfns:term_pp_types.ppstream_funs) gra
      add_newline ();
      add_string ")";
      end_block ()
-  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+  end 
 
 (*
 val t = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
@@ -1062,7 +1134,7 @@ in
     end_block ();
     add_newline ();
     end_block ()
-end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+end 
 
 fun holfoot_cond_triple_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = let
     open Portable term_pp_types
@@ -1086,7 +1158,7 @@ fun holfoot_cond_triple_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs
 
     fun print_condition (wL, rL, cL) = (
        begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);       
-         begin_style [FG OrangeRed];
+         begin_style [UserStyle "holfoot_spec"];
          add_string "[[w/r:";
          add_string " ";
          pretty_print_list_sep "," (sys, add_string, add_break) d wL;
@@ -1112,7 +1184,7 @@ in
        add_newline ();
        print_condition (post_writeL, post_readL, post_condL); 
     end_block ()
-end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+end 
 
 val pretty_printer_list =
  [("holfoot_prop_is_equiv_false", ``VAR_RES_PROP_IS_EQUIV_FALSE c f wrb (sfb:holfoot_a_proposition -> num)``,    holfoot_prop_is_equiv_false_printer),
@@ -1132,6 +1204,7 @@ val pretty_printer_list =
  ]:(string * Parse.term * term_grammar.userprinter) list;
 
 
+
 val use_holfoot_pp = ref true
 val _ = Feedback.register_btrace ("use holfoot_pp", use_holfoot_pp);
 
@@ -1139,7 +1212,9 @@ val _ = Feedback.register_btrace ("use holfoot_pp", use_holfoot_pp);
 fun trace_user_printer (up:term_grammar.userprinter) =
    (fn GS => fn sys => fn ppfns => fn gravs => fn d => fn pps => fn t =>
    if (!use_holfoot_pp) then 
-       up GS sys ppfns gravs d pps t
+       (up GS sys ppfns gravs d pps t) 
+          handle Interrupt => raise Interrupt
+               | _         => raise term_pp_types.UserPP_Failed
    else
       raise term_pp_types.UserPP_Failed):term_grammar.userprinter
 

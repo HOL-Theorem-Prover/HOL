@@ -111,12 +111,11 @@ struct
       (same_const t2 numSyntax.zero_tm)
    end handle HOL_ERR _ => true;
 
-
    val predicate_simpset = simpLib.++ (
-       std_ss, simpLib.merge_ss [numSimps.ARITH_RWTS_ss, listSimps.LIST_ss,
+       std_ss, simpLib.merge_ss [listSimps.LIST_ss,
       (numSimps.ARITH_DP_FILTER_ss is_no_proper_diseq),
       stringSimps.STRING_ss,
-      listLib.list_eq_simp_ss,
+      listLib.LIST_EQ_ss,
       simpLib.rewrites [
         LENGTH_NIL, LENGTH_NIL_GSYM,
         LIST_TO_FMAP_THM,
@@ -134,6 +133,8 @@ struct
         holfoot_ap_tree___null,
         holfoot_ap_data_tree___null,
         holfoot_ap_data_tree___leaf,
+        holfoot_ap_data_queue___startExp_null,
+        holfoot_ap_data_queue___endExp_null,
         tree_11, GSYM tree_distinct, tree_distinct,
         IS_LEAF_REWRITE, 
         TAKE_APPEND1, TAKE_APPEND2,
@@ -143,7 +144,9 @@ struct
         FRONT_CONS_EQ_NULL,
         LENGTH_FRONT_CONS,
         LAST_DROP_THM,
-        FRONT_TAKE_THM
+        FRONT_TAKE_THM,
+        BUTLAST, LAST, NOT_NULL_SNOC,
+        holfoot_separation_combinator_def
      ]])
 
    val varlist_rwts = [holfoot___varlist_update_NO_VAR_THM];
@@ -1700,6 +1703,7 @@ type var_res_inference = bool -> simpLib.ssfrag -> thm list -> ConseqConv.direct
 structure holfoot_param = 
 struct
    open Abbrev
+   val exp_to_string = holfoot_base_param.exp_to_string;
    val combinator_thmL = holfoot_base_param.combinator_thmL
    val combinator_terms = (holfoot_separation_combinator_term, holfoot_disjoint_fmap_union_term,
           rhs (concl holfoot_separation_combinator_def))

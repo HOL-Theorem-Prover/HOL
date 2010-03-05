@@ -27,7 +27,10 @@ fun holfoot_mk_const n =
 val holfoot_heap_ty =  Type `:holfoot_heap`;
 val holfoot_stack_ty = Type `:holfoot_stack`;
 val holfoot_state_ty = Type `:holfoot_state`;
-
+val holfoot_var_ty = Type `:holfoot_var`;
+val holfoot_tag_ty = Type `:holfoot_tag`;
+val holfoot_a_expression_ty = Type `:holfoot_a_expression`;
+val holfoot_a_proposition_ty = Type `:holfoot_a_proposition`;
 
 
 
@@ -55,7 +58,8 @@ val is_holfoot_tag = can dest_holfoot_tag
 *)
 val dest_holfoot_var = strip_comb_1 holfoot_var_term;
 val is_holfoot_var = can dest_holfoot_var
-
+fun holfoot_var2string t =
+   stringLib.fromHOLstring (dest_holfoot_var t)
 
 
 
@@ -121,6 +125,9 @@ val holfoot_prog_block_term = ``fasl_prog_block : holfoot_program list -> holfoo
 val holfoot_prog_cond_term = ``fasl_prog_cond:holfoot_state fasl_predicate -> holfoot_program -> holfoot_program -> holfoot_program``
 val holfoot_prog_with_resource_term = 
    ``fasl_prog_cond_critical_section:string->holfoot_state fasl_predicate->holfoot_program->holfoot_program``
+val dest_holfoot_prog_with_resource = strip_comb_3 holfoot_prog_with_resource_term;
+val is_holfoot_prog_with_resource = can dest_holfoot_prog_with_resource
+
 val holfoot_prog_while_term = 
    ``fasl_prog_while:holfoot_state fasl_predicate->holfoot_program->holfoot_program``
 
@@ -130,6 +137,10 @@ val holfoot_exp_var_term = ``var_res_exp_var:holfoot_var -> holfoot_a_expression
 val holfoot_exp_binop_term = ``(var_res_exp_binop :(num -> num -> num) ->
                      holfoot_a_expression ->
                      holfoot_a_expression ->
+                     holfoot_a_expression)``;
+
+val holfoot_exp_op_term = ``(var_res_exp_op :(num list -> num) ->
+                     holfoot_a_expression list ->
                      holfoot_a_expression)``;
 
 val holfoot_exp_add_term = mk_comb (holfoot_exp_binop_term, numSyntax.plus_tm)
@@ -162,6 +173,9 @@ val holfoot_pred_bin_term = ``(var_res_pred_bin :(num -> num -> bool) ->
                      holfoot_a_expression ->
                      holfoot_state fasl_predicate)``;
 
+val holfoot_pred_term = ``(var_res_pred :(num list -> bool) ->
+                     holfoot_a_expression list ->
+                     holfoot_state fasl_predicate)``;
 
 val holfoot_pred_eq_term = mk_comb (holfoot_pred_bin_term, ``($=):num->num->bool``);
 val holfoot_pred_neq_term = mk_comb (holfoot_pred_bin_term, ``\x1:num x2. ~(x1 = x2)``);
@@ -221,6 +235,10 @@ val is_holfoot_ap_data_list_seg = (can dest_holfoot_ap_data_list_seg);
 val holfoot_ap_data_list_term = holfoot_mk_const "holfoot_ap_data_list";
 val dest_holfoot_ap_data_list = strip_comb_3 holfoot_ap_data_list_term;
 val is_holfoot_ap_data_list = (can dest_holfoot_ap_data_list);
+
+val holfoot_ap_data_queue_term = holfoot_mk_const "holfoot_ap_data_queue";
+val dest_holfoot_ap_data_queue = strip_comb_4 holfoot_ap_data_queue_term;
+val is_holfoot_ap_data_queue = (can dest_holfoot_ap_data_queue);
 
 val holfoot_exp_null_term = ``(var_res_exp_const 0):holfoot_a_expression``
 fun is_holfoot_exp_null t = aconv t holfoot_exp_null_term

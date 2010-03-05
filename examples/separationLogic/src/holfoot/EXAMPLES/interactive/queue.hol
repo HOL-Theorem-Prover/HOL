@@ -1,0 +1,26 @@
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+
+(******************************************************************************)
+(* Some useful REWRITES                                                       *)
+(******************************************************************************)
+
+open holfootTheory generalHelpersTheory rich_listTheory vars_as_resourceTheory
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file  = concat [examplesDir, "/interactive/queue.dsf2"];
+val thm   = holfoot_auto_verify_spec file
+
+val thm = prove (parse_holfoot_file file,
+HF_SOLVE_TAC THEN
+SIMP_TAC list_ss [holfoot_ap_data_queue_def] THEN
+HF_SOLVE_TAC THEN
+REPEAT GEN_TAC THEN
+Cases_on `t_const_tl = 0` THEN HF_SOLVE_TAC)
+
+val t = ``(l1:'a list ++ [])::t = p ++ q``
+
+
+``(l1:'a list)::t = p ++ q``

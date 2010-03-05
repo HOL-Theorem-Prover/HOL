@@ -1129,7 +1129,9 @@ VAR_RES_COND_INFERENCE___prog_assume_neg_and,
 VAR_RES_COND_INFERENCE___prog_assume_neg_or,
 VAR_RES_COND_INFERENCE___prog_assume_neg_neg,
 VAR_RES_COND_INFERENCE___prog_assume_neg_pred_bin,
+VAR_RES_COND_INFERENCE___prog_assume_neg_pred,
 VAR_RES_COND_INFERENCE___prog_assume_pred_bin,
+VAR_RES_COND_INFERENCE___prog_assume_pred,
 VAR_RES_COND_INFERENCE___prog_assume_true,
 VAR_RES_COND_INFERENCE___prog_assume_false,
 VAR_RES_COND_INFERENCE___prog_assume_neg_true,
@@ -3745,7 +3747,6 @@ val VAR_RES_PURE_VC_TAC =
 
 val VAR_RES_ELIM_COMMENTS_TAC = REWRITE_TAC [fasl_comments_ELIM]
 val VAR_RES_VC_TAC = (TRY VAR_RES_PURE_VC_TAC) THEN VAR_RES_ELIM_COMMENTS_TAC
-
 
 end
 

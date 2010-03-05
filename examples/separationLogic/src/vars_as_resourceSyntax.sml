@@ -251,6 +251,7 @@ val dest_var_res_prog_parallel_procedure_call = strip_comb_4 var_res_prog_parall
 val is_var_res_prog_parallel_procedure_call = (can dest_var_res_prog_parallel_procedure_call);
 
 
+val var_res_map_term = var_res_mk_const "var_res_map";
 
 val var_res_prop_internal_term = var_res_mk_const "var_res_prop_internal";
 fun dest_var_res_prop_internal tt =
@@ -368,6 +369,8 @@ fun mk_var_res_exp_const c ty = inst_type_to_type ty
    (mk_icomb(var_res_exp_const_term, c));
 
 
+val var_res_exp_op_term = var_res_mk_const "var_res_exp_op";
+
 val var_res_exp_binop_term = var_res_mk_const "var_res_exp_binop";
 val dest_var_res_exp_binop = strip_comb_2 var_res_exp_binop_term;
 val is_var_res_exp_binop = can dest_var_res_exp_binop;
@@ -380,6 +383,7 @@ fun mk_VAR_RES_IS_PURE_PROPOSITION f p =
    list_mk_icomb (VAR_RES_IS_PURE_PROPOSITION_term, [f, p])
 
 
+val var_res_pred_term = var_res_mk_const "var_res_pred";
 val var_res_pred_bin_term = var_res_mk_const "var_res_pred_bin";
 
 fun string2num_var s = mk_var(s, numLib.num);

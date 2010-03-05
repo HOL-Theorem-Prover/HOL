@@ -20,7 +20,7 @@ fun mk_formal_params (rl,vl) =
 exception Parameters_not_variables
 fun mk_ref_params cel =
   let
-	fun check_par (Pexp_ident i) = i |
+	fun check_par (Aexp_ident i) = i |
 	      check_par _ = raise Parameters_not_variables
         val il = List.map check_par cel
   in
@@ -35,7 +35,6 @@ val data_list_tag = "dta";
 val list_link_tag = "tl"
 val tree_data_tag = "dta"
 val tree_link_tags = ("l", "r")
-val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
 
 
 %%
@@ -45,8 +44,10 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
   |  BARBAR
   |  COLON
   |  COMMA
+  |  DOT
+  |  LAM
+  |  MAP
   |  DISPOSE
-  |  DLSEG
   |  ELSE
   |  EMPTY
   |  EOF
@@ -67,6 +68,8 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
   |  LISTSEG
   |  DATA_LIST
   |  DATA_LISTSEG
+  |  QUEUE
+  |  DATA_QUEUE
   |  LOCAL
   |  LPAREN
   |  MINUSGREATER
@@ -92,7 +95,6 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
   |  BLOCK_SPEC
   |  LOOP_SPEC
   |  WITH
-  |  XLSEG
   |  XOR
   |  ASSUME
   |  WRITEREAD
@@ -125,22 +127,24 @@ val (dl_Llink_tag,dl_Rlink_tag) = tree_link_tags
   |  ident_decl of string list
   |  ident_seq of string list
   |  ident_notempty_seq of string list
+  |  ident_notempty_seq_no_comma of string list
   |  local_decls of string list
   |  formal_params of string list * string list
-  |  actual_params of string list * Parsetree.p_expression list
+  |  actual_params of string list * Parsetree.a_expression list
   |  invariant of Parsetree.a_proposition option
+  |  spec of Parsetree.a_proposition 
   |  statement_star of Parsetree.p_statement list
   |  statement of Parsetree.p_statement
   |  condition of Parsetree.p_condition
-  |  expression of Parsetree.p_expression
-  |  expression_seq of Parsetree.p_expression list
-  |  expression_notempty_seq of Parsetree.p_expression list
-  |  a_expression of Parsetree.a_expression
+  |  expression of Parsetree.a_expression
+  |  simple_expression of Parsetree.a_expression
+  |  expression_seq of Parsetree.a_expression list
+  |  expression_notempty_seq of Parsetree.a_expression list
   |  a_space_pred of Parsetree.a_space_pred
   |  a_component_expression_seq of (string * Parsetree.a_expression) list
   |  a_component_expression_notempty_seq of (string * Parsetree.a_expression) list
-  |  data_list_exp of string
-  |  data_tree_exp of string
+  |  a_simple_component_expression_notempty_seq of (string * Parsetree.a_expression) list
+  |  ident_or_hol of string
 
 %start program
 %pos (int * int)
@@ -197,6 +201,9 @@ ident_notempty_seq:
     IDENT            ( [IDENT] )
   | IDENT COMMA ident_notempty_seq ( IDENT::ident_notempty_seq )
 
+ident_notempty_seq_no_comma:
+    IDENT            ( [IDENT] )
+  | IDENT ident_notempty_seq_no_comma ( IDENT::ident_notempty_seq_no_comma )
 
 local_decls:
     (* empty *)              ( [] )
@@ -227,10 +234,10 @@ statement:
 	  ( Pstm_if(condition, statement1, statement2) )
   | WHILE LPAREN condition RPAREN read_write_decl invariant statement
 	  ( Pstm_while(read_write_decl, invariant, condition, statement) )
-  | BLOCK_SPEC read_write_decl LBRACKET a_proposition RBRACKET statement LBRACKET a_proposition RBRACKET
-	  ( Pstm_block_spec(false, read_write_decl, a_proposition1, statement, a_proposition2) )
-  | LOOP_SPEC read_write_decl LBRACKET a_proposition RBRACKET statement LBRACKET a_proposition RBRACKET
-	  ( Pstm_block_spec(true, read_write_decl, a_proposition1, statement, a_proposition2) )
+  | BLOCK_SPEC read_write_decl spec statement spec
+	  ( Pstm_block_spec(false, read_write_decl, spec1, statement, spec2) )
+  | LOOP_SPEC read_write_decl spec statement spec
+	  ( Pstm_block_spec(true, read_write_decl, spec1, statement, spec2) )
   | WITH IDENT WHEN LPAREN condition RPAREN statement
           ( Pstm_withres(IDENT,condition,statement) )
   | IDENT LPAREN actual_params RPAREN SEMI
@@ -244,8 +251,18 @@ statement:
 invariant:
     (* empty *)
           ( NONE )
+  | LBRACKET RBRACKET
+          ( NONE )
   | LBRACKET a_proposition RBRACKET
           ( SOME a_proposition )
+
+spec:
+    (* empty *)
+        ( Aprop_spred Aspred_empty )
+  | LBRACKET RBRACKET
+        ( Aprop_spred Aspred_empty )
+  | LBRACKET a_proposition RBRACKET
+          ( a_proposition )
 
 
 condition:
@@ -261,37 +278,41 @@ condition:
 	  ( Pcond_and(condition1,condition2) )
   | condition OR condition 
 	  ( Pcond_and(condition1,condition2) )
-  | expression EQUALEQUAL expression
-	  ( (Pcond_compare("==", expression1, expression2)) )
-  | expression BANGEQUAL expression
-	  ( (Pcond_compare("!=", expression1, expression2)) )
-  | expression INFIXOP1 expression
-	  ( (Pcond_compare(INFIXOP1, expression1, expression2)) )
+  | simple_expression EQUALEQUAL expression
+	  ( (Pcond_compare("==", simple_expression, expression)) )
+  | simple_expression BANGEQUAL expression
+	  ( (Pcond_compare("!=", simple_expression, expression)) )
+  | simple_expression INFIXOP1 expression
+	  ( (Pcond_compare(INFIXOP1, simple_expression, expression)) )
+  | HOL_TERM
+	  ( (Pcond_hol HOL_TERM) )
 
+
+simple_expression:
+    IDENT
+	  ( (Aexp_ident(IDENT)) )
+  | QIDENT
+	  ( (Aexp_ident(QIDENT)) )
+  | NAT
+	  ( (Aexp_num(NAT)) )
 
 expression:
-    IDENT
-	  ( (Pexp_ident(IDENT)) )
-  | QIDENT
-	  ( (Pexp_ident(QIDENT)) )
-  | NAT
-	  ( (Pexp_num(NAT)) )
+    simple_expression
+          ( simple_expression )
+  | HOL_TERM
+          ( Aexp_hol HOL_TERM)
   | LPAREN expression RPAREN
 	  ( expression )
-  | INFIXOP2 expression %prec unary_prefix
-	  ( (Pexp_prefix(INFIXOP2, expression)) )
   | expression AMPERAMPER expression
-	  ( (Pexp_infix("&&", expression1, expression2)) )
-  | expression STAR expression
-	  ( (Pexp_infix("*", expression1, expression2)) )
+	  ( (Aexp_infix("&&", expression1, expression2)) )
   | expression XOR expression
-	  ( (Pexp_infix("^", expression1, expression2)) )
+	  ( (Aexp_infix("^", expression1, expression2)) )
   | expression INFIXOP2 expression
-	  ( (Pexp_infix(INFIXOP2, expression1, expression2)) )
+	  ( (Aexp_infix(INFIXOP2, expression1, expression2)) )
   | expression STAR expression
-	  ( (Pexp_infix("*", expression1, expression2)) )
+	  ( (Aexp_infix("*", expression1, expression2)) )
   | expression INFIXOP3 expression
-	  ( (Pexp_infix(INFIXOP3, expression1, expression2)) )
+	  ( (Aexp_infix(INFIXOP3, expression1, expression2)) )
 
 
 expression_seq:
@@ -317,73 +338,80 @@ actual_params:
 a_component_expression_seq:
     (* empty *)      ( [] )
   | LBRACKET RBRACKET   ( [] )
-  | a_component_expression_notempty_seq ( a_component_expression_notempty_seq )
+  | a_simple_component_expression_notempty_seq ( a_simple_component_expression_notempty_seq )
   | LBRACKET a_component_expression_notempty_seq RBRACKET ( a_component_expression_notempty_seq )
 
 
 a_component_expression_notempty_seq:
-    IDENT COLON a_expression            ( [(IDENT,a_expression)] )
-  | IDENT COLON a_expression COMMA a_component_expression_notempty_seq ( (IDENT,a_expression)::a_component_expression_notempty_seq )
+    IDENT COLON expression            ( [(IDENT,expression)] )
+  | IDENT COLON expression COMMA a_component_expression_notempty_seq ( (IDENT,expression)::a_component_expression_notempty_seq )
 
+a_simple_component_expression_notempty_seq:
+    IDENT COLON simple_expression            ( [(IDENT,simple_expression)] )
+  | IDENT COLON simple_expression COMMA a_simple_component_expression_notempty_seq ( (IDENT,simple_expression)::a_simple_component_expression_notempty_seq )
 
 
 a_space_pred:
-    LIST LPAREN IDENT SEMI a_expression RPAREN
-	  ( Aspred_list(IDENT,a_expression) )
-  | LIST LPAREN a_expression RPAREN
-	  ( Aspred_list(list_link_tag, a_expression) )
-  | DATA_LIST LPAREN IDENT SEMI a_expression COMMA data_list_exp RPAREN
-	  ( Aspred_data_list(IDENT,a_expression,data_list_tag,data_list_exp) )
-  | DATA_LIST LPAREN a_expression COMMA data_list_exp RPAREN
-	  ( Aspred_data_list(list_link_tag,a_expression,data_list_tag,data_list_exp) )
-  | DATA_LIST LPAREN IDENT SEMI a_expression COMMA IDENT COLON data_list_exp RPAREN
-	  ( Aspred_data_list(IDENT1,a_expression,IDENT2,data_list_exp) )
-  | DATA_LIST LPAREN a_expression COMMA IDENT COLON data_list_exp RPAREN
-	  ( Aspred_data_list(list_link_tag,a_expression,IDENT,data_list_exp) )
-  | LISTSEG LPAREN IDENT SEMI a_expression COMMA a_expression RPAREN
-	  ( Aspred_listseg(IDENT,a_expression1,a_expression2) )
-  | LISTSEG LPAREN a_expression COMMA a_expression RPAREN
-	  ( Aspred_listseg(list_link_tag, a_expression1, a_expression2) )
-  | DATA_LISTSEG LPAREN IDENT SEMI a_expression COMMA data_list_exp COMMA a_expression RPAREN
-	  ( Aspred_data_listseg(IDENT,a_expression1,data_list_tag,data_list_exp,a_expression2) )
-  | DATA_LISTSEG LPAREN IDENT SEMI a_expression COMMA IDENT COLON data_list_exp COMMA a_expression RPAREN
-	  ( Aspred_data_listseg(IDENT1,a_expression1,IDENT2,data_list_exp,a_expression2) )
-  | DATA_LISTSEG LPAREN a_expression COMMA data_list_exp COMMA a_expression RPAREN
-	  ( Aspred_data_listseg(list_link_tag,a_expression1,data_list_tag,data_list_exp,a_expression2) )
-  | DATA_LISTSEG LPAREN a_expression COMMA IDENT COLON data_list_exp COMMA a_expression RPAREN
-	  ( Aspred_data_listseg(list_link_tag,a_expression1,IDENT,data_list_exp,a_expression2) )
-  | DLSEG LPAREN IDENT SEMI IDENT SEMI a_expression COMMA a_expression COMMA a_expression COMMA a_expression RPAREN
-	  ( Aspred_dlseg(DL,IDENT1,a_expression1,a_expression2,IDENT2,a_expression3,a_expression4) )
-  | DLSEG LPAREN a_expression COMMA a_expression COMMA a_expression COMMA a_expression RPAREN
-	  ( Aspred_dlseg(DL, dl_Rlink_tag, a_expression1, a_expression2, dl_Llink_tag,a_expression3, a_expression4) )
-  | XLSEG LPAREN IDENT SEMI IDENT SEMI a_expression COMMA a_expression COMMA a_expression COMMA a_expression RPAREN
-	  ( Aspred_dlseg(XL,IDENT1,a_expression1,a_expression2,IDENT2,a_expression3,a_expression4) )
-  | XLSEG LPAREN a_expression COMMA a_expression COMMA a_expression COMMA a_expression RPAREN
-	  ( Aspred_dlseg(XL, dl_Llink_tag, a_expression1, a_expression2, dl_Llink_tag,a_expression3, a_expression4) )
-  | TREE LPAREN LBRACKET IDENT COMMA IDENT RBRACKET SEMI a_expression RPAREN
-          ( Aspred_tree(IDENT1,IDENT2,a_expression) )
-  | TREE LPAREN a_expression RPAREN
+    LIST LPAREN IDENT SEMI expression RPAREN
+	  ( Aspred_list(IDENT,expression) )
+  | LIST LPAREN expression RPAREN
+	  ( Aspred_list(list_link_tag, expression) )
+  | DATA_LIST LPAREN IDENT SEMI expression COMMA ident_or_hol RPAREN
+	  ( Aspred_data_list(IDENT,expression,data_list_tag,ident_or_hol) )
+  | DATA_LIST LPAREN expression COMMA ident_or_hol RPAREN
+	  ( Aspred_data_list(list_link_tag,expression,data_list_tag,ident_or_hol) )
+  | DATA_LIST LPAREN IDENT SEMI expression COMMA IDENT COLON ident_or_hol RPAREN
+	  ( Aspred_data_list(IDENT1,expression,IDENT2,ident_or_hol) )
+  | DATA_LIST LPAREN expression COMMA IDENT COLON ident_or_hol RPAREN
+	  ( Aspred_data_list(list_link_tag,expression,IDENT,ident_or_hol) )
+  | LISTSEG LPAREN IDENT SEMI expression COMMA expression RPAREN
+	  ( Aspred_listseg(IDENT,expression1,expression2) )
+  | LISTSEG LPAREN expression COMMA expression RPAREN
+	  ( Aspred_listseg(list_link_tag, expression1, expression2) )
+  | DATA_LISTSEG LPAREN IDENT SEMI expression COMMA ident_or_hol COMMA expression RPAREN
+	  ( Aspred_data_listseg(IDENT,expression1,data_list_tag,ident_or_hol,expression2) )
+  | DATA_LISTSEG LPAREN IDENT SEMI expression COMMA IDENT COLON ident_or_hol COMMA expression RPAREN
+	  ( Aspred_data_listseg(IDENT1,expression1,IDENT2,ident_or_hol,expression2) )
+  | DATA_LISTSEG LPAREN expression COMMA ident_or_hol COMMA expression RPAREN
+	  ( Aspred_data_listseg(list_link_tag,expression1,data_list_tag,ident_or_hol,expression2) )
+  | DATA_LISTSEG LPAREN expression COMMA IDENT COLON ident_or_hol COMMA expression RPAREN
+	  ( Aspred_data_listseg(list_link_tag,expression1,IDENT,ident_or_hol,expression2) )
+  | QUEUE LPAREN IDENT SEMI expression COMMA expression RPAREN
+	  ( Aspred_queue(IDENT,expression1,expression2) )
+  | QUEUE LPAREN expression COMMA expression RPAREN
+	  ( Aspred_queue(list_link_tag, expression1, expression2) )
+  | DATA_QUEUE LPAREN IDENT SEMI expression COMMA ident_or_hol COMMA expression RPAREN
+	  ( Aspred_data_queue(IDENT,expression1,data_list_tag,ident_or_hol,expression2) )
+  | DATA_QUEUE LPAREN IDENT SEMI expression COMMA IDENT COLON ident_or_hol COMMA expression RPAREN
+	  ( Aspred_data_queue(IDENT1,expression1,IDENT2,ident_or_hol,expression2) )
+  | DATA_QUEUE LPAREN expression COMMA ident_or_hol COMMA expression RPAREN
+	  ( Aspred_data_queue(list_link_tag,expression1,data_list_tag,ident_or_hol,expression2) )
+  | DATA_QUEUE LPAREN expression COMMA IDENT COLON ident_or_hol COMMA expression RPAREN
+	  ( Aspred_data_queue(list_link_tag,expression1,IDENT,ident_or_hol,expression2) )
+  | TREE LPAREN LBRACKET IDENT COMMA IDENT RBRACKET SEMI expression RPAREN
+          ( Aspred_tree(IDENT1,IDENT2,expression) )
+  | TREE LPAREN expression RPAREN
           ( Aspred_tree(#1 tree_link_tags, #2 tree_link_tags,
-			a_expression) )
-  | DATA_TREE LPAREN LBRACKET ident_notempty_seq RBRACKET SEMI a_expression SEMI LBRACKET ident_notempty_seq RBRACKET COMMA data_tree_exp RPAREN
-	  ( Aspred_data_tree(ident_notempty_seq1,a_expression,ident_notempty_seq2,data_tree_exp) )
-  | DATA_TREE LPAREN a_expression SEMI LBRACKET ident_notempty_seq RBRACKET COMMA data_tree_exp RPAREN
-	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],a_expression,ident_notempty_seq,data_tree_exp) )
-  | DATA_TREE LPAREN a_expression SEMI IDENT COMMA data_tree_exp RPAREN 
-	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],a_expression,[IDENT],data_tree_exp) )
-  | DATA_TREE LPAREN a_expression SEMI data_tree_exp RPAREN
-	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],a_expression,[tree_data_tag],data_tree_exp) )
-  | EMPTY
-          ( Aspred_empty )
+			expression) )
+  | DATA_TREE LPAREN LBRACKET ident_notempty_seq RBRACKET SEMI expression SEMI LBRACKET ident_notempty_seq RBRACKET COMMA ident_or_hol RPAREN
+	  ( Aspred_data_tree(ident_notempty_seq1,expression,ident_notempty_seq2,ident_or_hol) )
+  | DATA_TREE LPAREN expression SEMI LBRACKET ident_notempty_seq RBRACKET COMMA ident_or_hol RPAREN
+	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],expression,ident_notempty_seq,ident_or_hol) )
+  | DATA_TREE LPAREN expression SEMI IDENT COMMA ident_or_hol RPAREN 
+	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],expression,[IDENT],ident_or_hol) )
+  | DATA_TREE LPAREN expression SEMI ident_or_hol RPAREN
+	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],expression,[tree_data_tag],ident_or_hol) )
   | HOL_TERM
           ( Aspred_hol HOL_TERM )
-  | a_expression POINTSTO a_component_expression_seq
-          ( Aspred_pointsto(a_expression,a_component_expression_seq) )
-  | a_expression POINTSTO a_expression
-          ( Aspred_pointsto(a_expression1,[(list_link_tag, a_expression2)]) )
-  | a_expression POINTSTO a_expression COMMA a_expression
-          ( Aspred_pointsto(a_expression1,[(#1 tree_link_tags, a_expression2),
-				(#2 tree_link_tags, a_expression3)]) )
+  | EMPTY
+          ( Aspred_empty )
+  | simple_expression POINTSTO a_component_expression_seq
+          ( Aspred_pointsto(simple_expression,a_component_expression_seq) )
+  | simple_expression POINTSTO expression
+          ( Aspred_pointsto(simple_expression,[(list_link_tag, expression)]) )
+  | simple_expression POINTSTO expression COMMA expression
+          ( Aspred_pointsto(simple_expression,[(#1 tree_link_tags, expression1),
+				(#2 tree_link_tags, expression2)]) )
   | LPAREN a_space_pred RPAREN
 	  ( a_space_pred )
 
@@ -392,39 +420,27 @@ a_space_pred:
 a_proposition:
     LPAREN a_proposition RPAREN
 	  ( a_proposition )
-  | a_expression EQUALEQUAL a_expression
-	  ( Aprop_infix("==",a_expression1,a_expression2) )
-  | a_expression BANGEQUAL a_expression
-	  ( Aprop_infix("!=",a_expression1,a_expression2) )
-  | a_expression INFIXOP1 a_expression
-	  ( (Aprop_infix(INFIXOP1, a_expression1, a_expression2)) )
+  | simple_expression EQUALEQUAL expression
+	  ( Aprop_infix("==",simple_expression,expression) )
+  | simple_expression BANGEQUAL expression
+	  ( Aprop_infix("!=",simple_expression,expression) )
+  | simple_expression INFIXOP1 expression
+	  ( (Aprop_infix(INFIXOP1, simple_expression, expression)) )
   | FF
 	  ( Aprop_false )
   | a_proposition STAR a_proposition
           ( Aprop_star(a_proposition1,a_proposition2) )
   | IF a_proposition IFTHEN a_proposition ELSE a_proposition
       ( Aprop_ifthenelse(a_proposition1,a_proposition2,a_proposition3) )  
+  | MAP LPAREN LAM ident_notempty_seq_no_comma DOT a_proposition RPAREN ident_or_hol 
+	  ( Aprop_map (ident_notempty_seq_no_comma,a_proposition,ident_or_hol) )
   | a_space_pred
           ( Aprop_spred a_space_pred )
 
-
-
-a_expression:
-    LPAREN a_expression RPAREN            ( a_expression )
-  | a_expression XOR a_expression         ( Aexp_infix("^",a_expression1,a_expression2) )
-  | IDENT                                 ( Aexp_ident(IDENT) )
-  | QIDENT                                ( Aexp_ident(QIDENT) )
-  | NAT                                   ( Aexp_num(NAT) )
-  | HOL_TERM                              ( Aexp_hol HOL_TERM )
-
-
-data_list_exp:
+ident_or_hol:
     IDENT                                 ( IDENT )
   | HOL_TERM                              ( HOL_TERM )
 
-data_tree_exp:
-    IDENT                                 ( IDENT )
-  | HOL_TERM                              ( HOL_TERM )
 
 
 

@@ -19,11 +19,61 @@ SIMP_TAC (std_ss++boolSimps.ETA_ss) [TREE_SUM_def, TREE_FOLD_def,
 
 
 (******************************************************************************)
-(* Verify specification                                                       *)
+(* Verify specification (simple recursive one)                                *)
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/tree_sum.dsf"];
 val spec_thm = holfoot_verify_spec file [ add_rewrites [TREE_SUM_REWRITE] ] 
 
 
+
+(******************************************************************************)
+(* Verify specification (iterative)                                           *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/tree_sum_iter.dsf"];
+
+(* push and pop are trivial, tree_sum_depth is not! *)
+val spec_thm = holfoot_tac_verify_spec file (SOME []) 
+  [("tree_sum_depth", NO_TAC)]
+
+
+(* holfoot_set_goal_procedures file ["tree_sum_depth"] *)
+val tree_sum_depth_TAC =
+   HF_CONTINUE_TAC THEN
+   SIMP_TAC list_ss [LENGTH_NIL, TREE_SUM_REWRITE] THEN
+   HF_CONTINUE_TAC THEN
+   REPEAT STRIP_TAC THENL [
+      (*unroll iterate*)
+      (*establish fact that trees are not empty*)
+      Cases_on `NULL trees` THEN1 HF_SOLVE_TAC THEN
+      Cases_on `NULL trees_data` THEN1 (
+          FULL_SIMP_TAC list_ss [NULL_EQ_NIL, GSYM_LENGTH_NIL]
+      ) THEN 
+      HF_SOLVE_TAC THEN
+      FULL_SIMP_TAC list_ss [var_res_map_REWRITE, IS_SEPARATION_COMBINATOR___FINITE_MAP] THEN
+      HF_SOLVE_TAC THEN
+      REPEAT STRIP_TAC THENL [
+         Q.EXISTS_TAC `trees_data_h_r'::trees_data_h_l'::trees_data_t`,
+         Q.EXISTS_TAC `trees_data_h_l'::trees_data_t`,
+         Q.EXISTS_TAC `trees_data_h_r'::trees_data_t`,
+         Q.EXISTS_TAC `trees_data_t`
+      ] THEN (
+         FULL_SIMP_TAC list_ss [var_res_map_REWRITE, IS_SEPARATION_COMBINATOR___FINITE_MAP] THEN
+         HF_CONTINUE_TAC THEN
+         HF_VC_TAC THEN
+         SIMP_TAC list_ss [TREE_SUM_REWRITE]
+      ),
+
+
+      Q.EXISTS_TAC `[data]` THEN
+      FULL_SIMP_TAC list_ss [var_res_map_REWRITE, IS_SEPARATION_COMBINATOR___FINITE_MAP] THEN
+      HF_CONTINUE_TAC THEN
+      HF_VC_TAC THEN
+      SIMP_TAC list_ss [TREE_SUM_REWRITE]
+   ];
+
+
+val spec_thm = holfoot_tac_verify_spec file (SOME []) 
+  [("tree_sum_depth", tree_sum_depth_TAC)]
 

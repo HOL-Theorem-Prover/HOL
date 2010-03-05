@@ -94,7 +94,7 @@ search_tree_lookup(r;t,k) [data_tree(t;data) * ``BIN_SEARCH_TREE_SET data keys``
       }
    }
 } [data_tree(t;data) * ``BIN_SEARCH_TREE_SET data keys`` *
-   (r == ``BOOL_TO_NUM ((k:num) IN keys)``)]
+   (r == ``BOOL_TO_NUM (k IN keys)``)]
 
 
 search_tree_to_list___rec (r;t) [data_tree(t;data_t) * 

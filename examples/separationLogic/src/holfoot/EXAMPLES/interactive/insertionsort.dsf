@@ -9,7 +9,7 @@ sortlist(i;) [data_list(i,data)] {
       i = j;
    }
 } [data_list(i,_idata) * 
-   ``(SORTED $<= (_idata:num list)) /\
+   ``(SORTED $<= _idata) /\
      (PERM data _idata)``]
 
 
@@ -24,11 +24,11 @@ min(m;i) [data_list(i,data) * (m == #mc)] {
     min (m;it);
   }
 } [data_list(i,data) * (m == _mc2) *
-   ``(MEM (_mc2:num) (mc::data)) /\
-     (EVERY (\n:num. (_mc2:num) <= n) (mc::data))``]
+   ``(MEM _mc2 (mc::data)) /\
+     (EVERY (\n. _mc2 <= n) (mc::data))``]
 
 
-delete(i,j;m) [data_list(i,data) * ``MEM (m:num) data``] {
+delete(i,j;m) [data_list(i,data) * ``MEM m data``] {
   local ih, it;
 
   ih = i->dta;
@@ -40,4 +40,4 @@ delete(i,j;m) [data_list(i,data) * ``MEM (m:num) data``] {
      delete(it,j;m);
      i->tl = it;
   }
-} [data_list(i,``REMOVE (m:num) data``) * (j |-> dta:m)]
+} [data_list(i,``REMOVE m data``) * (j |-> dta:m)]

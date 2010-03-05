@@ -15,6 +15,7 @@ val var_res_bool_proposition_term : term
 val var_res_cond_best_local_action_term : term
 val var_res_prog_cond_quant_best_local_action_term : term
 val var_res_exp_binop_term : term
+val var_res_exp_op_term : term
 val var_res_exp_const_term : term
 val var_res_exp_var_term : term
 val var_res_exp_varlist_update_term : term
@@ -22,6 +23,7 @@ val var_res_implies_unequal_term : term
 val var_res_mk_call_by_value_arg : (term * term) * term -> term
 val var_res_mk_local_var : term * term -> term
 val var_res_pred_bin_term : term;
+val var_res_pred_term : term;
 val var_res_prog_aquire_lock_input_term : term
 val var_res_prog_aquire_lock_internal_term : term
 val var_res_prog_aquire_lock_term : term
@@ -52,6 +54,7 @@ val var_res_prop_term : term
 val var_res_prop_unequal_term : term
 val var_res_prop_varlist_update_term : term
 val var_res_strip_local_vars : term -> (term * term option) list * term
+val var_res_map_term : term;
 
 val VAR_RES_COND_HOARE_TRIPLE___location_inc_CONV : conv
 val dest_VAR_RES_COND_HOARE_TRIPLE : term -> term * term * term * term
