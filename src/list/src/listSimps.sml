@@ -7,17 +7,6 @@ open simpLib listTheory;
 (*- CONVERSIONS added by TT 03 Dec 2009                          -*)
 (*-==============================================================-*)
 
-(* --------------------------------------------------------------------- *)
-(* NORM_CONS_APPEND_CONV : conv                                          *)
-(* bring appends and conses into normal form. The resulting list is      *)
-(* consists of appending serveral lists. Cons operations are put into    *)
-(* lists just containing these elements. Empty lists are removed and     *)
-(* associative of append used.                                           *)
-(* |- x1::x2::l1 ++ ([] ++ l2 ++ l3) ++ [x3; x4] ++ ([x5] ++ x6::l5) =   *)
-(*    x1::x2::(l1 ++ l2 ++ l3 ++ [x3; x4; x5; x6] ++ l5)                 *)
-(* lists just containing these elements. Empty lists are removed and     *)
-(* --------------------------------------------------------------------- *)
-
 open boolLib HolKernel listSyntax
 structure Parse =
 struct
@@ -32,18 +21,27 @@ open Parse
 val APPEND_EVAL_CONV = PURE_REWRITE_CONV [listTheory.APPEND_NIL,
                                           listTheory.APPEND];
 
-fun NORM_CONS_CONV t =
-  let
-     val (eL, r) = strip_cons t;
-     val _ = if null eL orelse is_nil r then raise UNCHANGED else ()
-     val v = genvar (type_of r);
-     val t' = mk_append (listSyntax.mk_list (eL, type_of (hd eL)), v);
-     val thm0 = APPEND_EVAL_CONV t'
-     val thm1 = INST [v |-> r] thm0
-  in
-     GSYM thm1
-  end;
+local
+  val NORM_CONS_conv1 = REWR_CONV (CONJUNCT2 listTheory.APPEND)
+  val NORM_CONS_conv2 = REWR_CONV (CONJUNCT1 listTheory.APPEND)
+  fun NORM_CONS_conv t = ((NORM_CONS_conv1 THENC RAND_CONV NORM_CONS_conv)
+                          ORELSEC NORM_CONS_conv2) t
+in
 
+(* takes a list of the form ``x1::x2::..::xn::l`` and converts it to
+   ``[x1;x2;...;xn]++l`` *)
+fun NORM_CONS_CONV tt =
+  let
+     val (eL, r) = strip_cons tt;
+     val _ = if null eL orelse is_nil r then raise UNCHANGED else ()
+     val t' = mk_append (listSyntax.mk_list (eL, type_of (hd eL)), r);
+  in
+     GSYM (NORM_CONS_conv t')
+  end
+end
+
+(* takes a list of the form ``[x1;...;xn] ++ [y1;...;ym]`` and converts it to
+   ``[x1;...;xn;y1;...;ym]`` *)
 fun APPEND_SIMPLE_LISTS_CONV t =
   let
      val (l1, l2) = dest_append t;
@@ -53,6 +51,8 @@ fun APPEND_SIMPLE_LISTS_CONV t =
   end handle HOL_ERR _ => raise UNCHANGED;
 
 
+(* takes a list of the form ``(l ++ [x1;...;xn]) ++ [y1;...;ym]`` and converts it to
+   ``l ++ [x1;...;xn;y1;...;ym]`` *)
 fun APPEND_SIMPLE_LISTS_ASSOC_CONV t =
   let
      val (l1, l2) = dest_append t;
@@ -64,23 +64,52 @@ fun APPEND_SIMPLE_LISTS_ASSOC_CONV t =
   end handle HOL_ERR _ => raise UNCHANGED;
 
 
-val NORM_APPEND_CONV =
-   PURE_REWRITE_CONV [listTheory.APPEND_NIL, listTheory.APPEND_ASSOC,
-                      listTheory.SNOC_APPEND]
-
+(* --------------------------------------------------------------------- *)
+(* NORM_CONS_APPEND_NO_EVAL_CONV : conv                                  *)
+(* bring appends and conses into normal form. The resulting list is      *)
+(* consists of appending serveral lists. Cons operations are put into    *)
+(* lists just containing these elements. Empty lists are removed and     *)
+(* associative of append used. Moreover, some rewrites for SNOC and      *)
+(* REVERSE are applied                                                   *)
+(* |- x1::x2::l1 ++ (SNOC x3 (x4::l2 ++                                  *)
+(*       REVERSE (x5::x6::x7::(l3 ++ l4 ++ l5)) ++ [x8;x9]))) =          *)
+(*    [x1; x2] ++ l1 ++ [x4] ++ l2 ++ REVERSE l5 ++ REVERSE l4 ++        *)
+(*       REVERSE l3 ++ [x7; x6; x5; x8; x9; x3]                          *)
+(* --------------------------------------------------------------------- *)
 
 val NORM_CONS_APPEND_NO_EVAL_CONV =
    (TOP_DEPTH_CONV NORM_CONS_CONV) THENC
-   NORM_APPEND_CONV THENC
+   (PURE_REWRITE_CONV [listTheory.APPEND_NIL, listTheory.APPEND_ASSOC,
+                      listTheory.SNOC_APPEND, listTheory.REVERSE_APPEND,
+                      listTheory.REVERSE_DEF]) THENC
    (DEPTH_CONV ((QCHANGED_CONV APPEND_SIMPLE_LISTS_ASSOC_CONV) ORELSEC
-                (QCHANGED_CONV APPEND_SIMPLE_LISTS_CONV)))
+                (QCHANGED_CONV APPEND_SIMPLE_LISTS_CONV)));
+
+
+(* --------------------------------------------------------------------- *)
+(* NORM_CONS_APPEND_CONV : conv                                          *)
+(* The normal form produced by NORM_CONS_APPEND_NO_EVAL_CONV is useful   *)
+(* for the tools developed below. It's the one this lib is mainly        *)
+(* interested in. However, the REWRITES for APPEND as for example        *)
+(* included in list_ss destroy this normal form. Therefore,              *)
+(* simplification easily loops when for example using list_ss with this  *)
+(* conversion.                                                           *)
+(*                                                                       *)
+(* In order to avoid such problems, NORM_CONS_APPEND_CONV used           *)
+(* NORM_CONS_APPEND_NO_EVAL_CONV followed by rewrites of APPEND          *)
+(* The result is moving conses for the first list outwards:              *)
+(*                                                                       *)
+(* |- x1::x2::l1 ++ (SNOC x3 (x4::l2 ++                                  *)
+(*       REVERSE (x5::x6::x7::(l3 ++ l4 ++ l5)) ++ [x8;x9]))) =          *)
+(*    x1::x2::(l1 ++ [x4] ++ l2 ++ REVERSE l5 ++ REVERSE l4 ++           *)
+(*       REVERSE l3 ++ [x7; x6; x5; x8; x9; x3]                          *)
+(* --------------------------------------------------------------------- *)
 
 val NORM_CONS_APPEND_CONV =
-   NORM_CONS_APPEND_NO_EVAL_CONV THENC APPEND_EVAL_CONV
+   NORM_CONS_APPEND_NO_EVAL_CONV THENC APPEND_EVAL_CONV;
 
 
 val GSYM_CONS_APPEND_CONV = PURE_REWRITE_CONV [GSYM (CONJUNCT2 listTheory.APPEND)]
-
 
 (* --------------------------------------------------------------------- *)
 (* LIST_EQ_SIMP_CONV : conv                                              *)
@@ -267,7 +296,7 @@ in
        listTheory.CONS_11]) t
 end;
 
-val list_eq_simp_ss =
+val LIST_EQ_ss =
     simpLib.conv_ss
       {name  = "LIST_EQ_SIMP_CONV",
        trace = 2,
@@ -276,12 +305,12 @@ val list_eq_simp_ss =
 
 end;
 
+
 (*---------------------------------------------------------------------------
         For the simplifier.
  ---------------------------------------------------------------------------*)
 
 val LIST_ss = BasicProvers.thy_ssfrag "list"
-val LIST_EQ_ss = list_eq_simp_ss
 val _ = BasicProvers.augment_srw_ss [LIST_EQ_ss]
 
 (*---------------------------------------------------------------------------

@@ -42,17 +42,18 @@ List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
   ("loop_spec", LOOP_SPEC),
   ("while",     WHILE),
   ("with",      WITH),
-  ("dlseg",     DLSEG),
   ("list" ,     LIST),
   ("lseg",      LISTSEG),
   ("data_list", DATA_LIST),
   ("data_lseg", DATA_LISTSEG),
+  ("queue",     QUEUE),
+  ("data_queue",DATA_QUEUE),
   ("tree" ,     TREE),
   ("data_tree", DATA_TREE),
-  ("xlseg",     XLSEG),
   ("and" ,      AND),
   ("or" ,       OR),
   ("not" ,      NOT),
+  ("map" ,      MAP),
   ("true" ,     TT),
   ("assume" ,   ASSUME),
   ("false",     FF),
@@ -95,8 +96,10 @@ hol_quote = "``" [^ `\``]* "``";
   ( POINTSTO (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"," =>
   ( COMMA (mkMtTok yytext yypos (!yylineno)) );
-<INITIAL>"," =>
-  ( COMMA (mkMtTok yytext yypos (!yylineno)) );
+<INITIAL>"\\" =>
+  ( LAM (mkMtTok yytext yypos (!yylineno)) );
+<INITIAL>"." =>
+  ( DOT (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"{" =>
   ( LBRACE (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"[" =>

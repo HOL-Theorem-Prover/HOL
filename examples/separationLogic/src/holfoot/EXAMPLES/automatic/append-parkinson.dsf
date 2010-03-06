@@ -4,8 +4,9 @@ list_append(x;y) [data_list(x,xdata) * data_list(y,ydata) * (x != NULL) * (y != 
 
   while (n != NULL) [data_list(n,_data2) * (x != 0) *
       (if (n != x) then 
-          (data_lseg (x, _xdata, p) * p |-> tl:n,dta:_date * ``data1:num list = _xdata++[_date]``)
-       else ``data1:num list = []``) * ``data:num list = _data1 ++ _data2``] {
+          (data_lseg (x, _xdata, p) * 
+          (p |-> [tl:n,dta:_date]) * ``data1 = _xdata++[_date]``)
+       else ``data1 = []``) * ``data = _data1 ++ _data2``] {
       p = n;
       n = p->tl;
     }

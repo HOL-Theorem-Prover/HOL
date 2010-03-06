@@ -112,9 +112,6 @@ SIMP_TAC std_ss [] THEN
 Q.EXISTS_TAC `0` THEN
 SIMP_TAC arith_ss []);
 
-
-
-
 val _ = type_abbrev("holfoot_heap", Type `:num |-> (holfoot_tag -> num)`)
 val _ = type_abbrev("holfoot_stack", Type `:(num, holfoot_var) var_res_state`)
 val _ = type_abbrev("holfoot_state", Type `:(holfoot_stack # holfoot_heap)`)
@@ -247,6 +244,16 @@ REWRITE_TAC [holfoot_separation_combinator_def,
    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_star])
 
 
+val VAR_RES_IS_STACK_IMPRECISE___asl_star___holfoot =
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___asl_star___holfoot",
+``!P1 P2.
+     VAR_RES_IS_STACK_IMPRECISE P1 /\
+     VAR_RES_IS_STACK_IMPRECISE P2 ==>
+     VAR_RES_IS_STACK_IMPRECISE (asl_star holfoot_separation_combinator P1 P2)``,
+REWRITE_TAC [holfoot_separation_combinator_def,
+   VAR_RES_IS_STACK_IMPRECISE___asl_star])
+
+
 val asl_star_holfoot_THM = store_thm ("asl_star_holfoot_THM",
 ``(asl_star holfoot_separation_combinator P (asl_emp holfoot_separation_combinator) = P) /\
   (asl_star holfoot_separation_combinator (asl_emp holfoot_separation_combinator) P = P) /\
@@ -263,6 +270,18 @@ val asl_star_holfoot_THM = store_thm ("asl_star_holfoot_THM",
          IS_SEPARATION_COMBINATOR___holfoot_separation_combinator] THEN
   SIMP_TAC std_ss [asl_star___var_res_bool_proposition, holfoot_separation_combinator_def,
          IS_SEPARATION_COMBINATOR___FINITE_MAP, var_res_prop_stack_true_def]);
+
+
+val var_res_prop_varlist_update___asl_star___holfoot =
+store_thm ("var_res_prop_varlist_update___asl_star___holfoot",
+``!vL p1 p2.
+     VAR_RES_IS_STACK_IMPRECISE p1 /\ VAR_RES_IS_STACK_IMPRECISE p2 ==>
+     (var_res_prop_varlist_update vL (asl_star holfoot_separation_combinator p1 p2) =
+      asl_star holfoot_separation_combinator
+        (var_res_prop_varlist_update vL p1)
+        (var_res_prop_varlist_update vL p2))``,
+SIMP_TAC std_ss [holfoot_separation_combinator_def,
+  var_res_prop_varlist_update___asl_star]);
 
 
 (***************************************
@@ -6045,6 +6064,133 @@ MATCH_MP_TAC (MP_CANON VAR_RES_FRAME_SPLIT___data_list_seg___REMOVE_START___REWR
 ASM_REWRITE_TAC[]);
 
 
+(*-----------------
+ * Queues
+ *-----------------*)
+
+val holfoot_ap_data_queue_def = Define `
+   holfoot_ap_data_queue tl startExp data endExp =
+      var_res_prop_binexpression_cond DISJOINT_FMAP_UNION $=
+          startExp (var_res_exp_const 0)
+          (var_res_bool_proposition DISJOINT_FMAP_UNION 
+              (EVERY (\td. NULL (SND td)) data))
+          (asl_star holfoot_separation_combinator
+              (asl_star holfoot_separation_combinator
+                  (var_res_bool_proposition DISJOINT_FMAP_UNION 
+                     (EVERY (\td. ~(NULL (SND td))) data))
+                  (holfoot_ap_data_list_seg tl startExp
+                         (MAP (\td. (FST td, FRONT (SND td))) data) endExp))
+                  (holfoot_ap_points_to endExp
+                      (LIST_TO_FMAP (ZIP
+                          (tl::MAP FST data, MAP var_res_exp_const
+                          (0::MAP (\x. LAST (SND x)) data))))))`;
+
+
+val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_queue = 
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_queue",
+`` !tl startExp data endExp vs.
+     VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs
+       startExp /\
+     VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs
+       endExp ==>
+     VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs
+       (holfoot_ap_data_queue tl startExp data endExp)``,
+
+SIMP_TAC std_ss [holfoot_ap_data_queue_def] THEN 
+REPEAT STRIP_TAC THEN
+CONSEQ_REWRITE_TAC ([], 
+   [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_binexpression_cond,
+    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition,
+    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_star___holfoot,
+    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___data_list_seg,
+    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___points_to,
+    FEVERY_LIST_TO_FMAP], []) THEN
+ASM_SIMP_TAC list_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL,
+   ZIP_MAP, EVERY_MAP]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE___holfoot_ap_data_queue = 
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___holfoot_ap_data_queue",
+`` !tl startExp data endExp.
+     IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS startExp) /\
+     IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS endExp) ==>
+     VAR_RES_IS_STACK_IMPRECISE (holfoot_ap_data_queue tl startExp data endExp)``,
+
+REWRITE_TAC [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
+        GSYM VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___UNIV_REWRITE,
+             VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_queue]);
+
+
+val var_res_prop_varlist_update___holfoot_ap_data_queue = 
+store_thm ("var_res_prop_varlist_update___holfoot_ap_data_queue",
+``!tl startExp data endExp.
+     IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS startExp) /\
+     IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS endExp) ==>
+  
+     (var_res_prop_varlist_update vcL (holfoot_ap_data_queue tl startExp data endExp) =
+      holfoot_ap_data_queue tl (var_res_exp_varlist_update vcL startExp) data (var_res_exp_varlist_update vcL endExp))``,
+
+REPEAT STRIP_TAC THEN
+REWRITE_TAC [holfoot_ap_data_queue_def] THEN
+Q.ABBREV_TAC `points_pred = (holfoot_ap_points_to endExp
+           (LIST_TO_FMAP
+              (ZIP
+                 (tl::MAP FST data,
+                  MAP var_res_exp_const
+                    (0::MAP (\x. LAST (SND x)) data)))))` THEN
+`VAR_RES_IS_STACK_IMPRECISE points_pred` by ALL_TAC THEN1 (
+   Q.UNABBREV_TAC `points_pred` THEN
+   CONSEQ_REWRITE_TAC ([],
+       [VAR_RES_IS_STACK_IMPRECISE___points_to,
+        FEVERY_LIST_TO_FMAP], []) THEN
+   ASM_SIMP_TAC list_ss [ZIP_MAP, EVERY_MAP,
+      IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL]
+) THEN
+ASM_SIMP_TAC list_ss [holfoot_separation_combinator_def,
+   var_res_exp_varlist_update___const_EVAL,
+   var_res_prop_varlist_update___BOOL,
+   var_res_prop_varlist_update___asl_star,
+   var_res_prop_varlist_update___var_res_prop_binexpression_cond,
+   var_res_prop_varlist_update___holfoot_ap_data_list_seg,
+   VAR_RES_IS_STACK_IMPRECISE___var_res_bool_proposition,
+   VAR_RES_IS_STACK_IMPRECISE___asl_star,
+   VAR_RES_IS_STACK_IMPRECISE___data_list_seg,
+   IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
+Q.UNABBREV_TAC `points_pred` THEN
+ASM_SIMP_TAC list_ss [var_res_prop_varlist_update___holfoot_ap_points_to,
+  o_f_LIST_TO_FMAP, ZIP_MAP, MAP_MAP_o, combinTheory.o_DEF, MAP_ZIP_EQ,
+  var_res_exp_varlist_update___const_EVAL]);
+
+
+
+
+val holfoot_ap_data_queue___startExp_null = store_thm (
+"holfoot_ap_data_queue___startExp_null",
+``holfoot_ap_data_queue tl (var_res_exp_const 0) data endExp =
+  var_res_bool_proposition DISJOINT_FMAP_UNION
+    (EVERY (\td. NULL (SND td)) data)``,
+SIMP_TAC std_ss [holfoot_ap_data_queue_def,
+   var_res_prop_binexpression_cond___CONST_REWRITE]);
+
+
+val holfoot_ap_data_queue___endExp_null = store_thm (
+"holfoot_ap_data_queue___endExp_null",
+``holfoot_ap_data_queue tl startExp data (var_res_exp_const 0) =
+  asl_trivial_cond 
+    (EVERY (\td. NULL (SND td)) data) 
+    (var_res_prop_equal DISJOINT_FMAP_UNION startExp (var_res_exp_const 0))``,
+
+SIMP_TAC std_ss [holfoot_ap_data_queue_def,
+   holfoot_ap_points_to___null, asl_false___asl_star_THM,
+   var_res_prop_binexpression_cond_def,
+   asl_bool_EVAL, asl_trivial_cond_def,
+   var_res_bool_proposition_REWRITE, IN_ABS] THEN
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
+SIMP_TAC std_ss [COND_RAND, COND_RATOR,
+   asl_bool_EVAL, var_res_prop_equal_unequal_EXPAND] THEN
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) []);
+
+
 
 (***************************************
  * Export some informations
@@ -6060,7 +6206,8 @@ val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___HOLFOOT_REWRITES =
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_tree_seg,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_tree,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_tree,
-     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_bintree])
+     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_bintree,
+     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_queue])
 
 
 val holfoot___varlist_update_NO_VAR_THM =
@@ -6069,10 +6216,12 @@ val holfoot___varlist_update_NO_VAR_THM =
      var_res_prop_varlist_update___holfoot_ap_data_list_seg_num,
      var_res_prop_varlist_update___holfoot_ap_data_list_seg,
      var_res_prop_varlist_update___holfoot_ap_data_list,
+     var_res_prop_varlist_update___asl_star___holfoot,
      var_res_prop_varlist_update___holfoot_ap_points_to,
      var_res_prop_varlist_update___holfoot_ap_data_tree,
      var_res_prop_varlist_update___holfoot_ap_tree,
-     var_res_prop_varlist_update___holfoot_ap_bintree])
+     var_res_prop_varlist_update___holfoot_ap_bintree,
+     var_res_prop_varlist_update___holfoot_ap_data_queue])
 
 
 

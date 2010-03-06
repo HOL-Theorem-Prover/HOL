@@ -6,8 +6,7 @@ list_append(x;y) [data_list(x,xdata) * data_list(y,ydata)] {
     t = x;
     n = t->tl;
     while (n != NULL) [data_lseg(x,_xdata1,t) * t |-> tl:n,dta:_tdate * 
-                       data_list(n, _xdata2) * 
-                       ``xdata:num list = _xdata1 ++ _tdate::_xdata2``] {
+                       data_list(n, _xdata2) * ``xdata = _xdata1 ++ _tdate::_xdata2``] {
       t = n;
       n = t->tl;
     }

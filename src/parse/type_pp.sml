@@ -125,10 +125,6 @@ in
   else raise ERR "dest_arraytype: not an array type"
 end
 
-(* This trace variable is now established in kind_pp.sml.
-val show_kinds = ref 1
-val _ = Feedback.register_trace("kinds", show_kinds, 2)
-*)
 val show_kinds = Feedback.get_tracefn "kinds"
 
 val ftyvars_seen = ref ([] : hol_type list)

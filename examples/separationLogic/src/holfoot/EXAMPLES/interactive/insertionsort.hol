@@ -67,7 +67,7 @@ val min_TAC =
    REPEAT STRIP_TAC THEN (
       HF_ELIM_COMMENTS_TAC THEN
       ASM_SIMP_TAC arith_ss []
-   )
+   );
 
 (* holfoot_set_goal_procedures file ["sortlist"] *)
 val sortlist_TAC =
@@ -93,8 +93,7 @@ val sortlist_TAC =
 val thm = holfoot_tac_verify_spec file NONE
                 [("sortlist", sortlist_TAC),
                  ("delete",   delete_TAC),
-                 ("min",      min_TAC)]
-
+                 ("min",      min_TAC)];
 
 val file = concat [examplesDir, "/interactive/insertionsort.dsf"];
 val spec_t = parse_holfoot_file file

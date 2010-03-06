@@ -688,8 +688,9 @@ Induct_on `L` THEN ASM_SIMP_TAC list_ss []);
 
 val FRONT_CONS_EQ_NULL = store_thm ("FRONT_CONS_EQ_NULL",
 ``(!x:'a xs. (FRONT (x::xs) = []) = (xs = [])) /\
-  (!x:'a xs. ([] = FRONT (x::xs)) = (xs = []))``,
-SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
+  (!x:'a xs. ([] = FRONT (x::xs)) = (xs = [])) /\
+  (!x:'a xs. NULL (FRONT (x::xs)) = NULL xs)``,
+SIMP_TAC std_ss [GSYM FORALL_AND_THM, NULL_EQ_NIL] THEN
 Induct_on `xs` THEN
 ASM_SIMP_TAC list_ss [])
 

@@ -135,20 +135,44 @@ fun COND_REWR_CONV___with_match thm =
 fun COND_REWR_CONV thm =
     fst (COND_REWR_CONV___with_match thm);
 
+fun COND_REWRITE_CONV___PREPOCESS thmL =
+    (map COND_REWR_CONV___with_match (flatten (map BODY_CONJUNCTS thmL)));
 
-fun COND_REWRITE_CONV top thmL =
+fun GABS_CONV conv tm =
+    case dest_term tm of
+        LAMB(Bvar,Body) => ((ABS_CONV conv tm) handle HOL_ERR _ =>
+        let
+           fun conv2 tm =
+              SPEC Bvar (GEN_ASSUM Bvar (conv tm));	    
+        in
+          ABS_CONV conv2 tm
+        end)
+    | _ => raise ERR "GABS_CONV" "Term not an abstraction"
+
+
+fun GSUB_CONV conv t =    
+    (TRY_CONV (COMB_CONV conv ORELSEC GABS_CONV conv) t)
+
+fun GREDEPTH_CONV conv tm =
+    (GSUB_CONV (GREDEPTH_CONV conv) THENC
+     TRY_CONV (conv THENC GREDEPTH_CONV conv)) tm
+
+fun EXT_COND_REWRITE_CONV top ctL thmL =
    let
-     val thmL' = flatten (map BODY_CONJUNCTS thmL);
-     val conv_termL = map COND_REWR_CONV___with_match thmL';
+     val conv_termL = ctL @ (COND_REWRITE_CONV___PREPOCESS thmL);
      val net = foldr (fn ((conv,t),net) => Net.insert (t,conv) net) Net.empty conv_termL;
    in
-     (if top then REPEATC else REDEPTH_CONV) (fn t =>
+     (if top then REPEATC else GREDEPTH_CONV) (fn t =>
         let
           val convL = Net.match t net;
         in
           FIRST_CONV convL t
         end)
    end;
+
+fun COND_REWRITE_CONV top thmL =
+   EXT_COND_REWRITE_CONV top [] thmL;
+
 
 fun GUARDED_COND_REWRITE_CONV top p thmL =
    let
@@ -716,6 +740,8 @@ local
    val var_res_prop_general_rewrites = [
          var_res_bool_proposition_TF,
          var_res_prop_binexpression___emp___consts,
+         var_res_prop_expression___NIL,
+         var_res_prop_expression___CONS_CONST,
          asl_trivial_cond_TF,
          BOOL_TO_NUM_REWRITE,
          asl_trivial_cond___asl_false,
@@ -723,6 +749,7 @@ local
          var_res_exp_binop___const_eval,
          asl_false___asl_star_THM,
          var_res_prop_binexpression_cond___CONST_REWRITE,
+         var_res_exp_op_CONS_CONST, var_res_exp_op_NIL,
          var_res_exp_is_defined___const,
          GSYM var_res_prop_equal_def,
          GSYM var_res_prop_unequal_def]
@@ -746,9 +773,6 @@ fun VAR_RES_PROP_REWRITE_CONV (do_something, ss) context =
    SIMP_CONV (ss_final++ss++simpLib.rewrites (prepare_context [] context)) []
 
 end
-
-
-
 
 
 (******************************************************************************)
@@ -806,26 +830,49 @@ in
 end;
 
 
-fun cond_rewrite___varlist_update rewrL sfb =
-    let
-       val thm0 = COND_REWRITE_CONV false (
-                       (var_res___varlist_update_NO_VAR_THM::
-                       (GSYM o_f_FUPDATE_WEAK)::
-                       o_f_FEMPTY::(var_res_param.varlist_rwts))@
-                       rewrL) sfb;
+local
+
+fun o_ABS_R___PAIRED_CONV t =
+   let
+      val _ = combinSyntax.dest_o t;
+      val (vs,_) = pairSyntax.dest_pabs (rand t);
+      val conv1 = (RAND_CONV pairTools.PABS_ELIM_CONV)
+      val conv2 = HO_REWR_CONV combinTheory.o_ABS_R
+      val conv3 = pairTools.PABS_INTRO_CONV vs     
+   in
+      (conv1 THENC conv2 THENC conv3) t
+   end handle HOL_ERR _ => raise UNCHANGED;
+
+val conv_termL = COND_REWRITE_CONV___PREPOCESS 
+   (var_res___varlist_update_NO_VAR_THM::MAP::
+    (GSYM o_f_FUPDATE_WEAK)::
+    o_f_FEMPTY::(var_res_param.varlist_rwts))@
+   [(o_ABS_R___PAIRED_CONV,Term `var_res_prop_varlist_update vcL o X`)];
+
+in
+
+(* val SOME (rewrL, t) = !tref *)
+fun cond_rewrite___varlist_update rewrL =
+    let val conv = EXT_COND_REWRITE_CONV false conv_termL rewrL in
+    fn t => let
+       val thm0 = conv t;
        val _ = let
-          val ct_opt = SOME (find_term is_var_res_prop_varlist_update (rhs (concl thm0))) handle HOL_ERR _ => NONE
+           val ct_opt = SOME (find_term (
+                  fn t => same_const var_res_prop_varlist_update_term (fst (strip_comb t))) (rhs (concl thm0))) handle HOL_ERR _ => NONE
          in
            if isSome ct_opt then (
             print "\n\n\n!!!Could not simplify:\n";
             print_term (valOf ct_opt);
+            print "\nin\n";
+            print_term (rhs (concl thm0));
             print "\n\n";
             Feedback.fail()) else ()
          end 
     in
        thm0
-    end;
+    end end;
 
+end
 
 fun var_res_prop___var_res_prop_varlist_update___EVAL vcL_t tt =
 let
@@ -884,5 +931,5 @@ fun simpset_no_context_strengthen_conseq_conv conv =
 
 fun simpset_strengthen_conseq_conv conv =
    (K (fn ss => (fn context => (STRENGTHEN_CONSEQ_CONV (conv ss context))))):var_res_inference
-
+									     
 end

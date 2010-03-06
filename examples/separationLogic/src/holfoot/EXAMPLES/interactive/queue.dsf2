@@ -1,0 +1,35 @@
+insert(f,r;d) [data_queue(f, data, r)] {
+  local t;
+  t = new();
+  t->tl = NULL;
+  t->dta = d;
+  if(f == NULL) {
+    f = t;
+    r = t;
+  } else {
+    r->tl = t;
+    r = t;
+  }
+} [data_queue(f, ``SNOC d data``, r)]
+
+insert_front(f,r;d) [data_queue(f, data, r)] {
+  local t;
+  t = new();
+  t->dta = d;
+  if(f == NULL) {
+    f = t;
+    r = t;
+    t->tl = 0;
+  } else {
+    t->tl = f;
+    f = t;
+  }
+} [data_queue(f, ``d::data``, r)]
+
+
+delete(f;r) [data_queue(f, ``date::data``, r)] {
+  local t;
+  t = f;
+  f = f->tl;
+  dispose t;
+} [data_queue(f, data, r)]

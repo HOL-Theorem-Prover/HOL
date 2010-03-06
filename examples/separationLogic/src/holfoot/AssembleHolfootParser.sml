@@ -13,16 +13,26 @@ struct
           structure Lex = HolfootLex
           structure LrParser = LrParser)
 
+
+  fun print_parse_error s =
+  let
+     open PPBackEnd;
+     val _ = Parse.print_with_style [FG OrangeRed, Bold, Underline] "Error:";
+     val _ = Parse.print_with_style [] " ";
+     val _ = Parse.print_with_style [FG OrangeRed] s
+     val _ = Parse.print_with_style [] "\n";
+  in
+     ()
+  end;
+
   fun invoke lexstream = let
     open PPBackEnd;
     val error_count = ref 0;
     fun print_error (s,(j:int,i:int),_) =
         ((if (!error_count > 0) then () else print "\n");
         (error_count := !error_count + 1);
-        Parse.print_with_style [FG OrangeRed, Bold, Underline] "Error:";
-        Parse.print_with_style [FG OrangeRed] (" "^
-            " line "^(Int.toString (i+1)) ^ ", char " ^ 
-               (Int.toString (j+2)) ^": " ^ s ^ "\n");
+        print_parse_error (" "^
+            " line "^(Int.toString (i+1)) ^ ": " ^ s);
        (if (!error_count > 15) then Feedback.fail() else ()));
 
     val r = (#1 (DiskFileParser.parse(15,lexstream,print_error,())))

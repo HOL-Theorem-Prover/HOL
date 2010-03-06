@@ -29,13 +29,11 @@ val _ =
             (``BUTFIRSTN 0 [1;2]``, ``[1;2]``),
             (``BUTFIRSTN 3 [1;2;3]``, ``[] : num list``),
             (``BUTFIRSTN 0 [] : num list``, ``[] : num list``)]
-(*
        andalso
        List.all
          (test "LIST_EQ_SIMP_CONV" Term.compare term_to_string
                listSimps.LIST_EQ_SIMP_CONV)
          [(``(l1:'a list ++ [])::t = p ++ q``, ``(l1:'a list)::t = p ++ q``)]
-*)
     then
       Process.exit Process.success
     else Process.exit Process.failure

@@ -5,6 +5,8 @@ open HolKernel optmonad;
 infix >> >-;
 infixr 3 ==>;
 
+val show_kinds = ref 1
+val _ = Feedback.register_trace("kinds", show_kinds, 2)
 
 val TCERR = mk_HOL_ERR "Prekind";
 

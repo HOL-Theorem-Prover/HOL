@@ -10,13 +10,15 @@ open holfootParser;
 open holfoot_pp_print;
 open holfootLib;
 
+open separationLogicTheory vars_as_resourceTheory holfootTheory generalHelpersTheory;
+
 use (Globals.HOLDIR ^ "/tools/hol-mode.sml");
 
 val _ = Feedback.set_trace "Unicode" 0;
 val _ = Feedback.set_trace "PPBackEnd use annotations" 0;
 val _ = Feedback.set_trace "PPBackEnd use styles" 1;
 val _ = Feedback.set_trace "PPBackEnd show types" 0;
-val _ = Feedback.set_trace "metis" 0
+val _ = Feedback.set_trace "metis" 0;
 
 val examplesDir = 
     concat [Globals.HOLDIR, 

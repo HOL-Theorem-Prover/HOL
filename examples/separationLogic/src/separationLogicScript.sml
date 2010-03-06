@@ -9015,6 +9015,16 @@ SIMP_TAC std_ss [fasla_seq___SUP_fasl_action_order, NOT_SING_EMPTY,
    IN_SING]);
 
 
+val fasla_seq___SUP_fasl_action_order___right = store_thm ("fasla_seq___SUP_fasl_action_order___right",
+``!M a1. ~(M = EMPTY) ==>
+(fasla_seq a1 (SUP_fasl_action_order M) =
+ SUP_fasl_action_order (\a. ?a2. (a2 IN M) /\ (a = fasla_seq a1 a2)))``,
+
+REPEAT STRIP_TAC THEN
+CONV_TAC (LHS_CONV (RATOR_CONV (RAND_CONV (REWR_CONV (GSYM SUP_fasl_action_order___SING))))) THEN
+ASM_SIMP_TAC std_ss [fasla_seq___SUP_fasl_action_order, IN_SING]);
+
+
 val FASL_PROGRAM_SEM___fasl_prog_critical_section =
 store_thm ("FASL_PROGRAM_SEM___fasl_prog_critical_section",
 ``!f lock_env penv l prog.
@@ -10881,7 +10891,42 @@ ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___REFL,
    FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action]);
 
 
+val FASL_INFERENCE_prog_while_unroll = store_thm  ("FASL_INFERENCE_prog_while_unroll",
+``!xenv penv c P Q p pL.
 
+ (IS_SEPARATION_COMBINATOR (FST xenv) /\
+ (FASL_PROGRAM_HOARE_TRIPLE xenv penv P
+   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg c))::pL)) Q) /\
+ (FASL_PROGRAM_HOARE_TRIPLE xenv penv P
+      (fasl_prog_block ((fasl_prog_assume c)::p::(fasl_prog_while c p)::pL)) Q)) ==>
+ (FASL_PROGRAM_HOARE_TRIPLE xenv penv P
+      (fasl_prog_block ((fasl_prog_while c p)::pL)) Q)``,
+
+
+REWRITE_TAC [fasl_prog_while_def,
+   FASL_PROGRAM_HOARE_TRIPLE_def,
+   FASL_PROGRAM_SEM___prog_block,
+   FASL_PROGRAM_SEM___prog_seq,
+   GSYM fasl_prog_assume_def,
+   FASL_PROGRAM_SEM___prog_kleene_star] THEN
+SIMP_TAC std_ss [REWRITE_RULE [ASSOC_DEF] fasla_seq___ASSOC,
+   fasla_seq___SUP_fasl_action_order___right,
+   IMAGE_EQ_EMPTY, UNIV_NOT_EMPTY] THEN
+SIMP_TAC std_ss [
+   fasla_seq___SUP_fasl_action_order___left,
+   IN_ABS, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM,
+   GSYM LEFT_EXISTS_AND_THM, IN_UNIV,
+   HOARE_INFERENCE___SUP_fasl_action_order,
+   GSYM LEFT_FORALL_IMP_THM] THEN
+REPEAT GEN_TAC THEN STRIP_TAC THEN
+Cases_on `n` THENL [
+   ASM_SIMP_TAC std_ss [fasl_prog_repeat_num_def,
+      FASL_PROGRAM_SEM___skip, fasla_seq_skip],
+
+   FULL_SIMP_TAC std_ss [FASL_PROGRAM_SEM___prog_repeat,
+      REWRITE_RULE [ASSOC_SYM] fasla_seq___ASSOC,
+      fasla_seq_skip, FASL_PROGRAM_SEM___prog_seq]
+]);
 
 val fasl_pc_assume_true___skip = store_thm (
 "fasl_pc_assume_true___skip",
