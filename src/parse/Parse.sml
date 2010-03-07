@@ -844,7 +844,7 @@ fun add_binder (name, prec) = let in
   end
 
 
-fun temp_add_rule0 setter rule = let
+fun temp_add_rule rule = let
   val {term_name,fixity,pp_elements,paren_style,block_style} = rule
 in
   case fixity of
@@ -865,7 +865,7 @@ in
           else HOL_WARNING "Parse" "temp_add_rule"
                            "Adding a Unicode-ish rule without Unicode trace \
                            \being true";
-          the_term_grammar := setter uni_on {
+          the_term_grammar := ProvideUnicode.temp_uadd_rule uni_on {
             u = term_name, term_name = term_name, newrule = grule,
             oldtok = NONE
           } (term_grammar());
@@ -884,11 +884,9 @@ in
     end
 end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
 
-val temp_add_rule = temp_add_rule0 ProvideUnicode.temp_uadd_rule
-
 fun add_rule (r as {term_name, fixity, pp_elements,
                     paren_style, block_style = (bs,bi)}) = let in
-  temp_add_rule0 ProvideUnicode.uadd_rule r;
+  temp_add_rule r;
   update_grms "add_rule"
               ("temp_add_rule",
                String.concat
@@ -990,17 +988,15 @@ fun remove_rules_for_term s = let in
  end
 
 
-fun temp_set_fixity0 setter s f = let in
+fun temp_set_fixity s f = let in
   temp_remove_termtok {term_name=s, tok=s};
   case f of
     Prefix => ()
-  | _ => temp_add_rule0 setter (standard_spacing s f)
+  | _ => temp_add_rule (standard_spacing s f)
  end
 
-val temp_set_fixity = temp_set_fixity0 ProvideUnicode.temp_uadd_rule
-
 fun set_fixity s f = let in
-    temp_set_fixity0 ProvideUnicode.uadd_rule s f;
+    temp_set_fixity s f;
     update_grms "set_fixity"
                 ("(temp_set_fixity "^quote s^")", "("^fixityToString f^")")
  end
