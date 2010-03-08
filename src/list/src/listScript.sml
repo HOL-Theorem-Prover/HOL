@@ -1422,6 +1422,24 @@ val ALL_DISTINCT_SING = store_thm(
    ``!x. ALL_DISTINCT [x]``,
    SRW_TAC [][]);
 
+val ALL_DISTINCT_ZIP = store_thm(
+   "ALL_DISTINCT_ZIP",
+   ``!l1 l2. ALL_DISTINCT l1 /\ (LENGTH l1 = LENGTH l2) ==> ALL_DISTINCT (ZIP (l1,l2))``,
+   Induct THEN Cases_on `l2` THEN SRW_TAC [][ZIP] THEN RES_TAC THEN
+   FULL_SIMP_TAC (srw_ss()) [MEM_EL] THEN
+   SRW_TAC [][LENGTH_ZIP] THEN
+   Q.MATCH_ABBREV_TAC `~X \/ Y` THEN
+   Cases_on `X` THEN SRW_TAC [][Abbr`Y`] THEN
+   SRW_TAC [][EL_ZIP] THEN METIS_TAC []);
+
+val ALL_DISTINCT_ZIP_SWAP = store_thm(
+   "ALL_DISTINCT_ZIP_SWAP",
+   ``!l1 l2. ALL_DISTINCT (ZIP (l1,l2)) /\ (LENGTH l1 = LENGTH l2) ==> ALL_DISTINCT (ZIP (l2,l1))``,
+   SRW_TAC [][ALL_DISTINCT_EL_EQ] THEN
+   Q.PAT_ASSUM `X = Y` (ASSUME_TAC o SYM) THEN
+   FULL_SIMP_TAC (srw_ss()) [EL_ZIP,LENGTH_ZIP] THEN
+   METIS_TAC [])
+
 (* ----------------------------------------------------------------------
     LRC
       Where NRC has the number of steps in a transitive path,
