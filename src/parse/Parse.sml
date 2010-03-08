@@ -744,6 +744,19 @@ struct
     | Binder => SOME std_binder_precedence
   end
 
+  fun urule (rf, {term_name,pp_elements,paren_style,block_style}) = let
+    open term_grammar
+    val irule = {term_name = term_name, elements = pp_elements,
+                 block_style = block_style, paren_style = paren_style,
+                 preferred = true}
+  in
+    case rf of
+      Infix (ass, prec) => (SOME prec, INFIX (STD_infix([irule], ass)))
+    | TruePrefix prec => (SOME prec, PREFIX (STD_prefix [irule]))
+    | Suffix prec => (SOME prec, SUFFIX (STD_suffix [irule]))
+    | Closefix => (NONE, CLOSEFIX [irule])
+  end
+
   exception foo
   fun uset_fixity0 setter s fxty = let
     open term_grammar
@@ -757,15 +770,10 @@ struct
       | RF rf => let
           val {term_name,pp_elements,paren_style,block_style,...} =
               standard_spacing s fxty
-          val irule = {term_name = term_name, elements = pp_elements,
-                       preferred = true, block_style = block_style,
-                       paren_style = paren_style}
+          val irule = {term_name = term_name, pp_elements = pp_elements,
+                       block_style = block_style, paren_style = paren_style}
         in
-          case rf of
-            Infix (ass, prec) => (SOME prec, INFIX (STD_infix([irule], ass)))
-          | TruePrefix prec => (SOME prec, PREFIX (STD_prefix [irule]))
-          | Suffix prec => (SOME prec, SUFFIX (STD_suffix [irule]))
-          | Closefix => (NONE, CLOSEFIX [irule])
+          urule (rf, irule)
         end
   in
     lift setter {u = s, term_name = s, newrule = rule, oldtok = NONE}
@@ -1104,6 +1112,12 @@ fun try_grammar_extension f x =
         grm_updates := updates; raise e)
  end;
 
+val els_include_unicode = let
+  fun includes_unicode s = not (CharVector.all (fn c => Char.ord c < 128) s)
+in
+  List.exists (fn RE (TOK s) => includes_unicode s | _ => false)
+end
+
 fun temp_add_binder(name, prec) = let in
    the_term_grammar := add_binder (!the_term_grammar)
                                   ({term_name = name, tok = name}, prec);
@@ -1131,20 +1145,45 @@ fun add_type_binder (name, prec) = let in
                                 ["(", quote name, ", std_binder_precedence)"])
   end
 
-fun temp_add_rule {term_name,fixity,pp_elements,paren_style,block_style} =
- (case fixity
-   of Prefix => Feedback.HOL_MESG"Fixities of Prefix do not affect the grammar"
-    | Binder => let
-      in
-        temp_add_binder (term_name, std_binder_precedence)
-      end
-    | RF rf => let in
-        the_term_grammar := term_grammar.add_rule (!the_term_grammar)
-              {term_name=term_name, fixity=rf, pp_elements=pp_elements,
-               paren_style=paren_style, block_style=block_style};
-        term_grammar_changed := true
-      end
- ) handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
+fun temp_add_rule rule = let
+  val {term_name,fixity,pp_elements,paren_style,block_style} = rule
+in
+  case fixity of
+    Prefix => Feedback.HOL_MESG"Fixities of Prefix do not affect the grammar"
+  | Binder => let
+    in
+      temp_add_binder (term_name, std_binder_precedence)
+    end
+  | RF rf => let
+      val uni_on = get_tracefn "Unicode" () > 0
+    in
+      if els_include_unicode pp_elements then let
+          val irule = {term_name = term_name, pp_elements = pp_elements,
+                       paren_style = paren_style, block_style = block_style}
+          val grule = Unicode.urule (rf, irule)
+        in
+          if uni_on then ()
+          else HOL_WARNING "Parse" "temp_add_rule"
+                           "Adding a Unicode-ish rule without Unicode trace \
+                           \being true";
+          the_term_grammar := ProvideUnicode.temp_uadd_rule uni_on {
+            u = term_name, term_name = term_name, newrule = grule,
+            oldtok = NONE
+          } (term_grammar());
+          term_grammar_changed := true
+        end
+      else let
+        in
+          the_term_grammar :=
+          term_grammar.add_rule (!the_term_grammar)
+                                {term_name=term_name, fixity=rf,
+                                 pp_elements=pp_elements,
+                                 paren_style=paren_style,
+                                 block_style=block_style};
+          term_grammar_changed := true
+        end
+    end
+end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
 
 fun add_rule (r as {term_name, fixity, pp_elements,
                     paren_style, block_style = (bs,bi)}) = let in
@@ -1252,7 +1291,9 @@ fun remove_rules_for_term s = let in
 
 fun temp_set_fixity s f = let in
   temp_remove_termtok {term_name=s, tok=s};
-  case f of Prefix => () | _ => temp_add_rule (standard_spacing s f)
+  case f of
+    Prefix => ()
+  | _ => temp_add_rule (standard_spacing s f)
  end
 
 fun set_fixity s f = let in

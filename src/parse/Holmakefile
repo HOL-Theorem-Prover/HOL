@@ -8,7 +8,5 @@ all: base_lexer.sml selftest.exe
 base_lexer.sml: base_lexer
 	$(protect $(HOLDIR)/tools/mllex/mllex.exe) base_lexer
 
-Unicode.ui: $(dprot $(SIGOBJ)/UnicodeChars.ui)
-
 selftest.exe: selftest.uo $(SELFTEST_DEPS)
 	$(HOLMOSMLC) -o $@ $<
