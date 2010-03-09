@@ -29,4 +29,8 @@ struct
   val full_simp_tac = FULL_SIMP_TAC
   val srw_tac = SRW_TAC
 
+  val op>> = op THEN
+  val op>- = op THEN1
+  val op>| = op THENL
+
 end

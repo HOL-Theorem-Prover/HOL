@@ -28,4 +28,8 @@ sig
   val full_simp_tac : simpLib.simpset -> thm list -> tactic
   val srw_tac : simpLib.ssfrag list -> thm list -> tactic
 
+  val >> : tactic * tactic -> tactic
+  val >| : tactic * tactic list -> tactic
+  val >- : tactic * tactic -> tactic
+
 end
