@@ -120,11 +120,27 @@ in
       t
 end
 
+(* test that a bound on a rewrite applies to all derived rewrite theorems *)
+val (test8_flag, _) = let
+  open boolSimps
+  val rwt_th = ASSUME ``(p:bool = x) /\ (q:bool = x)``
+  val t = ``p /\ q``
+  fun doit t = QCONV (SIMP_CONV bool_ss [Once rwt_th]) t
+  fun check th = not (aconv (rhs (concl th)) ``x:bool``)
+in
+  infloop_protect
+      "Bound on rewrites applies to all derived theorems jointly."
+      check
+      doit
+      t
+end
+
 (* ---------------------------------------------------------------------- *)
 
 val _ = Process.exit
           (if List.all I [test1_flag, test2_flag, test3_flag, test4_flag,
-                          test5_flag, test6_flag] then
+                          test5_flag, test6_flag, test7_flag, test8_flag]
+           then
              Process.success
            else
              Process.failure);
