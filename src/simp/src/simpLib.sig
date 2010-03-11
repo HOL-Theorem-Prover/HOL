@@ -47,12 +47,13 @@ sig
                    trace: int,
                     conv: (term list -> term -> thm) -> term list -> conv}
 
+  type controlled_thm = BoundedRewrites.controlled_thm
   datatype ssfrag = SSFRAG of
     {name : string option,
      convs: convdata list,
      rewrs: thm list,
         ac: (thm * thm) list,
-    filter: (thm -> thm list) option,
+    filter: (controlled_thm -> controlled_thm list) option,
     dprocs: Traverse.reducer list,
      congs: thm list}
 

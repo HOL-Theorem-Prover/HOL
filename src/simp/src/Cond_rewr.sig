@@ -35,15 +35,15 @@ signature Cond_rewr =
 sig
 
   include Abbrev
+  type controlled_thm = BoundedRewrites.controlled_thm
+  val mk_cond_rewrs  : controlled_thm -> controlled_thm list
+  val IMP_EQ_CANON   : controlled_thm -> controlled_thm list
+  val COND_REWR_CONV : thm -> bool ->
+                       (term list -> term -> thm) -> term list -> conv
+  val QUANTIFY_CONDITIONS : controlled_thm -> controlled_thm list
+  val stack_limit : int ref
 
-   val mk_cond_rewrs  : thm -> thm list
-   val IMP_EQ_CANON   : thm -> thm list
-   val COND_REWR_CONV : thm -> bool ->
-                        (term list -> term -> thm) -> term list -> conv
-   val QUANTIFY_CONDITIONS : thm -> thm list
-   val stack_limit : int ref
-
-   val used_rewrites : thm list ref
-   val track_rewrites : bool ref
+  val used_rewrites : thm list ref
+  val track_rewrites : bool ref
 
 end

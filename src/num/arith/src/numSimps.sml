@@ -482,7 +482,7 @@ fun ARITH_REDUCER fil = let
   exception CTXT of thm list;
   fun get_ctxt e = (raise e) handle CTXT c => c
   fun add_ctxt(ctxt, newthms) = let
-    val addthese = filter (fn thm => 
+    val addthese = filter (fn thm =>
         (is_arith_thm thm andalso fil thm)) (flatten (map CONJUNCTS newthms))
   in
     CTXT (addthese @ get_ctxt ctxt)
@@ -600,17 +600,19 @@ end handle Option.Option =>
            raise mk_HOL_ERR "numSimps" "eliminate_SUCn"
                             "No applicable SUC term to eliminate"
 
-val SUC_FILTER_ss =
- let fun numfilter th =
-      let val newth = repeat eliminate_SUCn
-                        (repeat eliminate_single_SUC th)
-      in if aconv (concl newth) (concl th) then [th] else [th, newth]
-      end
- in
+val SUC_FILTER_ss = let
+  fun numfilter (th,bnd) = let
+    val newth = repeat eliminate_SUCn
+                       (repeat eliminate_single_SUC th)
+  in
+    if aconv (concl newth) (concl th) then [(th,bnd)]
+    else [(th,bnd), (newth,bnd)]
+  end
+in
   simpLib.SSFRAG
-    {name=SOME"SUC_FILTER",
-     convs = [], rewrs = [], congs = [],
-     filter = SOME numfilter, ac = [], dprocs = []}
- end;
+      {name=SOME"SUC_FILTER",
+       convs = [], rewrs = [], congs = [],
+       filter = SOME numfilter, ac = [], dprocs = []}
+end;
 
 end (* numSimps *)

@@ -3,6 +3,8 @@ struct
 
 open HolKernel boolLib liteLib Trace;
 
+type controlled_thm = BoundedRewrites.controlled_thm
+
 fun WRAP_ERR x = STRUCT_WRAP "Cond_rewr" x;
 fun ERR x      = STRUCT_ERR "Cond_rewr" x;
 
@@ -199,10 +201,8 @@ val BOUNDED_t = mk_thy_const {Thy = "bool", Name = "BOUNDED",
                               Ty = bool --> bool}
 fun loops th = let
   val (l,r) = dest_eq (concl th)
-  fun is_bounded t = same_const BOUNDED_t (rator t) handle HOL_ERR _ => false
 in
-  can (find_term (equal l)) r andalso
-  not (isSome (HOLset.find is_bounded (hypset th)))
+  can (find_term (equal l)) r
 end handle HOL_ERR _ => failwith "loops"
 
 
@@ -275,134 +275,143 @@ val false_tm = boolSyntax.F
 val Abbrev_tm = prim_mk_const {Name = "Abbrev", Thy = "marker"}
 val x_eq_false = SPEC (mk_eq(genvar bool, false_tm)) FALSITY
 
-fun IMP_EQ_CANON thm =
-   let val conditions = #1 (strip_imp (concl thm))
-       val undisch_thm = UNDISCH_ALL thm
-       val conc = concl undisch_thm
-       val undisch_rewrites =
-        if (is_eq conc) then
-          if loops undisch_thm then
-            (trace(1,IGNORE("looping rewrite (but adding EQT versions)",thm));
-             [EQT_INTRO undisch_thm, EQT_INTRO (SYM undisch_thm)])
-          else let
-             val base = if null (subtract (free_vars (rhs conc))
-                                          (free_varsl (lhs conc::hyp thm)))
-		         then undisch_thm
-		         else (trace(1,IGNORE("rewrite with existential vars (adding EQT version(s))",thm));
-                               EQT_INTRO undisch_thm)
-              val flip_eqp = let val (l,r) = dest_eq (concl base)
-                             in
-                               is_eq l andalso not (is_eq r)
-                             end
-            in
-              if flip_eqp then
-                [base, CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ)) base]
-              else [base]
-            end
-        else if (is_conj conc) then
-          (op @ o (IMP_EQ_CANON##IMP_EQ_CANON) o CONJ_PAIR) undisch_thm
-        else if (is_forall conc) then IMP_EQ_CANON (snd (SPEC_VAR undisch_thm))
-        else if (is_neg conc) then
-          if (is_eq (dest_neg conc)) then
-            [EQF_INTRO undisch_thm, EQF_INTRO (GSYM undisch_thm)]
-          else [EQF_INTRO undisch_thm]
-        else if conc = truth_tm then
-          (trace(2,IGNORE ("pointless rewrite",thm)); [])
-        else if (conc = false_tm) then [MP x_eq_false undisch_thm]
-        else if is_comb conc andalso same_const (rator conc) Abbrev_tm then
-          if is_eq (rand conc) then
-            IMP_EQ_CANON
-              (SYM (CONV_RULE (REWR_CONV markerTheory.Abbrev_def) undisch_thm))
-          else []
-        else [EQT_INTRO undisch_thm]
-   in
-      map (CONJ_DISCH conditions) undisch_rewrites
-   end
-handle e => WRAP_ERR("IMP_EQ_CANON",e);
+fun IMP_EQ_CANON (thm,bnd) = let
+  val conditions = #1 (strip_imp (concl thm))
+  val undisch_thm = UNDISCH_ALL thm
+  val conc = concl undisch_thm
+  fun IMP_EQ_CANONb th = IMP_EQ_CANON (th, bnd)
+  val undisch_rewrites =
+      if (is_eq conc) then
+        if loops undisch_thm andalso bnd = BoundedRewrites.UNBOUNDED then
+          (trace(1,IGNORE("looping rewrite (but adding EQT versions)",thm));
+           [(EQT_INTRO undisch_thm, bnd), (EQT_INTRO (SYM undisch_thm), bnd)])
+        else let
+            val base =
+                if null (subtract (free_vars (rhs conc))
+                                  (free_varsl (lhs conc::hyp thm)))
+		then undisch_thm
+		else
+                  (trace(1,IGNORE("rewrite with existential vars (adding \
+                                  \EQT version(s))",thm));
+                   EQT_INTRO undisch_thm)
+            val flip_eqp = let val (l,r) = dest_eq (concl base)
+                           in
+                             is_eq l andalso not (is_eq r)
+                           end
+          in
+            if flip_eqp then
+              [(base, bnd),
+               (CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ)) base, bnd)]
+            else [(base,bnd)]
+          end
+      else if is_conj conc then
+        undisch_thm |> CONJ_PAIR
+                    |> (IMP_EQ_CANONb ## IMP_EQ_CANONb)
+                    |> op @
+      else if is_forall conc then
+        undisch_thm |> SPEC_VAR |> snd |> IMP_EQ_CANONb
+      else if is_neg conc then
+        if is_eq (dest_neg conc) then
+          [(EQF_INTRO undisch_thm, bnd), (EQF_INTRO (GSYM undisch_thm), bnd)]
+        else [(EQF_INTRO undisch_thm, bnd)]
+      else if conc = truth_tm then
+        (trace(2,IGNORE ("pointless rewrite",thm)); [])
+      else if conc = false_tm then [(MP x_eq_false undisch_thm, bnd)]
+      else if is_comb conc andalso same_const (rator conc) Abbrev_tm then
+        if is_eq (rand conc) then
+          undisch_thm |> CONV_RULE (REWR_CONV markerTheory.Abbrev_def)
+                      |> SYM
+                      |> IMP_EQ_CANONb
+        else []
+      else [(EQT_INTRO undisch_thm, bnd)]
+in
+  map (fn (th,bnd) => (CONJ_DISCH conditions th, bnd)) undisch_rewrites
+end handle e => WRAP_ERR("IMP_EQ_CANON",e);
 
 
-fun QUANTIFY_CONDITIONS thm =
- if is_imp (concl thm) then
-   let val free_in_eqn = (free_vars (snd(dest_imp (concl thm))))
-       val free_in_thm = (free_vars (concl thm))
-       val free_in_hyp = free_varsl (hyp thm)
-       val free_in_conditions =
-             subtract (subtract free_in_thm free_in_eqn) free_in_hyp
-       fun quantify fv = CONV_RULE (HO_REWR_CONV LEFT_FORALL_IMP_THM) o GEN fv
-       val quan_thm = itlist quantify free_in_conditions thm
-   in [quan_thm]
-   end
- else [thm]
- handle e => WRAP_ERR("QUANTIFY_CONDITIONS",e);
+fun QUANTIFY_CONDITIONS (thm, bnd) =
+    if is_imp (concl thm) then let
+        val free_in_eqn = (free_vars (snd(dest_imp (concl thm))))
+        val free_in_thm = (free_vars (concl thm))
+        val free_in_hyp = free_varsl (hyp thm)
+        val free_in_conditions =
+            subtract (subtract free_in_thm free_in_eqn) free_in_hyp
+        fun quantify fv = CONV_RULE (HO_REWR_CONV LEFT_FORALL_IMP_THM) o GEN fv
+        val quan_thm = itlist quantify free_in_conditions thm
+      in
+        [(quan_thm, bnd)]
+      end
+    else [(thm, bnd)]
+ handle e => WRAP_ERR("QUANTIFY_CONDITIONS",e)
 
 fun imp_canon_munge acc antthlist =
     case antthlist of
       [] => acc
-    | ((ants, th) :: rest) =>
-      imp_canon_munge (List.foldl (uncurry DISCH) th ants :: acc) rest
+    | ((ants, th, bnd) :: rest) =>
+      imp_canon_munge ((List.foldl (uncurry DISCH) th ants, bnd) :: acc) rest
 
 fun IMP_CANON acc thl =
     case thl of
       [] => imp_canon_munge [] acc
-    | (ants, th)::ths =>
-      let val w = concl th
+    | (ants, th, bnd)::ths => let
+        val w = concl th
       in
         if is_conj w then let
             val (th1, th2) = CONJ_PAIR th
           in
-            IMP_CANON acc ((ants, th1) :: (ants, th2) :: ths)
+            IMP_CANON acc ((ants, th1, bnd) :: (ants, th2, bnd) :: ths)
           end
-        else
-          if is_imp w then let
-              val (ant,c) = dest_imp w
-            in
-              if is_conj ant then let
-                  val (conj1,conj2) = dest_conj ant
-                  val newth =
-                      DISCH conj1 (DISCH conj2 (MP th (CONJ (ASSUME conj1)
-                                                            (ASSUME conj2))))
-                in
-                  IMP_CANON acc ((ants, newth) :: ths)
-                end
-              else if is_disj ant then let
-                  val (disj1,disj2) = dest_disj ant
-                  val newth1 = DISCH disj1 (MP th (DISJ1 (ASSUME disj1) disj2))
-                  val newth2 = DISCH disj2 (MP th (DISJ2 disj1 (ASSUME disj2)))
-                in
-                  IMP_CANON acc ((ants, newth1) :: (ants, newth2) :: ths)
-                end
-              else if is_exists ant then let
-                  val (Bvar,Body) = dest_exists ant
-                  val bv' = variant (thm_frees th) Bvar
-                  val body' = subst [Bvar |-> bv'] Body
-                  val newth =
-                      DISCH body' (MP th (EXISTS(ant, bv') (ASSUME body')))
-                in
-                  IMP_CANON acc ((ants, newth) :: ths)
-                end
-              else if c = boolSyntax.F then
-                IMP_CANON ((ants, NOT_INTRO th) :: acc) ths
+        else if is_imp w then let
+            val (ant,c) = dest_imp w
+          in
+            if is_conj ant then let
+                val (conj1,conj2) = dest_conj ant
+                val newth =
+                    DISCH conj1 (DISCH conj2 (MP th (CONJ (ASSUME conj1)
+                                                          (ASSUME conj2))))
+              in
+                IMP_CANON acc ((ants, newth, bnd) :: ths)
+              end
+            else if is_disj ant then let
+                val (disj1,disj2) = dest_disj ant
+                val newth1 = DISCH disj1 (MP th (DISJ1 (ASSUME disj1) disj2))
+                val newth2 = DISCH disj2 (MP th (DISJ2 disj1 (ASSUME disj2)))
+              in
+                IMP_CANON acc
+                          ((ants, newth1, bnd) :: (ants, newth2, bnd) :: ths)
+              end
+            else if is_exists ant then let
+                val (Bvar,Body) = dest_exists ant
+                val bv' = variant (thm_frees th) Bvar
+                val body' = subst [Bvar |-> bv'] Body
+                val newth =
+                    DISCH body' (MP th (EXISTS(ant, bv') (ASSUME body')))
+              in
+                IMP_CANON acc ((ants, newth, bnd) :: ths)
+              end
+            else if c = boolSyntax.F then
+              IMP_CANON ((ants, NOT_INTRO th, bnd) :: acc) ths
               (* we want [.] |- F theorems to rewrite to [.] |- x = F,
                  done above in IMP_EQ_CANON, but we don't want this to
                  be done for |- P ==> F, which would set up a rewrite
                  of the form |- P ==> (x = F), which would match any
                  boolean term and force endless attempts to prove P.
                  Instead, convert to |- ~P *)
-              else
-                IMP_CANON acc ((ant::ants, UNDISCH th)::ths)
-            end
-          else if is_forall w then
-            IMP_CANON acc ((ants, SPEC_ALL th) :: ths)
-          else if is_res_forall w then let
-              val newth = CONV_RULE (REWR_CONV RES_FORALL_THM THENC
-                                     QUANT_CONV (RAND_CONV BETA_CONV)) th
-            in
-              IMP_CANON acc ((ants, newth) :: ths)
-            end
-          else IMP_CANON ((ants, th)::acc) ths
+            else
+              IMP_CANON acc ((ant::ants, UNDISCH th, bnd)::ths)
+          end
+        else if is_forall w then
+          IMP_CANON acc ((ants, SPEC_ALL th, bnd) :: ths)
+        else if is_res_forall w then let
+            val newth = CONV_RULE (REWR_CONV RES_FORALL_THM THENC
+                                   QUANT_CONV (RAND_CONV BETA_CONV)) th
+          in
+            IMP_CANON acc ((ants, newth, bnd) :: ths)
+          end
+        else IMP_CANON ((ants, th, bnd)::acc) ths
       end
 
-val IMP_CANON = (fn th => IMP_CANON [] [([], th)])
+val IMP_CANON = (fn (th,bnd) => IMP_CANON [] [([], th, bnd)])
 
 infix oo;
 fun f oo g = fn x => flatten (map f (g x));
