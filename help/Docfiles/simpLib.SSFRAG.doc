@@ -8,7 +8,7 @@ SSFRAG : { ac     : (thm * thm) list,
                      name  : string,
                      trace : int} list,
            dprocs : Traverse.reducer list,
-           filter : (thm -> thm list) option,
+           filter : (controlled_thm -> controlled_thm list) option,
            name   : string option,
            rewrs  : thm list } -> ssfrag
 \ELTYPE
@@ -115,6 +115,16 @@ generating rewrites from theorems, and replaces that function.  The
 version of this present in {bool_ss} and its descendents will, for
 example, turn {|- P /\ Q} into {|- P} and {|- Q}, and {|- ~(t1 = t2)}
 into {|- (t1 = t2) = F} and {|- (t2 = t1) = F}.
+
+The {controlled_thm} type is defined in the module {BoundedRewrites},
+and pairs a theorem with a bound, which is either the value
+{UNBOUNDED} or the constructor {BOUNDED} applied to an integer
+reference.  The reference is used to limit the number of times a
+rewrite may be applied.  The filter gets information as to whether and
+how a rewrite is bounded as this can affect its decision on whether or
+not to include a rewrite at all (if it looks as if it will loop, and
+the bound is {UNBOUNDED}, it should be dropped, but it may choose to
+keep it if there is bound present).
 
 The {rewrs} field of the record is a list of rewrite theorems that are
 to be applied.
