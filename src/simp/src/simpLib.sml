@@ -44,12 +44,6 @@ fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
   | appconv (c,BOUNDED r) solver stk tm = c true solver stk tm before
                                           Portable.dec r
 
-fun dest_tagged_rewrite thm = let
-  val (th, n) = DEST_BOUNDED thm
-in
-  (th, BOUNDED (ref n))
-end handle HOL_ERR _ => (thm, UNBOUNDED)
-
 fun mk_rewr_convdata (thm,tag) = let
   val th = SPEC_ALL thm
 in
