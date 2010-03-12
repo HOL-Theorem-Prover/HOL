@@ -17,7 +17,7 @@ fun WARNloc f loc msg = if !syntax_error_trace then
                         else ()
 
 fun noloc s = (s, locn.Loc_None)
-val qfail = error (noloc "")
+fun qfail x = error (noloc "") x
 fun WARNloc_string loc s = (s, loc)
 
 
@@ -600,9 +600,6 @@ datatype 'a PStack =
   PStack of {stack : ('a stack_item locn.located * 'a lookahead_item) list,
              lookahead : 'a lookahead_item locn.located list,
              in_vstruct : (vsres_state * int) list}
-type tqbuf = term qbuf.qbuf
-type tPStack = term PStack
-
 
 (* dummy lookahead token *)
 val XXX = Token (Ident "XXX")
