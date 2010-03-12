@@ -1557,21 +1557,21 @@ REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [EXTENSION] THEN
    SIMP_TAC std_ss [asl_emp_def, IN_UNIV, IN_ABS, BIN_OPTION_MAP_THM],
 
-   SIMP_TAC std_ss [Once FUN_EQ_THM] THEN
+   SIMP_TAC std_ss [Ntimes FUN_EQ_THM 2] THEN
    SIMP_TAC std_ss [EXTENSION, asl_star_def, IN_INTER, IN_ABS,
       BIN_OPTION_MAP_THM],
 
-   SIMP_TAC std_ss [Once FUN_EQ_THM] THEN
+   SIMP_TAC std_ss [Ntimes FUN_EQ_THM 2] THEN
    SIMP_TAC std_ss [ASL_IS_SEPARATE_def, BIN_OPTION_MAP_THM],
 
-   SIMP_TAC std_ss [Once FUN_EQ_THM] THEN
+   SIMP_TAC std_ss [Ntimes FUN_EQ_THM 2] THEN
    SIMP_TAC std_ss [ASL_IS_SUBSTATE_def, BIN_OPTION_MAP_THM],
 
-   SIMP_TAC std_ss [Once FUN_EQ_THM] THEN
+   SIMP_TAC std_ss [Ntimes FUN_EQ_THM 2] THEN
    SIMP_TAC std_ss [ASL_IS_PRECISE_IN_STATE_def, BIN_OPTION_MAP_THM,
       ASL_IS_SUBSTATE_def],
 
-   SIMP_TAC std_ss [Once FUN_EQ_THM] THEN
+   SIMP_TAC std_ss [Ntimes FUN_EQ_THM 2] THEN
    SIMP_TAC std_ss [ASL_IS_PRECISE_def, BIN_OPTION_MAP_THM,
       ASL_IS_SUBSTATE_def]
 ]);
