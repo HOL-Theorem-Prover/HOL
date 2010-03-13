@@ -6,9 +6,11 @@ sig
   val conj_tac : tactic
   val gen_tac : tactic
   val exists_tac : term -> tactic
+  val suff_tac : term -> tactic
 
   val rewrite_tac : thm list -> tactic
   val asm_rewrite_tac : thm list -> tactic
+  val ho_match_mp_tac : thm_tactic
   val mp_tac : thm_tactic
   val match_mp_tac : thm_tactic
 
@@ -18,7 +20,12 @@ sig
 
   val qx_gen_tac : term quotation -> tactic
   val qexists_tac : term quotation -> tactic
+  val qsuff_tac : term quotation -> tactic
 
+  val res_tac : tactic
+  val imp_res_tac : thm_tactic
+
+  val map_every : ('a -> tactic) -> 'a list -> tactic
 
   val metis_tac : thm list -> tactic
   val prove_tac : thm list -> tactic
