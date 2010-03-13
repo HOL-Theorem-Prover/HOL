@@ -99,7 +99,7 @@ endf
 let s:stripStart     = ')\|\]\|\['
 let s:stripEnd       = '(\|\['
 let s:stripBothWords = 'THEN[1L]\?\|by'
-let s:stripBoth      = ',\|<<\|>>\|++\|\\\\'
+let s:stripBoth      = ',\|<<\|>>\|++\|\\\\\|>-\|>|'
 let s:delim          = '\_[[:space:]()]'
 
 fu! HOLExpand()
