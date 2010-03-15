@@ -4,11 +4,15 @@ solvers with the HOL theorem prover.
 Files:
 
 COPYRIGHT               Copyright notice, license and disclaimer.
+Holmakefile             Makefile for Holmake (to build selftest.exe).
+HolQbfLib.{sig,sml}     Entry point into HolQbfLib.
 Library.sml             Common auxiliary functions.
 QbfCertificate.sml      QBF Certificates and proof reconstruction.
 QDimacs.sml             Translation between HOL terms and the QDIMACS file
                         format.
+QbfTrace.sml            Controls tracing verbosity for HolQbfLib.
 README                  This file.
+selftest.sml            Unit tests for HolQbfLib.
 
 Further documentation can be found in the HOL Description (in
 HOL/Manual/Description).

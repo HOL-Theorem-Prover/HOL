@@ -13,14 +13,6 @@ struct
   val ERR = Feedback.mk_HOL_ERR "QDimacs"
 
 (* ------------------------------------------------------------------------- *)
-(* trace: controls tracing verbosity                                         *)
-(*      0 - fatal errors only                                                *)
-(*      1 - also warnings (involving potentially time-consuming checks)      *)
-(* ------------------------------------------------------------------------- *)
-
-  val trace = ref 1
-
-(* ------------------------------------------------------------------------- *)
 (* write_qdimacs_file: serializes a QBF 't' to a file in QDIMACS format. 't' *)
 (*      must have the following form:                                        *)
 (*        Q1 x1. Q2 x2. ... Qn xn. phi(x1, ..., xn)                          *)
@@ -252,11 +244,11 @@ struct
       end
       handle Feedback.HOL_ERR _ =>  (* 'tm' is not existentially quantified *)
         ()
-    val _ = if !trace > 0 then check_bvars tm else ()
+    val _ = if !QbfTrace.trace > 0 then check_bvars tm else ()
     (* Because the semantics of free variables differs in QDIMACS (where they
        are implicitly existential) vs. HOL (where they are implicitly
        universal), we inform the user if there are any free variables. *)
-    val _ = if !trace > 0 andalso
+    val _ = if !QbfTrace.trace > 0 andalso
       HOLset.numItems (Term.FVL [tm] Term.empty_varset) > 0 then
         Feedback.HOL_WARNING "QDimacs" "read_qdimacs_file"
           "QDIMACS problem contains free variables"
