@@ -33,7 +33,7 @@ struct
             else ()
           val (tokens, last) = Lib.front_last tokens
           val _ = if last <> ")" then
-              raise ERR "parse_typ" "missing ')' at the end"
+              raise ERR "parse_typ" "missing ')' at the end of function type"
             else ()
           (* separate the argument types *)
           fun separate tokens =
@@ -65,7 +65,7 @@ struct
             else ()
           val (tokens, last) = Lib.front_last tokens
           val _ = if last <> "]" then
-              raise ERR "parse_typ" "missing ']' at the end"
+              raise ERR "parse_typ" "missing ']' at the end of array type"
             else ()
           (* separate at a ':' token that is not nested within brackets *)
           fun separate 0 acc (":" :: tokens) =
@@ -88,8 +88,8 @@ struct
           (* arrays are translated to function types *)
           Type.--> (domT, rngT)
         end
-    | parse_typ _ =
-          raise ERR "parse_typ" "unknown type"
+    | parse_typ toks =
+        raise ERR "parse_typ" ("unknown type: " ^ String.concatWith ", " toks)
 
   fun parse_integer (id_string : string) : int =
   let
@@ -329,8 +329,9 @@ struct
               else
                 raise ERR "parse_term" ("unknown token '" ^ tok ^ "'")
             end))
-    | parse_term _ _ =
-        raise ERR "parse_term" "invalid token sequence"
+    | parse_term _ toks =
+        raise ERR "parse_term" ("invalid token sequence: " ^
+          String.concatWith ", " toks)
 
   (* string list * 'a -> int list * 'a *)
   fun parse_int_list (tokens, x) =
