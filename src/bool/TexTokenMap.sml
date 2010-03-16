@@ -46,7 +46,7 @@ struct
                        String.toString hol^"\" (was \""^
                        ttoString oldt^"\"); now \""^
                        ttoString TeX^"\"");
-                      tokmap := Binarymap.insert(!tokmap,hol,TeX)
+          tokmap := Binarymap.insert(!tokmap,hol,TeX)
         end
 
   val temp_TeX_notation = temp_TeX_notation0 "TeX_notation call"
@@ -77,5 +77,7 @@ struct
   end
 
   val _ = map onload (ancestry "-")
+
+  val _ = Theory.register_onload onload
 
 end (* struct *)
