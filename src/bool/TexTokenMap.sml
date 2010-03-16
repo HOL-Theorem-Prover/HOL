@@ -30,12 +30,34 @@ struct
                                               read = Coding.lift read_deltas,
                                               write = write_deltas}
 
-  fun TeX_notation record =
-      Theory.LoadableThyData.write_data_update {thydataty = tyname,
-                                                data = mk [record]}
 
   val tokmap = ref (Binarymap.mkDict String.compare)
   fun the_map() = !tokmap
+
+  fun temp_TeX_notation0 src {hol,TeX} =
+      case Binarymap.peek (!tokmap, hol) of
+        NONE => tokmap := Binarymap.insert(!tokmap,hol,TeX)
+      | SOME oldt => let
+          fun ttoString (t,i) = "(\"" ^ String.toString t ^ "\", "^
+                                Int.toString i ^ ")"
+        in
+          HOL_WARNING "TexTokenMap" "TeX_notation"
+                      (src^" overrides \""^
+                       String.toString hol^"\" (was \""^
+                       ttoString oldt^"\"); now \""^
+                       ttoString TeX^"\"");
+                      tokmap := Binarymap.insert(!tokmap,hol,TeX)
+        end
+
+  val temp_TeX_notation = temp_TeX_notation0 "TeX_notation call"
+
+  fun TeX_notation record = let
+  in
+    temp_TeX_notation record;
+    Theory.LoadableThyData.write_data_update {thydataty = tyname,
+                                              data = mk [record]}
+  end
+
 
   fun onload thyname = let
     open Theory
@@ -49,22 +71,8 @@ struct
                                           ("Data for theory "^thyname^
                                            " appears corrupted.");
                               [])
-        fun update1 {hol,TeX} =
-            case Binarymap.peek (!tokmap, hol) of
-              NONE => tokmap := Binarymap.insert(!tokmap,hol,TeX)
-            | SOME oldt => let
-                fun ttoString (t,i) = "(\"" ^ String.toString t ^ "\", "^
-                                      Int.toString i ^ ")"
-              in
-                HOL_WARNING "TexTokenMap" "onload"
-                            ("Theory "^thyname^" overrides \""^
-                             String.toString hol^"\" (was \""^
-                             ttoString oldt^"\"); now \""^
-                             ttoString TeX^"\"");
-                tokmap := Binarymap.insert(!tokmap,hol,TeX)
-              end
       in
-        List.app update1 deltas
+        List.app (temp_TeX_notation0 ("Theory "^thyname)) deltas
       end
   end
 

@@ -8,7 +8,7 @@ struct
 
 open boolTheory boolSyntax Hol_pp ParseExtras
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB
-     BoundedRewrites
+     BoundedRewrites TexTokenMap
 
 local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
 

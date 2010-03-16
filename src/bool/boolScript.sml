@@ -21,6 +21,7 @@ val _ = new_theory "bool";
  *             BASIC DEFINITIONS                                             *
  *---------------------------------------------------------------------------*)
 
+(* parsing/printing support for theory min *)
 val _ = unicode_version {u = UChar.imp, tmnm = "==>"}
 val _ = TeX_notation {hol = "==>", TeX = ("\\HOLTokenImp", 1)}
 val _ = TeX_notation {hol = UChar.imp, TeX = ("\\HOLTokenImp", 1)}
@@ -29,6 +30,9 @@ val _ = TeX_notation {hol = "\\", TeX = ("\\HOLTokenLambda", 1)}
 val _ = TeX_notation {hol = UChar.lambda, TeX = ("\\HOLTokenLambda", 1)}
 
 val _ = TeX_notation {hol = "@", TeX = ("\\HOLTokenHilbert", 1)}
+
+val _ = TeX_notation {hol = "<|", TeX = ("\\HOLTokenLeftrec", 2)}
+val _ = TeX_notation {hol = "|>", TeX = ("\\HOLTokenRightrec", 2)}
 
 val T_DEF =
  Definition.new_definition
@@ -94,6 +98,8 @@ Definition.new_definition
 val _ = (add_binder ("?!", std_binder_precedence); add_const "?!")
 
 val _ = unicode_version { u = UChar.exists ^ "!", tmnm = "?!"}
+val _ = TeX_notation {hol = "?!", TeX = ("\\HOLTokenUnique",2)}
+val _ = TeX_notation {hol = UChar.exists ^ "!", TeX = ("\\HOLTokenUnique",2)}
 
 val LET_DEF =
  Definition.new_definition
@@ -220,6 +226,8 @@ val IN_DEF =
 
 val _ = (add_infix ("IN", 425, Parse.NONASSOC); add_const "IN");
 val _ = unicode_version {u = UChar.setelementof, tmnm = "IN"};
+val _ = TeX_notation {hol = "IN", TeX = ("\\HOLTokenIn",1)}
+val _ = TeX_notation {hol = UChar.setelementof, TeX = ("\\HOLTokenIn",1)}
 
 val RES_FORALL_DEF =
  Definition.new_definition
