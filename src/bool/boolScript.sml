@@ -31,8 +31,14 @@ val _ = TeX_notation {hol = UChar.lambda, TeX = ("\\HOLTokenLambda", 1)}
 
 val _ = TeX_notation {hol = "@", TeX = ("\\HOLTokenHilbert", 1)}
 
+(* records *)
 val _ = TeX_notation {hol = "<|", TeX = ("\\HOLTokenLeftrec", 2)}
 val _ = TeX_notation {hol = "|>", TeX = ("\\HOLTokenRightrec", 2)}
+
+(* case expressions *)
+val _ = TeX_notation {hol = "->", TeX = ("\\HOLTokenMap", 1)}
+val _ = TeX_notation {hol = "||", TeX = ("\\HOLTokenOr ", 2)}
+          (* bit confused by trailing space *)
 
 val T_DEF =
  Definition.new_definition
