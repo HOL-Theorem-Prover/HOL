@@ -8,7 +8,7 @@ A decision procedure for words.
 
 \DESCRIBE
 
-The conversion {WORD_DECIDE} is the same as {WORD_DP bossLib.DECIDE}.
+The conversion {WORD_DECIDE} is the same as {WORD_DP WORD_CONV bossLib.DECIDE}.
 
 \EXAMPLE
 {
