@@ -92,12 +92,12 @@ fun holfoot_mk_call_by_value_arg ((var,expr),term) =
 
 
 val holfoot_prog_new_term = holfoot_mk_const "holfoot_prog_new";
-val dest_holfoot_prog_new = strip_comb_1 holfoot_prog_new_term;
+val dest_holfoot_prog_new = strip_comb_2 holfoot_prog_new_term;
 val is_holfoot_prog_new = (can dest_holfoot_prog_new);
 
 
 val holfoot_prog_dispose_term = holfoot_mk_const "holfoot_prog_dispose";
-val dest_holfoot_prog_dispose = strip_comb_1 holfoot_prog_dispose_term;
+val dest_holfoot_prog_dispose = strip_comb_2 holfoot_prog_dispose_term;
 val is_holfoot_prog_dispose = (can dest_holfoot_prog_dispose);
 
 
@@ -240,8 +240,23 @@ val holfoot_ap_data_queue_term = holfoot_mk_const "holfoot_ap_data_queue";
 val dest_holfoot_ap_data_queue = strip_comb_4 holfoot_ap_data_queue_term;
 val is_holfoot_ap_data_queue = (can dest_holfoot_ap_data_queue);
 
+val holfoot_ap_array_term = holfoot_mk_const "holfoot_ap_array";
+val dest_holfoot_ap_array = strip_comb_2 holfoot_ap_array_term;
+val is_holfoot_ap_array = (can dest_holfoot_ap_array);
+
+val holfoot_ap_data_array_term = holfoot_mk_const "holfoot_ap_data_array";
+val dest_holfoot_ap_data_array = strip_comb_3 holfoot_ap_data_array_term;
+val is_holfoot_ap_data_array = (can dest_holfoot_ap_data_array);
+
+val holfoot_ap_data_interval_term = holfoot_mk_const "holfoot_ap_data_interval";
+val dest_holfoot_ap_data_interval = strip_comb_3 holfoot_ap_data_interval_term;
+val is_holfoot_ap_data_interval = (can dest_holfoot_ap_data_interval);
+
 val holfoot_exp_null_term = ``(var_res_exp_const 0):holfoot_a_expression``
 fun is_holfoot_exp_null t = aconv t holfoot_exp_null_term
+
+val holfoot_exp_one_term = ``(var_res_exp_const 1):holfoot_a_expression``
+fun is_holfoot_exp_one t = aconv t holfoot_exp_one_term
 
 val holfoot_ap_bintree_term = holfoot_mk_const "holfoot_ap_bintree";
 val dest_holfoot_ap_bintree = strip_comb_2 holfoot_ap_bintree_term;

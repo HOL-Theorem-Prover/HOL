@@ -1011,17 +1011,6 @@ SIMP_TAC std_ss [asl_exists_def, asl_or_def, IN_ABS] THEN
 METIS_TAC[]);
 
 
-val asl_trivial_cond_TF = store_thm ("asl_trivial_cond_TF",
-``(!P. (asl_trivial_cond T P = P)) /\
-  (!P. ((asl_trivial_cond F P) = asl_false))``,
-SIMP_TAC std_ss [asl_trivial_cond_def]);
-
-
-val asl_trivial_cond___asl_false = store_thm ("asl_trivial_cond___asl_false",
-``!c. (asl_trivial_cond c asl_false = asl_false)``,
-SIMP_TAC std_ss [asl_trivial_cond_def]);
-
-
 val fasl_star_REWRITE = save_thm ("fasl_star_REWRITE",
    let
       val thm = (GEN ``f:'a ->'a ->'a`` BIN_OPTION_MAP_ALL_DEF_THM);
@@ -3829,6 +3818,34 @@ Q.EXISTS_TAC `uf x` THEN
 ASM_REWRITE_TAC[]);
 
 
+val asl_trivial_cond_TF = store_thm ("asl_trivial_cond_TF",
+``(!P. (asl_trivial_cond T P = P)) /\
+  (!P. ((asl_trivial_cond F P) = asl_false))``,
+SIMP_TAC std_ss [asl_trivial_cond_def]);
+
+
+val asl_trivial_cond___asl_false = store_thm ("asl_trivial_cond___asl_false",
+``!c. (asl_trivial_cond c asl_false = asl_false)``,
+SIMP_TAC std_ss [asl_trivial_cond_def]);
+
+
+val asl_trivial_cond___asl_star = store_thm ("asl_trivial_cond___asl_star",
+``(!f c p1 p2. asl_star f (asl_trivial_cond c p1) p2 =
+               asl_trivial_cond c (asl_star f p1 p2)) /\
+  (!f c p1 p2. asl_star f p1 (asl_trivial_cond c p2) =
+               asl_trivial_cond c (asl_star f p1 p2))``,
+SIMP_TAC std_ss [asl_trivial_cond_def, COND_RAND, COND_RATOR,
+   asl_false___asl_star_THM]);
+
+
+val asl_trivial_cond___asl_trivial_cond = store_thm ("asl_trivial_cond___asl_trivial_cond",
+``!c1 c2 p. 
+      asl_trivial_cond c1 (asl_trivial_cond c2 p) =
+      asl_trivial_cond (c1 /\ c2) p``,
+SIMP_TAC std_ss [asl_trivial_cond_def] THEN
+METIS_TAC[]);
+
+
 val asl_bigstar_list_def = Define `
    asl_bigstar_list f l =  FOLDR (asl_star f) (asl_emp f) l`
 
@@ -3836,6 +3853,14 @@ val asl_bigstar_list_REWRITE = store_thm ("asl_bigstar_list_REWRITE",
 ``(!f. (asl_bigstar_list f [] =  asl_emp f)) /\
   (!f h l. (asl_bigstar_list f (h::l) =  asl_star f h (asl_bigstar_list f l)))``,
 SIMP_TAC list_ss [asl_bigstar_list_def, FOLDR_APPEND]);
+
+
+val asl_bigstar_list_SNOC = store_thm ("asl_bigstar_list_SNOC",
+``!f h l. IS_SEPARATION_COMBINATOR f ==>
+   (asl_bigstar_list f (SNOC h l) =  asl_star f (asl_bigstar_list f l) h)``,
+Induct_on `l` THEN 
+ASM_SIMP_TAC list_ss [asl_bigstar_list_REWRITE,
+   REWRITE_RULE [ASSOC_DEF] asl_star___PROPERTIES]);
 
 
 val asl_bigstar_list_APPEND = store_thm ("asl_bigstar_list_APPEND",
@@ -3885,6 +3910,13 @@ REPEAT STRIP_TAC THEN
 MATCH_MP_TAC (SIMP_RULE std_ss [AND_IMP_INTRO] FOLDR_PERM) THEN
 IMP_RES_TAC asl_star___PROPERTIES THEN
 ASM_REWRITE_TAC[]);
+
+
+val asl_bigstar_list_REVERSE = store_thm ("asl_bigstar_list_REVERSE",
+``!f l.
+IS_SEPARATION_COMBINATOR f ==>
+(asl_bigstar_list f (REVERSE l) = asl_bigstar_list f l)``,
+METIS_TAC[asl_bigstar_list_PERM, PERM_REVERSE]);
 
 
 val asl_star___PROPERTIES___EVAL = store_thm ("asl_star___PROPERTIES___EVAL",
@@ -4019,7 +4051,7 @@ val asl_choose_pred_args___SING = store_thm ("asl_choose_pred_args___SING",
 
 REPEAT STRIP_TAC THEN
 SIMP_TAC list_ss [asl_choose_pred_args_def, asl_exists_def, EXTENSION, IN_ABS,
-   asl_and_def, LENGTH_EQ_NUM_EVAL, GSYM LEFT_EXISTS_AND_THM,
+   asl_and_def, LENGTH_EQ_NUM_compute, GSYM LEFT_EXISTS_AND_THM,
    GSYM RIGHT_EXISTS_AND_THM, asl_bigstar_list_REWRITE] THEN
 IMP_RES_TAC asl_star___PROPERTIES THEN
 ASM_SIMP_TAC std_ss [] THEN
@@ -4033,7 +4065,7 @@ val asl_choose_pred_args___2EL = store_thm ("asl_choose_pred_args___2EL",
 
 REPEAT STRIP_TAC THEN
 SIMP_TAC list_ss [asl_choose_pred_args_def, asl_exists_def, EXTENSION, IN_ABS,
-   asl_and_def, LENGTH_EQ_NUM_EVAL, GSYM LEFT_EXISTS_AND_THM,
+   asl_and_def, LENGTH_EQ_NUM_compute, GSYM LEFT_EXISTS_AND_THM,
    GSYM RIGHT_EXISTS_AND_THM, asl_bigstar_list_REWRITE] THEN
 IMP_RES_TAC asl_star___PROPERTIES THEN
 ASM_SIMP_TAC std_ss [] THEN
@@ -5015,7 +5047,7 @@ val FASL_TRACE_IS_NUM_LOCK_SYNCHRONISED_CHARACTERISATION = store_thm ("FASL_TRAC
 
 Induct_on `n` THENL [
    SIMP_TAC list_ss [FASL_TRACE_IS_NUM_LOCK_SYNCHRONISED_REWRITE,
-      LENGTH_EQ_NUM_EVAL, GSYM LEFT_EXISTS_AND_THM,
+      LENGTH_EQ_NUM_compute, GSYM LEFT_EXISTS_AND_THM,
       GSYM RIGHT_EXISTS_AND_THM,
       FASL_TRACE_LOCK_FLAT_def],
 
@@ -5520,7 +5552,7 @@ FULL_SIMP_TAC std_ss [] THEN
 
 completeInduct_on `n` THEN
 `(n:num = 0) \/ (?m:num. n = SUC m)` by (Cases_on `n` THEN SIMP_TAC std_ss []) THENL [
-   FULL_SIMP_TAC list_ss [LENGTH_EQ_NUM_EVAL, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
+   FULL_SIMP_TAC list_ss [LENGTH_EQ_NUM_compute, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
       GSYM LEFT_FORALL_IMP_THM] THEN
    SIMP_TAC std_ss [FASL_TRACE_INV_LOCK_FLAT_REWRITE,
       FASL_TRACE_LOCK_FLAT_def, FASL_TRACE_IS_LOCK_FREE___REMOVE_LOCKS] THEN

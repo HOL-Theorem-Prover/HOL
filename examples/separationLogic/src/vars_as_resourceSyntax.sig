@@ -144,6 +144,7 @@ val is_var_res_prop : term -> bool
 val is_var_res_prop_binexpression : term -> bool
 val is_var_res_prop_binexpression_cond : term -> bool
 val is_var_res_prop_equal : term -> bool
+val is_var_res_prop_equal_sym : term -> term -> term -> bool
 val is_var_res_prop_implies : term -> bool
 val is_var_res_prop_implies_eq : term -> bool
 val is_var_res_prop_input_ap_distinct : term -> bool;
@@ -151,6 +152,7 @@ val is_var_res_prop_input_distinct : term -> bool;
 val is_var_res_prop_internal : term -> bool
 val is_var_res_prop_stack_true : term -> bool
 val is_var_res_prop_unequal : term -> bool
+val is_var_res_prop_unequal_sym : term -> term -> term -> bool
 val is_var_res_prop_varlist_update : term -> bool
 val mk_VAR_RES_COND_HOARE_TRIPLE : term * term * term * term -> term
 val mk_VAR_RES_IS_PURE_PROPOSITION : term -> term -> term

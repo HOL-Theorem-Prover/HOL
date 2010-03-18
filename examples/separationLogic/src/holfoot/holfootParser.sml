@@ -312,6 +312,48 @@ fun holfoot_a_space_pred2absyn vs (Aspred_empty) =
   in
      c
   end
+| holfoot_a_space_pred2absyn vs (Aspred_array (exp1, exp2)) = 
+  let
+     val exp1 = holfoot_expression2absyn vs exp1;
+     val exp2 = holfoot_expression2absyn vs exp2;
+     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_array_term, [
+             exp1, exp2, Absyn.mk_AQ holfoot_data_list___EMPTY_tm]);
+  in
+     c
+  end
+| holfoot_a_space_pred2absyn vs (Aspred_data_array (exp1, exp2, tag, data)) = 
+  let
+     val exp1 = holfoot_expression2absyn vs exp1;
+     val exp2 = holfoot_expression2absyn vs exp2;
+     val data_a = HOL_Absyn data;
+     val data_tag_term = string2holfoot_tag tag;
+     val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
+     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_array_term, [
+             exp1, exp2, data2_a]);
+  in
+     c
+  end
+| holfoot_a_space_pred2absyn vs (Aspred_interval (exp1, exp2)) = 
+  let
+     val exp1 = holfoot_expression2absyn vs exp1;
+     val exp2 = holfoot_expression2absyn vs exp2;
+     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_interval_term, [
+             exp1, exp2, Absyn.mk_AQ holfoot_data_list___EMPTY_tm]);
+  in
+     c
+  end
+| holfoot_a_space_pred2absyn vs (Aspred_data_interval (exp1, exp2, tag, data)) = 
+  let
+     val exp1 = holfoot_expression2absyn vs exp1;
+     val exp2 = holfoot_expression2absyn vs exp2;
+     val data_a = HOL_Absyn data;
+     val data_tag_term = string2holfoot_tag tag;
+     val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
+     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_interval_term, [
+             exp1, exp2, data2_a]);
+  in
+     c
+  end
 | holfoot_a_space_pred2absyn vs (Aspred_data_tree (tagL,exp,dtagL,data)) =
   let
      val exp = holfoot_expression2absyn vs exp;
@@ -620,17 +662,19 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   in
      (comb_a, [], [])
   end
-| holfoot_p_statement2absyn funL resL vs (Pstm_new v) =
+| holfoot_p_statement2absyn funL resL vs (Pstm_new (v, expr)) =
   let
      val var_term = string2holfoot_var v;
-     val comb_term = mk_comb (holfoot_prog_new_term, var_term);
-  in
-     (Absyn.mk_AQ comb_term, [v], [])
-  end  
-| holfoot_p_statement2absyn funL resL vs (Pstm_dispose expr) =
-  let
      val exp = holfoot_expression2absyn vs expr;
-     val comb_a = Absyn.mk_app (Absyn.mk_AQ holfoot_prog_dispose_term, exp);
+     val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_new_term, [exp, Absyn.mk_AQ var_term]);
+  in
+     (comb_a, [v], [])
+  end  
+| holfoot_p_statement2absyn funL resL vs (Pstm_dispose (expr1, expr2)) =
+  let
+     val exp1 = holfoot_expression2absyn vs expr1;
+     val exp2 = holfoot_expression2absyn vs expr2;
+     val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_dispose_term, [exp2,exp1]);
   in
      (comb_a, [], [])
   end  

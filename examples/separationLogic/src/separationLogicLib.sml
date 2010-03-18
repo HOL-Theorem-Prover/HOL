@@ -789,6 +789,22 @@ in
 end;
 
 
+fun fasl_comment_modify_APPEND_DEC s c =
+let
+   val (n, s', c',_) = get_last_num_token c
+
+   val c'' = listSyntax.mk_cons (mk_var 
+                (s', markerSyntax.label_ty), c')
+
+   val ns = Int.toString (n - 1)
+   val s'' = s ^ " " ^ ns;
+   val c''' = listSyntax.mk_cons (mk_var 
+                (s'', markerSyntax.label_ty), c'')
+in
+   c'''
+end;
+
+
 fun fasl_comment_block_CONV conv t =
    if (not (is_fasl_prog_block t)) then conv t else
    let

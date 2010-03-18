@@ -10,7 +10,7 @@ sig
     val comments_step_convL          : (conv->conv) list
     val quantifier_heuristicsL       : quantHeuristicsLib.quant_param list
     val var_res_prop_implies___GENERATE :
-       (thm list -> term * term * term * term -> thm list) list
+       (term list -> (bool * simpLib.ssfrag) -> thm list -> term * term * term * term -> thm list) list
 
     val hoare_triple_case_splitL     : (term -> term) list
     val frame_split_case_splitL      : (term -> term) list
@@ -377,8 +377,10 @@ local
                xconv1 THENC xconv2 THENC xconv3
             end;
 
-         val cs = reduceLib.num_compset()
-         val _ = listSimps.list_rws cs
+         val cs = computeLib.bool_compset ();
+         val _ = computeLib.add_thms [
+                    listTheory.HD,
+                    listTheory.TL] cs
 
          val conv2 = DEPTH_CONV PairRules.PBETA_CONV
          val conv3 =  computeLib.CBV_CONV cs
@@ -512,7 +514,6 @@ end handle Interrupt => raise Interrupt
          | _ => raise (var_res_prop_internal___ELIM_CONV___failed_expn ttt));
 
 end
-
 
 exception var_res_prop_input_distinct___ELIM_CONV___failed_expn of term;
 fun var_res_prop_input_distinct___ELIM_CONV a_opt tt =
@@ -911,7 +912,7 @@ local
 
    val intro_hoare_triples =
        ANTE_CONV_RULE (
-         (QUANT_CONV (STRIP_CONJ_CONV
+         (QUANT_CONV (STRIP_CONJ_CONV 
             FASL_PROGRAM_IS_ABSTRACTION___forall_comment_var_res_prog_quant_bla_CONV)) THENC
          (TRY_CONV FORALL_SIMP_CONV)
        )
@@ -2909,13 +2910,13 @@ fun var_res_prop_implies_COMBINE [] = Feedback.fail()
     var_res_prop_implies_COMBINE (
        (MATCH_MP var_res_prop_implies___UNION (CONJ thm1 thm2))::thmL)
 
-fun VAR_RES_COND_INFERENCE___enrich_precond___CONV context tt =
+fun VAR_RES_COND_INFERENCE___enrich_precond___CONV ss context tt =
 let
    val (_,pre,prog,post) = dest_VAR_RES_COND_HOARE_TRIPLE tt;
    val (f, wpb,rpb, sfb) = dest_var_res_prop pre
 
    val implies_list = flatten (
-      map (fn ff => ff context (f, wpb, rpb, sfb))
+      map (fn ff => ff [] ss context (f, wpb, rpb, sfb))
          var_res_param.var_res_prop_implies___GENERATE)
 
    val implies_thm = var_res_prop_implies_COMBINE implies_list;
@@ -2933,7 +2934,7 @@ end;
 (*
    val tt = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
 *)
-fun VAR_RES_FRAME_SPLIT_INFERENCE___enrich_split___CONV context tt =
+fun VAR_RES_FRAME_SPLIT_INFERENCE___enrich_split___CONV ss context tt =
 let
    val (f, _, wr, _, context_sfb, split_sfb, imp_sfb, _) =
         dest_VAR_RES_FRAME_SPLIT tt
@@ -2941,7 +2942,7 @@ let
    val sfb = bagSyntax.mk_union (context_sfb, split_sfb)
 
    val implies_list = flatten (
-      map (fn ff => ff context (f, wpb, rpb, sfb))
+      map (fn ff => ff [imp_sfb] ss context (f, wpb, rpb, sfb))
          var_res_param.var_res_prop_implies___GENERATE)
 
    val implies_thm = var_res_prop_implies_COMBINE implies_list;
@@ -3023,7 +3024,7 @@ val VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main  =
       convs =         [],
       heuristics =    [QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool],
       final_rewrite_thms = []
-      }::(var_res_param.quantifier_heuristicsL));
+      }::list_qp::(var_res_param.quantifier_heuristicsL));
 
 fun VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV ss context tt =
 let
@@ -3292,7 +3293,7 @@ val VAR_RES_INFERENCES_LIST___expensive_simplifications___hoare_triple = ("expen
 val VAR_RES_INFERENCES_LIST___expands = ("expands",
    (K true), false, false, [
    ("precond_enrich",
-       context_strengthen_conseq_conv
+       simpset_strengthen_conseq_conv
        (VAR_RES_COND_INFERENCE___enrich_precond___CONV)),
    ("precond_simp___intro_constants",
        no_context_strengthen_conseq_conv
@@ -3302,7 +3303,7 @@ val VAR_RES_INFERENCES_LIST___expands = ("expands",
 val VAR_RES_INFERENCES_LIST___expands_entailment = ("expands_entailment",
    (K true), false, true, [
    ("entailment_enrich",
-       context_strengthen_conseq_conv
+       simpset_strengthen_conseq_conv
        VAR_RES_FRAME_SPLIT_INFERENCE___enrich_split___CONV),
    ("entailment___intro_constants",
        no_context_strengthen_conseq_conv
@@ -3465,7 +3466,7 @@ fun gen_step_param___update_prop_simps
 local
 
 fun step_conv_map_fun l s1 (s2, c) = c;
-(*
+
 fun step_conv_map_fun l s1 (s2, c:var_res_inference) =
   let
      val s = s1 ^ " - "^s2;
@@ -3481,7 +3482,6 @@ fun step_conv_map_fun l s1 (s2, c:var_res_inference) =
                        print ("applying "^ s ^ "\n") else ()
            in thm end)
   in conv2 end
-*)
 
 fun convL fast stops ss n list =
   let
@@ -3553,7 +3553,9 @@ fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
                       (fn t => (exists (fn pp => (pp t) handle Interrupt => raise Interrupt
                                                             | _ => false)
                                  (#stop_evals p)))
-      val cL = convL (#fast p) stops (#do_prop_simps p, mk_ssfrag ssp) n list;
+      val ssp_arg = (#do_prop_simps p, mk_ssfrag ssp);
+      val prop_simp_CONV = VAR_RES_PROP_REWRITE_CONV ssp_arg [];
+      val cL = convL (#fast p) stops ssp_arg n list;
 
       fun mc step_opt =
          EXT_DEPTH_NUM_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___var_res_list NONE step_opt true
@@ -3575,6 +3577,12 @@ fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
            val (n2, thm2_opt) = if (isSome thm2_opt) then (n2, thm2_opt) else
                 (if step_opt_allows_steps step_opt' 0 (SOME 1) then
                  vcc step_opt' t' else (0, NONE))
+           val (n2, thm2_opt) = if (isSome thm2_opt) then (n2, thm2_opt) else
+                (if not (step_opt_allows_steps step_opt' 0 (SOME 1)) then (0, NONE) else
+               ((1, SOME (snd (EQ_IMP_RULE (prop_simp_CONV t'))))
+               handle UNCHANGED => (0, NONE)
+                    | HOL_ERR _ => (0, NONE)))
+
            val thm =
               if (isSome thm1_opt) then
                  (if (isSome thm2_opt) then

@@ -11,7 +11,7 @@ map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
 show_assums := true;
 *)
 
-open generalHelpersTheory finite_mapTheory pred_setTheory 
+open generalHelpersTheory finite_mapTheory pred_setTheory
    listTheory rich_listTheory arithmeticTheory separationLogicTheory
    bagTheory bagSimps containerTheory relationTheory operatorTheory optionTheory;
 open ConseqConv boolSimps quantHeuristicsLib quantHeuristicsArgsLib Sanity
@@ -1995,6 +1995,10 @@ val var_res_exp_op_def = Define `
 val var_res_exp_binop_def = Define `
   var_res_exp_binop bop e1 e2 = var_res_exp_op (\l. bop (EL 0 l) (EL 1 l)) [e1;e2]`
 
+val var_res_exp_binop_const_def = Define `
+   var_res_exp_binop_const bop e n =
+   var_res_exp_binop bop e (var_res_exp_const n)`
+
 
 val var_res_exp_binop___const_eval = store_thm ("var_res_exp_binop___const_eval",
 ``var_res_exp_binop bop (var_res_exp_const c1) (var_res_exp_const c2) =
@@ -2002,6 +2006,27 @@ val var_res_exp_binop___const_eval = store_thm ("var_res_exp_binop___const_eval"
   SIMP_TAC list_ss [var_res_exp_binop_def, var_res_exp_const_def,
                     var_res_exp_op_def, LET_THM, combinTheory.K_DEF]);
 
+
+val var_res_exp_binop_REWRITE = store_thm ("var_res_exp_binop_REWRITE",
+``var_res_exp_binop bop e1 e2 = \s. if (IS_SOME (e1 s) /\ IS_SOME (e2 s)) then
+   SOME (bop (THE (e1 s)) (THE (e2 s))) else NONE``,
+  SIMP_TAC list_ss [var_res_exp_binop_def, var_res_exp_const_def,
+                    var_res_exp_op_def, LET_THM, combinTheory.K_DEF]);
+
+
+val var_res_exp_binop_const___ALTERNATIVE_DEF = store_thm ("var_res_exp_binop_const___ALTERNATIVE_DEF",
+``var_res_exp_binop_const bop e n = 
+  var_res_exp_op (\l. bop (EL 0 l) n) [e]``,
+SIMP_TAC list_ss [var_res_exp_op_def, var_res_exp_binop_def,
+   var_res_exp_binop_const_def, LET_THM, var_res_exp_const_EVAL]);
+
+
+val var_res_exp_binop_const_REWRITE = store_thm ("var_res_exp_binop_const_REWRITE",
+``var_res_exp_binop_const bop e n = \s. if (IS_SOME (e s)) then
+   SOME (bop (THE (e s)) n) else NONE``,
+  SIMP_TAC list_ss [var_res_exp_binop_const___ALTERNATIVE_DEF, 
+                    var_res_exp_const_def,
+                    var_res_exp_op_def, LET_THM, combinTheory.K_DEF]);
 
 
 val var_res_exp_op_NIL = store_thm ("var_res_exp_op_NIL",
@@ -2052,6 +2077,39 @@ val var_res_exp_is_const_def = Define `
 
 
 
+val var_res_exp_add_def = Define `
+   var_res_exp_add = var_res_exp_binop_const (($+):num -> num -> num)`
+val var_res_exp_sub_def = Define `
+   var_res_exp_sub = var_res_exp_binop_const (($-):num -> num -> num)`
+
+val var_res_exp_add_sub_REWRITES = store_thm ("var_res_exp_add_sub_REWRITES",
+``(var_res_exp_add e 0 = e) /\ (var_res_exp_sub e 0 = e) /\
+  (var_res_exp_add (var_res_exp_const n1) n2 = (var_res_exp_const (n1 + n2))) /\
+  (var_res_exp_sub (var_res_exp_const n1) n2 = (var_res_exp_const (n1 - n2))) /\
+
+  (var_res_exp_add (var_res_exp_add e n1) n2 = (var_res_exp_add e (n1 + n2))) /\
+  (var_res_exp_sub (var_res_exp_sub e n1) n2 = (var_res_exp_sub e (n1 + n2))) /\
+
+  (n2 <= n1 ==>
+     (var_res_exp_sub (var_res_exp_add e n1) n2 = (var_res_exp_add e (n1 - n2)))) /\
+  (n1 < n2 ==>
+     (var_res_exp_sub (var_res_exp_add e n1) n2 = (var_res_exp_sub e (n2 - n1))))``,
+SIMP_TAC (list_ss++CONJ_ss) [var_res_exp_add_def, var_res_exp_sub_def,
+   var_res_exp_binop_const_REWRITE, COND_NONE_SOME_REWRITES,
+   var_res_exp_const_EVAL, FUN_EQ_THM] THEN
+METIS_TAC[optionTheory.option_CLAUSES]);
+
+
+fun var_res_exp_add_sub___INST_THM thm =
+  let
+     val thm1 = REWRITE_RULE [GSYM var_res_exp_add_def] (ISPEC ``($+):num->num->num`` thm)
+     val thm2 = REWRITE_RULE [GSYM var_res_exp_sub_def] (ISPEC ``($-):num->num->num`` thm)
+  in
+     CONJ thm1 thm2
+  end;
+
+
+
 (******************************************************
  Propositions
  ******************************************************)
@@ -2088,6 +2146,16 @@ val var_res_exp_is_defined_def = Define `
   var_res_exp_is_defined f (e:('a,'b,'c) var_res_expression) =
   var_res_stack_proposition f T (\st. IS_SOME (e st))`
 
+val var_res_exp_prop_def = Define `
+   var_res_exp_prop (e:('a,'b,'c) var_res_expression) P =
+   \state. let e_opt = e (FST state) in
+           (IS_SOME e_opt) /\ (P (THE e_opt) state)`
+
+val var_res_exp_prop___CONST = store_thm ("var_res_exp_prop___CONST",
+``var_res_exp_prop (var_res_exp_const c) P = P c``,
+SIMP_TAC std_ss [var_res_exp_prop_def, LET_THM, var_res_exp_const_EVAL, 
+  FUN_EQ_THM])
+
 val var_res_exp_is_defined_REWRITE = save_thm (
 "var_res_exp_is_defined_REWRITE",
 SIMP_RULE std_ss [var_res_stack_proposition_def]
@@ -2121,7 +2189,7 @@ val var_res_prop_binexpression___ALTERNATIVE_DEF = store_thm (
 ``var_res_prop_binexpression f emp p e1 e2 =
   var_res_prop_expression f emp (\l. p (HD l) (HD (TL l))) [e1;e2]``,
 SIMP_TAC list_ss [var_res_prop_expression_def, var_res_prop_binexpression_def,
-  LET_THM] THEN 
+  LET_THM] THEN
 REWRITE_TAC[CONJ_ASSOC]);
 
 val var_res_prop_expression_REWRITE = save_thm (
@@ -2474,10 +2542,10 @@ REPEAT STRIP_TAC THEN
 METIS_TAC[]);
 
 
-val var_res_bigstar_def = Define `var_res_bigstar f b = 
+val var_res_bigstar_def = Define `var_res_bigstar f b =
    asl_bigstar (VAR_RES_COMBINATOR f) (BAG_INSERT (var_res_prop_stack_true f) b)`
 
-val var_res_bigstar_list_def = Define `var_res_bigstar_list f l = 
+val var_res_bigstar_list_def = Define `var_res_bigstar_list f l =
    asl_bigstar_list (VAR_RES_COMBINATOR f) ((var_res_prop_stack_true f)::l)`
 
 val var_res_map_def = Define `var_res_map f P l =
@@ -2795,6 +2863,7 @@ SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___IMP,
                  VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_true]);
 
 
+
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition =
 store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition",
 ``!f vs c. VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (var_res_bool_proposition f c)``,
@@ -2913,7 +2982,7 @@ val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_trivial_cond = store_thm (
 (c ==> VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS P) ==>
 VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS (asl_trivial_cond c P)``,
 
-Cases_on `c` THEN 
+Cases_on `c` THEN
 SIMP_TAC std_ss [asl_trivial_cond_TF,
    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_false]);
 
@@ -2923,7 +2992,7 @@ val VAR_RES_IS_STACK_IMPRECISE___asl_trivial_cond = store_thm (
 ``!c P.
 (c ==> VAR_RES_IS_STACK_IMPRECISE P) ==>
 VAR_RES_IS_STACK_IMPRECISE (asl_trivial_cond c P)``,
-Cases_on `c` THEN 
+Cases_on `c` THEN
 SIMP_TAC std_ss [asl_trivial_cond_TF, VAR_RES_IS_STACK_IMPRECISE___asl_false]);
 
 
@@ -3108,7 +3177,7 @@ SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bigstar = store_thm (
 "VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bigstar",
-``!f sfb exS. 
+``!f sfb exS.
 (IS_SEPARATION_COMBINATOR f /\
  BAG_EVERY (VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS) sfb) ==>
 (VAR_RES_IS_STACK_IMPRECISE___USED_VARS exS
@@ -3125,7 +3194,7 @@ FULL_SIMP_TAC std_ss [BAG_EVERY,
 
 val VAR_RES_IS_STACK_IMPRECISE___var_res_bigstar = store_thm (
 "VAR_RES_IS_STACK_IMPRECISE___var_res_bigstar",
-``!f sfb. 
+``!f sfb.
 (IS_SEPARATION_COMBINATOR f /\
  BAG_EVERY VAR_RES_IS_STACK_IMPRECISE sfb) ==>
 (VAR_RES_IS_STACK_IMPRECISE (var_res_bigstar f sfb))``,
@@ -3345,6 +3414,15 @@ SIMP_TAC std_ss [IS_SOME_EXISTS, VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VA
 
 
 
+val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___SUBSET = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___SUBSET",
+``!vs1 vs2 e.
+(VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs1 e /\
+ vs1 SUBSET vs2) ==>
+VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs2 e``,
+
+SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def] THEN
+METIS_TAC[SUBSET_TRANS]);
 
 
 val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___EXP_EQ = store_thm (
@@ -3485,8 +3563,8 @@ Induct_on `eL` THENL [
 
 
 
-val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_binop = store_thm (
-"VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_binop",
+val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop",
 ``!binop e1 e2 vs1 vs2 vs.
    ((VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1 = SOME vs1) /\
     (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e2 = SOME vs2) /\
@@ -3500,6 +3578,24 @@ REPEAT STRIP_TAC THEN
 MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_op THEN
 ASM_SIMP_TAC list_ss [UNION_EMPTY]);
 
+
+val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop_const = store_thm (
+"VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop_const",
+``!binop e n vs.
+   (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e = SOME vs) ==>
+
+   (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS (var_res_exp_binop_const binop e n) =
+    SOME vs)``,
+
+SIMP_TAC list_ss [var_res_exp_binop_const___ALTERNATIVE_DEF] THEN
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_op THEN
+ASM_SIMP_TAC list_ss [UNION_EMPTY]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_add_sub =
+ save_thm ("VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_add_sub",
+ var_res_exp_add_sub___INST_THM VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop_const);
 
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_expression = store_thm (
@@ -3801,7 +3897,7 @@ val var_res_bigstar_REWRITE = store_thm ("var_res_bigstar_REWRITE",
 ``(!f. IS_SEPARATION_COMBINATOR f ==>
     (var_res_bigstar f EMPTY_BAG = var_res_prop_stack_true f)) /\
   (!f p pL. IS_SEPARATION_COMBINATOR f ==>
-    (var_res_bigstar f (BAG_INSERT p pL) = 
+    (var_res_bigstar f (BAG_INSERT p pL) =
      asl_star (VAR_RES_COMBINATOR f) p
        (var_res_bigstar f pL)))``,
 SIMP_TAC std_ss [var_res_bigstar_def, asl_bigstar_REWRITE,
@@ -3812,7 +3908,7 @@ val var_res_bigstar_list_REWRITE = store_thm ("var_res_bigstar_list_REWRITE",
 ``(!f. IS_SEPARATION_COMBINATOR f ==>
     (var_res_bigstar_list f [] = var_res_prop_stack_true f)) /\
   (!f p pL. IS_SEPARATION_COMBINATOR f ==>
-    (var_res_bigstar_list f (p::pL) = 
+    (var_res_bigstar_list f (p::pL) =
      asl_star (VAR_RES_COMBINATOR f) p
        (var_res_bigstar_list f pL)))``,
 SIMP_TAC std_ss [var_res_bigstar_list_def, asl_bigstar_list_REWRITE,
@@ -3822,8 +3918,8 @@ SIMP_TAC std_ss [var_res_bigstar_list_def, asl_bigstar_list_REWRITE,
 
 val var_res_bigstar_list_APPEND = store_thm ("var_res_bigstar_list_APPEND",
 ``!f l1 l2. IS_SEPARATION_COMBINATOR f ==>
-    (var_res_bigstar_list f (l1++l2) = 
-     asl_star (VAR_RES_COMBINATOR f) 
+    (var_res_bigstar_list f (l1++l2) =
+     asl_star (VAR_RES_COMBINATOR f)
        (var_res_bigstar_list f l1)
        (var_res_bigstar_list f l2))``,
 SIMP_TAC std_ss [var_res_bigstar_list_def, asl_bigstar_list_APPEND,
@@ -3835,12 +3931,27 @@ METIS_TAC[ASSOC_DEF, COMM_DEF, asl_star___PROPERTIES,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    asl_star___swap_var_res_prop_stack_true]);
 
+val var_res_bigstar_list_SNOC = store_thm ("var_res_bigstar_list_SNOC",
+``!f p pL. IS_SEPARATION_COMBINATOR f ==>
+    (var_res_bigstar_list f (SNOC p pL) =
+     asl_star (VAR_RES_COMBINATOR f)
+       (var_res_bigstar_list f pL) p)``,
+SIMP_TAC std_ss [var_res_bigstar_list_def, asl_bigstar_list_SNOC,
+   GSYM SNOC, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR]);
+
+val var_res_bigstar_list_REVERSE = store_thm ("var_res_bigstar_list_REVERSE",
+``!f pL. IS_SEPARATION_COMBINATOR f ==>
+    (var_res_bigstar_list f (REVERSE pL) =
+     var_res_bigstar_list f pL)``,
+SIMP_TAC std_ss [var_res_bigstar_list_def, asl_bigstar_list_REWRITE,
+   asl_bigstar_list_REVERSE, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR]);
+
 
 val var_res_map_REWRITE = store_thm ("var_res_map_REWRITE",
 ``(!f P. IS_SEPARATION_COMBINATOR f ==>
     (var_res_map f P [] = var_res_prop_stack_true f)) /\
   (!f P p pL. IS_SEPARATION_COMBINATOR f ==>
-    (var_res_map f P (p::pL) = 
+    (var_res_map f P (p::pL) =
      asl_star (VAR_RES_COMBINATOR f) (P p)
        (var_res_map f P pL)))``,
 SIMP_TAC list_ss [var_res_map_def, var_res_bigstar_list_REWRITE]);
@@ -3848,17 +3959,52 @@ SIMP_TAC list_ss [var_res_map_def, var_res_bigstar_list_REWRITE]);
 
 val var_res_map_APPEND = store_thm ("var_res_map_APPEND",
 ``!f P l1 l2. IS_SEPARATION_COMBINATOR f ==>
-    (var_res_map f P (l1++l2) = 
-     asl_star (VAR_RES_COMBINATOR f) 
+    (var_res_map f P (l1++l2) =
+     asl_star (VAR_RES_COMBINATOR f)
        (var_res_map f P l1)
        (var_res_map f P l2))``,
 SIMP_TAC std_ss [var_res_map_def, var_res_bigstar_list_APPEND, MAP_APPEND]);
 
 
+val var_res_map_SNOC = store_thm ("var_res_map_SNOC",
+``!f P e l. IS_SEPARATION_COMBINATOR f ==>
+    (var_res_map f P (SNOC e l) =
+     asl_star (VAR_RES_COMBINATOR f)
+       (var_res_map f P l)
+       (P e))``,
+SIMP_TAC std_ss [var_res_map_def, var_res_bigstar_list_SNOC, MAP_SNOC]);
+
+val var_res_map_REVERSE = store_thm ("var_res_map_REVERSE",
+``!f P l. IS_SEPARATION_COMBINATOR f ==>
+    (var_res_map f P (REVERSE l) =
+     var_res_map f P l)``,
+SIMP_TAC std_ss [var_res_map_def, var_res_bigstar_list_REVERSE, MAP_REVERSE]);
+
+val var_res_map_MAP = store_thm ("var_res_map_MAP",
+``!f f2 P l.  (var_res_map f P (MAP f2 l) =
+               var_res_map f (P o f2) l)``,
+SIMP_TAC std_ss [var_res_map_def, MAP_MAP_o]);
+
+val var_res_map___REWRITES = save_thm ("var_res_map___REWRITES",
+LIST_CONJ [var_res_map_REWRITE, var_res_map_APPEND, var_res_map_SNOC,
+           var_res_map_REVERSE])
+
+val var_res_map___FUN_EQ = store_thm ("var_res_map___FUN_EQ",
+``!f P1 P2 l. IS_SEPARATION_COMBINATOR f /\
+  (!e. MEM e l ==> (P1 e = P2 e)) ==>
+  (var_res_map f P1 l = var_res_map f P2 l)``,
+
+NTAC 3 GEN_TAC THEN
+Induct_on `l` THEN (
+   FULL_SIMP_TAC list_ss [var_res_map_def]
+) THEN
+FULL_SIMP_TAC std_ss [var_res_bigstar_list_REWRITE]);
+
+
 val var_res_bigstar_UNION = store_thm ("var_res_bigstar_UNION",
 ``!f b1 b2. IS_SEPARATION_COMBINATOR f ==>
-    (var_res_bigstar f (BAG_UNION b1 b2) = 
-     asl_star (VAR_RES_COMBINATOR f) 
+    (var_res_bigstar f (BAG_UNION b1 b2) =
+     asl_star (VAR_RES_COMBINATOR f)
        (var_res_bigstar f b1)
        (var_res_bigstar f b2))``,
 SIMP_TAC std_ss [var_res_bigstar_def, asl_bigstar_UNION,
@@ -3873,7 +4019,7 @@ METIS_TAC[ASSOC_DEF, COMM_DEF, asl_star___PROPERTIES,
 
 val var_res_bigstar_list___var_res_prop_stack_true = store_thm ("var_res_bigstar_list___var_res_prop_stack_true",
 ``!f pL. IS_SEPARATION_COMBINATOR f ==>
-    (var_res_bigstar_list f ((var_res_prop_stack_true f)::pL) = 
+    (var_res_bigstar_list f ((var_res_prop_stack_true f)::pL) =
     var_res_bigstar_list f pL)``,
 SIMP_TAC std_ss [var_res_bigstar_list_def,
    asl_bigstar_list_REWRITE, asl_star___var_res_prop_stack_true___IDEM_2]);
@@ -3881,7 +4027,7 @@ SIMP_TAC std_ss [var_res_bigstar_list_def,
 
 val var_res_bigstar___var_res_prop_stack_true = store_thm ("var_res_bigstar___var_res_prop_stack_true",
 ``!f pL. IS_SEPARATION_COMBINATOR f ==>
-    (var_res_bigstar f (BAG_INSERT (var_res_prop_stack_true f) pL) = 
+    (var_res_bigstar f (BAG_INSERT (var_res_prop_stack_true f) pL) =
     var_res_bigstar f pL)``,
 SIMP_TAC std_ss [var_res_bigstar_def, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    asl_bigstar_REWRITE, asl_star___var_res_prop_stack_true___IDEM_2]);
@@ -3889,9 +4035,9 @@ SIMP_TAC std_ss [var_res_bigstar_def, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINA
 
 val var_res_bigstar___var_res_prop_stack_true___asl_star_ELIM = store_thm ("var_res_bigstar___var_res_prop_stack_true___asl_star_ELIM",
 ``!f pL. IS_SEPARATION_COMBINATOR f ==>
-    ((asl_star (VAR_RES_COMBINATOR f) (var_res_prop_stack_true f) (var_res_bigstar f pL) = 
+    ((asl_star (VAR_RES_COMBINATOR f) (var_res_prop_stack_true f) (var_res_bigstar f pL) =
     var_res_bigstar f pL) /\
-    (asl_star (VAR_RES_COMBINATOR f) (var_res_bigstar f pL) (var_res_prop_stack_true f) = 
+    (asl_star (VAR_RES_COMBINATOR f) (var_res_bigstar f pL) (var_res_prop_stack_true f) =
     var_res_bigstar f pL))``,
 SIMP_TAC std_ss [var_res_bigstar_def, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    asl_bigstar_REWRITE, asl_star___var_res_prop_stack_true___IDEM_2] THEN
@@ -3909,7 +4055,7 @@ store_thm ("asl_bigstar_list___VAR_RES_IS_STACK_IMPRECISE",
 
 (asl_bigstar_list (VAR_RES_COMBINATOR f) (P1::PL) =
 \s. ?es1 es2. (f (SOME es1) (SOME es2) = SOME (SND s)) /\
-              (FST s, es1) IN P1 /\ (FST s, es2) IN 
+              (FST s, es1) IN P1 /\ (FST s, es2) IN
               asl_bigstar_list (VAR_RES_COMBINATOR f) ((var_res_prop_stack_true f)::PL))``,
 
 Cases_on `PL` THENL [
@@ -3929,7 +4075,7 @@ Cases_on `PL` THENL [
    REPEAT STRIP_TAC THEN
    Q.ABBREV_TAC `P2 = asl_star (VAR_RES_COMBINATOR f) h
            (asl_bigstar_list (VAR_RES_COMBINATOR f) t)` THEN
-   ASM_SIMP_TAC list_ss [REWRITE_RULE [ASSOC_SYM] asl_star___PROPERTIES, 
+   ASM_SIMP_TAC list_ss [REWRITE_RULE [ASSOC_SYM] asl_star___PROPERTIES,
      IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR] THEN
    Tactical.REVERSE (`VAR_RES_IS_STACK_IMPRECISE P2` by ALL_TAC) THEN1 (
       ASM_SIMP_TAC std_ss [asl_star___VAR_RES_IS_STACK_IMPRECISE]
@@ -3947,7 +4093,7 @@ store_thm ("var_res_bigstar_list___VAR_RES_IS_STACK_IMPRECISE",
 
 (var_res_bigstar_list f (P1::PL) =
 \s. ?es1 es2. (f (SOME es1) (SOME es2) = SOME (SND s)) /\
-              (FST s, es1) IN P1 /\ (FST s, es2) IN 
+              (FST s, es1) IN P1 /\ (FST s, es2) IN
               var_res_bigstar_list f PL)``,
 
 SIMP_TAC list_ss [var_res_bigstar_list_def] THEN
@@ -3973,7 +4119,7 @@ store_thm ("var_res_bigstar___VAR_RES_IS_STACK_IMPRECISE",
 
 (var_res_bigstar f (BAG_INSERT P1 PL) =
 \s. ?es1 es2. (f (SOME es1) (SOME es2) = SOME (SND s)) /\
-              (FST s, es1) IN P1 /\ (FST s, es2) IN 
+              (FST s, es1) IN P1 /\ (FST s, es2) IN
               var_res_bigstar f PL)``,
 
 SIMP_TAC list_ss [var_res_bigstar_REWRITE] THEN
@@ -4045,7 +4191,7 @@ FULL_SIMP_TAC std_ss [UNION_SUBSET]);
 
 val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop = store_thm (
    "VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop",
-``!vs f e1 e2.
+``!f vs e1 e2.
 VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs e1 /\
 VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs e2 ==>
 VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs (var_res_exp_binop f e1 e2)``,
@@ -4056,6 +4202,20 @@ MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_
 ASM_SIMP_TAC list_ss []);
 
 
+val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop_const = store_thm (
+   "VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop_const",
+``!f vs e n.
+VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs e ==>
+VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs (var_res_exp_binop_const f e n)``,
+
+SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop,
+   VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL,
+   var_res_exp_binop_const_def]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_add_sub =
+ save_thm ("VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_add_sub",
+ var_res_exp_add_sub___INST_THM VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop_const);
 
 
 val VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___IS_SOME_IMPL = store_thm (
@@ -4104,6 +4264,21 @@ FULL_SIMP_TAC std_ss [
    VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop]);
 
 
+val IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop_const = store_thm (
+   "IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop_const",
+``!f e n.
+IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e) ==>
+IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS (var_res_exp_binop_const f e n))``,
+
+FULL_SIMP_TAC std_ss [
+   GSYM VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___UNIV_REWRITE,
+   VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop_const]);
+
+
+val IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_add_sub =
+ save_thm ("IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_add_sub",
+ var_res_exp_add_sub___INST_THM IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop_const);
+
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_is_defined =
 store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_is_defined",
 ``!f e vs. VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs e ==>
@@ -4128,6 +4303,39 @@ SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
                  GSYM VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___UNIV_REWRITE,
                  VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_is_defined]);
 
+
+
+val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_prop =
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_prop",
+``!e P vs. 
+(VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs e /\
+!c. VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (P c)) ==>
+VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (var_res_exp_prop e P)``,
+
+
+SIMP_TAC (std_ss++CONJ_ss) [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___ALTERNATIVE_DEF,
+   var_res_exp_prop_def, IN_ABS, LET_THM] THEN
+REPEAT (GEN_TAC ORELSE DISCH_TAC) THEN
+FULL_SIMP_TAC std_ss [] THEN
+`e (FST s2) = e (FST s)` by ALL_TAC THEN1 (
+   MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___EXP_EQ_IS_SOME THEN
+   Q.EXISTS_TAC `vs` THEN
+   ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_INTER]
+) THEN
+`?ec. e (FST s) = SOME ec` by METIS_TAC[IS_SOME_EXISTS] THEN
+FULL_SIMP_TAC std_ss [] THEN
+METIS_TAC[IN_DEF]);
+
+
+val VAR_RES_IS_STACK_IMPRECISE___var_res_exp_prop =
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___var_res_exp_prop",
+``!e P. IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e) ==>
+        (!c. VAR_RES_IS_STACK_IMPRECISE (P c)) ==>
+        VAR_RES_IS_STACK_IMPRECISE (var_res_exp_prop e P)``,
+
+SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF,
+                 GSYM VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___UNIV_REWRITE,
+                 VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_exp_prop]);
 
 
 
@@ -4220,7 +4428,7 @@ val var_res_prop___PROP_def = Define `
 
 
 val var_res_prop___PROP___REWRITE_2 = store_thm ("var_res_prop___PROP___REWRITE_2",
-``!f wpb rpb sfb. 
+``!f wpb rpb sfb.
     var_res_prop___PROP f (wpb,rpb) sfb =
        (\s.
           (!v. BAG_IN v wpb ==> var_res_sl___has_write_permission v (FST s)) /\
@@ -4231,14 +4439,14 @@ SIMP_TAC list_ss [var_res_prop_internal___PROP_def, NOT_IN_EMPTY,
 
 
 val var_res_prop___PROP___REWRITE = store_thm ("var_res_prop___PROP___REWRITE",
-``!f wpb rpb sfb. 
+``!f wpb rpb sfb.
     IS_SEPARATION_COMBINATOR f ==>
     (var_res_prop___PROP f (wpb,rpb) sfb =
        (\s.
           (!v. BAG_IN v wpb ==> var_res_sl___has_write_permission v (FST s)) /\
           (!v. BAG_IN v rpb ==> var_res_sl___has_read_permission v (FST s)) /\
           s IN var_res_bigstar f sfb))``,
-SIMP_TAC list_ss [var_res_prop___PROP___REWRITE_2, 
+SIMP_TAC list_ss [var_res_prop___PROP___REWRITE_2,
 var_res_bigstar_REWRITE, asl_star___PROPERTIES,
     IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR]);
 
@@ -4512,7 +4720,7 @@ FULL_SIMP_TAC std_ss [var_res_prop___COND___EXPAND] THEN
    FULL_SIMP_TAC std_ss [BAG_EVERY, BAG_IN_BAG_INSERT, FORALL_AND_THM,
      DISJ_IMP_THM, VAR_RES_IS_STACK_IMPRECISE___USED_VARS_def]
 ) THEN
-ASM_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE, 
+ASM_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE,
    IN_ABS, var_res_bigstar___VAR_RES_IS_STACK_IMPRECISE] THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) []);
 
@@ -4536,7 +4744,7 @@ FULL_SIMP_TAC std_ss [var_res_prop___COND___EXPAND, IN_ABS] THEN
    FULL_SIMP_TAC std_ss [BAG_EVERY, BAG_IN_BAG_UNION, FORALL_AND_THM,
      DISJ_IMP_THM, VAR_RES_IS_STACK_IMPRECISE___USED_VARS_def]
 ) THEN
-ASM_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE, 
+ASM_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE,
    IN_ABS, var_res_bigstar_UNION, asl_star___VAR_RES_IS_STACK_IMPRECISE,
    VAR_RES_IS_STACK_IMPRECISE___var_res_bigstar] THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) []);
@@ -4845,7 +5053,7 @@ store_thm ("var_res_prop___PROP___asl_bigstar",
 
 SIMP_TAC std_ss [var_res_prop___PROP___REWRITE,
    var_res_bigstar_def,
-   asl_bigstar_REWRITE, asl_bigstar_UNION, 
+   asl_bigstar_REWRITE, asl_bigstar_UNION,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    asl_star___swap_var_res_prop_stack_true,
    REWRITE_RULE [ASSOC_DEF] asl_star___PROPERTIES]);
@@ -5751,14 +5959,28 @@ SIMP_TAC std_ss [var_res_exp_varlist_update_def,
    var_res_exp_op_def, LET_THM, MAP_MAP_o, combinTheory.o_DEF]);
 
 
-val var_res_exp_varlist_update___var_res_binop_EVAL = store_thm (
-"var_res_exp_varlist_update___var_res_binop_EVAL",
+val var_res_exp_varlist_update___var_res_exp_binop_EVAL = store_thm (
+"var_res_exp_varlist_update___var_res_exp_binop_EVAL",
 ``!vL f e1 e2.
 var_res_exp_varlist_update vL (var_res_exp_binop f e1 e2) =
 var_res_exp_binop f (var_res_exp_varlist_update vL e1) (var_res_exp_varlist_update vL e2)``,
 
 SIMP_TAC list_ss [var_res_exp_binop_def,
    var_res_exp_varlist_update___var_res_exp_op_EVAL]);
+
+
+val var_res_exp_varlist_update___var_res_exp_binop_const_EVAL = store_thm (
+"var_res_exp_varlist_update___var_res_exp_binop_const_EVAL",
+``!f vL e n.
+var_res_exp_varlist_update vL (var_res_exp_binop_const f e n) =
+var_res_exp_binop_const f (var_res_exp_varlist_update vL e) n``,
+
+SIMP_TAC list_ss [var_res_exp_binop_const___ALTERNATIVE_DEF,
+   var_res_exp_varlist_update___var_res_exp_op_EVAL]);
+
+val var_res_exp_varlist_update___var_res_exp_add_sub_EVAL =
+ save_thm ("var_res_exp_varlist_update___var_res_exp_add_sub_EVAL",
+ var_res_exp_add_sub___INST_THM var_res_exp_varlist_update___var_res_exp_binop_const_EVAL);
 
 
 (* -------------------------------------------------------------------------- *)
@@ -6006,6 +6228,7 @@ store_thm ("var_res_prop_varlist_update___bool_cond",
 Cases_on `c` THEN SIMP_TAC std_ss [])
 
 
+
 val var_res_prop_varlist_update___asl_star =
 store_thm ("var_res_prop_varlist_update___asl_star",
 ``!f vL p1 p2.
@@ -6155,6 +6378,26 @@ SIMP_TAC std_ss [var_res_prop_varlist_update_def, var_res_exp_is_defined_def,
        var_res_ext_state_varlist_update_def]);
 
 
+val var_res_prop_var_update___var_res_exp_prop =
+store_thm ("var_res_prop_var_update___var_res_exp_prop",
+``!vc e P.
+var_res_prop_var_update vc (var_res_exp_prop e P) =
+var_res_exp_prop (var_res_exp_var_update vc e) (\c. var_res_prop_var_update vc (P c))``,
+
+SIMP_TAC std_ss [var_res_prop_var_update_def, var_res_exp_prop_def, IN_ABS,
+   LET_THM, FUN_EQ_THM, var_res_exp_var_update_def,
+   var_res_ext_state_var_update_def, IN_DEF]);
+
+
+val var_res_prop_varlist_update___var_res_exp_prop =
+store_thm ("var_res_prop_varlist_update___var_res_exp_prop",
+``!vcL e P.
+var_res_prop_varlist_update vcL (var_res_exp_prop e P) =
+var_res_exp_prop (var_res_exp_varlist_update vcL e) (\c. var_res_prop_varlist_update vcL (P c))``,
+SIMP_TAC std_ss [var_res_prop_varlist_update_def, var_res_exp_prop_def, IN_DEF,
+   var_res_exp_varlist_update_def, var_res_ext_state_varlist_update_def]);
+
+
 
 val var_res_prop_var_update___BOOL = store_thm ("var_res_prop_var_update___BOOL",
 ``(var_res_prop_var_update vc (asl_and p1 p2) =
@@ -6213,6 +6456,15 @@ SIMP_TAC std_ss [asl_bool_EVAL,
    var_res_ext_state_varlist_update_def,
    asl_cond_def]);
 
+
+val var_res_prop_varlist_update___asl_trivial_cond =
+store_thm ("var_res_prop_varlist_update___asl_trivial_cond",
+``!vL c p.
+(var_res_prop_varlist_update vL (asl_trivial_cond c p) =
+ asl_trivial_cond c (var_res_prop_varlist_update vL p))``,
+Cases_on `c` THEN
+SIMP_TAC std_ss [asl_trivial_cond_TF,
+   var_res_prop_varlist_update___BOOL]);
 
 
 val var_res_prop_var_update___var_res_prop_binexpression_cond =
@@ -6323,6 +6575,8 @@ ASM_SIMP_TAC list_ss [var_res_prop_varlist_update___var_res_bigstar_list, EVERY_
 SIMP_TAC std_ss [MAP_MAP_o]);
 
 
+
+
 val var_res_prop_varlist_update___var_res_bigstar =
 store_thm ("var_res_prop_varlist_update___var_res_bigstar",
 ``
@@ -6398,7 +6652,7 @@ Induct_on `vcL` THENL [
       var_res_bigstar_REWRITE, var_res_prop_stack_true_REWRITE,
       IN_ABS],
 
-   ASM_SIMP_TAC list_ss [var_res_prop___var_eq_const_BAG_THM,       
+   ASM_SIMP_TAC list_ss [var_res_prop___var_eq_const_BAG_THM,
       var_res_bigstar___VAR_RES_IS_STACK_IMPRECISE,
       BAG_EVERY_THM, IN_ABS] THEN
    FULL_SIMP_TAC (std_ss++CONJ_ss) [var_res_prop_equal_unequal_EXPAND, IN_ABS, asl_emp_def,
@@ -6701,11 +6955,35 @@ Cases_on `c` THEN (
 ));
 
 
-val asl_trivial_cond___var_res_stack_true = store_thm ("asl_trivial_cond___var_res_stack_true",
-``!f c. asl_trivial_cond c (var_res_prop_stack_true f) =
-        var_res_bool_proposition f c``,
+val asl_trivial_cond___asl_star_var_res_bool_proposition = store_thm (
+"asl_trivial_cond___asl_star_var_res_bool_proposition",
+``(!f c p.
+     (IS_SEPARATION_COMBINATOR f /\ VAR_RES_IS_STACK_IMPRECISE p) ==>
+     (asl_star (VAR_RES_COMBINATOR f) (var_res_bool_proposition f c) p =
+      asl_trivial_cond c p)) /\
+  (!f c p.
+     (IS_SEPARATION_COMBINATOR f /\ VAR_RES_IS_STACK_IMPRECISE p) ==>
+     (asl_star (VAR_RES_COMBINATOR f) p (var_res_bool_proposition f c) =
+      asl_trivial_cond c p))``,
+REPEAT STRIP_TAC THEN
 Cases_on `c` THEN
+ASM_SIMP_TAC std_ss [asl_trivial_cond_def, var_res_bool_proposition_TF,
+   asl_false___asl_star_THM,
+   asl_star___var_res_prop_stack_true___STACK_IMPRECISE,
+   asl_star___var_res_prop_stack_true___STACK_IMPRECISE___COMM]);
+
+
+val asl_trivial_cond___var_res_bool_proposition = store_thm ("asl_trivial_cond___var_res_bool_proposition",
+``!f c1 c2. asl_trivial_cond c1 (var_res_bool_proposition f c2) =
+            var_res_bool_proposition f (c1 /\ c2)``,
+Cases_on `c1` THEN Cases_on `c2` THEN
 SIMP_TAC std_ss [asl_trivial_cond_def, var_res_bool_proposition_TF]);
+
+
+val asl_trivial_cond___var_res_stack_true = store_thm ("asl_trivial_cond___var_res_stack_true",
+``!f c. asl_trivial_cond c (var_res_prop_stack_true f) = var_res_bool_proposition f c``,
+SIMP_TAC std_ss [var_res_prop_stack_true_def, asl_trivial_cond___var_res_bool_proposition]);
+
 
 
 val VAR_RES_COND_INFERENCE___asl_trivial_cond = store_thm (
@@ -6776,10 +7054,6 @@ Tactical.REVERSE (`vs' SUBSET FDOM (FST x) /\ vs'' SUBSET FDOM (FST x)` by ALL_T
 ) THEN
 IMP_RES_TAC var_res_prop___PROP___VARS THEN
 PROVE_TAC[SUBSET_TRANS]);
-
-
-
-
 
 
 val VAR_RES_COND_INFERENCE___CONST_INTRO = store_thm (
@@ -9913,7 +10187,7 @@ val var_res_implies_unequal___asl_exists = store_thm (
 
 SIMP_TAC std_ss [var_res_implies_unequal_def,
    BAG_INSERT_NOT_EMPTY,
-   var_res_bigstar_REWRITE_EXT, 
+   var_res_bigstar_REWRITE_EXT,
    GSYM asl_exists___asl_star_THM, asl_bool_EVAL] THEN
 PROVE_TAC[]);
 
@@ -11891,7 +12165,7 @@ ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
 ASM_SIMP_TAC std_ss [fasla_materialisation_THM,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    var_res_prop___PROP___REWRITE, NOT_IN_EMPTY_BAG,
-   var_res_bigstar_REWRITE_EXT, 
+   var_res_bigstar_REWRITE_EXT,
    IN_ABS, SUBSET_DEF] THEN
 REPEAT (GEN_TAC ORELSE DISCH_TAC) THEN
 Q.PAT_ASSUM `x' IN X` MP_TAC THEN
@@ -12282,7 +12556,7 @@ store_thm ("VAR_RES_COND_INFERENCE___block_spec",
 
 VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (
 (fasl_comment_block_spec ((\x. var_res_prop_input_ap_distinct f (wp,rp) d (P' x)),
-                          (\x. var_res_prop_input_ap_distinct f (wp,rp) d (Q' x))) 
+                          (\x. var_res_prop_input_ap_distinct f (wp,rp) d (Q' x)))
                          p)::prog)) Q``,
 
 REPEAT STRIP_TAC THEN
@@ -12298,7 +12572,7 @@ FULL_SIMP_TAC std_ss [] THEN
 Q.PAT_ASSUM `ALL_DISTINCT d` ASSUME_TAC THEN
 `IS_VAR_RES_COMBINATOR (VAR_RES_COMBINATOR f)` by METIS_TAC[IS_VAR_RES_COMBINATOR_def] THEN
 FULL_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
-   var_res_prog_cond_best_local_action_def, COND_RAND, 
+   var_res_prog_cond_best_local_action_def, COND_RAND,
    COND_RATOR, var_res_prop_input_distinct_def,
    FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action,
    VAR_RES_COND_HOARE_TRIPLE_def]);
@@ -12318,7 +12592,7 @@ store_thm ("VAR_RES_COND_INFERENCE___loop_spec",
   (fasl_prog_block [fasl_prog_assume c;p;
       (var_res_prog_cond_quant_best_local_action
            (\x. (var_res_prop_input_distinct f (wp,rp) d (P' x)))
-           (\x. (var_res_prop_input_distinct f (wp,rp) d (Q' x))))]) 
+           (\x. (var_res_prop_input_distinct f (wp,rp) d (Q' x))))])
     (var_res_prop_input_distinct f (wp,rp) d (Q' x))) /\
 
 ?x. VAR_RES_COND_HOARE_TRIPLE f P
@@ -12330,7 +12604,7 @@ store_thm ("VAR_RES_COND_INFERENCE___loop_spec",
 
 VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (
    (fasl_comment_loop_spec ((\x. var_res_prop_input_ap_distinct f (wp,rp) d (P' x)),
-                            (\x. var_res_prop_input_ap_distinct f (wp,rp) d (Q' x))) 
+                            (\x. var_res_prop_input_ap_distinct f (wp,rp) d (Q' x)))
    (fasl_prog_block ((fasl_prog_while c p)::prog1)))::prog2)) Q``,
 
 
@@ -12340,8 +12614,8 @@ Tactical.REVERSE (Cases_on `FST P /\ IS_SEPARATION_COMBINATOR f /\ FST Q`) THEN1
    FULL_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def]
 ) THEN
 
-REWRITE_TAC [prove (``fasl_comment_loop_spec = fasl_comment_block_spec``, 
-   SIMP_TAC std_ss [FUN_EQ_THM, fasl_comment_block_spec_def, 
+REWRITE_TAC [prove (``fasl_comment_loop_spec = fasl_comment_block_spec``,
+   SIMP_TAC std_ss [FUN_EQ_THM, fasl_comment_block_spec_def,
        fasl_comment_loop_spec_def])] THEN
 MATCH_MP_TAC (MP_CANON VAR_RES_COND_INFERENCE___block_spec) THEN
 ASM_REWRITE_TAC[] THEN
@@ -12365,11 +12639,11 @@ val VAR_RES_COND_INFERENCE___while_unroll =
 store_thm ("VAR_RES_COND_INFERENCE___while_unroll",
 ``!f c p prog P Q.
 
-VAR_RES_COND_HOARE_TRIPLE f P 
+VAR_RES_COND_HOARE_TRIPLE f P
    (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg c))::prog)) Q /\
-VAR_RES_COND_HOARE_TRIPLE f P 
+VAR_RES_COND_HOARE_TRIPLE f P
    (fasl_prog_block ((fasl_prog_assume c)::p::(fasl_prog_while c p)::prog)) Q ==>
-VAR_RES_COND_HOARE_TRIPLE f P 
+VAR_RES_COND_HOARE_TRIPLE f P
    (fasl_prog_block ((fasl_prog_while c p)::prog)) Q``,
 
 
@@ -12660,7 +12934,7 @@ REPEAT STRIP_TAC THENL [
      ASM_REWRITE_TAC[]
    ) THEN
    REPEAT STRIP_TAC THEN
-   Tactical.REVERSE (`MAP (\e. e (FST s2)) el = 
+   Tactical.REVERSE (`MAP (\e. e (FST s2)) el =
                       MAP (\e. e (FST x)) el` by ALL_TAC) THEN1 (
        ASM_REWRITE_TAC[]
    ) THEN
@@ -12754,7 +13028,7 @@ EQ_TAC THENL [
 
 
    REPEAT (GEN_TAC ORELSE DISCH_TAC) THEN
-   Tactical.REVERSE (`MAP (\e. e (FST y)) el = 
+   Tactical.REVERSE (`MAP (\e. e (FST y)) el =
                       MAP (\e. e (FST s)) el` by ALL_TAC) THEN1 (
        ASM_REWRITE_TAC[]
    ) THEN
@@ -12804,7 +13078,7 @@ VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
 
 
 REPEAT STRIP_TAC THEN
-MP_TAC (Q.SPECL [`f`, `wpb`, `rpb`, `sfb`, `\l. ~(p l)`, `el`, 
+MP_TAC (Q.SPECL [`f`, `wpb`, `rpb`, `sfb`, `\l. ~(p l)`, `el`,
                  `progL`, `Q`]
         VAR_RES_COND_INFERENCE___prog_assume_pred) THEN
 ASM_SIMP_TAC std_ss [] THEN
@@ -13012,13 +13286,16 @@ save_thm ("var_res___varlist_update_NO_VAR_THM",
 LIST_CONJ (map GEN_ALL [
    var_res_exp_varlist_update___const_EVAL,
    var_res_exp_varlist_update___var_res_exp_op_EVAL,
-   var_res_exp_varlist_update___var_res_binop_EVAL,
+   var_res_exp_varlist_update___var_res_exp_binop_EVAL,
+   var_res_exp_varlist_update___var_res_exp_binop_const_EVAL,
+   var_res_exp_varlist_update___var_res_exp_add_sub_EVAL,
    var_res_prop_varlist_update___var_res_prop_binexpression,
    var_res_prop_varlist_update___var_res_prop_expression,
    var_res_prop_varlist_update___equal_unequal,
    var_res_prop_varlist_update___var_res_exp_is_defined,
    var_res_prop_varlist_update___BOOL,
    var_res_prop_varlist_update___bool_cond,
+   var_res_prop_varlist_update___asl_trivial_cond,
    var_res_prop_varlist_update___asl_star,
    var_res_prop_varlist_update___var_res_map,
    var_res_prop_varlist_update___var_res_prop_binexpression_cond]));
@@ -13058,12 +13335,16 @@ val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___VAR_RES_REWRITES =
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_equal,
      VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_unequal,
 
+     IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
      VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL,
      VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_op,
      VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop,
+     VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop_const,
+     VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_add_sub,
      IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_op,
      IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop,
-     IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL]));
+     IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_binop_const,
+     IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_add_sub]));
 
 
 val _ = export_theory();

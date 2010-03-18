@@ -17,6 +17,10 @@ datatype a_space_pred =
   | Aspred_data_list of a_component * a_expression * a_component * string
   | Aspred_data_listseg of a_component * a_expression * a_component * string * a_expression
   | Aspred_data_queue of a_component * a_expression * a_component * string * a_expression
+  | Aspred_array of a_expression * a_expression
+  | Aspred_data_array of a_expression * a_expression * a_component * string
+  | Aspred_interval of a_expression * a_expression
+  | Aspred_data_interval of a_expression * a_expression * a_component * string
   | Aspred_tree of a_component * a_component * a_expression
   | Aspred_data_tree of a_component list * a_expression * a_component list * string
   | Aspred_empty
@@ -50,8 +54,8 @@ datatype p_statement =
     Pstm_assign of string * a_expression
   | Pstm_fldlookup of string * a_expression * a_component
   | Pstm_fldassign of a_expression * a_component * a_expression
-  | Pstm_new of string
-  | Pstm_dispose of a_expression
+  | Pstm_new of string * a_expression
+  | Pstm_dispose of a_expression * a_expression
   | Pstm_block of p_statement list
   | Pstm_if of p_condition * p_statement * p_statement
   | Pstm_while of read_write_decl * a_invariant * p_condition * p_statement

@@ -35,11 +35,26 @@ val var_res_prop_equal_term  =
    var_res_mk_const "var_res_prop_equal";
 val dest_var_res_prop_equal = strip_comb_3 var_res_prop_equal_term
 val is_var_res_prop_equal = can dest_var_res_prop_equal;
+fun is_var_res_prop_equal_sym e1 e2 tt = 
+let
+   val (_, e1', e2') = dest_var_res_prop_equal tt;
+in
+   ((aconv e1 e1') andalso (aconv e2 e2')) orelse
+   ((aconv e1 e2') andalso (aconv e2 e1'))
+end handle HOL_ERR _ => false
+
 
 val var_res_prop_unequal_term  = 
    var_res_mk_const "var_res_prop_unequal";
 val dest_var_res_prop_unequal = strip_comb_3 var_res_prop_unequal_term
 val is_var_res_prop_unequal = can dest_var_res_prop_unequal;
+fun is_var_res_prop_unequal_sym e1 e2 tt = 
+let
+   val (_, e1', e2') = dest_var_res_prop_unequal tt;
+in
+   ((aconv e1 e1') andalso (aconv e2 e2')) orelse
+   ((aconv e1 e2') andalso (aconv e2 e1'))
+end handle HOL_ERR _ => false
 
 val var_res_prop_binexpression_term = var_res_mk_const "var_res_prop_binexpression";
 val dest_var_res_prop_binexpression = strip_comb_5 var_res_prop_binexpression_term;

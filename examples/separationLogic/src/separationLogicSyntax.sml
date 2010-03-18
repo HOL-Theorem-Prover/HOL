@@ -270,6 +270,20 @@ in
 end handle HOL_ERR _ => (empty_label_list, tt, fn () => REFL tt)
 
 
+fun dest_list_fasl_comment_location tt =
+dest_fasl_comment_location tt handle HOL_ERR _ =>
+dest_fasl_comment_location (rand (rator tt))
+
+
+fun save_dest_list_fasl_comment_location tt =
+   if (is_fasl_comment_location tt) then
+      save_dest_fasl_comment_location tt 
+   else
+   let
+      val (c, p, f) = save_dest_fasl_comment_location (rand (rator tt))
+   in
+      (c, p, fn () => (RATOR_CONV (RAND_CONV (K (f ()))) tt))
+   end;
 
 val fasl_comment_location2_term = asl_mk_const "fasl_comment_location2"
 val dest_fasl_comment_location2 = strip_comb_2 fasl_comment_location2_term;

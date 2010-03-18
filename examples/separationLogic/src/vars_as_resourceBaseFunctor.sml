@@ -284,7 +284,6 @@ fun var_res_assumptions_prove thm =
    foldl (fn (h, thm) =>
         (MP (DISCH h thm) (var_res_prove h))) thm (hyp thm)
 
-
 fun var_res_precondition_prove thm =
 let
    val precond = (fst o dest_imp o concl) thm;
@@ -747,13 +746,14 @@ local
          asl_trivial_cond___asl_false,
          asl_trivial_cond___var_res_stack_true,
          var_res_exp_binop___const_eval,
+         var_res_exp_add_sub_REWRITES,
          asl_false___asl_star_THM,
          var_res_prop_binexpression_cond___CONST_REWRITE,
          var_res_exp_op_CONS_CONST, var_res_exp_op_NIL,
          var_res_exp_is_defined___const,
          GSYM var_res_prop_equal_def,
          GSYM var_res_prop_unequal_def]
-
+   
    val ss_1 = var_res_param.predicate_simpset
    val ss_2 = ss_1 ++ simpLib.rewrites var_res_prop_general_rewrites;
    val ss_3 = ss_2 ++
@@ -807,10 +807,17 @@ let
 
    val (var_ty, data_ty) = (pairSyntax.dest_prod (listSyntax.dest_list_type (type_of vcL_t)))
 
+   val vcL_t_v = 
+       let
+          val vL_tL = map (fst o pairSyntax.dest_pair) ((fst o listSyntax.dest_list) vcL_t)
+          val vL_tvL = map (fn v => pairSyntax.mk_pair (v, genvar data_ty)) vL_tL
+       in
+          listSyntax.mk_list (vL_tvL, pairSyntax.mk_prod (var_ty, data_ty))
+       end;
    val base_t0 = inst [Type.alpha |-> var_ty,
                        Type.beta  |-> data_ty,
                        Type.gamma |-> (optionSyntax.mk_option data_ty)] var_res_exp_varlist_update_term;
-   val base_t = mk_comb (base_t0, vcL_t);
+   val base_t = mk_comb (base_t0, vcL_t_v);
    val var_exp_t = inst [Type.beta |-> var_ty, Type.alpha |-> data_ty]
          var_res_exp_var_term;
 
@@ -851,7 +858,8 @@ val conv_termL = COND_REWRITE_CONV___PREPOCESS
 
 in
 
-(* val SOME (rewrL, t) = !tref *)
+(* 
+val SOME (rewrL, t) = !tref *)
 fun cond_rewrite___varlist_update rewrL =
     let val conv = EXT_COND_REWRITE_CONV false conv_termL rewrL in
     fn t => let
@@ -859,6 +867,8 @@ fun cond_rewrite___varlist_update rewrL =
        val _ = let
            val ct_opt = SOME (find_term (
                   fn t => same_const var_res_prop_varlist_update_term (fst (strip_comb t))) (rhs (concl thm0))) handle HOL_ERR _ => NONE
+           val ct_opt = if isSome ct_opt then ct_opt else (SOME (find_term (
+                  fn t => same_const var_res_exp_varlist_update_term (fst (strip_comb t))) (rhs (concl thm0))) handle HOL_ERR _ => NONE)
          in
            if isSome ct_opt then (
             print "\n\n\n!!!Could not simplify:\n";

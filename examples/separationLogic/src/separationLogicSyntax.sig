@@ -148,6 +148,8 @@ val save_dest_fasl_comment_location : term -> term * term * (unit -> thm)
 val is_fasl_comment_location : term -> bool
 val mk_fasl_comment_location : term * term -> term
 val empty_label_list : term
+val dest_list_fasl_comment_location : term -> term * term
+val save_dest_list_fasl_comment_location : term -> term * term * (unit -> thm)
 
 val fasl_comment_location_string_term : term
 val dest_fasl_comment_location_string : term -> term * term
