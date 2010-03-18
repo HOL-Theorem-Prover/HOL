@@ -5,6 +5,7 @@ sig
   val strip_tac : tactic
   val conj_tac : tactic
   val gen_tac : tactic
+  val rpt : tactic -> tactic
   val exists_tac : term -> tactic
   val suff_tac : term -> tactic
 

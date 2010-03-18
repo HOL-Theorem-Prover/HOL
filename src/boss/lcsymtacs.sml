@@ -8,6 +8,7 @@ struct
   val gen_tac : tactic = GEN_TAC
   val exists_tac : term -> tactic = EXISTS_TAC
   val suff_tac : term -> tactic = SUFF_TAC
+  val rpt = REPEAT
 
   val rewrite_tac : thm list -> tactic = REWRITE_TAC
   val asm_rewrite_tac : thm list -> tactic = ASM_REWRITE_TAC
