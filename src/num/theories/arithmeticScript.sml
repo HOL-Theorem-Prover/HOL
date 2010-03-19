@@ -136,24 +136,24 @@ val EXP = new_recursive_definition
 val _ = set_fixity "EXP" (Infixr 700);
 val _ = add_infix("**", 700, HOLgrammars.RIGHT);
 val _ = overload_on ("**", Term`$EXP`);
-val _ = TeX_notation {hol = "**", TeX = ("\\HOLTokenExp", 2)}
+val _ = TeX_notation {hol = "**", TeX = ("\\HOLTokenExp{}", 2)}
 
 val GREATER_DEF = new_definition("GREATER_DEF", ``$> m n = n < m``)
 val _ = set_fixity ">" (Infix(NONASSOC, 450))
-val _ = TeX_notation {hol = ">", TeX = ("\\HOLTokenGt", 1)}
+val _ = TeX_notation {hol = ">", TeX = ("\\HOLTokenGt{}", 1)}
 
 val LESS_OR_EQ = new_definition ("LESS_OR_EQ", ``$<= m n = m < n \/ (m = n)``)
 val _ = set_fixity "<=" (Infix(NONASSOC, 450))
 val _ = Unicode.unicode_version { u = Unicode.UChar.leq, tmnm = "<="}
-val _ = TeX_notation {hol = Unicode.UChar.leq, TeX = ("\\HOLTokenLeq", 1)}
-val _ = TeX_notation {hol = "<=", TeX = ("\\HOLTokenLeq", 1)}
+val _ = TeX_notation {hol = Unicode.UChar.leq, TeX = ("\\HOLTokenLeq{}", 1)}
+val _ = TeX_notation {hol = "<=", TeX = ("\\HOLTokenLeq{}", 1)}
 
 val GREATER_OR_EQ =
     new_definition("GREATER_OR_EQ", ``$>= m n = m > n \/ (m = n)``)
 val _ = set_fixity ">=" (Infix(NONASSOC, 450))
 val _ = Unicode.unicode_version { u = Unicode.UChar.geq, tmnm = ">="};
-val _ = TeX_notation {hol = ">=", TeX = ("\\HOLTokenGeq", 1)}
-val _ = TeX_notation {hol = Unicode.UChar.geq, TeX = ("\\HOLTokenGeq", 1)}
+val _ = TeX_notation {hol = ">=", TeX = ("\\HOLTokenGeq{}", 1)}
+val _ = TeX_notation {hol = Unicode.UChar.geq, TeX = ("\\HOLTokenGeq{}", 1)}
 
 val EVEN = new_recursive_definition
    {name = "EVEN",

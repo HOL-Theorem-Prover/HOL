@@ -23,22 +23,21 @@ val _ = new_theory "bool";
 
 (* parsing/printing support for theory min *)
 val _ = unicode_version {u = UChar.imp, tmnm = "==>"}
-val _ = TeX_notation {hol = "==>", TeX = ("\\HOLTokenImp", 1)}
-val _ = TeX_notation {hol = UChar.imp, TeX = ("\\HOLTokenImp", 1)}
+val _ = TeX_notation {hol = "==>", TeX = ("\\HOLTokenImp{}", 1)}
+val _ = TeX_notation {hol = UChar.imp, TeX = ("\\HOLTokenImp{}", 1)}
 
-val _ = TeX_notation {hol = "\\", TeX = ("\\HOLTokenLambda", 1)}
-val _ = TeX_notation {hol = UChar.lambda, TeX = ("\\HOLTokenLambda", 1)}
+val _ = TeX_notation {hol = "\\", TeX = ("\\HOLTokenLambda{}", 1)}
+val _ = TeX_notation {hol = UChar.lambda, TeX = ("\\HOLTokenLambda{}", 1)}
 
-val _ = TeX_notation {hol = "@", TeX = ("\\HOLTokenHilbert", 1)}
+val _ = TeX_notation {hol = "@", TeX = ("\\HOLTokenHilbert{}", 1)}
 
 (* records *)
-val _ = TeX_notation {hol = "<|", TeX = ("\\HOLTokenLeftrec", 2)}
-val _ = TeX_notation {hol = "|>", TeX = ("\\HOLTokenRightrec", 2)}
+val _ = TeX_notation {hol = "<|", TeX = ("\\HOLTokenLeftrec{}", 2)}
+val _ = TeX_notation {hol = "|>", TeX = ("\\HOLTokenRightrec{}", 2)}
 
 (* case expressions *)
-val _ = TeX_notation {hol = "->", TeX = ("\\HOLTokenMap", 1)}
-val _ = TeX_notation {hol = "||", TeX = ("\\HOLTokenOr ", 2)}
-          (* bit confused by trailing space *)
+val _ = TeX_notation {hol = "->", TeX = ("\\HOLTokenMap{}", 1)}
+val _ = TeX_notation {hol = "||", TeX = ("\\HOLTokenOr{} ", 2)}
 
 val T_DEF =
  Definition.new_definition
@@ -52,8 +51,8 @@ val FORALL_DEF =
 
 val _ = (add_binder("!", std_binder_precedence); add_const "!");
 val _ = unicode_version {u = UChar.forall, tmnm = "!"};
-val _ = TeX_notation {hol = "!", TeX = ("\\HOLTokenForall",1)}
-val _ = TeX_notation {hol = UChar.forall, TeX = ("\\HOLTokenForall",1)}
+val _ = TeX_notation {hol = "!", TeX = ("\\HOLTokenForall{}",1)}
+val _ = TeX_notation {hol = UChar.forall, TeX = ("\\HOLTokenForall{}",1)}
 
 val EXISTS_DEF =
  Definition.new_definition
@@ -61,8 +60,8 @@ val EXISTS_DEF =
 
 val _ = (add_binder("?", std_binder_precedence); add_const "?");
 val _ = unicode_version {u = UChar.exists, tmnm = "?"}
-val _ = TeX_notation {hol = "?", TeX = ("\\HOLTokenExists",1)}
-val _ = TeX_notation {hol = UChar.exists, TeX = ("\\HOLTokenExists",1)}
+val _ = TeX_notation {hol = "?", TeX = ("\\HOLTokenExists{}",1)}
+val _ = TeX_notation {hol = UChar.exists, TeX = ("\\HOLTokenExists{}",1)}
 
 val AND_DEF =
  Definition.new_definition
@@ -70,8 +69,8 @@ val AND_DEF =
 
 val _ = (add_infix ("/\\", 400, RIGHT); add_const "/\\");
 val _ = unicode_version {u = UChar.conj, tmnm = "/\\"};
-val _ = TeX_notation {hol = "/\\", TeX = ("\\HOLTokenConj",1)}
-val _ = TeX_notation {hol = UChar.conj, TeX = ("\\HOLTokenConj",1)}
+val _ = TeX_notation {hol = "/\\", TeX = ("\\HOLTokenConj{}",1)}
+val _ = TeX_notation {hol = UChar.conj, TeX = ("\\HOLTokenConj{}",1)}
 
 
 val OR_DEF =
@@ -80,8 +79,8 @@ val OR_DEF =
 
 val _ = (add_infix ("\\/", 300, RIGHT); add_const "\\/");
 val _ = unicode_version {u = UChar.disj, tmnm = "\\/"}
-val _ = TeX_notation {hol = "\\/", TeX = ("\\HOLTokenDisj",1)}
-val _ = TeX_notation {hol = UChar.disj, TeX = ("\\HOLTokenDisj",1)}
+val _ = TeX_notation {hol = "\\/", TeX = ("\\HOLTokenDisj{}",1)}
+val _ = TeX_notation {hol = UChar.disj, TeX = ("\\HOLTokenDisj{}",1)}
 
 
 val F_DEF =
@@ -104,8 +103,8 @@ Definition.new_definition
 val _ = (add_binder ("?!", std_binder_precedence); add_const "?!")
 
 val _ = unicode_version { u = UChar.exists ^ "!", tmnm = "?!"}
-val _ = TeX_notation {hol = "?!", TeX = ("\\HOLTokenUnique",2)}
-val _ = TeX_notation {hol = UChar.exists ^ "!", TeX = ("\\HOLTokenUnique",2)}
+val _ = TeX_notation {hol = "?!", TeX = ("\\HOLTokenUnique{}",2)}
+val _ = TeX_notation {hol = UChar.exists ^ "!", TeX = ("\\HOLTokenUnique{}",2)}
 
 val LET_DEF =
  Definition.new_definition
@@ -154,8 +153,8 @@ val _ = add_rule {term_name   = "~",
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 val _ = unicode_version { u = UChar.neg, tmnm = "~"};
-val _ = TeX_notation {hol = "~", TeX = ("\\HOLTokenNeg",1)}
-val _ = TeX_notation {hol = UChar.neg, TeX = ("\\HOLTokenNeg",1)}
+val _ = TeX_notation {hol = "~", TeX = ("\\HOLTokenNeg{}",1)}
+val _ = TeX_notation {hol = UChar.neg, TeX = ("\\HOLTokenNeg{}",1)}
 
 (* prettyprinting information here for "let" and "and" is completely ignored;
    the pretty-printer handles these specially.  These declarations are only
@@ -232,8 +231,8 @@ val IN_DEF =
 
 val _ = (add_infix ("IN", 425, Parse.NONASSOC); add_const "IN");
 val _ = unicode_version {u = UChar.setelementof, tmnm = "IN"};
-val _ = TeX_notation {hol = "IN", TeX = ("\\HOLTokenIn",1)}
-val _ = TeX_notation {hol = UChar.setelementof, TeX = ("\\HOLTokenIn",1)}
+val _ = TeX_notation {hol = "IN", TeX = ("\\HOLTokenIn{}",1)}
+val _ = TeX_notation {hol = UChar.setelementof, TeX = ("\\HOLTokenIn{}",1)}
 
 val RES_FORALL_DEF =
  Definition.new_definition

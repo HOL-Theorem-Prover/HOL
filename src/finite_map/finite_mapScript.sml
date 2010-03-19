@@ -87,7 +87,7 @@ val _ = add_infix_type
             ParseName = SOME "|->",
             Assoc = RIGHT,
             Name = "fmap"};
-val _ = TeX_notation {hol = "|->", TeX = ("\\HOLTokenMapto", 1)}
+val _ = TeX_notation {hol = "|->", TeX = ("\\HOLTokenMapto{}", 1)}
 
 (* --------------------------------------------------------------------- *)
 (* Define bijections                                                     *)
@@ -575,8 +575,8 @@ val SUBMAP_DEF = new_definition (
        !x. x IN FDOM f ==> x IN FDOM g /\ (FAPPLY f x = FAPPLY g x)``)
 val _ = set_fixity "SUBMAP" (Infix(NONASSOC, 450));
 val _ = Unicode.unicode_version { u = UTF8.chr 0x2291, tmnm = "SUBMAP"}
-val _ = TeX_notation {hol = "SUBMAP", TeX = ("\\HOLTokenSubmap", 1)}
-val _ = TeX_notation {hol = UTF8.chr 0x2291, TeX = ("\\HOLTokenSubmap", 1)}
+val _ = TeX_notation {hol = "SUBMAP", TeX = ("\\HOLTokenSubmap{}", 1)}
+val _ = TeX_notation {hol = UTF8.chr 0x2291, TeX = ("\\HOLTokenSubmap{}", 1)}
 
 
 val SUBMAP_FEMPTY = Q.store_thm

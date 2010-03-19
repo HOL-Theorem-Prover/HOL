@@ -50,7 +50,7 @@ val _ = add_infix_type
          {Prec = 70,
           ParseName = SOME "#", Name = "prod",
           Assoc = HOLgrammars.RIGHT};
-val _ = TeX_notation { hol = "#", TeX = ("\\HOLTokenProd", 1)}
+val _ = TeX_notation { hol = "#", TeX = ("\\HOLTokenProd{}", 1)}
 
 val REP_ABS_PAIR = Q.prove
 (`!x y. REP_prod (ABS_prod ^pairfn) = ^pairfn`,
