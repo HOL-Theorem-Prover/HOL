@@ -1587,7 +1587,7 @@ in
      "    --logging            : do per-theory time logging\n",
      "    --polymllibdir directory : use specified directory for Poly/ML's libraries\n",
      "    --poly file          : use specified file as the Poly/ML executable\n",
-     "    --poly_not_hol       : Treat the Poly/ML executable as plain, not as a hol-augmented executable",
+     "    --poly_not_hol       : Treat the Poly/ML executable as plain, not as a hol-augmented executable\n",
      "    --no_holmakefile     : don't use any Holmakefile\n",
      "    --no_overlay         : don't use an overlay file\n",
      "    --no_prereqs         : don't recursively build in INCLUDES\n",
