@@ -483,36 +483,36 @@ struct
         in
           wordsSyntax.mk_word_asr (op1, wordsSyntax.mk_w2n op2)
         end
-    | parse_term (decl, dict) ("(" :: "rotate_left" :: tokens) =
-        (* bit rotation to the left -- the number of bits to rotate is given by
-           the second argument, which must also be a bit-vector *)
+    | parse_term (decl, dict)
+          ("(" :: "rotate_left" :: "[" :: n :: "]" :: tokens) =
+        (* bit rotation to the left, by n bits *)
         let
           val tokens = remove_right_parenthesis tokens
           val operands = parse_term_list (decl, dict) tokens
-          val _ = if List.length operands <> 2 then
-              raise ERR "parse_term" "'rotate_left' must have 2 arguments"
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'rotate_left' must have 1 argument"
             else ()
-          val op1 = List.hd operands
-          val op2 = List.hd (List.tl operands)
+          val operand = List.hd operands
+          val n = Arbnum.fromString n
         in
-          wordsSyntax.mk_word_rol (op1, wordsSyntax.mk_w2n op2)
+          wordsSyntax.mk_word_rol (operand, numSyntax.mk_numeral n)
         end
-    | parse_term (decl, dict) ("(" :: "rotate_right" :: tokens) =
-        (* bit rotation to the right -- the number of bits to rotate is given by
-           the second argument, which must also be a bit-vector *)
+    | parse_term (decl, dict)
+          ("(" :: "rotate_right" :: "[" :: n :: "]" :: tokens) =
+        (* bit rotation to the right, by n bits *)
         let
           val tokens = remove_right_parenthesis tokens
           val operands = parse_term_list (decl, dict) tokens
-          val _ = if List.length operands <> 2 then
-              raise ERR "parse_term" "'rotate_right' must have 2 arguments"
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'rotate_right' must have 1 argument"
             else ()
-          val op1 = List.hd operands
-          val op2 = List.hd (List.tl operands)
+          val operand = List.hd operands
+          val n = Arbnum.fromString n
         in
-          wordsSyntax.mk_word_ror (op1, wordsSyntax.mk_w2n op2)
+          wordsSyntax.mk_word_ror (operand, numSyntax.mk_numeral n)
         end
     | parse_term (decl, dict) ("(" :: "bvudiv0" :: tokens) =
-        (* I assume bvudiv0 w is an internal Z3 abbreviation for bvudiv w 0. *)
+        (* I assume bvudiv0 w is an internal Z3 abbreviation for bvudiv w 0w. *)
         let
           val tokens = remove_right_parenthesis tokens
           val operands = parse_term_list (decl, dict) tokens
@@ -520,11 +520,13 @@ struct
               raise ERR "parse_term" "'bvudiv0' must have 1 argument"
             else ()
           val operand = List.hd operands
+          val dim = fcpLib.index_to_num (wordsSyntax.dim_of operand)
+          val zero = wordsSyntax.mk_word (Arbnum.zero, dim)
         in
-          wordsSyntax.mk_word_div (operand, numSyntax.zero_tm)
+          wordsSyntax.mk_word_div (operand, zero)
         end
     | parse_term (decl, dict) ("(" :: "bvurem0" :: tokens) =
-        (* I assume bvurem0 w is an internal Z3 abbreviation for bvurem w 0. *)
+        (* I assume bvurem0 w is an internal Z3 abbreviation for bvurem w 0w. *)
         let
           val tokens = remove_right_parenthesis tokens
           val operands = parse_term_list (decl, dict) tokens
@@ -532,8 +534,10 @@ struct
               raise ERR "parse_term" "'bvurem0' must have 1 argument"
             else ()
           val operand = List.hd operands
+          val dim = fcpLib.index_to_num (wordsSyntax.dim_of operand)
+          val zero = wordsSyntax.mk_word (Arbnum.zero, dim)
         in
-          wordsSyntax.mk_word_mod (operand, numSyntax.zero_tm)
+          wordsSyntax.mk_word_mod (operand, zero)
         end
     | parse_term (decl, dict) ("(" :: tok :: tokens) =
         (* function application *)
