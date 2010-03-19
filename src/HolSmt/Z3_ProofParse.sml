@@ -334,11 +334,12 @@ struct
             (Term.mk_comb (array1, i), Term.mk_comb (array2, i))))
         end
     | parse_term _ ["bv", "[", m, ":", n, "]"] =
-        (* bit-vector literals *)
+        (* bit-vector literals: numeric value m, bit-width n *)
         wordsSyntax.mk_word (Arbnum.fromString m, Arbnum.fromString n)
     (* The following bit-vector operations would perhaps better be implemented
-       using a table. However, SmtLib.OperatorsTable cannot be used because Z3
-       provides some operations that are not available in SMT-LIB. *)
+       using a table. However, SmtLib.OperatorsTable cannot be used at the
+       moment because these operations are not available in SMT-LIB's AUFLIA
+       logic (which is the translation target for that table). *)
     | parse_term _ ["bvand"] = wordsSyntax.word_and_tm
     | parse_term _ ["bvadd"] = wordsSyntax.word_add_tm
     | parse_term _ ["bvmul"] = wordsSyntax.word_mul_tm
@@ -347,9 +348,11 @@ struct
     | parse_term _ ["bvsub"] = wordsSyntax.word_sub_tm
     (* FIXME: I'm not sure that these are semantically equivalent, especially
               wrt. division by 0w. But as long as all proofs are checked
-              successfully ... *)
+              successfully, I won't bother. *)
     | parse_term _ ["bvudiv"] = wordsSyntax.word_div_tm
     | parse_term _ ["bvudiv_i"] = wordsSyntax.word_div_tm
+    | parse_term _ ["bvurem"] = wordsSyntax.word_mod_tm
+    | parse_term _ ["bvurem_i"] = wordsSyntax.word_mod_tm
     | parse_term _ ["bvslt"] = wordsSyntax.word_lt_tm
     | parse_term _ ["bvult"] = wordsSyntax.word_lo_tm
     | parse_term _ ["bvsle"] = wordsSyntax.word_le_tm
@@ -479,6 +482,58 @@ struct
           val op2 = List.hd (List.tl operands)
         in
           wordsSyntax.mk_word_asr (op1, wordsSyntax.mk_w2n op2)
+        end
+    | parse_term (decl, dict) ("(" :: "rotate_left" :: tokens) =
+        (* bit rotation to the left -- the number of bits to rotate is given by
+           the second argument, which must also be a bit-vector *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 2 then
+              raise ERR "parse_term" "'rotate_left' must have 2 arguments"
+            else ()
+          val op1 = List.hd operands
+          val op2 = List.hd (List.tl operands)
+        in
+          wordsSyntax.mk_word_rol (op1, wordsSyntax.mk_w2n op2)
+        end
+    | parse_term (decl, dict) ("(" :: "rotate_right" :: tokens) =
+        (* bit rotation to the right -- the number of bits to rotate is given by
+           the second argument, which must also be a bit-vector *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 2 then
+              raise ERR "parse_term" "'rotate_right' must have 2 arguments"
+            else ()
+          val op1 = List.hd operands
+          val op2 = List.hd (List.tl operands)
+        in
+          wordsSyntax.mk_word_ror (op1, wordsSyntax.mk_w2n op2)
+        end
+    | parse_term (decl, dict) ("(" :: "bvudiv0" :: tokens) =
+        (* I assume bvudiv0 w is an internal Z3 abbreviation for bvudiv w 0. *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'bvudiv0' must have 1 argument"
+            else ()
+          val operand = List.hd operands
+        in
+          wordsSyntax.mk_word_div (operand, numSyntax.zero_tm)
+        end
+    | parse_term (decl, dict) ("(" :: "bvurem0" :: tokens) =
+        (* I assume bvurem0 w is an internal Z3 abbreviation for bvurem w 0. *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'bvurem0' must have 1 argument"
+            else ()
+          val operand = List.hd operands
+        in
+          wordsSyntax.mk_word_mod (operand, numSyntax.zero_tm)
         end
     | parse_term (decl, dict) ("(" :: tok :: tokens) =
         (* function application *)
