@@ -23,6 +23,8 @@ val holfoot_mk_var_abs : string * term -> term
 
 val HOLFOOT_LOCK_ENV_MAP_term : term;
 val HOLFOOT_SPECIFICATION_term : term
+val HOLFOOT_VAR_RES_FRAME_SPLIT_term : term;
+val HOLFOOT_VAR_RES_FRAME_SPLIT___EMP_PRED_term : term;
 val holfoot_ap_array_term : term
 val holfoot_ap_bigstar_list_term : term
 val holfoot_ap_binexpression_term : term
@@ -136,7 +138,8 @@ val is_holfoot_prog_new : term -> bool
 val is_holfoot_prog_with_resource : term -> bool
 val is_holfoot_tag : term -> bool
 val is_holfoot_var : term -> bool
-
+val dest_holfoot_ap_data_array_interval : term -> (bool * (term * term * term))
+val is_holfoot_ap_data_array_interval : term -> bool
 
 end
 

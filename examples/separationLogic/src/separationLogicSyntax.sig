@@ -121,6 +121,7 @@ val is_asl_false          : term -> bool
 val dest_asl_trival_cond  : term -> term * term
 val is_asl_trivial_cond   : term -> bool
 val dest_asl_star         : term -> term * term * term
+val strip_asl_star        : term -> term list
 val is_asl_star           : term -> bool
 val dest_asl_exists       : term -> term * term 
 val is_asl_exists         : term -> bool
@@ -171,6 +172,8 @@ val fasl_procedure_call_preserve_names_wrapper_term : term;
 val dest_fasl_procedure_call_preserve_names_wrapper : term -> term * term * term * term
 val is_fasl_procedure_call_preserve_names_wrapper   : term -> bool
 val dest_FASL_SPECIFICATION : term -> term * term * term;
+val is_FASL_SPECIFICATION : term -> bool;
+
 
 
 

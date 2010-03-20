@@ -7047,29 +7047,6 @@ ASM_SIMP_TAC std_ss [var_res_exp_add_def, var_res_exp_binop_const_REWRITE]);
 
 
 
-val holfoot_ap_data_array___SPLIT___intro_same_start = store_thm ("holfoot_ap_data_array___SPLIT___intro_same_start",
-``!ec ec' nc nc2 data.
-
-((ec <= ec') /\ (ec' <= ec + nc)) ==>
-((ec' - ec) = nc2) ==>
-
-(holfoot_ap_data_array (var_res_exp_const ec) (var_res_exp_const nc) data =
-asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
-   (holfoot_ap_data_array (var_res_exp_const ec) (var_res_exp_const nc2)
-       (MAP (\tl. (FST tl, FIRSTN nc2 (SND tl))) data))
-   (holfoot_ap_data_array (var_res_exp_const ec') (var_res_exp_const (nc - nc2))
-       (MAP (\tl. (FST tl, BUTFIRSTN nc2 (SND tl))) data)))``,
-
-REPEAT STRIP_TAC THEN
-`nc = (nc2 + (nc - nc2))` by DECIDE_TAC THEN
-ONCE_ASM_REWRITE_TAC[] THEN
-Q.PAT_ASSUM `X = nc2` (ASSUME_TAC o GSYM) THEN
-SIMP_TAC std_ss [holfoot_ap_data_array___SPLIT,
-   IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
-ASM_SIMP_TAC arith_ss [var_res_exp_add_sub_REWRITES]);
-
-
-
 
 val holfoot_ap_data_array___EXP_REWRITE = store_thm ("holfoot_ap_data_array___EXP_REWRITE",
 ``!e1 e2 n1 n2 data s.
@@ -7529,6 +7506,20 @@ Cases_on `e` THENL [
    ASM_SIMP_TAC arith_ss [holfoot_ap_data_array_0]
 ]);
 
+
+val holfoot_ap_data_interval___end_before_begin = store_thm (
+"holfoot_ap_data_interval___end_before_begin",
+``!b e data. (e < b) ==>
+     (holfoot_ap_data_interval (var_res_exp_const b) (var_res_exp_const e) data =
+     var_res_bool_proposition DISJOINT_FMAP_UNION 
+         (EVERY (\tl. NULL (SND tl)) data /\ ALL_DISTINCT (MAP FST data)))``,
+
+SIMP_TAC arith_ss [holfoot_ap_data_interval___CONST] THEN
+REPEAT STRIP_TAC THEN
+`SUC e - b = 0` by DECIDE_TAC THEN
+ASM_SIMP_TAC std_ss [holfoot_ap_data_array_0]);
+
+
 val holfoot_ap_data_interval___LENGTH_NOT_EQ_REWRITE = store_thm (
 "holfoot_ap_data_interval___LENGTH_NOT_EQ_REWRITE",
 ``!ec nc t tvL data.
@@ -7614,6 +7605,241 @@ ASM_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___
    VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___var_res_exp_binop]);
 
 
+
+val holfoot_ap_data_interval___NOT_EMPTY_DATA_0 = store_thm ("holfoot_ap_data_interval___NOT_EMPTY_DATA_0",
+``!b e t data.
+holfoot_ap_data_interval b e ((t,[])::data) =
+asl_trivial_cond (EVERY (\tl. NULL (SND tl)) data /\ ALL_DISTINCT (t::(MAP FST data)))
+   (var_res_prop_binexpression DISJOINT_FMAP_UNION T $< e b)``,
+
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [holfoot_ap_data_interval_def,
+   holfoot_ap_data_array___NOT_EMPTY_DATA_0,
+   EXTENSION, asl_bool_EVAL, var_res_prop_equal_def,
+   var_res_prop_binexpression_def, var_res_exp_const_EVAL,
+   var_res_stack_proposition_def, IN_ABS, LET_THM] THEN
+
+SIMP_TAC list_ss [var_res_exp_binop_REWRITE,
+   var_res_exp_add_def,var_res_exp_binop_const_REWRITE] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `e (FST x)` THEN ASM_SIMP_TAC std_ss [] THEN
+Cases_on `b (FST x)` THEN ASM_SIMP_TAC std_ss [] THEN
+DECIDE_TAC);
+
+
+
+
+
+val holfoot_ap_data_array_interval___same_start___SPLIT___aa = store_thm (
+   "holfoot_ap_data_array_interval___same_start___SPLIT___aa",
+``!c1 c2 c3 c4 c5 lc data.
+(c3 <= c2) ==>
+((c1+c3 = c4) /\ ((c2 - c3) = c5) /\ (c3 = lc)) ==>
+
+(holfoot_ap_data_array (var_res_exp_const c1) (var_res_exp_const c2) data =
+asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
+   (holfoot_ap_data_array (var_res_exp_const c1) (var_res_exp_const c3)
+       (MAP (\tl. (FST tl, FIRSTN lc (SND tl))) data))
+   (holfoot_ap_data_array (var_res_exp_const c4) (var_res_exp_const c5)
+       (MAP (\tl. (FST tl, BUTFIRSTN lc (SND tl))) data)))``,
+
+REPEAT STRIP_TAC THEN
+`c2 = (c3 + c5)` by DECIDE_TAC THEN
+ONCE_ASM_REWRITE_TAC[] THEN
+SIMP_TAC std_ss [holfoot_ap_data_array___SPLIT,
+   IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
+ASM_REWRITE_TAC [var_res_exp_add_sub_REWRITES]);
+
+
+val holfoot_ap_data_array_interval___same_start___SPLIT___ai = store_thm (
+   "holfoot_ap_data_array_interval___same_start___SPLIT___ai",
+``!c1 c2 c3 c4 c5 lc data.
+(c1 <= c3) /\ (c3 < c1 + c2) ==>
+((SUC c3 = c4) /\ (c2 − (SUC c3 − c1) = c5) /\ (SUC c3 − c1 = lc)) ==>
+
+(holfoot_ap_data_array (var_res_exp_const c1) (var_res_exp_const c2) data =
+asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
+   (holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c3)
+       (MAP (\tl. (FST tl, FIRSTN lc (SND tl))) data))
+   (holfoot_ap_data_array (var_res_exp_const c4) (var_res_exp_const c5)
+       (MAP (\tl. (FST tl, BUTFIRSTN lc (SND tl))) data)))``,
+
+SIMP_TAC std_ss [holfoot_ap_data_interval___CONST] THEN
+REPEAT STRIP_TAC THEN 
+MATCH_MP_TAC (MP_CANON holfoot_ap_data_array_interval___same_start___SPLIT___aa) THEN
+DECIDE_TAC);
+
+
+val holfoot_ap_data_array_interval___same_start___SPLIT___ii = store_thm (
+   "holfoot_ap_data_array_interval___same_start___SPLIT___ii",
+``!c1 c2 c3 c4 c5 lc data.
+(c1 <= c3) /\ (c3 <= c2) ==>
+((SUC c3 = c4) /\ (c2 = c5) /\ (SUC c3 - c1 = lc)) ==>
+
+(holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c2) data =
+asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
+   (holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c3)
+       (MAP (\tl. (FST tl, FIRSTN lc (SND tl))) data))
+   (holfoot_ap_data_interval (var_res_exp_const c4) (var_res_exp_const c5)
+       (MAP (\tl. (FST tl, BUTFIRSTN lc (SND tl))) data)))``,
+
+SIMP_TAC std_ss [holfoot_ap_data_interval___CONST] THEN
+REPEAT STRIP_TAC THEN 
+MATCH_MP_TAC (MP_CANON holfoot_ap_data_array_interval___same_start___SPLIT___aa) THEN
+DECIDE_TAC);
+
+
+val holfoot_ap_data_array_interval___same_start___SPLIT___ia = store_thm (
+   "holfoot_ap_data_array_interval___same_start___SPLIT___ia",
+``!c1 c2 c3 c4 c5 lc data.
+(c3 <= c2 - c1) ==>
+((c1 + c3 = c4) /\ (c2 = c5) /\ (c3 = lc)) ==>
+
+(holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c2) data =
+asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
+   (holfoot_ap_data_array (var_res_exp_const c1) (var_res_exp_const c3)
+       (MAP (\tl. (FST tl, FIRSTN lc (SND tl))) data))
+   (holfoot_ap_data_interval (var_res_exp_const c4) (var_res_exp_const c5)
+       (MAP (\tl. (FST tl, BUTFIRSTN lc (SND tl))) data)))``,
+
+SIMP_TAC std_ss [holfoot_ap_data_interval___CONST] THEN
+REPEAT STRIP_TAC THEN 
+MATCH_MP_TAC (MP_CANON holfoot_ap_data_array_interval___same_start___SPLIT___aa) THEN
+DECIDE_TAC);
+
+
+val holfoot_ap_data_array___SPLIT___intro_same_start = store_thm (
+   "holfoot_ap_data_array___SPLIT___intro_same_start",
+``!c1 c2 c3 c4 c5 lc data.
+(c1 <= c3) /\ (c3 <= c1 + c2) ==>
+((c3 - c1 = c4) /\ (c2 - (c3 - c1) = c5) /\ (c3 - c1 = lc)) ==>
+
+(holfoot_ap_data_array (var_res_exp_const c1) (var_res_exp_const c2) data =
+asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
+   (holfoot_ap_data_array (var_res_exp_const c1) (var_res_exp_const c4)
+       (MAP (\tl. (FST tl, FIRSTN lc (SND tl))) data))
+   (holfoot_ap_data_array (var_res_exp_const c3) (var_res_exp_const c5)
+       (MAP (\tl. (FST tl, BUTFIRSTN lc (SND tl))) data)))``,
+
+SIMP_TAC std_ss [holfoot_ap_data_interval___CONST] THEN
+REPEAT STRIP_TAC THEN 
+MATCH_MP_TAC (MP_CANON holfoot_ap_data_array_interval___same_start___SPLIT___aa) THEN
+DECIDE_TAC);
+
+
+val holfoot_ap_data_interval___SPLIT___intro_same_start = store_thm (
+   "holfoot_ap_data_interval___SPLIT___intro_same_start",
+``!c1 c2 c3 c4 c5 lc data.
+(c1 <= c3) /\ (c3 <= c2) ==>
+((PRE c3 = c4) /\ (c2 = c5) /\ (c3 - c1 = lc)) ==>
+
+(holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c2) data =
+asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
+   (holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c4)
+       (MAP (\tl. (FST tl, FIRSTN lc (SND tl))) data))
+   (holfoot_ap_data_interval (var_res_exp_const c3) (var_res_exp_const c5)
+       (MAP (\tl. (FST tl, BUTFIRSTN lc (SND tl))) data)))``,
+SIMP_TAC std_ss [holfoot_ap_data_interval___SPLIT]);
+
+
+val holfoot_ap_data_interval___var_res_prop_implies___length_eq = store_thm (
+   "holfoot_ap_data_interval___var_res_prop_implies___length_eq",
+``!wpb rpb sfb ec1 ec2 t tvL data.
+(var_res_prop_implies DISJOINT_FMAP_UNION (wpb, rpb) 
+    (BAG_INSERT (holfoot_ap_data_interval (var_res_exp_const ec1) (var_res_exp_const ec2) ((t,tvL)::data)) sfb)
+    {|var_res_bool_proposition DISJOINT_FMAP_UNION (LENGTH tvL = SUC ec2 - ec1)|})``,
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [holfoot_ap_data_interval___CONST,
+   var_res_prop_implies_REWRITE, BAG_UNION_INSERT, BAG_UNION_EMPTY] THEN
+Tactical.REVERSE (Cases_on `LENGTH tvL = SUC ec2 - ec1`) THEN1 (
+   ASM_SIMP_TAC std_ss [var_res_bool_proposition_TF,
+       holfoot_ap_data_array___LENGTH_NOT_EQ_REWRITE] THEN
+   SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [var_res_prop___REWRITE,
+      var_res_prop___PROP___asl_false,
+      var_res_prop___COND_INSERT]
+) THEN ASM_SIMP_TAC std_ss [var_res_bool_proposition_TF] THEN
+METIS_TAC[var_res_prop___var_res_prop_stack_true, BAG_INSERT_commutes]);
+
+
+
+val holfoot_ap_data_interval___implies_in_heap = store_thm ("holfoot_ap_data_interval___implies_in_heap",
+``!c B sfb c1 c2 data.
+((c1 <= c) /\ (c <= c2)) ==>
+(holfoot_implies_in_heap B 
+    (BAG_INSERT (holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c2) data) sfb)
+    (var_res_exp_const c))``,
+
+SIMP_TAC std_ss [holfoot_ap_data_interval___CONST] THEN
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC holfoot_ap_data_array___implies_in_heap THEN
+DECIDE_TAC);
+
+
+
+val holfoot_ap_data_interval___implies_in_heap___COMPUTE = store_thm (
+   "holfoot_ap_data_interval___implies_in_heap___COMPUTE",
+``!c1 c2 data B c.
+((c1 <= c) /\ (c <= c2)) ==>
+(holfoot_implies_in_heap B 
+    {|(holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c2) data)|}
+    (var_res_exp_const c))``,
+SIMP_TAC std_ss [holfoot_ap_data_interval___implies_in_heap]);
+
+
+val holfoot_ap_data_interval___EXP_REWRITE = store_thm ("holfoot_ap_data_interval___EXP_REWRITE",
+``!e1 e2 e1' e2' data s.
+     (IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1) /\
+      IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1') /\
+     (e1 (FST s) = e1' (FST s)) /\ (e2 (FST s) = e2' (FST s))) ==>
+     (s IN holfoot_ap_data_interval e1  e2  data =
+      s IN holfoot_ap_data_interval e1' e2' data)``,
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [holfoot_ap_data_interval_def] THEN
+MATCH_MP_TAC holfoot_ap_data_array___EXP_REWRITE THEN
+ASM_SIMP_TAC std_ss [var_res_exp_binop_REWRITE,
+   var_res_exp_add_def, var_res_exp_binop_const_REWRITE]);
+
+
+val holfoot_ap_data_interval___implies_inequal_0_start = store_thm ("holfoot_ap_data_interval___implies_inequal_0_start",
+``!e1 e2 sfb data.
+var_res_implies_unequal DISJOINT_FMAP_UNION 
+    (BAG_INSERT (holfoot_ap_data_interval e1 e2 data) sfb)
+    e1 (var_res_exp_const 0)``,
+
+SIMP_TAC std_ss [var_res_implies_unequal_def,
+   var_res_bigstar_REWRITE, IS_SEPARATION_COMBINATOR___FINITE_MAP,
+   IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
+   var_res_prop_weak_unequal_def, var_res_prop_weak_binexpression_def,
+   var_res_prop_binexpression_def, var_res_stack_proposition_def,
+   IN_ABS, LET_THM, asl_star_def, var_res_exp_const_EVAL] THEN
+REPEAT GEN_TAC THEN STRIP_TAC THEN
+Cases_on `e1 (FST p)` THEN1 (
+    FULL_SIMP_TAC std_ss [holfoot_ap_data_interval_def,
+       holfoot_ap_data_array_def, var_res_exp_prop_def,
+       var_res_exp_binop_REWRITE, var_res_exp_add_def,
+       var_res_exp_binop_const_REWRITE, IN_ABS, LET_THM]
+) THEN
+`e1 (FST s) = SOME x` by ALL_TAC THEN1 (
+   Tactical.REVERSE (`e1 (FST s) = e1 (FST p)` by ALL_TAC) THEN1 (
+      ASM_REWRITE_TAC[]
+   ) THEN
+   MATCH_MP_TAC IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___SUBSTATE_RIGHT THEN
+   FULL_SIMP_TAC std_ss [VAR_RES_COMBINATOR_REWRITE] THEN
+   METIS_TAC[VAR_RES_STACK_IS_SUBSTATE_INTRO]
+) THEN
+ASM_SIMP_TAC std_ss [] THEN
+STRIP_TAC THEN
+`p IN holfoot_ap_data_interval (var_res_exp_const 0) e2 data` by ALL_TAC THEN1 (
+   MATCH_MP_TAC (EQ_IMP_RULE_CANON holfoot_ap_data_interval___EXP_REWRITE) THEN
+   MAP_EVERY Q.EXISTS_TAC [`e1`, `e2`] THEN
+   ASM_SIMP_TAC std_ss [var_res_exp_const_EVAL,
+      IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL]
+) THEN
+FULL_SIMP_TAC std_ss [holfoot_ap_data_interval_0_start, asl_bool_EVAL]);
+
+
+
 (***************************************
  * Some holfoot rewrites   
  **************************************)
@@ -7642,9 +7868,12 @@ val holfoot_ap_data_array___SIMP_THMS =
         holfoot_ap_data_array_0,
         holfoot_ap_data_array_0_start,
         holfoot_ap_data_array___LENGTH_NOT_EQ_REWRITE,
+        holfoot_ap_data_array___NOT_EMPTY_DATA_0,
         holfoot_ap_data_interval_0,
         holfoot_ap_data_interval_0_start,
-        holfoot_ap_data_interval___LENGTH_NOT_EQ_REWRITE]);
+        holfoot_ap_data_interval___LENGTH_NOT_EQ_REWRITE,
+        holfoot_ap_data_interval___end_before_begin,
+        holfoot_ap_data_interval___NOT_EMPTY_DATA_0]);
 
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___HOLFOOT_REWRITES =

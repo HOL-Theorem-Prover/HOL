@@ -133,7 +133,9 @@ sig
    val VAR_RES_ELIM_COMMENTS_TAC    : Abbrev.tactic
    val VAR_RES_VC_TAC               : Abbrev.tactic;
    val VAR_RES_SPECIFICATION___CONSEQ_CONV : ConseqConv.conseq_conv
-   val VAR_RES_SPECIFICATION_TAC : Abbrev.tactic
+   val VAR_RES_SPECIFICATION_TAC    : Abbrev.tactic
+   val VAR_RES_ENTAILMENT_INIT___CONSEQ_CONV : ConseqConv.conseq_conv
+   val VAR_RES_ENTAILMENT_INIT_TAC   : Abbrev.tactic
 end  =
 struct
 
@@ -945,14 +947,6 @@ in
 end
 
 end
-
-
-fun get_exception f x =
-(f x;raise UNCHANGED) handle e => e
-
-
-val VAR_RES_SPECIFICATION_TAC =
-  CONSEQ_CONV_TAC (K VAR_RES_SPECIFICATION___CONSEQ_CONV)
 
 
 
@@ -2636,7 +2630,7 @@ in
 end;
 
 
-fun VAR_RES_FRAME_SPLIT_INFERENCE___asl_exists___CONV tt =
+fun VAR_RES_FRAME_SPLIT_INFERENCE___asl_exists___CONSEQ_CONV tt =
 let
    val (_, _, _, _, context_sfb, split_sfb, imp_sfb, _) =  dest_VAR_RES_FRAME_SPLIT tt;
 
@@ -3259,7 +3253,7 @@ val VAR_RES_INFERENCES_LIST___cheap_simplifications = ("cheap simps",
        VAR_RES_FRAME_SPLIT_INFERENCE___asl_trivial_cond___CONV),
    ("entail_simp___asl_exists",
        no_context_strengthen_conseq_conv
-       VAR_RES_FRAME_SPLIT_INFERENCE___asl_exists___CONV),
+       VAR_RES_FRAME_SPLIT_INFERENCE___asl_exists___CONSEQ_CONV),
    ("comment_block",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___block_comment___CONV)]):var_res_inference_group
@@ -3755,6 +3749,26 @@ val VAR_RES_PURE_VC_TAC =
 
 val VAR_RES_ELIM_COMMENTS_TAC = REWRITE_TAC [fasl_comments_ELIM]
 val VAR_RES_VC_TAC = (TRY VAR_RES_PURE_VC_TAC) THEN VAR_RES_ELIM_COMMENTS_TAC
+
+
+
+
+val VAR_RES_SPECIFICATION_TAC =
+  CONSEQ_CONV_TAC (K VAR_RES_SPECIFICATION___CONSEQ_CONV)
+
+
+fun VAR_RES_SINGLE_ENTAILMENT_INIT_CONSEQ_CONV t =
+   if (is_VAR_RES_FRAME_SPLIT t) then EVERY_CONSEQ_CONV [
+       TRY_CONV VAR_RES_FRAME_SPLIT_INFERENCE___ALL_CONST_INTRO___CONV,
+       DEPTH_STRENGTHEN_CONSEQ_CONV VAR_RES_FRAME_SPLIT_INFERENCE___asl_exists___CONSEQ_CONV,
+       DEPTH_CONV VAR_RES_FRAME_SPLIT_INFERENCE___asl_star___CONV] t
+   else raise UNCHANGED
+
+val VAR_RES_ENTAILMENT_INIT___CONSEQ_CONV =
+   DEPTH_STRENGTHEN_CONSEQ_CONV VAR_RES_SINGLE_ENTAILMENT_INIT_CONSEQ_CONV
+
+val VAR_RES_ENTAILMENT_INIT_TAC =
+   CONSEQ_CONV_TAC (K VAR_RES_ENTAILMENT_INIT___CONSEQ_CONV);
 
 end
 

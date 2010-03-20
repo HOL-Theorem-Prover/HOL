@@ -1176,8 +1176,8 @@ in
               begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent); 
               add_string "...") else ());         
           add_string "]]";
+       end_block ();
     end_block ();
-    add_newline ();
     end_block ()
 end 
 
@@ -1303,5 +1303,6 @@ temp_remove_holfoot_pp ();t
 
 val _ = Feedback.set_trace "PPBackEnd use annotations" 0
 val _ = add_holfoot_pp_quiet();
+
 
 end

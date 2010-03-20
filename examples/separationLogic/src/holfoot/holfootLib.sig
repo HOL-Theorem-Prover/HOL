@@ -60,21 +60,25 @@ sig
    val xHF_STEP_TAC_n          : gen_step_tac_opt list -> int -> int option -> Abbrev.tactic;
    val xHF_SOLVE_TAC           : gen_step_tac_opt list -> Abbrev.tactic;
    val xHF_CONTINUE_TAC        : gen_step_tac_opt list -> Abbrev.tactic;
+   val xHF_SIMPLIFY_TAC        : gen_step_tac_opt list -> Abbrev.tactic;
 
    val HF_STEP_TAC             : int -> Abbrev.tactic;
    val HF_STEP_TAC_n           : int -> int option -> Abbrev.tactic;
    val HF_SOLVE_TAC            : Abbrev.tactic;
    val HF_CONTINUE_TAC         : Abbrev.tactic;
+   val HF_SIMPLIFY_TAC         : Abbrev.tactic;
    val HF_VC_SOLVE_TAC         : Abbrev.tactic;
 
    val HF_PURE_VC_TAC          : Abbrev.tactic;
    val HF_ELIM_COMMENTS_TAC    : Abbrev.tactic
    val HF_VC_TAC               : Abbrev.tactic;
    val HF_SPECIFICATION_TAC    : Abbrev.tactic
+   val HF_INIT_TAC             : Abbrev.tactic
    val HF_SPECIFICATION_CONSEQ_CONV : ConseqConv.conseq_conv
 
    val holfoot_set_goal                : string -> proofManagerLib.proofs
    val holfoot_set_goal_preprocess     : string -> proofManagerLib.proofs
+   val holfoot_set_goal_specs          : string -> string list -> proofManagerLib.proofs
    val holfoot_set_goal_procedures     : string -> string list -> proofManagerLib.proofs
    val holfoot_auto_verify_spec        : string -> thm
    val holfoot_verify_spec             : string -> gen_step_tac_opt list -> thm

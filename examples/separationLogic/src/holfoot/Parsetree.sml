@@ -80,7 +80,8 @@ type fun_item =
       post: a_invariant}
 *)
 
-datatype p_program =
+datatype p_top =
     Pprogram of a_component list * p_item list
-
+  | Pentailments of (string * a_proposition * a_proposition) list
+ 
 end;

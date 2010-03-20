@@ -213,12 +213,28 @@ val holfoot_prop_input_ap_term =
   holfoot_a_proposition -> holfoot_a_proposition``
 
 
+val HOLFOOT_VAR_RES_FRAME_SPLIT_term =
+``(VAR_RES_FRAME_SPLIT (DISJOINT_FMAP_UNION:holfoot_heap bin_option_function))
+:bool # label list option ->
+ (holfoot_var -> num) # (holfoot_var -> num) ->
+ (holfoot_var -> num) ->
+ (holfoot_a_proposition -> num) ->
+ (holfoot_a_proposition -> num) ->
+ (holfoot_a_proposition -> num) ->
+ ((holfoot_a_proposition -> num) -> bool) -> bool``
+
+val HOLFOOT_VAR_RES_FRAME_SPLIT___EMP_PRED_term =
+``(BAG_EVERY (VAR_RES_IS_PURE_PROPOSITION DISJOINT_FMAP_UNION)) :
+  ((holfoot_a_proposition -> num) -> bool)``
+
+
 val HOLFOOT_SPECIFICATION_term =
 ``(FASL_SPECIFICATION holfoot_separation_combinator) :
      (string # holfoot_a_proposition) list -> 
      (bool # string # (holfoot_var list # num list -> holfoot_program)
            # (holfoot_var list # num list -> holfoot_program)) list -> 
      bool``;
+
 
 val holfoot_lock_invariant_term = 
    ``(var_res_lock_invariant DISJOINT_FMAP_UNION):(holfoot_var set) -> holfoot_a_proposition -> holfoot_a_proposition``
@@ -251,6 +267,11 @@ val is_holfoot_ap_data_array = (can dest_holfoot_ap_data_array);
 val holfoot_ap_data_interval_term = holfoot_mk_const "holfoot_ap_data_interval";
 val dest_holfoot_ap_data_interval = strip_comb_3 holfoot_ap_data_interval_term;
 val is_holfoot_ap_data_interval = (can dest_holfoot_ap_data_interval);
+
+fun dest_holfoot_ap_data_array_interval t =
+    (false, dest_holfoot_ap_data_array t) handle HOL_ERR _ =>
+    (true, dest_holfoot_ap_data_interval t);
+val is_holfoot_ap_data_array_interval = can dest_holfoot_ap_data_array_interval;
 
 val holfoot_exp_null_term = ``(var_res_exp_const 0):holfoot_a_expression``
 fun is_holfoot_exp_null t = aconv t holfoot_exp_null_term

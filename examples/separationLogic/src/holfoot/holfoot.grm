@@ -106,6 +106,9 @@ val tree_link_tags = ("l", "r")
   |  BANGWRITEREAD
   |  below_ELSE
   |  unary_prefix
+  |  ENTAILS
+  |  STRING of string
+  |  ENTAILMENT
 
 
 (* precedences (increasing) and associativities for expressions *)
@@ -122,7 +125,10 @@ val tree_link_tags = ("l", "r")
 (* entry points *)
 
 %nonterm 
-     program of Parsetree.p_program
+     top of Parsetree.p_top
+  |  program of Parsetree.p_top
+  |  entailments of Parsetree.p_top
+  |  entailment_seq of (string * Parsetree.a_proposition * Parsetree.a_proposition) list
   |  a_proposition of Parsetree.a_proposition
   |  program_item_star of Parsetree.p_item list
   |  program_item of Parsetree.p_item
@@ -151,12 +157,26 @@ val tree_link_tags = ("l", "r")
   |  a_simple_component_expression_notempty_seq of (string * Parsetree.a_expression) list
   |  ident_or_hol of string
 
-%start program
+%start top
 %pos (int * int)
 
 
 
 %%
+
+top:
+    program ( program )
+  | entailments ( entailments )
+
+entailments:
+   entailment_seq 
+   ( Pentailments entailment_seq )
+
+entailment_seq :
+    EOF
+       ( [] )
+  | ENTAILMENT STRING a_proposition ENTAILS a_proposition entailment_seq
+       ( (STRING, a_proposition1, a_proposition2)::entailment_seq )
 
 program :
     program_item_star
