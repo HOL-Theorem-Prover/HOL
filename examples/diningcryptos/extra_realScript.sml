@@ -2,7 +2,7 @@
 loadPath := ["../ho_prover","../subtypes","../rsa"] @ !loadPath;
 app load ["bossLib","realLib","transcTheory","subtypeTheory",
           "formalizeUseful","extra_boolTheory",
-          "boolContext","extra_pred_setTools","sumTheory"];
+          (*"boolContext",*)"extra_pred_setTools","sumTheory"];
 
 open HolKernel Parse boolLib bossLib realTheory realLib
      formalizeUseful subtypeTheory extra_numTheory transcTheory

@@ -324,7 +324,7 @@ val list_rws = computeLib.add_thms
       ZIP, UNZIP,
       REVERSE_DEF, (* might want to think about more efficient
                       version of this *)
-      FILTER, FOLDL, FOLDR, FOLDL, EL_compute,
+      FILTER, FOLDL, FOLDR, FOLDL, EL_restricted, EL_simp_restricted,
       computeLib.lazyfy_thm list_case_compute,
       list_size_def];
 
@@ -336,7 +336,6 @@ fun list_compset () = let
 in
   base
 end
-
 
 end (* struct *)
 

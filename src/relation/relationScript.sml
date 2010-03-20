@@ -78,6 +78,9 @@ val _ = add_rule { fixity = Suffix 2100,
                    term_name = "^+" }
 val _ = overload_on ("^+", ``TC : ('a -> 'a -> bool) -> 'a -> 'a -> bool``)
 val _ = Unicode.unicode_version {u = Unicode.UChar.sup_plus, tmnm = "^+"}
+val _ = TeX_notation {hol = Unicode.UChar.sup_plus,
+                      TeX = ("\\HOLTokenSupPlus{}", 1)}
+val _ = TeX_notation {hol = "^+", TeX = ("\\HOLTokenSupPlus{}", 1)}
 
 
 val RTC_DEF = new_definition(
@@ -91,6 +94,7 @@ val _ = add_rule { fixity = Suffix 2100,
                    pp_elements = [TOK "^*"],
                    term_name = "^*" }
 val _ = overload_on ("^*", ``RTC : ('a -> 'a -> bool) -> 'a -> 'a -> bool``)
+val _ = TeX_notation {hol = "^*", TeX = ("\\HOLTokenSupStar{}", 1)}
 
 val RC_DEF = new_definition(
   "RC_DEF",

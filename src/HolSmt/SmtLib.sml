@@ -58,6 +58,7 @@ structure SmtLib = struct
     (Term.inst [{redex = Type.alpha, residue = Type.bool}]
        boolSyntax.conditional, "if_then_else", "", ""),
     (boolSyntax.conditional, "ite", "", ""),
+    (* integer operations *)
     (intSyntax.negate_tm, "~", "", ""),
     (intSyntax.absval_tm, "hol_int_abs", "hol_int_abs Int Int",
       "forall (?x Int) (= (hol_int_abs ?x) (ite (< ?x 0) (- 0 ?x) ?x))"),

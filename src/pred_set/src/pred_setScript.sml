@@ -109,6 +109,7 @@ val GSPEC_DEF_LEMMA =
 
 val GSPECIFICATION = new_specification
   ("GSPECIFICATION", ["GSPEC"], GSPEC_DEF_LEMMA);
+val _ = TeX_notation {hol = "|", TeX = ("\\HOLTokenBar{}", 1)}
 
 (* --------------------------------------------------------------------- *)
 (* load generalized specification code.					 *)
@@ -282,6 +283,8 @@ val SUBSET_DEF = new_definition(
   ``$SUBSET s t = !x:'a. x IN s ==> x IN t``);
 val _ = set_fixity "SUBSET" (Infix(NONASSOC, 450))
 val _ = unicode_version { u = UChar.subset, tmnm = "SUBSET"};
+val _ = TeX_notation {hol = "SUBSET", TeX = ("\\HOLTokenSubset{}", 1)}
+val _ = TeX_notation {hol = UChar.subset, TeX = ("\\HOLTokenSubset{}", 1)}
 
 val SUBSET_TRANS = store_thm
     ("SUBSET_TRANS",
@@ -388,6 +391,8 @@ val PSUBSET_UNIV =
 val UNION_DEF = new_infixl_definition
      ("UNION_DEF", (--`UNION s t = {x:'a | x IN s \/ x IN t}`--),500);
 val _ = unicode_version{ u = UChar.union, tmnm = "UNION"}
+val _ = TeX_notation {hol = "UNION", TeX = ("\\HOLTokenUnion{}", 1)}
+val _ = TeX_notation {hol = UChar.union, TeX = ("\\HOLTokenUnion{}", 1)}
 
 val IN_UNION = store_thm
      ("IN_UNION",
@@ -470,6 +475,8 @@ val INTER_DEF = new_infixl_definition
      ("INTER_DEF",
       (--`INTER s t = {x:'a | x IN s /\ x IN t}`--), 600);
 val _ = unicode_version{ u = UChar.inter, tmnm = "INTER"};
+val _ = TeX_notation {hol = "INTER", TeX = ("\\HOLTokenInter{}", 1)}
+val _ = TeX_notation {hol = UChar.inter, TeX = ("\\HOLTokenInter{}", 1)}
 
 val IN_INTER = store_thm
      ("IN_INTER",

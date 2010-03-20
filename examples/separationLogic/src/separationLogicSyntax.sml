@@ -152,6 +152,7 @@ fun mk_FASL_PROGRAM_IS_ABSTRACTION (xenv,penv,x,y) =
 
 val FASL_SPECIFICATION_term = asl_mk_const "FASL_SPECIFICATION"
 val dest_FASL_SPECIFICATION = strip_comb_3 FASL_SPECIFICATION_term;
+val is_FASL_SPECIFICATION = can dest_FASL_SPECIFICATION;
 
 
 val COND_PROP___IMP_term = asl_mk_const "COND_PROP___IMP";
@@ -220,6 +221,15 @@ val is_asl_trivial_cond = (can dest_asl_trival_cond);
 
 val dest_asl_star = strip_comb_3 asl_star_term;
 val is_asl_star = (can dest_asl_star);
+fun strip_asl_star t =
+let
+   val (_, p1, p2) = dest_asl_star t;
+   val p1L = strip_asl_star p1;
+   val p2L = strip_asl_star p2;
+in
+   (p1L @ p2L)
+end handle HOL_ERR _ => [t];
+
 
 fun dest_asl_exists tt =
   let
@@ -270,6 +280,20 @@ in
 end handle HOL_ERR _ => (empty_label_list, tt, fn () => REFL tt)
 
 
+fun dest_list_fasl_comment_location tt =
+dest_fasl_comment_location tt handle HOL_ERR _ =>
+dest_fasl_comment_location (rand (rator tt))
+
+
+fun save_dest_list_fasl_comment_location tt =
+   if (is_fasl_comment_location tt) then
+      save_dest_fasl_comment_location tt 
+   else
+   let
+      val (c, p, f) = save_dest_fasl_comment_location (rand (rator tt))
+   in
+      (c, p, fn () => (RATOR_CONV (RAND_CONV (K (f ()))) tt))
+   end;
 
 val fasl_comment_location2_term = asl_mk_const "fasl_comment_location2"
 val dest_fasl_comment_location2 = strip_comb_2 fasl_comment_location2_term;

@@ -26,8 +26,9 @@ or if variables from the goal are used in the pattern in ways that make the
 pattern fail to type-check.
 
 \COMMENTS
-This tactic improves on the following tedious workflow: {Q.PAT_ASSUM pat
-MP_TAC}, {Q.MATCH_ABBREV_TAC `pat ==> X`}, {Q.UNABBREV_TAC `X`}, {STRIP_TAC}.
+This tactic improves on the following tedious workflow:
+{Q.PAT_ASSUM pat MP_TAC}, {Q.MATCH_ABBREV_TAC `pat ==> X`}, {Q.UNABBREV_TAC `X`},
+{STRIP_TAC}.
 
 \SEEALSO
 Q.MATCH_ABBREV_TAC, Q.MATCH_ASSUM_RENAME_TAC

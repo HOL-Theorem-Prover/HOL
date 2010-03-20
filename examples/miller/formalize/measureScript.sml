@@ -1017,7 +1017,7 @@ val SIGMA_ALGEBRA_SIGMA = store_thm
    ++ DISCH_THEN (MP_TAC o Q.SPEC `x`)
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN MATCH_MP_TAC
-   ++ Q.EXISTS_TAC `s`
+   ++ Q.EXISTS_TAC `P`
    ++ RW_TAC std_ss []
    ++ PROVE_TAC [SUBSET_DEF]);
 
@@ -1664,7 +1664,8 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
        ++ PROVE_TAC [ALGEBRA_INTER])
    ++ RW_TAC std_ss [GSPECIFICATION, SUBSET_DEF, closed_cdi_def] <<
    [PROVE_TAC [closed_cdi_def, SMALLEST_CLOSED_CDI],
-    Know `s INTER COMPL s'' = COMPL (COMPL s UNION (s INTER s''))`
+    Q.MATCH_ASSUM_RENAME_TAC `s1 ∩ s2 ∈ smallest_closed_cdi a` [] ++
+    Know `s1 INTER COMPL s2 = COMPL (COMPL s1 UNION (s1 INTER s2))`
     >> (PSET_TAC [EXTENSION]
         ++ PROVE_TAC [])
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -1737,10 +1738,12 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     ++ MATCH_MP_TAC CLOSED_CDI_DISJOINT
     ++ Q.PAT_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
+    ++ Q.PAT_ASSUM `!m n. PP m n` (MP_TAC o Q.SPECL [`m`, `n`])
     ++ PSET_TAC [DISJOINT_DEF, EXTENSION]
     ++ PROVE_TAC []]);
 
+val IN_BIGINTER = prove(``∀x. x ∈ BIGINTER a ⇔ ∀s. s ∈ a ⇒ x ∈ s``,
+                        REWRITE_TAC [IN_BIGINTER]);
 val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
   ("SIGMA_PROPERTY_DISJOINT_LEMMA2",
    ``!a.

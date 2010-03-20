@@ -12,6 +12,9 @@ infixr 3 ==>;
 infixr 3 -->;
 infix 8 via by;
 
+(* infixes for THEN shorthands *)
+infix >> >- >|
+
 structure Tag = Tag :> FinalTag where type tag = Tag.tag
 structure Kind = Kind :> FinalKind where type kind = Kind.kind
 structure Type = Type :> FinalType where type hol_type = Type.hol_type

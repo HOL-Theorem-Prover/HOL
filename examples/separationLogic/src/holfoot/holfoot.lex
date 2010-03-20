@@ -28,7 +28,8 @@ val keyword_table =
 List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
 (Binarymap.mkDict String.compare)
 [
-  ("dispose",   DISPOSE),
+  ("Entailment",   ENTAILMENT),
+  ("dispose",      DISPOSE),
   ("else",      ELSE),
   ("emp",       EMPTY),
   ("if",        IF),
@@ -48,6 +49,10 @@ List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
   ("data_lseg", DATA_LISTSEG),
   ("queue",     QUEUE),
   ("data_queue",DATA_QUEUE),
+  ("array",     ARRAY),
+  ("data_array",DATA_ARRAY),
+  ("interval",     INTERVAL),
+  ("data_interval",DATA_INTERVAL),
   ("tree" ,     TREE),
   ("data_tree", DATA_TREE),
   ("and" ,      AND),
@@ -82,6 +87,7 @@ ident = {letter} {alphanum}*;
 qident = ("_" | "#") {ident};
 num = [0-9]+;
 hol_quote = "``" [^ `\``]* "``";
+quoted_string = "\"" [^ `\"`]* "\"";
 
 
 
@@ -94,6 +100,8 @@ hol_quote = "``" [^ `\``]* "``";
   ( (YYBEGIN Comment; lex ()) );
 <INITIAL>"|->" =>
   ( POINTSTO (mkMtTok yytext yypos (!yylineno)) );
+<INITIAL>"|-" =>
+  ( ENTAILS (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"," =>
   ( COMMA (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"\\" =>
@@ -150,6 +158,8 @@ hol_quote = "``" [^ `\``]* "``";
   ( mkKeyword yytext yypos (!yylineno) );
 <INITIAL>{qident} =>
   ( QIDENT (mkTok I yytext yypos (!yylineno)) );
+<INITIAL>{quoted_string} =>
+  ( STRING (mkTok (fn s => (substring (s, 1, (String.size s)-2))) yytext yypos (!yylineno)) );
 <INITIAL>. =>
   ( lexError "ill-formed token" yytext yypos (!yylineno) );
 

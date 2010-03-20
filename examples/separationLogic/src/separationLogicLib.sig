@@ -36,6 +36,7 @@ val fasl_comment_modify_INC         : term -> term
 val fasl_comment_modify_COPY_INIT   : term -> term
 val fasl_comment_modify_APPEND      : string -> term -> term
 val fasl_comment_modify_APPEND_INC  : string -> term -> term
+val fasl_comment_modify_APPEND_DEC  : string -> term -> term
 val list_append_norm_CONV           : conv
 
 val fasl_comment_block_CONV                : conv -> conv

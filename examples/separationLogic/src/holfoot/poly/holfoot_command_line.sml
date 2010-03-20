@@ -187,6 +187,7 @@ in
                 | #"3" => (apply_step 3)
                 | #"4" => (apply_step 4)
                 | #"5" => (apply_step 5)
+                | #"X" => (proofManagerLib.e (HF_INIT_TAC))
                 | #"s" => (apply_solve ())
                 | #"c" => (apply_strip ())
                 | #"w" => (apply_solve_till stop_at_while)

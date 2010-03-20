@@ -1,0 +1,161 @@
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+
+
+(******************************************************************************)
+(* Just the shape                                                             *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/quicksort-shape.dsf"];
+(* holfoot_set_goal file *)
+
+val quicksort_shape_TAC = 
+HF_CONTINUE_TAC THEN
+REPEAT STRIP_TAC THEN
+`l_const = SUC r_const` by DECIDE_TAC THEN
+FULL_SIMP_TAC list_ss [] THEN
+HF_CONTINUE_TAC THEN
+REPEAT STRIP_TAC THEN
+Q.EXISTS_TAC `data'' ++ data'` THEN
+HF_SOLVE_TAC;
+
+val thm = holfoot_tac_verify_spec file NONE
+                [("quicksort", quicksort_shape_TAC)]
+
+
+
+
+
+(******************************************************************************)
+(* Some useful REWRITES                                                       *)
+(******************************************************************************)
+open sortingTheory sortingTheory arithmeticTheory listTheory rich_listTheory
+
+val quicksort_opt = combined_gen_step_tac_opt [
+    add_rewrites [SORTED_DEF, PERM_REFL],
+    add_ssfrags [permLib.PERM_ss] ]
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file2 = concat [examplesDir, "/interactive/quicksort-full.dsf"];
+
+(* holfoot_set_goal file2 *)
+val quicksort_TAC = 
+
+xHF_CONTINUE_TAC [stop_at_while, quicksort_opt] THEN
+Tactical.REVERSE (REPEAT STRIP_TAC) THEN1 (
+   (* Case e <= b *)
+   Cases_on `b_const' > e_const'` THEN1 (
+      xHF_SOLVE_TAC [quicksort_opt]
+   ) THEN
+   `e_const' = b_const'` by DECIDE_TAC THEN
+   HF_SOLVE_TAC THEN
+   HF_VC_TAC THEN REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC std_ss [LENGTH_EQ_NUM_compute,
+      SORTED_DEF]
+) THEN
+Tactical.REVERSE (Cases_on `LENGTH data = ((e_const' + 1) - b_const')`) THEN1 (
+   HF_SIMPLIFY_TAC
+) THEN
+`~(NULL data)` by ALL_TAC THEN1 (
+   Cases_on `data` THEN 
+   FULL_SIMP_TAC list_ss []
+) THEN
+HF_STEP_TAC 1 THEN
+REPEAT STRIP_TAC THENL [
+   (* prove while loop invariant *)
+   Tactical.REVERSE (Cases_on `LENGTH data = ((ec + 1) - bc)`) THEN1 (
+      HF_SIMPLIFY_TAC
+   ) THEN
+   xHF_CONTINUE_TAC [use_asms] THEN
+   HF_VC_TAC THEN
+   REPEAT STRIP_TAC THENL [
+      Cases_on `n < lc - bc` THENL [
+         METIS_TAC[],
+         
+         `n = lc - bc` by DECIDE_TAC THEN
+         METIS_TAC[]
+      ],
+      
+      ASM_SIMP_TAC std_ss [EL_REPLACE_ELEMENT, GSYM EL,
+         REPLACE_ELEMENT_SEM] THEN
+      ASM_SIMP_TAC arith_ss [],
+
+      SIMP_TAC std_ss [GSYM SWAP_ELEMENTS_def] THEN
+      `(lc - bc < LENGTH data) /\
+       (rc - bc < LENGTH data)` by DECIDE_TAC THEN
+      METIS_TAC [PERM_SWAP_ELEMENTS, PERM_TRANS]
+   ],
+   
+
+   (* prove remaining body *)
+   HF_CONTINUE_TAC THEN
+   Q.EXISTS_TAC `data_h::data_t` THEN
+   ASM_SIMP_TAC arith_ss [PERM_REFL] THEN
+   HF_STEP_TAC 2 THEN
+   REPEAT STRIP_TAC THEN
+   `lc = rc + 1` by DECIDE_TAC THEN
+   Cases_on `b_const' = 0` THEN1 (
+      HF_SIMPLIFY_TAC
+   ) THEN
+   FULL_SIMP_TAC std_ss [] THEN
+   xHF_CONTINUE_TAC [use_asms] THEN
+   REPEAT STRIP_TAC THEN
+   Q.EXISTS_TAC `rdata ++ rdata'` THEN
+   Tactical.REVERSE (Cases_on `(rc + 1) - b_const' = LENGTH rdata`) THEN1 (
+      POP_ASSUM MP_TAC THEN
+      xHF_CONTINUE_TAC [do_expands]
+   ) THEN   
+   HF_VC_TAC THEN
+   ASM_SIMP_TAC list_ss [BUTFIRSTN_LENGTH_APPEND,
+                         FIRSTN_LENGTH_APPEND] THEN
+   
+   FULL_SIMP_TAC std_ss [GSYM EL, GSYM SWAP_ELEMENTS_def] THEN
+   FULL_SIMP_TAC list_ss [] THEN
+   REPEAT STRIP_TAC THENL [
+       MATCH_MP_TAC sortingTheory.SORTED_APPEND THEN
+       ASM_SIMP_TAC arith_ss [relationTheory.transitive_def] THEN
+       REPEAT STRIP_TAC THEN
+       `LENGTH data = SUC (LENGTH data_t)` by
+           METIS_TAC[PERM_LENGTH, LENGTH] THEN
+       `LENGTH rdata <= LENGTH data` by DECIDE_TAC THEN
+       `(LENGTH rdata > 0) /\ (rc − b_const' = PRE (LENGTH rdata))` by DECIDE_TAC THEN
+       Tactical.REVERSE (`(x <= HD data) /\ (HD data < y)` by ALL_TAC) THEN1 (
+          DECIDE_TAC
+       ) THEN
+       `MEM y (DROP (LENGTH rdata) (SWAP_ELEMENTS (PRE (LENGTH rdata)) 0 data)) /\
+        MEM x (TAKE (LENGTH rdata) (SWAP_ELEMENTS (PRE (LENGTH rdata)) 0 data))` by
+           METIS_TAC[PERM_MEM_EQ] THEN
+       NTAC 2 (POP_ASSUM MP_TAC) THEN
+       SIMP_TAC list_ss [MEM_EL, 
+           SWAP_ELEMENTS_def, REPLACE_ELEMENT_SEM, GSYM LEFT_FORALL_IMP_THM,
+           EL_REPLACE_ELEMENT, EL_FIRSTN, EL_BUTFIRSTN] THEN
+       REPEAT STRIP_TAC THENL [
+          Cases_on `n' = 0` THEN1 (
+             Cases_on `PRE (LENGTH rdata) = 0` THEN
+             ASM_SIMP_TAC list_ss []
+          ) THEN
+          ASM_SIMP_TAC arith_ss [COND_RAND, COND_RATOR],
+
+          Q.PAT_ASSUM `!n. X n ==> (HD data < EL n data)` MATCH_MP_TAC THEN
+          ASM_SIMP_TAC arith_ss []
+       ],
+
+       ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [] THEN
+       ONCE_REWRITE_TAC [PERM_FUN_APPEND] THEN
+       SIMP_TAC list_ss [] THEN
+       ONCE_REWRITE_TAC [PERM_SYM] THEN
+       MATCH_MP_TAC PERM_SWAP_ELEMENTS THEN
+       `LENGTH data = SUC (LENGTH data_t)` by
+           METIS_TAC[PERM_LENGTH, LENGTH] THEN
+       ASM_SIMP_TAC arith_ss []
+   ]
+];
+
+
+val thm2 = holfoot_tac_verify_spec file2 NONE
+                [("quicksort", quicksort_TAC)]
+
+

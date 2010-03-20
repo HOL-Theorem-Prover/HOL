@@ -28,7 +28,10 @@ fun term_of_absyn absyn = let
   fun checkcl a = let
     val nm = dest (head a)
   in
-    if mem nm ["/\\", "\\/", "!", "!:"] then
+    if mem nm ["/\\", "\\/", "!", "?", "!:", "?:", UnicodeChars.conj,
+               UnicodeChars.disj, UnicodeChars.forall, UnicodeChars.exists,
+               UnicodeChars.forall ^ ":", UnicodeChars.exists ^ ":"]
+    then
       raise ERRloc "term_of_absyn" (locn_of_absyn a)
                    ("Abstract syntax looks to be trying to redefine "^nm^". "^
                      "This is probably an error.\nIf you must, define with \

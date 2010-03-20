@@ -113,4 +113,8 @@ struct
     simpLib.SIMP_TAC (simpLib.mk_simpset [pred_setTheory.SET_SPEC_ss]) thms 
   end
 
+  (* A tactic that unfolds LET. *)
+  val LET_SIMP_TAC =
+    simpLib.SIMP_TAC (simpLib.mk_simpset [boolSimps.LET_ss]) []
+
 end

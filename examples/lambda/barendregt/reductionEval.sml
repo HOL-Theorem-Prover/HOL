@@ -241,11 +241,11 @@ end t
 
 val bnf_imp_noreduct = GEN_ALL (#2 (EQ_IMP_RULE noreduct_bnf))
 val nstar_imp_memnopath = GEN_ALL (#1 (EQ_IMP_RULE normstar_nopath))
-fun normstar_filter th =
-    [th, EQT_INTRO (MATCH_MP bnf_imp_noreduct (EQT_ELIM th))]
+fun normstar_filter (th,c) =
+    [(th,c), (EQT_INTRO (MATCH_MP bnf_imp_noreduct (EQT_ELIM th)),c)]
     handle HOL_ERR _ =>
-           [th, EQT_INTRO (MATCH_MP nstar_imp_memnopath (EQT_ELIM th))]
-           handle HOL_ERR _ => [th]
+           [(th,c), (EQT_INTRO (MATCH_MP nstar_imp_memnopath (EQT_ELIM th)),c)]
+           handle HOL_ERR _ => [(th,c)]
 
 fun mngcnv cnv solver stack t = cnv (solver stack) t
 val NORMSTAR_ss = SSFRAG {

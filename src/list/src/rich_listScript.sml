@@ -3225,6 +3225,69 @@ val GENLIST_CONS = store_thm(
   ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
   Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
 
+
+
+(*---------------------------------------------------------------------------
+   A list of numbers
+ ---------------------------------------------------------------------------*)
+
+val COUNT_LIST = TotalDefn.Define `
+   (COUNT_LIST 0 = []) /\
+   (COUNT_LIST (SUC n) = 0::MAP SUC (COUNT_LIST n))`
+
+val COUNT_LIST_compute = save_thm ("COUNT_LIST_compute",
+    CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV COUNT_LIST);
+
+val COUNT_LIST_GENLIST = store_thm ("COUNT_LIST_GENLIST",
+``!n. COUNT_LIST n = GENLIST I n``,
+Induct_on `n` THENL [
+   SIMP_TAC std_ss [GENLIST, COUNT_LIST],
+   ASM_SIMP_TAC std_ss [COUNT_LIST, GENLIST_CONS, MAP_GENLIST]
+]);
+
+val LENGTH_COUNT_LIST = store_thm ("LENGTH_COUNT_LIST",
+``!n. LENGTH (COUNT_LIST n) = n``,
+SIMP_TAC std_ss [COUNT_LIST_GENLIST, LENGTH_GENLIST]);
+
+val EL_COUNT_LIST = store_thm ("EL_COUNT_LIST",
+``!m n. m < n ==> (EL m (COUNT_LIST n) = m)``,
+SIMP_TAC std_ss [COUNT_LIST_GENLIST, EL_GENLIST]);
+
+val MEM_COUNT_LIST = store_thm ("MEM_COUNT_LIST",
+``!m n. MEM m (COUNT_LIST n) = (m < n)``,
+SIMP_TAC (std_ss++boolSimps.CONJ_ss) [listTheory.MEM_EL, EL_COUNT_LIST, 
+   LENGTH_COUNT_LIST, EL_COUNT_LIST]);
+
+val COUNT_LIST_SNOC = store_thm ("COUNT_LIST_SNOC",
+``(COUNT_LIST 0 = []) /\
+  (!n. COUNT_LIST (SUC n) = SNOC n (COUNT_LIST n))``,
+SIMP_TAC std_ss [COUNT_LIST_GENLIST, GENLIST]);
+
+val COUNT_LIST___COUNT = store_thm ("COUNT_LIST___COUNT",
+``!n. LIST_TO_SET (COUNT_LIST n) = count n``,
+Induct_on `n` THENL [
+   SIMP_TAC std_ss [pred_setTheory.COUNT_ZERO, COUNT_LIST, listTheory.LIST_TO_SET_THM],
+   ASM_SIMP_TAC std_ss [COUNT_LIST_SNOC, pred_setTheory.COUNT_SUC,
+      listTheory.LIST_TO_SET_APPEND, listTheory.SNOC_APPEND, listTheory.LIST_TO_SET_THM] THEN
+   SIMP_TAC std_ss [pred_setTheory.IN_UNION, pred_setTheory.IN_SING, 
+       pred_setTheory.EXTENSION, pred_setTheory.IN_INSERT] THEN
+   PROVE_TAC[]
+]);
+
+val COUNT_LIST___ADD = store_thm ("COUNT_LIST___ADD",
+``!n m. COUNT_LIST (n + m) = (COUNT_LIST n) ++ (MAP (\n'. n' + n) (COUNT_LIST m))``,
+Induct_on `n` THENL [
+   SIMP_TAC std_ss [COUNT_LIST, listTheory.APPEND, listTheory.MAP_ID],
+
+   GEN_TAC THEN
+   REWRITE_TAC[COUNT_LIST_SNOC] THEN
+   `SUC n + m = n + SUC m` by DECIDE_TAC THEN
+   ASM_SIMP_TAC std_ss [COUNT_LIST, MAP, MAP_MAP_o, combinTheory.o_DEF,
+      SNOC_APPEND, GSYM APPEND_ASSOC, APPEND] THEN
+   SIMP_TAC std_ss [arithmeticTheory.ADD_CLAUSES]
+]);
+
+
 (*---------------------------------------------------------------------------
    General theorems about lists. From Anthony Fox's and Thomas Tuerk's theories.
    Added by Thomas Tuerk

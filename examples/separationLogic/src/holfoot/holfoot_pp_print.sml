@@ -185,23 +185,43 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
        end    
     ) else if (same_const op_term holfoot_prog_dispose_term)  then (
        let
-          val exp_term = el 1 args;
+          val n_term = el 1 args;
+          val e_term = el 2 args;
+          val simple = is_holfoot_exp_one n_term;
        in
           begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);
-          add_string "dispose";
-          add_string " ";
-          sys (Top, Top, Top) (d - 1) exp_term;
+          if (simple) then (
+             add_string "dispose";
+             add_string " ";
+             sys (Top, Top, Top) (d - 1) e_term
+          ) else (
+             add_string "dispose-block";
+             add_string "(";             
+             sys (Top, Top, Top) (d - 1) e_term;
+             add_string ",";
+             sys (Top, Top, Top) (d - 1) n_term;
+             add_string ")"
+          );
 	  end_block ()
        end
     ) else if (same_const op_term holfoot_prog_new_term)  then (
        let
-          val v_term = el 1 args;
+          val n_term = el 1 args;
+          val v_term = el 2 args;
+          val simple = is_holfoot_exp_one n_term;
        in
           begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);
           sys (Top, Top, Top) (d - 1) v_term;
           add_string " =";
           add_break (1,!holfoot_pretty_printer_block_indent);
-          add_string "new()";
+          if simple then (
+             add_string "new()"
+          ) else (
+             add_string "new-block";             
+             add_string "(";             
+             sys (Top, Top, Top) (d - 1) n_term;
+             add_string ")"
+          );
 	  end_block ()
        end
     ) else if (same_const op_term fasl_prog_assume_term)  then (
@@ -734,6 +754,31 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
          add_string ")";
          end_block ()
       end
+    ) else if ((same_const op_term holfoot_ap_data_array_term) orelse
+               (same_const op_term holfoot_ap_data_interval_term)) then (
+      let
+         val has_data = not (same_const (el 3 args) listSyntax.nil_tm);
+         val is_interval = same_const op_term holfoot_ap_data_interval_term;
+         val desc = if is_interval then
+                       (if has_data then "data_interval" else "interval")
+                    else
+                       (if has_data then "data_array" else "array");
+      in
+         begin_block INCONSISTENT 0;       
+         add_string desc;
+         add_string "(";
+         add_break (0,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 1 args);
+         add_string ",";
+         add_break (1,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 2 args);
+         if has_data then
+              (add_string ",";add_break (1,!holfoot_pretty_printer_block_indent);
+               tag_list_printer (sys, add_string, add_break) (Top,Top,Top) (d-1) pps (el 3 args)
+              ) else ();
+         add_string ")";
+         end_block ()
+      end
     ) else if (same_const op_term holfoot_ap_bintree_term)  then (
       begin_block INCONSISTENT 0;       
       add_string "bin_tree";
@@ -1131,8 +1176,8 @@ in
               begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent); 
               add_string "...") else ());         
           add_string "]]";
+       end_block ();
     end_block ();
-    add_newline ();
     end_block ()
 end 
 
@@ -1258,5 +1303,6 @@ temp_remove_holfoot_pp ();t
 
 val _ = Feedback.set_trace "PPBackEnd use annotations" 0
 val _ = add_holfoot_pp_quiet();
+
 
 end

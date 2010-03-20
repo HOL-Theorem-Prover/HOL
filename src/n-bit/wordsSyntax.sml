@@ -52,6 +52,8 @@ val word_msb_tm         = mk_word_tm "word_msb"
 val word_lsb_tm         = mk_word_tm "word_lsb"
 val word_join_tm        = mk_word_tm "word_join"
 val word_concat_tm      = mk_word_tm "word_concat"
+val word_div_tm         = mk_word_tm "word_div"
+val word_mod_tm         = mk_word_tm "word_mod"
 val word_slice_tm       = mk_word_tm "word_slice"
 val word_bit_tm         = mk_word_tm "word_bit"
 val word_bits_tm        = mk_word_tm "word_bits"
@@ -171,6 +173,14 @@ in
             gamma |-> ty ] word_concat_tm,[w1,w2])
   handle HOL_ERR _ => raise ERR "mk_word_concat" ""
 end;
+
+fun mk_word_div (w1, w2) =
+  list_mk_comb (inst [alpha |-> dim_of w1] word_div_tm, [w1, w2])
+  handle HOL_ERR _ => raise ERR "mk_word_div" "";
+
+fun mk_word_mod (w1, w2) =
+  list_mk_comb (inst [alpha |-> dim_of w1] word_mod_tm, [w1, w2])
+  handle HOL_ERR _ => raise ERR "mk_word_mod" "";
 
 fun mk_word_log2 w =
   mk_comb(inst[alpha|->dim_of w]word_log2_tm,w)
@@ -396,6 +406,12 @@ val dest_word_join =
 val dest_word_concat =
   dest_binop word_concat_tm (ERR "dest_word_concat" "");
 
+val dest_word_div =
+  dest_binop word_div_tm (ERR "dest_word_div" "");
+
+val dest_word_mod =
+  dest_binop word_mod_tm (ERR "dest_word_mod" "");
+
 val dest_word_log2 =
   dest_monop word_log2_tm (ERR "dest_word_log2" "");
 
@@ -539,6 +555,8 @@ val is_word_sub = Lib.can dest_word_sub
 val is_word_mul = Lib.can dest_word_mul
 val is_word_rrx = Lib.can dest_word_rrx
 val is_word_concat = Lib.can dest_word_concat
+val is_word_div = Lib.can dest_word_div
+val is_word_mod = Lib.can dest_word_mod
 val is_word_log2 = Lib.can dest_word_log2
 val is_word_msb = Lib.can dest_word_msb
 val is_word_lsb = Lib.can dest_word_lsb

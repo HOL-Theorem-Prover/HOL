@@ -13,7 +13,7 @@ struct
 
 infix |> oo;
 
-open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net;
+open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net
 
 local open markerTheory in end;
 
@@ -38,36 +38,27 @@ type convdata = {name  : string,
 (* Make a rewrite rule into a conversion.                                    *)
 (*---------------------------------------------------------------------------*)
 
-datatype control = UNBOUNDED | BOUNDED of int ref
-
 (* boolean argument to c is whether or not the rewrite is bounded *)
 fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
   | appconv (c,BOUNDED(ref 0)) _ _ _    = failwith "exceeded rewrite bound"
   | appconv (c,BOUNDED r) solver stk tm = c true solver stk tm before
                                           Portable.dec r
 
-fun dest_tagged_rewrite thm = let
-  val (th, n) = DEST_BOUNDED thm
+fun mk_rewr_convdata (thm,tag) = let
+  val th = SPEC_ALL thm
 in
-  (BOUNDED (ref n), th)
-end handle HOL_ERR _ => (UNBOUNDED, thm)
-
-fun mk_rewr_convdata thm =
- let val (tag,thm') = dest_tagged_rewrite thm
-     val th = SPEC_ALL thm'
- in
-   SOME {name  = "<rewrite>",
-         key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
-         trace = 100, (* no need to provide extra tracing here;
-                         COND_REWR_CONV provides enough tracing itself *)
-         conv  = appconv (COND_REWR_CONV th, tag)} before
-   trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
-   handle HOL_ERR _ =>
-          (trace (2, LZ_TEXT(fn () =>
-                                thm_to_string th ^
-                                " dropped (conversion to rewrite failed)"));
-           NONE)
- end
+  SOME {name  = "<rewrite>",
+        key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
+        trace = 100, (* no need to provide extra tracing here;
+                      COND_REWR_CONV provides enough tracing itself *)
+        conv  = appconv (COND_REWR_CONV th, tag)} before
+  trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
+  handle HOL_ERR _ =>
+         (trace (2, LZ_TEXT(fn () =>
+                               thm_to_string th ^
+                               " dropped (conversion to rewrite failed)"));
+          NONE)
+end
 
 (*---------------------------------------------------------------------------*)
 (* Composable simpset fragments                                              *)
@@ -78,7 +69,7 @@ datatype ssfrag = SSFRAG of
     convs  : convdata list,
     rewrs  : thm list,
     ac     : (thm * thm) list,
-    filter : (thm -> thm list) option,
+    filter : (controlled_thm -> controlled_thm list) option,
     dprocs : Traverse.reducer list,
     congs  : thm list};
 
@@ -142,7 +133,7 @@ fun merge_ss (s:ssfrag list) =
 type net = ((term list -> term -> thm) -> term list -> conv) net;
 
 abstype simpset =
-     SS of {mk_rewrs    : (thm -> thm list),
+     SS of {mk_rewrs    : (controlled_thm -> controlled_thm list),
             ssfrags     : ssfrag list,
             initial_net : net,
             dprocs      : reducer list,
@@ -202,7 +193,7 @@ with
 
  fun mk_ac p A =
    let val (a,b,c) = Drule.MK_AC_LCOMM p
-   in a::b::c::A
+   in (a, UNBOUNDED)::(b, UNBOUNDED)::(c,UNBOUNDED)::A
    end handle HOL_ERR _ => A;
 
  fun ac_rewrites aclist = Lib.itlist mk_ac aclist [];
@@ -214,8 +205,11 @@ with
     (f as SSFRAG {convs,rewrs,filter,ac,dprocs,congs,...},
      SS {mk_rewrs=mk_rewrs',ssfrags,travrules,initial_net,dprocs=dprocs',
          limit})
-  = let val mk_rewrs = case filter of SOME f => f oo mk_rewrs' | _ => mk_rewrs'
-        val rewrs' = flatten (map mk_rewrs (ac_rewrites ac@rewrs))
+  = let val mk_rewrs = case filter of
+                         SOME f => f oo mk_rewrs'
+                       | _ => mk_rewrs'
+        val crewrs = map dest_tagged_rewrite rewrs
+        val rewrs' = flatten (map mk_rewrs (ac_rewrites ac@crewrs))
         val newconvdata = convs @ List.mapPartial mk_rewr_convdata rewrs'
         val net = net_add_convs initial_net newconvdata
         val TRAVRULES{relations,...} = travrules
@@ -325,7 +319,7 @@ in
               SOME (R,from,to) => let
                 fun foldthis (t,th) = DISCH t th
                 fun insert (t,th0) n = let
-                  val (bound,th) = dest_tagged_rewrite th0
+                  val (th,bound) = dest_tagged_rewrite th0
                   val looksloopy = aconv from to orelse
                                    (is_var_perm (from,to) andalso
                                     case bound of UNBOUNDED => true
@@ -432,17 +426,19 @@ end
 
  exception CONVNET of net;
 
- fun rewriter_for_ss (SS{mk_rewrs,travrules,initial_net,...}) =
-   let fun addcontext (context,thms) =
-        let val net = (raise context) handle CONVNET net => net
-        in CONVNET (net_add_convs net
-                       (List.mapPartial mk_rewr_convdata
-                         (flatten (map mk_rewrs thms))))
-        end
-       fun apply {solver,context,stack,relation} tm =
-         let val net = (raise context) handle CONVNET net => net
-         in tryfind (fn conv => conv solver stack tm) (lookup tm net)
-         end
+ fun rewriter_for_ss (SS{mk_rewrs,travrules,initial_net,...}) = let
+   fun addcontext (context,thms) = let
+     val net = (raise context) handle CONVNET net => net
+     val cthms = map dest_tagged_rewrite thms
+     val new_rwts = flatten (map mk_rewrs cthms)
+   in
+     CONVNET (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
+   end
+   fun apply {solver,context,stack,relation} tm = let
+     val net = (raise context) handle CONVNET net => net
+   in
+     tryfind (fn conv => conv solver stack tm) (lookup tm net)
+   end
    in REDUCER {name=SOME"rewriter_for_ss",
                addcontext=addcontext, apply=apply,
                initial=CONVNET initial_net}

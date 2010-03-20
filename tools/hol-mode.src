@@ -929,6 +929,11 @@ argument N, sets the trace to that value in particular."
   (interactive "nMax. number of visible assumptions: ")
   (hol-toggle-trace "goalstack number of assums" arg))
 
+(defun hol-toggle-goalstack-num-subgoals (arg)
+  "Toggles the number of shown subgoals."
+  (interactive "nMax. number of shown subgoals: ")
+  (hol-toggle-trace "Subgoal number" arg))
+
 (defun hol-toggle-simplifier-trace (arg)
   "Toggles the trace \"simplifier\".  With ARG sets trace to this value."
   (interactive "P")
@@ -1756,6 +1761,9 @@ already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-printing sep2]
    '(menu-item "--"))
 
+
+(define-key global-map [menu-bar hol-menu hol-printing num-subgoals]
+   '("Set no. of shown subgoals" . hol-toggle-goalstack-num-subgoals))
 
 (define-key global-map [menu-bar hol-menu hol-printing num-assums]
    '("Set no. of shown assumptions" . hol-toggle-goalstack-num-assums))

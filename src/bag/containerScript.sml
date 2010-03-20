@@ -203,6 +203,14 @@ Q.SPEC_THEN `b` STRUCT_CASES_TAC BAG_cases THEN
 SRW_TAC [][BAG_TO_LIST_THM])
 before export_rewrites ["BAG_TO_LIST_EQ_NIL"];
 
+local open rich_listTheory arithmeticTheory in
+  val LIST_ELEM_COUNT_LIST_TO_BAG = Q.store_thm(
+    "LIST_ELEM_COUNT_LIST_TO_BAG",
+    `LIST_ELEM_COUNT e ls = LIST_TO_BAG ls e`,
+    Induct_on `ls` THEN SRW_TAC [][LIST_ELEM_COUNT_THM,EMPTY_BAG] THEN
+    Cases_on `h = e` THEN SRW_TAC [][LIST_ELEM_COUNT_THM,BAG_INSERT,ADD1]);
+end
+
 (*---------------------------------------------------------------------------
     finite maps and bags.
  ---------------------------------------------------------------------------*)

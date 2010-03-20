@@ -2549,24 +2549,6 @@ fun prove_abs_fn_one_one th =
 (* Rules related to "semantic tags" for controlling rewriting                *)
 (*---------------------------------------------------------------------------*)
 
-fun MK_BOUNDED th n =
-  if n<0 then raise ERR "MK_BOUNDED" "negative bound"
-  else
-    ADD_ASSUM (mk_comb(bounded_tm, mk_var(Int.toString n, bool))) th
-
-fun DEST_BOUNDED th =
-    case HOLset.find (aconv bounded_tm o rator) (hypset th) of
-      SOME h => let
-        val arg = rand h
-      in
-        (PROVE_HYP (EQ_MP (SYM (SPEC arg BOUNDED_THM)) TRUTH) th,
-         valOf (Int.fromString (#1 (dest_var arg))))
-      end
-    | NONE => raise ERR "DEST_BOUNDED" "Theorem not bounded"
-
-val Ntimes = MK_BOUNDED
-val Once = C Ntimes 1
-
 val is_comm = can (kind_match_term comm_tm);
 val is_assoc = can (kind_match_term assoc_tm);
 

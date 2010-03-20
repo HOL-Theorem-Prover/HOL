@@ -50,6 +50,7 @@ val _ = add_infix_type
          {Prec = 70,
           ParseName = SOME "#", Name = "prod",
           Assoc = HOLgrammars.RIGHT};
+val _ = TeX_notation { hol = "#", TeX = ("\\HOLTokenProd{}", 1)}
 
 val REP_ABS_PAIR = Q.prove
 (`!x y. REP_prod (ABS_prod ^pairfn) = ^pairfn`,
@@ -358,16 +359,16 @@ val PEXISTS_THM = Q.store_thm
 (* Rewrite versions of ELIM_PEXISTS and ELIM_PFORALL                         *)
 (* ------------------------------------------------------------------------- *)
 
-val ELIM_PEXISTS_EVAL = Q.store_thm 
+val ELIM_PEXISTS_EVAL = Q.store_thm
 ("ELIM_PEXISTS_EVAL",
  `$? (UNCURRY (\x. P x)) = ?x. $? (P x)`,
- Q.SUBGOAL_THEN `!x. P x = \y. P x y` (fn th => ONCE_REWRITE_TAC [th]) THEN 
+ Q.SUBGOAL_THEN `!x. P x = \y. P x y` (fn th => ONCE_REWRITE_TAC [th]) THEN
  REWRITE_TAC [ETA_THM, PEXISTS_THM]);
 
-val ELIM_PFORALL_EVAL = Q.store_thm 
+val ELIM_PFORALL_EVAL = Q.store_thm
 ("ELIM_PFORALL_EVAL",
  `$! (UNCURRY (\x. P x)) = !x. $! (P x)`,
- Q.SUBGOAL_THEN `!x. P x = \y. P x y` (fn th => ONCE_REWRITE_TAC [th]) THEN 
+ Q.SUBGOAL_THEN `!x. P x = \y. P x y` (fn th => ONCE_REWRITE_TAC [th]) THEN
  REWRITE_TAC [ETA_THM, PFORALL_THM]);
 
 (*---------------------------------------------------------------------------

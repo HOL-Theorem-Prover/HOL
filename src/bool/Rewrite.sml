@@ -13,7 +13,7 @@
 structure Rewrite :> Rewrite =
 struct
 
-open HolKernel boolTheory boolSyntax Drule Abbrev;
+open HolKernel boolTheory boolSyntax Drule BoundedRewrites Abbrev;
 
 val ERR = mk_HOL_ERR "Rewrite";
 

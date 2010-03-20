@@ -53,8 +53,6 @@ val Cond =
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val BIGINTER_def = Define `BIGINTER a = {x | !s. s IN a ==> x IN s}`;
-
 val countable_def = Define
   `countable s = ?f. !x : 'a. x IN s ==> ?n : num. f n = x`;
 
@@ -95,8 +93,6 @@ val _ = save_thm ("list_elts_ind", list_elts_ind);
 val set_def = Define `set p s = s SUBSET p`;
 
 val nonempty_def = Define `nonempty s = ~(s = {})`;
-
-val count_def = Define `count (n:num) m = m < n`;
 
 val PREIMAGE_def = Define `PREIMAGE f s = {x | f x IN s}`;
 
@@ -938,38 +934,10 @@ val DIFF_ALT = store_thm
    ``!s t. s DIFF t = s INTER (COMPL t)``,
    RW_TAC std_ss [EXTENSION, IN_DIFF, IN_INTER, IN_COMPL]);
 
-val IN_BIGINTER = store_thm
-  ("IN_BIGINTER",
-   ``!x. x IN BIGINTER a = !s. s IN a ==> x IN s``,
-   RW_TAC std_ss [BIGINTER_def, GSPECIFICATION]);
-
 val DIFF_SUBSET = store_thm
   ("DIFF_SUBSET",
    ``!a b. a DIFF b SUBSET a``,
    RW_TAC std_ss [SUBSET_DEF, EXTENSION, IN_DIFF]);
-
-val IN_COUNT = store_thm
-  ("IN_COUNT",
-   ``!m n. m IN count n = m < n``,
-   RW_TAC std_ss [SPECIFICATION, count_def]);
-
-val COUNT_ZERO = store_thm
-  ("COUNT_ZERO",
-   ``count 0 = {}``,
-   RW_TAC std_ss [EXTENSION, IN_COUNT, NOT_IN_EMPTY]
-   ++ DECIDE_TAC);
-
-val COUNT_SUC = store_thm
-  ("COUNT_SUC",
-   ``!n. count (SUC n) = n INSERT count n``,
-   RW_TAC std_ss [EXTENSION, IN_INSERT, IN_COUNT]
-   ++ DECIDE_TAC);
-
-val FINITE_COUNT = store_thm
-  ("FINITE_COUNT",
-   ``!n. FINITE (count n)``,
-   Induct >> RW_TAC std_ss [COUNT_ZERO, FINITE_EMPTY]
-   ++ RW_TAC std_ss [COUNT_SUC, FINITE_INSERT]);
 
 val NUM_2D_BIJ = store_thm
   ("NUM_2D_BIJ",

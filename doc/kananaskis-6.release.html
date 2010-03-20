@@ -150,6 +150,16 @@ Behzad Akbarpour for the report of this bug.</p></li>
   it now gets a record of type <code>term_pp_types.ppstream_funs<code> that contains
   these functions as well as several others.</p></li>
 
+<li><p>The type of the <code>filter</code> field of
+the <code>SSFRAG</code> function for constructing simpset fragment
+values has changed
+from <code>(thm&nbsp;->&nbsp;thm&nbsp;list)&nbsp;option</code>
+to <code>(controlled_thm&nbsp;->&nbsp;controlled_thm&nbsp;list)&nbsp;option</code>,
+where a <q>controlled theorem</q> value is a pair of a theorem and a
+control indicating how many times the rewrite is allowed to be
+applied.  See the REFERENCE and the <code>BoundedRewrites</code>
+module for details.</p>
+
 </ul>
 
 <hr>

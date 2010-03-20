@@ -1,0 +1,35 @@
+quicksort(;b,e) [data_interval(b, e, data)] {
+  local piv, l, r;
+  if (e > b) {
+    piv = b->dta;
+    l = b + 1;
+    r = e;
+
+    while (l <= r) [data_interval(b,e, _data) * 
+                   (piv == #p) * (b == #bc) * (e == #ec) *
+                   (l == _lc) * (r == _rc) *
+                   (#bc < _lc) * (_lc <= _rc + 1) * (_rc <= #ec) *
+                   ``PERM org_data _data`` * ``HD org_data = HD _data`` *         
+                   ``!n. (0 < n) /\ (n < #lc - #bc) ==>  (EL n _data <= #p)`` *
+                   ``!n. (#rc - #bc < n) /\ (n <= #ec - #bc) ==> (#p < EL n _data)``] {
+      c = l->dta;
+      if (c <= piv) {
+        l = l + 1;
+      } else {
+        tmp1=l->dta; 
+        tmp2=r->dta; 
+        l->dta = tmp2;
+        r->dta = tmp1;
+        r = r - 1;
+      }
+    }
+    tmp1=r->dta; 
+    tmp2=b->dta; 
+    r->dta = tmp2;
+    b->dta = tmp1;
+    quicksort (;b, r);
+    quicksort (;l, e);
+  }
+} [data_interval(b, e, _rdata) *
+   ``(SORTED $<= _rdata) /\ (PERM data _rdata)``]
+

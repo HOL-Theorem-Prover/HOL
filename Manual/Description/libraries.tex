@@ -2233,14 +2233,15 @@ over sets. (In \ml{pred\_setSimps}.)
 constructor:
 \begin{hol}
 \begin{verbatim}
-   SSFRAG : { convs  : convdata list,
-              rewrs  : thm list,
-              ac     : (thm * thm) list,
-              filter : (thm -> thm list) option,
-              dprocs : Traverse.reducer list,
-              congs  : thm list,
-              name   : string option}
-           -> ssfrag
+   SSFRAG : {
+     convs  : convdata list,
+     rewrs  : thm list,
+     ac     : (thm * thm) list,
+     filter : (controlled_thm -> controlled_thm list) option,
+     dprocs : Traverse.reducer list,
+     congs  : thm list,
+     name   : string option
+   } -> ssfrag
 \end{verbatim}
 \end{hol}
 A complete description of the various fields of the record passed to
@@ -2383,8 +2384,15 @@ it.  Most \simpset{}s use the filter function from the \ml{pure\_ss}
 \simpset{} (see Section~\ref{sec:purebool-ss}).  However, when a
 \simpset{} fragment is added to a full simpset, the fragment can
 specify an additional filter component.  If specified, this function
-is of type \ml{thm~->~thm~list}, and is applied to each of the
-theorems produced by the existing \simpset's filter.
+is of type \ml{controlled\_thm~->~controlled\_thm~list}, and is applied
+to each of the theorems produced by the existing \simpset's filter.
+%
+\index{simplification!guaranteeing termination}
+(A ``controlled'' theorem is one that is accompanied by a piece of
+``control'' data expressing the limit (if any) on the number of times
+it can be applied.  See Section~\ref{sec:simp-special-rewrite-forms}
+for how users can introduce these limits.  The ``control'' type
+appears in the \ML{} module \ml{BoundedRewrites}.)
 
 The rewrite-producing filter in \ml{pure\_ss} strips away
 conjunctions, implications and universal quantifications until it has
@@ -2846,6 +2854,7 @@ the simplifier will perform AC-normalisation of disjunctions.  The
 \ml{Cong} function provides a similar interface for the addition of
 new congruence rules.
 
+\index{simplification!guaranteeing termination}
 \index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)}
 \index{Ntimes (controlling rewrite applications)@\ml{Ntimes} (controlling rewrite applications)}
 Two other functions provide a crude mechanism for controlling the

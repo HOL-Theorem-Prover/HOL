@@ -312,6 +312,48 @@ fun holfoot_a_space_pred2absyn vs (Aspred_empty) =
   in
      c
   end
+| holfoot_a_space_pred2absyn vs (Aspred_array (exp1, exp2)) = 
+  let
+     val exp1 = holfoot_expression2absyn vs exp1;
+     val exp2 = holfoot_expression2absyn vs exp2;
+     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_array_term, [
+             exp1, exp2, Absyn.mk_AQ holfoot_data_list___EMPTY_tm]);
+  in
+     c
+  end
+| holfoot_a_space_pred2absyn vs (Aspred_data_array (exp1, exp2, tag, data)) = 
+  let
+     val exp1 = holfoot_expression2absyn vs exp1;
+     val exp2 = holfoot_expression2absyn vs exp2;
+     val data_a = HOL_Absyn data;
+     val data_tag_term = string2holfoot_tag tag;
+     val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
+     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_array_term, [
+             exp1, exp2, data2_a]);
+  in
+     c
+  end
+| holfoot_a_space_pred2absyn vs (Aspred_interval (exp1, exp2)) = 
+  let
+     val exp1 = holfoot_expression2absyn vs exp1;
+     val exp2 = holfoot_expression2absyn vs exp2;
+     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_interval_term, [
+             exp1, exp2, Absyn.mk_AQ holfoot_data_list___EMPTY_tm]);
+  in
+     c
+  end
+| holfoot_a_space_pred2absyn vs (Aspred_data_interval (exp1, exp2, tag, data)) = 
+  let
+     val exp1 = holfoot_expression2absyn vs exp1;
+     val exp2 = holfoot_expression2absyn vs exp2;
+     val data_a = HOL_Absyn data;
+     val data_tag_term = string2holfoot_tag tag;
+     val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
+     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_interval_term, [
+             exp1, exp2, data2_a]);
+  in
+     c
+  end
 | holfoot_a_space_pred2absyn vs (Aspred_data_tree (tagL,exp,dtagL,data)) =
   let
      val exp = holfoot_expression2absyn vs exp;
@@ -620,17 +662,19 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   in
      (comb_a, [], [])
   end
-| holfoot_p_statement2absyn funL resL vs (Pstm_new v) =
+| holfoot_p_statement2absyn funL resL vs (Pstm_new (v, expr)) =
   let
      val var_term = string2holfoot_var v;
-     val comb_term = mk_comb (holfoot_prog_new_term, var_term);
-  in
-     (Absyn.mk_AQ comb_term, [v], [])
-  end  
-| holfoot_p_statement2absyn funL resL vs (Pstm_dispose expr) =
-  let
      val exp = holfoot_expression2absyn vs expr;
-     val comb_a = Absyn.mk_app (Absyn.mk_AQ holfoot_prog_dispose_term, exp);
+     val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_new_term, [exp, Absyn.mk_AQ var_term]);
+  in
+     (comb_a, [v], [])
+  end  
+| holfoot_p_statement2absyn funL resL vs (Pstm_dispose (expr1, expr2)) =
+  let
+     val exp1 = holfoot_expression2absyn vs expr1;
+     val exp2 = holfoot_expression2absyn vs expr2;
+     val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_dispose_term, [exp2,exp1]);
   in
      (comb_a, [], [])
   end  
@@ -1005,6 +1049,10 @@ fun p_item___is_resource (Presource _) = true |
 val examplesDir = Globals.HOLDIR  ^ "/examples/separationLogic/src/holfoot/EXAMPLES/";
 val file = examplesDir ^ "mem.sf" ; 
 
+
+val examplesDir = Globals.HOLDIR  ^ "/examples/separationLogic/src/holfoot/EXAMPLES/";
+val file = examplesDir ^ "/automatic/entailments.ent" ; 
+
 val prog2 = parse file
 val t = parse_holfoot_file file
 
@@ -1013,6 +1061,8 @@ fun dest_Pprogram (Pprogram (ident_decl, program_item_decl)) =
    (ident_decl, program_item_decl);
 
 val (ident_decl, program_item_decl) = dest_Pprogram prog2;
+
+val Pentailments ((comment, p1, p2)::_) = prog2
 *)
 
 
@@ -1063,8 +1113,51 @@ fun Pprogram2hol procL_opt (Pprogram (ident_decl, program_item_decl)) =
 
 
 
-val parse_holfoot_file = (Pprogram2hol NONE) o parse;
-fun parse_holfoot_file_restrict procL = (Pprogram2hol (SOME procL)) o parse;
+fun mk_entailment (comment, p1, p2) =
+let
+   val empty_vs = (Redblackset.empty String.compare, Redblackset.empty String.compare);
+   val a1 = holfoot_a_proposition2absyn empty_vs p1
+   val a2 = holfoot_a_proposition2absyn empty_vs p2
+   val (write_var_set, read_var_set) = get_read_write_var_set [] NONE [] [a1, a2]
+   val varL = Redblackset.listItems (Redblackset.union (write_var_set, read_var_set))
+   val var_tL = map string2holfoot_var varL
+   val r_bag = bagSyntax.mk_bag (var_tL, holfoot_var_ty);
+   val w_bag = bagSyntax.mk_bag ([], holfoot_var_ty);
+   val bag_t = pairSyntax.mk_pair (w_bag, r_bag)
+
+   val sr_t = pairSyntax.mk_pair (F, optionSyntax.mk_some 
+        (listSyntax.mk_list ([string_to_label comment], markerSyntax.label_ty)))
+
+   val a12_t = absyn2term (Absyn.mk_pair (a1, a2));
+   val b1 = bagSyntax.mk_bag (strip_asl_star (rand (rator a12_t)),
+         holfoot_a_proposition_ty)
+   val b2 = bagSyntax.mk_bag (strip_asl_star (rand a12_t), holfoot_a_proposition_ty);
+
+   val t0 = list_mk_comb (HOLFOOT_VAR_RES_FRAME_SPLIT_term, [sr_t, bag_t]);
+   val t1 = mk_comb (t0, inst [alpha |-> holfoot_var_ty] bagSyntax.EMPTY_BAG_tm)
+   val t2 = mk_comb (t1, inst [alpha |-> holfoot_a_proposition_ty] bagSyntax.EMPTY_BAG_tm)
+   val t3 = list_mk_comb (t2, [b1,b2, HOLFOOT_VAR_RES_FRAME_SPLIT___EMP_PRED_term]);
+in
+   t3
+end;
+
+
+fun Pentailments2hol res_opt (Pentailments eL) =
+   let
+      val eL' = if isSome (res_opt) then
+             filter (fn (c, p1, p2) => mem c (valOf res_opt)) eL else eL
+      val tL = map mk_entailment eL'
+   in
+      (list_mk_conj tL)
+   end;
+
+fun Ptop2hol res_opt (Pentailments x) =
+    Pentailments2hol res_opt (Pentailments x)
+  | Ptop2hol res_opt (Pprogram x) =
+    Pprogram2hol res_opt (Pprogram x);
+
+val parse_holfoot_file = (Ptop2hol NONE) o parse;
+fun parse_holfoot_file_restrict procL = (Ptop2hol (SOME procL)) o parse;
 
 fun print_file_contents file =
    let

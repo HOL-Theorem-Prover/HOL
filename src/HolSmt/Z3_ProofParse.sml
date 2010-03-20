@@ -33,7 +33,7 @@ struct
             else ()
           val (tokens, last) = Lib.front_last tokens
           val _ = if last <> ")" then
-              raise ERR "parse_typ" "missing ')' at the end"
+              raise ERR "parse_typ" "missing ')' at the end of function type"
             else ()
           (* separate the argument types *)
           fun separate tokens =
@@ -65,7 +65,7 @@ struct
             else ()
           val (tokens, last) = Lib.front_last tokens
           val _ = if last <> "]" then
-              raise ERR "parse_typ" "missing ']' at the end"
+              raise ERR "parse_typ" "missing ']' at the end of array type"
             else ()
           (* separate at a ':' token that is not nested within brackets *)
           fun separate 0 acc (":" :: tokens) =
@@ -88,8 +88,10 @@ struct
           (* arrays are translated to function types *)
           Type.--> (domT, rngT)
         end
-    | parse_typ _ =
-          raise ERR "parse_typ" "unknown type"
+    | parse_typ ["bv", "[", m, "]"] =
+         wordsSyntax.mk_word_type (fcpLib.index_type (Arbnum.fromString m))
+    | parse_typ tokens =
+        raise ERR "parse_typ" ("unknown type: " ^ String.concatWith ", " tokens)
 
   fun parse_integer (id_string : string) : int =
   let
@@ -128,6 +130,10 @@ struct
        -> string list -> term list *)
   fun parse_term_list (decl, dict) ("#" :: id :: tokens) =
         parse_term_id dict id :: parse_term_list (decl, dict) tokens
+    | parse_term_list (decl, dict)
+        ("bv" :: "[" :: m :: ":" :: n :: "]" :: tokens) =
+        parse_term (decl, dict) ["bv", "[", m, ":", n, "]"] ::
+          parse_term_list (decl, dict) tokens
     | parse_term_list (decl, dict) (tok :: tokens) =
         parse_term (decl, dict) [tok] :: parse_term_list (decl, dict) tokens
     | parse_term_list _ [] =
@@ -222,7 +228,56 @@ struct
           listSyntax.mk_all_distinct
             (listSyntax.mk_list (operands, Term.type_of (List.hd operands)))
         end
+    | parse_term (decl, dict) ("(" :: "xor" :: tokens) =
+        (* xor -- perhaps surprisingly, HOL doesn't define a corresponding
+           constant (but of course, xor is the same as "not equivalent") *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 2 then
+              raise ERR "parse_term" "'xor' must have 2 arguments"
+            else ()
+          val op1 = List.hd operands
+          val op2 = List.hd (List.tl operands)
+        in
+          boolSyntax.mk_neg (boolSyntax.mk_eq (op1, op2))
+        end
+    | parse_term (decl, dict) ("(" :: "xor3" :: tokens) =
+        (* xor a b c == xor (xor a b) c -- encodes the sum output bit of a full
+           adder *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 3 then
+              raise ERR "parse_term" "'xor3' must have 3 arguments"
+            else ()
+          val op1 = List.hd operands
+          val op2 = List.hd (List.tl operands)
+          val op3 = List.hd (List.tl (List.tl operands))
+          val mk_neq = boolSyntax.mk_neg o boolSyntax.mk_eq
+        in
+          mk_neq (mk_neq (op1, op2), op3)
+        end
+   | parse_term (decl, dict) ("(" :: "carry" :: tokens) =
+        (* carry a b c == (or (and a b) (and a c) (and b c)) -- encodes the
+           carry output bit of a full adder *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 3 then
+              raise ERR "parse_term" "'carry' must have 3 arguments"
+            else ()
+          val op1 = List.hd operands
+          val op2 = List.hd (List.tl operands)
+          val op3 = List.hd (List.tl (List.tl operands))
+          val conj1 = boolSyntax.mk_conj (op1, op2)
+          val conj2 = boolSyntax.mk_conj (op1, op3)
+          val conj3 = boolSyntax.mk_conj (op2, op3)
+        in
+          boolSyntax.list_mk_disj [conj1, conj2, conj3]
+        end
     | parse_term (decl, dict) ("(" :: "select" :: tokens) =
+        (* array lookup is translated as function application *)
         let
           val tokens = remove_right_parenthesis tokens
           val operands = parse_term_list (decl, dict) tokens
@@ -235,6 +290,7 @@ struct
           Term.mk_comb (array, index)
         end
     | parse_term (decl, dict) ("(" :: "store" :: tokens) =
+        (* array update is translated as function update *)
         let
           val tokens = remove_right_parenthesis tokens
           val operands = parse_term_list (decl, dict) tokens
@@ -247,6 +303,242 @@ struct
         in
           Term.mk_comb (combinSyntax.mk_update (index, value), array)
         end
+    | parse_term (decl, dict) ("(" :: "array-ext" :: "[" :: tokens) =
+        (* array-ext [T] A B in Z3 yields an index i such that select A i <>
+           select B i (provided A and B are different arrays of type T) *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          (* we do not need T, so we just drop it (without any checking) *)
+          fun drop_until_square_bracket 0 ("]" :: toks) =
+                toks
+            | drop_until_square_bracket n ("]" :: toks) =
+                drop_until_square_bracket (n-1) toks
+            | drop_until_square_bracket n ("[" :: toks) =
+                drop_until_square_bracket (n+1) toks
+            | drop_until_square_bracket n (_ :: toks) =
+                drop_until_square_bracket n toks
+            | drop_until_square_bracket _ [] =
+                raise ERR "parse_term"
+                  "'array-ext': missing ']' at the end of array type"
+          val tokens = drop_until_square_bracket 0 tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 2 then
+              raise ERR "parse_term" "'array-ext' must have 2 argument"
+            else ()
+          val array1 = List.hd operands
+          val array2 = List.hd (List.tl operands)
+          val (index_type, _) = Type.dom_rng (Term.type_of array1)
+          val i = Term.mk_var ("i", index_type)
+        in
+          boolSyntax.mk_select (i, boolSyntax.mk_neg (boolSyntax.mk_eq
+            (Term.mk_comb (array1, i), Term.mk_comb (array2, i))))
+        end
+    | parse_term _ ["bv", "[", m, ":", n, "]"] =
+        (* bit-vector literals: numeric value m, bit-width n *)
+        wordsSyntax.mk_word (Arbnum.fromString m, Arbnum.fromString n)
+    (* The following bit-vector operations would perhaps better be implemented
+       using a table. However, SmtLib.OperatorsTable cannot be used at the
+       moment because these operations are not available in SMT-LIB's AUFLIA
+       logic (which is the translation target for that table). *)
+    | parse_term _ ["bvand"] = wordsSyntax.word_and_tm
+    | parse_term _ ["bvadd"] = wordsSyntax.word_add_tm
+    | parse_term _ ["bvmul"] = wordsSyntax.word_mul_tm
+    | parse_term _ ["bvor"] = wordsSyntax.word_or_tm
+    | parse_term _ ["bvxor"] = wordsSyntax.word_xor_tm
+    | parse_term _ ["bvsub"] = wordsSyntax.word_sub_tm
+    (* FIXME: I'm not sure that these are semantically equivalent, especially
+              wrt. division by 0w. But as long as all proofs are checked
+              successfully, I won't bother. *)
+    | parse_term _ ["bvudiv"] = wordsSyntax.word_div_tm
+    | parse_term _ ["bvudiv_i"] = wordsSyntax.word_div_tm
+    | parse_term _ ["bvurem"] = wordsSyntax.word_mod_tm
+    | parse_term _ ["bvurem_i"] = wordsSyntax.word_mod_tm
+    | parse_term _ ["bvslt"] = wordsSyntax.word_lt_tm
+    | parse_term _ ["bvult"] = wordsSyntax.word_lo_tm
+    | parse_term _ ["bvsle"] = wordsSyntax.word_le_tm
+    | parse_term _ ["bvule"] = wordsSyntax.word_ls_tm
+    | parse_term _ ["bvsgt"] = wordsSyntax.word_gt_tm
+    | parse_term _ ["bvugt"] = wordsSyntax.word_hi_tm
+    | parse_term _ ["bvsge"] = wordsSyntax.word_ge_tm
+    | parse_term _ ["bvuge"] = wordsSyntax.word_hs_tm
+    | parse_term _ ["bvnot"] = wordsSyntax.word_1comp_tm
+    | parse_term _ ["bvneg"] = wordsSyntax.word_2comp_tm
+    | parse_term (decl, dict) ("(" :: "concat" :: tokens) =
+        (* bit-vector concatenation - 'concat' cannot simply be mapped to
+           wordsSyntax.word_concat_tm because we must compute the type (i.e.,
+           the size) of the resulting bit-vector *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 2 then
+              raise ERR "parse_term" "'concat' must have 2 arguments"
+            else ()
+          val op1 = List.hd operands
+          val op2 = List.hd (List.tl operands)
+        in
+          wordsSyntax.mk_word_concat (op1, op2)
+        end
+    | parse_term (decl, dict)
+          ("(" :: "sign_extend" :: "[" :: n :: "]" :: tokens) =
+        (* prepending the sign (i.e., the most significant bit) n times to a
+           bit vector *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'sign_extend' must have 1 argument"
+            else ()
+          val operand = List.hd operands
+          val m = fcpLib.index_to_num (wordsSyntax.dim_of operand)
+          val n = Arbnum.fromString n
+          val index_type = fcpLib.index_type (Arbnum.+ (m, n))
+        in
+          wordsSyntax.mk_sw2sw (operand, index_type)
+        end
+    | parse_term (decl, dict)
+          ("(" :: "zero_extend" :: "[" :: n :: "]" :: tokens) =
+        (* prepending n 0-bits to a bit vector *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'zero_extend' must have 1 argument"
+            else ()
+          val operand = List.hd operands
+          val m = fcpLib.index_to_num (wordsSyntax.dim_of operand)
+          val n = Arbnum.fromString n
+          val index_type = fcpLib.index_type (Arbnum.+ (m, n))
+        in 
+          wordsSyntax.mk_w2w (operand, index_type)
+        end
+    | parse_term (decl, dict)
+          ("(" :: "extract" :: "[" :: m :: ":" :: n :: "]":: tokens) =
+        (* extracting bits m to n from a bit-vector *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'extract' must have 1 argument"
+            else ()
+          val operand = List.hd operands
+          val m = Arbnum.fromString m
+          val n = Arbnum.fromString n
+          val index_type = fcpLib.index_type (Arbnum.plus1 (Arbnum.- (m, n)))
+        in
+          wordsSyntax.mk_word_extract (numSyntax.mk_numeral m,
+            numSyntax.mk_numeral n, operand, index_type)
+        end
+    | parse_term (decl, dict) ("(" :: "bit2bool" :: "[" :: n :: "]" :: tokens) =
+        (* extracting a single bit (with index n) from a bit-vector *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'bit2bool' must have 1 argument"
+            else ()
+          val operand = List.hd operands
+          val n = Arbnum.fromString n
+        in
+          wordsSyntax.mk_index (operand, numSyntax.mk_numeral n)
+        end
+    | parse_term (decl, dict) ("(" :: "bvshl" :: tokens) =
+        (* (logical) shift left -- the number of bits to shift is given by the
+           second argument, which must also be a bit-vector *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 2 then
+              raise ERR "parse_term" "'bvshl' must have 2 arguments"
+            else ()
+          val op1 = List.hd operands
+          val op2 = List.hd (List.tl operands)
+        in
+          wordsSyntax.mk_word_lsl (op1, wordsSyntax.mk_w2n op2)
+        end
+    | parse_term (decl, dict) ("(" :: "bvlshr" :: tokens) =
+        (* logical shift right -- the number of bits to shift is given by the
+           second argument, which must also be a bit-vector *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 2 then
+              raise ERR "parse_term" "'bvlshr' must have 2 arguments"
+            else ()
+          val op1 = List.hd operands
+          val op2 = List.hd (List.tl operands)
+        in
+          wordsSyntax.mk_word_lsr (op1, wordsSyntax.mk_w2n op2)
+        end
+    | parse_term (decl, dict) ("(" :: "bvashr" :: tokens) =
+        (* arithmetic shift right -- the number of bits to shift is given by
+           the second argument, which must also be a bit-vector *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 2 then
+              raise ERR "parse_term" "'bvashr' must have 2 arguments"
+            else ()
+          val op1 = List.hd operands
+          val op2 = List.hd (List.tl operands)
+        in
+          wordsSyntax.mk_word_asr (op1, wordsSyntax.mk_w2n op2)
+        end
+    | parse_term (decl, dict)
+          ("(" :: "rotate_left" :: "[" :: n :: "]" :: tokens) =
+        (* bit rotation to the left, by n bits *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'rotate_left' must have 1 argument"
+            else ()
+          val operand = List.hd operands
+          val n = Arbnum.fromString n
+        in
+          wordsSyntax.mk_word_rol (operand, numSyntax.mk_numeral n)
+        end
+    | parse_term (decl, dict)
+          ("(" :: "rotate_right" :: "[" :: n :: "]" :: tokens) =
+        (* bit rotation to the right, by n bits *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'rotate_right' must have 1 argument"
+            else ()
+          val operand = List.hd operands
+          val n = Arbnum.fromString n
+        in
+          wordsSyntax.mk_word_ror (operand, numSyntax.mk_numeral n)
+        end
+    | parse_term (decl, dict) ("(" :: "bvudiv0" :: tokens) =
+        (* I assume bvudiv0 w is an internal Z3 abbreviation for bvudiv w 0w. *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'bvudiv0' must have 1 argument"
+            else ()
+          val operand = List.hd operands
+          val dim = fcpLib.index_to_num (wordsSyntax.dim_of operand)
+          val zero = wordsSyntax.mk_word (Arbnum.zero, dim)
+        in
+          wordsSyntax.mk_word_div (operand, zero)
+        end
+    | parse_term (decl, dict) ("(" :: "bvurem0" :: tokens) =
+        (* I assume bvurem0 w is an internal Z3 abbreviation for bvurem w 0w. *)
+        let
+          val tokens = remove_right_parenthesis tokens
+          val operands = parse_term_list (decl, dict) tokens
+          val _ = if List.length operands <> 1 then
+              raise ERR "parse_term" "'bvurem0' must have 1 argument"
+            else ()
+          val operand = List.hd operands
+          val dim = fcpLib.index_to_num (wordsSyntax.dim_of operand)
+          val zero = wordsSyntax.mk_word (Arbnum.zero, dim)
+        in
+          wordsSyntax.mk_word_mod (operand, zero)
+        end
     | parse_term (decl, dict) ("(" :: tok :: tokens) =
         (* function application *)
         let
@@ -254,7 +546,8 @@ struct
           val operator = parse_term (decl, dict) [tok]
           val operands = parse_term_list (decl, dict) tokens
           val _ = if List.null operands then
-              raise ERR "parse_term" "application has empty argument list"
+              raise ERR "parse_term"
+                "function application has empty argument list"
             else ()
         in
           if operator = boolSyntax.conjunction then
@@ -290,10 +583,30 @@ struct
                   | NONE => operator
                 else
                   operator
-            in
               (* the type of polymorphic operators must be instantiated to
                  match their actual argument types *)
-              boolSyntax.list_mk_icomb (operator, operands)
+              (* 'list_mk_icomb' is rather slow. The problem is that for a term
+                 like f x y, where f x is polymorphic, 'list_mk_icomb' descends
+                 into both f and x to instantiate their types as necessary
+                 (based on the type of y) -- this takes time (at least) linear
+                 in the size of x. However, SMT-LIB is first order, and all
+                 arguments (in particular x) are of (possibly uninterpreted)
+                 monomorphic type. At most f is polymorphic. Hence it suffices
+                 to instantiate f's type, based on the types of x and y. *)
+              fun foldthis (rand, (rator_ty, tysubst)) =
+                let
+                  val (dom, rng) = Type.dom_rng rator_ty
+                  val rand_ty = Term.type_of rand
+                  val tysubst = Type.match_type dom rand_ty @ tysubst
+                in
+                  (rng, tysubst)
+                end
+              val (_, tysubst) = List.foldl foldthis (Term.type_of operator, [])
+                operands
+              val operator = Term.inst tysubst operator
+            in
+              (*boolSyntax.list_mk_icomb (operator, operands)*)
+              Term.list_mk_comb (operator, operands)
             end
         end
     | parse_term (decl, _) [tok] =
@@ -329,8 +642,9 @@ struct
               else
                 raise ERR "parse_term" ("unknown token '" ^ tok ^ "'")
             end))
-    | parse_term _ _ =
-        raise ERR "parse_term" "invalid token sequence"
+    | parse_term _ tokens =
+        raise ERR "parse_term" ("invalid token sequence: " ^
+          String.concatWith ", " tokens)
 
   (* string list * 'a -> int list * 'a *)
   fun parse_int_list (tokens, x) =

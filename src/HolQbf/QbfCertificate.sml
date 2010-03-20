@@ -66,6 +66,9 @@ struct
       | extension_lits _ ("0" :: _) =
       raise ERR "read_certificate_file"
         "unexpected input after '0'-terminated list of extension literals"
+      | extension_lits _ [] =
+      raise ERR "read_certificate_file"
+        "missing '0' terminator after extension literals"
       | extension_lits lits (literal :: xs) =
       extension_lits (int_from_string literal :: lits) xs
     (* (vindex, extension) dict -> string list -> (vindex, extension) dict *)
@@ -140,6 +143,8 @@ struct
       certificate (extension ext xs, res) xss
       | certificate (ext, res) (xs :: xss) =
       certificate (ext, resolution res xs) xss
+      | certificate _ [] =
+        raise ERR "read_certificate_file" "empty certificate"
   in
     (certificate
        (Redblackmap.mkDict Int.compare, Redblackmap.mkDict Int.compare)
@@ -227,11 +232,14 @@ struct
       val thm = #1 (Lib.snd (derive (clause_dict, cindex)))
 
       (* sanity checks *)
-      val _ = if HOLset.numItems (Thm.hypset thm) = 1 andalso
-          HOLset.member (Thm.hypset thm, t) then ()
+      val _ = if !QbfTrace.trace < 1 orelse
+          (HOLset.numItems (Thm.hypset thm) = 1 andalso
+            HOLset.member (Thm.hypset thm, t)) then
+          ()
         else
           Feedback.HOL_WARNING "QbfCertificate" "check" "final theorem has hyps"
-      val _ = if Thm.concl thm = boolSyntax.F then ()
+      val _ = if !QbfTrace.trace < 1 orelse Thm.concl thm = boolSyntax.F then
+          ()
         else
           Feedback.HOL_WARNING "QbfCertificate" "check" "final theorem not F"
     in

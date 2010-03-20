@@ -91,12 +91,13 @@ fun mk_literal_case (func,arg) =
 
 fun mk_arb ty = inst [alpha |-> ty] arb;
 
-fun mk_icomb(t1, t2) = let
-  val (dom,rng) = dom_rng (type_of t1)
-  val (i,k,r) = kind_match_type dom (type_of t2)
-in
-  mk_comb(inst i (inst_rank_kind r k t1), t2)
-end
+fun mk_icomb (t1, t2) =
+  let
+    val (dom, _) = dom_rng (type_of t1)
+    val (i,k,r) = kind_match_type dom (type_of t2)
+  in
+    mk_comb (inst i (inst_rank_kind r k t1), t2)
+  end
 
 
 (*--------------------------------------------------------------------------*
