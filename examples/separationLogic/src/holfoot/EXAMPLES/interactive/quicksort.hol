@@ -11,17 +11,11 @@ val file = concat [examplesDir, "/interactive/quicksort-shape.dsf"];
 val quicksort_shape_TAC = 
 HF_CONTINUE_TAC THEN
 REPEAT STRIP_TAC THEN
-`l_const = SUC r_const` by DECIDE_TAC THEN
-FULL_SIMP_TAC list_ss [] THEN
-HF_CONTINUE_TAC THEN
-REPEAT STRIP_TAC THEN
 Q.EXISTS_TAC `data'' ++ data'` THEN
-HF_SOLVE_TAC;
+HF_SOLVE_TAC
 
 val thm = holfoot_tac_verify_spec file NONE
                 [("quicksort", quicksort_shape_TAC)]
-
-
 
 
 
@@ -51,7 +45,10 @@ Tactical.REVERSE (REPEAT STRIP_TAC) THEN1 (
       xHF_SOLVE_TAC [quicksort_opt]
    ) THEN
    `e_const' = b_const'` by DECIDE_TAC THEN
-   HF_SOLVE_TAC THEN
+   ASM_SIMP_TAC std_ss [holfoot_ap_data_interval___TRIVIAL_LENGTH,
+      IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
+      holfoot_ap_data_array_1] THEN
+   HF_CONTINUE_TAC THEN
    HF_VC_TAC THEN REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [LENGTH_EQ_NUM_compute,
       SORTED_DEF]
@@ -69,8 +66,12 @@ REPEAT STRIP_TAC THENL [
    Tactical.REVERSE (Cases_on `LENGTH data = ((ec + 1) - bc)`) THEN1 (
       HF_SIMPLIFY_TAC
    ) THEN
-   xHF_CONTINUE_TAC [use_asms] THEN
+   Q.PAT_ASSUM `lc <= rc` MP_TAC THEN
+   Q.PAT_ASSUM `rc <= ec` MP_TAC THEN
+   Q.PAT_ASSUM `bc < lc` MP_TAC THEN
+   HF_CONTINUE_TAC THEN
    HF_VC_TAC THEN
+   ASM_SIMP_TAC std_ss [] THEN
    REPEAT STRIP_TAC THENL [
       Cases_on `n < lc - bc` THENL [
          METIS_TAC[],
@@ -79,9 +80,7 @@ REPEAT STRIP_TAC THENL [
          METIS_TAC[]
       ],
       
-      ASM_SIMP_TAC std_ss [EL_REPLACE_ELEMENT, GSYM EL,
-         REPLACE_ELEMENT_SEM] THEN
-      ASM_SIMP_TAC arith_ss [],
+      ASM_SIMP_TAC arith_ss [COND_RAND, COND_RATOR],
 
       SIMP_TAC std_ss [GSYM SWAP_ELEMENTS_def] THEN
       `(lc - bc < LENGTH data) /\
@@ -94,14 +93,7 @@ REPEAT STRIP_TAC THENL [
    HF_CONTINUE_TAC THEN
    Q.EXISTS_TAC `data_h::data_t` THEN
    ASM_SIMP_TAC arith_ss [PERM_REFL] THEN
-   HF_STEP_TAC 2 THEN
-   REPEAT STRIP_TAC THEN
-   `lc = rc + 1` by DECIDE_TAC THEN
-   Cases_on `b_const' = 0` THEN1 (
-      HF_SIMPLIFY_TAC
-   ) THEN
-   FULL_SIMP_TAC std_ss [] THEN
-   xHF_CONTINUE_TAC [use_asms] THEN
+   HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
    Q.EXISTS_TAC `rdata ++ rdata'` THEN
    Tactical.REVERSE (Cases_on `(rc + 1) - b_const' = LENGTH rdata`) THEN1 (
@@ -111,7 +103,6 @@ REPEAT STRIP_TAC THENL [
    HF_VC_TAC THEN
    ASM_SIMP_TAC list_ss [BUTFIRSTN_LENGTH_APPEND,
                          FIRSTN_LENGTH_APPEND] THEN
-   
    FULL_SIMP_TAC std_ss [GSYM EL, GSYM SWAP_ELEMENTS_def] THEN
    FULL_SIMP_TAC list_ss [] THEN
    REPEAT STRIP_TAC THENL [

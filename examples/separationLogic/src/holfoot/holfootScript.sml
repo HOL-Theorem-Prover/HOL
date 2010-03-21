@@ -6914,7 +6914,6 @@ ASM_SIMP_TAC std_ss [LENGTH_NIL, NULL_EQ_NIL,
    IN_ABS, asl_emp_DISJOINT_FMAP_UNION, IN_SING]);
 
 
-
 val holfoot_ap_data_array___SPLIT = store_thm ("holfoot_ap_data_array___SPLIT",
 ``!e n1 n2 data.
 IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e) ==>
@@ -7537,11 +7536,11 @@ val holfoot_ap_data_interval___SPLIT = store_thm (
 ``!e1 e2 e3. (e1 <= e2) /\ (e2 <= e3) ==>
  (holfoot_ap_data_interval (var_res_exp_const e1) (var_res_exp_const e3) data =
   asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
-     (holfoot_ap_data_interval (var_res_exp_const e1) (var_res_exp_const (PRE e2))
-           (MAP (\tl. (FST tl,TAKE (e2 - e1) (SND tl))) data))
-     (holfoot_ap_data_interval (var_res_exp_const e2)
+     (holfoot_ap_data_interval (var_res_exp_const e1) (var_res_exp_const e2)
+           (MAP (\tl. (FST tl,TAKE (e2 + 1 - e1) (SND tl))) data))
+     (holfoot_ap_data_interval (var_res_exp_const (SUC e2))
         (var_res_exp_const e3)
-        (MAP (\tl. (FST tl,DROP (e2 - e1) (SND tl))) data)))``,
+        (MAP (\tl. (FST tl,DROP (e2 +1 - e1) (SND tl))) data)))``,
 
 REPEAT STRIP_TAC THEN
 Cases_on `e1 = 0` THEN1 (
@@ -7549,11 +7548,11 @@ Cases_on `e1 = 0` THEN1 (
 ) THEN
 SIMP_TAC std_ss [holfoot_ap_data_interval_def,
    var_res_exp_add_sub_REWRITES, var_res_exp_binop___const_eval] THEN
-`(PRE e2 + 1) = e2` by DECIDE_TAC THEN
+`e3 + 1 - SUC e2 = e3 - e2` by DECIDE_TAC THEN
 ASM_SIMP_TAC std_ss [] THEN
-Q.ABBREV_TAC `l1 = e2 - e1` THEN
-Q.ABBREV_TAC `l2 = (e3 + 1 - e2)` THEN
-`((e3 + 1) - e1 = l1 + l2) /\ (e1 + l1 = e2)` by ALL_TAC THEN1 (
+Q.ABBREV_TAC `l1 = (e2 + 1) - e1` THEN
+Q.ABBREV_TAC `l2 = (e3 - e2)` THEN
+`((e3 + 1) - e1 = l1 + l2) /\ (e1 + l1 = SUC e2)` by ALL_TAC THEN1 (
    UNABBREV_ALL_TAC THEN
    IMP_RES_TAC LESS_EQUAL_ADD THEN
    Cases_on `e1` THEN FULL_SIMP_TAC std_ss [] THEN
@@ -7624,7 +7623,6 @@ REPEAT STRIP_TAC THEN
 Cases_on `e (FST x)` THEN ASM_SIMP_TAC std_ss [] THEN
 Cases_on `b (FST x)` THEN ASM_SIMP_TAC std_ss [] THEN
 DECIDE_TAC);
-
 
 
 
@@ -7729,7 +7727,7 @@ DECIDE_TAC);
 val holfoot_ap_data_interval___SPLIT___intro_same_start = store_thm (
    "holfoot_ap_data_interval___SPLIT___intro_same_start",
 ``!c1 c2 c3 c4 c5 lc data.
-(c1 <= c3) /\ (c3 <= c2) ==>
+(c1 <= c3) /\ (c3 <= c2 + 1) ==>
 ((PRE c3 = c4) /\ (c2 = c5) /\ (c3 - c1 = lc)) ==>
 
 (holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c2) data =
@@ -7738,7 +7736,17 @@ asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
        (MAP (\tl. (FST tl, FIRSTN lc (SND tl))) data))
    (holfoot_ap_data_interval (var_res_exp_const c3) (var_res_exp_const c5)
        (MAP (\tl. (FST tl, BUTFIRSTN lc (SND tl))) data)))``,
-SIMP_TAC std_ss [holfoot_ap_data_interval___SPLIT]);
+
+REPEAT STRIP_TAC THEN
+Cases_on `c1` THEN1 (
+   ASM_SIMP_TAC std_ss [holfoot_ap_data_interval_0_start,
+      asl_false___asl_star_THM]
+) THEN
+SIMP_TAC std_ss [holfoot_ap_data_interval___CONST] THEN
+REPEAT STRIP_TAC THEN 
+MATCH_MP_TAC (MP_CANON holfoot_ap_data_array_interval___same_start___SPLIT___aa) THEN
+DECIDE_TAC);
+
 
 
 val holfoot_ap_data_interval___var_res_prop_implies___length_eq = store_thm (

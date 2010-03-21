@@ -39,7 +39,8 @@ open bagLib bagTheory
 open separationLogicLib
 open simpLib
 open permLib;
- 
+open HolSmtLib;
+
 (*
 open vars_as_resourceBaseFunctor
 open vars_as_resourceFunctor
@@ -173,7 +174,7 @@ struct
         holfoot_separation_combinator_def,
         REPLACE_ELEMENT_compute,
         REPLACE_ELEMENT_SEM, REPLACE_ELEMENT_DEF,
-        EL_REPLACE_ELEMENT,
+        EL_REPLACE_ELEMENT, HD_REPLACE_ELEMENT,
 
         SUB1, arithmeticTheory.ADD1, arithmeticTheory.NOT_LESS,
         arithmeticTheory.NOT_LESS_EQUAL,
@@ -225,9 +226,25 @@ fun holfoot_arith_simp_CONV context t =
    SIMP_CONV arith_simp_ss context t
   handle UNCHANGED => REFL t
 
+fun array_bound_DECIDE___HOL context t = 
+   (EQT_ELIM (holfoot_arith_simp_CONV context t));
+
+fun array_bound_DECIDE___YICES context t = 
+let
+   val (_, vali) = YICES_TAC (map concl context, t)
+   val xthm0 = vali [];
+   val xthm1 = foldl (fn (h, thm) => PROVE_HYP h thm) xthm0 context
+in
+   xthm1
+end;
+
+
+val holfoot_use_yices = ref false;
+val _ = Feedback.register_btrace ("holfoot use Yices", holfoot_use_yices);
 
 fun array_bound_DECIDE context t = 
-   (EQT_ELIM (holfoot_arith_simp_CONV context t));
+   if (!holfoot_use_yices) then array_bound_DECIDE___YICES context t else
+      array_bound_DECIDE___HOL context t;
 
 fun prove_in_array_bound context ec (ec', nc') =
    let
@@ -567,7 +584,9 @@ let
       val (is_interval, (e1, e2, dataL)) = dest_holfoot_ap_data_array_interval tt;
       val (td, _) = listSyntax.dest_cons dataL;
       val (_, d) = pairSyntax.dest_pair td;      
-      val length_d = listSyntax.mk_length d;
+      val length_d0 = listSyntax.mk_length d;
+      val length_d = rhs (concl (VAR_RES_PROP_REWRITE_CONV ss context length_d0))
+              handle UNCHANGED => length_d0
       val length_const = mk_comb (holfoot_exp_const_term, length_d);
 
       (*check, whether this lenght should be introduced*)
@@ -758,9 +777,7 @@ let
 
    val res2L = mapfilter (mk_equal___in_heap_or_null___in_heap_or_null wpb rpb) implies_in_heap_pairL
 
-
    val res3L = holfoot_implies_GENERATE___data_array_interval ss context (wpb,rpb) sfb'
-
    val res = flatten [res1L, res2L, res3L]
    val res2 = map (CONV_RULE (RATOR_CONV (RAND_CONV (K (GSYM sfb_thm))))) res
 in
@@ -2143,18 +2160,35 @@ local
    val array_compset = computeLib.bool_compset ()
    val _ = computeLib.add_thms [pairTheory.SND, pairTheory.FST, MAP] array_compset
 
-   fun try_split context i1 i2 ec nc1 (nc2,data2) =
+   fun try_split context i1 i2 (ec1,nc1) (ec2,nc2,data2) =
    let
-       val inf_thm = if i1 then 
-          (if i2 then holfoot_ap_data_array_interval___same_start___SPLIT___ii else
-                      holfoot_ap_data_array_interval___same_start___SPLIT___ai) else
-          (if i2 then holfoot_ap_data_array_interval___same_start___SPLIT___ia else
-                      holfoot_ap_data_array_interval___same_start___SPLIT___aa)
-       val xthm0 = ISPECL [ec, nc2, nc1] inf_thm
-       val pre = (fst o dest_imp o snd o strip_forall) (concl xthm0);
+       val (guard_opt, inf_thm) = 
+          if (ec1 = ec2) then (
+             if i2 then 
+                (if i1 then (SOME (mk_eq (nc1, nc2)), ISPECL [ec2, nc2, nc1]
+                            holfoot_ap_data_array_interval___same_start___SPLIT___ii) else
+                            (NONE, ISPECL [ec2, nc2, nc1]
+                            holfoot_ap_data_array_interval___same_start___SPLIT___ia))
+             else
+                (if i1 then (NONE, ISPECL [ec2, nc2, nc1]
+                            holfoot_ap_data_array_interval___same_start___SPLIT___ai) else
+                            (SOME (mk_eq (nc1, nc2)), ISPECL [ec2, nc2, nc1]
+                            holfoot_ap_data_array_interval___same_start___SPLIT___aa))            
+          ) else (
+             if i2 then (SOME (mk_disj (numSyntax.mk_less (nc2, ec1), mk_eq (ec2, ec1))), 
+                ISPECL [ec2, nc2, ec1]
+                holfoot_ap_data_interval___SPLIT___intro_same_start)
+             else
+                (SOME (mk_eq (ec1, numSyntax.mk_plus (ec2, nc2))), ISPECL [ec2, nc2, ec1] 
+                  holfoot_ap_data_array___SPLIT___intro_same_start)
+          );
+       val pre = (fst o dest_imp o snd o strip_forall) (concl inf_thm);
        val pre_thm = array_bound_DECIDE context pre
+       val guard_ok = if not (isSome guard_opt) then true else
+                      not (can (array_bound_DECIDE context) (valOf guard_opt));
+       val _ = if guard_ok then () else Feedback.fail ();
 
-       val xthm1 = MATCH_MP xthm0 pre_thm;
+       val xthm1 = MATCH_MP inf_thm pre_thm;
        val xthm2 = CONV_RULE ((STRIP_QUANT_CONV o RATOR_CONV o RAND_CONV)
              (holfoot_arith_simp_CONV context)) xthm1
        val xthm3 = CONV_RULE (REPEATC Unwind.UNWIND_FORALL_CONV) xthm2
@@ -2164,19 +2198,33 @@ local
       xthm5
    end;
 
-   fun search_fun___same_start context sfs n ttt =
+   fun try_prove_eq_start context ec1 ec2 ttt = 
+   let
+      val _ = if (ec1 = ec2) then Feedback.fail() else ();
+      val eq_t = mk_eq (ec1, ec2);
+      val eq_thm = array_bound_DECIDE context eq_t;
+      val xthm0 = ISPECL [eq_t, ttt] asl_trivial_cond___INTRO;
+      val xthm1 = MP xthm0 eq_thm
+      val xthm2 = CONV_RULE ((RHS_CONV o RAND_CONV o RATOR_CONV o RATOR_CONV o
+             RAND_CONV o RAND_CONV) (K eq_thm)) xthm1
+   in
+      xthm2
+   end;
+
+   fun search_fun context sfs n ttt =
        let
           val (i1, (e, ne, data1)) = dest_holfoot_ap_data_array_interval ttt;          
           val nc1 = dest_var_res_exp_const ne
-          val ec = dest_var_res_exp_const e
+          val ec1 = dest_var_res_exp_const e
           fun search_fun2 m tttt =
           let
              val (i2, (e', ne', data2)) = dest_holfoot_ap_data_array_interval tttt
-             val _ = if (aconv e e') then () else Feedback.fail ();
+             val ec2 = dest_var_res_exp_const e'
              val nc2 = dest_var_res_exp_const ne'
              val (in_split, split_thm) = 
-                 (false, try_split context i1 i2 ec nc1 (nc2, data2)) handle HOL_ERR _ =>
-                 (true,  try_split context i2 i1 ec nc2 (nc1, data1))
+                 (true,  try_prove_eq_start context ec1 ec2 ttt) handle HOL_ERR _ =>
+                 (false, try_split context i1 i2 (ec1,nc1) (ec2, nc2, data2)) handle HOL_ERR _ =>
+                 (true,  try_split context i2 i1 (ec2,nc2) (ec1, nc1, data1))
           in
              SOME (m, tttt, in_split, split_thm)
           end
@@ -2193,7 +2241,7 @@ local
 
 in
 
-fun VAR_RES_FRAME_SPLIT_INFERENCE___data_array___same_start___CONV context tt =
+fun VAR_RES_FRAME_SPLIT_INFERENCE___data_array_interval___SPLIT___CONV context tt =
 let
    val (f, _, _, _, _, split_sfb, imp_sfb, _) =  dest_VAR_RES_FRAME_SPLIT tt;
 
@@ -2201,7 +2249,7 @@ let
    val (imp_sfs,_) = bagSyntax.dest_bag imp_sfb;
 
    (*search lists*)
-   val found_opt = first_opt (search_fun___same_start context imp_sfs) split_sfs;
+   val found_opt = first_opt (search_fun context imp_sfs) split_sfs;
    val _ = if isSome found_opt then () else raise UNCHANGED;
    val (n, m, sf1, sf2, in_split, split_thm) = valOf found_opt;
 
@@ -2220,85 +2268,6 @@ end;
 end;
 
 
-(*
-   val context = map ASSUME (fst (top_goal()))
-   val tt = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
-*)
-
-local 
-   fun search_fun___not_same_start context sfs n ttt =
-       let
-          val (is_interval, (e, ne, _)) = dest_holfoot_ap_data_array_interval ttt;          
-          val nc1 = dest_var_res_exp_const ne
-          val ec1 = dest_var_res_exp_const e
-          fun search_fun2 m tttt =
-          let
-             val (is_interval', (e', ne', _)) = dest_holfoot_ap_data_array_interval tttt
-          in
-             if not (aconv e e') then
-                (let
-                   val nc2 = dest_var_res_exp_const ne'
-                   val ec2 = dest_var_res_exp_const e'
-                   val (in_split, a_thm) = (false, prove_in_array_interval_bound is_interval' context ec1 (ec2, nc2)) handle HOL_ERR _ =>
-                                           (true,  prove_in_array_interval_bound is_interval  context ec2 (ec1, nc1))
-                in
-                   SOME (m, tttt, in_split, a_thm, is_interval')
-                end handle HOL_ERR _ => NONE)
-             else NONE
-          end
-          val found_opt = first_opt search_fun2 sfs
-       in
-          if not (isSome found_opt) then NONE else
-          let
-             val (m, tttt, in_split, a_thm, is_interval') = valOf found_opt;
-          in
-             SOME (n, m, ttt, tttt, in_split, a_thm, is_interval')
-          end           
-       end handle HOL_ERR _ => NONE;
-in
-
-fun VAR_RES_FRAME_SPLIT_INFERENCE___data_array___not_same_start___CONV context tt =
-let
-   val (f, _, _, _, _, split_sfb, imp_sfb, _) =  dest_VAR_RES_FRAME_SPLIT tt;
-
-   val (split_sfs,_) = bagSyntax.dest_bag split_sfb;
-   val (imp_sfs,_) = bagSyntax.dest_bag imp_sfb;
-
-   (*search lists*)
-   val found_opt = first_opt (search_fun___not_same_start context imp_sfs) split_sfs;
-   val _ = if isSome found_opt then () else raise UNCHANGED;
-   val (n, m, sf1, sf2, in_split, a_thm, is_interval) = valOf found_opt;
-
-
-   val array_split_thm = let
-      val t0 = if in_split then sf1 else sf2;
-      val inf_thm = if is_interval then
-              holfoot_ap_data_interval___SPLIT
-            else holfoot_ap_data_array___SPLIT___intro_same_start
-      val xthm0 = MATCH_MP inf_thm a_thm
-      val xthm1 = if is_interval then xthm0 else
-          let
-             val xthm1_pre = (lhs o fst o dest_imp o snd o strip_forall o concl) xthm0
-             val xthm1_pre_thm = holfoot_arith_simp_CONV context xthm1_pre
-             val xthm1 = MATCH_MP xthm0 xthm1_pre_thm
-          in xthm1 end;
-      val xthm2 = PART_MATCH lhs xthm1 t0;
-      val xthm3 = CONV_RULE (RHS_CONV (SIMP_CONV list_ss [])) xthm2
-   in xthm3 end
-
-
-   (*resort and apply*)
-   val array_split_conv = (if in_split then VAR_RES_FRAME_SPLIT___split_CONV else
-                          VAR_RES_FRAME_SPLIT___imp_CONV) (RATOR_CONV (RAND_CONV (K array_split_thm)))
-
-   val thm0 = (VAR_RES_FRAME_SPLIT___split_CONV (BAG_RESORT_CONV [n]) THENC
-               VAR_RES_FRAME_SPLIT___imp_CONV (BAG_RESORT_CONV [m]) THENC
-               array_split_conv) tt
-in
-   thm0
-end;
-
-end;
 
 
 (* ---------------------------------------- *)
@@ -2558,12 +2527,9 @@ struct
        ("holfoot_data_array___same_start_length__frame",
         no_context_strengthen_conseq_conv
         VAR_RES_FRAME_SPLIT_INFERENCE___data_array___same_start_length___CONV),
-       ("holfoot_data_array___split___same_start",
+       ("holfoot_data_array___split",
         context_strengthen_conseq_conv
-        VAR_RES_FRAME_SPLIT_INFERENCE___data_array___same_start___CONV),
-       ("holfoot_data_array___split___not_same_start",
-        context_strengthen_conseq_conv
-        VAR_RES_FRAME_SPLIT_INFERENCE___data_array___not_same_start___CONV),
+        VAR_RES_FRAME_SPLIT_INFERENCE___data_array_interval___SPLIT___CONV),
        ("holfoot_data_array___points_to_TO_array",
         context_strengthen_conseq_conv
         VAR_RES_FRAME_SPLIT_INFERENCE___data_array___points_to_elim___CONV)]

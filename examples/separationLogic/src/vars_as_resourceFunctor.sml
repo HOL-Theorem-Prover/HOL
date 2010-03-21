@@ -2593,9 +2593,8 @@ let
           (imp_sfb, VAR_RES_FRAME_SPLIT___imp_CONV, VAR_RES_FRAME_SPLIT___trivial_cond___imp, true),
           (split_sfb, VAR_RES_FRAME_SPLIT___split_CONV, VAR_RES_FRAME_SPLIT___trivial_cond___split, false)]
 
-
-
-   val thm1 = PART_MATCH (lhs o snd o dest_imp) thm (rhs (concl resort_thm));
+   val dest_fun = if (has_precond) then (snd o dest_imp) else I  
+   val thm1 = PART_MATCH (lhs o dest_fun) thm (rhs (concl resort_thm));
    val thm2 = if has_precond then var_res_precondition_prove thm1 else thm1
    val thm3 = TRANS resort_thm thm2
 in

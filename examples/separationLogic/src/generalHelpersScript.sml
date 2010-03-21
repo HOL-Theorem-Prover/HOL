@@ -135,6 +135,13 @@ Induct_on `n1` THEN (
 ));
 
 
+val HD_REPLACE_ELEMENT = store_thm ("HD_REPLACE_ELEMENT",
+``!n e l. (HD (REPLACE_ELEMENT e n l) =
+      if (n = 0) /\ (0 < LENGTH l) then e else HD l)``,
+SIMP_TAC std_ss [GSYM EL, EL_REPLACE_ELEMENT] THEN
+METIS_TAC[]);
+
+
 val EL_REPLACE_ELEMENT___NO_COND = store_thm ("EL_REPLACE_ELEMENT___NO_COND",
 ``(!n e l. n < LENGTH l ==> (EL n (REPLACE_ELEMENT e n l) = e)) /\
   (!n1 n2 e l. ~(n1 = n2) ==> (EL n1 (REPLACE_ELEMENT e n2 l) = EL n1 l))``,
@@ -308,6 +315,18 @@ Cases_on `l` THEN1 (
 ) THEN
 Cases_on `m` THEN (
    FULL_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]
+));
+
+val FIRSTN_EQ_APPEND_REWRITE = store_thm ("FIRSTN_EQ_APPEND_REWRITE",
+``!n l l1. (LENGTH l1 = n) ==> ((FIRSTN n l = l1) = (?l2. l = l1 ++ l2))``,
+
+Induct_on `n` THEN (
+   SIMP_TAC (list_ss++CONJ_ss) [FIRSTN, LENGTH_EQ_NUM]
+) THEN
+REPEAT STRIP_TAC THEN
+Cases_on `l` THEN (
+   ASM_SIMP_TAC list_ss [GSYM LEFT_EXISTS_AND_THM,
+      GSYM RIGHT_EXISTS_AND_THM]
 ));
 
 

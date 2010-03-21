@@ -3823,6 +3823,10 @@ val asl_trivial_cond_TF = store_thm ("asl_trivial_cond_TF",
   (!P. ((asl_trivial_cond F P) = asl_false))``,
 SIMP_TAC std_ss [asl_trivial_cond_def]);
 
+val asl_trivial_cond___INTRO = store_thm ("asl_trivial_cond___INTRO",
+``!c P. c ==> (P = asl_trivial_cond c P)``,
+SIMP_TAC std_ss [asl_trivial_cond_def]);
+
 
 val asl_trivial_cond___asl_false = store_thm ("asl_trivial_cond___asl_false",
 ``!c. (asl_trivial_cond c asl_false = asl_false)``,
