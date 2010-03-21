@@ -7,4 +7,5 @@ sig
   val size : string -> int
   val chr : int -> string (* May raise Chr *)
 
+  val translate : (string -> string) -> string -> string
 end

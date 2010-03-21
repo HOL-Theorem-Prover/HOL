@@ -131,7 +131,23 @@ in
     end
 end
 
-
-
+fun translate f s = let
+  fun recurse i changed acc ustr =
+      case getChar ustr of
+        NONE => if changed then String.concat (List.rev acc)
+                else s
+      | SOME ((c,code), rest) => let
+          val c' = f c
+        in
+          if c' = c andalso not changed then
+            recurse (i + 1) changed acc rest
+          else if not changed then
+            recurse i true (c' :: String.extract(s,0,SOME i)::acc) rest
+          else
+            recurse i true (c' :: acc) rest
+        end
+in
+  recurse 0 false [] s
+end
 
 end (* struct *)
