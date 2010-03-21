@@ -241,12 +241,61 @@ end;
 fun token_string s = String.concat ["\\", !texPrefix, "Token", s, "{}"];
 
 local
+  fun greek s = "\\ensuremath{\\" ^ s ^ "}"
+  fun subn i  = "\\ensuremath{_{" ^ Int.toString i ^ "}}"
+
   fun char_map c =
     case c
-    of #"\\" => token_string "Backslash"
-     | #"{"  => token_string "Leftbrace"
-     | #"}"  => token_string "Rightbrace"
-     | c     => String.str c
+    of "\\" => token_string "Backslash"
+     | "{"  => token_string "Leftbrace"
+     | "}"  => token_string "Rightbrace"
+     | "α" => greek "alpha"
+     | "β" => greek "beta"
+     | "γ" => greek "gamma"
+     | "Γ" => greek "Gamma"
+     | "δ" => greek "delta"
+     | "Δ" => greek "Delta"
+     | "ε" => greek "epsilon"
+     | "ζ" => greek "zeta"
+     | "η" => greek "eta"
+     | "θ" => greek "theta"
+     | "Θ" => greek "Theta"
+     | "ι" => greek "iota"
+     | "κ" => greek "kappa"
+     | "λ" => greek "lambda"
+     | "Λ" => greek "Lambda"
+     | "μ" => greek "mu"
+     | "ν" => greek "nu"
+     | "ξ" => greek "xi"
+     | "Ξ" => greek "Xi"
+     | "π" => greek "pi"
+     | "Π" => greek "Pi"
+     | "ρ" => greek "rho"
+     | "σ" => greek "sigma"
+     | "ς" => greek "varsigma"
+     | "Σ" => greek "Sigma"
+     | "τ" => greek "tau"
+     | "υ" => greek "upsilon"
+     | "Υ" => greek "Upsilon"
+     | "φ" => greek "phi"
+     | "ϕ" => greek "varphi"
+     | "Φ" => greek "Phi"
+     | "χ" => greek "chi"
+     | "ψ" => greek "psi"
+     | "Ψ" => greek "Psi"
+     | "ω" => greek "omega"
+     | "Ω" => greek "Omega"
+     | "₁" => subn 1
+     | "₂" => subn 2
+     | "₃" => subn 3
+     | "₄" => subn 4
+     | "₅" => subn 5
+     | "₆" => subn 6
+     | "₇" => subn 7
+     | "₈" => subn 8
+     | "₉" => subn 9
+     | "₀" => subn 0
+     | c     => c
 
   fun string_map s =
       case Binarymap.peek(TexTokenMap.the_map(), s) of
@@ -276,7 +325,7 @@ local
           | "\226\138\162" => (token_string "Turnstile", 2) (* ⊢ *)
           | "\226\151\129" => (token_string "LOpenTri", 1) (* ◁ *)
           | "\226\129\187\194\185" => (token_string "Inverse", 1) (* ⁻¹ *)
-          | _       => (String.translate char_map s,String.size s)
+          | _       => (UTF8.translate char_map s,String.size s)
         end
 
   fun smap overrides s =
