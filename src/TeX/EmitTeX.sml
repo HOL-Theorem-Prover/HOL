@@ -300,38 +300,32 @@ local
   fun string_map s =
       case Binarymap.peek(TexTokenMap.the_map(), s) of
         SOME result => result
-      | NONE => let
-        in
-          case s of
-            " <-"   => (" " ^ token_string "Leftmap",2)
-          | "-->"   => (token_string "Longmap",2)
-          | "_"     => (token_string "Underscore",1)
-          | "\226\134\146" => (token_string "Map", 1) (* → *)
-          | "\226\138\162" => (token_string "Turnstile", 2) (* ⊢ *)
-          | "\226\151\129" => (token_string "LOpenTri", 1) (* ◁ *)
-          | "\226\129\187\194\185" => (token_string "Inverse", 1) (* ⁻¹ *)
-          | _       => (UTF8.translate char_map s,String.size s)
-        end
+      | NONE => (UTF8.translate char_map s,String.size s)
 
   fun smap overrides s =
       case overrides s of
         NONE => string_map s
       | SOME r => r
-  fun varmunge s = let
-    open Substring
-    val ss = full s
-    val (pfx,primes) = splitr (equal #"'") ss
-    val prime_str_interior = translate (fn _ => "\\prime") primes
-    val prime_str = if prime_str_interior = "" then ""
-                    else "\\sp{" ^ prime_str_interior ^ "}"
-    val (core,digits) = splitr Char.isDigit pfx
-    val dsz = size digits
-    val digitstr = if 0 < dsz andalso dsz <= 2 then
-                     "\\sb{" ^ string digits ^ "}"
-                   else string digits
-  in
-    string core ^ digitstr ^ prime_str
-  end
+  fun varmunge s =
+      if String.sub(s,0) = #"_" andalso
+         CharVector.all (fn c => Char.isDigit c) (String.extract(s,1,NONE))
+      then
+        "\\HOLTokenUnderscore{}"
+      else let
+          open Substring
+          val ss = full s
+          val (pfx,primes) = splitr (equal #"'") ss
+          val prime_str_interior = translate (fn _ => "\\prime") primes
+          val prime_str = if prime_str_interior = "" then ""
+                          else "\\sp{" ^ prime_str_interior ^ "}"
+          val (core,digits) = splitr Char.isDigit pfx
+          val dsz = size digits
+          val digitstr = if 0 < dsz andalso dsz <= 2 then
+                           "\\sb{" ^ string digits ^ "}"
+                         else string digits
+        in
+          string core ^ digitstr ^ prime_str
+        end
 
   fun ann_string overrides pps (s,ann) = let
     open PPBackEnd
