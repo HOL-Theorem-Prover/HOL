@@ -268,6 +268,7 @@ val _ = add_rule {fixity = Suffix 2100,
                   paren_style = OnlyIfNecessary,
                   pp_elements = [TOK "⁻¹"]}
 val _ = overload_on ("⁻¹", ``REVERSE : (string # string) list -> (string # string) list``)
+val _ = TeX_notation {hol="⁻¹", TeX= ("\\ensuremath{\\sp{-1}}", 1)}
 
 val perm_IN = Store_thm(
   "perm_IN",
