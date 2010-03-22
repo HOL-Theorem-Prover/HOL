@@ -25,7 +25,7 @@ val term_to_string = Parse.term_to_string;
 (*-----------------------------------------------------------------------------
  * Split a theorem into a list of theorems suitable for rewriting:
  *
- *   1. Specialize all variables (SPEC_ALL).
+ *   1. Specialize all type and term variables (TY_TM_SPEC_ALL).
  *
  *   2. Then do the following:
  *
@@ -36,7 +36,7 @@ val term_to_string = Parse.term_to_string;
  *---------------------------------------------------------------------------*)
 
 fun mk_rewrites th =
-  let val th = SPEC_ALL (TY_SPEC_ALL th)
+  let val th = TY_TM_SPEC_ALL th
       val t = concl th
   in
   if is_eq t   then [th] else
@@ -214,7 +214,7 @@ val HIGHER_REWRITE_CONV =
       in INST (map2 (curry op |->) fvs gvs) th
       end
   in fn ths =>
-      let val thl = map (GINST o SPEC_ALL o TY_SPEC_ALL) ths
+      let val thl = map (GINST o TY_TM_SPEC_ALL) ths
           val concs = map concl thl
           val lefts = map lhs concs
           val (preds,pats) = unzip(map dest_comb lefts)

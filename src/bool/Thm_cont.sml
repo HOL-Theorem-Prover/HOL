@@ -372,7 +372,7 @@ fun ANTE_RES_THEN ttac ante : tactic =
 (* begin_section IMP_RES_THEN;						*)
 (*									*)
 (* let MATCH_MP impth =							*)
-(*     let sth = SPEC_ALL impth in					*)
+(*     let sth = TY_TM_SPEC_ALL impth in		                *)
 (*     let pat = fst(dest_imp(concl sth)) in				*)
 (*     let matchfn = match pat in					*)
 (*        (\th. MP (INST_TY_TERM (matchfn (concl th)) sth) th);		*)
@@ -408,7 +408,7 @@ fun ANTE_RES_THEN ttac ante : tactic =
 
 local
   fun MATCH_MP impth = let
-    val sth = SPEC_ALL (TY_SPEC_ALL impth)
+    val sth = TY_TM_SPEC_ALL impth
     val hyptyvars = HOLset.listItems (hyp_tyvars sth)
     val hypkdvars = HOLset.listItems (hyp_kdvars sth)
     val lconstants = HOLset.intersection

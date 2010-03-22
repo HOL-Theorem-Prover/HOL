@@ -160,6 +160,7 @@ sig
   val outL : ('a,'b) sum -> 'a
   val outR : ('a,'b) sum -> 'b
   val +++  : ('a -> 'b) * ('c -> 'd) -> ('a,'c) sum -> ('b,'d) sum
+  val +-+  : ('a -> 'b) * ('c -> 'b) -> ('a,'c) sum -> 'b
 
   datatype ('a,'b) verdict = PASS of 'a | FAIL of 'b
   val verdict : ('a -> 'b) -> ('a -> 'c) -> 'a -> ('b, 'c*exn)verdict

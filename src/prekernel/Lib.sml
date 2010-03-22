@@ -755,9 +755,12 @@ fun outL (inL (x:'a)) = x
 fun outR (inR (y:'b)) = y
   | outR _ = raise ERR "outR" "value not of the right type"
 
-infix 3 +++
+infix 3 +++ +-+
 fun (f +++ g) (inL x) = inL (f x)
   | (f +++ g) (inR y) = inR (g y)
+
+fun (f +-+ g) (inL x) = f x
+  | (f +-+ g) (inR y) = g y;
 
 (*---------------------------------------------------------------------------*)
 (* Yet another variant of the sum type, used for the failure monad           *)

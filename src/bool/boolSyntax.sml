@@ -205,30 +205,6 @@ val strip_tyexists   = HolKernel.strip_tybinder (SOME ty_existential)
 val strip_conj       = strip_binop (total dest_conj)
 val strip_disj       = strip_binop (total dest_disj)
 
-(*
-fun strip_all_forall M =
-  let val (tyvs, M1) = strip_tyforall M
-      val (  vs, M2) = strip_forall M1
-      (* M1 is not a tyforall *)
-      (* M2 is not a forall   *)
-  in if null vs then (* M1 = M2 *) (tyvs, vs, M2)
-     else let val (tyvs', vs', M') = strip_all_forall M2
-          in (tyvs @ tyvs', vs @ vs', M')
-          end
-  end;
-
-fun strip_all_exists M =
-  let val (tyvs, M1) = strip_tyexists M
-      val (  vs, M2) = strip_exists M1
-      (* M1 is not a tyexists *)
-      (* M2 is not a exists   *)
-  in if null vs then (* M1 = M2 *) (tyvs, vs, M2)
-     else let val (tyvs', vs', M') = strip_all_exists M2
-          in (tyvs @ tyvs', vs @ vs', M')
-          end
-  end;
-*)
-
 fun avoid_dest_abs (tyvs,tmvs) tm =
   let val (bv,body) = dest_abs tm
   in if op_mem eq bv tmvs then

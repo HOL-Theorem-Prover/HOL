@@ -16,6 +16,8 @@ struct
 
 open HolKernel Drule Conv Tactical Thm_cont boolTheory boolSyntax Abbrev;
 
+infix +++ +-+;
+
 val ERR = mk_HOL_ERR "Tactic";
 
 
@@ -805,29 +807,31 @@ fun MATCH_ACCEPT_TAC thm : tactic =
 (*     ([gl,(fst(dest_imp(concl imp)))], \thl. MP imp (hd thl));	*)
 (* ---------------------------------------------------------------------*)
 
-local fun efn v (tm,th) =
+local fun efn (inR v) (tm,th) =
        let val ntm = mk_exists(v, tm) in (ntm,CHOOSE (v, ASSUME ntm) th) end
+        | efn (inL a) (tm,th) =
+       let val ntm = mk_tyexists(a, tm) in (ntm,TY_CHOOSE (a, ASSUME ntm) th) end
 in
 fun MATCH_MP_TAC thm :tactic = let
   val lconsts      = HOLset.intersection
                         (FVL [concl thm] empty_tmset, hyp_frees thm)
   val hyptyvars    = HOLset.listItems (hyp_tyvars thm)
   val hypkdvars    = HOLset.listItems (hyp_kdvars thm)
-  val (gtvs,tbod)  = strip_tyforall (concl thm)
-  val (gvs,imp)    = strip_forall tbod
+  val (gvs,imp)    = strip_all_forall (concl thm)
   val (ant,conseq) = with_exn dest_imp imp
                               (ERR "MATCH_MP_TAC" "Not an implication")
   val (cvs,con)    = strip_forall conseq
-  val th1          = SPECL cvs (UNDISCH (SPECL gvs (TY_SPECL gtvs thm)))
-  val (vs,evs)     = partition (C Term.free_in con) gvs
+  val th1          = SPECL cvs (UNDISCH (TY_TM_SPECL gvs thm))
+  val (vs,evs)     = partition (fn inR v => Term.var_occurs v con
+                                 | inL a => Term.type_var_occurs a con) gvs
   val th2          = uncurry DISCH (itlist efn evs (ant,th1))
 in
 fn (A,g) =>
-   let val (vs,gl) = strip_forall g
+   let val (vs,gl) = strip_all_forall g
        val ins     = kind_match_terml hypkdvars hyptyvars lconsts con gl
            handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
        val ith     = INST_ALL ins th2
-       val gth     = GENL vs (UNDISCH ith)
+       val gth     = TY_TM_GENL vs (UNDISCH ith)
            handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "Generalized var(s)."
        val ant     = fst(dest_imp(concl ith))
    in
@@ -963,13 +967,14 @@ fun HO_BACKCHAIN_TAC th =
 fun HO_MATCH_MP_TAC th =
  let val sth =
    let val tm = concl th
-       val (tvs,tbod) = strip_tyforall tm
-       val (avs,bod) = strip_forall tbod
+       val (vs,bod) = strip_all_forall tm
        val (ant,conseq) = dest_imp_only bod
-       val th1 = SPECL avs (TY_SPECL tvs (ASSUME tm))
+       val th1 = TY_TM_SPECL vs (ASSUME tm)
        val th2 = UNDISCH th1
-       val evs = filter(fn v => free_in v ant andalso not(free_in v conseq)) avs
-       val th3 = itlist SIMPLE_CHOOSE evs (DISCH tm th2)
+       val evs = filter(fn inR v => var_occurs v ant andalso not(var_occurs v conseq)
+                         | inL a => type_var_occurs a ant andalso not(type_var_occurs a conseq)
+                        ) vs
+       val th3 = itlist (SIMPLE_TY_CHOOSE +-+ SIMPLE_CHOOSE) evs (DISCH tm th2)
        val tm3 = Lib.trye hd(hyp th3)
    in MP (DISCH tm (GEN_ALL (DISCH tm3 (UNDISCH th3)))) th
    end handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "Bad theorem"

@@ -35,7 +35,7 @@ datatype control = UNBOUNDED | BOUNDED of int ref
 (*---------------------------------------------------------------------------*
  * Split a theorem into a list of theorems suitable for rewriting:           *
  *                                                                           *
- *   1. Specialize all variables (SPEC_ALL).                                 *
+ *   1. Specialize all type and term variables (TY_TM_SPEC_ALL).             *
  *                                                                           *
  *   2. Then do the following:                                               *
  *                                                                           *
@@ -48,7 +48,7 @@ datatype control = UNBOUNDED | BOUNDED of int ref
 
 
 fun decompose tag th =
- let val th = SPEC_ALL (TY_SPEC_ALL th)
+ let val th = TY_TM_SPEC_ALL th
      val t = concl th
  in
    if is_eq t   then [(th,tag)] else

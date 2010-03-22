@@ -15,7 +15,8 @@ struct
 open Feedback HolKernel Parse boolTheory boolSyntax Abbrev;
 
 val +++ = Lib.+++
-infix +++
+val +-+ = Lib.+-+
+infix +++ +-+
 
 val ERR = mk_HOL_ERR "Drule";
 
@@ -2137,16 +2138,12 @@ fun HO_PART_MATCH partfn th =
 end
 
 
-infix +-+;
-fun (f +-+ g) (inL x) = f x
-  | (f +-+ g) (inR y) = g y;
-
 fun HO_MATCH_MP ith =
  let val sth =
        let val tm = concl ith
            val (avs,bod) = strip_all_forall tm
            val (ant,_) = dest_imp_only bod
-       in case partition (C type_var_occurs ant +-+ C free_in ant) avs
+       in case partition (C type_var_occurs ant +-+ C var_occurs ant) avs
            of (_,[]) => ith
             | (svs,pvs) =>
               let val th1 = TY_TM_SPECL avs (ASSUME tm)
@@ -2251,7 +2248,9 @@ fun HO_MATCH_MP ith =
 (*   (t1\/t2)==>t    --->	t1==>t, t2==>t				*)
 (*   t1 = t2         --->       t1==>t2, t2==>t1			*)
 (*   !x. t1 ==> t2   --->       t1 ==> !x.t2   (x not free in t1)	*)
+(*   !:a. t1 ==> t2  --->       t1 ==> !:a.t2  (a not free in t1)	*)
 (*   (?x.t1) ==> t2  --->	!x'. t1[x'/x] ==> t2			*)
+(*   (?:a.t1) ==> t2 --->	t1[a'/a] ==> t2			        *)
 (*									*)
 (* The function now fails if no implications can be derived from the 	*)
 (* input theorem.							*)
@@ -2292,6 +2291,15 @@ fun canon (fl,th) =
                  val th1  = MP th (EXISTS (ant,newv) (ASSUME newa))
              in
                canon(true,DISCH newa th1)
+             end else
+        if is_tyexists ant
+        then let val (Bvar,Body) = dest_tyexists ant
+                 val ftvs = HOLset.listItems (HOLset.addList (hyp_tyvars th, type_vars_in_term(concl th)))
+                 val newv = variant_type ftvs Bvar
+                 val newa = inst [Bvar |-> newv] Body
+                 val th1  = MP th (TY_EXISTS (ant,newv) (ASSUME newa))
+             in
+               canon(true,DISCH newa th1)
              end
         else map (GEN_ALL o (DISCH ant)) (canon (true,UNDISCH th))
      end else
@@ -2299,20 +2307,23 @@ fun canon (fl,th) =
    then let val (th1,th2) = EQ_IMP_RULE th
         in (if fl then [GEN_ALL th] else [])@canon(true,th1)@canon(true,th2)
         end else
-   if is_forall w then
-     let val (vs,_) = strip_forall w
+   if is_forall w orelse is_tyforall w then
+     let val (vs,_) = strip_all_forall w
          val fvs = HOLset.listItems (FVL[concl th] (hyp_frees th))
-         val nvs = itlist (fn v => fn nv => variant (nv @ fvs) v::nv) vs []
+         val ftvs = HOLset.listItems (HOLset.addList (hyp_tyvars th, type_vars_in_term(concl th)))
+         val nvs = itlist (fn inR v => (fn nv => inR(variant (mapfilter outR nv @ fvs) v)::nv)
+                            | inL v => (fn nv => inL(variant_type (mapfilter outL nv @ ftvs) v)::nv)
+                          ) vs []
      in
-        canon (fl, SPECL nvs th)
+        canon (fl, TY_TM_SPECL nvs th)
      end else
    if fl then [GEN_ALL th] else []
    end
 in
 fun RES_CANON th =
- let val conjlist = CONJUNCTS (SPEC_ALL (TY_SPEC_ALL th))
+ let val conjlist = CONJUNCTS (TY_TM_SPEC_ALL th)
      fun operate th accum =
-          accum @ map GEN_ALL (canon (not_elim (SPEC_ALL (TY_SPEC_ALL th))))
+          accum @ map GEN_ALL (canon (not_elim (TY_TM_SPEC_ALL th)))
      val imps = Lib.rev_itlist operate conjlist []
  in Lib.assert (op not o null) imps
  end handle HOL_ERR _
