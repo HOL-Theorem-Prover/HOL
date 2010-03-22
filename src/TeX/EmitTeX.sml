@@ -241,63 +241,91 @@ end;
 fun token_string s = String.concat ["\\", !texPrefix, "Token", s, "{}"];
 
 local
+  fun greek s = "\\ensuremath{\\" ^ s ^ "}"
+  fun subn i  = "\\ensuremath{_{" ^ Int.toString i ^ "}}"
+
   fun char_map c =
     case c
-    of #"\\" => token_string "Backslash"
-     | #"{"  => token_string "Leftbrace"
-     | #"}"  => token_string "Rightbrace"
-     | c     => String.str c
+    of "\\" => token_string "Backslash"
+     | "{"  => token_string "Leftbrace"
+     | "}"  => token_string "Rightbrace"
+     | "α" => greek "alpha"
+     | "β" => greek "beta"
+     | "γ" => greek "gamma"
+     | "Γ" => greek "Gamma"
+     | "δ" => greek "delta"
+     | "Δ" => greek "Delta"
+     | "ε" => greek "epsilon"
+     | "ζ" => greek "zeta"
+     | "η" => greek "eta"
+     | "θ" => greek "theta"
+     | "Θ" => greek "Theta"
+     | "ι" => greek "iota"
+     | "κ" => greek "kappa"
+     | "λ" => greek "lambda"
+     | "Λ" => greek "Lambda"
+     | "μ" => greek "mu"
+     | "ν" => greek "nu"
+     | "ξ" => greek "xi"
+     | "Ξ" => greek "Xi"
+     | "π" => greek "pi"
+     | "Π" => greek "Pi"
+     | "ρ" => greek "rho"
+     | "σ" => greek "sigma"
+     | "ς" => greek "varsigma"
+     | "Σ" => greek "Sigma"
+     | "τ" => greek "tau"
+     | "υ" => greek "upsilon"
+     | "Υ" => greek "Upsilon"
+     | "φ" => greek "phi"
+     | "ϕ" => greek "varphi"
+     | "Φ" => greek "Phi"
+     | "χ" => greek "chi"
+     | "ψ" => greek "psi"
+     | "Ψ" => greek "Psi"
+     | "ω" => greek "omega"
+     | "Ω" => greek "Omega"
+     | "₁" => subn 1
+     | "₂" => subn 2
+     | "₃" => subn 3
+     | "₄" => subn 4
+     | "₅" => subn 5
+     | "₆" => subn 6
+     | "₇" => subn 7
+     | "₈" => subn 8
+     | "₉" => subn 9
+     | "₀" => subn 0
+     | c     => c
 
   fun string_map s =
       case Binarymap.peek(TexTokenMap.the_map(), s) of
         SOME result => result
-      | NONE => let
-        in
-          case s of
-            " <-"   => (" " ^ token_string "Leftmap",2)
-          | "-->"   => (token_string "Longmap",2)
-          | "><"    => (token_string "Extract",2)
-          | "=>"    => (token_string "Imp",1)
-          | "===>"  => (token_string "Longimp",2)
-          | "<+"    => (token_string "Lo",1)
-          | ">+"    => (token_string "Hi",1)
-          | "<=+"   => (token_string "Ls",1)
-          | ">=+"   => (token_string "Hs",1)
-          | "<<"    => (token_string "Lsl",2)
-          | ">>"    => (token_string "Asr",2)
-          | ">>>"   => (token_string "Lsr",3)
-          | "#<<"   => (token_string "Rol",1)
-          | "#>>"   => (token_string "Ror",1)
-          | "!!"    => (token_string "Or",1)
-          | "??"    => (token_string "Eor",1)
-          | "{}"    => (token_string "Empty",2)
-          | "_"     => (token_string "Underscore",1)
-          | "\226\134\146" => (token_string "Map", 1) (* → *)
-          | "\226\138\162" => (token_string "Turnstile", 2) (* ⊢ *)
-          | "\226\151\129" => (token_string "LOpenTri", 1) (* ◁ *)
-          | "\226\129\187\194\185" => (token_string "Inverse", 1) (* ⁻¹ *)
-          | _       => (String.translate char_map s,String.size s)
-        end
+      | NONE => (UTF8.translate char_map s,String.size s)
 
   fun smap overrides s =
       case overrides s of
         NONE => string_map s
       | SOME r => r
-  fun varmunge s = let
-    open Substring
-    val ss = full s
-    val (pfx,primes) = splitr (equal #"'") ss
-    val prime_str_interior = translate (fn _ => "\\prime") primes
-    val prime_str = if prime_str_interior = "" then ""
-                    else "\\sp{" ^ prime_str_interior ^ "}"
-    val (core,digits) = splitr Char.isDigit pfx
-    val dsz = size digits
-    val digitstr = if 0 < dsz andalso dsz <= 2 then
-                     "\\sb{" ^ string digits ^ "}"
-                   else string digits
-  in
-    string core ^ digitstr ^ prime_str
-  end
+  fun varmunge s =
+      if String.sub(s,0) = #"_" andalso
+         CharVector.all (fn c => Char.isDigit c) (String.extract(s,1,NONE))
+      then
+        "\\HOLTokenUnderscore{}"
+      else let
+          open Substring
+          val ss = full s
+          val (pfx,primes) = splitr (equal #"'") ss
+          val prime_str_interior = translate (fn _ => "\\prime") primes
+          val prime_str = if prime_str_interior = "" then ""
+                          else "\\sp{" ^ prime_str_interior ^ "}"
+          val (core,digits) = splitr Char.isDigit pfx
+          val dsz = size digits
+          val digitstr = if 0 < dsz andalso dsz <= 2 then
+                           "\\sb{" ^ string digits ^ "}"
+                         else string digits
+        in
+          string core ^ digitstr ^ prime_str
+        end
 
   fun ann_string overrides pps (s,ann) = let
     open PPBackEnd

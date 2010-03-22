@@ -13,17 +13,20 @@ let
   val _ = print s;
 
   val _ = print_with_style [Bold] "Modes:\n";
-  val s =   "  -q     quiet mode, verify specifications automatically and just print end results\n";
-  val s = s^"  -i     interactive mode, verify specifications step by step\n\n";
+  val s =   "  -q      quiet mode, verify specifications automatically and just print end results\n";
+  val s = s^"  -i      interactive mode, verify specifications step by step\n\n";
   val _ = print s;
   val _ = print_with_style [Bold] "Printing switches:\n";
-  val s =   "  -nu    turn unicode off\n";
-  val s = s^"  -r     raw output, disable VT100 specials\n";
-  val s = s^"  --html html output\n\n";
+  val s =   "  -nu     turn unicode off\n";
+  val s = s^"  -r      raw output, disable VT100 specials\n";
+  val s = s^"  --html  html output\n\n";
+  val _ = print s;
+  val _ = print_with_style [Bold] "External Tools:\n";
+  val s =   "  --yices use the Yices SMT-solver (default off)\n\n";
   val _ = print s;
   val _ = print_with_style [Bold] "Help:\n";
-  val s =   "  -h     this help\n";
-  val s = s^"  -hi    help on interactive mode\n\n";
+  val s =   "  -h      this help\n";
+  val s = s^"  -hi     help on interactive mode\n\n";
   val _ = print s;
   val _ = print_with_style [Bold] "Build time: ";
   val _ = print ("\n  "^build_date^"\n\n");
@@ -205,6 +208,7 @@ end
 
 fun holfoot_run () = let
    val _ = Feedback.set_trace "PPBackEnd use annotations" 0
+   val _ = Feedback.set_trace "HolSmtLib" 0
 
    val orgargs = CommandLine.arguments ();
    val args = orgargs;
@@ -214,6 +218,8 @@ fun holfoot_run () = let
       handle _ => (false, args);
    val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args)) 
       handle _ => (true, args);
+   val (yices, args) = (false, Lib.snd (Lib.pluck (fn x => x = "--yices") args)) 
+      handle _ => (false, args);
    val (raw_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-r") args)) 
       handle _ => (false, args);
    val (html_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--html") args)) 
@@ -223,6 +229,7 @@ fun holfoot_run () = let
                                     (if (html_output) then PPBackEnd.html_terminal else PPBackEnd.vt100_terminal));
    val _ = Feedback.set_trace "Unicode" (if unicode then 1 else 0)
    val _ = Feedback.set_trace "holfoot print file" (if html_output then 0 else 1);
+   val _ = Feedback.set_trace "holfoot use Yices" (if unicode then 1 else 0)
 
    val args = ((Lib.pluck (fn x => x = "-h") orgargs);print_help();[])
       handle _ => args;

@@ -161,6 +161,12 @@ val _ = overload_on ("INT_MINw",``words$word_L``)
 val _ = Unicode.unicode_version{u=Unicode.UChar.or, tmnm="!!"}
 val _ = Unicode.unicode_version{u=Unicode.UChar.xor, tmnm="??"}
 
+val _ = TeX_notation {hol = "!!", TeX = ("\\HOLTokenOr{}", 1)}
+val _ = TeX_notation {hol = Unicode.UChar.or, TeX = ("\\HOLTokenOr{}", 1)}
+
+val _ = TeX_notation {hol = "??", TeX = ("\\HOLTokenEor{}", 1)}
+val _ = TeX_notation {hol = Unicode.UChar.xor, TeX = ("\\HOLTokenEor{}", 1)}
+
 (* ------------------------------------------------------------------------- *)
 (*  Reduction operations : definitions                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -247,6 +253,8 @@ val _ = set_fixity "''" (Infixr 375)
 val _ = set_fixity "--" (Infixr 375)
 val _ = set_fixity "><" (Infixr 375)
 val _ = set_fixity "---" (Infixr 375);
+
+val _ = TeX_notation {hol = "><", TeX = ("\\HOLTokenExtract", 2)}
 
 (* ------------------------------------------------------------------------- *)
 (*  Word arithmetic: definitions                                             *)
@@ -372,6 +380,21 @@ val _ = Unicode.unicode_version{u=Unicode.UChar.lsr, tmnm=">>>"}
 val _ = Unicode.unicode_version{u=Unicode.UChar.ror, tmnm="#>>"}
 val _ = Unicode.unicode_version{u=Unicode.UChar.rol, tmnm="#<<"}
 
+val _ = TeX_notation {hol = "<<", TeX = ("\\HOLTokenLsl{}", 2)}
+val _ = TeX_notation {hol = Unicode.UChar.lsl, TeX = ("\\HOLTokenLsl{}", 2)}
+
+val _ = TeX_notation {hol = ">>", TeX = ("\\HOLTokenAsr{}", 2)}
+val _ = TeX_notation {hol = Unicode.UChar.asr, TeX = ("\\HOLTokenAsr{}", 2)}
+
+val _ = TeX_notation {hol = ">>>", TeX = ("\\HOLTokenLsr{}", 3)}
+val _ = TeX_notation {hol = Unicode.UChar.lsr, TeX = ("\\HOLTokenLsr{}", 3)}
+
+val _ = TeX_notation {hol = "#>>", TeX = ("\\HOLTokenRor{}", 1)}
+val _ = TeX_notation {hol = Unicode.UChar.ror, TeX = ("\\HOLTokenRor{}", 2)}
+
+val _ = TeX_notation {hol = "#<<", TeX = ("\\HOLTokenRol{}", 1)}
+val _ = TeX_notation {hol = Unicode.UChar.rol, TeX = ("\\HOLTokenRol{}", 1)}
+
 (* ------------------------------------------------------------------------- *)
 (*  Concatenation : definition                                               *)
 (* ------------------------------------------------------------------------- *)
@@ -455,6 +478,18 @@ val _ = Unicode.unicode_version{u=Unicode.UChar.ls, tmnm = "<=+"}
 val _ = Unicode.unicode_version{u=Unicode.UChar.hi, tmnm = ">+"}
 val _ = Unicode.unicode_version{u=Unicode.UChar.lo, tmnm = "<+"}
 val _ = Unicode.unicode_version{u=Unicode.UChar.hs, tmnm = ">=+"}
+
+val _ = TeX_notation {hol = "<+", TeX = ("\\HOLTokenLo{}", 1)}
+val _ = TeX_notation {hol = Unicode.UChar.lo, TeX = ("\\HOLTokenLo{}", 1)}
+
+val _ = TeX_notation {hol = ">+", TeX = ("\\HOLTokenHi{}", 1)}
+val _ = TeX_notation {hol = Unicode.UChar.hi, TeX = ("\\HOLTokenHi{}", 1)}
+
+val _ = TeX_notation {hol = "<=+", TeX = ("\\HOLTokenLs{}", 1)}
+val _ = TeX_notation {hol = Unicode.UChar.ls, TeX = ("\\HOLTokenLs{}", 1)}
+
+val _ = TeX_notation {hol = ">=+", TeX = ("\\HOLTokenHs{}", 1)}
+val _ = TeX_notation {hol = Unicode.UChar.hs, TeX = ("\\HOLTokenHs{}", 1)}
 
 (* ------------------------------------------------------------------------- *)
 (*  Theorems                                                                 *)
@@ -1729,7 +1764,7 @@ val SNOC_GENLIST_K = Q.prove(
 val word_replicate_concat_word_list = Q.store_thm
  ("word_replicate_concat_word_list",
   `!n w. word_replicate n w = concat_word_list (GENLIST (K w) n)`,
-  Induct 
+  Induct
      \\ SRW_TAC [] [word_replicate_def, concat_word_list_def,
           rich_listTheory.GENLIST, SNOC_GENLIST_K]
      >> SRW_TAC [fcpLib.FCP_ss] [word_0]

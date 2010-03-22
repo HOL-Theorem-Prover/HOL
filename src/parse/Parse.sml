@@ -676,20 +676,6 @@ fun prefer_form_with_tok (r as {term_name,tok}) = let in
                                 ", tok = ", quote tok, "}"])
  end
 
-fun temp_overload_on (s, t) =
-    (the_term_grammar := fupdate_overload_info
-                             (Overload.add_overloading (s, t))
-                             (term_grammar());
-     term_grammar_changed := true)
-
-fun overload_on (s, t) = let
-in
-  temp_overload_on (s, t);
-  full_update_grms
-    ("temp_overload_on",
-     String.concat ["(", quote s, ", ", minprint t, ")"],
-    SOME t)
-end
 
 fun temp_set_grammars(tyG, tmG) = let
 in
@@ -821,10 +807,6 @@ struct
                              (fupdate_rules_ty (fupd_binders_ty (fn sl => [Lib.last sl]))
                                                (type_grammar())))))
 
-  fun unicode_lambda () =
-      temp_set_term_grammar (fupdate_specials (fupd_lambda (cons UChar.lambda))
-                                              (term_grammar()))
-
   (* This "uchar" is a terrible hack. *)
   fun uchar "\\" = UChar.lambda
     | uchar "!"  = UChar.forall
@@ -842,18 +824,23 @@ struct
                              (fupdate_specials_ty (fupd_forall_ty (cons UChar.forall))
                              (fupdate_rules_ty (fupd_binders_ty (fn sl => cons (uchar (hd sl)) sl))
                                                (type_grammar())))))
-
-  fun traceset n = if n = 0 then (master_unicode_switch := false;
-                                  set_trace "Greek tyvars" 0;
-                                  bare_lambda();
-                                  lift0 ProvideUnicode.disable_all)
-                   else (master_unicode_switch := true;
-                         set_trace "Greek tyvars" 1;
-                         unicode_lambda();
-                         lift0 ProvideUnicode.enable_all)
+  fun traceset n = if n = 0 then
+                     if !master_unicode_switch then
+                       (master_unicode_switch := false;
+                        set_trace "Greek tyvars" 0;
+                        bare_lambda();
+                        lift0 ProvideUnicode.disable_all)
+                     else ()
+                   else if not (!master_unicode_switch) then
+                     (master_unicode_switch := true;
+                      set_trace "Greek tyvars" 1;
+                      unicode_lambda();
+                      lift0 ProvideUnicode.enable_all)
+                   else ()
   fun traceget () = if !master_unicode_switch then 1 else 0
 
   val _ = register_ftrace ("Unicode", (traceget, traceset), 1)
+  val _ = unicode_lambda()
 
   val _ = traceset 1
 
@@ -1112,8 +1099,8 @@ fun try_grammar_extension f x =
         grm_updates := updates; raise e)
  end;
 
+fun includes_unicode s = not (CharVector.all (fn c => Char.ord c < 128) s)
 val els_include_unicode = let
-  fun includes_unicode s = not (CharVector.all (fn c => Char.ord c < 128) s)
 in
   List.exists (fn RE (TOK s) => includes_unicode s | _ => false)
 end
@@ -1198,6 +1185,34 @@ fun add_rule (r as {term_name, fixity, pp_elements,
                   "block_style = (", BlockStyleToString bs, ", ",
                   block_infoToString bi,")}"])
  end
+
+fun temp_overload_on (s, t) = let
+  val uni_on = get_tracefn "Unicode" () > 0
+in
+  if includes_unicode s then
+    (if not uni_on then
+       HOL_WARNING "Parse" "overload_on"
+                   "Adding a Unicode-ish rule without Unicode trace \
+                   \being true"
+     else
+       term_grammar_changed := true;
+     Unicode.temp_uoverload_on (s,t))
+  else
+    (the_term_grammar := fupdate_overload_info
+                             (Overload.add_overloading (s, t))
+                             (term_grammar());
+     term_grammar_changed := true)
+end
+
+fun overload_on (s, t) = let
+in
+  temp_overload_on (s, t);
+  full_update_grms
+    ("temp_overload_on",
+     String.concat ["(", quote s, ", ", minprint t, ")"],
+    SOME t)
+end
+
 
 fun temp_add_listform x = let open term_grammar in
     the_term_grammar := add_listform (term_grammar()) x;

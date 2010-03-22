@@ -190,6 +190,8 @@ fun mx_order mxo =
     | PM_EQUAL => SOME EQUAL
     | PM_LG _ => NONE
 
+val ambigrm = ref 1
+val _ = Feedback.register_trace ("ambiguous grammar warning", ambigrm, 2)
 
 fun mk_prec_matrix G = let
   exception NotFound = Binarymap.NotFound
@@ -219,15 +221,19 @@ fun mk_prec_matrix G = let
       (Polyhash.insert matrix (k, PM_LESS MS_Multi);
        complained_this_iteration := true;
        if not (!complained_already) andalso
-          !Globals.interactive
-       then
-         (Feedback.HOL_WARNING
-              "Parse" "Term"
-              ("Grammar ambiguous on token pair "^
-               STtoString G (#1 (#1 k)) ^ " and " ^
-               STtoString G (#2 k) ^ ", and "^
-               "probably others too");
-              complained_already := true)
+          (!Globals.interactive orelse !ambigrm = 2)
+       then let
+           val msg = "Grammar ambiguous on token pair "^
+                     STtoString G (#1 (#1 k)) ^ " and " ^
+                     STtoString G (#2 k) ^ ", and "^
+                     "probably others too"
+         in
+           case !ambigrm of
+             0 => ()
+           | 1 => (Feedback.HOL_WARNING "Parse" "Term" msg;
+                   complained_already := true)
+           | 2 => raise Feedback.mk_HOL_ERR "parse_term" "mk_prec_matrix" msg
+         end
        else
          ())
   fun insert k v = let

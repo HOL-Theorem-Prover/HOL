@@ -289,6 +289,8 @@ val FUN_REL =
            !x y. R1 x y ==> R2 (f x) (g y)`--),
      490);
 
+val _ = TeX_notation {hol = "===>", TeX = ("\\HOLTokenLongimp", 2)};
+
 
 val FUN_REL_EQ = store_thm
    ("FUN_REL_EQ",
