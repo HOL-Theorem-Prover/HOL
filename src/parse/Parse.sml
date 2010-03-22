@@ -506,20 +506,6 @@ fun prefer_form_with_tok (r as {term_name,tok}) = let in
                                 ", tok = ", quote tok, "}"])
  end
 
-fun temp_overload_on (s, t) =
-    (the_term_grammar := fupdate_overload_info
-                             (Overload.add_overloading (s, t))
-                             (term_grammar());
-     term_grammar_changed := true)
-
-fun overload_on (s, t) = let
-in
-  temp_overload_on (s, t);
-  full_update_grms
-    ("temp_overload_on",
-     String.concat ["(", quote s, ", ", minprint t, ")"],
-    SOME t)
-end
 
 fun temp_set_grammars(tyG, tmG) = let
 in
@@ -823,8 +809,8 @@ fun try_grammar_extension f x =
         grm_updates := updates; raise e)
  end;
 
+fun includes_unicode s = not (CharVector.all (fn c => Char.ord c < 128) s)
 val els_include_unicode = let
-  fun includes_unicode s = not (CharVector.all (fn c => Char.ord c < 128) s)
 in
   List.exists (fn RE (TOK s) => includes_unicode s | _ => false)
 end
@@ -897,6 +883,34 @@ fun add_rule (r as {term_name, fixity, pp_elements,
                   "block_style = (", BlockStyleToString bs, ", ",
                   block_infoToString bi,")}"])
  end
+
+fun temp_overload_on (s, t) = let
+  val uni_on = get_tracefn "Unicode" () > 0
+in
+  if includes_unicode s then
+    (if not uni_on then
+       HOL_WARNING "Parse" "overload_on"
+                   "Adding a Unicode-ish rule without Unicode trace \
+                   \being true"
+     else
+       term_grammar_changed := true;
+     Unicode.temp_uoverload_on (s,t))
+  else
+    (the_term_grammar := fupdate_overload_info
+                             (Overload.add_overloading (s, t))
+                             (term_grammar());
+     term_grammar_changed := true)
+end
+
+fun overload_on (s, t) = let
+in
+  temp_overload_on (s, t);
+  full_update_grms
+    ("temp_overload_on",
+     String.concat ["(", quote s, ", ", minprint t, ")"],
+    SOME t)
+end
+
 
 fun temp_add_listform x = let open term_grammar in
     the_term_grammar := add_listform (term_grammar()) x;
