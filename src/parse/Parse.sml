@@ -591,7 +591,7 @@ struct
           urule (rf, irule)
         end
   in
-    lift setter {u = s, term_name = s, newrule = rule, oldtok = NONE}
+    lift setter {u = [s], term_name = s, newrule = rule, oldtok = NONE}
   end handle foo => ()
 
   val temp_uset_fixity = uset_fixity0 ProvideUnicode.temp_uadd_rule
@@ -847,6 +847,8 @@ in
     end
   | RF rf => let
       val uni_on = get_tracefn "Unicode" () > 0
+      val toks = List.mapPartial (fn TOK s => SOME s | _ => NONE)
+                                 (rule_elements pp_elements)
     in
       if els_include_unicode pp_elements then let
           val irule = {term_name = term_name, pp_elements = pp_elements,
@@ -858,7 +860,7 @@ in
                            "Adding a Unicode-ish rule without Unicode trace \
                            \being true";
           the_term_grammar := ProvideUnicode.temp_uadd_rule uni_on {
-            u = term_name, term_name = term_name, newrule = grule,
+            u = toks, term_name = term_name, newrule = grule,
             oldtok = NONE
           } (term_grammar());
           term_grammar_changed := true

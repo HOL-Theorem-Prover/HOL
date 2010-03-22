@@ -3,7 +3,7 @@ sig
 
   type term = Term.term
   type grammar = term_grammar.grammar
-  type urule = {u:string, term_name : string,
+  type urule = {u:string list, term_name : string,
                 newrule : int option * term_grammar.grammar_rule,
                 oldtok : string option}
   (* functions for manipulating use of Unicode versions of constants *)
