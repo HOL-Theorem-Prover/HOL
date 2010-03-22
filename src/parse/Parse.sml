@@ -611,17 +611,23 @@ struct
       temp_set_term_grammar (fupdate_specials (fupd_lambda (cons UChar.lambda))
                                               (term_grammar()))
 
-  fun traceset n = if n = 0 then (master_unicode_switch := false;
-                                  set_trace "Greek tyvars" 0;
-                                  bare_lambda();
-                                  lift0 ProvideUnicode.disable_all)
-                   else (master_unicode_switch := true;
-                         set_trace "Greek tyvars" 1;
-                         unicode_lambda();
-                         lift0 ProvideUnicode.enable_all)
+  fun traceset n = if n = 0 then
+                     if !master_unicode_switch then
+                       (master_unicode_switch := false;
+                        set_trace "Greek tyvars" 0;
+                        bare_lambda();
+                        lift0 ProvideUnicode.disable_all)
+                     else ()
+                   else if not (!master_unicode_switch) then
+                     (master_unicode_switch := true;
+                      set_trace "Greek tyvars" 1;
+                      unicode_lambda();
+                      lift0 ProvideUnicode.enable_all)
+                   else ()
   fun traceget () = if !master_unicode_switch then 1 else 0
 
   val _ = register_ftrace ("Unicode", (traceget, traceset), 1)
+  val _ = unicode_lambda()
 
   val _ = traceset 1
 
