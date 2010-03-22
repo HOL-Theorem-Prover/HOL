@@ -257,5 +257,5 @@ end
 val _ = temp_add_user_printer ("parmonadsyntax.print_monads", ``x:'a``,
                                print_monads)
 
-
+val _ = temp_TeX_notation {hol = " <-", TeX = (" \\HOLTokenLeftmap{}", 2)}
 end (* struct *)
