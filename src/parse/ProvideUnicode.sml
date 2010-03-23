@@ -63,7 +63,7 @@ fun getrule G term_name = let
   end
 
   fun breplace {term_name,tok,preferred} s =
-      {term_name = term_name, tok = s, preferred = false}
+      {term_name = term_name, tok = s, preferred = true}
   fun search_bslist f alt blist = let
     fun srch {term_name = nm, preferred, tok} =
         term_name = nm andalso preferred
