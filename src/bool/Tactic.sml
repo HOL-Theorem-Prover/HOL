@@ -820,8 +820,8 @@ fun MATCH_MP_TAC thm :tactic = let
   val (gvs,imp)    = strip_all_forall (concl thm)
   val (ant,conseq) = with_exn dest_imp imp
                               (ERR "MATCH_MP_TAC" "Not an implication")
-  val (cvs,con)    = strip_forall conseq
-  val th1          = SPECL cvs (UNDISCH (TY_TM_SPECL gvs thm))
+  val (cvs,con)    = strip_all_forall conseq
+  val th1          = TY_TM_SPECL cvs (UNDISCH (TY_TM_SPECL gvs thm))
   val (vs,evs)     = partition (fn inR v => Term.var_occurs v con
                                  | inL a => Term.type_var_occurs a con) gvs
   val th2          = uncurry DISCH (itlist efn evs (ant,th1))
