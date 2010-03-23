@@ -13,15 +13,12 @@ type gopns = {prefer_form_with_tok : {term_name:string, tok:string} -> unit,
               overload_on : (string * term) -> unit,
               remove_termtok : {term_name:string,tok:string} -> unit,
               master_unicode_switch : bool}
-type urule = {u:string, term_name : string,
+type urule = {u:string list, term_name : string,
               newrule : int option * term_grammar.grammar_rule,
               oldtok : string option}
 
-
 datatype stored_data =
-         RuleUpdate of { u : string, term_name : string,
-                         newrule : (int option * grammar_rule),
-                         oldtok : string option }
+         RuleUpdate of urule
        | OverloadUpdate of { u : string, oldname : string option,
                              ts : term list }
 
@@ -29,10 +26,9 @@ datatype stored_data =
    the way in which a Unicode string can be an alternative for a
    syntactic form.
 
-   If it's a RuleUpdate{u,term_name,newrule,oldtok} form, then the
-   Unicode symbol u appears is a token of newrule, which maps to term_name,
+   If it's a RuleUpdate{u,term_name,newrule,oldtok} form, then u is the
+   list of tokens appearing in newrule, which maps to term_name,
    and oldtok is an ASCII token of the old rule (if any).
-
 
    If it's a OverloadUpdate{u,oldname,t} then u is to be put in as an
    additional overload from u to the term t, and oldname is the ASCII
@@ -40,12 +36,13 @@ datatype stored_data =
 *)
 
 val term_table = ref ([] : stored_data list)
+fun stored_data () = !term_table
 
 fun getrule G term_name = let
   fun replace {term_name, elements, preferred, block_style, paren_style} s =
       {term_name = term_name,
        elements = map (fn (RE (TOK _)) => RE (TOK s) | x => x) elements,
-       preferred = false,
+       preferred = true,
        block_style = block_style,
        paren_style = paren_style}
   fun tok_of0 es =
@@ -66,7 +63,7 @@ fun getrule G term_name = let
   end
 
   fun breplace {term_name,tok,preferred} s =
-      {term_name = term_name, tok = s, preferred = false}
+      {term_name = term_name, tok = s, preferred = true}
   fun search_bslist f alt blist = let
     fun srch {term_name = nm, preferred, tok} =
         term_name = nm andalso preferred
@@ -147,8 +144,8 @@ fun enable_one g0 sd =
       RuleUpdate {u,term_name,newrule = r,oldtok} => let
         open term_grammar
       in
-        g0 |> C add_grule r
-           |> C prefer_form_with_tok {term_name = term_name, tok = u}
+        g0 |> clear_prefs_for term_name
+           |> C add_grule r
       end
     | OverloadUpdate{u,oldname,ts} => let
         fun foldthis (t,g) =
@@ -175,7 +172,7 @@ fun disable_one G sd =
     case sd of
       RuleUpdate{u,term_name,newrule,oldtok} => let
       in
-        G |> C remove_form_with_tok {tok = u, term_name = term_name}
+        G |> remove_form_with_toklist {toklist = u, term_name = term_name}
           |> (case oldtok of
                 NONE => (fn g => g)
               | SOME s =>
@@ -192,8 +189,8 @@ fun disable_one G sd =
       end
 
 fun new_action switch G a =
-    (if switch then enable_one G a else G) before
-    (term_table := a :: !term_table)
+  (if switch then enable_one G a else G) before
+  term_table := a :: !term_table
 
 fun temp_unicode_version switch {u,tmnm} G = let
   val oi = term_grammar.overload_info G
@@ -207,7 +204,7 @@ fun temp_unicode_version switch {u,tmnm} G = let
           | SOME ops => OverloadUpdate{u = u, oldname = SOME tmnm,
                                        ts = #actual_ops ops}
         end
-      | SOME(r,f,s) => RuleUpdate{u = u,term_name = tmnm, newrule = f u,
+      | SOME(r,f,s) => RuleUpdate{u = [u],term_name = tmnm, newrule = f u,
                                   oldtok = SOME s}
 in
   new_action switch G sd
@@ -237,8 +234,8 @@ in
   case tui of
     UV {u,tmnm} => "U" ^ StringData.encode u ^ StringData.encode tmnm
   | RULE {u,term_name,newrule = (precopt, grule),oldtok} => let
-      val u' = StringData.encode u
       val tn' = StringData.encode term_name
+      val u' = StringData.encodel u
       val precopt' = case precopt of
                        NONE => "N"
                      | SOME i => "S" ^ IntData.encode i
@@ -247,7 +244,7 @@ in
                       NONE => "N"
                     | SOME s => "S" ^ StringData.encode s
     in
-      String.concat ["R",u',tn',precopt',grule',oldtok']
+      String.concat ["R",tn',u',precopt',grule',oldtok']
     end
   | OVL (s,tm) => let
       val s' = StringData.encode s
@@ -260,13 +257,13 @@ end
 val reader = let
   open Coding
   infix >> >- >-> >* ||
-  fun mkrule ((((u,tn),precopt),rule),oldtok) =
+  fun mkrule ((((tn,u),precopt),rule),oldtok) =
       RULE {u = u, term_name = tn, newrule = (precopt, rule), oldtok = oldtok}
 in
   (literal "U" >> map (fn (u,tm) => UV {u=u,tmnm=tm})
                       (StringData.reader >* StringData.reader)) ||
   (literal "R" >>
-   map mkrule (StringData.reader >* StringData.reader >*
+   map mkrule (StringData.reader >* many StringData.reader >*
                ((literal "N" >> return NONE) ||
                 (literal "S" >> map SOME IntData.reader)) >*
                term_grammar.grule_reader >*

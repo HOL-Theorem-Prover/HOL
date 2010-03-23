@@ -460,6 +460,7 @@ fun AdvanceTok () : unit = let
 	     of #" " => skipws()
 	      | #"\t" => skipws()
 	      | #"\n" => skipws()
+              | #"\r" => skipws()
 	      | x => x
 	    (* end case *))
 

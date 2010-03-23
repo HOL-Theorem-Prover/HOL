@@ -210,16 +210,19 @@ sig
 
   val remove_standard_form : grammar -> string -> grammar
 
-  (*------------------------------------------------------------------------*
-   * this one removes those rules relating to the term which also include   *
-   * a token of the form given.  Thus, if you had two rules for COND, and   *
-   * you wanted to get rid of the one with the "if" token in it, you would  *
-   * use                                                                    *
-   *     remove_form_with_tok G {term_name = "COND", tok = "if"}            *
-   *------------------------------------------------------------------------*)
+  (* ----------------------------------------------------------------------
+      these two remove rules relating to the term which also include
+      a token, or the exact token list of the form given.
+      Thus, if you had two rules for COND, and you wanted to get rid of
+      the one with the "if" token in it, you would use
 
-  val remove_form_with_tok
-    : grammar -> {term_name : string, tok: string} -> grammar
+         remove_form_with_tok G {term_name = "COND", tok = "if"}
+     ---------------------------------------------------------------------- *)
+
+  val remove_form_with_tok : grammar -> {term_name : string, tok: string} ->
+                             grammar
+  val remove_form_with_toklist : {term_name : string, toklist : string list} ->
+                                 grammar -> grammar
 
   (*-----------------------------------------------------------------------*
    * Pretty-printing                                                       *
@@ -228,6 +231,8 @@ sig
   val clear_prefs_for : string -> grammar -> grammar
   val prefer_form_with_tok : grammar -> {term_name : string, tok : string} ->
                              grammar
+  val prefer_form_with_toklist : {term_name : string, toklist : string list} ->
+                                 grammar -> grammar
 
 
   val set_associativity_at_level : grammar -> int * associativity -> grammar

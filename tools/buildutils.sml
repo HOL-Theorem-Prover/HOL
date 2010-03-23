@@ -39,13 +39,13 @@ fun read_buildsequence {ssfull,inputLine=readline,kernelpath} bseq_fname = let
       case readline fstr of
         NONE => List.rev acc
       | SOME s => let
-          (* drop final \n char *)
-          val s = String.substring(s, 0, size s - 1)
+          (* drop trailing and leading whitespace *)
           val ss = ssfull s
           val ss = Substring.dropl Char.isSpace ss
-          (* drop leading w-space *)
-          val (ss, _) = Substring.position "#" ss
+          val ss = Substring.dropr Char.isSpace ss
+
           (* drop trailing comment *)
+          val (ss, _) = Substring.position "#" ss
           val s = Substring.string ss
         in
           if s = "" then read_file acc fstr

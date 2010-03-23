@@ -300,6 +300,24 @@ in
   map_rrfn_rule over_rr over_br r
 end
 
+fun fupdate_rule_by_termtoklist {term_name,toklist} f g r = let
+  fun toks rr = List.mapPartial (fn TOK s => SOME s | _ => NONE)
+                                (rule_elements (#elements rr))
+  fun over_rr (rr:rule_record) =
+      if #term_name rr = term_name andalso toks rr = toklist then
+        f rr
+      else
+        rr
+  fun over_br LAMBDA = LAMBDA
+    | over_br TYPE_LAMBDA = TYPE_LAMBDA
+    | over_br (b as BinderString {term_name = tnm, tok, ...}) =
+      if term_name = tnm andalso [tok] = toklist then g b else b
+    | over_br (b as TypeBinderString {term_name = tnm, tok, ...}) =
+      if term_name = tnm andalso [tok] = toklist then g b else b
+in
+  map_rrfn_rule over_rr over_br r
+end
+
 fun fupdate_rulelist f rules = map (fn (p,r) => (p, f r)) rules
 fun fupdate_prulelist f rules = map f rules
 
@@ -789,8 +807,41 @@ in
   | _ => r
 end
 
+fun remove_toklist {term_name, toklist} r = let
+  fun relstoks rels = List.mapPartial (fn TOK s => SOME s | _ => NONE) rels
+  fun rr_safe ({term_name = s, elements, ...} : rule_record) =
+      s <> term_name orelse relstoks (rule_elements elements) <> toklist
+  fun binder_safe b =
+      case b of
+        BinderString { term_name = s, tok, ...} => [tok] <> toklist orelse
+                                                   s <> term_name
+      | TypeBinderString { term_name = s, tok, ...} => [tok] <> toklist orelse
+                                                   s <> term_name
+      | LAMBDA => true
+      | TYPE_LAMBDA => true
+in
+  case r of
+    SUFFIX (STD_suffix slist) => SUFFIX (STD_suffix (List.filter rr_safe slist))
+  | INFIX (STD_infix (slist, assoc)) =>
+      INFIX (STD_infix (List.filter rr_safe slist, assoc))
+  | PREFIX (STD_prefix slist) => PREFIX (STD_prefix (List.filter rr_safe slist))
+  | PREFIX (BINDER blist) => PREFIX (BINDER (List.filter binder_safe blist))
+  | CLOSEFIX slist => CLOSEFIX (List.filter rr_safe slist)
+  | LISTRULE rlist => let
+      fun lrule_dies (r:listspec) =
+          (#cons r = term_name orelse #nilstr r = term_name) andalso
+          (relstoks (rule_elements (#leftdelim r)) = toklist orelse
+           relstoks (rule_elements (#rightdelim r)) = toklist orelse
+           relstoks (rule_elements (#separator r)) = toklist)
+    in
+      LISTRULE (List.filter (not o lrule_dies) rlist)
+    end
+  | _ => r
+end
+
 fun remove_standard_form G s = map_rules (remove_form s) G
 fun remove_form_with_tok G r = map_rules (remove_tok r) G
+fun remove_form_with_toklist r = map_rules (remove_toklist r)
 
 
 datatype rule_fixity =
@@ -877,6 +928,14 @@ in
                             (update_rr_pref true)
                             (update_bpref true))) G1
 end
+
+fun prefer_form_with_toklist (r as {term_name,toklist}) G =
+    G |> clear_prefs_for term_name
+      |> fupdate_rules (fupdate_rulelist
+                          (fupdate_rule_by_termtoklist r
+                                                       (update_rr_pref true)
+                                                       (update_bpref true)))
+
 
 fun set_associativity_at_level G (p, ass) =
   fupdate_rules

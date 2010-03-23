@@ -177,7 +177,8 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
-                 "(case x of T -> (\\x. x) || F -> $~) y"]
+                 "(case x of T -> (\\x. x) || F -> $~) y",
+                 "!x. P (x /\\ y)"]
 
 
 val _ = Process.exit (if List.all substtest tests then Process.success

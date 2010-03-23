@@ -367,9 +367,9 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
     fun PT0 tm =
         term_pp.pp_term (Parse.term_grammar()) (Parse.type_grammar())
                         backend ostrm tm
-    val PT = PT0 |> trace ("Unicode", 0) |> trace ("types", 0)
+    val PT = PT0 |> trace ("types", 0)
     fun TP0 ty = type_pp.pp_type (Parse.type_grammar()) backend ostrm ty
-    val TP = TP0 |> trace ("Unicode", 0)
+    val TP = TP0
 
     fun strip_type t =
       if is_vartype t then

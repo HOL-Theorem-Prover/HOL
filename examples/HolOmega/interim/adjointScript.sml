@@ -46,6 +46,8 @@ val tmhe = ``nattransf eta (\:'a 'b. I) (G oo F') /\ functor G /\
 
 val adjf1_sharp_eq' = prove (tmhe, EVERY [
   STRIP_TAC, (IMP_RES_TAC adjf1_def), 
+  (POP_ASSUM (fn th => ALL_TAC)),
+  (POP_ASSUM (fn th => ALL_TAC)),
   (POP_ASSUM (ASSUME_TAC o tsfg (sfg (fst o EQ_IMP_RULE)))),
   (MATCH_MP_TAC EQ_SYM), (POP_ASSUM MATCH_MP_TAC),
   (IMP_RES_TAC functor_def), (ASM_REWRITE_TAC [GSYM o_ASSOC]),
@@ -101,6 +103,8 @@ val adjf1_eta_nt = store_thm ("adjf1_eta_nt", tment,
     (ASM_REWRITE_TAC [o_THM, I_THM]),
     (FIRST_X_ASSUM (MAP_EVERY ASSUME_TAC o CONJUNCTS o CONJUNCT2)) ,
     (IMP_RES_TAC adjf1_def),
+    (POP_ASSUM (fn th => ALL_TAC)),
+    (POP_ASSUM (fn th => ALL_TAC)),
     (POP_ASSUM (ASSUME_TAC o tsfg (sfg (fst o EQ_IMP_RULE)))),
     (REPEAT STRIP_TAC), (MATCH_MP_TAC EQ_SYM),
     (POP_ASSUM MATCH_MP_TAC), (IMP_RES_TAC functor_def),
@@ -142,12 +146,16 @@ val adjf3D = (UNDISCH (fst (EQ_IMP_RULE (SPEC_ALL adjf3_def)))) ;
 val SHARP_eta_I = store_thm ("SHARP_eta_I", 
   ``functor G /\ adjf3 F' G eta eps ==> (eps o F' eta = I)``,
   EVERY [ STRIP_TAC, (IMP_RES_TAC adjf3_def),
+  (POP_ASSUM (fn th => ALL_TAC)),
+  (POP_ASSUM (fn th => ALL_TAC)),
   (POP_ASSUM (MATCH_MP_TAC o tsfg (sfg (fst o EQ_IMP_RULE)))),
   (IMP_RES_TAC functor_def), (ASM_REWRITE_TAC [I_o_ID]) ]) ;
 
 val FLATT_eps_I = store_thm ("FLATT_eps_I", 
   ``functor F' /\ adjf3 F' G eta eps ==> (G eps o eta = I)``,
   EVERY [ STRIP_TAC, (IMP_RES_TAC adjf3_def),
+  (POP_ASSUM (fn th => ALL_TAC)),
+  (POP_ASSUM (fn th => ALL_TAC)),
   (POP_ASSUM (MATCH_MP_TAC o tsfg (sfg (snd o EQ_IMP_RULE)))),
   (IMP_RES_TAC functor_def), (ASM_REWRITE_TAC [I_o_ID]) ]) ;
 
@@ -174,6 +182,8 @@ val adjf3_jmj_lem = store_thm ("adjf3_jmj_lem",
   ``functor F' /\ functor G /\ adjf3 F' G eta eps ==>
     (eps o (F' (G eps)) = eps o eps)``,
   EVERY [STRIP_TAC, (IMP_RES_TAC adjf3_def),
+  (POP_ASSUM (fn th => ALL_TAC)),
+  (POP_ASSUM (fn th => ALL_TAC)),
   (POP_ASSUM (MATCH_MP_TAC o tsfg (sfg (fst o EQ_IMP_RULE)))),
   (IMP_RES_TAC functor_def), 
   (* (IMP_RES_TAC FLATT_eps_I), this should work but types wrong *)

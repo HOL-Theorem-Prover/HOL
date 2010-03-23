@@ -2257,7 +2257,7 @@ fun HO_MATCH_MP ith =
 (* ---------------------------------------------------------------------*)
 
 local fun not_elim th =
-       if is_neg(concl th) then (true, NOT_ELIM th) else (false,th)
+       if is_neg(concl th) then (true, NOT_ELIM th) else (false, th)
 fun canon (fl,th) =
    let val w = concl th
    in
@@ -2301,11 +2301,11 @@ fun canon (fl,th) =
              in
                canon(true,DISCH newa th1)
              end
-        else map (GEN_ALL o (DISCH ant)) (canon (true,UNDISCH th))
+        else map (TY_TM_GEN_ALL o (DISCH ant)) (canon (true,UNDISCH th))
      end else
    if is_eq w andalso (type_of (rand w) = Type.bool)
    then let val (th1,th2) = EQ_IMP_RULE th
-        in (if fl then [GEN_ALL th] else [])@canon(true,th1)@canon(true,th2)
+        in (if fl then [TY_TM_GEN_ALL th] else [])@canon(true,th1)@canon(true,th2)
         end else
    if is_forall w orelse is_tyforall w then
      let val (vs,_) = strip_all_forall w
@@ -2317,13 +2317,20 @@ fun canon (fl,th) =
      in
         canon (fl, TY_TM_SPECL nvs th)
      end else
-   if fl then [GEN_ALL th] else []
+   if fl then [TY_TM_GEN_ALL th] else []
    end
 in
 fun RES_CANON th =
- let val conjlist = CONJUNCTS (TY_TM_SPEC_ALL th)
+ let val ftyvs = HOLset.listItems (HOLset.difference
+                  (HOLset.addList(empty_tyset, type_vars_in_term(concl th)), hyp_tyvars th))
+     val gvs = map (fn a => genvar (mk_app_type(gen_var_type(kind_of a ==> typ, 0), a))) ftyvs
+     val ty_hyp = if null gvs then TRUTH else LIST_CONJ (map REFL gvs)
+     val ty_con = concl ty_hyp
+     val th1 = if null gvs then th else ADD_ASSUM ty_con th
+     val conjlist = CONJUNCTS (TY_TM_SPEC_ALL th1)
+     val REM_TY_HYP = if null gvs then I else fn th => MP (DISCH ty_con th) ty_hyp
      fun operate th accum =
-          accum @ map GEN_ALL (canon (not_elim (TY_TM_SPEC_ALL th)))
+          accum @ map (GEN_ALL o REM_TY_HYP) (canon (not_elim (TY_TM_SPEC_ALL th)))
      val imps = Lib.rev_itlist operate conjlist []
  in Lib.assert (op not o null) imps
  end handle HOL_ERR _

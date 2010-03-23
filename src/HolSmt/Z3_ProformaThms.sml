@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Proforma theorems, used for Z3 proof reconstruction *)
 
@@ -18,31 +18,33 @@ local
   open HolSmtTheory
 in
   val def_axiom_thms = thm_net_from_list
-    [th001, th002, th003, th003a, th004, th005, th006, th007, th008, th009, th010, th011,
-     th012, th013, th014, th015, th016]
+    [d001, d002, d003, d004, d005, d006, d007, d008, d009, d010, d011, d012,
+     d013, d014, d015, d016, d017, d018, d019, d020, d021, d022, d023, d024,
+     d025]
 
   val rewrite_thms = thm_net_from_list
-    [th017, th018, th019, th020, th021, th022, th023, th024, th025, th026, th027, th028,
-     th029, th030, th031, th032, th033, th034, th035, th036, th037, th038, th039, th040,
-     th041, th042, th043, th044, th045, th046, th047, th048, th049, th050, th051, th052,
-     th053, th054, th055, th056, th057, th058, th059, th060, th061, th062, th063, th064,
-     th065, th066, th067, th068, th069, th070, th071, th072, th073, th074, th075, th076,
-     th077, th078, th079, th080, th081, th082, th083, th084, th085, th086, th087, th088,
-     th089, th090, th091, th092, th093, th094, th095, th096, th097, th098, th099, th100,
-     th101, th102, th103, th104, th105, th106, th107, th108, th109, th110, th111, th112,
-     th113, th114, th115, th116, th117, th118, th119, th120, th121, th122, th123, th124,
-     th125, th126, th127, th128, th129, th130, th131, th132, th133, th134, th135, th136,
-     th137, th138, th139, th140, th141, th142, th143, th144, th145, th146, th147, th148,
-     th149, th150, th151, th152, th153, th154, th155, th156, th157, th158, th159, th160,
-     th161, th162, th163, th164, th165, th166, th167, th168, th169, th170, th171, th172,
-     th173, th174, th175, th176, th177, th178, th179, th180, th181, th182, th183, th184,
-     th185, th186, th187, th188, th189, th190, th191, th192, th193, th194, th195, th196,
-     th197, th198, th199, th200, th201, th202, th203, th204, th205, th206, th207, th208,
-     th209, th210, th211, th212, th213, th214, th215, th216, th217, th218, th219, th220,
-     th221, th222, th223, th224, th225, th226, th227]
+    [r001, r002, r003, r004, r005, r006, r007, r008, r009, r010, r011, r012,
+     r013, r014, r015, r016, r017, r018, r019, r020, r021, r022, r023, r024,
+     r025, r026, r027, r028, r029, r030, r031, r032, r033, r034, r035, r036,
+     r037, r038, r039, r040, r041, r042, r043, r044, r045, r046, r047, r048,
+     r049, r050, r051, r052, r053, r054, r055, r056, r057, r058, r059, r060,
+     r061, r062, r063, r064, r065, r066, r067, r068, r069, r070, r071, r072,
+     r073, r074, r075, r076, r077, r078, r079, r080, r081, r082, r083, r084,
+     r085, r086, r087, r088, r089, r090, r091, r092, r093, r094, r095, r096,
+     r097, r098, r099, r100, r101, r102, r103, r104, r105, r106, r107, r108,
+     r109, r110, r111, r112, r113, r114, r115, r116, r117, r118, r119, r120,
+     r121, r122, r123, r124, r125, r126, r127, r128, r129, r130, r131, r132,
+     r133, r134, r135, r136, r137, r138, r139, r140, r141, r142, r143, r144,
+     r145, r146, r147, r148, r149, r150, r151, r152, r153, r154, r155, r156,
+     r157, r158, r159, r160, r161, r162, r163, r164, r165, r166, r167, r168,
+     r169, r170, r171, r172, r173, r174, r175, r176, r177, r178, r179, r180,
+     r181, r182, r183, r184, r185, r186, r187, r188, r189, r190, r191, r192,
+     r193, r194, r195, r196, r197, r198, r199, r200, r201, r202, r203, r204,
+     r205, r206, r207, r208, r209, r210, r211]
 
   val th_lemma_thms = thm_net_from_list
-    [th228, th229, th230, th231, th232, th233, th234, th235, th236, th237, th238]
+    [t001, t002, t003, t004, t005, t006, t007, t008, t009, t010, t011]
+
 end  (* local *)
 
 end
