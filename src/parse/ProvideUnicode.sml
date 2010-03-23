@@ -17,11 +17,8 @@ type urule = {u:string list, term_name : string,
               newrule : int option * term_grammar.grammar_rule,
               oldtok : string option}
 
-
 datatype stored_data =
-         RuleUpdate of { u : string list, term_name : string,
-                         newrule : (int option * grammar_rule),
-                         oldtok : string option }
+         RuleUpdate of urule
        | OverloadUpdate of { u : string, oldname : string option,
                              ts : term list }
 
@@ -178,9 +175,14 @@ fun disable_one G sd =
                             | SOME s => C (List.foldl (foldthis s)) ts)
       end
 
-fun new_action switch G a =
-    (if switch then enable_one G a else G) before
-    (term_table := a :: !term_table)
+fun new_action switch G a = let
+  fun doit () = (if switch then enable_one G a else G) before
+                term_table := a :: !term_table
+in
+  case !term_table of
+    [] => doit()
+  | b::_ => if a = b then G else doit()
+end
 
 fun temp_unicode_version switch {u,tmnm} G = let
   val oi = term_grammar.overload_info G
