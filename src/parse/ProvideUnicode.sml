@@ -39,12 +39,13 @@ datatype stored_data =
 *)
 
 val term_table = ref ([] : stored_data list)
+fun stored_data () = !term_table
 
 fun getrule G term_name = let
   fun replace {term_name, elements, preferred, block_style, paren_style} s =
       {term_name = term_name,
        elements = map (fn (RE (TOK _)) => RE (TOK s) | x => x) elements,
-       preferred = false,
+       preferred = true,
        block_style = block_style,
        paren_style = paren_style}
   fun tok_of0 es =
@@ -137,8 +138,8 @@ fun enable_one g0 sd =
       RuleUpdate {u,term_name,newrule = r,oldtok} => let
         open term_grammar
       in
-        g0 |> C add_grule r
-           |> prefer_form_with_toklist {term_name = term_name, toklist = u}
+        g0 |> clear_prefs_for term_name
+           |> C add_grule r
       end
     | OverloadUpdate{u,oldname,ts} => let
         fun foldthis (t,g) =
