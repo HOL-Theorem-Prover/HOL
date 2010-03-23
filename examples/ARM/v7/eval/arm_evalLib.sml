@@ -527,6 +527,8 @@ fun output_program opt t =
 
 (* Standalone assembler (Poly/ML):
 
+open arm_evalLib;
+
 fun main () =
 let val opt =
           case CommandLine.arguments()
@@ -575,7 +577,7 @@ end handle
 
 val _ = PolyML.export("HOLas", main);
 
-gcc -O4 -o HOLas HOLas.o -L$HOME/polyml/lib -lpolymain -lpolyml
+gcc -o HOLas HOLas.o -L$HOME/polyml/lib -lpolymain -lpolyml
 *)
 
 (* val _ = installPP (mosmlpp patriciaLib.pp_term_ptree); *)

@@ -164,7 +164,7 @@ val _ = temp_clear_overloads_on "UInt"
 val _ = temp_clear_overloads_on "SInt"
 val _ = temp_overload_on("w2i", ``integer_word$w2i``);
 
-fun f x = [QUOTE (EmitTeX.datatype_thm_to_string x)]
+fun f x = [QUOTE (trace ("Unicode",0) EmitTeX.datatype_thm_to_string x)]
 
 val n2w_rule = Q.SPEC `n2w m`
 
@@ -183,7 +183,7 @@ val reserved_rule =
       ``type:SRType`` |-> ``typ:SRType``,
       ``type:word2`` |-> ``typ:word2``]);
 
-val in_rule = SIMP_RULE std_ss [pred_setTheory.SPECIFICATION];
+val thumb2_rule = SIMP_RULE (srw_ss()) [thumb2_support_def];
 
 val int_rule = SIMP_RULE std_ss (COND_RATOR :: map GSYM
   [int_emitTheory.i2w_itself_def,
@@ -250,7 +250,7 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
     [w8_rule integer_wordTheory.i2w_def, i2bits_itself_def,
      signed_sat_itself_def, unsigned_sat_itself_def,
      signed_sat_q_itself_def, unsigned_sat_q_itself_def] @
-  [DEFN data_processing_thumb2_upredictable_def] @
+  [DEFN data_processing_thumb2_unpredictable_def] @
   map (DEFN o reserved_rule o int_rule)
    ([IMP_DISJ_THM,
      (* arm_coretypes *)
@@ -309,8 +309,8 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      (* arm_opsem *)
      unaligned_support_def, arch_version_def, read_reg_literal_def,
      read_flags_def, write_flags_def, read_cflag_def, set_q_def, read_ge_def,
-     write_ge_def, write_e_def, IT_advance_def, cpsr_write_by_instr_def,
-     spsr_write_by_instr_def,
+     write_ge_def, write_e_def, thumb2_rule IT_advance_def,
+     cpsr_write_by_instr_def, spsr_write_by_instr_def,
      branch_write_pc_def, bx_write_pc_def, load_write_pc_def,
      alu_write_pc_def, decode_imm_shift_def, decode_reg_shift_def,
      shift_c_def, shift_def, arm_expand_imm_c_def, thumb_expand_imm_c_def,
@@ -338,7 +338,7 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      hint_decode_def, parallel_add_sub_op1, parallel_add_sub_op2,
      parallel_add_sub_thumb_op2, parallel_add_sub_decode_def,
      parallel_add_sub_thumb_decode_def, InITBlock_def, LastInITBlock_def,
-     arm_decode_def, SIMP_RULE (srw_ss()) [thumb2_support_def] thumb_decode_def,
+     arm_decode_def, thumb2_rule thumb_decode_def,
      thumb2_decode_aux1_def, thumb2_decode_aux2_def, thumb2_decode_aux3_def,
      thumb2_decode_aux4_def, thumb2_decode_aux5_def, thumb2_decode_aux6_def,
      thumb2_decode_aux7_def, thumb2_decode_aux8_def, thumb2_decode_aux9_def,

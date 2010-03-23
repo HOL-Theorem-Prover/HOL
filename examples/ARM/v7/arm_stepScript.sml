@@ -2043,12 +2043,22 @@ val aligned_bitwise_thm = Q.store_thm("aligned_bitwise_thm",
 
 (* ------------------------------------------------------------------------- *)
 
-val align4 = EVAL ``align (4w:word32,4)``;
+val align4  = EVAL ``align (4w:word32,4)``;
+val align8  = EVAL ``align (8w:word32,4)``;
+val align4m = EVAL ``align (0xFFFFFFFCw:word32,4)``;
 
 val align_plus4 = Q.prove(
   `!a:word32. align (a + 4w, 4) = align (a,4) + 4w`,
   SUBST1_TAC (SYM align4)
     \\ SRW_TAC [] [ONCE_REWRITE_RULE [WORD_ADD_COMM] align_aligned, align4]);
+
+val align_plus_extra = Q.prove(
+  `(!a:word32. align (a + 8w, 4) = align (a,4) + 8w) /\
+   (!a:word32. align (a + 0xFFFFFFFCw, 4) = align (a,4) + 0xFFFFFFFCw)`,
+  SUBST1_TAC (SYM align8)
+    \\ SUBST1_TAC (SYM align4m)
+    \\ SRW_TAC [] [ONCE_REWRITE_RULE [WORD_ADD_COMM] align_aligned,
+         align8,align4m]);
 
 val aligned_mul4 = Q.prove(
   `!a:word32. aligned (4w * a, 4)`,
@@ -2183,11 +2193,42 @@ val align_neq3 = Q.store_thm("align_neq3",
     \\ REWRITE_TAC [align_neq, GSYM align_aligned, WORD_ADD_ASSOC]);
 
 val neq_pc_plus4a = Q.prove(
-  `!b:word32 pc a.
-      pc <> align ((if pc <> align (a + b,4) then a else a + 4w) + b,4)`,
-  SRW_TAC [] []
+  `(!b:word32 pc a.
+      pc <> align ((if pc <> align (a + b,4) then a else a + 4w) + b,4)) /\
+   (!pc:word32 a.
+      pc + 1w <>
+      align ((if pc <> align (a + 4w,4) then a else a + 4w),4) + 5w) /\
+   (!pc:word32 a.
+      pc + 2w <>
+      align ((if pc <> align (a + 4w,4) then a else a + 4w),4) + 6w) /\
+   (!pc:word32 a.
+      pc + 3w <>
+      align ((if pc <> align (a + 4w,4) then a else a + 4w),4) + 7w) /\
+   (!pc:word32 a.
+      pc + 1w <>
+      align ((if pc <> align (a + 8w,4) then a else a + 4w),4) + 9w) /\
+   (!pc:word32 a.
+      pc + 2w <>
+      align ((if pc <> align (a + 8w,4) then a else a + 4w),4) + 10w) /\
+   (!pc:word32 a.
+      pc + 3w <>
+      align ((if pc <> align (a + 8w,4) then a else a + 4w),4) + 11w) /\
+   (!pc:word32 a.
+      pc + 1w <>
+      align ((if pc <> align (a + 0xFFFFFFFCw,4) then a else a + 4w),4) +
+      0xFFFFFFFDw) /\
+   (!pc:word32 a.
+      pc + 2w <>
+      align ((if pc <> align (a + 0xFFFFFFFCw,4) then a else a + 4w),4) +
+      0xFFFFFFFEw) /\
+   (!pc:word32 a.
+      pc + 3w <>
+      align ((if pc <> align (a + 0xFFFFFFFCw,4) then a else a + 4w),4) +
+      0xFFFFFFFFw)`,
+  SRW_TAC [] [] \\ FULL_SIMP_TAC (srw_ss()) [align_plus4, align_plus_extra]
     \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_ARITH_EQ_ss)
-         [aligned_def, align_plus4]);
+         [align_aligned |> ONCE_REWRITE_RULE [WORD_ADD_COMM]]
+);
 
 val neq_pc_plus4 = Q.prove(
   `!b:word32 pc a.
@@ -2213,22 +2254,9 @@ val neq_pc_plus4_plus = Q.prove(
     \\ FULL_SIMP_TAC (srw_ss())
          [align_aligned |> ONCE_REWRITE_RULE [WORD_ADD_COMM]]);
 
-val neq_pc_plus4_plus_extra = Q.prove(
-  `(!a b: word32. (a + 1w = b + 5w) = (a = b + 4w)) /\
-   (!a b: word32. (a + 2w = b + 6w) = (a = b + 4w)) /\
-   (!a b: word32. (a + 3w = b + 7w) = (a = b + 4w)) /\
-   (!a b: word32. (a + 1w = b + 9w) = (a = b + 8w)) /\
-   (!a b: word32. (a + 2w = b + 10w) = (a = b + 8w)) /\
-   (!a b: word32. (a + 3w = b + 11w) = (a = b + 8w)) /\
-   (!a b: word32. (a + 1w = b + 0xFFFFFFFDw) = (a = b + 0xFFFFFFFCw)) /\
-   (!a b: word32. (a + 2w = b + 0xFFFFFFFEw) = (a = b + 0xFFFFFFFCw)) /\
-   (!a b: word32. (a + 3w = b + 0xFFFFFFFFw) = (a = b + 0xFFFFFFFCw))`,
-  SRW_TAC [wordsLib.WORD_ARITH_EQ_ss] []);
-
 val neq_pc_plus4_plus = save_thm("neq_pc_plus4_plus",
   LIST_CONJ
-    ((* CONJUNCTS neq_pc_plus4_plus_extra @ *)
-     map (fn thm => GEN_ALL (MATCH_MP (SPEC_ALL thm)
+    (map (fn thm => GEN_ALL (MATCH_MP (SPEC_ALL thm)
                    (aligned_numeric |> CONJUNCT2 |> SPEC_ALL)))
      (CONJUNCTS neq_pc_plus4_plus)));
 
@@ -2307,17 +2335,17 @@ val extract_of_double_word = with_flag (wordsLib.guessing_word_lengths,true)
       ((63 >< 32) (a @@ b) = a) /\ ((31 >< 0 ) (a @@ b) = b)`,
   SRW_TAC [wordsLib.WORD_EXTRACT_ss] []);
 
-fun aligned_neq_thms thm =
-  MATCH_MP (SPEC_ALL align_neq2) (SPEC_ALL thm);
-
-fun aligned_neq_thms2 thm =
-  MATCH_MP (SPEC_ALL align_neq3) (SPEC_ALL thm);
-
 val aligned_pair = Q.prove(
   `!a:word32.
       aligned ((if aligned (a + a,4) then a else 0w) +
                (if aligned (a + a,4) then a else 0w), 4)`,
   SRW_TAC [] [] \\ EVAL_TAC);
+
+fun aligned_neq_thms thm =
+  MATCH_MP (SPEC_ALL align_neq2) (SPEC_ALL thm);
+
+fun aligned_neq_thms2 thm =
+  MATCH_MP (SPEC_ALL align_neq3) (SPEC_ALL thm);
 
 val aligned_pair_thms = save_thm("aligned_pair_thms",
    aligned_neq_thms aligned_pair);
