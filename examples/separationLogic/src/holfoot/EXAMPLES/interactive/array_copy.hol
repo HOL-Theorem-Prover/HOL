@@ -1,0 +1,36 @@
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+
+(******************************************************************************)
+(* Some useful REWRITES                                                       *)
+(******************************************************************************)
+open listTheory rich_listTheory
+
+
+(******************************************************************************)
+(* Just the shape works automatically                                         *)
+(******************************************************************************)
+val file = concat [examplesDir, "/automatic/array_copy-shape.dsf"];
+val thm = holfoot_auto_verify_spec file
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/array_copy-full.dsf"];
+
+(* holfoot_set_goal file *)
+val copy_TAC = 
+HF_SOLVE_TAC THEN
+HF_VC_TAC THEN
+REPEAT STRIP_TAC THENL [
+   Cases_on `x'' = ic` THEN ASM_REWRITE_TAC[] THEN
+   FULL_SIMP_TAC arith_ss [],
+
+   ASM_SIMP_TAC arith_ss [LIST_EQ_REWRITE]
+];
+
+val thm = holfoot_tac_verify_spec file NONE
+                [("copy", copy_TAC)]
+
+
