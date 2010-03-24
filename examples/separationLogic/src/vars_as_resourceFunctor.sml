@@ -3,6 +3,7 @@ sig
     include Abbrev;
 
     val combinator_thmL              : thm list
+    val predicate_ssfrag             : int -> simpLib.ssfrag
     val combinator_terms             : term * term * term;
     val resource_proccall_free_thmL  : thm list
     val inital_prop_rewrite_thmL     : thm list
@@ -82,13 +83,13 @@ sig
                           generate_vcs   : bool,
                           fast           : bool,
                           stop_evals     : (Abbrev.term -> bool) list,
-                          do_prop_simps  : bool};
+                          prop_simp_level: int};
 
    datatype gen_step_tac_opt =
        case_splits_flag of bool
      | expands_flag of bool
      | fast_flag of bool
-     | prop_simp_flag of bool
+     | prop_simp_level of int
      | use_asms_flag of bool
      | generate_vcs_flag of bool
      | add_rewrites of Abbrev.thm list
@@ -107,6 +108,7 @@ sig
    val no_asms               : gen_step_tac_opt;
    val use_asms              : gen_step_tac_opt;
    val no_prop_simps         : gen_step_tac_opt;
+   val simple_prop_simps     : gen_step_tac_opt;
    val conservative          : gen_step_tac_opt; (* not fast *)
    val careful               : gen_step_tac_opt; (* no asms. no case splits, no expands *)
    val stop_at_cond          : gen_step_tac_opt;
@@ -121,7 +123,7 @@ sig
    val gen_step_param___update_vcs        : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_expands    : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_fast       : gen_step_param -> bool -> gen_step_param
-   val gen_step_param___update_prop_simps : gen_step_param -> bool -> gen_step_param
+   val gen_step_param___update_prop_simps : gen_step_param -> int  -> gen_step_param
    val gen_step_param___update_stop_evals : gen_step_param -> (Abbrev.term -> bool) list -> gen_step_param
 
    val VAR_RES_GEN_STEP_CONSEQ_CONV : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.thm list -> Abbrev.conv
@@ -179,12 +181,13 @@ open var_res_param.var_res_base;
 (******************************************************************************)
 (* Parameters                                                                 *)
 (******************************************************************************)
-
 val verbose_level = ref 0
 val verbose_level_try = ref 0
 fun do_profile_ref () = ref (Profile.profile_with_exn)
 
 
+val _ = Feedback.register_trace ("holfoot verbose level", verbose_level, 6)
+val _ = Feedback.register_trace ("holfoot verbose level try", verbose_level_try, 6)
 
 (******************************************************************************)
 (* COND_PROP___STRONG_EXIST                                                   *)
@@ -2667,6 +2670,7 @@ let
    val cond_term = find_term (fn t => is_cond t) ttt
    val (c, _, _) = dest_cond cond_term;
    val (c',_) = strip_neg c;
+   val _ = REWRITE_CONV [ASSUME c'] ttt
 in
    c'
 end;
@@ -3338,7 +3342,7 @@ type gen_step_param =
    do_expands     : bool,
    generate_vcs   : bool,
    fast           : bool,
-   do_prop_simps  : bool,
+   prop_simp_level: int,
    stop_evals     : (term -> bool) list};
 
 
@@ -3349,13 +3353,13 @@ fun gen_step_param___update_stop_evals
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param) l =
+   prop_simp_level  = ps}:gen_step_param) l =
  ({use_asms       = asms,
    do_case_splits = cs,
    do_expands     = ex,
    generate_vcs   = vcs,
    fast           = f,
-   do_prop_simps  = ps,
+   prop_simp_level  = ps,
    stop_evals     = l}:gen_step_param);
 
 
@@ -3366,14 +3370,14 @@ fun gen_step_param___update_use_asms
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param) b =
+   prop_simp_level  = ps}:gen_step_param) b =
  ({use_asms       = b,
    do_case_splits = cs,
    do_expands     = ex,
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param);
+   prop_simp_level  = ps}:gen_step_param);
 
 fun gen_step_param___update_cs
  ({use_asms       = asms,
@@ -3382,14 +3386,14 @@ fun gen_step_param___update_cs
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param) b =
+   prop_simp_level  = ps}:gen_step_param) b =
  ({use_asms       = asms,
    do_case_splits = b,
    do_expands     = ex,
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param);
+   prop_simp_level  = ps}:gen_step_param);
 
 fun gen_step_param___update_vcs
  ({use_asms       = asms,
@@ -3398,14 +3402,14 @@ fun gen_step_param___update_vcs
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param) b =
+   prop_simp_level  = ps}:gen_step_param) b =
  ({use_asms       = asms,
    do_case_splits = cs,
    do_expands     = ex,
    generate_vcs   = b,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param);
+   prop_simp_level  = ps}:gen_step_param);
 
 fun gen_step_param___update_expands
  ({use_asms       = asms,
@@ -3414,14 +3418,14 @@ fun gen_step_param___update_expands
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param) b =
+   prop_simp_level  = ps}:gen_step_param) b =
  ({use_asms       = asms,
    do_case_splits = cs,
    do_expands     = b,
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param);
+   prop_simp_level  = ps}:gen_step_param);
 
 fun gen_step_param___update_fast
  ({use_asms       = asms,
@@ -3430,14 +3434,14 @@ fun gen_step_param___update_fast
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param) b =
+   prop_simp_level  = ps}:gen_step_param) b =
  ({use_asms       = asms,
    do_case_splits = cs,
    do_expands     = ex,
    generate_vcs   = vcs,
    fast           = b,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param);
+   prop_simp_level  = ps}:gen_step_param);
 
 fun gen_step_param___update_prop_simps
  ({use_asms       = asms,
@@ -3446,14 +3450,14 @@ fun gen_step_param___update_prop_simps
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = ps}:gen_step_param) b =
+   prop_simp_level  = ps}:gen_step_param) n =
  ({use_asms       = asms,
    do_case_splits = cs,
    do_expands     = ex,
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
-   do_prop_simps  = b}:gen_step_param);
+   prop_simp_level  = n}:gen_step_param);
 
 
 local
@@ -3544,9 +3548,12 @@ fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
       val list = list2
       val stops = if null (#stop_evals p) then K false else
                       (fn t => (exists (fn pp => (pp t) handle Interrupt => raise Interrupt
-                                                            | _ => false)
-                                 (#stop_evals p)))
-      val ssp_arg = (#do_prop_simps p, mk_ssfrag ssp);
+                                                            | _ => false) (#stop_evals p)))
+      
+      val ss0 = simpLib.merge_ss [var_res_param.predicate_ssfrag (#prop_simp_level p),
+                (mk_ssfrag ssp)];
+      val ssp_arg = (not (#prop_simp_level p = 0), ss0);
+
       val prop_simp_CONV = VAR_RES_PROP_REWRITE_CONV ssp_arg [];
       val cL = convL (#fast p) stops ssp_arg n list;
 
@@ -3615,7 +3622,7 @@ datatype gen_step_tac_opt =
     case_splits_flag of bool
   | expands_flag of bool
   | fast_flag of bool
-  | prop_simp_flag of bool
+  | prop_simp_level of int
   | use_asms_flag of bool
   | generate_vcs_flag of bool
   | add_rewrites of thm list
@@ -3633,7 +3640,9 @@ val generate_vcs          = generate_vcs_flag true;
 val dont_generate_vcs     = generate_vcs_flag false;
 val no_asms               = use_asms_flag false;
 val use_asms              = use_asms_flag true;
-val no_prop_simps         = prop_simp_flag false;
+val no_prop_simps         = prop_simp_level 0;
+val simple_prop_simps     = prop_simp_level 1;
+val full_prop_simps       = prop_simp_level 3;
 val conservative          = fast_flag false;
 val careful               = combined_gen_step_tac_opt [no_case_splits, no_expands, no_asms];
 
@@ -3693,8 +3702,8 @@ fun gen_step_tac_opt_eval (p:gen_step_param, ssp) [] = (p, ssp)
        ((fast_flag b)::gstoL) =
     gen_step_tac_opt_eval (gen_step_param___update_fast p b, ssp) gstoL
   | gen_step_tac_opt_eval (p, ssp)
-       ((prop_simp_flag b)::gstoL) =
-    gen_step_tac_opt_eval (gen_step_param___update_prop_simps p b, ssp) gstoL
+       ((prop_simp_level n)::gstoL) =
+    gen_step_tac_opt_eval (gen_step_param___update_prop_simps p n, ssp) gstoL
   | gen_step_tac_opt_eval (p, ssp)
        ((use_asms_flag b)::gstoL) =
     gen_step_tac_opt_eval (gen_step_param___update_use_asms p b, ssp) gstoL
@@ -3714,10 +3723,9 @@ val default_params = (
     do_expands = true,
     fast = true,
     use_asms = true,
-    do_prop_simps = true,
+    prop_simp_level = 3,
     stop_evals = [],
     generate_vcs = false}, ([],[],[]))
-
 
 
 fun xVAR_RES_GEN_STEP_TAC optL =

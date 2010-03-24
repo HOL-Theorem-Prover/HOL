@@ -54,7 +54,7 @@ datatype p_statement =
     Pstm_assign of string * a_expression
   | Pstm_fldlookup of string * a_expression * a_component
   | Pstm_fldassign of a_expression * a_component * a_expression
-  | Pstm_new of string * a_expression
+  | Pstm_new of string * a_expression * string list
   | Pstm_dispose of a_expression * a_expression
   | Pstm_block of p_statement list
   | Pstm_if of p_condition * p_statement * p_statement

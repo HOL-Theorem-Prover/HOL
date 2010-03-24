@@ -662,11 +662,13 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   in
      (comb_a, [], [])
   end
-| holfoot_p_statement2absyn funL resL vs (Pstm_new (v, expr)) =
+| holfoot_p_statement2absyn funL resL vs (Pstm_new (v, expr, tl)) =
   let
      val var_term = string2holfoot_var v;
      val exp = holfoot_expression2absyn vs expr;
-     val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_new_term, [exp, Absyn.mk_AQ var_term]);
+     val tl_L = map string2holfoot_tag tl;
+     val tl_t = listSyntax.mk_list (tl_L, holfoot_tag_ty);
+     val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_new_term, [exp, Absyn.mk_AQ var_term, Absyn.mk_AQ tl_t]);
   in
      (comb_a, [v], [])
   end  

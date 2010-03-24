@@ -218,7 +218,7 @@ fun holfoot_run () = let
       handle _ => (false, args);
    val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args)) 
       handle _ => (true, args);
-   val (yices, args) = (false, Lib.snd (Lib.pluck (fn x => x = "--yices") args)) 
+   val (yices, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--yices") args)) 
       handle _ => (false, args);
    val (raw_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-r") args)) 
       handle _ => (false, args);
@@ -229,7 +229,7 @@ fun holfoot_run () = let
                                     (if (html_output) then PPBackEnd.html_terminal else PPBackEnd.vt100_terminal));
    val _ = Feedback.set_trace "Unicode" (if unicode then 1 else 0)
    val _ = Feedback.set_trace "holfoot print file" (if html_output then 0 else 1);
-   val _ = Feedback.set_trace "holfoot use Yices" (if unicode then 1 else 0)
+   val _ = Feedback.set_trace "holfoot use Yices" (if yices then 1 else 0)
 
    val args = ((Lib.pluck (fn x => x = "-h") orgargs);print_help();[])
       handle _ => args;

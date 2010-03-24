@@ -117,71 +117,6 @@ struct
         IS_SEPARATION_COMBINATOR___FINITE_MAP, IS_SEPARATION_COMBINATOR___holfoot_separation_combinator,
         REWRITE_RULE [holfoot_separation_combinator_def] IS_SEPARATION_COMBINATOR___holfoot_separation_combinator];
 
-   fun LENGTH_EQ_conv tt =
-   let
-      val (l,r) = dest_eq tt
-      val _ = if (listSyntax.is_length r) andalso not (listSyntax.is_length l) then ()
-              else raise UNCHANGED
-   in
-      ISPECL [l,r] EQ_SYM_EQ
-   end handle HOL_ERR _ => raise UNCHANGED;
-
-   val LENGTH_EQ_norm_ss =
-            simpLib.conv_ss {conv = K (K LENGTH_EQ_conv),
-                 key = NONE, name = "LENGTH_EQ_norm", 
-                 trace = 2}
-
-
-   val predicate_simpset = simpLib.++ (
-       std_ss, simpLib.merge_ss [listSimps.LIST_ss,
-      (numSimps.ARITH_DP_FILTER_ss is_no_proper_diseq),
-      stringSimps.STRING_ss,
-      listLib.LIST_EQ_ss,
-      LENGTH_EQ_norm_ss,
-      simpLib.rewrites [
-        LENGTH_NIL, LENGTH_NIL_SYM,
-        LIST_TO_FMAP_THM,
-        holfoot_ap_data_list_seg___NOT_EMPTY_DATA___0,
-        holfoot_ap_data_list_seg___SAME_START_END,
-        holfoot_tag_11,
-        holfoot_var_11,
-        holfoot_ap_points_to___null,
-        holfoot_ap_list_def,
-        holfoot_ap_data_list_def,
-        holfoot_ap_list_seg_def,
-        holfoot_ap_data_list_seg___null,
-        holfoot_ap_data_list_seg_num___null,
-        holfoot_ap_bintree_def,
-        holfoot_ap_tree___null,
-        holfoot_ap_data_tree___null,
-        holfoot_ap_data_tree___leaf,
-        holfoot_ap_data_array___SIMP_THMS,
-        holfoot_ap_data_queue___startExp_null,
-        holfoot_ap_data_queue___endExp_null,
-        tree_11, GSYM tree_distinct, tree_distinct,
-        IS_LEAF_REWRITE, 
-        TAKE_APPEND1, TAKE_APPEND2,
-        BUTFIRSTN_APPEND1, BUTFIRSTN_APPEND2,
-        BUTFIRSTN_LENGTH_NIL, BUTFIRSTN_LENGTH_APPEND,
-        TAKE_LENGTH_ID,
-        FRONT_CONS_EQ_NIL,
-        LENGTH_FRONT_CONS,
-        LAST_DROP_THM,
-        FRONT_TAKE_THM,
-        BUTLAST, LAST, NOT_NULL_SNOC,
-        FIRSTN_LENGTH_ID_EVAL, BUTFIRSTN_LENGTH_NIL_EVAL,
-        holfoot_var_res_map_REWRITES,
-        holfoot_separation_combinator_def,
-        REPLACE_ELEMENT_compute,
-        REPLACE_ELEMENT_SEM, REPLACE_ELEMENT_DEF,
-        EL_REPLACE_ELEMENT, HD_REPLACE_ELEMENT,
-
-        SUB1, arithmeticTheory.ADD1, arithmeticTheory.NOT_LESS,
-        arithmeticTheory.NOT_LESS_EQUAL,
-        arithmeticTheory.GREATER_DEF,
-        arithmeticTheory.GREATER_EQ
-     ]])
-
    val varlist_rwts = [holfoot___varlist_update_NO_VAR_THM];
 
    val prover_extra = ([holfoot_tag_11, holfoot_var_11],
@@ -227,7 +162,8 @@ fun holfoot_arith_simp_CONV context t =
   handle UNCHANGED => REFL t
 
 fun array_bound_DECIDE___HOL context t = 
-   (EQT_ELIM (holfoot_arith_simp_CONV context t));
+   (EQT_ELIM (holfoot_arith_simp_CONV context t)) 
+
 
 fun array_bound_DECIDE___YICES context t = 
 let
@@ -239,12 +175,46 @@ in
 end;
 
 
-val holfoot_use_yices = ref false;
-val _ = Feedback.register_btrace ("holfoot use Yices", holfoot_use_yices);
+val (array_bound_DECIDE___YICES, _) =
+  Cache.CACHE ((K true), array_bound_DECIDE___YICES)
+
+val holfoot_use_yices = ref 0;
+val _ = Feedback.register_trace ("holfoot use Yices", holfoot_use_yices, 4);
 
 fun array_bound_DECIDE context t = 
-   if (!holfoot_use_yices) then array_bound_DECIDE___YICES context t else
-      array_bound_DECIDE___HOL context t;
+   if (!holfoot_use_yices = 1) then array_bound_DECIDE___YICES context t else
+   if (!holfoot_use_yices = 0) then array_bound_DECIDE___HOL context t else
+   let
+      fun run f context t = 
+        (let
+            val thm = f context t
+         in
+            if (aconv (concl thm) t) then SOME thm else 
+            (print "PROBLEM\n\n\n";NONE)
+         end) handle Interrupt => raise Interrupt
+                   | HOL_ERR _ => Feedback.fail()
+                   | e => (print "EXN-problem\n\n";Raise e)
+
+      val thm1_opt = run array_bound_DECIDE___YICES context t;
+      val thm2_opt = run array_bound_DECIDE___HOL context t;
+
+      fun print_thm_opt NONE = print "-"
+        | print_thm_opt (SOME thm) = print_thm thm;
+
+      val _ = if (isSome thm1_opt = isSome thm2_opt) then () else
+              let
+                  val _ = print "Yices: ";
+                  val _ = print_thm_opt thm1_opt;
+                  val _ = print "\n";
+                  val _ = print "HOL: ";
+                  val _ = print_thm_opt thm2_opt;
+                  val _ = print "\n";
+              in () end
+      val thm_opt = if (!holfoot_use_yices mod 2 = 1) then thm1_opt else thm2_opt
+   in
+      if isSome thm_opt then valOf thm_opt else Feedback.fail()
+   end;
+
 
 fun prove_in_array_bound context ec (ec', nc') =
    let
@@ -354,7 +324,7 @@ let
    
    val found_opt = first_opt (unequal_opt_pred c1 c2) context
    val found_opt = if isSome (found_opt) then found_opt else 
-          SOME (EQT_ELIM (holfoot_arith_simp_CONV context (mk_neg (mk_eq (c1, c2)))))
+          SOME (array_bound_DECIDE context (mk_neg (mk_eq (c1, c2))))
    val _ = if no_thm then raise var_res_implies_unequal_found_expn else ();
    val thm_context = valOf found_opt;
 
@@ -585,8 +555,9 @@ let
       val (td, _) = listSyntax.dest_cons dataL;
       val (_, d) = pairSyntax.dest_pair td;      
       val length_d0 = listSyntax.mk_length d;
-      val length_d = rhs (concl (VAR_RES_PROP_REWRITE_CONV ss context length_d0))
-              handle UNCHANGED => length_d0
+      val length_thm = (VAR_RES_PROP_REWRITE_CONV ss context length_d0)
+                       handle UNCHANGED => REFL length_d0;
+      val length_d = rhs (concl length_thm);
       val length_const = mk_comb (holfoot_exp_const_term, length_d);
 
       (*check, whether this lenght should be introduced*)
@@ -615,12 +586,12 @@ let
                     if (is_new) then () else Feedback.fail()
                  end)
    in
-      SOME (is_interval)
+      SOME (is_interval, length_thm)
    end handle HOL_ERR _ => NONE;
 
    val iL = indexes 0 my_holfoot_ap_data_array___pred sfs;
 
-   fun process_index (i, is_interval) = 
+   fun process_index (i, (is_interval, l_thm)) = 
    let
        val sfb_thm = BAG_RESORT_CONV [i] sfb;
        val xthm0 = if (is_interval) then
@@ -636,8 +607,9 @@ let
                ythm1
             end;
        val xthm1 = CONV_RULE (RATOR_CONV (RAND_CONV (K (GSYM sfb_thm)))) xthm0
+       val xthm2 = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [l_thm])) xthm1
    in
-      [xthm1]
+      [xthm2]
    end handle HOL_ERR _ => [];
 in
    flatten (map process_index iL)
@@ -1024,48 +996,138 @@ local
    val _ = computeLib.add_thms [FDOM_FUPDATE, FDOM_FEMPTY,
             IN_INSERT, NOT_IN_EMPTY, holfoot_tag_11] in_compset
 
-in
 
-fun HOLFOOT_INFERENCE___bring_points_to_to_front e tag_t tt =
-let
-   val (_,pre,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE tt;   
-   val (_,_,_,_,sfs) = dest_var_res_prop___propL pre
-   val found_opt = first_opt (is_holfoot_ap_points_to___found_opt_pred e) sfs
-   val _ = if isSome found_opt then () else raise UNCHANGED;               
+   fun search_fun_points_to e (n:int) ttt =
+   let
+      val (e', L) = dest_holfoot_ap_points_to ttt;
+   in
+      if (aconv e e') then SOME (n, NONE:thm option, ttt) else NONE
+   end;
 
-   (*resort points to to front and insert tag if necessary*)
-   val (pos,L_t) = valOf found_opt;
-   val thm0a = VAR_RES_COND_HOARE_TRIPLE___RESORT_PRECOND_CONV [pos] tt
-   val in_thm_term = pred_setSyntax.mk_in (tag_t, finite_mapSyntax.mk_fdom L_t);
-   val in_thm0 = computeLib.CBV_CONV in_compset in_thm_term;
+   fun search_fun_array_interval context ec (n:int) ttt =
+       let
+          val (is_interval, (e',n',_)) = dest_holfoot_ap_data_array_interval ttt
+          val nc' = dest_var_res_exp_const n';
+          val ec' = dest_var_res_exp_const e';
+          val thm = prove_in_array_interval_bound is_interval context ec (ec',nc')
+       in          
+          SOME (n, SOME thm, ttt)
+       end handle HOL_ERR _ => NONE;
 
-   val (in_thm, need_intro) = if aconv (rhs (concl in_thm0)) T then
-          (EQT_ELIM in_thm0, false) else
-        if aconv (rhs (concl in_thm0)) F then
-          (EQF_ELIM in_thm0, true) else
-          raise UNCHANGED
 
-   val thm0 = if not need_intro then thm0a else
+   fun points_to___intro_const tag_t sf thm =
+   let
+      val (e_t, L_t) = dest_holfoot_ap_points_to sf;
+
+      val in_thm_term = pred_setSyntax.mk_in (tag_t, finite_mapSyntax.mk_fdom L_t);
+      val in_thm0 = computeLib.CBV_CONV in_compset in_thm_term;
+      val (in_thm, need_intro) = 
+           if aconv (rhs (concl in_thm0)) T then
+             (EQT_ELIM in_thm0, false) else
+           if aconv (rhs (concl in_thm0)) F then
+             (EQF_ELIM in_thm0, true) else
+           raise UNCHANGED
+
+      val thm0 = if not need_intro then thm else
         let
            val xthm0 = PART_MATCH (lhs o snd o dest_imp o snd o dest_imp) 
                          (ISPEC tag_t HOLFOOT_COND_INFERENCE___points_to___ADD_TAG)
-                        (rhs (concl thm0a))
+                        (rhs (concl thm))
            val xthm1 = MP xthm0 in_thm
            val xthm2 = var_res_precondition_prove xthm1;
 
            (*give new constant a nice name*)
            val c_const_name = get_const_name_for_exp 
-                          ("_"^(holfoot_term_to_string tag_t)) e
+                          ("_"^(holfoot_term_to_string tag_t)) e_t
            val xthm3 = CONV_RULE 
                    (RHS_CONV
                     (RENAME_VARS_CONV [c_const_name])) xthm2
 
-           val xthm4 = TRANS thm0a xthm3
+           val xthm4 = TRANS thm xthm3
         in
            xthm4
         end;
+   in
+     (thm0, need_intro)
+   end;
+
+
+   fun array_interval___intro_const resort tag_t sf thm =
+   let
+      val (is_interval, (e1, e2, data)) = dest_holfoot_ap_data_array_interval sf;  
+      val (dataL, data_ty) = listSyntax.dest_list data;
+      val data_pL = map pairSyntax.dest_pair dataL;
+      val data_opt = SOME (assoc tag_t data_pL) handle HOL_ERR _ => NONE;
+      val need_intro = not (isSome data_opt);
+
+      val (thm0,data) = if need_intro then 
+        let
+           val rewr_thm0 = SPEC tag_t (if is_interval then
+                          holfoot_ap_data_interval___ADD_TAG
+                          else holfoot_ap_data_array___ADD_TAG)
+           val rewr_thm1 = PART_MATCH (lhs o snd o dest_imp) rewr_thm0 sf;
+           val rewr_thm = var_res_precondition_prove rewr_thm1;
+
+           val xthm0 = CONV_RULE ((RHS_CONV o VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV o
+                                   RAND_CONV o RATOR_CONV o RAND_CONV) (K rewr_thm)) thm;            
+
+           val xthm1 = HO_PART_MATCH (lhs o snd o dest_imp) 
+                        VAR_RES_COND_INFERENCE___asl_exists_pre
+                        (rhs (concl xthm0));
+           val xthm2 = var_res_precondition_prove xthm1;
+           val xthm3 = TRANS xthm0 xthm2;
+
+           (*give new constant a nice name*)
+           val c_const_name = get_const_name_for_exp 
+                          ("_"^(holfoot_term_to_string tag_t)) 
+                          (mk_var ("data", holfoot_a_expression_ty));
+           val xthm4 = CONV_RULE (RHS_CONV
+                    (RENAME_VARS_CONV [c_const_name])) xthm3
+           val (data, _) = dest_forall (rhs (concl xthm4))
+        in
+           (xthm4,data)
+        end
+     else if (not resort) then (thm, valOf data_opt) else
+        let
+        (*resort data_entry*)
+        val (dataL2_h, dataL2) = trypluck (fn dt => let val (tag, dl) = pairSyntax.dest_pair dt in
+                      if (aconv tag tag_t) then dt else Feedback.fail() end) dataL;
+        val data' = listSyntax.mk_list (dataL2_h::dataL2, data_ty)
+        val data_perm_thm = EQT_ELIM (permLib.PERM_NORMALISE_CONV (list_mk_icomb (permLib.PERM_tm, [data, data'])))
+        val perm_thm = if is_interval then holfoot_ap_data_interval___DATA_PERM else holfoot_ap_data_array___DATA_PERM;
+        val sf_thm = MATCH_MP (PART_MATCH (lhs o snd o dest_imp) perm_thm sf) data_perm_thm
+        val xthm0 = CONV_RULE ((RHS_CONV o VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV o
+                                RAND_CONV o RATOR_CONV o RAND_CONV) (K sf_thm)) thm;            
+     in
+        (xthm0, valOf data_opt)        
+     end
+   in
+     (thm0, need_intro,SOME data)
+   end;
 in
-   (thm0, need_intro)
+
+fun HOLFOOT_INFERENCE___bring_points_to_to_front resort context e tag_t tt =
+let
+   val (_,pre,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE tt;   
+   val (_,_,_,_,sfs) = dest_var_res_prop___propL pre
+   val found_opt = first_opt (search_fun_points_to e) sfs
+   val found_opt = if (isSome found_opt) then found_opt else 
+                   (first_opt (search_fun_array_interval context 
+                       (dest_var_res_exp_const e)) sfs handle HOL_ERR _ => NONE)
+   val _ = if isSome found_opt then () else raise UNCHANGED;               
+
+   (*resort points to to front and insert tag if necessary*)
+   val (pos,in_bound_thm_opt, sf) = valOf found_opt;
+
+   val thm0 = VAR_RES_COND_HOARE_TRIPLE___RESORT_PRECOND_CONV [pos] tt
+in
+   if (is_holfoot_ap_points_to sf) then
+      let
+         val (thm, need_intro) = points_to___intro_const tag_t sf thm0;
+      in
+         ((thm, need_intro, NONE), (sf, NONE))
+      end 
+   else (array_interval___intro_const resort tag_t sf thm0, (sf, in_bound_thm_opt))
 end;
 
 end;
@@ -1075,6 +1137,8 @@ end;
 (******************************************************************************)
 
 (*
+   REPEAT STRIP_TAC
+   val context = map ASSUME (fst (top_goal ()))
    val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
 *)
 
@@ -1121,28 +1185,17 @@ local
    val _ = computeLib.add_conv (ord_tm, 1, ORD_CHR_CONV) apply_compset
    val _ = computeLib.add_thms char_eq_thms apply_compset
    val _ = computeLib.add_thms [FAPPLY_FUPDATE_THM, holfoot_tag_11] apply_compset
-
-   fun search_fun_array_interval context ec n ttt =
-       let
-          val (is_interval, (e',n',_)) = dest_holfoot_ap_data_array_interval ttt
-          val nc' = dest_var_res_exp_const n';
-          val ec' = dest_var_res_exp_const e';
-          val thm = prove_in_array_interval_bound is_interval context ec (ec',nc')
-       in          
-          SOME (n, thm, ttt, is_interval)
-       end handle HOL_ERR _ => NONE;
-
 in
 
-
-fun HOLFOOT_INFERENCE___field_lookup___main___CONSEQ_CONV tt =
+fun HOLFOOT_INFERENCE___field_lookup___main___CONSEQ_CONV context tt =
 let
    (*destruct and search for points to*)
    val (p1,_,_,pre,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
    val (v, e, tag_t) = dest_holfoot_prog_field_lookup p1
 
-   val (thm0, intro) =
-      HOLFOOT_INFERENCE___bring_points_to_to_front e tag_t tt
+   val ((thm0, intro, data_opt), (sf, bound_thm_opt)) =
+      HOLFOOT_INFERENCE___bring_points_to_to_front false context e tag_t tt
+
    val (body_t, body_conv) = if intro then 
         ((snd o dest_forall o rhs o concl) thm0, QUANT_CONV) else
         ((rhs o concl) thm0, I)
@@ -1159,9 +1212,17 @@ let
    val varL = (fst o strip_forall o rhs o concl) thm1
     
    (*instantiate main theorem*)
-   val thm2a = PART_MATCH (snd o dest_imp o snd o dest_imp)
-      HOLFOOT_COND_INFERENCE___prog_field_lookup body_t
-   val thm2b = var_res_precondition_prove thm2a 
+   val is_points_to = is_holfoot_ap_points_to sf;
+   val inf_thm = if is_points_to then
+                    HOLFOOT_COND_INFERENCE___prog_field_lookup
+                 else SPEC (valOf data_opt)
+                    (if (is_holfoot_ap_data_array sf) then
+                       HOLFOOT_COND_INFERENCE___prog_field_lookup___array
+                    else
+                       HOLFOOT_COND_INFERENCE___prog_field_lookup___interval)
+
+   val thm2a = PART_MATCH ((if is_points_to then I else (snd o dest_imp)) o snd o dest_imp o snd o dest_imp) inf_thm body_t
+   val thm2b = var_res_precondition_prove (if is_points_to then thm2a else (MP thm2a (valOf bound_thm_opt)))
 
    val thm2c = CONV_RULE ((RATOR_CONV o RAND_CONV o VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV o
                            RAND_CONV o RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV) 
@@ -1178,66 +1239,6 @@ let
 in
    thm2
 end;
-
-(*
-   val context = map ASSUME (fst (top_goal ()))
-   val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
-*)
-fun HOLFOOT_INFERENCE___field_lookup___main_array___CONSEQ_CONV context tt =
-let
-   (*destruct and search for array / interval*)
-   val (p1,_,_,pre,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
-   val (v, e, tag_t) = dest_holfoot_prog_field_lookup p1
-   val ec = dest_var_res_exp_const e;
-
-   val (_, _, _, _, sfs) = dest_var_res_prop___propL pre;
-   val found_opt = first_opt (search_fun_array_interval context ec) sfs;
-   val _ = if isSome found_opt then () else raise UNCHANGED;
-   val (n, index_thm, sf, is_interval) = valOf found_opt;
-
-
-   (*find the apropriate instantiations*)
-   val (_, (_,_,data)) = dest_holfoot_ap_data_array_interval sf;
-   val (dataL, _) = listSyntax.dest_list data 
-   val t_data = tryfind (fn dt => let val (tag, dl) = pairSyntax.dest_pair dt in
-                   if (aconv tag tag_t) then dl else Feedback.fail() end) dataL;
-
-   (*resort*)
-   val thm0 = VAR_RES_COND_HOARE_TRIPLE___RESORT_PRECOND_CONV [n] tt;
-
-   (*introduce constant for variable*)
-   val (intro, c_t, thm1a) = VAR_RES_COND_INFERENCE___CONST_INTRO___CONV 
-        (mk_var_res_exp_var v (type_of e)) NONE (rhs (concl thm0))
-   val thm1 = TRANS thm0 thm1a
-   val body_t = if intro then 
-        (snd o dest_forall o rhs o concl) thm1 else
-        ((rhs o concl) thm1)
-   val varL = (fst o strip_forall o rhs o concl) thm1
-
-   val inf_thm = if is_interval then
-                    HOLFOOT_COND_INFERENCE___prog_field_lookup___interval
-                 else
-                    HOLFOOT_COND_INFERENCE___prog_field_lookup___array
-   val thm2a = PART_MATCH (snd o dest_imp o snd o dest_imp o snd o dest_imp)
-      (ISPEC t_data inf_thm) body_t
-   val thm2b = MP thm2a index_thm
-   val thm2c = var_res_precondition_prove thm2b
-   val thm2d = CONV_RULE ((RATOR_CONV o RAND_CONV o VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV o
-                           RAND_CONV o RATOR_CONV o RAND_CONV o RAND_CONV o RAND_CONV) 
-                           (SIMP_CONV list_ss [])) thm2c
-
-   val vc = pairSyntax.mk_pair (v, c_t);
-   val vcL_t = listSyntax.mk_list ([vc], type_of vc);
-   val thm2e = CONV_RULE ((RATOR_CONV o RAND_CONV)
-         (VAR_RES_COND_INFERENCE___PRECOND_var_res_prop_varlist_update___EVAL vcL_t))
-         thm2d
-
-   val thm2f = LIST_GEN_IMP varL thm2e
-   val thm2 = CONV_RULE (RAND_CONV (K (GSYM thm1))) thm2f
-in
-   thm2
-end;
-
 
 end;
 
@@ -1298,42 +1299,46 @@ in
 end;
 
 
+(*
+   REPEAT STRIP_TAC
+   val context = map ASSUME (fst (top_goal ()))
+   val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
+*)
 
-local
-   open stringTheory stringLib
-   val char_eq_thms   = [CHR_ORD,CHAR_EQ_THM,ORD_11];
-   val apply_compset = listLib.list_compset ()
-   val _ = computeLib.add_conv (ord_tm, 1, ORD_CHR_CONV) apply_compset
-   val _ = computeLib.add_thms char_eq_thms apply_compset
-   val _ = computeLib.add_thms [FAPPLY_FUPDATE_THM, holfoot_tag_11] apply_compset
-
-in
-
-
-fun HOLFOOT_INFERENCE___field_assign___main___CONSEQ_CONV tt =
+fun HOLFOOT_INFERENCE___field_assign___main___CONSEQ_CONV context tt =
 let
    (*destruct and search for points to*)
    val (p1,_,_,pre,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
    val (e1, tag_t, e2) = dest_holfoot_prog_field_assign p1
 
-   val (thm0, intro) =
-      HOLFOOT_INFERENCE___bring_points_to_to_front e1 tag_t tt
-   val body_t = if intro then 
-        ((snd o dest_forall o rhs o concl) thm0) else
-        ((rhs o concl) thm0)
+   val ((thm0, intro, data_opt), (sf, bound_thm_opt)) =
+      HOLFOOT_INFERENCE___bring_points_to_to_front true context e1 tag_t tt;
+
+   val (body_t, body_conv) = if intro then 
+        ((snd o dest_forall o rhs o concl) thm0, QUANT_CONV) else
+        ((rhs o concl) thm0, I)
 
    (*instantiate main theorem*)
-   val thm1a = PART_MATCH (snd o dest_imp o snd o dest_imp)
-      HOLFOOT_COND_INFERENCE___prog_field_assign body_t
-   val thm1b = var_res_precondition_prove thm1a 
+   val is_points_to = is_holfoot_ap_points_to sf;
+   val inf_thm = if is_points_to then
+                    HOLFOOT_COND_INFERENCE___prog_field_assign
+                 else 
+                    (if (is_holfoot_ap_data_array sf) then
+                       HOLFOOT_COND_INFERENCE___prog_field_assign___array
+                    else
+                       HOLFOOT_COND_INFERENCE___prog_field_assign___interval);
+                    
 
-   val thm1c = CONV_RULE ((RATOR_CONV o RAND_CONV o VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV o
-                           RAND_CONV o RATOR_CONV o RAND_CONV o RAND_CONV)
-                           finite_mapLib.fupdate_NORMALISE_CONV) thm1b
+   val thm1a = PART_MATCH (snd o dest_imp o snd o dest_imp) inf_thm body_t
+   val thm1b = if is_points_to then 
+                 (CONV_RULE ((RATOR_CONV o RAND_CONV o VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV o
+                              RAND_CONV o RATOR_CONV o RAND_CONV o RAND_CONV)
+                              finite_mapLib.fupdate_NORMALISE_CONV) (var_res_precondition_prove thm1a)) else
+                 (MP thm1a (valOf bound_thm_opt));
+ 
 
-  
    val thm1 = if intro then
-      GEN_IMP ((fst o dest_forall o rhs o concl) thm0) thm1c else thm1c
+      GEN_IMP ((fst o dest_forall o rhs o concl) thm0) thm1b else thm1b
 
 
    val thm2 = CONV_RULE (RAND_CONV (K (GSYM thm0))) thm1
@@ -1341,65 +1346,6 @@ in
    thm2
 end;
 
-end;
-
-
-(*
-   val context = map ASSUME (fst (top_goal ()))
-   val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
-*)
-local
-   fun search_fun_array_interval context ec n ttt =
-       let
-          val (is_interval, (e',n',_)) = dest_holfoot_ap_data_array_interval ttt
-          val nc' = dest_var_res_exp_const n';
-          val ec' = dest_var_res_exp_const e';
-          val thm = prove_in_array_interval_bound is_interval context ec (ec',nc')
-       in          
-          SOME (n, thm, ttt, is_interval)
-       end handle HOL_ERR _ => NONE;
-in
-
-fun HOLFOOT_INFERENCE___field_assign___main_array___CONSEQ_CONV context tt =
-let
-   (*destruct and search for points to*)
-   val (p1,_,_,pre,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
-   val (e1, tag_t, e2) = dest_holfoot_prog_field_assign p1
-   val ec = dest_var_res_exp_const e1;
-
-   val (_, _, _, _, sfs) = dest_var_res_prop___propL pre;
-   val found_opt = first_opt (search_fun_array_interval context ec) sfs;
-   val _ = if isSome found_opt then () else raise UNCHANGED;
-   val (n, index_thm, sf, is_interval) = valOf found_opt;
-
-   (*resort data_entry*)
-   val (_, (_,_,data)) = dest_holfoot_ap_data_array_interval sf;
-   val (dataL, data_ty) = listSyntax.dest_list data 
-   val (dataL2_h, dataL2) = trypluck (fn dt => let val (tag, dl) = pairSyntax.dest_pair dt in
-                   if (aconv tag tag_t) then dt else Feedback.fail() end) dataL;
-   val data' = listSyntax.mk_list (dataL2_h::dataL2, data_ty)
-   val data_perm_thm = EQT_ELIM (permLib.PERM_NORMALISE_CONV (list_mk_icomb (permLib.PERM_tm, [data, data'])))
-   val perm_thm = if is_interval then holfoot_ap_data_interval___DATA_PERM else holfoot_ap_data_array___DATA_PERM;
-   val sf_thm = MATCH_MP (PART_MATCH (lhs o snd o dest_imp) perm_thm sf) data_perm_thm
-
-   (*resort and apply data_entry_thm*)
-   val thm0a = VAR_RES_COND_HOARE_TRIPLE___RESORT_PRECOND_CONV [n] tt;
-   val thm0 = CONV_RULE (RHS_CONV (VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV (
-                (RAND_CONV o RATOR_CONV o RAND_CONV) (K sf_thm)))) thm0a
-
-   (*instantiate main theorem*)
-   val inf_thm = if is_interval then
-        HOLFOOT_COND_INFERENCE___prog_field_assign___interval 
-     else 
-        HOLFOOT_COND_INFERENCE___prog_field_assign___array
-   val thm1a = PART_MATCH (snd o dest_imp o snd o dest_imp) inf_thm (rhs (concl thm0))
-   val thm1b = MP thm1a index_thm
-   val thm1 = CONV_RULE (RAND_CONV (K (GSYM thm0))) thm1b
-in
-   thm1
-end;
-
-end;
 
 
 fun HOLFOOT_INFERENCE___field_assign___CONV tt =
@@ -1547,7 +1493,7 @@ end
 fun HOLFOOT_INFERENCE___prog_new___CONSEQ_CONV tt =
 let
    val (p1,_,_,pre,_,thm0_fun) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location tt;
-   val (ne, v) = dest_holfoot_prog_new p1;
+   val (ne, v, tagL) = dest_holfoot_prog_new p1;
    val ve = mk_var_res_exp_var v (Type `:holfoot_a_expression`)
 
    (* intro var *)
@@ -1591,8 +1537,33 @@ let
    val thm5 = ANTE_CONV_RULE (REWR_CONV FORALL_SIMP) thm4 handle 
                   UNCHANGED => thm4
                 | HOL_ERR _ => thm4
+
+
+   (*intro needed data*)
+   val add_tag_thm = if (is_holfoot_exp_one ne) then
+       holfoot_ap_points_to___ADD_TAG
+       else holfoot_ap_data_array___ADD_TAG
+
+   fun intro_conv tag_t tt =
+      let
+         val xthm0 = SPEC tag_t add_tag_thm
+         val xthm1 = PART_MATCH (lhs o snd o dest_imp) xthm0 tt;         
+      in
+         var_res_precondition_prove xthm1
+      end;
+
+   fun intro_all_conv [] = ALL_CONV
+     | intro_all_conv (tag_t::tagL) =
+       (intro_conv tag_t) THENC
+       QUANT_CONV (intro_all_conv tagL)
+
+   val (tagL_list, _) = listSyntax.dest_list tagL
+   val thm6 = ANTE_CONV_RULE ((STRIP_QUANT_CONV o 
+      VAR_RES_COND_HOARE_TRIPLE___PRECOND_CONV o RAND_CONV o
+      RATOR_CONV o RAND_CONV) (intro_all_conv tagL_list)) thm5
+
 in
-   thm5
+   thm6
 end;
 
 
@@ -2153,6 +2124,7 @@ end;
 (* ---------------------------------------- *)
 
 (*
+   REPEAT STRIP_TAC
    val context = map ASSUME (fst (top_goal()))
    val tt = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
 *)
@@ -2172,7 +2144,7 @@ local
              else
                 (if i1 then (NONE, ISPECL [ec2, nc2, nc1]
                             holfoot_ap_data_array_interval___same_start___SPLIT___ai) else
-                            (SOME (mk_eq (nc1, nc2)), ISPECL [ec2, nc2, nc1]
+                            (SOME (mk_disj (mk_eq (nc1, nc2), mk_eq (nc1, numSyntax.zero_tm))), ISPECL [ec2, nc2, nc1]
                             holfoot_ap_data_array_interval___same_start___SPLIT___aa))            
           ) else (
              if i2 then (SOME (mk_disj (numSyntax.mk_less (nc2, ec1), mk_eq (ec2, ec1))), 
@@ -2198,7 +2170,7 @@ local
       xthm5
    end;
 
-   fun try_prove_eq_start context ec1 ec2 ttt = 
+   fun try_prove_eq_start ss context ec1 ec2 ttt = 
    let
       val _ = if (ec1 = ec2) then Feedback.fail() else ();
       val eq_t = mk_eq (ec1, ec2);
@@ -2207,11 +2179,26 @@ local
       val xthm1 = MP xthm0 eq_thm
       val xthm2 = CONV_RULE ((RHS_CONV o RAND_CONV o RATOR_CONV o RATOR_CONV o
              RAND_CONV o RAND_CONV) (K eq_thm)) xthm1
+      val xthm3 = CONV_RULE (VAR_RES_PROP_REWRITE_CONV ss context) xthm2
    in
-      xthm2
+      xthm3
    end;
 
-   fun search_fun context sfs n ttt =
+   fun try_prove_eq_end ss context i1 i2 ec1 ec2 nc1 nc2 ttt = 
+   let
+      val _ = if (i1 = i2) andalso (ec1 = ec2) andalso not (nc1 = nc2) then () else Feedback.fail();
+      val eq_t = mk_eq (nc1, nc2);
+      val eq_thm = array_bound_DECIDE context eq_t;
+      val xthm0 = ISPECL [eq_t, ttt] asl_trivial_cond___INTRO;
+      val xthm1 = MP xthm0 eq_thm
+      val xthm2 = CONV_RULE ((RHS_CONV o RAND_CONV o RATOR_CONV o
+             RAND_CONV o RAND_CONV) (K eq_thm)) xthm1
+      val xthm3 = CONV_RULE (VAR_RES_PROP_REWRITE_CONV ss context) xthm2
+   in
+      xthm3
+   end;
+
+   fun search_fun ss context sfs n ttt =
        let
           val (i1, (e, ne, data1)) = dest_holfoot_ap_data_array_interval ttt;          
           val nc1 = dest_var_res_exp_const ne
@@ -2222,7 +2209,8 @@ local
              val ec2 = dest_var_res_exp_const e'
              val nc2 = dest_var_res_exp_const ne'
              val (in_split, split_thm) = 
-                 (true,  try_prove_eq_start context ec1 ec2 ttt) handle HOL_ERR _ =>
+                 (true,  try_prove_eq_start ss context ec1 ec2 ttt) handle HOL_ERR _ =>
+                 (true,  try_prove_eq_end ss context i1 i2 ec1 ec2 nc1 nc2 ttt) handle HOL_ERR _ =>
                  (false, try_split context i1 i2 (ec1,nc1) (ec2, nc2, data2)) handle HOL_ERR _ =>
                  (true,  try_split context i2 i1 (ec2,nc2) (ec1, nc1, data1))
           in
@@ -2241,7 +2229,7 @@ local
 
 in
 
-fun VAR_RES_FRAME_SPLIT_INFERENCE___data_array_interval___SPLIT___CONV context tt =
+fun VAR_RES_FRAME_SPLIT_INFERENCE___data_array_interval___SPLIT___CONV ss context tt =
 let
    val (f, _, _, _, _, split_sfb, imp_sfb, _) =  dest_VAR_RES_FRAME_SPLIT tt;
 
@@ -2249,7 +2237,7 @@ let
    val (imp_sfs,_) = bagSyntax.dest_bag imp_sfb;
 
    (*search lists*)
-   val found_opt = first_opt (search_fun context imp_sfs) split_sfs;
+   val found_opt = first_opt (search_fun ss context imp_sfs) split_sfs;
    val _ = if isSome found_opt then () else raise UNCHANGED;
    val (n, m, sf1, sf2, in_split, split_thm) = valOf found_opt;
 
@@ -2432,7 +2420,89 @@ struct
           rhs (concl holfoot_separation_combinator_def))
    val prover_extra = holfoot_base_param.prover_extra;
    val varlist_rwts = holfoot_base_param.varlist_rwts;
-   val predicate_simpset = holfoot_base_param.predicate_simpset
+
+   fun LENGTH_EQ_conv tt =
+   let
+      val (l,r) = dest_eq tt
+      val _ = if (listSyntax.is_length r) andalso not (listSyntax.is_length l) then ()
+              else raise UNCHANGED
+   in
+      ISPECL [l,r] EQ_SYM_EQ
+   end handle HOL_ERR _ => raise UNCHANGED;
+
+   val LENGTH_EQ_norm_ss =
+            simpLib.conv_ss {conv = K (K LENGTH_EQ_conv),
+                 key = NONE, name = "LENGTH_EQ_norm", 
+                 trace = 2}
+
+   val predicate_ssfrag0 = simpLib.rewrites[]
+   val predicate_ssfrag1 = simpLib.merge_ss [predicate_ssfrag0,
+      listSimps.LIST_ss ,
+      stringSimps.STRING_ss ,
+      listLib.LIST_EQ_ss,
+      LENGTH_EQ_norm_ss,
+      simpLib.rewrites [
+        LENGTH_NIL, LENGTH_NIL_SYM,
+        LIST_TO_FMAP_THM,
+        holfoot_ap_data_list_seg___NOT_EMPTY_DATA___0,
+        holfoot_ap_data_list_seg___SAME_START_END,
+        holfoot_tag_11,
+        holfoot_var_11,
+        holfoot_ap_points_to___null,
+        holfoot_ap_list_def,
+        holfoot_ap_data_list_def,
+        holfoot_ap_list_seg_def,
+        holfoot_ap_data_list_seg___null,
+        holfoot_ap_data_list_seg_num___null,
+        holfoot_ap_bintree_def,
+        holfoot_ap_tree___null,
+        holfoot_ap_data_tree___null,
+        holfoot_ap_data_tree___leaf,
+        holfoot_ap_data_array___SIMP_THMS,
+        holfoot_ap_data_queue___startExp_null,
+        holfoot_ap_data_queue___endExp_null,
+        tree_11, GSYM tree_distinct, tree_distinct,
+        IS_LEAF_REWRITE,
+
+        BUTFIRSTN_LENGTH_NIL, BUTFIRSTN_LENGTH_APPEND,
+        FIRSTN_LENGTH_APPEND, LAST_DROP_THM,
+        FRONT_TAKE_THM, BUTLAST, LAST, NOT_NULL_SNOC,
+
+        holfoot_var_res_map_REWRITES,
+        holfoot_separation_combinator_def,
+        REPLACE_ELEMENT_compute,
+        LENGTH_REPLACE_ELEMENT, REPLACE_ELEMENT_DEF,
+        EL_REPLACE_ELEMENT, HD_REPLACE_ELEMENT,
+        LENGTH_FIRSTN_MIN, LENGTH_DROP,
+
+        SUB1, arithmeticTheory.ADD1, arithmeticTheory.NOT_LESS,
+        arithmeticTheory.NOT_LESS_EQUAL,
+        arithmeticTheory.GREATER_DEF,
+        arithmeticTheory.GREATER_EQ
+     ]];
+      
+   val predicate_ssfrag2 = simpLib.merge_ss [predicate_ssfrag1,
+      simpLib.rewrites [
+        holfoot_ap_data_array___SIMP_THMS___PRECOND,
+        TAKE_APPEND1, TAKE_APPEND2,
+        BUTFIRSTN_APPEND1, BUTFIRSTN_APPEND2,
+        FIRSTN_LENGTH_ID_EVAL, BUTFIRSTN_LENGTH_NIL_EVAL]];
+
+   fun predicate_ssfrag_arith 0 = simpLib.rewrites []
+     | predicate_ssfrag_arith 1 =
+          numSimps.ARITH_DP_FILTER_ss (K false)
+     | predicate_ssfrag_arith 2 =
+          numSimps.ARITH_DP_FILTER_ss is_no_proper_diseq
+     | predicate_ssfrag_arith _ =
+          numSimps.ARITH_DP_FILTER_ss (K true)
+
+
+   fun predicate_ssfrag 0 = predicate_ssfrag0
+     | predicate_ssfrag 1 = simpLib.merge_ss [predicate_ssfrag1, predicate_ssfrag_arith 1]
+     | predicate_ssfrag 2 = simpLib.merge_ss [predicate_ssfrag1, predicate_ssfrag_arith 2]
+     | predicate_ssfrag 3 = simpLib.merge_ss [predicate_ssfrag2, predicate_ssfrag_arith 2]
+     | predicate_ssfrag _ = simpLib.merge_ss [predicate_ssfrag2, predicate_ssfrag_arith 3];
+
 
    val resource_proccall_free_thmL = 
        [fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_REWRITES];
@@ -2481,17 +2551,11 @@ struct
         no_context_strengthen_conseq_conv
         HOLFOOT_INFERENCE___dispose___main___CONSEQ_CONV),
        ("field_lookup_main",
-        no_context_strengthen_conseq_conv
+        context_strengthen_conseq_conv
         HOLFOOT_INFERENCE___field_lookup___main___CONSEQ_CONV),
-       ("field_lookup_main_array",
-        context_strengthen_conseq_conv
-        HOLFOOT_INFERENCE___field_lookup___main_array___CONSEQ_CONV),
        ("field_assign_main",
-        no_context_strengthen_conseq_conv 
-        HOLFOOT_INFERENCE___field_assign___main___CONSEQ_CONV),
-       ("field_lookup_main_array",
         context_strengthen_conseq_conv
-        HOLFOOT_INFERENCE___field_assign___main_array___CONSEQ_CONV)];
+        HOLFOOT_INFERENCE___field_assign___main___CONSEQ_CONV)];
 
 
    val INFERENCES_LIST___expensive_simplifications =
@@ -2528,7 +2592,7 @@ struct
         no_context_strengthen_conseq_conv
         VAR_RES_FRAME_SPLIT_INFERENCE___data_array___same_start_length___CONV),
        ("holfoot_data_array___split",
-        context_strengthen_conseq_conv
+        simpset_strengthen_conseq_conv
         VAR_RES_FRAME_SPLIT_INFERENCE___data_array_interval___SPLIT___CONV),
        ("holfoot_data_array___points_to_TO_array",
         context_strengthen_conseq_conv

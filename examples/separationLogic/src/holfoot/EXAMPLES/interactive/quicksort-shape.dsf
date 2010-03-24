@@ -1,11 +1,11 @@
-quicksort(;b,e) [data_interval(b, e, _data)] {
+quicksort(;b,e) [interval(b, e)] {
   local piv, l, r;
   if (e > b) {
     piv = b->dta;
     l = b + 1;
     r = e;
 
-    while (l <= r) [b < l * l <= r + 1 * r <= e * data_interval (b,e,_data)] {
+    while (l <= r) [b < l * l <= r + 1 * r <= e * interval (b,e)] {
       c = l->dta;
       if (c <= piv) {
         l = l + 1;
@@ -24,5 +24,5 @@ quicksort(;b,e) [data_interval(b, e, _data)] {
     quicksort (;b, r);
     quicksort (;l, e);
   }
-} [data_interval(b, e, _data)]
+} [interval(b, e)]
 
