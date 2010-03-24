@@ -228,54 +228,6 @@ struct
           listSyntax.mk_all_distinct
             (listSyntax.mk_list (operands, Term.type_of (List.hd operands)))
         end
-    | parse_term (decl, dict) ("(" :: "xor" :: tokens) =
-        (* xor -- perhaps surprisingly, HOL doesn't define a corresponding
-           constant (but of course, xor is the same as "not equivalent") *)
-        let
-          val tokens = remove_right_parenthesis tokens
-          val operands = parse_term_list (decl, dict) tokens
-          val _ = if List.length operands <> 2 then
-              raise ERR "parse_term" "'xor' must have 2 arguments"
-            else ()
-          val op1 = List.hd operands
-          val op2 = List.hd (List.tl operands)
-        in
-          boolSyntax.mk_neg (boolSyntax.mk_eq (op1, op2))
-        end
-    | parse_term (decl, dict) ("(" :: "xor3" :: tokens) =
-        (* xor a b c == xor (xor a b) c -- encodes the sum output bit of a full
-           adder *)
-        let
-          val tokens = remove_right_parenthesis tokens
-          val operands = parse_term_list (decl, dict) tokens
-          val _ = if List.length operands <> 3 then
-              raise ERR "parse_term" "'xor3' must have 3 arguments"
-            else ()
-          val op1 = List.hd operands
-          val op2 = List.hd (List.tl operands)
-          val op3 = List.hd (List.tl (List.tl operands))
-          val mk_neq = boolSyntax.mk_neg o boolSyntax.mk_eq
-        in
-          mk_neq (mk_neq (op1, op2), op3)
-        end
-   | parse_term (decl, dict) ("(" :: "carry" :: tokens) =
-        (* carry a b c == (or (and a b) (and a c) (and b c)) -- encodes the
-           carry output bit of a full adder *)
-        let
-          val tokens = remove_right_parenthesis tokens
-          val operands = parse_term_list (decl, dict) tokens
-          val _ = if List.length operands <> 3 then
-              raise ERR "parse_term" "'carry' must have 3 arguments"
-            else ()
-          val op1 = List.hd operands
-          val op2 = List.hd (List.tl operands)
-          val op3 = List.hd (List.tl (List.tl operands))
-          val conj1 = boolSyntax.mk_conj (op1, op2)
-          val conj2 = boolSyntax.mk_conj (op1, op3)
-          val conj3 = boolSyntax.mk_conj (op2, op3)
-        in
-          boolSyntax.list_mk_disj [conj1, conj2, conj3]
-        end
     | parse_term (decl, dict) ("(" :: "select" :: tokens) =
         (* array lookup is translated as function application *)
         let
@@ -333,6 +285,8 @@ struct
           boolSyntax.mk_select (i, boolSyntax.mk_neg (boolSyntax.mk_eq
             (Term.mk_comb (array1, i), Term.mk_comb (array2, i))))
         end
+    | parse_term _ ["xor3"] = Term.prim_mk_const {Thy="HolSmt", Name="xor3"}
+    | parse_term _ ["carry"] = Term.prim_mk_const {Thy="HolSmt", Name="carry"}
     | parse_term _ ["bv", "[", m, ":", n, "]"] =
         (* bit-vector literals: numeric value m, bit-width n *)
         wordsSyntax.mk_word (Arbnum.fromString m, Arbnum.fromString n)
