@@ -27,9 +27,14 @@ struct
 
   (* constants used by Z3 (internally, but they also appear in proofs) *)
 
+  (* exclusive or *)
+  val xor_def = bossLib.Define`
+    xor x y = ~(x <=> y)
+  `;
+
   (* ternary xor (i.e., the lower output bit of a full adder) *)
   val xor3_def = bossLib.Define`
-    xor3 x y z = ~(~(x <=> y) <=> z)
+    xor3 x y z = xor (xor x y) z
   `;
 
   (* the carry output of a full adder *)
@@ -84,14 +89,14 @@ struct
   val _ = s ("d013", D ``(~p /\ q) \/ p \/ ~q``)
   val _ = s ("d014", D ``(p /\ ~q) \/ ~p \/ q``)
   val _ = s ("d015", D ``(p /\ q) \/ ~p \/ ~q``)
-  val _ = s ("d016", U D [xor3_def] ``~xor3 p q r \/ ~p \/ ~q \/ r``)
-  val _ = s ("d017", U D [xor3_def] ``~xor3 p q r \/ ~p \/ q \/ ~r``)
-  val _ = s ("d018", U D [xor3_def] ``~xor3 p q r \/ p \/ ~q \/ ~r``)
-  val _ = s ("d019", U D [xor3_def] ``~xor3 p q r \/ p \/ q \/ r``)
-  val _ = s ("d020", U D [xor3_def] ``xor3 p q r \/ ~p \/ ~q \/ ~r``)
-  val _ = s ("d021", U D [xor3_def] ``xor3 p q r \/ ~p \/ q \/ r``)
-  val _ = s ("d022", U D [xor3_def] ``xor3 p q r \/ p \/ ~q \/ r``)
-  val _ = s ("d023", U D [xor3_def] ``xor3 p q r \/ p \/ q \/ ~r``)
+  val _ = s ("d016", U D [xor3_def, xor_def] ``~xor3 p q r \/ ~p \/ ~q \/ r``)
+  val _ = s ("d017", U D [xor3_def, xor_def] ``~xor3 p q r \/ ~p \/ q \/ ~r``)
+  val _ = s ("d018", U D [xor3_def, xor_def] ``~xor3 p q r \/ p \/ ~q \/ ~r``)
+  val _ = s ("d019", U D [xor3_def, xor_def] ``~xor3 p q r \/ p \/ q \/ r``)
+  val _ = s ("d020", U D [xor3_def, xor_def] ``xor3 p q r \/ ~p \/ ~q \/ ~r``)
+  val _ = s ("d021", U D [xor3_def, xor_def] ``xor3 p q r \/ ~p \/ q \/ r``)
+  val _ = s ("d022", U D [xor3_def, xor_def] ``xor3 p q r \/ p \/ ~q \/ r``)
+  val _ = s ("d023", U D [xor3_def, xor_def] ``xor3 p q r \/ p \/ q \/ ~r``)
   val _ = s ("d024", U D [carry_def] ``~carry p q r \/ p \/ q``)
   val _ = s ("d025", U D [carry_def] ``~carry p q r \/ p \/ r``)
   val _ = s ("d026", U D [carry_def] ``~carry p q r \/ q \/ r``)

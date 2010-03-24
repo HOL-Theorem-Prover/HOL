@@ -285,6 +285,7 @@ struct
           boolSyntax.mk_select (i, boolSyntax.mk_neg (boolSyntax.mk_eq
             (Term.mk_comb (array1, i), Term.mk_comb (array2, i))))
         end
+    | parse_term _ ["xor"] = Term.prim_mk_const {Thy="HolSmt", Name="xor"}
     | parse_term _ ["xor3"] = Term.prim_mk_const {Thy="HolSmt", Name="xor3"}
     | parse_term _ ["carry"] = Term.prim_mk_const {Thy="HolSmt", Name="carry"}
     | parse_term _ ["bv", "[", m, ":", n, "]"] =
