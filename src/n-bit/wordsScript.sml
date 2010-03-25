@@ -4001,7 +4001,7 @@ val WORD_SUB_LE = store_thm("WORD_SUB_LE",
 (* Create a few word sizes                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val sizes = [2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64];
+val sizes = [1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64];
 
 fun mk_word_size n =
   let val N = Arbnum.fromInt n
