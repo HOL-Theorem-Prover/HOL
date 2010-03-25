@@ -69,28 +69,16 @@ fun reltoString (TOK s) = s
 
 type rule_record = {term_name : string,
                     elements : pp_element list,
-                    preferred : bool,
+                    timestamp : int,
                     block_style : PhraseBlockStyle * block_info,
                     paren_style : ParenStyle}
 
-fun update_rr_pref b
-  {term_name, elements, preferred, block_style, paren_style} =
-  {term_name = term_name, elements = elements, preferred = b,
-   block_style = block_style, paren_style = paren_style}
-
 datatype binder = LAMBDA
                 | TYPE_LAMBDA
-                | BinderString     of {tok : string, term_name : string, preferred : bool}
-                | TypeBinderString of {tok : string, term_name : string, preferred : bool}
-
-fun update_bpref bool b =
-    case b of
-      LAMBDA => LAMBDA
-    | TYPE_LAMBDA => TYPE_LAMBDA 
-    | BinderString {term_name, tok, preferred} =>
-      BinderString {term_name = term_name, tok = tok, preferred = bool}
-    | TypeBinderString {term_name, tok, preferred} =>
-      TypeBinderString {term_name = term_name, tok = tok, preferred = bool}
+                | BinderString of {tok : string, term_name : string,
+                                   timestamp : int}
+                | TypeBinderString of {tok : string, term_name : string,
+                                       timestamp : int}
 
 datatype prefix_rule = STD_prefix of rule_record list
                      | BINDER of binder list
@@ -115,6 +103,37 @@ datatype grammar_rule =
        | INFIX of infix_rule
        | CLOSEFIX of rule_record list
        | LISTRULE of listspec list
+
+datatype rule_fixity =
+  Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
+
+datatype user_delta =
+         GRULE of {term_name : string,
+                   fixity : rule_fixity,
+                   pp_elements: pp_element list,
+                   paren_style : ParenStyle,
+                   block_style : PhraseBlockStyle * block_info}
+       | LRULE of listspec
+       | BRULE of {tok : string, term_name : string}
+       | TBRULE of {tok : string, term_name : string}
+
+fun pptoks ppels = List.mapPartial (fn TOK s => SOME s | _ => NONE)
+                                   (rule_elements ppels)
+fun userdelta_toks ud =
+    case ud of
+      GRULE {pp_elements, ...} => pptoks pp_elements
+    | BRULE {tok,...} => [tok]
+    | TBRULE {tok,...} => [tok]
+    | LRULE {leftdelim, separator, rightdelim, ...} =>
+      pptoks leftdelim @ pptoks separator @ pptoks rightdelim
+
+fun userdelta_name ud =
+    case ud of
+      GRULE {term_name, ...} => term_name
+    | BRULE {term_name, ...} => term_name
+    | TBRULE {term_name, ...} => term_name
+    | LRULE {cons, ...} => cons
+
 
 type overload_info = Overload.overload_info
 
@@ -301,8 +320,7 @@ in
 end
 
 fun fupdate_rule_by_termtoklist {term_name,toklist} f g r = let
-  fun toks rr = List.mapPartial (fn TOK s => SOME s | _ => NONE)
-                                (rule_elements (#elements rr))
+  fun toks rr = pptoks (#elements rr)
   fun over_rr (rr:rule_record) =
       if #term_name rr = term_name andalso toks rr = toklist then
         f rr
@@ -320,6 +338,18 @@ end
 
 fun fupdate_rulelist f rules = map (fn (p,r) => (p, f r)) rules
 fun fupdate_prulelist f rules = map f rules
+
+fun update_b_tstamp _ LAMBDA = LAMBDA
+  | update_b_tstamp _ TYPE_LAMBDA = TYPE_LAMBDA
+  | update_b_tstamp t (BinderString {tok,term_name,timestamp}) =
+    BinderString {tok = tok, term_name =term_name, timestamp = t}
+  | update_b_tstamp t (TypeBinderString {tok,term_name,timestamp}) =
+    TypeBinderString {tok = tok, term_name =term_name, timestamp = t}
+
+fun update_rr_tstamp t {term_name, elements, paren_style,
+                        block_style, timestamp} =
+    {term_name = term_name, elements = elements, paren_style = paren_style,
+     block_style = block_style, timestamp = t}
 
 
 fun binder_to_string (G:grammar) b =
@@ -453,19 +483,19 @@ val stdhol : grammar =
             (SOME 460,
              INFIX (STD_infix([{term_name = recwith_special,
                                 elements = [RE (TOK "with")],
-                                preferred = false,
+                                timestamp = 0,
                                 block_style = (AroundEachPhrase,
                                                 (PP.CONSISTENT, 0)),
                                 paren_style = OnlyIfNecessary},
                                {term_name = recupd_special,
                                 elements = [RE (TOK ":=")],
-                                preferred = false,
+                                timestamp = 0,
                                 block_style = (AroundEachPhrase,
                                                 (PP.CONSISTENT, 0)),
                                 paren_style = OnlyIfNecessary},
                                {term_name = recfupd_special,
                                 elements = [RE (TOK "updated_by")],
-                                preferred = false,
+                                timestamp = 0,
                                 block_style = (AroundEachPhrase,
                                                 (PP.CONSISTENT, 0)),
                                 paren_style = OnlyIfNecessary}], RIGHT))),
@@ -475,14 +505,14 @@ val stdhol : grammar =
             (SOME 2500,
              INFIX (STD_infix ([{term_name = recsel_special,
                                  elements = [RE (TOK ".")],
-                                 preferred = false,
+                                 timestamp = 0,
                                  block_style = (AroundEachPhrase,
                                                 (PP.CONSISTENT, 0)),
                                  paren_style = OnlyIfNecessary}], LEFT))),
             (NONE,
              CLOSEFIX [{term_name = bracket_special,
                         elements = [RE (TOK "("), RE TM, RE (TOK ")")],
-                        preferred = false,
+                        timestamp = 0,
                         (* these two elements here will not actually
                          ever be looked at by the printer *)
                         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
@@ -637,16 +667,34 @@ fun priv_a2string a =
   | RIGHT => "RIGHT"
   | NONASSOC => "NONASSOC"
 
+fun tokrr_eq (rr1: rule_record) (rr2 : rule_record) =
+    (#term_name rr1 = #term_name rr2 andalso
+     pptoks (#elements rr1) = pptoks (#elements rr2))
+val rrunion = Lib.op_union tokrr_eq
+
+fun tokb_eq b1 b2 =
+    case (b1,b2) of
+      (LAMBDA, LAMBDA) => true
+    | (TYPE_LAMBDA, TYPE_LAMBDA) => true
+    | (BinderString{tok=tk1, term_name = nm1,...},
+       BinderString{tok=tk2, term_name = nm2,...}) => tk1 = tk2 andalso
+                                                      nm1 = nm2
+    | (TypeBinderString{tok=tk1, term_name = nm1,...},
+       TypeBinderString{tok=tk2, term_name = nm2,...}) => tk1 = tk2 andalso
+                                                          nm1 = nm2
+    | _ => false
+val bunion = Lib.op_union tokb_eq
+
 fun merge_rules (r1, r2) =
   case (r1, r2) of
     (SUFFIX (STD_suffix sl1), SUFFIX (STD_suffix sl2)) =>
-      SUFFIX (STD_suffix (Lib.union sl1 sl2))
+      SUFFIX (STD_suffix (rrunion sl1 sl2))
   | (SUFFIX TYPE_annotation, SUFFIX TYPE_annotation) => r1
   | (SUFFIX TYPE_application, SUFFIX TYPE_application) => r1
   | (PREFIX (STD_prefix pl1), PREFIX (STD_prefix pl2)) =>
-      PREFIX (STD_prefix (Lib.union pl1 pl2))
+      PREFIX (STD_prefix (rrunion pl1 pl2))
   | (PREFIX (BINDER b1), PREFIX (BINDER b2)) =>
-      PREFIX (BINDER (Lib.union b1 b2))
+      PREFIX (BINDER (bunion b1 b2))
   | (INFIX VSCONS, INFIX VSCONS) => INFIX VSCONS
   | (INFIX(STD_infix (i1, a1)), INFIX(STD_infix(i2, a2))) =>
       if a1 <> a2 then
@@ -654,17 +702,17 @@ fun merge_rules (r1, r2) =
           ("Attempt to have differently associated infixes ("^
            priv_a2string a1^" and "^priv_a2string a2^") at same level")
       else
-        INFIX(STD_infix(Lib.union i1 i2, a1))
+        INFIX(STD_infix(rrunion i1 i2, a1))
   | (INFIX RESQUAN_OP, INFIX RESQUAN_OP) => INFIX(RESQUAN_OP)
-  | (INFIX (FNAPP rl1), INFIX (FNAPP rl2)) => INFIX (FNAPP (Lib.union rl1 rl2))
+  | (INFIX (FNAPP rl1), INFIX (FNAPP rl2)) => INFIX (FNAPP (rrunion rl1 rl2))
   | (INFIX (STD_infix(i1, a1)), INFIX (FNAPP rl1)) =>
       if a1 <> LEFT then
         raise GrammarError
                 ("Attempting to merge function application with non-left" ^
                  " associated infix")
-      else INFIX (FNAPP (Lib.union i1 rl1))
+      else INFIX (FNAPP (rrunion i1 rl1))
   | (INFIX (FNAPP _), INFIX (STD_infix _)) => merge_rules (r2, r1)
-  | (CLOSEFIX c1, CLOSEFIX c2) => CLOSEFIX (Lib.union c1 c2)
+  | (CLOSEFIX c1, CLOSEFIX c2) => CLOSEFIX (rrunion c1 c2)
   | (LISTRULE lr1, LISTRULE lr2) => LISTRULE (Lib.union lr1 lr2)
   | _ => raise GrammarError "Attempt to have different forms at same level"
 
@@ -844,8 +892,6 @@ fun remove_form_with_tok G r = map_rules (remove_tok r) G
 fun remove_form_with_toklist r = map_rules (remove_toklist r)
 
 
-datatype rule_fixity =
-  Infix of associativity * int | Closefix | Suffix of int | TruePrefix of int
 fun rule_fixityToString f =
   case f of
     Infix(a,i) => "Infix("^assocToString a^", "^Int.toString i^")"
@@ -854,20 +900,82 @@ fun rule_fixityToString f =
   | TruePrefix p => "TruePrefix "^Int.toString p
 
 
-fun clear_prefs_for s =
-  fupdate_rules
-    (fupdate_rulelist
-       (fupdate_rule_by_term s
-                             (update_rr_pref false)
-                             (update_bpref false)))
+fun rrec2delta rf (rr : rule_record) = let
+  val {term_name,paren_style,block_style,elements,...} = rr
+in
+  (#timestamp rr,
+   GRULE {term_name = term_name, paren_style = paren_style,
+          block_style = block_style, pp_elements = elements, fixity = rf})
+end
 
+fun rules_for G nm = let
+  fun search_rrlist rf acc rrl = let
+    fun recurse acc0 rrl =
+        case rrl of
+          [] => acc0
+        | rr :: rest => recurse (if #term_name rr = nm then
+                                   rrec2delta rf rr::acc0 else acc0)
+                                rest
+  in
+    recurse acc rrl
+  end
+  fun search_blist acc blist =
+      case blist of
+        [] => acc
+      | LAMBDA :: rest => search_blist acc rest
+      | TYPE_LAMBDA :: rest => search_blist acc rest
+      | BinderString {tok,term_name,timestamp} :: rest =>
+        if term_name = nm then
+          search_blist
+            ((timestamp, BRULE {term_name = term_name, tok = tok}) :: acc)
+            rest
+        else
+          search_blist acc rest
+      | TypeBinderString {tok,term_name,timestamp} :: rest =>
+        if term_name = nm then
+          search_blist
+            ((timestamp, TBRULE {term_name = term_name, tok = tok}) :: acc)
+            rest
+        else
+          search_blist acc rest
+  fun search_lslist acc lslist =
+      case lslist of
+        [] => acc
+      | r :: rest => if #cons r = nm orelse #nilstr r = nm then
+                       search_lslist ((0, LRULE r) :: acc) rest
+                     else
+                       search_lslist acc rest
+  fun search acc rs =
+      case rs of
+        [] => List.rev acc
+      | (fixopt, grule) :: rest => let
+        in
+          case grule of
+            PREFIX (BINDER blist) => search (search_blist acc blist) rest
+          | PREFIX (STD_prefix rrlist) =>
+            search (search_rrlist (TruePrefix (valOf fixopt)) acc rrlist)
+                   rest
+          | SUFFIX (STD_suffix rrlist) =>
+            search (search_rrlist (Suffix (valOf fixopt)) acc rrlist)
+                   rest
+          | INFIX (STD_infix (rrlist, assoc)) =>
+            search (search_rrlist (Infix(assoc, valOf fixopt)) acc rrlist)
+                   rest
+          | CLOSEFIX rrl => search (search_rrlist Closefix acc rrl) rest
+          | LISTRULE lsl => search (search_lslist acc lsl) rest
+          | _ => search acc rest
+        end
+in
+  search [] (rules G)
+end
 
-fun add_rule G0 {term_name = s, fixity = f, pp_elements,
+fun add_rule G0 {term_name = s : string, fixity = f, pp_elements,
                  paren_style, block_style} = let
   val _ =  pp_elements_ok pp_elements orelse
                  raise GrammarError "token list no good"
-  val G1 = clear_prefs_for s G0
-  val rr = {term_name = s, elements = pp_elements, preferred = true,
+  val contending_tstamps = map #1 (rules_for G0 s)
+  val new_tstamp = List.foldl Int.max 0 contending_tstamps + 1
+  val rr = {term_name = s, elements = pp_elements, timestamp = new_tstamp,
             paren_style = paren_style, block_style = block_style}
   val new_rule =
     case f of
@@ -876,23 +984,25 @@ fun add_rule G0 {term_name = s, fixity = f, pp_elements,
     | TruePrefix p => (SOME p, PREFIX (STD_prefix [rr]))
     | Closefix => (NONE, CLOSEFIX [rr])
 in
-  G1 Gmerge [new_rule]
+  G0 Gmerge [new_rule]
 end
 
 fun add_grule G0 r = G0 Gmerge [r]
 
-fun add_binder G0 ({term_name,tok}, prec) = let
-  val G1 = clear_prefs_for term_name G0
-  val binfo = {term_name = term_name, tok = tok, preferred = true}
+fun add_binder {term_name,tok} G0 = let
+  val contending_tstamps = map #1 (rules_for G0 term_name)
+  val binfo = {term_name = term_name, tok = tok,
+               timestamp = List.foldl Int.max 0 contending_tstamps + 1}
 in
-  G1 Gmerge [(SOME prec, PREFIX (BINDER [BinderString binfo]))]
+  G0 Gmerge [(SOME 0, PREFIX (BINDER [BinderString binfo]))]
 end
 
-fun add_type_binder G0 ({term_name,tok}, prec) = let 
-  val G1 = clear_prefs_for term_name G0
-  val binfo = {term_name = term_name, tok = tok, preferred = true}
+fun add_type_binder {term_name,tok} G0 = let
+  val contending_tstamps = map #1 (rules_for G0 term_name)
+  val binfo = {term_name = term_name, tok = tok,
+               timestamp = List.foldl Int.max 0 contending_tstamps + 1}
 in
-  G1 Gmerge [(SOME prec, PREFIX (BINDER [TypeBinderString binfo]))]
+  G0 Gmerge [(SOME 0, PREFIX (BINDER [TypeBinderString binfo]))]
 end
 
 fun add_listform G lrule = let
@@ -919,22 +1029,33 @@ in
   G Gmerge [(NONE, LISTRULE [lrule])]
 end
 
-fun prefer_form_with_tok (G0:grammar) (r as {term_name,tok}) = let
-  val G1 = clear_prefs_for term_name G0
+fun add_delta ud G =
+    case ud of
+      GRULE r => add_rule G r
+    | BRULE r => add_binder r G
+    | TBRULE r => add_type_binder r G
+    | LRULE r => add_listform G r
+
+fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
+  val contending_timestamps = map #1 (rules_for G0 term_name)
+  val newstamp = List.foldl Int.max 0 contending_timestamps + 1
 in
   fupdate_rules
   (fupdate_rulelist
    (fupdate_rule_by_termtok r
-                            (update_rr_pref true)
-                            (update_bpref true))) G1
+                            (update_rr_tstamp newstamp)
+                            (update_b_tstamp newstamp))) G0
 end
 
-fun prefer_form_with_toklist (r as {term_name,toklist}) G =
-    G |> clear_prefs_for term_name
-      |> fupdate_rules (fupdate_rulelist
-                          (fupdate_rule_by_termtoklist r
-                                                       (update_rr_pref true)
-                                                       (update_bpref true)))
+fun prefer_form_with_toklist (r as {term_name,toklist}) G = let
+  val contending_timestamps = map #1 (rules_for G term_name)
+  val t' = List.foldl Int.max 0 contending_timestamps + 1
+in
+  G |> fupdate_rules (fupdate_rulelist
+                        (fupdate_rule_by_termtoklist r
+                                                     (update_rr_tstamp t')
+                                                     (update_b_tstamp t')))
+end
 
 
 fun set_associativity_at_level G (p, ass) =
@@ -1331,7 +1452,7 @@ in
   stdhol |> add_const ("==>", prim_mk_const{Name = "==>", Thy = "min"})
          |> add_const ("=", prim_mk_const{Name = "=", Thy = "min"})
          |> add_const ("@", prim_mk_const{Name = "@", Thy = "min"})
-         |> C add_binder ({term_name="@", tok = "@"}, std_binder_precedence)
+         |> add_binder {term_name="@", tok = "@"}
 
          (* Using the standard rules for infixes for ==> and = seems
             to result in bad pretty-printing of goals.  I think the
@@ -1433,19 +1554,19 @@ fun ppel_reader s =
 
 
 
-fun rrule_encode {term_name,elements,preferred,block_style,paren_style} =
+fun rrule_encode {term_name,elements,timestamp,block_style,paren_style} =
     String.concat (StringData.encode term_name ::
-                   BoolData.encode preferred ::
+                   IntData.encode timestamp ::
                    block_style_encode block_style ::
                    paren_style_encode paren_style ::
                    (List.map ppel_encode elements @ ["E"]))
 val rrule_reader = let
-  fun f ((((term_name, preferred), block_style), paren_style), elements) =
-      {term_name = term_name, preferred = preferred,
+  fun f ((((term_name, timestamp), block_style), paren_style), elements) =
+      {term_name = term_name, timestamp = timestamp,
        block_style = block_style, paren_style = paren_style,
        elements = elements}
 in
-  map f (StringData.reader >* BoolData.reader >*
+  map f (StringData.reader >* IntData.reader >*
          block_style_reader >* paren_style_reader >*
          ((many ppel_reader >-> literal "E") || fail))
 end
@@ -1453,17 +1574,27 @@ end
 fun binder_encode b =
     case b of
       LAMBDA => "L"
-    | BinderString{tok,term_name,preferred} => "B" ^ StringData.encode tok ^
-                                               StringData.encode term_name ^
-                                               BoolData.encode preferred
+    | TYPE_LAMBDA => "T"
+    | BinderString{tok,term_name,timestamp} =>
+        "B" ^ StringData.encode tok ^ StringData.encode term_name ^
+        IntData.encode timestamp
+    | TypeBinderString{tok,term_name,timestamp} =>
+        "N" ^ StringData.encode tok ^ StringData.encode term_name ^
+        IntData.encode timestamp
 val binder_reader = let
-  fun f ((tok,term_name),preferred) =
+  fun f ((tok,term_name),timestamp) =
       BinderString {tok = tok, term_name = term_name,
-                    preferred = preferred}
+                    timestamp = timestamp}
+  fun g ((tok,term_name),timestamp) =
+      TypeBinderString {tok = tok, term_name = term_name,
+                        timestamp = timestamp}
 in
   (literal "L" >> return LAMBDA) ||
+  (literal "T" >> return TYPE_LAMBDA) ||
   (literal "B" >> (map f (StringData.reader >* StringData.reader >*
-                          BoolData.reader)))
+                          IntData.reader))) ||
+  (literal "N" >> (map g (StringData.reader >* StringData.reader >*
+                          IntData.reader)))
 end
 
 fun RRL s rrl = String.concat (s :: List.map rrule_encode rrl)
@@ -1479,9 +1610,11 @@ fun sfxrule_encode srule =
     case srule of
       STD_suffix rrl => RRL "S" rrl
     | TYPE_annotation => "T"
+    | TYPE_application => "A"
 val sfxrule_reader =
     (literal "S" >> map STD_suffix (many rrule_reader)) ||
-    (literal "T" >> return TYPE_annotation)
+    (literal "T" >> return TYPE_annotation) ||
+    (literal "A" >> return TYPE_application)
 
 fun ifxrule_encode irule =
     case irule of
@@ -1512,6 +1645,48 @@ in
          StringData.reader >* many ppel_reader >* binfo_reader)
 end
 
+fun fixity_encode f =
+    case f of
+      Infix(a,p) => "I" ^ assoc_encode a ^ IntData.encode p
+    | Suffix p => "S" ^ IntData.encode p
+    | TruePrefix p => "T" ^ IntData.encode p
+    | Closefix => "C"
+val fixity_reader =
+    (literal "I" >> map Infix (assoc_reader >* IntData.reader)) ||
+    (literal "S" >> map Suffix IntData.reader) ||
+    (literal "T" >> map TruePrefix IntData.reader) ||
+    (literal "C" >> return Closefix)
+
+fun user_delta_encode ud =
+    case ud of
+      GRULE {term_name, pp_elements, paren_style, block_style, fixity} =>
+      String.concat ("G" :: StringData.encode term_name ::
+                     paren_style_encode paren_style ::
+                     block_style_encode block_style ::
+                     fixity_encode fixity ::
+                     List.map ppel_encode pp_elements @ ["X"])
+    | BRULE {tok,term_name} =>
+      "B" ^ StringData.encode tok ^ StringData.encode term_name
+    | TBRULE {tok,term_name} =>
+      "T" ^ StringData.encode tok ^ StringData.encode term_name
+    | LRULE lspec => "L" ^ lspec_encode lspec
+
+val user_delta_reader = let
+  fun grule ((((tn,ps),bs),f),ppels) =
+      GRULE {term_name = tn, paren_style = ps, block_style = bs, fixity = f,
+             pp_elements = ppels}
+  fun brule (tok,tn) = BRULE {tok = tok, term_name = tn}
+  fun tbrule (tok,tn) = TBRULE {tok = tok, term_name = tn}
+in
+  (literal "G" >> Coding.map grule (StringData.reader >*
+                                    paren_style_reader >*
+                                    block_style_reader >*
+                                    fixity_reader >*
+                                    many (ppel_reader) >-> literal "X")) ||
+  (literal "B" >> Coding.map brule (StringData.reader >* StringData.reader)) ||
+  (literal "T" >> Coding.map tbrule (StringData.reader >* StringData.reader)) ||
+  (literal "L" >> Coding.map LRULE lspec_reader)
+end
 
 
 

@@ -11,9 +11,36 @@ struct
   val A = intLib.ARITH_PROVE
   val R = realLib.REAL_ARITH
 
+  (* simplify 't' using 'thms', then prove the simplified term by applying
+     'prove_fn' *)
+  fun U prove_fn thms t =
+  let
+    val t_eq_t' = simpLib.SIMP_CONV simpLib.empty_ss thms t
+    val t' = prove_fn (boolSyntax.rhs (Thm.concl t_eq_t'))
+  in
+    Thm.EQ_MP (Thm.SYM t_eq_t') t'
+  end
+
   val s = Theory.save_thm
 
   val _ = Theory.new_theory "HolSmt"
+
+  (* constants used by Z3 (internally, but they also appear in proofs) *)
+
+  (* exclusive or *)
+  val xor_def = bossLib.Define`
+    xor x y = ~(x <=> y)
+  `;
+
+  (* ternary xor (i.e., the lower output bit of a full adder) *)
+  val xor3_def = bossLib.Define`
+    xor3 x y z = xor (xor x y) z
+  `;
+
+  (* the carry output of a full adder *)
+  val carry_def = bossLib.Define`
+    carry x y z = (x /\ y) \/ (x /\ z) \/ (y /\ z)
+  `;
 
   (* used for Z3 proof reconstruction *)
 
@@ -55,23 +82,35 @@ struct
   val _ = s ("d006", D ``(p <=> q) \/ p \/ q``)
   val _ = s ("d007", D ``~(~p <=> q) \/ p \/ q``)
   val _ = s ("d008", D ``~(p <=> ~q) \/ p \/ q``)
-  val _ = s ("d009", D ``~q \/ p \/ ~(q <=> p)``)
-  val _ = s ("d010", D ``q \/ p \/ ~(q <=> ~p)``)
-  val _ = s ("d011", D ``~(~(p <=> q) <=> r) \/ ~p \/ q \/ r``)
-  val _ = s ("d012", D ``~(~(p <=> q) <=> r) \/ p \/ ~q \/ r``)
-  val _ = s ("d013", D ``~(~(p <=> q) <=> r) \/ p \/ q \/ ~r``)
-  val _ = s ("d014", D ``(~p /\ ~q) \/ p \/ q``)
-  val _ = s ("d015", D ``(~p /\ q) \/ p \/ ~q``)
-  val _ = s ("d016", D ``(p /\ ~q) \/ ~p \/ q``)
-  val _ = s ("d017", D ``(p /\ q) \/ ~p \/ ~q``)
-  val _ = s ("d018", P ``p \/ (x = if p then y else x)``)
-  val _ = s ("d019", P ``~p \/ (x = if p then x else y)``)
-  val _ = s ("d020", P ``p \/ q \/ ~(if p then r else q)``)
-  val _ = s ("d021", P ``~p \/ q \/ ~(if p then q else r)``)
-  val _ = s ("d022", P ``(if p then q else r) \/ ~p \/ ~q``)
-  val _ = s ("d023", P ``(if p then q else r) \/ p \/ ~r``)
-  val _ = s ("d024", P ``~(if p then q else r) \/ ~p \/ q``)
-  val _ = s ("d025", P ``~(if p then q else r) \/ p \/ r``)
+  val _ = s ("d009", D ``~p \/ q \/ ~(p <=> q)``)
+  val _ = s ("d010", D ``p \/ ~q \/ ~(p <=> q)``)
+  val _ = s ("d011", D ``p \/ q \/ ~(p <=> ~q)``)
+  val _ = s ("d012", D ``(~p /\ ~q) \/ p \/ q``)
+  val _ = s ("d013", D ``(~p /\ q) \/ p \/ ~q``)
+  val _ = s ("d014", D ``(p /\ ~q) \/ ~p \/ q``)
+  val _ = s ("d015", D ``(p /\ q) \/ ~p \/ ~q``)
+  val _ = s ("d016", U D [xor3_def, xor_def] ``~xor3 p q r \/ ~p \/ ~q \/ r``)
+  val _ = s ("d017", U D [xor3_def, xor_def] ``~xor3 p q r \/ ~p \/ q \/ ~r``)
+  val _ = s ("d018", U D [xor3_def, xor_def] ``~xor3 p q r \/ p \/ ~q \/ ~r``)
+  val _ = s ("d019", U D [xor3_def, xor_def] ``~xor3 p q r \/ p \/ q \/ r``)
+  val _ = s ("d020", U D [xor3_def, xor_def] ``xor3 p q r \/ ~p \/ ~q \/ ~r``)
+  val _ = s ("d021", U D [xor3_def, xor_def] ``xor3 p q r \/ ~p \/ q \/ r``)
+  val _ = s ("d022", U D [xor3_def, xor_def] ``xor3 p q r \/ p \/ ~q \/ r``)
+  val _ = s ("d023", U D [xor3_def, xor_def] ``xor3 p q r \/ p \/ q \/ ~r``)
+  val _ = s ("d024", U D [carry_def] ``~carry p q r \/ p \/ q``)
+  val _ = s ("d025", U D [carry_def] ``~carry p q r \/ p \/ r``)
+  val _ = s ("d026", U D [carry_def] ``~carry p q r \/ q \/ r``)
+  val _ = s ("d027", U D [carry_def] ``carry p q r \/ ~p \/ ~q``)
+  val _ = s ("d028", U D [carry_def] ``carry p q r \/ ~p \/ ~r``)
+  val _ = s ("d029", U D [carry_def] ``carry p q r \/ ~q \/ ~r``)
+  val _ = s ("d030", P ``p \/ (x = if p then y else x)``)
+  val _ = s ("d031", P ``~p \/ (x = if p then x else y)``)
+  val _ = s ("d032", P ``p \/ q \/ ~(if p then r else q)``)
+  val _ = s ("d033", P ``~p \/ q \/ ~(if p then q else r)``)
+  val _ = s ("d034", P ``(if p then q else r) \/ ~p \/ ~q``)
+  val _ = s ("d035", P ``(if p then q else r) \/ p \/ ~r``)
+  val _ = s ("d036", P ``~(if p then q else r) \/ ~p \/ q``)
+  val _ = s ("d037", P ``~(if p then q else r) \/ p \/ r``)
 
   (* used for Z3's proof rule rewrite *)
 

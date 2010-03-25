@@ -48,7 +48,7 @@ val restr_terms = mk_constants
 
 val _ = computeLib.del_consts (mk_constants
   [("arm_opsem",
-     ["branch_write_pc", "bx_write_pc", "load_write_pc", "alu_write_pc",
+    ["branch_write_pc", "bx_write_pc", "load_write_pc", "alu_write_pc",
      "cpsr_write_by_instr", "spsr_write_by_instr",
      "branch_target_instr",
      "branch_exchange_instr",

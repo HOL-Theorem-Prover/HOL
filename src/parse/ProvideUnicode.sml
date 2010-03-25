@@ -14,7 +14,7 @@ type gopns = {prefer_form_with_tok : {term_name:string, tok:string} -> unit,
               remove_termtok : {term_name:string,tok:string} -> unit,
               master_unicode_switch : bool}
 type urule = {u:string list, term_name : string,
-              newrule : int option * term_grammar.grammar_rule,
+              newrule : term_grammar.user_delta,
               oldtok : string option}
 
 datatype stored_data =
@@ -39,12 +39,6 @@ val term_table = ref ([] : stored_data list)
 fun stored_data () = !term_table
 
 fun getrule G term_name = let
-  fun replace {term_name, elements, preferred, block_style, paren_style} s =
-      {term_name = term_name,
-       elements = map (fn (RE (TOK _)) => RE (TOK s) | x => x) elements,
-       preferred = true,
-       block_style = block_style,
-       paren_style = paren_style}
   fun tok_of0 es =
       case es of
         [] => raise Fail "Unicode.getrule: should never happen"
@@ -52,82 +46,96 @@ fun getrule G term_name = let
       | _ :: rest => tok_of0 rest
   fun tok_of {elements, ...} = tok_of0 elements
 
-  fun search_rrlist f alt rrlist = let
-    fun srch ({term_name = nm, preferred, elements, ...} : rule_record) =
-        term_name = nm andalso preferred andalso
-        length (List.filter (fn (RE (TOK _)) => true | _ => false) elements) = 1
-  in
-    case List.find srch rrlist of
-      NONE => alt()
-    | SOME r => f (r, replace r, tok_of r)
-  end
+  fun rreplace rf {term_name,paren_style,elements,timestamp,block_style} s =
+      GRULE {term_name=term_name, paren_style = paren_style,
+             pp_elements = map (fn (RE (TOK _)) => RE (TOK s) | x => x)
+                               elements,
+             block_style = block_style,
+             fixity = rf}
+  fun search_rrlist rf tfopt k (rrlist : rule_record list) =
+      case rrlist of
+        [] => k tfopt
+      | r :: rest => let
+        in
+          if #term_name r = term_name then let
+              val tfopt' =
+                  case tfopt of
+                    NONE => SOME(#timestamp r, (rreplace rf r, tok_of r))
+                  | SOME (t', _) =>
+                    if #timestamp r > t' then
+                      SOME(#timestamp r, (rreplace rf r, tok_of r))
+                    else tfopt
+            in
+              search_rrlist rf tfopt' k rest
+            end
+          else search_rrlist rf tfopt k rest
+        end
 
-  fun breplace {term_name,tok,preferred} s =
-      {term_name = term_name, tok = s, preferred = true}
-  fun search_bslist f alt blist = let
-    fun srch {term_name = nm, preferred, tok} =
-        term_name = nm andalso preferred
-  in
-    case List.find srch blist of
-      NONE => alt()
-    | SOME r => f (r, breplace r, #tok r)
-  end
+  fun breplace s = BRULE {term_name = term_name, tok = s}
+  fun search_bslist tfopt k blist =
+      case blist of
+        [] => k tfopt
+      | LAMBDA :: rest => search_bslist tfopt k rest
+      | TYPE_LAMBDA :: rest => search_bslist tfopt k rest
+      | BinderString {timestamp, term_name = nm, tok} :: rest =>
+        if nm = term_name then let
+            val tfopt' =
+                case tfopt of
+                  NONE => SOME (timestamp, (breplace, tok))
+                | SOME (t', _) => if timestamp > t' then
+                                    SOME (timestamp, (breplace, tok))
+                                  else tfopt
+          in
+            search_bslist tfopt' k rest
+          end
+        else search_bslist tfopt k rest
+      | TypeBinderString {timestamp, term_name = nm, tok} :: rest =>
+        if nm = term_name then let
+            val tfopt' =
+                case tfopt of
+                  NONE => SOME (timestamp, (breplace, tok))
+                | SOME (t', _) => if timestamp > t' then
+                                    SOME (timestamp, (breplace, tok))
+                                  else tfopt
+          in
+            search_bslist tfopt' k rest
+          end
+        else search_bslist tfopt k rest
 
-  fun con c (r,f,tok) = (c [r], (fn s => c [f s]), tok)
-  fun addfix fopt (r,f,tok) = SOME ((fopt, r), (fn s => (fopt, f s)), tok)
-  fun STD_infix' assoc (r,f,tok) = (INFIX (STD_infix([r],assoc)),
-                                    (fn s => INFIX (STD_infix([f s], assoc))),
-                                    tok)
-
-  fun BString' BString (r, f, tok) =
-      (PREFIX (BINDER [BString r]),
-       (fn s => PREFIX (BINDER [BString (f s)])),
-       tok)
-  val BinderString' = BString' BinderString
-  val TypeBinderString' = BString' TypeBinderString
-  fun sing x = [x]
-  fun get_rule_data rs =
+  fun get_rule_data tf_opt  rs =
       case rs of
-        [] => NONE
+        [] => Option.map #2 tf_opt
       | (fixopt, grule) :: rest => let
         in
           case grule of
             PREFIX (BINDER blist) => let
-              fun extract_bs (BinderString r) = SOME r
-                | extract_bs _ = NONE
-              fun extract_tybs (TypeBinderString r) = SOME r
-                | extract_tybs _ = NONE
-              val bslist = List.mapPartial extract_bs blist
-              val tybslist = List.mapPartial extract_tybs blist
             in
-              search_bslist (addfix fixopt o BinderString')
-                            (fn () => search_bslist (addfix fixopt o TypeBinderString')
-                                                    (fn () => get_rule_data rest)
-                                                    tybslist)
-                            bslist
+              search_bslist tf_opt
+                            (fn tfopt => get_rule_data tfopt rest)
+                            blist
             end
           | PREFIX (STD_prefix rrlist) =>
-            search_rrlist (addfix fixopt o con (PREFIX o STD_prefix))
-                          (fn () => get_rule_data rest)
+            search_rrlist (TruePrefix (valOf fixopt)) tf_opt
+                          (fn tfopt => get_rule_data tfopt rest)
                           rrlist
-          | SUFFIX TYPE_annotation => get_rule_data rest
-          | SUFFIX TYPE_application => get_rule_data rest
+          | SUFFIX TYPE_annotation => get_rule_data tf_opt rest
+          | SUFFIX TYPE_application => get_rule_data tf_opt rest
           | SUFFIX (STD_suffix rrlist) =>
-            search_rrlist (addfix fixopt o con (SUFFIX o STD_suffix))
-                          (fn () => get_rule_data rest)
+            search_rrlist (Suffix (valOf fixopt)) tf_opt
+                          (fn tfopt => get_rule_data tfopt rest)
                           rrlist
           | INFIX (STD_infix (rrlist, assoc)) =>
-            search_rrlist (addfix fixopt o STD_infix' assoc)
-                          (fn () => get_rule_data rest)
+            search_rrlist (Infix(assoc, valOf fixopt)) tf_opt
+                          (fn tfopt => get_rule_data tfopt rest)
                           rrlist
-          | INFIX _ => get_rule_data rest
-          | CLOSEFIX _ => get_rule_data rest
+          | INFIX _ => get_rule_data tf_opt rest
+          | CLOSEFIX _ => get_rule_data tf_opt rest
              (* only support single token overloads and a closefix form must
                 involve two tokens at once *)
-          | LISTRULE _ => get_rule_data rest (* likewise *)
+          | LISTRULE _ => get_rule_data tf_opt rest (* likewise *)
         end
 in
-  get_rule_data (rules G)
+  get_rule_data NONE (rules G)
 end
 
 
@@ -144,8 +152,7 @@ fun enable_one g0 sd =
       RuleUpdate {u,term_name,newrule = r,oldtok} => let
         open term_grammar
       in
-        g0 |> clear_prefs_for term_name
-           |> C add_grule r
+        g0 |> add_delta r
       end
     | OverloadUpdate{u,oldname,ts} => let
         fun foldthis (t,g) =
@@ -156,7 +163,7 @@ fun enable_one g0 sd =
 
 fun fupd_restrs f {type_intro,type_lbracket,type_rbracket,lambda,type_lambda,
                    endbinding,restr_binders,res_quanop} =
-    {type_intro = type_intro, type_lbracket = type_lbracket, type_rbracket= type_rbracket,
+    {type_intro = type_intro, type_lbracket = type_lbracket, type_rbracket = type_rbracket,
      lambda = lambda, type_lambda = type_lambda, endbinding = endbinding,
      restr_binders = f restr_binders, res_quanop = res_quanop}
 fun fupd_restrs_ty f {lambda} = 
@@ -176,7 +183,7 @@ fun disable_one G sd =
           |> (case oldtok of
                 NONE => (fn g => g)
               | SOME s =>
-                C prefer_form_with_tok { tok = s, term_name = term_name})
+                prefer_form_with_tok { tok = s, term_name = term_name})
       end
     | OverloadUpdate{u,oldname,ts} => let
         fun foldthis s (t, G) = fupdate_overload_info
@@ -204,7 +211,7 @@ fun temp_unicode_version switch {u,tmnm} G = let
           | SOME ops => OverloadUpdate{u = u, oldname = SOME tmnm,
                                        ts = #actual_ops ops}
         end
-      | SOME(r,f,s) => RuleUpdate{u = [u],term_name = tmnm, newrule = f u,
+      | SOME(f,s) => RuleUpdate{u = [u],term_name = tmnm, newrule = f u,
                                   oldtok = SOME s}
 in
   new_action switch G sd
@@ -233,18 +240,15 @@ fun encode tui = let
 in
   case tui of
     UV {u,tmnm} => "U" ^ StringData.encode u ^ StringData.encode tmnm
-  | RULE {u,term_name,newrule = (precopt, grule),oldtok} => let
+  | RULE {u,term_name,newrule,oldtok} => let
       val tn' = StringData.encode term_name
       val u' = StringData.encodel u
-      val precopt' = case precopt of
-                       NONE => "N"
-                     | SOME i => "S" ^ IntData.encode i
-      val grule' = term_grammar.grule_encode grule
+      val delta' = user_delta_encode newrule
       val oldtok' = case oldtok of
                       NONE => "N"
                     | SOME s => "S" ^ StringData.encode s
     in
-      String.concat ["R",tn',u',precopt',grule',oldtok']
+      String.concat ["R",tn',u',delta',oldtok']
     end
   | OVL (s,tm) => let
       val s' = StringData.encode s
@@ -257,16 +261,14 @@ end
 val reader = let
   open Coding
   infix >> >- >-> >* ||
-  fun mkrule ((((tn,u),precopt),rule),oldtok) =
-      RULE {u = u, term_name = tn, newrule = (precopt, rule), oldtok = oldtok}
+  fun mkrule (((tn,u),delta),oldtok) =
+      RULE {u = u, term_name = tn, newrule = delta, oldtok = oldtok}
 in
   (literal "U" >> map (fn (u,tm) => UV {u=u,tmnm=tm})
                       (StringData.reader >* StringData.reader)) ||
   (literal "R" >>
    map mkrule (StringData.reader >* many StringData.reader >*
-               ((literal "N" >> return NONE) ||
-                (literal "S" >> map SOME IntData.reader)) >*
-               term_grammar.grule_reader >*
+               term_grammar.user_delta_reader >*
                ((literal "N" >> return NONE) ||
                 (literal "S" >> map SOME StringData.reader)))) ||
   (literal "O" >> map OVL (StringData.reader >* TermCoding.reader))

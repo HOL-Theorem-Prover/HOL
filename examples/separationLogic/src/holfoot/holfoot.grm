@@ -247,10 +247,14 @@ statement:
 	  ( Pstm_fldlookup(IDENT1, expression, IDENT2) )
   | expression MINUSGREATER IDENT EQUAL expression SEMI
 	  ( Pstm_fldassign(expression1, IDENT, expression2) )
+  | IDENT EQUAL NEW LPAREN RPAREN LBRACKET ident_notempty_seq RBRACKET SEMI
+	  ( Pstm_new(IDENT, Aexp_num 1, ident_notempty_seq) )
+  | IDENT EQUAL NEW LPAREN expression RPAREN LBRACKET ident_notempty_seq RBRACKET SEMI
+	  ( Pstm_new(IDENT, expression, ident_notempty_seq) )
   | IDENT EQUAL NEW LPAREN RPAREN SEMI
-	  ( Pstm_new(IDENT, Aexp_num 1) )
+	  ( Pstm_new(IDENT, Aexp_num 1, []) )
   | IDENT EQUAL NEW LPAREN expression RPAREN SEMI
-	  ( Pstm_new(IDENT, expression) )
+	  ( Pstm_new(IDENT, expression, []) )
   | DISPOSE expression SEMI
           ( Pstm_dispose(expression, Aexp_num 1) )
   | DISPOSE LPAREN expression RPAREN SEMI

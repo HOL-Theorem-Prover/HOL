@@ -208,6 +208,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
        let
           val n_term = el 1 args;
           val v_term = el 2 args;
+          val (l, _) = listSyntax.dest_list (el 3 args);
           val simple = is_holfoot_exp_one n_term;
        in
           begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);
@@ -221,6 +222,14 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
              add_string "(";             
              sys (Top, Top, Top) (d - 1) n_term;
              add_string ")"
+          );
+          if (null l) then () else (
+             add_string " ";
+             add_string "[";
+             begin_style [UserStyle "holfoot_spec"];
+             pretty_print_list_sep "," (sys, add_string, add_break) d l;
+             end_style ();
+             add_string "]"
           );
 	  end_block ()
        end

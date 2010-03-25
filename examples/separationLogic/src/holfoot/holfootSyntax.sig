@@ -113,7 +113,7 @@ val dest_holfoot_implies_in_heap_or_null : term -> term * term * term
 val dest_holfoot_prog_dispose : term -> term * term
 val dest_holfoot_prog_field_assign : term -> term * term * term
 val dest_holfoot_prog_field_lookup : term -> term * term * term
-val dest_holfoot_prog_new : term -> term * term
+val dest_holfoot_prog_new : term -> term * term * term
 val dest_holfoot_prog_with_resource : term -> term * term * term
 val dest_holfoot_tag : term -> term
 val dest_holfoot_var : term -> term

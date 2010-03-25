@@ -9,13 +9,13 @@ sig
                           generate_vcs   : bool,
                           fast           : bool,
                           stop_evals     : (term -> bool) list,
-                          do_prop_simps  : bool};
+                          prop_simp_level: int};
 
    datatype gen_step_tac_opt =
        case_splits_flag of bool
      | expands_flag of bool
      | fast_flag of bool
-     | prop_simp_flag of bool
+     | prop_simp_level of int
      | use_asms_flag of bool
      | generate_vcs_flag of bool
      | add_rewrites of thm list
@@ -48,7 +48,7 @@ sig
    val gen_step_param___update_vcs        : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_expands    : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_fast       : gen_step_param -> bool -> gen_step_param
-   val gen_step_param___update_prop_simps : gen_step_param -> bool -> gen_step_param
+   val gen_step_param___update_prop_simps : gen_step_param -> int  -> gen_step_param
    val gen_step_param___update_stop_evals : gen_step_param -> (term -> bool) list -> gen_step_param
 
    val HF_GEN_STEP_CONSEQ_CONV : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.thm list -> Abbrev.conv

@@ -142,10 +142,57 @@ SIMP_TAC std_ss [GSYM EL, EL_REPLACE_ELEMENT] THEN
 METIS_TAC[]);
 
 
+val LENGTH_REPLACE_ELEMENT = store_thm ("LENGTH_REPLACE_ELEMENT",
+``LENGTH (REPLACE_ELEMENT e n l) = LENGTH l``,
+REWRITE_TAC[REPLACE_ELEMENT_SEM]);
+
+
 val EL_REPLACE_ELEMENT___NO_COND = store_thm ("EL_REPLACE_ELEMENT___NO_COND",
 ``(!n e l. n < LENGTH l ==> (EL n (REPLACE_ELEMENT e n l) = e)) /\
   (!n1 n2 e l. ~(n1 = n2) ==> (EL n1 (REPLACE_ELEMENT e n2 l) = EL n1 l))``,
 SIMP_TAC std_ss [EL_REPLACE_ELEMENT]);
+
+
+val FIRSTN_REPLACE_ELEMENT = store_thm ("FIRSTN_REPLACE_ELEMENT",
+``!n1 n2 e l. FIRSTN n1 (REPLACE_ELEMENT e n2 l) =  
+  if (n1 <= n2) then FIRSTN n1 l else
+  REPLACE_ELEMENT e n2 (FIRSTN n1 l)``,
+
+Induct_on `n1` THEN
+Cases_on `n2` THEN
+Cases_on `l` THEN
+ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF,
+  COND_RAND, COND_RATOR])
+
+
+val FIRSTN_REPLACE_ELEMENT___SIMPLE = store_thm ("FIRSTN_REPLACE_ELEMENT___SIMPLE",
+``!n1 n2 e l. FIRSTN n1 (REPLACE_ELEMENT e n2 l) =  
+  REPLACE_ELEMENT e n2 (FIRSTN n1 l)``,
+Induct_on `n1` THEN Cases_on `n2` THEN Cases_on `l` THEN
+ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF])
+
+
+val BUTFIRSTN_REPLACE_ELEMENT = store_thm ("BUTFIRSTN_REPLACE_ELEMENT",
+``!n1 n2 e l. BUTFIRSTN n1 (REPLACE_ELEMENT e n2 l) =  
+   if (n2 < n1) then BUTFIRSTN n1 l else
+  REPLACE_ELEMENT e (n2-n1) (BUTFIRSTN n1 l)``,
+
+Induct_on `n1` THEN
+Cases_on `n2` THEN
+Cases_on `l` THEN
+ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]);
+
+
+val LENGTH_FIRSTN_MIN = store_thm ("LENGTH_FIRSTN_MIN",
+``!n l. LENGTH (FIRSTN n l) = MIN n (LENGTH l)``,
+Induct_on `l` THEN
+Induct_on `n` THEN
+ASM_SIMP_TAC list_ss [arithmeticTheory.MIN_DEF]);
+
+
+val LENGTH_FIRSTN_LESS_EQ = store_thm ("LENGTH_FIRSTN_LESS_EQ",
+``!n l. LENGTH (FIRSTN n l) <= n``,
+SIMP_TAC std_ss [LENGTH_FIRSTN_MIN]);
 
 
 val LIST_NOT_NIL___HD_EXISTS = store_thm ("LIST_NOT_NIL___HD_EXISTS",

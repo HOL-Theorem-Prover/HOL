@@ -243,30 +243,35 @@ in
 end
 
 fun grule_term_names G grule = let
-  fun suffix rr = (#term_name rr, SUFFIX (STD_suffix [rr]))
-  fun prefix rr = (#term_name rr, PREFIX (STD_prefix [rr]))
-  fun mkifix a rr = (#term_name rr, INFIX (STD_infix ([rr], a)))
-  fun closefix rr = (#term_name rr, CLOSEFIX [rr])
+  fun suffix rr = (#term_name rr, (#timestamp rr, SUFFIX (STD_suffix [rr])))
+  fun prefix rr = (#term_name rr, (#timestamp rr, PREFIX (STD_prefix [rr])))
+  fun mkifix a rr = (#term_name rr,
+                     (#timestamp rr, INFIX (STD_infix ([rr], a))))
+  fun closefix rr = (#term_name rr, (#timestamp rr, CLOSEFIX [rr]))
+  fun bstamp LAMBDA = 0
+    | bstamp TYPE_LAMBDA = 0
+    | bstamp (BinderString r) = #timestamp r
+    | bstamp (TypeBinderString r) = #timestamp r
 in
   case grule of
     PREFIX (STD_prefix list) => map prefix list
   | PREFIX (BINDER list) =>
-      map (fn b => (binder_to_string G b, PREFIX (BINDER [b]))) list
-      (* binder_to_string is incomplete on LAMBDA, but this doesn't matter
+      map (fn b => (binder_to_string G b, (bstamp b, PREFIX (BINDER [b])))) list
+      (* binder_to_string is incomplete on LAMBDA and TYPE_LAMBDA, but this doesn't matter
          here as the information generated here is not used to print
-         pure LAMBDAs *)
+         pure LAMBDAs or TYPE_LAMBDAs *)
   | SUFFIX (STD_suffix list) => map suffix list
   | SUFFIX TYPE_annotation => []
   | SUFFIX TYPE_application => []
   | INFIX (STD_infix(list, a)) => map (mkifix a) list
-  | INFIX RESQUAN_OP => [(resquan_special, grule)]
+  | INFIX RESQUAN_OP => [(resquan_special, (0, grule))]
   | INFIX (FNAPP lst) =>
-      (fnapp_special, INFIX (FNAPP [])) :: map (mkifix LEFT) lst
-  | INFIX VSCONS => [(vs_cons_special, INFIX VSCONS)]
+      (fnapp_special, (0, INFIX (FNAPP []))) :: map (mkifix LEFT) lst
+  | INFIX VSCONS => [(vs_cons_special, (0, INFIX VSCONS))]
   | CLOSEFIX lst => map closefix lst
   | LISTRULE lspeclist => let
-      fun process lspec = [(#cons lspec, LISTRULE [lspec]),
-                           (#nilstr lspec, LISTRULE [lspec])]
+      fun process lspec = [(#cons lspec, (0, LISTRULE [lspec])),
+                           (#nilstr lspec, (0, LISTRULE [lspec]))]
     in
       List.concat (map process lspeclist)
     end
@@ -363,12 +368,21 @@ fun pp_term (G : grammar) TyG backend = let
   fun insert ((nopt, grule), acc) = let
     val keys_n_rules = grule_term_names G grule
     val n = case nopt of SOME n => n | NONE => 0 (* doesn't matter *)
-    fun myinsert ((k, v), acc) = let
+    fun sortinsert (tstamp,r) [] = [(n,tstamp,r)]
+      | sortinsert (tstamp,r) ((h as (_,t',r')) :: rest) =
+        if tstamp < t' then h :: sortinsert (tstamp,r) rest
+        else (n,tstamp,r) :: h :: rest
+    fun val_insert (tstamp,r) NONE = [(n,tstamp,r)]
+      | val_insert (tstamp,r) (SOME l) = sortinsert (tstamp,r) l
+    fun myinsert ((k, (tstamp, r)), acc) = let
       val existing = Binarymap.peek(acc, k)
       val newvalue =
         case existing of
-          NONE => [(n,v)]
-        | SOME vs => (n,v)::vs
+          NONE => [(n,tstamp,r)]
+        | SOME [] => [(n,tstamp,r)]
+        | SOME ((old as (_,t',_))::rest) =>
+          if tstamp > t' then (n,tstamp,r)::old::rest
+          else old::(n,tstamp,r)::rest
     in
       Binarymap.insert(acc, k, newvalue)
     end
@@ -385,28 +399,28 @@ fun pp_term (G : grammar) TyG backend = let
   val tycomb_prec = comb_prec (* for now *)
   val recsel_info = (* (precedence, upd_tok) option *)
     case lookup_term recsel_special of
-      SOME [(n, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
+      SOME [(n, _, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
         SOME (n, s)
     | SOME _ =>
         raise PP_ERR "pp_term" "Invalid rule for record field select operator"
     | NONE => NONE
   val recupd_info = (* (precedence, upd_tok) option *)
     case lookup_term recupd_special of
-      SOME [(n, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
+      SOME [(n, _, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
         SOME (Prec(n, recupd_special), s)
     | SOME _ =>
         raise PP_ERR "pp_term" "Invalid rule for record update operator"
     | NONE => NONE
   val recfupd_info = (* (precedence, with_tok) option *)
     case lookup_term recfupd_special of
-      SOME [(n, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
+      SOME [(n, _, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
         SOME (Prec(n, recfupd_special), s)
     | SOME _ =>
         raise PP_ERR "pp_term" "Invalid rule for record f-update operator"
     | NONE => NONE
   val recwith_info = (* (precedence, with_tok) option *)
     case (lookup_term recwith_special) of
-      SOME [(n, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
+      SOME [(n, _, INFIX (STD_infix([{elements = [RE(TOK s)],...}], _)))] =>
         SOME (n, s)
     | SOME _ =>
         raise PP_ERR "pp_term"
@@ -414,7 +428,7 @@ fun pp_term (G : grammar) TyG backend = let
     | NONE => NONE
   val reclist_info = (* (leftdelim, rightdelim, sep) option *)
     case lookup_term reccons_special of
-      SOME [(_, LISTRULE[{separator, leftdelim, rightdelim,...}])] =>
+      SOME [(_, _, LISTRULE[{separator, leftdelim, rightdelim,...}])] =>
         SOME (leftdelim, rightdelim, separator)
     | SOME _ =>
         raise PP_ERR "pp_term"
@@ -832,7 +846,7 @@ fun pp_term (G : grammar) TyG backend = let
       case rule of
         NONE => Name = str
       | SOME rrlist =>
-          List.exists (mem str o term_grammar.rule_tokens G o #2) rrlist
+          List.exists (mem str o term_grammar.rule_tokens G o #3) rrlist
     end
 
     fun tm might_print str =
@@ -1677,7 +1691,7 @@ fun pp_term (G : grammar) TyG backend = let
         in
           begin_block INCONSISTENT 2; pbegin print_type;
           if isSome vrule then
-            pr_sole_name tm vname (map #2 (valOf vrule))
+            pr_sole_name tm vname (map #3 (valOf vrule))
           else
             if HOLset.member(spec_table, vname) then dollarise adds vname
             else adds vname;
@@ -1702,7 +1716,7 @@ fun pp_term (G : grammar) TyG backend = let
               val crules = lookup_term s
             in
               if isSome crules then
-                pr_sole_name tm s (map #2 (valOf crules))
+                pr_sole_name tm s (map #3 (valOf crules))
               else if s = "0" andalso can_pr_numeral NONE then
                 pr_numeral NONE tm
               else if Literal.is_emptystring tm then
@@ -1894,22 +1908,15 @@ fun pp_term (G : grammar) TyG backend = let
                                    NONE => binder_to_string G LAMBDA
                                  | SOME s => s
                     val optrule = lookup_term bindex
-                    fun ok_rule (_, r) =
+                    fun ok_rule (_, _, r) =
                         case r of
-                          PREFIX(BINDER b) => let
-                          in
-                            case hd b of
-                              LAMBDA => true
-                            | TYPE_LAMBDA => true
-                            | BinderString r => #preferred r
-                            | TypeBinderString r => #preferred r
-                          end
+                          PREFIX(BINDER b) => true
                         | otherwise => false
                   in
                     case optrule of
-                      SOME rule_list => List.find ok_rule rule_list
+                      SOME (r::_) => if ok_rule r then SOME r else NONE
                     | otherwise => NONE
-                     end
+                  end
                 else NONE
           in
             case candidate_rules of
@@ -1924,7 +1931,7 @@ fun pp_term (G : grammar) TyG backend = let
                     else pr_comb tm Rator Rand
                   | SOME (SOME fname) =>
                     if isSome restr_binder_rule then
-                      pr_comb_with_rule(#2(valOf restr_binder_rule))
+                      pr_comb_with_rule(#3(valOf restr_binder_rule))
                                        {fprec = #1 (valOf restr_binder_rule),
                                         fname = fname,
                                         f = f} args Rand
@@ -1947,43 +1954,29 @@ fun pp_term (G : grammar) TyG backend = let
                       numTMs (rule_elements (#elements (hd list))) =
                       length args
                     | SUFFIX Type_annotation => raise Fail "Can't happen 90210"
+                    | SUFFIX Type_application => raise Fail "Can't happen 90210"
                     | CLOSEFIX list =>
                       numTMs (rule_elements (#elements (hd list))) - 1 =
                       length args
                     | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
                     | INFIX VSCONS => raise Fail "Can't happen 90213"
                     | LISTRULE list => is_list (hd list) tm
-                val crules = List.filter (suitable_rule o #2) crules0
-                fun is_preferred (LISTRULE _) = true
-                  | is_preferred (PREFIX (BINDER [BinderString r])) =
-                    #preferred r
-                  | is_preferred (PREFIX (BINDER [TypeBinderString r])) = 
-                     #preferred r 
-                  | is_preferred r = #preferred (hd (rule_to_rr r))
-                val crules = List.filter (is_preferred o #2) crules
+                val crules = List.filter (suitable_rule o #3) crules0
                 fun is_lrule (LISTRULE _) = true | is_lrule _ = false
-                fun is_binder_rule (PREFIX (BINDER s)) = true
-                  | is_binder_rule _ = false
-                val (lrules, others0) = splitP (is_lrule o #2) crules
-                val (brules, others) = splitP (is_binder_rule o #2) others0
+                val first_nonlist = List.find (not o is_lrule o #3) crules
+                val lrules = List.filter (is_lrule o #3) crules
               in
-                if not (null brules) then
-                  pr_comb_with_rule (#2 (hd brules))
-                                    {fprec = #1 (hd brules),
-                                     fname=fname, f=f}
-                                    args Rand
-                else
                 if not (null lrules) then
-                  pr_comb_with_rule (#2 (hd lrules))
+                  pr_comb_with_rule (#3 (hd lrules))
                                     {fprec = #1 (hd lrules),
                                      fname=fname, f=f}
                                     args Rand
                 else
-                  case others of
-                    (p,r) :: _ =>
+                  case first_nonlist of
+                    SOME (p,_,r) =>
                     pr_comb_with_rule r {fprec=p, fname=fname, f=f}
                                       args Rand
-                  | [] => pr_comb tm Rator Rand
+                  | NONE => pr_comb tm Rator Rand
               end
           end (* pr_atomf *)
           fun maybe_pr_atomf () =

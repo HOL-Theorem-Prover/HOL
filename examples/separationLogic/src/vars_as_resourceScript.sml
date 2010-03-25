@@ -9090,6 +9090,16 @@ REPEAT STRIP_TAC THENL [
 ]);
 
 
+val VAR_RES_FRAME_SPLIT___SOLVE___bool_prop___MP = store_thm ("VAR_RES_FRAME_SPLIT___SOLVE___bool_prop___MP",
+``!b. b ==> !rfc f wpb rpb wpb' sfb_context sfb_split sfb_restP.
+(BAG_EVERY (VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG
+           (BAG_DIFF (BAG_UNION wpb rpb) wpb'))) sfb_split) ==>
+(~(VAR_RES_PROP_IS_EQUIV_FALSE (SND rfc) f (wpb,rpb) (BAG_UNION sfb_context sfb_split)) ==>
+ (sfb_restP sfb_split))  ==>
+VAR_RES_FRAME_SPLIT f rfc (wpb,rpb) wpb' sfb_context sfb_split {|var_res_bool_proposition f b|} sfb_restP``,
+SIMP_TAC std_ss [VAR_RES_FRAME_SPLIT___SOLVE___bool_prop]);
+
+
 val VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop = store_thm ("VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop",
 ``!b rfc f wpb rpb wpb' sfb_context sfb_split sfb_restP.
 (BAG_EVERY (VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG
@@ -9097,6 +9107,16 @@ val VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop = store_thm ("VAR_RES_FRAME_SPL
  (b /\ (b ==> (sfb_restP sfb_split)))  ==>
 VAR_RES_FRAME_SPLIT f rfc (wpb,rpb) wpb' sfb_context sfb_split {|var_res_bool_proposition f b|} sfb_restP``,
 SIMP_TAC std_ss [VAR_RES_FRAME_SPLIT___SOLVE___bool_prop]);
+
+
+val VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop___MP = store_thm ("VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop___MP",
+``!b. b ==> !rfc f wpb rpb wpb' sfb_context sfb_split sfb_restP.
+(BAG_EVERY (VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG
+           (BAG_DIFF (BAG_UNION wpb rpb) wpb'))) sfb_split) ==>
+ (sfb_restP sfb_split)  ==>
+VAR_RES_FRAME_SPLIT f rfc (wpb,rpb) wpb' sfb_context sfb_split {|var_res_bool_proposition f b|} sfb_restP``,
+SIMP_TAC std_ss [VAR_RES_FRAME_SPLIT___SOLVE___bool_prop]);
+
 
 
 val VAR_RES_PROP_IS_EQUIV_FALSE___FRAME_SPLIT_IMP =

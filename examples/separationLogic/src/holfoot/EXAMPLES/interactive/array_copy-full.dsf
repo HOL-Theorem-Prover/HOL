@@ -1,0 +1,13 @@
+copy(r;a,n) [data_array(a,n,data)] {
+   local i, l, tmp;
+   l = r;
+   i = 0;
+   r = new(n) [dta];
+   while (i < n) [data_array(a,n,data) * (i == _ic) *
+                  data_array(r,n,_data_new) * (i <= n) *
+                  ``!x. x < _ic ==> (EL x data = EL x _data_new)``] {
+      tmp = (a + i) -> dta;
+      (r + i) -> dta = tmp;
+      i = i + 1;
+   }
+} [data_array(a,n,data) * data_array(r, n, data)]

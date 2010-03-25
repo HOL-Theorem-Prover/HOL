@@ -2,7 +2,6 @@ functor vars_as_resourceBaseFunctor (var_res_param :
 sig     
     val combinator_thmL              : Abbrev.thm list
     val prover_extra                 : Abbrev.thm list * Abbrev.thm list
-    val predicate_simpset            : simpLib.simpset
     val varlist_rwts                 : Abbrev.thm list
     val exp_to_string                : Abbrev.term -> string
 end) :
@@ -754,17 +753,16 @@ local
          GSYM var_res_prop_equal_def,
          GSYM var_res_prop_unequal_def]
    
-   val ss_1 = var_res_param.predicate_simpset
-   val ss_2 = ss_1 ++ simpLib.rewrites var_res_prop_general_rewrites;
-   val ss_3 = ss_2 ++
+   val ss_1 = std_ss ++ (simpLib.rewrites var_res_prop_general_rewrites);
+   val ss_2 = ss_1 ++ (simpLib.merge_ss [
             simpLib.conv_ss {conv = K (K var_res_prop_equal_unequal___NORMALISE_CONV),
                  key = NONE, name = "var_res_prop_equal_unequal___NORMALISE_CONV", 
-                 trace = 2} ++
+                 trace = 2},
             simpLib.conv_ss {conv = K (K var_res_prop_binexpression_cond___asl_false___NORMALISE_CONV),
                  key = NONE, name = "var_res_prop_binexpression_cond___asl_false___NORMALISE_CONV", 
-                 trace = 2}
+                 trace = 2}])
 
-   val ss_final = ss_3
+   val ss_final = ss_2
 
 in
 

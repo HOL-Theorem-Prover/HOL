@@ -92,7 +92,7 @@ fun holfoot_mk_call_by_value_arg ((var,expr),term) =
 
 
 val holfoot_prog_new_term = holfoot_mk_const "holfoot_prog_new";
-val dest_holfoot_prog_new = strip_comb_2 holfoot_prog_new_term;
+val dest_holfoot_prog_new = strip_comb_3 holfoot_prog_new_term;
 val is_holfoot_prog_new = (can dest_holfoot_prog_new);
 
 

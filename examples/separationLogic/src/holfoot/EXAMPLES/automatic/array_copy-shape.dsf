@@ -1,0 +1,11 @@
+copy(r;a,n) [array(a,n)] {
+   local i, l, tmp;
+   l = r;
+   i = 0;
+   r = new(n);
+   while (i < n) [array(a,n) * array(r,n)] {
+      tmp = (a + i) -> dta;
+      (r + i) -> dta = tmp;
+      i = i + 1;
+   }
+} [array(a,n) * array(r, n)]

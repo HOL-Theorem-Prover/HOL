@@ -1,0 +1,32 @@
+/*
+   This is an example demonstrating the benefits of using the SMT solver      
+   Yices through HolSmtLib. The binary search always splits the array in the  
+   middle. This middle is calculated by                                       
+                                                                              
+   m := l + ((r - l) DIV 2)                                                   
+                                                                            
+   The boundary checks need to prove l <= m /\ m <= r provided l <= r      
+   The HOL internal procedures have trouble with DIV and need user    
+   interaction. Yices proves this automatically.                              
+
+*/
+
+binsearch(f;a,n,e) [array(a,n) * (n > 0)] {
+   local l, r, m, tmp;
+
+   l = 0;
+   r = n-1;
+   f = 0;
+   while ((f == 0) and (l <= r)) [
+          array(a,n) * (r < n)] {
+      m = l + ((r - l) / 2);
+      tmp = (a+m)->dta;
+      if (tmp < e) {
+         l = m+1;
+      } else if (e < tmp) {
+         r = m-1;
+      } else {
+         f = 1;
+      }
+   }
+} [array(a,n)]

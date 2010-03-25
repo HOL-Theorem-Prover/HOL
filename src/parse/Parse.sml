@@ -17,7 +17,7 @@ val WARN  = HOL_WARNING "Parse"
 val post_process_term = Preterm.post_process_term
 val quote = Lib.mlquote
 
-datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder
+datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder | TypeBinder
 
 fun acc_strip_comb M rands =
   let val (Rator,Rand) = dest_comb M
@@ -51,6 +51,7 @@ datatype fixity
     = RF of rule_fixity
     | Prefix
     | Binder
+    | TypeBinder
 
 fun Infix x = x;  (* namespace hackery *)
 fun Suffix x = x;
@@ -125,8 +126,10 @@ fun current_lgrms() = (!the_lty_grm, !the_ltm_grm);
 fun fixity s =
   case term_grammar.get_precedence (term_grammar()) s
    of SOME rf => RF rf
-    | NONE => if Lib.mem s (term_grammar.binders (term_grammar()))
+    | NONE => if Lib.mem s (term_grammar.term_binders (term_grammar()))
                  then Binder
+              else if Lib.mem s (term_grammar.type_binders (term_grammar()))
+                 then TypeBinder
                  else Prefix
 
 (*---------------------------------------------------------------------------
@@ -664,7 +667,7 @@ fun remove_termtok (r as {term_name, tok}) = let in
  end
 
 fun temp_prefer_form_with_tok r = let open term_grammar in
-    the_term_grammar := prefer_form_with_tok (term_grammar()) r;
+    the_term_grammar := prefer_form_with_tok r (term_grammar());
     term_grammar_changed := true
  end
 
@@ -685,20 +688,18 @@ in
   type_grammar_changed := true
 end
 
-fun standard_spacing name fixity =
- let open term_grammar  (* to get fixity constructors *)
-     val bstyle = (AroundSamePrec, (Portable.INCONSISTENT, 0))
-     val pstyle = OnlyIfNecessary
-     val pels =  (* not sure if Closefix case will ever arise *)
-       case fixity
-        of RF (Infix _)      => [HardSpace 1, RE (TOK name), BreakSpace(1,0)]
-         | RF (TruePrefix _) => [RE(TOK name), HardSpace 1]
-         | RF (Suffix _)     => [HardSpace 1, RE(TOK name)]
-         | RF Closefix       => [RE(TOK name)]
-         | Prefix => []
-         | Binder => []
+fun standard_spacing name fixity = let
+  open term_grammar  (* to get fixity constructors *)
+  val bstyle = (AroundSamePrec, (Portable.INCONSISTENT, 0))
+  val pstyle = OnlyIfNecessary
+  val ppels =
+      case fixity of
+        Infix _ => [HardSpace 1, RE (TOK name), BreakSpace(1,0)]
+      | TruePrefix _ => [RE(TOK name), HardSpace 1]
+      | Suffix _     => [HardSpace 1, RE(TOK name)]
+      | Closefix  => [RE(TOK name)]
 in
-  {term_name = name, fixity = fixity, pp_elements = pels,
+  {term_name = name, fixity = fixity, pp_elements = ppels,
    paren_style = pstyle, block_style = bstyle}
 end
 
@@ -728,19 +729,7 @@ struct
     | RF Closefix => NONE
     | Prefix => NONE
     | Binder => SOME std_binder_precedence
-  end
-
-  fun urule (rf, {term_name,pp_elements,paren_style,block_style}) = let
-    open term_grammar
-    val irule = {term_name = term_name, elements = pp_elements,
-                 block_style = block_style, paren_style = paren_style,
-                 preferred = true}
-  in
-    case rf of
-      Infix (ass, prec) => (SOME prec, INFIX (STD_infix([irule], ass)))
-    | TruePrefix prec => (SOME prec, PREFIX (STD_prefix [irule]))
-    | Suffix prec => (SOME prec, SUFFIX (STD_suffix [irule]))
-    | Closefix => (NONE, CLOSEFIX [irule])
+    | TypeBinder => SOME std_binder_precedence
   end
 
   exception foo
@@ -750,17 +739,9 @@ struct
       case fxty of
         Prefix => (HOL_MESG "Fixities of Prefix do not affect the grammar";
                    raise foo)
-      | Binder => (SOME std_binder_precedence,
-                   PREFIX (BINDER [BinderString {tok = s, term_name = s,
-                                                 preferred = true}]))
-      | RF rf => let
-          val {term_name,pp_elements,paren_style,block_style,...} =
-              standard_spacing s fxty
-          val irule = {term_name = term_name, pp_elements = pp_elements,
-                       block_style = block_style, paren_style = paren_style}
-        in
-          urule (rf, irule)
-        end
+      | Binder => BRULE {tok = s, term_name = s}
+      | TypeBinder => TBRULE {tok = s, term_name = s}
+      | RF rf => GRULE (standard_spacing s rf)
   in
     lift setter {u = [s], term_name = s, newrule = rule, oldtok = NONE}
   end handle foo => ()
@@ -1038,6 +1019,7 @@ local open term_grammar
 in
 fun fixityToString Prefix  = "Prefix"
   | fixityToString Binder  = "Binder"
+  | fixityToString TypeBinder  = "TypeBinder"
   | fixityToString (RF rf) = term_grammar.rule_fixityToString rf
 
 fun relToString TM = "TM"
@@ -1105,74 +1087,86 @@ in
   List.exists (fn RE (TOK s) => includes_unicode s | _ => false)
 end
 
-fun temp_add_binder(name, prec) = let in
-   the_term_grammar := add_binder (!the_term_grammar)
-                                  ({term_name = name, tok = name}, prec);
+fun temp_add_binder name = let in
+   the_term_grammar :=
+     add_binder {term_name = name, tok = name} (!the_term_grammar);
    term_grammar_changed := true
  end
 
-fun add_binder (name, prec) = let in
-    temp_add_binder(name, prec);
+fun add_binder name = let in
+    temp_add_binder name;
     update_grms "add_binder" ("temp_add_binder",
                               String.concat
                                 ["(", quote name,
                                  ", std_binder_precedence)"])
   end
 
-fun temp_add_type_binder(name, prec) = let in
-   the_term_grammar := add_type_binder (!the_term_grammar)
-                                       ({term_name = name, tok = name}, prec);
+fun temp_add_type_binder name = let in
+   the_term_grammar :=
+     add_type_binder {term_name = name, tok = name} (!the_term_grammar);
    term_grammar_changed := true
  end
 
-fun add_type_binder (name, prec) = let in
-    temp_add_type_binder(name, prec);
+fun add_type_binder name = let in
+    temp_add_type_binder name;
     update_grms "add_type_binder" ("temp_add_type_binder",
                               String.concat
-                                ["(", quote name, ", std_binder_precedence)"])
+                                ["(", quote name,
+                                 ", std_binder_precedence)"])
   end
 
-fun temp_add_rule rule = let
-  val {term_name,fixity,pp_elements,paren_style,block_style} = rule
+datatype 'a erroption = Error of string | Some of 'a
+fun prule_to_grule {term_name,fixity,pp_elements,paren_style,block_style} = let
+  open term_grammar
 in
   case fixity of
-    Prefix => Feedback.HOL_MESG"Fixities of Prefix do not affect the grammar"
+    Prefix => Error "Fixities of Prefix do not affect the grammar"
   | Binder => let
     in
-      temp_add_binder (term_name, std_binder_precedence)
+      case rule_elements pp_elements of
+        [TOK s] => Some (BRULE {term_name = term_name, tok = s})
+      | _ => Error "Rules for binders must feature exactly one TOK and no TMs"
     end
-  | RF rf => let
-      val uni_on = get_tracefn "Unicode" () > 0
-      val toks = List.mapPartial (fn TOK s => SOME s | _ => NONE)
-                                 (rule_elements pp_elements)
+  | TypeBinder => let
     in
-      if els_include_unicode pp_elements then let
-          val irule = {term_name = term_name, pp_elements = pp_elements,
-                       paren_style = paren_style, block_style = block_style}
-          val grule = Unicode.urule (rf, irule)
-        in
-          if uni_on then ()
-          else HOL_WARNING "Parse" "temp_add_rule"
-                           "Adding a Unicode-ish rule without Unicode trace \
-                           \being true";
-          the_term_grammar := ProvideUnicode.temp_uadd_rule uni_on {
-            u = toks, term_name = term_name, newrule = grule,
-            oldtok = NONE
-          } (term_grammar());
-          term_grammar_changed := true
-        end
-      else let
-        in
-          the_term_grammar :=
-          term_grammar.add_rule (!the_term_grammar)
-                                {term_name=term_name, fixity=rf,
-                                 pp_elements=pp_elements,
-                                 paren_style=paren_style,
-                                 block_style=block_style};
-          term_grammar_changed := true
-        end
+      case rule_elements pp_elements of
+        [TOK s] => Some (TBRULE {term_name = term_name, tok = s})
+      | _ => Error "Rules for type binders must feature exactly one TOK and no TMs"
+    end
+  | RF rf => Some (GRULE {term_name = term_name, fixity = rf,
+                          pp_elements = pp_elements,
+                          paren_style = paren_style,
+                          block_style = block_style})
+end
+
+fun temp_add_grule gr = let
+  val uni_on = get_tracefn "Unicode" () > 0
+  val toks = userdelta_toks gr
+in
+  if List.exists includes_unicode toks then let
+    in
+      if uni_on then ()
+      else HOL_WARNING "Parse" "temp_add_rule"
+                       "Adding a Unicode-ish rule without Unicode trace \
+                       \being true";
+      the_term_grammar := ProvideUnicode.temp_uadd_rule uni_on {
+        u = toks, term_name = userdelta_name gr,
+        newrule = gr,
+        oldtok = NONE
+      } (term_grammar());
+      term_grammar_changed := true
+    end
+  else let
+    in
+      the_term_grammar := term_grammar.add_delta gr (!the_term_grammar) ;
+      term_grammar_changed := true
     end
 end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
+
+fun temp_add_rule rule =
+    case prule_to_grule rule of
+      Error s => raise mk_HOL_ERR "Parse" "add_rule" s
+    | Some gr => temp_add_grule gr
 
 fun add_rule (r as {term_name, fixity, pp_elements,
                     paren_style, block_style = (bs,bi)}) = let in
@@ -1306,28 +1300,20 @@ fun remove_rules_for_term s = let in
  end
 
 
-fun temp_set_fixity s f = let in
+fun temp_set_fixity s f = let
+in
   temp_remove_termtok {term_name=s, tok=s};
   case f of
     Prefix => ()
-  | _ => temp_add_rule (standard_spacing s f)
- end
+  | RF rf => temp_add_grule (GRULE (standard_spacing s rf))
+  | Binder => temp_add_grule (BRULE {term_name = s, tok = s})
+  | TypeBinder => temp_add_grule (TBRULE {term_name = s, tok = s})
+end
 
 fun set_fixity s f = let in
     temp_set_fixity s f;
     update_grms "set_fixity"
                 ("(temp_set_fixity "^quote s^")", "("^fixityToString f^")")
- end
-
-
-fun temp_clear_prefs_for_term s = let open term_grammar in
-    the_term_grammar := clear_prefs_for s (term_grammar());
-    term_grammar_changed := true
-  end
-
-fun clear_prefs_for_term s = let in
-    temp_clear_prefs_for_term s;
-    update_grms "clear_prefs_for_term" ("temp_clear_prefs_for_term", quote s)
  end
 
 (* ----------------------------------------------------------------------
