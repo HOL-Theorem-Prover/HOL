@@ -41,13 +41,13 @@ sig
 
   type rule_record = {term_name   : string,
                       elements    : pp_element list,
-                      preferred   : bool,
+                      timestamp   : int,
                       block_style : PhraseBlockStyle * block_info,
                       paren_style : ParenStyle}
 
   datatype binder
      = LAMBDA
-     | BinderString of {tok : string, term_name : string, preferred : bool}
+     | BinderString of {tok : string, term_name : string, timestamp : int}
 
   datatype prefix_rule
      = STD_prefix of rule_record list
@@ -79,6 +79,24 @@ sig
      | LISTRULE of listspec list
 
   type grammar
+
+  datatype rule_fixity
+     = Infix of associativity * int
+     | Closefix
+     | Suffix of int
+     | TruePrefix of int
+
+  datatype user_delta =
+           GRULE of {term_name : string,
+                     fixity : rule_fixity,
+                     pp_elements: pp_element list,
+                     paren_style : ParenStyle,
+                     block_style : PhraseBlockStyle * block_info}
+         | LRULE of listspec
+         | BRULE of {tok : string, term_name : string}
+
+  val userdelta_toks : user_delta -> string list
+  val userdelta_name : user_delta -> string
 
   val stdhol         : grammar
   val min_grammar    : grammar
@@ -165,13 +183,8 @@ sig
   val find_suffix_rhses : grammar -> stack_terminal list
   val find_prefix_lhses : grammar -> stack_terminal list
 
-  val add_binder : grammar -> ({term_name:string,tok:string} * int) -> grammar
+  val add_binder : {term_name:string,tok:string} -> grammar -> grammar
   val add_listform : grammar -> listspec -> grammar
-  datatype rule_fixity
-     = Infix of associativity * int
-     | Closefix
-     | Suffix of int
-     | TruePrefix of int
 
   val rule_fixityToString : rule_fixity -> string
   val add_rule : grammar
@@ -181,7 +194,7 @@ sig
                       paren_style : ParenStyle,
                       block_style : PhraseBlockStyle * block_info}
                   -> grammar
-  val add_grule : grammar -> (int option * grammar_rule) -> grammar
+  val add_delta : user_delta -> grammar -> grammar
 
   val add_numeral_form : grammar -> (char * string option) -> grammar
   val give_num_priority : grammar -> char -> grammar
@@ -215,8 +228,7 @@ sig
    * Pretty-printing                                                       *
    *-----------------------------------------------------------------------*)
 
-  val clear_prefs_for : string -> grammar -> grammar
-  val prefer_form_with_tok : grammar -> {term_name : string, tok : string} ->
+  val prefer_form_with_tok : {term_name : string, tok : string} -> grammar ->
                              grammar
   val prefer_form_with_toklist : {term_name : string, toklist : string list} ->
                                  grammar -> grammar
@@ -224,6 +236,7 @@ sig
 
   val set_associativity_at_level : grammar -> int * associativity -> grammar
   val get_precedence : grammar -> string -> rule_fixity option
+  val rules_for : grammar -> string -> (int * user_delta) list
 
 
   val prettyprint_grammar : (grammar -> ppstream -> term -> unit) ->
@@ -231,5 +244,9 @@ sig
 
   val grule_reader : grammar_rule Coding.reader
   val grule_encode : grammar_rule -> string
+  val user_delta_reader : user_delta Coding.reader
+  val user_delta_encode : user_delta -> string
+  val fixity_encode : rule_fixity -> string
+  val fixity_reader : rule_fixity Coding.reader
 
 end

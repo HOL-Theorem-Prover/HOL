@@ -47,6 +47,4 @@ effect to persist when the current theory is exported.
 
 
 
-\SEEALSO
-Parse.clear_prefs_for_term.
 \ENDDOC

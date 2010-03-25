@@ -4,7 +4,7 @@ sig
   type term = Term.term
   type grammar = term_grammar.grammar
   type urule = {u:string list, term_name : string,
-                newrule : int option * term_grammar.grammar_rule,
+                newrule : term_grammar.user_delta,
                 oldtok : string option}
 
   datatype stored_data =

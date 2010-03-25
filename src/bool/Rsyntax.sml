@@ -54,16 +54,17 @@ fun new_constant{Name,Ty}   = boolSyntax.new_constant(Name,Ty);
 fun new_infix{Name,Prec,Ty} = boolSyntax.new_infix(Name,Ty,Prec);
 fun new_binder{Name,Ty}     = boolSyntax.new_binder(Name,Ty);
 
-fun new_specification {name,sat_thm,consts} =
- let val cnames = map #const_name consts
-     val res = Definition.new_specification(name, cnames, sat_thm)
-     fun add_rule' r =
-          if #fixity r = Parse.Prefix then () else Parse.add_rule r
-     fun modify_grammar {const_name,fixity} =
-         add_rule'(Parse.standard_spacing name fixity)
- in app modify_grammar consts;
-    res
- end;
+fun new_specification {name,sat_thm,consts} = let
+  open Parse
+  val cnames = map #const_name consts
+  val res = Definition.new_specification(name, cnames, sat_thm)
+  fun modify_grammar {const_name,fixity} = if fixity <> Prefix then
+                                             set_fixity const_name fixity
+                                           else ()
+in
+  app modify_grammar consts;
+  res
+end;
 
 datatype lambda
    = VAR   of {Name:string, Ty:hol_type}

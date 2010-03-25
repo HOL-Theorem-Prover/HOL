@@ -254,6 +254,7 @@ fun post (V,th) =
 
 val _ = Definition.new_definition_hook := (dest, post)
 
+open Parse
 fun defname t =
   let val head = #1 (strip_comb (lhs (#2 (strip_forall t))))
   in fst (dest_var head handle HOL_ERR _ => dest_const head)
@@ -262,17 +263,17 @@ fun defname t =
 fun new_infixr_definition (s, t, p) =
   Definition.new_definition(s, t)
     before
-  Parse.add_infix(defname t, p, Parse.RIGHT);
+  set_fixity (defname t) (Infixr p)
 
 fun new_infixl_definition (s, t, p) =
   Definition.new_definition(s, t)
     before
-   Parse.add_infix(defname t, p, Parse.LEFT);
+  set_fixity (defname t) (Infixl p)
 
 fun new_binder_definition (s, t) =
   Definition.new_definition(s, t)
     before
-  Parse.add_binder (defname t, Parse.std_binder_precedence);
+  Parse.set_fixity (defname t) Binder
 
 fun new_type_definition (name, inhab_thm) =
   Definition.new_type_definition (name,inhab_thm)
@@ -292,8 +293,7 @@ fun new_infix(Name, Ty, Prec) =
 fun new_binder (p as (Name,_)) =
   Theory.new_constant p
      before
-  (Parse.add_const Name;
-   Parse.add_binder (Name, Parse.std_binder_precedence));
+  (add_const Name; set_fixity Name Binder)
 
 fun new_type (p as (Name,_)) =
   Theory.new_type p

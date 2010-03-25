@@ -76,7 +76,7 @@ signature Parse = sig
   val add_const  : string -> unit
   val add_infix  : string * int * associativity -> unit
   val std_binder_precedence : int
-  val add_binder : string * int -> unit
+  val add_binder : string -> unit
   val add_rule   : {term_name : string, fixity :fixity,
                     pp_elements: pp_element list, paren_style : ParenStyle,
                     block_style : PhraseBlockStyle * block_info} -> unit
@@ -89,7 +89,6 @@ signature Parse = sig
   val remove_numeral_form : char -> unit
   val associate_restriction : (string * string) -> unit
   val prefer_form_with_tok : {term_name : string, tok : string} -> unit
-  val clear_prefs_for_term : string -> unit
   val set_fixity : string -> fixity -> unit
 
   val remove_rules_for_term : string -> unit
@@ -116,7 +115,7 @@ signature Parse = sig
     grammar exported to disk will be modified *)
 
   val temp_set_grammars : (type_grammar.grammar * term_grammar.grammar) -> unit
-  val temp_add_binder : (string * int) -> unit
+  val temp_add_binder : string -> unit
   val temp_add_rule :
     {term_name : string, fixity : fixity,
      pp_elements: pp_element list, paren_style : ParenStyle,
@@ -132,7 +131,6 @@ signature Parse = sig
   val temp_remove_numeral_form : char -> unit
   val temp_associate_restriction : (string * string) -> unit
   val temp_prefer_form_with_tok : {term_name : string, tok : string} -> unit
-  val temp_clear_prefs_for_term : string -> unit
   val temp_set_fixity : string -> fixity -> unit
 
   val temp_remove_rules_for_term : string -> unit
@@ -153,12 +151,6 @@ signature Parse = sig
                               unit
   val temp_remove_user_printer : string ->
                                  (term * term_grammar.userprinter) option
-
-  val standard_spacing : string -> fixity
-                         -> {term_name   : string, fixity:fixity,
-                             pp_elements : pp_element list,
-                             paren_style : ParenStyle,
-                             block_style : PhraseBlockStyle * block_info}
 
   val try_grammar_extension : ('a -> 'b) -> 'a -> 'b
 

@@ -49,7 +49,7 @@ val FORALL_DEF =
  Definition.new_definition
    ("FORALL_DEF",     Term `! = \P:'a->bool. P = \x. T`);
 
-val _ = (add_binder("!", std_binder_precedence); add_const "!");
+val _ = (set_fixity "!" Binder; add_const "!");
 val _ = unicode_version {u = UChar.forall, tmnm = "!"};
 val _ = TeX_notation {hol = "!", TeX = ("\\HOLTokenForall{}",1)}
 val _ = TeX_notation {hol = UChar.forall, TeX = ("\\HOLTokenForall{}",1)}
@@ -58,7 +58,7 @@ val EXISTS_DEF =
  Definition.new_definition
    ("EXISTS_DEF",     Term `? = \P:'a->bool. P ($@ P)`);
 
-val _ = (add_binder("?", std_binder_precedence); add_const "?");
+val _ = (set_fixity "?" Binder; add_const "?");
 val _ = unicode_version {u = UChar.exists, tmnm = "?"}
 val _ = TeX_notation {hol = "?", TeX = ("\\HOLTokenExists{}",1)}
 val _ = TeX_notation {hol = UChar.exists, TeX = ("\\HOLTokenExists{}",1)}
@@ -100,7 +100,7 @@ Definition.new_definition
 ("EXISTS_UNIQUE_DEF", Term `?! = \P:'a->bool.
                                     $? P /\ !x y. P x /\ P y ==> (x=y)`);
 
-val _ = (add_binder ("?!", std_binder_precedence); add_const "?!")
+val _ = (set_fixity "?!" Binder; add_const "?!")
 
 val _ = unicode_version { u = UChar.exists ^ "!", tmnm = "?!"}
 val _ = TeX_notation {hol = "?!", TeX = ("\\HOLTokenUnique{}",2)}
