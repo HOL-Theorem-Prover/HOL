@@ -854,68 +854,6 @@ fun EQF_ELIM th =
    end
    handle HOL_ERR _ => raise ERR "EQF_ELIM" ""
 
-(* ---------------------------------------------------------------------*)
-(* ISPEC: specialization, with type instantation if necessary.		*)
-(*									*)
-(*     A |- !x:ty.tm							*)
-(*  -----------------------   ISPEC "t:ty'" 				*)
-(*      A |- tm[t/x]							*)
-(*									*)
-(* (where t is free for x in tm, and ty' is an instance of ty)		*)
-(* ---------------------------------------------------------------------*)
-
-fun ISPEC t th =
-   let val (Bvar,_) = dest_forall(concl th) handle HOL_ERR _
-                      => raise ERR "ISPEC"
-                           "input theorem not universally quantified"
-       val (_,inst,kd_inst,rk) = kind_match_term Bvar t handle HOL_ERR _
-                      => raise ERR "ISPEC"
-                           "can't type-instantiate input theorem"
-       val ith = INST_TYPE inst (INST_KIND kd_inst (INST_RANK rk th))
-                    handle HOL_ERR {message,...}
-                      => raise ERR "ISPEC"
-                           ("failed to type-instantiate input theorem:\n" ^ message)
-   in SPEC t ith handle HOL_ERR _
-         => raise ERR "ISPEC" ": type variable free in assumptions"
-   end
-
-(* ---------------------------------------------------------------------*)
-(* ISPECL: iterated specialization, with type instantiation if necessary.*)
-(*									*)
-(*        A |- !x1...xn.tm						*)
-(*  ---------------------------------   ISPECL ["t1",...,"tn"]		*)
-(*      A |- tm[t1/x1,...,tn/xn]					*)
-(*									*)
-(* (where ti is free for xi in tm)					*)
-(*                                                                      *)
-(* Note: the following is simpler but it DOESN'T WORK.                  *)
-(*                                                                      *)
-(*  fun ISPECL tms th = rev_itlist ISPEC tms th                         *)
-(*                                                                      *)
-(* ---------------------------------------------------------------------*)
-
-local fun strip [] _ = []     (* Returns a list of (pat,ob) pairs. *)
-        | strip (tm::tml) M =
-            let val (Bvar,Body) = dest_forall M
-            in (type_of Bvar,type_of tm)::strip tml Body   end
-      fun funty [] = bool
-        | funty (ty::tys) = ty --> funty tys
-in
-fun ISPECL [] = I
-  | ISPECL [tm] = ISPEC tm
-  | ISPECL tms = fn th =>
-     let val pairs = strip tms (concl th) handle HOL_ERR _
-                     => raise ERR "ISPECL" "list of terms too long for theorem"
-         val (pats,obs) = split pairs
-         val (ty_theta,kd_theta,rk) =
-             Type.kind_match_type (funty pats) (funty obs)
-                      handle HOL_ERR _ => raise ERR "ISPECL"
-                              "can't type-instantiate input theorem"
-     in SPECL tms (INST_TYPE ty_theta (INST_KIND kd_theta (INST_RANK rk th))) handle HOL_ERR _
-        => raise ERR "ISPECL" "type variable or kind variable free in assumptions"
-     end
-end
-
 (*---------------------------------------------------------------------------
  * Generalise a theorem over all variables free in conclusion but not in hyps
  *
@@ -1040,6 +978,70 @@ fun TY_TM_SPEC_ALL th =
     else th
   end
 end;
+
+(* ---------------------------------------------------------------------*)
+(* ISPEC: specialization, with type instantation if necessary.		*)
+(*									*)
+(*     A |- !x:ty.tm							*)
+(*  -----------------------   ISPEC "t:ty'" 				*)
+(*      A |- tm[t/x]							*)
+(*									*)
+(* (where t is free for x in tm, and ty' is an instance of ty)		*)
+(* ---------------------------------------------------------------------*)
+
+fun ISPEC t th =
+   let val th = TY_SPEC_ALL th
+       val (Bvar,_) = dest_forall(concl th) handle HOL_ERR _
+                      => raise ERR "ISPEC"
+                           "input theorem not universally quantified"
+       val (_,inst,kd_inst,rk) = kind_match_term Bvar t handle HOL_ERR _
+                      => raise ERR "ISPEC"
+                           "can't type-instantiate input theorem"
+       val ith = INST_TYPE inst (INST_KIND kd_inst (INST_RANK rk th))
+                    handle HOL_ERR {message,...}
+                      => raise ERR "ISPEC"
+                           ("failed to type-instantiate input theorem:\n" ^ message)
+   in SPEC t ith handle HOL_ERR _
+         => raise ERR "ISPEC" ": type variable free in assumptions"
+   end
+
+(* ---------------------------------------------------------------------*)
+(* ISPECL: iterated specialization, with type instantiation if necessary.*)
+(*									*)
+(*        A |- !x1...xn.tm						*)
+(*  ---------------------------------   ISPECL ["t1",...,"tn"]		*)
+(*      A |- tm[t1/x1,...,tn/xn]					*)
+(*									*)
+(* (where ti is free for xi in tm)					*)
+(*                                                                      *)
+(* Note: the following is simpler but it DOESN'T WORK.                  *)
+(*                                                                      *)
+(*  fun ISPECL tms th = rev_itlist ISPEC tms th                         *)
+(*                                                                      *)
+(* ---------------------------------------------------------------------*)
+
+local fun strip [] _ = []     (* Returns a list of (pat,ob) pairs. *)
+        | strip (tm::tml) M =
+            let val (Bvar,Body) = dest_forall M
+            in (type_of Bvar,type_of tm)::strip tml Body   end
+      fun funty [] = bool
+        | funty (ty::tys) = ty --> funty tys
+in
+fun ISPECL [] = TY_SPEC_ALL (*I*)
+  | ISPECL [tm] = ISPEC tm
+  | ISPECL tms = fn th =>
+     let val th = TY_SPEC_ALL th
+         val pairs = strip tms (concl th) handle HOL_ERR _
+                     => raise ERR "ISPECL" "list of terms too long for theorem"
+         val (pats,obs) = split pairs
+         val (ty_theta,kd_theta,rk) =
+             Type.kind_match_type (funty pats) (funty obs)
+                      handle HOL_ERR _ => raise ERR "ISPECL"
+                              "can't type-instantiate input theorem"
+     in SPECL tms (INST_TYPE ty_theta (INST_KIND kd_theta (INST_RANK rk th))) handle HOL_ERR _
+        => raise ERR "ISPECL" "type variable or kind variable free in assumptions"
+     end
+end
 
 
 (*---------------------------------------------------------------------------
@@ -2321,16 +2323,9 @@ fun canon (fl,th) =
    end
 in
 fun RES_CANON th =
- let val ftyvs = HOLset.listItems (HOLset.difference
-                  (HOLset.addList(empty_tyset, type_vars_in_term(concl th)), hyp_tyvars th))
-     val gvs = map (fn a => genvar (mk_app_type(gen_var_type(kind_of a ==> typ, 0), a))) ftyvs
-     val ty_hyp = if null gvs then TRUTH else LIST_CONJ (map REFL gvs)
-     val ty_con = concl ty_hyp
-     val th1 = if null gvs then th else ADD_ASSUM ty_con th
-     val conjlist = CONJUNCTS (TY_TM_SPEC_ALL th1)
-     val REM_TY_HYP = if null gvs then I else fn th => MP (DISCH ty_con th) ty_hyp
+ let val conjlist = CONJUNCTS (TY_TM_SPEC_ALL th)
      fun operate th accum =
-          accum @ map (GEN_ALL o REM_TY_HYP) (canon (not_elim (TY_TM_SPEC_ALL th)))
+          accum @ map TY_TM_GEN_ALL (canon (not_elim (TY_TM_SPEC_ALL th)))
      val imps = Lib.rev_itlist operate conjlist []
  in Lib.assert (op not o null) imps
  end handle HOL_ERR _
