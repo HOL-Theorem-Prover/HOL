@@ -1,0 +1,138 @@
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+
+
+
+
+(* -------------------------------------------------------------------------- *)
+(* This is an example demonstrating the benefits of using the SMT solver      *)
+(* Yices through HolSmtLib. The binary search always splits the array in the  *)
+(* middle. This middle is calculated by                                       *)
+(*                                                                            *)
+(* m := l + ((r - l) DIV 2)                                                   *)
+(*                                                                            *)
+(* The boundary checks need to prove l <= m /\ m <= r provided l <= r         *)
+(* The HOL internal procedures have trouble with DIV and need user            *)
+(* interaction. Yices proves this automatically.                              *)
+(* -------------------------------------------------------------------------- *)
+
+
+(******************************************************************************)
+(* Some useful REWRITES                                                       *)
+(******************************************************************************)
+open listTheory rich_listTheory pred_setTheory sortingTheory ConseqConv boolSimps
+open relationTheory HolSmtLib generalHelpersTheory;
+
+
+val SORTED_EL = prove (
+``!R l n1 n2. transitive R /\ SORTED R l /\ 
+     (n2 < LENGTH l) /\ (n1 < n2) ==> (R (EL n1 l) (EL n2 l))``,
+
+GEN_TAC THEN
+Induct_on `l` THEN1 (
+   SIMP_TAC list_ss [SORTED_DEF]
+) THEN
+Cases_on `n1` THEN Cases_on `n2` THEN
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC list_ss [] THEN (
+   METIS_TAC[SORTED_EQ, EL_IS_EL]
+));
+
+
+val SORTED_EL_LESS_EQ = prove (
+``!l:num list n1 n2. SORTED $<= l /\ (n1 < LENGTH l) /\
+     (n2 < LENGTH l) /\ ((EL n1 l) < (EL n2 l)) ==> (n1 < n2)``,
+
+REPEAT STRIP_TAC THEN
+MP_TAC (Q.SPECL [`l`, `n2`, `n1`] (ISPEC ``($<=):num -> num -> bool`` SORTED_EL)) THEN
+ASM_SIMP_TAC arith_ss [transitive_def] THEN
+`~(n1 = n2)` by METIS_TAC[prim_recTheory.LESS_REFL] THEN
+DECIDE_TAC);
+
+
+
+      
+
+(******************************************************************************)
+(* Just the shape works automatically                                         *)
+(******************************************************************************)
+
+(*turn yices on*)
+set_trace "holfoot use Yices" 1;
+(*verbose off*)
+set_trace "HolSmtLib" 1;
+
+val file = concat [examplesDir, "/automatic/binary_search-shape.dsf"];
+val thm = holfoot_auto_verify_spec file
+
+
+(* see what happens without yices *)
+
+set_trace "holfoot use Yices" 0; (*turn yices off*)
+val thm = holfoot_auto_verify_spec file
+
+				   
+
+(******************************************************************************)
+(* Verify the fully functional spec now                                       *)
+(******************************************************************************)
+
+set_trace "holfoot use Yices" 1; (*turn yices on again*)
+
+
+val file = concat [examplesDir, "/interactive/binary_search-full.dsf"];
+
+(* holfoot_set_goal file *)
+val binsearch_TAC = 
+HF_SOLVE_TAC THEN
+REPEAT STRIP_TAC THENL [
+   HF_VC_TAC THEN
+   DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+   SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+   REPEAT STRIP_TAC THEN
+   EQ_TAC THEN SIMP_TAC arith_ss [] THEN
+   REPEAT STRIP_TAC THEN
+   MP_TAC (Q.SPECL [`data'`, `lc + ((rc - lc) DIV 2)`, `n`] SORTED_EL_LESS_EQ) THEN
+   ASM_SIMP_TAC std_ss [] THEN
+   YICES_TAC,
+
+
+   HF_VC_TAC THEN
+   Tactical.REVERSE (REPEAT STRIP_TAC) THEN1 (
+      YICES_TAC
+   ) THEN
+   DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+   SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+   REPEAT STRIP_TAC THEN
+   Tactical.REVERSE EQ_TAC THEN1 YICES_TAC THEN
+   REPEAT STRIP_TAC THEN
+   MP_TAC (Q.SPECL [`data'`, `n`, `lc + ((rc - lc) DIV 2)`] SORTED_EL_LESS_EQ) THEN
+   ASM_SIMP_TAC std_ss [] THEN
+   YICES_TAC,
+
+   HF_VC_TAC THEN
+   SIMP_TAC std_ss [IN_INSERT] THEN
+   Q.EXISTS_TAC `lc + ((rc − lc) DIV 2)` THEN
+   ASM_SIMP_TAC std_ss [] THEN  
+   YICES_TAC,
+
+
+   HF_VC_TAC THEN CONJ_TAC THEN1 (
+      ASM_SIMP_TAC std_ss [IN_INSERT, MEM_EL] THEN
+      DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+      SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+      REPEAT STRIP_TAC THEN
+      DECIDE_TAC
+   ) THEN
+   HF_SOLVE_TAC THEN
+   HF_VC_TAC THEN
+   REPEAT STRIP_TAC THEN (
+      FULL_SIMP_TAC std_ss [IN_INSERT, NOT_IN_EMPTY,
+         BOOL_TO_NUM_REWRITE]
+   ) THEN
+   YICES_TAC
+];
+
+val thm = holfoot_tac_verify_spec file NONE
+                [("binsearch", binsearch_TAC)]
+
+

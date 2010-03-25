@@ -1,0 +1,23 @@
+binsearch(f;a,n,e) [data_array(a,n,data) * (n > 0) * ``SORTED $<= data``] {
+   local l, r, m, tmp;
+
+   l = 0;
+   r = n-1;
+   f = 0;
+   while ((f == 0) and (l <= r)) [
+          data_array(a,n,data) * (n == #nc) *
+          (f == _fc) * (l == _lc) * (r == _rc) * (e == #ec) *
+          ``fc IN {0;1}`` * (r < n) * ``SORTED $<= data`` *
+          ``MEM ec data = 
+            ((fc = 1) \/ (?n. lc <= n /\ n <= rc /\ (EL n data = ec)))``] {
+      m = l + ((r - l) / 2);
+      tmp = (a+m)->dta;
+      if (tmp < e) {
+         l = m+1;
+      } else if (e < tmp) {
+         r = m-1;
+      } else {
+         f = 1;
+      }
+   }
+} [data_array(a,n,data) * (f == ``BOOL_TO_NUM (MEM e data)`` * ``SORTED $<= data``)]

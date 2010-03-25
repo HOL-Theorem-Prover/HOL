@@ -171,6 +171,12 @@ fun holfoot_web_interface () = let
    val _ = Feedback.set_trace "Unicode" 1
    val _ = Feedback.set_trace "goalstack chatting" 0
    val args = CommandLine.arguments ();
+   val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args)) 
+      handle _ => (true, args);
+   val (yices, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--yices") args)) 
+      handle _ => (false, args);
+   val _ = Feedback.set_trace "Unicode" (if unicode then 1 else 0)
+   val _ = Feedback.set_trace "holfoot use Yices" (if yices then 1 else 0)
 in
    if length args = 1 then
    let

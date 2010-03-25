@@ -4,6 +4,7 @@ sig
 
     val combinator_thmL              : thm list
     val predicate_ssfrag             : int -> simpLib.ssfrag
+    val final_decision_procedure     : thm list -> term -> thm;
     val combinator_terms             : term * term * term;
     val resource_proccall_free_thmL  : thm list
     val inital_prop_rewrite_thmL     : thm list
@@ -2820,10 +2821,13 @@ in
 (*
    val do_bool = true;
    val preserve_fallback = true
+   REPEAT STRIP_TAC
+   val context = map ASSUME (fst (top_goal ()))
    val tt = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
+
 *)
 
-fun VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV do_bool preserve_fallback tt =
+fun VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV do_bool preserve_fallback context tt =
 let
    val (f,sr, wpbrpb, wpb', _, _, imp_sfb, _) =  dest_VAR_RES_FRAME_SPLIT tt;
 
@@ -2835,7 +2839,14 @@ let
                         val (bp, rb) = bagSyntax.dest_insert imp_sfb handle HOL_ERR _ => raise UNCHANGED;
                         val _ = if bagSyntax.is_empty rb then () else raise UNCHANGED
                         val (_, b) = dest_var_res_bool_proposition bp handle HOL_ERR _ => raise UNCHANGED
+                        val b_thm_opt = SOME (var_res_param.final_decision_procedure context b) handle HOL_ERR _ => NONE;                      
                      in
+                        if (isSome b_thm_opt) then let
+                           val inf_thm =  SPEC b (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop___MP else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop___MP)
+                           val xthm0 = MP inf_thm (valOf b_thm_opt)
+                        in
+                           (xthm0, false)
+                        end else                         
                         (SPEC b (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop), true)
                      end
    val _ = if has_bool andalso (not do_bool) then raise UNCHANGED else ();
@@ -3215,8 +3226,8 @@ val VAR_RES_INFERENCES_LIST___entailment_steps = ("entailment",
 val VAR_RES_INFERENCES_LIST___entailment_solve = ("entailment",
    (K true), false, true,
    [("entailment_solve",
-       fn fast => (K (K (K
-       (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV false (not fast))))))]):var_res_inference_group;
+       fn fast => (K (fn context => (K
+       (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV false (not fast) context)))))]):var_res_inference_group;
 
 
 val VAR_RES_INFERENCES_LIST___cheap_simplifications = ("cheap simps",
@@ -3532,7 +3543,7 @@ val CONSEQ_CONV_CONGRUENCE___var_res_list =
 fun vc_conv vc step_opt =
    if not vc then (K (0, NONE)) else
    EXT_DEPTH_NUM_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___var_res_list NONE step_opt true
-     [(true, SOME 1, K (K (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV true false)))] []
+     [(true, SOME 1, K (K (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV true false [])))] []
    CONSEQ_CONV_STRENGTHEN_direction;
 
 (*

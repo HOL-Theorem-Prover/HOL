@@ -2503,6 +2503,11 @@ struct
      | predicate_ssfrag 3 = simpLib.merge_ss [predicate_ssfrag2, predicate_ssfrag_arith 2]
      | predicate_ssfrag _ = simpLib.merge_ss [predicate_ssfrag2, predicate_ssfrag_arith 3];
 
+   fun final_decision_procedure context t =
+       if (!holfoot_use_yices mod 2 = 1) then
+         array_bound_DECIDE___YICES context t
+       else Feedback.fail ();
+
 
    val resource_proccall_free_thmL = 
        [fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_REWRITES];
@@ -2922,5 +2927,6 @@ SOLVE_TAC ([arithmeticTheory.MIN_DEF],[],[])
 open holfootTheory
 ASM_SIMP_TAC list_ss [holfoot_ap_data_tree___null]
 *)
+
 
 end;
