@@ -285,9 +285,6 @@ struct
           boolSyntax.mk_select (i, boolSyntax.mk_neg (boolSyntax.mk_eq
             (Term.mk_comb (array1, i), Term.mk_comb (array2, i))))
         end
-    | parse_term _ ["xor"] = Term.prim_mk_const {Thy="HolSmt", Name="xor"}
-    | parse_term _ ["xor3"] = Term.prim_mk_const {Thy="HolSmt", Name="xor3"}
-    | parse_term _ ["carry"] = Term.prim_mk_const {Thy="HolSmt", Name="carry"}
     | parse_term _ ["bv", "[", m, ":", n, "]"] =
         (* bit-vector literals: numeric value m, bit-width n *)
         wordsSyntax.mk_word (Arbnum.fromString m, Arbnum.fromString n)
@@ -575,7 +572,13 @@ struct
             (* user-defined constants *)
             t
           | NONE =>
-            let
+            if tok = "xor" then
+              Term.prim_mk_const {Thy="HolSmt", Name="xor"}
+            else if tok = "xor3" then
+              Term.prim_mk_const {Thy="HolSmt", Name="xor3"}
+            else if tok = "carry" then
+              Term.prim_mk_const {Thy="HolSmt", Name="carry"}
+            else let
               val length = String.size tok
             in
               if length > 5 andalso
