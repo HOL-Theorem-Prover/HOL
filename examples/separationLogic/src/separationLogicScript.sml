@@ -876,11 +876,11 @@ val fasl_star_def = Define `fasl_star f = BIN_OPTION_MAP_ALL_DEF (asl_star f)`;
 
 val asl_exists_def =
  Define `asl_exists = \P:'a->('b -> bool). \s. ?x. (s IN P x)`;
-val _ = add_binder("asl_exists", std_binder_precedence);
+val _ = set_fixity "asl_exists" Binder;
 
 val asl_forall_def =
  Define `asl_forall = \P:'a->('b -> bool). \s. !x. (s IN P x)`;
-val _ = add_binder("asl_forall", std_binder_precedence);
+val _ = set_fixity "asl_forall" Binder
 
 val asl_neg_def =
  Define `asl_neg = \P:('a -> bool). \s. ~(s IN P)`;
@@ -3843,7 +3843,7 @@ SIMP_TAC std_ss [asl_trivial_cond_def, COND_RAND, COND_RATOR,
 
 
 val asl_trivial_cond___asl_trivial_cond = store_thm ("asl_trivial_cond___asl_trivial_cond",
-``!c1 c2 p. 
+``!c1 c2 p.
       asl_trivial_cond c1 (asl_trivial_cond c2 p) =
       asl_trivial_cond (c1 /\ c2) p``,
 SIMP_TAC std_ss [asl_trivial_cond_def] THEN
@@ -3862,7 +3862,7 @@ SIMP_TAC list_ss [asl_bigstar_list_def, FOLDR_APPEND]);
 val asl_bigstar_list_SNOC = store_thm ("asl_bigstar_list_SNOC",
 ``!f h l. IS_SEPARATION_COMBINATOR f ==>
    (asl_bigstar_list f (SNOC h l) =  asl_star f (asl_bigstar_list f l) h)``,
-Induct_on `l` THEN 
+Induct_on `l` THEN
 ASM_SIMP_TAC list_ss [asl_bigstar_list_REWRITE,
    REWRITE_RULE [ASSOC_DEF] asl_star___PROPERTIES]);
 
@@ -12730,7 +12730,7 @@ val cond_prop_false_def = Define `cond_prop_false = (F, asl_false)`
 val COND_PROP___EXISTS_def = Define
 `$COND_PROP___EXISTS P = (T, \s. ?x. (FST (P x)) /\ s IN (SND (P x)))`
 
-val _ = add_binder("COND_PROP___EXISTS", std_binder_precedence);
+val _ = set_fixity "COND_PROP___EXISTS" Binder
 
 
 val COND_PROP___EXISTS___ELIM = store_thm ("COND_PROP___EXISTS___ELIM",
