@@ -1,0 +1,48 @@
+Entailment "simple frame"
+list(x) * list(y) |- list(y) * list(x)
+
+Entailment "propagte eq"
+(x == y) * list (x) |-
+list(y)
+
+Entailment "false precond"
+(x == y) * (x != y) |-
+``anything``
+
+Entailment "list extension"
+(list(x) * y |-> x) |- (list(y) * (x != y))
+
+Entailment "list unequal"
+list(x) * list(y) * (x != 0) |- 
+list(x) * list(y) * (x != y)
+
+Entailment "list data elimination"
+(data_list(x,data)) |- (list(x))
+
+Entailment "list concat"
+(data_lseg(x,data1,y) * (y |-> tl:z,dta:#c) * data_list(y,data2)) |- 
+(data_list(x, ``data1++c::data2``))
+
+Entailment "points_to resort"
+x |-> t1:e1,t2:e2 |-
+x |-> t2:e2,t1:e1
+
+Entailment "points_to elim"
+x |-> t1:e1,t2:e2,t3:e3 |-
+x |-> t2:e2,t1:e1
+
+Entailment "points_to exists"
+x |-> t1:e1 |- x |-> t1:_c
+
+Entailment "list data exists"
+data_list(x,data) |- data_list(x, _data2)
+
+Entailment "array data elimination"
+data_array(x,n,data) |- array(x,n)
+
+Entailment "array frame 1"
+data_array(x,n + 5,data) |- array(x,n) * data_array(x+n,5,_data)
+
+Entailment "array frame 2"
+array(x,n) * data_array(x+n,5,data) |- array(x,n+5)
+
