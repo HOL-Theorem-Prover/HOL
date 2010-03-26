@@ -101,14 +101,16 @@ in
     end
 end;
 
-fun size_conv t = {conv = K (K (SIZES_CONV)), trace = 3,
-                   name = "SIZES_CONV", key = SOME ([], t)};
-
-val SIZES_ss = simpLib.merge_ss
-  (simpLib.named_rewrites "sizes" [ONE_LT_dimword, DIMINDEX_GT_0]::
-  (map (simpLib.conv_ss o size_conv)
-    [``fcp$dimindex(:'a)``, ``pred_set$FINITE (pred_set$UNIV:'a set)``,
-     ``words$INT_MIN(:'a)``, ``words$dimword(:'a)``]));
+val SIZES_ss =
+  simpLib.named_merge_ss "sizes"
+    [simpLib.rewrites [ONE_LT_dimword, DIMINDEX_GT_0],
+     simpLib.std_conv_ss
+      {name = "SIZES_CONV",
+       conv = SIZES_CONV,
+       pats = [``fcp$dimindex(:'a)``,
+               ``pred_set$FINITE (pred_set$UNIV:'a set)``,
+               ``words$INT_MIN(:'a)``,
+               ``words$dimword(:'a)``]}];
 
 fun NUM_RULE l n x =
   let val y = SPEC_ALL x
@@ -276,6 +278,8 @@ val WORD_EVAL_TAC  = CONV_TAC WORD_EVAL_CONV;
 (* Simpsets                                                                  *)
 (* ------------------------------------------------------------------------- *)
 
+val SYM_WORD_NEG_1 = SYM WORD_NEG_1;
+
 local
   fun name_thy t = let val {Name,Thy,...} = dest_thy_const t in (Thy,Name) end
 
@@ -379,7 +383,7 @@ in
       let val dim = wordsSyntax.dim_of t in
         if not (is_vartype dim) andalso dim <> ``:unit`` then
           PURE_REWRITE_CONV
-            [GSYM (EVAL (wordsSyntax.mk_word_T dim)), SYM WORD_NEG_1] t
+            [GSYM (EVAL (wordsSyntax.mk_word_T dim)), SYM_WORD_NEG_1] t
         else
           raise UNCHANGED
       end
@@ -396,11 +400,14 @@ in
      computeLib.CBV_CONV (words_compset()) THENC UINT_MAX_CONV) t
   end
 
-  val WORD_GROUND_ss = simpLib.merge_ss
-    [simpLib.named_rewrites "word ground" alpha_rws,
-     simpLib.conv_ss
-      {conv = K (K (CHANGED_CONV WORD_GROUND_CONV)), trace = 3,
-       name = "WORD_GROUND_CONV", key = NONE}]
+  val WORD_GROUND_ss =
+    simpLib.named_merge_ss "word ground"
+      [simpLib.rewrites alpha_rws,
+       simpLib.conv_ss
+        {conv  = K (K (CHANGED_CONV WORD_GROUND_CONV)),
+         trace = 3,
+         name  = "WORD_GROUND_CONV",
+         key   = NONE}]
 end;
 
 fun bit_set_compset () =
@@ -419,11 +426,14 @@ val BIT_SET_CONV =
             ISPEC `^a` pred_setTheory.IN_INSERT];
 
 val BIT_ss =
-  simpLib.merge_ss [simpLib.named_rewrites "bit" [BIT_ZERO],
-    simpLib.conv_ss
-      {conv = K (K (BIT_SET_CONV)), trace = 3,
-       name = "BITS_CONV", key = SOME ([], ``bit$BIT ^n ^a``)}];
+  simpLib.named_merge_ss "bit"
+    [simpLib.rewrites [BIT_ZERO],
+     simpLib.std_conv_ss
+       {conv = BIT_SET_CONV,
+        name = "BITS_CONV",
+        pats = [``bit$BIT ^n ^a``]}];
 
+(*
 val WORD_ORDER_ss = simpLib.named_rewrites "word order"
   [WORD_HIGHER, WORD_HIGHER_EQ,
    WORD_GREATER, WORD_GREATER_EQ,
@@ -434,6 +444,7 @@ val WORD_ORDER_ss = simpLib.named_rewrites "word order"
    word_T_not_zero, WORD_LS_word_T, WORD_LO_word_T,
    WORD_0_LS, WORD_LESS_0_word_T, WORD_L_LESS_EQ,
    WORD_LS_word_0, WORD_LO_word_0];
+*)
 
 (* ------------------------------------------------------------------------- *)
 
@@ -451,7 +462,7 @@ val WORD_NOT_NEG_NUMERAL =
      [GSYM ADD1, WORD_LITERAL_ADD, word_sub_def, WORD_NEG_NEG] o
    SPEC `words$word_2comp (^n2w (num$SUC ^n))`) WORD_NOT;
 
-val WORD_NOT_NEG_0 = SIMP_CONV std_ss [SYM WORD_NEG_1, WORD_NOT_0, WORD_NEG_0]
+val WORD_NOT_NEG_0 = SIMP_CONV std_ss [SYM_WORD_NEG_1, WORD_NOT_0, WORD_NEG_0]
   ``words$word_1comp (words$word_2comp 0w) : 'a word``;
 
 val WORD_LITERAL_MULT_thms =
@@ -547,8 +558,7 @@ end;
 
 local
   val conv = PURE_REWRITE_CONV
-                 [INT_MAX_def, word_L_def, word_H_def,
-                  GSYM WORD_NEG_1, w2n_n2w]
+                 [INT_MAX_def, word_L_def, word_H_def, SYM_WORD_NEG_1, w2n_n2w]
                THENC DEPTH_CONV SIZES_CONV
                THENC numLib.REDUCE_CONV
 in
@@ -560,7 +570,7 @@ in
     then
       conv t
     else
-      CHANGED_CONV (PURE_REWRITE_CONV [WORD_H_WORD_L, GSYM WORD_NEG_1]) t
+      CHANGED_CONV (PURE_REWRITE_CONV [WORD_H_WORD_L, SYM_WORD_NEG_1]) t
 
   fun WORD_UINT_MAX_CONV t =
     if is_known_word_size t then
@@ -656,67 +666,69 @@ fun WORD_ADD_CANON_CONV t =
    else
      raise ERR "WORD_ADD_CANON_CONV" "Can only be applied to word terms";
 
-val WORD_MULT_ss = simpLib.merge_ss
- [simpLib.named_rewrites "word mult" (NEG_EQ_0::word_mult_clauses),
-  simpLib.conv_ss
-    {conv = K (K (CHANGED_CONV WORD_MULT_CANON_CONV)), trace = 3,
-     name = "WORD_MULT_CANON_CONV", key = SOME([], ``words$word_mul ^w ^y``)}];
+val WORD_MULT_ss =
+ simpLib.merge_ss
+   [simpLib.rewrites (NEG_EQ_0::word_mult_clauses),
+    simpLib.std_conv_ss
+      {conv = CHANGED_CONV WORD_MULT_CANON_CONV,
+       name = "WORD_MULT_CANON_CONV",
+       pats = [``words$word_mul ^w ^y``]}];
 
-val WORD_ADD_ss = simpLib.conv_ss
-  {conv = K (K (CHANGED_CONV WORD_ADD_CANON_CONV)), trace = 3,
-   name = "WORD_ADD_CANON_CONV", key = SOME([], ```words$word_add ^w ^y``)};
+val WORD_ADD_ss =
+  simpLib.std_conv_ss
+    {conv = CHANGED_CONV WORD_ADD_CANON_CONV,
+     name = "WORD_ADD_CANON_CONV",
+     pats = [``words$word_add ^w ^y``]};
 
-val WORD_SUB_ss = simpLib.merge_ss
- [simpLib.named_rewrites "word sub" [word_sub_def],
-  simpLib.conv_ss
-    {conv = K (K (WORD_NEG_CONV)), trace = 3,
-     name = "WORD_NEG_CONV", key = SOME([], ``words$word_2comp ^w``)},
-  simpLib.conv_ss
-    {conv = K (K (WORD_NEG_CONV)), trace = 3,
-     name = "WORD_NEG_CONV", key = SOME([], ``words$word_sub ^w ^y``)}];
+val WORD_SUB_ss =
+ simpLib.merge_ss
+   [simpLib.rewrites [word_sub_def],
+    simpLib.std_conv_ss
+      {conv = WORD_NEG_CONV,
+       name = "WORD_NEG_CONV",
+       pats = [``words$word_2comp ^w``,
+               ``words$word_sub ^w ^y``]}];
 
-val WORD_w2n_ss = simpLib.merge_ss
- [simpLib.named_rewrites "word w2n" [word_0_n2w],
-  simpLib.conv_ss
-    {conv = K (K (WORD_w2n_CONV)), trace = 3,
-     name = "WORD_w2n_CONV", key = SOME([], ``words$w2n (^n2w ^a)``)}];
+val WORD_w2n_ss =
+ simpLib.merge_ss
+   [simpLib.rewrites [word_0_n2w],
+    simpLib.std_conv_ss
+      {conv = WORD_w2n_CONV,
+       name = "WORD_w2n_CONV",
+       pats = [``words$w2n (^n2w ^a)``]}];
 
-val WORD_UINT_MAX_ss = simpLib.merge_ss [
-  simpLib.conv_ss
-    {conv = K (K (WORD_UINT_MAX_CONV)), trace = 3,
-     name = "WORD_UINT_MAX_CONV",
-      key = SOME([], ``words$word_2comp 1w :'a word``)},
-  simpLib.conv_ss
-    {conv = K (K (WORD_UINT_MAX_CONV)), trace = 3,
-     name = "WORD_UINT_MAX_CONV",
-     key = SOME([], ``words$word_T :'a word``)}];
+val WORD_UINT_MAX_ss =
+ simpLib.std_conv_ss
+   {conv = WORD_UINT_MAX_CONV,
+    name = "WORD_UINT_MAX_CONV",
+    pats = [``words$word_2comp 1w :'a word``,
+            ``words$word_T :'a word``]};
 
-val WORD_CONST_ss = simpLib.merge_ss [
-  simpLib.conv_ss
-    {conv = K (K (WORD_CONST_CONV)), trace = 3,
-     name = "WORD_CONST_CONV", key = SOME([], ``words$word_L :'a word``)},
-  simpLib.conv_ss
-    {conv = K (K (WORD_CONST_CONV)), trace = 3,
-     name = "WORD_CONST_CONV", key = SOME([], ``words$word_H :'a word``)},
-  simpLib.conv_ss
-    {conv = K (K (WORD_CONST_CONV)), trace = 3,
-     name = "WORD_CONST_CONV", key = SOME([], ``words$word_T :'a word``)}];
+val WORD_CONST_ss =
+ simpLib.std_conv_ss
+   {conv = WORD_CONST_CONV,
+    name = "WORD_CONST_CONV",
+    pats = [``words$word_L :'a word``,
+            ``words$word_H :'a word``,
+            ``words$word_T :'a word``]};
 
-val WORD_ARITH_EQ_ss = simpLib.merge_ss
- [simpLib.named_rewrites "word arith eq"
-    [WORD_LEFT_ADD_DISTRIB,WORD_RIGHT_ADD_DISTRIB,
-     WORD_LSL_NUMERAL,WORD_NOT,hd (CONJUNCTS SHIFT_ZERO)],
-  simpLib.conv_ss
-    {conv = K (K (WORD_ARITH_EQ_CONV)), trace = 3,
-     name = "WORD_ARITH_EQ_CONV", key = SOME([], ``^w = ^y :'a word``)}];
+val WORD_ARITH_EQ_ss =
+ simpLib.named_merge_ss "word arith eq"
+   [simpLib.rewrites
+      [WORD_LEFT_ADD_DISTRIB,WORD_RIGHT_ADD_DISTRIB,
+       WORD_LSL_NUMERAL,WORD_NOT,hd (CONJUNCTS SHIFT_ZERO)],
+    simpLib.std_conv_ss
+      {conv = WORD_ARITH_EQ_CONV,
+       name = "WORD_ARITH_EQ_CONV",
+       pats = [``^w = ^y :'a word``]}];
 
 val WORD_ARITH_ss =
-  simpLib.merge_ss
+  simpLib.named_merge_ss "word arith"
     [WORD_MULT_ss, WORD_ADD_ss, WORD_SUB_ss, WORD_w2n_ss, WORD_CONST_ss];
 
 val WORD_MULT_CONV = SIMP_CONV (pure_ss++WORD_MULT_ss) [];
-val WORD_ADD_CONV = SIMP_CONV (pure_ss++WORD_ADD_ss) [];
-val WORD_SUB_CONV = SIMP_CONV (pure_ss++WORD_SUB_ss) [];
+val WORD_ADD_CONV  = SIMP_CONV (pure_ss++WORD_ADD_ss) [];
+val WORD_SUB_CONV  = SIMP_CONV (pure_ss++WORD_SUB_ss) [];
 
 local
  val conv = SIMP_CONV (std_ss++WORD_ARITH_EQ_ss++WORD_ARITH_ss) []
@@ -750,9 +762,9 @@ val GSYM_WORD_OR_ASSOC = GSYM WORD_OR_ASSOC;
 val GSYM_WORD_AND_ASSOC = GSYM WORD_AND_ASSOC;
 val GSYM_WORD_XOR_ASSOC = GSYM WORD_XOR_ASSOC;
 
-val WORD_OR_CLAUSES2 = REWRITE_RULE [SYM WORD_NEG_1] WORD_OR_CLAUSES;
-val WORD_AND_CLAUSES2 = REWRITE_RULE [SYM WORD_NEG_1] WORD_AND_CLAUSES;
-val WORD_XOR_CLAUSES2 = REWRITE_RULE [SYM WORD_NEG_1] WORD_XOR_CLAUSES;
+val WORD_OR_CLAUSES2 = REWRITE_RULE [SYM_WORD_NEG_1] WORD_OR_CLAUSES;
+val WORD_AND_CLAUSES2 = REWRITE_RULE [SYM_WORD_NEG_1] WORD_AND_CLAUSES;
+val WORD_XOR_CLAUSES2 = REWRITE_RULE [SYM_WORD_NEG_1] WORD_XOR_CLAUSES;
 
 val word_or_clauses = CONJUNCTS (SPEC `a` WORD_OR_CLAUSES2);
 val word_and_clauses = CONJUNCTS (SPEC `a` WORD_AND_CLAUSES2);
@@ -869,7 +881,7 @@ fun WORD_COMP_CONV t =
 let val x = wordsSyntax.dest_word_1comp t in
   if is_known_word_size t then
     if is_word_zero x then
-      PURE_REWRITE_CONV [REWRITE_RULE [SYM WORD_NEG_1] WORD_NOT_0] t
+      PURE_REWRITE_CONV [REWRITE_RULE [SYM_WORD_NEG_1] WORD_NOT_0] t
     else
       (PURE_REWRITE_CONV [word_1comp_n2w]
         THENC DEPTH_CONV SIZES_CONV THENC numLib.REDUCE_CONV) t
@@ -897,44 +909,51 @@ fun WORD_XOR_CANON_CONV t =
      raise ERR "WORD_XOR_CANON_CONV" "Can only be applied to word terms";
 
 val WORD_COMP_ss =
-  simpLib.merge_ss [
-    simpLib.named_rewrites "word comp"
-      [WORD_DE_MORGAN_THM, WORD_NOT_NOT, WORD_NOT_NEG_0,
+  simpLib.merge_ss
+   [simpLib.rewrites
+      [WORD_DE_MORGAN_THM, WORD_NOT_NEG_0, SYM_WORD_NEG_1,
        REWRITE_RULE [GSYM arithmeticTheory.PRE_SUB1] WORD_NOT_NEG_NUMERAL],
-    simpLib.conv_ss
-      {conv = K (K (reduceLib.PRE_CONV)), trace = 3,
-       name = "PRE_CONV", key = SOME ([], ``prim_rec$PRE ^a``)},
-    simpLib.conv_ss
-      {conv = K (K (WORD_COMP_CONV)), trace = 3,
+    simpLib.std_conv_ss
+      {conv = reduceLib.PRE_CONV,
+       name = "PRE_CONV",
+       pats  = [``prim_rec$PRE ^a``]},
+    simpLib.std_conv_ss
+      {conv = WORD_COMP_CONV,
        name = "WORD_COMP_CONV",
-       key = SOME ([], ``words$word_1comp (^n2w ^n) :'a word``)}];
+       pats = [``words$word_1comp (^n2w ^n) :'a word``]}];
 
 val WORD_AND_ss =
-  simpLib.merge_ss [simpLib.named_rewrites "word and"
-    [WORD_AND_CLAUSES2, SYM WORD_NEG_1, WORD_AND_COMP, WORD_NAND_NOT_AND],
-  simpLib.conv_ss
-    {conv = K (K (WORD_AND_CANON_CONV)), trace = 3,
-     name = "WORD_AND_CANON_CONV", key = SOME ([], ``words$word_and ^w ^y``)}];
+  simpLib.merge_ss
+   [simpLib.rewrites [WORD_AND_CLAUSES2],
+    simpLib.std_conv_ss
+      {conv = WORD_AND_CANON_CONV,
+       name = "WORD_AND_CANON_CONV",
+       pats = [``words$word_and ^w ^y``]}];
 
 val WORD_XOR_ss =
-  simpLib.merge_ss [simpLib.named_rewrites "word xor"
-    [WORD_XOR_CLAUSES2, SYM WORD_NEG_1, WORD_NOT_XOR, WORD_XNOR_NOT_XOR],
-  simpLib.conv_ss
-    {conv = K (K (WORD_XOR_CANON_CONV)), trace = 3,
-     name = "WORD_XOR_CANON_CONV", key = SOME ([], ``words$word_xor ^w ^y``)}];
-
-val WORD_OR_ss = let val thm = REWRITE_RULE [SYM WORD_NEG_1] WORD_OR_COMP in
   simpLib.merge_ss
-  [simpLib.named_rewrites "word or"
-     [WORD_OR_CLAUSES2, SYM WORD_NEG_1, WORD_AND_ABSORD, thm,
-      ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD,
-      ONCE_REWRITE_RULE [WORD_OR_COMM] thm, WORD_NOR_NOT_OR],
-   simpLib.conv_ss
-     {conv = K (K (WORD_OR_CANON_CONV)), trace = 3,
-      name = "WORD_OR_CANON_CONV", key = SOME ([], ``words$word_or ^w ^y``)}]
-end;
+   [simpLib.rewrites [WORD_XOR_CLAUSES2],
+    simpLib.std_conv_ss
+      {conv = WORD_XOR_CANON_CONV,
+       name = "WORD_XOR_CANON_CONV",
+       pats = [``words$word_xor ^w ^y``]}];
 
-val WORD_LOGIC_ss = simpLib.merge_ss
+val WORD_OR_ss =
+  let
+    val thm = REWRITE_RULE [SYM_WORD_NEG_1] WORD_OR_COMP
+  in
+    simpLib.merge_ss
+      [simpLib.rewrites
+         [WORD_OR_CLAUSES2, thm,
+          ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD,
+          ONCE_REWRITE_RULE [WORD_OR_COMM] thm],
+       simpLib.std_conv_ss
+         {conv = WORD_OR_CANON_CONV,
+          name = "WORD_OR_CANON_CONV",
+          pats = [``words$word_or ^w ^y``]}]
+  end;
+
+val WORD_LOGIC_ss = simpLib.named_merge_ss "word logic"
   [WORD_COMP_ss,WORD_AND_ss,WORD_OR_ss,WORD_XOR_ss];
 
 val WORD_LOGIC_CONV = SIMP_CONV (bool_ss++WORD_LOGIC_ss)
@@ -957,7 +976,7 @@ val WORD_SHIFT_ss =
       WORD_ADD_LSL, GSYM WORD_2COMP_LSL,
       GSYM LSL_BITWISE, GSYM LSR_BITWISE, GSYM ROR_BITWISE, GSYM ROL_BITWISE,
       LSL_LIMIT, LSR_LIMIT, ASR_LIMIT] @
-    map (REWRITE_RULE [SYM WORD_NEG_1])
+    map (REWRITE_RULE [SYM_WORD_NEG_1])
      [ASR_UINT_MAX, ROR_UINT_MAX,
       (REWRITE_RULE [ROR_UINT_MAX] o
          SPEC `words$word_T`) word_rol_def]);
@@ -997,46 +1016,50 @@ let val (l,r) = wordsSyntax.dest_word_mul t in
 end;
 
 val WORD_MUL_LSL_ss =
-  simpLib.conv_ss
-    {conv = K (K (WORD_MUL_LSL_CONV)), trace = 3, name = "WORD_MUL_LSL_CONV",
-     key = SOME([], ``words$word_mul (^n2w ^a) ^w:'a word``)};
+  simpLib.named_merge_ss "word mul lsl"
+    [simpLib.std_conv_ss
+      {conv = WORD_MUL_LSL_CONV,
+       name = "WORD_MUL_LSL_CONV",
+       pats = [``words$word_mul (^n2w ^a) ^w:'a word``]}];
 
 (* ------------------------------------------------------------------------- *)
 
 val LET_RULE = SIMP_RULE (bool_ss++boolSimps.LET_ss) [];
 val OR_AND_COMM_RULE = ONCE_REWRITE_RULE [WORD_ADD_COMM, WORD_OR_COMM];
 
-val WORD_REPLICATE_ss =
-  simpLib.conv_ss
-    {conv = K (K (WORD_EVAL_CONV)), trace = 3, name = "WORD_EVAL_CONV",
-     key = SOME([], ``words$word_replicate ^a ^w:'a word``)};
-
-val WORD_EXTRACT_ss = simpLib.merge_ss [WORD_REPLICATE_ss,
-  simpLib.named_rewrites "word extract"
-    ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
-      WORD_EXTRACT_LSL, WORD_EXTRACT_LSL2, word_concat_def,
-      LET_RULE word_join_def, word_rol_def, LET_RULE word_ror, word_asr,
-      word_lsr_n2w, WORD_EXTRACT_COMP_THM, WORD_EXTRACT_MIN_HIGH, EXTRACT_JOIN,
-      EXTRACT_JOIN_LSL, EXTRACT_JOIN_ADD, EXTRACT_JOIN_ADD_LSL,
-      OR_AND_COMM_RULE EXTRACT_JOIN, OR_AND_COMM_RULE EXTRACT_JOIN_LSL,
-      OR_AND_COMM_RULE EXTRACT_JOIN_ADD, OR_AND_COMM_RULE EXTRACT_JOIN_ADD_LSL,
-      GSYM WORD_EXTRACT_OVER_BITWISE,
-      (GEN_ALL o ISPEC `words$word_extract h l :'a word -> 'b word`) COND_RAND,
-      WORD_BITS_EXTRACT, WORD_w2w_EXTRACT, sw2sw_w2w, word_lsb, word_msb] @
-    map (REWRITE_RULE [WORD_BITS_EXTRACT])
-     [WORD_ALL_BITS, WORD_SLICE_THM, WORD_BIT_BITS])];
+val WORD_EXTRACT_ss =
+  simpLib.named_merge_ss "word extract"
+   [simpLib.std_conv_ss
+      {conv = WORD_EVAL_CONV,
+       name = "WORD_EVAL_CONV",
+       pats = [``words$word_replicate ^a ^w:'a word``]},
+   simpLib.rewrites
+     ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
+       WORD_EXTRACT_LSL, WORD_EXTRACT_LSL2, word_concat_def,
+       LET_RULE word_join_def, word_rol_def, LET_RULE word_ror, word_asr,
+       word_lsr_n2w, WORD_EXTRACT_COMP_THM, WORD_EXTRACT_MIN_HIGH,
+       EXTRACT_JOIN, EXTRACT_JOIN_LSL, EXTRACT_JOIN_ADD, EXTRACT_JOIN_ADD_LSL,
+       OR_AND_COMM_RULE EXTRACT_JOIN, OR_AND_COMM_RULE EXTRACT_JOIN_LSL,
+       OR_AND_COMM_RULE EXTRACT_JOIN_ADD, OR_AND_COMM_RULE
+       EXTRACT_JOIN_ADD_LSL, GSYM WORD_EXTRACT_OVER_BITWISE,
+       (GEN_ALL o ISPEC `words$word_extract h l :'a word -> 'b word`) COND_RAND,
+       WORD_BITS_EXTRACT, WORD_w2w_EXTRACT, sw2sw_w2w, word_lsb, word_msb] @
+       map (REWRITE_RULE [WORD_BITS_EXTRACT])
+         [WORD_ALL_BITS, WORD_SLICE_THM, WORD_BIT_BITS])];
 
 (* ------------------------------------------------------------------------- *)
 
-val WORD_ss =
-  simpLib.merge_ss [WORD_LOGIC_ss, WORD_ARITH_ss, WORD_SHIFT_ss,
-    WORD_GROUND_ss, BIT_ss, SIZES_ss];
+local
+  val ssfrags = [WORD_LOGIC_ss, WORD_ARITH_ss, WORD_SHIFT_ss, WORD_GROUND_ss,
+                 BIT_ss, SIZES_ss]
+in
+  val WORD_ss = simpLib.named_merge_ss "words" ssfrags
+  val _ = augment_srw_ss ssfrags
+end
 
 val WORD_CONV = SIMP_CONV (std_ss++WORD_ss)
   [WORD_LEFT_ADD_DISTRIB, WORD_RIGHT_ADD_DISTRIB,
    WORD_LEFT_AND_OVER_OR, WORD_RIGHT_AND_OVER_OR];
-
-val _ = augment_srw_ss [WORD_ss];
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1125,7 +1148,7 @@ fun EXISTS_WORD_CONV t =
 local
   val word_join = SIMP_RULE (std_ss++boolSimps.LET_ss) [] word_join_def
   val rw1 = [word_0,word_T,word_L,word_xor_def,word_or_def,word_and_def,
-             word_1comp_def, REWRITE_RULE [SYM WORD_NEG_1] word_T,
+             word_1comp_def, REWRITE_RULE [SYM_WORD_NEG_1] word_T,
              pred_setTheory.NOT_IN_EMPTY,
              ISPEC `0n` pred_setTheory.IN_INSERT,
              ISPEC `^a` pred_setTheory.IN_INSERT]
@@ -1167,12 +1190,13 @@ in
         else
           raise ERR "WORD_BIT_EQ_CONV" "Not a word equality"
   val WORD_BIT_EQ_ss =
-        simpLib.merge_ss [ARITH_ss, fcpLib.FCP_ss, SIZES_ss,
-          simpLib.named_rewrites "word bit eq" (rw1 @ rw2),
-          simpLib.conv_ss
-            {conv = K (K (CHANGED_CONV FORALL_AND_CONV)), trace = 3,
-             name = "FORALL_AND_CONV",
-             key = SOME([], ``!x:'a. ^P /\ ^Q``)}]
+        simpLib.named_merge_ss "word bit eq"
+          [ARITH_ss, fcpLib.FCP_ss, SIZES_ss,
+           simpLib.rewrites (rw1 @ rw2),
+           simpLib.std_conv_ss
+             {conv = CHANGED_CONV FORALL_AND_CONV,
+              name = "FORALL_AND_CONV",
+              pats = [``!x:'a. ^P /\ ^Q``]}]
   fun WORD_DP_PROVE dp t =
         let val thm1 = QCONV (
                         WORD_CONV

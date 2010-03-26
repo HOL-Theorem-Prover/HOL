@@ -880,6 +880,7 @@ val BOOL_WORD_TAC = SIMP_TAC (fcp_ss++WORD_ss) [] \\ DECIDE_TAC;
 
 val WORD_NOT_NOT = store_thm("WORD_NOT_NOT",
   `!a:'a word. ~(~a) = a`, BOOL_WORD_TAC);
+val _ = export_rewrites ["WORD_NOT_NOT"];
 
 val WORD_DE_MORGAN_THM = store_thm("WORD_DE_MORGAN_THM",
   `!a b. (~(a && b) = ~a !! ~b) /\ (~(a !! b) = ~a && ~b)`, BOOL_WORD_TAC);
@@ -887,6 +888,7 @@ val WORD_DE_MORGAN_THM = store_thm("WORD_DE_MORGAN_THM",
 val WORD_NOT_XOR = store_thm("WORD_NOT_XOR",
   `!a b. (~a ?? ~b = a ?? b) /\ (a ?? ~b = ~(a ?? b)) /\ (~a ?? b = ~(a ?? b))`,
   RW_TAC (fcp_ss++WORD_ss) [] \\ DECIDE_TAC);
+val _ = export_rewrites ["WORD_NOT_XOR"];
 
 val WORD_AND_CLAUSES = store_thm("WORD_AND_CLAUSES",
   `!a:'a word.
@@ -932,12 +934,14 @@ val WORD_OR_IDEM = store_thm("WORD_OR_IDEM",
 
 val WORD_AND_ABSORD = store_thm("WORD_AND_ABSORD",
   `!a b. a !! a && b = a`, BOOL_WORD_TAC);
+val _ = export_rewrites ["WORD_AND_ABSORD"];
 
 val WORD_OR_ABSORB = store_thm("WORD_OR_ABSORB",
   `!a b. a && (a !! b) = a`, BOOL_WORD_TAC);
 
 val WORD_AND_COMP = store_thm("WORD_AND_COMP",
   `!a. a && ~a = 0w`, BOOL_WORD_TAC);
+val _ = export_rewrites ["WORD_AND_COMP"];
 
 val WORD_OR_COMP = store_thm("WORD_OR_COMP",
   `!a. a !! ~a = Tw`, BOOL_WORD_TAC);
@@ -968,12 +972,15 @@ val WORD_XOR = store_thm("WORD_XOR",
 
 val WORD_NAND_NOT_AND = store_thm("WORD_NAND_NOT_AND",
   `!a b. a ~&& b = ~(a && b)`, BOOL_WORD_TAC);
+val _ = export_rewrites ["WORD_NAND_NOT_AND"];
 
 val WORD_NOR_NOT_OR = store_thm("WORD_NOR_NOT_OR",
   `!a b. a ~!! b = ~(a !! b)`, BOOL_WORD_TAC);
+val _ = export_rewrites ["WORD_NOR_NOT_OR"];
 
 val WORD_XNOR_NOT_XOR = store_thm("WORD_XNOR_NOT_XOR",
   `!a b. a ~?? b = ~(a ?? b)`, BOOL_WORD_TAC);
+val _ = export_rewrites ["WORD_XNOR_NOT_XOR"];
 
 val ADD_OR_lem_ = prove(
   `!a b n. ~BIT n a \/ ~BIT n b ==>
