@@ -42,22 +42,23 @@ sig
 
   (* Simplification *)
 
-  val ++             : simpset * ssfrag -> simpset    (* infix *)
-  val &&             : simpset * thm list -> simpset  (* infix *)
-  val pure_ss        : simpset
-  val bool_ss        : simpset
-  val std_ss         : simpset           (* bool + option + pair + sum *)
-  val arith_ss       : simpset
-  val old_arith_ss   : simpset
-  val list_ss        : simpset
-  val srw_ss         : unit -> simpset
-  val ARITH_ss       : ssfrag            (* arithmetic d.p. + some rewrites *)
-  val old_ARITH_ss   : ssfrag
-  val type_rws       : hol_type -> thm list
-  val rewrites       : thm list -> ssfrag
-  val augment_srw_ss : ssfrag list -> unit
-  val export_rewrites: string list -> unit
-  val limit          : int -> simpset -> simpset
+  val ++              : simpset * ssfrag -> simpset    (* infix *)
+  val &&              : simpset * thm list -> simpset  (* infix *)
+  val pure_ss         : simpset
+  val bool_ss         : simpset
+  val std_ss          : simpset           (* bool + option + pair + sum *)
+  val arith_ss        : simpset
+  val old_arith_ss    : simpset
+  val list_ss         : simpset
+  val srw_ss          : unit -> simpset
+  val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
+  val old_ARITH_ss    : ssfrag
+  val type_rws        : hol_type -> thm list
+  val rewrites        : thm list -> ssfrag
+  val augment_srw_ss  : ssfrag list -> unit
+  val diminish_srw_ss : string list -> ssfrag list
+  val export_rewrites : string list -> unit
+  val limit           : int -> simpset -> simpset
 
   (* use these in simplifier's argument list *)
   val SimpLHS        : thm

@@ -47,6 +47,10 @@ sig
                    trace: int,
                     conv: (term list -> term -> thm) -> term list -> conv}
 
+  type stdconvdata = { name: string,
+                       pats: term list,
+                       conv: conv}
+
   type controlled_thm = BoundedRewrites.controlled_thm
   datatype ssfrag = SSFRAG of
     {name : string option,
@@ -64,13 +68,19 @@ sig
   val Cong        : thm -> thm
   val AC          : thm -> thm -> thm
 
+  val rewrites       : thm list -> ssfrag
+  val dproc_ss       : Traverse.reducer -> ssfrag
+  val ac_ss          : (thm * thm) list -> ssfrag
+  val conv_ss        : convdata -> ssfrag
+  val std_conv_ss    : stdconvdata -> ssfrag
+  val merge_ss       : ssfrag list -> ssfrag
+  val name_ss        : string -> ssfrag -> ssfrag
   val named_rewrites : string -> thm list -> ssfrag
-  val rewrites    : thm list -> ssfrag
-  val dproc_ss    : Traverse.reducer -> ssfrag
-  val ac_ss       : (thm * thm) list -> ssfrag
-  val conv_ss     : convdata -> ssfrag
-  val merge_ss    : ssfrag list -> ssfrag
-  val type_ssfrag : hol_type -> ssfrag
+  val named_merge_ss : string -> ssfrag list -> ssfrag
+  val type_ssfrag    : hol_type -> ssfrag
+
+  val partition_ssfrags : string list -> ssfrag list ->
+                          (ssfrag list * ssfrag list)
 
    (* ---------------------------------------------------------------------
     * mk_simpset: Joins several ssfrag fragments to make a simpset.
@@ -86,18 +96,21 @@ sig
 
   type simpset
 
-  val empty_ss     : simpset
-  val ssfrags_of   : simpset -> ssfrag list
-  val mk_simpset   : ssfrag list -> simpset
-  val ++           : simpset * ssfrag -> simpset  (* infix *)
-  val &&           : simpset * thm list -> simpset  (* infix *)
-  val limit        : int -> simpset -> simpset
-  val unlimit      : simpset -> simpset
+  val empty_ss        : simpset
+  val ssfrags_of      : simpset -> ssfrag list
+  val mk_simpset      : ssfrag list -> simpset
+  val remove_ssfrags  : simpset -> string list -> simpset
+  val ++              : simpset * ssfrag -> simpset  (* infix *)
+  val &&              : simpset * thm list -> simpset  (* infix *)
+  val limit           : int -> simpset -> simpset
+  val unlimit         : simpset -> simpset
+
   val add_weakener : (Travrules.preorder list * thm list * Traverse.reducer) ->
                      simpset -> simpset
+
   val add_relsimp  : {trans: thm, refl: thm, weakenings: thm list,
                       subsets: thm list, rewrs : thm list} ->
-                     simpset -> simpset
+                      simpset -> simpset
 
   val traversedata_for_ss: simpset -> Traverse.traverse_data
 

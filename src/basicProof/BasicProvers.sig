@@ -24,6 +24,7 @@ sig
   val NORM_TAC        : simpset -> thm list -> tactic
   val SRW_TAC         : simpLib.ssfrag list -> thm list -> tactic
   val augment_srw_ss  : simpLib.ssfrag list -> unit
+  val diminish_srw_ss : string list -> simpLib.ssfrag list
   val export_rewrites : string list -> unit
   val thy_ssfrag      : string -> simpLib.ssfrag
 

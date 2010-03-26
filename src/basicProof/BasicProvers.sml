@@ -403,6 +403,24 @@ fun augment_srw_ss ssdl =
     else
       pending_updates := !pending_updates @ ssdl;
 
+fun diminish_srw_ss names =
+    if !srw_ss_initialised then
+      let
+        val (frags, rest) = (!srw_ss) |> simpLib.ssfrags_of
+                                      |> List.rev
+                                      |> simpLib.partition_ssfrags names
+        val _ = srw_ss := simpLib.mk_simpset rest
+      in
+        frags
+      end
+    else
+      let
+        val (frags, rest) = simpLib.partition_ssfrags names (!pending_updates)
+        val _ = pending_updates := rest
+      in
+        frags
+      end;
+
 fun update_fn tyi =
   augment_srw_ss ([tyi_to_ssdata tyi] handle HOL_ERR _ => [])
 

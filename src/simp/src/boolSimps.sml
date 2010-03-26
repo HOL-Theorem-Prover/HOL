@@ -112,11 +112,13 @@ end;
  *
  * --------------------------------------------------------------------*)
 
-val NOT_ss = rewrites [NOT_IMP,
-                       DE_MORGAN_THM,
-                       NOT_FORALL_THM,
-                       NOT_EXISTS_THM,
-                       TAUT `(~p = ~q) = (p = q)`];
+val NOT_ss =
+  named_rewrites "NOT"
+    [NOT_IMP,
+     DE_MORGAN_THM,
+     NOT_FORALL_THM,
+     NOT_EXISTS_THM,
+     TAUT `(~p = ~q) = (p = q)`];
 
 (*------------------------------------------------------------------------
  * UNWIND_ss
