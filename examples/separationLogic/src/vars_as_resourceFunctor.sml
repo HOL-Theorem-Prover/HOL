@@ -2835,7 +2835,9 @@ let
    val (solve_thm0,has_bool) = if bagSyntax.is_empty imp_sfb then
                       (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE else
                             VAR_RES_FRAME_SPLIT___SOLVE_WEAK, false)
-                   else let
+                   else 
+                     let
+                        val _ = if not (do_bool) then Feedback.fail() else ();
                         val (bp, rb) = bagSyntax.dest_insert imp_sfb handle HOL_ERR _ => raise UNCHANGED;
                         val _ = if bagSyntax.is_empty rb then () else raise UNCHANGED
                         val (_, b) = dest_var_res_bool_proposition bp handle HOL_ERR _ => raise UNCHANGED
@@ -2847,9 +2849,8 @@ let
                         in
                            (xthm0, false)
                         end else                         
-                        (SPEC b (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop), true)
-                     end
-   val _ = if has_bool andalso (not do_bool) then raise UNCHANGED else ();
+                           (SPEC b (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop), true)
+                     end;
 
    val (wpb,rpb) = dest_pair wpbrpb;
    val solve_thm1 = ISPECL [sr, f,wpb,rpb,wpb'] solve_thm0
@@ -3543,7 +3544,8 @@ val CONSEQ_CONV_CONGRUENCE___var_res_list =
 fun vc_conv vc step_opt =
    if not vc then (K (0, NONE)) else
    EXT_DEPTH_NUM_CONSEQ_CONV CONSEQ_CONV_CONGRUENCE___var_res_list NONE step_opt true
-     [(true, SOME 1, K (K (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV true false [])))] []
+     [(true, SOME 1, fn context => 
+         (K (VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV true false context)))] []
    CONSEQ_CONV_STRENGTHEN_direction;
 
 (*
