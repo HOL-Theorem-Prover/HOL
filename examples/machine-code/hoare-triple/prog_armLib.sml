@@ -10,6 +10,9 @@ open armLib;
 infix \\
 val op \\ = op THEN;
 
+val use_stack = ref false;
+fun arm_use_stack b = (use_stack := b);
+
 val arm_enc = snd o hd o arm_assemble_from_string;
 
 local val arm_memory_pred = ref "auto"
@@ -50,6 +53,7 @@ fun arm_pre_post g = let
   val cpsr_var = mk_var("cpsr",``:word32``)
   val g = subst [``ARM_READ_MASKED_CPSR s``|->cpsr_var] g
   val regs = collect_term_of_type ``:word4`` g
+  val regs = filter wordsSyntax.is_n2w regs
   val bits = collect_term_of_type ``:arm_bit`` g
   val h =  rewrite_names ``ARM_READ_STATUS`` (rewrite_names ``ARM_READ_REG`` g)
   val mems1 = find_terml (can (match_term ``ARM_READ_MEM a ^state``)) h
@@ -84,7 +88,7 @@ fun arm_pre_post g = let
   fun match_any [] tm = fail ()
     | match_any (x::xs) tm = match_term x tm handle HOL_ERR _ => match_any xs tm
   fun pass tm = let
-    val (s,i) = match_any [``ARMv4T_OK s``,
+    val (s,i) = match_any [``ARM_OK s``,
                            ``ALIGNED r15``,
                            ``ARM_READ_MEM (r15 + 3w) s = n2w n``,
                            ``ARM_READ_MEM (r15 + 2w) s = n2w n``,
@@ -275,6 +279,34 @@ fun introduce_aMEMORY th = if
     val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
     in th end end
 
+fun introduce_aSTACK th = 
+  if not (!use_stack) then th else let
+  val (_,p,c,q) = dest_spec(concl th)
+  val fp = mk_var("r11",``:word32``)
+  fun access_fp tm = (tm = fp) orelse
+    (can (match_term ``(v:word32) - n2w n``) tm andalso (fp = (cdr o car) tm))
+  val tm1 = find_term (fn tm => 
+              can (match_term ``aM x y``) tm andalso (access_fp o cdr o car) tm) p
+  val tm2 = find_term (can (match_term (mk_comb(car tm1,genvar(``:word32``))))) q
+  val c1 = MOVE_OUT_CONV ``aR 11w`` THENC MOVE_OUT_CONV (car tm1)
+  val c2 = MOVE_OUT_CONV ``aR 11w`` THENC MOVE_OUT_CONV (car tm2)
+  val th = CONV_RULE (POST_CONV c2 THENC PRE_CONV c1) th
+  val th = DISCH ``ALIGNED r11`` th
+  val th = SIMP_RULE bool_ss [ALIGNED,SEP_CLAUSES] th
+  val th = MATCH_MP aSTACK_INTRO th handle HOL_ERR e =>
+           MATCH_MP (RW [WORD_SUB_RZERO] (Q.INST [`n`|->`0`] aSTACK_INTRO)) th
+  fun mk_stack_var i = mk_var("s" ^ int_to_string i,``:word32``)
+  val index = (Arbnum.toInt o numSyntax.dest_numeral o cdr o cdr o cdr o car) tm1
+              handle HOL_ERR _ => 0
+  val index = index div 4
+  fun mk_slist i = if i = 0 then ``[]:word32 list`` else 
+                     listSyntax.mk_cons(mk_stack_var (index - i), mk_slist (i-1)) 
+  val th = SPECL [mk_slist index,mk_var("ss",``:word32 list``)] th
+  val th = CONV_RULE (RATOR_CONV (SIMP_CONV std_ss [listTheory.LENGTH]) THENC 
+                      REWRITE_CONV [listTheory.APPEND]) th
+  val th = INST [cdr tm1 |-> mk_stack_var index] th  
+  in th end handle HOL_ERR _ => th;
+
 fun calculate_length_and_jump th =
   let val (_,_,_,q) = dest_spec(concl th) in
   let val v = find_term (fn t => t = ``aPC (p + 4w)``) q in (th,4,SOME 4) end
@@ -290,6 +322,7 @@ fun post_process_thm th = let
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
   val th = if get_arm_memory_pred() = "auto" then introduce_aM th else th
+  val th = introduce_aSTACK th
   val th = if mem (get_arm_memory_pred()) ["auto","aBYTE_MEMORY"] 
            then introduce_aBYTE_MEMORY th else th
   val th = if get_arm_memory_pred() = "auto" then introduce_aMEMORY th else th
@@ -341,8 +374,8 @@ val precond_INTRO = prove(
 
 fun arm_prove_specs m_pred s = let
   val _ = set_arm_memory_pred m_pred
-  val thms = [arm_step "v4T" s]
-  val thms = (thms @ [arm_step "v4T,fail" s]) handle HOL_ERR _ => thms
+  val thms = [arm_step "v7" s]
+  val thms = (thms @ [arm_step "v7,fail" s]) handle HOL_ERR _ => thms
 (*
   val th = hd thms
 *)
@@ -350,8 +383,8 @@ fun arm_prove_specs m_pred s = let
     val th = SPEC state th
     val th = RW [ADD_WITH_CARRY_SUB,pairTheory.FST,pairTheory.SND,ADD_WITH_CARRY_SUB_n2w] th
     val th = SIMP_RULE std_ss [] th
-    val tm = (fst o dest_eq o concl o SPEC state) ARMv4T_OK_def
-    val th = (RW [AND_IMP_INTRO] o RW [GSYM ARMv4T_OK_def] o SIMP_RULE bool_ss [ARMv4T_OK_def] o DISCH tm) th
+    val tm = (fst o dest_eq o concl o SPEC state) ARM_OK_def
+    val th = (RW [AND_IMP_INTRO] o RW [GSYM ARM_OK_def] o SIMP_RULE bool_ss [ARM_OK_def] o DISCH tm) th
     val th = SIMP_RULE std_ss [aligned4_thm,aligned2_thm,ARM_READ_MASKED_CPSR_INTRO] th
     val th = if not (can (find_term (fn x => x = ``ARM_READ_MASKED_CPSR``)) (concl th)) then th else let
                val th = SIMP_RULE std_ss [FCP_UPDATE_WORD_AND] th
@@ -396,6 +429,7 @@ val arm_spec_byte_memory = cache (arm_prove_specs "aBYTE_MEMORY");
 
 val arm_tools = (arm_spec, arm_jump, arm_status, arm_pc);
 val arm_tools_no_status = (arm_spec, arm_jump, TRUTH, arm_pc);
+val arm_tools_byte = (arm_spec_byte_memory, arm_jump, arm_status, arm_pc);
 
 
 (*
@@ -461,6 +495,12 @@ val arm_tools_no_status = (arm_spec, arm_jump, TRUTH, arm_pc);
   val thms = arm_spec (enc "MSR CPSR, r1");
   val thms = arm_spec (enc "MSR CPSR, #219");
   val thms = arm_spec (enc "MRS r1, CPSR");
+  val thms = arm_spec (enc "LDR r0, [r11, #-8]");
+  val thms = arm_spec (enc "LDR r0, [r11]");
+  val thms = arm_spec (enc "STR r0, [r11]");
+  val thms = arm_spec (enc "STR r0, [r11, #-8]");
+
+  arm_use_stack true;
 
 *)
 

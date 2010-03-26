@@ -221,6 +221,10 @@ val SPEC_MERGE_COND = store_thm("SPEC_MERGE_COND",
   \\ SIMP_TAC std_ss [SEP_CLAUSES,SPEC_FALSE_PRE]
   \\ METIS_TAC [SPEC_ADD_CODE,SPEC_MERGE,SEP_CLAUSES,UNION_COMM]);
 
+val SPEC_MOVE_COND_POST = store_thm("SPEC_MOVE_COND_POST",
+  ``SPEC m (p * cond b) c q = SPEC m (p * cond b) c (q * cond b)``,
+  SIMP_TAC std_ss [SPEC_MOVE_COND,SEP_CLAUSES]);
+
 val SPEC_REFL = store_thm("SPEC_REFL",
   ``!x:('a,'b,'c)processor p c. SPEC x p c p``,
   INIT_TAC \\ SIMP_TAC std_ss [RUN_def,SPEC_def] \\ REPEAT STRIP_TAC

@@ -10,6 +10,8 @@ type decompiler_tools =
   (string -> (Thm.thm * int * int option) * (Thm.thm * int * int option) option) *
   (term -> term -> int -> bool -> string * int) * Thm.thm * Abbrev.term
 
+infix \\
+val op \\ = op THEN;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -450,8 +452,9 @@ fun SEP_EXISTS_ELIM_CONV tm = let
   val tm3 = subst [hd xs |-> mk_sep_hide f] p
   val tm3 = foldr mk_sep_exists tm3 vs
   val goal = mk_eq(tm2,tm3)
+  val thi = CONV_RULE ((RAND_CONV o RAND_CONV) (ALPHA_CONV x)) (ISPEC f SEP_HIDE_def)
   val th = prove(goal,
-    SIMP_TAC std_ss [SEP_CLAUSES,SEP_HIDE_def]
+    SIMP_TAC std_ss [SEP_CLAUSES,thi]
     THEN CONV_TAC (RAND_CONV SEP_EXISTS_AC_CONV)
     THEN CONV_TAC ((RATOR_CONV o RAND_CONV) SEP_EXISTS_AC_CONV)
     THEN ASM_SIMP_TAC std_ss []
@@ -485,6 +488,11 @@ fun SPEC_BOOL_FRAME_RULE th frame = let
   val th = INST [mk_var("boolean_variable_name",``:bool``) |-> frame] th
   in th end
 
+fun SEP_REWRITE_RULE rws th = let 
+  val rws = map (MATCH_MP SEP_REWRITE_THM) rws
+  val th = SIMP_RULE std_ss (GSYM STAR_ASSOC::rws) th 
+  val th = SIMP_RULE std_ss (STAR_ASSOC::rws) th 
+  in th end;
 
 (* a rule for composing a list of SPEC theorems *)
 
@@ -555,6 +563,14 @@ fun find_composition2 th1 th2 = let
   val th2 = foldr (uncurry HIDE_PRE_RULE) th2 hide_from_pre
   in find_composition1 th1 th2 end;
 
+(*
+  val th1o = th1
+  val th2o = th2
+
+  val th1 = th1o
+  val th2 = th2o
+*)
+
 fun find_composition3 th1 th2 = let
   val (_,_,_,q) = dest_spec (concl th1)
   val (_,p,_,_) = dest_spec (concl th2)
@@ -564,6 +580,7 @@ fun find_composition3 th1 th2 = let
      val th1 = CONV_RULE (POST_CONV f) th1
      val th2 = CONV_RULE (PRE_CONV f) th2
      val th2 = SIMP_RULE bool_ss [GSYM SPEC_PRE_EXISTS] th2
+     (* first level match *)
      val (_,_,_,q) = dest_spec (concl th1)
      val (_,p,_,_) = dest_spec (concl th2)
      val vs = list_dest dest_sep_exists q
@@ -572,8 +589,18 @@ fun find_composition3 th1 th2 = let
      val ty = type_of q
      val (m,i) = match_term (list_mk_star ys1 ty) (list_mk_star xs1 ty)
      val th2 = INST m (INST_TYPE i th2)
+     (* second level match *)
+     val (_,_,_,q) = dest_spec (concl th1)
+     val (_,p,_,_) = dest_spec (concl th2)
+     val vs = list_dest dest_sep_exists q
+     val (vs,q) = (butlast vs,last vs)    
+     val (xs1,xs2,ys1,ys2) = match_and_partition (list_dest dest_star q) (list_dest dest_star p)
+     val ty = type_of q
+     val (m,i) = match_term (list_mk_star ys1 ty) (list_mk_star xs1 ty)
+     val th2 = INST m (INST_TYPE i th2)
+     (* do rest *)
      val th2 = SPEC (list_mk_star xs2 ty) (MATCH_MP SPEC_FRAME th2) 
-     val th1 = SPEC (list_mk_star ys2 ty) (MATCH_MP SPEC_FRAME th1) 
+     val th1 = SPEC (subst m (inst i (list_mk_star ys2 ty))) (MATCH_MP SPEC_FRAME th1) 
      val th1 = CONV_RULE (POST_CONV f) th1
      val th2 = CONV_RULE (PRE_CONV f) th2
      val th2 = foldr (uncurry SEP_EXISTS_PRE_RULE) th2 vs     

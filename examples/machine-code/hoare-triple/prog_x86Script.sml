@@ -1013,5 +1013,27 @@ val X86_SPEC_EXLPODE_CODE_LEMMA = prove(
 val X86_SPEC_EXLPODE_CODE = save_thm("X86_SPEC_EXLPODE_CODE",
   RW [UNION_EMPTY] (Q.SPEC `{}` X86_SPEC_EXLPODE_CODE_LEMMA));
 
+(* Stack --- sp points at top of stack, stack grows towards smaller addresses *)  
+
+val xSTACK_def = Define `
+  xSTACK bp xs = xR EBP bp * xR ESP (bp - n2w (4 * LENGTH xs)) * 
+                 SEP_ARRAY xM (-4w) bp xs * cond (ALIGNED bp)`;
+
+val STAR6 = prove(
+  ``p1 * p2 * p3 * p4 * p5 * p6 = (p1 * p2 * p5) * (STAR p3 p4 * p6)``,
+  SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
+
+val xSTACK_INTRO_EBX = store_thm("xSTACK_INTRO_EBX",
+  ``(ALIGNED ebp ==>
+     SPEC X86_MODEL (q1 * xR EBP ebp * xM (ebp - n2w n) x) c 
+                    (q2 * xR EBP ebp * xM (ebp - n2w n) y)) ==>
+    !xs ys.
+      (4 * LENGTH xs = n) ==>
+      SPEC X86_MODEL (q1 * xSTACK ebp (xs ++ [x] ++ ys))
+                   c (q2 * xSTACK ebp (xs ++ [y] ++ ys))``,
+  SIMP_TAC std_ss [xSTACK_def,SEP_ARRAY_APPEND,GSYM WORD_NEG_RMUL,STAR_ASSOC,
+    RW1 [MULT_COMM] word_mul_n2w,GSYM word_sub_def,SEP_ARRAY_def,SEP_CLAUSES,
+    LENGTH,LENGTH_APPEND,SPEC_MOVE_COND] \\ ONCE_REWRITE_TAC [STAR6]
+  \\ METIS_TAC [SPEC_FRAME]);
 
 val _ = export_theory();

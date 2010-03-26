@@ -11,5 +11,6 @@ sig
 
     val set_x86_exec_flag             : bool -> unit
     val set_x86_code_write_perm_flag  : bool -> unit
+    val set_x86_use_stack             : bool -> unit
 
 end

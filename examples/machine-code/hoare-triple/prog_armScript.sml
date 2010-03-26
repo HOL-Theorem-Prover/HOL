@@ -39,9 +39,9 @@ val _ = Parse.type_abbrev("arm_set",``:arm_el set``);
 (* Converting from ARM-state record to arm_set                                   *)
 (* ----------------------------------------------------------------------------- *)
 
-val ARMv4T_OK_def = Define `
-  ARMv4T_OK state = 
-    (ARM_ARCH state = ARMv4T) /\ (ARM_EXTENSIONS state = {}) /\
+val ARM_OK_def = Define `
+  ARM_OK state = 
+    (ARM_ARCH state = ARMv7_A) /\ (ARM_EXTENSIONS state = {}) /\
     (ARM_UNALIGNED_SUPPORT state) /\ (ARM_READ_EVENT_REGISTER state) /\
     ~(ARM_READ_INTERRUPT_WAIT state) /\ ~(ARM_READ_SCTLR sctlrV state) /\
     (ARM_READ_SCTLR sctlrA state) /\ ~(ARM_READ_SCTLR sctlrU state) /\
@@ -49,7 +49,7 @@ val ARMv4T_OK_def = Define `
     ~(ARM_READ_STATUS psrT state) /\ ~(ARM_READ_STATUS psrE state) /\
     (ARM_MODE state = 16w)`;
 
-val ARM_READ_UNDEF_def = Define `ARM_READ_UNDEF s = ~(ARMv4T_OK s)`;
+val ARM_READ_UNDEF_def = Define `ARM_READ_UNDEF s = ~(ARM_OK s)`;
 
 val ARM_READ_MASKED_CPSR_def = Define `
   ARM_READ_MASKED_CPSR s = (26 '' 0) (encode_psr (ARM_READ_CPSR s))`;
@@ -296,7 +296,7 @@ val UNDEF_OF_UPDATES = prove(
     (!a x. ARM_READ_UNDEF (ARM_WRITE_MEM_WRITE a x s) = ARM_READ_UNDEF s) /\ 
     (!a. ARM_READ_UNDEF (ARM_WRITE_MEM_READ a s) = ARM_READ_UNDEF s) /\
     (!a x y. ARM_READ_UNDEF (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_UNDEF s)``,
-  SIMP_TAC std_ss [ARM_READ_UNDEF_def,ARMv4T_OK_def] \\ REPEAT STRIP_TAC 
+  SIMP_TAC std_ss [ARM_READ_UNDEF_def,ARM_OK_def] \\ REPEAT STRIP_TAC 
   \\ EVAL_TAC \\ SRW_TAC [] [] \\ EVAL_TAC);
 
 val MASKED_CPSR_OF_UPDATES = prove(
@@ -306,7 +306,7 @@ val MASKED_CPSR_OF_UPDATES = prove(
     (!a x. ARM_READ_MASKED_CPSR (ARM_WRITE_MEM_WRITE a x s) = ARM_READ_MASKED_CPSR s) /\ 
     (!a. ARM_READ_MASKED_CPSR (ARM_WRITE_MEM_READ a s) = ARM_READ_MASKED_CPSR s) /\
     (!a x y. ARM_READ_MASKED_CPSR (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) = ARM_READ_MASKED_CPSR s)``,
-  SIMP_TAC std_ss [ARM_READ_MASKED_CPSR_THM,ARMv4T_OK_def] \\ REPEAT STRIP_TAC THEN1
+  SIMP_TAC std_ss [ARM_READ_MASKED_CPSR_THM,ARM_OK_def] \\ REPEAT STRIP_TAC THEN1
    (SIMP_TAC std_ss [ARM_WRITE_STS_def]
     \\ Cases_on `a IN {psrN; psrZ; psrC; psrV; psrQ}` \\ ASM_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (f x = f y)``)
@@ -318,6 +318,17 @@ val MASKED_CPSR_OF_UPDATES = prove(
 val ARM_READ_WRITE = LIST_CONJ [REG_OF_UPDATES,MEM_OF_UPDATES,MASKED_CPSR_OF_UPDATES,
                                 UNDEF_OF_UPDATES,CPSR_COMPONENTS_OF_UPDATES]
 val _ = save_thm("ARM_READ_WRITE",ARM_READ_WRITE);
+
+val ARM_OK_WRITE_GE = prove(
+  ``ARM_OK (ARM_WRITE_GE w4 s) = ARM_OK s``,
+  SIMP_TAC std_ss [ARM_OK_def] \\ EVAL_TAC);  
+
+(*
+val UPDATE_arm2set''_GE = prove(
+  ``(!w4. arm2set'' (rs,ms,st,cp,ud) (ARM_WRITE_GE w4 s) = arm2set'' (rs,ms,st,cp,ud) s)``,
+  SIMP_TAC std_ss [arm2set_def,arm2set''_def,arm2set'_def,REG_OF_UPDATES,
+    MEM_OF_UPDATES,ARM_READ_WRITE,ARM_READ_UNDEF_def,ARM_OK_WRITE_GE]
+*)
 
 val UPDATE_arm2set'' = store_thm("UPDATE_arm2set''",
   ``(!a x. a IN rs ==> (arm2set'' (rs,ms,st,cp,ud) (ARM_WRITE_REG a x s) = arm2set'' (rs,ms,st,cp,ud) s)) /\
@@ -456,7 +467,7 @@ val aMEMORY_ARITH_LEMMA = prove(
   SIMP_TAC (std_ss++wordsLib.SIZES_ss) [WORD_EQ_ADD_LCANCEL,n2w_11,
     RW [WORD_ADD_0] (Q.SPECL [`x`,`0w`] WORD_EQ_ADD_LCANCEL)]);
 
-val aMEMORY_LEMMA = prove(
+val aM_THM = store_thm("aM_THM",
   ``!a f w. ALIGNED a ==> (aMEMORY {a} ((a =+ w) f) = aM a w)``,
   SIMP_TAC std_ss [aMEMORY_def,aMEMORY_SET_SING,aM_def] \\ REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [FUN_EQ_THM]
@@ -505,7 +516,7 @@ val aMEMORY_INSERT_LEMMA = prove(
   \\ ASM_SIMP_TAC bool_ss [] \\ METIS_TAC []);
 
 val aMEMORY_INSERT = save_thm("aMEMORY_INSERT",
-  SIMP_RULE std_ss [aMEMORY_LEMMA] aMEMORY_INSERT_LEMMA);
+  SIMP_RULE std_ss [aM_THM] aMEMORY_INSERT_LEMMA);
 
 val aMEMORY_INTRO = store_thm("aMEMORY_INTRO",
   ``SPEC ARM_MODEL (aM a v * P) c (aM a w * Q) ==>
@@ -515,7 +526,7 @@ val aMEMORY_INTRO = store_thm("aMEMORY_INTRO",
   \\ (IMP_RES_TAC o GEN_ALL o REWRITE_RULE [AND_IMP_INTRO] o
      SIMP_RULE std_ss [INSERT_DELETE,IN_DELETE] o
      DISCH ``a:word32 IN df`` o Q.SPEC `df DELETE a` o GSYM) aMEMORY_INSERT_LEMMA
-  \\ ASM_REWRITE_TAC [] \\ ASM_SIMP_TAC bool_ss [aMEMORY_LEMMA]
+  \\ ASM_REWRITE_TAC [] \\ ASM_SIMP_TAC bool_ss [aM_THM]
   \\ ONCE_REWRITE_TAC [STAR_COMM] \\ REWRITE_TAC [STAR_ASSOC]
   \\ MATCH_MP_TAC SPEC_FRAME
   \\ FULL_SIMP_TAC bool_ss [AC STAR_COMM STAR_ASSOC]);
@@ -592,5 +603,28 @@ val FCP_UPDATE_WORD_AND = store_thm("FCP_UPDATE_WORD_AND",
   \\ ONCE_REWRITE_TAC [fcpTheory.FCP_APPLY_UPDATE_THM]
   \\ SIMP_TAC std_ss [fcpTheory.FCP_BETA] \\ METIS_TAC []);
 
+
+(* Stack --- sp points at top of stack, stack grows towards smaller addresses *)  
+
+val aSTACK_def = Define `
+  aSTACK fp xs = aR 11w fp * aR 13w (fp - n2w (4 * LENGTH xs)) * 
+                 SEP_ARRAY aM (-4w) fp xs * cond (ALIGNED fp)`;
+
+val STAR6 = prove(
+  ``p1 * p2 * p3 * p4 * p5 * p6 = (STAR p1 p2 * p5) * (p3 * p4 * p6)``,
+  SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
+
+val aSTACK_INTRO = store_thm("aSTACK_INTRO",
+  ``(ALIGNED a ==>
+     SPEC ARM_MODEL (q1 * aR 11w a * aM (a - n2w n) x) c 
+                    (q2 * aR 11w a * aM (a - n2w n) y)) ==>
+    !xs ys.
+      (4 * LENGTH xs = n) ==>
+      SPEC ARM_MODEL (q1 * aSTACK a (xs ++ [x] ++ ys))
+                   c (q2 * aSTACK a (xs ++ [y] ++ ys))``,
+  SIMP_TAC std_ss [aSTACK_def,SEP_ARRAY_APPEND,GSYM WORD_NEG_RMUL,STAR_ASSOC,
+    RW1 [MULT_COMM] word_mul_n2w,GSYM word_sub_def,SEP_ARRAY_def,SEP_CLAUSES,
+    LENGTH,LENGTH_APPEND,SPEC_MOVE_COND] \\ ONCE_REWRITE_TAC [STAR6]
+  \\ METIS_TAC [SPEC_FRAME]);
 
 val _ = export_theory();

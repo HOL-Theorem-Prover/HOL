@@ -11,12 +11,15 @@ infix \\
 val op \\ = op THEN;
 
 
+
 val x86_status = xS_HIDE;
 val x86_pc = ``xPC``;
 val x86_exec_flag = ref false;
 val x86_code_write_perm = ref false;
+val x86_use_stack = ref true;
 fun set_x86_exec_flag b = (x86_exec_flag := b);
 fun set_x86_code_write_perm_flag b = (x86_code_write_perm := b);
+fun set_x86_use_stack b = (x86_use_stack := b);
 
 fun name_for_resource counter tm = let
   val to_lower_drop_two = implode o tl o tl o explode o to_lower
@@ -140,6 +143,31 @@ fun introduce_xBYTE_MEMORY_ANY th = let
   val th = replace_access_in_pre th
   in th end handle e => th;
 
+fun introduce_xSTACK th = 
+  if not (!x86_use_stack) then th else let
+  val (_,p,c,q) = dest_spec(concl th)
+  val ebp = mk_var("ebp",``:word32``)
+  fun access_ebp tm = (tm = ebp) orelse
+    (can (match_term ``(v:word32) - n2w n``) tm andalso (ebp = (cdr o car) tm))
+  val tm1 = find_term (fn tm => 
+              can (match_term ``xM x y``) tm andalso (access_ebp o cdr o car) tm) p
+  val tm2 = find_term (can (match_term (mk_comb(car tm1,genvar(``:word32``))))) q
+  val c1 = MOVE_OUT_CONV ``xR EBP`` THENC MOVE_OUT_CONV (car tm1)
+  val c2 = MOVE_OUT_CONV ``xR EBP`` THENC MOVE_OUT_CONV (car tm2)
+  val th = CONV_RULE (POST_CONV c2 THENC PRE_CONV c1) th
+  val th = DISCH ``ALIGNED ebp`` th
+  val th = MATCH_MP xSTACK_INTRO_EBX th
+  fun mk_stack_var i = mk_var("s" ^ int_to_string i,``:word32``)
+  val index = (Arbnum.toInt o numSyntax.dest_numeral o cdr o cdr o cdr o car) tm1
+  val index = index div 4
+  fun mk_slist i = if i = 0 then ``[]:word32 list`` else 
+                     listSyntax.mk_cons(mk_stack_var (index - i), mk_slist (i-1)) 
+  val th = SPECL [mk_slist index,mk_var("ss",``:word32 list``)] th
+  val th = CONV_RULE (RATOR_CONV (SIMP_CONV std_ss [listTheory.LENGTH]) THENC 
+                      REWRITE_CONV [listTheory.APPEND]) th
+  val th = INST [cdr tm1 |-> mk_stack_var index] th  
+  in th end handle e => th;
+  
 fun calculate_length_and_jump th = let
   val (_,_,c,q) = dest_spec (concl th)
   val l = (length o fst o listSyntax.dest_list o cdr o car o cdr o cdr o car) c
@@ -155,6 +183,7 @@ fun calculate_length_and_jump th = let
 fun post_process_thm th = let
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w,SEP_CLAUSES] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
+  val th = introduce_xSTACK th
   val th = introduce_xMEMORY th
   val th = introduce_xBYTE_MEMORY_ANY th
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [GSYM wordsTheory.WORD_ADD_ASSOC,
@@ -307,6 +336,7 @@ open x86_encodeLib;
   val th = x86_spec "7405";
 
   val th = x86_spec (x86_encode "jmp edx")
+  val th = x86_spec (x86_encode "add [ebp-20],eax")
 
   val th = x86_spec "E9";              (* jmp imm32 *)
 

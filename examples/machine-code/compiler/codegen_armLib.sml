@@ -13,7 +13,7 @@ fun get_arm_temp_regs () = (!arm_temp_regs);
 
 val arm_assign2assembly = let
   fun r i = "r" ^ int_to_string i
-  fun s i = "[sp,#" ^ int_to_string (4 * i) ^ "]"
+  fun s i = "[r11,#-" ^ int_to_string (4 * i) ^ "]"
   fun address (ASSIGN_ADDRESS_REG i) = "[" ^ r i ^ "]"
     | address (ASSIGN_ADDRESS_OFFSET_ADD (d,i)) = "[" ^ r d ^ ", #" ^ Arbnum.toString i ^ "]"
     | address (ASSIGN_ADDRESS_OFFSET_SUB (d,i)) = "[" ^ r d ^ ", #-" ^ Arbnum.toString i ^ "]"
