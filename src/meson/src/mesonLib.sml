@@ -1010,7 +1010,7 @@ fun GEN_MESON_TAC min max step ths g =
  inform
  (REFUTE_THEN ASSUME_TAC
    THEN let open jrhTactics
-        in convert (POLY_ASSUME_TAC (map GEN_ALL ths)
+        in convert (POLY_ASSUME_TAC (map (GEN_ALL o TY_SPEC_ALL) ths)
                       THEN PREMESON_CANON_TAC
                       THEN PURE_MESON_TAC min max step)
         end) g;
