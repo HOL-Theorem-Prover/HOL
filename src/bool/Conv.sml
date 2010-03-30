@@ -672,6 +672,28 @@ fun NOT_FORALL_CONV tm =
    handle HOL_ERR _ => raise ERR "NOT_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
+(* NOT_TY_FORALL_CONV, implements the following axiom scheme:           *)
+(*                                                                      *)
+(*      |- (~!:a.tm) = (?:a.~tm)                                        *)
+(*                                                                      *)
+(* ---------------------------------------------------------------------*)
+fun NOT_TY_FORALL_CONV tm =
+   let val all = dest_neg tm
+       val {Bvar,Body} = dest_tyforall all
+       val exists = mk_tyexists{Bvar = Bvar, Body = mk_neg Body}
+       val nott = ASSUME (mk_neg Body)
+       val not_all = mk_neg all
+       val th1 = DISCH all (MP nott (TY_SPEC Bvar (ASSUME all)))
+       val imp1 = DISCH exists (TY_CHOOSE (Bvar, ASSUME exists) (NOT_INTRO th1))
+       val th2 = CCONTR Body (MP (ASSUME(mk_neg exists))
+                              (TY_EXISTS(exists,Bvar) nott))
+       val th3 = CCONTR exists (MP (ASSUME not_all) (TY_GEN Bvar th2))
+   in
+     IMP_ANTISYM_RULE (DISCH not_all th3) imp1
+   end
+   handle HOL_ERR _ => raise ERR "NOT_TY_FORALL_CONV" "";
+
+(* ---------------------------------------------------------------------*)
 (* NOT_EXISTS_CONV, implements the following axiom scheme.              *)
 (*                                                                      *)
 (*      |- (~?x.tm) = (!x.~tm)                                          *)
@@ -694,6 +716,28 @@ fun NOT_EXISTS_CONV tm =
    handle HOL_ERR _ => raise ERR "NOT_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
+(* NOT_TY_EXISTS_CONV, implements the following axiom scheme.           *)
+(*                                                                      *)
+(*      |- (~?:a.tm) = (!:a.~tm)                                        *)
+(*                                                                      *)
+(* ---------------------------------------------------------------------*)
+fun NOT_TY_EXISTS_CONV tm =
+   let val {Bvar,Body} = dest_tyexists (dest_neg tm)
+       val all = mk_tyforall{Bvar=Bvar, Body=mk_neg Body}
+       val rand_tm = rand tm
+       val asm1 = ASSUME Body
+       val thm1 = MP (ASSUME tm) (TY_EXISTS (rand_tm, Bvar) asm1)
+       val imp1 = DISCH tm (TY_GEN Bvar (NOT_INTRO (DISCH Body thm1)))
+       val asm2 = ASSUME  all
+       and asm3 = ASSUME rand_tm
+       val thm2 = DISCH rand_tm (TY_CHOOSE (Bvar,asm3) (MP (TY_SPEC Bvar asm2) asm1))
+       val imp2 = DISCH all (NOT_INTRO thm2)
+   in
+     IMP_ANTISYM_RULE imp1 imp2
+   end
+   handle HOL_ERR _ => raise ERR "NOT_TY_EXISTS_CONV" "";
+
+(* ---------------------------------------------------------------------*)
 (* EXISTS_NOT_CONV, implements the following axiom scheme.              *)
 (*                                                                      *)
 (*      |- (?x.~tm) = (~!x.tm)                                          *)
@@ -707,6 +751,19 @@ fun EXISTS_NOT_CONV tm =
    handle HOL_ERR _ => raise ERR "EXISTS_NOT_CONV" "";
 
 (* ---------------------------------------------------------------------*)
+(* TY_EXISTS_NOT_CONV, implements the following axiom scheme.           *)
+(*                                                                      *)
+(*      |- (?:a.~tm) = (~!:a.tm)                                        *)
+(*                                                                      *)
+(* ---------------------------------------------------------------------*)
+fun TY_EXISTS_NOT_CONV tm =
+   let val {Bvar,Body} = dest_tyexists tm
+   in
+     SYM(NOT_TY_FORALL_CONV (mk_neg (mk_tyforall{Bvar=Bvar, Body=dest_neg Body})))
+   end
+   handle HOL_ERR _ => raise ERR "TY_EXISTS_NOT_CONV" "";
+
+(* ---------------------------------------------------------------------*)
 (* FORALL_NOT_CONV, implements the following axiom scheme.              *)
 (*                                                                      *)
 (*      |- (!x.~tm) = (~?x.tm)                                          *)
@@ -718,6 +775,19 @@ fun FORALL_NOT_CONV tm =
      SYM (NOT_EXISTS_CONV (mk_neg (mk_exists{Bvar=Bvar,Body=dest_neg Body})))
    end
    handle HOL_ERR _ => raise ERR "FORALL_NOT_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* TY_FORALL_NOT_CONV, implements the following axiom scheme.           *)
+(*                                                                      *)
+(*      |- (!:a.~tm) = (~?:a.tm)                                        *)
+(*                                                                      *)
+(* ---------------------------------------------------------------------*)
+fun TY_FORALL_NOT_CONV tm =
+   let val {Bvar,Body} = dest_tyforall tm
+   in
+     SYM (NOT_TY_EXISTS_CONV (mk_neg (mk_tyexists{Bvar=Bvar,Body=dest_neg Body})))
+   end
+   handle HOL_ERR _ => raise ERR "TY_FORALL_NOT_CONV" "";
 
 (* ---------------------------------------------------------------------*)
 (* FORALL_AND_CONV : move universal quantifiers into conjunction.       *)
@@ -738,6 +808,27 @@ fun FORALL_AND_CONV tm =
       IMP_ANTISYM_RULE imp1 (DISCH xtm (GEN Bvar (CONJ t1 t2)))
     end
     handle HOL_ERR _ => raise ERR "FORALL_AND_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* TY_FORALL_AND_CONV : move type universal quantifiers into            *)
+(* conjunction.                                                         *)
+(*                                                                      *)
+(* A call to TY_FORALL_AND_CONV "!:a. P /\ Q"  returns:                 *)
+(*                                                                      *)
+(*   |- (!:a. P /\ Q) = (!:a.P) /\ (!:a.Q)                              *)
+(* ---------------------------------------------------------------------*)
+fun TY_FORALL_AND_CONV tm =
+    let val {Bvar,Body} = dest_tyforall tm
+        val {...} = dest_conj Body
+        val (Pth,Qth) = CONJ_PAIR (TY_SPEC Bvar (ASSUME tm))
+        val imp1 = DISCH tm (CONJ (TY_GEN Bvar Pth) (TY_GEN Bvar Qth))
+        val xtm = rand(concl imp1)
+        val spec_bv = TY_SPEC Bvar
+        val (t1,t2) = (spec_bv##spec_bv) (CONJ_PAIR (ASSUME xtm))
+    in
+      IMP_ANTISYM_RULE imp1 (DISCH xtm (TY_GEN Bvar (CONJ t1 t2)))
+    end
+    handle HOL_ERR _ => raise ERR "TY_FORALL_AND_CONV" "";
 
 (* ---------------------------------------------------------------------*)
 (* EXISTS_OR_CONV : move existential quantifiers into disjunction.      *)
@@ -797,6 +888,64 @@ fun EXISTS_OR_CONV tm =
 end;
 
 (* ---------------------------------------------------------------------*)
+(* TY_EXISTS_OR_CONV : move type existential quantifiers into           *)
+(* disjunction.                                                         *)
+(*                                                                      *)
+(* A call to TY_EXISTS_OR_CONV "?:a. P \/ Q"  returns:                  *)
+(*                                                                      *)
+(*   |- (?:a. P \/ Q) = (?:a.P) \/ (?:a.Q)                              *)
+(* ---------------------------------------------------------------------*)
+(*
+fun TY_EXISTS_OR_CONV tm =
+   let val {Bvar,Body} = dest_tyexists tm
+       val {disj1,disj2} = dest_disj Body
+       val ep = mk_tyexists{Bvar=Bvar, Body=disj1}
+       and eq = mk_tyexists{Bvar=Bvar, Body=disj2}
+       val ep_or_eq = mk_disj{disj1=ep, disj2=eq}
+       val aP = ASSUME disj1
+       val aQ = ASSUME disj2
+       val Pth = TY_EXISTS(ep,Bvar) aP
+       and Qth = TY_EXISTS(eq,Bvar) aQ
+       val thm1 = DISJ_CASES_UNION (ASSUME Body) Pth Qth
+       val imp1 = DISCH tm (TY_CHOOSE (Bvar,ASSUME tm) thm1)
+       val t1 = DISJ1 aP disj2
+       and t2 = DISJ2 disj1 aQ
+       val th1 = TY_EXISTS(tm,Bvar) t1
+       and th2 = TY_EXISTS(tm,Bvar) t2
+       val e1 = TY_CHOOSE (Bvar,ASSUME ep) th1
+       and e2 = TY_CHOOSE (Bvar,ASSUME eq) th2
+   in
+    IMP_ANTISYM_RULE imp1 (DISCH ep_or_eq (DISJ_CASES (ASSUME ep_or_eq) e1 e2))
+   end
+   handle HOL_ERR _ => raise ERR "TY_EXISTS_OR_CONV" "";
+*)
+
+local val kappa = Kind.kappa
+      val spotBeta = FORK_CONV (TY_QUANT_CONV (BINOP_CONV TY_BETA_CONV),
+                                BINOP_CONV (TY_QUANT_CONV TY_BETA_CONV))
+      open boolTheory
+      val [P0,Q0] = fst(strip_forall(concl TY_EXISTS_OR_THM))
+      val thm0 = SPEC Q0 (SPEC P0 TY_EXISTS_OR_THM)
+      val Pname = #Name(dest_var P0)
+      val Qname = #Name(dest_var Q0)
+in
+fun TY_EXISTS_OR_CONV tm =
+  let val {Bvar,Body} = dest_tyexists tm
+      val thm = CONV_RULE (RAND_CONV (BINOP_CONV (GEN_TY_ALPHA_CONV Bvar)))
+                          (INST_KIND [kappa |-> kind_of Bvar] thm0)
+      val ty = mk_univ_type(Bvar, Type.bool)
+      val P = mk_var{Name=Pname, Ty=ty}
+      val Q = mk_var{Name=Qname, Ty=ty}
+      val {disj1,disj2} = dest_disj Body
+      val tylamP = mk_tyabs{Bvar=Bvar, Body=disj1}
+      val tylamQ = mk_tyabs{Bvar=Bvar, Body=disj2}
+  in
+    CONV_RULE spotBeta (INST [P |-> tylamP, Q |-> tylamQ] thm)
+  end
+  handle HOL_ERR _ => raise ERR "TY_EXISTS_OR_CONV" "";
+end;
+
+(* ---------------------------------------------------------------------*)
 (* AND_FORALL_CONV : move universal quantifiers out of conjunction.     *)
 (*                                                                      *)
 (* A call to AND_FORALL_CONV "(!x. P) /\ (!x. Q)"  returns:             *)
@@ -821,6 +970,33 @@ fun AND_FORALL_CONV tm =
         end
    end
    handle HOL_ERR _ => raise ERR "AND_FORALL_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* AND_TY_FORALL_CONV : move type universal quantifiers out of          *)
+(* conjunction.                                                         *)
+(*                                                                      *)
+(* A call to AND_TY_FORALL_CONV "(!:a. P) /\ (!:a. Q)"  returns:        *)
+(*                                                                      *)
+(*   |- (!:a.P) /\ (!:a.Q) = (!:a. P /\ Q)                              *)
+(* ---------------------------------------------------------------------*)
+
+fun AND_TY_FORALL_CONV tm =
+   let val {conj1,conj2} = dest_conj tm
+       val {Bvar=x, Body=P} = dest_tyforall conj1
+       val {Bvar=y, Body=Q} = dest_tyforall conj2
+   in
+   if (not (eq_ty x y))
+   then raise ERR "AND_TY_FORALL_CONV" "type forall'ed variables not the same"
+   else let val specx = TY_SPEC x
+            val (t1,t2) = (specx##specx) (CONJ_PAIR (ASSUME tm))
+            val imp1 = DISCH tm (TY_GEN x (CONJ t1 t2))
+            val rtm = rand(concl imp1)
+            val (Pth,Qth) = CONJ_PAIR (TY_SPEC x (ASSUME rtm))
+        in
+        IMP_ANTISYM_RULE imp1 (DISCH rtm (CONJ (TY_GEN x Pth) (TY_GEN x Qth)))
+        end
+   end
+   handle HOL_ERR _ => raise ERR "AND_TY_FORALL_CONV" "";
 
 
 (* ---------------------------------------------------------------------*)
@@ -848,6 +1024,31 @@ fun LEFT_AND_FORALL_CONV tm =
    handle HOL_ERR _ => raise ERR "LEFT_AND_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
+(* LEFT_AND_TY_FORALL_CONV : move type universal quantifier out of      *)
+(* conjunction.                                                         *)
+(*                                                                      *)
+(* A call to LEFT_AND_TY_FORALL_CONV "(!:a.P) /\  Q"  returns:          *)
+(*                                                                      *)
+(*   |- (!:a.P) /\ Q = (!:a'. P[a'/a] /\ Q)                             *)
+(*                                                                      *)
+(* Where a' is a primed variant of a not free in the input term         *)
+(* ---------------------------------------------------------------------*)
+fun LEFT_AND_TY_FORALL_CONV tm =
+   let val {conj1,...} = dest_conj tm
+       val {Bvar,...} = dest_tyforall conj1
+       val a' = variant_type (type_vars_in_term tm) Bvar
+       val speca' = TY_SPEC a'
+       and gena' = TY_GEN a'
+       val (t1,t2) = (speca' ## I) (CONJ_PAIR (ASSUME tm))
+       val imp1 = DISCH tm (gena' (CONJ t1 t2))
+       val rtm = rand(concl imp1)
+       val (Pth,Qth) = CONJ_PAIR (speca' (ASSUME rtm))
+   in
+     IMP_ANTISYM_RULE imp1 (DISCH rtm (CONJ (gena' Pth)  Qth))
+   end
+   handle HOL_ERR _ => raise ERR "LEFT_AND_TY_FORALL_CONV" "";
+
+(* ---------------------------------------------------------------------*)
 (* RIGHT_AND_FORALL_CONV : move universal quantifier out of conjunction.*)
 (*                                                                      *)
 (* A call to RIGHT_AND_FORALL_CONV "P /\ (!x.Q)"  returns:              *)
@@ -870,6 +1071,31 @@ fun RIGHT_AND_FORALL_CONV tm =
      IMP_ANTISYM_RULE imp1 (DISCH rtm (CONJ Pth (genx' Qth)))
    end
    handle HOL_ERR _ => raise ERR "RIGHT_AND_FORALL_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* RIGHT_AND_TY_FORALL_CONV : move type universal quantifier out of     *)
+(* conjunction.                                                         *)
+(*                                                                      *)
+(* A call to RIGHT_AND_TY_FORALL_CONV "P /\ (!:a.Q)"  returns:          *)
+(*                                                                      *)
+(*   |-  P /\ (!:a.Q) = (!:a'. P /\ Q[a'/a])                            *)
+(*                                                                      *)
+(* where a' is a primed variant of a not free in the input term         *)
+(* ---------------------------------------------------------------------*)
+fun RIGHT_AND_TY_FORALL_CONV tm =
+   let val {conj2, ...} = dest_conj tm
+       val {Bvar,...} = dest_tyforall conj2
+       val a' = variant_type (type_vars_in_term tm) Bvar
+       val speca' = TY_SPEC a'
+       val gena' = TY_GEN a'
+       val (t1,t2) = (I ## speca') (CONJ_PAIR (ASSUME tm))
+       val imp1 = DISCH tm (gena' (CONJ t1 t2))
+       val rtm = rand(concl imp1)
+       val (Pth,Qth) = CONJ_PAIR (speca' (ASSUME rtm))
+   in
+     IMP_ANTISYM_RULE imp1 (DISCH rtm (CONJ Pth (gena' Qth)))
+   end
+   handle HOL_ERR _ => raise ERR "RIGHT_AND_TY_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
 (* OR_EXISTS_CONV : move existential quantifiers out of disjunction.    *)
@@ -905,6 +1131,40 @@ fun OR_EXISTS_CONV tm =
    handle HOL_ERR _ => raise ERR "OR_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
+(* OR_TY_EXISTS_CONV : move type existential quantifiers out of         *)
+(* disjunction.                                                         *)
+(*                                                                      *)
+(* A call to OR_TY_EXISTS_CONV "(?:a. P) \/ (?:a. Q)"  returns:         *)
+(*                                                                      *)
+(*   |- (?:a.P) \/ (?:a.Q) = (?:a. P \/ Q)                              *)
+(* ---------------------------------------------------------------------*)
+fun OR_TY_EXISTS_CONV tm =
+   let val {disj1,disj2} = dest_disj tm
+       val {Bvar=x, Body=P} = dest_tyexists disj1
+       val {Bvar=y, Body=Q} = dest_tyexists disj2
+   in
+   if (not (eq_ty x y)) then raise ERR "OR_TY_EXISTS_CONV" ""
+   else let val aP = ASSUME P
+            and aQ = ASSUME Q
+            and P_or_Q = mk_disj{disj1 = P, disj2 = Q}
+            val otm = mk_tyexists {Bvar = x, Body = P_or_Q}
+            val t1 = DISJ1 aP Q
+            and t2 = DISJ2 P aQ
+            val eotm = TY_EXISTS(otm,x)
+            val e1 = TY_CHOOSE (x,ASSUME disj1) (eotm t1)
+            and e2 = TY_CHOOSE (x,ASSUME disj2) (eotm t2)
+            val thm1 = DISJ_CASES (ASSUME tm) e1 e2
+            val imp1 = DISCH tm thm1
+            val Pth = TY_EXISTS(disj1,x) aP
+            and Qth = TY_EXISTS(disj2,x) aQ
+            val thm2 = DISJ_CASES_UNION (ASSUME P_or_Q) Pth Qth
+        in
+          IMP_ANTISYM_RULE imp1 (DISCH otm (TY_CHOOSE (x,ASSUME otm) thm2))
+        end
+   end
+   handle HOL_ERR _ => raise ERR "OR_TY_EXISTS_CONV" "";
+
+(* ---------------------------------------------------------------------*)
 (* LEFT_OR_EXISTS_CONV : move existential quantifier out of disjunction.*)
 (*                                                                      *)
 (* A call to LEFT_OR_EXISTS_CONV "(?x.P) \/  Q"  returns:               *)
@@ -937,6 +1197,39 @@ fun LEFT_OR_EXISTS_CONV tm =
    handle HOL_ERR _  => raise ERR "LEFT_OR_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
+(* LEFT_OR_TY_EXISTS_CONV : move type existential quantifier out of     *)
+(* disjunction.                                                         *)
+(*                                                                      *)
+(* A call to LEFT_OR_TY_EXISTS_CONV "(?:a.P) \/  Q"  returns:           *)
+(*                                                                      *)
+(*   |- (?:a.P) \/ Q = (?:a'. P[a'/a] \/ Q)                             *)
+(*                                                                      *)
+(* Where a' is a primed variant of a not free in the input term         *)
+(* ---------------------------------------------------------------------*)
+
+fun LEFT_OR_TY_EXISTS_CONV tm =
+   let val {disj1,disj2} = dest_disj tm
+       val {Bvar,Body} = dest_tyexists disj1
+       val x' = variant_type (type_vars_in_term tm) Bvar
+       val newp = inst[Bvar |-> x'] Body
+       val newp_thm = ASSUME newp
+       val new_disj = mk_disj {disj1=newp, disj2=disj2}
+       val otm = mk_tyexists {Bvar=x', Body=new_disj}
+       and Qth = ASSUME disj2
+       val t1 = DISJ1 newp_thm disj2
+       and t2 = DISJ2 newp (ASSUME disj2)
+       val th1 = TY_EXISTS(otm,x') t1
+       and th2 = TY_EXISTS(otm,x') t2
+       val thm1 = DISJ_CASES (ASSUME tm) (TY_CHOOSE(x',ASSUME disj1)th1) th2
+       val imp1 = DISCH tm thm1
+       val Pth = TY_EXISTS(disj1,x') newp_thm
+       val thm2 = DISJ_CASES_UNION (ASSUME new_disj) Pth Qth
+   in
+     IMP_ANTISYM_RULE imp1 (DISCH otm (TY_CHOOSE (x',ASSUME otm) thm2))
+   end
+   handle HOL_ERR _  => raise ERR "LEFT_OR_TY_EXISTS_CONV" "";
+
+(* ---------------------------------------------------------------------*)
 (* RIGHT_OR_EXISTS_CONV: move existential quantifier out of disjunction.*)
 (*                                                                      *)
 (* A call to RIGHT_OR_EXISTS_CONV "P \/ (?x.Q)"  returns:               *)
@@ -965,6 +1258,37 @@ fun RIGHT_OR_EXISTS_CONV tm =
      IMP_ANTISYM_RULE imp1 (DISCH otm (CHOOSE (x',ASSUME otm) thm2))
    end
    handle HOL_ERR _ => raise ERR "RIGHT_OR_EXISTS_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* RIGHT_OR_TY_EXISTS_CONV: move type existential quantifier out of     *)
+(* disjunction.                                                         *)
+(*                                                                      *)
+(* A call to RIGHT_OR_TY_EXISTS_CONV "P \/ (?:a.Q)"  returns:           *)
+(*                                                                      *)
+(*   |-  P \/ (?:a.Q) = (?:a'. P \/ Q[a'/a])                            *)
+(*                                                                      *)
+(* where a' is a primed variant of a not free in the input term         *)
+(* ---------------------------------------------------------------------*)
+fun RIGHT_OR_TY_EXISTS_CONV tm =
+   let val {disj1,disj2} = dest_disj tm
+       val {Bvar,Body} = dest_tyexists disj2
+       val x' = variant_type (type_vars_in_term tm) Bvar
+       val newq = inst[Bvar |-> x'] Body
+       val newq_thm = ASSUME newq
+       and Pth = ASSUME disj1
+       val P_or_newq = mk_disj{disj1 = disj1, disj2 = newq}
+       val otm = mk_tyexists{Bvar = x',Body = P_or_newq}
+       val eotm' = TY_EXISTS(otm,x')
+       val th1 = eotm' (DISJ2 disj1 newq_thm)
+       and th2 = eotm' (DISJ1 Pth newq)
+       val thm1 = DISJ_CASES (ASSUME tm) th2 (TY_CHOOSE(x',ASSUME disj2) th1)
+       val imp1 = DISCH tm thm1
+       val Qth = TY_EXISTS(disj2,x') newq_thm
+       val thm2 = DISJ_CASES_UNION (ASSUME P_or_newq) Pth Qth
+   in
+     IMP_ANTISYM_RULE imp1 (DISCH otm (TY_CHOOSE (x',ASSUME otm) thm2))
+   end
+   handle HOL_ERR _ => raise ERR "RIGHT_OR_TY_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
 (* EXISTS_AND_CONV : move existential quantifier into conjunction.      *)
@@ -1010,6 +1334,51 @@ fun EXISTS_AND_CONV tm =
                         origin_function = "EXISTS_AND_CONV",...}) => raise e
         | HOL_ERR _ => raise ERR"EXISTS_AND_CONV" "";
 
+(* ---------------------------------------------------------------------*)
+(* TY_EXISTS_AND_CONV : move type existential quantifier into           *)
+(* conjunction.                                                         *)
+(*                                                                      *)
+(* A call to TY_EXISTS_AND_CONV "?:a. P /\ Q"  returns:                 *)
+(*                                                                      *)
+(*    |- (?:a. P /\ Q) = (?:a.P) /\ Q         [a not free in Q]         *)
+(*    |- (?:a. P /\ Q) = P /\ (?:a.Q)         [a not free in P]         *)
+(*    |- (?:a. P /\ Q) = (?:a.P) /\ (?:a.Q)   [a not free in P /\ Q]    *)
+(* ---------------------------------------------------------------------*)
+fun TY_EXISTS_AND_CONV tm =
+   let val {Bvar, Body} = dest_tyexists tm handle HOL_ERR _
+           => raise ERR "TY_EXISTS_AND_CONV" "expecting `?:'a. P /\\ Q`"
+       val {conj1,conj2} = dest_conj Body handle HOL_ERR _
+           => raise ERR "TY_EXISTS_AND_CONV" "expecting `?:'a. P /\\ Q`"
+       val fP = type_var_occurs Bvar conj1
+       and fQ = type_var_occurs Bvar conj2
+   in
+   if (fP andalso fQ)
+   then raise ERR "TY_EXISTS_AND_CONV"
+                      ("`"^(#1(dest_var_type Bvar))^ "` free in both conjuncts")
+   else let val (t1,t2) = CONJ_PAIR(ASSUME Body)
+            val econj1 = mk_tyexists{Bvar = Bvar, Body = conj1}
+            val econj2 = mk_tyexists{Bvar = Bvar, Body = conj2}
+            val eP = if fQ then t1 else TY_EXISTS (econj1,Bvar) t1
+            and eQ = if fP then t2 else TY_EXISTS (econj2,Bvar) t2
+            val imp1 = DISCH tm (TY_CHOOSE(Bvar,ASSUME tm) (CONJ eP eQ))
+            val th = TY_EXISTS (tm,Bvar) (CONJ(ASSUME conj1) (ASSUME conj2))
+            val th1 = if (fP orelse (not fQ))
+                      then TY_CHOOSE(Bvar,ASSUME econj1)th
+                      else th
+            val thm1 = if (fQ orelse (not fP))
+                       then TY_CHOOSE(Bvar,ASSUME econj2)th1
+                       else th1
+            val otm = rand(concl imp1)
+            val (t1,t2) = CONJ_PAIR(ASSUME otm)
+            val thm2 = PROVE_HYP t1 (PROVE_HYP t2 thm1)
+        in
+          IMP_ANTISYM_RULE imp1 (DISCH otm thm2)
+        end
+   end
+   handle (e as HOL_ERR{origin_structure = "Conv",
+                        origin_function = "TY_EXISTS_AND_CONV",...}) => raise e
+        | HOL_ERR _ => raise ERR"TY_EXISTS_AND_CONV" "";
+
 
 
 
@@ -1041,6 +1410,33 @@ fun AND_EXISTS_CONV tm =
 end;
 
 (* ---------------------------------------------------------------------*)
+(* AND_TY_EXISTS_CONV : move type existential quantifier out of         *)
+(* conjunction.                                                         *)
+(*                                                                      *)
+(*   |- (?:a.P) /\ (?:a.Q) = (?:a. P /\ Q)                              *)
+(*                                                                      *)
+(* provided a is free in neither P nor Q.                               *)
+(* ---------------------------------------------------------------------*)
+local val AE_ERR = ERR "AND_TY_EXISTS_CONV" "expecting `(?:'a.P) /\\ (?:'a.Q)`"
+in
+fun AND_TY_EXISTS_CONV tm =
+ let val {conj1,conj2} = dest_conj tm handle HOL_ERR _ => raise AE_ERR
+     val {Bvar=x, Body=P} = dest_tyexists conj1 handle HOL_ERR _ => raise AE_ERR
+     val {Bvar=y, Body=Q} = dest_tyexists conj2 handle HOL_ERR _ => raise AE_ERR
+ in
+   if (not(eq_ty x y)) then raise AE_ERR else
+   if (type_var_occurs x P orelse type_var_occurs x Q)
+   then raise ERR "AND_TY_EXISTS_CONV"
+            ("`"^(#1(dest_var_type x))^"` free in conjunct(s)")
+   else SYM (TY_EXISTS_AND_CONV
+              (mk_tyexists{Bvar=x, Body=mk_conj{conj1=P, conj2=Q}}))
+ end
+ handle (e as HOL_ERR{origin_structure = "Conv",
+                        origin_function = "AND_TY_EXISTS_CONV",...}) => raise e
+      | HOL_ERR _ => raise ERR"AND_TY_EXISTS_CONV" ""
+end;
+
+(* ---------------------------------------------------------------------*)
 (* LEFT_AND_EXISTS_CONV: move existential quantifier out of conjunction *)
 (*                                                                      *)
 (* A call to LEFT_AND_EXISTS_CONV "(?x.P) /\  Q"  returns:              *)
@@ -1067,6 +1463,33 @@ fun LEFT_AND_EXISTS_CONV tm =
    handle HOL_ERR _ => raise ERR "LEFT_AND_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
+(* LEFT_AND_TY_EXISTS_CONV: move type existential quantifier out of     *)
+(* conjunction.                                                         *)
+(*                                                                      *)
+(* A call to LEFT_AND_TY_EXISTS_CONV "(?:a.P) /\ Q"  returns:           *)
+(*                                                                      *)
+(*   |- (?:a.P) /\ Q = (?:a'. P[a'/a] /\ Q)                             *)
+(*                                                                      *)
+(* Where a' is a primed variant of a not free in the input term         *)
+(* ---------------------------------------------------------------------*)
+fun LEFT_AND_TY_EXISTS_CONV tm =
+   let val {conj1,conj2} = dest_conj tm
+       val {Bvar,Body} = dest_tyexists conj1
+       val x' = variant_type (type_vars_in_term tm) Bvar
+       val newp = inst[Bvar |-> x'] Body
+       val new_conj = mk_conj {conj1 = newp, conj2 = conj2}
+       val otm = mk_tyexists{Bvar = x', Body = new_conj}
+       val (EP,Qth) = CONJ_PAIR(ASSUME tm)
+       val thm1 = TY_EXISTS(otm,x')(CONJ(ASSUME newp)(ASSUME conj2))
+       val imp1 = DISCH tm (MP (DISCH conj2 (TY_CHOOSE(x',EP)thm1)) Qth)
+       val (t1,t2) = CONJ_PAIR (ASSUME new_conj)
+       val thm2 = TY_CHOOSE (x',ASSUME otm) (CONJ (TY_EXISTS (conj1,x') t1) t2)
+   in
+     IMP_ANTISYM_RULE imp1 (DISCH otm thm2)
+   end
+   handle HOL_ERR _ => raise ERR "LEFT_AND_TY_EXISTS_CONV" "";
+
+(* ---------------------------------------------------------------------*)
 (* RIGHT_AND_EXISTS_CONV: move existential quantifier out of conjunction*)
 (*                                                                      *)
 (* A call to RIGHT_AND_EXISTS_CONV "P /\ (?x.Q)"  returns:              *)
@@ -1091,6 +1514,33 @@ fun RIGHT_AND_EXISTS_CONV tm =
      IMP_ANTISYM_RULE imp1 (DISCH otm thm2)
    end
    handle HOL_ERR _ => raise ERR "RIGHT_AND_EXISTS_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* RIGHT_AND_TY_EXISTS_CONV: move type existential quantifier out of    *)
+(* conjunction.                                                         *)
+(*                                                                      *)
+(* A call to RIGHT_AND_TY_EXISTS_CONV "P /\ (?:a.Q)"  returns:          *)
+(*                                                                      *)
+(*   |- P /\ (?:a.Q) = (?:a'. P /\ (Q[a'/a])                            *)
+(*                                                                      *)
+(* where a' is a primed variant of a not free in the input term         *)
+(* ---------------------------------------------------------------------*)
+fun RIGHT_AND_TY_EXISTS_CONV tm =
+   let val {conj1,conj2} = dest_conj tm
+       val {Bvar,Body} = dest_tyexists conj2
+       val x' = variant_type (type_vars_in_term tm) Bvar
+       val newq = inst[Bvar |-> x'] Body
+       val new_conj = mk_conj{conj1 = conj1,conj2 = newq}
+       val otm = mk_tyexists{Bvar = x',Body = new_conj}
+       val (Pth,EQ) = CONJ_PAIR(ASSUME tm)
+       val thm1 = TY_EXISTS(otm,x')(CONJ(ASSUME conj1)(ASSUME newq))
+       val imp1 = DISCH tm (MP (DISCH conj1 (TY_CHOOSE(x',EQ)thm1)) Pth)
+       val (t1,t2) = CONJ_PAIR (ASSUME new_conj)
+       val thm2 = TY_CHOOSE (x',ASSUME otm) (CONJ t1 (TY_EXISTS (conj2,x') t2))
+   in
+     IMP_ANTISYM_RULE imp1 (DISCH otm thm2)
+   end
+   handle HOL_ERR _ => raise ERR "RIGHT_AND_TY_EXISTS_CONV" "";
 
 
 (* ---------------------------------------------------------------------*)
@@ -1156,6 +1606,68 @@ fun FORALL_OR_CONV tm =
 end;
 
 (* ---------------------------------------------------------------------*)
+(* TY_FORALL_OR_CONV : move type universal quantifier into disjunction. *)
+(*                                                                      *)
+(* A call to TY_FORALL_OR_CONV "!:a. P \/ Q"  returns:                  *)
+(*                                                                      *)
+(*  |- (!:a. P \/ Q) = (!:a.P) \/ Q       [if a not free in Q]          *)
+(*  |- (!:a. P \/ Q) = P \/ (!:a.Q)       [if a not free in P]          *)
+(*  |- (!:a. P \/ Q) = (!:a.P) \/ (!:a.Q) [if a free in neither P nor Q]*)
+(* ---------------------------------------------------------------------*)
+local val FO_ERR = ERR "TY_FORALL_OR_CONV" "expecting `!:'a. P \\/ Q`"
+in
+fun TY_FORALL_OR_CONV tm =
+ let val {Bvar,Body} = dest_tyforall tm handle HOL_ERR _ => raise FO_ERR
+     val {disj1,disj2} = dest_disj Body handle HOL_ERR _ => raise FO_ERR
+     val fdisj1 = type_var_occurs Bvar disj1
+     and fdisj2 = type_var_occurs Bvar disj2
+ in
+   if (fdisj1 andalso fdisj2)
+   then raise ERR "TY_FORALL_OR_CONV"
+               ("`"^(#1(dest_var_type Bvar))^"` free in both disjuncts")
+   else
+   let val disj1_thm = ASSUME disj1
+     val disj2_thm = ASSUME disj2
+     val thm1 = TY_SPEC Bvar (ASSUME tm)
+     val imp1 =
+      if fdisj1
+      then let val thm2 = CONTR disj1 (MP (ASSUME (mk_neg disj2)) disj2_thm)
+               val thm3 = DISJ1(TY_GEN Bvar(DISJ_CASES thm1 disj1_thm thm2)) disj2
+               val thm4 = DISJ2(mk_tyforall{Bvar=Bvar, Body=disj1})(ASSUME disj2)
+           in
+             DISCH tm (DISJ_CASES(SPEC disj2 EXCLUDED_MIDDLE) thm4 thm3)
+           end
+      else
+      if fdisj2
+      then let val thm2 = CONTR disj2(MP (ASSUME (mk_neg disj1)) (ASSUME disj1))
+               val thm3 = DISJ2 disj1 (TY_GEN Bvar(DISJ_CASES thm1 thm2 disj2_thm))
+               val thm4 = DISJ1(ASSUME disj1)(mk_tyforall{Bvar=Bvar, Body=disj2})
+           in
+             DISCH tm (DISJ_CASES (SPEC disj1 EXCLUDED_MIDDLE) thm4 thm3)
+           end
+      else
+      let val t1 = TY_GEN Bvar(ASSUME disj1)
+          val t2 = TY_GEN Bvar(ASSUME disj2)
+      in
+        DISCH tm (DISJ_CASES_UNION thm1 t1 t2)
+      end
+     val otm = rand(concl imp1)
+     val {disj1,disj2} = dest_disj otm
+     val thm5 = (if (fdisj1 orelse (not fdisj2)) then TY_SPEC Bvar else I)
+                (ASSUME disj1)
+     val thm6 = (if (fdisj2 orelse (not fdisj1)) then TY_SPEC Bvar else I)
+                (ASSUME disj2)
+     val imp2 = TY_GEN Bvar (DISJ_CASES_UNION (ASSUME otm) thm5 thm6)
+   in
+     IMP_ANTISYM_RULE imp1 (DISCH otm imp2)
+   end
+ end
+ handle (e as HOL_ERR{origin_structure = "Conv",
+                        origin_function = "TY_FORALL_OR_CONV",...}) => raise e
+      | HOL_ERR _ => raise ERR "TY_FORALL_OR_CONV" ""
+end;
+
+(* ---------------------------------------------------------------------*)
 (* OR_FORALL_CONV : move existential quantifier out of conjunction.     *)
 (*                                                                      *)
 (*   |- (!x.P) \/ (!x.Q) = (!x. P \/ Q)                                 *)
@@ -1181,9 +1693,35 @@ fun OR_FORALL_CONV tm =
 end;
 
 (* ---------------------------------------------------------------------*)
-(* LEFT_OR_FORALL_CONV : move universal quantifier out of conjunction.  *)
+(* OR_TY_FORALL_CONV : move type existential quantifier out of          *)
+(* conjunction.                                                         *)
 (*                                                                      *)
-(* A call to LEFT_OR_FORALL_CONV "(!x.P) \/  Q"  returns:               *)
+(*   |- (!:a.P) \/ (!:a.Q) = (!:a. P \/ Q)                              *)
+(*                                                                      *)
+(* provided a is free in neither P nor Q.                               *)
+(* ---------------------------------------------------------------------*)
+local val OF_ERR = ERR "OR_TY_FORALL_CONV" "expecting `(!:'a.P) \\/ (!:'a.Q)`"
+in
+fun OR_TY_FORALL_CONV tm =
+ let val {disj1,disj2} = dest_disj tm handle HOL_ERR _ => raise OF_ERR
+     val {Bvar=x, Body=P} = dest_tyforall disj1 handle HOL_ERR _ => raise OF_ERR
+     val {Bvar=y, Body=Q} = dest_tyforall disj2 handle HOL_ERR _ => raise OF_ERR
+ in
+   if not(eq_ty x y) then raise OF_ERR else
+   if (type_var_occurs x P orelse type_var_occurs x Q)
+   then raise ERR "OR_TY_FORALL_CONV"
+             ("`"^(#1(dest_var_type x))^ "` free in disjuncts(s)")
+   else SYM(TY_FORALL_OR_CONV(mk_tyforall{Bvar=x,Body=mk_disj{disj1=P,disj2=Q}}))
+ end
+ handle (e as HOL_ERR{origin_structure = "Conv",
+                        origin_function = "OR_TY_FORALL_CONV",...}) => raise e
+      | HOL_ERR _ => raise ERR "OR_TY_FORALL_CONV" ""
+end;
+
+(* ---------------------------------------------------------------------*)
+(* LEFT_OR_FORALL_CONV : move universal quantifier out of disjunction.  *)
+(*                                                                      *)
+(* A call to LEFT_OR_FORALL_CONV "(!x.P) \/ Q"  returns:                *)
 (*                                                                      *)
 (*   |- (!x.P) \/ Q = (!x'. P[x'/x] \/ Q)                               *)
 (*                                                                      *)
@@ -1210,7 +1748,37 @@ fun LEFT_OR_FORALL_CONV tm =
    handle HOL_ERR _ => raise ERR "LEFT_OR_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* RIGHT_OR_FORALL_CONV : move universal quantifier out of conjunction. *)
+(* LEFT_OR_TY_FORALL_CONV : move type universal quantifier out of       *)
+(* disjunction.                                                         *)
+(*                                                                      *)
+(* A call to LEFT_OR_TY_FORALL_CONV "(!:a.P) \/ Q"  returns:            *)
+(*                                                                      *)
+(*   |- (!:a.P) \/ Q = (!:a'. P[a'/a] \/ Q)                             *)
+(*                                                                      *)
+(* Where a' is a primed variant of a not free in the input term         *)
+(* ---------------------------------------------------------------------*)
+fun LEFT_OR_TY_FORALL_CONV tm =
+   let val {disj1,disj2} = dest_disj tm
+       val {Bvar,Body} = dest_tyforall disj1
+       val x' = variant_type (type_vars_in_term tm) Bvar
+       val newp = inst[Bvar |-> x'] Body
+       val aQ = ASSUME disj2
+       val Pth = DISJ1 (TY_SPEC x' (ASSUME disj1)) disj2
+       val Qth = DISJ2 newp aQ
+       val imp1 = DISCH tm (TY_GEN x' (DISJ_CASES (ASSUME tm) Pth Qth))
+       val otm = rand(concl imp1)
+       val thm1 = TY_SPEC x' (ASSUME otm)
+       val thm2 = CONTR newp (MP(ASSUME(mk_neg disj2)) aQ)
+       val thm3 = DISJ1 (TY_GEN x' (DISJ_CASES thm1 (ASSUME newp) thm2)) disj2
+       val thm4 = DISJ2 disj1 aQ
+       val imp2 = DISCH otm(DISJ_CASES(SPEC disj2 EXCLUDED_MIDDLE)thm4 thm3)
+   in
+     IMP_ANTISYM_RULE imp1 imp2
+   end
+   handle HOL_ERR _ => raise ERR "LEFT_OR_FORALL_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* RIGHT_OR_FORALL_CONV : move universal quantifier out of disjunction. *)
 (*                                                                      *)
 (* A call to RIGHT_OR_FORALL_CONV "P \/ (!x.Q)"  returns:               *)
 (*                                                                      *)
@@ -1237,6 +1805,36 @@ fun RIGHT_OR_FORALL_CONV tm =
      IMP_ANTISYM_RULE imp1 imp2
    end
    handle HOL_ERR _ => raise ERR "RIGHT_OR_FORALL_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* RIGHT_OR_TY_FORALL_CONV : move type universal quantifier out of      *)
+(* disjunction.                                                         *)
+(*                                                                      *)
+(* A call to RIGHT_OR_TY_FORALL_CONV "P \/ (!:a.Q)"  returns:           *)
+(*                                                                      *)
+(*   |- P \/ (!:a.Q) = (!:a'. P \/ (Q[a'/a])                            *)
+(*                                                                      *)
+(* where a' is a primed variant of a not free in the input term         *)
+(* ---------------------------------------------------------------------*)
+fun RIGHT_OR_TY_FORALL_CONV tm =
+   let val {disj1,disj2} = dest_disj tm
+       val {Bvar,Body} = dest_tyforall disj2
+       val x' = variant_type (type_vars_in_term tm) Bvar
+       val newq = inst[Bvar |-> x'] Body
+       val Qth = DISJ2 disj1 (TY_SPEC x' (ASSUME disj2))
+       val Pthm = ASSUME disj1
+       val Pth = DISJ1 Pthm newq
+       val imp1 = DISCH tm (TY_GEN x' (DISJ_CASES (ASSUME tm) Pth Qth))
+       val otm = rand(concl imp1)
+       val thm1 = TY_SPEC x' (ASSUME otm)
+       val thm2 = CONTR newq (MP(ASSUME(mk_neg disj1)) Pthm)
+       val thm3 = DISJ2 disj1 (TY_GEN x' (DISJ_CASES thm1 thm2 (ASSUME newq)))
+       val thm4 = DISJ1 Pthm disj2
+       val imp2 = DISCH otm(DISJ_CASES(SPEC disj1 EXCLUDED_MIDDLE)thm4 thm3)
+   in
+     IMP_ANTISYM_RULE imp1 imp2
+   end
+   handle HOL_ERR _ => raise ERR "RIGHT_OR_TY_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
 (* FORALL_IMP_CONV, implements the following axiom schemes.             *)
@@ -1296,6 +1894,63 @@ fun FORALL_IMP_CONV tm =
 end;
 
 (* ---------------------------------------------------------------------*)
+(* TY_FORALL_IMP_CONV, implements the following axiom schemes.          *)
+(*                                                                      *)
+(*     |- (!:a. P==>Q[a]) = (P ==> (!:a.Q[a]))    [a not free in P]     *)
+(*                                                                      *)
+(*     |- (!:a. P[a]==>Q) = ((?:a.P[a]) ==> Q)    [a not free in Q]     *)
+(*                                                                      *)
+(*     |- (!:a. P==>Q) = ((?:a.P) ==> (!:a.Q))    [a not free in P==>Q] *)
+(* ---------------------------------------------------------------------*)
+local val FI_ERR = ERR "TY_FORALL_IMP_CONV" "expecting `!:'a. P ==> Q`"
+in
+fun TY_FORALL_IMP_CONV tm =
+   let val {Bvar,Body} = dest_tyforall tm handle HOL_ERR _ => raise FI_ERR
+       val {ant,conseq} = dest_imp Body handle HOL_ERR _ => raise FI_ERR
+       val fant = type_var_occurs Bvar ant
+       and fconseq =  type_var_occurs Bvar conseq
+       val ant_thm = ASSUME ant
+       val tm_thm = ASSUME tm
+   in
+     if (fant andalso fconseq)
+     then raise ERR "TY_FORALL_IMP_CONV"
+             ("`"^(#1(dest_var_type Bvar))^"` free on both sides of `==>`")
+     else
+     if fant
+     then let val asm = mk_tyexists{Bvar = Bvar, Body = ant}
+              val th1 = TY_CHOOSE(Bvar,ASSUME asm) (UNDISCH(TY_SPEC Bvar tm_thm))
+              val imp1 = DISCH tm (DISCH asm th1)
+              val cncl = rand(concl imp1)
+              val th2 = MP (ASSUME cncl) (TY_EXISTS (asm,Bvar) ant_thm)
+              val imp2 = DISCH cncl (TY_GEN Bvar (DISCH ant th2))
+          in
+             IMP_ANTISYM_RULE imp1 imp2
+          end
+     else
+     if fconseq
+     then let val imp1 = DISCH ant(TY_GEN Bvar(UNDISCH(TY_SPEC Bvar tm_thm)))
+              val cncl = concl imp1
+              val imp2 = TY_GEN Bvar(DISCH ant(TY_SPEC Bvar(UNDISCH(ASSUME cncl))))
+          in
+             IMP_ANTISYM_RULE (DISCH tm imp1) (DISCH cncl imp2)
+          end
+     else let val asm = mk_tyexists{Bvar = Bvar, Body = ant}
+              val tmp = UNDISCH (TY_SPEC Bvar tm_thm)
+              val th1 = TY_GEN Bvar (TY_CHOOSE(Bvar,ASSUME asm) tmp)
+              val imp1 = DISCH tm (DISCH asm th1)
+              val cncl = rand(concl imp1)
+              val th2 = TY_SPEC Bvar (MP(ASSUME cncl) (TY_EXISTS (asm,Bvar) ant_thm))
+              val imp2 = DISCH cncl (TY_GEN Bvar (DISCH ant th2))
+          in
+             IMP_ANTISYM_RULE imp1 imp2
+          end
+   end
+   handle (e as HOL_ERR{origin_structure = "Conv",
+                        origin_function = "TY_FORALL_IMP_CONV",...}) => raise e
+        | HOL_ERR _ => raise ERR"TY_FORALL_IMP_CONV" ""
+end;
+
+(* ---------------------------------------------------------------------*)
 (* LEFT_IMP_EXISTS_CONV, implements the following theorem-scheme:       *)
 (*                                                                      *)
 (*    |- (?x. t1[x]) ==> t2  =  !x'. t1[x'] ==> t2                      *)
@@ -1317,6 +1972,26 @@ fun LEFT_IMP_EXISTS_CONV tm =
      IMP_ANTISYM_RULE (DISCH tm th1) (DISCH rtm (DISCH ant th2))
    end
    handle HOL_ERR _ => raise ERR "LEFT_IMP_EXISTS_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* LEFT_IMP_TY_EXISTS_CONV, implements the following theorem-scheme:    *)
+(*                                                                      *)
+(*    |- (?:a. t1[a]) ==> t2  =  !:a'. t1[a'] ==> t2                    *)
+(*                                                                      *)
+(* where a' is a variant of a chosen not to be free in (?:a.t1[a])==>t2 *)
+(*----------------------------------------------------------------------*)
+fun LEFT_IMP_TY_EXISTS_CONV tm =
+   let val {ant, ...} = dest_imp tm
+       val {Bvar,Body} = dest_tyexists ant
+       val x' = variant_type (type_vars_in_term tm) Bvar
+       val t' = inst [Bvar |-> x'] Body
+       val th1 = TY_GEN x' (DISCH t'(MP(ASSUME tm)(TY_EXISTS(ant,x')(ASSUME t'))))
+       val rtm = concl th1
+       val th2 = TY_CHOOSE (x',ASSUME ant) (UNDISCH(TY_SPEC x'(ASSUME rtm)))
+   in
+     IMP_ANTISYM_RULE (DISCH tm th1) (DISCH rtm (DISCH ant th2))
+   end
+   handle HOL_ERR _ => raise ERR "LEFT_IMP_TY_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
 (* RIGHT_IMP_FORALL_CONV, implements the following theorem-scheme:      *)
@@ -1341,6 +2016,28 @@ fun RIGHT_IMP_FORALL_CONV tm =
    handle HOL_ERR _ => raise ERR "RIGHT_IMP_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
+(* RIGHT_IMP_TY_FORALL_CONV, implements the following theorem-scheme:   *)
+(*                                                                      *)
+(*    |- (t1 ==> !:a. t2)  =  !:a'. t1 ==> t2[a'/a]                     *)
+(*                                                                      *)
+(* where a' is a variant of a chosen not to be free in the input term.  *)
+(*----------------------------------------------------------------------*)
+fun RIGHT_IMP_TY_FORALL_CONV tm =
+   let val {ant,conseq} = dest_imp tm
+       val {Bvar,Body} = dest_tyforall conseq
+       val x' = variant_type (type_vars_in_term tm) Bvar
+       val t' = inst [Bvar |-> x'] Body
+       val imp1 = DISCH tm (TY_GEN x' (DISCH ant(TY_SPEC x'(UNDISCH(ASSUME tm)))))
+       val ctm = rand(concl imp1)
+       val alph = GEN_TY_ALPHA_CONV Bvar (mk_tyforall{Bvar = x', Body = t'})
+       val thm1 = EQ_MP alph (TY_GEN x'(UNDISCH (TY_SPEC x' (ASSUME ctm))))
+       val imp2 = DISCH ctm (DISCH ant thm1)
+   in
+     IMP_ANTISYM_RULE imp1 imp2
+   end
+   handle HOL_ERR _ => raise ERR "RIGHT_IMP_FORALL_CONV" "";
+
+(* ---------------------------------------------------------------------*)
 (* EXISTS_IMP_CONV, implements the following axiom schemes.             *)
 (*                                                                      *)
 (*      |- (?x. P==>Q[x]) = (P ==> (?x.Q[x]))     [x not free in P]     *)
@@ -1355,7 +2052,7 @@ fun EXISTS_IMP_CONV tm =
  let val {Bvar,Body} = dest_exists tm handle HOL_ERR _ => raise EI_ERR
      val {ant = P,conseq = Q} = dest_imp Body handle HOL_ERR _ => raise EI_ERR
      val fP = free_in Bvar P
-     and fQ =  free_in Bvar Q
+     and fQ = free_in Bvar Q
  in
    if (fP andalso fQ) then raise ERR "EXISTS_IMP_CONV"
           ("`"^(#Name(dest_var Bvar))^ "` free on both sides of `==>`") else
@@ -1409,6 +2106,75 @@ fun EXISTS_IMP_CONV tm =
         | HOL_ERR _ => raise ERR"EXISTS_IMP_CONV" ""
 end;
 
+(* ---------------------------------------------------------------------*)
+(* TY_EXISTS_IMP_CONV, implements the following axiom schemes.             *)
+(*                                                                      *)
+(*    |- (?:a. P==>Q[a]) = (P ==> (?:a.Q[a]))     [a not free in P]     *)
+(*                                                                      *)
+(*    |- (?:a. P[a]==>Q) = ((!:a.P[a]) ==> Q)     [a not free in Q]     *)
+(*                                                                      *)
+(*    |- (?:a. P==>Q) = ((!:a.P) ==> (?:a.Q))     [a not free in P==>Q] *)
+(* ---------------------------------------------------------------------*)
+local val EI_ERR = ERR"TY_EXISTS_IMP_CONV" "expecting `?:'a. P ==> Q`"
+in
+fun TY_EXISTS_IMP_CONV tm =
+ let val {Bvar,Body} = dest_tyexists tm handle HOL_ERR _ => raise EI_ERR
+     val {ant = P,conseq = Q} = dest_imp Body handle HOL_ERR _ => raise EI_ERR
+     val fP = type_var_occurs Bvar P
+     and fQ = type_var_occurs Bvar Q
+ in
+   if (fP andalso fQ) then raise ERR "TY_EXISTS_IMP_CONV"
+          ("`"^(#1(dest_var_type Bvar))^ "` free on both sides of `==>`") else
+   if fP
+   then let val allp = mk_tyforall{Bvar = Bvar, Body = P}
+            val th1 = TY_SPEC Bvar (ASSUME allp)
+            val thm1 = MP (ASSUME Body) th1
+            val imp1 = DISCH tm (TY_CHOOSE(Bvar,ASSUME tm)(DISCH allp thm1))
+            val otm = rand(concl imp1)
+            val thm2 = TY_EXISTS(tm,Bvar)(DISCH P (UNDISCH(ASSUME otm)))
+            val notP = mk_neg P
+            val notP_thm = ASSUME notP
+            val nex =  mk_tyexists{Bvar = Bvar, Body = notP}
+            val asm1 = TY_EXISTS (nex, Bvar) notP_thm
+            val th2 = CCONTR P (MP (ASSUME (mk_neg nex)) asm1)
+            val th3 = CCONTR nex (MP (ASSUME (mk_neg allp)) (TY_GEN Bvar th2))
+            val thm4 = DISCH P (CONTR Q (UNDISCH notP_thm))
+            val thm5 = TY_CHOOSE(Bvar,th3)(TY_EXISTS(tm,Bvar)thm4)
+            val thm6 = DISJ_CASES (SPEC allp EXCLUDED_MIDDLE) thm2 thm5
+        in
+          IMP_ANTISYM_RULE imp1 (DISCH otm thm6)
+        end
+   else
+   if fQ
+   then let val thm1 = TY_EXISTS (mk_tyexists{Bvar=Bvar, Body=Q},Bvar)
+                                (UNDISCH(ASSUME Body))
+            val imp1 = DISCH tm (TY_CHOOSE(Bvar,ASSUME tm) (DISCH P thm1))
+            val thm2 = UNDISCH (ASSUME (rand(concl imp1)))
+            val thm3 = TY_CHOOSE(Bvar,thm2) (TY_EXISTS(tm,Bvar)(DISCH P(ASSUME Q)))
+            val thm4 = TY_EXISTS(tm,Bvar)
+                          (DISCH P (CONTR Q(UNDISCH(ASSUME(mk_neg P)))))
+            val thm5 = DISJ_CASES (SPEC P EXCLUDED_MIDDLE) thm3 thm4
+        in
+          IMP_ANTISYM_RULE imp1 (DISCH(rand(concl imp1)) thm5)
+        end
+   else let val eQ = mk_tyexists{Bvar = Bvar, Body = Q}
+            and aP = mk_tyforall{Bvar = Bvar, Body = P}
+            val thm1 = TY_EXISTS(eQ,Bvar)(UNDISCH(ASSUME Body))
+            val thm2 = DISCH aP (PROVE_HYP (TY_SPEC Bvar (ASSUME aP)) thm1)
+            val imp1 = DISCH tm (TY_CHOOSE(Bvar,ASSUME tm) thm2)
+            val thm2 = TY_CHOOSE(Bvar,UNDISCH(ASSUME(rand(concl imp1))))
+                           (ASSUME Q)
+            val thm3 = DISCH P (PROVE_HYP (TY_GEN Bvar (ASSUME P)) thm2)
+            val imp2 = DISCH (rand(concl imp1)) (TY_EXISTS(tm,Bvar) thm3)
+        in
+          IMP_ANTISYM_RULE imp1 imp2
+        end
+ end
+   handle (e as HOL_ERR{origin_structure = "Conv",
+             origin_function = "TY_EXISTS_IMP_CONV",...}) => raise e
+        | HOL_ERR _ => raise ERR"TY_EXISTS_IMP_CONV" ""
+end;
+
 
 
 (* ---------------------------------------------------------------------*)
@@ -1444,6 +2210,38 @@ fun LEFT_IMP_FORALL_CONV tm =
    handle HOL_ERR _ => raise ERR "LEFT_IMP_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
+(* LEFT_IMP_TY_FORALL_CONV, implements the following theorem-scheme:    *)
+(*                                                                      *)
+(*    |- (!:a. t1[a]) ==> t2  =  ?:a'. t1[a'] ==> t2                    *)
+(*                                                                      *)
+(* where a' is a variant of a chosen not to be free in the input term   *)
+(*----------------------------------------------------------------------*)
+fun LEFT_IMP_TY_FORALL_CONV tm =
+   let val {ant,conseq} = dest_imp tm
+       val {Bvar,Body} = dest_tyforall ant
+       val x' = variant_type (type_vars_in_term tm) Bvar
+       val t1' = inst [Bvar |-> x'] Body
+       val not_t1'_thm = ASSUME (mk_neg t1')
+       val th1 = TY_SPEC x' (ASSUME ant)
+       val new_imp = mk_imp{ant = t1', conseq = conseq}
+       val thm1 = MP (ASSUME new_imp) th1
+       val otm = mk_tyexists{Bvar = x', Body = new_imp}
+       val imp1 = DISCH otm (TY_CHOOSE(x',ASSUME otm)(DISCH ant thm1))
+       val thm2 = TY_EXISTS(otm,x') (DISCH t1' (UNDISCH(ASSUME tm)))
+       val nex =  mk_tyexists{Bvar = x', Body = mk_neg t1'}
+       val asm1 = TY_EXISTS (nex, x') not_t1'_thm
+       val th2 = CCONTR t1' (MP (ASSUME (mk_neg nex)) asm1)
+       val th3 = CCONTR nex (MP (ASSUME (mk_neg ant)) (TY_GEN x' th2))
+       val thm4 = DISCH t1' (CONTR conseq (UNDISCH not_t1'_thm))
+       val thm5 = TY_CHOOSE(x',th3)
+                      (TY_EXISTS(mk_tyexists{Bvar = x',Body = concl thm4},x')thm4)
+       val thm6 = DISJ_CASES (SPEC ant EXCLUDED_MIDDLE) thm2 thm5
+   in
+     IMP_ANTISYM_RULE (DISCH tm thm6) imp1
+   end
+   handle HOL_ERR _ => raise ERR "LEFT_IMP_TY_FORALL_CONV" "";
+
+(* ---------------------------------------------------------------------*)
 (* RIGHT_IMP_EXISTS_CONV, implements the following theorem-scheme:      *)
 (*                                                                      *)
 (*    |- (t1 ==> ?x. t2)  =  ?x'. t1 ==> t2[x'/x]                       *)
@@ -1468,6 +2266,32 @@ fun RIGHT_IMP_EXISTS_CONV tm =
      IMP_ANTISYM_RULE (DISCH tm thm6) imp1
    end
    handle HOL_ERR _ => raise ERR "RIGHT_IMP_EXISTS_CONV" "";
+
+(* ---------------------------------------------------------------------*)
+(* RIGHT_IMP_TY_EXISTS_CONV, implements the following theorem-scheme:   *)
+(*                                                                      *)
+(*    |- (t1 ==> ?:a. t2)  =  ?:a'. t1 ==> t2[a'/a]                     *)
+(*                                                                      *)
+(* where a' is a variant of a chosen not to be free in the input term.  *)
+(*----------------------------------------------------------------------*)
+fun RIGHT_IMP_TY_EXISTS_CONV tm =
+   let val {ant,conseq} = dest_imp tm
+       val {Bvar,Body} = dest_tyexists conseq
+       val x' = variant_type (type_vars_in_term tm) Bvar
+       val t2' = inst [Bvar |-> x'] Body
+       val new_imp = mk_imp{ant = ant, conseq = t2'}
+       val otm = mk_tyexists{Bvar = x', Body = new_imp}
+       val thm1 = TY_EXISTS(conseq,x')(UNDISCH(ASSUME new_imp))
+       val imp1 = DISCH otm (TY_CHOOSE(x',ASSUME otm) (DISCH ant thm1))
+       val thm2 = UNDISCH (ASSUME tm)
+       val thm3 = TY_CHOOSE (x',thm2) (TY_EXISTS (otm,x') (DISCH ant (ASSUME t2')))
+       val thm4 = DISCH ant (CONTR t2'(UNDISCH(ASSUME(mk_neg ant))))
+       val thm5 = TY_EXISTS(otm,x') thm4
+       val thm6 = DISJ_CASES (SPEC ant EXCLUDED_MIDDLE) thm3 thm5
+   in
+     IMP_ANTISYM_RULE (DISCH tm thm6) imp1
+   end
+   handle HOL_ERR _ => raise ERR "RIGHT_IMP_TY_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
 (* X_SKOLEM_CONV : introduce a skolem function.                         *)
@@ -1794,10 +2618,33 @@ fun SWAP_EXISTS_CONV xyt =
    end
    handle HOL_ERR _ => raise ERR "SWAP_EXISTS_CONV" "";
 
+(* ---------------------------------------------------------------------*)
+(* SWAP_TY_EXISTS_CONV: swap the order of existentially quantified type vars.   *)
+(*                                                                      *)
+(* SWAP_TY_EXISTS_CONV "?x y.t[x,y]" ---> |- ?x y.t[x,y] = ?y x.t[x,y]     *)
+(*                                                                      *)
+(* AUTHOR: Paul Loewenstein 3 May 1988                                  *)
+(* ---------------------------------------------------------------------*)
+
+fun SWAP_TY_EXISTS_CONV xyt =
+   let val {Bvar=x, Body=yt} = dest_tyexists xyt
+       val {Bvar=y, Body=t} = dest_tyexists yt
+       val xt  = mk_tyexists {Bvar=x, Body=t}
+       val yxt = mk_tyexists{Bvar=y, Body=xt}
+       val t_thm = ASSUME t
+   in
+     IMP_ANTISYM_RULE
+         (DISCH xyt (TY_CHOOSE (x,ASSUME xyt) (TY_CHOOSE (y, (ASSUME yt))
+          (TY_EXISTS (yxt,y) (TY_EXISTS (xt,x) t_thm)))))
+         (DISCH yxt (TY_CHOOSE (y,ASSUME yxt) (TY_CHOOSE (x, (ASSUME xt))
+          (TY_EXISTS (xyt,x) (TY_EXISTS (yt,y) t_thm)))))
+   end
+   handle HOL_ERR _ => raise ERR "SWAP_TY_EXISTS_CONV" "";
+
 
 
 (* ---------------------------------------------------------------------*)
-(* EXISTS_SIMP_CONV: gets rid of unused allquantification               *)
+(* EXISTS_SIMP_CONV: gets rid of all unused quantification              *)
 (*                                                                      *)
 (* |- ?x. P = P                                                         *)
 (* ---------------------------------------------------------------------*)
@@ -1806,8 +2653,22 @@ fun EXISTS_SIMP_CONV xt =
      val {Bvar=x, Body=t} = dest_exists xt
    in
      IMP_ANTISYM_RULE
-         (DISCH t (EXISTS(xt, x) (ASSUME t)))
          (DISCH xt (CHOOSE (x, ASSUME xt) (ASSUME t)))
+         (DISCH t (EXISTS(xt, x) (ASSUME t)))
+   end
+
+(* ---------------------------------------------------------------------*)
+(* TY_EXISTS_SIMP_CONV: gets rid of all unused type quantification      *)
+(*                                                                      *)
+(* |- ?:a. P = P                                                        *)
+(* ---------------------------------------------------------------------*)
+fun TY_EXISTS_SIMP_CONV xt =
+   let
+     val {Bvar=x, Body=t} = dest_tyexists xt
+   in
+     IMP_ANTISYM_RULE
+         (DISCH xt (TY_CHOOSE (x, ASSUME xt) (ASSUME t)))
+         (DISCH t (TY_EXISTS(xt, x) (ASSUME t)))
    end
 
 
@@ -1852,13 +2713,53 @@ fun RESORT_EXISTS_CONV rs xst =
 end;
 
 (* ---------------------------------------------------------------------*)
+(* RESORT_TY_EXISTS_CONV: resorts the order of type existentially       *)
+(*  quantified vars, as specified by a given resort function            *)
+(*                                                                      *)
+(* RESORT_TY_EXISTS_CONV rev "?:'a 'b 'c. t" --->                       *)
+(*                            |- ?:'a 'b 'c. t = ?:'c 'b 'a. t          *)
+(*                                                                      *)
+(* The standard use of this conversion is with a resort function, that  *)
+(* returns a permutation of the original variables. However, it can     *)
+(* also introduce or eliminate variables, provided that these variables *)
+(* are not free in t.                                                   *)
+(*                                                                      *)
+(* RESORT_TY_EXISTS_CONV (K [``:'b``,``:'new``]) ``?:'a 'b 'c. t`` ---> *)
+(*                      |- ?:'a 'b 'c. t = ?:'b 'new. t                 *)
+(* ---------------------------------------------------------------------*)
+local
+   fun mk_list_tyexists_thm ys xs t =
+   let
+      val thm1 = foldr (fn (v, thm) =>
+        (TY_EXISTS (mk_tyexists {Bvar = v, Body = (concl thm)}, v) thm))
+        (ASSUME t) xs
+      val (t',thm2) = foldr (fn (v, (t,thm)) =>
+         let val t' = (mk_tyexists {Bvar = v, Body = t}) in
+             (t', (TY_CHOOSE (v, ASSUME t') thm)) end) (t, thm1) ys
+   in
+      DISCH t' thm2
+   end;
+in
+
+fun RESORT_TY_EXISTS_CONV rs xst =
+   let val (xs, t) = strip_tyexists xst
+       val ys = rs xs;
+   in
+     IMP_ANTISYM_RULE
+        (mk_list_tyexists_thm xs ys t)
+        (mk_list_tyexists_thm ys xs t)
+   end
+
+end;
+
+(* ---------------------------------------------------------------------*)
 (* SWAP_FORALL_CONV: swap the order of existentially quantified vars.   *)
 (*                                                                      *)
 (* SWAP_FORALL_CONV "!x y.t[x,y]" ---> |- !x y.t[x,y] = !y x.t[x,y]     *)
 (* ---------------------------------------------------------------------*)
 fun SWAP_FORALL_CONV xyt =
    let val {Bvar=x, Body=yt} = dest_forall xyt
-       val {Bvar=y, Body=t} = dest_forall yt
+       val {Bvar=y, Body=t}  = dest_forall yt
        val xt  = mk_forall {Bvar=x, Body=t}
        val yxt = mk_forall {Bvar=y, Body=xt}
    in
@@ -1868,11 +2769,29 @@ fun SWAP_FORALL_CONV xyt =
    end
 
 (* ---------------------------------------------------------------------*)
-(* RESORT_FORALL_CONV: resorts the order of allquantified vars, as      *)
+(* SWAP_TY_FORALL_CONV: swap the order of type existentially quantified *)
+(* vars.                                                                *)
+(*                                                                      *)
+(* SWAP_TY_FORALL_CONV "!:'a 'b.t['a,'b]" --->                          *)
+(*                   |- !:'a 'b.t['a,'b] = !:'b 'a.t['a,'b]             *)
+(* ---------------------------------------------------------------------*)
+fun SWAP_TY_FORALL_CONV xyt =
+   let val {Bvar=x, Body=yt} = dest_tyforall xyt
+       val {Bvar=y, Body=t}  = dest_tyforall yt
+       val xt  = mk_tyforall {Bvar=x, Body=t}
+       val yxt = mk_tyforall {Bvar=y, Body=xt}
+   in
+     IMP_ANTISYM_RULE
+         (DISCH xyt (TY_GENL [y,x] (TY_SPECL [x,y] (ASSUME xyt))))
+         (DISCH yxt (TY_GENL [x,y] (TY_SPECL [y,x] (ASSUME yxt))))
+   end
+
+(* ---------------------------------------------------------------------*)
+(* RESORT_FORALL_CONV: resorts the order of all quantified vars, as     *)
 (*    specified by a given resort function                              *)
 (*                                                                      *)
-(* RESORT_FORALL_CONV rev "!x1 x2 x3. t" ---> |-                        *)
-(*                         !x1 x2 x3. t = !x3 x2 x1. t                  *)
+(* RESORT_FORALL_CONV rev ``!x1 x2 x3. t`` --->                         *)
+(*                         |- !x1 x2 x3. t = !x3 x2 x1. t               *)
 (*                                                                      *)
 (* The standard use of this conversion is with a resort function, that  *)
 (* returns a permutation of the original variables. However, it can     *)
@@ -1893,7 +2812,32 @@ fun RESORT_FORALL_CONV rs xst =
    end
 
 (* ---------------------------------------------------------------------*)
-(* FORALL_SIMP_CONV: gets rid of unused allquantification               *)
+(* RESORT_TY_FORALL_CONV: resorts the order of all type quantified vars,*)
+(*    as specified by a given resort function                           *)
+(*                                                                      *)
+(* RESORT_TY_FORALL_CONV rev ``!:'a 'b 'c. t`` --->                     *)
+(*                            |- !:'a 'b 'c. t = !:'c 'b 'a. t          *)
+(*                                                                      *)
+(* The standard use of this conversion is with a resort function, that  *)
+(* returns a permutation of the original variables. However, it can     *)
+(* also introduce or eliminate variables, provided that these variables *)
+(* are not free in t.                                                   *)
+(*                                                                      *)
+(* RESORT_TY_FORALL_CONV (K [``:'b``,``:'new``]) ``!:'a 'b 'c. t`` ---> *)
+(*                      |- !:'a 'b 'c. t = !:'b 'new. t                 *)
+(* ---------------------------------------------------------------------*)
+fun RESORT_TY_FORALL_CONV rs xst =
+   let val (xs, t) = strip_tyforall xst
+       val ys = rs xs;
+       val yst = list_mk_tyforall (ys, t)
+   in
+     IMP_ANTISYM_RULE
+         (DISCH xst (TY_GENL ys (TY_SPECL xs (ASSUME xst))))
+         (DISCH yst (TY_GENL xs (TY_SPECL ys (ASSUME yst))))
+   end
+
+(* ---------------------------------------------------------------------*)
+(* FORALL_SIMP_CONV: gets rid of all unused quantification              *)
 (*                                                                      *)
 (* |- !x. P = P                                                         *)
 (* ---------------------------------------------------------------------*)
@@ -1904,6 +2848,20 @@ fun FORALL_SIMP_CONV xt =
      IMP_ANTISYM_RULE
          (DISCH xt (SPEC x (ASSUME xt)))
          (DISCH t (GEN x (ASSUME t)))
+   end
+
+(* ---------------------------------------------------------------------*)
+(* TY_FORALL_SIMP_CONV: gets rid of all unused type quantification      *)
+(*                                                                      *)
+(* |- !:'a. P = P                                                         *)
+(* ---------------------------------------------------------------------*)
+fun TY_FORALL_SIMP_CONV xt =
+   let
+     val {Bvar=x, Body=t} = dest_tyforall xt
+   in
+     IMP_ANTISYM_RULE
+         (DISCH xt (TY_SPEC x (ASSUME xt)))
+         (DISCH t (TY_GEN x (ASSUME t)))
    end
 
 
@@ -1922,8 +2880,20 @@ local
          else c t
       end;
 
+   fun TY_FORALL_DEPTH_CONV c t =
+      let
+         val (_, body) = Psyntax.dest_tyforall t;
+      in
+         if is_tyforall body then
+            (TY_QUANT_CONV (TY_FORALL_DEPTH_CONV c) THENC c) t
+         else c t
+      end;
+
    fun NUM_QUANT_CONV n =
       (funpow n QUANT_CONV)
+
+   fun NUM_TY_QUANT_CONV n =
+      (funpow n TY_QUANT_CONV)
 
 in
 
@@ -1945,6 +2915,23 @@ in
    end;
 
    (* -------------------------------------------------- *)
+   (* Gets rid of unused type quantifiers                *)
+   (*                                                    *)
+   (* ``!:'a 'b 'c. P [:'b:]`` --> ``!:'b. P [:'b:]``    *)
+   (* -------------------------------------------------- *)
+   fun LIST_TY_FORALL_SIMP_CONV t =
+   let
+      val (vs, body) = strip_tyforall t;
+      val _ = if null vs then Feedback.fail() else ()
+      val fv_set = HOLset.addList(empty_tyset, type_vars_in_term body)
+      val (vs_free, vs_rest) = partition (fn v => HOLset.member (fv_set, v)) vs;
+      val _ = if null vs_rest then Feedback.fail() else ()
+      val thm = RESORT_TY_FORALL_CONV (K vs_free) t
+   in
+      thm
+   end;
+
+   (* -------------------------------------------------- *)
    (* Moves over conjunctions                            *)
    (*                                                    *)
    (* ``!x1 x2 x3. P1 /\ P2`` -->                        *)
@@ -1952,6 +2939,15 @@ in
    (* -------------------------------------------------- *)
    val LIST_FORALL_AND_CONV =
       FORALL_DEPTH_CONV FORALL_AND_CONV
+
+   (* -------------------------------------------------- *)
+   (* Moves over conjunctions                            *)
+   (*                                                    *)
+   (* ``!:'a 'b 'c. P1 /\ P2`` -->                       *)
+   (* ``!:'a 'b 'c. P1 /\ !:'a 'b 'c. P2``               *)
+   (* -------------------------------------------------- *)
+   val LIST_TY_FORALL_AND_CONV =
+      TY_FORALL_DEPTH_CONV TY_FORALL_AND_CONV
 
 
    (* -------------------------------------------------- *)
@@ -1986,6 +2982,39 @@ in
       (conv1 THENC conv2) t
    end;
 
+   (* -------------------------------------------------- *)
+   (* Moves over implications                            *)
+   (*                                                    *)
+   (* ``!:'a 'b 'c. P1[:'a,'b:] ==> P2[:'b, 'c:]`` -->   *)
+   (* ``!:'b.   (?:'a. P1[:'a,'b:]) ==> (!:'c. P2[:'b,'c:])`` *)
+   (* or                                                 *)
+   (* ``!:'a 'b.       P1[:'a,'b:]) ==> (!:'c. P2[:'b,'c:])`` *)
+   (* depending on the value of exists_intro             *)
+   (* -------------------------------------------------- *)
+   fun LIST_TY_FORALL_IMP_CONV exists_intro t =
+   let
+      val (vs, body) = strip_tyforall t;
+      val (b1, b2) = Psyntax.dest_imp_only body;
+
+      val fvs_1 = HOLset.addList(empty_tyset, type_vars_in_term b1)
+      val fvs_2 = HOLset.addList(empty_tyset, type_vars_in_term b2)
+
+      val (vs_b1x, vs_rest) = partition (fn v => HOLset.member (fvs_1, v)) vs;
+      val (vs_b12, vs_b1)  = partition (fn v => HOLset.member (fvs_2, v)) vs_b1x;
+      val (vs_b2 , _)  = partition (fn v => HOLset.member (fvs_2, v)) vs_rest;
+
+      val _ = if (null vs_b2) andalso
+                 ((not exists_intro) orelse (null vs_b1)) then
+                 raise UNCHANGED else ()
+
+      val (n, rs) = if exists_intro then (length vs_b12, vs_b12 @ vs_b1 @ vs_b2) else
+                        (length vs_b1x, vs_b1x @ vs_b2)
+      val conv1 = RESORT_TY_FORALL_CONV (K rs)
+      val conv2 = NUM_TY_QUANT_CONV n (TY_FORALL_DEPTH_CONV TY_FORALL_IMP_CONV)
+   in
+      (conv1 THENC conv2) t
+   end;
+
 
    (* -------------------------------------------------- *)
    (* Moves over or                                      *)
@@ -2013,6 +3042,32 @@ in
       (conv1 THENC conv2) t
    end;
 
+   (* -------------------------------------------------- *)
+   (* Moves over or                                      *)
+   (*                                                    *)
+   (*``!:'a 'b 'c. P1[:'a,'b:] \/ P2[:'b,'c:]`` -->      *)
+   (*``!:'b. (!:'a. P1[:'a,'b:]) \/ (!:'c. P2[:'b,'c:])``*)
+   (* -------------------------------------------------- *)
+   fun LIST_TY_FORALL_OR_CONV t =
+   let
+      val (vs, body) = strip_tyforall t;
+      val (b1, b2) = Psyntax.dest_disj body;
+
+      val fvs_1 = HOLset.addList(empty_tyset, type_vars_in_term b1)
+      val fvs_2 = HOLset.addList(empty_tyset, type_vars_in_term b2)
+
+      val (vs_b1x, vs_rest) = partition (fn v => HOLset.member (fvs_1, v)) vs;
+      val (vs_b12, vs_b1)  = partition (fn v => HOLset.member (fvs_2, v)) vs_b1x;
+      val (vs_b2 , _)  = partition (fn v => HOLset.member (fvs_2, v)) vs_rest;
+
+      val _ = if (null vs_b1) andalso (null vs_b2) then
+              raise UNCHANGED else ()
+      val conv1 = RESORT_TY_FORALL_CONV (K (vs_b12 @ vs_b1 @ vs_b2))
+      val conv2 = NUM_TY_QUANT_CONV (length vs_b12) (TY_FORALL_DEPTH_CONV TY_FORALL_OR_CONV)
+   in
+      (conv1 THENC conv2) t
+   end;
+
 
    (* -------------------------------------------------- *)
    (* Moves over negation                                *)
@@ -2021,6 +3076,14 @@ in
    (* -------------------------------------------------- *)
    val LIST_FORALL_NOT_CONV =
      FORALL_DEPTH_CONV FORALL_NOT_CONV
+
+   (* -------------------------------------------------- *)
+   (* Moves over negation                                *)
+   (*                                                    *)
+   (* ``!:'a 'b 'c. ~P1`` --> ``~?:'a 'b 'c. P1``        *)
+   (* -------------------------------------------------- *)
+   val LIST_TY_FORALL_NOT_CONV =
+     TY_FORALL_DEPTH_CONV TY_FORALL_NOT_CONV
 
 
    (* -------------------------------------------------- *)
@@ -2037,6 +3100,22 @@ in
       if (is_imp_only body) then LIST_FORALL_IMP_CONV exists_intro else
       if (is_neg body andalso exists_intro) then LIST_FORALL_NOT_CONV else
          LIST_FORALL_SIMP_CONV) t
+   end
+
+   (* -------------------------------------------------- *)
+   (* Tries to minimise the scope of type universal      *)
+   (* quantifiers using all the conversions above        *)
+   (* -------------------------------------------------- *)
+   fun MINISCOPE_TY_FORALL_CONV exists_intro t =
+   let
+      val (vs, body) = strip_tyforall t;
+      val _ = if null vs then raise UNCHANGED else ()
+   in
+      (if (is_conj body) then LIST_TY_FORALL_AND_CONV else
+      if (is_disj body) then LIST_TY_FORALL_OR_CONV else
+      if (is_imp_only body) then LIST_TY_FORALL_IMP_CONV exists_intro else
+      if (is_neg body andalso exists_intro) then LIST_TY_FORALL_NOT_CONV else
+         LIST_TY_FORALL_SIMP_CONV) t
    end
 end;
 
@@ -2056,8 +3135,20 @@ local
          else c t
       end;
 
+   fun TY_EXISTS_DEPTH_CONV c t =
+      let
+         val (_, body) = Psyntax.dest_tyexists t;
+      in
+         if is_tyexists body then
+            (TY_QUANT_CONV (TY_EXISTS_DEPTH_CONV c) THENC c) t
+         else c t
+      end;
+
    fun NUM_QUANT_CONV n =
       (funpow n QUANT_CONV)
+
+   fun NUM_TY_QUANT_CONV n =
+      (funpow n TY_QUANT_CONV)
 
 in
 
@@ -2079,6 +3170,23 @@ in
    end;
 
    (* -------------------------------------------------- *)
+   (* Gets rid of unused type quantifiers                *)
+   (*                                                    *)
+   (* ``?:'a 'b 'c. P [:'b:]`` --> ``?:'b. P [:'b:]``    *)
+   (* -------------------------------------------------- *)
+   fun LIST_TY_EXISTS_SIMP_CONV t =
+   let
+      val (vs, body) = strip_tyexists t;
+      val _ = if null vs then Feedback.fail() else ()
+      val fv_set = HOLset.addList(empty_tyset, type_vars_in_term body)
+      val (vs_free, vs_rest) = partition (fn v => HOLset.member (fv_set, v)) vs;
+      val _ = if null vs_rest then Feedback.fail() else ()
+      val thm = RESORT_TY_EXISTS_CONV (K vs_free) t
+   in
+      thm
+   end;
+
+   (* -------------------------------------------------- *)
    (* Moves over disjunctions                            *)
    (*                                                    *)
    (* ``?x1 x2 x3. P1 \/ P2`` -->                        *)
@@ -2086,6 +3194,15 @@ in
    (* -------------------------------------------------- *)
    val LIST_EXISTS_OR_CONV =
       EXISTS_DEPTH_CONV EXISTS_OR_CONV
+
+   (* -------------------------------------------------- *)
+   (* Moves over disjunctions                            *)
+   (*                                                    *)
+   (* ``?:'a 'b 'c. P1 \/ P2`` -->                       *)
+   (* ``?:'a 'b 'c. P1 \/ ?:'a 'b 'c. P2``               *)
+   (* -------------------------------------------------- *)
+   val LIST_TY_EXISTS_OR_CONV =
+      TY_EXISTS_DEPTH_CONV TY_EXISTS_OR_CONV
 
 
    (* -------------------------------------------------- *)
@@ -2120,6 +3237,39 @@ in
       (conv1 THENC conv2) t
    end;
 
+   (* -------------------------------------------------- *)
+   (* Moves over implications                            *)
+   (*                                                    *)
+   (* ``?:'a 'b 'c. P1[:'a,'b:] ==> P2[:'b, 'c:]`` -->   *)
+   (* ``?:'b.   (!:'a. P1[:'a,'b:]) ==> (?:'c. P2[:'b,'c:])`` *)
+   (* or                                                 *)
+   (* ``?:'a 'b.       P1[:'a,'b:]) ==> (?:'c. P2[:'b,'c:])`` *)
+   (* depending on the value of forall_intro             *)
+   (* -------------------------------------------------- *)
+   fun LIST_TY_EXISTS_IMP_CONV forall_intro t =
+   let
+      val (vs, body) = strip_tyexists t;
+      val (b1, b2) = Psyntax.dest_imp_only body;
+
+      val fvs_1 = HOLset.addList(empty_tyset, type_vars_in_term b1)
+      val fvs_2 = HOLset.addList(empty_tyset, type_vars_in_term b2)
+
+      val (vs_b1x, vs_rest) = partition (fn v => HOLset.member (fvs_1, v)) vs;
+      val (vs_b12, vs_b1)  = partition (fn v => HOLset.member (fvs_2, v)) vs_b1x;
+      val (vs_b2 , _)  = partition (fn v => HOLset.member (fvs_2, v)) vs_rest;
+
+      val _ = if (null vs_b2) andalso
+                 ((not forall_intro) orelse (null vs_b1)) then
+                 raise UNCHANGED else ()
+
+      val (n, rs) = if forall_intro then (length vs_b12, vs_b12 @ vs_b1 @ vs_b2) else
+                        (length vs_b1x, vs_b1x @ vs_b2)
+      val conv1 = RESORT_TY_EXISTS_CONV (K rs)
+      val conv2 = NUM_TY_QUANT_CONV n (TY_EXISTS_DEPTH_CONV TY_EXISTS_IMP_CONV)
+   in
+      (conv1 THENC conv2) t
+   end;
+
 
    (* ---------------------------------------------------------------------*)
    (* BOTH_EXISTS_IMP_CONV, implements the following axiom scheme.         *)
@@ -2127,13 +3277,31 @@ in
    (*      |- (?x. P[x]==>Q[x]) = ((!x.P[x]) ==> (?x.Q[x])                 *)
    (*                                                                      *)
    (* Thus, it handles thes missing case of EXISTS_IMP_CONV, where         *)
-   (* x is free in both P an Q                                             *)
+   (* x is free in both P and Q                                            *)
    (* ---------------------------------------------------------------------*)
    val BOTH_EXISTS_IMP_CONV =
    let
        val conv1 = QUANT_CONV (PART_MATCH lhs boolTheory.IMP_DISJ_THM)
        val conv2 = EXISTS_OR_CONV
        val conv3 = (RATOR_CONV o RAND_CONV) EXISTS_NOT_CONV
+       val conv4 = PART_MATCH lhs (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV) boolTheory.IMP_DISJ_THM)
+   in
+       (conv1 THENC conv2 THENC conv3 THENC conv4)
+   end;
+
+   (* ---------------------------------------------------------------------*)
+   (* BOTH_TY_EXISTS_IMP_CONV, implements the following axiom scheme.      *)
+   (*                                                                      *)
+   (*   |- (?:'a. P[:'a:]==>Q[:'a:]) = ((!:'a.P[:'a:]) ==> (?:'a.Q[:'a:])  *)
+   (*                                                                      *)
+   (* Thus, it handles thes missing case of TY_EXISTS_IMP_CONV, where      *)
+   (* a is free in both P and Q                                            *)
+   (* ---------------------------------------------------------------------*)
+   val BOTH_TY_EXISTS_IMP_CONV =
+   let
+       val conv1 = TY_QUANT_CONV (PART_MATCH lhs boolTheory.IMP_DISJ_THM)
+       val conv2 = TY_EXISTS_OR_CONV
+       val conv3 = (RATOR_CONV o RAND_CONV) TY_EXISTS_NOT_CONV
        val conv4 = PART_MATCH lhs (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV) boolTheory.IMP_DISJ_THM)
    in
        (conv1 THENC conv2 THENC conv3 THENC conv4)
@@ -2166,6 +3334,32 @@ in
       (conv1 THENC conv2) t
    end;
 
+   (* -------------------------------------------------- *)
+   (* Moves over conjunctions                            *)
+   (*                                                    *)
+   (*``?:'a 'b 'c. P1[:'a,'b:] /\ P2[:'b,'c:]`` -->      *)
+   (*``?:'b. (?:'a. P1[:'a,'b:]) /\ (?:'c. P2[:'b,'c:])``*)
+   (* -------------------------------------------------- *)
+   fun LIST_TY_EXISTS_AND_CONV t =
+   let
+      val (vs, body) = strip_tyexists t;
+      val (b1, b2) = Psyntax.dest_conj body;
+
+      val fvs_1 = HOLset.addList(empty_tyset, type_vars_in_term b1)
+      val fvs_2 = HOLset.addList(empty_tyset, type_vars_in_term b2)
+
+      val (vs_b1x, vs_rest) = partition (fn v => HOLset.member (fvs_1, v)) vs;
+      val (vs_b12, vs_b1)  = partition (fn v => HOLset.member (fvs_2, v)) vs_b1x;
+      val (vs_b2 , _)  = partition (fn v => HOLset.member (fvs_2, v)) vs_rest;
+
+      val _ = if (null vs_b1) andalso (null vs_b2) then
+              raise UNCHANGED else ()
+      val conv1 = RESORT_TY_EXISTS_CONV (K (vs_b12 @ vs_b1 @ vs_b2))
+      val conv2 = NUM_TY_QUANT_CONV (length vs_b12) (TY_EXISTS_DEPTH_CONV TY_EXISTS_AND_CONV)
+   in
+      (conv1 THENC conv2) t
+   end;
+
 
    (* -------------------------------------------------- *)
    (* Moves over negation                                *)
@@ -2174,6 +3368,14 @@ in
    (* -------------------------------------------------- *)
    val LIST_EXISTS_NOT_CONV =
      EXISTS_DEPTH_CONV EXISTS_NOT_CONV
+
+   (* -------------------------------------------------- *)
+   (* Moves over negation                                *)
+   (*                                                    *)
+   (* ``?:'a 'b 'c. ~P1`` --> ``~!:'a 'b 'c. P1``        *)
+   (* -------------------------------------------------- *)
+   val LIST_TY_EXISTS_NOT_CONV =
+     TY_EXISTS_DEPTH_CONV TY_EXISTS_NOT_CONV
 
 
    (* -------------------------------------------------- *)
@@ -2190,6 +3392,22 @@ in
       if (is_imp_only body) then LIST_EXISTS_IMP_CONV forall_intro else
       if (is_neg body andalso forall_intro) then LIST_EXISTS_NOT_CONV else
          LIST_EXISTS_SIMP_CONV) t
+   end
+
+   (* -------------------------------------------------- *)
+   (* Tries to minimise the scope of type universal      *)
+   (* quantifiers using all the conversions above        *)
+   (* -------------------------------------------------- *)
+   fun MINISCOPE_TY_EXISTS_CONV forall_intro t =
+   let
+      val (vs, body) = strip_tyexists t;
+      val _ = if null vs then raise UNCHANGED else ()
+   in
+      (if (is_disj body) then LIST_TY_EXISTS_OR_CONV else
+      if (is_conj body) then LIST_TY_EXISTS_AND_CONV else
+      if (is_imp_only body) then LIST_TY_EXISTS_IMP_CONV forall_intro else
+      if (is_neg body andalso forall_intro) then LIST_TY_EXISTS_NOT_CONV else
+         LIST_TY_EXISTS_SIMP_CONV) t
    end
 end;
 
@@ -2474,6 +3692,30 @@ fun EXISTS_AND_REORDER_CONV t = let
       EQT_ELIM (AC_CONV (CONJ_ASSOC, CONJ_COMM) (mk_eq(body, newbody)))
 in
   QUANT_CONV (K bodies_eq_thm) THENC EXISTS_AND_CONV
+end t
+
+(* ----------------------------------------------------------------------
+    TY_EXISTS_AND_REORDER_CONV
+
+    moves an existential quantifier into a conjunctive body, first sorting
+    the body so that conjuncts where the bound variable appears are
+    put first.
+   ---------------------------------------------------------------------- *)
+
+fun TY_EXISTS_AND_REORDER_CONV t = let
+  open Psyntax
+  val (var, body) = dest_tyexists t
+      handle HOL_ERR _ => raise ERR "TY_EXISTS_AND_REORDER_CONV"
+                                    "Term not a type existential"
+  val conjs = strip_conj body
+  val _ = length conjs > 1 orelse raise UNCHANGED
+  val (there, notthere) = partition (type_var_occurs var) conjs
+  val _ = (not (null notthere) andalso not (null there)) orelse raise UNCHANGED
+  val newbody = mk_conj (list_mk_conj notthere, list_mk_conj there)
+  val bodies_eq_thm =
+      EQT_ELIM (AC_CONV (CONJ_ASSOC, CONJ_COMM) (mk_eq(body, newbody)))
+in
+  TY_QUANT_CONV (K bodies_eq_thm) THENC TY_EXISTS_AND_CONV
 end t
 
 (*---------------------------------------------------------------------------*)

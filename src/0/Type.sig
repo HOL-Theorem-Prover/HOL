@@ -91,6 +91,7 @@ sig
   val polymorphic   : hol_type -> bool
   val universal     : hol_type -> bool
   val abstraction   : hol_type -> bool
+  val is_omega      : hol_type -> bool
   val kind_rank_compare : (kind * int) * (kind * int) -> order
   val tyvar_compare : tyvar * tyvar -> order
   val compare       : hol_type * hol_type -> order

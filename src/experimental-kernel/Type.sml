@@ -756,6 +756,12 @@ fun abstraction (TyAbs _)         = true
   | abstraction (TyAll (_,Body))  = abstraction Body
   | abstraction _                 = false
 
+fun is_omega (TyAbs _)         = true
+  | is_omega (TyAll _)         = true
+  | is_omega (TyApp (Opr,Arg)) = is_omega Opr orelse is_omega Arg
+  | is_omega (Tyv  (_,k,r))    = not (k = Kind.typ andalso r = 0)
+  | is_omega (TyCon(_,k,r))    = not (Kind.is_arity k andalso r = 0)
+
 (*---------------------------------------------------------------------------
        Function types
  ---------------------------------------------------------------------------*)

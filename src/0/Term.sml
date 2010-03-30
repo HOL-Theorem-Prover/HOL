@@ -574,6 +574,19 @@ fun prim_mk_const (knm as {Name,Thy}) =
 
 fun ground x = Lib.all (fn {redex,residue} => not(Type.polymorphic residue)) x;
 
+local val tyis_omega = Type.is_omega
+in
+  fun is_omega (Fv(_,ty))          = tyis_omega ty
+    | is_omega (Bv _)              = false
+    | is_omega (Const (_,POLY ty)) = tyis_omega ty
+    | is_omega (Const (_,GRND ty)) = tyis_omega ty
+    | is_omega (Comb(Rator,Rand))  = is_omega Rand orelse is_omega Rator
+    | is_omega (Abs(Bvar,Body))    = is_omega Bvar orelse is_omega Body
+    | is_omega (TComb(Rator,Ty))   = true
+    | is_omega (TAbs(Ty,Body))     = true
+    | is_omega (t as Clos _)       = is_omega (push_clos t)
+end
+
 (* val bconv = deep_beta_ty *)
 
 fun create_const errstr (const as (r,GRND pat)) Ty =

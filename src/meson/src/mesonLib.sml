@@ -797,7 +797,10 @@ fun ASM_FOL_TAC (asl,w) =
 (* ------------------------------------------------------------------------- *)
 
 val PREMESON_CANON_TAC =
-  let fun GSPEC th = SPEC (genvar(type_of(fst(dest_forall(concl th))))) th
+  let fun GTY_SPEC th = let val tyv = fst(dest_tyforall(concl th))
+                        in TY_SPEC (gen_var_type(kind_of tyv, rank_of tyv)) th
+                        end
+      fun GSPEC th = SPEC (genvar(type_of(fst(dest_forall(concl th))))) th
       open jrhTactics
   in
     RULE_ASSUM_TAC
@@ -907,6 +910,9 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
     fun grab_constants tm acc =
       if is_forall tm orelse is_exists tm then
          grab_constants (body(rand tm)) acc
+      else
+      if is_tyforall tm orelse is_tyexists tm then
+         grab_constants (tybody(rand tm)) acc
       else
         if is_beq tm orelse is_imp tm orelse is_conj tm orelse is_disj tm then
           grab_constants (rand tm) (grab_constants (lhand tm) acc)

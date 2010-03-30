@@ -1744,6 +1744,16 @@ fun gen_variant P caller =
 val variant      = gen_variant inST "variant"
 val prim_variant = gen_variant (K false) "prim_variant";
 
+local val tyis_omega = Type.is_omega
+in
+  fun is_omega (Var(_,ty))       = tyis_omega ty
+    | is_omega (Const (_,ty))    = tyis_omega ty
+    | is_omega (App(Rator,Rand)) = is_omega Rand orelse is_omega Rator
+    | is_omega (Abs(Bvar,Body))  = is_omega Bvar orelse is_omega Body
+    | is_omega (TApp(Rator,Ty))  = true
+    | is_omega (TAbs(Ty,Body))   = true
+end
+
 
 (* In the name-carrying implementation this operation is no longer constant
    time *)

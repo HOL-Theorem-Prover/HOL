@@ -71,6 +71,7 @@ sig
   val is_tycomb     : term -> bool
   val is_abs        : term -> bool
   val is_tyabs      : term -> bool
+  val is_omega      : term -> bool
   val rator         : term -> term
   val rand          : term -> term
   val bvar          : term -> term

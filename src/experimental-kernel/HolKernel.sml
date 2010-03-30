@@ -204,6 +204,8 @@ fun destruct_type Ty =
   TYVAR   (dest_var_type     Ty) handle HOL_ERR _ =>
   TYCONST (dest_thy_con_type Ty);
 
+fun is_omega th = Lib.exists Term.is_omega (hyp th) orelse Term.is_omega (concl th)
+
 
 (*---------------------------------------------------------------------------*
  * Used to implement natural deduction style discharging of hypotheses. All  *

@@ -2252,7 +2252,7 @@ fun HO_MATCH_MP ith =
 (*   !x. t1 ==> t2   --->       t1 ==> !x.t2   (x not free in t1)	*)
 (*   !:a. t1 ==> t2  --->       t1 ==> !:a.t2  (a not free in t1)	*)
 (*   (?x.t1) ==> t2  --->	!x'. t1[x'/x] ==> t2			*)
-(*   (?:a.t1) ==> t2 --->	t1[a'/a] ==> t2			        *)
+(*   (?:a.t1) ==> t2 --->	!:a'. t1[a'/a] ==> t2			*)
 (*									*)
 (* The function now fails if no implications can be derived from the 	*)
 (* input theorem.							*)
@@ -2321,15 +2321,33 @@ fun canon (fl,th) =
      end else
    if fl then [TY_TM_GEN_ALL th] else []
    end
-in
-fun RES_CANON th =
+
+fun CORE_RES_CANON finisher th =
  let val conjlist = CONJUNCTS (TY_TM_SPEC_ALL th)
      fun operate th accum =
-          accum @ map TY_TM_GEN_ALL (canon (not_elim (TY_TM_SPEC_ALL th)))
+          accum @ map finisher (canon (not_elim (TY_TM_SPEC_ALL th)))
      val imps = Lib.rev_itlist operate conjlist []
  in Lib.assert (op not o null) imps
  end handle HOL_ERR _
  => raise ERR "RES_CANON" "No implication is derivable from input thm"
+in
+fun OLD_RES_CANON th =
+ let val ftyvs = HOLset.listItems (HOLset.difference
+                  (HOLset.addList(empty_tyset, type_vars_in_term(concl th)), hyp_tyvars th))
+ in if null ftyvs then CORE_RES_CANON GEN_ALL th
+    else
+     let val gvs = map (fn a => genvar (mk_app_type(gen_var_type(kind_of a ==> typ, 0), a))) ftyvs
+         val ty_hyp = LIST_CONJ (map REFL gvs)
+         val ty_con = concl ty_hyp
+         val th1 = ADD_ASSUM ty_con th
+         val REM_TY_HYP = fn th => MP (DISCH ty_con th) ty_hyp
+     in CORE_RES_CANON (GEN_ALL o REM_TY_HYP) th1
+     end
+ end
+
+fun RES_CANON th =
+ if is_omega th then CORE_RES_CANON TY_TM_GEN_ALL th
+ else OLD_RES_CANON th
 end
 
 (*======================================================================*)

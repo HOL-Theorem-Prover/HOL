@@ -1343,6 +1343,13 @@ fun abstraction (TyAbs _)         = true
   | abstraction (TyAll (_,Body))  = abstraction Body
   | abstraction _                 = false
 
+fun is_omega (TyAbs _)         = true
+  | is_omega (TyAll _)         = true
+  | is_omega (TyApp (Opr,Arg)) = is_omega Opr orelse is_omega Arg
+  | is_omega (TyBv _)          = true
+  | is_omega (TyFv (_,k,r))    = not (k = Kind.typ andalso r = 0)
+  | is_omega (TyCon(_,k,r))    = not (Kind.is_arity k andalso r = 0)
+
 (*--------------------------------------------------------------------------------
     Matching (first order, modulo alpha conversion) of types, including
     sets of type variables to avoid binding.

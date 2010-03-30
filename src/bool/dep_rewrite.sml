@@ -1,11 +1,12 @@
 (* ===================================================================== *)
 (* FILE          : dep_rewrite.sml                                       *)
-(* VERSION       : 1.1                                                   *)
+(* VERSION       : 1.2                                                   *)
 (* DESCRIPTION   : Dependent Rewriting Tactics (general purpose)         *)
 (*                                                                       *)
 (* AUTHOR        : Peter Vincent Homeier                                 *)
 (* DATE          : May 7, 2002                                           *)
-(* COPYRIGHT     : Copyright (c) 2002 by Peter Vincent Homeier           *)
+(* REVISED       : March 30, 2010 by PVH for HOL-Omega                   *)
+(* COPYRIGHT     : Copyright (c) 2002, 2010 by Peter Vincent Homeier     *)
 (*                                                                       *)
 (* ===================================================================== *)
 
@@ -35,8 +36,8 @@
 (* proven.  Also, even more commonly than with REWRITE_TAC,           *)
 (* the rewriting process may diverge.                                 *)
 (*                                                                    *)
-(* Each implication theorem for rewriting may have a layer of         *)
-(* universal quantifications, under which is the base, which will     *)
+(* Each implication theorem for rewriting may have a layer of type or *)
+(* term universal quantifications, under which is the base, which will*)
 (* either be an equality, a negation, or a general term.  The pattern *)
 (* for matching will be the left-hand-side of an equality, the term   *)
 (* negated of a negation, or the term itself in the third case.  The  *)
@@ -202,6 +203,9 @@ fun UNDER_FORALL_CONV conv tm =
     if is_forall tm then
        RAND_CONV (ABS_CONV (UNDER_FORALL_CONV conv)) tm
     else
+    if is_tyforall tm then
+       RAND_CONV (TY_ABS_CONV (UNDER_FORALL_CONV conv)) tm
+    else
        conv tm ;
 
 (* Does multiple conversions of ==> to /\:
@@ -243,19 +247,22 @@ fun UNDISCH_ALL_NOT_NEG th =
        then UNDISCH_ALL_NOT_NEG (UNDISCH_NOT_NEG th)
        else th;
 
+val op +-+ = Lib.+-+
+infix +-+
 
 fun DEP_FIND_matches th =
    let
        val tha = (* CONV_RULE (REPEATC
                      (UNDER_FORALL_CONV RIGHT_IMP_FORALL_CONV)) *) th;
        val tm = concl tha
-       val (avs,bod) = strip_forall tm
+       val (avs,bod) = strip_all_forall tm
        val (ants,conseq) = strip_imp_only bod
-       val th1 = SPECL avs (ASSUME tm)
+       val th1 = TY_TM_SPECL avs (ASSUME tm)
        val th2 = UNDISCH_ALL_NOT_NEG th1
-       val evs = filter(fn v => all (free_in v) ants
-                        andalso not(free_in v conseq)) avs
-       val th3 = itlist SIMPLE_CHOOSE evs (DISCH tm th2)
+       val evs = filter(fn inR v => all (free_in v) ants andalso not(free_in v conseq)
+                         | inL a => all (type_var_occurs a) ants andalso not(type_var_occurs a conseq)
+                        ) avs
+       val th3 = itlist (SIMPLE_TY_CHOOSE +-+ SIMPLE_CHOOSE) evs (DISCH tm th2)
        val hs = hyp th3
        fun DISCH_ALL hyps th = itlist DISCH hyps th
        val sth = MP (DISCH tm (GEN_ALL (DISCH_ALL hs (UNDISCH th3)))) tha
@@ -285,12 +292,22 @@ fun SUB_matches (f:term->'a) tm =
    ( (* if debug_matches then (print_string "SUB_matches: ";
                     print_term tm; print_newline()) else (); *)
     if is_comb tm then
-       (let val {Rator,Rand} = Rsyntax.dest_comb tm in
-        (f Rator handle _ => f Rand)
-        end)
+        let val {Rator,Rand} = Rsyntax.dest_comb tm in
+            (f Rator handle _ => f Rand)
+        end
     else
     if is_abs tm then
        let val {Bvar,Body} = Rsyntax.dest_abs tm in
+           f Body
+       end
+    else
+    if is_tycomb tm then
+       let val {Rator,Rand} = Rsyntax.dest_tycomb tm in
+           f Rator
+       end
+    else
+    if is_tyabs tm then
+       let val {Bvar,Body} = Rsyntax.dest_tyabs tm in
            f Body
        end
     else failwith "SUB_matches");
