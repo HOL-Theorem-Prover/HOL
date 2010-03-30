@@ -8,6 +8,8 @@ fun readline lnum strm = let
       case latest of
         NONE => if null acc then NONE
               else SOME (lnum + 1, String.concat (List.rev acc))
+      | SOME "" => if null acc then NONE
+                   else SOME (lnum + 1, String.concat (List.rev acc))
       | SOME "\n" => SOME (lnum + 1, String.concat (List.rev acc))
       | SOME s =>
         if String.sub(s, size s - 2) = #"\\" then

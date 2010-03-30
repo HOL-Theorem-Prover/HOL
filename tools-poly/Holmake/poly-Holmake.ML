@@ -9,10 +9,15 @@ fun useH f =
   (use ("Holmake/" ^ f ^ ".sig");
    use ("Holmake/" ^ f ^ ".sml"));
 
+fun useC f =
+    (use ("../tools/Holmake/" ^ f ^ ".sig");
+     use ("../tools/Holmake/" ^ f ^ ".sml"))
+
+
 val _ = useH "Systeml";
-val _ = useH "internal_functions";
-val _ = useH "Holmake_types";
-val _ = useH "ReadHMF";
+val _ = useC "internal_functions";
+val _ = useC "Holmake_types";
+val _ = useC "ReadHMF";
 
 fun u f = use ("../tools/mlyacc/mlyacclib/" ^ f ^ ".sml");
 val _ = u "MLY_base-sig";
