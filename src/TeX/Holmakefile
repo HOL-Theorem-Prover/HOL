@@ -1,0 +1,8 @@
+mkmunge: mkmunge.o
+	cc -o $@ $< -lpolymain -lpolyml
+
+mkmunge.o: poly-mkmkmunge.ML munger.lex.sml
+	$(HOLDIR)/bin/hol < $<
+
+munger.lex.sml: munger.lex
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $(MLLEX) $<
