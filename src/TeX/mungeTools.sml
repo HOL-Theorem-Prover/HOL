@@ -170,8 +170,11 @@ local
       | pr [i] = ( begb pps; pfun pps i; endb pps)
       | pr (i::rst) = ( begb pps; pfun pps i; newl pps; endb pps; pr rst )
   in pr end
+  type arg = {commpos : posn, argpos : posn, command : command,
+              options : optionset, argument : string}
 in
-  fun replacement pps (argument as {commpos = pos, argument = spec,...}) = let
+  fun replacement pps (argument:arg as {commpos = pos, argument = spec,...}) =
+  let
     val {argpos = (argline, argcpos), command, options = opts, ...} = argument
     val tt = OptSet.has TT opts
     val () = if tt then add_string pps "\\mbox{\\textup{\\texttt{" else ()
