@@ -1,3 +1,9 @@
+TARGET = $(if $(findstring mosml,$(ML_SYSNAME)),munger.lex.sml,mkmunge)
+EXTRA_CLEANS = munger.lex.sml
+
+.PHONY: all
+all: $(TARGET)
+
 mkmunge: mkmunge.o
 	cc -o $@ $< -lpolymain -lpolyml
 
@@ -5,4 +11,10 @@ mkmunge.o: poly-mkmkmunge.ML munger.lex.sml
 	$(HOLDIR)/bin/hol < $<
 
 munger.lex.sml: munger.lex
-	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $(MLLEX) $<
+	$(MLLEX) $<
+
+munger.lex.ui munger.lex.uo: munger.lex.sml mungeTools.ui
+	$(HOLMOSMLC-C) -toplevel $<
+
+mkmunger.uo: mkmunger.sml munger.lex.ui
+	$(HOLMOSMLC-C) munger.lex.ui $<
