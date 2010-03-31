@@ -621,7 +621,7 @@ in
                                                    | SOME s => [LIT s]
         in
           [VREF "MOSMLCOMP", LIT (" -q "^stdincludes^" -c ")] @
-          basis_string @ overlaystring
+          basis_string @ [LIT " "] @ overlaystring
         end
       | "MOSMLC" => [VREF "MOSMLCOMP", LIT (" "^addincludes)]
       | "MOSMLDIR" => [LIT MOSMLDIR]
