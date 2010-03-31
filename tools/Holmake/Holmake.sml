@@ -503,25 +503,6 @@ in
   Process.exit Process.failure
 end
 
-fun base_environment s = let
-  open Holmake_types
-  val p = Systeml.protect
-in
-  case s of
-    "HOLDIR" => [LIT HOLDIR]
-  | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
-  | "MOSMLDIR" => [LIT MOSMLDIR]
-  | "MOSMLCOMP" => [VREF "protect $(MOSMLDIR)/mosmlc"]
-  | "MOSMLLEX" => [VREF "protect $(MOSMLDIR)/mosmllex"]
-  | "MOSMLYAC" => [VREF "protect $(MOSMLDIR)/mosmlyac"]
-  | "UNQUOTE" => [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")]
-  | "MV" => if Systeml.OS = "winNT" then [LIT "rename"] else [LIT "/bin/mv"]
-  | "CP" => if Systeml.OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]
-  | _ => (case Process.getEnv s of
-            NONE => [LIT ""]
-          | SOME v => [LIT v])
-end
-
 (* turn a variable name into a list *)
 fun envlist env id = let
   open Holmake_types
@@ -584,7 +565,10 @@ val hmakefile_toks =
     end
   else []
 
-val hmakefile_env0 = Holmake_types.extend_env hmakefile_toks base_environment
+val hmakefile_env0 = let open Holmake_types
+                     in
+                       extend_env hmakefile_toks base_environment
+                     end
 val envlist = envlist hmakefile_env0
 
 val hmake_includes = envlist "INCLUDES"
@@ -640,6 +624,10 @@ in
           basis_string @ overlaystring
         end
       | "MOSMLC" => [VREF "MOSMLCOMP", LIT (" "^addincludes)]
+      | "MOSMLDIR" => [LIT MOSMLDIR]
+      | "MOSMLCOMP" => [VREF "protect $(MOSMLDIR)/mosmlc"]
+      | "MOSMLLEX" => [VREF "protect $(MOSMLDIR)/mosmllex"]
+      | "MOSMLYAC" => [VREF "protect $(MOSMLDIR)/mosmlyac"]
       | _ => hmakefile_env0 s)
 end
 

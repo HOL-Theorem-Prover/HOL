@@ -12,6 +12,8 @@ datatype token = HM_defn of string * quotation
 
 type env = string -> quotation
 
+val base_environment : env
+
 val to_token : pretoken -> token
 
 val perform_substitution : env -> quotation -> string

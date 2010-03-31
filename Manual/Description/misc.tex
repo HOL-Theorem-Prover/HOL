@@ -534,6 +534,8 @@ commonly used programs.  These are:
   is the first argument, the second is the place to copy to.  The
   second argument can be a directory.  (Under Unix, \texttt{CP}
   expands to \texttt{cp}; under Windows, it expands to \texttt{copy}.)
+\item[\texttt{ML_SYSNAME}] The name of the ML system being used:
+  either \texttt{mosml} or \texttt{poly}.
 \item[\texttt{HOLMOSMLC}] This variable is replaced by an invocation
   of the Moscow ML compiler along with the \texttt{-q} flag (necessary
   for handling quotations), and the usual \texttt{-I} include
@@ -545,6 +547,10 @@ commonly used programs.  These are:
   system's overlay file.  This is needed for compilation of HOL source
   files, but not for linking of HOL object code, which can be done
   with \texttt{HOLMOSMLC}.
+\item[\texttt{MLLEX}] This is the path of the \texttt{mllex} tool that
+  is built as part of HOL's configuration.
+\item[\texttt{MLYACC}] This is the path of the \texttt{mlyacc} tool that
+  is built as part of HOL's configuration.
 \item[\texttt{MOSMLC}] This is replaced by an invocation of the
   compiler along with just the normal includes.
 \item[\texttt{MOSMLLEX}] This is replaced by an invocation of the
