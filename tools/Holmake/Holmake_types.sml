@@ -209,6 +209,31 @@ fun commafy0 [] = []
   | commafy0 (h::t) = h :: ", " :: commafy0 t
 val commafy = String.concat o commafy0
 
+fun argtokenize ss = let
+  open Substring
+  val sz = size ss
+  fun recurse pdepth start i acc =
+      if i = sz then
+        if pdepth = 0 then List.rev (slice(ss,start,NONE) :: acc)
+        else raise Fail "argtokenize: too few right parens"
+      else let
+          val c = sub(ss,i)
+        in
+          if c = #"(" then recurse (pdepth + 1) start (i + 1) acc
+          else if c = #")" then
+            if pdepth = 0 then raise Fail "argtokenize: too many right parens"
+            else recurse (pdepth - 1) start (i + 1) acc
+          else if c = #"," then
+            if pdepth = 0 then recurse pdepth (i + 1) (i + 1)
+                                       (slice(ss,start,SOME (i-start)) :: acc)
+            else recurse pdepth start (i + 1) acc
+          else
+            recurse pdepth start (i + 1) acc
+        end
+in
+  recurse 0 0 0 []
+end
+
 fun perform_substitution env q = let
   open Substring
   fun finisher q =
@@ -227,8 +252,9 @@ fun perform_substitution env q = let
               if size spc_rest > 0 then let
                   (* have a function call to evaluate *)
                   val fnname = string fnpart
-                  val args =
-                      tokens (fn c => c = #",") (dropl Char.isSpace spc_rest)
+                  val args = argtokenize
+                                 (dropl Char.isSpace
+                                        (dropr Char.isSpace spc_rest))
                   val eval =
                       finisher o recurse visited o extract_normal_quotation
                 in
@@ -339,6 +365,21 @@ fun mk_rules warn toks env = let
   val dict2 = Binarymap.mkDict String.compare
 in
   recurse (NONE, dict1, dict2) toks
+end
+
+fun base_environment s = let
+  open Systeml
+in
+  case s of
+    "CP" => if OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]
+  | "HOLDIR" => [LIT HOLDIR]
+  | "MLLEX" => [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]
+  | "MLYACC" => [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]
+  | "ML_SYSNAME" => [LIT ML_SYSNAME]
+  | "MV" => if OS = "winNT" then [LIT "rename"] else [LIT "/bin/mv"]
+  | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
+  | "UNQUOTE" => [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")]
+  | _ => (case OS.Process.getEnv s of NONE => [LIT ""] | SOME v => [LIT v])
 end
 
 end (* struct *)

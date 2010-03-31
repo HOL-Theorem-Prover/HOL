@@ -34,6 +34,10 @@ type convdata = {name  : string,
                  trace : int,
                  conv  : (term list -> term -> thm) -> term list -> conv};
 
+type stdconvdata = { name: string,
+                     pats: term list,
+                     conv: conv}
+
 (*---------------------------------------------------------------------------*)
 (* Make a rewrite rule into a conversion.                                    *)
 (*---------------------------------------------------------------------------*)
@@ -77,9 +81,10 @@ datatype ssfrag = SSFRAG of
 (* Operation on ssdata values                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun named_rewrites s rewrs =
-   SSFRAG {name=SOME s,
-           convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
+fun name_ss s (SSFRAG {convs,rewrs,filter,ac,dprocs,congs,...}) =
+  SSFRAG {name=SOME s,
+          convs=convs,rewrs=rewrs,filter=filter,
+          ac=ac,dprocs=dprocs,congs=congs};
 
 fun rewrites rewrs =
    SSFRAG {name=NONE,
@@ -122,6 +127,25 @@ fun merge_ss (s:ssfrag list) =
 	    dprocs=flatten (map (#dprocs o D) s),
 	     congs=flatten (map (#congs o D) s)};
 
+fun named_rewrites name = (name_ss name) o rewrites;
+fun named_merge_ss name = (name_ss name) o merge_ss;
+
+fun std_conv_ss {name,conv,pats} =
+  let
+    fun cnv k = conv_ss {conv = K (K conv), trace = 2, name = name, key = k}
+  in
+    if null pats then
+      cnv NONE
+    else
+      merge_ss (map (fn p => cnv (SOME([],p))) pats)
+  end
+
+fun partition_ssfrags names ssdata =
+     List.partition
+       (fn SSFRAG s =>
+          case #name s
+          of SOME name => Lib.mem name names
+           | NONE => false) ssdata
 
 (*---------------------------------------------------------------------------*)
 (* Simpsets and basic operations on them. Simpsets contain enough            *)
@@ -130,7 +154,7 @@ fun merge_ss (s:ssfrag list) =
 (* wasn't), but in practice it has to be.                                    *)
 (* --------------------------------------------------------------------------*)
 
-type net = ((term list -> term -> thm) -> term list -> conv) net;
+type net = ((term list -> term -> thm) -> term list -> conv) Ho_Net.net;
 
 abstype simpset =
      SS of {mk_rewrs    : (controlled_thm -> controlled_thm list),
@@ -214,19 +238,28 @@ with
         val net = net_add_convs initial_net newconvdata
         val TRAVRULES{relations,...} = travrules
         (* give the existing dprocs the rewrs as additional context -
-           assume the provided dprocs in the frag have already been primed *)
+           assume the provided dprocs in the frag have already been
+           primed *)
         val new_dprocs = map (Traverse.addctxt rewrs) dprocs' @ dprocs
     in
-       SS {mk_rewrs=mk_rewrs,
-           ssfrags = Lib.op_insert same_frag f ssfrags,
-           initial_net=net, limit = limit,
-           dprocs=new_dprocs,
-           travrules=merge_travrules [travrules,mk_travrules relations congs]}
+      SS {mk_rewrs    = mk_rewrs,
+          ssfrags     = Lib.op_insert same_frag f ssfrags,
+          initial_net = net,
+          limit       = limit,
+          dprocs      = new_dprocs,
+          travrules   = merge_travrules
+                          [travrules,mk_travrules relations congs]}
     end;
 
  val mk_simpset = foldl add_to_ss empty_ss;
 
  fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss)
+
+ fun remove_ssfrags ss names =
+       ss |> ssfrags_of
+          |> partition_ssfrags names
+          |> snd |> List.rev
+          |> mk_simpset
 
  fun limit n (SS {mk_rewrs,ssfrags,travrules,initial_net,dprocs,limit}) =
      SS {mk_rewrs = mk_rewrs, ssfrags = ssfrags, travrules = travrules,
@@ -261,7 +294,7 @@ with
        initial_net = initial_net, dprocs = dprocs, limit = limit} ++
    SSFRAG{convs = [], rewrs = [], filter = NONE, ac = [], dprocs = [dp],
           congs = [], name = NONE}
-end
+ end
 
 (* ----------------------------------------------------------------------
     add_relsimp : {trans,refl,weakenings,subsets} -> simpset -> simpset
@@ -275,150 +308,151 @@ end
     is a good subset theorem
    ---------------------------------------------------------------------- *)
 
-fun dest_binop t = let
-  val (fx,y) = dest_comb t
-  val (f,x) = dest_comb fx
-in
-  (f,x,y)
-end
+ fun dest_binop t = let
+   val (fx,y) = dest_comb t
+   val (f,x) = dest_comb fx
+ in
+   (f,x,y)
+ end
 
-fun vperm(tm1,tm2) =
-    case (dest_term tm1, dest_term tm2) of
-      (VAR v1,VAR v2)   => eq_ty (snd v1) (snd v2)
-    | (CONST{Name=n1,Thy=thy1,Ty=ty1},CONST{Name=n2,Thy=thy2,Ty=ty2}) =>
-         (n1 = n2) andalso (thy1 = thy2) andalso eq_ty ty1 ty2
-    | (LAMB t1,LAMB t2) => vperm(snd t1, snd t2)
-    | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
-    | (TYLAMB t1,TYLAMB t2) => vperm(snd t1, snd t2)
-    | (TYCOMB t1,TYCOMB t2) => vperm(fst t1,fst t2) andalso eq_ty (snd t1) (snd t2)
-    | (x,y) => (x = y)
+ fun vperm(tm1,tm2) =
+     case (dest_term tm1, dest_term tm2) of
+       (VAR v1,VAR v2)   => eq_ty (snd v1) (snd v2)
+     | (CONST{Name=n1,Thy=thy1,Ty=ty1},CONST{Name=n2,Thy=thy2,Ty=ty2}) =>
+          (n1 = n2) andalso (thy1 = thy2) andalso eq_ty ty1 ty2
+     | (LAMB t1,LAMB t2) => vperm(snd t1, snd t2)
+     | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
+     | (TYLAMB t1,TYLAMB t2) => vperm(snd t1, snd t2)
+     | (TYCOMB t1,TYCOMB t2) => vperm(fst t1,fst t2) andalso eq_ty (snd t1) (snd t2)
+     | (x,y) => (x = y)
 
-fun is_var_perm(tm1,tm2) =
-    vperm(tm1,tm2) andalso op_set_eq eq (free_vars tm1) (free_vars tm2)
+ fun is_var_perm(tm1,tm2) =
+     vperm(tm1,tm2) andalso op_set_eq eq (free_vars tm1) (free_vars tm2)
 
-datatype munge_action = TH of thm | POP
+ datatype munge_action = TH of thm | POP
 
-fun munge base subsets asms (thlistlist, n) = let
-  val munge = munge base subsets
-in
-  case thlistlist of
-    [] => n
-  | [] :: rest => munge asms (rest, n)
-  | (TH th :: ths) :: rest => let
-    in
-      case CONJUNCTS (SPEC_ALL th) of
-        [] => raise Fail "munge: Can't happen"
-      | [th] => let
-          open Net
-        in
-          if is_imp (concl th) then
-            munge (#1 (dest_imp (concl th)) :: asms)
-                  ((TH (UNDISCH th)::POP::ths)::rest, n)
-          else
-            case total dest_binop (concl th) of
-              SOME (R,from,to) => let
-                fun foldthis (t,th) = DISCH t th
-                fun insert (t,th0) n = let
-                  val (th,bound) = dest_tagged_rewrite th0
-                  val looksloopy = aconv from to orelse
-                                   (is_var_perm (from,to) andalso
-                                    case bound of UNBOUNDED => true
-                                                | _ => false)
-                in
-                  if looksloopy then n
-                  else
-                    Net.insert (t, (bound, List.foldl foldthis th asms)) n
-                end
-              in
-                if aconv R base then
-                  munge asms (ths :: rest, insert (from,th) n)
-                else
-                  case List.find (fn (t,_) => aconv R t) subsets of
-                    NONE => munge asms (ths :: rest, n)
-                  | SOME (_, sub_th) =>
-                    munge asms (ths :: rest, insert (from,MATCH_MP sub_th th) n)
-              end
-            | NONE => munge asms (ths :: rest, n)
-        end
-      | thlist => munge asms (map TH thlist :: ths :: rest, n)
-    end
-  | (POP :: ths) :: rest => munge (tl asms) (ths::rest, n)
-end
+ fun munge base subsets asms (thlistlist, n) = let
+   val munge = munge base subsets
+ in
+   case thlistlist of
+     [] => n
+   | [] :: rest => munge asms (rest, n)
+   | (TH th :: ths) :: rest => let
+     in
+       case CONJUNCTS (SPEC_ALL th) of
+         [] => raise Fail "munge: Can't happen"
+       | [th] => let
+           open Net
+         in
+           if is_imp (concl th) then
+             munge (#1 (dest_imp (concl th)) :: asms)
+                   ((TH (UNDISCH th)::POP::ths)::rest, n)
+           else
+             case total dest_binop (concl th) of
+               SOME (R,from,to) => let
+                 fun foldthis (t,th) = DISCH t th
+                 fun insert (t,th0) n = let
+                   val (th,bound) = dest_tagged_rewrite th0
+                   val looksloopy = aconv from to orelse
+                                    (is_var_perm (from,to) andalso
+                                     case bound of UNBOUNDED => true
+                                                 | _ => false)
+                 in
+                   if looksloopy then n
+                   else
+                     Net.insert (t, (bound, List.foldl foldthis th asms)) n
+                 end
+               in
+                 if aconv R base then
+                   munge asms (ths :: rest, insert (from,th) n)
+                 else
+                   case List.find (fn (t,_) => aconv R t) subsets of
+                     NONE => munge asms (ths :: rest, n)
+                   | SOME (_, sub_th) =>
+                     munge asms (ths :: rest,
+                                 insert (from,MATCH_MP sub_th th) n)
+               end
+             | NONE => munge asms (ths :: rest, n)
+         end
+       | thlist => munge asms (map TH thlist :: ths :: rest, n)
+     end
+   | (POP :: ths) :: rest => munge (tl asms) (ths::rest, n)
+ end
 
-fun po_rel (Travrules.PREORDER(r,_,_)) = r
+ fun po_rel (Travrules.PREORDER(r,_,_)) = r
 
-fun mk_reducer rel_t subsets initial_rewrites = let
-  exception redExn of (control * thm) Net.net
-  fun munge_subset_th th = let
-    val (_, impn) = strip_forall (concl th)
-    val (a, _) = dest_imp impn
-    val (f, _, _) = dest_binop a
-  in
-    (f, th)
-  end
-  val subsets = map munge_subset_th subsets
-  fun addcontext (ctxt, thms) = let
-    val n = case ctxt of redExn n => n
-                       | _ => raise ERR ("mk_reducer.addcontext",
-                                         "Wrong sort of ctxt")
-    val n' = munge rel_t subsets [] ([map TH thms], n)
-  in
-    redExn n'
-  end
-  val initial_ctxt = addcontext (redExn Net.empty, initial_rewrites)
-  fun applythm solver t (bound, th) = let
-    fun dec() = case bound of
-                  BOUNDED (r as ref n) =>
-                    if n > 0 then r := n - 1
-                    else raise ERR ("mk_reducer.applythm",
-                                    "Bound exceeded on rwt.")
-                | UNBOUNDED => ()
-    val matched = PART_MATCH (lhand o #2 o strip_imp) th t
-    open Trace
-    fun do_sideconds th =
-        if is_imp (concl th) then let
-          val (h,c) = dest_imp (concl th)
-          val _ = trace(3,SIDECOND_ATTEMPT h)
-          val scond = solver h
-          val _ = trace(2,SIDECOND_SOLVED scond)
-        in
-          do_sideconds (MP th scond)
-        end
-      else (dec(); trace(2,REWRITING(t,th)); th)
-  in
-    do_sideconds matched
-  end
+ fun mk_reducer rel_t subsets initial_rewrites = let
+   exception redExn of (control * thm) Net.net
+   fun munge_subset_th th = let
+     val (_, impn) = strip_forall (concl th)
+     val (a, _) = dest_imp impn
+     val (f, _, _) = dest_binop a
+   in
+     (f, th)
+   end
+   val subsets = map munge_subset_th subsets
+   fun addcontext (ctxt, thms) = let
+     val n = case ctxt of redExn n => n
+                        | _ => raise ERR ("mk_reducer.addcontext",
+                                          "Wrong sort of ctxt")
+     val n' = munge rel_t subsets [] ([map TH thms], n)
+   in
+     redExn n'
+   end
+   val initial_ctxt = addcontext (redExn Net.empty, initial_rewrites)
+   fun applythm solver t (bound, th) = let
+     fun dec() = case bound of
+                   BOUNDED (r as ref n) =>
+                     if n > 0 then r := n - 1
+                     else raise ERR ("mk_reducer.applythm",
+                                     "Bound exceeded on rwt.")
+                 | UNBOUNDED => ()
+     val matched = PART_MATCH (lhand o #2 o strip_imp) th t
+     open Trace
+     fun do_sideconds th =
+         if is_imp (concl th) then let
+           val (h,c) = dest_imp (concl th)
+           val _ = trace(3,SIDECOND_ATTEMPT h)
+           val scond = solver h
+           val _ = trace(2,SIDECOND_SOLVED scond)
+         in
+           do_sideconds (MP th scond)
+         end
+       else (dec(); trace(2,REWRITING(t,th)); th)
+   in
+     do_sideconds matched
+   end
 
-  fun apply {solver,context,stack,relation} t = let
-    val _ = aconv (po_rel relation) rel_t orelse
-            raise ERR ("mk_reducer.apply", "Wrong relation")
-    val n = case context of redExn n => n
-                          | _ => raise ERR ("apply", "Wrong sort of ctxt")
-    val matches = Net.match t n
-  in
-    tryfind (applythm (solver stack) t) matches
-  end
-in
-  Traverse.REDUCER {name = SOME ("reducer for "^term_to_string rel_t),
-                    addcontext = addcontext,
-                    apply = apply,
-                    initial = initial_ctxt}
-end
+   fun apply {solver,context,stack,relation} t = let
+     val _ = aconv (po_rel relation) rel_t orelse
+             raise ERR ("mk_reducer.apply", "Wrong relation")
+     val n = case context of redExn n => n
+                           | _ => raise ERR ("apply", "Wrong sort of ctxt")
+     val matches = Net.match t n
+   in
+     tryfind (applythm (solver stack) t) matches
+   end
+ in
+   Traverse.REDUCER {name = SOME ("reducer for "^term_to_string rel_t),
+                     addcontext = addcontext,
+                     apply = apply,
+                     initial = initial_ctxt}
+ end
 
-val equality_po = let
-  open Travrules
-  val TRAVRULES {relations,...} = EQ_tr
-in
-  hd relations
-end
+ val equality_po = let
+   open Travrules
+   val TRAVRULES {relations,...} = EQ_tr
+ in
+   hd relations
+ end
 
-fun add_relsimp {refl,trans,weakenings,subsets,rewrs} ss = let
-  val rel_t = #1 (dest_binop (#2 (strip_forall (concl refl))))
-  val rel_po = Travrules.mk_preorder (trans,refl)
-  val reducer = mk_reducer rel_t subsets rewrs
-in
-  add_weakener ([rel_po, equality_po], weakenings, reducer) ss
-end
+ fun add_relsimp {refl,trans,weakenings,subsets,rewrs} ss = let
+   val rel_t = #1 (dest_binop (#2 (strip_forall (concl refl))))
+   val rel_po = Travrules.mk_preorder (trans,refl)
+   val reducer = mk_reducer rel_t subsets rewrs
+ in
+   add_weakener ([rel_po, equality_po], weakenings, reducer) ss
+ end
 
 (*---------------------------------------------------------------------------*)
 (* SIMP_QCONV : simpset -> thm list -> conv                                  *)

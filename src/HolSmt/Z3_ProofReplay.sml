@@ -41,9 +41,12 @@ struct
     val skolem_defs = ref ([] : Term.term list)
     (* stores assumptions, (only) these may remain in the final theorem *)
     val asserted_hyps = ref Term.empty_tmset
-    (* stores theorems of linear arithmetic (proved by 'rewrite' or 'th_lemma')
-       for later retrieval, to avoid re-reproving them *)
-    val arith_cache = ref Net.empty
+    (* stores certain theorems (proved by 'rewrite' or 'th_lemma') for later
+       retrieval, to avoid re-reproving them *)
+    val theorem_cache = ref Net.empty
+
+    fun cache_theorem th =
+      theorem_cache := Net.insert (Thm.concl th, th) (!theorem_cache)
 
     (*** auxiliary functions ***)
     (* e.g.,   (A --> B) --> C --> D   ==>   [A, B, C, D] *)
@@ -689,15 +692,21 @@ struct
         handle Feedback.HOL_ERR _ =>
 
         (*Profile.profile "rewrite(cache)"*) (fn () =>
-          Z3_ProformaThms.prove (!arith_cache) t) ()
+          Z3_ProformaThms.prove (!theorem_cache) t) ()
         handle Feedback.HOL_ERR _ =>
 
         let val th = if term_contains_real_ty t then
-              (*Profile.profile "rewrite(REAL_ARITH)"*) realLib.REAL_ARITH t
-            else
-              (*Profile.profile "rewrite(ARITH_PROVE)"*) intLib.ARITH_PROVE t
+                (*Profile.profile "rewrite(REAL_ARITH)"*) realLib.REAL_ARITH t
+              else
+                (*Profile.profile "rewrite(ARITH_PROVE)"*) intLib.ARITH_PROVE t
+            handle Feedback.HOL_ERR _ =>
+
+              (*TODO*) Profile.profile "rewrite(WORD_DP)" (fn () =>
+              wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
+                (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
+                (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) t) ()
         in
-          arith_cache := Net.insert (t, th) (!arith_cache);
+          cache_theorem th;
           th
         end
       end
@@ -772,14 +781,16 @@ struct
         raise (Feedback.mk_HOL_ERR "Z3_ProofReplay" "check_proof" ("symm: " ^
           Hol_pp.thm_to_string thm ^ ", " ^ Hol_pp.term_to_string t))
     and th_lemma (thms, t) =
-      (* proforma theorems *)
-      (*Profile.profile "th_lemma(proforma)"*)
-        (fn () => Z3_ProformaThms.prove Z3_ProformaThms.th_lemma_thms t) ()
-      handle Feedback.HOL_ERR _ =>
       let val concl = boolSyntax.list_mk_imp (List.map Thm.concl thms, t)
       in
+        (* proforma theorems *)
+        (*Profile.profile "th_lemma(proforma)"*)
+          (fn () => Drule.LIST_MP thms
+            (Z3_ProformaThms.prove Z3_ProformaThms.th_lemma_thms concl)) ()
+        handle Feedback.HOL_ERR _ =>
+
         (* cache *)
-        Drule.LIST_MP thms (Z3_ProformaThms.prove (!arith_cache) concl)
+        Drule.LIST_MP thms (Z3_ProformaThms.prove (!theorem_cache) concl)
         handle Feedback.HOL_ERR _ =>
 
         let val (dict, concl) = generalize_ite concl
@@ -789,10 +800,16 @@ struct
               else
                 (*Profile.profile "th_lemma(ARITH_PROVE)"*)
                   intLib.ARITH_PROVE concl
-            val _ = arith_cache := Net.insert (concl, th) (!arith_cache)
+            handle Feedback.HOL_ERR _ =>
+
+              (*TODO*) Profile.profile "th_lemma(WORD_DP)" (fn () =>
+              wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
+                (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
+                (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) concl) ()
             val subst = List.map (fn (term, var) =>
               {redex = var, residue = term}) (Redblackmap.listItems dict)
         in
+          cache_theorem th;
           Drule.LIST_MP thms (Thm.INST subst th)
         end
       end

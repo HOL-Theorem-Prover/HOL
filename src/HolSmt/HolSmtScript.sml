@@ -10,6 +10,7 @@ struct
   val S = simpLib.SIMP_PROVE bossLib.list_ss
   val A = intLib.ARITH_PROVE
   val R = realLib.REAL_ARITH
+  val W = wordsLib.WORD_DECIDE
 
   (* simplify 't' using 'thms', then prove the simplified term by applying
      'prove_fn' *)
@@ -121,6 +122,12 @@ struct
   val _ = s ("r005", D ``(~p <=> ~q) <=> (p <=> q)``)
 
   val _ = s ("r006", P ``(if ~p then x else y) = (if p then y else x)``)
+  val _ = s ("r006a", P
+    ``(if p then (if q then x else y) else x) = (if p /\ ~q then y else x)``)
+  val _ = s ("r006b", P
+    ``(if p then (if q then x else y) else y) = (if p /\ q then x else y)``)
+  val _ = s ("r006c", P
+    ``(if p then (if q then x else y) else y) = (if q /\ p then x else y)``)
 
   val _ = s ("r007", D ``(~p ==> q) <=> (p \/ q)``)
   val _ = s ("r008", D ``(~p ==> q) <=> (q \/ p)``)
@@ -387,6 +394,32 @@ struct
   val _ = s ("r210", R ``0 * (x :real) = 0``)
   val _ = s ("r211", R ``1 * (x :real) = x``)
 
+  val _ = s ("r212", W ``0w + x = x``)
+  val _ = s ("r213", W ``(x :'a word) + y = y + x``)
+  val _ = s ("r214", W ``1w + (1w + x) = 2w + x``)
+(*
+  val _ = s ("r215", X ``0w @@ n2w x = n2w x``) (*TODO*)
+  val _ = s ("r216", X ``(0w @@ x = n2w y) <=> (x = n2w y)``)  (*TODO*)
+  val _ = s ("r217", X ``(0w @@ x = n2w y) <=> (n2w y = x)``)  (*TODO*)
+  val _ = s ("r218", X ``(n2w y = 0w @@ x) <=> (x = n2w y)``)  (*TODO*)
+  val _ = s ("r219", X ``(n2w y = 0w @@ x) <=> (n2w y = x)``)  (*TODO*)
+*)
+  val _ = s ("r220", W ``x && y = y && x``)
+  val _ = s ("r221", W ``x && y && z = y && x && z``)
+  val _ = s ("r222", W ``x && y && z = (x && y) && z``)
+  val _ = s ("r223", W ``(1w = (x :word1) && y) <=> (1w = x) /\ (1w = y)``)
+  val _ = s ("r224", U W [boolTheory.CONJ_COMM]
+    ``(1w = (x :word1) && y) <=> (1w = y) /\ (1w = x)``)
+  val _ = s ("r225", W ``(7 >< 0) (x :word8) = x``)
+  val _ = s ("r226", W ``x <+ y <=> ~(y <=+ x)``)
+  val _ = s ("r227", W ``(x :'a word) * y = y * x``)
+  val _ = s ("r228", W ``(0 >< 0) (x :word1) = x``)
+  val _ = s ("r229", W ``(x && y) && z = x && y && z``)
+  val _ = s ("r230", W ``0w !! x = x``)
+(*
+  val _ = s ("r231", X ``w2w (n2w x) = n2w x``)  (*TODO*)
+*)
+
   (* used for Z3's proof rule th-lemma *)
 
   val _ = s ("t001", A ``((x :int) <> y) \/ (x <= y)``)
@@ -401,6 +434,37 @@ struct
   val _ = s ("t010", A ``(x :int) >= y \/ x <= y``)
 
   val _ = s ("t011", R ``(x :real) <> y \/ x + -1 * y >= 0``)
+  val _ = s ("t012", Tactical.prove (``(x :'a word) <> ~x``,
+    let
+      val RW = bossLib.RW_TAC (bossLib.++ (bossLib.bool_ss, fcpLib.FCP_ss))
+    in
+      Tactical.THEN (RW [],
+        Tactical.THEN (Tactic.EXISTS_TAC ``0 :num``,
+          Tactical.THEN (RW [wordsTheory.DIMINDEX_GT_0,
+              wordsTheory.word_1comp_def],
+            bossLib.DECIDE_TAC)))
+    end))
+  val _ = s ("t013", W ``(x = y) ==> x ' i ==> y ' i``)
+
+  local
+    val th_x= Tactical.prove (``((x :word1) = 0w) \/ (x = 1w)``,
+      wordsLib.WORD_DECIDE_TAC)
+    val th_y = Tactical.prove (``((y :word1) = 0w) \/ (y = 1w)``,
+      wordsLib.WORD_DECIDE_TAC)
+    fun prove_by_cases t =
+      Tactical.prove (t, Tactical.THEN (Tactic.DISJ_CASES_TAC th_x,
+        wordsLib.WORD_DECIDE_TAC))
+  in
+    val _ = s ("t014", prove_by_cases ``(1w = ~(x :word1)) \/ x ' 0``)
+    val _ = s ("t015", prove_by_cases ``(x :word1) ' 0 ==> (0w = ~x)``)
+    val _ = s ("t016", prove_by_cases ``~((x :word1) ' 0) ==> (0w = x)``)
+    val _ = s ("t017", prove_by_cases ``(0w = ~(x :word1)) \/ ~(x ' 0)``)
+    val _ = s ("t018", Tactical.prove
+      (``(1w = ~(x :word1) !! ~y) \/ ~(~(x ' 0) \/ ~(y ' 0))``,
+        Tactical.THEN (Tactic.DISJ_CASES_TAC th_x,
+          Tactical.THEN (Tactic.DISJ_CASES_TAC th_y,
+            wordsLib.WORD_DECIDE_TAC))))
+  end
 
   val _ = Theory.export_theory ()
 

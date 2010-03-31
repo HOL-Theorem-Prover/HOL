@@ -1766,12 +1766,11 @@ val aligned_aligned_add_with_carry = Q.store_thm(
          (~(align(a,4) + 8w),
           if aligned (FST (add_with_carry (~(align(a,4) + 8w),b,c)),4) then b
             else if c then 0w else 1w,c)),4))`,
-  SRW_TAC [boolSimps.LET_ss]
-          [WORD_LEFT_ADD_DISTRIB, GSYM word_add_def, word_add_plus1, lem,
-           add_with_carry_def, aligned_sum]
-    \\ FULL_SIMP_TAC (srw_ss())
-          [WORD_LEFT_ADD_DISTRIB, WORD_NOT, aligned_neg_pc, GSYM word_add_def,
-           word_add_plus1, aligned_sum]
+  REPEAT STRIP_TAC \\ Cases_on `c`
+    \\ SIMP_TAC (std_ss++boolSimps.LET_ss)
+         [add_with_carry_def, GSYM word_add_def, word_add_plus1, lem]
+    \\ SRW_TAC [] [aligned_sum]
+    \\ FULL_SIMP_TAC (srw_ss()) [WORD_NOT, aligned_neg_pc]
     \\ EVAL_TAC);
 
 val aligned_aligned_shift = Q.prove(

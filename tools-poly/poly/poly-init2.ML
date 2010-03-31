@@ -3,12 +3,6 @@ val _ = use "poly/poly-init.ML";
 
 val _ = use "Holmake/Systeml.sig";
 val _ = use "Holmake/Systeml.sml";
-val _ = use "Holmake/internal_functions.sig";
-val _ = use "Holmake/internal_functions.sml";
-val _ = use "Holmake/Holmake_types.sig";
-val _ = use "Holmake/Holmake_types.sml";
-val _ = use "Holmake/ReadHMF.sig";
-val _ = use "Holmake/ReadHMF.sml";
 
 local
 

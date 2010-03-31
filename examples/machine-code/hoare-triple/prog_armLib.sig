@@ -14,7 +14,10 @@ sig
 
     val arm_tools            : decompiler_tools
     val arm_tools_no_status  : decompiler_tools
+    val arm_tools_byte       : decompiler_tools
 
     val arm_enc              : string -> string
+
+    val arm_use_stack        : bool -> unit
 
 end

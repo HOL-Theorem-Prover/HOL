@@ -1,5 +1,5 @@
 
-open HolKernel boolLib bossLib Parse pred_setTheory pairTheory;
+open HolKernel boolLib bossLib Parse pred_setTheory pairTheory wordsTheory;
 val _ = new_theory "set_sep";
 
 
@@ -34,6 +34,10 @@ val precond_def  = Define `precond = cond`;
 val SEP_IMP_def  = Define `SEP_IMP p q = !s. p s ==> q s`;
 
 val fun2set_def = Define `fun2set (f:'b->'a,d) =  { (a,f a) | a IN d }`;
+
+val SEP_ARRAY_def = Define `
+  (SEP_ARRAY p i a [] = emp) /\
+  (SEP_ARRAY p i a (x::xs) = p a x * SEP_ARRAY p i (a + i:'a word) xs)`;
 
 
 (* ---- theorems ---- *)
@@ -74,6 +78,10 @@ val SEP_CLAUSES = store_thm("SEP_CLAUSES",
   ONCE_REWRITE_TAC [FUN_EQ_THM]
   \\ SIMP_TAC std_ss [SEP_EXISTS,STAR_def,SEP_DISJ_def,cond_def,SEP_F_def,emp_def]
   \\ SPLIT_TAC);
+
+val SEP_EXISTS_COND = save_thm("SEP_EXISTS_COND",
+  (GEN_ALL o GSYM o Q.INST [`q`|->`cond c`] o hd o 
+   CONJUNCTS o SPEC_ALL) SEP_CLAUSES);
 
 val SEP_EXISTS_THM = store_thm("SEP_EXISTS_THM",
  ``(SEP_EXISTS x. p x) s = ?x. p x s``,    
@@ -189,6 +197,23 @@ val fun2set_DELETE = store_thm("fun2set_DELETE",
   ``!a h dh. fun2set (h,dh) DELETE (a, h a) = fun2set (h,dh DELETE a)``,
   SIMP_TAC std_ss [fun2set_def,GSPECIFICATION,IN_DELETE,EXTENSION,
                    FORALL_PROD] THEN METIS_TAC []);
+
+val SEP_ARRAY_APPEND = store_thm("SEP_ARRAY_APPEND",
+  ``!xs ys p i a. 
+      SEP_ARRAY p i a (xs ++ ys) =
+      SEP_ARRAY p i a xs * SEP_ARRAY p i (a + n2w (LENGTH xs) * i) ys``,
+  Induct \\ ASM_SIMP_TAC std_ss [SEP_ARRAY_def,STAR_ASSOC,
+    listTheory.APPEND,listTheory.LENGTH,SEP_CLAUSES,WORD_MULT_CLAUSES,WORD_ADD_0]
+  \\ SIMP_TAC std_ss [arithmeticTheory.ADD1,WORD_MULT_CLAUSES,GSYM word_add_n2w,
+       AC WORD_ADD_ASSOC WORD_ADD_COMM]);  
+
+val SEP_REWRITE_THM = store_thm("SEP_REWRITE_THM",
+  ``!q p x y. (!s. q s ==> (x = y)) ==> (q * p x = q * p y) /\ (p x * q = p y * q)``,
+  SIMP_TAC std_ss [FUN_EQ_THM,STAR_def] THEN REPEAT STRIP_TAC THEN METIS_TAC []);
+
+val cond_CONJ = store_thm("cond_CONJ",
+  ``cond (c /\ d) = (cond c * cond d) : 'a set set``,
+  SIMP_TAC std_ss [SEP_CLAUSES]);
 
 val _ = export_theory();
 

@@ -16,6 +16,14 @@ val (arm_th,arm_defs) = decompile_arm "arm_length" `
   15911000  (*    ldrne r1,[r1]   *)
   1AFFFFFB  (*    bne L           *)`;
 
+(*
+arm_spec "E3A00000"
+
+armLib.arm_step "v7" "E3A00000"
+
+progTheory.SPEC_FRAME
+*)
+
 (* formalising notion of linked-list *)
 
 val llist_def = Define `
@@ -86,6 +94,15 @@ val th = save_thm("PPC_LIST_SPEC",
 val th = save_thm("X86_LIST_SPEC",
   SIMP_RULE std_ss [LET_DEF] (INST_SPEC x86_th x86_length_thm));
 
+(* example of non-nested loop *)
+
+val (arm_th,arm_defs) = decompile_arm "arm_loop" `
+  E2800001    (*      add r0,r0,#1     *)
+  E2800001    (*  L:  add r0,r0,#1     *)
+  E3100001    (*  M:  tst r0,#1        *)
+  1AFFFFFC    (*      bne L            *)
+  E2500002    (*      subs r0,r0,#2    *)
+  1AFFFFFB    (*      bne M            *)`;
 
 val _ = export_theory();
 

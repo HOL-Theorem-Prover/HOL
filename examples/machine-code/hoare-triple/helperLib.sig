@@ -16,6 +16,7 @@ sig
 
     val ftree_type_eq          : ftree_type -> ftree_type -> bool
 
+    val \\                     : tactic * tactic -> tactic
     val RW                     : thm list -> thm -> thm
     val RW1                    : thm list -> thm -> thm
 
@@ -83,6 +84,7 @@ sig
     val SEP_EXISTS_ELIM_RULE   : thm -> thm
     val SEP_EXISTS_POST_RULE   : term -> thm -> thm
     val SEP_EXISTS_PRE_RULE    : term -> thm -> thm
+    val SEP_REWRITE_RULE       : thm list -> thm -> thm
 
     val SPEC_STRENGTHEN_RULE   : thm -> term -> thm * term
     val SPEC_WEAKEN_RULE       : thm -> term -> thm * term

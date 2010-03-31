@@ -197,6 +197,18 @@ in
   | "dprot" => if length args <> 1 then
                  raise Fail "Bad number of arguments to 'dprot' function."
                else subst(" ", "\\ ", eval (hd args))
+  | "findstring" => if length args <> 2 then
+                      raise Fail "Bad number of arguments to 'findstring' \
+                                 \function."
+                    else let
+                        val (findstr, instr) = case map eval args of
+                                                 [x,y] => (x,y)
+                                               | _ => raise Fail "Can't happen"
+                        open Substring
+                        val (pfx,sfx) = position findstr (full instr)
+                      in
+                        if size sfx = 0 then "" else findstr
+                      end
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
 

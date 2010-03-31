@@ -55,14 +55,15 @@ val WF_REL_TAC = TotalDefn.WF_REL_TAC
             Automated proof operations
  ---------------------------------------------------------------------------*)
 
-val PROVE          = BasicProvers.PROVE
-val PROVE_TAC      = BasicProvers.PROVE_TAC
-val METIS_PROVE    = metisLib.METIS_PROVE
-val METIS_TAC      = metisLib.METIS_TAC
-val RW_TAC         = BasicProvers.RW_TAC
-val SRW_TAC        = BasicProvers.SRW_TAC
-val srw_ss         = BasicProvers.srw_ss
-val augment_srw_ss = BasicProvers.augment_srw_ss
+val PROVE           = BasicProvers.PROVE
+val PROVE_TAC       = BasicProvers.PROVE_TAC
+val METIS_PROVE     = metisLib.METIS_PROVE
+val METIS_TAC       = metisLib.METIS_TAC
+val RW_TAC          = BasicProvers.RW_TAC
+val SRW_TAC         = BasicProvers.SRW_TAC
+val srw_ss          = BasicProvers.srw_ss
+val augment_srw_ss  = BasicProvers.augment_srw_ss
+val diminish_srw_ss = BasicProvers.diminish_srw_ss
 val export_rewrites = BasicProvers.export_rewrites
 
 val EVAL           = computeLib.EVAL_CONV;

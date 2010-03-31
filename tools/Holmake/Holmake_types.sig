@@ -1,3 +1,6 @@
+signature Holmake_types =
+sig
+
 datatype pretoken = DEFN of string | RULE of string | EOF
 
 datatype frag = LIT of string | VREF of string
@@ -8,6 +11,8 @@ datatype token = HM_defn of string * quotation
                               commands : quotation list }
 
 type env = string -> quotation
+
+val base_environment : env
 
 val to_token : pretoken -> token
 
@@ -30,3 +35,5 @@ val mk_rules : (string -> unit) -> token list -> env ->
    information.  The warn function is used to output warning messages
    about the toklist.
 *)
+
+end

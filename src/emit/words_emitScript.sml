@@ -39,7 +39,7 @@ fun mk_index i =
      EmitML.MLSTRUCT c, EmitML.MLSIG d]
   end;
 
-val sizes = [2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64]
+val sizes = [1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64]
 
 val ALPHA_BETA_RULE = GEN_ALL o Q.INST [`a` |-> `m`, `b` |-> `n`] o SPEC_ALL
 
@@ -96,12 +96,16 @@ val add_with_carry_n2w = Q.SPEC `n2w n` add_with_carry_def
 val reduce_xnor = ONCE_REWRITE_RULE [METIS_PROVE [] ``(<=>) = (\x y. x = y)``]
                    reduce_xnor_def
 
+val f =
+  map (DEFN o REWRITE_RULE
+         [GSYM n2w_itself_def, GSYM w2w_itself_def,
+          GSYM sw2sw_itself_def, GSYM word_concat_itself_def,
+          GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def,
+          TIMES_2EXP1, FUN_EQ_THM] o ALPHA_BETA_RULE)
+
 val defs =
-  map (DEFN o REWRITE_RULE [GSYM n2w_itself_def, GSYM w2w_itself_def,
-           GSYM sw2sw_itself_def, GSYM word_concat_itself_def,
-           GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def,
-           TIMES_2EXP1, FUN_EQ_THM] o ALPHA_BETA_RULE)
-      [dimword_def, INT_MIN_def, UINT_MAX_def, INT_MAX_def,
+    f [dimword_def, fromNum_def] @ List.concat (map mk_index sizes) @
+    f [INT_MIN_def, UINT_MAX_def, INT_MAX_def,
        w2n_n2w, word_eq_n2w, w2w_n2w, word_or_n2w, word_lsl_n2w,
        word_bits_n2w, word_signed_bits_n2w, Q.SPEC `c` word_bit_n2w,
        word_join_n2w, sw2sw_n2w, word_extract_n2w, word_slice_n2w,
@@ -120,9 +124,7 @@ val defs =
        word_to_bin_list_def,word_to_oct_list_def,
        word_to_dec_list_def,word_to_hex_list_def,
        word_to_bin_string_def,word_to_oct_string_def,
-       word_to_dec_string_def,word_to_hex_string_def,
-       fromNum_def] @
-    List.concat (map mk_index sizes)
+       word_to_dec_string_def,word_to_hex_string_def]
 
 val _ = eSML "words"
   (OPEN ["sum", "num", "fcp", "bit"]

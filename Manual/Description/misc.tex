@@ -444,7 +444,24 @@ functions are written with the general form
 Arguments can not include commas (use variable references to variables
 whose value are commas instead), but can otherwise be arbitrary text.
 \begin{description}
-
+\item[\texttt{\$(dprot arg)}] quotes (or ``protects'') the space
+  characters that occur in a string so that the string will be treated
+  as a unit if it occurs in a rule's dependency list.  For example,
+  the file
+\begin{verbatim}
+   dep = foo bar
+   target: $(dep)
+      do_something
+\end{verbatim}
+  will see \texttt{target} as having two dependencies, not one,
+  because spaces are used to delimit dependencies.  If a dependency's
+  name includes spaces, then this function can be used to quote them
+  for \holmake's benefit.  Note that the \texttt{dprot} function
+  does \emph{not} do the same thing as \texttt{protect} on either Unix
+  or Windows systems.
+\item[\texttt{\$(findstring arg1,arg2)}] checks if \texttt{arg1} occurs
+  in (is a sub-string of) \texttt{arg2}.  If it does so occur, the
+  result is \texttt{arg1}, otherwise the result is the empty string.
 \item[\texttt{\$(if arg1,arg2,arg3)}] examines \texttt{arg1}.  If it
   is the empty string, then the value of the whole is equal to the
   value of \texttt{arg3}.  Otherwise, the value is that of \texttt{arg2}.
@@ -463,8 +480,6 @@ whose value are commas instead), but can otherwise be arbitrary text.
     \texttt{\$(patsubst \%.sml,\%.uo,\$(SMLFILES))}
    \] turns a list of files with suffixes \texttt{.sml} into the same
   list with the suffixes replaced with \texttt{.uo}.
-\item[\texttt{\$(subst arg1,arg2,text)}] replaces every occurrence
-  of \texttt{arg1} in \texttt{text} with \texttt{arg2}.
 \item[\texttt{\$(protect arg)}] wraps \texttt{arg} in appropriate
   quote characters to ensure that it will pass through the operating
   system's command shell unscathed.  This is important in the presence
@@ -479,21 +494,8 @@ whose value are commas instead), but can otherwise be arbitrary text.
    $(protect $(DIR)/subdirectory/program)
 \end{verbatim}
   so that the above will be read as one unit by the underlying shell.
-\item[\texttt{\$(dprot arg)}] quotes (or ``protects'') the space
-  characters that occur in a string so that the string will be treated
-  as a unit if it occurs in a rule's dependency list.  For example,
-  the file
-\begin{verbatim}
-   dep = foo bar
-   target: $(dep)
-      do_something
-\end{verbatim}
-  will see \texttt{target} as having two dependencies, not one,
-  because spaces are used to delimit dependencies.  If a dependency's
-  name includes spaces, then this function can be used to quote them
-  for \holmake's benefit.  Note that the \texttt{dprot} function
-  does \emph{not} do the same thing as \texttt{protect} on either Unix
-  or Windows systems.
+\item[\texttt{\$(subst arg1,arg2,text)}] replaces every occurrence
+  of \texttt{arg1} in \texttt{text} with \texttt{arg2}.
 \end{description}
 
 \paragraph{Special and pre-defined variables}
@@ -532,6 +534,8 @@ commonly used programs.  These are:
   is the first argument, the second is the place to copy to.  The
   second argument can be a directory.  (Under Unix, \texttt{CP}
   expands to \texttt{cp}; under Windows, it expands to \texttt{copy}.)
+\item[\texttt{ML_SYSNAME}] The name of the ML system being used:
+  either \texttt{mosml} or \texttt{poly}.
 \item[\texttt{HOLMOSMLC}] This variable is replaced by an invocation
   of the Moscow ML compiler along with the \texttt{-q} flag (necessary
   for handling quotations), and the usual \texttt{-I} include
@@ -543,6 +547,10 @@ commonly used programs.  These are:
   system's overlay file.  This is needed for compilation of HOL source
   files, but not for linking of HOL object code, which can be done
   with \texttt{HOLMOSMLC}.
+\item[\texttt{MLLEX}] This is the path of the \texttt{mllex} tool that
+  is built as part of HOL's configuration.
+\item[\texttt{MLYACC}] This is the path of the \texttt{mlyacc} tool that
+  is built as part of HOL's configuration.
 \item[\texttt{MOSMLC}] This is replaced by an invocation of the
   compiler along with just the normal includes.
 \item[\texttt{MOSMLLEX}] This is replaced by an invocation of the

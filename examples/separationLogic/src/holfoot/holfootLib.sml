@@ -324,7 +324,7 @@ let
    
    val found_opt = first_opt (unequal_opt_pred c1 c2) context
    val found_opt = if isSome (found_opt) then found_opt else 
-          SOME (array_bound_DECIDE context (mk_neg (mk_eq (c1, c2))))
+          SOME (array_bound_DECIDE___HOL context (mk_neg (mk_eq (c1, c2))))
    val _ = if no_thm then raise var_res_implies_unequal_found_expn else ();
    val thm_context = valOf found_opt;
 
