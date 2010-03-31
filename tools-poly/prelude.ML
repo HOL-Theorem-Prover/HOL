@@ -1,6 +1,5 @@
 (* this is an -*- sml -*- file *)
 val _ = PolyML.print_depth 0;
-local in
 open HolKernel Parse boolLib proofManagerLib;
 
 val _ = let
@@ -73,7 +72,7 @@ in
               term = "hol", title = "HOL Overview"}
              :: !Help.specialfiles
   val help = Help.help
-end
+end (* local *)
 
 
 (*---------------------------------------------------------------------------*
@@ -115,7 +114,7 @@ fun use s =
       handle e => (try_remove filename; raise e)
     end
   else PolyML.use s;
-end;
+end (* local *)
 
 val _ = Globals.interactive := true;
 val _ = Parse.current_backend := Parse.interactive_ppbackend()
@@ -137,6 +136,19 @@ TextIO.output(TextIO.stdOut,
   ^"]\n\n       For introductory HOL help, type: help \"hol\";"
   ^"\n---------------------------------------------------------------------\n\
    \\n")
+
+val _ = let
+  infix ++
+  fun p1 ++ p2 = OS.Path.concat (p1,p2)
+  fun appthis s = let
+    val nm = HOLDIR ++ "tools" ++ "Holmake" ++ s
+  in
+    use (nm ^ ".sig");
+    use (nm ^ ".sml")
+  end
+in
+  app appthis ["internal_functions", "Holmake_types", "ReadHMF"]
+end;
 
 val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
             open Holmake_types;
@@ -167,7 +179,6 @@ val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
 val _ =
   (term_pp_prefix := "``";   term_pp_suffix := "``";
    type_pp_prefix  := "``";   type_pp_suffix := "``");
-end;
 structure HOL_Interactive :> sig
   val toggle_quietdec : unit -> bool
   val amquiet : unit -> bool

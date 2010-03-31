@@ -111,6 +111,7 @@ in
               | SOME #":" => read_commands
                                (advance b)
                                (strip_trailing_comment s' ^ "\n")
+              | SOME _ => raise Fail "ReadHMF: can't happen"
         end
     end
 end
