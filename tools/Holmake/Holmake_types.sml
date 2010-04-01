@@ -377,6 +377,7 @@ in
   | "MLYACC" => [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]
   | "ML_SYSNAME" => [LIT ML_SYSNAME]
   | "MV" => if OS = "winNT" then [LIT "rename"] else [LIT "/bin/mv"]
+  | "OS" => [LIT OS]
   | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
   | "UNQUOTE" => [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")]
   | _ => (case OS.Process.getEnv s of NONE => [LIT ""] | SOME v => [LIT v])

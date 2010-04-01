@@ -533,9 +533,7 @@ commonly used programs.  These are:
   appropriate program to perform a file copy.  The file to be copied
   is the first argument, the second is the place to copy to.  The
   second argument can be a directory.  (Under Unix, \texttt{CP}
-  expands to \texttt{cp}; under Windows, it expands to \texttt{copy}.)
-\item[\texttt{ML_SYSNAME}] The name of the ML system being used:
-  either \texttt{mosml} or \texttt{poly}.
+  expands to \texttt{/bin/cp}; under Windows, it expands to \texttt{copy}.)
 \item[\texttt{HOLMOSMLC}] This variable is replaced by an invocation
   of the Moscow ML compiler along with the \texttt{-q} flag (necessary
   for handling quotations), and the usual \texttt{-I} include
@@ -547,6 +545,8 @@ commonly used programs.  These are:
   system's overlay file.  This is needed for compilation of HOL source
   files, but not for linking of HOL object code, which can be done
   with \texttt{HOLMOSMLC}.
+\item[\texttt{ML\_SYSNAME}] The name of the ML system being used:
+  either \texttt{mosml} or \texttt{poly}.
 \item[\texttt{MLLEX}] This is the path of the \texttt{mllex} tool that
   is built as part of HOL's configuration.
 \item[\texttt{MLYACC}] This is the path of the \texttt{mlyacc} tool that
@@ -564,8 +564,12 @@ commonly used programs.  These are:
   moved is the first argument, the second is the place to move to.
   The second argument can be a directory.  (Under Unix, \texttt{MV}
   expands to \texttt{mv}; under Windows, it expands to \texttt{rename}.)
-
-
+\item[\texttt{OS}] This variable is replaced by the name of the
+  current operating system, which will be one of the strings
+  \texttt{"linux"}, \texttt{"solaris"}, \texttt{"macosx"},
+  \texttt{"unix"} (for all other Unices), or \texttt{"winNT"}, for all
+  Microsoft Windows operating systems (those of the 21st century,
+  anyway).
 \end{description}
 The \texttt{MOSMLLEX} and \texttt{MOSMLYAC} abbreviations are really
 only useful if the originals aren't necessarily going to be on the
