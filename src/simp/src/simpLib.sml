@@ -49,7 +49,7 @@ fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
                                           Portable.dec r
 
 fun mk_rewr_convdata (thm,tag) = let
-  val th = SPEC_ALL thm
+  val th = TY_TM_SPEC_ALL thm
 in
   SOME {name  = "<rewrite>",
         key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
@@ -339,7 +339,7 @@ with
    | [] :: rest => munge asms (rest, n)
    | (TH th :: ths) :: rest => let
      in
-       case CONJUNCTS (SPEC_ALL th) of
+       case CONJUNCTS (TY_TM_SPEC_ALL th) of
          [] => raise Fail "munge: Can't happen"
        | [th] => let
            open Net
@@ -384,7 +384,7 @@ with
  fun mk_reducer rel_t subsets initial_rewrites = let
    exception redExn of (control * thm) Net.net
    fun munge_subset_th th = let
-     val (_, impn) = strip_forall (concl th)
+     val (_, impn) = strip_all_forall (concl th)
      val (a, _) = dest_imp impn
      val (f, _, _) = dest_binop a
    in
@@ -447,7 +447,7 @@ with
  end
 
  fun add_relsimp {refl,trans,weakenings,subsets,rewrs} ss = let
-   val rel_t = #1 (dest_binop (#2 (strip_forall (concl refl))))
+   val rel_t = #1 (dest_binop (#2 (strip_all_forall (concl refl))))
    val rel_po = Travrules.mk_preorder (trans,refl)
    val reducer = mk_reducer rel_t subsets rewrs
  in
@@ -470,6 +470,15 @@ with
    end
    fun apply {solver,context,stack,relation} tm = let
      val net = (raise context) handle CONVNET net => net
+(*
+     val _ = if current_trace "simplifier" < 4 then () else
+          (**) let val cnvs = lookup tm net
+                   val _ = trace(4,REDUCE("rewriter_for_ss: found "^Int.toString(length cnvs)^" conversions for ", tm))
+                   val sols = mapfilter (fn conv => conv solver stack tm) cnvs
+                   val _ = trace(4,REDUCE("rewriter_for_ss: found "^Int.toString(length sols)^" working conversions for ", tm))
+                   val _ = map (fn sol => trace(4,REDUCE(">>> worked: ", concl sol))) sols
+               in () end
+*)
    in
      tryfind (fn conv => conv solver stack tm) (lookup tm net)
    end

@@ -945,7 +945,7 @@ val BETA_ETA_TY_TAC = CONV_TAC BETA_ETA_TY_CONV;
 fun HO_MATCH_ACCEPT_TAC thm =
   let val fmatch = HO_PART_MATCH I thm
       fun atac (asl,w) = ([], K (fmatch w))
-  in REPEAT GEN_TAC THEN atac
+  in REPEAT (TY_GEN_TAC ORELSE GEN_TAC) THEN atac
   end
   handle HOL_ERR _ => raise ERR "HO_MATCH_ACCEPT_TAC" "";
 

@@ -76,7 +76,7 @@ fun mk_eq_congproc preorder =
     val refl = extract_preorder_refl preorder;
     val reflThm = refl var
     val thm = MATCH_MP AP_TERM_THM reflThm
-    val thm = SPEC_ALL thm
+    val thm = TY_TM_SPEC_ALL thm
   in
     (*The only congruence occuring in an antecedent is =. Thus t == ``$=`` holds for all
       calls and we can use REFL *)

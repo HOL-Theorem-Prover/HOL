@@ -428,7 +428,11 @@ fun SINGLE_DEPTH_CONV conv tm =
 
 (*-----------------------------------------------------------------------*)
 (* MK_ABS_CONV - Abstract a term by a variable                           *)
+(* MK_TY_ABS_CONV - Abstract a term by a type variable                   *)
+(* MK_TY_ABS_CONV - Abstract a term by a type/term variable              *)
 (* MK_ABSL_CONV - Abstract a term by a set of variables                  *)
+(* MK_TY_ABSL_CONV - Abstract a term by a set of type variables          *)
+(* MK_TY_TM_ABSL_CONV - Abstract a term by a set of type/term variables  *)
 (*                                                                       *)
 (* [DRS 96.01.28]                                                        *)
 (*-----------------------------------------------------------------------*)
@@ -443,10 +447,43 @@ fun MK_ABS_CONV var tm =
   in SYM (BETA_CONV newrhs)
   end;
 
+fun MK_TY_ABS_CONV tyvar tm =
+  if (Term.is_tycomb tm andalso Type.eq_ty (Term.tyrand tm) tyvar
+      andalso not (Term.type_var_occurs tyvar (Term.tyrator tm)))
+  then REFL tm
+  else
+  let val rhs = Term.mk_tyabs(tyvar,tm)
+      val newrhs = Term.mk_tycomb(rhs,tyvar)
+  in SYM (TY_BETA_CONV newrhs)
+  end;
+
+val op +-+ = Lib.+-+
+infix +-+;
+
+val MK_TY_TM_ABS_CONV = MK_TY_ABS_CONV +-+ MK_ABS_CONV;
+
 fun MK_ABSL_CONV vars tm =
  let val rhs = boolSyntax.list_mk_abs (vars,tm)
      val newrhs = Term.list_mk_comb(rhs,vars)
      val thm1 = foldr (fn (_,conv) => (RATOR_CONV conv) THENC BETA_CONV)
+                      ALL_CONV vars newrhs
+ in SYM thm1
+ end;
+
+fun MK_TY_ABSL_CONV tyvars tm =
+ let val rhs = boolSyntax.list_mk_tyabs (tyvars,tm)
+     val newrhs = Term.list_mk_tycomb(rhs,tyvars)
+     val thm1 = foldr (fn (_,conv) => (TY_COMB_CONV conv) THENC TY_BETA_CONV)
+                      ALL_CONV tyvars newrhs
+ in SYM thm1
+ end;
+
+fun MK_TY_TM_ABSL_CONV vars tm =
+ let val rhs = boolSyntax.list_mk_all_abs (vars,tm)
+     val newrhs = boolSyntax.list_mk_all_comb(rhs,vars)
+     val thm1 = foldr (fn (Lib.inR _,conv) => (RATOR_CONV conv) THENC BETA_CONV
+                        | (Lib.inL _,conv) => (TY_COMB_CONV conv) THENC TY_BETA_CONV
+                       )
                       ALL_CONV vars newrhs
  in SYM thm1
  end;

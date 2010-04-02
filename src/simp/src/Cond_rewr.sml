@@ -286,7 +286,7 @@ val CONJ_DISCH =
    *
    * Makes the set of rewrites from a given theorem.
    * Split a theorem into a list of theorems suitable for rewriting:
-   *   1. Specialize all variables (SPEC_ALL).
+   *   1. Specialize all variables (TY_TM_SPEC_ALL).
    *   2. Move all conditions into assumptions
    *   3. Then do the following:
    *     A |- t1 /\ t2     -->    [A |- t1 ; A |- t2]
@@ -452,10 +452,8 @@ fun IMP_CANON acc thl =
             else
               IMP_CANON acc ((ant::ants, UNDISCH th, bnd)::ths)
           end
-        else if is_forall w then
-          IMP_CANON acc ((ants, SPEC_ALL th, bnd) :: ths)
-        else if is_tyforall w then
-          IMP_CANON acc ((ants, TY_SPEC_ALL th, bnd) :: ths)
+        else if is_forall w orelse is_tyforall w then
+          IMP_CANON acc ((ants, TY_TM_SPEC_ALL th, bnd) :: ths)
         else if is_res_forall w then let
             val newth = CONV_RULE (REWR_CONV RES_FORALL_THM THENC
                                    QUANT_CONV (RAND_CONV BETA_CONV)) th

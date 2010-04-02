@@ -119,6 +119,10 @@ sig
     val LAND_CONV : conv -> conv
     val MK_ABSL_CONV : term list -> conv
     val MK_ABS_CONV : term -> conv
+    val MK_TY_ABS_CONV : hol_type -> conv
+    val MK_TY_TM_ABS_CONV : (hol_type,term)Lib.sum -> conv
+    val MK_TY_ABSL_CONV : hol_type list -> conv
+    val MK_TY_TM_ABSL_CONV : (hol_type,term)Lib.sum list -> conv
     val MK_BINOP : term -> thm * thm -> thm
     val PINST : (hol_type,hol_type)subst -> (term,term)subst -> thm -> thm
     val REPEATQC : conv -> conv

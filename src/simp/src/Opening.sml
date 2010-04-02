@@ -26,7 +26,7 @@ fun ERR x = STRUCT_ERR "Opening" x;
  *   is_congruence (--`(!x:'a. P x) <== (!x:'a. P' x)`--);
  *   is_congruence (--`(A <== A') ==> (A ==> B) ==> (A' ==> B')`--); (*false*)
  *
- * rel_of_congruence
+ * rel_of_congrule
  *   Discover the relation a congruence is expressed over.
  *
  * EXAMPLES
@@ -68,13 +68,13 @@ fun rel_of_congrule thm = let
   fun aux tm = if is_congruence tm then #1 (dest_binop tm)
                else aux (snd (dest_imp tm))
 in
-  aux (snd(strip_forall (concl thm)))
+  aux (snd(strip_all_forall (concl thm)))
 end handle e => WRAP_ERR("rel_of_congrule",e)
 
 fun nconds_of_congrule thm = let
   fun aux tm = if is_congruence tm then 0 else aux (snd(dest_imp tm)) + 1
 in
-  aux (snd(strip_forall(concl thm)))
+  aux (snd(strip_all_forall(concl thm)))
 end handle e => WRAP_ERR("nconds_of_congrule",e)
 
 (* ---------------------------------------------------------------------
@@ -124,7 +124,7 @@ let
       Side conditions must be passed to the solver, sub-congruences
       must be passed to the depther. *)
 
-   val congrule' = GSPEC (GEN_ALL congrule)
+   val congrule' = TY_TM_GSPEC (TY_TM_GEN_ALL congrule)
    val nconds = nconds_of_congrule congrule'
    val rel = rel_of_congrule congrule'
 
@@ -139,7 +139,7 @@ let
    fun reprocess_flag assum = if is_var assum then false else true;
    val reprocess_flags =
        map (map reprocess_flag o fst o strip_imp_until_rel vars o
-            #2 o strip_forall)
+            #2 o strip_all_forall)
            conditions
 
 in fn {relation,solver,depther,freevars} =>
@@ -164,7 +164,7 @@ in fn {relation,solver,depther,freevars} =>
               head combinator of the rhs is one of the subterms
               in the congruence (see subterms above) then it
   	      is a congruence condition *)
-            val (ho_vars,bdy1) = strip_forall condition
+            val (ho_vars,bdy1) = strip_all_forall condition
             val (assums,bdy2) = strip_imp_until_rel genvars bdy1
             val (oper,args) = let
               val (f,x,y) = dest_binop bdy2
@@ -190,11 +190,13 @@ in fn {relation,solver,depther,freevars} =>
                   in (trace(5,PRODUCE(orig,"UNCHANGED",thm));thm)
                   end
                 val abs_rewr_thm =
-                    CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars)) rewr_thm
+                    CONV_RULE (RAND_CONV (MK_TY_TM_ABSL_CONV ho_vars)) rewr_thm
                 val disch_abs_rewr_thm = itlist DISCH assums abs_rewr_thm
-                val gen_abs_rewr_thm = GENL ho_vars disch_abs_rewr_thm
+                val gen_abs_rewr_thm = TY_TM_GENL ho_vars disch_abs_rewr_thm
                 val gen_abs_res =
-                    funpow (length ho_vars) rator (rand (concl abs_rewr_thm))
+                    foldr (fn (inL tyv,tm) => tyrator tm
+                            | (inR   v,tm) => rator tm)
+                          (rand (concl abs_rewr_thm)) ho_vars
                 val spec_match_thm = SPEC gen_abs_res (GEN genv match_thm)
                 val new_match_thm = MP spec_match_thm gen_abs_rewr_thm
             in process_subgoals (n-1,new_match_thm,more_flags)

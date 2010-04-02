@@ -147,6 +147,8 @@ val NOT_ss =
      DE_MORGAN_THM,
      NOT_FORALL_THM,
      NOT_EXISTS_THM,
+     NOT_TY_FORALL_THM,
+     NOT_TY_EXISTS_THM,
      TAUT `(~p = ~q) = (p = q)`];
 
 (*------------------------------------------------------------------------

@@ -1637,6 +1637,10 @@ fun tyrator (TComb(Rator,_)) = Rator
   | tyrator (Clos(Env, TComb(Rator,_))) = mk_clos(Env,Rator)
   | tyrator _ = raise ERR "tyrator" "not a type comb"
 
+fun tyrand (TComb(_,Rand)) = Rand
+  | tyrand (Clos(Env, TComb(_,Rand))) = Rand
+  | tyrand _ = raise ERR "tyrand" "not a type comb"
+
 
 (*---------------------------------------------------------------------------
     Matching (first order, modulo alpha conversion) of terms, including

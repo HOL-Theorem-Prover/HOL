@@ -1448,7 +1448,7 @@ fun GSPEC th =
   end
 
 (*---------------------------------------------------------------------------*
- *   |- !:x y z. w   --->  |- w[g1/x][g2/y][g3/z]                            *
+ *   |- !:'a 'b 'c. w   --->  |- w['g1/'a]['g2/'b]['g3/'c]                   *
  *---------------------------------------------------------------------------*)
 
 fun TY_GSPEC th =
@@ -1457,6 +1457,26 @@ fun TY_GSPEC th =
      then let val v = fst (dest_tyforall w)
               val (_,kd,rk) = dest_var_type v
           in TY_GSPEC (TY_SPEC (gen_var_type (kd,rk)) th)
+          end
+     else th
+  end;
+
+(*---------------------------------------------------------------------------*
+ *   |- !:'a. !x. !:'b. !y. !:'c. !z. w   --->                               *
+ *                         |- w['g1/'a][g1/x]['g2/'b][g2/y]['g3/'c][g3/z]    *
+ *---------------------------------------------------------------------------*)
+
+fun TY_TM_GSPEC th =
+  let val (_,w) = dest_thm th
+  in if is_forall w
+     then let val v = fst (dest_forall w)
+              val (_,ty) = dest_var v
+          in TY_TM_GSPEC (SPEC (genvar ty) th)
+          end
+     else if is_tyforall w
+     then let val a = fst (dest_tyforall w)
+              val (_,kd,rk) = dest_var_type a
+          in TY_TM_GSPEC (TY_SPEC (gen_var_type (kd,rk)) th)
           end
      else th
   end;

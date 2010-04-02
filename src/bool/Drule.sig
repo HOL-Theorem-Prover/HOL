@@ -107,6 +107,7 @@ sig
                           -> thm -> thm
   val GSPEC            : thm -> thm
   val TY_GSPEC         : thm -> thm
+  val TY_TM_GSPEC      : thm -> thm
 
   val strip_ty_tm_comb : term -> term * (hol_type,term) Lib.sum list
   val strip_ty_tm_abs  : term -> (hol_type,term) Lib.sum list * term

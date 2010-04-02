@@ -124,6 +124,8 @@ sig
   val list_mk_exists         : term list * term -> term
   val list_mk_tyforall       : hol_type list * term -> term
   val list_mk_tyexists       : hol_type list * term -> term
+  val list_mk_all_abs        : (hol_type, term)Lib.sum list * term -> term
+  val list_mk_all_comb       : term * (hol_type, term)Lib.sum list -> term
   val list_mk_imp            : term list * term -> term
   val list_mk_conj           : term list -> term
   val list_mk_disj           : term list -> term
@@ -146,6 +148,8 @@ sig
   val strip_exists           : term -> term list * term
   val strip_tyforall         : term -> hol_type list * term
   val strip_tyexists         : term -> hol_type list * term
+  val strip_all_abs          : term -> (hol_type, term)Lib.sum list * term
+  val strip_all_comb         : term -> term * (hol_type, term)Lib.sum list
   val strip_all_forall       : term -> (hol_type, term)Lib.sum list * term
   val strip_all_exists       : term -> (hol_type, term)Lib.sum list * term
   val strip_all_forall_avoid : hol_type list * term list ->
