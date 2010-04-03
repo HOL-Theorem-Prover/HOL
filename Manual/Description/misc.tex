@@ -438,6 +438,7 @@ coments on command-lines, and such ``comments'' will be passed to the
 shell, which may or may not treat them as comments when it sees them.
 
 \paragraph{Functions}
+\index{Holmake@\holmake!functions for text-manipulation}
 \holmake{} supports some simple functions for manipulating text.  All
 functions are written with the general form
 \texttt{\$(\textsl{function-name}\textvisiblespace{}\hspace{1mm}\textsl{arg}${}_1$,\textsl{arg}${}_2$\dots,\textsl{arg}${}_n$)}.
@@ -500,18 +501,18 @@ whose value are commas instead), but can otherwise be arbitrary text.
 
 \paragraph{Special and pre-defined variables}
 
-If defined, the \texttt{INCLUDES} variable is used by to add
-directories to the list of directories consulted when files are
-compiled and linked.  The effect is as if the directories specified
-had all been included on the command-line with \texttt{-I} options.
-The \texttt{PRE\_INCLUDES} variable works similarly, but the
-directories specified here are placed before the \mbox{\texttt{-I
-<holdir>}} option that is used in invocations of the Moscow ML
-compiler.  This option gives the user a way of over-riding code in
-the core distribution if they choose as the compiler will find their
-own code before the distribution's.
+\index{Holmake@\holmake!variables in makefiles}
+If defined, the \texttt{INCLUDES} variable is used to add directories
+to the list of directories consulted when files are compiled and
+linked.  The effect is as if the directories specified had all been
+included on the command-line with \texttt{-I} options.  The
+\texttt{PRE\_INCLUDES} variable works similarly, but the directories
+specified here are placed before the \mbox{\texttt{-I <holdir>}}
+option that is used in invocations of compiler.  This
+option gives the user a way of over-riding code in the core
+distribution as the compiler will find their code
+before the distribution's.
 
-\index{Holmake@\holmake!OPTIONS variable@\texttt{OPTIONS} variable}
 The \texttt{OPTIONS} variable is used for the specification of just
 four possible options (others are ignored): \texttt{NO\_SIGOBJ},
 \texttt{NO\_OVERLAY}, \texttt{NO\_PREREQS} and
@@ -526,16 +527,16 @@ Within a command, the variable \texttt{\$<} is used to stand for the
 name of the first dependency of the rule.  The variable \texttt{\$@} is
 used to stand for the target of the rule.
 
-Finally there are variables that are some useful abbreviations for
-commonly used programs.  These are:
+Finally there are variables that expand to program names and other
+useful information:
 \begin{description}
 \item[\texttt{CP}] This variable is replaced by an operating-system
   appropriate program to perform a file copy.  The file to be copied
   is the first argument, the second is the place to copy to.  The
   second argument can be a directory.  (Under Unix, \texttt{CP}
-  expands to \texttt{cp}; under Windows, it expands to \texttt{copy}.)
-\item[\texttt{ML_SYSNAME}] The name of the ML system being used:
-  either \texttt{mosml} or \texttt{poly}.
+  expands to \texttt{/bin/cp}; under Windows, it expands to
+  \texttt{copy}.)
+\item[\texttt{HOLDIR}] The root of the HOL installation.
 \item[\texttt{HOLMOSMLC}] This variable is replaced by an invocation
   of the Moscow ML compiler along with the \texttt{-q} flag (necessary
   for handling quotations), and the usual \texttt{-I} include
@@ -547,6 +548,8 @@ commonly used programs.  These are:
   system's overlay file.  This is needed for compilation of HOL source
   files, but not for linking of HOL object code, which can be done
   with \texttt{HOLMOSMLC}.
+\item[\texttt{ML\_SYSNAME}] The name of the ML system being used:
+  either \texttt{mosml} or \texttt{poly}.
 \item[\texttt{MLLEX}] This is the path of the \texttt{mllex} tool that
   is built as part of HOL's configuration.
 \item[\texttt{MLYACC}] This is the path of the \texttt{mlyacc} tool that
@@ -564,8 +567,15 @@ commonly used programs.  These are:
   moved is the first argument, the second is the place to move to.
   The second argument can be a directory.  (Under Unix, \texttt{MV}
   expands to \texttt{mv}; under Windows, it expands to \texttt{rename}.)
-
-
+\item[\texttt{OS}] This variable is replaced by the name of the
+  current operating system, which will be one of the strings
+  \texttt{"linux"}, \texttt{"solaris"}, \texttt{"macosx"},
+  \texttt{"unix"} (for all other Unices), or \texttt{"winNT"}, for all
+  Microsoft Windows operating systems (those of the 21st century,
+  anyway).
+\item[\texttt{SIGOBJ}] Effectively \varref{HOLDIR}\texttt{/sigobj},
+  where HOL object code is stored.
+  \item[\texttt{UNQUOTE}] The location of the quotation-filter executable.
 \end{description}
 The \texttt{MOSMLLEX} and \texttt{MOSMLYAC} abbreviations are really
 only useful if the originals aren't necessarily going to be on the
@@ -575,26 +585,11 @@ also be used by simply writing their names directly (i.e., without the
 enclosing \varref{\dots}), as long as these references occur first on
 a command-line.
 
-Other pre-defined variables are given in
-Figure~\ref{fig:predefined-holmake-vars}.  If a reference is made to
-an otherwise undefined string, then it is treated as a reference to an
-environment variable.  If there is no such variable in the
-environment, then the variable is silently given the empty string as
-its value.
+If a reference is made to an otherwise undefined string, then it is
+treated as a reference to an environment variable.  If there is no
+such variable in the environment, then the variable is silently given
+the empty string as its value.
 
-
-\begin{figure}[htbp]
-\begin{tabular}{ll}
-\texttt{HOLDIR} & the root of the HOL distribution\\
-\texttt{SIGOBJ} & \varref{HOLDIR}\texttt{/sigobj}, where HOL object
-code is stored\\
-\texttt{MOSMLDIR} & the directory containing the Moscow~ML executables\\
-\texttt{MOSMLCOMP} & \varref{MOSMLDIR}\texttt{/mosmlc}\\
-\texttt{UNQUOTE} & the location of the quotation-filter executable\\
-\end{tabular}
-\caption{Pre-defined variables provided in \holmake}
-\label{fig:predefined-holmake-vars}
-\end{figure}
 \index{Holmake@\holmake|)}
 
 
