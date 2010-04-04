@@ -15,7 +15,7 @@ fun mkmunge () = let
   end handle e => (die ("Exception raised: "^General.exnMessage e))
   val _ = app load1 ("EmitTeX" :: theories)
   fun appthis s = let
-    val nm = Globals.HOLDIR ++ "tools" ++ "texmunge" ++ s
+    val nm = Globals.HOLDIR ++ "src" ++ "TeX" ++ s
     val _ = print ("Using "^s^"\n")
   in
     use nm
