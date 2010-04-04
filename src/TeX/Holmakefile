@@ -1,5 +1,5 @@
 TARGET = $(if $(findstring mosml,$(ML_SYSNAME)),munger.lex.sml,mkmunge)
-EXTRA_CLEANS = munger.lex.sml mkmunge
+EXTRA_CLEANS = munger.lex.sml mkmunge mkmunge.o munger.o
 
 .PHONY: all
 all: $(TARGET)
