@@ -59,6 +59,17 @@ fun simp_unify_terms_in_env consts tm1 tm2 env =
                 (op_subtract eq consts [fst p1, fst p2]) (snd p1) (snd p2)
                 (restrict_tmenv filt env))
 	    end
+     | (TYCOMB p1,TYCOMB p2) =>
+         if eq_ty (snd p1) (snd p2) then
+           simp_unify_terms_in_env consts (fst p1) (fst p2) env
+         else  failwith "unify_types"
+     | (TYLAMB p1,TYLAMB p2) =>
+        let fun filt v = not (type_var_occurs (fst p1) v) andalso not (type_var_occurs (fst p2) v)
+        in restrict_tmenv filt
+             (simp_unify_terms_in_env
+                (filter filt consts) (snd p1) (snd p2)
+                (restrict_tmenv filt env))
+	    end
      | otherwise => if eq tm1' tm2' then env else failwith "simp_unify_terms"
     end;
 
@@ -70,8 +81,9 @@ end (* struct *)
 
 
 (*
-simp_unify_terms [`b:'a`] `P (x:'a) (b:'a):bool` `P (a:'a) (b:'a):bool`;;
-, `!x y:'a. Q x y`, `!z:'a. R x z`];
+simp_unify_terms [``b:'a``] ``P (x:'a) (b:'a):bool`` ``P (a:'a) (b:'a):bool``;
+... yields [{redex = ``x:'a``, residue = ``a:'a``}]
+simp_unify_terms [] ``!x y:'a. Q x y`` ``!x z:'a. R x z``;
 fun S facts = satisfy1 (U (map (freesl o hyp) facts)) (map concl facts);
 S facts `?a b:'a. P a b /\ R a b`;
 

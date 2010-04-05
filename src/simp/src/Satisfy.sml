@@ -51,18 +51,53 @@ fun satisfy consts tms1 tms2 =
  *  by the given facts
  *================================================================*)
 
+local
+   fun firsttys ({redex=inL redex, residue=inL residue} :: rs) =
+         let val (tyS,rs') = firsttys rs
+         in ((redex |-> residue) :: tyS, rs')
+         end
+     | firsttys rs = ([], rs)
+   fun firsttms ({redex=inR redex, residue=inR residue} :: rs) =
+         let val (tmS,rs') = firsttms rs
+         in ((redex |-> residue) :: tmS, rs')
+         end
+     | firsttms rs = ([], rs)
+in
+fun ty_tm_subst [] tm = tm
+  | ty_tm_subst S tm =
+      let val (tyS,S1) = firsttys S
+          val (tmS,S2) = firsttms S1
+          val tm' = ty_tm_subst S2 tm
+      in inst tyS (subst tmS tm')
+      end
+end
+
 type factdb = (term list * thm list)  (* this may change *)
 
 fun satisfy1 (consts,facts) gl =
-  let val (vars,g) = strip_exists gl
+  let val (vars,g) = strip_all_exists gl
       val _ = if null vars then failwith "satisfy1" else ()
       val _ = trace(3,REDUCE("trying SATISFY on",g))
-      val gvars = map (genvar o type_of) vars  (* rename to avoid clashes *)
+      val S = map (fn inR v => inR v |-> inR (genvar (type_of v))
+                    | inL a => inL a |-> inL (gen_var_type (kind_of a, rank_of a))
+                  ) vars  (* rename to avoid clashes *)
+(*
+      val tmvars = mapfilter outR vars
+      val tyvars = mapfilter outL vars
+      val gvars = map (genvar o type_of) tmvars
+      val gtyvars = map (fn a => gen_var_type (kind_of a, rank_of a)) tyvars
       val g' = subst (map2 (curry op |->) vars gvars) g
+*)
+      val g' = ty_tm_subst S g
+      val tmvars = mapfilter outR vars
+      val tyvars = mapfilter outL vars
+      val gtyvars = mapfilter (outL o #residue) S
+      val tyS = map (op |->) (zip tyvars gtyvars)
+      val gvars = mapfilter (inst tyS o outR o #residue) S
       val goals = strip_conj g'
       fun get_body t = snd (dest_forall t) handle HOL_ERR _ => snd (dest_tyforall t)
       val facts' = map (repeat get_body) facts
-   (* val facts' = map (snd o strip_forall) facts *)
+   (* val facts' = map (snd o strip_all_forall) facts *)
       fun choose choices v =
         deref_tmenv choices v handle HOL_ERR _ => mk_select(v,T)
       val choices = satisfy (op_union eq consts (free_vars gl)) goals facts'
