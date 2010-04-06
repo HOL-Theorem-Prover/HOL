@@ -401,6 +401,21 @@ definition is stripped.  This means that
 \texttt{ONE\_SPACE = \varref{NOTHING}\textvisiblespace\hspace{1mm}\varref{NOTHING}}\\
 \end{array}\]}
 
+Finally, note that the text inside a variable reference is itself
+evaluated.  This means that one can write something like
+\varref{FOO\_\varref{OS}} and have this first expand the \texttt{OS}
+variable, presumably giving rise to some useful string (such as
+\texttt{unix}), and then have the resulting variable
+(\texttt{FOO\_unix}, say) expanded.  This effectively allows the
+construction of functions by cases (define variables
+\texttt{FOO\_unix}, \texttt{FOO\_macos} etc; then use the nested
+variable reference above).  If the internal variable expands to
+something containing spaces, this will not turn a normal variable
+reference into a function call (see below).  On the other hand,
+if the initial reference contains a space, the function name component
+\emph{will} be expanded, allowing implementation of a function by
+cases determining which text-manipulation function should be called.
+
 \paragraph{Rules}
 Make-file rules are interpreted in the same way as by traditional
 \textsf{make}.  The files specified after the colon (if any) are those

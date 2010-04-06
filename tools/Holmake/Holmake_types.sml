@@ -248,23 +248,23 @@ fun perform_substitution env q = let
       | VREF s :: rest => let
           val ss = full s
           val (fnpart, spc_rest) = position " " ss
+          val eval = finisher o recurse visited o extract_normal_quotation
           val result =
               if size spc_rest > 0 then let
                   (* have a function call to evaluate *)
-                  val fnname = string fnpart
+                  val fnname = eval fnpart
                   val args = argtokenize
                                  (dropl Char.isSpace
                                         (dropr Char.isSpace spc_rest))
-                  val eval =
-                      finisher o recurse visited o extract_normal_quotation
                 in
                   [LIT (function_call (fnname, args, eval))]
                 end
               else let
-                  val _ = not (mem s visited) orelse
+                  val varname = eval ss
+                  val _ = not (mem varname visited) orelse
                           raise Fail ("Variable loop through: "^
                                       commafy visited)
-                  val s_expanded0 = env s
+                  val s_expanded0 = env varname
                 in
                   recurse (s :: visited) s_expanded0
                 end
