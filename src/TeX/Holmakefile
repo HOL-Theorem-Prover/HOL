@@ -1,4 +1,4 @@
-TARGET = $(if $(findstring mosml,$(ML_SYSNAME)),munger.lex.sml,mkmunge)
+TARGET = $(if $(findstring mosml,$(ML_SYSNAME)),munger.lex.sml,mkmunge munger.lex.sml)
 EXTRA_CLEANS = munger.lex.sml mkmunge mkmunge.o munger.o
 
 .PHONY: all
@@ -7,7 +7,7 @@ all: $(TARGET)
 mkmunge: mkmunge.o
 	cc -o $@ $< -L$(POLYMLLIBDIR) -lpolymain -lpolyml
 
-mkmunge.o: poly-mkmkmunge.ML munger.lex.sml
+mkmunge.o: poly-mkmkmunge.ML
 	$(HOLDIR)/bin/hol < $<
 
 munger.lex.sml: munger.lex

@@ -6,7 +6,7 @@ open Lib Feedback HolKernel Parse boolLib
 datatype command = Theorem | Term | Type
 datatype opt = Turnstile | Case | TT | Def | TypeOf | TermThm | Indent | NoSpec
              | Inst of string * string
-             | NoTurnstile
+             | NoTurnstile | Width of int
 
 val numErrors = ref 0
 type posn = int * int
@@ -34,14 +34,26 @@ fun stringOpt pos s =
   | "nosp" => SOME NoSpec
   | "nostile" => SOME NoTurnstile
   | _ => let
-      open Substring
-      val ss = full s
-      val (pfx,sfx) = position "/" ss
-      fun rmws ss = dropl Char.isSpace (dropr Char.isSpace ss)
     in
-      if size sfx < 2 then (warn (pos, s ^ " is not a valid option"); NONE)
-      else SOME (Inst (string (rmws pfx), string (rmws (slice(sfx,1,NONE)))))
+      if String.isPrefix "width=" s then let
+          val numpart_s = String.extract(s,6,NONE)
+        in
+          case Int.fromString numpart_s of
+            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+          | SOME i => SOME (Width i)
+        end
+      else let
+          open Substring
+          val ss = full s
+          val (pfx,sfx) = position "/" ss
+          fun rmws ss = ss |> dropl Char.isSpace |> dropr Char.isSpace |> string
+        in
+          if size sfx < 2 then (warn (pos, s ^ " is not a valid option"); NONE)
+          else SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
+        end
     end
+
+
 
 type override_map = (string,(string * int))Binarymap.dict
 fun read_overrides fname = let
@@ -82,7 +94,7 @@ in
   TextIO.closeIn istrm
 end
 
-structure OptSet :> sig
+structure OptSet : sig
   type elem type set
   val empty : set
   val add : elem -> set -> set
@@ -100,6 +112,8 @@ end where type elem = opt = struct
 end
 
 type optionset = OptSet.set
+
+fun optset_width s = get_first (fn Width i => SOME i | _ => NONE) s
 
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)

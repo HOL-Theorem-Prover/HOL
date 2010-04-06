@@ -28,13 +28,19 @@ in
 end
 val width = ref 63
 
-fun replace (pos, argpos, comm, optstring, args) =
+fun replace (pos, argpos, comm, optstring, args) = let
+  val optset = parseOpts pos optstring
+  val width = case optset_width optset of
+                SOME w => w
+              | NONE => !width
+in
   TextIO.output(TextIO.stdOut,
-                PP.pp_to_string (!width) replacement
+                PP.pp_to_string width replacement
                                 {commpos = pos, argpos = argpos,
                                  command = comm,
-                                 options = parseOpts pos optstring,
-                                 argument = unescape args});
+                                 options = optset,
+                                 argument = unescape args})
+end
 
 fun getparts s = let
   open Substring
