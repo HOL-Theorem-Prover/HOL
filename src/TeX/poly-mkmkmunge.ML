@@ -20,9 +20,18 @@ fun mkmunge () = let
   in
     use nm
   end handle e => (die ("Exception raised: "^General.exnMessage e))
+  open Systeml
 in
   List.app appthis ["mungeTools.sig", "mungeTools.sml", "munger.lex.sml",
-                    "mkmunger.sml", "poly-munge.ML"]
+                    "mkmunger.sml", "poly-munge.ML"];
+  print "Linking object code\n";
+  let
+    val res = systeml [CC, "-o", "munge", "munger.o", "-lpolymain", "-lpolyml",
+                       "-L"^POLYMLLIBDIR]
+  in
+    if OS.Process.isSuccess res then ()
+    else die "Linking of Poly/ML object code failed"
+  end
 end
 end (* local *)
 

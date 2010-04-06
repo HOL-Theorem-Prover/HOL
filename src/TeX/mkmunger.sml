@@ -35,6 +35,7 @@ fun munger () = let
               | (SOME i, NONE) => (setoverrides s2; setwidth i)
               | _ => mungeTools.usage()
             end
+          | _ => mungeTools.usage()
 in
   lexer()
 end

@@ -1,11 +1,20 @@
-TARGET = $(if $(findstring mosml,$(ML_SYSNAME)),munger.lex.sml,mkmunge munger.lex.sml)
-EXTRA_CLEANS = munger.lex.sml mkmunge mkmunge.o munger.o
+EXE = mkmunge.exe
+TARGET = $(protect $(HOLDIR)/bin/$(EXE))
 
-.PHONY: all
-all: $(TARGET)
+EXTRA_CLEANS = munger.lex.sml $(EXE) mkmunge.o munger.o $(TARGET)
 
-mkmunge: mkmunge.o
-	cc -o $@ $< -L$(POLYMLLIBDIR) -lpolymain -lpolyml
+mosml_MKMUNGE_DEP = mkmkmunge.uo
+poly_MKMUNGE_DEP = mkmunge.o
+
+mosml_MKMUNGE_COMM = $(HOLMOSMLC) -o $@ $<
+poly_MKMUNGE_COMM = cc -o $@ $< -L$(POLYMLLIBDIR) -lpolymain -lpolyml
+
+$(TARGET) : mkmunge.exe
+	$(CP) $< $@
+
+$(EXE): $($(ML_SYSNAME)_MKMUNGE_DEP)
+	$($(ML_SYSNAME)_MKMUNGE_COMM)
+	$(CP) $@ $(protect $(HOLDIR)/bin)
 
 mkmunge.o: poly-mkmkmunge.ML
 	$(HOLDIR)/bin/hol < $<
