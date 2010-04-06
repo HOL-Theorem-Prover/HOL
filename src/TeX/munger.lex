@@ -26,11 +26,11 @@ local
 in
   fun unescape s = u [] (full s)
 end
-val width = 63
+val width = ref 63
 
 fun replace (pos, argpos, comm, optstring, args) =
   TextIO.output(TextIO.stdOut,
-                PP.pp_to_string width replacement
+                PP.pp_to_string (!width) replacement
                                 {commpos = pos, argpos = argpos,
                                  command = comm,
                                  options = parseOpts pos optstring,
