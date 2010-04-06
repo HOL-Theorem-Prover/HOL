@@ -1981,12 +1981,14 @@ val BAG_GEN_PROD_UNION = Q.store_thm
    ---------------------------------------------------------------------- *)
 
 (* The 1 is from the fact that is one step of the relation, other uses
-   might want to take the transitive closure of this. *)
+   might want to take the transitive closure of this (overloaded below). *)
 val mlt1_def = new_definition(
   "mlt1_def",
   ``mlt1 r b1 b2 = FINITE_BAG b1 /\ FINITE_BAG b2 /\
                    ?e rep res. (b1 = rep + res) /\ (b2 = res + {|e|}) /\
                                !e'. BAG_IN e' rep ==> r e' e``);
+
+val _ = overload_on ("mlt", ``\R. TC (mlt1 R)``);
 
 val BAG_NOT_LESS_EMPTY = store_thm(
   "BAG_NOT_LESS_EMPTY",
