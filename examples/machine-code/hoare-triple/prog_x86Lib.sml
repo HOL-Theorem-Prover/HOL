@@ -16,7 +16,7 @@ val x86_status = xS_HIDE;
 val x86_pc = ``xPC``;
 val x86_exec_flag = ref false;
 val x86_code_write_perm = ref false;
-val x86_use_stack = ref true;
+val x86_use_stack = ref false;
 fun set_x86_exec_flag b = (x86_exec_flag := b);
 fun set_x86_code_write_perm_flag b = (x86_code_write_perm := b);
 fun set_x86_use_stack b = (x86_use_stack := b);
