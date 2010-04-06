@@ -69,7 +69,7 @@ args = "{"("\\}"|[^}])+"}";
 options = "["[^\]]*"]";
 
 %%
-<INITIAL>"\\HOLInputTerm" {options}? {args} =>
+<INITIAL>"\\HOLtm" {options}? {args} =>
   (let val (optstring, args, argpos) = getparts yytext
    in
      replace ((!linecount, !cpos),(!linecount, !cpos + argpos),
@@ -77,7 +77,7 @@ options = "["[^\]]*"]";
      cpos := !cpos + size yytext;
      lex()
    end);
-<INITIAL>"\\HOLInputTheorem" {options}? {args} =>
+<INITIAL>"\\HOLthm" {options}? {args} =>
   (let val (optstring, args, argpos) = getparts yytext
    in
      replace ((!linecount, !cpos), (!linecount, !cpos + argpos),
@@ -85,7 +85,7 @@ options = "["[^\]]*"]";
      cpos := !cpos + size yytext;
      lex()
    end);
-<INITIAL>"\\HOLInputType"  {options}? {args} =>
+<INITIAL>"\\HOLty"  {options}? {args} =>
   (let val (optstring, args, argpos) = getparts yytext
    in
      replace ((!linecount, !cpos), (!linecount, !cpos + argpos),
