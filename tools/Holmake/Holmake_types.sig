@@ -23,6 +23,8 @@ val empty_env : env
 
 val tokenize : string -> string list
 val dequote : string -> string
+val extract_normal_quotation : Substring.substring -> quotation
+val extract_cmd_quotation : Substring.substring -> quotation
 
 type rule_info = {dependencies : string list, commands : string list}
 
