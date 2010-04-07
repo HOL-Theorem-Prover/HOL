@@ -1,5 +1,7 @@
 (* this is an -*- sml -*- file *)
 (* the expectation is that this file gets fed into hol *)
+val _ = PolyML.print_depth 0;
+
 use "mkmkcline.sml";
 local
   fun p1 ++ p2 = OS.Path.concat(p1,p2)
@@ -10,12 +12,13 @@ fun mkmunge () = let
   val (exeopt,theories) = mkmkcline.read_cline()
   val exe = case exeopt of NONE => "munge.exe"
                          | SOME s => s
+  val _ = load "EmitTeX"
   fun load1 s = let
     val _ = print ("Loading "^s^"\n")
   in
     load s
   end handle e => (die ("Exception raised: "^General.exnMessage e))
-  val _ = app load1 ("EmitTeX" :: theories)
+  val _ = app load1 theories
   fun appthis s = let
     val nm = Globals.HOLDIR ++ "src" ++ "TeX" ++ s
     val _ = print ("Using "^s^"\n")
