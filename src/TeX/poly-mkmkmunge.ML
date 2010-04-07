@@ -28,8 +28,7 @@ in
                     "mkmunger.sml", "poly-munge.ML"];
   print "Linking object code\n";
   let
-    val res = systeml [CC, "-o", exe, "munger.o", "-lpolymain", "-lpolyml",
-                       "-L"^POLYMLLIBDIR]
+    val res = systeml ([CC, "-o", exe, "munger.o"] @ POLY_LDFLAGS)
   in
     if OS.Process.isSuccess res then ()
     else die "Linking of Poly/ML object code failed"

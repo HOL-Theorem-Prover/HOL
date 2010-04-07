@@ -7,7 +7,7 @@ mosml_MKMUNGE_DEP = mkmkmunge.uo
 poly_MKMUNGE_DEP = mkmunge.o
 
 mosml_MKMUNGE_COMM = $(HOLMOSMLC) -o $@ $<
-poly_MKMUNGE_COMM = cc -o $@ $< -L$(POLYMLLIBDIR) -lpolymain -lpolyml
+poly_MKMUNGE_COMM = cc -o $@ $< $(POLY_LDFLAGS)
 
 $(TARGET) : mkmunge.exe
 	$(CP) $< $@
