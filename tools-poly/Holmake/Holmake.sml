@@ -38,11 +38,7 @@ fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => OS.Path.concat (chunk,path)) slist);
 
 
-val spacify =
-   let fun enspace (x::(rst as _::_)) = x::" "::enspace rst
-         | enspace l = l
-   in String.concat o enspace
-   end;
+val spacify = String.concatWith " "
 
 fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
 
