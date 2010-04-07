@@ -1,13 +1,15 @@
 (* this is an -*- sml -*- file *)
 (* the expectation is that this file gets fed into hol *)
-
+use "mkmkcline.sml";
 local
   fun p1 ++ p2 = OS.Path.concat(p1,p2)
   fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
                OS.Process.exit OS.Process.failure)
 in
 fun mkmunge () = let
-  val theories = CommandLine.arguments()
+  val (exeopt,theories) = mkmkcline.read_cline()
+  val exe = case exeopt of NONE => "munge.exe"
+                         | SOME s => s
   fun load1 s = let
     val _ = print ("Loading "^s^"\n")
   in
@@ -26,7 +28,7 @@ in
                     "mkmunger.sml", "poly-munge.ML"];
   print "Linking object code\n";
   let
-    val res = systeml [CC, "-o", "munge", "munger.o", "-lpolymain", "-lpolyml",
+    val res = systeml [CC, "-o", exe, "munger.o", "-lpolymain", "-lpolyml",
                        "-L"^POLYMLLIBDIR]
   in
     if OS.Process.isSuccess res then ()

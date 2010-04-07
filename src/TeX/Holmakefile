@@ -16,7 +16,7 @@ $(EXE): $($(ML_SYSNAME)_MKMUNGE_DEP)
 	$($(ML_SYSNAME)_MKMUNGE_COMM)
 	$(CP) $@ $(protect $(HOLDIR)/bin)
 
-mkmunge.o: poly-mkmkmunge.ML
+mkmunge.o: poly-mkmkmunge.ML mkmkcline.sml
 	$(HOLDIR)/bin/hol < $<
 
 munger.lex.sml: munger.lex
