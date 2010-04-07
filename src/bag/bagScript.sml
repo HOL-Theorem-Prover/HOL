@@ -44,12 +44,18 @@ val BAG_IN = new_definition (
 val _ = set_fixity "<:" (Infix(NONASSOC, 425))
 val _ = overload_on ("<:", ``BAG_IN``)
 val _ = Unicode.unicode_version {tmnm = "<:", u = UTF8.chr 0x22F2}
-        (* U+22F2 looks like ⋲ in your current font *)
+        (* U+22F2 looks like ⋲ in your current font; unfortunately this
+           symbol doesn't seem to correspond to anything in LaTeX... *)
+val _ = TeX_notation {hol = "<:", TeX = ("\\HOLTokenIn{}:",2)}
+val _ = TeX_notation {hol = UTF8.chr 0x22F2, TeX = ("\\HOLTokenIn{}:",2)}
 
 val BAG_UNION = new_definition ("BAG_UNION",
                 ``BAG_UNION b (c:'a bag) = \x. b x + c x``);
 val _ = overload_on ("+", ``BAG_UNION``)
 val _ = send_to_back_overload "+" {Name = "BAG_UNION", Thy = "bag"}
+val _ = set_fixity (UTF8.chr 0x228E) (Infixl 500) (* LaTeX's \uplus *)
+val _ = overload_on (UTF8.chr 0x228E, ``BAG_UNION``)
+val _ = TeX_notation {hol = UTF8.chr 0x228E, TeX = ("\\ensuremath{\\uplus}", 1)}
 
 val BAG_DIFF = new_definition (
   "BAG_DIFF",
