@@ -194,6 +194,13 @@ in
   ["val HOLDIR ="   --> ("val HOLDIR = "^quote holdir^"\n"),
    "val POLYMLLIBDIR =" --> ("val POLYMLLIBDIR = "^quote polymllibdir^"\n"),
    "val POLY =" --> ("val POLY = "^quote poly^"\n"),
+   "val POLY_LDFLAGS =" --> ("val POLY_LDFLAGS = ["^
+                             (String.concatWith
+                                  ", "
+                                  (quote ("-L"^polymllibdir)::
+                                   quote "-lpolymain" ::
+                                   quote "-lpolyml" ::
+                                   map quote machine_flags)) ^ "]\n"),
    "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),

@@ -59,6 +59,7 @@ fun fullPath slist =
 val HOLDIR =
 val POLYMLLIBDIR =
 val POLY =
+val POLY_LDFLAGS =
 val CC =
 val OS =
 
