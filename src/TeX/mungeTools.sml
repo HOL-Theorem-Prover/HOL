@@ -66,26 +66,32 @@ fun read_overrides fname = let
           open Substring
           val ss = full line
           val ss = dropl Char.isSpace (dropr Char.isSpace ss)
-          val (word1, ss) = splitl (not o Char.isSpace) ss
-          val word1 = string word1
-          val ss = dropl Char.isSpace ss
-          val (num, ss) = splitl (not o Char.isSpace) ss
-          val word2 = string (dropl Char.isSpace ss)
-          val acc' =
-              case Int.fromString (string num) of
-                NONE => (warn ((count,0),
-                               fname ^ "(overrides file): --" ^
-                               string (dropr Char.isSpace (full line)) ^
-                               "-- couldn't decode size number. Ignoring.");
-                         acc)
-              | SOME n => let
-                in
-                  case Binarymap.peek(acc, word1) of
-                    NONE => Binarymap.insert(acc, word1, (word2, n))
-                  | SOME _ => (warn ((count,0),
-                                     fname ^ " rebinds " ^ word1);
-                               Binarymap.insert(acc, word1, (word2, n)))
-                end
+          val acc' = let
+          in
+            if size ss = 0 then acc
+            else let
+                val (word1, ss) = splitl (not o Char.isSpace) ss
+                val word1 = string word1
+                val ss = dropl Char.isSpace ss
+                val (num, ss) = splitl (not o Char.isSpace) ss
+                val word2 = string (dropl Char.isSpace ss)
+              in
+                case Int.fromString (string num) of
+                  NONE => (warn ((count,0),
+                                 fname ^ "(overrides file): --" ^
+                                 string (dropr Char.isSpace (full line)) ^
+                                 "-- couldn't decode size number. Ignoring.");
+                           acc)
+                | SOME n => let
+                  in
+                    case Binarymap.peek(acc, word1) of
+                      NONE => Binarymap.insert(acc, word1, (word2, n))
+                    | SOME _ => (warn ((count,0),
+                                       fname ^ " rebinds " ^ word1);
+                                 Binarymap.insert(acc, word1, (word2, n)))
+                  end
+              end
+          end
         in
           recurse (count + 1) acc'
         end
