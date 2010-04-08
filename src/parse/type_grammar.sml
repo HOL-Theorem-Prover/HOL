@@ -195,6 +195,7 @@ val empty_grammar = TYG ([(std_binder_precedence, BINDER[]),
 fun rules (TYG (G, dict, specials, pmap)) = G
 fun abbreviations (TYG (G, dict, specials, pmap)) = dict
 fun specials (TYG (G, dict, specials', pmap)) = specials'
+fun abbr_print_map (TYG (G, dict, specials, pmap)) = pmap
 
 fun fupdate_rules    f (TYG (G, dict, specials, pmap)) =
                         TYG (f G, dict, specials, pmap)
@@ -489,6 +490,7 @@ fun abb_dest_type0 (TYG(_, _, _, pmap)) ty = let
   open HolKernel
   val net_matches = TypeNet.match(pmap, ty)
   fun mymatch pat ty = let
+    val pat = if is_abs_type pat then snd(strip_abs_type pat) else pat
     val ((i, sames), (k, kdsames), r) =
        Type.raw_kind_match_type pat ty (([], []), ([], []), 0)
   in

@@ -42,6 +42,7 @@ TApp   ::= Leaf | Tuple Leaf
   val rules            : grammar -> (int * grammar_rule) list
   val abbreviations    : grammar -> (string,type_structure) Binarymap.dict
   val specials         : grammar -> special_info
+  val abbr_print_map   : grammar -> (int * string) TypeNet.typenet
   val fupdate_rules    : ((int * grammar_rule) list -> (int * grammar_rule) list) -> grammar -> grammar
   val fupdate_specials : (special_info -> special_info) -> grammar -> grammar
   val var_grammar      : grammar -> grammar

@@ -171,12 +171,17 @@ fun match ((net,sz), ty) = let
       | (ND (d,d0), ty::tys) => let
           val _ = if current_trace "debug_parse_type" = 0 then ()
                   else (print "ND d on\n  "; print_types (ty::tys); print "\n")
+          val acc0 = Binarymap.listItems d0
+          val _ = if current_trace "debug_parse_type" = 0 then () else
+                    (print "  d0 here has "; print_types (map fst acc0); print "\n")
           val acc' = Binarymap.listItems d0 @ acc
           val (Opr,Args) = strip_app_type ty
           val n = length Args
           val varresult = case Binarymap.peek(d, TV 0) of
                             NONE => acc'
                           | SOME n => trav acc' (n, tys)
+          val _ = if current_trace "debug_parse_type" = 0 then () else
+                    (print "varresult = "; print_types (map fst varresult); print "\n")
           val (lab, rest) = ndest_type ty
           val _ = if current_trace "debug_parse_type" = 0 then () else
                     (print "lab = "; print (label_to_string lab); print "\n  "; print_types rest; print "\n")
@@ -186,10 +191,13 @@ fun match ((net,sz), ty) = let
               case Binarymap.peek (d, TV n) of 
                 NONE => varresult
               | SOME n => trav varresult (n, rest @ tys)
+          val _ = if current_trace "debug_parse_type" = 0 then () else
+                    (print "varhead_result = "; print_types (map fst varhead_result); print "\n")
         in
           (case lab of
             TV n => (if current_trace "debug_parse_type" = 0 then () else
-                       (print "  n = "; print (Int.toString n); print "\n");
+                       (print "  n = "; print (Int.toString n); print "\n";
+                        print "    yielding "; print_types (map fst varhead_result); print "\n");
                      varhead_result)
           | _ => let
             in
