@@ -6,7 +6,7 @@ open Lib Feedback HolKernel Parse boolLib
 datatype command = Theorem | Term | Type
 datatype opt = Turnstile | Case | TT | Def | TypeOf | TermThm | Indent | NoSpec
              | Inst of string * string
-             | NoTurnstile
+             | NoTurnstile | Width of int
 
 val numErrors = ref 0
 type posn = int * int
@@ -20,7 +20,7 @@ fun warn ((l,c), s) = (TextIO.output(TextIO.stdErr,
 fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              TextIO.flushOut TextIO.stdErr;
              OS.Process.exit OS.Process.failure)
-fun usage() = die ("Usage:\n  "^CommandLine.name()^" [overridesfile]")
+fun usage() = die ("Usage:\n  "^CommandLine.name()^" [-w<linewidth>] [overridesfile]")
 
 fun stringOpt pos s =
   case s of
@@ -34,14 +34,26 @@ fun stringOpt pos s =
   | "nosp" => SOME NoSpec
   | "nostile" => SOME NoTurnstile
   | _ => let
-      open Substring
-      val ss = full s
-      val (pfx,sfx) = position "/" ss
-      fun rmws ss = dropl Char.isSpace (dropr Char.isSpace ss)
     in
-      if size sfx < 2 then (warn (pos, s ^ " is not a valid option"); NONE)
-      else SOME (Inst (string (rmws pfx), string (rmws (slice(sfx,1,NONE)))))
+      if String.isPrefix "width=" s then let
+          val numpart_s = String.extract(s,6,NONE)
+        in
+          case Int.fromString numpart_s of
+            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+          | SOME i => SOME (Width i)
+        end
+      else let
+          open Substring
+          val ss = full s
+          val (pfx,sfx) = position "/" ss
+          fun rmws ss = ss |> dropl Char.isSpace |> dropr Char.isSpace |> string
+        in
+          if size sfx < 2 then (warn (pos, s ^ " is not a valid option"); NONE)
+          else SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
+        end
     end
+
+
 
 type override_map = (string,(string * int))Binarymap.dict
 fun read_overrides fname = let
@@ -54,26 +66,32 @@ fun read_overrides fname = let
           open Substring
           val ss = full line
           val ss = dropl Char.isSpace (dropr Char.isSpace ss)
-          val (word1, ss) = splitl (not o Char.isSpace) ss
-          val word1 = string word1
-          val ss = dropl Char.isSpace ss
-          val (num, ss) = splitl (not o Char.isSpace) ss
-          val word2 = string (dropl Char.isSpace ss)
-          val acc' =
-              case Int.fromString (string num) of
-                NONE => (warn ((count,0),
-                               fname ^ "(overrides file): --" ^
-                               string (dropr Char.isSpace (full line)) ^
-                               "-- couldn't decode size number. Ignoring.");
-                         acc)
-              | SOME n => let
-                in
-                  case Binarymap.peek(acc, word1) of
-                    NONE => Binarymap.insert(acc, word1, (word2, n))
-                  | SOME _ => (warn ((count,0),
-                                     fname ^ " rebinds " ^ word1);
-                               Binarymap.insert(acc, word1, (word2, n)))
-                end
+          val acc' = let
+          in
+            if size ss = 0 then acc
+            else let
+                val (word1, ss) = splitl (not o Char.isSpace) ss
+                val word1 = string word1
+                val ss = dropl Char.isSpace ss
+                val (num, ss) = splitl (not o Char.isSpace) ss
+                val word2 = string (dropl Char.isSpace ss)
+              in
+                case Int.fromString (string num) of
+                  NONE => (warn ((count,0),
+                                 fname ^ "(overrides file): --" ^
+                                 string (dropr Char.isSpace (full line)) ^
+                                 "-- couldn't decode size number. Ignoring.");
+                           acc)
+                | SOME n => let
+                  in
+                    case Binarymap.peek(acc, word1) of
+                      NONE => Binarymap.insert(acc, word1, (word2, n))
+                    | SOME _ => (warn ((count,0),
+                                       fname ^ " rebinds " ^ word1);
+                                 Binarymap.insert(acc, word1, (word2, n)))
+                  end
+              end
+          end
         in
           recurse (count + 1) acc'
         end
@@ -82,7 +100,7 @@ in
   TextIO.closeIn istrm
 end
 
-structure OptSet :> sig
+structure OptSet : sig
   type elem type set
   val empty : set
   val add : elem -> set -> set
@@ -100,6 +118,8 @@ end where type elem = opt = struct
 end
 
 type optionset = OptSet.set
+
+fun optset_width s = get_first (fn Width i => SOME i | _ => NONE) s
 
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)

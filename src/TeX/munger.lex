@@ -26,15 +26,21 @@ local
 in
   fun unescape s = u [] (full s)
 end
-val width = 63
+val width = ref 63
 
-fun replace (pos, argpos, comm, optstring, args) =
+fun replace (pos, argpos, comm, optstring, args) = let
+  val optset = parseOpts pos optstring
+  val width = case optset_width optset of
+                SOME w => w
+              | NONE => !width
+in
   TextIO.output(TextIO.stdOut,
                 PP.pp_to_string width replacement
                                 {commpos = pos, argpos = argpos,
                                  command = comm,
-                                 options = parseOpts pos optstring,
-                                 argument = unescape args});
+                                 options = optset,
+                                 argument = unescape args})
+end
 
 fun getparts s = let
   open Substring
@@ -63,7 +69,7 @@ args = "{"("\\}"|[^}])+"}";
 options = "["[^\]]*"]";
 
 %%
-<INITIAL>"\\HOLInputTerm" {options}? {args} =>
+<INITIAL>"\\HOLtm" {options}? {args} =>
   (let val (optstring, args, argpos) = getparts yytext
    in
      replace ((!linecount, !cpos),(!linecount, !cpos + argpos),
@@ -71,7 +77,7 @@ options = "["[^\]]*"]";
      cpos := !cpos + size yytext;
      lex()
    end);
-<INITIAL>"\\HOLInputTheorem" {options}? {args} =>
+<INITIAL>"\\HOLthm" {options}? {args} =>
   (let val (optstring, args, argpos) = getparts yytext
    in
      replace ((!linecount, !cpos), (!linecount, !cpos + argpos),
@@ -79,7 +85,7 @@ options = "["[^\]]*"]";
      cpos := !cpos + size yytext;
      lex()
    end);
-<INITIAL>"\\HOLInputType"  {options}? {args} =>
+<INITIAL>"\\HOLty"  {options}? {args} =>
   (let val (optstring, args, argpos) = getparts yytext
    in
      replace ((!linecount, !cpos), (!linecount, !cpos + argpos),

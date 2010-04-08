@@ -77,12 +77,12 @@ src/datatype
 src/list/src
 src/quantHeuristics
 src/unwind
-src/TeX
 src/boss
 # Up to this point is needed for hol (which loads bossLib).
 # (Maybe unwind could be omitted).
 [poly]bin/hol
 
+src/TeX
 !examples/RSA
 src/sort
 src/string

@@ -5,7 +5,7 @@ that exist for managing the interface
 %
 \index{HOL system@\HOL{} system!adjustment of user interface of}
 %
-to the \HOL\ system.
+to the \HOL{} system.
 
 \begin{itemize}
 \item A help system.
@@ -13,6 +13,8 @@ to the \HOL\ system.
 \item A tool for dependency maintenance in large developments.
 \item Functions for counting the number of primitive inferences done in
 an evaluation, and timing it.
+\item A tool for embedding pretty-printed HOL theorems, terms and
+  types in \LaTeX{} documents.
 \end{itemize}
 
 \section{Help}
@@ -401,6 +403,21 @@ definition is stripped.  This means that
 \texttt{ONE\_SPACE = \varref{NOTHING}\textvisiblespace\hspace{1mm}\varref{NOTHING}}\\
 \end{array}\]}
 
+Finally, note that the text inside a variable reference is itself
+evaluated.  This means that one can write something like
+\varref{FOO\_\varref{OS}} and have this first expand the \texttt{OS}
+variable, presumably giving rise to some useful string (such as
+\texttt{unix}), and then have the resulting variable
+(\texttt{FOO\_unix}, say) expanded.  This effectively allows the
+construction of functions by cases (define variables
+\texttt{FOO\_unix}, \texttt{FOO\_macos} etc; then use the nested
+variable reference above).  If the internal variable expands to
+something containing spaces, this will not turn a normal variable
+reference into a function call (see below).  On the other hand,
+if the initial reference contains a space, the function name component
+\emph{will} be expanded, allowing implementation of a function by
+cases determining which text-manipulation function should be called.
+
 \paragraph{Rules}
 Make-file rules are interpreted in the same way as by traditional
 \textsf{make}.  The files specified after the colon (if any) are those
@@ -683,6 +700,65 @@ Total: 165.
 \index{timing of HOL evaluations@timing of \HOL{} evaluations|)}
 
 
+\section{Embedding HOL in \LaTeX{}}
+
+\index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|(}
+%
+When writing documents in \LaTeX{} about one's favourite \HOL{} development, one frequently wants to include pretty-printed terms, types and theorems from that development.
+%
+Done manually, this will typically require involved use of the \texttt{alltt} environment, and cutting and pasting from a HOL session or theory file.
+%
+The result is that one must also keep two copies of \HOL{} texts synchronised: if the \HOL{} development changes, the \LaTeX{} document should change as well.
+
+\newcommand{\munge}{\texttt{munge}}
+This manual, and error-prone process is not necessary: the standard \HOL{} distribution comes with a tool called \munge{} to automate the process, and to remove the duplicate copies of \HOL{} text.
+%
+The basic philosophy is that a \LaTeX{} document can be written ``as normal'', but that three new \LaTeX{}-like commands are available to the author.
+
+The commands are not really processed by \LaTeX{}: instead the source file must first be passed through the \munge{} filter.
+%
+For example, one might write a document called \texttt{article.htex}.
+%
+This document contains instances of the new commands, and cannot be processed as is by \LaTeX{}.
+%
+Instead one first runs
+\begin{alltt}
+   munge < article.htex > article.tex
+\end{alltt}
+and then runs \LaTeX{} on \texttt{article.tex}.
+%
+One would probably automate this process with a makefile of course.
+
+\subsection{Munging Commands}
+% need to get backslashes conveniently obscures the real names, preventing the munger from seeing them
+\newcommand{\holtm}{\texttt{\bs{}HOLtm}}
+\newcommand{\holty}{\texttt{\bs{}HOLty}}
+\newcommand{\holthm}{\texttt{\bs{}HOLthm}}
+There are three commands for inserting text corresponding to \HOL{} entities into \LaTeX{} documents: \holtm, \holty{} and \holthm.
+%
+Each takes one argument, specifying something of the corresponding \HOL{} type.
+%
+In addition, options can be specified in square brackets, just as would be done with a genuine \LaTeX{} command.
+%
+For example, one can write
+\begin{alltt}
+   \holtm{}[tt]\{P(SUC n) /\bs{} q\}
+\end{alltt}
+and one will get \[
+  \texttt{$P$ (SUC $n$) $\land$ $q$}
+\]
+or something very close to it, appearing in the resulting document.\footnote{The output is a mixture of typewriter font and   math-mode characters embedded in a \texttt{\bs{}texttt} block.}
+%
+Note how the spacing in the input (nothing between the \texttt{P} and the \texttt{SUC n}) is \emph{not} reflected in the output; this is because the input is parsed and pretty-printed with \HOL{}.
+%
+This means that if the \HOL{} input is malformed, the \munge{} program will report errors.
+%
+Note also how the system knows that \texttt{P}, \texttt{n} and \texttt{q} are variables, and that \texttt{SUC} is not.
+%
+This analysis would not be possible without having \HOL{} actually parse and print the term itself.
+
+
+\index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|)}
 
 %%% Local Variables:
 %%% mode: latex

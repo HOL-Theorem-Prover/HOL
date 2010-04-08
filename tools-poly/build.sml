@@ -24,13 +24,8 @@ val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
 val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
 val DYNLIB = Systeml.DYNLIB
+val POLY_LDFLAGS = Systeml.POLY_LDFLAGS
 
-val machine_flags = if OS = "macosx"
-                    then ["-segprot", "POLY", "rwx", "rwx"] @
-                           (if PolyML.architecture() = "I386"
-                            then ["-arch", "i386"]
-                            else [])
-                    else [];
 
 (* ----------------------------------------------------------------------
     Analysing the command-line
@@ -369,8 +364,7 @@ fun upload ((src, regulardir), target, symlink) =
  ---------------------------------------------------------------------------*)
 
 fun compile (systeml : string list -> OS.Process.status) exe obj : unit =
-  (systeml ([Systeml.CC, "-o", exe, obj, "-L" ^ POLYMLLIBDIR,
-             "-lpolymain", "-lpolyml"] @ machine_flags);
+  (systeml ([Systeml.CC, "-o", exe, obj] @ POLY_LDFLAGS);
    OS.FileSys.remove obj);
 
 fun make_exe (name:string) (POLY : string) (target:string) : unit = let

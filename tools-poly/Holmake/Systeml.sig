@@ -16,6 +16,7 @@ sig
   val HOLDIR : string
   val POLYMLLIBDIR : string
   val POLY : string
+  val POLY_LDFLAGS : string list
   val CC : string
   val OS : string
   val DEPDIR : string
