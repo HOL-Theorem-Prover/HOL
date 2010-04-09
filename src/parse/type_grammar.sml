@@ -31,6 +31,36 @@ fun typstruct_uptodate ts =
                                 andalso List.all typstruct_uptodate Args
 *)
 
+exception GrammarError = HOLgrammars.GrammarError
+
+fun dest_var_st (TYVAR triple) = triple
+  | dest_var_st _ = raise GrammarError "dest_var_st: not a type variable"
+
+fun is_abs_st (TYABST _) = true
+  | is_abs_st _ = false;
+
+fun dest_abs_st (TYABST p) = p
+  | dest_abs_st _ = raise GrammarError "dest_abs_st: not a type abstraction"
+
+fun strip_abs_st (TYABST (bvar,body)) =
+  let val (bvars,body1) = strip_abs_st body
+  in (bvar::bvars, body1)
+  end
+  | strip_abs_st ty = ([],ty)
+
+fun inst_rank_kind rkS kdS (TYVAR (str,kd,rk)) =
+       TYVAR (str,Kind.kind_subst kdS kd,rk+rkS)
+  | inst_rank_kind rkS kdS (TYCON {Thy, Tyop, Kind, Rank}) =
+       TYCON {Thy=Thy, Tyop=Tyop, Kind=Kind.kind_subst kdS Kind, Rank=Rank}
+  | inst_rank_kind rkS kdS (TYAPP (opr,arg)) =
+       TYAPP (inst_rank_kind rkS kdS opr, inst_rank_kind rkS kdS arg)
+  | inst_rank_kind rkS kdS (TYABST (bvar,body)) =
+       TYABST (inst_rank_kind rkS kdS bvar, inst_rank_kind rkS kdS body)
+  | inst_rank_kind rkS kdS (TYUNIV (bvar,body)) =
+       TYUNIV (inst_rank_kind rkS kdS bvar, inst_rank_kind rkS kdS body)
+  | inst_rank_kind rkS kdS (PARAM (n,kd,rk)) =
+       PARAM (n, Kind.kind_subst kdS kd, rk+rkS)
+
 
 
 type special_info = {lambda : string list,
@@ -39,7 +69,7 @@ type special_info = {lambda : string list,
 datatype grammar = TYG of (int * grammar_rule) list *
                           (string, type_structure) Binarymap.dict *
                           special_info *
-                          (int * string) TypeNet.typenet
+                          (int * string * Type.hol_type list) TypeNet.typenet
 
 open HOLgrammars
 
@@ -58,6 +88,21 @@ fun initialise_typrinter f =
                               message = "Printer function already initialised"}
 
 fun pp_type g pps ty = (!type_printer) g pps ty
+
+fun dest_var_st (TYVAR triple) = triple
+  | dest_var_st _ = raise GrammarError "dest_var_st: not a type variable"
+
+fun is_abs_st (TYABST _) = true
+  | is_abs_st _ = false;
+
+fun dest_abs_st (TYABST p) = p
+  | dest_abs_st _ = raise GrammarError "dest_abs_st: not a type abstraction"
+
+fun strip_abs_st (TYABST (bvar,body)) =
+  let val (bvars,body1) = strip_abs_st body
+  in (bvar::bvars, body1)
+  end
+  | strip_abs_st ty = ([],ty)
 
 fun structure_to_type st =
     case st of
@@ -179,6 +224,29 @@ in
   TYG(List.mapPartial edit_rule G, abbrevs, specials, pmap)
 end
 
+fun is_binary_tyop G s = let
+  fun is_s_rule {parse_string,opname,...} = opname = s
+  fun has_s_rule (prec, r) =
+      case r of
+        INFIX (irules, assoc) => List.exists is_s_rule irules
+      | _ => false
+in
+  List.exists has_s_rule G
+end
+
+fun conform_structure_to_type G s st ty =
+  let val (bvars,body) = if is_binary_tyop G s
+                           then let val (tyv1,body1) = dest_abs_st st
+                                    val (tyv2,body2) = dest_abs_st body1
+                                in ([tyv1,tyv2],body2)
+                                end
+                           else strip_abs_st st
+      val body_ty = structure_to_type body
+      val (tyS,kdS,rk) = Type.kind_match_type body_ty ty
+  in
+    inst_rank_kind rk kdS st
+  end
+
 
 fun new_tyop (TYG(G,abbrevs,specials,pmap)) name =
   TYG (insert_sorted (std_suffix_precedence, CONSTANT[name]) G, abbrevs, specials, pmap)
@@ -226,15 +294,28 @@ in
   check_for_gaps 0 plist
 end
 
+fun abb_strip_abs_type G s ty =
+  if is_binary_tyop G s
+    then let val (tyv1,body1) = Type.dest_abs_type ty
+             val (tyv2,body2) = Type.dest_abs_type body1
+          in ([tyv1,tyv2],body2)
+         end handle HolKernel.HOL_ERR _ => ([],ty)
+    else Type.strip_abs_type ty
+
 val abb_tstamp = ref 0
 fun new_abbreviation (TYG(G, dict0, specials, pmap)) (s, st) = let
   val _ = check_structure st
   val _ = case st of PARAM _ =>
                      raise GrammarError
                                "Abbreviation can't be to a type variable"
+                   | TYVAR _ =>
+                     raise GrammarError
+                               "Abbreviation can't be to a type variable"
                    | _ => ()
+  val ty = structure_to_type st
+  val (tyvs,body) = abb_strip_abs_type G s ty
   val G0 = TYG(G, Binarymap.insert(dict0,s,st), specials,
-               TypeNet.insert(pmap, structure_to_type st, (!abb_tstamp, s)))
+               TypeNet.insert(pmap, body, (!abb_tstamp, s, tyvs)))
   val _ = abb_tstamp := !abb_tstamp + 1
 in
   new_tyop G0 s
@@ -242,7 +323,8 @@ end
 
 fun remove_abbreviation(arg as TYG(G, dict0, specials, pmap0)) s = let
   val (dict,st) = Binarymap.remove(dict0,s)
-  val pmap = #1 (TypeNet.delete(pmap0, structure_to_type st))
+  val (tyvs,body) = abb_strip_abs_type G s (structure_to_type st)
+  val pmap = #1 (TypeNet.delete(pmap0, body))
       handle Binarymap.NotFound => pmap0
 in
   TYG(G, dict, specials, pmap)
@@ -374,9 +456,10 @@ val get_params = get_params0 (HOLset.empty (triple_compare (Int.compare,Kind.kin
              add_string ") ";
              add_string s)
     val ty = structure_to_type st
-    val printed = case TypeNet.peek (pmap, ty) of
+    val (tyvs,body) = abb_strip_abs_type (rules G) s ty
+    val printed = case TypeNet.peek (pmap, body) of
                     NONE => false
-                  | SOME (_, s') => s = s'
+                  | SOME (_, s', _) => s = s'
   in
     begin_block CONSISTENT 0;
     print_lhs ();
@@ -479,18 +562,26 @@ val print_abbrevs = ref true
 val _ = Feedback.register_btrace ("print_tyabbrevs", print_abbrevs)
 
 fun tysize ty =
-    if Type.is_vartype ty then 1
-    else let
-        val {Args,...} = Type.dest_thy_type ty
-      in
-        1 + List.foldl (fn (ty,acc) => tysize ty + acc) 0 Args
+    if Type.is_var_type ty then 1
+    else if Type.is_con_type ty then 1
+    else if Type.is_app_type ty then
+      let val (opr,arg) = Type.dest_app_type ty
+      in tysize opr + tysize arg
       end
+    else if Type.is_abs_type ty then
+      let val (bvar,body) = Type.dest_abs_type ty
+      in 1 + tysize body
+      end
+    else if Type.is_univ_type ty then
+      let val (bvar,body) = Type.dest_univ_type ty
+      in 1 + tysize body
+      end
+    else raise GrammarError "tysize: impossible type"
 
 fun abb_dest_type0 (TYG(_, _, _, pmap)) ty = let
   open HolKernel
   val net_matches = TypeNet.match(pmap, ty)
   fun mymatch pat ty = let
-    val pat = if is_abs_type pat then snd(strip_abs_type pat) else pat
     val ((i, sames), (k, kdsames), r) =
        Type.raw_kind_match_type pat ty (([], []), ([], []), 0)
   in
@@ -498,8 +589,8 @@ fun abb_dest_type0 (TYG(_, _, _, pmap)) ty = let
      k @ (map (fn kd => kd |-> kd) kdsames),
      r)
   end
-  fun check_match (pat, (tstamp, nm)) =
-      SOME(mymatch pat ty, nm, tstamp) handle HOL_ERR _ => NONE
+  fun check_match (pat, (tstamp, nm, tyvs)) =
+      SOME(mymatch pat ty, nm, tyvs, tstamp) handle HOL_ERR _ => NONE
   val checked_matches = List.mapPartial check_match net_matches
   fun instcmp ({redex = r1, ...}, {redex = r2, ...}) = Type.compare(r1, r2)
 in
@@ -508,13 +599,17 @@ in
   | _ => let
       fun instsize (i,k,r) =
           List.foldl (fn ({redex,residue},acc) => tysize residue + acc) 0 i
-      fun match_info (i, _, tstamp) = (instsize i, tstamp)
+      fun match_info (i, _, _, tstamp) = (instsize i, tstamp)
       val matchcmp = inv_img_cmp match_info
                                  (pair_compare(Int.compare,
                                                Lib.flip_order o Int.compare))
       val allinsts = Listsort.sort matchcmp checked_matches
-      val (inst,nm,_) = hd allinsts
-      val inst' = Listsort.sort instcmp (#1 inst)
+      val (inst,nm,tyvs,_) = hd allinsts
+      (*val inst' = Listsort.sort instcmp (#1 inst) *)
+      val (tyinst,kdinst,rkinst) = inst
+      val tyvs' = map (Type.inst_rank_kind rkinst kdinst) tyvs
+      val inst' = if null tyvs then Listsort.sort instcmp tyinst
+                  else map (fn tyv => tyv |-> pure_type_subst tyinst tyv) tyvs'
       val args = map #residue inst'
     in
       (nm, args)
@@ -529,7 +624,8 @@ fun disable_abbrev_printing s (arg as TYG(G,abbs,specials,pmap)) =
       NONE => arg
     | SOME st => let
         val ty = structure_to_type st
-        val (pmap', (_,s')) = TypeNet.delete(pmap, ty)
+        val (tyvs,body) = abb_strip_abs_type G s ty
+        val (pmap', (_,s',_)) = TypeNet.delete(pmap, body)
       in
         if s = s' then TYG(G, abbs, specials, pmap')
         else arg

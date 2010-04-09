@@ -3,46 +3,27 @@ struct
 
 open HolKernel
 
-fun print_type ty = Thm.debug_type ty
-
-fun print_types [] = print "[]"
-  | print_types [ty] = (print "["; print_type ty; print "]")
-  | print_types (ty::tys) = (print "["; print_type ty; print_types0 tys; print "]")
-and print_types0 (ty::tys) = (print ","; print_type ty; print_types0 tys)
-  | print_types0 [] = ()
-
-(*
-fun to_skind kd = if is_arrow_kind kd then let
-                      val (kd1,kd2) = dest_arrow_kind kd
-                    in mk_arrow_kind(to_skind kd1, to_skind kd2)
-                    end
-                  else typ (* for both the base kind and kind variables *)
-*)
-
-datatype label = TV of int | TOP of {Thy : string, Tyop : string} | TAB | TUN
-
-(* fun label_to_string (TV kd) = "<tyvar>" ^ (if kd=Kind.typ then "" else ":"^kind_to_string kd) *)
-fun label_to_string (TV n) = "<tyvar>" ^ (if n=0 then "" else ":"^Int.toString n)
-  | label_to_string (TOP{Thy,Tyop}) = Thy^"$"^Tyop
-  | label_to_string TAB = "<tyabs>"
-  | label_to_string TUN = "<tyuniv>"
+datatype label = TV | TCON of {Thy : string, Tyop : string} | TAPP | TABS | TUNI
 
 fun labcmp p =
     case p of
-      (TV n1, TV n2) => Int.compare(n1,n2)
-    | (TV _, _) => LESS
-    | (TOP{Thy = thy1, Tyop = op1}, TOP{Thy = thy2, Tyop = op2}) =>
-        pair_compare (String.compare, String.compare) ((op1,thy1), (op2,thy2))
-    | (TOP _, TV _) => GREATER
-    | (TOP _, _) => LESS
-    | (TAB, TUN) => LESS
-    | (TAB, TAB) => EQUAL
-    | (TAB, _) => GREATER
-    | (TUN, TUN) => EQUAL
-    | (TUN, _) => GREATER
+      (TV, TV) => EQUAL
+    | (TV, _) => LESS
+    | (_, TV) => GREATER
+    | (TCON{Thy = thy1, Tyop = op1}, TCON{Thy = thy2, Tyop = op2}) =>
+      pair_compare(String.compare, String.compare) ((op1,thy1),(op2,thy2))
+    | (TCON _, _) => LESS
+    | (_, TCON _) => GREATER
+    | (TAPP, TAPP) => EQUAL
+    | (TAPP, _) => LESS
+    | (_, TAPP) => GREATER
+    | (TABS, TABS) => EQUAL
+    | (TABS, _) => LESS
+    | (_, TABS) => GREATER
+    | (TUNI, TUNI) => EQUAL
 
 datatype 'a N = LF of (hol_type,'a) Binarymap.dict
-              | ND of (label,'a N) Binarymap.dict * (hol_type,'a) Binarymap.dict
+              | ND of (label,'a N) Binarymap.dict
               | EMPTY
 (* redundant EMPTY constructor is used to get around value polymorphism problem
    when creating a single value for empty below *)
@@ -51,64 +32,51 @@ type 'a typenet = 'a N * int
 
 val empty = (EMPTY, 0)
 
-fun mkempty () = ND (Binarymap.mkDict labcmp, Binarymap.mkDict Type.compare)
+fun mkempty () = ND (Binarymap.mkDict labcmp)
 
 fun ndest_type ty =
-    if is_vartype ty then (TV (length (snd (strip_app_type ty))), [])
-    else if is_con_type ty then let
-        val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
-      in
-        (TOP{Thy=Thy,Tyop=Tyop}, [])
+    if is_var_type ty then (TV, [])
+    else if is_con_type ty then
+      let val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
+      in (TCON{Thy=Thy,Tyop=Tyop}, [])
       end
-    else if is_app_type ty then let
-        val (Opr,Args) = strip_app_type ty
-        val (lab,rest) = ndest_type Opr
-      in
-        (lab, rest @ Args)
+    else if is_app_type ty then
+      let val (opr,arg) = dest_app_type ty
+      in (TAPP, [opr,arg])
       end
-    else if is_abs_type ty then let
-        val (Bvar,Body) = dest_abs_type ty
-      in
-        (TAB, [Body])
+    else if is_abs_type ty then
+      let val (_,body) = dest_abs_type ty
+      in (TABS, [body])
       end
-    else if is_univ_type ty then let
-        val (Bvar,Body) = dest_univ_type ty
-      in
-        (TUN, [Body])
+    else if is_univ_type ty then
+      let val (_,body) = dest_univ_type ty
+      in (TUNI, [body])
       end
-    else raise Fail "TypeNet.ndest_type: unrecognized type"
+    else raise Fail "TypeNet.ndest_type: catastrophic type destruction"
 
 fun insert ((net,sz), ty, item) = let
-  val ty' = deep_beta_eta_ty ty
-(*val _ = (print "\nTypeNet.insert ("; print_type ty'; print ")\n") *)
-  fun newnode tys =
-      case tys of
+  fun newnode labs =
+      case labs of
         [] => LF (Binarymap.mkDict Type.compare)
       | _ => mkempty()
   fun trav (net, tys) =
       case (net, tys) of
-        (LF d, []) => ( (* print "TypeNet.insert: LF d |-"; print_type ty'; print "-> =|\n"; *)
-                       LF (Binarymap.insert(d,ty',item)))
-      | (LF d, tys) => trav (ND (Binarymap.mkDict labcmp, d), tys)
-      | (ND (d,d0), []) => ( (* print "TypeNet.insert: ND d |-"; print_type ty'; print "-> =|\n"; *)
-                            ND (d,Binarymap.insert(d0,ty',item)))
-      | (ND (d,d0), ty::tys0) => let
+        (LF d, []) => LF (Binarymap.insert(d,ty,item))
+      | (ND d, ty::tys0) => let
           val (lab, rest) = ndest_type ty
-       (* val _ = (print "TypeNet.insert: ND d |-"; print (label_to_string lab); print "-> ") *)
           val tys = rest @ tys0
           val n' =
-             (case Binarymap.peek(d,lab) of
-                NONE => ( (* print ("new node("^Int.toString (length tys)^")\n"); *) trav(newnode tys, tys))
-              | SOME n => ( (* print "some node\n"; *) trav(n, tys))
-             ) handle Fail s => Raise (wrap_exn "TypeNet.insert" (label_to_string lab) (Fail s))
+              case Binarymap.peek(d,lab) of
+                NONE => trav(newnode tys, tys)
+              | SOME n => trav(n, tys)
           val d' = Binarymap.insert(d, lab, n')
         in
-          ND (d',d0)
+          ND d'
         end
       | (EMPTY, tys) => trav(mkempty(), tys)
-   (* | _ => raise Fail "TypeNet.insert: catastrophic invariant failure" *)
+      | _ => raise Fail "TypeNet.insert: catastrophic invariant failure"
 in
-  (trav(net,[ty']), sz + 1)
+  (trav(net,[ty]), sz + 1)
 end
 
 fun listItems (net, sz) = let
@@ -116,10 +84,10 @@ fun listItems (net, sz) = let
   fun trav (net, acc) =
       case net of
         LF d => Binarymap.foldl cons' acc d
-      | ND (d,d0) => let
+      | ND d => let
           fun foldthis (k,v,acc) = trav(v,acc)
         in
-          Binarymap.foldl foldthis (Binarymap.foldl cons' acc d0) d
+          Binarymap.foldl foldthis acc d
         end
       | EMPTY => []
 in
@@ -129,107 +97,61 @@ end
 fun numItems (net, sz) = sz
 
 fun peek ((net,sz), ty) = let
-  val ty' = deep_beta_eta_ty ty
-(*val _ = (print "\nTypeNet.peek ("; print_type ty'; print ")\n") *)
   fun trav (net, tys) =
       case (net, tys) of
-        (LF d, []) => ( (* print "TypeNet.peek: LF d |-"; print_type ty'; print "-> =|\n"; *) Binarymap.peek(d, ty'))
-      | (LF d, tys) => ( (* print "TypeNet.peek: LF d tys |-"; print_type ty'; print "-> =|\n"; *) Binarymap.peek(d, ty'))
-      | (ND (d,d0), []) => ( (* print "TypeNet.peek: ND d |-"; print_type ty'; print "-> =|\n"; *) Binarymap.peek(d0, ty'))
-      | (ND (d,d0), ty::tys) => let
-          val acc = Binarymap.peek(d0, ty')
+        (LF d, []) => Binarymap.peek(d, ty)
+      | (ND d, ty::tys) => let
           val (lab, rest) = ndest_type ty
-       (* val _ = (print "TypeNet.peek: ND d |-"; print (label_to_string lab); print "-> ") *)
         in
-         (case acc of
-            SOME a => SOME a
-          | NONE =>
-         (case Binarymap.peek(d, lab) of
-            NONE => ( (*print "NONE\n";*) NONE)
-          | SOME n => ( (*print "SOME n\n";*) trav(n, rest @ tys))
-         ) handle Fail s => raise (wrap_exn "TypeNet.peek" (label_to_string lab) (Fail s)))
+          case Binarymap.peek(d, lab) of
+            NONE => NONE
+          | SOME n => trav(n, rest @ tys)
         end
       | (EMPTY, _) => NONE
-   (* | _ => raise Fail "TypeNet.peek: catastrophic invariant failure" *)
+      | _ => raise Fail "TypeNet.peek: catastrophic invariant failure"
 in
-  trav(net, [ty'])
+  trav(net, [ty])
 end
 
 fun find (n, ty) =
     valOf (peek (n, ty)) handle Option => raise Binarymap.NotFound
 
 fun match ((net,sz), ty) = let
-  val ty' = deep_beta_eta_ty ty
-  val _ = if current_trace "debug_parse_type" = 0 then () else
-            (print "TypeNet.match("; print_type ty'; print ")\n")
   fun trav acc (net, tyl) =
       case (net, tyl) of
         (EMPTY, _) => []
       | (LF d, []) => Binarymap.listItems d @ acc
-      | (LF d, tys) => acc
-      | (ND (d,d0), []) => Binarymap.listItems d0 @ acc
-      | (ND (d,d0), ty::tys) => let
-          val _ = if current_trace "debug_parse_type" = 0 then ()
-                  else (print "ND d on\n  "; print_types (ty::tys); print "\n")
-          val acc0 = Binarymap.listItems d0
-          val _ = if current_trace "debug_parse_type" = 0 then () else
-                    (print "  d0 here has "; print_types (map fst acc0); print "\n")
-          val acc' = Binarymap.listItems d0 @ acc
-          val (Opr,Args) = strip_app_type ty
-          val n = length Args
-          val varresult = case Binarymap.peek(d, TV 0) of
-                            NONE => acc'
-                          | SOME n => trav acc' (n, tys)
-          val _ = if current_trace "debug_parse_type" = 0 then () else
-                    (print "varresult = "; print_types (map fst varresult); print "\n")
+      | (ND d, ty::tys) => let
+          val varresult = case Binarymap.peek(d, TV) of
+                            NONE => acc
+                          | SOME n => trav acc (n, tys)
           val (lab, rest) = ndest_type ty
-          val _ = if current_trace "debug_parse_type" = 0 then () else
-                    (print "lab = "; print (label_to_string lab); print "\n  "; print_types rest; print "\n")
-          val varhead_result =
-            if n = 0 then varresult 
-            else
-              case Binarymap.peek (d, TV n) of 
-                NONE => varresult
-              | SOME n => trav varresult (n, rest @ tys)
-          val _ = if current_trace "debug_parse_type" = 0 then () else
-                    (print "varhead_result = "; print_types (map fst varhead_result); print "\n")
         in
-          (case lab of
-            TV n => (if current_trace "debug_parse_type" = 0 then () else
-                       (print "  n = "; print (Int.toString n); print "\n";
-                        print "    yielding "; print_types (map fst varhead_result); print "\n");
-                     varhead_result)
+          case lab of
+            TV => varresult
           | _ => let
             in
               case Binarymap.peek (d, lab) of
-                NONE => varhead_result
-              | SOME n => trav varhead_result (n, rest @ tys)
-            end) handle Fail s => raise (wrap_exn "TypeNet.match" (label_to_string lab) (Fail s))
+                NONE => varresult
+              | SOME n => trav varresult (n, rest @ tys)
+            end
         end
-   (* | _ => raise Fail "TypeNet.match: catastrophic invariant failure" *)
+      | _ => raise Fail "TypeNet.match: catastrophic invariant failure"
 in
-  trav [] (net, [ty'])
+  trav [] (net, [ty])
 end
 
 fun delete ((net,sz), ty) = let
-  val ty' = deep_beta_eta_ty ty
   fun trav (p as (net, tyl)) =
       case p of
         (EMPTY, _) => raise Binarymap.NotFound
       | (LF d, []) => let
-          val (d',removed) = Binarymap.remove(d, ty')
+          val (d',removed) = Binarymap.remove(d, ty)
         in
           if Binarymap.numItems d' = 0 then (NONE, removed)
           else (SOME (LF d'), removed)
         end
-      | (ND (d,d0), []) => let
-        in
-          case trav (LF d0, []) of
-            (NONE, removed) => (SOME (ND (d,Binarymap.mkDict Type.compare)), removed)
-          | (SOME (LF d0'), removed) => (SOME (ND (d,d0')), removed)
-          | _ => raise Fail "TypeNet.delete: impossible"
-        end
-      | (ND (d,d0), ty::tys) => let
+      | (ND d, ty::tys) => let
           val (lab, rest) = ndest_type ty
         in
           case Binarymap.peek(d, lab) of
@@ -240,16 +162,16 @@ fun delete ((net,sz), ty) = let
                 (NONE, removed) => let
                   val (d',_) = Binarymap.remove(d, lab)
                 in
-                  if Binarymap.numItems d' = 0 andalso Binarymap.numItems d0 = 0 then (NONE, removed)
-                  else (SOME (ND (d',d0)), removed)
+                  if Binarymap.numItems d' = 0 then (NONE, removed)
+                  else (SOME (ND d'), removed)
                 end
-              | (SOME n', removed) => (SOME (ND (Binarymap.insert(d,lab,n'),d0)),
+              | (SOME n', removed) => (SOME (ND (Binarymap.insert(d,lab,n'))),
                                        removed)
             end
         end
       | _ => raise Fail "TypeNet.delete: catastrophic invariant failure"
 in
-  case trav (net, [ty']) of
+  case trav (net, [ty]) of
     (NONE, removed) => (empty, removed)
   | (SOME n, removed) =>  ((n,sz-1), removed)
 end
@@ -258,7 +180,7 @@ fun app f (net, sz) = let
   fun trav n =
       case n of
         LF d => Binarymap.app f d
-      | ND (d,d0) => (trav (LF d0); Binarymap.app (fn (lab, n) => trav n) d)
+      | ND d => Binarymap.app (fn (lab, n) => trav n) d
       | EMPTY => ()
 in
   trav net
@@ -268,7 +190,7 @@ fun fold f acc (net, sz) = let
   fun trav acc n =
       case n of
         LF d => Binarymap.foldl f acc d
-      | ND (d,d0) => Binarymap.foldl (fn (lab,n',acc) => trav acc n') (trav acc (LF d0)) d
+      | ND d => Binarymap.foldl (fn (lab,n',acc) => trav acc n') acc d
       | EMPTY => acc
 in
   trav acc net
@@ -278,7 +200,7 @@ fun map f (net, sz) = let
   fun trav n =
       case n of
         LF d => LF (Binarymap.map f d)
-      | ND (d,d0) => ND (Binarymap.transform trav d, Binarymap.map f d0)
+      | ND d => ND (Binarymap.transform trav d)
       | EMPTY => EMPTY
 in
   (trav net, sz)

@@ -23,6 +23,22 @@ val _ = register_btrace("pp_num_types", pp_num_types)
 val pp_annotations = ref (!Globals.interactive)
 val _ = register_btrace ("pp_annotations", pp_annotations)
 
+(*
+fun dest_var_st (TYVAR triple) = triple
+  | dest_var_st _ = raise GrammarError "dest_var_st: not a type variable"
+
+fun is_abs_st (TYABST _) = true
+  | is_abs_st _ = false;
+
+fun dest_abs_st (TYABST p) = p
+  | dest_abs_st _ = raise GrammarError "dest_abs_st: not a type abstraction"
+
+fun strip_abs_st (TYABST (bvar,body)) =
+  let val (bvars,body1) = strip_abs_st body
+  in (bvar::bvars, body1)
+  end
+  | strip_abs_st ty = ([],ty)
+*)
 fun dest_numtype ty = let
   open Arbnum
   val _ = (* respect pp_num_types flag *)
@@ -64,9 +80,14 @@ fun structure_to_string st = let
       case st of
         TYCON {Thy,Tyop,Kind,Rank} => Thy ^ "$" ^ Tyop
       | TYVAR (str,kd,rk) =>
+          let val paren = not (kd = typ andalso rk = 0)
+          in
+            (if paren then "(" else "") ^
             str ^
             (if kd = typ then "" else " : "^kind_to_string kd) ^
-            (if rk = 0   then "" else " :<= "^Int.toString rk)
+            (if rk = 0   then "" else " :<= "^Int.toString rk) ^
+            (if paren then ")" else "")
+          end
       | TYAPP (TYAPP (TYCON {Thy="min",Tyop="fun",Kind,Rank}, x), y) =>
                        (if paren then "(" else "") ^
                        recurse true x ^ " -> " ^
@@ -299,7 +320,7 @@ fun pp_type0 (G:grammar) backend = let
           pr_ty binderp pps cty Top (depth - 1);
           add_string "]"
         end handle HOL_ERR _ =>
-        if Lib.can check_dest_type ty then
+       (* if Lib.can check_dest_type ty then *)
         let
           val (Tyop, Args) = type_grammar.abb_dest_type G ty
           fun tooltip () =
@@ -309,7 +330,13 @@ fun pp_type0 (G:grammar) backend = let
                   in
                     Thy ^ "$" ^ Tyop
                   end
-                | SOME st => let
+                | SOME (st as TYABST _) => let
+                    val st' = type_grammar.conform_structure_to_type (type_grammar.rules G) Tyop st ty
+                  in
+                    structure_to_string st'
+                  end
+                | SOME st => (* pre-HOL-Omega type structures *) let
+                    val st = valOf (Binarymap.peek (type_grammar.abbreviations G, Tyop))
                     val numps = num_params st
                   in
                     if 0 < numps then let
@@ -405,7 +432,8 @@ fun pp_type0 (G:grammar) backend = let
               pend addparens
             end handle Option => print_ghastly()
         end
-      else let
+     (* else let *)
+        handle HOL_ERR _ => let
           (* not a normal "classic" type operator with arguments *)
           open TypeView
           fun add_ann_string'(p as (s,ann)) =

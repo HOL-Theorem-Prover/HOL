@@ -148,12 +148,21 @@ val _ = type_abbrev ("W", Type `: \('f:'k => 'k => 'l) 'a. 'a ('a 'f)`);
 
 (* Type composition operator: (not the same as B above) *)
 
-val _ = type_abbrev ("comp", Type `: \('f:'k => 'l) ('g:'l => 'm) 'a. 'a 'f 'g`);
-
 val _ = add_infix_type
          {Prec = 50,
           ParseName = SOME "o", Name = "comp",
           Assoc = HOLgrammars.RIGHT};
+
+val _ = type_abbrev ("comp", Type `: \('f:'k => 'l) ('g:'l => 'm) 'a. 'a 'f 'g`);
+
+val _ = disable_tyabbrev_printing "I";
+val _ = disable_tyabbrev_printing "K";
+val _ = disable_tyabbrev_printing "S";
+val _ = disable_tyabbrev_printing "A";
+val _ = disable_tyabbrev_printing "B";
+val _ = disable_tyabbrev_printing "C";
+val _ = disable_tyabbrev_printing "W";
+val _ = disable_tyabbrev_printing "comp";
 
 (* parsing/printing support for theory min *)
 val _ = unicode_version {u = UChar.imp, tmnm = "==>"}
