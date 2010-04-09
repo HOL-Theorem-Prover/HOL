@@ -218,15 +218,13 @@ val arm_div_mod_thm = let
   val th = SIMP_RULE std_ss [SEP_CLAUSES,LET_DEF] th
   val th = DISCH_ALL (MP th (UNDISCH imp))
   val th = REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND] th
-  val lemma = prove(
-  ``(~aR 0x2w * aR 0x3w (r3 // r4) * aR 0x4w r4 *
-      aR 0x5w (word_mod r3 r4) * aPC (p + 0x38w) * ~aS)
-    =
-    (let (r3,r5) = (r3 // r4, word_mod r3 r4) in
-        ~aR 0x2w * aR 0x3w r3 * aR 0x4w r4 *
-        aR 0x5w r5 * aPC (p + 0x38w) * ~aS)``,
-  SIMP_TAC (std_ss++SIZES_ss) [LET_DEF,w2n_n2w,
-     word_div_def,word_mod_def] THEN SIMP_TAC (std_ss++star_ss) [])
+  val (_,_,_,t) = dest_spec (concl th)
+  val q = subst [``word_mod r3 r4:word32``|->``r5:word32``,
+                 ``r3 // r4:word32``|->``r3:word32``] t
+  val q = pairSyntax.mk_anylet([(``(r3:word32,r5:word32)``,``(r3 // r4:word32,word_mod r3 r4:word32)``)],q)
+  val lemma = prove(mk_eq(t,q),
+    SIMP_TAC (std_ss++SIZES_ss) [LET_DEF,w2n_n2w,
+       word_div_def,word_mod_def] THEN SIMP_TAC (std_ss++star_ss) [])
   val th = REWRITE_RULE [lemma] th
   in th end
 
@@ -234,14 +232,11 @@ val (th,x86_div_mod_def) = decompile_x86 "x86_div_mod" `31D2
                                                         F7F1`;
 val x86_div_mod_thm = let
   val lemma = prove(
-  ``(let (eax,ecx,edx) = x86_div_mod (eax,ecx) in
-        xR1 EAX eax * xR1 ECX ecx * xR1 EDX edx * xPC (p + 0x4w) * ~xS)
-    =
-    (let (eax,edx) = (word_div eax ecx, word_mod eax ecx) in
-        xR1 EAX eax * xR1 ECX ecx * xR1 EDX edx * xPC (p + 0x4w) * ~xS)``,
+  ``((let (eax,ecx,edx) = x86_div_mod (eax,ecx) in pp eax ecx edx) =
+     (let (eax,edx) = (word_div eax ecx, word_mod eax ecx) in pp eax ecx edx))``,
   SIMP_TAC (std_ss++SIZES_ss) [LET_DEF,x86_div_mod_def,w2n_n2w,
      word_div_def,word_mod_def] THEN SIMP_TAC (std_ss++star_ss) [])
-  val th = REWRITE_RULE [lemma] th
+  val th = SIMP_RULE std_ss [lemma] th
   val imp = Q.SPECL [`ecx`,`eax`] arm_div_thm
   val th = DISCH ((cdr o car o concl) imp) th
   val lemma = prove(
@@ -274,13 +269,8 @@ val word_mod_thm =
 val ppc_div_mod_thm = let
   val lemma = prove(
   ``r4 <> 0w ==>
-    ((let (r3,r4,r5) = ppc_div (r3,r4) in
-        ~pR 0x2w * pR 0x3w r3 * pR 0x4w r4 * pR 0x5w r5 *
-        pPC (p + 0x10w) * ~pS)
-    =
-    (let (r3,r5) = (word_div r3 r4, word_mod r3 r4) in
-        ~pR 0x2w * pR 0x3w r3 * pR 0x4w r4 * pR 0x5w r5 *
-        pPC (p + 0x10w) * ~pS))``,
+    ((let (r3,r4,r5) = ppc_div (r3,r4) in pp r3 r4 r5) =
+     (let (r3,r5) = (word_div r3 r4, word_mod r3 r4) in pp r3 r4 r5))``,
   SIMP_TAC (std_ss++SIZES_ss) [LET_DEF,ppc_div_def,w2n_n2w,
      word_mod_thm])
   val imp = Q.SPECL [`r4`,`r3`] arm_div_thm

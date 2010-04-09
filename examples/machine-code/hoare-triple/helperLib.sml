@@ -111,6 +111,11 @@ fun dest_star tm = let
   val (x,y) = dest_comb x
   in if fst (dest_const x) = "STAR" then (y,z) else fail() end
 
+fun dest_sep_disj tm = let
+  val (x,z) = dest_comb tm
+  val (x,y) = dest_comb x
+  in if fst (dest_const x) = "SEP_DISJ" then (y,z) else fail() end
+
 fun mk_one x = (fst o dest_eq o concl o ISPEC x) one_def
 fun dest_one tm = if fst (dest_const (car tm)) = "one" then cdr tm else fail()
 
@@ -254,6 +259,22 @@ fun EVAL_ANY_MATCH_CONV patterns tm = let
   in (PURE_REWRITE_CONV [EVAL x] THENC EVAL_ANY_MATCH_CONV patterns) tm end
   handle e => ALL_CONV tm;
 
+fun SEP_EXISTS_AC_CONV tm = let
+  val vs = list_dest dest_sep_exists tm
+  val (vs,p) = (butlast vs, last vs)
+  val ws = sort (fn x => fn y => term_to_string x <= term_to_string y) vs   
+  val tm2 = foldr mk_sep_exists p ws
+  val goal = mk_eq(tm,tm2)
+  fun AUTO_EXISTS_TAC (gs,goal) = EXISTS_TAC (fst (dest_exists goal)) (gs,goal)
+  val th = prove(goal,
+    REWRITE_TAC [CONV_RULE ((QUANT_CONV o QUANT_CONV o RAND_CONV o RAND_CONV) 
+      (ALPHA_CONV (genvar(``:'a``)))) FUN_EQ_THM]
+    THEN SIMP_TAC bool_ss [SEP_EXISTS_THM]
+    THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
+    THEN REPEAT AUTO_EXISTS_TAC THEN ASM_SIMP_TAC std_ss [] 
+    THEN (fn x => hd []))
+  in th end handle Empty => fail();
+
 
 (* tree to term and back *)
 
@@ -293,111 +314,86 @@ fun MATCH_INST th tm = let
   in GENL ws thi end;
 
 
-(* hiding variables in SPEC theorems *)
+(* rewriting for separation logic *)
 
-fun HIDE_POST_RULE tm th = let
-  fun SEP_HIDE_INTRO c tm = let
-    val (p,q) = dest_star tm
-    val th1 = SEP_HIDE_INTRO c p
-    val th2 = SEP_HIDE_INTRO c q
-    in MATCH_MP SEP_IMP_STAR (CONJ th1 th2) end
-    handle e => let
-    val (w,tm) = dest_sep_exists tm
-    val th = SEP_HIDE_INTRO c tm
-    val th = CONV_RULE (RAND_CONV (UNBETA_CONV w) THENC (RATOR_CONV o RAND_CONV) (UNBETA_CONV w)) th
-    val th = MATCH_MP SEP_IMP_EXISTS_EXISTS (GEN w th)
-    in th end 
-    handle e => let
-    val (x,y) = dest_comb tm
-    val _ = if x = c then () else fail()
-    in ISPECL [x,y] SEP_IMP_SEP_HIDE end 
-    handle e => ISPEC tm SEP_IMP_REFL; 
-  val (_,_,_,q) = dest_spec (concl th)
-  val imp = SEP_HIDE_INTRO tm q
-  val th = MATCH_MP (MATCH_MP SPEC_WEAKEN th) imp
-  val th = CONV_RULE (POST_CONV (SIMP_CONV std_ss [SEP_CLAUSES])) th
-  in th end;  
+fun generic_star_match fixed_vars tm1 tm2 = let
+  val xs = list_dest dest_star tm1 
+  val ys = list_dest dest_star tm2
+  fun list_mk_set [] = empty_varset
+    | list_mk_set (x::xs) = HOLset.add(list_mk_set xs,x)
+  val match = match_terml [] (list_mk_set fixed_vars)
+  fun app [] = [] | app (x::xs) = x @ app xs
+  fun find_matches x [] zs = []
+    | find_matches x (y::ys) zs =
+        if can (match x) y 
+        then (y,ys @ zs) :: find_matches x ys (y::zs) 
+        else find_matches x ys (y::zs) 
+  fun alternatives [] ys = [([],ys)]
+    | alternatives (x::xs) ys = let
+        val al = find_matches x ys []        
+        in app (map (fn (z,zs) => map (fn (r,rs) => ((x,z)::r,rs)) (alternatives xs zs)) al) end       
+  fun frame_var tm = is_var tm andalso not (mem tm fixed_vars)
+  val ts = alternatives (filter (not o frame_var) xs) ys
+  val ts = map (fn (x,y) => (x,list_mk_star y (type_of (fst (hd x))))) ts
+  fun terms ([],x) = ((hd (filter frame_var xs),x) handle Empty => (list_mk_star [] (type_of (car tm1)),x))
+    | terms (((y,z)::ys),x) = let
+        val (y2,z2) = terms (ys,x)
+        in (mk_star(y,y2),mk_star(z,z2)) end 
+  fun try_each f [] = fail()
+    | try_each f (x::xs) = f x handle HOL_ERR _ => try_each f xs
+  fun g (x,y) = (x,y,fst (match x y))
+  val (x,y,s) = try_each (g o terms) ts
+  fun redexes xs = map (fn {redex = x,residue = y} => x) xs  
+  val result = s @ map (fn x => x |-> x) (filter (fn y => not (mem y (redexes s))) (free_vars x))
+  val rs = redexes result
+  val result = result @ map (fn y => y |-> list_mk_star [] (type_of y)) 
+                    (filter (fn x => not (mem x rs)) (filter frame_var xs))
+  in result end handle Empty => fail();
 
-val EQ_IMP_IMP = Q.SPECL [`p`,`q`] quotientTheory.EQ_IMPLIES;
+fun BASIC_SEP_REWRITE_RULE rw th = let
+  val (p,q) = dest_eq (concl rw)
+  val frame = genvar(type_of p)
+  val imp = PURE_ONCE_REWRITE_CONV [rw] (mk_star(frame,p))
+  val lhs = fst (dest_eq (concl imp))
+  fun foo th = let
+    val t = find_term (can (generic_star_match [] lhs)) (concl th)
+    val s = generic_star_match [] lhs t
+    val lm = SIMP_CONV (std_ss++star_ss) [SEP_CLAUSES,AC CONJ_ASSOC CONJ_COMM] (mk_eq(t,subst s lhs))
+    val _ = if can (match_term ``x = T``) (concl lm) then () else fail()
+    val lm = CONV_RULE (POST_CONV (PURE_ONCE_REWRITE_CONV [rw])) (RW [] lm)
+    in foo (RW [STAR_ASSOC] (RW [lm] th)) end handle HOL_ERR _ => th   
+  in foo th end;   
 
-val INC_ASSUM = (SPEC (genvar ``:bool``) o prove)(
-  ``!t p q. (p ==> q) ==> ((t ==> p) ==> (t ==> q))``,
-  REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC);
-
-fun DISCH_ALL_AS_SINGLE_IMP th = let
-  val th = RW [AND_IMP_INTRO] (DISCH_ALL th)
-  in if is_imp (concl th) then th else DISCH ``T`` th end
-
-fun A_MATCH_MP th1 th2 =
-  (UNDISCH_ALL o PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES])
-  (MATCH_MP (MATCH_MP INC_ASSUM (SPEC_ALL th1)) (DISCH_ALL_AS_SINGLE_IMP th2));
-
-val HIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL SPEC_HIDE_PRE));
-val HIDE_PRE2 = (MATCH_MP EQ_IMP_IMP
-  (SPEC_ALL (RW [SEP_CLAUSES] (Q.SPECL [`x`,`emp`] SPEC_HIDE_PRE))));
-
-fun HIDE_PRE_RULE tm th = let
-  val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV tm THENC REWRITE_CONV [STAR_ASSOC])) th
-  val _ = find_term (fn x => x = tm) (concl th)
-  val (_,p,_,_) = dest_spec (concl th)
-  val v = snd (dest_comb (snd (dest_star p) handle e => p))
-  val th = GEN v th
-  in A_MATCH_MP HIDE_PRE1 th handle e => A_MATCH_MP HIDE_PRE2 th end
-  handle e => let
-  val (_,p,_,q) = dest_spec (concl th)
-  val xs = list_dest dest_star p
-  val xs = map (dest_comb) (filter (can car) xs)
-  val v = (snd o hd o filter (fn x => fst x = tm)) xs
-  val ys = list_dest dest_star q
-  val ys = map (dest_comb) (filter (can car) ys)
-  val zs = map fst (filter (fn x => snd x = v) ys)
-  val th = foldr (uncurry HIDE_POST_RULE) th zs
-  val _ = if (mem v o free_vars o cdr o concl) th then raise e else ()
-  in HIDE_PRE_RULE tm th end;
-
-val UNHIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL (GSYM SPEC_HIDE_PRE)));
-val UNHIDE_PRE2 = (MATCH_MP EQ_IMP_IMP
-  (SPEC_ALL (RW [SEP_CLAUSES] (Q.SPECL [`x`,`emp`] (GSYM SPEC_HIDE_PRE)))));
-
-fun UNHIDE_PRE_RULE tm th = let
-  val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV (car tm) THENC REWRITE_CONV [STAR_ASSOC])) th
-  val _ = find_term (fn x => x = car tm) (car (concl th))
-  val th = (A_MATCH_MP UNHIDE_PRE1 th handle e => A_MATCH_MP UNHIDE_PRE2 th)
-  val th = SPEC (cdr tm) th
-  in th end;
-
-fun get_model_status_list th =
-  (map dest_sep_hide o list_dest dest_star o snd o dest_eq o concl) th handle e => []
-
-val lemma = prove (``(b = T) ==> b``,SIMP_TAC std_ss [])
-
-fun HIDE_STATUS_RULE in_post hide_th th = let
-  val xs = get_model_status_list hide_th
-  val ys = filter I (map (fn y => can (find_term (fn x => x = y)) (concl th)) xs)
-  val _ = if ys = [] then fail() else ()
-  val th = RW [hide_th,STAR_ASSOC] th
-  fun find_match tm tm2 = find_term (can (match_term tm)) tm2
-  fun HIDE_TERM (tm,th) = let
-    val th = (if in_post then HIDE_POST_RULE tm th else th) handle e => th
-    val th = HIDE_PRE_RULE tm th handle e => th
-    in if can (find_match tm) (concl th) then th else
-           ISPEC (mk_sep_hide tm) (A_MATCH_MP SPEC_FRAME th) end
-  val th = foldl HIDE_TERM th xs
-  val (_,p,_,q) = dest_spec (concl th)
-  val ps = filter (fn x => not (mem (get_sep_domain x) xs)) (list_dest dest_star p)
-  val qs = filter (fn x => not (mem (get_sep_domain x) xs)) (list_dest dest_star q)
-  val p = list_mk_star (ps @ [(fst o dest_eq o concl) hide_th]) (type_of p)
-  val q = list_mk_star (qs @ [(fst o dest_eq o concl) hide_th]) (type_of q)
-  val (_,pp,_,qq) = dest_spec (concl th)
-  val rw = MATCH_MP lemma (SIMP_CONV (bool_ss++star_ss) [hide_th] (mk_eq(pp,p)))
-  val th = CONV_RULE (PRE_CONV (ONCE_REWRITE_CONV [rw])) th
-  val th = if in_post then let
-             val rw = MATCH_MP lemma (SIMP_CONV (bool_ss++star_ss) [hide_th] (mk_eq(qq,q)))
-             in CONV_RULE (POST_CONV (ONCE_REWRITE_CONV [rw])) th end
-           else th
-  in th end handle e => th;
-
-fun HIDE_PRE_STATUS_RULE hide_th th = HIDE_STATUS_RULE false hide_th th
+fun EXISTS_SEP_REWRITE_RULE rw th = let (* possibly fragile *)
+  val (p,q) = dest_eq (concl (SPEC_ALL rw))
+  val frame = genvar(type_of p)
+  val vs = list_dest dest_sep_exists p
+  val lhs = mk_star(last vs,frame)
+  val vs = butlast vs
+  fun find_exists_match lhs tm = let
+    val (v,t) = dest_sep_exists tm
+    val vs = list_dest dest_sep_exists tm
+    in (butlast vs,last vs,generic_star_match [] lhs (last vs)) end
+  fun find_term_and_apply f tm = f (find_term (can f) tm)
+  fun foo th = let
+    val (ws,tm,s) = find_term_and_apply (find_exists_match lhs) (concl th)
+    val (t,t2) = (dest_eq (concl (SPEC_ALL rw)))
+    val zs = list_dest dest_sep_exists t
+    val (zs,z) = (butlast zs,list_dest dest_star (last zs))
+    val xs = list_dest dest_star tm
+    val ys = filter (fn y => not (mem y (map (subst s) z))) xs
+    val t3 = foldr mk_sep_exists (subst s (list_mk_star z (type_of frame))) (map (subst s) zs)
+    val goal = foldr mk_sep_exists (list_mk_star (t3::ys) (type_of frame)) ws
+    val goal = mk_eq(foldr mk_sep_exists tm ws,goal)    
+    val lemma = prove(goal,
+      SIMP_TAC std_ss [GSYM rw]
+      THEN SIMP_TAC (std_ss++sep_cond_ss) [SEP_CLAUSES]
+      THEN CONV_TAC (BINOP_CONV SEP_EXISTS_AC_CONV)
+      THEN SIMP_TAC (std_ss++star_ss) [AC CONJ_ASSOC CONJ_COMM])
+    val lemma = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [rw] 
+                  THENC SIMP_CONV std_ss [SEP_CLAUSES])) lemma
+    in foo (RW1 [lemma] th) end handle HOL_ERR _ => th
+  in foo th end;
 
 
 (* introducing SEP_EXISTS into pre and possibly also post *)
@@ -421,22 +417,6 @@ fun SEP_EXISTS_PRE_RULE tm th = let
   val thi = CONV_RULE (PRE_CONV (UNBETA_CONV tm)) thi
   val thi = SIMP_RULE bool_ss [SPEC_PRE_EXISTS] (GEN tm thi)
   in thi end;
-
-fun SEP_EXISTS_AC_CONV tm = let
-  val vs = list_dest dest_sep_exists tm
-  val (vs,p) = (butlast vs, last vs)
-  val ws = sort (fn x => fn y => term_to_string x <= term_to_string y) vs   
-  val tm2 = foldr mk_sep_exists p ws
-  val goal = mk_eq(tm,tm2)
-  fun AUTO_EXISTS_TAC (gs,goal) = EXISTS_TAC (fst (dest_exists goal)) (gs,goal)
-  val th = prove(goal,
-    REWRITE_TAC [CONV_RULE ((QUANT_CONV o QUANT_CONV o RAND_CONV o RAND_CONV) 
-      (ALPHA_CONV (genvar(``:'a``)))) FUN_EQ_THM]
-    THEN SIMP_TAC bool_ss [SEP_EXISTS_THM]
-    THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
-    THEN REPEAT AUTO_EXISTS_TAC THEN ASM_SIMP_TAC std_ss [] 
-    THEN (fn x => hd []))
-  in th end handle Empty => fail();
 
 fun SEP_EXISTS_ELIM_CONV tm = let
   val tm2 = (snd o dest_eq o concl o QCONV (SIMP_CONV bool_ss [SEP_CLAUSES])) tm  
@@ -467,6 +447,107 @@ fun SEP_EXISTS_ELIM_RULE th = let
   in CONV_RULE (DEPTH_CONV SEP_EXISTS_ELIM_CONV) th end;
 
 
+(* hiding variables in SPEC theorems *)
+
+(* expects c to produce SEP_IMP tm tm2 from tm *)
+fun SEP_IMP_WEAKEN c tm = let
+  val (p,q) = dest_star tm
+  in MATCH_MP SEP_IMP_STAR (CONJ (SEP_IMP_WEAKEN c p) (SEP_IMP_WEAKEN c q)) end
+  handle HOL_ERR _ => let 
+  val (p,q) = dest_sep_disj tm
+  in MATCH_MP SEP_IMP_DISJ (CONJ (SEP_IMP_WEAKEN c p) (SEP_IMP_WEAKEN c q)) end
+  handle HOL_ERR _ => let 
+  val (v,x) = dest_sep_exists tm
+  val imp = SEP_IMP_WEAKEN c x
+  val imp = GEN v (CONV_RULE (BINOP_CONV (UNBETA_CONV v)) imp)
+  in MATCH_MP SEP_IMP_EXISTS_EXISTS imp end
+  handle HOL_ERR _ => c tm handle HOL_ERR _ => ISPEC tm SEP_IMP_REFL; 
+
+val LIST_HIDE_POST_LEMMA = 
+  (RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH o SPEC_ALL) SPEC_WEAKEN  
+fun LIST_HIDE_POST_RULE tms th = let
+  fun HIDE_INTRO format_list tm = let
+    val (x,y) = dest_comb tm
+    in if mem x format_list 
+       then ISPEC y (ISPEC x SEP_IMP_SEP_HIDE) else fail() end
+  val (_,_,_,q) = dest_spec (concl th)
+  val imp = SEP_IMP_WEAKEN (HIDE_INTRO tms) q
+  in MATCH_MP LIST_HIDE_POST_LEMMA (CONJ th imp) end
+  
+fun HIDE_POST_RULE tm th = LIST_HIDE_POST_RULE [tm] th
+
+val EQ_IMP_IMP = Q.SPECL [`p`,`q`] quotientTheory.EQ_IMPLIES;
+
+val INC_ASSUM = (SPEC (genvar ``:bool``) o prove)(
+  ``!t p q. (p ==> q) ==> ((t ==> p) ==> (t ==> q))``,
+  REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC);
+
+fun DISCH_ALL_AS_SINGLE_IMP th = let
+  val th = RW [AND_IMP_INTRO] (DISCH_ALL th)
+  in if is_imp (concl th) then th else DISCH ``T`` th end
+
+fun A_MATCH_MP th1 th2 =
+  (UNDISCH_ALL o PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES])
+  (MATCH_MP (MATCH_MP INC_ASSUM (SPEC_ALL th1)) (DISCH_ALL_AS_SINGLE_IMP th2));
+
+fun SPEC_FRAME_RULE th frame =
+  SPEC frame (MATCH_MP progTheory.SPEC_FRAME th)
+
+fun HIDE_PRE_RULE tm th = let
+  val (_,p,_,_) = dest_spec (concl th)
+  val finder = find_term (fn x => fst (dest_comb x) = tm handle HOL_ERR _ => false)
+  in SEP_EXISTS_ELIM_RULE (SEP_EXISTS_PRE_RULE (cdr (finder p)) th) end
+      
+fun LIST_HIDE_PRE_RULE [] th = th
+  | LIST_HIDE_PRE_RULE (x::xs) th = LIST_HIDE_PRE_RULE xs (HIDE_PRE_RULE x th handle HOL_ERR _ => th)
+
+val UNHIDE_PRE1 = (MATCH_MP EQ_IMP_IMP (SPEC_ALL (GSYM SPEC_HIDE_PRE)));
+val UNHIDE_PRE2 = (MATCH_MP EQ_IMP_IMP
+  (SPEC_ALL (RW [SEP_CLAUSES] (Q.SPECL [`x`,`emp`] (GSYM SPEC_HIDE_PRE)))));
+
+fun UNHIDE_PRE_RULE tm th = let
+  val th = CONV_RULE (PRE_CONV (MOVE_OUT_CONV (car tm) THENC REWRITE_CONV [STAR_ASSOC])) th
+  val _ = find_term (fn x => x = car tm) (car (concl th))
+  val th = (A_MATCH_MP UNHIDE_PRE1 th handle e => A_MATCH_MP UNHIDE_PRE2 th)
+  val th = SPEC (cdr tm) th
+  in th end;
+
+fun get_model_status_list th = let
+  val (x,y) = (dest_eq o concl o SPEC_ALL) th
+  in ((map dest_sep_hide o list_dest dest_star) y,x) end handle e => ([],T)
+
+val lemma = prove (``(b = T) ==> b``,SIMP_TAC std_ss [])
+
+(*
+val hide_th = prog_ppcTheory.pS_HIDE
+val in_post = true
+*)
+
+fun HIDE_STATUS_RULE in_post hide_th th = let
+  val (xs,s) = get_model_status_list hide_th
+  val (_,p,_,_) = dest_spec (concl th)
+  val ys = filter (fn x => not (can (find_term (fn y => x = y)) p)) xs
+  val ys = if can (find_term (fn x => s = x)) p then [] else map mk_sep_hide ys
+  val th = SPEC_FRAME_RULE th (list_mk_star ys (type_of s))
+  val th = SIMP_RULE std_ss [SEP_CLAUSES,STAR_ASSOC] th
+  val th = if in_post then LIST_HIDE_POST_RULE xs th else th handle HOL_ERR _ => th 
+  val th = LIST_HIDE_PRE_RULE xs th
+  val th = BASIC_SEP_REWRITE_RULE (GSYM hide_th) th
+  in th end handle HOL_ERR _ => th;
+
+(*
+val th = ASSUME ``SPEC PPC_MODEL
+     (pPC p * ~pS1 PPC_CARRY * ~pR 0x2w * pR 0x3w r3 * ~pR 0x5w *
+      pR 0x4w r4)
+     {(p,0x7C621B78w); (p + 0x4w,0x7C632396w); (p + 0x8w,0x7CA419D6w);
+      (p + 0xCw,0x7CA51010w)}
+     (pPC (p + 0x10w) * ~pS1 PPC_CARRY * ~pR 0x2w * pR 0x3w r3 *
+        pR 0x5w r5 * pR 0x4w r4)``
+*)
+
+fun HIDE_PRE_STATUS_RULE hide_th th = HIDE_STATUS_RULE false hide_th th
+
+
 (* rules for modifying pre and post *)
 
 fun SPEC_STRENGTHEN_RULE th pre = let
@@ -478,9 +559,6 @@ fun SPEC_WEAKEN_RULE th post = let
   val th = SPEC post (MATCH_MP progTheory.SPEC_WEAKEN th)
   val goal = (fst o dest_imp o concl) th
   in (th,goal) end;
-
-fun SPEC_FRAME_RULE th frame =
-  SPEC frame (MATCH_MP progTheory.SPEC_FRAME th)
 
 fun SPEC_BOOL_FRAME_RULE th frame = let
   val th = MATCH_MP progTheory.SPEC_FRAME th
@@ -579,7 +657,7 @@ fun find_composition3 th1 th2 = let
      val f = SIMP_CONV bool_ss [SEP_CLAUSES,SEP_HIDE_def] THENC REWRITE_CONV [STAR_ASSOC]
      val th1 = CONV_RULE (POST_CONV f) th1
      val th2 = CONV_RULE (PRE_CONV f) th2
-     val th2 = SIMP_RULE bool_ss [GSYM SPEC_PRE_EXISTS] th2
+     val th2 = SPEC_ALL (SIMP_RULE bool_ss [GSYM SPEC_PRE_EXISTS] th2)
      (* first level match *)
      val (_,_,_,q) = dest_spec (concl th1)
      val (_,p,_,_) = dest_spec (concl th2)
@@ -611,7 +689,11 @@ fun find_composition3 th1 th2 = let
      val thi = UNDISCH_ALL (PURE_REWRITE_RULE [GSYM AND_IMP_INTRO,AND_CLAUSES2] thi)
      val thi = SIMP_RULE std_ss [pred_setTheory.INSERT_UNION_EQ,pred_setTheory.UNION_EMPTY,
              word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4,
-             SEP_CLAUSES,pred_setTheory.UNION_IDEMPOT] thi
+             SEP_CLAUSES,pred_setTheory.UNION_IDEMPOT,STAR_ASSOC] thi
+     val (_,p,c,q) = dest_spec (concl thi)
+     val vs = free_vars c @ free_vars q @ foldr (uncurry append) [] (map free_vars (hyp thi))
+     val vs = filter (fn x => not (mem x vs)) (free_vars p)
+     val thi = SIMP_RULE bool_ss [SPEC_PRE_EXISTS] (GENL vs thi)
      val thi = SEP_EXISTS_ELIM_RULE thi
      in remove_primes thi end end;
 

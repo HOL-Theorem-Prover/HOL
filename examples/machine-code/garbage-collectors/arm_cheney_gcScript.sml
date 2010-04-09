@@ -54,7 +54,7 @@ val (th,def3) = decompile_arm "arm_cheney_step" `
   E4836004 (* str r6,[r3],#4 *)
   E2833004 (* add r3,r3,#4 *)`;
 
-val (th,def4) = basic_decompile_arm "arm_cheney_loop" NONE `
+val (th,def4) = basic_decompile_arm "arm_cheney_loop"NONE `
   E1530004 (* CHENEY:cmp r3,r4 *)
   0A00001D (* beq EXIT *)
   insert: arm_cheney_step
