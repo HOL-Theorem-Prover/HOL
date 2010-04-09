@@ -3,6 +3,20 @@ structure auxLib = struct
 
 local open HolKernel boolLib bossLib in
 
+fun REWRITE_THM th = REWRITE_TAC[th]
+fun ASM_REWRITE_THM th = ASM_REWRITE_TAC[th]
+
+fun sge tm = proofManagerLib.set_goal ([], tm) ;
+fun eev tacs = proofManagerLib.e (EVERY tacs) ;
+fun eall [] = ()
+  | eall (t :: ts) = (proofManagerLib.e t ; eall ts) ; 
+
+(*
+show_types := false ;
+show_types := true ;
+handle e => Raise e ;
+*)
+
 infix THENC ORELSEC ;
 
 (* strip_left : ('a -> 'b * 'a) -> 'a -> 'b list * 'a
