@@ -60,6 +60,7 @@ val HOLDIR =
 val POLYMLLIBDIR =
 val POLY =
 val POLY_LDFLAGS =
+val POLY_LDFLAGS_STATIC =
 val CC =
 val OS =
 
