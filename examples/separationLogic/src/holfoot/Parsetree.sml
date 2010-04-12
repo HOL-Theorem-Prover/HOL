@@ -25,6 +25,7 @@ datatype a_space_pred =
   | Aspred_data_tree of a_component list * a_expression * a_component list * string
   | Aspred_empty
   | Aspred_hol of string
+  | Aspred_boolhol of string
   | Aspred_pointsto of a_expression * (a_component * a_expression) list
 
 datatype a_proposition =

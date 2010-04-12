@@ -27,6 +27,14 @@ Entailment "points_to resort"
 x |-> t1:e1,t2:e2 |-
 x |-> t2:e2,t1:e1
 
+Entailment "points_to resort - full hol quote"
+h``holfoot_ap_points_to (var_res_exp_var (holfoot_var "x"))
+        (FEMPTY |+
+         (holfoot_tag "t2",var_res_exp_var (holfoot_var "e2")) |+
+         (holfoot_tag "t1",var_res_exp_var (holfoot_var "e1")))`` |-
+x |-> t2:e2,t1:e1
+
+
 Entailment "points_to elim"
 x |-> t1:e1,t2:e2,t3:e3 |-
 x |-> t2:e2,t1:e1

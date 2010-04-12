@@ -60,6 +60,7 @@ val tree_link_tags = ("l", "r")
   |  QIDENT of string
   |  IF
   |  HOL_TERM of string
+  |  HOL_FULL_TERM of string
   |  INFIXOP1 of string
   |  INFIXOP2 of string
   |  INFIXOP3 of string
@@ -449,7 +450,9 @@ a_space_pred:
   | DATA_TREE LPAREN expression SEMI ident_or_hol RPAREN
 	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],expression,[tree_data_tag],ident_or_hol) )
   | HOL_TERM
-          ( Aspred_hol HOL_TERM )
+          ( Aspred_boolhol HOL_TERM )
+  | HOL_FULL_TERM
+          ( Aspred_hol HOL_FULL_TERM )
   | EMPTY
           ( Aspred_empty )
   | simple_expression POINTSTO a_component_expression_seq

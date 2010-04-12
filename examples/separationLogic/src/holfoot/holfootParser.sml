@@ -378,8 +378,10 @@ fun holfoot_a_space_pred2absyn vs (Aspred_empty) =
   in
      comb_a
   end
-| holfoot_a_space_pred2absyn vs (Aspred_hol s) =
+| holfoot_a_space_pred2absyn vs (Aspred_boolhol s) =
   Absyn.mk_app (Absyn.mk_AQ holfoot_bool_proposition_term, HOL_Absyn s)
+| holfoot_a_space_pred2absyn vs (Aspred_hol s) =
+  HOL_Absyn s
 | holfoot_a_space_pred2absyn vs (Aspred_pointsto (exp, pl)) =
   let
      val a1 = holfoot_expression2absyn vs exp;
