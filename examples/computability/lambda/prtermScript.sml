@@ -6,7 +6,6 @@ open rich_listTheory arithmeticTheory
 open reductionEval churchnumTheory churchboolTheory
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
-fun bstore_thm(n,t,tac) = store_thm(n,t,tac) before export_betarwt n
 
 val _ = new_theory "prterm"
 
@@ -1737,7 +1736,7 @@ val crecPr_cons0 = store_thm(
                         cchurch_behaviour]);
 
 open lcsymtacs
-(* val crecPr_consSUC = store_thm(
+val crecPr_consSUC = store_thm(
   "crecPr_consSUC",
   ``bnf_of (crecPr @@ church b @@ s @@ church (nlist_of (SUC n::t))) =
       case bnf_of (crecPr @@ church b @@ s @@ church (nlist_of (n::t))) of
