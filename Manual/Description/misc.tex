@@ -306,7 +306,7 @@ with the following command-line options:
 \item[\texttt{--no\_overlay}] Do not use an overlay file.  All HOL
   builds require the presence of a special overlay file from the
   kernel when compiling scripts and libraries.  This is not
-  apppropriate for compiling code that has no connection to HOL, so
+  appropriate for compiling code that has no connection to HOL, so
   this option makes the compilation not use the overlay file.  This
   option is also used in building the kernel before the overlay itself
   has been compiled.
@@ -427,7 +427,7 @@ files that each target (the files before the colon) is said to
 are no dependencies, then the commands are executed iff the
 target doesn't exist.  If there are no commands, and the target is not
 of a type that \holmake{} already knows how to build, then it will
-just make sure that the the dependencies are up to date (this may or
+just make sure that the dependencies are up to date (this may or
 may not create the target).  If there are no commands attached to a
 rule, and the target is one that \holmake{} does know how to build,
 then the rule's extra dependencies are added to those that \holmake{}
@@ -451,7 +451,7 @@ followed by newlines are turned into spaces. Otherwise, command text
 is passed as is to the underlying command interpreter
 (\texttt{/bin/sh} say, on Unix, or \texttt{COMMAND.COM} on Windows).
 In particular, this means that hash-characters do \emph{not} start
-coments on command-lines, and such ``comments'' will be passed to the
+comments on command-lines, and such ``comments'' will be passed to the
 shell, which may or may not treat them as comments when it sees them.
 
 \paragraph{Functions}
@@ -723,7 +723,7 @@ This document contains instances of the new commands, and cannot be processed as
 %
 Instead one first runs
 \begin{alltt}
-   munge < article.htex > article.tex
+   munge.exe < article.htex > article.tex
 \end{alltt}
 and then runs \LaTeX{} on \texttt{article.tex}.
 %
