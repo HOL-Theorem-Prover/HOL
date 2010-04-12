@@ -516,17 +516,11 @@ fun get_model_status_list th = let
   val (x,y) = (dest_eq o concl o SPEC_ALL) th
   in ((map dest_sep_hide o list_dest dest_star) y,x) end handle e => ([],T)
 
-val lemma = prove (``(b = T) ==> b``,SIMP_TAC std_ss [])
-
-(*
-val hide_th = prog_ppcTheory.pS_HIDE
-val in_post = true
-*)
-
 fun HIDE_STATUS_RULE in_post hide_th th = let
   val (xs,s) = get_model_status_list hide_th
   val (_,p,_,_) = dest_spec (concl th)
   val ys = filter (fn x => not (can (find_term (fn y => x = y)) p)) xs
+  val ys = if ys = xs then [] else ys 
   val ys = if can (find_term (fn x => s = x)) p then [] else map mk_sep_hide ys
   val th = SPEC_FRAME_RULE th (list_mk_star ys (type_of s))
   val th = SIMP_RULE std_ss [SEP_CLAUSES,STAR_ASSOC] th
@@ -534,16 +528,6 @@ fun HIDE_STATUS_RULE in_post hide_th th = let
   val th = LIST_HIDE_PRE_RULE xs th
   val th = BASIC_SEP_REWRITE_RULE (GSYM hide_th) th
   in th end handle HOL_ERR _ => th;
-
-(*
-val th = ASSUME ``SPEC PPC_MODEL
-     (pPC p * ~pS1 PPC_CARRY * ~pR 0x2w * pR 0x3w r3 * ~pR 0x5w *
-      pR 0x4w r4)
-     {(p,0x7C621B78w); (p + 0x4w,0x7C632396w); (p + 0x8w,0x7CA419D6w);
-      (p + 0xCw,0x7CA51010w)}
-     (pPC (p + 0x10w) * ~pS1 PPC_CARRY * ~pR 0x2w * pR 0x3w r3 *
-        pR 0x5w r5 * pR 0x4w r4)``
-*)
 
 fun HIDE_PRE_STATUS_RULE hide_th th = HIDE_STATUS_RULE false hide_th th
 

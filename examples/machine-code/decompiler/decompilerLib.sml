@@ -1193,7 +1193,7 @@ set_goal([],goal)
   val th = RW1 [thi] th
   in th end
 
-fun remove_constant_new_assigment th = let
+fun remove_constant_new_assigment avoid_vars th = let
   val vs = filter is_new_var (free_vars (concl th))
   fun is_real_assign tm = let
     val (x,y) = dest_eq tm
@@ -1203,8 +1203,8 @@ fun remove_constant_new_assigment th = let
   val th1 = RW [] (INST (map (fn x => x |-> dest_new_var x) ws) th)
   val ts = (free_vars o fst o dest_imp o concl) th1
   fun mk_new_var v = let val (n,t) = dest_var v in mk_var("new@"^n,t) end
-  val ws = map mk_new_var (diff (map dest_new_var ws) ts)
-  val th = RW [] (INST (map (fn x => x |-> dest_new_var x) ws) th)
+  val ws = diff (map dest_new_var ws) (ts @ avoid_vars)
+  val th = RW [] (INST (map (fn x => mk_new_var x |-> x) ws) th)
   in th end;
 
 fun introduce_lets th = let
@@ -1217,7 +1217,6 @@ fun introduce_lets th = let
   val th = SIMP_RULE bool_ss [LEFT_FORALL_IMP_THM] (GENL vs th)
   val th = RW1 [CONTAINER_def] th
   val th = one_step_let_intro th
-  val th = remove_constant_new_assigment th 
   in th end;
 
 fun raw_tm2ftree tm = let
@@ -1334,17 +1333,6 @@ fun REMOVE_VARS_FROM_THM vs th = let
   in foldr REMOVE_FROM_LHS th vs end
 
 fun HIDE_POST_VARS vs th = let
-(*  fun hide_one (v,th) = let
-    val (_,_,_,q) = (dest_spec o concl) th
-    val tm = hd (filter (mem v o free_vars) (list_dest dest_star q))
-    in HIDE_POST_RULE (car tm) th end handle e => th
-  val th = RW [GSYM SPEC_MOVE_COND] th
-  val th = foldr hide_one th vs
-  val th = RW [SPEC_MOVE_COND] th
-  val th = RW [] (DISCH_ALL th)
-  val th = REMOVE_VARS_FROM_THM vs th
-  in th end handle HOL_ERR _ => let *)
-  (* this part should replace the above, but SEP_EXISTS_ELIM_RULE too weak! *)
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [GSYM CONTAINER_def])) th
   val th = foldr (uncurry SEP_EXISTS_POST_RULE) (UNDISCH_ALL th) vs
   val th = SEP_EXISTS_ELIM_RULE th
@@ -1353,16 +1341,6 @@ fun HIDE_POST_VARS vs th = let
   in th end;
 
 fun HIDE_PRE_VARS vs th1 = let
-(*  fun hide_one (v,th) = let
-    val (_,q,_,_) = (dest_spec o concl) th
-    val tm = hd (filter (mem v o free_vars) (list_dest dest_star q))
-    in HIDE_PRE_RULE (car tm) th end handle e => th
-  val th1 = CONV_RULE ((RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [GSYM CONTAINER_def])) th1
-  val th1 = UNDISCH_ALL th1
-  val th1 = foldr hide_one th1 vs
-  val th1 = RW [CONTAINER_def] (DISCH_ALL th1)
-  in th1 end handle HOL_ERR _ => let *)
-  (* this part should replace the above, but SEP_EXISTS_ELIM_RULE too weak! *)
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [GSYM CONTAINER_def])) th1
   val th = foldr (uncurry SEP_EXISTS_PRE_RULE) (UNDISCH_ALL th) vs
   val th = SEP_EXISTS_ELIM_RULE th
@@ -1429,6 +1407,8 @@ fun extract_function name th entry exit function_in_out = let
     in th end
   val th = foldr new_abbrev th output
   val th = introduce_lets th
+  val avoid_vars = case function_in_out of NONE => [] | SOME (p,q) => free_vars q
+  val th = remove_constant_new_assigment avoid_vars th 
   val th = INST [mk_var("new@p",``:word32``) |-> mk_var("set@p",``:word32``)] th
   val t = tm2ftree ((cdr o car o concl o RW [WORD_ADD_0]) th)
   (* extract base, step, side, input, output *)
@@ -1700,6 +1680,10 @@ fun decompile_strings tools name strs = decompile tools name (strings_to_qcode s
 val decompile_arm = decompile arm_tools
 val decompile_ppc = decompile ppc_tools
 val decompile_x86 = decompile x86_tools
+
+(*
+val (entry,exit) = ([entry],[exit])
+*)
 
 fun basic_decompile (tools :decompiler_tools) name function_in_out (qcode :term quotation) = let
   val _ = set_tools tools
