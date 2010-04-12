@@ -1528,8 +1528,7 @@ val crecCn_fails = store_thm(
   markerLib.UNABBREV_ALL_TAC THEN BETA_TAC THEN
   SIMP_TAC (bsrw_ss()) [cchurch_behaviour] THEN
   Induct_on `gs` THEN
-  SIMP_TAC (bsrw_ss()) [wh_cvcons, cchurch_behaviour,
-                        cnumdB_behaviour, cdAPP_behaviour] THEN
+  SIMP_TAC (bsrw_ss()) [wh_cvcons, cchurch_behaviour] THEN
   MAP_EVERY Q.X_GEN_TAC [`h`, `i`, `f`, `k`, `x`] THEN
   Cases_on `i = h` THEN1 SRW_TAC [][PhiNONE_cbnf_ofk] THEN
   SRW_TAC [][] THEN
@@ -1578,10 +1577,10 @@ val crecCn_succeeds1 = store_thm(
   markerLib.UNABBREV_ALL_TAC THEN BETA_TAC THEN Induct_on `gs` THEN1
     SIMP_TAC (bsrw_ss()) [cnil_def, cnlist_of_behaviour, cchurch_behaviour] THEN
   SRW_TAC [][] THEN
-  SIMP_TAC (bsrw_ss()) [wh_cvcons, cnumdB_behaviour, cdAPP_behaviour] THEN
+  SIMP_TAC (bsrw_ss()) [wh_cvcons] THEN
   `∃j. Phi h x = SOME j` by METIS_TAC [] THEN
   IMP_RES_TAC PhiSOME_cbnf_ofk THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, wh_ccons, wh_cvcons] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [wh_ccons, wh_cvcons] THEN
   `∀i. MEM i gs ⇒ ∃j. Phi i x = SOME j` by METIS_TAC [] THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`f`, `x`, `ks ++ [force_num (toTerm v)]`]
                               MP_TAC) THEN
@@ -1738,67 +1737,76 @@ val crecPr_cons0 = store_thm(
 open lcsymtacs
 val crecPr_consSUC = store_thm(
   "crecPr_consSUC",
-  ``bnf_of (crecPr @@ church b @@ s @@ church (nlist_of (SUC n::t))) =
-      case bnf_of (crecPr @@ church b @@ s @@ church (nlist_of (n::t))) of
+  ``bnf_of (crecPr @@ church b @@ church s @@ church (nlist_of (SUC n::t))) =
+      case bnf_of (crecPr
+                     @@ church b
+                     @@ church s
+                     @@ church (nlist_of (n::t))) of
          NONE -> NONE
-      || SOME tm -> bnf_of
-                      (s @@ (church (nlist_of (n :: force_num tm :: t))))``,
+      || SOME tm -> OPTION_MAP church
+                               (Phi s (nlist_of (n :: force_num tm :: t)))``,
   SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
-                        cntl_behaviour, cnhd_behaviour, natrec_behaviour] THEN
+                        cntl_behaviour, cnhd_behaviour] THEN
   Q.HO_MATCH_ABBREV_TAC `
     bnf_of (natrec @@ ZZ @@ SS @@ church n @@ k) =
     case bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I) of
        NONE -> NONE
-    || SOME tm -> bnf_of (tm2 tm)
+    || SOME tm -> result_of tm
   ` >>
+  `∀M R kk. SS @@ church M @@ R @@ kk ==
+            R @@ (PrSstep
+                    @@ cDB (numdB s)
+                    @@ church (nlist_of t)
+                    @@ church M
+                    @@ kk)`
+    by asm_simp_tac (bsrw_ss()) [Abbr`SS`] >>
   `∀N k t.
      (bnf_of (natrec @@ ZZ @@ SS @@ church N @@ k) = SOME t) ⇒
      ∃m. (bnf_of (natrec @@ ZZ @@ SS @@ church N @@ I) = SOME (church m)) ∧
-         (bnf_of (k @@ church m) = SOME t)`
+         ∀k'. bnf_of (natrec @@ ZZ @@ SS @@ church N @@ k') =
+              bnf_of (k' @@ church m)`
     by (Induct >-
           (Q.UNABBREV_TAC `ZZ` THEN
-           ASM_SIMP_TAC (bsrw_ss()) [cchurch_behaviour,
-                                     cnumdB_behaviour, cdAPP_behaviour] THEN
+           ASM_SIMP_TAC (bsrw_ss()) [] THEN
            Cases_on `Phi b (nlist_of t)` >-
              asm_simp_tac (srw_ss()) [PhiNONE_cbnf_ofk] >>
            imp_res_tac PhiSOME_cbnf_ofk >>
-           asm_simp_tac (bsrw_ss()) [cforce_num_behaviour, bnf_bnf_of]) >>
-        asm_simp_tac (bsrw_ss()) []
-
-
-
-
-  Q_TAC SUFF_TAC `
-    bnf_of (natrec @@ ZZ @@ SS @@ church n @@ k) =
-    case bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I) of
-       NONE -> NONE
-    || SOME tm -> bnf_of (k @@ tm)
-  ` THEN1 (DISCH_THEN SUBST1_TAC THEN
-           Cases_on `bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)` THEN1
-             SRW_TAC [][] THEN
-           SRW_TAC [][Abbr`tm2`, Abbr`k`] THEN SIMP_TAC (bsrw_ss()) [] THEN
-           SIMP_TAC (bsrw_ss()) [PrSstep_eval, cncons_behaviour]
-          ) THEN
-  Q.RM_ABBREV_TAC `tm2` THEN Q.RM_ABBREV_TAC `k` THEN Q.ID_SPEC_TAC `k` THEN
-  Induct_on `n` THENL [
-    SIMP_TAC (bsrw_ss()) [Abbr`ZZ`, natrec_behaviour] ...,
-
-    SIMP_TAC (bsrw_ss()) [Abbr`SS`, natrec_behaviour] THEN
-    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
-    Q.X_GEN_TAC `k` THEN
-    Q.MATCH_ABBREV_TAC `
-      option_case NNONE SSOME (bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)) =
-      FOO
-    ` THEN MAP_EVERY Q.UNABBREV_TAC [`NNONE`, `SSOME`, `FOO`] THEN
-    Cases_on `bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)` THEN
-    SRW_TAC [][] THEN
-    SIMP_TAC (bsrw_ss()) []
-
-
-
-
-
-
+           asm_simp_tac (bsrw_ss()) [bnf_bnf_of]) >>
+        asm_simp_tac (bsrw_ss()) [] >>
+        MAP_EVERY Q.X_GEN_TAC [`kk`, `tt`] >> strip_tac >>
+        FIRST_ASSUM
+          (Q.SPECL_THEN [`PrSstep @@ cDB (numdB s) @@ church (nlist_of t)
+                                  @@ church N @@ kk`, `tt`] MP_TAC) >>
+        disch_then (fn imp => FIRST_ASSUM (fn th => STRIP_ASSUME_TAC
+                                                      (MATCH_MP imp th))) >>
+        asm_simp_tac (bsrw_ss()) [] >>
+        asm_simp_tac (bsrw_ss()) [PrSstep_eval, cncons_behaviour] >>
+        full_simp_tac (bsrw_ss()) [] >>
+        Q.PAT_ASSUM `bnf_of (PrSstep @@ XX @@ YY @@ ZZ @@ UU @@ VV) = SOME WW`
+          MP_TAC >>
+        asm_simp_tac (bsrw_ss()) [PrSstep_eval, cncons_behaviour] >>
+        Cases_on `Phi s (ncons N (ncons m (nlist_of t)))` >-
+          asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >>
+        IMP_RES_TAC PhiSOME_cbnf_ofk >>
+        asm_simp_tac (bsrw_ss()) [bnf_bnf_of]) >>
+  `∀N kk. (bnf_of (natrec @@ ZZ @@ SS @@ church N @@ I) = NONE) ⇒
+          (bnf_of (natrec @@ ZZ @@ SS @@ church N @@ kk) = NONE)`
+     by (SPOSE_NOT_THEN STRIP_ASSUME_TAC >>
+         Cases_on `bnf_of (natrec @@ ZZ @@ SS @@ church N @@ kk)` >-
+           full_simp_tac (srw_ss()) [] >>
+         res_tac >> full_simp_tac (srw_ss()) []) >>
+  Cases_on `bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)` >-
+    (res_tac >> srw_tac[][]) >>
+  res_tac >> asm_simp_tac (bsrw_ss()) [] >>
+  Q.UNABBREV_TAC `result_of` >>
+  full_simp_tac (srw_ss()) [] >>
+  srw_tac [][] >>
+  simp_tac (bsrw_ss()) [Abbr`k`, PrSstep_eval, cncons_behaviour] >>
+  Cases_on `Phi s (ncons n (ncons m (nlist_of t)))` >-
+    asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >>
+  imp_res_tac PhiSOME_cbnf_ofk >>
+  asm_simp_tac (bsrw_ss()) [bnf_bnf_of]);
+(*
 val recfns_in_Phi = Store_thm(
   "recfns_in_Phi",
   ``∀f n. recfn f n ⇒ ∃i. ∀l. Phi i (nlist_of l) = f l``,
@@ -1840,14 +1848,13 @@ val recfns_in_Phi = Store_thm(
          by (SRW_TAC [][listTheory.MEM_MAP] THEN METIS_TAC []) THEN
       POP_ASSUM (ASSUME_TAC o MATCH_MP crecCn_succeeds1) THEN
       POP_ASSUM (fn th => SIMP_TAC (srw_ss())[th]) THEN
-      SIMP_TAC (bsrw_ss()) [cnlist_of_behaviour, cchurch_behaviour,
-                            cnumdB_behaviour, cdAPP_behaviour] THEN
+      SIMP_TAC (bsrw_ss()) [cnlist_of_behaviour, cchurch_behaviour] THEN
       SRW_TAC [][MAP_MAP_o, combinTheory.o_DEF, Cong MAP_CONG'] THEN
       Q.ABBREV_TAC `result = MAP (λx. THE (x l)) gs` THEN
       Cases_on `Phi i (nlist_of result)` THENL [
         SRW_TAC [][PhiNONE_cbnf_ofk] THEN METIS_TAC [],
         IMP_RES_TAC PhiSOME_cbnf_ofk THEN
-        ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of, cforce_num_behaviour] THEN
+        ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of] THEN
         METIS_TAC []
       ],
 
@@ -1862,16 +1869,14 @@ val recfns_in_Phi = Store_thm(
     ` THEN
     SRW_TAC [][Phi_def] THEN
     Cases_on `l` THEN1
-      (SIMP_TAC (bsrw_ss()) [recPr_def, crecPr_nil, cdAPP_behaviour,
-                             cnumdB_behaviour] THEN
+      (SIMP_TAC (bsrw_ss()) [recPr_def, crecPr_nil] THEN
        Cases_on `Phi i 0` THEN1
          (SRW_TAC [][PhiNONE_cbnf_ofk] THEN METIS_TAC [nlist_of_def]) THEN
        IMP_RES_TAC PhiSOME_cbnf_ofk THEN
-       ASM_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, bnf_bnf_of] THEN
+       ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of] THEN
        METIS_TAC [nlist_of_def]) THEN
     SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
-                          cnhd_behaviour, cntl_behaviour, cchurch_behaviour,
-                          cnumdB_behaviour, cdAPP_behaviour] THEN
+                          cnhd_behaviour, cntl_behaviour, cchurch_behaviour] THEN
 
 
 
