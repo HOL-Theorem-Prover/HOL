@@ -7,6 +7,7 @@ datatype command = Theorem | Term | Type
 datatype opt = Turnstile | Case | TT | Def | TypeOf | TermThm | Indent | NoSpec
              | Inst of string * string
              | NoTurnstile | Width of int
+             | AllTT
 
 val numErrors = ref 0
 type posn = int * int
@@ -27,6 +28,7 @@ fun stringOpt pos s =
     "|-" => SOME Turnstile
   | "case" => SOME Case
   | "tt" => SOME TT
+  | "alltt" => SOME AllTT
   | "def" => SOME Def
   | "of" => SOME TypeOf
   | "K" => SOME TermThm
@@ -196,8 +198,10 @@ in
   fun replacement pps (argument:arg as {commpos = pos, argument = spec,...}) =
   let
     val {argpos = (argline, argcpos), command, options = opts, ...} = argument
-    val tt = OptSet.has TT opts
-    val () = if tt then add_string pps "\\mbox{\\textup{\\texttt{" else ()
+    val alltt = OptSet.has AllTT opts orelse
+                (command = Theorem andalso not (OptSet.has TT opts))
+    val () = if not alltt then  add_string pps "\\mbox{\\textup{\\texttt{"
+             else ()
     val parse_start = " (*#loc "^ Int.toString argline ^ " " ^
                       Int.toString argcpos ^"*)"
     val QQ = QUOTE
@@ -257,7 +261,7 @@ in
                        then Term.type_of (Parse.Term [QQ parse_start, QQ spec])
                     else Parse.Type [QQ parse_start, QQ spec]
         in raw_pp_type_as_tex overrides pps typ end
-    val () = if tt then add_string pps "}}}" else ()
+    val () = if not alltt then add_string pps "}}}" else ()
   in () end handle
       BadSpec => warn (pos, spec ^ " does not specify a theorem")
     | HOL_ERR e => warn (pos, !Feedback.ERR_to_string e)
