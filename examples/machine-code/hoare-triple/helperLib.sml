@@ -358,7 +358,9 @@ fun BASIC_SEP_REWRITE_RULE rw th = let
   fun foo th = let
     val t = find_term (can (generic_star_match [] lhs)) (concl th)
     val s = generic_star_match [] lhs t
-    val lm = SIMP_CONV (std_ss++star_ss) [SEP_CLAUSES,AC CONJ_ASSOC CONJ_COMM] (mk_eq(t,subst s lhs))
+    val lm = (SIMP_CONV (bool_ss++sep_cond_ss) [] THENC 
+              SIMP_CONV (bool_ss++star_ss) [SEP_CLAUSES,AC CONJ_ASSOC CONJ_COMM]) 
+               (mk_eq(t,subst s lhs))
     val _ = if can (match_term ``x = T``) (concl lm) then () else fail()
     val lm = CONV_RULE (POST_CONV (PURE_ONCE_REWRITE_CONV [rw])) (RW [] lm)
     in foo (RW [STAR_ASSOC] (RW [lm] th)) end handle HOL_ERR _ => th   
@@ -518,6 +520,7 @@ fun get_model_status_list th = let
 
 fun HIDE_STATUS_RULE in_post hide_th th = let
   val (xs,s) = get_model_status_list hide_th
+  val th = RW [hide_th,STAR_ASSOC] th
   val (_,p,_,_) = dest_spec (concl th)
   val ys = filter (fn x => not (can (find_term (fn y => x = y)) p)) xs
   val ys = if ys = xs then [] else ys 
@@ -527,7 +530,14 @@ fun HIDE_STATUS_RULE in_post hide_th th = let
   val th = if in_post then LIST_HIDE_POST_RULE xs th else th handle HOL_ERR _ => th 
   val th = LIST_HIDE_PRE_RULE xs th
   val th = BASIC_SEP_REWRITE_RULE (GSYM hide_th) th
-  in th end handle HOL_ERR _ => th;
+  (* check result *)
+  val (_,p,_,_) = dest_spec (concl th)
+  val ps = (list_dest dest_star o last o list_dest dest_sep_exists) p
+  val error = 1 < (length o filter (fn t => t = s)) ps
+              orelse not (intersect xs (map get_sep_domain ps) = [])
+  val _ = if error then (print "\n\nHIDE_STATUS_RULE failed on theorem:\n\n"; 
+                         print_thm th; print "\n\n"; fail()) else ()
+  in th end;
 
 fun HIDE_PRE_STATUS_RULE hide_th th = HIDE_STATUS_RULE false hide_th th
 
