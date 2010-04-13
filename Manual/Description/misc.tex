@@ -799,6 +799,9 @@ By default, the output is \emph{not} wrapped in an \texttt{\bs{}mbox}, making it
 There are a great many options for controlling the behaviour of each of these commands.
 %
 Some apply to all three commands, others are specific to a subset.
+%
+\newcommand{\indentoption}{\char'76\char'76}
+If multiple options are desired, they should be separated by commas. For example: \texttt{\holthm{}[nosp,p/t,\indentoption]\{bool.AND\_CLAUSES\}}.
 
 \begin{description}
 \item[\texttt{alltt}] Makes the argument suitable for inclusion in an \texttt{alltt} environment.
@@ -812,6 +815,8 @@ This preserves underscore-patterns, for example.
 \item[\texttt{def}] (Only for use with \holthm.)
 %
 Causes the theorem to be split into its constituent conjuncts, for each conjunct to have any outermost universal quantifiers removed, and for each to be printed on a line of its own.
+%
+The turnstiles usually printed in front of theorems are also omitted.
 %
 This works well with definitions (or characterising theorems) over multiple data type constructors, changing
 \begin{alltt}
