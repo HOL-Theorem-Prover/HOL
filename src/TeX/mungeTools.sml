@@ -147,7 +147,7 @@ fun mkinst loc opts tm = let
   in
     (mk_var(nm2,ty) |-> mk_var(nm1,ty)) :: acc
   end handle Binarymap.NotFound =>
-             (warn (loc, "Variable "^nm1^" does not appear in HOL object");
+             (warn (loc, "Variable "^nm2^" does not appear in HOL object");
               acc)
 in
   foldr foldthis [] insts
