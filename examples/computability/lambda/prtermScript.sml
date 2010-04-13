@@ -1822,10 +1822,9 @@ val recfns_in_Phi = Store_thm(
                                  @@ (csuc @@ (cnfst @@ (cminus @@ VAR "ns"
                                                                @@ church 1))))))
     ` THEN SRW_TAC [][Phi_def] THEN
-    SIMP_TAC (bsrw_ss()) [cis_zero_behaviour, cminus_behaviour] THEN
+    SIMP_TAC (bsrw_ss()) [] THEN
     Cases_on `l` THEN
-    SIMP_TAC (bsrw_ss() ++ ARITH_ss) [cB_behaviour, bnf_bnf_of, ncons_def,
-                                      cnfst_behaviour, csuc_behaviour],
+    SIMP_TAC (bsrw_ss() ++ ARITH_ss) [bnf_bnf_of, ncons_def, cnfst_behaviour],
 
     Q.EXISTS_TAC `dBnum (fromTerm (cnel @@ church i))` THEN
     SRW_TAC [][Phi_def] THEN
@@ -1875,9 +1874,28 @@ val recfns_in_Phi = Store_thm(
        IMP_RES_TAC PhiSOME_cbnf_ofk THEN
        ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of] THEN
        METIS_TAC [nlist_of_def]) THEN
-    SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
-                          cnhd_behaviour, cntl_behaviour, cchurch_behaviour] THEN
+    Induct_on `h` >-
+      (SIMP_TAC (bsrw_ss()) [recPr_def, SIMP_RULE (srw_ss()) [] crecPr_cons0] >>
+       Cases_on `Phi i (nlist_of t)` >-
+         (asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >> metis_tac []) >>
+       imp_res_tac PhiSOME_cbnf_ofk >>
+       asm_simp_tac (bsrw_ss()) [bnf_bnf_of] >> metis_tac []) >>
+    simp_tac (bsrw_ss()) [Once recPr_def,
+                          SIMP_RULE (srw_ss()) [] crecPr_consSUC] >>
+    full_simp_tac (srw_ss()) [] >>
+    Cases_on `bnf_of (crecPr @@ church i @@ church i'
+                             @@ church (ncons h (nlist_of t)))`
+    >- (full_simp_tac (srw_ss()) [] >>
+        Q.PAT_ASSUM `NONE = FOO` (MP_TAC o SYM) >>
+        simp_tac (srw_ss()) []) >>
+    full_simp_tac (srw_ss()) [] >>
+    Q.PAT_ASSUM `SOME (force_num XX) = YY` (MP_TAC o SYM) >>
+    simp_tac (srw_ss()) [optionTheory.OPTION_MAP_COMPOSE] >>
+    Q_TAC SUFF_TAC `∀nopt:num option. OPTION_MAP I nopt = nopt`
+    >- (srw_tac [][] >> metis_tac [nlist_of_def]) >>
+    Cases_on `nopt` >> srw_tac [][],
 
+    the horror of minimise_def awaits...
 
 
 *)val _ = export_theory()
