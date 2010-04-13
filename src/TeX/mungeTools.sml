@@ -7,7 +7,7 @@ datatype command = Theorem | Term | Type
 datatype opt = Turnstile | Case | TT | Def | TypeOf | TermThm | Indent | NoSpec
              | Inst of string * string
              | NoTurnstile | Width of int
-             | AllTT
+             | AllTT | ShowTypes
 
 val numErrors = ref 0
 type posn = int * int
@@ -35,6 +35,7 @@ fun stringOpt pos s =
   | ">>" => SOME Indent
   | "nosp" => SOME NoSpec
   | "nostile" => SOME NoTurnstile
+  | "showtypes" => SOME ShowTypes
   | _ => let
     in
       if String.isPrefix "width=" s then let
@@ -212,12 +213,19 @@ in
         in
           if OptSet.has Def opts then let
               val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
+              val printfn = let
+                val base = raw_pp_term_as_tex overrides
+              in
+                if OptSet.has ShowTypes opts then
+                  (fn pps => trace ("types", 1) (base pps))
+                else (fn pps => trace ("types", 0) (base pps))
+              end
             in
               add_string pps indent;
               begin_block pps CONSISTENT 0;
               block_list pps
                          (fn pps => begin_block pps INCONSISTENT 0)
-                         (raw_pp_term_as_tex overrides)
+                         printfn
                          add_newline
                          end_block
                          lines;
@@ -229,6 +237,9 @@ in
                   if OptSet.has NoTurnstile opts then
                     trace ("EmitTeX: print thm turnstiles", 0) base
                   else base
+              val printer =
+                  if OptSet.has ShowTypes opts then trace ("types", 1) printer
+                  else trace ("types", 0) printer
             in
               printer (if OptSet.has NoSpec opts then thm else SPEC_ALL thm)
             end
@@ -255,7 +266,13 @@ in
           val () = if OptSet.has Indent opts
                       then add_string pps indent
                    else ()
-        in raw_pp_term_as_tex overrides pps term end
+          val baseprint = raw_pp_term_as_tex overrides pps
+          val printer = if OptSet.has ShowTypes opts then
+                          trace ("types", 1) baseprint
+                        else trace ("types", 0) baseprint
+        in
+           printer term
+        end
       | Type => let
           val typ = if OptSet.has TypeOf opts
                        then Term.type_of (Parse.Term [QQ parse_start, QQ spec])
