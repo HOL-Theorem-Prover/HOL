@@ -257,14 +257,14 @@ in
                         end
                      else Parse.Term [QQ parse_start, QQ spec]
                             |> do_tminsts pos opts
+          val () = if OptSet.has Indent opts
+                      then add_string pps indent
+                   else ()
           val () = if OptSet.has Turnstile opts
                       then let in
                         add_stringsz pps ("\\"^HOL^"TokenTurnstile", 2);
                         add_string pps " "
                       end
-                   else ()
-          val () = if OptSet.has Indent opts
-                      then add_string pps indent
                    else ()
           val baseprint = raw_pp_term_as_tex overrides pps
           val printer = if OptSet.has ShowTypes opts then
