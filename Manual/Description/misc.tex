@@ -710,8 +710,12 @@ Done manually, this will typically require involved use of the \texttt{alltt} en
 %
 The result is that one must also keep two copies of \HOL{} texts synchronised: if the \HOL{} development changes, the \LaTeX{} document should change as well.
 
-\newcommand{\munge}{\texttt{munge}}
+\newcommand{\munge}{\texttt{munge.exe}}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})}
+%
 This manual, and error-prone process is not necessary: the standard \HOL{} distribution comes with a tool called \munge{} to automate the process, and to remove the duplicate copies of \HOL{} text.
+%
+(Strictly speaking, the distribution comes with a tool that itself creates \munge{}; see Section~\ref{sec:munger-creation} below.)
 %
 The basic philosophy is that a \LaTeX{} document can be written ``as normal'', but that three new \LaTeX{}-like commands are available to the author.
 
@@ -723,14 +727,16 @@ This document contains instances of the new commands, and cannot be processed as
 %
 Instead one first runs
 \begin{alltt}
-   munge.exe < article.htex > article.tex
+   \munge < article.htex > article.tex
 \end{alltt}
 and then runs \LaTeX{} on \texttt{article.tex}.
 %
 One would probably automate this process with a makefile of course.
 
 \subsection{Munging Commands}
-% need to get backslashes conveniently obscures the real names, preventing the munger from seeing them
+% need to get backslashes conveniently obscures the real names,
+% preventing the munger from seeing them, which will be useful when we
+% run the munger over this document!
 \newcommand{\holtm}{\texttt{\bs{}HOLtm}}
 \newcommand{\holty}{\texttt{\bs{}HOLty}}
 \newcommand{\holthm}{\texttt{\bs{}HOLthm}}
@@ -747,7 +753,7 @@ For example, one can write
 and one will get \[
   \texttt{$P$ (SUC $n$) $\land$ $q$}
 \]
-or something very close to it, appearing in the resulting document.\footnote{The output is a mixture of typewriter font and   math-mode characters embedded in a \texttt{\bs{}texttt} block.}
+or something very close to it, appearing in the resulting document.\footnote{The output is a mixture of typewriter font and math-mode characters embedded in a \texttt{\bs{}texttt} block within an \texttt{\bs{}mbox}.}
 %
 Note how the spacing in the input (nothing between the \texttt{P} and the \texttt{SUC n}) is \emph{not} reflected in the output; this is because the input is parsed and pretty-printed with \HOL{}.
 %
@@ -756,6 +762,92 @@ This means that if the \HOL{} input is malformed, the \munge{} program will repo
 Note also how the system knows that \texttt{P}, \texttt{n} and \texttt{q} are variables, and that \texttt{SUC} is not.
 %
 This analysis would not be possible without having \HOL{} actually parse and print the term itself.
+
+The default behaviours of each command is as follows:
+\begin{description}
+\item[\holty\{\textit{\mdseries{string}}\}]
+%
+\index{HOLty (munging command)@\holty{} (munging command)}
+%
+Parses the string argument as a type (the input must include the leading colon), and prints it.
+%
+The output is suited for inclusion in the normal flow of \LaTeX{} (it is an \texttt{\bs{}mbox}).
+\item[\holtm\{\textit{\mdseries{string}}\}]
+%
+\index{HOLtm (munging command)@\holtm{} (munging command)}
+%
+Parses the string argument as a term, and prints it.
+%
+Again, the output is wrapped in an \texttt{\bs{}mbox}.
+\item[\holthm\{\textit{\mdseries{thmspecifier}}\}]
+%
+\index{HOLthm (munging command)@\holthm{} (munging command)}
+%
+The argument should be of the form $\langle\mbox{\textit{theory}}\rangle\texttt{.}\langle{\mbox{\textit{theorem-name}}}\rangle$.
+%
+For example, \verb|\HOLthm{bool.AND_CLAUSES}|.
+%
+This prints the specified theorem with a leading turnstile.
+%
+By default, the output is \emph{not} wrapped in an \texttt{\bs{}mbox}, making it best suited for inclusion in an environment such as \texttt{alltt}.
+%
+(The important characteristics of the \texttt{alltt} environment are that it respects layout in terms of newlines, while also allowing the insertion of \LaTeX{} commands.  The \texttt{verbatim} environment does the former, but not the latter.)
+\end{description}
+
+\paragraph{Munging Command Options}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!command options}
+There are a great many options for controlling the behaviour of each of these commands.
+%
+Some apply to all three commands, others are specific to a subset.
+
+\begin{description}
+\item[\texttt{alltt}] Makes the argument suitable for inclusion in an \texttt{alltt} environment.
+%
+This is the default for \holthm.
+\item[\texttt{case}] (Only for use with \holtm.)
+%
+Causes the string to be parsed in such a way that any embedded \texttt{case} terms are only partly parsed, allowing their input form to appear when they are output.
+%
+This preserves underscore-patterns, for example.
+\item[\texttt{def}] (Only for use with \holthm.)
+%
+Causes the theorem to be split into its constituent conjuncts, for each conjunct to have any outermost universal quantifiers removed, and for each to be printed on a line of its own.
+%
+This works well with definitions (or characterising theorems) over multiple data type constructors, changing
+\begin{alltt}
+\(\vdash\) (FACT 0 = 1) \(\land\) (\(\forall\)\ensuremath{n}. FACT (SUC \ensuremath{n}) = SUC \ensuremath{n} * FACT \ensuremath{n})
+\end{alltt}
+into
+\begin{alltt}
+   FACT 0 = 1
+   FACT (SUC \ensuremath{n}) = SUC \ensuremath{n} * FACT \ensuremath{n}
+\end{alltt}
+\end{description}
+
+
+\subsection{Creating a Munger}
+\label{sec:munger-creation}
+
+\newcommand{\mkmunge}{\texttt{mkmunge.exe}}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!creating a munger}
+%
+The \HOL{} distribution comes with a tool called \mkmunge.
+%
+This executable is used to create munge executables that behave as described in this section.
+%
+A typical invocation of \mkmunge{} is
+\begin{alltt}
+   \mkmunge \(\langle\mathit{thy}\sb{1}\rangle\)Theory ... \(\langle\mathit{thy}\sb{n}\rangle\)Theory
+\end{alltt}
+Each commandline argument to \mkmunge{} is the name of a \HOL{} object file, so in addition to theory files, one can also include special purpose SML such as \texttt{monadsyntax}.
+
+The \mkmunge{} program can also take an optional \texttt{-o} argument that is used to specify the name of the output munger (the default is \munge).  For example
+\begin{alltt}
+   \mkmunge -o bagtexprocess bagTheory
+\end{alltt}
+
+The theories specified as arguments to \mkmunge{} determine what theorems are in scope for calls to \holthm, and also determine the grammars that will govern the parsing and printing of the \HOL{} types, terms and theorems.
+
 
 
 \index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|)}
