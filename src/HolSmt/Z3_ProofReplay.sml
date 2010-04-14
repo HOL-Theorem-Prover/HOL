@@ -29,6 +29,11 @@ struct
   val IMP_DISJ_2 = HolSmtTheory.IMP_DISJ_2
   val IMP_FALSE = HolSmtTheory.IMP_FALSE
 
+  val update_ss = simpLib.&& (simpLib.++ (intSimps.int_ss,
+      simpLib.std_conv_ss {name = "word_EQ_CONV", pats = [``(x :'a word) = y``],
+        conv = wordsLib.word_EQ_CONV}),
+    [combinTheory.UPDATE_def, boolTheory.EQ_SYM_EQ])
+
   fun check_proof prf =
   let
     val _ = if !SolverSpec.trace > 1 then
@@ -687,8 +692,7 @@ struct
         handle Feedback.HOL_ERR _ =>
 
         (*Profile.profile "rewrite(update)"*) (fn () =>
-          simpLib.SIMP_PROVE intSimps.int_ss [combinTheory.UPDATE_def,
-            boolTheory.EQ_SYM_EQ] t) ()
+          simpLib.SIMP_PROVE update_ss [] t) ()
         handle Feedback.HOL_ERR _ =>
 
         (*Profile.profile "rewrite(cache)"*) (fn () =>
@@ -791,6 +795,10 @@ struct
 
         (* cache *)
         Drule.LIST_MP thms (Z3_ProformaThms.prove (!theorem_cache) concl)
+        handle Feedback.HOL_ERR _ =>
+
+        (*Profile.profile "th_lemma(update)"*) (fn () => Drule.LIST_MP thms 
+          (simpLib.SIMP_PROVE update_ss [] concl)) ()
         handle Feedback.HOL_ERR _ =>
 
         let val (dict, concl) = generalize_ite concl
