@@ -810,6 +810,12 @@ struct
                   intLib.ARITH_PROVE concl
             handle Feedback.HOL_ERR _ =>
 
+              (*TODO*) Profile.profile "th_lemma(WORD_ARITH_EQ)" (fn () =>
+                simpLib.SIMP_PROVE (simpLib.++ (simpLib.++ (bossLib.std_ss,
+                  wordsLib.WORD_ARITH_ss), wordsLib.WORD_ARITH_EQ_ss)) []
+                  concl) ()
+            handle Feedback.HOL_ERR _ =>
+
               (*TODO*) Profile.profile "th_lemma(WORD_DP)" (fn () =>
               wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
                 (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
