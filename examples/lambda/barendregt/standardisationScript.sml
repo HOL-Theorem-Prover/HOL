@@ -2215,6 +2215,12 @@ val has_hnf_def = Define`
   has_hnf M = ?N. M == N /\ hnf N
 `;
 
+val has_bnf_hnf = store_thm(
+  "has_bnf_hnf",
+  ``has_bnf M ⇒ has_hnf M``,
+  SRW_TAC [][has_hnf_def, chap2Theory.has_bnf_def] THEN
+  METIS_TAC [bnf_hnf]);
+
 val head_reduct_def = Define`
   head_reduct M = if ?r. r is_head_redex M then
                     SOME (@N. M -h-> N)
@@ -2409,6 +2415,32 @@ val corollary11_4_8 = store_thm(
     METIS_TAC [head_reduces_reduction_beta, conversion_rules,
                head_reduces_def]
   ]);
+
+(* named by analogy with has_bnf_thm in chap3Theory *)
+val has_hnf_thm = store_thm(
+  "has_hnf_thm",
+  ``has_hnf M ⇔ ∃N. M -h->* N ∧ hnf N``,
+  SRW_TAC [][corollary11_4_8, EQ_IMP_THM] THENL [
+    Q.EXISTS_TAC `last (head_reduction_path M)` THEN
+    METIS_TAC [head_reduction_path_def, head_reduces_def,
+               head_reduces_RTC_hreduce1],
+
+    `M head_reduces N` by METIS_TAC [head_reduces_RTC_hreduce1] THEN
+    `∃p. finite p ∧ (first p = M) ∧ (last p = N) ∧ is_head_reduction p`
+       by METIS_TAC [head_reduces_def] THEN
+    METIS_TAC [head_reduction_path_unique]
+  ]);
+
+val has_hnf_whnf = store_thm(
+  "has_hnf_whnf",
+  ``has_hnf M ⇒ has_whnf M``,
+  METIS_TAC [has_hnf_thm, head_reductions_have_weak_prefixes,
+             has_whnf_def]);
+
+val has_bnf_whnf = store_thm(
+  "has_bnf_whnf",
+  ``has_bnf M ⇒ has_whnf M``,
+  METIS_TAC [has_bnf_hnf, has_hnf_whnf]);
 
 val _ = export_theory()
 
