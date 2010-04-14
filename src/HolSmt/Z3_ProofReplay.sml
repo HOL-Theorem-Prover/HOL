@@ -705,6 +705,12 @@ struct
                 (*Profile.profile "rewrite(ARITH_PROVE)"*) intLib.ARITH_PROVE t
             handle Feedback.HOL_ERR _ =>
 
+              (*TODO*) Profile.profile "rewrite(WORD_ARITH_CONV)" (fn () =>
+              Drule.EQT_ELIM (wordsLib.WORD_ARITH_CONV t)
+                handle Conv.UNCHANGED =>
+                  raise (Feedback.mk_HOL_ERR "" "" "")) ()
+            handle Feedback.HOL_ERR _ =>
+
               (*TODO*) Profile.profile "rewrite(WORD_DP)" (fn () =>
               wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
                 (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
@@ -810,10 +816,10 @@ struct
                   intLib.ARITH_PROVE concl
             handle Feedback.HOL_ERR _ =>
 
-              (*TODO*) Profile.profile "th_lemma(WORD_ARITH_EQ)" (fn () =>
-                simpLib.SIMP_PROVE (simpLib.++ (simpLib.++ (bossLib.std_ss,
-                  wordsLib.WORD_ARITH_ss), wordsLib.WORD_ARITH_EQ_ss)) []
-                  concl) ()
+              (*TODO*) Profile.profile "th_lemma(WORD_ARITH_CONV)" (fn () =>
+              Drule.EQT_ELIM (wordsLib.WORD_ARITH_CONV concl)
+                handle Conv.UNCHANGED =>
+                  raise (Feedback.mk_HOL_ERR "" "" "")) ()
             handle Feedback.HOL_ERR _ =>
 
               (*TODO*) Profile.profile "th_lemma(WORD_DP)" (fn () =>
