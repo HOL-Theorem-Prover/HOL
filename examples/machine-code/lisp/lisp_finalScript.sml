@@ -519,11 +519,10 @@ fun auto_prove th post = let
        lisp_eval (exp,Sym "nil",Sym "nil",Sym "nil",Sym "nil",Sym "nil",l) =
        (exp2,x2,y2,z2,stack2,alist2,l2)` by METIS_TAC [pairTheory.PAIR]
     THEN ASM_SIMP_TAC std_ss [LET_DEF,SEP_IMP_def,cond_STAR]
-    THEN SIMP_TAC std_ss [SEP_CLAUSES]
-    THEN CONV_TAC (REPEATC (DEPTH_CONV SEP_EXISTS_CONV))
+    THEN SIMP_TAC std_ss [SEP_CLAUSES,SEP_EXISTS_THM]
     THEN REPEAT STRIP_TAC
     THEN EX_TAC [`x2`,`y2`,`z2`,`stack2`,`alist2`]
-    THEN FULL_SIMP_TAC std_ss []
+    THEN FULL_SIMP_TAC (std_ss++star_ss) []
     THEN MP_TAC (Q.INST [`t`|->`s2`] R_ev_thm)
     THEN ASM_SIMP_TAC std_ss []
     THEN REPEAT STRIP_TAC
