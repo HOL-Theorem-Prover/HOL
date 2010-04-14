@@ -11,12 +11,13 @@ struct
   val A = intLib.ARITH_PROVE
   val R = realLib.REAL_ARITH
   val W = wordsLib.WORD_DECIDE
+  val e = simpLib.empty_ss
 
-  (* simplify 't' using 'thms', then prove the simplified term by applying
-     'prove_fn' *)
-  fun U prove_fn thms t =
+  (* simplify 't' using 'ss' and 'thms', then prove the simplified term by
+     applying 'prove_fn' *)
+  fun U prove_fn ss thms t =
   let
-    val t_eq_t' = simpLib.SIMP_CONV simpLib.empty_ss thms t
+    val t_eq_t' = simpLib.SIMP_CONV ss thms t
     val t' = prove_fn (boolSyntax.rhs (Thm.concl t_eq_t'))
   in
     Thm.EQ_MP (Thm.SYM t_eq_t') t'
@@ -90,20 +91,20 @@ struct
   val _ = s ("d013", D ``(~p /\ q) \/ p \/ ~q``)
   val _ = s ("d014", D ``(p /\ ~q) \/ ~p \/ q``)
   val _ = s ("d015", D ``(p /\ q) \/ ~p \/ ~q``)
-  val _ = s ("d016", U D [xor3_def, xor_def] ``~xor3 p q r \/ ~p \/ ~q \/ r``)
-  val _ = s ("d017", U D [xor3_def, xor_def] ``~xor3 p q r \/ ~p \/ q \/ ~r``)
-  val _ = s ("d018", U D [xor3_def, xor_def] ``~xor3 p q r \/ p \/ ~q \/ ~r``)
-  val _ = s ("d019", U D [xor3_def, xor_def] ``~xor3 p q r \/ p \/ q \/ r``)
-  val _ = s ("d020", U D [xor3_def, xor_def] ``xor3 p q r \/ ~p \/ ~q \/ ~r``)
-  val _ = s ("d021", U D [xor3_def, xor_def] ``xor3 p q r \/ ~p \/ q \/ r``)
-  val _ = s ("d022", U D [xor3_def, xor_def] ``xor3 p q r \/ p \/ ~q \/ r``)
-  val _ = s ("d023", U D [xor3_def, xor_def] ``xor3 p q r \/ p \/ q \/ ~r``)
-  val _ = s ("d024", U D [carry_def] ``~carry p q r \/ p \/ q``)
-  val _ = s ("d025", U D [carry_def] ``~carry p q r \/ p \/ r``)
-  val _ = s ("d026", U D [carry_def] ``~carry p q r \/ q \/ r``)
-  val _ = s ("d027", U D [carry_def] ``carry p q r \/ ~p \/ ~q``)
-  val _ = s ("d028", U D [carry_def] ``carry p q r \/ ~p \/ ~r``)
-  val _ = s ("d029", U D [carry_def] ``carry p q r \/ ~q \/ ~r``)
+  val _ = s ("d016", U D e [xor3_def, xor_def] ``~xor3 p q r \/ ~p \/ ~q \/ r``)
+  val _ = s ("d017", U D e [xor3_def, xor_def] ``~xor3 p q r \/ ~p \/ q \/ ~r``)
+  val _ = s ("d018", U D e [xor3_def, xor_def] ``~xor3 p q r \/ p \/ ~q \/ ~r``)
+  val _ = s ("d019", U D e [xor3_def, xor_def] ``~xor3 p q r \/ p \/ q \/ r``)
+  val _ = s ("d020", U D e [xor3_def, xor_def] ``xor3 p q r \/ ~p \/ ~q \/ ~r``)
+  val _ = s ("d021", U D e [xor3_def, xor_def] ``xor3 p q r \/ ~p \/ q \/ r``)
+  val _ = s ("d022", U D e [xor3_def, xor_def] ``xor3 p q r \/ p \/ ~q \/ r``)
+  val _ = s ("d023", U D e [xor3_def, xor_def] ``xor3 p q r \/ p \/ q \/ ~r``)
+  val _ = s ("d024", U D e [carry_def] ``~carry p q r \/ p \/ q``)
+  val _ = s ("d025", U D e [carry_def] ``~carry p q r \/ p \/ r``)
+  val _ = s ("d026", U D e [carry_def] ``~carry p q r \/ q \/ r``)
+  val _ = s ("d027", U D e [carry_def] ``carry p q r \/ ~p \/ ~q``)
+  val _ = s ("d028", U D e [carry_def] ``carry p q r \/ ~p \/ ~r``)
+  val _ = s ("d029", U D e [carry_def] ``carry p q r \/ ~q \/ ~r``)
   val _ = s ("d030", P ``p \/ (x = if p then y else x)``)
   val _ = s ("d031", P ``~p \/ (x = if p then x else y)``)
   val _ = s ("d032", P ``p \/ q \/ ~(if p then r else q)``)
@@ -408,7 +409,7 @@ struct
   val _ = s ("r221", W ``x && y && z = y && x && z``)
   val _ = s ("r222", W ``x && y && z = (x && y) && z``)
   val _ = s ("r223", W ``(1w = (x :word1) && y) <=> (1w = x) /\ (1w = y)``)
-  val _ = s ("r224", U W [boolTheory.CONJ_COMM]
+  val _ = s ("r224", U W e [boolTheory.CONJ_COMM]
     ``(1w = (x :word1) && y) <=> (1w = y) /\ (1w = x)``)
   val _ = s ("r225", W ``(7 >< 0) (x :word8) = x``)
   val _ = s ("r226", W ``x <+ y <=> ~(y <=+ x)``)
@@ -465,6 +466,10 @@ struct
           Tactical.THEN (Tactic.DISJ_CASES_TAC th_y,
             wordsLib.WORD_DECIDE_TAC))))
   end
+
+  val _ = s ("t019", U D (simpLib.++ (bossLib.std_ss, wordsLib.WORD_BIT_EQ_ss))
+    [] ``(0w = (x :word8)) \/ x ' 0 \/ x ' 1 \/ x ' 2 \/ x ' 3 \/ x ' 4 \/
+    x ' 5 \/ x ' 6 \/ x ' 7``)
 
   val _ = Theory.export_theory ()
 
