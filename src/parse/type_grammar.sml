@@ -566,7 +566,7 @@ fun tysize ty =
     else if Type.is_con_type ty then 1
     else if Type.is_app_type ty then
       let val (opr,arg) = Type.dest_app_type ty
-      in tysize opr + tysize arg
+      in 1 + tysize opr + tysize arg
       end
     else if Type.is_abs_type ty then
       let val (bvar,body) = Type.dest_abs_type ty
@@ -599,12 +599,14 @@ in
   | _ => let
       fun instsize (i,k,r) =
           List.foldl (fn ({redex,residue},acc) => tysize residue + acc) 0 i
-      fun match_info (i, _, _, tstamp) = (instsize i, tstamp)
+      fun match_info (i, _, tyvs, tstamp) = (instsize i, tstamp)
       val matchcmp = inv_img_cmp match_info
                                  (pair_compare(Int.compare,
                                                Lib.flip_order o Int.compare))
       val allinsts = Listsort.sort matchcmp checked_matches
       val (inst,nm,tyvs,_) = hd allinsts
+      val _ = if instsize inst + length (#1 inst) + 1 > tysize ty
+                then raise Match else ()
       (*val inst' = Listsort.sort instcmp (#1 inst) *)
       val (tyinst,kdinst,rkinst) = inst
       val tyvs' = map (Type.inst_rank_kind rkinst kdinst) tyvs
@@ -614,6 +616,7 @@ in
     in
       (nm, args)
     end
+    handle Match => Type.dest_type ty
 end
 
 fun abb_dest_type G ty = if !print_abbrevs then abb_dest_type0 G ty

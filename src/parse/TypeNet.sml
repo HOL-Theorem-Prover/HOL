@@ -3,13 +3,16 @@ struct
 
 open HolKernel
 
-datatype label = TV | TCON of {Thy : string, Tyop : string} | TAPP | TABS | TUNI
+datatype label = TV | TBV of int | TCON of {Thy : string, Tyop : string} | TAPP | TABS | TUNI
 
 fun labcmp p =
     case p of
       (TV, TV) => EQUAL
     | (TV, _) => LESS
     | (_, TV) => GREATER
+    | (TBV i, TBV j) => Int.compare (i,j)
+    | (TBV _, _) => LESS
+    | (_, TBV _) => GREATER
     | (TCON{Thy = thy1, Tyop = op1}, TCON{Thy = thy2, Tyop = op2}) =>
       pair_compare(String.compare, String.compare) ((op1,thy1),(op2,thy2))
     | (TCON _, _) => LESS
@@ -34,25 +37,49 @@ val empty = (EMPTY, 0)
 
 fun mkempty () = ND (Binarymap.mkDict labcmp)
 
-fun ndest_type ty =
-    if is_var_type ty then (TV, [])
+fun index_of x =
+  let fun ind n [] = ~1
+        | ind n (y::ys) = if y = x then n
+                          else ind (n+1) ys
+  in ind 0
+  end
+
+fun ndest_type (ty,env) =
+    if is_var_type ty then
+      let val i = index_of ty env
+      in if i = ~1 then (TV , [])
+                   else (TBV i, [])
+      end
     else if is_con_type ty then
       let val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
       in (TCON{Thy=Thy,Tyop=Tyop}, [])
       end
     else if is_app_type ty then
       let val (opr,arg) = dest_app_type ty
-      in (TAPP, [opr,arg])
+      in (TAPP, [(opr,env),(arg,env)])
       end
     else if is_abs_type ty then
-      let val (_,body) = dest_abs_type ty
-      in (TABS, [body])
+      let val (bvar,body) = dest_abs_type ty
+      in (TABS, [(body,bvar::env)])
       end
     else if is_univ_type ty then
-      let val (_,body) = dest_univ_type ty
-      in (TUNI, [body])
+      let val (bvar,body) = dest_univ_type ty
+      in (TUNI, [(body,bvar::env)])
       end
     else raise Fail "TypeNet.ndest_type: catastrophic type destruction"
+
+fun is_bvar_type env ty = is_var_type ty andalso mem ty env
+
+fun ndest_pat_type (t as (ty,env)) =
+  let val (opr,args) = Type.strip_app_type ty
+  in if is_var_type opr andalso not (mem opr env)
+                        andalso all (is_bvar_type env) args
+        (* possible higher order type match; unpredictable structure;
+           for path, represent as general single type variable pattern;
+           depend on normal higher order type matching to resolve. *)
+     then (TV, [])
+     else ndest_type t
+  end
 
 fun insert ((net,sz), ty, item) = let
   fun newnode labs =
@@ -63,7 +90,7 @@ fun insert ((net,sz), ty, item) = let
       case (net, tys) of
         (LF d, []) => LF (Binarymap.insert(d,ty,item))
       | (ND d, ty::tys0) => let
-          val (lab, rest) = ndest_type ty
+          val (lab, rest) = ndest_pat_type ty
           val tys = rest @ tys0
           val n' =
               case Binarymap.peek(d,lab) of
@@ -76,7 +103,7 @@ fun insert ((net,sz), ty, item) = let
       | (EMPTY, tys) => trav(mkempty(), tys)
       | _ => raise Fail "TypeNet.insert: catastrophic invariant failure"
 in
-  (trav(net,[ty]), sz + 1)
+  (trav(net,[(ty,[])]), sz + 1)
 end
 
 fun listItems (net, sz) = let
@@ -101,7 +128,7 @@ fun peek ((net,sz), ty) = let
       case (net, tys) of
         (LF d, []) => Binarymap.peek(d, ty)
       | (ND d, ty::tys) => let
-          val (lab, rest) = ndest_type ty
+          val (lab, rest) = ndest_pat_type ty
         in
           case Binarymap.peek(d, lab) of
             NONE => NONE
@@ -110,7 +137,7 @@ fun peek ((net,sz), ty) = let
       | (EMPTY, _) => NONE
       | _ => raise Fail "TypeNet.peek: catastrophic invariant failure"
 in
-  trav(net, [ty])
+  trav(net, [(ty,[])])
 end
 
 fun find (n, ty) =
@@ -138,7 +165,7 @@ fun match ((net,sz), ty) = let
         end
       | _ => raise Fail "TypeNet.match: catastrophic invariant failure"
 in
-  trav [] (net, [ty])
+  trav [] (net, [(ty,[])])
 end
 
 fun delete ((net,sz), ty) = let
@@ -152,7 +179,7 @@ fun delete ((net,sz), ty) = let
           else (SOME (LF d'), removed)
         end
       | (ND d, ty::tys) => let
-          val (lab, rest) = ndest_type ty
+          val (lab, rest) = ndest_pat_type ty
         in
           case Binarymap.peek(d, lab) of
             NONE => raise Binarymap.NotFound
@@ -171,7 +198,7 @@ fun delete ((net,sz), ty) = let
         end
       | _ => raise Fail "TypeNet.delete: catastrophic invariant failure"
 in
-  case trav (net, [ty]) of
+  case trav (net, [(ty,[])]) of
     (NONE, removed) => (empty, removed)
   | (SOME n, removed) =>  ((n,sz-1), removed)
 end

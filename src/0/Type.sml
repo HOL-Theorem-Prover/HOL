@@ -2301,7 +2301,8 @@ fun raw_kind_match_type pat ob ((tyS,tyId), (kdS,kdId), rkS) =
     let val tyfixed = HOLset.addList(empty_tyset, tyId)
         val (_,tyS',(kdS',kdId'),rkS') = ho_match_type1 true kdId tyfixed pat ob (tyS,[]) (rkS,(kdS,kdId))
         val _ = check_achieves_target (tyS', kdS', rkS') pat ob
-        val tyId' = Lib.subtract (Lib.union (type_vars pat) tyId) (map #redex tyS')
+        val pat_vars' = map (inst_rank_kind rkS' kdS') (type_vars pat)
+        val tyId' = Lib.subtract (Lib.union pat_vars' tyId) (map #redex tyS')
      in ((tyS',tyId'), (kdS',kdId'), rkS')
     end;
 

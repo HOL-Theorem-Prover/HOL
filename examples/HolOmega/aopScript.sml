@@ -429,7 +429,8 @@ val SPLIT_LENGTH_SUM = store_thm
   );
 
 
-
+val _ = set_trace "types" 1;
+val _ = set_trace "kinds" 0;
 val _ = html_theory "aop";
 
 val _ = export_theory();

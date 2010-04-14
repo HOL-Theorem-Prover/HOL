@@ -162,7 +162,7 @@ val _ = disable_tyabbrev_printing "A";
 val _ = disable_tyabbrev_printing "B";
 val _ = disable_tyabbrev_printing "C";
 val _ = disable_tyabbrev_printing "W";
-val _ = disable_tyabbrev_printing "comp";
+(* val _ = disable_tyabbrev_printing "comp"; *)
 
 (* parsing/printing support for theory min *)
 val _ = unicode_version {u = UChar.imp, tmnm = "==>"}

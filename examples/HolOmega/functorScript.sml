@@ -579,6 +579,7 @@ val binattransf_SWAP = store_thm
            (E R) s = { a | ?b. R a b /\ b IN s }
 *)
 
+(*
 val binattransf_E = store_thm
   ("binattransf_E",
    ``binattransf (\:'a 'b. SWAP)
@@ -590,9 +591,11 @@ val binattransf_E = store_thm
    THEN Cases
    THEN SIMP_TAC std_ss [SWAP_def]
   );
+*)
 
 
-
+val _ = set_trace "types" 1;
+val _ = set_trace "kinds" 0;
 val _ = html_theory "functor";
 
 val _ = export_theory();

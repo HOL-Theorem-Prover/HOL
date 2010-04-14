@@ -590,7 +590,6 @@ val cat_monad_eq_umj_monad = store_thm
   );
 
 
-
 val _ = set_trace "types" 1;
 val _ = set_trace "kinds" 0;
 val _ = html_theory "monad";
