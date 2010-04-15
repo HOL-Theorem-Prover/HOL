@@ -844,6 +844,12 @@ The expectation is that $f$ will be the combinator \holtxt{K} from \theoryimp{co
 %
 In this way, large complicated terms that are not themselves theorems (or even of boolean type), can be stored in \HOL{} theories, and then printed in \LaTeX{} documents.
 
+\item[\texttt{nosp}] (Only for use with \holthm.)
+%
+By default, arguments to \holthm{} are fully specialised (\ie, they have \ml{SPEC\_ALL} applied to them), removing outermost universal quantifiers.
+%
+The \texttt{nosp} option prevents this.
+
 \item[\texttt{\indentoption}] Indents the argument.
 %
   This option only makes sense when used with the \texttt{alltt} option (the additional spaces will have no effect when inside an \texttt{\bs{}mbox}).
