@@ -132,6 +132,8 @@ struct
     ``(if p then (if q then x else y) else y) = (if q /\ p then x else y)``)
   val _ = s ("r006d", P
     ``(if p then x = y else y = z) <=> (y = if p then x else z)``)
+  val _ = s ("r006e", P
+    ``(if p then x = y else z = y) <=> (y = if p then x else z)``)
 
   val _ = s ("r007", D ``(~p ==> q) <=> (p \/ q)``)
   val _ = s ("r008", D ``(~p ==> q) <=> (q \/ p)``)
@@ -463,6 +465,7 @@ struct
     val _ = s ("t015", prove_by_cases ``(x :word1) ' 0 ==> (0w = ~x)``)
     val _ = s ("t015a", prove_by_cases ``(x :word1) ' 0 ==> (1w = x)``)
     val _ = s ("t016", prove_by_cases ``~((x :word1) ' 0) ==> (0w = x)``)
+    val _ = s ("t016a", prove_by_cases ``~((x :word1) ' 0) ==> (1w = ~x)``)
     val _ = s ("t017", prove_by_cases ``(0w = ~(x :word1)) \/ ~(x ' 0)``)
     val _ = s ("t018", Tactical.prove
       (``(1w = ~(x :word1) !! ~y) \/ ~(~(x ' 0) \/ ~(y ' 0))``,
