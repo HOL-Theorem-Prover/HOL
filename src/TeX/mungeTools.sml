@@ -4,7 +4,8 @@ struct
 open Lib Feedback HolKernel Parse boolLib
 
 datatype command = Theorem | Term | Type
-datatype opt = Turnstile | Case | TT | Def | TypeOf | TermThm | Indent | NoSpec
+datatype opt = Turnstile | Case | TT | Def | TypeOf | TermThm
+             | Indent of int | NoSpec
              | Inst of string * string
              | NoTurnstile | Width of int
              | AllTT | ShowTypes
@@ -32,13 +33,23 @@ fun stringOpt pos s =
   | "def" => SOME Def
   | "of" => SOME TypeOf
   | "K" => SOME TermThm
-  | ">>" => SOME Indent
   | "nosp" => SOME NoSpec
   | "nostile" => SOME NoTurnstile
   | "showtypes" => SOME ShowTypes
   | _ => let
     in
-      if String.isPrefix "width=" s then let
+      if String.isPrefix ">>" s then let
+          val numpart_s = String.extract(s,2,NONE)
+        in
+          if numpart_s = "" then SOME (Indent 2)
+          else
+            case Int.fromString numpart_s of
+              NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+            | SOME i => if i < 0 then
+                          (warn(pos, "Negative indents illegal"); NONE)
+                        else SOME (Indent i)
+        end
+      else if String.isPrefix "width=" s then let
           val numpart_s = String.extract(s,6,NONE)
         in
           case Int.fromString numpart_s of
@@ -123,6 +134,16 @@ end
 type optionset = OptSet.set
 
 fun optset_width s = get_first (fn Width i => SOME i | _ => NONE) s
+fun spaces 0 = ""
+  | spaces 1 = " "
+  | spaces 2 = "  "
+  | spaces 3 = "   "
+  | spaces 4 = "    "
+  | spaces n = CharVector.tabulate(n, (fn _ => #" "))
+fun optset_indent s =
+    case get_first (fn Indent i => SOME i | _ => NONE) s of
+      NONE => ""
+    | SOME i => spaces i
 
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)
@@ -131,7 +152,6 @@ val user_overrides = ref (Binarymap.mkDict String.compare)
 fun overrides s = Binarymap.peek (!user_overrides, s)
 
 fun isChar x y = x = y
-val indent = "  "
 
 fun mkinst loc opts tm = let
   val insts = List.mapPartial (fn Inst(s1,s2) => SOME (s1,s2) | _ => NONE)
@@ -210,8 +230,7 @@ in
       case command of
         Theorem => let
           val thm = do_thminsts pos opts (getThm spec)
-          val _ = if OptSet.has Indent opts then add_string pps indent
-                  else ()
+          val _ = add_string pps (optset_indent opts)
         in
           if OptSet.has Def opts then let
               val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
@@ -258,9 +277,7 @@ in
                         end
                      else Parse.Term [QQ parse_start, QQ spec]
                             |> do_tminsts pos opts
-          val () = if OptSet.has Indent opts
-                      then add_string pps indent
-                   else ()
+          val () = add_string pps (optset_indent opts)
           val () = if OptSet.has Turnstile opts
                       then let in
                         add_stringsz pps ("\\"^HOL^"TokenTurnstile", 2);
@@ -278,7 +295,10 @@ in
           val typ = if OptSet.has TypeOf opts
                        then Term.type_of (Parse.Term [QQ parse_start, QQ spec])
                     else Parse.Type [QQ parse_start, QQ spec]
-        in raw_pp_type_as_tex overrides pps typ end
+        in
+          add_string pps (optset_indent opts);
+          raw_pp_type_as_tex overrides pps typ
+        end
     val () = if not alltt then add_string pps "}}}" else ()
   in () end handle
       BadSpec => warn (pos, spec ^ " does not specify a theorem")

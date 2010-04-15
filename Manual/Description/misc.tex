@@ -827,6 +827,26 @@ into
    FACT 0 = 1
    FACT (SUC \ensuremath{n}) = SUC \ensuremath{n} * FACT \ensuremath{n}
 \end{alltt}
+
+\item[\texttt{\indentoption}] Indents the argument.
+%
+  This option only makes sense when used with the \texttt{alltt} option (the additional spaces will have no effect when inside an \texttt{\bs{}mbox}).
+%
+  The default indentation is two spaces; if a different indentation is desired, the option can be followed by digits specifying the number of space characters desired.
+%
+  For example, \texttt{\holthm{}[\indentoption10,...]\{...\}} will indent by 10 spaces.
+
+  Note that simply placing a command such as \holthm{} within its \texttt{alltt} block with a given indentation, for example
+\begin{alltt}
+   \bs{}begin\{alltt\}
+      \holthm\{bool.AND_CLAUSES\}
+   \bs{}end\{alltt\}
+\end{alltt}
+will not do the right thing if the output spans multiple lines.
+%
+Rather the first line of \HOL{} output will be indented, and the subsequent lines will not.
+%
+The \texttt{\indentoption} option lets the pretty-printer know that it is printing with a given indentation, affecting all lines of its output.
 \end{description}
 
 
