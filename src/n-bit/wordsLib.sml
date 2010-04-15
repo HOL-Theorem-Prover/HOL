@@ -1180,43 +1180,42 @@ local
   val trace_word_decide = ref 0
   val _ = Feedback.register_trace ("word decide", trace_word_decide, 1)
 in
-  fun WORD_BIT_EQ_CONV t =
-        if is_eq t orelse wordsSyntax.is_index t then
-          ((SIMP_CONV (std_ss++fcpLib.FCP_ss++BIT_ss) (SPEC `^a` n2w_def :: rw1)
-             THENC TRY_CONV DECIDE_CONV
-             THENC SIMP_CONV (arith_ss++fcpLib.FCP_ss++SIZES_ss) (rw1 @ rw2)
-             THENC REDEPTH_CONV FORALL_AND_CONV
-             THENC SIMP_CONV arith_ss []) t)
-        else
-          raise ERR "WORD_BIT_EQ_CONV" "Not a word equality"
   val WORD_BIT_EQ_ss =
-        simpLib.named_merge_ss "word bit eq"
-          [ARITH_ss, fcpLib.FCP_ss, SIZES_ss,
-           simpLib.rewrites (rw1 @ rw2),
+        simpLib.merge_ss
+          [fcpLib.FCP_ss, SIZES_ss, simpLib.rewrites (rw1 @ rw2),
            simpLib.std_conv_ss
              {conv = CHANGED_CONV FORALL_AND_CONV,
               name = "FORALL_AND_CONV",
               pats = [``!x:'a. ^P /\ ^Q``]}]
-  fun WORD_DP_PROVE dp t =
-        let val thm1 = QCONV (
-                        WORD_CONV
-                          THENC SIMP_CONV (bool_ss++WORD_CONST_ss++
-                                 WORD_UINT_MAX_ss) rw3
-                          THENC SIMP_CONV (std_ss++boolSimps.LET_ss++
-                                 WORD_UINT_MAX_ss++WORD_w2n_ss++WORD_SUB_ss++
-                                 WORD_ADD_ss) rw4
-                          THENC DEPTH_CONV EXISTS_WORD_CONV) t
-            val t1 = rhs (concl thm1)
-            val bnds = mk_bounds_thms t1
-            val t2 = mk_imp (concl bnds, t1)
-            val _ = if 0 < !trace_word_decide then
-                      (print ("Trying to prove:\n");
-                       Parse.print_term t2;
-                       print "\n")
-                    else
-                      ()
-            val thm2 = dp t2
-            val conv = RAND_CONV (PURE_ONCE_REWRITE_CONV [GSYM thm1])
+  fun WORD_BIT_EQ_CONV t =
+        if is_eq t orelse wordsSyntax.is_index t then
+          (SIMP_CONV (std_ss++WORD_BIT_EQ_ss++BIT_ss) [SPEC `^a` n2w_def] THENC
+           TRY_CONV DECIDE_CONV) t
+        else
+          raise ERR "WORD_BIT_EQ_CONV" "Not a word equality"
+  val WORD_BIT_EQ_ss = simpLib.named_merge_ss "word bit eq"
+                         [WORD_BIT_EQ_ss, numSimps.ARITH_ss]
+  fun WORD_DP_PROVE dp t = let
+          val thm1 = QCONV
+                      (WORD_CONV
+                        THENC
+                       SIMP_CONV (bool_ss++WORD_CONST_ss++WORD_UINT_MAX_ss) rw3
+                        THENC
+                       SIMP_CONV (std_ss++boolSimps.LET_ss++WORD_UINT_MAX_ss++
+                                  WORD_w2n_ss++WORD_SUB_ss++WORD_ADD_ss) rw4
+                        THENC
+                       DEPTH_CONV EXISTS_WORD_CONV) t
+          val t1 = rhs (concl thm1)
+          val bnds = mk_bounds_thms t1
+          val t2 = mk_imp (concl bnds, t1)
+          val _ = if 0 < !trace_word_decide then
+                    (print ("Trying to prove:\n");
+                     Parse.print_term t2;
+                     print "\n")
+                  else
+                    ()
+          val thm2 = dp t2
+          val conv = RAND_CONV (PURE_ONCE_REWRITE_CONV [GSYM thm1])
         in
           MP (CONV_RULE conv thm2) bnds
         end
