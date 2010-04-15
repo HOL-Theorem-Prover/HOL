@@ -828,6 +828,22 @@ into
    FACT (SUC \ensuremath{n}) = SUC \ensuremath{n} * FACT \ensuremath{n}
 \end{alltt}
 
+\item[\texttt{K}] (Only for use with \holtm.)
+%
+The argument must be the name of a theorem (as per the \holthm{} command), and the theorem should be of the form
+\[
+\vdash f\;x\;t
+\]
+for some term $t$.
+%
+The command prints the term $t$.
+%
+\index{combinators, in HOL logic@combinators, in \HOL{} logic}
+\index{K, the HOL constant@\ml{K}, the \HOL{} constant}
+The expectation is that $f$ will be the combinator \holtxt{K} from \theoryimp{combin} (see Section~\ref{sec:combinTheory}), and that $x$ will be truth~(\holtxt{T}), allowing $t$ to be anything at all.
+%
+In this way, large complicated terms that are not themselves theorems (or even of boolean type), can be stored in \HOL{} theories, and then printed in \LaTeX{} documents.
+
 \item[\texttt{\indentoption}] Indents the argument.
 %
   This option only makes sense when used with the \texttt{alltt} option (the additional spaces will have no effect when inside an \texttt{\bs{}mbox}).
