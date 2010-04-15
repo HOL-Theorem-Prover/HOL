@@ -47,7 +47,7 @@ in
 
   val th_lemma_thms = thm_net_from_list
     [t001, t002, t003, t004, t005, t006, t007, t008, t009, t010, t011, t012,
-     t013, t014, t015, t015a, t016, t016a, t017, t018, t019]
+     t013, t014, t015, t016, t017, t018, t019, t020, t021]
 
 end  (* local *)
 
