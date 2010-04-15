@@ -210,6 +210,8 @@ in
       case command of
         Theorem => let
           val thm = do_thminsts pos opts (getThm spec)
+          val _ = if OptSet.has Indent opts then add_string pps indent
+                  else ()
         in
           if OptSet.has Def opts then let
               val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
@@ -221,7 +223,6 @@ in
                 else (fn pps => trace ("types", 0) (base pps))
               end
             in
-              add_string pps indent;
               begin_block pps CONSISTENT 0;
               block_list pps
                          (fn pps => begin_block pps INCONSISTENT 0)
