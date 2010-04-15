@@ -713,7 +713,8 @@ struct
 
               (*TODO*) Profile.profile "rewrite(WORD_BIT_EQ)" (fn () =>
               Drule.EQT_ELIM (Conv.THENC (simpLib.SIMP_CONV (simpLib.++
-                (bossLib.std_ss, wordsLib.WORD_BIT_EQ_ss)) [],
+                (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss),
+                wordsLib.WORD_BIT_EQ_ss)) [],
                 tautLib.TAUT_CONV) t)) ()
             handle Feedback.HOL_ERR _ =>
 
@@ -834,11 +835,12 @@ struct
 
               (*TODO*) Profile.profile "th_lemma(WORD_BIT_EQ)" (fn () =>
               Drule.EQT_ELIM (Conv.THENC (simpLib.SIMP_CONV (simpLib.++
-                (bossLib.std_ss, wordsLib.WORD_BIT_EQ_ss)) [],
+                (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss),
+                wordsLib.WORD_BIT_EQ_ss)) [],
                 tautLib.TAUT_CONV) concl)) ()
             handle Feedback.HOL_ERR _ =>
 
-              (*TODO*) Profile.profile "rewrite(WORD_DECIDE)"
+              (*TODO*) Profile.profile "th_lemma(WORD_DECIDE)"
                 wordsLib.WORD_DECIDE concl
             handle Feedback.HOL_ERR _ =>
 
