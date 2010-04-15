@@ -4,7 +4,7 @@ TARGET = $(protect $(HOLDIR)/bin/$(EXE))
 EXTRA_CLEANS = munger.lex.sml $(EXE) mkmunge.o munger.o $(TARGET)
 
 mosml_MKMUNGE_DEP = mkmkmunge.uo
-poly_MKMUNGE_DEP = mkmunge.o
+poly_MKMUNGE_DEP = mkmunge.o $(dprot $(HOLDIR)/bin/hol.builder)
 
 mosml_MKMUNGE_COMM = $(HOLMOSMLC) -o $@ $<
 poly_MKMUNGE_COMM = cc -o $@ $< $(POLY_LDFLAGS)
