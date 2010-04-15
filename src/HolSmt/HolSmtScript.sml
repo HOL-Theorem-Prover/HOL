@@ -5,7 +5,7 @@
 structure HolSmtScript =
 struct
 
-  val D = bossLib.DECIDE
+  val T = tautLib.TAUT_PROVE
   val P = bossLib.PROVE []
   val S = simpLib.SIMP_PROVE (simpLib.++ (simpLib.++ (bossLib.list_ss,
     wordsLib.WORD_ss), wordsLib.WORD_BIT_EQ_ss)) [boolTheory.EQ_SYM_EQ]
@@ -14,12 +14,12 @@ struct
   val W = wordsLib.WORD_DECIDE
 
   (* simplify 't' using 'thms', then prove the simplified term using
-     'bossLib.DECIDE' *)
+     'TAUT_PROVE' *)
   fun U thms t =
   let
     val t_eq_t' = simpLib.SIMP_CONV (simpLib.++ (simpLib.++ (bossLib.std_ss,
       wordsLib.WORD_ss), wordsLib.WORD_BIT_EQ_ss)) thms t
-    val t' = bossLib.DECIDE (boolSyntax.rhs (Thm.concl t_eq_t'))
+    val t' = tautLib.TAUT_PROVE (boolSyntax.rhs (Thm.concl t_eq_t'))
   in
     Thm.EQ_MP (Thm.SYM t_eq_t') t'
   end
@@ -54,43 +54,43 @@ struct
   val _ = s ("NOT_MEM_CONS", S ``!x h t. ~MEM x (h::t) = (x <> h) /\ ~MEM x t``)
   val _ = s ("NOT_MEM_CONS_SWAP", S
     ``!x h t. ~MEM x (h::t) = (h <> x) /\ ~MEM x t``)
-  val _ = s ("AND_T", D ``!p. p /\ T <=> p``)
-  val _ = s ("T_AND", D ``!p q. (T /\ p <=> T /\ q) ==> (p <=> q)``)
-  val _ = s ("F_OR", D ``!p q. (F \/ p <=> F \/ q) ==> (p <=> q)``)
-  val _ = s ("CONJ_CONG", D
+  val _ = s ("AND_T", T ``!p. p /\ T <=> p``)
+  val _ = s ("T_AND", T ``!p q. (T /\ p <=> T /\ q) ==> (p <=> q)``)
+  val _ = s ("F_OR", T ``!p q. (F \/ p <=> F \/ q) ==> (p <=> q)``)
+  val _ = s ("CONJ_CONG", T
     ``!p q r s. (p <=> q) ==> (r <=> s) ==> (p /\ r <=> q /\ s)``)
-  val _ = s ("NOT_NOT_ELIM", D ``!p. ~~p ==> p``)
-  val _ = s ("NOT_FALSE", D ``!p. p ==> ~p ==> F``)
-  val _ = s ("NNF_CONJ", D
+  val _ = s ("NOT_NOT_ELIM", T ``!p. ~~p ==> p``)
+  val _ = s ("NOT_FALSE", T ``!p. p ==> ~p ==> F``)
+  val _ = s ("NNF_CONJ", T
     ``!p q r s. (~p <=> r) ==> (~q <=> s) ==> (~(p /\ q) <=> r \/ s)``)
-  val _ = s ("NNF_DISJ", D
+  val _ = s ("NNF_DISJ", T
     ``!p q r s. (~p <=> r) ==> (~q <=> s) ==> (~(p \/ q) <=> r /\ s)``)
-  val _ = s ("NNF_NOT_NOT", D ``!p q. (p <=> q) ==> (~~p <=> q)``)
-  val _ = s ("NEG_IFF_1", D ``!p q. (p <=> q) ==> ~(q <=> ~p)``)
-  val _ = s ("NEG_IFF_2", D ``!p q. ~(p <=> ~q) ==> (q <=> p)``)
-  val _ = s ("DISJ_ELIM_1", D ``!p q r. (p \/ q ==> r) ==> p ==> r``)
-  val _ = s ("DISJ_ELIM_2", D ``!p q r. (p \/ q ==> r) ==> q ==> r``)
-  val _ = s ("IMP_DISJ_1", D ``!p q. (p ==> q) ==> ~p \/ q``)
-  val _ = s ("IMP_DISJ_2", D ``!p q. (~p ==> q) ==> p \/ q``)
-  val _ = s ("IMP_FALSE", D ``!p. (~p ==> F) ==> p``)
+  val _ = s ("NNF_NOT_NOT", T ``!p q. (p <=> q) ==> (~~p <=> q)``)
+  val _ = s ("NEG_IFF_1", T ``!p q. (p <=> q) ==> ~(q <=> ~p)``)
+  val _ = s ("NEG_IFF_2", T ``!p q. ~(p <=> ~q) ==> (q <=> p)``)
+  val _ = s ("DISJ_ELIM_1", T ``!p q r. (p \/ q ==> r) ==> p ==> r``)
+  val _ = s ("DISJ_ELIM_2", T ``!p q r. (p \/ q ==> r) ==> q ==> r``)
+  val _ = s ("IMP_DISJ_1", T ``!p q. (p ==> q) ==> ~p \/ q``)
+  val _ = s ("IMP_DISJ_2", T ``!p q. (~p ==> q) ==> p \/ q``)
+  val _ = s ("IMP_FALSE", T ``!p. (~p ==> F) ==> p``)
 
   (* used for Z3's proof rule def-axiom *)
 
-  val _ = s ("d001", D ``~(p <=> q) \/ ~p \/ q``)
-  val _ = s ("d002", D ``~(p <=> q) \/ p \/ ~q``)
-  val _ = s ("d003", D ``(p <=> ~q) \/ ~p \/ q``)
-  val _ = s ("d004", D ``(~p <=> q) \/ p \/ ~q``)
-  val _ = s ("d005", D ``(p <=> q) \/ ~p \/ ~q``)
-  val _ = s ("d006", D ``(p <=> q) \/ p \/ q``)
-  val _ = s ("d007", D ``~(~p <=> q) \/ p \/ q``)
-  val _ = s ("d008", D ``~(p <=> ~q) \/ p \/ q``)
-  val _ = s ("d009", D ``~p \/ q \/ ~(p <=> q)``)
-  val _ = s ("d010", D ``p \/ ~q \/ ~(p <=> q)``)
-  val _ = s ("d011", D ``p \/ q \/ ~(p <=> ~q)``)
-  val _ = s ("d012", D ``(~p /\ ~q) \/ p \/ q``)
-  val _ = s ("d013", D ``(~p /\ q) \/ p \/ ~q``)
-  val _ = s ("d014", D ``(p /\ ~q) \/ ~p \/ q``)
-  val _ = s ("d015", D ``(p /\ q) \/ ~p \/ ~q``)
+  val _ = s ("d001", T ``~(p <=> q) \/ ~p \/ q``)
+  val _ = s ("d002", T ``~(p <=> q) \/ p \/ ~q``)
+  val _ = s ("d003", T ``(p <=> ~q) \/ ~p \/ q``)
+  val _ = s ("d004", T ``(~p <=> q) \/ p \/ ~q``)
+  val _ = s ("d005", T ``(p <=> q) \/ ~p \/ ~q``)
+  val _ = s ("d006", T ``(p <=> q) \/ p \/ q``)
+  val _ = s ("d007", T ``~(~p <=> q) \/ p \/ q``)
+  val _ = s ("d008", T ``~(p <=> ~q) \/ p \/ q``)
+  val _ = s ("d009", T ``~p \/ q \/ ~(p <=> q)``)
+  val _ = s ("d010", T ``p \/ ~q \/ ~(p <=> q)``)
+  val _ = s ("d011", T ``p \/ q \/ ~(p <=> ~q)``)
+  val _ = s ("d012", T ``(~p /\ ~q) \/ p \/ q``)
+  val _ = s ("d013", T ``(~p /\ q) \/ p \/ ~q``)
+  val _ = s ("d014", T ``(p /\ ~q) \/ ~p \/ q``)
+  val _ = s ("d015", T ``(p /\ q) \/ ~p \/ ~q``)
   val _ = s ("d016", U [xor3_def, xor_def] ``~xor3 p q r \/ ~p \/ ~q \/ r``)
   val _ = s ("d017", U [xor3_def, xor_def] ``~xor3 p q r \/ ~p \/ q \/ ~r``)
   val _ = s ("d018", U [xor3_def, xor_def] ``~xor3 p q r \/ p \/ ~q \/ ~r``)
@@ -118,9 +118,9 @@ struct
 
   val _ = s ("r001", P ``(x = y) <=> (y = x)``)
   val _ = s ("r002", P ``(x = x) <=> T``)
-  val _ = s ("r003", D ``(p <=> T) <=> p``)
-  val _ = s ("r004", D ``(p <=> F) <=> ~p``)
-  val _ = s ("r005", D ``(~p <=> ~q) <=> (p <=> q)``)
+  val _ = s ("r003", T ``(p <=> T) <=> p``)
+  val _ = s ("r004", T ``(p <=> F) <=> ~p``)
+  val _ = s ("r005", T ``(~p <=> ~q) <=> (p <=> q)``)
 
   (*TODO: fix theorem numbers*)
   val _ = s ("r006", P ``(if ~p then x else y) = (if p then y else x)``)
@@ -135,41 +135,41 @@ struct
   val _ = s ("r006e", P
     ``(if p then x = y else z = y) <=> (y = if p then x else z)``)
 
-  val _ = s ("r007", D ``(~p ==> q) <=> (p \/ q)``)
-  val _ = s ("r008", D ``(~p ==> q) <=> (q \/ p)``)
-  val _ = s ("r009", D ``(p ==> q) <=> (~p \/ q)``)
-  val _ = s ("r010", D ``(p ==> q) <=> (q \/ ~p)``)
-  val _ = s ("r011", D ``(T ==> p) <=> p``)
-  val _ = s ("r012", D ``(p ==> T) <=> T``)
-  val _ = s ("r013", D ``(F ==> p) <=> T``)
-  val _ = s ("r014", D ``(p ==> p) <=> T``)
-  val _ = s ("r015", D ``((p <=> q) ==> r) <=> (r \/ (q <=> ~p))``)
+  val _ = s ("r007", T ``(~p ==> q) <=> (p \/ q)``)
+  val _ = s ("r008", T ``(~p ==> q) <=> (q \/ p)``)
+  val _ = s ("r009", T ``(p ==> q) <=> (~p \/ q)``)
+  val _ = s ("r010", T ``(p ==> q) <=> (q \/ ~p)``)
+  val _ = s ("r011", T ``(T ==> p) <=> p``)
+  val _ = s ("r012", T ``(p ==> T) <=> T``)
+  val _ = s ("r013", T ``(F ==> p) <=> T``)
+  val _ = s ("r014", T ``(p ==> p) <=> T``)
+  val _ = s ("r015", T ``((p <=> q) ==> r) <=> (r \/ (q <=> ~p))``)
 
-  val _ = s ("r016", D ``~T <=> F``)
-  val _ = s ("r017", D ``~F <=> T``)
-  val _ = s ("r018", D ``~~p <=> p``)
+  val _ = s ("r016", T ``~T <=> F``)
+  val _ = s ("r017", T ``~F <=> T``)
+  val _ = s ("r018", T ``~~p <=> p``)
 
-  val _ = s ("r019", D ``p \/ q <=> q \/ p``)
-  val _ = s ("r020", D ``p \/ T <=> T``)
-  val _ = s ("r021", D ``p \/ ~p <=> T``)
-  val _ = s ("r022", D ``~p \/ p <=> T``)
-  val _ = s ("r023", D ``T \/ p <=> T``)
-  val _ = s ("r024", D ``p \/ F <=> p``)
-  val _ = s ("r025", D ``F \/ p <=> p``)
+  val _ = s ("r019", T ``p \/ q <=> q \/ p``)
+  val _ = s ("r020", T ``p \/ T <=> T``)
+  val _ = s ("r021", T ``p \/ ~p <=> T``)
+  val _ = s ("r022", T ``~p \/ p <=> T``)
+  val _ = s ("r023", T ``T \/ p <=> T``)
+  val _ = s ("r024", T ``p \/ F <=> p``)
+  val _ = s ("r025", T ``F \/ p <=> p``)
 
-  val _ = s ("r026", D ``p /\ q <=> q /\ p``)
-  val _ = s ("r027", D ``p /\ T <=> p``)
-  val _ = s ("r028", D ``T /\ p <=> p``)
-  val _ = s ("r029", D ``p /\ F <=> F``)
-  val _ = s ("r030", D ``F /\ p <=> F``)
-  val _ = s ("r031", D ``p /\ q <=> ~(~p \/ ~q)``)
-  val _ = s ("r032", D ``~p /\ q <=> ~(p \/ ~q)``)
-  val _ = s ("r033", D ``p /\ ~q <=> ~(~p \/ q)``)
-  val _ = s ("r034", D ``~p /\ ~q <=> ~(p \/ q)``)
-  val _ = s ("r035", D ``p /\ q <=> ~(~q \/ ~p)``)
-  val _ = s ("r036", D ``~p /\ q <=> ~(~q \/ p)``)
-  val _ = s ("r037", D ``p /\ ~q <=> ~(q \/ ~p)``)
-  val _ = s ("r038", D ``~p /\ ~q <=> ~(q \/ p)``)
+  val _ = s ("r026", T ``p /\ q <=> q /\ p``)
+  val _ = s ("r027", T ``p /\ T <=> p``)
+  val _ = s ("r028", T ``T /\ p <=> p``)
+  val _ = s ("r029", T ``p /\ F <=> F``)
+  val _ = s ("r030", T ``F /\ p <=> F``)
+  val _ = s ("r031", T ``p /\ q <=> ~(~p \/ ~q)``)
+  val _ = s ("r032", T ``~p /\ q <=> ~(p \/ ~q)``)
+  val _ = s ("r033", T ``p /\ ~q <=> ~(~p \/ q)``)
+  val _ = s ("r034", T ``~p /\ ~q <=> ~(p \/ q)``)
+  val _ = s ("r035", T ``p /\ q <=> ~(~q \/ ~p)``)
+  val _ = s ("r036", T ``~p /\ q <=> ~(~q \/ p)``)
+  val _ = s ("r037", T ``p /\ ~q <=> ~(q \/ ~p)``)
+  val _ = s ("r038", T ``~p /\ ~q <=> ~(q \/ p)``)
 
   val _ = s ("r039", S ``ALL_DISTINCT [x; x] <=> F``)
   val _ = s ("r040", S ``ALL_DISTINCT [x; y] <=> x <> y``)
@@ -448,7 +448,7 @@ struct
         Tactical.THEN (Tactic.EXISTS_TAC ``0 :num``,
           Tactical.THEN (RW [wordsTheory.DIMINDEX_GT_0,
               wordsTheory.word_1comp_def],
-            bossLib.DECIDE_TAC)))
+            tautLib.TAUT_TAC)))
     end))
   val _ = s ("t013", W ``(x = y) ==> x ' i ==> y ' i``)
   val _ = s ("t014", S ``(1w = ~(x :word1)) \/ x ' 0``)
