@@ -1528,8 +1528,7 @@ val crecCn_fails = store_thm(
   markerLib.UNABBREV_ALL_TAC THEN BETA_TAC THEN
   SIMP_TAC (bsrw_ss()) [cchurch_behaviour] THEN
   Induct_on `gs` THEN
-  SIMP_TAC (bsrw_ss()) [wh_cvcons, cchurch_behaviour,
-                        cnumdB_behaviour, cdAPP_behaviour] THEN
+  SIMP_TAC (bsrw_ss()) [wh_cvcons, cchurch_behaviour] THEN
   MAP_EVERY Q.X_GEN_TAC [`h`, `i`, `f`, `k`, `x`] THEN
   Cases_on `i = h` THEN1 SRW_TAC [][PhiNONE_cbnf_ofk] THEN
   SRW_TAC [][] THEN
@@ -1578,10 +1577,10 @@ val crecCn_succeeds1 = store_thm(
   markerLib.UNABBREV_ALL_TAC THEN BETA_TAC THEN Induct_on `gs` THEN1
     SIMP_TAC (bsrw_ss()) [cnil_def, cnlist_of_behaviour, cchurch_behaviour] THEN
   SRW_TAC [][] THEN
-  SIMP_TAC (bsrw_ss()) [wh_cvcons, cnumdB_behaviour, cdAPP_behaviour] THEN
+  SIMP_TAC (bsrw_ss()) [wh_cvcons] THEN
   `∃j. Phi h x = SOME j` by METIS_TAC [] THEN
   IMP_RES_TAC PhiSOME_cbnf_ofk THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, wh_ccons, wh_cvcons] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [wh_ccons, wh_cvcons] THEN
   `∀i. MEM i gs ⇒ ∃j. Phi i x = SOME j` by METIS_TAC [] THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`f`, `x`, `ks ++ [force_num (toTerm v)]`]
                               MP_TAC) THEN
@@ -1625,6 +1624,62 @@ val cncons_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cncons_equiv, cnpair_behaviour, ncons_def,
                         csuc_behaviour, ADD1]);
 
+(* emulating primitive recursion.
+
+   crecPr b s [] = b []
+   crecPr b s (n::t) =
+     "build a stack of pending evaluations, using cbnf_ofk giving us
+      continuations off every evaluation saying what to do next.
+      First call is to
+        b t k
+      and k is to do the appropriate number of s-steps.  Say, n is 3, then
+      it will be
+        b t (\n. s 0 n t (\n. s 1 n t (\n. s 2 n t I)))
+      Each s-form is actually
+
+         \n. s <number> n t k
+
+      Constructing this recursively is a bit of a pain
+
+        f 0 k = b t k
+        f (SUC num) k = f num (s-form num t k)
+
+      Check:
+        f 1 I = f 0 (s-form 0 t I)
+              = b t (\n. s 0 n t I)
+
+        f 2 I = f 1 (s-form 1 t I)
+              = f 0 (s-form 0 t (s-form 1 t I))
+              = b t (s-form 0 t (\n. s 1 n t I))
+              = b t (\n. s 0 n t (\n. s 1 n t I))
+
+      So:
+
+        f 0 = zero-case = \k. b t k (or just b t)
+        f (SUC n) =
+            suc-case = \n r k. r (s-form n t k)
+
+
+*)
+
+val PrSstep_def = Define`
+  PrSstep =
+  LAM "sdb" (LAM "t" (LAM "number" (LAM "k" (LAM "n" (
+    cbnf_ofk @@ (B @@ VAR "k" @@ cforce_num)
+             @@ (cdAPP
+                   @@ VAR "sdb"
+                   @@ (cchurch
+                         @@ (cncons
+                               @@ VAR "number"
+                               @@ (cncons @@ VAR "n" @@ VAR "t")))))))))
+`;
+
+val PrSstep_eval = brackabs.brackabs_equiv [] PrSstep_def
+val FV_PrSstep = Store_thm(
+  "FV_PrSstep",
+  ``FV PrSstep = {}``,
+  SRW_TAC [][PrSstep_def, pred_setTheory.EXTENSION]);
+
 val crecPr_def = Define`
   crecPr =
   LAM "b" (LAM "s" (LAM "ns" (
@@ -1637,19 +1692,13 @@ val crecPr_def = Define`
                            @@ (B @@ VAR "k" @@ cforce_num)
                            @@ (cdAPP @@ (cnumdB @@ VAR "b")
                                      @@ (cchurch @@ (cntl @@ VAR "ns")))))
-                   @@ (LAM "n" (LAM "r" (LAM "k1" (
-                        VAR "r" @@ (LAM "k2" (
-                         cbnf_ofk
-                           @@ (B @@ VAR "k1" @@ cforce_num)
-                           @@ (cdAPP
-                                 @@ (cnumdB @@ VAR "s")
-                                 @@ (cchurch
-                                       @@ (cncons
-                                             @@ VAR "n"
-                                             @@ (cncons
-                                                   @@ VAR "k2"
-                                                   @@ (cntl
-                                                         @@ VAR "ns")))))))))))
+                   @@ (LAM "n" (LAM "r" (LAM "k" (
+                        VAR "r" @@
+                            (PrSstep
+                               @@ (cnumdB @@ VAR "s")
+                               @@ (cntl @@ VAR "ns")
+                               @@ VAR "n"
+                               @@ VAR "k")))))
                    @@ (cnhd @@ VAR "ns")
                    @@ I))))
 `;
@@ -1665,68 +1714,99 @@ val crecPr_nil = store_thm(
   ``crecPr @@ b @@ s @@ church 0 ==
     cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ b)
                                      @@ cDB (fromTerm (church 0)))``,
-  SIMP_TAC(bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
-                       cchurch_behaviour]);
+  SIMP_TAC(bsrw_ss()) [crecPr_equiv, cchurch_behaviour]);
 
-(* val crecPr_cons0 = store_thm(
-  "crecPr_cons0",
-  ``crecPr @@ b @@ s @@ church (nlist_of (0::t)) ==
-    cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ b)
-                                     @@ cDB (fromTerm (church (nlist_of t))))``,
-  SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
-                        cnhd_behaviour, cntl_behaviour, natrec_behaviour,
-                        cchurch_behaviour] THEN
-  Q_TAC SUFF_TAC `B @@ I @@ cforce_num == cforce_num` THEN1
-    SIMP_TAC (bsrw_ss()) [] THEN
+val BIforcenum = bstore_thm(
+  "BIforcenum",
+  ``B @@ I @@ cforce_num == cforce_num``,
   SIMP_TAC (bsrw_ss()) [chap2Theory.B_def, cforce_num_def] THEN
   SIMP_TAC (bsrw_ss()) [chap2Theory.S_def] THEN
   Q.MATCH_ABBREV_TAC `T1 == T2` THEN
   Q_TAC SUFF_TAC `T1 = T2` THEN1 SRW_TAC [][] THEN
   SRW_TAC [][termTheory.LAM_eq_thm, Abbr`T1`, Abbr`T2`, termTheory.tpm_fresh]);
 
+val crecPr_cons0 = store_thm(
+  "crecPr_cons0",
+  ``crecPr @@ b @@ s @@ church (nlist_of (0::t)) ==
+    cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ b)
+                                     @@ cDB (fromTerm (church (nlist_of t))))``,
+  SIMP_TAC (bsrw_ss()) [crecPr_equiv,
+                        cnhd_behaviour, cntl_behaviour, natrec_behaviour,
+                        cchurch_behaviour]);
+
+open lcsymtacs
 val crecPr_consSUC = store_thm(
   "crecPr_consSUC",
-  ``bnf_of (crecPr @@ b @@ s @@ church (nlist_of (SUC n::t))) =
-      case bnf_of (crecPr @@ b @@ s @@ church (nlist_of (n::t))) of
+  ``bnf_of (crecPr @@ church b @@ church s @@ church (nlist_of (SUC n::t))) =
+      case bnf_of (crecPr
+                     @@ church b
+                     @@ church s
+                     @@ church (nlist_of (n::t))) of
          NONE -> NONE
-      || SOME tm -> bnf_of (s @@ church n @@ tm @@ church (nlist_of t))``,
+      || SOME tm -> OPTION_MAP church
+                               (Phi s (nlist_of (n :: force_num tm :: t)))``,
   SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
-                        cntl_behaviour, cnhd_behaviour, natrec_behaviour] THEN
+                        cntl_behaviour, cnhd_behaviour] THEN
   Q.HO_MATCH_ABBREV_TAC `
     bnf_of (natrec @@ ZZ @@ SS @@ church n @@ k) =
     case bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I) of
        NONE -> NONE
-    || SOME tm -> bnf_of (tm2 tm)
-  ` THEN
-  Q_TAC SUFF_TAC `
-    bnf_of (natrec @@ ZZ @@ SS @@ church n @@ k) =
-    case bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I) of
-       NONE -> NONE
-    || SOME tm -> bnf_of (k @@ tm)
-  ` THEN1 (DISCH_THEN SUBST1_TAC THEN
-           Cases_on `bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)` THEN1
-             SRW_TAC [][] THEN
-           SRW_TAC [][Abbr`tm2`, Abbr`k`] THEN SIMP_TAC (bsrw_ss()) []) THEN
-  Q.RM_ABBREV_TAC `tm2` THEN Q.RM_ABBREV_TAC `k` THEN Q.ID_SPEC_TAC `k` THEN
-  Induct_on `n` THENL [
-    SIMP_TAC (bsrw_ss()) [Abbr`ZZ`, natrec_behaviour] ...,
-
-    SIMP_TAC (bsrw_ss()) [Abbr`SS`, natrec_behaviour] THEN
-    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
-    Q.X_GEN_TAC `k` THEN
-    Q.MATCH_ABBREV_TAC `
-      option_case NNONE SSOME (bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)) =
-      FOO
-    ` THEN MAP_EVERY Q.UNABBREV_TAC [`NNONE`, `SSOME`, `FOO`] THEN
-    Cases_on `bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)` THEN
-    SRW_TAC [][] THEN
-    SIMP_TAC (bsrw_ss()) []
-
-
-
-
-
-
+    || SOME tm -> result_of tm
+  ` >>
+  `∀M R kk. SS @@ church M @@ R @@ kk ==
+            R @@ (PrSstep
+                    @@ cDB (numdB s)
+                    @@ church (nlist_of t)
+                    @@ church M
+                    @@ kk)`
+    by asm_simp_tac (bsrw_ss()) [Abbr`SS`] >>
+  `∀N k t.
+     (bnf_of (natrec @@ ZZ @@ SS @@ church N @@ k) = SOME t) ⇒
+     ∃m. (bnf_of (natrec @@ ZZ @@ SS @@ church N @@ I) = SOME (church m)) ∧
+         ∀k'. bnf_of (natrec @@ ZZ @@ SS @@ church N @@ k') =
+              bnf_of (k' @@ church m)`
+    by (Induct >-
+          (Q.UNABBREV_TAC `ZZ` THEN
+           ASM_SIMP_TAC (bsrw_ss()) [] THEN
+           Cases_on `Phi b (nlist_of t)` >-
+             asm_simp_tac (srw_ss()) [PhiNONE_cbnf_ofk] >>
+           imp_res_tac PhiSOME_cbnf_ofk >>
+           asm_simp_tac (bsrw_ss()) [bnf_bnf_of]) >>
+        asm_simp_tac (bsrw_ss()) [] >>
+        MAP_EVERY Q.X_GEN_TAC [`kk`, `tt`] >> strip_tac >>
+        FIRST_ASSUM
+          (Q.SPECL_THEN [`PrSstep @@ cDB (numdB s) @@ church (nlist_of t)
+                                  @@ church N @@ kk`, `tt`] MP_TAC) >>
+        disch_then (fn imp => FIRST_ASSUM (fn th => STRIP_ASSUME_TAC
+                                                      (MATCH_MP imp th))) >>
+        asm_simp_tac (bsrw_ss()) [] >>
+        asm_simp_tac (bsrw_ss()) [PrSstep_eval, cncons_behaviour] >>
+        full_simp_tac (bsrw_ss()) [] >>
+        Q.PAT_ASSUM `bnf_of (PrSstep @@ XX @@ YY @@ ZZ @@ UU @@ VV) = SOME WW`
+          MP_TAC >>
+        asm_simp_tac (bsrw_ss()) [PrSstep_eval, cncons_behaviour] >>
+        Cases_on `Phi s (ncons N (ncons m (nlist_of t)))` >-
+          asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >>
+        IMP_RES_TAC PhiSOME_cbnf_ofk >>
+        asm_simp_tac (bsrw_ss()) [bnf_bnf_of]) >>
+  `∀N kk. (bnf_of (natrec @@ ZZ @@ SS @@ church N @@ I) = NONE) ⇒
+          (bnf_of (natrec @@ ZZ @@ SS @@ church N @@ kk) = NONE)`
+     by (SPOSE_NOT_THEN STRIP_ASSUME_TAC >>
+         Cases_on `bnf_of (natrec @@ ZZ @@ SS @@ church N @@ kk)` >-
+           full_simp_tac (srw_ss()) [] >>
+         res_tac >> full_simp_tac (srw_ss()) []) >>
+  Cases_on `bnf_of (natrec @@ ZZ @@ SS @@ church n @@ I)` >-
+    (res_tac >> srw_tac[][]) >>
+  res_tac >> asm_simp_tac (bsrw_ss()) [] >>
+  Q.UNABBREV_TAC `result_of` >>
+  full_simp_tac (srw_ss()) [] >>
+  srw_tac [][] >>
+  simp_tac (bsrw_ss()) [Abbr`k`, PrSstep_eval, cncons_behaviour] >>
+  Cases_on `Phi s (ncons n (ncons m (nlist_of t)))` >-
+    asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >>
+  imp_res_tac PhiSOME_cbnf_ofk >>
+  asm_simp_tac (bsrw_ss()) [bnf_bnf_of]);
+(*
 val recfns_in_Phi = Store_thm(
   "recfns_in_Phi",
   ``∀f n. recfn f n ⇒ ∃i. ∀l. Phi i (nlist_of l) = f l``,
@@ -1742,10 +1822,9 @@ val recfns_in_Phi = Store_thm(
                                  @@ (csuc @@ (cnfst @@ (cminus @@ VAR "ns"
                                                                @@ church 1))))))
     ` THEN SRW_TAC [][Phi_def] THEN
-    SIMP_TAC (bsrw_ss()) [cis_zero_behaviour, cminus_behaviour] THEN
+    SIMP_TAC (bsrw_ss()) [] THEN
     Cases_on `l` THEN
-    SIMP_TAC (bsrw_ss() ++ ARITH_ss) [cB_behaviour, bnf_bnf_of, ncons_def,
-                                      cnfst_behaviour, csuc_behaviour],
+    SIMP_TAC (bsrw_ss() ++ ARITH_ss) [bnf_bnf_of, ncons_def, cnfst_behaviour],
 
     Q.EXISTS_TAC `dBnum (fromTerm (cnel @@ church i))` THEN
     SRW_TAC [][Phi_def] THEN
@@ -1768,14 +1847,13 @@ val recfns_in_Phi = Store_thm(
          by (SRW_TAC [][listTheory.MEM_MAP] THEN METIS_TAC []) THEN
       POP_ASSUM (ASSUME_TAC o MATCH_MP crecCn_succeeds1) THEN
       POP_ASSUM (fn th => SIMP_TAC (srw_ss())[th]) THEN
-      SIMP_TAC (bsrw_ss()) [cnlist_of_behaviour, cchurch_behaviour,
-                            cnumdB_behaviour, cdAPP_behaviour] THEN
+      SIMP_TAC (bsrw_ss()) [cnlist_of_behaviour, cchurch_behaviour] THEN
       SRW_TAC [][MAP_MAP_o, combinTheory.o_DEF, Cong MAP_CONG'] THEN
       Q.ABBREV_TAC `result = MAP (λx. THE (x l)) gs` THEN
       Cases_on `Phi i (nlist_of result)` THENL [
         SRW_TAC [][PhiNONE_cbnf_ofk] THEN METIS_TAC [],
         IMP_RES_TAC PhiSOME_cbnf_ofk THEN
-        ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of, cforce_num_behaviour] THEN
+        ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of] THEN
         METIS_TAC []
       ],
 
@@ -1790,17 +1868,34 @@ val recfns_in_Phi = Store_thm(
     ` THEN
     SRW_TAC [][Phi_def] THEN
     Cases_on `l` THEN1
-      (SIMP_TAC (bsrw_ss()) [recPr_def, crecPr_nil, cdAPP_behaviour,
-                             cnumdB_behaviour] THEN
+      (SIMP_TAC (bsrw_ss()) [recPr_def, crecPr_nil] THEN
        Cases_on `Phi i 0` THEN1
          (SRW_TAC [][PhiNONE_cbnf_ofk] THEN METIS_TAC [nlist_of_def]) THEN
        IMP_RES_TAC PhiSOME_cbnf_ofk THEN
-       ASM_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, bnf_bnf_of] THEN
+       ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of] THEN
        METIS_TAC [nlist_of_def]) THEN
-    SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
-                          cnhd_behaviour, cntl_behaviour, cchurch_behaviour,
-                          cnumdB_behaviour, cdAPP_behaviour] THEN
+    Induct_on `h` >-
+      (SIMP_TAC (bsrw_ss()) [recPr_def, SIMP_RULE (srw_ss()) [] crecPr_cons0] >>
+       Cases_on `Phi i (nlist_of t)` >-
+         (asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >> metis_tac []) >>
+       imp_res_tac PhiSOME_cbnf_ofk >>
+       asm_simp_tac (bsrw_ss()) [bnf_bnf_of] >> metis_tac []) >>
+    simp_tac (bsrw_ss()) [Once recPr_def,
+                          SIMP_RULE (srw_ss()) [] crecPr_consSUC] >>
+    full_simp_tac (srw_ss()) [] >>
+    Cases_on `bnf_of (crecPr @@ church i @@ church i'
+                             @@ church (ncons h (nlist_of t)))`
+    >- (full_simp_tac (srw_ss()) [] >>
+        Q.PAT_ASSUM `NONE = FOO` (MP_TAC o SYM) >>
+        simp_tac (srw_ss()) []) >>
+    full_simp_tac (srw_ss()) [] >>
+    Q.PAT_ASSUM `SOME (force_num XX) = YY` (MP_TAC o SYM) >>
+    simp_tac (srw_ss()) [optionTheory.OPTION_MAP_COMPOSE] >>
+    Q_TAC SUFF_TAC `∀nopt:num option. OPTION_MAP I nopt = nopt`
+    >- (srw_tac [][] >> metis_tac [nlist_of_def]) >>
+    Cases_on `nopt` >> srw_tac [][],
 
+    the horror of minimise_def awaits...
 
 
 *)val _ = export_theory()

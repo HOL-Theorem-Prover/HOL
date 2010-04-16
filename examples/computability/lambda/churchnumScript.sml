@@ -11,7 +11,6 @@ open reductionEval
 open stepsTheory
 
 fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
-fun bstore_thm(n,t,tac) = store_thm(n,t,tac) before export_betarwt n
 
 val _ = new_theory "churchnum"
 

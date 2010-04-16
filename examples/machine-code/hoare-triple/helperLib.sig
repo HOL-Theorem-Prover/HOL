@@ -67,6 +67,7 @@ sig
     val PRE_CONV               : conv -> conv
     val FORCE_PBETA_CONV       : conv
     val EVAL_ANY_MATCH_CONV    : term list -> conv
+    val SEP_EXISTS_AC_CONV     : conv
 
     val tm2ftree               : term -> ftree_type
     val ftree2tm               : ftree_type -> term
@@ -85,6 +86,8 @@ sig
     val SEP_EXISTS_POST_RULE   : term -> thm -> thm
     val SEP_EXISTS_PRE_RULE    : term -> thm -> thm
     val SEP_REWRITE_RULE       : thm list -> thm -> thm
+    val BASIC_SEP_REWRITE_RULE : thm -> thm -> thm
+    val EXISTS_SEP_REWRITE_RULE : thm -> thm -> thm
 
     val SPEC_STRENGTHEN_RULE   : thm -> term -> thm * term
     val SPEC_WEAKEN_RULE       : thm -> term -> thm * term

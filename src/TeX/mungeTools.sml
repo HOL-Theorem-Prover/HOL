@@ -4,9 +4,11 @@ struct
 open Lib Feedback HolKernel Parse boolLib
 
 datatype command = Theorem | Term | Type
-datatype opt = Turnstile | Case | TT | Def | TypeOf | TermThm | Indent | NoSpec
+datatype opt = Turnstile | Case | TT | Def | TypeOf | TermThm
+             | Indent of int | NoSpec
              | Inst of string * string
              | NoTurnstile | Width of int
+             | AllTT | ShowTypes
 
 val numErrors = ref 0
 type posn = int * int
@@ -27,15 +29,27 @@ fun stringOpt pos s =
     "|-" => SOME Turnstile
   | "case" => SOME Case
   | "tt" => SOME TT
+  | "alltt" => SOME AllTT
   | "def" => SOME Def
   | "of" => SOME TypeOf
   | "K" => SOME TermThm
-  | ">>" => SOME Indent
   | "nosp" => SOME NoSpec
   | "nostile" => SOME NoTurnstile
+  | "showtypes" => SOME ShowTypes
   | _ => let
     in
-      if String.isPrefix "width=" s then let
+      if String.isPrefix ">>" s then let
+          val numpart_s = String.extract(s,2,NONE)
+        in
+          if numpart_s = "" then SOME (Indent 2)
+          else
+            case Int.fromString numpart_s of
+              NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+            | SOME i => if i < 0 then
+                          (warn(pos, "Negative indents illegal"); NONE)
+                        else SOME (Indent i)
+        end
+      else if String.isPrefix "width=" s then let
           val numpart_s = String.extract(s,6,NONE)
         in
           case Int.fromString numpart_s of
@@ -120,6 +134,16 @@ end
 type optionset = OptSet.set
 
 fun optset_width s = get_first (fn Width i => SOME i | _ => NONE) s
+fun spaces 0 = ""
+  | spaces 1 = " "
+  | spaces 2 = "  "
+  | spaces 3 = "   "
+  | spaces 4 = "    "
+  | spaces n = CharVector.tabulate(n, (fn _ => #" "))
+fun optset_indent s =
+    case get_first (fn Indent i => SOME i | _ => NONE) s of
+      NONE => ""
+    | SOME i => spaces i
 
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)
@@ -128,7 +152,6 @@ val user_overrides = ref (Binarymap.mkDict String.compare)
 fun overrides s = Binarymap.peek (!user_overrides, s)
 
 fun isChar x y = x = y
-val indent = "  "
 
 fun mkinst loc opts tm = let
   val insts = List.mapPartial (fn Inst(s1,s2) => SOME (s1,s2) | _ => NONE)
@@ -145,7 +168,7 @@ fun mkinst loc opts tm = let
   in
     (mk_var(nm2,ty) |-> mk_var(nm1,ty)) :: acc
   end handle Binarymap.NotFound =>
-             (warn (loc, "Variable "^nm1^" does not appear in HOL object");
+             (warn (loc, "Variable "^nm2^" does not appear in HOL object");
               acc)
 in
   foldr foldthis [] insts
@@ -196,8 +219,10 @@ in
   fun replacement pps (argument:arg as {commpos = pos, argument = spec,...}) =
   let
     val {argpos = (argline, argcpos), command, options = opts, ...} = argument
-    val tt = OptSet.has TT opts
-    val () = if tt then add_string pps "\\mbox{\\textup{\\texttt{" else ()
+    val alltt = OptSet.has AllTT opts orelse
+                (command = Theorem andalso not (OptSet.has TT opts))
+    val () = if not alltt then  add_string pps "\\mbox{\\textup{\\texttt{"
+             else ()
     val parse_start = " (*#loc "^ Int.toString argline ^ " " ^
                       Int.toString argcpos ^"*)"
     val QQ = QUOTE
@@ -205,15 +230,22 @@ in
       case command of
         Theorem => let
           val thm = do_thminsts pos opts (getThm spec)
+          val _ = add_string pps (optset_indent opts)
         in
           if OptSet.has Def opts then let
               val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
+              val printfn = let
+                val base = raw_pp_term_as_tex overrides
+              in
+                if OptSet.has ShowTypes opts then
+                  (fn pps => trace ("types", 1) (base pps))
+                else (fn pps => trace ("types", 0) (base pps))
+              end
             in
-              add_string pps indent;
               begin_block pps CONSISTENT 0;
               block_list pps
                          (fn pps => begin_block pps INCONSISTENT 0)
-                         (raw_pp_term_as_tex overrides)
+                         printfn
                          add_newline
                          end_block
                          lines;
@@ -225,6 +257,9 @@ in
                   if OptSet.has NoTurnstile opts then
                     trace ("EmitTeX: print thm turnstiles", 0) base
                   else base
+              val printer =
+                  if OptSet.has ShowTypes opts then trace ("types", 1) printer
+                  else trace ("types", 0) printer
             in
               printer (if OptSet.has NoSpec opts then thm else SPEC_ALL thm)
             end
@@ -243,22 +278,29 @@ in
                         end
                      else Parse.Term [QQ parse_start, QQ spec]
                             |> do_tminsts pos opts
+          val () = add_string pps (optset_indent opts)
           val () = if OptSet.has Turnstile opts
                       then let in
                         add_stringsz pps ("\\"^HOL^"TokenTurnstile", 2);
                         add_string pps " "
                       end
                    else ()
-          val () = if OptSet.has Indent opts
-                      then add_string pps indent
-                   else ()
-        in raw_pp_term_as_tex overrides pps term end
+          val baseprint = raw_pp_term_as_tex overrides pps
+          val printer = if OptSet.has ShowTypes opts then
+                          trace ("types", 1) baseprint
+                        else trace ("types", 0) baseprint
+        in
+           printer term
+        end
       | Type => let
           val typ = if OptSet.has TypeOf opts
                        then Term.type_of (Parse.Term [QQ parse_start, QQ spec])
                     else Parse.Type [QQ parse_start, QQ spec]
-        in raw_pp_type_as_tex overrides pps typ end
-    val () = if tt then add_string pps "}}}" else ()
+        in
+          add_string pps (optset_indent opts);
+          raw_pp_type_as_tex overrides pps typ
+        end
+    val () = if not alltt then add_string pps "}}}" else ()
   in () end handle
       BadSpec => warn (pos, spec ^ " does not specify a theorem")
     | HOL_ERR e => warn (pos, !Feedback.ERR_to_string e)

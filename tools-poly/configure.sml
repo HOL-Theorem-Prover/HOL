@@ -201,6 +201,19 @@ in
                                    quote "-lpolymain" ::
                                    quote "-lpolyml" ::
                                    map quote machine_flags)) ^ "]\n"),
+   "val POLY_LDFLAGS_STATIC =" --> ("val POLY_LDFLAGS_STATIC = ["^
+                             (String.concatWith
+                                  ", "
+                                  (quote ("-L"^polymllibdir)::
+                                   quote "-lpolymain" ::
+                                   quote "-lpolyml" ::
+                                   quote "-static" ::
+                                   quote "-lpolyml" ::
+                                   quote "-lstdc++" ::
+                                   quote "-lm" ::
+                                   quote "-ldl" ::
+                                   quote "-lpthread" ::
+                                   map quote machine_flags)) ^ "]\n"),
    "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),

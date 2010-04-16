@@ -496,7 +496,7 @@ val execute_code_and_return = let
     cond (ALIGNED esp /\ iEXEC (xs,l,0,ns) t)``
   val lemma = prove(goal,
     SIMP_TAC (std_ss++sep_cond_ss) [xCODE_IN_MEM_def,SEP_CLAUSES]
-    \\ SIMP_TAC std_ss [AC CONJ_ASSOC CONJ_COMM,SEP_IMP_REFL,CODE_IN_MEM_SIMP])
+    \\ SIMP_TAC (std_ss++star_ss) [AC CONJ_ASSOC CONJ_COMM,SEP_IMP_REFL,CODE_IN_MEM_SIMP])
   val th3 = MP th3 lemma
   in th3 end;
 

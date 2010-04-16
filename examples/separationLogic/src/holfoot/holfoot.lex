@@ -87,6 +87,7 @@ ident = {letter} {alphanum}*;
 qident = ("_" | "#") {ident};
 num = [0-9]+;
 hol_quote = "``" [^ `\``]* "``";
+hol_full_quote = "h``" [^ `\``]* "``";
 quoted_string = "\"" [^ `\"`]* "\"";
 
 
@@ -152,6 +153,8 @@ quoted_string = "\"" [^ `\"`]* "\"";
   ( XOR (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>{hol_quote} =>
   ( HOL_TERM (mkTok (fn s => (substring (s, 2, (String.size s)-4))) yytext yypos (!yylineno)) );
+<INITIAL>{hol_full_quote} =>
+  ( HOL_FULL_TERM (mkTok (fn s => (substring (s, 3, (String.size s)-5))) yytext yypos (!yylineno)) );
 <INITIAL>{num} =>
   ( NAT (mkTok (fn s => (valOf(Int.fromString s))) yytext yypos (!yylineno)) );
 <INITIAL>{ident} =>

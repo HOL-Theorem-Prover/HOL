@@ -11,9 +11,9 @@ holfoot.state: ../holfootLib.uo ../holfootLib.ui ../holfootTheory.ui ../Assemble
 	hol < build-state.hol
 
 holfoot: holfoot.o 
-	cc -O4 -o holfoot holfoot.o -static -L/usr/local/lib -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread
+	cc -o $@ $< $(POLY_LDFLAGS_STATIC)
 
 holfoot-web: holfoot-web.o
-	cc -O4 -o holfoot-web holfoot-web.o -static -L/usr/local/lib -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread
+	cc -o $@ $< $(POLY_LDFLAGS_STATIC)
 
 force-tools: holfoot holfoot-web

@@ -673,6 +673,7 @@ in
       | "MOSMLC" => [VREF "MOSMLCOMP", LIT (" "^addincludes)]
       | "POLYMLLIBDIR" => [LIT POLYMLLIBDIR]
       | "POLY_LDFLAGS" => [LIT (spacify (map Systeml.protect POLY_LDFLAGS))]
+      | "POLY_LDFLAGS_STATIC" => [LIT (spacify (map Systeml.protect POLY_LDFLAGS_STATIC))]
       | _ => hmakefile_env0 s)
 end
 

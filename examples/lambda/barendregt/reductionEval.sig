@@ -8,5 +8,6 @@ sig
   val unvarify_tac : thm -> Tactic.tactic
   val NORMSTAR_ss : simpLib.ssfrag
   val export_betarwt : string -> unit
+  val bstore_thm : string * term * tactic -> thm
 
 end

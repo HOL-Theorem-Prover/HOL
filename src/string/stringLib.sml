@@ -42,7 +42,7 @@ val char_EQ_CONV =
 
 val string_EQ_CONV =
  let open computeLib reduceLib boolTheory
-     val compset = listLib.list_compset ()
+     val compset = listSimps.list_compset ()
      val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
      val _ = add_thms char_eq_thms compset
      val conv = CBV_CONV compset

@@ -17,6 +17,7 @@ sig
   val POLYMLLIBDIR : string
   val POLY : string
   val POLY_LDFLAGS : string list
+  val POLY_LDFLAGS_STATIC : string list
   val CC : string
   val OS : string
   val DEPDIR : string

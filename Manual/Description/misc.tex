@@ -306,7 +306,7 @@ with the following command-line options:
 \item[\texttt{--no\_overlay}] Do not use an overlay file.  All HOL
   builds require the presence of a special overlay file from the
   kernel when compiling scripts and libraries.  This is not
-  apppropriate for compiling code that has no connection to HOL, so
+  appropriate for compiling code that has no connection to HOL, so
   this option makes the compilation not use the overlay file.  This
   option is also used in building the kernel before the overlay itself
   has been compiled.
@@ -427,7 +427,7 @@ files that each target (the files before the colon) is said to
 are no dependencies, then the commands are executed iff the
 target doesn't exist.  If there are no commands, and the target is not
 of a type that \holmake{} already knows how to build, then it will
-just make sure that the the dependencies are up to date (this may or
+just make sure that the dependencies are up to date (this may or
 may not create the target).  If there are no commands attached to a
 rule, and the target is one that \holmake{} does know how to build,
 then the rule's extra dependencies are added to those that \holmake{}
@@ -451,7 +451,7 @@ followed by newlines are turned into spaces. Otherwise, command text
 is passed as is to the underlying command interpreter
 (\texttt{/bin/sh} say, on Unix, or \texttt{COMMAND.COM} on Windows).
 In particular, this means that hash-characters do \emph{not} start
-coments on command-lines, and such ``comments'' will be passed to the
+comments on command-lines, and such ``comments'' will be passed to the
 shell, which may or may not treat them as comments when it sees them.
 
 \paragraph{Functions}
@@ -710,8 +710,12 @@ Done manually, this will typically require involved use of the \texttt{alltt} en
 %
 The result is that one must also keep two copies of \HOL{} texts synchronised: if the \HOL{} development changes, the \LaTeX{} document should change as well.
 
-\newcommand{\munge}{\texttt{munge}}
+\newcommand{\munge}{\texttt{munge.exe}}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})}
+%
 This manual, and error-prone process is not necessary: the standard \HOL{} distribution comes with a tool called \munge{} to automate the process, and to remove the duplicate copies of \HOL{} text.
+%
+(Strictly speaking, the distribution comes with a tool that itself creates \munge{}; see Section~\ref{sec:munger-creation} below.)
 %
 The basic philosophy is that a \LaTeX{} document can be written ``as normal'', but that three new \LaTeX{}-like commands are available to the author.
 
@@ -723,14 +727,16 @@ This document contains instances of the new commands, and cannot be processed as
 %
 Instead one first runs
 \begin{alltt}
-   munge < article.htex > article.tex
+   \munge < article.htex > article.tex
 \end{alltt}
 and then runs \LaTeX{} on \texttt{article.tex}.
 %
 One would probably automate this process with a makefile of course.
 
 \subsection{Munging Commands}
-% need to get backslashes conveniently obscures the real names, preventing the munger from seeing them
+% need to get backslashes conveniently obscures the real names,
+% preventing the munger from seeing them, which will be useful when we
+% run the munger over this document!
 \newcommand{\holtm}{\texttt{\bs{}HOLtm}}
 \newcommand{\holty}{\texttt{\bs{}HOLty}}
 \newcommand{\holthm}{\texttt{\bs{}HOLthm}}
@@ -747,7 +753,7 @@ For example, one can write
 and one will get \[
   \texttt{$P$ (SUC $n$) $\land$ $q$}
 \]
-or something very close to it, appearing in the resulting document.\footnote{The output is a mixture of typewriter font and   math-mode characters embedded in a \texttt{\bs{}texttt} block.}
+or something very close to it, appearing in the resulting document.\footnote{The output is a mixture of typewriter font and math-mode characters embedded in a \texttt{\bs{}texttt} block within an \texttt{\bs{}mbox}.}
 %
 Note how the spacing in the input (nothing between the \texttt{P} and the \texttt{SUC n}) is \emph{not} reflected in the output; this is because the input is parsed and pretty-printed with \HOL{}.
 %
@@ -757,6 +763,241 @@ Note also how the system knows that \texttt{P}, \texttt{n} and \texttt{q} are va
 %
 This analysis would not be possible without having \HOL{} actually parse and print the term itself.
 
+The default behaviours of each command are as follows:
+\begin{description}
+\item[\holty\{\textit{\mdseries{string}}\}]
+%
+\index{HOLty (munging command)@\holty{} (munging command)}
+%
+Parses the string argument as a type (the input must include the leading colon), and prints it.
+%
+The output is suited for inclusion in the normal flow of \LaTeX{} (it is an \texttt{\bs{}mbox}).
+\item[\holtm\{\textit{\mdseries{string}}\}]
+%
+\index{HOLtm (munging command)@\holtm{} (munging command)}
+%
+Parses the string argument as a term, and prints it.
+%
+Again, the output is wrapped in an \texttt{\bs{}mbox}.
+\item[\holthm\{\textit{\mdseries{thmspecifier}}\}]
+%
+\index{HOLthm (munging command)@\holthm{} (munging command)}
+%
+The argument should be of the form $\langle\mbox{\textit{theory}}\rangle\texttt{.}\langle{\mbox{\textit{theorem-name}}}\rangle$.
+%
+For example, \verb|\HOLthm{bool.AND_CLAUSES}|.
+%
+This prints the specified theorem with a leading turnstile.
+%
+By default, the output is \emph{not} wrapped in an \texttt{\bs{}mbox}, making it best suited for inclusion in an environment such as \texttt{alltt}.
+%
+(The important characteristics of the \texttt{alltt} environment are that it respects layout in terms of newlines, while also allowing the insertion of \LaTeX{} commands.  The \texttt{verbatim} environment does the former, but not the latter.)
+\end{description}
+
+\paragraph{Munging Command Options}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!command options}
+There are a great many options for controlling the behaviour of each of these commands.
+%
+Some apply to all three commands, others are specific to a subset.
+%
+\newcommand{\indentoption}{\gt\gt}
+If multiple options are desired, they should be separated by commas. For example: \texttt{\holthm{}[nosp,p/t,\indentoption]\{bool.AND\_CLAUSES\}}.
+
+\begin{description}
+\item[\texttt{alltt}] Makes the argument suitable for inclusion in an \texttt{alltt} environment.
+%
+This is the default for \holthm.
+\item[\texttt{case}] (Only for use with \holtm.)
+%
+Causes the string to be parsed in such a way that any embedded \texttt{case} terms are only partly parsed, allowing their input form to appear when they are output.
+%
+This preserves underscore-patterns, for example.
+\item[\texttt{def}] (Only for use with \holthm.)
+%
+Causes the theorem to be split into its constituent conjuncts, for each conjunct to have any outermost universal quantifiers removed, and for each to be printed on a line of its own.
+%
+The turnstiles usually printed in front of theorems are also omitted.
+%
+This works well with definitions (or characterising theorems) over multiple data type constructors, changing
+\begin{alltt}
+\(\vdash\) (FACT 0 = 1) \(\land\) (\(\forall\)\ensuremath{n}. FACT (SUC \ensuremath{n}) = SUC \ensuremath{n} * FACT \ensuremath{n})
+\end{alltt}
+into
+\begin{alltt}
+   FACT 0 = 1
+   FACT (SUC \ensuremath{n}) = SUC \ensuremath{n} * FACT \ensuremath{n}
+\end{alltt}
+
+\item[\texttt{K}] (Only for use with \holtm.)
+%
+The argument must be the name of a theorem (as per the \holthm{} command), and the theorem should be of the form
+\[
+\vdash f\;x\;t
+\]
+for some term $t$.
+%
+The command prints the term $t$.
+%
+\index{combinators, in HOL logic@combinators, in \HOL{} logic}
+\index{K, the HOL constant@\ml{K}, the \HOL{} constant}
+The expectation is that $f$ will be the combinator \holtxt{K} from \theoryimp{combin} (see Section~\ref{sec:combinTheory}), and that $x$ will be truth~(\holtxt{T}), allowing $t$ to be anything at all.
+%
+In this way, large complicated terms that are not themselves theorems (or even of boolean type), can be stored in \HOL{} theories, and then printed in \LaTeX{} documents.
+
+\item[\texttt{nosp}] (Only for use with \holthm.)
+%
+By default, arguments to \holthm{} are fully specialised (\ie, they have \ml{SPEC\_ALL} applied to them), removing outermost universal quantifiers.
+%
+The \texttt{nosp} option prevents this.
+
+\item[\texttt{nostile}] (Only for use with \holthm.)
+%
+By default, arguments to \holthm{} are printed with a turnstile~($\vdash$).
+%
+If this option is present, the turnstile is not printed (and the theorem will have its left margin three spaces further left).
+
+\item[\texttt{of}] (Only for use with \holty.)
+%
+The argument is a string that parses to a \emph{term}, not a type.
+%
+The behaviour is to print the type of this term.
+%
+Thus \texttt{\holty{}[of]\{p /\bs{} q\}} will print \texttt{bool}.
+
+\item[\texttt{showtypes}] (For use with \holthm{} and \holtm.)
+%
+Causes the term or theorem to be printed with the \texttt{types} trace set to level~1 (equivalent to having the \ml{show\_types} reference set to \ml{true}).
+
+\item[\texttt{tt}] %
+Causes the term to be type-set inside an \texttt{\bs{}mbox}, that is in turn wrapped around a \texttt{\bs{}texttt} environment, that is in turn wrapped around a \texttt{\bs{}textup} environment.
+%
+This makes the argument suitable for inclusion in standard \LaTeX{} positions.  This is the default for \holtm{} and \holty.
+
+\item[\texttt{width=}$n$] Causes the argument to be typeset in lines of width $n$.
+%
+The default width is $63$, which seems to work well with 11pt fonts.
+%
+This default can also be changed at the time the \munge{} command is
+run (see Section~\ref{sec:running-munger} below).
+
+\item[\texttt{\indentoption}] Indents the argument.
+%
+  This option only makes sense when used with the \texttt{alltt} option (the additional spaces will have no effect when inside an \texttt{\bs{}mbox}).
+%
+  The default indentation is two spaces; if a different indentation is desired, the option can be followed by digits specifying the number of space characters desired.
+%
+  For example, \texttt{\holthm{}[\indentoption10,...]\{...\}} will indent by 10 spaces.
+
+  Note that simply placing a command such as \holthm{} within its \texttt{alltt} block with a given indentation, for example
+\begin{alltt}
+   \bs{}begin\{alltt\}
+      \holthm\{bool.AND_CLAUSES\}
+   \bs{}end\{alltt\}
+\end{alltt}
+will not do the right thing if the output spans multiple lines.
+%
+Rather the first line of \HOL{} output will be indented, and the subsequent lines will not.
+%
+The \texttt{\indentoption} option lets the pretty-printer know that it is printing with a given indentation, affecting all lines of its output.
+\end{description}
+
+
+\subsection{Creating a Munger}
+\label{sec:munger-creation}
+
+\newcommand{\mkmunge}{\texttt{mkmunge.exe}}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!creating a munger}
+%
+The \HOL{} distribution comes with a tool called \mkmunge.
+%
+This executable is used to create munge executables that behave as described in this section.
+%
+A typical invocation of \mkmunge{} is
+\begin{alltt}
+   \mkmunge \(\langle\mathit{thy}\sb{1}\rangle\)Theory ... \(\langle\mathit{thy}\sb{n}\rangle\)Theory
+\end{alltt}
+Each commandline argument to \mkmunge{} is the name of a \HOL{} object file, so in addition to theory files, one can also include special purpose SML such as \texttt{monadsyntax}.
+
+The \mkmunge{} program can also take an optional \texttt{-o} argument that is used to specify the name of the output munger (the default is \munge).  For example
+\begin{alltt}
+   \mkmunge -o bagtexprocess bagTheory
+\end{alltt}
+
+The theories specified as arguments to \mkmunge{} determine what theorems are in scope for calls to \holthm, and also determine the grammars that will govern the parsing and printing of the \HOL{} types, terms and theorems.
+
+
+\subsection{Running a Munger}
+\label{sec:running-munger}
+
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!running a munger}
+Once created, a munger is run as a filter command, consuming its
+standard input, and writing to standard output.
+%
+It may also write error messages and warnings to its standard error.
+
+Thus, a standard pattern of use is something like
+\begin{alltt}
+   \munge < article.htex > article.tex
+\end{alltt}
+
+However, there are two ways of further modifying the behaviour of the
+munger, with command-line options.
+
+\paragraph{Overrides}
+Most importantly, one can specify an ``overrides file'' to provide
+token-to-\LaTeX{} replacements of what is pretty-printed.
+%
+The command-line would then look like
+\begin{alltt}
+   \munge overrides_file < article.htex > article.tex
+\end{alltt}
+The overrides file is a text file containing lines of the form
+\begin{alltt}
+   tok width tex
+\end{alltt}
+where \texttt{tok} is a \HOL{} token, \texttt{width} is a number
+giving the width of the \LaTeX{}, and \texttt{tex} is a \LaTeX{}
+string.
+
+As a very simple example, an overrides file might consist of just one
+line:
+\begin{alltt}
+   pi1 2 \bs{}ensuremath\{\bs{}pi_1\}
+\end{alltt}
+This would cause the string \texttt{pi1} (presumably occurring in the
+various \HOL{} entities as a variable name) to be replaced with the
+rather prettier $\pi_1$.
+%
+The \texttt{2} records the fact that the
+printer should record the provided \LaTeX{} as being 2 characters
+wide.
+%
+This is important for the generation of reasonable line-breaks.
+
+Overrides for \HOL{} tokens can also be provided within \HOL{}
+theories, using the
+\texttt{TeX\_notation} command (see
+Section~\ref{sec:holtheories-tex-ready} below).
+
+\paragraph{Default width}
+A munger can specify the default width in which \HOL{} will print its
+output with a \texttt{-w} option.
+%
+For example,
+\begin{alltt}
+   \munge -w70 < article.htex > article.tex
+\end{alltt}
+This default width can be overridden on a case-by-case basis with the
+\texttt{width=} option to any of the commands within a \LaTeX{}
+document.
+
+
+\smallskip \noindent
+The \texttt{-w} and overrides file options can be given in either
+order.
+
+\subsection{Making \HOL{} Theories \LaTeX{}-ready}
+\label{sec:holtheories-tex-ready}
 
 \index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|)}
 

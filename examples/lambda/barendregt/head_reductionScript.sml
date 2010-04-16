@@ -302,4 +302,52 @@ val whstar_abs = Store_thm(
   FULL_SIMP_TAC (srw_ss()) [Once relationTheory.RTC_CASES1,
                             Once weak_head_cases]);
 
+(* ----------------------------------------------------------------------
+    has_whnf
+   ---------------------------------------------------------------------- *)
+
+(* definition of has_hnf in standardisationScript has == rather than -h->*
+   as the relation on the RHS.  This means that has_bnf automatically implies
+   has_hnf, but makes the corollary to the standardisation theorem interesting
+   to prove... *)
+val has_whnf_def = Define`
+  has_whnf M = ∃N. M -w->* N ∧ whnf N
+`;
+
+open lcsymtacs
+val has_whnf_APP_E = store_thm(
+  "has_whnf_APP_E",
+  ``has_whnf (M @@ N) ⇒ has_whnf M``,
+  simp_tac (srw_ss())[has_whnf_def] >>
+  Q_TAC SUFF_TAC
+     `∀M N. M -w->* N ⇒ ∀M0 M1. (M = M0 @@ M1) ∧ whnf N ⇒
+                                 ∃N'. M0 -w->* N' ∧ whnf N'`
+     >- metis_tac [] >>
+  ho_match_mp_tac relationTheory.RTC_INDUCT >> conj_tac
+    >- (simp_tac (srw_ss()) [] >> metis_tac [relationTheory.RTC_RULES]) >>
+  srw_tac [][] >> Cases_on `is_abs M0`
+    >- (Q.SPEC_THEN `M0` FULL_STRUCT_CASES_TAC term_CASES >>
+        full_simp_tac (srw_ss()) [] >>
+        metis_tac [relationTheory.RTC_RULES, whnf_thm]) >>
+  full_simp_tac (srw_ss()) [Once weak_head_cases] >>
+  metis_tac [relationTheory.RTC_RULES])
+
+val hreduce_weak_or_strong = store_thm(
+  "hreduce_weak_or_strong",
+  ``∀M N. M -h-> N ⇒ whnf M ∨ M -w-> N``,
+  ho_match_mp_tac simple_induction >> simp_tac (srw_ss()) [] >>
+  rpt gen_tac >> strip_tac >> rpt gen_tac >>
+  simp_tac (srw_ss()) [Once hreduce1_cases] >>
+  simp_tac (srw_ss() ++ DNF_ss) [] >> conj_tac
+    >- metis_tac [weak_head_rules] >>
+  srw_tac [][] >> metis_tac [weak_head_rules]);
+
+val head_reductions_have_weak_prefixes = store_thm(
+  "head_reductions_have_weak_prefixes",
+  ``∀M N. M -h->* N ⇒ hnf N ⇒
+          ∃N0. M -w->* N0 ∧ whnf N0 ∧ N0 -h->* N``,
+   ho_match_mp_tac relationTheory.RTC_STRONG_INDUCT >> conj_tac
+     >- metis_tac [hnf_whnf, relationTheory.RTC_RULES] >>
+   metis_tac [relationTheory.RTC_RULES, hreduce_weak_or_strong]);
+
 val _ = export_theory()

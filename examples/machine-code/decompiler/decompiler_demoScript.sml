@@ -16,14 +16,6 @@ val (arm_th,arm_defs) = decompile_arm "arm_length" `
   15911000  (*    ldrne r1,[r1]   *)
   1AFFFFFB  (*    bne L           *)`;
 
-(*
-arm_spec "E3A00000"
-
-armLib.arm_step "v7" "E3A00000"
-
-progTheory.SPEC_FRAME
-*)
-
 (* formalising notion of linked-list *)
 
 val llist_def = Define `

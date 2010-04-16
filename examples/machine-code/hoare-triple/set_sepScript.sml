@@ -130,6 +130,10 @@ val SEP_IMP_STAR = store_thm("SEP_IMP_STAR",
   ``!p p' q q'. SEP_IMP p p' /\ SEP_IMP q q' ==> SEP_IMP (p * q) (p' * q')``,
   SIMP_TAC std_ss [SEP_IMP_def,STAR_def] \\ METIS_TAC []);
 
+val SEP_IMP_DISJ = store_thm("SEP_IMP_DISJ",
+  ``!p p' q q'. SEP_IMP p p' /\ SEP_IMP q q' ==> SEP_IMP (p \/ q) (p' \/ q')``,
+  SIMP_TAC std_ss [SEP_IMP_def,SEP_DISJ_def] \\ METIS_TAC []);
+
 val SEP_IMP_EQ = store_thm("SEP_IMP_EQ",
   ``!p q. (p = q) = SEP_IMP p q /\ SEP_IMP q p``,
   FULL_SIMP_TAC bool_ss [SEP_IMP_def,FUN_EQ_THM] \\ METIS_TAC []);

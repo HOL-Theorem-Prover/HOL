@@ -14,7 +14,6 @@ val _ = new_theory "churchDB"
 
 val _ = set_trace "Unicode" 1
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
-fun bstore_thm (trip as (n,t,tac)) = store_thm trip before export_betarwt n
 
 val DISJ_IMP_EQ = Store_thm(
   "DISJ_IMP_EQ",
@@ -845,7 +844,7 @@ val sub_funpow_dAPP = store_thm(
   ``sub M v (FUNPOW (dAPP f) n x) = FUNPOW (dAPP (sub M v f)) n (sub M v x)``,
   Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
 
-val cchurch_behaviour = store_thm(
+val cchurch_behaviour = bstore_thm(
   "cchurch_behaviour",
   ``cchurch @@ church n -n->* cDB (fromTerm (church n))``,
   SIMP_TAC (bsrw_ss()) [cchurch_def, cichurch_behaviour] THEN
@@ -1038,7 +1037,7 @@ val size_toTerm = save_thm(
   dbsize_fromTerm |> Q.SPEC `toTerm d` |> REWRITE_RULE [fromtoTerm] |> SYM);
 val _ = export_rewrites ["size_toTerm"]
 
-val cforce_num_behaviour = store_thm(
+val cforce_num_behaviour = bstore_thm(
   "cforce_num_behaviour",
   ``cforce_num @@ cDB t -n->* church (force_num (toTerm t))``,
   SIMP_TAC (bsrw_ss()) [cforce_num_equiv, cdbsize_behaviour, cdiv_behaviour,
@@ -1252,7 +1251,7 @@ val FV_cnumdB = Store_thm(
   ``FV cnumdB = {}``,
   SRW_TAC [][cnumdB_def]);
 
-val cnumdB_behaviour = store_thm(
+val cnumdB_behaviour = bstore_thm(
   "cnumdB_behaviour",
   ``cnumdB @@ church n -n->* cDB (numdB n)``,
   SIMP_TAC (bsrw_ss()) [cnumdB_def, cnumdB0_behaviour]);

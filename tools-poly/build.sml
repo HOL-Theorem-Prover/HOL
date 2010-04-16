@@ -25,6 +25,7 @@ val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
 val DYNLIB = Systeml.DYNLIB
 val POLY_LDFLAGS = Systeml.POLY_LDFLAGS
+val POLY_LDFLAGS_STATIC = Systeml.POLY_LDFLAGS_STATIC
 
 
 (* ----------------------------------------------------------------------
