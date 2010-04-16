@@ -372,12 +372,10 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
     val TP = TP0
 
     fun strip_type t =
-      if is_vartype t then
-        [t]
-      else
-        case dest_type t of
-          ("fun", [a, b]) => a :: strip_type b
-        | _ => [t]
+      (case dest_type t of
+           ("fun", [a, b]) => a :: strip_type b
+         | _ => [t])
+      handle HOL_ERR _ => [t]
 
     fun pp_clause t =
         let val l = strip_type (type_of t)
