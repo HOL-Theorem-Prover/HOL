@@ -876,6 +876,9 @@ This makes the argument suitable for inclusion in standard \LaTeX{} positions.  
 \item[\texttt{width=}$n$] Causes the argument to be typeset in lines of width $n$.
 %
 The default width is $63$, which seems to work well with 11pt fonts.
+%
+This default can also be changed at the time the \munge{} command is
+run (see Section~\ref{sec:running-munger} below).
 
 \item[\texttt{\indentoption}] Indents the argument.
 %
@@ -923,6 +926,78 @@ The \mkmunge{} program can also take an optional \texttt{-o} argument that is us
 The theories specified as arguments to \mkmunge{} determine what theorems are in scope for calls to \holthm, and also determine the grammars that will govern the parsing and printing of the \HOL{} types, terms and theorems.
 
 
+\subsection{Running a Munger}
+\label{sec:running-munger}
+
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!running a munger}
+Once created, a munger is run as a filter command, consuming its
+standard input, and writing to standard output.
+%
+It may also write error messages and warnings to its standard error.
+
+Thus, a standard pattern of use is something like
+\begin{alltt}
+   \munge < article.htex > article.tex
+\end{alltt}
+
+However, there are two ways of further modifying the behaviour of the
+munger, with command-line options.
+
+\paragraph{Overrides}
+Most importantly, one can specify an ``overrides file'' to provide
+token-to-\LaTeX{} replacements of what is pretty-printed.
+%
+The command-line would then look like
+\begin{alltt}
+   \munge overrides_file < article.htex > article.tex
+\end{alltt}
+The overrides file is a text file containing lines of the form
+\begin{alltt}
+   tok width tex
+\end{alltt}
+where \texttt{tok} is a \HOL{} token, \texttt{width} is a number
+giving the width of the \LaTeX{}, and \texttt{tex} is a \LaTeX{}
+string.
+
+As a very simple example, an overrides file might consist of just one
+line:
+\begin{alltt}
+   pi1 2 \bs{}ensuremath\{\bs{}pi_1\}
+\end{alltt}
+This would cause the string \texttt{pi1} (presumably occurring in the
+various \HOL{} entities as a variable name) to be replaced with the
+rather prettier $\pi_1$.
+%
+The \texttt{2} records the fact that the
+printer should record the provided \LaTeX{} as being 2 characters
+wide.
+%
+This is important for the generation of reasonable line-breaks.
+
+Overrides for \HOL{} tokens can also be provided within \HOL{}
+theories, using the
+\texttt{TeX\_notation} command (see
+Section~\ref{sec:holtheories-tex-ready} below).
+
+\paragraph{Default width}
+A munger can specify the default width in which \HOL{} will print its
+output with a \texttt{-w} option.
+%
+For example,
+\begin{alltt}
+   \munge -w70 < article.htex > article.tex
+\end{alltt}
+This default width can be overridden on a case-by-case basis with the
+\texttt{width=} option to any of the commands within a \LaTeX{}
+document.
+
+
+\smallskip \noindent
+The \texttt{-w} and overrides file options can be given in either
+order.
+
+\subsection{Making \HOL{} Theories \LaTeX{}-ready}
+\label{sec:holtheories-tex-ready}
 
 \index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|)}
 
