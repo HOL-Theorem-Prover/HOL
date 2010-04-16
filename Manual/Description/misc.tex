@@ -850,6 +850,33 @@ By default, arguments to \holthm{} are fully specialised (\ie, they have \ml{SPE
 %
 The \texttt{nosp} option prevents this.
 
+\item[\texttt{nostile}] (Only for use with \holthm.)
+%
+By default, arguments to \holthm{} are printed with a turnstile~($\vdash$).
+%
+If this option is present, the turnstile is not printed (and the theorem will have its left margin three spaces further left).
+
+\item[\texttt{of}] (Only for use with \holty.)
+%
+The argument is a string that parses to a \emph{term}, not a type.
+%
+The behaviour is to print the type of this term.
+%
+Thus \texttt{\holty{}[of]\{p /\bs{} q\}} will print \texttt{bool}.
+
+\item[\texttt{showtypes}] (For use with \holthm{} and \holtm.)
+%
+Causes the term or theorem to be printed with the \texttt{types} trace set to level~1 (equivalent to having the \ml{show\_types} reference set to \ml{true}).
+
+\item[\texttt{tt}] %
+Causes the term to be type-set inside an \texttt{\bs{}mbox}, that is in turn wrapped around a \texttt{\bs{}texttt} environment, that is in turn wrapped around a \texttt{\bs{}textup} environment.
+%
+This makes the argument suitable for inclusion in standard \LaTeX{} positions.  This is the default for \holtm{} and \holty.
+
+\item[\texttt{width=}$n$] Causes the argument to be typeset in lines of width $n$.
+%
+The default width is $63$, which seems to work well with 11pt fonts.
+
 \item[\texttt{\indentoption}] Indents the argument.
 %
   This option only makes sense when used with the \texttt{alltt} option (the additional spaces will have no effect when inside an \texttt{\bs{}mbox}).
