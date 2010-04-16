@@ -12,7 +12,9 @@ simplification, words.
 
 \DESCRIBE
 
-The fragment {WORD_LOGIC_ss} does AC simplification for word conjunction, disjunction and 2's complement.  If the word length is known then further simplification occurs, in particular for {~(n2w n)}.
+The fragment {WORD_LOGIC_ss} does AC simplification for word conjunction,
+disjunction and 1's complement (negation).  If the word length is known then
+further simplification occurs, in particular for {~(n2w n)}.
 
 \EXAMPLE
 
