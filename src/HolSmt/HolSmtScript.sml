@@ -7,8 +7,9 @@ struct
 
   val T = tautLib.TAUT_PROVE
   val P = bossLib.PROVE []
-  val S = simpLib.SIMP_PROVE (simpLib.++ (simpLib.++ (bossLib.list_ss,
-    wordsLib.WORD_ss), wordsLib.WORD_BIT_EQ_ss)) [boolTheory.EQ_SYM_EQ]
+  val S = simpLib.SIMP_PROVE (simpLib.++ (simpLib.++ (simpLib.++
+    (bossLib.list_ss, boolSimps.COND_elim_ss), wordsLib.WORD_ss),
+    wordsLib.WORD_BIT_EQ_ss)) [boolTheory.EQ_SYM_EQ]
   val A = intLib.ARITH_PROVE
   val R = realLib.REAL_ARITH
   val W = wordsLib.WORD_DECIDE
@@ -131,8 +132,10 @@ struct
   val _ = s ("r006c", P
     ``(if p then (if q then x else y) else y) = (if q /\ p then x else y)``)
   val _ = s ("r006d", P
-    ``(if p then x = y else y = z) <=> (y = if p then x else z)``)
+    ``(if p then x = y else x = z) <=> (x = if p then y else z)``)
   val _ = s ("r006e", P
+    ``(if p then x = y else y = z) <=> (y = if p then x else z)``)
+  val _ = s ("r006f", P
     ``(if p then x = y else z = y) <=> (y = if p then x else z)``)
 
   val _ = s ("r007", T ``(~p ==> q) <=> (p \/ q)``)
@@ -461,6 +464,8 @@ struct
     ``(1w = ~(x :word1) !! ~y) \/ ~(~(x ' 0) \/ ~(y ' 0))``)
   val _ = s ("t021", U []
     ``(0w = (x :word8)) \/ x ' 0 \/ x ' 1 \/ x ' 2 \/ x ' 3 \/ x ' 4 \/ x ' 5 \/ x ' 6 \/ x ' 7``)
+  val _ = s ("t022", S
+    ``((1w = (x :word1)) <=> p) <=> (x = if p then 1w else 0w)``)
 
   val _ = Theory.export_theory ()
 
