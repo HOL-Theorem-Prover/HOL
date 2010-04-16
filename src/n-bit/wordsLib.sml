@@ -911,7 +911,7 @@ fun WORD_XOR_CANON_CONV t =
 val WORD_COMP_ss =
   simpLib.merge_ss
    [simpLib.rewrites
-      [WORD_DE_MORGAN_THM, WORD_NOT_NEG_0, SYM_WORD_NEG_1,
+      [WORD_DE_MORGAN_THM, WORD_NOT_NOT, WORD_NOT_NEG_0, SYM_WORD_NEG_1,
        REWRITE_RULE [GSYM arithmeticTheory.PRE_SUB1] WORD_NOT_NEG_NUMERAL],
     simpLib.std_conv_ss
       {conv = reduceLib.PRE_CONV,
@@ -924,7 +924,8 @@ val WORD_COMP_ss =
 
 val WORD_AND_ss =
   simpLib.merge_ss
-   [simpLib.rewrites [WORD_AND_CLAUSES2],
+   [simpLib.rewrites [WORD_AND_CLAUSES2, WORD_AND_COMP, WORD_NAND_NOT_AND,
+       WORD_AND_ABSORD, ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD],
     simpLib.std_conv_ss
       {conv = WORD_AND_CANON_CONV,
        name = "WORD_AND_CANON_CONV",
@@ -932,7 +933,7 @@ val WORD_AND_ss =
 
 val WORD_XOR_ss =
   simpLib.merge_ss
-   [simpLib.rewrites [WORD_XOR_CLAUSES2],
+   [simpLib.rewrites [WORD_XOR_CLAUSES2, WORD_NOT_XOR, WORD_XNOR_NOT_XOR],
     simpLib.std_conv_ss
       {conv = WORD_XOR_CANON_CONV,
        name = "WORD_XOR_CANON_CONV",
@@ -944,9 +945,8 @@ val WORD_OR_ss =
   in
     simpLib.merge_ss
       [simpLib.rewrites
-         [WORD_OR_CLAUSES2, thm,
-          ONCE_REWRITE_RULE [WORD_AND_COMM] WORD_AND_ABSORD,
-          ONCE_REWRITE_RULE [WORD_OR_COMM] thm],
+         [WORD_OR_CLAUSES2, WORD_NOR_NOT_OR,
+          thm, ONCE_REWRITE_RULE [WORD_OR_COMM] thm],
        simpLib.std_conv_ss
          {conv = WORD_OR_CANON_CONV,
           name = "WORD_OR_CANON_CONV",
