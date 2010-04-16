@@ -465,6 +465,8 @@ struct
   val _ = s ("t021", U []
     ``(0w = (x :word8)) \/ x ' 0 \/ x ' 1 \/ x ' 2 \/ x ' 3 \/ x ' 4 \/ x ' 5 \/ x ' 6 \/ x ' 7``)
   val _ = s ("t022", S
+    ``(((x :word1) = 1w) <=> p) <=> (x = if p then 1w else 0w)``)
+  val _ = s ("t023", S
     ``((1w = (x :word1)) <=> p) <=> (x = if p then 1w else 0w)``)
 
   val _ = Theory.export_theory ()
