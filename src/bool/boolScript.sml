@@ -155,7 +155,6 @@ val _ = add_infix_type
 
 val _ = type_abbrev ("comp", Type `: \('f:'k => 'l) ('g:'l => 'm) 'a. 'a 'f 'g`);
 
-val _ = disable_tyabbrev_printing "I";
 val _ = disable_tyabbrev_printing "K";
 val _ = disable_tyabbrev_printing "S";
 val _ = disable_tyabbrev_printing "A";

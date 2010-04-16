@@ -300,7 +300,9 @@ fun abb_strip_abs_type G s ty =
              val (tyv2,body2) = Type.dest_abs_type body1
           in ([tyv1,tyv2],body2)
          end handle HolKernel.HOL_ERR _ => ([],ty)
-    else Type.strip_abs_type ty
+    else let val res = Type.strip_abs_type ty
+         in if Type.is_var_type (#2 res) then ([],ty) else res
+         end
 
 val abb_tstamp = ref 0
 fun new_abbreviation (TYG(G, dict0, specials, pmap)) (s, st) = let
