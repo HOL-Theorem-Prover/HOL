@@ -503,8 +503,12 @@ SIMP_CONV (std_ss ++ boolSimps.LIFT_COND_ss) ths t1;
   (* used to prove hypotheses of other proforma theorems (recursively) *)
 
   val _ = s ("p001", wordsTheory.ZERO_LT_dimword)  (* ``0 < dimword(:'a)`` *)
-  val _ = s ("p002", S ``FINITE (U(:16))``)
-  val _ = s ("p003", S ``FINITE (U(:24))``)
+  val _ = s ("p002", wordsTheory.ONE_LT_dimword)  (* ``1 < dimword(:'a)`` *)
+  val _ = s ("p003", S ``FINITE (U(:unit))``)
+  val _ = s ("p004", S ``FINITE (U(:16))``)
+  val _ = s ("p005", S ``FINITE (U(:24))``)
+  val _ = s ("p006", S ``FINITE (U(:30))``)
+  val _ = s ("p007", S ``FINITE (U(:31))``)
 
   val _ = Theory.export_theory ()
 
