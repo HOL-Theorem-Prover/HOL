@@ -1,0 +1,198 @@
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{holtex}[2010/15/04]
+
+\usepackage{holtexbasic} % Required
+\usepackage{hyperref} % Required
+\usepackage{alltt} % Required
+\usepackage{ifthen} % Required
+
+
+
+
+
+% Definition of foreach based on Christopher Oezbek's 
+% post on stackoverflow.com
+\def\foreach#1#2#3{\@firsttest@foreach{#1}{#2}#3,\@end@token}
+\def\@swallow#1{}
+\def\@firsttest@foreach#1#2{\@ifnextchar\@end@token{\@swallow}{\@foreach{#1}{#2}}}
+\def\@test@foreach#1#2{\@ifnextchar\@end@token{\@swallow}{#2\@foreach{#1}{#2}}}
+\def\@foreach#1#2#3,#4\@end@token{#1{#3}\@test@foreach{#1}{#2}#4\@end@token}
+
+
+%The general stuff that should not be modified without a good reason
+\newcounter{holThmCounter}
+\newcounter{holTermCounter}
+\newcounter{holTypeCounter}
+\newboolean{holShortIndexFlag}
+
+\newcommand{\initHOLindex}{
+   \newwrite\holaux
+   \immediate\openout\holaux\jobname.hix
+   \@input@{\jobname.tix}
+}
+
+\newcommand{\writehixfile}[1]{\write\holaux{#1}}
+
+\newcommand{\hollookup}[1]{
+   \@ifundefined{HOL@#1}{??}{\@nameuse{HOL@#1}}
+}
+
+\newcommand{\holdef}[2]{
+  \@namedef{HOL@#1}{#2}
+}
+
+\newcommand{\defineHOLIndex}[1]{\holdef{index}{#1}}
+
+\newcommand{\printHOLIndex}{
+\setcounter{holThmCounter}{0}
+\setcounter{holTermCounter}{0}
+\setcounter{holTypeCounter}{0}
+\setboolean{holShortIndexFlag}{true}
+\hollookup{index}}
+
+\newcommand{\printShortHOLIndex}{
+\setcounter{holThmCounter}{0}
+\setcounter{holTermCounter}{0}
+\setcounter{holTypeCounter}{0}
+\setboolean{holShortIndexFlag}{false}
+\hollookup{index}}
+
+
+\newcommand{\useHOLfile}[1]{
+   \writehixfile{UseFile #1}
+}
+
+\newcommand{\addHOLuse}[2] {
+   \writehixfile{Print #1 #2 \thepage}
+}
+
+\newcommand{\defineHOLthm}[2]{\holdef{thm@#1}{#2}}
+\newcommand{\useHOLthm}[1]{\addHOLuse{Thm}{#1}\hollookup{thm@#1}}
+\newcommand{\inlineHOLthm}[1]{\mbox{\textup{\texttt{\useHOLthm{#1}}}}}
+\newcommand{\blockHOLthm}[1]{\begin{alltt}\useHOLthm{#1}\end{alltt}}
+
+\newcommand{\defineHOLtm}[2]{\holdef{term@#1}{#2}}
+\newcommand{\useHOLtm}[1]{\addHOLuse{Term}{#1}\hollookup{term@#1}}
+\newcommand{\inlineHOLtm}[1]{\mbox{\textup{\texttt{\useHOLtm{#1}}}}}
+\newcommand{\blockHOLtm}[1]{\begin{alltt}\useHOLtm{#1}\end{alltt}}
+
+\newcommand{\defineHOLty}[2]{\holdef{type@#1}{#2}}
+\newcommand{\useHOLty}[1]{\addHOLuse{Type}{#1}\hollookup{type@#1}}
+\newcommand{\inlineHOLty}[1]{\mbox{\textup{\texttt{\useHOLty{#1}}}}}
+\newcommand{\blockHOLty}[1]{\begin{alltt}\useHOLty{#1}\end{alltt}}
+
+
+% Arg 1 : Type
+% Arg 2 : unique ID
+% Arg 3 : label
+% Arg 4 : the definition
+\def\addHOLdefinition#1#2#3#4{\writehixfile{%
+Definition #1 #2 {#3} {#4}
+}}
+
+
+\def\defHOLty#1#2#3{\addHOLdefinition{Type}{#1}{#2}{#3}}
+\def\defHOLtm#1#2#3{\addHOLdefinition{Term}{#1}{#2}{#3}}
+
+
+\newcommand{\setHOLlinewidth}[1]{\writehixfile{%
+   Linewidth #1
+}}
+
+% Arg 1 : Type
+% Arg 2 : unique ID
+% Arg 2 : options
+\def\formatHOLdefinition#1#2#3{\writehixfile{%
+   FormatOptions #1 #2 {#3}
+}}
+
+\def\formatHOLty#1#2{\formatHOLdefinition{Type}{#1}{#2}}
+\def\formatHOLtm#1#2{\formatHOLdefinition{Term}{#1}{#2}}
+\def\formatHOLthm#1#2{\formatHOLdefinition{Thm}{#1}{#2}}
+
+
+% Arg 1 : unique ID
+% Arg 2 : label
+% Arg 3 : options
+% Arg 4 : the definition
+\newcommand{\formatDefHOLty}[4]{
+   \defHOLty{#1}{#2}{#4}
+   \formatHOLty{#1}{#3}
+}
+\newcommand{\formatDefHOLtm}[4]{
+   \defHOLtm{#1}{#2}{#4}
+   \formatHOLtm{#1}{#3}
+}
+
+% Arg 1 : Type
+% Arg 2 : unique ID
+\def\indexHOLdefinition#1#2{\writehixfile{%
+   Index #1 #2
+}}
+
+\def\indexHOLty#1{\indexHOLdefinition{Type}{#1}}
+\def\indexHOLtm#1{\indexHOLdefinition{Term}{#1}}
+\def\indexHOLthm#1{\indexHOLdefinition{Thm}{#1}}
+
+
+\newcommand{\addHOLcite}[2]{\writehixfile{Reference #1 #2 \thepage}}
+\newcommand{\citePureHOLthm}[1]{\addHOLcite{Thm}{#1}\ref{hol:thm:#1}}
+\newcommand{\citePureHOLtm}[1]{\addHOLcite{Term}{#1}\ref{hol:tm:#1}}
+\newcommand{\citePureHOLty}[1]{\addHOLcite{Type}{#1}\ref{hol:ty:#1}}
+
+
+%formating option that can easily be redefined according to personal taste
+\newcommand{\HOLBeginTermIndex}{\section*{HOL-Term Index}}
+\newcommand{\HOLBeginTypeIndex}{\section*{HOL-Type Index}}
+\newcommand{\HOLBeginThmIndex}{\section*{HOL-Theorem Index}}
+
+\newcommand{\HOLThmIndexTheory}[1]{{\subsection*{#1Theory}}}
+
+% Arg 1 : number
+% Arg 2 : unique ID
+% Arg 3 : Label
+% Arg 4 : Pages
+\newcommand{\HOLIndexEntryFormat}[5]{ 
+   \makebox[0.1\textwidth][r]{(#1)\ }
+   \begin{minipage}[t]{0.9\textwidth}#3 \dotfill #4
+   \ifthenelse{\boolean{#5}}{
+    \begin{alltt}\hollookup{#2}\end{alltt}\medskip
+   }{}\end{minipage}\\
+}
+
+
+\newcommand{\HOLThmIndexEntryFormat}[3]{
+   \HOLIndexEntryFormat{\arabic{holThmCounter}}{thm@#1}{{\tt#2}}{#3}{holShortIndexFlag}
+}
+\newcommand{\HOLTypeIndexEntryFormat}[3]{
+   \HOLIndexEntryFormat{\arabic{holTypeCounter}}{type@#1}{#2}{#3}{true}
+}
+\newcommand{\HOLTermIndexEntryFormat}[3]{
+   \HOLIndexEntryFormat{\arabic{holTermCounter}}{term@#1}{#2}{#3}{true}
+}
+
+
+\newcommand{\HOLThmIndexEntry}[3]{
+   \refstepcounter{holThmCounter}\label{hol:thm:#1}
+   \HOLThmIndexEntryFormat{#1}{#2}{#3}
+}
+
+\newcommand{\HOLTypeIndexEntry}[3]{
+   \refstepcounter{holTypeCounter}\label{hol:ty:#1}
+   \HOLTypeIndexEntryFormat{#1}{#2}{#3}
+}
+
+\newcommand{\HOLTermIndexEntry}[3]{
+   \refstepcounter{holTermCounter}\label{hol:tm:#1}
+   \HOLTermIndexEntryFormat{#1}{#2}{#3}
+}
+
+\newcommand{\citeHOLthm}[1]{(HOL-Thm~\citePureHOLthm{#1})}
+\newcommand{\citeHOLtm}[1]{(HOL-Term~\citePureHOLtm{#1})}
+\newcommand{\citeHOLty}[1]{(HOL-Type~\citePureHOLty{#1})}
+
+
+\newcommand{\mciteHOLthm}[1]{(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
+\newcommand{\mciteHOLtm}[1]{(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
+\newcommand{\mciteHOLty}[1]{(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}

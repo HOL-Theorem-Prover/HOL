@@ -1,0 +1,158 @@
+\documentclass{article}
+
+\usepackage{holindex}
+\initHOLindex
+\setHOLlinewidth{80}  %default is 80
+
+\begin{document}
+
+
+\section{Holindex usage}
+
+Similar usage as bibtex, makeindex etc.
+
+\begin{enumerate}
+\item create jobname.tex with header
+\begin{verbatim}
+\usepackage{holindex}
+\initHOLindex
+\setHOLlinewidth{80}  %optional default is 80
+\end{verbatim}
+\item run latex on jobname.tex to generate jobname.hix
+\item run \texttt{munge -index jobname} to create jobname.tix
+\item rerun latex to use jobname.tix
+\item rerun the munger whenever some significant HOL stuff changed
+\end{enumerate}
+
+\section{Defining}
+\begin{verbatim}
+   \defHOLtm{unique_id}{label}{def}
+   \defHOLty{unique_id}{label}{def}
+
+   (Theorems don't need defining, since there ID is 
+    theory.name, there label is there name and the def
+    is stored in the theory)
+
+   Use the same formating options as the munger
+   \formatHOLtm{unique_id}{options}
+   \formatHOLty{unique_id}{options}
+   \formatHOLthm{unique_id}{options}
+
+   Combine definition and formating
+   \formatDefHOLtm{unique_id}{label}{options}{def}
+   \formatDefHOLty{unique_id}{label}{options}{def}
+
+   Add it explicitly to the index (citations are added automatically)
+   \indexHOLtm{unique_id}
+   \indexHOLty{unique_id}
+   \indexHOLthm{unique_id}
+
+
+   This is tedious, especially for long terms, so do it
+   in an external file and use that one (Syntax similar to bibtex)
+   \useHOLfile{filename}
+\end{verbatim}
+
+%use external file
+\useHOLfile{test.hdf}
+
+%or define inline (recommended only for short, simple ones)
+\defHOLtm{term_id_1}{The first term}{SUC a > 0 /\ X > 2}
+\defHOLtm{term_id_2}{The second term}{SUC a < 0 /\ X > 3}
+\defHOLty{type_id_1}{The first type}{:bool}
+\defHOLty{type_id_2}{The second type}{:num}
+\formatDefHOLtm{term_width_5}{Test term width=5}{width=5}{SUC a > 0 /\ X > 2}
+\formatDefHOLtm{term_width_10}{Test term width=10}{width=10}{SUC a > 0 /\ X > 2}
+\formatDefHOLtm{term_width_50}{Test term width=50}{width=50}{SUC a > 0 /\ X > 2}
+
+
+
+\section{Printing}
+
+\begin{verbatim}
+   Print inline
+   \inlineHOLtm{id}
+   \inlineHOLty{id}
+   \inlineHOLthm{id}
+
+   Print as block
+   \blockHOLtm{id}
+   \blockHOLty{id}
+   \blockHOLthm{id}
+\end{verbatim}
+
+\subsection{Block Examples}
+\begin{itemize}
+\item Example 1 \blockHOLtm{term_width_5}
+\item Example 2 \blockHOLtm{term_width_10}
+\item Example 3 \blockHOLtm{term_width_50}
+\item Example 4 \blockHOLthm{arithmetic.DIVMOD_THM}
+\end{itemize}
+
+
+\subsection{Inline Examples}
+\begin{itemize}
+\item Example 1 \inlineHOLtm{term_width_5}
+\item Example 2 \inlineHOLtm{term_width_10}
+\item Example 3 \inlineHOLtm{term_width_50}
+\item Example 4 \inlineHOLthm{arithmetic.DIVMOD_THM}
+\end{itemize}
+
+
+
+\section{Citing}
+
+\begin{verbatim}
+   Pure numbers
+   \citePureHOLtm{id}
+   \citePureHOLty{id}
+   \citePureHOLthm{id}
+
+   Single citations
+   \citeHOLtm{id}
+   \citeHOLty{id}
+   \citeHOLthm{id}
+
+   Multiple citations 
+   \mciteHOLtm{id,id,...}
+   \mciteHOLty{id,id,...}
+   \mciteHOLthm{id,id,...}
+
+   Printing Index 
+   \printHOLIndex
+   \printShortHOLIndex 
+\end{verbatim}
+
+\citeHOLthm{arithmetic.LESS_SUC_EQ_COR}
+\citeHOLtm{term_id_1}
+\citeHOLty{type_id_2}
+
+\mciteHOLthm{arithmetic.LESS_SUC_EQ_COR,prim_rec.INV_SUC_EQ,arithmetic.LESS_SUC_EQ_COR}
+
+\pagebreak
+
+\citeHOLthm{prim_rec.INV_SUC_EQ}
+\citeHOLthm{arithmetic.PRE_SUC_EQ}
+
+\pagebreak
+
+\citeHOLthm{prim_rec.INV_SUC_EQ}
+\citeHOLthm{arithmetic.PRE_SUC_EQ}
+
+\pagebreak
+
+\citeHOLthm{prim_rec.INV_SUC_EQ}
+
+\pagebreak
+
+\citeHOLthm{prim_rec.INV_SUC_EQ}
+\citeHOLthm{arithmetic.PRE_SUC_EQ}
+
+\printHOLIndex
+
+\pagebreak
+
+\printShortHOLIndex
+
+
+\end{document}

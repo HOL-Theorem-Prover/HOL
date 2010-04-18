@@ -18,6 +18,7 @@ fun mkmunge () = let
   in
     load s
   end handle e => (die ("Exception raised: "^General.exnMessage e))
+  val _ = load1 "holindex"
   val _ = app load1 theories
   fun appthis s = let
     val nm = Globals.HOLDIR ++ "src" ++ "TeX" ++ s
