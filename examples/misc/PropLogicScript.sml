@@ -487,6 +487,7 @@ val Andrews_Lemma = Q.store_thm(
 (*---------------------------------------------------------------------------*)
 
 val _ = temp_clear_overloads_on "U"
+val _ = temp_remove_termtok { tok = "U", term_name = "U"}
 val Completeness_Lemma = Q.prove
 (`!p V. Tautology p /\ (V SUBSET (Vars p))
         ==>

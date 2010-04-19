@@ -237,6 +237,7 @@ val EQ_UNIV =
      REWRITE_TAC [EXTENSION,IN_UNIV]);
 
 val _ = overload_on ("U", ``\x:'a itself. UNIV: 'a set``)
+val _ = set_fixity "U" (TruePrefix 2200)
 
 fun univ_printer (tyg, tmg) printer (ppfns:term_pp_types.ppstream_funs) gravs
                  depth pps tm =
