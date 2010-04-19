@@ -134,10 +134,14 @@ struct
   val _ = s ("r006c", P
     ``(if p then (if q then x else y) else y) = (if q /\ p then x else y)``)
   val _ = s ("r006d", P
-    ``(if p then x = y else x = z) <=> (x = if p then y else z)``)
+    ``(if p then x else (if q then x else y)) <=> (if p \/ q then x else y)``)
   val _ = s ("r006e", P
-    ``(if p then x = y else y = z) <=> (y = if p then x else z)``)
+    ``(if p then x else (if q then x else y)) <=> (if q \/ p then x else y)``)
   val _ = s ("r006f", P
+    ``(if p then x = y else x = z) <=> (x = if p then y else z)``)
+  val _ = s ("r006g", P
+    ``(if p then x = y else y = z) <=> (y = if p then x else z)``)
+  val _ = s ("r006h", P
     ``(if p then x = y else z = y) <=> (y = if p then x else z)``)
 
   val _ = s ("r007", T ``(~p ==> q) <=> (p \/ q)``)
@@ -412,26 +416,9 @@ struct
   val _ = s ("r215", Drule.UNDISCH_ALL (X  (*TODO*)
     ``FINITE (U(:'a)) ==> x < dimword(:'b) ==>
     ((0w :'a word) @@ (n2w x :'b word) = (n2w x :'c word))``))
-
-(*
-load "wordsLib";
-
-val t = ``FINITE (U(:'a)) ==> x < dimword(:'b) ==>
-    ((0w :'a word) @@ (n2w x :'b word) = (n2w x :'c word))``;
-
-val ths = [wordsTheory.word_concat_def, wordsTheory.word_join_0, wordsTheory.w2w_n2w, Thm.SYM (Drule.SPEC_ALL wordsTheory.MOD_DIMINDEX)];
-
-val t1 = rhs (concl (SIMP_CONV (std_ss ++ boolSimps.LIFT_COND_ss) ths t));
-
-val ths = [wordsTheory.dimword_def, fcpTheory.index_sum];
-
-SIMP_CONV (std_ss ++ boolSimps.LIFT_COND_ss) ths t1;
-*)
-
   val _ = s ("r216", Drule.UNDISCH (simpLib.SIMP_PROVE bossLib.std_ss
     [wordsTheory.w2w_n2w, Thm.SYM (Drule.SPEC_ALL wordsTheory.MOD_DIMINDEX)]
     ``x < dimword(:'a) ==> (w2w (n2w x :'a word) = (n2w x :'b word))``))
-
   val _ = s ("r217", Drule.UNDISCH_ALL (X  (*TODO*)
     ``FINITE (U(:'a)) ==> y < dimword(:'b) ==>
     ((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (x = n2w y)``))
@@ -501,8 +488,22 @@ SIMP_CONV (std_ss ++ boolSimps.LIFT_COND_ss) ths t1;
     ``(p <=> ((x :word1) = 1w)) <=> (x = if p then 1w else 0w)``)
   val _ = s ("t025", S
     ``(p <=> (1w = (x :word1))) <=> (x = if p then 1w else 0w)``)
-  val _ = s ("t026", X  (*TODO*)
-    ``((0w :word32) = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 0)``)
+  val _ = s ("t026",
+    let
+      val lem1 = W ``!x:word32. x ' 0 ==> 0w <> x``
+      val lem2 = W ``!x:word8. ((sw2sw x):word32 ' 0) = x ' 0``
+      val lem3 = Q.prove (`!x:word32. (x ' 0) ==> (0w <> 0xFFFFFFFFw * x)`,
+        Tactical.THEN (Tactic.NTAC 2 Tactic.STRIP_TAC,
+          Tactical.THEN (Tactic.MATCH_MP_TAC lem1,
+            Tactical.THEN (bossLib.Cases_on `x`,
+              simpLib.FULL_SIMP_TAC
+                (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss))
+                [arithmeticTheory.ODD_MULT, wordsTheory.word_index,
+                wordsTheory.word_mul_n2w]))))
+    in
+      bossLib.METIS_PROVE [lem2, lem3]
+        ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 0)``
+    end)
 
   (* used to prove hypotheses of other proforma theorems (recursively) *)
 
