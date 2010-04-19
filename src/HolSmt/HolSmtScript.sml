@@ -497,7 +497,11 @@ SIMP_CONV (std_ss ++ boolSimps.LIFT_COND_ss) ths t1;
     ``(((x :word1) = 1w) <=> p) <=> (x = if p then 1w else 0w)``)
   val _ = s ("t023", S
     ``((1w = (x :word1)) <=> p) <=> (x = if p then 1w else 0w)``)
-  val _ = s ("t024", X  (*TODO*)
+  val _ = s ("t024", S
+    ``(p <=> ((x :word1) = 1w)) <=> (x = if p then 1w else 0w)``)
+  val _ = s ("t025", S
+    ``(p <=> (1w = (x :word1))) <=> (x = if p then 1w else 0w)``)
+  val _ = s ("t026", X  (*TODO*)
     ``((0w :word32) = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 0)``)
 
   (* used to prove hypotheses of other proforma theorems (recursively) *)
