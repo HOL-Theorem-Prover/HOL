@@ -6,12 +6,17 @@
 \usepackage{alltt} % Required
 \usepackage{ifthen} % Required
 
+% Copy of the xnewcommand.sty definitions
+% Josselin Noirel http://www.jnoirel.fr/
+\def \@star@or@long #1{%
+  \@ifstar {\let \l@ngrel@x = \relax #1}%
+           {\@testopt {\@@star@or@long {#1}}{\long}}%
+}
+\@ifdefinable \@@star@or@long
+  {\def \@@star@or@long #1[#2]{\def \l@ngrel@x {#2}#1}}
 
 
-
-
-% Definition of foreach based on Christopher Oezbek's 
-% post on stackoverflow.com
+% define foreach
 \def\foreach#1#2#3{\@firsttest@foreach{#1}{#2}#3,\@end@token}
 \def\@swallow#1{}
 \def\@firsttest@foreach#1#2{\@ifnextchar\@end@token{\@swallow}{\@foreach{#1}{#2}}}
@@ -66,20 +71,20 @@
    \writehixfile{Print #1 #2 \thepage}
 }
 
-\newcommand{\defineHOLthm}[2]{\holdef{thm@#1}{#2}}
-\newcommand{\useHOLthm}[1]{\addHOLuse{Thm}{#1}\hollookup{thm@#1}}
-\newcommand{\inlineHOLthm}[1]{\mbox{\textup{\texttt{\useHOLthm{#1}}}}}
-\newcommand{\blockHOLthm}[1]{\begin{alltt}\useHOLthm{#1}\end{alltt}}
+\newcommand[\protect\long]{\defineHOLthm}[2]{\holdef{thm@#1}{#2}}
+\newcommand[\protect]{\useHOLthm}[1]{\addHOLuse{Thm}{#1}\hollookup{thm@#1}}
+\newcommand[\protect]{\inlineHOLthm}[1]{\mbox{\textup{\texttt{\useHOLthm{#1}}}}}
+\newcommand[\protect]{\blockHOLthm}[1]{\begin{alltt}\useHOLthm{#1}\end{alltt}}
 
-\newcommand{\defineHOLtm}[2]{\holdef{term@#1}{#2}}
-\newcommand{\useHOLtm}[1]{\addHOLuse{Term}{#1}\hollookup{term@#1}}
-\newcommand{\inlineHOLtm}[1]{\mbox{\textup{\texttt{\useHOLtm{#1}}}}}
-\newcommand{\blockHOLtm}[1]{\begin{alltt}\useHOLtm{#1}\end{alltt}}
+\newcommand[\protect\long]{\defineHOLtm}[2]{\holdef{term@#1}{#2}}
+\newcommand[\protect]{\useHOLtm}[1]{\addHOLuse{Term}{#1}\hollookup{term@#1}}
+\newcommand[\protect]{\inlineHOLtm}[1]{\mbox{\textup{\texttt{\useHOLtm{#1}}}}}
+\newcommand[\protect]{\blockHOLtm}[1]{\begin{alltt}\useHOLtm{#1}\end{alltt}}
 
-\newcommand{\defineHOLty}[2]{\holdef{type@#1}{#2}}
-\newcommand{\useHOLty}[1]{\addHOLuse{Type}{#1}\hollookup{type@#1}}
-\newcommand{\inlineHOLty}[1]{\mbox{\textup{\texttt{\useHOLty{#1}}}}}
-\newcommand{\blockHOLty}[1]{\begin{alltt}\useHOLty{#1}\end{alltt}}
+\newcommand[\protect\long]{\defineHOLty}[2]{\holdef{type@#1}{#2}}
+\newcommand[\protect]{\useHOLty}[1]{\addHOLuse{Type}{#1}\hollookup{type@#1}}
+\newcommand[\protect]{\inlineHOLty}[1]{\mbox{\textup{\texttt{\useHOLty{#1}}}}}
+\newcommand[\protect]{\blockHOLty}[1]{\begin{alltt}\useHOLty{#1}\end{alltt}}
 
 
 % Arg 1 : Type
@@ -91,8 +96,8 @@ Definition #1 #2 {#3} {#4}
 }}
 
 
-\def\defHOLty#1#2#3{\addHOLdefinition{Type}{#1}{#2}{#3}}
-\def\defHOLtm#1#2#3{\addHOLdefinition{Term}{#1}{#2}{#3}}
+\newcommand[\protect]{\defHOLty}[3]{\addHOLdefinition{Type}{#1}{#2}{#3}}
+\newcommand[\protect]{\defHOLtm}[3]{\addHOLdefinition{Term}{#1}{#2}{#3}}
 
 
 \newcommand{\setHOLlinewidth}[1]{\writehixfile{%
@@ -115,11 +120,11 @@ Definition #1 #2 {#3} {#4}
 % Arg 2 : label
 % Arg 3 : options
 % Arg 4 : the definition
-\newcommand{\formatDefHOLty}[4]{
+\newcommand[\protect]{\formatDefHOLty}[4]{
    \defHOLty{#1}{#2}{#4}
    \formatHOLty{#1}{#3}
 }
-\newcommand{\formatDefHOLtm}[4]{
+\newcommand[\protect]{\formatDefHOLtm}[4]{
    \defHOLtm{#1}{#2}{#4}
    \formatHOLtm{#1}{#3}
 }
@@ -136,9 +141,9 @@ Definition #1 #2 {#3} {#4}
 
 
 \newcommand{\addHOLcite}[2]{\writehixfile{Reference #1 #2 \thepage}}
-\newcommand{\citePureHOLthm}[1]{\addHOLcite{Thm}{#1}\ref{hol:thm:#1}}
-\newcommand{\citePureHOLtm}[1]{\addHOLcite{Term}{#1}\ref{hol:tm:#1}}
-\newcommand{\citePureHOLty}[1]{\addHOLcite{Type}{#1}\ref{hol:ty:#1}}
+\newcommand[\protect]{\citePureHOLthm}[1]{\addHOLcite{Thm}{#1}\ref{hol:thm:#1}}
+\newcommand[\protect]{\citePureHOLtm}[1]{\addHOLcite{Term}{#1}\ref{hol:tm:#1}}
+\newcommand[\protect]{\citePureHOLty}[1]{\addHOLcite{Type}{#1}\ref{hol:ty:#1}}
 
 
 %formating option that can easily be redefined according to personal taste
@@ -172,28 +177,28 @@ Definition #1 #2 {#3} {#4}
 }
 
 
-\newcommand{\HOLThmIndexEntry}[3]{
+\newcommand[\protect]{\HOLThmIndexEntry}[3]{
    \refstepcounter{holThmCounter}\label{hol:thm:#1}
    \HOLThmIndexEntryFormat{#1}{#2}{#3}
 }
 
-\newcommand{\HOLTypeIndexEntry}[3]{
+\newcommand[\protect]{\HOLTypeIndexEntry}[3]{
    \refstepcounter{holTypeCounter}\label{hol:ty:#1}
    \HOLTypeIndexEntryFormat{#1}{#2}{#3}
 }
 
-\newcommand{\HOLTermIndexEntry}[3]{
+\newcommand[\protect]{\HOLTermIndexEntry}[3]{
    \refstepcounter{holTermCounter}\label{hol:tm:#1}
    \HOLTermIndexEntryFormat{#1}{#2}{#3}
 }
 
-\newcommand{\citeHOLthm}[1]{(HOL-Thm~\citePureHOLthm{#1})}
-\newcommand{\citeHOLtm}[1]{(HOL-Term~\citePureHOLtm{#1})}
-\newcommand{\citeHOLty}[1]{(HOL-Type~\citePureHOLty{#1})}
+\newcommand[\protect]{\citeHOLthm}[1]{(HOL-Thm~\citePureHOLthm{#1})}
+\newcommand[\protect]{\citeHOLtm}[1]{(HOL-Term~\citePureHOLtm{#1})}
+\newcommand[\protect]{\citeHOLty}[1]{(HOL-Type~\citePureHOLty{#1})}
 
-\newcommand{\mciteHOLthm}[1]{(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
-\newcommand{\mciteHOLtm}[1]{(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
-\newcommand{\mciteHOLty}[1]{(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}
+\newcommand[\protect]{\mciteHOLthm}[1]{(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
+\newcommand[\protect]{\mciteHOLtm}[1]{(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
+\newcommand[\protect]{\mciteHOLty}[1]{(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}
 
 \newcommand{\UnderscoreCommands}{%   (\cite already done)
    \do\citeHOLty \do\citeHOLtm \do\citeHOLthm
@@ -209,3 +214,7 @@ Definition #1 #2 {#3} {#4}
 }
 \usepackage[strings]{underscore}
 \usepackage{holtexbasic}
+
+\renewcommand{\HOLBoundVar}[1]{\ensuremath{\textit{#1}}}
+\renewcommand{\HOLFreeVar}[1]{\ensuremath{\textit{#1}}}
+

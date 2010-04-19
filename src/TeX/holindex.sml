@@ -160,7 +160,6 @@ let
 in
    UTF8.translate (fn " " => "\\ "
                     | "\n" => "\\par "
-                    | "_" => "\\_"
                     | s => s) fs
 end;
 
@@ -362,8 +361,9 @@ let
     val thm_entryL' = List.filter (#in_index o snd) thm_entryL;
     val _ = if null(thm_entryL') then raise nothing_to_do else ();
 
-    val tex_escape = UTF8.translate 
-         (fn "_" => "\\_" | s => s)
+(*    val tex_escape = UTF8.translate 
+         (fn "_" => "\\_" | s => s)*)
+    val tex_escape = I;
     fun mapfun (id, ({label    = label, 
                  in_index = in_index, 
                  options  = options,
