@@ -2,7 +2,6 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{holtex}[2010/15/04]
 
-\usepackage{holtexbasic} % Required
 \usepackage{hyperref} % Required
 \usepackage{alltt} % Required
 \usepackage{ifthen} % Required
@@ -192,7 +191,21 @@ Definition #1 #2 {#3} {#4}
 \newcommand{\citeHOLtm}[1]{(HOL-Term~\citePureHOLtm{#1})}
 \newcommand{\citeHOLty}[1]{(HOL-Type~\citePureHOLty{#1})}
 
-
 \newcommand{\mciteHOLthm}[1]{(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
 \newcommand{\mciteHOLtm}[1]{(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
 \newcommand{\mciteHOLty}[1]{(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}
+
+\newcommand{\UnderscoreCommands}{%   (\cite already done)
+   \do\citeHOLty \do\citeHOLtm \do\citeHOLthm
+   \do\mciteHOLty \do\mciteHOLtm \do\mciteHOLthm
+   \do\citePureHOLty \do\citePureHOLtm \do\citePureHOLthm
+   \do\defineHOLty \do\defineHOLtm \do\defineHOLthm
+   \do\inlineHOLty \do\inlineHOLtm \do\inlineHOLthm
+   \do\blockHOLty \do\blockHOLtm \do\blockHOLthm
+   \do\useHOLty \do\useHOLtm \do\useHOLthm
+   \do\HOLTypeIndexEntry
+   \do\HOLTermIndexEntry
+   \do\HOLThmIndexEntry
+}
+\usepackage[strings]{underscore}
+\usepackage{holtexbasic}

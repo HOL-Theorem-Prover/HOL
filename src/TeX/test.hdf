@@ -2,7 +2,7 @@
    label = "a short description of term form external file",
    force_index,
    options = "width=20",
-   content = ``SUC a < 0 /\ 0 > SUC b``
+   content = ``SOME_FUN = SUC a < 0 /\ 0 > SUC b``
 }
 
 @Type{type_id_4,

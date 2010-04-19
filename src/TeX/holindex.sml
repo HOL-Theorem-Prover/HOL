@@ -160,6 +160,7 @@ let
 in
    UTF8.translate (fn " " => "\\ "
                     | "\n" => "\\par "
+                    | "_" => "\\_"
                     | s => s) fs
 end;
 
