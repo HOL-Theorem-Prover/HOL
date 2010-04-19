@@ -1429,7 +1429,7 @@ in
             end_block pps
           end
      | ("word_concat",[a,b]) =>
-          let val prec = Prec (700,"word_concat") in
+          let val prec = Prec (2000,"word_concat") in
             begin_block pps INCONSISTENT 0;
             delim 200 (fn () => str "(");
             trace ("types", 1) (sys (pg,lg,rg) d) f; brk (1,2);
