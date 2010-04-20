@@ -656,6 +656,7 @@ in
           [VREF "MOSMLCOMP", LIT (" -q "^stdincludes^" -c "^overlaystring)]
         end
       | "MOSMLC" => [VREF "MOSMLCOMP", LIT (" "^addincludes)]
+      | "POLY" => [LIT (Systeml.protect Systeml.POLY)]
       | "POLYMLLIBDIR" => [LIT POLYMLLIBDIR]
       | "POLY_LDFLAGS" => [LIT (spacify (map Systeml.protect POLY_LDFLAGS))]
       | "POLY_LDFLAGS_STATIC" => [LIT (spacify (map Systeml.protect POLY_LDFLAGS_STATIC))]
