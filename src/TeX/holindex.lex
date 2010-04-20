@@ -28,46 +28,38 @@ val keyword_table =
 List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
 (Binarymap.mkDict String.compare)
 [
-  ("Term",      TERM),
-  ("term",      TERM),
-  ("@term",     TERM),
-  ("@Term",     TERM),
+  ("TERM",      TERM),
+  ("@TERM",     TERM),
 
-  ("Theorem",   THEOREM),
-  ("Thm",       THEOREM),
-  ("theorem",   THEOREM),
-  ("thm",       THEOREM),
-  ("@Theorem",  THEOREM),
-  ("@Thm",      THEOREM),
-  ("@theorem",  THEOREM),
-  ("@thm",      THEOREM),
+  ("THEOREM",   THEOREM),
+  ("@THEOREM",  THEOREM),
+  ("THM",      THEOREM),
+  ("@THM",      THEOREM),
 
-  ("Type",      TYPE),
-  ("type",      TYPE),
-  ("@Type",     TYPE),
-  ("@type",     TYPE),
 
-  ("force_index", FORCE_INDEX),
-  ("force-index", FORCE_INDEX),
-  ("Force-index", FORCE_INDEX),
-  ("Force_index", FORCE_INDEX),
+  ("TYPE",      TYPE),
+  ("@TYPE",     TYPE),
 
-  ("options",   OPTIONS),
-  ("Options",   OPTIONS),
+  ("FORCE_INDEX", FORCE_INDEX),
+  ("FORCE-INDEX", FORCE_INDEX),
+  ("LONG_INDEX" , LONG_INDEX),
+  ("LONG-INDEX" , LONG_INDEX),
+  ("SHORT_INDEX" , SHORT_INDEX),
+  ("SHORT-INDEX" , SHORT_INDEX),
 
-  ("label",     LABEL),
-  ("Label",     LABEL),
-
-  ("content",   CONTENT),
-  ("Content",   CONTENT)
+  ("OPTIONS",   OPTIONS),
+  ("LABEL",     LABEL),
+  ("CONTENT",   CONTENT),
+  ("COMMENT",   COMMENT)
 ];
 
 
+fun toUpperString s =
+   String.translate (fn c => Char.toString(Char.toUpper c)) s
+
 fun mkKeyword text pos line =
-  (Binarymap.find (keyword_table, text)) (mkMtTok text pos line)
+  (Binarymap.find (keyword_table, toUpperString text)) (mkMtTok text pos line)
   handle Binarymap.NotFound => IDENT (mkTok I text pos line);
-
-
 
 
 %%

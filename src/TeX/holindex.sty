@@ -1,4 +1,3 @@
-
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{holtex}[2010/15/04]
 
@@ -29,6 +28,15 @@
 \newcounter{holTermCounter}
 \newcounter{holTypeCounter}
 \newboolean{holShortIndexFlag}
+\newboolean{holLongIndexFlag}
+
+\newboolean{holIndexLongTermFlag}
+\newboolean{holIndexLongTypeFlag}
+\newboolean{holIndexLongThmFlag}
+\setboolean{holIndexLongTermFlag}{true}
+\setboolean{holIndexLongTypeFlag}{true}
+\setboolean{holIndexLongThmFlag}{false}
+
 
 \newcommand{\initHOLindex}{
    \newwrite\holaux
@@ -47,20 +55,27 @@
 }
 
 \newcommand{\defineHOLIndex}[1]{\holdef{index}{#1}}
+\newcommand{\printHOLGeneralIndex}{
+\setcounter{holThmCounter}{0}
+\setcounter{holTermCounter}{0}
+\setcounter{holTypeCounter}{0}
+{\raggedbottom
+\hollookup{index}}}
 
 \newcommand{\printHOLIndex}{
-\setcounter{holThmCounter}{0}
-\setcounter{holTermCounter}{0}
-\setcounter{holTypeCounter}{0}
-\setboolean{holShortIndexFlag}{true}
-\hollookup{index}}
+\setboolean{holShortIndexFlag}{false}
+\setboolean{holLongIndexFlag}{false}
+\printHOLGeneralIndex}
 
 \newcommand{\printShortHOLIndex}{
-\setcounter{holThmCounter}{0}
-\setcounter{holTermCounter}{0}
-\setcounter{holTypeCounter}{0}
+\setboolean{holShortIndexFlag}{true}
+\setboolean{holLongIndexFlag}{false}
+\printHOLGeneralIndex}
+
+\newcommand{\printLongHOLIndex}{
 \setboolean{holShortIndexFlag}{false}
-\hollookup{index}}
+\setboolean{holLongIndexFlag}{true}
+\printHOLGeneralIndex}
 
 
 \newcommand{\useHOLfile}[1]{
@@ -68,7 +83,7 @@
 }
 
 \newcommand{\addHOLuse}[2] {
-   \writehixfile{Print #1 #2 \thepage}
+   \writehixfile{AddIndex #1 #2 \thepage}
 }
 
 \newcommand[\protect\long]{\defineHOLthm}[2]{\holdef{thm@#1}{#2}}
@@ -98,11 +113,16 @@ Definition #1 #2 {#3} {#4}
 
 \newcommand[\protect]{\defHOLty}[3]{\addHOLdefinition{Type}{#1}{#2}{#3}}
 \newcommand[\protect]{\defHOLtm}[3]{\addHOLdefinition{Term}{#1}{#2}{#3}}
+\newcommand[\protect]{\defHOLthm}[3]{\addHOLdefinition{Thm}{#1}{#2}{#3}}
 
 
 \newcommand{\setHOLlinewidth}[1]{\writehixfile{%
    Linewidth #1
 }}
+\newcommand{\sortHOLIndexOccurence}{\writehixfile{%
+   UseOccurenceSort
+}}
+
 
 % Arg 1 : Type
 % Arg 2 : unique ID
@@ -115,6 +135,13 @@ Definition #1 #2 {#3} {#4}
 \def\formatHOLtm#1#2{\formatHOLdefinition{Term}{#1}{#2}}
 \def\formatHOLthm#1#2{\formatHOLdefinition{Thm}{#1}{#2}}
 
+\def\commentHOLdefinition#1#2#3{\writehixfile{%
+   Comment #1 #2 {#3}
+}}
+
+\def\commentHOLty#1#2{\commentHOLdefinition{Type}{#1}{#2}}
+\def\commentHOLtm#1#2{\commentHOLdefinition{Term}{#1}{#2}}
+\def\commentHOLthm#1#2{\commentHOLdefinition{Thm}{#1}{#2}}
 
 % Arg 1 : unique ID
 % Arg 2 : label
@@ -132,18 +159,34 @@ Definition #1 #2 {#3} {#4}
 % Arg 1 : Type
 % Arg 2 : unique ID
 \def\indexHOLdefinition#1#2{\writehixfile{%
-   Index #1 #2
+   ForceIndex #1 #2
 }}
 
 \def\indexHOLty#1{\indexHOLdefinition{Type}{#1}}
 \def\indexHOLtm#1{\indexHOLdefinition{Term}{#1}}
 \def\indexHOLthm#1{\indexHOLdefinition{Thm}{#1}}
 
+\def\fullIndexHOLdefinition#1#2#3{\writehixfile{%
+   FullIndex #1 #2 #3
+}}
+
+\def\longIndexHOLty#1{\fullIndexHOLdefinition{Type}{#1}{true}}
+\def\longIndexHOLtm#1{\fullIndexHOLdefinition{Term}{#1}{true}}
+\def\longIndexHOLthm#1{\fullIndexHOLdefinition{Thm}{#1}{true}}
+\def\shortIndexHOLty#1{\fullIndexHOLdefinition{Type}{#1}{false}}
+\def\shortIndexHOLtm#1{\fullIndexHOLdefinition{Term}{#1}{false}}
+\def\shortIndexHOLthm#1{\fullIndexHOLdefinition{Thm}{#1}{false}}
+
 
 \newcommand{\addHOLcite}[2]{\writehixfile{Reference #1 #2 \thepage}}
 \newcommand[\protect]{\citePureHOLthm}[1]{\addHOLcite{Thm}{#1}\ref{hol:thm:#1}}
 \newcommand[\protect]{\citePureHOLtm}[1]{\addHOLcite{Term}{#1}\ref{hol:tm:#1}}
 \newcommand[\protect]{\citePureHOLty}[1]{\addHOLcite{Type}{#1}\ref{hol:ty:#1}}
+
+
+\newcommand[\protect]{\citeHiddenHOLthm}[1]{\addHOLcite{Thm}{#1}}
+\newcommand[\protect]{\citeHiddenHOLtm}[1]{\addHOLcite{Term}{#1}}
+\newcommand[\protect]{\citeHiddenHOLty}[1]{\addHOLcite{Type}{#1}}
 
 
 %formating option that can easily be redefined according to personal taste
@@ -153,43 +196,46 @@ Definition #1 #2 {#3} {#4}
 
 \newcommand{\HOLThmIndexTheory}[1]{{\subsection*{#1Theory}}}
 
+
 % Arg 1 : number
 % Arg 2 : unique ID
 % Arg 3 : Label
 % Arg 4 : Pages
-\newcommand{\HOLIndexEntryFormat}[5]{ 
-   \makebox[0.1\textwidth][r]{(#1)\ }
-   \begin{minipage}[t]{0.9\textwidth}#3 \dotfill #4
-   \ifthenelse{\boolean{#5}}{
-    \begin{alltt}\hollookup{#2}\end{alltt}\medskip
-   }{}\end{minipage}\\
+% Arg 5 : Full entry
+\newcommand{\HOLIndexEntryFormat}[6]{ 
+   \makebox[0.1\textwidth][r]{(#1)\ }%
+   \begin{minipage}[t]{0.9\textwidth}%
+   \begin{flushright}#3 \ldots$\!$\dotfill #4\end{flushright}%
+   {\ifthenelse{\(\not\boolean{holShortIndexFlag}\) \and 
+   \(\boolean{#5} \or \boolean{holLongIndexFlag}\)}{#6\begin{alltt}\hollookup{#2}\end{alltt}\medskip}{}}
+   \end{minipage}\\
 }
 
 
-\newcommand{\HOLThmIndexEntryFormat}[3]{
-   \HOLIndexEntryFormat{\arabic{holThmCounter}}{thm@#1}{{\tt#2}}{#3}{holShortIndexFlag}
+\newcommand{\HOLThmIndexEntryFormat}[5]{
+   \HOLIndexEntryFormat{\arabic{holThmCounter}}{thm@#1}{#2}{#3}{#4}{#5}
 }
-\newcommand{\HOLTypeIndexEntryFormat}[3]{
-   \HOLIndexEntryFormat{\arabic{holTypeCounter}}{type@#1}{#2}{#3}{true}
+\newcommand{\HOLTypeIndexEntryFormat}[5]{
+   \HOLIndexEntryFormat{\arabic{holTypeCounter}}{type@#1}{#2}{#3}{#4}{#5}
 }
-\newcommand{\HOLTermIndexEntryFormat}[3]{
-   \HOLIndexEntryFormat{\arabic{holTermCounter}}{term@#1}{#2}{#3}{true}
+\newcommand{\HOLTermIndexEntryFormat}[5]{
+   \HOLIndexEntryFormat{\arabic{holTermCounter}}{term@#1}{#2}{#3}{#4}{#5}
 }
 
 
-\newcommand[\protect]{\HOLThmIndexEntry}[3]{
+\newcommand[\protect\long]{\HOLThmIndexEntry}[5]{
    \refstepcounter{holThmCounter}\label{hol:thm:#1}
-   \HOLThmIndexEntryFormat{#1}{#2}{#3}
+   \HOLThmIndexEntryFormat{#1}{#2}{#3}{#4}{#5}
 }
 
-\newcommand[\protect]{\HOLTypeIndexEntry}[3]{
+\newcommand[\protect\long]{\HOLTypeIndexEntry}[5]{
    \refstepcounter{holTypeCounter}\label{hol:ty:#1}
-   \HOLTypeIndexEntryFormat{#1}{#2}{#3}
+   \HOLTypeIndexEntryFormat{#1}{#2}{#3}{#4}{#5}
 }
 
-\newcommand[\protect]{\HOLTermIndexEntry}[3]{
+\newcommand[\protect\long]{\HOLTermIndexEntry}[5]{
    \refstepcounter{holTermCounter}\label{hol:tm:#1}
-   \HOLTermIndexEntryFormat{#1}{#2}{#3}
+   \HOLTermIndexEntryFormat{#1}{#2}{#3}{#4}{#5}
 }
 
 \newcommand[\protect]{\citeHOLthm}[1]{(HOL-Thm~\citePureHOLthm{#1})}
@@ -199,6 +245,12 @@ Definition #1 #2 {#3} {#4}
 \newcommand[\protect]{\mciteHOLthm}[1]{(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
 \newcommand[\protect]{\mciteHOLtm}[1]{(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
 \newcommand[\protect]{\mciteHOLty}[1]{(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}
+
+
+
+
+
+
 
 \newcommand{\UnderscoreCommands}{%   (\cite already done)
    \do\citeHOLty \do\citeHOLtm \do\citeHOLthm
@@ -215,6 +267,4 @@ Definition #1 #2 {#3} {#4}
 \usepackage[strings]{underscore}
 \usepackage{holtexbasic}
 
-\renewcommand{\HOLBoundVar}[1]{\ensuremath{\textit{#1}}}
-\renewcommand{\HOLFreeVar}[1]{\ensuremath{\textit{#1}}}
 

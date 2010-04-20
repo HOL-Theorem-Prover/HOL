@@ -4,6 +4,7 @@
 \initHOLindex
 \setHOLlinewidth{80}  %default is 80
 
+
 \begin{document}
 
 
@@ -28,10 +29,14 @@ Similar usage as bibtex, makeindex etc.
 \begin{verbatim}
    \defHOLtm{unique_id}{label}{def}
    \defHOLty{unique_id}{label}{def}
+   \defHOLthm{unique_id}{label}{def}
 
    (Theorems don't need defining, since there ID is 
     theory.name, there label is there name and the def
-    is stored in the theory)
+    is stored in the theory. You can use this definition anyone, when
+    - the theorem name is too lengthy / contains special characters
+    - you want to use one theorem with different formating options
+    - you want to add a theorem several times to the index)
 
    Use the same formating options as the munger
    \formatHOLtm{unique_id}{options}
@@ -47,9 +52,27 @@ Similar usage as bibtex, makeindex etc.
    \indexHOLty{unique_id}
    \indexHOLthm{unique_id}
 
+   Print long version in the index
+   \longIndexHOLthm{unique_id}
+   \longIndexHOLty{unique_id}
+   \longIndexHOLtm{unique_id}
+   \shortIndexHOLthm{unique_id}
+   \shortIndexHOLty{unique_id}
+   \shortIndexHOLtm{unique_id}
 
-   This is tedious, especially for long terms, so do it
-   in an external file and use that one (Syntax similar to bibtex)
+   Use boolean flags to determine the default
+   \setboolean{holIndexLongTermFlag}{true}
+   \setboolean{holIndexLongTypeFlag}{true}
+   \setboolean{holIndexLongThmFlag}{false}
+
+   Add comments in the index
+   \commentHOLtm{unique_id}{comment}
+   \commentHOLty{unique_id}{comment}
+   \commentHOLthm{unique_id}{comment}
+
+   Definition like these inside a latex file are tedious,
+   especially for long terms, so do it
+   in an external file and use that one (see test.hdf)
    \useHOLfile{filename}
 \end{verbatim}
 
@@ -79,6 +102,11 @@ Similar usage as bibtex, makeindex etc.
    \blockHOLtm{id}
    \blockHOLty{id}
    \blockHOLthm{id}
+
+   Use def without encapsulation (seldom useful)
+   \useHOLtm{id}
+   \useHOLty{id}
+   \useHOLthm{id}
 \end{verbatim}
 
 \subsection{Block Examples}
@@ -118,9 +146,20 @@ Similar usage as bibtex, makeindex etc.
    \mciteHOLty{id,id,...}
    \mciteHOLthm{id,id,...}
 
+   Hidden citations (adds page to index, 
+      but does not print anything)
+   \citeHiddenHOLtm{id}
+   \citeHiddenHOLty{id}
+   \citeHiddenHOLthm{id}
+
+
    Printing Index 
    \printHOLIndex
    \printShortHOLIndex 
+   \printLongHOLIndex 
+
+   Sort the index by occurence in the text, not by names
+   \sortHOLIndexOccurence
 \end{verbatim}
 
 \citeHOLthm{arithmetic.LESS_SUC_EQ_COR}
@@ -147,6 +186,19 @@ Similar usage as bibtex, makeindex etc.
 
 \citeHOLthm{prim_rec.INV_SUC_EQ}
 \citeHOLthm{arithmetic.PRE_SUC_EQ}
+
+
+\longIndexHOLthm{arithmetic.PRE_SUC_EQ}
+\shortIndexHOLty{type_id_2}
+\commentHOLty{type_id_4}{Some short comment}
+
+%Sort index by occurence
+%\sortHOLIndexOccurence
+
+\setboolean{holIndexLongTermFlag}{false}
+\printLongHOLIndex
+
+\pagebreak
 
 \printHOLIndex
 

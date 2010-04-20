@@ -8,7 +8,7 @@ open Lib Feedback HolKernel Parse boolLib mungeTools holindexData
 (******************************************************************************)
 
 val default_linewidth_ref = ref 80;
-
+val use_occ_sort_ref = ref false;
 
 (******************************************************************************)
 (* Parse the input file                                                       *)
@@ -72,22 +72,34 @@ let
 in
    case ll of
      ["Definition", ty_arg, id_arg, label_arg, content_arg] =>
-         update_data_store ds (get_data_store_keys ty_arg id_arg)
+         update_data_store ds ty_arg id_arg
          (fn ent => data_entry___update_label (SOME label_arg)
-             (data_entry___update_content content_arg ent))
-   | ["Print", ty_arg, id_arg, page_arg] =>
-         update_data_store ds (get_data_store_keys ty_arg id_arg)
+             (data_entry___update_content (SOME content_arg) ent))
+   | ["AddIndex", ty_arg, id_arg, page_arg] =>
+         update_data_store ds ty_arg id_arg
          (data_entry___add_page page_arg)
    | ["Reference", ty_arg, id_arg, page_arg] =>
-         update_data_store ds (get_data_store_keys ty_arg id_arg)
+         update_data_store ds ty_arg id_arg
          ((data_entry___add_page page_arg) o
           (data_entry___update_in_index true))
-   | ["Index", ty_arg, id_arg] =>
-         update_data_store ds (get_data_store_keys ty_arg id_arg)
+   | ["ForceIndex", ty_arg, id_arg] =>
+         update_data_store ds ty_arg id_arg
          (data_entry___update_in_index true)
+   | ["FullIndex", ty_arg, id_arg, f_arg] =>
+         update_data_store ds ty_arg id_arg
+         (data_entry___update_full_index (f_arg = "true"))
    | ["FormatOptions", ty_arg, id_arg, options_arg] =>
-         update_data_store ds (get_data_store_keys ty_arg id_arg)
+         update_data_store ds ty_arg id_arg
          (data_entry___update_options options_arg)
+   | ["Comment", ty_arg, id_arg, comment_arg] =>
+         update_data_store ds ty_arg id_arg
+         (data_entry___update_comment (SOME comment_arg))
+   | ["UseOccurenceSort"] =>
+         let
+            val _ = use_occ_sort_ref := true;
+         in
+            ds
+         end
    | ["Linewidth", length_arg] =>
          let
             val n_opt = Int.fromString length_arg
@@ -105,30 +117,29 @@ in
             entryL
          end handle Interrupt => raise Interrupt
                   | _ => (print ("Error while parsing '"^filename^"' in '"^basedir^"'\n");ds))
-   | _ => ds
+   | _ => (print ("Error line: "^l); ds)
 end; 
 
 
-fun cleanup_data_store ds =
+
+fun cleanup_data_store (sds_thm, sds_term, sds_type) =
 let
     fun cleanup_subdata_store sds =
     let
         val sdsL = Redblackmap.listItems sds
         val sdsL' = List.filter (data_entry_is_used o snd) sdsL;
-        val sds' = List.foldr (fn ((k,v),ds) => 
-            (Redblackmap.insert (ds, k, v))) new_data_substore sdsL'
     in
-        sds'
+        sdsL'
     end;
-
-    val dsL   = Redblackmap.listItems ds
-    val dsL'  = List.map (fn (k, sds) => (k, cleanup_subdata_store sds)) dsL
-    val dsL'' = List.filter (fn (k, sds) => not (Redblackmap.isEmpty sds)) dsL'
-    val ds' = List.foldr (fn ((k,v),ds) => 
-            (Redblackmap.insert (ds, k, v))) new_data_store dsL''
+    fun thmmapfun (id, de:data_entry) =
+           (id, if (isSome (#content de)) then de else
+              data_entry___update_content (SOME id) de)
 in
-   ds'
+   (List.map thmmapfun (cleanup_subdata_store sds_thm),
+    cleanup_subdata_store sds_term,
+    cleanup_subdata_store sds_type)
 end;
+
 
 fun parse_hix file =
 let
@@ -146,14 +157,21 @@ in
 end;
 
 
+
+
+
+(******************************************************************************)
+(* Output definitions                                                         *)
+(******************************************************************************)
+
 fun holmunge_format command options content =
 let
-   val _ = if (content = "") then Feedback.fail() else ();
+   val _ = if (isSome content) then () else Feedback.fail();
    val empty_posn = (0,0);
    val opts = mungeTools.parseOpts empty_posn ("alltt,"^options);
    val replacement_args = 
       {argpos = empty_posn, command=command, commpos = empty_posn,
-       options = opts, argument=content};
+       options = opts, argument=(valOf content)};
    val width_opt = mungeTools.optset_width opts;
    val width = if isSome width_opt then valOf width_opt else (!default_linewidth_ref);
    val fs = Portable.pp_to_string width mungeTools.replacement replacement_args
@@ -166,13 +184,11 @@ end;
 
 (*val os = Portable.std_out*)
 fun output_holtex_def command definetype os (id,
-  ({label    = label, 
-    in_index = in_index, 
-    options  = options,
-    content  = content,
-    pages    = pages}:data_entry)) =
+  ({options  = options,
+    content  = content_opt,
+    ...}:data_entry)) =
 let
-   val cs = holmunge_format command options content;
+   val cs = holmunge_format command options content_opt;
    val _ = if (cs = "") then Feedback.fail() else ();
    val _ = Portable.output (os, definetype);
    val _ = Portable.output (os, id);
@@ -186,76 +202,102 @@ end handle Interrupt => raise Interrupt
 
 
 
-val output_holtex_type_def =
-   output_holtex_def mungeTools.Type "\\defineHOLty{"
+fun process_type_defs os =
+   List.map (output_holtex_def mungeTools.Type "\\defineHOLty{" os) 
 
-fun process_type_defs os ds =
+
+fun process_term_defs os =
+   List.map (output_holtex_def mungeTools.Term "\\defineHOLtm{" os) 
+
+fun process_thm_defs os =
+   List.map (output_holtex_def mungeTools.Theorem "\\defineHOLthm{" os) 
+
+fun output_all_defs os (thmL, termL, typeL) =
 let
-    val type_entryL = (Redblackmap.listItems (Redblackmap.find (ds, "Type")))
-          handle Redblackmap.NotFound => []
-    val _ = List.map (output_holtex_type_def os) type_entryL
+   val _ = process_type_defs os typeL;
+   val _ = process_term_defs os termL;
+   val _ = process_thm_defs os thmL;
 in
    ()
 end;
 
 
-val output_holtex_term_def =
-   output_holtex_def mungeTools.Term "\\defineHOLtm{";
-
-fun process_term_defs os ds =
-let
-    val term_entryL = (Redblackmap.listItems (Redblackmap.find (ds, "Term")))
-          handle Redblackmap.NotFound => []
-    val _ = List.map (output_holtex_term_def os) term_entryL
-in
-   ()
-end;
+(******************************************************************************)
+(* Output index                                                               *)
+(******************************************************************************)
 
 
-val output_holtex_thm_def =
-   output_holtex_def mungeTools.Theorem "\\defineHOLthm{";
+(* -------------------------------------------------------------------------- *)
+(* comparisons for sorting the index                                          *)
+(* -------------------------------------------------------------------------- *)
 
-fun process_thm_theory_defs os (theory,sds) =
-let
-    val thm_entryL = Redblackmap.listItems sds;
-    fun mapfun (id, ({label    = label, 
-                 in_index = in_index, 
-                 options  = options,
-                 content  = content,
-                 pages    = pages}:data_entry)) =
-               (theory^"."^id, 
-                 {label    = label, 
-                  in_index = in_index, 
-                  options  = options,
-                  content  = theory^"."^id,
-                  pages    = pages}:data_entry);
-    val thm_entryL' = List.map mapfun thm_entryL;
-    val _ = List.map (output_holtex_thm_def os) thm_entryL'
-in
-   ()
-end;
+val string_compare = String.collate (fn (c1, c2) =>
+    Char.compare (Char.toUpper c1, Char.toUpper c2))
 
-fun process_thm_defs os ds =
-let
-    val ds = (fst (Redblackmap.remove (ds, "Term"))) handle Redblackmap.NotFound => ds;
-    val ds = (fst (Redblackmap.remove (ds, "Type"))) handle Redblackmap.NotFound => ds;
-
-    val theory_entryL = Redblackmap.listItems ds;
-    val _ = List.map (process_thm_theory_defs os) theory_entryL
-in
-   ()
-end;
-
-fun output_all_defs os ds =
-let
-   val _ = process_type_defs os ds;
-   val _ = process_term_defs os ds;
-   val _ = process_thm_defs os ds;
-in
-   ()
-end;
+fun entry_list_pos_compare ((id1, de1 as {pos_opt=NONE,...}:data_entry), 
+                            (id2, de2 as {pos_opt=NONE,...}:data_entry)) =
+    string_compare (id1, id2)
+  | entry_list_pos_compare ((id1, de1 as {pos_opt=SOME _,...}:data_entry), 
+                            (id2, de2 as {pos_opt=NONE,...}:data_entry)) =
+    LESS
+  | entry_list_pos_compare ((id1, de1 as {pos_opt=NONE,...}:data_entry), 
+                            (id2, de2 as {pos_opt=SOME _,...}:data_entry)) =
+    GREATER
+  | entry_list_pos_compare ((id1, de1 as {pos_opt=SOME pos1,...}:data_entry), 
+                            (id2, de2 as {pos_opt=SOME pos2,...}:data_entry)) =
+        
+    let
+       val r = Int.compare(pos1,pos2)
+    in if r = EQUAL then string_compare (id1,id2) else r end;
 
 
+fun entry_list_label_compare ((id1, de1 as {label=NONE,...}:data_entry), 
+                              (id2, de2 as {label=NONE,...}:data_entry)) =
+    entry_list_pos_compare ((id1,de1),(id2,de2))
+  | entry_list_label_compare ((id1, de1 as {label=SOME _,...}:data_entry), 
+                              (id2, de2 as {label=NONE,...}:data_entry)) =
+    GREATER
+  | entry_list_label_compare ((id1, de1 as {label=NONE,...}:data_entry), 
+                              (id2, de2 as {label=SOME _,...}:data_entry)) =
+    LESS
+  | entry_list_label_compare ((id1, de1 as {label=SOME l1,...}:data_entry), 
+                              (id2, de2 as {label=SOME l2,...}:data_entry)) =        
+    let
+       val r = string_compare (l1,l2) 
+    in if r = EQUAL then entry_list_pos_compare ((id1,de1),(id2,de2)) else r end
+
+
+fun destruct_theory_thm s2 =
+    let
+       val ss2 = (Substring.full s2)
+       val (x1,x2) = Substring.splitl (fn c => not (c = #".")) ss2
+       val x2' = Substring.triml 1 x2
+    in
+       (Substring.string x1, Substring.string x2')
+    end
+
+
+fun entry_list_thm_compare ((id1, de1 as {content=NONE,...}:data_entry), 
+                            (id2, de2 as {content=NONE,...}:data_entry)) =
+    entry_list_label_compare ((id1,de1),(id2,de2))
+  | entry_list_thm_compare ((id1, de1 as {content=SOME _,...}:data_entry), 
+                              (id2, de2 as {content=NONE,...}:data_entry)) =
+    GREATER
+  | entry_list_thm_compare ((id1, de1 as {content=NONE,...}:data_entry), 
+                            (id2, de2 as {content=SOME _,...}:data_entry)) =
+    LESS
+  | entry_list_thm_compare ((id1, de1 as {content=SOME c1,...}:data_entry), 
+                            (id2, de2 as {content=SOME c2,...}:data_entry)) =        
+    let
+       val (theory1,thm1) = destruct_theory_thm c1;
+       val (theory2,thm2) = destruct_theory_thm c2;
+       val r = Lib.list_compare string_compare ([theory1,thm1], [theory2,thm2])
+    in if r = EQUAL then entry_list_label_compare ((id1,de1),(id2,de2)) else r end
+
+
+(* -------------------------------------------------------------------------- *)
+(* other auxiliary defs                                                       *)
+(* -------------------------------------------------------------------------- *)
 
 
 exception nothing_to_do;
@@ -264,7 +306,10 @@ fun process_index_pages pages =
 let
    val pL = Redblackset.listItems pages
    val pnL = List.map (fn s => (s, Int.fromString s)) pL
-   val intL = List.map (fn p => (p,p)) pnL;
+   fun get_int (_, NONE) = 0 
+     | get_int (_, (SOME n)) = n
+   val pnL' = Listsort.sort (fn (a,b) => Int.compare (get_int a, get_int b)) pnL;
+   val intL = List.map (fn p => (p,p)) pnL';
 
    fun make_intervals [] = []
      | make_intervals [pnp] = [pnp]
@@ -298,12 +343,15 @@ end;
 
 
 
-fun output_holtex_index indextype os (id,
+fun boolopt2latex (SOME true) def = "true"
+  | boolopt2latex (SOME false) def = "false"
+  | boolopt2latex NONE def = def;
+
+fun output_holtex_index (indextype,flagtype) os (id,
   ({label    = label_opt, 
-    in_index = in_index, 
-    options  = options,
-    content  = content,
-    pages    = pages}:data_entry)) =
+    full_index = full_index, 
+    pages    = pages,
+    comment  = comment_opt, ...}:data_entry)) =
 let
    val label = if isSome label_opt then valOf(label_opt) else "";
    val _ = Portable.output (os, indextype);
@@ -312,119 +360,114 @@ let
    val _ = Portable.output (os, label);
    val _ = Portable.output (os, "}{");
    val _ = Portable.output (os, process_index_pages pages);
+   val _ = Portable.output (os, "}{");
+   val _ = Portable.output (os, boolopt2latex full_index flagtype);
+   val _ = Portable.output (os, "}{");
+   val _ = Portable.output (os, if isSome comment_opt then valOf comment_opt else "");
    val _ = Portable.output (os, "}\n");
 in
   ()
 end handle Interrupt => raise Interrupt
-         | _ => ()
+         | _ => ();
 
 
-val output_holtex_type_index =
-   output_holtex_index "      \\HOLTypeIndexEntry{";
 
-fun process_type_index os ds =
+fun process_type_index os typeL =
 let
-    val type_entryL = (Redblackmap.listItems (Redblackmap.find (ds, "Type")))
-          handle Redblackmap.NotFound => []
-    val type_entryL' = List.filter (#in_index o snd) type_entryL;
-    val _ = if null(type_entryL') then raise nothing_to_do else ();
+    val type_entryL  = List.filter (#in_index o snd) typeL;
+    val _ = if null(type_entryL) then raise nothing_to_do else ();
+    val type_entryL' = Listsort.sort entry_list_pos_compare type_entryL;
 
     val _ = Portable.output(os, "   \\HOLBeginTypeIndex\n");
-    val _ = List.map (output_holtex_type_index os) type_entryL'
+    val _ = List.map (output_holtex_index("      \\HOLTypeIndexEntry{","holIndexLongTypeFlag") os) type_entryL'
 in
    ()
 end handle nothing_to_do => ();
 
-val output_holtex_term_index =
-   output_holtex_index "      \\HOLTermIndexEntry{"
 
-fun process_term_index os ds =
+fun process_term_index os termL =
 let
-    val term_entryL = (Redblackmap.listItems (Redblackmap.find (ds, "Term")))
-          handle Redblackmap.NotFound => []
-    val term_entryL' = List.filter (#in_index o snd) term_entryL;
-    val _ = if null(term_entryL') then raise nothing_to_do else ();
+    val term_entryL = List.filter (#in_index o snd) termL;
+    val _ = if null(term_entryL) then raise nothing_to_do else ();
+    val term_entryL' = Listsort.sort entry_list_pos_compare term_entryL;
 
     val _ = Portable.output(os, "   \\HOLBeginTermIndex\n");
-    val _ = List.map (output_holtex_term_index os) term_entryL'
+    val _ = List.map (output_holtex_index ("      \\HOLTermIndexEntry{","holIndexLongTermFlag") os) term_entryL'
 in
    ()
 end handle nothing_to_do => ();
 
 
-val output_holtex_thm_index =
-   output_holtex_index "         \\HOLThmIndexEntry{";
-
-fun process_thm_theory_index os (theory,sds) =
+fun process_thm_index os thmL =
 let
-    val thm_entryL = Redblackmap.listItems sds;
-    val thm_entryL' = List.filter (#in_index o snd) thm_entryL;
-    val _ = if null(thm_entryL') then raise nothing_to_do else ();
+    val thm_entryL = List.filter (#in_index o snd) thmL;
+    val _ = if null(thm_entryL) then raise nothing_to_do else ();
+    val cmp = if (!use_occ_sort_ref) then entry_list_pos_compare else
+         entry_list_thm_compare
+    val thm_entryL' = Listsort.sort cmp thm_entryL;
 
-(*    val tex_escape = UTF8.translate 
-         (fn "_" => "\\_" | s => s)*)
-    val tex_escape = I;
-    fun mapfun (id, ({label    = label, 
-                 in_index = in_index, 
-                 options  = options,
-                 content  = content,
-                 pages    = pages}:data_entry)) =
-               (theory^"."^id, 
-                 {label    = SOME (tex_escape id), 
-                  in_index = in_index, 
-                  options  = options,
-                  content  = theory^"."^id,
-                  pages    = pages}:data_entry);
-
-    val thm_entryL'' = List.map mapfun thm_entryL'; 
-    val _ = Portable.output(os, "      \\HOLThmIndexTheory{"^(tex_escape theory)^"}\n");
-    val _ = List.map (output_holtex_thm_index os) thm_entryL''
-in
-   ()
-end handle nothing_to_do => ();
-
-
-fun process_thm_index os ds =
-let
-    val ds = (fst (Redblackmap.remove (ds, "Term"))) handle Redblackmap.NotFound => ds;
-    val ds = (fst (Redblackmap.remove (ds, "Type"))) handle Redblackmap.NotFound => ds;
-
-    val theory_entryL = Redblackmap.listItems ds;
-    val _ = if null(theory_entryL) then raise nothing_to_do else ();
+    fun thmmapfun (id, de:data_entry) =
+       let
+          val label_opt = #label de;
+          val add_label = if (isSome label_opt) then 
+             (" "^(valOf label_opt)) else "";
+          val content_opt = (#content de);
+          val content = if isSome content_opt then valOf content_opt else id;
+          val (thy,thm) = destruct_theory_thm content;
+          val thythm = if (!use_occ_sort_ref) then
+              (thy^ "Theory."^thm) else thm
+          val new_label = SOME ("{\\tt{}"^thythm ^ "}"^add_label);
+       in
+          (id, thy, data_entry___update_label new_label de)
+       end;
+    val thm_entryL'' = List.map thmmapfun thm_entryL'; 
 
     val _ = Portable.output(os, "   \\HOLBeginThmIndex\n");
-    val _ = List.map (process_thm_theory_index os) theory_entryL
+
+    fun foldfun ((id, thy, de), old_thy) =
+        let
+            val _ = if ((!use_occ_sort_ref) orelse (thy = old_thy)) then () else 
+                (Portable.output(os, "      \\HOLThmIndexTheory{"^thy^"}\n"))
+            val _ = output_holtex_index ("         \\HOLThmIndexEntry{","holIndexLongThmFlag") os (id, de);
+        in
+            thy
+        end;
+    val _ =    foldl foldfun "" thm_entryL'';
 in
    ()
 end handle nothing_to_do => ();
 
-fun output_all_index os ds =
+fun output_all_index os (thmL, termL, typeL) =
 let
    val _ = Portable.output (os, "\\defineHOLIndex{\n");
-   val _ = process_type_index os ds;
-   val _ = Portable.output (os, "\n");
-   val _ = process_term_index os ds;
-   val _ = Portable.output (os, "\n");
-   val _ = process_thm_index os ds;
+   val _ = process_type_index os typeL;
+   val _ = process_term_index os termL;
+   val _ = process_thm_index os thmL;
    val _ = Portable.output (os, "}\n");
 in
    ()
 end;
 
 
-fun output_tix os ds =
+fun output_tix os (thmL, termL, typeL) =
 let
-   val _ = output_all_defs os ds;
-   val _ = Portable.output (os, "\n\n\n");
-   val _ = output_all_index os ds;
+   val _ = output_all_defs os (thmL, termL, typeL);
+   val _ = output_all_index os (thmL, termL, typeL);
 in
    ()
 end;
 
 
 
+
+(******************************************************************************)
+(* Put everything together                                                    *)
+(******************************************************************************)
+
 (*
-   val basename = "/home/tt291/Documents/thesis/holmunge/test";
+   val basename = Globals.HOLDIR ^ "/src/TeX/holindex-demo";
+   val file = (basename ^ ".hix")   
+   val (thmL, termL, typeL) = parse_hix file
 *)
 
 fun holindex basename =
