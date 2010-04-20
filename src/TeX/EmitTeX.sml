@@ -323,8 +323,9 @@ local
           val digitstr = if 0 < dsz andalso dsz <= 2 then
                            "\\sb{" ^ string digits ^ "}"
                          else string digits
+          val core_s = UTF8.translate (fn "_" => "\\HOLTokenUnderscore{}" | s => s) (string core);
         in
-          string core ^ digitstr ^ prime_str
+          core_s ^ digitstr ^ prime_str
         end
 
   fun ann_string overrides pps (s,ann) = let
