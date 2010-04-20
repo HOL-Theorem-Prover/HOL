@@ -1488,8 +1488,14 @@ in
     [] => let
       val targets = generate_all_plausible_targets ()
       val _ =
-        if debug then
-        print("Generated targets are: "^print_list (map fromFile targets)^"\n")
+        if debug then let
+            val tgtstrings0 = map fromFile targets
+            val tgtstrings =
+                map (fn s => if OS.FileSys.access(s, []) then s else s ^ "(*)")
+                    tgtstrings0
+          in
+            print("Generated targets are: "^print_list tgtstrings ^ "\n")
+          end
         else ()
     in
       maybe_recurse
