@@ -108,6 +108,7 @@ sig
   val subset : string
   val setelementof : string
   val not_elementof : string
+  val universal_set : string
 
   (* wordsTheory *)
   val lo : string

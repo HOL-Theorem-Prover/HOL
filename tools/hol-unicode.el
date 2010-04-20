@@ -3,6 +3,7 @@
 (global-set-key (kbd "C-&") "∧")
 (global-set-key (kbd "C-|") "∨")
 (global-set-key (kbd "C-S-u") "∪")
+(global-set-key (kbd "C-S-M-u") "𝕌")
 (global-set-key (kbd "C-S-i") "∩")
 (global-set-key (kbd "C-:") "∈")
 (global-set-key (kbd "C-~") (lambda () (interactive) (insert "¬")))
