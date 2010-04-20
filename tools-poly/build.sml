@@ -379,10 +379,8 @@ fun make_exe (name:string) (POLY : string) (target:string) : unit = let
  end
 
 fun buildDir symlink s =
-  if #1 s = fullPath [HOLDIR, "bin/hol.bare"] then
-    (make_exe "builder0.ML" (#1 (which_hol ())) "hol.builder0"; phase := Bare)
-  else if #1 s = fullPath [HOLDIR, "bin/hol"] then
-    (make_exe "builder.ML" (#1 (which_hol ())) "hol.builder"; phase := Full)
+  if #1 s = fullPath [HOLDIR, "bin/hol.bare"] then phase := Bare
+  else if #1 s = fullPath [HOLDIR, "bin/hol"] then phase := Full
   else
     (build_dir s; upload(s,SIGOBJ,symlink))
 
