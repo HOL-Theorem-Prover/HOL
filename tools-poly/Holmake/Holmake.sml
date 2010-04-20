@@ -396,7 +396,7 @@ fun parse_command_line list = let
 
   val (rem, includes) = find_pairs "-I" list
   val (rem, dontmakes) = find_pairs "-d" rem
-  val (rem, debug) = find_toggle "--debug" rem
+  val (rem, debug) = find_toggle "--d" rem
   val (rem, help) = find_alternative_tags  ["--help", "-h"] rem
   val (rem, rebuild_deps) = find_alternative_tags ["--rebuild_deps","-r"] rem
   val (rem, cmdl_HOLDIRs) = find_pairs "--holdir" rem
@@ -1516,7 +1516,7 @@ in
      "    -I <file>            : include directory (can be repeated)\n",
      "    -d <file>            : ignore file (can be repeated)\n",
      "    -f <theory>          : toggles fast build (can be repeated)\n",
-     "    --debug              : print debugging information\n",
+     "    --d                  : print debugging information\n",
      "    --fast               : files default to fast build; -f toggles\n",
      "    --help | -h          : show this message\n",
      "    --holdir <directory> : use specified directory as HOL root\n",
