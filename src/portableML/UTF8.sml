@@ -5,6 +5,7 @@ exception BadUTF8 of string
 
 val two11 = 2048  (* 2 ^ 11 *)
 val two16 = 65536 (* 2 ^ 16 *)
+val Umax = 0x10FFFF (* maximum Unicode code point *)
 
 fun chr i =
     if i < 0 then raise Chr
@@ -12,7 +13,7 @@ fun chr i =
     else if i < two11 then let
         val w = Word.fromInt i
         val byte2 = 128 + Word.toInt (Word.andb(w, 0wx3F))
-        val byte1 = 192 + Word.toInt (Word.>>(w,0w6))
+        val byte1 = 0xC0 + Word.toInt (Word.>>(w,0w6))
       in
         String.implode [Char.chr byte1, Char.chr byte2]
       end
@@ -22,9 +23,23 @@ fun chr i =
         val w = Word.>>(w,0w6)
         val byte2 = 128 + Word.toInt (Word.andb(w, 0wx3F))  (* 3F = 6 bits *)
         val w = Word.>>(w,0w6)
-        val byte1 = 224 + Word.toInt (Word.andb(w, 0wxF))   (* F = 4 bits *)
+        val byte1 = 0xE0 + Word.toInt (Word.andb(w, 0wxF))
+           (* inital E says there are 3 bytes, and with F to extract 4 bits *)
       in
         String.implode (map Char.chr [byte1, byte2, byte3])
+      end
+    else if i <= Umax then let
+        val w = Word.fromInt i
+        val byte4 = 128 + Word.toInt (Word.andb(w, 0wx3F))  (* 3F = 6 bits *)
+        val w = Word.>>(w,0w6)
+        val byte3 = 128 + Word.toInt (Word.andb(w, 0wx3F))  (* 3F = 6 bits *)
+        val w = Word.>>(w,0w6)
+        val byte2 = 128 + Word.toInt (Word.andb(w, 0wx3F))  (* 3F = 6 bits *)
+        val w = Word.>>(w,0w6)
+        val byte1 = 0xF0 + Word.toInt (Word.andb(w, 0wx7))
+           (* inital F says there are 4 bytes, and with 7 to extract 3 bits *)
+      in
+        String.implode (map Char.chr [byte1, byte2, byte3, byte4])
       end
     else raise Chr
 
