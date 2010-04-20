@@ -506,6 +506,10 @@ struct
       bossLib.METIS_PROVE [lem2, lem3]
         ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 0)``
     end)
+  val _ = s ("t027", X  (*TODO*)
+    ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 1 <=> ~(x ' 0))``)
+  val _ = s ("t028", X  (*TODO*)
+    ``(1w + (x :'a word) = y) ==> x ' 0 ==> ~(y ' 0)``)
 
   (* used to prove hypotheses of other proforma theorems (recursively) *)
 
