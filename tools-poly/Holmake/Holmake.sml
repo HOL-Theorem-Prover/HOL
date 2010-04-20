@@ -94,21 +94,6 @@ fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
      Support for handling the preprocessing of files containing ``
  ---------------------------------------------------------------------------*)
 
-(* does the file have an occurrence of `` *)
-fun has_dq filename = let
-  val istrm = TextIO.openIn filename
-  fun loop() =
-    case TextIO.input1 istrm of
-      NONE => false
-    | SOME #"`" => (case TextIO.input1 istrm of
-                      NONE => false
-                    | SOME #"`" => true
-                    | _ => loop())
-    | _ => loop()
-in
-  loop() before TextIO.closeIn istrm
-end
-
 fun variant str =  (* get an unused file name in the current directory *)
  if OS.FileSys.access(str,[])
  then let fun vary i =
@@ -1128,41 +1113,10 @@ in
       val _ = exists_readable file orelse
               (print ("Wanted to compile "^file^", but it wasn't there\n");
                raise FileNotFound)
-      val _ = print ("Compiling "^file^"\n")
-      open OS.Process
-      val res =
-          if has_unquoter() then let
-              (* force to always use unquoter if present, so as to generate
-                 location pragmas. Must test for existence, for bootstrapping.
-              *)
-              val clone = variant file
-              val _ = OS.FileSys.rename {old=file, new=clone}
-              fun revert() =
-                  if OS.FileSys.access (clone, [OS.FileSys.A_READ]) then
-                    (OS.FileSys.remove file handle _ => ();
-                     OS.FileSys.rename{old=clone, new=file})
-                  else ()
-            in
-              (if OS.Process.isSuccess (unquote_to clone file)
-                  handle e => (revert();
-                               print ("Unquoting "^file^
-                                      " raised exception\n");
-                               raise CompileFailed)
-               then
-                 poly_compile arg include_flags deps before revert()
-               else (print ("Unquoting "^file^" ran and failed\n");
-                     revert();
-                     raise CompileFailed))
-              handle CompileFailed => raise CompileFailed
-                   | e => (revert();
-                           print("Unable to compile: "^file^
-                                 " - raised exception "^exnName e^"\n");
-                           raise CompileFailed)
-            end
-          else poly_compile arg include_flags deps
-     in
-        isSuccess res
-     end
+      val res = poly_compile arg include_flags deps
+    in
+      OS.Process.isSuccess res
+    end
   | BuildScript (s, deps) => let
       val _ = not (Binaryset.member(!failed_script_cache, s)) orelse
               (print ("Not re-running "^s^"Script; believe it will fail\n");
