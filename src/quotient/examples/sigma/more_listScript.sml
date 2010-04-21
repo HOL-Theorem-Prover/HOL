@@ -153,7 +153,7 @@ val DELETE_DIFF_SL =
    (--`!xs s (e:'a).
         s DELETE e DIFF SL xs = s DIFF SL (e::xs)`--),
    LIST_INDUCT_TAC
-   THEN REWRITE_TAC[SL,DIFF]
+   THEN REWRITE_TAC[SL,DIFFF]
   );
 
 
