@@ -372,7 +372,7 @@ local
     word_bit_0, word_bit_0_word_T, w2w_0, sw2sw_0, sw2sw_word_T,
     word_0_n2w, word_1_n2w,
     word_len_def, word_reverse_0, word_reverse_word_T, word_log2_1, word_div_1,
-    word_join_0, word_concat_0, word_concat_word_T, word_join_word_T,
+    word_join_0, word_concat_0_0, word_concat_word_T, word_join_word_T,
     WORD_BITS_ZERO2, WORD_EXTRACT_ZERO2, WORD_SLICE_ZERO2,
     (REWRITE_RULE [LSB_ODD] o GSYM) LSB_def, BIT_ZERO, BITS_ZERO2]
 in
@@ -1034,18 +1034,18 @@ val WORD_EXTRACT_ss =
        name = "WORD_EVAL_CONV",
        pats = [``words$word_replicate ^a ^w:'a word``]},
    simpLib.rewrites
-     ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
-       WORD_EXTRACT_LSL, WORD_EXTRACT_LSL2, word_concat_def,
-       LET_RULE word_join_def, word_rol_def, LET_RULE word_ror, word_asr,
-       word_lsr_n2w, WORD_EXTRACT_COMP_THM, WORD_EXTRACT_MIN_HIGH,
-       EXTRACT_JOIN, EXTRACT_JOIN_LSL, EXTRACT_JOIN_ADD, EXTRACT_JOIN_ADD_LSL,
-       OR_AND_COMM_RULE EXTRACT_JOIN, OR_AND_COMM_RULE EXTRACT_JOIN_LSL,
-       OR_AND_COMM_RULE EXTRACT_JOIN_ADD, OR_AND_COMM_RULE
-       EXTRACT_JOIN_ADD_LSL, GSYM WORD_EXTRACT_OVER_BITWISE,
-       (GEN_ALL o ISPEC `words$word_extract h l :'a word -> 'b word`) COND_RAND,
-       WORD_BITS_EXTRACT, WORD_w2w_EXTRACT, sw2sw_w2w, word_lsb, word_msb] @
-       map (REWRITE_RULE [WORD_BITS_EXTRACT])
-         [WORD_ALL_BITS, WORD_SLICE_THM, WORD_BIT_BITS])];
+    ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
+      WORD_EXTRACT_LSL, WORD_EXTRACT_LSL2, word_extract_eq_n2w, word_concat_def,
+      LET_RULE word_join_def, word_rol_def, LET_RULE word_ror, word_asr,
+      word_lsr_n2w, WORD_EXTRACT_COMP_THM, WORD_EXTRACT_MIN_HIGH,
+      EXTRACT_JOIN, EXTRACT_JOIN_LSL, EXTRACT_JOIN_ADD, EXTRACT_JOIN_ADD_LSL,
+      OR_AND_COMM_RULE EXTRACT_JOIN, OR_AND_COMM_RULE EXTRACT_JOIN_LSL,
+      OR_AND_COMM_RULE EXTRACT_JOIN_ADD, OR_AND_COMM_RULE
+      EXTRACT_JOIN_ADD_LSL, GSYM WORD_EXTRACT_OVER_BITWISE,
+      (GEN_ALL o ISPEC `words$word_extract h l :'a word -> 'b word`) COND_RAND,
+      WORD_BITS_EXTRACT, WORD_w2w_EXTRACT, sw2sw_w2w, word_lsb, word_msb] @
+      map (REWRITE_RULE [WORD_BITS_EXTRACT])
+        [WORD_ALL_BITS, WORD_SLICE_THM, WORD_BIT_BITS])];
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1065,11 +1065,10 @@ val WORD_CONV = SIMP_CONV (std_ss++WORD_ss)
 
 val LESS_THM = SUC_RULE prim_recTheory.LESS_THM;
 
-val LESS_COR = REWRITE_RULE [DISJ_IMP_THM] (CONJ
-  ((GEN_ALL o REWRITE_CONV [LESS_THM])
-     ``(prim_rec$< ^m (arithmetic$NUMERAL (BIT1 ^n))) ==> ^P``)
-  ((GEN_ALL o REWRITE_CONV [LESS_THM])
-     ``(prim_rec$< ^m (arithmetic$NUMERAL (BIT2 ^n))) ==> ^P``));
+val LESS_COR =
+  [``(prim_rec$< ^m (arithmetic$NUMERAL (arithmetic$BIT1 ^n))) ==> ^P``,
+   ``(prim_rec$< ^m (arithmetic$NUMERAL (arithmetic$BIT2 ^n))) ==> ^P``]
+     |> map (GEN_ALL o REWRITE_CONV [LESS_THM, DISJ_IMP_THM]) |> LIST_CONJ;
 
 fun dest_strip t =
 let val (l,r) = strip_comb t in
