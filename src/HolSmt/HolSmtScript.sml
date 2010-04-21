@@ -497,7 +497,7 @@ struct
   val _ = s ("t026",
     let
       val lem1 = W ``!x:word32. x ' 0 ==> 0w <> x``
-      val lem2 = W ``!x:word8. ((sw2sw x):word32 ' 0) = x ' 0``
+      val lem2 = W ``!x:word8. (((sw2sw x):word32) ' 0) = x ' 0``
       val lem3 = Q.prove (`!x:word32. (x ' 0) ==> (0w <> 0xFFFFFFFFw * x)`,
         Tactical.THEN (Tactic.NTAC 2 Tactic.STRIP_TAC,
           Tactical.THEN (Tactic.MATCH_MP_TAC lem1,
