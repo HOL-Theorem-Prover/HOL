@@ -3806,14 +3806,19 @@ val word_extract_eq_n2w = Q.store_thm("word_extract_eq_n2w",
        [WORD_EXTRACT_MIN_HIGH, GSYM WORD_w2w_EXTRACT, w2w_eq_n2w]);
 
 val word_concat_0 = Q.store_thm("word_concat_0",
-  `!x. FINITE univ(:'a) /\ FINITE univ(:'b) /\ x < dimword (:'b) ==>
+  `!x. FINITE univ(:'a) /\ x < dimword (:'b) ==>
      ((0w :'a word) @@ (n2w x :'b word) = (n2w x :'c word))`,
-  Cases_on `dimindex (:'b) <= dimindex (:'c)`
-  >> SRW_TAC [numSimps.ARITH_ss] [fcpTheory.index_sum, word_concat_def,
-        word_join_0, w2w_w2w, w2w_eq_n2w, WORD_ALL_BITS]
-  \\ SRW_TAC [fcpLib.FCP_ss] [word_concat_def, word_join_0, n2w_def, w2w]
-  \\ Cases_on `i < dimindex (:'a) + dimindex (:'b)`
-  \\ SRW_TAC [fcpLib.FCP_ss, numSimps.ARITH_ss] [fcpTheory.index_sum, w2w]);
+  Cases_on `FINITE univ(:'b)`
+  << [Cases_on `dimindex (:'b) <= dimindex (:'c)`
+      >> SRW_TAC [numSimps.ARITH_ss] [fcpTheory.index_sum, word_concat_def,
+              word_join_0, w2w_w2w, w2w_eq_n2w, WORD_ALL_BITS]
+      \\ SRW_TAC [fcpLib.FCP_ss] [word_concat_def, word_join_0, n2w_def, w2w]
+      \\ Cases_on `i < dimindex (:'a) + dimindex (:'b)`
+      \\ SRW_TAC [fcpLib.FCP_ss, numSimps.ARITH_ss] [fcpTheory.index_sum, w2w],
+      IMP_RES_TAC fcpTheory.NOT_FINITE_IMP_dimindex_1
+      \\ FULL_SIMP_TAC std_ss [fcpTheory.index_sum, bitTheory.BITS_ZERO3,
+            word_concat_def, dimword_def, word_join_0, w2w_w2w, w2w_n2w,
+            word_bits_n2w]]);
 
 val word_concat_0_eq = Q.store_thm("word_concat_0_eq",
   `!x y. FINITE univ(:'a) /\ FINITE univ(:'b) /\
