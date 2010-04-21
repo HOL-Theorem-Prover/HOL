@@ -3821,7 +3821,7 @@ val word_concat_0 = Q.store_thm("word_concat_0",
             word_bits_n2w]]);
 
 val word_concat_0_eq = Q.store_thm("word_concat_0_eq",
-  `!x y. FINITE univ(:'a) /\ FINITE univ(:'b) /\
+  `!x y. FINITE univ(:'a) /\
          dimindex (:'b) <= dimindex (:'c) /\ y < dimword(:'b) ==>
      (((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (x = n2w y))`,
    Cases \\ SRW_TAC [numSimps.ARITH_ss] [dimindex_dimword_le_iso, word_concat_0]);
