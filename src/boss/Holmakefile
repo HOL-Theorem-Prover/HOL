@@ -1,0 +1,13 @@
+TARGET_poly = $(dprot $(HOLDIR)/bin/hol.builder)
+TARGET_mosml = bossLib.sml
+
+DEPS_poly = bossLib.uo $(dprot $(SIGOBJ)/listTheory.uo)
+DEPS_mosml =
+
+COMM_poly = cd $(protect $(HOLDIR)/tools-poly) ; \
+            $(protect $(HOLDIR)/bin/hol.builder0) < builder.ML ; \
+            cc -o $@ hol.builder.o $(POLY_LDFLAGS)
+COMM_mosml =
+
+$(TARGET_$(ML_SYSNAME)): $(DEPS_$(ML_SYSNAME))
+	$(COMM_$(ML_SYSNAME))

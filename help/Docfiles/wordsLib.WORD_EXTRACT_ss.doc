@@ -1,4 +1,4 @@
-\DOC 
+\DOC
 
 \TYPE {WORD_EXTRACT_ss : ssfrag}
 
@@ -12,7 +12,12 @@ simplification, words.
 
 \DESCRIBE
 
-The fragment {WORD_EXTRACT_ss} simplifies the operations {w2w}, {sw2sw} (signed word-to-word conversion), {word_lsb}, {word_msb}, {word_bit}, {>>} (arithmetic right shift), {>>>} (logical right shift), {#>>} (rotate right), {#<<} (rotate left), {@@} (concatenation), {--} (word slice) and {<>} (word bits). The result is expressed in terms of {!!} (dijunction), {<<} (left shift) and {><} (word extract).
+The fragment {WORD_EXTRACT_ss} simplifies the operations {w2w}, {sw2sw} (signed
+word-to-word conversion), {word_lsb}, {word_msb}, {word_bit}, {>>} (arithmetic
+right shift), {>>>} (logical right shift), {#>>} (rotate right), {#<<} (rotate
+left), {@@} (concatenation), {--} (word bits) and {''} (word slice). The result
+is expressed in terms of {!!} (dijunction), {<<} (left shift) and {><} (word
+extract).
 
 \EXAMPLE
 

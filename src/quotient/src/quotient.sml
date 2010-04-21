@@ -2162,7 +2162,7 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
               val nm = dest_vartype tau
               fun new_name nm =
                  if mem nm used then new_name (nm ^ "1") else nm
-          in mk_vartype (new_name nm)
+          in trace ("Vartype Format Complaint",0) mk_vartype (new_name nm)
           end
 
         fun mk_ksis taus =

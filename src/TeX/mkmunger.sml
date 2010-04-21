@@ -20,8 +20,12 @@ fun munger () = let
       else NONE
   fun setwidth i = mungeLex.UserDeclarations.width := i
   fun setoverrides s = mungeTools.user_overrides := mungeTools.read_overrides s
+  val run_lexer = ref true
   val _ = case CommandLine.arguments() of
-            [] => ()
+            [] => () 
+          | ["-index", basename] => (
+                holindex.holindex basename;
+                run_lexer := false)
           | [s] => let
             in
               case parseWidth s of
@@ -37,7 +41,7 @@ fun munger () = let
             end
           | _ => mungeTools.usage()
 in
-  lexer()
+  if (!run_lexer) then lexer() else ()
 end
 end
 

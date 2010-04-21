@@ -5,11 +5,6 @@
 structure Z3_ProformaThms =
 struct
 
-  fun prove net t =
-    Lib.tryfind
-      (fn th => Drule.INST_TY_TERM (Term.match_term (Thm.concl th) t) th)
-      (Net.match t net)
-
   fun thm_net_from_list thms =
     List.foldl (fn (th, net) => Net.insert (Thm.concl th, th) net) Net.empty
       thms
@@ -21,10 +16,10 @@ in
     [d001, d002, d003, d004, d005, d006, d007, d008, d009, d010, d011, d012,
      d013, d014, d015, d016, d017, d018, d019, d020, d021, d022, d023, d024,
      d025, d026, d027, d028, d029, d030, d031, d032, d033, d034, d035, d036,
-     d037]
+     d037, d038, d039]
 
   val rewrite_thms = thm_net_from_list
-    [r001, r002, r003, r004, r005, r006, r006a, r006b, r006c, r006d, r006e, r006f, r007, r008, r009, r010, r011, r012,
+    [r001, r002, r003, r004, r005, r006, r006a, r006b, r006c, r006d, r006e, r006f, r006g, r006h, r007, r008, r009, r010, r011, r012,
      r013, r014, r015, r016, r017, r018, r019, r020, r021, r022, r023, r024,
      r025, r026, r027, r028, r029, r030, r031, r032, r033, r034, r035, r036,
      r037, r038, r039, r040, r041, r042, r043, r044, r045, r046, r047, r048,
@@ -41,14 +36,40 @@ in
      r169, r170, r171, r172, r173, r174, r175, r176, r177, r178, r179, r180,
      r181, r182, r183, r184, r185, r186, r187, r188, r189, r190, r191, r192,
      r193, r194, r195, r196, r197, r198, r199, r200, r201, r202, r203, r204,
-     r205, r206, r207, r208, r209, r210, r211, r212, r213, r214, (*TODOr215, r216,
-     r217, r218, r219,*) r220, r221, r222, r223, r224, r225, r226, r227, r228,
-     r229, r230(*, TODOr231*)]
+     r205, r206, r207, r208, r209, r210, r211, r212, r213, r214, r215, r216,
+     r217, r218, r219, r220, r221, r222, r223, r224, r225, r226, r227, r228,
+     r229, r230, r231]
 
   val th_lemma_thms = thm_net_from_list
     [t001, t002, t003, t004, t005, t006, t007, t008, t009, t010, t011, t012,
-     t013, t014, t015, t016, t017, t018, t019, t020, t021, t022, t023]
+     t013, t014, t015, t016, t017, t018, t019, t020, t021, t022, t023, t024,
+     t025, t026, t027, t028]
 
+  val prove_hyp_thms = thm_net_from_list
+    [p001, p002, p003, p004, p005, p006, p007]
 end  (* local *)
+
+  (* finds a matching theorem, instantiates it, attempts to prove all
+     hypotheses of the instantiated theorem (by instantiation or
+     simplification) *)
+  fun prove net t =
+    Lib.tryfind
+      (fn th =>
+        let
+          val th = Drule.INST_TY_TERM (Term.match_term (Thm.concl th) t) th
+          open simpLib
+          fun prove_hyp (hyp, th) =
+            let
+              val hyp_th = prove prove_hyp_thms hyp
+                handle Feedback.HOL_ERR _ =>
+                  SIMP_PROVE (bossLib.std_ss ++ wordsLib.SIZES_ss) []
+                             hyp
+            in
+              Drule.PROVE_HYP hyp_th th
+            end
+        in
+          HOLset.foldl prove_hyp th (Thm.hypset th)
+        end)
+      (Net.match t net)
 
 end

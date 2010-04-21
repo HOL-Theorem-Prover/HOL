@@ -1,7 +1,11 @@
+(* this is an -*- sml -*- file*)
 local
 val pd = !PolyML.Compiler.printDepth;
+infix ++
+fun p1 ++ p2 = OS.Path.concat (p1,p2)
 in
 val _ = PolyML.print_depth 0;
+val _ = loadPath := (Systeml.HOLDIR ++ "src/boss") :: (!loadPath)
 val _ = app load ["optionTheory", "pairLib", "sumTheory",
                   "numTheory", "arithmeticTheory", "Arith",
                   "numLib", "mesonLib", "BasicProvers",

@@ -181,7 +181,7 @@ val freenonces1_def = Define
 
 val freenonces_RSP = store_thm
    ("freenonces_RSP",
-    (--`!U V. msgrel U V ==> (freenonces1 U = freenonces1 V)`--),
+    (--`!V W. msgrel V W ==> (freenonces1 V = freenonces1 W)`--),
     rule_induct msgrel_ind_thm
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss [freenonces1_def]
@@ -202,7 +202,7 @@ val freeleft1_def = Define
 
 val freeleft_RSP = store_thm
    ("freeleft_RSP",
-    (--`!U V. msgrel U V ==> msgrel (freeleft1 U) (freeleft1 V)`--),
+    (--`!V W. msgrel V W ==> msgrel (freeleft1 V) (freeleft1 W)`--),
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[freeleft1_def,msgrel_REFL,msgrel_SYM]
@@ -224,7 +224,7 @@ val freeright1_def = Define
 
 val freeright_RSP = store_thm
    ("freeright_RSP",
-    (--`!U V. msgrel U V ==> msgrel (freeright1 U) (freeright1 V)`--),
+    (--`!V W. msgrel V W ==> msgrel (freeright1 V) (freeright1 W)`--),
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[freeright1_def,msgrel_REFL,msgrel_SYM]
@@ -247,7 +247,7 @@ val is_nonce1_def = Define
 
 val is_nonce_RSP = store_thm
    ("is_nonce_RSP",
-    (--`!U V. msgrel U V ==> (is_nonce1 U = is_nonce1 V)`--),
+    (--`!V W. msgrel V W ==> (is_nonce1 V = is_nonce1 W)`--),
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[is_nonce1_def]

@@ -71,4 +71,38 @@ val _ =
      ]
  end;
 
+local
+  val univ_printing = ref true
+  val unicode_univ = ref true
+
+  val _ = Feedback.register_btrace ("Univ pretty-printing", univ_printing)
+  val _ = Feedback.register_btrace ("Unicode Univ printing", unicode_univ)
+          (* because the current unicode symbol for the universal set is
+             beyond the BMP, it may not be common in installed fonts.
+             So we provide a flag specifically to turn just it off. *)
+  val univ_t = prim_mk_const {Thy="pred_set", Name = "UNIV"}
+  fun univ_printer (tyg, tmg) printer (ppfns:term_pp_types.ppstream_funs) gravs depth pps tm =
+      let
+        val {add_string, begin_block, end_block,...} = ppfns
+      in
+        if !univ_printing then let
+            val (elty, _) = dom_rng (type_of tm)
+            val itself_t = Term.inst [{redex=alpha,residue=elty}]
+                                     boolSyntax.the_value
+            val U = if get_tracefn "Unicode" () = 1 andalso !unicode_univ then
+                      UnicodeChars.universal_set
+                    else "univ"
+          in
+            add_string U;
+            printer gravs depth itself_t
+          end
+        else
+          case Overload.info_for_name (term_grammar.overload_info tmg) "UNIV" of
+            NONE => add_string "pred_set$UNIV"
+          | SOME _ => add_string "UNIV"
+      end
+  val _ = Parse.temp_add_user_printer("UNIVprinter", univ_t, univ_printer)
+in
+end
+
 end

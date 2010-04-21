@@ -1,0 +1,81 @@
+open holindexData
+
+%%
+%name Holindex
+%eop EOF
+%term 
+     LBRACE
+  |  RBRACE
+  |  EQUAL
+  |  TERM
+  |  TYPE
+  |  THEOREM
+  |  STRING of string
+  |  FORCE_INDEX
+  |  LONG_INDEX
+  |  SHORT_INDEX
+  |  OPTIONS
+  |  LABEL
+  |  CONTENT
+  |  COMMENT
+  |  IDENT of string
+  |  COMMA
+  |  EOF
+
+
+
+(* entry points *)
+
+%nonterm 
+     top of parse_entry list
+  |  entry of parse_entry
+  |  entry_seq of parse_entry list
+  |  option of parse_entry -> parse_entry
+  |  option_seq of parse_entry -> parse_entry
+
+%start top
+%pos (int * int)
+
+
+
+%%
+
+top:
+   entry_seq ( entry_seq )
+
+entry_seq :
+    EOF
+       ( [] )
+  | entry entry_seq
+       ( entry::entry_seq )
+
+entry:
+    TERM LBRACE IDENT COMMA option_seq RBRACE
+       ( mk_update_parse_entry ("Term", IDENT) option_seq )
+  | TYPE LBRACE IDENT COMMA option_seq RBRACE
+       ( mk_update_parse_entry ("Type", IDENT) option_seq )
+  | THEOREM LBRACE IDENT COMMA option_seq RBRACE
+       ( mk_update_parse_entry ("Thm", IDENT) option_seq )
+
+option_seq:
+    (* empty *)   (fn x => x)
+  | option        (option)
+  | option COMMA option_seq 
+      (fn e => option_seq (option e))
+
+option:
+    FORCE_INDEX
+       (parse_entry___force_index)
+  | LONG_INDEX
+       (parse_entry___full_index true)
+  | SHORT_INDEX
+       (parse_entry___full_index false)
+  | LABEL EQUAL STRING
+       (parse_entry___set_label STRING)
+  | OPTIONS EQUAL STRING
+       (parse_entry___set_options STRING)
+  | CONTENT EQUAL STRING
+       (parse_entry___set_content STRING)
+  | COMMENT EQUAL STRING
+       (parse_entry___set_comment STRING)
+

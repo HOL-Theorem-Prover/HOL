@@ -525,6 +525,14 @@ val DIMINDEX_LT =
 val EXISTS_HB = save_thm("EXISTS_HB",
   PROVE [DIMINDEX_GT_0,LESS_ADD_1,ADD1,ADD] ``?m. ^WL = SUC m``);
 
+val dimindex_dimword_le_iso = Q.store_thm("dimindex_dimword_le_iso",
+  `dimindex (:'a) <= dimindex (:'b) = dimword (:'a) <= dimword (:'b)`,
+  SRW_TAC [] [logrootTheory.LE_EXP_ISO, fcpTheory.dimindex_def, dimword_def]);
+
+val dimindex_dimword_lt_iso = Q.store_thm("dimindex_dimword_lt_iso",
+  `dimindex (:'a) < dimindex (:'b) = dimword (:'a) < dimword (:'b)`,
+  SRW_TAC [] [logrootTheory.LT_EXP_ISO, fcpTheory.dimindex_def, dimword_def]);
+
 val MOD_DIMINDEX = store_thm("MOD_DIMINDEX",
   `!n. n MOD dimword (:'a) = BITS (^WL - 1) 0 n`,
   STRIP_ASSUME_TAC EXISTS_HB \\ ASM_SIMP_TAC arith_ss [dimword_def,BITS_ZERO3]);
@@ -1595,8 +1603,7 @@ val tac =
   \\ Cases_on `a:'a word`
   \\ Cases_on `b:'a word`
   \\ `n < 2 ** SUC (dimindex (:'a) - 1) /\ n' < 2 ** SUC (dimindex (:'a) - 1)`
-  by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
-       DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
+  by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0, SUB1_SUC]
   \\ SRW_TAC [ARITH_ss] [WORD_w2w_EXTRACT, word_extract_n2w, word_bits_n2w,
        MOD_DIMINDEX, BITS_COMP_THM2, MIN_DEF, BITS_ZEROL, WORD_BITS_EXTRACT]
   \\ SRW_TAC [ARITH_ss] [word_add_n2w, word_mul_n2w, word_extract_n2w,
@@ -1641,8 +1648,7 @@ val WORD_EXTRACT_ID = Q.store_thm("WORD_EXTRACT_ID",
   `!w:'a word h.  w2n w < 2 ** SUC h ==> ((h >< 0) w = w)`,
   Cases
   \\ `n < 2 ** SUC (dimindex (:'a) - 1)`
-  by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0,
-       DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
+  by FULL_SIMP_TAC arith_ss [dimword_def,DIMINDEX_GT_0, SUB1_SUC]
   \\ SRW_TAC [] [w2w_n2w, word_extract_n2w, word_bits_n2w,
        BITS_COMP_THM2, MOD_DIMINDEX, MIN_DEF, BITS_ZEROL]
   \\ FULL_SIMP_TAC arith_ss [BITS_ZEROL]
@@ -3059,7 +3065,6 @@ val LESS_EQ_ADD2 = DECIDE (Term `!a:num b c. a + b <= a + c ==> b <= c`);
 val LESS_ADD2 = DECIDE (Term `!a:num b c. a + b < a + c ==> b < c`);
 val LESS_EQ_ADD_SUB2 =
    DECIDE (Term `!m:num n p. p <= n ==> (m + p - n = m - (n - p))`);
-val SUB_SUC1 = DECIDE ``!m. ~(m = 0) ==> (SUC (m - 1) = m)``;
 
 val start_tac =
   REWRITE_TAC [word_sub_def,word_add_def] \\ RW_TAC bool_ss [word_msb_n2w]
@@ -3413,8 +3418,8 @@ val w2n_word_H = prove(
 val WORD_L_PLUS_H = store_thm("WORD_L_PLUS_H",
   `word_L + word_H = word_T`,
   REWRITE_TAC [word_add_def,w2n_word_L,w2n_word_H,n2w_def]
-    \\ RW_TAC (fcp_ss++ARITH_ss) [word_T,GSYM EXP,DIMINDEX_GT_0,
-         DECIDE ``0 < m ==> (SUC (m - 1) = m)``,ONE_COMP_0_THM]);
+    \\ RW_TAC (fcp_ss++ARITH_ss)
+         [word_T,GSYM EXP,DIMINDEX_GT_0, SUB1_SUC, ONE_COMP_0_THM]);
 
 fun bound_tac th1 th2 =
   RW_TAC bool_ss [WORD_LE,WORD_L_NEG,WORD_LE,WORD_H_POS,w2n_word_H,w2n_word_L]
@@ -3774,8 +3779,52 @@ val word_join_0 = store_thm("word_join_0",
   SRW_TAC [boolSimps.LET_ss]
     [word_join_def, w2w_0, ZERO_SHIFT, WORD_OR_CLAUSES]);
 
-val word_concat_0 = save_thm("word_concat_0",
+val word_concat_0_0 = save_thm("word_concat_0_0",
   SIMP_CONV std_ss [word_join_0, w2w_0, word_concat_def] ``0w @@ 0w``);
+
+val w2w_eq_n2w = Q.store_thm("w2w_eq_n2w",
+  `!x:'a word y.
+      dimindex (:'a) <= dimindex (:'b) /\ y < dimword (:'a) ==>
+      ((w2w x = n2w y :'b word) = (x = n2w y))`,
+  Cases \\ SRW_TAC [] [w2w_n2w]
+  >> FULL_SIMP_TAC arith_ss [dimindex_dimword_le_iso]
+  \\ SRW_TAC [] [MOD_DIMINDEX, bitTheory.BITS_COMP_THM2, MIN_DEF]
+  \\ FULL_SIMP_TAC arith_ss [dimword_def, DIMINDEX_GT_0, bitTheory.BITS_ZEROL,
+       SUB1_SUC]
+  \\ IMP_RES_TAC bitTheory.TWOEXP_MONO
+  \\ `y < 2 ** dimindex (:'b)` by DECIDE_TAC
+  \\ ASM_SIMP_TAC std_ss [DIMINDEX_GT_0, bitTheory.BITS_ZEROL, SUB1_SUC]);
+
+val word_extract_eq_n2w = Q.store_thm("word_extract_eq_n2w",
+  `!x:'a word h y.
+      dimindex (:'a) <= dimindex (:'b) /\
+      dimindex (:'a) - 1 <= h /\ y < dimword (:'a) ==>
+      (((h >< 0) x = n2w y :'b word) = (x = n2w y))`,
+  REPEAT STRIP_TAC
+  \\ Cases_on `h = dimindex (:'a) - 1`
+  \\ SRW_TAC [numSimps.ARITH_ss]
+       [WORD_EXTRACT_MIN_HIGH, GSYM WORD_w2w_EXTRACT, w2w_eq_n2w]);
+
+val word_concat_0 = Q.store_thm("word_concat_0",
+  `!x. FINITE univ(:'a) /\ x < dimword (:'b) ==>
+     ((0w :'a word) @@ (n2w x :'b word) = (n2w x :'c word))`,
+  Cases_on `FINITE univ(:'b)`
+  << [Cases_on `dimindex (:'b) <= dimindex (:'c)`
+      >> SRW_TAC [numSimps.ARITH_ss] [fcpTheory.index_sum, word_concat_def,
+              word_join_0, w2w_w2w, w2w_eq_n2w, WORD_ALL_BITS]
+      \\ SRW_TAC [fcpLib.FCP_ss] [word_concat_def, word_join_0, n2w_def, w2w]
+      \\ Cases_on `i < dimindex (:'a) + dimindex (:'b)`
+      \\ SRW_TAC [fcpLib.FCP_ss, numSimps.ARITH_ss] [fcpTheory.index_sum, w2w],
+      IMP_RES_TAC fcpTheory.NOT_FINITE_IMP_dimindex_1
+      \\ FULL_SIMP_TAC std_ss [fcpTheory.index_sum, bitTheory.BITS_ZERO3,
+            word_concat_def, dimword_def, word_join_0, w2w_w2w, w2w_n2w,
+            word_bits_n2w]]);
+
+val word_concat_0_eq = Q.store_thm("word_concat_0_eq",
+  `!x y. FINITE univ(:'a) /\
+         dimindex (:'b) <= dimindex (:'c) /\ y < dimword(:'b) ==>
+     (((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (x = n2w y))`,
+   Cases \\ SRW_TAC [numSimps.ARITH_ss] [dimindex_dimword_le_iso, word_concat_0]);
 
 val word_join_word_T = store_thm("word_join_word_T",
   `word_join (- 1w) (- 1w) = - 1w`,

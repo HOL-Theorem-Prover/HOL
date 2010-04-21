@@ -1,0 +1,31 @@
+@Term{term_id_4,
+   label = "a short description of term form external file",
+   force_index,
+   options = "width=20",
+   content = ``SOME_FUN = SUC a < 0 /\ 0 > SUC b``
+}
+
+@Type{type_id_4,
+   label = "a short description of the type from external file",
+   force_index,
+   short-index,
+   content = ``:bool``
+}
+
+
+@Thm{arithmetic.LESS_SUC_EQ_COR,
+   force-index,
+   long-index
+}
+
+@Thm{thm_1,
+   label = "(second instance)",
+   content = "arithmetic.LESS_SUC_EQ_COR",
+   options = "width=20",
+   comment = "some lengthy\\comment
+
+              with \textbf{formats} and newlines",
+   force-index,
+   long-index
+}
+

@@ -1,0 +1,16 @@
+TARGET_poly = $(dprot $(HOLDIR)/bin/hol.builder0)
+TARGET_mosml = proofManagerLib.sml
+DEPS_poly = $(BOOLLIB) $(BOOLTHEORY) proofManagerLib.uo History.uo \
+            goalStack.uo goalTree.uo Manager.uo
+DEPS_mosml =
+
+COMM_poly = cd $(protect $(HOLDIR)/tools-poly) ; $(POLY) < builder0.ML ; cc -o $@ hol.builder0.o $(POLY_LDFLAGS) ; rm hol.builder0.o
+COMM_mosml =
+
+BOOLTHEORY = $(dprot $(SIGOBJ)/boolTheory.uo)
+BOOLLIB = $(dprot $(SIGOBJ)/boolLib.uo)
+
+EXTRA_CLEANS = $(if $(findstring poly,$(ML_SYSNAME)),$(TARGET_poly),)
+
+$(TARGET_$(ML_SYSNAME)): $(DEPS_$(ML_SYSNAME))
+	$(COMM_$(ML_SYSNAME))

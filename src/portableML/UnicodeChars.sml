@@ -118,6 +118,7 @@ val inter = "\u00e2\u0088\u00a9"
 val union = "\u00e2\u0088\u00aa"
 val setelementof = "\u00e2\u0088\u0088"
 val not_elementof = U 0x2209
+val universal_set = U 0x1D54C
 
 (* words *)
 val lo = "<\u00e2\u0082\u008a"

@@ -28,7 +28,7 @@ AssembleHolfootParser.uo: AssembleHolfootParser.sml AssembleHolfootParser.ui hol
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holfoot.grm.ui holfoot.lex.ui $<
 
 holfootLib.uo: holfootLib.sml holfootParser.ui holfootParser.uo 
-	$(HOLMOSMLC) -c ListConv1.uo treeTheory.uo HolSmtLib.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo bagLib.uo permLib.uo ../vars_as_resourceBaseFunctor.ui ../vars_as_resourceFunctor.ui vars_as_resourceFunctor.uo vars_as_resourceBaseFunctor.uo Overlay.ui holfootLib.sml 
+	$(HOLMOSMLC) -c ListConv1.uo treeTheory.uo HolSmtLib.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo listLib.uo bagLib.uo permLib.uo ../vars_as_resourceBaseFunctor.ui ../vars_as_resourceFunctor.ui vars_as_resourceFunctor.uo vars_as_resourceBaseFunctor.uo Overlay.ui holfootLib.sml 
 
 clean-lib:
 	rm -f holfootLib.uo holfootLib.ui

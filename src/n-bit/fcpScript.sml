@@ -133,6 +133,10 @@ val dimindex_def = Define`
   dimindex(:'a) = if FINITE(UNIV:'a->bool) then CARD(UNIV:'a->bool) else 1`;
 val dimindex = save_thm("dimindex", dimindex_def);
 
+val NOT_FINITE_IMP_dimindex_1 = Q.store_thm("NOT_FINITE_IMP_dimindex_1",
+  `~FINITE univ(:'a) ==> (dimindex (:'a) = 1)`,
+  METIS_TAC [dimindex]);
+
 val HAS_SIZE_FINITE_IMAGE = prove(
   `(UNIV:'a finite_image->bool) HAS_SIZE dimindex(:'a)`,
   REWRITE_TAC[dimindex, FINITE_IMAGE_IMAGE] THEN

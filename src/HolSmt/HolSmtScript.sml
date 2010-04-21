@@ -14,6 +14,8 @@ struct
   val R = realLib.REAL_ARITH
   val W = wordsLib.WORD_DECIDE
 
+  (*TODO*) fun X t = Thm.mk_thm ([], t)
+
   (* simplify 't' using 'thms', then prove the simplified term using
      'TAUT_PROVE' *)
   fun U thms t =
@@ -108,12 +110,14 @@ struct
   val _ = s ("d029", U [carry_def] ``carry p q r \/ ~q \/ ~r``)
   val _ = s ("d030", P ``p \/ (x = if p then y else x)``)
   val _ = s ("d031", P ``~p \/ (x = if p then x else y)``)
-  val _ = s ("d032", P ``p \/ q \/ ~(if p then r else q)``)
-  val _ = s ("d033", P ``~p \/ q \/ ~(if p then q else r)``)
-  val _ = s ("d034", P ``(if p then q else r) \/ ~p \/ ~q``)
-  val _ = s ("d035", P ``(if p then q else r) \/ p \/ ~r``)
-  val _ = s ("d036", P ``~(if p then q else r) \/ ~p \/ q``)
-  val _ = s ("d037", P ``~(if p then q else r) \/ p \/ r``)
+  val _ = s ("d032", P ``p \/ ((if p then x else y) = y)``)
+  val _ = s ("d033", P ``~p \/ ((if p then x else y) = x)``)
+  val _ = s ("d034", P ``p \/ q \/ ~(if p then r else q)``)
+  val _ = s ("d035", P ``~p \/ q \/ ~(if p then q else r)``)
+  val _ = s ("d036", P ``(if p then q else r) \/ ~p \/ ~q``)
+  val _ = s ("d037", P ``(if p then q else r) \/ p \/ ~r``)
+  val _ = s ("d038", P ``~(if p then q else r) \/ ~p \/ q``)
+  val _ = s ("d039", P ``~(if p then q else r) \/ p \/ r``)
 
   (* used for Z3's proof rule rewrite *)
 
@@ -132,10 +136,14 @@ struct
   val _ = s ("r006c", P
     ``(if p then (if q then x else y) else y) = (if q /\ p then x else y)``)
   val _ = s ("r006d", P
-    ``(if p then x = y else x = z) <=> (x = if p then y else z)``)
+    ``(if p then x else (if q then x else y)) <=> (if p \/ q then x else y)``)
   val _ = s ("r006e", P
-    ``(if p then x = y else y = z) <=> (y = if p then x else z)``)
+    ``(if p then x else (if q then x else y)) <=> (if q \/ p then x else y)``)
   val _ = s ("r006f", P
+    ``(if p then x = y else x = z) <=> (x = if p then y else z)``)
+  val _ = s ("r006g", P
+    ``(if p then x = y else y = z) <=> (y = if p then x else z)``)
+  val _ = s ("r006h", P
     ``(if p then x = y else z = y) <=> (y = if p then x else z)``)
 
   val _ = s ("r007", T ``(~p ==> q) <=> (p \/ q)``)
@@ -406,27 +414,37 @@ struct
   val _ = s ("r212", W ``0w + x = x``)
   val _ = s ("r213", W ``(x :'a word) + y = y + x``)
   val _ = s ("r214", W ``1w + (1w + x) = 2w + x``)
-(*
-  val _ = s ("r215", X ``0w @@ n2w x = n2w x``) (*TODO*)
-  val _ = s ("r216", X ``(0w @@ x = n2w y) <=> (x = n2w y)``)  (*TODO*)
-  val _ = s ("r217", X ``(0w @@ x = n2w y) <=> (n2w y = x)``)  (*TODO*)
-  val _ = s ("r218", X ``(n2w y = 0w @@ x) <=> (x = n2w y)``)  (*TODO*)
-  val _ = s ("r219", X ``(n2w y = 0w @@ x) <=> (n2w y = x)``)  (*TODO*)
-*)
-  val _ = s ("r220", W ``x && y = y && x``)
-  val _ = s ("r221", W ``x && y && z = y && x && z``)
-  val _ = s ("r222", W ``x && y && z = (x && y) && z``)
-  val _ = s ("r223", W ``(1w = (x :word1) && y) <=> (1w = x) /\ (1w = y)``)
-  val _ = s ("r224", W ``(1w = (x :word1) && y) <=> (1w = y) /\ (1w = x)``)
-  val _ = s ("r225", W ``(7 >< 0) (x :word8) = x``)
-  val _ = s ("r226", W ``x <+ y <=> ~(y <=+ x)``)
-  val _ = s ("r227", W ``(x :'a word) * y = y * x``)
-  val _ = s ("r228", W ``(0 >< 0) (x :word1) = x``)
-  val _ = s ("r229", W ``(x && y) && z = x && y && z``)
-  val _ = s ("r230", W ``0w !! x = x``)
-(*
-  val _ = s ("r231", X ``w2w (n2w x) = n2w x``)  (*TODO*)
-*)
+
+  val _ = s ("r215", Drule.UNDISCH_ALL (X  (*TODO*)
+    ``FINITE (U(:'a)) ==> x < dimword(:'b) ==>
+    ((0w :'a word) @@ (n2w x :'b word) = (n2w x :'c word))``))
+  val _ = s ("r216", Drule.UNDISCH (simpLib.SIMP_PROVE bossLib.std_ss
+    [wordsTheory.w2w_n2w, Thm.SYM (Drule.SPEC_ALL wordsTheory.MOD_DIMINDEX)]
+    ``x < dimword(:'a) ==> (w2w (n2w x :'a word) = (n2w x :'b word))``))
+  val _ = s ("r217", Drule.UNDISCH_ALL (X  (*TODO*)
+    ``FINITE (U(:'a)) ==> y < dimword(:'b) ==>
+    ((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (x = n2w y)``))
+  val _ = s ("r218", Drule.UNDISCH_ALL (X  (*TODO*)
+    ``FINITE (U(:'a)) ==> y < dimword(:'b) ==>
+    ((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (n2w y = x)``))
+  val _ = s ("r219", Drule.UNDISCH_ALL (X  (*TODO*)
+    ``FINITE (U(:'a)) ==> y < dimword(:'b) ==>
+    ((n2w y :'c word) = (0w :'a word) @@ (x :'b word)) <=> (x = n2w y)``))
+  val _ = s ("r220", Drule.UNDISCH_ALL (X  (*TODO*)
+    ``FINITE (U(:'a)) ==> y < dimword(:'b) ==>
+    ((n2w y :'c word) = (0w :'a word) @@ (x :'b word)) <=> (n2w y = x)``))
+
+  val _ = s ("r221", W ``x && y = y && x``)
+  val _ = s ("r222", W ``x && y && z = y && x && z``)
+  val _ = s ("r223", W ``x && y && z = (x && y) && z``)
+  val _ = s ("r224", W ``(1w = (x :word1) && y) <=> (1w = x) /\ (1w = y)``)
+  val _ = s ("r225", W ``(1w = (x :word1) && y) <=> (1w = y) /\ (1w = x)``)
+  val _ = s ("r226", W ``(7 >< 0) (x :word8) = x``)
+  val _ = s ("r227", W ``x <+ y <=> ~(y <=+ x)``)
+  val _ = s ("r228", W ``(x :'a word) * y = y * x``)
+  val _ = s ("r229", W ``(0 >< 0) (x :word1) = x``)
+  val _ = s ("r230", W ``(x && y) && z = x && y && z``)
+  val _ = s ("r231", W ``0w !! x = x``)
 
   (* used for Z3's proof rule th-lemma *)
 
@@ -455,7 +473,7 @@ struct
     end))
   val _ = s ("t013", W ``(x = y) ==> x ' i ==> y ' i``)
   val _ = s ("t014", S ``(1w = ~(x :word1)) \/ x ' 0``)
-  val _ = s ("t015", S``(x :word1) ' 0 ==> (0w = ~x)``)
+  val _ = s ("t015", S ``(x :word1) ' 0 ==> (0w = ~x)``)
   val _ = s ("t016", S ``(x :word1) ' 0 ==> (1w = x)``)
   val _ = s ("t017", S ``~((x :word1) ' 0) ==> (0w = x)``)
   val _ = s ("t018", S ``~((x :word1) ' 0) ==> (1w = ~x)``)
@@ -468,6 +486,40 @@ struct
     ``(((x :word1) = 1w) <=> p) <=> (x = if p then 1w else 0w)``)
   val _ = s ("t023", S
     ``((1w = (x :word1)) <=> p) <=> (x = if p then 1w else 0w)``)
+  val _ = s ("t024", S
+    ``(p <=> ((x :word1) = 1w)) <=> (x = if p then 1w else 0w)``)
+  val _ = s ("t025", S
+    ``(p <=> (1w = (x :word1))) <=> (x = if p then 1w else 0w)``)
+  val _ = s ("t026",
+    let
+      val lem1 = W ``!x:word32. x ' 0 ==> 0w <> x``
+      val lem2 = W ``!x:word8. (((sw2sw x):word32) ' 0) = x ' 0``
+      val lem3 = Q.prove (`!x:word32. (x ' 0) ==> (0w <> 0xFFFFFFFFw * x)`,
+        Tactical.THEN (Tactic.NTAC 2 Tactic.STRIP_TAC,
+          Tactical.THEN (Tactic.MATCH_MP_TAC lem1,
+            Tactical.THEN (bossLib.Cases_on `x`,
+              simpLib.FULL_SIMP_TAC
+                (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss))
+                [arithmeticTheory.ODD_MULT, wordsTheory.word_index,
+                wordsTheory.word_mul_n2w]))))
+    in
+      bossLib.METIS_PROVE [lem2, lem3]
+        ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 0)``
+    end)
+  val _ = s ("t027", X  (*TODO*)
+    ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 1 <=> ~(x ' 0))``)
+  val _ = s ("t028", X  (*TODO*)
+    ``(1w + (x :'a word) = y) ==> x ' 0 ==> ~(y ' 0)``)
+
+  (* used to prove hypotheses of other proforma theorems (recursively) *)
+
+  val _ = s ("p001", wordsTheory.ZERO_LT_dimword)  (* ``0 < dimword(:'a)`` *)
+  val _ = s ("p002", wordsTheory.ONE_LT_dimword)  (* ``1 < dimword(:'a)`` *)
+  val _ = s ("p003", S ``FINITE univ(:unit)``)
+  val _ = s ("p004", S ``FINITE univ(:16)``)
+  val _ = s ("p005", S ``FINITE univ(:24)``)
+  val _ = s ("p006", S ``FINITE univ(:30)``)
+  val _ = s ("p007", S ``FINITE univ(:31)``)
 
   val _ = Theory.export_theory ()
 

@@ -94,21 +94,6 @@ fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
      Support for handling the preprocessing of files containing ``
  ---------------------------------------------------------------------------*)
 
-(* does the file have an occurrence of `` *)
-fun has_dq filename = let
-  val istrm = TextIO.openIn filename
-  fun loop() =
-    case TextIO.input1 istrm of
-      NONE => false
-    | SOME #"`" => (case TextIO.input1 istrm of
-                      NONE => false
-                    | SOME #"`" => true
-                    | _ => loop())
-    | _ => loop()
-in
-  loop() before TextIO.closeIn istrm
-end
-
 fun variant str =  (* get an unused file name in the current directory *)
  if OS.FileSys.access(str,[])
  then let fun vary i =
@@ -411,7 +396,7 @@ fun parse_command_line list = let
 
   val (rem, includes) = find_pairs "-I" list
   val (rem, dontmakes) = find_pairs "-d" rem
-  val (rem, debug) = find_toggle "--debug" rem
+  val (rem, debug) = find_toggle "--d" rem
   val (rem, help) = find_alternative_tags  ["--help", "-h"] rem
   val (rem, rebuild_deps) = find_alternative_tags ["--rebuild_deps","-r"] rem
   val (rem, cmdl_HOLDIRs) = find_pairs "--holdir" rem
@@ -671,6 +656,7 @@ in
           [VREF "MOSMLCOMP", LIT (" -q "^stdincludes^" -c "^overlaystring)]
         end
       | "MOSMLC" => [VREF "MOSMLCOMP", LIT (" "^addincludes)]
+      | "POLY" => [LIT (Systeml.protect Systeml.POLY)]
       | "POLYMLLIBDIR" => [LIT POLYMLLIBDIR]
       | "POLY_LDFLAGS" => [LIT (spacify (map Systeml.protect POLY_LDFLAGS))]
       | "POLY_LDFLAGS_STATIC" => [LIT (spacify (map Systeml.protect POLY_LDFLAGS_STATIC))]
@@ -1128,41 +1114,10 @@ in
       val _ = exists_readable file orelse
               (print ("Wanted to compile "^file^", but it wasn't there\n");
                raise FileNotFound)
-      val _ = print ("Compiling "^file^"\n")
-      open OS.Process
-      val res =
-          if has_unquoter() then let
-              (* force to always use unquoter if present, so as to generate
-                 location pragmas. Must test for existence, for bootstrapping.
-              *)
-              val clone = variant file
-              val _ = OS.FileSys.rename {old=file, new=clone}
-              fun revert() =
-                  if OS.FileSys.access (clone, [OS.FileSys.A_READ]) then
-                    (OS.FileSys.remove file handle _ => ();
-                     OS.FileSys.rename{old=clone, new=file})
-                  else ()
-            in
-              (if OS.Process.isSuccess (unquote_to clone file)
-                  handle e => (revert();
-                               print ("Unquoting "^file^
-                                      " raised exception\n");
-                               raise CompileFailed)
-               then
-                 poly_compile arg include_flags deps before revert()
-               else (print ("Unquoting "^file^" ran and failed\n");
-                     revert();
-                     raise CompileFailed))
-              handle CompileFailed => raise CompileFailed
-                   | e => (revert();
-                           print("Unable to compile: "^file^
-                                 " - raised exception "^exnName e^"\n");
-                           raise CompileFailed)
-            end
-          else poly_compile arg include_flags deps
-     in
-        isSuccess res
-     end
+      val res = poly_compile arg include_flags deps
+    in
+      OS.Process.isSuccess res
+    end
   | BuildScript (s, deps) => let
       val _ = not (Binaryset.member(!failed_script_cache, s)) orelse
               (print ("Not re-running "^s^"Script; believe it will fail\n");
@@ -1533,8 +1488,14 @@ in
     [] => let
       val targets = generate_all_plausible_targets ()
       val _ =
-        if debug then
-        print("Generated targets are: "^print_list (map fromFile targets)^"\n")
+        if debug then let
+            val tgtstrings0 = map fromFile targets
+            val tgtstrings =
+                map (fn s => if OS.FileSys.access(s, []) then s else s ^ "(*)")
+                    tgtstrings0
+          in
+            print("Generated targets are: "^print_list tgtstrings ^ "\n")
+          end
         else ()
     in
       maybe_recurse
@@ -1562,7 +1523,7 @@ in
      "    -I <file>            : include directory (can be repeated)\n",
      "    -d <file>            : ignore file (can be repeated)\n",
      "    -f <theory>          : toggles fast build (can be repeated)\n",
-     "    --debug              : print debugging information\n",
+     "    --d                  : print debugging information\n",
      "    --fast               : files default to fast build; -f toggles\n",
      "    --help | -h          : show this message\n",
      "    --holdir <directory> : use specified directory as HOL root\n",

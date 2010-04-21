@@ -1806,11 +1806,151 @@ val crecPr_consSUC = store_thm(
     asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >>
   imp_res_tac PhiSOME_cbnf_ofk >>
   asm_simp_tac (bsrw_ss()) [bnf_bnf_of]);
-(*
-val recfns_in_Phi = Store_thm(
+
+val cminimise_def = Define`
+  cminimise =
+  LAM "i" (LAM "x" (
+    cfindleast
+      @@ (LAM "n" (LAM "t" (LAM "f" (
+            cbnf_ofk
+              @@ (LAM "k" (
+                    cis_zero @@ (cforce_num @@ VAR "k") @@ VAR "t" @@ VAR "f"))
+              @@ (cdAPP @@ (cnumdB @@ VAR "i")
+                        @@ (cchurch @@ (cncons @@ VAR "n" @@ VAR "x")))))))
+      @@ I))
+`;
+
+val FV_cminimise = Store_thm(
+  "FV_cminimise",
+  ``FV cminimise = {}``,
+  SRW_TAC [][cminimise_def, pred_setTheory.EXTENSION]);
+
+val cminimise_equiv = brackabs.brackabs_equiv [] cminimise_def
+
+val cminimise_fail1 = store_thm(
+  "cminimise_fail1",
+  ``(Phi i (nlist_of (n::l)) = NONE) ∧
+    (∀m j. m < n ∧ (Phi i (nlist_of (m::l)) = SOME j) ⇒ 0 < j) ⇒
+    (bnf_of (cminimise @@ church i @@ church (nlist_of l)) = NONE)``,
+  simp_tac (bsrw_ss()) [cminimise_equiv, cfindleast_behaviour] >>
+  strip_tac >>
+  Q.MATCH_ABBREV_TAC `bnf_of (cfindbody P (church 0) I) = NONE` >>
+  Q_TAC SUFF_TAC
+    `∀N. N ≤ n ⇒ (bnf_of (cfindbody P (church N) I) = NONE)`
+    >- metis_tac [DECIDE ``∀n. 0 ≤ n``] >>
+  Induct_on `n - N`
+   >- (rpt strip_tac >> `N = n` by DECIDE_TAC >>
+       asm_simp_tac (bsrw_ss()) [Once cfindbody_thm] >>
+       asm_simp_tac (bsrw_ss()) [Abbr`P`, cncons_behaviour,
+                                 PhiNONE_cbnf_ofk]) >>
+  rpt strip_tac >>
+  asm_simp_tac (bsrw_ss()) [Once cfindbody_thm] >>
+  `∀mm res k.
+      P @@ church mm @@ res @@ k ==
+      cbnf_ofk
+        @@ (C @@ (C @@ (B @@ cis_zero @@ (B @@ cforce_num @@ I))
+                    @@ res)
+              @@ k)
+        @@ cDB (dAPP (numdB i) (fromTerm (church (ncons mm (nlist_of l)))))`
+    by simp_tac (bsrw_ss()) [Abbr`P`, cncons_behaviour] >>
+  Q.RM_ABBREV_TAC `P` >>
+  asm_simp_tac (bsrw_ss()) [] >>
+  Cases_on `Phi i (ncons N (nlist_of l))`
+   >- asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >>
+  imp_res_tac PhiSOME_cbnf_ofk >>
+  asm_simp_tac (bsrw_ss()) [] >>
+  `N < n` by DECIDE_TAC >>
+  `0 < x` by metis_tac [] >>
+  srw_tac [ARITH_ss][] >>
+  simp_tac (bsrw_ss()) [Cong cfindbody_cong] >>
+  RULE_ASSUM_TAC (SIMP_RULE bool_ss [AND_IMP_INTRO]) >>
+  FIRST_X_ASSUM MATCH_MP_TAC >>
+  Q.EXISTS_TAC `n` >> asm_simp_tac (srw_ss() ++ ARITH_ss) [] >>
+  FIRST_X_ASSUM ACCEPT_TAC);
+
+val appcongl = prove(
+  ``(x = y) ==> (x @@ z = y @@ z)``,
+  simp_tac bool_ss []);
+
+val S' = prove(
+  ``S = LAM "xx" (LAM "yy" (LAM "zz" (
+          VAR "xx" @@ VAR "zz" @@ (VAR "yy" @@ VAR "zz"))))``,
+  srw_tac [][termTheory.LAM_eq_thm, chap2Theory.S_def]);
+
+val cminimise_fail2 = store_thm(
+  "cminimise_fail2",
+  ``(∀n j. (Phi i (nlist_of (n::l)) = SOME j) ⇒ 0 < j) ⇒
+    (bnf_of (cminimise @@ church i @@ church (nlist_of l)) = NONE)``,
+  strip_tac >>
+  Cases_on `∃n. Phi i (nlist_of (n::l)) = NONE`
+   >- (MATCH_MP_TAC (GEN_ALL cminimise_fail1) >> metis_tac []) >>
+  full_simp_tac (srw_ss()) [] >>
+  simp_tac (bsrw_ss()) [cminimise_equiv] >>
+  Q.MATCH_ABBREV_TAC `bnf_of (cfindleast @@ P @@ I) = NONE` >>
+  Cases_on `bnf_of (cfindleast @@ P @@ I)` >> srw_tac [][] >>
+  `∀n. P @@ church n == cB F`
+     by (asm_simp_tac (bsrw_ss()) [Abbr`P`] >> gen_tac >>
+         simp_tac (srw_ss()) [Cong appcongl, chap2Theory.C_def,
+                              chap2Theory.S_def] >>
+         simp_tac (bsrw_ss()) [chap2Theory.S_def, termTheory.lemma15a] >>
+         simp_tac (srw_ss()) [Cong appcongl, chap2Theory.C_def,
+                              chap2Theory.S_def] >>
+         simp_tac (bsrw_ss()) [S', cncons_behaviour] >>
+         Cases_on `Phi i (ncons n (nlist_of l))` >- metis_tac [] >>
+         imp_res_tac PhiSOME_cbnf_ofk >>
+         `0 < x'` by metis_tac [] >>
+         asm_simp_tac (bsrw_ss()) [] >> srw_tac [ARITH_ss][] >>
+         simp_tac (bsrw_ss()) [] >>
+         simp_tac (bsrw_ss()) [cB_def] >>
+         Q.MATCH_ABBREV_TAC `M == N` >>
+         Q_TAC SUFF_TAC `M = N` >- SRW_TAC [][] >>
+         simp_tac (srw_ss()) [Abbr`M`, Abbr`N`, termTheory.LAM_eq_thm]) >>
+   `∀n. ∃b. P @@ church n == cB b` by metis_tac [] >>
+   `has_bnf (cfindleast @@ P @@ I)` by metis_tac [has_bnf_of] >>
+   `∃r. cfindleast @@ P @@ I == r ∧ bnf r`
+      by metis_tac [chap2Theory.has_bnf_def] >>
+   `∃m. P @@ church m == cB T` by metis_tac [cfindleast_bnfE] >>
+   POP_ASSUM MP_TAC >> asm_simp_tac (bsrw_ss()) []);
+
+val cminimise_succeeds = store_thm(
+  "cminimise_succeeds",
+  ``(Phi i (ncons j (nlist_of l)) = SOME 0) ∧
+    (∀k. k < j ⇒ ∃r. (Phi i (ncons k (nlist_of l)) = SOME r) ∧ 0 < r) ⇒
+    (bnf_of (cminimise @@ church i @@ church (nlist_of l)) = SOME (church j))``,
+  strip_tac >>
+  simp_tac (bsrw_ss()) [cminimise_equiv, cfindleast_behaviour] >>
+  Q.MATCH_ABBREV_TAC `bnf_of (cfindbody P (church 0) I) = SOME (church j)` >>
+  Q_TAC SUFF_TAC
+     `∀N. N ≤ j ⇒ (bnf_of (cfindbody P (church N) I) = SOME (church j))`
+     >- metis_tac [DECIDE ``0 ≤ n``] >>
+  Induct_on `j - N`
+    >- (rpt strip_tac >> `N = j` by DECIDE_TAC >>
+        imp_res_tac PhiSOME_cbnf_ofk >>
+        asm_simp_tac (bsrw_ss()) [Abbr`P`, cncons_behaviour,
+                                  Once cfindbody_thm, bnf_bnf_of]) >>
+  rpt strip_tac >>
+  `N < j` by DECIDE_TAC >> RES_TAC >>
+  Q.PAT_ASSUM `Phi i X = SOME r`
+              (STRIP_ASSUME_TAC o MATCH_MP PhiSOME_cbnf_ofk) >>
+  `∀mm res k.
+      P @@ church mm @@ res @@ k ==
+      cbnf_ofk
+        @@ (C @@ (C @@ (B @@ cis_zero @@ (B @@ cforce_num @@ I))
+                    @@ res)
+              @@ k)
+        @@ cDB (dAPP (numdB i) (fromTerm (church (ncons mm (nlist_of l)))))`
+    by simp_tac (bsrw_ss()) [Abbr`P`, cncons_behaviour] >>
+  Q.RM_ABBREV_TAC `P` >>
+  asm_simp_tac (bsrw_ss()) [Once cfindbody_thm] >> srw_tac [ARITH_ss][] >>
+  simp_tac (bsrw_ss()) [Cong cfindbody_cong] >>
+  RULE_ASSUM_TAC (SIMP_RULE bool_ss [AND_IMP_INTRO]) >>
+  FIRST_X_ASSUM MATCH_MP_TAC >>
+  asm_simp_tac (srw_ss() ++ ARITH_ss) []);
+
+val recfns_in_Phi = store_thm(
   "recfns_in_Phi",
   ``∀f n. recfn f n ⇒ ∃i. ∀l. Phi i (nlist_of l) = f l``,
-  HO_MATCH_MP_TAC recfn_ind THEN SRW_TAC [][] THENL [
+  HO_MATCH_MP_TAC recfn_ind THEN SRW_TAC [][]  THENL [
     Q.EXISTS_TAC `dBnum (fromTerm (LAM "x" (church 0)))` THEN
     SRW_TAC [][Phi_def] THEN
     SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
@@ -1895,7 +2035,62 @@ val recfns_in_Phi = Store_thm(
     >- (srw_tac [][] >> metis_tac [nlist_of_def]) >>
     Cases_on `nopt` >> srw_tac [][],
 
-    the horror of minimise_def awaits...
+    Q.EXISTS_TAC `dBnum (fromTerm (cminimise @@ church i))` >>
+    POP_ASSUM (ASSUME_TAC o GSYM) >>
+    srw_tac [][Once Phi_def, minimise_def]
+      >- (Q.EXISTS_TAC `church n` >>
+          conj_tac
+            >- (MATCH_MP_TAC cminimise_succeeds >> metis_tac []) >>
+          SELECT_ELIM_TAC >> srw_tac [][] >- metis_tac [] >>
+          `n < x ∨ (x = n) ∨ x < n` by DECIDE_TAC >>
+          res_tac >> full_simp_tac (srw_ss() ++ ARITH_ss) []) >>
+    full_simp_tac (srw_ss()) [DECIDE ``¬(0 < j) ⇔ (j = 0)``] >>
+    `∀n. (Phi i (ncons n (nlist_of l)) = SOME 0) ⇒
+         ∃m. m < n ∧ (Phi i (ncons m (nlist_of l)) = NONE) ∧
+             ∀p. p < m ⇒ ∃r. (Phi i (ncons p (nlist_of l)) = SOME r) ∧ 0 < r`
+      by (completeInduct_on `n` >> strip_tac >>
+          `∃j. j < n ∧ ∀m. (Phi i (ncons j (nlist_of l)) = SOME m) ⇒ (m = 0)`
+             by metis_tac [] >>
+          Cases_on `Phi i (ncons j (nlist_of l))`
+            >- (Q.ABBREV_TAC
+                  `JJ = LEAST j. Phi i (ncons j (nlist_of l)) = NONE` >>
+                `JJ ≤ j` by (Q.UNABBREV_TAC `JJ` >> numLib.LEAST_ELIM_TAC >>
+                             metis_tac [DECIDE ``¬(x:num ≤ y) ⇔ y < x``]) >>
+                Cases_on
+                  `∀p. p < JJ ⇒
+                       ∃r. (Phi i (ncons p (nlist_of l)) = SOME r) ∧ 0 < r`
+                  >- (Q_TAC SUFF_TAC
+                            `(Phi i (ncons JJ (nlist_of l)) = NONE) ∧ JJ < n`
+                            >- metis_tac [] >>
+                      conj_tac >-
+                        (Q.UNABBREV_TAC `JJ` >> numLib.LEAST_ELIM_TAC >>
+                         metis_tac []) >> DECIDE_TAC) >>
+                full_simp_tac (srw_ss()) [DECIDE ``¬(0 < j) ⇔ (j = 0)``] >>
+                Cases_on `Phi i (ncons p (nlist_of l))`
+                  >- (Q_TAC SUFF_TAC `F` >- metis_tac [] >>
+                      Q.PAT_ASSUM `p < JJ` MP_TAC >>
+                      POP_ASSUM MP_TAC >> Q.UNABBREV_TAC `JJ` >>
+                      numLib.LEAST_ELIM_TAC >> metis_tac []) >>
+                `Phi i (ncons p (nlist_of l)) = SOME 0`
+                   by full_simp_tac (srw_ss()) [] >>
+                `p < n` by DECIDE_TAC >>
+                `∃M. M < p ∧ (Phi i (ncons M (nlist_of l)) = NONE) ∧
+                     ∀p. p < M ⇒ ∃r. (Phi i (ncons p (nlist_of l)) = SOME r) ∧
+                                      0 < r` by metis_tac [] >>
+                Q.EXISTS_TAC `M` >> srw_tac [ARITH_ss][]) >>
+          `x = 0` by srw_tac[][] >> srw_tac[][] >>
+          `∃M. M < j ∧ (Phi i (ncons M (nlist_of l)) = NONE) ∧
+               ∀p. p < M ⇒ ∃r. (Phi i (ncons p (nlist_of l)) = SOME r) ∧ 0 < r`
+             by metis_tac [] >>
+          Q.EXISTS_TAC `M` >> srw_tac [ARITH_ss][]) >>
+    Cases_on `∃n. Phi i (ncons n (nlist_of l)) = SOME 0`
+      >- (POP_ASSUM STRIP_ASSUME_TAC >> res_tac >>
+          MATCH_MP_TAC (GEN_ALL cminimise_fail1) >>
+          Q.EXISTS_TAC `m` >> srw_tac [][] >>
+          metis_tac [optionTheory.SOME_11]) >>
+    full_simp_tac (srw_ss()) [] >>
+    MATCH_MP_TAC (GEN_ALL cminimise_fail2) >> srw_tac [][] >>
+    first_x_assum (Q.SPEC_THEN `n` MP_TAC) >> srw_tac [ARITH_ss][]
+  ]);
 
-
-*)val _ = export_theory()
+val _ = export_theory()
