@@ -1298,7 +1298,7 @@ and \ml{SUC} (the successor function) are defined
 and Peano's axioms
 \index{axioms!in num theory@in \ml{num} theory}
 \index{Peano's axioms}
-\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for natural numberrs}
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for natural numbers}
 pre-proved in the form:
 
 \begin{hol}
@@ -1758,7 +1758,7 @@ Numerals may of course be built using \ml{mk\_comb}, and taken apart with
 \ml{dest\_comb}; however, a more convenient interface to this
 functionality is provided by the functions \ml{mk\_numeral},
 \ml{dest\_numeral}, and \ml{is\_numeral} (found in the structure
-\ml{numSyntax}). These entrypoints make use of an \ML{} structure
+\ml{numSyntax}). These entry-points make use of an \ML{} structure
 \ml{Arbnum} which implements arbitrary precision numbers {\verb+num+}. The
 following session shows how \HOL{} numerals are constructed from elements of
 type \verb+num+ and how numerals are destructed. The structure
@@ -2033,7 +2033,7 @@ theories is constructed:
 \begin{description}
 \item [topology] Topologies and metric spaces, including metric on
 the real line.
-\item [nets] Moore-Smith covergence nets, and special cases like
+\item [nets] Moore-Smith convergence nets, and special cases like
 sequences.
 \item [seq] Sequences and series of real numbers.
 \item [lim] Limits, continuity and differentiation.
@@ -2066,8 +2066,8 @@ n < N$, picked uniformly at random from the available choices. This
 sampling function for the uniform distribution is later used to verify
 the Miller-Rabin primality test.
 
-\subsection{Theory of $n$-bit words}
-\index{n-bit words, the HOL theory of@$n$-bit words, the \HOL{} theory of|(}
+\subsection{Bit vectors}
+\index{bit vectors, the HOL theory of@bit vectors, the \HOL{} theory of|(}
 
 {
 \newcommand{\fcp}[2]{\ty{#1}[\ty{#2}]}
@@ -2078,43 +2078,23 @@ the Miller-Rabin primality test.
 \newcommand{\hash}{\,\holtxt{\#}\,}
 \newcommand{\oo}[2]{\mbox{\holtxt{#1\,'\,#2}}}
 
-\HOL{} provides a theory of finite-length bit strings, or $n$-bit words.  Such
-data types are prevalent in computer architectures, where one finds:
+\HOL{} provides a theory of bit vectors, or $n$-bit words.  For example, in computer architectures one finds:
 bytes/octets ($n = 8$), half-words ($n = 16$), words ($n = 32$) and long-words
-($n = 64$).  In the theory \theoryimp{words}, bit strings are represented as
+($n = 64$).  In the theory \theoryimp{words}, bit vectors are represented as
 \emph{finite Cartesian products}: an $n$-bit word is given type $\worda$
-where the \emph{size} of the type $\alpha$ is the word length $n$.    This
+where the \emph{size} of the type $\alpha$ determines the word length $n$.    This
 approach comes from an idea of John Harrison, which was presented at TPHOLs
-2005.\footnote{The current theory subsumes a previous $n$-bit word theory,
-which employed an equivalence class construction.  The principle advantage of
-the new theory is that there is just one theory for all word sizes. Thus, it is
-no longer necessary to build an entirely new theory (with new constants and
-operations) for each word size that is required.}
-
-Wai Wong's theory \theoryimp{word} should be used when working with different
-number bases (\ie{} not just base-2) or where the use of a model based on lists
-is more appropriate.\footnote{Wong's theory was developed on top of Paul
-Curzon's \ml{rich\_list} theory.}  However, one key advantage of the finite
-Cartesian product approach is that term equivalence corresponds directly with
-word equivalence -- side conditions about word sizes are not needed because the
-length of words is determined by the representing type.
+2005.\footnote{The current theory subsumes previous word theories -- it evolved from a development based on an equivalence class construction.  Wai Wong's word theory, which was based on Paul Curzon's \ml{rich\_list} theory, is no longer distributed with HOL.  The principle advantages of the current theory are that there is just one theory for all word sizes and that word length side conditions are not required.}
 
 \subsubsection{Finite Cartesian products}
 
-The \HOL{} theory \theoryimp{fcp} introduces a new infix type operator
-\holtxt{**} for constructing finite Cartesian products.\footnote{The theory of
-finite Cartesian products was ported from HOL Light.}  Conceptually, the type
-\fcp{'a}{'b} can be viewed as being equivalent to the type:
+The \HOL{} theory \theoryimp{fcp} introduces an infix type operator
+\holtxt{**}, which is used to represent finite Cartesian products.\footnote{The theory of
+finite Cartesian products was ported from HOL Light.}  The type \holtxt{'a ** 'b}, or equivalently \fcp{'a}{'b}, is conceptually equivalent to:
 \begin{hol}
-$\underbrace{\ty{'a}\hash\ty{'a}\hash\cdots\hash\ty{'a}}_n$
+$\underbrace{\ty{'a}\;\hash\;\ty{'a}\;\hash\;\cdots\;\hash\;\ty{'a}}_{\holtxt{dimindex('b)}}$
 \end{hol}
-where $n$ is the cardinality of the set \holtxt{UNIV:'b set}.  The
-type \ty{'b} could be infinite\footnote{\HOL{}'s type system does not
-  allow type variables to range over finite types only.} and so the
-dimension $n$ is actually taken to be \holtxt{dimindex(:\ty{'b})},
-where \holtxt{dimindex} has value one when the universe is infinite.
-For example, \fcp{'a}{\num} is similar to \ty{'a}, and \fcp{'a}{\bool}
-is like \ty{'a}\hash\ty{'a}.
+where \holtxt{dimindex('b)} is the cardinality of \holtxt{univ(:'b)} when \ty{'b} is finite and is one when it is infinite.  Thus, \fcp{'a}{\num} is similar to \ty{'a}, and \fcp{'a}{\bool} is similar to \ty{'a}\hash\ty{'a}.  Numeral type names are supported, so one can freely work with indexing sets of any size, \eg{} the type \ty{32} has thirty-two elements and \fcp{\bool}{32} represents 32-bit words.
 
 The \emph{components} of a finite Cartesian product are accessed with an
 indexing function
@@ -2123,10 +2103,9 @@ indexing function
    fcp_index : \fcp{'a}{'b}\rarr\num\rarr\ty{'a}
 \end{alltt}
 \end{hol}
-which is typically written with the infix apostrophe, so that
-\oo{x}{i} denotes the value of \holtxt{x} at position \holtxt{i}.
-Note that, in practice, indices are constrained to be less than the
-size of \ty{'b}.
+which is typically written with an infixed apostrophe:
+\oo{x}{i} denotes the value of vector \holtxt{x} at position \holtxt{i}.
+Typically, indices are constrained to be less than the size of \ty{'b}.
 
 The following theorem shows that two Cartesian products \holtxt{x} and
 \holtxt{y} are equal if, and only if, all of their components \oo{x}{i} and
@@ -2137,7 +2116,7 @@ CART_EQ: |- !x y. (x = y) = !i. i < dimindex (:'a) ==> (x ' i = y ' i)
 \end{verbatim}
 \end{hol}
 
-In order to define Cartesian products, the theory \theoryimp{fcp} introduces a
+In order to construct Cartesian products, the theory \theoryimp{fcp} introduces a
 binder \holtxt{FCP}, which is characterised by the following theorems:
 \begin{hol}
 \begin{verbatim}
@@ -2153,23 +2132,17 @@ These two theorems, together with \ml{CART\_EQ}, can be found in the
 \emph{simpset} fragment \ml{fcpLib.FCP\_ss}.
 
 Finite Cartesian products provide a good means to model $n$-bit words.  That is
-to say, the type \fcp{bool}{'a} can represent a binary word whose length
+to say, the type \fcp{bool}{'a} can represent a binary word whose length $n$
 corresponds with the size of the type \ty{'a}.  The binder \holtxt{FCP}
 provides a flexible means for defining words -- one can supply a function
-\holtxt{f:\num\rarr\bool} which gives the word's value at each bit position and
-then each bit can be accessed using the indexing map.
-
-Numeral type names are supported, so one can freely work with indexing sets of any size \eg{} the type \ty{32} has thirty-two elements.
+\holtxt{f:\num\rarr\bool} that gives the word's bit values, each of which can be accessed using the indexing map \holtxt{fcp\_index}.
 
 \subsubsection{Bit theory}
 
-The theory \theoryimp{bit} defines some bit operations over the natural numbers
+The theory \theoryimp{bit} defines some bit operations over the natural numbers,
 e.g. \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} and
 \holtxt{BIT\_MODIFY}. In this context, natural numbers are treated as binary words of
-unbounded length.  The operations in \theoryimp{bit} are built on top of the
-theory \theoryimp{arithmetic} \ie{} they are defined using \holtxt{DIV},
-\holtxt{MOD} and \holtxt{EXP}.  For example, from the definition of
-\holtxt{BIT}, the following theorem is derivable:
+unbounded length.  The operations in \theoryimp{bit} are primarily defined using \holtxt{DIV}, \holtxt{MOD} and \holtxt{EXP}.  For example, from the definition of \holtxt{BIT}, the following theorem holds:
 \begin{hol}
 \begin{verbatim}
 |- !b n. BIT b n = ((n DIV 2 ** b) MOD 2 = 1)
@@ -2182,14 +2155,14 @@ a mechanism for the efficient evaluation of some word operations via the theory
 
 \subsubsection{Words theory}
 
-The theory \theoryimp{words} introduces a selection of polymorphic constants and operations -- these can be type instantiated to any word size.  For example, word addition
+The theory \theoryimp{words} introduces a selection of polymorphic constants and operations, which can be type instantiated to any word size.  For example, word addition
 has type:
 \begin{hol}
 +:\worda\rarr\worda\rarr\worda
 \end{hol}
 If \ty{'a} is instantiated to \ty{32} then this operation corresponds with 32-bit addition.
 All theorems about word operations apply for any word length.\footnote{Note
-that it is not possible to introduce words of length zero because all types
+that it is impossible to introduce words of length zero because all types
 must be inhabited, and hence their size will always be greater than or equal to
 one.}
 
@@ -2209,45 +2182,45 @@ defined in \HOL{} by:
 |- !n. n2w n = FCP i. BIT i n
 \end{verbatim}
 \end{hol}
-The suffix \holtxt{w} is used in \HOL{} to denote a word literal \eg{}
+The suffix \holtxt{w} is used to denote word literals, \eg{}
 \holtxt{255w} is the same as \holtxt{n2w 255}.
 
-The function \holtxt{w2w:\worda\rarr\wordb} uses the functions \holtxt{w2n} and
-\holtxt{n2w} to map between two word types:
+The function \holtxt{w2w:\worda\rarr\wordb} provides word-to-word conversion (casting):
 \begin{hol}
 \begin{verbatim}
 |- !w. w2w w = n2w (w2n w)
 \end{verbatim}
 \end{hol}
 If $\beta$ is smaller than $\alpha$ then the higher bits of \holtxt{w} will be
-lost, otherwise the longer word will have the same value as the original.
+lost (it performs bit extraction), otherwise the longer word will have the same value as the original (in effect providing zero padding).
 However, if one were treating \holtxt{w} as a two's complement number then the
-word needs to be sign extended \ie{}
+word needs to be sign extended, \ie{}
 \begin{eqnarray*}
 \mbox{\small ($-$ve)}\quad 1b_{n-2} \cdots b_0\ \mapsto \ 1 \cdots 1 1 b_{n-2}
 \cdots b_0 \\
 \mbox{\small ($+$ve)}\quad 0b_{n-2} \cdots b_0\ \mapsto \ 0 \cdots 0 0 b_{n-2}
 \cdots b_0
 \end{eqnarray*}
-The function \holtxt{sw2sw:\worda\rarr\wordb} is the sign extending version of
+The function \holtxt{sw2sw:\worda\rarr\wordb} provides this sign extending version of
 \holtxt{w2w}.
 
-The function
-\holtxt{word\_concat:\worda\rarr\wordb\rarr\wordc} concatenates words -- it composes \holtxt{w2w}
-with
-\holtxt{word\_join:\worda\rarr\wordb\rarr\fcp{\bool}{\ensuremath{\alpha+\beta}}}, which is
-illustrated in Figure~\ref{fig:concat}.  The word-to-word conversion is needed
-because although the type $\alpha+\beta$ is of exactly the right size, it is
-often not the intended type \eg{} the type \fcp{\bool}{\ty{32}}will be preferred to
-\fcp{\bool}{\ty{16}+\ty{16}}.
+A collection of operations are provided for mapping to and from strings and number (digit) lists, \eg{}
+\begin{hol}
+\begin{verbatim}
+|- word_to_dec_string 876w = "876"
+\end{verbatim}
+\end{hol}
+and
+\begin{hol}
+\begin{verbatim}
+|- word_to_hex_list 876w = [12; 6; 3]
+\end{verbatim}
+\end{hol}
+These function are specialised versions of \holtxt{w2s} and \holtxt{w2l} respectively.
 
-\begin{figure}
-\begin{center}
-\scalebox{.8}{\includegraphics{figs/concat}}
-\caption{Joining two words: \holtxt{x = word\_join v w}.}
-\label{fig:concat}
-\end{center}
-\end{figure}
+\paragraph{Concatenation}
+
+The operation \holtxt{word\_concat:\worda\rarr\wordb\rarr\wordc} concatenates words.  Note that the return type is not constrained.  This means that two sixteen bit words can be concatenated to give a word of any length -- which may be smaller or larger than the expect value of 32.   The related function \holtxt{word\_join} does return a word of the expected length, \ie{} of type \fcp{\bool}{$\alpha+\beta$};  however, the concatenation operation is more useful because we often want \fcp{\bool}{\ty{32}} and not the logically distinct \fcp{\bool}{\ty{16}+\ty{16}}.
 
 \paragraph{Signed and unsigned words}
 
@@ -2257,7 +2230,7 @@ made explicit within the theory\footnote{Words are not tagged as being
   signed/unsigned.  Mappings to/from the integers (\holtxt{w2i} and
   \holtxt{i2w}) are provided in the theory \theoryimp{integer\_word}.}
 and all of the arithmetic operations are defined using the natural
-numbers \ie{} via \holtxt{w2n} and \holtxt{n2w}.  In particular,
+numbers, \ie{} via \holtxt{w2n} and \holtxt{n2w}.  In particular,
 addition and multiplication work naturally (have the same definition)
 under the two's complement representation.  This is not the case
 however with word-to-word conversion, orderings, division and right
@@ -2265,13 +2238,13 @@ shifting, where signed and unsigned variants are needed.  When
 operating over the natural numbers, some of the two's complement
 versions have slightly unnatural looking presentations.  For example,
 with the signed (two's complement) version of ``less than'' we have
-\holtxt{255w < 0w:word8} because the word \holtxt{n2w 255} is actually
+\holtxt{255w < (0w:word8)} because the word \holtxt{255w} is actually
 taken to be representing the integer $-1$, whereas the unsigned
-version appears to be more natural: \holtxt{0w <+ 255w:word8}.
+version is more natural: \holtxt{0w <+ (255w:word8)}.
 
 \paragraph{Bit field operations}
 
-The standard Boolean bit field operations are provided \ie{} bitwise negation
+The standard Boolean bit field operations are provided, \ie{} bitwise negation
 (one's complement), conjunction, disjunction and exclusive-or.  These functions
 are defined quite naturally using the Cartesian product binder; for example,
 bitwise conjunction is defined by:
@@ -2280,49 +2253,30 @@ bitwise conjunction is defined by:
 |- !v w. v && w = FCP i. v ' i /\ w ' i .
 \end{verbatim}
 \end{hol}
+There is also a collection of word \emph{reduction} operations, which reduce bit vectors to 1-bit words, e.g.
+\[ \mathrm{reduce\_and}(x)\;'\; 0= \bigwedge_{i = 0}^{n - 1} x_i\ .\]
 
-The functions \holtxt{word\_lsb}, \holtxt{word\_msb} and \holtxt{word\_bit i}
-give the truth value of a word at bit positions $0$, $n - 1$ and $i$
-respectively.  Three operations are provided for selecting bit
-ranges, or sub-words: \holtxt{word\_bits}, \holtxt{word\_slice} and
-\holtxt{word\_extract}.  These operations are illustrated in
-Figure~\ref{fig:bits}.
-Again, these operations are defined using the Cartesian product binder; for
-example, \holtxt{word\_bits} is defined as follows:
+The functions \holtxt{word\_lsb}, \holtxt{word\_msb} and \holtxt{word\_bit(i)}
+give the bit value of a word at positions $0$, $n - 1$ and $i$
+respectively.  Four operations are provided for selecting bit
+fields, or sub-words: \holtxt{word\_bits} (\holtxt{--}),  \holtxt{word\_signed\_bits} (\holtxt{---}), \holtxt{word\_slice} (\holtxt{''}) and
+\holtxt{word\_extract} (\holtxt{><}).  For example, \holtxt{word\_bits 4 1} will select four bits starting from bit position 1.  The slice function is an in-place variant (it zeroes bits outside of the bit range) and the extract function combines \holtxt{word\_bits} with a word cast (\holtxt{w2w}).  The operation \holtxt{word\_signed\_bits} is similar to \holtxt{word\_bits}, except that it sign-extends the bit field.
+
+The \holtxt{bit\_field\_insert} operation inserts a bit field.  For example,
 \begin{hol}
 \begin{verbatim}
-|- !h l x.
-     (h -- l) x = FCP i. i + l <= MIN h (dimindex (:'a) - 1) /\ x ' (i + l) .
+bit_field_insert 5 2 a b
 \end{verbatim}
 \end{hol}
-A word's bit ordering can be flipped over with \holtxt{word\_reverse}; see
-Figure~\ref{fig:reverse}.
+is word \holtxt{b} with bits 5--2 replaced by bits 3--0 of \holtxt{a}.
 
-\begin{figure}
-\begin{center}
-\scalebox{.8}{\includegraphics{figs/bits}}
-\caption{Selected bit ranges for the case when $l < h < n$.  The symbols
-\holtxt{--}, \holtxt{<>} and \holtxt{><} are for \holtxt{word\_bits},
-\holtxt{word\_slice} and \holtxt{word\_extract} respectively.  The word extract
-function applies \holtxt{word\_bits} and then \holtxt{w2w}; typically the
-target word size will be $h + 1 - l$, but this need not be the case.}
-\label{fig:bits}
-\end{center}
-\end{figure}
-
-\begin{figure}
-\begin{center}
-\scalebox{.8}{\includegraphics{figs/reverse}}
-\caption{Reversing the bit ordering: \holtxt{w = word\_reverse v}.}
-\label{fig:reverse}
-\end{center}
-\end{figure}
+A word's bit ordering can be flipped over with \holtxt{word\_reverse}, \ie{} bit zero is swapped with bit $n - 1$ and so forth.
 
 The function
 \holtxt{word\_modify:(\num\,\rarr\,\bool\,\rarr\,\bool)\,\rarr\,\worda\,\rarr\,\worda} changes
 a word by applying a map at each bit position.
 This operation provides a very flexible and convenient mechanism for
-manipulating words \eg{}
+manipulating words, \eg{}
 \begin{hol}
 \holtxt{word\_modify ($\lambda$i b.\,if EVEN i then $\sim$b else b) w}
 \end{hol}
@@ -2336,12 +2290,11 @@ are set.
 Six types of shifts are provided: logical shift left/right (\holtxt{<<} and
 \holtxt{>>>}), arithmetic shift right (\holtxt{>>}), rotate left/right
 (\holtxt{\#<<} and \holtxt{\#>>}) and rotate right extended by 1 place
-(\holtxt{word\_rrx}).  These shifts are illustrated in Figure~\ref{fig:shifts};
-they are defined in a similar manner to the other bit field operations.  For
+(\holtxt{word\_rrx}).  These shifts are illustrated in Figure~\ref{fig:shifts} and are defined in a similar manner to the other bit field operations.  For
 example, rotating right is defined by:
 \begin{hol}
 \begin{verbatim}
-|- !w n. w #>> n = FCP i. w ' (i + n) MOD dimindex (:'a) .
+|- !w n. w #>> x = FCP i. w ' (i + x) MOD dimindex (:'a) .
 \end{verbatim}
 \end{hol}
 Rotating left by $x$ places is defined as rotating right by $n - x \bmod n$
@@ -2353,12 +2306,12 @@ places.
 \begin{tabular}{ll}
 \scalebox{.8}{\includegraphics{figs/lsl}} &
 \scalebox{.8}{\includegraphics{figs/lsr}} \\
-(a) Logical shift left: \holtxt{w = v << n}. & (b) Logical shift right:
-\holtxt{w = v >>> n}. \\[12pt]
+(a) Logical shift left: \holtxt{w = v << x}. & (b) Logical shift right:
+\holtxt{w = v >>> x}. \\[12pt]
 \scalebox{.8}{\includegraphics{figs/asr}} &
 \hspace{-5mm}\scalebox{.8}{\includegraphics{figs/ror}} \\
-(c) Arithmetic shift right: \holtxt{w = v >> n}. & (d) Rotate right: \holtxt{w
-= v \#>> n}. \\[12pt]
+(c) Arithmetic shift right: \holtxt{w = v >> x}. & (d) Rotate right: \holtxt{w
+= v \#>> x}. \\[12pt]
 \multicolumn{2}{c}{\scalebox{.8}{\includegraphics{figs/rrx}}} \\
 \multicolumn{2}{c}{(e) Rotate right extended by 1 place: \holtxt{(d,w) =
 word\_rrx (c,v)}.}
@@ -2371,7 +2324,7 @@ word\_rrx (c,v)}.}
 \paragraph{Arithmetic and orderings}
 
 The arithmetic operations are: addition, subtraction, unary minus (two's
-complement), logarithm (base-2), multiplication and division (signed and
+complement), logarithm (base-2), multiplication, modulus and division (signed and
 unsigned).
 These operations are defined with respect to the natural numbers.  For example,
 word addition is defined by:
@@ -2387,149 +2340,114 @@ All of the standard word orderings are provided, with signed and unsigned
 versions of $<$, $\leq$, $>$ and $\geq$.  The unsigned versions are suffixed
 with a plus; for example, \holtxt{<+} is unsigned ``less than''.
 
-\subsubsection{Evaluation}
-\index{printing, in HOL logic@printing, in \HOL{} logic!of n-bit word values@of $n$-bit word values}
+\paragraph{Constants}
 
-To evaluate ground terms using \ml{EVAL} the library \theoryimp{wordsLib}
-needs to be loaded.  This library also provides a \emph{compset} \ml{words\_compset}, which
-can be used to build conversions that evaluate variable-free word expressions.
-
-Words can be pretty-printed using different number bases. For example, the function
-\ml{output\_words\_as\_bin} will select binary format for all words;
-\ml{output\_words\_as} is more flexible and allows the number base to vary depending on
-the word length and numeric value.  The session below demonstrates working with \ml{EVAL} and
-pretty-printing.
-\setcounter{sessioncount}{0}
-\begin{session}
-\begin{verbatim}
-- load "wordsLib";
-> val it = () : unit
-- EVAL ``8w + 9w:word4``;
-> val it = |- 8w + 9w = 1w : thm
-- wordsLib.output_words_as_bin();
-> val it = () : unit
-- EVAL ``($FCP ODD):word16``;
-> val it = |- $FCP ODD = 0b1010101010101010w : thm
-- EVAL ``((0b1011w:word4) @@ (0b10w:word2)):word6``;
-> val it = |- 0b1011w @@ 0b10w = 0b101110w : thm
-- base_tokens.allow_octal_input:=true;
-> val it = () : unit
-- wordsLib.output_words_as
-     (fn x => if fst x = 32 then StringCvt.HEX else StringCvt.DEC);
-> val it = () : unit
-- EVAL ``(word_log2 ## I) (66w:word32,044w:word8)``;
-> val it = |- (word_log2 ## I) (0x42w,36w) = (0x6w,36w) : thm
-\end{verbatim}
-\end{session}
-Note that type annotation is used to designate word sizes.  Any number
-base can be used in parsing a literal, but the reference
-\ml{allow\_octal\_input} must be true in order to parse octal numbers.
-
-\subsubsection{Word constants and operations}
-
-All of the operations outlined in the previous section are listed in
-Table~\ref{tab:word:operations}.  Many of the operation names are overloaded
-with symbols.  The word theory also defines a few word constants and these are
-listed in Table~\ref{tab:word:constants}.
-
-\begin{table}[htdp]
-\caption{Word constants.}
+The word theory also defines a few word constants:
 \begin{center}\small
 \begin{tabular}{lll}
-\multicolumn{1}{c}{Constant} & \multicolumn{1}{c}{Value}  &
-\multicolumn{1}{c}{Binary} \\
+\multicolumn{1}{l}{Constant} & \multicolumn{1}{l}{Value}  &
+\multicolumn{1}{l}{Binary} \\
 \noalign{\smallskip}
 \hline
 \noalign{\smallskip}
-\holtxt{word\_T} & $2^l - 1$ & $11\cdots 11$ \\
-\holtxt{word\_L} & $2^{l - 1}$ & $10\cdots 00$ \\
-\holtxt{word\_H} & $2^{l - 1} - 1$ & $01\cdots 11$
+\holtxt{word\_T} or \holtxt{UINT\_MAXw} & $2^l - 1$ & $11\cdots 11$ \\
+\holtxt{word\_L} or \holtxt{INT\_MINw} & $2^{l - 1}$ & $10\cdots 00$ \\
+\holtxt{word\_H} or \holtxt{INT\_MAXw} & $2^{l - 1} - 1$ & $01\cdots 11$
 \end{tabular}
 \end{center}
-\label{tab:word:constants}
-\end{table}
 
-{\setlength{\tabcolsep}{4pt}
-\begin{table}[h!tdp]
-\caption{Word operations.}
-\begin{center}\small
-\begin{tabular}{lcll}
-\multicolumn{1}{c}{Operation} & Symbol & \multicolumn{1}{c}{Type} &
-\multicolumn{1}{c}{Description} \\
-\noalign{\smallskip}
+\paragraph{List of bit vector operations}
+
+A list of operations is provided in the table below.
+{
+\setlength{\tabcolsep}{4pt}
+\begin{center}
+\tablefirsthead{% 
 \hline
-\noalign{\smallskip}
+\multicolumn{1}{|c}{Operation\rule{0pt}{14pt}} & 
+\multicolumn{1}{c}{Symbol} & 
+Type & 
+\multicolumn{1}{c|}{Description} \\[4pt]
+\hline} 
+\tablehead{% 
+\hline 
+\multicolumn{4}{|l|}{\small\sl continued from previous page}\\ 
+\hline 
+\multicolumn{1}{|c}{Operation\rule{0pt}{14pt}} & 
+\multicolumn{1}{c}{Symbol} & 
+Type & 
+\multicolumn{1}{c|}{Description} \\[4pt]
+\hline} 
+\tabletail{% 
+\hline 
+\multicolumn{4}{|r|}{\small\sl continued on next page}\\ 
+\hline} 
+\tablelasttail{\hline} 
+\small
+\begin{supertabular}{|l|c|l|l|}
 \holtxt{n2w} & & \num\rarr\worda & Map from a natural number \\
 \holtxt{w2n} & & \worda\rarr\num & Map to a natural number \\
-\holtxt{w2w} & & \worda\rarr\wordb & Map a word to a word (unsigned) \\
-\holtxt{sw2sw} & & \worda\rarr\wordb & Map a word to a word (signed) \\
+\holtxt{w2w} & & \worda\rarr\wordb & Map word-to-word (unsigned) \\
+\holtxt{sw2sw} & & \worda\rarr\wordb & Map word-to-word (signed) \\
+\holtxt{w2l} & & \num\rarr\worda\rarr\num~\ty{list} & Map word to digit list \\
+\holtxt{l2w} & & \num\rarr\num~\ty{list}\rarr\worda & Map digit list to word \\
+\holtxt{w2s} & & \num\rarr(\num\rarr\ty{char})\rarr\worda\rarr\ty{string} & Map word to string \\
+\holtxt{s2w} & & \num\rarr(\ty{char}\rarr\num)\rarr\ty{string}\rarr\worda & Map string to word \\
 \holtxt{word\_len} & & \worda\rarr\num & The word length \\
 \holtxt{word\_lsb} & & \worda\rarr\bool & The least significant bit \\
 \holtxt{word\_msb} & & \worda\rarr\bool & The most significant bit \\
 \holtxt{word\_bit} & & \num\rarr\worda\rarr\bool & Test bit position \\
-\holtxt{word\_bits} & \holtxt{--} & \num\rarr\num\rarr\worda\rarr\worda & See
-Figure~\ref{fig:bits} \\
-\holtxt{word\_slice} & \holtxt{<>} & \num\rarr\num\rarr\worda\rarr\worda & See
-Figure~\ref{fig:bits} \\
-\holtxt{word\_extract} & \holtxt{><} & \num\rarr\num\rarr\worda\rarr\wordb &
-See Figure~\ref{fig:bits} \\
+\holtxt{word\_bits} & \holtxt{--} & \num\rarr\num\rarr\worda\rarr\worda & Select a bit field \\
+\holtxt{word\_signed\_bits} & \holtxt{---} & \num\rarr\num\rarr\worda\rarr\worda & Sign-extend selected bit field \\
+\holtxt{word\_slice} & \holtxt{''} & \num\rarr\num\rarr\worda\rarr\worda &  Set bits outside field to zero \\
+\holtxt{word\_extract} & \holtxt{><} & \num\rarr\num\rarr\worda\rarr\wordb & Extract (cast) a bit field \\
 \holtxt{word\_reverse} & & \worda\rarr\worda & Reverse the bit order \\
-\holtxt{word\_modify} & & (\num\rarr\bool\rarr\bool)\rarr & Apply a function to
-each bit \\
- & & \worda\rarr\worda \\
-\holtxt{word\_join} & & \worda\rarr\wordb\rarr\fcp{\bool}{$\alpha+\beta$} & Join
-words \\
-\holtxt{word\_concat} & \holtxt{@@} & \worda\rarr\wordb\rarr\wordc &
-Concatenate words \\
-\holtxt{word\_log2} & & \worda\rarr\worda & Logarithm base-2 \\
+\holtxt{bit\_field\_insert} & & {\setlength{\tabcolsep}{0pt}\begin{tabular}[t]{ll}\num\rarr\num\rarr\worda\rarr\\\wordb\rarr\wordb\end{tabular}} & Insert a bit field \\
+\holtxt{word\_modify} & & {\setlength{\tabcolsep}{0pt}\begin{tabular}[t]{ll}(\num\rarr\bool\rarr\bool)\rarr\\\worda\rarr\worda\end{tabular}} & Apply a function to each bit \\
+\holtxt{word\_join} & & \worda\rarr\wordb\rarr\fcp{\bool}{$\alpha+\beta$} & Join words \\
+\holtxt{word\_concat} & \holtxt{@@} & \worda\rarr\wordb\rarr\wordc & Concatenate words \\
+\holtxt{concat\_word\_list} & & \worda~\ty{list}\rarr\wordb & Concatenate list of words \\
+\holtxt{word\_replicate} & & \num\rarr\worda\rarr\wordb & Replicate word \\
+\holtxt{word\_or} & \holtxt{!!} & \worda\rarr\worda\rarr\worda & Bitwise disjunction \\
+\holtxt{word\_xor} & \holtxt{??} & \worda\rarr\worda\rarr\worda & Bitwise exclusive-or \\
+\holtxt{word\_and} & \holtxt{\&\&} & \worda\rarr\worda\rarr\worda & Bitwise conjunction \\
+\holtxt{word\_nor} & \holtxt{\~{}!!} & \worda\rarr\worda\rarr\worda & Bitwise NOR \\
+\holtxt{word\_xnor} & \holtxt{\~{}??} & \worda\rarr\worda\rarr\worda & Bitwise XNOR \\
+\holtxt{word\_nand} & \holtxt{\~{}\&\&} & \worda\rarr\worda\rarr\worda & Bitwise NAND \\
+\holtxt{word\_reduce} & & {\setlength{\tabcolsep}{0pt}\begin{tabular}[t]{ll}(\bool\rarr\bool\rarr\bool)\rarr\\\worda\rarr\fcp{\bool}{1}\end{tabular}} & Word reduction \\
+\holtxt{reduce\_or} & & \worda\rarr\fcp{\bool}{1} & Disjunction reduction \\
+\holtxt{reduce\_xor} & & \worda\rarr\fcp{\bool}{1} & Exclusive-or reduction \\
+\holtxt{reduce\_and} & & \worda\rarr\fcp{\bool}{1} & Conjunction reduction \\
+\holtxt{reduce\_nor} & & \worda\rarr\fcp{\bool}{1} & NOR reduction \\
+\holtxt{reduce\_xnor} & & \worda\rarr\fcp{\bool}{1} & XNOR reduction \\
+\holtxt{reduce\_nand} & & \worda\rarr\fcp{\bool}{1} & NAND reduction \\
 \holtxt{word\_{}1comp} & \holtxt{\~} & \worda\rarr\worda & One's complement \\
-\holtxt{word\_{}2comp} & \holtxt{\$-} & \worda\rarr\worda & Two's complement \\
-\holtxt{word\_or} & \holtxt{!!} & \worda\rarr\worda\rarr\worda & Bitwise
-disjunction \\
-\holtxt{word\_xor} & \holtxt{??} & \worda\rarr\worda\rarr\worda & Bitwise
-exclusive-or \\
-\holtxt{word\_and} & \holtxt{\&\&} & \worda\rarr\worda\rarr\worda & Bitwise
-conjunction \\
+\holtxt{word\_{}2comp} & \holtxt{-} & \worda\rarr\worda & Two's complement \\
 \holtxt{word\_add} & \holtxt{+} & \worda\rarr\worda\rarr\worda & Addition \\
 \holtxt{word\_sub} & \holtxt{-} & \worda\rarr\worda\rarr\worda & Subtraction \\
-\holtxt{word\_mul} & \holtxt{*} & \worda\rarr\worda\rarr\worda & Multiplication
-\\
-\holtxt{word\_div} & \holtxt{//} & \worda\rarr\worda\rarr\worda & Division
-(unsigned) \\
-\holtxt{word\_sdiv} & \holtxt{/} & \worda\rarr\worda\rarr\worda & Division
-(signed) \\
-\holtxt{word\_lsl} & \holtxt{<<} & \worda\rarr\num\rarr\worda & Logical shift
-left \\
-\holtxt{word\_lsr} & \holtxt{>>>} & \worda\rarr\num\rarr\worda & Logical shift
-right \\
-\holtxt{word\_asr} & \holtxt{>>} & \worda\rarr\num\rarr\worda & Arithmetic
-shift right \\
+\holtxt{word\_mul} & \holtxt{*} & \worda\rarr\worda\rarr\worda & Multiplication \\
+\holtxt{word\_div} & \holtxt{//} & \worda\rarr\worda\rarr\worda & Division (unsigned) \\
+\holtxt{word\_sdiv} & \holtxt{/} & \worda\rarr\worda\rarr\worda & Division (signed) \\
+\holtxt{word\_mod} & & \worda\rarr\worda\rarr\worda & Modulus \\
+\holtxt{word\_log2} & & \worda\rarr\worda & Logarithm base-2 \\
+\holtxt{word\_lsl} & \holtxt{<<} & \worda\rarr\num\rarr\worda & Logical shift left \\
+\holtxt{word\_lsr} & \holtxt{>>>} & \worda\rarr\num\rarr\worda & Logical shift right \\
+\holtxt{word\_asr} & \holtxt{>>} & \worda\rarr\num\rarr\worda & Arithmetic shift right \\
 \holtxt{word\_ror} & \holtxt{\#>>} & \worda\rarr\num\rarr\worda & Rotate right \\
 \holtxt{word\_rol} & \holtxt{\#<<} & \worda\rarr\num\rarr\worda & Rotate left \\
-\holtxt{word\_rrx} & & \bool\#\worda\rarr\bool\#\worda & Rotate right extended
-by 1 place \\
-\holtxt{word\_lt} & \holtxt{<} & \worda\rarr\worda\rarr\bool & Signed ``less
-than'' \\
-\holtxt{word\_le} & \holtxt{<=} & \worda\rarr\worda\rarr\bool & Signed ``less
-than or equal'' \\
-\holtxt{word\_gt} & \holtxt{>} & \worda\rarr\worda\rarr\bool & Signed ``greater
-than'' \\
-\holtxt{word\_ge} & \holtxt{>=} & \worda\rarr\worda\rarr\bool & Signed
-``greater than or equal'' \\
-\holtxt{word\_lo} & \holtxt{<+} & \worda\rarr\worda\rarr\bool & Unsigned ``less
-than''  \\
-\holtxt{word\_ls} & \holtxt{<=+} & \worda\rarr\worda\rarr\bool & Unsigned
-``less than or equal'' \\
-\holtxt{word\_hi} & \holtxt{>+} & \worda\rarr\worda\rarr\bool & Unsigned
-``greater than'' \\
-\holtxt{word\_hs} & \holtxt{>=+} & \worda\rarr\worda\rarr\bool & Unsigned
-``greater than or equal''
-\end{tabular}
-\end{center}
-\label{tab:word:operations}
-\end{table}}
+\holtxt{word\_rrx} & & \bool\#\worda\rarr\bool\#\worda & Rotate right extended by 1 place \\
+\holtxt{word\_lt} & \holtxt{<} & \worda\rarr\worda\rarr\bool & Signed ``less than'' \\
+\holtxt{word\_le} & \holtxt{<=} & \worda\rarr\worda\rarr\bool & Signed ``less than or equal'' \\
+\holtxt{word\_gt} & \holtxt{>} & \worda\rarr\worda\rarr\bool & Signed ``greater than'' \\
+\holtxt{word\_ge} & \holtxt{>=} & \worda\rarr\worda\rarr\bool & Signed ``greater than or equal'' \\
+\holtxt{word\_lo} & \holtxt{<+} & \worda\rarr\worda\rarr\bool & Unsigned ``less than''  \\
+\holtxt{word\_ls} & \holtxt{<=+} & \worda\rarr\worda\rarr\bool & Unsigned ``less than or equal'' \\
+\holtxt{word\_hi} & \holtxt{>+} & \worda\rarr\worda\rarr\bool & Unsigned ``greater than'' \\
+\holtxt{word\_hs} & \holtxt{>=+} & \worda\rarr\worda\rarr\bool & Unsigned ``greater than or equal'' \\
+\end{supertabular}
+\end{center}}
 
-\index{n-bit words, the HOL theory of@$n$-bit words, the \HOL{} theory of|)}
+\index{bit vectors, the HOL theory of@bit vectors, the \HOL{} theory of|)}
 } % matches bracket at beginning of n-bit section, where some n-bit
   % specific macros are defined
 
