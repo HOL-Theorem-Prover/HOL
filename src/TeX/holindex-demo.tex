@@ -1,12 +1,11 @@
 \documentclass{article}
 
 \usepackage{holindex}
+
 \initHOLindex
 \setHOLlinewidth{80}  %default is 80
 
-
 \begin{document}
-
 
 \section{Holindex usage}
 
@@ -19,11 +18,20 @@ Similar usage as bibtex, makeindex etc.
 \initHOLindex
 \setHOLlinewidth{80}  %optional default is 80
 \end{verbatim}
+\item run \texttt{mkmunge.exe theories} to generate \texttt{munge.exe} for your theories
 \item run latex on jobname.tex to generate jobname.hix
-\item run \texttt{munge -index jobname} to create jobname.tix
+\item run \texttt{munge.exe -index jobname} to create jobname.tix
 \item rerun latex to use jobname.tix
 \item rerun the munger whenever some significant HOL stuff changed
+\item if using emacs with auctex you might want to add to your \texttt{.emacs}
+\begin{alltt}
+(eval-after-load "tex"
+  '(add-to-list 'TeX-command-list
+    '("Holindex" "munge.exe -index %s" 
+       TeX-run-command t t :help "Run Holindex") t))
+\end{alltt}
 \end{enumerate}
+
 
 \section{Defining}
 \begin{verbatim}
@@ -31,9 +39,13 @@ Similar usage as bibtex, makeindex etc.
    \defHOLty{unique_id}{label}{def}
    \defHOLthm{unique_id}{label}{def}
 
-   (Theorems don't need defining, since there ID is 
-    theory.name, there label is there name and the def
-    is stored in the theory. You can use this definition anyone, when
+   (Theorems don't need defining. Theorem IDs of the form
+    theory.name are automatically recognised.
+    The label is their name and the def
+    is stored in the theory. Giving them an extra label
+    will add this label after their name.
+
+    You can define theorems anyhow. This is useful, when
     - the theorem name is too lengthy / contains special characters
     - you want to use one theorem with different formating options
     - you want to add a theorem several times to the index)
@@ -69,12 +81,50 @@ Similar usage as bibtex, makeindex etc.
    \commentHOLtm{unique_id}{comment}
    \commentHOLty{unique_id}{comment}
    \commentHOLthm{unique_id}{comment}
-
-   Definition like these inside a latex file are tedious,
-   especially for long terms, so do it
-   in an external file and use that one (see test.hdf)
+\end{verbatim}
+%
+Definitions like these inside a latex file are tedious,
+especially for long terms. I strongly recommend using
+an external file for all these definitions. There
+is a construct
+\begin{verbatim}
    \useHOLfile{filename}
 \end{verbatim}
+that parses files in a syntax similar to BibTex.
+Printout of \texttt{test.hdf}:
+
+\begin{alltt}
+@Term\{term_id_4,
+   label = "a short description of term form external file",
+   force_index,
+   options = "width=20",
+   content = ``SOME_FUN = SUC a < 0 /\ 0 > SUC b``
+\}
+
+@Type\{type_id_4,
+   label = "a short description of the type from external file",
+   force_index,
+   short-index,
+   content = ``:bool``
+\}
+
+@Thm\{arithmetic.LESS_SUC_EQ_COR,
+   force-index,
+   long-index
+\}
+
+@Thm\{thm_1,
+   label = "(second instance)",
+   content = "arithmetic.LESS_SUC_EQ_COR",
+   options = "width=20",
+   comment = "some lengthy\verb-\\-comment
+
+              with \verb-\-textbf\{formats\} and newlines",
+   force-index,
+   long-index
+\}
+\end{alltt}
+
 
 %use external file
 \useHOLfile{test.hdf}
@@ -196,14 +246,17 @@ Similar usage as bibtex, makeindex etc.
 %\sortHOLIndexOccurence
 
 \setboolean{holIndexLongTermFlag}{false}
+
+
+\section{Long Index}
 \printLongHOLIndex
 
 \pagebreak
-
+\section{Index}
 \printHOLIndex
 
 \pagebreak
-
+\section{Short Index}
 \printShortHOLIndex
 
 
