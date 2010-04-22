@@ -117,4 +117,8 @@ struct
   val LET_SIMP_TAC =
     simpLib.SIMP_TAC (simpLib.mk_simpset [boolSimps.LET_ss]) []
 
+  (* A tactic that simplifies certain word expressions. *)
+  val WORD_SIMP_TAC =
+    simpLib.SIMP_TAC (simpLib.++ (bossLib.pure_ss, wordsLib.WORD_ss)) []
+
 end

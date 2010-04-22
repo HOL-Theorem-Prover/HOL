@@ -4,8 +4,10 @@
 
 structure Yices = struct
 
-  (* Yices 1.0.18 only supports linear arithmetic; we do not check for
-     linearity (Yices will check again anyway) *)
+  (* FIXME: Yices 1.0.18 only supports linear arithmetic, bit-vector shifts by
+            a numeric constant, etc.  We do not check these side conditions on
+            arguments at the moment, therefore possibly producing illegal Yices
+            input. *)
 
   (* translation of HOL terms into Yices' input syntax -- currently, all types
      and terms except the following are treated as uninterpreted:
