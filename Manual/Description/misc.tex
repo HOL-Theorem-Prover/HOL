@@ -899,6 +899,16 @@ will not do the right thing if the output spans multiple lines.
 Rather the first line of \HOL{} output will be indented, and the subsequent lines will not.
 %
 The \texttt{\indentoption} option lets the pretty-printer know that it is printing with a given indentation, affecting all lines of its output.
+
+
+\item[$\mathit{nm}_1$\texttt{/}$\mathit{nm}_2$] (For use with \holtm{}
+  and \holthm{}.)
+%
+Causes $\mathit{nm}_1$ to be substituted for $\mathit{nm}_2$ in the
+term or theorem.
+%
+This will rename free variables, or variables that are universally
+quantified at the outermost level.
 \end{description}
 
 
