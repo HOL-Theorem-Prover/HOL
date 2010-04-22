@@ -415,24 +415,28 @@ struct
   val _ = s ("r213", W ``(x :'a word) + y = y + x``)
   val _ = s ("r214", W ``1w + (1w + x) = 2w + x``)
 
-  val _ = s ("r215", Drule.UNDISCH_ALL (X  (*TODO*)
-    ``FINITE (U(:'a)) ==> x < dimword(:'b) ==>
-    ((0w :'a word) @@ (n2w x :'b word) = (n2w x :'c word))``))
+  val _ = s ("r215", Drule.UNDISCH_ALL (bossLib.PROVE
+    [wordsTheory.word_concat_0] ``FINITE univ(:'a) ==> x < dimword(:'b) ==>
+      ((0w :'a word) @@ (n2w x :'b word) = (n2w x :'c word))``))
   val _ = s ("r216", Drule.UNDISCH (simpLib.SIMP_PROVE bossLib.std_ss
     [wordsTheory.w2w_n2w, Thm.SYM (Drule.SPEC_ALL wordsTheory.MOD_DIMINDEX)]
     ``x < dimword(:'a) ==> (w2w (n2w x :'a word) = (n2w x :'b word))``))
-  val _ = s ("r217", Drule.UNDISCH_ALL (X  (*TODO*)
-    ``FINITE (U(:'a)) ==> y < dimword(:'b) ==>
-    ((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (x = n2w y)``))
-  val _ = s ("r218", Drule.UNDISCH_ALL (X  (*TODO*)
-    ``FINITE (U(:'a)) ==> y < dimword(:'b) ==>
-    ((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (n2w y = x)``))
-  val _ = s ("r219", Drule.UNDISCH_ALL (X  (*TODO*)
-    ``FINITE (U(:'a)) ==> y < dimword(:'b) ==>
-    ((n2w y :'c word) = (0w :'a word) @@ (x :'b word)) <=> (x = n2w y)``))
-  val _ = s ("r220", Drule.UNDISCH_ALL (X  (*TODO*)
-    ``FINITE (U(:'a)) ==> y < dimword(:'b) ==>
-    ((n2w y :'c word) = (0w :'a word) @@ (x :'b word)) <=> (n2w y = x)``))
+  val _ = s ("r217", Drule.UNDISCH_ALL (bossLib.PROVE
+    [wordsTheory.word_concat_0_eq] ``FINITE univ(:'a) ==>
+      dimindex(:'b) <= dimindex(:'c) ==> y < dimword(:'b) ==>
+      (((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (x = n2w y))``))
+  val _ = s ("r218", Drule.UNDISCH_ALL (bossLib.PROVE
+      [wordsTheory.word_concat_0_eq] ``FINITE univ(:'a) ==>
+      dimindex(:'b) <= dimindex(:'c) ==> y < dimword(:'b) ==>
+      (((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (n2w y = x))``))
+  val _ = s ("r219", Drule.UNDISCH_ALL (bossLib.PROVE
+    [wordsTheory.word_concat_0_eq] ``FINITE univ(:'a) ==>
+      dimindex(:'b) <= dimindex(:'c) ==> y < dimword(:'b) ==>
+      (((n2w y :'c word) = (0w :'a word) @@ (x :'b word)) <=> (x = n2w y))``))
+  val _ = s ("r220", Drule.UNDISCH_ALL (bossLib.PROVE
+    [wordsTheory.word_concat_0_eq] ``FINITE univ(:'a) ==>
+      dimindex(:'b) <= dimindex(:'c) ==> y < dimword(:'b) ==>
+      (((n2w y :'c word) = (0w :'a word) @@ (x :'b word)) <=> (n2w y = x))``))
 
   val _ = s ("r221", W ``x && y = y && x``)
   val _ = s ("r222", W ``x && y && z = y && x && z``)
@@ -515,11 +519,13 @@ struct
 
   val _ = s ("p001", wordsTheory.ZERO_LT_dimword)  (* ``0 < dimword(:'a)`` *)
   val _ = s ("p002", wordsTheory.ONE_LT_dimword)  (* ``1 < dimword(:'a)`` *)
-  val _ = s ("p003", S ``FINITE univ(:unit)``)
-  val _ = s ("p004", S ``FINITE univ(:16)``)
-  val _ = s ("p005", S ``FINITE univ(:24)``)
-  val _ = s ("p006", S ``FINITE univ(:30)``)
-  val _ = s ("p007", S ``FINITE univ(:31)``)
+  val _ = s ("p003", S ``255 < dimword (:8)``)
+  val _ = s ("p004", S ``FINITE univ(:unit)``)
+  val _ = s ("p005", S ``FINITE univ(:16)``)
+  val _ = s ("p006", S ``FINITE univ(:24)``)
+  val _ = s ("p007", S ``FINITE univ(:30)``)
+  val _ = s ("p008", S ``FINITE univ(:31)``)
+  val _ = s ("p009", S ``dimindex (:8) <= dimindex (:32)``)
 
   val _ = Theory.export_theory ()
 

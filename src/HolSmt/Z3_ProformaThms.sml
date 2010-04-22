@@ -46,7 +46,7 @@ in
      t025, t026, t027, t028]
 
   val prove_hyp_thms = thm_net_from_list
-    [p001, p002, p003, p004, p005, p006, p007]
+    [p001, p002, p003, p004, p005, p006, p007, p008, p009]
 end  (* local *)
 
   (* finds a matching theorem, instantiates it, attempts to prove all
@@ -57,13 +57,12 @@ end  (* local *)
       (fn th =>
         let
           val th = Drule.INST_TY_TERM (Term.match_term (Thm.concl th) t) th
-          open simpLib
           fun prove_hyp (hyp, th) =
             let
               val hyp_th = prove prove_hyp_thms hyp
                 handle Feedback.HOL_ERR _ =>
-                  SIMP_PROVE (bossLib.std_ss ++ wordsLib.SIZES_ss) []
-                             hyp
+                  simpLib.SIMP_PROVE (simpLib.++ (bossLib.std_ss,
+                    wordsLib.SIZES_ss)) [] hyp
             in
               Drule.PROVE_HYP hyp_th th
             end

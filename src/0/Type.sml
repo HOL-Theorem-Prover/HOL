@@ -505,9 +505,9 @@ fun gen_variant P caller =
                  let val s = next name
                  in if P s then loop s else s
                  end
-          in mk_var_type(loop Name, Kind, Rank)
+          in trace ("Vartype Format Complaint",0) mk_var_type(loop Name, Kind, Rank)
           end
-        | vary _ _ = raise ERR caller "2nd argument should be a variable"
+        | vary _ _ = raise ERR caller "2nd argument should be a type variable"
   in vary
   end;
 
