@@ -36,8 +36,21 @@ val _ = TeX_notation {hol = "<|", TeX = ("\\HOLTokenLeftrec{}", 2)}
 val _ = TeX_notation {hol = "|>", TeX = ("\\HOLTokenRightrec{}", 2)}
 
 (* case expressions *)
+val _ = TeX_notation {hol = "case", TeX = ("\\HOLKeyword{case}", 4)}
+val _ = TeX_notation {hol = "of",   TeX = ("\\HOLKeyword{of}", 2)}
 val _ = TeX_notation {hol = "->", TeX = ("\\HOLTokenMap{}", 1)}
 val _ = TeX_notation {hol = "||", TeX = ("\\HOLTokenOr{} ", 2)}
+
+(* let expressions *)
+val _ = TeX_notation {hol = "let", TeX = ("\\HOLKeyword{let}", 3)}
+val _ = TeX_notation {hol = "and", TeX = ("\\HOLKeyword{and}", 2)}
+val _ = TeX_notation {hol = "in",  TeX = ("\\HOLKeyword{in}", 2)}
+
+(* if statements *)
+val _ = TeX_notation {hol = "if",   TeX = ("\\HOLKeyword{if}", 2)}
+val _ = TeX_notation {hol = "then", TeX = ("\\HOLKeyword{then}", 4)}
+val _ = TeX_notation {hol = "else", TeX = ("\\HOLKeyword{else}", 4)}
+
 
 val T_DEF =
  Definition.new_definition
