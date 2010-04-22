@@ -81,6 +81,9 @@
 \newcommand{\useHOLfile}[1]{
    \writehixfile{UseFile #1}
 }
+\newcommand{\setHOLoverrides}[1]{
+   \writehixfile{Overrides #1}
+}
 
 \newcommand{\addHOLuse}[2] {
    \writehixfile{AddIndex #1 #2 \thepage}

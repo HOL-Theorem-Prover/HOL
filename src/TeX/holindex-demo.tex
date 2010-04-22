@@ -4,6 +4,7 @@
 
 \initHOLindex
 \setHOLlinewidth{80}  %default is 80
+%\setHOLoverrides{over} %optional
 
 \begin{document}
 
@@ -17,6 +18,7 @@ Similar usage as bibtex, makeindex etc.
 \usepackage{holindex}
 \initHOLindex
 \setHOLlinewidth{80}  %optional default is 80
+\setHOLoverrides{file}
 \end{verbatim}
 \item run \texttt{mkmunge.exe theories} to generate \texttt{munge.exe} for your theories
 \item run latex on jobname.tex to generate jobname.hix
