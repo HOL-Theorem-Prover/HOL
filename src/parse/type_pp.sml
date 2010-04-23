@@ -23,6 +23,10 @@ val _ = register_btrace("pp_num_types", pp_num_types)
 val pp_annotations = ref (!Globals.interactive)
 val _ = register_btrace ("pp_annotations", pp_annotations)
 
+(* Modest reimplementation of kind printing, before Parse *)
+val pp_kind = kind_pp.pp_kind kind_grammar.min_grammar PPBackEnd.raw_terminal;
+val kind_to_string = Portable.pp_to_string (!Globals.linewidth) pp_kind
+
 (*
 fun dest_var_st (TYVAR triple) = triple
   | dest_var_st _ = raise GrammarError "dest_var_st: not a type variable"
@@ -254,7 +258,7 @@ fun pp_type0 (G:grammar) backend = let
               in
                 add_string ": ";
                 pbegin p;
-                Kind.pp_kind pps k;
+                pp_kind pps k;
                 pend p
               end
             else ();
@@ -270,7 +274,7 @@ fun pp_type0 (G:grammar) backend = let
             val s = uniconvert s
             val bound = Lib.mem tyv (!btyvars_seen)
             val kd_annot = (* if k = Kind.typ then "" else *)
-                           ": " ^ Kind.kind_to_string k
+                           ": " ^ kind_to_string k
             val annot = (if bound then TyBV else TyFV)
                         (k, r, fn () => s ^ kd_annot)
         in if new then print_skr grav annot (s,k,r)
@@ -283,7 +287,7 @@ fun pp_type0 (G:grammar) backend = let
         let val {Thy, Tyop, Kind, Rank} = dest_thy_con_type tyc
             val fullname = Thy ^ "$" ^ Tyop
             val kd_annot = if Kind = Kind.typ then ""
-                           else ": " ^ Kind.kind_to_string Kind
+                           else ": " ^ kind_to_string Kind
             val annot_str = fullname ^ kd_annot
             val annot = TyOp (fn () => annot_str)
         in print_skr grav annot (fullname,Kind,Rank)

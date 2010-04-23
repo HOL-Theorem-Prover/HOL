@@ -235,7 +235,7 @@ fun pp_pretype pps ty =
                                pppretype none Ty;
                                add_string " :";
                                add_break(1,2);
-                               add_string (HolKernel.kind_to_string(Prekind.toKind Kind));
+                               add_string (Prekind.prekind_to_string Kind);
                                end_block())
          | dTyRankConstr {Ty, Rank} =>
                               (begin_block INCONSISTENT 0;

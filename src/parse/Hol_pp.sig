@@ -15,15 +15,18 @@ sig
                  definitions : (string * thm) list,
                  theorems    : (string * thm) list}
 
+  val pp_kind        : ppstream -> kind -> unit
   val pp_type        : ppstream -> hol_type -> unit
   val pp_term        : ppstream -> term -> unit
   val pp_thm         : ppstream -> thm -> unit
   val pp_theory      : ppstream -> theory -> unit
 
+  val kind_to_string : kind -> string
   val type_to_string : hol_type -> string
   val term_to_string : term -> string
   val thm_to_string  : thm -> string
 
+  val print_kind     : kind -> unit
   val print_type     : hol_type -> unit
   val print_term     : term -> unit
   val print_thm      : thm -> unit

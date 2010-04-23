@@ -183,13 +183,18 @@ fun pp_kind pps kind = let in
    !kind_printer (!current_backend) pps kind
  end
 
+fun pp_qkind pps kind = let in
+   update_kind_fns();
+   !kind_printer (!current_backend) pps kind
+ end
+
 fun kind_to_string kd =
     Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-                  (Portable.pp_to_string (!Globals.linewidth) pp_kind) kd;
+                  (Portable.pp_to_string (!Globals.linewidth) pp_qkind) kd;
 fun print_kind kind = Portable.output(Portable.std_out, kind_to_string kind);
 
 fun kind_to_backend_string kd =
-   (Portable.pp_to_string (!Globals.linewidth) pp_kind) kd;
+   (Portable.pp_to_string (!Globals.linewidth) pp_qkind) kd;
 fun print_backend_kind kd =
   Portable.output(Portable.std_out, kind_to_backend_string kd);
 

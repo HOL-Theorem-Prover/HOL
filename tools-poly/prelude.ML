@@ -36,10 +36,11 @@ in
     install_pp (pp2polypp (with_pp HOLset.pp_holset))
   else ();
   install_pp (pp2polypp
+                  (with_pp (Parse.kind_pp_with_delimiters Hol_pp.pp_kind)));
+  install_pp (pp2polypp
                   (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
   install_pp (pp2polypp
                   (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type)));
-  install_pp (pp2polypp (with_pp Kind.pp_qkind));
   install_pp (pp2polypp (with_pp Pretype.pp_pretype));
   install_pp (pp2polypp (with_pp Hol_pp.pp_thm));
   install_pp (pp2polypp (with_pp Hol_pp.pp_theory));
@@ -180,7 +181,8 @@ val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
 
 val _ =
   (term_pp_prefix := "``";   term_pp_suffix := "``";
-   type_pp_prefix  := "``";   type_pp_suffix := "``");
+   type_pp_prefix := "``";   type_pp_suffix := "``";
+   kind_pp_prefix := "``";   kind_pp_suffix := "``");
 structure HOL_Interactive :> sig
   val toggle_quietdec : unit -> bool
   val amquiet : unit -> bool

@@ -456,7 +456,7 @@ in
                       add_string"<td>"; add_break(1,0); strong Name;
                       add_break(1,0);
                       add_string"<td>"; add_break(1,0);
-                      add_string (Kind.kind_to_string Kind);
+                      add_string (kind_to_string Kind);
                       add_break(1,0);
                       add_string"<td>"; add_break(1,0);
                       add_string (Lib.int_to_string Rank);

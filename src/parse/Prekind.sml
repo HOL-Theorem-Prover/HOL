@@ -347,8 +347,9 @@ fun pp_prekind pps kd =
        | pp0 paren (Varkind s) = add_string s
        | pp0 paren (UVarkind (ref (SOME k))) = pp paren k
        | pp0 paren (UVarkind (ref (NONE  ))) = add_string "?"
-       | pp0 paren kd = add_string ("ar " ^ Lib.int_to_string (arity_of (PK(kd,locn.Loc_None))))
-                        handle HOL_ERR _ => pp2 paren kd
+       | pp0 paren kd = if current_trace "pp_arity_kinds" = 0 then pp2 paren kd
+                        else add_string ("ar " ^ Lib.int_to_string (arity_of (PK(kd,locn.Loc_None))))
+                             handle HOL_ERR _ => pp2 paren kd
     and pp paren (PK(kd,_)) = pp0 paren kd
  in
    begin_block INCONSISTENT 0;

@@ -235,8 +235,8 @@ signature Parse = sig
     (ppstream -> hol_type -> unit) ->
     ppstream -> hol_type -> unit
   val kind_pp_with_delimiters :
-    (ppstream -> hol_type -> unit) ->
-    ppstream -> hol_type -> unit
+    (ppstream -> kind -> unit) ->
+    ppstream -> kind -> unit
   val get_term_printer : unit -> (ppstream -> term -> unit)
   val set_term_printer : (ppstream -> term -> unit) ->
                                ppstream -> term -> unit

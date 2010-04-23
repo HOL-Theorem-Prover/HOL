@@ -49,7 +49,7 @@ in
     vblock ("Parents", add_string, parents); nl2();
     vblock ("Type constants",
      (fn (name,kind,rank) =>
-         (add_string name; add_string (" : "^Kind.kind_to_string kind); add_string (" :<= "^Lib.int_to_string rank))),
+         (add_string name; add_string (" : "^kind_to_string kind); add_string (" :<= "^Lib.int_to_string rank))),
      types)
       ;
     vspace types;

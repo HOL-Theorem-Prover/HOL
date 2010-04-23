@@ -509,6 +509,7 @@ fun pp_pretype pps ty =
  let open Portable
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
      val checkref = Portable.ref_to_int
+     val pp_prekind = Prekind.pp_prekind pps
      fun pppretype state (ty as PT(ty0,locn)) =
        case ty0 of
            UVar(r as ref (SOMEU pty')) => let
@@ -604,7 +605,7 @@ fun pp_pretype pps ty =
                                pppretype none Ty;
                                add_string " :";
                                add_break(1,2);
-                               add_string (kind_to_string(Prekind.toKind Kind));
+                               pp_prekind Kind;
                                end_block())
          | TyRankConstr {Ty, Rank} =>
                               (begin_block INCONSISTENT 0;

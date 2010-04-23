@@ -75,10 +75,12 @@ in
     MPP.end_block pps
   end
   val _ = installPP (mosmlpp Pretype.pp_pretype)
+  val _ = installPP (mosmlpp (Parse.kind_pp_with_delimiters Hol_pp.pp_kind))
   val _ = installPP (mosmlpp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
   val _ = installPP (mosmlpp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
   val _ = installPP (mosmlpp Hol_pp.pp_thm)
   val _ = installPP (mosmlpp Hol_pp.pp_theory)
+  val _ = installPP (mosmlpp kind_grammar.prettyprint_grammar)
   val _ = installPP (mosmlpp type_grammar.prettyprint_grammar)
   val _ = installPP (mosmlpp ppg)
   val _ = installPP (mosmlpp Arbnum.pp_num)
@@ -248,10 +250,11 @@ fun use s =
   else Meta.use s
 end;
 
-(*---------------------------------------------------------------------------*
- *  Make the pretty-printer print terms and types with `` .... `` syntax.    *
- *---------------------------------------------------------------------------*)
+(*----------------------------------------------------------------------------*
+ *  Make the pretty-printer print terms, types, kinds with `` .... `` syntax. *
+ *----------------------------------------------------------------------------*)
 
 val _ =
   (term_pp_prefix := "``";   term_pp_suffix := "``";
-  type_pp_prefix  := "``";   type_pp_suffix := "``");
+   type_pp_prefix  := "``";  type_pp_suffix := "``";
+   kind_pp_prefix  := "``";  kind_pp_suffix := "``");
