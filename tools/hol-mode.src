@@ -284,18 +284,33 @@ how long this took."
                              Time.toString elapsed^\"s\\n\")
                   end" nil nil))
 
+(defvar tactic-connective-regexp
+  "[[:space:]]*\\(THEN\\|THENL\\|THEN1\\|>>\\|>|\\|>-\\)[[:space:]]*[[([:space:]]"
+  "Regular expression for strings used to put tactics together.")
+
+(defun tactic-cleanup (string)
+  "Remove trailing and leading instances of tactic connectives from a string.
+A tactic connective is any one of \"THEN\", \"THENL\", \"THEN1\", \">>\", \">|\"
+or \">-\"."
+  (let* ((case-fold-search nil)
+         (s0 (replace-regexp-in-string (concat "\\`" tactic-connective-regexp)
+                                      ""
+                                      string)))
+    (replace-regexp-in-string (concat tactic-connective-regexp "\\'") "" s0)))
+
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
   (interactive "r\nP")
   (let*
       ((region-string0 (with-hol-locpragma start (buffer-substring start end)))
        (ste "\"show_typecheck_errors\"")
+       (region-string1 (tactic-cleanup region-string0))
        (region-string (concat "let val old = Feedback.current_trace "
                               ste
                               " val _ = Feedback.set_trace "
                               ste
                               " 0 in ("
-                              region-string0
+                              region-string1
                               ") before "
                               "Feedback.set_trace " ste " old end"))
        (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
@@ -755,14 +770,14 @@ region instead. With prefix ARG prompt for a file-name to load."
    (interactive "DRun Holmake in dir: ")
    (if (not (null dir))
       (save-excursion
-         (set-buffer (get-buffer-create "*Holmake*"))   
+         (set-buffer (get-buffer-create "*Holmake*"))
          (delete-region (point-min) (point-max))
          (cd (expand-file-name dir)))
       )
-   (let* ((buf (make-comint "Holmake" 
+   (let* ((buf (make-comint "Holmake"
                   holmake-executable nil "--qof" "-k")))
       (save-excursion
-         (set-buffer buf)   
+         (set-buffer buf)
          (font-lock-mode 0)
          (make-local-variable 'font-lock-function)
          (setq font-lock-function 'turn-off-hol-font-lock)
@@ -1349,20 +1364,20 @@ already loaded.)"
 
 
 (defun holpp-execute-code (code arg1 start end)
-  (cond ((equal code "FV") 
-             (holpp-execute-code-face-tooltip start end arg1 
+  (cond ((equal code "FV")
+             (holpp-execute-code-face-tooltip start end arg1
              '(face hol-free-variable)))
-        ((equal code "BV") 
-             (holpp-execute-code-face-tooltip start end arg1 
+        ((equal code "BV")
+             (holpp-execute-code-face-tooltip start end arg1
              '(face hol-bound-variable)))
-        ((equal code "TV") 
-             (holpp-execute-code-face-tooltip start end arg1 
+        ((equal code "TV")
+             (holpp-execute-code-face-tooltip start end arg1
              '(face hol-type-variable)))
-        ((equal code "TY") 
+        ((equal code "TY")
              (holpp-execute-code-face-tooltip start end arg1
              '(face hol-type)))
         ((equal code "ST")
-           (add-text-properties start end 
+           (add-text-properties start end
              (holpp-decode-full-style arg1)))))
 
 (setq temp-hol-output-buf nil)
@@ -1597,7 +1612,7 @@ already loaded.)"
   (cons "Misc" (make-sparse-keymap "Misc")))
 
 (define-key global-map [menu-bar hol-menu hol-misc clean-up]
-   '("Clean up (remove tab, white spaces at end of line, etc...)" . 
+   '("Clean up (remove tab, white spaces at end of line, etc...)" .
      hol-cleanup-buffer))
 
 (define-key global-map [menu-bar hol-menu hol-misc check-names]
