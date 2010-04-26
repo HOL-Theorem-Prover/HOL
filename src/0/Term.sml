@@ -2001,23 +2001,6 @@ fun sprint pp x = HOLPP.pp_to_string 75 pp x
 
 val term_to_string = sprint (pp_raw_term (fn t => ~1) (fn t => ~1));
 
-(*
-val _ = installPP Kind.pp_kind;
-val _ = installPP pp_raw_type;
-val _ = installPP (pp_raw_term (fn t => ~1));
-*)
-
-(* Tests:
-
-val tm0 = mk_var("x", alpha);
-val tm1 = mk_abs(tm0, tm0);
-val tm2 = mk_tyabs(alpha, tm1);
-val (ty1,tm3) = dest_tyabs tm2;
-val tm4 = mk_tyabs(alpha, tm2);
-val (tys, tm5) = strip_tyabs tm4;
-
-*)
-
 
 (*---------------------------------------------------------------------------
        Higher order matching (from jrh via Michael Norrish - June 2001)

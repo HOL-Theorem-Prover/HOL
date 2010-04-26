@@ -272,14 +272,15 @@ fun pp_kind pps kn =
  end;
 
 fun pp_qkind pps kn =
- let open Portable
+ let open Portable Globals
      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
      val pp_kind = pp_kind pps
  in
    begin_block INCONSISTENT 0;
-   add_string "``::";
+   add_string (!kind_pp_prefix);
+   add_string "::";
    pp_kind kn;
-   add_string "``";
+   add_string (!kind_pp_suffix);
    end_block()
  end;
 

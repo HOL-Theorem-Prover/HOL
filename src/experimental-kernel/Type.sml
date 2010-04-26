@@ -1735,11 +1735,6 @@ fun sprint pp x = HOLPP.pp_to_string 80 pp x
 
 val type_to_string = sprint pp_raw_type;
 
-(*
-val _ = installPP Kind.pp_kind;
-val _ = installPP pp_raw_type;
-*)
-
 
 (*---------------------------------------------------------------------------
        Higher order matching (from jrh via Michael Norrish - June 2001)
