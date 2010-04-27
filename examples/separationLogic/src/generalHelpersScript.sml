@@ -910,6 +910,167 @@ REPEAT STRIP_TAC THEN
 
 
 
+
+val LIST_NUM_STAR_def = Define `
+   (LIST_NUM_STAR 0 l = []) /\
+   (LIST_NUM_STAR (SUC n) l = l++(LIST_NUM_STAR n l))`
+
+val LIST_STAR_def = Define `
+   LIST_STAR l l' = ?n. l' = LIST_NUM_STAR n l`
+
+val LIST_NUM_STAR_def = Define `
+   (LIST_NUM_STAR 0 l = []) /\
+   (LIST_NUM_STAR (SUC n) l = l++(LIST_NUM_STAR n l))`
+
+val LIST_STAR_def = Define `
+   LIST_STAR l l' = ?n. l' = LIST_NUM_STAR n l`
+
+
+val LIST_STAR_REWRITE = store_thm ("LIST_STAR_REWRITE",
+``      (LIST_STAR l []) /\
+   (~(t = []) ==> (LIST_STAR l t = ?t'. (t = l++t') /\ LIST_STAR l t'))``,
+
+SIMP_TAC std_ss [LIST_STAR_def] THEN
+REPEAT STRIP_TAC THENL [
+   Q.EXISTS_TAC `0` THEN
+   SIMP_TAC std_ss [LIST_NUM_STAR_def],
+
+   EQ_TAC THENL [
+      STRIP_TAC THEN
+      Cases_on `n` THEN (
+         FULL_SIMP_TAC std_ss [LIST_NUM_STAR_def]
+      ) THEN
+      METIS_TAC[],
+
+      STRIP_TAC THEN
+      Q.EXISTS_TAC `SUC n` THEN
+      ASM_SIMP_TAC std_ss [LIST_NUM_STAR_def]
+   ]
+]);
+
+
+
+
+val LIST_NUM_STAR_SYM = store_thm ("LIST_NUM_STAR_SYM",
+   ``(LIST_NUM_STAR 0 l = []) /\
+   (LIST_NUM_STAR (SUC n) l = (LIST_NUM_STAR n l)++l)``,
+
+SIMP_TAC std_ss [LIST_NUM_STAR_def] THEN
+Induct_on `n` THENL [
+   SIMP_TAC list_ss [LIST_NUM_STAR_def],
+
+   ASM_SIMP_TAC std_ss [LIST_NUM_STAR_def,
+      APPEND_ASSOC]
+]);
+
+
+
+val LIST_NUM_SET_STAR_def = Define `
+   (LIST_NUM_SET_STAR 0 ls = {[]}) /\
+   (LIST_NUM_SET_STAR (SUC n) ls =
+      {l++t | (l IN ls) /\ (t IN (LIST_NUM_SET_STAR n ls))})`
+
+val LIST_SET_STAR_def = Define `
+   LIST_SET_STAR ls = \l'. ?n. l' IN LIST_NUM_SET_STAR n ls`
+
+
+val LIST_NUM_SET_STAR___SING = store_thm ("LIST_NUM_SET_STAR___SING",
+``!l n. LIST_NUM_SET_STAR n {l} = {LIST_NUM_STAR n l}``,
+
+Induct_on `n` THENL [
+   SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, LIST_NUM_STAR_def],
+
+   ASM_SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, LIST_NUM_STAR_def, IN_SING,
+      EXTENSION, GSPECIFICATION, PAIR_EXISTS_THM]
+]);
+
+
+val LIST_SET_STAR___SING = store_thm ("LIST_SET_STAR___SING",
+``!l. LIST_SET_STAR {l} = LIST_STAR l``,
+
+SIMP_TAC std_ss [FUN_EQ_THM, LIST_SET_STAR_def, LIST_STAR_def,
+   LIST_NUM_SET_STAR___SING, IN_SING]);
+
+
+val LIST_SET_NUM_STAR___EMPTY = store_thm ("LIST_SET_NUM_STAR___EMPTY",
+``!n. LIST_NUM_SET_STAR (SUC n) {} = {}``,
+
+SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, NOT_IN_EMPTY,
+   EXTENSION, GSPECIFICATION, PAIR_BETA_THM, GSYM pairTheory.PFORALL_THM,
+   GSYM pairTheory.PEXISTS_THM]);
+
+
+val IN_LIST_NUM_SET_STAR = store_thm ("IN_LIST_NUM_SET_STAR",
+``      (x IN LIST_NUM_SET_STAR 0 ls = (x = [])) /\
+   ((x IN LIST_NUM_SET_STAR (SUC n) ls) =
+      ?l t. (x = l ++ t) /\ l IN ls /\ (t IN (LIST_NUM_SET_STAR n ls)))``,
+
+SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, IN_SING, GSPECIFICATION,
+   PAIR_EXISTS_THM]);
+
+
+
+val LIST_SET_STAR___EMPTY = store_thm ("LIST_SET_STAR___EMPTY",
+``LIST_SET_STAR {} = {[]}``,
+
+SIMP_TAC std_ss [LIST_SET_STAR_def, EXTENSION, IN_ABS, IN_SING] THEN
+REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
+   Cases_on `n` THENL [
+      FULL_SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, IN_SING],
+      FULL_SIMP_TAC std_ss [LIST_SET_NUM_STAR___EMPTY, NOT_IN_EMPTY]
+   ],
+
+   Q.EXISTS_TAC `0` THEN
+   ASM_SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, IN_SING]
+]);
+
+
+
+val LIST_SET_STAR___EMPTY_LIST = store_thm ("LIST_SET_STAR___EMPTY_LIST",
+``!l. [] IN (LIST_SET_STAR l)``,
+SIMP_TAC std_ss [LIST_SET_STAR_def, IN_ABS] THEN
+GEN_TAC THEN
+Q.EXISTS_TAC `0` THEN
+SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, IN_SING]);
+
+
+val LIST_NUM_SET_STAR___SUBSET = store_thm ("LIST_NUM_SET_STAR___SUBSET",
+   ``!L1 L2 n. (L1 SUBSET L2) ==> (LIST_NUM_SET_STAR n L1 SUBSET LIST_NUM_SET_STAR n L2)``,
+
+Induct_on `n` THENL [
+   SIMP_TAC std_ss [LIST_NUM_SET_STAR_def, SUBSET_REFL],
+
+   REPEAT STRIP_TAC THEN
+   RES_TAC THEN
+   SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, PAIR_EXISTS_THM,
+      LIST_NUM_SET_STAR_def] THEN
+   METIS_TAC[SUBSET_DEF]
+]);
+
+
+
+val LIST_SET_STAR___SUBSET = store_thm ("LIST_SET_STAR___SUBSET",
+   ``!L1 L2. (L1 SUBSET L2) ==> (LIST_SET_STAR L1 SUBSET LIST_SET_STAR L2)``,
+
+SIMP_TAC std_ss [LIST_SET_STAR_def, SUBSET_DEF, IN_ABS] THEN
+METIS_TAC[LIST_NUM_SET_STAR___SUBSET, SUBSET_DEF]);
+
+
+
+
+val LIST_NUM_STAR_APPEND = store_thm ("LIST_NUM_STAR_APPEND",
+   ``(!n1 n2 l. (LIST_NUM_STAR n1 l) ++ (LIST_NUM_STAR n2 l) = LIST_NUM_STAR (n1 + n2) l)``,
+
+   Induct_on `n1` THENL [
+      SIMP_TAC list_ss [LIST_NUM_STAR_def],
+      ASM_SIMP_TAC std_ss [LIST_NUM_STAR_def, ADD_CLAUSES, GSYM APPEND_ASSOC]
+   ]
+);
+
+
+
+
+
 (******************************************************************
   PRED SET
  ******************************************************************)
