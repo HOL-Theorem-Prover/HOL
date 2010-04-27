@@ -45,22 +45,13 @@ end
 fun getparts s = let
   open Substring
   val ss = full s
-  val (preposn, posnsfx) = position "[" ss
-  val (opstring, rest, argoffset) =
-      if size posnsfx = 0 then let
-          val (argpfx, argstart) = position "{" ss
-        in
-          ("", argstart, size argpfx)
-        end
-      else let
-          val (opstuff, rest) = position "]" posnsfx
-        in
-          (string (slice(opstuff,1,NONE)),
-           slice(rest,1,NONE),
-           size opstuff + size preposn + 1)
-        end
+  val (prebrace, bracesfx) = position "{" ss
+  val argoffset = size prebrace + 1
+  val (preposn, optsfx) = position "[" prebrace
+  val opstring = if size optsfx = 0 then ""
+                 else inside (string optsfx)
 in
-  (opstring, inside (string rest), argoffset)
+  (opstring, inside (string bracesfx), argoffset)
 end
 %%
 %structure mungeLex
