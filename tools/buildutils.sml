@@ -24,7 +24,7 @@ fun die s =
       flushOut stdErr;
       Process.exit Process.failure
     end
-fun warn s = let open TextIO in output(stdErr, s); flushOut stdErr end;
+fun warn s = let open TextIO in output(stdErr, s ^ "\n"); flushOut stdErr end;
 
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
@@ -111,10 +111,10 @@ fun read_buildsequence {ssfull,inputLine=readline,kernelpath} bseq_fname = let
                   else
                     (warn ("** File "^dirname0^
                            " from build sequence is not a directory \
-                           \-- skipping it\n");
+                           \-- skipping it");
                      read_file acc fstr)
                 else (warn ("** File "^s^" from build sequence does not "^
-                          "exist or is inacessible -- skipping it\n");
+                          "exist or is inacessible -- skipping it");
                     read_file acc fstr)
               else read_file acc fstr
             end
@@ -138,7 +138,7 @@ fun cline_selftest cmdline = let
                                                resulting_cmdline)
                       | SOME i => if i < 0 then
                                     (warn("** Ignoring negative number spec\
-                                          \ification of test level\n");
+                                          \ification of test level");
                                      find_slftests(t', counts,
                                                    resulting_cmdline))
                                   else
@@ -152,7 +152,7 @@ in
     [] => (0, new_cmdline)
   | [h] => (h, new_cmdline)
   | h::t => (warn ("** Ignoring all but last -selftest spec; result is \
-                   \selftest level "^Int.toString h^"\n");
+                   \selftest level "^Int.toString h);
              (h, new_cmdline))
 end
 
@@ -199,7 +199,7 @@ fun delseq dflt numseen list = let
 in
   case list of
     [] => (NONE, [])
-  | ["-seq"] => (warn "Trailing -seq command-line option ignored\n";
+  | ["-seq"] => (warn "Trailing -seq command-line option ignored";
                  (NONE, []))
   | "-seq"::fname::t => let
       val _ = maybewarn()
@@ -250,7 +250,7 @@ fun get_cline {reader,default_seq} = let
             if f = default_seq then (f, new')
             else (warn ("*** Using build-sequence file "^f^
                         " from earlier build command; \n\
-                        \    use -fullbuild option to override\n");
+                        \    use -fullbuild option to override");
                   (f, new'))
         end
       | (SOME f, new') => (f, new')
@@ -258,7 +258,7 @@ fun get_cline {reader,default_seq} = let
       case inter ["-expk", "-stdknl"] newopts of
         [x] => (x, delete x newopts)
       | (result as (x::y::_)) =>
-        (warn ("Specifying multiple kernel options; using "^x^"\n");
+        (warn ("Specifying multiple kernel options; using "^x);
          (x, setdiff newopts result))
       | [] => let
         in
@@ -266,11 +266,11 @@ fun get_cline {reader,default_seq} = let
             [] => ("-stdknl", newopts)
           | [x] => (warn ("*** Using kernel option "^x^
                           " from earlier build command; \n\
-                          \    use -expk or -stdknl to override\n");
+                          \    use -expk or -stdknl to override");
                     (x, newopts))
           | x::y::_ =>
             (warn ("Cached build options specify multiple kernel options; \
-                   \using "^x^"\n"); (x,newopts))
+                   \using "^x); (x,newopts))
         end
   val _ = if seqspec = default_seq then write_options [knlspec]
           else write_options [knlspec, "-seq", seqspec]

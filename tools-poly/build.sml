@@ -50,7 +50,7 @@ val use_expk = let
 in
   if not expkp andalso compiler_number < 530 then
     (warn "*** Using the experimental kernel (standard kernel requires \
-          \Poly/ML 5.3 or\n*** higher)\n";
+          \Poly/ML 5.3 or\n*** higher)";
      true)
   else
     expkp
@@ -119,7 +119,7 @@ end
 
 fun Gnumake dir =
   if OS.Process.isSuccess (SYSTEML [GNUMAKE]) then true
-  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).\n");
+  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
         false)
 
 (* ----------------------------------------------------------------------
@@ -144,7 +144,7 @@ fun map_dir f dir =
 
 fun rem_file f =
   OS.FileSys.remove f
-   handle _ => (warn ("Couldn't remove file "^f^"\n"); ());
+   handle _ => (warn ("Couldn't remove file "^f); ());
 
 fun copy file path =  (* Dead simple file copy *)
  let open TextIO
@@ -495,15 +495,15 @@ fun setup_logfile () = let
 in
   if ensure_dir() then
     if access (logfilename, []) then
-      warn "Build log exists; new logging will concatenate onto this file\n"
+      warn "Build log exists; new logging will concatenate onto this file"
     else let
         (* touch the file *)
         val outs = TextIO.openOut logfilename
       in
         TextIO.closeOut outs
       end
-  else warn "Couldn't make or use build-logs directory\n"
-end handle IO.Io _ => warn "Couldn't set up build-logs\n"
+  else warn "Couldn't make or use build-logs directory"
+end handle IO.Io _ => warn "Couldn't set up build-logs"
 
 fun finish_logging buildok = let
 in
@@ -516,7 +516,7 @@ in
       OS.FileSys.rename {old = logfilename, new = fullPath [logdir, newname]}
     end
   else ()
-end handle IO.Io _ => warn "Had problems making permanent record of build log\n"
+end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
 val () = OS.Process.atExit (fn () => finish_logging false)
         (* this will do nothing if finish_logging happened normally first;
@@ -578,18 +578,16 @@ fun clean_dirs f =
                 fullPath [HOLDIR, "src", "experimental-kernel"] ::
                 map #1 SRCDIRS);
 
-fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
-
 fun check_against s = let
   open Time
   val cfgtime = OS.FileSys.modTime (fullPath [HOLDIR, s])
 in
   if OS.FileSys.modTime EXECUTABLE < cfgtime then
-    (print ("WARNING! WARNING!\n");
-     print ("  The build file is older than " ^ s ^ ";\n");
-     print ("  this suggests you should reconfigure the system.\n");
-     print ("  Press Ctl-C now to abort the build; <RETURN> to continue.\n");
-     print ("WARNING! WARNING!\n");
+    (warn ("WARNING! WARNING!");
+     warn ("  The build file is older than " ^ s ^ ";");
+     warn ("  this suggests you should reconfigure the system.");
+     warn ("  Press Ctl-C now to abort the build; <RETURN> to continue.");
+     warn ("WARNING! WARNING!");
      ignore (TextIO.inputLine TextIO.stdIn))
   else ()
 end;
@@ -624,6 +622,6 @@ in
     | ["nosymlink"] => build_hol cp
     | ["small"]     => build_hol mv
     | ["help"]      => build_help()
-    | otherwise     => errmsg help_mesg
+    | otherwise     => warn help_mesg
   end
 end (* struct *)
