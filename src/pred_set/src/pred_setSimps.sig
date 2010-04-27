@@ -3,6 +3,8 @@ sig
   val SET_SPEC_ss : simpLib.ssfrag
   val PRED_SET_ss : simpLib.ssfrag
   val PRED_SET_AC_ss : simpLib.ssfrag
+  val GSPEC_SIMP_CONV : Conv.conv
+  val GSPEC_SIMP_ss : simpLib.ssfrag
 end
 
 (*

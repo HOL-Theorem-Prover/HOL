@@ -899,6 +899,16 @@ will not do the right thing if the output spans multiple lines.
 Rather the first line of \HOL{} output will be indented, and the subsequent lines will not.
 %
 The \texttt{\indentoption} option lets the pretty-printer know that it is printing with a given indentation, affecting all lines of its output.
+
+
+\item[$\mathit{nm}_1$\texttt{/}$\mathit{nm}_2$] (For use with \holtm{}
+  and \holthm{}.)
+%
+Causes $\mathit{nm}_1$ to be substituted for $\mathit{nm}_2$ in the
+term or theorem.
+%
+This will rename free variables, or variables that are universally
+quantified at the outermost level.
 \end{description}
 
 
@@ -995,6 +1005,47 @@ document.
 \smallskip \noindent
 The \texttt{-w} and overrides file options can be given in either
 order.
+
+\subsection{Holindex}
+
+The munger provides preprocessing of \LaTeX{} sources. In contrast
+Holindex is interleaved with \LaTeX{}. Its main purpose is to generate
+indices of \HOL{}-theorems, types and terms. However, it can also be used
+to insert terms, types or theorems in the text.
+
+To use Holindex, add the following lines to the header of
+the \LaTeX{} source file:
+%
+\begin{alltt}
+\bs{}usepackage\{holindex\}
+\bs{}initHOLindex
+\bs{}setHOLlinewidth\{width\}  
+\bs{}setHOLoverrides\{file\}
+\end{alltt}
+%
+The commands \verb-\setHOLlinewidth- and \verb-\setHOLoverrides-
+correspond to the command line options of the merger. Their appearance
+in the header is optional. One can insert \HOL{}-theorems by
+\verb-\blockHOLthm{theory.thm}- or short ones by
+\verb-\inlineHOLthm-. There is also \verb-\citeHOLthm{theory.thm}- to
+cite theorems in the index. Similar \LaTeX{}-macros exist for terms
+and types. There are macros for setting formating options as
+well. However, it is recommended to use external files to define
+terms, types and theorems and their formating. Finally, the \HOL{}
+index is printed with \verb-\printHOLindex-.
+
+The workflow of Holindex is similar to that of tools like Bibtex. The
+first run of \LaTeX{} on a file \verb-jobfile.tex- will create an
+auxiliary file \verb-jobfile.hix-. A call of 
+\begin{alltt}
+   munge.exe -index jobname
+\end{alltt}
+will create \verb-jobfile.tix-. This file contains
+all the pretty-printed \HOL{}-theorems, terms and types as well
+as the \HOL{}-index. It will be used by further runs of \LaTeX{}.
+For an example on how to use Holindex, please have a look
+at \verb|holindex-demo.tex| in \varref{HOLDIR}\texttt{/src/TeX}.
+
 
 \subsection{Making \HOL{} Theories \LaTeX{}-ready}
 \label{sec:holtheories-tex-ready}

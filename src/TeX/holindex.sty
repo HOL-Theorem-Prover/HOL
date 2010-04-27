@@ -81,25 +81,31 @@
 \newcommand{\useHOLfile}[1]{
    \writehixfile{UseFile #1}
 }
+\newcommand{\setHOLoverrides}[1]{
+   \writehixfile{Overrides #1}
+}
 
 \newcommand{\addHOLuse}[2] {
    \writehixfile{AddIndex #1 #2 \thepage}
 }
 
+\newenvironment{blockHOL}{\begin{alltt}}{\end{alltt}}
+\newcommand[\protect\long]{\inlineHOL}[1]{\mbox{\textup{\texttt{#1}}}}
+
 \newcommand[\protect\long]{\defineHOLthm}[2]{\holdef{thm@#1}{#2}}
 \newcommand[\protect]{\useHOLthm}[1]{\addHOLuse{Thm}{#1}\hollookup{thm@#1}}
-\newcommand[\protect]{\inlineHOLthm}[1]{\mbox{\textup{\texttt{\useHOLthm{#1}}}}}
-\newcommand[\protect]{\blockHOLthm}[1]{\begin{alltt}\useHOLthm{#1}\end{alltt}}
+\newcommand[\protect]{\inlineHOLthm}[1]{\inlineHOL{\useHOLthm{#1}}}
+\newcommand[\protect]{\blockHOLthm}[1]{\begin{blockHOL}\useHOLthm{#1}\end{blockHOL}}
 
 \newcommand[\protect\long]{\defineHOLtm}[2]{\holdef{term@#1}{#2}}
 \newcommand[\protect]{\useHOLtm}[1]{\addHOLuse{Term}{#1}\hollookup{term@#1}}
-\newcommand[\protect]{\inlineHOLtm}[1]{\mbox{\textup{\texttt{\useHOLtm{#1}}}}}
-\newcommand[\protect]{\blockHOLtm}[1]{\begin{alltt}\useHOLtm{#1}\end{alltt}}
+\newcommand[\protect]{\inlineHOLtm}[1]{\inlineHOL{\useHOLtm{#1}}}
+\newcommand[\protect]{\blockHOLtm}[1]{\begin{blockHOL}\useHOLtm{#1}\end{blockHOL}}
 
 \newcommand[\protect\long]{\defineHOLty}[2]{\holdef{type@#1}{#2}}
 \newcommand[\protect]{\useHOLty}[1]{\addHOLuse{Type}{#1}\hollookup{type@#1}}
-\newcommand[\protect]{\inlineHOLty}[1]{\mbox{\textup{\texttt{\useHOLty{#1}}}}}
-\newcommand[\protect]{\blockHOLty}[1]{\begin{alltt}\useHOLty{#1}\end{alltt}}
+\newcommand[\protect]{\inlineHOLty}[1]{\inlineHOL{\useHOLty{#1}}}
+\newcommand[\protect]{\blockHOLty}[1]{\begin{blockHOL}\useHOLty{#1}\end{blockHOL}}
 
 
 % Arg 1 : Type
@@ -206,8 +212,8 @@ Definition #1 #2 {#3} {#4}
    \makebox[0.1\textwidth][r]{(#1)\ }%
    \begin{minipage}[t]{0.9\textwidth}%
    \begin{flushright}#3 \ldots$\!$\dotfill #4\end{flushright}%
-   {\ifthenelse{\(\not\boolean{holShortIndexFlag}\) \and 
-   \(\boolean{#5} \or \boolean{holLongIndexFlag}\)}{#6\begin{alltt}\hollookup{#2}\end{alltt}\medskip}{}}
+   {\ifthenelse{\(\not\boolean{holShortIndexFlag}\) \and %
+   \(\boolean{#5} \or \boolean{holLongIndexFlag}\)}{#6\begin{blockHOL}\hollookup{#2}\end{blockHOL}\medskip}{}}%
    \end{minipage}\\
 }
 
@@ -245,12 +251,6 @@ Definition #1 #2 {#3} {#4}
 \newcommand[\protect]{\mciteHOLthm}[1]{(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
 \newcommand[\protect]{\mciteHOLtm}[1]{(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
 \newcommand[\protect]{\mciteHOLty}[1]{(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}
-
-
-
-
-
-
 
 \newcommand{\UnderscoreCommands}{%   (\cite already done)
    \do\citeHOLty \do\citeHOLtm \do\citeHOLthm

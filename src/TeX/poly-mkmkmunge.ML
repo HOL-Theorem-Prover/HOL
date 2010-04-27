@@ -18,7 +18,7 @@ fun mkmunge () = let
   in
     load s
   end handle e => (die ("Exception raised: "^General.exnMessage e))
-  val _ = load1 "holindex"
+  val _ = load1 (Globals.HOLDIR ++ "src" ++ "TeX" ++ "holindex");
   val _ = app load1 theories
   fun appthis s = let
     val nm = Globals.HOLDIR ++ "src" ++ "TeX" ++ s
@@ -32,7 +32,7 @@ in
                     "mkmunger.sml", "poly-munge.ML"];
   print "Linking object code\n";
   let
-    val res = systeml ([CC, "-o", exe, "munger.o"] @ POLY_LDFLAGS)
+    val res = systeml ([CC, "-o", exe, "munger.o"] @ POLY_LDFLAGS_STATIC)
   in
     if OS.Process.isSuccess res then ()
     else die "Linking of Poly/ML object code failed"

@@ -94,6 +94,9 @@ in
    | ["Comment", ty_arg, id_arg, comment_arg] =>
          update_data_store ds ty_arg id_arg
          (data_entry___update_comment (SOME comment_arg))
+   | ["Overrides", file] =>
+         (mungeTools.user_overrides := mungeTools.read_overrides file;
+          ds)
    | ["UseOccurenceSort"] =>
          let
             val _ = use_occ_sort_ref := true;
@@ -163,7 +166,6 @@ end;
 (******************************************************************************)
 (* Output definitions                                                         *)
 (******************************************************************************)
-
 fun holmunge_format command options content =
 let
    val _ = if (isSome content) then () else Feedback.fail();

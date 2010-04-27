@@ -572,7 +572,6 @@ val valid_posns_subst = store_thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV u` THEN
   SRW_TAC [][valid_posns_thm, v_posns_thm, SUB_THM] THENL [
     SIMP_TAC (srw_ss() ++ DNF_ss)[EXTENSION, EQ_IMP_THM],
-    SRW_TAC [][EXTENSION],
     SRW_TAC [][EXTENSION] THEN REPEAT (POP_ASSUM (K ALL_TAC)) THEN
     SRW_TAC [DNF_ss][] THEN PROVE_TAC [],
     SRW_TAC [DNF_ss][EXTENSION] THEN PROVE_TAC []

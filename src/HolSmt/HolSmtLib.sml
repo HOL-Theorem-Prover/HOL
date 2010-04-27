@@ -30,7 +30,8 @@ structure HolSmtLib :> HolSmtLib = struct
         raise ERR ("solver reports 'unknown' (" ^ message ^ ")")
     val (goals, proof) = Tactical.THENL (Tactical.REPEAT Tactic.GEN_TAC,
       [Tactical.THEN (Library.LET_SIMP_TAC,
-         Tactical.THEN (Library.SET_SIMP_TAC, Tactic.BETA_TAC))]) goal
+         Tactical.THEN (Library.WORD_SIMP_TAC,
+           Tactical.THEN (Library.SET_SIMP_TAC, Tactic.BETA_TAC)))]) goal
   in
     (* ugly hack to work around the fact that SET_SIMP_TAC and BETA_TAC prove
        ``T``; we call the SMT solver anyway to make sure this only works if the

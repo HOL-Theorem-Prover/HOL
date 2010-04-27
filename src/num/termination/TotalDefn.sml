@@ -505,9 +505,9 @@ local open Defn
      end
   fun termination_proof_failed () =
      raise ERR "defnDefine" (String.concat
-         ["Unable to prove termination!\nUse \"Defn.Hol_defn\" to make ",
-          "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
-          "termination proof.\n"])
+         ["\nUnable to prove termination!\n\n",
+          "Try using \"TotalDefn.tDefine <name> <quotation> <tac>\".\n",
+          "The termination goal has been set up using Defn.tgoal <defn>."])
 in
 fun defnDefine term_tac defn =
  let val V = params_of defn
@@ -519,7 +519,10 @@ fun defnDefine term_tac defn =
          then ((if reln_is_not_set defn
                  then Lib.tryfind (try_proof defn) (guessR defn)
                  else tprover defn)
-              handle HOL_ERR _ => termination_proof_failed())
+              handle HOL_ERR _ =>
+                (Defn.tgoal defn;
+                 Portable.pprint proofManagerLib.pp_proof (proofManagerLib.p());
+                 termination_proof_failed ()))
          else (defn,NONE)
  in
     save_defn defn'

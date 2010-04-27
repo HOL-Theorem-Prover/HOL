@@ -66,8 +66,8 @@ which provides support for defining recursive functions.
 
 Every type and term in \HOL{} is ultimately built by application of
 the primitive (abstract) constructors for types and terms. However, in
-order to accomodate a wide variety of mathematical expression, \HOL{}
-provides flexible infrastracture for parsing and prettyprinting types
+order to accommodate a wide variety of mathematical expression, \HOL{}
+provides flexible infrastructure for parsing and prettyprinting types
 and terms through the \ml{Parse} structure.
 
 The term parser supports type inference, overloading, binders, and
@@ -144,7 +144,7 @@ This is done with the \ML{} function \ml{type\_abbrev}:
 An abbreviation is a new type operator, of any number of arguments,
 that expands into an existing type.  For example, one might develop a
 light-weight theory of numbers extended with an infinity, where the
-represeting type was \holtxt{num option} (\holtxt{NONE} would
+representing type was \holtxt{num option} (\holtxt{NONE} would
 represent the infinity value).  One might set up an abbreviation
 \holtxt{infnum} that expanded to this underlying type.
 Polymorphic patterns are supported as well.  For example, as described
@@ -1229,7 +1229,7 @@ The changes which may cause old terms to fail to parse are:
 The \emph{goal stack} provides a simple interface to tactic-based
 interactive proof. When one uses tactics to decompose a proof, many
 intermediate states arise; the goalstack takes care of the necessary
-bookeeping. The implementation of goalstacks reported here is a
+bookkeeping. The implementation of goalstacks reported here is a
 re-design of Larry Paulson's original conception.
 
 The goalstack library is automatically loaded when \HOL{} starts up.
@@ -1255,7 +1255,7 @@ Recall that the type \ml{goal} is an abbreviation for
 focus of further operations.
 
 A shorthand for \ml{set\_goal} is the function \ml{g}: it
-invokes the parser automatically, and it doesn't allow the the goal to
+invokes the parser automatically, and it doesn't allow the goal to
 have any assumptions.
 
 Calling \ml{set\_goal}, or \ml{g}, adds a new proof attempt to the
@@ -1364,7 +1364,7 @@ proof, or a different proof. The functions that do this are
 \newcommand\bossLib{\ml{bossLib}}
 
 \index{bossLib@\ml{bossLib}}
-The library \bossLib\ marshalls some of the most widely used theorem
+The library \bossLib\ marshals some of the most widely used theorem
 proving tools in \HOL{} and provides them with a convenient interface
 for interaction. The library currently focuses on three things:
 definition of datatypes and functions; high-level interactive proof
@@ -1437,7 +1437,7 @@ free variables of $M$ are universally quantified. \ml{Induct\_on} is
 more general than \ml{Induct}, but it does require an explicit term to
 be given.
 
-Three supplementary entrypoints have been provided for more exotic
+Three supplementary entry-points have been provided for more exotic
 inductions:
 \begin{description}
 \item [\ml{completeInduct\_on}] performs complete induction on the
@@ -1471,7 +1471,7 @@ inductions:
 tries to make it easy to compose them in a simple way. We take our basic
 reasoners from \ml{mesonLib}, \ml{simpLib}, and \ml{numLib},
 but the point of \ml{bossLib} is to provide a layer of abstraction so
-the user has to know only a few entrypoints.\footnote{In the mid 1980's
+the user has to know only a few entry-points.\footnote{In the mid 1980's
 Graham Birtwistle advocated such an approach, calling it `Ten Tactic
 HOL'.} (These underlying libraries, and others providing similarly
 powerful tools are described in detail in sections below.)
@@ -1565,7 +1565,7 @@ reasoning to be mixed with ordinary tactic proof.\footnote{Proofs in
   the Mizar system are readable documents, unlike most
   tactic-based proofs.}
 
-The \ml{SPOSE\_NOT\_THEN} entrypoint initiates a proof by
+The \ml{SPOSE\_NOT\_THEN} entry-point initiates a proof by
 contradiction by assuming the negation of the goal and driving the
 negation inwards through quantifiers. It provides the resulting
 theorem as an argument to the supplied function, which will use the
@@ -2190,7 +2190,7 @@ performs this construction:
 \end{verbatim}
 \end{hol}
 where \ml{++} is an infix.  In general, it is best to build on top of
-the \ml{pure\_ss} \simpset{} or one of its descendents in order to
+the \ml{pure\_ss} \simpset{} or one of its descendants in order to
 pick up the default ``filter'' function for converting theorems to
 rewrite rules.  (This filtering process is described below in
 Section~\ref{sec:generating-rewrite-rules}.)
@@ -3100,7 +3100,7 @@ is quite similar to having an \ML{} interpreter inside the \HOL{} logic,
 working by forward inference. When used in this way, functional
 programs can be executed more quickly than by using the simplifier.
 
-The most accessible entrypoints for using the \ml{computeLib} library
+The most accessible entry-points for using the \ml{computeLib} library
 are the conversion \ml{EVAL} and its tactic counterpart
 \ml{EVAL\_TAC}.  These depend on an internal database that stores
 function definitions. In the following example, loading \ml{sortingTheory}
@@ -3153,7 +3153,7 @@ test. For example, the following definition is provably equal to \holtxt{FACT},
 \end{verbatim}
 \end{session}
 %
-But the the two definitions evaluate completely differently.
+But the two definitions evaluate completely differently.
 %
 \begin{session}
 \begin{verbatim}
@@ -3304,6 +3304,325 @@ A decision procedure for linear arithmetic on the real numbers
 is also provided by \ml{realLib}, under the name \ml{REAL\_ARITH\_CONV}
 and \ml{REAL\_ARITH\_TAC}.
 
+\section{Bit Vector Library---\texttt{wordsLib}}
+
+The library \theoryimp{wordsLib} provides tool support for bit-vectors, this includes facilities for: evaluation, parsing, pretty-printing and simplification.
+
+\subsection{Evaluation}
+
+The library \theoryimp{wordsLib} should be loaded when evaluating ground bit-vector terms.  This library provides a \emph{compset} \ml{words\_compset}, which
+can be used in the construction of custom \emph{compsets} and conversions.
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- load "wordsLib";
+> val it = () : unit
+
+- EVAL ``8w + 9w:word4``;
+> val it = |- 8w + 9w = 1w : thm
+\end{verbatim}
+\end{session}
+Note that a type annotation is used here to designate the word size.  When the word size is represented by a type variable (\ie{} for arbitrary length words), evaluation may give partial or unsatisfactory results.
+
+\subsection{Parsing and pretty-printing}
+
+Words can be parsed in binary, decimal and hexadecimal.   For example:
+\begin{session}
+\begin{verbatim}
+- ``0b111011w : word8``;
+> val it = ``58w`` : term
+
+- ``0x3Aw : word8``;
+> val it = ``58w`` : term
+\end{verbatim}
+\end{session}
+It is possible to parse octal numbers, but this must be enabled first by setting the reference \ml{base\_tokens.allow\_octal\_input} to true.  For example:
+\begin{session}
+\begin{verbatim}
+- ``072w : word8``;
+> val it = ``72w`` : term
+
+- base_tokens.allow_octal_input:=true;
+> val it = () : unit
+
+- ``072w : word8``;
+> val it = ``58w`` : term
+\end{verbatim}
+\end{session}
+
+Words can be pretty-printed using the standard number bases. For example, the function
+\ml{wordsLib.output\_words\_as\_bin} will select binary format:
+\begin{session}
+\begin{verbatim}
+- wordsLib.output_words_as_bin();
+> val it = () : unit
+
+- EVAL ``($FCP ODD):word16``;
+> val it = |- $FCP ODD = 0b1010101010101010w : thm
+\end{verbatim}
+\end{session}
+The function \ml{output\_words\_as} is more flexible and allows the number base to vary depending on
+the word length and numeric value.  The default pretty-printer (installed when loading \theoryimp{wordsLib}) prints small values in decimal and large values in hexadecimal.
+The function \ml{output\_words\_as\_oct} will automatically enable the parsing of octal numbers.  
+
+The trace variable \ml{"word printing"} provides an alternative method for changing the output number base --- it is particularly suited to temporarily selecting a number base, for example:
+\begin{session}
+\begin{verbatim}
+- Feedback.trace ("word printing", 1) Parse.print_term ``32w``;
+<<HOL message: inventing new type variable names: 'a>>
+0b100000w> val it = () : unit
+\end{verbatim}
+\end{session}
+The choices are as follows: 0 (default) -- small numbers decimal, large numbers hexadecimal; 1 -- binary; 2 -- octal; 3 -- decimal; and 4 -- hexadecimal.
+
+\subsubsection{Types}
+
+You may have noticed that \ty{:word4} and \ty{:word8} have been used as convenient parsing abbreviations for \ty{:\bool[4]} and \ty{:\bool[8]} --- this facility is available for many standard word sizes.  Users wishing to use this notation for non-standard word sizes can use the function \ml{wordsLib.mk\_word\_size}:
+\begin{session}
+\begin{verbatim}
+- ``:bool[15]``;
+> val it = ``:bool[15]`` : hol_type
+
+- ``:word15``;
+! Uncaught exception: 
+! HOL_ERR
+  
+- wordsLib.mk_word_size 15;
+> val it = () : unit
+
+- ``:word15``;
+> val it = ``:bool[15]`` : hol_type
+\end{verbatim}
+\end{session}
+
+When printing terms with type printing turned on, it is sometimes not possible to see the types of bit vector (sub-)expressions, which leads to ambiguity.  This is often the case when word-to-word conversions are present, as in the example below.
+\begin{session}
+\begin{verbatim}
+- Globals.show_types:=true;
+> val it = () : unit
+
+- ``w2w (a:word4) + w2w (b:word8) : word16``;
+> val it =
+    ``w2w (a :bool[4]) + w2w (b :bool[8])``
+     : term
+\end{verbatim}
+\end{session}
+Here the return type \ty{:\bool[16]} is not printed and, more importantly, it is not deducible.  This means that parsing the printed term will not give you back the original term.  It is possible to print more information by turning on verbose printing, however this makes the results far less readable because everything is printed in a fully expanded prefix form, see below.
+\begin{session}
+\begin{verbatim}
+- Globals.show_types_verbosely:=true;
+> val it = () : unit
+
+- ``w2w (a:word4) + w2w (b:word8) : word16``;
+> val it =
+    ``(words$word_add :bool[16] -> bool[16] -> bool[16])
+        ((w2w :bool[4] -> bool[16]) (a :bool[4]) :bool[16])
+        ((w2w :bool[8] -> bool[16]) (b :bool[8]) :bool[16])``
+     : term
+\end{verbatim}
+\end{session}
+To address this problem, a custom pretty-printer is provided, see below.
+\begin{session}
+\begin{verbatim}
+- wordsLib.add_word_cast_printer();
+> val it = () : unit
+
+- ``w2w (a:word4) + w2w (b:word8) : word16``;
+> val it =
+    ``((w2w :bool[4] -> bool[16]) a) + ((w2w :bool[8] -> bool[16]) b)``
+     : term
+\end{verbatim}
+\end{session}
+This pretty-printer can be removed with a call to \ml{wordsLib.remove\_word\_cast\_printer}.
+
+\subsubsection{Operator overloading}
+
+The symbols for the standard arithmetic operations (addition, subtraction and multiplication) are overloaded with operators from other standard theories, \ie{} for the natural, integer, rational and real numbers.  In many cases type inference will resolve overloading, however, in some cases this is not possible.  The choice of operator will then depend upon the order in which theories are loaded.  To change this behaviour the functions \ml{wordsLib.deprecate\_word} and \ml{wordsLib.prefer\_word} are provided.  For example, in the following session, the selection of word operators is deprecated:
+\begin{session}
+\begin{verbatim}
+- type_of ``a + b``;
+<<HOL message: more than one resolution of overloading was possible>>
+<<HOL message: inventing new type variable names: 'a>>
+> val it = ``:bool['a]`` : hol_type
+
+- wordsLib.deprecate_word();
+> val it = () : unit
+
+- type_of ``a + b``;
+<<HOL message: more than one resolution of overloading was possible>>
+> val it = ``:num`` : hol_type
+\end{verbatim}
+\end{session}
+In the above, natural number addition is chosen in preference to word addition.  Conversely, words are preferred over the integers below:
+\begin{session}
+\begin{verbatim}
+- load "intLib";
+<<HOL message: intLib loaded.
+  Use intLib.deprecate_int() to turn off integer parsing>>
+> val it = () : unit
+
+- type_of ``a + b``;
+<<HOL message: more than one resolution of overloading was possible>>
+> val it = ``:int`` : hol_type
+
+- wordsLib.prefer_word();
+> val it = () : unit
+
+- type_of ``a + b``;
+<<HOL message: more than one resolution of overloading was possible>>
+<<HOL message: inventing new type variable names: 'a>>
+> it = ``:bool['a]`` : hol_type
+\end{verbatim}
+\end{session}
+Of course, type annotations could have been added to avoid this problem entirely.  Note that, unlike \ml{deprecate\_int}, the function \ml{deprecate\_word} does not remove the overloadings, it simply lowers their priority.
+
+\subsubsection{Guessing word lengths}
+
+It can be a nuisance to add type annotations when specifying the return type for operations such as: \holtxt{word\_extract}, \holtxt{word\_concat}, \holtxt{concat\_word\_list} and \holtxt{word\_replicate}.  This is because there is often a ``standard'' length that could be guessed, \eg{} concatenation usually sums the constituent word lengths.  A facility for word length guessing is controlled by the reference \ml{wordsLib.guessing\_word\_lengths}, which is false by default.  The guesses are made during a post-processing step that occurs after the application of \ml{Parse.Term}.  This is demonstrated below.
+\begin{session}
+\begin{verbatim}
+- wordsLib.guessing_word_lengths:=true;
+> val it = () : unit
+
+- ``concat_word_list [(4 >< 1) (w:word32); w2; w3]``;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+<<HOL message: assigning word length: 'a <- 4>>
+<<HOL message: assigning word length: 'b <- 12>>
+> val it =
+    ``concat_word_list [(4 >< 1) w; w2; w3]``
+     : term
+\end{verbatim}
+\end{session}
+In the example above, word length guessing is turned on.  Two guesses are made: the extraction is expected to give a four bit word, and the concatenation gives a twelve bit word ($3 \times 4$).  If non-standard numeric lengths are required then type annotations can be added to avoid guesses being made.  With guessing turned off the result types would remain as invented type variables, \ie{} as alpha and beta above.
+
+\subsection{Simplification and conversions}
+
+The following \emph{simpset} fragments are provided:
+\begin{description}
+\item[\ml{SIZES\_ss}] evaluates a group of functions that operate over numeric types, such as \holtxt{dimindex} and \holtxt{dimword}.
+\item[\ml{BIT\_ss}] tries to simplify occurrences of the function \holtxt{BIT}.
+\item[\ml{WORD\_LOGIC\_ss}] simplifies bitwise logic operations.
+\item[\ml{WORD\_ARITH\_ss}] simplifies word arithmetic operations.  Subtraction is replaced with multiplication by -1.
+\item[\ml{WORD\_SHIFT\_ss}] simplifies shift operations.
+\item[\ml{WORD\_ss}] contains all of the above fragments, and also does some extra ground term evaluation.  This fragment is added to \ml{srw\_ss}.
+\item[\ml{WORD\_ARITH\_EQ\_ss}] simplifies \holtxt{``a = b``} to \holtxt{``a - b = 0w``}.
+\item[\ml{WORD\_BIT\_EQ\_ss}] aggressively expands non-arithmetic bit-vector operations into Boolean expressions.  (Should be used with care -- it includes \ml{fcpLib.FCP\_ss}.)
+\item[\ml{WORD\_EXTRACT\_ss}] simplification for a variety of operations: word-to-word conversions; concatenation; shifts and bit-field extraction.  Can be used in situations where \ml{WORD\_BIT\_EQ\_ss} is unsuitable.
+\item[\ml{WORD\_MUL\_LSL\_ss}] simplifies multiplication by a word literal into a sum of partial products.
+\end{description}
+Many of these \emph{simpset} fragments have corresponding conversions.  For example, the conversion \ml{WORD\_ARITH\_CONV} is based on \ml{WORD\_ARITH\_EQ\_ss}, however, it does some extra work to ensure that \holtxt{``a = b``} and \holtxt{``b = a``} convert into the same expression.  Therefore, this conversion is suited to reasoning about the equality of arithmetic word expressions.
+
+The behaviour of the fragments listed above are demonstrated using the following function:
+\begin{session}
+\begin{verbatim}
+- fun conv ss = SIMP_CONV (pure_ss++ss) []; 
+> val conv = fn : ssfrag -> term -> thm
+\end{verbatim}
+\end{session}
+The following session demonstrates \ml{SIZES\_ss}:
+\begin{session}
+\begin{verbatim}
+- conv wordsLib.SIZES_ss ``dimindex(:12)``;
+> val it = |- dimindex (:12) = 12 : thm
+
+- conv wordsLib.SIZES_ss ``FINITE univ(:32)``;
+> val it = |- FINITE univ(:32) <=> T : thm
+\end{verbatim}
+\end{session}
+The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set of (high) bit positions: 
+\begin{session}
+\begin{verbatim}
+- conv wordsLib.BIT_ss ``BIT 3 5``;
+> val it = |- BIT 3 5 <=> (3 = 0) \/ (3 = 2) : thm
+
+- conv wordsLib.BIT_ss ``BIT i 123``;
+> val it = |- BIT i 123 <=> i IN {0; 1; 3; 4; 5; 6} :
+  thm
+\end{verbatim}
+\end{session}
+This simplification provides some support for reasoning about bitwise operations over arbitrary word lengths.  The arithmetic, logic and shift fragments help tidy up basic word expressions:
+\begin{session}
+\begin{verbatim}
+- conv wordsLib.WORD_LOGIC_ss ``a && 12w !! 11w && a``;    
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    |- a && 12w !! 11w && a = 15w && a :
+  thm
+
+- conv wordsLib.WORD_ARITH_ss ``3w * b + a + 2w * b - a * 4w:word2``;
+> val it =
+    |- 3w * b + a + 2w * b - a * 4w = a + b
+     : thm
+     
+- conv wordsLib.WORD_SHIFT_ss ``0w << 12 + a >>> 0 + b << 2 << 3``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    |- 0w << 12 + a >>> 0 + b << 2 << 3 = 0w + a + b << (2 + 3)
+     : thm
+\end{verbatim}
+\end{session}
+
+The remaining fragments are not included in \ml{wordsLib.WORD\_ss} or \ml{srw\_ss}.  The bit equality fragment is demonstrated below.
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] ``a && b = ~0w : word2``;
+> val it =
+    |- (a && b = ~0w) <=> (a ' 1 /\ b ' 1) /\ a ' 0 /\ b ' 0
+     : thm
+\end{verbatim}
+\end{session}
+The extract fragment is useful for reasoning about bit-field operations and is best used in combination with \ml{wordsLib.SIZES\_ss} or \ml{wordsLib.WORD\_ss}, for example:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_EXTRACT_ss) []
+   ``(4 -- 1) ((a:word3) @@ (b:word2)) : word5``;
+> val it =
+    |- (4 -- 1) (a @@ b) = (2 >< 0) a << 1 !! (1 >< 1) b
+     : thm
+\end{verbatim}
+\end{session}
+Finally, the fragment \ml{WORD\_MUL\_LSL\_ss} is demonstrated below.
+\begin{session}
+\begin{verbatim}
+- conv wordsLib.WORD_MUL_LSL_ss ``5w * a : word8``;
+> val it = |- 5w * a = a << 2 + a : thm
+\end{verbatim}
+\end{session}
+Rewriting with the theorem \ml{wordsTheory.WORD\_MUL\_LSL} provides an means to undo this simplification, for example:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV (std_ss++wordsLib.WORD_ARITH_ss) [wordsTheory.WORD_MUL_LSL]
+    ``a << 2 + a : word8``;
+> val it = |- a << 2 + a = 5w * a : thm
+\end{verbatim}
+\end{session}
+Obviously, without adding safeguards, this rewrite theorem cannot be deployed when used in combination with the \ml{WORD\_MUL\_LSL\_ss} fragment.
+
+\subsubsection{A decision procedure}
+
+A basic decision procedure for words is provided in the form of \ml{wordsLib.WORD\_DECIDE}.  This procedure is fairly light-weight, \eg{} it does not employ ``bit-blasting'' techniques for addition or multiplication.  However, it does provide some support for reasoning about word orderings, for example:
+\begin{session}
+\begin{verbatim}
+- wordsLib.WORD_DECIDE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
+> val it =
+    |- a + 2w <+ 4w <=> a <+ 2w \/ 13w <+ a
+     : thm
+     
+- wordsLib.WORD_DECIDE ``w2w (a:word8) <+ 256w : word16``;
+> val it = |- w2w a <+ 256w : thm
+\end{verbatim}
+\end{session}
+When the trace variable \ml{"word decide"} is set, a limited amount of feedback will be printed.
+
+A custom decision procedure can be constructed using \ml{wordsLib.WORD\_DP}.  In fact, the default decision procedure is just a special instance of this routine, for example:
+\begin{session}
+\begin{verbatim}
+- wordsLib.WORD_DP wordsLib.WORD_CONV bossLib.DECIDE
+   ``w2w (a:word8) <+ 256w : word16``;
+> val it = |- w2w a <+ 256w : thm
+\end{verbatim}
+\end{session}
+The supplied conversion is used to perform initial simplification, the problem is then mapped to the natural numbers and the decision procedure is applied.  With complex goals, the arithmetic decision procedures in \ml{intLib} provide better performance than \ml{bossLib.DECIDE}.
 
 \section{The \texttt{HolSat} Library}\label{sec:HolSatLib}
 \input{HolSat.tex}

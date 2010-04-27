@@ -19,8 +19,10 @@ open buildutils
 prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
-
-
+fun readline strm =
+    case TextIO.inputLine strm of
+      "" => NONE
+    | s => SOME s
 
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
@@ -35,73 +37,22 @@ val DYNLIB = Systeml.DYNLIB
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
-val cmdline = CommandLine.arguments()
+val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
+
+val {kernelspec,seqname = bseq_fname,rest = cmdline} =
+    case get_cline {reader = readline, default_seq = dfltbuildseq} of
+      Normal x => x
+    | Clean s => {kernelspec = "", seqname = dfltbuildseq, rest = [s]}
 
 (* use the experimental kernel? *)
-val (use_expk, cmdline) =   let
-  val (expks, rest) = List.partition (fn e => e = "-expk") cmdline
-in
-  (not (null expks), rest)
-end
+val use_expk = kernelspec = "-expk"
 
 (* do self-tests? and to what level *)
-val (do_selftests, cmdline) = let
-  fun find_slftests (cmdline,counts,resulting_cmdline) =
-      case cmdline of
-        [] => (counts, List.rev resulting_cmdline)
-      | h::t => if h = "-selftest" then
-                  case t of
-                    [] => (1::counts, List.rev resulting_cmdline)
-                  | h'::t' => let
-                    in
-                      case Int.fromString h' of
-                        NONE => find_slftests (t, 1::counts,
-                                               resulting_cmdline)
-                      | SOME i => if i < 0 then
-                                    (warn("** Ignoring negative number spec\
-                                          \ification of test level\n");
-                                     find_slftests(t', counts,
-                                                   resulting_cmdline))
-                                  else
-                                    find_slftests (t', i::counts,
-                                                   resulting_cmdline)
-                    end
-                else find_slftests (t, counts, h::resulting_cmdline)
-  val (selftest_counts, new_cmdline) = find_slftests (cmdline, [], [])
-in
-  case selftest_counts of
-    [] => (0, new_cmdline)
-  | [h] => (h, new_cmdline)
-  | h::t => (warn ("** Ignoring all but last -selftest spec; result is \
-                   \selftest level "^Int.toString h^"\n");
-             (h, new_cmdline))
-end
-
-(* use a non-standard build sequence? *)
-val (bseq_fname, cmdline) = let
-  fun analyse (acc as (fname, args')) num_seen args =
-      case args of
-        [] => (fname, List.rev args')
-      | ["-seq"] => (warn "Trailing -seq command-line option ignored\n";
-                     acc)
-      | ("-seq"::fname::rest) =>
-        (if num_seen = 1 then warn "Multiple -seq options; taking last one\n"
-         else ();
-         analyse (fname, args') (num_seen + 1) rest)
-      | (x::rest) => analyse (fname, x::args') num_seen rest
-in
-  analyse (fullPath [HOLDIR, "tools", "build-sequence"], []) 0 cmdline
-end
-
+val (do_selftests, cmdline) = cline_selftest cmdline
 
 (*---------------------------------------------------------------------------
      Source directories.
  ---------------------------------------------------------------------------*)
-
-fun readline strm =
-    case TextIO.inputLine strm of
-      "" => NONE
-    | s => SOME s
 
 val kpath = if use_expk then fullPath [HOLDIR, "src", "experimental-kernel"]
             else fullPath [HOLDIR, "src", "0"]
@@ -138,7 +89,7 @@ fun Holmake dir =
 
 fun Gnumake dir =
   if SYSTEML [GNUMAKE] = Process.success then true
-  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).\n");
+  else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
         false)
 
 (* ----------------------------------------------------------------------
@@ -163,7 +114,7 @@ fun map_dir f dir =
 
 fun rem_file f =
   FileSys.remove f
-   handle _ => (warn ("Couldn't remove file "^f^"\n"); ());
+   handle _ => (warn ("Couldn't remove file "^f); ());
 
 fun copy file path =  (* Dead simple file copy *)
  let open TextIO
@@ -287,7 +238,7 @@ in
                    else ()
   | "HolCheck" => if not DYNLIB then
                     warn "*** Not building HolCheck as Dynlib, and hence \
-                         \HolBddLib, not available\n"
+                         \HolBddLib, not available"
                   else Holmake dir
   | "minisat" => let
     in case OS of
@@ -491,15 +442,15 @@ fun setup_logfile () = let
 in
   if ensure_dir() then
     if access (logfilename, []) then
-      warn "Build log exists; new logging will concatenate onto this file\n"
+      warn "Build log exists; new logging will concatenate onto this file"
     else let
         (* touch the file *)
         val outs = TextIO.openOut logfilename
       in
         TextIO.closeOut outs
       end
-  else warn "Couldn't make or use build-logs directory\n"
-end handle Io _ => warn "Couldn't set up build-logs\n"
+  else warn "Couldn't make or use build-logs directory"
+end handle Io _ => warn "Couldn't set up build-logs"
 
 fun finish_logging buildok = let
 in
@@ -512,7 +463,7 @@ in
       FileSys.rename {old = logfilename, new = fullPath [logdir, newname]}
     end
   else ()
-end handle Io _ => warn "Had problems making permanent record of build log\n"
+end handle Io _ => warn "Had problems making permanent record of build log"
 
 val () = Process.atExit (fn () => finish_logging false)
         (* this will do nothing if finish_logging happened normally first;
@@ -572,39 +523,16 @@ fun clean_dirs f =
                 fullPath [HOLDIR, "src", "experimental-kernel"] ::
                 map #1 SRCDIRS);
 
-fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
-val help_mesg = "Usage: build\n\
-                \   or: build -symlink\n\
-                \   or: build -nosymlink\n\
-                \   or: build -small\n\
-                \   or: build -dir <fullpath>\n\
-                \   or: build -dir <fullpath> -symlink\n\
-                \   or: build -clean\n\
-                \   or: build -cleanAll\n\
-                \   or: build symlink\n\
-                \   or: build nosymlink\n\
-                \   or: build small\n\
-                \   or: build clean\n\
-                \   or: build cleanAll\n\
-                \   or: build help.\n\
-                \Symbolic linking is ON by default.\n\
-                \Add -expk to build an experimental kernel.\n\
-                \Add -selftest to do self-tests, where defined.\n\
-                \       Follow -selftest with a number to indicate level\n\
-                \       of testing, the higher the number the more testing\n\
-                \       will be done.\n\
-                \Add -seq <fname> to use fname as build-sequence\n";
-
 fun check_against s = let
   open Time
   val cfgtime = FileSys.modTime (fullPath [HOLDIR, s])
 in
   if FileSys.modTime EXECUTABLE < cfgtime then
-    (print ("WARNING! WARNING!\n");
-     print ("  The build file is older than " ^ s ^ ";\n");
-     print ("  this suggests you should reconfigure the system.\n");
-     print ("  Press Ctl-C now to abort the build; <RETURN> to continue.\n");
-     print ("WARNING! WARNING!\n");
+    (warn ("WARNING! WARNING!");
+     warn ("  The build file is older than " ^ s ^ ";");
+     warn ("  this suggests you should reconfigure the system.");
+     warn ("  Press Ctl-C now to abort the build; <RETURN> to continue.");
+     warn ("WARNING! WARNING!");
      ignore (TextIO.inputLine TextIO.stdIn))
   else ()
 end;
@@ -639,6 +567,6 @@ val _ =
     | ["nosymlink"] => build_hol cp
     | ["small"]     => build_hol mv
     | ["help"]      => build_help()
-    | otherwise     => errmsg help_mesg
+    | otherwise     => warn help_mesg
 
 end (* struct *)

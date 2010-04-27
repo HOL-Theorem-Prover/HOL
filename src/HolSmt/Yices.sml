@@ -4,8 +4,10 @@
 
 structure Yices = struct
 
-  (* Yices 1.0.18 only supports linear arithmetic; we do not check for
-     linearity (Yices will check again anyway) *)
+  (* FIXME: Yices 1.0.18 only supports linear arithmetic, bit-vector shifts by
+            a numeric constant, etc.  We do not check these side conditions on
+            arguments at the moment, therefore possibly producing illegal Yices
+            input. *)
 
   (* translation of HOL terms into Yices' input syntax -- currently, all types
      and terms except the following are treated as uninterpreted:
@@ -165,6 +167,12 @@ structure Yices = struct
                       val ty_dict' = Redblackmap.insert (ty_dict, ty, name)
                       val defs' = "(define-type " ^ name ^ ")" :: defs
                   in
+                    if Feedback.get_tracefn "HolSmtLib" () > 2 then
+                      Feedback.HOL_MESG
+                        ("HolSmtLib (Yices): inventing name '" ^ name ^
+                        "' for HOL type '" ^ Hol_pp.type_to_string ty ^ "'")
+                    else
+                      ();
                     ((ty_dict', fresh + 1, defs'), name)
                   end
       (* data types, record types *)
@@ -653,6 +661,12 @@ structure Yices = struct
                       ((ty_dict, ty_fresh, defs), Term.type_of tm)
                     val defs = "(define " ^ name ^ "::" ^ ty_name ^ ")" :: defs
                 in
+                  if Feedback.get_tracefn "HolSmtLib" () > 2 then
+                    Feedback.HOL_MESG
+                      ("HolSmtLib (Yices): inventing name '" ^ name ^
+                      "' for HOL term '" ^ Hol_pp.term_to_string tm ^ "'")
+                  else
+                    ();
                   ((dict, fresh + 1, ty_dict, ty_fresh, defs), name)
                 end
             end
