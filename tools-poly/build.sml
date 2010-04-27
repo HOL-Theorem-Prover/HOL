@@ -14,7 +14,6 @@ datatype phase = Initial | Bare | Full
 
     val phase = ref Initial
 
-val cmdline = CommandLine.arguments ();
 
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
@@ -27,80 +26,38 @@ val DYNLIB = Systeml.DYNLIB
 val POLY_LDFLAGS = Systeml.POLY_LDFLAGS
 val POLY_LDFLAGS_STATIC = Systeml.POLY_LDFLAGS_STATIC
 
+val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
 
 (* ----------------------------------------------------------------------
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
+val {kernelspec,seqname = bseq_fname,rest = cmdline} =
+    case get_cline {reader = TextIO.inputLine, default_seq = dfltbuildseq} of
+      Normal x => x
+    | Clean s => {kernelspec = "", seqname = dfltbuildseq, rest = [s]}
 
 (* use the experimental kernel? Depends on the command-line and the compiler
    version... *)
-val (use_expk, cmdline) =   let
-  val (expk, rest) = List.partition (fn e => e = "-expk") cmdline
+val use_expk = let
   val version_string_w1 =
       hd (String.tokens Char.isSpace PolyML.Compiler.compilerVersion)
       handle Empty => ""
   val compiler_number =
       Real.floor (100.0 * valOf (Real.fromString version_string_w1))
       handle Option => 0
+  val expkp = kernelspec = "-expk"
 in
-  if null expk andalso compiler_number < 530 then
-    (print "*** Using the experimental kernel (standard kernel requires Poly/ML 5.3 or\n*** higher)\n";
-     (true, rest))
+  if not expkp andalso compiler_number < 530 then
+    (warn "*** Using the experimental kernel (standard kernel requires \
+          \Poly/ML 5.3 or\n*** higher)\n";
+     true)
   else
-    (not (null expk), rest)
+    expkp
 end
 
 (* do self-tests? and to what level *)
-val (do_selftests, cmdline) = let
-  fun find_slftests (cmdline,counts,resulting_cmdline) =
-      case cmdline of
-        [] => (counts, List.rev resulting_cmdline)
-      | h::t => if h = "-selftest" then
-                  case t of
-                    [] => (1::counts, List.rev resulting_cmdline)
-                  | h'::t' => let
-                    in
-                      case Int.fromString h' of
-                        NONE => find_slftests (t, 1::counts,
-                                               resulting_cmdline)
-                      | SOME i => if i < 0 then
-                                    (warn("** Ignoring negative number spec\
-                                          \ification of test level\n");
-                                     find_slftests(t', counts,
-                                                   resulting_cmdline))
-                                  else
-                                    find_slftests (t', i::counts,
-                                                   resulting_cmdline)
-                    end
-                else find_slftests (t, counts, h::resulting_cmdline)
-  val (selftest_counts, new_cmdline) = find_slftests (cmdline, [], [])
-in
-  case selftest_counts of
-    [] => (0, new_cmdline)
-  | [h] => (h, new_cmdline)
-  | h::t => (warn ("** Ignoring all but last -selftest spec; result is \
-                   \selftest level "^Int.toString h^"\n");
-             (h, new_cmdline))
-end
-
-(* use a non-standard build sequence? *)
-val (bseq_fname, cmdline) = let
-  fun analyse (acc as (fname, args')) num_seen args =
-      case args of
-        [] => (fname, List.rev args')
-      | ["-seq"] => (warn "Trailing -seq command-line option ignored\n";
-                     acc)
-      | ("-seq"::fname::rest) =>
-        (if num_seen = 1 then warn "Multiple -seq options; taking last one\n"
-         else ();
-         analyse (fname, args') (num_seen + 1) rest)
-      | (x::rest) => analyse (fname, x::args') num_seen rest
-in
-  analyse (fullPath [HOLDIR, "tools", "build-sequence"], []) 0 cmdline
-end
-
-
+val (do_selftests, cmdline) = cline_selftest cmdline
 (*---------------------------------------------------------------------------
      Source directories.
  ---------------------------------------------------------------------------*)
@@ -622,25 +579,6 @@ fun clean_dirs f =
                 map #1 SRCDIRS);
 
 fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
-val help_mesg = "Usage: build\n\
-                \   or: build -symlink\n\
-                \   or: build -small\n\
-                \   or: build -dir <fullpath>\n\
-                \   or: build -dir <fullpath> -symlink\n\
-                \   or: build -clean\n\
-                \   or: build -cleanAll\n\
-                \   or: build symlink\n\
-                \   or: build small\n\
-                \   or: build clean\n\
-                \   or: build cleanAll\n\
-                \   or: build help.\n\
-                \Symbolic linking is ON by default.\n\
-                \Add -expk to build an experimental kernel.\n\
-                \Add -selftest to do self-tests, where defined.\n\
-                \       Follow -selftest with a number to indicate level\n\
-                \       of testing, the higher the number the more testing\n\
-                \       will be done.\n\
-                \Add -seq <fname> to use fname as build-sequence\n";
 
 fun check_against s = let
   open Time
