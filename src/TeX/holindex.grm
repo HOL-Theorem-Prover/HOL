@@ -6,10 +6,14 @@ open holindexData
 %term 
      LBRACE
   |  RBRACE
+  |  LBRACKET
+  |  RBRACKET
   |  EQUAL
   |  TERM
   |  TYPE
   |  THEOREM
+  |  THEOREMS
+  |  IDS
   |  STRING of string
   |  FORCE_INDEX
   |  LONG_INDEX
@@ -28,8 +32,9 @@ open holindexData
 
 %nonterm 
      top of parse_entry list
-  |  entry of parse_entry
+  |  entry of parse_entry list
   |  entry_seq of parse_entry list
+  |  ident_seq of string list
   |  option of parse_entry -> parse_entry
   |  option_seq of parse_entry -> parse_entry
 
@@ -47,15 +52,23 @@ entry_seq :
     EOF
        ( [] )
   | entry entry_seq
-       ( entry::entry_seq )
+       ( entry @ entry_seq )
 
 entry:
     TERM LBRACE IDENT COMMA option_seq RBRACE
-       ( mk_update_parse_entry ("Term", IDENT) option_seq )
+       ( [mk_update_parse_entry ("Term", IDENT) option_seq] )
   | TYPE LBRACE IDENT COMMA option_seq RBRACE
-       ( mk_update_parse_entry ("Type", IDENT) option_seq )
+       ( [mk_update_parse_entry ("Type", IDENT) option_seq] )
   | THEOREM LBRACE IDENT COMMA option_seq RBRACE
-       ( mk_update_parse_entry ("Thm", IDENT) option_seq )
+       ( [mk_update_parse_entry ("Thm", IDENT) option_seq] )
+  | THEOREMS LBRACE IDS EQUAL LBRACKET ident_seq RBRACKET COMMA option_seq RBRACE
+       ( mk_theorem_parse_entries ident_seq option_seq )
+
+ident_seq:
+    (* empty *)   ([])
+  | IDENT         ([IDENT])
+  | IDENT COMMA ident_seq 
+      (IDENT::ident_seq)
 
 option_seq:
     (* empty *)   (fn x => x)

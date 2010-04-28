@@ -29,3 +29,9 @@
    long-index
 }
 
+@Theorems{
+   ids = [arithmetic.LESS_ADD_SUC,
+          arithmetic.LESS_EQ*],
+   force-index
+}
+

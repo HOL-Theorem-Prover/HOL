@@ -22,8 +22,8 @@ Similar usage as bibtex, makeindex etc.
 \end{verbatim}
 \item run \texttt{mkmunge.exe theories} to generate \texttt{munge.exe} for your theories
 \item run latex on jobname.tex to generate jobname.hix
-\item run \texttt{munge.exe -index jobname} to create jobname.tix
-\item rerun latex to use jobname.tix
+\item run \texttt{munge.exe -index jobname} to create jobname.tde and jobname.tid
+\item rerun latex to use jobname.tid and jobname.tde
 \item rerun the munger whenever some significant HOL stuff changed
 \item if using emacs with auctex you might want to add to your \texttt{.emacs}
 \begin{alltt}
@@ -125,6 +125,12 @@ Printout of \texttt{test.hdf}:
    force-index,
    long-index
 \}
+
+@Theorems{
+   ids = [arithmetic.LESS_ADD_SUC,
+          arithmetic.LESS_EQ*],
+   force-index
+}
 \end{alltt}
 
 
@@ -238,7 +244,7 @@ Printout of \texttt{test.hdf}:
 
 \citeHOLthm{prim_rec.INV_SUC_EQ}
 \citeHOLthm{arithmetic.PRE_SUC_EQ}
-
+\citeHOLthm{list.list_repfns}
 
 \longIndexHOLthm{arithmetic.PRE_SUC_EQ}
 \shortIndexHOLty{type_id_2}

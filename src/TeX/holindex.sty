@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{holtex}[2010/15/04]
+\ProvidesPackage{holindex}[2010/28/04]
 
 \usepackage{hyperref} % Required
 \usepackage{alltt} % Required
@@ -41,7 +41,7 @@
 \newcommand{\initHOLindex}{
    \newwrite\holaux
    \immediate\openout\holaux\jobname.hix
-   \@input@{\jobname.tix}
+   \@input@{\jobname.tde}
 }
 
 \newcommand{\writehixfile}[1]{\write\holaux{#1}}
@@ -60,7 +60,7 @@
 \setcounter{holTermCounter}{0}
 \setcounter{holTypeCounter}{0}
 {\raggedbottom
-\hollookup{index}}}
+ \@input@{\jobname.tid}}}
 
 \newcommand{\printHOLIndex}{
 \setboolean{holShortIndexFlag}{false}
@@ -86,7 +86,7 @@
 }
 
 \newcommand{\addHOLuse}[2] {
-   \writehixfile{AddIndex #1 #2 \thepage}
+   \writehixfile{Printed #1 #2 \thepage}
 }
 
 \newenvironment{blockHOL}{\begin{alltt}}{\end{alltt}}
@@ -208,40 +208,39 @@ Definition #1 #2 {#3} {#4}
 % Arg 3 : Label
 % Arg 4 : Pages
 % Arg 5 : Full entry
-\newcommand{\HOLIndexEntryFormat}[6]{ 
+\newcommand{\HOLIndexEntryFormat}[8]{% 
    \makebox[0.1\textwidth][r]{(#1)\ }%
    \begin{minipage}[t]{0.9\textwidth}%
    \begin{flushright}#3 \ldots$\!$\dotfill #4\end{flushright}%
    {\ifthenelse{\(\not\boolean{holShortIndexFlag}\) \and %
-   \(\boolean{#5} \or \boolean{holLongIndexFlag}\)}{#6\begin{blockHOL}\hollookup{#2}\end{blockHOL}\medskip}{}}%
-   \end{minipage}\\
+   \(\boolean{#5} \or \boolean{holLongIndexFlag}\)}{#7\begin{blockHOL}#8\end{blockHOL}\medskip}{}}%
+   \end{minipage}}
+
+
+\newcommand{\HOLThmIndexEntryFormat}[7]{%
+   \HOLIndexEntryFormat{\arabic{holThmCounter}}{thm@#1}{#2}{#3}{#4}{#5}{#6}{#7}%
+}
+\newcommand{\HOLTypeIndexEntryFormat}[7]{%
+   \HOLIndexEntryFormat{\arabic{holTypeCounter}}{type@#1}{#2}{#3}{#4}{#5}{#6}{#7}%
+}
+\newcommand{\HOLTermIndexEntryFormat}[7]{%
+   \HOLIndexEntryFormat{\arabic{holTermCounter}}{term@#1}{#2}{#3}{#4}{#5}{#6}{#7}%
 }
 
 
-\newcommand{\HOLThmIndexEntryFormat}[5]{
-   \HOLIndexEntryFormat{\arabic{holThmCounter}}{thm@#1}{#2}{#3}{#4}{#5}
-}
-\newcommand{\HOLTypeIndexEntryFormat}[5]{
-   \HOLIndexEntryFormat{\arabic{holTypeCounter}}{type@#1}{#2}{#3}{#4}{#5}
-}
-\newcommand{\HOLTermIndexEntryFormat}[5]{
-   \HOLIndexEntryFormat{\arabic{holTermCounter}}{term@#1}{#2}{#3}{#4}{#5}
+\newcommand[\protect\long]{\HOLThmIndexEntry}[7]{%
+   \refstepcounter{holThmCounter}{\ifthenelse{\boolean{#5}}{\label{hol:thm:#1}}{}}%
+   \HOLThmIndexEntryFormat{#1}{#2}{#3}{#4}{#5}{#6}{#7}%
 }
 
-
-\newcommand[\protect\long]{\HOLThmIndexEntry}[5]{
-   \refstepcounter{holThmCounter}\label{hol:thm:#1}
-   \HOLThmIndexEntryFormat{#1}{#2}{#3}{#4}{#5}
+\newcommand[\protect\long]{\HOLTypeIndexEntry}[7]{%
+   \refstepcounter{holTypeCounter}{\ifthenelse{\boolean{#5}}{\label{hol:ty:#1}}{}}%
+   \HOLTypeIndexEntryFormat{#1}{#2}{#3}{#4}{#5}{#6}{#7}%
 }
 
-\newcommand[\protect\long]{\HOLTypeIndexEntry}[5]{
-   \refstepcounter{holTypeCounter}\label{hol:ty:#1}
-   \HOLTypeIndexEntryFormat{#1}{#2}{#3}{#4}{#5}
-}
-
-\newcommand[\protect\long]{\HOLTermIndexEntry}[5]{
-   \refstepcounter{holTermCounter}\label{hol:tm:#1}
-   \HOLTermIndexEntryFormat{#1}{#2}{#3}{#4}{#5}
+\newcommand[\protect\long]{\HOLTermIndexEntry}[7]{%
+   \refstepcounter{holTermCounter}{\ifthenelse{\boolean{#5}}{\label{hol:tm:#1}}{}}%
+   \HOLTermIndexEntryFormat{#1}{#2}{#3}{#4}{#5}{#6}{#7}%
 }
 
 \newcommand[\protect]{\citeHOLthm}[1]{(HOL-Thm~\citePureHOLthm{#1})}
