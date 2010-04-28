@@ -249,6 +249,7 @@ local
     of "\\" => token_string "Backslash"
      | "{"  => token_string "Leftbrace"
      | "}"  => token_string "Rightbrace"
+     | "$"  => "\\$"
      | "α" => greek "alpha"
      | "β" => greek "beta"
      | "γ" => greek "gamma"
