@@ -29,6 +29,7 @@ sig
    val data_entry_is_used : data_entry -> bool
 
    val update_data_store : 
+        (bool * (string -> unit)) ->
         data_store_ty -> string -> string ->
         (data_entry -> data_entry) ->
         data_store_ty

@@ -21,6 +21,9 @@ val use_occ_sort_ref = ref false;
    val l = Portable.input_line fh;
 *)
 
+val error_found = ref false;
+fun report_error e = (print e;print"\n";error_found := true);
+
 local
    fun is_not_space c = not (Char.isSpace c)
    fun is_lbrace c = c = #"{"
@@ -72,28 +75,29 @@ let
 in
    case ll of
      ["Definition", ty_arg, id_arg, label_arg, content_arg] =>
-         update_data_store ds ty_arg id_arg
+         update_data_store (true, report_error)
+         ds ty_arg id_arg
          (fn ent => data_entry___update_label (SOME label_arg)
              (data_entry___update_content (SOME content_arg) ent))
    | ["Printed", ty_arg, id_arg, page_arg] =>
-         update_data_store ds ty_arg id_arg
+         update_data_store (false, report_error) ds ty_arg id_arg
          ((data_entry___add_page page_arg) o
           (data_entry___update_printed true))
    | ["Reference", ty_arg, id_arg, page_arg] =>
-         update_data_store ds ty_arg id_arg
+         update_data_store (false, report_error) ds ty_arg id_arg
          ((data_entry___add_page page_arg) o
           (data_entry___update_in_index true))
    | ["ForceIndex", ty_arg, id_arg] =>
-         update_data_store ds ty_arg id_arg
+         update_data_store (false, report_error) ds ty_arg id_arg
          (data_entry___update_in_index true)
    | ["FullIndex", ty_arg, id_arg, f_arg] =>
-         update_data_store ds ty_arg id_arg
+         update_data_store (false, report_error) ds ty_arg id_arg
          (data_entry___update_full_index (f_arg = "true"))
    | ["FormatOptions", ty_arg, id_arg, options_arg] =>
-         update_data_store ds ty_arg id_arg
+         update_data_store (false, report_error) ds ty_arg id_arg
          (data_entry___update_options options_arg)
    | ["Comment", ty_arg, id_arg, comment_arg] =>
-         update_data_store ds ty_arg id_arg
+         update_data_store (false, report_error) ds ty_arg id_arg
          (data_entry___update_comment (SOME comment_arg))
    | ["Overrides", file] =>
          (mungeTools.user_overrides := mungeTools.read_overrides file;
@@ -120,8 +124,8 @@ in
             foldl (fn (de, ds) => parse_entry___add_to_data_store ds de) ds
             entryL
          end handle Interrupt => raise Interrupt
-                  | _ => (print ("Error while parsing '"^filename^"' in '"^basedir^"'\n");ds))
-   | _ => (print ("Error line: "^l); ds)
+                  | _ => (report_error ("Error while parsing '"^filename^"' in '"^basedir^"'");ds))
+   | _ => (report_error ("Error line: "^l); ds)
 end; 
 
 
@@ -167,22 +171,47 @@ end;
 (******************************************************************************)
 (* Output definitions                                                         *)
 (******************************************************************************)
-fun holmunge_format command options content =
+fun destruct_theory_thm s2 =
+    let
+       val ss2 = (Substring.full s2)
+       val (x1,x2) = Substring.splitl (fn c => not (c = #".")) ss2
+       val x2' = Substring.triml 1 x2
+    in
+       (Substring.string x1, Substring.string x2')
+    end
+
+fun command2string mungeTools.Term = "Term"
+  | command2string mungeTools.Theorem = "Theorem"
+  | command2string mungeTools.Type = "Type";
+
+fun holmunge_format command id options content =
 let
    val _ = if (isSome content) then () else Feedback.fail();
    val empty_posn = (0,0);
    val opts = mungeTools.parseOpts empty_posn ("alltt,"^options);
+   val _ = if command = mungeTools.Theorem then
+        let
+           val (ty, tm) = destruct_theory_thm (valOf content);
+           val _ = DB.fetch ty tm
+                   handle HOL_ERR e =>
+                       (report_error (#message e);Feedback.fail());
+        in
+           ()
+        end else ();
    val replacement_args = 
       {argpos = empty_posn, command=command, commpos = empty_posn,
        options = opts, argument=(valOf content)};
    val width_opt = mungeTools.optset_width opts;
    val width = if isSome width_opt then valOf width_opt else (!default_linewidth_ref);
    val fs = Portable.pp_to_string width mungeTools.replacement replacement_args
+   val _ = if fs = "" then (report_error 
+           ("Error while formating "^(command2string command)^" '"^id^"'!");Feedback.fail()) else ();
 in
    UTF8.translate (fn " " => "\\ "
                     | "\n" => "\\par "
                     | s => s) fs
-end;
+end handle Interrupt => raise Interrupt
+         | _ => "";
 
 
 (*val os = Portable.std_out*)
@@ -206,7 +235,7 @@ fun output_holtex_def command definetype os (id,
     printed  = printed,
     ...}:data_entry)) =
 let
-   val cs = holmunge_format command options content_opt;
+   val cs = holmunge_format command id options content_opt;
    val _ = if (cs = "") then Feedback.fail() else ();
    val _ = if printed then 
               output_holtex_def_internal (definetype,id,cs) os
@@ -288,7 +317,6 @@ fun entry_list_label_compare ((id1, de1 as {label=NONE,...}:data_entry),
     let
        val r = string_compare (l1,l2) 
     in if r = EQUAL then entry_list_pos_compare ((id1,de1),(id2,de2)) else r end
-
 
 
 fun entry_list_thm_compare ((id1, de1 as {content=NONE,...}:data_entry), 
@@ -486,6 +514,7 @@ end;
 
 fun holindex basename =
 let
+    val _ = error_found := false;
     val ds = parse_hix (basename ^ ".hix")   
     val os = Portable.open_out (basename ^ ".tde")   
     val dd = output_all_defs os ds
@@ -493,6 +522,7 @@ let
     val os = Portable.open_out (basename ^ ".tid")   
     val _ = output_all_index os dd ds;
     val _  = Portable.close_out os;
+    val _ = if (!error_found) then (Process.exit Process.failure) else ()
 in
     ()
 end;

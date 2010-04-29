@@ -1,6 +1,8 @@
 structure holindexData :> holindexData =
 struct
 
+open Lib Feedback 
+
 val scomp = String.collate (fn (c1, c2) =>
     Char.compare (Char.toUpper c1, Char.toUpper c2))
 
@@ -225,25 +227,29 @@ val new_data_store  =  (*Thms, Terms, Types*)
 type data_store_ty = ((string, data_entry) Redblackmap.dict * (string, data_entry) Redblackmap.dict * (string, data_entry) Redblackmap.dict);
 
 local
-   fun update_data_substore sds (key:string) upf =
+   fun update_data_substore (allow_new,error_fun) sds (key:string) upf =
    let
       open Redblackmap
-      val ent = find (sds, key) handle NotFound => default_data_entry;
-      val ent' = upf ent;
-      val sds' = insert(sds,key,ent')
+      val (ent,ok) = (find (sds, key),true) handle NotFound => (default_data_entry, allow_new);
+      val sds' = if ok then (insert(sds,key,upf ent)) else
+            (error_fun key;sds)
    in
       sds'
    end;
 
+   fun unknown_def (type_def, error_fun:string->unit) s =
+       error_fun ("Undefined "^type_def^" '"^s^"'!");
 in
 
-fun update_data_store (sds_thm,sds_term,sds_type) "Thm" key upf =
-   (update_data_substore sds_thm key upf,sds_term,sds_type)
-| update_data_store (sds_thm,sds_term,sds_type) "Term" key upf =
-   (sds_thm, update_data_substore sds_term key upf,sds_type)
-| update_data_store (sds_thm,sds_term,sds_type) "Type" key upf =
-   (sds_thm, sds_term, update_data_substore sds_type key upf)
-| update_data_store (sds_thm,sds_term,sds_type) ty key upf =
+fun update_data_store (allow_new,error_fun) (sds_thm,sds_term,sds_type) "Thm" key upf =
+   (update_data_substore (true, unknown_def ("Thm", error_fun)) sds_thm key upf,sds_term,sds_type)
+| update_data_store (allow_new,error_fun) (sds_thm,sds_term,sds_type) "Term" key upf =
+   (sds_thm, update_data_substore 
+        (allow_new, unknown_def ("Term", error_fun)) sds_term key upf,sds_type)
+| update_data_store (allow_new,error_fun) (sds_thm,sds_term,sds_type) "Type" key upf =
+   (sds_thm, sds_term, update_data_substore 
+       (allow_new, unknown_def ("Type", error_fun)) sds_type key upf)
+| update_data_store _ _ ty _ _ =
    Feedback.failwith ("Unkwown entry_type '"^ty^"'!")
 
 end;
@@ -439,7 +445,7 @@ let
         content    = if isSome content_opt then content_opt else content,
         pages      = pages}:data_entry);
 in
-   update_data_store ds ety id_s update_fun
+   update_data_store (true, K ()) ds ety id_s update_fun
 end;
 
 

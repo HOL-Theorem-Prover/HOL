@@ -25,12 +25,12 @@ Similar usage as bibtex, makeindex etc.
 \item run \texttt{munge.exe -index jobname} to create jobname.tde and jobname.tid
 \item rerun latex to use jobname.tid and jobname.tde
 \item rerun the munger whenever some significant HOL stuff changed
-\item if using emacs with auctex you might want to add to your \texttt{.emacs}
+\item if using emacs with AucTex you might want to add to your \texttt{.emacs}
 \begin{alltt}
 (eval-after-load "tex"
   '(add-to-list 'TeX-command-list
     '("Holindex" "munge.exe -index %s" 
-       TeX-run-command t t :help "Run Holindex") t))
+       TeX-run-background t t :help "Run Holindex") t))
 \end{alltt}
 \end{enumerate}
 
@@ -93,7 +93,7 @@ is a construct
    \useHOLfile{filename}
 \end{verbatim}
 that parses files in a syntax similar to BibTex.
-Printout of \texttt{test.hdf}:
+Printout of \texttt{holindex-demo.hdf}:
 
 \begin{alltt}
 @Term\{term_id_4,
@@ -135,7 +135,7 @@ Printout of \texttt{test.hdf}:
 
 
 %use external file
-\useHOLfile{test.hdf}
+\useHOLfile{holindex-demo.hdf}
 
 %or define inline (recommended only for short, simple ones)
 \defHOLtm{term_id_1}{The first term}{SUC a > 0 /\ X > 2}
