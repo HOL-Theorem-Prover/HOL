@@ -26,6 +26,10 @@ val is_list_type = can dest_list_type;
 
 val nil_tm       = prim_mk_const {Name = "NIL",     Thy = "list"}
 val cons_tm      = prim_mk_const {Name = "CONS",    Thy = "list"}
+val snoc_tm      = prim_mk_const {Name = "SNOC",    Thy = "list"}
+val drop_tm      = prim_mk_const {Name = "DROP",    Thy = "list"}
+val take_tm      = prim_mk_const {Name = "TAKE",    Thy = "list"}
+val isprefix_tm  = prim_mk_const {Name = "isPREFIX",Thy = "list"}
 val null_tm      = prim_mk_const {Name = "NULL",    Thy = "list"}
 val hd_tm        = prim_mk_const {Name = "HD",      Thy = "list"}
 val tl_tm        = prim_mk_const {Name = "TL",      Thy = "list"}
@@ -49,6 +53,7 @@ val list_case_tm = prim_mk_const {Name = "list_case", Thy = "list"}
 val last_tm      = prim_mk_const {Name = "LAST",    Thy = "list"}
 val front_tm     = prim_mk_const {Name = "FRONT",   Thy = "list"}
 val all_distinct_tm = prim_mk_const {Name = "ALL_DISTINCT", Thy = "list"}
+val list_to_set_tm  = prim_mk_const {Name = "LIST_TO_SET",  Thy = "list"}
 
 fun eltype l = dest_list_type (type_of l);
 
@@ -59,6 +64,11 @@ fun eltype l = dest_list_type (type_of l);
 
 fun mk_nil ty    = inst [alpha |-> ty] nil_tm
 fun mk_cons(h,t) = list_mk_comb(inst [alpha |-> type_of h] cons_tm, [h,t])
+fun mk_snoc(h,t) = list_mk_comb(inst [alpha |-> type_of h] snoc_tm, [h,t])
+fun mk_drop(n,l) = list_mk_comb(inst [alpha |-> eltype l] drop_tm, [n,l])
+fun mk_take(n,l) = list_mk_comb(inst [alpha |-> eltype l] take_tm, [n,l])
+fun mk_isprefix(l1,l2) =
+  list_mk_comb(inst [alpha |-> eltype l1] isprefix_tm, [l1,l2])
 fun mk_null l    = mk_comb(inst[alpha |-> eltype l] null_tm,l)
 fun mk_hd l      = mk_comb(inst[alpha |-> eltype l] hd_tm,l)
 fun mk_tl l      = mk_comb(inst[alpha |-> eltype l] tl_tm,l)
@@ -95,6 +105,7 @@ fun mk_reverse l = mk_comb(inst[alpha |-> eltype l] reverse_tm,l);
 fun mk_last l = mk_comb(inst[alpha |-> eltype l] last_tm,l);
 fun mk_front l = mk_comb(inst[alpha |-> eltype l] front_tm,l);
 fun mk_all_distinct l = mk_comb(inst[alpha |-> eltype l] all_distinct_tm,l);
+fun mk_list_to_set l = mk_comb(inst[alpha |-> eltype l] list_to_set_tm,l);
 
 fun mk_list_case (n,c,l) =
  case total dest_list_type (type_of l)
@@ -113,63 +124,75 @@ fun dest_nil tm =
    then dest_list_type (type_of tm)
    else raise ERR "dest_nil" "";
 
-val dest_cons    = dest_binop cons_tm   (ERR "dest_cons"   "not CONS")
-val dest_null    = dest_monop null_tm   (ERR "dest_null"   "not NULL")
-val dest_hd      = dest_monop hd_tm     (ERR "dest_hd"     "not HD")
-val dest_tl      = dest_monop tl_tm     (ERR "dest_tl"     "not TL")
-val dest_append  = dest_binop append_tm (ERR "dest_append" "not APPEND")
-val dest_flat    = dest_monop flat_tm   (ERR "dest_flat"   "not FLAT")
-val dest_length  = dest_monop length_tm (ERR "dest_length" "not LENGTH")
-val dest_map     = dest_binop map_tm    (ERR "dest_map"    "not MAP")
-val dest_map2    = dest_triop map2_tm   (ERR "dest_map2"   "not MAP2")
-val dest_mem     = dest_binop mem_tm    (ERR "dest_mem"    "not MEM")
-val dest_filter  = dest_binop filter_tm (ERR "dest_filter" "not FILTER")
-val dest_foldr   = dest_triop foldr_tm  (ERR "dest_foldr"  "not FOLDR")
-val dest_foldl   = dest_triop foldl_tm  (ERR "dest_foldl"  "not FOLDL")
-val dest_every   = dest_binop every_tm  (ERR "dest_every"  "not EVERY")
-val dest_exists  = dest_binop exists_tm (ERR "dest_exists" "not EXISTS")
-val dest_el      = dest_binop el_tm     (ERR "dest_el"     "not EL")
-val dest_zip     = pairSyntax.dest_pair
-                   o dest_monop zip_tm  (ERR "dest_zip"    "not ZIP")
-val dest_unzip   = dest_monop unzip_tm  (ERR "dest_unzip"  "not UNZIP")
-val dest_sum     = dest_monop sum_tm    (ERR "dest_sum"    "not SUM")
-val dest_reverse = dest_monop reverse_tm (ERR "dest_reverse" "not REVERSE")
-val dest_last    = dest_monop last_tm   (ERR "dest_last" "not LAST")
-val dest_front   = dest_monop front_tm  (ERR "dest_front" "not FRONT")
+val dest_cons     = dest_binop cons_tm     (ERR "dest_cons"     "not CONS")
+val dest_snoc     = dest_binop snoc_tm     (ERR "dest_snoc"     "not SNOC")
+val dest_drop     = dest_binop drop_tm     (ERR "dest_drop"     "not DROP")
+val dest_take     = dest_binop take_tm     (ERR "dest_take"     "not TAKE")
+val dest_isprefix = dest_binop isprefix_tm (ERR "dest_isprefix" "not isPREFIX")
+val dest_null     = dest_monop null_tm     (ERR "dest_null"     "not NULL")
+val dest_hd       = dest_monop hd_tm       (ERR "dest_hd"       "not HD")
+val dest_tl       = dest_monop tl_tm       (ERR "dest_tl"       "not TL")
+val dest_append   = dest_binop append_tm   (ERR "dest_append"   "not APPEND")
+val dest_flat     = dest_monop flat_tm     (ERR "dest_flat"     "not FLAT")
+val dest_length   = dest_monop length_tm   (ERR "dest_length"   "not LENGTH")
+val dest_map      = dest_binop map_tm      (ERR "dest_map"      "not MAP")
+val dest_map2     = dest_triop map2_tm     (ERR "dest_map2"     "not MAP2")
+val dest_mem      = dest_binop mem_tm      (ERR "dest_mem"      "not MEM")
+val dest_filter   = dest_binop filter_tm   (ERR "dest_filter"   "not FILTER")
+val dest_foldr    = dest_triop foldr_tm    (ERR "dest_foldr"    "not FOLDR")
+val dest_foldl    = dest_triop foldl_tm    (ERR "dest_foldl"    "not FOLDL")
+val dest_every    = dest_binop every_tm    (ERR "dest_every"    "not EVERY")
+val dest_exists   = dest_binop exists_tm   (ERR "dest_exists"   "not EXISTS")
+val dest_el       = dest_binop el_tm       (ERR "dest_el"       "not EL")
+val dest_zip      = pairSyntax.dest_pair
+                    o dest_monop zip_tm    (ERR "dest_zip"      "not ZIP")
+val dest_unzip    = dest_monop unzip_tm    (ERR "dest_unzip"    "not UNZIP")
+val dest_sum      = dest_monop sum_tm      (ERR "dest_sum"      "not SUM")
+val dest_reverse  = dest_monop reverse_tm  (ERR "dest_reverse"  "not REVERSE")
+val dest_last     = dest_monop last_tm     (ERR "dest_last"     "not LAST")
+val dest_front    = dest_monop front_tm    (ERR "dest_front"    "not FRONT")
 val dest_all_distinct = dest_monop all_distinct_tm
                           (ERR "dest_all_distinct" "not ALL_DISTINCT")
+val dest_list_to_set = dest_monop list_to_set_tm
+                          (ERR "dest_list_to_set" "not LIST_TO_SET")
 
-val dest_list_case = dest_triop list_case_tm (ERR "dest_list_case" "not list_case");
+val dest_list_case = dest_triop list_case_tm
+                          (ERR "dest_list_case" "not list_case");
 
 (*---------------------------------------------------------------------------
          Queries
  ---------------------------------------------------------------------------*)
 
-val is_nil    = can dest_nil
-val is_cons   = can dest_cons
-val is_null   = can dest_null
-val is_hd     = can dest_hd
-val is_tl     = can dest_tl
-val is_append = can dest_append
-val is_flat   = can dest_flat
-val is_length = can dest_length
-val is_map    = can dest_map
-val is_map2   = can dest_map2
-val is_mem    = can dest_mem
-val is_filter = can dest_filter
-val is_foldr  = can dest_foldr
-val is_foldl  = can dest_foldl
-val is_every  = can dest_every
-val is_exists = can dest_exists
-val is_el     = can dest_el
-val is_zip    = can dest_zip
-val is_unzip  = can dest_unzip
-val is_sum    = can dest_sum
-val is_last   = can dest_last
-val is_front  = can dest_front
+val is_nil          = can dest_nil
+val is_cons         = can dest_cons
+val is_snoc         = can dest_snoc
+val is_drop         = can dest_drop
+val is_take         = can dest_take
+val is_isprefix     = can dest_isprefix
+val is_null         = can dest_null
+val is_hd           = can dest_hd
+val is_tl           = can dest_tl
+val is_append       = can dest_append
+val is_flat         = can dest_flat
+val is_length       = can dest_length
+val is_map          = can dest_map
+val is_map2         = can dest_map2
+val is_mem          = can dest_mem
+val is_filter       = can dest_filter
+val is_foldr        = can dest_foldr
+val is_foldl        = can dest_foldl
+val is_every        = can dest_every
+val is_exists       = can dest_exists
+val is_el           = can dest_el
+val is_zip          = can dest_zip
+val is_unzip        = can dest_unzip
+val is_sum          = can dest_sum
+val is_last         = can dest_last
+val is_front        = can dest_front
 val is_all_distinct = can dest_all_distinct
-val is_reverse = can dest_reverse
-val is_list_case = can dest_list_case
+val is_list_to_set  = can dest_list_to_set
+val is_reverse      = can dest_reverse
+val is_list_case    = can dest_list_case
 
 
 fun mk_list (l,ty) = itlist (curry mk_cons) l (mk_nil ty);
