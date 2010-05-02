@@ -349,7 +349,9 @@ fun term_to_ML openthys side ppstrm =
         ; end_block()
        end
   and pp_binop i tm =
-      let val (c,[t1,t2]) = strip_comb tm
+      let val (c,t1,t2) = case strip_comb tm
+                          of (c,[t1,t2]) => (c,t1,t2)
+                           | _ => raise ERR "term_to_ML" ""
           val j = prec_of c
       in begin_block CONSISTENT 0
         ; lparen i j
