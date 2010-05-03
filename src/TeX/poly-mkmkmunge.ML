@@ -9,7 +9,7 @@ local
                OS.Process.exit OS.Process.failure)
 in
 fun mkmunge () = let
-  val (exeopt,theories) = mkmkcline.read_cline()
+  val (exeopt,theories,staticp) = mkmkcline.read_cline()
   val exe = case exeopt of NONE => "munge.exe"
                          | SOME s => s
   val _ = load "EmitTeX"
@@ -32,7 +32,8 @@ in
                     "mkmunger.sml", "poly-munge.ML"];
   print "Linking object code\n";
   let
-    val res = systeml ([CC, "-o", exe, "munger.o"] @ POLY_LDFLAGS_STATIC)
+    val flags = if staticp then POLY_LDFLAGS_STATIC else POLY_LDFLAGS
+    val res = systeml ([CC, "-o", exe, "munger.o"] @ flags)
   in
     if OS.Process.isSuccess res then ()
     else die "Linking of Poly/ML object code failed"
