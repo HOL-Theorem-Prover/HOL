@@ -203,6 +203,7 @@ end
 
 local
   open EmitTeX PP
+  val _ = set_trace "EmitTeX: print datatype names as types" 1
   exception BadSpec
   fun getThm spec = let
     val [theory,theorem] = String.tokens (isChar #".") spec

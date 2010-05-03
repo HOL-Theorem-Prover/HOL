@@ -357,6 +357,9 @@ end;
 (* Pretty-printer for datatype theorems                                      *)
 (* ------------------------------------------------------------------------- *)
 
+val print_datatype_names_as_types = ref false
+val _ = register_btrace ("EmitTeX: print datatype names as types", print_datatype_names_as_types)
+
 fun pp_datatype_theorem backend ostrm thm =
 let val {add_string,add_break,begin_block,add_newline,end_block,...} =
            PPBackEnd.with_ppstream backend ostrm
@@ -404,8 +407,14 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
             all (fn x => fst (dest_type x) = typ) l
           end
 
+    fun pp_type_name n =
+      let val l = strip_type (type_of n)
+      in
+        TP (last (strip_type (hd l)))
+      end
+
     fun pp_constructor_spec (n, l) =
-          (PT n; BR(1,2);
+          (if !print_datatype_names_as_types then pp_type_name n else PT n; BR(1,2);
            BB (if enumerated_type n then PP.INCONSISTENT else PP.CONSISTENT) 0;
              S "= ";
              app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
