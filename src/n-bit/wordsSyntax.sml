@@ -32,6 +32,7 @@ fun dim_of tm = dest_word_type(type_of tm);
 fun mk_word_tm s = prim_mk_const{Name = s, Thy = "words"}
 
 val fcp_index_tm        = prim_mk_const{Name = "fcp_index", Thy = "fcp"}
+val dimword_tm          = mk_word_tm "dimword"
 val word_T_tm           = mk_word_tm "word_T"
 val word_L_tm           = mk_word_tm "word_L"
 val word_H_tm           = mk_word_tm "word_H"
@@ -97,6 +98,10 @@ val sw2sw_tm            = mk_word_tm "sw2sw"
 fun mk_index(w,n) =
   list_mk_comb(inst[alpha |-> bool, beta |-> dim_of w] fcp_index_tm,[w,n])
   handle HOL_ERR _ => raise ERR "mk_index" "";
+
+fun mk_dimword ty =
+  mk_comb(inst[alpha |-> ty] dimword_tm,inst[alpha |-> ty] boolSyntax.the_value)
+  handle HOL_ERR _ => raise ERR "mk_dimword" "";
 
 fun mk_word_T ty =
   inst[alpha |-> ty] word_T_tm
@@ -348,6 +353,10 @@ fun mk_bit_field_insert (h,l,w1,w2) =
 
 val dest_index = dest_binop fcp_index_tm (ERR "dest_index" "");
 
+val dest_dimword =
+  hd o snd o dest_type o type_of o
+  dest_monop dimword_tm (ERR "dest_dimword" "");
+
 fun dest_word_T tm =
   if same_const word_T_tm tm
    then dim_of tm
@@ -539,6 +548,7 @@ val dest_bit_field_insert =
 (*---------------------------------------------------------------------------*)
 
 val is_index = Lib.can dest_index
+val is_dimword = Lib.can dest_dimword
 val is_word_T = Lib.can dest_word_T
 val is_word_L = Lib.can dest_word_L
 val is_word_H = Lib.can dest_word_H

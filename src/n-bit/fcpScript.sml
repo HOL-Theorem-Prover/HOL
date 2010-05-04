@@ -220,9 +220,6 @@ val _ = add_infix_type {Prec = 60, ParseName = SOME "**", Name = "cart",
 val fcp_index_def = new_infixl_definition("fcp_index",
   `$fcp_index x i = dest_cart x (finite_index i)`,500);
 
-val _ = set_fixity "%%" (Infixl 500);
-val _ = overload_on ("%%", Term`$fcp_index`);
-
 val _ = set_fixity "'" (Infixl 2000);
 val _ = overload_on ("'", Term`$fcp_index`);
 

@@ -9,8 +9,7 @@ struct
 open HolKernel Parse boolLib bossLib computeLib;
 open bitTheory numeral_bitTheory wordsTheory wordsSyntax;
 
-val emit_mesg = !Feedback.emit_MESG;
-val _ = Feedback.emit_MESG := false;
+val _ = Lib.with_flag (Feedback.emit_MESG, false) bossLib.srw_ss ()
 
 val ISPEC = Q.ISPEC;
 val SPEC  = Q.SPEC;
@@ -46,14 +45,7 @@ fun is_uintmax t =
   wordsSyntax.is_word_2comp t andalso
   is_word_one (wordsSyntax.dest_word_2comp t);
 
-val P = mk_var("P", bool);
-val Q = mk_var("Q", bool);
-val m = mk_var("m", numLib.num);
-val n = mk_var("n", numLib.num);
-val w = mk_var("w", ``:'a word``);
-val y = mk_var("y", ``:'a word``);
-val a = ``arithmetic$NUMERAL ^(mk_var("a", numLib.num))``;
-val b = ``arithmetic$NUMERAL ^(mk_var("b", numLib.num))``;
+val Na = ``arithmetic$NUMERAL ^(mk_var("a", numLib.num))``;
 val n2w = ``words$n2w : num -> 'a word``;
 
 (* ------------------------------------------------------------------------- *)
@@ -117,7 +109,7 @@ fun NUM_RULE l n x =
   in CONJ
      ((GEN_ALL o simpLib.SIMP_RULE (bossLib.arith_ss++boolSimps.LET_ss) l o
        INST [n |-> `0n`]) y)
-     ((GEN_ALL o INST [n |-> `^a`]) y)
+     ((GEN_ALL o INST [n |-> `^Na`]) y)
   end;
 
 val MOD_WL =
@@ -176,54 +168,54 @@ val word_2comp_compute = prove(
 
 val word_lsr_compute =
   (REWRITE_RULE [word_bits_n2w, arithmeticTheory.MIN_IDEM] o
-   SPECL [`^n2w ^n`,`^a`]) word_lsr_n2w;
+   SPECL [`^n2w n`,`^Na`]) word_lsr_n2w;
 
 val word_asr_compute =
   (REWRITE_RULE [word_bits_n2w, word_msb_n2w, word_or_n2w,
      word_lsr_compute, arithmeticTheory.MIN_IDEM] o
-   SPECL [`^a`, `^n2w ^n`]) word_asr_n2w;
+   SPECL [`^Na`, `^n2w n`]) word_asr_n2w;
 
 val bit_update_compute =
    BIT_UPDATE |> REWRITE_RULE [FUN_EQ_THM]
-              |> (fn th => CONJ (SPECL [`^a`, `F`,`^n2w ^n`] th)
-                                (SPECL [`^a`, `T`,`^n2w ^n`] th))
+              |> (fn th => CONJ (SPECL [`^Na`, `F`,`^n2w n`] th)
+                                (SPECL [`^Na`, `T`,`^n2w n`] th))
 
 val thms =
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
    SUC_RULE rich_listTheory.GENLIST, rich_listTheory.SNOC, combinTheory.K_THM,
    iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SBIT_def,
-   NUM_RULE [BIT_ZERO] `n` SIGN_EXTEND_def,
+   NUM_RULE [BIT_ZERO] `n:num` SIGN_EXTEND_def,
    DIVMOD_2EXP, NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP, NUMERAL_iDIV2,
    NUMERAL_SFUNPOW_iDIV2,NUMERAL_SFUNPOW_iDUB,NUMERAL_SFUNPOW_FDUB,
    FDUB_iDIV2,FDUB_iDUB,FDUB_FDUB,
    NUMERAL_BIT_MODIFY, NUMERAL_BIT_MODF,
    NUMERAL_BIT_REVERSE, NUMERAL_BIT_REV,
-   NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` BITS_def,
-   NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
+   NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n:num` BITS_def,
+   NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n:num` SLICE_def,
    (SIMP_RULE std_ss [GSYM ODD_MOD2_LEM,arithmeticTheory.MOD_2EXP_def,
-      BITS_def,SUC_SUB] o NUM_RULE [BITS_ZERO2] `n`) BIT_def,
+      BITS_def,SUC_SUB] o NUM_RULE [BITS_ZERO2] `n:num`) BIT_def,
    UINT_MAX_def, INT_MAX_def, INT_MIN_SUM,
    SUC_RULE MOD_2EXP_EQ, SUC_RULE BOOLIFY_def, bit_update_compute,
    numeral_log2,numeral_ilog2,LOG_compute,LOWEST_SET_BIT_compute,
-   n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w ^n` sw2sw_def,
+   n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w n` sw2sw_def,
    word_len_def, word_L_def, word_H_def, word_T_def,
-   word_join_def, SPECL [`^n2w ^n`,`n2w ^m:'b word`] word_concat_def,
-   SPEC `^a` word_replicate_concat_word_list, concat_word_list_def,
+   word_join_def, SPECL [`^n2w n`,`n2w m:'b word`] word_concat_def,
+   SPEC `^Na` word_replicate_concat_word_list, concat_word_list_def,
    word_reverse_n2w, word_modify_n2w, bit_field_insert_def,
-   SPEC `^a` word_log2_n2w,
+   SPEC `^Na` word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
    word_2comp_compute, word_nor_n2w, word_xnor_n2w, word_nand_n2w,
    word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
    MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
-   word_asr_compute, word_lsr_compute, SPEC `^a` word_lsl_n2w,
-   SHIFT_ZERO, SPEC `^a` word_ror_n2w,
-   SPECL [`^w`,`^a`] word_rol_def, word_rrx_n2w,
+   word_asr_compute, word_lsr_compute, SPEC `^Na` word_lsl_n2w,
+   SHIFT_ZERO, SPEC `^Na` word_ror_n2w,
+   SPECL [`w:'a word`,`^Na`] word_rol_def, word_rrx_n2w,
    word_lsb_n2w, word_msb_n2w, word_bit_n2w, fcp_n2w, fcpTheory.L2V_def,
-   NUM_RULE [DIMINDEX_GT_0] `i` word_index_n2w,
-   NUM_RULE [DIMINDEX_GT_0] `n` fcpTheory.index_comp,
-   NUM_RULE [DIMINDEX_GT_0] `b` fcpTheory.FCP_APPLY_UPDATE_THM,
+   NUM_RULE [DIMINDEX_GT_0] `i:num` word_index_n2w,
+   NUM_RULE [DIMINDEX_GT_0] `n:num` fcpTheory.index_comp,
+   NUM_RULE [DIMINDEX_GT_0] `b:num` fcpTheory.FCP_APPLY_UPDATE_THM,
    word_bits_n2w, word_signed_bits_n2w, word_slice_n2w, word_extract_n2w,
-   word_reduce_n2w, Q.SPEC `^n2w ^n` reduce_and, Q.SPEC `^n2w ^n` reduce_or,
+   word_reduce_n2w, Q.SPEC `^n2w n` reduce_and, Q.SPEC `^n2w n` reduce_or,
    reduce_xor_def, reduce_xnor_def, reduce_nand_def, reduce_nor_def,
    word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
    word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
@@ -423,7 +415,7 @@ val BIT_SET_CONV =
     THENC RAND_CONV (computeLib.CBV_CONV (bit_set_compset()))
     THENC REWRITE_CONV [pred_setTheory.NOT_IN_EMPTY,
             ISPEC `0n` pred_setTheory.IN_INSERT,
-            ISPEC `^a` pred_setTheory.IN_INSERT];
+            ISPEC `^Na` pred_setTheory.IN_INSERT];
 
 val BIT_ss =
   simpLib.named_merge_ss "bit"
@@ -431,7 +423,7 @@ val BIT_ss =
      simpLib.std_conv_ss
        {conv = BIT_SET_CONV,
         name = "BITS_CONV",
-        pats = [``bit$BIT ^n ^a``]}];
+        pats = [``bit$BIT n ^Na``]}];
 
 (*
 val WORD_ORDER_ss = simpLib.named_rewrites "word order"
@@ -450,17 +442,17 @@ val WORD_ORDER_ss = simpLib.named_rewrites "word order"
 
 val ADD1 = arithmeticTheory.ADD1;
 
-val WORD_LSL_NUMERAL = (GEN_ALL o SPECL [`^w`,`^a`]) WORD_MUL_LSL;
+val WORD_LSL_NUMERAL = (GEN_ALL o SPECL [`w:'a word`,`^Na`]) WORD_MUL_LSL;
 
 val WORD_NOT_NUMERAL =
   (SIMP_RULE std_ss [GSYM ADD1, WORD_LITERAL_ADD, word_sub_def] o
-   SPEC `^n2w ^n`) WORD_NOT;
+   SPEC `^n2w n`) WORD_NOT;
 
 val WORD_NOT_NEG_NUMERAL =
   (SUC_RULE o GEN_ALL o
    SIMP_RULE arith_ss
      [GSYM ADD1, WORD_LITERAL_ADD, word_sub_def, WORD_NEG_NEG] o
-   SPEC `words$word_2comp (^n2w (num$SUC ^n))`) WORD_NOT;
+   SPEC `words$word_2comp (^n2w (num$SUC n))`) WORD_NOT;
 
 val WORD_NOT_NEG_0 = SIMP_CONV std_ss [SYM_WORD_NEG_1, WORD_NOT_0, WORD_NEG_0]
   ``words$word_1comp (words$word_2comp 0w) : 'a word``;
@@ -482,7 +474,8 @@ val word_mult_clauses =
 val WORD_MULT_LEFT_1 = List.nth(word_mult_clauses,2);
 
 val NEG_EQ_0 = trace("metis",0) (METIS_PROVE [WORD_NEG_MUL, WORD_NEG_EQ_0])
-  ``(!w. (-1w * w = 0w) = (w = 0w)) /\ (!w. (0w = -1w * w) = (w = 0w))``;
+  ``(!w:'a word. (-1w * w = 0w) = (w = 0w)) /\
+    (!w:'a word. (0w = -1w * w) = (w = 0w))``;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -672,13 +665,13 @@ val WORD_MULT_ss =
     simpLib.std_conv_ss
       {conv = CHANGED_CONV WORD_MULT_CANON_CONV,
        name = "WORD_MULT_CANON_CONV",
-       pats = [``words$word_mul ^w ^y``]}];
+       pats = [``words$word_mul (w:'a word) y``]}];
 
 val WORD_ADD_ss =
   simpLib.std_conv_ss
     {conv = CHANGED_CONV WORD_ADD_CANON_CONV,
      name = "WORD_ADD_CANON_CONV",
-     pats = [``words$word_add ^w ^y``]};
+     pats = [``words$word_add (w:'a word) y``]};
 
 val WORD_SUB_ss =
  simpLib.merge_ss
@@ -686,8 +679,8 @@ val WORD_SUB_ss =
     simpLib.std_conv_ss
       {conv = WORD_NEG_CONV,
        name = "WORD_NEG_CONV",
-       pats = [``words$word_2comp ^w``,
-               ``words$word_sub ^w ^y``]}];
+       pats = [``words$word_2comp (w:'a word)``,
+               ``words$word_sub (w:'a word) y``]}];
 
 val WORD_w2n_ss =
  simpLib.merge_ss
@@ -695,7 +688,7 @@ val WORD_w2n_ss =
     simpLib.std_conv_ss
       {conv = WORD_w2n_CONV,
        name = "WORD_w2n_CONV",
-       pats = [``words$w2n (^n2w ^a)``]}];
+       pats = [``words$w2n (^n2w ^Na)``]}];
 
 val WORD_UINT_MAX_ss =
  simpLib.std_conv_ss
@@ -720,7 +713,7 @@ val WORD_ARITH_EQ_ss =
     simpLib.std_conv_ss
       {conv = WORD_ARITH_EQ_CONV,
        name = "WORD_ARITH_EQ_CONV",
-       pats = [``^w = ^y :'a word``]}];
+       pats = [``w = y :'a word``]}];
 
 val WORD_ARITH_ss =
   simpLib.named_merge_ss "word arith"
@@ -916,11 +909,11 @@ val WORD_COMP_ss =
     simpLib.std_conv_ss
       {conv = reduceLib.PRE_CONV,
        name = "PRE_CONV",
-       pats  = [``prim_rec$PRE ^a``]},
+       pats  = [``prim_rec$PRE ^Na``]},
     simpLib.std_conv_ss
       {conv = WORD_COMP_CONV,
        name = "WORD_COMP_CONV",
-       pats = [``words$word_1comp (^n2w ^n) :'a word``]}];
+       pats = [``words$word_1comp (^n2w n) :'a word``]}];
 
 val WORD_AND_ss =
   simpLib.merge_ss
@@ -929,7 +922,7 @@ val WORD_AND_ss =
     simpLib.std_conv_ss
       {conv = WORD_AND_CANON_CONV,
        name = "WORD_AND_CANON_CONV",
-       pats = [``words$word_and ^w ^y``]}];
+       pats = [``words$word_and (w:'a word) y``]}];
 
 val WORD_XOR_ss =
   simpLib.merge_ss
@@ -937,7 +930,7 @@ val WORD_XOR_ss =
     simpLib.std_conv_ss
       {conv = WORD_XOR_CANON_CONV,
        name = "WORD_XOR_CANON_CONV",
-       pats = [``words$word_xor ^w ^y``]}];
+       pats = [``words$word_xor (w:'a word) y``]}];
 
 val WORD_OR_ss =
   let
@@ -950,7 +943,7 @@ val WORD_OR_ss =
        simpLib.std_conv_ss
          {conv = WORD_OR_CANON_CONV,
           name = "WORD_OR_CANON_CONV",
-          pats = [``words$word_or ^w ^y``]}]
+          pats = [``words$word_or (w:'a word) y``]}]
   end;
 
 val WORD_LOGIC_ss = simpLib.named_merge_ss "word logic"
@@ -1020,7 +1013,7 @@ val WORD_MUL_LSL_ss =
     [simpLib.std_conv_ss
       {conv = WORD_MUL_LSL_CONV,
        name = "WORD_MUL_LSL_CONV",
-       pats = [``words$word_mul (^n2w ^a) ^w:'a word``]}];
+       pats = [``words$word_mul (^n2w ^Na) w:'a word``]}];
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1032,7 +1025,7 @@ val WORD_EXTRACT_ss =
    [simpLib.std_conv_ss
       {conv = WORD_EVAL_CONV,
        name = "WORD_EVAL_CONV",
-       pats = [``words$word_replicate ^a ^w:'a word``]},
+       pats = [``words$word_replicate ^Na (w:'a word):'b word``]},
    simpLib.rewrites
     ([WORD_EXTRACT_ZERO, WORD_EXTRACT_ZERO2, WORD_EXTRACT_ZERO3,
       WORD_EXTRACT_LSL, WORD_EXTRACT_LSL2, word_extract_eq_n2w, word_concat_def,
@@ -1057,7 +1050,7 @@ in
   val _ = augment_srw_ss ssfrags
 end
 
-val WORD_CONV = SIMP_CONV (std_ss++WORD_ss)
+val WORD_CONV = SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss)
   [WORD_LEFT_ADD_DISTRIB, WORD_RIGHT_ADD_DISTRIB,
    WORD_LEFT_AND_OVER_OR, WORD_RIGHT_AND_OVER_OR];
 
@@ -1066,8 +1059,8 @@ val WORD_CONV = SIMP_CONV (std_ss++WORD_ss)
 val LESS_THM = SUC_RULE prim_recTheory.LESS_THM;
 
 val LESS_COR =
-  [``(prim_rec$< ^m (arithmetic$NUMERAL (arithmetic$BIT1 ^n))) ==> ^P``,
-   ``(prim_rec$< ^m (arithmetic$NUMERAL (arithmetic$BIT2 ^n))) ==> ^P``]
+  [``(prim_rec$< m (arithmetic$NUMERAL (arithmetic$BIT1 n))) ==> (P:bool)``,
+   ``(prim_rec$< m (arithmetic$NUMERAL (arithmetic$BIT2 n))) ==> (P:bool)``]
      |> map (GEN_ALL o REWRITE_CONV [LESS_THM, DISJ_IMP_THM]) |> LIST_CONJ;
 
 fun dest_strip t =
@@ -1076,54 +1069,511 @@ let val (l,r) = strip_comb t in
 end;
 
 local
-  val word_size = fcpLib.index_to_num o wordsSyntax.dest_word_type o type_of
+  val word_n2w_le = Q.prove(
+    `!a. w2n (n2w a :'a word) <= a MOD dimword(:'a)`,
+    SIMP_TAC std_ss [w2n_n2w])
 
-  fun mk_bounds_thm t = let
-      val x = wordsSyntax.dest_w2n t
-      val size_rule = CONV_RULE (DEPTH_CONV SIZES_CONV)
-      fun lt_thm () = size_rule (Drule.ISPEC x w2n_lt)
-      val word_type = wordsSyntax.dest_word_type o type_of
-    in
-      if not (is_known_word_size x) orelse wordsSyntax.is_word_literal x then
-        raise ERR "mk_bounds_thm" "Term is word literal"
-      else
-       (case dest_strip x
-        of ("word_extract", [h,l,w]) => let
-               open Arbnum
-               val hi = numSyntax.dest_numeral h
-               val li = numSyntax.dest_numeral l
-               val m = plus1 hi - li
-             in
-               if m < word_size x then
-                 WORD_EXTRACT_LT
-                   |> Drule.ISPECL [h,l,w]
-                   |> Thm.INST_TYPE [beta |-> word_type x]
-                   |> numLib.REDUCE_RULE
-               else
-                 lt_thm ()
-             end
-         | ("w2w", [w]) =>
-               if Arbnum.<(word_size w, word_size x) then
-                 w2w_lt
-                   |> Drule.ISPEC w
-                   |> Thm.INST_TYPE [beta |-> word_type x]
-                   |> size_rule
-               else
-                 lt_thm ()
-         | _ => lt_thm ()) handle HOL_ERR _ => lt_thm ()
-    end
+  val word_n2w_le2 = Q.prove(
+    `!a. w2n (n2w a :'a word) <= a`,
+    SIMP_TAC std_ss [w2n_n2w, bitTheory.MOD_LEQ, ZERO_LT_dimword])
+
+  val word_extract_le = Q.prove(
+    `!a:'a word h l. w2n ((h >< l) a) <= w2n a`,
+    Cases THEN SRW_TAC [] [word_extract_n2w]
+    THEN SRW_TAC [] [bitTheory.BITS_COMP_THM2, MOD_DIMINDEX]
+    THEN SRW_TAC [] [arithmeticTheory.MIN_DEF, bitTheory.BITS_LEQ])
+
+  val word_add_le = Q.prove(
+    `!a:'a word b. w2n (a + b) <= w2n a + w2n b`,
+    Cases THEN Cases
+    THEN SIMP_TAC std_ss [bitTheory.MOD_LEQ, word_add_def, w2n_n2w,
+           ZERO_LT_dimword])
+
+  val word_mul_le = Q.prove(
+    `!a:'a word b. w2n (a * b) <= w2n a * w2n b`,
+    Cases THEN Cases
+    THEN SIMP_TAC std_ss [bitTheory.MOD_LEQ, word_mul_def, w2n_n2w,
+           ZERO_LT_dimword])
+
+  val word_lsl_le = Q.prove(
+    `!a:'a word b. w2n (a << b) <= w2n a * 2 ** b`,
+    Cases THEN SRW_TAC [] [word_lsl_n2w, bitTheory.MOD_LEQ, ZERO_LT_dimword])
+
+  val word_div_le = Q.prove(
+    `!a:'a word b.
+       0 < b MOD dimword (:'a) ==>
+       w2n (a // n2w b) <= w2n a DIV b MOD dimword (:'a)`,
+    Cases THEN STRIP_TAC
+    THEN Cases_on `b MOD dimword (:'a) = 1`
+    THENL
+      [SRW_TAC [numSimps.ARITH_ss] [word_div_def, w2n_n2w],
+       Cases_on `n = 0`
+       THEN SRW_TAC [numSimps.ARITH_ss] [word_div_def, w2n_n2w,
+            arithmeticTheory.ZERO_DIV, bitTheory.MOD_LEQ, ZERO_LT_dimword]])
+
+  val word_div_le2_lem = Q.prove(
+    `!n. 0 < (SUC (2 * n)) MOD dimword (:'a)`,
+    SRW_TAC [] [arithmeticTheory.ADD1, bitTheory.MOD_PLUS_1, ZERO_LT_dimword,
+                DECIDE ``0n < n = (n <> 0)``]
+    THEN STRIP_ASSUME_TAC EXISTS_HB
+    THEN ASM_SIMP_TAC arith_ss
+         [arithmeticTheory.EXP, GSYM arithmeticTheory.MOD_COMMON_FACTOR,
+          bitTheory.ZERO_LT_TWOEXP, dimword_def, GSYM arithmeticTheory.ADD1]
+    THEN `ODD (SUC (2 * n MOD 2 ** m))`
+      by (REWRITE_TAC [arithmeticTheory.ODD_EXISTS]
+         THEN Q.EXISTS_TAC `n MOD 2 ** m` THEN REWRITE_TAC [])
+    THEN RULE_ASSUM_TAC (SIMP_RULE std_ss
+           [arithmeticTheory.ODD_EVEN, arithmeticTheory.EVEN_EXISTS])
+    THEN POP_ASSUM (Q.SPEC_THEN `2 ** m` ASSUME_TAC)
+    THEN ASM_REWRITE_TAC [])
+
+  val word_div_le2 = Q.prove(
+    `!a:'a word b. ODD b ==> w2n (a // n2w b) <= w2n a`,
+    Cases THEN REPEAT STRIP_TAC
+    THEN IMP_RES_TAC (CONJUNCT2 (SPEC_ALL arithmeticTheory.EVEN_ODD_EXISTS))
+    THEN POP_ASSUM SUBST1_TAC
+    THEN SRW_TAC [numSimps.ARITH_ss] [word_div_def, w2n_n2w]
+    THEN `n DIV SUC (2 * m) MOD dimword (:α) <= n`
+      by SIMP_TAC std_ss [arithmeticTheory.DIV_LESS_EQ, word_div_le2_lem]
+    THEN SRW_TAC [numSimps.ARITH_ss] [])
+
+  val word_extract_order1 = Q.prove(
+    `!a b h l. w2n a < b ==> w2n ((h >< l) a) < b`,
+    REPEAT STRIP_TAC
+    THEN Q.SPECL_THEN [`w2n ((h >< l) a)`, `w2n a`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+    THEN ASM_REWRITE_TAC [word_extract_le])
+
+  val word_extract_order2 = Q.prove(
+    `!a b h l. w2n a <= b ==> w2n ((h >< l) a) <= b`,
+    REPEAT STRIP_TAC
+    THEN Q.SPECL_THEN [`w2n ((h >< l) a)`, `w2n a`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+    THEN ASM_REWRITE_TAC [word_extract_le])
+
+  val word_add_order1 = Q.prove(
+    `!a b m n. w2n a <= m /\ w2n b <= n ==> w2n (a + b) <= m + n`,
+    REPEAT STRIP_TAC
+    THEN `w2n a + w2n b <= m + n` by DECIDE_TAC
+    THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+    THEN ASM_REWRITE_TAC [word_add_le])
+
+  val word_add_order2 = Q.prove(
+    `!a b m n. w2n a <= m /\ w2n b < n ==> w2n (a + b) < m + n`,
+    REPEAT STRIP_TAC
+    THEN `w2n a + w2n b < m + n` by DECIDE_TAC
+    THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+    THEN ASM_REWRITE_TAC [word_add_le])
+
+  val word_add_order3 = Q.prove(
+    `!a b m n. w2n a < m /\ w2n b <= n ==> w2n (a + b) < m + n`,
+    REPEAT STRIP_TAC
+    THEN `w2n a + w2n b < m + n` by DECIDE_TAC
+    THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+    THEN ASM_REWRITE_TAC [word_add_le])
+
+  val word_add_order4 = Q.prove(
+    `!a b m n. w2n a < m /\ w2n b < n ==> w2n (a + b) < m + n - 1`,
+    REPEAT STRIP_TAC
+    THEN `w2n a + w2n b < m + n - 1` by DECIDE_TAC
+    THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+    THEN ASM_REWRITE_TAC [word_add_le])
+
+  val word_mul_order1 = Q.prove(
+    `!a b m n. w2n a <= m /\ w2n b <= n ==> w2n (a * b) <= m * n`,
+    REPEAT STRIP_TAC
+    THEN `w2n a * w2n b <= m * n`
+      by ASM_SIMP_TAC std_ss [arithmeticTheory.LESS_MONO_MULT2]
+    THEN Q.SPECL_THEN [`w2n (a * b)`, `w2n a * w2n b`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+    THEN ASM_REWRITE_TAC [word_mul_le])
+
+  val word_mul_order2 = Q.prove(
+    `!a b m n. w2n a <= m /\ w2n b < n ==> w2n (a * b) <= m * n`,
+    REPEAT STRIP_TAC
+    THEN `w2n a * w2n b <= m * n`
+      by ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_MONO_MULT2]
+    THEN Q.SPECL_THEN [`w2n (a * b)`, `w2n a * w2n b`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+    THEN ASM_SIMP_TAC arith_ss [word_mul_le])
+
+  val word_mul_order3 = Q.prove(
+    `!a b m n. w2n a < m /\ w2n b <= n ==> w2n (a * b) <= m * n`,
+    REPEAT STRIP_TAC
+    THEN `w2n a * w2n b <= m * n`
+      by ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_MONO_MULT2]
+    THEN Q.SPECL_THEN [`w2n (a * b)`, `w2n a * w2n b`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+    THEN ASM_SIMP_TAC arith_ss [word_mul_le])
+
+  val word_mul_order4 = Q.prove(
+    `!a b m n. w2n a < m /\ w2n b < n ==> w2n (a * b) <= m * n`,
+    REPEAT STRIP_TAC
+    THEN `w2n a * w2n b <= m * n`
+      by ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_MONO_MULT2]
+    THEN Q.SPECL_THEN [`w2n (a * b)`, `w2n a * w2n b`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+    THEN ASM_SIMP_TAC arith_ss [word_mul_le])
+
+  val word_lsl_order1 = Q.prove(
+    `!a:'a word b n. w2n a < n ==> w2n (a << b) < n * 2 ** b`,
+    REPEAT STRIP_TAC
+    THEN Q.SPECL_THEN [`w2n (a << b)`, `w2n a * 2 ** b`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+    THEN ASM_REWRITE_TAC [arithmeticTheory.LT_MULT_RCANCEL,
+           bitTheory.ZERO_LT_TWOEXP, word_lsl_le])
+
+  val word_lsl_order2 = Q.prove(
+    `!a:'a word b n. w2n a <= n ==> w2n (a << b) <= n * 2 ** b`,
+    REPEAT STRIP_TAC
+    THEN Q.SPECL_THEN [`w2n (a << b)`, `w2n a * 2 ** b`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+    THEN ASM_REWRITE_TAC [arithmeticTheory.LE_MULT_RCANCEL,
+           bitTheory.ZERO_LT_TWOEXP, word_lsl_le])
+
+  val word_div_order_lem =
+    word_div_le |> SPEC_ALL
+                |> Q.DISCH `b < dimword (:'a)`
+                |> SIMP_RULE arith_ss [];
+
+  val word_div_order1 = Q.prove(
+    `!a:'a word b n.
+       0 < b /\ b < dimword (:'a) /\ w2n a <= n ==>
+       w2n (a // n2w b) <= n DIV b`,
+    REPEAT STRIP_TAC
+    THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a DIV b MOD dimword (:'a)`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+    THEN ASM_SIMP_TAC arith_ss [arithmeticTheory.DIV_LE_MONOTONE,
+           word_div_order_lem])
+
+  val word_div_order2 = Q.prove(
+    `!a:'a word b n.
+       0 < b /\ b < dimword (:'a) /\ w2n a < n ==>
+       w2n (a // n2w b) <= n DIV b`,
+    REPEAT STRIP_TAC
+    THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a DIV b MOD dimword (:'a)`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+    THEN ASM_SIMP_TAC arith_ss [arithmeticTheory.DIV_LE_MONOTONE,
+           word_div_order_lem])
+
+  val word_div_order3 = Q.prove(
+    `!a:'a word b n.
+       ODD b /\ w2n a <= n ==> w2n (a // n2w b) <= n`,
+    REPEAT STRIP_TAC
+    THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+    THEN ASM_SIMP_TAC std_ss [word_div_le2])
+
+  val word_div_order4 = Q.prove(
+    `!a:'a word b n.
+       ODD b /\ w2n a < n ==> w2n (a // n2w b) < n`,
+    REPEAT STRIP_TAC
+    THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a`]
+           MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+    THEN ASM_SIMP_TAC std_ss [word_div_le2])
 
   fun removeDuplicates l = let open Binaryset in
-     listItems (addList (empty Term.compare, l))
+    listItems (addList (empty Term.compare, l))
   end
+
+  val word_type = wordsSyntax.dest_word_type o type_of
+  val arb_thm = boolSyntax.arb |> Term.inst [alpha |-> bool] |> ASSUME
+  val SIZE_RULE = CONV_RULE (DEPTH_CONV SIZES_CONV)
+  val RAND_REDUCE_RULE = CONV_RULE (RAND_CONV numLib.REDUCE_CONV)
+
+  datatype bound = LE_BOUND of Arbnum.num
+                 | LT_BOUND of Arbnum.num
+                 | NO_BOUND
+
+  fun bnd thm = let val tm = concl thm in
+                  case Lib.total numSyntax.dest_less tm
+                  of SOME (_,n) =>
+                       (case Lib.total numSyntax.dest_numeral n
+                        of SOME v => LT_BOUND v
+                         | NONE => NO_BOUND)
+                   | NONE =>
+                       (case Lib.total numSyntax.dest_leq tm
+                          of SOME (_,n) =>
+                               (case Lib.total numSyntax.dest_numeral n
+                                of SOME v => LE_BOUND v
+                                 | NONE => NO_BOUND)
+                           | NONE => NO_BOUND)
+                end
+
+  (* bounds for: + * n2w >< // << *)
+  fun mk_bounds_thm t = let
+          val w = wordsSyntax.dest_w2n t
+          val thm1 = SIZE_RULE (Drule.ISPEC w w2n_lt)
+          fun default () = case bnd thm1
+                           of LT_BOUND _ => thm1
+                            | _ => raise ERR "mk_bounds_thm"
+                                             "can't compute bound"
+          fun sub_bound x = mk_bounds_thm (wordsSyntax.mk_w2n x)
+                              handle HOL_ERR _ => arb_thm
+        in
+          case Lib.total dest_strip w
+          of SOME ("word_extract", args as [h,l,a]) => let
+                  val thm2 = WORD_EXTRACT_LT
+                               |> Thm.INST_TYPE
+                                   [alpha |-> word_type a, beta |-> word_type w]
+                               |> Drule.SPECL args
+                               |> RAND_REDUCE_RULE
+                  val thm3 = sub_bound a
+                  fun thm3_order th b =
+                        MATCH_MP
+                          (th |> Thm.INST_TYPE
+                                   [alpha |-> word_type a, beta |-> word_type w]
+                              |> Drule.SPECL [a, numSyntax.mk_numeral b, h, l])
+                          thm3
+                  val thm3_order1 = thm3_order word_extract_order1
+                  val thm3_order2 = thm3_order word_extract_order2
+                in
+                  case (bnd thm1, bnd thm2, bnd thm3)
+                  of (LT_BOUND _, NO_BOUND,   NO_BOUND)   => thm1
+                   | (NO_BOUND,   LT_BOUND _, NO_BOUND)   => thm2
+                   | (NO_BOUND,   NO_BOUND,   LT_BOUND b1) => thm3_order1 b1
+                   | (NO_BOUND,   NO_BOUND,   LE_BOUND b1) => thm3_order2 b1
+                   | (LT_BOUND b1, LT_BOUND b2, NO_BOUND) =>
+                        if Arbnum.<=(b1, b2) then thm1 else thm2
+                   | (LT_BOUND b1, NO_BOUND, LT_BOUND b2) =>
+                        if Arbnum.<=(b1, b2) then thm1 else thm3_order1 b2
+                   | (NO_BOUND, LT_BOUND b1, LT_BOUND b2) =>
+                        if Arbnum.<=(b1, b2) then thm2 else thm3_order1 b2
+                   | (LT_BOUND b1, NO_BOUND, LE_BOUND b2) =>
+                        if Arbnum.<=(b1, Arbnum.plus1 b2) then
+                          thm1
+                        else
+                          thm3_order2 b2
+                   | (NO_BOUND, LT_BOUND b1, LE_BOUND b2) =>
+                        if Arbnum.<=(b1, Arbnum.plus1 b2) then
+                          thm2
+                        else
+                          thm3_order2 b2
+                   | (LT_BOUND b1, LT_BOUND b2, LT_BOUND b3) =>
+                        if Arbnum.<=(b1, b2) then
+                          if Arbnum.<=(b1, b3) then thm1 else thm3_order1 b3
+                        else
+                          if Arbnum.<=(b2, b3) then thm2 else thm3_order1 b3
+                   | (LT_BOUND b1, LT_BOUND b2, LE_BOUND b3) =>
+                        if Arbnum.<=(b1, b2) then
+                          if Arbnum.<=(b1, Arbnum.plus1 b3) then
+                            thm1
+                          else
+                            thm3_order1 b3
+                        else
+                          if Arbnum.<=(b2, Arbnum.plus1 b3) then
+                            thm2
+                          else
+                            thm3_order1 b3
+                   | _ => raise ERR "mk_bounds_thm" "can't compute bound"
+                end
+           | SOME ("n2w", [n]) => let
+                  val thm2 = if is_known_word_size w then
+                               word_n2w_le
+                                 |> Thm.SPEC n
+                                 |> Thm.INST_TYPE
+                                      [alpha |-> wordsSyntax.dim_of w]
+                                 |> SIZE_RULE
+                                 |> numLib.REDUCE_RULE
+                             else
+                               word_n2w_le2 |> Thm.SPEC n
+                in
+                  case (bnd thm1, bnd thm2)
+                  of (LT_BOUND _, NO_BOUND) => thm1
+                   | (NO_BOUND, LE_BOUND _) => thm2
+                   | (LT_BOUND b1, LE_BOUND b2) =>
+                        if Arbnum.<=(b1, Arbnum.plus1 b2) then thm1 else thm2
+                   | _ => raise ERR "mk_bounds_thm" "can't compute bound"
+                end
+           | SOME ("word_add", [a,b]) => let
+                  val thm2 = sub_bound a
+                  fun f th thm3 = MATCH_MP th (CONJ thm2 thm3)
+                                    |> RAND_REDUCE_RULE
+                in
+                  case (bnd thm1, bnd thm2)
+                  of (LT_BOUND _, NO_BOUND) => thm1
+                   | (NO_BOUND, LT_BOUND _) =>
+                        let val thm3 = sub_bound b in
+                          case bnd thm3
+                          of LT_BOUND _ => f word_add_order4 thm3
+                           | LE_BOUND _ => f word_add_order3 thm3
+                           | NO_BOUND =>
+                               raise ERR "mk_bounds_thm" "can't compute bound"
+                        end
+                   | (NO_BOUND, LE_BOUND _) =>
+                        let val thm3 = sub_bound b in
+                          case bnd thm3
+                          of LT_BOUND _ => f word_add_order2 thm3
+                           | LE_BOUND _ => f word_add_order1 thm3
+                           | NO_BOUND =>
+                               raise ERR "mk_bounds_thm" "can't compute bound"
+                        end
+                   | (LT_BOUND b1, LT_BOUND b2) =>
+                        if Arbnum.<=(b1, b2) then
+                          thm1
+                        else let val thm3 = sub_bound b in
+                          case bnd thm3
+                          of LT_BOUND b3 =>
+                               if Arbnum.<(b1, Arbnum.+(b2,b3)) then
+                                 thm1
+                               else
+                                 f word_add_order4 thm3
+                           | LE_BOUND b3 =>
+                               if Arbnum.<=(b1, Arbnum.+(b2,b3)) then
+                                 thm1
+                               else
+                                 f word_add_order3 thm3
+                           | NO_BOUND =>
+                               raise ERR "mk_bounds_thm" "can't compute bound"
+                        end
+                   | (LT_BOUND b1, LE_BOUND b2) =>
+                        if Arbnum.<=(b1, Arbnum.plus1 b2) then
+                          thm1
+                        else let val thm3 = sub_bound b in
+                          case bnd thm3
+                          of LT_BOUND b3 =>
+                               if Arbnum.<=(b1, Arbnum.+(b2,b3)) then
+                                 thm1
+                               else
+                                 f word_add_order2 thm3
+                           | LE_BOUND b3 =>
+                               if Arbnum.<=(b1, Arbnum.+(b2,b3)) then
+                                 thm1
+                               else
+                                 f word_add_order1 thm3
+                           | NO_BOUND =>
+                               raise ERR "mk_bounds_thm" "can't compute bound"
+                        end
+                   | _ => raise ERR "mk_bounds_thm" "can't compute bound"
+                end
+           | SOME ("word_mul", [a,b]) => let
+                  val thm2 = sub_bound a
+                in
+                  case bnd thm2
+                  of LT_BOUND b2 => let
+                         val thm3 = sub_bound b
+                         fun f th = MATCH_MP th (CONJ thm2 thm3)
+                                      |> RAND_REDUCE_RULE
+                       in
+                         case (bnd thm1, bnd thm3)
+                         of (NO_BOUND, LT_BOUND b3) => f word_mul_order4
+                          | (NO_BOUND, LE_BOUND b3) => f word_mul_order3
+                          | (LT_BOUND b1, LT_BOUND b3) =>
+                              if Arbnum.<=(b1,Arbnum.plus1 (Arbnum.*(b2,b3)))
+                              then thm1 else f word_mul_order4
+                          | (LT_BOUND b1, LE_BOUND b3) =>
+                              if Arbnum.<=(b1,Arbnum.plus1 (Arbnum.*(b2,b3)))
+                              then thm1 else f word_mul_order3
+                          | (LT_BOUND _, NO_BOUND) => thm1
+                          | _ => raise ERR "mk_bounds_thm" "can't compute bound"
+                       end
+                   | LE_BOUND b2 => let
+                         val thm3 = sub_bound b
+                         fun f th = MATCH_MP th (CONJ thm2 thm3)
+                                      |> RAND_REDUCE_RULE
+                       in
+                         case (bnd thm1, bnd thm3)
+                         of (NO_BOUND, LT_BOUND b3) => f word_mul_order2
+                          | (NO_BOUND, LE_BOUND b3) => f word_mul_order1
+                          | (LT_BOUND b1, LT_BOUND b3) =>
+                              if Arbnum.<=(b1,Arbnum.plus1 (Arbnum.*(b2,b3)))
+                              then thm1 else f word_mul_order2
+                          | (LT_BOUND b1, LE_BOUND b3) =>
+                              if Arbnum.<=(b1,Arbnum.plus1 (Arbnum.*(b2,b3)))
+                              then thm1 else f word_mul_order1
+                          | (LT_BOUND _, NO_BOUND) => thm1
+                          | _ => raise ERR "mk_bounds_thm" "can't compute bound"
+                       end
+                   | NO_BOUND => default ()
+                end
+           | SOME ("word_lsl", args as [a,b]) =>
+               (case Lib.total numLib.dest_numeral b
+                of SOME v => let
+                        val thm2 = sub_bound a
+                        fun f b = Arbnum.*(b,Arbnum.pow(Arbnum.two,v))
+                        fun g thm = MATCH_MP (Drule.ISPECL args thm) thm2
+                                      |> RAND_REDUCE_RULE
+                      in
+                        case (bnd thm1, bnd thm2)
+                        of (NO_BOUND, LT_BOUND _) => g word_lsl_order1
+                         | (NO_BOUND, LE_BOUND _) => g word_lsl_order2
+                         | (LT_BOUND b1, LT_BOUND b2) =>
+                             if Arbnum.<=(b1,f b2) then
+                               thm1
+                             else
+                               g word_lsl_order1
+                         | (LT_BOUND b1, LE_BOUND b2) =>
+                             if Arbnum.<=(b1,Arbnum.plus1 (f b2)) then
+                               thm1
+                             else
+                               g word_lsl_order2
+                         | _ => raise ERR "mk_bounds_thm" "can't compute bound"
+                      end
+                 | NONE => default ())
+           | SOME ("word_div", [a,b]) =>
+               (case Lib.total wordsSyntax.dest_n2w b
+                of SOME (n, ty) =>
+                   (case (Lib.total numLib.dest_numeral n,
+                          Lib.total fcpLib.index_to_num ty)
+                    of (SOME v, SOME w) =>
+                         if v = Arbnum.zero orelse
+                            Arbnum.>=(v, Arbnum.pow (Arbnum.two, w))
+                         then
+                           default ()
+                         else let
+                           val thm2 = sub_bound a
+                           fun thm3 () =
+                                 numSyntax.mk_less (numSyntax.zero_tm, n)
+                                   |> bossLib.DECIDE
+                           fun thm4 () = numSyntax.mk_less (n,
+                                                 wordsSyntax.mk_dimword ty)
+                                           |> WORD_EVAL_CONV
+                                           |> EQT_ELIM
+                           fun g thm = MATCH_MP (Drule.ISPECL [a,n] thm)
+                                         (LIST_CONJ [thm3 (), thm4 (), thm2])
+                                         |> RAND_REDUCE_RULE
+                         in
+                           case bnd thm2
+                           of LT_BOUND _ => g word_div_order2
+                            | LE_BOUND _ => g word_div_order1
+                            | _ => raise ERR "mk_bounds_thm"
+                                             "can't compute bound"
+                         end
+                     | (SOME v, NONE) =>
+                         if Arbnum.mod2 v = Arbnum.zero then
+                           raise ERR "mk_bounds_thm" "can't compute bound"
+                         else let
+                           val thm2 = sub_bound a
+                           fun thm3 () = numSyntax.mk_odd n
+                                           |> numLib.REDUCE_CONV
+                                           |> EQT_ELIM
+                           fun g thm = MATCH_MP (Drule.ISPECL [a,n] thm)
+                                          (CONJ (thm3 ()) thm2)
+                         in
+                           case bnd thm2
+                           of LT_BOUND _ => g word_div_order4
+                            | LE_BOUND _ => g word_div_order3
+                            | _ => raise ERR "mk_bounds_thm"
+                                             "can't compute bound"
+                         end
+                     | _ => default ())
+                 | NONE => default ())
+           | _ => default ()
+        end
 in
   fun mk_bounds_thms t =
-  let val l = removeDuplicates (find_terms (Lib.can mk_bounds_thm) t)
+  let val l = t |> find_terms wordsSyntax.is_w2n
+                |> removeDuplicates
+                |> Lib.mapfilter mk_bounds_thm
   in
     if null l then
       TRUTH
     else
-      LIST_CONJ (map mk_bounds_thm l)
+      LIST_CONJ l
   end
 end;
 
@@ -1146,29 +1596,31 @@ fun EXISTS_WORD_CONV t =
 
 local
   val word_join = SIMP_RULE (std_ss++boolSimps.LET_ss) [] word_join_def
-  val rw1 = [word_0,word_T,word_L,word_xor_def,word_or_def,word_and_def,
-             word_1comp_def, REWRITE_RULE [SYM_WORD_NEG_1] word_T,
-             pred_setTheory.NOT_IN_EMPTY,
-             ISPEC `0n` pred_setTheory.IN_INSERT,
-             ISPEC `^a` pred_setTheory.IN_INSERT]
-  val rw2 = [fcpTheory.FCP_UPDATE_def,LESS_COR,sw2sw,w2w,word_replicate_def,
-             word_join,word_concat_def,word_reverse_def,word_modify_def,
-             word_lsl_def,word_lsr_def,word_asr_def,word_ror_def,
-             word_rol_def,word_rrx_def,word_msb_def,word_lsb_def,
-             word_extract_def,word_bits_def,word_slice_def,word_bit_def,
-             word_signed_bits_def]
+  val rw = [word_0,word_T,word_L,word_xor_def,word_or_def,word_and_def,
+            word_1comp_def, REWRITE_RULE [SYM_WORD_NEG_1] word_T,
+            pred_setTheory.NOT_IN_EMPTY,
+            ISPEC `0n` pred_setTheory.IN_INSERT,
+            ISPEC `^Na` pred_setTheory.IN_INSERT,
+            fcpTheory.FCP_UPDATE_def,LESS_COR,sw2sw,w2w,word_replicate_def,
+            word_join,word_concat_def,word_reverse_def,word_modify_def,
+            word_lsl_def,word_lsr_def,word_asr_def,word_ror_def,
+            word_rol_def,word_rrx_def,word_msb_def,word_lsb_def,
+            word_extract_def,word_bits_def,word_slice_def,word_bit_def,
+            word_signed_bits_def,
+            ``(if b then x:'a word else y) ' i = if b then x ' i else y ' i``
+              |> simpLib.SIMP_PROVE std_ss [COND_RAND,COND_RATOR] |> GEN_ALL]
   val thms = [WORD_ADD_LEFT_LO, WORD_ADD_LEFT_LS,
               WORD_ADD_RIGHT_LS, WORD_ADD_RIGHT_LO]
-  val thms2 = map (GEN_ALL o SPEC `^n2w ^n`)
+  val thms2 = map (GEN_ALL o SPEC `^n2w n`)
                [WORD_ADD_LEFT_LO2, WORD_ADD_LEFT_LS2,
                 WORD_ADD_RIGHT_LO2, WORD_ADD_RIGHT_LS2]
   val rw3 = [WORD_LT_LO, WORD_LE_LS, WORD_GREATER, WORD_GREATER_EQ,
              CONV_RULE WORD_ARITH_CONV WORD_LS_T,
              CONV_RULE WORD_ARITH_CONV WORD_LESS_EQ_H] @
-             map (SPECL [`^n2w ^m`, `^n2w ^n`]) thms @
+             map (SPECL [`^n2w m`, `^n2w n`]) thms @
              thms2 @ map (ONCE_REWRITE_RULE [WORD_ADD_COMM]) thms2
-  val rw4 = [SPECL [`^w`,`^n2w ^m`, `^n2w ^n`] WORD_ADD_EQ_SUB,
-             SPECL [`^w`,`words$word_2comp (^n2w ^m)`, `^n2w ^n`]
+  val rw4 = [SPECL [`w:'a word`,`^n2w m`, `^n2w n`] WORD_ADD_EQ_SUB,
+             SPECL [`w:'a word`,`words$word_2comp (^n2w m)`, `^n2w n`]
                WORD_ADD_EQ_SUB,
              REWRITE_RULE [GSYM w2n_11, word_0_n2w] NOT_INT_MIN_ZERO,
              REWRITE_RULE [WORD_LO, word_0_n2w] ZERO_LO_INT_MIN,
@@ -1181,14 +1633,14 @@ local
 in
   val WORD_BIT_EQ_ss =
         simpLib.merge_ss
-          [fcpLib.FCP_ss, SIZES_ss, simpLib.rewrites (rw1 @ rw2),
+          [fcpLib.FCP_ss, SIZES_ss, simpLib.rewrites rw,
            simpLib.std_conv_ss
              {conv = CHANGED_CONV FORALL_AND_CONV,
               name = "FORALL_AND_CONV",
-              pats = [``!x:'a. ^P /\ ^Q``]}]
+              pats = [``!x:'a. P /\ Q:bool``]}]
   fun WORD_BIT_EQ_CONV t =
         if is_eq t orelse wordsSyntax.is_index t then
-          (SIMP_CONV (std_ss++WORD_BIT_EQ_ss++BIT_ss) [SPEC `^a` n2w_def] THENC
+          (SIMP_CONV (std_ss++WORD_BIT_EQ_ss++BIT_ss) [SPEC `^Na` n2w_def] THENC
            TRY_CONV DECIDE_CONV) t
         else
           raise ERR "WORD_BIT_EQ_CONV" "Not a word equality"
@@ -1562,7 +2014,5 @@ fun prefer_word () =
          handle HOL_ERR _ => ()) operators;
 
 val _ = Defn.const_eq_ref := (!Defn.const_eq_ref ORELSEC word_EQ_CONV);
-
-val _ = Feedback.emit_MESG := emit_mesg
 
 end

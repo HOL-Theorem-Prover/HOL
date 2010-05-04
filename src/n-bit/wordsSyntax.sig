@@ -14,6 +14,7 @@ sig
   val mk_wordii         : int * int -> term
 
   val fcp_index_tm        : term
+  val dimword_tm          : term
   val word_T_tm           : term
   val word_L_tm           : term
   val word_H_tm           : term
@@ -73,6 +74,7 @@ sig
   val sw2sw_tm            : term
 
   val mk_index            : term * term -> term
+  val mk_dimword          : hol_type -> term
   val mk_word_T           : hol_type -> term
   val mk_word_L           : hol_type -> term
   val mk_word_H           : hol_type -> term
@@ -132,6 +134,7 @@ sig
   val mk_sw2sw            : term * hol_type -> term
 
   val dest_index            : term -> term * term
+  val dest_dimword          : term -> hol_type
   val dest_word_T           : term -> hol_type
   val dest_word_L           : term -> hol_type
   val dest_word_H           : term -> hol_type
@@ -191,6 +194,7 @@ sig
   val dest_w2n              : term -> term
 
   val is_index            : term -> bool
+  val is_dimword          : term -> bool
   val is_word_T           : term -> bool
   val is_word_L           : term -> bool
   val is_word_H           : term -> bool
