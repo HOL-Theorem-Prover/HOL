@@ -4,7 +4,7 @@ struct
 open Lib Feedback HolKernel Parse boolLib
 
 datatype command = Theorem | Term | Type
-datatype opt = Turnstile | Case | TT | Def | TypeOf | TermThm
+datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Indent of int | NoSpec
              | Inst of string * string
              | NoTurnstile | Width of int
@@ -32,6 +32,7 @@ fun stringOpt pos s =
   | "tt" => SOME TT
   | "alltt" => SOME AllTT
   | "def" => SOME Def
+  | "spaceddef" => SOME SpacedDef
   | "of" => SOME TypeOf
   | "K" => SOME TermThm
   | "nosp" => SOME NoSpec
@@ -234,7 +235,10 @@ in
           val thm = do_thminsts pos opts (getThm spec)
           val _ = add_string pps (optset_indent opts)
         in
-          if OptSet.has Def opts then let
+          if OptSet.has Def opts orelse OptSet.has SpacedDef opts then let
+              val newline = if OptSet.has SpacedDef opts then
+                              (fn pps => (add_newline pps; add_newline pps))
+                            else add_newline
               val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
               val printfn = let
                 val base = raw_pp_term_as_tex overrides
@@ -248,7 +252,7 @@ in
               block_list pps
                          (fn pps => begin_block pps INCONSISTENT 0)
                          printfn
-                         add_newline
+                         newline
                          end_block
                          lines;
               end_block pps
