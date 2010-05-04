@@ -21,6 +21,7 @@ open holindexData
   |  OPTIONS
   |  LABEL
   |  CONTENT
+  |  LATEX
   |  COMMENT
   |  IDENT of string
   |  COMMA
@@ -89,6 +90,8 @@ option:
        (parse_entry___set_options STRING)
   | CONTENT EQUAL STRING
        (parse_entry___set_content STRING)
+  | LATEX EQUAL STRING
+       (parse_entry___set_latex STRING)
   | COMMENT EQUAL STRING
        (parse_entry___set_comment STRING)
 

@@ -55,8 +55,8 @@ List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
   ("OPTIONS",      OPTIONS),
   ("LABEL",        LABEL),
   ("CONTENT",      CONTENT),
-  ("COMMENT",      COMMENT)
-
+  ("COMMENT",      COMMENT),
+  ("LATEX",        LATEX)
 ];
 
 

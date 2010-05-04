@@ -38,21 +38,13 @@
 \setboolean{holIndexLongThmFlag}{false}
 
 
-\newcommand{\initHOLindex}{
-   \newwrite\holaux
-   \immediate\openout\holaux\jobname.hix
-   \@input@{\jobname.tde}
-}
+\newcommand{\initHOLindex}{\newwrite\holaux\immediate\openout\holaux\jobname.hix\@input@{\jobname.tde}}
 
 \newcommand{\writehixfile}[1]{\write\holaux{#1}}
 
-\newcommand{\hollookup}[1]{
-   \@ifundefined{HOL@#1}{??}{\@nameuse{HOL@#1}}
-}
+\newcommand{\hollookup}[1]{\@ifundefined{HOL@#1}{??}{\@nameuse{HOL@#1}}}
 
-\newcommand{\holdef}[2]{
-  \@namedef{HOL@#1}{#2}
-}
+\newcommand{\holdef}[2]{\@namedef{HOL@#1}{#2}}
 
 \newcommand{\defineHOLIndex}[1]{\holdef{index}{#1}}
 \newcommand{\printHOLGeneralIndex}{
@@ -78,15 +70,15 @@
 \printHOLGeneralIndex}
 
 
-\newcommand{\useHOLfile}[1]{
-   \writehixfile{UseFile #1}
+\newcommand{\useHOLfile}[1]{%
+   \writehixfile{UseFile #1}%
 }
-\newcommand{\setHOLoverrides}[1]{
-   \writehixfile{Overrides #1}
+\newcommand{\setHOLoverrides}[1]{%
+   \writehixfile{Overrides #1}%
 }
 
-\newcommand{\addHOLuse}[2] {
-   \writehixfile{Printed #1 #2 \thepage}
+\newcommand{\addHOLuse}[2] {%
+   \writehixfile{Printed #1 #2 \thepage}%
 }
 
 \newenvironment{blockHOL}{\begin{alltt}}{\end{alltt}}
@@ -103,7 +95,7 @@
 \newcommand[\protect]{\blockHOLtm}[1]{\begin{blockHOL}\useHOLtm{#1}\end{blockHOL}}
 
 \newcommand[\protect\long]{\defineHOLty}[2]{\holdef{type@#1}{#2}}
-\newcommand[\protect]{\useHOLty}[1]{\addHOLuse{Type}{#1}\hollookup{type@#1}}
+\newcommand[\protect]{\useHOLty}[1]{\addHOLuse{Type}{#1}:\hollookup{type@#1}}
 \newcommand[\protect]{\inlineHOLty}[1]{\inlineHOL{\useHOLty{#1}}}
 \newcommand[\protect]{\blockHOLty}[1]{\begin{blockHOL}\useHOLty{#1}\end{blockHOL}}
 
@@ -195,28 +187,47 @@ Definition #1 #2 {#3} {#4}
 \newcommand[\protect]{\citeHiddenHOLty}[1]{\addHOLcite{Type}{#1}}
 
 
-%formating option that can easily be redefined according to personal taste
-\newcommand{\HOLBeginTermIndex}{\section*{HOL-Term Index}}
-\newcommand{\HOLBeginTypeIndex}{\section*{HOL-Type Index}}
-\newcommand{\HOLBeginThmIndex}{\section*{HOL-Theorem Index}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% formating option that can easily be redefined according to personal taste
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\newcommand{\HOLThmIndexTheory}[1]{{\subsection*{#1Theory}}}
+\newenvironment{HOLTermIndex}{\section*{HOL-Term Index}}{}
+\newenvironment{HOLTypeIndex}{\section*{HOL-Type Index}}{}
+\newenvironment{HOLThmIndex}{\section*{HOL-Theorem Index}}{}
+
+\newcommand{\HOLThmIndexTheory}[1]{\subsection*{#1Theory}}
+\newcommand{\HOLThmName}[1]{{\tt{}#1}}
 
 
-% Arg 1 : number
+% Arg 1 : number in the index
 % Arg 2 : unique ID
 % Arg 3 : Label
 % Arg 4 : Pages
-% Arg 5 : Full entry
+% Arg 5 : Long index?
+% Arg 6 : is the pages argument non-empty?
+% Arg 7 : comment
+% Arg 8 : latex printed version of theorem/type/term
 \newcommand{\HOLIndexEntryFormat}[8]{% 
-   \makebox[0.1\textwidth][r]{(#1)\ }%
-   \begin{minipage}[t]{0.9\textwidth}%
-   \begin{flushright}#3 \ldots$\!$\dotfill #4\end{flushright}%
-   {\ifthenelse{\(\not\boolean{holShortIndexFlag}\) \and %
-   \(\boolean{#5} \or \boolean{holLongIndexFlag}\)}{#7\begin{blockHOL}#8\end{blockHOL}\medskip}{}}%
+   \makebox[0.1\textwidth][r]{(#1)\ }%number
+   \begin{minipage}[t]{0.9\textwidth}%everything else in minibox
+      \begin{flushright}#3 \ldots$\!$\dotfill #4\end{flushright}{%first line
+      \ifthenelse{\(\not\boolean{holShortIndexFlag}\) \and %use short or
+                  \(\boolean{#5} \or \boolean{holLongIndexFlag}\)}% long version
+          {#7\begin{blockHOL}#8\end{blockHOL}\medskip}%long version
+          {}% else short version
+     }%end if-then-else
    \end{minipage}\\}
 
 
+% Arg 1 : unique ID 
+% Arg 2 : Label
+% Arg 3 : Pages
+% Arg 4 : Long index?
+% Arg 5 : is the pages argument non-empty?
+% Arg 6 : comment
+% Arg 7 : latex printed version of theorem/type/term
 \newcommand{\HOLThmIndexEntryFormat}[7]{%
    \HOLIndexEntryFormat{\arabic{holThmCounter}}{thm@#1}{#2}{#3}{#4}{#5}{#6}{#7}%
 }

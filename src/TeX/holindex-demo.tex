@@ -3,8 +3,8 @@
 \usepackage{holindex}
 
 \initHOLindex
-\setHOLlinewidth{80}  %default is 80
-%\setHOLoverrides{over} %optional
+\setHOLlinewidth{80}   %default is 80
+%\setHOLoverrides{over} %option
 
 \begin{document}
 
@@ -20,7 +20,12 @@ Similar usage as bibtex, makeindex etc.
 \setHOLlinewidth{80}  %optional default is 80
 \setHOLoverrides{file}
 \end{verbatim}
-\item run \texttt{mkmunge.exe theories} to generate \texttt{munge.exe} for your theories
+\item make sure that \texttt{holindex} is loaded after packages like
+  \texttt{natbib}, since it loads \texttt{underscore} and this will
+  break commands like \texttt{cite} that get arguments with
+  underscores if they are not properly protected
+\item run \texttt{mkmunge.exe theories} to generate \texttt{munge.exe}
+  for your theories
 \item run latex on jobname.tex to generate jobname.hix
 \item run \texttt{munge.exe -index jobname} to create jobname.tde and jobname.tid
 \item rerun latex to use jobname.tid and jobname.tde
@@ -95,43 +100,49 @@ is a construct
 that parses files in a syntax similar to BibTex.
 Printout of \texttt{holindex-demo.hdf}:
 
-\begin{alltt}
-@Term\{term_id_4,
+\begin{verbatim}
+@Term{term_id_4,
    label = "a short description of term form external file",
    force_index,
    options = "width=20",
    content = ``SOME_FUN = SUC a < 0 /\ 0 > SUC b``
-\}
+}
 
-@Type\{type_id_4,
+@Type{type_id_4,
    label = "a short description of the type from external file",
    force_index,
    short-index,
-   content = ``:bool``
-\}
+   content = ``:bool``   
+}
 
-@Thm\{arithmetic.LESS_SUC_EQ_COR,
+
+@Thm{arithmetic.LESS_SUC_EQ_COR,
    force-index,
-   long-index
-\}
+   long-index,
+   latex = "My latex code for \texttt{LESS_SUC_EQ_COR}"
+}
 
-@Thm\{thm_1,
+@Thm{arithmetic.LESS_EQ_0,
+   force-index, long-index
+}
+
+@Thm{thm_1,
    label = "(second instance)",
    content = "arithmetic.LESS_SUC_EQ_COR",
    options = "width=20",
-   comment = "some lengthy\verb-\\-comment
+   comment = "some lengthy\\comment
 
-              with \verb-\-textbf\{formats\} and newlines",
+              with \textbf{formats} and newlines",
    force-index,
    long-index
-\}
+}
 
 @Theorems{
    ids = [arithmetic.LESS_ADD_SUC,
           arithmetic.LESS_EQ*],
    force-index
 }
-\end{alltt}
+\end{verbatim}
 
 
 %use external file
@@ -219,6 +230,86 @@ Printout of \texttt{holindex-demo.hdf}:
    Sort the index by occurence in the text, not by names
    \sortHOLIndexOccurence
 \end{verbatim}
+
+
+
+\section{Printing}
+There are some macros just concerned with the resulting output.
+One can adapt these easily to personal preferences. Here the standard
+definitions are printed. Just copy them to the header of your file
+and modify them to your taste:
+
+\begin{verbatim}
+The environment for printing something as a block and the inline command:
+
+\renewenvironment{blockHOL}{\begin{alltt}}{\end{alltt}}
+\renewcommand[\protect\long]{\inlineHOL}[1]{\mbox{\textup{\texttt{#1}}}}
+
+
+Format of citations
+\renewcommand[\protect]{\citeHOLthm}[1]{(HOL-Thm~\citePureHOLthm{#1})}
+\renewcommand[\protect]{\citeHOLtm}[1]{(HOL-Term~\citePureHOLtm{#1})}
+\renewcommand[\protect]{\citeHOLty}[1]{(HOL-Type~\citePureHOLty{#1})}
+
+\renewcommand[\protect]{\mciteHOLthm}[1]{(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
+\renewcommand[\protect]{\mciteHOLtm}[1]{(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
+\renewcommand[\protect]{\mciteHOLty}[1]{(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}
+
+
+How theorem names are printed in the index
+\renewcommand{\HOLThmName}[1]{{\tt{}#1}}
+
+Headers in the index
+\rewenvironment{HOLTermIndex}{\section*{HOL-Term Index}}{}
+\renewenvironment{HOLTypeIndex}{\section*{HOL-Type Index}}{}
+\renewenvironment{HOLThmIndex}{\section*{HOL-Theorem Index}}{}
+\renewcommand{\HOLThmIndexTheory}[1]{\subsection*{#1Theory}}
+
+
+Much more complicated: Index entries themselves
+% Arg 1 : number in the index
+% Arg 2 : unique ID
+% Arg 3 : Label
+% Arg 4 : Pages
+% Arg 5 : Long index?
+% Arg 6 : is the pages argument non-empty?
+% Arg 7 : comment
+% Arg 8 : latex printed version of theorem/type/term
+\renewcommand{\HOLIndexEntryFormat}[8]{% 
+   \makebox[0.1\textwidth][r]{(#1)\ }%number
+   \begin{minipage}[t]{0.9\textwidth}%everything else in minibox
+      \begin{flushright}#3 \ldots$\!$\dotfill #4\end{flushright}{%first line
+      \ifthenelse{\(\not\boolean{holShortIndexFlag}\) \and %use short or
+                  \(\boolean{#5} \or \boolean{holLongIndexFlag}\)}% long version
+          {#7\begin{blockHOL}#8\end{blockHOL}\medskip}%long version
+          {}% else short version
+     }%end if-then-else
+   \end{minipage}\\}
+
+
+And index entries for the theorems, types and terms using this definition
+
+% Arg 1 : unique ID 
+% Arg 2 : Label
+% Arg 3 : Pages
+% Arg 4 : Long index?
+% Arg 5 : is the pages argument non-empty?
+% Arg 6 : comment
+% Arg 7 : latex printed version of theorem/type/term
+\renewcommand{\HOLThmIndexEntryFormat}[7]{%
+   \HOLIndexEntryFormat{\arabic{holThmCounter}}{thm@#1}{#2}{#3}{#4}{#5}{#6}{#7}%
+}
+\renewcommand{\HOLTypeIndexEntryFormat}[7]{%
+   \HOLIndexEntryFormat{\arabic{holTypeCounter}}{type@#1}{#2}{#3}{#4}{#5}{#6}{#7}%
+}
+\renewcommand{\HOLTermIndexEntryFormat}[7]{%
+   \HOLIndexEntryFormat{\arabic{holTermCounter}}{term@#1}{#2}{#3}{#4}{#5}{#6}{#7}%
+}
+\end{verbatim}
+
+
+
+\section{Some citing to fill the index}
 
 \citeHOLthm{arithmetic.LESS_SUC_EQ_COR}
 \citeHOLtm{term_id_1}

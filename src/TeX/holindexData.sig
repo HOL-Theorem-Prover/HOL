@@ -10,6 +10,7 @@ sig
     pos_opt       : int option,
     options       : string,
     content       : string option,
+    latex         : string option,
     pages         : string Redblackset.set}
 
    type data_store_ty = ((string, data_entry) Redblackmap.dict * (string, data_entry) Redblackmap.dict * (string, data_entry) Redblackmap.dict);
@@ -24,6 +25,7 @@ sig
    val data_entry___update_label      : string option -> data_entry -> data_entry
    val data_entry___update_options    : string        -> data_entry -> data_entry
    val data_entry___update_content    : string option -> data_entry -> data_entry
+   val data_entry___update_latex      : string option -> data_entry -> data_entry
    val data_entry___update_comment    : string option -> data_entry -> data_entry
    val data_entry___add_page          : string        -> data_entry -> data_entry
    val data_entry_is_used : data_entry -> bool
@@ -40,6 +42,7 @@ sig
     force_index : bool,
     full_index  : bool option,
     comment     : string option,
+    latex       : string option,
     options     : string option,
     content     : string option}
 
@@ -50,6 +53,7 @@ sig
    val parse_entry___set_label   : string -> parse_entry -> parse_entry
    val parse_entry___set_options : string -> parse_entry -> parse_entry
    val parse_entry___set_content : string -> parse_entry -> parse_entry 
+   val parse_entry___set_latex   : string -> parse_entry -> parse_entry 
    val parse_entry___set_comment : string -> parse_entry -> parse_entry
    val parse_entry___force_index : parse_entry -> parse_entry
    val parse_entry___full_index  : bool -> parse_entry -> parse_entry

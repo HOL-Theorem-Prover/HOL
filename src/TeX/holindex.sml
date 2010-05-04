@@ -23,6 +23,7 @@ val use_occ_sort_ref = ref false;
 
 val error_found = ref false;
 fun report_error e = (print e;print"\n";error_found := true);
+fun report_warning e = (print e;print"\n");
 
 local
    fun is_not_space c = not (Char.isSpace c)
@@ -233,9 +234,12 @@ fun output_holtex_def command definetype os (id,
   ({options  = options,
     content  = content_opt,
     printed  = printed,
+    latex    = latex_opt,
     ...}:data_entry)) =
 let
-   val cs = holmunge_format command id options content_opt;
+   val cs = if isSome latex_opt then 
+      (report_error ("Notice: using user defined latex for "^(command2string command)^" '"^id^"'!");valOf latex_opt) else         
+      holmunge_format command id options content_opt;
    val _ = if (cs = "") then Feedback.fail() else ();
    val _ = if printed then 
               output_holtex_def_internal (definetype,id,cs) os
@@ -426,8 +430,9 @@ let
     val _ = if null(type_entryL) then raise nothing_to_do else ();
     val type_entryL' = Listsort.sort entry_list_pos_compare type_entryL;
 
-    val _ = Portable.output(os, "   \\HOLBeginTypeIndex\n");
+    val _ = Portable.output(os, "   \\begin{HOLTypeIndex}\n");
     val _ = List.map (output_holtex_index d ("      \\HOLTypeIndexEntry{","holIndexLongTypeFlag") os) type_entryL'
+    val _ = Portable.output(os, "   \\end{HOLTypeIndex}\n");
 in
    ()
 end handle nothing_to_do => ();
@@ -439,8 +444,9 @@ let
     val _ = if null(term_entryL) then raise nothing_to_do else ();
     val term_entryL' = Listsort.sort entry_list_pos_compare term_entryL;
 
-    val _ = Portable.output(os, "   \\HOLBeginTermIndex\n");
+    val _ = Portable.output(os, "   \\begin{HOLTermIndex}\n");
     val _ = List.map (output_holtex_index d ("      \\HOLTermIndexEntry{","holIndexLongTermFlag") os) term_entryL'
+    val _ = Portable.output(os, "   \\end{HOLTermIndex}\n");
 in
    ()
 end handle nothing_to_do => ();
@@ -464,16 +470,16 @@ let
           val (thy,thm) = destruct_theory_thm content;
           val thythm = if (!use_occ_sort_ref) then
               (thy^ "Theory."^thm) else thm
-          val new_label = SOME ("{\\tt{}"^thythm ^ "}"^add_label);
+          val new_label = SOME ("\\HOLThmName{"^thythm ^ "}"^add_label);
        in
           (id, thy, data_entry___update_label new_label de)
        end;
     val thm_entryL'' = List.map thmmapfun thm_entryL'; 
 
-    val _ = Portable.output(os, "\\HOLBeginThmIndex\n");
+    val _ = Portable.output(os, "\\begin{HOLThmIndex}\n");
 
     fun foldfun ((id, thy, de), old_thy) =
-        let
+        let            
             val _ = if ((!use_occ_sort_ref) orelse (thy = old_thy)) then () else 
                 (Portable.output(os, "   \\HOLThmIndexTheory{"^thy^"}\n"))
             val _ = output_holtex_index d ("      \\HOLThmIndexEntry{","holIndexLongThmFlag") os (id, de);
@@ -481,6 +487,8 @@ let
             thy
         end;
     val _ = List.foldl foldfun "" thm_entryL'';
+    val _ = Portable.output(os, "\\end{HOLThmIndex}\n");
+
 in
    ()
 end handle nothing_to_do => ();

@@ -15,6 +15,7 @@ type data_entry =
     pos_opt       : int option,
     options       : string,
     content       : string option,
+    latex         : string option,
     pages         : string Redblackset.set}
 
 val default_data_entry =
@@ -26,6 +27,7 @@ val default_data_entry =
     comment       = NONE,
     options       = "",
     content       = NONE,
+    latex         = NONE,
     pages         = (Redblackset.empty String.compare)}:data_entry)
 
 fun data_entry___update_in_index new_ii
@@ -37,6 +39,7 @@ fun data_entry___update_in_index new_ii
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry) =
    {label            = label,
     in_index      = new_ii,
@@ -46,6 +49,7 @@ fun data_entry___update_in_index new_ii
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry;
 
 fun data_entry___update_printed new_printed
@@ -57,6 +61,7 @@ fun data_entry___update_printed new_printed
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry) =
    {label            = label,
     in_index      = in_index,
@@ -66,6 +71,7 @@ fun data_entry___update_printed new_printed
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry;
 
 
@@ -78,6 +84,7 @@ fun data_entry___update_full_index new_fi
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry) =
    {label            = label,
     in_index      = in_index,
@@ -87,6 +94,7 @@ fun data_entry___update_full_index new_fi
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry;
 
 
@@ -99,6 +107,7 @@ fun data_entry___update_label new_label
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry) =
    {label         = new_label,
     in_index      = in_index,
@@ -108,6 +117,7 @@ fun data_entry___update_label new_label
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry;
 
 
@@ -120,6 +130,7 @@ fun data_entry___update_comment new_comment
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry) =
    {label         = label,
     in_index      = in_index,
@@ -129,6 +140,7 @@ fun data_entry___update_comment new_comment
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry;
 
 fun data_entry___update_options new_op
@@ -140,6 +152,7 @@ fun data_entry___update_options new_op
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry) =
    {label         = label,
     in_index      = in_index,
@@ -149,6 +162,7 @@ fun data_entry___update_options new_op
     pos_opt       = pos_opt,
     options       = new_op,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry;
 
 fun data_entry___update_content new_content
@@ -160,6 +174,7 @@ fun data_entry___update_content new_content
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry) =
    {label         = label,
     in_index      = in_index,
@@ -169,7 +184,33 @@ fun data_entry___update_content new_content
     pos_opt       = pos_opt,
     options       = options,
     content       = new_content,
+    latex         = latex,
     pages         = pages}:data_entry;
+
+
+
+fun data_entry___update_latex new_latex
+  ({label         = label,
+    in_index      = in_index,
+    printed       = printed,
+    full_index    = full_index,
+    comment       = comment,
+    pos_opt       = pos_opt,
+    options       = options,
+    content       = content,
+    latex         = latex,
+    pages         = pages}:data_entry) =
+   {label         = label,
+    in_index      = in_index,
+    printed       = printed,
+    full_index    = full_index,
+    comment       = comment,
+    pos_opt       = pos_opt,
+    options       = options,
+    content       = content,
+    latex         = new_latex,
+    pages         = pages}:data_entry;
+
 
 val data_entry___pos_counter_ref = ref 0;
 fun data_entry___add_page page
@@ -181,6 +222,7 @@ fun data_entry___add_page page
     pos_opt       = pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = pages}:data_entry) =
    let
       val new_pos_opt =
@@ -196,20 +238,15 @@ fun data_entry___add_page page
     pos_opt       = new_pos_opt,
     options       = options,
     content       = content,
+    latex         = latex,
     pages         = Redblackset.add(pages,page)}:data_entry
    end;
 
 
 fun data_entry_is_used
-  ({label         = label,
-    in_index      = in_index,
-    printed       = printed,
-    full_index    = full_index,
-    comment       = comment,
+  ({in_index      = in_index,
     pos_opt       = pos_opt,
-    options       = options,
-    content       = content,
-    pages         = pages}:data_entry) =
+    ...}:data_entry) =
    (in_index orelse isSome pos_opt);
 
 
@@ -272,6 +309,7 @@ type parse_entry =
     full_index  : bool option,
     comment     : string option,
     options     : string option,
+    latex       : string option,
     content     : string option}
 
 fun mk_parse_entry id =
@@ -280,6 +318,7 @@ fun mk_parse_entry id =
     force_index = false,
     full_index  = NONE,
     comment     = NONE,
+    latex       = NONE,        
     options     = NONE,
     content     = NONE}:parse_entry
 
@@ -324,6 +363,7 @@ fun parse_entry___set_label l
     force_index = fi,
     full_index  = full_index,
     comment     = comment,
+    latex       = latex,
     options     = options_opt,
     content     = content_opt}:parse_entry) =
    {id          = id,
@@ -331,6 +371,7 @@ fun parse_entry___set_label l
     force_index = fi,
     full_index  = full_index,
     comment     = comment,
+    latex       = latex,
     options     = options_opt,
     content     = content_opt}:parse_entry;
 
@@ -340,6 +381,7 @@ fun parse_entry___set_comment c
     force_index = fi,
     full_index  = full_index,
     comment     = comment,
+    latex       = latex,
     options     = options_opt,
     content     = content_opt}:parse_entry) =
    {id          = id,
@@ -347,12 +389,33 @@ fun parse_entry___set_comment c
     force_index = fi,
     full_index  = full_index,
     comment     = SOME c,
+    latex       = latex,
     options     = options_opt,
     content     = content_opt}:parse_entry;
+
+fun parse_entry___set_latex l
+   ({id          = id,
+    label       = label_opt,
+    force_index = fi,
+    full_index  = full_index,
+    comment     = comment,
+    latex       = latex,
+    options     = options_opt,
+    content     = content_opt}:parse_entry) =
+   {id          = id,
+    label       = label_opt,
+    force_index = fi,
+    full_index  = full_index,
+    comment     = comment,
+    latex       = SOME l,
+    options     = options_opt,
+    content     = content_opt}:parse_entry;
+
 
 fun parse_entry___set_options new_opt
    ({id          = id,
     label       = label_opt,
+    latex       = latex,
     force_index = fi,
     full_index  = full_index,
     comment     = comment,
@@ -363,6 +426,7 @@ fun parse_entry___set_options new_opt
     force_index = fi,
     full_index  = full_index,
     comment     = comment,
+    latex       = latex,
     options     = SOME new_opt,
     content     = content_opt}:parse_entry;
 
@@ -373,6 +437,7 @@ fun parse_entry___set_content new_cont
     force_index = fi,
     full_index  = full_index,
     comment     = comment,
+    latex       = latex,
     options     = options_opt,
     content     = content_opt}:parse_entry) =
    {id          = id,
@@ -380,6 +445,7 @@ fun parse_entry___set_content new_cont
     force_index = fi,
     full_index  = full_index,
     comment     = comment,
+    latex       = latex,
     options     = options_opt,
     content     = SOME new_cont}:parse_entry;
 
@@ -390,12 +456,14 @@ fun parse_entry___force_index
     full_index  = full_index,
     options     = options_opt,
     comment     = comment,
+    latex       = latex,
     content     = content_opt}:parse_entry) =
    {id          = id,
     label       = label_opt,
     force_index = true,
     full_index  = full_index,
     comment     = comment,
+    latex       = latex,
     options     = options_opt,
     content     = content_opt}:parse_entry;
 
@@ -406,12 +474,14 @@ fun parse_entry___full_index b
     full_index  = full_index,
     options     = options_opt,
     comment     = comment,
+    latex       = latex,
     content     = content_opt}:parse_entry) =
    {id          = id,
     label       = label_opt,
     force_index = fi,
     full_index  = SOME b,
     comment     = comment,
+    latex       = latex,
     options     = options_opt,
     content     = content_opt}:parse_entry;
 
@@ -423,6 +493,7 @@ fun parse_entry___add_to_data_store ds
     force_index = fi,
     full_index  = full_i,
     comment     = comment_opt,
+    latex       = latex_opt,
     options     = options_opt,
     content     = content_opt}:parse_entry) =
 let
@@ -431,6 +502,7 @@ let
                     printed    = printed,
                     full_index = full_index,
                     comment    = comment,
+                    latex      = latex,
                     pos_opt    = pos_opt,
                     options  = options,
                     content  = content,
@@ -440,6 +512,7 @@ let
         printed    = printed,
         full_index = if isSome full_i then full_i else full_index,
         comment    = if isSome comment_opt then comment_opt else comment,
+        latex      = if isSome latex_opt then latex_opt else latex,
         pos_opt    = pos_opt,
         options    = if isSome options_opt then valOf options_opt else options,
         content    = if isSome content_opt then content_opt else content,
