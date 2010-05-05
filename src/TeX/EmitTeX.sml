@@ -322,9 +322,11 @@ local
           val (core,digits) = splitr Char.isDigit pfx
           val dsz = size digits
           val digitstr = if 0 < dsz andalso dsz <= 2 then
-                           "\\sb{" ^ string digits ^ "}"
+                           "\\sb{\\mathrm{" ^ string digits ^ "}}"
                          else string digits
-          val core_s = UTF8.translate (fn "_" => "\\HOLTokenUnderscore{}" | s => s) (string core);
+          val core_s = UTF8.translate (fn "_" => "\\HOLTokenUnderscore{}"
+                                        | s => s)
+                                      (string core)
         in
           core_s ^ digitstr ^ prime_str
         end
