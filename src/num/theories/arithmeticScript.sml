@@ -2645,6 +2645,11 @@ val DIV_LE_X = store_thm(
   AP_TERM_TAC THEN MATCH_MP_TAC X_LT_DIV THEN
   ASM_REWRITE_TAC []);
 
+val DIV_EQ_X = store_thm(
+  "DIV_EQ_X",
+  ``!x y z. 0 < z ==> ((y DIV z = x) = x * z <= y /\ y < SUC x * z)``,
+  SIMP_TAC bool_ss [EQ_LESS_EQ,DIV_LE_X,X_LE_DIV,GSYM ADD1,
+    AC CONJ_COMM CONJ_ASSOC]);
 
 val DIV_MOD_MOD_DIV = store_thm(
   "DIV_MOD_MOD_DIV",
