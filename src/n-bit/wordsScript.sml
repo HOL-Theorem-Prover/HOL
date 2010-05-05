@@ -1019,6 +1019,13 @@ val WORD_ADD_OR = store_thm("WORD_ADD_OR",
     \\ NTAC 2 (POP_ASSUM SUBST1_TAC)
     \\ SRW_TAC [] [ADD_OR_lem, BITWISE_THM]);
 
+val WORD_ADD_XOR = store_thm("WORD_ADD_XOR",
+  `!a b. (a && b = 0w) ==> (a + b = a ?? b)`,
+  SIMP_TAC std_ss [WORD_ADD_OR]
+    \\ SIMP_TAC std_ss [CART_EQ,word_0,word_xor_def,
+                      word_or_def,FCP_BETA,word_and_def] 
+    \\ REPEAT STRIP_TAC \\ RES_TAC \\ ASM_SIMP_TAC std_ss []);
+
 val WORD_AND_EXP_SUB1 = store_thm("WORD_AND_EXP_SUB1",
   `!m n. n2w n && n2w (2 ** m - 1) = n2w (n MOD 2 ** m)`,
   Cases
