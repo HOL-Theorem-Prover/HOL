@@ -236,7 +236,7 @@ in
     val {argpos = (argline, argcpos), command, options = opts, ...} = argument
     val alltt = OptSet.has AllTT opts orelse
                 (command = Theorem andalso not (OptSet.has TT opts))
-    val () = if not alltt then  add_string pps "\\mbox{\\textup{\\texttt{"
+    val () = if not alltt then  add_string pps "\\HOLinline{"
              else ()
     val parse_start = " (*#loc "^ Int.toString argline ^ " " ^
                       Int.toString argcpos ^"*)"
@@ -330,7 +330,7 @@ in
           add_string pps (optset_indent opts);
           raw_pp_type_as_tex overrides pps typ
         end
-    val () = if not alltt then add_string pps "}}}" else ()
+    val () = if not alltt then add_string pps "}" else ()
   in () end handle
       BadSpec => warn (pos, spec ^ " does not specify a theorem")
     | HOL_ERR e => warn (pos, !Feedback.ERR_to_string e)
