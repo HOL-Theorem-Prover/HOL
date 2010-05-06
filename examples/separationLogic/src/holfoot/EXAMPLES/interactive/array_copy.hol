@@ -4,6 +4,7 @@ use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
 (* Some useful REWRITES                                                       *)
 (******************************************************************************)
 open listTheory rich_listTheory
+open generalHelpersTheory;
 
 
 (******************************************************************************)
@@ -34,3 +35,25 @@ val thm = holfoot_tac_verify_spec file NONE
                 [("copy", copy_TAC)]
 
 
+(******************************************************************************)
+(* with loop-spec                                                             *)
+(******************************************************************************)
+
+val file2 = concat [examplesDir, "/interactive/array_copy-full-loopspec.dsf"];
+
+(* holfoot_set_goal file2 *)
+val copy2_TAC = 
+HF_CONTINUE_TAC THEN
+REPEAT STRIP_TAC THENL [
+   `n_const - ic = 0` by DECIDE_TAC THEN
+   ASM_REWRITE_TAC[] THEN
+   HF_SOLVE_TAC,
+
+   Cases_on `data` THEN1 HF_SOLVE_TAC THEN
+   Cases_on `data_dta` THEN1 HF_SOLVE_TAC THEN
+   SIMP_TAC list_ss [REPLACE_ELEMENT_compute] THEN
+   HF_CONTINUE_TAC
+];
+
+val thm = holfoot_tac_verify_spec file2 NONE
+                [("copy", copy2_TAC)]

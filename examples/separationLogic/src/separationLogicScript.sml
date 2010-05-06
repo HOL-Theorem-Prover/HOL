@@ -66,11 +66,17 @@ val IS_SEPARATION_COMBINATOR_def = Define `
 (* Rewrites and lemmata about separation combinators and algebras             *)
 (* -------------------------------------------------------------------------- *)
 
-val IS_SEPARATION_ALGEBRA___IS_COMBINATOR = store_thm ("IS_SEPARATION_ALGEBRA___IS_COMBINATOR",
-   ``!f u. IS_SEPARATION_ALGEBRA f u ==> IS_SEPARATION_COMBINATOR f``,
+val IS_SEPARATION_ALGEBRA___COMBINATOR_DEF = store_thm ("IS_SEPARATION_ALGEBRA___COMBINATOR_DEF",
+   ``!f u. IS_SEPARATION_ALGEBRA f u <=> 
+           ((IS_SEPARATION_COMBINATOR f) /\ 
+            (!x. (f (SOME u) (SOME x) = SOME x)))``,
 
    SIMP_TAC std_ss [IS_SEPARATION_ALGEBRA_def, IS_SEPARATION_COMBINATOR_def] THEN
    METIS_TAC[]);
+
+val IS_SEPARATION_ALGEBRA___IS_COMBINATOR = store_thm ("IS_SEPARATION_ALGEBRA___IS_COMBINATOR",
+   ``!f u. IS_SEPARATION_ALGEBRA f u ==> IS_SEPARATION_COMBINATOR f``,
+   SIMP_TAC std_ss [IS_SEPARATION_ALGEBRA___COMBINATOR_DEF]);
 
 
 val IS_SEPARATION_COMBINATOR___NEURAL_ELEMENT_IDEMPOTENT =
@@ -1839,15 +1845,23 @@ METIS_TAC[EXTENSION]);
 val PRODUCT_SEPARATION_COMBINATOR___asl_emp = store_thm (
 "PRODUCT_SEPARATION_COMBINATOR___asl_emp",
 ``!f1 f2.
+asl_emp (PRODUCT_SEPARATION_COMBINATOR f1 f2) =
+(\s. FST s IN asl_emp f1 /\ SND s IN asl_emp f2)``,
+
+SIMP_TAC std_ss [asl_emp_def,
+   PRODUCT_SEPARATION_COMBINATOR_REWRITE,
+   IN_ABS, PAIR_EXISTS_THM, FUN_EQ_THM] THEN
+METIS_TAC[]);
+
+
+val PRODUCT_SEPARATION_COMBINATOR___asl_in_emp = store_thm (
+"PRODUCT_SEPARATION_COMBINATOR___asl_in_emp",
+``!f1 f2.
 (((asl_inl f1 f2 (asl_emp f1)) = asl_emp (PRODUCT_SEPARATION_COMBINATOR f1 f2)) /\
 ((asl_inr f1 f2 (asl_emp f2)) = asl_emp (PRODUCT_SEPARATION_COMBINATOR f1 f2)))``,
 
-
-SIMP_TAC std_ss [asl_inl_def, asl_emp_def, IN_ABS, LET_THM,
-   asl_inr_def] THEN
-SIMP_TAC std_ss [FUN_EQ_THM, PAIR_FORALL_THM,
-   PAIR_EXISTS_THM] THEN
-SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR_REWRITE] THEN
+SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR___asl_emp,
+   asl_inr_def, asl_inl_def] THEN
 METIS_TAC[]);
 
 

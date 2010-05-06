@@ -1836,8 +1836,8 @@ val asl_emp___VAR_RES_COMBINATOR = store_thm (
 ``!f. (asl_emp (VAR_RES_COMBINATOR f) =
         \s. (FST s = FEMPTY) /\ (SND s IN asl_emp f))``,
 SIMP_TAC std_ss [VAR_RES_COMBINATOR_def,
-   GSYM (hd (BODY_CONJUNCTS PRODUCT_SEPARATION_COMBINATOR___asl_emp)),
-   asl_inl_def, asl_emp___VAR_RES_STACK_COMBINE, IN_SING]);
+   PRODUCT_SEPARATION_COMBINATOR___asl_emp,
+   asl_emp___VAR_RES_STACK_COMBINE, IN_SING]);
 
 
 
@@ -2572,9 +2572,11 @@ val VAR_RES_IS_PURE_PROPOSITION___asl_emp = store_thm (
 "VAR_RES_IS_PURE_PROPOSITION___asl_emp",
 ``!f. IS_SEPARATION_COMBINATOR f ==>
       VAR_RES_IS_PURE_PROPOSITION f (asl_emp (VAR_RES_COMBINATOR f))``,
-SIMP_TAC std_ss [VAR_RES_IS_PURE_PROPOSITION_def,
-                 VAR_RES_COMBINATOR_def, GSYM PRODUCT_SEPARATION_COMBINATOR___asl_emp,
-                 asl_inl_def, IN_ABS]);
+SIMP_TAC std_ss [
+   VAR_RES_IS_PURE_PROPOSITION_def,
+   VAR_RES_COMBINATOR_def, 
+   PRODUCT_SEPARATION_COMBINATOR___asl_emp,
+   IN_ABS]);
 
 
 val VAR_RES_IS_PURE_PROPOSITION___asl_star =

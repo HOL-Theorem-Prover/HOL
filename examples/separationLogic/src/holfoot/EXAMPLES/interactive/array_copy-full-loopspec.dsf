@@ -1,0 +1,15 @@
+copy(r;a,n) [data_array(a,n,data)] {
+   local i, l, tmp;
+   l = r;
+   i = 0;
+   r = new(n) [dta];
+   loop_spec [i == #ic * 
+              data_array(a+#ic,n-#ic,data) *
+              array(r+#ic,n-#ic)] {
+   while (i < n) {
+      tmp = (a + i) -> dta;
+      (r + i) -> dta = tmp;
+      i = i + 1;
+   }} [data_array(a+#ic,n-#ic,data) *
+       data_array(r+#ic,n-#ic,data)]
+} [data_array(a,n,data) * data_array(r, n, data)] 

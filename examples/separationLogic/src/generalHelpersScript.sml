@@ -46,6 +46,16 @@ Cases_on `c` THEN Cases_on `d` THEN
 SIMP_TAC std_ss [BOOL_TO_NUM_def]);
 
 
+val IS_BOOL_TO_NUM_def = Define `
+  IS_BOOL_TO_NUM n = (n = 0:num) \/ (n = 1)`;
+
+val IS_BOOL_TO_NUM_REWRITE = store_thm ("IS_BOOL_TO_NUM_REWRITE",
+  ``(IS_BOOL_TO_NUM 0) /\ (IS_BOOL_TO_NUM 1) /\
+    (!n. ~(n = 0) ==> (IS_BOOL_TO_NUM n = (n = 1))) /\
+    (!n. ~(n = 1) ==> (IS_BOOL_TO_NUM n = (n = 0)))``,
+SIMP_TAC std_ss [IS_BOOL_TO_NUM_def]);
+
+
 (******************************************************************
   BAG
  ******************************************************************)
