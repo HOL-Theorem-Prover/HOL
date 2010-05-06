@@ -249,6 +249,7 @@ local
     of "\\" => token_string "Backslash"
      | "{"  => token_string "Leftbrace"
      | "}"  => token_string "Rightbrace"
+     | "$"  => "\\$"
      | "α" => greek "alpha"
      | "β" => greek "beta"
      | "γ" => greek "gamma"
@@ -321,9 +322,11 @@ local
           val (core,digits) = splitr Char.isDigit pfx
           val dsz = size digits
           val digitstr = if 0 < dsz andalso dsz <= 2 then
-                           "\\sb{" ^ string digits ^ "}"
+                           "\\sb{\\mathrm{" ^ string digits ^ "}}"
                          else string digits
-          val core_s = UTF8.translate (fn "_" => "\\HOLTokenUnderscore{}" | s => s) (string core);
+          val core_s = UTF8.translate (fn "_" => "\\HOLTokenUnderscore{}"
+                                        | s => s)
+                                      (string core)
         in
           core_s ^ digitstr ^ prime_str
         end
@@ -355,6 +358,9 @@ end;
 (* pp_datatype_theorem : ppstream -> thm -> unit                             *)
 (* Pretty-printer for datatype theorems                                      *)
 (* ------------------------------------------------------------------------- *)
+
+val print_datatype_names_as_types = ref false
+val _ = register_btrace ("EmitTeX: print datatype names as types", print_datatype_names_as_types)
 
 fun pp_datatype_theorem backend ostrm thm =
 let val {add_string,add_break,begin_block,add_newline,end_block,...} =
@@ -401,8 +407,14 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
             all (fn x => fst (dest_type x) = typ) l
           end
 
+    fun pp_type_name n =
+      let val l = strip_type (type_of n)
+      in
+        TP (last (strip_type (hd l)))
+      end
+
     fun pp_constructor_spec (n, l) =
-          (PT n; BR(1,2);
+          (if !print_datatype_names_as_types then pp_type_name n else PT n; BR(1,2);
            BB (if enumerated_type n then PP.INCONSISTENT else PP.CONSISTENT) 0;
              S "= ";
              app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))

@@ -19,6 +19,9 @@ val _ = new_theory "arm";
 (*  The ARM State Space                                                      *)
 (* ------------------------------------------------------------------------- *)
 
+val _ = set_fixity "%%" (Infixl 500);
+val _ = overload_on ("%%", Term`$fcp_index`);
+
 val _ = Hol_datatype `register =
  r0     | r1     | r2      | r3      | r4      | r5      | r6      | r7  |
  r8     | r9     | r10     | r11     | r12     | r13     | r14     | r15 |

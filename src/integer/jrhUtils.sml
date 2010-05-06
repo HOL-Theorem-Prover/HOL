@@ -90,7 +90,8 @@ fun IMP_SUBST_TAC th (asl,w) =
             val pat = subst[l |-> gv] w
         in
           ([(asl,a), (asl,subst[gv |-> r] pat)],
-           fn [t1,t2] => SUBST[gv |-> SYM(MP th1 t1)] pat t2)
+           fn [t1,t2] => SUBST[gv |-> SYM(MP th1 t1)] pat t2
+            | _ => raise ERR "IMP_SUBST_TAC" "")
        end;
 
 (*---------------------------------------------------------------------------*)

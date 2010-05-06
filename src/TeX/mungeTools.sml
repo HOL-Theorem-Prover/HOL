@@ -4,11 +4,13 @@ struct
 open Lib Feedback HolKernel Parse boolLib
 
 datatype command = Theorem | Term | Type
-datatype opt = Turnstile | Case | TT | Def | TypeOf | TermThm
+datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Indent of int | NoSpec
              | Inst of string * string
              | NoTurnstile | Width of int
              | AllTT | ShowTypes
+             | Conj of int
+             | Rule | StackedRule
 
 val numErrors = ref 0
 type posn = int * int
@@ -32,11 +34,14 @@ fun stringOpt pos s =
   | "tt" => SOME TT
   | "alltt" => SOME AllTT
   | "def" => SOME Def
+  | "spaceddef" => SOME SpacedDef
   | "of" => SOME TypeOf
   | "K" => SOME TermThm
   | "nosp" => SOME NoSpec
   | "nostile" => SOME NoTurnstile
   | "showtypes" => SOME ShowTypes
+  | "rule" => SOME Rule
+  | "stackedrule" => SOME StackedRule
   | _ => let
     in
       if String.isPrefix ">>" s then let
@@ -56,6 +61,15 @@ fun stringOpt pos s =
           case Int.fromString numpart_s of
             NONE => (warn(pos, s ^ " is not a valid option"); NONE)
           | SOME i => SOME (Width i)
+        end
+      else if String.isPrefix "conj" s then let
+          val numpart_s = String.extract(s,4,NONE)
+        in
+          case Int.fromString numpart_s of
+            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+          | SOME i => if i <= 0 then
+                        (warn(pos, "Negative/zero conj specs illegal"); NONE)
+                      else SOME (Conj i)
         end
       else let
           open Substring
@@ -146,6 +160,8 @@ fun optset_indent s =
       NONE => ""
     | SOME i => spaces i
 
+fun optset_conjnum s = get_first (fn Conj i => SOME i | _ => NONE) s
+
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)
 
@@ -168,41 +184,51 @@ fun mkinst loc opts tm = let
     val ty = Binarymap.find(vtypemap, nm2)
   in
     (mk_var(nm2,ty) |-> mk_var(nm1,ty)) :: acc
-  end handle Binarymap.NotFound =>
-             (warn (loc, "Variable "^nm2^" does not appear in HOL object");
-              acc)
+  end handle Binarymap.NotFound => acc
 in
-  foldr foldthis [] insts
+  (insts, foldr foldthis [] insts)
 end
 
-fun do_thminsts loc opts th = let
-  val (bvs, c) = strip_forall (concl th)
-  val theta = mkinst loc opts c
+fun mk_s2smap pairs = let
+  fun foldthis ((nm1,nm2), acc) = Binarymap.insert(acc, nm2, nm1)
+  val m = Binarymap.mkDict String.compare
 in
-  if null theta then th
-  else let
-      val th' = INST theta (SPEC_ALL th)
-      val bvs' = map (Term.subst theta) bvs
-    in
-      GENL bvs' th'
-    end
+   List.foldl foldthis m pairs
+end
+
+fun rename m t = let
+  val (v0, _) = dest_abs t
+  val (vnm, vty) = dest_var v0
+in
+  case Binarymap.peek (m, vnm) of
+    NONE => NO_CONV t
+  | SOME newname => ALPHA_CONV (mk_var(newname,vty)) t
+end
+
+fun depth1_conv c t =
+    (TRY_CONV c THENC TRY_CONV (SUB_CONV (depth1_conv c))) t
+
+fun do_thminsts loc opts th = let
+  val (insts, theta) = mkinst loc opts (concl th)
+  val m = mk_s2smap insts
+  val th = if null theta then th else INST theta th
+in
+  CONV_RULE (depth1_conv (rename m)) th
 end
 
 fun do_tminsts loc opts tm = let
-  val (bvs, c) = strip_forall tm
-  val theta = mkinst loc opts c
+  val (insts, theta) = mkinst loc opts tm
+  val tm = if null theta then tm else Term.subst theta tm
+  val m = mk_s2smap insts
 in
-  if null theta then tm
-  else let
-      val c' = Term.subst theta c
-      val bvs' = map (Term.subst theta) bvs
-    in
-      list_mk_forall (bvs', c')
-    end
+  if null insts then tm
+  else
+    rhs (concl (QCONV (depth1_conv (rename m)) tm))
 end
 
 local
   open EmitTeX PP
+  val _ = set_trace "EmitTeX: print datatype names as types" 1
   exception BadSpec
   fun getThm spec = let
     val [theory,theorem] = String.tokens (isChar #".") spec
@@ -222,7 +248,46 @@ in
     val {argpos = (argline, argcpos), command, options = opts, ...} = argument
     val alltt = OptSet.has AllTT opts orelse
                 (command = Theorem andalso not (OptSet.has TT opts))
-    val () = if not alltt then  add_string pps "\\mbox{\\textup{\\texttt{"
+    val rulep = OptSet.has Rule opts orelse OptSet.has StackedRule opts
+    fun rule_print printer term = let
+      val (hs, c) = let
+        val (h, c) = dest_imp term
+      in
+        (strip_conj h, c)
+      end handle HOL_ERR _ => ([], term)
+      open Portable
+      fun addz s = add_stringsz pps (s, 0)
+      val (sep,hypbegin,hypend) =
+          if OptSet.has StackedRule opts then
+            ((fn () => addz "\\\\"),
+             (fn () => addz "\\begin{array}{c}"),
+             (fn () => addz "\\end{array}"))
+          else
+            ((fn () => addz "&"), (fn () => ()), (fn () => ()))
+    in
+      addz "\\infer{\\HOLinline{";
+      printer c;
+      addz "}}{";
+      hypbegin();
+      pr_list (fn t => (addz "\\HOLinline{";
+                        printer t;
+                        addz "}"))
+              sep
+              (fn () => ()) hs;
+      hypend();
+      addz "}"
+    end
+
+    fun stdtermprint t = let
+      val baseprint = raw_pp_term_as_tex overrides pps
+      val printer = if OptSet.has ShowTypes opts then
+                      trace ("types", 1) baseprint
+                    else trace ("types", 0) baseprint
+    in
+      printer t
+    end
+
+    val () = if not alltt andalso not rulep then add_string pps "\\HOLinline{"
              else ()
     val parse_start = " (*#loc "^ Int.toString argline ^ " " ^
                       Int.toString argcpos ^"*)"
@@ -231,9 +296,25 @@ in
       case command of
         Theorem => let
           val thm = do_thminsts pos opts (getThm spec)
+          val thm =
+              if OptSet.has NoSpec opts then thm
+              else
+                case optset_conjnum opts of
+                  NONE => SPEC_ALL thm
+                | SOME i => List.nth(map SPEC_ALL (CONJUNCTS (SPEC_ALL thm)),
+                                     i - 1)
+                  handle Subscript =>
+                         (warn(pos,
+                               "Theorem "^spec^
+                               " does not have a conjunct #" ^
+                               Int.toString i);
+                          SPEC_ALL thm)
           val _ = add_string pps (optset_indent opts)
         in
-          if OptSet.has Def opts then let
+          if OptSet.has Def opts orelse OptSet.has SpacedDef opts then let
+              val newline = if OptSet.has SpacedDef opts then
+                              (fn pps => (add_newline pps; add_newline pps))
+                            else add_newline
               val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
               val printfn = let
                 val base = raw_pp_term_as_tex overrides
@@ -247,11 +328,12 @@ in
               block_list pps
                          (fn pps => begin_block pps INCONSISTENT 0)
                          printfn
-                         add_newline
+                         newline
                          end_block
                          lines;
               end_block pps
             end
+          else if rulep then rule_print stdtermprint (concl thm)
           else let
               val base = raw_pp_theorem_as_tex overrides pps
               val printer =
@@ -262,7 +344,7 @@ in
                   if OptSet.has ShowTypes opts then trace ("types", 1) printer
                   else trace ("types", 0) printer
             in
-              printer (if OptSet.has NoSpec opts then thm else SPEC_ALL thm)
+              printer thm
             end
         end
       | Term => let
@@ -277,8 +359,9 @@ in
                         in
                           Preterm.to_term ptm |> do_tminsts pos opts
                         end
-                     else Parse.Term [QQ parse_start, QQ spec]
-                            |> do_tminsts pos opts
+                     else
+                         Parse.Term [QQ parse_start, QQ spec]
+                                    |> do_tminsts pos opts
           val () = add_string pps (optset_indent opts)
           val () = if OptSet.has Turnstile opts
                       then let in
@@ -286,12 +369,8 @@ in
                         add_string pps " "
                       end
                    else ()
-          val baseprint = raw_pp_term_as_tex overrides pps
-          val printer = if OptSet.has ShowTypes opts then
-                          trace ("types", 1) baseprint
-                        else trace ("types", 0) baseprint
         in
-           printer term
+          if rulep then rule_print stdtermprint term else stdtermprint term
         end
       | Type => let
           val typ = if OptSet.has TypeOf opts
@@ -301,7 +380,7 @@ in
           add_string pps (optset_indent opts);
           raw_pp_type_as_tex overrides pps typ
         end
-    val () = if not alltt then add_string pps "}}}" else ()
+    val () = if not alltt andalso not rulep then add_string pps "}" else ()
   in () end handle
       BadSpec => warn (pos, spec ^ " does not specify a theorem")
     | HOL_ERR e => warn (pos, !Feedback.ERR_to_string e)

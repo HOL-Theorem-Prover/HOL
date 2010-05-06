@@ -93,7 +93,7 @@ fu! HOLGoal()
   while search(',\_s*)\%$','bW')
     silent keepjumps normal vG$"_dG$a)
   endw
-  keepjumps normal gg0ig(
+  keepjumps normal gg0iproofManagerLib.g(
 endf
 
 let s:stripStart     = ')\|\]\|\['

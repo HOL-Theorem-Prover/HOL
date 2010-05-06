@@ -52,10 +52,16 @@ fun DIFF_CONV tm =
                 (fst(strip_comb tm2),th3)
               end
         end
-      val [cths, bths] = map (map make_assoc) [comths, !basic_diffs]
+      val (cths, bths) = case map (map make_assoc) [comths, !basic_diffs]
+                         of [cths, bths] => (cths, bths)
+                          | _ => raise ERR "DIFF_CONV" ""
       fun ICONJ th1 th2 =
-        let val [th1a, th2a] = map (SPEC xv) [th1, th2] in
-        GEN xv (tryfind (C MATCH_MP (CONJ th1a th2a)) iths) end
+        let val (th1a, th2a) = case map (SPEC xv) [th1, th2]
+                               of [th1a, th2a] => (th1a, th2a)
+                                | _ => raise ERR "DIFF_CONV" ""
+        in
+          GEN xv (tryfind (C MATCH_MP (CONJ th1a th2a)) iths)
+        end
       fun diff tm =
         let val (v,bod) = dest_abs tm in
             if not (free_in v bod) then

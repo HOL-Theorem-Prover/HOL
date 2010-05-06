@@ -9,13 +9,18 @@
    label = "a short description of the type from external file",
    force_index,
    short-index,
-   content = ``:bool``
+   content = ``:bool``   
 }
 
 
 @Thm{arithmetic.LESS_SUC_EQ_COR,
    force-index,
-   long-index
+   long-index,
+   latex = "My latex code for \texttt{LESS_SUC_EQ_COR}"
+}
+
+@Thm{arithmetic.LESS_EQ_0,
+   force-index, long-index
 }
 
 @Thm{thm_1,
@@ -27,5 +32,11 @@
               with \textbf{formats} and newlines",
    force-index,
    long-index
+}
+
+@Theorems{
+   ids = [arithmetic.LESS_ADD_SUC,
+          arithmetic.LESS_EQ*],
+   force-index
 }
 

@@ -154,7 +154,7 @@ val NUM_ADD_CONV = ADD_CONV;
 val mk_numeral = mk_numeral o toNat
 val dest_numeral = fromNat o dest_numeral
 
-val amp = Term`(&)`;
+val amp = Term`(&) :num -> real`;
 
 val is_numconst =
  fn tm =>
@@ -297,7 +297,7 @@ val (REAL_INT_LE_CONV,REAL_INT_LT_CONV,
       GEN_REWRITE_CONV I [nth]
     val [pth_le1, pth_le2a, pth_le2b, pth_le3] = (CONJUNCTS o prove)
       (Term`(~(&m) <= &n = T) /\
-            (&m <= &n = m <= n) /\
+            (&m <= (&n : real) = m <= n) /\
             (~(&m) <= ~(&n) = n <= m) /\
             (&m <= ~(&n) = (m = 0) /\ (n = 0))`,
       REWRITE_TAC[REAL_LE_NEG2] THEN
@@ -310,7 +310,7 @@ val (REAL_INT_LE_CONV,REAL_INT_LT_CONV,
       GEN_REWRITE_CONV I [pth_le3] THENC NUM2_EQ_CONV]
     val [pth_lt1, pth_lt2a, pth_lt2b, pth_lt3] = (CONJUNCTS o prove)
       (Term`(&m < ~(&n) = F) /\
-            (&m < &n = m < n) /\
+            (&m < (&n :real) = m < n) /\
             (~(&m) < ~(&n) = n < m) /\
             (~(&m) < &n = ~((m = 0) /\ (n = 0)))`,
       REWRITE_TAC[pth_le1, pth_le2a, pth_le2b, pth_le3,
@@ -322,7 +322,7 @@ val (REAL_INT_LE_CONV,REAL_INT_LT_CONV,
       GEN_REWRITE_CONV I [pth_lt3] THENC NUM2_NE_CONV]
     val [pth_ge1, pth_ge2a, pth_ge2b, pth_ge3] = (CONJUNCTS o prove)
       (Term`(&m >= ~(&n) = T) /\
-            (&m >= &n = n <= m) /\
+            (&m >= (&n :real) = n <= m) /\
             (~(&m) >= ~(&n) = m <= n) /\
             (~(&m) >= &n = (m = 0) /\ (n = 0))`,
       REWRITE_TAC[pth_le1, pth_le2a, pth_le2b, pth_le3, real_ge] THEN
@@ -333,7 +333,7 @@ val (REAL_INT_LE_CONV,REAL_INT_LT_CONV,
       GEN_REWRITE_CONV I [pth_ge3] THENC NUM2_EQ_CONV]
     val [pth_gt1, pth_gt2a, pth_gt2b, pth_gt3] = (CONJUNCTS o prove)
       (Term`(~(&m) > &n = F) /\
-            (&m > &n = n < m) /\
+            (&m > (&n :real) = n < m) /\
             (~(&m) > ~(&n) = m < n) /\
             (&m > ~(&n) = ~((m = 0) /\ (n = 0)))`,
       REWRITE_TAC[pth_lt1, pth_lt2a, pth_lt2b, pth_lt3, real_gt] THEN
@@ -343,7 +343,7 @@ val (REAL_INT_LE_CONV,REAL_INT_LT_CONV,
       GEN_REWRITE_CONV I [pth_gt2a, pth_gt2b] THENC NUM_LT_CONV,
       GEN_REWRITE_CONV I [pth_gt3] THENC NUM2_NE_CONV]
     val [pth_eq1a, pth_eq1b, pth_eq2a, pth_eq2b] = (CONJUNCTS o prove)
-      (Term`((&m = &n) = (m = n)) /\
+      (Term`((&m = (&n :real)) = (m = n)) /\
             ((~(&m) = ~(&n)) = (m = n)) /\
             ((~(&m) = &n) = (m = 0) /\ (n = 0)) /\
             ((&m = ~(&n)) = (m = 0) /\ (n = 0))`,
@@ -375,16 +375,16 @@ val REAL_INT_NEG_CONV =
 val REAL_INT_MUL_CONV =
   let
     val pth0 = prove
-      (``(&0 * &x = &0) /\
+      (``(&0 * (&x :real) = &0) /\
          (&0 * ~(&x) = &0) /\
-         (&x * &0 = &0) /\
-         (~(&x) * &0 = &0)``,
+         ((&x :real) * &0 = &0) /\
+         (~(&x :real) * &0 = &0)``,
       REWRITE_TAC[REAL_MUL_LZERO, REAL_MUL_RZERO])
     val (pth1,pth2) = (CONJ_PAIR o prove)
-      (``((&m * &n = &(m * n)) /\
-         (~(&m) * ~(&n) = &(m * n))) /\
-         ((~(&m) * &n = ~(&(m * n))) /\
-         (&m * ~(&n) = ~(&(m * n))))``,
+      (``((&m * &n = &(m * n) :real) /\
+         (~(&m) * ~(&n) = &(m * n) :real)) /\
+         ((~(&m) * &n = ~(&(m * n) :real)) /\
+         (&m * ~(&n) = ~(&(m * n) :real)))``,
       REWRITE_TAC[REAL_MUL_LNEG, REAL_MUL_RNEG, REAL_NEG_NEG] THEN
       REWRITE_TAC[REAL_OF_NUM_MUL])
   in
@@ -463,7 +463,7 @@ val REAL_PROD_NORM_CONV =
 val REAL_INT_ADD_CONV =
   let
     val neg_tm = ``$~ :real->real``
-    val amp_tm = ``(&)``
+    val amp_tm = ``(&) :num -> real``
     val add_tm = ``$+ : real -> real -> real``
     val dest = liteLib.dest_binop add_tm
     val m_tm = ``m:num`` and n_tm = ``n:num``
@@ -472,12 +472,12 @@ val REAL_INT_ADD_CONV =
          (&m + ~(&m) = &0)``,
       REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_RINV])
     val [pth1, pth2, pth3, pth4, pth5, pth6] = (CONJUNCTS o prove)
-      (``(~(&m) + ~(&n) = ~(&(m + n))) /\
+      (``(~(&m) + ~(&n :real) = ~(&(m + n))) /\
          (~(&m) + &(m + n) = &n) /\
          (~(&(m + n)) + &m = ~(&n)) /\
          (&(m + n) + ~(&m) = &n) /\
          (&m + ~(&(m + n)) = ~(&n)) /\
-         (&m + &n = &(m + n))``,
+         (&m + &n = &(m + n) :real)``,
       REWRITE_TAC[GSYM REAL_ADD, REAL_NEG_ADD] THEN
       REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_LID] THEN
       REWRITE_TAC[REAL_ADD_RINV, REAL_ADD_LID] THEN
@@ -574,10 +574,10 @@ val REAL_INT_ADD_CONV =
 val LINEAR_ADD =
   let
     val pth0a = prove
-      (``&0 + x = x``,
+      (``&0 + x = x :real``,
       REWRITE_TAC[REAL_ADD_LID])
     val pth0b = prove
-      (``x + &0 = x``,
+      (``x + &0 = x :real``,
       REWRITE_TAC[REAL_ADD_RID])
     val x_tm = ``x:real``
     val [pth1, pth2, pth3, pth4, pth5, pth6] = (CONJUNCTS o prove)
@@ -609,7 +609,7 @@ val LINEAR_ADD =
     val add_tm = ``$+ :real->real->real``
     val dest = liteLib.dest_binop add_tm
     val mk = mk_binop add_tm
-    val zero_tm = ``&0``
+    val zero_tm = ``&0 :real``
     val COEFF_CONV =
       QCONV (REWR_CONV (GSYM REAL_ADD_RDISTRIB) THENC
              LAND_CONV REAL_INT_ADD_CONV)
@@ -784,7 +784,7 @@ val REAL_SUM_NORM_CONV =
                      REWRITE_TAC[real_sub, GSYM pth1])
     val ptm = ``$~ :real->real``
     val stm = ``$+ :real->real->real``
-    val one_tm = ``&1``
+    val one_tm = ``&1 :real``
     val binops_add = liteLib.binops stm
     val list_mk_binop_add = list_mk_binop stm
     fun prelim_conv t =
@@ -845,16 +845,16 @@ val REAL_NEGATE_CANON =
       REWRITE_TAC[REAL_ADD_RID, REAL_ADD_LID] THEN
       CONV_TAC tautLib.TAUT_CONV)
     val pth2 = prove
-      (``~((~a) * x + z) = a * x + ~z``,
+      (``~((~a) * x + z :real) = a * x + ~z``,
       REWRITE_TAC[GSYM REAL_MUL_LNEG, REAL_NEG_ADD, REAL_NEG_NEG])
     val pth3 = prove
-      (``~(a * x + z) = ~a * x + ~z``,
+      (``~(a * x + z :real) = ~a * x + ~z``,
       REWRITE_TAC[REAL_NEG_ADD, GSYM REAL_MUL_LNEG])
     val pth4 = prove
-      (``~(~a * x) = a * x``,
+      (``~(~a * x :real) = a * x``,
       REWRITE_TAC[REAL_MUL_LNEG, REAL_NEG_NEG])
     val pth5 = prove
-      (``~(a * x) = ~a * x``,
+      (``~(a * x :real) = ~a * x``,
       REWRITE_TAC[REAL_MUL_LNEG])
     val rewr1_CONV = FIRST_CONV (map REWR_CONV [pth2, pth3])
     val rewr2_CONV = FIRST_CONV (map REWR_CONV [pth4, pth5])
@@ -1165,11 +1165,11 @@ fun elim ineqs =
 val LINEAR_MULT =
   let
     val mult_tm = ``$* :real->real->real``
-    val zero_tm = ``&0``
+    val zero_tm = ``&0 :real``
     val x_tm = ``x:real``
     val add_tm = ``$+ :real->real->real``
     val pth = prove
-      (``x * &0 = &0``,
+      (``x * &0 = &0 :real``,
       REWRITE_TAC[REAL_MUL_RZERO])
     val conv1 = GEN_REWRITE_CONV TOP_SWEEP_CONV [REAL_ADD_LDISTRIB]
     val conv2 = liteLib.DEPTH_BINOP_CONV add_tm
@@ -1218,15 +1218,15 @@ val TRANSLATE_PROOF =
         val a_tm = ``a:real``
         val b_tm = ``b:real``
         val pths = (CONJUNCTS o prove)
-          (``((&0 = a) /\ (&0 = b) ==> (&0 = a + b)) /\
-             ((&0 = a) /\ (&0 <= b) ==> (&0 <= a + b)) /\
-             ((&0 = a) /\ (&0 < b) ==> (&0 < a + b)) /\
-             ((&0 <= a) /\ (&0 = b) ==> (&0 <= a + b)) /\
-             ((&0 <= a) /\ (&0 <= b) ==> (&0 <= a + b)) /\
-             ((&0 <= a) /\ (&0 < b) ==> (&0 < a + b)) /\
-             ((&0 < a) /\ (&0 = b) ==> (&0 < a + b)) /\
-             ((&0 < a) /\ (&0 <= b) ==> (&0 < a + b)) /\
-             ((&0 < a) /\ (&0 < b) ==> (&0 < a + b))``,
+          (``((&0 = a) /\ (&0 = b) ==> (&0 = a + b :real)) /\
+             ((&0 = a) /\ (&0 <= b) ==> (&0 <= a + b :real)) /\
+             ((&0 = a) /\ (&0 < b) ==> (&0 < a + b :real)) /\
+             ((&0 <= a) /\ (&0 = b) ==> (&0 <= a + b :real)) /\
+             ((&0 <= a) /\ (&0 <= b) ==> (&0 <= a + b :real)) /\
+             ((&0 <= a) /\ (&0 < b) ==> (&0 < a + b :real)) /\
+             ((&0 < a) /\ (&0 = b) ==> (&0 < a + b :real)) /\
+             ((&0 < a) /\ (&0 <= b) ==> (&0 < a + b :real)) /\
+             ((&0 < a) /\ (&0 < b) ==> (&0 < a + b :real))``,
           CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
           REPEAT STRIP_TAC THEN
           ASM_REWRITE_TAC[REAL_ADD_LID, REAL_ADD_RID] THENL
@@ -1253,9 +1253,9 @@ val TRANSLATE_PROOF =
     val MULTIPLY_INEQS =
       let
         val pths = (CONJUNCTS o prove)
-          (``((&0 = y) ==> (&0 = x * y)) /\
-             (&0 <= y ==> &0 <= x ==> &0 <= x * y) /\
-             (&0 < y ==> &0 < x ==> &0 < x * y)``,
+          (``((&0 = y) ==> (&0 = x * y :real)) /\
+             (&0 <= y ==> &0 <= x ==> &0 <= x * y :real) /\
+             (&0 < y ==> &0 < x ==> &0 < x * y :real)``,
           CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
           REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[REAL_MUL_RZERO] THENL
           [MATCH_MP_TAC REAL_LE_MUL,
@@ -1316,10 +1316,11 @@ val TRANSLATE_PROOF =
 
 val REAL_SIMPLE_ARITH_REFUTER =
   let
-    val trivthm = prove(``&0 < &0 = F``, REWRITE_TAC[REAL_LE_REFL, real_lt])
+    val trivthm = prove(``&0 < &0 :real = F``,
+                    REWRITE_TAC[REAL_LE_REFL, real_lt])
     val add_tm = ``$+ :real->real->real``
-    val one_tm = ``&1``
-    val zero_tm = ``&0``
+    val one_tm = ``&1 :real``
+    val zero_tm = ``&0 :real``
     val less_tm = ``$< :real->real->bool``
     val false_tm = ``F``
     fun fixup_atom th =
@@ -1406,7 +1407,7 @@ val PURE_REAL_ARITH_TAC =
            REWRITE_TAC[GSYM REAL_LE_RNEG, REAL_NEG_NEG] THEN
            REWRITE_TAC[GSYM REAL_LE_ANTISYM, GSYM REAL_LE_LNEG,
                        GSYM REAL_LE_RNEG, REAL_LE_NEG2, REAL_NEG_NEG])
-        val zero_tm = ``&0``
+        val zero_tm = ``&0 :real``
       in
         let
           val raw_CONV = GEN_REWRITE_CONV I [pth] THENC
@@ -1455,10 +1456,11 @@ val PURE_REAL_ARITH_TAC =
                     CONJ_TAC THENL [ACCEPT_TAC th, ALL_TAC]) THEN
                     ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
                     MATCH_MP_TAC REAL_LE_LADD_IMP THEN
-                    MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC ``&0`` THEN
+                    MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC ``&0 :real`` THEN
                     REWRITE_TAC[REAL_LE_LNEG, REAL_LE_RNEG] THEN
                     ASM_REWRITE_TAC[REAL_ADD_RID, REAL_ADD_LID] THEN
-                    MP_TAC (SPEC(Term`&0`) (SPEC (Term`x:real`) REAL_LE_TOTAL))
+                    MP_TAC (SPEC(Term`&0 :real`) (SPEC (Term`x:real`)
+                           REAL_LE_TOTAL))
                     THEN ASM_REWRITE_TAC[])
         val ABS_ELIM_RULE = GEN_REWRITE_RULE I [ABS_ELIM_THM]
         val NEG_DISTRIB_RULE =
@@ -1475,7 +1477,7 @@ val PURE_REAL_ARITH_TAC =
                         REWRITE_TAC[real_abs] THEN COND_CASES_TAC
                         THEN REWRITE_TAC[] THEN
                         REWRITE_TAC[REAL_LE_RNEG, REAL_ADD_LID] THEN
-                        MP_TAC (SPEC(Term`&0`)
+                        MP_TAC (SPEC(Term`&0 :real`)
                                   (SPEC (Term`x:real`) REAL_LE_TOTAL))
                         THEN ASM_REWRITE_TAC[])
         val x_tm = ``x:real``

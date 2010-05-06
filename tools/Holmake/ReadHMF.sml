@@ -11,17 +11,18 @@ fun readline lnum strm = let
       | SOME "" => if null acc then NONE
                    else SOME (lnum + 1, String.concat (List.rev acc))
       | SOME "\n" => SOME (lnum + 1, String.concat (List.rev acc))
-      | SOME s =>
-        if String.sub(s, size s - 2) = #"\\" then
-          recurse (lnum + 1,
-                   " " :: String.extract(s, 0, SOME (size s - 2)) :: acc)
-                  (TextIO.inputLine strm)
-        else
-          SOME
-            (lnum + 1,
-             String.concat
-               (List.rev (String.extract(s, 0, SOME (size s - 1)) ::
-                          acc)))
+      | SOME s => let 
+          val s0 = if String.sub(s, size s - 2) = #"\r" then 
+                     String.extract(s, 0, SOME (size s - 2))
+                   else String.extract(s, 0, SOME (size s - 1))
+        in
+          if String.sub(s0, size s0 - 1) = #"\\" then
+            recurse (lnum + 1,
+                     " " :: String.extract(s0, 0, SOME (size s0 - 1)) :: acc)
+                    (TextIO.inputLine strm)
+          else
+            SOME (lnum + 1, String.concat (List.rev (s0 :: acc)))
+        end
 in
   recurse (lnum, []) (TextIO.inputLine strm)
 end
@@ -103,10 +104,11 @@ in
       else let
           val c1 = String.sub(s',0)
         in
-          if c1 = #"\t" then error b "starts an unattached command"
+          if c1 = #"\t" then error b "TAB starts an unattached command"
           else
             case first_special s' of
-                NONE => error b "Unrecognised"
+                NONE => error b ("Unrecognised character: \""^
+                                 String.toString (str c1) ^ "\"")
               | SOME #"=" => (advance b, DEFN (strip_trailing_comment s))
               | SOME #":" => read_commands
                                (advance b)

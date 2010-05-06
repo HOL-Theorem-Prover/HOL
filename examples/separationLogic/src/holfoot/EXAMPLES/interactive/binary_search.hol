@@ -49,6 +49,50 @@ ASM_SIMP_TAC arith_ss [transitive_def] THEN
 DECIDE_TAC);
 
 
+val TAKE_ID = prove (
+``(!n l. (FIRSTN n l = l) = (n >= LENGTH l))``,
+Induct_on `l` THEN 
+Cases_on `n` THEN (
+   ASM_SIMP_TAC list_ss []
+));
+
+
+val DROP_NIL = prove (
+``(!n l. (BUTFIRSTN n l = []) = (n >= LENGTH l))``,
+Induct_on `l` THEN 
+Cases_on `n` THEN (
+   ASM_SIMP_TAC list_ss []
+));
+
+
+val SORTED_TAKE_DROP = prove (
+``(!R (l:'a list) n. SORTED R l ==> SORTED R (BUTFIRSTN n l)) /\
+  (!R (l:'a list) n. SORTED R l ==> SORTED R (FIRSTN n l))``,
+
+SIMP_TAC std_ss [GSYM FORALL_AND_THM, GSYM IMP_CONJ_THM] THEN
+GEN_TAC THEN
+Induct_on `l` THEN (
+   SIMP_TAC list_ss [SORTED_DEF]
+) THEN
+Cases_on `n` THEN (
+   SIMP_TAC list_ss [SORTED_DEF]
+) THEN
+GEN_TAC THEN STRIP_TAC THEN
+`SORTED R l` by ALL_TAC THEN1 (
+   Cases_on `l` THEN
+   FULL_SIMP_TAC std_ss [SORTED_DEF]
+) THEN
+FULL_SIMP_TAC std_ss [] THEN
+
+Cases_on `n'` THEN1 (
+   SIMP_TAC list_ss [SORTED_DEF]
+) THEN
+Cases_on `l` THEN (
+   FULL_SIMP_TAC list_ss [SORTED_DEF]
+) THEN
+Q.PAT_ASSUM `!n. X n` (MP_TAC o Q.SPEC `SUC n`) THEN
+SIMP_TAC list_ss []);
+
 
       
 
@@ -59,7 +103,7 @@ DECIDE_TAC);
 (*turn yices on*)
 set_trace "holfoot use Yices" 1;
 (*verbose off*)
-set_trace "HolSmtLib" 1;
+set_trace "HolSmtLib" 0;
 
 val file = concat [examplesDir, "/automatic/binary_search-shape.dsf"];
 val thm = holfoot_auto_verify_spec file
@@ -67,7 +111,7 @@ val thm = holfoot_auto_verify_spec file
 
 (* see what happens without yices *)
 
-set_trace "holfoot use Yices" 0; (*turn yices off*)
+val _ = set_trace "holfoot use Yices" 0; (*turn yices off*)
 val thm = holfoot_auto_verify_spec file
 
 				   
@@ -76,63 +120,116 @@ val thm = holfoot_auto_verify_spec file
 (* Verify the fully functional spec now                                       *)
 (******************************************************************************)
 
-set_trace "holfoot use Yices" 1; (*turn yices on again*)
+val _ = set_trace "holfoot use Yices" 0; (*turn yices off again*)
 
+val file_full = concat [examplesDir, "/interactive/binary_search-full.dsf"];
 
-val file = concat [examplesDir, "/interactive/binary_search-full.dsf"];
-
-(* holfoot_set_goal file *)
-val binsearch_TAC = 
+(* holfoot_set_goal file_full *)
+val binsearch_full_TAC = 
 HF_SOLVE_TAC THEN
 REPEAT STRIP_TAC THENL [
+   HF_VC_TAC THEN YICES_TAC,
+
    HF_VC_TAC THEN
    DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
    SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
    REPEAT STRIP_TAC THEN
-   EQ_TAC THEN SIMP_TAC arith_ss [] THEN
+   EQ_TAC THEN ASM_SIMP_TAC arith_ss [] THEN
    REPEAT STRIP_TAC THEN
-   MP_TAC (Q.SPECL [`data'`, `lc + ((rc - lc) DIV 2)`, `n`] SORTED_EL_LESS_EQ) THEN
-   ASM_SIMP_TAC std_ss [] THEN
-   YICES_TAC,
+   MP_TAC (Q.SPECL [`data'`, `m_const`, `n`] SORTED_EL_LESS_EQ) THEN
+   ASM_SIMP_TAC arith_ss [],
 
 
    HF_VC_TAC THEN
-   Tactical.REVERSE (REPEAT STRIP_TAC) THEN1 (
-      YICES_TAC
-   ) THEN
    DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
    SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
    REPEAT STRIP_TAC THEN
-   Tactical.REVERSE EQ_TAC THEN1 YICES_TAC THEN
+   EQ_TAC THEN ASM_SIMP_TAC arith_ss [] THEN
    REPEAT STRIP_TAC THEN
-   MP_TAC (Q.SPECL [`data'`, `n`, `lc + ((rc - lc) DIV 2)`] SORTED_EL_LESS_EQ) THEN
-   ASM_SIMP_TAC std_ss [] THEN
-   YICES_TAC,
+   MP_TAC (Q.SPECL [`data'`, `n`, `m_const`] SORTED_EL_LESS_EQ) THEN
+   ASM_SIMP_TAC arith_ss [],
+
 
    HF_VC_TAC THEN
-   SIMP_TAC std_ss [IN_INSERT] THEN
-   Q.EXISTS_TAC `lc + ((rc − lc) DIV 2)` THEN
-   ASM_SIMP_TAC std_ss [] THEN  
-   YICES_TAC,
-
+   Q.EXISTS_TAC `m_const` THEN
+   ASM_SIMP_TAC arith_ss [],
+   
 
    HF_VC_TAC THEN CONJ_TAC THEN1 (
-      ASM_SIMP_TAC std_ss [IN_INSERT, MEM_EL] THEN
-      DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
-      SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
-      REPEAT STRIP_TAC THEN
-      DECIDE_TAC
+      METIS_TAC[MEM_EL]
    ) THEN
-   HF_SOLVE_TAC THEN
+   HF_CONTINUE_TAC THEN
    HF_VC_TAC THEN
    REPEAT STRIP_TAC THEN (
-      FULL_SIMP_TAC std_ss [IN_INSERT, NOT_IN_EMPTY,
-         BOOL_TO_NUM_REWRITE]
+      FULL_SIMP_TAC arith_ss [IS_BOOL_TO_NUM_def,
+        BOOL_TO_NUM_REWRITE]          
    ) THEN
-   YICES_TAC
+   CCONTR_TAC THEN
+   FULL_SIMP_TAC arith_ss []
 ];
 
-val thm = holfoot_tac_verify_spec file NONE
-                [("binsearch", binsearch_TAC)]
+val thm_full = holfoot_tac_verify_spec file_full NONE
+                [("binsearch", binsearch_full_TAC)];
 
+
+
+
+(******************************************************************************)
+(* Verify the fully functional spec now                                       *)
+(******************************************************************************)
+
+set_trace "holfoot use Yices" 0; (*turn yices off*)
+
+val file_loopspec = concat [examplesDir, "/interactive/binary_search-full-loopspec.dsf"];
+
+(* holfoot_set_goal file_loopspec *)
+val binsearch_loopspec_TAC = 
+HF_CONTINUE_TAC THEN
+SIMP_TAC (std_ss++CONJ_ss) [IS_BOOL_TO_NUM_REWRITE,
+   SORTED_TAKE_DROP, BOOL_TO_NUM_REWRITE] THEN
+HF_CONTINUE_TAC THEN
+REPEAT STRIP_TAC THENL [
+   `rc - lc = 0` by DECIDE_TAC THEN
+   xHF_CONTINUE_TAC [use_asms] THEN
+   HF_VC_TAC THEN
+   FULL_SIMP_TAC std_ss [IS_BOOL_TO_NUM_def, BOOL_TO_NUM_REWRITE],
+
+   HF_VC_TAC THEN YICES_TAC,
+
+   HF_VC_TAC THEN
+   ASM_SIMP_TAC (list_ss++CONJ_ss) [MEM_EL, EL_BUTFIRSTN] THEN
+   EQ_TAC THEN STRIP_TAC THEN1 (
+      Q.EXISTS_TAC `m_const + (n+1) - lc` THEN
+      ASM_SIMP_TAC arith_ss []
+   ) THEN
+   MP_TAC (Q.SPECL [`data'`, `m_const-lc`, `n`] SORTED_EL_LESS_EQ) THEN
+   ASM_SIMP_TAC arith_ss [] THEN
+   STRIP_TAC THEN
+   Q.EXISTS_TAC `((n - 1) + lc) - m_const` THEN
+   ASM_SIMP_TAC arith_ss [],
+
+
+   HF_VC_TAC THEN
+   ASM_SIMP_TAC (list_ss++CONJ_ss) [MEM_EL, EL_FIRSTN] THEN
+   DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+   SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+   REPEAT STRIP_TAC THEN
+   EQ_TAC THEN ASM_SIMP_TAC arith_ss [] THEN
+   REPEAT STRIP_TAC THEN
+   MP_TAC (Q.SPECL [`data'`, `n`, `m_const - lc`] SORTED_EL_LESS_EQ) THEN
+   ASM_SIMP_TAC arith_ss [],
+
+
+   HF_VC_TAC THEN
+   SIMP_TAC std_ss [MEM_EL] THEN
+   Q.EXISTS_TAC `m_const - lc` THEN
+   ASM_SIMP_TAC arith_ss [],
+
+   HF_SOLVE_TAC
+];
+
+
+
+val thm = holfoot_tac_verify_spec file_loopspec NONE
+                [("binsearch", binsearch_loopspec_TAC)]
 

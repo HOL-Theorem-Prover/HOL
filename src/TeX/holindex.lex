@@ -28,29 +28,35 @@ val keyword_table =
 List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
 (Binarymap.mkDict String.compare)
 [
-  ("TERM",      TERM),
-  ("@TERM",     TERM),
+  ("TERM",         TERM),
+  ("@TERM",        TERM),
 
-  ("THEOREM",   THEOREM),
-  ("@THEOREM",  THEOREM),
-  ("THM",      THEOREM),
-  ("@THM",      THEOREM),
+  ("THEOREM",      THEOREM),
+  ("@THEOREM",     THEOREM),
+  ("THM",          THEOREM),
+  ("@THM",         THEOREM),
+  ("THEOREMS",     THEOREMS),
+  ("@THEOREMS",    THEOREMS),
+  ("THMS",         THEOREMS),
+  ("@THMS",        THEOREMS),
 
 
-  ("TYPE",      TYPE),
-  ("@TYPE",     TYPE),
+  ("TYPE",         TYPE),
+  ("@TYPE",        TYPE),
 
-  ("FORCE_INDEX", FORCE_INDEX),
-  ("FORCE-INDEX", FORCE_INDEX),
-  ("LONG_INDEX" , LONG_INDEX),
-  ("LONG-INDEX" , LONG_INDEX),
+  ("FORCE_INDEX",  FORCE_INDEX),
+  ("FORCE-INDEX",  FORCE_INDEX),
+  ("LONG_INDEX" ,  LONG_INDEX),
+  ("LONG-INDEX" ,  LONG_INDEX),
   ("SHORT_INDEX" , SHORT_INDEX),
   ("SHORT-INDEX" , SHORT_INDEX),
 
-  ("OPTIONS",   OPTIONS),
-  ("LABEL",     LABEL),
-  ("CONTENT",   CONTENT),
-  ("COMMENT",   COMMENT)
+  ("IDS",          IDS),
+  ("OPTIONS",      OPTIONS),
+  ("LABEL",        LABEL),
+  ("CONTENT",      CONTENT),
+  ("COMMENT",      COMMENT),
+  ("LATEX",        LATEX)
 ];
 
 
@@ -72,7 +78,7 @@ blank = [\ | \009 | \012];
 letter = [A-Z\_a-z];
 digit = [0-9];
 alphanum = ({digit} | {letter});
-extalphanum = ("." | "-" | ":" | "@" | {digit} | {letter});
+extalphanum = ("." | "-" | ":" | "@" | "*" |{digit} | {letter});
 ident = {extalphanum}*;
 hol_quote = "``" [^ `\``]* "``";
 quoted_string = "\"" [^ `\"`]* "\"";
@@ -87,6 +93,10 @@ quoted_string = "\"" [^ `\"`]* "\"";
   ( LBRACE (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"}" =>
   ( RBRACE (mkMtTok yytext yypos (!yylineno)) );
+<INITIAL>"[" =>
+  ( LBRACKET (mkMtTok yytext yypos (!yylineno)) );
+<INITIAL>"]" =>
+  ( RBRACKET (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"=" =>
   ( EQUAL (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"," =>

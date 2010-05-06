@@ -119,6 +119,7 @@ struct
 
   (* A tactic that simplifies certain word expressions. *)
   val WORD_SIMP_TAC =
-    simpLib.SIMP_TAC (simpLib.++ (bossLib.pure_ss, wordsLib.WORD_ss)) []
+    simpLib.SIMP_TAC (simpLib.++ (bossLib.pure_ss, wordsLib.WORD_ss))
+      [wordsTheory.LSL_LIMIT, wordsTheory.LSR_LIMIT]
 
 end

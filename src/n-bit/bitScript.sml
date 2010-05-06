@@ -215,6 +215,14 @@ val EXP_SUB_LESS_EQ = store_thm("EXP_SUB_LESS_EQ",
   `!a b. 2 ** (a - b) <= 2 ** a`,
   RW_TAC bool_ss [SUB_LESS_EQ,TWOEXP_MONO2]);
 
+val MOD_LEQ = Q.store_thm("MOD_LEQ",
+  `!a b. 0 < b ==> a MOD b <= a`,
+  REPEAT STRIP_TAC
+  \\ IMP_RES_TAC DIVISION
+  \\ POP_ASSUM (K ALL_TAC)
+  \\ POP_ASSUM (Q.SPEC_THEN `a` SUBST1_TAC)
+  \\ SRW_TAC [] [MOD_TIMES]);
+
 (* ------------------------------------------------------------------------- *)
 
 val BITS_THM = save_thm("BITS_THM",
@@ -274,6 +282,14 @@ val DIV_MOD_MOD_DIV3 = prove(
 val BITS_THM2 = store_thm("BITS_THM2",
   `!h l n. BITS h l n = (n MOD 2 ** SUC h) DIV 2 ** l`,
   RW_TAC bool_ss [BITS_THM,DIV_MOD_MOD_DIV3]);
+
+val BITS_LEQ = Q.store_thm("BITS_LEQ",
+  `!h l n. BITS h l n <= n`,
+  SRW_TAC [numSimps.ARITH_ss] [BITS_THM2]
+  \\ `n MOD 2 ** SUC h DIV 2 ** l <= n MOD 2 ** SUC h`
+  by SRW_TAC [] [DIV_LESS_EQ, ZERO_LT_TWOEXP]
+  \\ `n MOD 2 ** SUC h <= n` by SRW_TAC [] [MOD_LEQ, ZERO_LT_TWOEXP]
+  \\ DECIDE_TAC);
 
 val BITS_COMP_LEM = prove(
   `!h1 l1 h2 l2 n. h2 + l1 <= h1 ==>
