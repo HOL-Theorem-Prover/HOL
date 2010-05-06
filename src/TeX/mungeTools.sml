@@ -10,7 +10,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | NoTurnstile | Width of int
              | AllTT | ShowTypes
              | Conj of int
-             | Rule
+             | Rule | StackedRule
 
 val numErrors = ref 0
 type posn = int * int
@@ -41,6 +41,7 @@ fun stringOpt pos s =
   | "nostile" => SOME NoTurnstile
   | "showtypes" => SOME ShowTypes
   | "rule" => SOME Rule
+  | "stackedrule" => SOME StackedRule
   | _ => let
     in
       if String.isPrefix ">>" s then let
@@ -238,7 +239,7 @@ in
     val {argpos = (argline, argcpos), command, options = opts, ...} = argument
     val alltt = OptSet.has AllTT opts orelse
                 (command = Theorem andalso not (OptSet.has TT opts))
-    val rulep = OptSet.has Rule opts
+    val rulep = OptSet.has Rule opts orelse OptSet.has StackedRule opts
     fun rule_print printer term = let
       val (hs, c) = let
         val (h, c) = dest_imp term
@@ -247,15 +248,24 @@ in
       end handle HOL_ERR _ => ([], term)
       open Portable
       fun addz s = add_stringsz pps (s, 0)
+      val (sep,hypbegin,hypend) =
+          if OptSet.has StackedRule opts then
+            ((fn () => addz "\\\\"),
+             (fn () => addz "\\begin{array}{c}"),
+             (fn () => addz "\\end{array}"))
+          else
+            ((fn () => addz "&"), (fn () => ()), (fn () => ()))
     in
       addz "\\infer{\\HOLinline{";
       printer c;
       addz "}}{";
+      hypbegin();
       pr_list (fn t => (addz "\\HOLinline{";
                         printer t;
                         addz "}"))
-              (fn () => (addz "&"))
+              sep
               (fn () => ()) hs;
+      hypend();
       addz "}"
     end
 
