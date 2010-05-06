@@ -2,7 +2,7 @@ INCLUDES=..
 
 EXTRA_CLEANS = holfoot.o holfoot holfoot-web.o holfoot-web
 
-all: holfoot holfoot-web
+all: holfoot holfoot-web holfoot-full
 
 holfoot.o: holfoot.state holfoot_command_line.sml
 	hol < build-cl.hol
@@ -11,6 +11,9 @@ holfoot.state: ../holfootLib.uo ../holfootLib.ui ../holfootTheory.ui ../Assemble
 	hol < build-state.hol
 
 holfoot: holfoot.o 
+	cc -o $@ $< $(POLY_LDFLAGS_STATIC)
+
+holfoot-full: holfoot-full.o 
 	cc -o $@ $< $(POLY_LDFLAGS_STATIC)
 
 holfoot-web: holfoot-web.o
