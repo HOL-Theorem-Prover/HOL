@@ -9,6 +9,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Inst of string * string
              | NoTurnstile | Width of int
              | AllTT | ShowTypes
+             | Conj of int
 
 val numErrors = ref 0
 type posn = int * int
@@ -57,6 +58,15 @@ fun stringOpt pos s =
           case Int.fromString numpart_s of
             NONE => (warn(pos, s ^ " is not a valid option"); NONE)
           | SOME i => SOME (Width i)
+        end
+      else if String.isPrefix "conj" s then let
+          val numpart_s = String.extract(s,4,NONE)
+        in
+          case Int.fromString numpart_s of
+            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+          | SOME i => if i <= 0 then
+                        (warn(pos, "Negative/zero conj specs illegal"); NONE)
+                      else SOME (Conj i)
         end
       else let
           open Substring
@@ -146,6 +156,8 @@ fun optset_indent s =
     case get_first (fn Indent i => SOME i | _ => NONE) s of
       NONE => ""
     | SOME i => spaces i
+
+fun optset_conjnum s = get_first (fn Conj i => SOME i | _ => NONE) s
 
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)
@@ -266,8 +278,20 @@ in
               val printer =
                   if OptSet.has ShowTypes opts then trace ("types", 1) printer
                   else trace ("types", 0) printer
+              val thm' =
+                  if OptSet.has NoSpec opts then thm
+                  else
+                    case optset_conjnum opts of
+                      NONE => SPEC_ALL thm
+                    | SOME i => List.nth(CONJUNCTS (SPEC_ALL thm), i - 1)
+                                handle Subscript =>
+                                       (warn(pos,
+                                             "Theorem "^spec^
+                                             " does not have a conjunct #" ^
+                                             Int.toString i);
+                                        SPEC_ALL thm)
             in
-              printer (if OptSet.has NoSpec opts then thm else SPEC_ALL thm)
+              printer thm'
             end
         end
       | Term => let
@@ -281,8 +305,9 @@ in
                         in
                           Preterm.to_term ptm |> do_tminsts pos opts
                         end
-                     else Parse.Term [QQ parse_start, QQ spec]
-                            |> do_tminsts pos opts
+                     else
+                         Parse.Term [QQ parse_start, QQ spec]
+                                    |> do_tminsts pos opts
           val () = add_string pps (optset_indent opts)
           val () = if OptSet.has Turnstile opts
                       then let in
