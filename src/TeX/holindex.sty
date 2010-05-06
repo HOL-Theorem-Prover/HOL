@@ -81,23 +81,21 @@
    \writehixfile{Printed #1 #2 \thepage}%
 }
 
-\newenvironment{blockHOL}{\begin{alltt}}{\end{alltt}}
-\newcommand[\protect\long]{\inlineHOL}[1]{\mbox{\textup{\texttt{#1}}}}
 
 \newcommand[\protect\long]{\defineHOLthm}[2]{\holdef{thm@#1}{#2}}
 \newcommand[\protect]{\useHOLthm}[1]{\addHOLuse{Thm}{#1}\hollookup{thm@#1}}
-\newcommand[\protect]{\inlineHOLthm}[1]{\inlineHOL{\useHOLthm{#1}}}
-\newcommand[\protect]{\blockHOLthm}[1]{\begin{blockHOL}\useHOLthm{#1}\end{blockHOL}}
+\newcommand[\protect]{\inlineHOLthm}[1]{\HOLinline{\useHOLthm{#1}}}
+\newcommand[\protect]{\blockHOLthm}[1]{\begin{HOLblock}\useHOLthm{#1}\end{HOLblock}}
 
 \newcommand[\protect\long]{\defineHOLtm}[2]{\holdef{term@#1}{#2}}
 \newcommand[\protect]{\useHOLtm}[1]{\addHOLuse{Term}{#1}\hollookup{term@#1}}
-\newcommand[\protect]{\inlineHOLtm}[1]{\inlineHOL{\useHOLtm{#1}}}
-\newcommand[\protect]{\blockHOLtm}[1]{\begin{blockHOL}\useHOLtm{#1}\end{blockHOL}}
+\newcommand[\protect]{\inlineHOLtm}[1]{\HOLinline{\useHOLtm{#1}}}
+\newcommand[\protect]{\blockHOLtm}[1]{\begin{HOLblock}\useHOLtm{#1}\end{HOLblock}}
 
 \newcommand[\protect\long]{\defineHOLty}[2]{\holdef{type@#1}{#2}}
 \newcommand[\protect]{\useHOLty}[1]{\addHOLuse{Type}{#1}:\hollookup{type@#1}}
-\newcommand[\protect]{\inlineHOLty}[1]{\inlineHOL{\useHOLty{#1}}}
-\newcommand[\protect]{\blockHOLty}[1]{\begin{blockHOL}\useHOLty{#1}\end{blockHOL}}
+\newcommand[\protect]{\inlineHOLty}[1]{\HOLinline{\useHOLty{#1}}}
+\newcommand[\protect]{\blockHOLty}[1]{\begin{HOLblock}\useHOLty{#1}\end{HOLblock}}
 
 
 % Arg 1 : Type
@@ -215,7 +213,7 @@ Definition #1 #2 {#3} {#4}
       \begin{flushright}#3 \ldots$\!$\dotfill #4\end{flushright}{%first line
       \ifthenelse{\(\not\boolean{holShortIndexFlag}\) \and %use short or
                   \(\boolean{#5} \or \boolean{holLongIndexFlag}\)}% long version
-          {#7\begin{blockHOL}#8\end{blockHOL}\medskip}%long version
+          {#7\begin{HOLblock}#8\end{HOLblock}\medskip}%long version
           {}% else short version
      }%end if-then-else
    \end{minipage}\\}

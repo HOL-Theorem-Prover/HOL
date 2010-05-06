@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass{scrartcl}
 
 \usepackage{holindex}
 
@@ -232,7 +232,6 @@ Printout of \texttt{holindex-demo.hdf}:
 \end{verbatim}
 
 
-
 \section{Printing}
 There are some macros just concerned with the resulting output.
 One can adapt these easily to personal preferences. Here the standard
@@ -240,20 +239,22 @@ definitions are printed. Just copy them to the header of your file
 and modify them to your taste:
 
 \begin{verbatim}
-The environment for printing something as a block and the inline command:
-
-\renewenvironment{blockHOL}{\begin{alltt}}{\end{alltt}}
-\renewcommand[\protect\long]{\inlineHOL}[1]{\mbox{\textup{\texttt{#1}}}}
-
+The environment for printing something as a 
+block and the inline command (found in holtexbasic.sty):
+\renewcommand{\HOLinline}[1]{\mbox{\textup{\texttt{#1}}}}
+\renewenvironment{HOLblock}{\begin{alltt}}{\end{alltt}}
 
 Format of citations
 \renewcommand[\protect]{\citeHOLthm}[1]{(HOL-Thm~\citePureHOLthm{#1})}
 \renewcommand[\protect]{\citeHOLtm}[1]{(HOL-Term~\citePureHOLtm{#1})}
 \renewcommand[\protect]{\citeHOLty}[1]{(HOL-Type~\citePureHOLty{#1})}
 
-\renewcommand[\protect]{\mciteHOLthm}[1]{(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
-\renewcommand[\protect]{\mciteHOLtm}[1]{(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
-\renewcommand[\protect]{\mciteHOLty}[1]{(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}
+\renewcommand[\protect]{\mciteHOLthm}[1]
+   {(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
+\renewcommand[\protect]{\mciteHOLtm}[1]
+   {(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
+\renewcommand[\protect]{\mciteHOLty}[1]
+   {(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}
 
 
 How theorem names are printed in the index
@@ -264,8 +265,9 @@ Headers in the index
 \renewenvironment{HOLTypeIndex}{\section*{HOL-Type Index}}{}
 \renewenvironment{HOLThmIndex}{\section*{HOL-Theorem Index}}{}
 \renewcommand{\HOLThmIndexTheory}[1]{\subsection*{#1Theory}}
-
-
+\end{verbatim}
+\pagebreak
+\begin{verbatim}
 Much more complicated: Index entries themselves
 % Arg 1 : number in the index
 % Arg 2 : unique ID
