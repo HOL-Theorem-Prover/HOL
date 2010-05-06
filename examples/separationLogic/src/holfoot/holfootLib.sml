@@ -93,7 +93,7 @@ fun holfoot_term_to_string t =
        holfoot_term_to_string (dest_var_res_exp_var t) 
    else if (is_holfoot_var t) then
        stringLib.fromHOLstring (dest_holfoot_var t)
-   else term_to_string t
+   else term_to_string t;
 
 
 fun is_no_proper_diseq thm = 
@@ -2618,7 +2618,6 @@ val HF_GEN_STEP_CONSEQ_CONV  = VAR_RES_GEN_STEP_CONSEQ_CONV;
 val HF_GEN_STEP_TAC          = VAR_RES_GEN_STEP_TAC;
 val xHF_GEN_STEP_CONSEQ_CONV = xVAR_RES_GEN_STEP_CONSEQ_CONV;
 val xHF_GEN_STEP_TAC         = xVAR_RES_GEN_STEP_TAC;
-
 
 fun xHF_STEP_TAC_n optL n m = xHF_GEN_STEP_TAC optL m n
 fun xHF_STEP_TAC optL m = xHF_STEP_TAC_n optL m (SOME 1);

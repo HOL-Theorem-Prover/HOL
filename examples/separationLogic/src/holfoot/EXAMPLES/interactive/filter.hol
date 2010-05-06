@@ -1,6 +1,18 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
 
-open listTheory rich_listTheory
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+
+HOL_Interactive.toggle_quietdec();
+
+open listTheory rich_listTheory listLib;
+
+HOL_Interactive.toggle_quietdec();
+
 
 (******************************************************************************)
 (* Parse the main file                                                        *)
@@ -30,31 +42,22 @@ val filter_TAC =
   ) THEN
 
   (* while loop *)
-  xHF_SOLVE_TAC [generate_vcs] THEN
+  HF_SOLVE_TAC THEN
+  HF_VC_TAC THEN
   REPEAT STRIP_TAC THENL [
-     FULL_SIMP_TAC list_ss [] THEN
-     HF_ELIM_COMMENTS_TAC,
+     Q.EXISTS_TAC `data_fc'` THEN
+     FULL_SIMP_TAC (list_ss++LIST_EQ_ss) [NULL_EQ, FILTER_EQ_NIL],
 
-     HF_ELIM_COMMENTS_TAC THEN
-     Q.EXISTS_TAC `data_fc` THEN
-     FULL_SIMP_TAC (list_ss++ListConv1.list_eq_simp_ss) [NULL_EQ, FILTER_EQ_NIL],
-
-     HF_ELIM_COMMENTS_TAC THEN
      Q.EXISTS_TAC `data1` THEN
-     FULL_SIMP_TAC (list_ss++ListConv1.list_eq_simp_ss) [],
+     FULL_SIMP_TAC (list_ss++LIST_EQ_ss) [],
 
-     HF_ELIM_COMMENTS_TAC THEN
      Q.EXISTS_TAC `data1 ++ [date] ++ data_fc'` THEN
-     FULL_SIMP_TAC (list_ss++ListConv1.list_eq_simp_ss) [
+     FULL_SIMP_TAC (list_ss++LIST_EQ_ss) [
         NULL_EQ, FILTER_EQ_NIL, FILTER_APPEND,
         BUTFIRSTN_APPEND1, TAKE_APPEND1,
         BUTFIRSTN_APPEND2, TAKE_APPEND2,
         BUTFIRSTN_LENGTH_APPEND, BUTFIRSTN_LENGTH_NIL]
   ]
-
-val spec_thm = prove (spec_t, filter_TAC)
-
-(*or*)
 
 val spec_thm = holfoot_tac_verify_spec file NONE 
    [("list_filter", filter_TAC)]
@@ -67,8 +70,6 @@ val spec_thm = holfoot_tac_verify_spec file NONE
 (******************************************************************************)
 
 val file2 = concat [examplesDir, "/interactive/filter.dsf2"];
-val spec_t2 = parse_holfoot_file file2
-
 
 (******************************************************************************)
 (* Verify specification                                                       *)
@@ -93,10 +94,6 @@ REPEAT STRIP_TAC THENL [
 
    HF_SOLVE_TAC
 ];
-
-val spec2_thm = prove (spec_t2, filter2_TAC) 
-
-(*or*)
 
 val spec2_thm = holfoot_tac_verify_spec file2 NONE 
    [("list_filter", filter2_TAC)]

@@ -1,11 +1,23 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open treeTheory rich_listTheory pred_setTheory ConseqConv listTheory sortingTheory 
+     finite_mapTheory boolSimps generalHelpersTheory;
+
+val _ = HOL_Interactive.toggle_quietdec();
+
 
 (******************************************************************************)
 (* First, get the necessary HOL definitions in place                          *)
 (******************************************************************************)
 
-open treeTheory rich_listTheory pred_setTheory ConseqConv listTheory sortingTheory 
-     finite_mapTheory boolSimps generalHelpersTheory
 
 (* -------------------------------------------------------------------------- *)
 (* Basic definitions of what a RED_BLACK_TREE is and some very simple         *)
@@ -103,7 +115,7 @@ val IS_RED_BLACK_TREE_NODE_THM = prove (
   ?k v c t1 t2. (t = node [k;v;c] [t1;t2]) /\ (c IN {0;1})``,
 Cases_on `t` THEN
 SIMP_TAC (list_ss++CONJ_ss) [IS_RED_BLACK_TREE_NODE_def, tree_distinct,
-   tree_11, LENGTH_EQ_NUM_EVAL, GSYM RIGHT_EXISTS_AND_THM,
+   tree_11, LENGTH_EQ_NUM_compute, GSYM RIGHT_EXISTS_AND_THM,
    GSYM LEFT_EXISTS_AND_THM] THEN
 METIS_TAC[]);
 
@@ -573,22 +585,23 @@ val PROGRAM_FUN___left_balance_def = Define `
       )
    ) else (node [k; v; c] [t1; t2]))`
 
+
 (* holfoot_set_goal_procedures file ["rb_tree_left_balance"] *)
 val rb_tree_left_balance_TAC =
    HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_left_balance_def,
-      IS_RED_BLACK_TREE_NODE_THM] THEN
-   xHF_CONTINUE_TAC [generate_vcs] THEN
+      IS_RED_BLACK_TREE_NODE_THM, IN_INSERT, NOT_IN_EMPTY] THEN
+   xHF_CONTINUE_TAC [use_asms, generate_vcs] THEN
    REPEAT STRIP_TAC THENL [
+      HF_VC_TAC THEN
       FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
          PROGRAM_PRED___can_color_flip___REWRITE, tree_11] THEN
-      ASM_REWRITE_TAC [IN_INSERT],
+      REWRITE_TAC [IN_INSERT],
    
-      ASM_REWRITE_TAC [PROGRAM_FUN___left_balance_def],
+      HF_VC_TAC THEN
+      ASM_SIMP_TAC std_ss [PROGRAM_FUN___left_balance_def],
 
-      Q.PAT_ASSUM `0 = c` (ASSUME_TAC o GSYM) THEN 
-      FULL_SIMP_TAC std_ss [IN_INSERT] THEN
       `?k v t11 t12. t1 = node [k;v;1] [t11;t12]` by  
          FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, tree_11] THEN
       ASM_SIMP_TAC std_ss [] THEN
@@ -604,7 +617,9 @@ val rb_tree_left_balance_TAC =
       ASM_SIMP_TAC list_ss [tree_11],
 
       ASM_REWRITE_TAC [PROGRAM_FUN___left_balance_def],
-      ASM_REWRITE_TAC [PROGRAM_FUN___left_balance_def]
+
+      HF_VC_TAC THEN
+      ASM_SIMP_TAC std_ss [PROGRAM_FUN___left_balance_def]
    ];
 
 (* -------------------------------------------------------------------------- *)    
@@ -633,8 +648,8 @@ val rb_tree_right_balance_TAC =
    HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [PROGRAM_PRED___can_right_balance_def,
-      IS_RED_BLACK_TREE_NODE_THM] THEN
-   xHF_CONTINUE_TAC [generate_vcs] THEN
+      IS_RED_BLACK_TREE_NODE_THM, IN_INSERT, NOT_IN_EMPTY] THEN
+   xHF_CONTINUE_TAC [generate_vcs, use_asms] THEN
    REPEAT STRIP_TAC THENL [
       FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE,
          PROGRAM_PRED___can_color_flip___REWRITE, tree_11] THEN
@@ -642,8 +657,6 @@ val rb_tree_right_balance_TAC =
    
       ASM_REWRITE_TAC [PROGRAM_FUN___right_balance_def],
 
-      Q.PAT_ASSUM `0 = c` (ASSUME_TAC o GSYM) THEN 
-      FULL_SIMP_TAC std_ss [IN_INSERT] THEN
       `?k v t21 t22. t2 = node [k;v;1] [t21;t22]` by  
          FULL_SIMP_TAC list_ss [RED_BLACK_TREE___IS_RED_BLACK___REWRITE, tree_11] THEN
       ASM_SIMP_TAC std_ss [] THEN
@@ -658,7 +671,9 @@ val rb_tree_right_balance_TAC =
       ASM_SIMP_TAC list_ss [tree_11],
 
       ASM_REWRITE_TAC [PROGRAM_FUN___right_balance_def],
-      ASM_REWRITE_TAC [PROGRAM_FUN___right_balance_def]
+
+      HF_VC_TAC THEN
+      ASM_SIMP_TAC std_ss [PROGRAM_FUN___right_balance_def]
    ];
 
 (* -------------------------------------------------------------------------- *)    
@@ -694,26 +709,26 @@ val rb_tree_insert_r_TAC =
 val rb_tree_lookup_TAC =
    xHF_CONTINUE_TAC [generate_vcs] THEN
    REPEAT STRIP_TAC THENL [
-      HF_ELIM_COMMENTS_TAC THEN
+      HF_VC_TAC THEN
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_def, FDOM_FEMPTY, NOT_IN_EMPTY],
 
-      HF_ELIM_COMMENTS_TAC THEN
-      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_THM,
-         FDOM_FUPDATE, IN_INSERT, FAPPLY_FUPDATE_THM],
+      HF_VC_TAC THEN
+      FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_def, FDOM_FUPDATE, IN_INSERT,
+         FAPPLY_FUPDATE_THM],
 
-      HF_ELIM_COMMENTS_TAC THEN
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_REWRITE, arithmeticTheory.GREATER_DEF] THEN
       Q.EXISTS_TAC `f1` THEN
       `~(k_const' IN FDOM f2)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
       ASM_SIMP_TAC std_ss [FDOM_FUPDATE, FDOM_FUNION, IN_UNION, IN_INSERT,
-         FAPPLY_FUPDATE_THM, FUNION_DEF],
+         FAPPLY_FUPDATE_THM, FUNION_DEF] THEN
+      HF_SOLVE_TAC,
 
-      HF_ELIM_COMMENTS_TAC THEN
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_BIN_REWRITE, arithmeticTheory.GREATER_DEF] THEN
       Q.EXISTS_TAC `f2` THEN
-      `~(k_const' IN FDOM f1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+      `~(k_const' IN FDOM f1)` by METIS_TAC[arithmeticTheory.LESS_EQ_ANTISYM] THEN
       ASM_SIMP_TAC std_ss [FDOM_FUPDATE, FDOM_FUNION, IN_UNION, IN_INSERT,
-         FAPPLY_FUPDATE_THM, FUNION_DEF]
+         FAPPLY_FUPDATE_THM, FUNION_DEF] THEN
+      HF_SOLVE_TAC
    ];
 
 

@@ -1,10 +1,22 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open treeTheory rich_listTheory listTheory generalHelpersTheory;
+
+val _ = HOL_Interactive.toggle_quietdec();
+
 
 (******************************************************************************)
 (* Some useful REWRITES                                                       *)
 (******************************************************************************)
-
-open treeTheory rich_listTheory listTheory
 
 val TREE_SUM_def = Define `TREE_SUM =
    TREE_FOLD (0:num, \v vL. (FOLDL (\a b. a + b) 0 ((HD v)::vL)))`
@@ -23,7 +35,7 @@ SIMP_TAC (std_ss++boolSimps.ETA_ss) [TREE_SUM_def, TREE_FOLD_def,
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/tree_sum.dsf"];
-val spec_thm = holfoot_verify_spec file [ add_rewrites [TREE_SUM_REWRITE] ] 
+val spec_thm = holfoot_verify_spec file [ add_rewrites [TREE_SUM_REWRITE] ];
 
 
 
@@ -35,11 +47,11 @@ val file2 = concat [examplesDir, "/interactive/tree_sum_iter.dsf"];
 
 (* holfoot_set_goal_procedures file2 ["tree_sum_depth"] *)
 val tree_sum_depth_TAC =
-   xHF_CONTINUE_TAC [add_rewrites [TREE_SUM_REWRITE]] THEN
-   REPEAT STRIP_TAC THEN
+   xHF_CONTINUE_TAC [add_rewrites [TREE_SUM_REWRITE, LENGTH_EQ_NUM_compute]] THEN
+   REPEAT GEN_TAC THEN
    (*establish fact that trees are not empty*)
    Cases_on `NULL trees` THEN1 HF_SOLVE_TAC THEN
-   xHF_CONTINUE_TAC [use_asms, add_rewrites [LENGTH_EQ_NUM_compute, LENGTH_EQ_NUM]] THEN
+   xHF_CONTINUE_TAC [use_asms, add_rewrites[LENGTH_EQ_ADD_CONST_compute]] THEN
    REPEAT STRIP_TAC THEN (
       Q.EXISTS_TAC `l''` THEN
       xHF_CONTINUE_TAC [use_asms, add_rewrites [TREE_SUM_REWRITE]]

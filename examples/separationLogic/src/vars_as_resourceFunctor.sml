@@ -3748,6 +3748,7 @@ fun xVAR_RES_GEN_STEP_TAC optL =
       VAR_RES_GEN_STEP_TAC p ssp
    end;
 
+
 fun xVAR_RES_GEN_STEP_CONSEQ_CONV optL n m =
    let
       val (p,ssp) = gen_step_tac_opt_eval default_params optL

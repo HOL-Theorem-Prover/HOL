@@ -1,5 +1,11 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
- 
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
 
 (******************************************************************************)
 (* Verify specification                                                       *)

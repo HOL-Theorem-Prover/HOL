@@ -1,10 +1,22 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open sortingTheory sortingTheory listTheory;
+
+val _ = HOL_Interactive.toggle_quietdec();
+
 
 (******************************************************************************)
 (* Some useful REWRITES                                                       *)
 (******************************************************************************)
-
-open sortingTheory sortingTheory listTheory
 
 val SORTED_CONS_IMP = prove (``!R x xs.
   (SORTED R (x::xs) ==> SORTED R xs)``,
@@ -41,7 +53,6 @@ Cases_on `x = h` THEN (
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/insertionsort.dsf"];
-val spec_t = parse_holfoot_file file
 
 
 (******************************************************************************)
@@ -49,16 +60,17 @@ val spec_t = parse_holfoot_file file
 (******************************************************************************)
 
 (* holfoot_set_goal_procedures file ["delete"] *)
+
 val delete_TAC =
    HF_CONTINUE_TAC THEN   
    REPEAT STRIP_TAC THEN
    Cases_on `i'_const = 0` THEN1 (
-     xHF_CONTINUE_TAC [use_asms] THEN
-     FULL_SIMP_TAC list_ss []
+     xHF_CONTINUE_TAC [use_asms]
    ) THEN   
    xHF_CONTINUE_TAC [use_asms, add_rewrites [REMOVE_def], generate_vcs] THEN
    HF_VC_TAC THEN
    FULL_SIMP_TAC list_ss []
+
 
 
 (* holfoot_set_goal_procedures file ["min"] *)
@@ -94,9 +106,6 @@ val thm = holfoot_tac_verify_spec file NONE
                 [("sortlist", sortlist_TAC),
                  ("delete",   delete_TAC),
                  ("min",      min_TAC)];
-
-val file = concat [examplesDir, "/interactive/insertionsort.dsf"];
-val spec_t = parse_holfoot_file file
 
 
 (******************************************************************************)

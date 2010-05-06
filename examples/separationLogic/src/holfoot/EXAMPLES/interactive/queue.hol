@@ -1,26 +1,50 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
-
 (******************************************************************************)
-(* Some useful REWRITES                                                       *)
+(* Boilerplate                                                                *)
 (******************************************************************************)
 
-open holfootTheory generalHelpersTheory rich_listTheory vars_as_resourceTheory
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open holfootTheory generalHelpersTheory rich_listTheory vars_as_resourceTheory;
+
+val _ = HOL_Interactive.toggle_quietdec();
 
 (******************************************************************************)
 (* Verify specification                                                       *)
 (******************************************************************************)
 
 val file  = concat [examplesDir, "/interactive/queue.dsf2"];
-val thm   = holfoot_auto_verify_spec file
 
-val thm = prove (parse_holfoot_file file,
-HF_SOLVE_TAC THEN
-SIMP_TAC list_ss [holfoot_ap_data_queue_def] THEN
-HF_SOLVE_TAC THEN
-REPEAT GEN_TAC THEN
-Cases_on `t_const_tl = 0` THEN HF_SOLVE_TAC)
+(* holfoot_set_goal_procedures file ["insert"] *)
+val insert_TAC =
+   HF_SOLVE_TAC THEN
+   SIMP_TAC list_ss [holfoot_ap_data_queue_def, LIST_TO_FMAP_THM] THEN
+   HF_SOLVE_TAC;
 
-val t = ``(l1:'a list ++ [])::t = p ++ q``
+(* holfoot_set_goal_procedures file ["insert_front"] *)
+val insert_front_TAC =
+   HF_SOLVE_TAC THEN
+   SIMP_TAC list_ss [holfoot_ap_data_queue_def, LIST_TO_FMAP_THM] THEN
+   HF_SOLVE_TAC;
 
 
-``(l1:'a list)::t = p ++ q``
+(* holfoot_set_goal_procedures file ["delete"] *)
+val delete_TAC =
+   SIMP_TAC list_ss [holfoot_ap_data_queue_def, LIST_TO_FMAP_THM] THEN
+   HF_SOLVE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   Cases_on `t_const_tl = 0` THEN
+   HF_SOLVE_TAC;
+
+
+val thm = holfoot_tac_verify_spec file NONE
+                [("insert",       insert_TAC),
+                 ("insert_front", insert_front_TAC),
+                 ("delete",       delete_TAC)];
+
+
+

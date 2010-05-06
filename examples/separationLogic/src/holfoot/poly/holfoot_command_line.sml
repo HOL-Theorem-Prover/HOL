@@ -14,7 +14,8 @@ let
 
   val _ = print_with_style [Bold] "Modes:\n";
   val s =   "  -q      quiet mode, verify specifications automatically and just print end results\n";
-  val s = s^"  -i      interactive mode, verify specifications step by step\n\n";
+  val s = s^"  -i      interactive mode, verify specifications step by step\n";
+  val s = s^"  -f      file mode, load files with interactive proofs\n\n";
   val _ = print s;
   val _ = print_with_style [Bold] "Printing switches:\n";
   val s =   "  -nu     turn unicode off\n";
@@ -211,16 +212,28 @@ in
    in () end
 end
 
+val examplesDir = ".";
+
+fun use_file file =
+let
+   val _ = print ("using file '"^file^"'\n\n");
+   val _ = use file
+in
+   ()
+end;
+
 
 fun holfoot_run () = let
    val _ = Feedback.set_trace "PPBackEnd use annotations" 0
-   val _ = Feedback.set_trace "HolSmtLib" 0
+   val _ = Feedback.set_trace "HolSmtLib" 0   
 
    val orgargs = CommandLine.arguments ();
    val args = orgargs;
    val (quiet, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-q") args)) 
       handle _ => (false, args);
    val (intera, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-i") args)) 
+      handle _ => (false, args);
+   val (file_mode, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-f") args)) 
       handle _ => (false, args);
    val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args)) 
       handle _ => (true, args);
@@ -242,7 +255,8 @@ fun holfoot_run () = let
    val args = ((Lib.pluck (fn x => x = "-hi") args);print_interactive_help();[])
       handle _ => args;
 
-   fun prover file = ((if intera then interactive_verify file else
+   fun prover file = if file_mode then use_file file else 
+                     ((if intera then interactive_verify file else
                        ((holfootLib.holfoot_interactive_verify_spec (not quiet) (not quiet) file (SOME [generate_vcs]) []);()));
                      (if quiet then () else (print "\n\n\n"; ())));
 

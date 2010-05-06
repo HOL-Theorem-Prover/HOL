@@ -34,6 +34,7 @@ sig
    val no_asms               : gen_step_tac_opt;
    val use_asms              : gen_step_tac_opt;
    val no_prop_simps         : gen_step_tac_opt;
+   val simple_prop_simps     : gen_step_tac_opt;
    val conservative          : gen_step_tac_opt; (* not fast *)
    val careful               : gen_step_tac_opt; (* no asms. no case splits, no expands *)
    val stop_at_cond          : gen_step_tac_opt;

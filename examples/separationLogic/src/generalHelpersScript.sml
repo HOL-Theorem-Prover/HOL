@@ -1079,6 +1079,15 @@ val LIST_NUM_STAR_APPEND = store_thm ("LIST_NUM_STAR_APPEND",
 
 
 
+val LENGTH_EQ_ADD_CONST = store_thm (
+   "LENGTH_EQ_ADD_CONST",
+   ``(!l:'a list n1 n2. (LENGTH l = ((SUC n1) + n2)) = (?h l'. (LENGTH l' = n1 + n2) /\ (l = h::l'))) /\
+     (!l:'a list n1 n2. (LENGTH l = (n1 + SUC n2)) = (?h l'. (LENGTH l' = n1 + n2) /\ (l = h::l')))``,
+  METIS_TAC [arithmeticTheory.ADD_CLAUSES, LENGTH_EQ_NUM]);
+
+
+val LENGTH_EQ_ADD_CONST_compute = save_thm ("LENGTH_EQ_ADD_CONST_compute",
+   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV LENGTH_EQ_ADD_CONST);
 
 
 (******************************************************************
