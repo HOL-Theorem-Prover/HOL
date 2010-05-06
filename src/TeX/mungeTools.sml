@@ -10,6 +10,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | NoTurnstile | Width of int
              | AllTT | ShowTypes
              | Conj of int
+             | Rule
 
 val numErrors = ref 0
 type posn = int * int
@@ -39,6 +40,7 @@ fun stringOpt pos s =
   | "nosp" => SOME NoSpec
   | "nostile" => SOME NoTurnstile
   | "showtypes" => SOME ShowTypes
+  | "rule" => SOME Rule
   | _ => let
     in
       if String.isPrefix ">>" s then let
@@ -236,7 +238,37 @@ in
     val {argpos = (argline, argcpos), command, options = opts, ...} = argument
     val alltt = OptSet.has AllTT opts orelse
                 (command = Theorem andalso not (OptSet.has TT opts))
-    val () = if not alltt then  add_string pps "\\HOLinline{"
+    val rulep = OptSet.has Rule opts
+    fun rule_print printer term = let
+      val (hs, c) = let
+        val (h, c) = dest_imp term
+      in
+        (strip_conj h, c)
+      end handle HOL_ERR _ => ([], term)
+      open Portable
+      fun addz s = add_stringsz pps (s, 0)
+    in
+      addz "\\infer{\\HOLinline{";
+      printer c;
+      addz "}}{";
+      pr_list (fn t => (addz "\\HOLinline{";
+                        printer t;
+                        addz "}"))
+              (fn () => (addz "&"))
+              (fn () => ()) hs;
+      addz "}"
+    end
+
+    fun stdtermprint t = let
+      val baseprint = raw_pp_term_as_tex overrides pps
+      val printer = if OptSet.has ShowTypes opts then
+                      trace ("types", 1) baseprint
+                    else trace ("types", 0) baseprint
+    in
+      printer t
+    end
+
+    val () = if not alltt andalso not rulep then add_string pps "\\HOLinline{"
              else ()
     val parse_start = " (*#loc "^ Int.toString argline ^ " " ^
                       Int.toString argcpos ^"*)"
@@ -245,6 +277,19 @@ in
       case command of
         Theorem => let
           val thm = do_thminsts pos opts (getThm spec)
+          val thm =
+              if OptSet.has NoSpec opts then thm
+              else
+                case optset_conjnum opts of
+                  NONE => SPEC_ALL thm
+                | SOME i => List.nth(map SPEC_ALL (CONJUNCTS (SPEC_ALL thm)),
+                                     i - 1)
+                  handle Subscript =>
+                         (warn(pos,
+                               "Theorem "^spec^
+                               " does not have a conjunct #" ^
+                               Int.toString i);
+                          SPEC_ALL thm)
           val _ = add_string pps (optset_indent opts)
         in
           if OptSet.has Def opts orelse OptSet.has SpacedDef opts then let
@@ -269,6 +314,7 @@ in
                          lines;
               end_block pps
             end
+          else if rulep then rule_print stdtermprint (concl thm)
           else let
               val base = raw_pp_theorem_as_tex overrides pps
               val printer =
@@ -278,20 +324,8 @@ in
               val printer =
                   if OptSet.has ShowTypes opts then trace ("types", 1) printer
                   else trace ("types", 0) printer
-              val thm' =
-                  if OptSet.has NoSpec opts then thm
-                  else
-                    case optset_conjnum opts of
-                      NONE => SPEC_ALL thm
-                    | SOME i => List.nth(CONJUNCTS (SPEC_ALL thm), i - 1)
-                                handle Subscript =>
-                                       (warn(pos,
-                                             "Theorem "^spec^
-                                             " does not have a conjunct #" ^
-                                             Int.toString i);
-                                        SPEC_ALL thm)
             in
-              printer thm'
+              printer thm
             end
         end
       | Term => let
@@ -315,12 +349,8 @@ in
                         add_string pps " "
                       end
                    else ()
-          val baseprint = raw_pp_term_as_tex overrides pps
-          val printer = if OptSet.has ShowTypes opts then
-                          trace ("types", 1) baseprint
-                        else trace ("types", 0) baseprint
         in
-           printer term
+          if rulep then rule_print stdtermprint term else stdtermprint term
         end
       | Type => let
           val typ = if OptSet.has TypeOf opts
@@ -330,7 +360,7 @@ in
           add_string pps (optset_indent opts);
           raw_pp_type_as_tex overrides pps typ
         end
-    val () = if not alltt then add_string pps "}" else ()
+    val () = if not alltt andalso not rulep then add_string pps "}" else ()
   in () end handle
       BadSpec => warn (pos, spec ^ " does not specify a theorem")
     | HOL_ERR e => warn (pos, !Feedback.ERR_to_string e)
