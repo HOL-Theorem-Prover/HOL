@@ -184,37 +184,44 @@ fun mkinst loc opts tm = let
     val ty = Binarymap.find(vtypemap, nm2)
   in
     (mk_var(nm2,ty) |-> mk_var(nm1,ty)) :: acc
-  end handle Binarymap.NotFound =>
-             (warn (loc, "Variable "^nm2^" does not appear in HOL object");
-              acc)
+  end handle Binarymap.NotFound => acc
 in
-  foldr foldthis [] insts
+  (insts, foldr foldthis [] insts)
 end
 
-fun do_thminsts loc opts th = let
-  val (bvs, c) = strip_forall (concl th)
-  val theta = mkinst loc opts c
+fun mk_s2smap pairs = let
+  fun foldthis ((nm1,nm2), acc) = Binarymap.insert(acc, nm2, nm1)
+  val m = Binarymap.mkDict String.compare
 in
-  if null theta then th
-  else let
-      val th' = INST theta (SPEC_ALL th)
-      val bvs' = map (Term.subst theta) bvs
-    in
-      GENL bvs' th'
-    end
+   List.foldl foldthis m pairs
+end
+
+fun rename m t = let
+  val (v0, _) = dest_abs t
+  val (vnm, vty) = dest_var v0
+in
+  case Binarymap.peek (m, vnm) of
+    NONE => NO_CONV t
+  | SOME newname => ALPHA_CONV (mk_var(newname,vty)) t
+end
+
+fun depth1_conv c t =
+    (TRY_CONV c THENC TRY_CONV (SUB_CONV (depth1_conv c))) t
+
+fun do_thminsts loc opts th = let
+  val (insts, theta) = mkinst loc opts (concl th)
+  val m = mk_s2smap insts
+  val th = if null theta then th else INST theta th
+in
+  CONV_RULE (depth1_conv (rename m)) th
 end
 
 fun do_tminsts loc opts tm = let
-  val (bvs, c) = strip_forall tm
-  val theta = mkinst loc opts c
+  val (insts, theta) = mkinst loc opts tm
+  val tm = if null theta then tm else Term.subst theta tm
+  val m = mk_s2smap insts
 in
-  if null theta then tm
-  else let
-      val c' = Term.subst theta c
-      val bvs' = map (Term.subst theta) bvs
-    in
-      list_mk_forall (bvs', c')
-    end
+  rhs (concl (depth1_conv (rename m) tm))
 end
 
 local
