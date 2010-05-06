@@ -193,7 +193,7 @@ val abs_step_thm = prove(
   THEN1   
    (FULL_SIMP_TAC std_ss [abs_gc_inv_def,IN_UNION,IN_DELETE,FDOM_FUPDATE,IN_INSERT,LET_DEF]
     \\ `~(a IN x) /\ ~(b IN x) /\ ~(a = b) /\ a IN (UNIV DIFF x) /\ a IN (UNIV DIFF (x UNION y))` by SET_TAC 
-    \\ `ADDR_SET xs SUBSET POINTERS h (U(:num) DIFF (x UNION y))` by METIS_TAC [set_SUBSET_POINTERS]
+    \\ `ADDR_SET xs SUBSET POINTERS h (UNIV DIFF (x UNION y))` by METIS_TAC [set_SUBSET_POINTERS]
     \\ `((a =+ b) ((b =+ a) f) o (a =+ b) ((b =+ a) f) = I)` by 
          (FULL_SIMP_TAC std_ss [APPLY_UPDATE_THM,FUN_EQ_THM] \\ SET_TAC)
     \\ STRIP_TAC THEN1 SET_TAC
@@ -222,7 +222,7 @@ val abs_step_thm = prove(
         \\ `~(b IN HAS_CHANGED f)` by (SIMP_TAC std_ss [HAS_CHANGED_def] \\ SET_TAC)
         \\ SET_TAC)
       \\ Cases_on `a = n` \\ FULL_SIMP_TAC std_ss [] 
-      \\ `POINTERS h (U(:num) DIFF (x UNION y)) SUBSET POINTERS h (U(:num) DIFF x)` by 
+      \\ `POINTERS h (UNIV DIFF (x UNION y)) SUBSET POINTERS h (UNIV DIFF x)` by 
            (MATCH_MP_TAC POINTERS_SUBSET \\ SET_TAC) 
       \\ `n IN FDOM h UNION HAS_CHANGED f DIFF (x UNION y)` by SET_TAC
       \\ FULL_SIMP_TAC std_ss [IN_INSERT,IN_UNION,IN_DELETE,IN_DIFF] \\ SET_TAC)
@@ -890,7 +890,7 @@ val gc_step_lemma = store_thm("gc_step_lemma",
     \\ `i IN (UNIV DIFF D0 (CUT (b,i) m))` by ALL_TAC THEN1
       (FULL_SIMP_TAC std_ss [IN_DIFF,IN_UNIV]
        \\ FULL_SIMP_TAC std_ss [IN_DEF,D0,CUT_EQ,heap_element_11] \\ RANGE_TAC)
-    \\ `ADDR_SET xs SUBSET POINTERS h (U(:num) DIFF D0 (CUT (b,i) m))`
+    \\ `ADDR_SET xs SUBSET POINTERS h (UNIV DIFF D0 (CUT (b,i) m))`
          by METIS_TAC [set_SUBSET_POINTERS]        
     \\ `D0 (CUT (b,i) m) UNION D0 (CUT (i,j) m) = D0 (CUT(b,j)m)`
          by METIS_TAC [D1_UNION,gc_inv_def,abs_gc_inv_def] 
