@@ -221,7 +221,9 @@ fun do_tminsts loc opts tm = let
   val tm = if null theta then tm else Term.subst theta tm
   val m = mk_s2smap insts
 in
-  rhs (concl (depth1_conv (rename m) tm))
+  if null insts then tm
+  else
+    rhs (concl (QCONV (depth1_conv (rename m)) tm))
 end
 
 local
