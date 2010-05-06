@@ -55,6 +55,7 @@ val LIST_GEN_EQ             : term list -> thm -> thm;
 val EXISTS_INTRO_IMP        : term -> thm -> thm;
 val LIST_EXISTS_INTRO_IMP   : term list -> thm -> thm;
 val SPEC_ALL_TAC            : tactic;
+val REMOVE_TRUE_TAC         : tactic;
 
 
 val IMP_QUANT_CANON             : thm -> thm;

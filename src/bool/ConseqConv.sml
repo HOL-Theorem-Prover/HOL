@@ -1669,14 +1669,14 @@ DISCH_ASM_CONV_TAC conv
 
 
 fun cases_rule [] t =
-   if aconv t T then TRUTH else EQT_ELIM (REWRITE_CONV [] t)
+   if aconv t T then TRUTH else EQT_ELIM (REWRITE_CONV [ASM_MARKER_THM] t)
  | cases_rule (c::cL) t  =
    if aconv t T then TRUTH else
    let
-      val thm_f1 = EQT_ELIM (REWRITE_CONV [ASSUME (mk_neg c)] t)
+      val thm_f1 = EQT_ELIM (REWRITE_CONV [ASSUME (mk_neg c),ASM_MARKER_THM] t)
       val thm_f = ADD_ASSUM (mk_neg c) thm_f1
 
-      val thm_t1 = REWRITE_CONV [ASSUME c] t
+      val thm_t1 = REWRITE_CONV [ASSUME c,ASM_MARKER_THM] t
       val thm_t2 = cases_rule cL (rhs (concl thm_t1))
       val thm_t3 = EQ_MP (GSYM thm_t1) thm_t2
       val thm_t = ADD_ASSUM c thm_t3
@@ -1699,12 +1699,21 @@ let
 
    val asm_list = map find_mark mL
    val base_t = find_mark m_base   
+   val (used_markerL,unused_markerL) = 
+     let
+        val (l1, l2) = partition (fn t => aconv T (rand t)) (base_t::asm_list)
+     in
+        (l2, l1)
+     end;
 
-   val body''= subst (map (fn t => t |-> (rand (rator t))) (base_t::asm_list)) body'
-   val thm_t = mk_eq (body'', list_mk_imp (rev mL, m_base));
+
+   val thm_tl = subst (map (fn t => t |-> (rand (rator t))) used_markerL) body'
+   val thm_tr = subst (map (fn t => (rand (rator t)) |-> t) unused_markerL) 
+                    (list_mk_imp (rev mL, m_base))
+   val thm_t = mk_eq (thm_tl, thm_tr);
    val thm0 = cases_rule mL thm_t
 
-   val thm1 = INST (map (fn t => (rand (rator t)) |-> t) (base_t::asm_list)) thm0
+   val thm1 = INST (map (fn t => (rand (rator t)) |-> t) used_markerL) thm0
    val thm2 = STRIP_QUANT_CONV (RAND_CONV (K thm1)) tt
 
    val new_asm = map rand asm_list
@@ -1712,6 +1721,16 @@ let
 in
    (new_asm, new_t, fv, thm2)
 end
+
+
+(* a simple tactic to remove true form the assumptions *)
+val REMOVE_TRUE_TAC:tactic = fn (asm, t) =>
+   let
+      val _ = if not (mem T asm) then Feedback.fail() else ();
+   in
+      ([(filter (fn t => not (same_const t T)) asm, t)],
+       hd)
+   end;
 
 
 val DISCH_ASM_CONV_TAC:(conv -> tactic) = fn conv => fn (asm,t) =>
@@ -1735,7 +1754,7 @@ let
 (*val thmL = [mk_thm (new_asm,new_t)] 
   val thmL = []*)
 in
-   (if aconv new_t T then [] else [(new_asm,new_t)], fn thmL =>
+   (if aconv new_t T then [] else [(filter (fn t => not (same_const t T)) new_asm,new_t)], fn thmL =>
     let
         val new_thm = if null thmL then TRUTH else hd thmL;
 
@@ -1766,7 +1785,6 @@ in
 end handle UNCHANGED => ALL_TAC (asm,t);
 
 fun DISCH_ASM_CONSEQ_CONV_TAC c = DISCH_ASM_CONV_TAC (c CONSEQ_CONV_STRENGTHEN_direction);
-
 
 
 (*
