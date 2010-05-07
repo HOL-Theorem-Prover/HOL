@@ -1,0 +1,23 @@
+fact(r;n) {
+   local i;
+   r = 1;
+   i = n;
+   while (i > 0) [r == _rc * i == _ic *
+      n == #nc *
+      ``rc * FACT ic = FACT nc``] {
+      r = r * i;
+      i = i - 1;
+   } 
+} [r == ``FACT n``]
+
+fact2(r;n) {
+   local i;
+
+   r = 1;
+   i = n;
+   loop_spec [(r == #rc) * (i == #ic)] {
+   while (i > 0) {
+      r = r * i;
+      i = i - 1;
+   }} [r == ``rc * FACT ic``]
+} [r == ``FACT n``]

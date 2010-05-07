@@ -1,0 +1,44 @@
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/fact.dsf"];
+
+(* holfoot_set_goal_procedures file ["fact"] *)
+
+val fact_TAC = 
+HF_CONTINUE_TAC THEN
+HF_VC_TAC THEN
+REPEAT STRIP_TAC THENL [
+  Cases_on `ic` THEN
+  FULL_SIMP_TAC arith_ss [arithmeticTheory.FACT],
+
+  FULL_SIMP_TAC arith_ss [arithmeticTheory.FACT]
+]
+
+(* holfoot_set_goal_procedures file ["fact2"] *)
+
+val fact2_TAC = 
+HF_CONTINUE_TAC THEN
+HF_VC_TAC THEN
+REPEAT STRIP_TAC THENL [
+  SIMP_TAC arith_ss [arithmeticTheory.FACT],
+
+  Cases_on `ic` THEN
+  FULL_SIMP_TAC arith_ss [arithmeticTheory.FACT]
+]
+
+val thm = holfoot_tac_verify_spec file NONE
+                [("fact",  fact_TAC),
+                 ("fact2", fact2_TAC)]
+
+

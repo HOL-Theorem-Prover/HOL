@@ -1,8 +1,3 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
-
-
-
-
 (* -------------------------------------------------------------------------- *)
 (* This is an example demonstrating the benefits of using the SMT solver      *)
 (* Yices through HolSmtLib. The binary search always splits the array in the  *)
@@ -17,10 +12,24 @@ use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
 
 
 (******************************************************************************)
-(* Some useful REWRITES                                                       *)
+(* Boilerplate                                                                *)
 (******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+HOL_Interactive.toggle_quietdec();
+
 open listTheory rich_listTheory pred_setTheory sortingTheory ConseqConv boolSimps
 open relationTheory HolSmtLib generalHelpersTheory;
+
+HOL_Interactive.toggle_quietdec();
+
+
+(******************************************************************************)
+(* Lemmata                                                                    *)
+(******************************************************************************)
 
 
 val SORTED_EL = prove (
@@ -105,6 +114,7 @@ set_trace "holfoot use Yices" 1;
 (*verbose off*)
 set_trace "HolSmtLib" 0;
 
+
 val file = concat [examplesDir, "/automatic/binary_search-shape.dsf"];
 val thm = holfoot_auto_verify_spec file
 
@@ -181,7 +191,6 @@ val thm_full = holfoot_tac_verify_spec file_full NONE
 set_trace "holfoot use Yices" 0; (*turn yices off*)
 
 val file_loopspec = concat [examplesDir, "/interactive/binary_search-full-loopspec.dsf"];
-
 (* holfoot_set_goal file_loopspec *)
 val binsearch_loopspec_TAC = 
 HF_CONTINUE_TAC THEN

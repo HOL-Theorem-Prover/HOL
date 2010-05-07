@@ -1,4 +1,18 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open sortingTheory sortingTheory arithmeticTheory listTheory rich_listTheory;
+
+val _ = HOL_Interactive.toggle_quietdec();
+
 
 (******************************************************************************)
 (* Just the shape works automatically                                         *)
@@ -11,7 +25,6 @@ val thm = holfoot_auto_verify_spec file
 (******************************************************************************)
 (* Some useful REWRITES                                                       *)
 (******************************************************************************)
-open sortingTheory sortingTheory arithmeticTheory listTheory rich_listTheory
 
 val quicksort_opt = combined_gen_step_tac_opt [
     add_rewrites [SORTED_DEF, PERM_REFL],

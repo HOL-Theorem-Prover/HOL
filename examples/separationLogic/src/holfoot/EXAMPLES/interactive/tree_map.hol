@@ -1,10 +1,18 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
-
 (******************************************************************************)
-(* Some useful REWRITES                                                       *)
+(* Boilerplate                                                                *)
 (******************************************************************************)
 
-open treeTheory rich_listTheory
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open treeTheory rich_listTheory;
+
+val _ = HOL_Interactive.toggle_quietdec();
+
 
 (******************************************************************************)
 (* Verify specification                                                       *)

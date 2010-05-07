@@ -1412,7 +1412,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
     end
   fun print_user_printers printers = let
     fun pr (pat,nm,f) =
-        (tmprint G pstrm pat; add_string (" "^nm))
+        (tmprint G pstrm pat; add_string ("       ->  "^nm))
   in
     if Net.size printers = 0 then ()
     else
@@ -1421,7 +1421,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
        add_newline();
        add_string "  ";
        begin_block INCONSISTENT 0;
-       pr_list pr (fn () => ()) (fn () => add_break(1,0))
+       pr_list pr (fn () => ()) (fn () => add_newline())
                (Net.itnet cons printers []);
        end_block())
   end

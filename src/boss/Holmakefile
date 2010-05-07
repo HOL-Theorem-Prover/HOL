@@ -3,13 +3,16 @@ EXTRA_CLEANS = $(if $(findstring poly,$(ML_SYSNAME)),$(dprot $(HOLDIR)/bin/hol.b
 TARGET_poly = $(dprot $(HOLDIR)/bin/hol.builder)
 TARGET_mosml = bossLib.sml
 
+builder0 = $(HOLDIR)/bin/hol.builder0
+
 boss_deps = listTheory pred_setTheory arithmeticTheory numLib \
             pred_setLib pred_setSimps numSimps optionTheory
-DEPS_poly = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps))
+DEPS_poly = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)) \
+            $(dprot $(builder0))
 DEPS_mosml =
 
 COMM_poly = cd $(protect $(HOLDIR)/tools-poly) && \
-            $(protect $(HOLDIR)/bin/hol.builder0) < builder.ML && \
+            $(protect $(builder0)) < builder.ML && \
             cc -o $@ hol.builder.o $(POLY_LDFLAGS) && \
             rm hol.builder.o
 COMM_mosml =

@@ -9,6 +9,12 @@ struct
 open HolKernel Parse boolLib bossLib computeLib;
 open bitTheory numeral_bitTheory wordsTheory wordsSyntax;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars wordsTheory.words_grammars
+end
+open Parse
+
 val _ = Lib.with_flag (Feedback.emit_MESG, false) bossLib.srw_ss ()
 
 val ISPEC = Q.ISPEC;

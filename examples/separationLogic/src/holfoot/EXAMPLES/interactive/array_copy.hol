@@ -1,10 +1,17 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
 
-(******************************************************************************)
-(* Some useful REWRITES                                                       *)
-(******************************************************************************)
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+HOL_Interactive.toggle_quietdec();
+
 open listTheory rich_listTheory
 open generalHelpersTheory;
+
+HOL_Interactive.toggle_quietdec();
 
 
 (******************************************************************************)

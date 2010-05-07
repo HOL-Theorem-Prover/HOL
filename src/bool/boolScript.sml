@@ -5557,6 +5557,39 @@ in
   save_thm("JRH_INDUCT_UTIL", GENL [P, t] (DISCH asm_t (EQ_MP ExP_eta ExPx)))
 end
 
+(* Parsing additions *)
+(* iff *)
+val _ = overload_on ("<=>", ``(=) : bool -> bool -> bool``)
+val _ = set_fixity "<=>" (Infix(NONASSOC, 100))
+val _ = unicode_version {u = UChar.iff, tmnm = "<=>"}
+val _ = TeX_notation {hol = "<=>", TeX = ("\\HOLTokenEquiv{}",2)}
+val _ = TeX_notation {hol = UChar.iff, TeX = ("\\HOLTokenEquiv{}",2)}
+
+(* not equal *)
+val _ = overload_on ("<>", ``\x:'a y:'a. ~(x = y)``)
+val _ = set_fixity "<>" (Infix(NONASSOC, 450))
+val _ = TeX_notation {hol="<>", TeX = ("\\HOLTokenNotEqual{}",1)}
+
+val _ = uset_fixity UChar.neq (Infix(NONASSOC, 450))
+val _ = uoverload_on (UChar.neq, ``\x:'a y:'a. ~(x = y)``)
+val _ = TeX_notation {hol=UChar.neq, TeX = ("\\HOLTokenNotEqual{}",1)}
+
+(* not an element of *)
+val _ = overload_on ("NOTIN", ``\x:'a y:('a -> bool). ~(x IN y)``)
+val _ = set_fixity "NOTIN" (Infix(NONASSOC, 425))
+val _ = unicode_version {u = UChar.not_elementof, tmnm = "NOTIN"}
+val _ = TeX_notation {hol="NOTIN", TeX = ("\\HOLTokenNotIn{}",1)}
+val _ = TeX_notation {hol=UChar.not_elementof,
+                      TeX = ("\\HOLTokenNotIn{}",1)}
+
+(* not iff *)
+val _ = overload_on ("<=/=>", ``$<> : bool -> bool -> bool``)
+val _ = set_fixity "<=/=>" (Infix(NONASSOC, 100))
+val _ = unicode_version {u = UChar.not_iff, tmnm = "<=/=>"}
+val _ = TeX_notation {hol="<=/=>", TeX = ("\\HOLTokenNotEquiv{}",2)}
+val _ = TeX_notation {hol=UChar.not_iff,
+                      TeX = ("\\HOLTokenNotEquiv{}",2)}
+
 val _ = export_theory();
 
 end (* boolScript *)

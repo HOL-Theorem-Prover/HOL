@@ -6,7 +6,7 @@ val _ = load "DiskThms";
 
 val build_date = Date.toString (Date.fromTimeLocal (Time.now()));
 
-fun print_help () =
+fun print_help full =
 let
   open PPBackEnd Parse
   val s =   "Syntax: holfoot [options] INPUT-FILES\n\n";
@@ -14,7 +14,9 @@ let
 
   val _ = print_with_style [Bold] "Modes:\n";
   val s =   "  -q      quiet mode, verify specifications automatically and just print end results\n";
-  val s = s^"  -i      interactive mode, verify specifications step by step\n\n";
+  val s = s^"  -i      interactive mode, verify specifications step by step\n";
+  val s = s^(if full then 
+            "  -f      file mode, load files with interactive proofs\n\n" else "\n");
   val _ = print s;
   val _ = print_with_style [Bold] "Printing switches:\n";
   val s =   "  -nu     turn unicode off\n";
@@ -212,15 +214,17 @@ in
 end
 
 
-fun holfoot_run () = let
+fun holfoot_run (full, filemode_command) = let
    val _ = Feedback.set_trace "PPBackEnd use annotations" 0
-   val _ = Feedback.set_trace "HolSmtLib" 0
+   val _ = Feedback.set_trace "HolSmtLib" 0   
 
    val orgargs = CommandLine.arguments ();
    val args = orgargs;
    val (quiet, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-q") args)) 
       handle _ => (false, args);
    val (intera, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-i") args)) 
+      handle _ => (false, args);
+   val (file_mode, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-f") args)) 
       handle _ => (false, args);
    val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args)) 
       handle _ => (true, args);
@@ -237,12 +241,13 @@ fun holfoot_run () = let
    val _ = Feedback.set_trace "holfoot print file" (if html_output then 0 else 1);
    val _ = Feedback.set_trace "holfoot use Yices" (if yices then 1 else 0)
 
-   val args = ((Lib.pluck (fn x => x = "-h") orgargs);print_help();[])
+   val args = ((Lib.pluck (fn x => x = "-h") orgargs);print_help full;[])
       handle _ => args;
    val args = ((Lib.pluck (fn x => x = "-hi") args);print_interactive_help();[])
       handle _ => args;
 
-   fun prover file = ((if intera then interactive_verify file else
+   fun prover file = if file_mode then filemode_command file else
+                     ((if intera then interactive_verify file else
                        ((holfootLib.holfoot_interactive_verify_spec (not quiet) (not quiet) file (SOME [generate_vcs]) []);()));
                      (if quiet then () else (print "\n\n\n"; ())));
 
@@ -250,10 +255,11 @@ fun holfoot_run () = let
       (prover file) handle
          _ => Parse.print_with_style [PPBackEnd.FG PPBackEnd.OrangeRed] "\nException raised!!!\n\n\n"
 
-   val _ = if orgargs = [] then print_help () else ();
+   val _ = if orgargs = [] then print_help full else ();
 in
    ((map check_file args);())
 end
+
 
 
 

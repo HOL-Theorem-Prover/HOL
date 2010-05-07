@@ -1,10 +1,22 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+
+HOL_Interactive.toggle_quietdec();
+
+open sortingTheory sortingTheory;
+
+HOL_Interactive.toggle_quietdec();
 
 (******************************************************************************)
 (* Some useful REWRITES                                                       *)
 (******************************************************************************)
 
-open sortingTheory sortingTheory
 
 val SORTED_CONS_IMP = prove (``!R x xs.
   (SORTED R (x::xs) ==> SORTED R xs)``,

@@ -1,11 +1,23 @@
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+HOL_Interactive.toggle_quietdec();
+
+open treeTheory generalHelpersTheory rich_listTheory pred_setTheory ConseqConv 
+     listTheory sortingTheory boolSimps;
+
+HOL_Interactive.toggle_quietdec();
+
 
 (******************************************************************************)
 (* Some useful REWRITES                                                       *)
 (******************************************************************************)
 
-open treeTheory generalHelpersTheory rich_listTheory pred_setTheory ConseqConv 
-     listTheory sortingTheory boolSimps
     
 val BIN_SEARCH_TREE_SET_defn = Hol_defn "BIN_SEARCH_TREE_SET" 
   `(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
@@ -303,7 +315,7 @@ val search_tree_lookup_TAC =
       SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_THM] THEN
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE, arithmeticTheory.GREATER_DEF] THEN
       Q.EXISTS_TAC `k2` THEN
-      `~(k_const' IN k1)` by METIS_TAC[arithmeticTheory.LESS_ANTISYM] THEN
+      `~(k_const' IN k1)` by METIS_TAC[arithmeticTheory.LESS_EQ_ANTISYM] THEN
       ASM_SIMP_TAC std_ss [IN_INSERT, IN_UNION]
    ];
 
@@ -324,10 +336,6 @@ val search_tree_to_list___rec_TAC =
    xHF_CONTINUE_TAC [generate_vcs, do_expands] THEN
    REPEAT STRIP_TAC THEN HF_ELIM_COMMENTS_TAC THEN
    ASM_SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [BIN_SEARCH_TREE_SET_BIN_THM, EXTENSION, IN_INSERT, IN_UNION, NOT_IN_EMPTY] THEN
-   CONJ_TAC THEN1 (
-      MAP_EVERY Q.EXISTS_TAC [`k1`, `k2`] THEN
-      ASM_SIMP_TAC std_ss []
-   ) THEN
    `transitive (($<):num -> num -> bool)` by ALL_TAC THEN1 (
       SIMP_TAC arith_ss [relationTheory.transitive_def]
    ) THEN
@@ -485,7 +493,7 @@ val search_tree_lookup2_TAC =
 
 
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE] THEN
-      `~(kv IN k1)` by METIS_TAC[] THEN
+      `~(kv IN k1)` by METIS_TAC[arithmeticTheory.LESS_EQ_ANTISYM] THEN
       Q.EXISTS_TAC `k2` THEN
       xHF_CONTINUE_TAC [use_asms, add_rewrites [IN_UNION, IN_INSERT]],
 
