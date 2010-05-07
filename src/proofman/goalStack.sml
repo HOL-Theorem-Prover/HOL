@@ -22,6 +22,8 @@ fun say s = if !chatting then Lib.say s else ();
 fun add_string_cr s = say (s^"\n")
 fun cr_add_string_cr s = say ("\n"^s^"\n")
 
+fun printthm th = if !chatting then Parse.print_thm th else ()
+
 fun rotl (a::rst) = rst@[a]
   | rotl [] = raise ERR "rotl" "empty list"
 
@@ -110,7 +112,7 @@ local
               => (cr_add_string_cr "finalization failed"; raise e))
           | {goals = _::rst_o_goals, validation}::rst' =>
              ( cr_add_string_cr "Goal proved.";
-               Parse.print_thm th; say "\n";
+               printthm th; say "\n";
                return(GSTK{prop=prop, final=final,
                            stack={goals=rst_o_goals,
                               validation=fn thl => validation(th::thl)}::rst'})
