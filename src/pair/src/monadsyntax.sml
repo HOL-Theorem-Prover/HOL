@@ -157,7 +157,8 @@ fun print_monads (tyg, tmg) sysprinter (ppfns:term_pp_types.ppstream_funs) (p,l,
         in
           PP.begin_block pps PP.INCONSISTENT 0;
           sysprinter (Top,Top,Prec(100, "monad_assign")) (dpth - 1) v;
-          strn " <-";
+          strn " ";
+          strn "<-";
           brk(1,2);
           sysprinter (Top,Prec(100, "monad_assign"),Top) (dpth - 1) action;
           PP.end_block pps
@@ -196,5 +197,8 @@ val _ = temp_add_user_printer ("monadsyntax.print_monads", ``x:'a``,
 val _ = temp_overload_on (monad_bind, ``BIND``)
 val _ = temp_overload_on (monad_unitbind, ``IGNORE_BIND``)
 val _ = temp_overload_on ("return", ``UNIT``)
+
+val _ = TexTokenMap.temp_TeX_notation
+            {hol = "<-", TeX = ("\\HOLTokenLeftmap", 1)}
 
 end (* struct *)
