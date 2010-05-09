@@ -30,6 +30,36 @@ in
 
   val systeml = system o concat_wspaces protect []
 
+  (* would like to be using Posix.Process.exec, but this seems flakey on
+     various machines (and is entirely unavailable on Moscow ML) *)
+  fun exec (comm, args) = OS.Process.exit (systeml (comm::args))
+
+  fun get_first f [] = NONE
+    | get_first f (h::t) = case f h of NONE => get_first f t
+                                     | x => x
+
+
+  fun find_my_path () = let
+    (* assumes directory hasn't been changed yet *)
+    val myname = CommandLine.name()
+    val {dir,file} = Path.splitDirFile myname
+  in
+    if dir = "" then let
+        val pathdirs = String.tokens (fn c => c = #":")
+                                     (valOf (Process.getEnv "PATH"))
+        open FileSys
+        fun checkdir d = let
+          val f = Path.concat(d,file)
+        in
+          if access(f, [A_READ, A_EXEC]) then SOME f else NONE
+        end
+      in
+        valOf (get_first checkdir pathdirs)
+      end
+    else
+      Path.mkAbsolute {path = myname, relativeTo = FileSys.getDir()}
+  end
+
   val system_ps = Process.system
   (* see winNT-systeml.sml for an explanation of why what is a synonym under
      unix needs to be slightly different on Windows. *)

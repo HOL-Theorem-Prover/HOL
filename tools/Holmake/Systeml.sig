@@ -3,6 +3,7 @@ sig
 
   val systeml : string list -> OS.Process.status
   val system_ps : string -> OS.Process.status
+  val exec : string * string list -> 'a
   val protect : string -> string
   val xable_string : string -> string
   val mk_xable : string -> string
@@ -11,6 +12,8 @@ sig
    second is the name of the post-initialisation script to run. *)
   val emit_hol_script : string -> string -> string
   val emit_hol_unquote_script : string -> string -> string
+
+  val find_my_path : unit -> string
 
   (* configuration time constants *)
   val HOLDIR : string

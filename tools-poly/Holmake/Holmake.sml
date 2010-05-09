@@ -419,6 +419,7 @@ fun parse_command_line list = let
 
   val (rem, cmdl_POLYs) = find_pairs "--poly" rem
   val (rem, polynothol) = find_toggle "--poly_not_hol" rem
+  val (rem, no_lastmakercheck) = find_toggle "--nolmbc" rem
 in
   {targets=rem, debug=debug, show_usage=help,
    always_rebuild_deps=rebuild_deps,
@@ -429,6 +430,7 @@ in
    allfast = allfast, fastfiles = fastfiles,
    user_hmakefile = user_hmakefile,
    no_overlay = no_overlay,
+   no_lastmakercheck = no_lastmakercheck,
    user_overlay = user_overlay,
    interactive_flag = interactive_flag,
    cmdl_HOLDIR =
@@ -472,7 +474,8 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      cmdl_HOLDIR, cmdl_POLYMLLIBDIR, cmdl_POLY, polynothol,
      no_sigobj = cline_no_sigobj, no_prereqs,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
-     user_overlay, keep_going_flag, quiet_flag, do_logging_flag} =
+     no_lastmakercheck, user_overlay, keep_going_flag, quiet_flag,
+     do_logging_flag} =
   parse_command_line (CommandLine.arguments())
 
 fun warn s = if not quiet_flag then
@@ -482,6 +485,8 @@ fun warn s = if not quiet_flag then
 fun info s = if not quiet_flag then print (execname^": "^s^"\n") else ()
 fun tgtfatal s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
                   TextIO.flushOut TextIO.stdErr)
+
+(* call out to (exec) a different Holmake *)
 
 
 (* set up logging *)
