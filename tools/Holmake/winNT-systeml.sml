@@ -22,6 +22,10 @@ in
   Process.system command
 end
 
+(* would like to be using Posix.Process.exec, but this seems flakey on
+   various machines (and is entirely unavailable on Moscow ML) *)
+fun exec (comm, args) = OS.Process.exit (systeml (comm::args))
+
 val protect = dquote
 
 (* the _ps suffix stands for 'protected string', as opposed to the 'l'
