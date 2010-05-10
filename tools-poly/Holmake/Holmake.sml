@@ -10,8 +10,9 @@
 structure Holmake =
 struct
 
-open Systeml;
-
+open Systeml Holmake_tools
+structure FileSys = OS.FileSys
+structure Path = OS.Path
 
   fun main () = let
 
@@ -478,16 +479,12 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      do_logging_flag} =
   parse_command_line (CommandLine.arguments())
 
-fun warn s = if not quiet_flag then
-               (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
-                TextIO.flushOut TextIO.stdErr)
-             else ()
-fun info s = if not quiet_flag then print (execname^": "^s^"\n") else ()
-fun tgtfatal s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
-                  TextIO.flushOut TextIO.stdErr)
+val (outputfunctions as {warn,info,tgtfatal,diag}) =
+    output_functions {quiet_flag = quiet_flag, debug = debug}
 
 (* call out to (exec) a different Holmake *)
-
+val _ = do_lastmade_checks outputfunctions
+                           {no_lastmakercheck = no_lastmakercheck}
 
 (* set up logging *)
 val logfilename = Systeml.make_log_file

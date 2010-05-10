@@ -18,9 +18,10 @@ struct
 prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
-open Systeml;
+open Systeml Holmake_tools
 
 structure Process = OS.Process
+structure Path = OS.Path
 
 
 val execname = Path.file (CommandLine.name())
@@ -393,6 +394,7 @@ fun parse_command_line list = let
   val (rem, keep_going_flag) = find_alternative_tags ["-k", "--keep-going"] rem
   val (rem, quiet_flag) = find_toggle "--quiet" rem
   val (rem, do_logging_flag) = find_toggle "--logging" rem
+  val (rem, no_lastmakercheck) = find_toggle "--nolmbc" rem
 in
   {targets=rem, debug=debug, show_usage=help,
    always_rebuild_deps=rebuild_deps,
@@ -403,6 +405,7 @@ in
    allfast = allfast, fastfiles = fastfiles,
    user_hmakefile = user_hmakefile,
    no_overlay = no_overlay, nob2002 = nob2002,
+   no_lastmakercheck = no_lastmakercheck,
    user_overlay = user_overlay,
    interactive_flag = interactive_flag,
    cmdl_HOLDIR =
@@ -433,20 +436,17 @@ end
 val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      always_rebuild_deps, interactive_flag,
      additional_includes = cline_additional_includes,
-     cmdl_HOLDIR, cmdl_MOSMLDIR, nob2002,
+     cmdl_HOLDIR, cmdl_MOSMLDIR, nob2002, no_lastmakercheck,
      no_sigobj = cline_no_sigobj, no_prereqs,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      user_overlay, keep_going_flag, quiet_flag, do_logging_flag} =
   parse_command_line (CommandLine.arguments())
 
-fun warn s = if not quiet_flag then
-               (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
-                TextIO.flushOut TextIO.stdErr)
-             else ()
-fun info s = if not quiet_flag then print (execname^": "^s^"\n") else ()
-fun tgtfatal s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
-                  TextIO.flushOut TextIO.stdErr)
+val (output_functions as {warn,tgtfatal,diag,info}) =
+    output_functions {debug = debug, quiet_flag = quiet_flag}
 
+val _ = do_lastmade_checks output_functions
+                           {no_lastmakercheck = no_lastmakercheck}
 
 (* set up logging *)
 val logfilename = Systeml.make_log_file
