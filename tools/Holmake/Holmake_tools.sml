@@ -10,9 +10,9 @@ structure FileSys = OS.FileSys
 type output_functions = {warn : string -> unit, info : string -> unit,
                          tgtfatal : string -> unit,
                          diag : string -> unit}
-val execname = CommandLine.name()
 
 fun output_functions {quiet_flag: bool, debug:bool} = let
+  val execname = CommandLine.name()
   open TextIO
   fun msg strm s = (output(strm, execname ^ ": "^s^"\n"); flushOut strm)
   fun donothing _ = ()
