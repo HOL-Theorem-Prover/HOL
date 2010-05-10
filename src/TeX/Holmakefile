@@ -6,10 +6,10 @@ MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
 EXTRA_CLEANS = munger.lex.sml $(EXE) mkmunge.o munger.o $(TARGET) \
                holindex.grm-sig.sml holindex.grm.sml holindex.lex.sig \
-               holindex.lex.sml holindex.grm.sig 
+               holindex.lex.sml holindex.grm.sig
 
 mosml_MKMUNGE_DEP = mkmkmunge.uo
-poly_MKMUNGE_DEP = mkmunge.o $(dprot $(HOLDIR)/bin/hol.builder)
+poly_MKMUNGE_DEP = mkmunge.o
 
 mosml_MKMUNGE_COMM = $(HOLMOSMLC) -o $@ $<
 poly_MKMUNGE_COMM = cc -o $@ $< $(POLY_LDFLAGS)
@@ -21,7 +21,7 @@ $(EXE): $($(ML_SYSNAME)_MKMUNGE_DEP)
 	$($(ML_SYSNAME)_MKMUNGE_COMM)
 	$(CP) $@ $(protect $(HOLDIR)/bin)
 
-mkmunge.o: poly-mkmkmunge.ML mkmkcline.sml
+mkmunge.o: poly-mkmkmunge.ML mkmkcline.sml $(dprot $(HOLDIR)/bin/hol.builder)
 	$(HOLDIR)/bin/hol < $<
 
 munger.lex.sml: munger.lex
@@ -49,7 +49,7 @@ holindex.grm.sml holindex.grm-sig.sml: holindex.grm holindexData.uo
 holindex.grm.ui holindex.grm.uo: holindex.grm.sml holindex.grm-sig.uo holindexData.uo
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holindex.grm-sig.ui $<
 
-AssembleHolindexParser.uo: AssembleHolindexParser.sml holindex.grm.uo holindex.lex.uo holindexData.uo 
+AssembleHolindexParser.uo: AssembleHolindexParser.sml holindex.grm.uo holindex.lex.uo holindexData.uo
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holindex.grm.ui holindex.lex.ui $<
 
 
