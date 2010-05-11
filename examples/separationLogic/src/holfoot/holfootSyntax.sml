@@ -189,6 +189,7 @@ val holfoot_separation_combinator_term = ``holfoot_separation_combinator``
 val holfoot_disjoint_fmap_union_term = ``DISJOINT_FMAP_UNION :holfoot_heap bin_option_function``;
 val holfoot_stack_true_term = ``(var_res_prop_stack_true DISJOINT_FMAP_UNION):holfoot_a_proposition``
 val holfoot_bool_proposition_term = ``(var_res_bool_proposition DISJOINT_FMAP_UNION):bool->holfoot_a_proposition``
+val holfoot_ap_expression_term = ``(var_res_prop_expression DISJOINT_FMAP_UNION T):(num list -> bool)->holfoot_a_expression list->holfoot_a_proposition``
 val holfoot_ap_binexpression_term = ``(var_res_prop_binexpression DISJOINT_FMAP_UNION T):(num->num->bool)->holfoot_a_expression->holfoot_a_expression->holfoot_a_proposition``
 val holfoot_ap_lt_term = mk_comb (holfoot_ap_binexpression_term, ``($<):num->num->bool``);
 val holfoot_ap_le_term = mk_comb (holfoot_ap_binexpression_term, ``($<=):num->num->bool``);

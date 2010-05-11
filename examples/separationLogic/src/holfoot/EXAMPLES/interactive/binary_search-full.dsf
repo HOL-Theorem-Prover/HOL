@@ -9,7 +9,7 @@ binsearch(f;a,n,e) [data_array(a,n,data) * ``SORTED $<= data``] {
           (f == _fc) * (l == _lc) * (r == _rc) * (e == #ec) *
           ``IS_BOOL_TO_NUM #fc /\ SORTED $<= data /\
             (MEM ec data = 
-            ((fc = 1) \/ (?n. lc <= n /\ n < rc /\ (EL n data = ec))))``] {
+            ((fc = 1) \/ (?n'. lc <= n' /\ n' < rc /\ (EL n' data = ec))))``] {
       block_spec [l < r] {
          m = l + ((r - l) / 2);
       } [l <= m * m < r]

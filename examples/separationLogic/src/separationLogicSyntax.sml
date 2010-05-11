@@ -262,6 +262,10 @@ val fasl_comment_loop_spec_term = asl_mk_const "fasl_comment_loop_spec"
 val dest_fasl_comment_loop_spec = strip_comb_2 fasl_comment_loop_spec_term;
 val is_fasl_comment_loop_spec = (can dest_fasl_comment_loop_spec);
 
+val fasl_comment_loop_unroll_term = asl_mk_const "fasl_comment_loop_unroll"
+val dest_fasl_comment_loop_unroll = strip_comb_2 fasl_comment_loop_unroll_term;
+val is_fasl_comment_loop_unroll = (can dest_fasl_comment_loop_unroll);
+
 val fasl_comment_location_string_term = asl_mk_const "fasl_comment_location_string"
 val dest_fasl_comment_location_string = strip_comb_2 fasl_comment_location_string_term;
 val is_fasl_comment_location_string = (can dest_fasl_comment_location_string);
@@ -331,12 +335,18 @@ fun dest_fasl_comment t =
             fasl_comment_abstraction_def
          else if (same_const op_term fasl_comment_loop_spec_term) then 
             fasl_comment_loop_spec_def
+         else if (same_const op_term fasl_comment_loop_unroll_term) then 
+            fasl_comment_loop_unroll_def
          else if (same_const op_term fasl_comment_block_spec_term) then 
             fasl_comment_block_spec_def
          else Feedback.fail();
    in
      (op_term, arg1, arg2, def_thm)   
    end;
+
+val fasl_comment_assert_term = asl_mk_const "fasl_comment_assert"
+val dest_fasl_comment_assert = strip_comb_1 fasl_comment_assert_term;
+val is_fasl_comment_assert = (can dest_fasl_comment_assert);
 
 
 val fasl_procedure_call_preserve_names_wrapper_term = asl_mk_const "fasl_procedure_call_preserve_names_wrapper"

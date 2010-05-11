@@ -378,8 +378,20 @@ fun holfoot_a_space_pred2absyn vs (Aspred_empty) =
   in
      comb_a
   end
-| holfoot_a_space_pred2absyn vs (Aspred_boolhol s) =
-  Absyn.mk_app (Absyn.mk_AQ holfoot_bool_proposition_term, HOL_Absyn s)
+| holfoot_a_space_pred2absyn vs (Aspred_boolhol h) =
+      let
+        val ha = HOL_Absyn h;
+        val used_vars = Redblackset.listItems (Redblackset.intersection (collect_ident ha, fst vs))        
+      in
+        if (null used_vars) then
+           Absyn.mk_app (Absyn.mk_AQ holfoot_bool_proposition_term, ha)
+        else
+           let
+              val (qha, vLt) = absyn_extract_vars used_vars ha
+           in
+              Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_expression_term, [qha, Absyn.mk_AQ vLt])
+           end
+      end
 | holfoot_a_space_pred2absyn vs (Aspred_hol s) =
   HOL_Absyn s
 | holfoot_a_space_pred2absyn vs (Aspred_pointsto (exp, pl)) =
@@ -702,7 +714,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
    in
       (comb_a, wL1@wL2, fL1@fL2)
    end
-| holfoot_p_statement2absyn funL resL vs (Pstm_while (rwOpt, i, cond, stm1)) =
+| holfoot_p_statement2absyn funL resL vs (Pstm_while (unroll, rwOpt, i, cond, stm1)) =
    let
       val (use_inv, i_a) = if isSome i then
               (true, holfoot_a_proposition2absyn vs (valOf i))
@@ -723,10 +735,14 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
             Absyn.list_mk_app (Absyn.IDENT (locn.Loc_None, "fasl_comment_loop_invariant"), [
                abs_prop_a, while_a])
          end
+      val unroll_a = if unroll = 0 then full_a else
+            Absyn.list_mk_app (Absyn.IDENT (locn.Loc_None, "fasl_comment_loop_unroll"), [
+                Absyn.mk_AQ (numLib.term_of_int unroll), full_a])
+      
    in
-      (full_a, wL, fL)
+      (unroll_a, wL, fL)
    end
-| holfoot_p_statement2absyn funL resL vs (Pstm_block_spec (loop, rwOpt, pre, stm1, post)) =
+| holfoot_p_statement2absyn funL resL vs (Pstm_block_spec (loop, unroll, rwOpt, pre, stm1, post)) =
    let
       val pre_a  = holfoot_a_proposition2absyn vs pre;
       val post_a = holfoot_a_proposition2absyn vs post;
@@ -760,8 +776,11 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
           Absyn.IDENT (locn.Loc_None, if loop then "fasl_comment_loop_spec" else
                 "fasl_comment_block_spec"),
           [Absyn.mk_pair (pre_a2, post_a2), stm1_a]);
+      val unroll_a = if unroll = 0 then spec_a else
+            Absyn.list_mk_app (Absyn.IDENT (locn.Loc_None, "fasl_comment_loop_unroll"), [
+                Absyn.mk_AQ (numLib.term_of_int unroll), spec_a])
    in
-      (spec_a, wL, fL)
+      (unroll_a, wL, fL)
    end
 | holfoot_p_statement2absyn funL resL vs (Pstm_withres (res, cond, stm1)) =
    let
@@ -780,6 +799,21 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
               Absyn.mk_AQ res_term, c_a, stm1_a]);
    in
       (comb_a, wL', fL)
+   end
+| holfoot_p_statement2absyn funL resL vs (Pstm_assert p) =
+   let
+      val p_a  = holfoot_a_proposition2absyn vs p;
+      val abs_p_a =
+         let
+            val cond_free_var_list = HOLset.listItems (FVL [absyn2term p_a] empty_tmset);
+            val abs_p_a = mk_list_plam cond_free_var_list p_a
+         in
+            abs_p_a
+         end
+      val comb_a =  Absyn.mk_app (
+          Absyn.IDENT (locn.Loc_None, "fasl_comment_assert"), abs_p_a);
+   in
+      (comb_a, [], [])
    end
 | holfoot_p_statement2absyn funL resL vs (Pstm_fcall(name,args)) =
        holfoot_fcall2absyn funL vs (name, args)

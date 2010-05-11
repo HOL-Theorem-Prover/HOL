@@ -27,6 +27,7 @@ val HOLFOOT_VAR_RES_FRAME_SPLIT_term : term;
 val HOLFOOT_VAR_RES_FRAME_SPLIT___EMP_PRED_term : term;
 val holfoot_ap_array_term : term
 val holfoot_ap_bigstar_list_term : term
+val holfoot_ap_expression_term : term
 val holfoot_ap_binexpression_term : term
 val holfoot_ap_bintree_term : term
 val holfoot_ap_data_array_term : term

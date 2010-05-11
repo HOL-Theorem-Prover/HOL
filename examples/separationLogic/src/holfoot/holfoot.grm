@@ -102,9 +102,11 @@ val tree_link_tags = ("l", "r")
   |  LOOP_SPEC
   |  WITH
   |  XOR
-  |  ASSUME
+  |  ASSUME 
+  |  ASSERT
   |  WRITEREAD
   |  BANGWRITEREAD
+  |  UNROLL
   |  below_ELSE
   |  unary_prefix
   |  ENTAILS
@@ -135,6 +137,7 @@ val tree_link_tags = ("l", "r")
   |  program_item of Parsetree.p_item
   |  fun_decl of Parsetree.p_item
   |  read_write_decl of (bool * string list * string list) option
+  |  unroll_decl of int
   |  resource_decl of Parsetree.p_item
   |  ident_decl of string list
   |  ident_seq of string list
@@ -196,6 +199,10 @@ program_item :
     fun_decl ( fun_decl )
   | resource_decl (resource_decl )
 
+unroll_decl:
+    (* empty *) ( 0 )
+  | UNROLL NAT RBRACKET ( NAT )
+  | UNROLL RBRACKET ( 1 )
 
 read_write_decl:
     (* empty *) ( NONE )
@@ -268,12 +275,14 @@ statement:
 	  ( Pstm_if(condition, statement, Pstm_block []) )
   | IF LPAREN condition RPAREN statement ELSE statement
 	  ( Pstm_if(condition, statement1, statement2) )
-  | WHILE LPAREN condition RPAREN read_write_decl invariant statement
-	  ( Pstm_while(read_write_decl, invariant, condition, statement) )
+  | WHILE LPAREN condition RPAREN unroll_decl read_write_decl invariant statement
+	  ( Pstm_while(unroll_decl, read_write_decl, invariant, condition, statement) )
   | BLOCK_SPEC read_write_decl spec statement spec
-	  ( Pstm_block_spec(false, read_write_decl, spec1, statement, spec2) )
-  | LOOP_SPEC read_write_decl spec statement spec
-	  ( Pstm_block_spec(true, read_write_decl, spec1, statement, spec2) )
+	  ( Pstm_block_spec(false, 0, read_write_decl, spec1, statement, spec2) )
+  | LOOP_SPEC unroll_decl read_write_decl spec statement spec
+	  ( Pstm_block_spec (true, unroll_decl, read_write_decl, spec1, statement, spec2) )
+  | ASSERT spec SEMI
+	  ( Pstm_assert spec)
   | WITH IDENT WHEN LPAREN condition RPAREN statement
           ( Pstm_withres(IDENT,condition,statement) )
   | IDENT LPAREN actual_params RPAREN SEMI

@@ -61,6 +61,7 @@ List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
   ("map" ,      MAP),
   ("true" ,     TT),
   ("assume" ,   ASSUME),
+  ("assert" ,   ASSERT),
   ("false",     FF),
   ("NULL",      (fn (x,y) => NAT (0,x,y)))
 ];
@@ -147,6 +148,8 @@ quoted_string = "\"" [^ `\"`]* "\"";
   ( STAR (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"[w/r:" =>
   ( WRITEREAD (mkMtTok yytext yypos (!yylineno)) );
+<INITIAL>"[unroll" =>
+  ( UNROLL (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"![w/r:" =>
   ( BANGWRITEREAD (mkMtTok yytext yypos (!yylineno)) );
 <INITIAL>"^" =>

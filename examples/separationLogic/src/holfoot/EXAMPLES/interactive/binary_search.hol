@@ -19,6 +19,7 @@
 use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
 *)
 
+
 HOL_Interactive.toggle_quietdec();
 
 open listTheory rich_listTheory pred_setTheory sortingTheory ConseqConv boolSimps
@@ -146,7 +147,7 @@ REPEAT STRIP_TAC THENL [
    REPEAT STRIP_TAC THEN
    EQ_TAC THEN ASM_SIMP_TAC arith_ss [] THEN
    REPEAT STRIP_TAC THEN
-   MP_TAC (Q.SPECL [`data'`, `m_const`, `n`] SORTED_EL_LESS_EQ) THEN
+   MP_TAC (Q.SPECL [`data'`, `m_const`, `n'`] SORTED_EL_LESS_EQ) THEN
    ASM_SIMP_TAC arith_ss [],
 
 
@@ -156,7 +157,7 @@ REPEAT STRIP_TAC THENL [
    REPEAT STRIP_TAC THEN
    EQ_TAC THEN ASM_SIMP_TAC arith_ss [] THEN
    REPEAT STRIP_TAC THEN
-   MP_TAC (Q.SPECL [`data'`, `n`, `m_const`] SORTED_EL_LESS_EQ) THEN
+   MP_TAC (Q.SPECL [`data'`, `n'`, `m_const`] SORTED_EL_LESS_EQ) THEN
    ASM_SIMP_TAC arith_ss [],
 
 
@@ -191,6 +192,7 @@ val thm_full = holfoot_tac_verify_spec file_full NONE
 set_trace "holfoot use Yices" 0; (*turn yices off*)
 
 val file_loopspec = concat [examplesDir, "/interactive/binary_search-full-loopspec.dsf"];
+
 (* holfoot_set_goal file_loopspec *)
 val binsearch_loopspec_TAC = 
 HF_CONTINUE_TAC THEN

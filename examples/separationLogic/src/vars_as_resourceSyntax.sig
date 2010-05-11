@@ -42,6 +42,7 @@ val var_res_prog_release_lock_term : term
 val var_res_prop___var_eq_const_BAG_term : term
 val var_res_prop_binexpression_cond_term : term
 val var_res_prop_binexpression_term : term
+val var_res_prop_expression_term : term
 val var_res_prop_equal_term : term
 val var_res_prop_implies_eq_term : term
 val var_res_prop_implies_term : term
