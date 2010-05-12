@@ -11,3 +11,9 @@ mosmlTextIO.ui mosmlTextIO.uo: mosmlTextIO.sml
 comparelogs: comparelogs.sml $(MLTON_SRCS)
 	mlton comparelogs.mlb
 
+generateBuildSummary: generateBuildSummary.o
+	gcc -o $@ $< $(POLY_LDFLAGS)
+
+generateBuildSummary.o: poly-gbs.ML generateBuildSummary.sml
+	$(POLY) < $<
+
