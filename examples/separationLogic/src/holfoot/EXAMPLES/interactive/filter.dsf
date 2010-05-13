@@ -5,13 +5,13 @@ list_filter(l;x) [data_list(l,data)] {
   while(y != NULL) [x == #fc *
                     if (y == l) then
                        data_list(l,_data1) * 
-          	       ``?data_fc. (EVERY (\x. x = fc:num) data_fc) /\
+          	       ``?data_fc. (EVERY (\n. n = fc:num) data_fc) /\
                                 (data:num list = data_fc ++ _data1)``
                     else
-                    data_lseg(l,``FILTER (\e:num. ~(e = fc)) _data1``,z) * 
+                    data_lseg(l,``FILTER (\n:num. ~(n = fc)) _data1``,z) * 
 	            z |-> [tl:y, dta:_date] *
                     data_list(y,_data2) *
-	            ``?data_fc. (EVERY (\x. x = fc:num) data_fc) /\
+	            ``?data_fc. (EVERY (\n. n = fc:num) data_fc) /\
                                 (data:num list = _data1 ++ _date::(data_fc++_data2)) /\
 	              (~(_date = fc))``] {
     e = y->dta;
@@ -31,7 +31,7 @@ list_filter(l;x) [data_list(l,data)] {
       y = y->tl;
     }
   }
-} [data_list(l, ``FILTER (\e:num. ~(e = (x:num))) data``)]
+} [data_list(l, ``FILTER (\n:num. ~(n = (x:num))) data``)]
 
 
 

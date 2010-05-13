@@ -27,11 +27,11 @@ list_filter(l;x) [data_list(l,data)] {
       }
     }
   } [if (#yc == #lc) then
-       data_list(l, ``FILTER (\e:num. ~(e = fc)) data2``)
+       data_list(l, ``FILTER (\n:num. ~(n = fc)) data2``)
      else
-       (data_list(l, ``data ++ [zdata] ++ (FILTER (\e:num. ~(e = fc)) data2)``) * 
+       (data_list(l, ``data ++ [zdata] ++ (FILTER (\n:num. ~(n = fc)) data2)``) * 
        (l != y))]
-} [data_list(l, ``FILTER (\e:num. ~(e = x:num)) data``)]
+} [data_list(l, ``FILTER (\n:num. ~(n = x:num)) data``)]
 
 
 

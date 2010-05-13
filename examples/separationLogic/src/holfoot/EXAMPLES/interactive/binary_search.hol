@@ -32,7 +32,6 @@ HOL_Interactive.toggle_quietdec();
 (* Lemmata                                                                    *)
 (******************************************************************************)
 
-
 val SORTED_EL = prove (
 ``!R l n1 n2. transitive R /\ SORTED R l /\ 
      (n2 < LENGTH l) /\ (n1 < n2) ==> (R (EL n1 l) (EL n2 l))``,
@@ -117,14 +116,15 @@ set_trace "HolSmtLib" 0;
 
 
 val file = concat [examplesDir, "/automatic/binary_search-shape.dsf"];
-val thm = holfoot_auto_verify_spec file
+val _ = holfoot_auto_verify_spec file;
 
 
-(* see what happens without yices *)
+(* see what happens without yices (it fails) *)
 
+(*
 val _ = set_trace "holfoot use Yices" 0; (*turn yices off*)
 val thm = holfoot_auto_verify_spec file
-
+*)
 				   
 
 (******************************************************************************)
@@ -179,9 +179,7 @@ REPEAT STRIP_TAC THENL [
    FULL_SIMP_TAC arith_ss []
 ];
 
-val thm_full = holfoot_tac_verify_spec file_full NONE
-                [("binsearch", binsearch_full_TAC)];
-
+val _ = holfoot_tac_verify_spec file_full NONE [("binsearch", binsearch_full_TAC)];
 
 
 
@@ -240,7 +238,6 @@ REPEAT STRIP_TAC THENL [
 ];
 
 
-
-val thm = holfoot_tac_verify_spec file_loopspec NONE
+val _ = holfoot_tac_verify_spec file_loopspec NONE
                 [("binsearch", binsearch_loopspec_TAC)]
 

@@ -18,7 +18,7 @@ HOL_Interactive.toggle_quietdec();
 (* Just the shape works automatically                                         *)
 (******************************************************************************)
 val file = concat [examplesDir, "/automatic/array_copy-shape.dsf"];
-val thm = holfoot_auto_verify_spec file
+val thm = holfoot_auto_verify_spec file;
 
 
 (******************************************************************************)
@@ -38,8 +38,7 @@ REPEAT STRIP_TAC THENL [
    ASM_SIMP_TAC arith_ss [LIST_EQ_REWRITE]
 ];
 
-val thm = holfoot_tac_verify_spec file NONE
-                [("copy", copy_TAC)]
+val _ = holfoot_tac_verify_spec file NONE [("copy", copy_TAC)];
 
 
 (******************************************************************************)
@@ -62,5 +61,5 @@ REPEAT STRIP_TAC THENL [
    HF_CONTINUE_TAC
 ];
 
-val thm = holfoot_tac_verify_spec file2 NONE
-                [("copy", copy2_TAC)]
+val _ = holfoot_tac_verify_spec file2 NONE [("copy", copy2_TAC)];
+
