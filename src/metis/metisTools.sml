@@ -428,6 +428,19 @@ fun METIS_TTAC (cs,ths) =
 
 val METIS_TAC = X_METIS_TAC METIS_TTAC;
 
+(*
+val METIS_TAC = fn ths => fn goal =>
+    let
+      val met = Count.mk_meter ()
+      val _ = chat "\nMETIS_TAC: new\n"
+      val res = METIS_TAC ths goal
+      val {prims,...} = Count.read met
+      val _ = chat ("METIS_TAC: " ^ Int.toString prims ^ "\n")
+    in
+      res
+    end;
+*)
+
 val METIS_PROVE = prover METIS_TAC;
 
 end

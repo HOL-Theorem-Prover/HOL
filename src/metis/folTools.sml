@@ -525,6 +525,18 @@ end;
 
 fun FOL_TACTIC slv lmap lim = ACCEPT_TAC (FOL_REFUTE slv lmap lim);
 
+(*
+val FOL_TACTIC = fn slv => fn lmap => fn lim => fn goal =>
+    let
+      val met = Count.mk_meter ()
+      val res = FOL_TACTIC slv lmap lim goal
+      val {prims,...} = Count.read met
+      val _ = chat ("FOL_TACTIC: " ^ Int.toString prims ^ "\n")
+    in
+      res
+    end;
+*)
+
 (* ------------------------------------------------------------------------- *)
 (* HOL normalization to first-order form.                                    *)
 (* ------------------------------------------------------------------------- *)
