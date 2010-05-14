@@ -311,15 +311,22 @@ fun parse_renamer instruction = let
 
 fun introduce_guards thms = let
   val pattern = (fst o dest_eq o concl o SPEC_ALL) cond_def
+(*
+  val (n,(th1,i1,j1),SOME (th2,i2,j2)) = el 8 res
+*)
   fun intro (n,(th1,i1,j1),NONE) = (n,(th1,i1,j1),NONE)
     | intro (n,(th1,i1,j1),SOME (th2,i2,j2)) = let
     val t1 = cdr (find_term (can (match_term pattern)) (concl th1))
     val t2 = cdr (find_term (can (match_term pattern)) (concl th2))
     val h = RW [SPEC_MOVE_COND] o SIMP_RULE (bool_ss++sep_cond_ss) []
     val (th1,th2) = (h th1,h th2)
+    val tm1 = (mk_neg o fst o dest_imp o concl) th1
+    val tm2 = (fst o dest_imp o concl) th2
+    val lemma = auto_prove "introduce_guards" (mk_eq(tm2,tm1),SIMP_TAC std_ss [])
+    val th2 = CONV_RULE ((RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [lemma])) th2
     val rw = SPEC (numSyntax.term_of_int n) GUARD_def
-    val f1 = CONV_RULE ((RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [GSYM rw]))
-    val f2 = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV) (ONCE_REWRITE_CONV [GSYM rw]))
+    val f1 = CONV_RULE ((RATOR_CONV o RAND_CONV) (PURE_ONCE_REWRITE_CONV [GSYM rw]))
+    val f2 = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV) (PURE_ONCE_REWRITE_CONV [GSYM rw]))
     val (th1,th2) = if is_neg t1 then (f2 th1,f1 th2) else (f1 th1, f2 th2)
     val h2 = RW [GSYM SPEC_MOVE_COND]
     val (th1,th2) = (h2 th1,h2 th2)
@@ -369,11 +376,14 @@ fun inst_pc_var tools thms = let
         (y,(f y th1,x1,x2),SOME (f y th2,y1,y2))
   val i = [mk_var("eip",``:word32``) |-> mk_var("p",``:word32``)]
   val (_,_,_,pc) = tools
+  val ty = (hd o snd o dest_type o type_of) pc
+  val aa = (hd o tl o snd o dest_type) ty
   fun f y th = let
     val th = INST i th
     val (_,p,_,_) = dest_spec (concl th)
-    val new_p = subst [mk_var("n",``:num``)|-> numSyntax.mk_numeral (Arbnum.fromInt y)] ``(p:word32) + n2w n``
-    val th = INST [mk_var("p",``:word32``)|->new_p] th
+    val pattern = inst [``:'a``|->aa] ``(p:'a word) + n2w n``
+    val new_p = subst [mk_var("n",``:num``)|-> numSyntax.mk_numeral (Arbnum.fromInt y)] pattern
+    val th = INST [mk_var("p",type_of new_p)|->new_p] th
     val (_,_,_,q) = dest_spec (concl th)
     val tm = find_term (fn tm => car tm = pc handle HOL_ERR e => false) q
     val cc = SIMP_CONV std_ss [word_arith_lemma1,word_arith_lemma3,word_arith_lemma4]
@@ -726,7 +736,8 @@ fun generate_spectree thms (entry,exit) = let
              val t = tree_composition (th,i,thms,entry,exit,conds,firstTime)
              in (i,t) end) is  
   val t = merge_entry_points case_list (map snd ts)
-  val t = map_spectree (HIDE_STATUS_RULE true hide_th) t
+  val t = if not (is_eq (concl (SPEC_ALL hide_th))) then t 
+          else map_spectree (HIDE_STATUS_RULE true hide_th) t
   val t = map_spectree (modifier "spec") t 
   in t end;
 
@@ -754,7 +765,8 @@ fun read_tag v = let
 
 fun ABBREV_NEW th = let
   val pc = get_pc ()
-  val tm = find_term (can (match_term (mk_comb(pc,genvar(``:word32``))))) (cdr (concl th))
+  val ty = (hd o snd o dest_type o type_of) pc
+  val tm = find_term (can (match_term (mk_comb(pc,genvar(ty))))) (cdr (concl th))
   val th = abbreviate ("new@p",tm) th
   val ws = (filter (not o is_new_var) o free_vars o cdr o concl) th
   fun one(v,th) = raw_abbreviate2 ("new@" ^ strip_tag v,v,v) th
@@ -768,6 +780,12 @@ fun remove_tags tm =
 fun list_dest_sep_exists tm = let
   val vs = list_dest dest_sep_exists tm
   in (butlast vs, last vs) end;
+
+(*
+val guard = ``T``
+val th1 = th
+val th2 = th
+*)
 
 fun MERGE guard th1 th2 = let
   (* fill in preconditions *)
@@ -1291,7 +1309,7 @@ val REMOVE_TAGS_CONV = let
     in MATCH_MP alpha_lemma thi end handle e => NO_CONV tm
   in (DEPTH_CONV REMOVE_TAG_CONV THENC REWRITE_CONV [GUARD_def]) end;
 
-fun simplify_and_define name x_in rhs = let
+fun simplify_and_define name x_in rhs = let (*  *)
   val ty = mk_type("fun",[type_of x_in, type_of rhs])
   val rw = REMOVE_TAGS_CONV rhs handle HOL_ERR _ => REFL rhs
   val tm = mk_eq(mk_comb(mk_var(name,ty),x_in),cdr (concl rw))
@@ -1423,18 +1441,22 @@ fun extract_function name th entry exit function_in_out = let
   val th = introduce_lets th
   val avoid_vars = case function_in_out of NONE => [] | SOME (p,q) => free_vars q
   val th = remove_constant_new_assigment avoid_vars th 
-  val th = INST [mk_var("new@p",``:word32``) |-> mk_var("set@p",``:word32``)] th
+  val pc = get_pc()
+  val pc_type = (hd o snd o dest_type o type_of) pc
+  val th = INST [mk_var("new@p",pc_type) |-> mk_var("set@p",pc_type)] th
   val t = tm2ftree ((cdr o car o concl o RW [WORD_ADD_0]) th)
   (* extract base, step, side, input, output *)
-  fun gen_pc n = if n = 0 then ``p:word32`` else
-    subst [mk_var("n",``:num``) |-> numSyntax.term_of_int n] ``(p:word32) + n2w n``
+  val aa = (hd o tl o snd o dest_type) pc_type
+  fun gen_pc n = if n = 0 then mk_var("p",pc_type) else
+    subst [mk_var("n",``:num``) |-> numSyntax.term_of_int n] 
+      (inst [``:'a``|->aa] ``(p:'a word) + n2w n``)
   val exit_tm = gen_pc (hd exit)
   val entry_tm = (snd o dest_eq o find_term (fn tm => let
                    val (x,y) = dest_eq tm
                    in fst (dest_var x) = "set@p" andalso not (y = exit_tm) end
                    handle HOL_ERR _ => false) o concl) th 
                  handle HOL_ERR _ => gen_pc (hd entry)
-  val final_node = mk_eq(mk_var("set@p",``:word32``),exit_tm)
+  val final_node = mk_eq(mk_var("set@p",pc_type),exit_tm)
   fun is_terminal_node tm = can (find_term (fn x => eq x final_node)) tm
   val side = ftree2tm (leaves t (fn x => mk_var("cond",``:bool``)))
   val side = subst [mk_var("cond",``:bool``) |-> ``T``] side
@@ -1446,7 +1468,7 @@ fun extract_function name th entry exit function_in_out = let
   fun strip_tag v = mk_var((implode o drop 4 o explode o fst o dest_var) v, type_of v)
   val output = var_sorter (map strip_tag output)
   fun rm_pc tm = let
-    val xs = find_terms (fn x => eq (fst (dest_eq x)) (mk_var("set@p",``:word32``)) handle HOL_ERR _ => false) tm
+    val xs = find_terms (fn x => eq (fst (dest_eq x)) (mk_var("set@p",pc_type)) handle HOL_ERR _ => false) tm
     in subst (map (fn x => x |-> T) xs) tm end
   val iii = (list_mk_pair o var_sorter o filter (not o is_new_var) o
                free_vars o rm_pc o ftree2tm o leaves t)
@@ -1518,7 +1540,7 @@ fun extract_function name th entry exit function_in_out = let
     val tac = 
       PURE_REWRITE_TAC [pre_def]
       THEN MATCH_MP_TAC tailrecTheory.TAILREC_PRE_IMP
-      THEN REVERSE STRIP_TAC
+      THEN Tactical.REVERSE STRIP_TAC
       THEN1 (SIMP_TAC std_ss [side_def,LET_DEF,pairTheory.FORALL_PROD])
       THEN SIMP_TAC std_ss [step_def,guard_def,LET_DEF,pairTheory.FORALL_PROD,GUARD_def]
       THEN AUTO_PROVE_WF_TAC ((concl o SPEC_ALL) main_thm)
@@ -1534,7 +1556,7 @@ fun extract_function name th entry exit function_in_out = let
     THEN REPEAT (AUTO_DECONSTRUCT_TAC finder)
     THEN SIMP_TAC std_ss []
   val lemma1 = let
-    val th1 = INST [mk_var("set@p",``:word32``) |-> exit_tm] th1
+    val th1 = INST [mk_var("set@p",pc_type) |-> exit_tm] th1
     val th1 = RW [] th1
     val post = (free_vars o cdr o snd o dest_imp o concl) th1
     val top = (free_vars o fst o dest_imp o concl) th1
@@ -1542,7 +1564,7 @@ fun extract_function name th entry exit function_in_out = let
     val vs = op_diff eq new_top (dest_tuple new_output @ output)
     val th1 = remove_primes (HIDE_POST_VARS vs th1)
     val pre = (free_vars o cdr o car o car o snd o dest_imp o concl) th1
-    val ws = op_diff eq pre (mk_var("p",``:word32``)::input)
+    val ws = op_diff eq pre (mk_var("p",pc_type)::input)
     val tm = (fst o dest_imp o concl o DISCH_ALL) th1
     val get_lhs = (fst o dest_eq o concl o SPEC_ALL)
     val tm2 = list_mk_conj [get_lhs side_def,mk_neg(get_lhs guard_def),
@@ -1557,7 +1579,7 @@ fun extract_function name th entry exit function_in_out = let
     handle e => (print "\n\nDecompiler failed to prove 'lemma 1'.\n\n"; raise e)
   val lemma2 = let
     val e_tm = subst [new_pos_subst] entry_tm
-    val th2 = INST [mk_var("set@p",``:word32``) |-> e_tm] th2
+    val th2 = INST [mk_var("set@p",pc_type) |-> e_tm] th2
     val th2 = RW [WORD_ADD_0] th2
     val post = (free_vars o cdr o snd o dest_imp o concl) th1
     val top = (free_vars o fst o dest_imp o concl) th1
@@ -1565,7 +1587,7 @@ fun extract_function name th entry exit function_in_out = let
     val vs = op_diff eq new_top (dest_tuple new_input)
     val th2 = remove_primes (HIDE_POST_VARS vs th2)
     val pre = (free_vars o cdr o car o car o snd o dest_imp o concl) th2
-    val vs = op_diff eq pre (mk_var("p",``:word32``)::input)
+    val vs = op_diff eq pre (mk_var("p",pc_type)::input)
     val tm = (fst o dest_imp o concl o DISCH_ALL) th2
     val get_lhs = (fst o dest_eq o concl o SPEC_ALL)
     val tm2 = list_mk_conj [get_lhs side_def,get_lhs guard_def,

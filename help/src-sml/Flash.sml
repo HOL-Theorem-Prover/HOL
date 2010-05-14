@@ -17,13 +17,13 @@ end
 
 fun donowt() = ()
 
-val initialise = let
-  val null = (fn _ => (donowt, donowt))
+fun initialise p = let
+  val null = (donowt, donowt)
 in
   case OS.Process.getEnv "TERM" of
     SOME "emacs" => null
   | SOME "dumb" => null
-  | SOME s => init
+  | SOME s => init p
   | NONE => null
 end
 

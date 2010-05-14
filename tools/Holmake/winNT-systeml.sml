@@ -22,6 +22,10 @@ in
   Process.system command
 end
 
+(* would like to be using Posix.Process.exec, but this seems flakey on
+   various machines (and is entirely unavailable on Moscow ML) *)
+fun exec (comm, args) = OS.Process.exit (systeml (comm::args))
+
 val protect = dquote
 
 (* the _ps suffix stands for 'protected string', as opposed to the 'l'
@@ -47,6 +51,33 @@ fun normPath s = Path.toString(Path.fromString s)
 fun fullPath slist =
     normPath (List.foldl (fn (p1,p2) => Path.concat(p2,p1))
                          (hd slist) (tl slist))
+
+  fun get_first f [] = NONE
+    | get_first f (h::t) = case f h of NONE => get_first f t
+                                     | x => x
+
+
+  fun find_my_path () = let
+    (* assumes directory hasn't been changed yet *)
+    val myname = CommandLine.name()
+    val {dir,file} = Path.splitDirFile myname
+  in
+    if dir = "" then let
+        val pathdirs = String.tokens (fn c => c = #";")
+                                     (valOf (Process.getEnv "PATH"))
+        open FileSys
+        fun checkdir d = let
+          val f = Path.concat(d,file)
+        in
+          if access(f, [A_READ, A_EXEC]) then SOME f else NONE
+        end
+      in
+        valOf (get_first checkdir pathdirs)
+      end
+    else
+      Path.mkAbsolute (myname,FileSys.getDir())
+  end
+
 
 val HOLDIR =
 val MOSMLDIR =

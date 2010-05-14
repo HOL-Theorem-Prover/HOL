@@ -291,7 +291,7 @@ val search_tree_delete_TAC =
          RES_TAC THEN DECIDE_TAC,
          METIS_TAC[]
       ]
-   ]
+   ];
 
 
 (* holfoot_set_goal_procedures file ["search_tree_lookup"] *)
@@ -352,7 +352,7 @@ val search_tree_to_list___rec_TAC =
 val search_tree_to_list_TAC =
    xHF_CONTINUE_TAC [generate_vcs] THEN
    HF_ELIM_COMMENTS_TAC THEN
-   METIS_TAC[]
+   METIS_TAC[];
 
 
 
@@ -361,7 +361,7 @@ val search_tree_to_list_TAC =
 (* Finally combine everything                                                 *)
 (******************************************************************************)
 
-val thm = holfoot_tac_verify_spec file NONE [
+val _ = holfoot_tac_verify_spec file NONE [
    ("search_tree_init",          search_tree_init_TAC),
    ("search_tree_insert",        search_tree_insert_TAC),
    ("search_tree_delete_min",    search_tree_delete_min_TAC),
@@ -499,12 +499,14 @@ val search_tree_lookup2_TAC =
 
       Q.EXISTS_TAC `keys` THEN
       xHF_CONTINUE_TAC [use_asms]
-   ]
+   ];
 
 
-val thm2 = holfoot_tac_verify_spec file2 NONE [
+val _ = holfoot_tac_verify_spec file2 NONE [
    ("search_tree_delete_min",    search_tree_delete_min2_TAC),
-   ("search_tree_lookup",        search_tree_lookup2_TAC)]
+   ("search_tree_lookup",        search_tree_lookup2_TAC)];
+
+
 
 
 

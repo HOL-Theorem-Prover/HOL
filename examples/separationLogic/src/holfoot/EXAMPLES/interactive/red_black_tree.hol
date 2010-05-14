@@ -1646,7 +1646,7 @@ val rb_tree_insert_TAC =
       ASM_SIMP_TAC std_ss [RED_BLACK_TREE___MAKE_BLACK_def]
    ) THEN
    HF_ELIM_COMMENTS_TAC THEN
-   METIS_TAC[RED_BLACK_TREE___MAKE_BLACK_THM]
+   METIS_TAC[RED_BLACK_TREE___MAKE_BLACK_THM];
    
 
 
@@ -1656,7 +1656,7 @@ val rb_tree_insert_TAC =
 
 val file = concat [examplesDir, "/interactive/red_black_tree.dsf"];
 
-val spec_thm = holfoot_tac_verify_spec file NONE 
+val _ = holfoot_tac_verify_spec file NONE 
     [("rb_tree_init",                    rb_tree_init_TAC),
      ("rb_tree_mk_node",                 rb_tree_mk_node_TAC),
      ("rb_tree_is_red",                  rb_tree_is_red_TAC),

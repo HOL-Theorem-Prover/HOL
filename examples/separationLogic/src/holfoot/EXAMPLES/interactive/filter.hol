@@ -32,7 +32,7 @@ val filter_TAC =
   HF_STEP_TAC 1 THEN
   Tactical.REVERSE CONJ_TAC THEN1 (
      (*body of original function*)
-     HF_CONTINUE_TAC THEN
+     xHF_CONTINUE_TAC [do_case_splits] THEN     
      (*at the beginning of the loop nothing is filtered*)
      REPEAT GEN_TAC THEN Q.EXISTS_TAC `[]` THEN
      xHF_CONTINUE_TAC [do_case_splits] THEN     
@@ -57,10 +57,10 @@ val filter_TAC =
         BUTFIRSTN_APPEND1, TAKE_APPEND1,
         BUTFIRSTN_APPEND2, TAKE_APPEND2,
         BUTFIRSTN_LENGTH_APPEND, BUTFIRSTN_LENGTH_NIL]
-  ]
+  ];
 
-val spec_thm = holfoot_tac_verify_spec file NONE 
-   [("list_filter", filter_TAC)]
+val _ = holfoot_tac_verify_spec file NONE 
+   [("list_filter", filter_TAC)];
 
 
 
@@ -95,5 +95,5 @@ REPEAT STRIP_TAC THENL [
    HF_SOLVE_TAC
 ];
 
-val spec2_thm = holfoot_tac_verify_spec file2 NONE 
+val _ = holfoot_tac_verify_spec file2 NONE 
    [("list_filter", filter2_TAC)]

@@ -1667,6 +1667,74 @@ end;
 
 
 
+(*
+VAR_RES_COND_INFERENCE___while_unroll
+
+val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
+*)
+
+fun VAR_RES_COND_INFERENCE___while___loop_unroll___CONSEQ_CONV tt =
+let
+    (* destruct everything *)
+    val (p1_0,_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
+    val (c, p1_1, thm0_fun) = save_dest_fasl_comment_location p1_0
+    val (unroll_t,p1) = dest_fasl_comment_loop_unroll p1_1;
+
+    (* elim comments *)
+    val thm0a = CONV_RULE (RHS_CONV (REWR_CONV fasl_comment_loop_unroll_def)) (thm0_fun ());
+    val thm0 = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV (K thm0a) tt
+
+
+    (* apply inference *)
+    val inf_thm = if (is_fasl_comment_loop_invariant p1) then 
+                     VAR_RES_COND_INFERENCE___while_unroll___invariant
+                  else if (is_fasl_comment_loop_spec p1) then
+                     VAR_RES_COND_INFERENCE___while_unroll___loop_spec
+                  else VAR_RES_COND_INFERENCE___while_unroll  
+    val thm1a = PART_MATCH (snd o dest_imp) inf_thm (rhs (concl thm0))
+    fun unroll_comment_intro t =
+       let
+          val unroll_n = numLib.int_of_term unroll_t
+       in
+          if unroll_n <= 1 then raise UNCHANGED else
+          ISPECL [numLib.term_of_int (unroll_n - 1), t] (GSYM fasl_comment_loop_unroll_def)
+       end;
+
+    val thm1b = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o
+                   RAND_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) unroll_comment_intro) thm1a   
+
+    val thm1c = CONV_RULE ((RATOR_CONV o RAND_CONV) (REWRITE_CONV [
+         VAR_RES_COND_INFERENCE___prog_block3, APPEND])) thm1b
+    val thm1 = CONV_RULE (RAND_CONV (K (GSYM thm0))) thm1c
+
+
+    (* reintroduce comments *)
+    val new_c2 = fasl_comment_modify_APPEND ("while-loop unroll-skipped") c;
+    val new_c3 = fasl_comment_modify_APPEND ("while-loop unrolled") c;
+
+    fun block_list_CONV conv t =
+       if listSyntax.is_nil t then conv t else
+       if listSyntax.is_nil (rand t) then
+          (RAND_CONV conv t) else
+          (RAND_CONV o RATOR_CONV o RAND_CONV) conv t
+
+    fun block_second_CONV conv t =
+         if is_fasl_prog_block t then RAND_CONV (block_list_CONV conv) t else
+            conv t
+
+    val thm2a = CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) 
+                     (block_second_CONV (fasl_comment_location_INTRO_CONV new_c2))) thm1
+
+    val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) 
+                     (block_second_CONV (fasl_comment_location_INTRO_CONV new_c3))) thm2a
+
+in
+   thm2
+end;
+
+
+
+
 (******************************************************************************)
 (* HANDLE block specs                                                         *)
 (******************************************************************************)
@@ -2227,6 +2295,69 @@ in
    thm3
 end
 
+end
+
+(******************************************************************************)
+(* Assert                                                                     *)
+(******************************************************************************)
+
+(*
+   val tt = find_term is_VAR_RES_COND_HOARE_TRIPLE (snd (top_goal ()))
+*)
+fun VAR_RES_COND_INFERENCE___assert___CONSEQ_CONV tt =
+let
+    (* destruct everything *)
+    val (p1_0,c_opt,_,_,_,thm0_fun) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location tt;
+    val P' = dest_fasl_comment_assert p1_0;
+    val c = if isSome c_opt then valOf c_opt else empty_label_list;
+
+    (*introduce constants*)
+    val thm_const = CONV_RULE (RHS_CONV
+         VAR_RES_COND_INFERENCE___PREPARE_FOR_FRAME___CONV) (thm0_fun())
+    val (vs, tt') = strip_forall (rhs (concl thm_const))
+
+    (*apply inference*)
+    val (vc, _) = pairSyntax.dest_pabs P';
+    val P_thm = pairTools.PABS_ELIM_CONV P' handle UNCHANGED => REFL P';
+
+    val thm0a = VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV
+                   (RAND_CONV (K P_thm)) tt'
+
+    val thm0b = HO_PART_MATCH (snd o dest_imp)
+                   VAR_RES_COND_INFERENCE___comment_assert
+                   (rhs (concl thm0a))
+
+    val thm0 = CONV_RULE ((RAND_CONV) ((DEPTH_CONV BETA_CONV) THENC
+                                        (K (GSYM thm0a)))) thm0b
+
+    (*simplify assertion*)
+    val a_prop = (rand o rand o rator o rand o rand o rator o snd o dest_exists o fst o dest_imp o concl) thm0;
+    val a_prop_thm = ((DEPTH_CONV BETA_CONV) THENC
+                        var_res_prop_internal___ELIM_CONV THENC
+                        COND_PROP___STRONG_EXISTS_NORMALISE_CONV) a_prop;
+
+    val thm1 = CONV_RULE ((RATOR_CONV o RAND_CONV o QUANT_CONV o 
+                           VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND___CONV) 
+                          (DEPTH_CONV (REWR_CONV a_prop_thm))) thm0
+
+    (*reintroduce orginal variable names*)
+    val my_intro_conv = (pairTools.SPLIT_QUANT_CONV vc THENC
+                         TRY_CONV LIST_EXISTS_SIMP_CONV)
+
+    val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV) my_intro_conv) thm1
+
+    (*introduce comment*)
+    val new_c1 = fasl_comment_modify_APPEND ("assertion") c
+    val thm3 = CONV_RULE ((RATOR_CONV o RAND_CONV o 
+                   STRIP_QUANT_CONV o
+                   RATOR_CONV o RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
+                  ((fasl_comment_location2_INTRO_CONV new_c1))) thm2
+
+   (*combine with thm_const*)
+   val thm4a = LIST_GEN_IMP vs thm3
+   val thm4 = CONV_RULE (RAND_CONV (K (GSYM thm_const))) thm4a
+in
+   thm4
 end
 
 
@@ -3162,6 +3293,9 @@ val VAR_RES_INFERENCES_LIST___simulate_command = ("simulate command",
    ("while_loop_spec",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___while___loop_spec___CONSEQ_CONV),
+   ("while_unroll",
+       no_context_strengthen_conseq_conv
+       VAR_RES_COND_INFERENCE___while___loop_unroll___CONSEQ_CONV),
    ("abstractions",
        no_context_strengthen_conseq_conv
        VAR_RES_COND_INFERENCE___abstracted_code___CONV),
@@ -3170,7 +3304,10 @@ val VAR_RES_INFERENCES_LIST___simulate_command = ("simulate command",
        VAR_RES_COND_INFERENCE___final___CONSEQ_CONV),
    ("block_spec",
        no_context_strengthen_conseq_conv
-       VAR_RES_COND_INFERENCE___block_spec___CONSEQ_CONV)]@
+       VAR_RES_COND_INFERENCE___block_spec___CONSEQ_CONV),
+   ("assert",
+       no_context_strengthen_conseq_conv
+       VAR_RES_COND_INFERENCE___assert___CONSEQ_CONV)]@
    var_res_param.INFERENCES_LIST___simulate_command):var_res_inference_group;
 
 

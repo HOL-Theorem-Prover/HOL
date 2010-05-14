@@ -182,7 +182,8 @@ val SET_MINIMUM =
 val EMPTY_DEF = new_definition
     ("EMPTY_DEF", (--`EMPTY = (\x:'a.F)`--));
 open Unicode
-(* val _ = unicode_version (UChar.emptyset, ``pred_set$EMPTY``) *)
+val _ = overload_on (UChar.emptyset, ``pred_set$EMPTY``)
+val _ = TeX_notation {hol = UChar.emptyset, TeX = ("\\HOLTokenEmpty{}", 1)}
 
 val NOT_IN_EMPTY =
     store_thm

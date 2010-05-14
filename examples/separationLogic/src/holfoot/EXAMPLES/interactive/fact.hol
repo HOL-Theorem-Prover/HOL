@@ -7,38 +7,79 @@ use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
 *)
 
 
+val _ = HOL_Interactive.toggle_quietdec();
+
+open arithmeticTheory numeralTheory
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+
+val GREATER_1 = prove (``!n. (1 < n) ==> ?m. n = SUC m``,
+ Cases_on `n` THEN SIMP_TAC arith_ss []);
+
+val LESSEQ_1 = prove (``!n:num. (n <= 1) ==> ((n = 0) \/ (n = 1))``,
+DECIDE_TAC);
+
+val FACT_DEF = CONJ FACT numeral_fact;
+
 (******************************************************************************)
 (* Verify specification                                                       *)
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/fact.dsf"];
 
-(* holfoot_set_goal_procedures file ["fact"] *)
-
+(* holfoot_set_goal_procedures file ["fact_recursive"] *)
+(* holfoot_set_goal_procedures file ["fact_invariant"] *)
+(* holfoot_set_goal_procedures file ["fact_loopspec"] *)
 val fact_TAC = 
 HF_CONTINUE_TAC THEN
 HF_VC_TAC THEN
-REPEAT STRIP_TAC THENL [
-  Cases_on `ic` THEN
-  FULL_SIMP_TAC arith_ss [arithmeticTheory.FACT],
+REPEAT STRIP_TAC THEN (
+  MAP_EVERY IMP_RES_TAC [GREATER_1, LESSEQ_1] THEN
+  FULL_SIMP_TAC arith_ss [FACT_DEF]
+);
 
-  FULL_SIMP_TAC arith_ss [arithmeticTheory.FACT]
-]
 
-(* holfoot_set_goal_procedures file ["fact2"] *)
 
+(* holfoot_set_goal_procedures file ["fact_invariant2"] *)
+(* holfoot_set_goal_procedures file ["fact_loopspec2"] *)
 val fact2_TAC = 
+HF_CONTINUE_TAC THEN
+SIMP_TAC arith_ss [FACT_DEF, GSYM ADD1] THEN
 HF_CONTINUE_TAC THEN
 HF_VC_TAC THEN
 REPEAT STRIP_TAC THENL [
-  SIMP_TAC arith_ss [arithmeticTheory.FACT],
+   METIS_TAC[LESS_EQUAL_ANTISYM],
 
-  Cases_on `ic` THEN
-  FULL_SIMP_TAC arith_ss [arithmeticTheory.FACT]
-]
+   `(n_const = 1) \/ (n_const = 0)` by DECIDE_TAC THEN
+   FULL_SIMP_TAC arith_ss [FACT_DEF]
+];
+
+
+
+(* holfoot_set_goal_procedures file ["fact_invariant3"] *)
+(* holfoot_set_goal_procedures file ["fact_loopspec3"] *)
+val fact3_TAC = 
+HF_CONTINUE_TAC THEN
+SIMP_TAC arith_ss [FACT_DEF, GSYM ADD1] THEN
+HF_CONTINUE_TAC THEN
+HF_VC_TAC THEN
+REPEAT STRIP_TAC THENL [
+   IMP_RES_TAC LESSEQ_1 THEN
+   FULL_SIMP_TAC arith_ss [FACT_DEF],
+ 
+   METIS_TAC[LESS_EQUAL_ANTISYM]
+];
+
+
 
 val thm = holfoot_tac_verify_spec file NONE
-                [("fact",  fact_TAC),
-                 ("fact2", fact2_TAC)]
+                [("fact_loopspec",   fact_TAC),
+                 ("fact_invariant",  fact_TAC),
+                 ("fact_recursive",  fact_TAC),
+                 ("fact_invariant2", fact2_TAC),
+                 ("fact_loopspec2",  fact2_TAC),
+                 ("fact_invariant3", fact3_TAC),
+                 ("fact_loopspec3",  fact3_TAC)]
 
 

@@ -35,7 +35,7 @@ SIMP_TAC (std_ss++boolSimps.ETA_ss) [TREE_SUM_def, TREE_FOLD_def,
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/tree_sum.dsf"];
-val spec_thm = holfoot_verify_spec file [ add_rewrites [TREE_SUM_REWRITE] ];
+val _ = holfoot_verify_spec file [ add_rewrites [TREE_SUM_REWRITE] ];
 
 
 
@@ -57,6 +57,6 @@ val tree_sum_depth_TAC =
       xHF_CONTINUE_TAC [use_asms, add_rewrites [TREE_SUM_REWRITE]]
    )
 
-val spec_thm = holfoot_tac_verify_spec file2 (SOME []) 
+val _ = holfoot_tac_verify_spec file2 (SOME []) 
   [("tree_sum_depth", tree_sum_depth_TAC)]
 

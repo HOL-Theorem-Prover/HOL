@@ -325,6 +325,46 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           end_style ();
           end_block ()
        end
+    ) else if (same_const op_term fasl_comment_loop_unroll_term)  then (
+       let
+          val unroll_term = el 1 args;
+          val prog_term   = el 2 args;
+       in
+          begin_block CONSISTENT 0;
+          begin_style [UserStyle "holfoot_comment"];
+          add_string ("loop-unroll");
+          add_string " ";
+          sys (Top, Top, Top) (d - 1) unroll_term;
+          end_style ();
+          add_string " ";
+          add_string "{";
+          add_break (1,(!holfoot_pretty_printer_block_indent));
+          begin_block INCONSISTENT 0;
+          sys (Top, Top, Top) (d - 1) prog_term;
+          end_block ();
+          add_break (1,0);
+          add_string "}";
+          end_block ()
+       end
+    ) else if (same_const op_term fasl_comment_assert_term)  then (
+       let
+          val p_term   = el 1 args;
+          val (v,p_body) = pairSyntax.dest_pabs p_term;
+          val vL = free_vars v;
+          val vL' = map (prefix_var_name "!") vL;
+          val su = map (op |->) (zip vL vL');
+          val p_body' = subst su p_body;
+       in
+          begin_style [UserStyle "holfoot_comment"];
+          add_string ("assert");
+          add_string " ";
+          add_string "[";
+          begin_block CONSISTENT 0;
+          sys (Top, Top, Top) (d - 1) p_body';
+          end_block ();
+          add_string "]";
+          end_style ()
+       end
     ) else if (same_const op_term fasl_prog_cond_critical_section_term)  then (
        let
           val res_term = el 1 args;
@@ -583,14 +623,14 @@ fun holfoot_pred_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
       sys (Top, Top, Top) (d - 1) (el 1 args);
       add_string " ";
       add_string "and";
-      add_break (1,0);
+      add_string " ";
       sys (Top, Top, Top) (d - 1) (el 2 args);
       add_string (")")
     ) else if (same_const op_term fasl_pred_or_term)  then (
       add_string ("(");
       sys (Top, Top, Top) (d - 1) (el 1 args);
       add_string (" or");
-      add_break (1,0);
+      add_string " ";
       sys (Top, Top, Top) (d - 1) (el 2 args);
       add_string (")")
     ) else if (same_const op_term var_res_pred_bin_term)  then (
@@ -875,6 +915,14 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
       add_string "pure";
       add_string "(";
       sys (Top, Top, Top) (d - 1) (el 2 args);
+      add_string ")";
+      end_block ()
+    ) else if (same_const op_term var_res_prop_expression_term)  then (
+      begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);       
+      add_string "pure";
+      add_string "(";
+      sys (Top, Top, Top) (d - 1) (gencoded_expression_to_term
+         (el 3 args) (el 4 args));
       add_string ")";
       end_block ()
     ) else if (same_const op_term var_res_prop_stack_true_term)  then (

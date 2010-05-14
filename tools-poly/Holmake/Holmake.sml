@@ -10,8 +10,9 @@
 structure Holmake =
 struct
 
-open Systeml;
-
+open Systeml Holmake_tools
+structure FileSys = OS.FileSys
+structure Path = OS.Path
 
   fun main () = let
 
@@ -419,6 +420,7 @@ fun parse_command_line list = let
 
   val (rem, cmdl_POLYs) = find_pairs "--poly" rem
   val (rem, polynothol) = find_toggle "--poly_not_hol" rem
+  val (rem, no_lastmakercheck) = find_toggle "--nolmbc" rem
 in
   {targets=rem, debug=debug, show_usage=help,
    always_rebuild_deps=rebuild_deps,
@@ -429,6 +431,7 @@ in
    allfast = allfast, fastfiles = fastfiles,
    user_hmakefile = user_hmakefile,
    no_overlay = no_overlay,
+   no_lastmakercheck = no_lastmakercheck,
    user_overlay = user_overlay,
    interactive_flag = interactive_flag,
    cmdl_HOLDIR =
@@ -472,17 +475,16 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      cmdl_HOLDIR, cmdl_POLYMLLIBDIR, cmdl_POLY, polynothol,
      no_sigobj = cline_no_sigobj, no_prereqs,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
-     user_overlay, keep_going_flag, quiet_flag, do_logging_flag} =
+     no_lastmakercheck, user_overlay, keep_going_flag, quiet_flag,
+     do_logging_flag} =
   parse_command_line (CommandLine.arguments())
 
-fun warn s = if not quiet_flag then
-               (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
-                TextIO.flushOut TextIO.stdErr)
-             else ()
-fun info s = if not quiet_flag then print (execname^": "^s^"\n") else ()
-fun tgtfatal s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
-                  TextIO.flushOut TextIO.stdErr)
+val (outputfunctions as {warn,info,tgtfatal,diag}) =
+    output_functions {quiet_flag = quiet_flag, debug = debug}
 
+(* call out to (exec) a different Holmake *)
+val _ = do_lastmade_checks outputfunctions
+                           {no_lastmakercheck = no_lastmakercheck}
 
 (* set up logging *)
 val logfilename = Systeml.make_log_file

@@ -34,11 +34,11 @@ fun process tm = let
   in if type_of tm = ``:word4`` then let
        val f = int_to_string o numSyntax.int_of_term o snd o dest_comb
        in (mk_comb(``aR``,tm),mk_var("r" ^ f tm,``:word32``)) end
-     else if eq tm ``psrN:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sn",``:bool``))
-     else if eq tm ``psrZ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sz",``:bool``))
-     else if eq tm ``psrC:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sc",``:bool``))
-     else if eq tm ``psrV:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("sv",``:bool``))
-     else if eq tm ``sQ:arm_bit``   then (mk_comb(``aS1``,tm),mk_var("sq",``:bool``))
+     else if eq tm ``psrN:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrn",``:bool``))
+     else if eq tm ``psrZ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrz",``:bool``))
+     else if eq tm ``psrC:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrc",``:bool``))
+     else if eq tm ``psrV:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrv",``:bool``))
+     else if eq tm ``sQ:arm_bit``   then (mk_comb(``aS1``,tm),mk_var("psrq",``:bool``))
      else if type_of tm = ``:word32`` then
        (mk_comb(``aM1:word32 -> word8 -> arm_set -> bool``,tm),mk_var(name_of_tm tm,``:word8``))
      else fail() end;

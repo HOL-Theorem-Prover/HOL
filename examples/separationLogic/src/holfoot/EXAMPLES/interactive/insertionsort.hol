@@ -102,7 +102,7 @@ val sortlist_TAC =
    ];
 
 
-val thm = holfoot_tac_verify_spec file NONE
+val _ = holfoot_tac_verify_spec file NONE
                 [("sortlist", sortlist_TAC),
                  ("delete",   delete_TAC),
                  ("min",      min_TAC)];
@@ -111,7 +111,7 @@ val thm = holfoot_tac_verify_spec file NONE
 (******************************************************************************)
 (* The version without data fails, since delete is not properly specified     *)
 (******************************************************************************)
+(*
 val file2 = concat [examplesDir, "/interactive/insertionsort.sf"];
 val thm = holfoot_auto_verify_spec file2
-
-	  
+*) 

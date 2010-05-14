@@ -56,6 +56,7 @@ in
    ((aconv e1 e2') andalso (aconv e2 e1'))
 end handle HOL_ERR _ => false
 
+val var_res_prop_expression_term = var_res_mk_const "var_res_prop_expression";
 val var_res_prop_binexpression_term = var_res_mk_const "var_res_prop_binexpression";
 val dest_var_res_prop_binexpression = strip_comb_5 var_res_prop_binexpression_term;
 val is_var_res_prop_binexpression = can dest_var_res_prop_binexpression

@@ -937,7 +937,7 @@ fun SEP_I_TAC func_name (hs,goal) = let
   fun get_tac i = let
     val xs = list_dest dest_forall i
     val (xs,t) = (butlast xs, last xs)
-    val t1 = find_term (fn t1 => can (match_term t1) tm) t
+    val t1 = find_term (fn t1 => can (match_term t1) tm) t 
     val s = fst (match_term t1 tm)
     val rs = redexes s
     val fs = filter (fn x => not (mem x rs) andalso mem x xs) (free_vars t1)

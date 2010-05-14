@@ -19,7 +19,7 @@ val _ = HOL_Interactive.toggle_quietdec();
 (******************************************************************************)
 
 val file = concat [examplesDir, "/automatic/quicksort-shape.dsf"];
-val thm = holfoot_auto_verify_spec file
+val _ = holfoot_auto_verify_spec file;
 
 
 (******************************************************************************)
@@ -28,7 +28,7 @@ val thm = holfoot_auto_verify_spec file
 
 val quicksort_opt = combined_gen_step_tac_opt [
     add_rewrites [SORTED_DEF, PERM_REFL],
-    add_ssfrags [permLib.PERM_ss] ]
+    add_ssfrags [permLib.PERM_ss] ];
 
 
 (******************************************************************************)
@@ -148,7 +148,7 @@ REPEAT STRIP_TAC THENL [
 ];
 
 
-val thm2 = holfoot_tac_verify_spec file2 NONE
+val _ = holfoot_tac_verify_spec file2 NONE
                 [("quicksort", quicksort_TAC)]
 
 

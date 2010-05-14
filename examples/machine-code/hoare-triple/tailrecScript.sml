@@ -1,6 +1,6 @@
 
 open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory whileTheory;
+open pred_setTheory arithmeticTheory whileTheory sumTheory;
 
 val _ = new_theory "tailrec";
 
@@ -18,6 +18,14 @@ val TAILREC_PRE_def = Define `
 val TAILREC_def = Define `
   TAILREC f1 (f2:'a->'b) g x = f2 (WHILE g f1 x)`;
 
+val SHORT_TAILREC_def = Define `
+  SHORT_TAILREC (f:'a -> ('a + 'b) # bool) = 
+    TAILREC (OUTL o FST o f) (OUTR o FST o f) (ISL o FST o f)`;
+
+val SHORT_TAILREC_PRE_def = Define `
+  SHORT_TAILREC_PRE (f:'a -> ('a + 'b) # bool) = 
+    TAILREC_PRE (OUTL o FST o f) (ISL o FST o f) (SND o f)`;
+ 
 
 (* ---- theorems ---- *)
 

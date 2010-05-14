@@ -1,23 +1,98 @@
-fact(r;n) {
+/* An recursive implementation of faculty. It's spec is simple. */
+fact_recursive(r;n) {
+   if (n > 1) {
+     fact_recursive(r;n-1);
+     r = r * n;
+   } else {
+     r = 1;
+   }
+} [r == ``FACT n``]
+
+
+
+/* The iterative version is slightly uglier to specify. One
+   needs an invariant, that is somewhat artificial. */
+fact_invariant(r;n) {
    local i;
    r = 1;
    i = n;
-   while (i > 0) [r == _rc * i == _ic *
-      n == #nc *
-      ``rc * FACT ic = FACT nc``] {
+   while (i > 1) [``r * FACT i = FACT n``] {
       r = r * i;
       i = i - 1;
    } 
 } [r == ``FACT n``]
 
-fact2(r;n) {
+
+/* With loop-specs one can instead forget about invariants and
+   concentrate on the effect of the loop. The "effect" of the loop
+   is to multiply r with the faculty of i. */
+fact_loopspec(r;n) {
    local i;
 
    r = 1;
    i = n;
    loop_spec [(r == #rc) * (i == #ic)] {
-   while (i > 0) {
+   while (i > 1) {
       r = r * i;
       i = i - 1;
    }} [r == ``rc * FACT ic``]
 } [r == ``FACT n``]
+
+
+/* Part of the reason, why the interative version is uglier to
+   speifiy than the recursive one is that the recurisive calculates
+   ((2 * 3) * 4) ... * n while the iterative does
+   n * ... (4 * (3 * 2)). So lets try what happens if we reverse it */
+
+fact_invariant2 (r;n) {
+   local i;
+   r = 1;
+   i = 1;
+   while (i < n) [(n == #n_const) * (i == _ic) *
+                  (r == ``FACT ic``) * ``(ic <= n_const) \/ (ic = 1)``] {
+      i = i + 1;
+      r = r * i;
+   } 
+} [r == ``FACT n``]
+
+fact_loopspec2(r;n) {
+   local i;
+
+   r = 1;
+   i = 1;
+   loop_spec [(n == #n_const) * (i == #ic) *
+              (r == ``FACT ic``) * ``(ic <= n_const) \/ (ic = 1)``] {
+   while (i < n) {
+      i = i + 1;
+      r = r * i;
+   }} [r == ``FACT n_const``]
+} [r == ``FACT n``]
+
+/* One can see that the loop invariant and the spec become very similar indeed.
+   But the case n = 0 is ugly to handle (special case in the spec.
+   Let's unroll the loop to get rid of this special case. */
+fact_invariant3 (r;n) {
+   local i;
+   r = 1;
+   i = 1;
+   while (i < n) [unroll 1] [r == ``FACT i`` * (i <= n)] {
+      i = i + 1;
+      r = r * i;
+   } 
+} [r == ``FACT n``]
+
+
+fact_loopspec3(r;n) {
+   local i;
+
+   r = 1;
+   i = 1;
+   loop_spec [unroll 1] [(r == ``FACT i``) * (i <= n)] {
+   while (i < n) {
+      i = i + 1;
+      r = r * i;
+   }} [r == ``FACT n``]
+} [r == ``FACT n``]
+
+/* Now loop specs and loop invariants are the same, 
+   showing the close relation between both. /*

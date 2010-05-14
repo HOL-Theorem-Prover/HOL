@@ -25,11 +25,11 @@ val rewriteL = [MIN_MAX_DEPTH_THM, arithmeticTheory.MIN_DEF,
     MIN_MAX_LIST_THM, arithmeticTheory.MAX_DEF,
     MIN_MAX_DEPTH_THM];
 
-val spec_thm = holfoot_verify_spec file 
-                 [ add_rewrites rewriteL ]
+val _ = holfoot_verify_spec file 
+                 [ add_rewrites rewriteL ];
 
-val spec_thm2 = holfoot_verify_spec file2
-                 [ add_rewrites rewriteL ] 
+val _ = holfoot_verify_spec file2
+                 [ add_rewrites rewriteL ];
 
-val spec_thm3 = holfoot_verify_spec file3 
-                 [ add_rewrites rewriteL ] 
+val _ = holfoot_verify_spec file3 
+                 [ add_rewrites rewriteL ];

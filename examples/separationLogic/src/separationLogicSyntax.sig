@@ -142,6 +142,9 @@ val fasl_comment_loop_spec_term : term
 val dest_fasl_comment_loop_spec : term -> term * term;
 val is_fasl_comment_loop_spec : term -> bool;
 
+val fasl_comment_loop_unroll_term : term
+val dest_fasl_comment_loop_unroll : term -> term * term;
+val is_fasl_comment_loop_unroll   : term -> bool;
 
 val fasl_comment_location_term : term
 val dest_fasl_comment_location : term -> term * term
@@ -151,6 +154,10 @@ val mk_fasl_comment_location : term * term -> term
 val empty_label_list : term
 val dest_list_fasl_comment_location : term -> term * term
 val save_dest_list_fasl_comment_location : term -> term * term * (unit -> thm)
+
+val fasl_comment_assert_term : term
+val dest_fasl_comment_assert : term -> term
+val is_fasl_comment_assert   : term -> bool;
 
 val fasl_comment_location_string_term : term
 val dest_fasl_comment_location_string : term -> term * term

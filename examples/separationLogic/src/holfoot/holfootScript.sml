@@ -7347,7 +7347,7 @@ EQ_TAC THENL [
 
 val VAR_RES_FRAME_SPLIT___data_array___data_array___SAME_EXP_LENGTH = store_thm (
 "VAR_RES_FRAME_SPLIT___data_array___data_array___SAME_EXP_LENGTH",
-``!e n data1 data2 sfb_restP wpb wpb' rpb sfb_context sfb_split sfb_imp.
+``!e n data1 data2 sfb_restP wpb wpb' rpb sfb_context sfb_split sfb_imp sr.
 
 (LIST_TO_SET (MAP FST data2) SUBSET LIST_TO_SET (MAP FST data1) /\
  ALL_DISTINCT (MAP FST data2) /\
@@ -7526,7 +7526,7 @@ SIMP_TAC std_ss [holfoot_ap_data_interval_def,
 
 val holfoot_ap_data_interval___SPLIT = store_thm (
 "holfoot_ap_data_interval___SPLIT",
-``!e1 e2 e3. (e1 <= e2) /\ (e2 <= e3) ==>
+``!e1 e2 e3 data. (e1 <= e2) /\ (e2 <= e3) ==>
  (holfoot_ap_data_interval (var_res_exp_const e1) (var_res_exp_const e3) data =
   asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
      (holfoot_ap_data_interval (var_res_exp_const e1) (var_res_exp_const e2)
@@ -7569,7 +7569,7 @@ SIMP_TAC std_ss [holfoot_ap_data_interval_def,
 
 val VAR_RES_FRAME_SPLIT___data_interval___data_interval___SAME_EXP_LENGTH = store_thm (
 "VAR_RES_FRAME_SPLIT___data_interval___data_interval___SAME_EXP_LENGTH",
-``!e1 e2 data1 data2 sfb_restP wpb wpb' rpb sfb_context sfb_split sfb_imp.
+``!e1 e2 data1 data2 sfb_restP wpb wpb' rpb sfb_context sfb_split sfb_imp sr.
 
 (LIST_TO_SET (MAP FST data2) SUBSET LIST_TO_SET (MAP FST data1) /\
  ALL_DISTINCT (MAP FST data2) /\
@@ -9788,7 +9788,7 @@ ASM_SIMP_TAC std_ss [holfoot_ap_array___ALTERNATIVE_DEF2, IN_ABS, LET_THM,
 
 val HOLFOOT_COND_INFERENCE___prog_dispose___FRAME =
 store_thm ("HOLFOOT_COND_INFERENCE___prog_dispose___FRAME",
-``!wpb rpb e n data sfb progL Q.
+``!wpb rpb e n sfb progL Q.
 (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
    (SET_OF_BAG (BAG_UNION wpb rpb)) e /\
  VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET

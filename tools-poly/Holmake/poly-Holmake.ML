@@ -17,6 +17,7 @@ fun useC f =
 val _ = useH "Systeml";
 val _ = useC "internal_functions";
 val _ = useC "Holmake_types";
+val _ = useC "Holmake_tools";
 val _ = useC "ReadHMF";
 
 fun u f = use ("../tools/mlyacc/mlyacclib/" ^ f ^ ".sml");

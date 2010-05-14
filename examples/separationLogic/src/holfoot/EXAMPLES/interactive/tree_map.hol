@@ -19,5 +19,5 @@ val _ = HOL_Interactive.toggle_quietdec();
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/tree_map.dsf"];
-val spec_thm = holfoot_verify_spec file 
-                 [ add_rewrites [ TREE_MAP_THM ] ]
+val _ = holfoot_verify_spec file 
+                 [ add_rewrites [ TREE_MAP_THM ] ];

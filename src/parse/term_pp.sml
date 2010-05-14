@@ -303,6 +303,16 @@ end
 (* term tm can be seen to have name s according to grammar G *)
 fun has_name G s tm = (grammar_name G tm = SOME s)
 
+(* term tm might be the product of parsing name s -
+   weaker than has_name *)
+fun has_name_by_parser G s tm = let
+  val oinfo = term_grammar.overload_info G
+in
+  case Overload.info_for_name oinfo s of
+    NONE => false
+  | SOME {actual_ops,...} =>
+    List.exists (fn t => can (match_term t) tm) actual_ops
+end
 
 datatype bvar
     = Simple of term
@@ -1534,7 +1544,7 @@ fun pp_term (G : grammar) TyG backend = let
               val tail = List.nth(args, 1)
             in
               if depth = 0 then add_string "..."
-              else if has_name G nilstr tail then
+              else if has_name_by_parser G nilstr tail then
                 (* last element *)
                 pr_term head Top Top Top (decdepth depth)
               else let
@@ -1889,7 +1899,7 @@ fun pp_term (G : grammar) TyG backend = let
             val (args,Rand) = front_last args
             val candidate_rules = lookup_term fname
             fun is_list (r as {nilstr, cons, ...}:listspec) tm =
-                has_name G nilstr tm orelse
+                has_name_by_parser G nilstr tm orelse
                 (is_comb tm andalso
                  let
                    val (t0, tail) = dest_comb tm

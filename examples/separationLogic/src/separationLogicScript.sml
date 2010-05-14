@@ -67,8 +67,8 @@ val IS_SEPARATION_COMBINATOR_def = Define `
 (* -------------------------------------------------------------------------- *)
 
 val IS_SEPARATION_ALGEBRA___COMBINATOR_DEF = store_thm ("IS_SEPARATION_ALGEBRA___COMBINATOR_DEF",
-   ``!f u. IS_SEPARATION_ALGEBRA f u <=> 
-           ((IS_SEPARATION_COMBINATOR f) /\ 
+   ``!f u. IS_SEPARATION_ALGEBRA f u <=>
+           ((IS_SEPARATION_COMBINATOR f) /\
             (!x. (f (SOME u) (SOME x) = SOME x)))``,
 
    SIMP_TAC std_ss [IS_SEPARATION_ALGEBRA_def, IS_SEPARATION_COMBINATOR_def] THEN
@@ -2377,7 +2377,7 @@ PROVE_TAC [fasl_action_order_IS_WEAK_ORDER, WeakOrder, transitive_def]);
 val FASL_IS_LOCAL_ACTION___HOARE_TRIPLE = store_thm ("FASL_IS_LOCAL_ACTION___HOARE_TRIPLE",
    ``!f a. (
       FASL_IS_LOCAL_ACTION f a =
-      (!P Q. (HOARE_TRIPLE P a Q ==> 
+      (!P Q. (HOARE_TRIPLE P a Q ==>
              (!x. HOARE_TRIPLE (asl_star f P x) a (asl_star f Q x)))))``,
 
 SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM, FASL_IS_LOCAL_ACTION_def,
@@ -3529,48 +3529,74 @@ SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___ALTERNATIVE_DEF,
    fasla_skip_def, IN_SING]);
 
 
-val fasla_assume_def = Define `
-   fasla_assume f P = \s. if (s IN P) then SOME {s} else
-                  if (s IN ASL_INTUITIONISTIC_NEGATION f P) then SOME {} else
-                  NONE`;
+val fasla_assume_def = Define `fasla_assume f P =
+   \s. if (s IN P) then SOME {s} else
+       if (s IN ASL_INTUITIONISTIC_NEGATION f P) then SOME {} else
+          NONE`;
+
+val fasla_assert_def = Define `fasla_assert f P =
+   \s. if (s IN P) then SOME {s} else NONE`
+
+
+val fasla_assume_assert_def = Define `
+   fasla_assume_assert aa f P = \s. if (s IN P) then SOME {s} else
+                  if (aa /\ s IN ASL_INTUITIONISTIC_NEGATION f P) then SOME {} else
+                  NONE`
+
+val fasla_assume_assert_THM = store_thm ("fasla_assume_assert_THM",
+``(fasla_assume_assert T = fasla_assume) /\
+  (fasla_assume_assert F = fasla_assert)``,
+SIMP_TAC std_ss [FUN_EQ_THM, fasla_assert_def,
+                 fasla_assume_def, fasla_assume_assert_def]);
+
+
+
+val FASL_IS_LOCAL_ACTION___fasla_assume_assert = store_thm ("FASL_IS_LOCAL_ACTION___fasla_assume_assert",
+``!c f P. IS_SEPARATION_COMBINATOR f /\ ASL_IS_INTUITIONISTIC f P ==>
+FASL_IS_LOCAL_ACTION f  (fasla_assume_assert c f P)``,
+
+SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
+   fasla_assume_assert_def] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `s3 IN P` THENL [
+   `~(s1 IN ASL_INTUITIONISTIC_NEGATION f P)` by ALL_TAC THEN1 (
+      FULL_SIMP_TAC std_ss [ASL_INTUITIONISTIC_NEGATION_REWRITE,
+        IN_ABS] THEN
+      METIS_TAC[]
+   ) THEN
+   FULL_SIMP_TAC std_ss [IN_SING] THEN
+   Q.PAT_ASSUM `X = v1` (ASSUME_TAC o GSYM) THEN
+   ASM_SIMP_TAC std_ss [IN_SING],
+
+
+   `~(s1 IN P)` by ALL_TAC THEN1 (
+      Q.PAT_ASSUM `ASL_IS_INTUITIONISTIC f P` MP_TAC THEN
+      FULL_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC___REWRITE] THEN
+      METIS_TAC[]
+   ) THEN
+   FULL_SIMP_TAC std_ss [] THEN
+   `ASL_IS_INTUITIONISTIC f (ASL_INTUITIONISTIC_NEGATION f P)` by
+      METIS_TAC[ASL_INTUITIONISTIC_NEGATION___IS_INTUITIONISTIC] THEN
+   POP_ASSUM MP_TAC THEN
+   Q.PAT_ASSUM `X = v1` (ASSUME_TAC o GSYM) THEN
+   FULL_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC___REWRITE, NOT_IN_EMPTY] THEN
+   METIS_TAC[]
+]);
+
 
 
 val FASL_IS_LOCAL_ACTION___fasla_assume = store_thm ("FASL_IS_LOCAL_ACTION___fasla_assume",
 ``!f P. IS_SEPARATION_COMBINATOR f /\ ASL_IS_INTUITIONISTIC f P ==>
 FASL_IS_LOCAL_ACTION f  (fasla_assume f P)``,
-
-SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION_def,
-   fasla_assume_def, ASL_IS_SEPARATE_def, IS_SOME_EXISTS,
-   GSYM LEFT_FORALL_IMP_THM] THEN
-REPEAT STRIP_TAC THEN
-Cases_on `y IN P` THENL [
-   `~(s1 IN (ASL_INTUITIONISTIC_NEGATION f P))` by ALL_TAC THEN1 (
-      SIMP_TAC std_ss [ASL_INTUITIONISTIC_NEGATION_def, IN_ABS, ASL_IS_SEPARATE_def,
-         IS_SOME_EXISTS] THEN
-      Q.EXISTS_TAC `s2` THEN
-      ASM_SIMP_TAC std_ss []
-   ) THEN
-   ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR, fasl_order_THM, SUBSET_DEF, IN_SING,
-      fasl_star_def, BIN_OPTION_MAP_ALL_DEF_THM] THEN
-   ASM_SIMP_TAC std_ss [asl_star_def, IN_ABS, IN_SING],
+SIMP_TAC std_ss [GSYM fasla_assume_assert_THM, FASL_IS_LOCAL_ACTION___fasla_assume_assert]);
 
 
+val FASL_IS_LOCAL_ACTION___fasla_assert = store_thm ("FASL_IS_LOCAL_ACTION___fasla_assert",
+``!f P. IS_SEPARATION_COMBINATOR f /\ ASL_IS_INTUITIONISTIC f P ==>
+FASL_IS_LOCAL_ACTION f  (fasla_assert f P)``,
+SIMP_TAC std_ss [GSYM fasla_assume_assert_THM, FASL_IS_LOCAL_ACTION___fasla_assume_assert]);
 
-   `!P. ((ASL_IS_INTUITIONISTIC f P) /\ ~(y IN P)) ==> ~(s1 IN P)` by ALL_TAC THEN1 (
-      FULL_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC_def, IN_ABS,
-         asl_star_def, EXTENSION, IN_UNIV] THEN
-      METIS_TAC[]
-   ) THEN
-   ASM_SIMP_TAC std_ss [] THEN
-   Cases_on `y IN ASL_INTUITIONISTIC_NEGATION f P` THEN1 (
-      ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR,
-         fasl_star_def, BIN_OPTION_MAP_ALL_DEF_THM,
-         fasl_order_THM, EMPTY_SUBSET]
-   ) THEN
-   ASM_SIMP_TAC std_ss [fasl_order_THM, COND_RAND, COND_RATOR,
-      fasl_star_def, BIN_OPTION_MAP_ALL_DEF_THM] THEN
-   METIS_TAC[ASL_INTUITIONISTIC_NEGATION___IS_INTUITIONISTIC]
-]);
+
 
 
 val IS_SOME___fasla_assume = store_thm ("IS_SOME___fasla_assume",
@@ -3582,10 +3608,12 @@ SIMP_TAC std_ss [COND_RAND, COND_RATOR]);
 
 
 val NONE___fasla_assume = store_thm ("NONE___fasla_assume",
-``!f P s. ((fasla_assume f P s) = NONE) =
+``!f P s. (fasla_assume f P s = NONE) =
      (~(s IN P) /\ ~(s IN ASL_INTUITIONISTIC_NEGATION f P))``,
-REWRITE_TAC [NONE_IS_NOT_SOME, IS_SOME___fasla_assume] THEN
-SIMP_TAC std_ss []);
+SIMP_TAC std_ss [fasla_assume_def] THEN
+Cases_on `s IN P` THEN ASM_SIMP_TAC std_ss [] THEN
+SIMP_TAC std_ss [COND_RAND, COND_RATOR] THEN
+METIS_TAC[]);
 
 
 val fasla_check_def = Define `
@@ -4378,13 +4406,12 @@ val fasl_prim_command_def =
 
 
 val fasl_prim_command_11 = fetch "-" "fasl_prim_command_11";
-
-
-
 val fasl_pc_assume_def  = Define `fasl_pc_assume P = fasl_pc_shallow_command (\f. fasla_assume f (EVAL_fasl_predicate f P))`
+val fasl_pc_assert_def  = Define `fasl_pc_assert P = fasl_pc_shallow_command (\f. fasla_assert f (EVAL_fasl_predicate f P))`
 val fasl_pc_skip_def    = Define `fasl_pc_skip     = fasl_pc_shallow_command (K fasla_skip)`;
 val fasl_pc_fail_def    = Define `fasl_pc_fail     = fasl_pc_shallow_command (K fasla_fail)`;
 val fasl_pc_diverge_def = Define `fasl_pc_diverge  = fasl_pc_shallow_command (K fasla_diverge)`;
+
 
 val fasl_pc_assume_true___skip = store_thm (
 "fasl_pc_assume_true___skip",
@@ -4399,7 +4426,8 @@ SIMP_TAC std_ss [FUN_EQ_THM]);
 val fasl_pc_assume_false___diverge = store_thm (
 "fasl_pc_assume_false___diverge",
 ``fasl_pc_assume fasl_pred_false = fasl_pc_diverge``,
-SIMP_TAC std_ss [fasl_pc_diverge_def, fasl_pc_assume_def,
+SIMP_TAC std_ss [fasl_pc_diverge_def,
+       fasl_pc_assume_def,
        fasl_prim_command_11, fasla_assume_def,
        EVAL_fasl_predicate_def, asl_bool_EVAL,
        fasla_diverge_def, IN_ABS,
@@ -4416,6 +4444,9 @@ val EVAL_fasl_prim_command_THM = store_thm ("EVAL_fasl_prim_command_THM",
 ``(IS_SEPARATION_COMBINATOR f  ==>
   (EVAL_fasl_prim_command f (fasl_pc_assume p) =
       fasla_assume f (EVAL_fasl_predicate f p))) /\
+  (IS_SEPARATION_COMBINATOR f  ==>
+  (EVAL_fasl_prim_command f (fasl_pc_assert p) =
+      fasla_assert f (EVAL_fasl_predicate f p))) /\
   (EVAL_fasl_prim_command f fasl_pc_diverge = fasla_diverge) /\
   (EVAL_fasl_prim_command f fasl_pc_fail = fasla_fail) /\
   (EVAL_fasl_prim_command f fasl_pc_skip = fasla_skip) /\
@@ -4426,7 +4457,9 @@ SIMP_TAC std_ss [EVAL_fasl_prim_command_def,
        fasl_pc_skip_def, FASL_IS_LOCAL_ACTION___fasla_skip,
        fasl_pc_fail_def, FASL_IS_LOCAL_ACTION___fasla_fail,
        fasl_pc_diverge_def, FASL_IS_LOCAL_ACTION___fasla_diverge,
-       fasl_pc_assume_def, FASL_IS_LOCAL_ACTION___fasla_assume,
+       fasl_pc_assume_def, fasl_pc_assert_def,
+       FASL_IS_LOCAL_ACTION___fasla_assert,
+       FASL_IS_LOCAL_ACTION___fasla_assume,
        ASL_IS_INTUITIONISTIC___EVAL_fasl_predicate]);
 
 
@@ -5239,8 +5272,9 @@ val fasl_pt_diverge_def = Define `fasl_pt_diverge = fasl_pt_prim_command (fasl_p
 
 val fasl_prog_prim_command_def = Define `fasl_prog_prim_command pc = {fasl_pt_prim_command pc}`;
 val fasl_prog_skip_def = Define `fasl_prog_skip = fasl_prog_prim_command fasl_pc_skip`;
+val fasl_prog_diverge_def = Define `fasl_prog_diverge = fasl_prog_prim_command (fasl_pc_diverge)`;
 val fasl_prog_assume_def = Define `fasl_prog_assume P = fasl_prog_prim_command (fasl_pc_assume P)`;
-val fasl_prog_diverge_def = Define `fasl_prog_diverge = fasl_prog_prim_command fasl_pc_diverge`;
+val fasl_prog_assert_def = Define `fasl_prog_assert P = fasl_prog_prim_command (fasl_pc_assert P)`;
 val fasl_prog_fail_def = Define `fasl_prog_fail = fasl_prog_prim_command fasl_pc_fail`;
 val fasl_prog_best_local_action_def = Define `fasl_prog_best_local_action P Q = fasl_prog_prim_command (fasl_pc_shallow_command (\f. best_local_action f P Q))`
 val fasl_prog_quant_best_local_action_def = Define `fasl_prog_quant_best_local_action qP qQ = fasl_prog_prim_command (fasl_pc_shallow_command (\f. quant_best_local_action f qP qQ))`
@@ -5383,17 +5417,17 @@ val fasl_prog_while_def = Define `
                (fasl_prog_prim_command (fasl_pc_assume c))
                p
             ))
-         (fasl_prog_prim_command (fasl_pc_assume (fasl_pred_neg c)))`
+         (fasl_prog_prim_command (fasl_pc_assume (fasl_pred_neg c)))`;
 
 
 val fasl_prog_forall_def = Define `
    fasl_prog_forall body =
-      BIGUNION (IMAGE body UNIV)`
+      BIGUNION (IMAGE body UNIV)`;
 
 
 val fasl_prog_assume_true = store_thm (
 "fasl_prog_assume_true",
-``(fasl_prog_assume fasl_pred_true) = (fasl_prog_skip)``,
+``((fasl_prog_assume fasl_pred_true) = (fasl_prog_skip))``,
 SIMP_TAC std_ss [fasl_prog_assume_def,
    fasl_prog_skip_def, fasl_pc_assume_true___skip]);
 
@@ -5495,6 +5529,9 @@ fasl_comment_block_spec x p = p`
 val fasl_comment_loop_spec_def = Define `
 fasl_comment_loop_spec x p = p`
 
+val fasl_comment_loop_unroll_def = Define `
+fasl_comment_loop_unroll (x:num) p = p`
+
 val fasl_comment_location_def = Define `
 fasl_comment_location (x:label list) p = p`
 
@@ -5509,6 +5546,9 @@ val fasl_comment_location2_THM = store_thm ("fasl_comment_location2_THM",
 SIMP_TAC std_ss [FUN_EQ_THM, fasl_comment_location2_def,
  fasl_comment_location_def])
 
+val fasl_comment_assert_def = Define `
+fasl_comment_assert (qP:'e -> 'd set) = fasl_prog_skip:('a,'b','c,'d) fasl_program`;
+
 val fasl_comment_abstraction_def = Define `
 fasl_comment_abstraction (x:label) p = p`
 
@@ -5519,6 +5559,7 @@ val comments_thmL = [fasl_comment_location_def,
       fasl_comment_loop_invariant_def,
       fasl_comment_abstraction_def,
       fasl_comment_loop_spec_def,
+      fasl_comment_loop_unroll_def,
       fasl_comment_block_spec_def];
 val fasl_comments_ELIM = save_thm ("fasl_comments_ELIM",
 LIST_CONJ comments_thmL);
@@ -5585,7 +5626,7 @@ CONJ_TAC THENL [
 
 
 val FASL_PROTO_TRACES_EVAL_def = Define `
-   FASL_PROTO_TRACES_EVAL penv prog = 
+   FASL_PROTO_TRACES_EVAL penv prog =
    \t. ?n. t IN (FASL_PROTO_TRACES_EVAL_PROC n penv prog)`;
 
 
@@ -8117,6 +8158,19 @@ SIMP_TAC std_ss [fasl_prog_assume_def,
    EVAL_fasl_prim_command_THM]);
 
 
+val FASL_PROGRAM_SEM___assert = store_thm (
+"FASL_PROGRAM_SEM___assert",
+``!xenv penv P.
+  IS_SEPARATION_COMBINATOR (FST xenv) ==>
+  (FASL_PROGRAM_SEM xenv penv (fasl_prog_assert P) =
+   fasla_assert (FST xenv) (EVAL_fasl_predicate (FST xenv) P))``,
+
+Cases_on `xenv` THEN
+SIMP_TAC std_ss [fasl_prog_assert_def,
+   FASL_PROGRAM_SEM___prim_command, FASL_ATOMIC_ACTION_SEM_def,
+   EVAL_fasl_prim_command_THM]);
+
+
 val FASL_PROGRAM_SEM___prog_quant_best_local_action = store_thm (
 "FASL_PROGRAM_SEM___prog_quant_best_local_action",
 ``!xenv penv qP qQ.
@@ -9840,6 +9894,49 @@ REPEAT STRIP_TAC THEN
 MATCH_MP_TAC FASL_INFERENCE_prog_seq THEN
 Q.EXISTS_TAC `asl_and P (EVAL_fasl_predicate (FST xenv) c)` THEN
 ASM_SIMP_TAC std_ss [FASL_INFERENCE_assume]);
+
+
+val FASL_INFERENCE_assert = store_thm ("FASL_INFERENCE_assert",
+``!xenv penv P c.
+  IS_SEPARATION_COMBINATOR (FST xenv) /\
+  (!s. s IN P ==> s IN (EVAL_fasl_predicate (FST xenv) c)) ==>
+   (FASL_PROGRAM_HOARE_TRIPLE xenv penv P
+      (fasl_prog_prim_command (fasl_pc_assert c))
+      (asl_and P (EVAL_fasl_predicate (FST xenv) c)))``,
+
+REPEAT GEN_TAC THEN
+`?lock_env f. xenv = (f,lock_env)` by ALL_TAC THEN1 (
+   Cases_on `xenv` THEN SIMP_TAC std_ss []
+) THEN
+ASM_SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_REWRITE,
+   FASL_PROGRAM_TRACES_IN_THM, FASL_TRACE_SEM_REWRITE,
+   fasla_seq_skip] THEN
+SIMP_TAC std_ss [FASL_ATOMIC_ACTION_SEM_def] THEN
+ASM_SIMP_TAC std_ss [EVAL_fasl_prim_command_THM, fasla_assert_def,
+   fasl_predicate_IS_DECIDED_def, GSYM FORALL_AND_THM,
+   EVAL_fasl_predicate_def] THEN
+REPEAT STRIP_TAC THEN
+RES_TAC THEN
+FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_SING, asl_and_def, IN_ABS]);
+
+
+
+val FASL_INFERENCE_assert_seq = store_thm ("FASL_INFERENCE_assert_seq",
+``!xenv penv P prog Q c.
+  IS_SEPARATION_COMBINATOR (FST xenv) /\
+
+  (!s. s IN P ==> s IN (EVAL_fasl_predicate (FST xenv) c)) /\
+  (FASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_and P (EVAL_fasl_predicate (FST xenv) c))
+     prog Q) ==>
+
+  (FASL_PROGRAM_HOARE_TRIPLE xenv penv P
+      (fasl_prog_seq (fasl_prog_prim_command (fasl_pc_assert c)) prog)
+      Q)``,
+
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC FASL_INFERENCE_prog_seq THEN
+Q.EXISTS_TAC `asl_and P (EVAL_fasl_predicate (FST xenv) c)` THEN
+ASM_SIMP_TAC std_ss [FASL_INFERENCE_assert]);
 
 
 
@@ -11959,12 +12056,13 @@ store_thm ("fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___SIMPLE_REWRITES",
   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_prog_quant_best_local_action qP qQ) /\
   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_prog_release_lock P) /\
   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE fasl_prog_skip /\
+  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_comment_assert qP) /\
   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE fasl_prog_fail /\
   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE fasl_prog_diverge``,
 
 REWRITE_TAC[fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prim_command,
 fasl_prog_best_local_action_def, fasl_prog_quant_best_local_action_def,
-fasl_prog_release_lock_def,
+fasl_prog_release_lock_def, fasl_comment_assert_def,
 fasl_prog_skip_def, fasl_prog_fail_def, fasl_prog_diverge_def]);
 
 
@@ -11982,6 +12080,8 @@ store_thm ("fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___comments",
   (!c p. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_comment_block_spec c p) =
    fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE p) /\
   (!c p. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_comment_loop_spec c p) =
+   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE p) /\
+  (!n p. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_comment_loop_unroll n p) =
    fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE p) /\
   (!c p. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (fasl_comment_loop_invariant c p) =
    fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE p)``,

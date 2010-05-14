@@ -2816,7 +2816,7 @@ fun holfoot_verify_spec_internal verbose print_remaining (file, defaultConseqCon
      val _ = if null preconds then print_with_style [FG Green] "done\n" else print_with_style [FG OrangeRed] "failed\n";
 
      val _ = if verbose then
-                   (print ("time needed: "); print (Time.toString d_time); print " s\n")
+                   (print ("time needed: "); print (Time.toString d_time); print " s\n\n\n")
              else ();
 
      (*build final theorem*)

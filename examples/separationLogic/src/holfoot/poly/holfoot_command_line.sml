@@ -217,6 +217,9 @@ end
 fun holfoot_run (full, filemode_command) = let
    val _ = Feedback.set_trace "PPBackEnd use annotations" 0
    val _ = Feedback.set_trace "HolSmtLib" 0   
+   val _ = Feedback.set_trace "meson" 0
+   val _ = Feedback.set_trace "metis" 0
+   val _ = Globals.interactive := false;
 
    val orgargs = CommandLine.arguments ();
    val args = orgargs;

@@ -7564,7 +7564,8 @@ SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [
 
 
 val VAR_RES_FRAME_SPLIT___sfb_restP_OK___PURE_PROPOSITION =
-prove (``IS_SEPARATION_COMBINATOR f /\ BAG_ALL_DISTINCT (BAG_UNION wpb rpb) ==>
+store_thm ("VAR_RES_FRAME_SPLIT___sfb_restP_OK___PURE_PROPOSITION",
+``IS_SEPARATION_COMBINATOR f /\ BAG_ALL_DISTINCT (BAG_UNION wpb rpb) ==>
 VAR_RES_FRAME_SPLIT___sfb_restP_OK f (wpb,rpb)
           (BAG_EVERY (VAR_RES_IS_PURE_PROPOSITION f))``,
 
@@ -7690,6 +7691,8 @@ Cases_on `IS_SEPARATION_COMBINATOR f` THENL [
 val VAR_RES_COND_HOARE_TRIPLE___SOLVE_skip = save_thm (
 "VAR_RES_COND_HOARE_TRIPLE___SOLVE_skip",
 SIMP_RULE std_ss [fasl_prog_block_def] VAR_RES_COND_HOARE_TRIPLE___SOLVE);
+
+
 
 
 val VAR_RES_COND_INFERENCE___prog_diverge = store_thm (
@@ -10267,6 +10270,19 @@ SIMP_TAC std_ss [var_res_prop_implies_eq_def,
    var_res_prop_implies_def, BAG_UNION_EMPTY]);
 
 
+(*
+val var_res_prop_implies___VAR_RES_FRAME_SPLIT = store_thm ("var_res_prop_implies___VAR_RES_FRAME_SPLIT"
+``!sr f wpb rpb sfb sfb'.
+   var_res_prop_implies f (wpb,rpb) sfb sfb' =
+   VAR_RES_FRAME_SPLIT f sr (wpb,rpb) EMPTY_BAG EMPTY_BAG sfb sfb' (K T)``,
+
+SIMP_TAC std_ss [var_res_prop_implies_REWRITE,
+   var_res_prop___EQ, VAR_RES_FRAME_SPLIT_def,
+   BAG_UNION_EMPTY, BAG_DIFF_EMPTY] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `var_res_prop___PROP___asl_false
+   var_res_prop_implies_def, BAG_UNION_EMPTY]);
+*)
 
 val var_res_prop_implies_eq___SUB_BAG = store_thm (
 "var_res_prop_implies_eq___SUB_BAG",
@@ -12676,6 +12692,66 @@ HO_MATCH_MP_TAC FASL_INFERENCE_prog_while_unroll THEN
 FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR]);
 
 
+val VAR_RES_COND_INFERENCE___while_unroll___invariant =
+store_thm ("VAR_RES_COND_INFERENCE___while_unroll___invariant",
+``!i f c p prog P Q.
+
+VAR_RES_COND_HOARE_TRIPLE f P
+   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg c))::prog)) Q /\
+VAR_RES_COND_HOARE_TRIPLE f P
+   (fasl_prog_block ((fasl_prog_assume c)::p::(fasl_comment_loop_invariant i (fasl_prog_while c p))::prog)) Q ==>
+
+VAR_RES_COND_HOARE_TRIPLE f P
+   (fasl_prog_block ((fasl_comment_loop_invariant i
+           (fasl_prog_while c p))::prog)) Q``,
+
+SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___while_unroll,
+   fasl_comment_loop_invariant_def]);
+
+
+val VAR_RES_COND_INFERENCE___while_unroll___loop_spec =
+store_thm ("VAR_RES_COND_INFERENCE___while_unroll___loop_spec",
+``!f c (p :('a, 'b, 'c, ('d, 'e, 'f) var_res_ext_state) fasl_program) 
+   sp prog1 prog2 P Q.
+
+VAR_RES_COND_HOARE_TRIPLE f P
+   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg c))::(prog1 ++ prog2))) Q /\
+VAR_RES_COND_HOARE_TRIPLE f P
+   (fasl_prog_block ((fasl_prog_assume c)::p::(fasl_comment_loop_spec sp 
+       (fasl_prog_block ((fasl_prog_while c p)::prog1)))::prog2)) Q ==>
+
+VAR_RES_COND_HOARE_TRIPLE f P
+   (fasl_prog_block ((fasl_comment_loop_spec sp
+           (fasl_prog_block ((fasl_prog_while c p)::prog1))::prog2))) Q``,
+
+SIMP_TAC std_ss [fasl_comment_loop_spec_def] THEN
+REPEAT GEN_TAC THEN
+Tactical.REVERSE (
+`!(c1 :('a, 'b, 'c, ('d, 'e, 'f) var_res_ext_state) fasl_program)  c2 c3 L1 L2.
+  (VAR_RES_COND_HOARE_TRIPLE f P
+    (fasl_prog_block
+       (c1::c2::fasl_prog_block (c3::L1)::L2)) Q =
+   VAR_RES_COND_HOARE_TRIPLE f P
+    (fasl_prog_block (c1::c2::c3::(L1 ++ L2))) Q) /\
+  (VAR_RES_COND_HOARE_TRIPLE f P
+    (fasl_prog_block (fasl_prog_block (c1::L1)::L2)) Q =
+   VAR_RES_COND_HOARE_TRIPLE f P
+     (fasl_prog_block (c1::(L1++L2))) Q)` by ALL_TAC) THEN1 (
+   FULL_SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___while_unroll]
+) THEN
+
+REPEAT GEN_TAC THEN
+`(fasl_prog_block (c1::L1)::L2 = [] ++ fasl_prog_block (c1::L1)::L2) /\
+ (c1::c2::fasl_prog_block (c3::L1)::L2 = [c1;c2] ++ fasl_prog_block (c3::L1)::L2)` by SIMP_TAC list_ss [] THEN
+
+ONCE_ASM_REWRITE_TAC[] THEN
+SIMP_TAC std_ss [FASL_PROGRAM_SEM___block_flatten,
+   VAR_RES_PROGRAM_SEM_def, VAR_RES_COND_HOARE_TRIPLE_REWRITE] THEN
+SIMP_TAC list_ss []);
+
+
+
+
 
 val VAR_RES_COND_INFERENCE___prog_assume_true =
 store_thm ("VAR_RES_COND_INFERENCE___prog_assume_true",
@@ -12685,6 +12761,7 @@ VAR_RES_COND_HOARE_TRIPLE f P
    (fasl_prog_block ((fasl_prog_assume fasl_pred_true)::progL)) Q``,
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block_skip_ELIM,
    fasl_prog_assume_true]);
+
 
 val VAR_RES_COND_INFERENCE___prog_assume_false =
 store_thm ("VAR_RES_COND_INFERENCE___prog_assume_false",
@@ -13013,6 +13090,169 @@ ASM_SIMP_TAC list_ss []);
 
 
 
+val VAR_RES_COND_INFERENCE___prog_assert_pred =
+store_thm ("VAR_RES_COND_INFERENCE___prog_assert_pred",
+``!sr f wpb rpb sfb p el progL Q.
+
+EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
+   (SET_OF_BAG (BAG_UNION wpb rpb))) el ==>
+
+((VAR_RES_FRAME_SPLIT f sr (wpb,rpb) EMPTY_BAG EMPTY_BAG sfb 
+  {|var_res_prop_expression f T p el|}) (K T) /\
+(VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb)
+   (BAG_INSERT (var_res_prop_expression f T p el) sfb))
+   (fasl_prog_block progL) Q) ==>
+
+VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
+   (fasl_prog_block ((fasl_prog_assert (var_res_pred p el))::progL)) Q)``,
+
+
+SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block,
+   var_res_pred_def] THEN
+SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
+   VAR_RES_HOARE_TRIPLE_def, var_res_prop___REWRITE,
+   fasl_prog_assert_def] THEN
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC FASL_INFERENCE_assert_seq THEN
+
+`ASL_IS_INTUITIONISTIC (VAR_RES_COMBINATOR f)
+        (var_res_prop_weak_expression p el)` by ALL_TAC THEN1 (
+   MATCH_MP_TAC ASL_IS_INTUITIONISTIC___weak_expression THEN
+   FULL_SIMP_TAC std_ss [EVERY_MEM,
+      VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
+) THEN
+`VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb))
+        (var_res_prop_expression f T p el)` by ALL_TAC THEN1 (
+   MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_expression THEN
+   ASM_REWRITE_TAC[]
+) THEN
+FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
+   IN_ABS, EVAL_fasl_predicate_def,
+   var_res_prop___COND_INSERT] THEN
+`!s. s IN var_res_prop___PROP f (wpb,rpb) sfb ==>
+     s IN var_res_prop_weak_expression p el` by ALL_TAC THEN1 (
+
+   `VAR_RES_FRAME_SPLIT___sfb_restP_OK f (wpb,rpb) (K T)` by ALL_TAC THEN1 (
+      FULL_SIMP_TAC std_ss [VAR_RES_FRAME_SPLIT___sfb_restP_OK_def] THEN
+      METIS_TAC[]
+   ) THEN
+   FULL_SIMP_TAC std_ss [VAR_RES_FRAME_SPLIT_def, BAG_UNION_EMPTY, BAG_DIFF_EMPTY,
+      BAG_UNION_INSERT, var_res_prop___COND_INSERT, IN_DEF] THEN
+   REPEAT STRIP_TAC THEN
+   Q.PAT_ASSUM `!s. X s ==> Y s` (MP_TAC o Q.SPEC `s`) THEN
+   ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT, var_res_prop___COND_INSERT,
+      var_res_prop_weak_expression_def,
+      var_res_prop_expression_def, var_res_stack_proposition_def, IN_ABS,
+      LET_THM, GSYM LEFT_FORALL_IMP_THM]
+) THEN
+ASM_SIMP_TAC std_ss [] THEN
+Tactical.REVERSE (`(asl_and (\s. s IN var_res_prop___PROP f (wpb,rpb) sfb /\ (s = x))
+     (var_res_prop_weak_expression p el)) = (\s.    s IN
+             var_res_prop___PROP f (wpb,rpb)     (BAG_INSERT (var_res_prop_expression f T p el) sfb) /\
+             (s = x))` by ALL_TAC) THEN1 (
+   ASM_SIMP_TAC std_ss []
+) THEN
+
+ASM_SIMP_TAC std_ss [FUN_EQ_THM, asl_bool_EVAL, IN_ABS,
+   var_res_prop___PROP_INSERT, var_res_prop___COND_INSERT,
+   var_res_prop_expression_REWRITE, var_res_prop_weak_expression_def,
+   LET_THM] THEN
+FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM, asl_emp_def, IN_ABS,
+   GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM] THEN
+METIS_TAC[]);
+
+
+
+val VAR_RES_COND_INFERENCE___comment_assert =
+store_thm ("VAR_RES_COND_INFERENCE___comment_assert",
+``!f wpb rpb sfb progL qP Q.
+
+(?x. VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
+   (fasl_prog_block (
+       (var_res_prog_cond_best_local_action 
+          (var_res_prop_internal f (wpb,rpb) (EMPTY, EMPTY) T EMPTY_BAG (qP x))
+          (var_res_prop_internal f (wpb,rpb) (EMPTY, EMPTY) T EMPTY_BAG (qP x)))::
+       progL)) Q) ==>
+
+VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
+   (fasl_prog_block ((fasl_comment_assert qP)::progL)) Q``,
+
+
+SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
+REPEAT GEN_TAC THEN
+Tactical.REVERSE (Cases_on `var_res_prop___COND f (wpb,rpb) sfb`) THEN1 (
+   ASM_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
+      var_res_prop___REWRITE]
+) THEN
+MATCH_MP_TAC (VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block_simple) THEN
+`IS_SEPARATION_COMBINATOR f /\ BAG_ALL_DISTINCT (BAG_UNION wpb rpb)` by ALL_TAC THEN1 (
+   FULL_SIMP_TAC std_ss [var_res_prop___COND___EXPAND]
+) THEN
+ASM_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
+   var_res_prog_cond_best_local_action_def, var_res_prop___REWRITE,
+   fasl_comment_assert_def, var_res_prop_internal_def,
+   var_res_prop_internal___COND_def, FINITE_BAG_THM,
+   NOT_IN_EMPTY_BAG] THEN
+MATCH_MP_TAC (EQ_IMP_RULE_CANON FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action) THEN
+ASM_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
+   FASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def, IN_ABS,
+   fasla_skip_def, fasl_order_THM, SUBSET_DEF, IN_SING,
+   VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___REFL] THEN
+FULL_SIMP_TAC std_ss [var_res_prop___COND___REWRITE,
+   IS_VAR_RES_COMBINATOR_def] THEN
+METIS_TAC[]);
+
+
+(*
+val VAR_RES_COND_INFERENCE___comment_assert =
+store_thm ("VAR_RES_COND_INFERENCE___comment_assert",
+``!rfc f wpb rpb sfb progL P Q.
+
+VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb)) P ==>
+
+(VAR_RES_FRAME_SPLIT f rfc (wpb,rpb) EMPTY_BAG EMPTY_BAG sfb {|P|}
+(\sfb'''. VAR_RES_COND_HOARE_TRIPLE f
+    (var_res_prop f (wpb,rpb) (BAG_INSERT P sfb'''))
+       (fasl_prog_block progL) Q)) ==>
+
+VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
+   (fasl_prog_block ((fasl_comment_assert P)::progL)) Q``,
+
+
+REPEAT STRIP_TAC THEN
+Tactical.REVERSE (Cases_on `var_res_prop___COND f (wpb,rpb) sfb`) THEN1 (
+   ASM_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
+      var_res_prop___REWRITE]
+) THEN
+MATCH_MP_TAC (MP_CANON VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block_simple) THEN
+Q.EXISTS_TAC `var_res_prog_cond_best_local_action 
+   (var_res_prop f (EMPTY_BAG, BAG_UNION wpb rpb) {|P|})
+   (var_res_prop f (EMPTY_BAG, BAG_UNION wpb rpb) {|P|})` THEN
+Tactical.REVERSE CONJ_TAC THEN1 (
+   MATCH_MP_TAC (MP_CANON VAR_RES_COND_INFERENCE___var_res_prog_cond_best_local_action) THEN
+   Q.EXISTS_TAC `rfc` THEN
+   ASM_SIMP_TAC std_ss [BAG_UNION_INSERT, BAG_UNION_EMPTY, SUBSET_DEF,
+      IN_SET_OF_BAG, NOT_IN_EMPTY_BAG]
+) THEN
+`var_res_prop___COND f ({||},wpb + rpb) {|P|}` by ALL_TAC THEN1 (
+   FULL_SIMP_TAC std_ss [var_res_prop___COND___REWRITE,
+      BAG_IN_BAG_INSERT, NOT_IN_EMPTY_BAG, BAG_UNION_EMPTY,
+      FINITE_BAG_THM]
+) THEN
+ASM_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
+   var_res_prog_cond_best_local_action_def, var_res_prop___REWRITE,
+   fasl_comment_assert_def] THEN
+MATCH_MP_TAC (EQ_IMP_RULE_CANON FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action) THEN
+
+ASM_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
+   FASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def, IN_ABS,
+   fasla_skip_def, fasl_order_THM, SUBSET_DEF, IN_SING,
+   VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___REFL] THEN
+
+FULL_SIMP_TAC std_ss [var_res_prop___COND___REWRITE,
+   IS_VAR_RES_COMBINATOR_def] THEN
+METIS_TAC[]);
+*)
 
 
 val ASL_INTUITIONISTIC_NEGATION___weak_prop_expression =

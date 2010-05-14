@@ -1,21 +1,52 @@
 (* build command line tool *)
 use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/header.sml");
 use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/holfoot_command_line.sml");
+use (Globals.HOLDIR ^ "/tools/quote-filter/filter.sml");
 
+fun read_from_stream is n = TextIO.input is
+
+fun unquote_to ifile ofile = 
+let
+     val is = TextIO.openIn ifile 
+     val os = TextIO.openOut ofile
+
+     open filter.UserDeclarations
+     val state as QFS args =
+        QFS {output_stream=os, comdepth=ref 0, pardepth=ref 0,
+           antiquote=ref false, row=ref 0, rowstart=ref 0};
+
+     fun loop() = let
+       val lexer = filter.makeLexer (read_from_stream is) state
+     in
+       lexer()
+       handle Interrupt => (let open filter.UserDeclarations
+                         in
+                           #comdepth args := 0;
+                           #pardepth args := 0;
+                           #antiquote args := false;
+                           loop()
+                         end)
+  end
+in
+  loop();
+  TextIO.closeOut os
+end;
 
 val examplesDir = ".";
 
-fun use_file file =
+fun use file =
 let
-   val _ = print ("using file '"^file^"'\n\n");
-   val _ = use file
+   val filename = FileSys.tmpName()^".hol"
+   val _ = unquote_to file filename;
+   val _ = PolyML.use filename;
+   val _ = FileSys.remove filename
 in
    ()
 end;
 
 fun holfoot_run_simple () = holfoot_run (false, fn x => Parse.print_with_style [PPBackEnd.FG PPBackEnd.OrangeRed] "File mode not supported in compressed version!\n");
 
-fun holfoot_run_full () = holfoot_run (true, use_file);
+fun holfoot_run_full () = holfoot_run (true, use);
 
 val _ = PolyML.export (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/holfoot", holfoot_run_simple);
 val _ = PolyML.export (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/holfoot-full", holfoot_run_full);

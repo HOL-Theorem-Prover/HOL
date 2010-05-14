@@ -41,7 +41,7 @@ val delete_TAC =
    HF_SOLVE_TAC;
 
 
-val thm = holfoot_tac_verify_spec file NONE
+val _ = holfoot_tac_verify_spec file NONE
                 [("insert",       insert_TAC),
                  ("insert_front", insert_front_TAC),
                  ("delete",       delete_TAC)];
