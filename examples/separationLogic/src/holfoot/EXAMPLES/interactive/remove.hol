@@ -15,6 +15,27 @@ val REMOVE_def = Define `
    (REMOVE x [] = []) /\
    (REMOVE x (x'::xs) = if (x = x') then xs else (x'::REMOVE x xs))`;
 
+val REMOVE_ID = prove (
+``!x l. (REMOVE x l = l) = ~(MEM x l)``,
+Induct_on `l` THEN
+ASM_SIMP_TAC list_ss [REMOVE_def, COND_RAND, COND_RATOR]);
+
+
+val REMOVE_APPEND = prove (
+``!x l1 l2. REMOVE x (l1 ++ l2) =
+   if (MEM x l1) then
+      (REMOVE x l1) ++ l2
+   else
+      l1 ++ (REMOVE x l2)``,
+
+Induct_on `l1` THEN
+ASM_SIMP_TAC list_ss [REMOVE_def] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `x = h` THEN ASM_SIMP_TAC std_ss [] THEN
+ASM_SIMP_TAC list_ss [COND_RAND, COND_RATOR]);
+
+
+
 (******************************************************************************)
 (* Verify specification                                                       *)
 (******************************************************************************)
@@ -33,6 +54,19 @@ val spec_thm = holfoot_prove_remaining (imp_thm,
 
 *)
 
+(******************************************************************************)
+(* Verify specification - iterative                                           *)
+(******************************************************************************)
 
+val file2 = concat [examplesDir, "/interactive/remove-iter.dsf"];
+val _ = holfoot_verify_spec file2 [ add_rewrites [REMOVE_def, REMOVE_APPEND, REMOVE_ID] ];
+
+
+(******************************************************************************)
+(* Verify specification - iterative loop-spec                                 *)
+(******************************************************************************)
+
+val file3 = concat [examplesDir, "/interactive/remove-iter-loopspec.dsf"];
+val _ = holfoot_verify_spec file3 [ add_rewrites [REMOVE_def] ];
 
 

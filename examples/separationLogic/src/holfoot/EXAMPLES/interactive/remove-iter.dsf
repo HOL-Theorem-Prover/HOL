@@ -1,0 +1,33 @@
+list_remove(l;x) [data_list(l,data)] {
+  local p, t, f, v;
+
+  p = NULL;
+  t = l;
+  f = 0;
+  
+  while (t != NULL and (f == 0)) [
+    data_list (t, _data2) *
+    (if p == 0 then ((t == l) * ``_data2 = data``) else
+    (data_lseg (l, _data1, p) * (p != t) *
+     p |-> [tl:t,dta:_pdate] *
+    ``~(MEM x data1) /\ ~(x = pdate) /\
+      (data = _data1 ++ (_pdate::_data2))``)) *
+    ``((~(t = 0)) /\ (~(f = 0))) ==> (HD data2 = x)``] {
+    v = t->dta;
+    if (v==x) {
+      f = 1;
+    } else {
+      p = t;      
+      t = t->tl;
+    }
+  }
+  if (t != NULL) {
+     v = t->tl;
+     dispose(t);
+     if (p == NULL) {
+        l = v;
+     } else {
+        p->tl = v;
+     }
+  }
+} [data_list(l, ``REMOVE x data``)]

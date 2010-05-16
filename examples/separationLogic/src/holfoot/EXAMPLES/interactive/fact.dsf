@@ -28,7 +28,6 @@ fact_invariant(r;n) {
    is to multiply r with the faculty of i. */
 fact_loopspec(r;n) {
    local i;
-
    r = 1;
    i = n;
    loop_spec [(r == #rc) * (i == #ic)] {

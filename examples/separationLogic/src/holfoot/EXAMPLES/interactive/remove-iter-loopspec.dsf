@@ -1,0 +1,31 @@
+list_remove(l;x) [data_list(l,data)] {
+  local p, t, f, v;
+
+  p = NULL;
+  t = l;
+  f = 0;
+  
+  loop_spec [data_list (t, tdata) * (p == #pc) * (x == #xc) * (t == #tc) *
+             (l == #lc) * ``((~(t = 0)) /\ (~(f = 0))) ==> (HD tdata = #xc)`` *
+       (if p != 0 then (p |-> [tl:t,dta:#pdate]) else (t == l))] {
+    while (t != NULL and (f == 0)) {
+      v = t->dta;
+      if (v==x) {
+        f = 1;
+      } else {
+        p = t;      
+        t = t->tl;
+      }
+    }
+    if (t != NULL) {
+      v = t->tl;
+      dispose(t);
+      if (p == NULL) {
+        l = v;
+      } else {
+        p->tl = v;
+      }
+    }
+  } [if #pc == 0 then data_list(l, ``REMOVE xc tdata``) else
+        ((l == #lc) * data_list(#pc, ``pdate::(REMOVE xc tdata)``))]
+} [data_list(l, ``REMOVE x data``)]
