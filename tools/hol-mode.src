@@ -1178,7 +1178,7 @@ already loaded.)"
 
 (defun hol-template-new-datatype ()
    (interactive)
-   (insert "val _ = Hol_datatype ‘TREE = LEAF of ’a | BRANCH of TREE => TREE‘;\n"))
+   (insert "val _ = Hol_datatype `TREE = LEAF of 'a | BRANCH of TREE => TREE`;\n"))
 
 
 
