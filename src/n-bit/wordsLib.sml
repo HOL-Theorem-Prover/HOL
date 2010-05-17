@@ -1139,7 +1139,7 @@ local
     THEN IMP_RES_TAC (CONJUNCT2 (SPEC_ALL arithmeticTheory.EVEN_ODD_EXISTS))
     THEN POP_ASSUM SUBST1_TAC
     THEN SRW_TAC [numSimps.ARITH_ss] [word_div_def, w2n_n2w]
-    THEN `n DIV SUC (2 * m) MOD dimword (:α) <= n`
+    THEN `n DIV SUC (2 * m) MOD dimword (:'a) <= n`
       by SIMP_TAC std_ss [arithmeticTheory.DIV_LESS_EQ, word_div_le2_lem]
     THEN SRW_TAC [numSimps.ARITH_ss] [])
 
