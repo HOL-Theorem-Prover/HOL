@@ -374,8 +374,8 @@ val precond_INTRO = prove(
 
 fun arm_prove_specs m_pred s = let
   val _ = set_arm_memory_pred m_pred
-  val thms = [arm_step "v7" s]
-  val thms = (thms @ [arm_step "v7,fail" s]) handle HOL_ERR _ => thms
+  val thms = [arm_step "v4" s]
+  val thms = (thms @ [arm_step "v4,fail" s]) handle HOL_ERR _ => thms
 (*
   val th = hd thms
 *)

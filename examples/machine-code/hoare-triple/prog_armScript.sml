@@ -41,7 +41,7 @@ val _ = Parse.type_abbrev("arm_set",``:arm_el set``);
 
 val ARM_OK_def = Define `
   ARM_OK state = 
-    (ARM_ARCH state = ARMv7_A) /\ (ARM_EXTENSIONS state = {}) /\
+    (ARM_ARCH state = ARMv4) /\ (ARM_EXTENSIONS state = {}) /\
     (ARM_UNALIGNED_SUPPORT state) /\ (ARM_READ_EVENT_REGISTER state) /\
     ~(ARM_READ_INTERRUPT_WAIT state) /\ ~(ARM_READ_SCTLR sctlrV state) /\
     (ARM_READ_SCTLR sctlrA state) /\ ~(ARM_READ_SCTLR sctlrU state) /\
