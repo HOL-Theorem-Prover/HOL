@@ -30,6 +30,7 @@ sig
 
  val std_ss                   : simpLib.simpset
  val arith_ss                 : simpLib.simpset
+ val ARITH_NORM_ss            : simpLib.ssfrag
 
  val DECIDE                   : conv
  val DECIDE_TAC               : tactic
