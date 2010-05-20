@@ -1,0 +1,42 @@
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open listTheory rich_listTheory
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+
+(******************************************************************************)
+(* New Definition for the Specification                                       *)
+(******************************************************************************)
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/array-inc.dsf"];
+
+(* holfoot_set_goal_procedures file ["inc"] *)
+val inc_TAC =
+  HF_SOLVE_TAC THEN
+  HF_VC_TAC THEN
+  REPEAT STRIP_TAC THENL [
+     Cases_on `ic = id` THEN (
+        ASM_SIMP_TAC arith_ss []
+     ),
+
+     MATCH_MP_TAC LIST_EQ THEN
+     ASM_SIMP_TAC list_ss [EL_MAP]
+  ];
+
+val _ = holfoot_tac_verify_spec file NONE
+                [("inc", inc_TAC)];
+

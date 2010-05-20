@@ -13170,8 +13170,8 @@ store_thm ("VAR_RES_COND_INFERENCE___comment_assert",
 (?x. VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
    (fasl_prog_block (
        (var_res_prog_cond_best_local_action 
-          (var_res_prop_internal f (wpb,rpb) (EMPTY, EMPTY) T EMPTY_BAG (qP x))
-          (var_res_prop_internal f (wpb,rpb) (EMPTY, EMPTY) T EMPTY_BAG (qP x)))::
+          (var_res_prop_internal f (EMPTY_BAG, BAG_UNION wpb rpb) (EMPTY, EMPTY) T EMPTY_BAG (qP x))
+          (var_res_prop_internal f (EMPTY_BAG, BAG_UNION wpb rpb) (EMPTY, EMPTY) T EMPTY_BAG (qP x)))::
        progL)) Q) ==>
 
 VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
@@ -13192,7 +13192,7 @@ ASM_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
    var_res_prog_cond_best_local_action_def, var_res_prop___REWRITE,
    fasl_comment_assert_def, var_res_prop_internal_def,
    var_res_prop_internal___COND_def, FINITE_BAG_THM,
-   NOT_IN_EMPTY_BAG] THEN
+   NOT_IN_EMPTY_BAG, BAG_UNION_EMPTY] THEN
 MATCH_MP_TAC (EQ_IMP_RULE_CANON FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action) THEN
 ASM_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
    FASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def, IN_ABS,

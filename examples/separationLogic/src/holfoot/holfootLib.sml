@@ -40,6 +40,7 @@ open separationLogicLib
 open simpLib
 open permLib;
 open HolSmtLib;
+open listLib
 
 (*
 open vars_as_resourceBaseFunctor
@@ -464,15 +465,27 @@ end handle HOL_ERR _ => []
          | UNCHANGED => []
 
 
-fun holfoot_implies_in_heap_GENERATE tL context sfb tt =
-   flatten
-   (map (fn f => (f tL context sfb tt) handle Interrupt => raise Interrupt
-                                         | e => []) [
+fun level_append 0 x = []
+  | level_append n [] = []
+  | level_append n (x::xs) =
+    x @ (level_append (n-1) xs);
+
+fun holfoot_implies_in_heap_GENERATE tL el context sfb tt =
+   let
+      val g1 = [
        holfoot_implies_in_heap_GENERATE___points_to,
        holfoot_implies_in_heap_GENERATE___data_list_seg,
        holfoot_implies_in_heap_GENERATE___tree,
-       holfoot_implies_in_heap_GENERATE___data_tree,
-       holfoot_implies_in_heap_GENERATE___data_array_interval])
+       holfoot_implies_in_heap_GENERATE___data_tree];
+      val g2 =  [holfoot_implies_in_heap_GENERATE___data_array_interval];
+ 
+
+      val genL = level_append el [g1,g2];
+   in
+      flatten
+        (map (fn f => (f tL context sfb tt) handle Interrupt => raise Interrupt
+                                         | e => []) genL)
+   end;
 
 
 fun holfoot_implies_in_heap___or_null___EXTEND_BAG sfb2 thm =
@@ -494,7 +507,7 @@ in
 end;
 
 
-fun holfoot_implies_in_heap_or_null___prove context sfb ex =
+fun holfoot_implies_in_heap_or_null___prove el context sfb ex =
 if is_holfoot_exp_null ex then
    ISPECL [sfb,sfb] holfoot_implies_in_heap_or_null___const_null
 else let
@@ -503,7 +516,7 @@ else let
    val sfs = fst (dest_bag sfb');
 
    val implies_in_heapL =
-      flatten (map (holfoot_implies_in_heap_GENERATE [] context sfb') sfs);
+      flatten (map (holfoot_implies_in_heap_GENERATE [] el context sfb') sfs);
 
 
    fun holfoot_implies_in_heap_or_null___check thm =
@@ -728,15 +741,16 @@ in
    val sfb = sfb_context
 *)
 
-fun holfoot___var_res_prop_implies___GENERATE tL ss context 
+fun holfoot___var_res_prop_implies___GENERATE tL el ss context 
     (f, wpb, rpb, sfb) =
+if (el = 0) then [] else
 let
    val sfb_thm = bagLib.SIMPLE_BAG_NORMALISE_CONV sfb handle UNCHANGED => REFL sfb
    val sfb' = rhs (concl sfb_thm)
    val sfs = fst (dest_bag sfb');
 
    val implies_in_heapL =
-      flatten (map (holfoot_implies_in_heap_GENERATE tL context sfb') sfs);
+      flatten (map (holfoot_implies_in_heap_GENERATE tL el context sfb') sfs);
    val implies_in_heap_pairL = mk_in_heap_pair [] implies_in_heapL
 
    val res1_L1 = mapfilter (mk_unequal_null context) implies_in_heapL;
@@ -1825,7 +1839,7 @@ end;
    val tt = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
 *)
 local 
-   fun search_fun (context_sfb, split_sfs, context) sfs n ttt =
+   fun search_fun el (context_sfb, split_sfs, context) sfs n ttt =
        let
           val (_, e1, _, _) = dest_holfoot_ap_data_list_seg ttt
           fun search_fun2 m tttt =
@@ -1849,14 +1863,14 @@ local
                 bagSyntax.mk_bag (l3, type_of (hd split_sfs))
              end;
              val bag_t = bagSyntax.mk_union (split_sfb', context_sfb)
-             val thm = holfoot_implies_in_heap_or_null___prove context  bag_t e2'
+             val thm = holfoot_implies_in_heap_or_null___prove el context bag_t e2'
           in
              SOME (n, ttt, m, tttt, thm)
           end handle HOL_ERR _ => NONE
        end
 in
 
-fun VAR_RES_FRAME_SPLIT_INFERENCE___list_seg_same_start___CONV context tt =
+fun VAR_RES_FRAME_SPLIT_INFERENCE___list_seg_same_start___CONV el context tt =
 let
    val (f, _, wpbrpb, _, context_sfb, split_sfb, imp_sfb, _) =  dest_VAR_RES_FRAME_SPLIT tt;
 
@@ -1865,7 +1879,7 @@ let
    val (wpb,rpb) = pairSyntax.dest_pair wpbrpb
 
    (*search lists*)
-   val found_opt = first_opt (search_fun (context_sfb, split_sfs, context) imp_sfs) split_sfs;
+   val found_opt = first_opt (search_fun el (context_sfb, split_sfs, context) imp_sfs) split_sfs;
    val _ = if isSome found_opt then () else raise UNCHANGED;
    val (n, sf1, m, sfb2, imp_thm) = valOf found_opt;
 
@@ -2525,7 +2539,7 @@ struct
 
    val VAR_RES_IS_PURE_PROPOSITION___provers = [];
 
-   val hoare_triple_case_splitL = [CASE_SPLIT_HEURISTIC___VAR_RES_COND_HOARE_TRIPLE_lseg]
+   val hoare_triple_case_splitL = [CASE_SPLIT_HEURISTIC___VAR_RES_COND_HOARE_TRIPLE_lseg];
    val frame_split_case_splitL  = []
 
    val INFERENCES_LIST___simulate_command =
@@ -2585,8 +2599,10 @@ struct
         context_strengthen_conseq_conv
         VAR_RES_FRAME_SPLIT_INFERENCE___points_to_list_seg___CONV),
        ("holfoot_data_list_seg___same_start___frame",
-        context_strengthen_conseq_conv
-        VAR_RES_FRAME_SPLIT_INFERENCE___list_seg_same_start___CONV),
+        fn p => fn context => 
+        (STRENGTHEN_CONSEQ_CONV (
+           VAR_RES_FRAME_SPLIT_INFERENCE___list_seg_same_start___CONV
+           (#expands_level p) context))),
        ("holfoot_points_to___tree___points_to___frame",
         no_context_strengthen_conseq_conv
         VAR_RES_FRAME_SPLIT_INFERENCE___points_to_tree___CONV),

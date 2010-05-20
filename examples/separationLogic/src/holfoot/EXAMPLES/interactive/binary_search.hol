@@ -193,10 +193,10 @@ val file_loopspec = concat [examplesDir, "/interactive/binary_search-full-loopsp
 
 (* holfoot_set_goal file_loopspec *)
 val binsearch_loopspec_TAC = 
-HF_CONTINUE_TAC THEN
+HF_SOLVE_TAC THEN
 SIMP_TAC (std_ss++CONJ_ss) [IS_BOOL_TO_NUM_REWRITE,
    SORTED_TAKE_DROP, BOOL_TO_NUM_REWRITE] THEN
-HF_CONTINUE_TAC THEN
+HF_SOLVE_TAC THEN
 REPEAT STRIP_TAC THENL [
    `rc - lc = 0` by DECIDE_TAC THEN
    xHF_CONTINUE_TAC [use_asms] THEN
@@ -206,6 +206,7 @@ REPEAT STRIP_TAC THENL [
    HF_VC_TAC THEN YICES_TAC,
 
    HF_VC_TAC THEN
+   FULL_SIMP_TAC arith_ss [MIN_EQ] THEN
    ASM_SIMP_TAC (list_ss++CONJ_ss) [MEM_EL, EL_BUTFIRSTN] THEN
    EQ_TAC THEN STRIP_TAC THEN1 (
       Q.EXISTS_TAC `m_const + (n+1) - lc` THEN
@@ -216,7 +217,6 @@ REPEAT STRIP_TAC THENL [
    STRIP_TAC THEN
    Q.EXISTS_TAC `((n - 1) + lc) - m_const` THEN
    ASM_SIMP_TAC arith_ss [],
-
 
    HF_VC_TAC THEN
    ASM_SIMP_TAC (list_ss++CONJ_ss) [MEM_EL, EL_FIRSTN] THEN
@@ -232,12 +232,9 @@ REPEAT STRIP_TAC THENL [
    HF_VC_TAC THEN
    SIMP_TAC std_ss [MEM_EL] THEN
    Q.EXISTS_TAC `m_const - lc` THEN
-   ASM_SIMP_TAC arith_ss [],
-
-   HF_SOLVE_TAC
+   ASM_SIMP_TAC arith_ss []
 ];
 
 
 val _ = holfoot_tac_verify_spec file_loopspec NONE
                 [("binsearch", binsearch_loopspec_TAC)]
-

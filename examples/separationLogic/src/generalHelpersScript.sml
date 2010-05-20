@@ -90,6 +90,12 @@ val FORALL_LESS_SUC = store_thm ("FORALL_LESS_SUC",
       ]
    ])
 
+val MIN_EQ = store_thm ("MIN_EQ",
+``(!n1 n2. (MIN n1 n2 = n1) = (n1 <= n2)) /\
+  (!n1 n2. (MIN n1 n2 = n2) = (n2 <= n1))``,
+SIMP_TAC arith_ss [arithmeticTheory.MIN_DEF, 
+   COND_RAND, COND_RATOR]);
+
 (******************************************************************
   PAIRS
  ******************************************************************)
@@ -858,6 +864,19 @@ Induct_on `n` THEN (
    ASM_SIMP_TAC list_ss [SWAP_ELEMENTS_def, REPLACE_ELEMENT_DEF]
 ));
 
+
+val EL_SWAP_ELEMENTS = store_thm ("EL_SWAP_ELEMENTS",
+``!x n m l.
+  EL x (SWAP_ELEMENTS n m l) =
+  if (x < LENGTH l) then
+    (if (x = m) then EL n l else
+     (if (x = n) then EL m l else EL x l)) 
+  else EL x l``,
+
+SIMP_TAC std_ss [SWAP_ELEMENTS_def, EL_REPLACE_ELEMENT,
+  LENGTH_REPLACE_ELEMENT] THEN
+Cases_on `x < LENGTH l` THEN
+SIMP_TAC std_ss []);
 
 
 val PERM_SWAP_ELEMENTS___helper = prove (

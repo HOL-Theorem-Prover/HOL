@@ -50,12 +50,20 @@ sig
        val VAR_RES_FRAME_SPLIT___context_split_imp_CONV : conv -> conv
        val VAR_RES_FRAME_SPLIT___PROP_CONV              : conv -> conv
 
-       type var_res_inference = bool -> (bool * simpLib.ssfrag) -> thm list -> ConseqConv.directed_conseq_conv
+       type var_res_inference_param =
+         {fast           : bool,
+          do_prop_simps  : bool,
+          prop_simp_ss   : simpLib.ssfrag,
+          expands_level  : int};
+
+       type var_res_inference = var_res_inference_param -> thm list -> ConseqConv.directed_conseq_conv
        val no_context_conseq_conv                    : ConseqConv.directed_conseq_conv -> var_res_inference;
        val no_context_strengthen_conseq_conv         : conv -> var_res_inference;
        val context_strengthen_conseq_conv            : (thm list -> conv) -> var_res_inference;
        val simpset_strengthen_conseq_conv            : ((bool * simpLib.ssfrag) -> thm list -> conv) -> var_res_inference;
        val simpset_no_context_strengthen_conseq_conv : ((bool * simpLib.ssfrag) -> conv) -> var_res_inference;
+       val expands_strengthen_conseq_conv            : (int -> (bool * simpLib.ssfrag) -> thm list -> conv) -> var_res_inference;
+
 end =
 struct
 
@@ -924,21 +932,32 @@ end;
 (* var_res_inference                                                          *)
 (******************************************************************************)
 
-type var_res_inference = bool -> (bool * simpLib.ssfrag) -> thm list -> directed_conseq_conv
+type var_res_inference_param =
+  {fast           : bool,
+   do_prop_simps  : bool,
+   prop_simp_ss   : simpLib.ssfrag,
+   expands_level  : int};
+
+type var_res_inference = var_res_inference_param -> thm list -> directed_conseq_conv
 
 fun no_context_conseq_conv conv =
-    (K (K (K conv))):var_res_inference
+    (K (K conv)):var_res_inference
 
 fun no_context_strengthen_conseq_conv conv =
     (no_context_conseq_conv (STRENGTHEN_CONSEQ_CONV conv))
 
 fun context_strengthen_conseq_conv conv =
-   (K (K (fn context => (STRENGTHEN_CONSEQ_CONV (conv context))))):var_res_inference
+   (K (fn context => (STRENGTHEN_CONSEQ_CONV (conv context)))):var_res_inference
 
 fun simpset_no_context_strengthen_conseq_conv conv =
-   (K (fn ss => (K (STRENGTHEN_CONSEQ_CONV (conv ss))))):var_res_inference
+   (fn p => (K (STRENGTHEN_CONSEQ_CONV (conv (#do_prop_simps p, #prop_simp_ss p))))):var_res_inference
 
 fun simpset_strengthen_conseq_conv conv =
-   (K (fn ss => (fn context => (STRENGTHEN_CONSEQ_CONV (conv ss context))))):var_res_inference
+   (fn p => (fn context => (STRENGTHEN_CONSEQ_CONV 
+       (conv (#do_prop_simps p, #prop_simp_ss p) context)))):var_res_inference
+
+fun expands_strengthen_conseq_conv conv =
+   (fn p => (fn context => (STRENGTHEN_CONSEQ_CONV 
+         (conv (#expands_level p) (#do_prop_simps p, #prop_simp_ss p) context)))):var_res_inference
 									     
 end

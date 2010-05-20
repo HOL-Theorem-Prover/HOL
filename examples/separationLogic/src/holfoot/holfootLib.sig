@@ -5,7 +5,7 @@ sig
    type user_rewrite_param = (Abbrev.thm list * Abbrev.conv list * simpLib.ssfrag list);
    type gen_step_param = {use_asms       : bool,
                           do_case_splits : bool,
-                          do_expands     : bool,
+                          expands_level  : int,
                           generate_vcs   : bool,
                           fast           : bool,
                           stop_evals     : (term -> bool) list,
@@ -13,7 +13,7 @@ sig
 
    datatype gen_step_tac_opt =
        case_splits_flag of bool
-     | expands_flag of bool
+     | expands_level of int
      | fast_flag of bool
      | prop_simp_level of int
      | use_asms_flag of bool
@@ -28,6 +28,7 @@ sig
    val do_case_splits        : gen_step_tac_opt;
    val no_expands            : gen_step_tac_opt;
    val do_expands            : gen_step_tac_opt;
+   val full_expands          : gen_step_tac_opt;
    val no_case_split_expands : gen_step_tac_opt;
    val generate_vcs          : gen_step_tac_opt;
    val dont_generate_vcs     : gen_step_tac_opt;
@@ -47,7 +48,7 @@ sig
    val gen_step_param___update_use_asms   : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_cs         : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_vcs        : gen_step_param -> bool -> gen_step_param
-   val gen_step_param___update_expands    : gen_step_param -> bool -> gen_step_param
+   val gen_step_param___update_expands    : gen_step_param -> int  -> gen_step_param
    val gen_step_param___update_fast       : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_prop_simps : gen_step_param -> int  -> gen_step_param
    val gen_step_param___update_stop_evals : gen_step_param -> (term -> bool) list -> gen_step_param
