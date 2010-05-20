@@ -37,7 +37,7 @@ fun process tm = let
      else if tm = ``psrZ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrz",``:bool``))
      else if tm = ``psrC:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrc",``:bool``))
      else if tm = ``psrV:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrv",``:bool``))
-     else if tm = ``sQ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrq",``:bool``))
+     else if tm = ``psrQ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrq",``:bool``))
      else if type_of tm = ``:word32`` then
        (mk_comb(``aM1:word32 -> word8 -> arm_set -> bool``,tm),mk_var(name_of_tm tm,``:word8``))
      else fail() end;
