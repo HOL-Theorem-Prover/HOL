@@ -4,10 +4,22 @@ struct
 (* reads the output of bin/build on standard input, and turns it into a
    mail message *)
 
+val timezone_string = let
+  val t = Date.localOffset()
+  val secs = Time.toSeconds t
+  val total_minutes = Int.abs secs div 60
+  val hrs = total_minutes div 60
+  val minpart = total_minutes mod 60
+  val pad = StringCvt.padLeft #"0" 2
+in
+  (if secs <= 0 then "+" else "-") ^
+  pad (Int.toString hrs) ^ pad (Int.toString minpart)
+end
+
 fun datestring t = let
   open Date
 in
-  fmt "%a, %d %b %Y %H:%M UT" (fromTimeUniv t)
+  fmt "%a, %d %b %Y %H:%M " (fromTimeLocal t) ^ timezone_string
 end
 
 fun standard_header from subject t =

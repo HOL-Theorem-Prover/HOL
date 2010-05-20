@@ -69,6 +69,8 @@ holid="$kernel:$rev:$(basename $ML)"
 
 
 (echo "Running in $holdir on machine $(hostname)" &&
+ echo "Started: $(date -R)" &&
+ echo "Extra commandline arguments: $@" &&
   svn update 2>&1 &&
   $ML < tools/smart-configure.sml 2>&1 &&
   bin/build cleanAll 2>&1 &&
