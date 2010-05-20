@@ -8,10 +8,10 @@ die ()
 
 usage()
 {
-    die "Usage: $0 from-address gbs holdir ML kernelflag"
+    die "Usage: $0 from-address gbs holdir ML kernelflag [other build options]"
 }
 
-if [ $# -ne 5 ]
+if [ $# -lt 5 ]
 then
     usage
 fi
@@ -31,6 +31,7 @@ fi
 holdir=$1
 ML=$2
 kernel=$3
+shift 3
 
 if [ -d $holdir -a -x $holdir -a -r $holdir ]
 then
@@ -39,7 +40,7 @@ else
   die "HOL directory \"$holdir\" doesn't exist or is inaccessible."
 fi
 
-if [ -r std.prelude -a -d sigobj -a tools/smart-configure ]
+if [ -r std.prelude -a -d sigobj -a -r tools/smart-configure.sml ]
 then
     :
 else
@@ -71,6 +72,6 @@ holid="$kernel:$rev:$(basename $ML)"
   svn update 2>&1 &&
   $ML < tools/smart-configure.sml 2>&1 &&
   bin/build cleanAll 2>&1 &&
-  bin/build -selftest 2 $kernel -fullbuild 2>&1) |
+  bin/build $kernel "$@" 2>&1) |
   tee build-log |
   $gbs "$from" "$holid"
