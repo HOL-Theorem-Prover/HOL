@@ -14,18 +14,30 @@ val _ = HOL_Interactive.toggle_quietdec();
 
 
 (******************************************************************************)
-(* New Definition for the Specification                                       *)
-(******************************************************************************)
-
-
-(******************************************************************************)
-(* Verify specification                                                       *)
+(* Verify specification - invariant                                           *)
 (******************************************************************************)
 
 val file = concat [examplesDir, "/interactive/array-inc.dsf"];
 
-(* holfoot_set_goal_procedures file ["inc"] *)
-val inc_TAC =
+(* holfoot_set_goal_procedures file ["inc1"] *)
+val inc1_TAC =
+  HF_VC_SOLVE_TAC THEN
+  HF_VC_TAC THEN
+  REPEAT STRIP_TAC THENL [
+     Cases_on `i_const = id` THEN (
+        ASM_SIMP_TAC arith_ss []
+     ),
+
+     Q.EXISTS_TAC `data` THEN
+     SIMP_TAC list_ss [] THEN
+     REPEAT STRIP_TAC THEN
+     MATCH_MP_TAC LIST_EQ THEN
+     ASM_SIMP_TAC list_ss [EL_MAP]
+  ];
+
+
+(* holfoot_set_goal_procedures file ["inc2"] *)
+val inc2_TAC =
   HF_SOLVE_TAC THEN
   HF_VC_TAC THEN
   REPEAT STRIP_TAC THENL [
@@ -37,6 +49,19 @@ val inc_TAC =
      ASM_SIMP_TAC list_ss [EL_MAP]
   ];
 
+(* holfoot_set_goal_procedures file ["inc3"] *)
+val inc3_TAC =
+  HF_SOLVE_TAC THEN
+  REPEAT STRIP_TAC THENL [
+     `n_const - ic = 0` by DECIDE_TAC THEN
+     HF_SOLVE_TAC,
+
+     Cases_on `data = []` THEN (
+        HF_SOLVE_TAC
+     )
+  ];
+
 val _ = holfoot_tac_verify_spec file NONE
-                [("inc", inc_TAC)];
+                [("inc2", inc2_TAC)];
+
 
