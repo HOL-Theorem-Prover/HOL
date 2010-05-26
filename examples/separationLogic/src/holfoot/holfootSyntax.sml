@@ -200,6 +200,7 @@ val holfoot_ap_equal_term = ``(var_res_prop_equal DISJOINT_FMAP_UNION):holfoot_a
 val holfoot_ap_unequal_term = ``(var_res_prop_unequal DISJOINT_FMAP_UNION):holfoot_a_expression->holfoot_a_expression->holfoot_a_proposition``
 val holfoot_ap_false_term = ``asl_false:holfoot_a_proposition``
 val holfoot_ap_eq_cond_term = ``(var_res_prop_binexpression_cond DISJOINT_FMAP_UNION $=):holfoot_a_expression -> holfoot_a_expression -> holfoot_a_proposition -> holfoot_a_proposition -> holfoot_a_proposition``
+val holfoot_ap_emp_term = ``asl_emp holfoot_separation_combinator``
 val holfoot_ap_star_term = ``asl_star holfoot_separation_combinator``
 val holfoot_ap_bigstar_list_term = ``asl_bigstar_list holfoot_separation_combinator``
 

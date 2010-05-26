@@ -16,16 +16,16 @@ inc1(;a,n) [data_array(a,n,data)] {
 inc2(;a,n) [data_array(a,n,data)] {
    local i, tmp;
    i = 0;
-   loop_spec [data_array(a,n,data) * (i == #ic)] {
+   loop_spec [data_array(a,n,data)] {
       while (i < n) {
          tmp = (a + i) -> dta;
          (a + i) -> dta = tmp + 1;
          i = i + 1;
       }
    } [data_array(a, n, _data2) *
-      ``(!id. id < #ic ==> 
+      ``(!id. id < old(i) ==> 
               (EL id data2 = EL id data)) /\
-        (!id. #ic <= id /\ id < n ==>
+        (!id. old(i) <= id /\ id < n ==>
               (EL id data2 = SUC (EL id data)))``]               
 } [data_array(a,n,``MAP SUC data``)]
 
@@ -33,11 +33,11 @@ inc2(;a,n) [data_array(a,n,data)] {
 inc3(;a,n) [data_array(a,n,data)] {
    local i, tmp;
    i = 0;
-   loop_spec [(i == #ic) * data_array(a+#ic,n-#ic,data)] {
+   loop_spec [data_array(a+i,n-i,data)] {
       while (i < n) {
          tmp = (a + i) -> dta;
          (a + i) -> dta = tmp + 1;
          i = i + 1;
       }
-   } [data_array(a+#ic, n-#ic, ``MAP SUC data``)]               
+   } [data_array(a+old(i), n-old(i), ``MAP SUC data``)]               
 } [data_array(a,n,``MAP SUC data``)]

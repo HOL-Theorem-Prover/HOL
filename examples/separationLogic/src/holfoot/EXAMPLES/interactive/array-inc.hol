@@ -41,7 +41,7 @@ val inc2_TAC =
   HF_SOLVE_TAC THEN
   HF_VC_TAC THEN
   REPEAT STRIP_TAC THENL [
-     Cases_on `ic = id` THEN (
+     Cases_on `old_i = id` THEN (
         ASM_SIMP_TAC arith_ss []
      ),
 
@@ -53,7 +53,7 @@ val inc2_TAC =
 val inc3_TAC =
   HF_SOLVE_TAC THEN
   REPEAT STRIP_TAC THENL [
-     `n_const - ic = 0` by DECIDE_TAC THEN
+     `n_const - old_i = 0` by DECIDE_TAC THEN
      HF_SOLVE_TAC,
 
      Cases_on `data = []` THEN (

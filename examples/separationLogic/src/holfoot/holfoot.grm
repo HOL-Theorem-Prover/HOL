@@ -112,6 +112,7 @@ val tree_link_tags = ("l", "r")
   |  ENTAILS
   |  STRING of string
   |  ENTAILMENT
+  |  OLD
 
 
 (* precedences (increasing) and associativities for expressions *)
@@ -338,6 +339,10 @@ simple_expression:
 	  ( (Aexp_ident(IDENT)) )
   | QIDENT
 	  ( (Aexp_ident(QIDENT)) )
+  | OLD LPAREN IDENT RPAREN
+	  ( (Aexp_old_ident(IDENT)) )
+  | OLD LPAREN QIDENT RPAREN
+	  ( (Aexp_old_ident(QIDENT)) )
   | NAT
 	  ( (Aexp_num(NAT)) )
 
@@ -489,6 +494,8 @@ a_proposition:
 	  ( Aprop_false )
   | a_proposition STAR a_proposition
           ( Aprop_star(a_proposition1,a_proposition2) )
+  | IF a_proposition IFTHEN a_proposition %prec below_ELSE
+      ( Aprop_ifthenelse(a_proposition1,a_proposition2,Aprop_spred Aspred_empty) )  
   | IF a_proposition IFTHEN a_proposition ELSE a_proposition
       ( Aprop_ifthenelse(a_proposition1,a_proposition2,a_proposition3) )  
   | MAP LPAREN LAM ident_notempty_seq_no_comma DOT a_proposition RPAREN ident_or_hol 

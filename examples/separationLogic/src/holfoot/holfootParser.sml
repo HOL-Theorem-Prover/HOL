@@ -48,8 +48,15 @@ val file = "/home/tt291/Downloads/holfoot/EXAMPLES/business2.sf";
 val prog = parse file;
 *)
 
+fun vstruct_idents s (Absyn.VAQ _) = s
+  | vstruct_idents s (Absyn.VIDENT (_, i)) = Redblackset.add (s, i)
+  | vstruct_idents s (Absyn.VPAIR (_, vs1, vs2)) =
+       vstruct_idents (vstruct_idents s vs1) vs2
+  | vstruct_idents s (Absyn.VTYPED (_, vs, _)) =
+       vstruct_idents s vs;
 
-fun map_ident (s,f) l = case l of
+
+fun map_ident (s,f,f2_opt,f3_opt) l = case l of
     Absyn.AQ    (locn,t)   => (s, Absyn.AQ (locn,t))
   | Absyn.IDENT (locn,i)   => 
          let
@@ -60,30 +67,33 @@ fun map_ident (s,f) l = case l of
   | Absyn.QIDENT(locn,t,i) => (s, Absyn.QIDENT(locn,t,i))
   | Absyn.APP   (locn,a1,a2) => 
          let
-            val (s',  a1') = map_ident (s,f)   a1
-            val (s'', a2') = map_ident (s',f) a2
+            val (s',  a1') = map_ident (s,f,f2_opt,f3_opt)   a1
+            val (s'', a2') = map_ident (s',f,f2_opt,f3_opt) a2
          in
             (s'', Absyn.APP (locn,a1',a2'))
          end
   | Absyn.LAM   (locn,v,a) => 
          let
-            val (s',  a') = map_ident (s,f) a
+            val is = vstruct_idents (Redblackset.empty String.compare) v;
+            val s' = if isSome f2_opt then (valOf f2_opt) s locn is else s;
+            val (s'',  a') = map_ident (s',f,f2_opt, f3_opt) a
+            val s''' = if isSome f3_opt then (valOf f3_opt) s'' locn is else s'';
          in
-            (s', Absyn.LAM (locn,v,a'))
+            (s''', Absyn.LAM (locn,v,a'))
          end
   | Absyn.TYPED (locn,a,p) => 
          let
-            val (s',  a') = map_ident (s,f) a
+            val (s',  a') = map_ident (s,f,f2_opt,f3_opt) a
          in
             (s', Absyn.TYPED (locn,a',p))
          end
-
 
 fun collect_ident l =
 let
    val is = Redblackset.empty String.compare
    fun col set l s = (Redblackset.add (set,s), Absyn.IDENT (l, s))
-   val (set, _) = map_ident (is, col) l
+   fun del set l is = Redblackset.difference (set,is)
+   val (set, _) = map_ident (is, col,NONE, SOME del) l
 in
    set
 end;
@@ -108,11 +118,10 @@ local
        in
           (qv', Absyn.IDENT (l, i'))
        end else (qv, Absyn.IDENT (l, i))
-
 in
 
 fun remove_qv a =
-      map_ident (Redblackset.empty String.compare, subst_qv_ident) a
+      map_ident (Redblackset.empty String.compare, subst_qv_ident, NONE, NONE) a
 
 end;
 
@@ -129,10 +138,11 @@ fun absyn_extract_vars vL a =
   let
      val eL_v = genvar (Type `:num list`);
      val eL_L = mk_el_list (length vL) eL_v;
-     val substL = zip vL eL_L;
-     fun a_subst () l i =
-        ((), Absyn.mk_AQ (assoc i substL)) handle HOL_ERR _ => ((), Absyn.IDENT (l, i))
-     val (_, a') = map_ident ((), a_subst) a
+     val substL = zip vL eL_L;    
+     fun a_subst set l i = (if Redblackset.member (set, i) then Feedback.fail() else
+        (set, Absyn.mk_AQ (assoc i substL))) handle HOL_ERR _ => (set, Absyn.IDENT (l, i))
+     fun my_union set l is = Redblackset.union (set, is);
+     val (_, a') = map_ident (Redblackset.empty String.compare, a_subst, SOME my_union, NONE) a
      val qa = Absyn.mk_lam (Absyn.VAQ (locn.Loc_None, eL_v), a')
 
      val vL' = map (fn v => mk_comb(holfoot_exp_var_term, string2holfoot_var v)) vL;
@@ -142,23 +152,113 @@ fun absyn_extract_vars vL a =
   end;
 
 
-fun holfoot_expression2absyn vs (Aexp_ident x) =
+fun replace_old os_opt l = case l of
+    Absyn.AQ    (locn,t)   => (os_opt, l)
+  | Absyn.IDENT (locn,i)   => (os_opt, l)
+  | Absyn.QIDENT(locn,t,i) => (os_opt, l)
+  | Absyn.APP   (locn,Absyn.IDENT(_,"old"),Absyn.IDENT(_,v)) => 
+    let
+       val os = if isSome os_opt then valOf os_opt else
+                  Feedback.failwith ("No old value of "^v^" available here!");
+       val nv_opt = Redblackmap.peek (os, v);
+       val (nv, os') = if isSome (nv_opt) then (valOf nv_opt, os) else
+                       let
+                          val nv = mk_var ("old_"^v, numLib.num);
+                          val os' = Redblackmap.insert(os,v,nv);
+                       in
+                          (nv,os')
+                       end;
+    in
+       (SOME os', Absyn.IDENT (locn,(fst o dest_var) nv))
+    end
+  | Absyn.APP   (locn,a1,a2) => 
+         let
+            val (os_opt, a1') = replace_old os_opt a1
+            val (os_opt, a2') = replace_old os_opt a2
+         in
+            (os_opt, Absyn.APP (locn,a1',a2'))
+         end
+  | Absyn.LAM   (locn,v,a) => 
+         let
+            val (os_opt,  a') = replace_old os_opt a
+         in
+            (os_opt, Absyn.LAM (locn,v,a'))
+         end
+  | Absyn.TYPED (locn,a,p) => 
+         let
+            val (os_opt,  a') = replace_old os_opt a
+         in
+            (os_opt, Absyn.TYPED (locn,a',p))
+         end
+
+
+fun HOL_Absyn_old_vars vs (os_opt, cs_opt) h =
+let
+   val ha = HOL_Absyn h
+
+   val (os_opt, ha) = replace_old os_opt ha;
+
+   val (ha, cs_opt) = if (not (isSome cs_opt)) then (ha, NONE) else
+       let
+          val used_vars = Redblackset.intersection (collect_ident ha, fst vs);        
+          fun const_name v = v^"_lc";
+          fun my_union set l is = Redblackset.union (set, is);
+          fun my_work set l i =
+            let
+               val i' =  if not (Redblackset.member (used_vars, i)) orelse
+                            Redblackset.member (set,i) then i else
+                    ("_"^(const_name i))                 
+             in
+                (set, Absyn.IDENT (l, i'))
+             end
+
+          val (_, ha') = map_ident (Redblackset.empty String.compare, 
+               my_work, SOME my_union, NONE) ha;
+          val used_varsL = Redblackset.listItems used_vars
+          val cs_opt' = SOME (
+               List.foldl (fn (k,d) => Redblackmap.insert (d, k, 
+                   mk_var(const_name k, numLib.num))) (valOf cs_opt) used_varsL)
+       in
+          (ha', cs_opt')
+       end;
+in
+   ((os_opt, cs_opt), ha)
+end;
+
+
+fun holfoot_expression2absyn vs os_opt (Aexp_ident x) =
    if (String.sub (x, 0) = #"#") then  
-      Absyn.mk_app (Absyn.mk_AQ holfoot_exp_const_term, 
-          Absyn.mk_ident (String.substring(x, 1, (String.size x) - 1)))
+      (os_opt, Absyn.mk_app (Absyn.mk_AQ holfoot_exp_const_term, 
+          Absyn.mk_ident (String.substring(x, 1, (String.size x) - 1))))
    else if (is_holfoot_ex_ident x) orelse (Redblackset.member (snd vs, x)) then 
-      Absyn.mk_app (Absyn.mk_AQ holfoot_exp_const_term, 
-          Absyn.mk_ident x)
+      (os_opt, Absyn.mk_app (Absyn.mk_AQ holfoot_exp_const_term, 
+          Absyn.mk_ident x))
    else 
       let
          val var_term = string2holfoot_var x;
          val term = mk_comb(holfoot_exp_var_term, var_term) 
       in 
-         Absyn.mk_AQ term
+         (os_opt, Absyn.mk_AQ term)
       end
-| holfoot_expression2absyn vs (Aexp_num n) =
-     Absyn.mk_AQ (mk_comb (holfoot_exp_const_term, numLib.term_of_int n))
-| holfoot_expression2absyn vs (Aexp_infix (opstring, e1, e2)) =
+| holfoot_expression2absyn vs os_opt (Aexp_old_ident x) =
+   let
+       val os = if isSome os_opt then valOf os_opt else
+                  Feedback.failwith ("No old value of "^x^" available here!");
+       val nv_opt = Redblackmap.peek (os, x);
+       val (nv, os') = if isSome (nv_opt) then (valOf nv_opt, os) else
+                       let
+                          val nv = mk_var ("old_"^x, numLib.num);
+                          val os' = Redblackmap.insert(os,x,nv);
+                       in
+                          (nv,os')
+                       end;
+       val et = mk_comb (holfoot_exp_const_term, nv);
+   in
+       (SOME os', Absyn.mk_AQ et)
+   end
+| holfoot_expression2absyn vs os_opt (Aexp_num n) =
+     (os_opt, Absyn.mk_AQ (mk_comb (holfoot_exp_const_term, numLib.term_of_int n)))
+| holfoot_expression2absyn vs os_opt (Aexp_infix (opstring, e1, e2)) =
    let
       val opterm = if (opstring = "-") then holfoot_exp_sub_term else
                    if (opstring = "+") then holfoot_exp_add_term else
@@ -167,23 +267,23 @@ fun holfoot_expression2absyn vs (Aexp_ident x) =
                    if (opstring = "%") then holfoot_exp_mod_term else
                    if (opstring = "^") then holfoot_exp_exp_term else
                        Raise (holfoot_unsupported_feature_exn ("Pexp_infix "^opstring));
-      val t1 = holfoot_expression2absyn vs e1;
-      val t2 = holfoot_expression2absyn vs e2;
+      val (os_opt' , t1) = holfoot_expression2absyn vs os_opt  e1;
+      val (os_opt'', t2) = holfoot_expression2absyn vs os_opt' e2;
    in
-      (Absyn.list_mk_app (Absyn.mk_AQ opterm, [t1, t2]))
+      (os_opt'', Absyn.list_mk_app (Absyn.mk_AQ opterm, [t1, t2]))
    end
-| holfoot_expression2absyn vs (Aexp_hol h) =
+| holfoot_expression2absyn vs os_opt (Aexp_hol h) =
       let
-        val ha = HOL_Absyn h;
+        val ((os_opt,_), ha) = HOL_Absyn_old_vars vs (os_opt,NONE) h;
         val used_vars = Redblackset.listItems (Redblackset.intersection (collect_ident ha, fst vs))        
       in
         if (null used_vars) then
-           Absyn.mk_app (Absyn.mk_AQ holfoot_exp_const_term, ha)
+           (os_opt, Absyn.mk_app (Absyn.mk_AQ holfoot_exp_const_term, ha))
         else
            let
              val (qha, vLt) = absyn_extract_vars used_vars ha
            in
-             Absyn.list_mk_app (Absyn.mk_AQ holfoot_exp_op_term, [qha, Absyn.mk_AQ vLt])
+             (os_opt, Absyn.list_mk_app (Absyn.mk_AQ holfoot_exp_op_term, [qha, Absyn.mk_AQ vLt]))
            end
       end;
 
@@ -222,8 +322,8 @@ fun holfoot_p_condition2absyn vs Pcond_false =
                    if (opstring = ">")  then holfoot_pred_gt_term else
                    if (opstring = ">=") then holfoot_pred_ge_term else
                       Raise (holfoot_unsupported_feature_exn ("Pcond_compare "^opstring));
-      val t1 = holfoot_expression2absyn vs e1;
-      val t2 = holfoot_expression2absyn vs e2;
+      val (_, t1) = holfoot_expression2absyn vs NONE e1;
+      val (_, t2) = holfoot_expression2absyn vs NONE e2;
    in
       (Absyn.list_mk_app (Absyn.mk_AQ opterm, [t1, t2]))
    end
@@ -246,118 +346,118 @@ val tag_a_expression_fmap_update_term = ``FUPDATE:(holfoot_tag |-> holfoot_a_exp
 (holfoot_tag # holfoot_a_expression)->(holfoot_tag |-> holfoot_a_expression)``;
 
 
-fun tag_a_expression_list2absyn vs [] = (Absyn.mk_AQ tag_a_expression_fmap_emp_term) |
-    tag_a_expression_list2absyn vs ((tag,exp1)::l) =
+fun tag_a_expression_list2absyn vs rvm [] = (rvm, Absyn.mk_AQ tag_a_expression_fmap_emp_term) |
+    tag_a_expression_list2absyn vs rvm ((tag,exp1)::l) =
       let
          val tag_term = string2holfoot_tag tag;
-         val exp_absyn = holfoot_expression2absyn vs exp1;
+         val (rvm', exp_absyn) = holfoot_expression2absyn vs rvm exp1;
          val a = Absyn.mk_pair (Absyn.mk_AQ tag_term, exp_absyn)
-         val rest = tag_a_expression_list2absyn vs l;
+         val (rvm'', rest) = tag_a_expression_list2absyn vs rvm' l;
       in
-         Absyn.list_mk_app (Absyn.mk_AQ tag_a_expression_fmap_update_term, [rest, a])
+         (rvm'', Absyn.list_mk_app (Absyn.mk_AQ tag_a_expression_fmap_update_term, [rest, a]))
       end;
 
 
 val holfoot_data_list___EMPTY_tm = ``[]:(holfoot_tag # num list) list``;
 
-fun holfoot_a_space_pred2absyn vs (Aspred_empty) =
-   Absyn.mk_AQ holfoot_stack_true_term
-| holfoot_a_space_pred2absyn vs (Aspred_list (tag,exp1)) =
-  holfoot_a_space_pred2absyn vs (Aspred_listseg (tag,exp1, Aexp_num 0))
-| holfoot_a_space_pred2absyn vs (Aspred_listseg (tag,exp1, exp2)) = 
+fun holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_empty) =
+   ((os_opt, cs_opt), Absyn.mk_AQ holfoot_stack_true_term)
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_list (tag,exp1)) =
+  holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_listseg (tag,exp1, Aexp_num 0))
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_listseg (tag,exp1, exp2)) = 
   let
-     val exp1 = holfoot_expression2absyn vs exp1;
-     val exp2 = holfoot_expression2absyn vs exp2;
+     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
+     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
      val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_list_seg_term, [
              Absyn.mk_AQ (string2holfoot_tag tag),
              exp1, Absyn.mk_AQ holfoot_data_list___EMPTY_tm, exp2]);
   in
-     c
+     ((os_opt, cs_opt), c)
   end
-| holfoot_a_space_pred2absyn vs (Aspred_queue (tag,exp1, exp2)) = 
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_queue (tag,exp1, exp2)) = 
   let
-     val exp1 = holfoot_expression2absyn vs exp1;
-     val exp2 = holfoot_expression2absyn vs exp2;
+     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
+     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
      val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_queue_term, [
              Absyn.mk_AQ (string2holfoot_tag tag),
              exp1, Absyn.mk_AQ holfoot_data_list___EMPTY_tm, exp2]);
   in
-     c
+     ((os_opt, cs_opt), c)
   end
-| holfoot_a_space_pred2absyn vs (Aspred_data_list (tag,exp1,data_tag,data)) =
-  holfoot_a_space_pred2absyn vs (Aspred_data_listseg (tag, exp1, data_tag, data, Aexp_num 0))
-| holfoot_a_space_pred2absyn vs (Aspred_data_listseg (tag,exp1,data_tag,data,exp2)) =
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_list (tag,exp1,data_tag,data)) =
+  holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_listseg (tag, exp1, data_tag, data, Aexp_num 0))
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_listseg (tag,exp1,data_tag,data,exp2)) =
   let
-     val exp1 = holfoot_expression2absyn vs exp1;
-     val exp2 = holfoot_expression2absyn vs exp2;
-     val data_a = HOL_Absyn data;
+     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
+     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
+     val ((os_opt, cs_opt), data_a) = HOL_Absyn_old_vars vs (os_opt, cs_opt) data;
      val data_tag_term = string2holfoot_tag data_tag;
      val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
      val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_list_seg_term, [
              Absyn.mk_AQ (string2holfoot_tag tag),
              exp1, data2_a, exp2]);
   in
-     c
+     ((os_opt, cs_opt), c)
   end
-| holfoot_a_space_pred2absyn vs (Aspred_data_queue (tag,exp1,data_tag,data,exp2)) =
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_queue (tag,exp1,data_tag,data,exp2)) =
   let
-     val exp1 = holfoot_expression2absyn vs exp1;
-     val exp2 = holfoot_expression2absyn vs exp2;
-     val data_a = HOL_Absyn data;
+     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
+     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
+     val ((os_opt, cs_opt), data_a) = HOL_Absyn_old_vars vs (os_opt, cs_opt) data;
      val data_tag_term = string2holfoot_tag data_tag;
      val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
      val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_queue_term, [
              Absyn.mk_AQ (string2holfoot_tag tag),
              exp1, data2_a, exp2]);
   in
-     c
+     ((os_opt, cs_opt), c)
   end
-| holfoot_a_space_pred2absyn vs (Aspred_array (exp1, exp2)) = 
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_array (exp1, exp2)) = 
   let
-     val exp1 = holfoot_expression2absyn vs exp1;
-     val exp2 = holfoot_expression2absyn vs exp2;
+     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
+     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
      val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_array_term, [
              exp1, exp2, Absyn.mk_AQ holfoot_data_list___EMPTY_tm]);
   in
-     c
+     ((os_opt, cs_opt), c)
   end
-| holfoot_a_space_pred2absyn vs (Aspred_data_array (exp1, exp2, tag, data)) = 
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_array (exp1, exp2, tag, data)) = 
   let
-     val exp1 = holfoot_expression2absyn vs exp1;
-     val exp2 = holfoot_expression2absyn vs exp2;
-     val data_a = HOL_Absyn data;
+     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
+     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
+     val ((os_opt, cs_opt), data_a) = HOL_Absyn_old_vars vs (os_opt, cs_opt) data;
      val data_tag_term = string2holfoot_tag tag;
      val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
      val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_array_term, [
              exp1, exp2, data2_a]);
   in
-     c
+     ((os_opt, cs_opt), c)
   end
-| holfoot_a_space_pred2absyn vs (Aspred_interval (exp1, exp2)) = 
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_interval (exp1, exp2)) = 
   let
-     val exp1 = holfoot_expression2absyn vs exp1;
-     val exp2 = holfoot_expression2absyn vs exp2;
+     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
+     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
      val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_interval_term, [
              exp1, exp2, Absyn.mk_AQ holfoot_data_list___EMPTY_tm]);
   in
-     c
+     ((os_opt, cs_opt), c)
   end
-| holfoot_a_space_pred2absyn vs (Aspred_data_interval (exp1, exp2, tag, data)) = 
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_interval (exp1, exp2, tag, data)) = 
   let
-     val exp1 = holfoot_expression2absyn vs exp1;
-     val exp2 = holfoot_expression2absyn vs exp2;
-     val data_a = HOL_Absyn data;
+     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
+     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
+     val ((os_opt, cs_opt), data_a) = HOL_Absyn_old_vars vs (os_opt, cs_opt) data;
      val data_tag_term = string2holfoot_tag tag;
      val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
      val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_interval_term, [
              exp1, exp2, data2_a]);
   in
-     c
-  end
-| holfoot_a_space_pred2absyn vs (Aspred_data_tree (tagL,exp,dtagL,data)) =
+     ((os_opt, cs_opt), c)
+  end 
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_tree (tagL,exp,dtagL,data)) =
   let
-     val exp = holfoot_expression2absyn vs exp;
-     val data_a = HOL_Absyn data;
+     val (os_opt, exp) = holfoot_expression2absyn vs os_opt exp;
+     val ((os_opt,cs_opt), data_a) = HOL_Absyn_old_vars vs (os_opt, cs_opt) data;
      val tree_dtag_t = listSyntax.mk_list (
                  (map string2holfoot_tag dtagL), Type `:holfoot_tag`)
      val data2_a = Absyn.mk_pair (Absyn.mk_AQ tree_dtag_t, data_a)
@@ -366,40 +466,40 @@ fun holfoot_a_space_pred2absyn vs (Aspred_empty) =
      val comb_a = Absyn.list_mk_app(Absyn.mk_AQ holfoot_ap_data_tree_term, [
                 Absyn.mk_AQ tree_tag_t, exp, data2_a]);
   in
-     comb_a
+     ((os_opt, cs_opt), comb_a)
   end
-| holfoot_a_space_pred2absyn vs (Aspred_tree (tagL,tagR,exp)) =
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_tree (tagL,tagR,exp)) =
   let
-     val exp = holfoot_expression2absyn vs exp;
+     val (os_opt, exp) = holfoot_expression2absyn vs os_opt exp;
      val comb_a = Absyn.list_mk_app(Absyn.mk_AQ holfoot_ap_bintree_term, [
                       Absyn.mk_pair (Absyn.mk_AQ (string2holfoot_tag tagL), 
                                Absyn.mk_AQ (string2holfoot_tag tagR)), 
                       exp])
   in
-     comb_a
+     ((os_opt, cs_opt), comb_a)
   end
-| holfoot_a_space_pred2absyn vs (Aspred_boolhol h) =
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_boolhol h) =
       let
-        val ha = HOL_Absyn h;
+        val ((os_opt, _), ha) = HOL_Absyn_old_vars vs (os_opt, NONE) h;
         val used_vars = Redblackset.listItems (Redblackset.intersection (collect_ident ha, fst vs))        
       in
         if (null used_vars) then
-           Absyn.mk_app (Absyn.mk_AQ holfoot_bool_proposition_term, ha)
+           ((os_opt, cs_opt), Absyn.mk_app (Absyn.mk_AQ holfoot_bool_proposition_term, ha))
         else
            let
               val (qha, vLt) = absyn_extract_vars used_vars ha
            in
-              Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_expression_term, [qha, Absyn.mk_AQ vLt])
+              ((os_opt, cs_opt), Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_expression_term, [qha, Absyn.mk_AQ vLt]))
            end
       end
-| holfoot_a_space_pred2absyn vs (Aspred_hol s) =
-  HOL_Absyn s
-| holfoot_a_space_pred2absyn vs (Aspred_pointsto (exp, pl)) =
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_hol s) =
+  HOL_Absyn_old_vars vs (os_opt, cs_opt) s
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_pointsto (exp, pl)) =
   let
-     val a1 = holfoot_expression2absyn vs exp;
-     val a2 = tag_a_expression_list2absyn vs pl;
+     val (os_opt, a1) = holfoot_expression2absyn vs os_opt exp;
+     val (os_opt, a2) = tag_a_expression_list2absyn vs os_opt pl;
   in
-     Absyn.list_mk_app(Absyn.mk_AQ holfoot_ap_points_to_term, [a1, a2])
+     ((os_opt, cs_opt), Absyn.list_mk_app(Absyn.mk_AQ holfoot_ap_points_to_term, [a1, a2]))
   end;
 
 
@@ -412,7 +512,7 @@ fun invariant2a_proposition NONE =
 val holfoot_map_absyn = Absyn ([QUOTE 
       "var_res_map DISJOINT_FMAP_UNION"])
 
-fun holfoot_a_proposition2absyn_context vs (Aprop_infix (opString, exp1, exp2)) =
+fun holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) (Aprop_infix (opString, exp1, exp2)) =
   let
     val op_term = if (opString = "<") then holfoot_ap_lt_term else
                   if (opString = "<=") then holfoot_ap_le_term else
@@ -421,60 +521,94 @@ fun holfoot_a_proposition2absyn_context vs (Aprop_infix (opString, exp1, exp2)) 
                   if (opString = "==") then holfoot_ap_equal_term else
                   if (opString = "!=") then holfoot_ap_unequal_term else
                      Raise (holfoot_unsupported_feature_exn ("Aexp_infix "^opString))
-    val t1 = holfoot_expression2absyn vs exp1;
-    val t2 = holfoot_expression2absyn vs exp2;
+    val (os_opt, t1) = holfoot_expression2absyn vs os_opt exp1;
+    val (os_opt, t2) = holfoot_expression2absyn vs os_opt exp2;
   in
-    (Absyn.list_mk_app (Absyn.mk_AQ op_term, [t1, t2]))
+    ((os_opt,cs_opt), Absyn.list_mk_app (Absyn.mk_AQ op_term, [t1, t2]))
   end
-| holfoot_a_proposition2absyn_context vs (Aprop_false) =
-     Absyn.mk_AQ holfoot_ap_false_term
-| holfoot_a_proposition2absyn_context vs (Aprop_ifthenelse (Aprop_infix (opString,exp1,exp2),ap1,ap2)) =
+| holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) (Aprop_false) =
+    ((os_opt,cs_opt), Absyn.mk_AQ holfoot_ap_false_term)
+| holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) (Aprop_ifthenelse (Aprop_infix (opString,exp1,exp2),ap1,ap2)) =
   let
       val (ap1,ap2) = if opString = "==" then (ap1,ap2) else 
                       if opString = "!=" then (ap2,ap1) else
                       Raise (holfoot_unsupported_feature_exn "Currently only equality checks are allowed as conditions in propositions")
 
-      val exp1 = holfoot_expression2absyn vs exp1;
-      val exp2 = holfoot_expression2absyn vs exp2;
-      val prop1 = holfoot_a_proposition2absyn_context vs ap1;
-      val prop2 = holfoot_a_proposition2absyn_context vs ap2;
+      val (os_opt, exp1)  = holfoot_expression2absyn vs os_opt exp1;
+      val (os_opt, exp2)  = holfoot_expression2absyn vs os_opt exp2;
+      val ((os_opt,cs_opt), prop1) = holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) ap1;
+      val ((os_opt,cs_opt), prop2) = holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) ap2;
    in
-      Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_eq_cond_term, [exp1, exp2, prop1, prop2])
+      ((os_opt,cs_opt), Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_eq_cond_term, [exp1, exp2, prop1, prop2]))
    end
-| holfoot_a_proposition2absyn_context vs (Aprop_ifthenelse _) =
+| holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) (Aprop_ifthenelse _) =
      Raise (holfoot_unsupported_feature_exn "Currently only equality checks are allowed as conditions in propositions")
-| holfoot_a_proposition2absyn_context vs (Aprop_star (ap1, ap2)) =
-     Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_star_term,
-                  [holfoot_a_proposition2absyn_context vs ap1,
-                   holfoot_a_proposition2absyn_context vs ap2])
-| holfoot_a_proposition2absyn_context vs (Aprop_map (vL, ap, l)) =
+| holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) (Aprop_star (ap1, ap2)) =
+  let
+     val ((os_opt,cs_opt), prop1) = holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) ap1;
+     val ((os_opt,cs_opt), prop2) = holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) ap2;
+  in
+     ((os_opt,cs_opt), Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_star_term, [prop1, prop2]))
+  end
+| holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) (Aprop_map (vL, ap, l)) =
   let
       val vs2 = (fst vs, Redblackset.addList (snd vs, vL))
-      val ap_a = holfoot_a_proposition2absyn_context vs2 ap;
+      val ((os_opt,cs_opt), ap_a) = holfoot_a_proposition2absyn_context vs2 (os_opt,cs_opt) ap;
       val pair_vs = end_itlist (fn v1 => fn v2 => Absyn.VPAIR (locn.Loc_None, v1, v2))
                     (map (fn v => Absyn.VIDENT (locn.Loc_None, v)) vL)
       val ap_la = Absyn.mk_lam (pair_vs,ap_a) 
       val l_a = HOL_Absyn l;
   in
-     Absyn.list_mk_app (holfoot_map_absyn,[ap_la, l_a])
+     ((os_opt,cs_opt), Absyn.list_mk_app (holfoot_map_absyn,[ap_la, l_a]))
   end
-| holfoot_a_proposition2absyn_context vs (Aprop_spred sp) =
-     holfoot_a_space_pred2absyn vs sp;
+| holfoot_a_proposition2absyn_context vs (os_opt,cs_opt) (Aprop_spred sp) =
+     holfoot_a_space_pred2absyn vs (os_opt,cs_opt) sp;
 
 
-fun holfoot_a_proposition2absyn vs x =
+exception NothingToDo;
+fun add_var_equations m a =
 let
-   val a1 = holfoot_a_proposition2absyn_context vs x;
-   val (s, a2) = remove_qv a1
-   val ex_vars = Redblackset.listItems s;
+   val L = Redblackmap.listItems m;
+   val _ = if null L then raise NothingToDo else ();
+   fun mk_old_eq (hv, v) =
+       list_mk_comb (holfoot_ap_equal_term, [
+           mk_comb(holfoot_exp_var_term, string2holfoot_var hv),
+           mk_comb(holfoot_exp_const_term, v)])
+   val eqL = List.map mk_old_eq L
+   val eq_star = end_itlist (fn t => fn ts =>
+         list_mk_comb (holfoot_ap_star_term, [t, ts])) eqL;
 
-   val a3 = foldr (fn (v,a) => 
+   val a' =  Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_star_term, 
+      [Absyn.mk_AQ eq_star, a])
+in
+   a'
+end handle NothingToDo => a;
+
+
+fun holfoot_a_proposition2absyn vs os_opt x =
+let
+   val ((os_opt,cs_opt), a1) = holfoot_a_proposition2absyn_context vs 
+       (os_opt, SOME (Redblackmap.mkDict String.compare)) x;
+
+   val a2 = if isSome cs_opt then add_var_equations (valOf cs_opt) a1 else a1;
+
+   val (s, a3) = remove_qv a2
+   val cs_opt = SOME (Redblackmap.mkDict String.compare)
+   val s' = if not (isSome cs_opt) then s else
+                let
+                   val vL = List.map (fst o dest_var o snd) (Redblackmap.listItems (valOf cs_opt))
+                in
+                   Redblackset.addList (s, vL)
+                end
+   val ex_vars = Redblackset.listItems s';
+
+   val a4 = foldr (fn (v,a) => 
        let
           val a_lam = Absyn.mk_lam (Absyn.VIDENT (locn.Loc_None, v), a);
           val a' = Absyn.mk_app (Absyn.mk_ident "asl_exists", a_lam);
-       in a' end) a2 ex_vars
+       in a' end) a3 ex_vars
 in
-   a3
+   (os_opt, a4)
 end;
 
 
@@ -518,7 +652,7 @@ let
    val var_list = map string2holfoot_var rp;
    val rp_term = listSyntax.mk_list (var_list, Type `:holfoot_var`);
 
-   val vp_a = mk_list (map (holfoot_expression2absyn vs) vp);
+   val vp_a = mk_list (map (fn t => snd (holfoot_expression2absyn vs NONE t)) vp);
 
    val arg_a = Absyn.mk_pair (Absyn.mk_AQ rp_term, vp_a);
    val _ = ((assoc name funL);()) handle HOL_ERR _ =>
@@ -534,7 +668,6 @@ let
 in
    (name_term, arg_a, wL, funcalls)
 end;
-
 
 
 fun holfoot_fcall2absyn funL vs (name, (rp, vp)) =
@@ -643,7 +776,12 @@ in
 end;
 
 
-
+fun rewrite_old_var os pre_a post_a =
+let
+   val pre_a' = add_var_equations os pre_a;
+in
+   (pre_a', post_a)
+end
 
 (*returns the abstract syntax of the statement as well as set of variables, that need write permissions.
   The set of variables that are read is figured out independently later. 
@@ -653,7 +791,7 @@ end;
 fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   let
      val var_term = string2holfoot_var v;
-     val exp = holfoot_expression2absyn vs expr;
+     val (_, exp) = holfoot_expression2absyn vs NONE expr;
      val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_assign_term, [Absyn.mk_AQ var_term, exp]);
   in
      (comb_a, [v], [])
@@ -661,7 +799,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
 | holfoot_p_statement2absyn funL resL vs (Pstm_fldlookup (v, expr, tag)) =
   let
      val var_term = string2holfoot_var v;
-     val exp_a = holfoot_expression2absyn vs expr;
+     val (_, exp_a) = holfoot_expression2absyn vs NONE expr;
      val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_field_lookup_term, 
           [Absyn.mk_AQ var_term, exp_a, Absyn.mk_AQ (string2holfoot_tag tag)]);
   in
@@ -669,8 +807,8 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   end
 | holfoot_p_statement2absyn funL resL vs (Pstm_fldassign (expr1, tag, expr2)) =
   let
-     val exp1 = holfoot_expression2absyn vs expr1;
-     val exp2 = holfoot_expression2absyn vs expr2;
+     val (_, exp1) = holfoot_expression2absyn vs NONE expr1;
+     val (_, exp2) = holfoot_expression2absyn vs NONE expr2;
      val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_field_assign_term, [
           exp1, Absyn.mk_AQ (string2holfoot_tag tag), exp2]);
   in
@@ -679,7 +817,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
 | holfoot_p_statement2absyn funL resL vs (Pstm_new (v, expr, tl)) =
   let
      val var_term = string2holfoot_var v;
-     val exp = holfoot_expression2absyn vs expr;
+     val (_, exp) = holfoot_expression2absyn vs NONE expr;
      val tl_L = map string2holfoot_tag tl;
      val tl_t = listSyntax.mk_list (tl_L, holfoot_tag_ty);
      val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_new_term, [exp, Absyn.mk_AQ var_term, Absyn.mk_AQ tl_t]);
@@ -688,8 +826,8 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   end  
 | holfoot_p_statement2absyn funL resL vs (Pstm_dispose (expr1, expr2)) =
   let
-     val exp1 = holfoot_expression2absyn vs expr1;
-     val exp2 = holfoot_expression2absyn vs expr2;
+     val (_, exp1) = holfoot_expression2absyn vs NONE expr1;
+     val (_, exp2) = holfoot_expression2absyn vs NONE expr2;
      val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_dispose_term, [exp2,exp1]);
   in
      (comb_a, [], [])
@@ -717,7 +855,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
 | holfoot_p_statement2absyn funL resL vs (Pstm_while (unroll, rwOpt, i, cond, stm1)) =
    let
       val (use_inv, i_a) = if isSome i then
-              (true, holfoot_a_proposition2absyn vs (valOf i))
+              (true, snd (holfoot_a_proposition2absyn vs NONE (valOf i)))
           else (false, Absyn.mk_AQ holfoot_stack_true_term)
 
       val (stm1_a, wL, fL) = holfoot_p_statement2absyn funL resL vs stm1;
@@ -744,8 +882,9 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
    end
 | holfoot_p_statement2absyn funL resL vs (Pstm_block_spec (loop, unroll, rwOpt, pre, stm1, post)) =
    let
-      val pre_a  = holfoot_a_proposition2absyn vs pre;
-      val post_a = holfoot_a_proposition2absyn vs post;
+      val (_, pre_a)  = holfoot_a_proposition2absyn vs NONE pre;
+      val (SOME os, post_a) = holfoot_a_proposition2absyn vs (SOME (Redblackmap.mkDict String.compare)) post;
+      val (pre_a, post_a) = rewrite_old_var os pre_a post_a;
       val (force_user_wr, write_var_set_user, read_var_set_user) = decode_rwOpt rwOpt;
 
       val (stm1_a, wL, fL) = holfoot_p_statement2absyn funL resL vs stm1;
@@ -802,7 +941,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
    end
 | holfoot_p_statement2absyn funL resL vs (Pstm_assert p) =
    let
-      val p_a  = holfoot_a_proposition2absyn vs p;
+      val (_, p_a)  = holfoot_a_proposition2absyn vs NONE p;
       val abs_p_a =
          let
             val cond_free_var_list = HOLset.listItems (FVL [absyn2term p_a] empty_tmset);
@@ -864,7 +1003,7 @@ val term = fun_body_term;
 fun Presource2hol vs (Presource(resname, varL, invariant)) =
 let
    val write_varL = map string2holfoot_var varL;
-   val i_a = holfoot_a_proposition2absyn vs invariant;
+   val (_, i_a) = holfoot_a_proposition2absyn vs NONE invariant;
 in
    (resname, (absyn2term i_a, write_varL))
 end |
@@ -900,9 +1039,13 @@ fun Pfundecl_preprocess resL (funL, vs,
    fun_body, postCondOpt)) = 
 let
    val (fun_body_a, wL, funcalls) = 
-        holfoot_p_statement2absyn funL resL vs (Pstm_block fun_body)
-   val pre_a  = holfoot_a_proposition2absyn vs (invariant2a_proposition preCondOpt);
-   val post_a = holfoot_a_proposition2absyn vs (invariant2a_proposition postCondOpt);
+        holfoot_p_statement2absyn funL resL vs (Pstm_block fun_body)   
+   
+   val vs_na = (List.foldl (fn (v,vs) => Redblackset.delete (vs, v) handle NotFound => vs) (fst vs) val_args, snd vs);
+   val (_, pre_a)  = holfoot_a_proposition2absyn vs_na NONE (invariant2a_proposition preCondOpt);
+   val (SOME os, post_a) = holfoot_a_proposition2absyn vs_na (SOME (Redblackmap.mkDict String.compare))
+        (invariant2a_proposition postCondOpt);
+   val (pre_a, post_a) = rewrite_old_var os pre_a post_a;
 
    val aL_t = absyn2term (Absyn.list_mk_pair [fun_body_a, pre_a, post_a]);
    val (ws, rs) = get_read_write_var_set resL rwOpt wL [Absyn.mk_AQ aL_t];
@@ -1039,6 +1182,7 @@ let
       (funname, assume_opt, ref_args, val_args, localV, 
        pre_t, fun_body_t, post_t, ws, rs)
       end;
+
    val finalL = map extract (zip fun_decl_list (internal init))
  
 in
@@ -1154,8 +1298,8 @@ fun Pprogram2hol procL_opt (Pprogram (ident_decl, program_item_decl)) =
 fun mk_entailment (comment, p1, p2) =
 let
    val empty_vs = (Redblackset.empty String.compare, Redblackset.empty String.compare);
-   val a1 = holfoot_a_proposition2absyn empty_vs p1
-   val a2 = holfoot_a_proposition2absyn empty_vs p2
+   val (_, a1) = holfoot_a_proposition2absyn empty_vs NONE p1
+   val (_, a2) = holfoot_a_proposition2absyn empty_vs NONE p2
    val (write_var_set, read_var_set) = get_read_write_var_set [] NONE [] [a1, a2]
    val varL = Redblackset.listItems (Redblackset.union (write_var_set, read_var_set))
    val var_tL = map string2holfoot_var varL
@@ -1184,9 +1328,9 @@ fun Pentailments2hol res_opt (Pentailments eL) =
    let
       val eL' = if isSome (res_opt) then
              filter (fn (c, p1, p2) => mem c (valOf res_opt)) eL else eL
-      val tL = map mk_entailment eL'
+      val tL = List.map mk_entailment eL'
    in
-      (list_mk_conj tL)
+      (boolSyntax.list_mk_conj tL)
    end;
 
 fun Ptop2hol res_opt (Pentailments x) =

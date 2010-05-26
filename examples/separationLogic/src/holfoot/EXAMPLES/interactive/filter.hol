@@ -14,50 +14,41 @@ open listTheory rich_listTheory listLib;
 HOL_Interactive.toggle_quietdec();
 
 
+
 (******************************************************************************)
-(* Parse the main file                                                        *)
+(* Recursive implementation                                                   *)
 (******************************************************************************)
 
-val file = concat [examplesDir, "/interactive/filter.dsf"];
+val file_rec = concat [examplesDir, "/automatic/filter_rec.dsf"];
+val _ = holfoot_auto_verify_spec file_rec;
+
 
 
 (******************************************************************************)
 (* Verify specification                                                       *)
 (******************************************************************************)
 
+val file = concat [examplesDir, "/interactive/filter.dsf"];
+
 (* holfoot_set_goal_procedures file ["list_filter"] *)
 val filter_TAC = 
-  (*do everything till while loop*)
-  xHF_SOLVE_TAC [stop_at_while] THEN
-  HF_STEP_TAC 1 THEN
-  Tactical.REVERSE CONJ_TAC THEN1 (
-     (*body of original function*)
-     xHF_CONTINUE_TAC [do_case_splits] THEN     
-     (*at the beginning of the loop nothing is filtered*)
-     REPEAT GEN_TAC THEN Q.EXISTS_TAC `[]` THEN
-     xHF_CONTINUE_TAC [do_case_splits] THEN     
-     SIMP_TAC list_ss [GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
-        GSYM LEFT_FORALL_IMP_THM, FILTER_APPEND] THEN
-     xHF_SOLVE_TAC [ add_rewrites [NULL_EQ, FILTER_EQ_NIL] ] 
-  ) THEN
+   xHF_SOLVE_TAC [ add_rewrites [NULL_EQ, FILTER_EQ_NIL] ] THEN
+   REPEAT STRIP_TAC THENL [
+      Q.EXISTS_TAC `data_fc'` THEN
+      HF_SOLVE_TAC,
 
-  (* while loop *)
-  HF_SOLVE_TAC THEN
-  HF_VC_TAC THEN
-  REPEAT STRIP_TAC THENL [
-     Q.EXISTS_TAC `data_fc'` THEN
-     FULL_SIMP_TAC (list_ss++LIST_EQ_ss) [NULL_EQ, FILTER_EQ_NIL],
+      Q.EXISTS_TAC `data1` THEN
+      HF_SOLVE_TAC,
 
-     Q.EXISTS_TAC `data1` THEN
-     FULL_SIMP_TAC (list_ss++LIST_EQ_ss) [],
+      Q.EXISTS_TAC `data1 ++ [date] ++ data_fc'` THEN
+      xHF_SOLVE_TAC [add_rewrites [FILTER_APPEND, FILTER_EQ_NIL]],
 
-     Q.EXISTS_TAC `data1 ++ [date] ++ data_fc'` THEN
-     FULL_SIMP_TAC (list_ss++LIST_EQ_ss) [
-        NULL_EQ, FILTER_EQ_NIL, FILTER_APPEND,
-        BUTFIRSTN_APPEND1, TAKE_APPEND1,
-        BUTFIRSTN_APPEND2, TAKE_APPEND2,
-        BUTFIRSTN_LENGTH_APPEND, BUTFIRSTN_LENGTH_NIL]
-  ];
+      Q.EXISTS_TAC `[]` THEN
+      HF_SOLVE_TAC THEN
+      SIMP_TAC list_ss [GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
+        GSYM LEFT_FORALL_IMP_THM, FILTER_APPEND, NULL_EQ, FILTER_EQ_NIL] THEN
+      xHF_SOLVE_TAC [add_rewrites[FILTER_EQ_NIL]]
+   ];
 
 val _ = holfoot_tac_verify_spec file NONE 
    [("list_filter", filter_TAC)];
@@ -71,29 +62,13 @@ val _ = holfoot_tac_verify_spec file NONE
 
 val file2 = concat [examplesDir, "/interactive/filter.dsf2"];
 
-(******************************************************************************)
-(* Verify specification                                                       *)
-(******************************************************************************)
-
 (* holfoot_set_goal_procedures file2 ["list_filter"] *)
 val filter2_TAC = 
-xHF_SOLVE_TAC [stop_at_while] THEN HF_STEP_TAC 1 THEN
-REPEAT STRIP_TAC THENL [
-   HF_SOLVE_TAC,
+   HF_SOLVE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   Q.EXISTS_TAC `data++[zdata]` THEN
+   xHF_SOLVE_TAC [no_case_splits];
 
-   Cases_on ` yc = lc` THEN ASM_SIMP_TAC std_ss [] THENL [
-      xHF_SOLVE_TAC [no_case_splits],
-
-      HF_SOLVE_TAC THEN
-      REPEAT STRIP_TAC THEN
-      Q.EXISTS_TAC `data++[zdata]` THEN
-      xHF_CONTINUE_TAC [use_asms] THEN
-      SIMP_TAC std_ss [GSYM APPEND_ASSOC, APPEND] THEN
-      HF_SOLVE_TAC
-   ],
-
-   HF_SOLVE_TAC
-];
 
 val _ = holfoot_tac_verify_spec file2 NONE 
    [("list_filter", filter2_TAC)]

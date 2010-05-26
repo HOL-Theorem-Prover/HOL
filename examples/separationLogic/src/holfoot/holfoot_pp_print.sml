@@ -893,22 +893,28 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
          end_block ()
       end
     ) else if (same_const op_term var_res_prop_binexpression_cond_term)  then (
-      begin_block INCONSISTENT 0;       
+      begin_block CONSISTENT 0;       
       add_string "if";
       add_string " ";
       add_string "(";
+      begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);
       sys (Top, Top, Top) (d - 1) (coded_expression_to_term (el 3 args) (el 4 args) (el 2 args));
       add_string ")";
-      add_break (1,0);
-      add_string("then");
-      add_break (1, 0);
+      end_block();
+      add_string(" ");
+      add_string("then (");
+      add_break (1,(!holfoot_pretty_printer_block_indent));
+      begin_block INCONSISTENT 0;
       sys (Top, Top, Top) (d - 1) (el 5 args);
+      end_block();
       add_break (1, 0);
-      add_string "else";
-      add_break (1, 0);
+      add_string ") else (";
+      add_break (1,(!holfoot_pretty_printer_block_indent));
+      begin_block INCONSISTENT 0;
       sys (Top, Top, Top) (d - 1) (el 6 args);
+      end_block ();
       add_break (1, 0);
-      add_string "end";
+      add_string ") end";
       end_block ()
     ) else if (same_const op_term var_res_bool_proposition_term)  then (
       begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);       
