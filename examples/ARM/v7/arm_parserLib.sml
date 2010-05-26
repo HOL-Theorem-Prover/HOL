@@ -667,7 +667,9 @@ in
   fun find_mnemonic s =
     let fun find_prefix [] = NONE
           | find_prefix ((l,r)::t) =
-              if Substring.isPrefix l s then
+              if Substring.isPrefix l s andalso
+                 (l <> "bl" orelse Lib.mem (Substring.size s) [2, 4])
+              then
                 SOME (Substring.triml (String.size l) s,r)
               else
                 find_prefix t
