@@ -3,9 +3,9 @@ open HolKernel Parse boolLib bossLib blastLib;
 val _ = set_trace "Unicode" 0
 
 fun trunc w t = let
-  val s = term_to_string t
+  val s = Lib.with_flag (Globals.linewidth, 10000) term_to_string t
 in
-  if size s >= w then String.extract (s, 0, SOME (w - 4)) ^ " ..."
+  if size s >= w then String.extract (s, 0, SOME (w - 5)) ^ " ... "
   else StringCvt.padRight #" " w s
 end
 
@@ -17,7 +17,7 @@ fun test c tm = let
   val res' = SOME (Option.map (Drule.EQT_ELIM o SPEC_ALL) res)
              handle HOL_ERR _ => NONE
 in
-  TextIO.print (trunc 60 tm ^ Time.toString elapsed ^
+  TextIO.print (trunc 65 tm ^ Time.toString elapsed ^
                 (case res' of
                    NONE => "FAILED!"
                  | SOME NONE => "FAILED!"
