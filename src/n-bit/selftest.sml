@@ -288,10 +288,5 @@ val _ = blast_true
 val _ = blast_true
   ``(reduce_or (w:word8) && reduce_or (v:word8)) =
     ~(reduce_and (~w) !! reduce_and (~v))``;
-(*
-  wordsLib.WORD_DECIDE ``(a + b) <+ c /\ c <+ d ==> (a + b) <+ d:word32``
-  BBLAST_CONV ``(a + b) <+ c /\ c <+ d ==> (a + b) <+ d:word32``
-  BBLAST_CONV ``a <+ c /\ c <+ d ==> a <+ d:word32``
-*)
 
 val _ = OS.Process.exit OS.Process.success;
