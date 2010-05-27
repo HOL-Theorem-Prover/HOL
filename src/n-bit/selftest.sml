@@ -1,20 +1,32 @@
 open HolKernel Parse boolLib bossLib blastLib;
 
-fun raw_blast_true tm =
-  Drule.EQT_ELIM (SPEC_ALL (real_time blastLib.BIT_BLAST_CONV tm))
-  handle HOL_ERR _ =>
-    (TextIO.print "Failed to prove goal!\n";
-     Parse.print_term tm;
-     TextIO.print "\n\n";
-     Process.exit OS.Process.failure)
+val _ = set_trace "Unicode" 0
 
-fun blast_true tm =
-  Drule.EQT_ELIM (SPEC_ALL (real_time blastLib.BBLAST_CONV tm))
-  handle HOL_ERR _ =>
-    (TextIO.print "Failed to prove goal!\n";
-     Parse.print_term tm;
-     TextIO.print "\n\n";
-     Process.exit OS.Process.failure)
+fun trunc w t = let
+  val s = term_to_string t
+in
+  if size s >= w then String.extract (s, 0, SOME (w - 4)) ^ " ..."
+  else StringCvt.padRight #" " w s
+end
+
+fun die() = OS.Process.exit OS.Process.failure
+fun test c tm = let
+  val rt = Timer.startRealTimer ()
+  val res = SOME (c tm) handle HOL_ERR _ => NONE
+  val elapsed = Timer.checkRealTimer rt
+  val res' = SOME (Option.map (Drule.EQT_ELIM o SPEC_ALL) res)
+             handle HOL_ERR _ => NONE
+in
+  TextIO.print (trunc 60 tm ^ Time.toString elapsed ^
+                (case res' of
+                   NONE => "FAILED!"
+                 | SOME NONE => "FAILED!"
+                 | _ => "") ^ "\n");
+  case res' of NONE => die() | SOME NONE => die() | _ => ()
+end
+
+val raw_blast_true = test blastLib.BIT_BLAST_CONV
+val blast_true = test blastLib.BBLAST_CONV
 
 (* start tests *)
 
@@ -276,9 +288,10 @@ val _ = blast_true
 val _ = blast_true
   ``(reduce_or (w:word8) && reduce_or (v:word8)) =
     ~(reduce_and (~w) !! reduce_and (~v))``;
-
+(*
   wordsLib.WORD_DECIDE ``(a + b) <+ c /\ c <+ d ==> (a + b) <+ d:word32``
   BBLAST_CONV ``(a + b) <+ c /\ c <+ d ==> (a + b) <+ d:word32``
   BBLAST_CONV ``a <+ c /\ c <+ d ==> a <+ d:word32``
+*)
 
 val _ = OS.Process.exit OS.Process.success;
