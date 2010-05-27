@@ -869,9 +869,21 @@ Thus \texttt{\holty{}[of]\{p /\bs{} q\}} will print \texttt{bool}.
 Causes the term or theorem to be printed with the \texttt{types} trace set to level~1 (equivalent to having the \ml{show\_types} reference set to \ml{true}).
 
 \item[\texttt{tt}] %
-Causes the term to be type-set inside an \texttt{\bs{}mbox}, that is in turn wrapped around a \texttt{\bs{}texttt} environment, that is in turn wrapped around a \texttt{\bs{}textup} environment.
+Causes the term to be type-set as the argument to a \LaTeX{} command \texttt{\bs{}HOLinline}.
 %
-This makes the argument suitable for inclusion in standard \LaTeX{} positions.  This is the default for \holtm{} and \holty.
+The default definition for \texttt{\bs{}HOLinline} is
+\begin{verbatim}
+   \newcommand{\HOLinline}[1]{\mbox{\textup{\texttt{#1}}}}
+\end{verbatim}
+This makes the argument suitable for inclusion in standard \LaTeX{} positions.
+%
+This is the default for \holtm{} and \holty.
+%
+The \texttt{\bs{}HOLinline} command is defined in the \texttt{.sty} file
+\begin{alltt}
+   src/TeX/holtexbasic.sty
+\end{alltt}
+which needs to be included (i.e., with \texttt{\bs{}usepackage}) to make the munged output work.
 
 \item[\texttt{width=}$n$] Causes the argument to be typeset in lines of width $n$.
 %
@@ -904,11 +916,13 @@ The \texttt{\indentoption} option lets the pretty-printer know that it is printi
 \item[$\mathit{nm}_1$\texttt{/}$\mathit{nm}_2$] (For use with \holtm{}
   and \holthm{}.)
 %
-Causes $\mathit{nm}_1$ to be substituted for $\mathit{nm}_2$ in the
-term or theorem.
+Causes name $\mathit{nm}_1$ to be substituted for name $\mathit{nm}_2$ in the term or theorem.
 %
-This will rename free variables, or variables that are universally
-quantified at the outermost level.
+This will rename both free and bound variables, wherever they occur throughout a term.
+%
+Because it uses instantiation, free variables in theorem hypotheses will get renamed, but bound variables in hypotheses are not affected.
+%
+(Hypotheses are not printed by default anyway of course.)
 \end{description}
 
 
@@ -1019,7 +1033,7 @@ the \LaTeX{} source file:
 \begin{alltt}
 \bs{}usepackage\{holindex\}
 \bs{}initHOLindex
-\bs{}setHOLlinewidth\{width\}  
+\bs{}setHOLlinewidth\{width\}
 \bs{}setHOLoverrides\{file\}
 \end{alltt}
 %
@@ -1036,7 +1050,7 @@ index is printed with \verb-\printHOLindex-.
 
 The workflow of Holindex is similar to that of tools like Bibtex. The
 first run of \LaTeX{} on a file \verb-jobfile.tex- will create an
-auxiliary file \verb-jobfile.hix-. A call of 
+auxiliary file \verb-jobfile.hix-. A call of
 \begin{alltt}
    munge.exe -index jobname
 \end{alltt}
@@ -1049,6 +1063,43 @@ at \verb|holindex-demo.tex| in \varref{HOLDIR}\texttt{/src/TeX}.
 
 \subsection{Making \HOL{} Theories \LaTeX{}-ready}
 \label{sec:holtheories-tex-ready}
+
+Though one might specify all one's desired token-replacements in an \texttt{overrides} file, there is also support for specifying token replacements in the theory where tokens are first ``defined''.
+%
+(Of course, \emph{tokens} aren't defined \textit{per se}, but the definition of particular constants will naturally give rise to the generation of corresponding tokens when those constants appear in HOL terms, types or theorems.)
+
+A token's printing form is given in a script-file with the \ml{TeX\_notation} command (from the \ml{TexTokenMap} module).
+%
+This function has type
+\begin{alltt}
+   \{ hol : string, TeX : string * int \} -> unit
+\end{alltt}
+The \ml{hol} field specifies the string of the token as \HOL{} prints it.
+%
+The \ml{TeX} field specifies both the string that should be emitted into the \LaTeX{} output, and the width that this string should be considered to have (as in the \texttt{overrides} file).
+
+For example, in \texttt{boolScript.sml}, there are calls:
+\begin{alltt}
+   val _ = TeX_notation \{ hol = "!", TeX = ("\bs{}\bs{}HOLTokenForall\{\}", 1)\}
+   val _ = TeX_notation \{ hol = UChar.forall,
+                          TeX = ("\bs{}\bs{}HOLTokenForall\{\}", 1)\}
+\end{alltt}
+The \texttt{UChar} structure is a local binding in the script-file that points at the standard list of UTF8-encoded Unicode strings in the distribution (\ml{UnicodeChars}).
+%
+Note also how the backslashes that are necessary for the \LaTeX{} command have to be doubled because they are appearing in an SML string.
+
+Finally, rather than mapping the token directly to the string \texttt{\bs{}forall} as one might expect, the mapping introduces another level of indirection by mapping to \texttt{\bs{}HOLTokenForall}.
+%
+Bindings for this, and a number of other \LaTeX{} commands are made in the file
+\begin{alltt}
+   src/TeX/holtexbasic.sty
+\end{alltt}
+which will need to be included in the \LaTeX{} source file.
+%
+(Such bindings can be overriden with the use of the command \texttt{\bs{}renewcommand}.)
+
+Finally, all theory-bindings made with \ml{TeX\_notation} can be overridden with \texttt{overrides} files referenced at the time a munger is run.
+
 
 \index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|)}
 
