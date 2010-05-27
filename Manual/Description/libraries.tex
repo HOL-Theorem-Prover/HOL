@@ -510,7 +510,7 @@ precedence.  (Users can thus manipulate the printer's preferences by
 making otherwise redundant calls to the \ml{overload\_on} function.)
 
 In the example of the not-equal-to operator above, the pattern will be
-\holtxt{\~(?x = ?y)}, where the question-marks indicate instantiable
+\holtxt{\~{}(?x = ?y)}, where the question-marks indicate instantiable
 pattern variables.  If a pattern includes free variables (recall that
 the \ml{x} and \ml{y} in this example were bound by an abstraction),
 then these will not be instantiable.
@@ -3363,7 +3363,7 @@ Words can be pretty-printed using the standard number bases. For example, the fu
 \end{session}
 The function \ml{output\_words\_as} is more flexible and allows the number base to vary depending on
 the word length and numeric value.  The default pretty-printer (installed when loading \theoryimp{wordsLib}) prints small values in decimal and large values in hexadecimal.
-The function \ml{output\_words\_as\_oct} will automatically enable the parsing of octal numbers.  
+The function \ml{output\_words\_as\_oct} will automatically enable the parsing of octal numbers.
 
 The trace variable \ml{"word printing"} provides an alternative method for changing the output number base --- it is particularly suited to temporarily selecting a number base, for example:
 \begin{session}
@@ -3384,9 +3384,9 @@ You may have noticed that \ty{:word4} and \ty{:word8} have been used as convenie
 > val it = ``:bool[15]`` : hol_type
 
 - ``:word15``;
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
-  
+
 - wordsLib.mk_word_size 15;
 > val it = () : unit
 
@@ -3515,7 +3515,7 @@ Many of these \emph{simpset} fragments have corresponding conversions.  For exam
 The behaviour of the fragments listed above are demonstrated using the following function:
 \begin{session}
 \begin{verbatim}
-- fun conv ss = SIMP_CONV (pure_ss++ss) []; 
+- fun conv ss = SIMP_CONV (pure_ss++ss) [];
 > val conv = fn : ssfrag -> term -> thm
 \end{verbatim}
 \end{session}
@@ -3529,7 +3529,7 @@ The following session demonstrates \ml{SIZES\_ss}:
 > val it = |- FINITE univ(:32) <=> T : thm
 \end{verbatim}
 \end{session}
-The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set of (high) bit positions: 
+The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set of (high) bit positions:
 \begin{session}
 \begin{verbatim}
 - conv wordsLib.BIT_ss ``BIT 3 5``;
@@ -3543,7 +3543,7 @@ The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set 
 This simplification provides some support for reasoning about bitwise operations over arbitrary word lengths.  The arithmetic, logic and shift fragments help tidy up basic word expressions:
 \begin{session}
 \begin{verbatim}
-- conv wordsLib.WORD_LOGIC_ss ``a && 12w !! 11w && a``;    
+- conv wordsLib.WORD_LOGIC_ss ``a && 12w !! 11w && a``;
 <<HOL message: inventing new type variable names: 'a>>
 > val it =
     |- a && 12w !! 11w && a = 15w && a :
@@ -3553,7 +3553,7 @@ This simplification provides some support for reasoning about bitwise operations
 > val it =
     |- 3w * b + a + 2w * b - a * 4w = a + b
      : thm
-     
+
 - conv wordsLib.WORD_SHIFT_ss ``0w << 12 + a >>> 0 + b << 2 << 3``;
 <<HOL message: inventing new type variable names: 'a>>
 > val it =
@@ -3607,7 +3607,7 @@ A basic decision procedure for words is provided in the form of \ml{wordsLib.WOR
 > val it =
     |- a + 2w <+ 4w <=> a <+ 2w \/ 13w <+ a
      : thm
-     
+
 - wordsLib.WORD_DECIDE ``w2w (a:word8) <+ 256w : word16``;
 > val it = |- w2w a <+ 256w : thm
 \end{verbatim}
