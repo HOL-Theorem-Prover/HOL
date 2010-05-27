@@ -624,19 +624,30 @@ in
   non_prop_args Term.empty_tmset [tm]
 end
 
+fun PROP_PROVE conv tm =
+  Drule.EQT_INTRO (conv tm)
+  handle HOL_ERR _ =>
+    Drule.EQF_INTRO (conv (boolSyntax.mk_neg tm))
+    handle HOL_ERR _ =>
+      raise ERR "PROP_PROVE" "not satisfiable or unsatisfiable"
+
+fun SAT_CONV tm = HolSatLib.SAT_PROVE tm (* HolSatLib.SAT_ORACLE *)
+                  handle HolSatLib.SAT_cex _ => raise ERR "SAT_CONV" ""
+
+fun DPLL_CONV tm = Thm.CCONTR tm (dpll.DPLL_TAUT tm)
+                   handle Empty => SAT_CONV tm;
+
 fun BIT_TAUT_CONV tm =
 let
   val insts = HOLset.listItems (non_prop_terms tm)
   val vars = Term.genvars Type.bool (List.length insts)
   val theta  = Lib.map2 (Lib.curry (op |->)) insts vars
   val tm' = Term.subst theta tm
-  (* val thm = Drule.EQT_INTRO (HolSatLib.SAT_ORACLE tm') *)
-  val thm = Drule.EQT_INTRO (HolSatLib.SAT_PROVE tm')
-            handle HolSatLib.SAT_cex _ =>
-              Drule.EQF_INTRO (HolSatLib.SAT_PROVE (boolSyntax.mk_neg tm'))
-              handle HolSatLib.SAT_cex _ =>
-                       raise ERR "BIT_TAUT_CONV"
-                                 "not satisfiable or unsatisfiable"
+  val thm = PROP_PROVE
+              (if Term.term_size tm' < 100 then
+                 DPLL_CONV
+               else
+                 SAT_CONV) tm'
   val theta' = Lib.map2 (Lib.curry (op |->)) vars insts
 in
   Thm.INST theta' thm
