@@ -102,6 +102,10 @@ sig
   val end_time      : Timer.cpu_timer -> unit
   val time          : ('a -> 'b) -> 'a -> 'b
 
+  val start_real_time : unit -> Timer.real_timer
+  val end_real_time   : Timer.real_timer -> unit
+  val real_time       : ('a -> 'b) -> 'a -> 'b
+
   type ('a,'b) istream
   val mk_istream    : ('a -> 'a) -> 'a -> ('a -> 'b) -> ('a,'b) istream
   val next          : ('a,'b) istream -> ('a,'b) istream

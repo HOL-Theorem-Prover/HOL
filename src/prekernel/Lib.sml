@@ -599,6 +599,19 @@ fun time f x =
      end_time timer;  y
   end
 
+fun start_real_time () = Timer.startRealTimer()
+
+fun end_real_time timer =
+  (TextIO.output(TextIO.stdOut,
+     "realtime: " ^ Time.toString (Timer.checkRealTimer timer) ^ "s\n");
+   TextIO.flushOut TextIO.stdOut)
+
+fun real_time f x =
+  let val timer = start_real_time()
+      val y = f x handle e => (end_real_time timer; raise e)
+  in
+     end_real_time timer; y
+  end
 
 (*---------------------------------------------------------------------------*
  * Invoking a function with a flag temporarily assigned to the given value.  *
