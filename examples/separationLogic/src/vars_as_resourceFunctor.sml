@@ -85,6 +85,19 @@ sig
     val VAR_RES_IS_PURE_PROPOSITION___provers : (term -> term -> thm) list
 end) :
 sig
+   type var_res_inference_group =
+     (* group name (used for debug) *) 
+     string * 
+     (* group guard, inferences are just applied to
+        terms that satisfy this guard *)
+     (term -> bool) * 
+     (* apply before working on subterms *) 
+     bool * 
+     (* use this inference group to clean up after a "bigger" step *)
+     bool * 
+     (* the members of the group, each with a name for debugging *)
+     (string * var_res_param.var_res_base.var_res_inference) list;
+
    type user_rewrite_param = (Abbrev.thm list * Abbrev.conv list * simpLib.ssfrag list);
    type gen_step_param = {use_asms       : bool,
                           do_case_splits : bool,
@@ -92,7 +105,10 @@ sig
                           generate_vcs   : bool,
                           fast           : bool,
                           stop_evals     : (Abbrev.term -> bool) list,
-                          prop_simp_level: int};
+                          prop_simp_level: int,
+                          inferences     : (int * var_res_inference_group) list *
+                                           (int * var_res_inference_group) list *
+                                           (int * var_res_inference_group) list};
 
    datatype gen_step_tac_opt =
        case_splits_flag of bool
@@ -106,6 +122,9 @@ sig
      | add_ssfrags of simpLib.ssfrag list
      | stop_evals of (Abbrev.term -> bool) list
      | combined_gen_step_tac_opt of gen_step_tac_opt list
+     | add_inference_groups of (int * var_res_inference_group) list *
+                               (int * var_res_inference_group) list *
+                               (int * var_res_inference_group) list;
 
    val no_case_splits        : gen_step_tac_opt;
    val do_case_splits        : gen_step_tac_opt;
@@ -135,6 +154,15 @@ sig
    val gen_step_param___update_fast       : gen_step_param -> bool -> gen_step_param
    val gen_step_param___update_prop_simps : gen_step_param -> int  -> gen_step_param
    val gen_step_param___update_stop_evals : gen_step_param -> (Abbrev.term -> bool) list -> gen_step_param
+   val gen_step_param___update_inferences : gen_step_param -> (
+                               (int * var_res_inference_group) list *
+                               (int * var_res_inference_group) list *
+                               (int * var_res_inference_group) list) -> gen_step_param
+
+   val gen_step_param___add_inferences    : gen_step_param -> (
+                               (int * var_res_inference_group) list *
+                               (int * var_res_inference_group) list *
+                               (int * var_res_inference_group) list) -> gen_step_param
 
    val VAR_RES_GEN_STEP_CONSEQ_CONV : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.thm list -> Abbrev.conv
    val VAR_RES_GEN_STEP_TAC         : gen_step_param -> user_rewrite_param -> int option -> int -> Abbrev.tactic
@@ -3277,10 +3305,19 @@ thm
 (* This level is important for interactive steps later. If an inference of a  *)
 (* given or lower level has been sucessfully applied, this STEP_TAC stops.    *)
 (* ========================================================================== *)
-(*
-*)
+
 type var_res_inference_group =
- string * (term -> bool) * bool * bool * (string * var_res_inference) list;
+  (* group name (used for debug) *) 
+  string * 
+  (* group guard, inferences are just applied to
+     terms that satisfy this guard *)
+  (term -> bool) * 
+  (* apply before working on subterms *) 
+  bool * 
+  (* use this inference group to clean up after a "bigger" step *)
+  bool * 
+  (* the members of the group, each with a name for debugging *)
+  (string * var_res_inference) list;
 
 
 val VAR_RES_INFERENCES_LIST___simulate_command = ("simulate command",
@@ -3480,18 +3517,20 @@ val VAR_RES_INFERENCES_LIST___expensive_simplifications___frame_split = ("expens
        VAR_RES_FRAME_SPLIT_INFERENCE___PROP_REWRITE___CONV)]):var_res_inference_group
 
 
-val VAR_RES_INFERENCES_LIST = [
+fun VAR_RES_INFERENCES_LIST (ih, im, il) (do_expands, do_case_splits) = ih@[
    (5, VAR_RES_INFERENCES_LIST___cheap_simplifications),
    (3, VAR_RES_INFERENCES_LIST___simulate_minor_command),
    (2, VAR_RES_INFERENCES_LIST___entailment_steps),
    (2, VAR_RES_INFERENCES_LIST___entailment_solve),
    (1, VAR_RES_INFERENCES_LIST___simulate_command),
-   (1, VAR_RES_INFERENCES_LIST___mayor_step),
+   (1, VAR_RES_INFERENCES_LIST___mayor_step)]@
+   im@[
    (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___hoare_triple),
    (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___frame_split),
-   (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___general)];
-
-
+   (5, VAR_RES_INFERENCES_LIST___expensive_simplifications___general)]@
+   (if do_expands then [(2, VAR_RES_INFERENCES_LIST___expands_entailment),(2, VAR_RES_INFERENCES_LIST___expands)] else [])@
+   (if do_case_splits then [(2, VAR_RES_INFERENCES_LIST___case_splits)] else [])@
+   il;
 
 type gen_step_param =
   {use_asms       : bool,
@@ -3500,7 +3539,10 @@ type gen_step_param =
    generate_vcs   : bool,
    fast           : bool,
    prop_simp_level: int,
-   stop_evals     : (term -> bool) list};
+   stop_evals     : (term -> bool) list,
+   inferences     : (int * var_res_inference_group) list *
+                    (int * var_res_inference_group) list *
+                    (int * var_res_inference_group) list};
 
 
 fun gen_step_param___update_stop_evals
@@ -3510,6 +3552,7 @@ fun gen_step_param___update_stop_evals
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param) l =
  ({use_asms       = asms,
    do_case_splits = cs,
@@ -3517,6 +3560,7 @@ fun gen_step_param___update_stop_evals
    generate_vcs   = vcs,
    fast           = f,
    prop_simp_level  = ps,
+   inferences     = inf,
    stop_evals     = l}:gen_step_param);
 
 
@@ -3527,6 +3571,7 @@ fun gen_step_param___update_use_asms
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param) b =
  ({use_asms       = b,
    do_case_splits = cs,
@@ -3534,6 +3579,7 @@ fun gen_step_param___update_use_asms
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param);
 
 fun gen_step_param___update_cs
@@ -3543,6 +3589,7 @@ fun gen_step_param___update_cs
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param) b =
  ({use_asms       = asms,
    do_case_splits = b,
@@ -3550,6 +3597,7 @@ fun gen_step_param___update_cs
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param);
 
 fun gen_step_param___update_vcs
@@ -3559,6 +3607,7 @@ fun gen_step_param___update_vcs
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param) b =
  ({use_asms       = asms,
    do_case_splits = cs,
@@ -3566,6 +3615,7 @@ fun gen_step_param___update_vcs
    generate_vcs   = b,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param);
 
 fun gen_step_param___update_expands
@@ -3575,6 +3625,7 @@ fun gen_step_param___update_expands
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param) n =
  ({use_asms       = asms,
    do_case_splits = cs,
@@ -3582,6 +3633,7 @@ fun gen_step_param___update_expands
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param);
 
 fun gen_step_param___update_fast
@@ -3591,6 +3643,7 @@ fun gen_step_param___update_fast
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param) b =
  ({use_asms       = asms,
    do_case_splits = cs,
@@ -3598,6 +3651,7 @@ fun gen_step_param___update_fast
    generate_vcs   = vcs,
    fast           = b,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param);
 
 fun gen_step_param___update_prop_simps
@@ -3607,6 +3661,7 @@ fun gen_step_param___update_prop_simps
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = ps}:gen_step_param) n =
  ({use_asms       = asms,
    do_case_splits = cs,
@@ -3614,7 +3669,34 @@ fun gen_step_param___update_prop_simps
    generate_vcs   = vcs,
    fast           = f,
    stop_evals     = sel,
+   inferences     = inf,
    prop_simp_level  = n}:gen_step_param);
+
+fun gen_step_param___update_inferences
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   expands_level  = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   inferences     = inf,
+   prop_simp_level  = ps}:gen_step_param) inf' =
+ ({use_asms       = asms,
+   do_case_splits = cs,
+   expands_level  = ex,
+   generate_vcs   = vcs,
+   fast           = f,
+   stop_evals     = sel,
+   inferences     = inf',
+   prop_simp_level  = ps}:gen_step_param);
+
+
+fun gen_step_param___add_inferences p (inf_h', inf_m', inf_l') =
+   let
+     val (inf_h, inf_m, inf_l) = #inferences p;
+   in
+     gen_step_param___update_inferences p (inf_h'@inf_h, inf_m'@inf_m, inf_l'@inf_l)
+   end;
 
 
 local
@@ -3700,10 +3782,7 @@ fun vc_conv vc step_opt =
 
 fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
    let
-      val list0 = VAR_RES_INFERENCES_LIST;
-      val list1 = if (#expands_level p > 0) then list0@[(2, VAR_RES_INFERENCES_LIST___expands_entailment),(2, VAR_RES_INFERENCES_LIST___expands)] else list0;
-      val list2 = if (#do_case_splits p) then list1@[(2, VAR_RES_INFERENCES_LIST___case_splits)] else list1;
-      val list = list2
+      val list = VAR_RES_INFERENCES_LIST (#inferences p) (#expands_level p > 0, #do_case_splits p);
       val stops = if null (#stop_evals p) then K false else
                       (fn t => (exists (fn pp => (pp t) handle Interrupt => raise Interrupt
                                                             | _ => false) (#stop_evals p)))
@@ -3793,6 +3872,9 @@ datatype gen_step_tac_opt =
   | add_ssfrags of simpLib.ssfrag list
   | stop_evals of (term -> bool) list
   | combined_gen_step_tac_opt of gen_step_tac_opt list
+  | add_inference_groups of (int * var_res_inference_group) list *
+                            (int * var_res_inference_group) list *
+                            (int * var_res_inference_group) list;
 
 val no_case_splits        = case_splits_flag false;
 val no_expands            = expands_level 0;
@@ -3878,6 +3960,9 @@ fun gen_step_tac_opt_eval (p:gen_step_param, ssp) [] = (p, ssp)
        ((stop_evals b)::gstoL) =
     gen_step_tac_opt_eval (gen_step_param___update_stop_evals p b, ssp) gstoL
   | gen_step_tac_opt_eval (p, ssp)
+       ((add_inference_groups ipg)::gstoL) =
+    gen_step_tac_opt_eval (gen_step_param___add_inferences p ipg, ssp) gstoL
+  | gen_step_tac_opt_eval (p, ssp)
        ((combined_gen_step_tac_opt optL)::gstoL) =
     gen_step_tac_opt_eval (p, ssp) (optL@gstoL)
 
@@ -3889,7 +3974,8 @@ val default_params = (
     use_asms = true,
     prop_simp_level = 3,
     stop_evals = [],
-    generate_vcs = false}, ([],[],[]))
+    inferences = ([],[],[]),
+    generate_vcs = false}, ([],[],[]));
 
 
 fun xVAR_RES_GEN_STEP_TAC optL =

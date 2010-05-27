@@ -2423,8 +2423,6 @@ in
 end;
 
 
-type var_res_inference = bool -> simpLib.ssfrag -> thm list -> ConseqConv.directed_conseq_conv
-
 structure holfoot_param = 
 struct
    open Abbrev
@@ -2624,16 +2622,17 @@ struct
 end
 structure var_res_param = holfoot_param
 
-structure holtactics = vars_as_resourceFunctor (var_res_param)
-open holtactics
+structure holfoot_tactics = vars_as_resourceFunctor (var_res_param)
+open holfoot_tactics
 
 
 
+val default_holfoot_gst_optL = ref ([]:gen_step_tac_opt list);
 
 val HF_GEN_STEP_CONSEQ_CONV  = VAR_RES_GEN_STEP_CONSEQ_CONV;
 val HF_GEN_STEP_TAC          = VAR_RES_GEN_STEP_TAC;
-val xHF_GEN_STEP_CONSEQ_CONV = xVAR_RES_GEN_STEP_CONSEQ_CONV;
-val xHF_GEN_STEP_TAC         = xVAR_RES_GEN_STEP_TAC;
+fun xHF_GEN_STEP_CONSEQ_CONV optL = xVAR_RES_GEN_STEP_CONSEQ_CONV ((!default_holfoot_gst_optL)@optL);
+fun xHF_GEN_STEP_TAC optL         = xVAR_RES_GEN_STEP_TAC ((!default_holfoot_gst_optL)@optL);
 
 fun xHF_STEP_TAC_n optL n m = xHF_GEN_STEP_TAC optL m n
 fun xHF_STEP_TAC optL m = xHF_STEP_TAC_n optL m (SOME 1);
