@@ -150,7 +150,7 @@ fun array_bound_DECIDE context t =
    end
 *)
 
-val sub_add_simp = prove (``(((x:num) + (c1:num)) - (x + c2)) = (c1 - c2)``, DECIDE_TAC)
+val sub_add_simp = prove (Term `(((x:num) + (c1:num)) - (x + c2)) = (c1 - c2)`, DECIDE_TAC)
 
 val arith_simp_ss = 
    std_ss ++ simpLib.merge_ss [

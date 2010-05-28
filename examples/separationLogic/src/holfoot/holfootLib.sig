@@ -94,7 +94,7 @@ sig
      string * 
      (* group guard, inferences are just applied to
         terms that satisfy this guard *)
-     (term -> bool) * 
+     (Abbrev.term -> bool) * 
      (* apply before working on subterms *) 
      bool * 
      (* use this inference group to clean up after a "bigger" step *)
