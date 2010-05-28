@@ -625,17 +625,25 @@ in
 end
 
 fun PROP_PROVE conv tm =
-  Drule.EQT_INTRO (conv tm)
-  handle HOL_ERR _ =>
-    Drule.EQF_INTRO (conv (boolSyntax.mk_neg tm))
+let
+  val thm = QCONV (REWRITE_CONV []) tm
+  val c = rhsc thm
+in
+  if c = boolSyntax.T orelse c = boolSyntax.F then
+    thm
+  else
+    Conv.CONV_RULE
+      (Conv.RHS_CONV (Conv.REWR_CONV (Drule.EQT_INTRO (conv c)))) thm
     handle HOL_ERR _ =>
-      raise ERR "PROP_PROVE" "not satisfiable or unsatisfiable"
+      Drule.EQF_INTRO (conv (boolSyntax.mk_neg tm))
+      handle HOL_ERR _ =>
+        raise ERR "PROP_PROVE" "not satisfiable or unsatisfiable"
+end
 
 fun SAT_CONV tm = HolSatLib.SAT_PROVE tm (* HolSatLib.SAT_ORACLE *)
                   handle HolSatLib.SAT_cex _ => raise ERR "SAT_CONV" ""
 
 fun DPLL_CONV tm = Thm.CCONTR tm (dpll.DPLL_TAUT tm)
-                   handle Empty => SAT_CONV tm;
 
 fun BIT_TAUT_CONV tm =
 let
