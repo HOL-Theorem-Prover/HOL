@@ -54,7 +54,6 @@ else
     die "ML system \"$ML\" is not executable."
 fi
 
-rev=$(svn info 2> /dev/null | grep ^Revision | cut -d' ' -f2)
 
 if [ $? -ne 0 ]
 then
@@ -64,16 +63,19 @@ fi
 case $kernel in -expk | -stdknl ) : ;; * ) die "Bad kernel spec \"$kernel\"."
 esac
 
-holid="$kernel:$rev:$(basename $ML)"
 
 
 
-(echo "Running in $holdir on machine $(hostname)" &&
+
+
+(svn update 2>&1 &&
+ rev=$(svn info 2> /dev/null | grep ^Revision | cut -d' ' -f2) &&
+ holid="$kernel:$rev:$(basename $ML)" &&
+ echo "Running in $holdir on machine $(hostname)" &&
  echo "Started: $(date -R)" &&
  echo "Extra commandline arguments: $@" &&
-  svn update 2>&1 &&
-  $ML < tools/smart-configure.sml 2>&1 &&
-  bin/build cleanAll 2>&1 &&
-  bin/build $kernel "$@" 2>&1) |
-  tee build-log |
-  $gbs "$from" "$holid"
+ $ML < tools/smart-configure.sml 2>&1 &&
+ bin/build cleanAll 2>&1 &&
+ bin/build $kernel "$@" 2>&1) |
+ tee build-log |
+ $gbs "$from" "$holid"
