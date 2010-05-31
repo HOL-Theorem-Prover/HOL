@@ -150,9 +150,9 @@ fun isDigit s = let
   val ((_, i), _) = valOf (UTF8.getChar s)
 in
   if i < 128 then Char.isDigit (String.sub(s,0))
-  else 0x2070 <= i andalso i <= 0x2079 (* superscripts *) orelse
-       0x2080 <= i andalso i <= 0x2089 (* subscripts *) orelse
-       i = 0xB2 orelse i = 0xB3 (* Latin-1 sup 2 and 3 resp. *)
+  else
+    0x2080 <= i andalso i <= 0x2089 (* subscripts *)
+
 end
 
 fun isAlphaNum s = isAlpha s orelse isDigit s
