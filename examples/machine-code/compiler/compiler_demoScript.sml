@@ -1,6 +1,6 @@
 
 open HolKernel boolLib bossLib Parse;
-open tailrecTheory tailrecLib compilerLib codegen_x86Lib;
+open compilerLib codegen_x86Lib;
 
 val _ = new_theory "compiler_demo";
 
@@ -60,7 +60,7 @@ val (th1,th2,th3) = compile_all ``
 (* shared-tails *)
 
 val (th1,th2,th3) = compile_all ``
-  shared_tails1 (r1:word32,r2:word32) =
+  shared_tails (r1:word32,r2:word32) =
     if r1 = 0w then
       let r2 = 23w:word32 in
       let r1 = 4w:word32 in
@@ -73,7 +73,7 @@ val (th1,th2,th3) = compile_all ``
 (* removal of dead code *)
 
 val (th1,th2,th3) = compile_all ``
-  dead_code1 (r1:word32,r2:word32) =
+  dead_code (r1:word32,r2:word32) =
     let r2 = 45w:word32 in
     if r1 <+ 3w then
       let r2 = r1 + 67w in

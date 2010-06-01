@@ -1182,7 +1182,7 @@ fun AUTO_DECONSTRUCT_EXISTS_TAC finder1 (cc1,cc2) (hs,goal) = let
            THEN GUIDED_INST_EXISTS_TAC finder1 cc2
            THEN CONV_TAC (cc1 EXPAND_BASIC_LET_CONV)
            THEN REWRITE_TAC []) (hs,goal) end
-     else (REWRITE_TAC [] THEN NO_TAC) (hs,goal) end
+     else (REWRITE_TAC [] THEN NO_TAC) (hs,goal) end;
 
 fun one_step_let_intro th = let
   val tm = fst (dest_imp (concl th))
@@ -1209,7 +1209,7 @@ set_goal([],goal)
     THEN SIMP_TAC pure_ss [AC CONJ_ASSOC CONJ_COMM] THEN REWRITE_TAC []
     THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []))
   val th = RW1 [thi] th
-  in th end
+  in th end;
 
 fun remove_constant_new_assigment avoid_vars th = let
   val vs = filter is_new_var (free_vars (concl th))
@@ -1328,7 +1328,7 @@ fun simplify_pre pre th = let
       THEN ONCE_REWRITE_TAC [pre]
       THEN REPEAT (AUTO_DECONSTRUCT_TAC I)))
     val th = RW [new_pre,SEP_CLAUSES] th
-    in (th,TRUTH) end end
+    in (th,new_pre) end end
 
 fun introduce_post_let th = let
   val (x,y) = (dest_comb o cdr o concl) th
@@ -1407,6 +1407,19 @@ fun SEP_EXISTS_CONV c tm =
   if can dest_sep_exists tm 
   then RAND_CONV (ABS_CONV (SEP_EXISTS_CONV c)) tm else ALL_CONV tm;
 
+val GEN_TUPLE_LEMMA = GSYM (CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV) 
+   (ALPHA_CONV (mk_var("_",``:'a # 'b``)))) FORALL_PROD)
+fun GEN_TUPLE tm th = 
+  if not (pairSyntax.is_pair tm) then GEN tm th else let
+    val (w,tm2) = pairSyntax.dest_pair tm
+    val th = GEN_TUPLE tm2 th
+    val v = fst (dest_forall (concl th))
+    val th = CONV_RULE (UNBETA_CONV (pairSyntax.mk_pair(w,v))) (SPEC v th)
+    val x = genvar(type_of tm)
+    val th = GEN x (CONV_RULE BETA_CONV 
+               (SPEC x (PURE_REWRITE_RULE [GEN_TUPLE_LEMMA] (GEN w (GEN v th)))))
+    in th end;
+
 fun extract_function name th entry exit function_in_out = let
   val _ = echo 1 " extracting function,"
   val output = (filter (not o is_new_var) o free_vars o cdr o concl) th
@@ -1431,7 +1444,7 @@ fun extract_function name th entry exit function_in_out = let
   val pc_type = (hd o snd o dest_type o type_of) pc
   val th = INST [mk_var("new@p",pc_type) |-> mk_var("set@p",pc_type)] th
   val t = tm2ftree ((cdr o car o concl o RW [WORD_ADD_0]) th)
-  (* extract base, step, side, input, output *)
+  (* extract: step function and input, output tuples *)
   val aa = (hd o tl o snd o dest_type) pc_type
   fun gen_pc n = if n = 0 then mk_var("p",pc_type) else
     subst [mk_var("n",``:num``) |-> numSyntax.term_of_int n] 
@@ -1444,12 +1457,6 @@ fun extract_function name th entry exit function_in_out = let
                  handle HOL_ERR _ => gen_pc (hd entry)
   val final_node = mk_eq(mk_var("set@p",pc_type),exit_tm)
   fun is_terminal_node tm = can (find_term (fn x => x = final_node)) tm
-  val side = ftree2tm (leaves t (fn x => mk_var("cond",``:bool``)))
-  val side = subst [mk_var("cond",``:bool``) |-> ``T``] side
-  val side = (cdr o concl o REWRITE_CONV []) side handle UNCHANGED => side
-  val t2 = erase_conds t
-  val guard = ftree2tm (leaves t2
-    (fn x => if is_terminal_node x then ``F:bool`` else ``T:bool``))
   val output = (filter is_new_var o free_vars o cdr o cdr o concl) th
   fun strip_tag v = mk_var((implode o drop 4 o explode o fst o dest_var) v, type_of v)
   val output = var_sorter (map strip_tag output)
@@ -1474,51 +1481,32 @@ fun extract_function name th entry exit function_in_out = let
     in subst (pos_subst :: map (fn x => let val (x,y) = dest_eq x in (strip_tag x) |-> y end) vs) end
   val x_in = list_mk_pair input
   val x_out = list_mk_pair output
-  val base = ftree2tm (leaves t2 (fn x => if is_terminal_node x then new_into_subst x x_out else mk_arb (type_of x_out)))
-  val step = ftree2tm (leaves t2 (fn x => if is_terminal_node x then mk_arb (type_of x_in) else new_into_subst x x_in))
   fun add_new_tag v = mk_var("new@" ^ fst (dest_var v), type_of v)
   val new_output = list_mk_pair (map add_new_tag output)
   val new_input = list_mk_pair (map add_new_tag input)
-  (* define the component functions *)
-  val side_def  = simplify_and_define (name ^ "_side") x_in side
-  val guard_def = simplify_and_define (name ^ "_guard") x_in guard
-  val base_def  = simplify_and_define (name ^ "_base") x_in base
-  val step_def  = simplify_and_define (name ^ "_step") x_in step
-  val get_name  = repeat car o cdr o car o concl o SPEC_ALL
-  val thi = ISPEC (get_name step_def) tailrecTheory.TAILREC_def
-  val thi = ISPEC (get_name base_def) thi
-  val thi = ISPEC (get_name guard_def) thi
-  val tmi = (car o fst o dest_eq o concl o SPEC_ALL) thi
-  val main_def = new_definition(name, mk_eq(mk_var(name,type_of tmi),tmi))
-  val thi = ISPEC (get_name step_def) tailrecTheory.TAILREC_PRE_def
-  val thi = ISPEC (get_name guard_def) thi
-  val thi = ISPEC (get_name side_def) thi
-  val tmi = (car o fst o dest_eq o concl o SPEC_ALL) thi
-  val pre_def = new_definition(name ^ "_pre", mk_eq(mk_var(name ^ "_pre",type_of tmi),tmi))
-  val _ = tailrecLib.tailrec_add_to_simpsets
-            (main_def,pre_def,step_def,base_def,guard_def,side_def)
-  (* derive the official extracted definitions *)
-  val main_lhs = mk_comb(get_name main_def, x_in)
-  val main_rhs = ftree2tm (leaves t2 (fn x => new_into_subst x
-                   (if is_terminal_node x then x_out else main_lhs)))
-  val pre_lhs = mk_comb(get_name pre_def, x_in)
-  val pre_rhs = ftree2tm (leaves t (fn x => new_into_subst x
-                   (if is_terminal_node x then mk_var("cond",``:bool``) else mk_conj(pre_lhs,mk_var("cond",``:bool``)))))
-  val pre_rhs = subst [mk_var("cond",``:bool``) |-> ``T``] pre_rhs
-  val pre_rhs = (cdr o concl o REWRITE_CONV []) pre_rhs handle UNCHANGED => pre_rhs
-  val main_tm = mk_eq(main_lhs,main_rhs)
-  val pre_tm = mk_eq(pre_lhs,pre_rhs)
-  val tac =
-    CONV_TAC (RATOR_CONV (REWRITE_CONV [main_def,pre_def]))
-    THEN ONCE_REWRITE_TAC [tailrecTheory.TAILREC_THM]
-    THEN ONCE_REWRITE_TAC [tailrecTheory.TAILREC_PRE_THM]
-    THEN REWRITE_TAC [GSYM main_def,GSYM pre_def]
-    THEN REWRITE_TAC [base_def,side_def,guard_def,step_def]
-    THEN REPEAT (AUTO_DECONSTRUCT_TAC cdr)
-    THEN SIMP_TAC std_ss [] THEN EQ_TAC THEN SIMP_TAC std_ss []
+  val cond_var = mk_var("cond",``:bool``)
+  fun mk_exit tm = pairSyntax.mk_pair(tm,cond_var)
+  val step_fun = mk_pabs(x_in,ftree2tm (leaves t (fn x => 
+                if is_terminal_node x 
+                then mk_exit(sumSyntax.mk_inr(new_into_subst x x_out,type_of x_in)) 
+                else mk_exit(sumSyntax.mk_inl(new_into_subst x x_in,type_of x_out)))))
+  val step_fun = (snd o dest_eq o concl o QCONV (REWRITE_CONV [GSYM CONJ_ASSOC]))
+                 (subst [cond_var |-> T] step_fun)
+  (* define functions *)  
+  val func_name = name
+  val tm_option = NONE
+  val (main_thm,main_def,pre_thm,pre_def) = 
+         tailrecLib.tailrec_define_from_step func_name step_fun tm_option  
   val finalise = CONV_RULE (REMOVE_TAGS_CONV THENC DEPTH_CONV (LET_EXPAND_POS_CONV)) 
-  val main_thm = finalise (auto_prove "main_thm" (main_tm,tac))
-  val pre_thm = finalise (auto_prove "pre_thm" (pre_tm,tac))
+  val main_thm = finalise main_thm
+  val pre_thm = finalise pre_thm
+  (* define temporary abbreviation *)
+  val silly_string = "(( step ))"
+  val step_def = new_definition(silly_string,mk_eq(mk_var(silly_string,type_of step_fun),step_fun))
+  val main_def = RW [GSYM step_def] main_def
+  val pre_def = RW [GSYM step_def] pre_def
+  val step_const = (fst o dest_eq o concl) step_def
+(*
   (* try automatically proving pre = T, i.e. termination *)
   val pre_thm = let
     val tt = (fst o dest_eq o concl o SPEC_ALL o RW1 [FUN_EQ_THM]) pre_def
@@ -1533,17 +1521,20 @@ fun extract_function name th entry exit function_in_out = let
     val pre_thm = (snd o tac) ([],goal) []
     val _ = echo 1 " (termination automatically proved),"
     in pre_thm end handle HOL_ERR _ => pre_thm
+*)
   (* prove lemmas for final proof *)
   val _ = echo 1 " proving certificate,"
   val (th1,th2) = (th,th)
-  val finder = hd o list_dest dest_conj o fst o dest_imp
-  val tac2 =
-    REWRITE_TAC [side_def,guard_def,base_def,step_def]
-    THEN REPEAT (AUTO_DECONSTRUCT_TAC finder)
-    THEN SIMP_TAC std_ss []
+  val finder = cdr o el 2 o list_dest dest_conj o fst o dest_imp
+  val tac2 = SIMP_TAC std_ss [step_def]
+             THEN REPEAT (AUTO_DECONSTRUCT_TAC finder) 
+             THEN SIMP_TAC std_ss [sumTheory.OUTL,sumTheory.OUTR,
+                                   sumTheory.ISR,sumTheory.ISL]
+  val thi = ISPEC step_const SPEC_SHORT_TAILREC
+  val thi = RW [GSYM main_def, GSYM pre_def] thi
   val lemma1 = let
     val th1 = INST [mk_var("set@p",pc_type) |-> exit_tm] th1
-    val th1 = RW [] th1
+    val th1 = DISCH_ALL_AS_SINGLE_IMP (RW [] th1)
     val post = (free_vars o cdr o snd o dest_imp o concl) th1
     val top = (free_vars o fst o dest_imp o concl) th1
     val new_top = filter is_new_var top
@@ -1552,16 +1543,16 @@ fun extract_function name th entry exit function_in_out = let
     val pre = (free_vars o cdr o car o car o snd o dest_imp o concl) th1
     val ws = diff pre (mk_var("p",pc_type)::input)
     val tm = (fst o dest_imp o concl o DISCH_ALL) th1
-    val get_lhs = (fst o dest_eq o concl o SPEC_ALL)
-    val tm2 = list_mk_conj [get_lhs side_def,mk_neg(get_lhs guard_def),
-                            mk_eq(new_output,get_lhs base_def)]
-    val goal = mk_imp(tm2,tm)
+    val ts = (list_dest dest_forall o snd o dest_conj o fst o dest_imp o concl o SPEC_ALL) thi    
+    val goal = (fst o dest_imp o last) ts
+    val goal = subst [el 1 ts |-> x_in, el 2 ts |-> new_output] goal
+    val goal = mk_imp(goal,tm)
     val lemma = UNDISCH (auto_prove "lemma1" (goal,tac2))
     val lemma1 = DISCH_ALL (MP th1 lemma)
     val (_,_,_,q) = dest_spec (concl (UNDISCH th1))
     val ws = diff ws (free_vars q)
     val lemma1 = HIDE_PRE_VARS ws lemma1
-    in lemma1 end
+    in RW [GSYM step_def] lemma1 end
     handle e => (print "\n\nDecompiler failed to prove 'lemma 1'.\n\n"; raise e)
   val lemma2 = let
     val e_tm = subst [new_pos_subst] entry_tm
@@ -1575,74 +1566,67 @@ fun extract_function name th entry exit function_in_out = let
     val pre = (free_vars o cdr o car o car o snd o dest_imp o concl) th2
     val vs = diff pre (mk_var("p",pc_type)::input)
     val tm = (fst o dest_imp o concl o DISCH_ALL) th2
-    val get_lhs = (fst o dest_eq o concl o SPEC_ALL)
-    val tm2 = list_mk_conj [get_lhs side_def,get_lhs guard_def,
-                            mk_eq(new_input,get_lhs step_def)]
-    val goal = mk_imp(tm2,tm)
+    val ts = (list_dest dest_forall o fst o dest_conj o fst o dest_imp o concl o SPEC_ALL) thi    
+    val goal = (fst o dest_imp o last) ts
+    val goal = subst [el 1 ts |-> x_in, el 2 ts |-> new_input] goal
+    val goal = mk_imp(goal,tm)
     val lemma = UNDISCH (auto_prove "lemma2" (goal,tac2))
     val lemma2 = DISCH_ALL (MP th2 lemma)
     val (_,_,_,q) = dest_spec (concl (UNDISCH th2))
     val ws = diff vs (free_vars q)
     val lemma2 = HIDE_PRE_VARS ws lemma2
-    in lemma2 end
+    in RW [GSYM step_def] lemma2 end
     handle e => (print "\n\nDecompiler failed to prove 'lemma 2'.\n\n"; raise e)
   val sort_conv = PRE_CONV (SEP_EXISTS_CONV SORT_SEP_CONV) THENC 
                   POST_CONV (SEP_EXISTS_CONV SORT_SEP_CONV)
   val lemma1 = CONV_RULE (RAND_CONV sort_conv) lemma1
   val lemma2 = CONV_RULE (RAND_CONV sort_conv) lemma2
-  (* check whether guard is false every where *)
-  val t = (raw_tm2ftree o cdr o concl o SPEC_ALL) guard_def
-  fun extract_leaves (FUN_VAL tm)      = [tm]
-    | extract_leaves (FUN_COND (c,t))  = extract_leaves t
-    | extract_leaves (FUN_IF (a,b,c))  = extract_leaves b @ extract_leaves c
-    | extract_leaves (FUN_LET (v,y,t)) = extract_leaves t
-  val xs = filter (fn x => not (x = ``F``)) (extract_leaves t)
-  val simplifier_lemma = if not (xs = []) then TRUTH else let
-    val goal = mk_eq((fst o dest_eq o concl o SPEC_ALL)guard_def, ``F``)
-    val simplifier_lemma = prove(goal,
-      REWRITE_TAC [guard_def]
-      THEN REPEAT (AUTO_DECONSTRUCT_TAC cdr)
-      THEN SIMP_TAC std_ss [])
-    in simplifier_lemma end
+  (* simplification for cases of non-recursive functions *)
+  val simp_lemma = let
+    val (x,y) = dest_eq (concl (SPEC_ALL main_thm))
+    val _ = if can (find_term (fn tm => car x = tm)) y then fail () else ()
+    val goal = mk_eq((fst o dest_imp o concl o 
+      ISPEC (pairSyntax.mk_fst(mk_comb(step_fun,x_in)))) sumTheory.INL,F)  
+    val simp_lemma = auto_prove "simp_lemma" (goal,SIMP_TAC std_ss []    
+      THEN REPEAT (AUTO_DECONSTRUCT_TAC (cdr o cdr o cdr)) 
+      THEN SIMP_TAC std_ss []) 
+    val simp_lemma = Q.SPEC `x` (GEN_TUPLE x_in simp_lemma)
+    val simp_lemma = PURE_REWRITE_RULE [GSYM step_def] simp_lemma
+    in GEN_ALL simp_lemma end handle HOL_ERR _ => TRUTH
   (* certificate theorem *)
   fun remove_new_tags tm = let
     val vs = filter is_new_var (free_vars tm)
     in subst (map (fn v => v |-> strip_tag v) vs) tm end
-  val thi = ISPEC (get_name step_def) SPEC_TAILREC
-  val thi = ISPEC (get_name base_def) thi
-  val thi = ISPEC (get_name guard_def) thi
-  val thi = ISPEC (get_name side_def) thi
-  val thi = RW [GSYM main_def, GSYM pre_def] thi
   val (m,p,c,q) = (dest_spec o concl o UNDISCH_ALL) lemma1
   val thi = ISPEC (mk_pabs(x_in,p)) thi
   val thi = ISPEC (mk_pabs(x_out,remove_new_tags q)) thi
   val thi = ISPEC c thi
   val thi = ISPEC m thi
+  val xi = GSYM (SIMP_CONV std_ss [] (mk_comb(mk_pabs(x_in,p),x_in)))
+  val xin = GSYM (SIMP_CONV std_ss [] (mk_comb(mk_pabs(x_in,p),new_input)))
+  val xon = GSYM (SIMP_CONV std_ss [] (mk_comb(mk_pabs(x_out,remove_new_tags q),new_output)))
+  fun fix_star rw = SIMP_CONV (bool_ss++star_ss) [] THENC
+    ONCE_REWRITE_CONV [CONV_RULE (RATOR_CONV (SIMP_CONV (bool_ss++star_ss) [])) rw]
+  val l1 = CONV_RULE (RAND_CONV (PRE_CONV (fix_star xi) THENC
+                                 POST_CONV (fix_star xon))) lemma1
+  val l2 = CONV_RULE (RAND_CONV (PRE_CONV (fix_star xi) THENC
+                                 POST_CONV (fix_star xin))) lemma2
+  val l1 = GEN_TUPLE x_in (GEN_TUPLE new_output l1)
+  val l2 = GEN_TUPLE x_in (GEN_TUPLE new_input l2) handle HOL_ERR _ => l2
   val goal = (snd o dest_imp o concl) thi
   val th = auto_prove "decompiler certificate" (goal,
     MATCH_MP_TAC thi THEN STRIP_TAC
-    THEN ONCE_REWRITE_TAC [EQ_SYM_EQ]
-    THEN SIMP_TAC std_ss [FORALL_PROD]
-    THEN ONCE_REWRITE_TAC [EQ_SYM_EQ]
-    THENL [
-      REWRITE_TAC [simplifier_lemma]
-      THEN REPEAT STRIP_TAC
-      THEN (MATCH_MP_TAC (GEN_ALL (RW [WORD_ADD_0] lemma2))
-            (* ORELSE due to sort_conv not being reliable enough *)
-            ORELSE (IMP_RES_TAC lemma2 THEN FULL_SIMP_TAC (std_ss++star_ss) []))
-      THEN ASM_SIMP_TAC std_ss [] THEN Q.EXISTS_TAC `x`
-      THEN ASM_REWRITE_TAC [],
-      REPEAT STRIP_TAC
-      THEN MATCH_MP_TAC (GEN_ALL (RW [WORD_ADD_0] lemma1))
-      THEN ASM_SIMP_TAC std_ss [] THEN Q.EXISTS_TAC `x`
-      THEN ASM_REWRITE_TAC []])
-  val th = SIMP_RULE pure_ss [FORALL_PROD] th
-  val th = SPECL input th
+    THEN1 (ONCE_REWRITE_TAC [simp_lemma] THEN REWRITE_TAC [] THEN 
+           REPEAT STRIP_TAC THEN MATCH_MP_TAC l2 THEN ASM_SIMP_TAC std_ss [])
+    THEN1 (REPEAT STRIP_TAC THEN MATCH_MP_TAC l1 THEN ASM_SIMP_TAC std_ss []))
+  val th = SPEC x_in th
   val th = RW [GSYM SPEC_MOVE_COND] th
   val th = introduce_post_let th
   val th = INST [mk_var("()",``:unit``) |-> ``():unit``] th
   val th = SPEC_ALL (SIMP_RULE bool_ss [SEP_CLAUSES,GSYM SPEC_PRE_EXISTS] th)
   val th = CONV_RULE (DEPTH_CONV DEST_NEW_VAR_CONV) th  
+  (* clean up and save function definitions *)
+  val _ = delete_const (fst (dest_const step_const))
   val _ = echo 1 " done.\n"
   val _ = save_thm(name ^ "_def",main_thm)
   val _ = save_thm(name ^ "_pre_def",pre_thm)
@@ -1677,6 +1661,9 @@ fun decompile_io (tools :decompiler_tools) name fio (qcode :term quotation) = le
   val (thms,loops) = stage_12 name tools qcode
   fun decompile_all thms (defs,pres) [] prev = (LIST_CONJ defs,LIST_CONJ pres,prev)
     | decompile_all thms (defs,pres) ((entry,exit)::loops) prev = let
+(*
+  val (entry,exit)::loops = loops
+*)
       val function_in_out = (NONE: (term * term) option)
       val suff = int_to_string (length loops)
       val (part_name,function_in_out) = if length loops = 0 then (name,fio) 
@@ -1685,9 +1672,6 @@ fun decompile_io (tools :decompiler_tools) name fio (qcode :term quotation) = le
       val thms = prepare_for_reuse entry (result,0,SOME (hd exit)) 0 @ thms
       in decompile_all thms (def::defs,pre::pres) loops result end
   val (def,pre,result) = decompile_all thms ([],[]) loops TRUTH
-(*
-  val (entry,exit)::loops = loops
-*)
   val exit = snd (last loops)
   val _ = add_decompiled (name,result,hd exit,SOME (hd exit))
   val result = if (get_abbreviate_code()) then result else UNABBREV_CODE_RULE result

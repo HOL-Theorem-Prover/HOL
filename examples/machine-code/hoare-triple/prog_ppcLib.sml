@@ -155,7 +155,7 @@ fun calculate_length_and_jump th =
 
 fun post_process_thm th = let
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss)
-             [wordsTheory.word_mul_n2w,wordsTheory.WORD_ADD_0] th
+             [wordsTheory.word_mul_n2w,wordsTheory.WORD_ADD_0,wordsTheory.WORD_OR_IDEM] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
   val th = introduce_pMEMORY th
   val th = introduce_pBYTE_MEMORY th

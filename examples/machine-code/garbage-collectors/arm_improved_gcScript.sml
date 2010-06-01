@@ -617,12 +617,12 @@ val arm_loop_thm = prove(
          (ref_mem m2 b i2 * ref_mem m2 b2 e2 * p) (fun2set (f2,df)) /\ ok_memory m2``,
   completeInduct_on `e-i` \\ NTAC 9 STRIP_TAC \\ Cases_on `j <= i` THEN1
    (`i = j` by (FULL_SIMP_TAC std_ss [gc_inv_def] \\ DECIDE_TAC)
-    \\ PURE_ONCE_REWRITE_TAC [gc_loop,arm_loop_def,arm_loop_pre_def]
+    \\ PURE_ONCE_REWRITE_TAC [gc_loop_def,arm_loop_def,arm_loop_pre_def]
     \\ ASM_SIMP_TAC std_ss [] \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] 
     \\ FULL_SIMP_TAC std_ss [CUT_EMPTY] \\ METIS_TAC []) 
   \\ `~(i = j)` by (FULL_SIMP_TAC std_ss [gc_inv_def] \\ DECIDE_TAC)
   \\ IMP_RES_TAC gc_step_lemma
-  \\ PURE_ONCE_REWRITE_TAC [gc_loop,arm_loop_def,arm_loop_pre_def]
+  \\ PURE_ONCE_REWRITE_TAC [gc_loop_def,arm_loop_def,arm_loop_pre_def]
   \\ ASM_SIMP_TAC std_ss []    
   \\ `~(ref_addr i = ref_addr j)` by ALL_TAC THEN1
    (FULL_SIMP_TAC (std_ss++SIZES_ss) [ref_addr_def,n2w_11]

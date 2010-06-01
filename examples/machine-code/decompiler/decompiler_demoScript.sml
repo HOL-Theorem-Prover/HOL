@@ -1,8 +1,7 @@
 
 open HolKernel boolLib bossLib Parse;
 open decompilerLib;
-open tailrecTheory tailrecLib;
-open listTheory pred_setTheory arithmeticTheory wordsTheory;
+open tailrecLib listTheory pred_setTheory arithmeticTheory wordsTheory;
 
 val _ = new_theory "decompiler_demo";
 
@@ -69,11 +68,11 @@ val (x86_th,x86_defs) = decompile_x86 "x86_length" `
 
 val ppc_length_eq = prove(
   ``(arm_length = ppc_length) /\ (arm_length_pre = ppc_length_pre)``,
-  TAILREC_EQ_TAC());
+  NTAC 2 TAILREC_TAC THEN SIMP_TAC std_ss [LET_DEF]);
 
 val x86_length_eq = prove(
   ``(arm_length = x86_length) /\ (arm_length_pre = x86_length_pre)``,
-  TAILREC_EQ_TAC());
+  NTAC 2 TAILREC_TAC THEN SIMP_TAC std_ss [LET_DEF]);
 
 val ppc_length_thm = REWRITE_RULE [ppc_length_eq] arm_length_thm;
 val x86_length_thm = REWRITE_RULE [x86_length_eq] arm_length_thm;

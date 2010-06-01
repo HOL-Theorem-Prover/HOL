@@ -111,7 +111,7 @@ val set_SUBSET_POINTERS = prove(
   ``(h ' a = (xs,d)) /\ a IN FDOM h /\ a IN x ==> ADDR_SET xs SUBSET POINTERS h x``,
   SET2_TAC);
 
-val POINTER_FUPDATE_EQ = prove(
+val POINTER_FUPDATE_EQ = store_thm("POINTER_FUPDATE_EQ",
   ``~(b IN FDOM h) /\ b IN x ==>
     (POINTERS (h |+ (b,xs,d)) x = POINTERS h x UNION ADDR_SET xs)``,
   SET2_TAC);
@@ -155,7 +155,7 @@ val SET_TRANSLATE_IGNORE = prove(
   SIMP_TAC std_ss [EXTENSION] \\ SIMP_TAC std_ss [FUN_EQ_THM,APPLY_UPDATE_THM,
     SET_TRANSLATE_def] \\ SET2_TAC);
 
-val ADDR_MAP_ADDR_MAP = prove(
+val ADDR_MAP_ADDR_MAP = store_thm("ADDR_MAP_ADDR_MAP",
   ``!xs f. (f o f = I) ==> (ADDR_MAP f (ADDR_MAP f xs) = xs)``,
   Induct \\ SIMP_TAC std_ss [ADDR_MAP_def] \\ Cases
   \\ ASM_SIMP_TAC std_ss [ADDR_MAP_def,FUN_EQ_THM]); 
@@ -379,10 +379,10 @@ val gc_step_def = Define `
     let i = i + n + 1 in
       (i,j,m)`; 
 
-val (gc_loop_def,_) = tailrecLib.tailrec_define ``
+val gc_loop_def = tailrecLib.tailrec_define ``
   gc_loop (i,j,m) = if i = j then (i,m) else
                       let (i,j,m) = gc_step (i,j,m) in
-                        gc_loop (i,j,m)`` NONE
+                        gc_loop (i,j,m)``;
 
 val gc_def = Define `
   gc (b:num,e:num,b2:num,e2:num,roots,m) =
@@ -486,7 +486,7 @@ val part_heap_LESS_EQ = store_thm("part_heap_LESS_EQ",
   ``!b e m k. part_heap b e m k ==> b <= e``,
   HO_MATCH_MP_TAC part_heap_ind \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
 
-val EMP_RANGE_RANGE = prove(
+val EMP_RANGE_RANGE = store_thm("EMP_RANGE_RANGE",
   ``!b e i m.
       ~(RANGE(b,e)i) ==> (EMP_RANGE (b,e) ((i=+x)m) = EMP_RANGE (b,e) m)``,
   FULL_SIMP_TAC std_ss [EMP_RANGE_def,APPLY_UPDATE_THM,IN_DEF] \\ METIS_TAC []);
@@ -579,15 +579,28 @@ val full_heap_LESS_EQ = store_thm("full_heap_LESS_EQ",
   ``!b e m. full_heap b e m ==> b <= e``,
   HO_MATCH_MP_TAC full_heap_ind \\ REPEAT STRIP_TAC \\ DECIDE_TAC);
 
-val full_heap_RANGE = store_thm("full_heap_RANGE",
-  ``!i x b e m. full_heap b e m /\ ~(RANGE(b,e)i) ==> full_heap b e ((i =+ x) m)``,
-  NTAC 2 STRIP_TAC \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO]
+val full_heap_IGNORE = prove(
+  ``!m2 b e m. full_heap b e m /\ (!a. RANGE(b,e)a ==> (m2 a = m a)) ==> 
+               full_heap b e m2``,
+  STRIP_TAC \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO]
   \\ HO_MATCH_MP_TAC full_heap_ind \\ REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [full_heap_cases] \\ SIMP_TAC std_ss [APPLY_UPDATE_THM]
   \\ IMP_RES_TAC full_heap_LESS_EQ
-  \\ `~RANGE (b + n + 1,e) i /\ ~(b = i) /\ ~(RANGE(b+1,b+n+1)i)` by
-       (FULL_SIMP_TAC std_ss [RANGE_def] \\ DECIDE_TAC)
-  \\ FULL_SIMP_TAC std_ss [heap_element_11,EMP_RANGE_RANGE]);
+  \\ `RANGE (b,e) b` by (FULL_SIMP_TAC std_ss [RANGE_def] \\ DECIDE_TAC)
+  \\ RES_TAC \\ DISJ2_TAC \\ ASM_SIMP_TAC std_ss [heap_element_11]
+  \\ REPEAT STRIP_TAC THEN1
+   (FULL_SIMP_TAC std_ss [EMP_RANGE_def,IN_DEF]
+    \\ REPEAT STRIP_TAC \\ RES_TAC
+    \\ `RANGE (b,e) k` by RANGE_TAC \\ ASM_SIMP_TAC std_ss [])
+  \\ Q.PAT_ASSUM `bbb ==> full_heap (b + n + 1) e m2` MATCH_MP_TAC
+  \\ REPEAT STRIP_TAC \\ RES_TAC
+  \\ `RANGE (b,e) a` by RANGE_TAC \\ ASM_SIMP_TAC std_ss []);
+
+val full_heap_RANGE = store_thm("full_heap_RANGE",
+  ``!i x b e m. full_heap b e m /\ ~(RANGE(b,e)i) ==> full_heap b e ((i =+ x) m)``,
+  REPEAT STRIP_TAC \\ MATCH_MP_TAC full_heap_IGNORE \\ Q.EXISTS_TAC `m` 
+  \\ ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM] \\ REPEAT STRIP_TAC 
+  \\ Cases_on `a = i` \\ FULL_SIMP_TAC std_ss [RANGE_def]);
 
 val full_heap_R0 = prove(
   ``!b e m. full_heap b e m ==> !k. RANGE(b,e)k ==> ~(R0 m k)``,
@@ -1067,7 +1080,7 @@ val gc_thm = store_thm("gc_thm",
   ``ok_full_heap (h,roots) (b2,i,e2,b,e,m) ==>
     (gc (b2,e2,b,e,roots,m) = (b,i2,e,b2,e2,roots2,m2)) ==>
     ?h2. ok_full_heap (h2,roots2) (b,i2,e,b2,e2,m2) /\ 
-         gc_exec (h,roots) (h2,roots2)``,
+         gc_exec (h,roots) (h2,roots2) /\ full_heap b i2 m2``,
   STRIP_TAC \\ IMP_RES_TAC ok_full_heap_IMP
   \\ SIMP_TAC std_ss [gc_def,LET_DEF]
   \\ `?r3 b3 m3. move_list (roots,b,m) = (r3,b3,m3)` by METIS_TAC [PAIR]
@@ -1096,8 +1109,10 @@ val gc_thm = store_thm("gc_thm",
        \\ ASM_SIMP_TAC std_ss [ADDR_MAP_EQ_ADDR_MAP]
        \\ FULL_SIMP_TAC std_ss [SET_TRANSLATE_MAP,SET_TRANSLATE_def]
        \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ SET_TAC)
-  \\ IMP_RES_TAC gc_exec_thm
-  \\ ASM_SIMP_TAC std_ss []
+  \\ IMP_RES_TAC gc_exec_thm \\ ASM_SIMP_TAC std_ss []
+  \\ `full_heap b i4 (CUT (b,i4) m4)` by ALL_TAC THEN1
+    (MATCH_MP_TAC full_heap_IGNORE \\ Q.EXISTS_TAC `m4`
+     \\ ASM_SIMP_TAC std_ss [CUT_def])
   \\ FULL_SIMP_TAC std_ss [ok_full_heap_def] \\ REPEAT STRIP_TAC
   THEN1 RANGE_TAC THEN1 FULL_SIMP_TAC std_ss [CUT_def,IN_DEF]
   THEN1 METIS_TAC [full_heap_IMP_part_heap,EQ_RANGE_full_heap,EQ_RANGE_CUT]
