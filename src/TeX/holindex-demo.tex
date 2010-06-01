@@ -2,7 +2,6 @@
 
 \usepackage{holindex}
 
-\initHOLindex
 \setHOLlinewidth{80}   %default is 80
 %\setHOLoverrides{over} %option
 
@@ -16,9 +15,8 @@ Similar usage as bibtex, makeindex etc.
 \item create jobname.tex with header
 \begin{verbatim}
 \usepackage{holindex}
-\initHOLindex
-\setHOLlinewidth{80}  %optional default is 80
-\setHOLoverrides{file}
+\setHOLlinewidth{80}   %optional default is 80
+\setHOLoverrides{file} %optional 
 \end{verbatim}
 \item make sure that \texttt{holindex} is loaded after packages like
   \texttt{natbib}, since it loads \texttt{underscore} and this will
