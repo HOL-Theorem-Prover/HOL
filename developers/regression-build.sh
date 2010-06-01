@@ -47,6 +47,13 @@ else
     die "Directory \"$holdir\" unlikely (no std.prelude, sigobj or configure.sml)"
 fi
 
+if [ -d .svn ]
+then
+    :
+else
+    die "HOL directory is not under subversion's control"
+fi
+
 if [ -x $ML ]
 then
     :
@@ -65,15 +72,26 @@ esac
 
 
 
+if svn update > svn-update 2>&1
+then
+    updated_ok=ok
+else
+    updated_ok=
+fi
+
+rev=$(svn info 2> /dev/null | grep ^Revision | cut -d' ' -f2)
+holid="$kernel:$rev:$(basename $ML)"
 
 
-
-(svn update 2>&1 &&
- rev=$(svn info 2> /dev/null | grep ^Revision | cut -d' ' -f2) &&
- holid="$kernel:$rev:$(basename $ML)" &&
- echo "Running in $holdir on machine $(hostname)" &&
+(echo "Running in $holdir on machine $(hostname)" &&
  echo "Started: $(date -R)" &&
  echo "Extra commandline arguments: $@" &&
+ if [ "$updated_ok" ]
+ then
+     cat svn-update
+ else
+     echo "svn update failed - continuing anyway."
+ fi &&
  $ML < tools/smart-configure.sml 2>&1 &&
  bin/build cleanAll 2>&1 &&
  bin/build $kernel "$@" 2>&1) |
