@@ -30,9 +30,6 @@ in
 
   val systeml = system o concat_wspaces protect []
 
-  (* would like to be using Posix.Process.exec, but this seems flakey on
-     various machines (and is entirely unavailable on Moscow ML) *)
-  fun exec (comm, args) = OS.Process.exit (systeml (comm::tl args))
 
   fun get_first f [] = NONE
     | get_first f (h::t) = case f h of NONE => get_first f t
@@ -102,6 +99,14 @@ val ML_SYSNAME =
 val release =
 
 val isUnix = true
+
+fun exec (x as (comm,args)) =
+    (* macos execv fails if the calling process is multi-threaded. *)
+    (* Can't lift the check out of the function body because of the value
+       restriction *)
+    if OS <> "macosx" then Posix.Process.exec x
+    else OS.Process.exit (systeml (comm::tl args))
+
 
 val build_log_dir = fullPath [HOLDIR, "tools-poly", "build-logs"]
 val build_log_file = fullPath [build_log_dir, "current-build-log"]
