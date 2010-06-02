@@ -56,7 +56,7 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
               then
                 mypath = path orelse
                 (warn ("*** Switching to execute "^path);
-                 Systeml.exec(path, "--nolmbc"::CommandLine.arguments()))
+                 Systeml.exec(path, path::"--nolmbc"::CommandLine.arguments()))
               else (warn "Garbage in Last Maker file";
                     write_lastmaker_file();
                     false)
@@ -86,7 +86,7 @@ in
       | SOME p =>
         if p = mypath then diag "In the right HOL distribution"
         else (warn ("*** Switching to execute "^p);
-              Systeml.exec (p, "--nolmbc"::CommandLine.arguments()))
+              Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
     end
   else ()
 end
