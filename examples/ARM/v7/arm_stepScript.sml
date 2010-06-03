@@ -6,7 +6,6 @@
 
 (* interactive use:
   app load ["armTheory", "wordsLib"];
-  HOL_Interactive.toggle_quietdec ();
 *)
 
 open HolKernel boolLib bossLib;
@@ -20,8 +19,6 @@ val _ = new_theory "arm_step";
 
 val _ = numLib.prefer_num();
 val _ = wordsLib.prefer_word();
-
-val m = print_apropos;
 
 infix \\ << >>
 
@@ -161,12 +158,12 @@ local
   val l = fst (listSyntax.dest_list
       ``[0b10001w;0b10010w;0b10011w;0b10110w;0b10111w;0b11011w]:word5 list``)
   fun rule thm m = GEN_ALL (CONV_RULE (RHS_CONV EVAL)
-                     (SPEC_ALL (Thm.SPEC m thm)))
+                     (Drule.SPEC_ALL (Thm.SPEC m thm)))
 in
   val ARM_READ_SPSR_MODE = save_thm("ARM_READ_SPSR_MODE",
-    LIST_CONJ (map (rule ARM_READ_SPSR_MODE_def) l));
+    Drule.LIST_CONJ (List.map (rule ARM_READ_SPSR_MODE_def) l));
   val ARM_WRITE_SPSR_MODE = save_thm("ARM_WRITE_SPSR_MODE",
-    LIST_CONJ (map (rule ARM_WRITE_SPSR_MODE_def) l));
+    Drule.LIST_CONJ (List.map (rule ARM_WRITE_SPSR_MODE_def) l));
 end;
 
 val ARM_READ_MODE_SPSR_def = Define`
@@ -321,12 +318,6 @@ val CLEAR_EXCLUSIVE_LOCAL_def = Define`
     s with monitors updated_by (ExclusiveMonitors_state_fupd (\state.
       SND (s.monitors.ClearExclusiveLocal 0 state)))`;
 
-val VALUE_OPTION_def = Define`
-  VALUE_OPTION f s =
-    case f s
-    of Error _ -> NONE
-    || ValueState v _ -> SOME v`;
-
 val STATE_OPTION_def = Define`
   STATE_OPTION f s =
     case f s
@@ -334,7 +325,7 @@ val STATE_OPTION_def = Define`
     || ValueState _ q -> SOME q`;
 
 val ARM_NEXT_def = Define`
-  ARM_NEXT = STATE_OPTION (arm_next <| proc := 0 |>)`;
+  ARM_NEXT inp = STATE_OPTION (arm_next <| proc := 0 |> inp)`;
 
 (* ------------------------------------------------------------------------- *)
 (* Facilitate evaluation of set_q to when the saturation condition unknown   *)
@@ -408,7 +399,7 @@ val align_1 = save_thm("align_1",
 
 val align_248 = save_thm("align_248",
   numLib.REDUCE_RULE
-    (LIST_CONJ (map (fn t => Q.SPEC t align_slice) [`1`,`2`,`3`])));
+    (Drule.LIST_CONJ (List.map (fn t => Q.SPEC t align_slice) [`1`,`2`,`3`])));
 
 val aligned_248 = Q.store_thm("aligned_248",
   `(!a:word32. aligned(a,2) = ~word_lsb a) /\
@@ -486,8 +477,8 @@ val aligned_thm2 = Q.prove(
   METIS_TAC [aligned_def, align_2_align_4]);
 
 val aligned_thm = save_thm("aligned_thm",
-  LIST_CONJ [aligned_thm2, aligned_thm1,
-    aligned_def |> SPEC_ALL |> EQ_IMP_RULE |> fst |> GSYM |> GEN_ALL]);
+  Drule.LIST_CONJ [aligned_thm2, aligned_thm1,
+    aligned_def |> Drule.SPEC_ALL |> EQ_IMP_RULE |> fst |> GSYM |> GEN_ALL]);
 
 val aligned_align = Q.store_thm("aligned_align",
   `(!a:word32. aligned(a,1)) /\
@@ -609,24 +600,24 @@ val align_relative_thm3 = Q.prove(
     \\ CONV_TAC wordsLib.WORD_ARITH_CONV);
 
 val align_relative_thm = save_thm("align_relative_thm",
-  LIST_CONJ (CONJUNCTS align_relative_thm1 @
+  Drule.LIST_CONJ (Drule.CONJUNCTS align_relative_thm1 @
    [align_relative_thm2 |> REWRITE_RULE [word_sub_def],
     align_relative_thm3 |> REWRITE_RULE [EVAL ``-1w:word32``],
     align_relative_thm3
-      |> CONJUNCT1 |> SPEC_ALL
+      |> Thm.CONJUNCT1 |> Drule.SPEC_ALL
       |> Q.INST [`b:word32` |-> `0w:word32`, `d:word32` |-> `0w:word32`]
       |> SIMP_RULE std_ss [WORD_NEG_0, WORD_ADD_0],
     align_relative_thm3
-      |> CONJUNCT2 |> CONJUNCT1 |> SPEC_ALL
+      |> Thm.CONJUNCT2 |> Thm.CONJUNCT1 |> Drule.SPEC_ALL
       |> Q.INST [`b:word32` |-> `0w:word32`]
       |> SIMP_RULE std_ss [EVAL ``-1w:word32``, WORD_ADD_0],
     align_relative_thm3
-      |> CONJUNCTS |> last |> SPEC_ALL
+      |> Drule.CONJUNCTS |> last |> Drule.SPEC_ALL
       |> Q.INST [`b:word32` |-> `0xFFFFFFFFw:word32`,
                  `d:word32` |-> `0w:word32`]
       |> SIMP_RULE std_ss [EVAL ``0xFFFFFFFFw = ~0w:word32``, WORD_ADD_0],
     align_relative_thm2
-      |> CONJUNCT1 |> SPEC_ALL
+      |> Thm.CONJUNCT1 |> Drule.SPEC_ALL
       |> Q.INST [`b:word32` |-> `1w:word32`, `c:word32` |-> `0w:word32`]
       |> SIMP_RULE std_ss [WORD_SUB_LZERO, WORD_ADD_0]]));
 
@@ -673,21 +664,21 @@ val align_relative_add_with_carry = Q.prove(
          [word_add_plus1, add_with_carry_def]);
 
 val align_relative_add_with_carry = save_thm("align_relative_add_with_carry",
-  LIST_CONJ
+  Drule.LIST_CONJ
     [align_relative_add_with_carry,
      align_relative_add_with_carry
-       |> CONJUNCT2 |> CONJUNCT2 |> CONJUNCT1 |> SPEC_ALL
+       |> Thm.CONJUNCT2 |> Thm.CONJUNCT2 |> Thm.CONJUNCT1 |> Drule.SPEC_ALL
        |> Q.INST [`b:word32` |-> `0w:word32`]
        |> SIMP_RULE std_ss [WORD_ADD_0]
        |> GEN_ALL,
      align_relative_add_with_carry
-       |> CONJUNCT2 |> CONJUNCT1 |> SPEC_ALL
+       |> Thm.CONJUNCT2 |> Thm.CONJUNCT1 |> Drule.SPEC_ALL
        |> Q.INST [`b:word32` |-> `0xFFFFFFFFw:word32`,
                   `d:word32` |-> `0w:word32`]
        |> SIMP_RULE std_ss [EVAL ``0xFFFFFFFFw = ~0w:word32``, WORD_ADD_0]
        |> GEN_ALL,
      align_relative_add_with_carry
-       |> CONJUNCT1 |> SPEC_ALL
+       |> Thm.CONJUNCT1 |> Drule.SPEC_ALL
        |> Q.INST [`b:word32` |-> `0w:word32`, `d:word32` |-> `0w:word32`]
        |> SIMP_RULE std_ss [WORD_NEG_0, WORD_ADD_0]
        |> GEN_ALL]);
@@ -699,8 +690,8 @@ val aligned_con_thm = Q.prove(
   SRW_TAC [] [] \\ EVAL_TAC \\ SRW_TAC [] [arithmeticTheory.ZERO_DIV]);
 
 val aligned_con_thms = save_thm("aligned_con_thms",
-  LIST_CONJ
-    (map (fn t => aligned_con_thm
+  Drule.LIST_CONJ
+    (List.map (fn t => aligned_con_thm
                   |> Q.SPEC t
                   |> SIMP_RULE std_ss []) [`2`,`4`]));
 
@@ -736,17 +727,17 @@ val NUMERAL_NOT_ZERO = Q.prove(
          arithmeticTheory.BIT1, arithmeticTheory.BIT2]
     \\ DECIDE_TAC);
 
-val NUMERAL_FST_SHIFT_C = LIST_CONJ
-  (map (fn t => CONJ (Q.SPECL [`0w`,`NUMERAL (BIT1 n)`] t)
+val NUMERAL_FST_SHIFT_C = Drule.LIST_CONJ
+  (List.map (fn t => CONJ (Q.SPECL [`0w`,`NUMERAL (BIT1 n)`] t)
                      (Q.SPECL [`0w`,`NUMERAL (BIT2 n)`] t)
                |> SIMP_RULE std_ss [NUMERAL_NOT_ZERO,ZERO_SHIFT]
                |> GEN_ALL)
-    (List.take(CONJUNCTS FST_SHIFT_C,4)));
+    (List.take(Drule.CONJUNCTS FST_SHIFT_C,4)));
 
 val aligned_con_shift_thms = save_thm("aligned_con_shift_thms",
-  LIST_CONJ (List.concat
-    (map (fn thm =>
-       map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
+  Drule.LIST_CONJ (List.concat
+    (List.map (fn thm =>
+       List.map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
                           (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
                     |> SIMP_RULE std_ss [NUMERAL_NOT_ZERO,NUMERAL_FST_SHIFT_C])
        [`LSL_C`,`LSR_C`,`ASR_C`,`ROR_C`])
@@ -768,7 +759,7 @@ val aligned_con_rrx_neg_thm = Q.prove(
   SRW_TAC [] [] \\ EVAL_TAC \\ SRW_TAC [] [arithmeticTheory.ZERO_DIV]);
 
 val aligned_con_rrx_thms = save_thm("aligned_con_rrx_thms",
-  LIST_CONJ
+  Drule.LIST_CONJ
      [aligned_con_rrx_thm |> Q.SPEC `2`,
       aligned_con_rrx_thm |> Q.SPEC `4`,
       aligned_con_rrx_neg_thm |> Q.SPEC `2`,
@@ -874,9 +865,9 @@ val eor_bit0 = Q.prove(
     \\ METIS_TAC []);
 
 val eor_bit0_cor =
-  eor_bit0 |> CONJUNCTS
-           |> map (SIMP_RULE (srw_ss()) [] o Q.SPECL [`a`,`b + 1w`])
-           |> LIST_CONJ;
+  eor_bit0 |> Drule.CONJUNCTS
+           |> List.map (SIMP_RULE (srw_ss()) [] o Q.SPECL [`a`,`b + 1w`])
+           |> Drule.LIST_CONJ;
 
 val aligned_bx_add_with_carry = Q.store_thm("aligned_bx_add_with_carry",
   `(!a:word32 b c.
@@ -918,7 +909,7 @@ val aligned_bx_rsb = Q.prove(
          [GSYM aligned_bx_def, aligned_bx_thm, eor_bit0]);
 
 val aligned_bx_add_sub = save_thm("aligned_bx_add_sub",
-  LIST_CONJ
+  Drule.LIST_CONJ
     [aligned_bx_add_sub |> Q.SPECL [`a`,`0w`] |> SIMP_RULE (srw_ss()) [word_0],
      aligned_bx_rev_add_sub |> Q.SPECL [`a`,`0w`]
                             |> SIMP_RULE std_ss [WORD_ADD_0],
@@ -968,9 +959,9 @@ val aligned_bx_add_sub_pc3 = Q.prove(
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss] [aligned_bx_def]);
 
 val aligned_bx_add_sub_pc = save_thm("aligned_bx_add_sub_pc",
-  LIST_CONJ
-    [CONJ (aligned_bx_add_sub_pc |> CONJUNCT1 |> Q.SPECL [`a`,`0w`])
-          (aligned_bx_add_sub_pc |> CONJUNCT2 |> Q.SPECL [`a`,`0w`])
+  Drule.LIST_CONJ
+    [CONJ (aligned_bx_add_sub_pc |> Thm.CONJUNCT1 |> Q.SPECL [`a`,`0w`])
+          (aligned_bx_add_sub_pc |> Thm.CONJUNCT2 |> Q.SPECL [`a`,`0w`])
        |> SIMP_RULE (srw_ss()) [word_0, aligned_bx_0w],
      aligned_bx_add_sub_pc, aligned_bx_add_sub_pc2, aligned_bx_add_sub_pc3]);
 
@@ -1293,15 +1284,15 @@ val aligned_bx_add_sub_rrx_pc = Q.store_thm("aligned_bx_add_sub_rrx_pc",
          [lem, lem2, lem3, GSYM word_add_def, word_add_plus1]);
 
 val aligned_bx_pair_shift_thms = save_thm("aligned_bx_pair_shift_thms",
-  LIST_CONJ (List.concat
-    (map (fn thm =>
-       map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
-                          (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
+  Drule.LIST_CONJ (List.concat
+    (List.map (fn thm =>
+       List.map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
+                               (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
                     |> SIMP_RULE std_ss [NUMERAL_NOT_ZERO,NUMERAL_FST_SHIFT_C])
        [`LSL_C`,`LSR_C`,`ASR_C`,`ROR_C`])
-    (CONJUNCTS aligned_bx_shift_pair @
-     CONJUNCTS aligned_bx_add_sub_shift_pc @
-     CONJUNCTS aligned_bx_add_with_carry_shift_pair))));
+    (Drule.CONJUNCTS aligned_bx_shift_pair @
+     Drule.CONJUNCTS aligned_bx_add_sub_shift_pc @
+     Drule.CONJUNCTS aligned_bx_add_with_carry_shift_pair))));
 
 val aligned_bx_add_with_carry_literal_pc =
   Q.store_thm("aligned_bx_add_with_carry_literal_pc",
@@ -1427,10 +1418,10 @@ val aligned_and_aligned_bx = Q.prove(
 val minus8 = EVAL ``-8w:word32``;
 
 val aligned_and_aligned_bx_thms = save_thm("aligned_and_aligned_bx_thms",
-  LIST_CONJ (List.concat
-    (map (fn thm => map (fn t => thm |> Q.SPEC t |> REWRITE_RULE [minus8])
+  Drule.LIST_CONJ (List.concat
+    (List.map (fn thm => map (fn t => thm |> Q.SPEC t |> REWRITE_RULE [minus8])
                      [`LSL_C`,`LSR_C`,`ASR_C`,`ROR_C`])
-    (CONJUNCTS aligned_and_aligned_bx))));
+    (Drule.CONJUNCTS aligned_and_aligned_bx))));
 
 val aligned_and_aligned_bx_rrx = Q.prove(
   `(!a:word32 x.
@@ -1626,14 +1617,14 @@ val aligned_bx_and_aligned = Q.prove(
   SRW_TAC [] [aligned_bx_0w] \\ EVAL_TAC);
 
 val aligned_bx_and_aligned_thms = save_thm("aligned_bx_and_aligned_thms",
-  LIST_CONJ (List.concat
-    (map (fn thm =>
-       map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
-                          (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
+  Drule.LIST_CONJ (List.concat
+    (List.map (fn thm =>
+       List.map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
+                               (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
              |> SIMP_RULE std_ss [NUMERAL_NOT_ZERO,NUMERAL_FST_SHIFT_C,minus8])
        [`LSL_C`,`LSR_C`,`ASR_C`,`ROR_C`])
-    (CONJUNCTS aligned_bx_and_aligned_add_with_carry @
-     CONJUNCTS aligned_bx_and_aligned))));
+    (Drule.CONJUNCTS aligned_bx_and_aligned_add_with_carry @
+     Drule.CONJUNCTS aligned_bx_and_aligned))));
 
 val aligned_bx_and_aligned_rrx = Q.store_thm("aligned_bx_and_aligned_rrx",
   `(!x a:word32.
@@ -1821,21 +1812,21 @@ val aligned_aligned_shift = Q.prove(
 val aligned_aligned_shift =
   CONJ
     (aligned_aligned_shift
-       |> CONJUNCT1
-       |> SPEC_ALL
+       |> Thm.CONJUNCT1
+       |> Drule.SPEC_ALL
        |> Q.INST [`a` |-> `0w`]
        |> REWRITE_RULE [EVAL ``aligned (0w:word32,4)``]
        |> Q.GEN `b` |> Q.GEN `x` |> Q.GEN `f`)
     aligned_aligned_shift;
 
 val aligned_aligned_shift_thms = save_thm("aligned_aligned_shift_thms",
-  LIST_CONJ (List.concat
-    (map (fn thm =>
-       map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
-                          (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
+  Drule.LIST_CONJ (List.concat
+    (List.map (fn thm =>
+       List.map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
+                               (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
                     |> SIMP_RULE std_ss [NUMERAL_NOT_ZERO,NUMERAL_FST_SHIFT_C])
        [`LSL_C`,`LSR_C`,`ASR_C`,`ROR_C`])
-     (CONJUNCTS aligned_aligned_shift))));
+     (Drule.CONJUNCTS aligned_aligned_shift))));
 
 val aligned_aligned_shift_pc = Q.prove(
   `(!f:bool[32] # num -> bool[32] # bool x a:word32 b c.
@@ -1874,13 +1865,13 @@ val aligned_aligned_shift_pc = Q.prove(
   SRW_TAC [] [aligned_sum, aligned_neg_pc] \\ EVAL_TAC);
 
 val aligned_aligned_shift_pc_thms = save_thm("aligned_aligned_shift_pc_thms",
-  LIST_CONJ (List.concat
-    (map (fn thm =>
-       map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
-                          (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
+  Drule.LIST_CONJ (List.concat
+    (List.map (fn thm =>
+       List.map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
+                               (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
                     |> SIMP_RULE std_ss [NUMERAL_NOT_ZERO,NUMERAL_FST_SHIFT_C])
        [`LSL_C`,`LSR_C`,`ASR_C`,`ROR_C`])
-     (CONJUNCTS aligned_aligned_shift_pc))));
+     (Drule.CONJUNCTS aligned_aligned_shift_pc))));
 
 val aligned_neg_pc2 = Q.prove(
   `!a:word32. aligned(-(align(a,4) + 0x80000008w),4)`,
@@ -1940,8 +1931,8 @@ val aligned_aligned_rrx = Q.prove(
 val aligned_aligned_rrx = save_thm("aligned_aligned_rrx",
   CONJ
     (aligned_aligned_rrx
-       |> CONJUNCT1
-       |> SPEC_ALL
+       |> Thm.CONJUNCT1
+       |> Drule.SPEC_ALL
        |> Q.INST [`b` |-> `T`]
        |> REWRITE_RULE []
        |> GEN_ALL)
@@ -2011,19 +2002,19 @@ val add_with_carry = Q.store_thm("add_with_carry",
            add_with_carry_def, word_add_plus1]);
 
 val add_with_carry0 = save_thm("add_with_carry0",
-  LIST_CONJ
+  Drule.LIST_CONJ
     [add_with_carry
-      |> CONJUNCT1
+      |> Thm.CONJUNCT1
       |> Q.SPECL [`a`,`0w`,`c`,`0w`]
       |> REWRITE_RULE [WORD_ADD_0]
       |> GEN_ALL,
      add_with_carry
-      |> CONJUNCT2 |> CONJUNCT1
+      |> Thm.CONJUNCT2 |> Thm.CONJUNCT1
       |> Q.SPECL [`a`,`0xFFFFFFFFw`,`c`,`0x0w`]
       |> REWRITE_RULE [WORD_ADD_0, EVAL ``0xFFFFFFFFw + 1w : word32``]
       |> GEN_ALL,
      add_with_carry
-      |> CONJUNCT2 |> CONJUNCT2
+      |> Thm.CONJUNCT2 |> Thm.CONJUNCT2
       |> Q.SPECL [`a`,`0w`,`c`,`0x0w`]
       |> REWRITE_RULE [WORD_ADD_0, WORD_SUB_RZERO]
       |> GEN_ALL]);
@@ -2083,7 +2074,7 @@ val aligned_numeric = Q.prove(
   `aligned (0w:word32,4) /\
    !n. aligned (n2w (NUMERAL (BIT2 (BIT1 n))) : word32, 4)`,
   REPEAT STRIP_TAC >> EVAL_TAC
-    \\ Q.SPEC_THEN `n` SUBST1_TAC (CONJUNCT1 BIT_ALIGN4)
+    \\ Q.SPEC_THEN `n` SUBST1_TAC (Thm.CONJUNCT1 BIT_ALIGN4)
     \\ REWRITE_TAC [GSYM word_mul_n2w, aligned_mul4]);
 
 val align_sum_numeric = Q.prove(
@@ -2254,18 +2245,18 @@ val neq_pc_plus4_plus = Q.prove(
          [align_aligned |> ONCE_REWRITE_RULE [WORD_ADD_COMM]]);
 
 val neq_pc_plus4_plus = save_thm("neq_pc_plus4_plus",
-  LIST_CONJ
-    (map (fn thm => GEN_ALL (MATCH_MP (SPEC_ALL thm)
-                   (aligned_numeric |> CONJUNCT2 |> SPEC_ALL)))
-     (CONJUNCTS neq_pc_plus4_plus)));
+  Drule.LIST_CONJ
+    (List.map (fn thm => GEN_ALL (MATCH_MP (Drule.SPEC_ALL thm)
+                   (aligned_numeric |> Thm.CONJUNCT2 |> Drule.SPEC_ALL)))
+     (Drule.CONJUNCTS neq_pc_plus4_plus)));
 
 val neq_pc_plus4 = save_thm("neq_pc_plus4",
-  LIST_CONJ
+  Drule.LIST_CONJ
     [neq_pc_plus4a,
-     MATCH_MP (SPEC_ALL neq_pc_plus4)
-       (aligned_numeric |> CONJUNCT2 |> SPEC_ALL),
+     MATCH_MP (Drule.SPEC_ALL neq_pc_plus4)
+       (aligned_numeric |> Thm.CONJUNCT2 |> Drule.SPEC_ALL),
      neq_pc_plus4 |> Q.SPEC `0w`
-       |> REWRITE_RULE [CONJUNCT1 aligned_numeric, WORD_ADD_0]]);
+       |> REWRITE_RULE [Thm.CONJUNCT1 aligned_numeric, WORD_ADD_0]]);
 
 val neq_pc_plus4_t2 = Q.prove(
   `(!b:word32 pc a.
@@ -2285,10 +2276,10 @@ val neq_pc_plus4_t2 = Q.prove(
     \\ EVAL_TAC);
 
 val neq_pc_plus4_t2 = save_thm("neq_pc_plus4_t2",
-  LIST_CONJ
-    (map (fn thm => MATCH_MP (SPEC_ALL thm)
-                      (aligned_numeric |> CONJUNCT2 |> SPEC_ALL))
-    (CONJUNCTS neq_pc_plus4_t2)));
+  Drule.LIST_CONJ
+    (List.map (fn thm => MATCH_MP (Drule.SPEC_ALL thm)
+                      (aligned_numeric |> Thm.CONJUNCT2 |> Drule.SPEC_ALL))
+    (Drule.CONJUNCTS neq_pc_plus4_t2)));
 
 val aligned_over_memread = Q.store_thm("aligned_over_memread",
   `(!b x:word8 y.
@@ -2341,10 +2332,10 @@ val aligned_pair = Q.prove(
   SRW_TAC [] [] \\ EVAL_TAC);
 
 fun aligned_neq_thms thm =
-  MATCH_MP (SPEC_ALL align_neq2) (SPEC_ALL thm);
+  MATCH_MP (Drule.SPEC_ALL align_neq2) (Drule.SPEC_ALL thm);
 
 fun aligned_neq_thms2 thm =
-  MATCH_MP (SPEC_ALL align_neq3) (SPEC_ALL thm);
+  MATCH_MP (Drule.SPEC_ALL align_neq3) (Drule.SPEC_ALL thm);
 
 val aligned_pair_thms = save_thm("aligned_pair_thms",
    aligned_neq_thms aligned_pair);
@@ -2372,13 +2363,13 @@ val aligned_rrx_pair = Q.prove(
   CONJ_TAC \\ Cases \\ SRW_TAC [] [] \\ EVAL_TAC);
 
 val aligned_shift_pair_thms =
-  LIST_CONJ (List.concat
-    (map (fn thm =>
-       map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
-                          (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
+  Drule.LIST_CONJ (List.concat
+    (List.map (fn thm =>
+       List.map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`,`a`])
+                               (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`,`a`]))
                     |> SIMP_RULE std_ss [NUMERAL_NOT_ZERO,NUMERAL_FST_SHIFT_C])
        [`LSL_C`,`LSR_C`,`ASR_C`,`ROR_C`])
-    (CONJUNCTS aligned_shift_pair)));
+    (Drule.CONJUNCTS aligned_shift_pair)));
 
 val aligned_rm_thms = Q.store_thm("aligned_rm_thms",
   `(!pc:word32 b.
@@ -2435,40 +2426,46 @@ val aligned_rrx_rm_thms = Q.store_thm("aligned_rrx_rm_thms",
     \\ SRW_TAC [] [aligned_sum, word_rrx_0] \\ EVAL_TAC);
 
 val aligned_shift_rm_thms = save_thm("aligned_shift_rm_thms",
-  LIST_CONJ (List.concat
-    (map (fn thm =>
-       map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`])
-                          (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`]))
+  Drule.LIST_CONJ (List.concat
+    (List.map (fn thm =>
+       List.map (fn t => (CONJ (thm |> Q.SPECL [t,`NUMERAL (BIT1 n)`])
+                               (thm |> Q.SPECL [t,`NUMERAL (BIT2 n)`]))
                     |> SIMP_RULE std_ss [NUMERAL_NOT_ZERO,NUMERAL_FST_SHIFT_C])
        [`LSL_C`,`LSR_C`,`ASR_C`,`ROR_C`])
-    (CONJUNCTS aligned_shift_rm))));
+    (Drule.CONJUNCTS aligned_shift_rm))));
 
 val aligned_rrx_pair_thms = save_thm("aligned_rrx_pair_thms",
-  LIST_CONJ (map aligned_neq_thms (CONJUNCTS aligned_rrx_pair)));
+  Drule.LIST_CONJ
+    (List.map aligned_neq_thms (Drule.CONJUNCTS aligned_rrx_pair)));
 
 val aligned_shift_pair_thms = save_thm("aligned_shift_pair_thms",
-  LIST_CONJ (map aligned_neq_thms (CONJUNCTS aligned_shift_pair_thms)));
+  Drule.LIST_CONJ
+    (List.map aligned_neq_thms (Drule.CONJUNCTS aligned_shift_pair_thms)));
 
 val aligned_align_shift_rm_thms = save_thm("aligned_align_shift_rm_thms",
-  LIST_CONJ (map aligned_neq_thms (CONJUNCTS aligned_shift_rm_thms)));
+  Drule.LIST_CONJ
+    (List.map aligned_neq_thms (Drule.CONJUNCTS aligned_shift_rm_thms)));
 
 val aligned_align_rrx_rm_thms = save_thm("aligned_align_rrx_rm_thms",
-  LIST_CONJ (map aligned_neq_thms (CONJUNCTS aligned_rrx_rm_thms)));
+  Drule.LIST_CONJ
+    (List.map aligned_neq_thms (Drule.CONJUNCTS aligned_rrx_rm_thms)));
 
 val aligned_align_rm_thms = save_thm("aligned_align_rm_thms",
-  LIST_CONJ
-    ((map aligned_neq_thms  (List.take(CONJUNCTS aligned_rm_thms,4))) @
-     (map aligned_neq_thms2 (List.drop(CONJUNCTS aligned_rm_thms,4)))));
+  Drule.LIST_CONJ
+    ((List.map aligned_neq_thms
+       (List.take(Drule.CONJUNCTS aligned_rm_thms,4))) @
+     (List.map aligned_neq_thms2
+       (List.drop(Drule.CONJUNCTS aligned_rm_thms,4)))));
 
 val aligned_0_thms = save_thm("aligned_0_thms",
   aligned_neq_thms (``aligned (0w:word32, 4)`` |> EVAL |> EQT_ELIM)
     |> SIMP_RULE (srw_ss()) []);
 
 val aligned_align_thms = save_thm("aligned_align_thms",
-  aligned_neq_thms (aligned_align |> CONJUNCTS |> el 4));
+  aligned_neq_thms (aligned_align |> Drule.CONJUNCTS |> el 4));
 
 val aligned_align_thms2 = save_thm("aligned_align_thms2",
-  aligned_neq_thms2 (aligned_align |> CONJUNCTS |> el 3));
+  aligned_neq_thms2 (aligned_align |> Drule.CONJUNCTS |> el 3));
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3045,11 +3042,11 @@ val ARM_WRITE_SPSR_o = Q.store_thm("ARM_WRITE_SPSR_o",
 (* ------------------------------------------------------------------------- *)
 
 fun arm_reg_rule thm =
-  LIST_CONJ
+  Drule.LIST_CONJ
     (List.tabulate(16, fn i =>
       let val r = wordsSyntax.mk_wordii(i,4) in
         (GEN_ALL o CONV_RULE (RHS_CONV EVAL) o
-         SPEC_ALL o SPEC r) thm
+         Drule.SPEC_ALL o Thm.SPEC r) thm
       end));
 
 local
@@ -3063,13 +3060,13 @@ local
          (14,"11011"), (14,"10110"), (15,"10000")]
 in
   fun arm_reg_rule thm =
-    LIST_CONJ (map (fn (i,s) =>
+    Drule.LIST_CONJ (List.map (fn (i,s) =>
       let val n = wordsSyntax.mk_wordii(i,4)
           val m = wordsSyntax.mk_wordi(Arbnum.fromBinString s,5)
           val x = pairSyntax.mk_pair(n,m)
       in
         (GEN_ALL o CONV_RULE (RHS_CONV EVAL) o
-         SPEC_ALL o SPEC x) thm
+         Drule.SPEC_ALL o Thm.SPEC x) thm
       end) regs)
 end;
 
@@ -3531,7 +3528,7 @@ val ARM_READ_STATUS_UPDATES = Q.store_thm("ARM_READ_STATUS_UPDATES",
           (ARM_READ_STATUS psrZ state /\
            ARM_READ_STATUS psrC state) state' = state'))`,
   REPEAT STRIP_TAC
-    \\ MATCH_MP_TAC (CONJUNCT1 ARM_READ_UNCHANGED)
+    \\ MATCH_MP_TAC (Thm.CONJUNCT1 ARM_READ_UNCHANGED)
     \\ METIS_TAC []);
 
 val EXCEPTION_MODE = Q.store_thm("EXCEPTION_MODE",
@@ -4288,14 +4285,14 @@ val ARM_MEMORY_FOOTPRINT_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val arm_next_thm = Q.store_thm("arm_next_thm",
-  `!s x P h g.
+  `!s x P h g inp.
      (!s. P s ==> (g s = s)) /\
      (P s ==> (h (g s) = x)) /\
-     (arm_next <| proc := 0 |> (g s) = ValueState () x) ==>
-     (P s ==> (ARM_NEXT s = SOME (h s)))`,
+     (arm_next <| proc := 0 |> inp (g s) = ValueState () x) ==>
+     (P s ==> (ARM_NEXT inp s = SOME (h s)))`,
   SRW_TAC [] [STATE_OPTION_def,ARM_NEXT_def]
     \\ `g s = s` by RES_TAC \\ POP_ASSUM SUBST_ALL_TAC
-    \\ Cases_on `arm_next <|proc := 0|> s`
+    \\ Cases_on `arm_next <|proc := 0|> inp s`
     \\ FULL_SIMP_TAC (srw_ss()) []);
 
 (* ------------------------------------------------------------------------- *)

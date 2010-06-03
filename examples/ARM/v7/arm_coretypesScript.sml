@@ -26,6 +26,9 @@ val _ = Hol_datatype `RName =
 val _ = Hol_datatype `PSRName =
   CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_mon | SPSR_abt | SPSR_und`;
 
+val _ = Hol_datatype `HWInterrupt =
+  NoInterrupt | HW_Reset | HW_Irq | HW_Fiq`;
+
 val _ = Hol_datatype `ARMpsr =
   <| N  : bool;  Z : bool; C : bool; V : bool; Q : bool;
      IT : word8; J : bool; Reserved : word4; GE : word4;
@@ -334,7 +337,7 @@ val align_id = Q.store_thm("align_id",
 
 val align_id_248 = save_thm("align_id_248",
   numLib.REDUCE_RULE
-    (LIST_CONJ (map (fn t => Q.SPEC t align_id) [`1`,`2`,`3`])));
+    (Drule.LIST_CONJ (List.map (fn t => Q.SPEC t align_id) [`1`,`2`,`3`])));
 
 val word_index = Q.prove(
   `!i n. i < dimindex (:'a) ==> ((n2w n : 'a word) ' i = BIT i n)`,

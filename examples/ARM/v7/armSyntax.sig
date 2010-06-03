@@ -34,6 +34,10 @@ sig
   val aligned_tm                    : term
   val bit_count_tm                  : term
   val ITAdvance_tm                  : term
+  val NoInterrupt_tm                : term
+  val HW_Reset_tm                   : term
+  val HW_Fiq_tm                     : term
+  val HW_Irq_tm                     : term
   val Encoding_ARM_tm               : term
   val Encoding_Thumb_tm             : term
   val Encoding_Thumb2_tm            : term

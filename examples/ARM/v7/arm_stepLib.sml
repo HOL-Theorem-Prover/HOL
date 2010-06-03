@@ -4,13 +4,19 @@ struct
 (* interactive use:
   app load ["arm_stepTheory", "armSyntax", "intLib", "wordsLib",
             "SatisfySimps"];
-  HOL_Interactive.toggle_quietdec ();
 *)
 
-open HolKernel boolLib bossLib Parse;
+open HolKernel boolLib bossLib;
 open wordsTheory combinTheory;
 open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory armTheory;
 open arm_stepTheory;
+
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars arm_stepTheory.arm_step_grammars
+end
+
+open Parse
 
 (* ------------------------------------------------------------------------- *)
 
@@ -19,7 +25,7 @@ val _ = wordsLib.prefer_word();
 
 infix \\
 
-val op \\ = op THEN;
+val op \\ = op Tactical.THEN;
 
 val ERR = Feedback.mk_HOL_ERR "arm_stepLib";
 
@@ -32,8 +38,8 @@ val _ = Feedback.register_trace ("arm step", arm_step_trace, 3);
 (* ------------------------------------------------------------------------- *)
 
 val mk_constants =
-  List.concat o map (fn (thy, l) =>
-     map (fn name => prim_mk_const {Thy = thy, Name = name}) l);
+  List.concat o List.map (fn (thy, l) =>
+    List.map (fn name => Term.prim_mk_const {Thy = thy, Name = name}) l);
 
 (* Things to avoid evaluating *)
 
@@ -86,7 +92,7 @@ val change_processor_state_instr =
   SIMP_RULE std_ss [change_processor_state_thm] change_processor_state_instr;
 
 val _ = computeLib.add_funs
-  (map (REWRITE_RULE [condT_set_q])
+  (List.map (REWRITE_RULE [condT_set_q])
     [saturating_add_subtract_instr, signed_16_multiply_32_accumulate_instr,
      signed_16x32_multiply_32_accumulate_instr, signed_multiply_dual_instr,
      saturate_instr, saturate_16_instr] @
@@ -130,11 +136,12 @@ in
                                        |> rule
 end;
 
-val inst_type2  = INST_TYPE [alpha |-> ``:2``];
-val inst_type32 = INST_TYPE [alpha |-> ``:32``];
+val inst_type2  = Thm.INST_TYPE [Type.alpha |-> ``:2``];
+val inst_type32 = Thm.INST_TYPE [Type.alpha |-> ``:32``];
 
 fun bitwise_clauses f thm =
-  List.drop (thm |> f |> SPEC_ALL |> CONJUNCTS,2) |> LIST_CONJ;
+  List.drop (thm |> f |> Drule.SPEC_ALL |> Drule.CONJUNCTS,2)
+    |> Drule.LIST_CONJ;
 
 val _ = computeLib.add_funs
   [align_1, align_2_align_4, align_bits, (* align_neq, *) align_aligned,
@@ -217,9 +224,10 @@ val _ = computeLib.add_funs
 
 (* ------------------------------------------------------------------------- *)
 
-val rhsc = rhs o concl;
-val eval = rhsc o EVAL;
-fun apply_conv conv = rhsc o (QCONV conv);
+val lowercase = String.map Char.toLower
+val rhsc = boolSyntax.rhs o Thm.concl;
+val eval = rhsc o bossLib.EVAL;
+fun apply_conv conv = rhsc o (Conv.QCONV conv);
 val restr_eval = apply_conv (computeLib.RESTR_EVAL_CONV restr_terms);
 val dest_strip = armSyntax.dest_strip;
 
@@ -228,13 +236,14 @@ fun dest_arm_state_updates tm =
   of (s, [a,b]) => (s, a) :: dest_arm_state_updates b
    | _ => []) handle HOL_ERR _ => [];
 
-fun mk_test (c,l,v) = mk_eq (list_mk_comb (c,l),v)
-fun mk_arm_const s = prim_mk_const{Name = s, Thy = "arm_step"}
+fun mk_test (c,l,v) = boolSyntax.mk_eq (Term.list_mk_comb (c,l),v)
+fun mk_arm_const s = Term.prim_mk_const {Name = s, Thy = "arm_step"}
 
 local
+  val I_flags_fupd = Term.inst [Type.alpha |-> ``:ARMpsr``] combinSyntax.I_tm
   val read_status_tm = mk_arm_const "ARM_READ_STATUS"
   fun mk_read_status (t,s) =
-        list_mk_comb (read_status_tm,[t,s])
+        Term.list_mk_comb (read_status_tm,[t,s])
         handle HOL_ERR _ => raise ERR "mk_read_status" ""
 in
   fun set_flags state cond pass =
@@ -295,8 +304,8 @@ in
        | (13,false) => (``arm_coretypes$ARMpsr_V_fupd (K ^flag_n) o
                           arm_coretypes$ARMpsr_Z_fupd (K F)``,
                           mk_conj (mk_eq (flag_n,flag_v),not_flag_z))
-       | (14,true)  => (``I : ARMpsr -> ARMpsr``,T)
-       | (15,true)  => (``I : ARMpsr -> ARMpsr``,T)
+       | (14,true)  => (I_flags_fupd,T)
+       | (15,true)  => (I_flags_fupd,T)
        | _ => raise ERR "set_flags" "Invalid pass status."
     end
 end;
@@ -314,10 +323,10 @@ type options =
   { arch : arch, mode : mode, endian : endian,
     pass : bool, thumb : bool, itblock : int };
 
-fun endian_to_term BigEndian = T
-  | endian_to_term LittleEndian = F;
+fun endian_to_term BigEndian = boolSyntax.T
+  | endian_to_term LittleEndian = boolSyntax.F;
 
-fun mode_to_term m = Term
+fun mode_to_term m = Parse.Term
   (case m
    of Usr => `0b10000w:word5`
     | Fiq => `0b10001w:word5`
@@ -328,7 +337,7 @@ fun mode_to_term m = Term
     | Und => `0b10111w:word5`
     | Sys => `0b11111w:word5`);
 
-fun arch_to_term s = Term
+fun arch_to_term s = Parse.Term
  (case s
   of ARMv4   => `ARMv4`
    | ARMv4T  => `ARMv4T`
@@ -360,17 +369,15 @@ local
   val arch_tm                = mk_arm_const "ARM_ARCH"
   val extensions_tm          = mk_arm_const "ARM_EXTENSIONS"
   val unaligned_support_tm   = mk_arm_const "ARM_UNALIGNED_SUPPORT"
-  val mode_tm                = mk_arm_const "ARM_MODE"
   val read_event_register_tm = mk_arm_const "ARM_READ_EVENT_REGISTER"
   val read_interrupt_wait_tm = mk_arm_const "ARM_READ_INTERRUPT_WAIT"
   val read_sctlr_tm          = mk_arm_const "ARM_READ_SCTLR"
   val read_status_tm         = mk_arm_const "ARM_READ_STATUS"
   val read_it_tm             = mk_arm_const "ARM_READ_IT"
   val ALIGN_CONV = SIMP_CONV (srw_ss()) [aligned_n2w, align_n2w]
-  val ALIGN_ss = simpLib.conv_ss
-        {conv = K (K (ALIGN_CONV)), trace = 3,
-         name = "ALIGN_CONV",
-         key = SOME ([], ``arm_coretypes$aligned (n2w a:'a word,n)``)}
+  val ALIGN_ss = simpLib.std_conv_ss
+        {conv = ALIGN_CONV, name = "ALIGN_CONV",
+         pats = [``arm_coretypes$aligned (n2w a:'a word,n)``]}
 in
   fun mk_precondition the_state arch itstate thumb endian flags regs memory =
         apply_conv
@@ -407,9 +414,9 @@ in
   List.rev (F t [])
 end;
 
-fun butlastn (l,n) = List.take (l,length l - n);
+fun butlastn (l,n) = List.take (l, List.length l - n);
 
-fun list_mk_o l = foldr combinSyntax.mk_o (last l) (butlastn (l,1));
+fun list_mk_o l = List.foldr combinSyntax.mk_o (List.last l) (butlastn (l,1));
 
 val dropn_o = total (fn (t,n) => list_mk_o (butlastn (list_dest_o t, n)));
 
@@ -419,40 +426,45 @@ fun find_arm_state_updates upd tm =
    | _ => raise ERR "pick_arm_state_updates" "no matching updates";
 
 fun arm_state_standard_updates tm =
-let val upd = dest_arm_state_updates tm
-    val (reg,upd) = pluck (fn (s,_) => s = "arm_state_registers_fupd") upd
-    val (psr,upd) = pluck (fn (s,_) => s = "arm_state_psrs_fupd") upd
-    val (mem,upd) = pluck (fn (s,_) => s = "arm_state_memory_fupd") upd
-    val (evt,upd) = pluck (fn (s,_) => s = "arm_state_event_register_fupd") upd
-    val (wfi,upd) = pluck (fn (s,_) => s = "arm_state_interrupt_wait_fupd") upd
-    val (acc,upd) = pluck (fn (s,_) => s = "arm_state_accesses_fupd") upd
-    val (mon,upd) = trypluck' (fn (s,u) =>
-                       if s = "arm_state_monitors_fupd" then
-                         SOME u
-                       else
-                         NONE) upd
+let
+  val upd = dest_arm_state_updates tm
+  val (reg,upd) = Lib.pluck (fn (s,_) => s = "arm_state_registers_fupd") upd
+  val (psr,upd) = Lib.pluck (fn (s,_) => s = "arm_state_psrs_fupd") upd
+  val (mem,upd) = Lib.trypluck' (fn (s,u) =>
+                    if s = "arm_state_memory_fupd" then SOME u else NONE) upd
+  val (evt,upd) = Lib.pluck
+                    (fn (s,_) => s = "arm_state_event_register_fupd") upd
+  val (wfi,upd) = Lib.pluck
+                    (fn (s,_) => s = "arm_state_interrupt_wait_fupd") upd
+  val (acc,upd) = Lib.trypluck' (fn (s,u) =>
+                   if s = "arm_state_accesses_fupd" then SOME u else NONE) upd
+  val (mon,upd) = Lib.trypluck' (fn (s,u) =>
+                     if s = "arm_state_monitors_fupd" then
+                       SOME u
+                     else
+                       NONE) upd
 in
-  (snd reg, snd psr, snd mem, snd evt, snd wfi, snd acc, mon, upd)
+  (snd reg, snd psr, mem, snd evt, snd wfi, acc, mon, upd)
 end;
 
 local
   val mode_tm = mk_arm_const "ARM_MODE"
   val registers_tm  =
-        prim_mk_const{Name = "arm_state_registers", Thy = "arm_seq_monad"}
+        Term.prim_mk_const {Name = "arm_state_registers", Thy = "arm_seq_monad"}
 
   val ALIGN_EQ_ss = simpLib.merge_ss
-    [rewrites [WORD_NEG_NEG, align_relative_thm,
-               GSYM aligned_def, GSYM aligned_248],
-     simpLib.conv_ss
-      {conv = K (K (CHANGED_CONV wordsLib.WORD_EVAL_CONV)), trace = 3,
-       name = "WORD_EVAL_CONV", key = SOME ([], ``a = b : word32``)}]
+    [simpLib.rewrites [WORD_NEG_NEG, align_relative_thm,
+                       GSYM aligned_def, GSYM aligned_248],
+     simpLib.std_conv_ss
+      {conv = Conv.CHANGED_CONV wordsLib.WORD_EVAL_CONV,
+       name = "WORD_EVAL_CONV", pats = [``a = b : word32``]}]
 
   val arm_reg_updates =
-        map combinSyntax.dest_update o list_dest_o o
-         find_arm_state_updates "arm_state_registers_fupd"
+        List.map combinSyntax.dest_update o list_dest_o o
+        find_arm_state_updates "arm_state_registers_fupd"
 
   fun mk_reg_mode_updates (the_state,state') =
-        let val updates = arm_reg_updates state'
+        let val updates = arm_reg_updates state' handle HOL_ERR _ => []
             fun mk_reg_test (r,v) =
                  let val c = total (find_term is_cond) v
                      val t = mk_test (registers_tm, [the_state,r], v)
@@ -471,15 +483,15 @@ local
                           end
                       | NONE => t
                  end
-            val tms = map mk_reg_test updates
+            val tms = List.map mk_reg_test updates
         in
-          map (apply_conv
+          List.map (apply_conv
             (SIMP_CONV (std_ss++boolSimps.CONJ_ss++ALIGN_EQ_ss) [])) tms
         end
 
   val arm_psrs_updates =
-        map combinSyntax.dest_update o list_dest_o o
-         find_arm_state_updates "arm_state_psrs_fupd"
+        List.map combinSyntax.dest_update o list_dest_o o
+        find_arm_state_updates "arm_state_psrs_fupd"
 
   fun mk_psrs_updates (the_state,state') =
         let val updates = arm_psrs_updates state' in
@@ -499,21 +511,22 @@ in
             val psrs = mk_psrs_updates (the_state,state')
             val mregs = list_mk_conj (tmode :: regs @ psrs)
         in
-          (length regs, apply_conv (SIMP_CONV (std_ss++boolSimps.CONJ_ss)
+          (List.length regs, apply_conv (SIMP_CONV (std_ss++boolSimps.CONJ_ss)
              [GSYM word_sub_def]) mregs)
         end
 end;
 
-val aligned_bx_tm = prim_mk_const{Name = "aligned_bx", Thy = "arm_step"}
+val aligned_bx_tm = Term.prim_mk_const {Name = "aligned_bx", Thy = "arm_step"}
 
 fun mk_aligned_bx (w,n:term) =
-  mk_comb (inst [alpha |-> wordsSyntax.dest_word_type (type_of w)]
-    aligned_bx_tm, w)
+  Term.mk_comb
+    (Term.inst [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)]
+       aligned_bx_tm, w)
   handle HOL_ERR _ => raise ERR "mk_aligned_bx" "";
 
 fun concat_bytes l =
-let val _ = length l = 4 orelse raise ERR "concat_bytes" "" in
-  foldl wordsSyntax.mk_word_concat (hd l) (tl l)
+let val _ = List.length l = 4 orelse raise ERR "concat_bytes" "" in
+  List.foldl wordsSyntax.mk_word_concat (hd l) (tl l)
 end;
 
 fun bits32 (n,h,l) =
@@ -553,7 +566,7 @@ local
         end
 
   fun mk_aligned_the_mem (f:term -> term,s,l) =
-        let val bytes = map (fn a => restr_eval
+        let val bytes = List.map (fn a => restr_eval
                                (list_mk_comb (read_mem_tm, [s,a]))) l
             val aliged_word = concat_bytes bytes
         in
@@ -561,7 +574,7 @@ local
         end
 
   fun mk_good_it_mode_the_mem (s,l) =
-        let val bytes = map (fn a => restr_eval
+        let val bytes = List.map (fn a => restr_eval
                                (list_mk_comb (read_mem_tm, [s,a]))) l
             val aliged_word = concat_bytes bytes
         in
@@ -579,7 +592,7 @@ local
         end
 
   fun fold_mem f init l =
-        foldl (fn (a,(n,tm1,tm2)) =>
+        List.foldl (fn (a,(n,tm1,tm2)) =>
                  let val (u,t) = f a in
                    if n = 0 then
                      (1,u,t)
@@ -607,7 +620,7 @@ local
   fun mk_memory_opc data_mem (s,endian,enc,opc) =
         let open wordsSyntax
             val (n,bytes) =
-                   case fst (dest_const enc)
+                   case fst (Term.dest_const enc)
                      of "Encoding_Thumb" =>
                            let val l = eval (armSyntax.mk_bytes (opc,``2n``))
                                val bytes = fst (listSyntax.dest_list l)
@@ -638,7 +651,7 @@ local
           fold_mem (fn (a,b) =>
                      (restr_eval (combinSyntax.mk_update (a,b)),
                       restr_eval (mk_test (read_mem_tm, [s,a], b))))
-                   data_mem (zip addrs bytes)
+                   data_mem (Lib.zip addrs bytes)
         end
 in
   fun mk_arm_memory state' endian arch enc opc bx aligns =
@@ -655,13 +668,25 @@ end;
 fun get_valuestate s tm =
     armSyntax.dest_valuestate tm handle HOL_ERR _ =>
       (let val e = armSyntax.dest_error tm handle HOL_ERR _ =>
-        (if (!arm_step_trace div 2) mod 2 = 1 then print_term tm else ();
+        (if (!arm_step_trace div 2) mod 2 = 1 then Parse.print_term tm else ();
          raise ERR "eval_inst" ("Failed to fully evaluate " ^ s))
        in
          raise ERR "eval_inst" ("Error: " ^ stringSyntax.fromHOLstring e)
        end);
 
+fun mk_inp instr =
+  case lowercase instr
+  of "rst"       => armSyntax.HW_Reset_tm
+   | "reset"     => armSyntax.HW_Reset_tm
+   | "fiq"       => armSyntax.HW_Fiq_tm
+   | "fast"      => armSyntax.HW_Fiq_tm
+   | "irq"       => armSyntax.HW_Irq_tm
+   | "interrupt" => armSyntax.HW_Irq_tm
+   | _           => armSyntax.NoInterrupt_tm
+
 local
+  val read_status_tm = mk_arm_const "ARM_READ_STATUS"
+
   fun init s cpsr arch =
    ``^s with
        <| psrs updated_by ((0,CPSR) =+ ^cpsr);
@@ -684,6 +709,20 @@ local
       in
         eval (mk_comb (flags_fupd, cpsr))
       end
+
+  fun mk_irpt_cpsr the_state inp T E M =
+        if inp = armSyntax.HW_Irq_tm then
+          (``^the_state.psrs (0,CPSR) with
+             <| I := F; J := F; T := ^T; E := ^E; M := ^M |>``,
+            mk_test (read_status_tm,[``arm_step$psrI``,the_state],boolSyntax.F))
+        else if inp = armSyntax.HW_Fiq_tm then
+          (``^the_state.psrs (0,CPSR) with
+            <| F := F; J := F; T := ^T; E := ^E; M := ^M |>``,
+            mk_test (read_status_tm,[``arm_step$psrF``,the_state],boolSyntax.F))
+        else
+          (``^the_state.psrs (0,CPSR) with
+            <| J := F; T := ^T; E := ^E; M := ^M |>``,
+           boolSyntax.T)
 
   fun decode_opcode IT arch thumb opc =
         if thumb then
@@ -728,34 +767,51 @@ in
     val E = endian_to_term endian
     val A = arch_to_term arch
     val Thumb = mk_bool thumb
-    val opc = Arbnum.fromHexString (remove_white_space instr)
-                handle Option => raise ERR "make_arm_state_and_pre"
-                                           "not a valid hex opcode"
-    val (enc,dec) = (I ## eval) (decode_opcode IT arch thumb opc)
-    val (cond,instruction) = pairSyntax.dest_pair dec
-    val (flags_fupd,flags_pre) = set_flags the_state cond (#pass opt)
-    val CPSR = mk_cpsr the_state flags_fupd itstate Thumb E M
-    val state' = init the_state CPSR A
-    val opc = wordsSyntax.mk_wordi (opc,32)
-    val opc' = if not thumb orelse arch_version arch >= 5
-               then opc else ``0w:word32``
-    val npass = if #pass opt then F else T
-    val tm = list_mk_comb (``arm_step$ARM_ALIGN_BX``,
-                           [ii,npass,opc',enc,instruction,state'])
-    val (bx,state') = get_valuestate "ARM_ALIGN_BX" (restr_eval tm)
-    val tm = list_mk_comb (``arm_step$ARM_MEMORY_FOOTPRINT``,
-                           [ii,npass,instruction,state'])
-    val (aligns,state') = get_valuestate "ARM_MEMORY_FOOTPRINT" (restr_eval tm)
-    val (nmem,memory_fupd,memory_pre) =
-           mk_arm_memory state' endian arch enc opc bx aligns
-    val state' = list_mk_comb (``arm_seq_monad$arm_state_memory_fupd``,
-                               [memory_fupd,state'])
-    val state' = restr_eval state'
-    val state' = apply_conv (PURE_REWRITE_CONV [UPDATE_ID_o2]) state'
-    val (nreg,reg_pre) = mk_reg_pre (the_state,M,state')
+    val inp = mk_inp instr
   in
-    (nreg,nmem,state',
-     mk_precondition the_state A itstate Thumb E flags_pre reg_pre memory_pre)
+    if mk_inp instr <> armSyntax.NoInterrupt_tm then
+      let
+        val (CPSR,flags_pre) = mk_irpt_cpsr the_state inp Thumb E M
+        val state' = init the_state CPSR A
+        val reg_pre = snd (mk_reg_pre (the_state,M,state'))
+      in
+        (0,0,state',
+         mk_precondition the_state A itstate Thumb E
+           flags_pre reg_pre boolSyntax.T)
+      end
+    else
+      let
+        val opc = Arbnum.fromHexString (remove_white_space instr)
+                    handle Option => raise ERR "make_arm_state_and_pre"
+                                               "not a valid hex opcode"
+        val (enc,dec) = (Lib.I ## eval) (decode_opcode IT arch thumb opc)
+        val (cond,instruction) = pairSyntax.dest_pair dec
+        val (flags_fupd,flags_pre) = set_flags the_state cond (#pass opt)
+        val CPSR = mk_cpsr the_state flags_fupd itstate Thumb E M
+        val state' = init the_state CPSR A
+        val opc = wordsSyntax.mk_wordi (opc,32)
+        val opc' = if not thumb orelse arch_version arch >= 5
+                   then opc else ``0w:word32``
+        val npass = if #pass opt then F else T
+        val tm = list_mk_comb (``arm_step$ARM_ALIGN_BX``,
+                               [ii,npass,opc',enc,instruction,state'])
+        val (bx,state') = get_valuestate "ARM_ALIGN_BX" (restr_eval tm)
+        val tm = list_mk_comb (``arm_step$ARM_MEMORY_FOOTPRINT``,
+                               [ii,npass,instruction,state'])
+        val (aligns,state') =
+               get_valuestate "ARM_MEMORY_FOOTPRINT" (restr_eval tm)
+        val (nmem,memory_fupd,memory_pre) =
+               mk_arm_memory state' endian arch enc opc bx aligns
+        val state' = list_mk_comb (``arm_seq_monad$arm_state_memory_fupd``,
+                                   [memory_fupd,state'])
+        val state' = restr_eval state'
+        val state' = apply_conv (PURE_REWRITE_CONV [UPDATE_ID_o2]) state'
+        val (nreg,reg_pre) = mk_reg_pre (the_state,M,state')
+      in
+        (nreg,nmem,state',
+         mk_precondition the_state A itstate Thumb E
+           flags_pre reg_pre memory_pre)
+      end
   end
 end;
 
@@ -763,7 +819,7 @@ local
   val lem1 = DECIDE ``(a <=/=> b) ==> (a <=> ~b)``
   val lem2 = DECIDE ``(a <=/=> b) ==> (b <=> ~a)``
   val lem3 = ``(-1w * a:'a word) << 1 = -1w * (a << 1)``
-                |> wordsLib.WORD_ARITH_CONV |> EQT_ELIM |> GEN_ALL
+                |> wordsLib.WORD_ARITH_CONV |> Drule.EQT_ELIM |> Drule.GEN_ALL
 in
   fun prove_character P G = Q.prove(
     `!s. ^P s ==> (^G s = s)`,
@@ -813,8 +869,8 @@ local
 
   val lem7 = ``(~a + n2w b : word32) = (n2w b - 1w) - a``
                  |> wordsLib.WORD_ARITH_CONV
-                 |> EQT_ELIM |> EVAL_RULE
-                 |> REWRITE_RULE [GSYM word_sub_def] |> GEN_ALL
+                 |> Drule.EQT_ELIM |> bossLib.EVAL_RULE
+                 |> REWRITE_RULE [GSYM word_sub_def] |> Drule.GEN_ALL
   val lem8 = intLib.ARITH_PROVE ``(a + b * 65536i) / 65536 = a / 65536 + b``
   val lem9 = ``arm_step$word4 (a,b,c,d)`` |> EVAL |> SYM |> GEN_ALL
   val lem10 = DECIDE ``~((a <=> b) /\ ~c) ==> ((if c then b else ~a) = b)``
@@ -825,8 +881,8 @@ local
   val align_rws = [lem1, lem7, aligned_thm, aligned_n2w, align_n2w,
      aligned_bitwise_thm, aligned_pc_thm, optionTheory.option_CLAUSES,
      WORD_SUB_LZERO, GSYM word_sub_def, UPDATE_ID_o2, it_mode_imp_thm,
-     aligned_bx_concat |> SPEC_ALL |> EQ_IMP_RULE |> fst |> GEN_ALL,
-     aligned_concat    |> SPEC_ALL |> EQ_IMP_RULE |> fst |> GEN_ALL]
+     aligned_bx_concat |> Drule.SPEC_ALL |> Thm.EQ_IMP_RULE |> fst |> GEN_ALL,
+     aligned_concat    |> Drule.SPEC_ALL |> Thm.EQ_IMP_RULE |> fst |> GEN_ALL]
 
   val record_rws =
     [GSYM ARM_READ_MEM_def, GSYM ARM_WRITE_MEM_def, GSYM ARM_WRITE_MEM_o,
@@ -868,31 +924,27 @@ local
      Q.ISPEC `ARM_WRITE_IT n` COND_RAND,
      arm_bit_distinct, lem11]
 in
-  val WORD_EQ_ss = simpLib.conv_ss
-             {conv = K (K (wordsLib.word_EQ_CONV)), trace = 3,
-              name = "word_EQ_CONV",
-              key = SOME ([], ``n2w w = n2w y :'a word``)}
-  val BFC_ss = simpLib.conv_ss
-             {conv = K (K (wordsLib.WORD_EVAL_CONV)), trace = 3,
-              name = "WORD_EVAL_CONV",
-              key = SOME ([], ``words$word_modify f 0xFFFFFFFFw : word32``)}
-  val ARM_ALIGN_ss = simpLib.merge_ss [rewrites align_rws, wordsLib.SIZES_ss,
-                                       numSimps.REDUCE_ss,
-                                       SatisfySimps.SATISFY_ss]
-  val ARM_RECORD_ss = simpLib.merge_ss [rewrites record_rws, WORD_EQ_ss,
+  val WORD_EQ_ss = simpLib.std_conv_ss
+             {conv = wordsLib.word_EQ_CONV, name = "word_EQ_CONV",
+              pats = [``n2w w = n2w y :'a word``]}
+  val BFC_ss = simpLib.std_conv_ss
+             {conv = wordsLib.WORD_EVAL_CONV, name = "WORD_EVAL_CONV",
+              pats = [``words$word_modify f 0xFFFFFFFFw : word32``]}
+  val ARM_ALIGN_ss = simpLib.merge_ss
+                        [simpLib.rewrites align_rws, wordsLib.SIZES_ss,
+                         numSimps.REDUCE_ss, SatisfySimps.SATISFY_ss]
+  val ARM_RECORD_ss = simpLib.merge_ss [simpLib.rewrites record_rws, WORD_EQ_ss,
                                         boolSimps.CONJ_ss, numSimps.REDUCE_ss]
-  val ARM_UPDATES_ss = simpLib.merge_ss [rewrites updates_rws, WORD_EQ_ss,
-                                         BFC_ss]
+  val ARM_UPDATES_ss = simpLib.merge_ss
+                         [simpLib.rewrites updates_rws, WORD_EQ_ss, BFC_ss]
 end;
 
 local
-  val lowercase = String.map Char.toLower
-
-  val endian_options = map (map lowercase)
+  val endian_options = List.map (List.map lowercase)
         [["le", "little-endian", "LittleEndian"],
          ["be", "big-endian", "BigEndian"]]
 
-  val arch_options = map (map lowercase)
+  val arch_options = List.map (List.map lowercase)
         [["v4", "ARMv4"],
          ["v4T", "ARMv4T"],
          ["v5", "v5T", "ARMv5", "ARMv5T"],
@@ -904,7 +956,7 @@ local
          ["v7_R", "v7-R", "ARMv7_R", "ARMv7-R"]
          (* ["v7_M", "v7-M", "ARMv7_M", "ARMv7-M"] *)]
 
-  val mode_options = map (map lowercase)
+  val mode_options = List.map (List.map lowercase)
         [["Usr", "User"],
          ["Fiq"],
          ["Irq"],
@@ -932,19 +984,16 @@ local
   fun isDelim c = Char.isPunct c andalso (c <> #"-") andalso (c <> #":") orelse
                   Char.isSpace c
 
-  val fromDec = valOf o Int.fromString
+  val fromDec = Option.valOf o Int.fromString
 
   val empty_string_set = Redblackset.empty Int.compare
 
-  fun remove_duplicates l =
-        Redblackset.listItems (Redblackset.addList (empty_string_set,l))
-
   fun process_option P g s d l f =
         let val (l,r) = List.partition P l
-            val positions = remove_duplicates (map g l)
+            val positions = Lib.mk_set (List.map g l)
             val result =
                   if null positions then d else
-                  if length positions = 1 then
+                  if List.length positions = 1 then
                     f (hd positions)
                   else
                     raise ERR "process_option"
@@ -953,8 +1002,8 @@ local
           (result,r)
         end
 
-  fun process_opt opt = process_option (Lib.C mem (List.concat opt))
-                          (fn option => find_pos (mem option) opt)
+  fun process_opt opt = process_option (Lib.C Lib.mem (List.concat opt))
+                          (fn option => find_pos (Lib.mem option) opt)
 
   val default_options =
     {arch = ARMv7_A, mode = Usr, endian = LittleEndian,
@@ -962,7 +1011,7 @@ local
 in
   fun process_options s =
     let val l = Substring.tokens isDelim (Substring.full s)
-        val l = map (lowercase o Substring.string) l
+        val l = List.map (lowercase o Substring.string) l
         val (endian,l) = process_opt endian_options "Endian"
                             (#endian default_options) l
                             (fn i => if i = 0 then LittleEndian else BigEndian)
@@ -1003,7 +1052,7 @@ end;
 
 local
   val the_state = mk_var ("state",``:arm_seq_monad$arm_state``)
-  fun mk_arm_next t = ``arm$arm_next <| proc := 0 |> ^t``
+  fun mk_arm_next inp t = ``arm$arm_next <| proc := 0 |> ^inp ^t``
   fun some_update fupd v s =
         case v of SOME u => list_mk_comb (fupd, [u,s])
                 | NONE => s
@@ -1012,7 +1061,10 @@ local
           dropn_o (tm, 1)
         else
           SOME tm
-  fun print_progress s = if !arm_step_trace mod 2 = 1 then print s else ()
+  fun print_progress s = if !arm_step_trace mod 2 = 1 then
+                           TextIO.print s
+                         else
+                           ()
 in
   fun arm_step options instr =
   let
@@ -1023,14 +1075,16 @@ in
     val character_thm = prove_character P G handle HOL_ERR _ =>
                           raise ERR "eval_inst"
                             "Failed to prove characteristic theorem"
-    val tm = mk_arm_next (mk_comb (mk_abs (the_state,s),the_state))
+    val init_state = mk_comb (mk_abs (the_state,s),the_state)
+    val tm = mk_arm_next (mk_inp instr) init_state
     val _ = print_progress "Starting evaluation ...\n"
     val eval_thm = computeLib.RESTR_EVAL_CONV restr_terms tm
     val _ = print_progress "... finished evaluation.\n"
     val X = snd (get_valuestate "next_arm" (rhsc eval_thm))
     val (reg,psr,mem,evt,wfi,acc,mon,_) = arm_state_standard_updates X
     val reg' = dropn_o (reg, nreg)
-    val mem' = dropn_o (mem, nmem)
+    val mem' = case mem of SOME m => dropn_o (m, nmem)
+                         | NONE => mem
     val psr' = dropn_o (psr, 1)
     val evt' = maybe_dropn_o evt
     val wfi' = maybe_dropn_o wfi
@@ -1040,7 +1094,7 @@ in
     val h = some_update ``arm_seq_monad$arm_state_psrs_fupd`` psr' h
     val h = some_update ``arm_seq_monad$arm_state_event_register_fupd`` evt' h
     val h = some_update ``arm_seq_monad$arm_state_interrupt_wait_fupd`` wfi' h
-    val h = some_update ``arm_seq_monad$arm_state_accesses_fupd`` (SOME acc) h
+    val h = some_update ``arm_seq_monad$arm_state_accesses_fupd`` acc h
     val h = some_update ``arm_seq_monad$arm_state_monitors_fupd`` mon h
     val H = mk_abs (the_state,h)
     val _ = print_progress "Starting composition proof ...\n"
@@ -1048,20 +1102,20 @@ in
                           raise ERR "eval_inst"
                             "Failed to prove composition theorem"
     val _ = print_progress "... finished composition proof.\n"
-    val next_thm = BETA_RULE (MATCH_MP arm_next_thm
-                     (LIST_CONJ [character_thm,comp_thm,eval_thm]))
-    val thm = next_thm |> UNDISCH
-                       |> SIMP_RULE (bool_ss++ARM_ALIGN_ss) [ASSUME pre]
-                       |> DISCH pre
+    val next_thm = Conv.BETA_RULE (Drule.MATCH_MP arm_next_thm
+                     (Drule.LIST_CONJ [character_thm,comp_thm,eval_thm]))
+    val thm = next_thm |> Drule.UNDISCH
+                       |> SIMP_RULE (bool_ss++ARM_ALIGN_ss) [Thm.ASSUME pre]
+                       |> Thm.DISCH pre
                        |> with_flag (Cond_rewr.stack_limit,50)
                             (SIMP_RULE (bool_ss++ARM_RECORD_ss) [])
-                       |> UNDISCH
-    val pre' = hd (fst (dest_thm thm))
+                       |> Drule.UNDISCH
+    val pre' = hd (fst (Thm.dest_thm thm))
   in
     thm |> with_flag (Cond_rewr.stack_limit,50)
-             (SIMP_RULE (bool_ss++ARM_UPDATES_ss) [ASSUME pre'])
-        |> DISCH pre'
-        |> GEN the_state
+             (SIMP_RULE (bool_ss++ARM_UPDATES_ss) [Thm.ASSUME pre'])
+        |> Thm.DISCH pre'
+        |> Thm.GEN the_state
   end
 end;
 

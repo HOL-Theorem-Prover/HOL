@@ -6,7 +6,6 @@
 
 (* interactive use:
   app load ["arm_astTheory", "wordsLib"];
-  val _ = HOL_Interactive.toggle_quietdec();
 *)
 
 open HolKernel boolLib bossLib Parse;

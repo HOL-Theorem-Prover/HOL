@@ -1,11 +1,6 @@
 structure arm_random_testingLib :> arm_random_testingLib =
 struct
 
-(* interactive use:
-  app load ["armLib"];
-  HOL_Interactive.toggle_quietdec ();
-*)
-
 open HolKernel boolLib bossLib Parse;
 local open armLib in end;
 
@@ -67,9 +62,9 @@ fun random_const n = random_range (pow2 n);
 fun random_from_list l = List.nth(l, random_range (length l));
 
 local
-  val regs = map mk_word4
+  val regs = List.map mk_word4
   val sp = mk_word4 13
-  val valid_modes = map mk_word5 [16,17,18,19,23,27,31]
+  val valid_modes = List.map mk_word5 [16,17,18,19,23,27,31]
   val valid_registers = regs [2,3,4,5,6,7,8,9,10,11,12,13,14]
   val valid_thumb2_registers = regs [2,3,4,5,6,7,8,9,10,11,12,14]
   val valid_thumb_registers = regs [2,3,4,5,6,7]
@@ -629,8 +624,8 @@ local
                  | _ => raise ERR "component_subst" "")
 
   fun component_substs tm =
-        Term.subst
-          (map component_subst (find_terms (Lib.can component_subst) tm)) tm
+        Term.subst (List.map component_subst
+          (KolKernel.find_terms (Lib.can component_subst) tm)) tm
 
   val component_substs = component_substs o component_substs
 

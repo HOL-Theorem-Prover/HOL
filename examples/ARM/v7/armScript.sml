@@ -51,19 +51,26 @@ val fetch_instruction_def = Define`
          errorT "fetch_instruction: unpredictable")`;
 
 val arm_next_def = Define`
-  arm_next ii =
-    (read_arch ii ||| event_registered ii ||| waiting_for_interrupt ii) >>=
-    (\(arch,registered,wfi).
+  arm_next ii irpt =
+    (read_arch ii ||| read_cpsr ii ||| event_registered ii |||
+     waiting_for_interrupt ii) >>=
+    (\(arch,cpsr,registered,wfi).
       if arch = ARMv7_M then
         errorT "arm_next: ARMv7-M profile not supported"
+      else if irpt = HW_Reset then
+        take_reset ii
+      else if (irpt = HW_Fiq) /\ ~cpsr.F then
+        take_fiq_exception ii
+      else if (irpt = HW_Irq) /\ ~cpsr.I then
+        take_irq_exception ii
       else if ~registered \/ wfi then
         constT ()
       else
         fetch_instruction ii >>= arm_instr ii)`;
 
 val arm_run_def = Define`
-  arm_run t ii =
-    (forT 0 t (K (arm_next ii))) >>=
+  arm_run t ii inp =
+    (forT 0 t (\t. arm_next ii (inp t))) >>=
     (\unit_list:unit list. constT ())`;
 
 (* ------------------------------------------------------------------------ *)

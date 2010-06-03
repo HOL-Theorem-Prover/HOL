@@ -17,7 +17,7 @@ val ERR = Feedback.mk_HOL_ERR "arm_disassemblerLib";
 
 (* ------------------------------------------------------------------------- *)
 
-val eval = rhs o concl o EVAL;
+val eval = boolSyntax.rhs o Thm.concl o bossLib.EVAL;
 
 val uint_of_word = wordsSyntax.uint_of_word;
 val sint_of_term = Arbint.toInt o intSyntax.int_of_term;
@@ -30,11 +30,11 @@ val SP = mk_word4 13;
 val AL = mk_word4 14;
 val PC = mk_word4 15;
 
-val is_T  = term_eq T;
-val is_F  = term_eq F;
-val is_SP = term_eq SP;
-val is_AL = term_eq AL;
-val is_PC = term_eq PC;
+val is_T  = Term.term_eq T;
+val is_F  = Term.term_eq F;
+val is_SP = Term.term_eq SP;
+val is_AL = Term.term_eq AL;
+val is_PC = Term.term_eq PC;
 
 fun is_0 tm = uint_of_word tm = 0;
 
@@ -77,13 +77,13 @@ in
 end
 
 fun disassemble_byte l =
-  l |> map term_to_string |> commy |> directive_line "byte"
+  l |> List.map term_to_string |> commy |> directive_line "byte"
 
 fun disassemble_short l =
-  l |> map term_to_string |> commy |> directive_line "short"
+  l |> List.map term_to_string |> commy |> directive_line "short"
 
 fun disassemble_word l =
-  l |> map term_to_string |> commy |> directive_line "word"
+  l |> List.map term_to_string |> commy |> directive_line "word"
 
 (* ------------------------------------------------------------------------- *)
 
@@ -119,7 +119,7 @@ fun reg 13 = "sp"
 val register = reg o uint_of_word;
 val cregister = (char_word4 #"c") o uint_of_word;
 val coprocessor = (char_word4 #"p") o uint_of_word;
-val rcommy = commy o map register;
+val rcommy = commy o List.map register;
 
 local
   fun mk_blocks l =
@@ -176,8 +176,8 @@ fun full_condition tm =
    | _  => raise ERR "full_condition" "unexpected value";
 
 fun condition tm =
-  if is_var tm then
-    fst (dest_var tm)
+  if Term.is_var tm then
+    fst (Term.dest_var tm)
   else if is_AL tm orelse is_PC tm then
     ""
   else
@@ -395,7 +395,7 @@ let fun odd n = n mod 2 = 1
     val b3 = odd n
 in
   String.concat ((if is_T r then "spsr_" else "cpsr_")::
-    (map (fn (b,c) => opt b c "") [(b3,"f"),(b2,"s"),(b1,"x"),(b0,"c")]))
+    (List.map (fn (b,c) => opt b c "") [(b3,"f"),(b2,"s"),(b1,"x"),(b0,"c")]))
 end;
 
 fun it_mask c0 mask =
@@ -835,7 +835,7 @@ fun arm_disassemble (arm_parserLib.Ascii s)       = disassemble_ascii s
 
 (*
 val arm_disassemble_parse =
-  map (arm_disassemble o
+  List.map (arm_disassemble o
        (snd : Arbnum.num * arm_parserLib.arm_code -> arm_parserLib.arm_code));
 
 val arm_disassemble_from_quote =

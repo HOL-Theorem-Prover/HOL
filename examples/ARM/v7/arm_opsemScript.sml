@@ -701,6 +701,24 @@ val exc_vector_base_def = Define`
             else
               constT 0w)))`;
 
+val take_reset_def = Define`
+  take_reset ii =
+    (exc_vector_base ii ||| have_security_ext ii |||
+     read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
+    (\(ExcVectorBase,have_security_ext,cpsr,scr,sctlr).
+       (condT (cpsr.M = 0b10110w)
+          (write_scr ii (scr with NS := F)) |||
+        write_cpsr ii (cpsr with M := 0b10011w)) >>=
+       (\(u1:unit,u2:unit).
+         ((read_cpsr ii >>=
+          (\cpsr.
+             write_cpsr ii (cpsr with
+               <| I := T;
+                  IT := 0b00000000w;
+                  J := F; T := sctlr.TE;
+                  E := sctlr.EE |>))) |||
+          branch_to ii (ExcVectorBase + 0w)) >>= unit2))`;
+
 val take_undef_instr_exception_def = Define`
   take_undef_instr_exception ii =
     (read_reg ii 15w ||| exc_vector_base ii |||
@@ -765,7 +783,7 @@ val take_smc_exception_def = Define`
                      E := sctlr.EE |>))) |||
             branch_to ii (mvbar + 8w)) >>= unit4)))`;
 
-(* For now assume trap_to_monitor is false i.e. no external aborts *)
+(* For now assume trap_to_monitor is false, i.e. no external aborts *)
 val take_prefetch_abort_exception_def = Define`
   take_prefetch_abort_exception ii =
     (read_reg ii 15w ||| exc_vector_base ii ||| have_security_ext ii |||
@@ -781,11 +799,54 @@ val take_prefetch_abort_exception_def = Define`
            (\cpsr.
               write_cpsr ii (cpsr with
                 <| I := T;
-                   A := ((have_security_ext \/ ~scr.NS \/ scr.AW) \/ cpsr.A);
+                   A := ((~have_security_ext \/ ~scr.NS \/ scr.AW) \/ cpsr.A);
                    IT := 0b00000000w;
                    J := F; T := sctlr.TE;
                    E := sctlr.EE |>))) |||
           branch_to ii (ExcVectorBase + 12w)) >>= unit4))`;
+
+val take_irq_exception_def = Define`
+  take_irq_exception ii =
+    (read_reg ii 15w ||| exc_vector_base ii ||| have_security_ext ii |||
+     read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
+    (\(pc,ExcVectorBase,have_security_ext,cpsr,scr,sctlr).
+       (condT (cpsr.M = 0b10110w)
+          (write_scr ii (scr with NS := F)) |||
+        write_cpsr ii (cpsr with M := 0b10010w)) >>=
+       (\(u1:unit,u2:unit).
+         (write_spsr ii cpsr |||
+          write_reg ii 14w (if cpsr.T then pc else pc - 4w) |||
+          (read_cpsr ii >>=
+           (\cpsr.
+              write_cpsr ii (cpsr with
+                <| I := T;
+                   A := ((~have_security_ext \/ ~scr.NS \/ scr.AW) \/ cpsr.A);
+                   IT := 0b00000000w;
+                   J := F; T := sctlr.TE;
+                   E := sctlr.EE |>))) |||
+          branch_to ii (ExcVectorBase + 24w)) >>= unit4))`;
+
+val take_fiq_exception_def = Define`
+  take_fiq_exception ii =
+    (read_reg ii 15w ||| exc_vector_base ii ||| have_security_ext ii |||
+     read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
+    (\(pc,ExcVectorBase,have_security_ext,cpsr,scr,sctlr).
+       (condT (cpsr.M = 0b10110w)
+          (write_scr ii (scr with NS := F)) |||
+        write_cpsr ii (cpsr with M := 0b10001w)) >>=
+       (\(u1:unit,u2:unit).
+         (write_spsr ii cpsr |||
+          write_reg ii 14w (if cpsr.T then pc else pc - 4w) |||
+          (read_cpsr ii >>=
+           (\cpsr.
+              write_cpsr ii (cpsr with
+                <| I := T;
+                   F := ((~have_security_ext \/ ~scr.NS \/ scr.AW) \/ cpsr.F);
+                   A := ((~have_security_ext \/ ~scr.NS \/ scr.AW) \/ cpsr.A);
+                   IT := 0b00000000w;
+                   J := F; T := sctlr.TE;
+                   E := sctlr.EE |>))) |||
+          branch_to ii (ExcVectorBase + 28w)) >>= unit4))`;
 
 (* ------------------------------------------------------------------------ *)
 

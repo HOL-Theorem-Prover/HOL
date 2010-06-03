@@ -26,13 +26,13 @@ val _ = Feedback.register_btrace ("add disassembler comments", disassemble);
 
 (* ------------------------------------------------------------------------- *)
 
-val eval = rhs o concl o EVAL;
+val eval = boolSyntax.rhs o Thm.concl o bossLib.EVAL;
 
 local
   fun mk_word4 i = wordsSyntax.mk_wordii (i,4)
 
-  val is_AL = term_eq (mk_word4 14)
-  val is_PC = term_eq (mk_word4 15)
+  val is_AL = Term.term_eq (mk_word4 14)
+  val is_PC = Term.term_eq (mk_word4 15)
 
   infix **
 
@@ -47,7 +47,7 @@ local
 
   fun condition_to_word4 tm =
     mk_word4
-      (case fst (dest_var tm)
+      (case fst (Term.dest_var tm)
        of "eq" => 0
         | "ne" => 1
         | "cs" => 2
@@ -70,7 +70,7 @@ local
   fun fix_condition tm = if is_var tm then condition_to_word4 tm else tm
 
   fun encoding tm =
-        case fst (dest_const tm)
+        case fst (Term.dest_const tm)
         of "Encoding_ARM"    => "; ARM"
          | "Encoding_Thumb"  => "; 16-bit Thumb"
          | "Encoding_Thumb2" => "; 32-bit Thumb"
@@ -88,7 +88,7 @@ local
                          else
                            ()
                  val thm = if (!trace_progress div 2) mod 2 = 1 then
-                             time (arm_step opt) opc
+                             Lib.time (arm_step opt) opc
                            else
                              arm_step opt opc
              in
@@ -147,7 +147,7 @@ in
     end
 end;
 
-fun arm_steps_from f opt qs = arm_steps_from_parse opt (map snd (f qs));
+fun arm_steps_from f opt qs = arm_steps_from_parse opt (List.map snd (f qs));
 
 val arm_steps_from_string = arm_steps_from arm_parse_from_string;
 val arm_steps_from_file   = arm_steps_from arm_parse_from_file;
@@ -163,7 +163,7 @@ end;
 fun decode_opcode itstate opc =
   if isSome itstate then
     let val n = wordsSyntax.mk_wordi (bits32 (opc,15,0),16)
-        val IT = wordsSyntax.mk_wordii (valOf itstate,8)
+        val IT = wordsSyntax.mk_wordii (Option.valOf itstate,8)
     in
       if bits32 (opc,31,29) = Arbnum.fromBinString "111" andalso
          bits32 (opc,28,27) <> Arbnum.zero
@@ -174,7 +174,8 @@ fun decode_opcode itstate opc =
         (Encoding_Thumb_tm, mk_thumb_decode (``ARMv7_A``,IT,n))
     end
   else
-    (Encoding_ARM_tm,mk_arm_decode (F,wordsSyntax.mk_wordi (opc,32)));
+    (Encoding_ARM_tm,
+     mk_arm_decode (boolSyntax.F, wordsSyntax.mk_wordi (opc,32)));
 
 fun decode_from_string itstate s =
 let val (enc,tm) = decode_opcode itstate (Arbnum.fromHexString s)
@@ -216,7 +217,7 @@ let open Arbnum
     val pad0  = StringCvt.padLeft #"0"
     val count = pad 8 o pad0 4 o lower o toHexString
 in
-  app (fn (n,i) => output_code ostrm (count (start + n)) i)
+  List.app (fn (n,i) => output_code ostrm (count (start + n)) i)
 end;
 
 fun arm_assemble_to_file_parse start filename c =
