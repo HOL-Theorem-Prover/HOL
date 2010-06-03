@@ -228,6 +228,7 @@ fun mc_define q = let
   val pre_tm = generate_pre fname args tm
   val pre_f = mk_var(fname ^ "_pre",mk_type ("fun",[type_of args, ``:bool``]))
   val pre_tm = mk_eq(mk_comb(pre_f,args),pre_tm)
+  val pre_option = SOME pre_tm
   val (def,pre) = tailrec_define_with_pre tm pre_tm
   val _ = (to_compile := (fname,(def,pre)) :: 
                          filter (fn (n,_) => not (fname = n)) (!to_compile))

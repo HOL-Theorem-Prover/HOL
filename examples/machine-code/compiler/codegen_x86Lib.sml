@@ -161,7 +161,8 @@ fun x86_encode_instruction s =
 
 fun x86_encode_branch_aux forward l cond = let
   fun asm NONE = "jmp"
-    | asm (SOME c) = if hd (explode c) = #"j" then c else "j" ^ c
+    | asm (SOME c) = if mem c ["loop","loope","loopne"] then c else
+                     if hd (explode c) = #"j" then c else "j" ^ c
   val s = asm cond
   fun address l = s ^ (if forward then " " else " -") ^ int_to_string l
   fun find_encoding f l s = let
@@ -184,7 +185,7 @@ fun x86_flip_cond c =
 fun x86_encode_branch forward l cond =
   x86_encode_branch_aux forward l cond handle HOL_ERR _ =>
   let (* The implementation of long conditional jumps assume
-         that short conditional jumps are 2 bytes inlength,
+         that short conditional jumps are 2 bytes in length,
          and that long unconditional branches are 5 bytes. *)
   fun the NONE = fail() | the (SOME x) = x
   val c = x86_flip_cond (the cond)
