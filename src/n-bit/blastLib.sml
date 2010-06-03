@@ -31,8 +31,7 @@ end;
 val dim_of_word = fcpLib.index_to_num o wordsSyntax.dim_of;
 
 (* ------------------------------------------------------------------------
-   FCP_INDEX_CONV : Conversion for evaluating terms of the form ``w ' i``,
-                    where ``w`` is a bit vector of fixed width.
+   FCP_INDEX_CONV : Conversion for evaluating ``($FCP f) ' i``.
    ------------------------------------------------------------------------ *)
 
 fun mk_size_thm (i,ty) =
@@ -41,130 +40,28 @@ fun mk_size_thm (i,ty) =
      |> Drule.EQT_ELIM;
 
 local
-  fun mk_size_thm2 (i,ty) =
-     numSyntax.mk_leq (wordsSyntax.mk_dimindex ty, i)
-       |> (Conv.LAND_CONV wordsLib.SIZES_CONV THENC numLib.REDUCE_CONV)
-       |> Drule.EQT_ELIM
-
-  fun mk_size_thm3 (ty1,ty2) =
-     numSyntax.mk_leq (wordsSyntax.mk_dimindex ty1,
-                       wordsSyntax.mk_dimindex ty2)
-       |> (Conv.DEPTH_CONV wordsLib.SIZES_CONV THENC numLib.REDUCE_CONV)
-       |> Drule.EQT_ELIM
-
-  val index_thm = Drule.SPEC_ALL wordsTheory.word_index
-  val w2w_thm   = Drule.SPEC_ALL wordsTheory.w2w
-
   val fcp_beta_thm = fcpTheory.FCP_BETA
                      |> Drule.SPEC_ALL
                      |> Thm.INST_TYPE [Type.alpha |-> Type.bool]
-
-  val minus1_thm = Q.prove(
-     `!i. i < dimindex(:'a) ==> (((-1w):'a word) ' i = T)`,
-     SIMP_TAC std_ss [REWRITE_RULE [SYM WORD_NEG_1] word_T])
-
-  val minus1_thm2 = Q.prove(
-     `!i. i < dimindex(:'a) ==> ((word_T:'a word) ' i = T)`,
-     SIMP_TAC std_ss [word_T])
-
-  val notif = trace ("metis",0) (METIS_PROVE [])
-                ``(if a then b:'a else c) = (if ~a then c else b)``
-
-  val lem = SIMP_RULE std_ss [arithmeticTheory.NOT_LESS]
-              (ONCE_REWRITE_RULE [notif] sw2sw)
-
-  val sw2sw_thm = Q.prove(
-     `i < dimindex (:'b) /\ i < dimindex (:'a) ==>
-      (((sw2sw (w:'a word)) :'b word) ' i = w ' i)`,
-     SIMP_TAC std_ss [sw2sw])
-
-  val sw2sw_thm2 = Q.prove(
-     `dimindex (:'a) <= i /\ i < dimindex (:'b) /\
-      dimindex (:'a) <= dimindex (:'b) ==>
-      (((sw2sw (w:'a word)) :'b word) ' i = w ' (dimindex (:'a) - 1))`,
-     SIMP_TAC std_ss [lem, word_msb_def])
 in
   fun FCP_INDEX_CONV conv tm =
     case dest_strip tm
     of ("fcp_index", [w, i]) =>
-       let
-         val ty = wordsSyntax.dim_of w
-         val n = fcpLib.index_to_num ty
-         val j = numLib.dest_numeral i
-         val _ = Arbnum.< (j, n) orelse
-                 raise ERR "FCP_INDEX_CONV" "index out of range"
-       in
-         case Lib.total dest_strip w
-         of SOME ("n2w", [v]) =>
+        (case Lib.total dest_strip w
+         of SOME ("FCP", [f]) =>
              let
-               val _ = numLib.is_numeral v orelse raise Conv.UNCHANGED
-               val indx_thm = index_thm
-                              |> Thm.INST_TYPE [alpha |-> ty]
-                              |> Thm.INST [``i:num`` |-> i, ``n:num`` |-> v]
-               val thm = Thm.MP indx_thm (mk_size_thm (i,ty))
-             in
-               Conv.CONV_RULE (Conv.RHS_CONV conv) thm
-             end
-          | SOME ("w2w", [v]) =>
-             let
-               val indx_thm =
-                    w2w_thm
-                    |> Thm.INST_TYPE [alpha |-> wordsSyntax.dim_of v,
-                                      beta |-> ty]
-                    |> Thm.INST [``i:num`` |-> i,
-                                 ``w:^(Parse.ty_antiq (Term.type_of v))`` |-> v]
-               val thm = Thm.MP indx_thm (mk_size_thm (i,ty))
-             in
-               Conv.CONV_RULE (Conv.RHS_CONV conv) thm
-             end
-          | SOME ("sw2sw", [v]) =>
-             let
-               val tya = wordsSyntax.dim_of v
-               val m = fcpLib.index_to_num tya
-               val (indx_thm, size_thms) =
-                      if Arbnum.< (j, m) then
-                        (sw2sw_thm,
-                         List.map mk_size_thm [(i,ty), (i, tya)])
-                      else
-                        (sw2sw_thm2,
-                         [mk_size_thm2 (i, tya), mk_size_thm (i,ty),
-                          mk_size_thm3 (tya, ty)])
-               val indx_thm =
-                    indx_thm
-                    |> Thm.INST_TYPE [alpha |-> tya, beta |-> ty]
-                    |> Thm.INST [``i:num`` |-> i,
-                                 ``w:^(Parse.ty_antiq (Term.type_of v))`` |-> v]
-               val thm = Thm.MP indx_thm (Drule.LIST_CONJ size_thms)
-             in
-               Conv.CONV_RULE (Conv.RHS_CONV conv) thm
-             end
-          | SOME ("word_T", []) =>
-             Drule.MATCH_MP minus1_thm2 (mk_size_thm (i,ty))
-          | SOME ("word_L", []) =>
-             let
-               val thm = Drule.MATCH_MP wordsTheory.word_L (mk_size_thm (i,ty))
-             in
-               Conv.CONV_RULE (Conv.RHS_CONV conv) thm
-             end
-          | SOME ("word_2comp", [v]) =>
-             if numLib.dest_numeral (fst (wordsSyntax.dest_n2w v)) =
-                Arbnum.one
-             then
-               Drule.MATCH_MP minus1_thm (mk_size_thm (i,ty))
-             else
-               raise Conv.UNCHANGED
-          | SOME ("FCP", [f]) =>
-             let
+               val ty = wordsSyntax.dim_of w
+               val _ = Arbnum.< (numLib.dest_numeral i, fcpLib.index_to_num ty)
+                       orelse raise ERR "FCP_INDEX_CONV" "index out of range"
                val indx_thm = fcp_beta_thm
                               |> Thm.INST_TYPE [beta |-> ty]
                               |> Thm.INST [``i:num`` |-> i,
                                            ``g:num->bool`` |-> f]
-               val thm = Thm.MP indx_thm (mk_size_thm (i,ty))
              in
-               Conv.CONV_RULE (Conv.RHS_CONV conv) thm
+               Conv.CONV_RULE (Conv.RHS_CONV conv)
+                 (Thm.MP indx_thm (mk_size_thm (i,ty)))
              end
-          | _ => raise Conv.UNCHANGED
-       end
+          | _ => raise Conv.UNCHANGED)
      | _ => raise ERR "FCP_INDEX_CONV" "not an application of fcp_index"
 end
 
@@ -405,13 +302,16 @@ local
                      THENC computeLib.CBV_CONV cmp
 
   val i = Term.mk_var ("i", numLib.num)
+
+  fun is_bit_lit tm = case Lib.total bitSyntax.dest_bit tm
+                      of SOME (_, n) => numSyntax.is_numeral n
+                       | NONE => false
 in
   fun mk_bit_sets tm =
     let
-      val tms = HolKernel.find_terms wordsSyntax.is_word_literal tm
-      val tms = Lib.mk_set (List.map (fst o wordsSyntax.dest_n2w) tms)
+      val tms = Lib.mk_set (HolKernel.find_terms is_bit_lit tm)
     in
-      List.map (fn tm => BIT_SET_CONV (bitSyntax.mk_bit (i,tm))) tms
+      List.map BIT_SET_CONV tms
     end
 end
 
@@ -552,22 +452,43 @@ local
   val word_xor = REWRITE_RULE [xor_thm] word_xor_def
   val reduce_xor = REWRITE_RULE [xor_thm] reduce_xor_def
 
+  val word_L_thm = Q.prove(
+    `INT_MINw :'a word = FCP i. i = dimindex (:α) − 1`,
+    SRW_TAC [fcpLib.FCP_ss] [word_L]);
+
+  val minus1_thm = Q.prove(
+    `-1w = $FCP (K T)`,
+    SRW_TAC [fcpLib.FCP_ss] [REWRITE_RULE [SYM WORD_NEG_1] word_T]);
+
+  val w2w_thm = Q.prove(
+    `!w: 'a word. w2w w = FCP i. i < dimindex (:'a) /\ w ' i`,
+    SRW_TAC [fcpLib.FCP_ss] [w2w]);
+
+  val sw2sw_thm = Q.prove(
+    `!w: 'a word.
+        sw2sw w :'b word =
+        FCP i. if i < dimindex (:'a) \/ dimindex (:'b) < dimindex (:'a) then
+                 w ' i
+               else
+                 w ' (dimindex (:'a) - 1)`,
+    SRW_TAC [fcpLib.FCP_ss] [sw2sw, word_msb_def]);
+
   fun WORD_NEG_CONV tm =
       let
         val t = wordsSyntax.dest_word_2comp tm
       in
-        case Lib.total wordsLib.dest_word_literal t
+        case Lib.total wordsSyntax.dest_word_literal t
         of SOME v => if v = Arbnum.one then
                        raise Conv.UNCHANGED
                      else
                        wordsLib.WORD_EVAL_CONV tm
-         | NONE => REWR_CONV WORD_NEG tm
+         | NONE => ONCE_REWRITE_CONV [WORD_NEG] tm
       end
 
   val cmp = reduceLib.num_compset()
 
   val _ = computeLib.add_thms
-     [word_xor, word_or_def, word_and_def, word_1comp_def,
+     [n2w_def, word_xor, word_or_def, word_and_def, word_1comp_def,
       word_nor_def, word_xnor_def, word_nand_def, word_reduce_def,
       reduce_or_def, reduce_and_def, reduce_xor, reduce_xnor_def,
       reduce_nand_def, word_replicate_def, word_join, word_concat_def,
@@ -575,6 +496,7 @@ local
       word_asr_def, word_ror_def, word_rol_def, word_rrx_def, word_msb_def,
       word_lsb_def, word_extract_def, word_bits_def, word_slice_def,
       word_bit_def, word_signed_bits_def, bit_field_insert_def, index_cond,
+      SYM WORD_NEG_1, word_L_thm, minus1_thm, w2w_thm, sw2sw_thm,
       fcpTheory.FCP_UPDATE_def, listTheory.HD, listTheory.TL, listTheory.SNOC,
       listTheory.FOLDL, rich_listTheory.GENLIST_compute,
       BITWISE_ADD, BITWISE_SUB, BITWISE_LO, combinTheory.o_THM] cmp
@@ -626,7 +548,7 @@ end
 
 fun PROP_PROVE conv tm =
 let
-  val thm = QCONV (REWRITE_CONV []) tm
+  val thm = Conv.QCONV (REWRITE_CONV []) tm
   val c = rhsc thm
 in
   if c = boolSyntax.T orelse c = boolSyntax.F then
@@ -651,11 +573,13 @@ let
   val vars = Term.genvars Type.bool (List.length insts)
   val theta  = Lib.map2 (Lib.curry (op |->)) insts vars
   val tm' = Term.subst theta tm
-  val thm = PROP_PROVE
-              (if Term.term_size tm' < 100 then
-                 DPLL_CONV
-               else
-                 SAT_CONV) tm'
+  val sz = Term.term_size tm'
+  val f = if !blast_trace > 2 then
+            (print ("Checking proposition of size: " ^ Int.toString sz ^ "\n");
+             real_time)
+          else
+            I
+  val thm = f (PROP_PROVE (if sz < 100 then DPLL_CONV else SAT_CONV)) tm'
   val theta' = Lib.map2 (Lib.curry (op |->)) vars insts
 in
   Thm.INST theta' thm
@@ -728,6 +652,9 @@ local
       in
         bit_theorem Arbnum.zero []
       end
+  val cmp = reduceLib.num_compset ()
+  val _ = computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM] cmp
+  val NUM_CONV = computeLib.CBV_CONV cmp
 in
   fun BIT_BLAST_CONV tm =
   let
@@ -735,13 +662,10 @@ in
             raise ERR "BIT_BLAST_CONV" "term not suited to bit blasting"
     val thm = Conv.QCONV BLAST_CONV tm
     val c = rhsc thm
-    val cmp = reduceLib.num_compset ()
-    val _ = computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM] cmp
-    val _ = computeLib.add_conv
-              (``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV) cmp
-    val _ = computeLib.add_thms (mk_bit_sets c) cmp
-    val conv = computeLib.CBV_CONV cmp
-    val conv = mk_sums conv c
+    val thm = Conv.CONV_RULE
+                (Conv.RHS_CONV (PURE_REWRITE_CONV (mk_bit_sets c))) thm
+    val c = rhsc thm
+    val conv = mk_sums NUM_CONV c
   in
     if wordsSyntax.is_index tm then
       let
