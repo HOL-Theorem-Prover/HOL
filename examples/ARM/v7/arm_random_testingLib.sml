@@ -625,7 +625,7 @@ local
 
   fun component_substs tm =
         Term.subst (List.map component_subst
-          (KolKernel.find_terms (Lib.can component_subst) tm)) tm
+          (HolKernel.find_terms (Lib.can component_subst) tm)) tm
 
   val component_substs = component_substs o component_substs
 
