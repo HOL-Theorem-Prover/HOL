@@ -460,11 +460,33 @@ in
 end handle NOT_FOUND => if redex = residue then (env, redex::idlist)
                         else (t::env, idlist)
 
+fun beta_normalise0 t = let
+  val bn0 = beta_normalise0
+  fun bn1 t = case bn0 t of NONE => SOME t | x => x
+in
+  case dest_term t of
+    COMB(t1,t2) => let
+    in
+      case Lib.total beta_conv t of
+        NONE => let
+        in
+          case bn0 t1 of
+            NONE => Option.map (fn t2' => mk_comb(t1,t2')) (bn0 t2)
+          | SOME t1' => bn1 (mk_comb(t1',t2))
+        end
+      | SOME t' => bn1 t'
+    end
+  | LAMB(v,t) => Option.map (fn t' => mk_abs(v,t')) (bn0 t)
+  | x => NONE
+end
 
-fun all_aconv [] [] = true
-  | all_aconv [] _ = false
-  | all_aconv _ [] = false
-  | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
+fun beta_normalise t = case beta_normalise0 t of NONE => t | SOME x => x
+
+fun all_abconv [] [] = true
+  | all_abconv [] _ = false
+  | all_abconv _ [] = false
+  | all_abconv (h1::t1) (h2::t2) =
+     aconv (beta_normalise h1) (beta_normalise h2) andalso all_abconv t1 t2
 
 fun term_homatch tyavoids lconsts tyins (insts, homs) = let
   (* local constants of both terms and types never change *)
@@ -506,7 +528,7 @@ in
              val ni = let
                val (chop,cargs) = strip_comb ctm
              in
-               if all_aconv cargs pats then
+               if all_abconv cargs pats then
                  if chop = vhop then insts
                  else safe_inserta (vhop |-> chop) insts
                else let
