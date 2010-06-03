@@ -784,9 +784,10 @@ fun SEP_WRITE_TAC (hs,gs) = let
         in if v = name then x else find_any_match ws name end handle e => find_any_match ws name
   val witnesses = map (find_any_match ys) (map fst updates)
   fun foo (w,tac) =
-    MATCH_MP_TAC write_fun2set THEN REWRITE_TAC [STAR_ASSOC] THEN EXISTS_TAC w
-    THEN tac
-  in (tac THEN foldr foo (FULL_SIMP_TAC (bool_ss++star_ss) []) witnesses) (hs,gs) end
+    MATCH_MP_TAC write_fun2set THEN REWRITE_TAC [STAR_ASSOC] THEN EXISTS_TAC w THEN tac
+  fun lift (w,tac) = Q.PAT_ASSUM [ANTIQUOTE w] MP_TAC THEN tac
+  val final_tac = foldr lift (SIMP_TAC (bool_ss++star_ss) []) xs
+  in (tac THEN foldr foo final_tac witnesses) (hs,gs) end
 
 fun SEP_NEQ_TAC (hs,gs) = let
   val (a1,a2) = dest_eq (dest_neg gs)
@@ -954,7 +955,7 @@ fun SEP_W_TAC (hs,goal) = let
           replace x y :: ys handle HOL_ERR _ => y :: replace_in_list (x,ys)
     val goal = list_mk_star (foldr replace_in_list qs zs) (type_of (hd qs))
     val goal = mk_comb(goal,subst [f|->up] (cdr x))
-    in ([ANTIQUOTE goal] by ALL_TAC THEN1 SEP_WRITE_TAC) end
+    in ([ANTIQUOTE goal] by ALL_TAC THEN1 SEP_WRITE_TAC) end handle Empty => ALL_TAC 
   in EVERY (map get_tac xs) (hs,goal) end;
 
 fun SEP_R_TAC (hs,goal) = let

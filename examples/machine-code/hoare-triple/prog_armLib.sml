@@ -332,7 +332,7 @@ fun post_process_thm th = let
 
 fun arm_prove_one_spec s th = let
   val g = concl th
-  val next = cdr (find_term (can (match_term ``ARM_NEXT s = s'``)) g)
+  val next = cdr (find_term (can (match_term ``ARM_NEXT x s = s'``)) g)
   val (pre,post) = arm_pre_post g
   val tm = ``SPEC ARM_MODEL pre {(p,n2w c)} post``
   val tm = subst [mk_var("pre",type_of pre) |-> pre,
@@ -434,6 +434,7 @@ val arm_tools_byte = (arm_spec_byte_memory, arm_jump, arm_status, arm_pc);
 
 (*
 
+  val m_pred = "auto"
   fun enc s = let val _ = print ("\n\n"^s^"\n\n") in arm_enc s end
 
   val thms = arm_spec (enc "TST r5, #3");

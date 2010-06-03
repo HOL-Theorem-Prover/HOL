@@ -115,12 +115,10 @@ fun tailrec_define_from_step func_name step_fun tm_option = let
   (* prove exported theorems *)
   fun tac finder = 
     PURE_REWRITE_TAC [def_thm,side_thm]
-    THEN PURE_ONCE_REWRITE_TAC [SHORT_TAILREC_def,SHORT_TAILREC_PRE_def]
-    THEN CONV_TAC (RATOR_CONV (PURE_ONCE_REWRITE_CONV [TAILREC_THM,TAILREC_PRE_THM]))
-    THEN PURE_ONCE_REWRITE_TAC [GSYM SHORT_TAILREC_def, GSYM SHORT_TAILREC_PRE_def]
-    THEN PURE_REWRITE_TAC [GSYM def_thm, GSYM side_thm]
-    THEN REWRITE_TAC [combinTheory.o_DEF]
-    THEN CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV) THEN REWRITE_TAC []
+    THEN CONV_TAC (RATOR_CONV (PURE_ONCE_REWRITE_CONV [SHORT_TAILREC_THM]))
+    THEN PURE_REWRITE_TAC [GSYM def_thm,GSYM side_thm]
+    THEN CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
+    THEN PURE_REWRITE_TAC [AND_CLAUSES]  
     THEN REPEAT (AUTO_DECONSTRUCT_TAC finder)
     THEN ASM_SIMP_TAC std_ss [sumTheory.ISL,sumTheory.ISR,sumTheory.OUTL,
            sumTheory.OUTR,LET_DEF, AC CONJ_COMM CONJ_ASSOC]
