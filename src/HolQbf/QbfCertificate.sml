@@ -151,7 +151,7 @@ struct
     o (map (String.tokens (Lib.C Lib.mem [#" ", #"\t", #"\n"])))
     o filter_header
     o List.filter (fn l => l <> "\n")
-    o Library.read_lines_from_file) path
+    o QbfLibrary.read_lines_from_file) path
   end
 
 (* ------------------------------------------------------------------------- *)
@@ -172,7 +172,7 @@ struct
 
       (* We assume that there are no free variables in 't', so that *all*
          variables in the matrix occur in 'vars'. *)
-      val (_, vars, matrix) = Library.enumerate_quantified_vars t
+      val (_, vars, matrix) = QbfLibrary.enumerate_quantified_vars t
 
       (* a dictionary that maps each variable to a pair, which consists of the
          variable's index and a Boolean that is true if the variable is
@@ -186,19 +186,19 @@ struct
       val vars = List.rev vars
       fun foldthis (clause, (i, clause_dict)) =
         let
-          val clause = Library.CLAUSE_TO_SEQUENT clause
-          val lits = Library.literals_in_clause index_fn clause
+          val clause = QbfLibrary.CLAUSE_TO_SEQUENT clause
+          val lits = QbfLibrary.literals_in_clause index_fn clause
         in
           (i + 1, Redblackmap.insert (clause_dict, i,
-            Library.forall_reduce (clause, vars, matrix, lits)))
+            QbfLibrary.forall_reduce (clause, vars, matrix, lits)))
         end
 
       (* a dictionary that maps each clause identifier to a 4-tuple, which
          consists of 1. the clause theorem (in sequent form, cf.
-         'Library.CLAUSE_TO_SEQUENT'), 2. the list of missing variables (cf.
-         'Library.enumerate_quantified_vars', 3. the hypothesis (initially,
+         'QbfLibrary.CLAUSE_TO_SEQUENT'), 2. the list of missing variables (cf.
+         'QbfLibrary.enumerate_quantified_vars', 3. the hypothesis (initially,
          this is 'matrix'), and 4. the list of literals in the clause (cf.
-         'Library.literals_in_clause' *)
+         'QbfLibrary.literals_in_clause' *)
       val clause_dict = Lib.snd (List.foldl foldthis
         (1, Redblackmap.mkDict Int.compare)
         (Drule.CONJUNCTS (Thm.ASSUME matrix)))
@@ -222,8 +222,8 @@ struct
                      Int.toString index)
               else ()
             val (c_dict, clauses) = Lib.foldl_map derive (c_dict, indices)
-            val clause = List.foldl (Library.QRESOLVE_CLAUSES) (List.hd clauses)
-              (List.tl clauses)
+            val clause = List.foldl (QbfLibrary.QRESOLVE_CLAUSES)
+              (List.hd clauses) (List.tl clauses)
           in
             (Redblackmap.insert (c_dict, index, clause), clause)
           end
