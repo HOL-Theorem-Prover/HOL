@@ -1,0 +1,78 @@
+reverse1(;a,n) [data_array(a,n+1,data)] {
+   local i, j, tmp_i, tmp_j;
+   i = 0; j = n;
+   while (i < j) [data_array(a, n+1, _data2) * (j == n - i) *       
+       ``!x. x <= n ==> (EL x _data2 = EL (
+            if i <= x /\ x <= j then x else (n-x)) data)``] {
+      tmp_i = (a + i) -> dta;
+      tmp_j = (a + j) -> dta;
+      (a + i) -> dta = tmp_j; 
+      (a + j) -> dta = tmp_i;
+      i = i + 1;
+      j = j - 1;
+   }
+} [data_array(a,n+1,_data2) *
+   ``!x.  x <= n ==> (EL x _data2 = EL (n-x) data)``]
+
+
+reverse2(;a,n) [data_array(a,n+1,data)] {
+   local i, j, tmp_i, tmp_j;
+   i = 0; j = n;
+   while (i < j) [data_array(a, n+1, _data2) * (j == n - i) *       
+       ``!x. x <= n ==> (EL x _data2 = EL (
+            if i <= x /\ x <= j then x else (n-x)) data)``] {
+      tmp_i = (a + i) -> dta;
+      tmp_j = (a + j) -> dta;
+      (a + i) -> dta = tmp_j; 
+      (a + j) -> dta = tmp_i;
+      i = i + 1;
+      j = j - 1;
+   }
+} [data_array(a,n+1,``REVERSE data``)]
+
+
+reverse3(;a,n) [data_array(a,n+1,data)] {
+   local i, j, tmp_i, tmp_j;
+   i = 0; j = n;
+   loop_spec [data_array(a, n+1, data) * (j == n - i)] {
+   while (i < j)  {
+      tmp_i = (a + i) -> dta;
+      tmp_j = (a + j) -> dta;
+      (a + i) -> dta = tmp_j; 
+      (a + j) -> dta = tmp_i;
+      i = i + 1;
+      j = j - 1;
+   }} [data_array(a, n+1, _data2) * 
+       ``!x. x <= n ==> (EL x data2 = EL (
+            if old(i) <= x /\ x <= old(j) then (n-x) else x) data)``]
+} [data_array(a,n+1,``REVERSE data``)]
+
+
+reverse4(;a,n) [data_array(a,n+1,data)] {
+   local i, j, tmp_i, tmp_j;
+   i = 0; j = n;
+   loop_spec [data_array(a+i, (j+1)-i, data)] {
+   while (i < j)  {
+      tmp_i = (a + i) -> dta;
+      tmp_j = (a + j) -> dta;
+      (a + i) -> dta = tmp_j; 
+      (a + j) -> dta = tmp_i;
+      i = i + 1;
+      j = j - 1;
+   }} [data_array(a+old(i), (old(j)+1)-old(i), ``REVERSE data``)]
+} [data_array(a,n+1,``REVERSE data``)]
+
+
+reverse5(;a,n) [data_array(a,n+1,data)] {
+   local i, j, tmp_i, tmp_j;
+   i = 0; j = n;
+   loop_spec [data_interval(a+i, a+j, data)] {
+   while (i < j)  {
+      tmp_i = (a + i) -> dta;
+      tmp_j = (a + j) -> dta;
+      (a + i) -> dta = tmp_j; 
+      (a + j) -> dta = tmp_i;
+      i = i + 1;
+      j = j - 1;
+   }} [data_interval(a+old(i), a+old(j), ``REVERSE data``)]
+} [data_array(a,n+1,``REVERSE data``)]

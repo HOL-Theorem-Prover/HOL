@@ -147,7 +147,7 @@ REPEAT STRIP_TAC THENL [
    REPEAT STRIP_TAC THEN
    EQ_TAC THEN ASM_SIMP_TAC arith_ss [] THEN
    REPEAT STRIP_TAC THEN
-   MP_TAC (Q.SPECL [`data'`, `m_const`, `n'`] SORTED_EL_LESS_EQ) THEN
+   MP_TAC (Q.SPECL [`data'`, `m_const`, `i`] SORTED_EL_LESS_EQ) THEN
    ASM_SIMP_TAC arith_ss [],
 
 
@@ -157,7 +157,7 @@ REPEAT STRIP_TAC THENL [
    REPEAT STRIP_TAC THEN
    EQ_TAC THEN ASM_SIMP_TAC arith_ss [] THEN
    REPEAT STRIP_TAC THEN
-   MP_TAC (Q.SPECL [`data'`, `n'`, `m_const`] SORTED_EL_LESS_EQ) THEN
+   MP_TAC (Q.SPECL [`data'`, `i`, `m_const`] SORTED_EL_LESS_EQ) THEN
    ASM_SIMP_TAC arith_ss [],
 
 

@@ -2250,6 +2250,7 @@ let
    val (split_sfs,_) = bagSyntax.dest_bag split_sfb;
    val (imp_sfs,_) = bagSyntax.dest_bag imp_sfb;
 
+
    (*search lists*)
    val found_opt = first_opt (search_fun ss context imp_sfs) split_sfs;
    val _ = if isSome found_opt then () else raise UNCHANGED;
@@ -2483,8 +2484,8 @@ struct
         holfoot_var_res_map_REWRITES,
         holfoot_separation_combinator_def,
         REPLACE_ELEMENT_compute,
+        REPLACE_ELEMENT___REPLACE_ID,
         LENGTH_REPLACE_ELEMENT, REPLACE_ELEMENT_DEF,
-        EL_REPLACE_ELEMENT, HD_REPLACE_ELEMENT,
         LENGTH_FIRSTN_MIN, LENGTH_DROP,
 
         SUB1, arithmeticTheory.ADD1, arithmeticTheory.NOT_LESS,
@@ -2495,6 +2496,8 @@ struct
       
    val predicate_ssfrag2 = simpLib.merge_ss [predicate_ssfrag1,
       simpLib.rewrites [
+        EL_REPLACE_ELEMENT, HD_REPLACE_ELEMENT,
+        REPLACE_ELEMENT___NO_REPLACE, 
         holfoot_ap_data_array___SIMP_THMS___PRECOND,
         TAKE_APPEND1, TAKE_APPEND2,
         BUTFIRSTN_APPEND1, BUTFIRSTN_APPEND2,

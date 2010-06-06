@@ -789,6 +789,13 @@ REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [LIST_TO_FUN_THM]);
 
 
+val NULL_DROP = store_thm ("NULL_DROP",
+``!n l. NULL (DROP n l) = (LENGTH l <= n)``,
+Induct_on `l` THEN (
+   ASM_SIMP_TAC (list_ss++boolSimps.LIFT_COND_ss) []
+));
+
+
 val DROP_TAKE_PRE_LENGTH = store_thm ("DROP_TAKE_PRE_LENGTH",
 ``!xs. ~(xs = []) ==> ((DROP (LENGTH xs - 1) xs = [LAST xs]) /\
                        (TAKE (LENGTH xs - 1) xs = FRONT xs))``,
@@ -814,6 +821,15 @@ val SWAP_ELEMENTS_def = Define `
 SWAP_ELEMENTS n m l =
   (REPLACE_ELEMENT (EL n l) m
       (REPLACE_ELEMENT (EL m l) n l))`
+
+val SWAP_ELEMENTS_INTRO = store_thm ("SWAP_ELEMENTS_INTRO",
+``!n m l e1 e2.
+  (EL n l = e1) /\ (EL m l = e2) ==>
+  ((REPLACE_ELEMENT e1 m
+      (REPLACE_ELEMENT e2 n l)) =
+  SWAP_ELEMENTS n m l)``,
+SIMP_TAC std_ss [SWAP_ELEMENTS_def]);
+
 
 val LENGTH_SWAP_ELEMENTS = store_thm ("LENGTH_SWAP_ELEMENTS",
 ``LENGTH (SWAP_ELEMENTS n m l) = LENGTH l``,

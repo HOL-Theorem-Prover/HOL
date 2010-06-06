@@ -7644,7 +7644,7 @@ ASM_REWRITE_TAC [var_res_exp_add_sub_REWRITES]);
 val holfoot_ap_data_array_interval___same_start___SPLIT___ai = store_thm (
    "holfoot_ap_data_array_interval___same_start___SPLIT___ai",
 ``!c1 c2 c3 c4 c5 lc data.
-(c1 <= c3) /\ (c3 < c1 + c2) ==>
+(c1 <= SUC c3) /\ (c3 < c1 + c2) ==>
 ((SUC c3 = c4) /\ (c2 − (SUC c3 − c1) = c5) /\ (SUC c3 − c1 = lc)) ==>
 
 (holfoot_ap_data_array (var_res_exp_const c1) (var_res_exp_const c2) data =
@@ -7663,7 +7663,7 @@ DECIDE_TAC);
 val holfoot_ap_data_array_interval___same_start___SPLIT___ii = store_thm (
    "holfoot_ap_data_array_interval___same_start___SPLIT___ii",
 ``!c1 c2 c3 c4 c5 lc data.
-(c1 <= c3) /\ (c3 <= c2) ==>
+(c1 <= SUC c3) /\ (c3 <= c2) ==>
 ((SUC c3 = c4) /\ (c2 = c5) /\ (SUC c3 - c1 = lc)) ==>
 
 (holfoot_ap_data_interval (var_res_exp_const c1) (var_res_exp_const c2) data =
