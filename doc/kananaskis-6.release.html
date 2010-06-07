@@ -92,6 +92,26 @@ or <code>.hol-config.ML</code>.  The “home” directory is the one
 residing at the environment <code>HOME</code>,
 or <code>HOMEPATH</code>, or <code>APPDATA</code> (the latter two are
 used on Windows).</p></li>
+
+<li><p>There are two new “document-level” modes for using HOL’s
+LaTeX-pretty-printing technology (originally due to Ramana Kumar and
+Thomas Türk).  In both, terms, types and theorems become
+straightforward to embed in LaTeX documents.  For example, one might
+write something like</p>
+<pre>
+        The term \HOLtm{p1 /\ q2} is a typical conjunction.
+</pre>
+<p> and have this turned into </p>
+<pre>
+        The term <i>p₁</i> ∧ <i>q₂</i> is a typical conjunction.
+</pre>
+<p> after LaTeX has been run.  The ASCII conjunction has turned into a
+nice LaTeX maths symbol, and the term has been parsed, allowing
+variables to be printed in italic font, and with trailing digits
+sub-scripted. </p>
+</li>
+
+
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
