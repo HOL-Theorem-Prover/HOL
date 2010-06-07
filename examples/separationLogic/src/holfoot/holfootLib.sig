@@ -186,6 +186,7 @@ end
    val add_rewrites : Abbrev.thm list -> holfoot_tactics.gen_step_tac_opt;
    val add_convs : Abbrev.conv list -> holfoot_tactics.gen_step_tac_opt;
    val add_ssfrags : simpLib.ssfrag list -> holfoot_tactics.gen_step_tac_opt;
+   val combined_gen_step_tac_opt : holfoot_tactics.gen_step_tac_opt list -> holfoot_tactics.gen_step_tac_opt;
    val add_inference_groups  : (int * holfoot_tactics.var_res_inference_group) list *
                                (int * holfoot_tactics.var_res_inference_group) list *
                                (int * holfoot_tactics.var_res_inference_group) list -> holfoot_tactics.gen_step_tac_opt

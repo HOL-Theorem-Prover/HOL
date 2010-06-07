@@ -26,6 +26,11 @@ let
   val _ = print_with_style [Bold] "External Tools:\n";
   val s =   "  --yices use the Yices SMT-solver (default off)\n\n";
   val _ = print s;
+  val _ = print_with_style [Bold] "Debugging options:\n";
+  val s =   "  -p      print profiling information\n";
+  val s = s^"  -v      verbose level (values 1 - 5)\n";
+  val s = s^"  -vt     verbose level try (values 1 - 5)\n\n";
+  val _ = print s;
   val _ = print_with_style [Bold] "Help:\n";
   val s =   "  -h      this help\n";
   val s = s^"  -hi     help on interactive mode\n\n";
@@ -221,6 +226,14 @@ fun holfoot_run (full, filemode_command) = let
    val _ = Feedback.set_trace "metis" 0
    val _ = Globals.interactive := false;
 
+   fun pluck_num_arg a =
+      let fun pl _ [] = raise ERR "pluck" "predicate not satisfied"
+          | pl _ [h] = raise ERR "pluck" "predicate not satisfied"
+          | pl A (h::n::t) = if (h = a) then (valOf (Int.fromString n), List.revAppend(A,t)) else pl (h::A) (n::t)
+      in pl []
+   end;
+
+
    val orgargs = CommandLine.arguments ();
    val args = orgargs;
    val (quiet, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-q") args)) 
@@ -237,12 +250,21 @@ fun holfoot_run (full, filemode_command) = let
       handle _ => (false, args);
    val (html_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--html") args)) 
       handle _ => (false, args);
+   val (do_profile, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-p") args)) 
+      handle _ => (false, args);
+   fun print_profile () = if not do_profile then () else
+      (print "\n\n";Profile.print_profile_results (Profile.results ()))
+
+   val (vl, args) = pluck_num_arg "-v" args handle _ => (0, args);
+   val (vlt, args) = pluck_num_arg "-vt" args handle _ => (0, args);
 
    val _ = Parse.current_backend := (if (raw_output) then PPBackEnd.raw_terminal else 
                                     (if (html_output) then PPBackEnd.html_terminal else PPBackEnd.vt100_terminal));
    val _ = Feedback.set_trace "Unicode" (if unicode then 1 else 0)
    val _ = Feedback.set_trace "holfoot print file" (if html_output then 0 else 1);
    val _ = Feedback.set_trace "holfoot use Yices" (if yices then 1 else 0)
+   val _ = Feedback.set_trace "holfoot verbose level" vl;
+   val _ = Feedback.set_trace "holfoot verbose level try" vlt;
 
    val args = ((Lib.pluck (fn x => x = "-h") orgargs);print_help full;[])
       handle _ => args;
@@ -257,10 +279,10 @@ fun holfoot_run (full, filemode_command) = let
    fun check_file file =
       (prover file) handle
          _ => Parse.print_with_style [PPBackEnd.FG PPBackEnd.OrangeRed] "\nException raised!!!\n\n\n"
-
+   val _ = Profile.reset_all ();
    val _ = if orgargs = [] then print_help full else ();
 in
-   ((map check_file args);())
+   ((map check_file args);print_profile())
 end
 
 

@@ -3702,23 +3702,32 @@ fun gen_step_param___add_inferences p (inf_h', inf_m', inf_l') =
 
 local
 
-fun step_conv_map_fun l s1 (s2, c) = c;
+fun gen_step_conv_map_fun l s f = f;
+
+fun gen_step_conv_map_fun l s f =
+  let
+     fun f1 x =
+        (((!(do_profile_ref ())) s (fn () =>
+         (f x))) ())
+     fun f2 x = if !verbose_level = 0 andalso !verbose_level_try = 0 then f1 x else
+            let
+               val _ = if (l < !verbose_level_try) then
+                       print ("trying "^ s ^ "\n") else ()
+               val y = f1 x;
+               val _ = if (l < !verbose_level orelse l < !verbose_level_try) then
+                       print ("applying "^ s ^ "\n") else ()
+              in y end
+  in f2 end
 
 fun step_conv_map_fun l s1 (s2, c:var_res_inference) =
   let
      val s = s1 ^ " - "^s2;
-     fun conv p context dir t =
-        (((!(do_profile_ref ())) s (fn () =>
-         (c p context dir t))) ())
-     fun conv2 p context dir = if !verbose_level = 0 then conv p context dir else
-         (fn t => let
-            val _ = if (l < !verbose_level_try) then
-                       print ("trying "^ s ^ "\n") else ()
-            val thm = conv p context dir t;
-            val _ = if (l < !verbose_level) then
-                       print ("applying "^ s ^ "\n") else ()
-           in thm end)
-  in conv2 end
+     fun f1 (p, context, dir, t) = c p context dir t;
+     fun f2 p context dir t =
+        gen_step_conv_map_fun l s f1 (p, context, dir, t);
+  in
+     f2
+  end;
 
 fun convL p stops n list =
   let
@@ -3811,20 +3820,30 @@ fun VAR_RES_GEN_STEP_CONSEQ_CONV (p:gen_step_param) ssp step_opt n context  =
            val step_opt' = step_opt_sub step_opt n1;
            val t' = if (isSome thm1_opt) then ((fst o dest_imp o concl o valOf) thm1_opt) else t
 
+           fun apply_second_step s f (n2, thm2_opt) =
+               if (isSome thm2_opt) then (n2, thm2_opt) else
+               ((gen_step_conv_map_fun 1 ("toplevel - "^s) 
+                  (fn x => let 
+                      val (n, thm_opt) = f x;
+                      val _ = if isSome thm_opt then () else Feedback.fail()
+                      in (n, thm_opt) end) t')
+                  handle Interrupt => raise Interrupt
+                       | _ => (0, NONE))
 
-           val (n2, thm2_opt) =
+
+           val (n2, thm2_opt) = apply_second_step "Normalise Structure"
+               (fn t' => (
                (0, SOME (snd (EQ_IMP_RULE (((REDEPTH_CONV VAR_RES_STRUCTURE_NORMALISE_CONV) THENC
-                                            REWRITE_CONV []) t'))))
-               handle UNCHANGED => (0, NONE)
-                    | HOL_ERR _ => (0, NONE)
-           val (n2, thm2_opt) = if (isSome thm2_opt) then (n2, thm2_opt) else
-                (if step_opt_allows_steps step_opt' 0 (SOME 1) then
-                 vcc step_opt' t' else (0, NONE))
-           val (n2, thm2_opt) = if (isSome thm2_opt) then (n2, thm2_opt) else
-                (if not (step_opt_allows_steps step_opt' 0 (SOME 1)) then (0, NONE) else
-               ((1, SOME (snd (EQ_IMP_RULE (prop_simp_CONV t'))))
-               handle UNCHANGED => (0, NONE)
-                    | HOL_ERR _ => (0, NONE)))
+                                            REWRITE_CONV []) t')))))) (0, NONE);
+
+           val (n2, thm2_opt) = apply_second_step "Generate verification conditions"
+                (fn t' => (if step_opt_allows_steps step_opt' 0 (SOME 1) then
+                 vcc step_opt' t' else (0, NONE))) (n2, thm2_opt);
+
+           val (n2, thm2_opt) = apply_second_step "Simplification"
+                (fn t' => if not (step_opt_allows_steps step_opt' 0 (SOME 1)) then (0, NONE) else
+                   (1, SOME (snd (EQ_IMP_RULE (prop_simp_CONV t'))))) (n2, thm2_opt);
+
 
            val thm =
               if (isSome thm1_opt) then

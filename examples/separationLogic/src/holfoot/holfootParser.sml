@@ -1247,6 +1247,14 @@ val (ident_decl, program_item_decl) = dest_Pprogram prog2;
 val Pentailments ((comment, p1, p2)::_) = prog2
 *)
 
+fun find_duplicates [] = []
+  | find_duplicates (x::xs) = 
+    let
+       val (xL,xs') = partition (fn y => (x = y)) xs;
+       val dL = find_duplicates xs';
+    in
+       if null xL then dL else ((hd xL)::dL)
+    end;
 
 fun Pprogram2hol procL_opt (Pprogram (ident_decl, program_item_decl)) =
    let
@@ -1254,9 +1262,16 @@ fun Pprogram2hol procL_opt (Pprogram (ident_decl, program_item_decl)) =
 
       (*parse resources*)
       val resource_list = filter p_item___is_resource program_item_decl;
+      val resource_names = map (fn Presource (name,_,_) => name) resource_list;
+      val resource_names_dL = find_duplicates resource_names;
+      val _ = if null resource_names_dL then () else
+              (AssembleHolfootParser.print_parse_error (String.concat (
+                  "Multiple resource definition found for:\n"::
+                   (map (fn n => (" - '"^n^"'\n")) resource_names_dL)));Feedback.fail ());
+
       val emp_s = (Redblackset.empty String.compare);
       val resource_parseL = map (Presource2hol (emp_s, emp_s)) resource_list;
-      val resource_parse_termL =map (fn (name, (prop, vars)) =>
+      val resource_parse_termL = map (fn (name, (prop, vars)) =>
           let
              val name_term = stringLib.fromMLstring name;
              val varL = listSyntax.mk_list (vars, Type `:holfoot_var`);
@@ -1270,6 +1285,13 @@ fun Pprogram2hol procL_opt (Pprogram (ident_decl, program_item_decl)) =
 
       (*parse procedure specs*)
       val fun_decl_list = filter p_item___is_fun_decl program_item_decl;
+      val fun_names = map (fn Pfundecl (_,name,_,_,_,_,_,_) => name) fun_decl_list;
+      val fun_names_dL = find_duplicates fun_names;
+      val _ = if null fun_names_dL then () else
+              (AssembleHolfootParser.print_parse_error (String.concat (
+                  "Multiple procedure definition found for:\n"::
+                   (map (fn n => (" - '"^n^"'\n")) fun_names_dL)));Feedback.fail ());
+
       val res_varL = map (fn Presource (n, vL, _) => (n, vL)) resource_list;
       val res_propL = map (fn Presource (_, _, p) => p) resource_list;
       val init_post_prop = if null res_propL then Aprop_spred Aspred_empty else

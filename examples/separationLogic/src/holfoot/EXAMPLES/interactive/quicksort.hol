@@ -130,12 +130,14 @@ val _ = holfoot_tac_verify_spec file2 NONE
 
 val file3 = concat [examplesDir, "/interactive/quicksort-full-loopspec.dsf"];
 
-
 (* holfoot_set_goal file3 *)
 val quicksort_loopspec_TAC = 
-xHF_SOLVE_TAC [quicksort_opt] THEN
+xHF_SOLVE_TAC [quicksort_opt, no_expands, simple_prop_simps] THEN
 REPEAT STRIP_TAC THENL [
+   HF_SOLVE_TAC,
+
    Q.EXISTS_TAC `(HD data)::data2` THEN
+   HF_SOLVE_TAC THEN
    HF_VC_TAC THEN
    Cases_on `data` THEN (
       FULL_SIMP_TAC list_ss []
@@ -148,64 +150,53 @@ REPEAT STRIP_TAC THENL [
    ],
 
 
-   Tactical.REVERSE (Cases_on `lc <= rc - 1`) THEN1 (
+   ASM_SIMP_TAC arith_ss [] THEN
+   xHF_SOLVE_TAC [simple_prop_simps, no_expands, quicksort_opt] THEN
+   Cases_on `lc = 0` THEN1 xHF_SOLVE_TAC [quicksort_opt, simple_prop_simps] THEN
+   Cases_on `lc = rc` THEN1 (
       xHF_SOLVE_TAC [quicksort_opt] THEN
       HF_VC_TAC THEN
-      `rc - lc = 0` by DECIDE_TAC THEN
       ASM_SIMP_TAC std_ss [GSYM EL, REPLACE_ELEMENT___REPLACE_ID, PERM_REFL]
    ) THEN  
-   Cases_on `lc = 0` THEN1 xHF_SOLVE_TAC [quicksort_opt] THEN
-   xHF_CONTINUE_TAC [use_asms] THEN
    REPEAT STRIP_TAC THEN
    Q.EXISTS_TAC `data2 ++ DROP (rc - lc) (SWAP_ELEMENTS 0 (rc - lc) data)` THEN
+   ASM_SIMP_TAC list_ss [SWAP_ELEMENTS_INTRO] THEN
+   HF_SOLVE_TAC THEN
    REPEAT STRIP_TAC THEN
    HF_VC_TAC THEN
-   FULL_SIMP_TAC std_ss [GSYM EL, GSYM SWAP_ELEMENTS_def] THEN
-   `rc - lc = LENGTH data2` by ALL_TAC THEN1 (
-      IMP_RES_TAC PERM_LENGTH THEN
-      ASM_SIMP_TAC list_ss [LENGTH_SWAP_ELEMENTS]
-   ) THEN
-   FULL_SIMP_TAC list_ss [BUTFIRSTN_LENGTH_APPEND, FIRSTN_LENGTH_APPEND,
-      LENGTH_SWAP_ELEMENTS] THEN
    REPEAT STRIP_TAC THENL [
+       Q.PAT_ASSUM `PERM X data2` (ASSUME_TAC o ONCE_REWRITE_RULE [PERM_SYM]) THEN
        ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [] THEN
        ONCE_REWRITE_TAC [PERM_FUN_APPEND] THEN
        SIMP_TAC list_ss [] THEN
        MATCH_MP_TAC (ONCE_REWRITE_RULE [PERM_SYM] PERM_SWAP_ELEMENTS) THEN
-       ASM_SIMP_TAC arith_ss [],
+       FULL_SIMP_TAC arith_ss [LENGTH_SWAP_ELEMENTS],
 
 
        Cases_on `n < LENGTH data2` THEN (
-          ASM_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2, LENGTH_SWAP_ELEMENTS,
-           EL_BUTFIRSTN, EL_SWAP_ELEMENTS]
+          FULL_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2, LENGTH_SWAP_ELEMENTS,
+           EL_BUTFIRSTN, EL_SWAP_ELEMENTS, LENGTH_SWAP_ELEMENTS]
        )
    ],
 
 
 
+   HF_SOLVE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   Q.EXISTS_TAC `HD (data)::data2` THEN
+   REPEAT STRIP_TAC THEN
    `?dh dtl. data = dh::dtl` by (Cases_on `data` THEN FULL_SIMP_TAC list_ss []) THEN
-   Q.EXISTS_TAC `dh::data2` THEN
    FULL_SIMP_TAC list_ss [] THEN
-   HF_CONTINUE_TAC THEN
+   HF_SOLVE_TAC THEN
    REPEAT STRIP_TAC THEN
    Q.EXISTS_TAC `rdata ++ rdata'` THEN
+   FULL_SIMP_TAC list_ss [SWAP_ELEMENTS_INTRO] THEN
+   HF_SOLVE_TAC THEN
+   STRIP_TAC THEN
+   REPEAT (Q.PAT_ASSUM `LENGTH Y = X` (ASSUME_TAC o GSYM)) THEN
+   `r_const − b_const' = PRE (LENGTH rdata)` by DECIDE_TAC THEN
+   FULL_SIMP_TAC list_ss [MIN_EQ] THEN
    HF_VC_TAC THEN
-   Q.SUBGOAL_THEN `REPLACE_ELEMENT (EL (r_const − b_const') (dh::data2)) 0
-      (REPLACE_ELEMENT dh (r_const − b_const') (dh::data2)) =
-    SWAP_ELEMENTS (r_const - b_const') 0 (dh::data2)` 
-       (fn thm => FULL_SIMP_TAC std_ss [thm]) THEN1 (
-       SIMP_TAC std_ss [SWAP_ELEMENTS_def, EL, HD]
-   ) THEN
-   `r_const + 1 - b_const' = LENGTH rdata` by ALL_TAC THEN1 (
-      IMP_RES_TAC PERM_LENGTH THEN
-      FULL_SIMP_TAC list_ss [LENGTH_SWAP_ELEMENTS]
-   ) THEN
-   `(r_const − b_const') = PRE (LENGTH rdata)` by DECIDE_TAC THEN
-   `LENGTH rdata <= LENGTH (dh::data2)` by ALL_TAC THEN1 (
-       ASM_SIMP_TAC list_ss []
-   ) THEN
-   Q.PAT_ASSUM `LENGTH data2 = X` (ASSUME_TAC o GSYM) THEN
-   FULL_SIMP_TAC list_ss [FIRSTN_LENGTH_APPEND, BUTFIRSTN_LENGTH_APPEND] THEN
    REPEAT STRIP_TAC THENL [
       MATCH_MP_TAC sortingTheory.SORTED_APPEND THEN
       FULL_SIMP_TAC arith_ss [relationTheory.transitive_def, EL] THEN
@@ -218,10 +209,10 @@ REPEAT STRIP_TAC THENL [
        MEM y (DROP (LENGTH rdata) (SWAP_ELEMENTS (PRE (LENGTH rdata)) 0 (dh::data2)))` by 
           METIS_TAC[PERM_MEM_EQ] THEN
       NTAC 2 (POP_ASSUM MP_TAC) THEN
-      Q.PAT_ASSUM `LENGTH rdata <= X` MP_TAC THEN
-      SIMP_TAC list_ss [MEM_EL, NOT_LESS, 
-           SWAP_ELEMENTS_def, REPLACE_ELEMENT_SEM, GSYM LEFT_FORALL_IMP_THM,
-           EL_REPLACE_ELEMENT, EL_FIRSTN, EL_BUTFIRSTN] THEN
+      Q.SUBGOAL_THEN `LENGTH rdata <= SUC (LENGTH data2)` MP_TAC THEN1 DECIDE_TAC THEN
+      SIMP_TAC list_ss [MEM_EL, NOT_LESS, GSYM LEFT_FORALL_IMP_THM,
+           SWAP_ELEMENTS_def, REPLACE_ELEMENT_SEM, LENGTH_REPLACE_ELEMENT,
+           EL_FIRSTN, EL_BUTFIRSTN] THEN
       REPEAT STRIP_TAC THENL [
          Cases_on `PRE (LENGTH rdata)` THEN1 (
             ASM_SIMP_TAC list_ss []
@@ -234,16 +225,18 @@ REPEAT STRIP_TAC THENL [
          Cases_on `n' + LENGTH rdata` THEN (
             ASM_SIMP_TAC list_ss []
          )
-       ],
+      ],
 
-       ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [] THEN
-       ONCE_REWRITE_TAC [PERM_FUN_APPEND] THEN
-       SIMP_TAC list_ss [] THEN
-       MATCH_MP_TAC (ONCE_REWRITE_RULE [PERM_SYM] PERM_SWAP_ELEMENTS) THEN
-       ASM_SIMP_TAC list_ss []
+
+      ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [] THEN
+      ONCE_REWRITE_TAC [PERM_FUN_APPEND] THEN
+      SIMP_TAC list_ss [] THEN
+      MATCH_MP_TAC (ONCE_REWRITE_RULE [PERM_SYM] PERM_SWAP_ELEMENTS) THEN
+      ASM_SIMP_TAC list_ss []
    ],
    
-   HF_VC_TAC THEN
+   HF_SOLVE_TAC THEN HF_VC_TAC THEN
+   REPEAT STRIP_TAC THEN
    Q.ABBREV_TAC `len = e_const' + 1 - b_const'`  THEN
    `(len = 0) \/ (len = 1)` by (UNABBREV_ALL_TAC THEN DECIDE_TAC) THEN (
       FULL_SIMP_TAC std_ss [LENGTH_EQ_NUM_compute, SORTED_DEF]

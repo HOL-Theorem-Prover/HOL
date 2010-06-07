@@ -1,6 +1,5 @@
-open HolKernel boolLib bossLib;
-
 local 
+   open HolKernel boolLib bossLib;
    val holfoot_base_dir = Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/";
    val use_polyml = (Systeml.ML_SYSNAME = "poly") andalso
      (Lib.mem "holfoot.state" (Portable.listDir (holfoot_base_dir^"poly")) handle SysErr _ => false)
