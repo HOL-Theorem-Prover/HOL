@@ -7,7 +7,7 @@ val padl = StringCvt.padLeft #" "
 
 fun test s (problem, result) = let
   val p_s = padr 30 (term_to_string problem)
-  val r_s = padl 10 (term_to_string result)
+  val r_s = padl 15 (term_to_string result)
   val _ = print p_s
   val th = QCONV s problem
   val answer = rhs (concl th)
@@ -15,7 +15,7 @@ fun test s (problem, result) = let
                 else ("FAILED!", false)
 in
   print (" = " ^ r_s);
-  print (padl 19 (#1 verdict) ^ "\n");
+  print (padl 14 (#1 verdict) ^ "\n");
   #2 verdict
 end;
 
