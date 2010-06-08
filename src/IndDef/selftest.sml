@@ -30,6 +30,15 @@ val (rtc_rules, rtc_ind, rtc_cases) = Hol_reln`
 `;
 val _ = checkhyps rtc_rules
 
+val _ = print "*** Testing schematic variables for multiple relations\n"
+val (mscheme_rules, mscheme_ind, mscheme_cases) = Hol_reln`
+  (!n m. n < m ==> foo P n m) /\
+  (!n m. P n ==> foo P n m) /\
+  (!n m. bar P n ==> foo P n m) /\
+  (!n. 4 < n ==> bar P (2 * n))
+`
+val _ = checkhyps mscheme_rules
+
 val strongrtc = derive_strong_induction (rtc_rules, rtc_ind)
 
 val _ = print "*** Testing inductive definitions - existential vars\n"
@@ -129,6 +138,7 @@ val _ = checkhyps single_rules
 
 val _ = derive_strong_induction(single_rules, single_ind)
 
+(* schematic parameters on mutual recursion *)
 val _ = OS.Process.exit OS.Process.success
 
 

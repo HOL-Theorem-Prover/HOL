@@ -63,13 +63,14 @@ end;
    in which case we return ["C", "D"]
  ---------------------------------------------------------------------------*)
 
-fun names_from_casethm thm =
- let open HolKernel boolSyntax
-     val eqns = map (#2 o strip_forall) (strip_conj (concl thm))
-     val cnsts = map (#1 o strip_comb o lhs) eqns
- in
-    map (#1 o dest_const) cnsts
- end;
+fun names_from_casethm thm = let
+  open HolKernel boolSyntax
+  val forallbod = #2 o strip_forall
+  val eqns = thm |> concl |> forallbod |> strip_conj |> map forallbod
+  val cnsts = map (#1 o strip_comb o lhs) eqns
+in
+  map (#1 o dest_const) cnsts
+end
 
 fun Hol_mono_reln monoset tm =
  let val (rules, indn, cases) =

@@ -191,6 +191,12 @@ arguments than they were expecting.  E.g.,</p>
 definitions where type variables appear only in schematic
 variables.</p></li>
 
+<li><p><code>Hol_reln</code> now correctly accepts inductive
+definitions defining multiple (presumably multiply recursive)
+relations with schematic variables.  Note that for a variable to be
+detected as schematic in this situation, it needs to be a parameter to
+all relations, even if it may not be used in all of them.
+
 <li><p>The syntax <code>num$0</code> failed to parse.  Thanks to
 Behzad Akbarpour for the report of this bug.</p></li>
 
