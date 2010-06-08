@@ -138,7 +138,4 @@ val _ = checkhyps single_rules
 
 val _ = derive_strong_induction(single_rules, single_ind)
 
-(* schematic parameters on mutual recursion *)
 val _ = OS.Process.exit OS.Process.success
-
-
