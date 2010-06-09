@@ -4,36 +4,32 @@ struct
 (* reads the output of bin/build on standard input, and turns it into a
    mail message *)
 
-val timezone_string = let
-  val t = Date.localOffset()
-  val secs = Time.toSeconds t
-  val total_minutes = Int.abs secs div 60
-  val hrs = total_minutes div 60
-  val minpart = total_minutes mod 60
-  val pad = StringCvt.padLeft #"0" 2
+fun die s = (TextIO.output(TextIO.stdErr, s);
+             TextIO.flushOut TextIO.stdErr;
+             OS.Process.exit OS.Process.failure)
+
+
+fun usage() = die ("Usage:\n  "^CommandLine.name()^
+                   " from-address system-description\n")
+
+
+fun datestring () = let
+  (* SML implementations have such broken time/date code that this seems
+     best - now only works on Unixy systems *)
+  val tmp = OS.FileSys.tmpName()
+  val result = OS.Process.system ("date +\"%a, %d %b %Y %H:%M %z\" > "^tmp)
+  val _ = OS.Process.isSuccess result orelse
+          die "Couldn't run date"
+  val istrm = TextIO.openIn tmp
 in
-  (if secs <= 0 then "+" else "-") ^
-  pad (Int.toString hrs) ^ pad (Int.toString minpart)
+  TextIO.inputAll istrm before TextIO.closeIn istrm
 end
 
-fun datestring t = let
-  open Date
-in
-  fmt "%a, %d %b %Y %H:%M " (fromTimeLocal t) ^ timezone_string
-end
-
-fun standard_header from subject t =
+fun standard_header from subject =
     "To: hol-builds@lists.sourceforge.net\n\
     \From: "^from^"\n\
-    \Date: "^datestring t^"\n\
-    \Subject: "^subject^"\n\n"
-
-fun usage() =
-    (TextIO.output(TextIO.stdErr,
-                   "Usage:\n  "^CommandLine.name()^
-                   " from-address system-description\n");
-     TextIO.flushOut TextIO.stdErr;
-     OS.Process.exit OS.Process.failure)
+    \Date: "^datestring()^
+    "Subject: "^subject^"\n\n"
 
 fun main() = let
   val (from, sysdesc) = case CommandLine.arguments() of
@@ -44,11 +40,11 @@ fun main() = let
 in
   if String.isSuffix "Hol built successfully.\n" buildlog then
     output(stdOut,
-           standard_header from ("SUCCESS: "^sysdesc) (Time.now()) ^
+           standard_header from ("SUCCESS: "^sysdesc) ^
            buildlog)
   else
     output(stdOut,
-           standard_header from ("FAILURE: "^sysdesc) (Time.now()) ^
+           standard_header from ("FAILURE: "^sysdesc) ^
            buildlog)
 end
 
