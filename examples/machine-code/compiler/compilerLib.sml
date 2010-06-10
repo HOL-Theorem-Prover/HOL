@@ -2,7 +2,8 @@ structure compilerLib :> compilerLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open decompilerLib
+open decompilerLib;
+open reg_allocLib;
 open codegenLib codegen_x86Lib;
 
 open prog_armLib prog_ppcLib prog_x86Lib;
@@ -22,6 +23,10 @@ fun AUTO_ALPHA_CONV () = let
       (RATOR_CONV doit THENC RAND_CONV doit) tm
     else ALL_CONV tm
   in doit end
+
+val COMPILER_TAC_LEMMA = prove(
+  ``!a b:bool. (a /\ a /\ b = a /\ b) /\ (a \/ a \/ b = a \/ b)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_SIMP_TAC std_ss []);
 
 val COMPILER_TAC =
     SIMP_TAC bool_ss [LET_DEF,word_div_def,word_mod_def,w2w_CLAUSES]
@@ -44,7 +49,8 @@ val COMPILER_TAC =
     THEN REPEAT STRIP_TAC
     THEN CONV_TAC (RAND_CONV (AUTO_ALPHA_CONV ()))
     THEN CONV_TAC ((RATOR_CONV o RAND_CONV) (AUTO_ALPHA_CONV ()))
-    THEN SIMP_TAC std_ss [AC CONJ_ASSOC CONJ_COMM, AC DISJ_COMM DISJ_ASSOC]
+    THEN SIMP_TAC std_ss [AC CONJ_ASSOC CONJ_COMM, AC DISJ_COMM DISJ_ASSOC, 
+                          COMPILER_TAC_LEMMA]
     THEN SIMP_TAC std_ss [WORD_SUB_RZERO, WORD_ADD_0, IF_IF,
                           AC WORD_ADD_COMM WORD_ADD_ASSOC,
                           AC WORD_MULT_COMM WORD_MULT_ASSOC,
@@ -250,49 +256,49 @@ fun collect_aux_fnames fname = let
   val fnames = filter (fn x => mem x fnames) (map fst (!to_compile))
   in fnames end;
   
-fun mc_compile fname target = TRUTH; (* let
+fun mc_compile fname target = let
   val fnames = collect_aux_fnames fname
-  val xs = map (fn f => (f,list_find f (!to_compile))) (rev fnames)   
-  val tm = list_mk_conj (map (concl o fst o snd) xs) 
+  val qs = map (fn f => (f,list_find f (!to_compile))) (rev fnames)   
+  val fun_const = car o fst o dest_eq o concl
+  val cs = map (fun_const o fst o snd) qs
+  fun make_temp_name s = "__" ^ s
+  val s = map (fn c => c |-> mk_var(make_temp_name (fst (dest_const c)),type_of c)) cs
+  val tm = subst s (list_mk_conj (map (concl o fst o snd) qs)) 
+  val input_tm = tm
   val n = list_find target [("arm",13),("ppc",31),("x86",1000)]
-  val imp = allocate_registers n tm
+  val imp = allocate_registers n input_tm
+
   fun strip_forall tm = strip_forall (snd (dest_forall tm)) handle HOL_ERR _ => tm
   val gs = (map strip_forall o list_dest dest_conj o fst o dest_imp o concl) imp
   val xs = zip (rev fnames) gs
-  fun do_all [] rws thms = thms
-    | do_all ((f,tm)::xs) rws thms = let
+  fun do_all [] thms = thms
+    | do_all ((f,tm)::xs) thms = let
         val (x1,x2,x3) = compile target tm
-        
- 
-  val ((f,tm)::xs) = xs
-
-
-  
-
-val (f1_def,f1_pre) = mc_define `
-  f1 (a,b,c,d:word32) =
-    let x = a + b + c + d in
-    let y = a + b + 5w in
-      (x,y)`;
-
-val (f2_def,f2_pre) = mc_define `
-  f2 (a,b,c) = if a <+ b then (a,b,c) else 
-                 let b = b-4w in 
-                 let c = c+5w in  
-                   f2 (a:word32,b:word32,c:word32)`;
-
-val (f3_def,f3_pre) = mc_define `
-  f3 (a,b) = 
-    let (x,y,z) = f2 (b,a,a-b) in
-    let (d,c) = f1 (z,x,y,x+5w) in
-      if d = c then (d,c) else (a,b)`  
-
-val target = "ppc"
-val fname = "f3"
-
-
-  
-*)
+        val x2c = fun_const x2
+        val x3c = fun_const x3
+        val s = [mk_var(make_temp_name(f),type_of x2c) |-> x2c]      
+        val xs = map (fn (x,tm) => (x,subst s tm)) xs
+        in do_all xs ((x1,x2,x3)::thms) end       
+  val zs = do_all xs []
+  fun prove_equiv [] rws = rws
+    | prove_equiv (((_,(x2,x3)),(_,y2,y3))::ts) rws = let
+        val goal = mk_conj(mk_eq(fun_const x2,fun_const y2),
+                           mk_eq(fun_const x3,fun_const y3))        
+        val th2 = auto_prove "mc_compile" (goal,
+          STRIP_TAC THEN TAILREC_TAC THEN AP_TERM_TAC THEN REWRITE_TAC rws
+          THEN SIMP_TAC std_ss [GUARD_def,FUN_EQ_THM] THEN REPEAT STRIP_TAC
+          THEN SIMP_TAC std_ss [ALIGNED_INTRO] THEN COMPILER_TAC)
+        val rws = th2::rws
+        in prove_equiv ts rws end
+  val rws = []
+  val ts = zip qs (rev zs)
+  val rws = prove_equiv ts rws
+  val rw = GSYM (RW [GSYM CONJ_ASSOC] (LIST_CONJ rws))
+  val (th,_,_) = hd zs
+  val th = RW [rw] th
+  val temp_cs = map (fst o dest_eq) (list_dest dest_conj (concl rw))
+  val _ = map (delete_const o fst o dest_const) temp_cs
+  in th end;
 
 fun mc_compile_all fname = 
   map (fn target => (target, mc_compile fname target)) ["arm","ppc","x86"]

@@ -284,8 +284,10 @@ fun subroutine_internal_vars (tm,t) = let
 
 fun clash_graph ts = let
   fun ok_var x = (type_of x = ``:word32``)
-  fun add_live_set ls t = FUN_COND
-       (mk_eq(listSyntax.mk_list(all_distinct ls,``:word32``),listSyntax.mk_list([],``:word32``)),t)
+  fun add_live_set2 ls1 ls2 t = FUN_COND
+       (mk_eq(listSyntax.mk_list(all_distinct ls1,``:word32``),
+              listSyntax.mk_list(all_distinct ls2,``:word32``)),t) 
+  fun add_live_set ls t = add_live_set2 ls [] t
   val fs = map (car o fst) ts
   fun get_internal_vars rhs = 
     if not (mem (car rhs) fs) handle HOL_ERR _ => true then [] else
@@ -304,19 +306,26 @@ fun clash_graph ts = let
     | live (FUN_LET (lhs,rhs,t)) = let
         val (ls,tt) = live t 
         val vs = (filter ok_var (free_vars lhs))
-        val ls = diff ls vs @ (filter ok_var (free_vars rhs))
+        val ls2 = diff ls vs
+        val ls = ls2 @ (filter ok_var (free_vars rhs))
         val ii = get_internal_vars rhs
-        val t = add_live_set (ii @ ls) (FUN_LET (lhs,rhs,tt))
+        val t = if ii = [] then add_live_set ls (FUN_LET (lhs,rhs,tt)) else
+                  add_live_set ls (add_live_set2 ls2 ii (FUN_LET (lhs,rhs,tt)))
         in (ls,t) end
   fun collect (FUN_VAL tm) = []
-    | collect (FUN_COND (tm,t)) = (fst o listSyntax.dest_list o fst o dest_eq) tm :: collect t
     | collect (FUN_IF (tm,x1,x2)) = collect x1 @ collect x2
     | collect (FUN_LET (lhs,rhs,t)) = collect t
-  val live_sets = append_lists 
-    (map (fn (f,t) => all_distinct (collect (snd (live t)))) ts)  
+    | collect (FUN_COND (tm,t)) = let
+         val f = fst o listSyntax.dest_list
+         val (x1,x2) = dest_eq tm
+         in (f x1, f x2) :: collect t end
+  val live_sets = append_lists (map (fn (f,t) => (collect (snd (live t)))) ts)  
   fun clash [] y z = false
-    | clash (x::xs) y z = (mem y x andalso mem z x) orelse clash xs y z
-  val all_vars = all_distinct (append_lists live_sets)
+    | clash ((x1,x2)::xs) y z = 
+        (mem y x1 andalso mem z x1) orelse
+        (mem y x1 andalso mem z x2) orelse
+        (mem y x2 andalso mem z x1) orelse clash xs y z
+  val all_vars = all_distinct (append_lists (map fst live_sets))
   val graph = map (fn v => (v,filter (clash live_sets v) all_vars)) all_vars
   val graph = map (fn (v,cs) => (v,filter (fn y => not (y = v)) cs)) graph
   in graph end
@@ -360,7 +369,7 @@ fun iterated_register_coalescing graph moves freq is_colourable n = let
     val moves = filter (fn (x,y) => not (x = w) andalso not (y = w)) moves
     in (graph,moves,joined) end;
   fun busy w = list_find w freq handle HOL_ERR _ => 0
-  fun no_print s = print s
+  fun no_print s = print ("    " ^ s ^ "\n")
   fun build_stack graph moves joined n result =
     (* simplification: ?w. ~(w IN ms) and degree w < n, then remove from graph *) let 
     (* val _ = no_print_graph graph *)
@@ -375,6 +384,7 @@ fun iterated_register_coalescing graph moves freq is_colourable n = let
     in build_stack graph moves joined n ((w,"r")::result) end handle HOL_ERR _ =>
     (* coalescing: ?x y. (x,y) IN moves and degree (x UNION y) < n, then combine x,y *) let
     fun combined_degree (x,y) = length (all_distinct (list_find x graph @ list_find y graph))
+                                handle HOL_ERR _ => n+1000
     val moves2 = filter (fn (x,y) => not (mem x (list_find y graph))) moves
     val moves2 = filter (fn (x,y) => combined_degree (x,y) < n) moves2
     val moves2 = sort (fn (x1,x2) => fn (y1,y2) => busy x1 + busy x2 >= busy y1 + busy y2) moves2
@@ -461,6 +471,12 @@ fun REMOVE_REFL_LET_CONV tm = let
   in if v = y then EXPAND_LET_CONV tm else NO_CONV tm end
   handle HOL_ERR _ => NO_CONV tm;
 
+fun REMOVE_DEAD_LET_CONV tm = let
+  val (x,y) = dest_let tm
+  val (v,x) = dest_abs x
+  in if mem v (free_vars x) then NO_CONV tm else EXPAND_LET_CONV tm end
+  handle HOL_ERR _ => NO_CONV tm;
+
 fun REG_ALLOC_CONV n tm = let
   val xs = map (repeat (snd o dest_forall)) (list_dest dest_conj tm)
   val ts = map (fn x => ((cdr o car) x, tm2ftree (cdr x))) xs  
@@ -471,33 +487,10 @@ fun REG_ALLOC_CONV n tm = let
   val colouring = iterated_register_coalescing graph moves freq is_colourable n
   fun COLOUR_ALPHA_CONV colouring tm = 
     ALPHA_CONV (colouring (fst (dest_abs tm))) tm handle HOL_ERR _ => NO_CONV tm
-  val thi = (BOTTOM_UP_CONV (COLOUR_ALPHA_CONV colouring) THENC
+  val thi = (BOTTOM_UP_CONV REMOVE_DEAD_LET_CONV THENC
+             BOTTOM_UP_CONV (COLOUR_ALPHA_CONV colouring) THENC
              BOTTOM_UP_CONV REMOVE_REFL_LET_CONV) tm
   in thi end;
-
-(*
-val input_tm = ``
-  (f1 (a,b,c,d:word32) =
-    let x = a + b + c + d in
-    let y = a + b + 5w in
-      (x,y)) /\
-  (f2 (a,b,c) = if a <+ b then (a,b,c) else f2 (a,b-4w,c+5w)) /\
-  (f3 (a,b) = 
-    let (x,y,z) = f2 (b,a,a-b) in
-    let (d,c) = f1 (z,x,y,x+5w) in
-      if d = c then (d,c) else (a,b))``  
-
-val input_tm = ``
-  (f1 (a:word32,b:word32,c:word32,d:word32) =
-     let r2 = a in
-     let r3 = b in
-     let s1 = r2 + r3 in
-     let y = s1 + c in
-     let x = r2 in
-      (x:word32,y:word32))``  
-
-val n = 30
-*)
 
 fun initial_clean tm = let
   val tms = list_dest dest_conj tm
