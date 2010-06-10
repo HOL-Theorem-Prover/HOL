@@ -726,6 +726,10 @@ struct
               wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
                 (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
                 (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) t) ()
+            handle Feedback.HOL_ERR _ =>
+
+              (*TODO*) Profile.profile "rewrite(BBLAST_TAC)"
+                Tactical.prove (t, blastLib.BBLAST_TAC)
         in
           cache_theorem th;
           th
@@ -848,6 +852,11 @@ struct
               wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
                 (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
                 (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) concl) ()
+            handle Feedback.HOL_ERR _ =>
+
+              (*TODO*) Profile.profile "th_lemma(BBLAST_TAC)"
+                Tactical.prove (concl, blastLib.BBLAST_TAC)
+
             val subst = List.map (fn (term, var) =>
               {redex = var, residue = term}) (Redblackmap.listItems dict)
         in
