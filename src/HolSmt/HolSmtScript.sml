@@ -13,6 +13,7 @@ struct
   val A = intLib.ARITH_PROVE
   val R = realLib.REAL_ARITH
   val W = wordsLib.WORD_DECIDE
+  val B = fn t => Tactical.prove (t, blastLib.BBLAST_TAC)
 
   (*TODO*) fun X t = Thm.mk_thm ([], t)
 
@@ -494,26 +495,13 @@ struct
     ``(p <=> ((x :word1) = 1w)) <=> (x = if p then 1w else 0w)``)
   val _ = s ("t025", S
     ``(p <=> (1w = (x :word1))) <=> (x = if p then 1w else 0w)``)
-  val _ = s ("t026",
-    let
-      val lem1 = W ``!x:word32. x ' 0 ==> 0w <> x``
-      val lem2 = W ``!x:word8. (((sw2sw x):word32) ' 0) = x ' 0``
-      val lem3 = Q.prove (`!x:word32. (x ' 0) ==> (0w <> 0xFFFFFFFFw * x)`,
-        Tactical.THEN (Tactic.NTAC 2 Tactic.STRIP_TAC,
-          Tactical.THEN (Tactic.MATCH_MP_TAC lem1,
-            Tactical.THEN (bossLib.Cases_on `x`,
-              simpLib.FULL_SIMP_TAC
-                (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss))
-                [arithmeticTheory.ODD_MULT, wordsTheory.word_index,
-                wordsTheory.word_mul_n2w]))))
-    in
-      bossLib.METIS_PROVE [lem2, lem3]
-        ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 0)``
-    end)
-  val _ = s ("t027", X  (*TODO*)
+  val _ = s ("t026", B
+    ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 0)``)
+  val _ = s ("t027", B
     ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 1 <=> ~(x ' 0))``)
-  val _ = s ("t028", X  (*TODO*)
-    ``(1w + (x :'a word) = y) ==> x ' 0 ==> ~(y ' 0)``)
+  val _ = s ("t028", B ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==>
+      ~(x ' 2 <=> ~(x ' 0) /\ ~(x ' 1))``)
+  val _ = s ("t029", X ``(1w + (x :'a word) = y) ==> x ' 0 ==> ~(y ' 0)``)
 
   (* used to prove hypotheses of other proforma theorems (recursively) *)
 

@@ -43,7 +43,7 @@ in
   val th_lemma_thms = thm_net_from_list
     [t001, t002, t003, t004, t005, t006, t007, t008, t009, t010, t011, t012,
      t013, t014, t015, t016, t017, t018, t019, t020, t021, t022, t023, t024,
-     t025, t026, t027, t028]
+     t025, t026, t027, t028, t029]
 
   val prove_hyp_thms = thm_net_from_list
     [p001, p002, p003, p004, p005, p006, p007, p008, p009]
