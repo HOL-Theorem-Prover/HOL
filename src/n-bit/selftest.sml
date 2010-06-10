@@ -289,4 +289,8 @@ val _ = blast_true
   ``(reduce_or (w:word8) && reduce_or (v:word8)) =
     ~(reduce_and (~w) !! reduce_and (~v))``;
 
+val _ = blast_true
+  ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==>
+    ~(x ' 1 <=> ~(x ' 0))``;
+
 val _ = OS.Process.exit OS.Process.success;

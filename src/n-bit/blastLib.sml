@@ -713,7 +713,8 @@ in
         val thms = Lib.mapfilter BIT_BLAST_CONV tms
       in
         Thm.GENL vars (Conv.CONV_RULE (Conv.RHS_CONV
-          (REWRITE_CONV thms THENC Conv.TRY_CONV BIT_TAUT_CONV)) thm)
+          (Rewrite.ONCE_REWRITE_CONV thms THENC
+           Conv.TRY_CONV BIT_TAUT_CONV)) thm)
       end
 end
 
