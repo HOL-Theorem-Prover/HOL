@@ -188,6 +188,7 @@ fun mk_prec_matrix G = let
            | 1 => (Feedback.HOL_WARNING "Parse" "Term" msg;
                    complained_already := true)
            | 2 => raise Feedback.mk_HOL_ERR "parse_term" "mk_prec_matrix" msg
+           | _ => raise Fail "parse_term: matrix construction invariant fail!"
          end
        else
          ())
@@ -1312,7 +1313,10 @@ fun parse_term (G : grammar) typeparser = let
               case mx_order order of
                 SOME x => byorder x
               | NONE => let
-                  val PM_LG {pfx,ifx} = order
+                  val (pfx,ifx) =
+                      case order of
+                        PM_LG {pfx,ifx} => (pfx,ifx)
+                      | _ => raise Fail "parse_term: check_order invariant fail"
                 in
                   if top_might_be_infix stk then byorder ifx
                   else byorder pfx
