@@ -37,6 +37,8 @@
 \setboolean{holIndexLongTypeFlag}{true}
 \setboolean{holIndexLongThmFlag}{false}
 
+\newboolean{holThmCiteDebug}
+\setboolean{holThmCiteDebug}{false}
 
 \newcommand{\initHOLindex}{\newwrite\holaux\immediate\openout\holaux\jobname.hix\@input@{\jobname.tde}}
 
@@ -174,7 +176,8 @@ Definition #1 #2 {#3} {#4}
 \def\shortIndexHOLthm#1{\fullIndexHOLdefinition{Thm}{#1}{false}}
 
 
-\newcommand{\addHOLcite}[2]{\writehixfile{Reference #1 #2 \thepage}}
+\newcommand{\addHOLcite}[2]{\writehixfile{Reference #1 #2 \thepage}%
+\ifthenelse{\boolean{holThmCiteDebug}}{{\tiny\texttt{#2}}\ }{}}
 \newcommand[\protect]{\citePureHOLthm}[1]{\addHOLcite{Thm}{#1}\ref{hol:thm:#1}}
 \newcommand[\protect]{\citePureHOLtm}[1]{\addHOLcite{Term}{#1}\ref{hol:tm:#1}}
 \newcommand[\protect]{\citePureHOLty}[1]{\addHOLcite{Type}{#1}\ref{hol:ty:#1}}
@@ -256,13 +259,17 @@ Definition #1 #2 {#3} {#4}
 \newcommand[\protect]{\citeHOLtm}[1]{(HOL-Term~\citePureHOLtm{#1})}
 \newcommand[\protect]{\citeHOLty}[1]{(HOL-Type~\citePureHOLty{#1})}
 
-\newcommand[\protect]{\mciteHOLthm}[1]{(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
+
+\newcommand[\protect]{\citePureHOLthmPrefix}[2]{\citePureHOLthm{#1#2}}
+\newcommand[\protect]{\mciteHOLthmPrefix}[2]{(HOL-Thms~\foreach{\citePureHOLthmPrefix{#1}}{, }{#2})}
+\newcommand[\protect]{\mciteHOLthm}[1]{\mciteHOLthmPrefix{}{#1}}
 \newcommand[\protect]{\mciteHOLtm}[1]{(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
 \newcommand[\protect]{\mciteHOLty}[1]{(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}
 
 \newcommand{\UnderscoreCommands}{%   (\cite already done)
+   \do\ref \do\label
    \do\citeHOLty \do\citeHOLtm \do\citeHOLthm
-   \do\mciteHOLty \do\mciteHOLtm \do\mciteHOLthm
+   \do\mciteHOLty \do\mciteHOLtm \do\mciteHOLthm \do\mciteHOLthmPrefix
    \do\citePureHOLty \do\citePureHOLtm \do\citePureHOLthm
    \do\defineHOLty \do\defineHOLtm \do\defineHOLthm
    \do\inlineHOLty \do\inlineHOLtm \do\inlineHOLthm
