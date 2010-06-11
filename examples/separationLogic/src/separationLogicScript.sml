@@ -861,6 +861,16 @@ Cases_on `x` THEN
 SIMP_TAC std_ss [DISJOINT_FMAP_UNION___REWRITE]);
 
 
+val DISJOINT_FMAP_UNION___EQ_FEMPTY = store_thm ("DISJOINT_FMAP_UNION___EQ_FEMPTY",
+``!x y. (DISJOINT_FMAP_UNION x y = (SOME FEMPTY)) =
+        (x = SOME FEMPTY) /\ (y = SOME FEMPTY)``,
+
+Cases_on `x` THEN
+Cases_on `y` THEN
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [DISJOINT_FMAP_UNION___REWRITE, FUNION_EQ_FEMPTY,
+   FDOM_FEMPTY, DISJOINT_EMPTY]);
+
+
 val IS_SEPARATION_COMBINATOR___FINITE_MAP = store_thm ("IS_SEPARATION_COMBINATOR___FINITE_MAP",
 ``IS_SEPARATION_COMBINATOR DISJOINT_FMAP_UNION``,
 
@@ -980,6 +990,7 @@ asl_magic_wand f P Q = \s.
 val asl_true_def = Define `asl_true = UNIV`;
 val asl_false_def = Define `asl_false = EMPTY`;
 val fasl_star_def = Define `fasl_star f = BIN_OPTION_MAP_ALL_DEF (asl_star f)`;
+
 
 val asl_exists_def =
  Define `asl_exists = \P:'a->('b -> bool). \s. ?x. (s IN P x)`;
@@ -1134,6 +1145,11 @@ val fasl_star_REWRITE = save_thm ("fasl_star_REWRITE",
       thm3
    end);
 
+val fasl_star_DIRECT_DEF = store_thm ("fasl_star_DIRECT_DEF",
+``(fasl_star f NONE Qopt = NONE) /\
+  (fasl_star f Popt NONE = NONE) /\
+  (fasl_star f (SOME P) (SOME Q) = SOME (asl_star f P Q))``,
+SIMP_TAC std_ss [fasl_star_REWRITE]);
 
 val asl_star___PROPERTIES = save_thm ("asl_star___PROPERTIES",
 SIMP_RULE std_ss [COMM_MONOID_def, MONOID_DEF,
@@ -2339,6 +2355,13 @@ EQ_TAC THEN STRIP_TAC THENL [
 val HOARE_TRIPLE_def = Define `
    HOARE_TRIPLE (P:'a set) f (Q:'a set) = (!s. s IN P ==> fasl_order (f s) (SOME Q))`
 
+
+val HOARE_TRIPLE_REWRITE = store_thm ("HOARE_TRIPLE_REWRITE",
+``HOARE_TRIPLE P f Q = 
+  (!s. s IN P ==> ?S. (f s = SOME S) /\ S SUBSET Q)``,
+SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM]);
+
+
 val fasl_action_order_def = Define `fasl_action_order f g =
 !P Q. HOARE_TRIPLE P g Q ==> HOARE_TRIPLE P f Q`;
 
@@ -2410,6 +2433,18 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
 
 val SUP_fasl_action_order_def = Define `
    SUP_fasl_action_order M = \x. SUP_fasl_order (IMAGE (\f. f x) M)`;
+
+val SUP_fasl_action_order_REWRITE = store_thm ("SUP_fasl_action_order_REWRITE",
+``!actions. SUP_fasl_action_order actions = \s.
+      if !a. a IN actions ==> IS_SOME (a s) then
+        SOME (BIGUNION (IMAGE (\a. THE (a s)) actions))
+      else
+        NONE``,
+
+SIMP_TAC std_ss [SUP_fasl_action_order_def,
+   SUP_fasl_order_def, IN_IMAGE, GSYM IMAGE_COMPOSE,
+   combinTheory.o_DEF] THEN
+METIS_TAC[NOT_IS_SOME_EQ_NONE]);
 
 
 val SUP_fasl_action_order_THM = store_thm ("SUP_fasl_action_order_THM",
@@ -2587,6 +2622,20 @@ val INF_fasl_action_order_def = Define `
    INF_fasl_action_order M = \x. INF_fasl_order (IMAGE (\f. f x) M)`;
 
 
+val INF_fasl_action_order_REWRITE = store_thm ("INF_fasl_action_order_REWRITE",
+``!actions. INF_fasl_action_order actions = \s.
+      if ?a. a IN actions /\ IS_SOME (a s) then
+        SOME (BIGINTER (IMAGE THE (IS_SOME INTER IMAGE (\a. a s) actions)))
+      else
+        NONE``,
+
+SIMP_TAC std_ss [INF_fasl_action_order_def,
+   INF_fasl_order_def, IN_IMAGE, GSYM IMAGE_COMPOSE,
+   combinTheory.o_DEF, GSYM LEFT_FORALL_IMP_THM, ETA_THM] THEN
+METIS_TAC[NOT_IS_SOME_EQ_NONE]);
+
+
+
 val INF_fasl_action_order_THM = store_thm ("INF_fasl_action_order_THM",
 
 ``!M. IS_INFIMUM fasl_action_order UNIV M (INF_fasl_action_order M)``,
@@ -2695,7 +2744,6 @@ REPEAT STRIP_TAC THENL [
 
 
 
-
 val FASL_IS_LOCAL_ACTION___FAILING_FUNCTION = store_thm ("FASL_IS_LOCAL_ACTION___FAILING_FUNCTION",
 ``!f. FASL_IS_LOCAL_ACTION f (K NONE)``,
 
@@ -2757,7 +2805,6 @@ SIMP_TAC std_ss [IS_COMPLETE_LATTICE_def, SUBSET_UNIV] THEN
    rest_WeakOrder_THM] THEN
 ASM_SIMP_TAC std_ss [SUBSET_DEF, IS_SOME_EXISTS,
 BIGINF_fasl_action_order_THM, BIGSUP_fasl_action_order_THM]);
-
 
 
 val fasl_action_order___IS_NON_EMPTY_COMPLETE_LATTICE___UNIV = store_thm ("fasl_action_order___IS_NON_EMPTY_COMPLETE_LATTICE___UNIV",
@@ -2982,6 +3029,43 @@ val quant_best_local_action_def = Define `
    quant_best_local_action f qP1 qP2 =
    INF_fasl_action_order (\g. ?x. g = best_local_action f (qP1 x) (qP2 x))`
 
+val quant_best_local_action_REWRITE = store_thm ("quant_best_local_action_REWRITE",
+   ``quant_best_local_action f qP1 qP2 s = 
+     (let set p =
+            ?x s0 s1.
+              (SOME s = f (SOME s0) (SOME s1)) /\ s1 IN (qP1 x) /\
+              (p = fasl_star f (SOME (qP2 x)) (SOME {s0}))
+      in
+        INF_fasl_order set)``,
+   SIMP_TAC std_ss [INF_fasl_action_order_def, quant_best_local_action_def,
+       best_local_action_def, IMAGE_ABS, IN_ABS, GSYM RIGHT_EXISTS_AND_THM,
+       LET_THM] THEN
+   SIMP_TAC std_ss [INF_fasl_order_def, IN_ABS,
+      GSYM LEFT_FORALL_IMP_THM, COND_NONE_SOME_REWRITES_EQ] THEN
+   REPEAT STRIP_TAC THEN
+   ONCE_REWRITE_TAC[EXTENSION] THEN
+
+   SIMP_TAC std_ss [INTER_ABS, IN_BIGINTER, IN_ABS, IN_IMAGE,
+      GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
+   REPEAT GEN_TAC THEN
+   Q.ABBREV_TAC `cond = \x''. !s0' s1'.
+                (f (SOME s0) (SOME s1) = f (SOME s0') (SOME s1')) /\
+                s1' IN qP1 x'' ==>
+                (fasl_star f (SOME (qP2 x'')) (SOME {s0'}) = NONE)` THEN
+   `!x''. (!s0' s1'.
+                (f (SOME s0) (SOME s1) = f (SOME s0') (SOME s1')) /\
+                s1' IN qP1 x'' ==>
+                (fasl_star f (SOME (qP2 x'')) (SOME {s0'}) = NONE)) =
+          cond x''` by (Q.UNABBREV_TAC `cond` THEN SIMP_TAC std_ss []) THEN
+   ASM_SIMP_TAC std_ss [] THEN
+   SIMP_TAC (std_ss++CONJ_ss) [COND_NONE_SOME_REWRITES, IN_BIGINTER, 
+      IN_IMAGE, IN_ABS, GSYM RIGHT_EXISTS_AND_THM,
+      GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM] THEN
+   REDEPTH_CONSEQ_CONV_TAC (K FORALL_EQ___CONSEQ_CONV) THEN
+   SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+   UNABBREV_ALL_TAC THEN
+   METIS_TAC[NOT_NONE_IS_SOME]);
+
 
 val quant_best_local_action_THM = store_thm ("quant_best_local_action_THM",
 ``!f qP1 qP2.
@@ -3052,6 +3136,25 @@ REPEAT STRIP_TAC THENL [
 ]);
 
 
+val quant_best_local_action___ALTERNATIVE_DEF = store_thm ("quant_best_local_action___ALTERNATIVE_DEF",
+``!f P1 P2.
+  IS_SEPARATION_COMBINATOR f ==>
+
+(BIGSUP fasl_action_order UNIV (\g. FASL_IS_LOCAL_ACTION f g /\ !x. HOARE_TRIPLE (qP1 x) g (qP2 x)) =
+ SOME (quant_best_local_action f qP1 qP2))``,
+
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC BIGSUP_THM THEN
+CONJ_TAC THEN1 (
+   ASSUME_TAC fasl_action_order_IS_WEAK_ORDER THEN
+   FULL_SIMP_TAC std_ss [WeakOrder, antisymmetric_def,
+      rest_antisymmetric_def]
+) THEN
+SIMP_TAC std_ss [IS_SUPREMUM_def,
+   IS_UPPER_BOUND_def, IN_UNIV, IN_ABS] THEN
+ASM_SIMP_TAC std_ss [quant_best_local_action_THM]);
+
+
 val fasl_action_order____quant_best_local_action =
 store_thm ("fasl_action_order____quant_best_local_action",
 ``!f qP1 qP2 g.
@@ -3067,14 +3170,8 @@ val quant_best_local_action___QUANT_ELIM = store_thm ("quant_best_local_action__
 ``quant_best_local_action f (K P) (K Q) = best_local_action f P Q``,
 
 ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
-SIMP_TAC std_ss [quant_best_local_action_def,
-       INF_fasl_action_order_def,
-       INF_fasl_order_def, IN_IMAGE,
-       IN_ABS, COND_RATOR, COND_RAND] THEN
-GEN_TAC THEN
-Cases_on `best_local_action f P Q x` THEN SIMP_TAC std_ss [] THEN
-REWRITE_TAC [EXTENSION] THEN
-ASM_SIMP_TAC std_ss [IN_BIGINTER, IN_IMAGE, IN_INTER, IN_ABS]);
+SIMP_TAC std_ss [quant_best_local_action_REWRITE,
+       best_local_action_def]);
 
 
 
@@ -3128,26 +3225,12 @@ val SOME___quant_best_local_action = store_thm ("SOME___quant_best_local_action"
           x IN asl_star f (P2 arg) {s0})))``,
 
 
-SIMP_TAC std_ss [quant_best_local_action_def,
-       SOME___INF_fasl_action_order,
-       IN_ABS, GSYM RIGHT_EXISTS_AND_THM,
-       GSYM LEFT_EXISTS_AND_THM,
-       IMAGE_ABS, IN_INTER, IN_ABS] THEN
-
-SIMP_TAC std_ss [prove (
-   ``((x = THE y) /\ (IS_SOME y)) = (SOME x = y)``,
-   Cases_on `y` THEN SIMP_TAC std_ss [])] THEN
-
-SIMP_TAC std_ss [IS_SOME___best_local_action,
-       SOME___best_local_action,
-       BIGINTER_ABS, IN_ABS,
+SIMP_TAC std_ss [quant_best_local_action_REWRITE, LET_THM,
+       SOME___INF_fasl_order, IN_ABS, fasl_star_REWRITE,
+       GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
+       BIGINTER_ABS, IMAGE_ABS, INTER_ABS,
        GSYM LEFT_FORALL_IMP_THM] THEN
-REWRITE_TAC[EXTENSION] THEN
-SIMP_TAC std_ss [IN_ABS,
-       LEFT_EXISTS_AND_THM,
-       RIGHT_EXISTS_AND_THM] THEN
 METIS_TAC[]);
-
 
 
 
@@ -3180,24 +3263,11 @@ val quant_best_local_action_EQ_IMPL = store_thm ("quant_best_local_action_EQ_IMP
 (quant_best_local_action f qP1 qQ1 =
  quant_best_local_action f qP2 qQ2)``,
 
-
-SIMP_TAC std_ss [quant_best_local_action_def,
-   INF_fasl_action_order_def, IMAGE_ABS,
-   IN_ABS, GSYM RIGHT_EXISTS_AND_THM] THEN
+SIMP_TAC std_ss [quant_best_local_action_REWRITE, FUN_EQ_THM, LET_THM] THEN
 REPEAT STRIP_TAC THEN
-ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
-SIMP_TAC std_ss [INF_fasl_order_def, IN_ABS,
-   GSYM LEFT_FORALL_IMP_THM] THEN
-GEN_TAC THEN
-MATCH_MP_TAC COND_CONG THEN
-
-`!x' x.  ((?x''. x' = best_local_action f (qP1 x'') (qQ1 x'') x) =
-    (?x''. x' = best_local_action f (qP2 x'') (qQ2 x'') x))` by ALL_TAC THEN1 (
-   METIS_TAC[]
-) THEN
-
-ASM_SIMP_TAC std_ss [] THEN
-PROVE_TAC[]);
+AP_TERM_TAC THEN 
+ONCE_REWRITE_TAC[FUN_EQ_THM] THEN SIMP_TAC std_ss [] THEN
+METIS_TAC[]);
 
 
 
@@ -3245,11 +3315,8 @@ val quant_best_local_action___false_pre = store_thm ("quant_best_local_action___
 ``quant_best_local_action f (\x. asl_false) Qq = K NONE``,
 
 ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
-SIMP_TAC std_ss [quant_best_local_action_def,
-       INF_fasl_action_order_def,
-       INF_fasl_order_def,
-       IN_IMAGE, best_local_action___false_pre,
-       IN_ABS]);
+SIMP_TAC std_ss [quant_best_local_action_REWRITE, asl_false_def, NOT_IN_EMPTY,
+       LET_THM, INF_fasl_order_def, IN_ABS]);
 
 
 
@@ -3519,6 +3586,18 @@ FULL_SIMP_TAC std_ss [ASL_IS_PRECISE___IN_STATE___THM]);
 
 
 
+(* example of a non-local action  and divergence for local actions *)
+val FASL_IS_LOCAL_ACTION___simple_heap_examples = store_thm ("FASL_IS_LOCAL_ACTION___simple_heap_examples",
+``~(FASL_IS_LOCAL_ACTION DISJOINT_FMAP_UNION (\h. if (h = FEMPTY) then SOME {h} else NONE)) /\
+   (FASL_IS_LOCAL_ACTION DISJOINT_FMAP_UNION (\h. if (h = FEMPTY) then SOME {h} else SOME {}))
+``,
+SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___ALTERNATIVE_DEF, 
+   COND_NONE_SOME_REWRITES, DISJOINT_FMAP_UNION___FEMPTY, IN_SING] THEN
+SIMP_TAC (std_ss++boolSimps.COND_elim_ss) [NOT_IN_EMPTY, IN_SING,
+   DISJOINT_FMAP_UNION___EQ_FEMPTY] THEN
+METIS_TAC[NOT_EQ_FEMPTY_FUPDATE]);
+
+
 val fasla_skip_def = Define `
    fasla_skip = \s. SOME {s}`;
 
@@ -3548,7 +3627,6 @@ val fasla_assume_assert_THM = store_thm ("fasla_assume_assert_THM",
   (fasla_assume_assert F = fasla_assert)``,
 SIMP_TAC std_ss [FUN_EQ_THM, fasla_assert_def,
                  fasla_assume_def, fasla_assume_assert_def]);
-
 
 
 val FASL_IS_LOCAL_ACTION___fasla_assume_assert = store_thm ("FASL_IS_LOCAL_ACTION___fasla_assume_assert",
@@ -4026,6 +4104,9 @@ ASM_SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___fasla_repeat]);
 val fasla_choice_def = Define `
    fasla_choice = SUP_fasl_action_order`
 
+val fasla_choice_REWRITE = save_thm ("fasla_choice_REWRITE",
+REWRITE_CONV [fasla_choice_def, SUP_fasl_action_order_REWRITE] ``fasla_choice actions``);
+
 
 val FASL_IS_LOCAL_ACTION___fasla_choice = save_thm ("FASL_IS_LOCAL_ACTION___fasla_choice",
    REWRITE_RULE [GSYM fasla_choice_def] SUP_fasl_action_order_LOCAL);
@@ -4052,12 +4133,11 @@ val fasla_bin_choice_THM = store_thm ("fasla_bin_choice_THM",
               else
             (SOME ((THE (a1 s)) UNION (THE (a2 s))))``,
 
-SIMP_TAC std_ss [fasla_bin_choice_def, fasla_choice_def,
-       SUP_fasl_action_order_def,
-       SUP_fasl_order_def, IMAGE_INSERT, IMAGE_EMPTY,
-       IN_INSERT, NOT_IN_EMPTY, BIGUNION_INSERT,
-       BIGUNION_EMPTY, UNION_EMPTY] THEN
-METIS_TAC[]);
+SIMP_TAC std_ss [fasla_bin_choice_def, fasla_choice_REWRITE,
+   IMAGE_INSERT, IMAGE_EMPTY,
+   IN_INSERT, NOT_IN_EMPTY, BIGUNION_INSERT,
+   BIGUNION_EMPTY, UNION_EMPTY] THEN
+METIS_TAC[NOT_IS_SOME_EQ_NONE]);
 
 
 val fasla_seq_diverge = store_thm ("fasla_seq_diverge",
