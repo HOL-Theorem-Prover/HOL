@@ -515,20 +515,23 @@ in
   type_grammar_changed := true
 end
 
-fun standard_spacing name fixity = let
+fun standard_mapped_spacing {term_name,tok,fixity}  = let
   open term_grammar  (* to get fixity constructors *)
   val bstyle = (AroundSamePrec, (Portable.INCONSISTENT, 0))
   val pstyle = OnlyIfNecessary
   val ppels =
       case fixity of
-        Infix _ => [HardSpace 1, RE (TOK name), BreakSpace(1,0)]
-      | TruePrefix _ => [RE(TOK name), HardSpace 1]
-      | Suffix _     => [HardSpace 1, RE(TOK name)]
-      | Closefix  => [RE(TOK name)]
+        Infix _ => [HardSpace 1, RE (TOK tok), BreakSpace(1,0)]
+      | TruePrefix _ => [RE(TOK tok), HardSpace 1]
+      | Suffix _     => [HardSpace 1, RE(TOK tok)]
+      | Closefix  => [RE(TOK tok)]
 in
-  {term_name = name, fixity = fixity, pp_elements = ppels,
+  {term_name = term_name, fixity = fixity, pp_elements = ppels,
    paren_style = pstyle, block_style = bstyle}
 end
+
+fun standard_spacing name fixity =
+    standard_mapped_spacing {term_name = name, tok = name, fixity = fixity}
 
 val std_binder_precedence = 0;
 
@@ -989,15 +992,33 @@ fun remove_rules_for_term s = let in
    update_grms "remove_rules_for_term" ("temp_remove_rules_for_term", quote s)
  end
 
-
-fun temp_set_fixity s f = let
+fun temp_set_mapped_fixity {fixity,term_name,tok} = let
+  val nmtok = {term_name = term_name, tok = tok}
 in
-  temp_remove_termtok {term_name=s, tok=s};
-  case f of
+  temp_remove_termtok nmtok;
+  case fixity of
     Prefix => ()
-  | RF rf => temp_add_grule (GRULE (standard_spacing s rf))
-  | Binder => temp_add_grule (BRULE {term_name = s, tok = s})
+  | RF rf => temp_add_grule
+                 (GRULE (standard_mapped_spacing {fixity = rf, tok = tok,
+                                                  term_name = term_name}))
+  | Binder => if term_name <> tok then
+                raise ERROR "set_mapped_fixity"
+                            "Can't map binders to different strings"
+              else
+                temp_add_grule (BRULE nmtok)
 end
+
+fun set_mapped_fixity (arg as {fixity,term_name,tok}) = let
+in
+  temp_set_mapped_fixity arg;
+  update_grms "set_mapped_fixity"
+              ("(fn () => (temp_set_mapped_fixity {term_name = "^
+               quote term_name^", "^ "tok = "^quote tok^", fixity = "^
+               fixityToString fixity^"}))", "()")
+end
+
+fun temp_set_fixity s f =
+    temp_set_mapped_fixity {fixity = f, term_name = s, tok = s}
 
 fun set_fixity s f = let in
     temp_set_fixity s f;

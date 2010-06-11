@@ -46,19 +46,6 @@ left-associative infix:
 > val it = () : unit
 \end{verbatim}
 \end{session}
-Finally, there's one last piece of book-keeping to be done for our new
-type.  The datatype package defines the constructors in theorems of
-their own, and the name of the theorem stored to disk is the same as
-the name of the constructor.  SML doesn't allow \# to be an identifier
-so we must change the name of the theorem.  We do this with the
-function \texttt{set\_MLname}.  The first parameter to the function is
-the old name, and the second is the new name.
-\begin{session}
-\begin{verbatim}
-- set_MLname "#" "HASH";
-> val it = () : unit
-\end{verbatim}
-\end{session}
 
 
 % C = S (S (K S) (S (K K) S)) (K K)
@@ -88,18 +75,23 @@ congruence rules:\[
 \infer{x\;y\;\;\rightarrow\;\;x\;y'}{y\;\;\rightarrow\;\;y'}
 \end{array}\]
 In HOL, we can capture this relation with an inductive definition.
-First we set our arrow symbol up as an infix to make everything that
-bit prettier:
+First we need to set our arrow symbol up as an infix to make everything that
+bit prettier
 \begin{session}
 \begin{verbatim}
-- set_fixity "-->" (Infix(NONASSOC, 450));
+- set_mapped_fixity {tok = "-->", fixity = Infix(NONASSOC, 450),
+                     term_name = "redn"};
 > val it = () : unit
 \end{verbatim}
 \end{session}
-(By choosing to make our arrow symbol non-associative, we make it a
+We make our arrow symbol non-associative, thereby making it a
 parse error to write \verb!x --> y --> z!. It would be nice to be able
 to write this and have it mean \verb!x --> y /\ y --> z!, but this is
-not presently possible with the HOL parser.)
+not presently possible with the HOL parser.  The
+\ml{set\_mapped\_fixity} function also requires us to provide the
+``real'' name for the syntax (it's generally helpful to have names
+that just include alphanumeric characters), so we pick \verb!redn! as
+an abbreviation of ``reduction''.
 
 Our next step is to actually define the relation.  The function for
 doing this returns three separate theorems, so we bind each
@@ -118,12 +110,12 @@ val (redn_rules, redn_ind, redn_cases) =
        (!x y. K # x # y --> x) /\
        !f g x. S # f # g # x --> f # x # (g # x) : thm
   val redn_ind =
-    |- !-->'.
-         (!x y f. -->' x y ==> -->' (f # x) (f # y)) /\
-         (!f g x. -->' f g ==> -->' (f # x) (g # x)) /\
-         (!x y. -->' (K # x # y) x) /\
-         (!f g x. -->' (S # f # g # x) (f # x # (g # x))) ==>
-         !a0 a1. a0 --> a1 ==> -->' a0 a1 : thm
+    |- !redn'.
+         (!x y f. redn' x y ==> redn' (f # x) (f # y)) /\
+         (!f g x. redn' f g ==> redn' (f # x) (g # x)) /\
+         (!x y. redn' (K # x # y) x) /\
+         (!f g x. redn' (S # f # g # x) (f # x # (g # x))) ==>
+         !a0 a1. a0 --> a1 ==> redn' a0 a1 : thm
   val redn_cases =
     |- !a0 a1.
          a0 --> a1 =
@@ -134,45 +126,9 @@ val (redn_rules, redn_ind, redn_cases) =
     : thm
 \end{verbatim}
 \end{session}
-The induction theorem \texttt{redn\_ind} looks a little strange
-because the induction predicate is given the name \texttt{-->'}.  We
-can change the name to make things prettier with the function
-\texttt{RENAME\_VARS\_CONV}, a conversion:
-\begin{session}
-\begin{verbatim}
-- val redn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) redn_ind;
-> val redn_ind =
-    |- !P.
-         (!x y f. P x y ==> P (f # x) (f # y)) /\
-         (!f g x. P f g ==> P (f # x) (g # x)) /\
-         (!x y. P (K # x # y) x) /\
-         (!f g x. P (S # f # g # x) (f # x # (g # x))) ==>
-         !a0 a1. a0 --> a1 ==> P a0 a1 : thm
-\end{verbatim}
-\end{session}
-In addition to proving these three theorems for us, the inductive
-definitions package has also saved them to disk.  Unfortunately, it
-does so in a way that generates names that will be unacceptable.  Only
-experience tells you this at this stage, but when (if) we later export
-and compile the theory we will get nasty errors.  So, we need to set
-the ML names for the theorem defining the constant \texttt{-->} and
-for the theorems that have been given the names \texttt{-->\_rules},
-\texttt{-->\_ind} and \texttt{-->\_cases}.\footnote{Normally,
-  \texttt{-->} would be a fine name for an ML identifier, but the
-  problem here is that when the theory is compiled, the identifier
-  \texttt{-->} is already declared as an infix.  Names like
-  \texttt{-->\_rules} are always bad because they attempt to mix
-  symbolic and alpha-numeric characters.}
-\begin{session}
-\begin{verbatim}
-- app (uncurry set_MLname) [
-    ("-->", "redn"), ("-->_rules", "redn_rules"),
-    ("-->_ind", "redn_ind"), ("-->_cases", "redn_cases")
-  ];
-> val it = () : unit
-\end{verbatim}
-\end{session}
 
+In addition to proving these three theorems for us, the inductive
+definitions package has also saved them to disk.
 
 Now, using our theorem \texttt{redn\_rules} we can demonstrate single
 steps of our reduction relation:
@@ -794,7 +750,8 @@ parallel.  We use the \texttt{-||->} symbol to indicate parallel
 reduction because of its own parallel lines:
 \begin{session}
 \begin{verbatim}
-- set_fixity "-||->"  (Infix(NONASSOC, 450));
+- set_fixity {tok = "-||->", term_name = "predn",
+              fixity = Infix(NONASSOC, 450)};
 > val it = () : unit
 \end{verbatim}
 \end{session}
@@ -822,13 +779,13 @@ reduction because of its own parallel lines:
        (!x y. K # x # y -||-> x) /\
        !f g x. S # f # g # x -||-> f # x # (g # x) : thm
   val predn_ind =
-    |- !-||->'.
-         (!x. -||->' x x) /\
-         (!x y u v. -||->' x y /\ -||->' u v ==>
-                    -||->' (x # u) (y # v)) /\
-         (!x y. -||->' (K # x # y) x) /\
-         (!f g x. -||->' (S # f # g # x) (f # x # (g # x))) ==>
-         !a0 a1. a0 -||-> a1 ==> -||->' a0 a1 : thm
+    |- !predn'.
+         (!x. predn' x x) /\
+         (!x y u v. predn' x y /\ predn' u v ==>
+                    predn' (x # u) (y # v)) /\
+         (!x y. predn' (K # x # y) x) /\
+         (!f g x. predn' (S # f # g # x) (f # x # (g # x))) ==>
+         !a0 a1. a0 -||-> a1 ==> predn' a0 a1 : thm
   val predn_cases =
     |- !a0 a1.
          a0 -||-> a1 =
@@ -840,32 +797,6 @@ reduction because of its own parallel lines:
     : thm
 \end{verbatim}
 \end{session}
-We again have an induction principle that looks bizarre because of the
-choice of variable name, so we rename the bound variables.
-\begin{session}
-\begin{verbatim}
-- val predn_ind =
-    CONV_RULE (RENAME_VARS_CONV ["P"]) predn_ind;
-> val predn_ind =
-    |- !P.
-         (!x. P x x) /\
-         (!x y u v. P x y /\ P u v ==> P (x # u) (y # v)) /\
-         (!x y. P (K # x # y) x) /\
-         (!f g x. P (S # f # g # x) (f # x # (g # x))) ==>
-         !a0 a1. a0 -||-> a1 ==> P a0 a1 : thm
-\end{verbatim}
-\end{session}
-    Again, we have to change the names that the inductive definitions
-    package has chosen for our theorems:
-\begin{session}
-\begin{verbatim}
-- app (uncurry set_MLname) [
-    ("-||->_rules", "predn_rules"), ("-||->_ind", "predn_ind"),
-    ("-||->_cases", "predn_cases")
-  ];
-> val it = () : unit
-\end{verbatim}
-\end{session}
 
 \subsection{Using \con{RTC}}
 \label{sec:Using-RTC}
@@ -873,18 +804,19 @@ choice of variable name, so we rename the bound variables.
 Now we can set up nice syntax for the reflexive and transitive
 closures of our two relations.  We will use ASCII symbols for both
 that consist of the original symbol followed by an asterisk.  Note
-also how, in defining the two relations, we have to use the
-\texttt{\$} character to ``escape'' the symbols' usual fixities.  This
-is exactly analogous to the way in which ML's \texttt{op} keyword is
-used.  First, we create the desired symbol for the concrete syntax,
-and then we ``overload'' it so that the parser will expand it to the
-desired form.
+also how, in establishing these two new relations, we have to use the
+underlying symbols' ``real'' names.  First, we create the desired
+symbol for the concrete syntax, and then we ``overload'' it so that
+the parser will expand it to the desired form.  We can use the simpler
+\ml{set\_fixity} function to make our new symbols infix, and not have
+to bother about ``real'' names, because we're not defining a real HOL
+constant.
 \begin{session}
 \begin{verbatim}
 - set_fixity "-->*" (Infix(NONASSOC, 450));
 > val it = () : unit
 
-- overload_on ("-->*", ``RTC $-->``);
+- overload_on ("-->*", ``RTC redn``);
 > val it = () : unit
 \end{verbatim}
 \end{session}
@@ -895,7 +827,7 @@ of our parallel reduction.
 - set_fixity "-||->*" (Infix(NONASSOC, 450));
 > val it = () : unit
 
-- overload_on ("-||->*", ``RTC $-||->``);
+- overload_on ("-||->*", ``RTC predn``);
 > val it = () : unit
 \end{verbatim}
 \end{session}

@@ -7,9 +7,9 @@ val _ = new_theory "cl";
 val _ = Hol_datatype `cl = S | K | # of cl => cl`;
 
 val _ = set_fixity "#"  (Infixl 1100);
-val _ = set_MLname "#"  "HASH";
 
-val _ = set_fixity "-->" (Infix(NONASSOC, 450));
+val _ = set_mapped_fixity {tok = "-->", term_name = "redn",
+                           fixity = Infix(NONASSOC, 450)}
 
 val (redn_rules, redn_ind, redn_cases) =
   IndDefLib.Hol_reln `
@@ -17,15 +17,6 @@ val (redn_rules, redn_ind, redn_cases) =
     (!f g x. f --> g   ==>    f # x --> g # x) /\
     (!x y.   K # x # y --> x) /\
     (!f g x. S # f # g # x --> (f # x) # (g # x))`;
-
-val redn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) redn_ind
-
-val _ = app (uncurry set_MLname) [
-          ("-->",       "redn"),
-          ("-->_rules", "redn_rules"),
-          ("-->_ind",   "redn_ind"),
-          ("-->_cases", "redn_cases")
-        ];
 
 val _ = hide "RTC";
 
@@ -90,7 +81,8 @@ val diamond_RTC = store_thm(
   ``!R. diamond R ==> diamond (RTC R)``,
   PROVE_TAC [diamond_def,diamond_RTC_lemma]);
 
-val _ = set_fixity "-||->" (Infix(NONASSOC, 450));
+val _ = set_mapped_fixity {tok = "-||->", fixity = Infix(NONASSOC, 450),
+                           term_name = "predn"}
 
 val (predn_rules, predn_ind, predn_cases) =
     IndDefLib.Hol_reln
@@ -98,14 +90,6 @@ val (predn_rules, predn_ind, predn_cases) =
        (!x y u v. x -||-> y /\ u -||-> v ==> x # u -||-> y # v) /\
        (!x y. K # x # y -||-> x) /\
        (!f g x. S # f # g # x -||-> (f # x) # (g # x))`;
-
-val predn_ind = CONV_RULE (RENAME_VARS_CONV ["P"]) predn_ind;
-
-val _ = app (uncurry set_MLname) [
-          ("-||->_rules", "predn_rules"),
-          ("-||->_ind",   "predn_ind"),
-          ("-||->_cases", "predn_cases")
-  ];
 
 val RTC_monotone = store_thm(
   "RTC_monotone",
@@ -115,10 +99,10 @@ val RTC_monotone = store_thm(
   REPEAT STRIP_TAC THEN PROVE_TAC [RTC_rules]);
 
 val _ = set_fixity "-->*" (Infix(NONASSOC, 450));
-val _ = overload_on ("-->*", ``RTC $-->``)
+val _ = overload_on ("-->*", ``RTC redn``)
 
 val _ = set_fixity "-||->*" (Infix(NONASSOC, 450));
-val _ = overload_on ("-||->*", ``RTC $-||->``)
+val _ = overload_on ("-||->*", ``RTC predn``)
 
 val RTCredn_RTCpredn = store_thm(
   "RTCredn_RTCpredn",
@@ -191,8 +175,7 @@ val Sxyz_predn = prove(
 
 val x_ap_y_predn = characterise ``x # y``;
 
-val predn_strong_ind =
-  IndDefLib.derive_strong_induction (predn_rules, predn_ind)
+val predn_strong_ind = theorem "predn_strongind"
 
 val predn_diamond_lemma = prove(
   ``!x y. x -||-> y ==>
@@ -216,12 +199,12 @@ val predn_diamond_lemma = prove(
 
 val predn_diamond = store_thm(
   "predn_diamond",
-  ``diamond $-||->``,
+  ``diamond predn``,
   PROVE_TAC [diamond_def, predn_diamond_lemma]);
 
 val confluent_redn = store_thm(
   "confluent_redn",
-  ``confluent $-->``,
+  ``confluent redn``,
   PROVE_TAC [predn_diamond, confluent_diamond_RTC,
              RTCpredn_EQ_RTCredn, diamond_RTC]);
 
