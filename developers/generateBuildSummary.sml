@@ -28,8 +28,12 @@ end
 fun standard_header from subject =
     "To: hol-builds@lists.sourceforge.net\n\
     \From: "^from^"\n\
-    \Date: "^datestring()^
-    "Subject: "^subject^"\n\n"
+    \Date: "^datestring()^ (* datestring provides its own newline *)
+    "Subject: "^subject^"\n"^
+    "MIME-version: 1.0\n\
+    \Content-Type: text/plain; charset=UTF-8\n\
+    \Content-Transfer-Encoding: 8bit\n\n"
+
 
 fun main() = let
   val (from, sysdesc) = case CommandLine.arguments() of
