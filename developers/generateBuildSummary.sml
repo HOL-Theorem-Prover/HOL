@@ -35,7 +35,8 @@ fun main() = let
   val (from, sysdesc) = case CommandLine.arguments() of
                [f,s] => (f,s)
              | _ => usage()
-  val buildlog = TextIO.inputAll TextIO.stdIn
+  val buildlog0 = TextIO.inputAll TextIO.stdIn
+  val buildlog = String.translate (fn #"\000" => "^@" | c => str c) buildlog0
   open TextIO
 in
   if String.isSuffix "Hol built successfully.\n" buildlog then
