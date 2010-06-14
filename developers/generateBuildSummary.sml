@@ -1,8 +1,13 @@
 structure generateBuildSummary =
 struct
 
+
+
 (* reads the output of bin/build on standard input, and turns it into a
    mail message *)
+
+infix |>
+fun (x |> f) = f x
 
 fun die s = (TextIO.output(TextIO.stdErr, s);
              TextIO.flushOut TextIO.stdErr;
@@ -34,13 +39,31 @@ fun standard_header from subject =
     \Content-Type: text/plain; charset=UTF-8\n\
     \Content-Transfer-Encoding: 8bit\n\n"
 
+fun trunclast n s = let
+  val sz = String.size s
+in
+  if n < 0 then "" else
+  if n < sz then String.extract(s, sz - n, NONE)
+  else s
+end
+
+val remove_nulls = String.translate (fn #"\000" => "^@" | c => str c)
+
+fun newline_tidy s = let
+  (* replace first line with ellipsis message -
+     leave a string with no newlines alone *)
+  open Substring
+  val (pfx, rest) = position "\n" (full s)
+in
+  if size rest = 0 then s
+  else "... content elided ..." ^ string rest
+end
 
 fun main() = let
   val (from, sysdesc) = case CommandLine.arguments() of
                [f,s] => (f,s)
              | _ => usage()
-  val buildlog0 = TextIO.inputAll TextIO.stdIn
-  val buildlog = String.translate (fn #"\000" => "^@" | c => str c) buildlog0
+  val buildlog = TextIO.inputAll TextIO.stdIn
   open TextIO
 in
   if String.isSuffix "Hol built successfully.\n" buildlog then
@@ -50,7 +73,9 @@ in
   else
     output(stdOut,
            standard_header from ("FAILURE: "^sysdesc) ^
-           buildlog)
+           (buildlog |> trunclast 3000
+                     |> newline_tidy
+                     |> remove_nulls))
 end
 
 end
