@@ -86,7 +86,7 @@ val wh_cvcons = store_thm(
     by SRW_TAC [][cvcons_fresh] THEN
   ASM_SIMP_TAC (whfy(srw_ss())) []);
 
-val lameq_sym = List.nth(CONJUNCTS chap2Theory.lam_eq_rules, 2)
+val lameq_sym = List.nth(CONJUNCTS chap2Theory.lameq_rules, 2)
 val cvcons_eq_ccons =
     wh_ccons |> MATCH_MP (GEN_ALL head_reductionTheory.whstar_lameq)
              |> MATCH_MP lameq_sym
