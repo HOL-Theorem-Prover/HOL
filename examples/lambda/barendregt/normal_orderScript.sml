@@ -803,9 +803,9 @@ val lameq_bnf_of_cong = store_thm(
   ``M == N ⇒ (bnf_of M = bnf_of N)``,
   Cases_on `bnf_of N` THENL [
     FULL_SIMP_TAC (srw_ss()) [bnf_of_NONE, chap2Theory.has_bnf_def] THEN
-    METIS_TAC [chap2Theory.lam_eq_rules],
+    METIS_TAC [chap2Theory.lameq_rules],
     IMP_RES_TAC bnf_of_SOME THEN STRIP_TAC THEN
-    `M == x` by METIS_TAC [chap2Theory.lam_eq_rules, nstar_lameq] THEN
+    `M == x` by METIS_TAC [chap2Theory.lameq_rules, nstar_lameq] THEN
     METIS_TAC [lameq_bnf_of_SOME_I]
   ]);
 
@@ -813,7 +813,7 @@ val lameq_has_bnf_cong = store_thm(
   "lameq_has_bnf_cong",
   ``M == N ⇒ (has_bnf M = has_bnf N)``,
   SRW_TAC [][has_bnf_of] THEN
-  METIS_TAC [lameq_bnf_of_cong, chap2Theory.lam_eq_rules]);
+  METIS_TAC [lameq_bnf_of_cong, chap2Theory.lameq_rules]);
 
 val bnf_bnf_of = store_thm(
   "bnf_bnf_of",

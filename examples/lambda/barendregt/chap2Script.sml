@@ -80,34 +80,30 @@ val one_hole_is_normal = store_thm(
                                   MP_TAC (MATCH_MP imp (CONJ cth th))))) THEN
   SIMP_TAC std_ss []);
 
-val _ = set_fixity "==" (Infix(NONASSOC, 450));
-val (lam_eq_rules, lam_eq_indn, lam_eq_cases) = (* p. 13 *)
-  Hol_reln`(!x M N. (LAM x M) @@ N == [N/x]M) /\
-           (!M. M == M) /\
-           (!M N. M == N ==> N == M) /\
-           (!M N L. M == N /\ N == L ==> M == L) /\
-           (!M N Z. M == N ==> M @@ Z == N @@ Z) /\
-           (!M N Z. M == N ==> Z @@ M == Z @@ N) /\
-           (!M N x. M == N ==> LAM x M == LAM x N)`;
+val (lameq_rules, lameq_indn, lameq_cases) = (* p. 13 *)
+  IndDefLib.xHol_reln "lameq"
+    `(!x M N. (LAM x M) @@ N == [N/x]M) /\
+     (!M. M == M) /\
+     (!M N. M == N ==> N == M) /\
+     (!M N L. M == N /\ N == L ==> M == L) /\
+     (!M N Z. M == N ==> M @@ Z == N @@ Z) /\
+     (!M N Z. M == N ==> Z @@ M == Z @@ N) /\
+     (!M N x. M == N ==> LAM x M == LAM x N)`;
 
 val lameq_refl = Store_thm(
   "lameq_refl",
   ``M:term == M``,
-  SRW_TAC [][lam_eq_rules]);
+  SRW_TAC [][lameq_rules]);
 
 val lameq_app_cong = store_thm(
   "lameq_app_cong",
   ``M1 == M2 ==> N1 == N2 ==> M1 @@ N1 == M2 @@ N2``,
-  METIS_TAC [lam_eq_rules]);
+  METIS_TAC [lameq_rules]);
 
 val lameq_weaken_cong = store_thm(
   "lameq_weaken_cong",
   ``(M1:term) == M2 ==> N1 == N2 ==> (M1 == N1 <=> M2 == N2)``,
-  METIS_TAC [lam_eq_rules]);
-
-val _ = app (uncurry set_MLname) [("==_rules", "lam_eq_rules"),
-                                  ("==_ind", "lam_eq_indn"),
-                                  ("==_cases", "lam_eq_cases")]
+  METIS_TAC [lameq_rules]);
 
 val fixed_point_thm = store_thm(  (* p. 14 *)
   "fixed_point_thm",
@@ -115,9 +111,9 @@ val fixed_point_thm = store_thm(  (* p. 14 *)
   GEN_TAC THEN Q_TAC (NEW_TAC "x") `FV f` THEN
   Q.ABBREV_TAC `w = (LAM x (f @@ (VAR x @@ VAR x)))` THEN
   Q.EXISTS_TAC `w @@ w` THEN
-  `w @@ w == [w/x] (f @@ (VAR x @@ VAR x))` by PROVE_TAC [lam_eq_rules] THEN
+  `w @@ w == [w/x] (f @@ (VAR x @@ VAR x))` by PROVE_TAC [lameq_rules] THEN
   POP_ASSUM MP_TAC THEN
-  ASM_SIMP_TAC (srw_ss())[SUB_THM, lemma14b, lam_eq_rules]);
+  ASM_SIMP_TAC (srw_ss())[SUB_THM, lemma14b, lameq_rules]);
 
 (* properties of substitution - p19 *)
 
@@ -157,16 +153,16 @@ val lemma2_12 = store_thm( (* p. 19 *)
   THENL [
     CONJ_TAC THENL [
       REPEAT STRIP_TAC THEN
-      `LAM x M == LAM x M'` by PROVE_TAC [lam_eq_rules] THEN
-      `LAM x M @@ N == LAM x M' @@ N` by PROVE_TAC [lam_eq_rules] THEN
-      PROVE_TAC [lam_eq_rules],
+      `LAM x M == LAM x M'` by PROVE_TAC [lameq_rules] THEN
+      `LAM x M @@ N == LAM x M' @@ N` by PROVE_TAC [lameq_rules] THEN
+      PROVE_TAC [lameq_rules],
       Q_TAC SUFF_TAC `!N N' x M. N == N' ==> [N/x] M == [N'/x]M` THEN1
         SRW_TAC [][] THEN
       NTAC 3 GEN_TAC THEN HO_MATCH_MP_TAC nc_INDUCTION2 THEN
       Q.EXISTS_TAC `x INSERT FV N UNION FV N'` THEN
-      SRW_TAC [][SUB_THM, SUB_VAR] THEN PROVE_TAC [lam_eq_rules]
+      SRW_TAC [][SUB_THM, SUB_VAR] THEN PROVE_TAC [lameq_rules]
     ],
-    PROVE_TAC [lam_eq_rules]
+    PROVE_TAC [lameq_rules]
   ]);
 
 val lameq_sub_cong = save_thm(
@@ -179,7 +175,7 @@ val lemma2_13 = store_thm( (* p.20 *)
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MAP_EVERY Q.ID_SPEC_TAC [`n`, `n'`] THEN
   POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `c` THEN
-  HO_MATCH_MP_TAC ctxt_indn THEN PROVE_TAC [lam_eq_rules]);
+  HO_MATCH_MP_TAC ctxt_indn THEN PROVE_TAC [lameq_rules]);
 
 val (lamext_rules, lamext_indn, lamext_cases) = (* p. 21 *)
   Hol_reln`(!x M N. lamext ((LAM x M) @@ N) ([N/x]M)) /\
@@ -282,18 +278,18 @@ val SUB_LAM_RWT = store_thm(
 val lameq_asmlam = store_thm(
   "lameq_asmlam",
   ``!M N. M == N ==> asmlam eqns M N``,
-  HO_MATCH_MP_TAC lam_eq_indn THEN METIS_TAC [asmlam_rules]);
+  HO_MATCH_MP_TAC lameq_indn THEN METIS_TAC [asmlam_rules]);
 
 fun betafy ss =
     simpLib.add_relsimp {refl = GEN_ALL lameq_refl,
-                         trans = List.nth(CONJUNCTS lam_eq_rules, 3),
+                         trans = List.nth(CONJUNCTS lameq_rules, 3),
                          weakenings = [lameq_weaken_cong],
                          subsets = [],
-                         rewrs = [hd (CONJUNCTS lam_eq_rules)]} ss ++
+                         rewrs = [hd (CONJUNCTS lameq_rules)]} ss ++
     simpLib.SSFRAG {rewrs = [],
                     ac = [],  convs = [],
                     congs = [lameq_app_cong,
-                             SPEC_ALL (last (CONJUNCTS lam_eq_rules)),
+                             SPEC_ALL (last (CONJUNCTS lameq_rules)),
                              lameq_sub_cong],
                     dprocs = [], filter = NONE, name = NONE}
 
@@ -312,7 +308,7 @@ val lameq_K = store_thm(
 val lameq_I = store_thm(
   "lameq_I",
   ``I @@ A == A``,
-  PROVE_TAC [lam_eq_rules, I_def, SUB_THM]);
+  PROVE_TAC [lameq_rules, I_def, SUB_THM]);
 
 val B_def = Define`B = S @@ (K @@ S) @@ K`;
 val FV_B = Store_thm(
@@ -357,7 +353,7 @@ val Yf_def = Define`
 val YYf = store_thm(
   "YYf",
   ``Y @@ f == Yf f``,
-  ONCE_REWRITE_TAC [lam_eq_cases] THEN DISJ1_TAC THEN
+  ONCE_REWRITE_TAC [lameq_cases] THEN DISJ1_TAC THEN
   SRW_TAC [boolSimps.DNF_ss][Yf_def, Y_def, LAM_eq_thm] THEN
   DISJ1_TAC THEN NEW_ELIM_TAC THEN SRW_TAC [][SUB_LAM_RWT] THEN
   NEW_ELIM_TAC THEN SRW_TAC [][LAM_eq_thm, tpm_fresh]);
@@ -365,14 +361,14 @@ val YYf = store_thm(
 val YffYf = store_thm(
   "YffYf",
   ``Yf f == f @@ Yf f``,
-  SRW_TAC [][Yf_def] THEN NEW_ELIM_TAC THEN SRW_TAC [][Once lam_eq_cases] THEN
+  SRW_TAC [][Yf_def] THEN NEW_ELIM_TAC THEN SRW_TAC [][Once lameq_cases] THEN
   DISJ1_TAC THEN MAP_EVERY Q.EXISTS_TAC [`v`, `f @@ (VAR v @@ VAR v)`] THEN
   SRW_TAC [][lemma14b]);
 
 val lameq_Y = store_thm(
   "lameq_Y",
   ``Y @@ f == f @@ (Y @@ f)``,
-  METIS_TAC [lam_eq_rules, YYf, YffYf]);
+  METIS_TAC [lameq_rules, YYf, YffYf]);
 
 val Yf_fresh = store_thm(
   "Yf_fresh",
@@ -416,7 +412,7 @@ val Yf_cong = store_thm(
            LAM fv (g @@ (VAR fv @@ VAR fv)))`
      by SRW_TAC [][Yf_fresh] THEN
   STRIP_TAC THEN ASM_SIMP_TAC (srw_ss()) [] THEN
-  METIS_TAC [lam_eq_rules]);
+  METIS_TAC [lameq_rules]);
 
 val SK_incompatible = store_thm( (* example 2.18, p23 *)
   "SK_incompatible",
