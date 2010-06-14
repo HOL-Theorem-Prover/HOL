@@ -22,7 +22,7 @@ fun datestring () = let
   (* SML implementations have such broken time/date code that this seems
      best - now only works on Unixy systems *)
   val tmp = OS.FileSys.tmpName()
-  val result = OS.Process.system ("date +\"%a, %d %b %Y %H:%M %z\" > "^tmp)
+  val result = OS.Process.system ("date +\"%a, %d %b %Y %H:%M:%S %z\" > "^tmp)
   val _ = OS.Process.isSuccess result orelse
           die "Couldn't run date"
   val istrm = TextIO.openIn tmp
@@ -35,17 +35,9 @@ fun standard_header from subject =
     \From: "^from^"\n\
     \Date: "^datestring()^ (* datestring provides its own newline *)
     "Subject: "^subject^"\n"^
-    "MIME-version: 1.0\n\
+    "MIME-Version: 1.0\n\
     \Content-Type: text/plain; charset=UTF-8\n\
     \Content-Transfer-Encoding: 8bit\n\n"
-
-fun trunclast n s = let
-  val sz = String.size s
-in
-  if n < 0 then "" else
-  if n < sz then String.extract(s, sz - n, NONE)
-  else s
-end
 
 val remove_nulls = String.translate (fn #"\000" => "^@" | c => str c)
 
@@ -57,6 +49,14 @@ fun newline_tidy s = let
 in
   if size rest = 0 then s
   else "... content elided ..." ^ string rest
+end
+
+fun trunclast n s = let
+  val sz = String.size s
+in
+  if n < 0 then "" else
+  if n < sz then newline_tidy (String.extract(s, sz - n, NONE))
+  else s
 end
 
 fun main() = let
@@ -74,7 +74,6 @@ in
     output(stdOut,
            standard_header from ("FAILURE: "^sysdesc) ^
            (buildlog |> trunclast 3000
-                     |> newline_tidy
                      |> remove_nulls))
 end
 
