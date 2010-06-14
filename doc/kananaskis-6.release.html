@@ -169,7 +169,24 @@ just <code>bin/build</code> to build again with those same options.
 To override a <code>-seq foo</code> option, you can use
 the <code>-fullbuild</code> option.
 
-<p> Other options (<code>-symlink</code>, <code>-selftest</code>) are not cached.
+<p> Other options (<code>-symlink</code>, <code>-selftest</code>) are
+not cached.
+
+<li> <p>Users can configure their interactive sessions (setting output
+pretty-printing options with <code>set_trace</code> commands for
+example), by writing SML code into a <code>.hol-config.sml</code> file
+in their HOME directory.  In fact, all of the following are acceptable
+names for the file: <code>hol-config.sml</code>, <code>hol-config.ML</code>, <code>.hol-config</code>, <code>.hol-config.sml</code>,
+and <code>.hol-config.ML</code>.  The first of these that is found is
+used.
+
+<p> (The meaning of “the user’s home
+directory” is clear on Unix systems.  On Windows, the environment
+variables <code>HOMEPATH</code> and <code>APPDATA</code> are consulted
+to determine where to look.)
+
+<p> The file, if it exists, is <code>use</code>-d into the interactive
+session, when it begins.  A message is printed saying as much also.
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
