@@ -18,6 +18,7 @@ sig
 
   (* new (inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
+  val xHol_reln    : string -> term quotation -> thm * thm * thm
   val export_mono  : string -> unit
 
   (* Case-splitting and induction operations *)

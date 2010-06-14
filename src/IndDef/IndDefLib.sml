@@ -147,27 +147,41 @@ val derive_mono_strong_induction = IndDefRules.derive_mono_strong_induction;
 fun derive_strong_induction (rules,ind) =
     IndDefRules.derive_mono_strong_induction (!the_monoset) (rules, ind)
 
+fun save_theorems name (rules, indn, strong_ind, cases) = let
+in
+  save_thm(name^"_rules", rules);
+  save_thm(name^"_ind", indn);
+  save_thm(name^"_strongind", strong_ind);
+  save_thm(name^"_cases", cases);
+  export_rule_induction (name ^ "_strongind")
+end
+
 fun Hol_mono_reln monoset tm = let
   val (rules, indn, cases) =
       InductiveDefinition.new_inductive_definition monoset tm
       (* not! InductiveDefinition.bool_monoset tm *)
+  val strong_ind = derive_strong_induction (rules, indn)
   val names = names_from_casethm cases
   val name = hd names
-  val strong_ind = derive_strong_induction (rules, indn)
-  val _ = save_thm(name^"_rules", rules)
-  val _ = save_thm(name^"_ind", indn)
-  val _ = save_thm(name^"_strongind", strong_ind)
-  val _ = save_thm(name^"_cases", cases)
-  val _ = export_rule_induction (name ^ "_strongind")
 in
+  save_theorems name (rules, indn, strong_ind, cases);
   (rules, indn, cases)
 end
 handle e => raise (wrap_exn "IndDefLib" "Hol_mono_reln" e);
 
 
 (* ----------------------------------------------------------------------
-    the standard entry-point
+    the standard entry-points
    ---------------------------------------------------------------------- *)
+
+fun xHol_reln name q = let
+  val (rules, indn, cases) =
+      InductiveDefinition.new_inductive_definition (!the_monoset) (term_of q)
+  val strong_ind = derive_strong_induction (rules, indn)
+in
+  save_theorems name (rules, indn, strong_ind, cases);
+  (rules,indn,cases)
+end
 
 fun Hol_reln q =
     Hol_mono_reln (!the_monoset) (term_of q)
