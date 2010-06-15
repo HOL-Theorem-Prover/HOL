@@ -2709,6 +2709,14 @@ val INFINITE_UNIV =
      PURE_ONCE_REWRITE_TAC [NOT_IN_FINITE] THEN
      ACCEPT_TAC (IMP_ANTISYM_RULE INF_IMP_INFINITY INFINITY_IMP_INF));
 
+(* a natural consequence *)
+val INFINITE_NUM_UNIV = store_thm(
+  "INFINITE_NUM_UNIV",
+  ``~FINITE univ(:num) /\ INFINITE univ(:num)``,
+  REWRITE_TAC [GSYM INFINITE_DEF] THEN
+  SRW_TAC [][INFINITE_UNIV] THEN Q.EXISTS_TAC `SUC` THEN SRW_TAC [][] THEN
+  Q.EXISTS_TAC `0` THEN SRW_TAC [][]);
+val _ = export_rewrites ["INFINITE_NUM_UNIV"]
 
 val FINITE_PSUBSET_INFINITE = store_thm("FINITE_PSUBSET_INFINITE",
 (--`!s. INFINITE (s:'a set) =
@@ -3186,6 +3194,18 @@ val FINITE_CROSS_EQ = store_thm(
   MESON_TAC [FINITE_CROSS_EQ_lemma, FINITE_CROSS, FINITE_EMPTY,
              CROSS_EMPTY]);
 val _ = export_rewrites ["FINITE_CROSS_EQ"]
+
+val CROSS_UNIV = store_thm(
+  "CROSS_UNIV",
+  ``univ(:'a # 'b) = univ(:'a) CROSS univ(:'b)``,
+  SRW_TAC [][EXTENSION]);
+
+val INFINITE_PAIR_UNIV = store_thm(
+  "INFINITE_PAIR_UNIV",
+  ``(FINITE univ(:'a # 'b) = FINITE univ(:'a) /\ FINITE univ(:'b)) /\
+    (INFINITE univ(:'a # 'b) = INFINITE univ(:'a) \/ INFINITE univ(:'b))``,
+  FULL_SIMP_TAC (srw_ss()) [INFINITE_DEF, CROSS_UNIV]);
+val _ = export_rewrites ["INFINITE_PAIR_UNIV"]
 
 (* ====================================================================== *)
 (* Set complements.                                                       *)

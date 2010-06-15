@@ -3026,6 +3026,17 @@ val INT_LE_MONO = store_thm(
   ASM_SIMP_TAC bool_ss [INT_LE_LT, INT_MUL_SIGN_CASES, INT_LT_GT] THEN
   PROVE_TAC [INT_ENTIRE, INT_LT_REFL]);
 
+open pred_setTheory
+val INFINITE_INT_UNIV = store_thm(
+  "INFINITE_INT_UNIV",
+  ``~FINITE univ(:int) /\ INFINITE univ(:int)``,
+  REWRITE_TAC [INFINITE_DEF] THEN STRIP_TAC THEN
+  `FINITE (IMAGE Num univ(:int))` by SRW_TAC [][] THEN
+  Q_TAC SUFF_TAC `IMAGE Num univ(:int) = univ(:num)`
+        THEN1 (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+  SRW_TAC [][EXTENSION] THEN Q.EXISTS_TAC `&x` THEN SRW_TAC [][NUM_OF_INT]);
+val _ = export_rewrites ["INFINITE_INT_UNIV"]
+
 (*----------------------------------------------------------------------*)
 (* Prove rewrites for calculation with integers                         *)
 (*----------------------------------------------------------------------*)

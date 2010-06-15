@@ -3279,6 +3279,15 @@ val REAL_ADD_SUB_ALT = store_thm
    ``!x y : real. (x + y) - y = x``,
    RW_TAC boolSimps.bool_ss [REAL_EQ_SUB_RADD]);
 
+val INFINITE_REAL_UNIV = store_thm(
+  "INFINITE_REAL_UNIV",
+  ``~FINITE univ(:real) /\ INFINITE univ(:real)``,
+  REWRITE_TAC [pred_setTheory.INFINITE_DEF] THEN STRIP_TAC THEN
+  `FINITE (IMAGE real_of_num univ(:num))`
+     by METIS_TAC [pred_setTheory.SUBSET_FINITE,
+                   pred_setTheory.SUBSET_UNIV] THEN
+  FULL_SIMP_TAC (srw_ss()) [pred_setTheory.INJECTIVE_IMAGE_FINITE]);
+val _ = export_rewrites ["INFINITE_REAL_UNIV"]
 
 (* ----------------------------------------------------------------------
    theorems for calculating with the reals; naming scheme taken from
