@@ -12,8 +12,6 @@ LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
 PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
 COUNT_UID = $(dprot $(SIGOBJ)/Count.ui)
 HOLSET_UID = $(dprot $(SIGOBJ)/HOLset.ui)
-mosml_BASIS_UID = $(dprot $(SIGOBJ)/basis2002.ui)
-poly_BASIS_UID = 
 
 Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID) $(FTHEORY_UID) TheoryPP-sig.ui
 	HOLMOSMLC -c -toplevel $(FTHEORY_UI) TheoryPP-sig.ui Raw-sig.sml
@@ -42,8 +40,8 @@ TheoryPP-sig.uo TheoryPP-sig.ui: TheoryPP-sig.sml $(PORTABLE_UID)
 Theory-sig.uo: Theory-sig.sml $(PORTABLE_UID) $(FTHEORY_UID)
 	HOLMOSMLC -c -toplevel $(FTHEORY_UI) Theory-sig.sml
 
-Definition-sig.uo: Definition-sig.sml $($(ML_SYSNAME)_BASIS_UID)
-	HOLMOSMLC -c -toplevel Definition-sig.sml
+Definition-sig.uo: Definition-sig.sml 
+	$(MOSMLC) -c -toplevel Definition-sig.sml
 
 CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo \
                    Thm-sig.uo $(FTAG_UID) $(FTERM_UID) Theory-sig.uo \
@@ -52,8 +50,8 @@ CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo \
                                Theory-sig.ui TheoryPP-sig.ui Net-sig.ui \
                                Definition-sig.ui CoreKernel-sig.sml
 
-Net-sig.uo: Net-sig.sml $($(ML_SYSNAME)_BASIS_UID)
-	HOLMOSMLC -c -toplevel Net-sig.sml
+Net-sig.uo: Net-sig.sml 
+	$(MOSMLC) -c -toplevel Net-sig.sml
 
 Overlay.uo: Overlay.sml CoreKernel-sig.uo Type.uo Term.uo $(FTAG_UID) Thm.uo \
             TheoryPP.uo Theory.uo Definition.uo Net.uo
