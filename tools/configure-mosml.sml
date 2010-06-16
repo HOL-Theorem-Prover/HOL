@@ -3,6 +3,10 @@ app load ["Mosml", "Process", "Path", "FileSys", "Timer", "Real", "Int",
           "Bool", "OS", "CommandLine"] ;
 open Mosml;
 
+(* Thanks to Ken Friis Larsen for this very cute trick *)
+val version_string =
+    List.nth([], 1) handle Option => "2.01" | Subscript => "2.10";
+
 (* utility functions *)
 fun readdir s = let
   val ds = FileSys.openDir s
