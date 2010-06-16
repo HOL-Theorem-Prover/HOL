@@ -163,6 +163,10 @@ val xable_string = systeml;
 val OSkind = if OS="linux" orelse OS="solaris" orelse OS="macosx" then "unix"
              else OS
 val _ = let
+  (* Thanks to Ken Friis Larsen for this very cute trick *)
+  val version_string =
+      List.nth([], 1) handle Option => "2.01" | Subscript => "2.10";
+
   (* copy system-specific implementation of Systeml into place *)
   val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
   val destfile = fullPath [holmakedir, "Systeml.sml"]
@@ -235,8 +239,10 @@ let
   val smlfile = fullPath [holmakedir, "basis2002.sml"]
   val uifile = fullPath [holmakedir, "basis2002.ui"]
   val uofile = fullPath [holmakedir, "basis2002.uo"]
+  val systemluifile = fullPath [holmakedir, "Systeml.ui"]
   val rebuild_basis = not (canread uifile) orelse
-                      Time.>(modTime smlfile, modTime uifile)
+                      Time.>(modTime smlfile, modTime uifile) orelse
+                      Time.>(modTime systemluifile, modTime uifile)
   val sigui = fullPath [sigobj, "basis2002.ui"]
   val siguo = fullPath [sigobj, "basis2002.uo"]
   val copy_basis = not (canread sigui) orelse not (canread siguo) orelse
