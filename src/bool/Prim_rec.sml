@@ -626,20 +626,6 @@ and GALPHA tm =
    in MK_COMB(AP_TERM boolSyntax.conjunction c, cs)
    end handle HOL_ERR _ => GALPH tm
 
-
-(* ---------------------------------------------------------------------*)
-(* Internal function: mapshape						*)
-(* 									*)
-(* Applies the functions in fl to argument lists obtained by splitting  *)
-(* the list l into sublists of lengths given by nl.			*)
-(* ---------------------------------------------------------------------*)
-
-fun mapshape [] _ _ =  [] |
-    mapshape (n1::nums) (f1::funcs) args =
-       let val (f1_args,args') = Lib.split_after n1 args
-       in f1 f1_args :: mapshape nums funcs args'
-       end;
-
 (* --------------------------------------------------------------------- *)
 (* INDUCT_THEN : general induction tactic for concrete recursive types.	 *)
 (* --------------------------------------------------------------------- *)

@@ -302,6 +302,13 @@ in
   List.rev (recurse 0 [] lst)
 end
 
+fun mapshape [] _ _ =  []
+  | mapshape (n::nums) (f::funcs) all_args =
+     let val (fargs,rst) = split_after n all_args
+     in f fargs :: mapshape nums funcs rst
+     end
+  | mapshape _ _ _ = raise ERR "mapshape" "irregular lists";
+
 type 'a cmp = 'a * 'a -> order
 
 fun flip_order LESS = GREATER
