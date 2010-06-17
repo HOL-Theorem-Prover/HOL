@@ -219,15 +219,18 @@ in
   fn t => with_pp con (pprint t)
 end
 
+val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
+
 fun minprint t = let
-  val g0 = (type_grammar.empty_grammar, term_grammar.stdhol)
   fun default t = let
+    val (_, baseprinter) =
+        Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+                      print_from_grammars
+                      min_grammars
+    fun printer pps =
+        baseprinter pps |> trace ("types", 1) |> trace ("Greek tyvars", 0)
     val t_str =
-        String.toString
-          (trace ("types", 1)
-                 (trace ("Unicode", 0)
-                        (PP.pp_to_string 1000000 (#2 (print_from_grammars g0))))
-                 t)
+        String.toString (PP.pp_to_string 1000000 printer t)
   in
     String.concat ["(#2 (parse_from_grammars min_grammars)",
                    "[QUOTE \"", t_str, "\"])"]
@@ -1512,8 +1515,6 @@ fun TM x = x; fun TOK x = x;   (* remove constructor status *)
 
 val TM = term_grammar.RE term_grammar.TM
 val TOK = term_grammar.RE o term_grammar.TOK
-
-val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
 
 (* ----------------------------------------------------------------------
     hideous hack section
