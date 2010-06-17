@@ -226,18 +226,29 @@ val _ =
     | _ => die "FAILED!"
 end (* local *)
 
-val _ = tprint "Testing type-specific Unicode overload"
+val _ = tprint "Testing type-specific Unicode overload 1"
 val _ = set_trace "Unicode" 1
 val _ = overload_on (UnicodeChars.delta, ``$! :(('a -> 'b)->bool)->bool``)
-val tm = Lib.with_flag (Globals.notify_on_tyvar_guess, false)
-                       Parse.Term
-                       `!x. P x`
-val randty =  type_of (rand tm)
-val _ = if Type.compare(randty, alpha --> bool) <> EQUAL then
-          die "FAILED!"
-        else print "OK\n"
-val _ = set_trace "Unicode" 0
+fun checkparse () = let
+  val tm = Lib.with_flag (Globals.notify_on_tyvar_guess, false)
+                         Parse.Term
+                         `!x. P x`
+  val randty =  type_of (rand tm)
+in
+  if Type.compare(randty, alpha --> bool) <> EQUAL then die "FAILED!"
+  else print "OK\n"
+end
+val _ = checkparse()
 
+(* bounce Unicode trace - and repeat *)
+val _ = tprint "Testing type-specific Unicode overload 2"
+val _ = set_trace "Unicode" 0
+val _ = set_trace "Unicode" 1
+val _ = checkparse ()
+
+
+(* pretty-printing tests - turn Unicode off *)
+val _ = set_trace "Unicode" 0
 fun tpp s = let
   val t = Parse.Term [QUOTE s]
   val _ = tprint ("Testing printing of `"^s^"`")
