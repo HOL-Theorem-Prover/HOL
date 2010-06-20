@@ -176,11 +176,33 @@ fun induct_on_type st ty =
                     ("No induction theorem found for type: "^Lib.quote Tyop)
  end
 
-fun Induct_on qtm g =
- let val st = find_subterm qtm g
- in induct_on_type st (cat_tyof st) g
- end
- handle e => raise wrap_exn "SingleStep" "Induct_on" e
+val is_fun_ty = can dom_rng
+fun rule_induct indth = HO_MATCH_MP_TAC indth
+
+fun Induct_on qtm g = let
+  val st = find_subterm qtm g
+  val ty = cat_tyof st
+  val (_, rngty) = strip_fun ty
+in
+  if rngty = Type.bool then let
+      val tm = case st of Free t => t | Alien t => t | Bound (_, t) => t
+      val (c, _) = strip_comb tm
+    in
+      case Lib.total dest_thy_const c of
+        SOME {Thy,Name,...} => let
+          val crec = {Thy=Thy,Name=Name}
+          val rules = Binarymap.find(IndDefLib.rule_induction_map(), crec)
+                      handle NotFound => []
+        in
+          MAP_FIRST rule_induct rules ORELSE
+          induct_on_type st ty
+        end g
+      | NONE => induct_on_type st ty g
+    end
+  else
+    induct_on_type st ty g
+end
+    handle e => raise wrap_exn "SingleStep" "Induct_on" e
 
 
 fun grab_var M =
