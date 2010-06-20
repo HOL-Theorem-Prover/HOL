@@ -19,7 +19,8 @@ sig
   val thy_monos     : string -> thm list
 
   val thy_rule_inductions : string -> thm list
-  val rule_induction_map : unit -> (term,thm list) Binarymap.dict
+  val rule_induction_map : unit ->
+                           ({Thy:string,Name:string},thm list) Binarymap.dict
   val add_rule_induction : thm -> unit
   val export_rule_induction : string -> unit
 

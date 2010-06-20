@@ -57,8 +57,8 @@ end;
     Store all rule inductions
    ---------------------------------------------------------------------- *)
 
-val term_rule_map : (term,thm list)Binarymap.dict ref =
-    ref (Binarymap.mkDict Term.compare)
+val term_rule_map : ({Name:string,Thy:string},thm list)Binarymap.dict ref =
+    ref (Binarymap.mkDict KernelSig.name_compare)
 
 fun listdict_add (d, k, e) =
     case Binarymap.peek(d, k) of
@@ -73,8 +73,10 @@ fun ind_thm_to_consts thm = let
   val (_, bod) = strip_forall c
   val (_, con) = dest_imp bod
   val cons = strip_conj con
+  fun to_kname {Name,Thy,...} = {Name = Name, Thy = Thy}
 in
-  map (fn t => t |> strip_forall |> #2 |> dest_imp |> #1 |> strip_comb |> #1)
+  map (fn t => t |> strip_forall |> #2 |> dest_imp |> #1 |> strip_comb |> #1
+                 |> dest_thy_const |> to_kname)
       cons
 end
 
