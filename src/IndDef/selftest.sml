@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib IndDefLib arithmeticTheory
+open HolKernel Parse boolLib IndDefLib
 
 fun die s = (if !Globals.interactive then
                raise Fail s
@@ -11,12 +11,30 @@ fun derive_strong_induction p =
      handle HOL_ERR _ => die "FAILED to prove strong induction!";
      print "Proved strong induction\n")
 
+(* set up a fake arithmetic theory *)
+val _ = new_type ("num", 0)
+val _ = new_constant("Z", ``:num``)
+val _ = new_constant("ONE", ``:num``)
+val _ = new_constant("TWO", ``:num``)
+val _ = new_constant("FOUR", ``:num``)
+val _ = new_constant("<=", ``:num -> num -> bool``)
+val _ = set_fixity "<=" (Infix(NONASSOC, 450))
+val _ = new_constant("<", ``:num -> num -> bool``)
+val _ = set_fixity "<" (Infix(NONASSOC, 450))
+val _ = new_constant ("+", ``:num -> num -> num``)
+val _ = set_fixity "+" (Infixl 500)
+val _ = new_constant ("*", ``:num -> num -> num``)
+val _ = set_fixity "*" (Infixl 600)
+val _ = new_constant ("SUC", ``:num -> num``)
+
+
 val _ = print "*** Testing inductive definitions - mutual recursion\n"
 
+
 val (oe_rules, oe_ind, oe_cases) = Hol_reln`
-  even 0 /\
-  (!m. odd m /\ 1 <= m ==> even (m + 1)) /\
-  (!m. even m ==> odd (m + 1))
+  even Z /\
+  (!m. odd m /\ ONE <= m ==> even (m + ONE)) /\
+  (!m. even m ==> odd (m + ONE))
 `;
 val _ = checkhyps oe_rules
 
@@ -35,7 +53,7 @@ val (mscheme_rules, mscheme_ind, mscheme_cases) = Hol_reln`
   (!n m. n < m ==> foo P n m) /\
   (!n m. P n ==> foo P n m) /\
   (!n m. bar P n ==> foo P n m) /\
-  (!n. 4 < n ==> bar P (2 * n))
+  (!n. FOUR < n ==> bar P (TWO * n))
 `
 val _ = checkhyps mscheme_rules
 
@@ -123,7 +141,7 @@ val ph_strong = derive_strong_induction(ph_rules, ph_ind)
 (* UNCURRY with more than two arguments *)
 val _ = print "*** Testing UNCURRY with more than two arguments\n"
 val (u3_rules, u3_ind, u3_cases) = Hol_reln`
-  u3 (0,1,2) /\
+  u3 (Z,ONE,TWO) /\
   (!x y z. (\ ((x,y), z). u3 (x,y,z)) ((y,x),z) ==> u3 (x,y,z))
 `
 val _ = checkhyps u3_rules
@@ -132,7 +150,7 @@ val u3_strong = derive_strong_induction(u3_rules, u3_ind)
 (* single rule *)
 val _ = print "*** Testing strong principle for singleton rule\n"
 val (single_rules, single_ind, single_cases) = Hol_reln`
-  (!x y. RTC single x y \/ (x = y + 3) ==> single x y)
+  (!x y. RTC single x y \/ (x = y + TWO) ==> single x y)
 `;
 val _ = checkhyps single_rules
 
