@@ -1,3 +1,2 @@
-selftest.exe: selftest.uo IndDefLib.uo IndDefRules.uo InductiveDefinition.uo\
-              $(dprot $(SIGOBJ)/arithmeticTheory.uo)
+selftest.exe: selftest.uo IndDefLib.uo IndDefRules.uo InductiveDefinition.uo
 	$(HOLMOSMLC) -o $@ $<
