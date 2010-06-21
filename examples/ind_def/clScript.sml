@@ -8,11 +8,9 @@ val _ = Hol_datatype `cl = S | K | # of cl => cl`;
 
 val _ = set_fixity "#"  (Infixl 1100);
 
-val _ = set_mapped_fixity {tok = "-->", term_name = "redn",
-                           fixity = Infix(NONASSOC, 450)}
+val _ = set_fixity "-->" (Infix(NONASSOC, 450))
 
-val (redn_rules, redn_ind, redn_cases) =
-  IndDefLib.Hol_reln `
+val (redn_rules, redn_ind, redn_cases) = xHol_reln "redn" `
     (!x y f. x --> y   ==>    f # x --> f # y) /\
     (!f g x. f --> g   ==>    f # x --> g # x) /\
     (!x y.   K # x # y --> x) /\
@@ -21,7 +19,7 @@ val (redn_rules, redn_ind, redn_cases) =
 val _ = hide "RTC";
 
 val (RTC_rules, RTC_ind, RTC_cases) =
-  IndDefLib.Hol_reln `
+  Hol_reln `
     (!x.     RTC R x x) /\
     (!x y z. R x y /\ RTC R y z ==> RTC R x z)`;
 
@@ -56,23 +54,21 @@ val R_RTC_diamond = store_thm(
          !x p. RTC R x p ==>
                !z. R x z ==>
                    ?u. RTC R p u /\ RTC R z u``,
-  GEN_TAC THEN STRIP_TAC THEN
-  HO_MATCH_MP_TAC RTC_ind THEN
+  GEN_TAC THEN STRIP_TAC THEN Induct_on `RTC` THEN
   PROVE_TAC [diamond_def,RTC_rules]);
 
 val RTC_RTC = store_thm(
   "RTC_RTC",
   ``!R x y z. RTC R x y /\ RTC R y z ==> RTC R x z``,
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
-  PROVE_TAC [RTC_rules]);
+  GEN_TAC THEN Induct_on `RTC` THEN PROVE_TAC [RTC_rules]);
 
 val diamond_RTC_lemma = prove(
   ``!R.
        diamond R ==>
        !x y. RTC R x y ==> !z. RTC R x z ==>
                                ?u. RTC R y u /\ RTC R z u``,
-  GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
+  GEN_TAC THEN STRIP_TAC THEN Induct_on `RTC` THEN
     PROVE_TAC [RTC_RTC, RTC_rules, R_RTC_diamond]
   );
 
@@ -81,52 +77,48 @@ val diamond_RTC = store_thm(
   ``!R. diamond R ==> diamond (RTC R)``,
   PROVE_TAC [diamond_def,diamond_RTC_lemma]);
 
-val _ = set_mapped_fixity {tok = "-||->", fixity = Infix(NONASSOC, 450),
-                           term_name = "predn"}
-
-val (predn_rules, predn_ind, predn_cases) =
-    IndDefLib.Hol_reln
-      `(!x. x -||-> x) /\
-       (!x y u v. x -||-> y /\ u -||-> v ==> x # u -||-> y # v) /\
-       (!x y. K # x # y -||-> x) /\
-       (!f g x. S # f # g # x -||-> (f # x) # (g # x))`;
+val _ = set_fixity "-||->" (Infix(NONASSOC, 450))
+val (predn_rules, predn_ind, predn_cases) = xHol_reln "predn" `
+  (!x. x -||-> x) /\
+  (!x y u v. x -||-> y /\ u -||-> v ==> x # u -||-> y # v) /\
+  (!x y. K # x # y -||-> x) /\
+  (!f g x. S # f # g # x -||-> (f # x) # (g # x))
+`;
 
 val RTC_monotone = store_thm(
   "RTC_monotone",
   ``!R1 R2. (!x y. R1 x y ==> R2 x y) ==>
             (!x y. RTC R1 x y ==> RTC R2 x y)``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN Induct_on `RTC` THEN
   REPEAT STRIP_TAC THEN PROVE_TAC [RTC_rules]);
 
 val _ = set_fixity "-->*" (Infix(NONASSOC, 450));
-val _ = overload_on ("-->*", ``RTC redn``)
+val _ = overload_on ("-->*", ``RTC $-->``)
 
 val _ = set_fixity "-||->*" (Infix(NONASSOC, 450));
-val _ = overload_on ("-||->*", ``RTC predn``)
+val _ = overload_on ("-||->*", ``RTC $-||->``)
 
 val RTCredn_RTCpredn = store_thm(
   "RTCredn_RTCpredn",
   ``!x y. x -->* y   ==>   x -||->* y``,
-  HO_MATCH_MP_TAC RTC_monotone THEN
-  HO_MATCH_MP_TAC redn_ind THEN
+  HO_MATCH_MP_TAC RTC_monotone THEN Induct_on `$-->` THEN
   PROVE_TAC [predn_rules]);
 
 val RTCredn_ap_monotonic = store_thm(
   "RTCredn_ap_monotonic",
   ``!x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y``,
-  HO_MATCH_MP_TAC RTC_ind THEN PROVE_TAC [RTC_rules, redn_rules]);
+  Induct_on `RTC` THEN PROVE_TAC [RTC_rules, redn_rules]);
 
 val predn_RTCredn = store_thm(
   "predn_RTCredn",
   ``!x y. x -||-> y  ==>  x -->* y``,
-  HO_MATCH_MP_TAC predn_ind THEN
+  Induct_on `$-||->` THEN
   PROVE_TAC [RTC_rules,redn_rules,RTC_RTC,RTCredn_ap_monotonic]);
 
 val RTCpredn_RTCredn = store_thm(
   "RTCpredn_RTCredn",
   ``!x y. x -||->* y   ==>  x -->* y``,
-  HO_MATCH_MP_TAC RTC_ind THEN
-  PROVE_TAC [predn_RTCredn, RTC_RTC, RTC_rules]);
+  Induct_on `RTC` THEN PROVE_TAC [predn_RTCredn, RTC_RTC, RTC_rules]);
 
 val RTCpredn_EQ_RTCredn = store_thm(
   "RTCpredn_EQ_RTCredn",
@@ -175,12 +167,10 @@ val Sxyz_predn = prove(
 
 val x_ap_y_predn = characterise ``x # y``;
 
-val predn_strong_ind = theorem "predn_strongind"
-
 val predn_diamond_lemma = prove(
   ``!x y. x -||-> y ==>
           !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u``,
-  HO_MATCH_MP_TAC predn_strong_ind THEN REPEAT CONJ_TAC THENL [
+  Induct_on `$-||->` THEN REPEAT CONJ_TAC THENL [
     PROVE_TAC [predn_rules],
     REPEAT STRIP_TAC THEN
     Q.PAT_ASSUM `x # y -||-> z`
@@ -199,12 +189,12 @@ val predn_diamond_lemma = prove(
 
 val predn_diamond = store_thm(
   "predn_diamond",
-  ``diamond predn``,
+  ``diamond $-||->``,
   PROVE_TAC [diamond_def, predn_diamond_lemma]);
 
 val confluent_redn = store_thm(
   "confluent_redn",
-  ``confluent redn``,
+  ``confluent $-->``,
   PROVE_TAC [predn_diamond, confluent_diamond_RTC,
              RTCpredn_EQ_RTCredn, diamond_RTC]);
 
