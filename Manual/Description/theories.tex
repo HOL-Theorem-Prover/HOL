@@ -2362,27 +2362,27 @@ A list of operations is provided in the table below.
 {
 \setlength{\tabcolsep}{4pt}
 \begin{center}
-\tablefirsthead{% 
+\tablefirsthead{%
 \hline
-\multicolumn{1}{|c}{Operation\rule{0pt}{14pt}} & 
-\multicolumn{1}{c}{Symbol} & 
-Type & 
+\multicolumn{1}{|c}{Operation\rule{0pt}{14pt}} &
+\multicolumn{1}{c}{Symbol} &
+Type &
 \multicolumn{1}{c|}{Description} \\[4pt]
-\hline} 
-\tablehead{% 
-\hline 
-\multicolumn{4}{|l|}{\small\sl continued from previous page}\\ 
-\hline 
-\multicolumn{1}{|c}{Operation\rule{0pt}{14pt}} & 
-\multicolumn{1}{c}{Symbol} & 
-Type & 
+\hline}
+\tablehead{%
+\hline
+\multicolumn{4}{|l|}{\small\sl continued from previous page}\\
+\hline
+\multicolumn{1}{|c}{Operation\rule{0pt}{14pt}} &
+\multicolumn{1}{c}{Symbol} &
+Type &
 \multicolumn{1}{c|}{Description} \\[4pt]
-\hline} 
-\tabletail{% 
-\hline 
-\multicolumn{4}{|r|}{\small\sl continued on next page}\\ 
-\hline} 
-\tablelasttail{\hline} 
+\hline}
+\tabletail{%
+\hline
+\multicolumn{4}{|r|}{\small\sl continued on next page}\\
+\hline}
+\tablelasttail{\hline}
 \small
 \begin{supertabular}{|l|c|l|l|}
 \holtxt{n2w} & & \num\rarr\worda & Map from a natural number \\
@@ -3517,6 +3517,7 @@ as follows:
 \end{hol}
 
 \paragraph{Finite sets}
+\index{finiteness!of sets}
 The finite sets (\holtxt{FINITE}) are defined inductively as those
 built from the empty set by a finite number of insertions.
 %
@@ -3524,14 +3525,15 @@ built from the empty set by a finite number of insertions.
 \begin{verbatim}
    FINITE_DEF
      |- !s. FINITE s = !P. P {} /\ (!s. P s ==> !e. P (e INSERT s)) ==> P s
-   INFINITE_DEF
-     |- !s. INFINITE s = ~FINITE s
 \end{verbatim}
 \end{hol}
 %
 \noindent
-A set is infinite iff it is not finite. The finite sets have an
-induction theorem:
+A set is infinite iff it is not finite, and there is an abbreviation in the system that parses \holtxt{\holquote{INFINITE~s}} into  \holtxt{\holquote{\td{}FINITE~s}}.
+The pretty-printer reverses this transformation.
+
+\medskip\noindent
+The finite sets have an induction theorem:
 %
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite sets}
 %
@@ -3548,6 +3550,7 @@ As mentioned, set operations apply to both finite and infinite
 sets. However, some operations, such as cardinality
 (\holtxt{CARD}), are only defined for finite sets.  The
 cardinality of an infinite set is not specified.
+\index{cardinality of (finite) sets}
 %
 \begin{hol}
 \begin{verbatim}
@@ -3997,7 +4000,7 @@ elements to $0$.
 
 
 \paragraph {Finite multisets}
-
+\index{finiteness!of multi-sets}
 The finite multisets (\holtxt{FINITE\_BAG}) are defined inductively as
 those built from the empty bag by a finite number of insertions.
 %

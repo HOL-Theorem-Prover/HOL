@@ -359,6 +359,16 @@ This means that a line such as
          open Unicode
 </pre>
 
+<li><p>The constant <code>INFINITE</code>
+in <code>pred_setTheory</code> has been replaced by an abbreviation.
+Thus, if one types <code>``INFINITE&nbsp;s``</code>, the underlying term is
+really <code>¬FINITE&nbsp;s</code>.  All instances of this pattern
+will print as <code>INFINITE&nbsp;s</code>.  The
+functions <code>mk_infinite</code>, <code>dest_infinite</code>
+and <code>is_infinite</code> in <code>pred_setSyntax</code> continue
+to work and do the “right thing”, the
+entrypoint <code>infinite_tm</code> in the same module has been removed.</p>
+
 </ul>
 
 <hr>
