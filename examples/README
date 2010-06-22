@@ -2,31 +2,8 @@ This is the examples directory.
 
 Currently here are the following:
 
-  * MLSyntax
 
-       This example shows the use of a facility for defining
-       recursive types, implemented by John Harrison. In the example,
-       due to Elsa Gunter, the abstract syntax for a small but not
-       totally unrealistic subset of ML is defined, along with a simple
-       mutually recursive function over the syntax.
-
-  * PSL
-
-       This directory contains a deep embedding of the Accellera
-       standard property language Sugar 2.0. Author: Mike Gordon.
-
-  * RSA
-
-       This directory develops some of the mathematics underlying
-       the RSA cryptography scheme. The theories have been
-       produced by Laurent Thery of INRIA Sophia-Antipolis.
-
-  * Rijndael
-
-       This directory holds a formalization of Rijmen and Daemen's
-       AES crypto standard, together with a proof of correctness.
-
-  * arm6
+  * ARM
 
        This directory contains a formal model of the ARM6
        processor core (which implements v3 of the ARM architecture),
@@ -46,6 +23,19 @@ Currently here are the following:
 
        This example is an old and standard HOL benchmark: the proof of
        correctness of a multiplier circuit, due to Mike Gordon.
+
+  * computability
+
+       Some basic computability theory, based on two models: the
+       lambda-calculus and the recursive functions.  These are proved
+       equivalent.  Results include Rice's theorem, and that if a set
+       and its complement are r.e., then they are also recursive.
+
+  * Crypto
+
+       This directory holds a formalization of a number of different
+       crypto-systems, including Rijmen and Daemen's AES crypto
+       standard, together with a proof of correctness.
 
   * euclid.sml
 
@@ -69,11 +59,10 @@ Currently here are the following:
 
   * lambda
 
-       This directory develops a "de Bruijn" style lambda calculus,
-       uses this as a model of a name-carrying implementation of
-       lambda calculus terms (where alpha-equivalent terms are
-       identified), and proves a number of lambda calculus theory
-       results.
+       This directory contains a variety of theories about the lambda
+       calculus, including multiple models (nominal, de Bruijn,
+       locally nameless) and results such as confluence and
+       standardisation.
 
   * miller
 
@@ -81,6 +70,29 @@ Currently here are the following:
        probabilistic primality test, incorporating version 2 of
        probability theory and some cute example probabilistic
        programs. Author: Joe Hurd.
+
+  * MLSyntax
+
+       This example shows the use of a facility for defining
+       recursive types, implemented by John Harrison. In the example,
+       due to Elsa Gunter, the abstract syntax for a small but not
+       totally unrealistic subset of ML is defined, along with a simple
+       mutually recursive function over the syntax.
+
+  * ordinal
+
+      This directory contains a formalization of the ordinals up to ε₀
+      and proves corresponding induction and recursion theorems.
+
+  * PropLogic
+
+      This file contains a development of propositional logic, up
+      to the completeness theorem.
+
+  * PSL
+
+       This directory contains a deep embedding of the Accellera
+       standard property language Sugar 2.0. Author: Mike Gordon.
 
   * ring.sml
 
@@ -91,6 +103,12 @@ Currently here are the following:
 
        A proof that the square root of two is not rational. Adapted
        from a proof by John Harrison.
+
+  * RSA
+
+       This directory develops some of the mathematics underlying
+       the RSA cryptography scheme. The theories have been
+       produced by Laurent Thery of INRIA Sophia-Antipolis.
 
   * taut.sml
 
@@ -116,12 +134,3 @@ Currently here are the following:
          "Types summer school'99: Theory and practice of formal proofs",
          Giens, France, August 30 - September 10, 1999.
 
-  * PropLogic
-
-      This file contains a development of propositional logic, up 
-      to the completeness theorem.
-
-  * ordinal
-
-      This directory contains a formalization of the ordinals up to e0
-      and proves corresponding induction and recursion theorems.
