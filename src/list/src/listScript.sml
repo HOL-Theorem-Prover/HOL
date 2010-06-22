@@ -1878,7 +1878,7 @@ val LIST_TO_SET_SNOC = Q.store_thm("LIST_TO_SET_SNOC",
 
 val INFINITE_LIST_UNIV = store_thm(
   "INFINITE_LIST_UNIV",
-  ``~FINITE univ(:'a list) /\ INFINITE univ(:'a list)``,
+  ``INFINITE univ(:'a list)``,
   REWRITE_TAC [GSYM INFINITE_DEF] THEN
   SRW_TAC [][INFINITE_UNIV] THEN
   Q.EXISTS_TAC `\l. x::l` THEN SRW_TAC [][] THEN

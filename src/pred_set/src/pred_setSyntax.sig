@@ -21,7 +21,6 @@ sig
   val card_tm     : term
   val image_tm    : term
   val finite_tm   : term
-  val infinite_tm : term
   val sing_tm     : term
   val subset_tm   : term
   val pow_tm      : term

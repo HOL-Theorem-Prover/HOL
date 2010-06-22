@@ -3281,7 +3281,7 @@ val REAL_ADD_SUB_ALT = store_thm
 
 val INFINITE_REAL_UNIV = store_thm(
   "INFINITE_REAL_UNIV",
-  ``~FINITE univ(:real) /\ INFINITE univ(:real)``,
+  ``INFINITE univ(:real)``,
   REWRITE_TAC [pred_setTheory.INFINITE_DEF] THEN STRIP_TAC THEN
   `FINITE (IMAGE real_of_num univ(:num))`
      by METIS_TAC [pred_setTheory.SUBSET_FINITE,

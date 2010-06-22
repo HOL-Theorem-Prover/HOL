@@ -46,7 +46,6 @@ val compl_tm    = prim_mk_const{Name = "COMPL",    Thy = "pred_set"}
 val card_tm     = prim_mk_const{Name = "CARD",     Thy = "pred_set"}
 val image_tm    = prim_mk_const{Name = "IMAGE",    Thy = "pred_set"}
 val finite_tm   = prim_mk_const{Name = "FINITE",   Thy = "pred_set"}
-val infinite_tm = prim_mk_const{Name = "INFINITE", Thy = "pred_set"}
 val sing_tm     = prim_mk_const{Name = "SING",     Thy = "pred_set"}
 val subset_tm   = prim_mk_const{Name = "SUBSET",   Thy = "pred_set"}
 val psubset_tm  = prim_mk_const{Name = "PSUBSET",  Thy = "pred_set"}
@@ -284,12 +283,15 @@ val is_finite = Lib.can dest_finite;
 (* Infiniteness                                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_infinite tm =
- list_mk_comb(inst[alpha |-> eltype tm] infinite_tm, [tm])
+fun mk_infinite tm = boolSyntax.mk_neg (mk_finite tm)
   handle HOL_ERR _ => raise ERR "mk_infinite" "not a set?";
 
-val dest_infinite =
-  dest_monop infinite_tm (ERR "dest_infinite" "not an application of INFINITE");
+fun dest_infinite t = let
+  val t' = boolSyntax.dest_neg t
+in
+  dest_finite t'
+end handle HOL_ERR _ =>
+  raise ERR "dest_infinite" "not an application of INFINITE"
 
 val is_infinite = Lib.can dest_infinite;
 
