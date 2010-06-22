@@ -22,7 +22,7 @@ val divides_def =
  Define
   `divides a b = ?x. b = a * x`;
 
-set_fixity "divides" (Infixr 450);
+set_fixity "divides" (Infix(NONASSOC, 450));
 
 (*---------------------------------------------------------------------------*)
 (* Primality.                                                                *)
