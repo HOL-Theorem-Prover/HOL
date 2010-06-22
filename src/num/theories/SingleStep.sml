@@ -160,21 +160,22 @@ fun primInduct st ind_tac (g as (asl,c)) =
 
 val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl;
 
-fun induct_on_type st ty =
- let val {Thy,Tyop,...} =
+fun induct_on_type st ty g = let
+  val {Thy,Tyop,...} =
          with_exn dest_thy_type ty
                   (ERR "induct_on_type"
                        "No induction theorems available for variable types")
- in case TypeBase.read {Thy=Thy,Tyop=Tyop}
-     of SOME facts =>
-        let val thm = TypeBasePure.induction_of facts
-        in if is_mutind_thm thm
-              then Mutual.MUTUAL_INDUCT_TAC thm
-              else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
-        end
-      | NONE => raise ERR "induct_on_type"
-                    ("No induction theorem found for type: "^Lib.quote Tyop)
- end
+in
+  case TypeBase.read {Thy=Thy,Tyop=Tyop} of
+    SOME facts => let
+      val thm = TypeBasePure.induction_of facts
+    in
+      if is_mutind_thm thm then Mutual.MUTUAL_INDUCT_TAC thm
+      else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
+    end
+  | NONE => raise ERR "induct_on_type"
+                      ("No induction theorem found for type: "^Lib.quote Tyop)
+end g
 
 val is_fun_ty = can dom_rng
 fun rule_induct indth = HO_MATCH_MP_TAC indth
