@@ -423,7 +423,8 @@ fun pp_struct info_record ppstrm =
       let val (tg,asl,w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
       in
          begin_block INCONSISTENT 2;
-         add_string"val"; add_break(1,0); add_string s; add_break (1,0);
+         add_string"val"; add_break(1,0); add_string ("op "^s);
+         add_break (1,0);
          add_string "="; add_break (1,0);
          add_string"DT("; begin_block INCONSISTENT 0;
                         pp_tag tg; add_string","; add_break(1,0);
