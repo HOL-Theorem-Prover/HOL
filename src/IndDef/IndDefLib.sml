@@ -136,6 +136,8 @@ fun thy_monos thyname =
    in which case we return ["C", "D"]
  ---------------------------------------------------------------------------*)
 
+open InductiveDefinition
+
 fun names_from_casethm thm = let
   open HolKernel boolSyntax
   val forallbod = #2 o strip_forall
@@ -158,13 +160,14 @@ in
   export_rule_induction (name ^ "_strongind")
 end
 
-fun Hol_mono_reln monoset tm = let
-  val (rules, indn, cases) =
-      InductiveDefinition.new_inductive_definition monoset tm
+fun Hol_mono_reln name monoset tm = let
+  val _ = Lexis.ok_sml_identifier (name ^ !Defn.def_suffix) orelse
+          raise ERR "Hol_mono_reln"
+                    ("Bad name for definition: "^ Lib.mlquote name^
+                     " (use xHol_reln to specify a better)")
+  val (rules, indn, cases) = new_inductive_definition monoset name tm
       (* not! InductiveDefinition.bool_monoset tm *)
   val strong_ind = derive_strong_induction (rules, indn)
-  val names = names_from_casethm cases
-  val name = hd names
 in
   save_theorems name (rules, indn, strong_ind, cases);
   (rules, indn, cases)
@@ -176,17 +179,25 @@ handle e => raise (wrap_exn "IndDefLib" "Hol_mono_reln" e);
     the standard entry-points
    ---------------------------------------------------------------------- *)
 
-fun xHol_reln name q = let
-  val (rules, indn, cases) =
-      InductiveDefinition.new_inductive_definition (!the_monoset) (term_of q)
-  val strong_ind = derive_strong_induction (rules, indn)
+fun xHol_reln name q = Hol_mono_reln name (!the_monoset) (term_of q)
+
+fun name_from_def t = let
+  open boolSyntax
+  val cs = strip_conj t
 in
-  save_theorems name (rules, indn, strong_ind, cases);
-  (rules,indn,cases)
+  hd cs |> strip_forall |> #2 |> strip_imp |> #2 |> strip_comb |> #1 |>
+  dest_var |> #1
 end
 
-fun Hol_reln q =
-    Hol_mono_reln (!the_monoset) (term_of q)
-    handle e => Raise (wrap_exn "IndDefLib" "Hol_reln" e);
+fun Hol_reln q = let
+  val parse = term_of |> trace ("syntax_error", 0)
+                      |> trace ("show_typecheck_errors", 0)
+              (* turn off verbiage because the Raise below will redisplay any
+                 exceptions *)
+  val def as (def_t,_) = parse q
+  val name = name_from_def def_t
+in
+  Hol_mono_reln name (!the_monoset) def
+end handle e => Raise (wrap_exn "IndDefLib" "Hol_reln" e);
 
 end

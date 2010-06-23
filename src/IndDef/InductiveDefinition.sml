@@ -622,13 +622,17 @@ fun derive_existence th = itlist EXISTS_EQUATION (filter is_eq (hyp th)) th
 (* Make definitions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun make_definitions th =
-  let val defs = filter is_eq (hyp th)
-      val dths = map (fn tm => new_definition(fst(dest_var
-                                  (fst(strip_comb(lhs tm)))),tm)) defs
-      val insts = map2 (curry op |->) (map lhs defs) (map (lhs o concl) dths)
-  in rev_itlist (C MP) dths (INST insts (itlist DISCH defs th))
-  end;;
+fun make_definitions stem th = let
+  val defs = filter is_eq (hyp th)
+  fun mkdef i tm = new_definition(stem ^ Int.toString i ^ !Defn.def_suffix, tm)
+  val dths = if length defs = 1 then
+               [new_definition(stem ^ !Defn.def_suffix, hd defs)]
+             else
+               mapi mkdef defs
+  val insts = map2 (curry op |->) (map lhs defs) (map (lhs o concl) dths)
+in
+  rev_itlist (C MP) dths (INST insts (itlist DISCH defs th))
+end
 
 (* ------------------------------------------------------------------------- *)
 (* "Unschematize" a set of clauses.                                          *)
@@ -881,14 +885,14 @@ fun prove_inductive_relations_exist monoset tm =
                              "prove_inductive_relations_exist" e);
 
 
-fun new_inductive_definition monoset (tm,clocs) =
+fun new_inductive_definition monoset stem (tm,clocs) =
  let val clauses = strip_conj tm
      val (clauses',fvs) = unschematize_clauses clauses
      val th0 = derive_nonschematic_inductive_relations
                  (check_definition fvs clocs (list_mk_conj clauses'))
      val th1 = prove_monotonicity_hyps monoset th0
      val th2 = generalize_schematic_variables fvs th1
-     val th3 = make_definitions th2
+     val th3 = make_definitions stem th2
      val avs = fst(strip_forall(concl th3))
      val (r,ic) = CONJ_PAIR(SPECL avs th3)
      val (i,c)  = CONJ_PAIR ic

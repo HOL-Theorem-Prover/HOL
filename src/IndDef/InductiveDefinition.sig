@@ -15,7 +15,8 @@ sig
   val BACKCHAIN_TAC: thm -> tactic
 
   val prove_inductive_relations_exist : monoset -> term -> thm
-  val new_inductive_definition        : monoset -> term * locn.locn list->
+  val new_inductive_definition        : monoset -> string ->
+                                        term * locn.locn list->
                                         thm * thm * thm
 
   val prove_nonschematic_inductive_relations_exist : monoset -> term -> thm

@@ -8,7 +8,8 @@ sig
 
   val Hol_reln      : term quotation -> thm * thm * thm
   val xHol_reln     : string -> term quotation -> thm * thm * thm
-  val Hol_mono_reln : monoset -> (term * locn.locn list) -> thm * thm * thm
+  val Hol_mono_reln : string -> monoset ->
+                      (term * locn.locn list) -> thm * thm * thm
 
   val derive_mono_strong_induction : monoset -> thm * thm -> thm
   val derive_strong_induction : thm * thm -> thm
