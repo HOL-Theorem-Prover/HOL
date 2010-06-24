@@ -454,6 +454,33 @@ val _ = send_to_back_overload ">" {Name = "string_gt", Thy = "string"};
 val _ = send_to_back_overload "<=" {Name = "string_le", Thy = "string"};
 val _ = send_to_back_overload ">=" {Name = "string_ge", Thy = "string"};
 
+val string_lt_nonrefl = store_thm("string_lt_nonrefl",
+  ``!s:string. ~(s < s)``,
+  Induct THEN ASM_SIMP_TAC std_ss [string_lt_def,char_lt_def]);
+
+val string_lt_antisym = store_thm("string_lt_antisym",
+  ``!s t:string. ~(s < t /\ t < s)``,
+  SIMP_TAC std_ss []
+  THEN Induct THEN Cases_on `t` THEN SIMP_TAC std_ss [string_lt_def,char_lt_def]
+  THEN REPEAT STRIP_TAC THEN Cases_on `h = h'` THEN ASM_SIMP_TAC std_ss []
+  THEN FULL_SIMP_TAC std_ss [GSYM ORD_11] THEN DECIDE_TAC);
+
+val string_lt_cases = store_thm("string_lt_cases",
+  ``!s t:string. (s = t) \/ s < t \/ t < s``,
+  Induct THEN Cases_on `t` THEN SIMP_TAC std_ss [string_lt_def,char_lt_def]
+  THEN SIMP_TAC std_ss [CONS_11,GSYM ORD_11] THEN STRIP_TAC
+  THEN Cases_on `ORD h = ORD h'` THEN ASM_SIMP_TAC std_ss [] THEN DECIDE_TAC);
+
+val string_lt_trans = store_thm("string_lt_trans",
+  ``!s1 s2 s3:string. s1 < s2 /\ s2 < s3 ==> s1 < s3``,
+  Induct THEN Cases_on `s2` THEN Cases_on `s3` 
+  THEN SIMP_TAC std_ss [string_lt_def,char_lt_def,GSYM ORD_11] THEN STRIP_TAC  
+  THEN Cases_on `ORD h'' < ORD h'` THEN ASM_SIMP_TAC std_ss [IMP_CONJ_THM]
+  THEN STRIP_TAC THEN1 (REPEAT STRIP_TAC THEN DECIDE_TAC)
+  THEN REPEAT STRIP_TAC THEN IMP_RES_TAC arithmeticTheory.LESS_TRANS 
+  THEN METIS_TAC []);
+
+
 (*---------------------------------------------------------------------------
     Exportation
  ---------------------------------------------------------------------------*)
