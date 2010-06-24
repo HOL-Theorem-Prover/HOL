@@ -55,8 +55,9 @@ end;
 
 (* ------------------------------------------------------------------------- *)
 
+val comma     = ", ";
 val uppercase = String.map Char.toUpper;
-val commy     = String.concat o Lib.separate ",";
+val commy     = String.concat o Lib.separate comma;
 fun square s  = String.concat ["[",s,"]"];
 fun curly s   = String.concat ["{",s,"}"];
 val scommy    = square o commy;
@@ -146,10 +147,10 @@ local
           (if i = j then
             ""
            else if i + 1 = j then
-            "," ^ reg j
+            comma ^ reg j
            else
             "-" ^ reg j) ^
-          (if xs = [] then "" else ",")) xs
+          (if xs = [] then "" else comma)) xs
 in
   val register_list =
         (reg_list "{") o mk_blocks o i2l o
@@ -217,12 +218,13 @@ fun thumb_expand_imm tm =
       |> eval;
 
 fun shift tm =
-  case uint_of_word tm
-  of 0 => ",lsl "
-   | 1 => ",lsr "
-   | 2 => ",asr "
-   | 3 => ",ror "
-   | _ => raise ERR "shift" "unexpected value";
+  comma ^
+  (case uint_of_word tm
+   of 0 => "lsl "
+    | 1 => "lsr "
+    | 2 => "asr "
+    | 3 => "ror "
+    | _ => raise ERR "shift" "unexpected value");
 
 fun disassemble_imm_shift (imm5,typ,rm) =
   case uint_of_word typ
@@ -235,7 +237,7 @@ fun disassemble_imm_shift (imm5,typ,rm) =
    | 2 => register rm ^ shift typ ^
             (if is_0 imm5 then "#32" else constant imm5)
    | 3 => if is_0 imm5 then
-            register rm ^ ",rrx"
+            register rm ^ comma ^ "rrx"
           else
             register rm ^ shift typ ^ constant imm5
    | _ => raise ERR "disassemble_imm_shift" "unexpected value";
@@ -254,17 +256,24 @@ fun disassemble_mode1 thumb2 tm =
 fun disassemble_mode2 (u,tm) =
   case dest_strip tm
   of ("Mode2_immediate", [imm12]) =>
-         if is_T u andalso is_0 imm12 then "" else "," ^ sign_constant (u,imm12)
+         if is_T u andalso is_0 imm12 then
+           ""
+         else
+           comma ^ sign_constant (u,imm12)
    | ("Mode2_register", [imm5,typ,rm]) =>
-         (if is_F u then ",-" else ",") ^ disassemble_imm_shift (imm5,typ,rm)
+         comma ^ (if is_F u then "-" else "") ^
+         disassemble_imm_shift (imm5,typ,rm)
    | _ => raise ERR "disassemble_mode2" "";
 
 fun disassemble_mode3 (u,tm) =
   case dest_strip tm
   of ("Mode3_immediate", [imm12]) =>
-         if is_T u andalso is_0 imm12 then "" else "," ^ sign_constant (u,imm12)
+         if is_T u andalso is_0 imm12 then
+           ""
+         else
+           comma ^ sign_constant (u,imm12)
    | ("Mode3_register", [imm2,rm]) =>
-        (if is_F u then ",-" else ",") ^
+        comma ^ (if is_F u then "-" else "") ^
         disassemble_imm_shift (imm2,``0w:word2``,rm)
    | _ => raise ERR "disassemble_mode3" "";
 
@@ -505,6 +514,14 @@ let val f = mnemonic instr in
          f "tbh" (scommy [register n, register m, "lsl #1"])
        else
          f "tbb" (scommy [register n, register m])
+   | ("Check_Array", [n,m]) =>
+       f "chka" (commy [register n,register m])
+   | ("Handler_Branch_Link", [l,handler]) =>
+       f (if is_T l then "hbl" else "hb") (constant handler)
+   | ("Handler_Branch_Link_Parameter", [imm5,handler]) =>
+       f "hblp" (commy [constant imm5, constant handler])
+   | ("Handler_Branch_Parameter", [imm3,handler]) =>
+       f "hbp" (commy [constant imm3, constant handler])
    | _ => raise ERR "disassemble_branch"
             ("cannot disassemble: " ^ term_to_string tm)
 end;
@@ -757,6 +774,8 @@ let val f = mnemonic instr in
        f "svc" (constant imm24)
    | ("Secure_Monitor_Call", [imm4]) =>
        f "smc" (constant imm4)
+   | ("Enterx_Leavex", [is_enterx]) =>
+       f (if is_T is_enterx then "enterx" else "leavex") ""
    | ("Clear_Exclusive", []) =>
        f "clrex" ""
    | ("If_Then", [firstcond,mask]) =>

@@ -115,21 +115,24 @@ val ARM_WRITE_STATUS_def = Define`
      ARM_WRITE_CPSR (ARM_READ_CPSR s with T := b) s)`;
 
 val ARM_READ_SCTLR_def = Define`
-  (ARM_READ_SCTLR sctlrV s = s.coprocessors.state.SCTLR.V) /\
-  (ARM_READ_SCTLR sctlrA s = s.coprocessors.state.SCTLR.A) /\
-  (ARM_READ_SCTLR sctlrU s = s.coprocessors.state.SCTLR.U) /\
-  (ARM_READ_SCTLR sctlrEE s = s.coprocessors.state.SCTLR.EE) /\
-  (ARM_READ_SCTLR sctlrTE s = s.coprocessors.state.SCTLR.TE) /\
-  (ARM_READ_SCTLR sctlrNMFI s = s.coprocessors.state.SCTLR.NMFI)`;
+  (ARM_READ_SCTLR sctlrV s = s.coprocessors.state.cp15.SCTLR.V) /\
+  (ARM_READ_SCTLR sctlrA s = s.coprocessors.state.cp15.SCTLR.A) /\
+  (ARM_READ_SCTLR sctlrU s = s.coprocessors.state.cp15.SCTLR.U) /\
+  (ARM_READ_SCTLR sctlrEE s = s.coprocessors.state.cp15.SCTLR.EE) /\
+  (ARM_READ_SCTLR sctlrTE s = s.coprocessors.state.cp15.SCTLR.TE) /\
+  (ARM_READ_SCTLR sctlrNMFI s = s.coprocessors.state.cp15.SCTLR.NMFI)`;
 
 val ARM_READ_SCR_def = Define`
-  (ARM_READ_SCR scrnET s = s.coprocessors.state.SCR.nET) /\
-  (ARM_READ_SCR scrAW s = s.coprocessors.state.SCR.AW) /\
-  (ARM_READ_SCR scrFW s = s.coprocessors.state.SCR.FW) /\
-  (ARM_READ_SCR scrEA s = s.coprocessors.state.SCR.EA) /\
-  (ARM_READ_SCR scrFIQ s = s.coprocessors.state.SCR.FIQ) /\
-  (ARM_READ_SCR scrIRQ s = s.coprocessors.state.SCR.IRQ) /\
-  (ARM_READ_SCR scrNS s = s.coprocessors.state.SCR.NS)`;
+  (ARM_READ_SCR scrnET s = s.coprocessors.state.cp15.SCR.nET) /\
+  (ARM_READ_SCR scrAW s = s.coprocessors.state.cp15.SCR.AW) /\
+  (ARM_READ_SCR scrFW s = s.coprocessors.state.cp15.SCR.FW) /\
+  (ARM_READ_SCR scrEA s = s.coprocessors.state.cp15.SCR.EA) /\
+  (ARM_READ_SCR scrFIQ s = s.coprocessors.state.cp15.SCR.FIQ) /\
+  (ARM_READ_SCR scrIRQ s = s.coprocessors.state.cp15.SCR.IRQ) /\
+  (ARM_READ_SCR scrNS s = s.coprocessors.state.cp15.SCR.NS)`;
+
+val ARM_READ_TEEHBR_def = Define`
+  ARM_READ_TEEHBR s = s.coprocessors.state.cp14.TEEHBR`;
 
 val SPSR_MODE_def = Define`
   SPSR_MODE (m:word5) =
@@ -2636,6 +2639,63 @@ val compare_branch_instr = save_thm("compare_branch_instr",
   REWRITE_RULE [compare_branch_instr_thm, align32]
   arm_opsemTheory.compare_branch_instr);
 
+val error_option_case_COND_RAND = Q.store_thm("error_option_case_COND_RAND",
+  `!c f f1 a0 a1 a2 a3.
+     error_option_case f f1
+       (if c then ValueState a0 a1
+             else ValueState a2 a3) =
+     if c then
+       f a0 a1
+     else
+       f a2 a3`,
+  SRW_TAC [] []);
+
+(*
+val chka_thm = Q.store_thm("chka_thm",
+   `(if c then
+       ValueState ()
+         (state with
+          <|registers updated_by
+              ((0,pc) =+ x) o
+              ((0,lr) =+ y) o
+              ((0,pc) =+ z);
+            psrs updated_by p;
+            event_register updated_by e;
+            interrupt_wait updated_by i;
+            memory updated_by m;
+            accesses updated_by a;
+            information := info;
+            coprocessors updated_by cp |>)
+     else
+       ValueState ()
+         (state with
+          <|registers updated_by ((0,pc) =+ z);
+            psrs updated_by p;
+            event_register updated_by e;
+            interrupt_wait updated_by i;
+            memory updated_by m;
+            accesses updated_by a;
+            information := info;
+            coprocessors updated_by cp |>)) =
+   ValueState ()
+     (state with
+      <|registers updated_by
+          ((0,pc) =+ if c then x else z) o
+          ((0,lr) =+ if c then y
+                     else if lr = pc then z
+                     else state.registers (0,lr)) o
+          ((0,pc) =+ z);
+        psrs updated_by p;
+        event_register updated_by e;
+        interrupt_wait updated_by i;
+        memory updated_by m;
+        accesses updated_by a;
+        information := info;
+        coprocessors updated_by cp |>)`,
+  SRW_TAC [] [arm_state_component_equality]
+  \\ SRW_TAC [] [FUN_EQ_THM, combinTheory.UPDATE_def]);
+*)
+
 (* ------------------------------------------------------------------------- *)
 
 val ARM_READ_REG_FROM_MODE = Q.store_thm("ARM_READ_REG_FROM_MODE",
@@ -4290,6 +4350,19 @@ val arm_next_thm = Q.store_thm("arm_next_thm",
      (P s ==> (h (g s) = x)) /\
      (arm_next <| proc := 0 |> inp (g s) = ValueState () x) ==>
      (P s ==> (ARM_NEXT inp s = SOME (h s)))`,
+  SRW_TAC [] [STATE_OPTION_def,ARM_NEXT_def]
+    \\ `g s = s` by RES_TAC \\ POP_ASSUM SUBST_ALL_TAC
+    \\ Cases_on `arm_next <|proc := 0|> inp s`
+    \\ FULL_SIMP_TAC (srw_ss()) []);
+
+val arm_next_thm2 = Q.store_thm("arm_next_thm2",
+  `!s c x1 x2 P h1 h2 g inp.
+     (!s. P s ==> (g s = s)) /\
+     (P s ==> (h1 (g s) = x1)) /\
+     (P s ==> (h2 (g s) = x2)) /\
+     (arm_next <| proc := 0 |> inp (g s) =
+       if c then ValueState () x1 else ValueState () x2) ==>
+     (P s ==> (ARM_NEXT inp s = SOME (if c then h1 s else h2 s)))`,
   SRW_TAC [] [STATE_OPTION_def,ARM_NEXT_def]
     \\ `g s = s` by RES_TAC \\ POP_ASSUM SUBST_ALL_TAC
     \\ Cases_on `arm_next <|proc := 0|> inp s`

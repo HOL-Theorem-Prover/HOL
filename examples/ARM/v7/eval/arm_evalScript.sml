@@ -3,14 +3,14 @@
 (* ------------------------------------------------------------------------ *)
 
 (* interactive use:
-  app load ["arm_decoderTheory", "arm_opsemTheory", "wordsLib",
+  app load ["arm_decoderTheory", "armTheory", "wordsLib",
             "patriciaTheory", "parmonadsyntax"];
 *)
 
 open HolKernel boolLib bossLib Parse;
 
 open patriciaTheory arm_coretypesTheory arm_astTheory arm_seq_monadTheory
-     arm_decoderTheory arm_opsemTheory;
+     arm_decoderTheory arm_opsemTheory armTheory;
 
 val _ = new_theory "arm_eval";
 
@@ -31,105 +31,63 @@ val _ = temp_overload_on ("return", ``constT``);
 
 (* ------------------------------------------------------------------------ *)
 
-val ptree_fetch_instruction_def = Define`
-  ptree_fetch_instruction arch cpsr pc (prog:word8 ptree)
-    : (Encoding # word4 # ARMinstruction) option =
-    let bytes = [prog ' pc; prog ' (pc + 1);
-                 prog ' (pc + 2); prog ' (pc + 3)] in
-    let check_bytes = EVERY IS_SOME
-    and the_bytes = MAP THE
-    in
-      if cpsr.T /\ arch <> ARMv4 then (* Thumb *)
-        let bytes1 = TAKE 2 bytes
-        and bytes2 = DROP 2 bytes
-        in
-          if check_bytes bytes1 then
-            let ireg1 = word16 (the_bytes bytes1) in
-              if ((15 -- 13) ireg1 = 0b111w) /\ (12 -- 11) ireg1 <> 0b00w then
-                if check_bytes bytes2 then
-                  let ireg2 = word16 (the_bytes bytes2) in
-                    SOME (Encoding_Thumb2, thumb2_decode cpsr.IT (ireg1,ireg2))
-                else
-                  NONE
-              else (* 16-bit Thumb *)
-                SOME (Encoding_Thumb, thumb_decode arch cpsr.IT ireg1)
-          else
-            NONE
-      else if check_bytes bytes then
-        SOME (Encoding_ARM,
-              arm_decode (version_number arch < 5) (word32 (the_bytes bytes)))
-      else
-        NONE`;
+val ptree_read_word_def = Define`
+  ptree_read_word (prog:word8 ptree) (a:word32) : word32 M =
+  let pc = w2n a in
+   (case prog ' pc
+    of SOME b1 ->
+       (case prog ' (pc + 1)
+        of SOME b2 ->
+           (case prog ' (pc + 2)
+            of SOME b3 ->
+               (case prog ' (pc + 3)
+                of SOME b4 -> constT (word32 [b1; b2; b3; b4])
+                || NONE -> errorT "couldn't fetch an instruction")
+            || NONE -> errorT "couldn't fetch an instruction")
+        || NONE -> errorT "couldn't fetch an instruction")
+    || NONE -> errorT "couldn't fetch an instruction")`;
+
+val ptree_read_halfword_def = Define`
+  ptree_read_halfword (prog:word8 ptree) (a:word32) : word16 M =
+  let pc = w2n a in
+    case prog ' pc
+    of SOME b1 ->
+       (case prog ' (pc + 1)
+        of SOME b2 -> constT (word16 [b1; b2])
+        || NONE -> errorT "couldn't fetch an instruction")
+    || NONE -> errorT "couldn't fetch an instruction"`;
 
 val ptree_arm_next_def =
   with_flag (computeLib.auto_import_definitions,false) Define
     `ptree_arm_next ii x (pc:word32) (cycle:num) : unit M = arm_instr ii x`;
 
+val attempt_def = Define`
+  attempt cycle f g =
+  \s:arm_state.
+      case f s
+      of Error e -> ValueState (cycle, e) s
+      || ValueState v s' -> g v s'`;
+
 val ptree_arm_loop_def = Define`
-  ptree_arm_loop ii cycle prog t =
-    let done s = constT ("at cycle " ++ num_to_dec_string cycle ++ ": " ++ s) in
-      if t = 0 then
-        done "finished"
-      else
-       (read_arch ii ||| waiting_for_interrupt ii ||| read_cpsr ii |||
-        read_pc ii ||| writeT (\s. s with accesses := [])) >>=
-       (\(arch,wfi,cpsr,pc,u).
-          if arch = ARMv7_M then
-            errorT "ARMv7-M profile not supported"
-          else if wfi then
-            done "waiting for interrupt"
-          else
-            case ptree_fetch_instruction arch cpsr (w2n pc) prog
-            of SOME x -> ptree_arm_next ii x pc cycle >>=
-                         (\u. ptree_arm_loop ii (cycle + 1) prog (t - 1))
-            || NONE -> done "couldn't fetch an instruction")`;
+  ptree_arm_loop ii cycle prog t : (num # string) M =
+    if t = 0 then
+      constT (cycle, "finished")
+    else
+      attempt cycle
+        (fetch_instruction ii (ptree_read_word prog) (ptree_read_halfword prog))
+        (\x.
+          read_pc ii >>=
+          (\pc:word32.
+              ptree_arm_next ii x pc cycle >>=
+              (\u:unit.
+                 ptree_arm_loop ii (cycle + 1) prog (t - 1))))`;
 
 val ptree_arm_run_def = Define`
-  ptree_arm_run prog s t =
-    case ptree_arm_loop <| proc := 0 |> 0 prog t s
-    of Error s -> (s, NONE)
-    || ValueState v s -> (v, SOME s)`;
-
-(* version that uses a ptree for the data memory:
-val ptree_arm_loop_def = Define`
-  ptree_arm_loop ii cycle prog md dmem t =
-    let done s = constT ("at cycle " ++ num_to_dec_string cycle ++ ": " ++ s) in
-      if t = 0 then
-        done "finished"
-      else
-       (read_arch ii ||| waiting_for_interrupt ii ||| read_cpsr ii |||
-        read_pc ii ||| writeT (\s. s with accesses := [])) >>=
-       (\(arch,wfi,cpsr,pc,u).
-          if arch = ARMv7_M then
-            errorT "ARMv7-M profile not supported"
-          else if wfi then
-            done "waiting for interrupt"
-          else
-            case ptree_fetch_instruction arch cpsr (w2n pc) prog
-            of SOME x ->
-                ptree_arm_next ii x pc cycle >>=
-                (\u.
-                   readT (\s. s.accesses) >>=
-                   (\l.
-                     let dmem' =
-                            FOLDL (\m x. case x
-                                         of MEM_WRITE a d -> m |+ (w2n a,d)
-                                         || _ -> m) dmem l
-                     in
-                       writeT (\s. s with memory :=
-                          (\a. case patricia$PEEK dmem' (w2n a)
-                               of SOME d -> d
-                               || NONE -> md)) >>=
-                       (\u.
-                          ptree_arm_loop ii (cycle + 1) prog md dmem' (t - 1))))
-            || NONE -> done "couldn't fetch an instruction")`;
-
-val ptree_arm_run_def = Define`
-  ptree_arm_run prog md s t =
-    case ptree_arm_loop <| proc := 0 |> 0 prog md prog t s
-    of Error s -> (s, NONE)
-    || ValueState v s -> (v, SOME s)`;
-*)
+  ptree_arm_run prog state t =
+    case ptree_arm_loop <| proc := 0 |> 0 prog t state
+    of Error e -> (e, NONE)
+    || ValueState (c,v) s ->
+          ("at cycle " ++ num_to_dec_string c ++ ": " ++ v, SOME s)`;
 
 (* ------------------------------------------------------------------------ *)
 
@@ -151,10 +109,12 @@ val mk_arm_state_def = Define`
                          unaligned_support := T;
                          extensions := {} |>;
        coprocessors updated_by
-         (Coprocessors_state_fupd (CP15reg_SCTLR_fupd
-            (\sctlr. sctlr with <| V := F; A := T; U := F;
-                                   IE := T; TE := F; NMFI := T;
-                                   EE := T; VE := F |>)));
+         (Coprocessors_state_fupd
+            (cp15_fupd (CP15reg_SCTLR_fupd
+              (\sctlr. sctlr with <| V := F; A := T; U := F;
+                                     IE := T; TE := F; NMFI := T;
+                                     EE := T; VE := F |>)) o
+             cp14_fupd (CP14reg_TEEHBR_fupd (K 0xF0000000w))));
        monitors := <| ClearExclusiveByAddress := (K (constE ())) |> |>`;
 
 (* ------------------------------------------------------------------------ *)

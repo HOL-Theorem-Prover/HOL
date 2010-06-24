@@ -38,12 +38,14 @@ fun mk_word4 i = wordsSyntax.mk_wordii (i,4);
 
 val PC = mk_word4 15;
 
-val is_T  = Term.term_eq T;
-val is_F  = Term.term_eq F;
-val is_SP = Term.term_eq (mk_word4 13);
-val is_AL = Term.term_eq (mk_word4 14);
-val is_PC = Term.term_eq PC;
-val is_LR = is_AL;
+val is_T   = Term.term_eq T;
+val is_F   = Term.term_eq F;
+val is_R9  = Term.term_eq (mk_word4 9);
+val is_R10 = Term.term_eq (mk_word4 10);
+val is_SP  = Term.term_eq (mk_word4 13);
+val is_AL  = Term.term_eq (mk_word4 14);
+val is_PC  = Term.term_eq PC;
+val is_LR  = is_AL;
 
 fun NOT tm = if is_T tm then F else if is_F tm then T else raise ERR "NOT" "";
 
@@ -782,11 +784,11 @@ let val checkls = check ("thumb_encode_load_store",tm) in
                 [(T,15), (T,11), (imm5,6), (n,3), (t,0)]
             end
           else
-            let val (imm3,m) = dest_Mode3_register mode3 in
+            let val (imm2,m) = dest_Mode3_register mode3 in
               checkls
                 (fn _ => is_T p andalso is_T u andalso is_F w andalso
                          (is_T s orelse is_T h) andalso
-                         is_0 imm3 andalso Lib.all (width_okay 3) [m,n,t])
+                         is_0 imm2 andalso Lib.all (width_okay 3) [m,n,t])
                 [(``0b101w:word3``,12), (h,11), (s,10), (T,9), (m,6), (n,3),
                  (t,0)]
             end)
@@ -803,10 +805,10 @@ let val checkls = check ("thumb_encode_load_store",tm) in
                 [(T,15), (imm5,6), (n,3), (t,0)]
             end
           else
-            let val (imm3,m) = dest_Mode3_register mode3 in
+            let val (imm2,m) = dest_Mode3_register mode3 in
               checkls
                 (fn _ => is_T p andalso is_T u andalso is_F w andalso
-                         is_0 imm3 andalso Lib.all (width_okay 3) [m,n,t])
+                         is_0 imm2 andalso Lib.all (width_okay 3) [m,n,t])
                 [(``0b101001w:word6``,9), (m,6), (n,3), (t,0)]
             end)
      | ("Load_Multiple", [p,u,s,w,n,registers]) =>
@@ -1283,10 +1285,115 @@ let val checkmisc = check ("thumb2_encode_miscellaneous",tm) in
             end
      | ("Secure_Monitor_Call", [imm4]) =>
           [(``0b101111111w:9 word``,20), (imm4,16), (T,15)]
+     | ("Enterx_Leavex", [l]) =>
+          [(``0b100111011111110001111000w:word24``,5), (l,4), (PC,0)]
      | ("Clear_Exclusive", []) =>
           [(``0b10011101111111000111100101111w:29 word``,0)]
      | _ => raise ERR "thumb2_encode_miscellaneous"
               ("cannot encode: " ^ term_to_string tm)))
+end;
+
+(* ------------------------------------------------------------------------- *)
+
+fun thumbee_encode_branch tm =
+let val checkbr = check ("thumbee_encode_branch", tm) in
+ term_list_to_num
+   (case dest_strip tm
+    of ("Check_Array", [n,m]) =>
+          [(``0b11001010w:word8``,8), (n$(3,3), 7), (m,3), (n$(2,0),0)]
+     | ("Handler_Branch_Link", [l,h]) =>
+          [(``0b1100001w:word7``,9), (l,8), (h,0)]
+     | ("Handler_Branch_Link_Parameter", [imm5,h]) =>
+          [(``0b110001w:word6``,10), (imm5,5), (h,0)]
+     | ("Handler_Branch_Parameter", [imm3,h]) =>
+          [(``0b11w:word2``,14), (imm3,5), (h,0)]
+     | _ => raise ERR "thumbee_encode_branch"
+              ("cannot encode: " ^ term_to_string tm))
+end;
+
+fun thumbee_encode_load_store tm = term_list_to_num
+let val checkls = check ("thumbee_encode_load_store",tm) in
+   (case dest_strip tm
+    of ("Load", [p,u,b,w,unpriv,n,t,mode2]) =>
+         checkls (fn _ => is_F unpriv)
+         (if is_Mode2_immediate mode2 then
+            let val imm12 = dest_Mode2_immediate mode2 in
+              if is_R9 n then
+                let val imm6 = imm12$(11,2) in
+                  checkls
+                    (fn _ => is_F b andalso is_T p andalso is_T u andalso
+                             is_F w andalso is_0 (imm12$(1,0)) andalso
+                             width_okay 6 imm6 andalso width_okay 3 t)
+                    [(``0b110011w:word6``,10), (imm6,3), (t,0)]
+                end
+              else if is_R10 n then
+                let val imm5 = imm12$(11,2) in
+                  checkls
+                    (fn _ => is_F b andalso is_T p andalso is_T u andalso
+                             is_F w andalso is_0 (imm12$(1,0)) andalso
+                             width_okay 5 imm5 andalso width_okay 3 t)
+                    [(``0b11001011w:word8``,8), (imm5,3), (t,0)]
+                end
+              else
+                let val imm3 = imm12$(11,2) in
+                  checkls
+                    (fn _ => is_F b andalso is_T p andalso is_F u andalso
+                             is_F w andalso is_0 (imm12$(1,0)) andalso
+                             width_okay 3 imm3 andalso
+                             Lib.all (width_okay 3) [n,t])
+                    [(``0b11001w:word5``,11), (imm3,6), (n,3), (t,0)]
+                end
+            end
+          else
+            let val (imm5,typ,m) = dest_Mode2_register mode2 in
+              checkls
+                (fn _ => is_T p andalso is_T u andalso is_F w andalso
+                         is_F b andalso term_eq imm5 ``2w:word5`` andalso
+                         is_0 typ andalso Lib.all (width_okay 3) [m,n,t])
+                [(``0b1011w:word4``,11), (m,6), (n,3), (t,0)]
+            end)
+     | ("Store", [p,u,b,w,unpriv,n,t,mode2]) =>
+         checkls (fn _ => is_F unpriv)
+         (if is_Mode2_immediate mode2 then
+            let val imm12 = dest_Mode2_immediate mode2
+                val imm6 = imm12$(11,2)
+            in
+              checkls
+                (fn _ => is_F b andalso is_T p andalso is_T u andalso
+                         is_F w andalso is_0 (imm12$(1,0)) andalso
+                         width_okay 6 imm6 andalso is_R9 n andalso
+                         width_okay 3 t)
+                [(``0b1100111w:word7``,9), (imm6,3), (t,0)]
+            end
+          else
+            let val (imm5,typ,m) = dest_Mode2_register mode2 in
+              checkls
+                (fn _ => is_F b andalso is_T p andalso is_T u andalso
+                         is_F w andalso term_eq imm5 ``2w:word5`` andalso
+                         is_0 typ andalso Lib.all (width_okay 3) [m,n,t])
+                [(``0b101w:word4``,12), (m,6), (n,3), (t,0)]
+            end)
+     | ("Load_Halfword", [p,u,w,s,h,unpriv,n,t,mode3]) =>
+         checkls (fn _ => is_F unpriv andalso is_T p andalso is_T u andalso
+                          is_F w andalso is_T h andalso
+                          Lib.all (width_okay 3) [n,t] andalso
+                          Lib.can dest_Mode3_register mode3)
+         (let val (imm2,m) = dest_Mode3_register mode3 in
+            checkls
+              (fn _ => term_eq imm2 ``1w:word2`` andalso width_okay 3 m)
+              [(``0b1011w:word4``,11), (s,10), (T,9), (m,6), (n,3), (t,0)]
+          end)
+     | ("Store_Halfword", [p,u,w,unpriv,n,t,mode3]) =>
+         checkls (fn _ => is_F unpriv andalso is_T p andalso is_T u andalso
+                          is_F w andalso Lib.all (width_okay 3) [n,t] andalso
+                          Lib.can dest_Mode3_register mode3)
+         (let val (imm2,m) = dest_Mode3_register mode3 in
+            checkls
+              (fn _ => term_eq imm2 ``1w:word2`` andalso width_okay 3 m)
+              [(``0b101001w:word6``,9), (m,6), (n,3), (t,0)]
+          end)
+     | _ => raise ERR "thumbee_encode_load_store"
+              ("cannot encode: " ^ term_to_string tm))
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -1334,10 +1441,16 @@ fun encode_instruction (enc,cond,tm) =
            (mk_word4 (if is_var cond orelse is_PC cond then 15 else 14),i)
    | ("Encoding_Thumb2",("Undefined", [])) =>
          term_list_to_num [(``0b1111011111110000101w:19 word``,13)]
+   | ("Encoding_ThumbEE",("Branch", [i])) =>
+         thumbee_encode_branch i
+   | ("Encoding_ThumbEE",("LoadStore", [i])) =>
+         thumbee_encode_load_store i
+   | ("Encoding_ThumbEE",("Undefined", [])) =>
+         term_list_to_num [(``0b1101111w:word7``,9)]
    | _ => raise ERR "encode_instruction" ("cannot encode: " ^
             term_to_string (pairSyntax.mk_pair (enc,tm))))
      |> Arbnum.toHexString
-     |> (if enc = Encoding_Thumb_tm then
+     |> (if enc = Encoding_Thumb_tm orelse enc = Encoding_ThumbEE_tm then
            pad 4
          else if enc = Encoding_ARM_tm then
            pad 8

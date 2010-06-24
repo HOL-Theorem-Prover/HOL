@@ -60,8 +60,13 @@ val _ = computeLib.del_consts (mk_constants
      "branch_exchange_instr",
      "branch_link_exchange_imm_instr",
      "branch_link_exchange_reg_instr",
+     "null_check_if_thumbEE",
      "compare_branch_instr",
      "table_branch_byte_instr",
+     "check_array_instr",
+     "handler_branch_link_instr",
+     "handler_branch_link_parameter_instr",
+     "handler_branch_parameter_instr",
      "add_sub_instr",
      "data_processing_instr",
      "load_instr",
@@ -97,15 +102,17 @@ val _ = computeLib.add_funs
      signed_16x32_multiply_32_accumulate_instr, signed_multiply_dual_instr,
      saturate_instr, saturate_16_instr] @
    [branch_write_pc, bx_write_pc, load_write_pc_def, alu_write_pc_def,
-    cpsr_write_by_instr, spsr_write_by_instr,
+    cpsr_write_by_instr, spsr_write_by_instr, null_check_if_thumbEE_def,
     branch_target_instr, branch_exchange_instr, branch_link_exchange_imm_instr,
     branch_link_exchange_reg_instr, arm_stepTheory.compare_branch_instr,
-    table_branch_byte_instr, add_sub_instr, data_processing_instr,
-    load_instr, load_multiple_instr, return_from_exception_instr,
-    immediate_to_status_instr, register_to_status_instr,
-    change_processor_state_instr, branch_instruction_def,
-    data_processing_instruction_def, load_store_instruction_def,
-    status_access_instruction_def, arm_instr_def, armTheory.arm_next_def]);
+    table_branch_byte_instr, check_array_instr, handler_branch_link_instr,
+    handler_branch_link_parameter_instr, handler_branch_parameter_instr,
+    add_sub_instr, data_processing_instr, load_instr, load_multiple_instr,
+    return_from_exception_instr, immediate_to_status_instr,
+    register_to_status_instr, change_processor_state_instr,
+    branch_instruction_def, data_processing_instruction_def,
+    load_store_instruction_def, status_access_instruction_def, arm_instr_def,
+    armTheory.arm_next_def]);
 
 val WORD_EQ_ADD_LCANCEL_0 =
   simpLib.SIMP_PROVE (srw_ss()++wordsLib.WORD_ARITH_EQ_ss) []
@@ -205,6 +212,7 @@ val _ = computeLib.add_funs
    Q.ISPEC `ARMpsr_F` COND_RAND,
    Q.ISPEC `ARMpsr_T` COND_RAND,
    Q.ISPEC `ARMpsr_IT_fupd f` COND_RAND,
+   error_option_case_COND_RAND, COND_RATOR,
    FST_ADD_WITH_CARRY,
    DECIDE ``if b then b else T``,
    DECIDE ``~((n <=> if z then v else ~n) /\ ~z)``,
@@ -317,11 +325,11 @@ datatype mode = Usr | Fiq | Irq | Svc | Mon | Abt | Und | Sys;
 datatype arch = ARMv4 | ARMv4T
               | ARMv5T | ARMv5TE
               | ARMv6 | ARMv6K | ARMv6T2
-              | ARMv7_A | ARMv7_R | ARMv7_M;
+              | ARMv7_A | ARMv7_R;
 
 type options =
   { arch : arch, mode : mode, endian : endian,
-    pass : bool, thumb : bool, itblock : int };
+    pass : bool, thumb : bool, thumbee : bool, itblock : int };
 
 fun endian_to_term BigEndian = boolSyntax.T
   | endian_to_term LittleEndian = boolSyntax.F;
@@ -347,8 +355,7 @@ fun arch_to_term s = Parse.Term
    | ARMv6K  => `ARMv6K`
    | ARMv6T2 => `ARMv6T2`
    | ARMv7_A => `ARMv7_A`
-   | ARMv7_R => `ARMv7_R`
-   | ARMv7_M => `ARMv7_M`);
+   | ARMv7_R => `ARMv7_R`);
 
 fun arch_version s =
   case s
@@ -360,10 +367,9 @@ fun arch_version s =
    | ARMv6K  => 6
    | ARMv6T2 => 6
    | ARMv7_A => 7
-   | ARMv7_R => 7
-   | ARMv7_M => 7;
+   | ARMv7_R => 7;
 
-fun thumb2_support a = Lib.mem a [ARMv6T2, ARMv7_A, ARMv7_R, ARMv7_M]
+fun thumb2_support a = Lib.mem a [ARMv6T2, ARMv7_A, ARMv7_R]
 
 local
   val arch_tm                = mk_arm_const "ARM_ARCH"
@@ -379,7 +385,8 @@ local
         {conv = ALIGN_CONV, name = "ALIGN_CONV",
          pats = [``arm_coretypes$aligned (n2w a:'a word,n)``]}
 in
-  fun mk_precondition the_state arch itstate thumb endian flags regs memory =
+  fun mk_precondition
+        the_state arch itstate ext thumbee thumb endian flags regs memory =
         apply_conv
          (SIMP_CONV (pure_ss++ALIGN_ss++boolSimps.CONJ_ss)
             [GSYM CONJ_ASSOC, aligned_thm,
@@ -388,8 +395,7 @@ in
              ARM_READ_IT_def])
          (list_mk_conj
           ([mk_test (arch_tm,[the_state],arch),
-            mk_test (extensions_tm,[the_state],
-                    pred_setSyntax.mk_empty ``:ARMextensions``),
+            mk_test (extensions_tm,[the_state], ext),
             mk_test (unaligned_support_tm,[the_state],T),
             mk_test (read_event_register_tm,[the_state],T),
             mk_test (read_interrupt_wait_tm,[the_state],F),
@@ -399,7 +405,7 @@ in
            [case itstate
             of SOME IT => mk_test (read_it_tm,[the_state],IT)
              | NONE => boolSyntax.T] @
-           [mk_test (read_status_tm,[``arm_step$psrJ``,the_state],F),
+           [mk_test (read_status_tm,[``arm_step$psrJ``,the_state],thumbee),
             mk_test (read_status_tm,[``arm_step$psrT``,the_state],thumb),
             mk_test (read_status_tm,[``arm_step$psrE``,the_state],endian),
             flags, regs, memory]))
@@ -642,7 +648,17 @@ local
                            in
                              (3,if endian = BigEndian then rev bytes else bytes)
                            end
-                      | _ => raise ERR "mk_memory_opc" "Invalid encoding."
+                      | s =>
+                         if s = "Encoding_Thumb" orelse
+                            s = "Encoding_ThumbEE"
+                         then
+                           let val l = eval (armSyntax.mk_bytes (opc,``2n``))
+                               val bytes = fst (listSyntax.dest_list l)
+                           in
+                             (1,if endian = BigEndian then rev bytes else bytes)
+                           end
+                         else
+                           raise ERR "mk_memory_opc" "Invalid encoding."
             val registers = mk_comb (read_reg_tm,s)
             val pc = restr_eval (mk_comb (registers,pc_tm))
             val addrs = pc :: List.tabulate (n,
@@ -687,55 +703,68 @@ fun mk_inp instr =
 local
   val read_status_tm = mk_arm_const "ARM_READ_STATUS"
 
-  fun init s cpsr arch =
-   ``^s with
-       <| psrs updated_by ((0,CPSR) =+ ^cpsr);
-          event_register updated_by (0 =+ T);
-          interrupt_wait updated_by (0 =+ F);
-          information :=
-            <| arch := ^arch; unaligned_support := T; extensions := {} |>;
-          coprocessors updated_by (Coprocessors_state_fupd (CP15reg_SCTLR_fupd
-            (\sctlr. sctlr with <| V := F; A := T; U := F |>))) |>``
+  fun init s cpsr arch thumbee = let
+        val ext = if thumbee then
+                    ``{Extension_ThumbEE}``
+                  else
+                    ``{}:ARMextensions set``
+      in
+        (ext,
+        ``^s with
+         <| psrs updated_by ((0,CPSR) =+ ^cpsr);
+            event_register updated_by (0 =+ T);
+            interrupt_wait updated_by (0 =+ F);
+            information :=
+              <| arch := ^arch; unaligned_support := T; extensions := ^ext |>;
+            coprocessors updated_by
+              (Coprocessors_state_fupd (cp15_fupd (CP15reg_SCTLR_fupd
+              (\sctlr. sctlr with <| V := F; A := T; U := F |>)))) |>``)
+      end
 
   fun mk_bool b = if b then T else F
 
-  fun mk_cpsr the_state flags_fupd itstate T E M = let
-        val cpsr = case itstate
-                   of SOME IT =>
-                     ``^the_state.psrs (0,CPSR) with
-                          <| IT := ^IT; J := F; T := ^T; E := ^E; M := ^M |>``
-                   | _ => ``^the_state.psrs (0,CPSR) with
-                              <| J := F; T := ^T; E := ^E; M := ^M |>``
-      in
-        eval (mk_comb (flags_fupd, cpsr))
-      end
+  fun mk_cpsr the_state flags_fupd itstate T ThumbEE E M = let
+      val cpsr = case itstate
+                 of SOME IT =>
+                   ``^the_state.psrs (0,CPSR) with
+                     <| IT := ^IT; J := ^ThumbEE; T := ^T; E := ^E; M := ^M |>``
+                 | _ => ``^the_state.psrs (0,CPSR) with
+                            <| J := F; T := ^T; E := ^E; M := ^M |>``
+    in
+      eval (mk_comb (flags_fupd, cpsr))
+    end
 
-  fun mk_irpt_cpsr the_state inp T E M =
+  fun mk_irpt_cpsr the_state inp T ThumbEE M =
         if inp = armSyntax.HW_Irq_tm then
           (``^the_state.psrs (0,CPSR) with
-             <| I := F; J := F; T := ^T; E := ^E; M := ^M |>``,
+             <| I := F; J := ^ThumbEE; T := ^T; M := ^M |>``,
             mk_test (read_status_tm,[``arm_step$psrI``,the_state],boolSyntax.F))
         else if inp = armSyntax.HW_Fiq_tm then
           (``^the_state.psrs (0,CPSR) with
-            <| F := F; J := F; T := ^T; E := ^E; M := ^M |>``,
+            <| F := F; J := ^ThumbEE; T := ^T; M := ^M |>``,
             mk_test (read_status_tm,[``arm_step$psrF``,the_state],boolSyntax.F))
         else
           (``^the_state.psrs (0,CPSR) with
-            <| J := F; T := ^T; E := ^E; M := ^M |>``,
+             <| J := ^ThumbEE; T := ^T; M := ^M |>``,
            boolSyntax.T)
 
-  fun decode_opcode IT arch thumb opc =
+  fun decode_opcode IT arch thumb thumbee opc =
         if thumb then
           let val n = wordsSyntax.mk_wordi (bits32 (opc,15,0),16)
           in
             if bits32 (opc,31,29) = Arbnum.fromBinString "111" andalso
                bits32 (opc,28,27) <> Arbnum.zero
             then
-              (armSyntax.Encoding_Thumb2_tm,armSyntax.mk_thumb2_decode (IT,
-                wordsSyntax.mk_wordi (bits32 (opc,31,16),16),n))
+              (armSyntax.Encoding_Thumb2_tm,
+               eval (armSyntax.mk_thumb2_decode (arch_to_term arch,IT,
+                     wordsSyntax.mk_wordi (bits32 (opc,31,16),16),n)))
             else if bits32 (opc,31,16) = Arbnum.zero then
-              (armSyntax.Encoding_Thumb_tm,
-               armSyntax.mk_thumb_decode (arch_to_term arch,IT,n))
+              if thumbee then
+                pairSyntax.dest_pair (eval
+                  (armSyntax.mk_thumbee_decode (arch_to_term arch,IT,n)))
+              else
+                (armSyntax.Encoding_Thumb_tm,
+                 eval (armSyntax.mk_thumb_decode (arch_to_term arch,IT,n)))
             else
               raise ERR "decode_opcode" "not a valid thumb op-code"
           end
@@ -743,22 +772,31 @@ local
           let val n = wordsSyntax.mk_wordi (opc,32)
               val v4 = arch = ARMv4 orelse arch = ARMv4T
           in
-            (armSyntax.Encoding_ARM_tm,armSyntax.mk_arm_decode (mk_bool v4,n))
+            (armSyntax.Encoding_ARM_tm,
+             eval (armSyntax.mk_arm_decode (mk_bool v4,n)))
           end
 
   val remove_white_space =
-        String.translate (fn c => if Char.isSpace c then
-                                    ""
-                                  else
-                                    Char.toString c)
+        String.translate
+          (fn c => if Char.isSpace c then "" else Char.toString c)
 in
   fun make_arm_state_and_pre the_state (opt:options) instr =
   let
     val arch = #arch opt
     val thumb = #thumb opt
+    val thumbee = #thumbee opt
     val endian = #endian opt
     val _ = not (arch = ARMv4 andalso thumb) orelse
               raise ERR "make_arm_state_and_pre" "ARMv4 does not support Thumb."
+    val Thumb = mk_bool thumb
+    val ThumbEE = if thumbee then
+                    if arch = ARMv7_A orelse arch = ARMv7_R then
+                      boolSyntax.T
+                    else
+                      raise ERR "make_arm_state_and_pre"
+                                "ThumbEE not supported by architecture."
+                  else
+                    boolSyntax.F
     val ii = ``<| proc := 0 |> : arm_coretypes$iiid``
     val T2 = thumb2_support arch
     val IT = wordsSyntax.mk_wordii (if T2 then #itblock opt else 0,8)
@@ -766,17 +804,16 @@ in
     val M = mode_to_term (#mode opt)
     val E = endian_to_term endian
     val A = arch_to_term arch
-    val Thumb = mk_bool thumb
     val inp = mk_inp instr
   in
     if mk_inp instr <> armSyntax.NoInterrupt_tm then
       let
-        val (CPSR,flags_pre) = mk_irpt_cpsr the_state inp Thumb E M
-        val state' = init the_state CPSR A
+        val (CPSR,flags_pre) = mk_irpt_cpsr the_state inp Thumb ThumbEE M
+        val (ext,state') = init the_state CPSR A thumbee
         val reg_pre = snd (mk_reg_pre (the_state,M,state'))
       in
         (0,0,state',
-         mk_precondition the_state A itstate Thumb E
+         mk_precondition the_state A itstate ext ThumbEE Thumb E
            flags_pre reg_pre boolSyntax.T)
       end
     else
@@ -784,11 +821,11 @@ in
         val opc = Arbnum.fromHexString (remove_white_space instr)
                     handle Option => raise ERR "make_arm_state_and_pre"
                                                "not a valid hex opcode"
-        val (enc,dec) = (Lib.I ## eval) (decode_opcode IT arch thumb opc)
+        val (enc,dec) = decode_opcode IT arch thumb thumbee opc
         val (cond,instruction) = pairSyntax.dest_pair dec
         val (flags_fupd,flags_pre) = set_flags the_state cond (#pass opt)
-        val CPSR = mk_cpsr the_state flags_fupd itstate Thumb E M
-        val state' = init the_state CPSR A
+        val CPSR = mk_cpsr the_state flags_fupd itstate Thumb ThumbEE E M
+        val (ext,state') = init the_state CPSR A thumbee
         val opc = wordsSyntax.mk_wordi (opc,32)
         val opc' = if not thumb orelse arch_version arch >= 5
                    then opc else ``0w:word32``
@@ -809,7 +846,7 @@ in
         val (nreg,reg_pre) = mk_reg_pre (the_state,M,state')
       in
         (nreg,nmem,state',
-         mk_precondition the_state A itstate Thumb E
+         mk_precondition the_state A itstate ext ThumbEE Thumb E
            flags_pre reg_pre memory_pre)
       end
   end
@@ -826,7 +863,8 @@ in
     STRIP_TAC
       \\ PURE_REWRITE_TAC [ARM_ARCH_def, ARM_EXTENSIONS_def,
            ARM_UNALIGNED_SUPPORT_def, ARM_READ_EVENT_REGISTER_def,
-           ARM_READ_INTERRUPT_WAIT_def, ARM_READ_SCTLR_def, ARM_READ_SCR_def]
+           ARM_READ_INTERRUPT_WAIT_def, ARM_READ_SCTLR_def, ARM_READ_SCR_def,
+           ARM_READ_TEEHBR_def]
       \\ Cases_on `s`
       \\ SIMP_TAC (srw_ss())
            [WORD_NOT, WORD_LEFT_ADD_DISTRIB, IT_concat0,
@@ -834,9 +872,10 @@ in
       \\ STRIP_TAC
       \\ ASM_SIMP_TAC (srw_ss()) [arm_state_component_equality,
            ARMinfo_component_equality, Coprocessors_component_equality,
-           CP15reg_component_equality, CP15sctlr_component_equality,
-           ARMpsr_component_equality, optionTheory.option_CLAUSES,
-           APPLY_UPDATE_ID, aligned_thm, aligned_n2w, align_n2w]
+           coproc_state_component_equality, CP15reg_component_equality,
+           CP15sctlr_component_equality, ARMpsr_component_equality,
+           optionTheory.option_CLAUSES, APPLY_UPDATE_ID, aligned_thm,
+           aligned_n2w, align_n2w]
       \\ ASM_SIMP_TAC (srw_ss())
            [align_relative_add_with_carry, lem3, APPLY_UPDATE_THM,
             WORD_NOT, WORD_LEFT_ADD_DISTRIB, UPDATE_APPLY_IMP_ID]
@@ -851,7 +890,8 @@ fun prove_comp_thm the_state P H G X = Q.prove(
     \\ computeLib.RESTR_EVAL_TAC restr_terms
     \\ ASM_SIMP_TAC (srw_ss()++boolSimps.CONJ_ss)
          [UPD11_SAME_KEY_AND_BASE, UPDATE_EQ, UPDATE_ID_o2, APPLY_UPDATE_THM,
-          WORD_EQ_ADD_LCANCEL_0, align_aligned]);
+          WORD_EQ_ADD_LCANCEL_0, align_aligned]
+          );
 
 local
   val lem1 = trace ("metis",0) (METIS_PROVE [WORD_EQ_ADD_RCANCEL])
@@ -877,6 +917,9 @@ local
   val lem11 = simpLib.SIMP_PROVE std_ss [COND_RAND]
                  ``(if b then align (x:word32,m) else align (x,n)) =
                    align (x,if b then m else n)``
+  val lem12 = Q.prove(`word_modify (\i. COND (i = 0) T) (w:word32) =
+                       (((31 >< 1) w):31 word) @@ (1w:bool[unit])`,
+                    SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [])
 
   val align_rws = [lem1, lem7, aligned_thm, aligned_n2w, align_n2w,
      aligned_bitwise_thm, aligned_pc_thm, optionTheory.option_CLAUSES,
@@ -892,9 +935,11 @@ local
      GSYM ARM_WRITE_REG_o, GSYM ARM_MODE_def,
      GSYM ARM_READ_IT_def, GSYM ARM_READ_GE_def,
      GSYM ARM_READ_CPSR_def, GSYM ARM_WRITE_CPSR_def,
-     ARM_READ_SCTLR_def |> SIMP_RULE (srw_ss()) [] |> GSYM,
-     ARM_READ_SCR_def   |> SIMP_RULE (srw_ss()) [] |> GSYM,
+     ARM_READ_SCTLR_def  |> SIMP_RULE (srw_ss()) [] |> GSYM,
+     ARM_READ_SCR_def    |> SIMP_RULE (srw_ss()) [] |> GSYM,
+     ARM_READ_TEEHBR_def |> SIMP_RULE (srw_ss()) [] |> GSYM,
      GSYM ARM_READ_STATUS_def, GSYM ARM_READ_SCTLR_def, GSYM ARM_READ_SCR_def,
+     GSYM ARM_READ_TEEHBR_def,
      GSYM ARM_READ_STATUS_SPSR_def, GSYM ARM_READ_MODE_SPSR_def,
      GSYM ARM_READ_IT_SPSR_def, GSYM ARM_READ_GE_SPSR_def,
      GSYM ARM_WAIT_FOR_EVENT_def, GSYM ARM_SEND_EVENT_def,
@@ -922,7 +967,7 @@ local
      COND_RATOR, EXCEPTION_MODE,
      Q.ISPEC `ARM_WRITE_CPSR` COND_RAND,
      Q.ISPEC `ARM_WRITE_IT n` COND_RAND,
-     arm_bit_distinct, lem11]
+     arm_bit_distinct, lem11, lem12]
 in
   val WORD_EQ_ss = simpLib.std_conv_ss
              {conv = wordsLib.word_EQ_CONV, name = "word_EQ_CONV",
@@ -953,8 +998,7 @@ local
          ["v6K", "ARMv6K"],
          ["v6T2", "ARMv6T2"],
          ["v7", "v7_A", "v7-A", "ARMv7", "ARMv7_A", "ARMv7-A"],
-         ["v7_R", "v7-R", "ARMv7_R", "ARMv7-R"]
-         (* ["v7_M", "v7-M", "ARMv7_M", "ARMv7-M"] *)]
+         ["v7_R", "v7-R", "ARMv7_R", "ARMv7-R"]]
 
   val mode_options = List.map (List.map lowercase)
         [["Usr", "User"],
@@ -973,6 +1017,9 @@ local
   val thumb_options =
         [["thumb","thumb2","16-bit","16"],
          ["arm","32-bit","32"]]
+
+  val thumbee_options =
+        [["thumbee","thumbx"]]
 
   fun find_pos P l =
         let fun tail [] n = n
@@ -1007,7 +1054,7 @@ local
 
   val default_options =
     {arch = ARMv7_A, mode = Usr, endian = LittleEndian,
-     pass = true, thumb = false, itblock = 0}
+     pass = true, thumb = false, thumbee = false, itblock = 0}
 in
   fun process_options s =
     let val l = Substring.tokens isDelim (Substring.full s)
@@ -1022,7 +1069,7 @@ in
                                 of 0 => ARMv4   | 1 => ARMv4T
                                  | 2 => ARMv5T  | 3 => ARMv5TE
                                  | 4 => ARMv6   | 5 => ARMv6K  | 6 => ARMv6T2
-                                 | 7 => ARMv7_A | 8 => ARMv7_R | 9 => ARMv7_M
+                                 | 7 => ARMv7_A | 8 => ARMv7_R
                                  | _ => raise ERR "process_options"
                                                   "Invalid Arch option.")
         val (mode,l) = process_opt mode_options "Mode"
@@ -1035,20 +1082,30 @@ in
                                                   "Invalid Mode option.")
         val (pass,l) = process_opt pass_options "Pass"
                             (#pass default_options) l (fn i => i = 0)
+        val (thumbee,l) = process_opt thumbee_options "ThumbEE"
+                            (#thumbee default_options) l (fn i => i = 0)
         val (thumb,l) = process_opt thumb_options "Thumb"
-                            (#thumb default_options) l (fn i => i = 0)
+                            thumbee l (fn i => i = 0)
         val (itblock,l) = process_option (String.isPrefix "it:")
                             (fn s => fromDec (String.extract (s,3,NONE)))
                             "IT block" (#itblock default_options) l I
     in
       if null l then
         {arch = arch, mode = mode, endian = endian, pass = pass,
-         thumb = thumb, itblock = itblock}
+         thumb = thumb, thumbee = thumb andalso thumbee, itblock = itblock}
       else
         raise ERR "process_options"
           ("Unrecognized option: " ^ String.concat (commafy l))
     end
 end;
+
+fun get_valuestate2 s tm = let
+  val f = snd o get_valuestate s
+in
+  case Lib.total boolSyntax.dest_cond tm
+  of SOME (c,tm1,tm2) => [f tm1, f tm2]
+   | NONE => [f tm]
+end
 
 local
   val the_state = mk_var ("state",``:arm_seq_monad$arm_state``)
@@ -1065,6 +1122,28 @@ local
                            TextIO.print s
                          else
                            ()
+  fun prove_comp_thms nreg nmem P G X =
+    let
+      val (reg,psr,mem,evt,wfi,acc,mon,_) = arm_state_standard_updates X
+      val reg' = dropn_o (reg, nreg)
+      val mem' = case mem of SOME m => dropn_o (m, nmem)
+                           | NONE => mem
+      val psr' = dropn_o (psr, 1)
+      val evt' = maybe_dropn_o evt
+      val wfi' = maybe_dropn_o wfi
+      val h = some_update
+                ``arm_seq_monad$arm_state_registers_fupd`` reg' the_state
+      val h = some_update ``arm_seq_monad$arm_state_memory_fupd`` mem' h
+      val h = some_update ``arm_seq_monad$arm_state_psrs_fupd`` psr' h
+      val h = some_update ``arm_seq_monad$arm_state_event_register_fupd`` evt' h
+      val h = some_update ``arm_seq_monad$arm_state_interrupt_wait_fupd`` wfi' h
+      val h = some_update ``arm_seq_monad$arm_state_accesses_fupd`` acc h
+      val h = some_update ``arm_seq_monad$arm_state_monitors_fupd`` mon h
+      val H = Term.mk_abs (the_state,h)
+    in
+      prove_comp_thm the_state P H G X handle HOL_ERR _ =>
+        raise ERR "eval_inst" "Failed to prove composition theorem"
+    end
 in
   fun arm_step options instr =
   let
@@ -1080,30 +1159,20 @@ in
     val _ = print_progress "Starting evaluation ...\n"
     val eval_thm = computeLib.RESTR_EVAL_CONV restr_terms tm
     val _ = print_progress "... finished evaluation.\n"
-    val X = snd (get_valuestate "next_arm" (rhsc eval_thm))
-    val (reg,psr,mem,evt,wfi,acc,mon,_) = arm_state_standard_updates X
-    val reg' = dropn_o (reg, nreg)
-    val mem' = case mem of SOME m => dropn_o (m, nmem)
-                         | NONE => mem
-    val psr' = dropn_o (psr, 1)
-    val evt' = maybe_dropn_o evt
-    val wfi' = maybe_dropn_o wfi
-    val h = some_update
-              ``arm_seq_monad$arm_state_registers_fupd`` reg' the_state
-    val h = some_update ``arm_seq_monad$arm_state_memory_fupd`` mem' h
-    val h = some_update ``arm_seq_monad$arm_state_psrs_fupd`` psr' h
-    val h = some_update ``arm_seq_monad$arm_state_event_register_fupd`` evt' h
-    val h = some_update ``arm_seq_monad$arm_state_interrupt_wait_fupd`` wfi' h
-    val h = some_update ``arm_seq_monad$arm_state_accesses_fupd`` acc h
-    val h = some_update ``arm_seq_monad$arm_state_monitors_fupd`` mon h
-    val H = mk_abs (the_state,h)
-    val _ = print_progress "Starting composition proof ...\n"
-    val comp_thm = prove_comp_thm the_state P H G X handle HOL_ERR _ =>
-                          raise ERR "eval_inst"
-                            "Failed to prove composition theorem"
-    val _ = print_progress "... finished composition proof.\n"
-    val next_thm = Conv.BETA_RULE (Drule.MATCH_MP arm_next_thm
-                     (Drule.LIST_CONJ [character_thm,comp_thm,eval_thm]))
+    val Xs = get_valuestate2 "next_arm" (rhsc eval_thm)
+    val _ = print_progress "Starting composition proof(s) ...\n"
+    val comp_thms = List.map (prove_comp_thms nreg nmem P G) Xs
+    val _ = print_progress "... finished composition proof(s).\n"
+    val next_thm = case comp_thms
+                   of [comp_thm] =>
+                       Conv.BETA_RULE (Drule.MATCH_MP arm_next_thm
+                         (Drule.LIST_CONJ [character_thm,comp_thm,eval_thm]))
+                    | [comp_thm1, comp_thm2] =>
+                       Conv.BETA_RULE (Drule.MATCH_MP arm_next_thm2
+                         (Drule.LIST_CONJ
+                           [character_thm,comp_thm1,comp_thm2,eval_thm]))
+                    | _ => raise ERR "arm_step"
+                             "Unexpected number of composition theorems"
     val thm = next_thm |> Drule.UNDISCH
                        |> SIMP_RULE (bool_ss++ARM_ALIGN_ss) [Thm.ASSUME pre]
                        |> Thm.DISCH pre
@@ -1113,7 +1182,8 @@ in
     val pre' = hd (fst (Thm.dest_thm thm))
   in
     thm |> with_flag (Cond_rewr.stack_limit,50)
-             (SIMP_RULE (bool_ss++ARM_UPDATES_ss) [Thm.ASSUME pre'])
+             (SIMP_RULE (bool_ss++wordsLib.WORD_ARITH_ss++ARM_UPDATES_ss)
+                [Thm.ASSUME pre'])
         |> Thm.DISCH pre'
         |> Thm.GEN the_state
   end

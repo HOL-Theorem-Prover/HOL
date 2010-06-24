@@ -6,11 +6,13 @@ sig
 
   include arm_encoderLib arm_disassemblerLib arm_stepLib
 
-  val arm_decode   : string -> arm_code
-  val thumb_decode : int -> string -> arm_code
+  val arm_decode     : string -> arm_code
+  val thumb_decode   : int -> string -> arm_code
+  val thumbee_decode : int -> string -> arm_code
 
-  val arm_disassemble_decode   : string -> string
-  val thumb_disassemble_decode : int -> string -> string
+  val arm_disassemble_decode     : string -> string
+  val thumb_disassemble_decode   : int -> string -> string
+  val thumbee_disassemble_decode : int -> string -> string
 
   val arm_steps_from_quote  : string -> string frag list ->
                               (Abbrev.thm * Abbrev.thm option) list

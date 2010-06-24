@@ -65,6 +65,12 @@ val Branch_Target_tm             = mk_ast_const "Branch_Target"
 val Branch_Exchange_tm           = mk_ast_const "Branch_Exchange"
 val Compare_Branch_tm            = mk_ast_const "Compare_Branch"
 val Table_Branch_Byte_tm         = mk_ast_const "Table_Branch_Byte"
+val Check_Array_tm               = mk_ast_const "Check_Array"
+val Handler_Branch_Link_tm       = mk_ast_const "Handler_Branch_Link"
+val Handler_Branch_Parameter_tm  = mk_ast_const "Handler_Branch_Parameter"
+
+val Handler_Branch_Link_Parameter_tm =
+  mk_ast_const "Handler_Branch_Link_Parameter"
 
 val Branch_Link_Exchange_Immediate_tm =
    mk_ast_const "Branch_Link_Exchange_Immediate"
@@ -148,6 +154,7 @@ val Preload_Data_tm        = mk_ast_const "Preload_Data"
 val Preload_Instruction_tm = mk_ast_const "Preload_Instruction"
 val Supervisor_Call_tm     = mk_ast_const "Supervisor_Call"
 val Secure_Monitor_Call_tm = mk_ast_const "Secure_Monitor_Call"
+val Enterx_Leavex_tm       = mk_ast_const "Enterx_Leavex"
 val Clear_Exclusive_tm     = mk_ast_const "Clear_Exclusive"
 val If_Then_tm             = mk_ast_const "If_Then"
 
@@ -241,6 +248,28 @@ fun mk_Table_Branch_Byte(r,s,t) =
        (Table_Branch_Byte_tm, inst_list [``:4``,bool,``:4``] [r,s,t])
     |> mk_Branch
   handle HOL_ERR _ => raise ERR "mk_Table_Branch_Byte" "";
+
+fun mk_Check_Array(r,s) =
+  Term.list_mk_comb(Check_Array_tm, inst_list [``:4``,``:4``] [r,s])
+    |> mk_Branch
+  handle HOL_ERR _ => raise ERR "mk_Check_Array" "";
+
+fun mk_Handler_Branch_Link(r,s) =
+  Term.list_mk_comb(Handler_Branch_Link_tm, inst_list [bool,``:8``] [r,s])
+    |> mk_Branch
+  handle HOL_ERR _ => raise ERR "mk_Handler_Branch_Link" "";
+
+fun mk_Handler_Branch_Link_Parameter(r,s) =
+  Term.list_mk_comb
+       (Handler_Branch_Link_Parameter_tm, inst_list [``:5``,``:5``] [r,s])
+    |> mk_Branch
+  handle HOL_ERR _ => raise ERR "mk_Handler_Branch_Link_Parameter" "";
+
+fun mk_Handler_Branch_Parameter(r,s) =
+  Term.list_mk_comb
+       (Handler_Branch_Parameter_tm, inst_list [``:3``,``:5``] [r,s])
+    |> mk_Branch
+  handle HOL_ERR _ => raise ERR "mk_Handler_Branch_Parameter" "";
 
 (* .. *)
 
@@ -623,6 +652,11 @@ fun mk_Secure_Monitor_Call t =
     |> mk_Miscellaneous
   handle HOL_ERR _ => raise ERR "mk_Secure_Monitor_Call" "";
 
+fun mk_Enterx_Leavex t =
+  Term.mk_comb(Enterx_Leavex_tm, t)
+    |> mk_Miscellaneous
+  handle HOL_ERR _ => raise ERR "mk_Enterx_Leavex" "";
+
 fun mk_If_Then(r,s) =
   Term.list_mk_comb(If_Then_tm, inst_list [``:4``,``:4``] [r,s])
     |> mk_Miscellaneous
@@ -765,6 +799,22 @@ val dest_Compare_Branch =
 val dest_Table_Branch_Byte =
   HolKernel.dest_triop Table_Branch_Byte_tm (ERR "dest_Table_Branch_Byte" "") o
   dest_Branch;
+
+val dest_Check_Array =
+  HolKernel.dest_binop Check_Array_tm (ERR "dest_Check_Array" "") o
+  dest_Branch;
+
+val dest_Handler_Branch_Link =
+  HolKernel.dest_binop Handler_Branch_Link_tm
+    (ERR "dest_Handler_Branch_Link" "") o dest_Branch;
+
+val dest_Handler_Branch_Link_Parameter =
+  HolKernel.dest_binop Handler_Branch_Link_Parameter_tm
+    (ERR "dest_Handler_Branch_Link_Parameter" "") o dest_Branch;
+
+val dest_Handler_Branch_Parameter =
+  HolKernel.dest_binop Handler_Branch_Parameter_tm
+    (ERR "dest_Handler_Branch_Parameter" "") o dest_Branch;
 
 (* .. *)
 
@@ -1047,6 +1097,10 @@ val dest_Secure_Monitor_Call =
     Secure_Monitor_Call_tm (ERR "dest_Secure_Monitor_Call" "") o
   dest_Miscellaneous;
 
+val dest_Enterx_Leavex =
+  HolKernel.dest_monop Enterx_Leavex_tm (ERR "dest_Enterx_Leavex" "") o
+  dest_Miscellaneous;
+
 val dest_If_Then =
   HolKernel.dest_binop If_Then_tm (ERR "dest_If_Then" "") o
   dest_Miscellaneous;
@@ -1110,6 +1164,10 @@ val is_Branch_Link_Exchange_Immediate = can dest_Branch_Link_Exchange_Immediate
 val is_Branch_Link_Exchange_Register  = can dest_Branch_Link_Exchange_Register
 val is_Compare_Branch                 = can dest_Compare_Branch
 val is_Table_Branch_Byte              = can dest_Table_Branch_Byte
+val is_Check_Array                    = can dest_Check_Array
+val is_Handler_Branch_Link            = can dest_Handler_Branch_Link
+val is_Handler_Branch_Link_Parameter  = can dest_Handler_Branch_Link_Parameter
+val is_Handler_Branch_Parameter       = can dest_Handler_Branch_Parameter
 val is_DataProcessing                 = can dest_DataProcessing
 val is_Data_Processing                = can dest_Data_Processing
 val is_Add_Sub                        = can dest_Add_Sub
@@ -1182,6 +1240,7 @@ val is_Preload_Data                   = can dest_Preload_Data
 val is_Preload_Instruction            = can dest_Preload_Instruction
 val is_Supervisor_Call                = can dest_Supervisor_Call
 val is_Secure_Monitor_Call            = can dest_Secure_Monitor_Call
+val is_Enterx_Leavex                  = can dest_Enterx_Leavex
 val is_If_Then                        = can dest_If_Then
 val is_Data_Synchronization_Barrier   = can dest_Data_Synchronization_Barrier
 

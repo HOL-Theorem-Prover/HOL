@@ -69,23 +69,25 @@ val send_event_tm               = mk_monad_const "send_event"
 val wait_for_interrupt_tm       = mk_monad_const "wait_for_interrupt"
 val clear_wait_for_interrupt_tm = mk_monad_const "clear_wait_for_interrupt"
 
-val decode_psr_tm      = mk_core_const "decode_psr"
-val bytes_tm           = mk_core_const "bytes"
-val align_tm           = mk_core_const "align"
-val aligned_tm         = mk_core_const "aligned"
-val bit_count_tm       = mk_core_const "bit_count"
-val Encoding_ARM_tm    = mk_core_const "Encoding_ARM"
-val Encoding_Thumb_tm  = mk_core_const "Encoding_Thumb"
-val Encoding_Thumb2_tm = mk_core_const "Encoding_Thumb2"
-val ITAdvance_tm       = mk_core_const "ITAdvance"
-val NoInterrupt_tm     = mk_core_const "NoInterrupt"
-val HW_Reset_tm        = mk_core_const "HW_Reset"
-val HW_Fiq_tm          = mk_core_const "HW_Fiq"
-val HW_Irq_tm          = mk_core_const "HW_Irq"
+val decode_psr_tm       = mk_core_const "decode_psr"
+val bytes_tm            = mk_core_const "bytes"
+val align_tm            = mk_core_const "align"
+val aligned_tm          = mk_core_const "aligned"
+val bit_count_tm        = mk_core_const "bit_count"
+val Encoding_ARM_tm     = mk_core_const "Encoding_ARM"
+val Encoding_Thumb_tm   = mk_core_const "Encoding_Thumb"
+val Encoding_Thumb2_tm  = mk_core_const "Encoding_Thumb2"
+val Encoding_ThumbEE_tm = mk_core_const "Encoding_ThumbEE"
+val ITAdvance_tm        = mk_core_const "ITAdvance"
+val NoInterrupt_tm      = mk_core_const "NoInterrupt"
+val HW_Reset_tm         = mk_core_const "HW_Reset"
+val HW_Fiq_tm           = mk_core_const "HW_Fiq"
+val HW_Irq_tm           = mk_core_const "HW_Irq"
 
-val arm_decode_tm      = mk_decode_const "arm_decode"
-val thumb_decode_tm    = mk_decode_const "thumb_decode"
-val thumb2_decode_tm   = mk_decode_const "thumb2_decode";
+val arm_decode_tm       = mk_decode_const "arm_decode"
+val thumb_decode_tm     = mk_decode_const "thumb_decode"
+val thumbee_decode_tm   = mk_decode_const "thumbee_decode"
+val thumb2_decode_tm    = mk_decode_const "thumb2_decode";
 
 fun mk_error s =
   HolKernel.mk_comb(error_tm,
@@ -289,9 +291,14 @@ fun mk_thumb_decode(a,itstate,w) =
     [a,inst_word_alpha ``:8`` itstate, inst_word_alpha ``:16`` w])
   handle HOL_ERR _ => raise ERR "mk_thumb_decode" "";
 
-fun mk_thumb2_decode(itstate,w1,w2) =
+fun mk_thumbee_decode(a,itstate,w) =
+  HolKernel.list_mk_comb(thumbee_decode_tm,
+    [a,inst_word_alpha ``:8`` itstate, inst_word_alpha ``:16`` w])
+  handle HOL_ERR _ => raise ERR "mk_thumbee_decode" "";
+
+fun mk_thumb2_decode(a,itstate,w1,w2) =
   HolKernel.list_mk_comb(thumb2_decode_tm,
-    [inst_word_alpha ``:8`` itstate,
+    [a,inst_word_alpha ``:8`` itstate,
      pairSyntax.mk_pair
        (inst_word_alpha ``:16`` w1,
         inst_word_alpha ``:16`` w2)])
@@ -362,8 +369,11 @@ val dest_arm_decode =
 val dest_thumb_decode =
     HolKernel.dest_triop thumb_decode_tm (ERR "dest_thumb_decode" "");
 
+val dest_thumbee_decode =
+    HolKernel.dest_triop thumbee_decode_tm (ERR "dest_thumbee_decode" "");
+
 val dest_thumb2_decode =
-    HolKernel.dest_binop thumb2_decode_tm (ERR "dest_thumb2_decode" "");
+    HolKernel.dest_triop thumb2_decode_tm (ERR "dest_thumb2_decode" "");
 
 val can = Lib.can
 
@@ -403,8 +413,9 @@ val is_send_event               = can dest_send_event
 val is_wait_for_interrupt       = can dest_wait_for_interrupt
 val is_clear_wait_for_interrupt = can dest_clear_wait_for_interrupt;
 
-val is_arm_decode    = can dest_arm_decode
-val is_thumb_decode  = can dest_thumb_decode
-val is_thumb2_decode = can dest_thumb2_decode;
+val is_arm_decode     = can dest_arm_decode
+val is_thumb_decode   = can dest_thumb_decode
+val is_thumbee_decode = can dest_thumbee_decode
+val is_thumb2_decode  = can dest_thumb2_decode;
 
 end

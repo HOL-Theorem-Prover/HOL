@@ -57,11 +57,14 @@ val _ = Hol_datatype `CP15reg =
       VBAR  : CP15vbar;
       MVBAR : word32 |>`;
 
+val _ = Hol_datatype `CP14reg =
+   <| TEEHBR : word32 |>`;
+
 val _ = Hol_datatype `ARMarch =
     ARMv4   | ARMv4T
   | ARMv5T  | ARMv5TE
   | ARMv6   | ARMv6K  | ARMv6T2
-  | ARMv7_A | ARMv7_R | ARMv7_M`;
+  | ARMv7_A | ARMv7_R`;
 
 val _ = Hol_datatype `ARMextensions =
     Extension_ThumbEE  | Extension_VFP     | Extension_AdvanvedSIMD
@@ -83,7 +86,7 @@ val _ = Hol_datatype `InstrSet =
   InstrSet_ARM | InstrSet_Thumb | InstrSet_Jazelle | InstrSet_ThumbEE`;
 
 val _ = Hol_datatype `Encoding =
-  Encoding_ARM | Encoding_Thumb | Encoding_Thumb2`;
+  Encoding_ARM | Encoding_Thumb | Encoding_Thumb2 | Encoding_ThumbEE`;
 
 val _ = Hol_datatype `MemType =
   MemType_Normal | MemType_Device | MemType_StronglyOrdered`;
@@ -286,11 +289,22 @@ val version_number_def = Define`
   (version_number ARMv6K  = 6) /\
   (version_number ARMv6T2 = 6) /\
   (version_number ARMv7_A = 7) /\
-  (version_number ARMv7_R = 7) /\
-  (version_number ARMv7_M = 7)`;
+  (version_number ARMv7_R = 7)`;
 
 val thumb2_support_def = Define`
   thumb2_support = {a | (a = ARMv6T2) \/ version_number a >= 7}`;
+
+val security_support_def = Define`
+  security_support = {(a,e) | ((a = ARMv6K) \/ (a = ARMv7_A)) /\
+                              Extension_Security IN e}`;
+
+val thumbee_support_def = Define`
+  thumbee_support = {(a,e) | (a = ARMv7_A) \/
+                             (a = ARMv7_R) /\ Extension_ThumbEE IN e}`;
+
+val jazelle_support_def = Define`
+  jazelle_support = {(a,e) | version_number a > 6 \/
+                             (a = ARMv5TE) /\ Extension_Jazelle IN e}`;
 
 (* ------------------------------------------------------------------------ *)
 

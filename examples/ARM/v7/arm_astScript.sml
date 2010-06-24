@@ -63,7 +63,11 @@ val _ = Hol_datatype `branch_instruction =
   | Branch_Link_Exchange_Immediate of bool=>bool=>word24
   | Branch_Link_Exchange_Register  of reg
   | Compare_Branch                 of bool=>word6=>word3
-  | Table_Branch_Byte              of reg=>bool=>reg`;
+  | Table_Branch_Byte              of reg=>bool=>reg
+  | Check_Array                    of word4=>word4
+  | Handler_Branch_Link            of bool=>word8
+  | Handler_Branch_Link_Parameter  of word5=>word5
+  | Handler_Branch_Parameter       of word3=>word5`;
 
 val _ = Hol_datatype `data_processing_instruction =
     Data_Processing                   of word4=>bool=>reg=>reg=>addressing_mode1
@@ -143,6 +147,7 @@ val _ = Hol_datatype `miscellaneous_instruction =
   | Preload_Instruction          of bool=>reg=>addressing_mode2
   | Supervisor_Call              of word24
   | Secure_Monitor_Call          of word4
+  | Enterx_Leavex                of bool
   | Clear_Exclusive
   | If_Then                      of word4=>word4`;
 

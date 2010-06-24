@@ -240,6 +240,8 @@ local
                  "ARM:\t"
                else if term_eq enc armSyntax.Encoding_Thumb_tm then
                  "16-bit Thumb:"
+               else if term_eq enc armSyntax.Encoding_ThumbEE_tm then
+                 "ThumbEE:"
                else
                  "32-bit Thumb:", "\t", m, " ", a]
         end
@@ -573,6 +575,7 @@ in
 end handle
    HOL_ERR {origin_function,message,...} =>
      print (origin_function ^ ": " ^ message ^ "\n")
+ | SysErr (s, _) => print (s ^ "\n")
  | Io {name, cause = SysErr (s, _), function} =>
      print (function ^ ": " ^ s ^ ": " ^ name ^ "\n");
 

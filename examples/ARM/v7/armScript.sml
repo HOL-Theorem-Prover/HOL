@@ -5,8 +5,8 @@
 (* ------------------------------------------------------------------------ *)
 
 (* interactive use:
-  app load ["arm_decoderTheory", "arm_opsemTheory", "pred_setLib", "wordsLib",
-            "parmonadsyntax"];
+  app load ["arm_decoderTheory", "arm_opsemTheory",
+            "pred_setLib", "wordsLib", "parmonadsyntax"];
 *)
 
 open HolKernel boolLib bossLib Parse pred_setLib;
@@ -27,46 +27,85 @@ val _ = temp_overload_on ("return", ``constT``);
 
 (* ------------------------------------------------------------------------ *)
 
+(* Get the actual instruction set.  An alternative version could raise an error
+   if iset is Thumb, Jazelle or ThumbEE when these aren't avaialble. *)
+
+val actual_instr_set_def = Define`
+  actual_instr_set ii : InstrSet M =
+    read_arch ii >>=
+    (\arch.
+      if arch = ARMv4 then
+        constT InstrSet_ARM
+      else
+        current_instr_set ii >>=
+        (\iset.
+          if iset = InstrSet_Jazelle then
+            have_jazelle ii >>=
+            (\HaveJazelle.
+              constT (if HaveJazelle then iset else InstrSet_ARM))
+          else if iset = InstrSet_ThumbEE then
+            have_thumbEE ii >>=
+            (\HaveThumbEE.
+              constT (if HaveThumbEE then iset else InstrSet_Thumb))
+          else
+            constT iset))`;
+
+val fetch_arm_def = Define`
+  fetch_arm ii read_word : (Encoding # word4 # ARMinstruction) M =
+    (read_pc ii ||| arch_version ii) >>=
+    (\(pc,v).
+       read_word pc >>=
+       (\ireg.
+          constT (Encoding_ARM, arm_decode (v < 5) ireg)))`;
+
+val fetch_thumb_def = Define`
+  fetch_thumb ii ee read_halfword : (Encoding # word4 # ARMinstruction) M =
+    (read_pc ii ||| read_cpsr ii ||| read_arch ii) >>=
+    (\(pc,cpsr,arch).
+      read_halfword pc >>= (\ireg1.
+        if ((15 -- 13) ireg1 = 0b111w) /\ (12 -- 11) ireg1 <> 0b00w then
+          read_halfword (pc + 2w) >>= (\ireg2.
+            constT (Encoding_Thumb2, thumb2_decode arch cpsr.IT (ireg1,ireg2)))
+        else
+          constT
+            (if ee then
+               thumbee_decode arch cpsr.IT ireg1
+             else
+               (Encoding_Thumb, thumb_decode arch cpsr.IT ireg1))))`;
+
 val fetch_instruction_def = Define`
-  fetch_instruction ii : (Encoding # word4 # ARMinstruction) M =
-    (read_arch ii ||| read_cpsr ii ||| read_pc ii) >>=
-    (\(arch,cpsr,pc).
-       if cpsr.T /\ arch <> ARMv4 then (* Thumb *)
-         read_memA ii (pc,2) >>=
-         (\ireg1. let ireg1 = word16 ireg1 in
-            if ((15 -- 13) ireg1 = 0b111w) /\ (12 -- 11) ireg1 <> 0b00w
-            then (* 32-bit Thumb *)
-              read_memA ii (pc + 2w, 2) >>=
-              (\ireg2.
-                 constT (Encoding_Thumb2,
-                         thumb2_decode cpsr.IT (ireg1,word16 ireg2)))
-            else (* 16-bit Thumb *)
-              constT (Encoding_Thumb, thumb_decode arch cpsr.IT ireg1))
-       else if ~cpsr.T /\ arch <> ARMv7_M then (* ARM *)
-         read_memA ii (pc,4) >>=
-         (\ireg.
-            constT (Encoding_ARM,
-                    arm_decode (version_number arch < 5) (word32 ireg)))
-       else
-         errorT "fetch_instruction: unpredictable")`;
+  fetch_instruction ii
+    read_word read_halfword : (Encoding # word4 # ARMinstruction) M =
+    actual_instr_set ii >>=
+    (\iset.
+       case iset
+       of InstrSet_ARM     -> fetch_arm ii read_word
+       || InstrSet_Thumb   -> fetch_thumb ii F read_halfword
+       || InstrSet_ThumbEE -> fetch_thumb ii T read_halfword
+       || InstrSet_Jazelle ->
+            errorT ("fetch_instruction: Jazelle not supported"))`;
 
 val arm_next_def = Define`
-  arm_next ii irpt =
-    (read_arch ii ||| read_cpsr ii ||| event_registered ii |||
-     waiting_for_interrupt ii) >>=
-    (\(arch,cpsr,registered,wfi).
-      if arch = ARMv7_M then
-        errorT "arm_next: ARMv7-M profile not supported"
-      else if irpt = HW_Reset then
-        take_reset ii
-      else if (irpt = HW_Fiq) /\ ~cpsr.F then
-        take_fiq_exception ii
-      else if (irpt = HW_Irq) /\ ~cpsr.I then
-        take_irq_exception ii
-      else if ~registered \/ wfi then
-        constT ()
-      else
-        fetch_instruction ii >>= arm_instr ii)`;
+  arm_next ii irpt : unit M =
+    if irpt = HW_Reset then
+      clear_wait_for_interrupt ii >>= (\u:unit. take_reset ii)
+    else
+      read_cpsr ii >>=
+      (\cpsr.
+          if (irpt = HW_Fiq) /\ ~cpsr.F then
+            clear_wait_for_interrupt ii >>= (\u:unit. take_fiq_exception ii)
+          else if (irpt = HW_Irq) /\ ~cpsr.I then
+            clear_wait_for_interrupt ii >>= (\u:unit. take_irq_exception ii)
+          else
+            waiting_for_interrupt ii >>=
+            (\wfi.
+               if wfi then
+                 constT ()
+               else
+                 fetch_instruction ii
+                   (\a. read_memA ii (a, 4) >>= (\d. return (word32 d)))
+                   (\a. read_memA ii (a, 2) >>= (\d. return (word16 d))) >>=
+                 arm_instr ii))`;
 
 val arm_run_def = Define`
   arm_run t ii inp =

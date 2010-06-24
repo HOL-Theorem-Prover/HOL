@@ -15,12 +15,16 @@ val _ = Feedback.register_btrace ("arm random", arm_random_trace);
 datatype arch = ARMv4 | ARMv4T
               | ARMv5T | ARMv5TE
               | ARMv6 | ARMv6K | ARMv6T2
-              | ARMv7_A | ARMv7_R (* | ARMv7_M *);
+              | ARMv7_A | ARMv7_R;
 
-datatype encoding = ARM | Thumb | Thumb2;
+datatype encoding = ARM | Thumb | Thumb2 | ThumbEE;
 
 datatype class = DataProcessing | LoadStore | Branch
                | StatusAccess | Miscellaneous
+
+datatype step_output
+  = Simple_step of (term * term) list
+  | Conditional_step of term * (term * term) list * (term * term) list
 
 (* ------------------------------------------------------------------------- *)
 
@@ -87,8 +91,7 @@ fun version_number a =
    | ARMv6K  => 6
    | ARMv6T2 => 6
    | ARMv7_A => 7
-   | ARMv7_R => 7
-(* | ARMv7_M => 7 *);
+   | ARMv7_R => 7;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -97,9 +100,10 @@ fun data_processing_list n enc =
   List.tabulate
     (if n < 6 then 3 else
       case enc
-      of Thumb  => 8
-       | Thumb2 => 30
-       | ARM    => 29, I) @
+      of Thumb   => 8
+       | ThumbEE => 8
+       | Thumb2  => 30
+       | ARM     => 29, I) @
    (if n = 5 andalso enc = ARM then [23] else []);
 
 fun random_term arch enc typ =
@@ -144,9 +148,11 @@ let val rand_term = random_term arch enc
                                                 (enc <> Thumb2 orelse
                                                  random_range 2 = 0)
                                             then p else c)
-                         val sflag = if enc = Thumb orelse test_or_compare opc
+                         val sflag = if enc = Thumb orelse enc = ThumbEE orelse
+                                        test_or_compare opc
                                      then T else b
-                         val mode1 = if enc = Thumb andalso opc <> 13 andalso
+                         val mode1 = if (enc = Thumb orelse enc = ThumbEE)
+                                        andalso opc <> 13 andalso
                                         arm_astSyntax.is_Mode1_register e
                                      then
                                        arm_astSyntax.mk_Mode1_register
@@ -162,14 +168,16 @@ let val rand_term = random_term arch enc
                                   'reg word -> 'reg word``
                  of [a,b,c,d,e,f] =>
                      let val (acc,sflag,rm) =
-                                 if enc = Thumb then (F,T,c) else (a,b,e)
+                                 if enc = Thumb orelse enc = ThumbEE
+                                 then (F,T,c) else (a,b,e)
                      in arm_astSyntax.mk_Multiply (acc,sflag,c,d,rm,f) end
                   | _ => raise ERR "random_term" "mul"
     fun ls () = case rand_term ``:bool -> bool -> bool -> bool ->
                                   'reg word -> 'reg word``
                 of [p,u,b,w,n,t] =>
                      let val load = random_range 2 = 0
-                         val p = if enc = Thumb then T else p
+                         val p = if enc = Thumb orelse enc = ThumbEE
+                                 then T else p
                          val immediate = (enc <> ARM andalso is_F p) orelse
                                          random_range 2 = 0
                          val w = mk_bool (enc = ARM andalso is_T w orelse
@@ -183,10 +191,11 @@ let val rand_term = random_term arch enc
                                     n
                          val wide = imm_no_wb andalso is_T p andalso is_T u
                          val unpriv =
-                                    case enc
-                                    of Thumb => false
-                                     | Thumb2 => wide andalso random_range 3 = 0
-                                     | ARM => is_F p andalso is_T w
+                                  case enc
+                                  of Thumb   => false
+                                   | ThumbEE => false
+                                   | Thumb2  => wide andalso random_range 3 = 0
+                                   | ARM     => is_F p andalso is_T w
                          val (u,mode2) =
                                      if immediate then
                                        (if wide then T else u,
@@ -200,7 +209,8 @@ let val rand_term = random_term arch enc
             	                                  wide andalso not unpriv
 	                                       then 12
                                                else
-                                                 if enc <> Thumb orelse
+                                                 if enc = ARM orelse
+                                                    enc = Thumb2  orelse
                                                     is_word4 13 rn orelse
                                                     is_word4 15 rn
                                                  then 8 else 5))))
@@ -209,9 +219,10 @@ let val rand_term = random_term arch enc
                                         arm_astSyntax.mk_Mode2_register
                                           (mk_word5 (random_const
                                             (case enc
-                                             of Thumb => 0
-                                              | Thumb2 => 2
-                                              | ARM => 5)),
+                                             of Thumb   => 0
+                                              | ThumbEE => 2
+                                              | Thumb2  => 2
+                                              | ARM     => 5)),
                                            mk_word2 (random_const
                                              (if enc = ARM then 2 else 0)),
                                            hd (rand_term ``:'reg word``)))
@@ -226,8 +237,8 @@ let val rand_term = random_term arch enc
                  of [p,u,w,s,h,n,t,mode3] =>
                       let val load = random_range 2 = 0
                           val immediate = arm_astSyntax.is_Mode3_immediate mode3
-                          val p = if enc = Thumb orelse enc <> ARM andalso
-                                     not immediate
+                          val p = if enc = Thumb orelse enc = ThumbEE orelse
+                                     enc <> ARM andalso not immediate
                                   then T else p
                           val w = mk_bool (enc = ARM andalso is_T w orelse
                                            is_F p)
@@ -235,16 +246,18 @@ let val rand_term = random_term arch enc
                           val wide = imm_no_wb andalso is_T p andalso is_T u
                           val unpriv =
                                      case enc
-                                     of Thumb => false
-                                      | Thumb2 => wide andalso
-                                                  random_range 3 = 0
-                                      | ARM => is_F p andalso is_T w
+                                     of Thumb   => false
+                                      | ThumbEE => false
+                                      | Thumb2  => wide andalso
+                                                   random_range 3 = 0
+                                      | ARM     => is_F p andalso is_T w
                           val u = if immediate then
                                     if wide then T else u
                                   else
                                     if enc = ARM then u else T
                           val rn = if load andalso imm_no_wb andalso
-                                      enc <> Thumb andalso random_range 3 = 0
+                                      (enc = ARM orelse enc = Thumb2) andalso
+                                      random_range 3 = 0
                                    then
                                      pc
                                    else
@@ -276,7 +289,8 @@ let val rand_term = random_term arch enc
                            val n = if random_range 2 = 0 then mk_word4 13 else n
                            val list = wordsSyntax.mk_wordii
                                         (random_const
-                                           (if enc = Thumb then 8 else 16), 16)
+                                           (if enc = Thumb orelse enc = ThumbEE
+                                            then 8 else 16), 16)
                            val list = wordsSyntax.mk_word_and(list,
                                         ``0b0101111111111100w:word16``) |> eval
                        in
@@ -329,9 +343,10 @@ in
        (if b = bool then
           if n = ``:'reg`` orelse n = ``:'areg`` andalso random_range 2 = 0 then
             [case enc
-             of ARM => random_arm_register ()
-              | Thumb => random_thumb_register ()
-              | Thumb2 => random_thumb2_register ()]
+             of ARM     => random_arm_register ()
+              | Thumb   => random_thumb_register ()
+              | ThumbEE => random_thumb_register ()
+              | Thumb2  => random_thumb2_register ()]
           else if n = ``:'areg`` then
             [pc]
           else if n = ``:'mode`` then
@@ -349,10 +364,10 @@ in
         else
           raise ERR "random_term" "cart")
    | ("addressing_mode1", []) =>
-       [case random_range (if enc = Thumb then 2 else 3)
+       [case random_range (if enc = Thumb orelse enc = ThumbEE then 2 else 3)
         of 0 => arm_astSyntax.mk_Mode1_immediate
-                  (wordsSyntax.mk_wordii
-                     (random_const (if enc = Thumb then 8 else 12), 12))
+                  (wordsSyntax.mk_wordii (random_const
+                     (if enc = Thumb orelse enc = ThumbEE then 8 else 12), 12))
          | 1 => r3 arm_astSyntax.mk_Mode1_register
                    ``:word5 -> word2 -> 'reg word``
          | 2 => r3 arm_astSyntax.mk_Mode1_register_shifted_register
@@ -361,9 +376,13 @@ in
    | ("addressing_mode3", []) =>
        [case random_range 2
         of 0 => arm_astSyntax.mk_Mode3_immediate
-                  (mk_word12 (random_const (if enc = Thumb then 5 else 8)))
+                  (mk_word12 (random_const
+                     (if enc = Thumb orelse enc = ThumbEE then 5 else 8)))
          | 1 => arm_astSyntax.mk_Mode3_register
-                  (mk_word2 (random_const (if enc = Thumb2 then 2 else 0)),
+                  (mk_word2 (case enc
+                             of Thumb2  => random_const 2
+                              | ThumbEE => 1
+                              | _       => 0),
                    hd (rand_term ``:'reg word``))
          | _ => raise ERR "random_term" "addressing_mode3"]
    | ("parallel_add_sub_op1", []) =>
@@ -386,19 +405,49 @@ in
                           arm_astSyntax.mk_Hint_debug
                             (hd (rand_term ``:word4``))]]
    | ("branch_instruction", []) =>
-       [case random_range 6
-        of 0 => arm_astSyntax.mk_Branch_Target
-                     (hd (rand_term ``:'offset word``))
-         | 1 => arm_astSyntax.mk_Branch_Exchange (hd (rand_term ``:'reg word``))
-         | 2 => r3 arm_astSyntax.mk_Branch_Link_Exchange_Immediate
-                     ``:bool -> bool -> 'offset word``
-         | 3 => arm_astSyntax.mk_Branch_Link_Exchange_Register
-                     (hd (rand_term ``:'reg word``))
-         | 4 => r3 arm_astSyntax.mk_Compare_Branch ``:bool -> word6 -> word3``
-         | 5 => r3 arm_astSyntax.mk_Table_Branch_Byte
-                     ``:'reg word -> bool -> 'reg word``
-         | _ => raise ERR "random_term" "branch_instruction"]
+       [case enc
+        of ARM =>
+           (case random_range 4
+            of 0 => arm_astSyntax.mk_Branch_Target
+                         (hd (rand_term ``:'offset word``))
+             | 1 => arm_astSyntax.mk_Branch_Exchange
+                         (hd (rand_term ``:'reg word``))
+             | 2 => r3 arm_astSyntax.mk_Branch_Link_Exchange_Immediate
+                         ``:bool -> bool -> 'offset word``
+             | 3 => arm_astSyntax.mk_Branch_Link_Exchange_Register
+                         (hd (rand_term ``:'reg word``))
+             | _ => raise ERR "random_term" "branch_instruction")
+         | Thumb2 =>
+           (case random_range 3
+            of 0 => arm_astSyntax.mk_Branch_Target
+                         (hd (rand_term ``:'offset word``))
+             | 1 => r3 arm_astSyntax.mk_Branch_Link_Exchange_Immediate
+                         ``:bool -> bool -> 'offset word``
+             | 2 => r3 arm_astSyntax.mk_Table_Branch_Byte
+                         ``:'reg word -> bool -> 'reg word``
+             | _ => raise ERR "random_term" "branch_instruction")
+         | Thumb =>
+           (case random_range 4
+            of 0 => arm_astSyntax.mk_Branch_Target
+                         (hd (rand_term ``:'offset word``))
+             | 1 => arm_astSyntax.mk_Branch_Exchange
+                         (hd (rand_term ``:'reg word``))
+             | 2 => arm_astSyntax.mk_Branch_Link_Exchange_Register
+                         (hd (rand_term ``:'reg word``))
+             | 3 => r3 arm_astSyntax.mk_Compare_Branch
+                         ``:bool -> word6 -> word3``
+             | _ => raise ERR "random_term" "branch_instruction")
+         | ThumbEE =>
+           (case random_range 4
+            of 0 => r2 arm_astSyntax.mk_Check_Array ``:'reg word -> 'reg word``
+             | 1 => r2 arm_astSyntax.mk_Handler_Branch_Link ``:bool -> word8``
+             | 2 => r2 arm_astSyntax.mk_Handler_Branch_Link_Parameter
+                         ``:word5 -> word5``
+             | 3 => r2 arm_astSyntax.mk_Handler_Branch_Parameter
+                         ``:word3 -> word5``
+             | _ => raise ERR "random_term" "branch_instruction")]
    | ("data_processing_instruction", []) =>
+         Lib.assert_exn (K (enc <> ThumbEE))
          [case random_from_list (data_processing_list (version_number arch) enc)
           of 0 => dp ()
            | 1 => r4 arm_astSyntax.mk_Add_Sub
@@ -467,7 +516,9 @@ in
            | 29 => r4 arm_astSyntax.mk_Divide
                      ``:bool -> 'reg word -> 'reg word -> 'reg word``
            | _ => raise ERR "random_term" "data_processing_instruction"]
+           (ERR "random_term" "data_processing_instruction")
    | ("status_access_instruction", []) =>
+       Lib.assert_exn (K (enc <> ThumbEE))
        [case random_range 5
         of 0 => r2 arm_astSyntax.mk_Status_to_Register ``:bool -> 'reg word``
          | 1 => r3 arm_astSyntax.mk_Register_to_Status
@@ -478,10 +529,11 @@ in
                      ``:word2 -> bool -> bool -> bool -> 'mode word option``
          | 4 => arm_astSyntax.mk_Set_Endianness (hd (rand_term ``:bool``))
          | _ => raise ERR "random_term" "status_access_instruction"]
+       (ERR "random_term" "status_access_instruction")
    | ("load_store_instruction", []) =>
       [if random_range 3 = 0 then
          ls ()
-       else if random_range 2 = 0 then
+       else if enc = ThumbEE orelse random_range 2 = 0 then
          lsh ()
        else if enc = Thumb orelse random_range 2 = 0 then
          lsm ()
@@ -516,19 +568,9 @@ in
                   end
           | _ => raise ERR "random_term" "load_store_instruction"]
    | ("miscellaneous_instruction", []) =>
+       Lib.assert_exn (K (enc <> ThumbEE))
        [case enc
-        of Thumb =>
-             (case random_range 4
-              of 0 => arm_astSyntax.mk_Hint (hd (rand_term ``:hint``))
-               | 1 => arm_astSyntax.mk_Breakpoint
-                        (wordsSyntax.mk_wordii
-                           (random_const (if enc = ARM then 16 else 8), 16))
-               | 2 => arm_astSyntax.mk_Supervisor_Call
-                        (wordsSyntax.mk_wordii
-                           (random_const (if enc = ARM then 24 else 8), 24))
-               | 3 => r2 arm_astSyntax.mk_If_Then ``:word4 -> word4``
-               | _ => raise ERR "random_term" "miscellaneous_instruction")
-         | Thumb2 =>
+        of Thumb2 =>
              (case random_range 6
               of 0 => arm_astSyntax.mk_Hint (hd (rand_term ``:hint``))
                | 1 => arm_astSyntax.mk_Data_Memory_Barrier
@@ -563,7 +605,19 @@ in
                         (hd (rand_term ``:word4``))
                | 8 => arm_astSyntax.mk_Miscellaneous
                         arm_astSyntax.Clear_Exclusive_tm
+               | _ => raise ERR "random_term" "miscellaneous_instruction")
+         | _ =>
+             (case random_range 4
+              of 0 => arm_astSyntax.mk_Hint (hd (rand_term ``:hint``))
+               | 1 => arm_astSyntax.mk_Breakpoint
+                        (wordsSyntax.mk_wordii
+                           (random_const (if enc = ARM then 16 else 8), 16))
+               | 2 => arm_astSyntax.mk_Supervisor_Call
+                        (wordsSyntax.mk_wordii
+                           (random_const (if enc = ARM then 24 else 8), 24))
+               | 3 => r2 arm_astSyntax.mk_If_Then ``:word4 -> word4``
                | _ => raise ERR "random_term" "miscellaneous_instruction")]
+       (ERR "random_term" "miscellaneous_instruction")
    | _ => raise ERR "random_term" (type_to_string typ)
 end
 
@@ -579,6 +633,7 @@ local
   val spsr     = mk_var ("spsr", ``:ARMpsr``)
   val GE       = mk_var ("GE", ``:word4``)
   val IT       = mk_var ("IT", ``:word8``)
+  val teehbr   = mk_var ("TEEHBR", ``:word32``)
   val mode     = mk_var ("mode", ``:word5``)
   val mem      = mk_var ("mem", ``:word32 -> word8``)
   val spsrGE   = mk_var ("spsrGE", ``:word4``)
@@ -611,6 +666,7 @@ local
                  | ("ARM_READ_STATUS_SPSR", [a,_]) => spsr_flag a
                  | ("ARM_READ_CPSR", [_])          => cpsr
                  | ("ARM_READ_SPSR", [_])          => spsr
+                 | ("ARM_READ_TEEHBR", [_])        => teehbr
                  | ("ARM_READ_SPSR_MODE", [m,_])   => spsr_mode m
                  | ("ARM_READ_GE", [_])            => GE
                  | ("ARM_READ_IT", [_])            => IT
@@ -629,27 +685,31 @@ local
 
   val component_substs = component_substs o component_substs
 
+  fun updates tm l =
+     (case dest_strip tm
+      of ("ARM_WRITE_MEM", [a,d,s]) => updates s ((mk_comb (mem,a), d)::l)
+       | ("ARM_WRITE_REG", [a,d,s]) => updates s ((reg a, d)::l)
+       | ("ARM_WRITE_REG_MODE", [x,d,s]) => updates s ((reg_mode x, d)::l)
+       | ("ARM_WRITE_STATUS", [f,d,s]) => updates s ((flag f,d)::l)
+       | ("ARM_WRITE_STATUS_SPSR", [f,d,s]) => updates s ((spsr_flag f,d)::l)
+       | ("ARM_WRITE_CPSR", [d,s]) => updates s ((cpsr,d)::l)
+       | ("ARM_WRITE_SPSR", [d,s]) => updates s ((spsr,d)::l)
+       | ("ARM_WRITE_SPSR_MODE", [m,d,s]) => updates s ((spsr_mode m,d)::l)
+       | ("ARM_WRITE_GE", [d,s]) => updates s ((GE,d)::l)
+       | ("ARM_WRITE_IT", [d,s]) => updates s ((IT,d)::l)
+       | ("ARM_WRITE_MODE", [d,s]) => updates s ((mode,d)::l)
+       | ("ARM_WRITE_GE_SPSR", [d,s]) => updates s ((spsrGE,d)::l)
+       | ("ARM_WRITE_IT_SPSR", [d,s]) => updates s ((spsrIT,d)::l)
+       | ("ARM_WRITE_MODE_SPSR", [d,s]) => updates s ((spsrmode,d)::l)
+       | (_,tml) => updates (List.last tml) l) handle HOL_ERR _ => List.rev l
+
   fun get_updates tm =
   let
-    fun recurse tm l =
-       (case dest_strip tm
-        of ("ARM_WRITE_MEM", [a,d,s]) => recurse s ((mk_comb (mem,a), d)::l)
-         | ("ARM_WRITE_REG", [a,d,s]) => recurse s ((reg a, d)::l)
-         | ("ARM_WRITE_REG_MODE", [x,d,s]) => recurse s ((reg_mode x, d)::l)
-         | ("ARM_WRITE_STATUS", [f,d,s]) => recurse s ((flag f,d)::l)
-         | ("ARM_WRITE_STATUS_SPSR", [f,d,s]) => recurse s ((spsr_flag f,d)::l)
-         | ("ARM_WRITE_CPSR", [d,s]) => recurse s ((cpsr,d)::l)
-         | ("ARM_WRITE_SPSR", [d,s]) => recurse s ((spsr,d)::l)
-         | ("ARM_WRITE_SPSR_MODE", [m,d,s]) => recurse s ((spsr_mode m,d)::l)
-         | ("ARM_WRITE_GE", [d,s]) => recurse s ((GE,d)::l)
-         | ("ARM_WRITE_IT", [d,s]) => recurse s ((IT,d)::l)
-         | ("ARM_WRITE_MODE", [d,s]) => recurse s ((mode,d)::l)
-         | ("ARM_WRITE_GE_SPSR", [d,s]) => recurse s ((spsrGE,d)::l)
-         | ("ARM_WRITE_IT_SPSR", [d,s]) => recurse s ((spsrIT,d)::l)
-         | ("ARM_WRITE_MODE_SPSR", [d,s]) => recurse s ((spsrmode,d)::l)
-         | (_,tml) => recurse (List.last tml) l) handle HOL_ERR _ => List.rev l
+    val tm' = component_substs tm
   in
-    recurse (component_substs tm) []
+    case Lib.total boolSyntax.dest_cond tm'
+    of SOME (c,a,b) => Conditional_step (c, updates a [], updates b [])
+     | NONE => Simple_step (updates tm' [])
   end
 in
   fun arm_step_updates opt opc = let
@@ -664,32 +724,46 @@ in
            |> optionSyntax.dest_some
            |> get_updates)
       end
-  fun step_updates (pass,arch) (opc,ass:string,arm) = let
-      val opt = String.concat [arch, ", ", if arm then "arm" else "thumb",
-                                     ", ", if pass then "pass" else "fail"]
+  fun step_updates (pass,arch) (opc,ass:string,block) = let
+      val opt = String.concat [arch, ", ", block, ", ",
+                               if pass then "pass" else "fail"]
       val _ = if !arm_random_trace then
                 print (String.concat ["Processing... ", ass, "\n"])
               else
                 ()
-      val (l,r) = arm_step_updates opt opc
+      val (l,r) = case arm_step_updates opt opc
+                  of (l, Simple_step r) => (l,r)
+                   | _ => raise ERR "step_updates" "Condition at top-level"
     in
       (opc, ass, List.drop(l,8), r)
     end
 end;
 
 local
-  fun encoding Thumb  = armSyntax.Encoding_Thumb_tm
-    | encoding Thumb2 = armSyntax.Encoding_Thumb2_tm
-    | encoding ARM    = armSyntax.Encoding_ARM_tm
+  fun encoding Thumb   = armSyntax.Encoding_Thumb_tm
+    | encoding ThumbEE = armSyntax.Encoding_ThumbEE_tm
+    | encoding Thumb2  = armSyntax.Encoding_Thumb2_tm
+    | encoding ARM     = armSyntax.Encoding_ARM_tm
+
+  fun block enc =
+        if enc = armSyntax.Encoding_Thumb_tm orelse
+           enc = armSyntax.Encoding_Thumb2_tm
+        then
+          "THUMB"
+        else if enc = armSyntax.Encoding_ThumbEE_tm then
+          "THUMBX"
+        else
+          "ARM"
 
   fun disassemble c =
         let val (l,r) = armLib.arm_disassemble c in l ^ " " ^ r end
 
-  fun decode arm n =
-        let val c = if arm then
-                      armLib.arm_decode n
-                    else
-                      armLib.thumb_decode 0 n
+  fun decode block n =
+        let val c = case block
+                    of "ARM"    => armLib.arm_decode n
+                     | "THUMB"  => armLib.thumb_decode 0 n
+                     | "THUMBX" => armLib.thumbee_decode 0 n
+                     | _ => raise ERR "decode" block
         in
           case c
           of armLib.Instruction (_,_,tm) => tm | _ => raise ERR "decode" ""
@@ -715,11 +789,11 @@ local
         arm_astSyntax.is_Coprocessor tm andalso random_range 2 = 0
 
   fun mk_code arch (code as (enc, _, tm)) =
-    let val arm = enc = armSyntax.Encoding_ARM_tm
+    let val b = block enc
         val c = armLib.Instruction code
         val e = armLib.arm_encode c
         val s = disassemble c
-        val a = arch ^ (if arm then s else "THUMB\n " ^ s)
+        val a = arch ^ (if b = "ARM" then s else b ^ "\n " ^ s)
         val d = a |> with_flag (Feedback.emit_WARNING,false)
                        armLib.arm_assemble_from_string |> hd |> snd
         val w = if d <> e then
@@ -728,13 +802,13 @@ local
                       a, "\n",
                       Hol_pp.term_to_string tm, "\n",
                       "\t", e, " =/= ", d, "\n",
-                      Hol_pp.term_to_string (decode arm d), "\n"]);
+                      Hol_pp.term_to_string (decode b d), "\n"]);
                      String.concat
                        [" // warning, ", e, " equivalent to ", d, "?"])
                  else
                    ""
     in
-      (e,a ^ w,arm)
+      (e,a ^ w,b)
     end handle HOL_ERR e =>
           (HOL_WARNING (#origin_structure e) (#origin_function e)
              (String.concat
@@ -759,7 +833,6 @@ local
      | ARMv6T2 => "ARMv6T2"
      | ARMv7_A => "ARMv7-A"
      | ARMv7_R => "ARMv7-R"
-  (* | ARMv7_M => "ARMv7-M" *)
 
   fun valid_arch_ecoding e a = Lib.mem e
    (case a
@@ -770,16 +843,15 @@ local
      | ARMv6   => [ARM, Thumb]
      | ARMv6K  => [ARM, Thumb]
      | ARMv6T2 => [ARM, Thumb, Thumb2]
-     | ARMv7_A => [ARM, Thumb, Thumb2]
-     | ARMv7_R => [ARM, Thumb, Thumb2]
-  (* | ARMv7_M => [Thumb, Thumb2] *))
+     | ARMv7_A => [ARM, Thumb, Thumb2, ThumbEE]
+     | ARMv7_R => [ARM, Thumb, Thumb2, ThumbEE])
 
   fun random_code arch enc typ =
         let val tm = hd (random_term arch enc typ)
             val cond = mk_word4
                          (if enc = ARM andalso arm_uncoditional tm then
                             15
-                          else if arm_astSyntax.is_Branch tm then
+                          else if arm_astSyntax.is_Branch_Target tm then
                             random_range 14
                           else
                             14)
@@ -791,13 +863,14 @@ local
     val _ = valid_arch_ecoding enc arch orelse
               raise ERR "generate_opcode"
 		        "Architecture does not support encoding"
-    val arm = enc = ARM
-    val ass = if arm then
-                armLib.arm_disassemble_decode opc
-              else
-                armLib.thumb_disassemble_decode 0 opc
+    val b = block (encoding enc)
+    val ass = case b
+              of "ARM"    => armLib.arm_disassemble_decode opc
+               | "THUMB"  => armLib.thumb_disassemble_decode 0 opc
+               | "THUMBX" => armLib.thumbee_disassemble_decode 0 opc
+               | _ => raise ERR "generate_opcode_cond" b
   in
-    step_updates (pass,arch_to_string arch) (opc,ass,arm)
+    step_updates (pass,arch_to_string arch) (opc,ass,b)
   end
 in
   fun generate_random arch enc class =
@@ -826,10 +899,11 @@ fun instruction_type enc opc =
 let
   val code =
     case enc
-      of ARM => armLib.arm_decode opc
-       | Thumb => armLib.thumb_decode 0 (String.extract(opc,4,NONE))
-       | Thumb2 => armLib.thumb_decode 0 (String.extract(opc,4,NONE) ^
-                                          String.extract(opc,0,SOME 4))
+      of ARM     => armLib.arm_decode opc
+       | Thumb   => armLib.thumb_decode 0 (String.extract(opc,4,NONE))
+       | ThumbEE => armLib.thumb_decode 0 (String.extract(opc,4,NONE))
+       | Thumb2  => armLib.thumb_decode 0 (String.extract(opc,4,NONE) ^
+                                           String.extract(opc,0,SOME 4))
   val (e,tm) =
     case code
       of arm_parserLib.Instruction (e,_,tm) => (e,tm)

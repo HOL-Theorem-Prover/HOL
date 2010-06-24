@@ -3,7 +3,7 @@ sig
 
   include Abbrev
 
-  datatype encoding = ARM | Thumb | Thumb2
+  datatype encoding = ARM | Thumb | Thumb2 | ThumbEE
 
   datatype arch = ARMv4
                 | ARMv4T
@@ -14,7 +14,6 @@ sig
                 | ARMv6T2
                 | ARMv7_A
                 | ARMv7_R
-             (* | ARMv7_M *)
 
   datatype class = DataProcessing
                  | LoadStore
@@ -22,7 +21,11 @@ sig
                  | StatusAccess
                  | Miscellaneous
 
-  val arm_step_updates : string -> string -> term list * (term * term) list
+  datatype step_output
+    = Simple_step of (term * term) list
+    | Conditional_step of term * (term * term) list * (term * term) list
+
+  val arm_step_updates : string -> string -> term list * step_output
 
   val generate_random : arch -> encoding -> class ->
                         (string * string * term list * (term * term) list)
