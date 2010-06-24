@@ -1259,7 +1259,7 @@ end;
 fun HOLFOOT_INFERENCE___field_lookup___CONV tt =
 let
    val (p1,_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
-   val (_, p1') = dest_fasl_comment_location p1;
+   val (_, p1') = dest_asl_comment_location p1;
    val _ = dest_holfoot_prog_field_lookup p1'
 in
    VAR_RES_COND_HOARE_TRIPLE___location_inc_CONV tt
@@ -1365,7 +1365,7 @@ end;
 fun HOLFOOT_INFERENCE___field_assign___CONV tt =
 let
    val (p1,_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
-   val (_, p1') = dest_fasl_comment_location p1;
+   val (_, p1') = dest_asl_comment_location p1;
    val _ = dest_holfoot_prog_field_assign p1'
 in
    VAR_RES_COND_HOARE_TRIPLE___location_inc_CONV tt
@@ -1435,7 +1435,7 @@ fun HOLFOOT_INFERENCE___dispose___FRAME___CONSEQ_CONV tt =
 let
    val (p1,prog,_,pre,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
    val (_, _) = dest_holfoot_prog_dispose p1
-   val (c, _, prog_fun) = save_dest_list_fasl_comment_location prog
+   val (c, _, prog_fun) = save_dest_list_asl_comment_location prog
 
    (*apply inference*)
    val thm1a = PART_MATCH (snd o dest_imp o snd o dest_imp)
@@ -1443,11 +1443,11 @@ let
    val thm1 = var_res_precondition_prove thm1a 
 
 
-   val new_c1 = fasl_comment_modify_APPEND_DEC ("abstracted dispose") c
+   val new_c1 = asl_comment_modify_APPEND_DEC ("abstracted dispose") c
    val thm2 = CONV_RULE ((RATOR_CONV o RAND_CONV o RATOR_CONV o
                           RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
-                  ((fasl_comment_location2_INTRO_CONV new_c1) THENC
-                   (fasl_comment_abstraction_INTRO_CONV "dispose"))) thm1
+                  ((asl_comment_location2_INTRO_CONV new_c1) THENC
+                   (asl_comment_abstraction_INTRO_CONV "dispose"))) thm1
 in
    thm2
 end;
@@ -1491,7 +1491,7 @@ end handle holfoot_too_complicated_expn =>
 fun HOLFOOT_INFERENCE___dispose___CONV tt =
 let
    val (p1,_,_,_,_) = dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt;
-   val (_, p1') = dest_fasl_comment_location p1;
+   val (_, p1') = dest_asl_comment_location p1;
    val _ = dest_holfoot_prog_dispose p1'
 in
    VAR_RES_COND_HOARE_TRIPLE___location_inc_CONV tt
@@ -2525,7 +2525,7 @@ struct
 
 
    val resource_proccall_free_thmL = 
-       [fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_REWRITES];
+       [asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___HOLFOOT_REWRITES];
    val inital_prop_rewrite_thmL = [holfoot_ap_data_list_def,
        holfoot_separation_combinator_def]
 
@@ -2660,7 +2660,7 @@ val HF_SIMPLIFY_TAC = xHF_SIMPLIFY_TAC [];
 
 
 fun HF_INIT_TAC (asm, t) = 
-  (if (is_FASL_SPECIFICATION t) then VAR_RES_SPECIFICATION_TAC else
+  (if (is_ASL_SPECIFICATION t) then VAR_RES_SPECIFICATION_TAC else
   VAR_RES_ENTAILMENT_INIT_TAC) (asm, t)
 
 
@@ -2756,7 +2756,7 @@ fun holfoot_verify_spec_internal verbose print_remaining (file, defaultConseqCon
                          ("\nparsing ... "))
 
      val t = parse_holfoot_file file;    
-     val is_spec = is_FASL_SPECIFICATION t
+     val is_spec = is_ASL_SPECIFICATION t
 
      val _ = if verbose then (print_timer true (true,false); print "\n\n"; print_backend_term t; print "\n\n")
                         else (print "\n");

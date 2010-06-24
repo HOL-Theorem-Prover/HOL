@@ -11,7 +11,7 @@ sig
     val combinator_terms             : term * term * term;
     val resource_proccall_free_thmL  : thm list
     val inital_prop_rewrite_thmL     : thm list
-    val abstrL                       : separationLogicLib.fasl_program_abstraction list
+    val abstrL                       : separationLogicLib.asl_program_abstraction list
     val comments_step_convL          : (conv->conv) list
     val quantifier_heuristicsL       : quantHeuristicsLib.quant_param list
     val var_res_prop_implies___GENERATE :

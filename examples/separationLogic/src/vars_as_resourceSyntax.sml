@@ -148,14 +148,14 @@ val is_VAR_RES_COND_HOARE_TRIPLE = (can dest_VAR_RES_COND_HOARE_TRIPLE);
 fun VAR_RES_COND_HOARE_TRIPLE___location_inc_CONV tt =
 let
    val (f,pre,prog,post) = dest_VAR_RES_COND_HOARE_TRIPLE tt;
-   val (p1, pL) = listSyntax.dest_cons (dest_fasl_prog_block prog)   
-   val (c, p1') = dest_fasl_comment_location p1;
-   val p1_thm = ISPECL [c, p1'] separationLogicTheory.fasl_comment_location_def
+   val (p1, pL) = listSyntax.dest_cons (dest_asl_prog_block prog)   
+   val (c, p1') = dest_asl_comment_location p1;
+   val p1_thm = ISPECL [c, p1'] separationLogicTheory.asl_comment_location_def
 
-   val c' = separationLogicLib.fasl_comment_modify_INC c;
+   val c' = separationLogicLib.asl_comment_modify_INC c;
    val pL_thm = ((if listSyntax.is_cons pL then
                    (RATOR_CONV o RAND_CONV) else I)
-                (fasl_comment_location_INTRO_CONV c')) pL
+                (asl_comment_location_INTRO_CONV c')) pL
 
    val thm = ((RATOR_CONV o RAND_CONV o RAND_CONV) 
               ((RAND_CONV (K pL_thm)) THENC
@@ -167,7 +167,7 @@ end;
 fun dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND tt =
 let
    val (f,pre,prog,post) = dest_VAR_RES_COND_HOARE_TRIPLE tt;
-   val (p1, pL) = listSyntax.dest_cons (dest_fasl_prog_block prog)   
+   val (p1, pL) = listSyntax.dest_cons (dest_asl_prog_block prog)   
 in
    (p1, pL, f, pre, post)
 end;
@@ -175,12 +175,12 @@ end;
 fun dest_VAR_RES_COND_HOARE_TRIPLE___FIRST_COMMAND_location tt =
 let
    val (f,pre,prog,post) = dest_VAR_RES_COND_HOARE_TRIPLE tt;
-   val (p1, pL) = listSyntax.dest_cons (dest_fasl_prog_block prog)   
+   val (p1, pL) = listSyntax.dest_cons (dest_asl_prog_block prog)   
    
-   val (p1', c_opt, thm_fun) = if not (is_fasl_comment_location p1) then
+   val (p1', c_opt, thm_fun) = if not (is_asl_comment_location p1) then
        (p1, NONE, fn () => REFL tt) else
        let
-          val (c, p1') = dest_fasl_comment_location p1;
+          val (c, p1') = dest_asl_comment_location p1;
        in
           (p1', SOME c, fn () => VAR_RES_COND_HOARE_TRIPLE___location_inc_CONV tt)
        end

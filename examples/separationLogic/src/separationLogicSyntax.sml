@@ -94,65 +94,65 @@ fun strip_comb_9 ff = list2tuple9 o (strip_comb_num 9 ff);
 fun asl_mk_const n = 
    prim_mk_const {Name = n, Thy = "separationLogic"}
 
-val fasl_prog_parallel_term = asl_mk_const "fasl_prog_parallel";
-val dest_fasl_prog_parallel = strip_comb_2 fasl_prog_parallel_term;
-val is_fasl_prog_parallel = (can dest_fasl_prog_parallel);
+val asl_prog_parallel_term = asl_mk_const "asl_prog_parallel";
+val dest_asl_prog_parallel = strip_comb_2 asl_prog_parallel_term;
+val is_asl_prog_parallel = (can dest_asl_prog_parallel);
 
 
-val fasl_prog_seq_term = asl_mk_const "fasl_prog_seq";
-val dest_fasl_prog_seq = strip_comb_2 fasl_prog_seq_term;
-val is_fasl_prog_seq = (can dest_fasl_prog_seq);
+val asl_prog_seq_term = asl_mk_const "asl_prog_seq";
+val dest_asl_prog_seq = strip_comb_2 asl_prog_seq_term;
+val is_asl_prog_seq = (can dest_asl_prog_seq);
 
 
-val fasl_prog_block_term = asl_mk_const "fasl_prog_block";
-val dest_fasl_prog_block = strip_comb_1 fasl_prog_block_term;
-val is_fasl_prog_block = (can dest_fasl_prog_block);
-fun mk_fasl_prog_block t = mk_icomb (fasl_prog_block_term, t);
+val asl_prog_block_term = asl_mk_const "asl_prog_block";
+val dest_asl_prog_block = strip_comb_1 asl_prog_block_term;
+val is_asl_prog_block = (can dest_asl_prog_block);
+fun mk_asl_prog_block t = mk_icomb (asl_prog_block_term, t);
 
-val fasl_prog_cond_term = asl_mk_const "fasl_prog_cond";
-val dest_fasl_prog_cond = strip_comb_3 fasl_prog_cond_term;
-val is_fasl_prog_cond = (can dest_fasl_prog_cond);
-fun mk_fasl_prog_cond (c,p1,p2) = 
-   list_mk_icomb(fasl_prog_cond_term, [c,p1,p2]);
-
-
-val fasl_prog_while_term = asl_mk_const "fasl_prog_while";
-val dest_fasl_prog_while = strip_comb_2 fasl_prog_while_term;
-val is_fasl_prog_while = (can dest_fasl_prog_while);
-fun mk_fasl_prog_while (c,p) = 
-   list_mk_icomb(fasl_prog_while_term, [c,p]);
-
-val fasl_prog_assume_term = asl_mk_const "fasl_prog_assume";
-val dest_fasl_prog_assume = strip_comb_1 fasl_prog_assume_term;
-val is_fasl_prog_assume = (can dest_fasl_prog_assume);
+val asl_prog_cond_term = asl_mk_const "asl_prog_cond";
+val dest_asl_prog_cond = strip_comb_3 asl_prog_cond_term;
+val is_asl_prog_cond = (can dest_asl_prog_cond);
+fun mk_asl_prog_cond (c,p1,p2) = 
+   list_mk_icomb(asl_prog_cond_term, [c,p1,p2]);
 
 
-val fasl_prog_cond_critical_section_term = asl_mk_const "fasl_prog_cond_critical_section";
-val dest_fasl_prog_cond_critical_section = strip_comb_3 fasl_prog_cond_critical_section_term;
-val is_fasl_prog_cond_critical_section = (can dest_fasl_prog_cond_critical_section);
+val asl_prog_while_term = asl_mk_const "asl_prog_while";
+val dest_asl_prog_while = strip_comb_2 asl_prog_while_term;
+val is_asl_prog_while = (can dest_asl_prog_while);
+fun mk_asl_prog_while (c,p) = 
+   list_mk_icomb(asl_prog_while_term, [c,p]);
+
+val asl_prog_assume_term = asl_mk_const "asl_prog_assume";
+val dest_asl_prog_assume = strip_comb_1 asl_prog_assume_term;
+val is_asl_prog_assume = (can dest_asl_prog_assume);
 
 
-val fasl_prog_best_local_action_term = asl_mk_const "fasl_prog_best_local_action";
-val dest_fasl_prog_best_local_action = strip_comb_2 fasl_prog_best_local_action_term;
-val is_fasl_prog_best_local_action = (can dest_fasl_prog_best_local_action);
+val asl_prog_cond_critical_section_term = asl_mk_const "asl_prog_cond_critical_section";
+val dest_asl_prog_cond_critical_section = strip_comb_3 asl_prog_cond_critical_section_term;
+val is_asl_prog_cond_critical_section = (can dest_asl_prog_cond_critical_section);
 
 
-val FASL_PROGRAM_HOARE_TRIPLE_term = asl_mk_const "FASL_PROGRAM_HOARE_TRIPLE";
-val dest_FASL_PROGRAM_HOARE_TRIPLE = strip_comb_5 FASL_PROGRAM_HOARE_TRIPLE_term;
-val is_FASL_PROGRAM_HOARE_TRIPLE = (can dest_FASL_PROGRAM_HOARE_TRIPLE);
+val asl_prog_best_local_action_term = asl_mk_const "asl_prog_best_local_action";
+val dest_asl_prog_best_local_action = strip_comb_2 asl_prog_best_local_action_term;
+val is_asl_prog_best_local_action = (can dest_asl_prog_best_local_action);
+
+
+val ASL_PROGRAM_HOARE_TRIPLE_term = asl_mk_const "ASL_PROGRAM_HOARE_TRIPLE";
+val dest_ASL_PROGRAM_HOARE_TRIPLE = strip_comb_5 ASL_PROGRAM_HOARE_TRIPLE_term;
+val is_ASL_PROGRAM_HOARE_TRIPLE = (can dest_ASL_PROGRAM_HOARE_TRIPLE);
 
 
 
-val FASL_PROGRAM_IS_ABSTRACTION_term = asl_mk_const "FASL_PROGRAM_IS_ABSTRACTION";
-val dest_FASL_PROGRAM_IS_ABSTRACTION = strip_comb_4 FASL_PROGRAM_IS_ABSTRACTION_term;
-val is_FASL_PROGRAM_IS_ABSTRACTION = (can dest_FASL_PROGRAM_IS_ABSTRACTION);
-fun mk_FASL_PROGRAM_IS_ABSTRACTION (xenv,penv,x,y) = 
-   list_mk_icomb(FASL_PROGRAM_IS_ABSTRACTION_term, [xenv,penv,x,y]);
+val ASL_PROGRAM_IS_ABSTRACTION_term = asl_mk_const "ASL_PROGRAM_IS_ABSTRACTION";
+val dest_ASL_PROGRAM_IS_ABSTRACTION = strip_comb_4 ASL_PROGRAM_IS_ABSTRACTION_term;
+val is_ASL_PROGRAM_IS_ABSTRACTION = (can dest_ASL_PROGRAM_IS_ABSTRACTION);
+fun mk_ASL_PROGRAM_IS_ABSTRACTION (xenv,penv,x,y) = 
+   list_mk_icomb(ASL_PROGRAM_IS_ABSTRACTION_term, [xenv,penv,x,y]);
 
 
-val FASL_SPECIFICATION_term = asl_mk_const "FASL_SPECIFICATION"
-val dest_FASL_SPECIFICATION = strip_comb_3 FASL_SPECIFICATION_term;
-val is_FASL_SPECIFICATION = can dest_FASL_SPECIFICATION;
+val ASL_SPECIFICATION_term = asl_mk_const "ASL_SPECIFICATION"
+val dest_ASL_SPECIFICATION = strip_comb_3 ASL_SPECIFICATION_term;
+val is_ASL_SPECIFICATION = can dest_ASL_SPECIFICATION;
 
 
 val COND_PROP___IMP_term = asl_mk_const "COND_PROP___IMP";
@@ -198,12 +198,12 @@ val dest_asl_cond_star = strip_comb_3 asl_cond_star_term
 val is_asl_cond_star = (can dest_asl_cond_star);
 
 
-val fasl_pred_false_term = asl_mk_const "fasl_pred_false";
-val fasl_pred_true_term = asl_mk_const "fasl_pred_true";
-val fasl_pred_neg_term = asl_mk_const "fasl_pred_neg";
-val fasl_pred_and_term = asl_mk_const "fasl_pred_and";
-val fasl_pred_or_term = asl_mk_const "fasl_pred_or";
-val fasl_pred_prim_term = asl_mk_const "fasl_pred_prim";
+val asl_pred_false_term = asl_mk_const "asl_pred_false";
+val asl_pred_true_term = asl_mk_const "asl_pred_true";
+val asl_pred_neg_term = asl_mk_const "asl_pred_neg";
+val asl_pred_and_term = asl_mk_const "asl_pred_and";
+val asl_pred_or_term = asl_mk_const "asl_pred_or";
+val asl_pred_prim_term = asl_mk_const "asl_pred_prim";
 
 val asl_exists_term = asl_mk_const "asl_exists"
 val asl_exists_list_term = asl_mk_const "asl_exists_list"
@@ -250,108 +250,108 @@ val is_asl_exists_list = (can dest_asl_exists_list);
 
 
 
-val fasl_comment_loop_invariant_term = asl_mk_const "fasl_comment_loop_invariant"
-val dest_fasl_comment_loop_invariant = strip_comb_2 fasl_comment_loop_invariant_term;
-val is_fasl_comment_loop_invariant = (can dest_fasl_comment_loop_invariant);
+val asl_comment_loop_invariant_term = asl_mk_const "asl_comment_loop_invariant"
+val dest_asl_comment_loop_invariant = strip_comb_2 asl_comment_loop_invariant_term;
+val is_asl_comment_loop_invariant = (can dest_asl_comment_loop_invariant);
 
-val fasl_comment_block_spec_term = asl_mk_const "fasl_comment_block_spec"
-val dest_fasl_comment_block_spec = strip_comb_2 fasl_comment_block_spec_term;
-val is_fasl_comment_block_spec = (can dest_fasl_comment_block_spec);
+val asl_comment_block_spec_term = asl_mk_const "asl_comment_block_spec"
+val dest_asl_comment_block_spec = strip_comb_2 asl_comment_block_spec_term;
+val is_asl_comment_block_spec = (can dest_asl_comment_block_spec);
 
-val fasl_comment_loop_spec_term = asl_mk_const "fasl_comment_loop_spec"
-val dest_fasl_comment_loop_spec = strip_comb_2 fasl_comment_loop_spec_term;
-val is_fasl_comment_loop_spec = (can dest_fasl_comment_loop_spec);
+val asl_comment_loop_spec_term = asl_mk_const "asl_comment_loop_spec"
+val dest_asl_comment_loop_spec = strip_comb_2 asl_comment_loop_spec_term;
+val is_asl_comment_loop_spec = (can dest_asl_comment_loop_spec);
 
-val fasl_comment_loop_unroll_term = asl_mk_const "fasl_comment_loop_unroll"
-val dest_fasl_comment_loop_unroll = strip_comb_2 fasl_comment_loop_unroll_term;
-val is_fasl_comment_loop_unroll = (can dest_fasl_comment_loop_unroll);
+val asl_comment_loop_unroll_term = asl_mk_const "asl_comment_loop_unroll"
+val dest_asl_comment_loop_unroll = strip_comb_2 asl_comment_loop_unroll_term;
+val is_asl_comment_loop_unroll = (can dest_asl_comment_loop_unroll);
 
-val fasl_comment_location_string_term = asl_mk_const "fasl_comment_location_string"
-val dest_fasl_comment_location_string = strip_comb_2 fasl_comment_location_string_term;
-val is_fasl_comment_location_string = (can dest_fasl_comment_location_string);
+val asl_comment_location_string_term = asl_mk_const "asl_comment_location_string"
+val dest_asl_comment_location_string = strip_comb_2 asl_comment_location_string_term;
+val is_asl_comment_location_string = (can dest_asl_comment_location_string);
 
-val fasl_comment_location_term = asl_mk_const "fasl_comment_location"
-val dest_fasl_comment_location = strip_comb_2 fasl_comment_location_term;
-val is_fasl_comment_location = (can dest_fasl_comment_location);
-fun mk_fasl_comment_location (c, tt) = list_mk_icomb (fasl_comment_location_term, [c, tt])
+val asl_comment_location_term = asl_mk_const "asl_comment_location"
+val dest_asl_comment_location = strip_comb_2 asl_comment_location_term;
+val is_asl_comment_location = (can dest_asl_comment_location);
+fun mk_asl_comment_location (c, tt) = list_mk_icomb (asl_comment_location_term, [c, tt])
 
 val empty_label_list = listSyntax.mk_list ([], markerSyntax.label_ty)
-fun save_dest_fasl_comment_location tt =
+fun save_dest_asl_comment_location tt =
 let
-   val (c, p) = dest_fasl_comment_location tt;
+   val (c, p) = dest_asl_comment_location tt;
 in
-   (c, p, fn () => ISPECL [c, p] fasl_comment_location_def)
+   (c, p, fn () => ISPECL [c, p] asl_comment_location_def)
 end handle HOL_ERR _ => (empty_label_list, tt, fn () => REFL tt)
 
 
-fun dest_list_fasl_comment_location tt =
-dest_fasl_comment_location tt handle HOL_ERR _ =>
-dest_fasl_comment_location (rand (rator tt))
+fun dest_list_asl_comment_location tt =
+dest_asl_comment_location tt handle HOL_ERR _ =>
+dest_asl_comment_location (rand (rator tt))
 
 
-fun save_dest_list_fasl_comment_location tt =
-   if (is_fasl_comment_location tt) then
-      save_dest_fasl_comment_location tt 
+fun save_dest_list_asl_comment_location tt =
+   if (is_asl_comment_location tt) then
+      save_dest_asl_comment_location tt 
    else
    let
-      val (c, p, f) = save_dest_fasl_comment_location (rand (rator tt))
+      val (c, p, f) = save_dest_asl_comment_location (rand (rator tt))
    in
       (c, p, fn () => (RATOR_CONV (RAND_CONV (K (f ()))) tt))
    end;
 
-val fasl_comment_location2_term = asl_mk_const "fasl_comment_location2"
-val dest_fasl_comment_location2 = strip_comb_2 fasl_comment_location2_term;
-val is_fasl_comment_location2 = (can dest_fasl_comment_location2);
-fun mk_fasl_comment_location2 (c, tt) = list_mk_icomb (fasl_comment_location2_term, [c, tt])
+val asl_comment_location2_term = asl_mk_const "asl_comment_location2"
+val dest_asl_comment_location2 = strip_comb_2 asl_comment_location2_term;
+val is_asl_comment_location2 = (can dest_asl_comment_location2);
+fun mk_asl_comment_location2 (c, tt) = list_mk_icomb (asl_comment_location2_term, [c, tt])
 
-fun save_dest_fasl_comment_location2 tt =
+fun save_dest_asl_comment_location2 tt =
 let
-   val (c, p) = dest_fasl_comment_location2 tt;
+   val (c, p) = dest_asl_comment_location2 tt;
 in
-   (c, p, fn () => ISPECL [c, p] fasl_comment_location2_def)
+   (c, p, fn () => ISPECL [c, p] asl_comment_location2_def)
 end handle HOL_ERR _ => (empty_label_list, tt, fn () => REFL tt)
 
 
-val fasl_comment_abstraction_term = asl_mk_const "fasl_comment_abstraction"
-val dest_fasl_comment_abstraction = strip_comb_2 fasl_comment_abstraction_term;
-val is_fasl_comment_abstraction = (can dest_fasl_comment_abstraction);
+val asl_comment_abstraction_term = asl_mk_const "asl_comment_abstraction"
+val dest_asl_comment_abstraction = strip_comb_2 asl_comment_abstraction_term;
+val is_asl_comment_abstraction = (can dest_asl_comment_abstraction);
 
-fun dest_fasl_comment t =
+fun dest_asl_comment t =
   let
      val (op_term, args) = strip_comb t;
      val _ = if (length args = 2) then () else (Feedback.fail ());
      val (arg1, arg2) = (el 1 args, el 2 args);
 
      val def_thm = 
-         if (same_const op_term fasl_comment_location_term) then 
-            fasl_comment_location_def
-         else if (same_const op_term fasl_comment_location_string_term) then 
-            fasl_comment_location_string_def
-         else if (same_const op_term fasl_comment_location2_term) then 
-            fasl_comment_location2_def
-         else if (same_const op_term fasl_comment_loop_invariant_term) then 
-            fasl_comment_loop_invariant_def
-         else if (same_const op_term fasl_comment_abstraction_term) then 
-            fasl_comment_abstraction_def
-         else if (same_const op_term fasl_comment_loop_spec_term) then 
-            fasl_comment_loop_spec_def
-         else if (same_const op_term fasl_comment_loop_unroll_term) then 
-            fasl_comment_loop_unroll_def
-         else if (same_const op_term fasl_comment_block_spec_term) then 
-            fasl_comment_block_spec_def
+         if (same_const op_term asl_comment_location_term) then 
+            asl_comment_location_def
+         else if (same_const op_term asl_comment_location_string_term) then 
+            asl_comment_location_string_def
+         else if (same_const op_term asl_comment_location2_term) then 
+            asl_comment_location2_def
+         else if (same_const op_term asl_comment_loop_invariant_term) then 
+            asl_comment_loop_invariant_def
+         else if (same_const op_term asl_comment_abstraction_term) then 
+            asl_comment_abstraction_def
+         else if (same_const op_term asl_comment_loop_spec_term) then 
+            asl_comment_loop_spec_def
+         else if (same_const op_term asl_comment_loop_unroll_term) then 
+            asl_comment_loop_unroll_def
+         else if (same_const op_term asl_comment_block_spec_term) then 
+            asl_comment_block_spec_def
          else Feedback.fail();
    in
      (op_term, arg1, arg2, def_thm)   
    end;
 
-val fasl_comment_assert_term = asl_mk_const "fasl_comment_assert"
-val dest_fasl_comment_assert = strip_comb_1 fasl_comment_assert_term;
-val is_fasl_comment_assert = (can dest_fasl_comment_assert);
+val asl_comment_assert_term = asl_mk_const "asl_comment_assert"
+val dest_asl_comment_assert = strip_comb_1 asl_comment_assert_term;
+val is_asl_comment_assert = (can dest_asl_comment_assert);
 
 
-val fasl_procedure_call_preserve_names_wrapper_term = asl_mk_const "fasl_procedure_call_preserve_names_wrapper"
-val dest_fasl_procedure_call_preserve_names_wrapper = strip_comb_4 fasl_procedure_call_preserve_names_wrapper_term
-val is_fasl_procedure_call_preserve_names_wrapper = can dest_fasl_procedure_call_preserve_names_wrapper
+val asl_procedure_call_preserve_names_wrapper_term = asl_mk_const "asl_procedure_call_preserve_names_wrapper"
+val dest_asl_procedure_call_preserve_names_wrapper = strip_comb_4 asl_procedure_call_preserve_names_wrapper_term
+val is_asl_procedure_call_preserve_names_wrapper = can dest_asl_procedure_call_preserve_names_wrapper
 
 
 

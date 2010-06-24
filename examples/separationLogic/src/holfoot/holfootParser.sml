@@ -870,11 +870,11 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
             val cond_free_var_list = free_vars (absyn2term prop_a);
             val abs_prop_a = mk_list_plam cond_free_var_list prop_a
          in
-            Absyn.list_mk_app (Absyn.IDENT (locn.Loc_None, "fasl_comment_loop_invariant"), [
+            Absyn.list_mk_app (Absyn.IDENT (locn.Loc_None, "asl_comment_loop_invariant"), [
                abs_prop_a, while_a])
          end
       val unroll_a = if unroll = 0 then full_a else
-            Absyn.list_mk_app (Absyn.IDENT (locn.Loc_None, "fasl_comment_loop_unroll"), [
+            Absyn.list_mk_app (Absyn.IDENT (locn.Loc_None, "asl_comment_loop_unroll"), [
                 Absyn.mk_AQ (numLib.term_of_int unroll), full_a])
       
    in
@@ -912,11 +912,11 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
              stm1_a'
           end;
       val spec_a = Absyn.list_mk_app (
-          Absyn.IDENT (locn.Loc_None, if loop then "fasl_comment_loop_spec" else
-                "fasl_comment_block_spec"),
+          Absyn.IDENT (locn.Loc_None, if loop then "asl_comment_loop_spec" else
+                "asl_comment_block_spec"),
           [Absyn.mk_pair (pre_a2, post_a2), stm1_a]);
       val unroll_a = if unroll = 0 then spec_a else
-            Absyn.list_mk_app (Absyn.IDENT (locn.Loc_None, "fasl_comment_loop_unroll"), [
+            Absyn.list_mk_app (Absyn.IDENT (locn.Loc_None, "asl_comment_loop_unroll"), [
                 Absyn.mk_AQ (numLib.term_of_int unroll), spec_a])
    in
       (unroll_a, wL, fL)
@@ -950,7 +950,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
             abs_p_a
          end
       val comb_a =  Absyn.mk_app (
-          Absyn.IDENT (locn.Loc_None, "fasl_comment_assert"), abs_p_a);
+          Absyn.IDENT (locn.Loc_None, "asl_comment_assert"), abs_p_a);
    in
       (comb_a, [], [])
    end
@@ -1123,7 +1123,7 @@ fun Pfundecl2hol_final (funname, assume_opt, ref_args, val_args, localV,
    val val_args_const = map (fn s => s ^ "_const") val_args;
    val val_arg_names = listSyntax.mk_list (map string_to_label val_args_const, markerSyntax.label_ty);
 
-   val wrapped_preCond = list_mk_icomb (fasl_procedure_call_preserve_names_wrapper_term,
+   val wrapped_preCond = list_mk_icomb (asl_procedure_call_preserve_names_wrapper_term,
       [ref_arg_names, val_arg_names,
        pairLib.mk_pabs (pairLib.mk_pair(arg_ref_term, arg_val_term), preCond3),
        pairLib.mk_pair(arg_ref_term, arg_val_term)]);

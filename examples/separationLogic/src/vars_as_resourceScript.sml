@@ -5248,23 +5248,23 @@ SIMP_TAC std_ss [var_res_prop_binexpression_cond___asl_false___false]);
 
 val VAR_RES_HOARE_TRIPLE_def = Define `
    VAR_RES_HOARE_TRIPLE xenv penv P prog Q =
-   !x. FASL_PROGRAM_HOARE_TRIPLE xenv penv
+   !x. ASL_PROGRAM_HOARE_TRIPLE xenv penv
               (\s. s IN P /\ (s = x)) prog (\s. s IN Q /\ (VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST s)))`
 
 val VAR_RES_PERM_HOARE_TRIPLE_def = Define `
 VAR_RES_PERM_HOARE_TRIPLE xenv penv P prog =
-!s s'. ((s IN P) /\ (FASL_PROGRAM_SEM xenv penv prog s = SOME s')) ==>
+!s s'. ((s IN P) /\ (ASL_PROGRAM_SEM xenv penv prog s = SOME s')) ==>
     (!s2. s2 IN s' ==> VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST s) (FST s2))`;
 
 
 val VAR_RES_HOARE_TRIPLE_REWRITE = store_thm (
 "VAR_RES_HOARE_TRIPLE_REWRITE",
 ``VAR_RES_HOARE_TRIPLE xenv penv P prog Q =
-  FASL_PROGRAM_HOARE_TRIPLE xenv penv P prog Q /\
+  ASL_PROGRAM_HOARE_TRIPLE xenv penv P prog Q /\
   VAR_RES_PERM_HOARE_TRIPLE xenv penv P prog``,
 
 SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, SUBSET_DEF,
-   FASL_PROGRAM_HOARE_TRIPLE_def, IN_ABS,
+   ASL_PROGRAM_HOARE_TRIPLE_def, IN_ABS,
    VAR_RES_PERM_HOARE_TRIPLE_def,
    HOARE_TRIPLE_def, fasl_order_THM] THEN
 METIS_TAC[SOME_11]);
@@ -5295,7 +5295,7 @@ val VAR_RES_COND_HOARE_TRIPLE_def = Define `
    (IS_SEPARATION_COMBINATOR f /\ (FST P) /\ (FST Q)) ==> VAR_RES_HOARE_TRIPLE (VAR_RES_COMBINATOR f, K asl_false) FEMPTY (SND P) prog (SND Q)`
 
 val VAR_RES_PROGRAM_SEM_def = Define
-`VAR_RES_PROGRAM_SEM f = FASL_PROGRAM_SEM (VAR_RES_COMBINATOR f, K asl_false) FEMPTY`
+`VAR_RES_PROGRAM_SEM f = ASL_PROGRAM_SEM (VAR_RES_COMBINATOR f, K asl_false) FEMPTY`
 
 
 val VAR_RES_COND_HOARE_TRIPLE_REWRITE = store_thm (
@@ -5310,7 +5310,7 @@ val VAR_RES_COND_HOARE_TRIPLE_REWRITE = store_thm (
 
 Cases_on `P` THEN Cases_on `Q` THEN
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-   VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
    GSYM VAR_RES_PROGRAM_SEM_def, COND_HOARE_TRIPLE_def] THEN
 METIS_TAC[]);
 
@@ -5318,7 +5318,7 @@ METIS_TAC[]);
 val VAR_RES_COND_HOARE_TRIPLE_INTRO = store_thm (
 "VAR_RES_COND_HOARE_TRIPLE_INTRO",
 ``!f f' lock_env penv wp1 rp1 d P1 wp2 rp2 P2 prog.
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE prog /\ IS_VAR_RES_COMBINATOR f /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE prog /\ IS_VAR_RES_COMBINATOR f /\
   (GET_VAR_RES_COMBINATOR f = f') ==>
 
   (VAR_RES_HOARE_TRIPLE (f, lock_env) penv
@@ -5335,9 +5335,9 @@ SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
    BAG_ALL_DISTINCT_THM, NOT_IN_EMPTY_BAG,
    VAR_RES_HOARE_TRIPLE_def, asl_bool_EVAL,
    BAG_UNION_EMPTY, FINITE_BAG_THM,
-   FASL_PROGRAM_HOARE_TRIPLE_def, IN_ABS,
+   ASL_PROGRAM_HOARE_TRIPLE_def, IN_ABS,
    HOARE_TRIPLE_def, fasl_order_THM, SUBSET_DEF,
-   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE_def] THEN
+   asl_prog_IS_RESOURCE_AND_PROCCALL_FREE_def] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `ALL_DISTINCT d` THEN ASM_SIMP_TAC std_ss [] THEN
 FULL_SIMP_TAC std_ss [IS_VAR_RES_COMBINATOR_def,
@@ -5355,7 +5355,7 @@ val VAR_RES_COND_HOARE_TRIPLE___COND_PROP_IMP = store_thm (
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
    COND_PROP___IMP_def, VAR_RES_HOARE_TRIPLE_def,
-   FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
+   ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
    fasl_order_THM, IN_ABS] THEN
 METIS_TAC[]);
 
@@ -5400,14 +5400,14 @@ val VAR_RES_COND_HOARE_TRIPLE___COND_EXISTS = store_thm (
 SIMP_TAC std_ss [COND_PROP___EXISTS_def,
   VAR_RES_COND_HOARE_TRIPLE_def, VAR_RES_HOARE_TRIPLE_def,
   GSYM LEFT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM,
-  HOARE_TRIPLE_def, IN_ABS, FASL_PROGRAM_HOARE_TRIPLE_def,
+  HOARE_TRIPLE_def, IN_ABS, ASL_PROGRAM_HOARE_TRIPLE_def,
   fasl_order_THM] THEN
 METIS_TAC[]);
 
 
 val VAR_RES_PROGRAM_IS_ABSTRACTION_def = Define `
 VAR_RES_PROGRAM_IS_ABSTRACTION f prog1 prog2 =
-FASL_PROGRAM_IS_ABSTRACTION (VAR_RES_COMBINATOR f, K asl_false) FEMPTY prog1 prog2`
+ASL_PROGRAM_IS_ABSTRACTION (VAR_RES_COMBINATOR f, K asl_false) FEMPTY prog1 prog2`
 
 
 val VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION = store_thm (
@@ -5419,7 +5419,7 @@ val VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION = store_thm (
    VAR_RES_COND_HOARE_TRIPLE f P prog1 Q``,
 
 SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
-   FASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF,
+   ASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF,
    VAR_RES_COND_HOARE_TRIPLE_def,
    VAR_RES_HOARE_TRIPLE_def]);
 
@@ -5439,24 +5439,24 @@ val VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first = store_thm (
 ``!f P prog1 prog2 prog3 Q.
   (IS_SEPARATION_COMBINATOR f ==>
    (VAR_RES_PROGRAM_IS_ABSTRACTION f prog1 prog2 /\
-    VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_seq prog2 prog3) Q)) ==>
-   VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_seq prog1 prog3) Q``,
+    VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_seq prog2 prog3) Q)) ==>
+   VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_seq prog1 prog3) Q``,
 
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION THEN
-Q.EXISTS_TAC `fasl_prog_seq prog2 prog3` THEN
+Q.EXISTS_TAC `asl_prog_seq prog2 prog3` THEN
 FULL_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
 STRIP_TAC THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___seq THEN
-ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___REFL]);
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___seq THEN
+ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION___REFL]);
 
 
 val VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block = store_thm (
 "VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block",
 ``!f wpb rpb sfb prog1 prog2 progL Q.
   (BAG_ALL_DISTINCT (BAG_UNION wpb rpb) ==> VAR_RES_PROGRAM_IS_ABSTRACTION f prog1 prog2) ==>
-  (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb) (fasl_prog_block (prog2::progL)) Q ==>
-   VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb) (fasl_prog_block (prog1::progL)) Q)``,
+  (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb) (asl_prog_block (prog2::progL)) Q ==>
+   VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb) (asl_prog_block (prog1::progL)) Q)``,
 
 REPEAT STRIP_TAC THEN
 Tactical.REVERSE (Cases_on `BAG_ALL_DISTINCT (BAG_UNION wpb rpb)`) THEN1 (
@@ -5464,25 +5464,25 @@ Tactical.REVERSE (Cases_on `BAG_ALL_DISTINCT (BAG_UNION wpb rpb)`) THEN1 (
       var_res_prop___REWRITE, var_res_prop___COND___REWRITE]
 ) THEN
 MATCH_MP_TAC (MP_CANON VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_EVAL) THEN
-Q.EXISTS_TAC `fasl_prog_block (prog2::progL)` THEN
+Q.EXISTS_TAC `asl_prog_block (prog2::progL)` THEN
 FULL_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
-MATCH_MP_TAC (MP_CANON FASL_PROGRAM_IS_ABSTRACTION___block) THEN
-ASM_REWRITE_TAC[FASL_PROGRAM_IS_ABSTRACTION___REFL]);
+MATCH_MP_TAC (MP_CANON ASL_PROGRAM_IS_ABSTRACTION___block) THEN
+ASM_REWRITE_TAC[ASL_PROGRAM_IS_ABSTRACTION___REFL]);
 
 
 val VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block_simple = store_thm (
 "VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block_simple",
 ``!f P prog1 prog2 progL Q.
   (VAR_RES_PROGRAM_IS_ABSTRACTION f prog1 prog2) ==>
-  (VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (prog2::progL)) Q ==>
-   VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (prog1::progL)) Q)``,
+  (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (prog2::progL)) Q ==>
+   VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (prog1::progL)) Q)``,
 
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC (MP_CANON VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_EVAL) THEN
-Q.EXISTS_TAC `fasl_prog_block (prog2::progL)` THEN
+Q.EXISTS_TAC `asl_prog_block (prog2::progL)` THEN
 FULL_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
-MATCH_MP_TAC (MP_CANON FASL_PROGRAM_IS_ABSTRACTION___block) THEN
-ASM_REWRITE_TAC[FASL_PROGRAM_IS_ABSTRACTION___REFL]);
+MATCH_MP_TAC (MP_CANON ASL_PROGRAM_IS_ABSTRACTION___block) THEN
+ASM_REWRITE_TAC[ASL_PROGRAM_IS_ABSTRACTION___REFL]);
 
 val var_res_best_local_action_def = Define `
     var_res_best_local_action f P Q =
@@ -5493,37 +5493,37 @@ val var_res_best_local_action_def = Define `
 val var_res_cond_best_local_action_def = Define `
     var_res_cond_best_local_action f P Q =
     if ~(FST P) \/ ~(FST Q) then
-       fasla_diverge
+       asla_diverge
     else
        var_res_best_local_action f (SND P) (SND Q)`;
 
-val FASL_IS_LOCAL_ACTION___var_res_best_local_action = store_thm (
-"FASL_IS_LOCAL_ACTION___var_res_best_local_action",
+val ASL_IS_LOCAL_ACTION___var_res_best_local_action = store_thm (
+"ASL_IS_LOCAL_ACTION___var_res_best_local_action",
 ``!f P Q. IS_SEPARATION_COMBINATOR f ==>
-          FASL_IS_LOCAL_ACTION f (var_res_best_local_action f P Q)``,
+          ASL_IS_LOCAL_ACTION f (var_res_best_local_action f P Q)``,
 SIMP_TAC std_ss [var_res_best_local_action_def, quant_best_local_action_THM]);
 
 
-val FASL_IS_LOCAL_ACTION___var_res_cond_best_local_action = store_thm (
-"FASL_IS_LOCAL_ACTION___var_res_cond_best_local_action",
+val ASL_IS_LOCAL_ACTION___var_res_cond_best_local_action = store_thm (
+"ASL_IS_LOCAL_ACTION___var_res_cond_best_local_action",
 ``!f P Q. IS_SEPARATION_COMBINATOR f ==>
-          FASL_IS_LOCAL_ACTION f (var_res_cond_best_local_action f P Q)``,
+          ASL_IS_LOCAL_ACTION f (var_res_cond_best_local_action f P Q)``,
 SIMP_TAC std_ss [var_res_cond_best_local_action_def,
-   COND_RAND, COND_RATOR, FASL_IS_LOCAL_ACTION___fasla_diverge,
-   FASL_IS_LOCAL_ACTION___var_res_best_local_action]);
+   COND_RAND, COND_RATOR, ASL_IS_LOCAL_ACTION___asla_diverge,
+   ASL_IS_LOCAL_ACTION___var_res_best_local_action]);
 
 
 
 val var_res_prog_best_local_action_def = Define `
         var_res_prog_best_local_action P Q =
-        fasl_prog_quant_best_local_action (\x s. s IN P /\ (s = x))
+        asl_prog_quant_best_local_action (\x s. s IN P /\ (s = x))
 (\x s. s IN Q /\ (VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST s)))`;
 
 
 val var_res_prog_cond_best_local_action_def = Define `
   var_res_prog_cond_best_local_action pre post =
      if ~(FST pre) \/ ~(FST post) then
-        fasl_prog_diverge
+        asl_prog_diverge
      else
         var_res_prog_best_local_action (SND pre) (SND post)`
 
@@ -5532,14 +5532,14 @@ val var_res_prog_cond_best_local_action_def = Define `
 val var_res_prog_best_local_action_REWRITE = store_thm (
 "var_res_prog_best_local_action_REWRITE",
 ``var_res_prog_best_local_action pre post =
-  fasl_prog_prim_command (fasl_pc_shallow_command
+  asl_prog_prim_command (asl_pc_shallow_command
      (\f. var_res_best_local_action f pre post))``,
 
 SIMP_TAC std_ss [
    var_res_prog_best_local_action_def,
-   fasl_prog_quant_best_local_action_def,
-   fasl_prog_diverge_def,
-   fasl_prog_prim_command_def, fasl_pc_diverge_def,
+   asl_prog_quant_best_local_action_def,
+   asl_prog_diverge_def,
+   asl_prog_prim_command_def, asl_pc_diverge_def,
    var_res_cond_best_local_action_def,
    combinTheory.K_DEF,
    COND_RAND, COND_RATOR,
@@ -5549,15 +5549,15 @@ SIMP_TAC std_ss [
 val var_res_prog_cond_best_local_action_REWRITE = store_thm (
 "var_res_prog_cond_best_local_action_REWRITE",
 ``var_res_prog_cond_best_local_action pre post =
-  fasl_prog_prim_command (fasl_pc_shallow_command
+  asl_prog_prim_command (asl_pc_shallow_command
      (\f. var_res_cond_best_local_action f pre post))``,
 
 SIMP_TAC std_ss [
    var_res_prog_cond_best_local_action_def,
    var_res_prog_best_local_action_def,
-   fasl_prog_quant_best_local_action_def,
-   fasl_prog_diverge_def,
-   fasl_prog_prim_command_def, fasl_pc_diverge_def,
+   asl_prog_quant_best_local_action_def,
+   asl_prog_diverge_def,
+   asl_prog_prim_command_def, asl_pc_diverge_def,
    var_res_cond_best_local_action_def,
    combinTheory.K_DEF,
    COND_RAND, COND_RATOR,
@@ -5595,8 +5595,8 @@ SIMP_TAC std_ss [var_res_prog_cond_best_local_action_def,
 REPEAT GEN_TAC THEN
 Tactical.REVERSE (Cases_on `FST pre /\ FST post`) THEN (
    FULL_SIMP_TAC (std_ss++CONJ_ss) [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
-       FASL_PROGRAM_IS_ABSTRACTION___diverge,
-       FASL_PROGRAM_IS_ABSTRACTION___REFL]
+       ASL_PROGRAM_IS_ABSTRACTION___diverge,
+       ASL_PROGRAM_IS_ABSTRACTION___REFL]
 ));
 
 
@@ -5610,38 +5610,38 @@ val var_res_quant_best_local_action_def = Define `
 val var_res_cond_quant_best_local_action_def = Define `
     var_res_cond_quant_best_local_action f qP qQ =
     if ~(!x. FST (qP x)) \/ ~(!x. FST (qQ x)) then
-       fasla_diverge
+       asla_diverge
     else
        var_res_quant_best_local_action f (\x. SND (qP x)) (\x. SND (qQ x))`;
 
 
-val FASL_IS_LOCAL_ACTION___var_res_quant_best_local_action = store_thm (
-"FASL_IS_LOCAL_ACTION___var_res_quant_best_local_action",
+val ASL_IS_LOCAL_ACTION___var_res_quant_best_local_action = store_thm (
+"ASL_IS_LOCAL_ACTION___var_res_quant_best_local_action",
 ``!f P Q. IS_SEPARATION_COMBINATOR f ==>
-          FASL_IS_LOCAL_ACTION f (var_res_quant_best_local_action f P Q)``,
+          ASL_IS_LOCAL_ACTION f (var_res_quant_best_local_action f P Q)``,
 SIMP_TAC std_ss [var_res_quant_best_local_action_def, quant_best_local_action_THM]);
 
 
-val FASL_IS_LOCAL_ACTION___var_res_cond_quant_best_local_action = store_thm (
-"FASL_IS_LOCAL_ACTION___var_res_cond_quant_best_local_action",
+val ASL_IS_LOCAL_ACTION___var_res_cond_quant_best_local_action = store_thm (
+"ASL_IS_LOCAL_ACTION___var_res_cond_quant_best_local_action",
 ``!f P Q. IS_SEPARATION_COMBINATOR f ==>
-          FASL_IS_LOCAL_ACTION f (var_res_cond_quant_best_local_action f P Q)``,
+          ASL_IS_LOCAL_ACTION f (var_res_cond_quant_best_local_action f P Q)``,
 SIMP_TAC std_ss [var_res_cond_quant_best_local_action_def,
-   COND_RAND, COND_RATOR, FASL_IS_LOCAL_ACTION___fasla_diverge,
-   FASL_IS_LOCAL_ACTION___var_res_quant_best_local_action]);
+   COND_RAND, COND_RATOR, ASL_IS_LOCAL_ACTION___asla_diverge,
+   ASL_IS_LOCAL_ACTION___var_res_quant_best_local_action]);
 
 
 
 val var_res_prog_quant_best_local_action_def = Define `
         var_res_prog_quant_best_local_action qP qQ =
-        fasl_prog_quant_best_local_action (\x s. s IN (qP (FST x)) /\ (s = (SND x)))
+        asl_prog_quant_best_local_action (\x s. s IN (qP (FST x)) /\ (s = (SND x)))
 (\x s. s IN (qQ (FST x)) /\ (VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST (SND x)) (FST s)))`;
 
 
 val var_res_prog_cond_quant_best_local_action_def = Define `
   var_res_prog_cond_quant_best_local_action qP qQ =
      if ~(!x. FST (qP x)) \/ ~(!x. FST (qQ x)) then
-        fasl_prog_diverge
+        asl_prog_diverge
      else
         var_res_prog_quant_best_local_action (\x. SND (qP x)) (\x. SND (qQ x))`
 
@@ -5649,14 +5649,14 @@ val var_res_prog_cond_quant_best_local_action_def = Define `
 val var_res_prog_quant_best_local_action_REWRITE = store_thm (
 "var_res_prog_quant_best_local_action_REWRITE",
 ``var_res_prog_quant_best_local_action qP qQ =
-  fasl_prog_prim_command (fasl_pc_shallow_command
+  asl_prog_prim_command (asl_pc_shallow_command
      (\f. var_res_quant_best_local_action f qP qQ))``,
 
 SIMP_TAC std_ss [
    var_res_prog_quant_best_local_action_def,
-   fasl_prog_quant_best_local_action_def,
-   fasl_prog_diverge_def,
-   fasl_prog_prim_command_def, fasl_pc_diverge_def,
+   asl_prog_quant_best_local_action_def,
+   asl_prog_diverge_def,
+   asl_prog_prim_command_def, asl_pc_diverge_def,
    var_res_cond_quant_best_local_action_def,
    combinTheory.K_DEF,
    COND_RAND, COND_RATOR,
@@ -5666,15 +5666,15 @@ SIMP_TAC std_ss [
 val var_res_prog_cond_quant_best_local_action_REWRITE = store_thm (
 "var_res_prog_cond_quant_best_local_action_REWRITE",
 ``var_res_prog_cond_quant_best_local_action qP qQ =
-  fasl_prog_prim_command (fasl_pc_shallow_command
+  asl_prog_prim_command (asl_pc_shallow_command
      (\f. var_res_cond_quant_best_local_action f qP qQ))``,
 
 SIMP_TAC std_ss [
    var_res_prog_cond_quant_best_local_action_def,
    var_res_prog_quant_best_local_action_def,
-   fasl_prog_quant_best_local_action_def,
-   fasl_prog_diverge_def,
-   fasl_prog_prim_command_def, fasl_pc_diverge_def,
+   asl_prog_quant_best_local_action_def,
+   asl_prog_diverge_def,
+   asl_prog_prim_command_def, asl_pc_diverge_def,
    var_res_cond_quant_best_local_action_def,
    combinTheory.K_DEF,
    COND_RAND, COND_RATOR,
@@ -5754,36 +5754,36 @@ SIMP_TAC std_ss [var_res_prog_cond_quant_best_local_action_def,
 
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___var_res_quant_best_local_action =
-store_thm ("FASL_PROGRAM_IS_ABSTRACTION___var_res_quant_best_local_action",
+val ASL_PROGRAM_IS_ABSTRACTION___var_res_quant_best_local_action =
+store_thm ("ASL_PROGRAM_IS_ABSTRACTION___var_res_quant_best_local_action",
 ``!xenv penv qP prog qQ.
   IS_VAR_RES_COMBINATOR (FST xenv) ==>
 
-  (FASL_PROGRAM_IS_ABSTRACTION xenv penv prog
+  (ASL_PROGRAM_IS_ABSTRACTION xenv penv prog
      (var_res_prog_quant_best_local_action qP qQ) =
   !arg. VAR_RES_HOARE_TRIPLE xenv penv (qP arg) prog (qQ arg))``,
 
 REPEAT STRIP_TAC THEN
 IMP_RES_TAC IS_SEPARATION_COMBINATOR___IS_VAR_RES_COMBINATOR THEN
 ASM_SIMP_TAC std_ss [var_res_prog_quant_best_local_action_def,
-   FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
+   ASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
    VAR_RES_HOARE_TRIPLE_def, PAIR_FORALL_THM]);
 
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action =
-store_thm ("FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action",
+val ASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action =
+store_thm ("ASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action",
 ``!xenv penv P prog Q.
   IS_VAR_RES_COMBINATOR (FST xenv) ==>
 
-  (FASL_PROGRAM_IS_ABSTRACTION xenv penv prog
+  (ASL_PROGRAM_IS_ABSTRACTION xenv penv prog
      (var_res_prog_best_local_action P Q) =
   VAR_RES_HOARE_TRIPLE xenv penv P prog Q)``,
 
 REPEAT STRIP_TAC THEN
 IMP_RES_TAC IS_SEPARATION_COMBINATOR___IS_VAR_RES_COMBINATOR THEN
 ASM_SIMP_TAC std_ss [var_res_prog_best_local_action_def,
-   FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
+   ASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
    VAR_RES_HOARE_TRIPLE_def]);
 
 
@@ -5791,7 +5791,7 @@ val VAR_RES_HOARE_TRIPLE___comment___ELIM_preserve_names =
 store_thm ("VAR_RES_HOARE_TRIPLE___comment___ELIM_preserve_names",
 ``!xenv penv  ref_args val_args P Q prog arg_refL arg_valL.
  (VAR_RES_HOARE_TRIPLE xenv penv
-    ((fasl_procedure_call_preserve_names_wrapper ref_args val_args P)
+    ((asl_procedure_call_preserve_names_wrapper ref_args val_args P)
      (arg_refL, arg_valL))
      prog
      Q) =
@@ -5803,13 +5803,13 @@ store_thm ("VAR_RES_HOARE_TRIPLE___comment___ELIM_preserve_names",
 
 
 SIMP_TAC std_ss [
-  fasl_procedure_call_preserve_names_wrapper_def] THEN
+  asl_procedure_call_preserve_names_wrapper_def] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `LIST_UNROLL_GIVEN_ELEMENT_NAMES arg_valL val_args /\
           LIST_UNROLL_GIVEN_ELEMENT_NAMES arg_refL ref_args` THEN
 FULL_SIMP_TAC std_ss [asl_bool_REWRITES] THEN (
    SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, NOT_IN_asl_false,
-      FASL_PROGRAM_HOARE_TRIPLE_REWRITE, IN_ABS]
+      ASL_PROGRAM_HOARE_TRIPLE_REWRITE, IN_ABS]
 ));
 
 
@@ -6836,7 +6836,7 @@ store_thm ("VAR_RES_INFERENCE___EXISTS_PRE",
 (!x. VAR_RES_HOARE_TRIPLE xenv penv (P x) prog Q)``,
 
 SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, asl_bool_EVAL,
-    FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def, IN_ABS,
+    ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def, IN_ABS,
     GSYM LEFT_FORALL_IMP_THM] THEN
 METIS_TAC[]);
 
@@ -6934,7 +6934,7 @@ VAR_RES_COND_HOARE_TRIPLE f
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
    var_res_prop___REWRITE, var_res_prop___PROP_INSERT,
    asl_bool_EVAL, VAR_RES_HOARE_TRIPLE_def,
-   FASL_PROGRAM_HOARE_TRIPLE_def, IN_ABS,
+   ASL_PROGRAM_HOARE_TRIPLE_def, IN_ABS,
    HOARE_TRIPLE_def]);
 
 
@@ -7046,7 +7046,7 @@ FULL_SIMP_TAC std_ss [var_res_prop_unequal_def, var_res_prop_equal_def,
 QUANT_INSTANTIATE_TAC [] THEN
 
 SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, IN_ABS,
-                 FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
+                 ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
                  fasl_order_THM, GSYM FORALL_AND_THM] THEN
 CONSEQ_CONV_TAC (K FORALL_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
@@ -7123,35 +7123,35 @@ SIMP_TAC std_ss [IN_ABS3]);
 val VAR_RES_COND_INFERENCE___prog_block = store_thm (
 "VAR_RES_COND_INFERENCE___prog_block",
 ``!f P prog L Q.
- (VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (prog::L)) Q) =
- (VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_seq prog (fasl_prog_block L)) Q)``,
+ (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (prog::L)) Q) =
+ (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_seq prog (asl_prog_block L)) Q)``,
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-   VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   FASL_PROGRAM_SEM___prog_block, FASL_PROGRAM_SEM___prog_seq]);
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_block, ASL_PROGRAM_SEM___prog_seq]);
 
 
 val VAR_RES_COND_INFERENCE___prog_block2 = store_thm (
 "VAR_RES_COND_INFERENCE___prog_block2",
 ``!f P prog1 prog2 L Q.
- (VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block ((fasl_prog_seq prog1 prog2)::L)) Q) =
- (VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (prog1::prog2::L)) Q)``,
+ (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block ((asl_prog_seq prog1 prog2)::L)) Q) =
+ (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (prog1::prog2::L)) Q)``,
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-   VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   FASL_PROGRAM_SEM___prog_block, FASL_PROGRAM_SEM___prog_seq,
-   REWRITE_RULE [ASSOC_DEF] fasla_seq___ASSOC]);
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_block, ASL_PROGRAM_SEM___prog_seq,
+   REWRITE_RULE [ASSOC_DEF] asla_seq___ASSOC]);
 
 
 val VAR_RES_COND_INFERENCE___prog_block3 = store_thm (
 "VAR_RES_COND_INFERENCE___prog_block3",
 ``!f P p1 pL pL2 Q.
- (VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (p1::(fasl_prog_block pL)::pL2)) Q) =
- (VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (p1::(pL++pL2))) Q)``,
+ (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (p1::(asl_prog_block pL)::pL2)) Q) =
+ (VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (p1::(pL++pL2))) Q)``,
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-   VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   FASL_PROGRAM_SEM___prog_block, FASL_PROGRAM_SEM___prog_block_append]);
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_block, ASL_PROGRAM_SEM___prog_block_append]);
 
 
 val VAR_RES_INFERENCE___prog_parallel = store_thm (
@@ -7162,7 +7162,7 @@ val VAR_RES_INFERENCE___prog_parallel = store_thm (
    VAR_RES_HOARE_TRIPLE (VAR_RES_COMBINATOR f, lock_env) penv P2 p2 Q2 ==>
    VAR_RES_HOARE_TRIPLE (VAR_RES_COMBINATOR f, lock_env) penv
            (asl_star (VAR_RES_COMBINATOR f) P1 P2)
-           (fasl_prog_parallel p1 p2)
+           (asl_prog_parallel p1 p2)
            (asl_star (VAR_RES_COMBINATOR f) Q1 Q2)``,
 
 SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def] THEN
@@ -7170,7 +7170,7 @@ REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [IN_ABS, asl_star_def,
                  GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
 SIMP_TAC std_ss [asl_exists___GSYM_REWRITE, IN_ABS3,
-                 FASL_INFERENCE_asl_quant] THEN
+                 ASL_INFERENCE_asl_quant] THEN
 REPEAT STRIP_TAC THEN
 
 Q.PAT_ASSUM `!x. X x` (MP_TAC o Q.SPEC `q`) THEN
@@ -7183,10 +7183,10 @@ Q.ABBREV_TAC `Q2' = (\s. s IN Q2 /\
          VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST q) (FST s))` THEN
 SIMP_TAC (std_ss++CONJ_ss) [] THEN
 Tactical.REVERSE (Cases_on `VAR_RES_COMBINATOR f (SOME p) (SOME q) = SOME x`) THEN1 (
-   ASM_SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def, IN_ABS]
+   ASM_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def, IN_ABS]
 ) THEN
 ASM_SIMP_TAC std_ss [] THEN REPEAT STRIP_TAC THEN
-MATCH_MP_TAC FASL_INFERENCE_STRENGTHEN THEN
+MATCH_MP_TAC ASL_INFERENCE_STRENGTHEN THEN
 Q.EXISTS_TAC `asl_star (VAR_RES_COMBINATOR f) P1' P2'` THEN
 Q.EXISTS_TAC `asl_star (VAR_RES_COMBINATOR f) Q1' Q2'` THEN
 REPEAT STRIP_TAC THENL [
@@ -7216,7 +7216,7 @@ REPEAT STRIP_TAC THENL [
       AND_IMP_INTRO, var_res_permission_THM2],
 
 
-   MATCH_MP_TAC (SIMP_RULE std_ss [PAIR_FORALL_THM] FASL_INFERENCE_prog_parallel) THEN
+   MATCH_MP_TAC (SIMP_RULE std_ss [PAIR_FORALL_THM] ASL_INFERENCE_prog_parallel) THEN
    ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR]
 ]);
 
@@ -7226,17 +7226,17 @@ val VAR_RES_INFERENCE___prog_forall = store_thm (
 "VAR_RES_INFERENCE___prog_forall",
 ``!xenv penv P Q body.
   (!d. VAR_RES_HOARE_TRIPLE xenv penv P (body d) Q) ==>
-  VAR_RES_HOARE_TRIPLE xenv penv P (fasl_prog_forall body) Q``,
+  VAR_RES_HOARE_TRIPLE xenv penv P (asl_prog_forall body) Q``,
 
 SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def] THEN
-METIS_TAC[FASL_INFERENCE_prog_forall]);
+METIS_TAC[ASL_INFERENCE_prog_forall]);
 
 
 val VAR_RES_COND_INFERENCE___prog_forall = store_thm (
 "VAR_RES_COND_INFERENCE___prog_forall",
 ``!f P Q body.
   (!d. VAR_RES_COND_HOARE_TRIPLE f P (body d) Q) ==>
-  VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_forall body) Q``,
+  VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_forall body) Q``,
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def] THEN
 METIS_TAC[VAR_RES_INFERENCE___prog_forall]);
@@ -7248,25 +7248,25 @@ val VAR_RES_INFERENCE___prog_seq = store_thm (
 ``!xenv penv P Q R p1 p2.
   VAR_RES_HOARE_TRIPLE xenv penv P p1 Q /\
   VAR_RES_HOARE_TRIPLE xenv penv Q p2 R ==>
-  VAR_RES_HOARE_TRIPLE xenv penv P (fasl_prog_seq p1 p2) R``,
+  VAR_RES_HOARE_TRIPLE xenv penv P (asl_prog_seq p1 p2) R``,
 
 SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_REWRITE] THEN
-REPEAT STRIP_TAC THEN1 PROVE_TAC[FASL_INFERENCE_prog_seq] THEN
+REPEAT STRIP_TAC THEN1 PROVE_TAC[ASL_INFERENCE_prog_seq] THEN
 FULL_SIMP_TAC std_ss [
-   VAR_RES_PERM_HOARE_TRIPLE_def, FASL_PROGRAM_SEM___prog_seq,
-   SOME___fasla_seq, GSYM RIGHT_EXISTS_AND_THM,
+   VAR_RES_PERM_HOARE_TRIPLE_def, ASL_PROGRAM_SEM___prog_seq,
+   SOME___asla_seq, GSYM RIGHT_EXISTS_AND_THM,
    GSYM LEFT_FORALL_IMP_THM, IN_BIGUNION, IN_IMAGE] THEN
 REPEAT STRIP_TAC THEN
 `VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST s) (FST x')` by RES_TAC THEN
 `x' IN Q` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `FASL_PROGRAM_HOARE_TRIPLE xenv penv P p1 Q` MP_TAC THEN
+   Q.PAT_ASSUM `ASL_PROGRAM_HOARE_TRIPLE xenv penv P p1 Q` MP_TAC THEN
    ASM_SIMP_TAC std_ss [
-      FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
+      ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
       fasl_order_THM, GSYM LEFT_EXISTS_IMP_THM, SUBSET_DEF] THEN
    Q.EXISTS_TAC `s` THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
-`?s1'. FASL_PROGRAM_SEM xenv penv p2 x' = SOME s1'` by
+`?s1'. ASL_PROGRAM_SEM xenv penv p2 x' = SOME s1'` by
    METIS_TAC[IS_SOME_EXISTS] THEN
 FULL_SIMP_TAC std_ss [] THEN
 `VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x') (FST s2)` by RES_TAC THEN
@@ -7280,7 +7280,7 @@ val VAR_RES_COND_INFERENCE___prog_seq = store_thm (
   (FST P /\ FST R ==> FST Q) /\
   VAR_RES_COND_HOARE_TRIPLE f P p1 Q /\
   VAR_RES_COND_HOARE_TRIPLE f Q p2 R ==>
-  VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_seq p1 p2) R``,
+  VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_seq p1 p2) R``,
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def] THEN
 REPEAT STRIP_TAC THEN
@@ -7301,10 +7301,10 @@ val VAR_RES_INFERENCE___STRENGTHEN = store_thm (
   VAR_RES_HOARE_TRIPLE xenv penv P2 prog Q2``,
 
 SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def,
-   FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
+   ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
    IN_ABS, fasl_order_THM, SUBSET_DEF] THEN
 REPEAT STRIP_TAC THEN
-`?s1. (FASL_PROGRAM_SEM xenv penv prog x = SOME s1) /\
+`?s1. (ASL_PROGRAM_SEM xenv penv prog x = SOME s1) /\
       !x'. x' IN s1 ==> x' IN Q1 /\
       VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST x')` by METIS_TAC[] THEN
 ASM_SIMP_TAC std_ss [] THEN
@@ -7352,17 +7352,17 @@ val VAR_RES_INFERENCE___FRAME = store_thm (
   VAR_RES_HOARE_TRIPLE xenv penv (asl_star (VAR_RES_COMBINATOR f) P R) prog (asl_star (VAR_RES_COMBINATOR f) Q R)``,
 
 SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def,
-   FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
+   ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
    IN_ABS, fasl_order_THM2, SUBSET_DEF, asl_star_def] THEN
 REPEAT STRIP_TAC THEN
 Q.PAT_ASSUM `!x. X x` (MP_TAC o Q.SPEC `p`) THEN
 ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
 Q.PAT_ASSUM `SOME x = Y` (ASSUME_TAC o GSYM) THEN
-Q.ABBREV_TAC `act = FASL_PROGRAM_SEM xenv penv prog` THEN
-`FASL_IS_LOCAL_ACTION (FST xenv) act` by METIS_TAC[
-   FASL_IS_LOCAL_ACTION___FASL_PROGRAM_SEM,
+Q.ABBREV_TAC `act = ASL_PROGRAM_SEM xenv penv prog` THEN
+`ASL_IS_LOCAL_ACTION (FST xenv) act` by METIS_TAC[
+   ASL_IS_LOCAL_ACTION___ASL_PROGRAM_SEM,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR] THEN
-FULL_SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF] THEN
+FULL_SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF] THEN
 Q.PAT_ASSUM `!s1 s2 s3. X s1 s2 s3` (
    MP_TAC o (Q.SPECL [`p`, `q`, `x`])) THEN
 `ASL_IS_SUBSTATE (FST xenv) p x` by PROVE_TAC[ASL_IS_SUBSTATE_INTRO,
@@ -7546,7 +7546,7 @@ val VAR_RES_COND_HOARE_TRIPLE___SOLVE_WEAK_IMP = store_thm (
   IS_SEPARATION_COMBINATOR f ==>
   (VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) sfb)
-    (fasl_prog_block [])
+    (asl_prog_block [])
     (var_res_prop f (wpb',rpb') sfb') =
    COND_PROP___WEAK_IMP (var_res_prop f (wpb,rpb) sfb)
                        (var_res_prop f (wpb',rpb') sfb'))``,
@@ -7554,9 +7554,9 @@ val VAR_RES_COND_HOARE_TRIPLE___SOLVE_WEAK_IMP = store_thm (
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [
    VAR_RES_COND_HOARE_TRIPLE_def, COND_PROP___WEAK_IMP_def,
    var_res_prop___REWRITE, VAR_RES_HOARE_TRIPLE_def,
-   FASL_PROGRAM_HOARE_TRIPLE_def, fasl_prog_block_def,
-   FASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def,
-   fasl_order_THM, fasla_skip_def, SUBSET_DEF, IN_ABS,
+   ASL_PROGRAM_HOARE_TRIPLE_def, asl_prog_block_def,
+   ASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def,
+   fasl_order_THM, asla_skip_def, SUBSET_DEF, IN_ABS,
    IN_SING, VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___REFL]);
 
 
@@ -7673,7 +7673,7 @@ val VAR_RES_COND_HOARE_TRIPLE___SOLVE = store_thm (
 
   VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) sfb)
-    (fasl_prog_block [])
+    (asl_prog_block [])
     (var_res_prop f (wpb',rpb') sfb'))``,
 
 REPEAT STRIP_TAC THEN
@@ -7690,7 +7690,7 @@ Cases_on `IS_SEPARATION_COMBINATOR f` THENL [
 
 val VAR_RES_COND_HOARE_TRIPLE___SOLVE_skip = save_thm (
 "VAR_RES_COND_HOARE_TRIPLE___SOLVE_skip",
-SIMP_RULE std_ss [fasl_prog_block_def] VAR_RES_COND_HOARE_TRIPLE___SOLVE);
+SIMP_RULE std_ss [asl_prog_block_def] VAR_RES_COND_HOARE_TRIPLE___SOLVE);
 
 
 
@@ -7698,14 +7698,14 @@ SIMP_RULE std_ss [fasl_prog_block_def] VAR_RES_COND_HOARE_TRIPLE___SOLVE);
 val VAR_RES_COND_INFERENCE___prog_diverge = store_thm (
 "VAR_RES_COND_INFERENCE___prog_diverge",
 ``!f P progL Q.
-  VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (fasl_prog_diverge::progL)) Q``,
+  VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (asl_prog_diverge::progL)) Q``,
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-   VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   HOARE_TRIPLE_def, FASL_PROGRAM_SEM___prog_seq,
-   FASL_PROGRAM_SEM___diverge, fasla_seq_diverge,
-   FASL_PROGRAM_SEM___prog_block] THEN
-SIMP_TAC std_ss [fasla_diverge_def, fasl_order_THM, EMPTY_SUBSET]);
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   HOARE_TRIPLE_def, ASL_PROGRAM_SEM___prog_seq,
+   ASL_PROGRAM_SEM___diverge, asla_seq_diverge,
+   ASL_PROGRAM_SEM___prog_block] THEN
+SIMP_TAC std_ss [asla_diverge_def, fasl_order_THM, EMPTY_SUBSET]);
 
 
 val VAR_RES_COND_INFERENCE___first_command_REWRITE = store_thm (
@@ -7716,10 +7716,10 @@ val VAR_RES_COND_INFERENCE___first_command_REWRITE = store_thm (
 
   (VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) sfb)
-    (fasl_prog_block (p1::progL)) Q =
+    (asl_prog_block (p1::progL)) Q =
    VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) sfb)
-    (fasl_prog_block (p1'::progL)) Q)``,
+    (asl_prog_block (p1'::progL)) Q)``,
 
 
 REPEAT STRIP_TAC THEN
@@ -7737,18 +7737,18 @@ val VAR_RES_COND_INFERENCE___first_command_PRECOND_SEM = store_thm (
 ``!f p1 p1' P progL Q.
 
   (!s. (IS_SEPARATION_COMBINATOR f /\ FST P /\ FST Q /\ (s IN (SND P))) ==>
-     (FASL_PROGRAM_SEM (VAR_RES_COMBINATOR f, K asl_false) FEMPTY p1 s =
-      FASL_PROGRAM_SEM (VAR_RES_COMBINATOR f, K asl_false) FEMPTY p1' s)) ==>
+     (ASL_PROGRAM_SEM (VAR_RES_COMBINATOR f, K asl_false) FEMPTY p1 s =
+      ASL_PROGRAM_SEM (VAR_RES_COMBINATOR f, K asl_false) FEMPTY p1' s)) ==>
 
   (VAR_RES_COND_HOARE_TRIPLE f P
-    (fasl_prog_block (p1::progL)) Q =
+    (asl_prog_block (p1::progL)) Q =
    VAR_RES_COND_HOARE_TRIPLE f P
-    (fasl_prog_block (p1'::progL)) Q)``,
+    (asl_prog_block (p1'::progL)) Q)``,
 
 
 REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, VAR_RES_HOARE_TRIPLE_def,
-   FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
+   ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
       IN_ABS, fasl_order_THM] THEN
 
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
@@ -7760,8 +7760,8 @@ CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
 
-FULL_SIMP_TAC std_ss [FASL_PROGRAM_SEM___prog_block,
-   fasla_seq_def]);
+FULL_SIMP_TAC std_ss [ASL_PROGRAM_SEM___prog_block,
+   asla_seq_def]);
 
 
 
@@ -7771,13 +7771,13 @@ val VAR_RES_COND_INFERENCE___var_res_prog_quant_best_local_action = store_thm (
 
   (?x.
     VAR_RES_COND_HOARE_TRIPLE f P
-    (fasl_prog_block (
+    (asl_prog_block (
         (var_res_prog_best_local_action (qP x) (qQ x))::
         progL))
     Q) ==>
 
   (VAR_RES_COND_HOARE_TRIPLE f P
-    (fasl_prog_block (
+    (asl_prog_block (
         (var_res_prog_quant_best_local_action qP qQ)::
         progL))
     Q)``,
@@ -7786,30 +7786,30 @@ REPEAT GEN_TAC THEN
 `?P_ap P_cond. P = (P_cond, P_ap)` by (Cases_on `P` THEN SIMP_TAC std_ss []) THEN
 `?Q_ap Q_cond. Q = (Q_cond, Q_ap)` by (Cases_on `Q` THEN SIMP_TAC std_ss []) THEN
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
-Q.ABBREV_TAC `prog = fasl_prog_block progL` THEN
+Q.ABBREV_TAC `prog = asl_prog_block progL` THEN
 ASM_SIMP_TAC std_ss [
    VAR_RES_COND_HOARE_TRIPLE_def,
    VAR_RES_HOARE_TRIPLE_def,
-   FASL_PROGRAM_HOARE_TRIPLE_def,
-   FASL_PROGRAM_SEM___prog_seq] THEN
+   ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_seq] THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
 Q.PAT_ASSUM `!x'. HOARE_TRIPLE (pre x') act (post x')` (MP_TAC o Q.SPEC `x'`) THEN
 ASM_SIMP_TAC std_ss [
    var_res_prog_quant_best_local_action_REWRITE,
    var_res_prog_best_local_action_REWRITE,
-   FASL_PROGRAM_SEM___prim_command,
-   FASL_ATOMIC_ACTION_SEM_def,
-   EVAL_fasl_prim_command_THM,
-   FASL_IS_LOCAL_ACTION___var_res_best_local_action,
-   FASL_IS_LOCAL_ACTION___var_res_quant_best_local_action,
+   ASL_PROGRAM_SEM___prim_command,
+   ASL_ATOMIC_ACTION_SEM_def,
+   EVAL_asl_prim_command_THM,
+   ASL_IS_LOCAL_ACTION___var_res_best_local_action,
+   ASL_IS_LOCAL_ACTION___var_res_quant_best_local_action,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR] THEN
-Q.MATCH_ABBREV_TAC `HOARE_TRIPLE pre (fasla_seq a1  a2) post ==>
-                    HOARE_TRIPLE pre (fasla_seq a1' a2) post` THEN
+Q.MATCH_ABBREV_TAC `HOARE_TRIPLE pre (asla_seq a1  a2) post ==>
+                    HOARE_TRIPLE pre (asla_seq a1' a2) post` THEN
 Tactical.REVERSE (`fasl_action_order a1' a1` by ALL_TAC) THEN1 (
    FULL_SIMP_TAC std_ss [fasl_action_order_POINTWISE_DEF,
      HOARE_TRIPLE_def, fasl_order_THM,
-     SOME___fasla_seq, GSYM LEFT_EXISTS_AND_THM] THEN
+     SOME___asla_seq, GSYM LEFT_EXISTS_AND_THM] THEN
    REPEAT STRIP_TAC THEN
    Q.PAT_ASSUM `!s. s IN pre ==> X s` (MP_TAC o Q.SPEC `s`) THEN
    ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
@@ -7847,13 +7847,13 @@ val VAR_RES_COND_INFERENCE___var_res_prog_cond_quant_best_local_action = store_t
 
   (?x.
     VAR_RES_COND_HOARE_TRIPLE f P
-    (fasl_prog_block (
+    (asl_prog_block (
         (var_res_prog_cond_best_local_action (qP x) (qQ x))::
         progL))
     Q) ==>
 
   (VAR_RES_COND_HOARE_TRIPLE f P
-    (fasl_prog_block (
+    (asl_prog_block (
         (var_res_prog_cond_quant_best_local_action qP qQ)::
         progL))
     Q)``,
@@ -7916,11 +7916,11 @@ val VAR_RES_COND_INFERENCE___var_res_prog_cond_best_local_action___EXISTS_VAR_CH
 ( (?x'. VAR_RES_FRAME_SPLIT f rfc (wpb,rpb) wpb' EMPTY_BAG sfb (sfb' x')
   (\sfb'''. !x''. VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (BAG_UNION (BAG_DIFF wpb wpb') wpb'',rpb) (BAG_UNION (sfb'' x'') sfb'''))
-       (fasl_prog_block progL) Q)) ==>
+       (asl_prog_block progL) Q)) ==>
 
   VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) sfb)
-    (fasl_prog_block (
+    (asl_prog_block (
         (var_res_prog_cond_best_local_action
             (COND_PROP___STRONG_EXISTS (\x'.  var_res_prop f (wpb',rpb')  (sfb' x')))
             (COND_PROP___STRONG_EXISTS (\x''. var_res_prop f (wpb'',rpb') (sfb'' x''))))::
@@ -7931,7 +7931,7 @@ val VAR_RES_COND_INFERENCE___var_res_prog_cond_best_local_action___EXISTS_VAR_CH
 REPEAT GEN_TAC THEN
 `?Q_ap Q_cond. Q = (Q_cond, Q_ap)` by (Cases_on `Q` THEN SIMP_TAC std_ss []) THEN
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
-Q.ABBREV_TAC `prog = fasl_prog_block progL` THEN
+Q.ABBREV_TAC `prog = asl_prog_block progL` THEN
 ASM_SIMP_TAC std_ss [
    VAR_RES_COND_HOARE_TRIPLE_def,
    COND_PROP___STRONG_EXISTS_def,
@@ -7942,7 +7942,7 @@ Cases_on `(?x'. (~var_res_prop___COND f (wpb',rpb') (sfb' x'))) \/
           (?x''. (~var_res_prop___COND f (wpb'',rpb') (sfb'' x'')))` THEN1 (
    ASM_REWRITE_TAC[] THEN
    REWRITE_TAC [VAR_RES_HOARE_TRIPLE_def,
-                FASL_INFERENCE_prog_seq_diverge]
+                ASL_INFERENCE_prog_seq_diverge]
 ) THEN
 
 FULL_SIMP_TAC std_ss [] THEN
@@ -7957,7 +7957,7 @@ Q.PAT_ASSUM `X ==> Y` (fn thm => SUBGOAL_THEN (fst (dest_imp (concl thm)))
       ASM_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, var_res_prop___PROP___REWRITE,
          var_res_bigstar_REWRITE, var_res_bigstar_UNION,
          asl_false___asl_star_THM, asl_bool_EVAL, IN_ABS,
-         FASL_PROGRAM_HOARE_TRIPLE_REWRITE] THEN
+         ASL_PROGRAM_HOARE_TRIPLE_REWRITE] THEN
       FULL_SIMP_TAC std_ss [var_res_prop___COND___REWRITE,
          FINITE_BAG_THM, BAG_IN_BAG_INSERT, NOT_IN_EMPTY_BAG,
          VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_false,
@@ -7975,7 +7975,7 @@ Q.PAT_ASSUM `X ==> Y` (fn thm => SUBGOAL_THEN (fst (dest_imp (concl thm)))
       ASM_SIMP_TAC std_ss [asl_bool_REWRITES,
          var_res_prop___PROP___asl_false, IN_ABS,
          asl_bool_EVAL,
-         VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_REWRITE]
+         VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_REWRITE]
    ) THEN
    Q.PAT_ASSUM `!sfb'''. X` (MP_TAC o Q.SPEC `sfb'''`) THEN
    ASM_SIMP_TAC std_ss [asl_bool_REWRITES, BAG_UNION_INSERT,
@@ -8015,7 +8015,7 @@ Tactical.REVERSE (Cases_on `
    var_res_prop___COND f (BAG_DIFF wpb wpb',BAG_DIFF rpb wpb') sfb'''`) THEN1 (
    FULL_SIMP_TAC std_ss [] THEN
    FULL_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, IN_DEF,
-      FASL_PROGRAM_HOARE_TRIPLE_REWRITE]
+      ASL_PROGRAM_HOARE_TRIPLE_REWRITE]
 ) THEN
 `var_res_prop___COND f (wpb,rpb) sfb'''` by ALL_TAC THEN1 (
    MATCH_MP_TAC var_res_prop___COND___BAG_DIFF_REMOVE THEN
@@ -8038,11 +8038,11 @@ Tactical.REVERSE (Cases_on `BAG_ALL_DISTINCT (BAG_UNION wpb''' rpb)`) THEN1 (
    MATCH_MP_TAC VAR_RES_INFERENCE___prog_seq THEN
    Q.EXISTS_TAC `asl_false` THEN
    ASM_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, asl_bool_EVAL,
-      FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def, IN_ABS,
-      FASL_PROGRAM_SEM___prim_command,
+      ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def, IN_ABS,
+      ASL_PROGRAM_SEM___prim_command,
       var_res_prog_best_local_action_def,
-      fasl_prog_quant_best_local_action_def,
-      FASL_ATOMIC_ACTION_SEM_def, EVAL_fasl_prim_command_THM,
+      asl_prog_quant_best_local_action_def,
+      ASL_ATOMIC_ACTION_SEM_def, EVAL_asl_prim_command_THM,
       quant_best_local_action_THM, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
       fasl_order_THM, IN_DEF] THEN
    REPEAT STRIP_TAC THEN
@@ -8140,7 +8140,7 @@ Q.EXISTS_TAC `asl_exists x''. var_res_prop___PROP f (wpb''',rpb) (BAG_UNION (sfb
 Tactical.REVERSE CONJ_TAC THEN1 (
    Q.PAT_ASSUM `!x''. VAR_RES_HOARE_TRIPLE X Y pre prog Q_ap` MP_TAC THEN
    SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, asl_bool_EVAL,
-      FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def, IN_ABS]
+      ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def, IN_ABS]
 ) THEN
 
 MATCH_MP_TAC VAR_RES_INFERENCE___STRENGTHEN THEN
@@ -8220,10 +8220,10 @@ Tactical.REVERSE (`?wpb''' rpb'''.
    MATCH_MP_TAC VAR_RES_INFERENCE___FRAME THEN
    ASM_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def,
       var_res_prog_best_local_action_def,
-      FASL_PROGRAM_HOARE_TRIPLE_def,
-      fasl_prog_quant_best_local_action_def,
-      FASL_PROGRAM_SEM___prim_command,
-      FASL_ATOMIC_ACTION_SEM_def, EVAL_fasl_prim_command_THM,
+      ASL_PROGRAM_HOARE_TRIPLE_def,
+      asl_prog_quant_best_local_action_def,
+      ASL_PROGRAM_SEM___prim_command,
+      ASL_ATOMIC_ACTION_SEM_def, EVAL_asl_prim_command_THM,
       quant_best_local_action_THM, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR] THEN
    HO_MATCH_MP_TAC (
       el 2 (BODY_CONJUNCTS (SIMP_RULE std_ss [IMP_CONJ_THM, FORALL_AND_THM] quant_best_local_action_THM))) THEN
@@ -8291,11 +8291,11 @@ val VAR_RES_COND_INFERENCE___var_res_prog_cond_best_local_action___VAR_CHANGE = 
 ( VAR_RES_FRAME_SPLIT f rfc (wpb,rpb) wpb' EMPTY_BAG sfb sfb'
   (\sfb'''. VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (BAG_UNION (BAG_DIFF wpb wpb') wpb'',rpb) (BAG_UNION sfb'' sfb'''))
-       (fasl_prog_block progL) Q) ==>
+       (asl_prog_block progL) Q) ==>
 
   VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) sfb)
-    (fasl_prog_block (
+    (asl_prog_block (
         (var_res_prog_cond_best_local_action
             (var_res_prop f (wpb',rpb') sfb')
             (var_res_prop f (wpb'',rpb') sfb''))::
@@ -8326,11 +8326,11 @@ val VAR_RES_COND_INFERENCE___var_res_prog_cond_best_local_action___EXISTS = stor
 ( (?x'. VAR_RES_FRAME_SPLIT f rfc (wpb,rpb) wpb' EMPTY_BAG sfb (sfb' x')
   (\sfb'''. !x''. VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) (BAG_UNION (sfb'' x'') sfb'''))
-       (fasl_prog_block progL) Q)) ==>
+       (asl_prog_block progL) Q)) ==>
 
   VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) sfb)
-    (fasl_prog_block (
+    (asl_prog_block (
         (var_res_prog_cond_best_local_action
             (COND_PROP___STRONG_EXISTS (\x'. var_res_prop f (wpb',rpb') (sfb' x')))
             (COND_PROP___STRONG_EXISTS (\x''. var_res_prop f (wpb',rpb') (sfb'' x'')))::
@@ -8347,10 +8347,10 @@ Tactical.REVERSE (Cases_on `BAG_ALL_DISTINCT (BAG_UNION wpb rpb) /\
       COND_PROP___STRONG_EXISTS___ELIM] THEN
    DISCH_TAC THEN POP_ASSUM (K ALL_TAC) THEN
    SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def,
-      FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
-      FASL_PROGRAM_SEM___diverge, FASL_PROGRAM_SEM___prog_seq,
-      fasla_seq_diverge, fasl_order_THM, FASL_PROGRAM_SEM___prog_block] THEN
-   SIMP_TAC std_ss [fasla_diverge_def, EMPTY_SUBSET]
+      ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
+      ASL_PROGRAM_SEM___diverge, ASL_PROGRAM_SEM___prog_seq,
+      asla_seq_diverge, fasl_order_THM, ASL_PROGRAM_SEM___prog_block] THEN
+   SIMP_TAC std_ss [asla_diverge_def, EMPTY_SUBSET]
 ) THEN
 HO_MATCH_MP_TAC (MP_CANON VAR_RES_COND_INFERENCE___var_res_prog_cond_best_local_action___EXISTS_VAR_CHANGE) THEN
 ASM_SIMP_TAC std_ss [] THEN
@@ -8379,11 +8379,11 @@ val VAR_RES_COND_INFERENCE___var_res_prog_cond_best_local_action = store_thm (
 ( VAR_RES_FRAME_SPLIT f rfc (wpb,rpb) wpb' EMPTY_BAG sfb sfb'
   (\sfb'''. VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) (BAG_UNION sfb'' sfb'''))
-       (fasl_prog_block progL) Q) ==>
+       (asl_prog_block progL) Q) ==>
 
   VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) sfb)
-    (fasl_prog_block (
+    (asl_prog_block (
         (var_res_prog_cond_best_local_action
             (var_res_prop f (wpb',rpb') sfb')
             (var_res_prop f (wpb',rpb') sfb''))::
@@ -10677,13 +10677,13 @@ REPEAT STRIP_TAC THENL [
 
 
 
-val FASL_IS_LOCAL_ACTION___var_res_new_var_init_action = store_thm (
-"FASL_IS_LOCAL_ACTION___var_res_new_var_init_action",
+val ASL_IS_LOCAL_ACTION___var_res_new_var_init_action = store_thm (
+"ASL_IS_LOCAL_ACTION___var_res_new_var_init_action",
 ``!f e v.
 IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e) ==>
-FASL_IS_LOCAL_ACTION (VAR_RES_COMBINATOR f) (var_res_new_var_init_action v e)``,
+ASL_IS_LOCAL_ACTION (VAR_RES_COMBINATOR f) (var_res_new_var_init_action v e)``,
 
-SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
+SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
    var_res_new_var_init_action_def, LET_THM, COND_NONE_SOME_REWRITES,
    VAR_RES_COMBINATOR_REWRITE, SOME___VAR_RES_STACK_COMBINE,
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___REWRITE,
@@ -10718,10 +10718,10 @@ REPEAT STRIP_TAC THENL [
 
 val var_res_prog_new_var_init_def = Define `
 var_res_prog_new_var_init v e =
-fasl_prog_prim_command (fasl_pc_shallow_command (K (var_res_new_var_init_action v e)))`;
+asl_prog_prim_command (asl_pc_shallow_command (K (var_res_new_var_init_action v e)))`;
 
 val var_res_prog_new_var_def = Define `
-var_res_prog_new_var v = fasl_prog_ndet (\p. ?c. p = var_res_prog_new_var_init v (var_res_exp_const c))`;
+var_res_prog_new_var v = asl_prog_ndet (\p. ?c. p = var_res_prog_new_var_init v (var_res_exp_const c))`;
 
 
 val var_res_dispose_var_action_def = Define `
@@ -10791,11 +10791,11 @@ REPEAT GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN CONJ_TAC THENL [
 
 
 
-val FASL_IS_LOCAL_ACTION___var_res_dispose_var_action = store_thm (
-"FASL_IS_LOCAL_ACTION___var_res_dispose_var_action",
-``!f v. FASL_IS_LOCAL_ACTION (VAR_RES_COMBINATOR f) (var_res_dispose_var_action v)``,
+val ASL_IS_LOCAL_ACTION___var_res_dispose_var_action = store_thm (
+"ASL_IS_LOCAL_ACTION___var_res_dispose_var_action",
+``!f v. ASL_IS_LOCAL_ACTION (VAR_RES_COMBINATOR f) (var_res_dispose_var_action v)``,
 
-SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
+SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
    var_res_dispose_var_action_def, COND_NONE_SOME_REWRITES,
    IN_SING] THEN
 SIMP_TAC std_ss [VAR_RES_COMBINATOR_REWRITE,
@@ -10818,19 +10818,19 @@ METIS_TAC[]);
 
 
 val var_res_prog_dispose_var_def = Define `
-var_res_prog_dispose_var v = fasl_prog_prim_command (fasl_pc_shallow_command
+var_res_prog_dispose_var v = asl_prog_prim_command (asl_pc_shallow_command
    (K (var_res_dispose_var_action v)))`
 
 
 
 val var_res_prog_call_by_value_arg_def = Define `var_res_prog_call_by_value_arg prog_body c =
-   (fasl_prog_forall (\x. fasl_prog_seq
+   (asl_prog_forall (\x. asl_prog_seq
        (var_res_prog_new_var_init x (var_res_exp_const c))
-       (fasl_prog_seq (prog_body x) (var_res_prog_dispose_var x))))`;
+       (asl_prog_seq (prog_body x) (var_res_prog_dispose_var x))))`;
 
 
 val var_res_prog_local_var_def = Define `var_res_prog_local_var prog_body =
-   fasl_prog_ndet (\p. ?c. p = $var_res_prog_call_by_value_arg prog_body c)`
+   asl_prog_ndet (\p. ?c. p = $var_res_prog_call_by_value_arg prog_body c)`
 
 
 
@@ -10840,8 +10840,8 @@ val VAR_RES_PROGRAM_IS_ABSTRACTION___var_res_prog_call_by_value_arg = store_thm 
 IS_SEPARATION_COMBINATOR f ==>
 (VAR_RES_PROGRAM_IS_ABSTRACTION f
        (var_res_prog_call_by_value_arg body c)
-       (fasl_prog_forall (\v.
-       (fasl_prog_block [
+       (asl_prog_forall (\v.
+       (asl_prog_block [
           (var_res_prog_cond_best_local_action
              ((var_res_prop f (EMPTY_BAG,EMPTY_BAG) EMPTY_BAG):(bool # ('c,'b,'a) var_res_proposition))
              (var_res_prop f ({|v|},EMPTY_BAG)
@@ -10852,21 +10852,21 @@ IS_SEPARATION_COMBINATOR f ==>
              (var_res_prop f (EMPTY_BAG,EMPTY_BAG) EMPTY_BAG))]))))``,
 
 SIMP_TAC std_ss [var_res_prog_call_by_value_arg_def,
-   VAR_RES_PROGRAM_IS_ABSTRACTION_def, fasl_prog_block_def] THEN
+   VAR_RES_PROGRAM_IS_ABSTRACTION_def, asl_prog_block_def] THEN
 REPEAT STRIP_TAC THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___forall THEN
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___forall THEN
 GEN_TAC THEN SIMP_TAC std_ss [] THEN
-CONSEQ_REWRITE_TAC ([FASL_PROGRAM_IS_ABSTRACTION___seq], [], []) THEN
-REWRITE_TAC [FASL_PROGRAM_IS_ABSTRACTION___REFL] THEN
-ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
+CONSEQ_REWRITE_TAC ([ASL_PROGRAM_IS_ABSTRACTION___seq], [], []) THEN
+REWRITE_TAC [ASL_PROGRAM_IS_ABSTRACTION___REFL] THEN
+ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION_def,
    var_res_prog_cond_best_local_action_REWRITE,
    var_res_prog_dispose_var_def, var_res_prog_new_var_init_def,
-   FASL_PROGRAM_SEM___prim_command,
+   ASL_PROGRAM_SEM___prim_command,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
-   FASL_ATOMIC_ACTION_SEM_def, EVAL_fasl_prim_command_THM,
-   FASL_IS_LOCAL_ACTION___var_res_cond_best_local_action,
-   FASL_IS_LOCAL_ACTION___var_res_dispose_var_action,
-   FASL_IS_LOCAL_ACTION___var_res_new_var_init_action,
+   ASL_ATOMIC_ACTION_SEM_def, EVAL_asl_prim_command_THM,
+   ASL_IS_LOCAL_ACTION___var_res_cond_best_local_action,
+   ASL_IS_LOCAL_ACTION___var_res_dispose_var_action,
+   ASL_IS_LOCAL_ACTION___var_res_new_var_init_action,
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
 ASM_SIMP_TAC std_ss [var_res_dispose_var_action___best_local_action_THM] THEN
 MP_TAC (Q.SPECL [`f`, `arg`, `var_res_exp_const c`]
@@ -10877,20 +10877,20 @@ ASM_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res
 
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_call_by_value_arg___CONG = store_thm (
-"FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_call_by_value_arg___CONG",
+val ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_call_by_value_arg___CONG = store_thm (
+"ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_call_by_value_arg___CONG",
 ``!xenv penv c body body'.
-(!v. FASL_PROGRAM_IS_ABSTRACTION xenv penv (body v) (body' v)) ==>
-FASL_PROGRAM_IS_ABSTRACTION xenv penv
+(!v. ASL_PROGRAM_IS_ABSTRACTION xenv penv (body v) (body' v)) ==>
+ASL_PROGRAM_IS_ABSTRACTION xenv penv
        (var_res_prog_call_by_value_arg body c)
        (var_res_prog_call_by_value_arg body' c)``,
 
 REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [var_res_prog_call_by_value_arg_def] THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___forall THEN
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___forall THEN
 SIMP_TAC std_ss [] THEN
-CONSEQ_REWRITE_TAC ([FASL_PROGRAM_IS_ABSTRACTION___seq], [], []) THEN
-ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___REFL]);
+CONSEQ_REWRITE_TAC ([ASL_PROGRAM_IS_ABSTRACTION___seq], [], []) THEN
+ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION___REFL]);
 
 
 
@@ -10902,8 +10902,8 @@ val VAR_RES_PROGRAM_IS_ABSTRACTION___var_res_prog_local_var = store_thm (
 IS_SEPARATION_COMBINATOR f ==>
 (VAR_RES_PROGRAM_IS_ABSTRACTION f
        (var_res_prog_local_var body)
-       (fasl_prog_forall (\v.
-       (fasl_prog_block [
+       (asl_prog_forall (\v.
+       (asl_prog_block [
           (var_res_prog_cond_best_local_action
              ((var_res_prop f (EMPTY_BAG,EMPTY_BAG) EMPTY_BAG):(bool # ('c,'b,'a) var_res_proposition))
              (var_res_prop f ({|v|},EMPTY_BAG) EMPTY_BAG));
@@ -10914,26 +10914,26 @@ IS_SEPARATION_COMBINATOR f ==>
 
 SIMP_TAC std_ss [var_res_prog_local_var_def, VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
 REPEAT STRIP_TAC THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___ndet_1 THEN
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___ndet_1 THEN
 SIMP_TAC std_ss [IN_ABS, GSYM LEFT_FORALL_IMP_THM] THEN
 GEN_TAC THEN
-MATCH_MP_TAC (SIMP_RULE std_ss [AND_IMP_INTRO] FASL_PROGRAM_IS_ABSTRACTION___TRANSITIVE) THEN
+MATCH_MP_TAC (SIMP_RULE std_ss [AND_IMP_INTRO] ASL_PROGRAM_IS_ABSTRACTION___TRANSITIVE) THEN
 MP_TAC (Q.SPECL [`f`, `c`, `body`]
    VAR_RES_PROGRAM_IS_ABSTRACTION___var_res_prog_call_by_value_arg) THEN
 ASM_REWRITE_TAC[VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
 Q.MATCH_ABBREV_TAC `
-   FASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 prog2 ==>
-   ?p2. FASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 p2 /\
-        FASL_PROGRAM_IS_ABSTRACTION xenv penv p2 prog3` THEN
+   ASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 prog2 ==>
+   ?p2. ASL_PROGRAM_IS_ABSTRACTION xenv penv prog1 p2 /\
+        ASL_PROGRAM_IS_ABSTRACTION xenv penv p2 prog3` THEN
 REPEAT STRIP_TAC THEN
 Q.EXISTS_TAC `prog2` THEN
 ASM_REWRITE_TAC[] THEN
 Q.UNABBREV_TAC `prog2` THEN
 Q.UNABBREV_TAC `prog3` THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___forall THEN
-GEN_TAC THEN SIMP_TAC std_ss [fasl_prog_block_def] THEN
-CONSEQ_REWRITE_TAC ([FASL_PROGRAM_IS_ABSTRACTION___seq], [], []) THEN
-REWRITE_TAC [FASL_PROGRAM_IS_ABSTRACTION___REFL] THEN
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___forall THEN
+GEN_TAC THEN SIMP_TAC std_ss [asl_prog_block_def] THEN
+CONSEQ_REWRITE_TAC ([ASL_PROGRAM_IS_ABSTRACTION___seq], [], []) THEN
+REWRITE_TAC [ASL_PROGRAM_IS_ABSTRACTION___REFL] THEN
 ASM_SIMP_TAC std_ss [var_res_prog_cond_best_local_action_def,
    var_res_prop___REWRITE, var_res_prop___COND___REWRITE,
    NOT_IN_EMPTY_BAG, FINITE_BAG_THM, BAG_UNION_EMPTY,
@@ -10947,14 +10947,14 @@ SIMP_TAC std_ss [var_res_prog_best_local_action_def] THEN
    Q.UNABBREV_TAC `xenv` THEN
    ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR]
 ) THEN
-ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action] THEN
+ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action] THEN
 GEN_TAC THEN
-Q.HO_MATCH_ABBREV_TAC `FASL_PROGRAM_HOARE_TRIPLE xenv penv (P x)
-   (fasl_prog_quant_best_local_action (\x. P x) (\x. Q' x)) (Q x)` THEN
-MATCH_MP_TAC FASL_INFERENCE_STRENGTHEN THEN
+Q.HO_MATCH_ABBREV_TAC `ASL_PROGRAM_HOARE_TRIPLE xenv penv (P x)
+   (asl_prog_quant_best_local_action (\x. P x) (\x. Q' x)) (Q x)` THEN
+MATCH_MP_TAC ASL_INFERENCE_STRENGTHEN THEN
 Q.EXISTS_TAC `P x` THEN
 Q.EXISTS_TAC `Q' x` THEN
-ASM_SIMP_TAC std_ss [FASL_INFERENCE_prog_quant_best_local_action, SUBSET_REFL] THEN
+ASM_SIMP_TAC std_ss [ASL_INFERENCE_prog_quant_best_local_action, SUBSET_REFL] THEN
 Q.UNABBREV_TAC `Q'` THEN
 Q.UNABBREV_TAC `Q` THEN
 ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_ABS,
@@ -10972,22 +10972,22 @@ SIMP_TAC std_ss [var_res_prop_stack_true_REWRITE,
 
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_local_var___CONG = store_thm (
-"FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_local_var___CONG",
+val ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_local_var___CONG = store_thm (
+"ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_local_var___CONG",
 ``!xenv penv body body'.
-(!v. FASL_PROGRAM_IS_ABSTRACTION xenv penv (body v) (body' v)) ==>
-FASL_PROGRAM_IS_ABSTRACTION xenv penv
+(!v. ASL_PROGRAM_IS_ABSTRACTION xenv penv (body v) (body' v)) ==>
+ASL_PROGRAM_IS_ABSTRACTION xenv penv
        (var_res_prog_local_var body)
        (var_res_prog_local_var body')``,
 
 REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [var_res_prog_local_var_def] THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___ndet THEN
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___ndet THEN
 SIMP_TAC std_ss [IN_ABS, GSYM LEFT_EXISTS_AND_THM,
    GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THEN
 Q.EXISTS_TAC `c` THEN
-ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_call_by_value_arg___CONG]);
+ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_call_by_value_arg___CONG]);
 
 
 
@@ -10997,41 +10997,41 @@ val VAR_RES_COND_INFERENCE___prog_seq_skip_INTRO = store_thm (
 "VAR_RES_COND_INFERENCE___prog_seq_skip_INTRO",
 ``!f P prog Q.
   VAR_RES_COND_HOARE_TRIPLE f P prog Q =
-  VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_seq prog fasl_prog_skip) Q``,
+  VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_seq prog asl_prog_skip) Q``,
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-   VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   HOARE_TRIPLE_def, FASL_PROGRAM_SEM___prog_seq,
-   FASL_PROGRAM_SEM___skip, fasla_seq_skip]);
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   HOARE_TRIPLE_def, ASL_PROGRAM_SEM___prog_seq,
+   ASL_PROGRAM_SEM___skip, asla_seq_skip]);
 
 
 val VAR_RES_COND_INFERENCE___prog_block_INTRO = store_thm (
 "VAR_RES_COND_INFERENCE___prog_block_INTRO",
 ``!f P prog Q.
   VAR_RES_COND_HOARE_TRIPLE f P prog Q =
-  VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block [prog]) Q``,
-SIMP_TAC std_ss [fasl_prog_block_def]);
+  VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block [prog]) Q``,
+SIMP_TAC std_ss [asl_prog_block_def]);
 
 
 
 val VAR_RES_COND_INFERENCE___prog_seq_skip_ELIM = store_thm (
 "VAR_RES_COND_INFERENCE___prog_seq_skip_ELIM",
 ``!f P prog Q.
-  VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_seq fasl_prog_skip prog) Q =
+  VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_seq asl_prog_skip prog) Q =
   VAR_RES_COND_HOARE_TRIPLE f P prog Q``,
 
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-   VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   HOARE_TRIPLE_def, FASL_PROGRAM_SEM___prog_seq,
-   FASL_PROGRAM_SEM___skip, fasla_seq_skip]);
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   HOARE_TRIPLE_def, ASL_PROGRAM_SEM___prog_seq,
+   ASL_PROGRAM_SEM___skip, asla_seq_skip]);
 
 
 val VAR_RES_COND_INFERENCE___prog_block_skip_ELIM = store_thm (
 "VAR_RES_COND_INFERENCE___prog_block_skip_ELIM",
 ``!f P progL Q.
-  VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (fasl_prog_skip::progL)) Q =
-  VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block progL) Q``,
+  VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (asl_prog_skip::progL)) Q =
+  VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block progL) Q``,
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block,
    VAR_RES_COND_INFERENCE___prog_seq_skip_ELIM]);
 
@@ -11040,19 +11040,19 @@ SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block,
 val VAR_RES_COND_INFERENCE___prog_seq_diverge = store_thm (
 "VAR_RES_COND_INFERENCE___prog_seq_diverge",
 ``!f P prog Q.
-  VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_seq fasl_prog_diverge prog) Q``,
+  VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_seq asl_prog_diverge prog) Q``,
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-   VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   HOARE_TRIPLE_def, FASL_PROGRAM_SEM___prog_seq,
-   fasla_seq_diverge, FASL_PROGRAM_SEM___diverge] THEN
-SIMP_TAC std_ss [fasla_diverge_def, fasl_order_THM2, EMPTY_SUBSET]);
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   HOARE_TRIPLE_def, ASL_PROGRAM_SEM___prog_seq,
+   asla_seq_diverge, ASL_PROGRAM_SEM___diverge] THEN
+SIMP_TAC std_ss [asla_diverge_def, fasl_order_THM2, EMPTY_SUBSET]);
 
 
 val VAR_RES_COND_INFERENCE___prog_block_diverge = store_thm (
 "VAR_RES_COND_INFERENCE___prog_block_diverge",
 ``!f P progL Q.
-  VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (fasl_prog_diverge::progL)) Q``,
+  VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (asl_prog_diverge::progL)) Q``,
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block,
    VAR_RES_COND_INFERENCE___prog_seq_diverge]);
 
@@ -11076,11 +11076,11 @@ Tactical.REVERSE (Cases_on `
    (!x'. var_res_prop___COND f (wpb,rpb) (sfb' x'))`) THEN1 (
    ASM_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, var_res_prop___REWRITE,
       VAR_RES_PROGRAM_IS_ABSTRACTION_def, COND_PROP___STRONG_EXISTS_def] THEN
-   PROVE_TAC[FASL_PROGRAM_IS_ABSTRACTION___REFL]
+   PROVE_TAC[ASL_PROGRAM_IS_ABSTRACTION___REFL]
 ) THEN
 Cases_on `IS_SEPARATION_COMBINATOR f` THEN ASM_SIMP_TAC std_ss [] THEN
-Q.EXISTS_TAC `(fasl_prog_forall (\v.
-             fasl_prog_block
+Q.EXISTS_TAC `(asl_prog_forall (\v.
+             asl_prog_block
                [var_res_prog_cond_best_local_action
                   (var_res_prop f ({||},{||}) {||})
                   (var_res_prop f ({|v|},{||}) {||}); body v;
@@ -11153,10 +11153,10 @@ CONJ_TAC THEN1 (
 STRIP_TAC THEN
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-  VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-  var_res_prop___REWRITE, FASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def,
-  IN_ABS, fasl_order_THM, fasl_prog_block_def] THEN
-SIMP_TAC std_ss [fasla_skip_def, SUBSET_DEF, IN_ABS, IN_SING,
+  VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+  var_res_prop___REWRITE, ASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def,
+  IN_ABS, fasl_order_THM, asl_prog_block_def] THEN
+SIMP_TAC std_ss [asla_skip_def, SUBSET_DEF, IN_ABS, IN_SING,
   VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___REFL]);
 
 
@@ -11183,13 +11183,13 @@ Tactical.REVERSE (Cases_on `
    (!x'. (var_res_prop___COND f (wpb,rpb) (sfb' x')))`) THEN1 (
    ASM_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, var_res_prop___REWRITE,
       VAR_RES_PROGRAM_IS_ABSTRACTION_def, COND_PROP___STRONG_EXISTS_def] THEN
-   PROVE_TAC[FASL_PROGRAM_IS_ABSTRACTION___REFL]
+   PROVE_TAC[ASL_PROGRAM_IS_ABSTRACTION___REFL]
 ) THEN
 Cases_on `IS_SEPARATION_COMBINATOR f` THEN FULL_SIMP_TAC std_ss [var_res_prop___COND___REWRITE] THEN
 
-Q.EXISTS_TAC `fasl_prog_forall
+Q.EXISTS_TAC `asl_prog_forall
           (\v.
-             fasl_prog_block
+             asl_prog_block
                [var_res_prog_cond_best_local_action
                   (var_res_prop f ({||},{||}) {||})
                   (var_res_prop f ({|v|},{||})
@@ -11257,10 +11257,10 @@ CONJ_TAC THEN1 (
    METIS_TAC[]
 ) THEN
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-  VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-  var_res_prop___REWRITE, FASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def,
-  IN_ABS, fasl_order_THM, fasl_prog_block_def] THEN
-SIMP_TAC std_ss [fasla_skip_def, SUBSET_DEF, IN_ABS, IN_SING,
+  VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+  var_res_prop___REWRITE, ASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def,
+  IN_ABS, fasl_order_THM, asl_prog_block_def] THEN
+SIMP_TAC std_ss [asla_skip_def, SUBSET_DEF, IN_ABS, IN_SING,
   VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___REFL]);
 
 
@@ -11279,13 +11279,13 @@ val var_res_assign_action_def = Define `
          SOME {(var_res_ext_state_var_update (v, (THE ev_opt))) s} else
       NONE`
 
-val FASL_IS_LOCAL_ACTION___var_res_assign_action = store_thm (
-"FASL_IS_LOCAL_ACTION___var_res_assign_action",
+val ASL_IS_LOCAL_ACTION___var_res_assign_action = store_thm (
+"ASL_IS_LOCAL_ACTION___var_res_assign_action",
 ``!f e v.
 IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e) ==>
-FASL_IS_LOCAL_ACTION (VAR_RES_COMBINATOR f) (var_res_assign_action v e)``,
+ASL_IS_LOCAL_ACTION (VAR_RES_COMBINATOR f) (var_res_assign_action v e)``,
 
-SIMP_TAC std_ss [FASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
+SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
    var_res_assign_action_def, LET_THM, COND_NONE_SOME_REWRITES,
    IN_SING, VAR_RES_COMBINATOR_REWRITE,
    var_res_ext_state_var_update_def,
@@ -11333,7 +11333,7 @@ CONJ_TAC THENL [
 
 
 val var_res_prog_assign_def = Define `var_res_prog_assign v e =
-  fasl_prog_prim_command (fasl_pc_shallow_command (\f. (var_res_assign_action v e)))`;
+  asl_prog_prim_command (asl_pc_shallow_command (\f. (var_res_assign_action v e)))`;
 
 
 val VAR_RES_PROGRAM_IS_ABSTRACTION___var_res_prog_assign = store_thm (
@@ -11351,14 +11351,14 @@ val VAR_RES_PROGRAM_IS_ABSTRACTION___var_res_prog_assign = store_thm (
         {|var_res_prop_equal f (var_res_exp_var v) (var_res_exp_var_update (v, c) e)|})))``,
 
 
-SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
+SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION_def,
    VAR_RES_PROGRAM_IS_ABSTRACTION_def,
-   FASL_PROGRAM_SEM___prim_command,
+   ASL_PROGRAM_SEM___prim_command,
    var_res_prog_assign_def,
    var_res_prog_cond_best_local_action_REWRITE,
-   FASL_ATOMIC_ACTION_SEM_def, EVAL_fasl_prim_command_THM,
-   FASL_IS_LOCAL_ACTION___var_res_assign_action,
-   FASL_IS_LOCAL_ACTION___var_res_cond_best_local_action,
+   ASL_ATOMIC_ACTION_SEM_def, EVAL_asl_prim_command_THM,
+   ASL_IS_LOCAL_ACTION___var_res_assign_action,
+   ASL_IS_LOCAL_ACTION___var_res_cond_best_local_action,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    fasl_action_order_POINTWISE_DEF] THEN
 REPEAT STRIP_TAC THEN
@@ -11517,14 +11517,14 @@ store_thm ("VAR_RES_COND_INFERENCE___var_res_prog_assign",
       (BAG_INSERT (var_res_prop_equal f (var_res_exp_var v)
                                         (var_res_exp_varlist_update [(v, c)] e))
       (BAG_IMAGE (var_res_prop_varlist_update [(v, c)]) sfb)))
-    (fasl_prog_block progL) Q) ==>
+    (asl_prog_block progL) Q) ==>
 
 
 (VAR_RES_COND_HOARE_TRIPLE f
    (var_res_prop f (wpb,rpb)
       (BAG_INSERT (var_res_prop_equal f (var_res_exp_var v) (var_res_exp_const c))
        sfb))
-   (fasl_prog_block ((var_res_prog_assign v e)::progL)) Q))``,
+   (asl_prog_block ((var_res_prog_assign v e)::progL)) Q))``,
 
 REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
@@ -11536,7 +11536,7 @@ Tactical.REVERSE (Cases_on `(var_res_prop___COND f (wpb,rpb)
                  (var_res_exp_const c)) sfb))`) THEN1 (
    ASM_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
      var_res_prop___REWRITE, VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
-   PROVE_TAC[FASL_PROGRAM_IS_ABSTRACTION___REFL]
+   PROVE_TAC[ASL_PROGRAM_IS_ABSTRACTION___REFL]
 ) THEN
 Cases_on `IS_SEPARATION_COMBINATOR f` THEN FULL_SIMP_TAC std_ss [] THEN
 IMP_RES_TAC VAR_RES_PROGRAM_IS_ABSTRACTION___var_res_prog_assign THEN
@@ -11587,28 +11587,28 @@ ASM_SIMP_TAC std_ss [
 
 val var_res_prog_eval_expressions_def = Define `
 var_res_prog_eval_expressions prog (expL:('a, 'b,'c) var_res_expression list) =
-fasl_prog_choose_constants prog (MAP (\e s. e (FST s)) expL)`
+asl_prog_choose_constants prog (MAP (\e s. e (FST s)) expL)`
 
 
 val var_res_prog_procedure_call_def = Define `
 var_res_prog_procedure_call name (ref, expL:('a, 'b,'c) var_res_expression list) =
-fasl_prog_ext_procedure_call name (ref, (MAP (\e s. e (FST s)) expL))`
+asl_prog_ext_procedure_call name (ref, (MAP (\e s. e (FST s)) expL))`
 
 
 val var_res_prog_procedure_call_THM =
 store_thm ("var_res_prog_procedure_call_THM",
 ``var_res_prog_procedure_call name (ref, expL) =
 var_res_prog_eval_expressions
-  (\constL. fasl_prog_procedure_call name (ref,constL)) expL``,
+  (\constL. asl_prog_procedure_call name (ref,constL)) expL``,
 
 SIMP_TAC std_ss [var_res_prog_procedure_call_def,
-   var_res_prog_eval_expressions_def, fasl_prog_ext_procedure_call_def]);
+   var_res_prog_eval_expressions_def, asl_prog_ext_procedure_call_def]);
 
 
 val var_res_prog_parallel_procedure_call_def = Define `
 var_res_prog_parallel_procedure_call name1 (ref1, expL1:('a, 'b,'c) var_res_expression list)
 name2 (ref2, expL2:('a, 'b,'c) var_res_expression list)=
-fasl_prog_ext_parallel_procedure_call
+asl_prog_ext_parallel_procedure_call
 name1 (ref1, (MAP (\e s. e (FST s)) expL1))
 name2 (ref2, (MAP (\e s. e (FST s)) expL2))`
 
@@ -11620,42 +11620,42 @@ name2 (ref2, expL2:('a, 'b,'c) var_res_expression list) =
 
 var_res_prog_eval_expressions
   (\constL1. var_res_prog_eval_expressions (\constL2.
-      fasl_prog_parallel
-          (fasl_prog_procedure_call name1 (ref1,constL1))
-          (fasl_prog_procedure_call name2 (ref2,constL2))) expL2) expL1``,
+      asl_prog_parallel
+          (asl_prog_procedure_call name1 (ref1,constL1))
+          (asl_prog_procedure_call name2 (ref2,constL2))) expL2) expL1``,
 
 SIMP_TAC std_ss [var_res_prog_parallel_procedure_call_def,
-   var_res_prog_eval_expressions_def, fasl_prog_ext_parallel_procedure_call_def]);
+   var_res_prog_eval_expressions_def, asl_prog_ext_parallel_procedure_call_def]);
 
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_eval_expressions = store_thm (
-"FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_eval_expressions",
+val ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_eval_expressions = store_thm (
+"ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_eval_expressions",
 ``!xenv penv expL prog prog'.
-(!constL. FASL_PROGRAM_IS_ABSTRACTION xenv penv (prog constL) (prog' constL)) ==>
-FASL_PROGRAM_IS_ABSTRACTION xenv penv
+(!constL. ASL_PROGRAM_IS_ABSTRACTION xenv penv (prog constL) (prog' constL)) ==>
+ASL_PROGRAM_IS_ABSTRACTION xenv penv
        (var_res_prog_eval_expressions prog  expL)
        (var_res_prog_eval_expressions prog' expL)``,
 
 REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [var_res_prog_eval_expressions_def,
-   fasl_prog_choose_constants_def] THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___ndet THEN
+   asl_prog_choose_constants_def] THEN
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___ndet THEN
 SIMP_TAC list_ss [IN_ABS, GSYM LEFT_EXISTS_AND_THM,
    GSYM LEFT_FORALL_IMP_THM, IN_IMAGE] THEN
 REPEAT STRIP_TAC THEN
 Q.EXISTS_TAC `constL` THEN
-CONSEQ_REWRITE_TAC ([FASL_PROGRAM_IS_ABSTRACTION___seq], [], []) THEN
-ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___REFL]);
+CONSEQ_REWRITE_TAC ([ASL_PROGRAM_IS_ABSTRACTION___seq], [], []) THEN
+ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION___REFL]);
 
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_procedure_call = store_thm (
-"FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_procedure_call",
+val ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_procedure_call = store_thm (
+"ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_procedure_call",
 ``!xenv penv name arg prog'.
-(!arg. FASL_PROGRAM_IS_ABSTRACTION xenv penv (
-   fasl_prog_procedure_call name arg) (prog' arg)) ==>
-FASL_PROGRAM_IS_ABSTRACTION xenv penv
+(!arg. ASL_PROGRAM_IS_ABSTRACTION xenv penv (
+   asl_prog_procedure_call name arg) (prog' arg)) ==>
+ASL_PROGRAM_IS_ABSTRACTION xenv penv
        (var_res_prog_procedure_call name arg)
        (var_res_prog_eval_expressions
         (\constL. prog' (FST arg, constL)) (SND arg))``,
@@ -11663,7 +11663,7 @@ FASL_PROGRAM_IS_ABSTRACTION xenv penv
 REPEAT STRIP_TAC THEN
 `?ref expL. arg = (ref, expL)` by (Cases_on `arg` THEN SIMP_TAC std_ss []) THEN
 ASM_SIMP_TAC std_ss [var_res_prog_procedure_call_THM] THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_eval_expressions THEN
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_eval_expressions THEN
 ASM_SIMP_TAC std_ss []);
 
 
@@ -11693,17 +11693,17 @@ ASM_SIMP_TAC (std_ss++CONJ_ss) [VAR_RES_STACK_COMBINE___MERGE_FUNC_def,
 
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_parallel_procedure_call = store_thm (
-"FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_parallel_procedure_call",
+val ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_parallel_procedure_call = store_thm (
+"ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_parallel_procedure_call",
 ``!xenv penv arg1 arg2 name1 name2.
 (IS_VAR_RES_COMBINATOR (FST xenv)) ==>  !qP1 qP2 qQ1 qQ2.
-(!arg. FASL_PROGRAM_IS_ABSTRACTION xenv penv (
-   fasl_prog_procedure_call name1 arg)
+(!arg. ASL_PROGRAM_IS_ABSTRACTION xenv penv (
+   asl_prog_procedure_call name1 arg)
    (var_res_prog_quant_best_local_action (qP1 arg) (qQ1 arg))) /\
-(!arg. FASL_PROGRAM_IS_ABSTRACTION xenv penv (
-   fasl_prog_procedure_call name2 arg)
+(!arg. ASL_PROGRAM_IS_ABSTRACTION xenv penv (
+   asl_prog_procedure_call name2 arg)
    (var_res_prog_quant_best_local_action (qP2 arg) (qQ2 arg))) ==>
-FASL_PROGRAM_IS_ABSTRACTION xenv penv
+ASL_PROGRAM_IS_ABSTRACTION xenv penv
        (var_res_prog_parallel_procedure_call name1 arg1 name2 arg2)
        (var_res_prog_eval_expressions (\constL1.
         var_res_prog_eval_expressions (\constL2.
@@ -11724,49 +11724,49 @@ REPEAT STRIP_TAC THEN
 `?ref1 expL1. arg1 = (ref1, expL1)` by (Cases_on `arg1` THEN SIMP_TAC std_ss []) THEN
 `?ref2 expL2. arg2 = (ref2, expL2)` by (Cases_on `arg2` THEN SIMP_TAC std_ss []) THEN
 ASM_SIMP_TAC std_ss [var_res_prog_parallel_procedure_call_THM] THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_eval_expressions THEN
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_eval_expressions THEN
 ASM_SIMP_TAC std_ss [] THEN GEN_TAC THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_eval_expressions THEN
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_eval_expressions THEN
 ASM_SIMP_TAC std_ss [] THEN GEN_TAC THEN
 
-Q.PAT_ASSUM `!arg. FASL_PROGRAM_IS_ABSTRACTION xenv penv
-                   (fasl_prog_procedure_call name1 arg) prog'`
+Q.PAT_ASSUM `!arg. ASL_PROGRAM_IS_ABSTRACTION xenv penv
+                   (asl_prog_procedure_call name1 arg) prog'`
              (MP_TAC o Q.SPEC `(ref1, constL)`) THEN
-Q.PAT_ASSUM `!arg. FASL_PROGRAM_IS_ABSTRACTION xenv penv
-                   (fasl_prog_procedure_call name2 arg) prog'`
+Q.PAT_ASSUM `!arg. ASL_PROGRAM_IS_ABSTRACTION xenv penv
+                   (asl_prog_procedure_call name2 arg) prog'`
              (MP_TAC o Q.SPEC `(ref2, constL')`) THEN
 
 SIMP_TAC std_ss [var_res_prog_quant_best_local_action_def] THEN
 Q.MATCH_ABBREV_TAC `
-FASL_PROGRAM_IS_ABSTRACTION xenv penv p2
-   (fasl_prog_quant_best_local_action qP2' qQ2') ==>
-FASL_PROGRAM_IS_ABSTRACTION xenv penv p1
-   (fasl_prog_quant_best_local_action qP1' qQ1') ==>
-FASL_PROGRAM_IS_ABSTRACTION xenv penv
-   (fasl_prog_parallel p1 p2) prog'` THEN
+ASL_PROGRAM_IS_ABSTRACTION xenv penv p2
+   (asl_prog_quant_best_local_action qP2' qQ2') ==>
+ASL_PROGRAM_IS_ABSTRACTION xenv penv p1
+   (asl_prog_quant_best_local_action qP1' qQ1') ==>
+ASL_PROGRAM_IS_ABSTRACTION xenv penv
+   (asl_prog_parallel p1 p2) prog'` THEN
 
 
 REPEAT STRIP_TAC THEN
 Tactical.REVERSE (`
-   FASL_PROGRAM_IS_ABSTRACTION xenv penv
-   (fasl_prog_quant_best_local_action
+   ASL_PROGRAM_IS_ABSTRACTION xenv penv
+   (asl_prog_quant_best_local_action
               (\ (a1,a2). asl_star (FST xenv) (qP1' a1) (qP2' a2))
               (\ (a1,a2). asl_star (FST xenv) (qQ1' a1) (qQ2' a2))) prog'`
    by ALL_TAC) THEN1 (
 
    POP_ASSUM MP_TAC THEN
-   MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___TRANSITIVE THEN
+   MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___TRANSITIVE THEN
    ASM_SIMP_TAC std_ss [] THEN
-   MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___parallel THEN
+   MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___parallel THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
 
 
 UNABBREV_ALL_TAC THEN
-REPEAT (Q.PAT_ASSUM `FASL_PROGRAM_IS_ABSTRACTION x y z zz` (K ALL_TAC)) THEN
+REPEAT (Q.PAT_ASSUM `ASL_PROGRAM_IS_ABSTRACTION x y z zz` (K ALL_TAC)) THEN
 
-ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
-   FASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
+ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
+   ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
    IN_ABS] THEN
 GEN_TAC THEN
 `?a1 a2 s. x = ((a1,a2),s)` by ALL_TAC THEN1 (
@@ -11780,10 +11780,10 @@ GEN_TAC THEN
 ) THEN
 FULL_SIMP_TAC std_ss [
    fasl_order_THM2,
-   fasl_prog_quant_best_local_action_def,
-   FASL_PROGRAM_SEM___prim_command,
-   FASL_ATOMIC_ACTION_SEM_def,
-   EVAL_fasl_prim_command_THM,
+   asl_prog_quant_best_local_action_def,
+   ASL_PROGRAM_SEM___prim_command,
+   ASL_ATOMIC_ACTION_SEM_def,
+   EVAL_asl_prim_command_THM,
    quant_best_local_action_THM] THEN
 
 SIMP_TAC std_ss [SUBSET_DEF, SOME___quant_best_local_action,
@@ -11833,13 +11833,13 @@ val VAR_RES_COND_INFERENCE___eval_expressions___NIL =
 store_thm ("VAR_RES_COND_INFERENCE___eval_expressions___NIL",
 ``!f P prog progL Q.
 (VAR_RES_COND_HOARE_TRIPLE f P
-    (fasl_prog_block ((var_res_prog_eval_expressions prog [])::progL)) Q =
- VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block ((prog [])::progL)) Q)``,
+    (asl_prog_block ((var_res_prog_eval_expressions prog [])::progL)) Q =
+ VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block ((prog [])::progL)) Q)``,
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 SIMP_TAC list_ss [var_res_prog_eval_expressions_def,
    VAR_RES_COND_HOARE_TRIPLE_def, VAR_RES_HOARE_TRIPLE_def,
-   FASL_INFERENCE___choose_constants___NIL,
+   ASL_INFERENCE___choose_constants___NIL,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR]);
 
 
@@ -11850,9 +11850,9 @@ store_thm ("VAR_RES_COND_INFERENCE___eval_expressions___ONE",
 BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb  ==>
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
-   (fasl_prog_block ((var_res_prog_eval_expressions prog (e::L))::progL)) Q =
+   (asl_prog_block ((var_res_prog_eval_expressions prog (e::L))::progL)) Q =
  VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
-   (fasl_prog_block ((var_res_prog_eval_expressions (\L. prog (c::L)) L)::progL)) Q)``,
+   (asl_prog_block ((var_res_prog_eval_expressions (\L. prog (c::L)) L)::progL)) Q)``,
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, VAR_RES_HOARE_TRIPLE_def,
@@ -11861,7 +11861,7 @@ SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
 CONSEQ_CONV_TAC (K FORALL_EQ___CONSEQ_CONV) THEN
 GEN_TAC THEN
-HO_MATCH_MP_TAC FASL_INFERENCE___choose_constants___ONE THEN
+HO_MATCH_MP_TAC ASL_INFERENCE___choose_constants___ONE THEN
 ASM_SIMP_TAC std_ss [IN_ABS, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR] THEN
 
 `?sfb'. sfb =  BAG_INSERT (var_res_prop_equal f e (var_res_exp_const c)) sfb'` by
@@ -11897,9 +11897,9 @@ store_thm ("VAR_RES_COND_INFERENCE___eval_expressions___LIST",
 EVERY (\ (e,c). BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb) (ZIP (eL,cL))  ==>
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
-   (fasl_prog_block ((var_res_prog_eval_expressions prog (eL++L))::progL)) Q =
+   (asl_prog_block ((var_res_prog_eval_expressions prog (eL++L))::progL)) Q =
  VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
-   (fasl_prog_block ((var_res_prog_eval_expressions (\L. prog (cL++L)) L)::progL)) Q)``,
+   (asl_prog_block ((var_res_prog_eval_expressions (\L. prog (cL++L)) L)::progL)) Q)``,
 
 
 Induct_on `eL` THEN1 (
@@ -11929,9 +11929,9 @@ store_thm ("VAR_RES_COND_INFERENCE___eval_expressions",
 EVERY (\ (e,c). BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb) (ZIP (eL,cL))  ==>
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
-   (fasl_prog_block ((var_res_prog_eval_expressions prog eL)::progL)) Q =
+   (asl_prog_block ((var_res_prog_eval_expressions prog eL)::progL)) Q =
  VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
-   (fasl_prog_block ((prog cL)::progL)) Q)``,
+   (asl_prog_block ((prog cL)::progL)) Q)``,
 
 
 REPEAT STRIP_TAC THEN
@@ -11946,22 +11946,22 @@ ASM_SIMP_TAC list_ss [VAR_RES_COND_INFERENCE___eval_expressions___NIL]);
 
 val var_res_prog_aquire_lock_input_def = Define `
 var_res_prog_aquire_lock_input f c wp P =
-fasl_prog_aquire_lock c (var_res_lock_invariant f wp P)`
+asl_prog_aquire_lock c (var_res_lock_invariant f wp P)`
 
 val var_res_prog_release_lock_input_def = Define `
 var_res_prog_release_lock_input f wp P =
-fasl_prog_release_lock (var_res_lock_invariant f wp P)`;
+asl_prog_release_lock (var_res_lock_invariant f wp P)`;
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___fasl_prog_cond_critical_section___lock_decls_env = store_thm (
-   "FASL_PROGRAM_IS_ABSTRACTION___fasl_prog_cond_critical_section___lock_decls_env",
+val ASL_PROGRAM_IS_ABSTRACTION___asl_prog_cond_critical_section___lock_decls_env = store_thm (
+   "ASL_PROGRAM_IS_ABSTRACTION___asl_prog_cond_critical_section___lock_decls_env",
 ``!f f' lock_decls penv l c prog wpL P.
  (IS_VAR_RES_COMBINATOR f') /\ (GET_VAR_RES_COMBINATOR f' = f) /\
  (ALL_DISTINCT (MAP FST lock_decls) /\ MEM (l,wpL,P) lock_decls) ==>
 
- FASL_PROGRAM_IS_ABSTRACTION (f',LIST_TO_FUN (VAR_RES_LOCK_ENV_MAP f lock_decls)) penv
-      (fasl_prog_cond_critical_section l c prog)
-      (fasl_prog_block
+ ASL_PROGRAM_IS_ABSTRACTION (f',LIST_TO_FUN (VAR_RES_LOCK_ENV_MAP f lock_decls)) penv
+      (asl_prog_cond_critical_section l c prog)
+      (asl_prog_block
          [var_res_prog_aquire_lock_input f c (LIST_TO_SET wpL) P;
           prog;
           var_res_prog_release_lock_input f (LIST_TO_SET wpL) P])``,
@@ -11971,7 +11971,7 @@ SIMP_TAC (std_ss++CONJ_ss) [IS_VAR_RES_COMBINATOR_def, GET_VAR_RES_COMBINATOR_TH
 REPEAT STRIP_TAC THEN
 REWRITE_TAC [var_res_prog_release_lock_input_def,
              var_res_prog_aquire_lock_input_def] THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___fasl_prog_cond_critical_section THEN
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___asl_prog_cond_critical_section THEN
 ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    VAR_RES_LOCK_ENV_MAP_def] THEN
 MATCH_MP_TAC EQ_SYM THEN
@@ -11986,7 +11986,7 @@ PROVE_TAC[]);
 
 val var_res_prog_aquire_lock_internal_def =
 Define `var_res_prog_aquire_lock_internal f c wp P =
-  if (~FST P) then fasl_prog_diverge else
+  if (~FST P) then asl_prog_diverge else
     var_res_prog_aquire_lock_input f c wp (SND P)`
 
 val var_res_prog_aquire_lock_def =
@@ -11997,7 +11997,7 @@ Define `var_res_prog_aquire_lock f c wpb sfb =
 
 val var_res_prog_release_lock_internal_def =
 Define `var_res_prog_release_lock_internal f wp P =
-  if (~FST P) then fasl_prog_diverge else
+  if (~FST P) then asl_prog_diverge else
     var_res_prog_release_lock_input f wp (SND P)`;
 
 val var_res_prog_release_lock_def =
@@ -12108,16 +12108,16 @@ SIMP_TAC std_ss [var_res_prog_aquire_lock_input_def,
    var_res_prog_release_lock_input_def]);
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___fasl_prog_cond_critical_section___lock_decls_env___INTERNAL = store_thm (
-   "FASL_PROGRAM_IS_ABSTRACTION___fasl_prog_cond_critical_section___lock_decls_env___INTERNAL",
+val ASL_PROGRAM_IS_ABSTRACTION___asl_prog_cond_critical_section___lock_decls_env___INTERNAL = store_thm (
+   "ASL_PROGRAM_IS_ABSTRACTION___asl_prog_cond_critical_section___lock_decls_env___INTERNAL",
 
 ``!f f' lock_decls penv l c prog wpL P.
  (IS_VAR_RES_COMBINATOR f') /\ (GET_VAR_RES_COMBINATOR f' = f) ==>
  (ALL_DISTINCT (MAP FST lock_decls) /\ MEM (l,wpL,P) lock_decls) ==>
 
- FASL_PROGRAM_IS_ABSTRACTION (f',LIST_TO_FUN (VAR_RES_LOCK_ENV_MAP f lock_decls)) penv
-      (fasl_prog_cond_critical_section l c prog)
-      (fasl_prog_block
+ ASL_PROGRAM_IS_ABSTRACTION (f',LIST_TO_FUN (VAR_RES_LOCK_ENV_MAP f lock_decls)) penv
+      (asl_prog_cond_critical_section l c prog)
+      (asl_prog_block
          [var_res_prog_aquire_lock_internal f c (LIST_TO_SET wpL)
           (var_res_prop_input f ((LIST_TO_SET wpL),{}) P);
           prog;
@@ -12131,7 +12131,7 @@ REPEAT STRIP_TAC THEN
    ASM_REWRITE_TAC[]
 ) THEN
 METIS_TAC[var_res_prog_aquire_release_lock_input___REWRITE,
-   FASL_PROGRAM_IS_ABSTRACTION___fasl_prog_cond_critical_section___lock_decls_env]);
+   ASL_PROGRAM_IS_ABSTRACTION___asl_prog_cond_critical_section___lock_decls_env]);
 
 
 val var_res_prog_aquire_lock___INTRO =
@@ -12154,39 +12154,39 @@ store_thm ("var_res_prog_release_lock___INTRO",
 SIMP_TAC std_ss [var_res_prog_release_lock_def]);
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_aquire_lock =
-store_thm ("FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_aquire_lock",
+val ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_aquire_lock =
+store_thm ("ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_aquire_lock",
 ``!f lenv penv c wpb sfb.
 IS_SEPARATION_COMBINATOR f ==>
-FASL_PROGRAM_IS_ABSTRACTION (VAR_RES_COMBINATOR f, lenv) penv
+ASL_PROGRAM_IS_ABSTRACTION (VAR_RES_COMBINATOR f, lenv) penv
      (var_res_prog_aquire_lock f c wpb sfb)
-     (fasl_prog_seq
+     (asl_prog_seq
         (var_res_prog_cond_best_local_action
             (var_res_prop f (EMPTY_BAG, EMPTY_BAG) EMPTY_BAG)
             (var_res_prop f (wpb, EMPTY_BAG) sfb))
-        (fasl_prog_assume c))``,
+        (asl_prog_assume c))``,
 
 SIMP_TAC std_ss [
    var_res_prog_cond_best_local_action_REWRITE,
    var_res_prog_aquire_lock_def,
-   fasl_prog_aquire_lock_def,
-   GSYM fasl_prog_assume_def,
+   asl_prog_aquire_lock_def,
+   GSYM asl_prog_assume_def,
    var_res_prog_aquire_lock_internal_def,
    var_res_prog_aquire_lock_input_def,
    var_res_prop___REWRITE] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `var_res_prop___COND f (wpb,{||}) sfb` THEN (
-   ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___diverge]
+   ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION___diverge]
 ) THEN
-MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___seq THEN
-ASM_REWRITE_TAC [FASL_PROGRAM_IS_ABSTRACTION___REFL] THEN
-ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION_def,
-   FASL_PROGRAM_SEM___prim_command,
-   FASL_ATOMIC_ACTION_SEM_def,
-   EVAL_fasl_prim_command_THM,
-   FASL_IS_LOCAL_ACTION___materialisation_annihilation,
+MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___seq THEN
+ASM_REWRITE_TAC [ASL_PROGRAM_IS_ABSTRACTION___REFL] THEN
+ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION_def,
+   ASL_PROGRAM_SEM___prim_command,
+   ASL_ATOMIC_ACTION_SEM_def,
+   EVAL_asl_prim_command_THM,
+   ASL_IS_LOCAL_ACTION___materialisation_annihilation,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
-   FASL_IS_LOCAL_ACTION___var_res_cond_best_local_action] THEN
+   ASL_IS_LOCAL_ACTION___var_res_cond_best_local_action] THEN
 ASM_SIMP_TAC std_ss [
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    var_res_cond_best_local_action_def,
@@ -12198,9 +12198,9 @@ ASM_SIMP_TAC std_ss [
 MATCH_MP_TAC fasl_action_order____quant_best_local_action THEN
 
 ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
-   HOARE_TRIPLE_def, FASL_IS_LOCAL_ACTION___materialisation_annihilation,
+   HOARE_TRIPLE_def, ASL_IS_LOCAL_ACTION___materialisation_annihilation,
    IN_ABS, fasl_order_THM2] THEN
-ASM_SIMP_TAC std_ss [fasla_materialisation_THM,
+ASM_SIMP_TAC std_ss [asla_materialisation_THM,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    var_res_prop___PROP___REWRITE, NOT_IN_EMPTY_BAG,
    var_res_bigstar_REWRITE_EXT,
@@ -12255,14 +12255,14 @@ val VAR_RES_COND_INFERENCE___var_res_prog_aquire_lock = store_thm (
 
 ((VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (BAG_UNION wpb wpb',rpb) (BAG_UNION sfb' sfb))
-    (fasl_prog_block (
-        (fasl_prog_assume c)::
+    (asl_prog_block (
+        (asl_prog_assume c)::
         progL))
     Q) ==>
 
   VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) sfb)
-    (fasl_prog_block (
+    (asl_prog_block (
         (var_res_prog_aquire_lock f c wpb' sfb')::
         progL))
     Q)``,
@@ -12275,12 +12275,12 @@ Tactical.REVERSE (Cases_on `var_res_prop___COND f (wpb,rpb) sfb`) THEN1 (
 ) THEN
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 MATCH_MP_TAC VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first THEN
-Q.EXISTS_TAC `fasl_prog_seq
+Q.EXISTS_TAC `asl_prog_seq
         (var_res_prog_cond_best_local_action
             (var_res_prop f (EMPTY_BAG, EMPTY_BAG) EMPTY_BAG)
-            (var_res_prop f (wpb', EMPTY_BAG) sfb')) (fasl_prog_assume c)` THEN
+            (var_res_prop f (wpb', EMPTY_BAG) sfb')) (asl_prog_assume c)` THEN
 ASM_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
-   FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_aquire_lock,
+   ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_aquire_lock,
    GSYM VAR_RES_COND_INFERENCE___prog_block,
    VAR_RES_COND_INFERENCE___prog_block2] THEN
 MATCH_MP_TAC (MP_CANON VAR_RES_COND_INFERENCE___var_res_prog_cond_best_local_action___VAR_CHANGE) THEN
@@ -12292,11 +12292,11 @@ FULL_SIMP_TAC std_ss [BAG_DIFF_EMPTY,
 
 
 
-val FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_release_lock =
-store_thm ("FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_release_lock",
+val ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_release_lock =
+store_thm ("ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_release_lock",
 ``!f lenv penv wpb sfb.
 IS_SEPARATION_COMBINATOR f ==>
-FASL_PROGRAM_IS_ABSTRACTION (VAR_RES_COMBINATOR f, lenv) penv
+ASL_PROGRAM_IS_ABSTRACTION (VAR_RES_COMBINATOR f, lenv) penv
      (var_res_prog_release_lock f wpb sfb)
      (var_res_prog_cond_best_local_action
          (var_res_prop f (wpb, EMPTY_BAG) sfb)
@@ -12307,19 +12307,19 @@ ASM_SIMP_TAC std_ss [
    var_res_prog_release_lock_def,
    var_res_prog_release_lock_internal_def,
    var_res_prog_release_lock_input_def,
-   fasl_prog_release_lock_def,
+   asl_prog_release_lock_def,
    COND_RAND, COND_RATOR,
-   FASL_PROGRAM_IS_ABSTRACTION_def,
-   FASL_PROGRAM_SEM___prim_command,
-   FASL_PROGRAM_SEM___diverge,
-   FASL_ATOMIC_ACTION_SEM_def,
-   EVAL_fasl_prim_command_THM,
-   FASL_IS_LOCAL_ACTION___materialisation_annihilation,
+   ASL_PROGRAM_IS_ABSTRACTION_def,
+   ASL_PROGRAM_SEM___prim_command,
+   ASL_PROGRAM_SEM___diverge,
+   ASL_ATOMIC_ACTION_SEM_def,
+   EVAL_asl_prim_command_THM,
+   ASL_IS_LOCAL_ACTION___materialisation_annihilation,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
-   FASL_IS_LOCAL_ACTION___var_res_cond_best_local_action] THEN
+   ASL_IS_LOCAL_ACTION___var_res_cond_best_local_action] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `~FST (var_res_prop f (wpb,{||}) sfb)` THEN1 (
-   ASM_SIMP_TAC std_ss [fasl_order_THM2, fasla_diverge_def,
+   ASM_SIMP_TAC std_ss [fasl_order_THM2, asla_diverge_def,
       EMPTY_SUBSET, fasl_action_order_POINTWISE_DEF]
 ) THEN
 ASM_SIMP_TAC std_ss [] THEN STRIP_TAC THEN
@@ -12336,10 +12336,10 @@ FULL_SIMP_TAC list_ss [
 MATCH_MP_TAC fasl_action_order____quant_best_local_action THEN
 
 ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
-   FASL_IS_LOCAL_ACTION___materialisation_annihilation,
+   ASL_IS_LOCAL_ACTION___materialisation_annihilation,
    HOARE_TRIPLE_def, IN_ABS, fasl_order_THM2,
    var_res_lock_invariant___var_res_prop,
-   fasla_annihilation_THM, SUBSET_DEF,
+   asla_annihilation_THM, SUBSET_DEF,
    COND_NONE_SOME_REWRITES] THEN
 
 GEN_TAC THEN STRIP_TAC THEN
@@ -12407,11 +12407,11 @@ val VAR_RES_COND_INFERENCE___var_res_prog_release_lock = store_thm (
 ( VAR_RES_FRAME_SPLIT f rfc (wpb,rpb) wpb' EMPTY_BAG sfb sfb'
   (\sfb'''. VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f ((BAG_DIFF wpb wpb'),rpb) sfb''')
-       (fasl_prog_block progL) Q) ==>
+       (asl_prog_block progL) Q) ==>
 
   VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) sfb)
-    (fasl_prog_block (
+    (asl_prog_block (
         (var_res_prog_release_lock f wpb' sfb')::
         progL))
     Q)``,
@@ -12424,7 +12424,7 @@ Q.EXISTS_TAC `var_res_prog_cond_best_local_action
    (var_res_prop f (wpb', EMPTY_BAG) sfb')
    (var_res_prop f (EMPTY_BAG, EMPTY_BAG) EMPTY_BAG)` THEN
 ASM_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
-   FASL_PROGRAM_IS_ABSTRACTION___var_res_prog_release_lock,
+   ASL_PROGRAM_IS_ABSTRACTION___var_res_prog_release_lock,
    GSYM VAR_RES_COND_INFERENCE___prog_block] THEN
 MATCH_MP_TAC (MP_CANON VAR_RES_COND_INFERENCE___var_res_prog_cond_best_local_action___VAR_CHANGE) THEN
 Q.EXISTS_TAC `rfc` THEN
@@ -12443,29 +12443,29 @@ val VAR_RES_COND_INFERENCE___prog_cond =
 store_thm ("VAR_RES_COND_INFERENCE___prog_cond",
 ``!f P c pTrue pFalse prog Q.
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume c)::pTrue::prog)) Q /\
+   (asl_prog_block ((asl_prog_assume c)::pTrue::prog)) Q /\
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg c))::pFalse::prog)) Q ==>
-VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block ((fasl_prog_cond c pTrue pFalse)::prog)) Q``,
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg c))::pFalse::prog)) Q ==>
+VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block ((asl_prog_cond c pTrue pFalse)::prog)) Q``,
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, VAR_RES_HOARE_TRIPLE_def] THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
-MATCH_MP_TAC FASL_INFERENCE_prog_cond_seq THEN
-FULL_SIMP_TAC std_ss [FASL_PROGRAM_HOARE_TRIPLE_def,
-   FASL_PROGRAM_SEM___prog_block, FASL_PROGRAM_SEM___prog_seq]);
+MATCH_MP_TAC ASL_INFERENCE_prog_cond_seq THEN
+FULL_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_block, ASL_PROGRAM_SEM___prog_seq]);
 
 
 val VAR_RES_COND_INFERENCE___prog_cond_block =
 store_thm ("VAR_RES_COND_INFERENCE___prog_cond_block",
 ``!f P c bTrue bFalse prog Q.
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume c)::(bTrue++prog))) Q /\
+   (asl_prog_block ((asl_prog_assume c)::(bTrue++prog))) Q /\
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg c))::
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg c))::
         (bFalse++prog))) Q ==>
-VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block ((fasl_prog_cond c (fasl_prog_block bTrue) (fasl_prog_block bFalse))::prog)) Q``,
+VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block ((asl_prog_cond c (asl_prog_block bTrue) (asl_prog_block bFalse))::prog)) Q``,
 
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC VAR_RES_COND_INFERENCE___prog_cond THEN
@@ -12475,11 +12475,11 @@ ASM_SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block3]);
 val VAR_RES_INFERENCE___prog_kleene_star = store_thm ("VAR_RES_INFERENCE___prog_kleene_star",
 ``!xenv penv P prog.
      VAR_RES_HOARE_TRIPLE xenv penv P prog P ==>
-     VAR_RES_HOARE_TRIPLE xenv penv P (fasl_prog_kleene_star prog) P``,
+     VAR_RES_HOARE_TRIPLE xenv penv P (asl_prog_kleene_star prog) P``,
 
 SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def,
-   FASL_PROGRAM_HOARE_TRIPLE_def,
-   FASL_PROGRAM_SEM___prog_kleene_star,
+   ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_kleene_star,
    HOARE_TRIPLE_def, IN_ABS, fasl_order_THM] THEN
 SIMP_TAC std_ss [SUBSET_DEF,
    SOME___SUP_fasl_action_order, IN_IMAGE, IN_BIGUNION, IN_UNIV,
@@ -12490,12 +12490,12 @@ HO_MATCH_MP_TAC (prove (``
    (!n. (X n) /\ (!x'. X n ==> Y x' n)) ==>
    ((!n. X n) /\ (!x' n. Y x' n))``, METIS_TAC[])) THEN
 Induct_on `n` THEN1 (
-   ASM_SIMP_TAC std_ss [FASL_PROGRAM_SEM___prog_repeat, fasla_skip_def, IN_SING,
+   ASM_SIMP_TAC std_ss [ASL_PROGRAM_SEM___prog_repeat, asla_skip_def, IN_SING,
       VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___REFL]
 ) THEN
-FULL_SIMP_TAC std_ss [FASL_PROGRAM_SEM___prog_repeat___fasla_repeat, IS_SOME_EXISTS,
-   GSYM LEFT_FORALL_IMP_THM, fasla_repeat___SYM_DEF] THEN
-SIMP_TAC std_ss [SOME___fasla_seq, GSYM LEFT_FORALL_IMP_THM,
+FULL_SIMP_TAC std_ss [ASL_PROGRAM_SEM___prog_repeat___asla_repeat, IS_SOME_EXISTS,
+   GSYM LEFT_FORALL_IMP_THM, asla_repeat___SYM_DEF] THEN
+SIMP_TAC std_ss [SOME___asla_seq, GSYM LEFT_FORALL_IMP_THM,
   IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
 CONJ_TAC THEN1 (
    Q.EXISTS_TAC `y` THEN
@@ -12517,22 +12517,22 @@ store_thm ("VAR_RES_COND_INFERENCE___prog_while",
 (FST P ==> ALL_DISTINCT d) ==>
 ((!x. VAR_RES_COND_HOARE_TRIPLE f
         (var_res_prop_input_distinct f (wp,rp) d (LI x))
-        (fasl_prog_block ((fasl_prog_assume c)::pL))
+        (asl_prog_block ((asl_prog_assume c)::pL))
         (var_res_prop_input_distinct f (wp,rp) d (LI x))) /\
 
 ?x. VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block (
+   (asl_prog_block (
        (var_res_prog_cond_best_local_action
             (var_res_prop_input_distinct f (wp,rp) d (LI x))
             (var_res_prop_input_distinct f (wp,rp) d (LI x)))::
-       (fasl_prog_assume (fasl_pred_neg c))::prog)) Q) ==>
+       (asl_prog_assume (asl_pred_neg c))::prog)) Q) ==>
 
-VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (
-(fasl_comment_loop_invariant (\x. var_res_prop_input_ap_distinct f (wp,rp) d (LI x))
-   (fasl_prog_while c (fasl_prog_block pL)))::prog)) Q``,
+VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (
+(asl_comment_loop_invariant (\x. var_res_prop_input_ap_distinct f (wp,rp) d (LI x))
+   (asl_prog_while c (asl_prog_block pL)))::prog)) Q``,
 
-REWRITE_TAC [fasl_comment_loop_invariant_def,
-  fasl_prog_while_def, VAR_RES_COND_INFERENCE___prog_block2] THEN
+REWRITE_TAC [asl_comment_loop_invariant_def,
+  asl_prog_while_def, VAR_RES_COND_INFERENCE___prog_block2] THEN
 REPEAT STRIP_TAC THEN
 
 Tactical.REVERSE (Cases_on `IS_SEPARATION_COMBINATOR f /\ FST P`) THEN1 (
@@ -12545,7 +12545,7 @@ Q.EXISTS_TAC `var_res_prog_cond_quant_best_local_action
                  (\x. var_res_prop_input_distinct f (wp,rp) d (LI x))
                  (\x. var_res_prop_input_distinct f (wp,rp) d (LI x))` THEN
 
-ASM_REWRITE_TAC [GSYM fasl_prog_assume_def] THEN
+ASM_REWRITE_TAC [GSYM asl_prog_assume_def] THEN
 Tactical.REVERSE CONJ_TAC THEN1 (
    FULL_SIMP_TAC std_ss [GSYM VAR_RES_COND_INFERENCE___prog_block] THEN
    MATCH_MP_TAC VAR_RES_COND_INFERENCE___var_res_prog_cond_quant_best_local_action THEN
@@ -12561,8 +12561,8 @@ ASM_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
 
 Q.HO_MATCH_ABBREV_TAC `
    (!x. VAR_RES_HOARE_TRIPLE xenv FEMPTY (PP x) p (PP x)) ==>
-   FASL_PROGRAM_IS_ABSTRACTION xenv FEMPTY
-      (fasl_prog_kleene_star p)
+   ASL_PROGRAM_IS_ABSTRACTION xenv FEMPTY
+      (asl_prog_kleene_star p)
       (var_res_prog_quant_best_local_action PP PP)` THEN
 
 REPEAT STRIP_TAC THEN
@@ -12571,7 +12571,7 @@ REPEAT STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [IS_VAR_RES_COMBINATOR_def] THEN
    METIS_TAC[]
 ) THEN
-ASM_SIMP_TAC std_ss [FASL_PROGRAM_IS_ABSTRACTION___var_res_quant_best_local_action,
+ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION___var_res_quant_best_local_action,
    VAR_RES_INFERENCE___prog_kleene_star]);
 
 
@@ -12586,14 +12586,14 @@ store_thm ("VAR_RES_COND_INFERENCE___block_spec",
         (var_res_prop_input_distinct f (wp,rp) d (Q' x))) /\
 
 ?x. VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block (
+   (asl_prog_block (
        (var_res_prog_cond_best_local_action
             (var_res_prop_input_distinct f (wp,rp) d (P' x))
             (var_res_prop_input_distinct f (wp,rp) d (Q' x)))::
        prog)) Q) ==>
 
-VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (
-(fasl_comment_block_spec ((\x. var_res_prop_input_ap_distinct f (wp,rp) d (P' x)),
+VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (
+(asl_comment_block_spec ((\x. var_res_prop_input_ap_distinct f (wp,rp) d (P' x)),
                           (\x. var_res_prop_input_ap_distinct f (wp,rp) d (Q' x)))
                          p)::prog)) Q``,
 
@@ -12602,7 +12602,7 @@ Tactical.REVERSE (Cases_on `FST P /\ IS_SEPARATION_COMBINATOR f /\ FST Q`) THEN1
    FULL_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def]
 ) THEN
 MATCH_MP_TAC (MP_CANON VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block_simple) THEN
-SIMP_TAC std_ss [fasl_comment_block_spec_def] THEN
+SIMP_TAC std_ss [asl_comment_block_spec_def] THEN
 Q.EXISTS_TAC `var_res_prog_cond_best_local_action
               (var_res_prop_input_distinct f (wp,rp) d (P' x))
               (var_res_prop_input_distinct f (wp,rp) d (Q' x))` THEN
@@ -12612,7 +12612,7 @@ Q.PAT_ASSUM `ALL_DISTINCT d` ASSUME_TAC THEN
 FULL_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
    var_res_prog_cond_best_local_action_def, COND_RAND,
    COND_RATOR, var_res_prop_input_distinct_def,
-   FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action,
+   ASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action,
    VAR_RES_COND_HOARE_TRIPLE_def]);
 
 
@@ -12623,27 +12623,27 @@ store_thm ("VAR_RES_COND_INFERENCE___loop_spec",
 (FST P ==> ALL_DISTINCT d) ==>
 ((!x. VAR_RES_COND_HOARE_TRIPLE f
         (var_res_prop_input_distinct f (wp,rp) d (P' x))
-        (fasl_prog_block (fasl_prog_assume (fasl_pred_neg c)::prog1))
+        (asl_prog_block (asl_prog_assume (asl_pred_neg c)::prog1))
         (var_res_prop_input_distinct f (wp,rp) d (Q' x))) /\
 
 (!x. VAR_RES_COND_HOARE_TRIPLE f (var_res_prop_input_distinct f (wp,rp) d (P' x))
-  (fasl_prog_block [fasl_prog_assume c;p;
+  (asl_prog_block [asl_prog_assume c;p;
       (var_res_prog_cond_quant_best_local_action
            (\x. (var_res_prop_input_distinct f (wp,rp) d (P' x)))
            (\x. (var_res_prop_input_distinct f (wp,rp) d (Q' x))))])
     (var_res_prop_input_distinct f (wp,rp) d (Q' x))) /\
 
 ?x. VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block (
+   (asl_prog_block (
        (var_res_prog_cond_best_local_action
             (var_res_prop_input_distinct f (wp,rp) d (P' x))
             (var_res_prop_input_distinct f (wp,rp) d (Q' x)))::
        prog2)) Q) ==>
 
-VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block (
-   (fasl_comment_loop_spec ((\x. var_res_prop_input_ap_distinct f (wp,rp) d (P' x)),
+VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block (
+   (asl_comment_loop_spec ((\x. var_res_prop_input_ap_distinct f (wp,rp) d (P' x)),
                             (\x. var_res_prop_input_ap_distinct f (wp,rp) d (Q' x)))
-   (fasl_prog_block ((fasl_prog_while c p)::prog1)))::prog2)) Q``,
+   (asl_prog_block ((asl_prog_while c p)::prog1)))::prog2)) Q``,
 
 
 
@@ -12652,9 +12652,9 @@ Tactical.REVERSE (Cases_on `FST P /\ IS_SEPARATION_COMBINATOR f /\ FST Q`) THEN1
    FULL_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def]
 ) THEN
 
-REWRITE_TAC [prove (``fasl_comment_loop_spec = fasl_comment_block_spec``,
-   SIMP_TAC std_ss [FUN_EQ_THM, fasl_comment_block_spec_def,
-       fasl_comment_loop_spec_def])] THEN
+REWRITE_TAC [prove (``asl_comment_loop_spec = asl_comment_block_spec``,
+   SIMP_TAC std_ss [FUN_EQ_THM, asl_comment_block_spec_def,
+       asl_comment_loop_spec_def])] THEN
 MATCH_MP_TAC (MP_CANON VAR_RES_COND_INFERENCE___block_spec) THEN
 ASM_REWRITE_TAC[] THEN
 Tactical.REVERSE CONJ_TAC THEN1 METIS_TAC[] THEN
@@ -12663,7 +12663,7 @@ FULL_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
    var_res_prop_input_distinct_def, VAR_RES_HOARE_TRIPLE_def] THEN
 Q.PAT_ASSUM `ALL_DISTINCT d` ASSUME_TAC THEN
 SIMP_TAC std_ss [GSYM pairTheory.ELIM_PFORALL] THEN
-HO_MATCH_MP_TAC FASL_INFERENCE_prog_while_frame THEN
+HO_MATCH_MP_TAC ASL_INFERENCE_prog_while_frame THEN
 
 FULL_SIMP_TAC std_ss [GSYM VAR_RES_HOARE_TRIPLE_def,
    var_res_prog_cond_quant_best_local_action_def,
@@ -12678,17 +12678,17 @@ store_thm ("VAR_RES_COND_INFERENCE___while_unroll",
 ``!f c p prog P Q.
 
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg c))::prog)) Q /\
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg c))::prog)) Q /\
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume c)::p::(fasl_prog_while c p)::prog)) Q ==>
+   (asl_prog_block ((asl_prog_assume c)::p::(asl_prog_while c p)::prog)) Q ==>
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_while c p)::prog)) Q``,
+   (asl_prog_block ((asl_prog_while c p)::prog)) Q``,
 
 
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
    VAR_RES_HOARE_TRIPLE_def] THEN
 REPEAT STRIP_TAC THEN
-HO_MATCH_MP_TAC FASL_INFERENCE_prog_while_unroll THEN
+HO_MATCH_MP_TAC ASL_INFERENCE_prog_while_unroll THEN
 FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR]);
 
 
@@ -12697,55 +12697,55 @@ store_thm ("VAR_RES_COND_INFERENCE___while_unroll___invariant",
 ``!i f c p prog P Q.
 
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg c))::prog)) Q /\
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg c))::prog)) Q /\
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume c)::p::(fasl_comment_loop_invariant i (fasl_prog_while c p))::prog)) Q ==>
+   (asl_prog_block ((asl_prog_assume c)::p::(asl_comment_loop_invariant i (asl_prog_while c p))::prog)) Q ==>
 
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_comment_loop_invariant i
-           (fasl_prog_while c p))::prog)) Q``,
+   (asl_prog_block ((asl_comment_loop_invariant i
+           (asl_prog_while c p))::prog)) Q``,
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___while_unroll,
-   fasl_comment_loop_invariant_def]);
+   asl_comment_loop_invariant_def]);
 
 
 val VAR_RES_COND_INFERENCE___while_unroll___loop_spec =
 store_thm ("VAR_RES_COND_INFERENCE___while_unroll___loop_spec",
-``!f c (p :('a, 'b, 'c, ('d, 'e, 'f) var_res_ext_state) fasl_program) 
+``!f c (p :('a, 'b, 'c, ('d, 'e, 'f) var_res_ext_state) asl_program) 
    sp prog1 prog2 P Q.
 
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg c))::(prog1 ++ prog2))) Q /\
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg c))::(prog1 ++ prog2))) Q /\
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume c)::p::(fasl_comment_loop_spec sp 
-       (fasl_prog_block ((fasl_prog_while c p)::prog1)))::prog2)) Q ==>
+   (asl_prog_block ((asl_prog_assume c)::p::(asl_comment_loop_spec sp 
+       (asl_prog_block ((asl_prog_while c p)::prog1)))::prog2)) Q ==>
 
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_comment_loop_spec sp
-           (fasl_prog_block ((fasl_prog_while c p)::prog1))::prog2))) Q``,
+   (asl_prog_block ((asl_comment_loop_spec sp
+           (asl_prog_block ((asl_prog_while c p)::prog1))::prog2))) Q``,
 
-SIMP_TAC std_ss [fasl_comment_loop_spec_def] THEN
+SIMP_TAC std_ss [asl_comment_loop_spec_def] THEN
 REPEAT GEN_TAC THEN
 Tactical.REVERSE (
-`!(c1 :('a, 'b, 'c, ('d, 'e, 'f) var_res_ext_state) fasl_program)  c2 c3 L1 L2.
+`!(c1 :('a, 'b, 'c, ('d, 'e, 'f) var_res_ext_state) asl_program)  c2 c3 L1 L2.
   (VAR_RES_COND_HOARE_TRIPLE f P
-    (fasl_prog_block
-       (c1::c2::fasl_prog_block (c3::L1)::L2)) Q =
+    (asl_prog_block
+       (c1::c2::asl_prog_block (c3::L1)::L2)) Q =
    VAR_RES_COND_HOARE_TRIPLE f P
-    (fasl_prog_block (c1::c2::c3::(L1 ++ L2))) Q) /\
+    (asl_prog_block (c1::c2::c3::(L1 ++ L2))) Q) /\
   (VAR_RES_COND_HOARE_TRIPLE f P
-    (fasl_prog_block (fasl_prog_block (c1::L1)::L2)) Q =
+    (asl_prog_block (asl_prog_block (c1::L1)::L2)) Q =
    VAR_RES_COND_HOARE_TRIPLE f P
-     (fasl_prog_block (c1::(L1++L2))) Q)` by ALL_TAC) THEN1 (
+     (asl_prog_block (c1::(L1++L2))) Q)` by ALL_TAC) THEN1 (
    FULL_SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___while_unroll]
 ) THEN
 
 REPEAT GEN_TAC THEN
-`(fasl_prog_block (c1::L1)::L2 = [] ++ fasl_prog_block (c1::L1)::L2) /\
- (c1::c2::fasl_prog_block (c3::L1)::L2 = [c1;c2] ++ fasl_prog_block (c3::L1)::L2)` by SIMP_TAC list_ss [] THEN
+`(asl_prog_block (c1::L1)::L2 = [] ++ asl_prog_block (c1::L1)::L2) /\
+ (c1::c2::asl_prog_block (c3::L1)::L2 = [c1;c2] ++ asl_prog_block (c3::L1)::L2)` by SIMP_TAC list_ss [] THEN
 
 ONCE_ASM_REWRITE_TAC[] THEN
-SIMP_TAC std_ss [FASL_PROGRAM_SEM___block_flatten,
+SIMP_TAC std_ss [ASL_PROGRAM_SEM___block_flatten,
    VAR_RES_PROGRAM_SEM_def, VAR_RES_COND_HOARE_TRIPLE_REWRITE] THEN
 SIMP_TAC list_ss []);
 
@@ -12756,11 +12756,11 @@ SIMP_TAC list_ss []);
 val VAR_RES_COND_INFERENCE___prog_assume_true =
 store_thm ("VAR_RES_COND_INFERENCE___prog_assume_true",
 ``!f P progL Q.
-VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block progL) Q ==>
+VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block progL) Q ==>
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume fasl_pred_true)::progL)) Q``,
+   (asl_prog_block ((asl_prog_assume asl_pred_true)::progL)) Q``,
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block_skip_ELIM,
-   fasl_prog_assume_true]);
+   asl_prog_assume_true]);
 
 
 val VAR_RES_COND_INFERENCE___prog_assume_false =
@@ -12768,38 +12768,38 @@ store_thm ("VAR_RES_COND_INFERENCE___prog_assume_false",
 ``!f P progL Q.
 T ==>
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume fasl_pred_false)::progL)) Q``,
+   (asl_prog_block ((asl_prog_assume asl_pred_false)::progL)) Q``,
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block_diverge,
-   fasl_prog_assume_false]);
+   asl_prog_assume_false]);
 
 
 val VAR_RES_COND_INFERENCE___prog_assume_neg_false =
 store_thm ("VAR_RES_COND_INFERENCE___prog_assume_neg_false",
 ``!f P progL Q.
-VAR_RES_COND_HOARE_TRIPLE f P (fasl_prog_block progL) Q ==>
+VAR_RES_COND_HOARE_TRIPLE f P (asl_prog_block progL) Q ==>
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg fasl_pred_false))::progL)) Q``,
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg asl_pred_false))::progL)) Q``,
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-   VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   FASL_PROGRAM_SEM___prog_block,
-   FASL_PROGRAM_SEM___prog_assume___neg_false,
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_block,
+   ASL_PROGRAM_SEM___prog_assume___neg_false,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
-   fasla_seq_skip]);
+   asla_seq_skip]);
 
 
 val VAR_RES_COND_INFERENCE___prog_assume_neg_true =
 store_thm ("VAR_RES_COND_INFERENCE___prog_assume_neg_true",
 ``!f P progL Q. T ==>
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg fasl_pred_true))::progL)) Q``,
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg asl_pred_true))::progL)) Q``,
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-   VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   FASL_PROGRAM_SEM___prog_block,
-   FASL_PROGRAM_SEM___prog_assume___neg_true,
+   VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_block,
+   ASL_PROGRAM_SEM___prog_assume___neg_true,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
-   fasla_seq_diverge] THEN
+   asla_seq_diverge] THEN
 SIMP_TAC std_ss [HOARE_TRIPLE_def,
-  fasla_diverge_def, fasl_order_THM, EMPTY_SUBSET]);
+  asla_diverge_def, fasl_order_THM, EMPTY_SUBSET]);
 
 
 
@@ -12807,25 +12807,25 @@ val VAR_RES_COND_INFERENCE___prog_assume_and =
 store_thm ("VAR_RES_COND_INFERENCE___prog_assume_and",
 ``!f P1 P2 P progL Q.
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block (
-         (fasl_prog_assume P1)::
-         (fasl_prog_assume P2)::progL)) Q ==>
+   (asl_prog_block (
+         (asl_prog_assume P1)::
+         (asl_prog_assume P2)::progL)) Q ==>
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_and P1 P2))::progL)) Q``,
+   (asl_prog_block ((asl_prog_assume (asl_pred_and P1 P2))::progL)) Q``,
 
 REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 MATCH_MP_TAC VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first THEN
-Q.EXISTS_TAC `fasl_prog_seq (fasl_prog_assume P1) (fasl_prog_assume P2)` THEN
+Q.EXISTS_TAC `asl_prog_seq (asl_prog_assume P1) (asl_prog_assume P2)` THEN
 REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
-   MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___assume_and THEN
+   MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___assume_and THEN
    ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR],
 
    FULL_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-      VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-      FASL_PROGRAM_SEM___prog_seq, FASL_PROGRAM_SEM___prog_block] THEN
-   METIS_TAC[fasla_seq___ASSOC, ASSOC_DEF]
+      VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+      ASL_PROGRAM_SEM___prog_seq, ASL_PROGRAM_SEM___prog_block] THEN
+   METIS_TAC[asla_seq___ASSOC, ASSOC_DEF]
 ]);
 
 
@@ -12833,25 +12833,25 @@ val VAR_RES_COND_INFERENCE___prog_assume_or =
 store_thm ("VAR_RES_COND_INFERENCE___prog_assume_or",
 ``!f P1 P2 P progL Q.
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume P1)::progL)) Q /\
+   (asl_prog_block ((asl_prog_assume P1)::progL)) Q /\
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume P2)::progL)) Q ==>
+   (asl_prog_block ((asl_prog_assume P2)::progL)) Q ==>
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block (fasl_prog_assume (fasl_pred_or P1 P2)::progL)) Q``,
+   (asl_prog_block (asl_prog_assume (asl_pred_or P1 P2)::progL)) Q``,
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first THEN
-Q.EXISTS_TAC `fasl_prog_choice (fasl_prog_assume P1) (fasl_prog_assume P2)` THEN
+Q.EXISTS_TAC `asl_prog_choice (asl_prog_assume P1) (asl_prog_assume P2)` THEN
 REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
-   MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___assume_or THEN
+   MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___assume_or THEN
    ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR],
 
    FULL_SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
-      VAR_RES_HOARE_TRIPLE_def, fasl_prog_seq_choice] THEN
+      VAR_RES_HOARE_TRIPLE_def, asl_prog_seq_choice] THEN
    REPEAT STRIP_TAC THEN
-   MATCH_MP_TAC FASL_INFERENCE_prog_choice THEN
+   MATCH_MP_TAC ASL_INFERENCE_prog_choice THEN
    ASM_SIMP_TAC std_ss []
 ]);
 
@@ -12861,17 +12861,17 @@ val VAR_RES_COND_INFERENCE___prog_assume_neg_neg =
 store_thm ("VAR_RES_COND_INFERENCE___prog_assume_neg_neg",
 ``!f p P progL Q.
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume p)::progL)) Q ==>
+   (asl_prog_block ((asl_prog_assume p)::progL)) Q ==>
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg (fasl_pred_neg p)))::progL)) Q``,
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg (asl_pred_neg p)))::progL)) Q``,
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first THEN
-Q.EXISTS_TAC `fasl_prog_assume p` THEN
+Q.EXISTS_TAC `asl_prog_assume p` THEN
 REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
-   MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___assume_neg_neg THEN
+   MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___assume_neg_neg THEN
    ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR],
 
    ASM_REWRITE_TAC[]
@@ -12883,17 +12883,17 @@ val VAR_RES_COND_INFERENCE___prog_assume_neg_and =
 store_thm ("VAR_RES_COND_INFERENCE___prog_assume_neg_and",
 ``!f P1 P2 P progL Q.
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_or (fasl_pred_neg P1) (fasl_pred_neg P2)))::progL)) Q ==>
+   (asl_prog_block ((asl_prog_assume (asl_pred_or (asl_pred_neg P1) (asl_pred_neg P2)))::progL)) Q ==>
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg (fasl_pred_and P1 P2)))::progL)) Q``,
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg (asl_pred_and P1 P2)))::progL)) Q``,
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first THEN
-Q.EXISTS_TAC `fasl_prog_assume (fasl_pred_or (fasl_pred_neg P1) (fasl_pred_neg P2))` THEN
+Q.EXISTS_TAC `asl_prog_assume (asl_pred_or (asl_pred_neg P1) (asl_pred_neg P2))` THEN
 REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
-   MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___assume_neg_and THEN
+   MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___assume_neg_and THEN
    ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR],
 
    ASM_REWRITE_TAC[]
@@ -12905,17 +12905,17 @@ val VAR_RES_COND_INFERENCE___prog_assume_neg_or =
 store_thm ("VAR_RES_COND_INFERENCE___prog_assume_neg_or",
 ``!f P1 P2 P progL Q.
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_and (fasl_pred_neg P1) (fasl_pred_neg P2)))::progL)) Q ==>
+   (asl_prog_block ((asl_prog_assume (asl_pred_and (asl_pred_neg P1) (asl_pred_neg P2)))::progL)) Q ==>
 VAR_RES_COND_HOARE_TRIPLE f P
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg (fasl_pred_or P1 P2)))::progL)) Q``,
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg (asl_pred_or P1 P2)))::progL)) Q``,
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 REPEAT STRIP_TAC THEN
 MATCH_MP_TAC VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first THEN
-Q.EXISTS_TAC `fasl_prog_assume (fasl_pred_and (fasl_pred_neg P1) (fasl_pred_neg P2))` THEN
+Q.EXISTS_TAC `asl_prog_assume (asl_pred_and (asl_pred_neg P1) (asl_pred_neg P2))` THEN
 REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def] THEN
-   MATCH_MP_TAC FASL_PROGRAM_IS_ABSTRACTION___assume_neg_or THEN
+   MATCH_MP_TAC ASL_PROGRAM_IS_ABSTRACTION___assume_neg_or THEN
    ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR],
 
    ASM_REWRITE_TAC[]
@@ -12971,11 +12971,11 @@ ASM_SIMP_TAC list_ss []);
 
 val var_res_pred_def = Define `
 var_res_pred p el =
-   fasl_pred_prim (\f. var_res_prop_weak_expression p el)`;
+   asl_pred_prim (\f. var_res_prop_weak_expression p el)`;
 
 val var_res_pred_bin_def = Define `
 var_res_pred_bin p e1 e2 =
-   fasl_pred_prim (\f. var_res_prop_weak_binexpression p e1 e2)`;
+   asl_pred_prim (\f. var_res_prop_weak_binexpression p e1 e2)`;
 
 
 val var_res_pred_bin___ALTERNATIVE_DEF = store_thm ("var_res_pred_bin___ALTERNATIVE_DEF",
@@ -12995,23 +12995,23 @@ EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb)
    (BAG_INSERT (var_res_prop_expression f T p el) sfb))
-   (fasl_prog_block progL) Q ==>
+   (asl_prog_block progL) Q ==>
 
 VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
-   (fasl_prog_block ((fasl_prog_assume (var_res_pred p el))::progL)) Q)``,
+   (asl_prog_block ((asl_prog_assume (var_res_pred p el))::progL)) Q)``,
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block,
    var_res_pred_def] THEN
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
    VAR_RES_HOARE_TRIPLE_def, var_res_prop___REWRITE,
-   fasl_prog_assume_def] THEN
+   asl_prog_assume_def] THEN
 REPEAT STRIP_TAC THEN
-MATCH_MP_TAC FASL_INFERENCE_assume_seq THEN
+MATCH_MP_TAC ASL_INFERENCE_assume_seq THEN
 REPEAT STRIP_TAC THENL [
    ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR],
 
-   ASM_SIMP_TAC std_ss [fasl_predicate_IS_DECIDED_def, IN_ABS,
-      EVAL_fasl_predicate_def] THEN
+   ASM_SIMP_TAC std_ss [asl_predicate_IS_DECIDED_def, IN_ABS,
+      EVAL_asl_predicate_def] THEN
    `ASL_IS_INTUITIONISTIC (VAR_RES_COMBINATOR f)
            (var_res_prop_weak_expression p el)` by ALL_TAC THEN1 (
       MATCH_MP_TAC ASL_IS_INTUITIONISTIC___weak_expression THEN
@@ -13047,14 +13047,14 @@ REPEAT STRIP_TAC THENL [
             (var_res_prop_expression f T p el)` by ALL_TAC THEN1 (
       ASM_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_expression]
    ) THEN
-   FULL_SIMP_TAC std_ss [var_res_prop___COND_INSERT, FASL_PROGRAM_HOARE_TRIPLE_def,
+   FULL_SIMP_TAC std_ss [var_res_prop___COND_INSERT, ASL_PROGRAM_HOARE_TRIPLE_def,
       HOARE_TRIPLE_def, asl_bool_EVAL, IN_ABS] THEN
    REPEAT STRIP_TAC THEN
    Q.PAT_ASSUM `!x. X` MATCH_MP_TAC THEN
    Q.PAT_ASSUM `x IN var_res_prop___PROP f X Y` MP_TAC THEN
    FULL_SIMP_TAC std_ss [var_res_prop___PROP_INSERT, IN_ABS,
       var_res_prop___COND_INSERT,
-      EVAL_fasl_predicate_def, COND_RAND, COND_RATOR, asl_bool_EVAL] THEN
+      EVAL_asl_predicate_def, COND_RAND, COND_RATOR, asl_bool_EVAL] THEN
    FULL_SIMP_TAC std_ss [asl_star_def, var_res_prop_weak_expression_def,
       var_res_prop_expression_def, var_res_stack_proposition_def,
       IN_ABS, LET_THM, asl_emp_def, IS_SEPARATION_COMBINATOR_EXPAND_THM,
@@ -13077,10 +13077,10 @@ VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb)
    (BAG_INSERT (var_res_prop_binexpression f T p e1 e2) sfb))
-   (fasl_prog_block progL) Q ==>
+   (asl_prog_block progL) Q ==>
 
 VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
-   (fasl_prog_block ((fasl_prog_assume (var_res_pred_bin p e1 e2))::progL)) Q)``,
+   (asl_prog_block ((asl_prog_assume (var_res_pred_bin p e1 e2))::progL)) Q)``,
 
 SIMP_TAC std_ss [var_res_pred_bin___ALTERNATIVE_DEF,
    var_res_prop_binexpression___ALTERNATIVE_DEF] THEN
@@ -13101,19 +13101,19 @@ EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
   {|var_res_prop_expression f T p el|}) (K T) /\
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb)
    (BAG_INSERT (var_res_prop_expression f T p el) sfb))
-   (fasl_prog_block progL) Q) ==>
+   (asl_prog_block progL) Q) ==>
 
 VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
-   (fasl_prog_block ((fasl_prog_assert (var_res_pred p el))::progL)) Q)``,
+   (asl_prog_block ((asl_prog_assert (var_res_pred p el))::progL)) Q)``,
 
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block,
    var_res_pred_def] THEN
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def,
    VAR_RES_HOARE_TRIPLE_def, var_res_prop___REWRITE,
-   fasl_prog_assert_def] THEN
+   asl_prog_assert_def] THEN
 REPEAT STRIP_TAC THEN
-MATCH_MP_TAC FASL_INFERENCE_assert_seq THEN
+MATCH_MP_TAC ASL_INFERENCE_assert_seq THEN
 
 `ASL_IS_INTUITIONISTIC (VAR_RES_COMBINATOR f)
         (var_res_prop_weak_expression p el)` by ALL_TAC THEN1 (
@@ -13127,7 +13127,7 @@ MATCH_MP_TAC FASL_INFERENCE_assert_seq THEN
    ASM_REWRITE_TAC[]
 ) THEN
 FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
-   IN_ABS, EVAL_fasl_predicate_def,
+   IN_ABS, EVAL_asl_predicate_def,
    var_res_prop___COND_INSERT] THEN
 `!s. s IN var_res_prop___PROP f (wpb,rpb) sfb ==>
      s IN var_res_prop_weak_expression p el` by ALL_TAC THEN1 (
@@ -13168,14 +13168,14 @@ store_thm ("VAR_RES_COND_INFERENCE___comment_assert",
 ``!f wpb rpb sfb progL qP Q.
 
 (?x. VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
-   (fasl_prog_block (
+   (asl_prog_block (
        (var_res_prog_cond_best_local_action 
           (var_res_prop_internal f (EMPTY_BAG, BAG_UNION wpb rpb) (EMPTY, EMPTY) T EMPTY_BAG (qP x))
           (var_res_prop_internal f (EMPTY_BAG, BAG_UNION wpb rpb) (EMPTY, EMPTY) T EMPTY_BAG (qP x)))::
        progL)) Q) ==>
 
 VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
-   (fasl_prog_block ((fasl_comment_assert qP)::progL)) Q``,
+   (asl_prog_block ((asl_comment_assert qP)::progL)) Q``,
 
 
 SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
@@ -13190,13 +13190,13 @@ MATCH_MP_TAC (VAR_RES_COND_HOARE_TRIPLE___PROGRAM_ABSTRACTION_first_block_simple
 ) THEN
 ASM_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
    var_res_prog_cond_best_local_action_def, var_res_prop___REWRITE,
-   fasl_comment_assert_def, var_res_prop_internal_def,
+   asl_comment_assert_def, var_res_prop_internal_def,
    var_res_prop_internal___COND_def, FINITE_BAG_THM,
    NOT_IN_EMPTY_BAG, BAG_UNION_EMPTY] THEN
-MATCH_MP_TAC (EQ_IMP_RULE_CANON FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action) THEN
-ASM_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   FASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def, IN_ABS,
-   fasla_skip_def, fasl_order_THM, SUBSET_DEF, IN_SING,
+MATCH_MP_TAC (EQ_IMP_RULE_CANON ASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action) THEN
+ASM_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def, IN_ABS,
+   asla_skip_def, fasl_order_THM, SUBSET_DEF, IN_SING,
    VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___REFL] THEN
 FULL_SIMP_TAC std_ss [var_res_prop___COND___REWRITE,
    IS_VAR_RES_COMBINATOR_def] THEN
@@ -13213,10 +13213,10 @@ VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb)) P ==>
 (VAR_RES_FRAME_SPLIT f rfc (wpb,rpb) EMPTY_BAG EMPTY_BAG sfb {|P|}
 (\sfb'''. VAR_RES_COND_HOARE_TRIPLE f
     (var_res_prop f (wpb,rpb) (BAG_INSERT P sfb'''))
-       (fasl_prog_block progL) Q)) ==>
+       (asl_prog_block progL) Q)) ==>
 
 VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
-   (fasl_prog_block ((fasl_comment_assert P)::progL)) Q``,
+   (asl_prog_block ((asl_comment_assert P)::progL)) Q``,
 
 
 REPEAT STRIP_TAC THEN
@@ -13241,12 +13241,12 @@ Tactical.REVERSE CONJ_TAC THEN1 (
 ) THEN
 ASM_SIMP_TAC std_ss [VAR_RES_PROGRAM_IS_ABSTRACTION_def,
    var_res_prog_cond_best_local_action_def, var_res_prop___REWRITE,
-   fasl_comment_assert_def] THEN
-MATCH_MP_TAC (EQ_IMP_RULE_CANON FASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action) THEN
+   asl_comment_assert_def] THEN
+MATCH_MP_TAC (EQ_IMP_RULE_CANON ASL_PROGRAM_IS_ABSTRACTION___var_res_best_local_action) THEN
 
-ASM_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, FASL_PROGRAM_HOARE_TRIPLE_def,
-   FASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def, IN_ABS,
-   fasla_skip_def, fasl_order_THM, SUBSET_DEF, IN_SING,
+ASM_SIMP_TAC std_ss [VAR_RES_HOARE_TRIPLE_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___skip, HOARE_TRIPLE_def, IN_ABS,
+   asla_skip_def, fasl_order_THM, SUBSET_DEF, IN_SING,
    VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___REFL] THEN
 
 FULL_SIMP_TAC std_ss [var_res_prop___COND___REWRITE,
@@ -13332,10 +13332,10 @@ EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb)
    (BAG_INSERT (var_res_prop_expression f T (\l. ~(p l)) el) sfb))
-   (fasl_prog_block progL) Q ==>
+   (asl_prog_block progL) Q ==>
 
 VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg (
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg (
       var_res_pred p el)))::progL)) Q)``,
 
 
@@ -13347,10 +13347,10 @@ ASM_SIMP_TAC std_ss [] THEN
 
 SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block, var_res_pred_def] THEN
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, VAR_RES_HOARE_TRIPLE_def,
-   FASL_PROGRAM_HOARE_TRIPLE_def, FASL_PROGRAM_SEM___prog_seq,
+   ASL_PROGRAM_HOARE_TRIPLE_def, ASL_PROGRAM_SEM___prog_seq,
    HOARE_TRIPLE_def, IN_ABS, var_res_prop___REWRITE,
-   FASL_PROGRAM_SEM___assume, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
-   EVAL_fasl_predicate_def] THEN
+   ASL_PROGRAM_SEM___assume, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
+   EVAL_asl_predicate_def] THEN
 REPEAT STRIP_TAC THEN
 `!p. ASL_IS_INTUITIONISTIC (VAR_RES_COMBINATOR f)
     (var_res_prop_weak_expression p el)` by ALL_TAC THEN1 (
@@ -13362,13 +13362,13 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
 Q.PAT_ASSUM `!x'. x' IN X ==> Z` (MP_TAC o Q.SPEC `x`) THEN
 ASM_SIMP_TAC std_ss [] THEN
-Q.MATCH_ABBREV_TAC `fasl_order ((fasla_seq A2 psem) x) (SOME qset) ==>
-                    fasl_order ((fasla_seq A1 psem) x) (SOME qset)` THEN
+Q.MATCH_ABBREV_TAC `fasl_order ((asla_seq A2 psem) x) (SOME qset) ==>
+                    fasl_order ((asla_seq A1 psem) x) (SOME qset)` THEN
 Tactical.REVERSE (`A1 x = A2 x` by ALL_TAC) THEN1 (
-   ASM_SIMP_TAC std_ss [fasl_order_THM2, fasla_seq_def]
+   ASM_SIMP_TAC std_ss [fasl_order_THM2, asla_seq_def]
 ) THEN
 Q.UNABBREV_TAC `A1` THEN Q.UNABBREV_TAC `A2` THEN
-SIMP_TAC std_ss [fasla_assume_def] THEN
+SIMP_TAC std_ss [asla_assume_def] THEN
 
 Q.ABBREV_TAC `P1 = ASL_INTUITIONISTIC_NEGATION (VAR_RES_COMBINATOR f)
          (var_res_prop_weak_expression p el)` THEN
@@ -13412,10 +13412,10 @@ VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb)
    (BAG_INSERT (var_res_prop_binexpression f T (\x1 x2. ~(p x1 x2)) e1 e2) sfb))
-   (fasl_prog_block progL) Q ==>
+   (asl_prog_block progL) Q ==>
 
 VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb, rpb) sfb)
-   (fasl_prog_block ((fasl_prog_assume (fasl_pred_neg (
+   (asl_prog_block ((asl_prog_assume (asl_pred_neg (
       var_res_pred_bin p e1 e2)))::progL)) Q)``,
 
 
@@ -13433,32 +13433,32 @@ ASM_SIMP_TAC list_ss []);
  ******************************************************)
 
 
-val fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_bla =
-store_thm ("fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_bla",
-``fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_best_local_action P Q) /\
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_cond_best_local_action xP xQ) /\
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_quant_best_local_action qP qQ) /\
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_cond_quant_best_local_action xqP xqQ)``,
+val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_bla =
+store_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_bla",
+``asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_best_local_action P Q) /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_cond_best_local_action xP xQ) /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_quant_best_local_action qP qQ) /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_cond_quant_best_local_action xqP xqQ)``,
 
-REWRITE_TAC[fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___SIMPLE_REWRITES,
+REWRITE_TAC[asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___SIMPLE_REWRITES,
    var_res_prog_best_local_action_def, var_res_prog_cond_best_local_action_def,
    var_res_prog_quant_best_local_action_def,
    var_res_prog_cond_quant_best_local_action_def,
    COND_RAND, COND_RATOR, COND_EXPAND_IMP]);
 
 
-val fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_SIMPLE_REWRITES =
-store_thm ("fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_SIMPLE_REWRITES",
-``fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_release_lock f wpb sfb) /\
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_release_lock_input f wp P) /\
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_release_lock_internal f wp PP) /\
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_aquire_lock f c wpb sfb) /\
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_aquire_lock_input f c wp P) /\
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_aquire_lock_internal f c wp PP) /\
+val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_SIMPLE_REWRITES =
+store_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_SIMPLE_REWRITES",
+``asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_release_lock f wpb sfb) /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_release_lock_input f wp P) /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_release_lock_internal f wp PP) /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_aquire_lock f c wpb sfb) /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_aquire_lock_input f c wp P) /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_aquire_lock_internal f c wp PP) /\
 
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_new_var_init v e) /\
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_dispose_var v) /\
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_assign v e)
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_new_var_init v e) /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_dispose_var v) /\
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_assign v e)
 ``,
 
 SIMP_TAC std_ss [var_res_prog_aquire_lock_internal_def,
@@ -13472,68 +13472,68 @@ SIMP_TAC std_ss [var_res_prog_aquire_lock_internal_def,
                  var_res_prog_dispose_var_def] THEN
 REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [COND_RAND, COND_RATOR,
-                 fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_aquire_lock,
-                 fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___SIMPLE_REWRITES,
-                 fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prim_command]);
+                 asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_aquire_lock,
+                 asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___SIMPLE_REWRITES,
+                 asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prim_command]);
 
 
-val fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_new_var =
-store_thm ("fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_new_var",
-``!v. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_new_var v)``,
+val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_new_var =
+store_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_new_var",
+``!v. asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_new_var v)``,
 
 SIMP_TAC std_ss [var_res_prog_new_var_def] THEN
 GEN_TAC THEN
-MATCH_MP_TAC fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_ndet THEN
+MATCH_MP_TAC asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_ndet THEN
 SIMP_TAC std_ss [IN_ABS, GSYM LEFT_FORALL_IMP_THM,
-   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_SIMPLE_REWRITES]);
+   asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_SIMPLE_REWRITES]);
 
 
 
 
 
 
-val fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_call_by_value_arg =
-store_thm ("fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_call_by_value_arg",
+val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_call_by_value_arg =
+store_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_call_by_value_arg",
 ``!body c.
-  ((!v. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (body v)) ==>
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_call_by_value_arg body c))``,
+  ((!v. asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (body v)) ==>
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_call_by_value_arg body c))``,
 
 
 SIMP_TAC std_ss [var_res_prog_call_by_value_arg_def] THEN
 REPEAT STRIP_TAC THEN
-MATCH_MP_TAC fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_forall THEN
+MATCH_MP_TAC asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_forall THEN
 SIMP_TAC std_ss [] THEN
 GEN_TAC THEN
-CONSEQ_REWRITE_TAC ([fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_seq], [], []) THEN
-ASM_SIMP_TAC std_ss [fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_SIMPLE_REWRITES]);
+CONSEQ_REWRITE_TAC ([asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_seq], [], []) THEN
+ASM_SIMP_TAC std_ss [asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_SIMPLE_REWRITES]);
 
 
 
 
-val fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_local_var =
-store_thm ("fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_local_var",
+val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_local_var =
+store_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_local_var",
 ``!body.
-  ((!v. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (body v)) ==>
-  fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_local_var body))``,
+  ((!v. asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (body v)) ==>
+  asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_local_var body))``,
 
 
 SIMP_TAC std_ss [var_res_prog_local_var_def] THEN
 REPEAT STRIP_TAC THEN
-MATCH_MP_TAC fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_ndet THEN
+MATCH_MP_TAC asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_ndet THEN
 ASM_SIMP_TAC std_ss [IN_ABS, GSYM LEFT_FORALL_IMP_THM,
-   fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_call_by_value_arg]);
+   asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_call_by_value_arg]);
 
 
 
-val fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_eval_expressions =
-store_thm ("fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_eval_expressions",
+val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_eval_expressions =
+store_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_eval_expressions",
 ``!body expL.
-(!argL. fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (body argL)) ==>
-fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_eval_expressions body expL)``,
+(!argL. asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (body argL)) ==>
+asl_prog_IS_RESOURCE_AND_PROCCALL_FREE (var_res_prog_eval_expressions body expL)``,
 
 SIMP_TAC std_ss [var_res_prog_eval_expressions_def] THEN
 REPEAT STRIP_TAC THEN
-MATCH_MP_TAC fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_choose_constants THEN
+MATCH_MP_TAC asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prog_choose_constants THEN
 ASM_REWRITE_TAC[]);
 
 
@@ -13563,15 +13563,15 @@ LIST_CONJ (map GEN_ALL [
    var_res_prop_varlist_update___var_res_prop_binexpression_cond]));
 
 
-val fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_REWRITES =
-  save_thm ("fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_REWRITES",
+val asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_REWRITES =
+  save_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_REWRITES",
   LIST_CONJ (map GEN_ALL [
-     fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_bla,
-     fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_SIMPLE_REWRITES,
-     fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_new_var,
-     fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_call_by_value_arg,
-     fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_local_var,
-     fasl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_eval_expressions]));
+     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_bla,
+     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___VAR_RES_SIMPLE_REWRITES,
+     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_new_var,
+     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_call_by_value_arg,
+     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_local_var,
+     asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___var_res_prog_eval_expressions]));
 
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___VAR_RES_REWRITES =
