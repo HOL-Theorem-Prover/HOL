@@ -37,6 +37,7 @@ fun tstamp () : real = Time.toReal (Time.now())
 type overload_info = ((string,overloaded_op_info) Binarymap.dict *
                       printmap_data LVTermNet.lvtermnet)
 
+fun raw_print_map ((x,y):overload_info) = y
 structure PrintMap = LVTermNet
 
 fun nthy_rec_cmp ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
@@ -351,8 +352,8 @@ fun isize f x = isize0 0 f x
 
 fun strip_comb ((_, prmap): overload_info) t = let
   val matches = PrintMap.match(prmap, t)
-  val cmp0 = pair_compare (measure_cmp (isize type_size),
-                           pair_compare (measure_cmp (isize term_size),
+  val cmp0 = pair_compare (measure_cmp (isize term_size),
+                           pair_compare (measure_cmp (isize type_size),
                                          flip_order o Real.compare))
   val cmp = inv_img_cmp (fn (a,b,c,d) => (a,(b,c))) cmp0
 
@@ -369,12 +370,12 @@ fun strip_comb ((_, prmap): overload_info) t = let
                          tyi0
                          tyeq
   in
-    SOME (tyi, tmi, tstamp, (orig, nm))
+    SOME (tmi, tyi, tstamp, (orig, nm))
   end handle HOL_ERR _ => NONE
 
   val inst_data = List.mapPartial test matches
   val sorted = Listsort.sort cmp inst_data
-  fun rearrange (_, tmi, _, (orig, nm)) = let
+  fun rearrange (tmi, _, _, (orig, nm)) = let
     val (bvs,_) = strip_abs orig
     fun findarg v =
         case List.find (fn {redex,residue} => redex = v) tmi of

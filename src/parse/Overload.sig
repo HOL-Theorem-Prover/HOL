@@ -9,6 +9,7 @@ sig
 
 
   type overload_info
+  type printmap_data = term * string * real
 
   val null_oinfo : overload_info
 
@@ -18,7 +19,7 @@ sig
   (* the print map, taking constants to at most one string *)
   val print_map : overload_info -> (nthy_rec * string) list
 
-
+  val raw_print_map : overload_info -> printmap_data LVTermNet.lvtermnet
 
   val fupd_actual_ops :
     (term list -> term list) -> overloaded_op_info ->
