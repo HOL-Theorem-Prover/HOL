@@ -6,8 +6,6 @@ val _ = new_theory "stt";
 
 val _ = remove_ovl_mapping "B" {Name="B", Thy="chap2"}
 
-val _ = set_trace "Unicode" 1
-
 (* define simple types, the "funspace" constructor will get to be written
    as infix "-->".
 *)
@@ -57,10 +55,6 @@ val _ = overload_on ("·", ``ctxtswap``)
 val _ = set_fixity "#" (Infix(NONASSOC, 450))
 val _ = overload_on ("#", ``λv Γ. v ∉ ctxtFV Γ``)
 val _ = overload_on ("#", ``λv M. v ∉ FV M``)
-
-val _ = set_fixity "⁻¹" (Suffix 2100)
-val _ = overload_on ("⁻¹",
-  ``REVERSE : (string # string) list -> (string # string) list``)
 
 (* typing relation respects permutation *)
 val hastype_swap = store_thm(
