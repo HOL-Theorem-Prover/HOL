@@ -316,7 +316,7 @@ in
 end
 
 (* ------------------------------------------------------------------------
-   fcp_eq_thm : generates a bitwise equality theorem for a give word type.
+   fcp_eq_thm : generates a bitwise equality theorem for a given word type.
                 For example, fcp_eq_thm ``:word2`` gives the theorem
                 |- !a b. (a = b) = (a ' 0 = b ' 0) /\ (a ' 1 = b ' 1).
    ------------------------------------------------------------------------ *)
@@ -559,7 +559,7 @@ in
     handle HOL_ERR _ =>
       Drule.EQF_INTRO (conv (boolSyntax.mk_neg tm))
       handle HOL_ERR _ =>
-        raise ERR "PROP_PROVE" "not satisfiable or unsatisfiable"
+        raise ERR "PROP_PROVE" "contingent proposition"
 end
 
 fun SAT_CONV tm = HolSatLib.SAT_PROVE tm (* HolSatLib.SAT_ORACLE *)
@@ -571,7 +571,7 @@ fun BIT_TAUT_CONV tm =
 let
   val insts = HOLset.listItems (non_prop_terms tm)
   val vars = Term.genvars Type.bool (List.length insts)
-  val theta  = Lib.map2 (Lib.curry (op |->)) insts vars
+  val theta = Lib.map2 (Lib.curry (op |->)) insts vars
   val tm' = Term.subst theta tm
   val sz = Term.term_size tm'
   val f = if !blast_trace > 2 then
@@ -619,7 +619,10 @@ local
           of SOME (w,v) =>
                 Lib.can dim_of_word w orelse
                 is_word_index w orelse is_word_index v
-           | NONE => wordsSyntax.is_word_lo tm)
+           | NONE =>
+               (case Lib.total wordsSyntax.dest_word_lo tm
+                of SOME (w,_) => Lib.can dim_of_word w
+                 | NONE => false))
 
   fun bit_theorems conv (n, l, r) =
       let
@@ -655,6 +658,9 @@ local
   val cmp = reduceLib.num_compset ()
   val _ = computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM] cmp
   val NUM_CONV = computeLib.CBV_CONV cmp
+  fun FORALL_EQ_RULE vars t =
+        List.foldr (fn (v,t) => Drule.FORALL_EQ v t) t vars
+        |> Conv.CONV_RULE (Conv.RHS_CONV (Rewrite.REWRITE_CONV []))
 in
   fun BIT_BLAST_CONV tm =
   let
@@ -708,13 +714,13 @@ in
                 raise ERR "BBLAST_CONV" "not a bool term"
         val (vars,tm') = boolSyntax.strip_forall tm
         val thm = Conv.QCONV WORD_SIMP_CONV tm'
-        val tm' = rhsc thm
-        val tms = HolKernel.find_terms is_blastable tm'
+        val tms = HolKernel.find_terms is_blastable (rhsc thm)
         val thms = Lib.mapfilter BIT_BLAST_CONV tms
       in
-        Thm.GENL vars (Conv.CONV_RULE (Conv.RHS_CONV
-          (Rewrite.ONCE_REWRITE_CONV thms THENC
-           Conv.TRY_CONV BIT_TAUT_CONV)) thm)
+        FORALL_EQ_RULE vars
+          (Conv.CONV_RULE (Conv.RHS_CONV
+             (Rewrite.ONCE_REWRITE_CONV thms THENC
+              Conv.TRY_CONV BIT_TAUT_CONV)) thm)
       end
 end
 

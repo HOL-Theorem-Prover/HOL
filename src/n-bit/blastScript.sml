@@ -10,34 +10,34 @@ open arithmeticTheory bitTheory wordsTheory;
 
 val _ = new_theory "blast";
 
-infix \\ << >>
+infix \\ <<
 
 val op \\ = op THEN;
 val op << = op THENL;
-val op >> = op THEN1;
 
-(* ------------------------------------------------------------------------- *)
-(* Ripple carry addition *)
-
-val bcarry_def = new_definition ("bcarry_def",
-  ``bcarry x y c = x /\ y \/ (x \/ y) /\ c``);
+(* -------------------------------------------------------------------------
+   Ripple carry addition
+   ------------------------------------------------------------------------- *)
 
 (* --------------------------------------------------------
    "BCARRY i x y c" is the i-th carry-out bit for the
    summuation of bit streams "x" and "y" with carry-in "c"
    -------------------------------------------------------- *)
 
+val bcarry_def = new_definition ("bcarry_def",
+  ``bcarry x y c = x /\ y \/ (x \/ y) /\ c``);
+
 val BCARRY_def = Define`
   (BCARRY 0 x y c = c) /\
   (BCARRY (SUC i) x y c = bcarry (x i) (y i) (BCARRY i x y c))`;
-
-val bsum_def = new_definition ("bsum_def",
-  ``bsum (x:bool) y c = ((x = ~y) = ~c)``);
 
 (* --------------------------------------------------------
    "BSUM i x y c" is the i-th bit for the summuation of
    bit streams "x" and "y" with carry-in "c"
    -------------------------------------------------------- *)
+
+val bsum_def = new_definition ("bsum_def",
+  ``bsum (x:bool) y c = ((x = ~y) = ~c)``);
 
 val BSUM_def = new_definition ("BSUM_def",
   ``BSUM i x y c = bsum (x i) (y i) (BCARRY i x y c)``);

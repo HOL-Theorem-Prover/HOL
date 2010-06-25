@@ -14,7 +14,7 @@ fun test c tm = let
   val rt = Timer.startRealTimer ()
   val res = SOME (c tm) handle HOL_ERR _ => NONE
   val elapsed = Timer.checkRealTimer rt
-  val res' = SOME (Option.map (Drule.EQT_ELIM o SPEC_ALL) res)
+  val res' = SOME (Option.map Drule.EQT_ELIM res)
              handle HOL_ERR _ => NONE
 in
   TextIO.print (trunc 65 tm ^ Time.toString elapsed ^
