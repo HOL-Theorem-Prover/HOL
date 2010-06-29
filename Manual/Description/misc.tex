@@ -813,6 +813,16 @@ This is the default for \holthm.
 Causes the string to be parsed in such a way that any embedded \texttt{case} terms are only partly parsed, allowing their input form to appear when they are output.
 %
 This preserves underscore-patterns, for example.
+
+\item[\texttt{conj}$n$] (Only for use with \holthm.)
+Extracts the $n^{\mbox{\scriptsize th}}$ conjunct of a theorem.
+The conjuncts are numbered starting at $1$, not $0$.
+For example,
+\begin{verbatim}
+  \HOLthm[conj3]{bool.AND_CLAUSES}
+\end{verbatim}
+extracts the conjunct $\vdash \texttt{F} \land t \iff \texttt{F}$.
+
 \item[\texttt{def}] (Only for use with \holthm.)
 %
 Causes the theorem to be split into its constituent conjuncts, for each conjunct to have any outermost universal quantifiers removed, and for each to be printed on a line of its own.
@@ -865,9 +875,39 @@ The behaviour is to print the type of this term.
 %
 Thus \texttt{\holty{}[of]\{p /\bs{} q\}} will print \texttt{bool}.
 
+\item[\texttt{rule}] (Only for use with \holtm{} and \holthm.)
+Prints a term (or a theorem's conclusion) using the \texttt{\bs{}infer} command (available as part of the \texttt{proof.sty} package).
+This gives a nice, ``natural deduction'' presentation.
+\index{natural deduction!presentation style for the LaTeX munger@presentation style for the \LaTeX{} munger}
+For example, the term
+\begin{alltt}
+   (p \bs{}/ q) /\bs{} (p ==> r) /\bs{} (q ==> r) ==> r
+\end{alltt}
+will print as
+\[
+\infer{r}{p \lor q & p \Rightarrow r & q \Rightarrow r}
+\]
+Conjuncts to the left of the outermost implication (if any) will be split into hypotheses separated by whitespace.
+For large rules, this style of presentation breaks down, as there may not be enough horizontal space on the page to fit in all the hypotheses.
+In this situation, the \texttt{stackedrule} option is appropriate.
+
+The term or theorem must be within a \LaTeX{} math-environment (it is typeset as if inline, with the \texttt{tt} option).
+
 \item[\texttt{showtypes}] (For use with \holthm{} and \holtm.)
 %
 Causes the term or theorem to be printed with the \texttt{types} trace set to level~1 (equivalent to having the \ml{show\_types} reference set to \ml{true}).
+
+\item[\texttt{stackedrule}] (For use with \holthm{} and \holtm.)
+This is similar to the \texttt{rule} option, but causes implication hypotheses to be presented as a ``stack'', centered in a \LaTeX{} array on top of one another.
+Thus,
+\begin{alltt}
+   (p \bs{}/ q) /\bs{} (p ==> r) /\bs{} (q ==> r) ==> r
+\end{alltt}
+will print as
+\[
+\infer{r}{\begin{array}{c}p \lor q \\ p \Rightarrow r \\ q \Rightarrow r\end{array}}
+\]
+For this purely propositional example with single-letter variable names, the result looks a little odd, but if the hypotheses are textually larger, this option is indispensable.
 
 \item[\texttt{tt}] %
 Causes the term to be type-set as the argument to a \LaTeX{} command \texttt{\bs{}HOLinline}.
@@ -1031,7 +1071,7 @@ tighter interaction with \LaTeX{} is beneficial. Holindex is a
 \HOL{}-theorems, types and terms as well as many related commands.
 This allows it to generate an index of all \HOL{}-theorems, types and
 terms that occur in the document as well as providing citation commands
-for \HOL{} entities in this index. Holindex can be found in 
+for \HOL{} entities in this index. Holindex can be found in
 \texttt{src/TeX/}. There is also a demonstration file available in this
 directory.
 
@@ -1057,7 +1097,7 @@ If you are using emacs with AUCTeX to write your latex files, you might
 want to add
 \begin{verbatim}
 (eval-after-load "tex" '(add-to-list 'TeX-command-list
-   '("Holindex" "munge.exe -index %s" 
+   '("Holindex" "munge.exe -index %s"
      TeX-run-background t t :help "Run Holindex") t))
 \end{verbatim}
 to your emacs configuration file. This will allow
@@ -1068,7 +1108,7 @@ you to run Holindex using AUCTeX.
 \item[\texttt{\bs{}blockHOLthm\{id\}}, \texttt{\bs{}blockHOLtm\{id\}}, \texttt{
     \bs{}blockHOLty\{id\}}] These commands typeset the theorem, term
   or type with the given \texttt{id} as the argument to a \LaTeX{}
-  command \texttt{\bs{}HOLblock}. They are intended for 
+  command \texttt{\bs{}HOLblock}. They are intended for
   typesetting multiple lines in a new block.
   For theorem ids of the form \texttt{theory.thm} are predefined. All
   other ids have to be defined before usage as explained below.
@@ -1079,10 +1119,10 @@ you to run Holindex using AUCTeX.
    use \texttt{\bs{}HOLinline} instead of \texttt{\bs{}HOLblock}.
 %
 \item[\texttt{\bs{}citeHOLthm\{id\}}, \texttt{\bs{}citeHOLtm\{id\}}, \texttt{\bs{}citeHOLty\{id\}}]
-   These commands cite a theorem, term or type. 
+   These commands cite a theorem, term or type.
 %
 \item[\texttt{\bs{}mciteHOLthm\{id,id,...id\}}, \texttt{\bs{}mciteHOLtm\{ids\}}, \texttt{\bs{}mciteHOLty\{ids\}}]
-   These commands cite multiple theorems, terms or types. 
+   These commands cite multiple theorems, terms or types.
 %
 \item[\texttt{\bs{}citePureHOLthm\{id\}}, \texttt{\bs{}citePureHOLtm\{id\}},
    \texttt{\bs{}citePureHOLty\{id\}}] These commands\linebreak cite a theorems, terms or types.
@@ -1198,7 +1238,7 @@ Here is an example of such a \HOL{} definition file:
 }
 
 @Type{type_id_1,
-   content = ``:bool``   
+   content = ``:bool``
 }
 
 @Thm{arithmetic.LESS_SUCC_EQ_COR,
@@ -1222,7 +1262,7 @@ Here is an example of such a \HOL{} definition file:
 
 There are some commands that can be used to change the overall behaviour
 of Holindex. They should be used in the header directly after \texttt{holindex}
-is included. 
+is included.
 \begin{description}
 \item[\texttt{\bs{}setHOLlinewidth}] sets the default line-width. This
    corresponds to the \texttt{-w} option of the munger.
