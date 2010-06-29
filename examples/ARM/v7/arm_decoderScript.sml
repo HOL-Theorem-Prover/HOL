@@ -1519,10 +1519,10 @@ val arm_decode_not_v4 = save_thm("arm_decode_not_v4",
     |> REWRITE_RULE []);
 
 val thumb_decode = save_thm("thumb_decode",
-  rule [`arch`,`n2w it`,`n2w n`] thumb_decode_def);
+  rule [`arch`,`it`,`n2w n`] thumb_decode_def);
 
 val thumbee_decode = save_thm("thumbee_decode",
-  rule [`arch`,`n2w it`,`n2w n`] thumbee_decode_def);
+  rule [`arch`,`it`,`n2w n`] thumbee_decode_def);
 
 val thumb2_decode_aux1 = save_thm("thumb2_decode_aux1",
   rule [`n2w it`, `n2w m`, `n2w n`] thumb2_decode_aux1_def);
