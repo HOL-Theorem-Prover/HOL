@@ -4870,6 +4870,21 @@ SIMP_TAC std_ss [ASL_TRACE_ZIP_def, ASL_TRACE_ZIP_PRIME_def,
    ASL_GET_PRIM_COMMAND_ATOMIC_ACTION_def, LET_THM, DISJ_IMP_THM]);
 
 
+val ASL_TRACE_ZIP___REWRITE = store_thm ("ASL_TRACE_ZIP___REWRITE",
+``(ASL_TRACE_ZIP [] t = {t}) /\
+  (ASL_TRACE_ZIP t [] = {t}) /\
+  (ASL_TRACE_ZIP (aa1::t1) (aa2::t2) =
+    (let z1 = IMAGE (\x. aa1::x) (ASL_TRACE_ZIP t1 (aa2::t2)) in
+     let z2 = IMAGE (\x. aa2::x) (ASL_TRACE_ZIP (aa1::t1) t2) in
+     let z3 = z1 UNION z2 in
+       if (ASL_IS_PRIM_COMMAND_ATOMIC_ACTION aa1 /\
+           ASL_IS_PRIM_COMMAND_ATOMIC_ACTION aa2) then
+      IMAGE (\x. (asl_aa_check (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION aa1) (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION aa2))::x) z3 else
+      z3))``,
+SIMP_TAC std_ss [ASL_TRACE_ZIP_def, ASL_TRACE_ZIP_THM]);
+
+
+
 val ASL_TRACE_SEM___check = store_thm ("ASL_TRACE_SEM___check",
 ``!f lock_env pc1 pc2 t s.
 ASL_TRACE_SEM (f, lock_env) (asl_aa_check pc1 pc2::t) s =

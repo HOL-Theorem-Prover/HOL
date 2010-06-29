@@ -3182,8 +3182,38 @@ ASM_REWRITE_TAC[]);
  * Lists
  *-----------------*)
 
+
+val holfoot_ap_gendl_data_list_seg_num_def = Define `
+  (holfoot_ap_gendl_data_list_seg_num 0 np startExp data endExp =
+    if (EVERY (\x. NULL (SND x)) data) /\ ALL_DISTINCT (MAP FST data) then
+       (var_res_prop_equal DISJOINT_FMAP_UNION startExp endExp)
+    else asl_false) /\
+  (holfoot_ap_gendl_data_list_seg_num (SUC n) np startExp data endExp =
+    if EVERY (\x. ~NULL (SND x)) data /\ ALL_DISTINCT (MAP FST data) then
+     asl_and (var_res_prop_weak_unequal startExp endExp) 
+     asl_exists n':num. 
+      asl_star holfoot_separation_combinator
+                      (asl_and (np startExp (var_res_exp_const n')) 
+                      (holfoot_ap_points_to startExp
+                         (LIST_TO_FMAP (ZIP (MAP FST data,
+                            (MAP (\x. var_res_exp_const (HD (SND x))) data))))))
+                      (holfoot_ap_gendl_data_list_seg_num n np
+               (var_res_exp_const n') (MAP (\ (t, l). (t, TL l)) data) endExp)
+     else asl_false)`;
+
 val holfoot_ap_data_list_seg_num_def = Define `
-  (holfoot_ap_data_list_seg_num 0 tl startExp data endExp =
+  holfoot_ap_data_list_seg_num n tl startExp data endExp =
+  if MEM tl (MAP FST data) then asl_false else
+  holfoot_ap_gendl_data_list_seg_num n
+    (\e1 e2 state. 
+     let v1 = e1 (FST state) in
+     let v2 = e2 (FST state) in
+     (IS_SOME v1 /\ IS_SOME v2 /\
+      ((THE v1) IN FDOM (SND state)) /\
+      ((SND state) ' (THE v1) tl = THE v2))) startExp data endExp`;
+
+val holfoot_ap_data_list_seg_num_REWRITE = store_thm ("holfoot_ap_data_list_seg_num_REWRITE",
+``(holfoot_ap_data_list_seg_num 0 tl startExp data endExp =
     if (EVERY (\x. NULL (SND x)) data) /\ ALL_DISTINCT (tl::(MAP FST data)) then
        (var_res_prop_equal DISJOINT_FMAP_UNION startExp endExp)
     else asl_false) /\
@@ -3196,7 +3226,27 @@ val holfoot_ap_data_list_seg_num_def = Define `
                             MAP (var_res_exp_const) (n'::(MAP (\x. HD (SND x)) data))))))
                       (holfoot_ap_data_list_seg_num n tl
                (var_res_exp_const n') (MAP (\ (t, l). (t, TL l)) data) endExp)
-     ) else asl_false)`;
+     ) else asl_false)``,
+
+SIMP_TAC (std_ss++boolSimps.CONJ_ss) [holfoot_ap_data_list_seg_num_def, holfoot_ap_gendl_data_list_seg_num_def] THEN
+Cases_on `ALL_DISTINCT (tl::(MAP FST data))` THEN FULL_SIMP_TAC std_ss [ALL_DISTINCT] THEN
+Cases_on `EVERY (\x. ~NULL (SND x)) data` THEN ASM_REWRITE_TAC[] THEN
+ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [FUN_EQ_THM, asl_bool_EVAL, IN_ABS, asl_star_def, GSYM RIGHT_EXISTS_AND_THM,
+   MAP_MAP_o, combinTheory.o_DEF, ETA_THM] THEN
+REPEAT STRIP_TAC THEN
+REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+REPEAT STRIP_TAC THEN
+SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [holfoot_ap_points_to_def, IN_ABS, LET_THM,
+   LIST_TO_FMAP_THM, FEVERY_FUPDATE, MAP_MAP_o, combinTheory.o_DEF,
+   var_res_exp_const_EVAL] THEN
+Q.ABBREV_TAC `dL:holfoot_tag |-> holfoot_a_expression = (LIST_TO_FMAP (ZIP (MAP FST data, MAP (\x. var_res_exp_const (HD (SND x))) data)))` THEN
+`DRESTRICT dL (COMPL {tl}) = dL` by ALL_TAC THEN1 (
+   MATCH_MP_TAC NOT_FDOM_DRESTRICT THEN
+   Q.UNABBREV_TAC `dL` THEN
+   ASM_SIMP_TAC list_ss [FDOM_LIST_TO_FMAP, IN_LIST_TO_SET, MAP_ZIP]
+) THEN
+ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [IN_SING]);
 
 
 
@@ -3205,19 +3255,18 @@ val holfoot_ap_list_seg_num_def = Define `
   holfoot_ap_data_list_seg_num n tl startExp [] endExp`;
 
 
-val holfoot_ap_data_list_seg_num___DATA_PROPS =
-store_thm ("holfoot_ap_data_list_seg_num___DATA_PROPS",
-``!n data tl startExp endExp.
-
-  ~((EVERY (\x. LENGTH (SND x) = n) data) /\ (ALL_DISTINCT (tl::(MAP FST data)))) ==>
-  (holfoot_ap_data_list_seg_num n tl startExp data endExp =
+val holfoot_ap_gendl_data_list_seg_num___DATA_PROPS =
+store_thm ("holfoot_ap_gendl_data_list_seg_num___DATA_PROPS",
+``!n data np startExp endExp.
+  ~((EVERY (\x. LENGTH (SND x) = n) data) /\ (ALL_DISTINCT (MAP FST data))) ==>
+  (holfoot_ap_gendl_data_list_seg_num n np startExp data endExp =
    asl_false)``,
 
 Induct_on `n` THENL [
-   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def, LENGTH_NIL, NULL_EQ,
+   SIMP_TAC std_ss [holfoot_ap_gendl_data_list_seg_num_def, LENGTH_NIL, NULL_EQ,
                     DISJ_IMP_THM],
 
-   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def, COND_RAND, COND_RATOR,
+   SIMP_TAC std_ss [holfoot_ap_gendl_data_list_seg_num_def, COND_RAND, COND_RATOR,
                     DISJ_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
    SIMP_TAC std_ss [EXTENSION, asl_bool_EVAL] THEN
@@ -3234,42 +3283,65 @@ Induct_on `n` THENL [
 ]);
 
 
-val holfoot_ap_data_list_seg_num___EXP_DEFINED =
-store_thm ("holfoot_ap_data_list_seg_num___EXP_DEFINED",
-``!n data tl startExp endExp s.
 
-  (s IN holfoot_ap_data_list_seg_num n tl startExp data endExp ==>
+val holfoot_ap_data_list_seg_num___DATA_PROPS =
+store_thm ("holfoot_ap_data_list_seg_num___DATA_PROPS",
+``!n data tl startExp endExp.
+  ~((EVERY (\x. LENGTH (SND x) = n) data) /\ (ALL_DISTINCT (tl::(MAP FST data)))) ==>
+  (holfoot_ap_data_list_seg_num n tl startExp data endExp =
+   asl_false)``,
+
+SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+   ALL_DISTINCT, COND_RAND, COND_RATOR] THEN
+METIS_TAC[holfoot_ap_gendl_data_list_seg_num___DATA_PROPS]);
+
+
+val holfoot_ap_gendl_data_list_seg_num___EXP_DEFINED =
+store_thm ("holfoot_ap_gendl_data_list_seg_num___EXP_DEFINED",
+``!n data pn startExp endExp s.
+
+  (s IN holfoot_ap_gendl_data_list_seg_num n pn startExp data endExp ==>
    IS_SOME (startExp (FST s)) /\ IS_SOME (endExp (FST s)))``,
 
 Cases_on `n` THEN (
-   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+   SIMP_TAC std_ss [holfoot_ap_gendl_data_list_seg_num_def,
       COND_RAND, COND_RATOR, asl_bool_EVAL,
       var_res_prop_equal_unequal_EXPAND, IN_ABS]
 ));
 
 
+val holfoot_ap_data_list_seg_num___EXP_DEFINED =
+store_thm ("holfoot_ap_data_list_seg_num___EXP_DEFINED",
+``!n data tl startExp endExp s.
+  (s IN holfoot_ap_data_list_seg_num n tl startExp data endExp ==>
+   IS_SOME (startExp (FST s)) /\ IS_SOME (endExp (FST s)))``,
 
-val holfoot_ap_data_list_seg_num___ELIM_DATA =
-store_thm ("holfoot_ap_data_list_seg_num___ELIM_DATA",
-``!data data' n tl startExp endExp s.
+SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+   COND_RAND, COND_RATOR, NOT_IN_asl_false] THEN
+METIS_TAC[holfoot_ap_gendl_data_list_seg_num___EXP_DEFINED]);
+
+
+
+val holfoot_ap_gendl_data_list_seg_num___ELIM_DATA =
+store_thm ("holfoot_ap_gendl_data_list_seg_num___ELIM_DATA",
+``!data data' n pn startExp endExp s.
   ((!x. MEM x data' ==> MEM x data) /\ ALL_DISTINCT (MAP FST data') /\
-   (s IN holfoot_ap_data_list_seg_num n tl startExp data endExp)) ==>
-    s IN holfoot_ap_data_list_seg_num n tl startExp data' endExp``,
+   (s IN holfoot_ap_gendl_data_list_seg_num n pn startExp data endExp)) ==>
+    s IN holfoot_ap_gendl_data_list_seg_num n pn startExp data' endExp``,
 
 Induct_on `n` THENL [
-   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+   SIMP_TAC std_ss [holfoot_ap_gendl_data_list_seg_num_def,
           asl_bool_EVAL, IN_ABS, EVERY_MEM, COND_RATOR, COND_RAND,
           ALL_DISTINCT, MEM_MAP] THEN
    METIS_TAC[],
 
 
-   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def, COND_RAND, COND_RATOR,
+   SIMP_TAC std_ss [holfoot_ap_gendl_data_list_seg_num_def, COND_RAND, COND_RATOR,
                     asl_bool_EVAL] THEN
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [EVERY_MEM, ALL_DISTINCT, MEM_MAP] THEN
-   CONJ_TAC THEN1 PROVE_TAC[] THEN
    Q.EXISTS_TAC `n'` THEN
-   FULL_SIMP_TAC std_ss [asl_star_def, IN_ABS] THEN
+   FULL_SIMP_TAC std_ss [asl_star_def, IN_ABS, asl_bool_EVAL] THEN
    Q.EXISTS_TAC `p` THEN
    Q.EXISTS_TAC `q` THEN
    ASM_SIMP_TAC std_ss [] THEN
@@ -3284,8 +3356,8 @@ Induct_on `n` THENL [
 
       MATCH_MP_TAC holfoot_ap_points_to___SUBMAP THEN
       Q.EXISTS_TAC `LIST_TO_FMAP (ZIP
-               (tl::MAP FST data,
-                MAP var_res_exp_const (n'::MAP (\x. HD (SND x)) data)))` THEN
+               (MAP FST data,
+                MAP (\x. var_res_exp_const (HD (SND x))) data))` THEN
       ASM_SIMP_TAC list_ss [MAP_MAP_o, LIST_TO_FMAP_THM,
          combinTheory.o_DEF, ZIP_MAP, MAP_ZIP_EQ] THEN
       SIMP_TAC std_ss [SUBMAP_DEF, FDOM_FUPDATE_LIST, IN_INSERT,
@@ -3293,7 +3365,6 @@ Induct_on `n` THENL [
          combinTheory.o_DEF, GSYM RIGHT_EXISTS_AND_THM,
          FDOM_FUPDATE] THEN
       GEN_TAC THEN
-      Cases_on `x = tl` THEN ASM_REWRITE_TAC[FAPPLY_FUPDATE_THM] THEN
       REPEAT STRIP_TAC THEN1 PROVE_TAC[] THEN
 
       MATCH_MP_TAC (prove (``(?z. (X = z) /\ (Y = z)) ==> (X = Y)``, PROVE_TAC[])) THEN
@@ -3305,7 +3376,19 @@ Induct_on `n` THENL [
 
 
 
+val holfoot_ap_data_list_seg_num___ELIM_DATA =
+store_thm ("holfoot_ap_data_list_seg_num___ELIM_DATA",
+``!data data' n tl startExp endExp s.
+  ((!x. MEM x data' ==> MEM x data) /\ ALL_DISTINCT (MAP FST data') /\
+   (s IN holfoot_ap_data_list_seg_num n tl startExp data endExp)) ==>
+    s IN holfoot_ap_data_list_seg_num n tl startExp data' endExp``,
 
+SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `MEM tl (MAP FST data)` THEN1 FULL_SIMP_TAC std_ss [NOT_IN_asl_false] THEN
+`~(MEM tl (MAP FST data'))` by METIS_TAC[MEM_MAP] THEN
+FULL_SIMP_TAC std_ss [] THEN
+METIS_TAC[holfoot_ap_gendl_data_list_seg_num___ELIM_DATA]);
 
 
 
@@ -3321,9 +3404,6 @@ REPEAT STRIP_TAC THEN
 MATCH_MP_TAC holfoot_ap_data_list_seg_num___ELIM_DATA THEN
 Q.EXISTS_TAC `data` THEN
 ASM_SIMP_TAC list_ss []);
-
-
-
 
 
 
@@ -3356,16 +3436,16 @@ SIMP_TAC std_ss [EXTENSION, IN_ABS, asl_bool_EVAL,
                  GSYM asl_exists___asl_star_THM] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    Cases_on `n` THEN
-   FULL_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+   FULL_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE,
      asl_bool_EVAL, IN_ABS, COND_RAND, COND_RATOR] THEN
    PROVE_TAC[],
 
    Q.EXISTS_TAC `0` THEN
-   ASM_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+   ASM_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE,
                         asl_bool_EVAL, asl_bool_REWRITES],
 
    Q.EXISTS_TAC `SUC n` THEN
-   ASM_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+   ASM_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE,
                         asl_bool_EVAL, asl_bool_REWRITES] THEN
    Q.EXISTS_TAC `n'` THEN
    ASM_REWRITE_TAC[]
@@ -3435,7 +3515,7 @@ store_thm ("holfoot_ap_data_list_seg___NOT_EMPTY_DATA___0",
 
 SIMP_TAC list_ss [holfoot_ap_data_list_seg___NOT_EMPTY_DATA_DEF,
    asl_trivial_cond_def,
-   holfoot_ap_data_list_seg_num_def]);
+   holfoot_ap_data_list_seg_num_REWRITE]);
 
 
 val holfoot_ap_data_list_seg___SAME_START_END =
@@ -3464,12 +3544,12 @@ store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___data_list_seg_num",
 
 
 Induct_on `n` THENL [
-   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def] THEN
+   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE] THEN
    SIMP_TAC std_ss [COND_RAND, COND_RATOR,
       VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_equal,
       VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_false],
 
-   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE,
        COND_RATOR, COND_RAND, VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_false,
        holfoot_separation_combinator_def] THEN
    CONSEQ_HO_REWRITE_TAC ([],[VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_equal,
@@ -3572,7 +3652,7 @@ store_thm ("holfoot_ap_data_list_seg_num___STACK_IMPRECISE___REWRITE",
                 (holfoot_ap_data_list_seg_num n tl (var_res_exp_const n')
                    (MAP (\ (t,l). (t,TL l)) data) endExp))))``,
 
-SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [holfoot_ap_data_list_seg_num_def,
+SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [holfoot_ap_data_list_seg_num_REWRITE,
   asl_bool_EVAL, EXTENSION, IN_ABS, COND_RAND, COND_RATOR] THEN
 REPEAT STRIP_TAC THEN
 CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
@@ -3607,7 +3687,7 @@ store_thm ("var_res_prop_varlist_update___holfoot_ap_data_list_seg_num",
       data (var_res_exp_varlist_update vcL endExp))``,
 
 Induct_on `n` THEN1 (
-   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def] THEN
+   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE] THEN
    REPEAT STRIP_TAC THEN
    Q.ABBREV_TAC `c = EVERY (\x. NULL (SND x)) data /\ ALL_DISTINCT (tl::MAP FST data)` THEN
    Cases_on `c` THEN
@@ -3615,7 +3695,7 @@ Induct_on `n` THEN1 (
          var_res_prop_varlist_update___equal_unequal]
 ) THEN
 
-SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def] THEN
+SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `EVERY (\x. ~NULL (SND x)) data /\ ALL_DISTINCT (tl::MAP FST data)` THEN
 ASM_SIMP_TAC std_ss [var_res_prop_varlist_update___BOOL] THEN
@@ -3694,12 +3774,12 @@ val holfoot_ap_data_list_seg_num___null = store_thm ("holfoot_ap_data_list_seg_n
 
 
 Cases_on `n` THENL [
-   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE,
       COND_RAND, COND_RATOR, COND_EXPAND_IMP,
       asl_trivial_cond_def] THEN
    PROVE_TAC[var_res_prop_equal_symmetric],
 
-   SIMP_TAC arith_ss [holfoot_ap_data_list_seg_num_def,
+   SIMP_TAC arith_ss [holfoot_ap_data_list_seg_num_REWRITE,
       holfoot_ap_points_to___null,
       asl_false___asl_star_THM, asl_bool_REWRITES,
       asl_exists_ELIM, asl_trivial_cond_def]
@@ -3727,7 +3807,7 @@ val holfoot_ap_data_list_seg_num_SUC___implies_in_heap = store_thm ("holfoot_ap_
  (BAG_INSERT (holfoot_ap_data_list_seg_num (SUC n) tl e1 data e2) sfb) e1``,
 
 REPEAT STRIP_TAC THEN
-ASM_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+ASM_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE,
    COND_RAND, COND_RATOR,
    holfoot_implies_in_heap_def,
    holfoot_implies_in_heap_pred___asl_false] THEN
@@ -3755,7 +3835,7 @@ Tactical.REVERSE (Cases_on `n`) THEN1 (
    PROVE_TAC[holfoot_ap_data_list_seg_num_SUC___implies_in_heap]
 ) THEN
 
-SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE,
    COND_RAND, COND_RATOR,
    holfoot_implies_in_heap_def,
    holfoot_implies_in_heap_pred___asl_false,
@@ -3825,7 +3905,7 @@ SIMP_TAC std_ss [holfoot_ap_data_list_def,
    holfoot_ap_data_list_seg_def,
    holfoot_implies_in_heap_pred___asl_exists] THEN
 Cases_on `n` THENL [
-   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_def,
+   SIMP_TAC std_ss [holfoot_ap_data_list_seg_num_REWRITE,
       COND_RAND, COND_RATOR, holfoot_implies_in_heap_pred___asl_false] THEN
    ASM_SIMP_TAC std_ss [GSYM holfoot_implies_in_heap_or_null_def,
       holfoot_implies_in_heap_or_null___equal_null],
@@ -4066,7 +4146,7 @@ Induct_on `n` THEN1 (
       asl_emp_DISJOINT_FMAP_UNION, IN_SING, FDOM_FEMPTY, NOT_IN_EMPTY,
       holfoot_not_in_heap_def, GSYM IS_SOME_EXISTS]
 ) THEN
-SIMP_TAC (std_ss++CONJ_ss) [holfoot_ap_data_list_seg_num_def, IN_ABS,
+SIMP_TAC (std_ss++CONJ_ss) [holfoot_ap_data_list_seg_num_REWRITE, IN_ABS,
    COND_RAND, COND_RATOR, asl_bool_EVAL, asl_star_def,
    holfoot_separation_combinator___REWRITE,
    GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
@@ -4093,7 +4173,7 @@ val holfoot_ap_data_list_seg_num___SPLIT = store_thm ("holfoot_ap_data_list_seg_
        (MAP (\x. (FST x, DROP n (SND x))) data) e2))``,
 
 Induct_on `n` THEN1 (
-   SIMP_TAC (list_ss++boolSimps.ETA_ss) [holfoot_ap_data_list_seg_num_def, EVERY_MAP,
+   SIMP_TAC (list_ss++boolSimps.ETA_ss) [holfoot_ap_data_list_seg_num_REWRITE, EVERY_MAP,
       MAP_MAP_o, combinTheory.o_DEF] THEN
    REPEAT GEN_TAC THEN
    Tactical.REVERSE (Cases_on `ALL_DISTINCT (tl::MAP FST data)`) THEN1 (
@@ -4146,7 +4226,7 @@ Induct_on `n` THEN1 (
 
 REPEAT STRIP_TAC THEN
 Tactical.REVERSE (Cases_on `ALL_DISTINCT (tl::MAP FST data)`) THEN1 (
-   ASM_SIMP_TAC (std_ss++boolSimps.ETA_ss) [ADD_CLAUSES, holfoot_ap_data_list_seg_num_def,
+   ASM_SIMP_TAC (std_ss++boolSimps.ETA_ss) [ADD_CLAUSES, holfoot_ap_data_list_seg_num_REWRITE,
       MAP_MAP_o, combinTheory.o_DEF, asl_false___asl_star_THM,
       asl_exists_ELIM, asl_bool_REWRITES]
 ) THEN
@@ -4985,7 +5065,7 @@ CONJ_TAC THENL [
    Q.PAT_ASSUM `s IN X` MP_TAC THEN
    MATCH_MP_TAC (prove (``~A ==> (A ==> B)``, SIMP_TAC std_ss [])) THEN
    ASM_SIMP_TAC std_ss [
-      holfoot_ap_data_list_seg_num_def, COND_RAND, COND_RATOR,
+      holfoot_ap_data_list_seg_num_REWRITE, COND_RAND, COND_RATOR,
       var_res_prop___PROP___asl_false, asl_bool_EVAL] THEN
    ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
       var_res_prop___COND_INSERT, IN_ABS,

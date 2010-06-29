@@ -2765,8 +2765,10 @@ fun holfoot_verify_spec_internal verbose print_remaining (file, defaultConseqCon
      if (is_spec) then
      let
         val tL = (fst o listSyntax.dest_list o rand) t;
-        val ntL = map (el 2 o pairSyntax.strip_pair) tL;
-        val nL = map stringLib.fromHOLstring ntL
+        val ntL = map ((fn x => (el 2 x, el 1 x)) o pairSyntax.strip_pair) tL;
+        val nL' = map (fn (n, a) =>
+             (stringLib.fromHOLstring n, same_const T a)) ntL
+        val nL = map fst (filter snd nL')
      in
         nL
      end else 
