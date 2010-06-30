@@ -10,7 +10,7 @@ val _ = set_fixity "#"  (Infixl 1100);
 
 val _ = set_fixity "-->" (Infix(NONASSOC, 450))
 
-val (redn_rules, redn_ind, redn_cases) = xHol_reln "redn" `
+val (redn_rules, _, redn_cases) = xHol_reln "redn" `
     (!x y f. x --> y   ==>    f # x --> f # y) /\
     (!f g x. f --> g   ==>    f # x --> g # x) /\
     (!x y.   K # x # y --> x) /\
@@ -18,17 +18,17 @@ val (redn_rules, redn_ind, redn_cases) = xHol_reln "redn" `
 
 val _ = hide "RTC";
 
-val (RTC_rules, RTC_ind, RTC_cases) =
-  Hol_reln `
+val (RTC_rules, _, RTC_cases) = Hol_reln `
     (!x.     RTC R x x) /\
     (!x y z. R x y /\ RTC R y z ==> RTC R x z)`;
-
-val normform_def = Define `normform R x = !y. ~R x y`;
 
 val confluent_def = Define`
   confluent R =
      !x y z. RTC R x y /\ RTC R x z ==>
              ?u. RTC R y u /\ RTC R z u`;
+
+val normform_def = Define `normform R x = !y. ~R x y`;
+
 
 val confluent_normforms_unique = store_thm(
   "confluent_normforms_unique",
@@ -104,8 +104,8 @@ val RTCredn_RTCpredn = store_thm(
   HO_MATCH_MP_TAC RTC_monotone THEN Induct_on `$-->` THEN
   PROVE_TAC [predn_rules]);
 
-val RTCredn_ap_monotonic = store_thm(
-  "RTCredn_ap_monotonic",
+val RTCredn_ap_congruence = store_thm(
+  "RTCredn_ap_congruence",
   ``!x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y``,
   Induct_on `RTC` THEN PROVE_TAC [RTC_rules, redn_rules]);
 
@@ -113,7 +113,7 @@ val predn_RTCredn = store_thm(
   "predn_RTCredn",
   ``!x y. x -||-> y  ==>  x -->* y``,
   Induct_on `$-||->` THEN
-  PROVE_TAC [RTC_rules,redn_rules,RTC_RTC,RTCredn_ap_monotonic]);
+  PROVE_TAC [RTC_rules,redn_rules,RTC_RTC,RTCredn_ap_congruence]);
 
 val RTCpredn_RTCredn = store_thm(
   "RTCpredn_RTCredn",

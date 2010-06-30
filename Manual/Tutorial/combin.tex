@@ -22,6 +22,12 @@ the \texttt{examples/ind\_def} directory of the distribution.  It is
 self-contained and so includes the answers to the exercises set at the
 end of this document.
 
+The HOL sessions assume that the Unicode trace is \emph{on} (as it is
+by default), meaning that even though the inputs may be written in
+pure ASCII, the output still uses nice Unicode output (symbols such as
+$\forall$ and $\Rightarrow$).  The Unicode symbols could also be used
+in the input.
+
 
 \section{The type of combinators}
 \label{sec:Type-Combinators}
@@ -79,52 +85,48 @@ First we need to set our arrow symbol up as an infix to make everything that
 bit prettier
 \begin{session}
 \begin{verbatim}
-- set_mapped_fixity {tok = "-->", fixity = Infix(NONASSOC, 450),
-                     term_name = "redn"};
+- set_fixity "-->" (Infix(NONASSOC, 450));
 > val it = () : unit
 \end{verbatim}
 \end{session}
 We make our arrow symbol non-associative, thereby making it a
 parse error to write \verb!x --> y --> z!. It would be nice to be able
 to write this and have it mean \verb!x --> y /\ y --> z!, but this is
-not presently possible with the HOL parser.  The
-\ml{set\_mapped\_fixity} function also requires us to provide the
-``real'' name for the syntax (it's generally helpful to have names
-that just include alphanumeric characters), so we pick \verb!redn! as
-an abbreviation of ``reduction''.
+not presently possible with the HOL parser.
 
-Our next step is to actually define the relation.  The function for
-doing this returns three separate theorems, so we bind each
-separately:
+Our next step is to actually define the relation with the
+\ml{xHol\_reln} function.  In addition to a quotation specifying the
+rules for the new relation, it requires a name to use as the stem for
+the theorems it proves.  We pick the string \ml{"redn"}.\footnote{The
+  related function \ml{Hol\_reln} can be used if the system's choice
+  of stem is acceptable.  In this case, \ml{Hol\_reln} can't cope with the
+  non-alphanumeric characters in \holtxt{-->} and will raise an
+  error.}
+The \ml{xHol\_reln} function for
+doing this returns three separate theorems, and we bind the first (the
+``rules'' theorem) and
+third (the ``cases'' theorem):
 \begin{session}
-\begin{verbatim}
-val (redn_rules, redn_ind, redn_cases) =
-  Hol_reln
-    `(!x y f. x --> y   ==>    f # x --> f # y) /\
-     (!f g x. f --> g   ==>    f # x --> g # x) /\
-     (!x y.   K # x # y --> x) /\
-     (!f g x. S # f # g # x --> (f # x) # (g # x))`;
+\begin{alltt}
+val (redn_rules, _, redn_cases) = xHol_reln "redn"
+   `(!x y f. x --> y   ==>    f # x --> f # y) /\bs
+    (!f g x. f --> g   ==>    f # x --> g # x) /\bs
+    (!x y.   K # x # y --> x) /\bs
+    (!f g x. S # f # g # x --> (f # x) # (g # x))`;
 > val redn_rules =
-    |- (!x y f. x --> y ==> f # x --> f # y) /\
-       (!f g x. f --> g ==> f # x --> g # x) /\
-       (!x y. K # x # y --> x) /\
-       !f g x. S # f # g # x --> f # x # (g # x) : thm
-  val redn_ind =
-    |- !redn'.
-         (!x y f. redn' x y ==> redn' (f # x) (f # y)) /\
-         (!f g x. redn' f g ==> redn' (f # x) (g # x)) /\
-         (!x y. redn' (K # x # y) x) /\
-         (!f g x. redn' (S # f # g # x) (f # x # (g # x))) ==>
-         !a0 a1. a0 --> a1 ==> redn' a0 a1 : thm
+    |- (\(\forall\)x y f. x --> y \(\Rightarrow\) f # x --> f # y) \(\land\)
+       (\(\forall\)f g x. f --> g \(\Rightarrow\) f # x --> g # x) \(\land\)
+       (\(\forall\)x y. K # x # y --> x) \(\land\)
+       \(\forall\)f g x. S # f # g # x --> f # x # (g # x) : thm
   val redn_cases =
-    |- !a0 a1.
-         a0 --> a1 =
-         (?x y f. (a0 = f # x) /\ (a1 = f # y) /\ x --> y) \/
-         (?f g x. (a0 = f # x) /\ (a1 = g # x) /\ f --> g) \/
-         (?y. a0 = K # a1 # y) \/
-         ?f g x. (a0 = S # f # g # x) /\ (a1 = f # x # (g # x))
+    |- \(\forall\)a0 a1.
+         a0 --> a1 \(\Leftrightarrow\)
+         (\(\exists\)x y f. (a0 = f # x) \(\land\) (a1 = f # y) \(\land\) x --> y) \(\lor\)
+         (\(\exists\)f g x. (a0 = f # x) \(\land\) (a1 = g # x) \(\land\) f --> g) \(\lor\)
+         (\(\exists\)y. a0 = K # a1 # y) \(\lor\)
+         \(\exists\)f g x. (a0 = S # f # g # x) \(\land\) (a1 = f # x # (g # x))
     : thm
-\end{verbatim}
+\end{alltt}
 \end{session}
 
 In addition to proving these three theorems for us, the inductive
@@ -190,26 +192,20 @@ that we are inputting ambiguous terms.  The ambiguities would always
 be resolved in the favour of more recent definition, but the warnings
 are annoying.)
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 val _ = hide "RTC";
 
-val (RTC_rules, RTC_ind, RTC_cases) =
-  Hol_reln `
-    (!x.     RTC R x x) /\
-    (!x y z. R x y /\ RTC R y z ==> RTC R x z)`;
+val (RTC_rules, _, RTC_cases) = Hol_reln `
+    (!x.     RTC R x x) /\bs
+    (!x y z. R x y /\bs RTC R y z ==> RTC R x z)`;
 <<HOL message: inventing new type variable names: 'a>>
 > val RTC_rules =
-    |- !R. (!x. RTC R x x) /\
-           !x y z. R x y /\ RTC R y z ==> RTC R x z : thm
-  val RTC_ind =
-    |- !R RTC'.
-         (!x. RTC' x x) /\
-         (!x y z. R x y /\ RTC' y z ==> RTC' x z) ==>
-         !a0 a1. RTC R a0 a1 ==> RTC' a0 a1 : thm
+    |- \(\forall\)R. (\(\forall\)x. RTC R x x) \(\land\)
+           \(\forall\)x y z. R x y \(\land\) RTC R y z \(\Rightarrow\) RTC R x z : thm
   val RTC_cases =
-    |- !R a0 a1. RTC R a0 a1 = (a1 = a0) \/
-                               ?y. R a0 y /\ RTC R y a1 : thm
-\end{verbatim}
+    |- \(\forall\)R a0 a1. RTC R a0 a1 \(\Leftrightarrow\) (a1 = a0) \(\lor\)
+                                \(\exists\)y. R a0 y \(\land\) RTC R y a1 : thm
+\end{alltt}
 \end{session}
 Now let us go back to the notion of confluence.  We want this to mean
 something like: ``though a system may take different paths in the
@@ -237,12 +233,12 @@ One nice property of confluent relations is that from any one starting
 point they produce no more than one \emph{normal form}, where a normal
 form is a value from which no further steps can be taken.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - val normform_def = Define`normform R x = !y. ~(R x y)`;
 <<HOL message: inventing new type variable names: 'a, 'b>>
 Definition has been stored under "normform_def".
-> val normform_def = |- !R x. normform R x = !y. ~R x y : thm
-\end{verbatim}
+> val normform_def = |- \(\forall\)R x. normform R x \(\Leftrightarrow\) \(\forall\)y. \(\neg\)R x y : thm
+\end{alltt}
 \end{session}
 In other words, a system has an $R$-normal form at $x$ if there are no
 connections via $R$ to any other values.  (We could have written
@@ -250,60 +246,57 @@ connections via $R$ to any other values.  (We could have written
 
 We can now prove the following:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - g `!R. confluent R ==>
          !x y z.
-           RTC R x y /\ normform R y /\
-           RTC R x z /\ normform R z ==> (y = z)`;
+           RTC R x y /\bs normform R y /\bs
+           RTC R x z /\bs normform R z ==> (y = z)`;
 <<HOL message: inventing new type variable names: 'a>>
 > val it =
     Proof manager status: 1 proof.
     1. Incomplete:
          Initial goal:
-         !R.
-           confluent R ==>
-           !x y z.
-             RTC R x y /\ normform R y /\
-             RTC R x z /\ normform R z ==> (y = z)
-\end{verbatim}
+         \(\forall\)R.
+           confluent R \(\Rightarrow\)
+           \(\forall\)x y z. RTC R x y \(\land\) normform R y \(\land\) RTC R x z \(\land\) normform R z \(\Rightarrow\)
+                   (y = z)
+\end{alltt}
 \end{session}
 We rewrite with the definition of confluence:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (RW_TAC std_ss [confluent_def]);
 OK..
 1 subgoal:
 > val it =
     y = z
     ------------------------------------
-      0.  !x y z. RTC R x y /\ RTC R x z ==>
-                  ?u. RTC R y u /\ RTC R z u
+      0.  \(\forall\)x y z. RTC R x y \(\land\) RTC R x z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
       1.  RTC R x y
       2.  normform R y
       3.  RTC R x z
       4.  normform R z
-\end{verbatim}
+\end{alltt}
 \end{session}
     Our confluence property is now assumption 0, and we can use it to
     infer that there is a $u$ at the base of the diamond:
 \begin{session}
-\begin{verbatim}
-- e (`?u. RTC R y u /\ RTC R z u` by PROVE_TAC []);
+\begin{alltt}
+- e (`?u. RTC R y u /\bs RTC R z u` by PROVE_TAC []);
 OK..
 Meson search level: .........
 1 subgoal:
 > val it =
     y = z
     ------------------------------------
-      0.  !x y z. RTC R x y /\ RTC R x z ==>
-                  ?u. RTC R y u /\ RTC R z u
+      0.  \(\forall\)x y z. RTC R x y \(\land\) RTC R x z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
       1.  RTC R x y
       2.  normform R y
       3.  RTC R x z
       4.  normform R z
       5.  RTC R y u
       6.  RTC R z u
-\end{verbatim}
+\end{alltt}
 \end{session}
     So, from $y$ we can take zero or more steps to get to $u$ and
     similarly from $z$.  But, we also know that we're at an $R$-normal
@@ -312,7 +305,7 @@ Meson search level: .........
     this in turn means that $y = z$, which is our goal.  So we can
     finish with
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (PROVE_TAC [normform_def, RTC_cases]);
 OK..
 Meson search level: ..........
@@ -320,12 +313,12 @@ Meson search level: ..........
 Goal proved. [...]
 > val it =
     Initial goal proved.
-    |- !R.
-         confluent R ==>
-         !x y z.
-           RTC R x y /\ normform R y /\
-           RTC R x z /\ normform R z ==> (y = z)
-\end{verbatim}
+    |- \(\forall\)R.
+         confluent R \(\Rightarrow\)
+         \(\forall\)x y z.
+           RTC R x y \(\land\) normform R y \(\land\) RTC R x z \(\land\) normform R z \(\Rightarrow\)
+           (y = z)
+\end{alltt}
 \end{session}
 Packaged up so as to remove the sub-goal package commands, we can
 prove and save the theorem for future use by:
@@ -347,18 +340,15 @@ Clearly confluence is a nice property for a system to have.  The
 question is how we might manage to prove it.  Let's start by defining
 the diamond property that we used in the definition of confluence.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - val diamond_def = Define
-    `diamond R = !x y z. R x y /\ R x z ==>
-                         ?u. R y u /\ R z u`;
+    `diamond R = !x y z. R x y /\bs R x z ==> ?u. R y u /\bs R z u`;
 <<HOL message: inventing new type variable names: 'a>>
 Definition has been stored under "diamond_def".
 > val diamond_def =
-    |- !R.
-         diamond R = !x y z. R x y /\ R x z ==>
-                             ?u. R y u /\ R z u
+    |- \(\forall\)R. diamond R \(\Leftrightarrow\) \(\forall\)x y z. R x y \(\land\) R x z \(\Rightarrow\) \(\exists\)u. R y u \(\land\) R z u
      : thm
-\end{verbatim}
+\end{alltt}
 \end{session}
     Now we clearly have that confluence of a relation is equivalent to
     the reflexive, transitive closure of that relation having the
@@ -410,75 +400,76 @@ induction principle for \con{RTC}.\footnote{In this and subsequent
   proof to remove the evidence of the old goal.  In practice, there is
   no harm in leaving these goals on the proof manager's stack.}
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - g `!R. diamond R ==>
          !x p. RTC R x p ==>
                !z. R x z ==>
-                   ?u. RTC R p u /\ RTC R z u`;
+                   ?u. RTC R p u /\bs RTC R z u`;
 <<HOL message: inventing new type variable names: 'a>>
 > val it =
     Proof manager status: 1 proof.
     1. Incomplete:
          Initial goal:
-         !R.
-           diamond R ==>
-           !x p. RTC R x p ==> !z. R x z ==>
-                                   ?u. RTC R p u /\ RTC R z u
-\end{verbatim}
+         \(\forall\)R.
+           diamond R \(\Rightarrow\)
+           \(\forall\)x p. RTC R x p \(\Rightarrow\) \(\forall\)z. R x z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+\end{alltt}
 \end{session}
 First, we strip away the diamond property assumption (two things need to
 be stripped: the outermost universal quantifier and the antecedent of
 the implication):
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (GEN_TAC THEN STRIP_TAC);
 OK..
 1 subgoal:
 > val it =
-    !x p. RTC R x p ==> !z. R x z ==> ?u. RTC R p u /\ RTC R z u
+    \(\forall\)x p. RTC R x p \(\Rightarrow\) \(\forall\)z. R x z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
     ------------------------------------
       diamond R
-\end{verbatim}
+\end{alltt}
 \end{session}
-Now we can use the induction principle.  We use the higher-order
-backward chaining rule, \texttt{HO\_MATCH\_MP\_TAC}, which takes a
-theorem of the form $\vdash\;P\supset Q$, tries to instantiate it to
-make it $\vdash\;P'\supset Q'$, such that $Q'$ is the same as the goal
-to be proved, and then requires the user to prove $P'$.
+Now we can use the induction principle for reflexive and transitive closure (alternatively, we perform a ``rule induction'').
+To do this, we use the \ml{Induct\_on} command that is also used to do
+structural induction on algebraic data types (such as numbers and
+lists).
+We provide the name of the constant whose induction principle we want
+to use, and the tactic does the rest:
 \begin{session}
-\begin{verbatim}
-- e (HO_MATCH_MP_TAC RTC_ind);
+\begin{alltt}
+- e (Induct_on `RTC`);
 OK..
 1 subgoal:
 > val it =
-    (!x z. R x z ==> ?u. RTC R x u /\ RTC R z u) /\
-    !x y z.
-      R x y /\ (!z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u) ==>
-      !z'. R x z' ==> ?u. RTC R z u /\ RTC R z' u
+    (\(\forall\)x z. R x z \(\Rightarrow\) \(\exists\)u. RTC R x u \(\land\) RTC R z u) \(\land\)
+    \(\forall\)x x' p.
+      R x x' \(\land\) RTC R x' p \(\land\) (\(\forall\)z. R x' z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u) \(\Rightarrow\)
+      \(\forall\)z. R x z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
     ------------------------------------
       diamond R
-\end{verbatim}
+\end{alltt}
 \end{session}
 Let's strip the goal as much as possible with the aim of making what
 remains to be proved easier to see:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (REPEAT STRIP_TAC);
 OK..
 2 subgoals:
 > val it =
-    ?u. RTC R z u /\ RTC R z' u
+    \(\exists\)u. RTC R p u \(\land\) RTC R z u
     ------------------------------------
       0.  diamond R
-      1.  R x y
-      2.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
-      3.  R x z'
+      1.  R x x'
+      2.  RTC R x' p
+      3.  \(\forall\)z. R x' z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+      4.  R x z
 
-    ?u. RTC R x u /\ RTC R z u
+    \(\exists\)u. RTC R x u \(\land\) RTC R z u
     ------------------------------------
       0.  diamond R
       1.  R x z
-\end{verbatim}
+\end{alltt}
 \end{session}
 This first goal is easy.  It corresponds to the case where the many
 steps from $x$ to $p$ are actually no steps at all, and $p$ and $x$
@@ -489,51 +480,53 @@ candidate is $z$ itself.  In fact, we don't even need to provide this
 witness explicitly. \texttt{PROVE\_TAC} will find it for us, as long
 as we tell it what the rules governing \con{RTC} are:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (PROVE_TAC [RTC_rules]);
 OK..
 Meson search level: .....
 
-Goal proved. [...]
+Goal proved. [..] |- \(\exists\)u. RTC R p u \(\land\) RTC R z u
 Remaining subgoals:
 > val it =
-    ?u. RTC R z u /\ RTC R z' u
+    \(\exists\)u. RTC R p u \(\land\) RTC R z u
     ------------------------------------
       0.  diamond R
-      1.  R x y
-      2.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
-      3.  R x z'
-\end{verbatim}
+      1.  R x x'
+      2.  RTC R x' p
+      3.  \(\forall\)z. R x' z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+      4.  R x z
+\end{alltt}
 \end{session}
-    And what of this remaining goal?  Assumptions one and three
+    And what of this remaining goal?  Assumptions one and four
     between them are the top of an $R$-diamond.  Let's use the fact
     that we have the diamond property for $R$ and infer that there
     exists a $v$ to which $y$ and $z'$ can both take single steps:
 \begin{session}
-\begin{verbatim}
-- e (`?v. R y v /\ R z' v` by PROVE_TAC [diamond_def]);
+\begin{alltt}
+- e (`?v. R x' v /\bs R z v` by PROVE_TAC [diamond_def]);
 OK..
 Meson search level: ............
 1 subgoal:
 > val it =
-    ?u. RTC R z u /\ RTC R z' u
+    \(\exists\)u. RTC R p u \(\land\) RTC R z u
     ------------------------------------
       0.  diamond R
-      1.  R x y
-      2.  !z'. R y z' ==> ?u. RTC R z u /\ RTC R z' u
-      3.  R x z'
-      4.  R y v
-      5.  R z' v
-\end{verbatim}
+      1.  R x x'
+      2.  RTC R x' p
+      3.  \(\forall\)z. R x' z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+      4.  R x z
+      5.  R x' v
+      6.  R z v
+\end{alltt}
 \end{session}
-Now we can apply our induction hypothesis (assumption 2) to complete
+Now we can apply our induction hypothesis (assumption 3) to complete
 the long, lop-sided strip of the diamond.  We will conclude that there
-is a $u$ such that $\con{RTC}\;R\;z\;u$ and $\con{RTC}\;R\;v\;u$.  We
-actually need a $u$ such that $\con{RTC}\;R\;z'\;u$, but because there
-is a single $R$-step between $z'$ and $v$ we have that as well.  All
+is a $u$ such that $\con{RTC}\;R\;p\;u$ and $\con{RTC}\;R\;v\;u$.  We
+actually need a $u$ such that $\con{RTC}\;R\;z\;u$, but because there
+is a single $R$-step between $z$ and $v$ we have that as well.  All
 we need to provide \texttt{PROVE\_TAC} is the rules for \con{RTC}:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (PROVE_TAC [RTC_rules]);
 OK..
 Meson search level: .......
@@ -541,10 +534,10 @@ Meson search level: .......
 Goal proved. [...]
 > val it =
     Initial goal proved.
-    |- !R.
-         diamond R ==> !x p. RTC R x p ==>
-                        !z. R x z ==> ?u. RTC R p u /\ RTC R z u
-\end{verbatim}
+    |- \(\forall\)R.
+         diamond R \(\Rightarrow\)
+         \(\forall\)x p. RTC R x p \(\Rightarrow\) \(\forall\)z. R x z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+\end{alltt}
 \end{session}
     Again we can (and should) package up the lemma, avoiding the
     sub-goal package commands:
@@ -556,10 +549,10 @@ val R_RTC_diamond = store_thm(
          !x p. RTC R x p ==>
                !z. R x z ==>
                    ?u. RTC R p u /\ RTC R z u``,
-  GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
+  GEN_TAC THEN STRIP_TAC THEN Induct_on `RTC` THEN
   REPEAT STRIP_TAC THENL [
     PROVE_TAC [RTC_rules],
-    `?v. R y v /\ R z' v` by PROVE_TAC [diamond_def] THEN
+    `?v. R x' v /\ R z v` by PROVE_TAC [diamond_def] THEN
     PROVE_TAC [RTC_rules]
   ]);
 \end{verbatim}
@@ -576,47 +569,46 @@ statement of the goal that is very near in form to the induction
 princple.  So, we manually expand the meaning of \con{diamond} and state
 our next goal thus:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - g `!R. diamond R ==> !x y. RTC R x y ==>
                              !z. RTC R x z ==>
-                                 ?u. RTC R y u /\ RTC R z u`;
+                                 ?u. RTC R y u /\bs RTC R z u`;
 <<HOL message: inventing new type variable names: 'a>>
 > val it =
     Proof manager status: 1 proof.
     1. Incomplete:
          Initial goal:
-         !R.
-           diamond R ==>
-           !x y. RTC R x y ==> !z. RTC R x z ==>
-                                   ?u. RTC R y u /\ RTC R z u
-\end{verbatim}
+         \(\forall\)R.
+           diamond R \(\Rightarrow\)
+           \(\forall\)x y. RTC R x y \(\Rightarrow\) \(\forall\)z. RTC R x z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+\end{alltt}
 \end{session}
     Again we strip the diamond property assumption, apply the
     induction principle, and strip repeatedly:
 \begin{session}
-\begin{verbatim}
-- e (GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
-     REPEAT STRIP_TAC);
+\begin{alltt}
+- e (GEN_TAC THEN STRIP_TAC THEN Induct_on `RTC` THEN REPEAT STRIP_TAC);
 OK..
 2 subgoals:
 > val it =
-    ?u. RTC R z u /\ RTC R z' u
+    \(\exists\)u. RTC R y u \(\land\) RTC R z u
     ------------------------------------
       0.  diamond R
-      1.  R x y
-      2.  !z'. RTC R y z' ==> ?u. RTC R z u /\ RTC R z' u
-      3.  RTC R x z'
+      1.  R x x'
+      2.  RTC R x' y
+      3.  \(\forall\)z. RTC R x' z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+      4.  RTC R x z
 
-    ?u. RTC R x u /\ RTC R z u
+    \(\exists\)u. RTC R x u \(\land\) RTC R z u
     ------------------------------------
       0.  diamond R
       1.  RTC R x z
-\end{verbatim}
+\end{alltt}
 \end{session}
 The first goal is again an easy one, corresponding to the case where
 the trip from $x$ to $y$ has been one of no steps whatsoever.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (PROVE_TAC [RTC_rules]);
 OK..
 Meson search level: ...
@@ -625,60 +617,60 @@ Goal proved. [...]
 
 Remaining subgoals:
 > val it =
-    ?u. RTC R z u /\ RTC R z' u
+    \(\exists\)u. RTC R y u \(\land\) RTC R z u
     ------------------------------------
       0.  diamond R
-      1.  R x y
-      2.  !z'. RTC R y z' ==> ?u. RTC R z u /\ RTC R z' u
-      3.  RTC R x z'
-\end{verbatim}
+      1.  R x x'
+      2.  RTC R x' y
+      3.  \(\forall\)z. RTC R x' z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+      4.  RTC R x z
+\end{alltt}
 \end{session}
 This goal is very similar to the one we saw earlier.  We have the top
-of a (``lop-sided'') diamond in assumptions 1 and 3, so we can infer
-the existence of a common destination for $y$ and $z'$:
+of a (``lop-sided'') diamond in assumptions 1 and 4, so we can infer
+the existence of a common destination for $x'$ and $z$:
 \begin{session}
-\begin{verbatim}
-- e (`?v. RTC R y v /\ RTC R z' v`
-       by PROVE_TAC [R_RTC_diamond]);
+\begin{alltt}
+- e (`?v. RTC R x' v /\bs RTC R z v` by PROVE_TAC [R_RTC_diamond]);
 OK..
 Meson search level: ............
 1 subgoal:
 > val it =
-    ?u. RTC R z u /\ RTC R z' u
+    \(\exists\)u. RTC R y u \(\land\) RTC R z u
     ------------------------------------
       0.  diamond R
-      1.  R x y
-      2.  !z'. RTC R y z' ==> ?u. RTC R z u /\ RTC R z' u
-      3.  RTC R x z'
-      4.  RTC R y v
-      5.  RTC R z' v
-\end{verbatim}
+      1.  R x x'
+      2.  RTC R x' y
+      3.  \(\forall\)z. RTC R x' z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+      4.  RTC R x z
+      5.  RTC R x' v
+      6.  RTC R z v
+\end{alltt}
 \end{session}
     At this point in the last proof we were able to finish it all off
     by just appealing to the rules for \con{RTC}.  This time it is not
     quite so straightforward.  When we use the induction hypothesis
-    (assumption 2), we can conclude that there is a $u$ to which both
-    $z$ and $v$ can connect in zero or more steps, but in order to
-    show that this $u$ is reachable from $z'$, we need to be able to
-    conclude $\con{RTC}\;R\;z'\;u$ when we know that
-    $\con{RTC}\;R\;z'\;v$ (assumption 5 above) and
+    (assumption 3), we can conclude that there is a $u$ to which both
+    $y$ and $v$ can connect in zero or more steps, but in order to
+    show that this $u$ is reachable from $z$, we need to be able to
+    conclude $\con{RTC}\;R\;z\;u$ when we know that
+    $\con{RTC}\;R\;z\;v$ (assumption 6 above) and
     $\con{RTC}\;R\;v\;u$ (our consequence of the inductive
     hypothesis).  We leave the proof of this general result as an
     exercise, and here assume that it is already proved as the theorem
     \texttt{RTC\_RTC}.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (PROVE_TAC [RTC_rules, RTC_RTC]);
 Meson search level: .......
 
 Goal proved. [...]
 > val it =
     Initial goal proved.
-    |- !R.
-         diamond R ==>
-         !x y. RTC R x y ==> !z. RTC R x z ==>
-                                 ?u. RTC R y u /\ RTC R z u
-\end{verbatim}
+    |- \(\forall\)R.
+         diamond R \(\Rightarrow\)
+         \(\forall\)x y. RTC R x y \(\Rightarrow\) \(\forall\)z. RTC R x z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+\end{alltt}
 \end{session}
 We can package this result up as a lemma and then prove the prettier
 version directly:
@@ -687,13 +679,11 @@ version directly:
 val diamond_RTC_lemma = prove(
   ``!R.
        diamond R ==>
-       !x y. RTC R x y ==> !z. RTC R x z ==>
-                               ?u. RTC R y u /\ RTC R z u``,
-  GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
+       !x y. RTC R x y ==> !z. RTC R x z ==> ?u. RTC R y u /\ RTC R z u``,
+  GEN_TAC THEN STRIP_TAC THEN Induct_on `RTC` THEN
   REPEAT STRIP_TAC THENL [
     PROVE_TAC [RTC_rules],
-    `?v. RTC R y v /\ RTC R z' v`
-       by PROVE_TAC [R_RTC_diamond] THEN
+    `?v. RTC R x' v /\ RTC R z v` by PROVE_TAC [R_RTC_diamond] THEN
     PROVE_TAC [RTC_RTC, RTC_rules]
   ]);
 val diamond_RTC = store_thm(
@@ -750,8 +740,7 @@ parallel.  We use the \texttt{-||->} symbol to indicate parallel
 reduction because of its own parallel lines:
 \begin{session}
 \begin{verbatim}
-- set_fixity {tok = "-||->", term_name = "predn",
-              fixity = Infix(NONASSOC, 450)};
+- set_fixity "-||->" (Infix(NONASSOC, 450));
 > val it = () : unit
 \end{verbatim}
 \end{session}
@@ -764,38 +753,29 @@ reduction because of its own parallel lines:
     $(\KC\;x\;y)\,\KC$ couldn't reduce because while the LHS of the
     application ($\KC\;x\;y$) can reduce, its RHS (\KC) can't.
 \begin{session}
-\begin{verbatim}
-- val (predn_rules, predn_ind, predn_cases) =
-    Hol_reln
-      `(!x. x -||-> x) /\
-       (!x y u v. x -||-> y /\ u -||-> v
+\begin{alltt}
+- val (predn_rules, _, predn_cases) = xHol_reln "predn"
+      `(!x. x -||-> x) /\bs
+       (!x y u v. x -||-> y /\bs u -||-> v
                          ==>
-                  x # u -||-> y # v) /\
-       (!x y. K # x # y -||-> x) /\
+                  x # u -||-> y # v) /\bs
+       (!x y. K # x # y -||-> x) /\bs
        (!f g x. S # f # g # x -||-> (f # x) # (g # x))`;
 > val predn_rules =
-    |- (!x. x -||-> x) /\
-       (!x y u v. x -||-> y /\ u -||-> v ==> x # u -||-> y # v) /\
-       (!x y. K # x # y -||-> x) /\
-       !f g x. S # f # g # x -||-> f # x # (g # x) : thm
-  val predn_ind =
-    |- !predn'.
-         (!x. predn' x x) /\
-         (!x y u v. predn' x y /\ predn' u v ==>
-                    predn' (x # u) (y # v)) /\
-         (!x y. predn' (K # x # y) x) /\
-         (!f g x. predn' (S # f # g # x) (f # x # (g # x))) ==>
-         !a0 a1. a0 -||-> a1 ==> predn' a0 a1 : thm
+    |- (\(\forall\)x. x -||-> x) \(\land\)
+       (\(\forall\)x y u v. x -||-> y \(\land\) u -||-> v \(\Rightarrow\) x # u -||-> y # v) \(\land\)
+       (\(\forall\)x y. K # x # y -||-> x) \(\land\)
+       \(\forall\)f g x. S # f # g # x -||-> f # x # (g # x) : thm
   val predn_cases =
-    |- !a0 a1.
-         a0 -||-> a1 =
-         (a1 = a0) \/
-         (?x y u v. (a0 = x # u) /\ (a1 = y # v) /\
-                    x -||-> y /\ u -||-> v) \/
-         (?y. a0 = K # a1 # y) \/
-         ?f g x. (a0 = S # f # g # x) /\ (a1 = f # x # (g # x))
+    |- \(\forall\)a0 a1.
+         a0 -||-> a1 \(\Leftrightarrow\)
+         (a1 = a0) \(\lor\)
+         (\(\exists\)x y u v. (a0 = x # u) \(\land\) (a1 = y # v) \(\land\)
+                    x -||-> y \(\land\) u -||-> v) \(\lor\)
+         (\(\exists\)y. a0 = K # a1 # y) \(\lor\)
+         \(\exists\)f g x. (a0 = S # f # g # x) \(\land\) (a1 = f # x # (g # x))
     : thm
-\end{verbatim}
+\end{alltt}
 \end{session}
 
 \subsection{Using \con{RTC}}
@@ -804,19 +784,18 @@ reduction because of its own parallel lines:
 Now we can set up nice syntax for the reflexive and transitive
 closures of our two relations.  We will use ASCII symbols for both
 that consist of the original symbol followed by an asterisk.  Note
-also how, in establishing these two new relations, we have to use the
-underlying symbols' ``real'' names.  First, we create the desired
-symbol for the concrete syntax, and then we ``overload'' it so that
-the parser will expand it to the desired form.  We can use the simpler
-\ml{set\_fixity} function to make our new symbols infix, and not have
-to bother about ``real'' names, because we're not defining a real HOL
-constant.
+also how, in defining the two relations, we have to use the
+\texttt{\$} character to ``escape'' the symbols' usual fixities.  This
+is exactly analogous to the way in which ML's \texttt{op} keyword is
+used.  First, we create the desired symbol for the concrete syntax,
+and then we ``overload'' it so that the parser will expand it to the
+desired form.
 \begin{session}
 \begin{verbatim}
 - set_fixity "-->*" (Infix(NONASSOC, 450));
 > val it = () : unit
 
-- overload_on ("-->*", ``RTC redn``);
+- overload_on ("-->*", ``RTC $-->``);
 > val it = () : unit
 \end{verbatim}
 \end{session}
@@ -827,7 +806,7 @@ of our parallel reduction.
 - set_fixity "-||->*" (Infix(NONASSOC, 450));
 > val it = () : unit
 
-- overload_on ("-||->*", ``RTC predn``);
+- overload_on ("-||->*", ``RTC $-||->``);
 > val it = () : unit
 \end{verbatim}
 \end{session}
@@ -839,12 +818,12 @@ automatically demonstrate relatively long chains of reductions:
 Meson search level: ......
 > val it = |- S # K # K # x -->* x : thm
 
-- PROVE [RTCredn_rules, redn_rules]
+- PROVE [RTC_rules, redn_rules]
     ``S # (S # (K # S) # K) # (S # K # K) # f # x -->*
       f # (f # x)``;
 Meson search level: ...........................
-> val it = |- S # (S # (K # S) # K) # (S # K # K) # f # x -->*
-              f # (f # x) : thm
+> val it = |- S # (S # (K # S) # K) # (S # K # K) # f # x -->* f # (f # x)
+           : thm
 \end{verbatim}
 \end{session}
 (The latter sequence is seven reductions long.)
@@ -860,43 +839,43 @@ we can reduce this to showing that $x\rightarrow y\supset x\mathpredn y$.
 
 Our goal:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - g `!x y. x -->* y ==> x -||->* y`;
 > val it =
     Proof manager status: 1 proof.
     1. Incomplete:
          Initial goal:
-         !x y. x -->* y ==> x -||->* y
-\end{verbatim}
+         \(\forall\)x y. x -->* y \(\Rightarrow\) x -||->* y
+\end{alltt}
 \end{session}
 We back-chain using our monotonicity result:
 \begin{session}
-\begin{verbatim}
-- e (HO_MATCH_MP_TAC RTC_monotone);
+\begin{alltt}
+- e (MATCH_MP_TAC RTC_monotone);
 OK..
 1 subgoal:
 > val it =
-    !x y. x --> y ==> x -||-> y
-\end{verbatim}
+    \(\forall\)x y. x --> y \(\Rightarrow\) x -||-> y
+\end{alltt}
 \end{session}
 Now we can induct over the rules for $\rightarrow$:
 \begin{session}
-\begin{verbatim}
-- e (HO_MATCH_MP_TAC redn_ind);
+\begin{alltt}
+- e (Induct_on `$-->`);
 OK..
 1 subgoal:
 > val it =
-    (!x y f. x -||-> y ==> f # x -||-> f # y) /\
-    (!f g x. f -||-> g ==> f # x -||-> g # x) /\
-    (!x y. K # x # y -||-> x) /\
-    !f g x. S # f # g # x -||-> f # x # (g # x)
-\end{verbatim}
+    (\(\forall\)x y f. x --> y \(\land\) x -||-> y \(\Rightarrow\) f # x -||-> f # y) \(\land\)
+    (\(\forall\)f g x. f --> g \(\land\) f -||-> g \(\Rightarrow\) f # x -||-> g # x) \(\land\)
+    (\(\forall\)x y. K # x # y -||-> x) \(\land\)
+    \(\forall\)f g x. S # f # g # x -||-> f # x # (g # x)
+\end{alltt}
 \end{session}
 We could split the 4-way conjunction apart into four goals, but there
 is no real need.  It is quite clear that each follows immediately from
 the rules for parallel reduction.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (PROVE_TAC [predn_rules]);
 OK..
 Meson search level: ............
@@ -904,8 +883,8 @@ Meson search level: ............
 Goal proved. [...]
 > val it =
     Initial goal proved.
-    |- !x y. x -->* y ==> x -||->* y : goalstack
-\end{verbatim}
+    |- \(\forall\)x y. x -->* y \(\Rightarrow\) x -||->* y : goalstack
+\end{alltt}
 \end{session}
 Packaged into a tidy little sub-goal-package-free parcel, our proof is
 \begin{session}
@@ -913,9 +892,8 @@ Packaged into a tidy little sub-goal-package-free parcel, our proof is
 val RTCredn_RTCpredn = store_thm(
   "RTCredn_RTCpredn",
   ``!x y. x -->* y   ==>   x -||->* y``,
-  HO_MATCH_MP_TAC RTC_monotone THEN
-  HO_MATCH_MP_TAC redn_ind THEN
-  PROVE_TAC [predn_rules]);
+  MATCH_MP_TAC RTC_monotone THEN
+  Induct_on `$-->` THEN PROVE_TAC [predn_rules]);
 \end{verbatim}
 \end{session}
 \eos{}
@@ -927,28 +905,29 @@ with one step of the original reduction relation.  It's clear that
 mirroring one step of the parallel reduction relation might take many
 steps of the original relation.  Let's prove that then:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - g `!x y. x -||-> y   ==>   x -->* y`;
 > val it =
     Proof manager status: 1 proof.
     1. Incomplete:
          Initial goal:
-         !x y. x -||-> y ==> x -->* y
-\end{verbatim}
+         \(\forall\)x y. x -||-> y \(\Rightarrow\) x -->* y
+\end{alltt}
 \end{session}
 This time our induction will be over the rules defining the parallel
 reduction relation.
 \begin{session}
-\begin{verbatim}
-- e (HO_MATCH_MP_TAC predn_ind);
+\begin{alltt}
+- e (Induct_on `$-||->`);
 OK..
 1 subgoal:
 > val it =
-    (!x. x -->* x) /\
-    (!x y u v. x -->* y /\ u -->* v ==> x # u -->* y # v) /\
-    (!x y. K # x # y -->* x) /\
-    !f g x. S # f # g # x -->* f # x # (g # x)
-\end{verbatim}
+    (\(\forall\)x. x -->* x) \(\land\)
+    (\(\forall\)x y x' y'. x -||-> y \(\land\) x -->* y \(\land\) x' -||-> y' \(\land\) x' -->* y' \(\Rightarrow\)
+                 x # x' -->* y # y') \(\land\)
+    (\(\forall\)x y. K # x # y -->* x) \(\land\)
+    \(\forall\)f g x. S # f # g # x -->* f # x # (g # x)
+\end{alltt}
 \end{session}
     There are four conjuncts here, and it should be clear that all but
     the second can be proved immediately by appeal to the rules for
@@ -961,9 +940,9 @@ OK..
     \texttt{TRY} will protect us against this failure and let us
     proceed.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 e (REPEAT CONJ_TAC THEN
-   TRY (PROVE_TAC [RTC_rules, redn_rules]);
+   TRY (PROVE_TAC [RTC_rules, redn_rules]));
 OK..
 Meson search level: ....
 Meson search level: ....
@@ -971,8 +950,9 @@ Meson search level: ...............................
 Meson search level: ..
 1 subgoal:
 > val it =
-    !x y u v. x -->* y /\ u -->* v ==> x # u -->* y # v
-\end{verbatim}
+    \(\forall\)x y x' y'. x -||-> y \(\land\) x -->* y \(\land\) x' -||-> y' \(\land\) x' -->* y' \(\Rightarrow\)
+                x # x' -->* y # y'
+\end{alltt}
 \end{session}
     Note that wrapping \texttt{TRY} around \texttt{PROVE\_TAC} is not
     always wise.  It can often take the \texttt{PROVE\_TAC} tactic an extremely
@@ -980,37 +960,38 @@ Meson search level: ..
     failure.  Here, ``we got lucky''.
 
     Anyway, what of this latest sub-goal?  If we look at it for long
-    enough, we should see that it is another monotonicity fact.  In
-    this form, it's not quite right for easy proof.  Let's go away and
-    prove \texttt{RTCredn\_ap\_monotonic} separately. (Another
-    exercise!)  Our new theorem should state
+    enough, we should see that it is another monotonicity fact.  More
+    accurately, we need what is called a \emph{congruence} result for
+    \holtxt{-->*}.  In this form, it's not quite right for easy proof.
+    Let's go away and prove \texttt{RTCredn\_ap\_monotonic}
+    separately. (Another exercise!)  Our new theorem should state
 \begin{session}
 \begin{verbatim}
-val RTCredn_ap_monotonic = store_thm(
-  "RTCredn_ap_monotonic",
+val RTCredn_ap_congruence = store_thm(
+  "RTCredn_ap_congruence",
   ``!x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y``,
   ...);
 \end{verbatim}
 \end{session}
     Now that we have this, our sub-goal is almost immediately
     provable.  Using it, we know that \[\begin{array}{c}
-      x\;u \rightarrow^* y\;u \\
-      y\;u \rightarrow^* y\;v
+      x\;x' \rightarrow^* y\;x' \\
+      y\;x' \rightarrow^* y\;y'
     \end{array}\]
     All we need to do is ``stitch together'' the two transitions above
-    and go from $x\;u$ to $y\;v$.  We can do this by appealing to our
+    and go from $x\;x'$ to $y\;y'$.  We can do this by appealing to our
     earlier \texttt{RTC\_RTC} result.
 \begin{session}
-\begin{verbatim}
-e (PROVE_TAC [RTC_RTC, RTCredn_ap_monotonic]);
+\begin{alltt}
+e (PROVE_TAC [RTC_RTC, RTCredn_ap_congruence]);
 OK..
-Meson search level: .............................
+Meson search level: .......
 
 Goal proved. [...]
 > val it =
     Initial goal proved.
-    |- !x y. x -||-> y ==> x -->* y : goalstack
-\end{verbatim}
+    |- \(\forall\)x y. x -||-> y \(\Rightarrow\) x -->* y : goalstack
+\end{alltt}
 \end{session}
 But given that we can finish off what we thought was an awkward branch
 with just another application of \texttt{PROVE\_TAC}, we don't need to
@@ -1023,8 +1004,8 @@ indeed:
 val predn_RTCredn = store_thm(
   "predn_RTCredn",
   ``!x y. x -||-> y  ==>  x -->* y``,
-  HO_MATCH_MP_TAC predn_ind THEN
-  PROVE_TAC [RTC_rules, redn_rules, RTC_RTC, RTCredn_ap_monotonic]);
+  Induct_on `$-||->` THEN
+  PROVE_TAC [RTC_rules, redn_rules, RTC_RTC, RTCredn_ap_congruence]);
 \end{verbatim}
 \end{session}
 \eos{}
@@ -1033,40 +1014,41 @@ Now it's time to prove that if a number of parallel reduction steps
 are chained together, then we can mirror this with some number of
 steps using the original reduction relation.  Our goal:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - g `!x y. x -||->* y  ==> x -->* y`;
 > val it =
     Proof manager status: 1 proof.
     1. Incomplete:
          Initial goal:
-         !x y. x -||->* y ==> x -->* y
-\end{verbatim}
+         \(\forall\)x y. x -||->* y \(\Rightarrow\) x -->* y
+\end{alltt}
 \end{session}
 We use the appropriate induction principle to get to:
 \begin{session}
-\begin{verbatim}
-- e (HO_MATCH_MP_TAC RTC_ind);
+\begin{alltt}
+- e (Induct_on `RTC`);
 OK..
 1 subgoal:
 > val it =
-    (!x. x -->* x) /\ !x y z. x -||-> y /\ y -->* z ==> x -->* z
-\end{verbatim}
+    (\(\forall\)x. x -->* x) \(\land\)
+    \(\forall\)x x' y. x -||-> x' \(\land\) x' -||-> y* \(\land\) x' -->* y \(\Rightarrow\) x -->* z
+\end{alltt}
 \end{session}
 This we can finish off in one step.  The first conjunct is obvious,
 and in the second the \verb!x -||-> y! and our last result combine to
 tell us that \verb!x -->* y!.  Then this can be chained together with
 the other assumption in the second conjunct and we're done.
 \begin{session}
-\begin{verbatim}
-- e (PROVE_TAC [RTC_rules, predn_RTCredn, RTCredn_RTCredn]);
+\begin{alltt}
+- e (PROVE_TAC [RTC_rules, predn_RTCredn, RTC_RTC]);
 OK..
 Meson search level: .......
 
 Goal proved.[...]
 > val it =
     Initial goal proved.
-    |- !x y. x -||->* y ==> x -->* y : goalstack
-\end{verbatim}
+    |- \(\forall\)x y. x -||->* y \(\Rightarrow\) x -->* y : proof
+\end{alltt}
 \end{session}
 Packaged up, this proof is:
 \begin{session}
@@ -1074,8 +1056,7 @@ Packaged up, this proof is:
 val RTCpredn_RTCredn = store_thm(
   "RTCpredn_RTCredn",
   ``!x y. x -||->* y   ==>  x -->* y``,
-  HO_MATCH_MP_TAC RTC_ind THEN
-  PROVE_TAC [predn_RTCredn, RTC_RTC, RTC_rules]);
+  Induct_on `RTC` THEN PROVE_TAC [predn_RTCredn, RTC_RTC, RTC_rules]);
 \end{verbatim}
 \end{session}
 \eos{}
@@ -1095,20 +1076,20 @@ $\rightarrow^*$ and $\mathpredn^*$ are equal.  We state our goal:
 We want to now appeal to extensionality.  The simplest way to do this
 is to rewrite with the theorem \texttt{FUN\_EQ\_THM}:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - FUN_EQ_THM;
-> val it = |- !f g. (f = g) <=> !x. f x = g x : thm
-\end{verbatim}
+> val it = |- \(\forall\)f g. (f = g) \(\Leftrightarrow\) \(\forall\)x. f x = g x : thm
+\end{alltt}
 \end{session}
 So, we rewrite:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (SIMP_TAC std_ss [FUN_EQ_THM]);
 OK..
 1 subgoal:
 > val it =
-    !x x'. x -||->* x' = x -->* x'
-\end{verbatim}
+    \(\forall\)x x'. x -||->* x' = x -->* x'
+\end{alltt}
 \end{session}
 
 This goal is an easy consequence of our two earlier implications.
@@ -1161,26 +1142,26 @@ The \ml{characterise} function specialises the theorem
 disjointness of constructors and eliminates obvious impossibilities.
 For example,
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - val K_predn = characterise ``K``;
 <<HOL message: more than one resolution of overloading was possible>>
-> val K_predn = |- !a1. K -||-> a1 = (a1 = K) : thm
+> val K_predn = |- \(\forall\)a1. K -||-> a1 = (a1 = K) : thm
 
 - val S_predn = characterise ``S``;
 <<HOL message: more than one resolution of overloading was possible>>
-> val S_predn = |- !a1. S -||-> a1 = (a1 = S) : thm
-\end{verbatim}
+> val S_predn = |- \(\forall\)a1. S -||-> a1 = (a1 = S) : thm
+\end{alltt}
 \end{session}
 Unfortunately, what we get back from other inputs is not so good:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - val Sx_predn0 = characterise ``S # x``;
 > val Sx_predn0 =
-    |- !a1.
+    |- \(\forall\)a1.
          S # x -||-> a1 =
-         (a1 = S # x) \/
-         ?y v. (a1 = y # v) /\ S -||-> y /\ x -||-> v : thm
-\end{verbatim}
+         (a1 = S # x) \(\lor\)
+         \(\exists\)y v. (a1 = y # v) \(\land\) S -||-> y \(\land\) x -||-> v : thm
+\end{alltt}
 \end{session}
 That first disjunct is redundant, as the following demonstrates:
 \begin{session}
@@ -1244,94 +1225,55 @@ Last of all, we want a characterisation for $x\;y$.   What
 \texttt{characterise} gives us this time can't be improved upon,
 for all that we might look upon the four disjunctions and despair.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - val x_ap_y_predn = characterise ``x # y``;
 > val x_ap_y_predn =
-    |- !a1.
+    |- \(\forall\)a1.
          x # y -||-> a1 =
-         (a1 = x # y) \/
-         (?y' v. (a1 = y' # v) /\ x -||-> y' /\ y -||-> v) \/
-         (x = K # a1) \/
-         ?f g. (x = S # f # g) /\ (a1 = f # y # (g # y)) : thm
-\end{verbatim}
-\end{session}
-Our last preliminary before we begin is to derive what is known as the
-\emph{strong induction principle} for the inductive relation
-defining \texttt{-||->}.  This gives us an induction principle where
-the application case changes from
-\begin{verbatim}
-     !x y u v. P x y /\ P u v ==> P (x # u) (y # v)
-\end{verbatim}
-where we can only assume \texttt{P x y} and \texttt{P u v} in trying
-to prove the application case, to the often more useful:
-\begin{verbatim}
-     !x y u v.
-          x -||-> y /\ P x y /\ u -||-> v /\ P u v ==>
-          P (x # u) (y # v)
-\end{verbatim}
-Deriving strong induction can be done automatically by the function\linebreak
-\texttt{derive\_strong\_induction} found in the \texttt{IndDefRules}
-module.  It takes a pair of a list of theorems and another theorem.
-The list of theorems consists of the rules of the relation split up
-into individual conjuncts, and the second argument is the normal
-induction principle.
-
-Thus:
-\begin{session}
-\begin{verbatim}
-val predn_strong_ind =
-  IndDefRules.derive_strong_induction (predn_rules, predn_ind);
-> val predn_strong_ind =
-    |- !P.
-         (!x. P x x) /\
-         (!x y u v.
-            x -||-> y /\ P x y /\ u -||-> v /\ P u v ==>
-            P (x # u) (y # v)) /\
-         (!x y. P (K # x # y) x) /\
-         (!f g x. P (S # f # g # x) (f # x # (g # x))) ==>
-         !a0 a1. a0 -||-> a1 ==> P a0 a1 : thm
-\end{verbatim}
+         (a1 = x # y) \(\lor\)
+         (\(\exists\)y' v. (a1 = y' # v) \(\land\) x -||-> y' \(\land\) y -||-> v) \(\lor\)
+         (x = K # a1) \(\lor\)
+         \(\exists\)f g. (x = S # f # g) \(\land\) (a1 = f # y # (g # y)) : thm
+\end{alltt}
 \end{session}
 \eos{}
 
 \noindent Now we are ready to prove the final goal.  It is
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - g `!x y. x -||-> y ==>
-           !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u`;
+           !z. x -||-> z ==> ?u. y -||-> u /\bs z -||-> u`;
 > val it =
     Proof manager status: 1 proof.
     1. Incomplete:
          Initial goal:
-         !x y. x -||-> y ==> !z. x -||-> z ==>
-               ?u. y -||-> u /\ z -||-> u
-\end{verbatim}
+         \(\forall\)x y. x -||-> y \(\Rightarrow\) \(\forall\)z. x -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
+\end{alltt}
 \end{session}
-We now apply the strong induction principle and split the goal into
-its individual conjuncts:
+We now induct and split the goal into its individual conjuncts:
 \begin{session}
-\begin{verbatim}
-- e (HO_MATCH_MP_TAC predn_strong_ind THEN REPEAT CONJ_TAC);
+\begin{alltt}
+- e (Induct_on `$-||->` THEN REPEAT CONJ_TAC);
 OK..
 4 subgoals:
 > val it =
-    !f g x z. S # f # g # x -||-> z ==>
-              ?u. f # x # (g # x) -||-> u /\ z -||-> u
+    \(\forall\)f g x z. S # f # g # x -||-> z \(\Rightarrow\)
+              \(\exists\)u. f # x # (g # x) -||-> u \(\land\) z -||-> u
 
 
-    !x y z. K # x # y -||-> z ==> ?u. x -||-> u /\ z -||-> u
+    \(\forall\)x y z. K # x # y -||-> z \(\Rightarrow\) \(\exists\)u. x -||-> u \(\land\) z -||-> u
 
 
-    !x y u v.
-      x -||-> y /\
-      (!z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u) /\
-      u -||-> v /\
-      (!z. u -||-> z ==> ?u. v -||-> u /\ z -||-> u) ==>
-      !z. x # u -||-> z ==> ?u. y # v -||-> u /\ z -||-> u
+    \(\forall\)x y u v.
+      x -||-> y \(\land\)
+      (\(\forall\)z. x -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u) \(\land\)
+      u -||-> v \(\land\)
+      (\(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u) \(\Rightarrow\)
+      \(\forall\)z. x # u -||-> z \(\Rightarrow\) \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
 
 
-    !x z. x -||-> z ==> ?u. x -||-> u /\ z -||-> u
-\end{verbatim}
+    \(\forall\)x z. x -||-> z \(\Rightarrow\) \(\exists\)u. x -||-> u \(\land\) z -||-> u
+\end{alltt}
 \end{session}
 The first goal is easily disposed of.  The witness we would provide
 for this case is simply \texttt{z}, but \texttt{PROVE\_TAC} will do
@@ -1353,19 +1295,19 @@ Goal proved. [...]
     quantifier.  Starting everything by repeatedly stripping can't
     lead us too far astray.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (REPEAT STRIP_TAC);
 OK..
 1 subgoal:
 > val it =
-    ?u. y # v -||-> u /\ z -||-> u
+    \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
     ------------------------------------
       0.  x -||-> y
-      1.  !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u
+      1.  \(\forall\)z. x -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
       2.  u -||-> v
-      3.  !z. u -||-> z ==> ?u. v -||-> u /\ z -||-> u
+      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
       4.  x # u -||-> z
-\end{verbatim}
+\end{alltt}
 \end{session}
 We need to split up assumption 4.  We can get it out of the assumption
 list using the \texttt{Q.PAT\_ASSUM} theorem-tactical.  We will write
@@ -1394,7 +1336,7 @@ assumptions are eliminated.
 
 So:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (Q.PAT_ASSUM `x # y -||-> z`
       (STRIP_ASSUME_TAC o SIMP_RULE std_ss [x_ap_y_predn]) THEN
      RW_TAC std_ss [] THEN
@@ -1406,20 +1348,20 @@ Meson search level: ..................
 Meson search level: .....
 2 subgoals:
 > val it =
-    ?u'. y # v -||-> u' /\ f # u # (g # u) -||-> u'
+    \(\exists\)u'. y # v -||-> u' \(\land\) f # u # (g # u) -||-> u'
     ------------------------------------
       0.  S # f # g -||-> y
-      1.  !z. S # f # g -||-> z ==> ?u. y -||-> u /\ z -||-> u
+      1.  \(\forall\)z. S # f # g -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
       2.  u -||-> v
-      3.  !z. u -||-> z ==> ?u. v -||-> u /\ z -||-> u
+      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
 
-    ?u. y # v -||-> u /\ z -||-> u
+    \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
     ------------------------------------
       0.  K # z -||-> y
-      1.  !z'. K # z -||-> z' ==> ?u. y -||-> u /\ z' -||-> u
+      1.  \(\forall\)z'. K # z -||-> z' \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z' -||-> u
       2.  u -||-> v
-      3.  !z. u -||-> z ==> ?u. v -||-> u /\ z -||-> u
-\end{verbatim}
+      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
+\end{alltt}
 \end{session}
 Brilliant!  We've eliminated two of the four disjuncts already.  Now
 our next goal features a term \verb!K # z -||-> y! in the assumptions.
@@ -1436,21 +1378,21 @@ Our theorem tells us that \texttt{y} must actually be of the form
 \verb!K # w! for some \texttt{w}, and that there must be an arrow
 between \texttt{z} and \texttt{w}.  Thus:
 \begin{session}
-\begin{verbatim}
-- e (`?w. (y = K # w) /\ (z -||-> w)` by PROVE_TAC [Kx_predn]);
+\begin{alltt}
+- e (`?w. (y = K # w) /\bs (z -||-> w)` by PROVE_TAC [Kx_predn]);
 OK..
 Meson search level: ......
 1 subgoal:
 > val it =
-    ?u. y # v -||-> u /\ z -||-> u
+    \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
     ------------------------------------
       0.  K # z -||-> y
-      1.  !z'. K # z -||-> z' ==> ?u. y -||-> u /\ z' -||-> u
+      1.  \(\forall\)z'. K # z -||-> z' \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z' -||-> u
       2.  u -||-> v
-      3.  !z. u -||-> z ==> ?u. v -||-> u /\ z -||-> u
+      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
       4.  y = K # w
       5.  z -||-> w
-\end{verbatim}
+\end{alltt}
 \end{session}
     On inspection, it becomes clear that the \texttt{u} must be
     \texttt{w}.  The first conjunct requires \verb!K # w # v -||-> w!,
@@ -1460,7 +1402,7 @@ Meson search level: ......
     \texttt{PROVE\_TAC}'s job that much easier), and then first order
     reasoning will solve this goal:
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (RW_TAC std_ss [] THEN PROVE_TAC [predn_rules]);
 OK..
 Meson search level: ...
@@ -1468,18 +1410,18 @@ Meson search level: ...
 Goal proved. [...]
 Remaining subgoals:
 > val it =
-    ?u'. y # v -||-> u' /\ f # u # (g # u) -||-> u'
+    \(\exists\)u'. y # v -||-> u' \(\land\) f # u # (g # u) -||-> u'
     ------------------------------------
       0.  S # f # g -||-> y
-      1.  !z. S # f # g -||-> z ==> ?u. y -||-> u /\ z -||-> u
+      1.  \(\forall\)z. S # f # g -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
       2.  u -||-> v
-      3.  !z. u -||-> z ==> ?u. v -||-> u /\ z -||-> u
-\end{verbatim}
+      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
+\end{alltt}
 \end{session}
 This case involving \SC{} is analogous.  Here's the tactic to apply:
 \begin{session}
-\begin{verbatim}
-- e (`?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)`
+\begin{alltt}
+- e (`?p q. (y = S # p # q) /\bs (f -||-> p) /\bs (g -||-> q)`
         by PROVE_TAC [Sxy_predn] THEN
      RW_TAC std_ss [] THEN PROVE_TAC [predn_rules]);
 OK..
@@ -1489,12 +1431,12 @@ Meson search level: ...........
 Goal proved.[...]
 Remaining subgoals:
 > val it =
-    !f g x z. S # f # g # x -||-> z ==>
-              ?u. f # x # (g # x) -||-> u /\ z -||-> u
+    \(\forall\)f g x z. S # f # g # x -||-> z \(\Rightarrow\)
+              \(\exists\)u. f # x # (g # x) -||-> u \(\land\) z -||-> u
 
 
-    !x y z. K # x # y -||-> z ==> ?u. x -||-> u /\ z -||-> u
-\end{verbatim}
+    \(\forall\)x y z. K # x # y -||-> z \(\Rightarrow\) \(\exists\)u. x -||-> u \(\land\) z -||-> u
+\end{alltt}
 \end{session}
 This next goal features a \verb!K # x # y -||-> z! term that we have a
 theorem for already.  And again, let's speculatively use a call to
@@ -1502,7 +1444,7 @@ theorem for already.  And again, let's speculatively use a call to
 (\verb!Kxy_predn! is a disjunct so we'll get two sub-goals if we don't
 eliminate anything).
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (RW_TAC std_ss [Kxy_predn] THEN
      TRY (PROVE_TAC [predn_rules]));
 OK..
@@ -1512,14 +1454,14 @@ Meson search level: ...
 Goal proved. [...]
 Remaining subgoals:
 > val it =
-    !f g x z. S # f # g # x -||-> z ==>
-              ?u. f # x # (g # x) -||-> u /\ z -||-> u
-\end{verbatim}
+    \(\forall\)f g x z. S # f # g # x -||-> z \(\Rightarrow\)
+              \(\exists\)u. f # x # (g # x) -||-> u \(\land\) z -||-> u
+\end{alltt}
 \end{session}
 Better yet! We got both cases immediately, and have moved onto the
 last case.  We can try the same strategy.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 - e (RW_TAC std_ss [Sxyz_predn] THEN PROVE_TAC [predn_rules]);
 OK..
 Meson search level: ..
@@ -1528,9 +1470,9 @@ Meson search level: ...........
 Goal proved.[...]
 > val it =
     Initial goal proved.
-    |- !x y. x -||-> y ==> !z. x -||-> z ==>
-             ?u. y -||-> u /\ z -||-> u : goalstack
-\end{verbatim}
+    |- \(\forall\)x y. x -||-> y \(\Rightarrow\) \(\forall\)z. x -||-> z \(\Rightarrow\)
+             \(\exists\)u. y -||-> u \(\land\) z -||-> u : goalstack
+\end{alltt}
 \end{session}
 The final goal proof can be packaged into:
 \begin{session}
@@ -1538,7 +1480,7 @@ The final goal proof can be packaged into:
 val predn_diamond_lemma = prove(
   ``!x y. x -||-> y ==>
           !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u``,
-  HO_MATCH_MP_TAC predn_strong_ind THEN REPEAT CONJ_TAC THENL [
+  Induct_on `$-||->` THEN REPEAT CONJ_TAC THENL [
     PROVE_TAC [predn_rules],
     REPEAT STRIP_TAC THEN
     Q.PAT_ASSUM `x # y -||-> z`
@@ -1606,8 +1548,7 @@ examining the source file in \texttt{examples/ind\_def/clScript.sml}.
 x \rightarrow^* y \;\;\;\supset\;\;\;
 \forall z.\;\; x\;z \rightarrow^* y \;z \land
 z\;x \rightarrow^* z\;y
-\] Call it \texttt{RTCredn\_ap\_monotonic}.
-
+\] Call it \texttt{RTCredn\_ap\_congruence}.
 
 \item Come up with a counter-example for the following property: \[
 \begin{array}{c}
