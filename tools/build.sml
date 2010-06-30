@@ -214,7 +214,12 @@ fun build_dir (dir, regulardir) = let
   val _ = if do_selftests >= regulardir then ()
           else raise BuildExit
   val _ = FileSys.chDir dir
-  val _ = print ("Working in directory "^dir^"\n")
+  val truncdir = if String.isPrefix HOLDIR dir then
+                   String.extract(dir, size HOLDIR, NONE)
+                 else dir
+  val now_d = Date.fromTimeLocal (Time.now())
+  val now_s = Date.fmt "%d %b, %H:%M:%S" now_d
+  val _ = print ("Building directory "^truncdir^" ["^now_s^"]\n")
 in
   case #file(Path.splitDirFile dir) of
     "muddyC" => let
