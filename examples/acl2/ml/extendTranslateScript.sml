@@ -1472,8 +1472,8 @@ val length_s2l = prove(
     Induct THEN ASM_REWRITE_TAC [sexp_to_list_def,LENGTH]);
 val map_fcp_lem = prove(
     ``!n x' x''.
-    	 (!i. i < n ==> (EL i x' = ((FCP i. x):'a ** 'b) %% i)) /\
-	 (!i. i < n ==> (EL i x'' = ((FCP i. f x):'c ** 'b) %% i)) /\
+    	 (!i. i < n ==> (EL i x' = ((FCP i. x):'a ** 'b) ' i)) /\
+	 (!i. i < n ==> (EL i x'' = ((FCP i. f x):'c ** 'b) ' i)) /\
 	 n <= dimindex(:'b) /\ (LENGTH x' = n) /\ (LENGTH x'' = n)
 	 ==> (MAP f x' = x'')``,
     REWRITE_TAC [LISTS_EQ] THEN Induct THEN REPEAT (Cases ORELSE GEN_TAC) THEN
@@ -1511,7 +1511,7 @@ val HD_BUTFIRST_EL = store_thm("HD_BUTFIRST_EL",
 val FCP_INDEX = store_thm("FCP_INDEX",
     ``a < dimindex(:'b) ==>
     	(fcp_encode f (:'b) m = M) /\ (nat a = A) ==>
-		    (f (m %% a) = car (acl2_nthcdr A M))``,
+		    (f (m ' a) = car (acl2_nthcdr A M))``,
     RW_TAC arith_ss [fcp_encode_def] THEN
     `a < LENGTH (V2L m) /\ (LENGTH (BUTFIRSTN a (V2L m)) = dimindex(:'b) - a)`
          by RW_TAC arith_ss [LENGTH_V2L,rich_listTheory.LENGTH_BUTFIRSTN] THEN
@@ -1572,8 +1572,8 @@ val el_update2 = prove(
 val update_lem = prove(``!n x y a b.
     (LENGTH x = n) /\ (LENGTH y = n) /\
     (n <= dimindex (:'b)) /\
-    (!i. i < n ==> (EL i x = (a :+ b) (m:'a ** 'b) %% i)) /\
-    (!i. i < n ==> (EL i y = (m:'a ** 'b) %% i)) ==>
+    (!i. i < n ==> (EL i x = (a :+ b) (m:'a ** 'b) ' i)) /\
+    (!i. i < n ==> (EL i y = (m:'a ** 'b) ' i)) ==>
     (x = update a b y)``,
     REWRITE_TAC [LISTS_EQ] THEN Induct THEN
     REPEAT (Cases ORELSE GEN_TAC) THEN
@@ -1592,7 +1592,7 @@ val update_lem = prove(``!n x y a b.
      	 POP_ASSUM SUBST_ALL_TAC THEN
      	 CONV_TAC SYM_CONV THEN MATCH_MP_TAC el_update2 THEN
      	 RW_TAC arith_ss []) 
-     [`(m:'a ** 'b) %% SUC n = EL n t''`,`(m:'a ** 'b) %% SUC n = EL n t'`]);
+     [`(m:'a ** 'b) ' SUC n = EL n t''`,`(m:'a ** 'b) ' SUC n = EL n t'`]);
 in
 val UPDATE_V2L = store_thm("UPDATE_V2L",
     ``!a b m. V2L ((a :+ b) m) = update a b (V2L m)``,
@@ -1937,7 +1937,7 @@ val ODDP_ABS = store_thm("ODDP_ABS",
     FULL_SIMP_TAC int_ss [bitTheory.DIV_MULT_THM2]);
 
 val WORD_BIT = store_thm("WORD_BIT",
-    ``!a b. b < dimindex (:'a) ==> (bool (a %% b) =
+    ``!a b. b < dimindex (:'a) ==> (bool (a ' b) =
     	    acl2_logbitp (nat b) (word_encode (:'a) (a:'a word)))``,
     RW_TAC int_ss [sw2i_bit,acl2_logbitp_def,ibit_def,NAT_ODD,NAT_NFIX,
     	   GSYM NAT_EXPT] THEN
