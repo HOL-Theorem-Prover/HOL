@@ -70,8 +70,6 @@ fi
 case $kernel in -expk | -stdknl ) : ;; * ) die "Bad kernel spec \"$kernel\"."
 esac
 
-
-
 if svn update > svn-update 2>&1
 then
     updated_ok=ok
@@ -82,9 +80,23 @@ fi
 rev=$(svn info 2> /dev/null | grep ^Revision | cut -d' ' -f2)
 holid="$kernel:$rev:$(basename $ML)"
 
+case $(uname) in
+    Linux )
+      cpu=$(grep ^model.name < /proc/cpuinfo |
+            perl -ne 'split; shift @_; shift @_; shift @_; $, = " ";
+                      print @_; exit;' )
+      mem=$(free -m | grep ^Mem | perl -ne 'split; print $_[1], "\n";') ;;
+    Darwin )
+      cpu=$(system_profiler SPHardwareDataType |
+            grep '^ *Processor' |
+            perl -ne '$, = " "; split; shift @_; shift @_; print @_, " ";')
+      mem=$(top -l 1 | grep ^PhysMem | perl -ne 'split; print $_[7] + $_[9]') ;;
+esac
 
 (echo "Running in $holdir on machine $(hostname)" &&
- echo "Started: $(date -R)" &&
+ echo "Uname info (srm): $(uname -srm)" &&
+ echo "Cpu: $cpu - Memory: $mem MB" &&
+ echo "Started: "$(date +"%a, %d %b %Y %H:%M:%S %z") &&
  echo "Extra commandline arguments: $@" &&
  if [ "$updated_ok" ]
  then
