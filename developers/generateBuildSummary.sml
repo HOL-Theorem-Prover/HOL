@@ -59,22 +59,57 @@ in
   else s
 end
 
+val lastlines = 80
+
+fun filter_input instr = let
+  fun phase1 lines =
+      case TextIO.inputLine instr of
+        NONE => (lines, false)
+      | SOME s => if s = "-- Configuration Description Ends --\n" then
+                    ("\n"::s::lines, true)
+                  else phase1 (s::lines)
+  fun phase2 (lines, dirlines, cnt) =
+      case TextIO.inputLine instr of
+        NONE => (List.take(lines, lastlines), false)
+      | SOME s => if s = "Hol built successfully.\n" then
+                      (dirlines, true)
+                  else let
+                      val dirlines =
+                          if String.isPrefix "Building directory" s then
+                            s :: dirlines
+                          else dirlines
+                      val (lines, cnt) =
+                          if cnt = lastlines * 2 then
+                            (s :: List.take(lines, lastlines - 1), lastlines)
+                          else
+                            (s::lines, cnt + 1)
+                    in
+                      phase2 (lines, dirlines, cnt)
+                    end
+  val (p1_lines, p1_ok) = phase1 []
+in
+  if not p1_ok then (String.concat (List.rev p1_lines), false)
+  else let
+      val (p2_lines, p2_ok) = phase2 ([], [], 0)
+      val all_lines = String.concat (List.rev p1_lines @ List.rev p2_lines)
+    in
+      (all_lines, p2_ok)
+    end
+end
+
+
 fun main() = let
+  open TextIO
   val (from, sysdesc) = case CommandLine.arguments() of
                [f,s] => (f,s)
              | _ => usage()
-  val buildlog = TextIO.inputAll TextIO.stdIn
-  open TextIO
+  val (outputthis, succeeded) = filter_input stdIn
+  val header =
+      standard_header from
+                      ((if succeeded then "SUCCESS: " else "FAILURE: ")^sysdesc)
 in
-  if String.isSuffix "Hol built successfully.\n" buildlog then
-    output(stdOut,
-           standard_header from ("SUCCESS: "^sysdesc) ^
-           buildlog)
-  else
-    output(stdOut,
-           standard_header from ("FAILURE: "^sysdesc) ^
-           (buildlog |> trunclast 3000
-                     |> remove_nulls))
+  output(stdOut, header);
+  output(stdOut, outputthis)
 end
 
 end

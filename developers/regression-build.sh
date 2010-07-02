@@ -104,6 +104,8 @@ esac
  else
      echo "svn update failed - continuing anyway."
  fi &&
+ echo "-- Configuration Description Ends --" &&
+ echo &&
  $ML < tools/smart-configure.sml 2>&1 &&
  bin/build cleanAll 2>&1 &&
  bin/build $kernel "$@" 2>&1) |
