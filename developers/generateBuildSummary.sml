@@ -61,6 +61,25 @@ end
 
 val lastlines = 80
 
+fun tidy_p2_lines linelist = let
+  val maxlen = List.foldl (fn (l,acc) => Int.max(size l, acc)) 0 linelist
+  val maxlen = Int.max(78, maxlen)
+  fun make_maxlen s =
+    if size s = maxlen then s
+    else let
+        fun findlbrack i =
+            if String.sub(s, i) = #"[" then i else findlbrack (i - 1)
+        val lbrack_i = findlbrack (size s - 1)
+        val pfx = String.extract(s, 0, SOME lbrack_i)
+        val spaces = CharVector.tabulate(maxlen - size s, (fn _ => #" "))
+        val sfx = String.extract(s, lbrack_i, NONE)
+      in
+        pfx ^ spaces ^ sfx
+      end
+in
+  map make_maxlen linelist
+end
+
 fun filter_input instr = let
   fun phase1 lines =
       case TextIO.inputLine instr of
@@ -91,6 +110,7 @@ in
   if not p1_ok then (String.concat (List.rev p1_lines), false)
   else let
       val (p2_lines, p2_ok) = phase2 ([], [], 0)
+      val p2_lines = tidy_p2_lines p2_lines
       val all_lines = String.concat (List.rev p1_lines @ List.rev p2_lines)
     in
       (all_lines, p2_ok)
