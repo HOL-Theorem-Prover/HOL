@@ -41,24 +41,6 @@ fun standard_header from subject =
 
 val remove_nulls = String.translate (fn #"\000" => "^@" | c => str c)
 
-fun newline_tidy s = let
-  (* replace first line with ellipsis message -
-     leave a string with no newlines alone *)
-  open Substring
-  val (pfx, rest) = position "\n" (full s)
-in
-  if size rest = 0 then s
-  else "... content elided ..." ^ string rest
-end
-
-fun trunclast n s = let
-  val sz = String.size s
-in
-  if n < 0 then "" else
-  if n < sz then newline_tidy (String.extract(s, sz - n, NONE))
-  else s
-end
-
 val lastlines = 80
 
 fun tidy_p2_lines linelist = let
@@ -88,7 +70,7 @@ fun filter_input instr = let
                     ("\n"::s::lines, true)
                   else phase1 (s::lines)
   fun phase2 (lines, dirlines, cnt) =
-      case TextIO.inputLine instr of
+      case Option.map remove_nulls (TextIO.inputLine instr) of
         NONE => (List.take(lines, lastlines), false)
       | SOME s => if s = "Hol built successfully.\n" then
                       (dirlines, true)
