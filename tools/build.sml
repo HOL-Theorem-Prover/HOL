@@ -158,7 +158,8 @@ fun build_dir (dir, regulardir) = let
           else raise BuildExit
   val _ = FileSys.chDir dir
   val truncdir = if String.isPrefix HOLDIR dir then
-                   String.extract(dir, size HOLDIR, NONE)
+                   String.extract(dir, size HOLDIR + 1, NONE)
+                   (* +1 to drop directory slash after holdir *)
                  else dir
   val now_d = Date.fromTimeLocal (Time.now())
   val now_s = Date.fmt "%d %b, %H:%M:%S" now_d
