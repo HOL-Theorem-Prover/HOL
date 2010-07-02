@@ -632,6 +632,7 @@ theorems supporting quantifier movement.
 Also, a theorem justifying Skolemization ({\small\verb+SKOLEM_THM+}) is
 proved. Many other theorems may be found in \theoryimp{bool} theory.
 
+
 \subsection{Combinators}
 \label{sec:combinTheory}
 
@@ -1200,6 +1201,32 @@ constructing more elaborate types.  The one value of the type
 \ml{one}, can also be written as \ml{()} by analogy with the unit
 value in \ML.  This is also the default way in which this value is
 printed by the system pretty-printer.
+
+\subsubsection{The itself type}
+\index{itself, the HOL type operator@\holtxt{itself}, the \HOL{} type operator}%
+The unary \holtxt{itself} type operator provides a family of singleton types akin to \holtxt{one}.
+Thus, for every type $\alpha$, \holtxt{$\alpha$~itself} is a type containing just one value.
+This value's name is \holtxt{the\_value}, but the parser and pretty-printer are set up so that for the type \holtxt{$\alpha$~itself}, \holtxt{the\_value} can be written as \holtxt{(:$\alpha$)} (the syntax includes the parentheses).
+For example, \holtxt{(:num)} is the single value inhabiting the type \holtxt{num~itself}.
+
+The point of the itself type is that if one defines a function with \holtxt{$\alpha$~itself} as the domain, the function picks out just one value in its range,  and so one can think of the function as being one from the type to a value for the whole type.
+
+For example, one could define
+\begin{hol}
+\begin{verbatim}
+   finite_univ (:'a) = FINITE (UNIV :'a set)
+\end{verbatim}
+\end{hol}
+It would then be straightforward to prove the following theorems
+\begin{hol}
+\begin{alltt}
+   \(\vdash\) finite_univ(:bool)
+   \(\vdash\) \(\neg\)finite_univ(:num)
+   \(\vdash\) finite_univ(:'a) \(\land\) finite_univ(:'b) \(\Rightarrow\) finite_univ(:'a # 'b)
+\end{alltt}
+\end{hol}
+
+The itself type is used in the Finite Cartesian Product construction that underlies the fixed-width word type (see Section~\ref{sec:bit-vectors} below).
 
 \subsection{The option type}
 \index{options, the HOL theory of@options, the \HOL{} theory of}
@@ -2067,6 +2094,7 @@ sampling function for the uniform distribution is later used to verify
 the Miller-Rabin primality test.
 
 \subsection{Bit vectors}
+\label{sec:bit-vectors}
 \index{bit vectors, the HOL theory of@bit vectors, the \HOL{} theory of|(}
 
 {
