@@ -8,9 +8,9 @@ that exist for managing the interface
 to the \HOL{} system.
 
 \begin{itemize}
-\item A help system.
-\item A theorem database.
-\item A tool for dependency maintenance in large developments.
+\item The help system.
+\item The trace system for controlling feedback and printing.
+\item \holmake{}: a tool for dependency maintenance in large developments.
 \item Functions for counting the number of primitive inferences done in
 an evaluation, and timing it.
 \item A tool for embedding pretty-printed HOL theorems, terms and
@@ -69,6 +69,35 @@ Therefore the following example queries can be made:
     \end{tabular}
   \end{center}
 \end{table}
+
+\section{The Trace System}
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback}
+\label{sec:traces}
+
+The trace system gives the user one central interface with which to control most of \HOL's many different flags, though they be scattered all over the system, defined in different modules.
+These flags are typically those that determine the level to which \HOL{} tools provide information to the user while operating.
+For example, a trace level of zero will usually make a tool remain completely
+silent while it operates.
+The tool may still raise an exception when it fails, but it won't also
+output any messages saying so.
+
+There are three core functions, all in the \ml{Feedback} structure:
+\begin{hol}
+\begin{verbatim}
+   traces : unit ->
+            {default: int, max: int, name: string, trace_level: int} list
+
+   set_trace : string -> int -> unit
+   trace     : (string * int) -> ('a -> 'b) -> ('a -> 'b)
+\end{verbatim}
+\end{hol}
+
+The \ml{traces} function returns a list of all the traces in the system.
+The \ml{set\_trace} function allows the user to set a trace directly.
+The effect of this might be seen in a subsequent call \ml{traces()}.
+Finally, the \ml{trace} function allows for a trace to be temporarily set while a function executes, restoring the trace to its old value when the function returns (whether normally, or with an exception).
+
+
 
 \section{Maintaining \texttt{HOL} Formalizations with \holmake}
 \label{Holmake}
@@ -1170,7 +1199,8 @@ you to run Holindex using AUCTeX.
   option = value,
   boolFlag,
   ...
-}\end{verbatim}
+}
+\end{verbatim}
 \noindent
 There are the following entry types
 \begin{description}
