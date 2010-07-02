@@ -3445,18 +3445,31 @@ Two sets are equal if they have the same elements.
 \end{hol}
 
 \paragraph{Empty and universal sets}
-
-The empty set is the characteristic function that is constantly
-false. The constant {\small\verb+EMPTY+} denotes the empty set; it may
-be written as {\small\verb+{}+}. The universal set {\small\verb+UNIV+}
-on a type is the characteristic function that is always true for
-elements of that type.
+\index{universal set}
+The empty set is the characteristic function that is constantly false. The constant \holtxt{EMPTY} denotes the empty set; it may be written as \holtxt{\{\}} and \holtxt{$\emptyset$} (U+2205).
+The universal set, \holtxt{UNIV}, on a type is the characteristic function that is always true for elements of that type.
 \begin{hol}
 \begin{verbatim}
    EMPTY_DEF   |- {} = (\x. F)
    UNIV_DEF    |- UNIV = (\x. T)
 \end{verbatim}
 \end{hol}
+In addition to \holtxt{UNIV} (perhaps with a type annotation \holtxt{:'a~set}), one may also write \holtxt{univ(:'a)} to represent the universal set over type \holtxt{:'a}.
+The Unicode syntax \holtxt{$\mathbb{U}$(:'a)} means the same.
+The Unicode symbol for $\mathbb{U}$ is U+1D54C, and may not exist in many fonts.
+
+One of these forms will be used to print \holtxt{UNIV} by default.
+The user trace (see Section~\ref{sec:traces}) \ml{"Univ~pretty-printing"} can be set to zero to cancel this behaviour.
+Additionally, the trace \ml{"Unicode Univ printing"} can be used to stop the U+1D54C syntax from being used, even if the Unicode trace is set.
+
+The symbols \holtxt{univ} and \holtxt{$\mathbb{U}$} are high-priority ``true prefixes'' (see Section~\ref{sec:parseprint:fixities}), and overloaded patterns (see Section~\ref{sec:parser:syntactic-patterns}) mapping a value of the itself type to the corresponding \holtxt{UNIV} constant.
+One effect is that one can write things like
+\begin{hol}
+\begin{verbatim}
+   FINITE univ(:'a)
+\end{verbatim}
+\end{hol}
+without the need for parentheses around \holtxt{FINITE}'s argument.
 
 \paragraph{Insertion, union, and intersection}
 
