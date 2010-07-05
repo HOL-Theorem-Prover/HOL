@@ -1117,14 +1117,21 @@ fun pp_term (G : grammar) TyG backend = let
            the underlying constant. *)
         val base_ty = let
         in
-          case Overload.overloading_of_term overload_info f of
-            NONE => let
-              val {Thy,Name,Ty} = dest_thy_const f
+          if is_fakeconst f then let
+              (* f prints to the atom-name *)
+              val nm = atom_name f
             in
-              type_of (prim_mk_const {Thy = Thy, Name = Name})
+              #base_type (valOf (Overload.info_for_name overload_info nm))
             end
-          | SOME print_name =>
-            #base_type
+          else
+            case Overload.overloading_of_term overload_info f of
+              NONE => let
+                val {Thy,Name,Ty} = dest_thy_const f
+              in
+                type_of (prim_mk_const {Thy = Thy, Name = Name})
+              end
+            | SOME print_name =>
+              #base_type
                 (valOf (Overload.info_for_name overload_info print_name))
         end
 

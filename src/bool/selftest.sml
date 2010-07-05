@@ -266,6 +266,12 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "(case x of T -> (\\x. x) || F -> $~) y",
                  "!x. P (x /\\ y)"]
 
+val _ = new_type ("foo", 2)
+val _ = new_constant ("con", ``:'a -> ('a,'b)foo``)
+val _ = set_trace "types" 1
+val _ = tpp "(con (x :'a) :('a, 'b) foo)"
 
+
+val _ = set_trace "types" 0
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
