@@ -15,12 +15,22 @@ val _ = cpi (``STRCAT``, "STRCAT")
 val _ = cpi (``STRLEN``, "STRLEN")
 val _ = cpi (``STRING``, "STRING")
 
+val PAD_LEFT = Q.prove(
+  `PAD_LEFT c n s =
+     STRCAT (IMPLODE (GENLIST (K c) (n − STRLEN s))) s`,
+  REWRITE_TAC [PAD_LEFT_def, IMPLODE_EXPLODE_I]);
+
+val PAD_RIGHT = Q.prove(
+  `PAD_RIGHT c n s =
+     STRCAT s (IMPLODE (GENLIST (K c) (n − STRLEN s)))`,
+  REWRITE_TAC [PAD_RIGHT_def, IMPLODE_EXPLODE_I]);
+
 val defs =
   map DEFN [char_size_def, STRCAT_EXPLODE,
             isPREFIX_DEF, isLower_def, isUpper_def, isDigit_def, isAlpha_def,
             isHexDigit_def, isAlphaNum_def, isPrint_def, isSpace_def,
             isGraph_def, isPunct_def, isAscii_def, isCntrl_def,
-            toLower_def, toUpper_def, PAD_LEFT_def, PAD_RIGHT_def,
+            toLower_def, toUpper_def, PAD_LEFT, PAD_RIGHT,
             char_lt_def, char_le_def, char_gt_def, char_ge_def,
             string_le_def, string_gt_def, string_ge_def]
 
