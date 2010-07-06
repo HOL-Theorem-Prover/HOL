@@ -36,6 +36,18 @@ val _ =
                 "{x + y | x > 6}",
                 "{x + y | x | x < y}"]
 
+val _ = temp_add_rule {
+          fixity = Closefix,
+          term_name = "lterange",
+          block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
+          paren_style = OnlyIfNecessary,
+          pp_elements = [TOK "{", HardSpace 1, TM, BreakSpace(1,0),
+                         TOK "<..", BreakSpace(1,0), TM, HardSpace 1,
+                         TOK "}"]}
+val _ = temp_overload_on ("lterange", ``\m n. { i | m < i /\ i <= n}``)
+
+val _ = app testpp ["{ 3 <.. 5 }", "{x | x < 6}"]
+
 val imgtests = [(``IMAGE (\x. x + 1) {3;4}``, ``{4;5}``),
                 (``IMAGE (K 0) {3;4}``, ``{0}``),
                 (``IMAGE (\x. x MOD 8) {11;22}``, ``{3;6}``)]

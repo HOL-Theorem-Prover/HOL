@@ -1598,6 +1598,10 @@ fun pp_term (G : grammar) TyG backend = let
         end
       | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator
+          val (oif, oiargs) =
+              case Overload.oi_strip_comb overload_info tm of
+                NONE => (f, args @ [Rand])
+              | SOME p => p
 
           (* check for various literal and special forms *)
 
@@ -1631,7 +1635,7 @@ fun pp_term (G : grammar) TyG backend = let
 
           (* set comprehensions *)
           val _ =
-              if grammar_name G Rator = SOME "GSPEC" andalso my_is_abs Rand
+              if grammar_name G oif = SOME "GSPEC" andalso my_is_abs Rand
               then let
                   val (vs, body) = my_dest_abs Rand
                   val vfrees = FVL [vs] empty_tmset
