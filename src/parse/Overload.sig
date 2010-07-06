@@ -9,7 +9,7 @@ sig
 
 
   type overload_info
-  type printmap_data = term * string * real
+  type printmap_data = term * string * int
 
   val null_oinfo : overload_info
 

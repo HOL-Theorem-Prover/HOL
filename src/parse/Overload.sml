@@ -28,11 +28,15 @@ type overloaded_op_info = {base_type : Type.hol_type, actual_ops : term list,
 *)
 
 
-type printmap_data = term * string * real
+type printmap_data = term * string * int
   (* the term is the lambda abstraction provided by the user, the
      string is the name that it is to be used in the printing process, and
-     the real is the timestamp *)
-fun tstamp () : real = Time.toReal (Time.now())
+     the int is the 'timestamp' *)
+val tstamp : unit -> int = let
+  val cnt = ref 0
+in
+  fn () => (!cnt before (cnt := !cnt + 1))
+end
 
 type overload_info = ((string,overloaded_op_info) Binarymap.dict *
                       printmap_data LVTermNet.lvtermnet)
@@ -354,7 +358,7 @@ fun strip_comb ((_, prmap): overload_info) t = let
   val matches = PrintMap.match(prmap, t)
   val cmp0 = pair_compare (measure_cmp (isize term_size),
                            pair_compare (measure_cmp (isize type_size),
-                                         flip_order o Real.compare))
+                                         flip_order o Int.compare))
   val cmp = inv_img_cmp (fn (a,b,c,d) => (a,(b,c))) cmp0
 
   fun test ((fvs, pat), (orig, nm, tstamp)) = let
