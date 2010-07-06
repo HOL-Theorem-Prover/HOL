@@ -31,6 +31,7 @@ end
 
 val _ =
     app testpp ["{}",
+                "0",
                 "{x | x < 10}",
                 "{x | x < 10} y",
                 "{x + y | x < y}",
