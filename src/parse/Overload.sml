@@ -487,12 +487,21 @@ end handle Binarymap.NotFound => opdict
 
 fun remove_mapping str crec ((opc, cop) : overload_info) = let
   val t = prim_mk_const crec
+  val cop' = let
+    val ds = PrintMap.peek (cop, ([], t))
+    val ds' = List.filter (fn (_, s, _) => s <> str) ds
+  in
+    if length ds' = length ds then cop
+    else let
+        val (pm',_) = PrintMap.delete(cop, ([], t))
+      in
+        List.foldl (fn (d,acc) => PrintMap.insert(acc,([],t),d))
+                   pm'
+                   ds'
+      end
+  end
 in
-  (remove_omapping crec str opc,
-   case PrintMap.peek (cop, ([], t)) of
-     NONE => cop
-   | SOME (_,s,_) => if s = str then #1 (PrintMap.delete(cop, ([], t)))
-                     else cop)
+  (remove_omapping crec str opc, cop')
 end
 
 end (* Overload *)
