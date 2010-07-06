@@ -30,7 +30,8 @@ in
 end
 
 val _ =
-    app testpp ["{x | x < 10}",
+    app testpp ["{}",
+                "{x | x < 10}",
                 "{x | x < 10} y",
                 "{x + y | x < y}",
                 "{x + y | x > 6}",
