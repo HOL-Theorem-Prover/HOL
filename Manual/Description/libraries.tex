@@ -2857,8 +2857,8 @@ the simplifier will perform AC-normalisation of disjunctions.  The
 new congruence rules.
 
 \index{simplification!guaranteeing termination}
-\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)}
-\index{Ntimes (controlling rewrite applications)@\ml{Ntimes} (controlling rewrite applications)}
+\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)|pin}
+\index{Ntimes (controlling rewrite applications)@\ml{Ntimes} (controlling rewrite applications)|pin}
 Two other functions provide a crude mechanism for controlling the
 number of times an individual rewrite will be applied.
 \begin{hol}
@@ -2926,7 +2926,7 @@ particular terms.  For example, if \holtxt{opn} is a binary operator,
    |- (x = x') ==> (opn x y = opn x' y)
 \end{verbatim}
 \end{hol}
-\index{SimpLHS@\ml{SimpLHS}}\index{SimpRHS@\ml{SimpRHS}}
+\index{SimpLHS@\ml{SimpLHS}|pin}\index{SimpRHS@\ml{SimpRHS}|pin}
 Because the equality case is so common, the special values
 \ml{SimpLHS} and \ml{SimpRHS} are provided to force
 simplification on the left or right of an equality respectively.
