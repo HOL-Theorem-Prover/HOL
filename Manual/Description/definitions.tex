@@ -1353,7 +1353,7 @@ The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}
 and show that the arguments to \holtxt{qsort} are in the relation.
 The function \ml{WF\_REL\_TAC} is almost invariably used at this point to
 initiate the termination proof. Clearly, \ml{qsort} terminates because the list
-argument gets shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate 
+argument gets shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate
 measure function results in two subgoals, both of which are easy to
 prove.
 
@@ -1370,14 +1370,14 @@ prove.
 \end{session}
 %
 Execution of \ml{WF\_REL\_TAC} has automatically proved the
-wellfoundedness of the termination relation 
+wellfoundedness of the termination relation
 \holtxt{measure (LENGTH o SND)}
 and the remainder of the goal has been simplified into a
 pair of easy goals. Once both goals are proved, we can encapsulate
 the termination proof with \ml{tDefine}, which takes a quotation
-(representing desired recursion equations) and a tactic $t$, 
+(representing desired recursion equations) and a tactic $t$,
 defines the specified function, calculates the termination conditions,
-and applies $t$ to them. If the termination conditions are proved by 
+and applies $t$ to them. If the termination conditions are proved by
 $t$ then the recursion equations and induction theorem are stored
 in the current theory segment before the recursion equations are returned:
 
@@ -1415,7 +1415,7 @@ first argument denotes a theory; the current theory may be specified by \texttt{
 \end{verbatim}
 \end{session}
 
-\noindent The induction theorem produced by \holtxt{Define} and \holtxt{tDefine} can 
+\noindent The induction theorem produced by \holtxt{Define} and \holtxt{tDefine} can
 be applied by \ml{recInduct}. See Section \ref{sec:bossLib} for details.
 
 \subsubsection{Techniques for proving termination}
@@ -1556,10 +1556,10 @@ Occasionally, there's a combination of factors that complicate the
 termination argument. For example, the following specification
 describes a naive pattern matching algorithm on strings (represented
 as lists here). The function takes four arguments: the first, $p$,
-is the remainder of the pattern being matched. The second, 
-$\mathit{rst}$, is the remainder of the string being searched.  The third 
-argument, $p_0$, holds the original pattern to be matched. 
-The fourth argument, $s$, is the string being searched. 
+is the remainder of the pattern being matched. The second,
+$\mathit{rst}$, is the remainder of the string being searched.  The third
+argument, $p_0$, holds the original pattern to be matched.
+The fourth argument, $s$, is the string being searched.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -1579,28 +1579,28 @@ The fourth argument, $s$, is the string being searched.
 \end{verbatim}
 \end{session}
 %
-The first clause of the definition states that if $p$ becomes exhausted, then a match has 
+The first clause of the definition states that if $p$ becomes exhausted, then a match has
 been found;  the function returns \holtxt{T}. The second clause represents the case
-where $s$ becomes exhausted but $p$ is not, in which case the function returns 
+where $s$ becomes exhausted but $p$ is not, in which case the function returns
 \holtxt{F}. The remaining case is when there's more searching to do; the function
-checks if the head of the pattern $p$ is the same as the head of 
+checks if the head of the pattern $p$ is the same as the head of
 $\mathit{rst}$. If yes, then the search proceeds recursively, using the
 tail of $p$ and the tail of $\mathit{rst}$. If no, that means that $p$ has
-failed to match, so the algorithm advances one character ahead in 
-$\mathit{s}$ and starts matching from the beginning of $p_0$. If 
-$\mathit{s}$ is empty, however, then we return \holtxt{F}. Note that 
+failed to match, so the algorithm advances one character ahead in
+$\mathit{s}$ and starts matching from the beginning of $p_0$. If
+$\mathit{s}$ is empty, however, then we return \holtxt{F}. Note that
 $\mathit{rst}$ and $s$ both represent the string being
-searched: $\mathit{rst}$ is a `local` version of $s$: we recurse into 
-$\mathit{rst}$  as long as there are matches with the pattern $p$. However, 
-if the search eventually fails, then $s$, which `remembers` where the search 
+searched: $\mathit{rst}$ is a `local` version of $s$: we recurse into
+$\mathit{rst}$  as long as there are matches with the pattern $p$. However,
+if the search eventually fails, then $s$, which `remembers` where the search
 started from, is used to restart the search.
 
 So much for the behaviour of the function. Why does it terminate? There
-are two recursive calls. The first call reduces the size of $p$ and $\mathit{rst}$, and 
-leaves the other arguments unchanged. The second call can increase the 
-size of $p$ and $\mathit{rst}$, but reduces the size $s$. This is a classic situation 
-in which to use a  lexicographic ordering: some arguments to the function are reduced in 
-some recursive calls, and some others are reduced in other recursive calls.  
+are two recursive calls. The first call reduces the size of $p$ and $\mathit{rst}$, and
+leaves the other arguments unchanged. The second call can increase the
+size of $p$ and $\mathit{rst}$, but reduces the size $s$. This is a classic situation
+in which to use a  lexicographic ordering: some arguments to the function are reduced in
+some recursive calls, and some others are reduced in other recursive calls.
 Recall that \holtxt{LEX} is an infix operator, defined in \ml{pairTheory} as follows:
 %
 \begin{hol}
@@ -1613,8 +1613,8 @@ In the second recursive call, the length of \holtxt{s} is reduced, and in
 the first it stays the same. This motivates having the length of the
 $s$ be the first component of the lexicographic
 combination, and the length of $\mathit{rst}$ as the second
-component. Formally, we want to map from the four-tuple of 
-arguments into a lexicographic combination of relations. 
+component. Formally, we want to map from the four-tuple of
+arguments into a lexicographic combination of relations.
 This is enabled by \holtxt{inv\_image} from \ml{relationTheory}:
 %
 \begin{hol}
@@ -1911,9 +1911,11 @@ proving the other constraints.
 \section{Inductive Relations}
 \index{inductive relations|(}
 
+\index{Hol_reln, defining inductive relations@\ml{Hol\_reln}, defining inductive relations}
+\index{inductive relations!Hol_reln (ML function)@\ml{Hol\_reln} (ML function)}
 Inductive definitions are made with the function \ml{Hol\_reln}, found
-in the \ml{bossLib} structure, and the resulting definitions and 
-theorems are handled with functions defined in the library 
+in the \ml{bossLib} structure, and the resulting definitions and
+theorems are handled with functions defined in the library
 \ml{IndDefLib}. The \ml{Hol\_reln} function takes a
 term quotation as input and attempts to define the relations there
 specified.  The input term quotation must parse to a term that
@@ -1969,6 +1971,11 @@ and is used to decompose an element in the relation into the
 possible ways of obtaining it by the rules.
 \end{itemize}
 
+\index{xHol_reln, defining inductive relations@\ml{xHol\_reln}, defining inductive relations}
+\index{inductive relations!xHol_reln (ML function)@\ml{xHol\_reln} (ML function)}
+If the ``stem'' of the first constant defined in a set of clauses is such that resulting \ML{} bindings in an exported theory file will result in illegal \ML{}, then the \ml{xHol\_reln} function should be used.
+The \ml{xHol\_reln} function is analogous to the \ml{xDefine} function for defining recursive functions (see Section~\ref{TFL}).
+
 \paragraph{Strong Induction Principles}
 So called ``strong'' versions of induction principles (in which instances
 of the relation being defined appear as extra hypotheses), can be
@@ -1978,6 +1985,8 @@ automatically proved with a call to the function
 \]
 The first argument is the rules theorem, and the second is the
 induction theorem.
+The strong induction principle for a relation is used when the
+\ml{Induct\_on} tactic is used.
 
 \paragraph{Adding Monotone Operators}
 \index{inductive relations!monotone operators for}
@@ -2095,6 +2104,45 @@ as in the definition of \holtxt{EVEN} and \holtxt{ODD}.  The relations
 may or may not be mutually recursive.  The clauses for each relation
 need not be contiguous.
 
+\subsection{Proofs with Inductive Relations}
+\index{inductive relations!performing proofs}
+
+The ``rules'' theorem of an inductive relation provides a straightforward way of proving arguments belong to a relation.
+If confronted with a goal of the form \holtxt{R~x~y}, one might make progress by performing a \ml{MATCH\_MP\_TAC} (or perhaps, an \ml{HO\_MATCH\_MP\_TAC}) with one of the implications in the ``rules'' theorem.
+
+The ``cases'' theorem can be used for the same purpose because it is an equality, of the general form \holtxt{R~x~y~$\iff$\dots}.
+Because the right-hand side of this theorem will often include other occurrences of the relation, it is generally not safe to simply rewrite with it.
+\index{SimpLHS@\ml{SimpLHS}}\index{SimpRHS@\ml{SimpRHS}}
+\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)}
+The rewriting-control directives \ml{Once}, \ml{SimpLHS} and \ml{SimpRHS} can be useful here.
+\index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
+In addition, the ``cases'' theorem can be used as an ``elimination'' form: if one has an assumption of the form \holtxt{R~x~y}, rewriting this (perhaps with \ml{FULL\_SIMP\_TAC} if the term occurs in the goal's assumptions) into the possible ways it may have come about is often a good approach.
+
+Inductive relations naturally also support proof by induction.
+Because an inductive relation is the least relation satisfying the given rules, one can use induction to show goals of the form
+\begin{alltt}
+   \(\forall\)x y. R x y \(\Rightarrow\) P
+\end{alltt}
+where \holtxt{P} is an arbitrary predicate likely including references to variables \holtxt{x} and \holtxt{y}.
+
+The low-level approach to goals of this form is to apply
+\begin{verbatim}
+   HO_MATCH_MP_TAC R_ind
+\end{verbatim}
+\index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
+A slightly more high-level approach is use the \ml{Induct\_on} tactic.
+(This tactic is also used to perform structural inductions over algebraic data types; see Section~\ref{sec:bossLib}.)
+When performing a rule induction, the quotation passed to \ml{Induct\_on} should be of the constant being used.
+For the sake of aesthetics, the constant may also be applied to arguments.
+Thus, one can write
+\begin{verbatim}
+   Induct_on `R`
+\end{verbatim}
+or
+\begin{verbatim}
+   Induct_on `R x y`
+\end{verbatim}
+and the effect will be the same.
 \index{inductive relations|)}
 
 

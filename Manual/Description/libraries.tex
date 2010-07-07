@@ -1379,6 +1379,7 @@ of booleans, pairs, sums, the option type, arithmetic, and lists.
 The following functions use information in the database to ease the
 application of \HOL's underlying functionality:
 
+\index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
 \begin{verbatim}
    type_rws     : hol_type -> thm list
    Induct       : tactic
@@ -1423,6 +1424,7 @@ least contain some free variables already appearing in the goal. Note
 that the \ml{Cases\_on} tactic is more general than \ml{Cases}, but
 it does require an explicit term to be given.
 
+\index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
 The \ml{Induct\_on} tactic takes a quotation, which is parsed into a
 term $M$, and then $M$ is searched for in the goal. If $M$ is a
 variable, then a variable with the same name is searched for. Once the
