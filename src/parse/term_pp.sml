@@ -1255,9 +1255,21 @@ fun pp_term (G : grammar) TyG backend = let
           val pp_elements = block_up_els [] ((FirstTM::elements) @ [LastTM])
           val (begblock, endblock) =
             block_by_style(addparens, rr, pgrav, fname, fprec)
+          val (casearrow_begin, casearrow_end) =
+              if fname = GrammarSpecials.case_arrow_special andalso
+                 length args = 1
+              then let
+                  val old_seen = !bvars_seen
+                in
+                  ((fn () => bvars_seen := free_vars (hd args) @ !bvars_seen),
+                   (fn () => bvars_seen := old_seen))
+                end
+              else ((fn () => ()), (fn () => ()))
         in
           pbegin addparens; begblock();
+          casearrow_begin();
           print_ellist (lprec, prec, rprec) (pp_elements, arg_terms);
+          casearrow_end();
           endblock (); pend addparens
         end
       | INFIX RESQUAN_OP => raise Fail "Res. quans shouldn't arise"

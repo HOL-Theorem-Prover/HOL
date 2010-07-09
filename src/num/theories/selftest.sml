@@ -27,3 +27,16 @@ val _ = let
 in
   if res <> "" then print "OK\n" else fail()
 end
+
+val _ = let
+  val _ = tprint "Pretty-printing of case expression bound variables"
+  val s = "case x of 0 -> 1 || SUC n -> n * 2"
+  val _ = Parse.current_backend := PPBackEnd.vt100_terminal
+  val res = PP.pp_to_string 70 pp_term (Term [QUOTE s])
+  val expected =
+      "case \^[[0;1;34mx\^[[0m of 0 -> 1 || \
+      \SUC \^[[0;32mn\^[[0m -> \^[[0;32mn\^[[0m * 2"
+in
+  if res = expected then print "OK\n" else fail()
+end
+
