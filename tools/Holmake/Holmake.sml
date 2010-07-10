@@ -1321,6 +1321,9 @@ in
   else let
       fun foldthis (dir, m) =
           Binarymap.insert(m, FileSys.fullPath dir, dir)
+          handle OS.SysErr _ =>
+                 (warn ("Includes path "^dir^" looks bogus");
+                  m)
       val possible_calls = List.foldr foldthis
                                       (Binarymap.mkDict String.compare)
                                       (cline_additional_includes @
