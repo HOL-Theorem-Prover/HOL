@@ -2018,6 +2018,12 @@ Cases_on `x` THEN
 SIMP_TAC std_ss [fasl_order_def, SUBSET_REFL]);
 
 
+val fasl_order_TRANSITIVE = store_thm ("fasl_order_TRANSITIVE",
+``!x1 x2 x3. fasl_order x1 x2 /\ fasl_order x2 x3 ==> fasl_order x1 x3``,
+METIS_TAC[fasl_order_IS_WEAK_ORDER, WeakOrder, transitive_def])
+
+
+
 val SUP_fasl_order_def = Define `
    SUP_fasl_order M = if (NONE IN M) then NONE else SOME (BIGUNION (IMAGE THE M))`;
 
@@ -2527,6 +2533,21 @@ REPEAT STRIP_TAC THENL [
 ]);
 
 
+
+val fasl_order___SUP_fasl_action_order = store_thm ("fasl_order___SUP_fasl_action_order",
+``!X s P.
+   fasl_order (SUP_fasl_action_order X s) (SOME P) =
+   (!x. x IN X ==> ?p. (x s = SOME p) /\ (p SUBSET P))``,
+
+SIMP_TAC std_ss [fasl_order_THM,
+   SOME___SUP_fasl_action_order, SUBSET_DEF,
+   IN_BIGUNION, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM,
+   GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM,
+   IS_SOME_EXISTS] THEN
+METIS_TAC[option_CLAUSES]);
+
+
+
 val fasl_action_order___SUP_fasl_action_order =
 store_thm ("fasl_action_order___SUP_fasl_action_order",
 ``!OP a2. fasl_action_order (SUP_fasl_action_order OP) a2 =
@@ -2568,20 +2589,6 @@ Cases_on `a1 s` THENL [
    `?s2. a2 s = SOME s2` by METIS_TAC[IS_SOME_EXISTS] THEN
    FULL_SIMP_TAC std_ss []
 ]);
-
-
-val fasl_order___SUP_fasl_action_order = store_thm ("fasl_order___SUP_fasl_action_order",
-``!X s P.
-   fasl_order (SUP_fasl_action_order X s) (SOME P) =
-   (!x. x IN X ==> ?p. (x s = SOME p) /\ (p SUBSET P))``,
-
-SIMP_TAC std_ss [fasl_order_THM,
-   SOME___SUP_fasl_action_order, SUBSET_DEF,
-   IN_BIGUNION, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM,
-   GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM,
-   IS_SOME_EXISTS] THEN
-METIS_TAC[option_CLAUSES]);
-
 
 
 
@@ -4232,7 +4239,9 @@ REPEAT STRIP_TAC THEN (
 ));
 
 
-
+val EQUIV_asl_predicate_def = Define `
+   EQUIV_asl_predicate f p1 p2 =
+   (EVAL_asl_predicate f p1 = EVAL_asl_predicate f p2)`
 
 val asl_pred_bigand_def = Define `
        (asl_pred_bigand [] = asl_pred_true)
@@ -4262,6 +4271,20 @@ val asl_predicate_IS_DECIDED_IN_STATE_def = Define `
    asl_predicate_IS_DECIDED_IN_STATE f s c =
    (s IN (EVAL_asl_predicate f c) \/
     s IN (EVAL_asl_predicate f (asl_pred_neg c)))`;
+
+
+val asl_predicate_IS_DECIDED_IN_STATE___EXPAND_REWRITE = store_thm (
+"asl_predicate_IS_DECIDED_IN_STATE___EXPAND_REWRITE",
+``IS_SEPARATION_COMBINATOR f ==>
+  (asl_predicate_IS_DECIDED_IN_STATE f s c =
+   (s IN (EVAL_asl_predicate f c) /\
+    ~(s IN (EVAL_asl_predicate f (asl_pred_neg c)))) \/
+   (~(s IN (EVAL_asl_predicate f c)) /\
+    s IN (EVAL_asl_predicate f (asl_pred_neg c))))``,
+SIMP_TAC std_ss [asl_predicate_IS_DECIDED_IN_STATE_def,
+   EVAL_asl_predicate_def] THEN
+METIS_TAC[ASL_INTUITIONISTIC_NEGATION_IMP,
+   ASL_IS_INTUITIONISTIC___EVAL_asl_predicate]);
 
 
 val asl_predicate_IS_DECIDED_def = Define `
@@ -4984,7 +5007,6 @@ METIS_TAC[COMM_DEF]);
 
 
 
-
 val ASL_TRACE_SEM___PARALLEL_DECOMPOSITION = store_thm ("ASL_TRACE_SEM___PARALLEL_DECOMPOSITION",
 ``!f lock_env q1 q2 s s1 s2 t1 t2 t .
 (IS_SEPARATION_COMBINATOR f /\
@@ -5235,6 +5257,9 @@ REPEAT STRIP_TAC THEN
 Q.PAT_ASSUM `!x x''. P x x''` MATCH_MP_TAC THEN
 Q.EXISTS_TAC `x0` THEN
 ASM_SIMP_TAC std_ss []);
+
+
+
 
 
 
@@ -9593,51 +9618,115 @@ METIS_TAC[]);
 
 
 
+val ASL_INFERENCE_prog_seq_STRONG = store_thm ("ASL_INFERENCE_prog_seq_STRONG",
+``!xenv penv P R p1 p2.
+ ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_seq p1 p2) R =
+ (?Q. ASL_PROGRAM_HOARE_TRIPLE xenv penv P p1 Q /\
+      ASL_PROGRAM_HOARE_TRIPLE xenv penv Q p2 R)``,
+
+
+SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
+       ASL_PROGRAM_SEM___prog_seq] THEN
+REPEAT STRIP_TAC THEN
+Q.ABBREV_TAC `a1 = ASL_PROGRAM_SEM xenv penv p1` THEN
+Q.ABBREV_TAC `a2 = ASL_PROGRAM_SEM xenv penv p2` THEN
+SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM,
+   SOME___asla_seq, GSYM RIGHT_EXISTS_AND_THM,
+   GSYM LEFT_EXISTS_AND_THM, SUBSET_DEF, IN_BIGUNION,
+   IN_IMAGE, GSYM LEFT_FORALL_IMP_THM] THEN
+REPEAT STRIP_TAC THEN
+EQ_TAC THEN REPEAT STRIP_TAC THENL [
+   Q.EXISTS_TAC `BIGUNION (IMAGE (THE o a1) P)` THEN
+   SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM,
+      GSYM LEFT_FORALL_IMP_THM] THEN
+   HO_MATCH_MP_TAC (prove 
+      (``(!e. (X e /\ !x. Y x e)) ==> ((!e. X e) /\ (!x x'. Y x x'))``, METIS_TAC[])) THEN
+   GEN_TAC THEN
+   Cases_on `x IN P` THEN ASM_REWRITE_TAC[] THEN
+   Q.PAT_ASSUM `!s. s IN P ==> X s` (MP_TAC o Q.SPEC `x`) THEN
+   ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
+   REPEAT STRIP_TAC THENL [
+      Q.EXISTS_TAC `x` THEN
+      ASM_SIMP_TAC std_ss [],
+
+      METIS_TAC[option_CLAUSES]
+   ],
+
+
+   Q.PAT_ASSUM `!s. s IN P ==> X s` (MP_TAC o Q.SPEC `s`) THEN
+   ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
+   GEN_TAC THEN STRIP_TAC THEN
+   HO_MATCH_MP_TAC (prove 
+      (``(!e. (X e /\ !x. Y x e)) ==> ((!e. X e) /\ (!x x'. Y x x'))``, METIS_TAC[])) THEN
+   GEN_TAC THEN
+   Cases_on `x' IN s1` THEN ASM_REWRITE_TAC[] THEN
+   Q.PAT_ASSUM `!s. s IN Q ==> X s` (MP_TAC o Q.SPEC `x'`) THEN
+   ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM]
+]);
+
+
 val ASL_INFERENCE_prog_seq = store_thm ("ASL_INFERENCE_prog_seq",
 ``!xenv penv P Q R p1 p2.
 (ASL_PROGRAM_HOARE_TRIPLE xenv penv P p1 Q /\
  ASL_PROGRAM_HOARE_TRIPLE xenv penv Q p2 R) ==>
  ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_seq p1 p2) R``,
 
-
-SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
-       ASL_PROGRAM_SEM___prog_seq] THEN
-SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM] THEN
-REPEAT STRIP_TAC THEN
-SIMP_TAC std_ss [asla_seq_def, COND_NONE_SOME_REWRITES2,
-       SUP_fasl_order_def, SUBSET_DEF, IN_BIGUNION,
-       IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
-
-`?s1. (ASL_PROGRAM_SEM xenv penv p1 s = SOME s1) /\ s1 SUBSET Q` by METIS_TAC[] THEN
-ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
-REPEAT STRIP_TAC THENL [
-   Cases_on `x IN s1` THEN ASM_REWRITE_TAC[] THEN
-   `x IN Q` by PROVE_TAC[SUBSET_DEF] THEN
-   RES_TAC THEN
-   FULL_SIMP_TAC std_ss [],
-
-
-   `x' IN Q` by PROVE_TAC[SUBSET_DEF] THEN
-   RES_TAC THEN
-   `?s2. (ASL_PROGRAM_SEM xenv penv p2 x' = SOME s2) /\ s2 SUBSET R` by METIS_TAC[] THEN
-   FULL_SIMP_TAC std_ss [] THEN
-   METIS_TAC[SUBSET_DEF]
-]);
+METIS_TAC[ASL_INFERENCE_prog_seq_STRONG]);
 
 
 
-
-
-val ASL_INFERENCE_prog_choice = store_thm      ("ASL_INFERENCE_prog_choice",
+val ASL_INFERENCE_prog_choice_STRONG = store_thm("ASL_INFERENCE_prog_choice_STRONG",
 ``!xenv penv P Q p1 p2.
+ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_choice p1 p2) Q =
 (ASL_PROGRAM_HOARE_TRIPLE xenv penv P p1 Q /\
- ASL_PROGRAM_HOARE_TRIPLE xenv penv P p2 Q) ==>
- ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_choice p1 p2) Q``,
+ ASL_PROGRAM_HOARE_TRIPLE xenv penv P p2 Q)``,
 
 SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_REWRITE,
    ASL_PROGRAM_TRACES_IN_THM, IN_UNION] THEN
 METIS_TAC[]);
 
+
+val ASL_INFERENCE_prog_choice = store_thm ("ASL_INFERENCE_prog_choice",
+``!xenv penv P Q p1 p2.
+(ASL_PROGRAM_HOARE_TRIPLE xenv penv P p1 Q /\
+ ASL_PROGRAM_HOARE_TRIPLE xenv penv P p2 Q) ==>
+ ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_choice p1 p2) Q``,
+
+SIMP_TAC std_ss [ASL_INFERENCE_prog_choice_STRONG]);
+
+
+
+val ASL_INFERENCE_prog_kleene_star_STRONG = store_thm ("ASL_INFERENCE_prog_kleene_star_STRONG",
+``!xenv penv P p.
+ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_kleene_star p) P =
+ASL_PROGRAM_HOARE_TRIPLE xenv penv P p P``,
+
+SIMP_TAC std_ss [
+   ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___prog_kleene_star___asla_kleene_star,
+   asla_kleene_star_def,
+   HOARE_INFERENCE___SUP_fasl_action_order, GSPECIFICATION,
+   IN_UNIV, GSYM LEFT_FORALL_IMP_THM] THEN
+REPEAT GEN_TAC THEN
+Q.ABBREV_TAC `ps = ASL_PROGRAM_SEM xenv penv p` THEN
+EQ_TAC THEN REPEAT STRIP_TAC THEN1 (
+   Q.PAT_ASSUM `!n. X n` (MP_TAC o Q.SPEC `SUC 0`) THEN
+   REWRITE_TAC [asla_repeat_def, asla_seq_skip]
+) THEN
+
+Induct_on `n` THENL [
+  SIMP_TAC std_ss [asla_repeat_def, HOARE_TRIPLE_def, asla_skip_def,
+     fasl_order_THM, IN_SING, SUBSET_DEF],
+
+  FULL_SIMP_TAC std_ss [asla_repeat_def, HOARE_TRIPLE_def,
+     fasl_order_THM, SOME___asla_seq, GSYM RIGHT_EXISTS_AND_THM,
+     GSYM LEFT_EXISTS_AND_THM, SUBSET_DEF, IN_BIGUNION, IN_IMAGE, IN_ABS,
+     GSYM LEFT_FORALL_IMP_THM] THEN
+  REPEAT STRIP_TAC THEN
+  Q.PAT_ASSUM `!s. s IN P ==> ?s1. (ps s = SOME s1) /\ XXX` (MP_TAC o Q.SPEC `s`) THEN
+  ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
+  METIS_TAC[option_CLAUSES]
+]);
 
 
 
@@ -9646,60 +9735,40 @@ val ASL_INFERENCE_prog_kleene_star = store_thm ("ASL_INFERENCE_prog_kleene_star"
 ASL_PROGRAM_HOARE_TRIPLE xenv penv P p P ==>
 ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_kleene_star p) P``,
 
+METIS_TAC[ASL_INFERENCE_prog_kleene_star_STRONG]);
 
-SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_REWRITE,
-   ASL_PROGRAM_TRACES_IN_THM,
-   LIST_SET_STAR_def, IN_ABS, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
-   GSYM LEFT_FORALL_IMP_THM,
-   IN_IMAGE] THEN
-REPEAT GEN_TAC THEN
-`?f lock_env. (xenv = (f, lock_env))` by ALL_TAC THEN1 (
-   Cases_on `xenv` THEN
-   SIMP_TAC std_ss []
+
+
+val ASL_PROGRAM_SEM___PARALLEL_DECOMPOSITION = store_thm ("ASL_PROGRAM_SEM___PARALLEL_DECOMPOSITION",
+``!xenv penv q1 q2 s s1 s2 p1 p2.
+IS_SEPARATION_COMBINATOR (FST xenv) /\
+fasl_order (ASL_PROGRAM_SEM xenv penv p1 s1) q1 /\
+fasl_order (ASL_PROGRAM_SEM xenv penv p2 s2) q2 /\
+(SOME s = (FST xenv) (SOME s1) (SOME s2)) ==>
+
+fasl_order (ASL_PROGRAM_SEM xenv penv (asl_prog_parallel p1 p2) s) 
+           (fasl_star (FST xenv) q1 q2)``,
+
+REPEAT STRIP_TAC THEN
+Cases_on `(q1 = NONE) \/ (q2 = NONE)` THEN1 (
+   FULL_SIMP_TAC std_ss [fasl_order_THM, fasl_star_REWRITE]
 ) THEN
-ASM_SIMP_TAC std_ss [ASL_TRACE_SEM_APPEND, asla_seq_skip,
-   ASL_TRACE_SEM_REWRITE,
-   asl_aa_skip_def,
-   EVAL_asl_prim_command_THM,
-   ASL_ATOMIC_ACTION_SEM_def] THEN
-STRIP_TAC THEN
-Induct_on `n` THENL [
-   SIMP_TAC list_ss [LIST_NUM_SET_STAR_def, IN_SING,
-      ASL_TRACE_SEM_def, asla_big_seq_def,
-      asla_skip_def, SUBSET_DEF, IN_SING],
-
-   SIMP_TAC std_ss [LIST_NUM_SET_STAR_def,
-      GSPECIFICATION, PAIR_EXISTS_THM,
-      GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
-      GSYM LEFT_FORALL_IMP_THM,
-      ASL_TRACE_SEM_APPEND] THEN
-   REPEAT STRIP_TAC THEN
-   SIMP_TAC std_ss [SOME___asla_seq, GSYM LEFT_EXISTS_AND_THM] THEN
-
-   `?s'. (ASL_TRACE_SEM xenv x1 s = SOME s') /\ s' SUBSET P` by METIS_TAC[] THEN
-   Q.PAT_ASSUM `xenv = X` (ASSUME_TAC o GSYM) THEN
-   FULL_SIMP_TAC std_ss [] THEN
-   CONJ_TAC THEN1 (
-      REPEAT STRIP_TAC THEN
-      `e IN P` by METIS_TAC[SUBSET_DEF] THEN
-      RES_TAC THEN
-      ASM_SIMP_TAC std_ss []
-   ) THEN
-
-   SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM,
-      GSYM RIGHT_EXISTS_AND_THM] THEN
-   REPEAT STRIP_TAC THEN
-   `x' IN P` by METIS_TAC[SUBSET_DEF] THEN
-   `?s'. (ASL_TRACE_SEM xenv x2 x' = SOME s') /\ s' SUBSET P` by METIS_TAC[] THEN
-   FULL_SIMP_TAC std_ss [] THEN
-   METIS_TAC[SUBSET_DEF]
-]);
+`?q1v q2v. (q1 = SOME q1v) /\ (q2 = SOME q2v)` by ALL_TAC THEN1 (
+   Cases_on `q1` THEN Cases_on `q2` THEN 
+   FULL_SIMP_TAC std_ss []
+) THEN
+FULL_SIMP_TAC std_ss [ASL_PROGRAM_SEM_def, ASL_TRACE_SET_SEM_def,
+   fasl_order___SUP_fasl_action_order, fasl_star_REWRITE,
+   IN_IMAGE, GSYM LEFT_FORALL_IMP_THM, ASL_PROGRAM_TRACES_IN_THM,
+   GSYM fasl_order_THM] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `xenv` THEN
+FULL_SIMP_TAC std_ss [GSYM fasl_star_REWRITE] THEN
+MATCH_MP_TAC ASL_TRACE_SEM___PARALLEL_DECOMPOSITION THEN
+METIS_TAC[]);
 
 
-
-
-
-val ASL_INFERENCE_prog_parallel = store_thm    ("ASL_INFERENCE_prog_parallel",
+val ASL_INFERENCE_prog_parallel = store_thm ("ASL_INFERENCE_prog_parallel",
 ``!xenv penv P1 P2 Q1 Q2 p1 p2.
 (IS_SEPARATION_COMBINATOR (FST xenv) /\
  ASL_PROGRAM_HOARE_TRIPLE xenv penv P1 p1 Q1 /\
@@ -9708,20 +9777,10 @@ val ASL_INFERENCE_prog_parallel = store_thm    ("ASL_INFERENCE_prog_parallel",
 ASL_PROGRAM_HOARE_TRIPLE xenv penv (asl_star (FST xenv) P1 P2)
    (asl_prog_parallel p1 p2) (asl_star (FST xenv) Q1 Q2)``,
 
-SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_REWRITE,
-   ASL_PROGRAM_TRACES_IN_THM,
-   GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
-   GSYM LEFT_FORALL_IMP_THM] THEN
-REPEAT STRIP_TAC THEN
-`?f lock_env. xenv = (f, lock_env)` by ALL_TAC  THEN1 (
-   Cases_on `xenv` THEN SIMP_TAC std_ss []
-) THEN
-FULL_SIMP_TAC std_ss [asl_star_def, IN_ABS] THEN
-MP_TAC (
-Q.SPECL [`f`, `lock_env`, `SOME Q1`, `SOME Q2`, `s`, `p`, `q`, `t1`, `t2`, `t`]
-ASL_TRACE_SEM___PARALLEL_DECOMPOSITION) THEN
-ASM_SIMP_TAC std_ss [fasl_order_THM] THEN
-SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM, asl_star_def]);
+SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def, HOARE_TRIPLE_def,
+   GSYM fasl_star_REWRITE] THEN
+SIMP_TAC std_ss [asl_star_def, IN_ABS] THEN
+METIS_TAC[ASL_PROGRAM_SEM___PARALLEL_DECOMPOSITION]);
 
 
 
@@ -9978,25 +10037,15 @@ val ASL_INFERENCE_assume = store_thm ("ASL_INFERENCE_assume",
       (asl_prog_prim_command (asl_pc_assume c))
       (asl_and P (EVAL_asl_predicate (FST xenv) c)))``,
 
-REPEAT GEN_TAC THEN
-`?lock_env f. xenv = (f,lock_env)` by ALL_TAC THEN1 (
-   Cases_on `xenv` THEN SIMP_TAC std_ss []
-) THEN
-ASM_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_REWRITE,
-   ASL_PROGRAM_TRACES_IN_THM, ASL_TRACE_SEM_REWRITE,
-   asla_seq_skip] THEN
-SIMP_TAC std_ss [ASL_ATOMIC_ACTION_SEM_def] THEN
-ASM_SIMP_TAC std_ss [EVAL_asl_prim_command_THM, asla_assume_def,
-   asl_predicate_IS_DECIDED_def, GSYM FORALL_AND_THM,
-   EVAL_asl_predicate_def] THEN
+SIMP_TAC std_ss [asl_predicate_IS_DECIDED_def,
+   GSYM asl_prog_assume_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___assume, HOARE_TRIPLE_def,
+   fasl_order_THM, EVAL_asl_predicate_def,
+   asla_assume_def] THEN
 REPEAT STRIP_TAC THEN
-Cases_on `s IN EVAL_asl_predicate f c` THENL [
-   FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_SING, asl_and_def, IN_ABS],
-
-   `s IN ASL_INTUITIONISTIC_NEGATION f (EVAL_asl_predicate f c)` by METIS_TAC[] THEN
-   ASM_SIMP_TAC std_ss [SUBSET_DEF, NOT_IN_EMPTY,
-      IN_SING, asl_and_def, IN_ABS]
-]);
+ASM_SIMP_TAC (std_ss++boolSimps.LIFT_COND_ss) [SUBSET_DEF, IN_SING,
+   NOT_IN_EMPTY, asl_bool_EVAL] THEN
+METIS_TAC[]);
 
 
 
@@ -10362,56 +10411,28 @@ EQ_TAC THEN STRIP_TAC THENL [
 
 
 
-val ASL_INFERENCE_prog_slp = store_thm ("ASL_INFERENCE_prog_slp",
-``!xenv penv P Q p1 p2 slp.
-   (asl_slp_opt xenv penv P p1 = SOME slp) ==>
-
+val ASL_INFERENCE_slp = store_thm ("ASL_INFERENCE_slp",
+``!xenv penv P Q p1 p2.   
    (ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_seq p1 p2) Q =
-    ASL_PROGRAM_HOARE_TRIPLE xenv penv slp p2 Q)``,
+    (?slp. (asl_slp_opt xenv penv P p1 = SOME slp) /\
+    ASL_PROGRAM_HOARE_TRIPLE xenv penv slp p2 Q))``,
 
+SIMP_TAC std_ss [ASL_INFERENCE_prog_seq_STRONG] THEN
 REPEAT STRIP_TAC THEN
-Tactical.REVERSE EQ_TAC THENL [
-   FULL_SIMP_TAC std_ss [GSYM asl_slp_opt_THM] THEN
-   STRIP_TAC THEN
-   MATCH_MP_TAC ASL_INFERENCE_prog_seq THEN
-   Q.EXISTS_TAC `slp` THEN
-   ASM_REWRITE_TAC[],
+Cases_on `asl_slp_opt xenv penv P p1` THEN1 (
+   FULL_SIMP_TAC std_ss [asl_slp_opt_def, LET_THM,
+         EXTENSION, NOT_IN_EMPTY, IN_ABS]
+) THEN
+FULL_SIMP_TAC std_ss [GSYM asl_slp_opt_THM] THEN
+EQ_TAC THEN STRIP_TAC THENL [
+   MATCH_MP_TAC ASL_INFERENCE_STRENGTHEN THEN
+   METIS_TAC[SUBSET_REFL],
 
-
-
-   FULL_SIMP_TAC std_ss [GSYM asl_slp_opt_THM] THEN
-   FULL_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
-               ASL_PROGRAM_SEM___prog_seq] THEN
-   Q.ABBREV_TAC `a1 = ASL_PROGRAM_SEM xenv penv p1` THEN
-   Q.ABBREV_TAC `a2 = ASL_PROGRAM_SEM xenv penv p2` THEN
-   FULL_SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM,
-               SOME___asla_seq, GSYM LEFT_EXISTS_AND_THM] THEN
-   REPEAT STRIP_TAC THEN
-   Tactical.REVERSE (`?s1 s2. s1 IN P /\ (a1 s1 = SOME s2) /\ (s IN s2)` by ALL_TAC) THEN1 (
-      Q.PAT_ASSUM `!s. X s` (MP_TAC o Q.SPEC `s1`) THEN
-      ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE,
-              GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
-      REPEAT STRIP_TAC THEN
-      `IS_SOME (a2 s)` by RES_TAC THEN
-      FULL_SIMP_TAC std_ss [IS_SOME_EXISTS] THEN
-      REPEAT STRIP_TAC THEN
-      Q.PAT_ASSUM `!x x''. X x x''` (MP_TAC o Q.SPECL [`x`, `s`]) THEN
-      ASM_SIMP_TAC std_ss []
-   ) THEN
-
-
-   CCONTR_TAC THEN
-   FULL_SIMP_TAC std_ss [] THEN
-   Q.PAT_ASSUM `!Q. X Q ==> slp SUBSET Q` (MP_TAC o Q.SPEC `UNIV DELETE s`) THEN
-   ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_DELETE, IN_UNIV] THEN
    METIS_TAC[]
 ]);
 
 
-
-
-
-val ASL_INFERENCE_prog_slp___IMP = store_thm ("ASL_INFERENCE_prog_slp___IMP",
+val ASL_INFERENCE_slp___IMP = store_thm ("ASL_INFERENCE_slp___IMP",
 
 ``!xenv penv P Q p1 p2 slp.
    ((asl_slp_opt xenv penv P p1 = SOME slp) /\
@@ -10419,7 +10440,7 @@ val ASL_INFERENCE_prog_slp___IMP = store_thm ("ASL_INFERENCE_prog_slp___IMP",
 
    (ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_seq p1 p2) Q)``,
 
-METIS_TAC[ASL_INFERENCE_prog_slp]);
+METIS_TAC[ASL_INFERENCE_slp]);
 
 
 
@@ -10531,27 +10552,90 @@ FULL_SIMP_TAC std_ss [SUBSET_DEF]);
 
 
 
+val asl_slp_opt___prog_assume = store_thm ("asl_slp_opt___prog_assume",
+``!xenv penv P c. 
+  IS_SEPARATION_COMBINATOR (FST xenv) ==>
+
+  (asl_slp_opt xenv penv P (asl_prog_assume c) = 
+   if (asl_predicate_IS_DECIDED (FST xenv) P c) then
+   SOME (asl_and P (EVAL_asl_predicate (FST xenv) c)) else NONE)``,
+
+SIMP_TAC std_ss [asl_slp_opt_def, ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___assume, HOARE_TRIPLE_def,
+   fasl_order_THM, asla_assume_def] THEN
+REPEAT STRIP_TAC THEN
+Q.ABBREV_TAC `cc = EVAL_asl_predicate (FST xenv) c` THEN
+SIMP_TAC (std_ss++LIFT_COND_ss) [] THEN
+ASM_SIMP_TAC std_ss [COND_EXPAND_IMP, asl_predicate_IS_DECIDED_def,
+   FORALL_AND_THM, EMPTY_SUBSET, SUBSET_DEF, IN_SING,
+   EVAL_asl_predicate_def, LET_THM] THEN
+
+Q.HO_MATCH_ABBREV_TAC `Y1 /\ (Y2 ==> (qset = Y3))` THEN
+MAP_EVERY Q.UNABBREV_TAC [`Y1`, `Y2`, `Y3`] THEN
+CONJ_TAC THEN STRIP_TAC THENL [
+   `qset = \Q. asl_and P cc SUBSET Q` by ALL_TAC THEN1 (
+       Q.UNABBREV_TAC `qset` THEN
+       SIMP_TAC std_ss [EXTENSION, IN_ABS, SUBSET_DEF, asl_bool_EVAL] THEN
+       METIS_TAC[]
+   ) THEN
+   ASM_SIMP_TAC std_ss [EXTENSION, IN_ABS, IN_BIGINTER, NOT_IN_EMPTY,
+       SUBSET_DEF] THEN
+   METIS_TAC[],
+
+   Q.UNABBREV_TAC `qset` THEN
+   SIMP_TAC std_ss [EXTENSION, IN_ABS, NOT_IN_EMPTY] THEN
+   METIS_TAC[]
+]);
+
+
+val ASL_INFERENCE_assume_seq_STRONG = store_thm ("ASL_INFERENCE_assume_seq_STRONG",
+``!xenv penv P prog Q c.
+  IS_SEPARATION_COMBINATOR (FST xenv) ==>
+
+ (ASL_PROGRAM_HOARE_TRIPLE xenv penv P
+    (asl_prog_seq (asl_prog_prim_command (asl_pc_assume c)) prog) Q =
+  (asl_predicate_IS_DECIDED (FST xenv) P c /\
+   ASL_PROGRAM_HOARE_TRIPLE xenv penv
+     (asl_and P (EVAL_asl_predicate (FST xenv) c)) prog Q))``,
+
+SIMP_TAC std_ss [ASL_INFERENCE_slp,
+   asl_slp_opt___prog_assume, GSYM asl_prog_assume_def]);
+
+
+val asl_slp_opt___prog_seq = store_thm ("asl_slp_opt___prog_seq",
+``!xenv penv P p1 p2. 
+  IS_SEPARATION_COMBINATOR (FST xenv) ==>
+
+  (asl_slp_opt xenv penv P (asl_prog_seq p1 p2) = 
+   let P1_opt = asl_slp_opt xenv penv P p1 in
+   if IS_SOME P1_opt then 
+      asl_slp_opt xenv penv (THE P1_opt) p2
+   else NONE)``,
+
+REPEAT STRIP_TAC THEN
+Cases_on `asl_slp_opt xenv penv P p1` THEN1 (
+   FULL_SIMP_TAC std_ss [asl_slp_opt_def,
+      ASL_INFERENCE_prog_seq_STRONG, LET_THM, EXTENSION, 
+      IN_ABS, NOT_IN_EMPTY]
+) THEN
+FULL_SIMP_TAC std_ss [GSYM asl_slp_opt_THM, LET_THM] THEN
+Cases_on `asl_slp_opt xenv penv x p2` THEN1 (
+   FULL_SIMP_TAC std_ss [asl_slp_opt_def,
+      ASL_INFERENCE_prog_seq_STRONG,
+      LET_THM, EXTENSION, IN_ABS, NOT_IN_EMPTY] THEN
+   METIS_TAC[ASL_INFERENCE_STRENGTHEN, SUBSET_REFL]
+) THEN
+   
+FULL_SIMP_TAC std_ss [GSYM asl_slp_opt_THM,
+   ASL_INFERENCE_prog_seq_STRONG] THEN
+METIS_TAC[ASL_INFERENCE_STRENGTHEN, SUBSET_REFL]);
+
 
 
 
 val asl_wlp_def = Define `
 asl_wlp xenv penv prog Q =
 BIGUNION (\P. ASL_PROGRAM_HOARE_TRIPLE xenv penv P prog Q)`
-
-val asl_wlp_opt_def = Define `
-asl_wlp_opt xenv penv prog Q =
-if ASL_PROGRAM_TRACES penv prog = EMPTY then NONE else
-SOME (asl_wlp xenv penv prog Q)`;
-
-
-val asl_wlp_opt___SOME = store_thm ("asl_wlp_opt___SOME",
-``(asl_wlp_opt xenv penv prog Q = SOME wlp) =
-(~(ASL_PROGRAM_TRACES penv prog = EMPTY) /\
- (wlp = asl_wlp xenv penv prog Q))``,
-
-SIMP_TAC std_ss [asl_wlp_opt_def, COND_RATOR, COND_RAND] THEN
-METIS_TAC[]);
-
 
 val asl_wlp_THM = store_thm ("asl_wlp_THM",
    ``!xenv penv Q prog wlp.
@@ -10589,15 +10673,12 @@ EQ_TAC THEN STRIP_TAC THENL [
 
 
 
-val ASL_INFERENCE_prog_wlp = store_thm ("ASL_INFERENCE_prog_wlp",
+val ASL_INFERENCE_wlp = store_thm ("ASL_INFERENCE_wlp",
 
-``!xenv penv P Q p1 p2 wlp.
-   (asl_wlp_opt xenv penv p2 Q = SOME wlp) ==>
-
+``!xenv penv P Q p1 p2.
    (ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_seq p1 p2) Q =
-   ASL_PROGRAM_HOARE_TRIPLE xenv penv P p1 wlp)``,
+   ASL_PROGRAM_HOARE_TRIPLE xenv penv P p1 (asl_wlp xenv penv p2 Q))``,
 
-SIMP_TAC std_ss [asl_wlp_opt___SOME] THEN
 REPEAT STRIP_TAC THEN
 Tactical.REVERSE EQ_TAC THENL [
    REPEAT STRIP_TAC THEN
@@ -10607,44 +10688,80 @@ Tactical.REVERSE EQ_TAC THENL [
    METIS_TAC[asl_wlp_THM],
 
 
-   FULL_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_REWRITE,
-      ASL_PROGRAM_TRACES_IN_THM, GSYM LEFT_EXISTS_AND_THM,
+   FULL_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
+      ASL_PROGRAM_SEM___prog_seq, asl_wlp_def,
+      HOARE_TRIPLE_def, fasl_order_THM, SOME___asla_seq,
+      GSYM LEFT_EXISTS_AND_THM, IN_IMAGE,
       GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM,
-      ASL_TRACE_SEM_APPEND, SOME___asla_seq,
       asl_wlp_def, SUBSET_DEF, IN_BIGUNION, IN_ABS] THEN
-   SIMP_TAC std_ss [IN_IMAGE, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
-      GSYM LEFT_FORALL_IMP_THM] THEN
-   SIMP_TAC std_ss [IN_INSERT, LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR,
-          DISJ_IMP_THM, FORALL_AND_THM,
-          ASL_TRACE_SEM_diverge, asl_aa_diverge_def,
-          NOT_IN_EMPTY] THEN
    REPEAT STRIP_TAC THEN
-   `?s1. ASL_TRACE_SEM xenv t s = SOME s1` by METIS_TAC[] THEN
+   Q.PAT_ASSUM `!s. s IN P ==> X` (MP_TAC o Q.SPEC `s`) THEN
+   ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [] THEN
    REPEAT STRIP_TAC THEN
-   Q.EXISTS_TAC `{x}` THEN
-   SIMP_TAC std_ss [IN_SING] THEN
-   REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `!s t1 t2. X s t1 t2` (MP_TAC o Q.SPECL [`s`, `t`, `t'`]) THEN
-   ASM_SIMP_TAC std_ss [] THEN
-   REPEAT STRIP_TAC THEN
-   RES_TAC THEN
-   FULL_SIMP_TAC std_ss [IS_SOME_EXISTS]
+   Q.EXISTS_TAC `s1'` THEN
+   ASM_SIMP_TAC std_ss [] THEN REPEAT STRIP_TAC THEN
+   METIS_TAC[option_CLAUSES]
 ]);
 
 
 
+val ASL_INFERENCE_wlp___IMP = store_thm ("ASL_INFERENCE_wlp___IMP",
+``!xenv penv P Q p1 p2.
+    ASL_PROGRAM_HOARE_TRIPLE xenv penv P p1 (asl_wlp xenv penv p2 Q) ==>
+    ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_seq p1 p2) Q``,
 
-val ASL_INFERENCE_prog_wlp___IMP = store_thm ("ASL_INFERENCE_prog_wlp___IMP",
-
-``!xenv penv P Q p1 p2 wlp.
-   ((asl_wlp_opt xenv penv p2 Q = SOME wlp) /\
-    ASL_PROGRAM_HOARE_TRIPLE xenv penv P p1 wlp) ==>
-   (ASL_PROGRAM_HOARE_TRIPLE xenv penv P (asl_prog_seq p1 p2) Q)``,
-
-METIS_TAC[ASL_INFERENCE_prog_wlp]);
+METIS_TAC[ASL_INFERENCE_wlp]);
 
 
+
+val asl_wlp___prog_seq = store_thm ("asl_wlp___prog_seq",
+``!xenv penv Q p1 p2. 
+  IS_SEPARATION_COMBINATOR (FST xenv) ==>
+
+  (asl_wlp xenv penv (asl_prog_seq p1 p2) Q = 
+   asl_wlp xenv penv p1 (asl_wlp xenv penv p2 Q))``,
+
+REPEAT STRIP_TAC THEN
+Q.ABBREV_TAC `wlp2 = asl_wlp xenv penv p2 Q` THEN
+Q.ABBREV_TAC `wlp1 = asl_wlp xenv penv p1 wlp2` THEN
+FULL_SIMP_TAC std_ss [GSYM asl_wlp_THM,
+   ASL_INFERENCE_prog_seq_STRONG] THEN
+FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def] THEN
+METIS_TAC[ASL_INFERENCE_STRENGTHEN, SUBSET_REFL]);
+
+
+
+val asl_wlp___prog_asssume = store_thm ("asl_wlp___prog_assume",
+``!xenv penv Q c. 
+  IS_SEPARATION_COMBINATOR (FST xenv) ==>
+
+  (asl_wlp xenv penv (asl_prog_assume c) Q = 
+   \s. s IN EVAL_asl_predicate (FST xenv) (asl_pred_neg c) \/
+       (s IN Q /\ s IN EVAL_asl_predicate (FST xenv) c))``,
+
+SIMP_TAC std_ss [asl_wlp_def,
+   ASL_PROGRAM_HOARE_TRIPLE_def,
+   ASL_PROGRAM_SEM___assume,
+   HOARE_TRIPLE_def, fasl_order_THM,
+   asla_assume_def] THEN
+SIMP_TAC std_ss [EXTENSION, IN_BIGUNION] THEN
+REPEAT STRIP_TAC THEN
+SIMP_TAC (std_ss++LIFT_COND_ss) [IN_ABS, SUBSET_DEF, IN_SING, NOT_IN_EMPTY,
+   EVAL_asl_predicate_def] THEN
+EQ_TAC THENL [
+   STRIP_TAC THEN
+   Q.PAT_ASSUM `!s'. X s'` (MP_TAC o Q.SPEC `x`) THEN
+   ASM_SIMP_TAC std_ss [COND_EXPAND_OR, DISJ_IMP_THM],
+
+   DISCH_TAC THEN
+   Q.EXISTS_TAC `{x}` THEN
+   SIMP_TAC std_ss [IN_SING, COND_EXPAND_IMP, AND_IMP_INTRO,
+      FORALL_AND_THM] THEN
+   FULL_SIMP_TAC std_ss [] THEN
+   METIS_TAC[ASL_INTUITIONISTIC_NEGATION_IMP,
+      ASL_IS_INTUITIONISTIC___EVAL_asl_predicate]
+]);
 
 
 
@@ -11231,6 +11348,51 @@ Cases_on `!s2. ASL_IS_SUBSTATE (FST xenv) s s2 ==>
           s2 NOTIN EVAL_asl_predicate (FST xenv) P2` THEN (
    ASM_SIMP_TAC std_ss [fasl_order_THM, SUBSET_REFL]
 ));
+
+
+val ASL_PROGRAM_IS_ABSTRACTION___assume_and___LOST_INFORMATION = store_thm (
+"ASL_PROGRAM_IS_ABSTRACTION___assume_and___LOST_INFORMATION",
+``!xenv penv P1 P2 s.
+IS_SEPARATION_COMBINATOR (FST xenv) /\ 
+asl_predicate_IS_DECIDED_IN_STATE (FST xenv) s P1 /\
+(s IN EVAL_asl_predicate (FST xenv) P1 ==> 
+ asl_predicate_IS_DECIDED_IN_STATE (FST xenv) s P2) ==>
+
+    (ASL_PROGRAM_SEM xenv penv 
+       (asl_prog_seq (asl_prog_assume P1) (asl_prog_assume P2)) s =
+     ASL_PROGRAM_SEM xenv penv
+       (asl_prog_assume (asl_pred_and P1 P2)) s)
+   ``,
+
+SIMP_TAC (std_ss++CONJ_ss) [ASL_PROGRAM_SEM___prog_seq,
+   ASL_PROGRAM_SEM___assume,
+   EVAL_asl_predicate_def, asl_predicate_IS_DECIDED_IN_STATE___EXPAND_REWRITE] THEN
+REPEAT GEN_TAC THEN
+Q.ABBREV_TAC `p1 = EVAL_asl_predicate (FST xenv) P1` THEN
+Q.ABBREV_TAC `p2 = EVAL_asl_predicate (FST xenv) P2` THEN
+
+Cases_on `IS_SEPARATION_COMBINATOR (FST xenv)` THEN ASM_REWRITE_TAC[] THEN
+
+`(!s. s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) p1 ==>
+      s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)) /\
+ (!s. s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) p2 ==>
+      s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)) /\
+ (!s. s IN p1 /\ s IN p2 ==>
+      ~(s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)))` by ALL_TAC THEN1 (
+
+   ASM_SIMP_TAC std_ss [ASL_INTUITIONISTIC_NEGATION_REWRITE,
+      IN_ABS, asl_bool_EVAL] THEN
+   METIS_TAC[ASL_IS_SUBSTATE___REFL]
+) THEN
+
+
+ASM_SIMP_TAC (std_ss++CONJ_ss) [asla_assume_def, asl_bool_EVAL,
+   LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR, DISJ_IMP_THM] THEN
+
+SIMP_TAC std_ss [SOME___asla_seq, IN_SING,
+    BIGUNION_INSERT, BIGUNION_EMPTY, IMAGE_INSERT,
+   IMAGE_EMPTY, UNION_EMPTY, NOT_IN_EMPTY]
+);
 
 
 

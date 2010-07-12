@@ -13427,6 +13427,76 @@ ASM_SIMP_TAC list_ss []);
 
 
 
+val VAR_RES_COND_INFERENCE___prog_assume_pred_equiv =
+store_thm ("VAR_RES_COND_INFERENCE___prog_assume_pred_equiv",
+``!f P pred1 pred2 progL Q.
+
+EQUIV_asl_predicate (VAR_RES_COMBINATOR f) pred1 pred2 ==>
+
+(VAR_RES_COND_HOARE_TRIPLE f P
+   (asl_prog_block ((asl_prog_assume pred1)::progL)) Q =
+VAR_RES_COND_HOARE_TRIPLE f P
+   (asl_prog_block ((asl_prog_assume pred2)::progL)) Q)``,
+
+SIMP_TAC std_ss [EQUIV_asl_predicate_def,
+  VAR_RES_COND_HOARE_TRIPLE_REWRITE,
+  VAR_RES_PROGRAM_SEM_def,
+  ASL_PROGRAM_SEM___prog_block,
+  COND_HOARE_TRIPLE_REWRITE,
+  IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
+  ASL_PROGRAM_SEM___assume]);
+
+
+
+val VAR_RES_COND_INFERENCE___prog_assume_and___NO_EQUIV_COUNTER_EXAMPLE =
+store_thm ("VAR_RES_COND_INFERENCE___prog_assume_and___NO_EQUIV_COUNTER_EXAMPLE",
+``(IS_SEPARATION_COMBINATOR f ==>
+  ~(VAR_RES_COND_HOARE_TRIPLE f (T, asl_true)
+   (asl_prog_seq
+         (asl_prog_assume (var_res_pred (\vl. HD vl = 0) [var_res_exp_var v]))
+         (asl_prog_assume asl_pred_false)) 
+   (T, asl_true))) /\
+  
+   (VAR_RES_COND_HOARE_TRIPLE f (T, asl_true)
+   (asl_prog_assume (asl_pred_and (var_res_pred (\vl. HD vl = 0) [var_res_exp_var v])
+                                  asl_pred_false)) (T, asl_true))``,
+
+
+SIMP_TAC (std_ss++CONJ_ss) [EQUIV_asl_predicate_def,
+  VAR_RES_COND_HOARE_TRIPLE_REWRITE,
+  VAR_RES_PROGRAM_SEM_def,
+  ASL_PROGRAM_SEM___prog_block,
+  COND_HOARE_TRIPLE_REWRITE,
+  ASL_PROGRAM_SEM___prog_seq,
+  var_res_prop___REWRITE,
+  IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
+  ASL_PROGRAM_SEM___assume, asl_bool_EVAL] THEN
+
+SIMP_TAC std_ss [
+  EVAL_asl_predicate_def, asl_bool_EVAL,
+  asl_bool_REWRITES, asla_assume_def, HOARE_TRIPLE_def, IN_ABS,
+  NOT_IN_asl_false, ASL_INTUITIONISTIC_NEGATION_REWRITE,
+  EMPTY_SUBSET, fasl_order_THM2, var_res_pred_def] THEN
+ASM_SIMP_TAC (list_ss++CONJ_ss) [ASL_IS_INTUITIONISTIC___weak_expression,
+   IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
+   IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
+   SOME___asla_seq] THEN
+REPEAT STRIP_TAC THEN
+Q.EXISTS_TAC `(FEMPTY, x2)` THEN
+SIMP_TAC (list_ss++CONJ_ss) [var_res_prop_weak_expression_def,
+   var_res_prop_expression_REWRITE, IN_ABS, LET_THM,
+   var_res_exp_var_def, FDOM_FEMPTY, NOT_IN_EMPTY,
+   IMAGE_EMPTY, BIGUNION_EMPTY, EMPTY_SUBSET] THEN
+Q.EXISTS_TAC `(FEMPTY |+ (v, (0,ARB)), x2)` THEN
+SIMP_TAC std_ss [ASL_IS_SUBSTATE_def,
+   VAR_RES_COMBINATOR_REWRITE, FDOM_FUPDATE, FDOM_FEMPTY,
+   IN_INSERT, NOT_IN_EMPTY, FAPPLY_FUPDATE_THM,
+   VAR_RES_STACK_COMBINE_REWRITE] THEN
+FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
+Q.EXISTS_TAC `(FEMPTY |+ (v,0,ARB), uf x2)` THEN
+SIMP_TAC std_ss []);
+
+
 
 (*******************************************************
  * PROCCALL FREE
