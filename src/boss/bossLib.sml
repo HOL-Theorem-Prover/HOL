@@ -109,24 +109,24 @@ fun ZAP_TAC ss thl =
 
 
 (*---------------------------------------------------------------------------
-            Single step interactive proof operations
+    Single step interactive proof operations
  ---------------------------------------------------------------------------*)
 
 
-val Cases     = SingleStep.Cases
-val Induct    = SingleStep.Induct
-val recInduct = SingleStep.recInduct
+val Cases     = BasicProvers.Cases
+val Induct    = BasicProvers.Induct
+val recInduct = Induction.recInduct
 
-val Cases_on          = SingleStep.Cases_on
-val Induct_on         = SingleStep.Induct_on
-val completeInduct_on = SingleStep.completeInduct_on
-val measureInduct_on  = SingleStep.measureInduct_on;
+val Cases_on          = BasicProvers.Cases_on
+val Induct_on         = BasicProvers.Induct_on
+val completeInduct_on = numLib.completeInduct_on
+val measureInduct_on  = numLib.measureInduct_on;
 
-val SPOSE_NOT_THEN    = SingleStep.SPOSE_NOT_THEN
+val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
 
-val op by             = SingleStep.by; (* infix 8 by *)
+val op by             = BasicProvers.by; (* infix 8 by *)
 
-val CASE_TAC          = SingleStep.CASE_TAC;
+val CASE_TAC          = BasicProvers.CASE_TAC;
 
 (*---------------------------------------------------------------------------*)
 (* Working with abbreviations.                                               *)

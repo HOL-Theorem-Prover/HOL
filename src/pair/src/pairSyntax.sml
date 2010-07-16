@@ -338,9 +338,10 @@ fun list_mk_anylet (L,M) = itlist (curry mk_anylet) L M;
 *)
 
 
-(*---------------------------------------------------------------------------
-     A "vstruct" is a tuple of variables, with no duplicate occurrences.
- ---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* A "vstruct" is a tuple of variables, possibly nested, with no duplicate   *)
+(* occurrences.                                                              *)
+(*---------------------------------------------------------------------------*)
 
 val is_vstruct = pairTheory.is_vstruct;
 

@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib
 
-open SingleStep BasicProvers simpLib boolSimps
+open BasicProvers simpLib boolSimps
 
 val _ = new_theory "fixedPoint";
 

@@ -10,7 +10,7 @@ quantified variable of the goal.
 tactic
 
 \LIBRARY
-SingleStep
+BasicProvers
 
 \DESCRIBE
 When applied to a universally quantified goal {?- !u. G}, {Cases} performs a 

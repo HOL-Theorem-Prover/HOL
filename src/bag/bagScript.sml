@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib boolSimps bossLib
-     numLib Prim_rec pred_setTheory BasicProvers SingleStep
+     numLib Prim_rec pred_setTheory BasicProvers
      metisLib dividesTheory arithmeticTheory
 
 fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
@@ -44,7 +44,7 @@ val BAG_IN = new_definition (
 val _ = set_fixity "<:" (Infix(NONASSOC, 425))
 val _ = overload_on ("<:", ``BAG_IN``)
 val _ = Unicode.unicode_version {tmnm = "<:", u = UTF8.chr 0x22F2}
-        (* U+22F2 looks like ⋲ in your current font; unfortunately this
+        (* U+22F2 looks like â² in your current font; unfortunately this
            symbol doesn't seem to correspond to anything in LaTeX... *)
 val _ = TeX_notation {hol = "<:", TeX = ("\\HOLTokenIn{}:",2)}
 val _ = TeX_notation {hol = UTF8.chr 0x22F2, TeX = ("\\HOLTokenIn{}:",2)}

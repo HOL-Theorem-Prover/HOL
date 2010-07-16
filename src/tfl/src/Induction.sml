@@ -387,7 +387,7 @@ fun prove_case f thy (tm,TCs_locals,thm) =
 fun detuple newvar =
   let fun detup M =
      if pairLib.is_pair M
-     then let val (M1,M2) = pairLib.dest_pair M
+     then let val (M1,M2) = pairSyntax.dest_pair M
               val ((M1',vars1), (M2',vars2)) = (detup M1, detup M2)
           in (pairLib.mk_pair(M1',M2'), vars1@vars2)
           end
@@ -539,5 +539,99 @@ handle e => raise wrap_exn "Induction" "mk_induction" e
 in
   if !monitoring > 0 then Count.apply f () else f()
 end;
+
+(*---------------------------------------------------------------------------*)
+(*         Recursion induction tactic. Taken from tflLib.                    *)
+(*                                                                           *)
+(* Given a goal `!v1 ... vn. M`, and an induction theorem of the form        *)
+(* returned by TFL, i.e.,                                                    *)
+(*                                                                           *)
+(*   !P. clause_1 /\ ... /\ clause_n                                         *)
+(*          ==>                                                              *)
+(*        !u1 ... uk. P vstr_1 ... vstr_j                                    *)
+(*                                                                           *)
+(* we use v1 ... vk to rename the varstructs vstr_1 ... vstr_j to variables  *)
+(* in the goal. Thus the binding prefix of the goal is used to make the      *)
+(* predicate with which P is instantiated.                                   *)
+(*---------------------------------------------------------------------------*)
+
+fun rename_tuple tm [] = (tm,[])
+  | rename_tuple tm (vlist as (h::t)) =
+     let open pairSyntax
+     in if is_var tm then (h,t)
+        else let val (p1,p2) = dest_pair tm
+                 val (p1',vlist') = rename_tuple p1 vlist
+                 val (p2',vlist'') = rename_tuple p2 vlist'
+             in (mk_pair (p1',p2'), vlist'')
+            end
+     end;
+
+fun rename_tuples [] vlist = ([],vlist)
+  | rename_tuples (tmlist as (h::t)) vlist =
+    let val (tuple,vlist') = rename_tuple h vlist
+        val (tuples,vlist'') = rename_tuples t vlist'
+    in (tuple::tuples, vlist'')
+    end
+    handle e => raise wrap_exn "Induction" "rename_tuples" e;
+
+fun ndest_forall n trm =
+  let fun dest (0,tm,V) = (rev V,tm)
+        | dest (n,tm,V) =
+           let val (Bvar,Body) = dest_forall tm
+                  handle _ => raise ERR "ndest_forall"
+                  "too few quantified variables in goal"
+           in dest(n-1,Body, Bvar::V)
+           end
+  in dest(n,trm,[])
+  end;
+
+fun recInduct thm =
+  let open pairLib
+      val (prop,Body) = dest_forall(concl thm)
+      val c = snd (strip_imp Body)
+      val Pargs = snd(strip_comb(snd(strip_forall c)))
+      val n = (length o #1 o strip_forall o #2 o strip_imp) Body
+      fun tac (asl,w) =
+       let val (V,body) = ndest_forall n w
+           val (vstrl,extras) = rename_tuples Pargs V
+           val _ = if not (null extras)
+                     then raise ERR "recInduct" "internal error" else ()
+           val P = list_mk_pabs(vstrl,body)
+           val thm' = GEN_BETA_RULE (ISPEC P thm)
+       in MATCH_MP_TAC thm' (asl,w)
+       end
+  in tac
+  end
+  handle e => raise wrap_exn "Induction" "recInduct" e;
+
+(*
+fun mk_vstrl [] V A = rev A
+  | mk_vstrl (ty::rst) V A =
+      let val (vstr,V1) = unstrip_pair ty V
+      in mk_vstrl rst V1 (vstr::A)
+      end;
+
+fun recInduct thm =
+  let val (prop,Body) = dest_forall(concl thm)
+      val parg_tyl = #1(strip_fun (type_of prop))
+      val n = (length o #1 o strip_forall o #2 o strip_imp) Body
+      fun ndest_forall trm =
+          let fun dest (0,tm,V) = (rev V,tm)
+                | dest (n,tm,V) =
+                    let val (Bvar,Body) = dest_forall tm
+                    in dest(n-1,Body, Bvar::V) end
+          in dest(n,trm,[])
+          end
+      fun tac (asl,w) =
+       let val (V,body) = ndest_forall w
+           val P = (list_mk_pabs(mk_vstrl parg_tyl V [],body)
+                    handle HOL_ERR _ => list_mk_abs(V,body))
+           val thm' = GEN_BETA_RULE (ISPEC P thm)
+       in MATCH_MP_TAC thm' (asl,w)
+       end
+  in tac
+  end
+  handle e => raise wrap_exn "Induction" "recInduct" e
+*)
 
 end

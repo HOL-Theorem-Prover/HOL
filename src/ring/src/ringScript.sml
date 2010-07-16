@@ -5,7 +5,7 @@ load "semi_ringTheory";
 *)
 
 open HolKernel Parse boolLib;
-open BasicProvers SingleStep Datatype;
+open BasicProvers Datatype;
 open  abs_tools; (* Rebinds Term and Define *)
 
 fun EQ_TRANS_TAC t = MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC t THEN CONJ_TAC;

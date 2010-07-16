@@ -29,9 +29,9 @@ val Know = Q_TAC KNOW_TAC;
 val REVERSE = Tactical.REVERSE;
 
 val CASE_TAC =
-  SingleStep.PURE_TOP_CASE_TAC
+  BasicProvers.PURE_TOP_CASE_TAC
   ++ ASM_REWRITE_TAC []
-  ++ CONV_TAC SingleStep.CASE_SIMP_CONV;
+  ++ CONV_TAC BasicProvers.CASE_SIMP_CONV;
 
 (*---------------------------------------------------------------------------
      Well-formed decoders: the definition is carefully chosen to be the

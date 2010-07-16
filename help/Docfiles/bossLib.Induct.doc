@@ -10,7 +10,7 @@ outermost universally quantified variable.
 tactic, induction
 
 \LIBRARY
-SingleStep.
+BasicProvers
 
 \DESCRIBE
 Given a universally quantified goal, {Induct} attempts to perform an

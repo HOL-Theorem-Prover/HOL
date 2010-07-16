@@ -22,7 +22,7 @@ Fails if {tac} fails when applied to {A ?- tm}.
 Given the goal {{x <= y, w < x} ?- P}, suppose that the fact
 {?n. y = n + w} would help in eventually proving {P}. Invoking
 {
-   `?n. y = n + w` by (EXISTS_TAC (Term `y-w`) THEN DECIDE_TAC)
+   `?n. y = n + w` by (EXISTS_TAC ``y-w`` THEN DECIDE_TAC)
 }
 yields the goal {{y = n + w, x <= y, w < x} ?- P} in which the proved
 fact has been added to the assumptions after its existential quantifier 

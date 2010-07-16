@@ -47,7 +47,6 @@ val N_aux_partial_correctness = Q.prove
    THEN RW_TAC arith_ss [] 
    THEN RW_TAC arith_ss [E]);
 
-
 (*---------------------------------------------------------------------------*)
 (* Termination of 91 is a bit tricky.                                        *)
 (*---------------------------------------------------------------------------*)

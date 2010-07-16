@@ -74,12 +74,11 @@ val WF_tm = prim_mk_const{Name = "WF", Thy="relation"};
 
 val isWFR = same_const WF_tm o fst o strip_comb;
 
-fun K0 ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm);
-
 fun get_WF tmlist =
    pluck isWFR tmlist
     handle HOL_ERR _ => raise ERR "get_WF" "unexpected termination condition";
 
+fun K0 ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm);
 
 (*---------------------------------------------------------------------------*)
 (* Takes [v1,...,vn] [i_j,...,i_m], where  1 <= i_j <= i_m <= n and returns  *)

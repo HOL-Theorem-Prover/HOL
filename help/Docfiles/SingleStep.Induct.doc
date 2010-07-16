@@ -6,7 +6,7 @@
 Induct on leading universally quantified variable in a goal.
 
 \DESCRIBE
-{bossLib.Induct} is identical to {SingleStep.Induct}.
+{bossLib.Induct} is identical to {BasicProvers.Induct}.
 
 \SEEALSO
 bossLib.Induct.

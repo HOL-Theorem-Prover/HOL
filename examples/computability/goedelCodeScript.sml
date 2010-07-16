@@ -15,7 +15,7 @@ open HolKernel Parse boolLib bossLib
 
 val _ = new_theory "goedelCode";
 
-val P_EUCLIDES =  gcdTheory.P_EUCLIDES;
+val P_EUCLIDES = gcdTheory.P_EUCLIDES;
 
 (*---------------------------------------------------------------------------*)
 (* Goedel coding                                                             *)
@@ -96,9 +96,16 @@ val lem4 = Q.prove
  METIS_TAC[lem3,LESS_ADD_1,ADD1]);
 
 val lem5 = Q.prove
-( `!l a. PRIME_FACTORS (GCODE (a + 1) l) (PRIMES a) = 0`,
+(`!l a. PRIME_FACTORS (GCODE (a + 1) l) (PRIMES a) = 0`,
  RW_TAC arith_ss [NOT_BAG_IN] THEN STRIP_TAC THEN
  METIS_TAC [lem4,DECIDE ``~(x < x) /\ a < a+1``]);
+
+val lem6 = Q.prove
+(`PRIME_FACTORS ((PRIMES i ** (h+1)) * GCODE (i+1) t) (PRIMES i) = h+1`,
+ `0 < GCODE (i+1) t` by METIS_TAC [ZERO_LT_GCODE] THEN
+ `0 < PRIMES i ** (h+1)` by RW_TAC arith_ss [ZERO_LT_EXP,ZERO_LT_PRIMES] THEN
+ RW_TAC arith_ss [PRIME_FACTORS_MULT,ZERO_LT_EXP, ZERO_LT_PRIMES,
+       ZERO_LT_GCODE,BAG_UNION,PRIME_FACTORS_EXP,primePRIMES,lem5]);
 
 (*---------------------------------------------------------------------------*)
 (* Injectivity                                                               *)
@@ -167,13 +174,6 @@ val GDECODE_def =
 
 val GDECODE_ind = fetch "-" "GDECODE_ind";
 
-val lem6 = Q.prove
-(`PRIME_FACTORS ((PRIMES i ** (h+1)) * GCODE (i+1) t) (PRIMES i) = h+1`,
- `0 < GCODE (i+1) t` by METIS_TAC [ZERO_LT_GCODE] THEN
- `0 < PRIMES i ** (h+1)` by RW_TAC arith_ss [ZERO_LT_EXP,ZERO_LT_PRIMES] THEN
- RW_TAC arith_ss [PRIME_FACTORS_MULT,ZERO_LT_EXP, ZERO_LT_PRIMES,
-       ZERO_LT_GCODE,BAG_UNION,PRIME_FACTORS_EXP,primePRIMES,lem5]);
-
 val lem7 = Q.prove
 (`(PRIME_FACTORS (GCODE i (h::t)) (PRIMES i) = SUC n) ==> (h=n)`,
  RW_TAC arith_ss [GCODE_def] THEN FULL_SIMP_TAC arith_ss [lem6]);
@@ -204,12 +204,10 @@ val lem10 = Q.prove
            [PRIME_FACTORS_MULT,BAG_UNION,PRIME_FACTORS_EXP,primePRIMES],
    `h = n` by METIS_TAC [lem7] THEN RW_TAC arith_ss [] THEN
       FULL_SIMP_TAC arith_ss [lem8] THEN
-      `GDECODE (i+1) (GCODE (i+1) t) = SOME t` by METIS_TAC [lem9] THEN
-      FULL_SIMP_TAC arith_ss [],
+      METIS_TAC [lem9,optionTheory.NOT_SOME_NONE],
    `h = n` by METIS_TAC [lem7] THEN RW_TAC arith_ss [] THEN
       FULL_SIMP_TAC arith_ss [lem8] THEN
-      `GDECODE (i+1) (GCODE (i+1) t) = SOME t` by METIS_TAC [lem9] THEN
-      FULL_SIMP_TAC arith_ss []]]);
+      METIS_TAC [lem9,optionTheory.SOME_11]]]);
 
 val GDECODE_GCODE = Q.store_thm
 ("GDECODE_GCODE",
@@ -233,8 +231,10 @@ val gCONS_def = Define `gCONS n gn = ENCODE (n::DECODE gn)`;
 val gHD_def   = Define `gHD gn = HD (DECODE gn)`;
 val gTL_def   = Define `gTL gn = ENCODE (TL (DECODE gn))`;
 val gLEN_def  = Define `gLEN gn = LENGTH (DECODE gn)`;
-val gMAP_def  = Define `gMAP f gn = ENCODE (MAP f (DECODE gn))`;
 val gAPPEND_def = Define`gAPPEND gn1 gn2 = ENCODE (DECODE gn1 ++ DECODE gn2)`;
+val gMAP_def   = Define `gMAP f gn = ENCODE (MAP f (DECODE gn))`;
+val gFOLDL_def = Define `gFOLDL f a gn = FOLDL f a (DECODE gn)`;
+val gFOLDR_def = Define `gFOLDR f a gn = FOLDR f a (DECODE gn)`;
 
 val gCONS_ENCODE = Q.store_thm
 ("gCONS_ENCODE",
@@ -256,5 +256,14 @@ val gMAP_ENCODE = Q.store_thm
  `gMAP f (ENCODE nl) = ENCODE (MAP f nl)`,
  RW_TAC arith_ss [gMAP_def, DECODE_ENCODE]);
 
+val gFOLDL_ENCODE = Q.store_thm
+("gFOLDL_ENCODE",
+ `gFOLDL f a (ENCODE nl) = FOLDL f a nl`,
+ RW_TAC arith_ss [gFOLDL_def, DECODE_ENCODE]);
+
+val gFOLDR_ENCODE = Q.store_thm
+("gFOLDR_ENCODE",
+ `gFOLDR f a (ENCODE nl) = FOLDR f a nl`,
+ RW_TAC arith_ss [gFOLDR_def, DECODE_ENCODE]);
 
 val _ = export_theory();

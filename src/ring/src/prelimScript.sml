@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib listTheory
-     TotalDefn Datatype BasicProvers SingleStep;
+     TotalDefn Datatype BasicProvers;
 
 infix THEN THENL |->;
 

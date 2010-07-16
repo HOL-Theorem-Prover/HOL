@@ -6,7 +6,7 @@
 Induct on given term.
 
 \DESCRIBE
-{bossLib.Induct_on} is identical to {SingleStep.Induct_on}.
+{bossLib.Induct_on} is identical to {BasicProvers.Induct_on}.
 
 \SEEALSO
 bossLib.Induct_on.

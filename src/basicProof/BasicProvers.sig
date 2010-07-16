@@ -37,4 +37,30 @@ sig
   val PRIM_STP_TAC    : simpset -> tactic -> tactic
   val STP_TAC         : simpset -> tactic -> tactic
 
+  (* Other reasoning support. *)
+  val SPOSE_NOT_THEN    : (thm -> tactic) -> tactic
+
+  val by                : term quotation * tactic -> tactic  (* infix *)
+  val on                : (thm -> tactic) * (term quotation * tactic) -> tactic
+                          (* infix *)
+
+  datatype tmkind
+      = Free of term
+      | Bound of term list * term
+      | Alien of term;
+
+  val tmkind_tyof       : tmkind -> hol_type
+  val prim_find_subterm : term list -> term -> goal -> tmkind
+  val find_subterm      : term quotation -> goal -> tmkind
+  val primInduct        : tmkind -> tactic -> tactic
+  val Cases             : tactic
+  val Induct            : tactic
+  val Cases_on          : term quotation -> tactic
+  val Induct_on         : term quotation -> tactic
+
+  val PURE_TOP_CASE_TAC : tactic      (* The top-most case-split *)
+  val PURE_CASE_TAC     : tactic      (* The smallest case-split *)
+  val CASE_SIMP_CONV    : conv        (* The case rewrites in the typebase *)
+  val CASE_TAC          : tactic      (* PURE_CASE_TAC THEN simplification *)
+
 end

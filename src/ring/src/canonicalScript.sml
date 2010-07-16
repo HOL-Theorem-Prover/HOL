@@ -4,11 +4,10 @@ load "semi_ringTheory";
 load "quoteTheory";
 load "prelimTheory";
 load "BasicProvers";
-load "SingleStep";
 load "Datatype";
 *)
 open HolKernel Parse boolLib;
-open BasicProvers SingleStep Datatype;
+open BasicProvers Datatype;
 open abs_tools;
 
 val _ = new_theory "canonical";

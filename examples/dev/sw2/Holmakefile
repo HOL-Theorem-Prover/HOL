@@ -1,1 +1,2 @@
-INCLUDES = $(HOLDIR)/examples/ARM/v4 $(HOLDIR)/tools/mlyacc/mlyacclib $(HOLDIR)/examples/mc-logic
+INCLUDES = $(HOLDIR)/examples/ARM/v4 $(HOLDIR)/tools/mlyacc/mlyacclib $(HOLDIR)/examples/machine-code/compiler $(HOLDIR)/examples/machine-code/decompiler $(HOLDIR)/examples/machine-code/hoare-triple $(HOLDIR)/examples/machine-code/instruction-set-models
+

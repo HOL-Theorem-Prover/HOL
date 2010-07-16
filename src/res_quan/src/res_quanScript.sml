@@ -10,7 +10,7 @@
  ===================================================================== *)
 
 (* interactive use
-app load ["combinTheory", "pred_setTheory", "BasicProvers", "SingleStep"];
+app load ["combinTheory", "pred_setTheory", "BasicProvers"];
 *)
 
 (* non-interactive use
@@ -18,8 +18,7 @@ app load ["combinTheory", "pred_setTheory", "BasicProvers", "SingleStep"];
 structure res_quanScript =
 struct
 
-open HolKernel Parse boolLib combinTheory pred_setTheory BasicProvers
-  SingleStep;
+open HolKernel Parse boolLib combinTheory pred_setTheory BasicProvers;
 
 val _ = new_theory "res_quan";
 

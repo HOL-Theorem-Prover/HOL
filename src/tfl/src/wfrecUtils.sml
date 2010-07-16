@@ -112,7 +112,6 @@ fun vary vlist =
   end
 end;
 
-
 fun match_term thry tm1 tm2 = Term.match_term tm1 tm2;
 fun match_type thry ty1 ty2 = Type.match_type ty1 ty2;
 

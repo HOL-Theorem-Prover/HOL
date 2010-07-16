@@ -1,5 +1,5 @@
 This directory contains everything for performing the HOL part of the
-HOL-ACL2 proof of the soundness withrespect to HOL LTL semantics of
+HOL-ACL2 proof of the soundness with respect to HOL LTL semantics of
 the Ray et al ACL2 of a cone of influence algorithm. See:
 
  Sandip Ray, John Matthews, Mark Tuttle, 

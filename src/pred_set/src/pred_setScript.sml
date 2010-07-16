@@ -15,12 +15,12 @@ struct
 
 
 (* interactive use
-app load ["pairLib", "numLib", "PGspec", "PSet_ind", "SingleStep", "Q",
+app load ["pairLib", "numLib", "PGspec", "PSet_ind", "Q",
           "Defn", "TotalDefn", "metisLib"];
 *)
 open HolKernel Parse boolLib Prim_rec pairLib numLib
      pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
-    BasicProvers SingleStep metisLib mesonLib simpLib boolSimps;
+     BasicProvers metisLib mesonLib simpLib boolSimps;
 
 val AP = numLib.ARITH_PROVE
 val arith_ss = bool_ss ++ numSimps.ARITH_ss

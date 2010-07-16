@@ -9,7 +9,7 @@ structure containerScript =
 struct
 
 open HolKernel Parse boolLib pred_setTheory listTheory bagTheory
-     Defn TotalDefn SingleStep BasicProvers sortingTheory finite_mapTheory
+     Defn TotalDefn BasicProvers sortingTheory finite_mapTheory
      listSimps bossLib;
 
 (* ---------------------------------------------------------------------*)

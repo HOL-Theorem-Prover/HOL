@@ -6,7 +6,7 @@
 Induct with supplied recursion induction scheme.
 
 \DESCRIBE
-{bossLib.recInduct} is identical to {SingleStep.recInduct}.
+{bossLib.recInduct} is identical to {Induction.recInduct}.
 
 \SEEALSO
 bossLib.recInduct.

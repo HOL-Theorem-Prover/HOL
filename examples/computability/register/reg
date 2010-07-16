@@ -3,7 +3,8 @@
 (*---------------------------------------------------------------------------*)
 
 quietdec := true;
-app load ["finite_mapTheory"];
+loadPath := "../" :: !loadPath;
+app load ["finite_mapTheory", "goedelCodeTheory"];
 open finite_mapTheory arithmeticTheory pred_setTheory;
 quietdec := false;
 
@@ -233,21 +234,17 @@ val Run_def =
 (* Example Register program executions.                                      *)
 (*---------------------------------------------------------------------------*)
 
-computeLib.add_funs [FLOOKUP_EMPTY,FLOOKUP_UPDATE];
-
-val prog1 = ``FEMPTY |++ [(1,TST 0 0 0)]``;  (* Halt immediately *)
+(*
+(* Halt immediately *)
+val prog1 = ``FEMPTY |++ [(1,TST 0 0 0)]``;  
 
 (* Add R0 and R1, leaving result in R0 and trashing R1 *)
-
 val prog2 = ``FEMPTY |++ [(1,TST 1 0 2); (2, INC 0 1)]``; 
 
 EVAL ``reg0(Run ^prog1 [0;1;2] 1)``;
 EVAL ``reg0(Run ^prog2 [3;4] 8)``;
 EVAL ``reg0(Run ^prog2 [3;19] 40)``;
 Count.apply EVAL ``reg0(Run ^prog2 [19;52] 400)``;
+*)
 
-
-(*---------------------------------------------------------------------------*)
-(* TODO: Computable functions are closed under constants, successor,         *)
-(* projection, composition, prim. rec. and unbounded minimization.           *)
-(*---------------------------------------------------------------------------*)
+val _ = export_theory();

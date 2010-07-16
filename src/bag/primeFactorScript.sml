@@ -2,7 +2,7 @@
 (* Fundamental theorem of arithmetic for num.                                *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib simpLib BasicProvers SingleStep metisLib
+open HolKernel Parse boolLib simpLib BasicProvers metisLib 
      bagTheory dividesTheory arithmeticTheory;
 
 (* Interactive
@@ -39,7 +39,7 @@ val PRIME_FACTORS_EXIST = Q.store_thm
         ?b. FINITE_BAG b /\
             (!m. BAG_IN m b ==> prime m) /\
             (n = BAG_GEN_PROD b 1)`,
- completeInduct_on `n` THEN STRIP_TAC THEN Cases_on `prime n` THENL
+ numLib.completeInduct_on `n` THEN STRIP_TAC THEN Cases_on `prime n` THENL
  [Q.EXISTS_TAC `{|n|}` THEN
     SRW_TAC [] [BAG_GEN_PROD_TAILREC,BAG_GEN_PROD_EMPTY],
   Cases_on `n=1` THENL
@@ -50,7 +50,8 @@ val PRIME_FACTORS_EXIST = Q.store_thm
   `q < n` by
      (STRIP_ASSUME_TAC (DECIDE ``q < n \/ (q=n) \/ n < q``) THENL
       [FULL_SIMP_TAC arith_ss [MULT_EQ_ID] THEN METIS_TAC [NOT_PRIME_1],
-       `0 < m /\ 0 < q` by METIS_TAC [ZERO_LESS_MULT,DECIDE ``0 < 1``,LESS_TRANS] THEN
+       `0 < m /\ 0 < q` 
+           by METIS_TAC [ZERO_LESS_MULT,DECIDE ``0 < 1``,LESS_TRANS] THEN
        RW_TAC arith_ss [] THEN
        `(m=1) \/ 1 < m` by DECIDE_TAC THEN METIS_TAC [NOT_PRIME_1]]) THEN
   `1 < q` by
@@ -104,7 +105,7 @@ val UNIQUE_PRIME_FACTORS = store_thm
    (FINITE_BAG b1 /\ (!m. BAG_IN m b1 ==> prime m) /\ (n=BAG_GEN_PROD b1 1)) /\
    (FINITE_BAG b2 /\ (!m. BAG_IN m b2 ==> prime m) /\ (n=BAG_GEN_PROD b2 1))
     ==> (b1 = b2)``,
-completeInduct_on `n` THEN
+numLib.completeInduct_on `n` THEN
  REPEAT STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
  `(b1 = {||}) \/ ?b1' e. b1 = BAG_INSERT e b1'` by METIS_TAC [BAG_cases] THENL
  [RW_TAC arith_ss [] THEN

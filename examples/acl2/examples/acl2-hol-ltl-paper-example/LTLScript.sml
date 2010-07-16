@@ -219,7 +219,7 @@ val SAT_def =
 (* Definition of a bisimulation *)
 val BISIM_def =
  Define
-  `BISIM M M' B Vars=
+  `BISIM M M' B Vars =
     !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
            ==>
            (!a. (a IN Vars ==> (M.L s a = M'.L s' a)))           (* 1 *)

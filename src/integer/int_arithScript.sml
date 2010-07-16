@@ -3,8 +3,7 @@ structure int_arithScript = struct
 open HolKernel boolLib Parse
 
 open integerTheory intSyntax dividesTheory
-
-open simpLib boolSimps BasicProvers SingleStep
+open simpLib boolSimps BasicProvers
 
 val arith_ss = bool_ss ++ numSimps.old_ARITH_ss
 

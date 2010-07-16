@@ -27,8 +27,7 @@
    ===================================================================== *)
 
 open HolKernel Parse boolLib IndDefLib numLib pred_setTheory
-     sumTheory pairTheory BasicProvers SingleStep bossLib metisLib
-     simpLib;
+     sumTheory pairTheory BasicProvers bossLib metisLib simpLib;
 
 local open pred_setLib listTheory in end
 

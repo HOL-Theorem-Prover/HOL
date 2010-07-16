@@ -4,12 +4,11 @@
    ---------------------------------------------------------------------- *)
 
 open HolKernel boolLib integerTheory
+open simpLib boolSimps BasicProvers TotalDefn
 
 local open listTheory in end;
 
 val _ = new_theory "Omega";
-
-open simpLib boolSimps SingleStep BasicProvers TotalDefn
 
 val ARITH_ss = numSimps.ARITH_ss
 

@@ -65,7 +65,7 @@ val RIGHT_IMP_OR_INTRO = store_thm ("RIGHT_IMP_OR_INTRO",
 val PAIR_EQ_EXPAND = store_thm ("PAIR_EQ_EXPAND",
 ``(((x:'a,y:'b) = X) = ((x = FST X) /\ (y = SND X))) /\
   ((X = (x,y)) = ((FST X = x) /\ (SND X = y)))``,
-SingleStep.Cases_on `X` THEN
+Cases_on `X` THEN
 REWRITE_TAC[pairTheory.PAIR_EQ]);
 
 
@@ -76,7 +76,7 @@ val PAIR_EQ_SIMPLE_EXPAND = store_thm ("PAIR_EQ_SIMPLE_EXPAND",
   (((x, SND X) = X) = (x = FST X)) /\
   ((X = (FST X, y)) = (SND X = y)) /\
   ((X = (x, SND X)) = (FST X = x))``,
-SingleStep.Cases_on `X` THEN
+Cases_on `X` THEN
 ASM_REWRITE_TAC[pairTheory.PAIR_EQ]);
 
 

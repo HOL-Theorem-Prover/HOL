@@ -8,4 +8,6 @@ sig
                 pat_TCs_list: (term * term list) list}
             -> thm
 
+   val recInduct : thm -> tactic
+
 end;
