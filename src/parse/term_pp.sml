@@ -1417,21 +1417,23 @@ fun pp_term (G : grammar) TyG backend = let
           find_base (List.nth(args, 1)::acc) (hd args)
         end
         else (acc, tm)
+      val letboundvars = ref []
       fun pr_leteq (bv, tm2) = let
         val (args, rhs_t) = strip_vstructs NONE NONE tm2
-        val bvars_seen_here = List.concat (map (free_vars o bv2term) args)
-        val old_seen = (free_vars (bv2term bv)) @ (!bvars_seen)
+        val fnarg_bvars = List.concat (map (free_vars o bv2term) args)
+        val old_seen = !bvars_seen
       in
         begin_block INCONSISTENT 2;
         pr_vstruct bv; spacep true;
         pr_list pr_vstruct (fn () => ()) (fn () => spacep true) args;
-        bvars_seen := bvars_seen_here @ old_seen;
+        bvars_seen := fnarg_bvars @ old_seen;
         spacep (not (null args));
         add_string "="; spacep true;
         begin_block INCONSISTENT 2;
         pr_term rhs_t Top Top Top (decdepth depth);
         end_block();
         bvars_seen := old_seen;
+        letboundvars := free_vars (bv2term bv) @ !letboundvars;
         end_block()
       end
       val (values, abstr) = find_base [] tm
@@ -1447,13 +1449,13 @@ fun pp_term (G : grammar) TyG backend = let
       pr_list pr_leteq (fn () => (add_string " "; add_string "and"))
               (fn () => spacep true) name_value_pairs;
       end_block(); (* end of variable binding block *)
-      spacep true; add_string "in";
-      end_block(); (* end of "let ... in" phrase block *)
-      if is_let body then (add_break(1,0); pr_let0 body)
-      else
-        (add_break(1,2);
-         (* a lie! but it works *)
-         pr_term body RealTop RealTop RealTop (decdepth depth))
+      bvars_seen := !bvars_seen @ !letboundvars;
+      if is_let body then (spacep true; add_string "in"; end_block();
+                           spacep true; pr_let0 body)
+      else (end_block(); spacep true; add_string "in";
+            add_break(1,2);
+            (* a lie! but it works *)
+            pr_term body RealTop RealTop RealTop (decdepth depth))
     end
 
     fun pr_let lgrav rgrav tm = let
