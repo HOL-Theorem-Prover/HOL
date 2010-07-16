@@ -1092,7 +1092,50 @@ fun pp_term (G : grammar) TyG backend = let
         end
         else ()
 
+    fun comb_show_type (f, args) = let
+      val _ = (showtypes andalso combpos <> RatorCP) orelse raise PP_ERR "" ""
 
+      (* find out how the printer will map this constant into a string,
+         and then see how this string maps back into constants.  The
+         base_type will encompass the simulated polymorphism of the
+         overloading system as well as any genuine polymorphism in
+         the underlying constant. *)
+      val base_ty = let
+      in
+        if is_fakeconst f then let
+            (* f prints to the atom-name *)
+            val nm = atom_name f
+          in
+            #base_type (valOf (Overload.info_for_name overload_info nm))
+          end
+        else
+          case Overload.overloading_of_term overload_info f of
+            NONE => let
+              val {Thy,Name,Ty} = dest_thy_const f
+            in
+              type_of (prim_mk_const {Thy = Thy, Name = Name})
+            end
+          | SOME print_name =>
+            #base_type
+              (valOf (Overload.info_for_name overload_info print_name))
+      end
+
+      val empty_tyset = HOLset.empty Type.compare
+      fun arg_tyvars acc args ty =
+          case args of
+            [] => (acc, ty)
+          | _ :: rest => let
+              val (dom,rng) = dom_rng ty
+            in
+              arg_tyvars (HOLset.addList(acc, type_vars dom)) rest rng
+            end
+      val (consumed_types, rest_type) =
+          arg_tyvars empty_tyset args base_ty
+      val rng_types = HOLset.addList(empty_tyset, type_vars rest_type)
+    in
+      not (HOLset.isEmpty (HOLset.difference(rng_types, consumed_types)))
+    end handle HOL_ERR _ => false
+             | Option => false
 
     fun pr_comb tm t1 t2 = let
       val add_l =
@@ -1107,52 +1150,7 @@ fun pp_term (G : grammar) TyG backend = let
 
 
       val (f, args) = strip_comb tm
-      val comb_show_type = let
-        val _ = (showtypes andalso combpos <> RatorCP) orelse raise PP_ERR "" ""
-
-        (* find out how the printer will map this constant into a string,
-           and then see how this string maps back into constants.  The
-           base_type will encompass the simulated polymorphism of the
-           overloading system as well as any genuine polymorphism in
-           the underlying constant. *)
-        val base_ty = let
-        in
-          if is_fakeconst f then let
-              (* f prints to the atom-name *)
-              val nm = atom_name f
-            in
-              #base_type (valOf (Overload.info_for_name overload_info nm))
-            end
-          else
-            case Overload.overloading_of_term overload_info f of
-              NONE => let
-                val {Thy,Name,Ty} = dest_thy_const f
-              in
-                type_of (prim_mk_const {Thy = Thy, Name = Name})
-              end
-            | SOME print_name =>
-              #base_type
-                (valOf (Overload.info_for_name overload_info print_name))
-        end
-
-        val empty_tyset = HOLset.empty Type.compare
-        fun arg_tyvars acc args ty =
-            case args of
-              [] => (acc, ty)
-            | _ :: rest => let
-                val (dom,rng) = dom_rng ty
-              in
-                arg_tyvars (HOLset.addList(acc, type_vars dom)) rest rng
-              end
-        val (consumed_types, rest_type) =
-            arg_tyvars empty_tyset args base_ty
-        val rng_types = HOLset.addList(empty_tyset, type_vars rest_type)
-      in
-        not (HOLset.isEmpty (HOLset.difference(rng_types, consumed_types)))
-      end handle HOL_ERR _ => false
-               | Option => false
-
-
+      val comb_show_type = comb_show_type(f,args)
       val prec = Prec(comb_prec, fnapp_special)
       val lprec = if addparens then Top else lgrav
       val rprec = if addparens then Top else rgrav
@@ -1218,6 +1216,18 @@ fun pp_term (G : grammar) TyG backend = let
 
     fun pr_comb_with_rule frule fterm args Rand = let
       val {fname,fprec,f} = fterm
+      val comb_show_type = comb_show_type(f,args @ [Rand])
+      val (ptype_begin, ptype_end) =
+          if comb_show_type then
+            ((fn () => (add_string "("; begin_block CONSISTENT 0)),
+             (fn () => (add_break (1,2);
+                        add_string type_intro;
+                        type_pp.pp_type_with_depth TyG backend pps
+                                                   (decdepth depth)
+                                                   (type_of tm);
+                        end_block();
+                        add_string ")")))
+          else ((fn () => ()), (fn () => ()))
       fun block_up_els acc els =
         case els of
           [] => List.rev acc
@@ -1266,11 +1276,13 @@ fun pp_term (G : grammar) TyG backend = let
                 end
               else ((fn () => ()), (fn () => ()))
         in
-          pbegin addparens; begblock();
+          ptype_begin(); pbegin (addparens orelse comb_show_type);
+          begblock();
           casearrow_begin();
           print_ellist (lprec, prec, rprec) (pp_elements, arg_terms);
           casearrow_end();
-          endblock (); pend addparens
+          endblock (); pend (addparens orelse comb_show_type);
+          ptype_end()
         end
       | INFIX RESQUAN_OP => raise Fail "Res. quans shouldn't arise"
       | INFIX (FNAPP _) => raise PP_ERR "pr_term" "fn apps can't arise"
@@ -1292,9 +1304,9 @@ fun pp_term (G : grammar) TyG backend = let
           val (begblock, endblock) =
             block_by_style(addparens, rr, pgrav, fname, fprec)
         in
-          pbegin addparens; begblock();
+          ptype_begin(); pbegin (addparens orelse comb_show_type); begblock();
           print_ellist (lprec, prec, Top) (pp_elements, real_args);
-          endblock(); pend addparens
+          endblock(); pend (addparens orelse comb_show_type); ptype_end()
         end
       | SUFFIX TYPE_annotation =>
         raise Fail "Type annotation shouldn't arise"
@@ -1316,9 +1328,11 @@ fun pp_term (G : grammar) TyG backend = let
           val (begblock, endblock) =
             block_by_style(addparens, rr, pgrav, fname, fprec)
         in
-          pbegin addparens; begblock();
+          ptype_begin(); pbegin (addparens orelse comb_show_type);
+          begblock();
           print_ellist (Top, prec, rprec) (pp_elements, real_args);
-          endblock(); pend addparens
+          endblock(); pend (addparens orelse comb_show_type);
+          ptype_end()
         end
       | PREFIX (BINDER lst) => let
           val tok = case hd lst of
@@ -1335,7 +1349,8 @@ fun pp_term (G : grammar) TyG backend = let
             | _ => false
           val addparens = addparens orelse combpos = RandCP
         in
-          pbegin addparens; begin_block INCONSISTENT 2;
+          ptype_begin(); pbegin (addparens orelse comb_show_type);
+          begin_block INCONSISTENT 2;
           add_string tok;
           pr_vstructl bvs;
           add_string endbinding; spacep true;
@@ -1345,15 +1360,17 @@ fun pp_term (G : grammar) TyG backend = let
           bvars_seen := old_seen;
           end_block ();
           end_block();
-          pend addparens
+          pend (addparens orelse comb_show_type);
+          ptype_end()
         end
       | CLOSEFIX lst => let
           val rr = hd lst
           val elements = #elements rr
         in
-          uncurry begin_block (#2 (#block_style rr)) ;
+          ptype_begin(); uncurry begin_block (#2 (#block_style rr)) ;
           print_ellist (Top, Top, Top) (elements, args @ [Rand]);
-          end_block()
+          end_block();
+          ptype_end()
         end
       | LISTRULE lrules => let
           val (r as {nilstr, cons, block_info,...}) =
@@ -1388,7 +1405,7 @@ fun pp_term (G : grammar) TyG backend = let
             ignore (print_ellist (Top,Top,Top) (rdelim, []))
           end
         in
-          pr_list tm
+          ptype_begin(); pr_list tm; ptype_end()
         end
     end
 
