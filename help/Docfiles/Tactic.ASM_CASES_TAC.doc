@@ -51,5 +51,5 @@ on {u}:
 Performing a case analysis according to whether a given term is true or false.
 
 \SEEALSO
-Tactic.BOOL_CASES_TAC, Tactic.COND_CASES_TAC, Tactic.DISJ_CASES_TAC, Thm.SPEC, Tactic.STRUCT_CASES_TAC, SingleStep.Cases, Cases_on.
+Tactic.BOOL_CASES_TAC, Tactic.COND_CASES_TAC, Tactic.DISJ_CASES_TAC, Thm.SPEC, Tactic.STRUCT_CASES_TAC, BasicProvers.Cases, Cases_on.
 \ENDDOC

@@ -42,7 +42,7 @@ val keepers =
      "BasicProvers.sig",
 
      (* boss *)
-     "bossLib.sig", "SingleStep.sig",
+     "bossLib.sig",
 
      (* combin theory *)
      "combinTheory.sig", "combinSyntax.sig",
