@@ -92,7 +92,7 @@ in
   if not p1_ok then (String.concat (List.rev p1_lines), false)
   else let
       val (p2_lines, p2_ok) = phase2 ([], [], 0)
-      val p2_lines = tidy_p2_lines p2_lines
+      val p2_lines = if p2_ok then tidy_p2_lines p2_lines else p2_lines
       val all_lines = String.concat (List.rev p1_lines @ List.rev p2_lines)
     in
       (all_lines, p2_ok)
@@ -112,6 +112,6 @@ fun main() = let
 in
   output(stdOut, header);
   output(stdOut, outputthis)
-end
+end handle e => die ("Unexpected exception: "^exnMessage e)
 
 end
