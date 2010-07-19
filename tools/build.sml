@@ -179,12 +179,6 @@ in
                             "(continuing anyway).\n\n"])
                  else ()
     end
-  | "smv.2.4.3" => if not (Gnumake dir) then
-                     print(String.concat
-                             ["\nCompilation of SMV fails!!",
-                              " temporal Lib has NOT been built!! ",
-                              "(continuing anyway).\n\n"])
-                   else ()
   | "HolCheck" => if not DYNLIB then
                     warn "*** Not building HolCheck as Dynlib, and hence \
                          \HolBddLib, not available"

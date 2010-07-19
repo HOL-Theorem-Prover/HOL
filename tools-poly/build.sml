@@ -222,12 +222,6 @@ in
                             "(continuing anyway).\n\n"])
                  else ()
     end
-  | "smv.2.4.3" => if not (Gnumake dir) then
-                     print(String.concat
-                             ["\nCompilation of SMV fails!!",
-                              " temporal Lib has NOT been built!! ",
-                              "(continuing anyway).\n\n"])
-                   else ()
   | "minisat" => let
     in case OS of
 	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
