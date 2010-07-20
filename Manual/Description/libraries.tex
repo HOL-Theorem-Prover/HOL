@@ -3382,9 +3382,6 @@ The choices are as follows: 0 (default) -- small numbers decimal, large numbers 
 You may have noticed that \ty{:word4} and \ty{:word8} have been used as convenient parsing abbreviations for \ty{:\bool[4]} and \ty{:\bool[8]} --- this facility is available for many standard word sizes.  Users wishing to use this notation for non-standard word sizes can use the function \ml{wordsLib.mk\_word\_size}:
 \begin{session}
 \begin{verbatim}
-- ``:bool[15]``;
-> val it = ``:bool[15]`` : hol_type
-
 - ``:word15``;
 ! Uncaught exception:
 ! HOL_ERR
@@ -3396,46 +3393,6 @@ You may have noticed that \ty{:word4} and \ty{:word8} have been used as convenie
 > val it = ``:bool[15]`` : hol_type
 \end{verbatim}
 \end{session}
-
-When printing terms with type printing turned on, it is sometimes not possible to see the types of bit vector (sub-)expressions, which leads to ambiguity.  This is often the case when word-to-word conversions are present, as in the example below.
-\begin{session}
-\begin{verbatim}
-- Globals.show_types:=true;
-> val it = () : unit
-
-- ``w2w (a:word4) + w2w (b:word8) : word16``;
-> val it =
-    ``w2w (a :bool[4]) + w2w (b :bool[8])``
-     : term
-\end{verbatim}
-\end{session}
-Here the return type \ty{:\bool[16]} is not printed and, more importantly, it is not deducible.  This means that parsing the printed term will not give you back the original term.  It is possible to print more information by turning on verbose printing, however this makes the results far less readable because everything is printed in a fully expanded prefix form, see below.
-\begin{session}
-\begin{verbatim}
-- Globals.show_types_verbosely:=true;
-> val it = () : unit
-
-- ``w2w (a:word4) + w2w (b:word8) : word16``;
-> val it =
-    ``(words$word_add :bool[16] -> bool[16] -> bool[16])
-        ((w2w :bool[4] -> bool[16]) (a :bool[4]) :bool[16])
-        ((w2w :bool[8] -> bool[16]) (b :bool[8]) :bool[16])``
-     : term
-\end{verbatim}
-\end{session}
-To address this problem, a custom pretty-printer is provided, see below.
-\begin{session}
-\begin{verbatim}
-- wordsLib.add_word_cast_printer();
-> val it = () : unit
-
-- ``w2w (a:word4) + w2w (b:word8) : word16``;
-> val it =
-    ``((w2w :bool[4] -> bool[16]) a) + ((w2w :bool[8] -> bool[16]) b)``
-     : term
-\end{verbatim}
-\end{session}
-This pretty-printer can be removed with a call to \ml{wordsLib.remove\_word\_cast\_printer}.
 
 \subsubsection{Operator overloading}
 
@@ -3458,10 +3415,7 @@ The symbols for the standard arithmetic operations (addition, subtraction and mu
 In the above, natural number addition is chosen in preference to word addition.  Conversely, words are preferred over the integers below:
 \begin{session}
 \begin{verbatim}
-- load "intLib";
-<<HOL message: intLib loaded.
-  Use intLib.deprecate_int() to turn off integer parsing>>
-> val it = () : unit
+- load "intLib"; ...
 
 - type_of ``a + b``;
 <<HOL message: more than one resolution of overloading was possible>>
@@ -3469,7 +3423,6 @@ In the above, natural number addition is chosen in preference to word addition. 
 
 - wordsLib.prefer_word();
 > val it = () : unit
-
 - type_of ``a + b``;
 <<HOL message: more than one resolution of overloading was possible>>
 <<HOL message: inventing new type variable names: 'a>>
@@ -3600,7 +3553,7 @@ Rewriting with the theorem \ml{wordsTheory.WORD\_MUL\_LSL} provides an means to 
 \end{session}
 Obviously, without adding safeguards, this rewrite theorem cannot be deployed when used in combination with the \ml{WORD\_MUL\_LSL\_ss} fragment.
 
-\subsubsection{A decision procedure}
+\subsubsection{Decision procedures}
 
 A basic decision procedure for words is provided in the form of \ml{wordsLib.WORD\_DECIDE}.  This procedure is fairly light-weight, \eg{} it does not employ ``bit-blasting'' techniques for addition or multiplication.  However, it does provide some support for reasoning about word orderings, for example:
 \begin{session}
@@ -3626,6 +3579,16 @@ A custom decision procedure can be constructed using \ml{wordsLib.WORD\_DP}.  In
 \end{session}
 The supplied conversion is used to perform initial simplification, the problem is then mapped to the natural numbers and the decision procedure is applied.  With complex goals, the arithmetic decision procedures in \ml{intLib} provide better performance than \ml{bossLib.DECIDE}.
 
+The conversion \ml{blastLib.BBLAST\_CONV} performs bit-blasting, converting word expressions into propositions and, whenever possible, deriving true or false. This conversion is suited to reasoning about addition and multiplication (by a word literal) in combination with orderings and bit-field operations (shifts, bitwise logic and so forth).  For example:
+\begin{session}
+\begin{verbatim}
+- blastLib.BBLAST_CONV ``(((a : word16) + 5w) << 3) ' 5``;
+> val it =
+   |- ((a + 5w) << 3) ' 5 <=> (~a ' 2 <=> ~(a ' 1 /\ a ' 0))
+   : thm
+\end{verbatim}
+\end{session}
+This conversion will only work for constant word lengths and for fixed value shifts and bit-field extractions.  Furthermore, it can be very slow for all but a small number of additions, or with large word lengths. Consequently, this conversion should be used with caution.
 
 \section{The \texttt{HolSat} Library}\label{sec:HolSatLib}
 \input{HolSat.tex}
