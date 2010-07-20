@@ -130,7 +130,7 @@ fun prim_find_subterm FVs tm (asl,w) =
       end
  else if List.exists (free_in tm) (w::asl) then Free tm
  else let val (V,body) = strip_forall w
-      in if free_in tm body 
+      in if free_in tm body
           then Bound(intersect (free_vars tm) V, tm)
           else Alien tm
       end
@@ -153,11 +153,11 @@ fun primCases_on st (g as (_,w)) =
            of Free M =>
                if (is_var M) then VAR_INTRO_TAC (ISPEC M thm) else
                if ty=bool then ASM_CASES_TAC M
-               else TERM_INTRO_TAC (ISPEC M thm) 
+               else TERM_INTRO_TAC (ISPEC M thm)
             | Bound(V,M) => let val (tac,M') = FREEUP V M g
                             in (tac THEN VAR_INTRO_TAC (ISPEC M' thm)) end
-            | Alien M    => if ty=bool then ASM_CASES_TAC M 
-                            else TERM_INTRO_TAC (ISPEC M thm) 
+            | Alien M    => if ty=bool then ASM_CASES_TAC M
+                            else TERM_INTRO_TAC (ISPEC M thm)
         end
       | NONE => raise ERR "primCases_on"
                 ("No cases theorem found for type: "^Lib.quote (Thy^"$"^Tyop))
@@ -210,28 +210,50 @@ fun primInduct st ind_tac (g as (asl,c)) =
 
 val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl;
 
-fun induct_on_type st ty =
- let val {Thy,Tyop,...} =
+fun induct_on_type st ty g = let
+  val {Thy,Tyop,...} =
          with_exn dest_thy_type ty
                   (ERR "induct_on_type"
                        "No induction theorems available for variable types")
- in case TypeBase.read {Thy=Thy,Tyop=Tyop}
-     of SOME facts =>
-        let val thm = TypeBasePure.induction_of facts
-        in if is_mutind_thm thm
-              then Mutual.MUTUAL_INDUCT_TAC thm
-              else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
-        end
-      | NONE => raise ERR "induct_on_type"
-                    ("No induction theorem found for type: "^Lib.quote Tyop)
- end
+in
+  case TypeBase.read {Thy=Thy,Tyop=Tyop} of
+    SOME facts => let
+      val thm = TypeBasePure.induction_of facts
+    in
+      if is_mutind_thm thm then Mutual.MUTUAL_INDUCT_TAC thm
+      else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
+    end
+  | NONE => raise ERR "induct_on_type"
+                      ("No induction theorem found for type: "^Lib.quote Tyop)
+end g
 
-fun Induct_on qtm g =
- let val st = find_subterm qtm g
- in induct_on_type st (tmkind_tyof st) g
- end
- handle e => raise wrap_exn "BasicProvers" "Induct_on" e
+val is_fun_ty = can dom_rng
+fun rule_induct indth = HO_MATCH_MP_TAC indth
 
+fun Induct_on qtm g = let
+  val st = find_subterm qtm g
+  val ty = tmkind_tyof st
+  val (_, rngty) = strip_fun ty
+in
+  if rngty = Type.bool then let
+      val tm = case st of Free t => t | Alien t => t | Bound (_, t) => t
+      val (c, _) = strip_comb tm
+    in
+      case Lib.total dest_thy_const c of
+        SOME {Thy,Name,...} => let
+          val crec = {Thy=Thy,Name=Name}
+          val rules = Binarymap.find(IndDefLib.rule_induction_map(), crec)
+                      handle NotFound => []
+        in
+          MAP_FIRST rule_induct rules ORELSE
+          induct_on_type st ty
+        end g
+      | NONE => induct_on_type st ty g
+    end
+  else
+    induct_on_type st ty g
+end
+    handle e => raise wrap_exn "SingleStep" "Induct_on" e
 
 fun grab_var M =
   if is_forall M then fst(dest_forall M) else
@@ -299,7 +321,7 @@ fun (q by tac) (g as (asl,w)) = let
       case Lib.total Absyn.dest_eq a of
         SOME (Absyn.IDENT(_,"_"), r) =>
         if not (null asl) andalso is_labeq (hd asl) then
-          (Parse.absyn_to_preterm 
+          (Parse.absyn_to_preterm
              (Absyn.mk_eq(Absyn.mk_AQ (labrhs (hd asl)), r)),
            POP_ASSUM o eqTRANS)
         else
@@ -600,7 +622,7 @@ fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
 fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
 
 fun mkCSET () =
- let val CSET = ref (HOLset.empty 
+ let val CSET = ref (HOLset.empty
                       (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
                               (pair_compare(String.compare,String.compare))))
      fun inCSET t = HOLset.member(!CSET, dest_thy_const t)
