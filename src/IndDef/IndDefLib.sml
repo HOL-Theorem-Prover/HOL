@@ -161,7 +161,7 @@ in
 end
 
 fun Hol_mono_reln name monoset tm = let
-  val _ = Lexis.ok_sml_identifier (name ^ !Defn.def_suffix) orelse
+  val _ = Lexis.ok_sml_identifier (name ^ !boolLib.def_suffix) orelse
           raise ERR "Hol_mono_reln"
                     ("Bad name for definition: "^ Lib.mlquote name^
                      " (use xHol_reln to specify a better)")
