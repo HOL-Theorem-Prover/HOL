@@ -341,7 +341,7 @@ fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
   end)
 
 (*---------------------------------------------------------------------------
-    A special-purpose case-splitting tactic.
+    A general-purpose case-splitting tactic.
  ---------------------------------------------------------------------------*)
 
 fun exists_p [] _ = false
@@ -365,64 +365,130 @@ fun first_term f tm = f (find_term (can f) tm);
 
 fun first_subterm f tm = f (case_find_subterm (can f) tm);
 
-local
-  fun rator_n 0 f tm = f tm
-    | rator_n n f tm = is_comb tm andalso rator_n (n - 1) f (rator tm);
+fun rator_n 0 f tm = f tm
+  | rator_n n f tm = is_comb tm andalso rator_n (n - 1) f (rator tm);
 
-  fun case_p c =
-    let val (doms, _) = strip_fun (type_of c)
-    in rator_n (length doms) (same_const c)
-    end;
+fun case_p c =
+  let val (doms, _) = strip_fun (type_of c)
+  in rator_n (length doms) (same_const c)
+  end;
 
-  val cases_p =
-    exists_p o Lib.mapfilter (case_p o TypeBasePure.case_const_of) o
-    TypeBasePure.listItems o TypeBase.theTypeBase;
+fun cases_p tyilist =
+  exists_p (Lib.mapfilter (case_p o TypeBasePure.case_const_of) tyilist)
 
-  fun free_thing tm =
-    let
-      val cp = cases_p ()
-
-      fun free_case t =
+fun free_thing cp tm =
+ let fun free_case t =
         let val (_, a) = dest_comb t
         in if cp t andalso free_in a tm then a else raise ERR "free_case" ""
         end
 
-      fun free_cond t =
+     fun free_cond t =
         let val (a, _, _) = dest_cond t
         in if free_in a tm then a else raise ERR "free_cond" ""
         end
-    in
-      fn t => free_case t handle HOL_ERR _ => free_cond t
-    end;
-in
-  fun PURE_TOP_CASE_TAC (g as (_, tm)) =
-    let val t = first_term (free_thing tm) tm in Cases_on `^t` g end;
+ in
+    fn t => free_case t handle HOL_ERR _ => free_cond t
+ end;
 
-  fun PURE_CASE_TAC (g as (_, tm)) =
-    let val t = first_subterm (free_thing tm) tm in Cases_on `^t` g end;
-end
+fun PURE_TOP_CASE_TAC cp (g as (_, tm)) =
+ let val t = first_term (free_thing cp tm) tm 
+ in Cases_on `^t` g end;
+
+fun PURE_CASE_TAC cp (g as (_, tm)) =
+ let val t = first_subterm (free_thing cp tm) tm 
+ in Cases_on `^t` g end;
+
+fun PURE_FULL_CASE_TAC cp (g as (asl,w)) =
+ let val tm = list_mk_conj(w::asl)
+     val t = first_subterm (free_thing cp tm) tm
+ in Cases_on `^t` g end;
 
 local
   fun tot f x = f x handle HOL_ERR _ => NONE
-  fun case_rws tyi =
+in
+fun case_rws tyi =
     List.mapPartial I
        [Lib.total TypeBasePure.case_def_of tyi,
         tot TypeBasePure.distinct_of tyi,
-        tot TypeBasePure.one_one_of tyi];
+        tot TypeBasePure.one_one_of tyi]
 
-  val all_case_rws =
-    flatten o map case_rws o TypeBasePure.listItems o TypeBase.theTypeBase;
-in
-  fun CASE_SIMP_CONV tm =
-    simpLib.SIMP_CONV boolSimps.bool_ss (all_case_rws ()) tm;
-end;
+fun case_rwlist tyilist = flatten (map case_rws tyilist)
+
+fun all_case_rws() = 
+  case_rwlist (TypeBasePure.listItems (TypeBase.theTypeBase()))
+
+fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV boolSimps.bool_ss rws
+
+fun CASE_SIMP_CONV tm = PURE_CASE_SIMP_CONV (all_case_rws()) tm
+
+end
 
 (*---------------------------------------------------------------------------*)
 (* Q: what should CASE_TAC do with literal case expressions?                 *)
 (*---------------------------------------------------------------------------*)
 
-val CASE_TAC =
-  PURE_CASE_TAC THEN ASM_REWRITE_TAC [] THEN CONV_TAC CASE_SIMP_CONV;
+fun is_refl tm = 
+ let val (l,r) = dest_eq tm
+ in aconv l r
+ end handle HOL_ERR _ => false;
+
+(*---------------------------------------------------------------------------*)
+(* Do a case analysis in the conclusion of the goal, then simplify a bit.    *)
+(*---------------------------------------------------------------------------*)
+
+fun CASE_TAC goal =
+ let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
+     val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
+     val cp = cases_p tyilist
+ in
+  (PURE_CASE_TAC cp THEN 
+   POP_ASSUM (fn th => 
+       if is_refl(concl th) 
+         then ALL_TAC 
+         else (REWRITE_TAC [th] THEN ASSUME_TAC th))
+   THEN CONV_TAC case_conv) goal
+ end;
+   
+(*---------------------------------------------------------------------------*)
+(* Do a case analysis anywhere in the goal, then simplify a bit.             *)
+(*---------------------------------------------------------------------------*)
+
+fun FULL_CASE_TAC goal =
+ let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
+     val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
+     val cp = cases_p tyilist
+ in
+  (PURE_FULL_CASE_TAC cp THEN 
+   POP_ASSUM (fn th => 
+      if is_refl(concl th) 
+       then ALL_TAC 
+       else (REWRITE_TAC [th] THEN ASSUME_TAC th))
+   THEN RULE_ASSUM_TAC (CONV_RULE case_conv) 
+   THEN CONV_TAC case_conv) goal
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Repeatedly do a case analysis anywhere in the goal. Avoids re-computing   *)
+(* case info from the TypeBase each time around the loop, so more efficient  *)
+(* than REPEAT FULL_CASE_TAC.                                                *)
+(*---------------------------------------------------------------------------*)
+
+fun EVERY_CASE_TAC goal = 
+ let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
+     val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
+     val cp = cases_p tyilist
+     val tac = PURE_FULL_CASE_TAC cp THEN 
+        POP_ASSUM (fn th => 
+           if is_refl(concl th) then ALL_TAC 
+           else (REWRITE_TAC [th] THEN ASSUME_TAC th)) THEN 
+        RULE_ASSUM_TAC (CONV_RULE case_conv) THEN CONV_TAC case_conv
+ in
+  REPEAT tac
+ end goal;
+ 
+(*===========================================================================*)
+(* Rewriters                                                                 *)
+(*===========================================================================*)
 
 (*---------------------------------------------------------------------------*
  * When invoked, we know that th is an equality, at least one side of which  *
