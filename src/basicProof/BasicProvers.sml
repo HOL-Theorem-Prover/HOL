@@ -432,40 +432,41 @@ fun is_refl tm =
  in aconv l r
  end handle HOL_ERR _ => false;
 
+val TOSS_REFL_ASSUM = TRY (WEAKEN_TAC is_refl) THEN ASM_REWRITE_TAC[]
+
 (*---------------------------------------------------------------------------*)
 (* Do a case analysis in the conclusion of the goal, then simplify a bit.    *)
 (*---------------------------------------------------------------------------*)
 
-fun CASE_TAC goal =
+fun CASE_TAC (goal as (asl,w)) =
  let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
      val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
      val cp = cases_p tyilist
  in
-  (PURE_CASE_TAC cp THEN 
-   POP_ASSUM (fn th => 
-       if is_refl(concl th) 
-         then ALL_TAC 
-         else (REWRITE_TAC [th] THEN ASSUME_TAC th))
-   THEN CONV_TAC case_conv) goal
- end;
+  PURE_CASE_TAC cp THEN TOSS_REFL_ASSUM THEN CONV_TAC case_conv
+ end goal;
+
+fun TOP_CASE_TAC (goal as (asl,w)) =
+ let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
+     val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
+     val cp = cases_p tyilist
+ in
+  PURE_TOP_CASE_TAC cp THEN TOSS_REFL_ASSUM THEN CONV_TAC case_conv
+ end goal;
    
 (*---------------------------------------------------------------------------*)
 (* Do a case analysis anywhere in the goal, then simplify a bit.             *)
 (*---------------------------------------------------------------------------*)
 
-fun FULL_CASE_TAC goal =
+fun FULL_CASE_TAC (goal as (asl,_)) =
  let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
      val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
      val cp = cases_p tyilist
  in
-  (PURE_FULL_CASE_TAC cp THEN 
-   POP_ASSUM (fn th => 
-      if is_refl(concl th) 
-       then ALL_TAC 
-       else (REWRITE_TAC [th] THEN ASSUME_TAC th))
+  PURE_FULL_CASE_TAC cp THEN TOSS_REFL_ASSUM
    THEN RULE_ASSUM_TAC (CONV_RULE case_conv) 
-   THEN CONV_TAC case_conv) goal
- end;
+   THEN CONV_TAC case_conv
+ end goal;
 
 (*---------------------------------------------------------------------------*)
 (* Repeatedly do a case analysis anywhere in the goal. Avoids re-computing   *)
@@ -473,15 +474,13 @@ fun FULL_CASE_TAC goal =
 (* than REPEAT FULL_CASE_TAC.                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun EVERY_CASE_TAC goal = 
+fun EVERY_CASE_TAC (goal as (asl,_)) = 
  let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
      val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
      val cp = cases_p tyilist
-     val tac = PURE_FULL_CASE_TAC cp THEN 
-        POP_ASSUM (fn th => 
-           if is_refl(concl th) then ALL_TAC 
-           else (REWRITE_TAC [th] THEN ASSUME_TAC th)) THEN 
-        RULE_ASSUM_TAC (CONV_RULE case_conv) THEN CONV_TAC case_conv
+     val tac = PURE_FULL_CASE_TAC cp THEN TOSS_REFL_ASSUM THEN
+               RULE_ASSUM_TAC (CONV_RULE case_conv) THEN 
+               CONV_TAC case_conv
  in
   REPEAT tac
  end goal;
@@ -773,7 +772,7 @@ fun splittable w =
 fun LIFT_SPLIT_SIMP ss simp tm =
    UNDISCH_THEN tm
      (fn th => MP_TAC (simpLib.SIMP_RULE ss [] th)
-                 THEN (IF_CASES_TAC ORELSE CASE_TAC)
+                 THEN CASE_TAC
                  THEN simp
                  THEN REPEAT BOSS_STRIP_TAC);
 

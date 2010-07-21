@@ -28,10 +28,7 @@ val Know = Q_TAC KNOW_TAC;
 
 val REVERSE = Tactical.REVERSE;
 
-val CASE_TAC =
-  BasicProvers.PURE_TOP_CASE_TAC
-  ++ ASM_REWRITE_TAC []
-  ++ CONV_TAC BasicProvers.CASE_SIMP_CONV;
+val TOP_CASE_TAC = BasicProvers.TOP_CASE_TAC;
 
 (*---------------------------------------------------------------------------
      Well-formed decoders: the definition is carefully chosen to be the
@@ -254,7 +251,7 @@ val decode_bool = store_thm
   ("decode_bool",
    ``decode_bool p l =
      case l of [] -> NONE || (h :: t) -> if p h then SOME (h, t) else NONE``,
-   REPEAT CASE_TAC ++
+   TOP_CASE_TAC ++
    RW_TAC std_ss
    [decode_bool_def, enc2dec_none, enc2dec_some, encode_bool_def,
     APPEND, wf_encode_bool]);
@@ -313,7 +310,7 @@ val decode_prod = store_thm
       || SOME (x, t) ->
          (case d2 t of NONE -> NONE
           || SOME (y, t') -> SOME ((x, y), t')))``,
-   (REPEAT CASE_TAC ++
+   (REPEAT TOP_CASE_TAC ++
     RW_TAC std_ss
     [decode_prod_def, enc2dec_none, GSYM APPEND_ASSOC, encode_prod_alt]) <<
    [STRIP_TAC
@@ -427,7 +424,7 @@ val decode_sum = store_thm
       || (F :: t) ->
          (case d2 t of NONE -> NONE
           || SOME (x, t') -> SOME (INR x, t')))``,
-   (REPEAT CASE_TAC ++
+   (REPEAT TOP_CASE_TAC ++
     RW_TAC std_ss [decode_sum_def, enc2dec_none, GSYM APPEND_ASSOC]) <<
    [Cases_on `x`
     ++ RW_TAC std_ss [encode_sum_def, APPEND],
@@ -546,7 +543,7 @@ val decode_option = store_thm
          (case d t of NONE -> NONE
           || SOME (x, t') -> SOME (SOME x, t'))
       || (F :: t) -> SOME (NONE, t))``,
-   (REPEAT CASE_TAC ++
+   (REPEAT TOP_CASE_TAC ++
     RW_TAC std_ss [decode_option_def, enc2dec_none]) <<
    [Cases_on `x`
     ++ RW_TAC std_ss [encode_option_def, APPEND],
@@ -643,7 +640,7 @@ val decode_list = store_thm
              (case decode_list (EVERY p) d t' of NONE -> NONE
               || SOME (xs, t'') -> SOME (x :: xs, t'')))
       || (F :: t) -> SOME ([], t))``,
-   (REPEAT CASE_TAC ++
+   (REPEAT TOP_CASE_TAC ++
     RW_TAC std_ss [decode_list_def, enc2dec_none]) <<
    [Cases_on `x` ++
     RW_TAC std_ss [encode_list_def, APPEND],
@@ -776,7 +773,7 @@ val decode_blist = store_thm
           || SOME (x, t) ->
           (case decode_blist (lift_blist n p) n d t of NONE -> NONE
            || SOME (xs, t') -> SOME (x :: xs, t'))))``,
-   (REPEAT CASE_TAC ++
+   (REPEAT TOP_CASE_TAC ++
     RW_TAC std_ss [decode_blist_def, enc2dec_none, lift_blist_def, LENGTH_NIL])
    << [MP_TAC
        (Q.SPECL
@@ -866,7 +863,7 @@ val decode_num_total = store_thm
         (case decode_num (K T) t of NONE -> NONE
          || SOME (v, t') -> SOME (2 * v + 2, t'))
      || _ -> NONE``,
-   (REPEAT CASE_TAC
+   (REPEAT TOP_CASE_TAC
     ++ REPEAT (POP_ASSUM MP_TAC)
     ++ RW_TAC std_ss
        [decode_num_def, enc2dec_none, K_THM, enc2dec_some, wf_encode_num]) <<
@@ -907,7 +904,7 @@ val decode_num = store_thm
      || _ -> NONE``,
    (MP_TAC decode_num_total
     ++ STRIP_TAC
-    ++ REPEAT CASE_TAC
+    ++ REPEAT TOP_CASE_TAC
     ++ RW_TAC std_ss [decode_num_def, enc2dec_none]
     ++ ASSUM_LIST (UNDISCH_TAC o concl o last)
     ++ RW_TAC std_ss
@@ -985,7 +982,7 @@ val dec_bnum_lt = store_thm
    Induct
    ++ REPEAT GEN_TAC
    ++ SIMP_TAC arith_ss [dec_bnum_def]
-   ++ REPEAT CASE_TAC
+   ++ REPEAT TOP_CASE_TAC
    ++ RW_TAC bool_ss [GSYM EXP2_LT]
    ++ ONCE_REWRITE_TAC [MULT_COMM]
    ++ SIMP_TAC arith_ss [DIV_MULT]
@@ -998,7 +995,7 @@ val dec_bnum_inj = store_thm
    Induct
    ++ RW_TAC std_ss [dec_bnum_def, encode_bnum_def, APPEND]
    ++ POP_ASSUM MP_TAC
-   ++ REPEAT CASE_TAC
+   ++ REPEAT TOP_CASE_TAC
    ++ RES_TAC
    ++ POP_ASSUM SUBST1_TAC
    ++ POP_ASSUM_LIST (K ALL_TAC)
@@ -1035,7 +1032,7 @@ val decode_bnum = store_thm
    ++ Q.SPEC_TAC (`p`, `p`)
    ++ Induct_on `m`
    >> (RW_TAC std_ss [dec_bnum_def]
-       ++ REPEAT CASE_TAC
+       ++ REPEAT TOP_CASE_TAC
        ++ RW_TAC std_ss
           [decode_bnum_def, enc2dec_none, enc2dec_some, wf_encode_bnum,
            encode_bnum_def, APPEND]
@@ -1044,7 +1041,7 @@ val decode_bnum = store_thm
        ++ RES_TAC
        ++ PROVE_TAC [DECIDE ``x < 1 ==> (x = 0)``])
    ++ RW_TAC std_ss [decode_bnum_def]
-   ++ (REPEAT CASE_TAC
+   ++ (REPEAT TOP_CASE_TAC
        ++ RW_TAC std_ss
           [decode_bnum_def, enc2dec_none, enc2dec_some, wf_encode_bnum,
            encode_bnum_def, APPEND])
@@ -1052,7 +1049,7 @@ val decode_bnum = store_thm
        ++ RW_TAC std_ss []
        ++ Q.PAT_ASSUM `X = Y` MP_TAC
        ++ SIMP_TAC std_ss [dec_bnum_def, list_case_def]
-       ++ REPEAT CASE_TAC
+       ++ REPEAT TOP_CASE_TAC
        ++ Q.PAT_ASSUM `!x. P x`
           (MP_TAC o
            Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (x DIV 2)) t`])
@@ -1066,7 +1063,7 @@ val decode_bnum = store_thm
            Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (q DIV 2)) r`])
        ++ RW_TAC std_ss [wf_pred_bnum_total, decode_bnum_def, enc2dec_none]
        ++ POP_ASSUM MP_TAC
-       ++ REPEAT CASE_TAC
+       ++ REPEAT TOP_CASE_TAC
        >> (DISCH_THEN (fn th => CCONTR_TAC ++ MP_TAC th)
            ++ RW_TAC std_ss [enc2dec_none]
            ++ Q.EXISTS_TAC `q DIV 2`
@@ -1091,7 +1088,7 @@ val decode_bnum = store_thm
        ++ RW_TAC std_ss []
        ++ Q.PAT_ASSUM `X = Y` MP_TAC
        ++ SIMP_TAC std_ss [dec_bnum_def]
-       ++ REPEAT CASE_TAC
+       ++ REPEAT TOP_CASE_TAC
        ++ REWRITE_TAC [GSYM DE_MORGAN_THM]
        ++ STRIP_TAC
        ++ RW_TAC std_ss []
@@ -1147,7 +1144,7 @@ val decode_tree = store_thm
          (decode_list (EVERY (lift_tree p)) (decode_tree (lift_tree p) d))` >>
    PROVE_TAC [wf_decode_list] ++
    STRIP_TAC ++
-   REPEAT CASE_TAC <<
+   REPEAT TOP_CASE_TAC <<
    [RW_TAC std_ss [decode_tree_def, enc2dec_none] ++
     STRIP_TAC ++
     RW_TAC std_ss [] ++

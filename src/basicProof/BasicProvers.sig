@@ -65,7 +65,8 @@ sig
 
   val CASE_SIMP_CONV    : conv     (* Apply case rewrites in theTypeBase *)
   val CASE_TAC          : tactic   (* PURE_CASE_TAC then simplification *)
+  val TOP_CASE_TAC      : tactic   (* PURE_TOP_CASE_TAC then simplification *)
   val FULL_CASE_TAC     : tactic   (* CASE_TAC anywhere in goal *)
-  val EVERY_CASE_TAC   : tactic  (* Repeat FULL_CASE_TAC *)
+  val EVERY_CASE_TAC    : tactic  (* Repeat FULL_CASE_TAC *)
 
 end
