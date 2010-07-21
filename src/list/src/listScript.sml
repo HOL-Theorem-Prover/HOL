@@ -1812,6 +1812,10 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x227C, tmnm = "<<="}
         (* in tex input mode in emacs, produce U+227C with \preceq *)
         (* tempting to add a not-isprefix macro keyed to U+22E0 \npreceq, but
            hard to know what the ASCII version should be.  *)
+val _ = TexTokenMap.TeX_notation {hol = "<<=", 
+                                  TeX = ("\\HOLTokenIsPrefix{}", 1)}
+val _ = TexTokenMap.TeX_notation {hol = UTF8.chr 0x227C,
+                                  TeX = ("\\HOLTokenIsPrefix{}", 1)}
 
 (* type annotations are there solely to make theorem have only one
    type variable; without them the theorem ends up with three (because the
