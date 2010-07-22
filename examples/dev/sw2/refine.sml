@@ -1,7 +1,8 @@
 structure refine =
 struct
 
-(* app load ["wordsLib", "Normal"];
+(* 
+app load ["wordsLib", "Normal"];
 *)
 local 
 open HolKernel Parse boolLib bossLib
