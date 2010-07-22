@@ -81,7 +81,8 @@ sig
    val fetch           : typeBase -> hol_type -> tyinfo option
    val prim_get        : typeBase -> string * string -> tyinfo option
    val get             : typeBase -> string -> tyinfo list
-       (* get returns list of tyinfos for types with that tyop *)
+                       (* get returns list of tyinfos for types with that tyop *)
+
    val listItems       : typeBase -> tyinfo list
 
   (* Support for polytypism *)

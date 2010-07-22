@@ -29,15 +29,6 @@ val REVERSE = Tactical.REVERSE;
 
 val TOP_CASE_TAC = BasicProvers.TOP_CASE_TAC;
 
-(*
-val TOP_CASE_TAC =
- let open BasicProvers
- in PURE_TOP_CASE_TAC
-       (cases_p (TypeBasePure.listItems (TypeBase.theTypeBase())))
-  ++ ASM_REWRITE_TAC []
-  ++ CONV_TAC CASE_SIMP_CONV;
-*)
-
 (*---------------------------------------------------------------------------
      decode turns a decoding parser of type
 

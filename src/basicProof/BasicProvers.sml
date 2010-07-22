@@ -340,12 +340,9 @@ fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
     (SUBGOAL_THEN tm ttac THEN1 tac) g
   end)
 
-(*---------------------------------------------------------------------------
-    A general-purpose case-splitting tactic.
- ---------------------------------------------------------------------------*)
-
-fun exists_p [] _ = false
-  | exists_p (p :: ps) x = p x orelse exists_p ps x;
+(*===========================================================================*)
+(*  General-purpose case-splitting tactics.                                  *)
+(*===========================================================================*)
 
 fun case_find_subterm p =
   let
@@ -365,21 +362,17 @@ fun first_term f tm = f (find_term (can f) tm);
 
 fun first_subterm f tm = f (case_find_subterm (can f) tm);
 
-fun rator_n 0 f tm = f tm
-  | rator_n n f tm = is_comb tm andalso rator_n (n - 1) f (rator tm);
+(*---------------------------------------------------------------------------*)
+(* If tm is a fully applied conditional or case expression and the           *)
+(* scrutinized subterm of tm is free, return the scrutinized subterm.        *)
+(* Otherwise raise an exception.                                             *)
+(*---------------------------------------------------------------------------*)
 
-fun case_p c =
-  let val (doms, _) = strip_fun (type_of c)
-  in rator_n (length doms) (same_const c)
-  end;
-
-fun cases_p tyilist =
-  exists_p (Lib.mapfilter (case_p o TypeBasePure.case_const_of) tyilist)
-
-fun free_thing cp tm =
+fun scrutinized_and_free_in tm =
  let fun free_case t =
         let val (_, a) = dest_comb t
-        in if cp t andalso free_in a tm then a else raise ERR "free_case" ""
+        in if TypeBase.is_case t andalso free_in a tm 
+              then a else raise ERR "free_case" ""
         end
 
      fun free_cond t =
@@ -390,18 +383,18 @@ fun free_thing cp tm =
     fn t => free_case t handle HOL_ERR _ => free_cond t
  end;
 
-fun PURE_TOP_CASE_TAC cp (g as (_, tm)) =
- let val t = first_term (free_thing cp tm) tm 
- in Cases_on `^t` g end;
+fun PURE_TOP_CASE_TAC (g as (_, tm)) =
+ let val t = first_term (scrutinized_and_free_in tm) tm 
+ in Cases_on `^t` end g;
 
-fun PURE_CASE_TAC cp (g as (_, tm)) =
- let val t = first_subterm (free_thing cp tm) tm 
- in Cases_on `^t` g end;
+fun PURE_CASE_TAC (g as (_, tm)) =
+ let val t = first_subterm (scrutinized_and_free_in tm) tm 
+ in Cases_on `^t` end g;
 
-fun PURE_FULL_CASE_TAC cp (g as (asl,w)) =
+fun PURE_FULL_CASE_TAC (g as (asl,w)) =
  let val tm = list_mk_conj(w::asl)
-     val t = first_subterm (free_thing cp tm) tm
- in Cases_on `^t` g end;
+     val t = first_subterm (scrutinized_and_free_in tm) tm
+ in Cases_on `^t` end g;
 
 local
   fun tot f x = f x handle HOL_ERR _ => NONE
@@ -412,16 +405,14 @@ fun case_rws tyi =
         tot TypeBasePure.distinct_of tyi,
         tot TypeBasePure.one_one_of tyi]
 
-fun case_rwlist tyilist = flatten (map case_rws tyilist)
-
-fun all_case_rws() = 
-  case_rwlist (TypeBasePure.listItems (TypeBase.theTypeBase()))
+fun case_rwlist () =
+ itlist (fn tyi => fn rws => case_rws tyi @ rws) 
+        (TypeBase.elts()) [];
 
 fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV boolSimps.bool_ss rws
 
-fun CASE_SIMP_CONV tm = PURE_CASE_SIMP_CONV (all_case_rws()) tm
-
-end
+fun CASE_SIMP_CONV tm = PURE_CASE_SIMP_CONV (case_rwlist()) tm
+end;
 
 (*---------------------------------------------------------------------------*)
 (* Q: what should CASE_TAC do with literal case expressions?                 *)
@@ -432,40 +423,29 @@ fun is_refl tm =
  in aconv l r
  end handle HOL_ERR _ => false;
 
-val TOSS_REFL_ASSUM = TRY (WEAKEN_TAC is_refl) THEN ASM_REWRITE_TAC[]
+val TOSS_REFL_ASSUM = 
+  TRY (WEAKEN_TAC is_refl) THEN ASM_REWRITE_TAC[]
 
 (*---------------------------------------------------------------------------*)
 (* Do a case analysis in the conclusion of the goal, then simplify a bit.    *)
 (*---------------------------------------------------------------------------*)
 
-fun CASE_TAC (goal as (asl,w)) =
- let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
-     val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
-     val cp = cases_p tyilist
- in
-  PURE_CASE_TAC cp THEN TOSS_REFL_ASSUM THEN CONV_TAC case_conv
- end goal;
+val CASE_TAC = 
+  PURE_CASE_TAC THEN TOSS_REFL_ASSUM THEN CONV_TAC CASE_SIMP_CONV;
 
-fun TOP_CASE_TAC (goal as (asl,w)) =
- let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
-     val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
-     val cp = cases_p tyilist
- in
-  PURE_TOP_CASE_TAC cp THEN TOSS_REFL_ASSUM THEN CONV_TAC case_conv
- end goal;
+val TOP_CASE_TAC =
+  PURE_TOP_CASE_TAC THEN TOSS_REFL_ASSUM THEN CONV_TAC CASE_SIMP_CONV;
+
    
 (*---------------------------------------------------------------------------*)
 (* Do a case analysis anywhere in the goal, then simplify a bit.             *)
 (*---------------------------------------------------------------------------*)
 
-fun FULL_CASE_TAC (goal as (asl,_)) =
- let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
-     val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
-     val cp = cases_p tyilist
- in
-  PURE_FULL_CASE_TAC cp THEN TOSS_REFL_ASSUM
-   THEN RULE_ASSUM_TAC (CONV_RULE case_conv) 
-   THEN CONV_TAC case_conv
+fun FULL_CASE_TAC goal =
+ let val case_conv = PURE_CASE_SIMP_CONV (case_rwlist ())
+ in PURE_FULL_CASE_TAC THEN TOSS_REFL_ASSUM
+    THEN RULE_ASSUM_TAC (CONV_RULE case_conv) 
+    THEN CONV_TAC case_conv
  end goal;
 
 (*---------------------------------------------------------------------------*)
@@ -474,15 +454,12 @@ fun FULL_CASE_TAC (goal as (asl,_)) =
 (* than REPEAT FULL_CASE_TAC.                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun EVERY_CASE_TAC (goal as (asl,_)) = 
- let val tyilist = TypeBasePure.listItems (TypeBase.theTypeBase())
-     val case_conv = PURE_CASE_SIMP_CONV (case_rwlist tyilist)
-     val cp = cases_p tyilist
-     val tac = PURE_FULL_CASE_TAC cp THEN TOSS_REFL_ASSUM THEN
+fun EVERY_CASE_TAC goal = 
+ let val case_conv = PURE_CASE_SIMP_CONV (case_rwlist ())
+     val tac = PURE_FULL_CASE_TAC THEN TOSS_REFL_ASSUM THEN
                RULE_ASSUM_TAC (CONV_RULE case_conv) THEN 
                CONV_TAC case_conv
- in
-  REPEAT tac
+ in REPEAT tac
  end goal;
  
 (*===========================================================================*)

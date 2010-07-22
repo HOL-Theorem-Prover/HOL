@@ -58,15 +58,16 @@ sig
   val Cases_on          : term quotation -> tactic
   val Induct_on         : term quotation -> tactic
 
-  val PURE_TOP_CASE_TAC : (term -> bool) -> tactic  (* top-most case-split *)
-  val PURE_CASE_TAC     : (term -> bool) -> tactic  (* smallest case-split (concl) *)
-  val PURE_FULL_CASE_TAC: (term -> bool) -> tactic  (* smallest case-split (goal) *)
-  val PURE_CASE_SIMP_CONV : thm list -> conv
+  val PURE_TOP_CASE_TAC : tactic  (* top-most case-split *)
+  val PURE_CASE_TAC     : tactic  (* smallest case-split (concl) *)
+  val PURE_FULL_CASE_TAC: tactic  (* smallest case-split  (goal) *)
 
+  val PURE_CASE_SIMP_CONV : thm list -> conv
   val CASE_SIMP_CONV    : conv     (* Apply case rewrites in theTypeBase *)
+
   val CASE_TAC          : tactic   (* PURE_CASE_TAC then simplification *)
   val TOP_CASE_TAC      : tactic   (* PURE_TOP_CASE_TAC then simplification *)
-  val FULL_CASE_TAC     : tactic   (* CASE_TAC anywhere in goal *)
-  val EVERY_CASE_TAC    : tactic  (* Repeat FULL_CASE_TAC *)
+  val FULL_CASE_TAC     : tactic   (* PURE_FULL_CASE_TAC then simplification *)
+  val EVERY_CASE_TAC    : tactic   (* Repeat FULL_CASE_TAC *)
 
 end
