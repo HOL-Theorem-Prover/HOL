@@ -442,9 +442,11 @@ val TOP_CASE_TAC =
 (*---------------------------------------------------------------------------*)
 
 fun FULL_CASE_TAC goal =
- let val case_conv = PURE_CASE_SIMP_CONV (case_rwlist ())
+ let val rws = case_rwlist()
+     val case_conv = PURE_CASE_SIMP_CONV rws
+     val asm_rule = Rewrite.REWRITE_RULE rws
  in PURE_FULL_CASE_TAC THEN TOSS_REFL_ASSUM
-    THEN RULE_ASSUM_TAC (CONV_RULE case_conv) 
+    THEN RULE_ASSUM_TAC asm_rule
     THEN CONV_TAC case_conv
  end goal;
 
@@ -455,9 +457,11 @@ fun FULL_CASE_TAC goal =
 (*---------------------------------------------------------------------------*)
 
 fun EVERY_CASE_TAC goal = 
- let val case_conv = PURE_CASE_SIMP_CONV (case_rwlist ())
+ let val rws = case_rwlist()
+     val case_conv = PURE_CASE_SIMP_CONV rws
+     val asm_rule = Rewrite.REWRITE_RULE rws
      val tac = PURE_FULL_CASE_TAC THEN TOSS_REFL_ASSUM THEN
-               RULE_ASSUM_TAC (CONV_RULE case_conv) THEN 
+               RULE_ASSUM_TAC asm_rule THEN 
                CONV_TAC case_conv
  in REPEAT tac
  end goal;
