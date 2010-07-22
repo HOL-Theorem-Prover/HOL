@@ -508,6 +508,7 @@ fun generate_code target model_name print_assembly tm = let
     fun force_condition (ASM_INSTRUCTION (c,x,h)) = ASM_INSTRUCTION (conditionalise c condition,x,h)
       | force_condition (ASM_BRANCH (NONE, l2)) = ASM_BRANCH (SOME (bool2str (not u)), l2)
       | force_condition _ = fail()
+    val _ = if length code < 5 then () else fail()
     in map force_condition code @ rest end
   fun conditionalise [] (t,f) = []
     | conditionalise ((ASM_BRANCH (SOME u,label))::xs) (t,f) =

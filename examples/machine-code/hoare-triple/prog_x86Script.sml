@@ -378,7 +378,7 @@ val UPDATE_x86_2set'' = store_thm("UPDATE_x86_2set''",
   \\ METIS_TAC [X86_ACCURATE_UPDATE]);
 
 val X86_SPEC_CODE = save_thm("X86_SPEC_CODE",
-  RW [GSYM X86_MODEL_def,GSYM xCODE_def] 
+  RW [GSYM X86_MODEL_def,GSYM xCODE_def]
   (SIMP_RULE std_ss [X86_MODEL_def] (Q.ISPEC `X86_MODEL` SPEC_CODE)));
 
 val IMP_X86_SPEC_LEMMA = prove(
@@ -598,7 +598,7 @@ val xBYTE_MEMORY_ANY_C_INSERT = prove(
   \\ FULL_SIMP_TAC std_ss [xBYTE_MEMORY_ANY_SET_def,EXTENSION,GSPECIFICATION,IN_DELETE,IN_INSERT]
   \\ METIS_TAC []);
 
-val xBYTE_MEMORY_ANY_INSERT = prove(
+val xBYTE_MEMORY_ANY_INSERT = store_thm("xBYTE_MEMORY_ANY_INSERT",
   ``a IN df ==>
     (xBYTE_MEMORY_ANY e df ((a =+ w) g) =
      ~xM1 a (SOME (w,xDATA_PERM e)) * xBYTE_MEMORY_ANY e (df DELETE a) g)``,
@@ -1013,10 +1013,10 @@ val X86_SPEC_EXLPODE_CODE_LEMMA = prove(
 val X86_SPEC_EXLPODE_CODE = save_thm("X86_SPEC_EXLPODE_CODE",
   RW [UNION_EMPTY] (Q.SPEC `{}` X86_SPEC_EXLPODE_CODE_LEMMA));
 
-(* Stack --- sp points at top of stack, stack grows towards smaller addresses *)  
+(* Stack --- sp points at top of stack, stack grows towards smaller addresses *)
 
 val xSTACK_def = Define `
-  xSTACK bp xs = xR EBP bp * xR ESP (bp - n2w (4 * LENGTH xs)) * 
+  xSTACK bp xs = xR EBP bp * xR ESP (bp - n2w (4 * LENGTH xs)) *
                  SEP_ARRAY xM (-4w) bp xs * cond (ALIGNED bp)`;
 
 val STAR6 = prove(
@@ -1025,7 +1025,7 @@ val STAR6 = prove(
 
 val xSTACK_INTRO_EBX = store_thm("xSTACK_INTRO_EBX",
   ``(ALIGNED ebp ==>
-     SPEC X86_MODEL (q1 * xR EBP ebp * xM (ebp - n2w n) x) c 
+     SPEC X86_MODEL (q1 * xR EBP ebp * xM (ebp - n2w n) x) c
                     (q2 * xR EBP ebp * xM (ebp - n2w n) y)) ==>
     !xs ys.
       (4 * LENGTH xs = n) ==>

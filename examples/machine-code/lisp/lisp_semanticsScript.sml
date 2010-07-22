@@ -119,7 +119,7 @@ val Div_def =
  Define
   `Div ((A(Number m)),(A(Number n))) = A(Number(m DIV n))`;
 
-val Sub_def =
+val Mod_def =
  Define
   `Mod ((A(Number m)),(A(Number n))) = A(Number(m MOD n))`;
 

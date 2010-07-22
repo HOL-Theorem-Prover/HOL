@@ -28,6 +28,7 @@ val code_abbreviations = ref ([]:thm list);
 val abbreviate_code = ref false;
 val executable_data_names = ref ([]:string list);
 val user_defined_modifier = ref (fn (name:string) => fn (th:thm) => th);
+val decompile_as_single_function = ref false;
 
 fun add_decompiled (name,th,code_len,code_exit) =
   (decompiler_memory := (name,(th,code_len,code_exit)) :: !decompiler_memory);
@@ -527,7 +528,12 @@ fun extract_loops jumps = let
   (* sort internal  *)
   val int_sort = sort (fn x => fn (y:int) => x <= y)
   val loops = map (fn (xs,ys) => (int_sort xs, int_sort ys)) loops
-  (* final states should still be optimised *)
+  (* deal with option to return result as a single function *)  
+  val loops = if not (!decompile_as_single_function) then loops else let
+    val entry = all_distinct (append_lists (map fst loops))
+    val exit = diff (all_distinct (append_lists (map snd loops))) entry
+    in [(sort (fn x => fn y => (x <= y)) entry,exit)] end
+  (* TODO: final states should still be optimised... *)
   in loops end;
 
 fun stage_12 name tools qcode = let
@@ -585,6 +591,7 @@ fun number_GUARD (x,y,z) = let
 
 fun format_for_multi_entry entry thms = let
   val _ = if length entry = 1 then fail() else ()
+  val pc_tm = get_pc()
   val pos = mk_var("pos",``:num``)
   val mk_num = numSyntax.mk_numeral o Arbnum.fromInt
   fun mk_pos i = subst [mk_var("n",``:num``) |-> mk_num i] ``p + (n2w n):word32``
@@ -595,7 +602,10 @@ fun format_for_multi_entry entry thms = let
     | mk ((x,y)::xs) = mk_cond(mk_eq(pos,x),y,mk xs)
   val tm = mk xs
   val case_list = map (fn (x,y) => mk_eq(pos,x)) xs
-  val format = ``GUARD 0 (pos = k:num) ==> (t1 = t2:word32)``
+  val format = 
+    mk_imp(``GUARD 0 (pos = k:num)``,
+           mk_eq(mk_comb(pc_tm,mk_var("t1",``:word32``)),
+                 mk_comb(pc_tm,mk_var("t2",``:word32``))))
   val format = subst [``t2:word32``|->tm] format
   fun mk_sub (x,y) = subst [``k:num``|->x, ``t1:word32``|->y] format
   fun mk_goals [] rest = fail() 
@@ -608,7 +618,7 @@ fun format_for_multi_entry entry thms = let
   fun two_conj th = let 
     val xs = CONJUNCTS th 
     in if length xs = 1 then (hd xs, hd xs) else (el 1 xs, el 2 xs) end
-  val ys = map (fn goal => (two_conj o RW[AND_IMP_INTRO,GSYM CONJ_ASSOC]) 
+  val ys = map (fn goal => (two_conj o RW[AND_IMP_INTRO,GSYM CONJ_ASSOC,WORD_ADD_0]) 
                     (prove(goal,SIMP_TAC std_ss [GUARD_def]))) goals
   val posts = map snd ys
   val pres = map fst ys
@@ -837,6 +847,7 @@ fun MERGE guard th1 th2 = let
   val th = MATCH_MP SPEC_COMBINE (g guard th1)
   val th = MATCH_MP th (g (mk_neg guard) th2)
   val th = UNDISCH (RW [UNION_IDEMPOT] th)
+  val th = remove_primes th
   in th end;
 
 fun merge_spectree_thm (LEAF (th,i)) = let

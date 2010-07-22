@@ -3,8 +3,8 @@ struct
 
 open HolKernel boolLib bossLib Parse;
 open decompilerLib;
-open reg_allocLib;
 open codegenLib codegen_x86Lib;
+open reg_allocLib;
 
 open prog_armLib prog_ppcLib prog_x86Lib;
 open wordsTheory wordsLib addressTheory;

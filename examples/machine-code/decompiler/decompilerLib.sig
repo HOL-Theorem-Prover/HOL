@@ -38,4 +38,7 @@ sig
 
     val add_modifier          : string -> (thm -> thm) -> unit
     val remove_all_modifiers  : unit -> unit
+
+    val decompile_as_single_function : bool ref
+
 end

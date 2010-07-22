@@ -374,7 +374,7 @@ val DELETE_pBYTE_MEMORY_SET = prove(
   SIMP_TAC std_ss [EXTENSION,IN_INSERT,pBYTE_MEMORY_SET_def,GSPECIFICATION]
   \\ REWRITE_TAC [IN_DELETE,APPLY_UPDATE_THM] \\ METIS_TAC []);
 
-val pBYTE_MEMORY_INSERT = prove(
+val pBYTE_MEMORY_INSERT = store_thm("pBYTE_MEMORY_INSERT",
   ``a IN df ==>
     (pBYTE_MEMORY df ((a =+ w) g) =
     pM1 a (SOME w) * pBYTE_MEMORY (df DELETE a) g)``,

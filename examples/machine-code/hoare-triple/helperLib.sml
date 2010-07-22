@@ -697,6 +697,30 @@ fun SPEC_COMPOSE_RULE [] = fail()
       SPEC_COMPOSE_RULE ((find_composition3 th1 th2)::thms)
 
 
+(* a rule which sorts the code in a SPEC theorem *)
+
+fun SPEC_SORT_CODE_RULE th = let
+  val (_,_,c,_) = dest_spec (concl th)  
+  val xs = list_dest (pred_setSyntax.dest_insert) c
+  val _ = if pred_setSyntax.is_empty (last xs) then () else fail()
+  val xs = butlast xs
+  fun get_offset tm = let 
+    val x = tm |> dest_pair |> fst
+    in if is_var x then 0 
+       else if can (match_term ``p + n2w n:'a word``) x then
+         numSyntax.int_of_term(cdr (cdr x))
+       else if can (match_term ``p - n2w n:'a word``) x then
+         0 - numSyntax.int_of_term(cdr (cdr x))
+       else fail () end
+  val cs = sort (fn x => fn y => get_offset x <= get_offset y) xs
+  val c2 = pred_setSyntax.mk_set cs
+  val goal = mk_eq(c,c2)
+  val lemma = SIMP_CONV std_ss [pred_setTheory.EXTENSION,pred_setTheory.IN_INSERT,
+                pred_setTheory.NOT_IN_EMPTY,AC DISJ_COMM DISJ_ASSOC] goal
+  val lemma = EQT_ELIM lemma
+  in CONV_RULE ((RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [lemma])) th end
+
+
 (* tactics *)
 
 fun SPEC_PROVE_TAC thms (hs,goal) = let
@@ -1013,6 +1037,27 @@ fun SEP_S_TAC names th (hs,goal) = let
   val th = LIST_INST_MATCH names th (goal::hs)
   val th = INST_FRAME hs th handle HOL_ERR _ => th
   in MP_TAC th (hs,goal) end;
+
+fun dest_sep_imp tm = let
+  val format = (fst o dest_eq o concl o SPEC_ALL) SEP_IMP_def  
+  in if can (match_term format) tm then (cdr (car tm), cdr tm) else fail() end;
+
+fun SEP_IMP_TAC (hs,goal) = let
+  fun subset xs ys = filter (fn x => not (mem x ys)) xs = []
+  val imps = filter (can dest_sep_imp) hs
+  val xs = map (fn tm => (dest_sep_imp tm, tm)) imps
+  val ys = list_dest dest_star (car goal)
+  val ((x1,x2),tm) = first (fn ((x1,x2),tm) => subset (list_dest dest_star x2) ys) xs
+  val zs = list_dest dest_star x2
+  val zs = filter (fn x => not (mem x zs)) ys
+  val th1 = MATCH_MP SEP_IMP_FRAME (ASSUME tm)
+  val th2 = RW1 [SEP_IMP_def] (SPEC (list_mk_star zs (type_of x2)) th1)
+  val th3 = SPEC (cdr goal) th2
+  val rw_goal = mk_eq(car (cdr (concl th3)),car goal)
+  val rw_th = prove(rw_goal,SIMP_TAC (std_ss++star_ss) [])
+  val th4 = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [rw_th])) th3
+  in MATCH_MP_TAC th4 (hs,goal) end;
+
 
 (* debug prover *)
 
