@@ -16,6 +16,12 @@ val _ = temp_remove_rules_for_term "Empty"
 val _ = temp_disable_tyabbrev_printing "ptreeset"
 val _ = temp_disable_tyabbrev_printing "word_ptreeset"
 
+val defs =
+   [BRANCHING_BIT_def, PEEK_def, JOIN_def, ADD_def, BRANCH_def,
+    REMOVE_def, TRAVERSE_def, KEYS_def, TRANSFORM_def, EVERY_LEAF_def,
+    EXISTS_LEAF_def, SIZE_def, DEPTH_def, IS_PTREE_def, IN_PTREE_def,
+    INSERT_PTREE_def, IS_EMPTY_def, FIND_def, fun_rule ADD_LIST_def];
+
 val _ = eSML "patricia"
    (OPEN ["num", "option", "set"]
     :: MLSIG "type num = numML.num"
@@ -25,11 +31,18 @@ val _ = eSML "patricia"
               \    | toList (Leaf(j,d)) = [(j,d)]\n\
               \    | toList (Branch(p,m,l,r)) =\n\
               \        listML.APPEND (toList l) (toList r)"
-    :: map DEFN
-         [BRANCHING_BIT_def, PEEK_def, JOIN_def, ADD_def, BRANCH_def,
-          REMOVE_def, TRAVERSE_def, KEYS_def, TRANSFORM_def, EVERY_LEAF_def,
-          EXISTS_LEAF_def, SIZE_def, DEPTH_def, IS_PTREE_def, IN_PTREE_def,
-          INSERT_PTREE_def, IS_EMPTY_def, FIND_def, fun_rule ADD_LIST_def]);
+    :: map DEFN defs);
+
+val _ = eCAML "patricia"
+   (MLSIGSTRUCT ["type num = NumML.num"]
+     @ Datatype datatype_ptree
+    :: MLSIG "val toList : 'a ptree -> (num * 'a) list"
+    :: MLSTRUCT "let rec toList t = match t with\n\
+              \      Empty -> []\n\
+              \    | Leaf(j,d) -> [(j,d)]\n\
+              \    | Branch(p,m,l,r) ->\n\
+              \        ListML._APPEND (toList l) (toList r)"
+    :: map DEFN defs);
 
 val _ = eSML "patricia_casts"
    (OPEN ["num", "option", "set", "bit", "words", "patricia"]
