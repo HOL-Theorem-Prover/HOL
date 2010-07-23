@@ -163,7 +163,7 @@ local
 "          (Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"})",
 "fun WORDS_EMIT_RULE thm = let",
 "  open boolTheory wordsTheory fcp_emitTheory",
-"  val rws = List.map Conv.GSYM [word_index_def, word_eq_def,",
+"  val rws = List.map Conv.GSYM [word_index_def, n2w_itself_def, word_eq_def,",
 "              w2w_itself_def, sw2sw_itself_def, word_concat_itself_def,",
 "              word_extract_itself_def, literal_case_DEF] @",
 "             [BIT_UPDATE, fcp_n2w, word_T_def, word_L_def, word_H_def,",
