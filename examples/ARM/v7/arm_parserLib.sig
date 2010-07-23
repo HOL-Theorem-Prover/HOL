@@ -13,11 +13,15 @@ sig
 
 (*val arm_lex_from_file     : string -> Substring.substring list *)
 
-  val arm_parse_from_file   : string -> (Arbnum.num * arm_code) list
+  val arm_parse_from_file   : string -> (Arbnum.num * arm_code) list *
+                                        (string, Arbnum.num) Redblackmap.dict
 
-  val arm_parse_from_string : string -> (Arbnum.num * arm_code) list
+  val arm_parse_from_string : string -> (Arbnum.num * arm_code) list *
+                                        (string, Arbnum.num) Redblackmap.dict
 
-  val arm_parse_from_quote  : string frag list -> (Arbnum.num * arm_code) list
+  val arm_parse_from_quote  : string frag list ->
+                                (Arbnum.num * arm_code) list *
+                                (string, Arbnum.num) Redblackmap.dict
 
 (* ..........................................................................
 

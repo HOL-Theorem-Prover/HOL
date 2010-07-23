@@ -533,7 +533,10 @@ val thumb_decode_def =
       || (T,F,T, T , T , F , T, F, T, T) ->
            DataProcessing (Byte_Reverse_Signed_Halfword (r 0) (r 3))
       || (T,F,T, T , T , T , F,b8,_7,_6) -> (* POP *)
-           LoadStore (Load_Multiple F T F T 13w ((15 :+ b8) ((7 >< 0) ireg)))
+           if b8 /\ InITBlock /\ ~LastInITBlock then
+             Unpredictable
+           else
+             LoadStore (Load_Multiple F T F T 13w ((15 :+ b8) ((7 >< 0) ireg)))
       || (T,F,T, T , F , T , T, F, F, T) ->
            if b 5 then
              StatusAccess

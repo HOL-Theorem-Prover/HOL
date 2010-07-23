@@ -153,7 +153,8 @@ in
   end
 end;
 
-fun arm_steps_from f opt qs = arm_steps_from_parse opt (List.map snd (f qs));
+fun arm_steps_from f opt qs =
+  arm_steps_from_parse opt (Lib.mk_set (List.map snd (fst (f qs))));
 
 val arm_steps_from_string = arm_steps_from arm_parse_from_string;
 val arm_steps_from_file   = arm_steps_from arm_parse_from_file;
@@ -238,22 +239,22 @@ let val ostrm = TextIO.openOut filename in
 end;
 
 fun print_arm_assemble_from_quote s =
-  output_arm_assemble_parse TextIO.stdOut s o arm_parse_from_quote;
+  output_arm_assemble_parse TextIO.stdOut s o fst o arm_parse_from_quote;
 
 fun print_arm_assemble_from_string s =
-  output_arm_assemble_parse TextIO.stdOut s o arm_parse_from_string;
+  output_arm_assemble_parse TextIO.stdOut s o fst o arm_parse_from_string;
 
 fun print_arm_assemble_from_file s =
-  output_arm_assemble_parse TextIO.stdOut s o arm_parse_from_file;
+  output_arm_assemble_parse TextIO.stdOut s o fst o arm_parse_from_file;
 
 fun arm_assemble_to_file_from_quote s f =
-  arm_assemble_to_file_parse s f o arm_parse_from_quote;
+  arm_assemble_to_file_parse s f o fst o arm_parse_from_quote;
 
 fun arm_assemble_to_file_from_string s f =
-  arm_assemble_to_file_parse s f o arm_parse_from_string;
+  arm_assemble_to_file_parse s f o fst o arm_parse_from_string;
 
 fun arm_assemble_to_file_from_file s f =
-  arm_assemble_to_file_parse s f o arm_parse_from_file;
+  arm_assemble_to_file_parse s f o fst o arm_parse_from_file;
 
 fun join (a,b) = case b of "" => a | _ => String.concat [a, " ", b];
 

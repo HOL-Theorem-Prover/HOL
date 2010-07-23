@@ -59,13 +59,15 @@ val ptree_read_halfword_def = Define`
 
 val ptree_arm_next_def =
   with_flag (computeLib.auto_import_definitions,false) Define
-    `ptree_arm_next ii x (pc:word32) (cycle:num) : unit M = arm_instr ii x`;
+    `ptree_arm_next ii (x:string # Encoding # word4 # ARMinstruction)
+       (pc:word32) (cycle:num) : unit M =
+     arm_instr ii (SND x)`;
 
 val attempt_def = Define`
-  attempt cycle f g =
+  attempt c f g =
   \s:arm_state.
       case f s
-      of Error e -> ValueState (cycle, e) s
+      of Error e -> ValueState (c, e) s
       || ValueState v s' -> g v s'`;
 
 val ptree_arm_loop_def = Define`

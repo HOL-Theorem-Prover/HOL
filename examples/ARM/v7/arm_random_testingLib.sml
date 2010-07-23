@@ -795,7 +795,7 @@ local
         val s = disassemble c
         val a = arch ^ (if b = "ARM" then s else b ^ "\n " ^ s)
         val d = a |> with_flag (Feedback.emit_WARNING,false)
-                       armLib.arm_assemble_from_string |> hd |> snd
+                       armLib.arm_encode_from_string
         val w = if d <> e then
                    (HOL_WARNING "arm_randomLib" "mk_code" (String.concat
                      ["<<parse warning>>:", "\n",

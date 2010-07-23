@@ -1469,13 +1469,18 @@ fun arm_encode (arm_parserLib.Ascii s)       = encode_ascii s
 val arm_assemble_parse = List.map ((I:Arbnum.num -> Arbnum.num) ## arm_encode);
 
 val arm_assemble_from_quote =
-  arm_assemble_parse o arm_parserLib.arm_parse_from_quote;
+  (arm_assemble_parse ## I) o arm_parserLib.arm_parse_from_quote;
 
 val arm_assemble_from_string =
-  arm_assemble_parse o arm_parserLib.arm_parse_from_string;
+  (arm_assemble_parse ## I) o arm_parserLib.arm_parse_from_string;
 
 val arm_assemble_from_file =
-  arm_assemble_parse o arm_parserLib.arm_parse_from_file;
+  (arm_assemble_parse ## I) o arm_parserLib.arm_parse_from_file;
+
+fun arm_encode_from_string s =
+  case Lib.total arm_assemble_from_string s
+  of SOME ([(_,opc)],_) => opc
+   | _ => raise ERR "arm_encode_from_string" "could not encode assembler";
 
 (*
 fun print_code_from s =
