@@ -135,6 +135,7 @@ src/temporal/src
 #
 # Examples only from here on
 #
+!examples/MLsyntax
 !!examples/miller/ho_prover
 !!examples/miller/miller
 !examples/ordinal
