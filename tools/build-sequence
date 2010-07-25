@@ -152,4 +152,4 @@ src/temporal/src
 !!examples/Crypto/TEA
 !!examples/Crypto/TWOFISH
 
-[poly]!!examples/machine-code/lisp
+[poly]!!!examples/machine-code/lisp
