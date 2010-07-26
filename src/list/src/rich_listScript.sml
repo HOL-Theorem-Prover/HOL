@@ -662,6 +662,15 @@ val SPLITP = new_recursive_definition
                   (if P x then ([], CONS x l) else
                     ((CONS x (FST(SPLITP P l))), (SND (SPLITP P l)))))`--};
 
+(* tail recursive version -- for evaluation *)
+val SPLITP_AUX_def = TotalDefn.Define`
+  (SPLITP_AUX acc P [] = (acc,[])) /\
+  (SPLITP_AUX acc P (h::t) =
+    if P h then
+      (acc, h::t)
+    else
+      SPLITP_AUX (acc ++ [h]) P t)`;
+
 val PREFIX_DEF = new_definition("PREFIX_DEF",
     (--`PREFIX P (l:'a list) = FST (SPLITP ($~ o P) l)`--));
 
@@ -3358,6 +3367,24 @@ val SPLITP_EVERY = store_thm("SPLITP_EVERY",
   ``!P l. EVERY (\x. ~P x) l ==> (SPLITP P l = (l, []))``,
   Induct_on `l` THEN SRW_TAC [] [SPLITP]);
 
+val SPLITP_AUX_lem1 = Q.prove(
+  `!P acc l h.
+     ~P h ==>
+     (h::FST (SPLITP_AUX acc P l) = FST (SPLITP_AUX (h::acc) P l))`,
+  Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]);
+
+val SPLITP_AUX_lem2 = Q.prove(
+  `!P acc1 acc2 l. SND (SPLITP_AUX acc1 P l) = SND (SPLITP_AUX acc2 P l)`,
+  Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]);
+
+val SPLITP_AUX = Q.prove(
+  `!P l. SPLITP P l = SPLITP_AUX [] P l`,
+  Induct_on `l`
+  THEN SRW_TAC [] [SPLITP_AUX_def, SPLITP, SPLITP_AUX_lem1]
+  THEN metisLib.METIS_TAC [SPLITP_AUX_lem2, pairTheory.PAIR]);
+
+val SPLITP_AUX = save_thm("SPLITP_AUX",
+  REWRITE_RULE [GSYM FUN_EQ_THM] SPLITP_AUX);
 
 val MEM_FRONT = store_thm ("MEM_FRONT",
   ``!l e y. MEM y (FRONT (e::l)) ==> MEM y (e::l)``,
@@ -3517,7 +3544,7 @@ val _ = computeLib.add_persistent_funs
   ("SCANR", SCANR),
   ("SEG_compute", SEG_compute),
   ("SNOC", SNOC),
-  ("SPLITP", SPLITP),
+  ("SPLITP_AUX", SPLITP_AUX),
   ("SUFFIX_DEF", SUFFIX_DEF),
   ("UNZIP_FST_DEF", UNZIP_FST_DEF),
   ("UNZIP_SND_DEF", UNZIP_SND_DEF)];
