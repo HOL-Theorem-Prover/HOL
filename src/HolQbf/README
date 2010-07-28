@@ -6,7 +6,7 @@ Files:
 COPYRIGHT               Copyright notice, license and disclaimer.
 Holmakefile             Makefile for Holmake (to build selftest.exe).
 HolQbfLib.{sig,sml}     Entry point into HolQbfLib.
-QbfCertificate.sml      QBF Certificates and proof reconstruction.
+QbfCertificate.sml      QBF certificates and proof reconstruction.
 QbfLibrary.sml          Common auxiliary functions.
 QbfTrace.sml            Controls tracing verbosity for HolQbfLib.
 QDimacs.sml             Translation between HOL terms and the QDIMACS file
