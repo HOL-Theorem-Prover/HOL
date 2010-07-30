@@ -399,6 +399,10 @@ local
   val NEG_WORD = Drule.EQT_ELIM
                    (wordsLib.WORD_CONV ``a * b = -a * -b :'a word``)
   val SYM_WORD_NEG_MUL = GSYM wordsTheory.WORD_NEG_MUL
+  fun boolify sz = (fn l => List.take(l, sz)) o
+                   String.explode o
+                   StringCvt.padLeft #"0" sz o
+                   Arbnum.toBinString
 in
   fun SMART_MUL_LSL_CONV tm =
     let
@@ -411,28 +415,27 @@ in
            else
              raise ERR "SMART_MUL_LSL_CONV" "not -1w * x"
        | NONE =>
-          let
-            val (n,ty) = wordsSyntax.dest_n2w l
-            val sz = Arbnum.toInt (fcpLib.index_to_num ty)
-            val N = numLib.dest_numeral n
-            val boolify = (fn l => List.take(l, sz)) o
-                            String.explode o
-                            StringCvt.padLeft #"0" sz o
-                            Arbnum.toBinString
-            val c_pos = N |> boolify
-                          |> List.filter (Lib.equal #"1")
-                          |> List.length
-            val c_neg = N |> Arbnum.less1
-                          |> boolify
-                          |> List.filter (Lib.equal #"0")
-                          |> List.length
-          in
-            if c_pos <= 2 * c_neg + 1 then
+          let val (N,sz) = wordsSyntax.dest_mod_word_literal l in
+            if Arbnum.<(N, Arbnum.fromInt 11) then
               wordsLib.WORD_MUL_LSL_CONV tm
             else
-              (Conv.REWR_CONV NEG_WORD
-               THENC Conv.RATOR_CONV wordsLib.WORD_EVAL_CONV
-               THENC wordsLib.WORD_MUL_LSL_CONV) tm
+              let
+                val sz = Arbnum.toInt sz
+                val c_pos = N |> boolify sz
+                              |> List.filter (Lib.equal #"1")
+                              |> List.length
+                val c_neg = N |> Arbnum.less1
+                              |> boolify sz
+                              |> List.filter (Lib.equal #"0")
+                              |> List.length
+              in
+                if c_pos <= 2 * c_neg + 1 then
+                  wordsLib.WORD_MUL_LSL_CONV tm
+                else
+                  (Conv.REWR_CONV NEG_WORD
+                   THENC Conv.RATOR_CONV wordsLib.WORD_EVAL_CONV
+                   THENC wordsLib.WORD_MUL_LSL_CONV) tm
+              end
           end
     end
 end
@@ -668,43 +671,48 @@ in
             raise ERR "BIT_BLAST_CONV" "term not suited to bit blasting"
     val thm = Conv.QCONV BLAST_CONV tm
     val c = rhsc thm
-    val thm = Conv.CONV_RULE
-                (Conv.RHS_CONV (PURE_REWRITE_CONV (mk_bit_sets c))) thm
-    val c = rhsc thm
-    val conv = mk_sums NUM_CONV c
   in
-    if wordsSyntax.is_index tm then
-      let
-        val thm2 = INDEX_CONV conv c
-      in
-        Conv.CONV_RULE (Conv.RHS_CONV (Conv.REWR_CONV thm2)) thm
-      end
-    else if wordsSyntax.is_word_lo tm then
-      Conv.CONV_RULE (Conv.RHS_CONV (Conv.REWR_CONV (conv c))) thm
-    else let val (l,r) = boolSyntax.dest_eq c in
-      if wordsSyntax.is_index l orelse wordsSyntax.is_index r then
+    if Term.term_eq c boolSyntax.T orelse Term.term_eq c boolSyntax.F then
+      thm
+    else let
+      val thm = Conv.CONV_RULE
+                  (Conv.RHS_CONV (PURE_REWRITE_CONV (mk_bit_sets c))) thm
+      val c = rhsc thm
+      val conv = mk_sums NUM_CONV c
+    in
+      if wordsSyntax.is_index tm then
         let
-          val thm2 = TRY_INDEX_CONV conv l
-          val thm3 = TRY_INDEX_CONV conv r
+          val thm2 = INDEX_CONV conv c
         in
-          Conv.CONV_RULE (Conv.RHS_CONV
-            (PURE_REWRITE_CONV [thm2, thm3]
-             THENC Conv.TRY_CONV BIT_TAUT_CONV)) thm
+          Conv.CONV_RULE (Conv.RHS_CONV (Conv.REWR_CONV thm2)) thm
         end
-      else
-        case bit_theorems conv (dim_of_word l, l, r)
-        of Lib.PASS thms =>
-               Conv.CONV_RULE (Conv.RHS_CONV
-                 (Conv.REWR_CONV (fcp_eq_thm (Term.type_of l))
-                  THENC REWRITE_CONV thms)) thm
-         | Lib.FAIL (i, fail_thm) =>
-             let
-               val ty = wordsSyntax.dim_of l
-               val sz_thm = mk_size_thm (i, ty)
-               val thm2 = Drule.MATCH_MP FCP_NEQ (Thm.CONJ sz_thm fail_thm)
-             in
-               Conv.CONV_RULE (Conv.RHS_CONV (Conv.REWR_CONV thm2)) thm
-             end
+      else if wordsSyntax.is_word_lo tm then
+        Conv.CONV_RULE (Conv.RHS_CONV (Conv.REWR_CONV (conv c))) thm
+      else let val (l,r) = boolSyntax.dest_eq c in
+        if wordsSyntax.is_index l orelse wordsSyntax.is_index r then
+          let
+            val thm2 = TRY_INDEX_CONV conv l
+            val thm3 = TRY_INDEX_CONV conv r
+          in
+            Conv.CONV_RULE (Conv.RHS_CONV
+              (PURE_REWRITE_CONV [thm2, thm3]
+               THENC Conv.TRY_CONV BIT_TAUT_CONV)) thm
+          end
+        else
+          case bit_theorems conv (dim_of_word l, l, r)
+          of Lib.PASS thms =>
+                 Conv.CONV_RULE (Conv.RHS_CONV
+                   (Conv.REWR_CONV (fcp_eq_thm (Term.type_of l))
+                    THENC REWRITE_CONV thms)) thm
+           | Lib.FAIL (i, fail_thm) =>
+               let
+                 val ty = wordsSyntax.dim_of l
+                 val sz_thm = mk_size_thm (i, ty)
+                 val thm2 = Drule.MATCH_MP FCP_NEQ (Thm.CONJ sz_thm fail_thm)
+               in
+                 Conv.CONV_RULE (Conv.RHS_CONV (Conv.REWR_CONV thm2)) thm
+               end
+      end
     end
   end
 

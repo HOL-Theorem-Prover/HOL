@@ -991,9 +991,8 @@ local
           l
         else
           num2list' (Arbnum.plus1 i) (if odd n then i::l else l) (Arbnum.div2 n)
-  val num2list = num2list' Arbnum.zero []
 in
-  val word2list = num2list o numSyntax.dest_numeral o fst o wordsSyntax.dest_n2w
+  val num2list = num2list' Arbnum.zero []
 end;
 
 fun shift_n t n =
@@ -1006,16 +1005,23 @@ fun sum_n l = foldl (fn (a,b) => wordsSyntax.mk_word_add (b,a)) (hd l) (tl l);
 
 fun WORD_MUL_LSL_CONV tm = let
   val (l,r) = wordsSyntax.dest_word_mul tm
-  val v = wordsSyntax.dest_word_literal l
+  val (v,sz) = wordsSyntax.dest_mod_word_literal l
+  val v2 = wordsSyntax.dest_word_literal l
+  val thm = if v <> v2 then
+              EQT_ELIM (word_EQ_CONV (mk_eq (l,wordsSyntax.mk_word (v,sz))))
+            else
+              combinTheory.I_THM
 in
   if v = Arbnum.zero then
-    REWR_CONV (hd word_mult_clauses) tm
+    (TRY_CONV (RATOR_CONV (RAND_CONV (REWR_CONV thm))) THENC
+     REWR_CONV (hd word_mult_clauses)) tm
   else let
     val _ = not (wordsSyntax.is_word_literal r) orelse
               raise ERR "WORD_MUL_LSL_CONV" "Not a term of the form: n2w n * x"
-    val t' = sum_n (List.map (shift_n r) (word2list l))
+    val t' = sum_n (List.map (shift_n r) (num2list v))
   in
-    EQT_ELIM (SIMP_CONV (std_ss++WORD_ARITH_ss) [WORD_MUL_LSL] (mk_eq (tm,t')))
+    EQT_ELIM
+      (SIMP_CONV (std_ss++WORD_ARITH_ss) [WORD_MUL_LSL,thm] (mk_eq (tm,t')))
   end
 end;
 
@@ -1744,11 +1750,7 @@ fun mk_word_size n =
     type_abbrev("word" ^ SN, TYPE)
   end;
 
-fun dest_word_literal t =
-let val n = (rhs o concl o EVAL o mk_w2n) t in
-  numLib.dest_numeral n
-end handle HOL_ERR _ =>
-  raise ERR "dest_word_literal" "term is not a word literal with known length";
+val dest_word_literal = fst o wordsSyntax.dest_mod_word_literal;
 
 (* ------------------------------------------------------------------------- *)
 

@@ -623,5 +623,18 @@ val is_word_literal = Lib.can dest_word_literal
 
 val uint_of_word = numSyntax.int_of_term o fst o dest_n2w
 
+fun mod_2exp (m, n) =
+  if n = Arbnum.zero orelse m = Arbnum.zero then Arbnum.zero else
+    let val v = Arbnum.times2 (mod_2exp (Arbnum.div2 m, Arbnum.less1 n)) in
+      if Arbnum.mod2 m = Arbnum.zero then v else Arbnum.plus1 v
+    end
+
+fun dest_mod_word_literal tm = let
+  val (tm1,ty) = dest_n2w tm
+  val sz = fcpLib.index_to_num ty
+in
+  (mod_2exp (numSyntax.dest_numeral tm1, sz), sz)
+end handle HOL_ERR _ => raise ERR "dest_mod_word_literal" ""
+
 end
 
