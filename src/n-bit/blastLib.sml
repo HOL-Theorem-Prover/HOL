@@ -285,10 +285,10 @@ in
 end
 
 (* ------------------------------------------------------------------------
-   mk_bit_sets : finds word literals and returns theorems of the form
-                 ``BIT i v = (i = p1) \/ ... \/ (i = pn)``, where
-                 v is the numeric value of the literal and p1..pn
-                 are the bit positions for T bits.
+   WORD_LIT_CONV : Rewrites occurances of ``BIT i v`` using theorems
+                   ``BIT i v = (i = p1) \/ ... \/ (i = pn)``, where
+                   v is the numeric value of the literal and p1..pn
+                   are the bit positions for T bits.
    ------------------------------------------------------------------------ *)
 
 local
@@ -306,13 +306,14 @@ local
   fun is_bit_lit tm = case Lib.total bitSyntax.dest_bit tm
                       of SOME (_, n) => numSyntax.is_numeral n
                        | NONE => false
-in
   fun mk_bit_sets tm =
     let
       val tms = Lib.mk_set (HolKernel.find_terms is_bit_lit tm)
     in
       List.map BIT_SET_CONV tms
     end
+in
+  fun WORD_LIT_CONV tm = PURE_REWRITE_CONV (mk_bit_sets tm) tm
 end
 
 (* ------------------------------------------------------------------------
@@ -520,6 +521,7 @@ in
         Conv.DEPTH_CONV SMART_MUL_LSL_CONV
         THENC PURE_REWRITE_CONV [GSYM word_sub_def, WORD_SUB]
         THENC computeLib.CBV_CONV cmp
+        THENC WORD_LIT_CONV
 end;
 
 (* ------------------------------------------------------------------------
@@ -674,12 +676,7 @@ in
   in
     if Term.term_eq c boolSyntax.T orelse Term.term_eq c boolSyntax.F then
       thm
-    else let
-      val thm = Conv.CONV_RULE
-                  (Conv.RHS_CONV (PURE_REWRITE_CONV (mk_bit_sets c))) thm
-      val c = rhsc thm
-      val conv = mk_sums NUM_CONV c
-    in
+    else let val conv = mk_sums NUM_CONV c in
       if wordsSyntax.is_index tm then
         let
           val thm2 = INDEX_CONV conv c
