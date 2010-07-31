@@ -514,7 +514,7 @@ fun mk_functional thy eqns =
                    Lib.quote("Functional.allow_new_clauses")^" flag"))
              else ()
      fun int_eq i1 (i2:int) =  (i1=i2)
-     val inaccessibles = gather(fn x => not(op_mem int_eq x finals)) originals
+     val inaccessibles = filter(fn x => not(op_mem int_eq x finals)) originals
      fun accessible p = not(op_mem int_eq (row_of_pat p) inaccessibles)
      val patts3 = (if null inaccessibles then I else filter accessible) patts2
      val _ = if null patts3

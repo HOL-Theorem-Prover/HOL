@@ -280,7 +280,7 @@ fun follow tm net =
                  in Lib.itlist(fn i => fn A => (follow Rator i @ A))
                               (follow Rand (get_edge Cmb net)) []
                  end
- in Lib.gather (not o is_empty) (get_edge V net::nets)
+ in List.filter (not o is_empty) (get_edge V net::nets)
  end;
 
 fun lookup tm net =

@@ -190,7 +190,6 @@ fun foldl_map _ (acc, []) = (acc, [])
 fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
   | separate _ xs = xs
 
-val gather = List.filter
 val filter = List.filter
 
 fun get_first f l =
@@ -450,12 +449,12 @@ fun union [] S = S
 fun U set_o_sets = itlist union set_o_sets []
 
 (* All the elements in the first set that are not also in the second set. *)
-fun set_diff a b = gather (not o C mem b) a
+fun set_diff a b = filter (not o C mem b) a
 val subtract = set_diff
 
 fun intersect [] _ = []
   | intersect _ [] = []
-  | intersect S1 S2 = mk_set(gather (C mem S2) S1)
+  | intersect S1 S2 = mk_set(filter (C mem S2) S1)
 
 fun null_intersection _  [] = true
   | null_intersection [] _ = true
@@ -499,7 +498,7 @@ fun op_intersect eq_func a b =
   let val mem = op_mem eq_func
       val in_b = C mem b
       val mk_set = op_mk_set eq_func
-   in mk_set(gather in_b a)
+   in mk_set(filter in_b a)
    end;
 
 (* All the elements in the first set that are not also in the second set. *)

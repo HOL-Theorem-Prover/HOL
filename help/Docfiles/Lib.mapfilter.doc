@@ -19,7 +19,6 @@ If {f x} raises {Interrupt} for some element {x} of {l}, then
 > val it = [1, 4, 6] : int list
 }
 
-
 \SEEALSO
-Lib.filter, Lib.gather.
+Lib.filter.
 \ENDDOC

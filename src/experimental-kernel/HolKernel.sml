@@ -175,7 +175,7 @@ fun dest_term M =
  * hypotheses alpha-convertible to the dischargee are removed.               *
  *---------------------------------------------------------------------------*)
 
-fun disch(w,wl) = Lib.gather (not o Term.aconv w) wl;
+fun disch(w,wl) = List.filter (not o Term.aconv w) wl;
 
 
 (*---------------------------------------------------------------------------*

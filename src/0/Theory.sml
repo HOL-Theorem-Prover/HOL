@@ -505,7 +505,7 @@ fun scrub_ax {thid,con_wrt_disk,facts,adjoin,thydata} =
           | check (_, Axiom(_,th)) = uptodate_term (Thm.concl th)
     in
       {thid=thid, con_wrt_disk=con_wrt_disk, adjoin=adjoin,
-       facts=Lib.gather check facts, thydata=thydata}
+       facts=List.filter check facts, thydata=thydata}
     end
 
 fun scrub_thms {thid,con_wrt_disk,facts,adjoin, thydata} =
@@ -513,7 +513,7 @@ fun scrub_thms {thid,con_wrt_disk,facts,adjoin, thydata} =
           | check (_, Thm th ) = uptodate_thm th
           | check (_, Defn th) = uptodate_thm th
     in {thid=thid, con_wrt_disk=con_wrt_disk,adjoin=adjoin,
-        facts=Lib.gather check facts, thydata=thydata}
+        facts=List.filter check facts, thydata=thydata}
     end
 
 fun scrub () = let
@@ -585,7 +585,7 @@ end;
  * Adding a new theory into the current theory graph.                        *
  *---------------------------------------------------------------------------*)
 
-fun set_diff a b = gather (fn x => not (Lib.op_mem thyid_eq x b)) a;
+fun set_diff a b = filter (fn x => not (Lib.op_mem thyid_eq x b)) a;
 fun node_set_eq S1 S2 = null(set_diff S1 S2) andalso null(set_diff S2 S1);
 
 fun link_parents thy plist =
@@ -787,9 +787,9 @@ fun unkind facts =
                | ((s,Defn th),(A,D,T))     => (A,(s,th)::D,T)
                | ((s,Thm th),(A,D,T))     => (A,D,(s,th)::T)) ([],[],[]) facts;
 
-val utd_types  = Lib.gather uptodate_type;
-val utd_consts = Lib.gather uptodate_term;
-val utd_thms   = Lib.gather uptodate_thm;
+val utd_types  = List.filter uptodate_type;
+val utd_consts = List.filter uptodate_term;
+val utd_thms   = List.filter uptodate_thm;
 
 (* automatically reverses the list, which is what is needed. *)
 
