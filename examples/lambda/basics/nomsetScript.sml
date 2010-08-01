@@ -1084,6 +1084,11 @@ val fresh_equivariant = store_thm(
 
 val _ = overload_on ("ssetpm", ``setpm lswapstr``)
 
+val ssetpm_inverse = Store_thm(
+  "ssetpm_inverse",
+  ``(ssetpm p (ssetpm p⁻¹ s) = s) ∧ (ssetpm p⁻¹ (ssetpm p s) = s)``,
+  SRW_TAC [][is_perm_inverse])
+
 val cpmsupp_avoids = perm_of_unchanged
 (*
    given a finite set of atoms and some other set to avoid, we can
