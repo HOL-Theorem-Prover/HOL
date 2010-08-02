@@ -14,10 +14,6 @@ fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
 val _ = new_theory "generic_terms"
 (* could perform quotient now *)
 
-open HolKernel boolLib Parse bossLib BasicProvers metisLib
-
-open basic_swapTheory pred_setTheory nomsetTheory binderLib
-
 val _ = Hol_datatype `
   pregterm = var of string => 'v
            | app of 'nb => pregterm list
@@ -142,12 +138,9 @@ val allatoms_finite = Store_Thm(
 
 val allatoms_supports = store_thm(
   "allatoms_supports",
-  ``support ptpm (t:(α,β,γ)pregterm) (allatoms t)``,
-  Q_TAC suff_tac
-    `(∀t:(α,β,γ)pregterm. support ptpm t (allatoms t)) ∧
-     (∀l:(α,β,γ)pregterm list. support (listpm ptpm) l (allatomsl l))` >-
-    srw_tac [][] >>
-  simp_tac (srw_ss()) [support_def] >>
+  ``(∀t:(α,β,γ)pregterm. support ptpm t (allatoms t)) ∧
+    (∀l:(α,β,γ)pregterm list. support (listpm ptpm) l (allatomsl l))``,
+  simp_tac (srw_ss())[support_def] >>
   ho_match_mp_tac oldind >> srw_tac [][allatoms_def]);
 
 val allatoms_fresh = store_thm(
@@ -293,94 +286,112 @@ val ptpm_flip_args = store_thm(
   ``!x y t. ptpm ((y,x)::t) M = ptpm ((x,y)::t) M``,
   srw_tac [][is_perm_flip_args]);
 
-(*
 val aeq_sym = store_thm(
   "aeq_sym",
-  ``!t u. aeq t u ==> aeq u t``,
-  HO_MATCH_MP_TAC aeq_ind THEN SRW_TAC [][aeq_rules] THEN
-  METIS_TAC [aeq_lam]);
+  ``(∀t:(α,β,γ)pregterm u. aeq t u ==> aeq u t) ∧
+    (∀l1:(α,β,γ)pregterm list l2. aeql l1 l2 ==> aeql l2 l1)``,
+  ho_match_mp_tac aeq_ind >> srw_tac [][aeq_rules] >>
+  metis_tac [aeq_lam]);
+
+val aeq_var_inversion = store_thm(
+  "aeq_var_inversion",
+  ``aeq (var vv s) t = (t = var vv s)``,
+  srw_tac [][Once aeq_cases]);
 
 val aeq_app_inversion = store_thm(
   "aeq_app_inversion",
-  ``aeq (app t u) v = ?t' u'. (v = app t' u') /\
-                              aeq t t' /\ aeq u u'``,
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [aeq_cases])) THEN SRW_TAC [][]);
+  ``aeq (app nbv ts) v = ?ts'. (v = app nbv ts') /\ aeql ts ts'``,
+  simp_tac (srw_ss()) [Once aeq_cases, SimpLHS])
 
 val aeq_lam_inversion = store_thm(
   "aeq_lam_inversion",
-  ``aeq (lam v M) N = ?v' M' z. (N = lam v' M') /\
-                                ~(z = v') /\ ~(z = v) /\ ~(z IN allatoms M) /\
-                                ~(z IN allatoms M') /\
-                                aeq (ptpm [(v,z)] M) (ptpm [(v',z)] M')``,
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [aeq_cases])) THEN SRW_TAC [][] THEN
-  METIS_TAC []);
+  ``aeq (lam v bv bndts unbndts) N =
+      ∃z v' bndts' unbndts'.
+        (N = lam v' bv bndts' unbndts') ∧ z ≠ v' ∧ z ≠ v ∧
+        z ∉ allatomsl bndts ∧ z ∉ allatomsl bndts' ∧
+        aeql (ptpml [(v,z)] bndts) (ptpml [(v',z)] bndts') ∧
+        aeql unbndts unbndts'``,
+  srw_tac [][Once aeq_cases, SimpLHS] >> metis_tac []);
 
 val aeq_ptm_11 = store_thm(
   "aeq_ptm_11",
-  ``(aeq (var s1) (var s2) = (s1 = s2)) /\
-    (aeq (app t1 u1) (app t2 u2) = aeq t1 t2 /\ aeq u1 u2) /\
-    (aeq (lam v t1) (lam v t2) = aeq t1 t2)``,
+  ``(aeq (var s1 vv1) (var s2 vv2) = (s1 = s2) ∧ (vv1 = vv2)) /\
+    (aeq (app nbv1 ts1) (app nbv2 ts2) = (nbv1 = nbv2) ∧ aeql ts1 ts2) ∧
+    (aeq (lam v bv1 bndts1 unbndts1) (lam v bv2 bndts2 unbndts2) =
+      (bv1 = bv2) ∧ aeql bndts1 bndts2 ∧ aeql unbndts1 unbndts2)``,
   SRW_TAC [][aeq_app_inversion, aeq_lam_inversion, aeq_ptpm_eqn,
-             EQ_IMP_THM]
+             aeq_var_inversion, EQ_IMP_THM]
   THENL [
-    POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [aeq_cases] THEN SRW_TAC [][],
-    Q_TAC (NEW_TAC "z") `v INSERT allatoms t1 UNION allatoms t2` THEN
-    Q.EXISTS_TAC `z` THEN SRW_TAC [][]
+    full_simp_tac (srw_ss() ++ boolSimps.ETA_ss) [aeql_ptpm_eqn, ptpml_listpm,
+                                                  is_perm_nil],
+    srw_tac [][],
+    Q_TAC (NEW_TAC "z") `v INSERT allatomsl bndts1 ∪ allatomsl bndts2` THEN
+    Q.EXISTS_TAC `z` >>
+    srw_tac [boolSimps.ETA_ss][aeql_ptpm_eqn, ptpml_listpm, is_perm_nil]
   ]);
 
+val aeq_strong_ind = theorem "aeq_strongind"
 
+val ptpml_sing_to_back' = prove(
+  ``ptpml p (ptpml [(u,v)] tl) =
+       ptpml [(lswapstr p u, lswapstr p v)] (ptpml p tl)``,
+  simp_tac (srw_ss()) [ptpml_listpm, is_perm_sing_to_back]);
 
-
-val aeq_strong_ind = IndDefLib.derive_strong_induction (aeq_rules, aeq_ind)
+val ptpml_fresh =
+  allatoms_supports |> CONJUNCT2 |>
+  SIMP_RULE (srw_ss()) [support_def, GSYM ptpml_listpm]
 
 (* proof follows that on p169 of Andy Pitts, Information and Computation 186
    article: Nominal logic, a first order theory of names and binding *)
 val aeq_trans = store_thm(
   "aeq_trans",
-  ``!t u v. aeq t u /\ aeq u v ==> aeq t v``,
-  Q_TAC SUFF_TAC `!t u. aeq t u ==> !v. aeq u v ==> aeq t v`
-        THEN1 METIS_TAC [] THEN
-  HO_MATCH_MP_TAC aeq_ind THEN REPEAT CONJ_TAC THENL [
-    SRW_TAC [][],
-    SRW_TAC [][aeq_app_inversion],
+  ``(∀t:(α,β,γ)pregterm u. aeq t u ⇒ ∀v. aeq u v ==> aeq t v) ∧
+    (∀l1:(α,β,γ)pregterm list l2. aeql l1 l2 ⇒ ∀l3. aeql l2 l3 ⇒ aeql l1 l3)``,
+  ho_match_mp_tac aeq_ind >> REPEAT conj_tac >|[
+    srw_tac [][],
+    srw_tac [][aeq_app_inversion],
     Q_TAC SUFF_TAC
-          `!a a' b t t'.
-             (!t''. aeq (ptpm [(a',b)] t') t'' ==> aeq (ptpm [(a,b)] t) t'') /\
-             ~(b IN allatoms t) /\ ~(b IN allatoms t') /\
-             ~(b = a) /\ ~(b = a') ==>
-             !t''. aeq (lam a' t') t'' ==> aeq (lam a t) t''`
-          THEN1 METIS_TAC [] THEN
-    REPEAT GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN
-    CONV_TAC (LAND_CONV (REWRITE_CONV [aeq_lam_inversion])) THEN
+      `∀u v bv z bt1 bt2 ut1 (ut2:(α,β,γ)pregterm list).
+         (∀l3. aeql (ptpml [(v,z)] bt2) l3 ⇒ aeql (ptpml [(u,z)] bt1) l3) ∧
+         (∀ut3. aeql ut2 ut3 ⇒ aeql ut1 ut3) ∧
+         z ∉ allatomsl bt1 ∧ z ∉ allatomsl bt2 ∧ z ≠ u ∧ z ≠ v ⇒
+         ∀t3. aeq (lam v bv bt2 ut2) t3 ⇒ aeq (lam u bv bt1 ut1) t3`
+          >- metis_tac [] >>
+    rpt gen_tac >> strip_tac >> gen_tac >>
+    simp_tac (srw_ss()) [SimpL ``$==>``, aeq_lam_inversion] >>
     DISCH_THEN
-      (Q.X_CHOOSE_THEN `a''`
-         (Q.X_CHOOSE_THEN `t'''`
-              (Q.X_CHOOSE_THEN `c` STRIP_ASSUME_TAC))) THEN
-    `?d. ~(d = a) /\ ~(d = a') /\ ~(d = a'') /\ ~(d = b) /\ ~(d = c) /\
-         ~(d IN allatoms t) /\ ~(d IN allatoms t') /\ ~(d IN allatoms t'')`
-       by (Q.SPEC_THEN `{a;a';a'';b;c} UNION allatoms t UNION allatoms t' UNION
-                        allatoms t''` MP_TAC NEW_def THEN
-           SRW_TAC [][] THEN METIS_TAC []) THEN
-    `!t''. aeq (ptpm [(b,d)] (ptpm [(a',b)] t')) (ptpm [(b,d)] t'') ==>
-           aeq (ptpm [(b,d)] (ptpm [(a,b)] t)) (ptpm [(b,d)] t'')`
-       by FULL_SIMP_TAC (srw_ss()) [aeq_ptpm_eqn] THEN
-    POP_ASSUM (Q.SPEC_THEN `ptpm [(b,d)] t''`
-                           (ASSUME_TAC o Q.GEN `t''` o
-                            SIMP_RULE (srw_ss()) [])) THEN
-    POP_ASSUM (MP_TAC o
-               ONCE_REWRITE_RULE [GSYM ptpm_sing_to_back]) THEN
-    `!x y t. ~(x IN allatoms t) /\ ~(y IN allatoms t) ==>
-             (ptpm [(x,y)] t = t)`
-       by METIS_TAC [allatoms_supports, support_def] THEN
-    SRW_TAC [][swapstr_def] THEN
-    `aeq (ptpm [(c,d)] (ptpm [(a',c)] t'))
-         (ptpm [(c,d)] (ptpm [(a'',c)] t'''))`
-       by FULL_SIMP_TAC (srw_ss()) [aeq_ptpm_eqn] THEN
-    POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM ptpm_sing_to_back]) THEN
-    `~(d IN allatoms t''')` by FULL_SIMP_TAC (srw_ss()) [allatoms_def] THEN
-    SRW_TAC [][swapstr_def] THEN
-    `aeq (ptpm [(a,d)] t) (ptpm [(a'',d)] t''')` by METIS_TAC [] THEN
-    METIS_TAC [aeq_lam]
+      (Q.X_CHOOSE_THEN `z2`
+         (Q.X_CHOOSE_THEN `w`
+              (Q.X_CHOOSE_THEN `bt3`
+                  (Q.X_CHOOSE_THEN `ut3` STRIP_ASSUME_TAC)))) >>
+    Q_TAC (NEW_TAC "d")
+       `{z;z2;u;v;w} ∪ allatomsl bt1 ∪ allatomsl bt2 ∪ allatomsl bt3` >>
+    `∀bt3.
+       aeql (ptpml [(z,d)] (ptpml [(v,z)] bt2)) (ptpml [(z,d)] bt3) ==>
+       aeql (ptpml [(z,d)] (ptpml [(u,z)] bt1)) (ptpml [(z,d)] bt3)`
+       by FULL_SIMP_TAC (srw_ss()) [aeql_ptpm_eqn, ptpml_listpm] THEN
+    POP_ASSUM
+       (Q.SPEC_THEN `ptpml [(z,d)] bt3`
+           (ASSUME_TAC o Q.GEN `bt3` o
+            SIMP_RULE (srw_ss()) [GSYM ptpml_listpm] o
+            SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss)
+                      [ptpml_listpm, is_perm_sing_inv, is_perm_nil])) THEN
+    POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [ptpml_sing_to_back']) THEN
+    SRW_TAC [][swapstr_def, ptpml_fresh] THEN
+    `aeql (ptpml [(z2,d)] (ptpml [(v,z2)] bt2))
+          (ptpml [(z2,d)] (ptpml [(w,z2)] bt3))`
+       by (srw_tac [boolSimps.ETA_ss]
+                   [Once aeql_ptpm_eqn, ptpml_listpm, is_perm_nil] >>
+           srw_tac [][GSYM ptpml_listpm]) >>
+    POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [ptpml_sing_to_back']) THEN
+    SRW_TAC [][swapstr_def, ptpml_fresh] THEN
+    `aeql (ptpml [(u,d)] bt1) (ptpml [(w,d)] bt3)` by METIS_TAC [] THEN
+    METIS_TAC [aeq_lam],
+
+    srw_tac [][],
+    rpt gen_tac >> strip_tac >> gen_tac >>
+    srw_tac [][Once aeq_cases, SimpL ``$==>``] >>
+    metis_tac [aeq_rules]
   ]);
 
 open relationTheory
@@ -393,22 +404,26 @@ val aeq_equiv = store_thm(
 
 val alt_aeq_lam = store_thm(
   "alt_aeq_lam",
-  ``(!z. ~(z IN allatoms t1) /\ ~(z IN allatoms t2) /\ ~(z = u) /\ ~(z = v) ==>
-         aeq (ptpm [(u,z)] t1) (ptpm [(v,z)] t2)) ==>
-    aeq (lam u t1) (lam v t2)``,
-  STRIP_TAC THEN MATCH_MP_TAC aeq_lam THEN
-  `?z. ~(z IN allatoms t1) /\ ~(z IN allatoms t2) /\ ~(z = u) /\ ~(z = v)`
-      by (Q.SPEC_THEN `allatoms t1 UNION allatoms t2 UNION {u;v}`
-                      MP_TAC NEW_def THEN SRW_TAC [][] THEN METIS_TAC []) THEN
+  ``(∀z. z ∉ allatomsl t1 ∧ z ∉ allatomsl t2 ∧ z ≠ u ∧ z ≠ v ⇒
+         aeql (ptpml [(u,z)] t1) (ptpml [(v,z)] t2)) ∧
+    aeql u1 u2 ⇒
+    aeq (lam u bv t1 u1) (lam v bv t2 u2)``,
+  strip_tac >> MATCH_MP_TAC aeq_lam >>
+  Q_TAC (NEW_TAC "z")
+     `allatomsl t1 ∪ allatomsl t2 ∪ {u;v}` >>
   METIS_TAC []);
 
-val fresh_swap = store_thm(
+(* val fresh_swap = store_thm(
   "fresh_swap",
-  ``!x y. ~(x IN fv t) /\ ~(y IN fv t) ==> aeq t (ptpm [(x, y)] t)``,
-  SIMP_TAC (srw_ss()) [] THEN Induct_on `t` THEN
-  ASM_SIMP_TAC (srw_ss()) [aeq_rules] THEN
-  MAP_EVERY Q.X_GEN_TAC [`s`,`x`,`y`] THEN
+  ``(∀t:(α,β,γ)pregterm x y. x ∉ fv t ∧ y ∉ fv t ⇒ aeq t (ptpm [(x, y)] t)) ∧
+    (∀l:(α,β,γ)pregterm list x y.
+       x ∉ fvl l ∧ y ∉ fvl l ⇒ aeql l (ptpml [(x,y)] l))``,
+  ho_match_mp_tac oldind >>
+  ASM_SIMP_TAC (srw_ss()) [aeq_rules, ptpm_nil0, ptpm_def] THEN
+  MAP_EVERY Q.X_GEN_TAC [`bt`, `ut`] >> strip_tac >>
+  MAP_EVERY Q.X_GEN_TAC [`b`, `s`,`x`,`y`] THEN
   STRIP_TAC THEN SRW_TAC [][] THEN
+  srw_tac [boolSimps.ETA_ss][ptpml_listpm, is_perm_sing_inv]
   MATCH_MP_TAC alt_aeq_lam THEN REPEAT STRIP_TAC THEN
   `~(z IN fv t)` by METIS_TAC [SUBSET_DEF, fv_SUBSET_allatoms]
   THENL [
