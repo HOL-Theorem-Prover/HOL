@@ -1536,6 +1536,31 @@ fun ANTE_CONJ_CONV tm =
 
 
 (* ---------------------------------------------------------------------*)
+(* AND_IMP_INTRO_CONV: convert a series of implications to an           *)
+(*                     implication with conjuncts in its antecedent     *)
+(*                                                                      *)
+(* AND_IMP_INTRO_CONV "a1 ==> a2 ==> c"                                 *)
+(*      ----> |- (a1 ==> (a2 ==> c)) = (a1 /\ a2 ==> c)                 *)
+(*                                                                      *)
+(* Added: Thomas Tuerk, 2nd August 2010                                 *)
+(* ---------------------------------------------------------------------*)
+fun AND_IMP_INTRO_CONV tm =
+   let val {ant = ant1,conseq = conseq1} = dest_imp tm
+       val {ant = ant2,conseq = conseq2} = dest_imp conseq1
+       val ant_conj = mk_conj {conj1=ant1,conj2 = ant2};
+       val ant_thm = ASSUME ant_conj
+       val tm2 = mk_imp {ant = ant_conj,  conseq = conseq2};
+       val imp1 = MP (ASSUME tm2) (CONJ (ASSUME ant1) (ASSUME ant2))
+       and imp2 = LIST_MP [CONJUNCT1 ant_thm,CONJUNCT2 ant_thm] (ASSUME tm)
+   in
+     IMP_ANTISYM_RULE
+       (DISCH_ALL (DISCH ant_conj imp2))
+       (DISCH_ALL (DISCH ant1 (DISCH ant2 imp1)))
+   end
+   handle HOL_ERR _ => raise ERR "AND_IMP_INTRO_CONV" "";
+
+
+(* ---------------------------------------------------------------------*)
 (* SWAP_EXISTS_CONV: swap the order of existentially quantified vars.   *)
 (*                                                                      *)
 (* SWAP_EXISTS_CONV "?x y.t[x,y]" ---> |- ?x y.t[x,y] = ?y x.t[x,y]     *)

@@ -80,6 +80,7 @@ sig
    val SELECT_CONV           : conv
    val CONTRAPOS_CONV        : conv
    val ANTE_CONJ_CONV        : conv
+   val AND_IMP_INTRO_CONV    : conv
    val SWAP_EXISTS_CONV      : conv
    val SWAP_FORALL_CONV      : conv
    val RESORT_FORALL_CONV    : (term list -> term list) -> conv
