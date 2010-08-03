@@ -1,5 +1,8 @@
 INCLUDES=..
 
+linux_LIBS = $(POLY_LDFLAGS_STATIC) 
+macosx_LIBS = $(POLY_LDFLAGS)
+
 EXTRA_CLEANS = holfoot.o holfoot holfoot-web.o holfoot-web
 
 all: holfoot holfoot-web holfoot-full
@@ -11,12 +14,12 @@ holfoot.state: ../holfootLib.uo ../holfootLib.ui ../holfootTheory.ui ../Assemble
 	hol < build-state.hol
 
 holfoot: holfoot.o 
-	cc -o $@ $< $(POLY_LDFLAGS_STATIC)
+	cc -o $@ $< $($(OS)_LIBS)
 
 holfoot-full: holfoot-full.o 
-	cc -o $@ $< $(POLY_LDFLAGS_STATIC)
+	cc -o $@ $< $($(OS)_LIBS)
 
 holfoot-web: holfoot-web.o
-	cc -o $@ $< $(POLY_LDFLAGS_STATIC)
+	cc -o $@ $< $($(OS)_LIBS)
 
 force-tools: holfoot holfoot-web
