@@ -328,11 +328,16 @@ local
         (a = b) = EVERY (\i. a ' i = b ' i) (GENLIST I (dimindex (:'a)))`,
     SRW_TAC [fcpLib.FCP_ss] [rich_listTheory.EVERY_GENLIST])
 
+  val FCP_EQ_EVERY =
+        REWRITE_RULE [GSYM rich_listTheory.COUNT_LIST_GENLIST,
+                      rich_listTheory.COUNT_LIST_AUX] FCP_EQ_EVERY
+
   val cmp = reduceLib.num_compset ()
 
   val _ = computeLib.add_thms
-            [combinTheory.I_THM, listTheory.EVERY_DEF,
-             rich_listTheory.GENLIST_compute, rich_listTheory.SNOC] cmp
+            [listTheory.EVERY_DEF,
+             Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV
+               rich_listTheory.COUNT_LIST_AUX_def] cmp
 
   val _ = computeLib.add_conv
             (``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV) cmp
@@ -607,6 +612,7 @@ local
   val dummy_thm = SPEC_ALL combinTheory.I_THM
 
   fun INDEX_CONV conv = TOP_DEPTH_CONV (FCP_INDEX_CONV conv)
+                        THENC Conv.TRY_CONV BIT_TAUT_CONV
 
   fun TRY_INDEX_CONV conv tm =
         INDEX_CONV conv tm
@@ -648,9 +654,8 @@ local
                 val li = wordsSyntax.mk_index (l, ii)
                 val ri = wordsSyntax.mk_index (r, ii)
                 val eq_tm = boolSyntax.mk_eq (li, ri)
-                val idx_thm = (INDEX_CONV conv
-                               THENC Conv.TRY_CONV BIT_TAUT_CONV) eq_tm
-                               handle Conv.UNCHANGED => dummy_thm
+                val idx_thm = INDEX_CONV conv eq_tm
+                              handle Conv.UNCHANGED => dummy_thm
               in
                 if rhsc idx_thm = boolSyntax.F then
                   Lib.FAIL (ii, idx_thm)
