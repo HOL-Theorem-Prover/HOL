@@ -1263,6 +1263,12 @@ val FRANGE_FMAP = store_thm(
   PROVE_TAC []);
 val _ = export_rewrites ["FRANGE_FMAP"]
 
+val FLOOKUP_FUN_FMAP = Q.store_thm(
+  "FLOOKUP_FUN_FMAP",
+  `FINITE P ==>
+   (FLOOKUP (FUN_FMAP f P) k = if k IN P then SOME (f k) else NONE)`,
+  SRW_TAC [][FUN_FMAP_DEF,FLOOKUP_DEF]);
+
 (*---------------------------------------------------------------------------
          Composition of finite map and function
  ---------------------------------------------------------------------------*)
