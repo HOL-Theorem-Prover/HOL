@@ -1518,22 +1518,7 @@ fun CONTRAPOS_CONV tm =
 (*                                                                      *)
 (* Added: TFM 88.03.31                                                  *)
 (* ---------------------------------------------------------------------*)
-
-fun ANTE_CONJ_CONV tm =
-   let val {ant,conseq} = dest_imp tm
-       val {conj1,conj2} = dest_conj ant
-       val ant_thm = ASSUME ant
-       val imp1 = MP (ASSUME tm) (CONJ (ASSUME conj1) (ASSUME conj2))
-       and imp2 = LIST_MP [CONJUNCT1 ant_thm,CONJUNCT2 ant_thm]
-                       (ASSUME (mk_imp{ant=conj1,
-                         conseq=mk_imp{ant=conj2, conseq=conseq}}))
-   in
-     IMP_ANTISYM_RULE
-       (DISCH_ALL (DISCH conj1 (DISCH conj2 imp1)))
-       (DISCH_ALL (DISCH ant imp2))
-   end
-   handle HOL_ERR _ => raise ERR "ANTE_CONJ_CONV" "";
-
+val ANTE_CONJ_CONV = REWR_CONV (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV) AND_IMP_INTRO);
 
 (* ---------------------------------------------------------------------*)
 (* AND_IMP_INTRO_CONV: convert a series of implications to an           *)
@@ -1544,21 +1529,7 @@ fun ANTE_CONJ_CONV tm =
 (*                                                                      *)
 (* Added: Thomas Tuerk, 2nd August 2010                                 *)
 (* ---------------------------------------------------------------------*)
-fun AND_IMP_INTRO_CONV tm =
-   let val {ant = ant1,conseq = conseq1} = dest_imp tm
-       val {ant = ant2,conseq = conseq2} = dest_imp conseq1
-       val ant_conj = mk_conj {conj1=ant1,conj2 = ant2};
-       val ant_thm = ASSUME ant_conj
-       val tm2 = mk_imp {ant = ant_conj,  conseq = conseq2};
-       val imp1 = MP (ASSUME tm2) (CONJ (ASSUME ant1) (ASSUME ant2))
-       and imp2 = LIST_MP [CONJUNCT1 ant_thm,CONJUNCT2 ant_thm] (ASSUME tm)
-   in
-     IMP_ANTISYM_RULE
-       (DISCH_ALL (DISCH ant_conj imp2))
-       (DISCH_ALL (DISCH ant1 (DISCH ant2 imp1)))
-   end
-   handle HOL_ERR _ => raise ERR "AND_IMP_INTRO_CONV" "";
-
+val AND_IMP_INTRO_CONV = REWR_CONV AND_IMP_INTRO;
 
 (* ---------------------------------------------------------------------*)
 (* SWAP_EXISTS_CONV: swap the order of existentially quantified vars.   *)
