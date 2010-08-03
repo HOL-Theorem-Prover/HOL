@@ -731,6 +731,31 @@ val RTC_lifts_monotonicities = store_thm(
   STRIP_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
   METIS_TAC [RTC_RULES]);
 
+val RTC_lifts_reflexive_transitive_relations = Q.store_thm(
+  "RTC_lifts_reflexive_transitive_relations",
+  `(!x y. R x y ==> Q (f x) (f y)) /\ reflexive Q /\ transitive Q ==>
+   !x y. R^* x y ==> Q (f x) (f y)`,
+  STRIP_TAC THEN
+  HO_MATCH_MP_TAC RTC_INDUCT THEN
+  FULL_SIMP_TAC bool_ss [reflexive_def,transitive_def] THEN
+  METIS_TAC []);
+
+val RTC_lifts_equalities = Q.store_thm(
+  "RTC_lifts_equalities",
+  `(!x y. R x y ==> (f x = f y)) ==> !x y. R^* x y ==> (f x = f y)`,
+  STRIP_TAC THEN
+  HO_MATCH_MP_TAC RTC_lifts_reflexive_transitive_relations THEN
+  ASM_SIMP_TAC bool_ss [reflexive_def,transitive_def]);
+
+val RTC_lifts_invariants = Q.store_thm(
+  "RTC_lifts_invariants",
+  `(!x y. P x /\ R x y ==> P y) ==> !x y. P x /\ R^* x y ==> P y`,
+  STRIP_TAC THEN
+  REWRITE_TAC [Once CONJ_COMM] THEN
+  REWRITE_TAC [GSYM AND_IMP_INTRO] THEN
+  HO_MATCH_MP_TAC RTC_INDUCT THEN
+  METIS_TAC []);
+
 (*---------------------------------------------------------------------------*
  * Wellfounded relations. Wellfoundedness: Every non-empty set has an        *
  * R-minimal element. Applications of wellfoundedness to specific types      *
