@@ -724,6 +724,12 @@ val RTC_EQC = store_thm(
   ``!x y. RTC R x y ==> EQC R x y``,
   HO_MATCH_MP_TAC RTC_INDUCT THEN METIS_TAC [EQC_R, EQC_REFL, EQC_TRANS]);
 
+val RTC_lifts_monotonicities = store_thm(
+  "RTC_lifts_monotonicities",
+  ``(!x y. R x y ==> R (f x) (f y)) ==>
+    !x y. R^* x y ==> R^* (f x) (f y)``,
+  STRIP_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
+  METIS_TAC [RTC_RULES]);
 
 (*---------------------------------------------------------------------------*
  * Wellfounded relations. Wellfoundedness: Every non-empty set has an        *
