@@ -662,15 +662,6 @@ val SPLITP = new_recursive_definition
                   (if P x then ([], CONS x l) else
                     ((CONS x (FST(SPLITP P l))), (SND (SPLITP P l)))))`--};
 
-(* tail recursive version -- for evaluation *)
-val SPLITP_AUX_def = TotalDefn.Define`
-  (SPLITP_AUX acc P [] = (acc,[])) /\
-  (SPLITP_AUX acc P (h::t) =
-    if P h then
-      (acc, h::t)
-    else
-      SPLITP_AUX (acc ++ [h]) P t)`;
-
 val PREFIX_DEF = new_definition("PREFIX_DEF",
     (--`PREFIX P (l:'a list) = FST (SPLITP ($~ o P) l)`--));
 
@@ -713,6 +704,7 @@ val SUM = store_thm("SUM",
 (* Spec:                                                        *)
 (*  GENLIST f n = [f 0;...; f(n-1)]                             *)
 (*  REPLICATE n x = [x;....;x] (n repeate elements)             *)
+(*  COUNT_LIST n = [0;....;n-1]                                 *)
 (*--------------------------------------------------------------*)
 
 val GENLIST = new_recursive_definition
@@ -727,6 +719,31 @@ val REPLICATE = new_recursive_definition
        def = --`(REPLICATE 0 (x:'a) = []) /\
                 (REPLICATE (SUC n) x = CONS x (REPLICATE n x))`--};
 
+val COUNT_LIST = Lib.with_flag (computeLib.auto_import_definitions, false)
+  TotalDefn.Define`
+   (COUNT_LIST 0 = []) /\
+   (COUNT_LIST (SUC n) = 0::MAP SUC (COUNT_LIST n))`;
+
+
+
+
+(* Some tail recursive versions -- for evaluation *)
+
+val SPLITP_AUX_def = TotalDefn.Define`
+  (SPLITP_AUX acc P [] = (acc,[])) /\
+  (SPLITP_AUX acc P (h::t) =
+    if P h then
+      (acc, h::t)
+    else
+      SPLITP_AUX (acc ++ [h]) P t)`;
+
+val GENLIST_AUX_def = TotalDefn.Define`
+  (GENLIST_AUX f 0 l = l) /\
+  (GENLIST_AUX f (SUC n) l = GENLIST_AUX f n ((f n)::l))`;
+
+val COUNT_LIST_AUX_def = TotalDefn.Define`
+  (COUNT_LIST_AUX 0 l = l) /\
+  (COUNT_LIST_AUX (SUC n) l = COUNT_LIST_AUX n (n::l))`;
 
 (* --------------------------------------------------------------------------
  * Theorems from the basic list theory.
@@ -3240,10 +3257,6 @@ val GENLIST_CONS = store_thm(
    A list of numbers
  ---------------------------------------------------------------------------*)
 
-val COUNT_LIST = TotalDefn.Define `
-   (COUNT_LIST 0 = []) /\
-   (COUNT_LIST (SUC n) = 0::MAP SUC (COUNT_LIST n))`
-
 val COUNT_LIST_compute = save_thm ("COUNT_LIST_compute",
     CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV COUNT_LIST);
 
@@ -3502,6 +3515,23 @@ Cases_on `p` THEN ASM_SIMP_TAC arith_ss [EL, HD, TL]);
 (* Add evaluation theorems to computeLib.the_compset                         *)
 (*---------------------------------------------------------------------------*)
 
+val GENLIST_AUX_lem = Q.prove(
+  `!n l1 l2. GENLIST_AUX f n l1 ++ l2 = GENLIST_AUX f n (l1 ++ l2)`,
+  Induct THEN SRW_TAC [] [GENLIST_AUX_def]);
+
+val GENLIST_AUX = Q.store_thm("GENLIST_AUX",
+  `!n. GENLIST f n = GENLIST_AUX f n []`,
+  Induct THEN SRW_TAC [] [GENLIST_AUX_def, GENLIST_AUX_lem, GENLIST]);
+
+val COUNT_LIST_AUX_lem = Q.prove(
+  `!n l1 l2. COUNT_LIST_AUX n l1 ++ l2 = COUNT_LIST_AUX n (l1 ++ l2)`,
+  Induct THEN SRW_TAC [] [COUNT_LIST_AUX_def]);
+
+val COUNT_LIST_AUX = Q.store_thm("COUNT_LIST_AUX",
+  `!n. COUNT_LIST n = COUNT_LIST_AUX n []`,
+  Induct THEN SRW_TAC [] [COUNT_LIST_GENLIST, GENLIST, COUNT_LIST_AUX_def]
+  THEN FULL_SIMP_TAC (srw_ss()) [COUNT_LIST_GENLIST, COUNT_LIST_AUX_lem]);
+
 val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
 val ELL_compute = save_thm("ELL_compute", SUC_RULE ELL);
@@ -3533,7 +3563,8 @@ val _ = computeLib.add_persistent_funs
   ("BUTLASTN_compute", BUTLASTN_compute),
   ("ELL_compute", ELL_compute),
   ("FIRSTN_compute", FIRSTN_compute),
-  ("GENLIST_compute", GENLIST_compute),
+  ("GENLIST_AUX", GENLIST_AUX),
+  ("COUNT_LIST_AUX", COUNT_LIST_AUX),
   ("IS_SUBLIST", IS_SUBLIST),
   ("IS_SUFFIX_compute", IS_SUFFIX_compute),
   ("LASTN_compute", LASTN_compute),
