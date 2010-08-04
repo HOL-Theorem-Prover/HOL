@@ -115,6 +115,15 @@ val ptpm_sing_inv = Store_Thm(
   ``ptpm [h] (ptpm [h] t) = t``,
   srw_tac [][is_perm_sing_inv]);
 
+val ptpml_sing_inv = prove(
+  ``ptpml [h] (ptpml [h] l) = l``,
+  srw_tac [boolSimps.ETA_ss][ptpml_listpm, is_perm_sing_inv, is_perm_nil]);
+
+val ptpml_id_front = prove(
+  ``ptpml ((x,x)::t) l = ptpml t l``,
+  srw_tac [boolSimps.ETA_ss][ptpml_listpm, is_perm_id]);
+
+
 val ptpm_fv = Store_Thm(
   "ptpm_fv",
   ``(∀t:(α,β,γ)pregterm. fv (ptpm p t) = ssetpm p (fv t)) ∧
@@ -286,6 +295,10 @@ val ptpm_flip_args = store_thm(
   ``!x y t. ptpm ((y,x)::t) M = ptpm ((x,y)::t) M``,
   srw_tac [][is_perm_flip_args]);
 
+val ptpml_flip_args = prove(
+  ``ptpml ((y,x)::t) l = ptpml ((x,y)::t) l``,
+  srw_tac [][is_perm_flip_args, ptpml_listpm]);
+
 val aeq_sym = store_thm(
   "aeq_sym",
   ``(∀t:(α,β,γ)pregterm u. aeq t u ==> aeq u t) ∧
@@ -413,38 +426,42 @@ val alt_aeq_lam = store_thm(
      `allatomsl t1 ∪ allatomsl t2 ∪ {u;v}` >>
   METIS_TAC []);
 
-(* val fresh_swap = store_thm(
+val aeql_ptpm_eqn' = REWRITE_RULE [GSYM ptpml_listpm] aeql_ptpm_eqn
+
+val fresh_swap = store_thm(
   "fresh_swap",
   ``(∀t:(α,β,γ)pregterm x y. x ∉ fv t ∧ y ∉ fv t ⇒ aeq t (ptpm [(x, y)] t)) ∧
     (∀l:(α,β,γ)pregterm list x y.
        x ∉ fvl l ∧ y ∉ fvl l ⇒ aeql l (ptpml [(x,y)] l))``,
   ho_match_mp_tac oldind >>
-  ASM_SIMP_TAC (srw_ss()) [aeq_rules, ptpm_nil0, ptpm_def] THEN
-  MAP_EVERY Q.X_GEN_TAC [`bt`, `ut`] >> strip_tac >>
-  MAP_EVERY Q.X_GEN_TAC [`b`, `s`,`x`,`y`] THEN
-  STRIP_TAC THEN SRW_TAC [][] THEN
-  srw_tac [boolSimps.ETA_ss][ptpml_listpm, is_perm_sing_inv]
-  MATCH_MP_TAC alt_aeq_lam THEN REPEAT STRIP_TAC THEN
-  `~(z IN fv t)` by METIS_TAC [SUBSET_DEF, fv_SUBSET_allatoms]
-  THENL [
+  asm_simp_tac (srw_ss()) [aeq_rules, ptpm_nil0, ptpm_def] >>
+  map_every qx_gen_tac [`bt`, `ut`] >> strip_tac >>
+  map_every qx_gen_tac [`b`, `s`,`x`,`y`] >>
+  strip_tac >> srw_tac [][] >>
+  match_mp_tac alt_aeq_lam >> rpt strip_tac >>
+  srw_tac [][ptpml_id_front, ptpm_nil0] >>
+  `z ∉ fvl bt` by METIS_TAC [SUBSET_DEF, fv_SUBSET_allatoms] >| [
     Cases_on `s = x` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
-      ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
-      SRW_TAC [][swapstr_def, aeq_ptpm_eqn],
+      ONCE_REWRITE_TAC [GSYM ptpml_sing_to_back] THEN
+      SRW_TAC [][swapstr_def, aeql_ptpm_eqn', ptpml_sing_inv,
+                 ptpml_id_front, ptpm_nil0],
       ALL_TAC
     ] THEN Cases_on `s = y` THENL [
       FULL_SIMP_TAC (srw_ss()) [] THEN
-      ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
-      SRW_TAC [][swapstr_def, ptpm_flip_args, aeq_ptpm_eqn],
-      SRW_TAC [][swapstr_def, aeq_ptpm_eqn]
+      ONCE_REWRITE_TAC [GSYM ptpml_sing_to_back] THEN
+      SRW_TAC [][swapstr_def, ptpml_flip_args, aeql_ptpm_eqn',
+                 ptpml_sing_inv],
+      SRW_TAC [][swapstr_def, aeql_ptpm_eqn', ptpml_sing_inv]
     ],
-    Cases_on `s = x` THEN1 SRW_TAC [][] THEN
-    ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
-    SRW_TAC [][swapstr_def, ptpm_flip_args, aeq_ptpm_eqn],
-    Cases_on `s = y` THEN1 SRW_TAC [][] THEN
-    ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
-    SRW_TAC [][swapstr_def, aeq_ptpm_eqn]
+    Cases_on `s = x` THEN1 SRW_TAC [][ptpml_id_front, ptpm_nil0] THEN
+    ONCE_REWRITE_TAC [GSYM ptpml_sing_to_back] THEN
+    SRW_TAC [][swapstr_def, ptpml_flip_args, aeql_ptpm_eqn', ptpml_sing_inv],
+    Cases_on `s = y` THEN1 SRW_TAC [][ptpml_id_front, ptpm_nil0] THEN
+    ONCE_REWRITE_TAC [GSYM ptpml_sing_to_back] THEN
+    SRW_TAC [][swapstr_def, aeql_ptpm_eqn', ptpml_sing_inv]
   ]);
 
+(*
 val lam_aeq_thm = store_thm(
   "lam_aeq_thm",
   ``aeq (lam u t1) (lam v t2) =
