@@ -5,6 +5,7 @@ open bossLib binderLib
 open basic_swapTheory nomsetTheory
 open pred_setTheory
 open BasicProvers
+open quotientLib
 
 open lcsymtacs
 
@@ -12,7 +13,6 @@ fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
 fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
 
 val _ = new_theory "generic_terms"
-(* could perform quotient now *)
 
 val _ = Hol_datatype `
   pregterm = var of string => 'v
@@ -461,58 +461,131 @@ val fresh_swap = store_thm(
     SRW_TAC [][swapstr_def, aeql_ptpm_eqn', ptpml_sing_inv]
   ]);
 
-(*
 val lam_aeq_thm = store_thm(
   "lam_aeq_thm",
-  ``aeq (lam u t1) (lam v t2) =
-       (u = v) /\ aeq t1 t2 \/
-       ~(u = v) /\ ~(u IN fv t2) /\ aeq t1 (ptpm [(u,v)] t2)``,
+  ``aeq (lam v1 bv1 t1 u1) (lam v2 bv2 t2 u2) =
+       (v1 = v2) ∧ (bv1 = bv2) ∧ aeql t1 t2 ∧ aeql u1 u2 ∨
+       v1 ≠ v2 ∧ (bv1 = bv2) ∧ v1 ∉ fvl t2 ∧ aeql t1 (ptpml [(v1,v2)] t2) ∧
+       aeql u1 u2``,
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, DISJ_IMP_THM] THEN REPEAT CONJ_TAC THENL [
-    SRW_TAC [][aeq_lam_inversion] THEN
-    `~(z IN fv t1) /\ ~(z IN fv t2)`
-       by METIS_TAC [SUBSET_DEF, fv_SUBSET_allatoms] THEN
-    Cases_on `u = v` THEN1 FULL_SIMP_TAC (srw_ss()) [aeq_ptpm_eqn] THEN
-    `~(u IN fv t2)`
-        by (STRIP_TAC THEN
-            `u IN fv (ptpm [(v,z)] t2)`
-               by SRW_TAC [][ptpm_fv, perm_IN, swapstr_def] THEN
-            `u IN fv (ptpm [(u,z)] t1)` by METIS_TAC [aeq_fv] THEN
-            FULL_SIMP_TAC (srw_ss()) [ptpm_fv, perm_IN, swapstr_def]) THEN
-    FULL_SIMP_TAC (srw_ss()) [aeq_ptpm_eqn] THEN
-    Q.PAT_ASSUM `aeq X Y` MP_TAC THEN
-    ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
-    SRW_TAC [][swapstr_def] THEN
-    MATCH_MP_TAC aeq_trans THEN
-    Q.EXISTS_TAC `ptpm [(u,v)] (ptpm [(u,z)] t2)`  THEN
-    FULL_SIMP_TAC (srw_ss()) [ptpm_flip_args, aeq_ptpm_eqn, fresh_swap],
+    srw_tac [][aeq_lam_inversion] >>
+    `z ∉ fvl t1 ∧ z ∉ fvl t2`
+       by METIS_TAC [SUBSET_DEF, fv_SUBSET_allatoms] >>
+    Cases_on `v1 = v2` >- fsrw_tac [][aeql_ptpm_eqn', ptpml_sing_inv] THEN
+    `v1 ∉ fvl t2`
+        by (strip_tac >>
+            `v1 ∈ fvl (ptpml [(v2,z)] t2)`
+               by SRW_TAC [][ptpm_fv, perm_IN, ptpml_listpm] THEN
+            `v1 ∈ fvl (ptpml [(v1,z)] t1)` by metis_tac [aeq_fv] THEN
+            fsrw_tac [][ptpm_fv, perm_IN, ptpml_listpm]) >>
+    fsrw_tac [][aeql_ptpm_eqn'] >>
+    Q.PAT_ASSUM `aeql X (ptpml PI Y)` MP_TAC THEN
+    SRW_TAC [][swapstr_def, Once ptpml_sing_to_back'] THEN
+    MATCH_MP_TAC (MP_CANON (CONJUNCT2 aeq_trans)) THEN
+    Q.EXISTS_TAC `ptpml [(v1,v2)] (ptpml [(v1,z)] t2)`  THEN
+    FULL_SIMP_TAC (srw_ss()) [ptpml_flip_args, aeql_ptpm_eqn', fresh_swap,
+                              ptpml_sing_inv],
 
-    SRW_TAC [][] THEN MATCH_MP_TAC alt_aeq_lam THEN SRW_TAC [][aeq_ptpm_eqn],
+    srw_tac [][] >> match_mp_tac alt_aeq_lam >>
+    srw_tac [][aeql_ptpm_eqn', ptpml_sing_inv],
 
-    SRW_TAC [][] THEN MATCH_MP_TAC alt_aeq_lam THEN
-    SRW_TAC [][aeq_ptpm_eqn] THEN
-    `~(z IN fv t2)` by METIS_TAC [SUBSET_DEF, fv_SUBSET_allatoms] THEN
-    ONCE_REWRITE_TAC [GSYM ptpm_sing_to_back] THEN
-    SRW_TAC [][swapstr_def, ptpm_flip_args] THEN
-    MATCH_MP_TAC aeq_trans THEN Q.EXISTS_TAC `ptpm [(u,v)] t2` THEN
-    SRW_TAC [][aeq_ptpm_eqn, fresh_swap]
+    srw_tac [][] >> match_mp_tac alt_aeq_lam >>
+    srw_tac [][aeql_ptpm_eqn'] >>
+    `z ∉ fvl t2` by metis_tac [SUBSET_DEF, fv_SUBSET_allatoms] >>
+    SRW_TAC [][swapstr_def, ptpm_flip_args, Once ptpml_sing_to_back'] >>
+    match_mp_tac (MP_CANON (CONJUNCT2 aeq_trans)) >>
+    qexists_tac `ptpml [(v1,v2)] t2` >>
+    srw_tac [][aeql_ptpm_eqn', fresh_swap, ptpml_sing_inv, ptpml_flip_args]
   ]);
+
+val aeql_LIST_REL = prove(
+  ``aeql l1 l2 ⇔ LIST_REL aeq l1 l2``,
+  map_every Q.ID_SPEC_TAC [`l2`, `l1`] >> Induct >>
+  srw_tac [][Once aeq_cases] >> Cases_on `l2` >>
+  srw_tac [][quotient_listTheory.LIST_REL_def]);
 
 val lam_respects_aeq = store_thm(
   "lam_respects_aeq",
-  ``!v t1 t2. aeq t1 t2 ==> aeq (lam v t1) (lam v t2)``,
-  SRW_TAC [][] THEN MATCH_MP_TAC aeq_lam THEN SRW_TAC [][aeq_ptpm_eqn] THEN
-  Q.SPEC_THEN `v INSERT allatoms t1 UNION allatoms t2` MP_TAC NEW_def THEN
-  SRW_TAC [][] THEN METIS_TAC []);
+  ``!v bv t1 t2 u1 u2.
+      aeql t1 t2 ∧ aeql u1 u2 ==> aeq (lam v bv t1 u1) (lam v bv t2 u2)``,
+  srw_tac [][] >> match_mp_tac aeq_lam >>
+  srw_tac [][aeql_ptpm_eqn', ptpml_sing_inv] >>
+  Q_TAC (NEW_TAC "z") `v INSERT allatomsl t1 ∪ allatomsl t2` >> metis_tac []);
 
 val app_respects_aeq = aeq_app
 
+val rmaeql = REWRITE_RULE [aeql_LIST_REL]
+
 val var_respects_aeq = store_thm(
   "var_respects_aeq",
-  ``!s1 s2. (s1 = s2) ==> aeq (var s1) (var s2)``,
+  ``!s1 s2 vv1 vv2. (s1 = s2) ∧ (vv1 = vv2) ==> aeq (var s1 vv1) (var s2 vv2)``,
   SRW_TAC [][]);
 
-val _ = export_theory ();
+(* ----------------------------------------------------------------------
+    perform quotient!
+   ---------------------------------------------------------------------- *)
 
+val app_eq_respects = prove(
+  ``∀x1:β y1 x2:(α,β,γ)pregterm list y2.
+      (x1 = y1) ∧ (x2 = y2) ⇒ aeq (app x1 x2) (app y1 y2)``,
+  srw_tac [][]);
+
+fun mk_def(s,t) =
+    {def_name = s ^ "_def", fixity = Prefix, fname = s, func = t};
+
+val ptpm_fv' =
+    ptpm_fv |> CONJUNCT1 |> REWRITE_RULE [EXTENSION]
+            |> CONV_RULE
+                 (STRIP_QUANT_CONV (RAND_CONV (SIMP_CONV (srw_ss()) [perm_IN])))
+
+val fvl_MAP = prove(
+  ``fvl l = BIGUNION (set (MAP fv l))``,
+  Induct_on `l` >> srw_tac [][]);
+val rmfvl = REWRITE_RULE [fvl_MAP]
+
+val ptpml_MAP = prove(
+  ``ptpml p l = MAP (ptpm p) l``,
+  Induct_on `l` >> srw_tac [][ptpm_def]);
+val rmptpml = REWRITE_RULE [ptpml_MAP]
+
+fun front n l = List.take (l, n)
+
+(*
+val [GFV_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct, gterm_11,
+     GLAM_eq_thm, FRESH_swap0,
+     (* tpm_is_perm,*) FINITE_GFV,
+     gtpm_sing_inv, gtpm_NIL, gtpm_inverse, gtpm_flip_args, gtpm_id_front] =
+    quotient.define_quotient_types_full
+    {
+     types = [{name = "gterm", equiv = aeq_equiv}],
+     defs = map mk_def
+       [("GLAM", ``lam:string -> α -> (α,β,γ)pregterm list ->
+                       (α,β,γ)pregterm list -> (α,β,γ)pregterm``),
+        ("GAPP", ``app:β -> (α,β,γ)pregterm list -> (α,β,γ)pregterm``),
+        ("GVAR", ``var:string -> γ -> (α,β,γ)pregterm``),
+        ("GFV", ``fv : (α,β,γ)pregterm -> string set``),
+        ("gtpm", ``ptpm : (string # string) list -> (α,β,γ)pregterm ->
+                          (α,β,γ)pregterm``)],
+     tyop_equivs = [],
+     tyop_quotients = [],
+     tyop_simps = [],
+     respects = [rmaeql lam_respects_aeq, rmaeql app_respects_aeq,
+                 app_eq_respects,
+                 var_respects_aeq, CONJUNCT1 aeq_fv, CONJUNCT2 aeq_fv,
+                 aeq_ptpm_lemma |> CONJUNCT1
+                                |> SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM]
+                 ],
+     poly_preserves = [],
+     poly_respects = [],
+     old_thms = [fv_def |> CONJUNCTS |> front 3 |> LIST_CONJ |> rmfvl,
+                 ptpm_fv', pind,
+                 ptpm_def |> CONJUNCTS |> front 3 |> LIST_CONJ |> rmptpml,
+                 aeq_distinct, rmaeql aeq_ptm_11,
+                 lam_aeq_thm, CONJUNCT1 fresh_swap,
+                 finite_fv,
+                 ptpm_sing_inv, ptpm_NIL, CONJUNCT1 ptpm_INVERSE,
+                 ptpm_flip_args,
+                 ptpm_id_front]}
 
 
 (* show connection of with nomset concepts *)
