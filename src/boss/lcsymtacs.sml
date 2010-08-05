@@ -20,6 +20,7 @@ struct
   val match_mp_tac : thm_tactic = MATCH_MP_TAC
   val mp_tac = MP_TAC
 
+  val pop_assum : thm_tactic -> tactic = POP_ASSUM
   val first_assum : thm_tactic -> tactic = FIRST_ASSUM
   val first_x_assum : thm_tactic -> tactic = FIRST_X_ASSUM
   val disch_then = DISCH_THEN
@@ -37,11 +38,7 @@ struct
   val qmatch_assum_abbrev_tac : term quotation -> tactic = Q.MATCH_ASSUM_ABBREV_TAC
   val qmatch_assum_rename_tac : term quotation -> string list -> tactic = Q.MATCH_ASSUM_RENAME_TAC
 
-  val pop_assum : thm_tactic -> tactic = POP_ASSUM
-  val first_assum : thm_tactic -> tactic = FIRST_ASSUM
-  val first_x_assum : thm_tactic -> tactic = FIRST_X_ASSUM
-
-  val unabbrev_all_tac : tactic = UNABBREV_ALL_TAC
+  val unabbrev_all_tac : tactic = markerLib.UNABBREV_ALL_TAC
 
   val res_tac : tactic = RES_TAC
   val imp_res_tac : thm_tactic = IMP_RES_TAC

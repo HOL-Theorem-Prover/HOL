@@ -19,6 +19,7 @@ sig
   val mp_tac : thm_tactic
   val match_mp_tac : thm_tactic
 
+  val pop_assum : thm_tactic -> tactic
   val first_assum : thm_tactic -> tactic
   val first_x_assum : thm_tactic -> tactic
   val disch_then : thm_tactic -> tactic
@@ -35,10 +36,6 @@ sig
   val qmatch_rename_tac : term quotation -> string list -> tactic
   val qmatch_assum_abbrev_tac : term quotation -> tactic
   val qmatch_assum_rename_tac : term quotation -> string list -> tactic
-
-  val pop_assum : thm_tactic -> tactic
-  val first_assum : thm_tactic -> tactic
-  val first_x_assum : thm_tactic -> tactic
 
   val unabbrev_all_tac : tactic
 
