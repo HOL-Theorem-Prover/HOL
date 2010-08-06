@@ -16,7 +16,7 @@ val keepers =
       "Lib.sig", "Globals.sig",
 
      (* parse *)
-     "Parse.sig",  "Hol_pp.sig", "Absyn.sig", "Preterm.sig",
+     "Parse.sig", "Hol_pp.sig", "Absyn.sig", "Preterm.sig",
 
      (* boolLib *)
      "Abbrev.sig", "DB.sig", "boolSyntax.sig", "boolTheory.sig",
@@ -26,10 +26,10 @@ val keepers =
      "TypeBase.sig", "TypeBasePure.sig", "DefnBase.sig", "Prim_rec.sig",
 
      (* marker *)
-     "markerLib.sig",  "markerSyntax.sig",
+     "markerLib.sig", "markerSyntax.sig",
 
      (* emit *)
-     "EmitML.sig",  "EmitTeX.sig",
+     "EmitML.sig", "EmitTeX.sig",
 
      (* jrh ind_defs *)
      "IndDefLib.sig", "InductiveDefinition.sig", "IndDefRules.sig",
@@ -75,7 +75,7 @@ val keepers =
      "llistTheory.sig",
 
      (* meson *)
-     "Canon_Port.sig","jrhTactics.sig","mesonLib.sig",
+     "Canon_Port.sig", "jrhTactics.sig", "mesonLib.sig",
 
      (* n-bit *)
      "fcpTheory.sig",
@@ -98,14 +98,14 @@ val keepers =
      (* num *)
      "numSyntax.sig",
      "numTheory.sig", "prim_recTheory.sig", "arithmeticTheory.sig",
-     "numeralTheory.sig", "whileTheory.sig", "numLib.sig", "numSimps.sig",
-     "reduceLib.sig", "dividesTheory.sig", "gcdTheory.sig",
+     "numeralTheory.sig", "whileTheory.sig", "Arith.sig", "numLib.sig",
+     "numSimps.sig", "reduceLib.sig", "dividesTheory.sig", "gcdTheory.sig",
 
      (* one *)
      "oneTheory.sig",
 
      (* option *)
-     "optionLib.sig","optionTheory.sig", "optionSyntax.sig",
+     "optionLib.sig", "optionTheory.sig", "optionSyntax.sig",
 
      (* pair *)
      "pairLib.sig", "pairTheory.sig", "pairSyntax.sig",
@@ -119,7 +119,7 @@ val keepers =
      (* probability *)
      "probLib.sig", "probTheory.sig",
      "boolean_sequenceTheory.sig",
-     "prob_algebraTheory.sig",     "prob_indepTheory.sig",
+     "prob_algebraTheory.sig", "prob_indepTheory.sig",
      "prob_canonTheory.sig",
      "prob_extraTheory.sig",
      "prob_pseudoTheory.sig",
@@ -130,7 +130,7 @@ val keepers =
      "Q.sig",
 
      (* rational numbers *)
-     "ratTheory.sig", "ratLib.sig","ratSyntax.sig","ratRingLib.sig",
+     "ratTheory.sig", "ratLib.sig", "ratSyntax.sig", "ratRingLib.sig",
 
      (* real numbers *)
      "limTheory.sig", "realTheory.sig",
@@ -140,13 +140,14 @@ val keepers =
      "hrealTheory.sig", "realLib.sig", "transcTheory.sig",
 
      (* refute *)
-     "AC.sig","Canon.sig",
+     "AC.sig", "Canon.sig",
 
      (* relation *)
      "relationTheory.sig",
 
      (* res_quan *)
-     "res_quanLib.sig", "res_quanTheory.sig",
+     "Cond_rewrite.sig", "res_quanLib.sig", "res_quanTools.sig",
+     "res_quanTheory.sig",
 
      (* Rings *)
 

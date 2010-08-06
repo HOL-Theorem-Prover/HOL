@@ -1,9 +1,1 @@
 help/Docfiles
-src/num/arith/help/entries
-src/num/reduce/help/entries
-src/list/help/entries
-src/pair/help/entries
-src/pred_set/help/entries
-src/string/help/entries
-src/taut/help/entries
-src/unwind/help/entries
