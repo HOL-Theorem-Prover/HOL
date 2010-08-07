@@ -27,7 +27,7 @@ sig
   val qx_gen_tac : term quotation -> tactic
   val qexists_tac : term quotation -> tactic
   val qsuff_tac : term quotation -> tactic
-  val qidspec_tac : term quotation -> tactic
+  val qid_spec_tac : term quotation -> tactic
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic
   val qpat_assum : term quotation -> thm_tactic -> tactic
@@ -36,6 +36,10 @@ sig
   val qmatch_rename_tac : term quotation -> string list -> tactic
   val qmatch_assum_abbrev_tac : term quotation -> tactic
   val qmatch_assum_rename_tac : term quotation -> string list -> tactic
+
+  val assume_tac : thm_tactic
+  val strip_assume_tac : thm_tactic
+  val spose_not_then : thm_tactic -> tactic
 
   val unabbrev_all_tac : tactic
 

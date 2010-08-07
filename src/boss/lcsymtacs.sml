@@ -28,7 +28,7 @@ struct
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC
   val qexists_tac : term quotation -> tactic = Q.EXISTS_TAC
   val qsuff_tac : term quotation -> tactic = Q_TAC SUFF_TAC
-  val qidspec_tac : term quotation -> tactic = Q.ID_SPEC_TAC
+  val qid_spec_tac : term quotation -> tactic = Q.ID_SPEC_TAC
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic = Q.SPEC_THEN
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic = Q.SPECL_THEN
   val qpat_assum : term quotation -> thm_tactic -> tactic = Q.PAT_ASSUM
@@ -37,6 +37,10 @@ struct
   val qmatch_rename_tac : term quotation -> string list -> tactic = Q.MATCH_RENAME_TAC
   val qmatch_assum_abbrev_tac : term quotation -> tactic = Q.MATCH_ASSUM_ABBREV_TAC
   val qmatch_assum_rename_tac : term quotation -> string list -> tactic = Q.MATCH_ASSUM_RENAME_TAC
+
+  val assume_tac : thm_tactic = ASSUME_TAC
+  val strip_assume_tac : thm_tactic = STRIP_ASSUME_TAC
+  val spose_not_then : thm_tactic -> tactic = SPOSE_NOT_THEN
 
   val unabbrev_all_tac : tactic = markerLib.UNABBREV_ALL_TAC
 
