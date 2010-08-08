@@ -1982,6 +1982,65 @@ val BAG_GEN_PROD_UNION = Q.store_thm
              BAG_GEN_PROD b1 1 * BAG_GEN_PROD b2 1)`,
  METIS_TAC [BAG_GEN_PROD_UNION_LEM, ARITH `1 * 1 = 1`]);
 
+(* BIG_BAG_UNION: the union of all bags in a finite set *)
+
+val BIG_BAG_UNION_def = Define`
+ BIG_BAG_UNION sob = \x. SIGMA (\b. b x) sob`;
+
+val BIG_BAG_UNION_EMPTY = Q.store_thm(
+"BIG_BAG_UNION_EMPTY",
+`BIG_BAG_UNION {} = {||}`,
+SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_THM,EMPTY_BAG,FUN_EQ_THM]);
+val _ = export_rewrites ["BIG_BAG_UNION_EMPTY"];
+
+val BIG_BAG_UNION_INSERT = Q.store_thm(
+"BIG_BAG_UNION_INSERT",
+`FINITE sob ==> (BIG_BAG_UNION (b INSERT sob) = b + BIG_BAG_UNION (sob DELETE b))`,
+SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_THM,BAG_UNION,FUN_EQ_THM]);
+
+val BIG_BAG_UNION_ITSET_BAG_UNION = Q.store_thm(
+"BIG_BAG_UNION_ITSET_BAG_UNION",
+`!sob. FINITE sob ==> (BIG_BAG_UNION sob = ITSET BAG_UNION sob {||})`,
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+SRW_TAC [][ITSET_EMPTY] THEN
+(COMMUTING_ITSET_RECURSES
+ |> Q.ISPECL_THEN [`BAG_UNION`,`e`,`sob`,`{||}`] MP_TAC) THEN
+FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
+SRW_TAC [][BIG_BAG_UNION_INSERT] THEN
+FIRST_X_ASSUM (MATCH_MP_TAC o GSYM) THEN
+METIS_TAC [COMM_BAG_UNION,ASSOC_BAG_UNION]);
+
+val FINITE_BIG_BAG_UNION = Q.store_thm(
+"FINITE_BIG_BAG_UNION",
+`!sob. FINITE sob /\ (!b. b IN sob ==> FINITE_BAG b) ==> FINITE_BAG
+(BIG_BAG_UNION sob)`,
+SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+    SRW_TAC [][BIG_BAG_UNION_INSERT] THEN
+      FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT]);
+
+val BAG_IN_BIG_BAG_UNION = Q.store_thm(
+"BAG_IN_BIG_BAG_UNION",
+`FINITE P ==> (e <: BIG_BAG_UNION P <=> ?b. e <: b /\ b IN P)`,
+SRW_TAC [][BIG_BAG_UNION_def,BAG_IN,BAG_INN,EQ_IMP_THM] THEN1 (
+  SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
+  (SUM_IMAGE_upper_bound
+   |> Q.GEN `f`
+   |> Q.ISPEC_THEN `\b:'a bag. b e` (Q.ISPEC_THEN `P` MP_TAC)) THEN
+  SRW_TAC [][] THEN
+  Q.EXISTS_TAC `0` THEN
+  SRW_TAC [ARITH_ss][] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `x` MP_TAC) THEN
+  SRW_TAC [ARITH_ss][] ) THEN
+FULL_SIMP_TAC (srw_ss()) [arithmeticTheory.GREATER_EQ] THEN
+`1 <= SIGMA (\b. b e) {b}` by SRW_TAC [][SUM_IMAGE_THM] THEN
+MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS THEN
+Q.EXISTS_TAC `SIGMA (\b.b e) {b}` THEN
+SRW_TAC [][] THEN
+MATCH_MP_TAC SUM_IMAGE_SUBSET_LE THEN
+SRW_TAC [][]);
+val _ = export_rewrites ["BAG_IN_BIG_BAG_UNION"];
+
 (* ----------------------------------------------------------------------
     Multiset ordering
 
