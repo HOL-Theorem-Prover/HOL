@@ -14,6 +14,7 @@ iab NOTIN ∉
 iab INTER ∩
 iab UNION ∪
 iab SUBSET ⊆
+iab PSUBSET ⊂
 set iskeyword+=>,/,\
 fu! HOLUnab ()
   s/∧/\/\\/eg
@@ -32,4 +33,5 @@ fu! HOLUnab ()
   s/∪/UNION/eg
   s/∩/INTER/eg
   s/⊆/SUBSET/eg
+  s/⊂/PSUBSET/eg
 endf
