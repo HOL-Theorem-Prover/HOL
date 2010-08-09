@@ -4172,6 +4172,16 @@ val PSUBSET_EQN = Q.store_thm
  `!s1 s2. s1 PSUBSET s2 = s1 SUBSET s2 /\ ~(s2 SUBSET s1)`,
  PROVE_TAC [PSUBSET_DEF,SET_EQ_SUBSET]);
 
+val PSUBSET_SUBSET_TRANS = Q.store_thm
+("PSUBSET_SUBSET_TRANS",
+ `!s t u. s PSUBSET t /\ t SUBSET u ==> s PSUBSET u`,
+ PROVE_TAC [SUBSET_DEF,PSUBSET_EQN]);
+
+val SUBSET_PSUBSET_TRANS = Q.store_thm
+("SUBSET_PSUBSET_TRANS",
+ `!s t u. s SUBSET t /\ t PSUBSET u ==> s PSUBSET u`,
+ PROVE_TAC [SUBSET_DEF,PSUBSET_EQN]);
+
 val CROSS_EQNS = Q.store_thm
 ("CROSS_EQNS",
  `!(s1:'a set) (s2:'b set).
