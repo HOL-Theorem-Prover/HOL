@@ -435,6 +435,14 @@ val TC_lifts_transitive_relations = store_thm(
     (!x y. TC R x y ==> Q (f x) (f y))``,
   STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT THEN METIS_TAC [transitive_def]);
 
+val TC_implies_one_step = Q.store_thm(
+"TC_implies_one_step",
+`!x y . R^+ x y /\ x <> y ==> ?z. R x z /\ x <> z`,
+REWRITE_TAC [GSYM AND_IMP_INTRO] THEN
+HO_MATCH_MP_TAC TC_INDUCT THEN
+SRW_TAC [SatisfySimps.SATISFY_ss][] THEN
+PROVE_TAC []);
+
 val TC_RTC = store_thm(
   "TC_RTC",
   ``!R (x:'a) y. TC R x y ==> RTC R x y``,
@@ -690,6 +698,41 @@ val EQC_TRANS = store_thm(
   REPEAT GEN_TAC THEN
   Q_TAC SUFF_TAC `transitive (EQC R)` THEN1 PROVE_TAC [transitive_def] THEN
   SRW_TAC [][EQC_DEF, transitive_RC, TC_TRANSITIVE])
+
+val transitive_EQC = Q.store_thm(
+"transitive_EQC",
+`transitive (EQC R)`,
+PROVE_TAC [transitive_def,EQC_TRANS]);
+
+val symmetric_EQC = Q.store_thm(
+"symmetric_EQC",
+`symmetric (EQC R)`,
+PROVE_TAC [symmetric_def,EQC_SYM]);
+
+val reflexive_EQC = Q.store_thm(
+"reflexive_EQC",
+`reflexive (EQC R)`,
+PROVE_TAC [reflexive_def,EQC_REFL]);
+
+val EQC_MOVES_IN = Q.store_thm(
+"EQC_MOVES_IN",
+`!R. (EQC (RC R) = EQC R) /\ (EQC (SC R) = EQC R) /\ (EQC (TC R) = EQC R)`,
+SRW_TAC [][EQC_DEF,RC_MOVES_OUT,SC_IDEM] THEN
+AP_TERM_TAC THEN
+SRW_TAC [][FUN_EQ_THM] THEN
+REVERSE EQ_TAC THEN
+MAP_EVERY Q.ID_SPEC_TAC [`x'`,`x`] THEN
+HO_MATCH_MP_TAC TC_INDUCT THEN1 (
+  SRW_TAC [][SC_DEF] THEN
+  PROVE_TAC [TC_RULES,SC_DEF] ) THEN
+REVERSE (SRW_TAC [][SC_DEF]) THEN1
+  PROVE_TAC [TC_RULES,SC_DEF] THEN
+Q.MATCH_ASSUM_RENAME_TAC `R^+ a b` [] THEN
+POP_ASSUM MP_TAC THEN
+MAP_EVERY Q.ID_SPEC_TAC [`b`,`a`] THEN
+HO_MATCH_MP_TAC TC_INDUCT THEN
+SRW_TAC [][SC_DEF] THEN
+PROVE_TAC [TC_RULES,SC_DEF]);
 
 val STRONG_EQC_INDUCTION = store_thm(
   "STRONG_EQC_INDUCTION",
