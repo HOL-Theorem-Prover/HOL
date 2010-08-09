@@ -1155,11 +1155,10 @@ in
       then let
         val thysmlfile = s^"Theory.sml"
         val thysigfile = s^"Theory.sig"
-        val _ =
-          app (fn s => OS.FileSys.remove s handle OS.SysErr _ => ())
-          [thysmlfile, thysigfile]
+        fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
+        val _ = app safedelete [thysmlfile, thysigfile]
         val res2 = systeml [fullPath [OS.FileSys.getDir(), script]];
-        val _ = app OS.FileSys.remove [script, scriptuo, scriptui]
+        val _ = app safedelete [script, scriptuo, scriptui]
         val () =
             if not (isSuccess res2) then
               (failed_script_cache := Binaryset.add(!failed_script_cache, s);

@@ -1006,11 +1006,10 @@ in
         val script' = Systeml.mk_xable script
         val thysmlfile = s^"Theory.sml"
         val thysigfile = s^"Theory.sig"
-        val _ =
-          app (fn s => FileSys.remove s handle OS.SysErr _ => ())
-          [thysmlfile, thysigfile]
+        fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
+        val _ = app safedelete [thysmlfile, thysigfile]
         val res2    = Systeml.systeml [fullPath [FileSys.getDir(), script']]
-        val _       = app FileSys.remove [script', scriptuo, scriptui]
+        val _       = app safedelete [script', scriptuo, scriptui]
         val ()      = if res2 <> success then
                         failed_script_cache :=
                         Binaryset.add(!failed_script_cache, s)
