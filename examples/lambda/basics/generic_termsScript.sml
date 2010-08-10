@@ -411,9 +411,7 @@ open relationTheory
 val aeq_equiv = store_thm(
   "aeq_equiv",
   ``!t1 t2. aeq t1 t2 = (aeq t1 = aeq t2)``,
-  SIMP_TAC (srw_ss()) [GSYM ALT_equivalence, equivalence_def, reflexive_def,
-                       symmetric_def, transitive_def] THEN
-  METIS_TAC [aeq_trans, aeq_sym]);
+  srw_tac [][FUN_EQ_THM] >> METIS_TAC [aeq_trans, aeq_sym, aeq_refl]);
 
 val alt_aeq_lam = store_thm(
   "alt_aeq_lam",
@@ -549,9 +547,10 @@ val ptpml_MAP = prove(
 val rmptpml = REWRITE_RULE [ptpml_MAP]
 
 fun front n l = List.take (l, n)
+fun drop n l = List.drop(l,n)
 
 (*
-val [GFV_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct, gterm_11,
+val [GFV_thm, gfvl_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct, gterm_11,
      GLAM_eq_thm, FRESH_swap0,
      (* tpm_is_perm,*) FINITE_GFV,
      gtpm_sing_inv, gtpm_NIL, gtpm_inverse, gtpm_flip_args, gtpm_id_front] =
@@ -564,20 +563,22 @@ val [GFV_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct, gterm_11,
         ("GAPP", ``app:β -> (α,β,γ)pregterm list -> (α,β,γ)pregterm``),
         ("GVAR", ``var:string -> γ -> (α,β,γ)pregterm``),
         ("GFV", ``fv : (α,β,γ)pregterm -> string set``),
+        ("gfvl", ``fvl : (α,β,γ)pregterm list -> string set``),
         ("gtpm", ``ptpm : (string # string) list -> (α,β,γ)pregterm ->
                           (α,β,γ)pregterm``)],
      tyop_equivs = [],
      tyop_quotients = [],
      tyop_simps = [],
      respects = [rmaeql lam_respects_aeq, rmaeql app_respects_aeq,
-                 app_eq_respects,
-                 var_respects_aeq, CONJUNCT1 aeq_fv, CONJUNCT2 aeq_fv,
+                 var_respects_aeq, CONJUNCT1 aeq_fv,
+                 rmaeql (CONJUNCT2 aeq_fv),
                  aeq_ptpm_lemma |> CONJUNCT1
                                 |> SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM]
                  ],
      poly_preserves = [],
      poly_respects = [],
-     old_thms = [fv_def |> CONJUNCTS |> front 3 |> LIST_CONJ |> rmfvl,
+     old_thms = [fv_def |> CONJUNCTS |> front 3 |> LIST_CONJ,
+                 fv_def |> CONJUNCTS |> drop 3 |> LIST_CONJ,
                  ptpm_fv', pind,
                  ptpm_def |> CONJUNCTS |> front 3 |> LIST_CONJ |> rmptpml,
                  aeq_distinct, rmaeql aeq_ptm_11,
