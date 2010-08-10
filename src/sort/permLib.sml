@@ -335,7 +335,7 @@ in
 end;
 
 (*
-PERM_SPLIT l l2
+PERM_SPLIT ls l
 
 val ls = ``l1:'a list``
 val l = ``l2 ++ x::l1``
@@ -410,10 +410,13 @@ val PERM_NORMALISE_CONV = PERM_ELIM_DUPLICATES_CONV THENC
 val thm = (ASSUME ``PERM l1 [x;y;z]``)
 val t = ``PERM (z::y::x'::l2) (l3++(x'::l1))``
 
+val thm = (el 2 new_thmL)
+val t =  (concl (el 2 new_thmL))
+PERM_REWR_CONV (el 2 new_thmL) (concl (el 2 new_thmL))
+
 show_assums := true
 PERM_REWR_CONV thm t
 *)
-
 
 fun PERM_REWR_CONV thm t =
 let
@@ -443,6 +446,7 @@ in
 end;
 
 
+
 fun PERM_SIMP_CONV thmL t =
    let
       val _ = if is_PERM t then () else raise UNCHANGED;
@@ -452,27 +456,78 @@ fun PERM_SIMP_CONV thmL t =
    end;
 
 
+local
+
 exception perm_reducer_context of thm list
 
 fun perm_reducer_get_context e =
     (raise e)
     handle perm_reducer_context thmL => thmL;
 
+
+fun clean_perm_thm thm = filter (is_PERM o concl) (BODY_CONJUNCTS thm);
+fun clean_perm_thmL thmL = flatten (map clean_perm_thm thmL);
+fun normalise_RULE l thm = CONV_RULE (REPEATC (PERM_SIMP_CONV l)) thm handle HOL_ERR _ => thm
+fun normalise_RULE_bool l thm = 
+   let val thm' = normalise_RULE l thm; in
+      (not (aconv (concl thm) (concl thm')), thm')
+   end;
+
+fun perm_reducer_add_context old_thmL [] = old_thmL
+  | perm_reducer_add_context old_thmL (new_thm::new_thmL) =
+    case clean_perm_thm (normalise_RULE old_thmL new_thm) of
+        [] => perm_reducer_add_context old_thmL new_thmL
+      | (new_thm'::new_thmL') => 
+        let 
+           val old_thmLb' = map (normalise_RULE_bool [new_thm']) old_thmL
+           val (new_thmLb'', old_thmLb'') = partition fst old_thmLb';
+           val new_thmL'' = map snd new_thmLb'';
+           val old_thmL'' = map snd old_thmLb'';
+        in
+           perm_reducer_add_context (new_thm'::old_thmL'') 
+              (append new_thmL'' (append new_thmL' new_thmL))
+        end;
+
+val perm_simplify_thmL = perm_reducer_add_context [];
+
+fun perm_reducer_add_context2 (ctx, thmL) =
+   perm_reducer_context (perm_reducer_add_context 
+                        (perm_reducer_get_context ctx) thmL);
+
+(* the old, simple method to add context 
+
+fun perm_reducer_add_context_simple (ctx, thmL) =
+   perm_reducer_context (append (clean_perm_thmL thmL)
+                                (perm_reducer_get_context ctx)); 
+*)
+
 val PERM_REDUCER =
   Traverse.REDUCER {name = SOME "PERM_REDUCER",
            initial = perm_reducer_context [],
-           addcontext = fn (ctx, thmL) => (
-			       perm_reducer_context (append (filter (is_PERM o concl)
-                                                    (flatten (map BODY_CONJUNCTS thmL)))
-                               (perm_reducer_get_context ctx))),
+           addcontext = perm_reducer_add_context2,
            apply = fn args => QCHANGED_CONV (PERM_SIMP_CONV (perm_reducer_get_context (#context args)))
               };
+
+in
 
 val PERM_ss = simpLib.SSFRAG
     {name=SOME"PERM_ss",
      convs = [], rewrs = [], filter = NONE, dprocs = [PERM_REDUCER], congs = [],
      ac = []
      }
+
+fun NORMALISE_ASM_PERM_TAC (asm, t) =
+let
+   val (asm_perm, asm_rest) = partition is_PERM asm;
+   val asm_perm_thmL = perm_simplify_thmL (map ASSUME asm_perm)
+   
+   val asm' = append asm_rest (map concl asm_perm_thmL);
+   fun reconstruct thm' = foldl (fn (h, thm) => PROVE_HYP h thm) thm' asm_perm_thmL
+in
+   ([(asm', t)], fn thmL => reconstruct (hd thmL))
+end;
+
+end;
 
 
 (*
@@ -485,8 +540,11 @@ conv ``(PERM (x::z::l1++l2) (l3++x::l1)) /\ Z``
 
 conv ``(X /\ (PERM (l2++[]++[z]) (y::l4)) /\ Y) ==> ((PERM (x::z::l1++l2) (l3++x::l1)))``
 
-REPEAT STRIP_TAC THEN
-ASM_SIMP_TAC (std_ss++PERM_ss) []
+conv ``(PERM l1 m1 /\
+        PERM l2 m2 /\
+        PERM (l1 ++ l2) n1 /\
+        PERM (m1 ++ m2) n2) ==>
+        PERM n1 n2``
 
 *)
 
