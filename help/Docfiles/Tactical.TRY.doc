@@ -18,5 +18,6 @@ The application of {TRY} to a tactic never fails. The resulting
 tactic never fails.
 
 \SEEALSO
-Tactical.CHANGED_TAC, VALID.
+Tactical.CHANGED_TAC, Tactical.VALID.
+
 \ENDDOC

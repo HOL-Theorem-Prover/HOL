@@ -31,5 +31,8 @@ Fails if the goal's conclusion is not a paired universal quantifier or the
 quantified pair is equal to the given term.
 
 \SEEALSO
-Tactic.FILTER_GEN_TAC, PairRules.PGEN, PairRules.PGEN_TAC, PairRules.PGENL, PGEN_ALL, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC, PairRules.PSTRIP_TAC.
+Tactic.FILTER_GEN_TAC, PairRules.PGEN, PairRules.PGEN_TAC, PairRules.PGENL,
+PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC,
+PairRules.PSTRIP_TAC.
+
 \ENDDOC

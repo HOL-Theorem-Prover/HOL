@@ -78,5 +78,6 @@ quantified in the termination conditions, which is not desirable for a
 schema.
 
 \SEEALSO
-TotalDefn.xDefineSchema, TotalDefn.Define, Defn.Hol_defn.
+TotalDefn.Define, Defn.Hol_defn.
+
 \ENDDOC

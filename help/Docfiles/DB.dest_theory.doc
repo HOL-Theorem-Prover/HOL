@@ -112,6 +112,6 @@ A prettyprinter is installed for the type {theory}, but the contents
 may still be accessed via pattern matching.
 
 \SEEALSO
-DB.print_theory, Hol_pp.pp_theory, Hol_pp.theory.
+DB.print_theory.
 
 \ENDDOC

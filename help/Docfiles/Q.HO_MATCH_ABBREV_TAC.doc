@@ -22,6 +22,6 @@ is transformed by {Q.HO_MATCH_ABBREV_TAC `!k. P k`} to
 Note how the bound variable changes to match that used in the pattern.
 
 \SEEALSO
-Q.ABBREV_TAC, Q.MATCH_ABBREV_TAC, Q.PAT_ABBREV_TAC.
+Q.ABBREV_TAC, Q.MATCH_ABBREV_TAC.
 
 \ENDDOC

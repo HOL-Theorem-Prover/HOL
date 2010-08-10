@@ -27,5 +27,8 @@ Normally {p'} is just {p}.
 Fails unless the goal's conclusion is a paired universally quantification.
 
 \SEEALSO
-Tactic.GEN_TAC, PairRules.FILTER_PGEN_TAC, PairRules.PGEN, PairRules.PGENL, PGEN_ALL, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC, PairRules.PSTRIP_TAC, PairRules.P_PGEN_TAC.
+Tactic.GEN_TAC, PairRules.FILTER_PGEN_TAC, PairRules.PGEN, PairRules.PGENL,
+PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC,
+PairRules.PSTRIP_TAC, PairRules.P_PGEN_TAC.
+
 \ENDDOC

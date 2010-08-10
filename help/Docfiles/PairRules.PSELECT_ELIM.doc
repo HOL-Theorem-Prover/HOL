@@ -34,5 +34,7 @@ any of the variables from the variable structure {p} occur free in any
 other assumption of {th2}.
 
 \SEEALSO
-Drule.SELECT_ELIM, PairRules.PCHOOSE, SELECT_AX, PairRules.PSELECT_CONV, PairRules.PSELECT_INTRO, PairRules.PSELECT_RULE.
+Drule.SELECT_ELIM, PairRules.PCHOOSE, PairRules.PSELECT_CONV,
+PairRules.PSELECT_INTRO, PairRules.PSELECT_RULE.
+
 \ENDDOC

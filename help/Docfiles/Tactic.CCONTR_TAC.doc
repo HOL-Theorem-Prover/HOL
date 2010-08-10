@@ -22,5 +22,6 @@ This is an invalid tactic unless {A'} is a subset of {A}.
 Fails unless the theorem is contradictory, i.e. has {F} as its conclusion.
 
 \SEEALSO
-Tactic.CHECK_ASSUME_TAC, Thm.CCONTR, CCCONTR, Drule.CONTRAPOS, Thm.NOT_ELIM.
+Tactic.CHECK_ASSUME_TAC, Thm.CCONTR, Drule.CONTRAPOS, Thm.NOT_ELIM.
+
 \ENDDOC

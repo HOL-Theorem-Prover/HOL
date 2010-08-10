@@ -31,5 +31,8 @@ Never fails.
 theorems while avoiding using any variables that may be present elsewhere.
 
 \SEEALSO
-Drule.GSPEC, PairRules.PGEN, PairRules.PGENL, Term.genvar, PGEN_ALL, PairRules.PGEN_TAC, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC, PairRules.PSPEC_PAIR.
+Drule.GSPEC, PairRules.PGEN, PairRules.PGENL, Term.genvar, PairRules.PGEN_TAC,
+PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC,
+PairRules.PSPEC_PAIR.
+
 \ENDDOC

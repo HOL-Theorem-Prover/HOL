@@ -55,8 +55,7 @@ extension property of HOL says that {th} is still provable, even in
 the absence of {c}.
 
 \SEEALSO
-Theory.delete_type, Theory.delete_axiom, Theory.delete_definition,
-Theory.delete_theorem, Theory.uptodate_type, Theory.uptodate_term, 
-Theory.uptodate_thm, Theory.scrub. 
+Theory.delete_type, Theory.uptodate_type, Theory.uptodate_term,
+Theory.uptodate_thm, Theory.scrub.
 
 \ENDDOC

@@ -71,5 +71,5 @@ these global values may be such that the parsing causes quite
 unexpected results or failures.
 
 \SEEALSO
-Parse.add_rule, Parse.print_from_grammars, Parse.Term, Parse.Type.
+Parse.add_rule, Parse.print_from_grammars, Parse.Term.
 \ENDDOC

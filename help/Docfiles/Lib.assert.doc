@@ -30,7 +30,7 @@ exception {e}, then {assert p x} raises {e}.
 ! HOL_ERR <poly>
 }
 
-
 \SEEALSO
-Lib.can, Lib.assert_exn, Feedback.with_exn.
+Lib.can, Lib.assert_exn.
+
 \ENDDOC

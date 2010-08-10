@@ -58,6 +58,7 @@ This rule is rarely used.  The equivalence of {P($@ P)} and {$? P}
 makes this rule fundamentally similar to the {?}-elimination rule {CHOOSE}.
 
 \SEEALSO
-Thm.CHOOSE, SELECT_AX, Conv.SELECT_CONV, Tactic.SELECT_ELIM_TAC,
+Thm.CHOOSE, Conv.SELECT_CONV, Tactic.SELECT_ELIM_TAC,
 Drule.SELECT_INTRO, Drule.SELECT_RULE.
+
 \ENDDOC

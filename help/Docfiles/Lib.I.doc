@@ -12,5 +12,6 @@ Performs identity operation: {I x} = {x}.
 Never fails.
 
 \SEEALSO
-Lib, Lib.##, Lib.A, Lib.B, Lib.C, Lib.K, o, Lib.S, Lib.W.
+Lib, Lib.##, Lib.A, Lib.B, Lib.C, Lib.K, Lib.S, Lib.W.
+
 \ENDDOC

@@ -26,7 +26,7 @@ High performance finite set operations may be found in the ML Standard
 Basis Library.
 
 \SEEALSO
-Lib.op_mem, Lib.insert, Lib.find, Lib.tryfind, Lib.exists, Lib.all, 
-Lib.assoc, Lib.rev_assoc.
+Lib.op_mem, Lib.insert, Lib.tryfind, Lib.exists, Lib.all, Lib.assoc,
+Lib.rev_assoc.
 
 \ENDDOC

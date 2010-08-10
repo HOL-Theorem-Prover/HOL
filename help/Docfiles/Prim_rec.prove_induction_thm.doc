@@ -36,5 +36,8 @@ is true of two subtrees {b1} and {b2} it is also true of the tree {NODE b1 b2},
 then {P} is true of all labelled binary trees.
 
 \SEEALSO
-Datatype.define_type, Prim_rec.INDUCT_THEN, Prim_rec.new_recursive_definition, Prim_rec.prove_cases_thm, Prim_rec.prove_constructors_distinct, Prim_rec.prove_constructors_one_one, Prim_rec.prove_rec_fn_exists.
+Prim_rec.INDUCT_THEN, Prim_rec.new_recursive_definition,
+Prim_rec.prove_cases_thm, Prim_rec.prove_constructors_distinct,
+Prim_rec.prove_constructors_one_one, Prim_rec.prove_rec_fn_exists.
+
 \ENDDOC

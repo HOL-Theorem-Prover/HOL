@@ -23,5 +23,5 @@ Will fail if the supplied theorem is not a datatype theorem, as created by {Hol_
 }
 
 \SEEALSO
-EmitTeX.theory_datatypes, bossLib.Hol_datatype.
+bossLib.Hol_datatype.
 \ENDDOC

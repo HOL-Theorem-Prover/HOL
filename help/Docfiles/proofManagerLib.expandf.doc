@@ -75,5 +75,9 @@ will only be discovered when the proof has apparently been finished and the
 justifications are applied.
 
 \SEEALSO
-proofManagerLib.set_goal, proofManagerLib.set_goaltree, proofManagerLib.set_goalstack, proofManagerLib.new_goaltree, proofManagerLib.add, proofManagerLib.drop, proofManagerLib.dropn, proofManagerLib.restart, proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save, proofManagerLib.set_backup, proofManagerLib.forget_history, proofManagerLib.expand, proofManagerLib.expandv, proofManagerLib.p, proofManagerLib.initial_goal, proofManagerLib.top_thm, proofManagerLib.top_goal, proofManagerLib.top_goals, proofManagerLib.status, proofManagerLib.rotate, proofManagerLib.rotate_proofs, Tactical.VALID.
+proofManagerLib.set_goal, proofManagerLib.restart,
+proofManagerLib.backup,proofManagerLib.restore, proofManagerLib.save,
+proofManagerLib.set_backup,proofManagerLib.expand, proofManagerLib.expandf,
+proofManagerLib.p,proofManagerLib.top_thm, proofManagerLib.top_goal.
+
 \ENDDOC

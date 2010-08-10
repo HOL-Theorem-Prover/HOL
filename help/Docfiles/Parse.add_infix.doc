@@ -140,8 +140,7 @@ As with other functions in the {Parse} structure, there is a companion
 grammar, but which does not cause this effect to persist when the
 current theory is exported.
 
-
-
 \SEEALSO
-Parse.add_binder, Parse.add_rule, Parse.add_listform, Parse.Term.
+Parse.add_rule, Parse.add_listform, Parse.Term.
+
 \ENDDOC

@@ -27,6 +27,4 @@ the subgoals are just {A ?- P} and {A u {P} ?- P}.
 {INDUCT_TAC g} fails unless the conclusion of the goal {g} has the form {!n.t},
 where the variable {n} has type {num}.
 
-\SEEALSO
-INDUCT.
 \ENDDOC

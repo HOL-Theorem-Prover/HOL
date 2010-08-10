@@ -32,7 +32,7 @@ an exception {ex}, then {assert_exn p x e} raises {ex}.
 ! Fail  "non-empty list"
 }
 
-
 \SEEALSO
-Lib.can, Lib.assert, Feedback.with_exn.
+Lib.can, Lib.assert.
+
 \ENDDOC

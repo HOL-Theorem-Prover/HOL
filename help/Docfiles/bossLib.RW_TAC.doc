@@ -45,7 +45,6 @@ in a context with many datatypes (or a few large datatypes). In such cases,
 {SRW_TAC} is preferable to {RW_TAC}.
 
 \SEEALSO
-bossLib.SRW_TAC, bossLib.SIMP_TAC, Rewrite.REWRITE_TAC,
-Ho_Rewrite.REWRITE_TAC, bossLib.Hol_datatype.
+bossLib.SRW_TAC, bossLib.SIMP_TAC, Rewrite.REWRITE_TAC, bossLib.Hol_datatype.
 
 \ENDDOC

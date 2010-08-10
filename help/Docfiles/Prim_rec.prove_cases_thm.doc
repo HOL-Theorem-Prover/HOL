@@ -30,5 +30,8 @@ This states that every labelled binary tree {b} is either a leaf node
 with a label {x} or a tree with two subtrees {b1} and {b2}.
 
 \SEEALSO
-Datatype.define_type, Prim_rec.INDUCT_THEN, Prim_rec.new_recursive_definition, Prim_rec.prove_constructors_distinct, Prim_rec.prove_constructors_one_one, Prim_rec.prove_induction_thm, Prim_rec.prove_rec_fn_exists.
+Prim_rec.INDUCT_THEN, Prim_rec.new_recursive_definition,
+Prim_rec.prove_constructors_distinct, Prim_rec.prove_constructors_one_one,
+Prim_rec.prove_induction_thm, Prim_rec.prove_rec_fn_exists.
+
 \ENDDOC

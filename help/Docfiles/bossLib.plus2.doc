@@ -31,7 +31,6 @@ exploit the former's point-wise elimination conversions.
 
 
 \SEEALSO
-simpLib.mk_simpset, simpLib.rewrites,
-simpLib.SIMP_CONV, pureSimps.pure_ss, boolSimps.UNWIND_ss.
+simpLib.mk_simpset, simpLib.rewrites, simpLib.SIMP_CONV, pureSimps.pure_ss.
 
 \ENDDOC

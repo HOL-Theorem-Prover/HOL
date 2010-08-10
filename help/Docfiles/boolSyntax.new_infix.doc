@@ -63,5 +63,7 @@ precedence.
 
 
 \SEEALSO
-Parse.add_infix, precedence, Theory.constants, infixes, binders, is_constant, Theory.new_constant, boolSyntax.new_binder, Definition.new_definition, new_infix_definition, boolSyntax.new_binder_definition.
+Parse.add_infix, Theory.constants, Theory.new_constant, boolSyntax.new_binder,
+Definition.new_definition, boolSyntax.new_binder_definition.
+
 \ENDDOC

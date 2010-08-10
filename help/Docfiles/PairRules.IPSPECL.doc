@@ -26,5 +26,7 @@ quantified variables in the term, if the type instantiation fails, or
 if the type variable being instantiated is free in the assumptions.
 
 \SEEALSO
-Drule.ISPECL, Thm.INST_TYPE, Drule.INST_TY_TERM, PairRules.IPSPEC, MATCH, Thm.SPEC, PairRules.PSPECL.
+Drule.ISPECL, Thm.INST_TYPE, Drule.INST_TY_TERM, PairRules.IPSPEC, Thm.SPEC,
+PairRules.PSPECL.
+
 \ENDDOC

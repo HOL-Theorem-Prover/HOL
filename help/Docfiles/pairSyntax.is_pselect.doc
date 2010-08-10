@@ -16,5 +16,5 @@ If the term is not a paired choice-term the result is {false}.
 Never fails.
 
 \SEEALSO
-boolSyntax.is_select, pairSyntax.mk_pselect, pairSyntax.dest_pselect.
+boolSyntax.is_select, pairSyntax.dest_pselect.
 \ENDDOC

@@ -44,5 +44,6 @@ May be used to introduce an epsilon term to permit rewriting with a
 constant defined using the epsilon operator.
 
 \SEEALSO
-Thm.CHOOSE, SELECT_AX, Conv.SELECT_CONV, Drule.SELECT_ELIM, Drule.SELECT_INTRO.
+Thm.CHOOSE, Conv.SELECT_CONV, Drule.SELECT_ELIM, Drule.SELECT_INTRO.
+
 \ENDDOC

@@ -57,5 +57,6 @@ the state of the ML environment in existence at the time
 see {adjoin_to_theory}.
 
 \SEEALSO
-Theory.new_theory, Theory.adjoin_to_theory, Theory.set_MLname, Holmake.
+Theory.new_theory, Theory.adjoin_to_theory, Theory.set_MLname.
+
 \ENDDOC

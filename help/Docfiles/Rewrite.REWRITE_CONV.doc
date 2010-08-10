@@ -41,5 +41,7 @@ as {PURE_REWRITE_CONV}, or other rules such as {SUBST_CONV}, may be used
 instead to improve efficiency.
 
 \SEEALSO
-basic_rewrites, Rewrite.GEN_REWRITE_CONV, Rewrite.ONCE_REWRITE_CONV, Rewrite.PURE_REWRITE_CONV, Conv.REWR_CONV, Drule.SUBST_CONV.
+Rewrite.GEN_REWRITE_CONV, Rewrite.ONCE_REWRITE_CONV, Rewrite.PURE_REWRITE_CONV,
+Conv.REWR_CONV, Drule.SUBST_CONV.
+
 \ENDDOC

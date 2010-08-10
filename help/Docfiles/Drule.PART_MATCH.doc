@@ -42,5 +42,6 @@ because the selector function picks the antecedent of the implication
 it to {T}.
 
 \SEEALSO
-Thm.INST_TYPE, Drule.INST_TY_TERM, Drule.HO_PART_MATCH, Term.match_term.
+Thm.INST_TYPE, Drule.INST_TY_TERM, Term.match_term.
+
 \ENDDOC

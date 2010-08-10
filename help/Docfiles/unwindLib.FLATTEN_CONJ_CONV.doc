@@ -23,7 +23,5 @@ Never fails.
 #FLATTEN_CONJ_CONV "(a /\ (b /\ c)) /\ ((d /\ e) /\ f)";;
 |- (a /\ b /\ c) /\ (d /\ e) /\ f = a /\ b /\ c /\ d /\ e /\ f
 }
-\SEEALSO
-unwindLib.CONJUNCTS_CONV.
 
 \ENDDOC

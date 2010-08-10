@@ -40,7 +40,7 @@ The following is a typical use of the conversion:
      ACCEPT_TAC (SYM (MATCH_MP SELECT_AX (REFL (Term `(a:'a,b:'b)`)))));
 }
 
-
 \SEEALSO
-Thm.ETA_CONV.
+Drule.ETA_CONV.
+
 \ENDDOC

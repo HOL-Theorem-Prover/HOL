@@ -36,5 +36,6 @@ allow equality. For other types, typically abstract ones,
 use the `op_' variants.
 
 \SEEALSO
-Lib.op_set_eq, Lib.intersect, Lib.union, Lib.U, Lib.mk_set, Lib.mem, Lib.insert, Lib.set_diff.
+Lib.intersect, Lib.union, Lib.U, Lib.mk_set, Lib.mem, Lib.insert, Lib.set_diff.
+
 \ENDDOC

@@ -51,7 +51,7 @@ instantiation is required. The last example shows that a subterm of
 {tm2} can be instantiated to match {tm1}.
 
 \SEEALSO
-match, COND_REWR_TAC, CONV_REWRITE_TAC, COND_REWR_CONV, CONV_REWRITE_CONV.
+Db.match.
 
 \ENDDOC
 

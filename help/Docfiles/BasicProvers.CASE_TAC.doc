@@ -23,6 +23,6 @@ is the same as {BasicProvers.CASE_TAC}.
 fails.
 
 \SEEALSO
-SingleStep.PURE_CASE_TAC.
+BasicProvers.PURE_CASE_TAC.
 
 \ENDDOC

@@ -8,10 +8,9 @@ in rewriting.
 
 \DESCRIBE
 
-
 \USES
 
-
 \SEEALSO
-base_rewrites, add_base_rewrites, Rewrite.empty_rewrites, Rewrite.add_rewrites.
+Rewrite.empty_rewrites, Rewrite.add_rewrites.
+
 \ENDDOC

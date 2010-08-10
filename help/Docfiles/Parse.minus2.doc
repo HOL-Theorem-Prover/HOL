@@ -21,5 +21,5 @@ As for {Parse.Term}.
 Turns strings into terms.
 
 \SEEALSO
-Parse.Term, Parse.Type, Parse.==.
+Parse.Term, Parse.==.
 \ENDDOC

@@ -54,6 +54,7 @@ match the RHS of the assumption, and the fact that {f} is effectively
 a local constant in the goal to find the correct assumption.
 
 \SEEALSO
-Tactical.ASSUM_LIST, Tactical.EVERY, Tactical.EVERY_ASSUM, Tactical.FIRST, Tactical.MAP_EVERY, Tactical.MAP_FIRST, Thm_cont.UNDISCH_THEN, Term.match_term, 
-HolKernel.ho_match_term.
+Tactical.ASSUM_LIST, Tactical.EVERY, Tactical.EVERY_ASSUM, Tactical.FIRST,
+Tactical.MAP_EVERY, Tactical.MAP_FIRST, Thm_cont.UNDISCH_THEN, Term.match_term.
+
 \ENDDOC

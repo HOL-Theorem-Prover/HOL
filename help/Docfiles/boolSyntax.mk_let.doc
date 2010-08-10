@@ -31,5 +31,6 @@ has been loaded. The library {pairLib} provides support for manipulating
 `paired' lets.
 
 \SEEALSO
-boolSyntax.dest_let, boolSyntax.is_let, pairSyntax.mk_anylet, pairLib.
+boolSyntax.dest_let, boolSyntax.is_let, pairSyntax.mk_anylet.
+
 \ENDDOC

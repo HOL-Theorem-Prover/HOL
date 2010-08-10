@@ -34,9 +34,7 @@ For example, the equations for {FACT} would have to be rephrased
 as {FACT n = if n = 0 then 1 else n * FACT (n-1)}.
 
 \SEEALSO
-computeLib.CBV_CONV, computeLib.RESTR_EVAL_CONV,
-bossLib.EVAL_TAC, computeLib.monitoring,
-computeLib.the_compset, computeLib.add_funs, 
-computeLib.add_persistent_funs, computeLib.add_convs, bossLib.Define.
+computeLib.CBV_CONV, computeLib.RESTR_EVAL_CONV, bossLib.EVAL_TAC,
+computeLib.monitoring, bossLib.Define.
 
 \ENDDOC

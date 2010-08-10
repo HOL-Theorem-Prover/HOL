@@ -37,5 +37,5 @@ HOL provides a fresh namespace for each theory ({mk_type} is a holdover
 from a time when there was only one namespace shared by all theories).
 
 \SEEALSO
-Type.mk_type, Type.dest_thy_type, Term.mk_const, Term.mk_thy_const, decls, op_arity.
+Type.mk_type, Type.dest_thy_type, Term.mk_const, Term.mk_thy_const.
 \ENDDOC

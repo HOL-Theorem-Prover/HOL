@@ -27,5 +27,6 @@ This rule is expressed as an equivalence in the theorem
 {boolTheory.FUN_EQ_THM}.
 
 \SEEALSO
-Thm.AP_THM, Thm.ETA_CONV, Conv.FUN_EQ_CONV.
+Thm.AP_THM, Drule.ETA_CONV, Conv.FUN_EQ_CONV.
+
 \ENDDOC

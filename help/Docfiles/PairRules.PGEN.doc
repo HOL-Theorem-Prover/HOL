@@ -28,5 +28,7 @@ Fails if {p} is not a paired structure of variables,
 of if any variable in {p} is free in the assumptions.
 
 \SEEALSO
-Thm.GEN, PairRules.PGENL, PGEN_ALL, PairRules.PGEN_TAC, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC.
+Thm.GEN, PairRules.PGENL, PairRules.PGEN_TAC, PairRules.PSPEC,
+PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC.
+
 \ENDDOC

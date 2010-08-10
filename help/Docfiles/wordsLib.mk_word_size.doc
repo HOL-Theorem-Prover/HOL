@@ -26,6 +26,6 @@ The type abbreviation will only print when {type_pp.pp_array_types} is set to {f
 
 \SEEALSO
 
-Parse.type_grammar, Parse.type_abbrev, wordsLib.SIZES_CONV, wordsLib.SIZES_ss
+Parse.type_abbrev, wordsLib.SIZES_CONV, wordsLib.SIZES_ss
 
 \ENDDOC

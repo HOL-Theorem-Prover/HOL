@@ -35,5 +35,8 @@ the concrete type in question has more than two constructors, the resulting
 theorem is just conjunction of inequalities of this kind.
 
 \SEEALSO
-Datatype.define_type, Prim_rec.INDUCT_THEN, Prim_rec.new_recursive_definition, Prim_rec.prove_cases_thm, Prim_rec.prove_constructors_one_one, Prim_rec.prove_induction_thm, Prim_rec.prove_rec_fn_exists.
+Prim_rec.INDUCT_THEN, Prim_rec.new_recursive_definition,
+Prim_rec.prove_cases_thm, Prim_rec.prove_constructors_one_one,
+Prim_rec.prove_induction_thm, Prim_rec.prove_rec_fn_exists.
+
 \ENDDOC

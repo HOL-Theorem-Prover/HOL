@@ -28,5 +28,7 @@ just {pi}, in which case {PSPEC_ALL} simply removes all universal quantifiers.
 Never fails.
 
 \SEEALSO
-Drule.SPEC_ALL, PairRules.PGEN, PairRules.PGENL, PGEN_ALL, PairRules.PGEN_TAC, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_TAC.
+Drule.SPEC_ALL, PairRules.PGEN, PairRules.PGENL, PairRules.PGEN_TAC,
+PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_TAC.
+
 \ENDDOC

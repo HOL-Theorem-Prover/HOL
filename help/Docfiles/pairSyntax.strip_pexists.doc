@@ -20,5 +20,5 @@ existential quantification.
 Never fails.
 
 \SEEALSO
-boolSyntax.strip_exists, pairSyntax.list_mk_pexists, pairSyntax.dest_pexists.
+boolSyntax.strip_exists, pairSyntax.dest_pexists.
 \ENDDOC

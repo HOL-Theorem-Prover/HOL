@@ -65,5 +65,5 @@ abbreviations (using {Parse.disable_tyabbrev_printing}), or to not
 print any (by setting the trace variable {"print_tyabbrevs"}).
 
 \SEEALSO
-Parse.add_infix_type, Parse.add_type, Parse.disable_tyabbrev_printing.
+Parse.add_infix_type, Parse.disable_tyabbrev_printing.
 \ENDDOC

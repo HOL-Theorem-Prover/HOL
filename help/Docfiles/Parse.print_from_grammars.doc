@@ -70,7 +70,6 @@ concrete syntax and overloading, and even the underlying
 representation of numerals.
 
 \SEEALSO
-Parse.parse_from_grammars, Parse.print_term_by_grammar, Parse.Term,
-Parse.Type.
+Parse.parse_from_grammars, Parse.print_term_by_grammar, Parse.Term.
 
 \ENDDOC

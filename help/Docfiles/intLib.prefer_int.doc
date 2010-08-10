@@ -21,7 +21,6 @@ the situation after a call to {deprecate_int}).
 Never fails.
 
 \SEEALSO
-intLib.deprecate_int, numLib.deprecate_num, Parse.overload_on,
-numLib.prefer_num.
+intLib.deprecate_int, Parse.overload_on.
 
 \ENDDOC

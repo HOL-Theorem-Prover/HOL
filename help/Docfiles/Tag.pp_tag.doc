@@ -33,7 +33,4 @@ Never fails.
 In MoscowML, {Meta.installPP} will install {pp_tag} in the top-level
 loop.
 
-\SEEALSO
-Hol_pp.pp_thm, Tag.dest_tag.
-
 \ENDDOC
