@@ -3014,6 +3014,11 @@ val DISJOINT_BIGINTER = Q.store_thm
   SIMP_TAC bool_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER,
                     IN_BIGINTER] THEN PROVE_TAC []);
 
+val BIGINTER_UNION = Q.store_thm
+("BIGINTER_UNION",
+ `!s1 s2. BIGINTER (s1 UNION s2) = BIGINTER s1 INTER BIGINTER s2`,
+ SIMP_TAC bool_ss [IN_BIGINTER, IN_UNION, IN_INTER, EXTENSION] THEN PROVE_TAC []);
+
 (* ====================================================================== *)
 (* Cross product of sets                                                  *)
 (* ====================================================================== *)
@@ -4555,7 +4560,7 @@ val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)
      "IN_BIGINTER", "IN_BIGUNION", "DISJOINT_BIGUNION", "BIGUNION_EMPTY",
-     "BIGUNION_INSERT", "BIGUNION_UNION",
+     "BIGUNION_INSERT", "BIGUNION_UNION", "BIGINTER_UNION",
      "DISJOINT_BIGUNION", "BIGINTER_EMPTY", "BIGINTER_INSERT",
      (* cardinality theorems *)
      "CARD_DIFF", "CARD_EQ_0", "CARD_INSERT",
