@@ -549,10 +549,19 @@ val rmptpml = REWRITE_RULE [ptpml_MAP]
 fun front n l = List.take (l, n)
 fun drop n l = List.drop(l,n)
 
+val app_eqrespects = prove(
+  ``∀x1:β y1 x2:(α,β,γ)pregterm list y2. (x1 = y1) ∧ (x2 = y2) ==>
+                                        aeq (app x1 x2) (app y1 y2)``,
+  srw_tac [][]);
+
+val fvl_eqrespects = prove(
+  ``∀ts1 ts2:(α,β,γ) pregterm list. (ts1 = ts2) ==> (fvl ts1 = fvl ts2)``,
+  srw_tac [][]);
+
 (*
-val [GFV_thm, gfvl_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct, gterm_11,
+val [(* GFV_thm, gfvl_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct,  gterm_11,*)
      GLAM_eq_thm, FRESH_swap0,
-     (* tpm_is_perm,*) FINITE_GFV,
+     FINITE_GFV,
      gtpm_sing_inv, gtpm_NIL, gtpm_inverse, gtpm_flip_args, gtpm_id_front] =
     quotient.define_quotient_types_full
     {
@@ -570,6 +579,8 @@ val [GFV_thm, gfvl_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct, gt
      tyop_quotients = [],
      tyop_simps = [],
      respects = [rmaeql lam_respects_aeq, rmaeql app_respects_aeq,
+                 (* lib calls for this next one, but it surely shouldn't *)
+                 app_eqrespects,
                  var_respects_aeq, CONJUNCT1 aeq_fv,
                  rmaeql (CONJUNCT2 aeq_fv),
                  aeq_ptpm_lemma |> CONJUNCT1
@@ -577,18 +588,20 @@ val [GFV_thm, gfvl_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct, gt
                  ],
      poly_preserves = [],
      poly_respects = [],
-     old_thms = [fv_def |> CONJUNCTS |> front 3 |> LIST_CONJ,
+     old_thms = [(* fv_def |> CONJUNCTS |> front 3 |> LIST_CONJ,
                  fv_def |> CONJUNCTS |> drop 3 |> LIST_CONJ,
                  ptpm_fv', pind,
                  ptpm_def |> CONJUNCTS |> front 3 |> LIST_CONJ |> rmptpml,
-                 aeq_distinct, rmaeql aeq_ptm_11,
-                 lam_aeq_thm, CONJUNCT1 fresh_swap,
+                 aeq_distinct, rmaeql aeq_ptm_11, *)
+                 rmptpml (rmaeql lam_aeq_thm), CONJUNCT1 fresh_swap,
                  finite_fv,
                  ptpm_sing_inv, ptpm_NIL, CONJUNCT1 ptpm_INVERSE,
                  ptpm_flip_args,
                  ptpm_id_front]}
+*)
 
 
+(*
 (* show connection of with nomset concepts *)
 
 val lamf = ``lm : string -> 'a -> 'a``
