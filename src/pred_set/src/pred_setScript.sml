@@ -256,8 +256,9 @@ in
 end
 
 val _ = temp_add_user_printer("UNIVprinter", ``UNIV: 'a set``, univ_printer)
+val _ = TeX_notation {hol = "univ", TeX = ("\\ensuremath{\\cal{U}}", 1)}
 val _ = TeX_notation {hol = UnicodeChars.universal_set,
-                      TeX = ("\\ensuremath{\\cal U}", 1)}
+                      TeX = ("\\ensuremath{\\cal{U}}", 1)}
 
 
 (* ===================================================================== *)
