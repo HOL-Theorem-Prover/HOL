@@ -558,8 +558,10 @@ val fvl_eqrespects = prove(
   ``∀ts1 ts2:(α,β,γ) pregterm list. (ts1 = ts2) ==> (fvl ts1 = fvl ts2)``,
   srw_tac [][]);
 
-(*
-val [(* GFV_thm, gfvl_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct,  gterm_11,*)
+
+val _ = quotient.chatting := true;
+
+val [GFV_thm, gfvl_thm, GFV_gtpm, (*simple_induction,*) gtpm_thm, gterm_distinct, gterm_11,
      GLAM_eq_thm, FRESH_swap0,
      FINITE_GFV,
      gtpm_sing_inv, gtpm_NIL, gtpm_inverse, gtpm_flip_args, gtpm_id_front] =
@@ -580,7 +582,8 @@ val [(* GFV_thm, gfvl_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct,
      tyop_simps = [],
      respects = [rmaeql lam_respects_aeq, rmaeql app_respects_aeq,
                  (* lib calls for this next one, but it surely shouldn't *)
-                 app_eqrespects,
+                 (* PVH: now it doesn't *)
+                 (*app_eqrespects,*)
                  var_respects_aeq, CONJUNCT1 aeq_fv,
                  rmaeql (CONJUNCT2 aeq_fv),
                  aeq_ptpm_lemma |> CONJUNCT1
@@ -588,17 +591,17 @@ val [(* GFV_thm, gfvl_thm, GFV_gtpm, simple_induction, gtpm_thm, gterm_distinct,
                  ],
      poly_preserves = [],
      poly_respects = [],
-     old_thms = [(* fv_def |> CONJUNCTS |> front 3 |> LIST_CONJ,
+     old_thms = [fv_def |> CONJUNCTS |> front 3 |> LIST_CONJ,
                  fv_def |> CONJUNCTS |> drop 3 |> LIST_CONJ,
-                 ptpm_fv', pind,
+                 ptpm_fv', (*pind, (Contains MEM, which is not respectful)*)
                  ptpm_def |> CONJUNCTS |> front 3 |> LIST_CONJ |> rmptpml,
-                 aeq_distinct, rmaeql aeq_ptm_11, *)
+                 aeq_distinct, rmaeql aeq_ptm_11,
                  rmptpml (rmaeql lam_aeq_thm), CONJUNCT1 fresh_swap,
                  finite_fv,
                  ptpm_sing_inv, ptpm_NIL, CONJUNCT1 ptpm_INVERSE,
                  ptpm_flip_args,
                  ptpm_id_front]}
-*)
+
 
 
 (*
