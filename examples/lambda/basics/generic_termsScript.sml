@@ -33,16 +33,14 @@ val oldind = TypeBase.induction_of ``:(α,β,γ)pregterm``
 val pind = prove(
   ``∀P.
       (∀s vv. P (var s vv)) ∧
-      (∀nbv ts. (∀e. MEM e ts ⇒ P e) ⇒ P (app nbv ts)) ∧
+      (∀nbv ts. EVERY P ts ⇒ P (app nbv ts)) ∧
       (∀v bv bndts unbndts.
-         (∀e. MEM e bndts ⇒ P e) ∧ (∀e. MEM e unbndts ⇒ P e) ⇒
-         P (lam v bv bndts unbndts))
+         EVERY P bndts ∧ EVERY P unbndts ⇒ P (lam v bv bndts unbndts))
     ⇒
       ∀t. P t``,
   gen_tac >> strip_tac >>
   Q_TAC suff_tac `(∀t. P t) ∧ (∀ts. EVERY P ts)` >- metis_tac [] >>
-  ho_match_mp_tac oldind >> srw_tac [][] >> first_x_assum match_mp_tac >>
-  full_simp_tac (srw_ss()) [listTheory.EVERY_MEM])
+  ho_match_mp_tac oldind >> srw_tac [][]);
 
 val finite_fv = Store_Thm(
   "finite_fv",
@@ -559,12 +557,12 @@ val fvl_eqrespects = prove(
   srw_tac [][]);
 
 
-val _ = quotient.chatting := true;
-
-val [GFV_thm, gfvl_thm, GFV_gtpm, (*simple_induction,*) gtpm_thm, gterm_distinct, gterm_11,
+val [GFV_thm0, gfvl_thm, GFV_gtpm, simple_induction0, gtpm_thm,
+     gterm_distinct, gterm_11,
      GLAM_eq_thm, FRESH_swap0,
      FINITE_GFV,
-     gtpm_sing_inv, gtpm_NIL, gtpm_inverse, gtpm_flip_args, gtpm_id_front] =
+     gtpm_sing_inv, gtpm_NIL, gtpm_inverse, gtpm_flip_args, gtpm_id_front,
+     gtpm_compose, gtpm_permeq] =
     quotient.define_quotient_types_full
     {
      types = [{name = "gterm", equiv = aeq_equiv}],
@@ -581,9 +579,6 @@ val [GFV_thm, gfvl_thm, GFV_gtpm, (*simple_induction,*) gtpm_thm, gterm_distinct
      tyop_quotients = [],
      tyop_simps = [],
      respects = [rmaeql lam_respects_aeq, rmaeql app_respects_aeq,
-                 (* lib calls for this next one, but it surely shouldn't *)
-                 (* PVH: now it doesn't *)
-                 (*app_eqrespects,*)
                  var_respects_aeq, CONJUNCT1 aeq_fv,
                  rmaeql (CONJUNCT2 aeq_fv),
                  aeq_ptpm_lemma |> CONJUNCT1
@@ -593,15 +588,90 @@ val [GFV_thm, gfvl_thm, GFV_gtpm, (*simple_induction,*) gtpm_thm, gterm_distinct
      poly_respects = [],
      old_thms = [fv_def |> CONJUNCTS |> front 3 |> LIST_CONJ,
                  fv_def |> CONJUNCTS |> drop 3 |> LIST_CONJ,
-                 ptpm_fv', (*pind, (Contains MEM, which is not respectful)*)
+                 ptpm_fv', pind,
                  ptpm_def |> CONJUNCTS |> front 3 |> LIST_CONJ |> rmptpml,
                  aeq_distinct, rmaeql aeq_ptm_11,
                  rmptpml (rmaeql lam_aeq_thm), CONJUNCT1 fresh_swap,
                  finite_fv,
                  ptpm_sing_inv, ptpm_NIL, CONJUNCT1 ptpm_INVERSE,
                  ptpm_flip_args,
-                 ptpm_id_front]}
+                 ptpm_id_front, CONJUNCT1 ptpm_compose0,
+                 permeq_ptpm |> UNDISCH |> CONJUNCT1 |> DISCH_ALL]}
 
+val simple_induction = save_thm(
+  "simple_induction",
+  REWRITE_RULE [listTheory.EVERY_MEM] simple_induction0)
+
+val gfvl_BIGUNION = prove(
+  ``gfvl ts = BIGUNION (set (MAP GFV ts))``,
+  Induct_on `ts` >> srw_tac [][gfvl_thm])
+
+val rmgfvl = REWRITE_RULE [gfvl_BIGUNION]
+
+(* don't export any of these, because the intention is not to have users
+   working with this type *)
+val GFV_thm = save_thm("GFV_thm", rmgfvl GFV_thm0)
+val GFV_gtpm = save_thm("GFV_gtpm", GFV_gtpm)
+val gtpm_thm = save_thm("gtpm_thm", gtpm_thm)
+val gterm_distinct = save_thm("gterm_distinct", gterm_distinct)
+val gterm_11 = save_thm("gterm_11", gterm_11)
+val GLAM_eq_thm = save_thm("GLAM_eq_thm", rmgfvl GLAM_eq_thm)
+val gtpm_fresh = save_thm("gtpm_fresh", GSYM FRESH_swap0)
+val FINITE_GFV = save_thm("FINITE_GFV", FINITE_GFV)
+val gtpm_sing_inv = save_thm("gtpm_sing_inv", gtpm_sing_inv);
+val gtpm_NIL  = save_thm("gtpm_NIL", gtpm_NIL );
+val gtpm_inverse  = save_thm("gtpm_inverse", gtpm_inverse );
+val gtpm_flip_args  = save_thm("gtpm_flip_args", gtpm_flip_args );
+val gtpm_id_front = save_thm("gtpm_id_front", gtpm_id_front);
+val gtpm_compose = save_thm("gtpm_compose", gtpm_compose)
+val gtpm_permeq = save_thm("gtpm_permeq", gtpm_permeq)
+
+val gtpm_is_perm = store_thm(
+  "gtpm_is_perm",
+  ``is_perm gtpm``,
+  srw_tac [][is_perm_def,gtpm_NIL,gtpm_compose, permeq_def, FUN_EQ_THM,
+             gtpm_permeq]);
+
+val _ = delete_const "gfvl"
+
+val MAP_EQ1 = prove(
+  ``(MAP f l = l) ⇔ ∀x. MEM x l ⇒ (f x = x)``,
+  Induct_on `l` >> srw_tac [][DISJ_IMP_THM, FORALL_AND_THM]);
+
+(* default rewriting of negations makes a mess of these. *)
+val NOT_IN_GFV = store_thm(
+  "NOT_IN_GFV",
+  ``(x ∉ GFV (GVAR s vv) ⇔ x ≠ s) ∧
+    (x ∉ GFV (GAPP nbv ts) ⇔ ∀t. MEM t ts ⇒ x ∉ GFV t) ∧
+    (x ∉ GFV (GLAM v bv ts us) ⇔
+       (∀u. MEM u us ⇒ x ∉ GFV u) ∧
+       (∀t. x ≠ v ∧ MEM t ts ⇒ x ∉ GFV t))``,
+  srw_tac [][GFV_thm, listTheory.MEM_MAP] >> metis_tac []);
+
+val GFV_apart = store_thm(
+  "GFV_apart",
+  ``∀t x y. x ∈ GFV t ∧ y ∉ GFV t ⇒ gtpm [(x,y)] t ≠ t``,
+  ho_match_mp_tac simple_induction >>
+  srw_tac [][GFV_thm, gtpm_thm, gterm_11, listTheory.MEM_MAP,
+             MAP_EQ1, GLAM_eq_thm, NOT_IN_GFV]
+  >- metis_tac []
+  >- (Cases_on `y = v` >> srw_tac [][] >> metis_tac [])
+  >- (Cases_on `y = v` >> srw_tac [][] >> metis_tac [])
+  >- metis_tac []
+  >- metis_tac [])
+
+val GFV_support = store_thm(
+  "GFV_support",
+  ``support gtpm t (GFV t)``,
+  srw_tac [][support_def, gtpm_fresh])
+
+val GFV_supp = store_thm(
+  "GFV_supp",
+  ``supp gtpm t = GFV t``,
+  match_mp_tac (GEN_ALL supp_unique_apart) >>
+  srw_tac [][GFV_support, GFV_apart, gtpm_is_perm, FINITE_GFV]);
+
+(* tempting to delete GFV and just use supp gtpm.... *)
 
 
 (*
