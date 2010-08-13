@@ -1408,7 +1408,7 @@ val FINITE_SET_OF_BAG = store_thm(
     BAG_IMAGE is "safe" if the input bag is finite, or if the function is
     only finitely non-injective.  I don't want to have these side conditions
     hanging around on my theorems, so I've decided to simply make BAG_IMAGE
-    take elements that want to be infinite to zero instead.
+    take elements that want to be infinite to one instead.
    ---------------------------------------------------------------------- *)
 
 val _ = augment_srw_ss [simpLib.rewrites [LET_THM]]
@@ -1417,7 +1417,7 @@ val BAG_IMAGE_DEF = new_definition(
   ``BAG_IMAGE f b = \e. let sb = BAG_FILTER (\e0. f e0 = e) b
                         in
                             if FINITE_BAG sb then BAG_CARD sb
-                            else 0``);
+                            else 1``);
 
 val BAG_IMAGE_EMPTY = store_thm(
   "BAG_IMAGE_EMPTY",
@@ -1820,6 +1820,25 @@ val BAG_FILTER_EQ_EMPTY = Q.store_thm(
   FULL_SIMP_TAC (srw_ss()) [] THEN
   `n = 1` by DECIDE_TAC THEN
   SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []);
+
+val SET_OF_BAG_IMAGE = Q.store_thm(
+  "SET_OF_BAG_IMAGE",
+  `SET_OF_BAG (BAG_IMAGE f b) = IMAGE f (SET_OF_BAG b)`,
+  SRW_TAC [][EXTENSION,BAG_IMAGE_DEF,BAG_IN,BAG_INN] THEN
+  Q.ABBREV_TAC `bf = BAG_FILTER (\e0. f e0 = x) b` THEN
+  Q.ISPEC_THEN `bf` MP_TAC BAG_cases THEN
+  SRW_TAC [][] THEN
+  SRW_TAC [][] THENL [
+    FULL_SIMP_TAC (srw_ss()) [BAG_FILTER_EQ_EMPTY,BAG_EVERY,BAG_IN,BAG_INN] THEN
+    PROVE_TAC [],
+    `FINITE_BAG b0` by PROVE_TAC [FINITE_BAG_INSERT] THEN
+    SRW_TAC [ARITH_ss][BAG_CARD_THM],
+    FULL_SIMP_TAC (srw_ss()) [],
+    ALL_TAC ] THEN
+  `~BAG_EVERY ($~ o (\e0. f e0 = x)) b` by PROVE_TAC [BAG_FILTER_EQ_EMPTY,BAG_INSERT_NOT_EMPTY] THEN
+  FULL_SIMP_TAC (srw_ss()) [BAG_EVERY,BAG_IN,BAG_INN] THEN
+  PROVE_TAC []);
+val _ = export_rewrites ["SET_OF_BAG_IMAGE"];
 
 val BAG_ALL_DISTINCT = new_definition ("BAG_ALL_DISTINCT",
   ``BAG_ALL_DISTINCT b = (!e. b e <= 1:num)``);
