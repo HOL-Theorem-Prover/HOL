@@ -674,6 +674,50 @@ val GFV_supp = store_thm(
 (* tempting to delete GFV and just use supp gtpm.... *)
 
 
+val vf = mk_var ("vf", ``: string -> γ -> δ``)
+val af = mk_var ("af", ``:β -> δ list -> (α,β,γ)gterm list -> δ``)
+val lf = mk_var ("lf", ``: string -> α -> δ list -> (α,β,γ)gterm list ->
+                           δ list -> (α,β,γ)gterm list -> δ``)
+
+val _ = temp_set_fixity "-p->" (Infixr 490)
+val _ = overload_on ("-p->", ``fnpm``)
+
+val (mylist_rel_rules, mylist_rel_ind, mylist_rel_cases) = Hol_reln`
+  mylist_rel R [] [] ∧
+  (R h1 h2 ∧ mylist_rel R t1 t2 ==> mylist_rel R (h1::t1) (h2::t2))`
+
+val mylist_rel_mono = store_thm(
+  "mylist_rel_mono",
+  ``(∀x y. Q x y ==> R x y) ==> mylist_rel Q x y ==> mylist_rel R x y``,
+  strip_tac >> map_every qid_spec_tac [`y`,`x`] >>
+  ho_match_mp_tac mylist_rel_ind >> metis_tac [mylist_rel_rules]);
+val _ = export_mono "mylist_rel_mono"
+
+val std_sidecond =
+  ``support (lswapstr -p-> gpm -p-> dpm) ^vf A ∧
+    support (bpm -p-> listpm dpm -p-> listpm gtpm -p-> dpm) ^af A ∧
+    support (lswapstr -p-> apm -p-> listpm dpm -p-> listpm gtpm -p->
+             listpm dpm -p-> listpm gtpm -p-> dpm)
+            ^lf A ∧
+    is_perm apm ∧ is_perm bpm ∧ is_perm gpm ∧ is_perm dpm``
+
+val (recn_rel_rules, recn_rel_ind, recn_rel_cases) = Hol_reln`
+  (∀s vv. ^std_sidecond ==>
+          recn_rel ^vf ^af ^lf apm bpm gpm dpm A (GVAR s vv) (^vf s vv)) ∧
+  (∀nbv ts ds.
+     mylist_rel (recn_rel ^vf ^af ^lf apm bpm gpm dpm A) ts ds ∧
+     ^std_sidecond ==>
+     recn_rel ^vf ^af ^lf apm bpm gpm dpm A (GAPP nbv ts) (^af nbv ds ts)) ∧
+  (∀bv ts us v ds1 ds2.
+     mylist_rel (recn_rel ^vf ^af ^lf apm bpm gpm dpm A) ts ds1 ∧
+     mylist_rel (recn_rel ^vf ^af ^lf apm bpm gpm dpm A) us ds2 ∧
+     ^std_sidecond ==>
+     recn_rel vf af lf apm bpm gpm dpm A
+              (GLAM v bv ts us)
+              (lf v bv ds1 ts ds2 us))
+`
+
+
 (*
 (* show connection of with nomset concepts *)
 
