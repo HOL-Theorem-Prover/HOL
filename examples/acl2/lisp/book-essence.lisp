@@ -108,15 +108,31 @@
                        (quant vars &) . &)
                      (let ((vars
                             (if (symbolp vars) (list vars) vars)))
-                       (case-match tbody
-                         ((('lambda & matrix) . &)
-                          (value (list 'defun-sk name formals
-                                       (list quant vars matrix))))
-                         (& (internal-error ctx
-                                            "Unexpected form of ~
+                       (cond
+                        ((null (cdr vars))
+                         (case-match tbody
+                           (('prog2$ ('throw-nonexec-error . &)
+                                     (('lambda & matrix) . &))
+                            (value (list 'defun-sk name formals
+                                         (list quant vars matrix))))
+                           (& (internal-error ctx
+                                              "Unexpected form of ~
                                              'unnormalized-body property for ~
                                              ~x0:~|~%  ~x1"
-                                            name tbody)))))
+                                              name tbody))))
+                        (t ; at least two vars
+                         (case-match tbody
+                           (('prog2$ ('throw-nonexec-error . &)
+                                     (('lambda ('mv . &)
+                                        (('lambda & matrix) . &))
+                                      . &))
+                            (value (list 'defun-sk name formals
+                                         (list quant vars matrix))))
+                           (& (internal-error ctx
+                                              "Unexpected form of ~
+                                             'unnormalized-body property for ~
+                                             ~x0:~|~%  ~x1"
+                                              name tbody)))))))
                     (& (internal-error ctx
                                        "Expected defun-sk of a certain form, ~
                                         but got:~|~%  ~x1."
@@ -320,7 +336,8 @@
            SET-NU-REWRITER-MODE
            SET-CASE-SPLIT-LIMITATIONS
            SET-DEFAULT-HINTS!
-           SET-REWRITE-STACK-LIMIT VALUE-TRIPLE)
+           SET-REWRITE-STACK-LIMIT VALUE-TRIPLE
+           defattach)
           (essential-events (cdr forms) acc ctx state))
          (otherwise
           (er soft ctx

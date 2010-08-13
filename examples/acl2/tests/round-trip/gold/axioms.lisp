@@ -361,8 +361,6 @@
 
 (DEFUN PROG2$ (X Y) Y)
 
-(DEFUN TIME$ (X) X)
-
 (DEFUN EC-CALL (X) X)
 
 (DEFAXIOM CLOSURE
@@ -1026,13 +1024,12 @@
                  (CONS (CAR LST)
                        (CONS (LIST*-MACRO (CDR LST)) 'NIL)))))
 
-(DEFUN NULL-BODY-ER (FN FORMALS)
-       (CONS 'THROW-RAW-EV-FNCALL
-             (CONS (CONS 'LIST
-                         (CONS ''EV-FNCALL-NULL-BODY-ER
-                               (CONS (CONS 'QUOTE (CONS FN 'NIL))
-                                     FORMALS)))
-                   'NIL)))
+(DEFUN NULL-BODY-ER (FN FORMALS MAYBE-ATTACH)
+       (IF MAYBE-ATTACH
+           (CONS 'THROW-OR-ATTACH
+                 (CONS FN (CONS FORMALS (CONS 'NIL 'NIL))))
+           (CONS 'THROW-WITHOUT-ATTACH
+                 (CONS FN (CONS FORMALS 'NIL)))))
 
 (DEFAXIOM STRINGP-SYMBOL-PACKAGE-NAME (STRINGP (SYMBOL-PACKAGE-NAME X)))
 
@@ -1546,6 +1543,10 @@
            (CONS (CAR X)
                  (BINARY-APPEND (CDR X) Y))))
 
+(DEFTHM TRUE-LISTP-APPEND
+        (IMPLIES (TRUE-LISTP B)
+                 (TRUE-LISTP (BINARY-APPEND A B))))
+
 (DEFTHM STANDARD-CHAR-LISTP-APPEND
         (IMPLIES (TRUE-LISTP X)
                  (EQUAL (STANDARD-CHAR-LISTP (BINARY-APPEND X Y))
@@ -1716,9 +1717,11 @@
            (EQUAL RST 'NIL)
            (IF (CONSP (CAR RST))
                (IF (TRUE-LISTP (CAR RST))
-                   (IF (MEMBER-EQ (CAR (CAR RST))
-                                  '(DEFUN DEFUND))
-                       (MUTUAL-RECURSION-GUARDP (CDR RST))
+                   (IF (TRUE-LISTP (CAR (CDR (CDR (CAR RST)))))
+                       (IF (MEMBER-EQ (CAR (CAR RST))
+                                      '(DEFUN DEFUND DEFUN-NX DEFUND-NX))
+                           (MUTUAL-RECURSION-GUARDP (CDR RST))
+                           'NIL)
                        'NIL)
                    'NIL)
                'NIL)))
@@ -1822,6 +1825,63 @@
                                                 (CAR (CDR (CAR DEFUNS))))
                                        (CAR (CDR (CAR DEFUNS))))
                                    ACC))))
+
+(DEFUN THROW-NONEXEC-ERROR (FN ACTUALS) 'NIL)
+
+(DEFUN
+ DEFUN-NX-FN (FORM DISABLEDP)
+ ((LAMBDA
+   (NAME FORMALS REST DEFUNX)
+   (CONS
+    DEFUNX
+    (CONS
+     NAME
+     (CONS
+      FORMALS
+      (CONS
+       (CONS 'DECLARE
+             (CONS (CONS 'XARGS
+                         (CONS ':NON-EXECUTABLE
+                               (CONS 'T
+                                     (CONS ':MODE (CONS ':LOGIC 'NIL)))))
+                   'NIL))
+       (BINARY-APPEND
+        (BUTLAST REST '1)
+        (CONS
+            (CONS 'PROG2$
+                  (CONS (CONS 'THROW-NONEXEC-ERROR
+                              (CONS (CONS 'QUOTE (CONS NAME 'NIL))
+                                    (CONS (CONS 'LIST
+                                                (BINARY-APPEND FORMALS 'NIL))
+                                          'NIL)))
+                        (BINARY-APPEND (LAST REST) 'NIL)))
+            'NIL)))))))
+  (CAR (CDR FORM))
+  (CAR (CDR (CDR FORM)))
+  (CDR (CDR (CDR FORM)))
+  (IF DISABLEDP 'DEFUND 'DEFUN)))
+
+(DEFUN
+   UPDATE-MUTUAL-RECURSION-FOR-DEFUN-NX-1
+   (DEFS)
+   (IF (ENDP DEFS)
+       'NIL
+       (IF (EQ (CAR (CAR DEFS)) 'DEFUN-NX)
+           (CONS (DEFUN-NX-FN (CAR DEFS) 'NIL)
+                 (UPDATE-MUTUAL-RECURSION-FOR-DEFUN-NX-1 (CDR DEFS)))
+           (IF (EQ (CAR (CAR DEFS)) 'DEFUND-NX)
+               (CONS (DEFUN-NX-FN (CAR DEFS) 'T)
+                     (UPDATE-MUTUAL-RECURSION-FOR-DEFUN-NX-1 (CDR DEFS)))
+               (CONS (CAR DEFS)
+                     (UPDATE-MUTUAL-RECURSION-FOR-DEFUN-NX-1 (CDR DEFS)))))))
+
+(DEFUN UPDATE-MUTUAL-RECURSION-FOR-DEFUN-NX
+       (DEFS)
+       (IF (IF (ASSOC-EQ 'DEFUN-NX DEFS)
+               (ASSOC-EQ 'DEFUN-NX DEFS)
+               (ASSOC-EQ 'DEFUND-NX DEFS))
+           (UPDATE-MUTUAL-RECURSION-FOR-DEFUN-NX-1 DEFS)
+           DEFS))
 
 (MUTUAL-RECURSION
  (DEFUN
@@ -2520,21 +2580,21 @@
                (CONS (SUBST NEW OLD (CAR TREE))
                      (SUBST NEW OLD (CDR TREE))))))
 
-(DEFUN WORLDP (ALIST)
+(DEFUN PLIST-WORLDP (ALIST)
        (IF (ATOM ALIST)
            (EQ ALIST 'NIL)
            (IF (CONSP (CAR ALIST))
                (IF (SYMBOLP (CAR (CAR ALIST)))
                    (IF (CONSP (CDR (CAR ALIST)))
                        (IF (SYMBOLP (CAR (CDR (CAR ALIST))))
-                           (WORLDP (CDR ALIST))
+                           (PLIST-WORLDP (CDR ALIST))
                            'NIL)
                        'NIL)
                    'NIL)
                'NIL)))
 
-(DEFTHM WORLDP-FORWARD-TO-ASSOC-EQ-EQUAL-ALISTP
-        (IMPLIES (WORLDP X)
+(DEFTHM PLIST-WORLDP-FORWARD-TO-ASSOC-EQ-EQUAL-ALISTP
+        (IMPLIES (PLIST-WORLDP X)
                  (ASSOC-EQ-EQUAL-ALISTP X)))
 
 (DEFUN PUTPROP (SYMB KEY VALUE WORLD-ALIST)
@@ -2741,7 +2801,7 @@
                'NIL)
            'NIL))
 
-(DEFUN THE-ERROR (X Y) (CDR (CONS X Y)))
+(DEFUN THE-ERROR (X Y) Y)
 
 (DEFUN SET-DIFFERENCE-EQUAL (L1 L2)
        (IF (ENDP L1)
@@ -3309,6 +3369,8 @@
                  (MAKE-MV-NTHS (CDR ARGS)
                                CALL (BINARY-+ I '1)))))
 
+(DEFUN MV-LIST (INPUT-ARITY X) X)
+
 (DEFUN UPDATE-NTH (KEY VAL L)
        (IF (ZP KEY)
            (CONS VAL (CDR L))
@@ -3740,10 +3802,9 @@
             (ACCUMULATED-TTREE)
             (ACCUMULATED-WARNINGS)
             (ACL2-RAW-MODE-P)
-            (ACL2-VERSION . "ACL2 Version 3.6")
+            (ACL2-VERSION . "ACL2 Version 4.0")
             (AXIOMSP)
             (BDDNOTES)
-            (CERTIFY-BOOK-DISABLEDP)
             (CERTIFY-BOOK-INFO)
             (CHECKPOINT-FORCED-GOALS)
             (CHECKPOINT-PROCESSORS ELIMINATE-DESTRUCTORS-CLAUSE
@@ -3751,11 +3812,14 @@
                                    ELIMINATE-IRRELEVANCE-CLAUSE
                                    PUSH-CLAUSE :INDUCT)
             (CHECKPOINT-SUMMARY-LIMIT NIL . 3)
+            (COMPILER-ENABLED)
             (CONNECTED-BOOK-DIRECTORY)
             (CURRENT-ACL2-WORLD)
             (CURRENT-PACKAGE . "ACL2")
             (DEBUGGER-ENABLE)
             (DEFAXIOMS-OKP-CERT . T)
+            (DEFERRED-TTAG-NOTES . :NOT-DEFERRED)
+            (DEFERRED-TTAG-NOTES-SAVED)
             (DISTRIBUTED-BOOKS-DIR)
             (DMRP)
             (EVISC-HITP-WITHOUT-IPRINT)
@@ -3770,12 +3834,14 @@
             (GUARD-CHECKING-ON . T)
             (HONS-ENABLED)
             (HONS-READ-P . T)
+            (HOST-LISP . :CCL)
             (IN-LOCAL-FLG)
             (IN-PROVE-FLG)
             (IN-VERIFY-FLG)
             (INFIXP)
             (INHIBIT-OUTPUT-LST SUMMARY)
             (INHIBIT-OUTPUT-LST-STACK)
+            (INHIBITED-SUMMARY-TYPES)
             (IPRINT-AR (:HEADER :DIMENSIONS (10001)
                                 :MAXIMUM-LENGTH 40004
                                 :DEFAULT NIL
@@ -3789,20 +3855,23 @@
             (LD-LEVEL . 0)
             (LD-REDEFINITION-ACTION)
             (LD-SKIP-PROOFSP)
-            (LOGIC-FNS-WITH-RAW-CODE MOD-EXPT HEADER SEARCH-FN STATE-P1
-                                     AREF2 AREF1 MFC-ANCESTORS FGETPROP
-                                     GETENV$ WORMHOLE1 ASET2 SGETPROP SETENV$
+            (LOGIC-FNS-WITH-RAW-CODE MOD-EXPT HEADER SEARCH-FN
+                                     STATE-P1 AREF2 AREF1 MFC-ANCESTORS
+                                     FGETPROP GETENV$ WORMHOLE-EVAL
+                                     WORMHOLE1 GET-WORMHOLE-STATUS
+                                     ASET2 SGETPROP SETENV$
                                      GETPROPS COMPRESS1 TIME-LIMIT4-REACHED-P
                                      FMT-TO-COMMENT-WINDOW
                                      LEN MFC-CLAUSE CPU-CORE-COUNT
                                      NONNEGATIVE-INTEGER-QUOTIENT
-                                     CHECK-PRINT-BASE RETRACT-WORLD
-                                     ASET1 ARRAY1P BOOLE$ ARRAY2P STRIP-CDRS
-                                     COMPRESS2 STRIP-CARS WORLDP WORMHOLE-P
+                                     CHECK-PRINT-BASE
+                                     RETRACT-WORLD ASET1 ARRAY1P
+                                     BOOLE$ ARRAY2P STRIP-CDRS COMPRESS2
+                                     STRIP-CARS PLIST-WORLDP WORMHOLE-P
                                      MFC-TYPE-ALIST MAY-NEED-SLASHES-FN
                                      FMT-TO-COMMENT-WINDOW!
                                      HAS-PROPSP HARD-ERROR
-                                     ABORT! MFC-RDEPTH FLUSH-COMPRESS
+                                     ABORT! P! MFC-RDEPTH FLUSH-COMPRESS
                                      ALPHORDER EXTEND-WORLD USER-STOBJ-ALIST
                                      READ-ACL2-ORACLE UPDATE-USER-STOBJ-ALIST
                                      DECREMENT-BIG-CLOCK
@@ -3813,15 +3882,17 @@
                                      CLOSE-OUTPUT-CHANNEL WRITE-BYTE$
                                      SHRINK-T-STACK ASET-32-BIT-INTEGER-STACK
                                      GET-GLOBAL 32-BIT-INTEGER-STACK-LENGTH1
-                                     EXTEND-32-BIT-INTEGER-STACK ASET-T-STACK
-                                     WITH-PROVER-TIME-LIMIT AREF-T-STACK
+                                     EXTEND-32-BIT-INTEGER-STACK
+                                     ASET-T-STACK AREF-T-STACK
                                      READ-CHAR$ AREF-32-BIT-INTEGER-STACK
                                      OPEN-OUTPUT-CHANNEL-P1
                                      READ-OBJECT BIG-CLOCK-NEGATIVE-P
                                      PEEK-CHAR$ SHRINK-32-BIT-INTEGER-STACK
-                                     READ-RUN-TIME READ-BYTE$ EC-CALL
-                                     PROG2$ READ-IDATE TIME$ PRINT-OBJECT$
-                                     T-STACK-LENGTH1 MUST-BE-EQUAL ZPF
+                                     READ-RUN-TIME
+                                     READ-BYTE$ READ-IDATE T-STACK-LENGTH1
+                                     PRINT-OBJECT$ EC-CALL PROG2$ MV-LIST
+                                     MUST-BE-EQUAL WITH-PROVER-TIME-LIMIT
+                                     WITH-GUARD-CHECKING ZPF
                                      IDENTITY ENDP NTHCDR LAST REVAPPEND NULL
                                      BUTLAST STRING MEMBER NOT MOD PLUSP ATOM
                                      LISTP ZP FLOOR CEILING TRUNCATE ROUND
@@ -3833,13 +3904,18 @@
                                      LOGORC1 LOGORC2 LOGTEST POSITION ABS
                                      STRING-EQUAL STRING< STRING> STRING<=
                                      STRING>= STRING-UPCASE STRING-DOWNCASE
-                                     KEYWORDP EQ EQL CHAR SUBST SUBLIS
-                                     ACONS ASSOC RASSOC NTH SUBSEQ LENGTH
-                                     REVERSE ZIP STANDARD-CHAR-P ALPHA-CHAR-P
-                                     UPPER-CASE-P LOWER-CASE-P CHAR< CHAR>
-                                     CHAR<= CHAR>= CHAR-EQUAL CHAR-UPCASE
-                                     CHAR-DOWNCASE HONS-READ-OBJECT
-                                     AND-LIST OR-LIST RANDOM$)
+                                     KEYWORDP EQ EQL CHAR SUBST
+                                     SUBLIS ACONS ASSOC RASSOC NTH SUBSEQ
+                                     LENGTH REVERSE ZIP STANDARD-CHAR-P
+                                     ALPHA-CHAR-P UPPER-CASE-P LOWER-CASE-P
+                                     CHAR< CHAR> CHAR<= CHAR>= CHAR-EQUAL
+                                     CHAR-UPCASE CHAR-DOWNCASE AND-LIST
+                                     OR-LIST RANDOM$ THROW-NONEXEC-ERROR
+                                     GC$-FN SET-COMPILER-ENABLED GOOD-BYE-FN
+                                     ASSOC-EQ ASSOC-EQUAL MEMBER-EQ
+                                     MEMBER-EQUAL SUBSETP-EQ SUBSETP-EQUAL
+                                     REMOVE-EQ REMOVE-EQUAL POSITION-EQ
+                                     POSITION-EQUAL TAKE CANONICAL-PATHNAME)
             (MACROS-WITH-RAW-CODE MBE
                                   THEORY-INVARIANT SET-LET*-ABSTRACTIONP
                                   DEFAXIOM SET-BOGUS-MUTUAL-RECURSION-OK
@@ -3854,8 +3930,7 @@
                                   SET-NON-LINEARP WITH-OUTPUT
                                   SET-COMPILE-FNS ADD-INCLUDE-BOOK-DIR
                                   CLEAR-PSTK ADD-CUSTOM-KEYWORD-HINT
-                                  INITIAL-GSTACK ASSIGN-WORMHOLE-OUTPUT
-                                  ACL2-UNWIND-PROTECT
+                                  INITIAL-GSTACK ACL2-UNWIND-PROTECT
                                   SET-WELL-FOUNDED-RELATION
                                   CATCH-TIME-LIMIT4 DEFUNS
                                   ADD-DEFAULT-HINTS! LOCAL ENCAPSULATE
@@ -3869,7 +3944,6 @@
                                   F-BIG-CLOCK-NEGATIVE-P RESET-PREHISTORY
                                   MUTUAL-RECURSION SET-REWRITE-STACK-LIMIT
                                   ADD-MATCH-FREE-OVERRIDE
-                                  SET-INHIBIT-OUTPUT-LST
                                   SET-MATCH-FREE-DEFAULT
                                   THE-MV TABLE IN-ARITHMETIC-THEORY
                                   SET-CASE-SPLIT-LIMITATIONS
@@ -3898,16 +3972,19 @@
                                   UNMEMOIZE HONS-LET MEMOIZE-LET MEMOIZE
                                   DEFUNS-STD DEFTHM-STD DEFUN-STD POR
                                   PAND PLET PARGS TRACE! WITH-LIVE-STATE
-                                  WITH-OUTPUT-OBJECT-CHANNEL-SHARING)
+                                  WITH-OUTPUT-OBJECT-CHANNEL-SHARING
+                                  TIME$ WITH-HCOMP-BINDINGS
+                                  WITH-HCOMP-HT-BINDINGS REDEF+
+                                  REDEF- BIND-ACL2-TIME-LIMIT DEFATTACH)
             (MAIN-TIMER . 0)
             (MAKE-EVENT-DEBUG)
             (MAKE-EVENT-DEBUG-DEPTH . 0)
             (MATCH-FREE-ERROR)
+            (MODIFYING-INCLUDE-BOOK-DIR-ALIST)
             (MORE-DOC-MAX-LINES . 45)
             (MORE-DOC-MIN-LINES . 35)
             (MORE-DOC-STATE)
             (MSWINDOWS-DRIVE)
-            (PACKAGES-CREATED-BY-DEFPKG)
             (PARALLEL-EVALUATION-ENABLED)
             (PC-OUTPUT)
             (PPR-FLAT-RIGHT-MARGIN . 40)
@@ -3928,7 +4005,7 @@
             (PROGRAM-FNS-WITH-RAW-CODE
                  RELIEVE-HYP-SYNP
                  APPLY-ABBREVS-TO-LAMBDA-STACK1
-                 GOOD-BYE-FN NTH-UPDATE-REWRITER
+                 NTH-UPDATE-REWRITER
                  EV-W-LST SIMPLIFY-CLAUSE1
                  EV-REC-ACL2-UNWIND-PROTECT
                  ALLOCATE-FIXNUM-RANGE TRACE$-FN-GENERAL
@@ -3945,9 +4022,9 @@
                  LD-LOOP PRINT-SUMMARY
                  EV EV-LST ALLEGRO-ALLOCATE-SLOWLY-FN
                  CERTIFY-BOOK-FN
-                 TRANSLATE11-FLET-ALIST1 INCLUDE-BOOK-FN
-                 FMT1 FLSZ SET-W PROVE-LOOP CHK-VIRGIN
-                 W-OF-ANY-STATE PRINT-NEWLINE-FOR-TIME$
+                 TRANSLATE11-FLET-ALIST1 INCLUDE-BOOK-FN1
+                 INCLUDE-BOOK-FN FMT1 FLSZ SET-W
+                 PROVE-LOOP CHK-VIRGIN W-OF-ANY-STATE
                  LAMBDA-ABSTRACT LD-FN-BODY UNTRANSLATE
                  LONGEST-COMMON-TAIL-LENGTH-REC
                  COMPILE-FUNCTION UNTRANSLATE-LST EV-SYNP
@@ -3957,11 +4034,15 @@
                  EV-FNCALL-REC SYS-CALL EV-FNCALL LD-FN0
                  LD-FN WRITE-EXPANSION-FILE LATCH-STOBJS1
                  CHK-PACKAGE-REINCARNATION-IMPORT-RESTRICTIONS
-                 UNTRACE$-FN1 BDD-TOP
-                 GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS
-                 EXPANSION-ALIST-PKG-NAMES
-                 TIMES-MOD-M31 PRINT-CALL-HISTORY
-                 IPRINT-AR-AREF1 PROVE MAKE-EVENT-FN)
+                 UNTRACE$-FN1
+                 BDD-TOP DEFSTOBJ-FIELD-FNS-RAW-DEFS
+                 EXPANSION-ALIST-PKG-NAMES TIMES-MOD-M31
+                 PRINT-CALL-HISTORY IPRINT-AR-AREF1
+                 PROVE MAKE-EVENT-FN OOPS-WARNING
+                 CHECKPOINT-WORLD UBT-PREHISTORY-FN
+                 GET-DECLAIM-LIST PATHNAME-UNIX-TO-OS
+                 HCOMP-BUILD-FROM-PORTCULLIS
+                 DEFCONST-VAL)
             (PROMPT-FUNCTION . DEFAULT-PRINT-PROMPT)
             (PROMPT-MEMO)
             (PROOF-TREE)
@@ -3972,12 +4053,14 @@
             (PROOFS-CO .
                        ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (RAW-ARITY-ALIST)
+            (RAW-INCLUDE-BOOK-DIR-ALIST . :IGNORE)
             (RAW-PROOF-FORMAT)
             (REDO-FLAT-FAIL)
             (REDO-FLAT-SUCC)
             (REDUNDANT-WITH-RAW-CODE-OKP)
             (RETRACE-P)
             (SAFE-MODE)
+            (SAVE-EXPANSION-FILE)
             (SAVED-OUTPUT-P)
             (SAVED-OUTPUT-REVERSED)
             (SAVED-OUTPUT-TOKEN-LST)
@@ -3990,7 +4073,6 @@
                          ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (STANDARD-OI .
                          ACL2-OUTPUT-CHANNEL::STANDARD-OBJECT-INPUT-0)
-            (SUPPRESS-COMPILE)
             (TAINTED-OKP)
             (TEMP-TOUCHABLE-FNS)
             (TEMP-TOUCHABLE-VARS)
@@ -4015,12 +4097,12 @@
                  "~%#<\\<e(acl2-window-prelude ?~sw ~xc)#>\\>#<\\<~sw")
             (WINDOW-INTERFACEP)
             (WORMHOLE-NAME)
-            (WORMHOLE-OUTPUT)
+            (WORMHOLE-STATUS)
             (WRITES-OKP . T))
           (GLOBAL-TABLE X))
        (IF
-        (WORLDP (CDR (ASSOC 'CURRENT-ACL2-WORLD
-                            (GLOBAL-TABLE X))))
+        (PLIST-WORLDP (CDR (ASSOC 'CURRENT-ACL2-WORLD
+                                  (GLOBAL-TABLE X))))
         (IF
          (SYMBOL-ALISTP (FGETPROP 'ACL2-DEFAULTS-TABLE
                                   'TABLE-ALIST
@@ -4098,10 +4180,9 @@
             (ACCUMULATED-TTREE)
             (ACCUMULATED-WARNINGS)
             (ACL2-RAW-MODE-P)
-            (ACL2-VERSION . "ACL2 Version 3.6")
+            (ACL2-VERSION . "ACL2 Version 4.0")
             (AXIOMSP)
             (BDDNOTES)
-            (CERTIFY-BOOK-DISABLEDP)
             (CERTIFY-BOOK-INFO)
             (CHECKPOINT-FORCED-GOALS)
             (CHECKPOINT-PROCESSORS ELIMINATE-DESTRUCTORS-CLAUSE
@@ -4109,11 +4190,14 @@
                                    ELIMINATE-IRRELEVANCE-CLAUSE
                                    PUSH-CLAUSE :INDUCT)
             (CHECKPOINT-SUMMARY-LIMIT NIL . 3)
+            (COMPILER-ENABLED)
             (CONNECTED-BOOK-DIRECTORY)
             (CURRENT-ACL2-WORLD)
             (CURRENT-PACKAGE . "ACL2")
             (DEBUGGER-ENABLE)
             (DEFAXIOMS-OKP-CERT . T)
+            (DEFERRED-TTAG-NOTES . :NOT-DEFERRED)
+            (DEFERRED-TTAG-NOTES-SAVED)
             (DISTRIBUTED-BOOKS-DIR)
             (DMRP)
             (EVISC-HITP-WITHOUT-IPRINT)
@@ -4128,12 +4212,14 @@
             (GUARD-CHECKING-ON . T)
             (HONS-ENABLED)
             (HONS-READ-P . T)
+            (HOST-LISP . :CCL)
             (IN-LOCAL-FLG)
             (IN-PROVE-FLG)
             (IN-VERIFY-FLG)
             (INFIXP)
             (INHIBIT-OUTPUT-LST SUMMARY)
             (INHIBIT-OUTPUT-LST-STACK)
+            (INHIBITED-SUMMARY-TYPES)
             (IPRINT-AR (:HEADER :DIMENSIONS (10001)
                                 :MAXIMUM-LENGTH 40004
                                 :DEFAULT NIL
@@ -4147,20 +4233,23 @@
             (LD-LEVEL . 0)
             (LD-REDEFINITION-ACTION)
             (LD-SKIP-PROOFSP)
-            (LOGIC-FNS-WITH-RAW-CODE MOD-EXPT HEADER SEARCH-FN STATE-P1
-                                     AREF2 AREF1 MFC-ANCESTORS FGETPROP
-                                     GETENV$ WORMHOLE1 ASET2 SGETPROP SETENV$
+            (LOGIC-FNS-WITH-RAW-CODE MOD-EXPT HEADER SEARCH-FN
+                                     STATE-P1 AREF2 AREF1 MFC-ANCESTORS
+                                     FGETPROP GETENV$ WORMHOLE-EVAL
+                                     WORMHOLE1 GET-WORMHOLE-STATUS
+                                     ASET2 SGETPROP SETENV$
                                      GETPROPS COMPRESS1 TIME-LIMIT4-REACHED-P
                                      FMT-TO-COMMENT-WINDOW
                                      LEN MFC-CLAUSE CPU-CORE-COUNT
                                      NONNEGATIVE-INTEGER-QUOTIENT
-                                     CHECK-PRINT-BASE RETRACT-WORLD
-                                     ASET1 ARRAY1P BOOLE$ ARRAY2P STRIP-CDRS
-                                     COMPRESS2 STRIP-CARS WORLDP WORMHOLE-P
+                                     CHECK-PRINT-BASE
+                                     RETRACT-WORLD ASET1 ARRAY1P
+                                     BOOLE$ ARRAY2P STRIP-CDRS COMPRESS2
+                                     STRIP-CARS PLIST-WORLDP WORMHOLE-P
                                      MFC-TYPE-ALIST MAY-NEED-SLASHES-FN
                                      FMT-TO-COMMENT-WINDOW!
                                      HAS-PROPSP HARD-ERROR
-                                     ABORT! MFC-RDEPTH FLUSH-COMPRESS
+                                     ABORT! P! MFC-RDEPTH FLUSH-COMPRESS
                                      ALPHORDER EXTEND-WORLD USER-STOBJ-ALIST
                                      READ-ACL2-ORACLE UPDATE-USER-STOBJ-ALIST
                                      DECREMENT-BIG-CLOCK
@@ -4171,15 +4260,17 @@
                                      CLOSE-OUTPUT-CHANNEL WRITE-BYTE$
                                      SHRINK-T-STACK ASET-32-BIT-INTEGER-STACK
                                      GET-GLOBAL 32-BIT-INTEGER-STACK-LENGTH1
-                                     EXTEND-32-BIT-INTEGER-STACK ASET-T-STACK
-                                     WITH-PROVER-TIME-LIMIT AREF-T-STACK
+                                     EXTEND-32-BIT-INTEGER-STACK
+                                     ASET-T-STACK AREF-T-STACK
                                      READ-CHAR$ AREF-32-BIT-INTEGER-STACK
                                      OPEN-OUTPUT-CHANNEL-P1
                                      READ-OBJECT BIG-CLOCK-NEGATIVE-P
                                      PEEK-CHAR$ SHRINK-32-BIT-INTEGER-STACK
-                                     READ-RUN-TIME READ-BYTE$ EC-CALL
-                                     PROG2$ READ-IDATE TIME$ PRINT-OBJECT$
-                                     T-STACK-LENGTH1 MUST-BE-EQUAL ZPF
+                                     READ-RUN-TIME
+                                     READ-BYTE$ READ-IDATE T-STACK-LENGTH1
+                                     PRINT-OBJECT$ EC-CALL PROG2$ MV-LIST
+                                     MUST-BE-EQUAL WITH-PROVER-TIME-LIMIT
+                                     WITH-GUARD-CHECKING ZPF
                                      IDENTITY ENDP NTHCDR LAST REVAPPEND NULL
                                      BUTLAST STRING MEMBER NOT MOD PLUSP ATOM
                                      LISTP ZP FLOOR CEILING TRUNCATE ROUND
@@ -4191,13 +4282,18 @@
                                      LOGORC1 LOGORC2 LOGTEST POSITION ABS
                                      STRING-EQUAL STRING< STRING> STRING<=
                                      STRING>= STRING-UPCASE STRING-DOWNCASE
-                                     KEYWORDP EQ EQL CHAR SUBST SUBLIS
-                                     ACONS ASSOC RASSOC NTH SUBSEQ LENGTH
-                                     REVERSE ZIP STANDARD-CHAR-P ALPHA-CHAR-P
-                                     UPPER-CASE-P LOWER-CASE-P CHAR< CHAR>
-                                     CHAR<= CHAR>= CHAR-EQUAL CHAR-UPCASE
-                                     CHAR-DOWNCASE HONS-READ-OBJECT
-                                     AND-LIST OR-LIST RANDOM$)
+                                     KEYWORDP EQ EQL CHAR SUBST
+                                     SUBLIS ACONS ASSOC RASSOC NTH SUBSEQ
+                                     LENGTH REVERSE ZIP STANDARD-CHAR-P
+                                     ALPHA-CHAR-P UPPER-CASE-P LOWER-CASE-P
+                                     CHAR< CHAR> CHAR<= CHAR>= CHAR-EQUAL
+                                     CHAR-UPCASE CHAR-DOWNCASE AND-LIST
+                                     OR-LIST RANDOM$ THROW-NONEXEC-ERROR
+                                     GC$-FN SET-COMPILER-ENABLED GOOD-BYE-FN
+                                     ASSOC-EQ ASSOC-EQUAL MEMBER-EQ
+                                     MEMBER-EQUAL SUBSETP-EQ SUBSETP-EQUAL
+                                     REMOVE-EQ REMOVE-EQUAL POSITION-EQ
+                                     POSITION-EQUAL TAKE CANONICAL-PATHNAME)
             (MACROS-WITH-RAW-CODE MBE
                                   THEORY-INVARIANT SET-LET*-ABSTRACTIONP
                                   DEFAXIOM SET-BOGUS-MUTUAL-RECURSION-OK
@@ -4212,8 +4308,7 @@
                                   SET-NON-LINEARP WITH-OUTPUT
                                   SET-COMPILE-FNS ADD-INCLUDE-BOOK-DIR
                                   CLEAR-PSTK ADD-CUSTOM-KEYWORD-HINT
-                                  INITIAL-GSTACK ASSIGN-WORMHOLE-OUTPUT
-                                  ACL2-UNWIND-PROTECT
+                                  INITIAL-GSTACK ACL2-UNWIND-PROTECT
                                   SET-WELL-FOUNDED-RELATION
                                   CATCH-TIME-LIMIT4 DEFUNS
                                   ADD-DEFAULT-HINTS! LOCAL ENCAPSULATE
@@ -4227,7 +4322,6 @@
                                   F-BIG-CLOCK-NEGATIVE-P RESET-PREHISTORY
                                   MUTUAL-RECURSION SET-REWRITE-STACK-LIMIT
                                   ADD-MATCH-FREE-OVERRIDE
-                                  SET-INHIBIT-OUTPUT-LST
                                   SET-MATCH-FREE-DEFAULT
                                   THE-MV TABLE IN-ARITHMETIC-THEORY
                                   SET-CASE-SPLIT-LIMITATIONS
@@ -4256,16 +4350,19 @@
                                   UNMEMOIZE HONS-LET MEMOIZE-LET MEMOIZE
                                   DEFUNS-STD DEFTHM-STD DEFUN-STD POR
                                   PAND PLET PARGS TRACE! WITH-LIVE-STATE
-                                  WITH-OUTPUT-OBJECT-CHANNEL-SHARING)
+                                  WITH-OUTPUT-OBJECT-CHANNEL-SHARING
+                                  TIME$ WITH-HCOMP-BINDINGS
+                                  WITH-HCOMP-HT-BINDINGS REDEF+
+                                  REDEF- BIND-ACL2-TIME-LIMIT DEFATTACH)
             (MAIN-TIMER . 0)
             (MAKE-EVENT-DEBUG)
             (MAKE-EVENT-DEBUG-DEPTH . 0)
             (MATCH-FREE-ERROR)
+            (MODIFYING-INCLUDE-BOOK-DIR-ALIST)
             (MORE-DOC-MAX-LINES . 45)
             (MORE-DOC-MIN-LINES . 35)
             (MORE-DOC-STATE)
             (MSWINDOWS-DRIVE)
-            (PACKAGES-CREATED-BY-DEFPKG)
             (PARALLEL-EVALUATION-ENABLED)
             (PC-OUTPUT)
             (PPR-FLAT-RIGHT-MARGIN . 40)
@@ -4286,7 +4383,7 @@
             (PROGRAM-FNS-WITH-RAW-CODE
                  RELIEVE-HYP-SYNP
                  APPLY-ABBREVS-TO-LAMBDA-STACK1
-                 GOOD-BYE-FN NTH-UPDATE-REWRITER
+                 NTH-UPDATE-REWRITER
                  EV-W-LST SIMPLIFY-CLAUSE1
                  EV-REC-ACL2-UNWIND-PROTECT
                  ALLOCATE-FIXNUM-RANGE TRACE$-FN-GENERAL
@@ -4303,9 +4400,9 @@
                  LD-LOOP PRINT-SUMMARY
                  EV EV-LST ALLEGRO-ALLOCATE-SLOWLY-FN
                  CERTIFY-BOOK-FN
-                 TRANSLATE11-FLET-ALIST1 INCLUDE-BOOK-FN
-                 FMT1 FLSZ SET-W PROVE-LOOP CHK-VIRGIN
-                 W-OF-ANY-STATE PRINT-NEWLINE-FOR-TIME$
+                 TRANSLATE11-FLET-ALIST1 INCLUDE-BOOK-FN1
+                 INCLUDE-BOOK-FN FMT1 FLSZ SET-W
+                 PROVE-LOOP CHK-VIRGIN W-OF-ANY-STATE
                  LAMBDA-ABSTRACT LD-FN-BODY UNTRANSLATE
                  LONGEST-COMMON-TAIL-LENGTH-REC
                  COMPILE-FUNCTION UNTRANSLATE-LST EV-SYNP
@@ -4315,11 +4412,15 @@
                  EV-FNCALL-REC SYS-CALL EV-FNCALL LD-FN0
                  LD-FN WRITE-EXPANSION-FILE LATCH-STOBJS1
                  CHK-PACKAGE-REINCARNATION-IMPORT-RESTRICTIONS
-                 UNTRACE$-FN1 BDD-TOP
-                 GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS
-                 EXPANSION-ALIST-PKG-NAMES
-                 TIMES-MOD-M31 PRINT-CALL-HISTORY
-                 IPRINT-AR-AREF1 PROVE MAKE-EVENT-FN)
+                 UNTRACE$-FN1
+                 BDD-TOP DEFSTOBJ-FIELD-FNS-RAW-DEFS
+                 EXPANSION-ALIST-PKG-NAMES TIMES-MOD-M31
+                 PRINT-CALL-HISTORY IPRINT-AR-AREF1
+                 PROVE MAKE-EVENT-FN OOPS-WARNING
+                 CHECKPOINT-WORLD UBT-PREHISTORY-FN
+                 GET-DECLAIM-LIST PATHNAME-UNIX-TO-OS
+                 HCOMP-BUILD-FROM-PORTCULLIS
+                 DEFCONST-VAL)
             (PROMPT-FUNCTION . DEFAULT-PRINT-PROMPT)
             (PROMPT-MEMO)
             (PROOF-TREE)
@@ -4330,12 +4431,14 @@
             (PROOFS-CO .
                        ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (RAW-ARITY-ALIST)
+            (RAW-INCLUDE-BOOK-DIR-ALIST . :IGNORE)
             (RAW-PROOF-FORMAT)
             (REDO-FLAT-FAIL)
             (REDO-FLAT-SUCC)
             (REDUNDANT-WITH-RAW-CODE-OKP)
             (RETRACE-P)
             (SAFE-MODE)
+            (SAVE-EXPANSION-FILE)
             (SAVED-OUTPUT-P)
             (SAVED-OUTPUT-REVERSED)
             (SAVED-OUTPUT-TOKEN-LST)
@@ -4348,7 +4451,6 @@
                          ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (STANDARD-OI .
                          ACL2-OUTPUT-CHANNEL::STANDARD-OBJECT-INPUT-0)
-            (SUPPRESS-COMPILE)
             (TAINTED-OKP)
             (TEMP-TOUCHABLE-FNS)
             (TEMP-TOUCHABLE-VARS)
@@ -4373,11 +4475,11 @@
                  "~%#<\\<e(acl2-window-prelude ?~sw ~xc)#>\\>#<\\<~sw")
             (WINDOW-INTERFACEP)
             (WORMHOLE-NAME)
-            (WORMHOLE-OUTPUT)
+            (WORMHOLE-STATUS)
             (WRITES-OKP . T))
           (NTH '2 X))
         (IF
-         (WORLDP (CDR (ASSOC 'CURRENT-ACL2-WORLD (NTH '2 X))))
+         (PLIST-WORLDP (CDR (ASSOC 'CURRENT-ACL2-WORLD (NTH '2 X))))
          (IF
           (SYMBOL-ALISTP (FGETPROP 'ACL2-DEFAULTS-TABLE
                                    'TABLE-ALIST
@@ -4454,10 +4556,9 @@
             (ACCUMULATED-TTREE)
             (ACCUMULATED-WARNINGS)
             (ACL2-RAW-MODE-P)
-            (ACL2-VERSION . "ACL2 Version 3.6")
+            (ACL2-VERSION . "ACL2 Version 4.0")
             (AXIOMSP)
             (BDDNOTES)
-            (CERTIFY-BOOK-DISABLEDP)
             (CERTIFY-BOOK-INFO)
             (CHECKPOINT-FORCED-GOALS)
             (CHECKPOINT-PROCESSORS ELIMINATE-DESTRUCTORS-CLAUSE
@@ -4465,11 +4566,14 @@
                                    ELIMINATE-IRRELEVANCE-CLAUSE
                                    PUSH-CLAUSE :INDUCT)
             (CHECKPOINT-SUMMARY-LIMIT NIL . 3)
+            (COMPILER-ENABLED)
             (CONNECTED-BOOK-DIRECTORY)
             (CURRENT-ACL2-WORLD)
             (CURRENT-PACKAGE . "ACL2")
             (DEBUGGER-ENABLE)
             (DEFAXIOMS-OKP-CERT . T)
+            (DEFERRED-TTAG-NOTES . :NOT-DEFERRED)
+            (DEFERRED-TTAG-NOTES-SAVED)
             (DISTRIBUTED-BOOKS-DIR)
             (DMRP)
             (EVISC-HITP-WITHOUT-IPRINT)
@@ -4484,12 +4588,14 @@
             (GUARD-CHECKING-ON . T)
             (HONS-ENABLED)
             (HONS-READ-P . T)
+            (HOST-LISP . :CCL)
             (IN-LOCAL-FLG)
             (IN-PROVE-FLG)
             (IN-VERIFY-FLG)
             (INFIXP)
             (INHIBIT-OUTPUT-LST SUMMARY)
             (INHIBIT-OUTPUT-LST-STACK)
+            (INHIBITED-SUMMARY-TYPES)
             (IPRINT-AR (:HEADER :DIMENSIONS (10001)
                                 :MAXIMUM-LENGTH 40004
                                 :DEFAULT NIL
@@ -4503,20 +4609,23 @@
             (LD-LEVEL . 0)
             (LD-REDEFINITION-ACTION)
             (LD-SKIP-PROOFSP)
-            (LOGIC-FNS-WITH-RAW-CODE MOD-EXPT HEADER SEARCH-FN STATE-P1
-                                     AREF2 AREF1 MFC-ANCESTORS FGETPROP
-                                     GETENV$ WORMHOLE1 ASET2 SGETPROP SETENV$
+            (LOGIC-FNS-WITH-RAW-CODE MOD-EXPT HEADER SEARCH-FN
+                                     STATE-P1 AREF2 AREF1 MFC-ANCESTORS
+                                     FGETPROP GETENV$ WORMHOLE-EVAL
+                                     WORMHOLE1 GET-WORMHOLE-STATUS
+                                     ASET2 SGETPROP SETENV$
                                      GETPROPS COMPRESS1 TIME-LIMIT4-REACHED-P
                                      FMT-TO-COMMENT-WINDOW
                                      LEN MFC-CLAUSE CPU-CORE-COUNT
                                      NONNEGATIVE-INTEGER-QUOTIENT
-                                     CHECK-PRINT-BASE RETRACT-WORLD
-                                     ASET1 ARRAY1P BOOLE$ ARRAY2P STRIP-CDRS
-                                     COMPRESS2 STRIP-CARS WORLDP WORMHOLE-P
+                                     CHECK-PRINT-BASE
+                                     RETRACT-WORLD ASET1 ARRAY1P
+                                     BOOLE$ ARRAY2P STRIP-CDRS COMPRESS2
+                                     STRIP-CARS PLIST-WORLDP WORMHOLE-P
                                      MFC-TYPE-ALIST MAY-NEED-SLASHES-FN
                                      FMT-TO-COMMENT-WINDOW!
                                      HAS-PROPSP HARD-ERROR
-                                     ABORT! MFC-RDEPTH FLUSH-COMPRESS
+                                     ABORT! P! MFC-RDEPTH FLUSH-COMPRESS
                                      ALPHORDER EXTEND-WORLD USER-STOBJ-ALIST
                                      READ-ACL2-ORACLE UPDATE-USER-STOBJ-ALIST
                                      DECREMENT-BIG-CLOCK
@@ -4527,15 +4636,17 @@
                                      CLOSE-OUTPUT-CHANNEL WRITE-BYTE$
                                      SHRINK-T-STACK ASET-32-BIT-INTEGER-STACK
                                      GET-GLOBAL 32-BIT-INTEGER-STACK-LENGTH1
-                                     EXTEND-32-BIT-INTEGER-STACK ASET-T-STACK
-                                     WITH-PROVER-TIME-LIMIT AREF-T-STACK
+                                     EXTEND-32-BIT-INTEGER-STACK
+                                     ASET-T-STACK AREF-T-STACK
                                      READ-CHAR$ AREF-32-BIT-INTEGER-STACK
                                      OPEN-OUTPUT-CHANNEL-P1
                                      READ-OBJECT BIG-CLOCK-NEGATIVE-P
                                      PEEK-CHAR$ SHRINK-32-BIT-INTEGER-STACK
-                                     READ-RUN-TIME READ-BYTE$ EC-CALL
-                                     PROG2$ READ-IDATE TIME$ PRINT-OBJECT$
-                                     T-STACK-LENGTH1 MUST-BE-EQUAL ZPF
+                                     READ-RUN-TIME
+                                     READ-BYTE$ READ-IDATE T-STACK-LENGTH1
+                                     PRINT-OBJECT$ EC-CALL PROG2$ MV-LIST
+                                     MUST-BE-EQUAL WITH-PROVER-TIME-LIMIT
+                                     WITH-GUARD-CHECKING ZPF
                                      IDENTITY ENDP NTHCDR LAST REVAPPEND NULL
                                      BUTLAST STRING MEMBER NOT MOD PLUSP ATOM
                                      LISTP ZP FLOOR CEILING TRUNCATE ROUND
@@ -4547,13 +4658,18 @@
                                      LOGORC1 LOGORC2 LOGTEST POSITION ABS
                                      STRING-EQUAL STRING< STRING> STRING<=
                                      STRING>= STRING-UPCASE STRING-DOWNCASE
-                                     KEYWORDP EQ EQL CHAR SUBST SUBLIS
-                                     ACONS ASSOC RASSOC NTH SUBSEQ LENGTH
-                                     REVERSE ZIP STANDARD-CHAR-P ALPHA-CHAR-P
-                                     UPPER-CASE-P LOWER-CASE-P CHAR< CHAR>
-                                     CHAR<= CHAR>= CHAR-EQUAL CHAR-UPCASE
-                                     CHAR-DOWNCASE HONS-READ-OBJECT
-                                     AND-LIST OR-LIST RANDOM$)
+                                     KEYWORDP EQ EQL CHAR SUBST
+                                     SUBLIS ACONS ASSOC RASSOC NTH SUBSEQ
+                                     LENGTH REVERSE ZIP STANDARD-CHAR-P
+                                     ALPHA-CHAR-P UPPER-CASE-P LOWER-CASE-P
+                                     CHAR< CHAR> CHAR<= CHAR>= CHAR-EQUAL
+                                     CHAR-UPCASE CHAR-DOWNCASE AND-LIST
+                                     OR-LIST RANDOM$ THROW-NONEXEC-ERROR
+                                     GC$-FN SET-COMPILER-ENABLED GOOD-BYE-FN
+                                     ASSOC-EQ ASSOC-EQUAL MEMBER-EQ
+                                     MEMBER-EQUAL SUBSETP-EQ SUBSETP-EQUAL
+                                     REMOVE-EQ REMOVE-EQUAL POSITION-EQ
+                                     POSITION-EQUAL TAKE CANONICAL-PATHNAME)
             (MACROS-WITH-RAW-CODE MBE
                                   THEORY-INVARIANT SET-LET*-ABSTRACTIONP
                                   DEFAXIOM SET-BOGUS-MUTUAL-RECURSION-OK
@@ -4568,8 +4684,7 @@
                                   SET-NON-LINEARP WITH-OUTPUT
                                   SET-COMPILE-FNS ADD-INCLUDE-BOOK-DIR
                                   CLEAR-PSTK ADD-CUSTOM-KEYWORD-HINT
-                                  INITIAL-GSTACK ASSIGN-WORMHOLE-OUTPUT
-                                  ACL2-UNWIND-PROTECT
+                                  INITIAL-GSTACK ACL2-UNWIND-PROTECT
                                   SET-WELL-FOUNDED-RELATION
                                   CATCH-TIME-LIMIT4 DEFUNS
                                   ADD-DEFAULT-HINTS! LOCAL ENCAPSULATE
@@ -4583,7 +4698,6 @@
                                   F-BIG-CLOCK-NEGATIVE-P RESET-PREHISTORY
                                   MUTUAL-RECURSION SET-REWRITE-STACK-LIMIT
                                   ADD-MATCH-FREE-OVERRIDE
-                                  SET-INHIBIT-OUTPUT-LST
                                   SET-MATCH-FREE-DEFAULT
                                   THE-MV TABLE IN-ARITHMETIC-THEORY
                                   SET-CASE-SPLIT-LIMITATIONS
@@ -4612,16 +4726,19 @@
                                   UNMEMOIZE HONS-LET MEMOIZE-LET MEMOIZE
                                   DEFUNS-STD DEFTHM-STD DEFUN-STD POR
                                   PAND PLET PARGS TRACE! WITH-LIVE-STATE
-                                  WITH-OUTPUT-OBJECT-CHANNEL-SHARING)
+                                  WITH-OUTPUT-OBJECT-CHANNEL-SHARING
+                                  TIME$ WITH-HCOMP-BINDINGS
+                                  WITH-HCOMP-HT-BINDINGS REDEF+
+                                  REDEF- BIND-ACL2-TIME-LIMIT DEFATTACH)
             (MAIN-TIMER . 0)
             (MAKE-EVENT-DEBUG)
             (MAKE-EVENT-DEBUG-DEPTH . 0)
             (MATCH-FREE-ERROR)
+            (MODIFYING-INCLUDE-BOOK-DIR-ALIST)
             (MORE-DOC-MAX-LINES . 45)
             (MORE-DOC-MIN-LINES . 35)
             (MORE-DOC-STATE)
             (MSWINDOWS-DRIVE)
-            (PACKAGES-CREATED-BY-DEFPKG)
             (PARALLEL-EVALUATION-ENABLED)
             (PC-OUTPUT)
             (PPR-FLAT-RIGHT-MARGIN . 40)
@@ -4642,7 +4759,7 @@
             (PROGRAM-FNS-WITH-RAW-CODE
                  RELIEVE-HYP-SYNP
                  APPLY-ABBREVS-TO-LAMBDA-STACK1
-                 GOOD-BYE-FN NTH-UPDATE-REWRITER
+                 NTH-UPDATE-REWRITER
                  EV-W-LST SIMPLIFY-CLAUSE1
                  EV-REC-ACL2-UNWIND-PROTECT
                  ALLOCATE-FIXNUM-RANGE TRACE$-FN-GENERAL
@@ -4659,9 +4776,9 @@
                  LD-LOOP PRINT-SUMMARY
                  EV EV-LST ALLEGRO-ALLOCATE-SLOWLY-FN
                  CERTIFY-BOOK-FN
-                 TRANSLATE11-FLET-ALIST1 INCLUDE-BOOK-FN
-                 FMT1 FLSZ SET-W PROVE-LOOP CHK-VIRGIN
-                 W-OF-ANY-STATE PRINT-NEWLINE-FOR-TIME$
+                 TRANSLATE11-FLET-ALIST1 INCLUDE-BOOK-FN1
+                 INCLUDE-BOOK-FN FMT1 FLSZ SET-W
+                 PROVE-LOOP CHK-VIRGIN W-OF-ANY-STATE
                  LAMBDA-ABSTRACT LD-FN-BODY UNTRANSLATE
                  LONGEST-COMMON-TAIL-LENGTH-REC
                  COMPILE-FUNCTION UNTRANSLATE-LST EV-SYNP
@@ -4671,11 +4788,15 @@
                  EV-FNCALL-REC SYS-CALL EV-FNCALL LD-FN0
                  LD-FN WRITE-EXPANSION-FILE LATCH-STOBJS1
                  CHK-PACKAGE-REINCARNATION-IMPORT-RESTRICTIONS
-                 UNTRACE$-FN1 BDD-TOP
-                 GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS
-                 EXPANSION-ALIST-PKG-NAMES
-                 TIMES-MOD-M31 PRINT-CALL-HISTORY
-                 IPRINT-AR-AREF1 PROVE MAKE-EVENT-FN)
+                 UNTRACE$-FN1
+                 BDD-TOP DEFSTOBJ-FIELD-FNS-RAW-DEFS
+                 EXPANSION-ALIST-PKG-NAMES TIMES-MOD-M31
+                 PRINT-CALL-HISTORY IPRINT-AR-AREF1
+                 PROVE MAKE-EVENT-FN OOPS-WARNING
+                 CHECKPOINT-WORLD UBT-PREHISTORY-FN
+                 GET-DECLAIM-LIST PATHNAME-UNIX-TO-OS
+                 HCOMP-BUILD-FROM-PORTCULLIS
+                 DEFCONST-VAL)
             (PROMPT-FUNCTION . DEFAULT-PRINT-PROMPT)
             (PROMPT-MEMO)
             (PROOF-TREE)
@@ -4686,12 +4807,14 @@
             (PROOFS-CO .
                        ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (RAW-ARITY-ALIST)
+            (RAW-INCLUDE-BOOK-DIR-ALIST . :IGNORE)
             (RAW-PROOF-FORMAT)
             (REDO-FLAT-FAIL)
             (REDO-FLAT-SUCC)
             (REDUNDANT-WITH-RAW-CODE-OKP)
             (RETRACE-P)
             (SAFE-MODE)
+            (SAVE-EXPANSION-FILE)
             (SAVED-OUTPUT-P)
             (SAVED-OUTPUT-REVERSED)
             (SAVED-OUTPUT-TOKEN-LST)
@@ -4704,7 +4827,6 @@
                          ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
             (STANDARD-OI .
                          ACL2-OUTPUT-CHANNEL::STANDARD-OBJECT-INPUT-0)
-            (SUPPRESS-COMPILE)
             (TAINTED-OKP)
             (TEMP-TOUCHABLE-FNS)
             (TEMP-TOUCHABLE-VARS)
@@ -4729,7 +4851,7 @@
                  "~%#<\\<e(acl2-window-prelude ?~sw ~xc)#>\\>#<\\<~sw")
             (WINDOW-INTERFACEP)
             (WORMHOLE-NAME)
-            (WORMHOLE-OUTPUT)
+            (WORMHOLE-STATUS)
             (WRITES-OKP . T))
            NIL NIL 4000000
            NIL NIL 1 NIL NIL NIL NIL NIL NIL)))
@@ -4817,10 +4939,9 @@
      (ACCUMULATED-TTREE)
      (ACCUMULATED-WARNINGS)
      (ACL2-RAW-MODE-P)
-     (ACL2-VERSION . "ACL2 Version 3.6")
+     (ACL2-VERSION . "ACL2 Version 4.0")
      (AXIOMSP)
      (BDDNOTES)
-     (CERTIFY-BOOK-DISABLEDP)
      (CERTIFY-BOOK-INFO)
      (CHECKPOINT-FORCED-GOALS)
      (CHECKPOINT-PROCESSORS ELIMINATE-DESTRUCTORS-CLAUSE
@@ -4828,11 +4949,14 @@
                             ELIMINATE-IRRELEVANCE-CLAUSE
                             PUSH-CLAUSE :INDUCT)
      (CHECKPOINT-SUMMARY-LIMIT NIL . 3)
+     (COMPILER-ENABLED)
      (CONNECTED-BOOK-DIRECTORY)
      (CURRENT-ACL2-WORLD)
      (CURRENT-PACKAGE . "ACL2")
      (DEBUGGER-ENABLE)
      (DEFAXIOMS-OKP-CERT . T)
+     (DEFERRED-TTAG-NOTES . :NOT-DEFERRED)
+     (DEFERRED-TTAG-NOTES-SAVED)
      (DISTRIBUTED-BOOKS-DIR)
      (DMRP)
      (EVISC-HITP-WITHOUT-IPRINT)
@@ -4847,12 +4971,14 @@
      (GUARD-CHECKING-ON . T)
      (HONS-ENABLED)
      (HONS-READ-P . T)
+     (HOST-LISP . :CCL)
      (IN-LOCAL-FLG)
      (IN-PROVE-FLG)
      (IN-VERIFY-FLG)
      (INFIXP)
      (INHIBIT-OUTPUT-LST SUMMARY)
      (INHIBIT-OUTPUT-LST-STACK)
+     (INHIBITED-SUMMARY-TYPES)
      (IPRINT-AR (:HEADER :DIMENSIONS (10001)
                          :MAXIMUM-LENGTH 40004
                          :DEFAULT NIL
@@ -4866,20 +4992,23 @@
      (LD-LEVEL . 0)
      (LD-REDEFINITION-ACTION)
      (LD-SKIP-PROOFSP)
-     (LOGIC-FNS-WITH-RAW-CODE MOD-EXPT HEADER SEARCH-FN STATE-P1
-                              AREF2 AREF1 MFC-ANCESTORS FGETPROP
-                              GETENV$ WORMHOLE1 ASET2 SGETPROP SETENV$
+     (LOGIC-FNS-WITH-RAW-CODE MOD-EXPT HEADER SEARCH-FN
+                              STATE-P1 AREF2 AREF1 MFC-ANCESTORS
+                              FGETPROP GETENV$ WORMHOLE-EVAL
+                              WORMHOLE1 GET-WORMHOLE-STATUS
+                              ASET2 SGETPROP SETENV$
                               GETPROPS COMPRESS1 TIME-LIMIT4-REACHED-P
                               FMT-TO-COMMENT-WINDOW
                               LEN MFC-CLAUSE CPU-CORE-COUNT
                               NONNEGATIVE-INTEGER-QUOTIENT
-                              CHECK-PRINT-BASE RETRACT-WORLD
-                              ASET1 ARRAY1P BOOLE$ ARRAY2P STRIP-CDRS
-                              COMPRESS2 STRIP-CARS WORLDP WORMHOLE-P
+                              CHECK-PRINT-BASE
+                              RETRACT-WORLD ASET1 ARRAY1P
+                              BOOLE$ ARRAY2P STRIP-CDRS COMPRESS2
+                              STRIP-CARS PLIST-WORLDP WORMHOLE-P
                               MFC-TYPE-ALIST MAY-NEED-SLASHES-FN
                               FMT-TO-COMMENT-WINDOW!
                               HAS-PROPSP HARD-ERROR
-                              ABORT! MFC-RDEPTH FLUSH-COMPRESS
+                              ABORT! P! MFC-RDEPTH FLUSH-COMPRESS
                               ALPHORDER EXTEND-WORLD USER-STOBJ-ALIST
                               READ-ACL2-ORACLE UPDATE-USER-STOBJ-ALIST
                               DECREMENT-BIG-CLOCK
@@ -4890,15 +5019,17 @@
                               CLOSE-OUTPUT-CHANNEL WRITE-BYTE$
                               SHRINK-T-STACK ASET-32-BIT-INTEGER-STACK
                               GET-GLOBAL 32-BIT-INTEGER-STACK-LENGTH1
-                              EXTEND-32-BIT-INTEGER-STACK ASET-T-STACK
-                              WITH-PROVER-TIME-LIMIT AREF-T-STACK
+                              EXTEND-32-BIT-INTEGER-STACK
+                              ASET-T-STACK AREF-T-STACK
                               READ-CHAR$ AREF-32-BIT-INTEGER-STACK
                               OPEN-OUTPUT-CHANNEL-P1
                               READ-OBJECT BIG-CLOCK-NEGATIVE-P
                               PEEK-CHAR$ SHRINK-32-BIT-INTEGER-STACK
-                              READ-RUN-TIME READ-BYTE$ EC-CALL
-                              PROG2$ READ-IDATE TIME$ PRINT-OBJECT$
-                              T-STACK-LENGTH1 MUST-BE-EQUAL ZPF
+                              READ-RUN-TIME
+                              READ-BYTE$ READ-IDATE T-STACK-LENGTH1
+                              PRINT-OBJECT$ EC-CALL PROG2$ MV-LIST
+                              MUST-BE-EQUAL WITH-PROVER-TIME-LIMIT
+                              WITH-GUARD-CHECKING ZPF
                               IDENTITY ENDP NTHCDR LAST REVAPPEND NULL
                               BUTLAST STRING MEMBER NOT MOD PLUSP ATOM
                               LISTP ZP FLOOR CEILING TRUNCATE ROUND
@@ -4910,13 +5041,18 @@
                               LOGORC1 LOGORC2 LOGTEST POSITION ABS
                               STRING-EQUAL STRING< STRING> STRING<=
                               STRING>= STRING-UPCASE STRING-DOWNCASE
-                              KEYWORDP EQ EQL CHAR SUBST SUBLIS
-                              ACONS ASSOC RASSOC NTH SUBSEQ LENGTH
-                              REVERSE ZIP STANDARD-CHAR-P ALPHA-CHAR-P
-                              UPPER-CASE-P LOWER-CASE-P CHAR< CHAR>
-                              CHAR<= CHAR>= CHAR-EQUAL CHAR-UPCASE
-                              CHAR-DOWNCASE HONS-READ-OBJECT
-                              AND-LIST OR-LIST RANDOM$)
+                              KEYWORDP EQ EQL CHAR SUBST
+                              SUBLIS ACONS ASSOC RASSOC NTH SUBSEQ
+                              LENGTH REVERSE ZIP STANDARD-CHAR-P
+                              ALPHA-CHAR-P UPPER-CASE-P LOWER-CASE-P
+                              CHAR< CHAR> CHAR<= CHAR>= CHAR-EQUAL
+                              CHAR-UPCASE CHAR-DOWNCASE AND-LIST
+                              OR-LIST RANDOM$ THROW-NONEXEC-ERROR
+                              GC$-FN SET-COMPILER-ENABLED GOOD-BYE-FN
+                              ASSOC-EQ ASSOC-EQUAL MEMBER-EQ
+                              MEMBER-EQUAL SUBSETP-EQ SUBSETP-EQUAL
+                              REMOVE-EQ REMOVE-EQUAL POSITION-EQ
+                              POSITION-EQUAL TAKE CANONICAL-PATHNAME)
      (MACROS-WITH-RAW-CODE MBE
                            THEORY-INVARIANT SET-LET*-ABSTRACTIONP
                            DEFAXIOM SET-BOGUS-MUTUAL-RECURSION-OK
@@ -4931,8 +5067,7 @@
                            SET-NON-LINEARP WITH-OUTPUT
                            SET-COMPILE-FNS ADD-INCLUDE-BOOK-DIR
                            CLEAR-PSTK ADD-CUSTOM-KEYWORD-HINT
-                           INITIAL-GSTACK ASSIGN-WORMHOLE-OUTPUT
-                           ACL2-UNWIND-PROTECT
+                           INITIAL-GSTACK ACL2-UNWIND-PROTECT
                            SET-WELL-FOUNDED-RELATION
                            CATCH-TIME-LIMIT4 DEFUNS
                            ADD-DEFAULT-HINTS! LOCAL ENCAPSULATE
@@ -4946,7 +5081,6 @@
                            F-BIG-CLOCK-NEGATIVE-P RESET-PREHISTORY
                            MUTUAL-RECURSION SET-REWRITE-STACK-LIMIT
                            ADD-MATCH-FREE-OVERRIDE
-                           SET-INHIBIT-OUTPUT-LST
                            SET-MATCH-FREE-DEFAULT
                            THE-MV TABLE IN-ARITHMETIC-THEORY
                            SET-CASE-SPLIT-LIMITATIONS
@@ -4975,16 +5109,19 @@
                            UNMEMOIZE HONS-LET MEMOIZE-LET MEMOIZE
                            DEFUNS-STD DEFTHM-STD DEFUN-STD POR
                            PAND PLET PARGS TRACE! WITH-LIVE-STATE
-                           WITH-OUTPUT-OBJECT-CHANNEL-SHARING)
+                           WITH-OUTPUT-OBJECT-CHANNEL-SHARING
+                           TIME$ WITH-HCOMP-BINDINGS
+                           WITH-HCOMP-HT-BINDINGS REDEF+
+                           REDEF- BIND-ACL2-TIME-LIMIT DEFATTACH)
      (MAIN-TIMER . 0)
      (MAKE-EVENT-DEBUG)
      (MAKE-EVENT-DEBUG-DEPTH . 0)
      (MATCH-FREE-ERROR)
+     (MODIFYING-INCLUDE-BOOK-DIR-ALIST)
      (MORE-DOC-MAX-LINES . 45)
      (MORE-DOC-MIN-LINES . 35)
      (MORE-DOC-STATE)
      (MSWINDOWS-DRIVE)
-     (PACKAGES-CREATED-BY-DEFPKG)
      (PARALLEL-EVALUATION-ENABLED)
      (PC-OUTPUT)
      (PPR-FLAT-RIGHT-MARGIN . 40)
@@ -5004,7 +5141,7 @@
      (PRINT-RIGHT-MARGIN)
      (PROGRAM-FNS-WITH-RAW-CODE RELIEVE-HYP-SYNP
                                 APPLY-ABBREVS-TO-LAMBDA-STACK1
-                                GOOD-BYE-FN NTH-UPDATE-REWRITER
+                                NTH-UPDATE-REWRITER
                                 EV-W-LST SIMPLIFY-CLAUSE1
                                 EV-REC-ACL2-UNWIND-PROTECT
                                 ALLOCATE-FIXNUM-RANGE TRACE$-FN-GENERAL
@@ -5021,9 +5158,9 @@
                                 LD-LOOP PRINT-SUMMARY
                                 EV EV-LST ALLEGRO-ALLOCATE-SLOWLY-FN
                                 CERTIFY-BOOK-FN
-                                TRANSLATE11-FLET-ALIST1 INCLUDE-BOOK-FN
-                                FMT1 FLSZ SET-W PROVE-LOOP CHK-VIRGIN
-                                W-OF-ANY-STATE PRINT-NEWLINE-FOR-TIME$
+                                TRANSLATE11-FLET-ALIST1 INCLUDE-BOOK-FN1
+                                INCLUDE-BOOK-FN FMT1 FLSZ SET-W
+                                PROVE-LOOP CHK-VIRGIN W-OF-ANY-STATE
                                 LAMBDA-ABSTRACT LD-FN-BODY UNTRANSLATE
                                 LONGEST-COMMON-TAIL-LENGTH-REC
                                 COMPILE-FUNCTION UNTRANSLATE-LST EV-SYNP
@@ -5033,11 +5170,15 @@
                                 EV-FNCALL-REC SYS-CALL EV-FNCALL LD-FN0
                                 LD-FN WRITE-EXPANSION-FILE LATCH-STOBJS1
                                 CHK-PACKAGE-REINCARNATION-IMPORT-RESTRICTIONS
-                                UNTRACE$-FN1 BDD-TOP
-                                GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS
-                                EXPANSION-ALIST-PKG-NAMES
-                                TIMES-MOD-M31 PRINT-CALL-HISTORY
-                                IPRINT-AR-AREF1 PROVE MAKE-EVENT-FN)
+                                UNTRACE$-FN1
+                                BDD-TOP DEFSTOBJ-FIELD-FNS-RAW-DEFS
+                                EXPANSION-ALIST-PKG-NAMES TIMES-MOD-M31
+                                PRINT-CALL-HISTORY IPRINT-AR-AREF1
+                                PROVE MAKE-EVENT-FN OOPS-WARNING
+                                CHECKPOINT-WORLD UBT-PREHISTORY-FN
+                                GET-DECLAIM-LIST PATHNAME-UNIX-TO-OS
+                                HCOMP-BUILD-FROM-PORTCULLIS
+                                DEFCONST-VAL)
      (PROMPT-FUNCTION . DEFAULT-PRINT-PROMPT)
      (PROMPT-MEMO)
      (PROOF-TREE)
@@ -5048,12 +5189,14 @@
      (PROOFS-CO .
                 ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
      (RAW-ARITY-ALIST)
+     (RAW-INCLUDE-BOOK-DIR-ALIST . :IGNORE)
      (RAW-PROOF-FORMAT)
      (REDO-FLAT-FAIL)
      (REDO-FLAT-SUCC)
      (REDUNDANT-WITH-RAW-CODE-OKP)
      (RETRACE-P)
      (SAFE-MODE)
+     (SAVE-EXPANSION-FILE)
      (SAVED-OUTPUT-P)
      (SAVED-OUTPUT-REVERSED)
      (SAVED-OUTPUT-TOKEN-LST)
@@ -5066,7 +5209,6 @@
                   ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
      (STANDARD-OI .
                   ACL2-OUTPUT-CHANNEL::STANDARD-OBJECT-INPUT-0)
-     (SUPPRESS-COMPILE)
      (TAINTED-OKP)
      (TEMP-TOUCHABLE-FNS)
      (TEMP-TOUCHABLE-VARS)
@@ -5091,7 +5233,7 @@
           "~%#<\\<e(acl2-window-prelude ?~sw ~xc)#>\\>#<\\<~sw")
      (WINDOW-INTERFACEP)
      (WORMHOLE-NAME)
-     (WORMHOLE-OUTPUT)
+     (WORMHOLE-STATUS)
      (WRITES-OKP . T)))
   (ASSOC-EQ
    X
@@ -5099,10 +5241,9 @@
      (ACCUMULATED-TTREE)
      (ACCUMULATED-WARNINGS)
      (ACL2-RAW-MODE-P)
-     (ACL2-VERSION . "ACL2 Version 3.6")
+     (ACL2-VERSION . "ACL2 Version 4.0")
      (AXIOMSP)
      (BDDNOTES)
-     (CERTIFY-BOOK-DISABLEDP)
      (CERTIFY-BOOK-INFO)
      (CHECKPOINT-FORCED-GOALS)
      (CHECKPOINT-PROCESSORS ELIMINATE-DESTRUCTORS-CLAUSE
@@ -5110,11 +5251,14 @@
                             ELIMINATE-IRRELEVANCE-CLAUSE
                             PUSH-CLAUSE :INDUCT)
      (CHECKPOINT-SUMMARY-LIMIT NIL . 3)
+     (COMPILER-ENABLED)
      (CONNECTED-BOOK-DIRECTORY)
      (CURRENT-ACL2-WORLD)
      (CURRENT-PACKAGE . "ACL2")
      (DEBUGGER-ENABLE)
      (DEFAXIOMS-OKP-CERT . T)
+     (DEFERRED-TTAG-NOTES . :NOT-DEFERRED)
+     (DEFERRED-TTAG-NOTES-SAVED)
      (DISTRIBUTED-BOOKS-DIR)
      (DMRP)
      (EVISC-HITP-WITHOUT-IPRINT)
@@ -5129,12 +5273,14 @@
      (GUARD-CHECKING-ON . T)
      (HONS-ENABLED)
      (HONS-READ-P . T)
+     (HOST-LISP . :CCL)
      (IN-LOCAL-FLG)
      (IN-PROVE-FLG)
      (IN-VERIFY-FLG)
      (INFIXP)
      (INHIBIT-OUTPUT-LST SUMMARY)
      (INHIBIT-OUTPUT-LST-STACK)
+     (INHIBITED-SUMMARY-TYPES)
      (IPRINT-AR (:HEADER :DIMENSIONS (10001)
                          :MAXIMUM-LENGTH 40004
                          :DEFAULT NIL
@@ -5148,20 +5294,23 @@
      (LD-LEVEL . 0)
      (LD-REDEFINITION-ACTION)
      (LD-SKIP-PROOFSP)
-     (LOGIC-FNS-WITH-RAW-CODE MOD-EXPT HEADER SEARCH-FN STATE-P1
-                              AREF2 AREF1 MFC-ANCESTORS FGETPROP
-                              GETENV$ WORMHOLE1 ASET2 SGETPROP SETENV$
+     (LOGIC-FNS-WITH-RAW-CODE MOD-EXPT HEADER SEARCH-FN
+                              STATE-P1 AREF2 AREF1 MFC-ANCESTORS
+                              FGETPROP GETENV$ WORMHOLE-EVAL
+                              WORMHOLE1 GET-WORMHOLE-STATUS
+                              ASET2 SGETPROP SETENV$
                               GETPROPS COMPRESS1 TIME-LIMIT4-REACHED-P
                               FMT-TO-COMMENT-WINDOW
                               LEN MFC-CLAUSE CPU-CORE-COUNT
                               NONNEGATIVE-INTEGER-QUOTIENT
-                              CHECK-PRINT-BASE RETRACT-WORLD
-                              ASET1 ARRAY1P BOOLE$ ARRAY2P STRIP-CDRS
-                              COMPRESS2 STRIP-CARS WORLDP WORMHOLE-P
+                              CHECK-PRINT-BASE
+                              RETRACT-WORLD ASET1 ARRAY1P
+                              BOOLE$ ARRAY2P STRIP-CDRS COMPRESS2
+                              STRIP-CARS PLIST-WORLDP WORMHOLE-P
                               MFC-TYPE-ALIST MAY-NEED-SLASHES-FN
                               FMT-TO-COMMENT-WINDOW!
                               HAS-PROPSP HARD-ERROR
-                              ABORT! MFC-RDEPTH FLUSH-COMPRESS
+                              ABORT! P! MFC-RDEPTH FLUSH-COMPRESS
                               ALPHORDER EXTEND-WORLD USER-STOBJ-ALIST
                               READ-ACL2-ORACLE UPDATE-USER-STOBJ-ALIST
                               DECREMENT-BIG-CLOCK
@@ -5172,15 +5321,17 @@
                               CLOSE-OUTPUT-CHANNEL WRITE-BYTE$
                               SHRINK-T-STACK ASET-32-BIT-INTEGER-STACK
                               GET-GLOBAL 32-BIT-INTEGER-STACK-LENGTH1
-                              EXTEND-32-BIT-INTEGER-STACK ASET-T-STACK
-                              WITH-PROVER-TIME-LIMIT AREF-T-STACK
+                              EXTEND-32-BIT-INTEGER-STACK
+                              ASET-T-STACK AREF-T-STACK
                               READ-CHAR$ AREF-32-BIT-INTEGER-STACK
                               OPEN-OUTPUT-CHANNEL-P1
                               READ-OBJECT BIG-CLOCK-NEGATIVE-P
                               PEEK-CHAR$ SHRINK-32-BIT-INTEGER-STACK
-                              READ-RUN-TIME READ-BYTE$ EC-CALL
-                              PROG2$ READ-IDATE TIME$ PRINT-OBJECT$
-                              T-STACK-LENGTH1 MUST-BE-EQUAL ZPF
+                              READ-RUN-TIME
+                              READ-BYTE$ READ-IDATE T-STACK-LENGTH1
+                              PRINT-OBJECT$ EC-CALL PROG2$ MV-LIST
+                              MUST-BE-EQUAL WITH-PROVER-TIME-LIMIT
+                              WITH-GUARD-CHECKING ZPF
                               IDENTITY ENDP NTHCDR LAST REVAPPEND NULL
                               BUTLAST STRING MEMBER NOT MOD PLUSP ATOM
                               LISTP ZP FLOOR CEILING TRUNCATE ROUND
@@ -5192,13 +5343,18 @@
                               LOGORC1 LOGORC2 LOGTEST POSITION ABS
                               STRING-EQUAL STRING< STRING> STRING<=
                               STRING>= STRING-UPCASE STRING-DOWNCASE
-                              KEYWORDP EQ EQL CHAR SUBST SUBLIS
-                              ACONS ASSOC RASSOC NTH SUBSEQ LENGTH
-                              REVERSE ZIP STANDARD-CHAR-P ALPHA-CHAR-P
-                              UPPER-CASE-P LOWER-CASE-P CHAR< CHAR>
-                              CHAR<= CHAR>= CHAR-EQUAL CHAR-UPCASE
-                              CHAR-DOWNCASE HONS-READ-OBJECT
-                              AND-LIST OR-LIST RANDOM$)
+                              KEYWORDP EQ EQL CHAR SUBST
+                              SUBLIS ACONS ASSOC RASSOC NTH SUBSEQ
+                              LENGTH REVERSE ZIP STANDARD-CHAR-P
+                              ALPHA-CHAR-P UPPER-CASE-P LOWER-CASE-P
+                              CHAR< CHAR> CHAR<= CHAR>= CHAR-EQUAL
+                              CHAR-UPCASE CHAR-DOWNCASE AND-LIST
+                              OR-LIST RANDOM$ THROW-NONEXEC-ERROR
+                              GC$-FN SET-COMPILER-ENABLED GOOD-BYE-FN
+                              ASSOC-EQ ASSOC-EQUAL MEMBER-EQ
+                              MEMBER-EQUAL SUBSETP-EQ SUBSETP-EQUAL
+                              REMOVE-EQ REMOVE-EQUAL POSITION-EQ
+                              POSITION-EQUAL TAKE CANONICAL-PATHNAME)
      (MACROS-WITH-RAW-CODE MBE
                            THEORY-INVARIANT SET-LET*-ABSTRACTIONP
                            DEFAXIOM SET-BOGUS-MUTUAL-RECURSION-OK
@@ -5213,8 +5369,7 @@
                            SET-NON-LINEARP WITH-OUTPUT
                            SET-COMPILE-FNS ADD-INCLUDE-BOOK-DIR
                            CLEAR-PSTK ADD-CUSTOM-KEYWORD-HINT
-                           INITIAL-GSTACK ASSIGN-WORMHOLE-OUTPUT
-                           ACL2-UNWIND-PROTECT
+                           INITIAL-GSTACK ACL2-UNWIND-PROTECT
                            SET-WELL-FOUNDED-RELATION
                            CATCH-TIME-LIMIT4 DEFUNS
                            ADD-DEFAULT-HINTS! LOCAL ENCAPSULATE
@@ -5228,7 +5383,6 @@
                            F-BIG-CLOCK-NEGATIVE-P RESET-PREHISTORY
                            MUTUAL-RECURSION SET-REWRITE-STACK-LIMIT
                            ADD-MATCH-FREE-OVERRIDE
-                           SET-INHIBIT-OUTPUT-LST
                            SET-MATCH-FREE-DEFAULT
                            THE-MV TABLE IN-ARITHMETIC-THEORY
                            SET-CASE-SPLIT-LIMITATIONS
@@ -5257,16 +5411,19 @@
                            UNMEMOIZE HONS-LET MEMOIZE-LET MEMOIZE
                            DEFUNS-STD DEFTHM-STD DEFUN-STD POR
                            PAND PLET PARGS TRACE! WITH-LIVE-STATE
-                           WITH-OUTPUT-OBJECT-CHANNEL-SHARING)
+                           WITH-OUTPUT-OBJECT-CHANNEL-SHARING
+                           TIME$ WITH-HCOMP-BINDINGS
+                           WITH-HCOMP-HT-BINDINGS REDEF+
+                           REDEF- BIND-ACL2-TIME-LIMIT DEFATTACH)
      (MAIN-TIMER . 0)
      (MAKE-EVENT-DEBUG)
      (MAKE-EVENT-DEBUG-DEPTH . 0)
      (MATCH-FREE-ERROR)
+     (MODIFYING-INCLUDE-BOOK-DIR-ALIST)
      (MORE-DOC-MAX-LINES . 45)
      (MORE-DOC-MIN-LINES . 35)
      (MORE-DOC-STATE)
      (MSWINDOWS-DRIVE)
-     (PACKAGES-CREATED-BY-DEFPKG)
      (PARALLEL-EVALUATION-ENABLED)
      (PC-OUTPUT)
      (PPR-FLAT-RIGHT-MARGIN . 40)
@@ -5286,7 +5443,7 @@
      (PRINT-RIGHT-MARGIN)
      (PROGRAM-FNS-WITH-RAW-CODE RELIEVE-HYP-SYNP
                                 APPLY-ABBREVS-TO-LAMBDA-STACK1
-                                GOOD-BYE-FN NTH-UPDATE-REWRITER
+                                NTH-UPDATE-REWRITER
                                 EV-W-LST SIMPLIFY-CLAUSE1
                                 EV-REC-ACL2-UNWIND-PROTECT
                                 ALLOCATE-FIXNUM-RANGE TRACE$-FN-GENERAL
@@ -5303,9 +5460,9 @@
                                 LD-LOOP PRINT-SUMMARY
                                 EV EV-LST ALLEGRO-ALLOCATE-SLOWLY-FN
                                 CERTIFY-BOOK-FN
-                                TRANSLATE11-FLET-ALIST1 INCLUDE-BOOK-FN
-                                FMT1 FLSZ SET-W PROVE-LOOP CHK-VIRGIN
-                                W-OF-ANY-STATE PRINT-NEWLINE-FOR-TIME$
+                                TRANSLATE11-FLET-ALIST1 INCLUDE-BOOK-FN1
+                                INCLUDE-BOOK-FN FMT1 FLSZ SET-W
+                                PROVE-LOOP CHK-VIRGIN W-OF-ANY-STATE
                                 LAMBDA-ABSTRACT LD-FN-BODY UNTRANSLATE
                                 LONGEST-COMMON-TAIL-LENGTH-REC
                                 COMPILE-FUNCTION UNTRANSLATE-LST EV-SYNP
@@ -5315,11 +5472,15 @@
                                 EV-FNCALL-REC SYS-CALL EV-FNCALL LD-FN0
                                 LD-FN WRITE-EXPANSION-FILE LATCH-STOBJS1
                                 CHK-PACKAGE-REINCARNATION-IMPORT-RESTRICTIONS
-                                UNTRACE$-FN1 BDD-TOP
-                                GC$-FN DEFSTOBJ-FIELD-FNS-RAW-DEFS
-                                EXPANSION-ALIST-PKG-NAMES
-                                TIMES-MOD-M31 PRINT-CALL-HISTORY
-                                IPRINT-AR-AREF1 PROVE MAKE-EVENT-FN)
+                                UNTRACE$-FN1
+                                BDD-TOP DEFSTOBJ-FIELD-FNS-RAW-DEFS
+                                EXPANSION-ALIST-PKG-NAMES TIMES-MOD-M31
+                                PRINT-CALL-HISTORY IPRINT-AR-AREF1
+                                PROVE MAKE-EVENT-FN OOPS-WARNING
+                                CHECKPOINT-WORLD UBT-PREHISTORY-FN
+                                GET-DECLAIM-LIST PATHNAME-UNIX-TO-OS
+                                HCOMP-BUILD-FROM-PORTCULLIS
+                                DEFCONST-VAL)
      (PROMPT-FUNCTION . DEFAULT-PRINT-PROMPT)
      (PROMPT-MEMO)
      (PROOF-TREE)
@@ -5330,12 +5491,14 @@
      (PROOFS-CO .
                 ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
      (RAW-ARITY-ALIST)
+     (RAW-INCLUDE-BOOK-DIR-ALIST . :IGNORE)
      (RAW-PROOF-FORMAT)
      (REDO-FLAT-FAIL)
      (REDO-FLAT-SUCC)
      (REDUNDANT-WITH-RAW-CODE-OKP)
      (RETRACE-P)
      (SAFE-MODE)
+     (SAVE-EXPANSION-FILE)
      (SAVED-OUTPUT-P)
      (SAVED-OUTPUT-REVERSED)
      (SAVED-OUTPUT-TOKEN-LST)
@@ -5348,7 +5511,6 @@
                   ACL2-OUTPUT-CHANNEL::STANDARD-CHARACTER-OUTPUT-0)
      (STANDARD-OI .
                   ACL2-OUTPUT-CHANNEL::STANDARD-OBJECT-INPUT-0)
-     (SUPPRESS-COMPILE)
      (TAINTED-OKP)
      (TEMP-TOUCHABLE-FNS)
      (TEMP-TOUCHABLE-VARS)
@@ -5373,7 +5535,7 @@
           "~%#<\\<e(acl2-window-prelude ?~sw ~xc)#>\\>#<\\<~sw")
      (WINDOW-INTERFACEP)
      (WORMHOLE-NAME)
-     (WORMHOLE-OUTPUT)
+     (WORMHOLE-STATUS)
      (WRITES-OKP . T)))
   (ASSOC-EQ
    X
@@ -5676,7 +5838,7 @@
                  (ORDERED-SYMBOL-ALISTP (ADD-PAIR W5 W6 GS))))
 
 (DEFTHM ORDERED-SYMBOL-ALISTP-GETPROPS
-        (IMPLIES (IF (WORLDP W)
+        (IMPLIES (IF (PLIST-WORLDP W)
                      (IF (SYMBOLP WORLD-NAME)
                          (SYMBOLP KEY)
                          'NIL)
@@ -6507,6 +6669,20 @@
                    'STRING)
            (SUBSEQ-LIST SEQ START (IF END END (LENGTH SEQ)))))
 
+(DEFUN OS (WRLD) (GLOBAL-VAL 'OPERATING-SYSTEM WRLD))
+
+(DEFTHM ALL-BOUNDP-PRESERVES-ASSOC
+        (IMPLIES (IF (EQLABLE-ALISTP TBL1)
+                     (IF (EQLABLE-ALISTP TBL2)
+                         (IF (ALL-BOUNDP TBL1 TBL2)
+                             (IF (SYMBOLP X) (ASSOC-EQ X TBL1) 'NIL)
+                             'NIL)
+                         'NIL)
+                     'NIL)
+                 (ASSOC X TBL2)))
+
+(DEFUN W (STATE) (GET-GLOBAL 'CURRENT-ACL2-WORLD STATE))
+
 (DEFUN
     SHRINK-T-STACK (N STATE-STATE)
     (UPDATE-T-STACK (FIRST-N-AC (MAX '0
@@ -6940,18 +7116,6 @@
         CHANNEL STATE)))
      CHANNEL X)))))
 
-(DEFTHM ALL-BOUNDP-PRESERVES-ASSOC
-        (IMPLIES (IF (EQLABLE-ALISTP TBL1)
-                     (IF (EQLABLE-ALISTP TBL2)
-                         (IF (ALL-BOUNDP TBL1 TBL2)
-                             (IF (SYMBOLP X) (ASSOC-EQ X TBL1) 'NIL)
-                             'NIL)
-                         'NIL)
-                     'NIL)
-                 (ASSOC X TBL2)))
-
-(DEFUN W (STATE) (GET-GLOBAL 'CURRENT-ACL2-WORLD STATE))
-
 (DEFUN CURRENT-PACKAGE (STATE) (GET-GLOBAL 'CURRENT-PACKAGE STATE))
 
 (DEFUN KNOWN-PACKAGE-ALIST (STATE)
@@ -6963,7 +7127,7 @@
 (DEFTHM
     STATE-P1-UPDATE-NTH-2-WORLD
     (IMPLIES (IF (STATE-P1 STATE)
-                 (IF (WORLDP WRLD)
+                 (IF (PLIST-WORLDP WRLD)
                      (IF (KNOWN-PACKAGE-ALISTP (FGETPROP 'KNOWN-PACKAGE-ALIST
                                                          'GLOBAL-VALUE
                                                          'NIL
@@ -7054,13 +7218,26 @@
     (< '0 LEN)
     (IF
      (IF
-      (EQ OS ':MSWINDOWS)
-      ((LAMBDA (POS-COLON POS-SEP)
-               (IF POS-COLON
-                   (IF POS-SEP (< POS-COLON POS-SEP) 'NIL)
-                   'NIL))
-       (POSITION '#\: STR)
-       (POSITION '#\/ STR))
+      (IF (EQ OS ':MSWINDOWS)
+          (IF ((LAMBDA (POS-COLON POS-SEP)
+                       (IF POS-COLON
+                           (EQL POS-SEP (BINARY-+ '1 POS-COLON))
+                           'NIL))
+               (POSITION '#\: STR)
+               (POSITION '#\/ STR))
+              'T
+              'NIL)
+          'NIL)
+      (IF (EQ OS ':MSWINDOWS)
+          (IF ((LAMBDA (POS-COLON POS-SEP)
+                       (IF POS-COLON
+                           (EQL POS-SEP (BINARY-+ '1 POS-COLON))
+                           'NIL))
+               (POSITION '#\: STR)
+               (POSITION '#\/ STR))
+              'T
+              'NIL)
+          'NIL)
       (IF
        (EQL (CHAR STR '0) '#\/)
        'T
@@ -7091,8 +7268,6 @@
     'NIL))
   (LENGTH STR)
   DIRECTORYP STR OS))
-
-(DEFUN OS (WRLD) (GLOBAL-VAL 'OPERATING-SYSTEM WRLD))
 
 (DEFUN INCLUDE-BOOK-DIR-ALISTP (X OS)
        (IF (ATOM X)
@@ -7135,6 +7310,20 @@
        (CDR (ASSOC-EQ ':COMPILE-FNS
                       (TABLE-ALIST 'ACL2-DEFAULTS-TABLE
                                    WRLD))))
+
+(DEFUN
+ SET-COMPILER-ENABLED (VAL STATE)
+ (IF
+  (GET-GLOBAL 'CERTIFY-BOOK-INFO STATE)
+  (PROG2$
+   (HARD-ERROR
+    'SET-COMPILER-ENABLED
+    '"It is illegal to call set-compiler-enabled ~
+                              inside certify-book."
+    'NIL)
+   STATE)
+  (PUT-GLOBAL 'COMPILER-ENABLED
+              VAL STATE)))
 
 (DEFUN DEFAULT-MEASURE-FUNCTION (WRLD)
        (IF (CDR (ASSOC-EQ ':MEASURE-FUNCTION
@@ -7203,23 +7392,33 @@
                (CONS (CAR ALIST)
                      (DELETE-ASSOC-EQUAL KEY (CDR ALIST))))))
 
-(DEFUN BACKCHAIN-LIMIT (WRLD)
-       (IF (CDR (ASSOC-EQ ':BACKCHAIN-LIMIT
-                          (TABLE-ALIST 'ACL2-DEFAULTS-TABLE
-                                       WRLD)))
-           (CDR (ASSOC-EQ ':BACKCHAIN-LIMIT
-                          (TABLE-ALIST 'ACL2-DEFAULTS-TABLE
-                                       WRLD)))
-           'NIL))
+(DEFUN BACKCHAIN-LIMIT (WRLD FLG)
+       ((LAMBDA (ENTRY FLG)
+                (IF (EQ FLG ':TS)
+                    (CAR ENTRY)
+                    (CAR (CDR ENTRY))))
+        (IF (CDR (ASSOC-EQ ':BACKCHAIN-LIMIT
+                           (TABLE-ALIST 'ACL2-DEFAULTS-TABLE
+                                        WRLD)))
+            (CDR (ASSOC-EQ ':BACKCHAIN-LIMIT
+                           (TABLE-ALIST 'ACL2-DEFAULTS-TABLE
+                                        WRLD)))
+            '(NIL NIL))
+        FLG))
 
-(DEFUN DEFAULT-BACKCHAIN-LIMIT (WRLD)
-       (IF (CDR (ASSOC-EQ ':DEFAULT-BACKCHAIN-LIMIT
-                          (TABLE-ALIST 'ACL2-DEFAULTS-TABLE
-                                       WRLD)))
-           (CDR (ASSOC-EQ ':DEFAULT-BACKCHAIN-LIMIT
-                          (TABLE-ALIST 'ACL2-DEFAULTS-TABLE
-                                       WRLD)))
-           'NIL))
+(DEFUN DEFAULT-BACKCHAIN-LIMIT (WRLD FLG)
+       ((LAMBDA (ENTRY FLG)
+                (IF (EQ FLG ':TS)
+                    (CAR ENTRY)
+                    (CAR (CDR ENTRY))))
+        (IF (CDR (ASSOC-EQ ':DEFAULT-BACKCHAIN-LIMIT
+                           (TABLE-ALIST 'ACL2-DEFAULTS-TABLE
+                                        WRLD)))
+            (CDR (ASSOC-EQ ':DEFAULT-BACKCHAIN-LIMIT
+                           (TABLE-ALIST 'ACL2-DEFAULTS-TABLE
+                                        WRLD)))
+            '(NIL NIL))
+        FLG))
 
 (DEFUN REWRITE-STACK-LIMIT (WRLD)
        (IF (CDR (ASSOC-EQ ':REWRITE-STACK-LIMIT
@@ -7544,11 +7743,29 @@
 
 (DEFUN TIME-LIMIT4-REACHED-P (MSG) 'NIL)
 
-(DEFUN WORMHOLE1 (NAME INPUT FORM LD-SPECIALS) 'NIL)
+(DEFUN
+ TILDE-@-GUARD-CHECKING-PHRASE (VAL)
+ (CONS
+  '"The first argument to ~x0 must evaluate to one of ~v1.  But such an ~
+        argument has evaluated to ~x2."
+  (CONS (CONS '#\0 'WITH-GUARD-CHECKING)
+        (CONS (CONS '#\1 '(T NIL :NOWARN :ALL :NONE))
+              (CONS (CONS '#\2 VAL) 'NIL)))))
 
-(DEFUN WORMHOLE-P (STATE) (READ-ACL2-ORACLE STATE))
+(DEFUN
+     WITH-GUARD-CHECKING (VAL FORM)
+     (PROG2$ (IF (MEMBER-EQ VAL '(T NIL :NOWARN :ALL :NONE))
+                 (MEMBER-EQ VAL '(T NIL :NOWARN :ALL :NONE))
+                 (HARD-ERROR 'WITH-GUARD-CHECKING
+                             '"~@0"
+                             (CONS (CONS '#\0
+                                         (TILDE-@-GUARD-CHECKING-PHRASE VAL))
+                                   'NIL)))
+             FORM))
 
 (DEFUN ABORT! NIL 'NIL)
+
+(DEFUN P! NIL 'NIL)
 
 (DEFUN FMT-TO-COMMENT-WINDOW (STR ALIST COL EVISC-TUPLE) 'NIL)
 
@@ -7559,6 +7776,10 @@
            'NIL
            (CONS (CONS (CAR X) (CAR Y))
                  (PAIRLIS2 (CDR X) (CDR Y)))))
+
+(DEFUN WORMHOLE1 (NAME INPUT FORM LD-SPECIALS) 'NIL)
+
+(DEFUN WORMHOLE-P (STATE) (READ-ACL2-ORACLE STATE))
 
 (DEFUN DUPLICATES (LST)
        (IF (ENDP LST)
@@ -7577,6 +7798,14 @@
                (CONS (CAR L1)
                      (INTERSECTION-EQ (CDR L1) L2))
                (INTERSECTION-EQ (CDR L1) L2))))
+
+(DEFUN INTERSECTION-EQUAL (L1 L2)
+       (IF (ENDP L1)
+           'NIL
+           (IF (MEMBER-EQUAL (CAR L1) L2)
+               (CONS (CAR L1)
+                     (INTERSECTION-EQUAL (CDR L1) L2))
+               (INTERSECTION-EQUAL (CDR L1) L2))))
 
 (DEFUN EVENS (L) (IF (ENDP L) 'NIL (CONS (CAR L) (EVENS (CDR (CDR L))))))
 
@@ -8109,3 +8338,13 @@
   (IF END1P END1 (LENGTH SEQ1))
   SEQ1 START1
   START2 FROM-END TEST SEQ2 END2 END2P))
+
+(DEFUN TIME$-LOGIC (REAL-MINTIME RUN-MINTIME MINALLOC MSG ARGS X) X)
+
+(DEFUN GC$-FN (ARGS) 'NIL)
+
+(DEFUN GET-WORMHOLE-STATUS (NAME STATE) (READ-ACL2-ORACLE STATE))
+
+(ENCAP ((TOO-MANY-IFS-POST-REWRITE-WRAPPER 2)))
+
+(DEFUN TOO-MANY-IFS-POST-REWRITE-PRELIM (ARGS VAL) 'NIL)
