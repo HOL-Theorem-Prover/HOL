@@ -552,16 +552,19 @@ val RC_IDEM = store_thm(
   "RC_IDEM",
   ``!R:'a->'a->bool.  RC (RC R) = RC R``,
   SIMP_TAC bool_ss [RC_REFLEXIVE, reflexive_RC_identity]);
+val _ = export_rewrites ["RC_IDEM"]
 
 val SC_IDEM = store_thm(
   "SC_IDEM",
   ``!R:'a->'a->bool. SC (SC R) = SC R``,
   SIMP_TAC bool_ss [SC_SYMMETRIC, symmetric_SC_identity]);
+val _ = export_rewrites ["SC_IDEM"]
 
 val TC_IDEM = store_thm(
   "TC_IDEM",
   ``!R:'a->'a->bool.  TC (TC R) = TC R``,
   SIMP_TAC bool_ss [TC_TRANSITIVE, transitive_TC_identity]);
+val _ = export_rewrites ["TC_IDEM"]
 
 val RC_MOVES_OUT = store_thm(
   "RC_MOVES_OUT",
@@ -585,18 +588,21 @@ val EQC_EQUIVALENCE = store_thm(
   ``!R. equivalence (EQC R)``,
   REWRITE_TAC [equivalence_def, EQC_DEF, RC_REFLEXIVE, symmetric_RC] THEN
   MESON_TAC [symmetric_TC, TC_RC_EQNS, TC_TRANSITIVE, SC_SYMMETRIC]);
+val _ = export_rewrites ["EQC_EQUIVALENCE"]
 
 val EQC_IDEM = store_thm(
   "EQC_IDEM",
   ``!R:'a->'a->bool. EQC(EQC R) = EQC R``,
   SIMP_TAC bool_ss [EQC_DEF, RC_MOVES_OUT, symmetric_SC_identity,
                     symmetric_TC, SC_SYMMETRIC, TC_IDEM]);
+val _ = export_rewrites ["EQC_IDEM"]
 
 
 val RTC_IDEM = store_thm(
   "RTC_IDEM",
   ``!R:'a->'a->bool.  RTC (RTC R) = RTC R``,
   SIMP_TAC bool_ss [GSYM TC_RC_EQNS, RC_MOVES_OUT, TC_IDEM]);
+val _ = export_rewrites ["RTC_IDEM"]
 
 val RTC_CASES1 = store_thm(
   "RTC_CASES1",
@@ -733,6 +739,7 @@ MAP_EVERY Q.ID_SPEC_TAC [`b`,`a`] THEN
 HO_MATCH_MP_TAC TC_INDUCT THEN
 SRW_TAC [][SC_DEF] THEN
 PROVE_TAC [TC_RULES,SC_DEF]);
+val _ = export_rewrites ["EQC_MOVES_IN"]
 
 val STRONG_EQC_INDUCTION = store_thm(
   "STRONG_EQC_INDUCTION",
