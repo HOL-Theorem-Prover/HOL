@@ -1807,6 +1807,20 @@ val BAG_EVERY_SET = Q.store_thm(
 `BAG_EVERY P b = SET_OF_BAG b SUBSET {x | P x}`,
 SRW_TAC [][BAG_EVERY, SET_OF_BAG, SUBSET_DEF]);
 
+val BAG_FILTER_EQ_EMPTY = Q.store_thm(
+  "BAG_FILTER_EQ_EMPTY",
+  `(BAG_FILTER P b = {||}) <=> BAG_EVERY ($~ o P) b`,
+  SRW_TAC [][BAG_EXTENSION,BAG_INN_BAG_FILTER,BAG_EVERY,BAG_IN,EQ_IMP_THM] THEN1 (
+    FIRST_X_ASSUM (Q.SPECL_THEN [`1`,`e`] MP_TAC)
+    THEN SRW_TAC [][] ) THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `e` MP_TAC) THEN
+  SRW_TAC [][] THEN
+  Cases_on `n < 1` THEN1 DECIDE_TAC THEN
+  (BAG_INN_LESS |> Q.SPECL [`b`,`e`,`n`,`1`] |> CONTRAPOS |> IMP_RES_TAC) THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  `n = 1` by DECIDE_TAC THEN
+  SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []);
+
 val BAG_ALL_DISTINCT = new_definition ("BAG_ALL_DISTINCT",
   ``BAG_ALL_DISTINCT b = (!e. b e <= 1:num)``);
 
