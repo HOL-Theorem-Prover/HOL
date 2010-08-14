@@ -2200,4 +2200,23 @@ val TC_mlt1_UNION2_I = store_thm(
     METIS_TAC [EL_BAG, BAG_INSERT_UNION, COMM_BAG_UNION, ASSOC_BAG_UNION]
   ]);
 
+val mlt_TO_EMPTY_BAG = Q.store_thm(
+  "mlt_TO_EMPTY_BAG",
+  `FINITE_BAG b2 /\ b2 <> {||} ==> mlt r {||} b2`,
+  SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
+  Q.ID_SPEC_TAC `b2` THEN
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
+  SRW_TAC [][] THEN
+  Cases_on `b2 = {||}`  THEN1 (
+    MATCH_MP_TAC relationTheory.TC_SUBSET THEN
+    SRW_TAC [][mlt1_def] ) THEN
+  MATCH_MP_TAC (CONJUNCT2 (SPEC_ALL relationTheory.TC_RULES)) THEN
+  Q.EXISTS_TAC `b2` THEN
+  SRW_TAC [][] THEN
+  MATCH_MP_TAC relationTheory.TC_SUBSET THEN
+  SRW_TAC [][mlt1_def] THEN
+  MAP_EVERY Q.EXISTS_TAC [`e`,`{||}`,`b2`] THEN
+  SRW_TAC [][BAG_INSERT_UNION,COMM_BAG_UNION]);
+val _ = export_rewrites ["mlt_TO_EMPTY_BAG"];
+
 val _ = export_theory();
