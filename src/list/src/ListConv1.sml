@@ -1253,7 +1253,7 @@ val REPLICATE_CONV  =
 (*-----------------------------------------------------------------------*)
 
 val GENLIST_CONV =
-    let val (bthm,ithm) = CONJ_PAIR rich_listTheory.GENLIST
+    let val (bthm,ithm) = CONJ_PAIR listTheory.GENLIST
         fun dec n = term_of_int((int_of_term n) - 1)
         fun genconv (bthm,ithm) conv tm =
             let val n = last(snd(strip_comb tm))
@@ -1267,7 +1267,7 @@ val GENLIST_CONV =
             end
     in
   fn conv => fn tm =>
-   (let val (f,n) = rich_listSyntax.dest_genlist tm
+   (let val (f,n) = listSyntax.dest_genlist tm
         val bthm' = ISPEC f bthm and ithm' = ISPEC f ithm
     in
         RIGHT_CONV_RULE (TOP_DEPTH_CONV SNOC_CONV)

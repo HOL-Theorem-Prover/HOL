@@ -38,6 +38,7 @@ sig
   val front_tm        : term
   val all_distinct_tm : term
   val list_to_set_tm  : term
+  val genlist_tm      : term
 
   val mk_nil          : hol_type -> term
   val mk_cons         : term * term -> term
@@ -70,6 +71,7 @@ sig
   val mk_front        : term -> term
   val mk_all_distinct : term -> term
   val mk_list_to_set  : term -> term
+  val mk_genlist      : term * term -> term
   val mk_list         : term list * hol_type -> term
 
   val dest_nil          : term -> hol_type
@@ -104,6 +106,7 @@ sig
   val dest_front        : term -> term
   val dest_all_distinct : term -> term
   val dest_list_to_set  : term -> term
+  val dest_genlist    : term -> term * term
   val dest_list         : term -> term list * hol_type
 
   val is_nil          : term -> bool
@@ -136,6 +139,7 @@ sig
   val is_front        : term -> bool
   val is_all_distinct : term -> bool
   val is_list_to_set  : term -> bool
+  val is_genlist      : term -> bool
   val is_list         : term -> bool
 
   val lift_list      : hol_type -> ('a -> term) -> 'a list -> term
