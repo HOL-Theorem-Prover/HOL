@@ -2031,6 +2031,12 @@ val BIG_BAG_UNION_INSERT = Q.store_thm(
 `FINITE sob ==> (BIG_BAG_UNION (b INSERT sob) = b + BIG_BAG_UNION (sob DELETE b))`,
 SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_THM,BAG_UNION,FUN_EQ_THM]);
 
+val BIG_BAG_UNION_DELETE = Q.store_thm(
+"BIG_BAG_UNION_DELETE",
+`FINITE sob ==> (BIG_BAG_UNION (sob DELETE b) = if b IN sob then BAG_DIFF (BIG_BAG_UNION sob) b else BIG_BAG_UNION sob)`,
+SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_THM,SUM_IMAGE_DELETE,BAG_UNION,BAG_DIFF,FUN_EQ_THM] THEN
+FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT]);
+
 val BIG_BAG_UNION_ITSET_BAG_UNION = Q.store_thm(
 "BIG_BAG_UNION_ITSET_BAG_UNION",
 `!sob. FINITE sob ==> (BIG_BAG_UNION sob = ITSET BAG_UNION sob {||})`,
@@ -2073,6 +2079,43 @@ SRW_TAC [][] THEN
 MATCH_MP_TAC SUM_IMAGE_SUBSET_LE THEN
 SRW_TAC [][]);
 val _ = export_rewrites ["BAG_IN_BIG_BAG_UNION"];
+
+val BIG_BAG_UNION_EQ_EMPTY_BAG = Q.store_thm(
+"BIG_BAG_UNION_EQ_EMPTY_BAG",
+`!sob. FINITE sob ==> ((BIG_BAG_UNION sob = {||}) <=> (!b. b IN sob ==> (b = {||})))`,
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+SRW_TAC [][BIG_BAG_UNION_INSERT] THEN
+FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
+PROVE_TAC []);
+
+val BIG_BAG_UNION_UNION = Q.store_thm(
+"BIG_BAG_UNION_UNION",
+`FINITE s1 /\ FINITE s2 ==> (BIG_BAG_UNION (s1 UNION s2) = BIG_BAG_UNION s1 + BIG_BAG_UNION s2 - BIG_BAG_UNION (s1 INTER s2))`,
+SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_UNION,FUN_EQ_THM,BAG_UNION,BAG_DIFF]);
+
+val BIG_BAG_UNION_EQ_ELEMENT = Q.store_thm(
+"BIG_BAG_UNION_EQ_ELEMENT",
+`FINITE sob /\ b IN sob ==> ((BIG_BAG_UNION sob = b) <=> (!b'. b' IN sob ==> (b' = b) \/ (b' = {||})))`,
+STRIP_TAC THEN
+`sob = b INSERT sob DELETE b` by SRW_TAC [][] THEN
+Q.ABBREV_TAC `sob0 = sob DELETE b` THEN
+SRW_TAC [][BIG_BAG_UNION_def] THEN
+FULL_SIMP_TAC (srw_ss()) [SUM_IMAGE_THM] THEN
+UNABBREV_ALL_TAC THEN
+SRW_TAC [][EQ_IMP_THM] THEN1 (
+  SRW_TAC [][EMPTY_BAG] THEN
+  FULL_SIMP_TAC (srw_ss()) [DELETE_INSERT,FUN_EQ_THM] THEN
+  `sob0 DELETE b = b' INSERT ((sob0 DELETE b) DELETE b')`
+    by PROVE_TAC [IN_DELETE,INSERT_DELETE] THEN
+  Q.ABBREV_TAC `sob1 = sob0 DELETE b DELETE b'` THEN
+  `FINITE (b' INSERT sob1)` by SRW_TAC [][Abbr`sob1`] THEN
+  FULL_SIMP_TAC (srw_ss()) [SUM_IMAGE_THM] ) THEN
+FULL_SIMP_TAC (srw_ss()++boolSimps.DNF_ss) [DELETE_INSERT,EMPTY_BAG] THEN
+SRW_TAC [][FUN_EQ_THM] THEN
+`SIGMA (\b. b x) (sob0 DELETE b) ≤ CARD (sob0 DELETE b) * 0` by (
+  MATCH_MP_TAC (MP_CANON SUM_IMAGE_upper_bound) THEN
+  SRW_TAC [][] ) THEN
+FULL_SIMP_TAC (srw_ss()) []);
 
 (* ----------------------------------------------------------------------
     Multiset ordering
