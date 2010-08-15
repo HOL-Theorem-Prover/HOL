@@ -1132,7 +1132,6 @@ val REST_PSUBSET =
      IMP_RES_TAC CHOICE_DEF THEN
      ASM_REWRITE_TAC []);
 
-
 (* ===================================================================== *)
 (* Singleton set.							 *)
 (* ===================================================================== *)
@@ -1675,6 +1674,11 @@ val FINITE_DELETE =
      [MATCH_ACCEPT_TAC DELETE_FINITE,
       DISCH_THEN (MATCH_ACCEPT_TAC o MATCH_MP FINITE_DELETE)]);
 
+val FINITE_REST =
+    store_thm
+    ("FINITE_REST",
+     (--`!s:'a set. FINITE s ==> FINITE (REST s)`--),
+     REWRITE_TAC [REST_DEF, FINITE_DELETE]);
 
 val UNION_FINITE = prove(
   --`!s:'a set. FINITE s ==> !t. FINITE t ==> FINITE (s UNION t)`--,
@@ -4587,7 +4591,7 @@ val _ = export_rewrites
      (* "PSUBSET" *)
      "PSUBSET_IRREFL",
      (* "REST" *)
-     "REST_PSUBSET", "REST_SUBSET",
+     "REST_PSUBSET", "REST_SUBSET", "FINITE_REST",
      (* "SING" *)
      "SING", "SING_FINITE",
      (* "SUBSET" *)
