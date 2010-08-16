@@ -171,7 +171,7 @@ val BCARRY_EQ = Q.store_thm("BCARRY_EQ",
      (!i. i < n ==> (x1 i = x2 i) /\ (y1 i = y2 i)) ==>
      (BCARRY n x1 y1 c = BCARRY n x2 y2 c)`,
   Induct \\ SRW_TAC [] [BCARRY_def]
-  \\ `!i. i < n ==> (x1 i = x2 i) ∧ (y1 i = y2 i)`
+  \\ `!i. i < n ==> (x1 i = x2 i) /\ (y1 i = y2 i)`
   by ASM_SIMP_TAC arith_ss []
   \\ RES_TAC \\ ASM_REWRITE_TAC []);
 
@@ -180,7 +180,7 @@ val BSUM_EQ = Q.store_thm("BSUM_EQ",
      (!i. i <= n ==> (x1 i = x2 i) /\ (y1 i = y2 i)) ==>
      (BSUM n x1 y1 c = BSUM n x2 y2 c)`,
   SRW_TAC [] [BSUM_def]
-  \\ `!i. i < n ==> (x1 i = x2 i) ∧ (y1 i = y2 i)`
+  \\ `!i. i < n ==> (x1 i = x2 i) /\ (y1 i = y2 i)`
   by ASM_SIMP_TAC arith_ss []
   \\ IMP_RES_TAC BCARRY_EQ
   \\ ASM_REWRITE_TAC []);

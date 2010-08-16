@@ -584,7 +584,7 @@ val symmetric_TC = store_thm(
 
 val reflexive_TC = store_thm(
   "reflexive_TC",
-  ``!R. reflexive R ⇒ reflexive (TC R)``,
+  ``!R. reflexive R ==> reflexive (TC R)``,
   PROVE_TAC [reflexive_def,TC_SUBSET]);
 
 val EQC_EQUIVALENCE = store_thm(

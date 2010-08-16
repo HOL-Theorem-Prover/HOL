@@ -2112,7 +2112,7 @@ SRW_TAC [][EQ_IMP_THM] THEN1 (
   FULL_SIMP_TAC (srw_ss()) [SUM_IMAGE_THM] ) THEN
 FULL_SIMP_TAC (srw_ss()++boolSimps.DNF_ss) [DELETE_INSERT,EMPTY_BAG] THEN
 SRW_TAC [][FUN_EQ_THM] THEN
-`SIGMA (\b. b x) (sob0 DELETE b) ≤ CARD (sob0 DELETE b) * 0` by (
+`SIGMA (\b. b x) (sob0 DELETE b) <= CARD (sob0 DELETE b) * 0` by (
   MATCH_MP_TAC (MP_CANON SUM_IMAGE_upper_bound) THEN
   SRW_TAC [][] ) THEN
 FULL_SIMP_TAC (srw_ss()) []);
