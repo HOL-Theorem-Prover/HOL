@@ -582,6 +582,10 @@ val symmetric_TC = store_thm(
     CONV_TAC SWAP_VARS_CONV THEN HO_MATCH_MP_TAC TC_INDUCT
   ] THEN ASM_MESON_TAC [TC_RULES]);
 
+val reflexive_TC = store_thm(
+  "reflexive_TC",
+  ``!R. reflexive R ⇒ reflexive (TC R)``,
+  PROVE_TAC [reflexive_def,TC_SUBSET]);
 
 val EQC_EQUIVALENCE = store_thm(
   "EQC_EQUIVALENCE",
