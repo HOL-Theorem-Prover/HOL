@@ -80,7 +80,7 @@ in
 end;
 
 val HD_GENLIST =
-  (GEN_ALL o SIMP_RULE list_ss [] o INST [`x` |-> `0`] o SPEC_ALL) EL_GENLIST;
+  (GEN_ALL o REWRITE_RULE [EL] o INST [`x` |-> `0`] o SPEC_ALL) EL_GENLIST;
 
 val HD_APPEND2 = prove(
   `!n f l. HD (GENLIST f n ++ l) = if n = 0 then HD l else f 0`,

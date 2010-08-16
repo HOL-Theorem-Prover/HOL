@@ -702,7 +702,6 @@ val SUM = store_thm("SUM",
 (*--------------------------------------------------------------*)
 (* List generator                                               *)
 (* Spec:                                                        *)
-(*  GENLIST f n = [f 0;...; f(n-1)]                             *)
 (*  REPLICATE n x = [x;....;x] (n repeate elements)             *)
 (*  COUNT_LIST n = [0;....;n-1]                                 *)
 (*--------------------------------------------------------------*)
@@ -732,10 +731,6 @@ val SPLITP_AUX_def = TotalDefn.Define`
       (acc, h::t)
     else
       SPLITP_AUX (acc ++ [h]) P t)`;
-
-val GENLIST_AUX_def = TotalDefn.Define`
-  (GENLIST_AUX f 0 l = l) /\
-  (GENLIST_AUX f (SUC n) l = GENLIST_AUX f n ((f n)::l))`;
 
 val COUNT_LIST_AUX_def = TotalDefn.Define`
   (COUNT_LIST_AUX 0 l = l) /\
@@ -3407,14 +3402,6 @@ Cases_on `p` THEN ASM_SIMP_TAC arith_ss [EL, HD, TL]);
 (* Add evaluation theorems to computeLib.the_compset                         *)
 (*---------------------------------------------------------------------------*)
 
-val GENLIST_AUX_lem = Q.prove(
-  `!n l1 l2. GENLIST_AUX f n l1 ++ l2 = GENLIST_AUX f n (l1 ++ l2)`,
-  Induct THEN SRW_TAC [] [GENLIST_AUX_def]);
-
-val GENLIST_AUX = Q.store_thm("GENLIST_AUX",
-  `!n. GENLIST f n = GENLIST_AUX f n []`,
-  Induct THEN SRW_TAC [] [GENLIST_AUX_def, GENLIST_AUX_lem, GENLIST]);
-
 val COUNT_LIST_AUX_lem = Q.prove(
   `!n l1 l2. COUNT_LIST_AUX n l1 ++ l2 = COUNT_LIST_AUX n (l1 ++ l2)`,
   Induct THEN SRW_TAC [] [COUNT_LIST_AUX_def]);
@@ -3430,7 +3417,6 @@ val ELL_compute = save_thm("ELL_compute", SUC_RULE ELL);
 val SEG_compute = save_thm("SEG_compute", SUC_RULE SEG);
 val FIRSTN_compute = save_thm("FIRSTN_compute", SUC_RULE FIRSTN);
 val GENLIST_compute = save_thm("GENLIST_compute", SUC_RULE GENLIST);
-val _ = export_rewrites ["GENLIST_compute"]
 val BUTFIRSTN_compute = save_thm("BUTFIRSTN_compute", SUC_RULE BUTFIRSTN);
 val IS_SUFFIX_compute = save_thm("IS_SUFFIX_compute", GSYM IS_PREFIX_REVERSE);
 val REPLICATE_compute = save_thm("REPLICATE_compute", SUC_RULE REPLICATE);
@@ -3455,7 +3441,6 @@ val _ = computeLib.add_persistent_funs
   ("BUTLASTN_compute", BUTLASTN_compute),
   ("ELL_compute", ELL_compute),
   ("FIRSTN_compute", FIRSTN_compute),
-  ("GENLIST_AUX", GENLIST_AUX),
   ("COUNT_LIST_AUX", COUNT_LIST_AUX),
   ("IS_SUBLIST", IS_SUBLIST),
   ("IS_SUFFIX_compute", IS_SUFFIX_compute),

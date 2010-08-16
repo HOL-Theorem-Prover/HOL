@@ -322,11 +322,13 @@ end
                 |- !a b. (a = b) = (a ' 0 = b ' 0) /\ (a ' 1 = b ' 1).
    ------------------------------------------------------------------------ *)
 
+val SUC_RULE = Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
+
 local
   val FCP_EQ_EVERY = Q.prove(
     `!a b:'a word.
         (a = b) = EVERY (\i. a ' i = b ' i) (GENLIST I (dimindex (:'a)))`,
-    SRW_TAC [fcpLib.FCP_ss] [rich_listTheory.EVERY_GENLIST])
+    SRW_TAC [fcpLib.FCP_ss] [listTheory.EVERY_GENLIST])
 
   val FCP_EQ_EVERY =
         REWRITE_RULE [GSYM rich_listTheory.COUNT_LIST_GENLIST,
@@ -335,9 +337,8 @@ local
   val cmp = reduceLib.num_compset ()
 
   val _ = computeLib.add_thms
-            [listTheory.EVERY_DEF,
-             Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV
-               rich_listTheory.COUNT_LIST_AUX_def] cmp
+            [listTheory.EVERY_DEF, SUC_RULE rich_listTheory.COUNT_LIST_AUX_def]
+            cmp
 
   val _ = computeLib.add_conv
             (``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV) cmp
@@ -506,9 +507,10 @@ local
       word_lsb_def, word_extract_def, word_bits_def, word_slice_def,
       word_bit_def, word_signed_bits_def, bit_field_insert_def, index_cond,
       SYM WORD_NEG_1, word_L_thm, minus1_thm, w2w_thm, sw2sw_thm,
-      fcpTheory.FCP_UPDATE_def, listTheory.HD, listTheory.TL, listTheory.SNOC,
-      listTheory.FOLDL, rich_listTheory.GENLIST_compute,
-      BITWISE_ADD, BITWISE_SUB, BITWISE_LO, combinTheory.o_THM] cmp
+      BITWISE_ADD, BITWISE_SUB, BITWISE_LO, fcpTheory.FCP_UPDATE_def,
+      listTheory.HD, listTheory.TL, listTheory.SNOC, listTheory.FOLDL,
+      listTheory.GENLIST_GENLIST_AUX, SUC_RULE listTheory.GENLIST_AUX,
+      combinTheory.o_THM] cmp
 
   val _ = computeLib.add_conv
             (``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV) cmp

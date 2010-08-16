@@ -1953,6 +1953,10 @@ val LENGTH_GENLIST = store_thm("LENGTH_GENLIST",
     THEN ASM_REWRITE_TAC[GENLIST,LENGTH,LENGTH_SNOC]);
 val _ = export_rewrites ["LENGTH_GENLIST"]
 
+val GENLIST_AUX = Define`
+  (GENLIST_AUX f 0 l = l) /\
+  (GENLIST_AUX f (SUC n) l = GENLIST_AUX f n ((f n)::l))`;
+
 (*---------------------------------------------------------------------------
    Theorems about genlist. From Anthony Fox's theories. Added by Thomas Tuerk.
    Moved from rich_listTheory.
@@ -2023,6 +2027,16 @@ val GENLIST_CONS = store_thm(
   ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
   Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
 
+val GENLIST_AUX_lem = Q.prove(
+  `!n l1 l2. GENLIST_AUX f n l1 ++ l2 = GENLIST_AUX f n (l1 ++ l2)`,
+  Induct_on `n` THEN SRW_TAC [] [GENLIST_AUX]);
+
+val GENLIST_GENLIST_AUX = Q.store_thm("GENLIST_GENLIST_AUX",
+  `!n. GENLIST f n = GENLIST_AUX f n []`,
+  Induct_on `n`
+  THEN RW_TAC bool_ss
+         [SNOC_APPEND, APPEND, GENLIST_AUX, GENLIST_AUX_lem, GENLIST]);
+
 (* ----------------------------------------------------------------------
     All lists have infinite universes
    ---------------------------------------------------------------------- *)
@@ -2090,7 +2104,7 @@ val _ = adjoin_to_theory
    S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
    S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
    S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
-   S "              FOLDL, REVERSE_DEF, ALL_DISTINCT,";
+   S "              FOLDL, REVERSE_DEF, ALL_DISTINCT, GENLIST_AUX,";
    S "              Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV EL,";
    S "              computeLib.lazyfy_thm list_case_compute,";
    S "              list_size_def,FRONT_DEF,LAST_DEF,isPREFIX]";
