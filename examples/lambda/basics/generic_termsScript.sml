@@ -15,6 +15,8 @@ fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
 
 val _ = new_theory "generic_terms"
 
+val _ = computeLib.auto_import_definitions := false
+
 val _ = Hol_datatype `
   pregterm = var of string => 'v
            | app of 'nb => pregterm list
@@ -27,7 +29,7 @@ val fv_def = Define `
   (fv (lam v bv bndts unbndts) = (fvl bndts DELETE v) ∪ fvl unbndts) ∧
   (fvl [] = ∅) ∧
   (fvl (h::ts) = fv h ∪ fvl ts)`
-val _ = export_rewrites ["fv_def"]
+val _ = augment_srw_ss [rewrites [fv_def]]
 
 val oldind = TypeBase.induction_of ``:(α,β,γ)pregterm``
 
@@ -43,12 +45,13 @@ val pind = prove(
   Q_TAC suff_tac `(∀t. P t) ∧ (∀ts. EVERY P ts)` >- metis_tac [] >>
   ho_match_mp_tac oldind >> srw_tac [][]);
 
-val finite_fv = Store_Thm(
+val finite_fv = store_thm(
   "finite_fv",
   ``∀t. FINITE (fv t)``,
   Q_TAC suff_tac `(∀t:(α,β,γ)pregterm. FINITE (fv t)) ∧
                   (∀l:(α,β,γ)pregterm list. FINITE (fvl l))` >- srw_tac [][] >>
   ho_match_mp_tac oldind >> srw_tac [][]);
+val _ = augment_srw_ss [rewrites [finite_fv]]
 
 val ptpm_def = Define`
   (ptpm p (var s vv) = var (perm_of p s) vv) ∧
@@ -123,11 +126,12 @@ val ptpml_id_front = prove(
   srw_tac [ETA_ss][ptpml_listpm, is_perm_id]);
 
 
-val ptpm_fv = Store_Thm(
+val ptpm_fv = store_thm(
   "ptpm_fv",
   ``(∀t:(α,β,γ)pregterm. fv (ptpm p t) = ssetpm p (fv t)) ∧
     (∀l:(α,β,γ)pregterm list. fvl (listpm ptpm p l) = ssetpm p (fvl l))``,
   ho_match_mp_tac oldind >> srw_tac[][perm_INSERT, perm_DELETE, perm_UNION]);
+val _ = augment_srw_ss [rewrites [ptpm_fv]]
 
 val allatoms_def = Define`
   (allatoms (var s vv) = {s}) ∧
@@ -1058,7 +1062,6 @@ val NOT_IN_supp_listpm = prove(
   ``a ∉ supp (listpm pm) l ⇔ ∀e. MEM e l ⇒ a ∉ supp pm e``,
   metis_tac [IN_supp_listpm])
 
-(*
 val freshness = prove(
   ``^permsupp_sidecond ∧ ^FCB ⇒
     ∀t r. recn_rel ^vf ^af ^lf A t r ⇒ a ∉ A ∧ a ∉ GFV t ⇒ a ∉ supp dpm r``,
@@ -1102,17 +1105,31 @@ val freshness = prove(
            srw_tac[][mylist_rel_eqn, listTheory.MEM_EL] >>
            match_mp_tac (MP_CANON recn_rel_finite_support) >>
            metis_tac []) >>
-    notinsupp_fnapp >> srw_tac [][GSYM gfvl_supp] >|[
-      match_mp_tac FINITE_supplf5 >> srw_tac [][],
-
-
-
-
-
-
-
-
-*)
+    `a ∉ supp (listpm dpm) ds1 ∧ a ∉ supp (listpm dpm) ds2`
+      by (conj_tac >>
+          rpt (qpat_assum `mylist_rel R X Y` MP_TAC) >>
+          srw_tac [][NOT_IN_supp_listpm, mylist_rel_eqn, listTheory.MEM_EL] >>
+          metis_tac [listTheory.MEM_EL]) >>
+    notinsupp_fnapp >> srw_tac [][GSYM gfvl_supp]
+    >- (match_mp_tac FINITE_supplf5 >> srw_tac [][]) >>
+    notinsupp_fnapp >> srw_tac [][]
+    >- (match_mp_tac FINITE_supplf4 >> srw_tac [][]) >>
+    notinsupp_fnapp >> srw_tac [][GSYM gfvl_supp]
+    >- (match_mp_tac FINITE_supplf3 >> srw_tac [][])
+    >- (notinsupp_fnapp >> srw_tac [][]
+        >- (match_mp_tac FINITE_supplf2 >> srw_tac [][]) >>
+        notinsupp_fnapp >> srw_tac [][]
+        >- rpt (match_mp_tac fnpm_is_perm >> srw_tac [][])
+        >- (match_mp_tac FINITE_supplf1 >> srw_tac [][]) >>
+        notinsupp_fnapp >> srw_tac [][]
+        >- rpt (match_mp_tac fnpm_is_perm >> srw_tac [][])
+        >- (match_mp_tac support_FINITE_supp >> srw_tac [][] >>
+            rpt (match_mp_tac fnpm_is_perm >> srw_tac [][])) >>
+        match_mp_tac sub_cpos >> qexists_tac `A` >> srw_tac [][] >>
+        match_mp_tac supp_smallest >> srw_tac [][] >>
+        rpt (match_mp_tac fnpm_is_perm >> srw_tac [][])) >>
+    srw_tac [][listTheory.MEM_MAP] >> metis_tac []
+  ]);
 
 
 
