@@ -1679,6 +1679,11 @@ val RSUBSET = new_definition(
   ``(RSUBSET) R1 R2 = !x y. R1 x y ==> R2 x y``);
 val _ = set_fixity "RSUBSET" (Infix(NONASSOC, 450));
 
+val irreflexive_RSUBSET = store_thm(
+  "irreflexive_RSUBSET",
+  ``!R1 R2. irreflexive R2 /\ R1 RSUBSET R2 ==> irreflexive R1``,
+  SRW_TAC [][irreflexive_def, RSUBSET] THEN PROVE_TAC []);
+
 (* ----------------------------------------------------------------------
     relational union
    ---------------------------------------------------------------------- *)
