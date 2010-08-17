@@ -1263,6 +1263,13 @@ val MEM_EL = store_thm(
     ASM_MESON_TAC []
   ]);
 
+val SUM_MAP_PLUS_ZIP = store_thm(
+  "SUM_MAP_PLUS_ZIP",
+  ``!ls1 ls2. (LENGTH ls1 = LENGTH ls2) /\ (!x y. f (x,y) = g x + h y) ==>
+              (SUM (MAP f (ZIP (ls1,ls2))) = SUM (MAP g ls1) + SUM (MAP h ls2))``,
+  Induct THEN Cases_on `ls2` THEN
+  SRW_TAC [numSimps.ARITH_ss][MAP,ZIP,MAP_ZIP,SUM]);
+
 (* --------------------------------------------------------------------- *)
 (* REVERSE                                                               *)
 (* --------------------------------------------------------------------- *)
@@ -1643,6 +1650,13 @@ val FINITE_LIST_TO_SET = Q.store_thm
  `!l. FINITE (set l)`,
  Induct THEN SRW_TAC [][]);
 val _ = export_rewrites ["FINITE_LIST_TO_SET"]
+
+val SUM_IMAGE_LIST_TO_SET_upper_bound = store_thm(
+  "SUM_IMAGE_LIST_TO_SET_upper_bound",
+  ``!ls. SIGMA f (set ls) <= SUM (MAP f ls)``,
+  Induct THEN
+  SRW_TAC [][MAP,SUM,SUM_IMAGE_THM,SUM_IMAGE_DELETE] THEN
+  numLib.DECIDE_TAC);
 
 local open numLib in
 val CARD_LIST_TO_SET = Q.store_thm(
