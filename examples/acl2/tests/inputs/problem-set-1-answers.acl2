@@ -1,0 +1,21 @@
+(defpkg "M1"
+  '(defun declare ignore xargs defthm mutual-recursion
+    include-book in-theory disable defconst
+    defmacro &rest
+    intern-in-package-of-symbol
+    coerce symbol-name
+    string
+    otherwise
+    concatenate progn strip-cars syntaxp quotep assoc pairlis$ pairlis-x2 e/d
+
+    o-p o< acl2-count
+    let let*
+    cond case
+    and or not implies t nil quote
+    cons consp car cdr endp
+    list list*
+    atom symbolp natp
+    if equal
+    zp + - * / mod expt < <= > >=))
+
+(certify-book "problem-set-1-answers" 1 t)

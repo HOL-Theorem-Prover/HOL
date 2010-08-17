@@ -1,0 +1,3 @@
+(include-book "problem-set-1-answers")
+
+(certify-book "m1-story" 1 t)
