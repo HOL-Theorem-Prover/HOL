@@ -3,8 +3,14 @@ INSTRUCTIONS:
 WARNING! Before running ./doit, edit the editable variables in file
 ../.acl2holrc.bash.
 
+Note: As described below, file inputs/PKGS.ml defines all packages
+used by the books in inputs/, and hence should be used to define
+ACL2_PACKAGE_ALIST in HOL.  This file, and corresponding file
+inputs/PKGS.lsp, are in the svn repository, and are expected to be
+reasonably stable, but should be committed when they have changed.
+
 In this directory (or most likely, in any directory), run testbench
-script doit.  This will certify any uncertified books in inputs/
+script ./doit.  This will certify any uncertified books in inputs/
 (first certifying any uncertified tool books in ../lisp/), then
 generate "essential" .lisp files in directory results/, which should
 then have identical contents to directory gold/.  If so, then
@@ -12,6 +18,21 @@ then have identical contents to directory gold/.  If so, then
 status is non-zero and the error message will direct you to file
 diffout and the logs/ directory (though if certification fails then
 you may also want to see inputs/).
+
+There is also a wrinkle regarding packages.  The 'make' in inputs/
+should generate files PKGS.lsp and PKGS.ml in that directory (logged
+in PKGS.out and PKGS.err).  These, in turn, should result in
+generating a small file, pkg-check.txt (logged in pkg-check.out and
+pkg-check.err).  File PKGS.ml defines all packages used by the books
+in inputs/, and hence should be used to define ACL2_PACKAGE_ALIST in
+HOL.  File PKGS.lsp is an ACL2-readable version of that same package
+information, assocating package names with imports, and is checked to
+be complete and correct with respect to each book certified in
+inputs/.  If that check fails, it's probably because additional
+packages have been defined that do not show up when including the
+books mentioned explicitly in the PKGS.lsp target in inputs/Makefile;
+so that target's code should then be edited by adding additional
+books.
 
 Note: Only minimal effort has been made (at least for updating to ACL2
 Version 4.0) to maintain round-trip/gold/axioms.lisp and

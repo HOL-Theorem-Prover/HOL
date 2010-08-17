@@ -23,16 +23,18 @@ if [ "$my_args" = "clean+" ]; then \
 fi
 
 if [ "$my_args" = "clean" ]; then \
-    rm diffout diffout.old ; \
+    rm -f diffout diffout.old 2> /dev/null ; \
     rm -rf $results_dir $old_results_dir $logs_dir $old_logs_dir ; \
     cd $inputs_dir ; make clean ; cd .. ; \
     cd round-trip ; ./doit clean ; cd .. ; \
     exit 0 ; \
 fi
 
-echo "Making books in $lisp_dir..." ; cd $lisp_dir ; make ; cd ..
+echo "Making books in $lisp_dir..." ; cd $lisp_dir ; make -s ; temp_status=$? ; cd ..
+if [ $temp_status -ne 0 ]; then echo "***Failure making books in $lisp_dir" ; my_status=1 ; fi
 
-echo "Making books in $inputs_dir..." ; cd $inputs_dir ; make ; cd ..
+echo "Making books in $inputs_dir..." ; cd $inputs_dir ; make -s ; temp_status=$? ; cd ..
+if [ $temp_status -ne 0 ]; then echo "***Failure making books in $inputs_dir" ; my_status=1 ; fi
 
 echo "Converting .lisp files to their essences..."
 
