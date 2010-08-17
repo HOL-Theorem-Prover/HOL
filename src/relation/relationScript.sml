@@ -1717,6 +1717,18 @@ val RINTER_ASSOC = store_thm(
   ``R1 RINTER (R2 RINTER R3) = (R1 RINTER R2) RINTER R3``,
   SRW_TAC [][RINTER, FUN_EQ_THM] THEN PROVE_TAC []);
 
+val antisymmetric_RINTER = Q.store_thm(
+  "antisymmetric_RINTER",
+  `(antisymmetric R1 ==> antisymmetric (R1 RINTER R2)) /\
+   (antisymmetric R2 ==> antisymmetric (R1 RINTER R2))`,
+  SRW_TAC [][antisymmetric_def,RINTER]);
+val _ = export_rewrites ["antisymmetric_RINTER"]
+
+val transitive_RINTER = Q.store_thm(
+  "transitive_RINTER",
+  `transitive R1 /\ transitive R2 ==> transitive (R1 RINTER R2)`,
+  SRW_TAC [SatisfySimps.SATISFY_ss][transitive_def,RINTER]);
+val _ = export_rewrites ["transitive_RINTER"]
 
 (* ----------------------------------------------------------------------
     relational complement
