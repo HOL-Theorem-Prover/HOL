@@ -15,7 +15,7 @@ mksym "COMMON-LISP" "CONS") (mkpair (mksym "MY-PKG" "X") (mkpair (mksym
 
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "MY-PKG" "F2") (mkpair (
 mkpair (mksym "MY-PKG" "X") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (
-mksym "MY-PKG" "BINARY-APPEND") (mkpair (mksym "MY-PKG" "X") (mkpair (mksym 
+mksym "ACL2" "BINARY-APPEND") (mkpair (mksym "MY-PKG" "X") (mkpair (mksym 
 "MY-PKG" "X") (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))))
 
 ];

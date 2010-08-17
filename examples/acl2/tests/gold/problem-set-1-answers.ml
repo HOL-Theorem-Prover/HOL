@@ -60,7 +60,7 @@ mkpair (mksym "M1" "N") (mkpair (mksym "COMMON-LISP" "LIST") (mksym
 mkpair (mksym "ACL2" "ZP") (mkpair (mksym "M1" "N") (mksym "COMMON-LISP" 
 "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" "CAR") (mkpair (mksym 
 "COMMON-LISP" "LIST") (mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym 
-"M1" "NTH") (mkpair (mkpair (mksym "M1" "BINARY-+") (mkpair (mkpair (mksym 
+"M1" "NTH") (mkpair (mkpair (mksym "ACL2" "BINARY-+") (mkpair (mkpair (mksym 
 "COMMON-LISP" "QUOTE") (mkpair (mknum "-1" "1" "0" "1") (mksym "COMMON-LISP" 
 "NIL"))) (mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL")))) (mkpair (
 mkpair (mksym "COMMON-LISP" "CDR") (mkpair (mksym "COMMON-LISP" "LIST") (
@@ -141,7 +141,7 @@ mkpair (mksym "M1" "X") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym
 "COMMON-LISP" "IF") (mkpair (mkpair (mksym "COMMON-LISP" "ENDP") (mkpair (
 mksym "M1" "X") (mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym 
 "COMMON-LISP" "QUOTE") (mkpair (mknum "0" "1" "0" "1") (mksym "COMMON-LISP" 
-"NIL"))) (mkpair (mkpair (mksym "M1" "BINARY-+") (mkpair (mkpair (mksym 
+"NIL"))) (mkpair (mkpair (mksym "ACL2" "BINARY-+") (mkpair (mkpair (mksym 
 "COMMON-LISP" "QUOTE") (mkpair (mknum "1" "1" "0" "1") (mksym "COMMON-LISP" 
 "NIL"))) (mkpair (mkpair (mksym "M1" "LEN") (mkpair (mkpair (mksym 
 "COMMON-LISP" "CDR") (mkpair (mksym "M1" "X") (mksym "COMMON-LISP" "NIL"))) (
@@ -203,7 +203,7 @@ mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym
 "COMMON-LISP" "QUOTE") (mkpair (mksym "COMMON-LISP" "NIL") (mksym 
 "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" "CONS") (mkpair (
 mksym "M1" "TH") (mkpair (mkpair (mksym "M1" "REPEAT") (mkpair (mksym "M1" 
-"TH") (mkpair (mkpair (mksym "M1" "BINARY-+") (mkpair (mkpair (mksym 
+"TH") (mkpair (mkpair (mksym "ACL2" "BINARY-+") (mkpair (mkpair (mksym 
 "COMMON-LISP" "QUOTE") (mkpair (mknum "-1" "1" "0" "1") (mksym "COMMON-LISP" 
 "NIL"))) (mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL")))) (mksym 
 "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" 
@@ -214,7 +214,7 @@ mksym "M1" "TH") (mkpair (mkpair (mksym "M1" "REPEAT") (mkpair (mksym "M1"
 mkpair (mksym "M1" "N") (mkpair (mksym "M1" "STK") (mksym "COMMON-LISP" "NIL"))) (
 mkpair (mkpair (mksym "COMMON-LISP" "IF") (mkpair (mkpair (mksym "ACL2" "ZP") (
 mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL"))) (mkpair (mksym "M1" 
-"STK") (mkpair (mkpair (mksym "M1" "POPN") (mkpair (mkpair (mksym "M1" 
+"STK") (mkpair (mkpair (mksym "M1" "POPN") (mkpair (mkpair (mksym "ACL2" 
 "BINARY-+") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "-1" 
 "1" "0" "1") (mksym "COMMON-LISP" "NIL"))) (mkpair (mksym "M1" "N") (mksym 
 "COMMON-LISP" "NIL")))) (mkpair (mkpair (mksym "M1" "POP") (mkpair (mksym 
@@ -232,7 +232,7 @@ mkpair (mksym "COMMON-LISP" "LIST") (mksym "COMMON-LISP" "NIL"))) (mksym
 "COMMON-LISP" "NIL")))) (mkpair (mkpair (mksym "COMMON-LISP" "CONS") (mkpair (
 mkpair (mksym "COMMON-LISP" "CAR") (mkpair (mksym "COMMON-LISP" "LIST") (
 mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "M1" "UPDATE-NTH") (
-mkpair (mkpair (mksym "M1" "BINARY-+") (mkpair (mkpair (mksym "COMMON-LISP" 
+mkpair (mkpair (mksym "ACL2" "BINARY-+") (mkpair (mkpair (mksym "COMMON-LISP" 
 "QUOTE") (mkpair (mknum "-1" "1" "0" "1") (mksym "COMMON-LISP" "NIL"))) (
 mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL")))) (mkpair (mksym "M1" 
 "V") (mkpair (mkpair (mksym "COMMON-LISP" "CDR") (mkpair (mksym "COMMON-LISP" 
@@ -268,7 +268,7 @@ mkpair (mkpair (mksym "COMMON-LISP" "EQUAL") (mkpair (mksym "M1" "E") (mkpair (
 mkpair (mksym "COMMON-LISP" "CAR") (mkpair (mksym "M1" "LST") (mksym 
 "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))) (mkpair (mkpair (mksym 
 "COMMON-LISP" "QUOTE") (mkpair (mknum "0" "1" "0" "1") (mksym "COMMON-LISP" 
-"NIL"))) (mkpair (mkpair (mksym "M1" "BINARY-+") (mkpair (mkpair (mksym 
+"NIL"))) (mkpair (mkpair (mksym "ACL2" "BINARY-+") (mkpair (mkpair (mksym 
 "COMMON-LISP" "QUOTE") (mkpair (mknum "1" "1" "0" "1") (mksym "COMMON-LISP" 
 "NIL"))) (mkpair (mkpair (mksym "M1" "INDEX") (mkpair (mksym "M1" "E") (
 mkpair (mkpair (mksym "COMMON-LISP" "CDR") (mkpair (mksym "M1" "LST") (mksym 
@@ -393,20 +393,20 @@ mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP"
 
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "M1" "S-FIX") (mkpair (
 mkpair (mksym "M1" "X") (mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL"))) (
-mkpair (mkpair (mkpair (mksym "M1" "LAMBDA") (mkpair (mkpair (mksym "M1" 
-"TEMP") (mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL"))) (mkpair (
+mkpair (mkpair (mkpair (mksym "COMMON-LISP" "LAMBDA") (mkpair (mkpair (mksym 
+"M1" "TEMP") (mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL"))) (mkpair (
 mkpair (mksym "COMMON-LISP" "IF") (mkpair (mkpair (mksym "COMMON-LISP" "<") (
 mkpair (mksym "M1" "TEMP") (mkpair (mkpair (mksym "COMMON-LISP" "EXPT") (
 mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "2" "1" "0" "1") (
-mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "M1" "BINARY-+") (mkpair (
-mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "-1" "1" "0" "1") (mksym 
-"COMMON-LISP" "NIL"))) (mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL")))) (
-mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))) (mkpair (mksym 
-"M1" "TEMP") (mkpair (mkpair (mksym "M1" "BINARY-+") (mkpair (mksym "M1" 
-"TEMP") (mkpair (mkpair (mksym "M1" "UNARY--") (mkpair (mkpair (mksym 
-"COMMON-LISP" "EXPT") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (
-mknum "2" "1" "0" "1") (mksym "COMMON-LISP" "NIL"))) (mkpair (mksym "M1" "N") (
-mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL"))) (mksym 
+mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "ACL2" "BINARY-+") (
+mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "-1" "1" "0" "1") (
+mksym "COMMON-LISP" "NIL"))) (mkpair (mksym "M1" "N") (mksym "COMMON-LISP" 
+"NIL")))) (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))) (
+mkpair (mksym "M1" "TEMP") (mkpair (mkpair (mksym "ACL2" "BINARY-+") (mkpair (
+mksym "M1" "TEMP") (mkpair (mkpair (mksym "ACL2" "UNARY--") (mkpair (mkpair (
+mksym "COMMON-LISP" "EXPT") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (
+mkpair (mknum "2" "1" "0" "1") (mksym "COMMON-LISP" "NIL"))) (mkpair (mksym 
+"M1" "N") (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL"))) (mksym 
 "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL"))))) (mksym "COMMON-LISP" 
 "NIL")))) (mkpair (mkpair (mksym "COMMON-LISP" "MOD") (mkpair (mksym "M1" "X") (
 mkpair (mkpair (mksym "COMMON-LISP" "EXPT") (mkpair (mkpair (mksym 
@@ -422,13 +422,13 @@ mkpair (mksym "M1" "LST") (mkpair (mksym "M1" "ACC") (mksym "COMMON-LISP"
 "COMMON-LISP" "ENDP") (mkpair (mksym "M1" "LST") (mksym "COMMON-LISP" "NIL"))) (
 mkpair (mksym "M1" "ACC") (mkpair (mkpair (mksym "M1" "U-BIG1") (mkpair (
 mkpair (mksym "COMMON-LISP" "CDR") (mkpair (mksym "M1" "LST") (mksym 
-"COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "M1" "BINARY-+") (mkpair (
+"COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "ACL2" "BINARY-+") (mkpair (
 mkpair (mksym "M1" "U-FIX") (mkpair (mkpair (mksym "COMMON-LISP" "CAR") (
 mkpair (mksym "M1" "LST") (mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (
 mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "8" "1" "0" "1") (mksym 
 "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))) (mkpair (mkpair (mksym 
-"M1" "BINARY-*") (mkpair (mkpair (mksym "COMMON-LISP" "EXPT") (mkpair (mkpair (
-mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "2" "1" "0" "1") (mksym 
+"ACL2" "BINARY-*") (mkpair (mkpair (mksym "COMMON-LISP" "EXPT") (mkpair (
+mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "2" "1" "0" "1") (mksym 
 "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (
 mknum "8" "1" "0" "1") (mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" 
 "NIL")))) (mkpair (mksym "M1" "ACC") (mksym "COMMON-LISP" "NIL")))) (mksym 
@@ -446,11 +446,11 @@ mkpair (mksym "M1" "LST") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "M1" "S-BIG") (mkpair (
 mkpair (mksym "M1" "LST") (mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym 
 "M1" "S-FIX") (mkpair (mkpair (mksym "M1" "U-BIG") (mkpair (mksym "M1" "LST") (
-mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "M1" "BINARY-*") (mkpair (
-mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "8" "1" "0" "1") (mksym 
-"COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "M1" "LEN") (mkpair (mksym "M1" 
-"LST") (mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))) (mksym 
-"COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))))
+mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "ACL2" "BINARY-*") (
+mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "8" "1" "0" "1") (
+mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "M1" "LEN") (mkpair (
+mksym "M1" "LST") (mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))) (
+mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))))
 ,
 
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "M1" "NEXTN") (mkpair (
@@ -461,19 +461,19 @@ mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym
 "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" "CONS") (mkpair (
 mkpair (mksym "COMMON-LISP" "CAR") (mkpair (mksym "M1" "LST") (mksym 
 "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "M1" "NEXTN") (mkpair (mkpair (
-mksym "M1" "BINARY-+") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (
-mknum "-1" "1" "0" "1") (mksym "COMMON-LISP" "NIL"))) (mkpair (mksym "M1" "N") (
-mksym "COMMON-LISP" "NIL")))) (mkpair (mkpair (mksym "COMMON-LISP" "CDR") (
-mkpair (mksym "M1" "LST") (mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" 
-"NIL")))) (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL"))))) (
-mksym "COMMON-LISP" "NIL")))))
+mksym "ACL2" "BINARY-+") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (
+mkpair (mknum "-1" "1" "0" "1") (mksym "COMMON-LISP" "NIL"))) (mkpair (mksym 
+"M1" "N") (mksym "COMMON-LISP" "NIL")))) (mkpair (mkpair (mksym "COMMON-LISP" 
+"CDR") (mkpair (mksym "M1" "LST") (mksym "COMMON-LISP" "NIL"))) (mksym 
+"COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" 
+"NIL"))))) (mksym "COMMON-LISP" "NIL")))))
 ,
 
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "M1" "SKIPN") (mkpair (
 mkpair (mksym "M1" "N") (mkpair (mksym "M1" "LST") (mksym "COMMON-LISP" "NIL"))) (
 mkpair (mkpair (mksym "COMMON-LISP" "IF") (mkpair (mkpair (mksym "ACL2" "ZP") (
 mkpair (mksym "M1" "N") (mksym "COMMON-LISP" "NIL"))) (mkpair (mksym "M1" 
-"LST") (mkpair (mkpair (mksym "M1" "SKIPN") (mkpair (mkpair (mksym "M1" 
+"LST") (mkpair (mkpair (mksym "M1" "SKIPN") (mkpair (mkpair (mksym "ACL2" 
 "BINARY-+") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mknum "-1" 
 "1" "0" "1") (mksym "COMMON-LISP" "NIL"))) (mkpair (mksym "M1" "N") (mksym 
 "COMMON-LISP" "NIL")))) (mkpair (mkpair (mksym "COMMON-LISP" "CDR") (mkpair (

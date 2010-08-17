@@ -88,43 +88,40 @@
                        (list (cons #\0 case))))
           (f-put-global 'print-case case state)))
 
-(defun a2ml-read-eval-thru-in-package1 (ch file ctx acc state)
+(defun a2ml-read-eval-up-to-in-package1 (ch file ctx acc state)
   (mv-let (eofp val state)
           (read-object ch state)
           (cond (eofp
                  (er soft ctx
                      "Reached end of file ~x0 before finding in-package form."
                      file))
-                (t (er-progn
-                    (trans-eval val ctx state t)
-                    (cond ((and (consp val)
-                                (eq (car val) 'in-package))
-                           (cond
-                            ((and (true-listp val)
-                                  (eql (length val) 2)
-                                  (stringp (cadr val))
-                                  (find-non-hidden-package-entry
-                                   (cadr val)
-                                   (known-package-alist state)))
-
-; We don't include the package name.
-
-                             (value (cons val acc)))
-                            (t (er soft ctx
-                                   "IN-PACKAGE must have a single argument, ~
+                (t (cond ((and (consp val)
+                               (eq (car val) 'in-package))
+                          (cond
+                           ((and (true-listp val)
+                                 (eql (length val) 2)
+                                 (stringp (cadr val))
+                                 (find-non-hidden-package-entry
+                                  (cadr val)
+                                  (known-package-alist state)))
+                            (value (cons val acc)))
+                           (t (er soft ctx
+                                  "IN-PACKAGE must have a single argument, ~
                                     which is a known package name.  The form ~
                                     ~x0 in file ~x1 is thus illegal.  The ~
                                     known packages are~*2"
-                                   val
-                                   file
-                                   (tilde-*-&v-strings
-                                    '&
-                                    (strip-non-hidden-package-names
-                                     (known-package-alist state))
-                                    #\.)))))
-                          (t (a2ml-read-eval-thru-in-package1 ch file ctx
-                                                              (cons val acc)
-                                                              state))))))))
+                                  val
+                                  file
+                                  (tilde-*-&v-strings
+                                   '&
+                                   (strip-non-hidden-package-names
+                                    (known-package-alist state))
+                                   #\.)))))
+                         (t (er-progn
+                             (trans-eval val ctx state t)
+                             (a2ml-read-eval-up-to-in-package1 ch file ctx
+                                                               (cons val acc)
+                                                               state))))))))
 
 (defun set-cbd-fn-state (str state)
   (mv-let (erp val state)
@@ -136,7 +133,7 @@
                            str))
                   state)))
 
-(defun a2ml-read-eval-thru-in-package (ch file dir ctx acc state)
+(defun a2ml-read-eval-up-to-in-package (ch file dir ctx acc state)
   (state-global-let*
    ((connected-book-directory
      (or dir
@@ -147,7 +144,7 @@
                (subseq file 0 (- (length file) posn))
              (f-get-global 'connected-book-directory state))))
      set-cbd-fn-state))
-   (a2ml-read-eval-thru-in-package1 ch file ctx acc state)))
+   (a2ml-read-eval-up-to-in-package1 ch file ctx acc state)))
 
 (defun print-current-package (pkg-form channel state)
   (let ((pkg (if (and (true-listp pkg-form)
@@ -181,8 +178,8 @@
    ((current-package "ACL2" set-current-package-state))
    (let ((ctx 'a2ml))
      (er-let* ((ch (open-input-object-file infile ctx state))
-               (lst1 (a2ml-read-eval-thru-in-package ch infile dir ctx nil
-                                                     state))
+               (lst1 (a2ml-read-eval-up-to-in-package ch infile dir ctx nil
+                                                      state))
                (lst2 (read-object-file1 ch state (cdr lst1))))
        (let ((state (close-input-channel ch state)))
          (mv-let

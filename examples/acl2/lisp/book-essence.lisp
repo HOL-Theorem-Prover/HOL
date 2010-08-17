@@ -380,17 +380,25 @@
                   (value nil)
                 (read-portcullis-cmds book-name cert-optional-p ctx state)))
              (forms (read-object-file infile ctx state))
-             (events (essential-events (append portcullis-cmds forms) nil ctx
-                                       state)))
+             (events1 (essential-events portcullis-cmds nil ctx
+                                        state))
+             (events2 (essential-events forms nil ctx state)))
             (mv-let (chan state)
                     (open-output-channel outfile :object state)
                     (cond ((null chan)
                            (er soft ctx
                                "Unable to open file ~x0 for output."
                                outfile))
-                          (t (pprogn (print-objects-pretty events chan state)
-                                     (close-output-channel chan state)
-                                     (value :invisible))))))))
+                          (t (pprogn
+                              (print-objects-pretty events1 chan state)
+                              (cond (events1 (newline chan state))
+                                    (t state))
+                              (princ$ "; NOTE: Forms below are not evaluated when translating to ML."
+                                      chan state)
+                              (newline chan state)
+                              (print-objects-pretty events2 chan state)
+                              (close-output-channel chan state)
+                              (value :invisible))))))))
 
 (defmacro book-essence (infile &optional outfile cert-optional-p infile-keywords)
   (declare (ignore infile-keywords)) ; add later for parameters, like ttags

@@ -11,6 +11,7 @@
                 PROGN QUOTE QUOTEP STRING STRIP-CARS
                 SYMBOL-NAME SYMBOLP SYNTAXP T XARGS ZP))
 
+; NOTE: Forms below are not evaluated when translating to ML.
 (IN-PACKAGE "M1")
 
 (DEFUN M1::PUSH (M1::X M1::Y) (CONS M1::X M1::Y))
