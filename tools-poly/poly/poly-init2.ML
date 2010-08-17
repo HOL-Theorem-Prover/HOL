@@ -70,7 +70,7 @@ val loadPath : string list ref = ref [];
 
 val loadedMods = ref (Binaryset.empty String.compare);
 val _ = loadedMods := Binaryset.addList (!loadedMods,
-                                         ["Real", "Int", "List"])
+                                         ["Real", "Int", "List", "Binaryset"])
 
 fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =
@@ -87,17 +87,16 @@ fun findUo modPath [] = NONE
       end;
 
 fun loadUo uo modName =
-let val i = TextIO.openIn uo;
+let val i = TextIO.openIn uo
     val files =
-      String.tokens (fn c => List.exists (fn c' => c = c')
-                                         (String.explode " \n"))
-                    (TextIO.inputAll i);
+      String.tokens (fn c => c = #"\n") (TextIO.inputAll i)
+    val _ = TextIO.closeIn i
     fun loadOne f =
       ((*print (modName ^ "\n");*)
        case OS.Path.ext f of
          SOME "sml" => myuse f
        | SOME "sig" => myuse f
-       | _ => load f);
+       | _ => load f) handle OS.Path.InvalidArc => raise Fail ("Invalid arc on "^f)
 in
   List.app loadOne files
 end
