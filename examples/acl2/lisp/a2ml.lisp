@@ -119,9 +119,17 @@
                                    #\.)))))
                          (t (er-progn
                              (trans-eval val ctx state t)
-                             (a2ml-read-eval-up-to-in-package1 ch file ctx
-                                                               (cons val acc)
-                                                               state))))))))
+                             (a2ml-read-eval-up-to-in-package1
+                              ch file ctx
+                              (cond ((and (consp val)
+                                          (eq (car val) 'defpkg))
+
+; Defpkg forms are not exported to ML.  Instead, we check that packages are OK
+; using the pkg-check.txt mechanism discussed in ../tests/README.
+
+                                     acc)
+                                    (t (cons val acc)))
+                              state))))))))
 
 (defun set-cbd-fn-state (str state)
   (mv-let (erp val state)

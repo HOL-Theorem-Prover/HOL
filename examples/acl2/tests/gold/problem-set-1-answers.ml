@@ -1,41 +1,5 @@
 val _ = sexp.acl2_list_ref := [
 
-(mkpair (mksym "ACL2" "DEFPKG") (mkpair (mk_chars_str (chars_to_string (cons 
-77 (cons 49 nil)))) (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (
-mkpair (mksym "COMMON-LISP" "&REST") (mkpair (mksym "COMMON-LISP" "*") (
-mkpair (mksym "COMMON-LISP" "+") (mkpair (mksym "COMMON-LISP" "-") (mkpair (
-mksym "COMMON-LISP" "/") (mkpair (mksym "COMMON-LISP" "<") (mkpair (mksym 
-"COMMON-LISP" "<=") (mkpair (mksym "COMMON-LISP" ">") (mkpair (mksym 
-"COMMON-LISP" ">=") (mkpair (mksym "ACL2" "ACL2-COUNT") (mkpair (mksym 
-"COMMON-LISP" "AND") (mkpair (mksym "COMMON-LISP" "ASSOC") (mkpair (mksym 
-"COMMON-LISP" "ATOM") (mkpair (mksym "COMMON-LISP" "CAR") (mkpair (mksym 
-"COMMON-LISP" "CASE") (mkpair (mksym "COMMON-LISP" "CDR") (mkpair (mksym 
-"COMMON-LISP" "COERCE") (mkpair (mksym "COMMON-LISP" "CONCATENATE") (mkpair (
-mksym "COMMON-LISP" "COND") (mkpair (mksym "COMMON-LISP" "CONS") (mkpair (
-mksym "COMMON-LISP" "CONSP") (mkpair (mksym "COMMON-LISP" "DECLARE") (mkpair (
-mksym "ACL2" "DEFCONST") (mkpair (mksym "COMMON-LISP" "DEFMACRO") (mkpair (
-mksym "ACL2" "DEFTHM") (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym 
-"ACL2" "DISABLE") (mkpair (mksym "ACL2" "E/D") (mkpair (mksym "COMMON-LISP" 
-"ENDP") (mkpair (mksym "COMMON-LISP" "EQUAL") (mkpair (mksym "COMMON-LISP" 
-"EXPT") (mkpair (mksym "COMMON-LISP" "IF") (mkpair (mksym "COMMON-LISP" 
-"IGNORE") (mkpair (mksym "ACL2" "IMPLIES") (mkpair (mksym "ACL2" "IN-THEORY") (
-mkpair (mksym "ACL2" "INCLUDE-BOOK") (mkpair (mksym "ACL2" 
-"INTERN-IN-PACKAGE-OF-SYMBOL") (mkpair (mksym "COMMON-LISP" "LET") (mkpair (
-mksym "COMMON-LISP" "LET*") (mkpair (mksym "COMMON-LISP" "LIST") (mkpair (
-mksym "COMMON-LISP" "LIST*") (mkpair (mksym "COMMON-LISP" "MOD") (mkpair (
-mksym "ACL2" "MUTUAL-RECURSION") (mkpair (mksym "ACL2" "NATP") (mkpair (mksym 
-"COMMON-LISP" "NIL") (mkpair (mksym "COMMON-LISP" "NOT") (mkpair (mksym 
-"ACL2" "O-P") (mkpair (mksym "ACL2" "O<") (mkpair (mksym "COMMON-LISP" "OR") (
-mkpair (mksym "COMMON-LISP" "OTHERWISE") (mkpair (mksym "ACL2" "PAIRLIS$") (
-mkpair (mksym "ACL2" "PAIRLIS-X2") (mkpair (mksym "COMMON-LISP" "PROGN") (
-mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "ACL2" "QUOTEP") (mkpair (
-mksym "COMMON-LISP" "STRING") (mkpair (mksym "ACL2" "STRIP-CARS") (mkpair (
-mksym "COMMON-LISP" "SYMBOL-NAME") (mkpair (mksym "COMMON-LISP" "SYMBOLP") (
-mkpair (mksym "ACL2" "SYNTAXP") (mkpair (mksym "COMMON-LISP" "T") (mkpair (
-mksym "ACL2" "XARGS") (mkpair (mksym "ACL2" "ZP") (mksym "COMMON-LISP" "NIL")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) (
-mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL"))))
-,
-
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "M1" "PUSH") (mkpair (
 mkpair (mksym "M1" "X") (mkpair (mksym "M1" "Y") (mksym "COMMON-LISP" "NIL"))) (
 mkpair (mkpair (mksym "COMMON-LISP" "CONS") (mkpair (mksym "M1" "X") (mkpair (
