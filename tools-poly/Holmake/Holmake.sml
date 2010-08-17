@@ -487,8 +487,14 @@ val _ = diag ("CommandLine.arguments() = "^
               String.concatWith ", " (CommandLine.arguments()))
 
 (* call out to (exec) a different Holmake *)
-val _ = do_lastmade_checks outputfunctions
-                           {no_lastmakercheck = no_lastmakercheck}
+fun has_clean [] = false
+  | has_clean (h::t) =
+      h = "clean" orelse h = "cleanAll" orelse h = "cleanDeps" orelse
+      has_clean t
+val _ = if has_clean targets then ()
+        else
+          do_lastmade_checks outputfunctions
+                             {no_lastmakercheck = no_lastmakercheck}
 
 (* set up logging *)
 val logfilename = Systeml.make_log_file
