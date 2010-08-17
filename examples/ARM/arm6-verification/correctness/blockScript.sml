@@ -357,19 +357,21 @@ val LENGTH_FILTER = prove(
 
 val REGISTER_LIST_GEN_REG_LIST = prove(
   `!list. GEN_REG_LIST 16 (w2n list) = MAP w2n (REGISTER_LIST list)`,
-  STRIP_TAC \\ MATCH_MP_TAC LIST_EQ
+  STRIP_TAC \\ MATCH_MP_TAC LIST_EQ \\ REWRITE_TAC [REGISTER_LIST_def]
+    \\ Q.ABBREV_TAC `sz = 16`
     \\ SIMP_TAC list_ss [GEN_REG_LIST_def,REGISTER_LIST_def]
-    \\ `LENGTH (FILTER FST (GENLIST (\b. (BIT b (w2n list),b)) 16)) =
-        LENGTH (FILTER FST (GENLIST (\i. (list %% i,(n2w i):word4)) 16))`
+    \\ `LENGTH (FILTER FST (GENLIST (\b. (BIT b (w2n list),b)) sz)) =
+        LENGTH (FILTER FST (GENLIST (\i. (list %% i,(n2w i):word4)) sz))`
     by (MATCH_MP_TAC LENGTH_FILTER \\
-          SIMP_TAC std_ss [LENGTH_GENLIST,EL_GENLIST,INST_16 BIT_w2n])
+          SIMP_TAC std_ss [LENGTH_GENLIST,EL_GENLIST,INST_16 BIT_w2n, Abbr`sz`])
     \\ RW_TAC list_ss [EL_MAP]
     \\ `!z:bool # word4. w2n (SND z) = (w2n o SND) z`
     by SIMP_TAC std_ss []
     \\ POP_ASSUM (fn th => REWRITE_TAC [th]) \\ POP_ASSUM MP_TAC
     \\ CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) \\ MATCH_MP_TAC EL_FILTER
     \\ SIMP_TAC (list_ss++SIZES_ss)
-         [EL_GENLIST,LENGTH_GENLIST,w2n_n2w,BIT_w2n]);
+         [EL_GENLIST,LENGTH_GENLIST,w2n_n2w,BIT_w2n]
+    \\ SIMP_TAC (list_ss ++ SIZES_ss) [Abbr`sz`, BIT_w2n]);
 
 val EL_GEN_REG_LIST_EQUAL = prove(
   `!wl x y n.

@@ -1831,7 +1831,7 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x227C, tmnm = "<<="}
         (* in tex input mode in emacs, produce U+227C with \preceq *)
         (* tempting to add a not-isprefix macro keyed to U+22E0 \npreceq, but
            hard to know what the ASCII version should be.  *)
-val _ = TexTokenMap.TeX_notation {hol = "<<=", 
+val _ = TexTokenMap.TeX_notation {hol = "<<=",
                                   TeX = ("\\HOLTokenIsPrefix{}", 1)}
 val _ = TexTokenMap.TeX_notation {hol = UTF8.chr 0x227C,
                                   TeX = ("\\HOLTokenIsPrefix{}", 1)}
@@ -1957,6 +1957,13 @@ val GENLIST_AUX = Define`
   (GENLIST_AUX f 0 l = l) /\
   (GENLIST_AUX f (SUC n) l = GENLIST_AUX f n ((f n)::l))`;
 
+val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
+
+val GENLIST_AUX_compute = save_thm(
+  "GENLIST_AUX_compute",
+  SUC_RULE GENLIST_AUX)
+val _ = export_rewrites ["GENLIST_AUX_compute"]
+
 (*---------------------------------------------------------------------------
    Theorems about genlist. From Anthony Fox's theories. Added by Thomas Tuerk.
    Moved from rich_listTheory.
@@ -2036,6 +2043,14 @@ val GENLIST_GENLIST_AUX = Q.store_thm("GENLIST_GENLIST_AUX",
   Induct_on `n`
   THEN RW_TAC bool_ss
          [SNOC_APPEND, APPEND, GENLIST_AUX, GENLIST_AUX_lem, GENLIST]);
+
+val GENLIST_NUMERALS = store_thm(
+  "GENLIST_NUMERALS",
+  ``(GENLIST f 0 = []) /\
+    (GENLIST f (NUMERAL n) = GENLIST_AUX f (NUMERAL n) [])``,
+  REWRITE_TAC [GENLIST_GENLIST_AUX, GENLIST_AUX]);
+val _ = export_rewrites ["GENLIST_NUMERALS"]
+
 
 (* ----------------------------------------------------------------------
     All lists have infinite universes
