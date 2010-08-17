@@ -1854,6 +1854,21 @@ val FINITE_INJ = Q.store_thm
  `!(f:'a->'b) s t. INJ f s t /\ FINITE t ==> FINITE s`,
  METIS_TAC [lem]);
 
+val REL_RESTRICT_DEF = new_definition(
+  "REL_RESTRICT_DEF",
+  ``REL_RESTRICT R s x y = x IN s /\ y IN s /\ R x y``);
+
+val REL_RESTRICT_EMPTY = store_thm(
+  "REL_RESTRICT_EMPTY",
+  ``REL_RESTRICT R {} = REMPTY``,
+  SRW_TAC [][REL_RESTRICT_DEF, FUN_EQ_THM]);
+val _ = export_rewrites ["REL_RESTRICT_EMPTY"]
+
+val REL_RESTRICT_SUBSET = store_thm(
+  "REL_RESTRICT_SUBSET",
+  ``s1 SUBSET s2 ==> REL_RESTRICT R s1 RSUBSET REL_RESTRICT R s2``,
+  SRW_TAC [][relationTheory.RSUBSET, REL_RESTRICT_DEF, SUBSET_DEF]);
+
 (* =====================================================================*)
 (* Cardinality 								*)
 (* =====================================================================*)
@@ -2844,6 +2859,60 @@ val FINITE_WEAK_ENUMERATE = Q.store_thm
       ]
     ]
   ]);
+
+val lem = prove(
+  ``!s R.
+      FINITE s /\ (!e. e IN s <=> (?y. R e y) \/ (?x. R x e)) /\
+      (!n. R (f (SUC n)) (f n)) ==>
+      ?x. R^+ x x``,
+  REPEAT STRIP_TAC THEN `!n. f n IN s` by METIS_TAC [] THEN
+  Cases_on `?n m. (f n = f m) /\ n <> m` THENL [
+    POP_ASSUM STRIP_ASSUME_TAC THEN
+    Cases_on `n < m` THENL [
+      ALL_TAC,
+      `m < n` by DECIDE_TAC
+    ] THEN
+    Q.ISPECL_THEN [`inv R^+`, `f`] MP_TAC transitive_monotone THEN
+    SRW_TAC [][relationTheory.inv_DEF, relationTheory.transitive_inv] THEN
+    METIS_TAC [relationTheory.TC_SUBSET],
+
+    `!n m. (f n = f m) = (n = m)` by METIS_TAC [] THEN
+    `IMAGE f univ(:num) SUBSET s`
+      by (SRW_TAC [][SUBSET_DEF, IN_IMAGE] THEN METIS_TAC []) THEN
+    `FINITE (IMAGE f univ(:num))` by METIS_TAC [SUBSET_FINITE] THEN
+    POP_ASSUM MP_TAC THEN SRW_TAC [][INJECTIVE_IMAGE_FINITE]
+  ])
+
+val FINITE_WF_noloops = store_thm(
+  "FINITE_WF_noloops",
+  ``!s. FINITE s ==>
+        (WF (REL_RESTRICT R s) <=> irreflexive (REL_RESTRICT R s)^+)``,
+  Q_TAC SUFF_TAC
+    `!s. FINITE s ==>
+         irreflexive (TC (REL_RESTRICT R s)) ==> WF (REL_RESTRICT R s)`
+    THEN1 METIS_TAC [relationTheory.irreflexive_def,
+                     relationTheory.WF_noloops] THEN
+  REWRITE_TAC [prim_recTheory.WF_IFF_WELLFOUNDED,
+               prim_recTheory.wellfounded_def] THEN
+  REPEAT STRIP_TAC THEN
+  Q.SPECL_THEN [`f`,
+                `{x | x IN s /\ ((?y. R x y /\ y IN s) \/
+                                 (?x'. R x' x /\ x' IN s))}`,
+                `REL_RESTRICT R s`] MP_TAC (GEN_ALL lem) THEN
+  ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [REL_RESTRICT_DEF] THEN
+  FULL_SIMP_TAC (srw_ss()) [relationTheory.irreflexive_def] THEN
+  CONJ_TAC THENL [
+    MATCH_MP_TAC SUBSET_FINITE_I THEN Q.EXISTS_TAC `s` THEN
+    SRW_TAC [][SUBSET_DEF],
+    METIS_TAC []
+  ]);
+
+val FINITE_StrongOrder_WF = store_thm(
+  "FINITE_StrongOrder_WF",
+  ``!R s. FINITE s /\ StrongOrder (REL_RESTRICT R s) ==>
+          WF (REL_RESTRICT R s)``,
+  SRW_TAC [][FINITE_WF_noloops, relationTheory.StrongOrder,
+             relationTheory.transitive_TC_identity]);
 
 (* ===================================================================== *)
 (* Big union (union of set of sets)                                      *)
