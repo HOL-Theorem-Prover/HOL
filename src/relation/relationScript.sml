@@ -920,6 +920,11 @@ REWRITE_TAC[WF_DEF]
   THEN Q.UNDISCH_THEN `min=y` SUBST_ALL_TAC
   THEN DISCH_TAC THEN RES_TAC);
 
+(* delete this or the previous if we abbreviate irreflexive *)
+val WF_irreflexive = store_thm(
+  "WF_irreflexive",
+  ``WF R ==> irreflexive R``,
+  METIS_TAC [WF_NOT_REFL, irreflexive_def]);
 
 (*---------------------------------------------------------------------------
  * Some combinators for wellfounded relations.
@@ -995,6 +1000,18 @@ val WF_TC_EQN = store_thm(
   ``WF (R^+) <=> WF R``,
   METIS_TAC [WF_TC, TC_SUBSET, WF_SUBSET]);
 
+val WF_noloops = store_thm(
+  "WF_noloops",
+  ``WF R ==> TC R x y ==> x <> y``,
+  METIS_TAC [WF_NOT_REFL, WF_TC_EQN]);
+
+val WF_antisymmetric = store_thm(
+  "WF_antisymmetric",
+  ``WF R ==> antisymmetric R``,
+  REWRITE_TAC [antisymmetric_def] THEN STRIP_TAC THEN
+  MAP_EVERY Q.X_GEN_TAC [`a`, `b`] THEN
+  STRIP_TAC THEN Q_TAC SUFF_TAC `TC R a a` THEN1 METIS_TAC [WF_noloops] THEN
+  METIS_TAC [TC_RULES]);
 
 (*---------------------------------------------------------------------------
  * Inverse image theorem: mapping into a wellfounded relation gives a
