@@ -78,7 +78,11 @@ else
 fi
 
 rev=$(svn info 2> /dev/null | grep ^Revision | cut -d' ' -f2)
-holid="$kernel:$rev:$(basename $ML)"
+cd developers
+mlsys=$($ML < mlsysinfo.sml | grep MLSYSTEM | awk '{print $3}')
+cd ..
+
+holid="$kernel:$rev:$mlsys"
 
 case $(uname) in
     Linux )
@@ -96,6 +100,7 @@ esac
 (echo "Running in $holdir on machine $(hostname)" &&
  echo "Uname info (srm): $(uname -srm)" &&
  echo "Cpu: $cpu - Memory: $mem MB" &&
+ echo "ML Implementation: $mlsys" &&
  echo "Started: "$(date +"%a, %d %b %Y %H:%M:%S %z") &&
  echo "Extra commandline arguments: $@" &&
  if [ "$updated_ok" ]
