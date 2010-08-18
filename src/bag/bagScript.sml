@@ -1840,6 +1840,12 @@ val SET_OF_BAG_IMAGE = Q.store_thm(
   PROVE_TAC []);
 val _ = export_rewrites ["SET_OF_BAG_IMAGE"];
 
+val BAG_IMAGE_FINITE_RESTRICTED_I = store_thm(
+  "BAG_IMAGE_FINITE_RESTRICTED_I",
+  ``!b. FINITE_BAG b /\ BAG_EVERY (\e. f e = e) b ==> (BAG_IMAGE f b = b)``,
+  REWRITE_TAC [GSYM AND_IMP_INTRO] THEN
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][]);
+
 val BAG_ALL_DISTINCT = new_definition ("BAG_ALL_DISTINCT",
   ``BAG_ALL_DISTINCT b = (!e. b e <= 1:num)``);
 
