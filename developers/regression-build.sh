@@ -84,12 +84,33 @@ cd ..
 
 holid="$kernel:$rev:$mlsys"
 
+cpuperlprog='
+  while (<>) {
+    if (/^model.name\s*:\s*(.*)$/) {
+      $info = $1;
+      $info =~ s/\s+/ /g;
+      push @cpuinfo, $info;
+    }
+  }
+  $numcpus = scalar(@cpuinfo);
+  if ($numcpus == 0) { print "<NO CPU INFO???>\n"; exit; }
+  if ($numcpus > 1) {
+    $first = $cpuinfo[0];
+    $i=1;
+    while ($i < $numcpus) {
+      break if ($cpuinfo[$i] ne $first);
+      $i++;
+    }
+    if ($i < $numcpus) { $, = ", "; print @cpuinfo; print "\n"; exit }
+    print $first, "  x $numcpus\n"; exit;
+  }
+  print $cpuinfo[0], "\n";'
+
+
 case $(uname) in
     Linux )
-      cpu=$(grep ^model.name < /proc/cpuinfo |
-            perl -ne 'split; shift @_; shift @_; shift @_; $, = " ";
-                      print @_; exit;' )
-      mem=$(free -m | grep ^Mem | perl -ne 'split; print $_[1], "\n";') ;;
+      cpu=$(perl -e "$cpuperlprog" < /proc/cpuinfo)
+      mem=$(free -m | grep ^Mem | awk '{print $2;}') ;;
     Darwin )
       cpu=$(system_profiler SPHardwareDataType |
             grep '^ *Processor' |
@@ -99,7 +120,8 @@ esac
 
 (echo "Running in $holdir on machine $(hostname)" &&
  echo "Uname info (srm): $(uname -srm)" &&
- echo "Cpu: $cpu - Memory: $mem MB" &&
+ echo "Cpu: $cpu" &&
+ echo "Memory: $mem MB" &&
  echo "ML Implementation: $mlsys" &&
  echo "Started: "$(date +"%a, %d %b %Y %H:%M:%S %z") &&
  echo "Extra commandline arguments: $@" &&
