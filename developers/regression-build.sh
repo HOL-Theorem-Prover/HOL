@@ -77,7 +77,7 @@ else
     updated_ok=
 fi
 
-rev=$(svn info 2> /dev/null | grep ^Revision | cut -d' ' -f2)
+rev=$(svn info 2> /dev/null | grep "^Revision" | cut -d' ' -f2)
 cd developers
 mlsys=$($ML < mlsysinfo.sml | grep MLSYSTEM | awk '{print $3}')
 cd ..
@@ -110,7 +110,7 @@ cpuperlprog='
 case $(uname) in
     Linux )
       cpu=$(perl -e "$cpuperlprog" < /proc/cpuinfo)
-      mem=$(free -m | grep ^Mem | awk '{print $2;}') ;;
+      mem=$(free -m | grep "^Mem" | awk '{print $2;}') ;;
     Darwin )
       cpu=$(system_profiler SPHardwareDataType |
             grep '^ *Processor' |
