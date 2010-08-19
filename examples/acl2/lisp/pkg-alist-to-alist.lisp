@@ -54,7 +54,7 @@
                         (list (cons #\0 (nth 0 (car triples)))
                               (cons #\1 (nth 1 (car triples)))
                               (cons #\2 (nth 2 (car triples)))
-                              (cons #\3 (if (cdr triples) ";" "")))
+                              (cons #\3 (if (cdr triples) "," "")))
                         chan state nil)
                    (print-string-triples-rec (cdr triples) chan state)))))
 
@@ -66,7 +66,7 @@
   (cond ((endp objs) state)
         (t (pprogn (fms "    ~x0~s1"
                         (list (cons #\0 (car objs))
-                              (cons #\1 (if (cdr objs) ";" "")))
+                              (cons #\1 (if (cdr objs) "," "")))
                         chan state nil)
                    (print-objs-rec (cdr objs) chan state)))))
 
@@ -79,22 +79,18 @@
            (er soft ctx
                "Unable to open file ~x0 for output.~|"
                filename))
-          (t (pprogn (princ$ "Define" chan state)
-                     (newline chan state)
-                     (princ$ " `ACL2_PACKAGE_ALIST =" chan state)
+          (t (pprogn (princ$ "val ACL2_PACKAGE_ALIST =" chan state)
                      (newline chan state)
                      (princ$ "   [" chan state)
                      (print-string-triples-rec triples chan state)
-                     (princ$ "]`;" chan state)
+                     (princ$ "];" chan state)
                      (newline chan state)
                      (newline chan state)
-                     (princ$ "Define" chan state)
-                     (newline chan state)
-                     (princ$ " `ACL2_KNOWN_PACKAGES =" chan state)
+                     (princ$ "val ACL2_KNOWN_PACKAGES =" chan state)
                      (newline chan state)
                      (princ$ "   [" chan state)
                      (print-objs-rec pkg-names chan state)
-                     (princ$ "]`;" chan state)
+                     (princ$ "];" chan state)
                      (newline chan state)
                      (value :invisible))))))
 

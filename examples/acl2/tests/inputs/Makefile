@@ -8,7 +8,7 @@ ACL2 ?= acl2
 
 -include Makefile-deps
 
-pkg-check.txt: PKGS.lsp PKGS.ml
+pkg-check.txt: PKGS.lsp PKGS.sml
 	@echo '(include-book "../../lisp/pkg-alist-to-alist")' > $(TMPFILE)
 	@echo "(ld (quote (" >> $(TMPFILE)
 	@for book in $(BOOKS) ; \
@@ -25,14 +25,14 @@ pkg-check.txt: PKGS.lsp PKGS.ml
 	exit 1 ; \
 	fi
 
-PKGS.lsp PKGS.ml: all
+PKGS.lsp PKGS.sml: all
 	echo '(include-book "../../lisp/pkg-alist-to-alist")' > $(TMPFILE)
 	echo '(include-book "pkg-test")' >> $(TMPFILE)
 	echo '(include-book "m1-story")' >> $(TMPFILE)
-	echo '(print-kpa "PKGS.lsp" "PKGS.ml")' >> $(TMPFILE)
+	echo '(print-kpa "PKGS.lsp" "PKGS.sml")' >> $(TMPFILE)
 	$(ACL2) < $(TMPFILE) > PKGS.out 2> PKGS.err
 
 clean: clean-pkgs
 
 clean-pkgs:
-	rm -f PKGS.* pkg-check.*
+	rm -f pkg-check.*
