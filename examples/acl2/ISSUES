@@ -1,0 +1,6 @@
+We have decided not to translate include-book forms from ACL2 to HOL;
+they are simply dropped.  But for a robust infrastructure, we should
+guarantee that for a given set of ACL2 books, then those and all
+included sub-books, and no more, are translated to HOL.  As of August
+19, 2010, we do not yet have not implemented any mechanical check that
+provides such a guarantee.

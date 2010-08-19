@@ -122,7 +122,11 @@
                              (a2ml-read-eval-up-to-in-package1
                               ch file ctx
                               (cond ((and (consp val)
-                                          (eq (car val) 'defpkg))
+                                          (member-eq (car val) '(include-book
+                                                                 defpkg)))
+
+; Include-book forms are not exported to ML.  See the comment about
+; include-book in ../ISSUES (as of August 19, 2010).
 
 ; Defpkg forms are not exported to ML.  Instead, we check that packages are OK
 ; using the pkg-check.txt mechanism discussed in ../tests/README.
