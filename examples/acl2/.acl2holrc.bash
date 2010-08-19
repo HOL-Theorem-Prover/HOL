@@ -4,7 +4,7 @@
 hostname=`hostname`
 
 if [ "$hostname" = "kala.cl.cam.ac.uk" ] ; then \
-	export ACL2_SRC=/home/mk606/acl2/v4-0 ; \
+	export ACL2_SRC=/home/mk606/acl2/v4-0/acl2-sources ; \
 	export ACL2=${ACL2_SRC}/saved_acl2 ; \
 	export ACL2_HOL=/home/mk606/hol/HOL/examples/acl2
 elif [ "$hostname" = "oliphaunt-0.cs.utexas.edu" ] ; then \

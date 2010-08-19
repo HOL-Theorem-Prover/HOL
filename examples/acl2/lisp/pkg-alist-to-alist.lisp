@@ -92,6 +92,7 @@
                      (print-objs-rec pkg-names chan state)
                      (princ$ "];" chan state)
                      (newline chan state)
+                     (close-output-channel chan state)
                      (value :invisible))))))
 
 (defun imports-alist-from-kpa (kpa)
