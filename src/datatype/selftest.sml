@@ -155,6 +155,10 @@ val result = ind_types.define_type spec' handle e => Raise e;
 
 *)
 
+(* Ramana Kumar's example from 2010/08/19 *)
+val _ = Hol_datatype`pointer = pnil | pref of 'a`
+val _ = Hol_datatype`failure = <| head : 'a pointer; tail : failure pointer |>`
+
 
 fun tprint s = print (StringCvt.padRight #" " 70 s)
 
