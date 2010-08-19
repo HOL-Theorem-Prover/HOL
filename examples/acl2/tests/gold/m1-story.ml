@@ -1046,14 +1046,6 @@ mkpair (mknum "6" "1" "0" "1") (mksym "COMMON-LISP" "NIL"))) (mksym
 "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL"))))
 ,
 
-(mkpair (mksym "ACL2" "INCLUDE-BOOK") (mkpair (mk_chars_str (chars_to_string (
-cons 97 (cons 114 (cons 105 (cons 116 (cons 104 (cons 109 (cons 101 (cons 116 (
-cons 105 (cons 99 (cons 45 (cons 51 (cons 47 (cons 101 (cons 120 (cons 116 (
-cons 114 (cons 97 (cons 47 (cons 116 (cons 111 (cons 112 (cons 45 (cons 101 (
-cons 120 (cons 116 nil)))))))))))))))))))))))))))) (mkpair (mksym "KEYWORD" 
-"DIR") (mkpair (mksym "KEYWORD" "SYSTEM") (mksym "COMMON-LISP" "NIL")))))
-,
-
 (mkpair (mksym "ACL2" "DEFTHM") (mkpair (mksym "M1" "STACKS") (mkpair (mkpair (
 mksym "COMMON-LISP" "IF") (mkpair (mkpair (mksym "COMMON-LISP" "EQUAL") (
 mkpair (mkpair (mksym "M1" "TOP") (mkpair (mkpair (mksym "M1" "PUSH") (mkpair (

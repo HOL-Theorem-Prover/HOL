@@ -58,13 +58,30 @@
   (fms "~f0" (list (cons #\0 obj)) channel state nil))
 
 (defun pprint-objects-to-ml (list sep channel state)
-  (if (endp list)
-      state
-    (pprogn (pprint-object (sexp-to-ml (car list)) channel state)
-            (newline channel state)
-            (if (endp (cdr list)) state (princ$ sep channel state))
-            (newline channel state)
-            (pprint-objects-to-ml (cdr list) sep channel state))))
+  (cond
+   ((endp list)
+      state)
+   ((and (consp (car list))
+         (eq (caar list) 'include-book))
+
+; Include-book forms are not exported to ML.  See the comment about
+; include-book in ../ISSUES (as of August 19, 2010).
+
+    (pprint-objects-to-ml (cdr list) sep channel state))
+   (t
+    (prog2$
+     (and (consp (car list))
+          (eq (caar list) 'defpkg)
+          (er hard 'pprint-objects-to-ml
+              "Unexpected defpkg form, ~x0, in a book.  We had thought that ~
+                defpkg forms would only be in the portcullis commands for a ~
+                book."
+              (car list)))
+     (pprogn (pprint-object (sexp-to-ml (car list)) channel state)
+             (newline channel state)
+             (if (endp (cdr list)) state (princ$ sep channel state))
+             (newline channel state)
+             (pprint-objects-to-ml (cdr list) sep channel state))))))
 
 (defun set-current-package-state (val state)
   (mv-let (erp val state)
