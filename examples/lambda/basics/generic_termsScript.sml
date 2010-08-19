@@ -207,7 +207,7 @@ val aeq_lam = List.nth(CONJUNCTS aeq_rules, 2)
 val aeq_distinct = store_thm(
   "aeq_distinct",
   ``~(aeq (var s vv) (app nbv ts)) /\ ~(aeq (var s vv) (lam v bv ts us)) /\
-    ~(aeq (app nbv ts) (lam v bv ts us))``,
+    ~(aeq (app nbv ts1) (lam v bv ts2 us))``,
   ONCE_REWRITE_TAC [aeq_cases] THEN SRW_TAC [][]);
 
 val ptpm_sing_to_back = store_thm(
@@ -1109,11 +1109,51 @@ val freshness = prove(
     srw_tac [][MEM_MAP] >> metis_tac []
   ]);
 
+(* UB lemma 8 *)
+(*
+val uniqueness = prove(
+  ``^permsupp_sidecond ∧ ^FCB ==>
+    ∀t r. recn_rel ^vf ^af ^lf A t r ⇒
+          ∀r'. recn_rel ^vf ^af ^lf A t r' ==> (r' = r)``,
+  strip_tac >> Induct_on `recn_rel` >> srw_tac [][] >|[
+    (* var case *)
+    qpat_assum `recn_rel X Y Z Z' U U'` MP_TAC >>
+    srw_tac [][Once recn_rel_cases, gterm_distinct, gterm_11],
+
+    (* app case *)
+    qpat_assum `recn_rel X Y Z Z' U U'` MP_TAC >>
+    srw_tac[] [Once recn_rel_cases, gterm_distinct, gterm_11] >>
+    qsuff_tac `ds' = ds` >- srw_tac [][] >>
+    rpt (qpat_assum `LIST_REL R X Y` MP_TAC) >>
+    rpt (pop_assum (K ALL_TAC)) >>
+    map_every qid_spec_tac [`ds`, `ds'`] >> Induct_on `ts` >> srw_tac [][] >>
+    Cases_on `ds` >> fsrw_tac [][] >>
+    Cases_on `ds'` >> fsrw_tac [][],
+
+    (* lam case *)
+    qpat_assum `recn_rel X Y Z Z' U U'` MP_TAC >>
+    srw_tac[] [Once recn_rel_cases, gterm_distinct, gterm_11] >>
+    `us' = us` by fsrw_tac [][GLAM_eq_thm] >> srw_tac [][] >>
+    `ds2' = ds2`
+       by (rpt (qpat_assum `LIST_REL R us Y` MP_TAC) >>
+           rpt (pop_assum (K ALL_TAC)) >>
+           map_every qid_spec_tac [`ds2`, `ds2'`] >> Induct_on `us` >>
+           Cases_on `ds2` >> srw_tac [][] >>
+           Cases_on `ds2'` >> fsrw_tac [][]) >>
+    srw_tac [][] >>
+    Cases_on `v = v'` >| [
+      srw_tac [][] >> fsrw_tac [][GLAM_eq_thm] >> srw_tac [][] >>
+      qsuff_tac `ds1' = ds1` >- srw_tac [][] >>
+      rpt (qpat_assum `LIST_REL R ts Y` MP_TAC) >>
+      rpt (pop_assum (K ALL_TAC)) >>
+      map_every qid_spec_tac [`ds1`, `ds1'`] >> Induct_on `ts` >>
+      Cases_on `ds1` >> srw_tac [][] >>
+      Cases_on `ds1'` >> fsrw_tac [][],
+
+      (* hard case, bvars not equal *)
 
 
-
-
-
+*)
 
 
 (*
