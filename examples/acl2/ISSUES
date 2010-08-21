@@ -129,3 +129,57 @@ Thanks --
 -- Matt
 
 <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+Consider translating directly from the ACL2 logical world (database),
+including as output what is currently written to
+tests/inputs/PKGS.sml.  Below is the relevant August 21, 2010 email
+thread, begun by this question from Mike to Matt:
+
+   One question I had was whether ACL2 should discard redundant events
+   before creating the .ml files? I already have almost finished revising
+   the code in HOL, but could jettison it easily.
+
+Matt's reply is below, to which Mike replied in turn:
+
+  If the custom PKGS.ml files were significantly
+  smaller that could be a benefit at the HOL end!
+
+.....
+
+Hi, Mike --
+
+ACL2 could discard redundant events that occur within a single file.
+But that's probably relatively uncommon; much more common is that the
+same event occurs in two different files (books).  We want to be able
+to translate books independently.  So if we were to eliminate
+redundancies on the ACL2 end, we would need a step that says which
+collection of books is to be translated.
+
+But maybe that's a good idea.  I can imagine a process where we
+specify the books to be translated, and as a first step ACL2 writes
+out a single file, with all redundancies eliminated.  That would
+probably be reasonably straightforward, since the translation process
+already translates an ACL2 book to an "essential" list of "events".
+I've put "events" in quotes because, in particular, encapsulate events
+are translated to encap forms; compare
+examples/acl2/tests/inputs/encap1.lisp (the input book) with
+examples/acl2/tests/gold/encap1.lisp (the "essential" file, which is
+used to generate encap1.ml).
+
+In fact, as part of that process, I could create the necessary PKGS.ml
+for each translation, rather than maintaining a single "universal"
+file examples/acl2/tests/inputs/PKGS.ml.
+
+For even greater security, I might translate directly from the logical
+database ("world") present after including certified books, rather
+than from a file of events.  That would have the added advantage of
+getting rid of redundancy automatically.
+
+But probably it's not worth the effort right now to do any of that.
+Maybe it's worth my taking 2 minutes though to put this email into the
+ISSUES file.  What do you think?
+
+Thanks --
+-- Matt
+
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
