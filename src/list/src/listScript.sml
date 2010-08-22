@@ -1724,6 +1724,11 @@ Induct_on `l` THEN
 ASM_SIMP_TAC bool_ss [pred_setTheory.IMAGE_EMPTY, pred_setTheory.IMAGE_INSERT,
    MAP, LIST_TO_SET_THM]);
 
+val LIST_TO_SET_FILTER = store_thm(
+  "LIST_TO_SET_FILTER",
+  ``LIST_TO_SET (FILTER P l) = { x | P x } INTER LIST_TO_SET l``,
+  SRW_TAC [][pred_setTheory.EXTENSION, MEM_FILTER]);
+
 
 (* ----------------------------------------------------------------------
     SET_TO_LIST : 'a set -> 'a list
