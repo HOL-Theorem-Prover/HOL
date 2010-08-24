@@ -6,14 +6,6 @@ open armTheory arm_stepTheory lpc_uartTheory;
 
 val _ = new_theory "lpc_devices";
 
-(*
-val arm_enc = snd o hd o armLib.arm_assemble_from_string;
-
-ARM_WRITE_MEM_READ_def
- type_of ``MEM_WRITE``
-
-armLib.arm_step "v4" (arm_enc "add r1,r2,r3")
-*)
 
 (* We define the type of a generic device *)
 
