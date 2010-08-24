@@ -1391,19 +1391,6 @@ fun SORT_SEP_CONV tm = let
   val thi = auto_prove "SORT_SEP_CONV" (mk_eq(tm,tm2),SIMP_TAC (bool_ss++star_ss) [])
   in thi end;
 
-fun AUTO_PROVE_WF_TAC def_tm = let
-  val d = (repeat car o fst o dest_eq) def_tm
-  val defn = Defn.Hol_defn "d" [ANTIQUOTE (subst [d |-> genvar(type_of d)] def_tm)]  
-  val cc = snd o dest_eq o concl o QCONV (REWRITE_CONV [GSYM prim_recTheory.measure_def])
-  val xs = map cc (TotalDefn.guessR defn) @ [``measure (\(x:word32 list,y:word32 list). LENGTH x)``]
-  fun tac x = 
-    TotalDefn.WF_REL_TAC [ANTIQUOTE x] THEN wordsLib.Cases_word
-    THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [WORD_LO,w2n_n2w,word_arith_lemma2,LESS_SUB_MOD,listTheory.LENGTH,listTheory.TL]
-    THEN DECIDE_TAC
-  fun ATTEMPT_EACH [] = ALL_TAC 
-    | ATTEMPT_EACH (x::xs) = tac x ORELSE (ATTEMPT_EACH xs)
-  in ATTEMPT_EACH xs end handle HOL_ERR _ => NO_TAC;
-
 fun LET_EXPAND_POS_CONV tm = let
   val x = (fst o dest_abs o fst o dest_let) tm 
   in if not (x = mk_var("pos",``:num``)) then fail () else
@@ -1522,13 +1509,27 @@ fun extract_function name th entry exit function_in_out = let
   val pre_thm = let
     val tt = (fst o dest_eq o concl o SPEC_ALL o RW1 [FUN_EQ_THM]) pre_def
     val goal = mk_forall(cdr tt,mk_eq(tt,``T:bool``))
+    val dummy_name = "no_name"
+    val c = (repeat car o fst o dest_eq o concl o SPEC_ALL) main_thm
+    val v = mk_var(dummy_name,type_of c)
+    val fake_eq = subst [c|->v] ((concl o SPEC_ALL) main_thm)
+    val defn = Hol_defn dummy_name [ANTIQUOTE fake_eq]
+    val gs = TotalDefn.guessR defn
+    fun case_tac x = 
+      TotalDefn.WF_REL_TAC [ANTIQUOTE x]
+      THEN SRW_TAC [] [] THEN SIMP_TAC std_ss [GSYM word_sub_def]
+      THEN REPEAT (POP_ASSUM MP_TAC)
+      THEN SIMP_TAC std_ss (!termination_simps) THEN NO_TAC
+    val AUX_TAC = FIRST (map case_tac gs)
+    (* set_goal([],goal) *)
     val tac = 
-      PURE_REWRITE_TAC [pre_def]
+      PURE_REWRITE_TAC [pre_def,tailrecTheory.SHORT_TAILREC_PRE_def]
       THEN MATCH_MP_TAC tailrecTheory.TAILREC_PRE_IMP
       THEN Tactical.REVERSE STRIP_TAC
-      THEN1 (SIMP_TAC std_ss [side_def,LET_DEF,pairTheory.FORALL_PROD])
-      THEN SIMP_TAC std_ss [step_def,guard_def,LET_DEF,pairTheory.FORALL_PROD,GUARD_def]
-      THEN AUTO_PROVE_WF_TAC ((concl o SPEC_ALL) main_thm)
+      THEN1 (SIMP_TAC std_ss [pairTheory.FORALL_PROD] 
+             THEN SRW_TAC [] [step_def,LET_DEF])
+      THEN SIMP_TAC std_ss [step_def,LET_DEF,pairTheory.FORALL_PROD,GUARD_def]
+      THEN AUX_TAC
     val pre_thm = (snd o tac) ([],goal) []
     val _ = echo 1 " (termination automatically proved),"
     in pre_thm end handle HOL_ERR _ => pre_thm
