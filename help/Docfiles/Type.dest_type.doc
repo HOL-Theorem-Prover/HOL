@@ -6,7 +6,7 @@
 Breaks apart a non-variable type.
 
 \DESCRIBE
-If {ty} is a type constant, then {dest_type t} returns {(ty,[])}.
+If {ty} is a type constant, then {dest_type ty} returns {(ty,[])}.
 If {ty} is a compound type {(ty1,...,tyn)tyop}, then {dest_type ty}
 returns {(tyop,[ty1,...,tyn])}.
 
