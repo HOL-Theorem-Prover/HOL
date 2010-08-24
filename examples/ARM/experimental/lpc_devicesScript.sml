@@ -2,10 +2,18 @@
 open HolKernel boolLib bossLib Parse;
 open wordsTheory pred_setTheory;
 
-open toy_coreTheory toy_uartTheory;
+open armTheory arm_stepTheory lpc_uartTheory;
 
-val _ = new_theory "toy_system";
+val _ = new_theory "lpc_devices";
 
+(*
+val arm_enc = snd o hd o armLib.arm_assemble_from_string;
+
+ARM_WRITE_MEM_READ_def
+ type_of ``MEM_WRITE``
+
+armLib.arm_step "v4" (arm_enc "add r1,r2,r3")
+*)
 
 (* We define the type of a generic device *)
 
@@ -13,7 +21,7 @@ val _ = type_abbrev ("device",``:
    (* memory addresses that belong to this device, dependent on internal state of type 'a *)
    ('a -> word32 set) #     
    (* if core executes a memory read, it sees the following data *)
-   ('a -> word32 -> word32) # 
+   ('a -> word32 -> word8) # 
    (* the next state relation for the devive  *)
    (num -> memory_access list -> 'a -> 'a -> bool) #
    (* an invariant that mst be true for this devie to make sense *)
@@ -57,13 +65,13 @@ val domain_def = Define `domain r = { a | ~(r a = NONE) }`;
 val UPDATE_RAM_def = Define `
   (UPDATE_RAM [] ram = ram) /\
   (UPDATE_RAM ((MEM_READ w)::xs) ram = UPDATE_RAM xs ram) /\ 
-  (UPDATE_RAM ((MEM_WRITE w v)::xs) ram = UPDATE_RAM xs (\a. if a = w then SOME w else ram a))`;
+  (UPDATE_RAM ((MEM_WRITE w v)::xs) ram = UPDATE_RAM xs (\a. if a = w then SOME v else ram a))`;
 
 val RAM_NEXT_def = Define `
-  RAM_NEXT (t:num) l (r1:word32 -> word32 option) r2 = (r2 = UPDATE_RAM l r1)`;
+  RAM_NEXT (t:num) l (r1:word32 -> word8 option) r2 = (r2 = UPDATE_RAM l r1)`;
 
 val RAM_DEVICE_def = Define `
-  (RAM_DEVICE:(word32 -> word32 option) device) =
+  (RAM_DEVICE:(word32 -> word8 option) device) =
     (domain, (\m addr. THE (m addr)), RAM_NEXT, (\x. T))`;
 
 
@@ -77,7 +85,7 @@ val ROM_NEXT_def = Define `
   ROM_NEXT (t:num) l r1 r2 = (r2 = r1) /\ (FILTER IS_WRITE l = [])`;
 
 val ROM_DEVICE_def = Define `
-  (ROM_DEVICE:(word32 -> word32 option) device) =
+  (ROM_DEVICE:(word32 -> word8 option) device) =
     (domain, (\m addr. THE (m addr)), ROM_NEXT, (\x. T))`;
 
 
@@ -108,16 +116,34 @@ val PERIPHERALS_OK_def = Define `
   PERIPHERALS_OK = 
     let (addresses,mem,next,inv) = ALL_PERIPHERALS in inv`;
 
-val INIT_MEMORY_def = Define `
-  INIT_MEMORY (t:num,s) = 
+val MEMORY_IMAGE_def = Define `
+  MEMORY_IMAGE (t:num,s) = 
     let (addresses,mem,next,inv) = ALL_PERIPHERALS in mem s`;
+
+val PENDING_INTERRUPT_def = Define `
+  PENDING_INTERRUPT p1 = NoInterrupt`;
+
+val peripherals_type = 
+  ``PERIPHERALS_NEXT`` |> type_of |> dest_type |> snd |> el 2
+                                  |> dest_type |> snd |> el 1
+                                   
+val _ = type_abbrev ("peripherals", peripherals_type)
+
+val PER_READ_ROM_def = Define `PER_READ_ROM ((t,x,y):peripherals) a = THE (x a)`;
+val PER_READ_RAM_def = Define `PER_READ_RAM ((t,x,y,z):peripherals) a = THE (y a)`;
+val PER_READ_UART_def = Define `PER_READ_UART ((t,x,y,u,z):peripherals) a = u`;
 
 
 (* The overall next-state relation *)
 
-val TOY_NEXT_def = Define `
-  TOY_NEXT (s1,p1) (s2,p2) =
-    ?l. (NEXT s1 (INIT_MEMORY p1) = (s2,l)) /\ PERIPHERALS_NEXT l p1 p2`;
+val LOAD_IMAGE_def = Define `
+  LOAD_IMAGE (s:arm_state) m = s with <|memory := m; accesses := []|>`;
+
+val LPC_NEXT_def = Define `
+  LPC_NEXT (s1,p1) (s2,p2) =
+    (ARM_NEXT (PENDING_INTERRUPT p1) 
+              (LOAD_IMAGE s1 (MEMORY_IMAGE p1)) = SOME s2) /\ 
+    PERIPHERALS_NEXT s2.accesses p1 p2`;
 
 
 (* Theorems *)
@@ -130,7 +156,7 @@ val domain_UPDATE_RAM = prove(
   THEN Cases_on `h` THEN SIMP_TAC std_ss [ACCESS_ADDRESS_def]
   THEN REPEAT STRIP_TAC THEN Cases_on `c IN domain p` THEN ASM_SIMP_TAC std_ss []
   THEN ASM_SIMP_TAC std_ss [UPDATE_RAM_def]
-  THEN `domain p = domain (\a. if a = c then SOME c else p a)` by 
+  THEN `domain p = domain (\a. if a = c then SOME c0 else p a)` by 
    (FULL_SIMP_TAC std_ss [domain_def,GSPECIFICATION,EXTENSION]
     THEN REPEAT STRIP_TAC THEN Cases_on `x = c` THEN ASM_SIMP_TAC std_ss []) 
   THEN ASM_SIMP_TAC std_ss []);

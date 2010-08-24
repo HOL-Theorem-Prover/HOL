@@ -2,9 +2,9 @@
 open HolKernel boolLib bossLib Parse;
 open wordsTheory wordsLib listTheory;
 
-open toy_coreTheory;
+open armTheory arm_coretypesTheory;
 
-val _ = new_theory "toy_uart";
+val _ = new_theory "lpc_uart";
 
 
 (* We define the state of a UART interface *)
@@ -191,13 +191,13 @@ val UART0_WRITE = store_thm("UART0_WRITE",
   THEN REPEAT STRIP_TAC
   THEN EXISTS_TAC 
   ``<| U0RBR := if s1.input_time <= t + 1 /\ s1.input_list <> [] then HD s1.input_list else ARB;
-       U0THR := w2w (w:word32);
+       U0THR := w2w (w:word8);
        U0LCR := s1.U0LCR;
        U0LSR := BIT_UPDATE 0 (s1.input_time <= t + 1 /\ s1.input_list <> []) 
                (BIT_UPDATE 5 F s1.U0LSR);
        input_list  := s1.input_list;  
        input_time  := s1.input_time;         
-       output_list := (w2w (w:word32)) :: s1.output_list;  
+       output_list := (w2w (w:word8)) :: s1.output_list;  
        output_time := t + 5 |>``
   THEN SRW_TAC [] [UART0_READ_def,APPLY_BIT_UPDATE_THM]
   THEN FULL_SIMP_TAC std_ss []);

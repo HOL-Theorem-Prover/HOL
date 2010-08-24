@@ -1,1 +1,1 @@
-INCLUDES = $(HOLDIR)/examples/machine-code/hoare-triple $(HOLDIR)/examples/machine-code/decompiler
+INCLUDES = $(HOLDIR)/examples/ARM/v7 $(HOLDIR)/examples/machine-code/hoare-triple $(HOLDIR)/examples/machine-code/decompiler 
