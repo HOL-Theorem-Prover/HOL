@@ -1,0 +1,798 @@
+Analysing hol_defaxiomsScript.sml
+Trying to create directory .HOLMK for dependency files
+Analysing sexp.sml
+Analysing complex_rationalScript.sml
+Compiling complex_rationalScript.sml
+Linking complex_rationalScript.uo to produce theory-builder executable
+<<HOL message: Created theory "complex_rational">>
+Saved theorem datatype_complex_rational
+Saved theorem complex_rational_11
+Saved theorem complex_rational_case_cong
+Saved theorem complex_rational_nchotomy
+Saved theorem complex_rational_Axiom
+Saved theorem complex_rational_induction
+<<HOL message: Defined type: "complex_rational">>
+Definition has been stored under "com_0_def".
+Definition has been stored under "com_1_def".
+Saved theorem COMPLEX_ADD_ind
+Saved theorem COMPLEX_ADD_def
+Equations stored under "COMPLEX_ADD_def".
+Induction stored under "COMPLEX_ADD_ind".
+Saved theorem COMPLEX_SUB_ind
+Saved theorem COMPLEX_SUB_def
+Equations stored under "COMPLEX_SUB_def".
+Induction stored under "COMPLEX_SUB_ind".
+Saved theorem COMPLEX_MULT_ind
+Saved theorem COMPLEX_MULT_def
+Equations stored under "COMPLEX_MULT_def".
+Induction stored under "COMPLEX_MULT_ind".
+Definition has been stored under "COMPLEX_RECIPROCAL_def".
+Saved theorem COMPLEX_LT_ind
+Saved theorem COMPLEX_LT_def
+Equations stored under "COMPLEX_LT_def".
+Induction stored under "COMPLEX_LT_ind".
+Saved theorem COMPLEX_LE_ind
+Saved theorem COMPLEX_LE_def
+Equations stored under "COMPLEX_LE_def".
+Induction stored under "COMPLEX_LE_ind".
+Saved theorem COMPLEX_GT_ind
+Saved theorem COMPLEX_GT_def
+Equations stored under "COMPLEX_GT_def".
+Induction stored under "COMPLEX_GT_ind".
+Saved theorem COMPLEX_GE_ind
+Saved theorem COMPLEX_GE_def
+Equations stored under "COMPLEX_GE_def".
+Induction stored under "COMPLEX_GE_ind".
+Definition has been stored under "COMPLEX_NEG_def".
+Definition has been stored under "COMPLEX_DIV_def".
+Definition has been stored under "DIVIDES_def".
+Definition has been stored under "IS_INT_def".
+Definition has been stored under "reduce_def".
+Definition has been stored under "reduced_nmr_def".
+Definition has been stored under "reduced_dnm_def".
+Saved theorem COMPLEX_MULT_COMM
+Saved theorem COMPLEX_MULT_ASSOC
+Saved theorem COMPLEX_MULT_RID
+Exporting theory "complex_rational" ... done.
+Theory "complex_rational" took 14.113s to build
+Analysing complex_rationalTheory.sml
+Analysing complex_rationalTheory.sig
+Compiling complex_rationalTheory.sig
+Compiling complex_rationalTheory.sml
+Analysing sexpScript.sml
+Analysing acl2_packageScript.sml
+Analysing PKGS.sml
+Compiling PKGS.sml
+Compiling acl2_packageScript.sml
+Linking acl2_packageScript.uo to produce theory-builder executable
+<<HOL message: Created theory "acl2_package">>
+Definition has been stored under "ACL2_CL_def".
+Definition has been stored under "ACL2_USER_def".
+Definition has been stored under "ACL2_USER_CL_def".
+Definition has been stored under "ACL2_PACKAGE_ALIST_def".
+runtime: 148.657s,    gctime: 97.150s,     systime: 0.884s.
+Definition has been stored under "ACL2_KNOWN_PACKAGES_def".
+runtime: 0.296s,    gctime: 0.032s,     systime: 0.000s.
+Saved theorem LOOKUP_ind
+Saved theorem LOOKUP_def
+Equations stored under "LOOKUP_def".
+Induction stored under "LOOKUP_ind".
+Saved theorem VALID_PKG_TRIPLES_AUX_ind
+Saved theorem VALID_PKG_TRIPLES_AUX_def
+Equations stored under "VALID_PKG_TRIPLES_AUX_def".
+Induction stored under "VALID_PKG_TRIPLES_AUX_ind".
+Definition has been stored under "VALID_PKG_TRIPLES_def".
+Exporting theory "acl2_package" ... done.
+Theory "acl2_package" took 270.389s to build
+Analysing acl2_packageTheory.sml
+Analysing acl2_packageTheory.sig
+Compiling acl2_packageTheory.sig
+Compiling acl2_packageTheory.sml
+Compiling sexp.sml
+Compiling sexpScript.sml
+Linking sexpScript.uo to produce theory-builder executable
+<<HOL message: Created theory "sexp">>
+Saved theorem datatype_sexp
+Saved theorem sexp_11
+Saved theorem sexp_distinct
+Saved theorem sexp_case_cong
+Saved theorem sexp_nchotomy
+Saved theorem sexp_Axiom
+Saved theorem sexp_induction
+<<HOL message: Defined type: "sexp">>
+Definition has been stored under "ACL2_def".
+Definition has been stored under "COMMON_LISP_def".
+Definition has been stored under "KEYWORD_def".
+Definition has been stored under "ACL2_OUTPUT_CHANNEL_def".
+Definition has been stored under "asym_def".
+Definition has been stored under "csym_def".
+Definition has been stored under "ksym_def".
+Definition has been stored under "osym_def".
+Definition has been stored under "nil_def".
+"COMMON-LISP::NIL" defined with HOL name "nil"
+Definition has been stored under "t_def".
+"COMMON-LISP::T" defined with HOL name "t"
+Definition has been stored under "quote_def".
+"COMMON-LISP::QUOTE" defined with HOL name "quote"
+Definition has been stored under "equal_def".
+"COMMON-LISP::EQUAL" defined with HOL name "equal"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem stringp_ind
+Saved theorem stringp_def
+Equations stored under "stringp_def".
+Induction stored under "stringp_ind".
+"COMMON-LISP::STRINGP" defined with HOL name "stringp"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem characterp_ind
+Saved theorem characterp_def
+Equations stored under "characterp_def".
+Induction stored under "characterp_ind".
+"COMMON-LISP::CHARACTERP" defined with HOL name "characterp"
+Definition has been stored under "rat_def".
+Definition has been stored under "cpx_def".
+Definition has been stored under "int_def".
+Definition has been stored under "nat_def".
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem acl2_numberp_ind
+Saved theorem acl2_numberp_def
+Equations stored under "acl2_numberp_def".
+Induction stored under "acl2_numberp_ind".
+"ACL2::ACL2-NUMBERP" defined with HOL name "acl2_numberp"
+<<HOL message: mk_functional: 
+  pattern completion has added 21 clauses to the original specification.>>
+Saved theorem add_ind
+Saved theorem add_def
+Equations stored under "add_def".
+Induction stored under "add_ind".
+"ACL2::BINARY-+" defined with HOL name "add"
+<<HOL message: mk_functional: 
+  pattern completion has added 7 clauses to the original specification.>>
+Saved theorem mult_ind
+Saved theorem mult_def
+Equations stored under "mult_def".
+Induction stored under "mult_ind".
+"ACL2::BINARY-*" defined with HOL name "mult"
+<<HOL message: mk_functional: 
+  pattern completion has added 21 clauses to the original specification.>>
+Saved theorem less_ind
+Saved theorem less_def
+Equations stored under "less_def".
+Induction stored under "less_ind".
+"COMMON-LISP::<" defined with HOL name "less"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem unary_minus_ind
+Saved theorem unary_minus_def
+Equations stored under "unary_minus_def".
+Induction stored under "unary_minus_ind".
+"ACL2::UNARY--" defined with HOL name "unary_minus"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem reciprocal_ind
+Saved theorem reciprocal_def
+Equations stored under "reciprocal_def".
+Induction stored under "reciprocal_ind".
+"ACL2::UNARY-/" defined with HOL name "reciprocal"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem consp_ind
+Saved theorem consp_def
+Equations stored under "consp_def".
+Induction stored under "consp_ind".
+"COMMON-LISP::CONSP" defined with HOL name "consp"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem car_ind
+Saved theorem car_def
+Equations stored under "car_def".
+Induction stored under "car_ind".
+"COMMON-LISP::CAR" defined with HOL name "car"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem cdr_ind
+Saved theorem cdr_def
+Equations stored under "cdr_def".
+Induction stored under "cdr_ind".
+"COMMON-LISP::CDR" defined with HOL name "cdr"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem realpart_ind
+Saved theorem realpart_def
+Equations stored under "realpart_def".
+Induction stored under "realpart_ind".
+"COMMON-LISP::REALPART" defined with HOL name "realpart"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem imagpart_ind
+Saved theorem imagpart_def
+Equations stored under "imagpart_def".
+Induction stored under "imagpart_ind".
+"COMMON-LISP::IMAGPART" defined with HOL name "imagpart"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem rationalp_ind
+Saved theorem rationalp_def
+Equations stored under "rationalp_def".
+Induction stored under "rationalp_ind".
+"COMMON-LISP::RATIONALP" defined with HOL name "rationalp"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem complex_rationalp_ind
+Saved theorem complex_rationalp_def
+Equations stored under "complex_rationalp_def".
+Induction stored under "complex_rationalp_ind".
+"ACL2::COMPLEX-RATIONALP" defined with HOL name "complex_rationalp"
+<<HOL message: mk_functional: 
+  pattern completion has added 21 clauses to the original specification.>>
+Saved theorem complex_ind
+Saved theorem complex_def
+Equations stored under "complex_def".
+Induction stored under "complex_ind".
+"COMMON-LISP::COMPLEX" defined with HOL name "complex"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem integerp_ind
+Saved theorem integerp_def
+Equations stored under "integerp_def".
+Induction stored under "integerp_ind".
+"COMMON-LISP::INTEGERP" defined with HOL name "integerp"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem numerator_ind
+Saved theorem numerator_def
+Equations stored under "numerator_def".
+Induction stored under "numerator_ind".
+"COMMON-LISP::NUMERATOR" defined with HOL name "numerator"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem denominator_ind
+Saved theorem denominator_def
+Equations stored under "denominator_def".
+Induction stored under "denominator_ind".
+"COMMON-LISP::DENOMINATOR" defined with HOL name "denominator"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem char_code_ind
+Saved theorem char_code_def
+Equations stored under "char_code_def".
+Induction stored under "char_code_ind".
+"COMMON-LISP::CHAR-CODE" defined with HOL name "char_code"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem code_char_ind
+Saved theorem code_char_def
+Equations stored under "code_char_def".
+Induction stored under "code_char_ind".
+"COMMON-LISP::CODE-CHAR" defined with HOL name "code_char"
+Definition has been stored under "ite_def".
+"COMMON-LISP::IF" defined with HOL name "ite"
+Definition has been stored under "list_to_sexp_def".
+<<HOL message: mk_functional: 
+  pattern completion has added 6 clauses to the original specification.>>
+Saved theorem make_character_list_ind
+Saved theorem make_character_list_def
+Equations stored under "make_character_list_def".
+Induction stored under "make_character_list_ind".
+Definition has been stored under "coerce_string_to_list_def".
+<<HOL message: mk_functional: 
+  pattern completion has added 7 clauses to the original specification.>>
+Saved theorem coerce_list_to_string_ind
+Saved theorem coerce_list_to_string_def
+Equations stored under "coerce_list_to_string_def".
+Induction stored under "coerce_list_to_string_ind".
+<<HOL message: mk_functional: 
+  pattern completion has added 2 clauses to the original specification.>>
+Saved theorem coerce_ind
+Saved theorem coerce_def
+Equations stored under "coerce_def".
+Induction stored under "coerce_ind".
+"COMMON-LISP::COERCE" defined with HOL name "coerce"
+Definition has been stored under "BASIC_INTERN_def".
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem symbolp_ind
+Saved theorem symbolp_def
+Equations stored under "symbolp_def".
+Induction stored under "symbolp_ind".
+"COMMON-LISP::SYMBOLP" defined with HOL name "symbolp"
+Saved theorem VALID_PKG_TRIPLES
+Saved theorem LOOKUP_IDEMPOTENT
+Saved theorem LOOKUP_NOT_EMPTY_STRING
+Saved theorem LOOKUP_PKG_WITNESS
+Saved theorem LIST_LEX_ORDER_ind
+Saved theorem LIST_LEX_ORDER_def
+Equations stored under "LIST_LEX_ORDER_def".
+Induction stored under "LIST_LEX_ORDER_ind".
+Saved theorem LIST_LEX_ORDER_IRREFLEXIVE
+Saved theorem LIST_LEX_ORDER_ANTISYM
+Saved theorem LIST_LEX_ORDER_TRANS
+Saved theorem LIST_LEX_ORDER_TRICHOTOMY
+Definition has been stored under "STRING_LESS_def".
+Definition has been stored under "STRING_LESS_EQ_def".
+Saved theorem STRING_LESS_IRREFLEXIVE
+Saved theorem STRING_LESS_SYM
+Saved theorem STRING_LESS_EQ_SYM
+Saved theorem MAP_ORD_11
+Saved theorem STRING_LESS_ANTISYM
+Saved theorem STRING_LESS_EQ_ANTISYM
+Saved theorem STRING_LESS_TRICHOTOMY
+Saved theorem STRING_LESS_EQ_TRICHOTOMY
+Saved theorem STRING_LESS_TRANS
+Saved theorem STRING_LESS_EQ_TRANS
+Saved theorem STRING_LESS_TRANS_NOT
+Saved theorem STRING_LESS_EQ_TRANS_NOT
+<<HOL message: mk_functional: 
+  pattern completion has added 8 clauses to the original specification.>>
+Saved theorem SEXP_SYM_LESS_ind
+Saved theorem SEXP_SYM_LESS_def
+Equations stored under "SEXP_SYM_LESS_def".
+Induction stored under "SEXP_SYM_LESS_ind".
+Definition has been stored under "SEXP_SYM_LESS_EQ_def".
+Definition has been stored under "bad_atom_less_equal_def".
+"ACL2::BAD-ATOM<=" defined with HOL name "bad_atom_less_equal"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem symbol_name_ind
+Saved theorem symbol_name_def
+Equations stored under "symbol_name_def".
+Induction stored under "symbol_name_ind".
+"COMMON-LISP::SYMBOL-NAME" defined with HOL name "symbol_name"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem symbol_package_name_ind
+Saved theorem symbol_package_name_def
+Equations stored under "symbol_package_name_def".
+Induction stored under "symbol_package_name_ind".
+"ACL2::SYMBOL-PACKAGE-NAME" defined with HOL name "symbol_package_name"
+<<HOL message: mk_functional: 
+  pattern completion has added 3 clauses to the original specification.>>
+Saved theorem pkg_witness_ind
+Saved theorem pkg_witness_def
+Equations stored under "pkg_witness_def".
+Induction stored under "pkg_witness_ind".
+"ACL2::PKG-WITNESS" defined with HOL name "pkg_witness"
+<<HOL message: mk_functional: 
+  pattern completion has added 7 clauses to the original specification.>>
+Saved theorem intern_in_package_of_symbol_ind
+Saved theorem intern_in_package_of_symbol_def
+Equations stored under "intern_in_package_of_symbol_def".
+Induction stored under "intern_in_package_of_symbol_ind".
+"ACL2::INTERN-IN-PACKAGE-OF-SYMBOL" defined with HOL name "intern_in_package_of_symbol"
+Definition has been stored under "ACL2_TRUE_def".
+Saved theorem ACL2_TRUE
+Definition has been stored under "bool_to_sexp_def".
+Definition has been stored under "caar_def".
+Definition has been stored under "cadr_def".
+Definition has been stored under "cdar_def".
+Definition has been stored under "cddr_def".
+Definition has been stored under "caaar_def".
+Definition has been stored under "cdaar_def".
+Definition has been stored under "cadar_def".
+Definition has been stored under "cddar_def".
+Definition has been stored under "caadr_def".
+Definition has been stored under "cdadr_def".
+Definition has been stored under "caddr_def".
+Definition has been stored under "cdddr_def".
+Definition has been stored under "caaaar_def".
+Definition has been stored under "cadaar_def".
+Definition has been stored under "caadar_def".
+Definition has been stored under "caddar_def".
+Definition has been stored under "caaadr_def".
+Definition has been stored under "cadadr_def".
+Definition has been stored under "caaddr_def".
+Definition has been stored under "cadddr_def".
+Definition has been stored under "cdaaar_def".
+Definition has been stored under "cddaar_def".
+Definition has been stored under "cdadar_def".
+Definition has been stored under "cdddar_def".
+Definition has been stored under "cdaadr_def".
+Definition has been stored under "cddadr_def".
+Definition has been stored under "cdaddr_def".
+Definition has been stored under "cddddr_def".
+Definition has been stored under "List_def".
+Saved theorem andl_ind
+Saved theorem andl_def
+Equations stored under "andl_def".
+Induction stored under "andl_ind".
+Saved theorem andl_append
+Saved theorem andl_fold
+Saved theorem itel_ind
+Saved theorem itel_def
+Equations stored under "itel_def".
+Induction stored under "itel_ind".
+Saved theorem itel_fold
+Saved theorem itel_append
+Saved theorem ite_CONG1
+Saved theorem ite_CONG2
+Saved theorem itel_CONG1
+Saved theorem itel_CONG2
+Saved theorem andl_CONG
+Saved theorem sexp_size_car
+Saved theorem sexp_size_cdr
+Saved theorem let_simp
+Saved theorem forall_fold
+Saved theorem exists_fold
+Saved theorem bool_to_sexp
+Saved theorem forall2_thm
+Saved theorem exists2_thm
+Saved theorem t_nil
+Definition has been stored under "implies_def".
+"ACL2::IMPLIES" defined with HOL name "implies"
+Saved theorem implies_ite
+Saved theorem implies
+Saved theorem consp_nil
+Saved theorem ite_simp
+Saved theorem andl_simp
+Definition has been stored under "not_def".
+"COMMON-LISP::NOT" defined with HOL name "not"
+Saved theorem not_simp
+Saved theorem equal_memberp_imp
+Saved theorem equal_imp
+Saved theorem imported_symbol_names_ind
+Saved theorem imported_symbol_names_def
+Equations stored under "imported_symbol_names_def".
+Induction stored under "imported_symbol_names_ind".
+Saved theorem ACL2_SIMPS
+Exporting theory "sexp" ... done.
+Theory "sexp" took 47.443s to build
+Analysing sexpTheory.sml
+Analysing sexpTheory.sig
+Compiling sexpTheory.sig
+Compiling sexpTheory.sml
+Compiling hol_defaxiomsScript.sml
+Linking hol_defaxiomsScript.uo to produce theory-builder executable
+<<HOL message: Created theory "hol_defaxioms">>
+Definition has been stored under "iff_def".
+"ACL2::IFF" defined with HOL name "iff"
+Saved theorem iff_thm
+Definition has been stored under "booleanp_def".
+"ACL2::BOOLEANP" defined with HOL name "booleanp"
+Definition has been stored under "hide_def".
+"ACL2::HIDE" defined with HOL name "hide"
+Definition has been stored under "eq_def".
+"COMMON-LISP::EQ" defined with HOL name "eq"
+Saved theorem true_listp_def
+Saved theorem true_listp_ind
+"ACL2::TRUE-LISTP" defined with HOL name "true_listp"
+Saved theorem list_macro_def
+Saved theorem list_macro_ind
+"ACL2::LIST-MACRO" defined with HOL name "list_macro"
+Saved theorem and_macro_def
+Saved theorem and_macro_ind
+"ACL2::AND-MACRO" defined with HOL name "and_macro"
+Saved theorem or_macro_def
+Saved theorem or_macro_ind
+"ACL2::OR-MACRO" defined with HOL name "or_macro"
+Definition has been stored under "integer_abs_def".
+"ACL2::INTEGER-ABS" defined with HOL name "integer_abs"
+Saved theorem xxxjoin_def
+Saved theorem xxxjoin_ind
+"ACL2::XXXJOIN" defined with HOL name "xxxjoin"
+Saved theorem len_def
+Saved theorem len_ind
+"ACL2::LEN" defined with HOL name "len"
+Definition has been stored under "length_def".
+"COMMON-LISP::LENGTH" defined with HOL name "length"
+Saved theorem cond_clausesp_def
+Saved theorem cond_clausesp_ind
+"ACL2::COND-CLAUSESP" defined with HOL name "cond_clausesp"
+Definition has been stored under "eqlablep_def".
+"ACL2::EQLABLEP" defined with HOL name "eqlablep"
+Saved theorem eqlable_listp_def
+Saved theorem eqlable_listp_ind
+"ACL2::EQLABLE-LISTP" defined with HOL name "eqlable_listp"
+Saved theorem eqlable_listp
+Definition has been stored under "atom_def".
+"COMMON-LISP::ATOM" defined with HOL name "atom"
+Saved theorem acl2_make_character_list_def
+Saved theorem acl2_make_character_list_ind
+"ACL2::MAKE-CHARACTER-LIST" defined with HOL name "acl2_make_character_list"
+Saved theorem acl2_make_character_list
+Saved theorem eqlable_alistp_def
+Saved theorem eqlable_alistp_ind
+"ACL2::EQLABLE-ALISTP" defined with HOL name "eqlable_alistp"
+Saved theorem alistp_def
+Saved theorem alistp_ind
+"ACL2::ALISTP" defined with HOL name "alistp"
+Definition has been stored under "acons_def".
+"COMMON-LISP::ACONS" defined with HOL name "acons"
+Definition has been stored under "endp_def".
+"COMMON-LISP::ENDP" defined with HOL name "endp"
+Saved theorem member_equal_def
+Saved theorem member_equal_ind
+"ACL2::MEMBER-EQUAL" defined with HOL name "member_equal"
+Definition has been stored under "null_def".
+"COMMON-LISP::NULL" defined with HOL name "null"
+Definition has been stored under "eql_def".
+"COMMON-LISP::EQL" defined with HOL name "eql"
+Definition has been stored under "common_lisp_equal_def".
+"COMMON-LISP::=" defined with HOL name "common_lisp_equal"
+Definition has been stored under "zp_def".
+"ACL2::ZP" defined with HOL name "zp"
+Saved theorem zp
+Definition has been stored under "zip_def".
+"ACL2::ZIP" defined with HOL name "zip"
+Saved theorem zip
+Definition has been stored under "fix_def".
+"ACL2::FIX" defined with HOL name "fix"
+Saved theorem fix
+Definition has been stored under "force_def".
+Saved theorem member_def
+Saved theorem member_ind
+"COMMON-LISP::MEMBER" defined with HOL name "member"
+Saved theorem assoc_def
+Saved theorem assoc_ind
+"COMMON-LISP::ASSOC" defined with HOL name "assoc"
+Definition has been stored under "standard_char_p_def".
+"COMMON-LISP::STANDARD-CHAR-P" defined with HOL name "standard_char_p"
+Saved theorem standard_char_p
+Saved theorem standard_char_listp_def
+Saved theorem standard_char_listp_ind
+"ACL2::STANDARD-CHAR-LISTP" defined with HOL name "standard_char_listp"
+Saved theorem character_listp_def
+Saved theorem character_listp_ind
+"ACL2::CHARACTER-LISTP" defined with HOL name "character_listp"
+Saved theorem character_listp
+Definition has been stored under "string_def".
+"COMMON-LISP::STRING" defined with HOL name "string"
+Definition has been stored under "alpha_char_p_def".
+"COMMON-LISP::ALPHA-CHAR-P" defined with HOL name "alpha_char_p"
+Definition has been stored under "upper_case_p_def".
+"COMMON-LISP::UPPER-CASE-P" defined with HOL name "upper_case_p"
+Definition has been stored under "lower_case_p_def".
+"COMMON-LISP::LOWER-CASE-P" defined with HOL name "lower_case_p"
+Definition has been stored under "char_upcase_def".
+"COMMON-LISP::CHAR-UPCASE" defined with HOL name "char_upcase"
+Definition has been stored under "char_downcase_def".
+"COMMON-LISP::CHAR-DOWNCASE" defined with HOL name "char_downcase"
+Saved theorem string_downcase1_def
+Saved theorem string_downcase1_ind
+"ACL2::STRING-DOWNCASE1" defined with HOL name "string_downcase1"
+Definition has been stored under "string_downcase_def".
+"COMMON-LISP::STRING-DOWNCASE" defined with HOL name "string_downcase"
+Saved theorem string_upcase1_def
+Saved theorem string_upcase1_ind
+"ACL2::STRING-UPCASE1" defined with HOL name "string_upcase1"
+Definition has been stored under "string_upcase_def".
+"COMMON-LISP::STRING-UPCASE" defined with HOL name "string_upcase"
+Definition has been stored under "our_digit_char_p_def".
+"ACL2::OUR-DIGIT-CHAR-P" defined with HOL name "our_digit_char_p"
+Definition has been stored under "char_equal_def".
+"COMMON-LISP::CHAR-EQUAL" defined with HOL name "char_equal"
+Saved theorem atom_listp_def
+Saved theorem atom_listp_ind
+"ACL2::ATOM-LISTP" defined with HOL name "atom_listp"
+Definition has been stored under "ifix_def".
+"ACL2::IFIX" defined with HOL name "ifix"
+Definition has been stored under "rfix_def".
+"ACL2::RFIX" defined with HOL name "rfix"
+Definition has been stored under "realfix_def".
+"ACL2::REALFIX" defined with HOL name "realfix"
+Definition has been stored under "nfix_def".
+"ACL2::NFIX" defined with HOL name "nfix"
+Definition has been stored under "natp_def".
+"ACL2::NATP" defined with HOL name "natp"
+Definition has been stored under "posp_def".
+"ACL2::POSP" defined with HOL name "posp"
+Definition has been stored under "o_finp_def".
+"ACL2::O-FINP" defined with HOL name "o_finp"
+Definition has been stored under "o_first_expt_def".
+"ACL2::O-FIRST-EXPT" defined with HOL name "o_first_expt"
+Saved theorem sexp_size_o_first_expt
+Definition has been stored under "o_first_coeff_def".
+"ACL2::O-FIRST-COEFF" defined with HOL name "o_first_coeff"
+Saved theorem sexp_size_o_first_coeff
+Definition has been stored under "o_rst_def".
+"ACL2::O-RST" defined with HOL name "o_rst"
+Saved theorem sexp_size_o_rst
+Saved theorem member_symbol_name_def
+Saved theorem member_symbol_name_ind
+"ACL2::MEMBER-SYMBOL-NAME" defined with HOL name "member_symbol_name"
+Saved theorem binary_append_def
+Saved theorem binary_append_ind
+"ACL2::BINARY-APPEND" defined with HOL name "binary_append"
+Axiomatic definition has been stored under "nonnegative_integer_quotient_def".
+"ACL2::NONNEGATIVE-INTEGER-QUOTIENT" axiomatically defined with HOL name "nonnegative_integer_quotient"
+Saved theorem nonnegative_integer_quotient_def
+Definition has been stored under "floor_def".
+"COMMON-LISP::FLOOR" defined with HOL name "floor"
+Definition has been stored under "mod_def".
+"COMMON-LISP::MOD" defined with HOL name "mod"
+Axiomatic definition has been stored under "expt_def".
+"COMMON-LISP::EXPT" axiomatically defined with HOL name "expt"
+Saved theorem expt_def
+Definition has been stored under "char_less_def".
+"COMMON-LISP::CHAR<" defined with HOL name "char_less"
+Saved theorem string_less_l_def
+Saved theorem string_less_l_ind
+"ACL2::STRING<-L" defined with HOL name "string_less_l"
+Definition has been stored under "string_less_def".
+"COMMON-LISP::STRING<" defined with HOL name "string_less"
+Definition has been stored under "string_less_equal_def".
+"COMMON-LISP::STRING<=" defined with HOL name "string_less_equal"
+Definition has been stored under "symbol_less_def".
+"ACL2::SYMBOL::-<" defined with HOL name "symbol_less"
+Saved theorem mv_nth_def
+Saved theorem mv_nth_ind
+"ACL2::MV-NTH" defined with HOL name "mv_nth"
+Definition has been stored under "bad_atom_def".
+"ACL2::BAD-ATOM" defined with HOL name "bad_atom"
+Definition has been stored under "alphorder_def".
+"ACL2::ALPHORDER" defined with HOL name "alphorder"
+Saved theorem lexorder_def
+Saved theorem lexorder_ind
+"ACL2::LEXORDER" defined with HOL name "lexorder"
+Saved theorem ACL2_SIMPS
+Exporting theory "hol_defaxioms" ... done.
+Theory "hol_defaxioms" took 52.835s to build
+Analysing hol_defaxiomsTheory.sml
+Analysing hol_defaxiomsTheory.sig
+Compiling hol_defaxiomsTheory.sig
+Compiling hol_defaxiomsTheory.sml
+Analysing load_book.sml
+Analysing load_book.sig
+Compiling load_book.sig
+Compiling load_book.sml
+../../../../bin/hol < make_imported_acl2_theory.ml
+
+---------------------------------------------------------------------
+       HOL-4 [Kananaskis 6 (stdknl, built Thu Mar 11 18:29:45 2010)]
+
+       For introductory HOL help, type: help "hol";
+
+---------------------------------------------------------------------
+
+                                  --------------- ][loading theories and proof tools *************** ]
+[closing file "/local/scratch/mjcg/HOL98/hol4/HOL/tools/end-init-boss.sml"]
+- > val it = () : unit
+- [opening file "imported_acl2_books.ml"]
+> val imported_acl2_books = ["problem-set-1-answers", "m1-story"] : string list
+[closing file "imported_acl2_books.ml"]
+> val it = () : unit
+- > val current_package = ref "UnspecifiedPackage" : string ref
+- <<HOL message: Created theory "imported_acl2">>
+> val it = () : unit
+- > val aplist = fn : (string -> (string * thm) list list) -> string list -> unit
+- [opening file "problem-set-1-answers.ml"]
+[closing file "problem-set-1-answers.ml"]
+Discarding duplicated events.
+runtime: 17.181s,    gctime: 6.200s,     systime: 0.032s.
+[opening file "m1-story.ml"]
+[closing file "m1-story.ml"]
+Discarding duplicated events.
+Mutual recursion? COLLECT-VARS-IN-STMT* has unbound free variables: M1::COLLECT-VARS-IN-STMT 
+Mutual recursion? COLLECT-VARS-IN-STMT has unbound free variables: M1::COLLECT-VARS-IN-STMT* 
+Mutual recursion? STMT*! has unbound free variables: M1::STMT! 
+Mutual recursion? STMT! has unbound free variables: M1::STMT*! 
+runtime: 31.658s,    gctime: 4.716s,     systime: 0.056s.
+> val it = () : unit
+- Exporting theory "imported_acl2" ... done.
+Theory "imported_acl2" took 48.871s to build
+> val it = () : unit
+- Compiled imported_acl2 theory files.
+> val it = () : unit
+- 
+../../../../bin/hol < make_M1Theory.ml
+
+---------------------------------------------------------------------
+       HOL-4 [Kananaskis 6 (stdknl, built Thu Mar 11 18:29:45 2010)]
+
+       For introductory HOL help, type: help "hol";
+
+---------------------------------------------------------------------
+
+                                  --------------- ][loading theories and proof tools *************** ]
+[closing file "/local/scratch/mjcg/HOL98/hol4/HOL/tools/end-init-boss.sml"]
+- > val it = () : unit
+- <<HOL message: Created theory "M1">>
+- > val exclaim_def =
+    |- ∀[0;32mn[0m.
+         exclaim [0;32mn[0m =
+         itel [(zp [0;32mn[0m,nat 1)] (mult [0;32mn[0m (exclaim (add (int (-1)) [0;32mn[0m)))
+     : thm
+- > val ifact_def =
+    |- ∀[0;32mn[0m [0;32ma[0m.
+         ifact [0;32mn[0m [0;32ma[0m = itel [(zp [0;32mn[0m,[0;32ma[0m)] (ifact (add (int (-1)) [0;32mn[0m) (mult [0;32mn[0m [0;32ma[0m))
+     : thm
+- > val ifact_lemma =
+    |- ∀[0;32mstack[0m [0;32ma[0m [0;32mn[0m.
+         (|= natp [0;32mn[0m) ⇒
+         |= equal
+              (run (ifact_sched [0;32mn[0m)
+                 (make_state (nat 0) (List [[0;32mn[0m; [0;32ma[0m]) [0;32mstack[0m
+                    (List
+                       [List [sym "M1" "ICONST"; nat 1];
+                        List [sym "M1" "ISTORE"; nat 1];
+                        List [sym "M1" "ILOAD"; nat 0];
+                        List [sym "M1" "IFLE"; nat 10];
+                        List [sym "M1" "ILOAD"; nat 0];
+                        List [sym "M1" "ILOAD"; nat 1];
+                        List [sym "M1" "IMUL"];
+                        List [sym "M1" "ISTORE"; nat 1];
+                        List [sym "M1" "ILOAD"; nat 0];
+                        List [sym "M1" "ICONST"; nat 1];
+                        List [sym "M1" "ISUB"];
+                        List [sym "M1" "ISTORE"; nat 0];
+                        List [sym "M1" "GOTO"; int (-10)];
+                        List [sym "M1" "ILOAD"; nat 1];
+                        List [sym "M1" "HALT"]])))
+              (make_state (nat 14) (List [nat 0; ifact [0;32mn[0m (nat 1)])
+                 (push (ifact [0;32mn[0m (nat 1)) [0;32mstack[0m)
+                 (List
+                    [List [sym "M1" "ICONST"; nat 1];
+                     List [sym "M1" "ISTORE"; nat 1];
+                     List [sym "M1" "ILOAD"; nat 0];
+                     List [sym "M1" "IFLE"; nat 10];
+                     List [sym "M1" "ILOAD"; nat 0];
+                     List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
+                     List [sym "M1" "ISTORE"; nat 1];
+                     List [sym "M1" "ILOAD"; nat 0];
+                     List [sym "M1" "ICONST"; nat 1];
+                     List [sym "M1" "ISUB"];
+                     List [sym "M1" "ISTORE"; nat 0];
+                     List [sym "M1" "GOTO"; int (-10)];
+                     List [sym "M1" "ILOAD"; nat 1];
+                     List [sym "M1" "HALT"]])) : thm
+- > val ifact_is_factorial =
+    |- ∀[0;32ma[0m [0;32mn[0m.
+         (|= natp [0;32mn[0m) ∧ (|= natp [0;32ma[0m) ⇒
+         |= equal (ifact [0;32mn[0m [0;32ma[0m) (mult (exclaim [0;32mn[0m) [0;32ma[0m)
+     : thm
+- > val ifact_correct =
+    |- ∀[0;32mstack[0m [0;32ma[0m [0;32mn[0m.
+         (|= natp [0;32mn[0m) ⇒
+         |= equal
+              (run (ifact_sched [0;32mn[0m)
+                 (make_state (nat 0) (List [[0;32mn[0m; [0;32ma[0m]) [0;32mstack[0m
+                    (List
+                       [List [sym "M1" "ICONST"; nat 1];
+                        List [sym "M1" "ISTORE"; nat 1];
+                        List [sym "M1" "ILOAD"; nat 0];
+                        List [sym "M1" "IFLE"; nat 10];
+                        List [sym "M1" "ILOAD"; nat 0];
+                        List [sym "M1" "ILOAD"; nat 1];
+                        List [sym "M1" "IMUL"];
+                        List [sym "M1" "ISTORE"; nat 1];
+                        List [sym "M1" "ILOAD"; nat 0];
+                        List [sym "M1" "ICONST"; nat 1];
+                        List [sym "M1" "ISUB"];
+                        List [sym "M1" "ISTORE"; nat 0];
+                        List [sym "M1" "GOTO"; int (-10)];
+                        List [sym "M1" "ILOAD"; nat 1];
+                        List [sym "M1" "HALT"]])))
+              (make_state (nat 14) (List [nat 0; exclaim [0;32mn[0m])
+                 (push (exclaim [0;32mn[0m) [0;32mstack[0m)
+                 (List
+                    [List [sym "M1" "ICONST"; nat 1];
+                     List [sym "M1" "ISTORE"; nat 1];
+                     List [sym "M1" "ILOAD"; nat 0];
+                     List [sym "M1" "IFLE"; nat 10];
+                     List [sym "M1" "ILOAD"; nat 0];
+                     List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
+                     List [sym "M1" "ISTORE"; nat 1];
+                     List [sym "M1" "ILOAD"; nat 0];
+                     List [sym "M1" "ICONST"; nat 1];
+                     List [sym "M1" "ISUB"];
+                     List [sym "M1" "ISTORE"; nat 0];
+                     List [sym "M1" "GOTO"; int (-10)];
+                     List [sym "M1" "ILOAD"; nat 1];
+                     List [sym "M1" "HALT"]])) : thm
+- > val repeat_def =
+    |- ∀[0;32mth[0m [0;32mn[0m.
+         repeat [0;32mth[0m [0;32mn[0m =
+         itel [(zp [0;32mn[0m,List [])] (cons [0;32mth[0m (repeat [0;32mth[0m (add (int (-1)) [0;32mn[0m)))
+     : thm
+- > val ifact_sched_def =
+    |- ∀[0;32mn[0m. ifact_sched [0;32mn[0m = app (repeat (nat 0) (nat 2)) (ifact_loop_sched [0;32mn[0m)
+     : thm
+- > val test_ifact_examples =
+    |- (|= equal (test_ifact (nat 5)) (exclaim (nat 5))) ∧
+       (|= equal (test_ifact (nat 10)) (exclaim (nat 10))) ∧
+       |= equal (test_ifact (nat 100)) (exclaim (nat 100)) : thm
+- Exporting theory "M1" ... done.
+Theory "M1" took 4.424s to build
+- Compiled M1 theory files.
+- 
