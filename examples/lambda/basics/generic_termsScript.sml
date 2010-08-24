@@ -991,6 +991,13 @@ val recn_rel_finite_support = prove(
     rpt (match_mp_tac fnpm_is_perm >> srw_tac [][])
   ]);
 
+val list_rel_finitesupp = prove(
+  ``^permsupp_sidecond ⇒
+    ∀ts ds. LIST_REL (recn_rel ^vf ^af ^lf A) ts ds ⇒
+            FINITE (supp (listpm dpm) ds)``,
+  strip_tac >> Induct_on `LIST_REL` >> srw_tac [][] >>
+  metis_tac [recn_rel_finite_support]);
+
 val [rvar, rapp, rlam] = CONJUNCTS (SIMP_RULE bool_ss [FORALL_AND_THM]
                                               recn_rel_rules)
 
@@ -1156,7 +1163,7 @@ val list_rel_freshness = prove(
   metis_tac [GFV_supp]);
 
 (* UB lemma 8 *)
-(*
+
 val uniqueness = prove(
   ``^permsupp_sidecond ∧ ^FCB ==>
     ∀t r. recn_rel ^vf ^af ^lf A t r ⇒
@@ -1212,13 +1219,37 @@ val uniqueness = prove(
       pop_assum SUBST_ALL_TAC >>
       `v ∉ supp (listpm dpm) ds1'`
         by (match_mp_tac (MP_CANON list_rel_freshness) >> metis_tac []) >>
+      `FINITE (supp (listpm dpm) ds1') ∧ FINITE (supp (listpm dpm) ds2)`
+        by metis_tac [list_rel_finitesupp] >>
+      `v ∉ supp (listpm dpm) ds2 ∧ v' ∉ supp (listpm dpm) ds2`
+        by (CONJ_TAC >> match_mp_tac (MP_CANON list_rel_freshness) >>
+            metis_tac []) >>
       `v ∉ supp dpm (lf v' bv' ds1' ts' ds2 us)`
         by (notinsupp_fnapp >> srw_tac [][]
-            >- (match_mp_tac FINITE_supplf5 >> srw_tac [][]
-
-
-
-*)
+            >- (match_mp_tac FINITE_supplf5 >> srw_tac [][]) >>
+            notinsupp_fnapp >> srw_tac [][]
+            >- (match_mp_tac FINITE_supplf4 >> srw_tac [][]) >>
+            notinsupp_fnapp >> srw_tac [][]
+            >- (match_mp_tac FINITE_supplf3 >> srw_tac [][]) >>
+            notinsupp_fnapp >> srw_tac [][]
+            >- (match_mp_tac FINITE_supplf2 >> srw_tac [][]) >>
+            notinsupp_fnapp >> srw_tac [][]
+            >- (rpt (match_mp_tac fnpm_is_perm >> srw_tac [][]))
+            >- (match_mp_tac FINITE_supplf1 >> srw_tac [][]) >>
+            notinsupp_fnapp >> srw_tac [][]
+            >- (rpt (match_mp_tac fnpm_is_perm >> srw_tac [][]))
+            >- (match_mp_tac support_FINITE_supp >> srw_tac [][] >>
+                rpt (match_mp_tac fnpm_is_perm >> srw_tac [][])) >>
+            match_mp_tac sub_cpos >> qexists_tac `A` >> srw_tac [][] >>
+            match_mp_tac supp_smallest >> srw_tac [][] >>
+            rpt (match_mp_tac fnpm_is_perm >> srw_tac [][])) >>
+      `v' ∉ supp dpm (lf v' bv' ds1' ts' ds2 us)` by metis_tac [] >>
+      `^lfpm [(v,v')] lf = lf` by metis_tac [support_def] >>
+      pop_assum (fn th => SIMP_TAC (srw_ss()) [Once (GSYM th), SimpRHS]) >>
+      srw_tac [ETA_ss][fnpm_def, supp_fresh, listpm_is_perm,
+                       is_perm_nil]
+    ]
+  ]);
 
 
 (*
