@@ -5,8 +5,8 @@
 (* Commands when run interactively:
 quietdec := true;                                    (* Switch off output    *)
 
-map load ["imported_acl2Theory","load_book"];
-open imported_acl2Theory load_book;
+map load ["imported_acl2Theory"];
+open imported_acl2Theory;
 
 quietdec := false;                                   (* Restore output       *)
 *)
