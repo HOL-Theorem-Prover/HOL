@@ -1299,6 +1299,75 @@ val recursion_axiom = store_thm(
     srw_tac [][]
   ]);
 
+val (genind_rules, genind_ind, genind_cases) = Hol_reln`
+  (∀s vv. vp ⇒ genind vp ap lp (GVAR s vv)) ∧
+  (∀nbv ts. EVERY (genind vp ap lp) ts ∧ ap nbv (LENGTH ts) ⇒
+            genind vp ap lp (GAPP nbv ts)) ∧
+  (∀v bv ts us.
+     EVERY (genind vp ap lp) ts ∧ EVERY (genind vp ap lp) us ∧
+     lp bv (LENGTH ts) (LENGTH us)  ⇒
+     genind vp ap lp (GLAM v bv ts us))
+`;
+
+val grules' = genind_rules |> SPEC_ALL |> CONJUNCTS
+
+val EVERY_AND = prove(
+  ``EVERY (λx. P x ∧ Q x) l ⇔ EVERY P l ∧ EVERY Q l``,
+  Induct_on `l` >> srw_tac [][] >> metis_tac []);
+
+val genind_gtpm = store_thm(
+  "genind_gtpm",
+  ``∀t. genind vp ap lp t ⇒ ∀pi. genind vp ap lp (gtpm pi t)``,
+  Induct_on `genind` >>
+  srw_tac [DNF_ss][gtpm_thm, listTheory.EVERY_MEM] >| [
+    match_mp_tac (List.nth(grules', 0)) >> srw_tac [][],
+    match_mp_tac (List.nth(grules', 1)) >>
+    srw_tac [][listTheory.EVERY_MEM, MEM_MAP] >> srw_tac [][],
+    match_mp_tac (List.nth(grules', 2)) >>
+    srw_tac [][listTheory.EVERY_MEM, MEM_MAP] >> srw_tac [][]
+  ]);
+
+
+(*
+val bvc_genind = prove(
+  ``∀P fv.
+      (∀x. FINITE (fv x)) ∧
+      (∀s vv x. vp ⇒ P (GVAR s vv) x) ∧
+      (∀nbv ts x.
+         (∀xs. (LENGTH xs = LENGTH ts) ⇒ LIST_REL P ts xs) ∧
+         ap nbv (LENGTH ts) ⇒ P (GAPP nbv ts) x) ∧
+      (∀v bv ts us x.
+         (∀xs. (LENGTH xs = LENGTH ts) ⇒ LIST_REL P ts xs) ∧
+         (∀xs. (LENGTH xs = LENGTH us) ⇒ LIST_REL P us xs) ∧
+         lp bv (LENGTH ts) (LENGTH us) ∧ x ∉ fv x ∧ x ∉ supp (listpm gtpm) us
+        ⇒
+         P (GLAM v bv ts us) x)
+   ⇒
+      ∀t. genind vp ap lp t ⇒ ∀x. P t x``,
+  rpt GEN_TAC >> strip_tac >>
+  qsuff_tac `∀t. genind vp ap lp t ⇒ ∀pi x. P (gtpm pi t) x`
+  >- metis_tac [gtpm_NIL] >>
+  Induct_on `genind` >> srw_tac [DNF_ss][gtpm_thm, listTheory.EVERY_MEM] >| [
+    first_x_assum match_mp_tac >> srw_tac [][] >>
+    pop_assum MP_TAC >> qpat_assum `ap nbv XX` (K ALL_TAC) >>
+    qid_spec_tac `xs` >> Induct_on `ts` >> srw_tac [][] >>
+    Cases_on `xs` >> fsrw_tac [][],
+
+    Q_TAC (NEW_TAC "z")
+      `fv x ∪ {lswapstr pi v; v} ∪ supp (listpm gtpm) (MAP (gtpm pi) us) ∪
+       supp (listpm gtpm) (MAP (gtpm pi) ts)` >>
+    `GLAM (lswapstr pi v) bv (MAP (gtpm pi) ts) (MAP (gtpm pi) us) =
+     GLAM z bv (listpm gtpm [(z,lswapstr pi v)] (MAP (gtpm pi) ts))
+               (MAP (gtpm pi) us)`
+       by (srw_tac [][GLAM_eq_thm, not_in_gfvl]
+           >- (fsrw_tac [][GSYM MAP_gtpm, MEM_MAP, NOT_IN_supp_listpm] >>
+               fsrw_tac [DNF_ss][GFV_supp, GFV_gtpm]) >>
+           srw_tac [ETA_ss][MAP_gtpm, is_perm_flip_args, is_perm_nil]) >>
+    pop_assum SUBST1_TAC
+
+
+*)
+
 
 
 
