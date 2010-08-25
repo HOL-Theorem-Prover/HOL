@@ -1251,6 +1251,56 @@ val uniqueness = prove(
     ]
   ]);
 
+val listrel_uniqueness1 = prove(
+  ``^permsupp_sidecond ∧ ^FCB ⇒
+    ∀ts ds. LIST_REL (recn_rel vf af lf A) ts ds ⇒
+            (MAP (λt. @r. recn_rel vf af lf A t r) ts = ds)``,
+  strip_tac >> Induct_on `LIST_REL` >> srw_tac [][] >>
+  `∀r. recn_rel vf af lf A h1 r ⇔ (r = h2)` by metis_tac [uniqueness] >>
+  srw_tac [][]);
+val listrel_uniqueness2 = prove(
+  ``^permsupp_sidecond ∧ ^FCB ⇒
+    ∀ts ds. LIST_REL (recn_rel vf af lf A) ts ds ⇒
+            ∀ds'. LIST_REL (recn_rel vf af lf A) ts ds' ⇔ (ds' = ds)``,
+  strip_tac >> Induct_on `LIST_REL` >> srw_tac [][] >>
+  Cases_on `ds'` >> srw_tac [][] >> metis_tac [uniqueness]);
+
+val recursion_axiom = store_thm(
+  "recursion_axiom",
+  ``^permsupp_sidecond ∧ ^FCB ⇒
+    ∃h. (∀s vv. h (GVAR s vv) = vf s vv) ∧
+        (∀nbv ts. h (GAPP nbv ts) = af nbv (MAP h ts) ts) ∧
+        (∀bv v ts us.
+            v ∉ A ∧ v ∉ supp (listpm gtpm) us ⇒
+            (h (GLAM v bv ts us) = lf v bv (MAP h ts) ts (MAP h us) us))``,
+  strip_tac >> qexists_tac `λt. @r. recn_rel vf af lf A t r` >> srw_tac [][] >|[
+    srw_tac [][Once recn_rel_cases, gterm_11, gterm_distinct, SimpLHS],
+    srw_tac [][Once recn_rel_cases, gterm_11, gterm_distinct, SimpLHS]>>
+    `∃ds. LIST_REL (recn_rel vf af lf A) ts ds`
+        by (srw_tac [][LIST_REL_exists] >> metis_tac [recn_rel_exists]) >>
+    `∀ds'. LIST_REL (recn_rel vf af lf A) ts ds' ⇔ (ds' = ds)`
+        by metis_tac [listrel_uniqueness2] >>
+    srw_tac [][] >>
+    `MAP (λt. @r. recn_rel vf af lf A t r) ts = ds`
+      by (match_mp_tac (MP_CANON listrel_uniqueness1) >> srw_tac [][]) >>
+    srw_tac [][],
+
+    `(∃ds. LIST_REL (recn_rel vf af lf A) ts ds) ∧
+     (∃es.  LIST_REL (recn_rel vf af lf A) us es)`
+        by (srw_tac [][LIST_REL_exists] >> metis_tac [recn_rel_exists]) >>
+    `MAP (λt. @r. recn_rel vf af lf A t r) ts = ds`
+      by (match_mp_tac (MP_CANON listrel_uniqueness1) >> srw_tac [][]) >>
+    `MAP (λt. @r. recn_rel vf af lf A t r) us = es`
+      by (match_mp_tac (MP_CANON listrel_uniqueness1) >> srw_tac [][]) >>
+    `recn_rel vf af lf A (GLAM v bv ts us) (lf v bv ds ts es us)`
+      by srw_tac [][recn_rel_rules] >>
+    `∀r. recn_rel vf af lf A (GLAM v bv ts us) r ⇔ (r = lf v bv ds ts es us)`
+      by metis_tac [uniqueness] >>
+    srw_tac [][]
+  ]);
+
+
+
 
 (*
 (* show connection of with nomset concepts *)
