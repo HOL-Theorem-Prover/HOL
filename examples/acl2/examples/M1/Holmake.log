@@ -15,9 +15,9 @@ Definition has been stored under "ACL2_CL_def".
 Definition has been stored under "ACL2_USER_def".
 Definition has been stored under "ACL2_USER_CL_def".
 Definition has been stored under "ACL2_PACKAGE_ALIST_def".
-runtime: 164.510s,    gctime: 114.215s,     systime: 0.908s.
+runtime: 176.643s,    gctime: 126.572s,     systime: 0.772s.
 Definition has been stored under "ACL2_KNOWN_PACKAGES_def".
-runtime: 0.360s,    gctime: 0.052s,     systime: 0.000s.
+runtime: 0.364s,    gctime: 0.040s,     systime: 0.000s.
 Saved theorem LOOKUP_ind
 Saved theorem LOOKUP_def
 Equations stored under "LOOKUP_def".
@@ -28,7 +28,7 @@ Equations stored under "VALID_PKG_TRIPLES_AUX_def".
 Induction stored under "VALID_PKG_TRIPLES_AUX_ind".
 Definition has been stored under "VALID_PKG_TRIPLES_def".
 Exporting theory "acl2_package" ... done.
-Theory "acl2_package" took 285.598s to build
+Theory "acl2_package" took 327.392s to build
 Analysing acl2_packageTheory.sml
 Analysing acl2_packageTheory.sig
 Compiling acl2_packageTheory.sig
@@ -87,7 +87,7 @@ Saved theorem COMPLEX_MULT_COMM
 Saved theorem COMPLEX_MULT_ASSOC
 Saved theorem COMPLEX_MULT_RID
 Exporting theory "complex_rational" ... done.
-Theory "complex_rational" took 13.981s to build
+Theory "complex_rational" took 14.213s to build
 Analysing complex_rationalTheory.sml
 Analysing complex_rationalTheory.sig
 Compiling complex_rationalTheory.sig
@@ -441,7 +441,7 @@ Equations stored under "imported_symbol_names_def".
 Induction stored under "imported_symbol_names_ind".
 Saved theorem ACL2_SIMPS
 Exporting theory "sexp" ... done.
-Theory "sexp" took 47.583s to build
+Theory "sexp" took 47.783s to build
 Analysing sexpTheory.sml
 Analysing sexpTheory.sig
 Compiling sexpTheory.sig
@@ -631,7 +631,7 @@ Saved theorem lexorder_ind
 "ACL2::LEXORDER" defined with HOL name "lexorder"
 Saved theorem ACL2_SIMPS
 Exporting theory "hol_defaxioms" ... done.
-Theory "hol_defaxioms" took 53.011s to build
+Theory "hol_defaxioms" took 53.063s to build
 Analysing hol_defaxiomsTheory.sml
 Analysing hol_defaxiomsTheory.sig
 Compiling hol_defaxiomsTheory.sig
@@ -749,9 +749,27 @@ Saved theorem example_semantics_1_thm
 Saved theorem concat_symbols_defun
 Saved theorem make_defun_defun
 Exporting theory "imported_acl2" ... done.
-Theory "imported_acl2" took 47.355s to build
+Theory "imported_acl2" took 47.451s to build
 Analysing imported_acl2Theory.sig
 Compiling imported_acl2Theory.sig
 Compiling M1Examples.sml
+Analysing M1Script.sml
 Analysing imported_acl2Theory.sml
 Compiling imported_acl2Theory.sml
+Compiling M1Script.sml
+Linking M1Script.uo to produce theory-builder executable
+<<HOL message: Created theory "M1">>
+Saved theorem exclaim_def
+Saved theorem ifact_def
+Saved theorem ifact_lemma
+Saved theorem ifact_is_factorial
+Saved theorem ifact_correct
+Saved theorem repeat_def
+Saved theorem ifact_sched_def
+Saved theorem test_ifact_examples
+Exporting theory "M1" ... done.
+Theory "M1" took 3.140s to build
+Analysing M1Theory.sml
+Analysing M1Theory.sig
+Compiling M1Theory.sig
+Compiling M1Theory.sml

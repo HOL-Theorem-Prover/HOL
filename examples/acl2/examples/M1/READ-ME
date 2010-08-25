@@ -1,9 +1,9 @@
 Overview
 --------
 
-This directory is a preliminary slurping in of J's M1 model into HOL
-tweaked manually to try to get it to build in HOL4 under Moscow ML and
-Poly/ML.
+This directory is a preliminary slurping in of J Moore's M1 ACL2 JVM
+model into HOL, tweaked manually to try to get it to build in HOL4
+under Moscow ML and Poly/ML.
 
 Holmake should perform the complete proof, including rebuilding the
 HOL-ACL2 infrastructure. This will takes tens of minutes.
@@ -14,17 +14,19 @@ acl2Define) and those that are axiomatically defined based on trusting
 ACL2 (these are defined with acl2AxiomDefine). Ideally everything
 should be properly defined, but I was too lazy to figure out the
 termination proofs for ACL2::NONNEGATIVE-INTEGER-QUOTIENT and
-COMMON-LISP::EXPT (see file hol_defaxiomsScript.sml).
+COMMON-LISP::EXPT (see file hol_defaxiomsScript.sml). See the file
+acl2/ISSUES for some more discussion.
 
-To get a flavour of M1 in HOL, run hol in this directory, load
-"M1Examples" and then look at M1Examples.Examples1 (selectged
-examples) and M1Examples.Examples2 (ev erything).
+To get a flavour of the M1 example in HOL, run hol in this directory,
+load "M1Examples" and then look at M1Examples.Examples1 (some selected
+examples) and M1Examples.Examples2 (shows att the theorems in
+imported_acl2Theory).
 
-A log of doing this is in the file M1Examples.txt.
+A log of doing this (in Moscow ML) is in the file M1Examples.txt.
 
 Notes:
 
- 1. The HOL functions corresponding to the AC2 M1 model are in
+ 1. The HOL functions corresponding to the AC2 M1 JVM model are in
     imported_acl2Theory;
 
  2. The ML function acl2_simp performs some simplifications on
@@ -38,8 +40,8 @@ Files in this directory
 
    READ-ME ............................... This file
 
-   Holmake.log ........................... Log of Holmake
-   M1Examples.txt ........................ Log of loading M1Examples (see above)
+   Holmake.log ........................... Log of Holmake (Moscow ML)
+   M1Examples.txt ........................ Log of loading M1Examples as descrined above (Moscow ML)
 
    sexp.sml .............................. Tool for interactively processing s-expressions
    complex_rationalScript.sml ............ Script to build theory of complex rationals
