@@ -1,6 +1,39 @@
-Analysing hol_defaxiomsScript.sml
+Analysing M1Examples.sml
 Trying to create directory .HOLMK for dependency files
+Analysing imported_acl2Script.sml
+Analysing problem_set_1_answers.sml
 Analysing sexp.sml
+Analysing m1_story.sml
+Analysing acl2_packageScript.sml
+Analysing PKGS.sml
+Compiling sexp.sml
+Compiling PKGS.sml
+Compiling acl2_packageScript.sml
+Linking acl2_packageScript.uo to produce theory-builder executable
+<<HOL message: Created theory "acl2_package">>
+Definition has been stored under "ACL2_CL_def".
+Definition has been stored under "ACL2_USER_def".
+Definition has been stored under "ACL2_USER_CL_def".
+Definition has been stored under "ACL2_PACKAGE_ALIST_def".
+runtime: 164.510s,    gctime: 114.215s,     systime: 0.908s.
+Definition has been stored under "ACL2_KNOWN_PACKAGES_def".
+runtime: 0.360s,    gctime: 0.052s,     systime: 0.000s.
+Saved theorem LOOKUP_ind
+Saved theorem LOOKUP_def
+Equations stored under "LOOKUP_def".
+Induction stored under "LOOKUP_ind".
+Saved theorem VALID_PKG_TRIPLES_AUX_ind
+Saved theorem VALID_PKG_TRIPLES_AUX_def
+Equations stored under "VALID_PKG_TRIPLES_AUX_def".
+Induction stored under "VALID_PKG_TRIPLES_AUX_ind".
+Definition has been stored under "VALID_PKG_TRIPLES_def".
+Exporting theory "acl2_package" ... done.
+Theory "acl2_package" took 285.598s to build
+Analysing acl2_packageTheory.sml
+Analysing acl2_packageTheory.sig
+Compiling acl2_packageTheory.sig
+Compiling acl2_packageTheory.sml
+Analysing hol_defaxiomsScript.sml
 Analysing complex_rationalScript.sml
 Compiling complex_rationalScript.sml
 Linking complex_rationalScript.uo to produce theory-builder executable
@@ -54,41 +87,12 @@ Saved theorem COMPLEX_MULT_COMM
 Saved theorem COMPLEX_MULT_ASSOC
 Saved theorem COMPLEX_MULT_RID
 Exporting theory "complex_rational" ... done.
-Theory "complex_rational" took 14.113s to build
+Theory "complex_rational" took 13.981s to build
 Analysing complex_rationalTheory.sml
 Analysing complex_rationalTheory.sig
 Compiling complex_rationalTheory.sig
 Compiling complex_rationalTheory.sml
 Analysing sexpScript.sml
-Analysing acl2_packageScript.sml
-Analysing PKGS.sml
-Compiling PKGS.sml
-Compiling acl2_packageScript.sml
-Linking acl2_packageScript.uo to produce theory-builder executable
-<<HOL message: Created theory "acl2_package">>
-Definition has been stored under "ACL2_CL_def".
-Definition has been stored under "ACL2_USER_def".
-Definition has been stored under "ACL2_USER_CL_def".
-Definition has been stored under "ACL2_PACKAGE_ALIST_def".
-runtime: 148.657s,    gctime: 97.150s,     systime: 0.884s.
-Definition has been stored under "ACL2_KNOWN_PACKAGES_def".
-runtime: 0.296s,    gctime: 0.032s,     systime: 0.000s.
-Saved theorem LOOKUP_ind
-Saved theorem LOOKUP_def
-Equations stored under "LOOKUP_def".
-Induction stored under "LOOKUP_ind".
-Saved theorem VALID_PKG_TRIPLES_AUX_ind
-Saved theorem VALID_PKG_TRIPLES_AUX_def
-Equations stored under "VALID_PKG_TRIPLES_AUX_def".
-Induction stored under "VALID_PKG_TRIPLES_AUX_ind".
-Definition has been stored under "VALID_PKG_TRIPLES_def".
-Exporting theory "acl2_package" ... done.
-Theory "acl2_package" took 270.389s to build
-Analysing acl2_packageTheory.sml
-Analysing acl2_packageTheory.sig
-Compiling acl2_packageTheory.sig
-Compiling acl2_packageTheory.sml
-Compiling sexp.sml
 Compiling sexpScript.sml
 Linking sexpScript.uo to produce theory-builder executable
 <<HOL message: Created theory "sexp">>
@@ -437,7 +441,7 @@ Equations stored under "imported_symbol_names_def".
 Induction stored under "imported_symbol_names_ind".
 Saved theorem ACL2_SIMPS
 Exporting theory "sexp" ... done.
-Theory "sexp" took 47.443s to build
+Theory "sexp" took 47.583s to build
 Analysing sexpTheory.sml
 Analysing sexpTheory.sig
 Compiling sexpTheory.sig
@@ -627,172 +631,127 @@ Saved theorem lexorder_ind
 "ACL2::LEXORDER" defined with HOL name "lexorder"
 Saved theorem ACL2_SIMPS
 Exporting theory "hol_defaxioms" ... done.
-Theory "hol_defaxioms" took 52.835s to build
+Theory "hol_defaxioms" took 53.011s to build
 Analysing hol_defaxiomsTheory.sml
 Analysing hol_defaxiomsTheory.sig
 Compiling hol_defaxiomsTheory.sig
 Compiling hol_defaxiomsTheory.sml
-Analysing load_book.sml
-Analysing load_book.sig
-Compiling load_book.sig
-Compiling load_book.sml
-../../../../bin/hol < make_imported_acl2_theory.ml
-
----------------------------------------------------------------------
-       HOL-4 [Kananaskis 6 (stdknl, built Thu Mar 11 18:29:45 2010)]
-
-       For introductory HOL help, type: help "hol";
-
----------------------------------------------------------------------
-
-                                  --------------- ][loading theories and proof tools *************** ]
-[closing file "/local/scratch/mjcg/HOL98/hol4/HOL/tools/end-init-boss.sml"]
-- > val it = () : unit
-- [opening file "imported_acl2_books.ml"]
-> val imported_acl2_books = ["problem-set-1-answers", "m1-story"] : string list
-[closing file "imported_acl2_books.ml"]
-> val it = () : unit
-- > val current_package = ref "UnspecifiedPackage" : string ref
-- <<HOL message: Created theory "imported_acl2">>
-> val it = () : unit
-- > val aplist = fn : (string -> (string * thm) list list) -> string list -> unit
-- [opening file "problem-set-1-answers.ml"]
-[closing file "problem-set-1-answers.ml"]
+Compiling problem_set_1_answers.sml
+Compiling m1_story.sml
+Compiling imported_acl2Script.sml
+Linking imported_acl2Script.uo to produce theory-builder executable
+<<HOL message: Created theory "imported_acl2">>
 Discarding duplicated events.
-runtime: 17.181s,    gctime: 6.200s,     systime: 0.032s.
-[opening file "m1-story.ml"]
-[closing file "m1-story.ml"]
+Saved theorem push_defun
+Saved theorem top_defun
+Saved theorem pop_defun
+Saved theorem nth_defun
+Saved theorem make_state_defun
+Saved theorem pc_defun
+Saved theorem locals_defun
+Saved theorem stack_defun
+Saved theorem program_defun
+Saved theorem op_code_defun
+Saved theorem arg1_defun
+Saved theorem arg2_defun
+Saved theorem arg3_defun
+Saved theorem m1_len_defun
+Saved theorem app_defun
+Saved theorem rev_defun
+Saved theorem rev1_defun
+Saved theorem frev_defun
+Saved theorem repeat_defun
+Saved theorem popn_defun
+Saved theorem update_nth_defun
+Saved theorem m1_member_defun
+Saved theorem index_defun
+Saved theorem suppliedp_defun
+Saved theorem actual_defun
+Saved theorem boundp_defun
+Saved theorem binding_defun
+Saved theorem bind_defun
+Saved theorem u_fix_defun
+Saved theorem s_fix_defun
+Saved theorem u_big1_defun
+Saved theorem u_big_defun
+Saved theorem s_big_defun
+Saved theorem nextn_defun
+Saved theorem skipn_defun
 Discarding duplicated events.
+Saved theorem next_inst_defun
+Saved theorem execute_iconst_defun
+Saved theorem execute_iload_defun
+Saved theorem execute_iadd_defun
+Saved theorem execute_istore_defun
+Saved theorem execute_isub_defun
+Saved theorem execute_imul_defun
+Saved theorem execute_goto_defun
+Saved theorem execute_ifle_defun
+Saved theorem do_inst_defun
+Saved theorem step_defun
+Saved theorem run_defun
+Saved theorem factorial_example_0_thm
+Saved theorem ifact_loop_sched_defun
+Saved theorem ifact_sched_defun
+Saved theorem exclaim_defun
+Saved theorem test_ifact_defun
+Saved theorem factorial_example_1_thm
+Saved theorem factorial_example_2_thm
+Saved theorem even_sched_defun
+Saved theorem test_even_defun
+Saved theorem test_even_theorem_thm
+Saved theorem collect_at_end_defun
+Saved theorem nth_nil_thm
+Saved theorem acl2_count_nth_thm
+Saved theorem collect_vars_in_expr_defun
 Mutual recursion? COLLECT-VARS-IN-STMT* has unbound free variables: M1::COLLECT-VARS-IN-STMT 
 Mutual recursion? COLLECT-VARS-IN-STMT has unbound free variables: M1::COLLECT-VARS-IN-STMT* 
+Saved theorem collect_vars_in_stmt_star_space_m1_colon_colon_collect_vars_in_stmt_mutual
+Saved theorem op_exclaim_defun
+Saved theorem iload_exclaim_defun
+Saved theorem iconst_exclaim_defun
+Saved theorem expr_exclaim_defun
+Saved theorem ifle_exclaim_defun
+Saved theorem goto_exclaim_defun
+Saved theorem while_exclaim_defun
+Saved theorem test_exclaim_defun
+Saved theorem istore_exclaim_defun
 Mutual recursion? STMT*! has unbound free variables: M1::STMT! 
 Mutual recursion? STMT! has unbound free variables: M1::STMT*! 
-runtime: 31.658s,    gctime: 4.716s,     systime: 0.056s.
-> val it = () : unit
-- Exporting theory "imported_acl2" ... done.
-Theory "imported_acl2" took 48.871s to build
-> val it = () : unit
-- Compiled imported_acl2 theory files.
-> val it = () : unit
-- 
-../../../../bin/hol < make_M1Theory.ml
-
----------------------------------------------------------------------
-       HOL-4 [Kananaskis 6 (stdknl, built Thu Mar 11 18:29:45 2010)]
-
-       For introductory HOL help, type: help "hol";
-
----------------------------------------------------------------------
-
-                                  --------------- ][loading theories and proof tools *************** ]
-[closing file "/local/scratch/mjcg/HOL98/hol4/HOL/tools/end-init-boss.sml"]
-- > val it = () : unit
-- <<HOL message: Created theory "M1">>
-- > val exclaim_def =
-    |- ∀[0;32mn[0m.
-         exclaim [0;32mn[0m =
-         itel [(zp [0;32mn[0m,nat 1)] (mult [0;32mn[0m (exclaim (add (int (-1)) [0;32mn[0m)))
-     : thm
-- > val ifact_def =
-    |- ∀[0;32mn[0m [0;32ma[0m.
-         ifact [0;32mn[0m [0;32ma[0m = itel [(zp [0;32mn[0m,[0;32ma[0m)] (ifact (add (int (-1)) [0;32mn[0m) (mult [0;32mn[0m [0;32ma[0m))
-     : thm
-- > val ifact_lemma =
-    |- ∀[0;32mstack[0m [0;32ma[0m [0;32mn[0m.
-         (|= natp [0;32mn[0m) ⇒
-         |= equal
-              (run (ifact_sched [0;32mn[0m)
-                 (make_state (nat 0) (List [[0;32mn[0m; [0;32ma[0m]) [0;32mstack[0m
-                    (List
-                       [List [sym "M1" "ICONST"; nat 1];
-                        List [sym "M1" "ISTORE"; nat 1];
-                        List [sym "M1" "ILOAD"; nat 0];
-                        List [sym "M1" "IFLE"; nat 10];
-                        List [sym "M1" "ILOAD"; nat 0];
-                        List [sym "M1" "ILOAD"; nat 1];
-                        List [sym "M1" "IMUL"];
-                        List [sym "M1" "ISTORE"; nat 1];
-                        List [sym "M1" "ILOAD"; nat 0];
-                        List [sym "M1" "ICONST"; nat 1];
-                        List [sym "M1" "ISUB"];
-                        List [sym "M1" "ISTORE"; nat 0];
-                        List [sym "M1" "GOTO"; int (-10)];
-                        List [sym "M1" "ILOAD"; nat 1];
-                        List [sym "M1" "HALT"]])))
-              (make_state (nat 14) (List [nat 0; ifact [0;32mn[0m (nat 1)])
-                 (push (ifact [0;32mn[0m (nat 1)) [0;32mstack[0m)
-                 (List
-                    [List [sym "M1" "ICONST"; nat 1];
-                     List [sym "M1" "ISTORE"; nat 1];
-                     List [sym "M1" "ILOAD"; nat 0];
-                     List [sym "M1" "IFLE"; nat 10];
-                     List [sym "M1" "ILOAD"; nat 0];
-                     List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
-                     List [sym "M1" "ISTORE"; nat 1];
-                     List [sym "M1" "ILOAD"; nat 0];
-                     List [sym "M1" "ICONST"; nat 1];
-                     List [sym "M1" "ISUB"];
-                     List [sym "M1" "ISTORE"; nat 0];
-                     List [sym "M1" "GOTO"; int (-10)];
-                     List [sym "M1" "ILOAD"; nat 1];
-                     List [sym "M1" "HALT"]])) : thm
-- > val ifact_is_factorial =
-    |- ∀[0;32ma[0m [0;32mn[0m.
-         (|= natp [0;32mn[0m) ∧ (|= natp [0;32ma[0m) ⇒
-         |= equal (ifact [0;32mn[0m [0;32ma[0m) (mult (exclaim [0;32mn[0m) [0;32ma[0m)
-     : thm
-- > val ifact_correct =
-    |- ∀[0;32mstack[0m [0;32ma[0m [0;32mn[0m.
-         (|= natp [0;32mn[0m) ⇒
-         |= equal
-              (run (ifact_sched [0;32mn[0m)
-                 (make_state (nat 0) (List [[0;32mn[0m; [0;32ma[0m]) [0;32mstack[0m
-                    (List
-                       [List [sym "M1" "ICONST"; nat 1];
-                        List [sym "M1" "ISTORE"; nat 1];
-                        List [sym "M1" "ILOAD"; nat 0];
-                        List [sym "M1" "IFLE"; nat 10];
-                        List [sym "M1" "ILOAD"; nat 0];
-                        List [sym "M1" "ILOAD"; nat 1];
-                        List [sym "M1" "IMUL"];
-                        List [sym "M1" "ISTORE"; nat 1];
-                        List [sym "M1" "ILOAD"; nat 0];
-                        List [sym "M1" "ICONST"; nat 1];
-                        List [sym "M1" "ISUB"];
-                        List [sym "M1" "ISTORE"; nat 0];
-                        List [sym "M1" "GOTO"; int (-10)];
-                        List [sym "M1" "ILOAD"; nat 1];
-                        List [sym "M1" "HALT"]])))
-              (make_state (nat 14) (List [nat 0; exclaim [0;32mn[0m])
-                 (push (exclaim [0;32mn[0m) [0;32mstack[0m)
-                 (List
-                    [List [sym "M1" "ICONST"; nat 1];
-                     List [sym "M1" "ISTORE"; nat 1];
-                     List [sym "M1" "ILOAD"; nat 0];
-                     List [sym "M1" "IFLE"; nat 10];
-                     List [sym "M1" "ILOAD"; nat 0];
-                     List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
-                     List [sym "M1" "ISTORE"; nat 1];
-                     List [sym "M1" "ILOAD"; nat 0];
-                     List [sym "M1" "ICONST"; nat 1];
-                     List [sym "M1" "ISUB"];
-                     List [sym "M1" "ISTORE"; nat 0];
-                     List [sym "M1" "GOTO"; int (-10)];
-                     List [sym "M1" "ILOAD"; nat 1];
-                     List [sym "M1" "HALT"]])) : thm
-- > val repeat_def =
-    |- ∀[0;32mth[0m [0;32mn[0m.
-         repeat [0;32mth[0m [0;32mn[0m =
-         itel [(zp [0;32mn[0m,List [])] (cons [0;32mth[0m (repeat [0;32mth[0m (add (int (-1)) [0;32mn[0m)))
-     : thm
-- > val ifact_sched_def =
-    |- ∀[0;32mn[0m. ifact_sched [0;32mn[0m = app (repeat (nat 0) (nat 2)) (ifact_loop_sched [0;32mn[0m)
-     : thm
-- > val test_ifact_examples =
-    |- (|= equal (test_ifact (nat 5)) (exclaim (nat 5))) ∧
-       (|= equal (test_ifact (nat 10)) (exclaim (nat 10))) ∧
-       |= equal (test_ifact (nat 100)) (exclaim (nat 100)) : thm
-- Exporting theory "M1" ... done.
-Theory "M1" took 4.424s to build
-- Compiled M1 theory files.
-- 
+Saved theorem stmt_star_exclaim_space_m1_colon_colon_stmt_exclaim_mutual
+Saved theorem compile_defun
+Saved theorem example_compilation_1_thm
+Saved theorem example_compilation_2_thm
+Saved theorem example_execution_1_thm
+Saved theorem example_execution_2_thm
+Saved theorem stacks_thm
+Saved theorem states_thm
+Saved theorem step_opener_thm
+Saved theorem run_app_thm
+Saved theorem run_opener_thm
+Saved theorem nth_add1_exclaim_thm
+Saved theorem nth_update_nth_thm
+Saved theorem update_nth_update_nth_1_thm
+Saved theorem update_nth_update_nth_2_thm
+Saved theorem ifact_defun
+Saved theorem test_ifact_examples_thm
+Saved theorem ifact_loop_lemma_thm
+Saved theorem ifact_lemma_thm
+Saved theorem ifact_is_factorial_thm
+Saved theorem ifact_correct_thm
+Saved theorem ifact_correct_corollary_1_thm
+Saved theorem ifact_correct_corollary_2_thm
+Saved theorem example_modify_1_thm
+Saved theorem example_modify_2_thm
+Saved theorem example_modify_3_thm
+Saved theorem pattern_bindings_defun
+Saved theorem example_semantics_1_thm
+Saved theorem concat_symbols_defun
+Saved theorem make_defun_defun
+Exporting theory "imported_acl2" ... done.
+Theory "imported_acl2" took 47.355s to build
+Analysing imported_acl2Theory.sig
+Compiling imported_acl2Theory.sig
+Compiling M1Examples.sml
+Analysing imported_acl2Theory.sml
+Compiling imported_acl2Theory.sml

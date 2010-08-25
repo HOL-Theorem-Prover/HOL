@@ -1,12 +1,12 @@
 (*****************************************************************************)
-(* Create "M1Theory"                                                         *)
+(* Examples of M1                                                            *)
 (*****************************************************************************)
 
 (* Commands when run interactively:
 quietdec := true;                                    (* Switch off output    *)
 
-map load ["imported_acl2Theory","load_book"];
-open imported_acl2Theory load_book;
+map load ["sexpTheory","imported_acl2Theory"];
+open sexpTheory imported_acl2Theory;
 
 quietdec := false;                                   (* Restore output       *)
 *)
@@ -21,45 +21,38 @@ open HolKernel Parse boolLib bossLib;
 * Open theories (including ratTheory from Jens Brandt).
 ******************************************************************************)
 
-open stringLib complex_rationalTheory acl2_packageTheory sexp 
-     imported_acl2Theory load_book;
+open sexpTheory imported_acl2Theory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
 (******************************************************************************
-* Start a new theory called M1
+* Function to simplify imported ACL2
 ******************************************************************************)
 
-val _ = new_theory "M1";
+val acl2_simp =
+ SIMP_RULE
+  list_ss
+  ([let_simp,andl_fold,itel_fold,itel_append,
+    forall2_thm,exists2_thm,forall_fold,exists_fold,
+    implies,andl_simp,not_simp,t_nil]
+   @
+   (map GSYM [int_def,nat_def,List_def,asym_def,csym_def,ksym_def,osym_def]));
 
 (******************************************************************************
 M1 contains simplified definitions and theorems from other theories
 ******************************************************************************)
 
-val exclaim_def =
- save_thm("exclaim_def", load_simp_fn exclaim_defun);
+val Examples1 =
+ [("exclaim_def",         acl2_simp exclaim_defun),
+  ("ifact_def",           acl2_simp ifact_defun),
+  ("ifact_lemma",         acl2_simp ifact_lemma_thm),
+  ("ifact_is_factorial",  acl2_simp ifact_is_factorial_thm),
+  ("ifact_correct",       acl2_simp ifact_correct_thm),
+  ("repeat_def",          acl2_simp repeat_defun),
+  ("ifact_sched_def",     acl2_simp ifact_sched_defun),
+  ("test_ifact_examples", acl2_simp test_ifact_examples_thm)];
 
-val ifact_def =
- save_thm("ifact_def", load_simp_fn ifact_defun);
+val Examples2 = map (I ## acl2_simp) (theorems "imported_acl2");
 
-val ifact_lemma =
- save_thm("ifact_lemma", load_simp_fn ifact_lemma_thm);
-
-val ifact_is_factorial =
- save_thm("ifact_is_factorial", load_simp_fn ifact_is_factorial_thm);
-
-val ifact_correct =
- save_thm("ifact_correct", load_simp_fn ifact_correct_thm);
-
-val repeat_def =
- save_thm("repeat_def", load_simp_fn repeat_defun);
-
-val ifact_sched_def =
- save_thm("ifact_sched_def", load_simp_fn ifact_sched_defun);
-
-val test_ifact_examples =
- save_thm("test_ifact_examples", load_simp_fn test_ifact_examples_thm);
-
-val _ = export_theory();

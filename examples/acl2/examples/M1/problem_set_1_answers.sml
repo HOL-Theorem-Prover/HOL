@@ -1,4 +1,45 @@
-val _ = sexp.acl2_list_ref := [
+
+(*****************************************************************************)
+(* Ignore everything up to "END BOILERPLATE"                                 *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
+(*****************************************************************************)
+
+(******************************************************************************
+* Load theories
+******************************************************************************)
+(* The commented out stuff below should be loaded in interactive sessions
+quietdec := true;
+map
+ load
+ ["sexp"];
+open sexp;
+printDepth := 1000;
+printLength := 1000;
+Globals.checking_const_names := false;
+quietdec := false;
+*)
+
+structure problem_set_1_answers =
+struct
+
+(******************************************************************************
+* Boilerplate needed for compilation: open HOL4 systems modules
+******************************************************************************)
+open HolKernel Parse boolLib bossLib;
+
+(******************************************************************************
+* Open theories
+******************************************************************************)
+open intSyntax pairSyntax listSyntax stringLib numLib sexp;
+
+(*****************************************************************************)
+(* END BOILERPLATE                                                           *)
+(*****************************************************************************)
+
+val problem_set_1_answers = [
 
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "M1" "PUSH") (mkpair (
 mkpair (mksym "M1" "X") (mkpair (mksym "M1" "Y") (mksym "COMMON-LISP" "NIL"))) (
@@ -446,5 +487,4 @@ mksym "COMMON-LISP" "NIL"))))) (mksym "COMMON-LISP" "NIL")))))
 
 ];
 
-val _ = current_package :=
- implode(map chr (cons 77 (cons 49 nil)));
+end

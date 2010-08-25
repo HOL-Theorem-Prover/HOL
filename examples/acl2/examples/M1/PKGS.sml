@@ -1,3 +1,44 @@
+
+(*****************************************************************************)
+(* Ignore everything up to "END BOILERPLATE"                                 *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
+(*****************************************************************************)
+
+(******************************************************************************
+* Load theories
+******************************************************************************)
+(* The commented out stuff below should be loaded in interactive sessions
+quietdec := true;
+map
+ load
+ ["sexp"];
+open sexp;
+printDepth := 1000;
+printLength := 1000;
+Globals.checking_const_names := false;
+quietdec := false;
+*)
+
+structure PKGS =
+struct
+
+(******************************************************************************
+* Boilerplate needed for compilation: open HOL4 systems modules
+******************************************************************************)
+open HolKernel Parse boolLib bossLib;
+
+(******************************************************************************
+* Open theories
+******************************************************************************)
+open intSyntax pairSyntax listSyntax stringLib numLib sexp;
+
+(*****************************************************************************)
+(* END BOILERPLATE                                                           *)
+(*****************************************************************************)
+
 val ACL2_PACKAGE_ALIST =
    [
     ("&ALLOW-OTHER-KEYS" , "ACL2" , "COMMON-LISP"),
@@ -10290,3 +10331,5 @@ val ACL2_KNOWN_PACKAGES =
     "ACL2",
     "COMMON-LISP",
     "KEYWORD"];
+
+end

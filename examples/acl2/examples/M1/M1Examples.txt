@@ -1,0 +1,901 @@
+hol
+
+---------------------------------------------------------------------
+       HOL-4 [Kananaskis 6 (stdknl, built Thu Mar 11 18:29:45 2010)]
+
+       For introductory HOL help, type: help "hol";
+
+---------------------------------------------------------------------
+
+[loading theories and proof tools ............... ]
+[closing file "/local/scratch/mjcg/HOL98/hol4/HOL/tools/end-init-boss.sml"]
+-  load "M1Examples";
+> val it = () : unit
+- M1Examples.Examples1;
+> val it =
+    [("exclaim_def",
+      |- ∀n.
+           exclaim n =
+           itel [(zp n,nat 1)] (mult n (exclaim (add (int (-1)) n)))),
+     ("ifact_def",
+      |- ∀n a.
+           ifact n a = itel [(zp n,a)] (ifact (add (int (-1)) n) (mult n a))),
+     ("ifact_lemma",
+      |- ∀stack a n.
+           (|= natp n) ⇒
+           |= equal
+                (run (ifact_sched n)
+                   (make_state (nat 0) (List [n; a]) stack
+                      (List
+                         [List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "IFLE"; nat 10];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "IMUL"];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISUB"];
+                          List [sym "M1" "ISTORE"; nat 0];
+                          List [sym "M1" "GOTO"; int (-10)];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "HALT"]])))
+                (make_state (nat 14) (List [nat 0; ifact n (nat 1)])
+                   (push (ifact n (nat 1)) stack)
+                   (List
+                      [List [sym "M1" "ICONST"; nat 1];
+                       List [sym "M1" "ISTORE"; nat 1];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "IFLE"; nat 10];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
+                       List [sym "M1" "ISTORE"; nat 1];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "ICONST"; nat 1];
+                       List [sym "M1" "ISUB"];
+                       List [sym "M1" "ISTORE"; nat 0];
+                       List [sym "M1" "GOTO"; int (-10)];
+                       List [sym "M1" "ILOAD"; nat 1];
+                       List [sym "M1" "HALT"]]))),
+     ("ifact_is_factorial",
+      |- ∀a n.
+           (|= natp n) ∧ (|= natp a) ⇒
+           |= equal (ifact n a) (mult (exclaim n) a)),
+     ("ifact_correct",
+      |- ∀stack a n.
+           (|= natp n) ⇒
+           |= equal
+                (run (ifact_sched n)
+                   (make_state (nat 0) (List [n; a]) stack
+                      (List
+                         [List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "IFLE"; nat 10];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "IMUL"];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISUB"];
+                          List [sym "M1" "ISTORE"; nat 0];
+                          List [sym "M1" "GOTO"; int (-10)];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "HALT"]])))
+                (make_state (nat 14) (List [nat 0; exclaim n])
+                   (push (exclaim n) stack)
+                   (List
+                      [List [sym "M1" "ICONST"; nat 1];
+                       List [sym "M1" "ISTORE"; nat 1];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "IFLE"; nat 10];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
+                       List [sym "M1" "ISTORE"; nat 1];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "ICONST"; nat 1];
+                       List [sym "M1" "ISUB"];
+                       List [sym "M1" "ISTORE"; nat 0];
+                       List [sym "M1" "GOTO"; int (-10)];
+                       List [sym "M1" "ILOAD"; nat 1];
+                       List [sym "M1" "HALT"]]))),
+     ("repeat_def",
+      |- ∀th n.
+           repeat th n =
+           itel [(zp n,List [])] (cons th (repeat th (add (int (-1)) n)))),
+     ("ifact_sched_def",
+      |- ∀n. ifact_sched n = app (repeat (nat 0) (nat 2)) (ifact_loop_sched n)),
+     ("test_ifact_examples",
+      |- (|= equal (test_ifact (nat 5)) (exclaim (nat 5))) ∧
+         (|= equal (test_ifact (nat 10)) (exclaim (nat 10))) ∧
+         |= equal (test_ifact (nat 100)) (exclaim (nat 100)))] :
+  (string * thm) list
+- M1Examples.Examples2;
+> val it =
+    [("push_defun", |- ∀x y. push x y = cons x y),
+     ("top_defun", |- ∀stack. top stack = car stack),
+     ("pop_defun", |- ∀stack. pop stack = cdr stack),
+     ("nth_defun",
+      |- ∀n list.
+           nth n list =
+           itel [(zp n,car list)] (nth (add (int (-1)) n) (cdr list))),
+     ("make_state_defun",
+      |- ∀pc locals stack program.
+           make_state pc locals stack program =
+           List [pc; locals; stack; program]),
+     ("pc_defun", |- ∀s. pc s = nth (nat 0) s),
+     ("locals_defun", |- ∀s. locals s = nth (nat 1) s),
+     ("stack_defun", |- ∀s. stack s = nth (nat 2) s),
+     ("program_defun", |- ∀s. program s = nth (nat 3) s),
+     ("op_code_defun", |- ∀inst. op_code inst = car inst),
+     ("arg1_defun", |- ∀inst. arg1 inst = nth (nat 1) inst),
+     ("arg2_defun", |- ∀inst. arg2 inst = nth (nat 2) inst),
+     ("arg3_defun", |- ∀inst. arg3 inst = nth (nat 3) inst),
+     ("m1_len_defun",
+      |- ∀x. m1_len x = itel [(endp x,nat 0)] (add (nat 1) (m1_len (cdr x)))),
+     ("app_defun",
+      |- ∀x y. app x y = itel [(endp x,y)] (cons (car x) (app (cdr x) y))),
+     ("rev_defun",
+      |- ∀x.
+           rev x = itel [(endp x,List [])] (app (rev (cdr x)) (List [car x]))),
+     ("rev1_defun",
+      |- ∀x a. rev1 x a = itel [(endp x,a)] (rev1 (cdr x) (cons (car x) a))),
+     ("frev_defun", |- ∀x. frev x = rev1 x (List [])),
+     ("repeat_defun",
+      |- ∀th n.
+           repeat th n =
+           itel [(zp n,List [])] (cons th (repeat th (add (int (-1)) n)))),
+     ("popn_defun",
+      |- ∀n stk.
+           popn n stk = itel [(zp n,stk)] (popn (add (int (-1)) n) (pop stk))),
+     ("update_nth_defun",
+      |- ∀n v list.
+           update_nth n v list =
+           itel [(zp n,cons v (cdr list))]
+             (cons (car list) (update_nth (add (int (-1)) n) v (cdr list)))),
+     ("m1_member_defun",
+      |- ∀e list.
+           m1_member e list =
+           itel [(endp list,List []); (equal e (car list),t)]
+             (m1_member e (cdr list))),
+     ("index_defun",
+      |- ∀e lst.
+           index e lst =
+           itel [(endp lst,nat 0); (equal e (car lst),nat 0)]
+             (add (nat 1) (index e (cdr lst)))),
+     ("suppliedp_defun",
+      |- ∀key args.
+           suppliedp key args =
+           itel [(endp args,List []); (equal key (car args),t)]
+             (suppliedp key (cdr (cdr args)))),
+     ("actual_defun",
+      |- ∀key args.
+           actual key args =
+           itel [(endp args,List []); (equal key (car args),car (cdr args))]
+             (actual key (cdr (cdr args)))),
+     ("boundp_defun",
+      |- ∀var alist.
+           boundp var alist =
+           itel [(endp alist,List []); (equal var (car (car alist)),t)]
+             (boundp var (cdr alist))),
+     ("binding_defun",
+      |- ∀var alist.
+           binding var alist =
+           itel
+             [(endp alist,List []);
+              (equal var (car (car alist)),car (cdr (car alist)))]
+             (binding var (cdr alist))),
+     ("bind_defun",
+      |- ∀var val alist.
+           bind var val alist =
+           itel
+             [(endp alist,List [List [var; val]]);
+              (equal var (car (car alist)),
+               cons (List [var; val]) (cdr alist))]
+             (cons (car alist) (bind var val (cdr alist)))),
+     ("u_fix_defun", |- ∀x n. u_fix x n = mod x (expt (nat 2) n)),
+     ("s_fix_defun",
+      |- ∀x n.
+           s_fix x n =
+           itel
+             [(less (mod x (expt (nat 2) n))
+                 (expt (nat 2) (add (int (-1)) n)),mod x (expt (nat 2) n))]
+             (add (mod x (expt (nat 2) n)) (unary_minus (expt (nat 2) n)))),
+     ("u_big1_defun",
+      |- ∀lst acc.
+           u_big1 lst acc =
+           itel [(endp lst,acc)]
+             (u_big1 (cdr lst)
+                (add (u_fix (car lst) (nat 8))
+                   (mult (expt (nat 2) (nat 8)) acc)))),
+     ("u_big_defun", |- ∀lst. u_big lst = u_big1 lst (nat 0)),
+     ("s_big_defun",
+      |- ∀lst. s_big lst = s_fix (u_big lst) (mult (nat 8) (m1_len lst))),
+     ("nextn_defun",
+      |- ∀n lst.
+           nextn n lst =
+           itel [(zp n,List [])]
+             (cons (car lst) (nextn (add (int (-1)) n) (cdr lst)))),
+     ("skipn_defun",
+      |- ∀n lst.
+           skipn n lst =
+           itel [(zp n,lst)] (skipn (add (int (-1)) n) (cdr lst))),
+     ("next_inst_defun", |- ∀s. next_inst s = nth (pc s) (program s)),
+     ("execute_iconst_defun",
+      |- ∀inst s.
+           execute_iconst inst s =
+           make_state (add (nat 1) (pc s)) (locals s)
+             (push (arg1 inst) (stack s)) (program s)),
+     ("execute_iload_defun",
+      |- ∀inst s.
+           execute_iload inst s =
+           make_state (add (nat 1) (pc s)) (locals s)
+             (push (nth (arg1 inst) (locals s)) (stack s)) (program s)),
+     ("execute_iadd_defun",
+      |- ∀inst s.
+           execute_iadd inst s =
+           make_state (add (nat 1) (pc s)) (locals s)
+             (push (add (top (pop (stack s))) (top (stack s)))
+                (pop (pop (stack s)))) (program s)),
+     ("execute_istore_defun",
+      |- ∀inst s.
+           execute_istore inst s =
+           make_state (add (nat 1) (pc s))
+             (update_nth (arg1 inst) (top (stack s)) (locals s))
+             (pop (stack s)) (program s)),
+     ("execute_isub_defun",
+      |- ∀inst s.
+           execute_isub inst s =
+           make_state (add (nat 1) (pc s)) (locals s)
+             (push (add (top (pop (stack s))) (unary_minus (top (stack s))))
+                (pop (pop (stack s)))) (program s)),
+     ("execute_imul_defun",
+      |- ∀inst s.
+           execute_imul inst s =
+           make_state (add (nat 1) (pc s)) (locals s)
+             (push (mult (top (pop (stack s))) (top (stack s)))
+                (pop (pop (stack s)))) (program s)),
+     ("execute_goto_defun",
+      |- ∀inst s.
+           execute_goto inst s =
+           make_state (add (arg1 inst) (pc s)) (locals s) (stack s)
+             (program s)),
+     ("execute_ifle_defun",
+      |- ∀inst s.
+           execute_ifle inst s =
+           make_state
+             (itel
+                [(not (less (nat 0) (top (stack s))),add (arg1 inst) (pc s))]
+                (add (nat 1) (pc s))) (locals s) (pop (stack s)) (program s)),
+     ("do_inst_defun",
+      |- ∀inst s.
+           do_inst inst s =
+           itel
+             [(equal (op_code inst) (sym "M1" "ICONST"),
+               execute_iconst inst s);
+              (equal (op_code inst) (sym "M1" "ILOAD"),execute_iload inst s);
+              (equal (op_code inst) (sym "M1" "ISTORE"),
+               execute_istore inst s);
+              (equal (op_code inst) (sym "M1" "IADD"),execute_iadd inst s);
+              (equal (op_code inst) (sym "M1" "ISUB"),execute_isub inst s);
+              (equal (op_code inst) (sym "M1" "IMUL"),execute_imul inst s);
+              (equal (op_code inst) (sym "M1" "GOTO"),execute_goto inst s);
+              (equal (op_code inst) (sym "M1" "IFLE"),execute_ifle inst s)] s),
+     ("step_defun", |- ∀s. step s = do_inst (next_inst s) s),
+     ("run_defun",
+      |- ∀sched s.
+           run sched s = itel [(endp sched,s)] (run (cdr sched) (step s))),
+     ("factorial_example_0_thm",
+      |- |= equal
+              (run
+                 (List
+                    [nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0; nat 0;
+                     nat 0; nat 0; nat 0; nat 0])
+                 (make_state (nat 0) (List [nat 5; nat 0]) (List [])
+                    (List
+                       [List [sym "M1" "ICONST"; nat 1];
+                        List [sym "M1" "ISTORE"; nat 1];
+                        List [sym "M1" "ILOAD"; nat 0];
+                        List [sym "M1" "IFLE"; nat 10];
+                        List [sym "M1" "ILOAD"; nat 0];
+                        List [sym "M1" "ILOAD"; nat 1];
+                        List [sym "M1" "IMUL"];
+                        List [sym "M1" "ISTORE"; nat 1];
+                        List [sym "M1" "ILOAD"; nat 0];
+                        List [sym "M1" "ICONST"; nat 1];
+                        List [sym "M1" "ISUB"];
+                        List [sym "M1" "ISTORE"; nat 0];
+                        List [sym "M1" "GOTO"; int (-10)];
+                        List [sym "M1" "ILOAD"; nat 1];
+                        List [sym "M1" "HALT"]])))
+              (List
+                 [nat 14; List [nat 0; nat 120]; List [nat 120];
+                  List
+                    [List [sym "M1" "ICONST"; nat 1];
+                     List [sym "M1" "ISTORE"; nat 1];
+                     List [sym "M1" "ILOAD"; nat 0];
+                     List [sym "M1" "IFLE"; nat 10];
+                     List [sym "M1" "ILOAD"; nat 0];
+                     List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
+                     List [sym "M1" "ISTORE"; nat 1];
+                     List [sym "M1" "ILOAD"; nat 0];
+                     List [sym "M1" "ICONST"; nat 1]; List [sym "M1" "ISUB"];
+                     List [sym "M1" "ISTORE"; nat 0];
+                     List [sym "M1" "GOTO"; int (-10)];
+                     List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "HALT"]]])),
+     ("ifact_loop_sched_defun",
+      |- ∀n.
+           ifact_loop_sched n =
+           itel [(zp n,repeat (nat 0) (nat 4))]
+             (app (repeat (nat 0) (nat 11))
+                (ifact_loop_sched (add (int (-1)) n)))),
+     ("ifact_sched_defun",
+      |- ∀n. ifact_sched n = app (repeat (nat 0) (nat 2)) (ifact_loop_sched n)),
+     ("exclaim_defun",
+      |- ∀n.
+           exclaim n =
+           itel [(zp n,nat 1)] (mult n (exclaim (add (int (-1)) n)))),
+     ("test_ifact_defun",
+      |- ∀n.
+           test_ifact n =
+           top
+             (stack
+                (run (ifact_sched n)
+                   (make_state (nat 0) (List [n; nat 0]) (List [])
+                      (List
+                         [List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "IFLE"; nat 10];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "IMUL"];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISUB"];
+                          List [sym "M1" "ISTORE"; nat 0];
+                          List [sym "M1" "GOTO"; int (-10)];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "HALT"]]))))),
+     ("factorial_example_1_thm",
+      |- |= equal (test_ifact (nat 5)) (exclaim (nat 5))),
+     ("factorial_example_2_thm",
+      |- |= equal (test_ifact (nat 1000)) (exclaim (nat 1000))),
+     ("even_sched_defun",
+      |- ∀i.
+           even_sched i =
+           itel
+             [(zp i,repeat (nat 0) (nat 4));
+              (equal i (nat 1),repeat (nat 0) (nat 8))]
+             (app (repeat (nat 0) (nat 11)) (even_sched (add (int (-2)) i)))),
+     ("test_even_defun",
+      |- ∀i.
+           test_even i =
+           top
+             (stack
+                (run (even_sched i)
+                   (make_state (nat 0) (List [i]) (List [])
+                      (List
+                         [List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "IFLE"; nat 12];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISUB"];
+                          List [sym "M1" "IFLE"; nat 6];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ICONST"; nat 2];
+                          List [sym "M1" "ISUB"];
+                          List [sym "M1" "ISTORE"; nat 0];
+                          List [sym "M1" "GOTO"; int (-10)];
+                          List [sym "M1" "ICONST"; nat 0];
+                          List [sym "M1" "HALT"];
+                          List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "HALT"]]))))),
+     ("test_even_theorem_thm",
+      |- (|= equal (test_even (nat 18)) (nat 1)) ∧
+         (|= equal (test_even (nat 19)) (nat 0)) ∧
+         (|= equal (test_even (nat 235)) (nat 0)) ∧
+         |= equal (test_even (nat 234)) (nat 1)),
+     ("collect_at_end_defun",
+      |- ∀list e.
+           collect_at_end list e =
+           itel [(m1_member e list,list)] (app list (List [e]))),
+     ("nth_nil_thm", |- ∀n. |= equal (nth n (List [])) (List [])),
+     ("acl2_count_nth_thm",
+      |- ∀n acl2_count list.
+           (|= consp list) ⇒
+           |= less (acl2_count (nth n list)) (acl2_count list)),
+     ("collect_vars_in_expr_defun",
+      |- ∀vars expr.
+           collect_vars_in_expr vars expr =
+           itel
+             [(atom expr,itel [(symbolp expr,collect_at_end vars expr)] vars)]
+             (collect_vars_in_expr
+                (collect_vars_in_expr vars (nth (nat 0) expr))
+                (nth (nat 2) expr))),
+     ("collect_vars_in_stmt_star_space_m1_colon_colon_collect_vars_in_stmt_mutual",
+      |- (∀stmt_list vars.
+            collect_vars_in_stmt_star vars stmt_list =
+            itel [(endp stmt_list,vars)]
+              (collect_vars_in_stmt_star
+                 (collect_vars_in_stmt vars (car stmt_list))
+                 (cdr stmt_list))) ∧
+         ∀stmt vars.
+           collect_vars_in_stmt vars stmt =
+           itel
+             [(equal (nth (nat 1) stmt) (sym "M1" "="),
+               collect_vars_in_expr (collect_at_end vars (nth (nat 0) stmt))
+                 (nth (nat 2) stmt));
+              (equal (nth (nat 0) stmt) (sym "M1" "WHILE"),
+               collect_vars_in_stmt_star
+                 (collect_vars_in_expr vars (nth (nat 1) stmt))
+                 (cdr (cdr stmt)));
+              (equal (nth (nat 0) stmt) (sym "M1" "RETURN"),
+               collect_vars_in_expr vars (nth (nat 1) stmt))] vars),
+     ("op_exclaim_defun",
+      |- ∀op.
+           op_exclaim op =
+           itel
+             [(equal op (csym "+"),List [List [sym "M1" "IADD"]]);
+              (equal op (csym "-"),List [List [sym "M1" "ISUB"]]);
+              (equal op (csym "*"),List [List [sym "M1" "IMUL"]])]
+             (List [List [sym "M1" "ILLEGAL"]])),
+     ("iload_exclaim_defun",
+      |- ∀vars var.
+           iload_exclaim vars var =
+           List [List [sym "M1" "ILOAD"; index var vars]]),
+     ("iconst_exclaim_defun",
+      |- ∀n. iconst_exclaim n = List [List [sym "M1" "ICONST"; n]]),
+     ("expr_exclaim_defun",
+      |- ∀vars expr.
+           expr_exclaim vars expr =
+           itel
+             [(atom expr,
+               itel [(symbolp expr,iload_exclaim vars expr)]
+                 (iconst_exclaim expr))]
+             (app (expr_exclaim vars (nth (nat 0) expr))
+                (app (expr_exclaim vars (nth (nat 2) expr))
+                   (op_exclaim (nth (nat 1) expr))))),
+     ("ifle_exclaim_defun",
+      |- ∀offset. ifle_exclaim offset = List [List [sym "M1" "IFLE"; offset]]),
+     ("goto_exclaim_defun",
+      |- ∀offset. goto_exclaim offset = List [List [sym "M1" "GOTO"; offset]]),
+     ("while_exclaim_defun",
+      |- ∀test_code body_code.
+           while_exclaim test_code body_code =
+           app test_code
+             (app (ifle_exclaim (add (nat 2) (m1_len body_code)))
+                (app body_code
+                   (goto_exclaim
+                      (unary_minus
+                         (add (m1_len test_code)
+                            (add (nat 1) (m1_len body_code)))))))),
+     ("test_exclaim_defun",
+      |- ∀vars test.
+           test_exclaim vars test =
+           itel
+             [(equal (nth (nat 1) test) (csym ">"),
+               itel
+                 [(equal (nth (nat 2) test) (nat 0),
+                   expr_exclaim vars (nth (nat 0) test))]
+                 (app (expr_exclaim vars (nth (nat 0) test))
+                    (app (expr_exclaim vars (nth (nat 2) test))
+                       (List [List [sym "M1" "ISUB"]]))))]
+             (List [List [sym "M1" "ILLEGAL"]])),
+     ("istore_exclaim_defun",
+      |- ∀vars var.
+           istore_exclaim vars var =
+           List [List [sym "M1" "ISTORE"; index var vars]]),
+     ("stmt_star_exclaim_space_m1_colon_colon_stmt_exclaim_mutual",
+      |- (∀stmt_list vars.
+            stmt_star_exclaim vars stmt_list =
+            itel [(endp stmt_list,List [])]
+              (app (stmt_exclaim vars (car stmt_list))
+                 (stmt_star_exclaim vars (cdr stmt_list)))) ∧
+         ∀stmt vars.
+           stmt_exclaim vars stmt =
+           itel
+             [(equal (nth (nat 1) stmt) (sym "M1" "="),
+               app (expr_exclaim vars (nth (nat 2) stmt))
+                 (istore_exclaim vars (nth (nat 0) stmt)));
+              (equal (nth (nat 0) stmt) (sym "M1" "WHILE"),
+               while_exclaim (test_exclaim vars (nth (nat 1) stmt))
+                 (stmt_star_exclaim vars (cdr (cdr stmt))));
+              (equal (nth (nat 0) stmt) (sym "M1" "RETURN"),
+               app (expr_exclaim vars (nth (nat 1) stmt))
+                 (List [List [sym "M1" "HALT"]]))]
+             (List [List [sym "M1" "ILLEGAL"]])),
+     ("compile_defun",
+      |- ∀formals stmt_list.
+           compile formals stmt_list =
+           stmt_star_exclaim (collect_vars_in_stmt_star formals stmt_list)
+             stmt_list),
+     ("example_compilation_1_thm",
+      |- |= equal
+              (compile (List [sym "M1" "N"])
+                 (List
+                    [List [sym "M1" "A"; sym "M1" "="; nat 1];
+                     List
+                       [sym "M1" "WHILE";
+                        List [sym "M1" "N"; csym ">"; nat 0];
+                        List
+                          [sym "M1" "A"; sym "M1" "=";
+                           List [sym "M1" "N"; csym "*"; sym "M1" "A"]];
+                        List
+                          [sym "M1" "N"; sym "M1" "=";
+                           List [sym "M1" "N"; csym "-"; nat 1]]];
+                     List [sym "M1" "RETURN"; sym "M1" "A"]]))
+              (List
+                 [List [sym "M1" "ICONST"; nat 1];
+                  List [sym "M1" "ISTORE"; nat 1];
+                  List [sym "M1" "ILOAD"; nat 0];
+                  List [sym "M1" "IFLE"; nat 10];
+                  List [sym "M1" "ILOAD"; nat 0];
+                  List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
+                  List [sym "M1" "ISTORE"; nat 1];
+                  List [sym "M1" "ILOAD"; nat 0];
+                  List [sym "M1" "ICONST"; nat 1]; List [sym "M1" "ISUB"];
+                  List [sym "M1" "ISTORE"; nat 0];
+                  List [sym "M1" "GOTO"; int (-10)];
+                  List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "HALT"]])),
+     ("example_compilation_2_thm",
+      |- |= equal
+              (compile (List [sym "M1" "N"; sym "M1" "K"])
+                 (List
+                    [List [sym "M1" "A"; sym "M1" "="; nat 0];
+                     List
+                       [sym "M1" "WHILE";
+                        List [sym "M1" "N"; csym ">"; sym "M1" "K"];
+                        List
+                          [sym "M1" "A"; sym "M1" "=";
+                           List [sym "M1" "A"; csym "+"; nat 1]];
+                        List
+                          [sym "M1" "N"; sym "M1" "=";
+                           List [sym "M1" "N"; csym "-"; nat 1]]];
+                     List [sym "M1" "RETURN"; sym "M1" "A"]]))
+              (List
+                 [List [sym "M1" "ICONST"; nat 0];
+                  List [sym "M1" "ISTORE"; nat 2];
+                  List [sym "M1" "ILOAD"; nat 0];
+                  List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "ISUB"];
+                  List [sym "M1" "IFLE"; nat 10];
+                  List [sym "M1" "ILOAD"; nat 2];
+                  List [sym "M1" "ICONST"; nat 1]; List [sym "M1" "IADD"];
+                  List [sym "M1" "ISTORE"; nat 2];
+                  List [sym "M1" "ILOAD"; nat 0];
+                  List [sym "M1" "ICONST"; nat 1]; List [sym "M1" "ISUB"];
+                  List [sym "M1" "ISTORE"; nat 0];
+                  List [sym "M1" "GOTO"; int (-12)];
+                  List [sym "M1" "ILOAD"; nat 2]; List [sym "M1" "HALT"]])),
+     ("example_execution_1_thm",
+      |- |= equal
+              (top
+                 (stack
+                    (run (repeat (nat 0) (nat 1000))
+                       (make_state (nat 0) (List [nat 5; nat 0]) (List [])
+                          (compile (List [sym "M1" "N"])
+                             (List
+                                [List [sym "M1" "A"; sym "M1" "="; nat 1];
+                                 List
+                                   [sym "M1" "WHILE";
+                                    List [sym "M1" "N"; csym ">"; nat 0];
+                                    List
+                                      [sym "M1" "A"; sym "M1" "=";
+                                       List
+                                         [sym "M1" "N"; csym "*";
+                                          sym "M1" "A"]];
+                                    List
+                                      [sym "M1" "N"; sym "M1" "=";
+                                       List [sym "M1" "N"; csym "-"; nat 1]]];
+                                 List [sym "M1" "RETURN"; sym "M1" "A"]]))))))
+              (nat 120)),
+     ("example_execution_2_thm",
+      |- |= equal
+              (top
+                 (stack
+                    (run (repeat (nat 0) (nat 1000))
+                       (make_state (nat 0) (List [nat 10; nat 4; nat 0])
+                          (List [])
+                          (compile (List [sym "M1" "N"; sym "M1" "K"])
+                             (List
+                                [List [sym "M1" "A"; sym "M1" "="; nat 0];
+                                 List
+                                   [sym "M1" "WHILE";
+                                    List
+                                      [sym "M1" "N"; csym ">"; sym "M1" "K"];
+                                    List
+                                      [sym "M1" "A"; sym "M1" "=";
+                                       List [sym "M1" "A"; csym "+"; nat 1]];
+                                    List
+                                      [sym "M1" "N"; sym "M1" "=";
+                                       List [sym "M1" "N"; csym "-"; nat 1]]];
+                                 List [sym "M1" "RETURN"; sym "M1" "A"]]))))))
+              (nat 6)),
+     ("stacks_thm",
+      |- ∀s x.
+           (|= equal (top (push x s)) x) ∧ (|= equal (pop (push x s)) s) ∧
+           (|= equal (top (cons x s)) x) ∧ |= equal (pop (cons x s)) s),
+     ("states_thm",
+      |- ∀x program stack locals pc.
+           (|= equal (pc (make_state pc locals stack program)) pc) ∧
+           (|= equal (locals (make_state pc locals stack program)) locals) ∧
+           (|= equal (stack (make_state pc locals stack program)) stack) ∧
+           (|= equal (program (make_state pc locals stack program)) program) ∧
+           (|= equal (pc (cons pc x)) pc) ∧
+           (|= equal (locals (cons pc (cons locals x))) locals) ∧
+           (|= equal (stack (cons pc (cons locals (cons stack x)))) stack) ∧
+           |= equal
+                (program
+                   (cons pc (cons locals (cons stack (cons program x)))))
+                program),
+     ("step_opener_thm",
+      |- ∀s.
+           (|= consp (next_inst s)) ⇒
+           |= equal (step s) (do_inst (next_inst s) s)),
+     ("run_app_thm",
+      |- ∀s b a. |= equal (run (app a b) s) (run b (run a s))),
+     ("run_opener_thm",
+      |- ∀sched th s.
+           (|= equal (run (List []) s) s) ∧
+           |= equal (run (cons th sched) s) (run sched (step s))),
+     ("nth_add1_exclaim_thm",
+      |- ∀list n.
+           (|= natp n) ⇒
+           |= equal (nth (add (nat 1) n) list) (nth n (cdr list))),
+     ("nth_update_nth_thm",
+      |- ∀list v j i.
+           (|= natp i) ∧ (|= natp j) ⇒
+           |= equal (nth i (update_nth j v list))
+                (itel [(equal i j,v)] (nth i list))),
+     ("update_nth_update_nth_1_thm",
+      |- ∀list w v j i.
+           (|= natp i) ∧ (|= natp j) ∧ ¬(|= equal i j) ⇒
+           |= equal (update_nth i v (update_nth j w list))
+                (update_nth j w (update_nth i v list))),
+     ("update_nth_update_nth_2_thm",
+      |- ∀list w v i.
+           |= equal (update_nth i v (update_nth i w list))
+                (update_nth i v list)),
+     ("ifact_defun",
+      |- ∀n a.
+           ifact n a = itel [(zp n,a)] (ifact (add (int (-1)) n) (mult n a))),
+     ("test_ifact_examples_thm",
+      |- (|= equal (test_ifact (nat 5)) (exclaim (nat 5))) ∧
+         (|= equal (test_ifact (nat 10)) (exclaim (nat 10))) ∧
+         |= equal (test_ifact (nat 100)) (exclaim (nat 100))),
+     ("ifact_loop_lemma_thm",
+      |- ∀stack a n.
+           (|= natp n) ∧ (|= natp a) ⇒
+           |= equal
+                (run (ifact_loop_sched n)
+                   (make_state (nat 2) (List [n; a]) stack
+                      (List
+                         [List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "IFLE"; nat 10];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "IMUL"];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISUB"];
+                          List [sym "M1" "ISTORE"; nat 0];
+                          List [sym "M1" "GOTO"; int (-10)];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "HALT"]])))
+                (make_state (nat 14) (List [nat 0; ifact n a])
+                   (push (ifact n a) stack)
+                   (List
+                      [List [sym "M1" "ICONST"; nat 1];
+                       List [sym "M1" "ISTORE"; nat 1];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "IFLE"; nat 10];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
+                       List [sym "M1" "ISTORE"; nat 1];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "ICONST"; nat 1];
+                       List [sym "M1" "ISUB"];
+                       List [sym "M1" "ISTORE"; nat 0];
+                       List [sym "M1" "GOTO"; int (-10)];
+                       List [sym "M1" "ILOAD"; nat 1];
+                       List [sym "M1" "HALT"]]))),
+     ("ifact_lemma_thm",
+      |- ∀stack a n.
+           (|= natp n) ⇒
+           |= equal
+                (run (ifact_sched n)
+                   (make_state (nat 0) (List [n; a]) stack
+                      (List
+                         [List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "IFLE"; nat 10];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "IMUL"];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISUB"];
+                          List [sym "M1" "ISTORE"; nat 0];
+                          List [sym "M1" "GOTO"; int (-10)];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "HALT"]])))
+                (make_state (nat 14) (List [nat 0; ifact n (nat 1)])
+                   (push (ifact n (nat 1)) stack)
+                   (List
+                      [List [sym "M1" "ICONST"; nat 1];
+                       List [sym "M1" "ISTORE"; nat 1];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "IFLE"; nat 10];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
+                       List [sym "M1" "ISTORE"; nat 1];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "ICONST"; nat 1];
+                       List [sym "M1" "ISUB"];
+                       List [sym "M1" "ISTORE"; nat 0];
+                       List [sym "M1" "GOTO"; int (-10)];
+                       List [sym "M1" "ILOAD"; nat 1];
+                       List [sym "M1" "HALT"]]))),
+     ("ifact_is_factorial_thm",
+      |- ∀a n.
+           (|= natp n) ∧ (|= natp a) ⇒
+           |= equal (ifact n a) (mult (exclaim n) a)),
+     ("ifact_correct_thm",
+      |- ∀stack a n.
+           (|= natp n) ⇒
+           |= equal
+                (run (ifact_sched n)
+                   (make_state (nat 0) (List [n; a]) stack
+                      (List
+                         [List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "IFLE"; nat 10];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "IMUL"];
+                          List [sym "M1" "ISTORE"; nat 1];
+                          List [sym "M1" "ILOAD"; nat 0];
+                          List [sym "M1" "ICONST"; nat 1];
+                          List [sym "M1" "ISUB"];
+                          List [sym "M1" "ISTORE"; nat 0];
+                          List [sym "M1" "GOTO"; int (-10)];
+                          List [sym "M1" "ILOAD"; nat 1];
+                          List [sym "M1" "HALT"]])))
+                (make_state (nat 14) (List [nat 0; exclaim n])
+                   (push (exclaim n) stack)
+                   (List
+                      [List [sym "M1" "ICONST"; nat 1];
+                       List [sym "M1" "ISTORE"; nat 1];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "IFLE"; nat 10];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "ILOAD"; nat 1]; List [sym "M1" "IMUL"];
+                       List [sym "M1" "ISTORE"; nat 1];
+                       List [sym "M1" "ILOAD"; nat 0];
+                       List [sym "M1" "ICONST"; nat 1];
+                       List [sym "M1" "ISUB"];
+                       List [sym "M1" "ISTORE"; nat 0];
+                       List [sym "M1" "GOTO"; int (-10)];
+                       List [sym "M1" "ILOAD"; nat 1];
+                       List [sym "M1" "HALT"]]))),
+     ("ifact_correct_corollary_1_thm",
+      |- ∀stack a n.
+           (|= natp n) ⇒
+           |= equal
+                (top
+                   (stack
+                      (run (ifact_sched n)
+                         (make_state (nat 0) (List [n; a]) stack
+                            (List
+                               [List [sym "M1" "ICONST"; nat 1];
+                                List [sym "M1" "ISTORE"; nat 1];
+                                List [sym "M1" "ILOAD"; nat 0];
+                                List [sym "M1" "IFLE"; nat 10];
+                                List [sym "M1" "ILOAD"; nat 0];
+                                List [sym "M1" "ILOAD"; nat 1];
+                                List [sym "M1" "IMUL"];
+                                List [sym "M1" "ISTORE"; nat 1];
+                                List [sym "M1" "ILOAD"; nat 0];
+                                List [sym "M1" "ICONST"; nat 1];
+                                List [sym "M1" "ISUB"];
+                                List [sym "M1" "ISTORE"; nat 0];
+                                List [sym "M1" "GOTO"; int (-10)];
+                                List [sym "M1" "ILOAD"; nat 1];
+                                List [sym "M1" "HALT"]]))))) (exclaim n)),
+     ("ifact_correct_corollary_2_thm",
+      |- ∀stack a n.
+           (|= natp n) ⇒
+           |= equal
+                (top
+                   (stack
+                      (run (ifact_sched n)
+                         (make_state (nat 0) (List [n; a]) stack
+                            (compile (List [sym "M1" "N"])
+                               (List
+                                  [List [sym "M1" "A"; sym "M1" "="; nat 1];
+                                   List
+                                     [sym "M1" "WHILE";
+                                      List [sym "M1" "N"; csym ">"; nat 0];
+                                      List
+                                        [sym "M1" "A"; sym "M1" "=";
+                                         List
+                                           [sym "M1" "N"; csym "*";
+                                            sym "M1" "A"]];
+                                      List
+                                        [sym "M1" "N"; sym "M1" "=";
+                                         List
+                                           [sym "M1" "N"; csym "-"; nat 1]]];
+                                   List
+                                     [sym "M1" "RETURN"; sym "M1" "A"]]))))))
+                (exclaim n)),
+     ("example_modify_1_thm",
+      |- ∀inst s.
+           |= equal
+                (make_state (add (nat 1) (pc s)) (locals s)
+                   (push (arg1 inst) (stack s)) (program s))
+                (make_state (add (nat 1) (pc s)) (locals s)
+                   (push (arg1 inst) (stack s)) (program s))),
+     ("example_modify_2_thm",
+      |- ∀inst s.
+           |= equal
+                (make_state (add (nat 1) (pc s))
+                   (update_nth (arg1 inst) (top (stack s)) (locals s))
+                   (pop (stack s)) (program s))
+                (make_state (add (nat 1) (pc s))
+                   (update_nth (arg1 inst) (top (stack s)) (locals s))
+                   (pop (stack s)) (program s))),
+     ("example_modify_3_thm",
+      |- ∀s inst.
+           |= equal
+                (make_state (add (arg1 inst) (pc s)) (locals s) (stack s)
+                   (program s))
+                (make_state (add (arg1 inst) (pc s)) (locals s) (stack s)
+                   (program s))),
+     ("pattern_bindings_defun",
+      |- ∀vars arg_expressions.
+           pattern_bindings vars arg_expressions =
+           itel [(endp vars,List [])]
+             (cons (List [car vars; car arg_expressions])
+                (pattern_bindings (cdr vars) (cdr arg_expressions)))),
+     ("example_semantics_1_thm",
+      |- ∀s inst.
+           |= equal
+                (make_state (add (nat 1) (pc s)) (locals s)
+                   (push (arg1 inst) (stack s)) (program s))
+                (make_state (add (nat 1) (pc s)) (locals s)
+                   (push (arg1 inst) (stack s)) (program s))),
+     ("concat_symbols_defun",
+      |- ∀part1 part2.
+           concat_symbols part1 part2 =
+           intern_in_package_of_symbol
+             (coerce
+                (app (coerce (symbol_name part1) (csym "LIST"))
+                   (coerce (symbol_name part2) (csym "LIST")))
+                (csym "STRING")) (sym "M1" "RUN")),
+     ("make_defun_defun",
+      |- ∀name args dcl body.
+           make_defun name args dcl body =
+           itel [(dcl,List [csym "DEFUN"; name; args; dcl; body])]
+             (List [csym "DEFUN"; name; args; body]))] : (string * thm) list
+- 
