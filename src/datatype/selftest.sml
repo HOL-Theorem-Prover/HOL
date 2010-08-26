@@ -159,9 +159,14 @@ val result = ind_types.define_type spec' handle e => Raise e;
 val _ = Hol_datatype`pointer = pnil | pref of 'a`
 val _ = Hol_datatype`failure = <| head : 'a pointer; tail : failure pointer |>`
 
-(* Ramana Kumar's example from 2010/08/25 *)
+(* Ramana Kumar's examples from 2010/08/25 *)
 val _ = Hol_datatype `t1 = c1 of 'a => t1 itself `;
 val _ = Hol_datatype `t2 = c2 of t2 t1 itself ` ;
+
+val _ = Hol_datatype `t1 = c1 of 'a itself`;
+val _ = Hol_datatype `t2 = c2 of 'a t1 `;
+val _ = Hol_datatype `t3 = c3 of t4 t2 t1 ;
+                      t4 = c4 of t3 t1 `;
 
 fun tprint s = print (StringCvt.padRight #" " 70 s)
 
