@@ -168,6 +168,10 @@ val _ = Hol_datatype `u2 = d2 of 'a u1 `;
 val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
                       u4 = d4 of u3 u1 `;
 
+(* Ramana Kumar's TypeNet bug from 2010/08/25 *)
+val _ = Hol_datatype `foo = fooC of 'a`
+val _ = Hol_datatype `foo = fooC' of num`
+
 fun tprint s = print (StringCvt.padRight #" " 70 s)
 
 val _ = tprint "Testing independence of case variables"
