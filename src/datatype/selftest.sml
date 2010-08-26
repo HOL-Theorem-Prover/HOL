@@ -163,10 +163,10 @@ val _ = Hol_datatype`failure = <| head : 'a pointer; tail : failure pointer |>`
 val _ = Hol_datatype `t1 = c1 of 'a => t1 itself `;
 val _ = Hol_datatype `t2 = c2 of t2 t1 itself ` ;
 
-val _ = Hol_datatype `t1 = c1 of 'a itself`;
-val _ = Hol_datatype `t2 = c2 of 'a t1 `;
-val _ = Hol_datatype `t3 = c3 of t4 t2 t1 ;
-                      t4 = c4 of t3 t1 `;
+val _ = Hol_datatype `u1 = d1 of 'a itself`;
+val _ = Hol_datatype `u2 = d2 of 'a u1 `;
+val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
+                      u4 = d4 of u3 u1 `;
 
 fun tprint s = print (StringCvt.padRight #" " 70 s)
 
