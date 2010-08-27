@@ -1,0 +1,24 @@
+vscomp3(i;ll) [data_list(ll,data)] {
+   local found, jj, tmp;
+   jj = ll;
+   
+   found = 0;
+   i = 0;
+   loop_spec [data_list(jj,data2) * 
+              ``(~(found = 0)) ==> (HD data2 = 0)``] {
+   while ((jj != NULL) and (found == 0)) {
+      tmp = jj -> dta;
+      if (tmp == 0) {
+         found = 1;
+      } else {
+         jj = jj -> tl;      
+         i = i + 1;
+      }
+   }} [data_list(old(jj),data2) * (old(i) <= i) *
+      (i <= old(i) + ``LENGTH data2``) *
+      ``!n. n < (i - old(i)) ==> ~(EL n data2 = 0)`` *
+      ``((i - old(i)) < LENGTH data2) ==> (EL (i - old(i)) data2 = 0)``] 
+} [data_list(ll,data) *
+   ``(i <= LENGTH data) /\
+     (!n. n < i ==> ~(EL n data = 0)) /\
+     (i < LENGTH data ==> (EL i data = 0))``]

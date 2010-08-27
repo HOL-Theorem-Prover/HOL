@@ -250,4 +250,8 @@ end
    val holfoot_prove_remaining         : (thm * tactic) -> thm
    val holfoot_set_remaining_goal      : thm -> proofManagerLib.proofs
 
+   val holfoot_prover_extras_1 : thm list ref;
+   val holfoot_prover_extras_2 : thm list ref;
+   val holfoot_varlist_rwts    : thm list ref;
+   val update_var_res_param    : unit -> unit;
 end

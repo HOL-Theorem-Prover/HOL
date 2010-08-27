@@ -15,7 +15,7 @@ push(sp;v) [data_list (sp,data)] {
 } [data_list (sp, ``v::data``)]
 
 
-tree_sum_depth (r;t) [data_tree(t; data)] {
+tree_sum_depth (r;t) [data_tree(t, data)] {
   local sp, c, i;
 
   r = 0;
@@ -26,7 +26,7 @@ tree_sum_depth (r;t) [data_tree(t; data)] {
 
     /* build the sum, till stack is empty */
     loop_spec [(r == #rc) * data_list(sp,trees) * ``LENGTH trees_data = LENGTH trees`` *
-               ``~(MEM 0 trees)`` * map (\t d. data_tree(t;d)) ``ZIP (trees,trees_data)``] {
+               ``~(MEM 0 trees)`` * map (\t d. data_tree(t,d)) ``ZIP (trees,trees_data)``] {
     while (sp != 0) {
       pop(sp,c;);
 
@@ -37,7 +37,7 @@ tree_sum_depth (r;t) [data_tree(t; data)] {
       /* do the sum */
       i = c->dta; 
       r = r + i;    
-    }} [map (\t d. data_tree(t;d)) ``ZIP (trees,trees_data)`` *
+    }} [map (\t d. data_tree(t,d)) ``ZIP (trees,trees_data)`` *
         (r == ``#rc + SUM (MAP TREE_SUM trees_data)``)]
   }
-} [data_tree(t;data) * (r == ``TREE_SUM data``)]
+} [data_tree(t,data) * (r == ``TREE_SUM data``)]

@@ -1,0 +1,277 @@
+(******************************************************************************)
+(* Holfoot can proof partial correctness of programs using separation logic.  *)
+(*                                                                            *)
+(* The entire proof is done using HOL 4. This includes not just the the       *)
+(* proof of some verification conditions, but the whole proof. This includes  *)
+(* formal definitions of the programming and specification language as well   *)
+(* as verified inferences.                                                    *)
+(*                                                                            *)
+(* Holfoot does not support objects. Therefore, a functional implementation   *)
+(* is verified here. Moreover, this implementation is destructive.            *)
+(******************************************************************************)
+
+(******************************************************************************)
+(* Boilerplate (Load everything)                                              *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open holfootTheory vars_as_resourceTheory separationLogicTheory listTheory
+open ConseqConv pred_setTheory
+open holfootSyntax Parsetree
+
+open listTheory rich_listTheory arithmeticTheory
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+
+(******************************************************************************)
+(* Define a predicate for amortized queues                                    *)
+(******************************************************************************)
+
+(* amortized_queue(strong, q, data) =
+
+   q |-> [front:_f, rear:_r, front_length:_fl, rear_length:_rl] *
+   data_list(_f, _f_data) * data_list(_r, _r_data) *
+   (_fl = LENGTH _f_data) * (_rl = LENGTH _r_data) *
+   (data = _f_data ++ REVERSE (_r_data)) *
+   (strong ==> (_rl <= _fl)) 
+
+ *)
+
+
+val holfoot_ap_amortized_queue_def = Define `
+   holfoot_ap_amortized_queue strong tl q dta data =
+   asl_exists f r f_data r_data. asl_bigstar_list holfoot_separation_combinator
+      [holfoot_ap_points_to q (LIST_TO_FMAP [				   
+           (holfoot_tag "front", var_res_exp_const f);
+           (holfoot_tag "rear", var_res_exp_const r);
+           (holfoot_tag "front_length", var_res_exp_const (LENGTH f_data));
+           (holfoot_tag "rear_length", var_res_exp_const (LENGTH r_data))]);
+       holfoot_ap_data_list tl (var_res_exp_const f) [(dta, f_data)];
+       holfoot_ap_data_list tl (var_res_exp_const r) [(dta, r_data)];
+       var_res_bool_proposition DISJOINT_FMAP_UNION 
+           ((data = f_data ++ (REVERSE r_data)) /\
+            (strong ==> (LENGTH r_data <= LENGTH f_data)))]`
+
+(* some rewrites *)
+val holfoot_ap_amortized_queue_REWRITE = save_thm ("holfoot_ap_amortized_queue_REWRITE",
+SIMP_RULE std_ss [asl_bigstar_list_REWRITE,
+   asl_star_holfoot_THM] holfoot_ap_amortized_queue_def);
+                                       
+val holfoot_ap_amortized_queue_REWRITE2 = save_thm ("holfoot_ap_amortized_queue_REWRITE2",
+SIMP_RULE list_ss [LIST_TO_FMAP_THM, holfoot_separation_combinator_def] holfoot_ap_amortized_queue_REWRITE);
+
+
+(***************************************)
+(* add the new predicate to the parser *)
+(***************************************)
+
+val holfoot_ap_amortized_queue_term = Term `holfoot_ap_amortized_queue`;
+
+fun mk_holfoot_ap_amoritized_queue_absyn (strong, tag, exp, dtag, data) =
+      Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_amortized_queue_term, [
+         Absyn.mk_AQ (if strong then T else F),
+         tag, exp, 
+         dtag, 
+         data])
+
+(* amortized_queue (q,data) *)
+val _ = add_genpred ("amortized_queue", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol], 
+                 fn [exp1,data] => mk_holfoot_ap_amoritized_queue_absyn (
+                     true,
+                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), 
+                     exp1, 
+                     Absyn.mk_AQ (string2holfoot_tag (!data_list_tag)),
+                     data));
+
+val _ = add_genpred ("weak_amortized_queue", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol], 
+                 fn [exp1,data] => mk_holfoot_ap_amoritized_queue_absyn (
+                     false,
+                     Absyn.mk_AQ (string2holfoot_tag (!list_link_tag)), 
+                     exp1, 
+                     Absyn.mk_AQ (string2holfoot_tag (!data_list_tag)),
+                     data));
+
+
+fun amortized_queue_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = let
+    open Portable term_pp_types
+    val {add_string,add_break,begin_block,end_block,add_ann_string,add_newline,begin_style,end_style,...} = ppfns
+    val (op_term,args) = strip_comb t;
+  in
+    if (same_const op_term holfoot_ap_amortized_queue_term) then (
+      let
+         val is_strong = same_const (el 1 args) T;
+         val desc = if is_strong then "amortized_queue" else "weak_amortized_queue";
+      in
+         begin_block INCONSISTENT 0;       
+         add_string desc;
+         add_string "(";
+         add_break (0,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 2 args);
+         add_string ";";
+         add_break (1,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 3 args);
+         add_string ",";add_break (1,!holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 4 args);
+         add_string ":";
+         sys (Top, Top, Top) (d - 1) (el 5 args);
+         add_string ")";
+         end_block ()
+      end
+    ) else (
+      raise term_pp_types.UserPP_Failed
+    )
+  end;
+
+val _ = add_user_printer ("amortized_list_printer", ``x:'a set``, amortized_queue_printer);
+
+
+(******************************************)
+(* prove thms needed for basic automation *)
+(******************************************)
+
+val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_amortized_queue = 
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_amortized_queue",
+``!tl st q dta data vs.
+     VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs q ==>
+     VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs
+       (holfoot_ap_amortized_queue st tl q dta data)``,
+
+SIMP_TAC std_ss [holfoot_ap_amortized_queue_REWRITE] THEN 
+REPEAT STRIP_TAC THEN
+CONSEQ_HO_REWRITE_TAC ([], 
+   [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition,
+    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___data_list,
+    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___points_to,
+    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_exists_direct,
+    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_star___holfoot,
+    FEVERY_LIST_TO_FMAP], []) THEN
+ASM_SIMP_TAC list_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL]
+);
+
+
+val var_res_prop_varlist_update___holfoot_ap_amortized_queue = 
+store_thm ("var_res_prop_varlist_update___holfoot_ap_amortized_queue",
+``!vcL st tl q dta data.
+     IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS q) ==>
+  
+     (var_res_prop_varlist_update vcL (holfoot_ap_amortized_queue st tl q dta data) =
+      holfoot_ap_amortized_queue st tl (var_res_exp_varlist_update vcL q) dta data)``,
+
+SIMP_TAC std_ss [FUN_EQ_THM, var_res_prop_varlist_update___BOOL, holfoot_ap_amortized_queue_REWRITE] THEN
+SIMP_TAC std_ss [asl_exists_def, IN_ABS] THEN
+REPEAT STRIP_TAC THEN
+REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
+REPEAT GEN_TAC THEN
+AP_TERM_TAC THEN
+
+Q.MATCH_ABBREV_TAC `var_res_prop_varlist_update vcL 
+   (asl_star holfoot_separation_combinator p1 p2) =
+   asl_star holfoot_separation_combinator p1' p2'` THEN
+
+Tactical.REVERSE (`(VAR_RES_IS_STACK_IMPRECISE p1 /\
+                    VAR_RES_IS_STACK_IMPRECISE p2) /\
+                   ((VAR_RES_IS_STACK_IMPRECISE p1 /\ VAR_RES_IS_STACK_IMPRECISE p2) ==>
+                   ((var_res_prop_varlist_update vcL p1 = p1') /\
+                    (var_res_prop_varlist_update vcL p2 = p2')))` by ALL_TAC) THEN1 (
+   METIS_TAC[var_res_prop_varlist_update___asl_star___holfoot]
+) THEN
+UNABBREV_ALL_TAC THEN
+CONJ_TAC THEN1 (
+
+   CONSEQ_REWRITE_TAC ([],
+     [VAR_RES_IS_STACK_IMPRECISE___asl_star___holfoot,
+      VAR_RES_IS_STACK_IMPRECISE___var_res_bool_proposition,
+      VAR_RES_IS_STACK_IMPRECISE___data_list,
+      VAR_RES_IS_STACK_IMPRECISE___points_to,
+      FEVERY_LIST_TO_FMAP], []) THEN
+   ASM_SIMP_TAC list_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL]
+) THEN
+REPEAT STRIP_TAC THENL [
+   ASM_SIMP_TAC list_ss [var_res_prop_varlist_update___holfoot_ap_points_to,
+      o_f_LIST_TO_FMAP, var_res_exp_varlist_update___const_EVAL],
+
+   ASM_SIMP_TAC std_ss [var_res_prop_varlist_update___asl_star___holfoot,
+        var_res_prop_varlist_update___holfoot_ap_data_list,
+        VAR_RES_IS_STACK_IMPRECISE___asl_star___holfoot,
+        VAR_RES_IS_STACK_IMPRECISE___data_list,
+        VAR_RES_IS_STACK_IMPRECISE___var_res_bool_proposition,
+        var_res_exp_varlist_update___const_EVAL,
+        var_res_prop_varlist_update___BOOL,
+        IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL]
+]);
+
+
+
+(******************************************)
+(* add amortized queue to the automation  *)
+(******************************************)
+
+holfoot_prover_extras_2 := [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_amortized_queue];
+holfoot_varlist_rwts := [var_res_prop_varlist_update___holfoot_ap_amortized_queue];
+update_var_res_param();
+
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/vstte/vscomp5.dsf"];
+val spec_term = parse_holfoot_file file;
+
+val thm1 = prove (spec_term,
+    (* use the definition for rewriting *)
+    REWRITE_TAC [holfoot_ap_amortized_queue_REWRITE2] THEN
+
+    (* Call automation *)
+    HF_SOLVE_TAC THEN
+
+    (* one manual case split needed *)
+    REPEAT STRIP_TAC THEN
+    Cases_on `f_data = []` THEN (
+       HF_SOLVE_TAC
+    ));
+
+
+
+
+(* or do it a bit more verbose / procedurewise *)
+
+(* holfoot_set_goal_procedures file ["queue_create"] *)
+(* holfoot_set_goal_procedures file ["list_dest"] *)
+(* holfoot_set_goal_procedures file ["queue_normalise"] *)
+(* holfoot_set_goal_procedures file ["queue_length"] *)
+(* holfoot_set_goal_procedures file ["queue_front"] *)
+(* holfoot_set_goal_procedures file ["queue_dequeue"] *)
+(* holfoot_set_goal_procedures file ["queue_enqueue"] *)
+(* holfoot_set_goal_procedures file ["queue_front"] *)
+
+
+val queue_rewrite_TAC =    
+    REWRITE_TAC [holfoot_ap_amortized_queue_REWRITE2] THEN
+    HF_SOLVE_TAC
+
+val dequeue_TAC =    
+    queue_rewrite_TAC THEN
+    REPEAT STRIP_TAC THEN
+    Cases_on `f_data = []` THEN1 (
+       FULL_SIMP_TAC list_ss [LENGTH_NIL]
+    ) THEN
+    HF_SOLVE_TAC
+
+(* put everything together *)        
+val thm2 = holfoot_tac_verify_spec file (SOME []) [
+             ("queue_create",    queue_rewrite_TAC),
+             ("queue_length",    queue_rewrite_TAC),
+             ("queue_front",     queue_rewrite_TAC),
+             ("queue_normalise", queue_rewrite_TAC),
+             ("queue_enqueue",   queue_rewrite_TAC),
+             ("queue_dequeue",   dequeue_TAC)]
+
+

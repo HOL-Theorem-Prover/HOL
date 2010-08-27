@@ -11,23 +11,29 @@ datatype a_expression =
   | Aexp_hol of string
   | Aexp_infix of string * a_expression * a_expression
 
+datatype a_genpredarg =
+    Aspred_arg_exp of a_expression
+  | Aspred_arg_string_list of string list
+  | Aspred_arg_comma 
+  | Aspred_arg_colon
+  | Aspred_arg_semi
+
+datatype a_genpredargType =
+    Aspred_arg_ty_tag
+  | Aspred_arg_ty_exp
+  | Aspred_arg_ty_hol
+  | Aspred_arg_ty_list of a_genpredargType
+  | Aspred_arg_ty_comma
+  | Aspred_arg_ty_colon
+  | Aspred_arg_ty_semi
+
 datatype a_space_pred =
-    Aspred_list of a_component * a_expression
-  | Aspred_listseg of a_component * a_expression * a_expression
-  | Aspred_queue of a_component * a_expression * a_expression
-  | Aspred_data_list of a_component * a_expression * a_component * string
-  | Aspred_data_listseg of a_component * a_expression * a_component * string * a_expression
-  | Aspred_data_queue of a_component * a_expression * a_component * string * a_expression
-  | Aspred_array of a_expression * a_expression
-  | Aspred_data_array of a_expression * a_expression * a_component * string
-  | Aspred_interval of a_expression * a_expression
-  | Aspred_data_interval of a_expression * a_expression * a_component * string
-  | Aspred_tree of a_component * a_component * a_expression
-  | Aspred_data_tree of a_component list * a_expression * a_component list * string
+    Aspred_genpred of string * a_genpredarg list * (int * int)
   | Aspred_empty
   | Aspred_hol of string
   | Aspred_boolhol of string
   | Aspred_pointsto of a_expression * (a_component * a_expression) list
+
 
 datatype a_proposition =
    Aprop_infix of string * a_expression * a_expression

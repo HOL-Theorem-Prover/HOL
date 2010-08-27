@@ -1,0 +1,77 @@
+isConsistent(r; board, p) [data_array(board,#m,data) * (p < #m)] {
+   local q, b_q, b_p;
+   r = 1;
+   q = 0;
+   b_p = (board + p) -> dta;
+   while ((q < p) and (r == 1)) [
+      data_array(board,#m,data) * (q <= p) * (q < #m) * (p < #m) *
+      ``(r = BOOL_TO_NUM (IS_CONSISTENT_BOARD_REC q p data)) /\
+        (b_p = EL p data)``] {
+      b_q = (board + q) -> dta;
+      if (``(b_q = b_p) \/
+            (b_q - b_p = p - q) \/
+            (b_p - b_q = p - q)``) {
+         r = 0;
+      }
+      q = q + 1;
+   }
+} [data_array(board,#m,data) * 
+   ``r = BOOL_TO_NUM (IS_CONSISTENT_BOARD_REC p p data)``]
+
+
+
+search(r; board, p, m) [
+   data_array(board,m,``data1++data2``) * 
+   ``(p = LENGTH data1) /\ (m = LENGTH data1 + LENGTH data2)``] {
+
+   local i, c;
+   r = 0;
+   if (p == m) { 
+      r = 1; 
+   } else {
+      i = 0;
+      while ((i < m) and (r == 0)) [   
+         data_array(board,m,``data1++_data2``) * 
+         ``IS_BOOL_TO_NUM r`` * (i <= m) * (p < m) * (p == ``LENGTH data1``) *
+         ``if (r = 1) then 
+             ((EVERY (\x. x < m) _data2) /\
+              (!pp. (p <= pp /\ pp < m) ==> IS_CONSISTENT_BOARD_REC pp pp
+                         (data1 ++ _data2)))
+           else
+              (!i' data3. 
+                 (i' < i) /\
+                 (SUC (LENGTH data3) = LENGTH _data2) /\
+                 (EVERY (\x. x < m) data3) ==> ?pp.
+                 ((p <= pp /\ pp < m) /\
+                  ~(IS_CONSISTENT_BOARD_REC pp pp (data1 ++ i'::data3))))``] {
+         (board + p) -> dta = i;
+          isConsistent(c; board, p);
+          if (c == 1) { search (r;board, p+1, m); }
+          i = i + 1;
+       }
+   }
+} [data_array(board,m,``data1++_data2``) * 
+   ``IS_BOOL_TO_NUM r`` *
+   ``if (r = 1) then 
+        ((EVERY (\x. x < m) _data2) /\
+         (!pp. (p <= pp /\ pp < m) ==> IS_CONSISTENT_BOARD_REC pp pp
+                         (data1 ++ _data2)))
+     else
+        (!data3 pp. 
+             (EVERY (\x. x < m) data3) /\
+             (LENGTH data1 + LENGTH data3 = m) ==> 
+             (?pp. (p <= pp /\ pp < m) /\
+                   ~(IS_CONSISTENT_BOARD_REC pp pp (data1 ++ data3))))``]
+
+
+
+find(r, b; m) [] {
+   b = new(m) [dta];
+   search(r; b, 0, m);
+
+} [data_array(b, m, _data) *
+   if (r == 1) then 
+      ``IS_CONSISTENT_BOARD _data``
+   else
+      ``!data. (LENGTH data = m) ==> ~(IS_CONSISTENT_BOARD data)``]
+

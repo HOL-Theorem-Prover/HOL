@@ -21,6 +21,7 @@ sig
     structure var_res_base : sig
        include Abbrev;
 
+       val update_var_res_param       : unit -> unit;
        val var_res_prove              : Abbrev.term -> Abbrev.thm
        val var_res_prove___no_expn    : Abbrev.term -> Abbrev.thm
        val var_res_assumptions_prove  : Abbrev.thm -> Abbrev.thm
@@ -2018,6 +2019,7 @@ let
    end handle HOL_ERR _ => NONE;
 
    fun get_const_for_exp e =
+       if is_var_res_exp_const e then dest_var_res_exp_const e else
        let
           val found_opt = first_opt (var_res_exp___is_equals_const e) sfs;
           val _ = if isSome found_opt then () else raise UNCHANGED;

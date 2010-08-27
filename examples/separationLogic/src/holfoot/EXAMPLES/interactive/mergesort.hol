@@ -62,12 +62,12 @@ REPEAT STRIP_TAC THENL [
 
 val mergesort_gen_step_opt = combined_gen_step_tac_opt [
     add_rewrites [SORTED_DEF, PERM_REFL],
-    add_ssfrags [permLib.PERM_ss] ]
+    add_ssfrags [permLib.PERM_ss] ];
 
 (* holfoot_set_goal_procedures file ["merge"] *)
 val merge_TAC =
    xHF_CONTINUE_TAC [mergesort_gen_step_opt, generate_vcs] THEN
-   merge_TAC_0 
+   merge_TAC_0;
 
 
 val _ = holfoot_tac_verify_spec file
@@ -77,30 +77,13 @@ val _ = holfoot_tac_verify_spec file
 
 
 (******************************************************************************)
-(* try the parallel one                                                       *)
+(* try the parallel one - exactly the same proof                              *)
 (******************************************************************************)
 
 val file_parallel = concat [examplesDir, "/interactive/mergesort_parallel.dsf"];
 
-(*unluckily mergesort needs some hints now as well, since the automation steps
-  happen in a slightly different order*)
 
-val mergesort_TAC_0 =    
-   HF_ELIM_COMMENTS_TAC THEN
-   REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `PERM X rdata'''` (
-      ASSUME_TAC o (CONV_RULE (REWR_CONV PERM_SYM))) THEN
-   ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [];
-
-val mergesort_TAC =
-   xHF_CONTINUE_TAC [mergesort_gen_step_opt, generate_vcs] THEN
-   mergesort_TAC_0;
-
-val split_TAC =
-   xHF_CONTINUE_TAC [mergesort_gen_step_opt, generate_vcs];
-
-val _ = holfoot_tac_verify_spec file_parallel NONE
-                [("mergesort", mergesort_TAC),
-                 ("merge",     merge_TAC),
-                 ("split",     split_TAC)]
+val _ = holfoot_tac_verify_spec file_parallel
+                (SOME [careful, generate_vcs, mergesort_gen_step_opt]) 
+                [("merge", merge_TAC)]
 

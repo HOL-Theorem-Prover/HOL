@@ -1,0 +1,167 @@
+(******************************************************************************)
+(* Holfoot can proof partial correctness of programs using separation logic.  *)
+(*                                                                            *)
+(* The entire proof is done using HOL 4. This includes not just the the       *)
+(* proof of some verification conditions, but the whole proof. This includes  *)
+(* formal definitions of the programming and specification language as well   *)
+(* as verified inferences.                                                    *)
+(******************************************************************************)
+
+
+(******************************************************************************)
+(* Boilerplate (Load everything)                                              *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open listTheory rich_listTheory arithmeticTheory 
+open HolSmtLib;
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+
+(******************************************************************************)
+(* Start with a simple version of the spec                                    *)
+(*                                                                            *)
+(* Unluckily, even the simple version needs  an interactive proof, since      *)
+(* HOL is bad at arithmetic.                                                  *)
+(******************************************************************************)
+
+val file1 = concat [examplesDir, "/vstte/vscomp1-simple.dsf"];
+
+
+(* Parse the file and try to verify procedure "vscomp1" interactively.
+   holfoot_set_goal_procedures file ["vscomp1"] 
+*)
+
+val vscomp1_simple_TAC =
+    (*run automation and then remove comments *)
+    HF_CONTINUE_TAC THEN HF_VC_TAC THEN
+
+    (* only some arithmetic verification conditions remain
+       proof them interactively *)
+    SIMP_TAC arith_ss [GSYM ADD1, MULT_CLAUSES] THEN
+    REPEAT STRIP_TAC THENL [
+       MATCH_MP_TAC LESS_EQ_TRANS THEN
+       Q.EXISTS_TAC `i_const * max'_const` THEN
+       ASM_SIMP_TAC arith_ss [],
+
+       `n_const = i_const` by DECIDE_TAC THEN
+       ASM_SIMP_TAC arith_ss []
+    ];
+
+
+(* put everything together, verifies in about 1 s *)
+val thm1 = holfoot_tac_verify_spec file NONE 
+                   [("vscomp1", vscomp1_simple_TAC)];
+
+
+
+(******************************************************************************)
+(* HOL is good at using lemma and definitions. Let's proof that vscomp1       *)
+(* really calculates the sum and maximum of a list.                           *)
+(******************************************************************************)
+
+(* SUM and MAX are already defined for lists in appropriate HOL
+   libraries. However, for demonstration purposes, let's redefine it here *)
+   
+
+val LIST_SUM_def = Define `
+   (LIST_SUM ([]:num list) = 0) /\
+   (LIST_SUM (n::ns)       = n + LIST_SUM ns)`
+
+val LIST_MAX_def = Define `
+   (LIST_MAX ([]:num list) = 0) /\
+   (LIST_MAX (n::ns)       = MAX n (LIST_MAX ns))`
+
+
+(* Proof the goal as a lemma *)
+val LIST_MAX_SUM_THM = prove (
+``!l. LIST_SUM l <= (LENGTH l) * LIST_MAX l``,
+Induct_on `l` THENL [
+   SIMP_TAC list_ss [LIST_SUM_def],
+
+   ASM_SIMP_TAC list_ss [LIST_SUM_def, LIST_MAX_def,
+      MULT_CLAUSES, MAX_DEF] THEN
+   ASM_SIMP_TAC (arith_ss++boolSimps.COND_elim_ss) [] THEN
+   REPEAT STRIP_TAC THEN
+   Cases_on `h < LIST_MAX l` THEN (
+      ASM_SIMP_TAC arith_ss []
+   ) THEN
+   `LIST_MAX l <= h` by DECIDE_TAC THEN
+   METIS_TAC[MULT_SYM,LESS_EQ_TRANS,LESS_MONO_MULT]
+]);
+
+
+val LIST_SUM_SNOC = prove (``
+!n ns. LIST_SUM (SNOC n ns) = LIST_SUM (n::ns)``,
+Induct_on `ns` THEN
+ASM_SIMP_TAC list_ss [LIST_SUM_def]);
+
+
+val LIST_MAX_SNOC = prove (``
+!n ns. LIST_MAX (SNOC n ns) = LIST_MAX (n::ns)``,
+Induct_on `ns` THEN
+ASM_SIMP_TAC list_ss [LIST_MAX_def] THEN
+SIMP_TAC (arith_ss++boolSimps.COND_elim_ss) [MAX_DEF]);
+
+
+
+(******************************************************************************)
+(* Verify specification using these definitions and a loop invariant          *)
+(******************************************************************************)
+
+(* Assing the filename of the spec to variable file *)
+val file2 = concat [examplesDir, "/vstte/vscomp1-invariant.dsf"];
+
+(* holfoot_set_goal_procedures file2 ["vscomp1"] *)
+val vscomp1_invariant_TAC =
+    (*run automation *)
+    HF_VC_SOLVE_TAC THEN
+   
+    (* concentrate on remaining VCs i.e. remove comments *)
+    HF_VC_TAC THEN
+
+    (* solve vcs using the simplifier *)
+    SIMP_TAC arith_ss [GSYM ADD1,
+        LIST_SUM_def, LIST_MAX_def,
+        LIST_MAX_SUM_THM,
+        GSYM SNOC_EL_FIRSTN, MAX_DEF,
+        LIST_SUM_SNOC, LIST_MAX_SNOC]
+
+(* put everything together (1.8 s) *)       
+val thm2 = holfoot_tac_verify_spec file NONE
+                   [("vscomp1", vscomp1_invariant_TAC)];
+
+
+
+(******************************************************************************)
+(* Verify specification using these definitions and a loop spec               *)
+(******************************************************************************)
+
+(* Assing the filename of the spec to variable file *)
+val file3 = concat [examplesDir, "/vstte/vscomp1-loopspec.dsf"];
+
+(* holfoot_set_goal_procedures file3 ["vscomp1"] *)
+val vscomp1_loopspec_TAC =
+    (*run automation *)
+    HF_SOLVE_TAC THEN
+   
+    (* concentrate on remaining VCs i.e. remove comments *)
+    HF_VC_TAC THEN
+
+    (* solve vcs using the simplifier *)
+    SIMP_TAC arith_ss [BUTFIRSTN_LENGTH_LESS, GSYM ADD1,
+        BUTFIRSTN_CONS_EL, LIST_SUM_def, LIST_MAX_def,
+        LIST_MAX_SUM_THM, MAX_DEF]
+
+
+(* put everything together (2.2 s) *)       
+val thm3 = holfoot_tac_verify_spec file3 NONE
+                   [("vscomp1", vscomp1_loopspec_TAC)];
+
+

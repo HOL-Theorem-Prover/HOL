@@ -41,6 +41,7 @@ open simpLib
 open permLib;
 open HolSmtLib;
 open listLib
+open holfootParserGenpreds;
 
 (*
 open vars_as_resourceBaseFunctor
@@ -106,6 +107,10 @@ fun is_no_proper_diseq thm =
    end handle HOL_ERR _ => true;
 
 
+val holfoot_prover_extras_1 = ref ([]:thm list);
+val holfoot_prover_extras_2 = ref ([]:thm list);
+val holfoot_varlist_rwts = ref ([]:thm list);
+
 structure holfoot_base_param = 
 struct
    val exp_to_string = holfoot_term_to_string;
@@ -118,10 +123,11 @@ struct
         IS_SEPARATION_COMBINATOR___FINITE_MAP, IS_SEPARATION_COMBINATOR___holfoot_separation_combinator,
         REWRITE_RULE [holfoot_separation_combinator_def] IS_SEPARATION_COMBINATOR___holfoot_separation_combinator];
 
-   val varlist_rwts = [holfoot___varlist_update_NO_VAR_THM];
+   fun varlist_rwts () = holfoot___varlist_update_NO_VAR_THM :: (!holfoot_varlist_rwts);
 
-   val prover_extra = ([holfoot_tag_11, holfoot_var_11],
-                    [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___HOLFOOT_REWRITES]);
+   fun prover_extra () = ([holfoot_tag_11, holfoot_var_11] @ (!holfoot_prover_extras_1),
+                    [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___HOLFOOT_REWRITES] @
+                    (!holfoot_prover_extras_2));
 end
 
 (*

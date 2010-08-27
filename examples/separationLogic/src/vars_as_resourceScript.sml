@@ -11776,7 +11776,8 @@ SIMP_TAC list_ss [var_res_prog_eval_expressions_def,
 val VAR_RES_COND_INFERENCE___eval_expressions___ONE =
 store_thm ("VAR_RES_COND_INFERENCE___eval_expressions___ONE",
 ``!f wpb rpb sfb e L c prog progL Q.
-BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb  ==>
+((e = var_res_exp_const c) \/ 
+ BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb)  ==>
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
    (asl_prog_block ((var_res_prog_eval_expressions prog (e::L))::progL)) Q =
@@ -11787,12 +11788,13 @@ SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, VAR_RES_HOARE_TRIPLE_def,
    var_res_prop___REWRITE, var_res_prog_eval_expressions_def] THEN
 SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [] THEN
+REPEAT GEN_TAC THEN DISCH_TAC THEN
 REPEAT STRIP_TAC THEN
 CONSEQ_CONV_TAC (K FORALL_EQ___CONSEQ_CONV) THEN
 GEN_TAC THEN
 HO_MATCH_MP_TAC ASL_INFERENCE___choose_constants___ONE THEN
 ASM_SIMP_TAC std_ss [IN_ABS, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR] THEN
-
+FULL_SIMP_TAC std_ss [var_res_exp_const_EVAL] THEN
 `?sfb'. sfb =  BAG_INSERT (var_res_prop_equal f e (var_res_exp_const c)) sfb'` by
   PROVE_TAC[BAG_DECOMPOSE] THEN
 FULL_SIMP_TAC std_ss [BAG_IN_BAG_INSERT, IN_ABS,
@@ -11823,7 +11825,7 @@ val VAR_RES_COND_INFERENCE___eval_expressions___LIST =
 store_thm ("VAR_RES_COND_INFERENCE___eval_expressions___LIST",
 ``!f wpb rpb sfb eL cL prog progL Q L.
 (LENGTH cL = LENGTH eL) /\
-EVERY (\ (e,c). BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb) (ZIP (eL,cL))  ==>
+EVERY (\ (e,c). (e = var_res_exp_const c) \/ BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb) (ZIP (eL,cL))  ==>
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
    (asl_prog_block ((var_res_prog_eval_expressions prog (eL++L))::progL)) Q =
@@ -11855,7 +11857,9 @@ val VAR_RES_COND_INFERENCE___eval_expressions =
 store_thm ("VAR_RES_COND_INFERENCE___eval_expressions",
 ``!f wpb rpb sfb eL cL prog progL Q.
 (LENGTH cL = LENGTH eL) /\
-EVERY (\ (e,c). BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb) (ZIP (eL,cL))  ==>
+EVERY (\ (e,c). (e = var_res_exp_const c) \/
+                BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb \/
+                BAG_IN (var_res_prop_equal f (var_res_exp_const c) e) sfb) (ZIP (eL,cL))  ==>
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
    (asl_prog_block ((var_res_prog_eval_expressions prog eL)::progL)) Q =
@@ -11865,7 +11869,8 @@ EVERY (\ (e,c). BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb) (ZIP 
 
 REPEAT STRIP_TAC THEN
 MP_TAC (Q.SPECL [`f`, `wpb`, `rpb`, `sfb`, `eL`, `cL`, `prog`, `progL`, `Q`, `[]`] VAR_RES_COND_INFERENCE___eval_expressions___LIST) THEN
-ASM_SIMP_TAC list_ss [VAR_RES_COND_INFERENCE___eval_expressions___NIL]);
+FULL_SIMP_TAC (list_ss++CONJ_ss) [VAR_RES_COND_INFERENCE___eval_expressions___NIL,
+   var_res_prop_equal_symmetric]);
 
 
 

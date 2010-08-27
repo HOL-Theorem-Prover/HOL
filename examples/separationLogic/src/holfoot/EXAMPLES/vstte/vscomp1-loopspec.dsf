@@ -1,0 +1,22 @@
+vscomp1(sum,max;a,n) [data_array(a,n,data)] {
+   local i, tmp;
+   sum = 0;
+   max = 0;
+   i = 0;
+   loop_spec [data_array(a,n,data)] {
+      while (i < n) {
+         tmp = (a + i) -> dta;
+         if (max < tmp) {
+            max = tmp;
+         }
+         sum = sum + tmp;
+         i = i + 1;
+      }
+   } [data_array(a,n,data) *
+      (max == ``MAX (old(max)) (LIST_MAX (BUTFIRSTN (old(i)) data))``) *
+      (sum == old(sum) + ``LIST_SUM (BUTFIRSTN (old(i)) data)``)]
+} [data_array(a,n,data) *
+   (max == ``LIST_MAX data``) *
+   (sum == ``LIST_SUM data``) *
+   (sum <= (n * max))]
+

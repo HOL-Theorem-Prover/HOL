@@ -1,0 +1,131 @@
+list_create(l;) [] {
+  l = NULL;
+} [data_list(l,``[]``)]
+
+list_cons(l;d) [data_list(l,data)] {
+  local t;
+  t = new();
+  t->tl = l;
+  t->dta = d;
+  l = t;
+} [data_list(l,``d::data``)]
+
+list_dest(re,l;) [data_list(l,``d::data``)] {
+  local t;
+  re = l->dta;
+  t = l->tl;
+  dispose(l);
+  l = t;
+} [data_list(l,data) * (re == #d)]
+
+list_concat(x;y) [data_list(x,xdata) * data_list(y,ydata)] {
+  local n,t;
+  if (x == NULL) {
+    x = y;
+  } else {
+    t = x;
+    n = t->tl;
+    loop_spec [(t |-> tl:n,dta:#tdate) *
+               data_list(n,data2) * data_list(y, data3)] {
+       while (n != NULL) {
+         t = n;
+         n = t->tl;
+       }
+       t->tl = y;
+    } [data_list(old(t),``tdate::(data2++data3)``)]
+  } 
+} [data_list(x, ``xdata++ydata``)]
+
+list_reverse(i;) [data_list(i,data)] {
+  local p, x;
+  p = NULL;
+  loop_spec [data_list(i,data) * data_list(p, data2)] {
+     while (i != NULL) {
+        x = i->tl;
+        i->tl = p;
+        p = i;
+        i = x;
+     }
+  } [data_list(p, ``(REVERSE data)++data2``)]
+  i = p;
+} [data_list(i,``REVERSE data``)]
+
+
+queue_create(q;) [] {
+  q = new();
+  q->front = NULL;
+  q->front_length = 0;
+  q->rear = NULL;
+  q->rear_length = 0;
+} [amortized_queue(q, ``[]``)]
+
+
+queue_length(re;q) [amortized_queue(q, data)] {
+   local rl,fl;
+   rl = q->rear_length;
+   fl = q->front_length;
+   re = rl + fl;
+} [amortized_queue(q, data) * (re == ``LENGTH data``)] 
+
+
+queue_normalise(;q) [weak_amortized_queue(q, data)] {
+   local r,rl,f,fl;
+
+   r  = q->rear;
+   rl = q->rear_length;
+   f  = q->front;
+   fl = q->front_length;
+
+   if (fl < rl) {
+      list_reverse(r;);
+      list_concat(f;r);
+      q->rear = NULL;
+      q->rear_length = 0;
+      q->front = f;
+      q->front_length = fl + rl;
+   }
+} [amortized_queue(q, data)]
+
+
+queue_front(re;q) [amortized_queue(q, ``d::data``)] {
+   local f;
+   f  = q->front;
+   re  = f->dta;
+} [amortized_queue(q, ``d::data``) * (re == #d)]
+
+
+queue_dequeue(re;q) [amortized_queue(q, ``d::data``)] {
+   local rl,f,fl;
+
+   rl = q->rear_length;
+   f  = q->front;
+   fl = q->front_length;
+
+   list_dest(re,f;);
+   fl = fl - 1;
+   q->front = f;
+   q->front_length = fl;
+  
+   if (fl < rl) {
+      queue_normalise(;q);
+   }
+} [amortized_queue(q, data) * (re == #d)]
+
+
+queue_enqueue(;q,d) [amortized_queue(q, data)] {
+   local r,rl,fl;
+
+   r  = q->rear;
+   rl = q->rear_length;
+   fl = q->front_length;
+ 
+   list_cons(r;d);
+   rl = rl + 1;
+
+   q->rear = r;
+   q->rear_length = rl;
+
+   if (fl < rl) {
+      queue_normalise(;q);
+   }
+} [amortized_queue(q, ``SNOC d data``)]

@@ -1,13 +1,14 @@
 functor vars_as_resourceBaseFunctor (var_res_param : 
 sig     
     val combinator_thmL              : Abbrev.thm list
-    val prover_extra                 : Abbrev.thm list * Abbrev.thm list
-    val varlist_rwts                 : Abbrev.thm list
+    val prover_extra                 : unit -> Abbrev.thm list * Abbrev.thm list
+    val varlist_rwts                 : unit -> Abbrev.thm list
     val exp_to_string                : Abbrev.term -> string
 end) :
 sig
        include Abbrev;
 
+       val update_var_res_param       : unit -> unit;
        val var_res_prove              : Abbrev.term -> Abbrev.thm
        val var_res_prove___no_expn    : Abbrev.term -> Abbrev.thm
        val var_res_assumptions_prove  : Abbrev.thm -> Abbrev.thm
@@ -42,7 +43,7 @@ sig
        val GENERATE___var_res_exp_varlist_update___REWRITES : term -> term -> term -> (term * thm list)
        val cond_rewrite___varlist_update : thm list -> conv
        val BAG_NORMALISE_CONV : conv;
-
+     
 
        val VAR_RES_FRAME_SPLIT___imp_CONV               : conv -> conv
        val VAR_RES_FRAME_SPLIT___split_CONV             : conv -> conv
@@ -142,7 +143,7 @@ fun COND_REWR_CONV___with_match thm =
 fun COND_REWR_CONV thm =
     fst (COND_REWR_CONV___with_match thm);
 
-fun COND_REWRITE_CONV___PREPOCESS thmL =
+fun COND_REWRITE_CONV___PREPROCESS thmL =
     (map COND_REWR_CONV___with_match (flatten (map BODY_CONJUNCTS thmL)));
 
 fun GABS_CONV conv tm =
@@ -166,7 +167,7 @@ fun GREDEPTH_CONV conv tm =
 
 fun EXT_COND_REWRITE_CONV top ctL thmL =
    let
-     val conv_termL = ctL @ (COND_REWRITE_CONV___PREPOCESS thmL);
+     val conv_termL = ctL @ (COND_REWRITE_CONV___PREPROCESS thmL);
      val net = foldr (fn ((conv,t),net) => Net.insert (t,conv) net) Net.empty conv_termL;
    in
      (if top then REPEATC else GREDEPTH_CONV) (fn t =>
@@ -232,12 +233,12 @@ val var_res_prove_RWL = [
       SUBSET_REFL, IN_LIST_TO_SET,
       VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF];
 
-   val var_res_prove_CONV =
+   fun var_res_prove_CONV_GEN () =
    let
+      val extra = var_res_param.prover_extra ();
       val rewrites = flatten [
           var_res_param.combinator_thmL,
-          (fst (var_res_param.prover_extra)),
-          var_res_prove_RWL]
+          (fst extra), var_res_prove_RWL]
       val var_res_prove_cs = listLib.list_compset ();
       val _ = computeLib.add_thms rewrites var_res_prove_cs 
       val _ = computeLib.add_conv (stringSyntax.ord_tm, 1, stringLib.ORD_CHR_CONV) var_res_prove_cs
@@ -245,7 +246,7 @@ val var_res_prove_RWL = [
 
       val strengthen = append [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___VAR_RES_REWRITES,
                                FEVERY_STRENGTHEN_THM]
-                       (snd (var_res_param.prover_extra)) 
+                       (snd extra) 
    in
       FULL_EXT_CONSEQ_REWRITE_CONV 
             (CONSEQ_CONV_get_context_congruences CONSEQ_CONV_IMP_CONTEXT)
@@ -255,10 +256,13 @@ val var_res_prove_RWL = [
         ([], strengthen, []) CONSEQ_CONV_STRENGTHEN_direction
    end
 
+   val var_res_prove_CONV = ref (var_res_prove_CONV_GEN ());
+   fun update_prover_extra () = (var_res_prove_CONV := var_res_prove_CONV_GEN ());
+
 exception var_res_prove___failed_expn of (term * term option);
 fun var_res_prove tttt =
    let
-      val thm = var_res_prove_CONV tttt handle UNCHANGED => Feedback.fail ()
+      val thm = (!var_res_prove_CONV) tttt handle UNCHANGED => Feedback.fail ()
       val precond = (fst o dest_imp o concl) thm
       val _ = if (aconv precond T) then () else
               raise var_res_prove___failed_expn (tttt, SOME precond)
@@ -857,18 +861,28 @@ fun o_ABS_R___PAIRED_CONV t =
       (conv1 THENC conv2 THENC conv3) t
    end handle HOL_ERR _ => raise UNCHANGED;
 
-val conv_termL = COND_REWRITE_CONV___PREPOCESS 
+val var_res_exp_varlist_update___exists_CONV =
+   HO_REWR_CONV (el 8 (BODY_CONJUNCTS var_res_prop_varlist_update___BOOL));
+
+fun conv_termL_GEN () = COND_REWRITE_CONV___PREPROCESS 
    (var_res___varlist_update_NO_VAR_THM::MAP::
     (GSYM o_f_FUPDATE_WEAK)::
-    o_f_FEMPTY::(var_res_param.varlist_rwts))@
-   [(o_ABS_R___PAIRED_CONV,Term `var_res_prop_varlist_update vcL o X`)];
+    o_f_FEMPTY::(var_res_param.varlist_rwts ()))@
+   [(o_ABS_R___PAIRED_CONV,Term `var_res_prop_varlist_update vcL o X`),
+    (var_res_exp_varlist_update___exists_CONV, 
+     Term `var_res_exp_varlist_update vcL (asl_exists x. p x)`)];
+
+val conv_termL = ref (conv_termL_GEN ())
 
 in
+
+fun update_varlist_rwts () =
+   conv_termL := (conv_termL_GEN ());
 
 (* 
 val SOME (rewrL, t) = !tref *)
 fun cond_rewrite___varlist_update rewrL =
-    let val conv = EXT_COND_REWRITE_CONV false conv_termL rewrL in
+    let val conv = EXT_COND_REWRITE_CONV false (!conv_termL) rewrL in
     fn t => let
        val thm0 = conv t;
        val _ = let
@@ -960,4 +974,8 @@ fun expands_strengthen_conseq_conv conv =
    (fn p => (fn context => (STRENGTHEN_CONSEQ_CONV 
          (conv (#expands_level p) (#do_prop_simps p, #prop_simp_ss p) context)))):var_res_inference
 									     
+
+fun update_var_res_param () =
+    (update_varlist_rwts();update_prover_extra();prover_cache_clear ();());
+
 end

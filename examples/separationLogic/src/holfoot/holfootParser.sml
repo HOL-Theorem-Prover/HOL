@@ -26,6 +26,14 @@ quietdec := false;
 
 exception holfoot_unsupported_feature_exn of string;
 
+val list_data_tag = ref "hd";
+val data_list_tag = ref "dta";
+val array_data_tag = ref "dta";
+val list_link_tag = ref "tl"
+val tree_data_tag = ref "dta"
+val tree_link_tags = ref ("l", "r")
+
+
 fun mk_el_list 0 v = []
   | mk_el_list n v =
        (listSyntax.mk_hd v)::(mk_el_list (n-1) (listSyntax.mk_tl v))
@@ -358,126 +366,104 @@ fun tag_a_expression_list2absyn vs rvm [] = (rvm, Absyn.mk_AQ tag_a_expression_f
       end;
 
 
-val holfoot_data_list___EMPTY_tm = ``[]:(holfoot_tag # num list) list``;
+val genpredL = ref []
+fun add_genpred (name:string, argL:Parsetree.a_genpredargType list, mk:Absyn.absyn list -> Absyn.absyn) =
+    genpredL:= (name,argL,mk,length argL)::(!genpredL)
+fun remove_genpred () =
+   let
+      val (h::hs) = (!genpredL);
+      val _ = genpredL := hs;
+   in
+      h
+   end;
+fun reset_genpreds () = 
+let
+   val _ = genpredL := [];
+in
+   ()
+end;
+
+
+
+fun lookup_genpredL name len =
+   filter (fn (n', _, _, len') => (len = len') andalso (name = n')) (!genpredL)
+
+local
+   exception arg_exception;
+
+   fun arg2absyn vs (os_opt, cs_opt) Aspred_arg_ty_tag (Aspred_arg_exp (Aexp_ident arg)) =
+         (os_opt, cs_opt, SOME (Absyn.mk_AQ (string2holfoot_tag arg)))
+     | arg2absyn vs (os_opt, cs_opt) Aspred_arg_ty_exp (Aspred_arg_exp arg_exp) =
+         let
+            val (os_opt, exp) = holfoot_expression2absyn vs os_opt arg_exp
+         in
+            (os_opt, cs_opt, SOME exp)
+         end
+     | arg2absyn vs (os_opt, cs_opt) Aspred_arg_ty_hol (Aspred_arg_exp (Aexp_hol arg)) =
+         let
+            val ((os_opt, cs_opt), hol) = HOL_Absyn_old_vars vs (os_opt, cs_opt) arg;
+         in
+            (os_opt, cs_opt, SOME hol)
+         end 
+     | arg2absyn vs (os_opt, cs_opt) Aspred_arg_ty_hol (Aspred_arg_exp (Aexp_ident arg)) =
+       arg2absyn vs (os_opt, cs_opt) Aspred_arg_ty_hol (Aspred_arg_exp (Aexp_hol arg))
+     | arg2absyn vs (os_opt, cs_opt) (Aspred_arg_ty_list Aspred_arg_ty_tag) (Aspred_arg_string_list argL) =
+         let
+            val tag_t = listSyntax.mk_list (
+                 (map string2holfoot_tag argL), Type `:holfoot_tag`);
+         in
+            (os_opt, cs_opt, SOME (Absyn.mk_AQ tag_t))
+         end
+     | arg2absyn vs (os_opt, cs_opt) Aspred_arg_ty_comma Aspred_arg_comma =
+         (os_opt, cs_opt, NONE)
+     | arg2absyn vs (os_opt, cs_opt) Aspred_arg_ty_colon Aspred_arg_colon =
+         (os_opt, cs_opt, NONE)     
+     | arg2absyn vs (os_opt, cs_opt) Aspred_arg_ty_semi Aspred_arg_semi =
+         (os_opt, cs_opt, NONE)
+     | arg2absyn _ _ _ _ = raise arg_exception;
+
+              
+   fun args2absyn vs (os_opt, cs_opt) [] [] = (os_opt, cs_opt, [])
+     | args2absyn vs (os_opt, cs_opt) (ty::tys) (arg::args) =
+       let
+          val (os_opt, cs_opt, r_opt)  = arg2absyn  vs (os_opt, cs_opt) ty arg;
+          val (os_opt, cs_opt, rs) = args2absyn vs (os_opt, cs_opt) tys args;
+
+          val rs' = case r_opt of SOME r => r::rs | NONE => rs;
+       in
+          (os_opt, cs_opt, rs')
+       end;
+
+in
+
+fun holfoot_a_genpred2absyn vs (os_opt, cs_opt) name args line =
+   let
+      val candidates = lookup_genpredL name (length args);
+      fun try_canditate (_, arg_tys, c, _) =
+      let
+          val (os_opt, cs_opt, absynArgs) = args2absyn vs (os_opt, cs_opt) arg_tys args
+      in
+         ((os_opt, cs_opt), c absynArgs)
+      end handle arg_exception => Feedback.fail ()
+   in
+      tryfind try_canditate candidates handle HOL_ERR _ =>
+         let
+         val _ = AssembleHolfootParser.print_parse_error (
+                  "Undefined predicate '"^name^"' found in line "^
+                  (Int.toString (line+1))^"!")
+         in
+         ((os_opt, cs_opt), Absyn.mk_typed(Absyn.mk_ident ("!!!ERROR "^name^"!!!"),
+                            Pretype.fromType holfoot_a_proposition_ty)) end
+   end;
+end
+
+
+
 
 fun holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_empty) =
    ((os_opt, cs_opt), Absyn.mk_AQ holfoot_stack_true_term)
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_list (tag,exp1)) =
-  holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_listseg (tag,exp1, Aexp_num 0))
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_listseg (tag,exp1, exp2)) = 
-  let
-     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
-     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
-     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_list_seg_term, [
-             Absyn.mk_AQ (string2holfoot_tag tag),
-             exp1, Absyn.mk_AQ holfoot_data_list___EMPTY_tm, exp2]);
-  in
-     ((os_opt, cs_opt), c)
-  end
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_queue (tag,exp1, exp2)) = 
-  let
-     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
-     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
-     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_queue_term, [
-             Absyn.mk_AQ (string2holfoot_tag tag),
-             exp1, Absyn.mk_AQ holfoot_data_list___EMPTY_tm, exp2]);
-  in
-     ((os_opt, cs_opt), c)
-  end
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_list (tag,exp1,data_tag,data)) =
-  holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_listseg (tag, exp1, data_tag, data, Aexp_num 0))
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_listseg (tag,exp1,data_tag,data,exp2)) =
-  let
-     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
-     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
-     val ((os_opt, cs_opt), data_a) = HOL_Absyn_old_vars vs (os_opt, cs_opt) data;
-     val data_tag_term = string2holfoot_tag data_tag;
-     val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
-     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_list_seg_term, [
-             Absyn.mk_AQ (string2holfoot_tag tag),
-             exp1, data2_a, exp2]);
-  in
-     ((os_opt, cs_opt), c)
-  end
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_queue (tag,exp1,data_tag,data,exp2)) =
-  let
-     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
-     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
-     val ((os_opt, cs_opt), data_a) = HOL_Absyn_old_vars vs (os_opt, cs_opt) data;
-     val data_tag_term = string2holfoot_tag data_tag;
-     val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
-     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_queue_term, [
-             Absyn.mk_AQ (string2holfoot_tag tag),
-             exp1, data2_a, exp2]);
-  in
-     ((os_opt, cs_opt), c)
-  end
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_array (exp1, exp2)) = 
-  let
-     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
-     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
-     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_array_term, [
-             exp1, exp2, Absyn.mk_AQ holfoot_data_list___EMPTY_tm]);
-  in
-     ((os_opt, cs_opt), c)
-  end
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_array (exp1, exp2, tag, data)) = 
-  let
-     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
-     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
-     val ((os_opt, cs_opt), data_a) = HOL_Absyn_old_vars vs (os_opt, cs_opt) data;
-     val data_tag_term = string2holfoot_tag tag;
-     val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
-     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_array_term, [
-             exp1, exp2, data2_a]);
-  in
-     ((os_opt, cs_opt), c)
-  end
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_interval (exp1, exp2)) = 
-  let
-     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
-     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
-     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_interval_term, [
-             exp1, exp2, Absyn.mk_AQ holfoot_data_list___EMPTY_tm]);
-  in
-     ((os_opt, cs_opt), c)
-  end
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_interval (exp1, exp2, tag, data)) = 
-  let
-     val (os_opt, exp1) = holfoot_expression2absyn vs os_opt exp1;
-     val (os_opt, exp2) = holfoot_expression2absyn vs os_opt exp2;
-     val ((os_opt, cs_opt), data_a) = HOL_Absyn_old_vars vs (os_opt, cs_opt) data;
-     val data_tag_term = string2holfoot_tag tag;
-     val data2_a = mk_list [Absyn.mk_pair (Absyn.mk_AQ data_tag_term, data_a)];
-     val c = Absyn.list_mk_app (Absyn.mk_AQ holfoot_ap_data_interval_term, [
-             exp1, exp2, data2_a]);
-  in
-     ((os_opt, cs_opt), c)
-  end 
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_data_tree (tagL,exp,dtagL,data)) =
-  let
-     val (os_opt, exp) = holfoot_expression2absyn vs os_opt exp;
-     val ((os_opt,cs_opt), data_a) = HOL_Absyn_old_vars vs (os_opt, cs_opt) data;
-     val tree_dtag_t = listSyntax.mk_list (
-                 (map string2holfoot_tag dtagL), Type `:holfoot_tag`)
-     val data2_a = Absyn.mk_pair (Absyn.mk_AQ tree_dtag_t, data_a)
-     val tree_tag_t = listSyntax.mk_list (
-                 (map string2holfoot_tag tagL), Type `:holfoot_tag`)
-     val comb_a = Absyn.list_mk_app(Absyn.mk_AQ holfoot_ap_data_tree_term, [
-                Absyn.mk_AQ tree_tag_t, exp, data2_a]);
-  in
-     ((os_opt, cs_opt), comb_a)
-  end
-| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_tree (tagL,tagR,exp)) =
-  let
-     val (os_opt, exp) = holfoot_expression2absyn vs os_opt exp;
-     val comb_a = Absyn.list_mk_app(Absyn.mk_AQ holfoot_ap_bintree_term, [
-                      Absyn.mk_pair (Absyn.mk_AQ (string2holfoot_tag tagL), 
-                               Absyn.mk_AQ (string2holfoot_tag tagR)), 
-                      exp])
-  in
-     ((os_opt, cs_opt), comb_a)
-  end
+| holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_genpred (name,args,(_,line))) =
+  holfoot_a_genpred2absyn vs (os_opt, cs_opt) name args line
 | holfoot_a_space_pred2absyn vs (os_opt, cs_opt) (Aspred_boolhol h) =
       let
         val ((os_opt, _), ha) = HOL_Absyn_old_vars vs (os_opt, NONE) h;
