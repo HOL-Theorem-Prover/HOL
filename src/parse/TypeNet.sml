@@ -3,14 +3,37 @@ struct
 
 open HolKernel
 
-datatype label = TV | TOP of {Thy : string, Tyop : string}
+datatype label = TV
+               | TOP of {Thy : string, Tyop : string} * int
+  (* The integer records arity of operator - this is necessary when
+     types are redefined.  If the old and new versions have the
+     same arity, all is well, but if they are different then the data
+     structure expects the wrong thing.
+
+     For example, if scratch$foo is of arity 1, then there will be a
+     ND node beneath it (where the argument gets treated).  But if
+     the user dumps that foo, and replaces it with one of arity 0, an
+     attempt to follow the tree will find the node that was right before
+     when it should be a leaf.
+
+     If the user does a lot of this, the data structure will slowly fill
+     up with garbage.  If a type gets replaced with a new one of the same
+     arity, the data for the old type will be returned as part of a
+     Binarymap.listItems when "match" is called, but the user will eliminate
+     the junk with the usual sort of call to match_type.  With "peek", the
+     old data won't be called because the lookup at the leaf's Binarymap
+     will just find whatever's supposed to be associated with the new type.
+  *)
+
+fun reccmp ({Thy=th1,Tyop=op1}, {Thy=th2,Tyop=op2}) =
+    pair_compare(String.compare, String.compare) ((op1,th1),(op2,th2))
 
 fun labcmp p =
     case p of
       (TV, TV) => EQUAL
     | (TV, TOP _) => LESS
-    | (TOP{Thy = thy1, Tyop = op1}, TOP{Thy = thy2, Tyop = op2}) =>
-      pair_compare(String.compare, String.compare) ((op1,thy1),(op2,thy2))
+    | (TOP opdata1, TOP opdata2) =>
+         pair_compare(reccmp, Int.compare) (opdata1, opdata2)
     | (TOP _, TV) => GREATER
 
 datatype 'a N = LF of (hol_type,'a) Binarymap.dict
@@ -30,7 +53,7 @@ fun ndest_type ty =
     else let
         val  {Thy,Tyop,Args} = dest_thy_type ty
       in
-        (TOP{Thy=Thy,Tyop=Tyop}, Args)
+        (TOP({Thy=Thy,Tyop=Tyop},length Args), Args)
       end
 
 fun insert ((net,sz), ty, item) = let
