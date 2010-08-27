@@ -35,7 +35,7 @@ val file1 = concat [examplesDir, "/vstte/vscomp1-simple.dsf"];
 
 
 (* Parse the file and try to verify procedure "vscomp1" interactively.
-   holfoot_set_goal_procedures file ["vscomp1"] 
+   holfoot_set_goal_procedures file1 ["vscomp1"] 
 *)
 
 val vscomp1_simple_TAC =
@@ -56,7 +56,7 @@ val vscomp1_simple_TAC =
 
 
 (* put everything together, verifies in about 1 s *)
-val thm1 = holfoot_tac_verify_spec file NONE 
+val thm1 = holfoot_tac_verify_spec file1 NONE 
                    [("vscomp1", vscomp1_simple_TAC)];
 
 
@@ -134,7 +134,7 @@ val vscomp1_invariant_TAC =
         LIST_SUM_SNOC, LIST_MAX_SNOC]
 
 (* put everything together (1.8 s) *)       
-val thm2 = holfoot_tac_verify_spec file NONE
+val thm2 = holfoot_tac_verify_spec file2 NONE
                    [("vscomp1", vscomp1_invariant_TAC)];
 
 

@@ -78,7 +78,7 @@ fun mk_holfoot_ap_amoritized_queue_absyn (strong, tag, exp, dtag, data) =
          Absyn.mk_AQ (if strong then T else F),
          tag, exp, 
          dtag, 
-         data])
+         data]);
 
 (* amortized_queue (q,data) *)
 val _ = add_genpred ("amortized_queue", [Aspred_arg_ty_exp, Aspred_arg_ty_comma, Aspred_arg_ty_hol], 
@@ -255,7 +255,7 @@ val thm1 = prove (spec_term,
 
 val queue_rewrite_TAC =    
     REWRITE_TAC [holfoot_ap_amortized_queue_REWRITE2] THEN
-    HF_SOLVE_TAC
+    HF_SOLVE_TAC;
 
 val dequeue_TAC =    
     queue_rewrite_TAC THEN
@@ -263,7 +263,7 @@ val dequeue_TAC =
     Cases_on `f_data = []` THEN1 (
        FULL_SIMP_TAC list_ss [LENGTH_NIL]
     ) THEN
-    HF_SOLVE_TAC
+    HF_SOLVE_TAC;
 
 (* put everything together *)        
 val thm2 = holfoot_tac_verify_spec file (SOME []) [
@@ -272,6 +272,6 @@ val thm2 = holfoot_tac_verify_spec file (SOME []) [
              ("queue_front",     queue_rewrite_TAC),
              ("queue_normalise", queue_rewrite_TAC),
              ("queue_enqueue",   queue_rewrite_TAC),
-             ("queue_dequeue",   dequeue_TAC)]
+             ("queue_dequeue",   dequeue_TAC)];
 
 
