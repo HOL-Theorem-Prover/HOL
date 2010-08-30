@@ -737,8 +737,8 @@ val bvc_genind = prove(
       (∀x. FINITE (fv x)) ∧
       (∀n s vv x. vp n vv ⇒ P n (GVAR s vv) x) ∧
       (∀n v bv tns uns ts us x.
-         LIST_REL (λn t. ∀x. P n t x) tns ts ∧
-         LIST_REL (λn t. ∀x. P n t x) uns us ∧
+         LIST_REL (λn t. genind vp lp n t ∧ ∀x. P n t x) tns ts ∧
+         LIST_REL (λn t. genind vp lp n t ∧ ∀x. P n t x) uns us ∧
          lp n bv tns uns ∧ v ∉ fv x ∧ v ∉ supp (listpm gtpm) us
         ⇒
          P n (GLAM v bv ts us) x)
