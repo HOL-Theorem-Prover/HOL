@@ -33,6 +33,8 @@ open TextIO sexp;
 val outstr = openOut "fact.lisp";
 fun out s = output(outstr, s);
 
+val _ = current_package := "M1";
+
 val _ = print_acl2def out (defun (concl f2));
 val _ = print_acl2def out (defun (concl f1));
 

@@ -370,6 +370,15 @@ val add_nat = store_thm("add_nat",
   \\ `!m n. &(m + n) = &m + (&(n:num)):int` by intLib.COOPER_TAC
   \\ ASM_SIMP_TAC std_ss []);
 
+val mult_nat = store_thm("mult_nat",
+  ``!m n. mult (nat m) (nat n) = nat (m * n)``,
+  SIMP_TAC (srw_ss()) [mult_def,int_def,nat_def,cpx_def, 
+    complex_rationalTheory.COMPLEX_MULT_def,rat_def,
+    ratTheory.RAT_MUL_CALCULATE,fracTheory.FRAC_MULT_CALCULATE, 
+    complex_rationalTheory.COMPLEX_ADD_def,rat_def,
+    ratTheory.RAT_ADD_CALCULATE,fracTheory.FRAC_ADD_CALCULATE,
+    ratTheory.RAT_SUB_CALCULATE,fracTheory.FRAC_SUB_CALCULATE]);
+
 val add_nat_int = store_thm("add_nat_int",
   ``!m n. n <= m ==> (add (nat m) (int (-&n)) = nat (m - n))``,
   SIMP_TAC (srw_ss()) [add_def,int_def,nat_def,cpx_def, 
@@ -404,9 +413,9 @@ val INTEGERP_INT = prove(
   \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC \\ POP_ASSUM MP_TAC
   \\ METIS_TAC [fracTheory.FRAC_DNMPOS,DIVIDES_lemma]); 
 
-val nth_lemma = prove(
-  ``(nth (nat 0) (cons x0 x1) = x0) /\
-    (nth (nat (SUC n)) (cons x0 x1) = nth (nat n) x1)``,
+val nth_lemma = store_thm("nth_lemma",
+  ``(nth (nat 0) x = car x) /\
+    (nth (nat (SUC n)) x = nth (nat n) (cdr x))``,
   SIMP_TAC std_ss [arithmeticTheory.ADD1] \\ REPEAT STRIP_TAC
   \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [acl2_simp nth_defun]))
   \\ SIMP_TAC (srw_ss()) [ACL2_SIMPS,nat_def,INTEGERP_INT,less_def,
@@ -422,7 +431,7 @@ val nth_thm = prove(
     (nth (nat 1) (cons x0 (cons x1 x2)) = x1) /\
     (nth (nat 2) (cons x0 (cons x1 (cons x2 x3))) = x2) /\
     (nth (nat 3) (cons x0 (cons x1 (cons x2 (cons x3 x4)))) = x3)``,
-  SIMP_TAC bool_ss [nth_lemma,
+  SIMP_TAC bool_ss [nth_lemma,car_def,cdr_def,
     DECIDE ``(1 = SUC 0) /\ (2 = SUC 1) /\ (3 = SUC 2) /\ (4 = SUC 3)``]);
 
 val make_state_thm = prove(
