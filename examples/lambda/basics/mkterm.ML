@@ -1,3 +1,8 @@
+(*  this is an -*- sml -*- file *)
+open lcsymtacs boolSimps
+open pred_setTheory nomsetTheory generic_termsTheory
+
+
 val vp = ``(λn u:unit. n = 0)``
 val lp = ``(λn (d:unit + unit) tns uns.
                (n = 0) ∧ ISL d ∧ (tns = [0]) ∧ (uns = []) ∨
@@ -44,9 +49,11 @@ val LAM_def = new_definition(
   "LAM_def",
   ``LAM v t = term_ABS (GLAM v (INL ()) [term_REP t] [])``)
 
+val [gvar,glam] = genind_rules |> SPEC_ALL |> CONJUNCTS
+
 val LAM_termP = prove(
   ``^termP (GLAM v (INL ()) [term_REP t] [])``,
-  match_mp_tac (hd (tl grules')) >> srw_tac [][genind_term_REP]);
+  match_mp_tac glam >> srw_tac [][genind_term_REP]);
 
 val APP_def = new_definition(
   "APP_def",
@@ -54,7 +61,7 @@ val APP_def = new_definition(
 
 val APP_termP = prove(
   ``^termP (GLAM x (INR ()) [] [term_REP t1; term_REP t2])``,
-  match_mp_tac (hd (tl grules')) >> srw_tac [][genind_term_REP])
+  match_mp_tac glam >> srw_tac [][genind_term_REP])
 
 val APP_def' = prove(
   ``term_ABS (GLAM v (INR ()) [] [term_REP t1; term_REP t2]) = APP t1 t2``,
@@ -74,6 +81,43 @@ val tpm_def = new_definition(
 
 val repabs_id = term_ABSREP |> CONJUNCT2 |> SPEC_ALL |> (#1 o EQ_IMP_RULE)
                             |> GEN_ALL
+
+val term_REP_tpm =
+    tpm_def |> SPEC_ALL |> Q.AP_TERM `term_REP`
+            |> SIMP_RULE bool_ss [repabs_id, genind_gtpm_eqn, genind_term_REP]
+
+
+
+val term_ind =
+    bvc_genind |> INST_TYPE [alpha |-> ``:unit+unit``, beta |-> ``:unit``]
+               |> Q.INST [`vp` |-> `^vp`, `lp` |-> `^lp`]
+               |> SIMP_RULE (std_ss ++ DNF_ss) [LIST_REL_NIL1, LIST_REL_CONS1]
+               |> Q.SPEC `λn t x. Q t x`
+               |> Q.SPEC `fv` |> Q.SPEC `0`
+               |> SIMP_RULE (std_ss ++ DNF_ss)
+                            [sumTheory.FORALL_SUM, supp_listpm,
+                             IN_UNION, NOT_IN_EMPTY, FORALL_ONE,
+                             genind_exists]
+               |> Q.INST [`Q` |-> `λt. P (term_ABS t)`]
+               |> SIMP_RULE std_ss [GSYM LAM_def, APP_def', GSYM VAR_def,
+                                    CONJUNCT1 term_ABSREP]
+
+(*
+fun elim_unnecessary_atoms th = let
+  val th = SPEC_ALL th
+  fun hypconv t = let
+    val (vs, bod) = strip_forall t
+    fun checkvar v =
+        if type_of v = stringLib.string_ty then let
+            val (h,c) = dest_imp bod
+          in
+            if not (free_in v c) then
+
+
+val supp_tpm = prove(
+  ``supp tpm t = supp gtpm (term_REP t)``,
+*)
+
 
 (* not sure if defining this is a good idea; perhaps just show the necessary
    properties of supp tpm *)
@@ -103,18 +147,5 @@ val FV_lam =
                                                  GFV_supp]))
            |> SIMP_RULE (srw_ss()) [GSYM GFV_supp, GSYM FV_def]
 
-val term_ind =
-    bvc_genind |> INST_TYPE [alpha |-> ``:unit+unit``, beta |-> ``:unit``]
-               |> Q.INST [`vp` |-> `^vp`, `lp` |-> `^lp`]
-               |> SIMP_RULE (std_ss ++ DNF_ss) [LIST_REL_NIL1, LIST_REL_CONS1]
-               |> Q.SPEC `λn t x. Q t x`
-               |> Q.SPEC `fv` |> Q.SPEC `0`
-               |> SIMP_RULE (std_ss ++ DNF_ss)
-                            [sumTheory.FORALL_SUM, supp_listpm,
-                             IN_UNION, NOT_IN_EMPTY, FORALL_ONE,
-                             genind_exists]
-               |> Q.INST [`Q` |-> `λt. P (term_ABS t)`]
-               |> SIMP_RULE std_ss [GSYM LAM_def, APP_def', GSYM VAR_def,
-                                    CONJUNCT1 term_ABSREP]
 
-val term_ind
+

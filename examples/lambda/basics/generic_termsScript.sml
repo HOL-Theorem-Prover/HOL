@@ -732,7 +732,8 @@ val MAP_gtpm = prove(
   ``MAP (gtpm pi) l = listpm gtpm pi l``,
   Induct_on `l` >> srw_tac [][]);
 
-val bvc_genind = prove(
+val bvc_genind = store_thm(
+  "bvc_genind",
   ``∀P fv.
       (∀x. FINITE (fv x)) ∧
       (∀n s vv x. vp n vv ⇒ P n (GVAR s vv) x) ∧
