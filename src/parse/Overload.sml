@@ -351,7 +351,7 @@ fun myfind f [] = NONE
   | myfind f (x::xs) = case f x of (v as SOME _) => v | NONE => myfind f xs
 
 fun isize0 acc f [] = acc
-  | isize0 acc f ({redex,residue} :: rest) = isize0 (acc + f residue) f rest
+  | isize0 acc f ({redex,residue} :: rest) = isize0 (acc + f residue + 1) f rest
 fun isize f x = isize0 0 f x
 
 fun strip_comb ((_, prmap): overload_info) t = let
