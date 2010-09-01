@@ -770,7 +770,10 @@ One would probably automate this process with a makefile of course.
 \newcommand{\holtm}{\texttt{\bs{}HOLtm}}
 \newcommand{\holty}{\texttt{\bs{}HOLty}}
 \newcommand{\holthm}{\texttt{\bs{}HOLthm}}
-There are three commands for inserting text corresponding to \HOL{} entities into \LaTeX{} documents: \holtm, \holty{} and \holthm.
+\paragraph{Before Starting} In order to use the munger, one must ``include'' (use the \texttt{\bs{}usepackage} command) the \texttt{holtexbasic.sty} style-file, which is found in the HOL source directory \texttt{src/TeX}.
+
+\bigskip
+There are then three commands for inserting text corresponding to \HOL{} entities into \LaTeX{} documents: \holtm, \holty{} and \holthm.
 %
 Each takes one argument, specifying something of the corresponding \HOL{} type.
 %
@@ -949,11 +952,7 @@ This makes the argument suitable for inclusion in standard \LaTeX{} positions.
 %
 This is the default for \holtm{} and \holty.
 %
-The \texttt{\bs{}HOLinline} command is defined in the \texttt{.sty} file
-\begin{alltt}
-   src/TeX/holtexbasic.sty
-\end{alltt}
-which needs to be included (i.e., with \texttt{\bs{}usepackage}) to make the munged output work.
+(The \texttt{\bs{}HOLinline} command is defined in the \texttt{holtexbasic.sty} style file.)
 
 \item[\texttt{width=}$n$] Causes the argument to be typeset in lines of width $n$.
 %
