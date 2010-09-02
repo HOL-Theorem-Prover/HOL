@@ -2,7 +2,7 @@
 open HolKernel boolLib bossLib Parse;
 open pred_setTheory set_sepTheory progTheory listTheory pairTheory 
 open combinTheory addressTheory sexpTheory imported_acl2Theory;
-open complex_rationalTheory hol_defaxiomsTheory;
+open complex_rationalTheory hol_defaxiomsTheory arithmeticTheory;
 
 val _ = new_theory "m1_prog";
 
@@ -370,6 +370,18 @@ val add_nat = store_thm("add_nat",
   \\ `!m n. &(m + n) = &m + (&(n:num)):int` by intLib.COOPER_TAC
   \\ ASM_SIMP_TAC std_ss []);
 
+val less_nat = store_thm("less_nat",
+  ``!m n. (|= (less (nat m) (nat n))) = m < n``,
+  SIMP_TAC (srw_ss()) [less_def,int_def,nat_def,cpx_def, 
+    complex_rationalTheory.COMPLEX_LT_def,rat_def,
+    ratTheory.RAT_LES_CALCULATE,fracTheory.NMR,fracTheory.DNM]
+  \\ SRW_TAC [] [] \\ EVAL_TAC);
+
+val sexp_not = store_thm("sexp_not",
+  ``!s. (|= not s) = ~(|= s)``,
+  REPEAT STRIP_TAC \\ Cases_on `s = nil` \\ POP_ASSUM MP_TAC
+  \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC);
+
 val mult_nat = store_thm("mult_nat",
   ``!m n. mult (nat m) (nat n) = nat (m * n)``,
   SIMP_TAC (srw_ss()) [mult_def,int_def,nat_def,cpx_def, 
@@ -384,6 +396,14 @@ val add_nat_int = store_thm("add_nat_int",
   SIMP_TAC (srw_ss()) [add_def,int_def,nat_def,cpx_def, 
     complex_rationalTheory.COMPLEX_ADD_def,rat_def,
     ratTheory.RAT_ADD_CALCULATE,fracTheory.FRAC_ADD_CALCULATE,
+    integerTheory.INT_SUB,GSYM integerTheory.int_sub]);
+
+val unary_minus_int = store_thm("unary_minus_int",
+  ``!i. unary_minus (int i) = int (-i)``,
+  SIMP_TAC (srw_ss()) [unary_minus_def,int_def,nat_def,cpx_def, 
+    complex_rationalTheory.COMPLEX_SUB_def,rat_def,
+    complex_rationalTheory.com_0_def,ratTheory.rat_0_def,fracTheory.frac_0_def,
+    ratTheory.RAT_SUB_CALCULATE,fracTheory.FRAC_SUB_CALCULATE,
     integerTheory.INT_SUB,GSYM integerTheory.int_sub]);
 
 val rat_lemma = prove(
@@ -426,6 +446,19 @@ val nth_lemma = store_thm("nth_lemma",
         cpx_def,EVAL ``int 0``,rat_def,ratTheory.RAT_LES_CALCULATE,
         fracTheory.NMR,fracTheory.DNM,DECIDE ``0<n+1:num``]);
 
+val update_nth_lemma = store_thm("update_nth_lemma",
+  ``(update_nth (nat 0) v list = cons v (cdr list)) /\
+    (update_nth (nat (SUC n)) v list = cons (car list) (update_nth (nat n) v (cdr list)))``,
+  SIMP_TAC std_ss [arithmeticTheory.ADD1] \\ REPEAT STRIP_TAC
+  \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [acl2_simp update_nth_defun]))
+  \\ SIMP_TAC (srw_ss()) [ACL2_SIMPS,nat_def,INTEGERP_INT,less_def,
+        cpx_def,EVAL ``int 0``,rat_def,ratTheory.RAT_LES_CALCULATE]
+  \\ ONCE_REWRITE_TAC [add_COMM] \\ SIMP_TAC std_ss [GSYM nat_def]
+  \\ SIMP_TAC std_ss [add_nat_int] \\ SIMP_TAC std_ss [nat_def]
+  \\ SIMP_TAC (srw_ss()) [ACL2_SIMPS,nat_def,INTEGERP_INT,less_def,int_def,
+        cpx_def,EVAL ``int 0``,rat_def,ratTheory.RAT_LES_CALCULATE,
+        fracTheory.NMR,fracTheory.DNM,DECIDE ``0<n+1:num``]);
+
 val nth_thm = prove(
   ``(nth (nat 0) (cons x0 x1) = x0) /\
     (nth (nat 1) (cons x0 (cons x1 x2)) = x1) /\
@@ -433,6 +466,24 @@ val nth_thm = prove(
     (nth (nat 3) (cons x0 (cons x1 (cons x2 (cons x3 x4)))) = x3)``,
   SIMP_TAC bool_ss [nth_lemma,car_def,cdr_def,
     DECIDE ``(1 = SUC 0) /\ (2 = SUC 1) /\ (3 = SUC 2) /\ (4 = SUC 3)``]);
+
+val nth_1 = save_thm("nth_1",
+  SIMP_CONV bool_ss [GSYM (EVAL ``SUC 0``),nth_lemma] ``nth (nat 1) x``);
+
+val update_nth_1 = save_thm("update_nth_1",
+  SIMP_CONV bool_ss [GSYM (EVAL ``SUC 0``),update_nth_lemma] ``update_nth (nat 1) v list``);
+
+val not_eq_nil = store_thm("not_eq_nil",
+  ``!x. (not x = nil) = (|= x)``,
+  REPEAT STRIP_TAC \\ Cases_on `x = nil` \\ POP_ASSUM MP_TAC
+  \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss []);
+
+val sexp_reduce_SUC = store_thm("sexp_reduce_SUC",
+  ``!n. add (nat (SUC n)) (unary_minus (nat 1)) = nat n``,
+  SIMP_TAC std_ss [ADD1,GSYM add_nat,add_ASSOC]
+  \\ `add (nat 1) (unary_minus (nat 1)) = nat 0` by ALL_TAC 
+  \\ ASM_SIMP_TAC std_ss [add_nat] \\ SIMP_TAC std_ss [nat_def,unary_minus_int]
+  \\ SIMP_TAC std_ss [GSYM nat_def,add_nat_int]);
 
 val make_state_thm = prove(
   ``(pc (make_state x y z p) = x) /\

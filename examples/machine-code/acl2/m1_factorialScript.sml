@@ -19,29 +19,24 @@ val (th,defs) = m1_progLib.decompile_m1 "fact" `
   List [sym "M1" "GOTO"; int (-10)]
   List [sym "M1" "ILOAD"; nat 1]`
 
-val f1 = el 1 (CONJUNCTS defs)
-val f2 = el 2 (CONJUNCTS defs)
-
 val _ = save_thm("acl2_fact_definition",defs);
 val _ = save_thm("acl2_fact_certificate",th);
 
 
-(* print result 
+(* export result *)
 
-open TextIO sexp;
+val f1 = el 1 (CONJUNCTS defs);
+val f2 = el 2 (CONJUNCTS defs);
 
-val outstr = openOut "fact.lisp";
-fun out s = output(outstr, s);
+val outstr = TextIO.openOut "fact.lisp";
+fun out s = TextIO.output(outstr, s);
 
-val _ = current_package := "M1";
+val _ = sexp.current_package := "M1";
+val _ = sexp.print_acl2def out (sexp.defun (concl f2));
+val _ = sexp.print_acl2def out (sexp.defun (concl f1));
 
-val _ = print_acl2def out (defun (concl f2));
-val _ = print_acl2def out (defun (concl f1));
-
-val _ = flushOut outstr;
-val _ = closeOut outstr;
-
- / print result *)
+val _ = TextIO.flushOut outstr;
+val _ = TextIO.closeOut outstr;
 
 
 val _ = export_theory();
