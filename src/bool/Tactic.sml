@@ -22,6 +22,8 @@ fun empty th [] = th
   | empty th _ = raise ERR "empty" "Bind Error"
 fun sing f [x] = f x
   | sing f _ = raise ERR "sing" "Bind Error"
+fun pairths f [x,y] = f x y
+  | pairths f _ = raise ERR "pairths" "Bind Error"
 
 (*---------------------------------------------------------------------------*
  * Accepts a theorem that satisfies the goal                                 *
@@ -143,16 +145,16 @@ val CONJ_TAC:tactic = fn (asl,w) =>
 val CONJ_ASM1_TAC:tactic = fn (asl,w) =>
    let val (conj1,conj2) = dest_conj w
    in ([(asl,conj1), (conj1::asl,conj2)],
-       fn [th1,th2] => CONJ th1 (PROVE_HYP th1 th2))
+       pairths (fn th1 => fn th2 => CONJ th1 (PROVE_HYP th1 th2)))
    end
-   handle HOL_ERR _ => raise ERR "CONJ1_TAC" "";
+   handle HOL_ERR _ => raise ERR "CONJ_ASM1_TAC" "";
 
 val CONJ_ASM2_TAC:tactic = fn (asl,w) =>
    let val (conj1,conj2) = dest_conj w
    in ([(conj2::asl,conj1), (asl,conj2)],
-       fn [th1,th2] => CONJ (PROVE_HYP th2 th1) th2)
+       pairths (fn th1 => fn th2 => CONJ (PROVE_HYP th2 th1) th2))
    end
-   handle HOL_ERR _ => raise ERR "CONJ1_TAC" "";
+   handle HOL_ERR _ => raise ERR "CONJ_ASM2_TAC" "";
 
 
 
