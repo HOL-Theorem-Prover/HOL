@@ -3,26 +3,28 @@
 homesvn=https://hol.svn.sourceforge.net/svnroot/hol
 
 usage () {
-        echo "Usage: releasing-hol [-f] <release-path> <ML>" >&2
+        echo "Usage: releasing-hol [-f] [--svn URL] <release-path> <ML>" >&2
         echo "  <release-path> is a path wrt $homesvn" >&2
         echo "  <ML> is a path to mosml or poly" >&2
         echo "  Use the -f option to force fresh svn call (ignoring cache)" >&2
+        echo "  Use --svn <repo-URL> to specify alternative svn repo" >&2
         exit 1
 }
 
-if [ $# -eq 0 ]
-then
-    usage
-fi
+TEMP=$(getopt -n releasing-hol -of -l svn: -- "$@")
+eval set -- "$TEMP"
 
-if [ $1 = "-f" ]
-then
-    force=true
-    echo "Forcing a fresh svn export call" >&2
-    shift
-else
-    force=false
-fi
+force=false
+
+while true
+do
+    case "$1" in
+        -f ) force=true ; echo "Forcing a fresh svn export call" >&2; shift ;;
+        --svn ) homesvn=$2 ; shift 2 ;;
+        -- ) shift ; break ;;
+        * ) echo "Internal error!" >&2 ; exit 1 ;;
+    esac
+done
 
 if [ $# -ne 2 ]
 then
@@ -130,7 +132,8 @@ echo
 echo "Copying theory graph from local installation"
 # see the file help/src/DOT for instructions on how to generate the
 # theorygraph files
-/bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* /tmp/svn-export-result/help/theorygraph
+/bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* /tmp/svn-export-result/help/theorygraph ||
+  (echo "Couldn't copy theory graph." >&2 ; exit 1)
 
 if [ $ML = "mosml" ]
 then
