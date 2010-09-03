@@ -3,9 +3,6 @@ struct
 
 open HolKernel Parse boolLib;
 
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
 (* ************************************************************	*)
 (* PROP_TAC    : A tautology checker with prop. abstraction	*)
 (* REW_PROP_TAC: Same as PROP_TAC, but rewrites first with asm.	*)
@@ -158,25 +155,8 @@ fun RIGHT_DISJ_TAC (asm,g) =
 (*	G |- a	| G,a|- b		G |- b	| G,b|- a	*)
 (* ************************************************************	*)
 
-fun LEFT_CONJ_TAC (asm,g) =
-    let val lem = TAC_PROOF(([],--`!a b. a/\b = a /\ (a==>b)`--),
-		REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`a:bool`--)
-		THEN REWRITE_TAC[])
-	val (a,b) = dest_conj g
-     in
-     (SUBST1_TAC(SPECL[a,b]lem) THEN CONJ_TAC THENL[ALL_TAC,DISCH_TAC]) (asm,g)
-    end
-
-fun RIGHT_CONJ_TAC (asm,g) =
-    let val lem = TAC_PROOF(([],--`!a b. a/\b = b /\ (b==>a)`--),
-		REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`b:bool`--)
-		THEN REWRITE_TAC[])
-	val (a,b) = dest_conj g
-     in
-    (SUBST1_TAC(SPECL[a,b]lem) THEN CONJ_TAC THENL[ALL_TAC,DISCH_TAC]) (asm,g)
-    end
-
-
+val LEFT_CONJ_TAC = CONJ_ASM1_TAC
+val RIGHT_CONJ_TAC = CONJ_ASM2_TAC
 
 (* ********** LEFT_LEMMA_DISJ_CASES_TAC ***********************	*)
 (* Given a theorem G|-a\/b, these tactics behave as follows:	*)

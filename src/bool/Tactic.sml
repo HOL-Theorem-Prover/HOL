@@ -136,6 +136,25 @@ val CONJ_TAC:tactic = fn (asl,w) =>
    end
    handle HOL_ERR _ => raise ERR "CONJ_TAC" "";
 
+(* ASM1 and ASM2 variants assume the given conjunct when proving the other
+   one
+*)
+
+val CONJ_ASM1_TAC:tactic = fn (asl,w) =>
+   let val (conj1,conj2) = dest_conj w
+   in ([(asl,conj1), (conj1::asl,conj2)],
+       fn [th1,th2] => CONJ th1 (PROVE_HYP th1 th2))
+   end
+   handle HOL_ERR _ => raise ERR "CONJ1_TAC" "";
+
+val CONJ_ASM2_TAC:tactic = fn (asl,w) =>
+   let val (conj1,conj2) = dest_conj w
+   in ([(conj2::asl,conj1), (asl,conj2)],
+       fn [th1,th2] => CONJ (PROVE_HYP th2 th1) th2)
+   end
+   handle HOL_ERR _ => raise ERR "CONJ1_TAC" "";
+
+
 
 (*---------------------------------------------------------------------------*
  * Disjunction introduction                                                  *

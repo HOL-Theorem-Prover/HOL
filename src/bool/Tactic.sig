@@ -9,6 +9,8 @@ sig
   val ASSUME_TAC            : thm_tactic
   val FREEZE_THEN           : thm_tactical
   val CONJ_TAC              : tactic
+  val CONJ_ASM1_TAC         : tactic
+  val CONJ_ASM2_TAC         : tactic
   val DISJ1_TAC             : tactic
   val DISJ2_TAC             : tactic
   val MP_TAC                : thm_tactic
