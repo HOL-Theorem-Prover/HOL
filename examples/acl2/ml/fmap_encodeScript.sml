@@ -26,6 +26,12 @@ open HolKernel Parse boolLib bossLib;
 open finite_mapTheory pred_setTheory listTheory pred_setLib;
 
 (*****************************************************************************)
+(* Start new theory "fmap_encode"                                            *)
+(*****************************************************************************)
+
+val _ = new_theory "fmap_encode";
+
+(*****************************************************************************)
 (* fold for finite maps                                                      *)
 (*****************************************************************************)
 
@@ -182,6 +188,7 @@ val EXISTS_MEM_M2L = prove(``!x a. (?y. MEM (a,y) (M2L x)) = a IN FDOM x``,
 (* UNIQL_M2L:                                                                *)
 (* `!x. uniql (M2L x)`                                                       *)
 (*****************************************************************************)
+
 val UNIQL_M2L = prove(``!x. uniql (M2L x)``,
     GEN_TAC THEN completeInduct_on `FCARD x` THEN RW_TAC std_ss [M2L_def] THEN
     ONCE_REWRITE_TAC [fold_def] THEN RW_TAC std_ss [uniql_empty,GSYM M2L_def] THEN
@@ -211,7 +218,8 @@ val MEM_M2L = store_thm("M2M_M2L",
 (* `!x. L2M (M2L x) = L2M (SET_TO_LIST (set (M2L x)))`                       *)
 (*****************************************************************************)
 
-val L2M_M2L_SETLIST = prove(``!x. L2M (M2L x) = L2M (SET_TO_LIST (set (M2L x)))``,
+val L2M_M2L_SETLIST = store_thm("L2M_M2L_SETLIST",
+    ``!x. L2M (M2L x) = L2M (SET_TO_LIST (set (M2L x)))``,
     GEN_TAC THEN HO_MATCH_MP_TAC L2M_EQ THEN
     RW_TAC std_ss [UNIQL_M2L, GSYM uniqs_eq, FINITE_LIST_TO_SET, GSYM uniql_eq, SET_TO_LIST_INV]);
 
@@ -226,7 +234,8 @@ val MEM_M2L_FUPDATE = prove(``!x y z. MEM (y,z) (M2L (x |+ (y,z)))``,
 val MEM_M2L_PAIR = prove(``!x y. MEM y (M2L x) = (FST y) IN FDOM x /\ (SND y = x ' (FST y))``,
     GEN_TAC THEN Cases THEN RW_TAC std_ss [MEM_M2L]);
 
-val SET_M2L_FUPDATE = prove(``!x y. set (M2L (x |+ y)) = set (y :: M2L (x \\ FST y))``,
+val SET_M2L_FUPDATE = store_thm("SET_M2L_FUPDATE",
+    ``!x y. set (M2L (x |+ y)) = set (y :: M2L (x \\ FST y))``,
     RW_TAC std_ss [SET_EQ_SUBSET, SUBSET_DEF, LIST_TO_SET_THM, IN_INSERT, IN_LIST_TO_SET, MEM_M2L_PAIR, MEM] THEN
     TRY (Cases_on `x'`) THEN TRY (Cases_on `y`) THEN Cases_on `q = q'` THEN
     FULL_SIMP_TAC std_ss [FDOM_FUPDATE, IN_INSERT, FAPPLY_FUPDATE, FDOM_DOMSUB, IN_DELETE, DOMSUB_FAPPLY, DOMSUB_FAPPLY_NEQ, NOT_EQ_FAPPLY]);
@@ -236,18 +245,49 @@ val SET_M2L_FUPDATE = prove(``!x y. set (M2L (x |+ y)) = set (y :: M2L (x \\ FST
 (* `!x y. y IN FDOM (L2M x) = ?z. MEM (y,z) x`                               *)
 (*****************************************************************************)
 
+val FDOM_L2M = store_thm("FDOM_L2M",
+    ``!x y. y IN FDOM (L2M x) = ?z. MEM (y,z) x``,
+    Induct THEN TRY (Cases_on `h`) THEN 
+    RW_TAC std_ss [L2M,MEM,FDOM_FEMPTY,NOT_IN_EMPTY,FDOM_FUPDATE,IN_INSERT] THEN
+    METIS_TAC []);
+
 (*****************************************************************************)
 (* FDOM_L2M_M2L                                                              *)
 (* `!x. FDOM (L2M (M2L x)) = FDOM x`                                         *)
 (*****************************************************************************)
+
+val FDOM_L2M_M2L = prove(``!x. FDOM (L2M (M2L x)) = FDOM x``,
+    RW_TAC std_ss [SET_EQ_SUBSET, SUBSET_DEF, FDOM_L2M, MEM_M2L]);
+
+(*****************************************************************************)
+(* L2M_APPLY:                                                                *)
+(* `!x y z. uniql x /\ MEM (y,z) x ==> (L2M x ' y = z)`                      *)
+(*****************************************************************************)
+
+val L2M_APPLY = store_thm("L2M_APPLY",
+    ``!x y z. uniql x /\ MEM (y,z) x ==> (L2M x ' y = z)``,
+    Induct THEN TRY (Cases_on `h`) THEN RW_TAC std_ss [MEM,L2M] THEN
+    Cases_on `q = y` THEN RW_TAC std_ss [FAPPLY_FUPDATE,NOT_EQ_FAPPLY] THEN
+    REPEAT (POP_ASSUM MP_TAC) THEN REWRITE_TAC [MEM, uniql_def] THEN
+    METIS_TAC []);
 
 (*****************************************************************************)
 (* APPLY_L2M_M2L                                                             *)
 (* `y IN FDOM x ==> (L2M (M2L x) ' y = x ' y)`                               *)
 (*****************************************************************************)
 
+val APPLY_L2M_M2L = store_thm("APPLY_L2M_M2L",
+    ``!x y. y IN FDOM x ==> (L2M (M2L x) ' y = x ' y)``,
+    METIS_TAC [L2M_APPLY, UNIQL_M2L, MEM_M2L, FDOM_L2M_M2L, FDOM_L2M]);
+
 (*****************************************************************************)
 (* L2M_M2L:                                                                  *)
 (* `!x. L2M (M2L x) = x`                                                     *)
 (*****************************************************************************)
 
+val L2M_M2L = store_thm("L2M_M2L",
+    ``!x. L2M (M2L x) = x``,
+    REWRITE_TAC [GSYM SUBMAP_ANTISYM, SUBMAP_DEF, FDOM_L2M_M2L] THEN
+    RW_TAC std_ss [APPLY_L2M_M2L]);
+
+val _ = export_theory();
