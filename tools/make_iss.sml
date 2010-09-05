@@ -1,10 +1,11 @@
 (* program to output iss file *)
 (* to compile this structure, cd to the tools directory, and
-     mosmlc -o make_iss.exe -I Holmake -I ..\sigobj make_iss.sml
+     mosmlc -o make_iss.exe -I Holmake -I ..\sigobj basis2002.ui make_iss.sml
 *)
 structure make_iss = struct
 
 structure FileSys = OS.FileSys
+structure Process = OS.Process
 
 val holdir = Globals.HOLDIR
 val systeml = Systeml.systeml
@@ -28,14 +29,16 @@ val _ = print "Removing unnecessary files: ";
 val _ = FileSys.remove (fullPath ["help", "HOL.Help"])
     handle Interrupt => raise Interrupt | _ => ()
 val _ = print "help/HOL.Help, "
-val _ = (FileSys.chDir "help", FileSys.chDir "src")
+val _ = (FileSys.chDir "help", FileSys.chDir "src-sml")
 val _ = systeml [fullPath [holdir, "bin", "Holmake"], "cleanAll"]
-val _ = print "cleanable stuff in help/src\n\n"
+val _ = print "cleanable stuff in help/src-sml\n\n"
 
 val _ = print "Compiling win-config.exe"
 val _ = FileSys.chDir (fullPath [holdir, "tools"])
-val _ = if systeml ["mosmlc", "-I", "Holmake", "-o", "win-config.exe",
-                    "win-config.sml"] = Process.success then ()
+val _ = if Process.isSuccess 
+             (systeml ["mosmlc", "-I", "Holmake", "-o", "win-config.exe",
+                       "win-config.sml"])
+        then ()         
         else (print "Compilation failed!\n"; Process.exit Process.failure)
 val _ = FileSys.chDir holdir
 
@@ -129,7 +132,7 @@ val run_section = "\
 
 val _ = let
   val (toplevelfiles, dirs) = alldirs [".HOLMK", "CVS"]
-  val outstream = TextIO.openOut "hol98.iss"
+  val outstream = TextIO.openOut "hol4.iss"
   fun print s = TextIO.output(outstream, s)
 in
   print header;
@@ -152,8 +155,8 @@ val _ = let
   val instrm = TextIO.openIn file
   fun readlines acc =
       case TextIO.inputLine instrm of
-        "" => List.rev acc
-      | s => readlines (s::acc)
+        NONE => List.rev acc
+      | SOME s => readlines (s::acc)
   val lines = readlines []
   val _ = TextIO.closeIn instrm
   fun adjustline s = String.extract(s,size holdir + 1,NONE)
