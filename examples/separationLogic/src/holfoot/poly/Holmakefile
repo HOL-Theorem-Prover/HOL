@@ -3,7 +3,7 @@ INCLUDES=..
 linux_LIBS = $(POLY_LDFLAGS_STATIC) 
 macosx_LIBS = $(POLY_LDFLAGS)
 
-EXTRA_CLEANS = holfoot.o holfoot holfoot-web.o holfoot-web
+EXTRA_CLEANS = holfoot.o holfoot holfoot-web.o holfoot-web holfoot-full holfoot-full.o holfoot.state
 
 all: holfoot holfoot-web holfoot-full
 

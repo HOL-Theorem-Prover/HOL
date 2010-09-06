@@ -1814,7 +1814,7 @@ let
    (*apply inference*)
    val (fvs, thm1_base) = strip_forall (rhs (concl thm0));
    val thm1a = PART_MATCH (lhs o snd o dest_imp o snd o dest_imp)
-      VAR_RES_FRAME_SPLIT___points_to___data_list_seg
+      VAR_RES_FRAME_SPLIT___points_to___data_list_seg 
       thm1_base;
 
    val precond = (fst o dest_imp o concl) thm1a;

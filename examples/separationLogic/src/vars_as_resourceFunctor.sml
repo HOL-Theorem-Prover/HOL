@@ -3001,11 +3001,25 @@ in
 fun VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV do_bool preserve_fallback context tt =
 let
    val (f,sr, wpbrpb, wpb', _, _, imp_sfb, _) =  dest_VAR_RES_FRAME_SPLIT tt;
+   val split_term = fst (strip_comb tt);
+   fun split tt =
+       (split o snd o dest_forall) tt handle HOL_ERR _ =>
+       (split o snd o dest_imp_only) tt handle HOL_ERR _ =>
+       tt;
+
+   fun split_thm_inst thm =
+       let 
+          val ttt = (fst o strip_comb o split o concl) thm
+          val thm2 = INST_TYPE (snd (match_term ttt split_term)) thm
+       in
+          thm2
+       end;
+
 
    (*check whether it can be solved*)
    val (solve_thm0,has_bool) = if bagSyntax.is_empty imp_sfb then
-                      (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE else
-                            VAR_RES_FRAME_SPLIT___SOLVE_WEAK, false)
+                      (split_thm_inst (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE else
+                            VAR_RES_FRAME_SPLIT___SOLVE_WEAK), false)
                    else 
                      let
                         val _ = if not (do_bool) then Feedback.fail() else ();
@@ -3015,12 +3029,12 @@ let
                         val b_thm_opt = SOME (var_res_param.final_decision_procedure context b) handle HOL_ERR _ => NONE;                      
                      in
                         if (isSome b_thm_opt) then let
-                           val inf_thm =  SPEC b (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop___MP else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop___MP)
+                           val inf_thm =  SPEC b (split_thm_inst (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop___MP else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop___MP))
                            val xthm0 = MP inf_thm (valOf b_thm_opt)
                         in
                            (xthm0, false)
                         end else                         
-                           (SPEC b (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop), true)
+                           (SPEC b (split_thm_inst (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop)), true)
                      end;
 
    val (wpb,rpb) = dest_pair wpbrpb;
@@ -4018,7 +4032,6 @@ fun xVAR_RES_GEN_STEP_CONSEQ_CONV optL n m =
 
 
 val _ = Rewrite.add_implicit_rewrites [asl_comments_TF_ELIM];
-
 val VAR_RES_PURE_VC_TAC =
  CONSEQ_CONV_TAC (K (fn t =>
      let

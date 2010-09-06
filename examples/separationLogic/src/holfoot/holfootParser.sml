@@ -366,27 +366,34 @@ fun tag_a_expression_list2absyn vs rvm [] = (rvm, Absyn.mk_AQ tag_a_expression_f
       end;
 
 
-val genpredL = ref []
+val genpredMap = ref (Redblackmap.mkDict String.compare)
 fun add_genpred (name:string, argL:Parsetree.a_genpredargType list, mk:Absyn.absyn list -> Absyn.absyn) =
-    genpredL:= (name,argL,mk,length argL)::(!genpredL)
-fun remove_genpred () =
-   let
-      val (h::hs) = (!genpredL);
-      val _ = genpredL := hs;
-   in
-      h
-   end;
+let
+   val map = (!genpredMap);
+   val oldEntry = Redblackmap.find (map, name) handle Redblackmap.NotFound => [];
+   val newEntry = (length argL, argL, mk)::oldEntry;
+   val map = Redblackmap.insert (map, name, newEntry);
+   val _ = genpredMap := map;
+in
+   ()
+end;
+
 fun reset_genpreds () = 
 let
-   val _ = genpredL := [];
+   val _ = genpredMap := (Redblackmap.mkDict String.compare);
 in
    ()
 end;
 
 
+fun lookup_genpredL name len = 
+let
+   val l = Redblackmap.find ((!genpredMap), name);
+   val l' = filter (fn (len', _, _) => (len = len')) l;
+in
+   List.map (fn (_, argL, mk) => (argL, mk)) l'
+end handle Redblackmap.NotFound => [];
 
-fun lookup_genpredL name len =
-   filter (fn (n', _, _, len') => (len = len') andalso (name = n')) (!genpredL)
 
 local
    exception arg_exception;
@@ -439,7 +446,7 @@ in
 fun holfoot_a_genpred2absyn vs (os_opt, cs_opt) name args line =
    let
       val candidates = lookup_genpredL name (length args);
-      fun try_canditate (_, arg_tys, c, _) =
+      fun try_canditate (arg_tys, c) =
       let
           val (os_opt, cs_opt, absynArgs) = args2absyn vs (os_opt, cs_opt) arg_tys args
       in
@@ -769,12 +776,26 @@ in
    (pre_a', post_a)
 end
 
+
+fun global_vars_restrict global_vars =
+ filter (fn v =>
+    not (Redblackset.member (global_vars, fst (dest_var v))));
+
+
+fun free_vars_restrict global_vars t =
+let
+   val fv_list = free_vars t;
+in
+   global_vars_restrict global_vars fv_list
+end
+
+
 (*returns the abstract syntax of the statement as well as set of variables, that need write permissions.
   The set of variables that are read is figured out independently later. 
   Function calls might add to both sets by either their call-by-reference parameters or by
   accessing global variables. Therefore, function calls and their call-by-reference parameters
   are recorded as well *)
-fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
+fun holfoot_p_statement2absyn funL resL gv vs (Pstm_assign (v, expr)) =
   let
      val var_term = string2holfoot_var v;
      val (_, exp) = holfoot_expression2absyn vs NONE expr;
@@ -782,7 +803,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   in
      (comb_a, [v], [])
   end
-| holfoot_p_statement2absyn funL resL vs (Pstm_fldlookup (v, expr, tag)) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_fldlookup (v, expr, tag)) =
   let
      val var_term = string2holfoot_var v;
      val (_, exp_a) = holfoot_expression2absyn vs NONE expr;
@@ -791,7 +812,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   in
      (comb_a, [v], [])
   end
-| holfoot_p_statement2absyn funL resL vs (Pstm_fldassign (expr1, tag, expr2)) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_fldassign (expr1, tag, expr2)) =
   let
      val (_, exp1) = holfoot_expression2absyn vs NONE expr1;
      val (_, exp2) = holfoot_expression2absyn vs NONE expr2;
@@ -800,7 +821,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   in
      (comb_a, [], [])
   end
-| holfoot_p_statement2absyn funL resL vs (Pstm_new (v, expr, tl)) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_new (v, expr, tl)) =
   let
      val var_term = string2holfoot_var v;
      val (_, exp) = holfoot_expression2absyn vs NONE expr;
@@ -810,7 +831,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   in
      (comb_a, [v], [])
   end  
-| holfoot_p_statement2absyn funL resL vs (Pstm_dispose (expr1, expr2)) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_dispose (expr1, expr2)) =
   let
      val (_, exp1) = holfoot_expression2absyn vs NONE expr1;
      val (_, exp2) = holfoot_expression2absyn vs NONE expr2;
@@ -818,33 +839,33 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
   in
      (comb_a, [], [])
   end  
-| holfoot_p_statement2absyn funL resL vs (Pstm_block stmL) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_block stmL) =
   let
-     val l0 = map (holfoot_p_statement2absyn funL resL vs) stmL;      
+     val l0 = map (holfoot_p_statement2absyn funL resL gv vs) stmL;      
      val (aL, wL, fL) = foldr (fn ((a, wL', fL'), (aL, wL, fL)) =>
           (a::aL, wL'@wL, fL'@fL)) ([],[],[]) l0;
      val comb_a = Absyn.mk_app (Absyn.mk_AQ holfoot_prog_block_term, mk_list aL);
    in
      (comb_a, wL, fL)
    end
-| holfoot_p_statement2absyn funL resL vs (Pstm_if (cond, stm1, stm2)) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_if (cond, stm1, stm2)) =
    let
       val c_a = holfoot_p_condition2absyn vs cond;
-      val (stm1, wL1, fL1) = holfoot_p_statement2absyn funL resL vs stm1;
-      val (stm2, wL2, fL2) = holfoot_p_statement2absyn funL resL vs stm2;
+      val (stm1, wL1, fL1) = holfoot_p_statement2absyn funL resL gv vs stm1;
+      val (stm2, wL2, fL2) = holfoot_p_statement2absyn funL resL gv vs stm2;
 
       val comb_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_cond_term, 
              [c_a, stm1, stm2]);
    in
       (comb_a, wL1@wL2, fL1@fL2)
    end
-| holfoot_p_statement2absyn funL resL vs (Pstm_while (unroll, rwOpt, i, cond, stm1)) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_while (unroll, rwOpt, i, cond, stm1)) =
    let
       val (use_inv, i_a) = if isSome i then
               (true, snd (holfoot_a_proposition2absyn vs NONE (valOf i)))
           else (false, Absyn.mk_AQ holfoot_stack_true_term)
 
-      val (stm1_a, wL, fL) = holfoot_p_statement2absyn funL resL vs stm1;
+      val (stm1_a, wL, fL) = holfoot_p_statement2absyn funL resL gv vs stm1;
       val c_a = holfoot_p_condition2absyn vs cond;
       val while_a = Absyn.list_mk_app (Absyn.mk_AQ holfoot_prog_while_term, [c_a,stm1_a]); 
 
@@ -853,7 +874,7 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
       val full_a = if not use_inv then while_a else
          let
             val prop_a = mk_holfoot_prop_input_absyn write_var_set read_var_set i_a;
-            val cond_free_var_list = free_vars (absyn2term prop_a);
+            val cond_free_var_list = free_vars_restrict gv (absyn2term prop_a);
             val abs_prop_a = mk_list_plam cond_free_var_list prop_a
          in
             Absyn.list_mk_app (Absyn.IDENT (locn.Loc_None, "asl_comment_loop_invariant"), [
@@ -866,14 +887,14 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
    in
       (unroll_a, wL, fL)
    end
-| holfoot_p_statement2absyn funL resL vs (Pstm_block_spec (loop, unroll, rwOpt, pre, stm1, post)) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_block_spec (loop, unroll, rwOpt, pre, stm1, post)) =
    let
       val (_, pre_a)  = holfoot_a_proposition2absyn vs NONE pre;
       val (SOME os, post_a) = holfoot_a_proposition2absyn vs (SOME (Redblackmap.mkDict String.compare)) post;
       val (pre_a, post_a) = rewrite_old_var os pre_a post_a;
       val (force_user_wr, write_var_set_user, read_var_set_user) = decode_rwOpt rwOpt;
 
-      val (stm1_a, wL, fL) = holfoot_p_statement2absyn funL resL vs stm1;
+      val (stm1_a, wL, fL) = holfoot_p_statement2absyn funL resL gv vs stm1;
 
       val (write_var_set, read_var_set) = get_read_write_var_set resL rwOpt wL [
          pre_a, post_a, stm1_a]
@@ -882,7 +903,8 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
          let
             val pre_a3 =  mk_holfoot_prop_input_absyn write_var_set read_var_set pre_a
             val post_a3 = mk_holfoot_prop_input_absyn write_var_set read_var_set post_a
-            val cond_free_var_list = HOLset.listItems (FVL [absyn2term pre_a3, absyn2term post_a3] empty_tmset);
+            val cond_free_var_list = global_vars_restrict gv (
+                HOLset.listItems (FVL [absyn2term pre_a3, absyn2term post_a3] empty_tmset));
             val abs_pre_a = mk_list_plam cond_free_var_list pre_a3
             val abs_post_a = mk_list_plam cond_free_var_list post_a3
          in
@@ -907,10 +929,10 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
    in
       (unroll_a, wL, fL)
    end
-| holfoot_p_statement2absyn funL resL vs (Pstm_withres (res, cond, stm1)) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_withres (res, cond, stm1)) =
    let
       val c_a = holfoot_p_condition2absyn vs cond;
-      val (stm1_a,wL,fL) = holfoot_p_statement2absyn funL resL vs stm1;
+      val (stm1_a,wL,fL) = holfoot_p_statement2absyn funL resL gv vs stm1;
       val res_term = stringLib.fromMLstring res;
       val res_varL = assoc res resL handle HOL_ERR _ => 
            let
@@ -925,12 +947,13 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
    in
       (comb_a, wL', fL)
    end
-| holfoot_p_statement2absyn funL resL vs (Pstm_assert p) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_assert p) =
    let
       val (_, p_a)  = holfoot_a_proposition2absyn vs NONE p;
       val abs_p_a =
          let
-            val cond_free_var_list = HOLset.listItems (FVL [absyn2term p_a] empty_tmset);
+            val cond_free_var_list = global_vars_restrict gv (
+                HOLset.listItems (FVL [absyn2term p_a] empty_tmset));
             val abs_p_a = mk_list_plam cond_free_var_list p_a
          in
             abs_p_a
@@ -940,9 +963,9 @@ fun holfoot_p_statement2absyn funL resL vs (Pstm_assign (v, expr)) =
    in
       (comb_a, [], [])
    end
-| holfoot_p_statement2absyn funL resL vs (Pstm_fcall(name,args)) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_fcall(name,args)) =
        holfoot_fcall2absyn funL vs (name, args)
-| holfoot_p_statement2absyn funL resL vs (Pstm_parallel_fcall(name1,args1,name2,args2)) =
+| holfoot_p_statement2absyn funL resL gv vs (Pstm_parallel_fcall(name1,args1,name2,args2)) =
        holfoot_parallel_fcall2absyn funL vs (name1, args1, name2, args2);
 
 
@@ -1020,12 +1043,12 @@ fun extend_set_if_necessary b (s1, s2) =
   end;
 
 
-fun Pfundecl_preprocess resL (funL, vs, 
+fun Pfundecl_preprocess resL global_vars (funL, vs,
    Pfundecl(assume_opt, funname, (ref_args, val_args), rwOpt, preCondOpt, localV, 
    fun_body, postCondOpt)) = 
 let
    val (fun_body_a, wL, funcalls) = 
-        holfoot_p_statement2absyn funL resL vs (Pstm_block fun_body)   
+        holfoot_p_statement2absyn funL resL global_vars vs (Pstm_block fun_body)   
    
    val vs_na = (List.foldl (fn (v,vs) => Redblackset.delete (vs, v) handle NotFound => vs) (fst vs) val_args, snd vs);
    val (_, pre_a)  = holfoot_a_proposition2absyn vs_na NONE (invariant2a_proposition preCondOpt);
@@ -1058,11 +1081,11 @@ in
 end;
 
 fun Pfundecl2hol_final (funname, assume_opt, ref_args, val_args, localV, 
-   pre_t, fun_body_t, post_t, ws, rs) = 
+   global_vars, pre_t, fun_body_t, post_t, ws, rs) = 
    let
    val fun_body_local_var_term = foldr holfoot_mk_local_var fun_body_t localV;
 
-   val used_vars = ref (free_vars fun_body_local_var_term);
+   val used_vars = ref (free_vars_restrict global_vars fun_body_local_var_term);
    fun mk_new_var x = let
                     val v = variant (!used_vars) (mk_var x);
                     val _ = used_vars := v::(!used_vars);
@@ -1096,13 +1119,14 @@ fun Pfundecl2hol_final (funname, assume_opt, ref_args, val_args, localV,
 
    val cond_free_var_list = 
        let
-          val set1 = HOLset.addList(empty_tmset, free_vars preCond3);
-          val set2 = HOLset.addList(set1, free_vars postCond3);
+          val set1 = HOLset.addList(empty_tmset, free_vars_restrict global_vars preCond3);
+          val set2 = HOLset.addList(set1, free_vars_restrict global_vars postCond3);
           val set3 = HOLset.delete (set2, arg_ref_term) handle HOLset.NotFound => set2;
           val set4 = HOLset.delete (set3, arg_val_term) handle HOLset.NotFound => set3;
           val set5 = HOLset.delete (set4, fun_body_final_term) handle HOLset.NotFound => set4;
+          val fv_list = HOLset.listItems set5;
        in
-          HOLset.listItems set5
+         fv_list
        end;
    
    val ref_arg_names = listSyntax.mk_list (map string_to_label ref_args, markerSyntax.label_ty);
@@ -1122,7 +1146,7 @@ in
 end;
 
 
-fun Pfundecl_list2hol res_varL fun_decl_list =
+fun Pfundecl_list2hol global_vars res_varL fun_decl_list =
 let
    fun initPfundecl (Pfundecl(assume_opt, funname, (ref_args, val_args), rwOpt, preCondOpt, localV, 
    fun_body, postCondOpt)) =
@@ -1133,7 +1157,7 @@ let
 
    fun internal l =
    let
-      val l' = map (Pfundecl_preprocess res_varL) l;
+      val l' = map (Pfundecl_preprocess res_varL global_vars) l;
       val changed = exists (#1) l';
    in
       if changed then
@@ -1165,7 +1189,7 @@ let
          val fun_body_t = el 2 tL
          val post_t = el 3 tL
       in
-      (funname, assume_opt, ref_args, val_args, localV, 
+      (funname, assume_opt, ref_args, val_args, localV, global_vars, 
        pre_t, fun_body_t, post_t, ws, rs)
       end;
 
@@ -1242,7 +1266,8 @@ fun find_duplicates [] = []
        if null xL then dL else ((hd xL)::dL)
     end;
 
-fun Pprogram2hol procL_opt (Pprogram (ident_decl, program_item_decl)) =
+
+fun Pprogram2hol procL_opt (Pprogram (ident_decl, global_decl, program_item_decl)) =
    let
       (*ignore ident_decl*)
 
@@ -1283,7 +1308,8 @@ fun Pprogram2hol procL_opt (Pprogram (ident_decl, program_item_decl)) =
       val init_post_prop = if null res_propL then Aprop_spred Aspred_empty else
              (end_itlist (curry Aprop_star) res_propL)
       val fun_decl_list_init = map (add_init_spec init_post_prop) fun_decl_list
-      val fun_decl_parseL = Pfundecl_list2hol res_varL fun_decl_list_init
+      val global_vars = string_list2set global_decl;
+      val fun_decl_parseL = Pfundecl_list2hol global_vars res_varL fun_decl_list_init
 
       fun assume_proc_spec assume_opt proc =
          if (not assume_opt) then F else
@@ -1299,7 +1325,6 @@ fun Pprogram2hol procL_opt (Pprogram (ident_decl, program_item_decl)) =
    in
       (list_mk_icomb (HOLFOOT_SPECIFICATION_term, [resource_term, input]))
    end;
-
 
 
 

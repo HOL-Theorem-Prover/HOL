@@ -90,7 +90,7 @@ type fun_item =
 *)
 
 datatype p_top =
-    Pprogram of a_component list * p_item list
+    Pprogram of a_component list * a_component list * p_item list
   | Pentailments of (string * a_proposition * a_proposition) list
  
 end;

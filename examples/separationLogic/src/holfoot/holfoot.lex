@@ -28,8 +28,9 @@ val keyword_table =
 List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
 (Binarymap.mkDict String.compare)
 [
-  ("Entailment",   ENTAILMENT),
-  ("dispose",      DISPOSE),
+  ("Entailment",ENTAILMENT),
+  ("dispose",   DISPOSE),
+  ("global",    GLOBAL),
   ("else",      ELSE),
   ("emp",       EMPTY),
   ("if",        IF),

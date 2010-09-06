@@ -1,0 +1,21 @@
+global P;
+
+vscomp3(i;ll) [data_list(ll,data)] {
+   local found, jj, tmp;
+   jj = ll;
+   
+   found = 0;
+   i = 0;
+   loop_spec [data_list(jj,data2) * ``(~(found = 0)) ==> (P (HD data2))``] {
+   while ((jj != NULL) and (found == 0)) {
+      tmp = jj -> dta;
+      if (``P tmp``) {
+         found = 1;
+      } else {
+         jj = jj -> tl;      
+         i = i + 1;
+      }
+   }} [data_list(old(jj),data2) * 
+       (i == ``old(i) + (FIRST_INDEX P data2)``)] 
+} [data_list(ll,data) *
+   (i == ``FIRST_INDEX P data``)]

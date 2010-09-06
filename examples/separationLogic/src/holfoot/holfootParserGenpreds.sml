@@ -298,7 +298,8 @@ val file = "/home/tt291/hol98/examples/separationLogic/src/holfoot/EXAMPLES/auto
 val file = "/home/tt291/hol98/examples/separationLogic/src/holfoot/EXAMPLES/interactive/queue.dsf2"
 
 
-parse_holfoot_file file
+val _ = parse_holfoot_file file
+
 *)
 
 end
