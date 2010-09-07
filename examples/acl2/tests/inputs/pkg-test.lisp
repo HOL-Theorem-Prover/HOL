@@ -77,3 +77,21 @@
   (not (equal (intern-in-package-of-symbol "D" 'my-pkg::c)
               (intern-in-package-of-symbol "D" 'common-lisp::c)))
   :rule-classes nil)
+
+; Test of quoted constants:
+
+(defun fun0 ()
+  '(a defun b))
+
+(defun fun1 ()
+  '(a defun b . c))
+
+(acl2::defthm
+ fun0-thm
+ (acl2::equal (fun0)
+              (cons 'a (cons 'defun (cons 'b acl2::nil)))))
+
+(acl2::defthm
+ fun1-thm
+ (acl2::equal (fun1)
+              (cons 'a (cons 'defun (cons 'b 'c)))))

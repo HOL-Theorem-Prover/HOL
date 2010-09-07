@@ -58,3 +58,18 @@
                                                  'MY-PKG::C)
                     (INTERN-IN-PACKAGE-OF-SYMBOL '"D"
                                                  'COMMON-LISP::C))))
+
+(DEFUN MY-PKG::FUN0 NIL '(MY-PKG::A DEFUN MY-PKG::B))
+
+(DEFUN MY-PKG::FUN1 NIL '(MY-PKG::A DEFUN MY-PKG::B . MY-PKG::C))
+
+(DEFTHM MY-PKG::FUN0-THM
+        (EQUAL (MY-PKG::FUN0)
+               (CONS 'MY-PKG::A
+                     (CONS 'DEFUN (CONS 'MY-PKG::B 'NIL)))))
+
+(DEFTHM MY-PKG::FUN1-THM
+        (EQUAL (MY-PKG::FUN1)
+               (CONS 'MY-PKG::A
+                     (CONS 'DEFUN
+                           (CONS 'MY-PKG::B 'MY-PKG::C)))))

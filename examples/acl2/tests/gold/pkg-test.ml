@@ -189,6 +189,49 @@ mkpair (mk_chars_str (chars_to_string (cons 68 nil))) (mksym "COMMON-LISP"
 "COMMON-LISP" "C") (mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))) (
 mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL"))) (mksym 
 "COMMON-LISP" "NIL"))))
+,
+
+(mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "MY-PKG" "FUN0") (mkpair (
+mksym "COMMON-LISP" "NIL") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (
+mkpair (mkpair (mksym "MY-PKG" "A") (mkpair (mksym "COMMON-LISP" "DEFUN") (
+mkpair (mksym "MY-PKG" "B") (mksym "COMMON-LISP" "NIL")))) (mksym 
+"COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))))
+,
+
+(mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "MY-PKG" "FUN1") (mkpair (
+mksym "COMMON-LISP" "NIL") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (
+mkpair (mkpair (mksym "MY-PKG" "A") (mkpair (mksym "COMMON-LISP" "DEFUN") (
+mkpair (mksym "MY-PKG" "B") (mksym "MY-PKG" "C")))) (mksym "COMMON-LISP" 
+"NIL"))) (mksym "COMMON-LISP" "NIL")))))
+,
+
+(mkpair (mksym "ACL2" "DEFTHM") (mkpair (mksym "MY-PKG" "FUN0-THM") (mkpair (
+mkpair (mksym "COMMON-LISP" "EQUAL") (mkpair (mkpair (mksym "MY-PKG" "FUN0") (
+mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "COMMON-LISP" "CONS") (
+mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "MY-PKG" "A") (
+mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" "CONS") (
+mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "COMMON-LISP" 
+"DEFUN") (mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" 
+"CONS") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "MY-PKG" 
+"B") (mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" 
+"QUOTE") (mkpair (mksym "COMMON-LISP" "NIL") (mksym "COMMON-LISP" "NIL"))) (
+mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))) (mksym 
+"COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" 
+"NIL"))))
+,
+
+(mkpair (mksym "ACL2" "DEFTHM") (mkpair (mksym "MY-PKG" "FUN1-THM") (mkpair (
+mkpair (mksym "COMMON-LISP" "EQUAL") (mkpair (mkpair (mksym "MY-PKG" "FUN1") (
+mksym "COMMON-LISP" "NIL")) (mkpair (mkpair (mksym "COMMON-LISP" "CONS") (
+mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "MY-PKG" "A") (
+mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" "CONS") (
+mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "COMMON-LISP" 
+"DEFUN") (mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" 
+"CONS") (mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "MY-PKG" 
+"B") (mksym "COMMON-LISP" "NIL"))) (mkpair (mkpair (mksym "COMMON-LISP" 
+"QUOTE") (mkpair (mksym "MY-PKG" "C") (mksym "COMMON-LISP" "NIL"))) (mksym 
+"COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" 
+"NIL")))) (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL"))))
 
 ];
 
