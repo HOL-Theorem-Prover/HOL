@@ -25,15 +25,19 @@ val FACT_EQ_FACTORIAL = prove(
   ``!n m. FACT (n,m) = FACTORIAL n * m``,
   Induct \\ ASM_SIMP_TAC std_ss [FACT_def,FACTORIAL_def,AC MULT_ASSOC MULT_COMM]);
 
+(*
+
 val sexp_fact1_thm = prove(
-  ``!n m. fact1_pre (List [nat n; nat m],List []) /\
-          (sexp_fact1 (List [nat n; nat m]) (List []) = 
-           List [List [nat 0; nat (FACT (n,m))]; List []])``,
+  ``!n m. fact1_pre (List [],nat n,nat m) /\
+          (sexp_fact1 (List []) (nat n) (nat m) = 
+           List [nat 0; nat (FACT (n,m)); List []])``,
   Induct \\ FULL_SIMP_TAC std_ss [List_def] \\ ONCE_REWRITE_TAC [sexp_fact_def]
   \\ SIMP_TAC std_ss [FACT_def,car_def,less_nat,cdr_def,mult_nat,
        update_nth_lemma,update_nth_1,sexp_not]
   \\ ONCE_REWRITE_TAC [] \\ ASM_SIMP_TAC std_ss [sexp_reduce_SUC]  
   \\ SIMP_TAC std_ss [AC MULT_ASSOC MULT_COMM]); 
+
+
 
 val sexp_fact_thm = prove(
   ``!n m. fact_pre (List [nat n; nat m],List []) /\
@@ -51,6 +55,7 @@ val m1_factorial_thm = acl2_fact_certificate
 
 val _ = save_thm("m1_factorial_thm",m1_factorial_thm);
 
+*)
 
 val _ = export_theory();
 

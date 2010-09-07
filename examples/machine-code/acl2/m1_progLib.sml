@@ -3,7 +3,11 @@ struct
 
 open HolKernel boolLib bossLib;
 
-open m1_progTheory decompilerLib helperLib sexpTheory pairSyntax;
+open decompilerLib;
+open m1_progTheory helperLib sexpTheory pairSyntax;
+open combinTheory addressTheory sexpTheory imported_acl2Theory;
+open complex_rationalTheory hol_defaxiomsTheory;
+open arithmeticTheory;
 
 
 (* m1_spec produces Hoare triple theorems for M1 instructions *)
@@ -21,6 +25,12 @@ fun m1_spec s = let
     th |> concl |> rand |> rand |> rand |> rand |> rand
        |> (fn x => numSyntax.int_of_term x handle HOL_ERR _ => 
                    Arbint.toInt(intSyntax.int_of_term x))
+  val th = let
+    val pat = find_term (can (match_term ``tL a v``)) (concl th)
+    val (v,ty) = dest_var(rand pat)
+    val n = Arbnum.toInt(numSyntax.dest_numeral (rand (rator pat)))
+    val s = [mk_var(v,ty) |-> mk_var("v"^(int_to_string n),ty)]
+    in INST s th end handle HOL_ERR _ => th
   in if can (find_term (fn x => x = ``"IFLE"``)) (concl th) then
        ((th,1,SOME pc_offset),SOME (match_thm M1_IFLE_NOP,1,SOME 1))
      else ((th,1,SOME pc_offset),NONE) end;
@@ -117,13 +127,15 @@ fun sexp_finalise_decompile (res,def) = let
     CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [def2]))
     THEN SIMP_TAC std_ss [LET_DEF])
   val def2 = REWRITE_RULE [ite_intro] def2
+  val def2 = SIMP_RULE bool_ss [top_defun,pop_defun,push_defun,nth_lemma, 
+       LET_DEF,nth_1,cdr_def,car_def,ite_def,not_eq_nil] def2
+  val def2 = REWRITE_RULE [ite_intro] def2
   in (res,def2) end;
 
 val _ = (decompiler_set_pc := fix_pc);
 val _ = (decompiler_finalise := sexp_finalise_decompile)
 
 val decompile_m1 = decompile m1_tools
-
 
 end
 
