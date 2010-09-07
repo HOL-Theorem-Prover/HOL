@@ -5,6 +5,8 @@ struct
 
   val strip_tac : tactic = STRIP_TAC
   val conj_tac : tactic = CONJ_TAC
+  val conj_asm1_tac : tactic = CONJ_ASM1_TAC
+  val conj_asm2_tac : tactic = CONJ_ASM2_TAC
   val disj1_tac : tactic = DISJ1_TAC
   val disj2_tac : tactic = DISJ2_TAC
   val gen_tac : tactic = GEN_TAC
@@ -42,6 +44,8 @@ struct
   val strip_assume_tac : thm_tactic = STRIP_ASSUME_TAC
   val spose_not_then : thm_tactic -> tactic = SPOSE_NOT_THEN
 
+  val qabbrev_tac : term quotation -> tactic = Q.ABBREV_TAC
+  val qunabbrev_tac : term quotation -> tactic = Q.UNABBREV_TAC
   val unabbrev_all_tac : tactic = markerLib.UNABBREV_ALL_TAC
 
   val res_tac : tactic = RES_TAC

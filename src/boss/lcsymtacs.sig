@@ -4,6 +4,8 @@ sig
   include Abbrev
   val strip_tac : tactic
   val conj_tac : tactic
+  val conj_asm1_tac : tactic
+  val conj_asm2_tac : tactic
   val disj1_tac : tactic
   val disj2_tac : tactic
   val gen_tac : tactic
@@ -41,6 +43,8 @@ sig
   val strip_assume_tac : thm_tactic
   val spose_not_then : thm_tactic -> tactic
 
+  val qabbrev_tac : term quotation -> tactic
+  val qunabbrev_tac : term quotation -> tactic
   val unabbrev_all_tac : tactic
 
   val res_tac : tactic
