@@ -338,8 +338,14 @@ fun mk_reduce_xnor w =
   handle HOL_ERR _ => raise ERR "mk_reduce_xnor" "";
 
 fun mk_word_replicate (n,w) =
-  list_mk_comb(inst[alpha |-> dim_of w]word_replicate_tm,[n,w])
-  handle HOL_ERR _ => raise ERR "mk_word_replicate" "";
+let val wlen = fcpLib.index_to_num o dest_word_type o type_of
+    val ty = fcpLib.index_type (Arbnum.* (numSyntax.dest_numeral n, wlen w))
+               handle HOL_ERR _ => beta
+in
+  list_mk_comb
+    (inst [alpha |-> dim_of w, beta |-> ty] word_replicate_tm, [n, w])
+  handle HOL_ERR _ => raise ERR "mk_word_replicate" ""
+end;
 
 fun mk_concat_word_list l =
   mk_comb(inst[alpha |-> (l |> type_of
