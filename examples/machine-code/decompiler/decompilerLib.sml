@@ -188,13 +188,15 @@ fun replace_abbrev_vars tm = let
   in subst (map f (free_vars tm)) tm end
 
 fun name_for_abbrev tm =
+  "v" ^ (int_to_string (Arbnum.toInt(numSyntax.dest_numeral(cdr (car tm))))) handle HOL_ERR e =>
   if is_const (cdr (car tm)) andalso is_const(car (car tm)) handle HOL_ERR e => false then
     (to_lower o fst o dest_const o cdr o car) tm
   else if can (match_term ``(f ((n2w n):'a word) (x:'c)):'d``) tm then
     "r" ^ ((int_to_string o numSyntax.int_of_term o cdr o cdr o car) tm)
-  else fst (dest_var (repeat cdr tm)) handle HOL_ERR e =>
-       fst (dest_var (find_term is_var tm)) handle HOL_ERR e =>
-       fst (dest_const (repeat car (get_sep_domain tm)));
+  else 
+    fst (dest_var (repeat cdr tm)) handle HOL_ERR e =>
+    fst (dest_var (find_term is_var tm)) handle HOL_ERR e =>
+    fst (dest_const (repeat car (get_sep_domain tm)));
 
 fun raw_abbreviate2 (var_name,y,tm) th = let
   val y = mk_eq(mk_var(var_name,type_of y),y)
@@ -351,6 +353,12 @@ fun derive_individual_specs tools (code:string list) = let
       val _ = echo 1 ".\n"
       in (n+1,(ys @ [(n,x,y)])) end
   val _ = echo 1 "\nDeriving theorems for individual instructions.\n"
+(*
+  val instruction = el 3 code
+  val ((th,_,_),_) = f instruction
+  val th = renamer th
+  val prefix = "foo@"
+*)
   val res = snd (foldl get_specs (1,[]) code)
   val res = introduce_guards res
   fun calc_addresses i [] = []
