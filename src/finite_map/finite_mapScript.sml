@@ -1011,6 +1011,12 @@ val FLOOKUP_FUNION = Q.store_thm(
  || SOME v -> SOME v`,
 SRW_TAC [][FLOOKUP_DEF,FUNION_DEF] THEN FULL_SIMP_TAC (srw_ss()) []);
 
+val FLOOKUP_EXT = store_thm
+("FLOOKUP_EXT",
+ ``(f1 = f2) = (FLOOKUP f1 = FLOOKUP f2)``,
+ SRW_TAC [][fmap_EXT,FUN_EQ_THM,IN_DEF,FLOOKUP_DEF] THEN
+ PROVE_TAC [optionTheory.SOME_11,optionTheory.NOT_SOME_NONE]);
+
 (*---------------------------------------------------------------------------
        Universal quantifier on finite maps
  ---------------------------------------------------------------------------*)
