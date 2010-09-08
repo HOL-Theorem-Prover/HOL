@@ -17,6 +17,7 @@ axioms-essence.csh    Shell wrapper for a2ml.lisp, customized to handle
                         (called in tests/round-trip/doit)
 book-essence.lisp     Utility mapping an ACL2 input file to input for a2ml.csh
 book-essence.csh      Shell wrapper for book-essence.lisp
+check-file.lisp       Utility for checking round-trip output
 untranslate-file.lisp Utility for generating file of pretty DEFP forms from
                         a file of DEFUN forms
 
