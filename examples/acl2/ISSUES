@@ -193,3 +193,15 @@ tests/inputs/PKGS.sml, but that such syncing is currently not
 automated.
 
 <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+Fix issues (current as of Sept. 9, 2010) in printing HOL to ACL2:
+For example, in doing the round-trip from tests/gold/pkg-test.lisp
+to HOL and then back to ACL2, these errors were identified:
+
+  TEST0 ends with MY-PKG::CONSTS, which should be (MY-PKG::CONSTS).
+
+  TEST3A and TEST3B have MY-PKG::defun, which should be MY-PKG::|defun|.
+
+  MY-PKG::FUN0-THM has MY-PKG::FUN0, which should be (MY-PKG::FUN0).
+
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
