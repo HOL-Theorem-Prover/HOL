@@ -183,3 +183,13 @@ Thanks --
 -- Matt
 
 <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+Make it easy to update for new releases of ACL2 or HOL4.  E.g., for an
+ACL2 update, is it necessary only to update .acl2holrc.bash and then
+do updates as needed so that the regression tests (in tests/) pass?
+We suspect it may be necessary to sync other parts of
+HOL/examples/acl2/ with tests/round-trip/gold/axioms.ml or
+tests/inputs/PKGS.sml, but that such syncing is currently not
+automated.
+
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
