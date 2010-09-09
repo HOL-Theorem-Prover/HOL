@@ -819,7 +819,7 @@ val lf = mk_var ("lf", ``: string -> α -> γ list -> (α,β)gterm list ->
                            γ list -> (α,β)gterm list -> γ``)
 
 val _ = temp_set_fixity "-p->" (Infixr 490)
-val _ = overload_on ("-p->", ``fnpm``)
+val _ = temp_overload_on ("-p->", ``fnpm``)
 
 
 
