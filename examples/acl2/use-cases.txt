@@ -1,0 +1,190 @@
+Use Cases for the ACL2/HOL4 link
+Matt Kaufmann (summarizing discussions with Mike Gordon)
+
+This file explores some possible ways to use the ACL2/HOL4 link.  In
+each case we say something about the associated trust story.
+
+Table of Contents
+----- -- --------
+
+1. Using ACL2 as an oracle for HOL4
+2. Using HOL4 as an oracle for ACL2
+3. Using HOL tools to assist ACL2 developments
+
+============================================================
+1. Using ACL2 as an oracle for HOL4
+============================================================
+
+The original conception of an ACL2/HOL4 link was to use ACL2 as an
+oracle to assist with HOL4 proofs.  In particular, ACL2 could be used
+to prove theorems of the form (u = c), where u is a ground term and c
+is a constant, taking advantage of ACL2's efficient evaluation
+capability.  Indeed, James Reynolds showed in his Ph.D. research
+that using ACL2 for evaluation, via the link, can result in
+significant speed-ups.
+
+But the primary example (as of September 2010) is the paper by Gordon,
+Kaufmann, and Ray, "The Right Tools for the Job: Correctness of Cone
+of Influence Reduction Proved Using ACL2 and HOL4," Journal of
+Automated Reasoning, DOI 10.1007/s10817-010-9169-y.  This paper shows
+how to take advantage of an existing ACL2 development, importing it
+into HOL4 to prove a HOL theorem about LTL semantics.  Since the LTL
+semantics are formulated using HOL datatypes, but the importation of
+ACL2 definitions and theorems gives formulations in the SEXP datatype
+of HOL, a correspondence must be established.  Reynolds has developed
+tools to assist in such correspondence proofs.
+
+Correctness of such proof efforts rests on correctness of the
+translation from ACL2 to HOL, as follows.  One may view an ACL2
+development as a set of axioms, typically definitions (which may be
+recursive or even mutually recursive), together with a set of
+first-order consequences of the extension of the built-in ACL2 theory
+by those axioms.  A key requirement of the translation is that the
+translation of those theorems is a HOL consequence of those axioms.
+An additional requirement is that the HOL translation of each
+definition, in sequence, provides a conservative extension of the
+existing HOL theory.  As far as we know, our translation methodology
+from ACL2 to HOL has these properties.  We have some modest confidence
+in this correctness because we operate on internal-form ("translated")
+ACL2 terms, in particular avoiding macros.
+
+============================================================
+2. Using HOL4 as an oracle for ACL2
+============================================================
+
+As of this writing (September 2010), an effort is underway to take a
+HOL4 development for a small programming language (see
+HOL/examples/opsemTools/newOpsemDoc.txt) and translate it to ACL2.  We
+can envision the following use case, for a suitable variant L0 of this
+language.  (Rockwell Collins may be interested in such a language.)
+
+Imagine a proof effort done in HOL4 connecting L0 to Anthony Fox's ARM
+model.  Also imagine a proof effort done in ACL2 connecting L0 to the
+Rockwell Collins AAMP7 model.  Perhaps one would like to connect these
+proof efforts with a combined ACL2 proof development.  One can imagine
+doing this, by first translating the ARM proof effort from HOL into
+ACL2.
+
+What logical claim can be made for such an effort?  Any such claim
+rests on a suitable correctness claim for the translation from HOL to
+ACL2.  A suitable such claim is that when we translate HOL definitions
+and associated HOL theorems into ACL2 definitions and "theorems"
+(defthm events), respectively, then the resulting ACL2 "theorems" are
+higher-order logical consequences of the resulting ACL2 definitions.
+Note that we must not claim that the resulting ACL2 defthm events are
+really provable in the ACL2 logic!  The reason is that HOL is a
+stronger logic than ACL2 -- for example, it proves the consistency of
+ACL2, and HOL/SEXP proves the existence of "bad atoms" that are not
+symbols, characters, numbers, strings, or conses -- so theorems
+imported from HOL may not be theorems of ACL2.
+
+Do we trust that the (reasonable, first version of the) above logical
+claim holds for our translation from HOL (more accurately, from HOL
+restricted to the SEXP data type) into ACL2?  Perhaps, but such a
+translation seems much harder to get right than one going the other
+direction (from ACL2 to HOL).  The problem is that while ACL2
+translates naturally into HOL's SEXP data type (albeit with some
+effort involving packages and symbols in particular), the other
+direction requires at the least a restriction to first-order terms.
+It seems easy to make mistakes, for example in the handling of
+zero-ary functions, in generating proper case for symbol names, and in
+dealing with illegal objects such as (mksym "ACL2" "CAR").  (Note that
+"CAR" is in the "COMMON-LISP" package, imported into "ACL2"; there is
+no symbol named "CAR" whose symbol-package-name is "ACL2".)
+
+It may nonetheless be possible to gain assurance, sufficient in some
+settings, for correctness of translation from HOL to ACL2.  But the
+following approach can avoid the need to trust translation from HOL to
+ACL2.  One can in principle translate the resulting ACL2 development
+back to HOL, in such a manner that the original HOL functions have new
+names.  For example, the original HOL4/SEXP interpreter for ARM might
+be named ARM, and the translation from ACL2 back to HOL4/SEXP might be
+named ACL2_ARM.  Now we can imagine proving, perhaps with considerable
+automation, equivalence of ARM (the original function) and ACL2_ARM
+(the result of translating ARM to ACL2 and then back to HOL/SEXP).
+With such proof, we can obtain a development entirely in HOL that
+relies only on the correctness of the translation from ACL2 to HOL,
+which seems considerably less problematic than the other way around.
+
+Moving on from trust to practicalities....
+
+How shall we translate HOL definitions to ACL2?  An obvious approach
+is to generate defstub events (encapsulate events with no axioms)
+together with defaxiom events that state the properties imported from
+HOL, including definitional equations.  A practical problem with this
+approach, however, is that defaxiom events must not be local to books,
+yet an ACL2 user may wish to hide (with local) some of the events
+imported from HOL.  A solution is to use encapsulate and avoid
+defaxiom, by introducing for each imported definition an auxiliary
+0-ary function asserting that the definition is correct.  Thus, for
+HOL definition f(x)=<body>, we may generate the following in ACL2.
+The first line below "encapsulate" is just signature declarations,
+stating that function symbols f and f-ok have arities 1 and 0,
+respectively.  The two local definitions come next, and are used to
+prove the theorem named "f-def" under them; but only this theorem
+is exported (as a conservative axiom), not the local definitions.
+
+  (encapsulate
+   (((f *) => *) ((f-ok) => *))
+   (local (defun f-ok () nil))
+   (local (defun f (x) x)) ; doesn't matter
+   (defthm f-def
+     (equal (f x)
+            (if (f-ok)
+                <body>
+              'do-not-care))))
+
+Of course, theorems about f will generally need the hypothesis
+(f-ok).  In HOL, we would define f-ok to be the constant TRUE, thus
+avoiding the need for those extra hypotheses.
+
+One can imagine variants of the above approach, for example having a
+single "ok" function rather than an f-ok for each f.
+
+============================================================
+3. Using HOL tools to assist ACL2 developments
+============================================================
+
+An ACL2 development may benefit by using the link to import the
+development to HOL, applying HOL tools to generate HOL code, and then
+translating the resulting HOL code back to ACL2.  The idea would be to
+fold the resulting ACL2 code into the ACL2 development.  No trust
+argument would be necessary; the link and the HOL tools would be used
+only, in effect, to provide hints to ACL2, namely generated
+definitions in the case described above.
+
+An example of this use case has been carried out in September 2010:
+the automation of definitions of pure functions that represent the
+operational semantics of the JVM on a factorial program.  The ACL2/HOL
+link was employed by translating the ACL2 M1 model to HOL using the
+link, then to apply existing HOL4 technology from Magnus Myreen to
+generate function definitions, and finally to print those HOL SEXP
+function definitions back into ACL2 syntax.  Then J Moore admitted the
+resulting definitions to ACL2, and proved appropriate theorems in ACL2
+to relate the functions thus defined to the running of the factorial
+program on the JVM.
+
+Again: There's nothing to trust here about the ACL2/HOL link, or for
+that matter about Magnus Myreen's technology; the process can be
+viewed simply as a method to help generate definitions.  Although the
+user is welcome to inspect the generated ACL2 definitions for some
+sort of correctness, it may well suffice simply to use them to aid in
+the proofs of theorems about the JVM.
+
+For a simple example of such a theorem and how it might be proved,
+imagine that one writes a second JVM factorial program (e.g. by
+looping in the opposite direction) and wants to prove that the two JVM
+factorial programs compute the same result.  One might do so by the
+following steps:
+
+- Generate a definition for each, using Magnus's technology and the
+  ACL2/HOL connection as described above.
+
+- Prove the correspondence theorem for each program, as J Moore has
+  done for the original JVM factorial program).
+
+- Prove the two ACL2 functions equal, using ordinary ACL2 techniques
+  for reasoning about functions.
+
+- Combine the two results to prove the desired ACL2 theorem that the
+  two JVM programs compute the same result.

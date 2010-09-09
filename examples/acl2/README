@@ -6,14 +6,16 @@ between the HOL4 and ACL2 proof tools.
 This is work in progress. For pending issues, see ISSUES in this
 directory.
 
-The directories here are:
+The files and directories here are:
 
+.acl2holrc.bash ............... See below
 README ........................ This file
 ISSUES ........................ Implementation topics, pending work, bugfixes
 ml ............................ ML and HOL files
 lisp .......................... Lisp and ACL2 files
 examples ...................... Various examples and case studies
 tests ......................... Regression tests
+use-cases.txt ................. Some use cases with discussion of trust issues
 
 To use these tools, edit the following file to give correct paths:
 
@@ -30,4 +32,4 @@ through tests/doit.
 
 Originbally created by Mike Gordon (16 Dec, 2005)
 Updated by Matt Kaufmann (8 Dec, 2008; 19 Aug, 2010)
-Updated by Mike Gordon (Sep 9, 2010)
+Updated by Mike Gordon and Matt Kaufmann (Sep 9, 2010)
