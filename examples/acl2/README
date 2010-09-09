@@ -3,17 +3,16 @@ The files here are part of joint project between Mike Gordon
 (University of Texas) to develop a logically sound and robust link
 between the HOL4 and ACL2 proof tools.
 
-This is work in progress. For further details see:
-
- http://www.cl.cam.ac.uk/users/mjcg/hol2acl2/
-
-For pending issues, see the file ISSUES in this directory.
+This is work in progress. For pending issues, see ISSUES in this
+directory.
 
 The directories here are:
 
+README ........................ This file
+ISSUES ........................ Implementation topics, pending work, bugfixes
 ml ............................ ML and HOL files
 lisp .......................... Lisp and ACL2 files
-examples ...................... Examples
+examples ...................... Various examples and case studies
 tests ......................... Regression tests
 
 To use these tools, edit the following file to give correct paths:
@@ -29,8 +28,6 @@ However, you may wish to execute
 in your bash shell, in case you are using tools in any way other than
 through tests/doit.
 
-
-Mike Gordon
-16 Dec, 2005
-Updated by Matt Kaufmann
-8 Dec, 2008; 19 Aug, 2010
+Originbally created by Mike Gordon (16 Dec, 2005)
+Updated by Matt Kaufmann (8 Dec, 2008; 19 Aug, 2010)
+Updated by Mike Gordon (Sep 9, 2010)

@@ -1,9 +1,30 @@
+This directory contains examples in various states of development. It
+is intended primarily as a place where developers put their
+experimental code. Some directories (e.g. acl2-hol-ltl-paper-example,
+LTL, M1) are self-contained in that they have their own copies of all
+the ACL2-HOL infrastructure (possibly tweaked for the purposes of the
+particular example).
+
+README ...................... This file				 
+LTL ......................... Legacy directory for LTL example
+M1 .......................... Importing J Moore's M1 JVM model into HOL 
+acl2-hol-ltl-paper-example .. HOL proofs described in LTL paper
+encap ....................... Stuff from Matt to test HOL support for ACL2 encapsulate
+miller-rabin.sml ............ Miller-Rabin example 
+example_axiomsScript.ml ..... Legacy file
+pprint-example.lisp ......... Legacy example for testing pprint-file.csh
+pprint-example.pp.lisp ...... Legacy example for testing pprint-file.csh
+testEncode.sml .............. Legacy file
+
+
 See ../tests/inputs/ for additional examples.  In particular, the file
 summary.lisp includes an LTL example in ACL2 supplied by Sandip Ray;
 each of the following files requires (via include-book) the one
 underneath it.
 
-summary.lisp
-records.lisp
-apply-total-order.lisp
-total-order.lisp
+   summary.lisp
+   records.lisp
+   apply-total-order.lisp
+   total-order.lisp
+
+Updated by Mike Gordon (Sept 9, 2010)
