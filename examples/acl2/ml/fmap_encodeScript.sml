@@ -8,8 +8,9 @@
 (*****************************************************************************)
 (*
 load "finite_mapTheory";
+load "sortingTheory";
 quietdec := true;
-open finite_mapTheory pred_setTheory listTheory pred_setLib;
+open finite_mapTheory sortingTheory pred_setTheory listTheory pred_setLib;
 quietdec := false;
 *)
 
@@ -23,13 +24,16 @@ open HolKernel Parse boolLib bossLib;
 (* Theories for compilation                                                  *)
 (*****************************************************************************)
 
-open finite_mapTheory pred_setTheory listTheory pred_setLib;
+open finite_mapTheory pred_setTheory listTheory pred_setLib sortingTheory;
 
 (*****************************************************************************)
 (* Start new theory "fmap_encode"                                            *)
 (*****************************************************************************)
 
 val _ = new_theory "fmap_encode";
+
+val IND_STEP_TAC = PAT_ASSUM ``!y. P ==> Q`` 
+    (MATCH_MP_TAC o CONV_RULE (REPEATC (DEPTH_CONV (RIGHT_IMP_FORALL_CONV ORELSEC AND_IMP_INTRO_CONV))));
 
 (*****************************************************************************)
 (* fold for finite maps                                                      *)
@@ -202,7 +206,7 @@ val UNIQL_M2L = prove(``!x. uniql (M2L x)``,
 (* `!x y z. MEM (y,z) (M2L x) = y IN FDOM x /\ (z = x ' y)`                  *)
 (*****************************************************************************)
 
-val MEM_M2L = store_thm("M2M_M2L", 
+val MEM_M2L = store_thm("MEM_M2L", 
     ``!x y z. MEM (y,z) (M2L x) = y IN FDOM x /\ (z = x ' y)``,
     GEN_TAC THEN completeInduct_on `FCARD x` THEN REPEAT STRIP_TAC THEN Cases_on `x = FEMPTY` THEN RW_TAC std_ss [M2L_def] THEN
     ONCE_REWRITE_TAC [fold_def] THEN RW_TAC std_ss [GSYM M2L_def, MEM, FDOM_FEMPTY, NOT_IN_EMPTY] THEN
@@ -290,4 +294,167 @@ val L2M_M2L = store_thm("L2M_M2L",
     REWRITE_TAC [GSYM SUBMAP_ANTISYM, SUBMAP_DEF, FDOM_L2M_M2L] THEN
     RW_TAC std_ss [APPLY_L2M_M2L]);
 
+
+val SETEQ_def = Define `SETEQ l1 l2 = !x. MEM x l1 = MEM x l2`;
+
+(*****************************************************************************)
+(* M2L_L2M_SETEQ:                                                            *)
+(* `!x. uniql x ==> SETEQ x (M2L (L2M x))`                                   *)
+(*****************************************************************************)
+
+val lemma1 = prove(``!x y z. uniql (y::x) ==> !z. MEM (FST y,z) x ==> (z = SND y)``,
+    REPEAT (Cases ORELSE GEN_TAC) THEN REWRITE_TAC [uniql_def,MEM] THEN METIS_TAC []);
+
+val M2L_L2M_SETEQ = prove(``!x. uniql x ==> SETEQ x (M2L (L2M x))``,
+    Induct THEN RW_TAC std_ss [L2M, M2L_def, fold_FEMPTY, SETEQ_def,MEM] THEN
+    IMP_RES_TAC uniql_cons THEN
+    Cases_on `x' = h` THEN Cases_on `MEM x' x` THEN Cases_on `x'` THEN
+    RW_TAC std_ss [GSYM M2L_def,GSYM IN_LIST_TO_SET, SET_M2L_FUPDATE] THEN
+    RW_TAC std_ss [IN_LIST_TO_SET, MEM, MEM_M2L, FDOM_DOMSUB, DOMSUB_FAPPLY_THM, IN_DELETE, FDOM_L2M, L2M_APPLY] THEN
+    METIS_TAC [lemma1,pairTheory.PAIR, L2M_APPLY, uniql_def]);
+
+(*****************************************************************************)
+(*                                                                           *)
+(*****************************************************************************)
+
+val SORTSET_def = Define `SORTSET sort relation = sort relation o SET_TO_LIST o set`;
+val SORTEDSET_def = Define `SORTEDSET r l = SORTED r l /\ ALL_DISTINCT l`;
+val MAPSET_def = Define `MAPSET r l = SORTED r l /\ ALL_DISTINCT (MAP FST l)`;
+
+val RFILTER_EQ_NIL = 
+    CONJ (REWRITE_RULE [] (AP_TERM ``$~`` (SPEC_ALL FILTER_NEQ_NIL)))
+         (CONV_RULE (REWRITE_CONV [] THENC LAND_CONV SYM_CONV) (AP_TERM ``$~`` (SPEC_ALL FILTER_NEQ_NIL)))
+
+val ALL_DISTINCT_THM = prove(``!l. ALL_DISTINCT l = !x. MEM x l ==> (FILTER ($= x) l = [x])``,
+    Induct THEN RW_TAC std_ss [ALL_DISTINCT, MEM, FILTER] THEN
+    EQ_TAC THEN RW_TAC std_ss [RFILTER_EQ_NIL] THENL [
+      ALL_TAC,
+      PAT_ASSUM ``!y. P`` (MP_TAC o Q.SPEC `h`),
+      PAT_ASSUM ``!y. P`` (MP_TAC o Q.SPEC `x`)] THEN
+   RW_TAC std_ss [RFILTER_EQ_NIL] THEN METIS_TAC[]);
+
+(*****************************************************************************)
+(* PERM_S2L_L2S:                                                             *)
+(* `!l. ALL_DISTINCT l ==> PERM (SET_TO_LIST (set l)) l`                     *)
+(*****************************************************************************)
+
+val ALL_DISTINCT_CONS = store_thm("ALL_DISTINCT_CONS",
+    ``!l. ALL_DISTINCT (h::l) ==> ALL_DISTINCT l``,
+    RW_TAC std_ss [ALL_DISTINCT_THM,FILTER,MEM] THEN
+    PAT_ASSUM ``!y. P`` (MP_TAC o Q.SPEC `x`) THEN RW_TAC std_ss [FILTER_NEQ_NIL] THEN
+    FIRST_ASSUM ACCEPT_TAC);
+
+val IN_FILTER_SET = prove(``!x y. FINITE x /\ y IN x ==> (FILTER ($= y) (SET_TO_LIST x) = [y])``,
+    GEN_TAC THEN completeInduct_on `CARD x` THEN
+    RW_TAC std_ss [SET_TO_LIST_THM, FILTER, FINITE_EMPTY, CHOICE_DEF] THEN
+    POP_ASSUM MP_TAC THEN RW_TAC std_ss [CHOICE_NOT_IN_REST, FINITE_REST, MEM_SET_TO_LIST, NOT_IN_EMPTY, RFILTER_EQ_NIL] THEN
+    PAT_ASSUM ``!y. P`` (MATCH_MP_TAC o CONV_RULE (REPEATC (DEPTH_CONV (RIGHT_IMP_FORALL_CONV ORELSEC AND_IMP_INTRO_CONV)))) THEN
+    Q.EXISTS_TAC `CARD (REST x)` THEN RW_TAC std_ss [FINITE_REST, REST_DEF, CARD_DELETE, CHOICE_DEF, IN_DELETE, GSYM arithmeticTheory.NOT_ZERO_LT_ZERO,CARD_EQ_0]);
+
+val NOT_IN_FILTER_SET = prove(``!x y. FINITE x /\ ~(y IN x) ==> (FILTER ($= y) (SET_TO_LIST x) = [])``,
+    RW_TAC std_ss [REWRITE_RULE [] (AP_TERM ``$~`` (SPEC_ALL FILTER_NEQ_NIL)), MEM_SET_TO_LIST]);
+
+val FILTER_SET = store_thm("FILTER_SET",
+    ``!x. FINITE x ==> (!y. FILTER ($= y) (SET_TO_LIST x) = if y IN x then [y] else [])``,
+    METIS_TAC [IN_FILTER_SET, NOT_IN_FILTER_SET]);
+
+val PERM_S2L_L2S = store_thm("PERM_S2L_L2S",
+    ``!l. ALL_DISTINCT l ==> PERM (SET_TO_LIST (set l)) l``,
+    REPEAT (RW_TAC std_ss [PERM_DEF, FILTER_SET, FINITE_LIST_TO_SET, RFILTER_EQ_NIL, IN_LIST_TO_SET, ALL_DISTINCT_THM]));
+
+val NO_MEM_EMPTY = prove(``!l. (!x. ¬(MEM x l)) = (l = [])``,
+    Induct THEN RW_TAC std_ss [MEM] THEN METIS_TAC []);
+
+val SORTED_APPEND = prove(``!a b r. transitive r /\ SORTED r (a ++ b) ==> !x y. MEM x a /\ MEM y b ==> r x y``,
+    Induct THEN METIS_TAC [APPEND,MEM,SORTED_EQ,MEM_APPEND]);
+
+val MEM_PERM = prove(``!l1 l2. PERM l1 l2 ==> (!a. MEM a l1 = MEM a l2)``,
+    METIS_TAC [Q.SPEC `$= a` MEM_FILTER, PERM_DEF]);
+
+val PERM_SORTED_EQ = store_thm("PERM_SORTED_EQ",
+    ``!l1 l2 r. antisymmetric r /\ transitive r /\ PERM l1 l2 /\ SORTED r l1 /\ SORTED r l2 ==> (l1 = l2)``,
+    REPEAT GEN_TAC THEN completeInduct_on `LENGTH l1 + LENGTH l2` THEN REPEAT Cases THEN REWRITE_TAC [LENGTH] THEN
+    TRY (REWRITE_TAC [PERM_DEF, RFILTER_EQ_NIL, FILTER] THEN METIS_TAC [NOT_NIL_CONS]) THEN
+    RW_TAC std_ss [NO_MEM_EMPTY] THEN
+    `t = t'` by PAT_ASSUM ``!y. P ==> q`` (MATCH_MP_TAC o CONV_RULE (REPEATC (DEPTH_CONV (RIGHT_IMP_FORALL_CONV ORELSEC AND_IMP_INTRO_CONV)))) THEN
+    IMP_RES_TAC SORTED_EQ THEN RW_TAC arith_ss [] THEN
+    FULL_SIMP_TAC std_ss [PERM_CONS_EQ_APPEND] THEN
+    Cases_on `M` THEN FULL_SIMP_TAC std_ss [APPEND,list_11] THEN
+    REPEAT (PAT_ASSUM ``a = b`` SUBST_ALL_TAC) THEN
+    `h = h''` by METIS_TAC [MEM_PERM, MEM, MEM_APPEND, SORTED_APPEND, relationTheory.antisymmetric_def] THEN
+    METIS_TAC [PERM_FUN_APPEND_CONS, PERM_TRANS, PERM_SYM, APPEND]);
+
+val SORTSET_SORTEDSET = store_thm("SORTSET_SORTEDSET",
+    ``!l. transitive R /\ antisymmetric R /\ SORTS sort R /\ SORTEDSET R l ==> (SORTSET sort R l = l)``,
+    RW_TAC std_ss [SORTEDSET_def,SORTSET_def, SETEQ_def, SORTS_DEF] THEN
+    `PERM (sort R (SET_TO_LIST (set l))) l` by METIS_TAC [PERM_SYM, PERM_TRANS, PERM_S2L_L2S] THEN
+    METIS_TAC [PERM_SORTED_EQ]);
+
+val ALL_DISTINCT_M2L = prove(``!s. ALL_DISTINCT (M2L s)``,
+    completeInduct_on `FCARD s` THEN REPEAT STRIP_TAC THEN
+    REWRITE_TAC [M2L_def] THEN ONCE_REWRITE_TAC [fold_def] THEN
+    NTAC 2 (RW_TAC std_ss [ALL_DISTINCT, GSYM M2L_def,MEM_M2L,FDOM_DOMSUB,IN_DELETE]) THEN
+    IND_STEP_TAC THEN
+    METIS_TAC [fcard_less, not_fempty_eq]);
+
+val PERM_DISTINCT = prove(``!l1 l2. PERM l1 l2 ==> (ALL_DISTINCT l1 = ALL_DISTINCT l2)``,
+    METIS_TAC [MEM_PERM, PERM_DEF, ALL_DISTINCT_THM]);
+
+val SORTSET_SORT = prove(``!l R. antisymmetric R /\ transitive R /\ SORTS sort R /\ ALL_DISTINCT l ==> (SORTSET sort R l = sort R l)``,
+    RW_TAC std_ss [SORTS_DEF,SORTSET_def] THEN
+    `PERM l (sort R (SET_TO_LIST (set l)))` by METIS_TAC [PERM_S2L_L2S, PERM_DISTINCT, PERM_TRANS, PERM_SYM] THEN
+    MATCH_MP_TAC PERM_SORTED_EQ THEN RW_TAC std_ss [] THEN
+    Q.EXISTS_TAC `R` THEN RW_TAC std_ss [] THEN
+    METIS_TAC [PERM_S2L_L2S, PERM_DISTINCT, PERM_TRANS, PERM_SYM]);
+
+val PERM_S2L_L2S_EQ = prove(``!l1 l2. SETEQ l1 l2 ==> PERM (SET_TO_LIST (set l1)) (SET_TO_LIST (set l2))``,
+    RW_TAC std_ss [PERM_DEF, FILTER_SET, FINITE_LIST_TO_SET,IN_LIST_TO_SET,SETEQ_def]);
+
+val PERM_SETEQ = prove(``!l1 l2. PERM l1 l2 ==> SETEQ l1 l2``,
+    Induct THEN RW_TAC std_ss [PERM_CONS_EQ_APPEND, PERM_NIL,SETEQ_def] THEN
+    Cases_on `x = h` THEN ASM_REWRITE_TAC [MEM, MEM_APPEND] THEN EQ_TAC THEN
+    RES_TAC THEN FULL_SIMP_TAC std_ss [SETEQ_def, MEM_APPEND]);
+
+val SORTSET_EQ = prove(``!l1 l2 R. SORTS sort R /\ antisymmetric R /\ transitive R /\ SETEQ l1 l2 ==> (SORTSET sort R l1 = SORTSET sort R l2)``,
+    RW_TAC std_ss [SORTSET_def, SORTS_DEF] THEN
+    MATCH_MP_TAC PERM_SORTED_EQ THEN Q.EXISTS_TAC `R` THEN RW_TAC std_ss [] THEN
+    METIS_TAC [PERM_S2L_L2S_EQ,PERM_TRANS,PERM_SYM, PERM_SETEQ]);
+
+val MAPSET_IMP_SORTEDSET = prove(``!l R. transitive R ==> (MAPSET R l ==> SORTEDSET R l)``,
+    Induct THEN RW_TAC std_ss [MAPSET_def, SORTEDSET_def, ALL_DISTINCT, MAP, MEM_MAP] THEN
+    METIS_TAC [MAPSET_def, SORTEDSET_def, SORTED_EQ]);
+
+val SORTED_CONS = prove(``!a b R. SORTED R (a::b) ==> SORTED R b``,
+    GEN_TAC THEN Cases THEN RW_TAC std_ss [SORTED_DEF]);
+
+val MAPSET_CONS = prove(``!a b R. MAPSET R (a::b) ==> MAPSET R b``,
+    RW_TAC std_ss [MAPSET_def, MAP, ALL_DISTINCT, SORTED_CONS] THEN
+    METIS_TAC [SORTED_CONS]);
+
+
+val MAPSET_UNIQ = prove(``!a R. MAPSET R a ==> uniql a``,	
+    Induct THEN REPEAT STRIP_TAC THEN IMP_RES_TAC MAPSET_CONS THEN RES_TAC THEN
+    FULL_SIMP_TAC std_ss [uniql_def, MEM, uniql_def, MAPSET_def, MAP, ALL_DISTINCT, MEM_MAP] THEN
+    Cases_on `h` THEN RW_TAC std_ss [] THENL [
+       PAT_ASSUM ``!y. P \/ Q`` (MP_TAC o Q.SPEC `(q,y')`),
+       PAT_ASSUM ``!y. P \/ Q`` (MP_TAC o Q.SPEC `(q,y)`),
+       ALL_TAC] THEN 
+    ASM_REWRITE_TAC [] THEN METIS_TAC []);
+
+
+(*****************************************************************************)
+(* M2L_L2M:                                                                  *)
+(*`!l sort R. transitive R /\ antisymmetric R /\                             *) 
+(*            SORTS sort R /\ MAPSET R l ==> (sort R (M2L (L2M l)) = l)`     *)
+(*****************************************************************************)
+
+val M2L_L2M = store_thm("M2L_L2M",
+    ``!l sort R. transitive R /\ antisymmetric R /\ SORTS sort R /\ MAPSET R l ==> (sort R (M2L (L2M l)) = l)``,
+    REPEAT STRIP_TAC THEN
+    `(sort R (M2L (L2M l)) = l) = (SORTSET sort R (M2L (L2M l)) = SORTSET sort R l)` by 
+    	   METIS_TAC [ALL_DISTINCT_M2L, SORTSET_SORT, SORTSET_SORTEDSET, MAPSET_IMP_SORTEDSET] THEN
+    ASM_REWRITE_TAC [] THEN MATCH_MP_TAC SORTSET_EQ THEN ASM_REWRITE_TAC [] THEN
+    METIS_TAC [SETEQ_def, M2L_L2M_SETEQ, MAPSET_UNIQ]);
+
 val _ = export_theory();
+
