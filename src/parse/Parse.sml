@@ -878,7 +878,7 @@ fun add_rule (r as {term_name, fixity, pp_elements,
                   block_infoToString bi,")}"])
  end
 
-fun temp_overload_on (s, t) = let
+fun make_temp_overload_on add (s, t) = let
   val uni_on = get_tracefn "Unicode" () > 0
 in
   if includes_unicode s then
@@ -891,20 +891,25 @@ in
      Unicode.temp_uoverload_on (s,t))
   else
     (the_term_grammar := fupdate_overload_info
-                             (Overload.add_overloading (s, t))
+                             (add (s, t))
                              (term_grammar());
      term_grammar_changed := true)
 end
 
-fun overload_on (s, t) = let
+val temp_overload_on = make_temp_overload_on Overload.add_overloading
+val temp_inferior_overload_on = make_temp_overload_on Overload.add_inferior_overloading
+
+fun make_overload_on temp temps (s, t) = let
 in
-  temp_overload_on (s, t);
+  temp (s, t);
   full_update_grms
-    ("temp_overload_on",
+    (temps,
      String.concat ["(", quote s, ", ", minprint t, ")"],
     SOME t)
 end
 
+val overload_on = make_overload_on temp_overload_on "temp_overload_on"
+val inferior_overload_on = make_overload_on temp_inferior_overload_on "temp_inferior_overload_on"
 
 fun temp_add_listform x = let open term_grammar in
     the_term_grammar := add_listform (term_grammar()) x;

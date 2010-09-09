@@ -99,6 +99,7 @@ signature Parse = sig
   (* overloading and records *)
 
   val overload_on : string * term -> unit
+  val inferior_overload_on : string * term -> unit
   val overload_on_by_nametype : string -> {Name: string, Thy: string} -> unit
   val send_to_back_overload : string -> {Name: string, Thy: string} -> unit
   val bring_to_front_overload : string -> {Name: string, Thy: string} -> unit
@@ -142,6 +143,7 @@ signature Parse = sig
   val temp_set_associativity : (int * associativity) -> unit
 
   val temp_overload_on : string * term -> unit
+  val temp_inferior_overload_on : string * term -> unit
   val temp_overload_on_by_nametype : string -> {Name:string,Thy:string} -> unit
   val temp_send_to_back_overload : string -> {Name:string,Thy:string} -> unit
   val temp_bring_to_front_overload : string -> {Name:string,Thy:string} -> unit

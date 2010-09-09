@@ -32,11 +32,14 @@ type printmap_data = term * string * int
   (* the term is the lambda abstraction provided by the user, the
      string is the name that it is to be used in the printing process, and
      the int is the 'timestamp' *)
-val tstamp : unit -> int = let
-  val cnt = ref 0
+val pos_tstamp : bool -> int = let
+  val neg = ref 0
+  val cnt = ref 1
 in
-  fn () => (!cnt before (cnt := !cnt + 1))
+  fn true => (!cnt before (cnt := !cnt + 1))
+   | false => (!neg before (neg := !neg - 1))
 end
+fun tstamp () = pos_tstamp true
 
 type overload_info = ((string,overloaded_op_info) Binarymap.dict *
                       printmap_data LVTermNet.lvtermnet)
@@ -246,8 +249,10 @@ fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
 (* put a new overloading resolution into the database.  If it's already
    there for a given operator, don't mind.  In either case, make sure that
    it's at the head of the list, meaning that it will be the first choice
-   in ambigous resolutions. *)
-fun add_overloading (opname, term) oinfo = let
+   in ambigous resolutions.
+   update: abstracted the inserter to allow adding at the
+           end of the list for inferior resolutions.  *)
+fun add_overloading_with_inserter inserter tstamp (opname, term) oinfo = let
   val _ = Theory.uptodate_term term orelse
           raise OVERLOAD_ERR "Term is out-of-date"
   val (opc0, cop0) = oinfo
@@ -268,7 +273,7 @@ fun add_overloading (opname, term) oinfo = let
                   else (tyavoids, base_type)
             in
               Binarymap.insert(opc0, opname,
-                               {actual_ops = term::rest,
+                               {actual_ops = inserter(term,rest),
                                 base_type = base_type,
                                 tyavoids = avoids})
             end
@@ -283,7 +288,7 @@ fun add_overloading (opname, term) oinfo = let
                      Lib.union (tmlist_tyvs (free_vars term)) tyavoids)
             in
               Binarymap.insert(opc0, opname,
-                               {actual_ops = term :: actual_ops,
+                               {actual_ops = inserter(term,actual_ops),
                                 base_type = newbase,
                                 tyavoids = new_avoids})
             end
@@ -303,6 +308,8 @@ in
   (opc, cop)
 end
 
+val add_overloading = add_overloading_with_inserter (op ::) (fn () => pos_tstamp true)
+val add_inferior_overloading = add_overloading_with_inserter (fn (a,l) => l @ [a]) (fn() => pos_tstamp false)
 
 fun add_actual_overloading {opname, realname, realthy} oinfo = let
   val cnst = prim_mk_const{Name = realname, Thy = realthy}
