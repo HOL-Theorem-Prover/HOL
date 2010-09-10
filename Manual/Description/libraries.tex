@@ -2524,7 +2524,7 @@ This section describes some of the simplifier's advanced features.
 \subsubsection{Congruence rules}
 \label{sec:simp-congruences}
 \index{simplification!congruence rules}
-
+\index{congruence rules!in simplification}
 Congruence rules control the way the simplifier traverses a term.
 They also provide a mechanism by which additional assumptions can be
 added to the simplifier's context, representing information about the
@@ -2607,7 +2607,7 @@ rewrites using the mechanisms described in
 Section~\ref{sec:generating-rewrite-rules}.
 
 Congruence rules can be used to achieve a number of interesting
-effects.  For example, congruence can specify that sub-terms
+effects.  For example, a congruence can specify that sub-terms
 \emph{not} be simplified if desired.  This might be used to prevent
 simplification of the branches of conditional expressions:
 \[
