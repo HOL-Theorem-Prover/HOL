@@ -485,19 +485,16 @@ fun keys dict = Binarymap.foldr (fn (k,v,l) => k::l) [] dict
 
 fun known_constants (oi:overload_info) = keys (#1 oi)
 
-fun remove_omapping crec str opdict = let
+fun remove_omapping t str opdict = let
   val (dictlessk, kitem) = Binarymap.remove(opdict, str)
-  val cnst = prim_mk_const crec
-  fun ok_actual t = not (aconv t cnst)
+  fun ok_actual t' = not (aconv t' t)
   val new_rec = fupd_actual_ops (List.filter ok_actual) kitem
 in
   if (null (#actual_ops new_rec)) then dictlessk
   else Binarymap.insert(dictlessk, str, new_rec)
 end handle Binarymap.NotFound => opdict
 
-
-fun remove_mapping str crec ((opc, cop) : overload_info) = let
-  val t = prim_mk_const crec
+fun gen_remove_mapping str t ((opc, cop) : overload_info) = let
   val cop' = let
     val ds = PrintMap.peek (cop, ([], t))
     val ds' = List.filter (fn (_, s, _) => s <> str) ds
@@ -512,7 +509,8 @@ fun remove_mapping str crec ((opc, cop) : overload_info) = let
       end
   end
 in
-  (remove_omapping crec str opc, cop')
+  (remove_omapping t str opc, cop')
 end
+fun remove_mapping str crec = gen_remove_mapping str (prim_mk_const crec)
 
 end (* Overload *)

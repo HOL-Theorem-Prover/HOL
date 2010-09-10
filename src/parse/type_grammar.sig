@@ -13,6 +13,8 @@ sig
 
   type grammar
 
+  val structure_to_type : type_structure -> Type.hol_type
+
   val empty_grammar    : grammar
   val min_grammar      : grammar
   val rules            : grammar -> (int * grammar_rule) list
