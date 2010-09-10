@@ -137,7 +137,10 @@ val type_parser2 =
     ref (parse_type typantiq_constructors false (type_grammar()))
 end
 
-
+fun make_to_backend_string ppf x = Portable.pp_to_string (!Globals.linewidth) ppf x
+fun lazy_make_to_string ppf = Lib.with_flag (current_backend, PPBackEnd.raw_terminal) (fn x => make_to_backend_string (ppf()) x)
+fun make_to_string ppf = lazy_make_to_string (fn()=>ppf)
+fun make_print to_string t = Portable.output(Portable.std_out, to_string t)
 
 (*---------------------------------------------------------------------------
         pretty printing types
@@ -180,15 +183,10 @@ fun pp_type pps ty = let in
  end
 
 
-fun type_to_string ty =
-    Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-                  (Portable.pp_to_string (!Globals.linewidth) pp_type) ty;
-fun print_type ty = Portable.output(Portable.std_out, type_to_string ty);
-
-fun type_to_backend_string ty =
-   (Portable.pp_to_string (!Globals.linewidth) pp_type) ty;
-fun print_backend_type ty =
-  Portable.output(Portable.std_out, type_to_backend_string ty);
+val type_to_string = make_to_string pp_type;
+val print_type = make_print type_to_string;
+val type_to_backend_string = make_to_backend_string pp_type;
+val print_backend_type = make_print type_to_backend_string;
 
 fun type_pp_with_delimiters ppfn pp ty =
   let open Portable Globals
@@ -211,15 +209,18 @@ val print_pp = {consumer = (fn s => output(stdOut, s)),
                 flush = (fn () => flushOut stdOut)}
 end
 
-fun print_term_by_grammar Gs = let
+fun print_with_newline add_t = let
   open PP
+  fun p pps = (begin_block pps CONSISTENT 0 ;
+               add_t pps ;
+               add_newline pps ;
+               end_block pps)
+in with_pp print_pp p end
+
+fun print_term_by_grammar Gs = let
   val (_, termprinter) = print_from_grammars Gs
-  fun pprint t pps = (begin_block pps CONSISTENT 0;
-                      termprinter pps t;
-                      add_newline pps;
-                      end_block pps)
 in
-  fn t => with_pp print_pp (pprint t)
+  print_with_newline o (Lib.C termprinter)
 end
 
 val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
@@ -359,14 +360,6 @@ in
   (List.map ppfn ls1, List.map ppfn ls2)
 end
 
-fun print_with_newline add_t = let
-  open PP
-  fun p pps = (begin_block pps CONSISTENT 0 ;
-               add_t pps ;
-               add_newline pps ;
-               end_block pps)
-in with_pp print_pp p end
-
 fun print_overloads_on s = let
   val (ls1,ls2) = pp_overloads_on s
   val p = List.app print_with_newline
@@ -386,11 +379,6 @@ in
 end handle Bind => raise ERROR "pp_abbrev" (s^" is not a type abbreviation")
 
 val print_abbrev = print_with_newline o pp_abbrev
-
-fun make_to_backend_string ppf x = Portable.pp_to_string (!Globals.linewidth) ppf x
-fun lazy_make_to_string ppf = Lib.with_flag (current_backend, PPBackEnd.raw_terminal) (fn x => make_to_backend_string (ppf()) x)
-fun make_to_string ppf = lazy_make_to_string (fn()=>ppf)
-fun make_print to_string t = Portable.output(Portable.std_out, to_string t)
 
 fun pp_term_without_overloads_on ls = let
   fun remove s = #1 o term_grammar.mfupdate_overload_info
@@ -439,20 +427,15 @@ fun pp_style_string ppstrm (st, s) =
     end_style ()
  end
 
-fun add_style_to_string st s = (Portable.pp_to_string (!Globals.linewidth) pp_style_string) (st, s);
-fun print_with_style st s =  Portable.output(Portable.std_out, add_style_to_string st s);
+fun add_style_to_string st s = (make_to_string pp_style_string) (st, s);
+fun print_with_style st =  make_print (add_style_to_string st);
 
 
 fun pp_term pps t = (update_term_fns(); !term_printer pps t)
-fun term_to_string t =
-    Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-                  (Portable.pp_to_string (!Globals.linewidth) pp_term) t;
-fun print_term t = Portable.output(Portable.std_out, term_to_string t);
-
-fun term_to_backend_string t =
-   (Portable.pp_to_string (!Globals.linewidth) pp_term) t;
-fun print_backend_term t =
-  Portable.output(Portable.std_out, term_to_backend_string t);
+val term_to_string = make_to_string pp_term;
+val print_term = make_print term_to_string;
+val term_to_backend_string = make_to_backend_string pp_term;
+val print_backend_term = make_print term_to_backend_string;
 
 
 fun term_pp_with_delimiters ppfn pp tm =
@@ -490,15 +473,10 @@ fun pp_thm ppstrm th =
     end_block()
  end;
 
-fun thm_to_string thm =
-    Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-                  (Portable.pp_to_string (!Globals.linewidth) pp_thm) thm;
-fun print_thm thm     = Portable.output(Portable.std_out, thm_to_string thm);
-
-fun thm_to_backend_string thm =
-   (Portable.pp_to_string (!Globals.linewidth) pp_thm) thm;
-fun print_backend_thm thm =
-  Portable.output(Portable.std_out, thm_to_backend_string thm);
+val thm_to_string = make_to_string pp_thm;
+val print_thm = make_print thm_to_string;
+val thm_to_backend_string = make_to_backend_string pp_thm;
+val print_backend_thm = make_print thm_to_backend_string;
 
 
 (*---------------------------------------------------------------------------
