@@ -33,9 +33,10 @@ structure HolSmtLib :> HolSmtLib = struct
          Tactical.THEN (Library.WORD_SIMP_TAC,
            Tactical.THEN (Library.SET_SIMP_TAC, Tactic.BETA_TAC)))]) goal
   in
-    (* ugly hack to work around the fact that SET_SIMP_TAC and BETA_TAC prove
-       ``T``; we call the SMT solver anyway to make sure this only works if the
-       solver is installed (which is relied upon in selftest.sml) *)
+    (* ugly hack to work around the fact that SET_SIMP_TAC and
+       BETA_TAC (above) prove ``T``; we call the SMT solver anyway to
+       make sure this only works if the solver is installed (which is
+       relied upon in selftest.sml) *)
     case goals of
       [] =>
       (ignore (SMT_TAC ([], boolSyntax.T));
