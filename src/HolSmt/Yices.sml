@@ -601,7 +601,7 @@ structure Yices = struct
           handle Feedback.HOL_ERR _ =>  (* not a record field selector *)
 
           (* record field updates *)
-          let 
+          let
               val (update_f, x) = Term.dest_comb tm
               val (update, f) = Term.dest_comb update_f
               (* FIXME: Only field updates using the K combinator (in eta-long
@@ -734,13 +734,13 @@ structure Yices = struct
   (* Yices 1.0.18, native file format *)
   val Yices_Oracle = SolverSpec.make_solver
     (Lib.pair () o goal_to_Yices)
-    "yices -tc" 
+    "yices -tc"
     (Lib.K result_fn)
 
   (* Yices 1.0.18, SMT-LIB file format *)
   val Yices_SMT_Oracle = SolverSpec.make_solver
     (Lib.pair () o Lib.snd o SmtLib.goal_to_SmtLib)
-    "yices -tc -smt" 
+    "yices -tc -smt"
     (Lib.K result_fn)
 
 end
