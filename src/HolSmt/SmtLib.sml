@@ -1,6 +1,6 @@
 (* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
-(* Functions to translate HOL terms into the SMT-LIB format. *)
+(* Translation of HOL terms into SMT-LIB format *)
 
 structure SmtLib = struct
 

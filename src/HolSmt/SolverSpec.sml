@@ -1,4 +1,6 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
+
+(* Definition of SMT solvers, tracing *)
 
 structure SolverSpec = struct
 
