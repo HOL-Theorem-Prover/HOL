@@ -1,4 +1,9 @@
-val _ = sexp.acl2_list_ref := [
+open HolKernel Parse boolLib bossLib intSyntax pairSyntax listSyntax stringLib numLib sexp;
+
+val package =
+ implode(map chr (cons 65 (cons 67 (cons 76 (cons 50 nil)))));
+
+val events = [
 
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "ACL2" "IFF") (mkpair (
 mkpair (mksym "ACL2" "P") (mkpair (mksym "ACL2" "Q") (mksym "COMMON-LISP" 
@@ -19580,6 +19585,3 @@ mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "COMMON-LISP" "NIL") (mksym
 "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))))
 
 ];
-
-val _ = current_package :=
- implode(map chr (cons 65 (cons 67 (cons 76 (cons 50 nil)))));

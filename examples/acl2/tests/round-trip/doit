@@ -34,7 +34,7 @@ if [ -e diffout ]; then mv diffout diffout.old ; fi
 
 (${ACL2_HOL_LISP}/axioms-essence.csh $results_dir/axioms.lisp) > $logs_dir/axioms.out 2> $logs_dir/axioms.err ; \
 
-(${ACL2_HOL_LISP}/a2ml.csh $gold_dir/axioms.lisp $results_dir/axioms.ml) > $logs_dir/axioms.ml.out 2> $logs_dir/axioms.ml.err ; \
+(${ACL2_HOL_LISP}/a2ml.csh $gold_dir/axioms.lisp $results_dir/axioms.sml) > $logs_dir/axioms.sml.out 2> $logs_dir/axioms.sml.err ; \
 
 (diff -x .svn $results_dir $gold_dir 2>&1) > diffout
 

@@ -181,7 +181,7 @@
                       (stringp (cadr pkg-form)))
                  (cadr pkg-form)
                "ACL2")))
-    (pprogn (fms "val _ = current_package :=~| implode(map chr ~x0);~|"
+    (pprogn (fms "val package =~| implode(map chr ~x0);~|"
                  (list (cons #\0 (s2conses pkg (length pkg) nil)))
                  channel state nil))))
 
@@ -190,12 +190,16 @@
    ((write-for-read t)
     (current-package "ACL2" set-current-package-state)
     (print-case :downcase set-print-case))
-   (pprogn (princ$ "val _ = sexp.acl2_list_ref := [" channel state)
+   (pprogn (princ$ "open HolKernel Parse boolLib bossLib intSyntax pairSyntax listSyntax stringLib numLib sexp;"
+                   channel state)
+           (newline channel state)
+           (print-current-package pkg-form channel state)
+           (newline channel state)
+           (princ$ "val events = [" channel state)
            (newline channel state)
            (let ((state (pprint-objects-to-ml lst "," channel state)))
              (pprogn (princ$ "];" channel state)
                      (newline channel state)
-                     (print-current-package pkg-form channel state)
                      (close-output-channel channel state)
                      (value :invisible))))))
 
@@ -225,6 +229,19 @@
              (declare (ignore col))
              (acl2ml-write lst2 (car lst1) channel state)))))))))
 
+(defun a2ml-filename (file)
+
+; Convert hyphen (-) to underscore (_), but only for the filename part of the
+; file, not the directory name.
+
+  (let ((pos (search *directory-separator-string* file :from-end t)))
+    (cond (pos (concatenate 'string
+                            (subseq file 0 (1+ pos))
+                            (substitute
+                             #\_ #\-
+                             (subseq file (1+ pos) (length file)))))
+          (t (substitute #\_ #\- file)))))
+
 (defmacro a2ml (infile outfile &optional infile-dir)
 
 ; We assume that infile consists of essential events from a book: first the
@@ -233,4 +250,5 @@
 
   (declare (xargs :guard (and (stringp infile)
                               (stringp outfile))))
-  `(a2ml-fn ,infile ,outfile ,infile-dir state))
+  (let ((outfile (a2ml-filename outfile)))
+    `(a2ml-fn ,infile ,outfile ,infile-dir state)))
