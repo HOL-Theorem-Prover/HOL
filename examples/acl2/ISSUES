@@ -205,3 +205,13 @@ to HOL and then back to ACL2, these errors were identified:
   MY-PKG::FUN0-THM has MY-PKG::FUN0, which should be (MY-PKG::FUN0).
 
 <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+Now that we replace "-" by "_" in filenames when running a2ml (macro
+a2ml in file examples/acl2/lisp/a2ml.lisp), there would seem to be
+some danger of filename confusion; for example, foo-bar.lisp and
+foo_bar.lisp are both mapped to foo_bar.sml.  Consider causing an
+error if the .lisp file has an "_" character (which is perfectly legal
+for ACL2 books, but perhaps unusual), or else replace "-" by "__" and
+cause an error if "__" is present in the lisp file.
+
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
