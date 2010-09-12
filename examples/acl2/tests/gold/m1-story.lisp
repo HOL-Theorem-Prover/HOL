@@ -1,6 +1,10 @@
 (INCLUDE-BOOK "problem-set-1-answers")
 
-; NOTE: Forms below are not evaluated when translating to ML.
+; NOTE: Only the forms above are evaluated (as opposed the ones below,
+; which merely are read) when translating to ML.  On a related note:
+; the following IN-PACKAGE form is for use by a2ml, but all forms in
+; this file assume that the current package is actually "ACL2".
+
 (IN-PACKAGE "M1")
 
 (DEFUN M1::NEXT-INST (M1::S) (M1::NTH (M1::PC M1::S) (M1::PROGRAM M1::S)))

@@ -1,4 +1,3 @@
-; NOTE: Forms below are not evaluated when translating to ML.
 (IN-PACKAGE "ACL2")
 
 (INCLUDE-BOOK "circuit-bisim")

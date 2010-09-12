@@ -1,4 +1,3 @@
-; NOTE: Forms below are not evaluated when translating to ML.
 (IN-PACKAGE "ACL2")
 
 (DEFUN IFF (P Q) (IF P (IF Q 'T 'NIL) (IF Q 'NIL 'T)))

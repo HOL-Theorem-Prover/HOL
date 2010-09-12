@@ -1,6 +1,10 @@
 (DEFPKG "MY-PKG" '(CONS DEFUN))
 
-; NOTE: Forms below are not evaluated when translating to ML.
+; NOTE: Only the forms above are evaluated (as opposed the ones below,
+; which merely are read) when translating to ML.  On a related note:
+; the following IN-PACKAGE form is for use by a2ml, but all forms in
+; this file assume that the current package is actually "ACL2".
+
 (IN-PACKAGE "MY-PKG")
 
 (DEFUN MY-PKG::F1 (MY-PKG::X) (CONS MY-PKG::X MY-PKG::X))
