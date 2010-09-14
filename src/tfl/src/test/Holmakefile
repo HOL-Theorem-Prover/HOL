@@ -1,0 +1,3 @@
+EXTRA_CLEANS = selftest.exe
+selftest.exe : selftest.uo $(dprot $(SIGOBJ)/bossLib.uo)
+	$(HOLMOSMLC) -o $@ $<

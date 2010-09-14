@@ -650,7 +650,7 @@ fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      val def' = MP inst'd (SPEC_ALL def)
      val var_wits = LIST_CONJ (map ASSUME full_rqt)
      val TC_choice_thm =
-           MP (BETA_RULE(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
+           MP (CONV_RULE(BINOP_CONV BETA_CONV)(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
  in
     {theory = theory, R=R1, SV=SV,
      rules = CONJUNCTS
@@ -708,7 +708,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
                (mk_eq(fvar_app, list_mk_comb(faux_const,R2::SV)))
      val var_wits = LIST_CONJ (map ASSUME full_rqt)
      val TC_choice_thm =
-         MP (BETA_RULE(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
+         MP (CONV_RULE(BINOP_CONV BETA_CONV)(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
      val elim_chosenTCs =
            rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) R2inst'd
      val rules = simplify [GSYM def1] elim_chosenTCs
