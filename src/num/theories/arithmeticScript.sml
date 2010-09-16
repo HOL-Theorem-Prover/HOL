@@ -2988,6 +2988,29 @@ val EXP_SUB = Q.store_thm
    RW_TAC bool_ss [GSYM EXP_ADD,ADD_CLAUSES] THEN
    METIS_TAC [SUB_ADD]);
 
+val EXP_SUB_NUMERAL = store_thm(
+  "EXP_SUB_NUMERAL",
+  ``0 < n ==>
+     (n ** (NUMERAL (BIT1 x)) DIV n = n ** (NUMERAL (BIT1 x) - 1)) /\
+     (n ** (NUMERAL (BIT2 x)) DIV n = n ** (NUMERAL (BIT1 x)))``,
+  REPEAT STRIP_TAC THENL [
+    Q.SPECL_THEN [`NUMERAL (BIT1 x)`, `1`, `n`] (MP_TAC o GSYM) EXP_SUB THEN
+    REWRITE_TAC [EXP_1] THEN DISCH_THEN MATCH_MP_TAC THEN
+    ASM_REWRITE_TAC [NUMERAL_DEF, BIT1, ALT_ZERO, ADD_CLAUSES,
+                     LESS_EQ_MONO, ZERO_LESS_EQ],
+    Q.SPECL_THEN [`NUMERAL (BIT2 x)`, `1`, `n`] (MP_TAC o GSYM) EXP_SUB THEN
+    REWRITE_TAC [EXP_1] THEN
+    Q.SUBGOAL_THEN `NUMERAL (BIT2 x) - 1 = NUMERAL (BIT1 x)` SUBST1_TAC THENL[
+      REWRITE_TAC [NUMERAL_DEF, BIT1, BIT2, ALT_ZERO, ADD_CLAUSES,
+                   SUB_MONO_EQ, SUB_0],
+      ALL_TAC
+    ] THEN DISCH_THEN MATCH_MP_TAC THEN
+    ASM_REWRITE_TAC [NUMERAL_DEF, BIT2, BIT1, ALT_ZERO, ADD_CLAUSES,
+                     LESS_EQ_MONO, ZERO_LESS_EQ]
+  ]);
+val _ = export_rewrites ["EXP_SUB_NUMERAL"]
+
+
 val EXP_BASE_MULT = store_thm(
   "EXP_BASE_MULT",
   ``!z x y. (x * y) ** z = (x ** z) * (y ** z)``,
