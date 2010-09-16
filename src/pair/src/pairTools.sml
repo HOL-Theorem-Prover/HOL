@@ -381,4 +381,41 @@ in
       end;
 end;
 
+
+
+local
+  val PFORALL_THM2 = prove (``!P. (!x. $! (P x)) = $! (UNCURRY P)``,
+                          GEN_TAC THEN
+                          Q.SUBGOAL_THEN `P = (\x y. P x y)` (fn thm => ONCE_ASM_REWRITE_TAC [thm]) THEN1 (
+                             REWRITE_TAC [FUN_EQ_THM] THEN
+                             BETA_TAC THEN REWRITE_TAC[]
+                          ) THEN
+                          BETA_TAC THEN
+                          REWRITE_TAC [PFORALL_THM]);
+
+  val PEXISTS_THM2 = prove (``!P. (?x. $? (P x)) = $? (UNCURRY P)``,
+                          GEN_TAC THEN
+                          Q.SUBGOAL_THEN `P = (\x y. P x y)` (fn thm => ONCE_ASM_REWRITE_TAC [thm]) THEN1 (
+                             REWRITE_TAC [FUN_EQ_THM] THEN
+                             BETA_TAC THEN REWRITE_TAC[]
+                          ) THEN
+                          BETA_TAC THEN
+                          REWRITE_TAC [PEXISTS_THM]);
+in
+  fun PEXISTS_INTRO_CONV tm =
+      (((TRY_CONV ELIM_TUPLED_QUANT_CONV) THENC
+        (QUANT_CONV PEXISTS_INTRO_CONV) THENC
+        (HO_REWR_CONV PEXISTS_THM2)) tm) handle HOL_ERR _ => raise UNCHANGED
+
+  fun PFORALL_INTRO_CONV tm =
+      (((TRY_CONV ELIM_TUPLED_QUANT_CONV) THENC
+        (QUANT_CONV PFORALL_INTRO_CONV) THENC
+        (HO_REWR_CONV PFORALL_THM2)) tm) handle HOL_ERR _ => raise UNCHANGED
+
+  fun INTRO_TUPLED_QUANT_CONV tm =
+      if is_universal (rator tm) then PFORALL_INTRO_CONV tm else
+      if is_existential (rator tm) then PEXISTS_INTRO_CONV tm else
+         raise PERR "INTRO_TUPLED_QUANT_CONV" ""
+end;
+
 end
