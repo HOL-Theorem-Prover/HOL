@@ -2,7 +2,7 @@
  * Pattern matching extensions.
  *---------------------------------------------------------------------------*)
 
-open HolKernel boolLib Parse Defn
+open HolKernel boolLib Parse Defn bossLib
 
 val _ = new_theory "pattern_matching"
 
