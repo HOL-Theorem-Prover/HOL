@@ -1566,8 +1566,8 @@ fun EXISTS_SIMP_CONV xt =
      val {Bvar=x, Body=t} = dest_exists xt
    in
      IMP_ANTISYM_RULE
-         (DISCH t (EXISTS(xt, x) (ASSUME t)))
          (DISCH xt (CHOOSE (x, ASSUME xt) (ASSUME t)))
+         (DISCH t (EXISTS(xt, x) (ASSUME t)))
    end
 
 
