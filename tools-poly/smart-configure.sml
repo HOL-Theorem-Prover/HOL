@@ -8,6 +8,10 @@ val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
 
 (* utility functions *)
+fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+             OS.Process.exit OS.Process.failure)
+
 fun readdir s = let
   val ds = OS.FileSys.openDir s
   fun recurse acc =
@@ -24,6 +28,19 @@ fun mem x [] = false
 fun frontlast [] = raise Fail "frontlast: failure"
   | frontlast [h] = ([], h)
   | frontlast (h::t) = let val (f,l) = frontlast t in (h::f, l) end;
+
+fun check_dir nm privs candidate = let
+  open OS.FileSys
+  val p = OS.Path.concat(candidate,nm)
+in
+  if access(p, privs) then SOME (OS.Path.dir (fullPath p)) else NONE
+end
+val check_poly = check_dir "poly" [OS.FileSys.A_EXEC]
+val check_libpoly = check_dir "libpolymain.a" [OS.FileSys.A_READ]
+
+fun findpartial f [] = NONE
+  | findpartial f (h::t) =
+    case f h of NONE => findpartial f t | x => x
 
 (* sleeping, with an action every second *)
 fun delay limit action = let
@@ -42,6 +59,18 @@ fun determining s =
 (* action starts here *)
 print "\nHOL smart configuration.\n\n";
 
+val poly = ""
+val polymllibdir = "";
+
+val _ = let
+  val override = "tools-poly/poly-includes.ML"
+in
+  if OS.FileSys.access (override, [OS.FileSys.A_READ]) then
+    (print ("[Using override file "^override^"]\n\n");
+     use override)
+  else ()
+end;
+
 print "Determining configuration parameters: ";
 
 val currentdir = OS.FileSys.getDir();
@@ -59,9 +88,8 @@ in
   else if mem "smart-configure.sml" cdir_files andalso
           mem "configure.sml" cdir_files
   then dirify (OS.Path.fromString currentdir)
-  else (print "\n\n*** Couldn't determine holdir; ";
-        print "please run me from the root HOL directory\n";
-        OS.Process.exit OS.Process.failure)
+  else die "\n\n*** Couldn't determine holdir; \
+            \please run me from the root HOL directory"
 end;
 
 val _ = let
@@ -71,8 +99,9 @@ in
   OS.FileSys.chDir currentdir
 end;
 
-determining "OS";
+
 val OS = let
+  val _ = determining "OS"
   val {vol,...} = OS.Path.fromString currentdir
 in
   if vol = "" then (* i.e. Unix *)
@@ -89,93 +118,99 @@ in
                     print s;
                     OS.Process.exit OS.Process.failure)
   else "winNT"
-end;
-
-
-determining "poly";
-
-fun check_dir nm privs candidate = let
-  open OS.FileSys
-  val p = OS.Path.concat(candidate,nm)
-in
-  if access(p, privs) then SOME (OS.Path.dir (fullPath p)) else NONE
 end
-val check_poly = check_dir "poly" [OS.FileSys.A_EXEC]
-val check_libpoly = check_dir "libpolymain.a" [OS.FileSys.A_READ]
 
-fun findpartial f [] = NONE
-  | findpartial f (h::t) =
-    case f h of NONE => findpartial f t | x => x
-
-val poly = let
-  val nm = CommandLine.name()
-  val p as {arcs, isAbs, vol} = OS.Path.fromString nm
-  val cand =
-      if isAbs then SOME (dirify p)
-      else if length arcs > 1 then
-        SOME (OS.Path.mkAbsolute { path = dirify p,
-                                   relativeTo = OS.FileSys.getDir()})
-      else (* examine PATH variable *)
-        case OS.Process.getEnv "PATH" of
-          NONE => NONE
-        | SOME elist => let
-            val sep = case OS of "winNT" => #";" | _ => #":"
-            val search_these = String.fields (fn c => c = sep) elist
+val polyinstruction =
+    "Please write file tools-poly/poly-includes.ML to specify it\
+    \properly.\n\
+    \This file should include a line of the form\n\n\
+    \  val poly = \"path-to-poly\";"
+val poly =
+    if poly = "" then let
+        val _ = determining "poly"
+        val nm = CommandLine.name()
+        val p as {arcs, isAbs, vol} = OS.Path.fromString nm
+        val cand =
+            if isAbs then SOME (dirify p)
+            else if length arcs > 1 then
+              SOME (OS.Path.mkAbsolute { path = dirify p,
+                                         relativeTo = OS.FileSys.getDir()})
+            else (* examine PATH variable *)
+              case OS.Process.getEnv "PATH" of
+                NONE => NONE
+              | SOME elist => let
+                  val sep = case OS of "winNT" => #";" | _ => #":"
+                  val search_these = String.fields (fn c => c = sep) elist
+                in
+                  findpartial check_poly search_these
+                end
+      in
+        case cand of
+          NONE => die
+                   ("\n\nYou ran poly on the commandline, but it doesn't seem \
+                    \to be in your PATH.\n\
+                    \I need to know where your poly executable is.\n" ^
+                    polyinstruction)
+        | SOME c => let
           in
-            findpartial check_poly search_these
+            case check_poly c of
+              SOME p => OS.Path.concat(p,"poly")
+            | NONE =>
+              die ("\n\nI tried to figure out where your poly executable is\
+                   \n\by examining your command-line.\n\
+                   \But directory "^c^
+                   "doesn't seem to contain a poly executable after \
+                   \all\n" ^
+                   polyinstruction)
           end
+      end
+    else
+      case check_poly (OS.Path.dir poly) of
+        NONE => die ("\n\nYour overrides file specifies bogus location '"
+                     ^poly^
+                     "'\nas the location of the poly executable.\n"^
+                     polyinstruction)
+      | SOME p => OS.Path.concat(p, "poly")
+
+val polylibsister = let
+  val p as {arcs,isAbs,vol} = OS.Path.fromString poly
+  val (dirname, _) = frontlast arcs
+  val (parent, probably_bin) = frontlast dirname
+  val _ = if probably_bin <> "bin" then
+            warn "\nSurprised that poly is not in a \"bin\" directory"
+          else ()
 in
-  case cand of
-    NONE => ""
-  | SOME c => let
-    in
-      case check_poly c of
-        SOME p => OS.Path.concat(p,"poly")
-      | NONE =>
-        (print "\nCouldn't figure out location of poly executable\n\
-               \Please write file tools-poly/poly-includes.ML to specify it.\n\
-               \This file should include a line of the form\n\
-               \  val poly = \"path-to-poly\";\n";
-         "")
-    end
-end;
+  OS.Path.toString { arcs = parent @ ["lib"], vol = vol, isAbs = isAbs }
+end
+
+val polylibinstruction =
+    "Please write file tools-poly/poly-includes.ML to specify it.\n\
+    \This file should include a line of the form\n\n\
+    \  val polymllibdir = \"path-to-dir-containing-libpolymain.a\";"
 
 val polymllibdir =
-    if poly <> "" then let
+    if polymllibdir = "" then let
         val _ = determining "polymllibdir"
-        val p as {arcs,isAbs,vol} = OS.Path.fromString poly
-        val (dirname, _) = frontlast arcs
-        val (parent, probably_bin) = frontlast dirname
-        val _ = if probably_bin <> "bin" then
-                  print "\nSurprised that poly is not in a \"bin\" directory\n"
-                else ()
-        val candidate = OS.Path.toString { arcs = parent @ ["lib"], vol = vol,
-                                           isAbs = isAbs }
       in
-        case check_libpoly candidate of
+        case check_libpoly polylibsister of
           SOME c => c
-        | NONE =>
-          (print
-               "\nCouldn't find libpolymain.a in sister lib directory\n\
-               \Please write file tools-poly/poly-includes.ML to specify it.\n\
-               \This file should include a line of the form\n\
-               \  val polymllibdir = \"path-to-libpolymain.a\";\n";
-           "")
+        | NONE => die ("\n\nLooked in poly's sister lib directory "^
+                       polylibsister ^
+                       "\nand couldn't find libpolymain.a\n" ^
+                       polylibinstruction)
+
       end
-    else "";
+    else
+      case check_libpoly polymllibdir of
+        SOME c => c
+      | NONE => die ("\n\nYour overrides file specifies bogus location '"
+                     ^polymllibdir ^
+                     "'\nas the location of libpolymain.a\n" ^
+                     polylibinstruction)
 
 val dynlib_available = false;
 
 print "\n";
-
-val _ = let
-  val override = OS.Path.concat(holdir, "tools-poly/poly-includes.ML")
-in
-  if OS.FileSys.access (override, [OS.FileSys.A_READ]) then
-    (print "\n[Using override file!]\n\n";
-     use override)
-  else ()
-end;
 
 fun verdict (prompt, value) =
     if value = "" then
