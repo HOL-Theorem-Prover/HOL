@@ -12,5 +12,5 @@ Makes two values into a pair.
 Never fails.
 
 \SEEALSO
-Lib.fst, Lib.snd, Lib.curry, Lib.uncurry.
+Lib.rpair, Lib.swap, Lib.fst, Lib.snd, Lib.curry, Lib.uncurry.
 \ENDDOC

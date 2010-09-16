@@ -7,6 +7,8 @@ sig
   val strcat        : string -> string -> string
   val equal         : ''a -> ''a -> bool
   val pair          : 'a -> 'b -> 'a * 'b
+  val rpair         : 'a -> 'b -> 'b * 'a
+  val swap          : 'a * 'b -> 'b * 'a
   val cons          : 'a -> 'a list -> 'a list
   val ##            : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
   val apfst         : ('a -> 'b) -> 'a * 'c -> 'b * 'c

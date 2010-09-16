@@ -44,8 +44,11 @@ fun equal x y = (x=y);
 val strcat = curry (op ^)
 fun cons a L = a::L
 fun pair x y = (x,y)
-fun fst (x,_) = x   and   snd (_,y) = y;
 
+fun rpair x y = (y,x)
+fun swap (x,y) = (y,x)
+fun fst (x,_) = x
+fun snd (_,y) = y
 
 (*---------------------------------------------------------------------------*
  * Success and failure. Interrupt has a special status in MoscowML.          *
