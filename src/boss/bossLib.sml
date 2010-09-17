@@ -45,6 +45,7 @@ val Hol_datatype = Datatype.Hol_datatype;
 val xDefine    = TotalDefn.xDefine
 val tDefine    = TotalDefn.tDefine
 val Define     = TotalDefn.Define
+val zDefine    = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 val Hol_defn   = Defn.Hol_defn
 val Hol_reln   = IndDefLib.Hol_reln
 val xHol_reln   = IndDefLib.xHol_reln
