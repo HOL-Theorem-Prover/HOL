@@ -57,7 +57,6 @@ fun can f x =
   (f x; true) handle Interrupt => raise Interrupt | _  => false;
 
 fun total f x = SOME (f x) handle Interrupt => raise Interrupt | _ => NONE;
-fun itotal f x = total f x handle _ => NONE;
 
 fun partial e f x =
    case f x

@@ -24,7 +24,6 @@ sig
   val can           : ('a -> 'b) -> 'a -> bool
   val partial       : exn -> ('a -> 'b option) -> 'a -> 'b
   val total         : ('a -> 'b) -> 'a -> 'b option
-  val itotal        : ('a -> 'b) -> 'a -> 'b option
   val try           : ('a -> 'b) -> 'a -> 'b
   val trye          : ('a -> 'b) -> 'a -> 'b
   val assert        : ('a -> bool) -> 'a -> 'a
