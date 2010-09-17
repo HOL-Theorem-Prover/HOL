@@ -31,6 +31,14 @@
 
 <h2 id="new-features">New features:</h2>
 
+<ul>
+
+<li><p><code>wordsSyntax.mk_word_replicate</code> now computes the
+width of the resulting word when applied to a numeral and a
+fixed-width word. Minor incompatibility.</p></li>
+
+</ul>
+
 <h2 id="bugs-fixed">Bugs fixed:</h2>
 
 <h2 id="new-theories">New theories:</h2>
@@ -47,6 +55,9 @@
 instead. Note that <code>handle _</code> is harmful:
 exception <code>Interrupt</code> should never be handled without being
 re-raised.</p></li>
+
+<li><p><code>Lib.gather</code> removed;
+use <code>{Lib,List}.filter</code> instead.</p></li>
 
 </ul>
 
