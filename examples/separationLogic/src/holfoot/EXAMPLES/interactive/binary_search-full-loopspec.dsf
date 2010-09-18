@@ -4,10 +4,8 @@ binsearch(f;a,n,e) [data_array(a,n,data) * ``SORTED $<= data``] {
    l = 0;
    r = n;
    f = 0;
-   loop_spec [data_array(a+l,r-l,data) * (f == #fc) *
-              (l == #lc) * (r == #rc) * 
-              ``IS_BOOL_TO_NUM #fc /\ SORTED $<= data /\
-                (LENGTH data = rc - lc)``] {
+   loop_spec [data_array(a+l,r-l,data) * 
+              ``IS_BOOL_TO_NUM f /\ SORTED $<= data``] {
    while ((f == 0) and (l < r)) {
       block_spec [l < r] {
          m = l + ((r - l) / 2);
@@ -20,6 +18,6 @@ binsearch(f;a,n,e) [data_array(a,n,data) * ``SORTED $<= data``] {
       } else {
          f = 1;
       }
-   }} [data_array(a+#lc,#rc-#lc,data) *
-      (f == ``BOOL_TO_NUM (MEM e data \/ (#fc = 1))``)]
+   }} [data_array(a+old(l),old(r)-old(l),data) *
+      (f == ``BOOL_TO_NUM (MEM e data \/ (old(f) = 1))``)]
 } [data_array(a,n,data) * (f == ``BOOL_TO_NUM (MEM e data)`` * ``SORTED $<= data``)]

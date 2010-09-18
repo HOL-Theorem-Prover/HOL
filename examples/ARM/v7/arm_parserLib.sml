@@ -38,15 +38,16 @@ end;
 datatype instruction_mnemonic
   = ADC     | ADD    | ADDW    | ADR     | AND     | ASR
   | B       | BFC    | BFI     | BIC     | BKPT    | BL      | BLX | BX
-  | CBZ     | CBNZ   | CDP     | CDP2    | CLREX   | CLZ     | CMN
+  | CBZ     | CBNZ   | CDP     | CDP2    | CHKA    | CLREX   | CLZ | CMN
   | CMP     | CPS    | CPSIE   | CPSID
   | DBG     | DMB    | DSB
-  | EOR
+  | ENTERX  | EOR
+  | HB      | HBL    | HBLP    | HBP
   | ISB     | IT
   | LDC     | LDCL   | LDC2    | LDC2L   | LDMIA   | LDMDA   | LDMDB   | LDMIB
   | LDR     | LDRB   | LDRBT   | LDRD    | LDREX   | LDREXB
   | LDREXD  | LDREXH | LDRH    | LDRHT   | LDRSB   | LDRSBT
-  | LDRSH   | LDRSHT | LDRT    | LSL     | LSR
+  | LDRSH   | LDRSHT | LDRT    | LEAVEX  | LSL     | LSR
   | MCR     | MCR2   | MCRR    | MCRR2   | MLA     | MLS     | MOV | MOVT | MOVW
   | MRC     | MRC2   | MRRC    | MRRC2   | MRS     | MSR     | MUL | MVN
   | NOP
@@ -91,9 +92,11 @@ datatype instruction_mnemonic
 datatype arch = ARMv4 | ARMv4T
               | ARMv5T | ARMv5TE
               | ARMv6 | ARMv6K | ARMv6T2
-              | ARMv7_A | ARMv7_R | ARMv7_M;
+              | ARMv7_A | ARMv7_R;
 
 datatype qualifier = Narrow | Wide | Either;
+
+datatype code = ARM_CODE | THUMB_CODE | THUMBX_CODE;
 
 type instruction =
   {sflag : term, cond : term, qual : qualifier,
@@ -101,7 +104,7 @@ type instruction =
 
 type state =
   {instruction : instruction option,
-   thumb       : bool,
+   code       : code,
    linenumber  : int,
    itstate     : term * bool list,
    arch        : arch,
@@ -142,7 +145,8 @@ val writeT : (state -> state) -> unit M = fn f => fn (s:state) => Okay ((),f s);
 val read_instruction = readT (#instruction);
 val read_linenumber  = readT (#linenumber);
 val read_itstate     = readT (#itstate);
-val read_thumb       = readT (#thumb);
+val read_thumb       = readT (fn s => #code s <> ARM_CODE);
+val read_thumbee     = readT (fn s => #code s = THUMBX_CODE);
 val read_arch        = readT (#arch);
 val read_tokens      = readT (#tokens);
 val read_token       = read_tokens >>= (fn l => return (total hd l));
@@ -168,7 +172,7 @@ val read_OutsideOrLastInITBlock : bool M =
 
 val write_instruction = fn i => writeT (fn s =>
   { instruction = i,
-    thumb       = #thumb s,
+    code        = #code s,
     linenumber  = #linenumber s,
     arch        = #arch s,
     itstate     = #itstate s,
@@ -183,16 +187,16 @@ let val i = #instruction s in
                     end
                   else
                     raise ERR "write_cond" "no instruction",
-    thumb       = #thumb s,
+    code        = #code s,
     linenumber  = #linenumber s,
     arch        = #arch s,
     itstate     = #itstate s,
     tokens      = #tokens s }
 end);
 
-val write_thumb = fn t => writeT (fn s =>
+val write_code = fn c => writeT (fn s =>
   { instruction = #instruction s,
-    thumb       = t,
+    code        = c,
     linenumber  = #linenumber s,
     arch        = #arch s,
     itstate     = (boolSyntax.arb,[]),
@@ -200,7 +204,7 @@ val write_thumb = fn t => writeT (fn s =>
 
 val write_arch = fn a => writeT (fn s =>
   { instruction = #instruction s,
-    thumb       = a = ARMv7_M orelse a <> ARMv4 andalso #thumb s,
+    code        = if a = ARMv4 then ARM_CODE else #code s,
     linenumber  = #linenumber s,
     arch        = a,
     itstate     = (boolSyntax.arb,[]),
@@ -208,7 +212,7 @@ val write_arch = fn a => writeT (fn s =>
 
 val write_itcond = fn c => writeT (fn s =>
   { instruction = #instruction s,
-    thumb       = #thumb s,
+    code        = #code s,
     linenumber  = #linenumber s,
     arch        = #arch s,
     itstate     = (c, snd (#itstate s)),
@@ -216,7 +220,7 @@ val write_itcond = fn c => writeT (fn s =>
 
 val write_itlist = fn l => writeT (fn s =>
   { instruction = #instruction s,
-    thumb       = #thumb s,
+    code        = #code s,
     linenumber  = #linenumber s,
     arch        = #arch s,
     itstate     = (fst (#itstate s), l),
@@ -224,7 +228,7 @@ val write_itlist = fn l => writeT (fn s =>
 
 val write_token = fn t => writeT (fn s =>
   { instruction = #instruction s,
-    thumb       = #thumb s,
+    code        = #code s,
     linenumber  = #linenumber s,
     arch        = #arch s,
     itstate     = #itstate s,
@@ -232,7 +236,7 @@ val write_token = fn t => writeT (fn s =>
 
 val next_linenumber = writeT (fn s =>
   { instruction = #instruction s,
-    thumb       = #thumb s,
+    code        = #code s,
     linenumber  = #linenumber s + 1,
     arch        = #arch s,
     itstate     = #itstate s,
@@ -240,7 +244,7 @@ val next_linenumber = writeT (fn s =>
 
 val next_itstate = writeT (fn s =>
   { instruction = #instruction s,
-    thumb       = #thumb s,
+    code        = #code s,
     linenumber  = #linenumber s,
     arch        = #arch s,
     itstate     = let val (c,l) = #itstate s in
@@ -253,7 +257,7 @@ val next_itstate = writeT (fn s =>
 
 val next_token = writeT (fn s =>
   { instruction = #instruction s,
-    thumb       = #thumb s,
+    code        = #code s,
     linenumber  = #linenumber s,
     arch        = #arch s,
     itstate     = #itstate s,
@@ -382,7 +386,7 @@ val arm_lex_quote = arm_lex o quote_to_string;
 
 fun arm_parse (f:'a M) s =
 let val init = { instruction = NONE,
-                 thumb = false,
+                 code = ARM_CODE,
                  arch = ARMv7_A,
                  linenumber = 1,
                  itstate = (boolSyntax.arb,[]),
@@ -436,11 +440,13 @@ infix ==;
 
 val op == = uncurry term_eq;
 
-val is_T  = term_eq T;
-val is_F  = term_eq F;
-val is_SP = term_eq (mk_word4 13);
-val is_AL = term_eq (mk_word4 14);
-val is_PC = term_eq (mk_word4 15);
+val is_T   = term_eq T;
+val is_F   = term_eq F;
+val is_R9  = term_eq (mk_word4 9);
+val is_R10 = term_eq (mk_word4 10);
+val is_SP  = term_eq (mk_word4 13);
+val is_AL  = term_eq (mk_word4 14);
+val is_PC  = term_eq (mk_word4 15);
 
 infix pow
 
@@ -582,11 +588,13 @@ local
    ("asr", ASR),
    ("b", B), ("bfc", BFC), ("bfi", BFI), ("bic", BIC), ("bkpt", BKPT),
    ("bl", BL), ("blx", BLX), ("bx", BX),
-   ("cbz", CBZ), ("cbnz", CBNZ), ("cdp", CDP), ("cdp2", CDP2), ("clrex", CLREX),
+   ("cbz", CBZ), ("cbnz", CBNZ), ("cdp", CDP), ("cdp2", CDP2), ("chka", CHKA),
+   ("clrex", CLREX),
    ("clz", CLZ), ("cmn", CMN), ("cmp", CMP),
    ("cps", CPS), ("cpsie", CPSIE), ("cpsid", CPSID),
    ("dbg", DBG), ("dmb", DMB), ("dsb", DSB),
-   ("eor", EOR),
+   ("enterx",ENTERX), ("eor", EOR),
+   ("hb", HB), ("hbl", HBL), ("hblp", HBLP), ("hbp", HBP),
    ("isb", ISB), ("it", IT),
    ("ldc", LDC), ("ldcl", LDCL), ("ldc2", LDC2), ("ldc2l", LDC2L),
    ("ldm", LDMIA), ("ldmia", LDMIA), ("ldmfd", LDMIA),
@@ -599,7 +607,7 @@ local
    ("ldrexh", LDREXH), ("ldrh", LDRH),
    ("ldrsb", LDRSB), ("ldrsbt", LDRSBT), ("ldrsh", LDRSH), ("ldrsht", LDRSHT),
    ("ldrt", LDRT),
-   ("lsl", LSL), ("lsr", LSR),
+   ("leavex", LEAVEX), ("lsl", LSL), ("lsr", LSR),
    ("mcr", MCR), ("mcr2", MCR2), ("mcrr", MCRR), ("mcrr2", MCRR2), ("mla", MLA),
    ("mls", MLS), ("mov", MOV), ("movt", MOVT), ("movw", MOVW),
    ("mrc", MRC), ("mrc2", MRC2), ("mrrc", MRRC), ("mrrc2", MRRC2), ("mrs", MRS),
@@ -667,7 +675,9 @@ in
   fun find_mnemonic s =
     let fun find_prefix [] = NONE
           | find_prefix ((l,r)::t) =
-              if Substring.isPrefix l s then
+              if Substring.isPrefix l s andalso
+                 (l <> "bl" orelse Lib.mem (Substring.size s) [2, 4])
+              then
                 SOME (Substring.triml (String.size l) s,r)
               else
                 find_prefix t
@@ -725,7 +735,7 @@ end;
 
 (* ------------------------------------------------------------------------- *)
 
-val has_thumb2 = Lib.C mem [ARMv6T2, ARMv7_A, ARMv7_R, ARMv7_M];
+val has_thumb2 = Lib.C mem [ARMv6T2, ARMv7_A, ARMv7_R];
 val has_dsp    = not o Lib.C mem [ARMv4, ARMv4T, ARMv5T];
 
 fun version_number ARMv4   = 4
@@ -1170,6 +1180,18 @@ val arm_parse_mnemonic : instruction_mnemonic M =
           end);
 
 (* ------------------------------------------------------------------------- *)
+
+fun pick_enc_ee thumb narrow_okay ee =
+  if thumb then
+    if narrow_okay then
+      if ee then
+        Encoding_ThumbEE_tm
+      else
+        Encoding_Thumb_tm
+    else
+      Encoding_Thumb2_tm
+  else
+    Encoding_ARM_tm;
 
 fun pick_enc thumb narrow_okay =
   if thumb then
@@ -2341,6 +2363,7 @@ val arm_parse_mode2_offset :
   (bool * bool * term * term * term * term) -> (term * term) M =
   fn (ld,indx,byte,unpriv,rt,rn) =>
     read_thumb >>= (fn thumb =>
+    read_thumbee >>= (fn thumbee =>
     read_qualifier >>= (fn q =>
     assertT (indx orelse q <> Narrow)
       ("arm_parse_mode2_offset",
@@ -2355,16 +2378,32 @@ val arm_parse_mode2_offset :
           (fn w =>
              let val v = sint_of_term i
                  val u = mk_bool (0 <= v andalso not (i == ``-0i``))
+                 val thumbee_okay = thumbee andalso q <> Wide andalso
+                                    narrow_register rt andalso is_F byte andalso
+                                    is_F w andalso v mod 4 = 0 andalso
+                                    if ld then
+                                      is_R9 rn andalso 0 <= v andalso v <= 252
+                                        orelse
+                                      is_R10 rn andalso 0 <= v andalso v <= 124
+                                        orelse
+                                      narrow_register rn andalso ~28 <= v
+                                       andalso v <= 124
+                                    else
+                                      0 <= v andalso
+                                      (is_R9 rn andalso v <= 252 orelse
+                                       narrow_register rn andalso v <= 124)
                  val narrow_okay = q <> Wide andalso narrow_register rt andalso
                                    is_F w andalso 0 <= v andalso
                                    if is_T byte then
                                      narrow_register rn andalso v <= 31
                                    else
                                      v mod 4 = 0 andalso
-                                     if is_SP rn orelse ld andalso is_PC rn then
+                                     if is_SP rn orelse ld andalso is_PC rn
+                                     then
                                        is_F byte andalso v <= 1020
                                      else
                                        narrow_register rn andalso v <= 124
+                 val narrow_or_thumbee = thumbee_okay orelse narrow_okay
                  val wide_okay = ~255 <= v andalso
                                  if indx andalso is_T u andalso is_F w then
                                    v <= 4095
@@ -2376,13 +2415,14 @@ val arm_parse_mode2_offset :
                  val imm12 = mk_word12 (Int.abs v)
              in
                assertT
-                 (q = Narrow andalso narrow_okay orelse
+                 (q = Narrow andalso narrow_or_thumbee orelse
                   q <> Narrow andalso thumb andalso wide_okay orelse
                   not thumb andalso arm_okay)
                  ("arm_parse_mode2_offset",
                   "invalid argument(s) (check registers, alignment and range)")
                  (return
-                    (pick_enc thumb narrow_okay,
+                    (pick_enc_ee thumb narrow_or_thumbee
+                       (not narrow_okay andalso thumbee_okay),
                      (if ld then mk_Load else mk_Store)
                         (mk_bool indx,u,byte,w,unpriv,rn,rt,
                          mk_Mode2_immediate imm12)))
@@ -2402,16 +2442,17 @@ val arm_parse_mode2_offset :
                 let val (sh,_,_) = dest_Mode2_register mode2
                     val narrow_okay = q <> Wide andalso indx andalso
                                       narrow_registers [rt,rn,rm] andalso
-                                      sh = mk_word5 0 andalso is_F w
+                                      sh = mk_word5 (if thumbee then 2 else 0)
+                                      andalso is_F w
                 in
                   assertT ((not thumb orelse pos andalso is_F w) andalso
                            (q <> Narrow orelse narrow_okay))
                     ("arm_parse_mode2_offset", "invalid argument(s)")
                     (return
-                      (pick_enc thumb narrow_okay,
+                      (pick_enc_ee thumb narrow_okay thumbee,
                      (if ld then mk_Load else mk_Store)
                         (mk_bool indx,mk_bool pos,byte,w,unpriv,rn,rt,mode2)))
-                end))))))));
+                end)))))))));
 
 val arm_parse_mode2 : bool -> term -> (term * term) M =
   fn ld => fn byte =>
@@ -2586,6 +2627,7 @@ val arm_parse_mode3_offset :
            arm_parse_plus_minus >>= (fn pos =>
            arm_parse_register >>= (fn rm =>
            arm_parse_mode3_shift thumb q rm >>= (fn mode3 =>
+           read_thumbee >>= (fn thumbee =>
              (if indx then
                arm_parse_rsquare >>-
                tryT arm_parse_exclaim (K (return T)) (K (return F))
@@ -2595,13 +2637,14 @@ val arm_parse_mode3_offset :
                 let val (sh,_) = dest_Mode3_register mode3
                     val narrow_okay = q <> Wide andalso indx andalso
                                       narrow_registers [rt,rn,rm] andalso
-                                      sh = mk_word2 0 andalso is_F w
+                                      sh = mk_word2 (if thumbee then 1 else 0)
+                                      andalso is_F w
                 in
                   assertT ((not thumb orelse pos andalso is_F w) andalso
                            (q <> Narrow orelse narrow_okay))
                     ("arm_parse_mode3_offset", "invalid argument(s)")
                     (return
-                      (pick_enc thumb narrow_okay,
+                      (pick_enc_ee thumb narrow_okay thumbee,
                        case opt
                        of SOME (signed,half) =>
                             mk_Load_Halfword
@@ -2610,7 +2653,7 @@ val arm_parse_mode3_offset :
                         | NONE =>
                             mk_Store_Halfword
                               (mk_bool indx,mk_bool pos,w,unpriv,rn,rt,mode3)))
-                end))))))));
+                end)))))))));
 
 val arm_parse_mode3 : (term * term) option -> (term * term) M =
   fn opt =>
@@ -3120,6 +3163,7 @@ val arm_parse_ldm_stm : bool -> term -> term -> (term * term) M =
     arm_parse_comma >>-
     arm_parse_register_list >>= (fn list =>
       read_thumb >>= (fn thumb =>
+      read_thumbee >>= (fn thumbee =>
         if thumb then
           read_OutsideOrLastInITBlock >>= (fn OutsideOrLastInITBlock =>
           read_qualifier >>= (fn q =>
@@ -3132,7 +3176,7 @@ val arm_parse_ldm_stm : bool -> term -> term -> (term * term) M =
               val lr = bit 6 high_bits
               val sp = bit 5 high_bits
               val narrow_okay =
-                    q <> Wide andalso
+                    q <> Wide andalso not thumbee andalso
                     if ldm then
                       is_F indx andalso is_T add andalso
                       is_T w <> bit n l andalso
@@ -3183,7 +3227,7 @@ val arm_parse_ldm_stm : bool -> term -> term -> (term * term) M =
                if ldm then
                  mk_Load_Multiple (indx,add,sys,w,rn,list)
                else
-                 mk_Store_Multiple (indx,add,sys,w,rn,list))))))));
+                 mk_Store_Multiple (indx,add,sys,w,rn,list)))))))));
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3808,6 +3852,72 @@ val arm_parse_dbg : (term * term) M =
 
 (* ------------------------------------------------------------------------- *)
 
+val arm_parse_enterx_leavex : term -> (term * term) M =
+  fn is_enterx =>
+    need_v7 "arm_parse_enterx"
+      (thumb2_okay "arm_parse_enterx"
+         (return (Encoding_Thumb2_tm, mk_Enterx_Leavex is_enterx)));
+
+val arm_parse_check_array : (term * term) M =
+  read_thumbee >>= (fn thumbee =>
+  read_qualifier >>= (fn q =>
+    assertT (thumbee andalso q <> Wide)
+      ("arm_parse_check_array", "only available as narrow ThumbEE instruction")
+      (arm_parse_register >>= (fn rn =>
+       arm_parse_comma >>-
+       arm_parse_register >>= (fn rm =>
+         return (Encoding_ThumbEE_tm, mk_Check_Array (rn,rm)))))));
+
+val arm_parse_handler_branch_link : term -> (term * term) M =
+  fn link =>
+    read_thumbee >>= (fn thumbee =>
+    read_qualifier >>= (fn q =>
+      assertT (thumbee andalso q <> Wide)
+        ("arm_parse_handler_branch_link",
+         "only available as narrow ThumbEE instruction")
+        (arm_parse_constant >>= (fn i =>
+          let val h = uint_to_word ``:8`` i in
+            return (Encoding_ThumbEE_tm, mk_Handler_Branch_Link (link,h))
+          end handle HOL_ERR {message,...} =>
+            other_errorT ("arm_parse_handler_branch_link", message)))));
+
+val arm_parse_handler_branch_parameter : (term * term) M =
+  read_thumbee >>= (fn thumbee =>
+  read_qualifier >>= (fn q =>
+    assertT (thumbee andalso q <> Wide)
+      ("arm_parse_handler_branch_parameter",
+       "only available as narrow ThumbEE instruction")
+      (arm_parse_constant >>= (fn i =>
+       arm_parse_comma >>-
+       arm_parse_constant >>= (fn j =>
+        let val imm3 = uint_to_word ``:3`` i
+            val h = uint_to_word ``:5`` j
+        in
+          return (Encoding_ThumbEE_tm, mk_Handler_Branch_Parameter (imm3,h))
+        end handle HOL_ERR {message,...} =>
+          other_errorT ("arm_parse_handler_branch_parameter", message))))));
+
+val arm_parse_handler_branch_link_parameter : (term * term) M =
+  read_thumbee >>= (fn thumbee =>
+  read_qualifier >>= (fn q =>
+    assertT (thumbee andalso q <> Wide)
+      ("arm_parse_handler_branch_link_parameter",
+       "only available as narrow ThumbEE instruction")
+      (arm_parse_constant >>= (fn i =>
+       arm_parse_comma >>-
+       arm_parse_constant >>= (fn j =>
+        let val imm5 = uint_to_word ``:5`` i
+            val h = uint_to_word ``:5`` j
+        in
+          return
+            (Encoding_ThumbEE_tm,
+             mk_Handler_Branch_Link_Parameter (imm5,h))
+        end handle HOL_ERR {message,...} =>
+          other_errorT
+            ("arm_parse_handler_branch_link_parameter", message))))));
+
+(* ------------------------------------------------------------------------- *)
+
 val arm_parse_ldc_stc : instruction_mnemonic -> (term * term) M =
   fn m =>
     thumb2_or_arm_okay "arm_parse_smc"
@@ -3970,6 +4080,13 @@ val arm_parse_instruction : line M =
      | CLREX  => arm_parse_clrex
      | CDP    => arm_parse_cdp
      | CDP2   => arm_parse_cdp
+     | CHKA   => arm_parse_check_array
+     | ENTERX => arm_parse_enterx_leavex T
+     | LEAVEX => arm_parse_enterx_leavex F
+     | HB     => arm_parse_handler_branch_link F
+     | HBL    => arm_parse_handler_branch_link T
+     | HBLP   => arm_parse_handler_branch_link_parameter
+     | HBP    => arm_parse_handler_branch_parameter
      | IT     => arm_parse_it
      | ADR    => arm_parse_adr
      | ADDW   => arm_parse_addw_subw T
@@ -4116,24 +4233,25 @@ in
                            arm_parse_strings ["a","m","r"] >>= (fn s =>
                              case s
                              of "a" => write_arch ARMv7_A
-                              | "m" => write_arch ARMv7_M
                               | "r" => write_arch ARMv7_R
                               | _ => raise ERR "arm_parse_arch" ""))
                         (fn _ => write_arch ARMv7_A)
        | _ => raise ERR "arm_parse_arch" "")
 end;
 
-val switch_to_arm : unit M =
-  read_arch >>= (fn a =>
-    assertT (a <> ARMv7_M)
-    ("switch_to_arm", "ARMv7-M only supports Thumb2")
-    (write_thumb false));
+val switch_to_arm : unit M = write_code ARM_CODE;
 
 val switch_to_thumb : unit M =
   read_arch >>= (fn a =>
     assertT (a <> ARMv4)
     ("switch_to_thumb", "ARMv4 does not support Thumb")
-    (write_thumb true));
+    (write_code THUMB_CODE));
+
+val switch_to_thumbx : unit M =
+  read_arch >>= (fn a =>
+    assertT (a = ARMv7_A orelse a = ARMv7_R)
+    ("switch_to_thumb", "ThumbEE not supported before ARMv7")
+    (write_code THUMBX_CODE));
 
 local
   fun arm_parse_number_list (l : term list) (P : term -> bool) : term list M =
@@ -4182,7 +4300,7 @@ val arm_parse_align : line M =
 
 local
   val directives =
-    ["arch","code","code16","code32","arm","thumb",
+    ["arch","code","code16","code32","arm","thumb","thumbx",
      "ascii","byte","short","word","align","space"]
 in
   val arm_parse_line : line list M =
@@ -4199,6 +4317,7 @@ in
           | "code32" => switch_to_arm >>- return ([Align 4])
           | "thumb"  => switch_to_thumb >>- return ([Align 2])
           | "code16" => switch_to_thumb >>- return ([Align 2])
+          | "thumbx" => switch_to_thumbx >>- return ([Align 2])
           | "ascii"  => arm_parse_string_const >>= (fn s =>
                           assertT (Lib.all Char.isAscii (explode s))
                             ("arm_parse_line", "not an Ascii string")
@@ -4274,7 +4393,11 @@ in
     | inc_code_width line (Align i) =
         let val n = fromInt i in line + (n - (line mod n)) mod n end
     | inc_code_width line (Instruction1 (_,e,_,_)) =
-        align (line,e) + (if e = Encoding_Thumb_tm then two else n4)
+        align (line,e) +
+        (if e = Encoding_Thumb_tm orelse e = Encoding_ThumbEE_tm then
+           two
+         else
+           n4)
 end;
 
 local

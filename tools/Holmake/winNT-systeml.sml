@@ -24,7 +24,7 @@ end
 
 (* would like to be using Posix.Process.exec, but this seems flakey on
    various machines (and is entirely unavailable on Moscow ML) *)
-fun exec (comm, args) = OS.Process.exit (systeml (comm::args))
+fun exec (comm, args) = OS.Process.exit (systeml (comm::tl args))
 
 val protect = dquote
 

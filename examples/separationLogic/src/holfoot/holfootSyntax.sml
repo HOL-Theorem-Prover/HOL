@@ -121,15 +121,15 @@ val holfoot_prog_parallel_procedure_call_term =
     holfoot_program``
 
 val holfoot_prog_assign_term = ``var_res_prog_assign:holfoot_var -> holfoot_a_expression -> holfoot_program``
-val holfoot_prog_block_term = ``fasl_prog_block : holfoot_program list -> holfoot_program``;
-val holfoot_prog_cond_term = ``fasl_prog_cond:holfoot_state fasl_predicate -> holfoot_program -> holfoot_program -> holfoot_program``
+val holfoot_prog_block_term = ``asl_prog_block : holfoot_program list -> holfoot_program``;
+val holfoot_prog_cond_term = ``asl_prog_cond:holfoot_state asl_predicate -> holfoot_program -> holfoot_program -> holfoot_program``
 val holfoot_prog_with_resource_term = 
-   ``fasl_prog_cond_critical_section:string->holfoot_state fasl_predicate->holfoot_program->holfoot_program``
+   ``asl_prog_cond_critical_section:string->holfoot_state asl_predicate->holfoot_program->holfoot_program``
 val dest_holfoot_prog_with_resource = strip_comb_3 holfoot_prog_with_resource_term;
 val is_holfoot_prog_with_resource = can dest_holfoot_prog_with_resource
 
 val holfoot_prog_while_term = 
-   ``fasl_prog_while:holfoot_state fasl_predicate->holfoot_program->holfoot_program``
+   ``asl_prog_while:holfoot_state asl_predicate->holfoot_program->holfoot_program``
 
 
 val holfoot_exp_const_term = ``var_res_exp_const:num -> holfoot_a_expression``;
@@ -162,20 +162,20 @@ val holfoot_prog_quant_best_local_action_term =
 fun inst_tyvar_with_holfoot_state t =
    inst [hd (type_vars_in_term t) |-> holfoot_state_ty] t;
 
-val holfoot_pred_false_term = inst_tyvar_with_holfoot_state fasl_pred_false_term;
-val holfoot_pred_true_term = inst_tyvar_with_holfoot_state fasl_pred_true_term;
-val holfoot_pred_neg_term = inst_tyvar_with_holfoot_state fasl_pred_neg_term;
-val holfoot_pred_and_term = inst_tyvar_with_holfoot_state fasl_pred_and_term;
-val holfoot_pred_or_term = inst_tyvar_with_holfoot_state fasl_pred_or_term;
+val holfoot_pred_false_term = inst_tyvar_with_holfoot_state asl_pred_false_term;
+val holfoot_pred_true_term = inst_tyvar_with_holfoot_state asl_pred_true_term;
+val holfoot_pred_neg_term = inst_tyvar_with_holfoot_state asl_pred_neg_term;
+val holfoot_pred_and_term = inst_tyvar_with_holfoot_state asl_pred_and_term;
+val holfoot_pred_or_term = inst_tyvar_with_holfoot_state asl_pred_or_term;
 
 val holfoot_pred_bin_term = ``(var_res_pred_bin :(num -> num -> bool) ->
                      holfoot_a_expression ->
                      holfoot_a_expression ->
-                     holfoot_state fasl_predicate)``;
+                     holfoot_state asl_predicate)``;
 
 val holfoot_pred_term = ``(var_res_pred :(num list -> bool) ->
                      holfoot_a_expression list ->
-                     holfoot_state fasl_predicate)``;
+                     holfoot_state asl_predicate)``;
 
 val holfoot_pred_eq_term = mk_comb (holfoot_pred_bin_term, ``($=):num->num->bool``);
 val holfoot_pred_neq_term = mk_comb (holfoot_pred_bin_term, ``\x1:num x2. ~(x1 = x2)``);
@@ -200,6 +200,7 @@ val holfoot_ap_equal_term = ``(var_res_prop_equal DISJOINT_FMAP_UNION):holfoot_a
 val holfoot_ap_unequal_term = ``(var_res_prop_unequal DISJOINT_FMAP_UNION):holfoot_a_expression->holfoot_a_expression->holfoot_a_proposition``
 val holfoot_ap_false_term = ``asl_false:holfoot_a_proposition``
 val holfoot_ap_eq_cond_term = ``(var_res_prop_binexpression_cond DISJOINT_FMAP_UNION $=):holfoot_a_expression -> holfoot_a_expression -> holfoot_a_proposition -> holfoot_a_proposition -> holfoot_a_proposition``
+val holfoot_ap_emp_term = ``asl_emp holfoot_separation_combinator``
 val holfoot_ap_star_term = ``asl_star holfoot_separation_combinator``
 val holfoot_ap_bigstar_list_term = ``asl_bigstar_list holfoot_separation_combinator``
 
@@ -230,7 +231,7 @@ val HOLFOOT_VAR_RES_FRAME_SPLIT___EMP_PRED_term =
 
 
 val HOLFOOT_SPECIFICATION_term =
-``(FASL_SPECIFICATION holfoot_separation_combinator) :
+``(ASL_SPECIFICATION holfoot_separation_combinator) :
      (string # holfoot_a_proposition) list -> 
      (bool # string # (holfoot_var list # num list -> holfoot_program)
            # (holfoot_var list # num list -> holfoot_program)) list -> 

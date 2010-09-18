@@ -73,7 +73,7 @@ fun basic_assembler target code3 = let
     | jump_length label _ = fail()
   fun generate_jumps xs [] = rev xs
     | generate_jumps xs (((ASM_BRANCH (c,label),s),_) :: ys) = let
-        val jump = branch false (jump_length label xs) c handle e =>
+        val jump = branch false (jump_length label xs) c handle HOL_ERR _ =>
                    branch true  (jump_length label ys) c
         in generate_jumps (((ASM_BRANCH (c,label),s), extend jump) :: xs) ys end
     | generate_jumps xs (y::ys) = generate_jumps (y :: xs) ys

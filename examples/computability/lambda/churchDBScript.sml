@@ -1374,7 +1374,7 @@ val cbnf_of_fails = store_thm(
   Cases_on `bnf_of M` THEN SRW_TAC [][] THEN
   IMP_RES_TAC cbnf_of_works1 THEN
   `cbnf_ofk @@ I @@ cDB (fromTerm M) == cDB (fromTerm x)`
-    by METIS_TAC [chap2Theory.lam_eq_rules, chap2Theory.lameq_I] THEN
+    by METIS_TAC [chap2Theory.lameq_rules, chap2Theory.lameq_I] THEN
   METIS_TAC [bnf_cDB, betastar_lameq_bnf, has_bnf_thm]);
 
 val cbnf_force_num_fails = store_thm(

@@ -28,15 +28,20 @@ type overloaded_op_info = {base_type : Type.hol_type, actual_ops : term list,
 *)
 
 
-type printmap_data = term * string * real
+type printmap_data = term * string * int
   (* the term is the lambda abstraction provided by the user, the
      string is the name that it is to be used in the printing process, and
-     the real is the timestamp *)
-fun tstamp () : real = Time.toReal (Time.now())
+     the int is the 'timestamp' *)
+val tstamp : unit -> int = let
+  val cnt = ref 0
+in
+  fn () => (!cnt before (cnt := !cnt + 1))
+end
 
 type overload_info = ((string,overloaded_op_info) Binarymap.dict *
                       printmap_data LVTermNet.lvtermnet)
 
+fun raw_print_map ((x,y):overload_info) = y
 structure PrintMap = LVTermNet
 
 fun nthy_rec_cmp ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
@@ -473,12 +478,12 @@ fun isize f x = isize0 0 f x
 fun strip_comb ((_, prmap): overload_info) t = let
   val (t',tyargs) = strip_tycomb t
   val matches = PrintMap.match(prmap, t')
-  val cmp0 = pair_compare (Int.compare,
-                           pair_compare (measure_cmp (isize kind_size),
+  val cmp0 = pair_compare (measure_cmp (isize term_size),
                            pair_compare (measure_cmp (isize type_size),
-                           pair_compare (measure_cmp (isize term_size),
-                                         flip_order o Real.compare))))
-  val cmp = inv_img_cmp (fn (r,k,a,b,c,d) => (r,(k,(a,(b,c))))) cmp0
+                           pair_compare (measure_cmp (isize kind_size),
+                           pair_compare (Int.compare,
+                                         flip_order o Int.compare))))
+  val cmp = inv_img_cmp (fn (a,b,k,r,c,d) => (a,(b,(k,(r,c))))) cmp0
 
   fun test ((fvs, pat), (orig, nm, tstamp)) = let
     val kdvs = tmlist_kdvs fvs
@@ -498,12 +503,12 @@ fun strip_comb ((_, prmap): overload_info) t = let
                          kdi0
                          kdeq
   in
-    SOME (rki, kdi, tyi, tmi, tstamp, (orig, nm))
+    SOME (tmi, tyi, kdi, rki, tstamp, (orig, nm))
   end handle HOL_ERR _ => NONE
 
   val inst_data = List.mapPartial test matches
   val sorted = Listsort.sort cmp inst_data
-  fun rearrange (_, _, _, tmi, _, (orig, nm)) = let
+  fun rearrange (tmi, _, _, _, _, (orig, nm)) = let
     val (bvs,_) = strip_abs orig
     fun findarg v =
         case List.find (fn {redex,residue} => eq redex v) tmi of
@@ -617,12 +622,21 @@ end handle Binarymap.NotFound => opdict
 
 fun remove_mapping str crec ((opc, cop) : overload_info) = let
   val t = prim_mk_const crec
+  val cop' = let
+    val ds = PrintMap.peek (cop, ([], t))
+    val ds' = List.filter (fn (_, s, _) => s <> str) ds
+  in
+    if length ds' = length ds then cop
+    else let
+        val (pm',_) = PrintMap.delete(cop, ([], t))
+      in
+        List.foldl (fn (d,acc) => PrintMap.insert(acc,([],t),d))
+                   pm'
+                   ds'
+      end
+  end
 in
-  (remove_omapping crec str opc,
-   case PrintMap.peek (cop, ([], t)) of
-     NONE => cop
-   | SOME (_,s,_) => if s = str then #1 (PrintMap.delete(cop, ([], t)))
-                     else cop)
+  (remove_omapping crec str opc, cop')
 end
 
 end (* Overload *)

@@ -145,13 +145,10 @@ end;
 
 (* For right-associative binary operators. Tail recursive. *)
 
-fun list_mk_rbinop _ [] = raise ERR "list_mk_rbinop" "empty list"
-  | list_mk_rbinop mk_binop alist =
-       let val rlist = List.rev alist
-           val h = List.hd rlist
-           and t = List.tl rlist
-       in rev_itlist mk_binop t h
-       end;
+fun list_mk_rbinop mk_binop alist =
+    case List.rev alist of
+      [] => raise ERR "list_mk_rbinop" "empty list"
+    | h::t => rev_itlist mk_binop t h
 
 fun mk_binder c f (p as (Bvar,_)) =
    mk_comb(inst[alpha |-> type_of Bvar] c, mk_abs p)

@@ -30,52 +30,52 @@ val strip_comb_7 : term -> term -> term * term * term * term * term * term * ter
 val strip_comb_8 : term -> term -> term * term * term * term * term * term * term * term
 val strip_comb_9 : term -> term -> term * term * term * term * term * term * term * term * term
 
-val fasl_prog_parallel_term : term
-val dest_fasl_prog_parallel : term -> term * term
-val is_fasl_prog_parallel : term -> bool
+val asl_prog_parallel_term : term
+val dest_asl_prog_parallel : term -> term * term
+val is_asl_prog_parallel : term -> bool
 
-val fasl_prog_seq_term : term
-val dest_fasl_prog_seq : term -> term * term
-val is_fasl_prog_seq : term -> bool
+val asl_prog_seq_term : term
+val dest_asl_prog_seq : term -> term * term
+val is_asl_prog_seq : term -> bool
 
-val fasl_prog_block_term : term
-val dest_fasl_prog_block : term -> term
-val is_fasl_prog_block : term -> bool
-val mk_fasl_prog_block : term -> term
+val asl_prog_block_term : term
+val dest_asl_prog_block : term -> term
+val is_asl_prog_block : term -> bool
+val mk_asl_prog_block : term -> term
 
-val fasl_prog_assume_term : term
-val dest_fasl_prog_assume : term -> term
-val is_fasl_prog_assume   : term -> bool
+val asl_prog_assume_term : term
+val dest_asl_prog_assume : term -> term
+val is_asl_prog_assume   : term -> bool
 
-val fasl_prog_cond_term : term
-val dest_fasl_prog_cond : term -> term * term * term
-val is_fasl_prog_cond : term -> bool
-val mk_fasl_prog_cond : term * term * term -> term
+val asl_prog_cond_term : term
+val dest_asl_prog_cond : term -> term * term * term
+val is_asl_prog_cond : term -> bool
+val mk_asl_prog_cond : term * term * term -> term
 
-val fasl_prog_while_term : term
-val dest_fasl_prog_while : term -> term * term
-val is_fasl_prog_while : term -> bool
-val mk_fasl_prog_while : term * term -> term
+val asl_prog_while_term : term
+val dest_asl_prog_while : term -> term * term
+val is_asl_prog_while : term -> bool
+val mk_asl_prog_while : term * term -> term
 
 
-val fasl_prog_cond_critical_section_term : term
-val dest_fasl_prog_cond_critical_section : term -> term * term * term
-val is_fasl_prog_cond_critical_section : term -> bool
+val asl_prog_cond_critical_section_term : term
+val dest_asl_prog_cond_critical_section : term -> term * term * term
+val is_asl_prog_cond_critical_section : term -> bool
 
-val fasl_prog_best_local_action_term : term
-val dest_fasl_prog_best_local_action : term -> term * term
-val is_fasl_prog_best_local_action : term -> bool
+val asl_prog_best_local_action_term : term
+val dest_asl_prog_best_local_action : term -> term * term
+val is_asl_prog_best_local_action : term -> bool
 
-val FASL_PROGRAM_HOARE_TRIPLE_term : term
-val dest_FASL_PROGRAM_HOARE_TRIPLE : term -> term * term * term * term * term
-val is_FASL_PROGRAM_HOARE_TRIPLE : term -> bool
+val ASL_PROGRAM_HOARE_TRIPLE_term : term
+val dest_ASL_PROGRAM_HOARE_TRIPLE : term -> term * term * term * term * term
+val is_ASL_PROGRAM_HOARE_TRIPLE : term -> bool
 
-val FASL_PROGRAM_IS_ABSTRACTION_term : term
-val dest_FASL_PROGRAM_IS_ABSTRACTION : term -> term * term * term * term
-val is_FASL_PROGRAM_IS_ABSTRACTION : term -> bool
-val mk_FASL_PROGRAM_IS_ABSTRACTION : term * term * term * term -> term
+val ASL_PROGRAM_IS_ABSTRACTION_term : term
+val dest_ASL_PROGRAM_IS_ABSTRACTION : term -> term * term * term * term
+val is_ASL_PROGRAM_IS_ABSTRACTION : term -> bool
+val mk_ASL_PROGRAM_IS_ABSTRACTION : term * term * term * term -> term
 
-val FASL_SPECIFICATION_term : term
+val ASL_SPECIFICATION_term : term
 
 val COND_PROP___IMP_term : term
 val dest_COND_PROP___IMP : term -> term * term
@@ -101,12 +101,12 @@ val asl_cond_star_term : term
 val dest_asl_cond_star : term -> term * term * term
 val is_asl_cond_star   : term -> bool
 
-val fasl_pred_false_term  : term
-val fasl_pred_true_term   : term
-val fasl_pred_neg_term    : term
-val fasl_pred_and_term    : term
-val fasl_pred_or_term     : term
-val fasl_pred_prim_term   : term
+val asl_pred_false_term  : term
+val asl_pred_true_term   : term
+val asl_pred_neg_term    : term
+val asl_pred_and_term    : term
+val asl_pred_or_term     : term
+val asl_pred_prim_term   : term
 
 
 val asl_exists_term       : term
@@ -129,57 +129,57 @@ val dest_asl_exists_list  : term -> term * term
 val is_asl_exists_list    : term -> bool
 
 
-val fasl_comment_loop_invariant_term : term
-val dest_fasl_comment_loop_invariant : term -> term * term;
-val is_fasl_comment_loop_invariant : term -> bool;
+val asl_comment_loop_invariant_term : term
+val dest_asl_comment_loop_invariant : term -> term * term;
+val is_asl_comment_loop_invariant : term -> bool;
 
 
-val fasl_comment_block_spec_term : term
-val dest_fasl_comment_block_spec : term -> term * term;
-val is_fasl_comment_block_spec : term -> bool;
+val asl_comment_block_spec_term : term
+val dest_asl_comment_block_spec : term -> term * term;
+val is_asl_comment_block_spec : term -> bool;
 
-val fasl_comment_loop_spec_term : term
-val dest_fasl_comment_loop_spec : term -> term * term;
-val is_fasl_comment_loop_spec : term -> bool;
+val asl_comment_loop_spec_term : term
+val dest_asl_comment_loop_spec : term -> term * term;
+val is_asl_comment_loop_spec : term -> bool;
 
-val fasl_comment_loop_unroll_term : term
-val dest_fasl_comment_loop_unroll : term -> term * term;
-val is_fasl_comment_loop_unroll   : term -> bool;
+val asl_comment_loop_unroll_term : term
+val dest_asl_comment_loop_unroll : term -> term * term;
+val is_asl_comment_loop_unroll   : term -> bool;
 
-val fasl_comment_location_term : term
-val dest_fasl_comment_location : term -> term * term
-val save_dest_fasl_comment_location : term -> term * term * (unit -> thm)
-val is_fasl_comment_location : term -> bool
-val mk_fasl_comment_location : term * term -> term
+val asl_comment_location_term : term
+val dest_asl_comment_location : term -> term * term
+val save_dest_asl_comment_location : term -> term * term * (unit -> thm)
+val is_asl_comment_location : term -> bool
+val mk_asl_comment_location : term * term -> term
 val empty_label_list : term
-val dest_list_fasl_comment_location : term -> term * term
-val save_dest_list_fasl_comment_location : term -> term * term * (unit -> thm)
+val dest_list_asl_comment_location : term -> term * term
+val save_dest_list_asl_comment_location : term -> term * term * (unit -> thm)
 
-val fasl_comment_assert_term : term
-val dest_fasl_comment_assert : term -> term
-val is_fasl_comment_assert   : term -> bool;
+val asl_comment_assert_term : term
+val dest_asl_comment_assert : term -> term
+val is_asl_comment_assert   : term -> bool;
 
-val fasl_comment_location_string_term : term
-val dest_fasl_comment_location_string : term -> term * term
-val is_fasl_comment_location_string : term -> bool
+val asl_comment_location_string_term : term
+val dest_asl_comment_location_string : term -> term * term
+val is_asl_comment_location_string : term -> bool
 
-val fasl_comment_location2_term : term
-val dest_fasl_comment_location2 : term -> term * term
-val save_dest_fasl_comment_location2 : term -> term * term * (unit -> thm)
-val is_fasl_comment_location2 : term -> bool
-val mk_fasl_comment_location2 : term * term -> term
+val asl_comment_location2_term : term
+val dest_asl_comment_location2 : term -> term * term
+val save_dest_asl_comment_location2 : term -> term * term * (unit -> thm)
+val is_asl_comment_location2 : term -> bool
+val mk_asl_comment_location2 : term * term -> term
 
-val fasl_comment_abstraction_term : term
-val dest_fasl_comment_abstraction : term -> term * term
-val is_fasl_comment_abstraction : term -> bool
+val asl_comment_abstraction_term : term
+val dest_asl_comment_abstraction : term -> term * term
+val is_asl_comment_abstraction : term -> bool
 
-val dest_fasl_comment : term -> term * term * term * thm
+val dest_asl_comment : term -> term * term * term * thm
 
-val fasl_procedure_call_preserve_names_wrapper_term : term;
-val dest_fasl_procedure_call_preserve_names_wrapper : term -> term * term * term * term
-val is_fasl_procedure_call_preserve_names_wrapper   : term -> bool
-val dest_FASL_SPECIFICATION : term -> term * term * term;
-val is_FASL_SPECIFICATION : term -> bool;
+val asl_procedure_call_preserve_names_wrapper_term : term;
+val dest_asl_procedure_call_preserve_names_wrapper : term -> term * term * term * term
+val is_asl_procedure_call_preserve_names_wrapper   : term -> bool
+val dest_ASL_SPECIFICATION : term -> term * term * term;
+val is_ASL_SPECIFICATION : term -> bool;
 
 
 

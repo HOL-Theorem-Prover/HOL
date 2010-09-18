@@ -1,6 +1,5 @@
 copy(r;a,n) [array(a,n)] {
-   local i, l, tmp;
-   l = r;
+   local i, tmp;
    i = 0;
    r = new(n);
    while (i < n) [array(a,n) * array(r,n)] {

@@ -475,8 +475,8 @@ val lisp_reduce_alist_EQ = prove(
 
 val FILTER_LISP_REDUCE_A = prove(
   ``!a stack xl.
-      FILTER (λx. ¬MEM (FST x) xl) (LISP_REDUCE_A (stack,MAP Sym xl,a)) = 
-      FILTER (λx. ¬MEM (FST x) xl) a``,
+      FILTER (\x. ~MEM (FST x) xl) (LISP_REDUCE_A (stack,MAP Sym xl,a)) = 
+      FILTER (\x. ~MEM (FST x) xl) a``,
   SIMP_TAC std_ss [LISP_REDUCE_A_def]
   THEN Cases_on `stack` THEN ASM_SIMP_TAC std_ss [isDot_def,CAR_def]
   THEN Cases_on `S'` THEN ASM_SIMP_TAC std_ss [isVal_def,CAR_def,getVal_def]
@@ -515,7 +515,7 @@ val LISP_REDUCE_AUX_IMP = prove(
   THEN REVERSE (Cases_on `MEM (Sym q) x`) 
   THEN ASM_SIMP_TAC std_ss [getVal_def,arithmeticTheory.FUNPOW,isVal_def]
   THEN REPEAT STRIP_TAC THEN RES_TAC THEN1 DECIDE_TAC
-  THEN `SUC n − getVal m = SUC (n - getVal m)` by DECIDE_TAC 
+  THEN `SUC n - getVal m = SUC (n - getVal m)` by DECIDE_TAC 
   THEN ASM_SIMP_TAC std_ss [arithmeticTheory.FUNPOW]
   THEN ASM_SIMP_TAC std_ss [alist2sexp_def,MAP,list2sexp_def,CDR_def]);
  

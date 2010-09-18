@@ -8,14 +8,14 @@ sig
 
   val empty : 'a lvtermnet
   val insert : ('a lvtermnet * key * 'a) -> 'a lvtermnet
-  val find : 'a lvtermnet * key -> 'a
-  val peek : 'a lvtermnet * key -> 'a option
+  val find : 'a lvtermnet * key -> 'a list
+  val peek : 'a lvtermnet * key -> 'a list
   val match : 'a lvtermnet * term -> (key * 'a) list
 
-  val delete : 'a lvtermnet * key -> 'a lvtermnet * 'a
+  val delete : 'a lvtermnet * key -> 'a lvtermnet * 'a list
   val numItems : 'a lvtermnet -> int
   val listItems : 'a lvtermnet -> (key * 'a) list
-  val app : (key * 'a -> unit) -> 'a lvtermnet -> unit
+  val app : (key * 'a list -> unit) -> 'a lvtermnet -> unit
   val fold : (key * 'a * 'b -> 'b) -> 'b -> 'a lvtermnet -> 'b
 
   val map : (key * 'a -> 'b) -> 'a lvtermnet -> 'b lvtermnet

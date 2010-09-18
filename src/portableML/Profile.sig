@@ -1,7 +1,7 @@
 signature Profile =
 sig
 
-type call_info = {usr : Time.time, sys : Time.time, gc : Time.time, n : int}
+type call_info = {usr : Time.time, sys : Time.time, gc : Time.time, real : Time.time, n : int}
 
 val profile : string -> ('a -> 'b) -> 'a -> 'b
 val profile_with_exn : string -> ('a -> 'b) -> 'a -> 'b

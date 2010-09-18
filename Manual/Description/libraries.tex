@@ -510,7 +510,7 @@ precedence.  (Users can thus manipulate the printer's preferences by
 making otherwise redundant calls to the \ml{overload\_on} function.)
 
 In the example of the not-equal-to operator above, the pattern will be
-\holtxt{\~(?x = ?y)}, where the question-marks indicate instantiable
+\holtxt{\~{}(?x = ?y)}, where the question-marks indicate instantiable
 pattern variables.  If a pattern includes free variables (recall that
 the \ml{x} and \ml{y} in this example were bound by an abstraction),
 then these will not be instantiable.
@@ -1379,6 +1379,7 @@ of booleans, pairs, sums, the option type, arithmetic, and lists.
 The following functions use information in the database to ease the
 application of \HOL's underlying functionality:
 
+\index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
 \begin{verbatim}
    type_rws     : hol_type -> thm list
    Induct       : tactic
@@ -1423,6 +1424,7 @@ least contain some free variables already appearing in the goal. Note
 that the \ml{Cases\_on} tactic is more general than \ml{Cases}, but
 it does require an explicit term to be given.
 
+\index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
 The \ml{Induct\_on} tactic takes a quotation, which is parsed into a
 term $M$, and then $M$ is searched for in the goal. If $M$ is a
 variable, then a variable with the same name is searched for. Once the
@@ -2855,8 +2857,8 @@ the simplifier will perform AC-normalisation of disjunctions.  The
 new congruence rules.
 
 \index{simplification!guaranteeing termination}
-\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)}
-\index{Ntimes (controlling rewrite applications)@\ml{Ntimes} (controlling rewrite applications)}
+\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)|pin}
+\index{Ntimes (controlling rewrite applications)@\ml{Ntimes} (controlling rewrite applications)|pin}
 Two other functions provide a crude mechanism for controlling the
 number of times an individual rewrite will be applied.
 \begin{hol}
@@ -2924,7 +2926,7 @@ particular terms.  For example, if \holtxt{opn} is a binary operator,
    |- (x = x') ==> (opn x y = opn x' y)
 \end{verbatim}
 \end{hol}
-\index{SimpLHS@\ml{SimpLHS}}\index{SimpRHS@\ml{SimpRHS}}
+\index{SimpLHS@\ml{SimpLHS}|pin}\index{SimpRHS@\ml{SimpRHS}|pin}
 Because the equality case is so common, the special values
 \ml{SimpLHS} and \ml{SimpRHS} are provided to force
 simplification on the left or right of an equality respectively.
@@ -3363,7 +3365,7 @@ Words can be pretty-printed using the standard number bases. For example, the fu
 \end{session}
 The function \ml{output\_words\_as} is more flexible and allows the number base to vary depending on
 the word length and numeric value.  The default pretty-printer (installed when loading \theoryimp{wordsLib}) prints small values in decimal and large values in hexadecimal.
-The function \ml{output\_words\_as\_oct} will automatically enable the parsing of octal numbers.  
+The function \ml{output\_words\_as\_oct} will automatically enable the parsing of octal numbers.
 
 The trace variable \ml{"word printing"} provides an alternative method for changing the output number base --- it is particularly suited to temporarily selecting a number base, for example:
 \begin{session}
@@ -3384,9 +3386,9 @@ You may have noticed that \ty{:word4} and \ty{:word8} have been used as convenie
 > val it = ``:bool[15]`` : hol_type
 
 - ``:word15``;
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
-  
+
 - wordsLib.mk_word_size 15;
 > val it = () : unit
 
@@ -3515,7 +3517,7 @@ Many of these \emph{simpset} fragments have corresponding conversions.  For exam
 The behaviour of the fragments listed above are demonstrated using the following function:
 \begin{session}
 \begin{verbatim}
-- fun conv ss = SIMP_CONV (pure_ss++ss) []; 
+- fun conv ss = SIMP_CONV (pure_ss++ss) [];
 > val conv = fn : ssfrag -> term -> thm
 \end{verbatim}
 \end{session}
@@ -3529,7 +3531,7 @@ The following session demonstrates \ml{SIZES\_ss}:
 > val it = |- FINITE univ(:32) <=> T : thm
 \end{verbatim}
 \end{session}
-The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set of (high) bit positions: 
+The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set of (high) bit positions:
 \begin{session}
 \begin{verbatim}
 - conv wordsLib.BIT_ss ``BIT 3 5``;
@@ -3543,7 +3545,7 @@ The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set 
 This simplification provides some support for reasoning about bitwise operations over arbitrary word lengths.  The arithmetic, logic and shift fragments help tidy up basic word expressions:
 \begin{session}
 \begin{verbatim}
-- conv wordsLib.WORD_LOGIC_ss ``a && 12w !! 11w && a``;    
+- conv wordsLib.WORD_LOGIC_ss ``a && 12w !! 11w && a``;
 <<HOL message: inventing new type variable names: 'a>>
 > val it =
     |- a && 12w !! 11w && a = 15w && a :
@@ -3553,7 +3555,7 @@ This simplification provides some support for reasoning about bitwise operations
 > val it =
     |- 3w * b + a + 2w * b - a * 4w = a + b
      : thm
-     
+
 - conv wordsLib.WORD_SHIFT_ss ``0w << 12 + a >>> 0 + b << 2 << 3``;
 <<HOL message: inventing new type variable names: 'a>>
 > val it =
@@ -3607,7 +3609,7 @@ A basic decision procedure for words is provided in the form of \ml{wordsLib.WOR
 > val it =
     |- a + 2w <+ 4w <=> a <+ 2w \/ 13w <+ a
      : thm
-     
+
 - wordsLib.WORD_DECIDE ``w2w (a:word8) <+ 256w : word16``;
 > val it = |- w2w a <+ 256w : thm
 \end{verbatim}
@@ -3624,8 +3626,13 @@ A custom decision procedure can be constructed using \ml{wordsLib.WORD\_DP}.  In
 \end{session}
 The supplied conversion is used to perform initial simplification, the problem is then mapped to the natural numbers and the decision procedure is applied.  With complex goals, the arithmetic decision procedures in \ml{intLib} provide better performance than \ml{bossLib.DECIDE}.
 
+
 \section{The \texttt{HolSat} Library}\label{sec:HolSatLib}
 \input{HolSat.tex}
+
+
+\section{The \texttt{HolQbf} Library}\label{sec:HolQbfLib}
+\input{HolQbf.tex}
 
 
 \section{The \texttt{HolSmt} library}\label{sec:HolSmtLib}

@@ -881,7 +881,7 @@ GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC THEN (
   ASM_SIMP_TAC bool_ss [FILTER, EVERY_DEF, COND_RATOR, COND_RAND]
 ));
 
-val EVERY_FILTER_IMP = Q.store_thm 
+val EVERY_FILTER_IMP = Q.store_thm
 ("EVERY_FILTER_IMP",
  `!P1 P2 l. EVERY P1 l ==> EVERY P1 (FILTER P2 l)`,
 GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC THEN (
@@ -1125,10 +1125,10 @@ val UNZIP_THM = Q.store_thm
    THEN RW_TAC bool_ss [LET_THM,pairTheory.UNCURRY_DEF,
                         pairTheory.FST,pairTheory.SND]);
 
-val UNZIP_MAP = Q.store_thm 
+val UNZIP_MAP = Q.store_thm
 ("UNZIP_MAP",
  `!L. UNZIP L = (MAP FST L, MAP SND L)`,
- LIST_INDUCT_TAC THEN 
+ LIST_INDUCT_TAC THEN
  ASM_SIMP_TAC arith_ss [UNZIP, MAP,
     PAIR_EQ, pairTheory.FST, pairTheory.SND]);
 
@@ -1296,7 +1296,7 @@ val _ = export_rewrites ["REVERSE_EQ_SING"]
 val FILTER_REVERSE = store_thm(
   "FILTER_REVERSE",
   ``!l P. FILTER P (REVERSE l) = REVERSE (FILTER P l)``,
-  Induct THEN 
+  Induct THEN
   ASM_SIMP_TAC bool_ss [FILTER, REVERSE_DEF, FILTER_APPEND_DISTRIB,
     COND_RAND, COND_RATOR, APPEND_NIL]);
 
@@ -1522,7 +1522,7 @@ val ALL_DISTINCT_REVERSE = store_thm (
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       RES_TAC THEN
       `(FILTER ($= x) l) = REVERSE [x]` by METIS_TAC[REVERSE_REVERSE] THEN
-      FULL_SIMP_TAC bool_ss [REVERSE_DEF, APPEND],   
+      FULL_SIMP_TAC bool_ss [REVERSE_DEF, APPEND],
       ASM_SIMP_TAC bool_ss [REVERSE_DEF, APPEND]
    ]);
 
@@ -1871,6 +1871,20 @@ val SNOC_APPEND = store_thm("SNOC_APPEND",
 val LIST_TO_SET_SNOC = Q.store_thm("LIST_TO_SET_SNOC",
     `set (SNOC x ls) = x INSERT set ls`,
     Induct_on `ls` THEN SRW_TAC [][INSERT_COMM]);
+
+(* ----------------------------------------------------------------------
+    All lists have infinite universes
+   ---------------------------------------------------------------------- *)
+
+val INFINITE_LIST_UNIV = store_thm(
+  "INFINITE_LIST_UNIV",
+  ``INFINITE univ(:'a list)``,
+  REWRITE_TAC [GSYM INFINITE_DEF] THEN
+  SRW_TAC [][INFINITE_UNIV] THEN
+  Q.EXISTS_TAC `\l. x::l` THEN SRW_TAC [][] THEN
+  Q.EXISTS_TAC `[]` THEN SRW_TAC [][])
+val _ = export_rewrites ["INFINITE_LIST_UNIV"]
+
 
 (*---------------------------------------------------------------------------*)
 (* Tail recursive versions for better memory usage when applied in ML        *)

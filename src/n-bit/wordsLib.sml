@@ -79,8 +79,10 @@ local
   val rule = REWRITE_RULE [TIMES_2EXP1, arithmeticTheory.TIMES2,
                            GSYM numeralTheory.iDUB]
 in
-  fun SIZES_CONV t =
-    let val rtr = fst (dest_const (rator t)) handle HOL_ERR _ => ""
+  fun SIZES_CONV t = let
+       val exn = ERR "SIZES_CONV"
+                     "Term not dimword, dimindex, INT_MIN or FINITE"
+       val rtr = Lib.with_exn (fst o dest_const o rator) t exn
     in
       if (rtr = "dimword") orelse (rtr = "dimindex") orelse
          (rtr = "INT_MIN") orelse (rtr = "FINITE")
@@ -95,7 +97,7 @@ in
               x
             end
       else
-        raise ERR "SIZES_CONV" "Term not dimword, dimindex, INT_MIN or FINITE"
+        raise exn
     end
 end;
 
@@ -998,20 +1000,23 @@ fun shift_n t n =
    if n = Arbnum.zero then
      t
    else
-     wordsSyntax.mk_word_lsl(t, numSyntax.mk_numeral n);
+     wordsSyntax.mk_word_lsl (t, numSyntax.mk_numeral n);
 
-fun sum_n l = foldl (fn (a,b) => wordsSyntax.mk_word_add(b,a)) (hd l) (tl l);
+fun sum_n l = foldl (fn (a,b) => wordsSyntax.mk_word_add (b,a)) (hd l) (tl l);
 
-fun WORD_MUL_LSL_CONV t =
-let val (l,r) = wordsSyntax.dest_word_mul t in
-  if wordsSyntax.is_n2w l andalso not (wordsSyntax.is_word_literal r) then
-    let val t' = sum_n (map (shift_n r) (word2list l))
-        val thm = SIMP_CONV (std_ss++WORD_ARITH_ss) [WORD_MUL_LSL] (mk_eq(t,t'))
-    in
-      EQT_ELIM thm
-    end
-  else
-    raise ERR "WORD_MUL_LSL_CONV" "Not a term of the form: n2w n * x."
+fun WORD_MUL_LSL_CONV tm = let
+  val (l,r) = wordsSyntax.dest_word_mul tm
+  val v = wordsSyntax.dest_word_literal l
+in
+  if v = Arbnum.zero then
+    REWR_CONV (hd word_mult_clauses) tm
+  else let
+    val _ = not (wordsSyntax.is_word_literal r) orelse
+              raise ERR "WORD_MUL_LSL_CONV" "Not a term of the form: n2w n * x"
+    val t' = sum_n (List.map (shift_n r) (word2list l))
+  in
+    EQT_ELIM (SIMP_CONV (std_ss++WORD_ARITH_ss) [WORD_MUL_LSL] (mk_eq (tm,t')))
+  end
 end;
 
 val WORD_MUL_LSL_ss =
@@ -1139,7 +1144,7 @@ local
     THEN IMP_RES_TAC (CONJUNCT2 (SPEC_ALL arithmeticTheory.EVEN_ODD_EXISTS))
     THEN POP_ASSUM SUBST1_TAC
     THEN SRW_TAC [numSimps.ARITH_ss] [word_div_def, w2n_n2w]
-    THEN `n DIV SUC (2 * m) MOD dimword (:α) <= n`
+    THEN `n DIV SUC (2 * m) MOD dimword (:'a) <= n`
       by SIMP_TAC std_ss [arithmeticTheory.DIV_LESS_EQ, word_div_le2_lem]
     THEN SRW_TAC [numSimps.ARITH_ss] [])
 
@@ -1281,10 +1286,6 @@ local
     THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a`]
            MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
     THEN ASM_SIMP_TAC std_ss [word_div_le2])
-
-  fun removeDuplicates l = let open Binaryset in
-    listItems (addList (empty Term.compare, l))
-  end
 
   val word_type = wordsSyntax.dest_word_type o type_of
   val arb_thm = boolSyntax.arb |> Term.inst [alpha |-> bool] |> ASSUME
@@ -1573,7 +1574,7 @@ local
 in
   fun mk_bounds_thms t =
   let val l = t |> find_terms wordsSyntax.is_w2n
-                |> removeDuplicates
+                |> Lib.mk_set
                 |> Lib.mapfilter mk_bounds_thm
   in
     if null l then

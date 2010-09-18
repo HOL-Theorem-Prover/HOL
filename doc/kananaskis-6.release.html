@@ -46,9 +46,14 @@
     term variables are printed in green, and free variables are
     printed in blue.  This colouring will happen on colour terminals
     such as Unix <code>xterm</code> (also the standard MacOS Terminal
-    application), as well as inside Emacs.  Also, if you are using the
-    Emacs mode, then the types of both sorts of variables are
-    available in a mouse-over tooltip.</p>
+    application), as well as inside Emacs.</p>
+
+   <p> If you are using the
+    Emacs mode, then the types of both sorts of variables are also
+    available in a mouse-over tooltip.  Moreover, the colours and
+    printing-styles used in the Emacs mode for things like bound
+    variables can be customised,
+    using <code>M-x&nbsp;customize</code>. </p>
 
     <p>Besides this automatic colored pretty-printing depending on
     the term structure, it is now possible to define syntax highlighting
@@ -83,15 +88,95 @@ a clause in the definition of an inductive relation contains duplicate
 names, <code>Hol_reln</code> detects this and provides an informative
 error message. </p></li>
 
+<li><p>There are two new “document-level” modes for using HOL’s
+LaTeX-pretty-printing technology (originally due to Ramana Kumar and
+Thomas Türk).  In both, terms, types and theorems become
+straightforward to embed in LaTeX documents.  For example, one might
+write something like</p>
+<pre>
+        The term \HOLtm{p1 /\ q2} is a typical conjunction.
+</pre>
+<p> and have this turned into </p>
+<pre>
+        The term <i>p₁</i> ∧ <i>q₂</i> is a typical conjunction.
+</pre>
+<p> after LaTeX has been run.  The ASCII conjunction has turned into a
+nice LaTeX maths symbol, and the term has been parsed, allowing
+variables to be printed in italic font, and with trailing digits
+sub-scripted. </p>
 
-<li> <p>Users can configure their interactive sessions by creating a
-file in their home directory.  This file is <code>use</code>-ed into
-the session as it begins.  The file can be called one
-of <code>hol-config.sml</code>, <code>hol-config.ML</code>, <code>.hol-config</code>, <code>.hol-config.sml</code>,
-or <code>.hol-config.ML</code>.  The “home” directory is the one
-residing at the environment <code>HOME</code>,
-or <code>HOMEPATH</code>, or <code>APPDATA</code> (the latter two are
-used on Windows).</p></li>
+<p>See the Description manual for more detailed documentation.
+
+</li>
+
+<li> <p> Simplification of terms involving the <code>EL</code> operator
+(calculates the <i>n</i><sup>th</sup> element of a list) is better.
+
+<li><p> Some new syntax for various bag operations, including arithmetic
+symbols <code>+</code>, <code>-</code>, <code>&lt;</code>, <code>≤</code>
+for the notions on bags that are just point-wise lifts of those
+operators on numbers
+(<code>BAG_UNION</code>, <code>BAG_DIFF</code>, <code>PSUB_BAG</code>, <code>SUB_BAG</code>).</li>
+
+<li><p> New syntax for universal sets
+(in <code>pred_setTheory</code>).  In ASCII
+mode, <code>univ(:'a)</code> is the universal set with elements drawn
+from type <code>:'a</code>.  Another example: <code>univ(:num)</code>
+is the set of all natural numbers. With Unicode on, the first example
+prints as <code>&#120140;(:α)</code>.  The Unicode character used here
+(U+1D54C, a cute uppercase ‘U’) is beyond the BMP (Basic Multilingual Plane)
+and may not appear in many fonts.  Rather than have to give up all of
+Unicode to get around this, there is an additional trace variable
+(<code>"Unicode Univ printing"</code>) to turn off the use of this
+character, making the syntax use <code>univ</code> once more.
+
+<p>Of course, the old syntax (<code>UNIV:'a&nbsp;->&nbsp;bool</code>,
+or <code>UNIV:'a&nbsp;set</code>) continues to work.
+
+<li><p> A new “vim mode” for controlling a HOL session from within the
+vim editor. This mimicks most of the important features of the Emacs
+mode.  See <code>tools/vim</code> for a README file about this
+feature. Thanks to Ramana Kumar for the implementation of this tool.
+
+<li> <p> If syntax that involves non-ASCII characters is added
+using <code>add_rule</code>, <code>set_fixity</code>
+or <code>overload_on</code>, it is only used if the Unicode flag is
+set.  If the Unicode flag is toggled off and then on again, the
+Unicode syntax will disappear and reappear appropriately.
+
+
+<li> <p> The persistent simpset (<code>srw_ss()</code>, also used
+in <code>SRW_TAC</code>) can now have named simpset fragments removed from
+it using the function <code>diminish_srw_ss</code>.
+
+<li> <p> <code>bin/build</code> uses earlier (cached) options when not
+explicitly overridden.
+
+In particular, kernel specifications (<code>-expk</code>, and the new <code>-stdknl</code>), and
+build-sequence file specifications are cached in
+<code>tools/lastbuildoptions</code> so that one can subsequently do
+just <code>bin/build</code> to build again with those same options.
+To override a <code>-seq foo</code> option, you can use
+the <code>-fullbuild</code> option.
+
+<p> Other options (<code>-symlink</code>, <code>-selftest</code>) are
+not cached.
+
+<li> <p>Users can configure their interactive sessions (setting output
+pretty-printing options with <code>set_trace</code> commands for
+example), by writing SML code into a <code>.hol-config.sml</code> file
+in their HOME directory.  In fact, all of the following are acceptable
+names for the file: <code>hol-config.sml</code>, <code>hol-config.ML</code>, <code>.hol-config</code>, <code>.hol-config.sml</code>,
+and <code>.hol-config.ML</code>.  The first of these that is found is
+used.
+
+<p> (The meaning of “the user’s home
+directory” is clear on Unix systems.  On Windows, the environment
+variables <code>HOMEPATH</code> and <code>APPDATA</code> are consulted
+to determine where to look.)
+
+<p> The file, if it exists, is <code>use</code>-d into the interactive
+session, when it begins.  A message is printed saying as much also.
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
@@ -113,6 +198,12 @@ arguments than they were expecting.  E.g.,</p>
 definitions where type variables appear only in schematic
 variables.</p></li>
 
+<li><p><code>Hol_reln</code> now correctly accepts inductive
+definitions defining multiple (presumably multiply recursive)
+relations with schematic variables.  Note that for a variable to be
+detected as schematic in this situation, it needs to be a parameter to
+all relations, even if it may not be used in all of them.
+
 <li><p>The syntax <code>num$0</code> failed to parse.  Thanks to
 Behzad Akbarpour for the report of this bug.</p></li>
 
@@ -123,11 +214,106 @@ Behzad Akbarpour for the report of this bug.</p></li>
 
 <h2 id="new-theories">New theories:</h2>
 
+<ul>
+<li> <p> A very simple theory <code>string_numTheory</code> demonstrating
+that strings and natural numbers are in bijection (with
+functions <code>n2s</code> and <code>s2n</code> constructively
+demonstrating this bijection).
+
+<li> <p>A theory of trie-like trees that recurse under a finite
+map, <code>fmaptreeTheory</code>.  This type can be used to represent
+recursive namespace-like environments.
+</ul>
+
 <h2 id="new-tools">New tools:</h2>
+
+<ul>
+<li><p> A new library <code>HolQbfLib</code> provides an interface to
+external Quantified Boolean Formulae (QBF) solvers.  It can check
+certificates of invalidity generated by the QBF solver Squolem.</li>
+
+<li><p>A bit-blasting conversion for operations on fixed-width
+words: <code>BBLAST_CONV</code>.  This goes beyond the capabilities
+of <code>WORD_BIT_EQ_CONV</code> by expanding out additions and
+subtractions.  This allows the new conversion to automatically handle
+small but tricky bit vector goals.  For example:
+<pre>
+         (x && 3w = 0w:word32) ==&gt; ((x + 4w * y) && 3w = 0w)
+</pre>
+<p> and
+<pre>
+         !a:word8. a &lt;+ 4w /\ b &lt;+ a /\ c &lt;=+ 5w ==&gt; (b + c) &lt;=+ 7w
+</pre>
+<p>
+(These aren’t provable with <code>wordsLib.WORD_DECIDE</code>.)
+
+<p> Obviously bit-blasting is a brute force approach, so the new
+conversion should be used with care.  It will only work well for
+smallish word sizes and when there is only and handful of additions
+around.  It is also “eager”—additions are expanded out even when
+not strictly necessary.  For example, in
+<pre>
+         (a + b) &lt;+ c /\ c &lt;+ d ==&gt; (a + b) &lt;+ d:word32
+</pre>
+<p>
+the sum <code>a + b</code> is expanded.  Users may be able to achieve
+speed-ups by first introducing abbreviations and then proving general
+forms, <i>e.g.</i>
+<pre>
+         x &lt;+ c /\ c &lt;+ d ==&gt; x &lt;+ d:word32
+</pre>
+<p> The conversion handles most operators, however, the following are
+not covered or interpreted:
+<ul>
+ <li> Type variables for word lengths, <i>i.e.</i> terms of type <code>``:'a word``</code>
+
+ <li> General multiplication, i.e. <code>``w1 * w2``</code>.
+   Multiplication by a literal is
+   okay, although this may introduce many additions.
+
+ <li> Bit field selections with non-literal bounds, e.g. <code>``(exp1 -- exp2) w``</code>.
+
+ <li> Shifting by non-literal amounts, <i>e.g.</i> <code>``w &lt;&lt; exp``</code>.
+
+ <li> <code>``n2w exp``</code> and <code>``w2n w``</code>.  Also <code>w2s</code>, <code>s2w</code>, <code>w2l</code> and <code>l2w</code>.
+
+  <li> <code>word_div</code>, <code>word_sdiv</code>, <code>word_mod</code>
+  and <code>word_log2</code>.
+
+</ul>
+
+
+
+
+</ul>
 
 <h2 id="new-versions">New versions:</h2>
 
 <h2 id="new-examples">New examples:</h2>
+
+<ul>
+<li> A development of some basic computability theory:
+<ul>
+  <li> a development of λ-terms as computable functions, showing that
+  things like Church-numerals are as powerful as one would like, and
+  that λ-terms can indeed be set up to evaluate suitably encoded
+  λ-terms (thereby providing a Universal Machine);
+
+  <li> a development of primitive recursive and recursive
+  functions doing much the same;
+
+  <li> a demonstration that both models can emulate each other;
+
+  <li> definition of concepts of recursive, and
+  recursively-enumerable sets; and
+
+  <li> some standard results, including: the Halting Problem, Rice's
+  Theorem, the Recursion theorem, that recursive sets are closed under
+  union and complementation, that r.e. sets are closed under union and
+  intersection but not complement, and that if a set and its
+  complement are both r.e. then they are both recursive.
+</ul>
+</ul>
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
 
@@ -142,13 +328,14 @@ Behzad Akbarpour for the report of this bug.</p></li>
   functionality can easily be derived
   from <code>Drule.CONJUNCTS_AC</code>.</p></li>
 
-<li><p>The overload <code><></code> on <code>words$word_slice</code>
+<li><p>The overload <code>&lt;&gt;</code> on <code>words$word_slice</code>
   has been removed and replaced with <code>''</code>.</p></li>
 
-<li><p>The interface of <code>userprinter<code> (user defined pretty printers) changed.
-  Instead of getting just two functions <code>add_string</code> and <code>add_break</code>,
-  it now gets a record of type <code>term_pp_types.ppstream_funs<code> that contains
-  these functions as well as several others.</p></li>
+<li><p>The interface of <code>userprinter</code> (user defined pretty
+  printers) changed.  Instead of getting just two
+  functions <code>add_string</code> and <code>add_break</code>, it now
+  gets a record of type <code>term_pp_types.ppstream_funs</code> that
+  contains these functions as well as several others.</p></li>
 
 <li><p>The type of the <code>filter</code> field of
 the <code>SSFRAG</code> function for constructing simpset fragment
@@ -159,6 +346,28 @@ where a <q>controlled theorem</q> value is a pair of a theorem and a
 control indicating how many times the rewrite is allowed to be
 applied.  See the REFERENCE and the <code>BoundedRewrites</code>
 module for details.</p>
+
+<li><p>The <code>Unicode</code> structure is now a sub-structure
+of <code>Parse</code>, due to some significant code-reorganisation.
+This means that a line such as
+<pre>
+         open Parse boolLib Unicode
+</pre>
+<p>will fail.  Instead it must be
+<pre>
+         open Parse boolLib
+         open Unicode
+</pre>
+
+<li><p>The constant <code>INFINITE</code>
+in <code>pred_setTheory</code> has been replaced by an abbreviation.
+Thus, if one types <code>``INFINITE&nbsp;s``</code>, the underlying term is
+really <code>¬FINITE&nbsp;s</code>.  All instances of this pattern
+will print as <code>INFINITE&nbsp;s</code>.  The
+functions <code>mk_infinite</code>, <code>dest_infinite</code>
+and <code>is_infinite</code> in <code>pred_setSyntax</code> continue
+to work and do the “right thing”, the
+entrypoint <code>infinite_tm</code> in the same module has been removed.</p>
 
 </ul>
 

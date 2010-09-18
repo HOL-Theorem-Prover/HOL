@@ -19,8 +19,7 @@ type urule = {u:string list, term_name : string,
 
 datatype stored_data =
          RuleUpdate of urule
-       | OverloadUpdate of { u : string, oldname : string option,
-                             ts : term list }
+       | OverloadUpdate of { u : string, ts : term list }
 
 (* This stored data record encodes a number of different options for
    the way in which a Unicode string can be an alternative for a
@@ -30,9 +29,8 @@ datatype stored_data =
    list of tokens appearing in newrule, which maps to term_name,
    and oldtok is an ASCII token of the old rule (if any).
 
-   If it's a OverloadUpdate{u,oldname,t} then u is to be put in as an
-   additional overload from u to the term t, and oldname is the ASCII
-   version of u (if any)
+   If it's a OverloadUpdate{u,ts} then u is to be put in as an
+   additional overload from u to the terms ts.
 *)
 
 val term_table = ref ([] : stored_data list)
@@ -154,7 +152,7 @@ fun enable_one g0 sd =
       in
         g0 |> add_delta r
       end
-    | OverloadUpdate{u,oldname,ts} => let
+    | OverloadUpdate{u,ts} => let
         fun foldthis (t,g) =
             fupdate_overload_info (Overload.add_overloading(u,t)) g
       in
@@ -185,15 +183,7 @@ fun disable_one G sd =
               | SOME s =>
                 prefer_form_with_tok { tok = s, term_name = term_name})
       end
-    | OverloadUpdate{u,oldname,ts} => let
-        fun foldthis s (t, G) = fupdate_overload_info
-                                    (Overload.add_overloading (s,t))
-                                    G
-      in
-        G |> C remove_uoverload u
-          |> (case oldname of NONE => (fn x => x)
-                            | SOME s => C (List.foldl (foldthis s)) ts)
-      end
+    | OverloadUpdate{u,ts} => remove_uoverload G u
 
 fun new_action switch G a =
   (if switch then enable_one G a else G) before
@@ -208,28 +198,18 @@ fun temp_unicode_version switch {u,tmnm} G = let
           case Overload.info_for_name oi tmnm of
             NONE => raise mk_HOL_ERR "Unicode" "unicode_version"
                                      ("No data for term with name "^tmnm)
-          | SOME ops => OverloadUpdate{u = u, oldname = SOME tmnm,
-                                       ts = #actual_ops ops}
+          | SOME ops => OverloadUpdate{u = u, ts = #actual_ops ops}
         end
       | SOME(f,s) => RuleUpdate{u = [u],term_name = tmnm, newrule = f u,
-                                  oldtok = SOME s}
+                                oldtok = SOME s}
 in
   new_action switch G sd
 end
 
 fun temp_uadd_rule switch rule G = new_action switch G (RuleUpdate rule)
 
-fun temp_uoverload_on switch (s, t) G = let
-  val oi = term_grammar.overload_info G
-  val oldname =
-      case Overload.oi_strip_comb oi (#2 (strip_abs t)) of
-        NONE => NONE
-      | SOME (f,_) => SOME (unprefix GrammarSpecials.fakeconst_special
-                                     (#1 (dest_var f)))
-                       handle HOL_ERR _ => NONE
-in
-  new_action switch G (OverloadUpdate { u = s, ts = [t], oldname = oldname })
-end
+fun temp_uoverload_on switch (s, t) G =
+    new_action switch G (OverloadUpdate { u = s, ts = [t]})
 
 datatype ThyUpdateInfo = UV of {u:string,tmnm:string}
                        | RULE of urule

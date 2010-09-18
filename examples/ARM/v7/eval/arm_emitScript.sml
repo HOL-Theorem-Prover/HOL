@@ -13,7 +13,7 @@
 open HolKernel boolLib bossLib Parse wordsLib;
 
 open arm_coretypesTheory arm_astTheory arm_seq_monadTheory
-     arm_decoderTheory arm_opsemTheory arm_evalTheory;
+     arm_decoderTheory arm_opsemTheory armTheory arm_evalTheory;
 
 open emitLib set_emitTheory int_emitTheory rich_list_emitTheory
      patricia_emitTheory;
@@ -154,7 +154,6 @@ val unsigned_sat_q_itself_def = Define`
 val _ = type_pp.pp_num_types := false;
 val _ = type_pp.pp_array_types := false;
 val _ = temp_disable_tyabbrev_printing "proc";
-val _ = temp_disable_tyabbrev_printing "cp_state";
 val _ = temp_disable_tyabbrev_printing "FullAddress";
 val _ = temp_disable_tyabbrev_printing "cpid";
 val _ = temp_type_abbrev("ARMextensions_set", ``:ARMextensions set``);
@@ -183,7 +182,7 @@ val reserved_rule =
       ``type:SRType`` |-> ``typ:SRType``,
       ``type:word2`` |-> ``typ:word2``]);
 
-val thumb2_rule = SIMP_RULE (srw_ss()) [thumb2_support_def];
+val extension_rule = SIMP_RULE (srw_ss()) [thumb2_support_def];
 
 val int_rule = SIMP_RULE std_ss (COND_RATOR :: map GSYM
   [int_emitTheory.i2w_itself_def,
@@ -217,17 +216,18 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
    MLSTRUCT "type ARMextensions_set = ARMextensions set"] @
   map (DATATYPE o f)
     [datatype_iiid, datatype_RName, datatype_PSRName, datatype_ARMpsr,
-     datatype_CP15sctlr, datatype_CP15scr, datatype_CP15nsacr,
-     datatype_CP15vbar, datatype_CP15reg, datatype_memory_access,
-     datatype_ARMarch, datatype_ARMinfo, datatype_SRType, datatype_InstrSet,
-     datatype_Encoding, datatype_MemType, datatype_MemoryAttributes,
-     datatype_AddressDescriptor, datatype_MBReqDomain, datatype_MBReqTypes,
-     datatype_addressing_mode1, datatype_addressing_mode2,
-     datatype_addressing_mode3, datatype_hint, datatype_parallel_add_sub_op1,
-     datatype_parallel_add_sub_op2, datatype_branch_instruction,
-     datatype_data_processing_instruction, datatype_status_access_instruction,
-     datatype_load_store_instruction, datatype_miscellaneous_instruction,
-     datatype_coprocessor_instruction, datatype_ARMinstruction] @
+     datatype_CP14reg, datatype_CP15sctlr, datatype_CP15scr,
+     datatype_CP15nsacr, datatype_CP15vbar, datatype_CP15reg,
+     datatype_coproc_state, datatype_memory_access, datatype_ARMarch,
+     datatype_ARMinfo, datatype_SRType, datatype_InstrSet, datatype_Encoding,
+     datatype_MemType, datatype_MemoryAttributes, datatype_AddressDescriptor,
+     datatype_MBReqDomain, datatype_MBReqTypes, datatype_addressing_mode1,
+     datatype_addressing_mode2, datatype_addressing_mode3, datatype_hint,
+     datatype_parallel_add_sub_op1, datatype_parallel_add_sub_op2,
+     datatype_branch_instruction, datatype_data_processing_instruction,
+     datatype_status_access_instruction, datatype_load_store_instruction,
+     datatype_miscellaneous_instruction, datatype_coprocessor_instruction,
+     datatype_ARMinstruction] @
   [MLSIG    "type CPinstruction = word4 * (word4 * coprocessor_instruction)",
    MLSTRUCT "type CPinstruction = word4 * (word4 * coprocessor_instruction)",
    MLSIG    "type exclusive_triple = word32 * (iiid * num)",
@@ -236,8 +236,8 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
    MLSTRUCT "type exclusive_state = (num -> word32 set) * (word32 * num) set",
    MLSIG    "type 'a ExclusiveM = exclusive_state -> ('a * exclusive_state)",
    MLSTRUCT "type 'a ExclusiveM = exclusive_state -> ('a * exclusive_state)",
-   MLSIG    "type 'a CoprocessorM = CP15reg -> ('a * CP15reg)",
-   MLSTRUCT "type 'a CoprocessorM = CP15reg -> ('a * CP15reg)"] @
+   MLSIG    "type 'a CoprocessorM = coproc_state -> ('a * coproc_state)",
+   MLSTRUCT "type 'a CoprocessorM = coproc_state -> ('a * coproc_state)"] @
   map (DATATYPE o f)
     [datatype_ExclusiveMonitors, datatype_Coprocessors,
      datatype_arm_state, datatype_error_option] @
@@ -273,9 +273,9 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      read_arch_def, read_extensions_def, read__reg_def,
      write__reg_def, read__psr_def, write__psr_def,
      read_scr_def, write_scr_def, read_nsacr_def,
-     read_sctlr_def, read_cpsr_def, write_cpsr_def,
+     read_teehbr_def, read_sctlr_def, read_cpsr_def, write_cpsr_def,
      read_isetstate_def, write_isetstate_def,
-     have_security_ext_def, bad_mode_def, read_spsr_def,
+     have_security_ext, have_jazelle, have_thumbEE, bad_mode_def, read_spsr_def,
      write_spsr_def, current_mode_is_priviledged_def,
      current_mode_is_user_or_system_def, is_secure_def,
      read_vbar_def, read_mvbar_def, current_instr_set_def,
@@ -309,7 +309,7 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      (* arm_opsem *)
      unaligned_support_def, arch_version_def, read_reg_literal_def,
      read_flags_def, write_flags_def, read_cflag_def, set_q_def, read_ge_def,
-     write_ge_def, write_e_def, thumb2_rule IT_advance_def,
+     write_ge_def, write_e_def, extension_rule IT_advance_def,
      cpsr_write_by_instr_def, spsr_write_by_instr_def,
      branch_write_pc_def, bx_write_pc_def, load_write_pc_def,
      alu_write_pc_def, decode_imm_shift_def, decode_reg_shift_def,
@@ -328,7 +328,8 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      parallel_add_sub_def, barrier_option_def, exc_vector_base_def,
      take_undef_instr_exception_def, take_svc_exception_def,
      take_smc_exception_def, take_prefetch_abort_exception_def,
-     integer_zero_divide_trapping_enabled_def] @ instruction_list @
+     integer_zero_divide_trapping_enabled_def, null_check_if_thumbEE_def] @
+    instruction_list @
     [condition_passed_def, branch_instruction_def,
      data_processing_instruction_def, status_access_instruction_def,
      load_store_instruction_def, miscellaneous_instruction_def,
@@ -338,11 +339,13 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
      hint_decode_def, parallel_add_sub_op1, parallel_add_sub_op2,
      parallel_add_sub_thumb_op2, parallel_add_sub_decode_def,
      parallel_add_sub_thumb_decode_def, InITBlock_def, LastInITBlock_def,
-     arm_decode_def, thumb2_rule thumb_decode_def,
+     arm_decode_def, extension_rule thumb_decode_def, thumbee_decode_def,
      thumb2_decode_aux1_def, thumb2_decode_aux2_def, thumb2_decode_aux3_def,
      thumb2_decode_aux4_def, thumb2_decode_aux5_def, thumb2_decode_aux6_def,
      thumb2_decode_aux7_def, thumb2_decode_aux8_def, thumb2_decode_aux9_def,
-     thumb2_decode_def, proc_def, ptree_fetch_instruction_def]));
+     extension_rule thumb2_decode_def, proc_def, ptree_read_word_def,
+     ptree_read_halfword_def, fetch_arm_def, fetch_thumb_def, attempt_def,
+     actual_instr_set_def, fetch_instruction_def]));
 
 (* ------------------------------------------------------------------------ *)
 

@@ -45,9 +45,6 @@ val _ = temp_overload_on
 val _ = temp_overload_on
   ("ARCH", ``\s. (s CROSS UNIV) : (ARMarch # ARMextensions set) set``);
 
-val _ = temp_overload_on
-  ("EXT", ``\s. (UNIV CROSS s) : (ARMarch # ARMextensions set) set``);
-
 val _ = temp_overload_on("BadReg", ``\n:word4. (n = 13w) \/ (n = 15w)``);
 
 val _ = temp_overload_on("extend", ``\u. if u then w2w else sw2sw``);
@@ -55,6 +52,8 @@ val _ = temp_overload_on("extend", ``\u. if u then w2w else sw2sw``);
 val _ = temp_overload_on
   ("ARCH2",
      ``\enc a. ARCH (if enc = Encoding_Thumb2 then thumb2_support else a)``);
+
+val _ = TexTokenMap.TeX_notation {hol = "CROSS", TeX = ("\\HOLTokenProd{}", 1)};
 
 (* ------------------------------------------------------------------------ *)
 
@@ -699,6 +698,24 @@ val exc_vector_base_def = Define`
             else
               constT 0w)))`;
 
+val take_reset_def = Define`
+  take_reset ii =
+    (exc_vector_base ii ||| have_security_ext ii |||
+     read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
+    (\(ExcVectorBase,have_security_ext,cpsr,scr,sctlr).
+       (condT (cpsr.M = 0b10110w)
+          (write_scr ii (scr with NS := F)) |||
+        write_cpsr ii (cpsr with M := 0b10011w)) >>=
+       (\(u1:unit,u2:unit).
+         ((read_cpsr ii >>=
+          (\cpsr.
+             write_cpsr ii (cpsr with
+               <| I := T;
+                  IT := 0b00000000w;
+                  J := F; T := sctlr.TE;
+                  E := sctlr.EE |>))) |||
+          branch_to ii (ExcVectorBase + 0w)) >>= unit2))`;
+
 val take_undef_instr_exception_def = Define`
   take_undef_instr_exception ii =
     (read_reg ii 15w ||| exc_vector_base ii |||
@@ -763,7 +780,7 @@ val take_smc_exception_def = Define`
                      E := sctlr.EE |>))) |||
             branch_to ii (mvbar + 8w)) >>= unit4)))`;
 
-(* For now assume trap_to_monitor is false i.e. no external aborts *)
+(* For now assume trap_to_monitor is false, i.e. no external aborts *)
 val take_prefetch_abort_exception_def = Define`
   take_prefetch_abort_exception ii =
     (read_reg ii 15w ||| exc_vector_base ii ||| have_security_ext ii |||
@@ -779,24 +796,106 @@ val take_prefetch_abort_exception_def = Define`
            (\cpsr.
               write_cpsr ii (cpsr with
                 <| I := T;
-                   A := ((have_security_ext \/ ~scr.NS \/ scr.AW) \/ cpsr.A);
+                   A := ((~have_security_ext \/ ~scr.NS \/ scr.AW) \/ cpsr.A);
                    IT := 0b00000000w;
                    J := F; T := sctlr.TE;
                    E := sctlr.EE |>))) |||
           branch_to ii (ExcVectorBase + 12w)) >>= unit4))`;
 
+val take_irq_exception_def = Define`
+  take_irq_exception ii =
+    (read_reg ii 15w ||| exc_vector_base ii ||| have_security_ext ii |||
+     read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
+    (\(pc,ExcVectorBase,have_security_ext,cpsr,scr,sctlr).
+       (condT (cpsr.M = 0b10110w)
+          (write_scr ii (scr with NS := F)) |||
+        write_cpsr ii (cpsr with M := 0b10010w)) >>=
+       (\(u1:unit,u2:unit).
+         (write_spsr ii cpsr |||
+          write_reg ii 14w (if cpsr.T then pc else pc - 4w) |||
+          (read_cpsr ii >>=
+           (\cpsr.
+              write_cpsr ii (cpsr with
+                <| I := T;
+                   A := ((~have_security_ext \/ ~scr.NS \/ scr.AW) \/ cpsr.A);
+                   IT := 0b00000000w;
+                   J := F; T := sctlr.TE;
+                   E := sctlr.EE |>))) |||
+          branch_to ii (ExcVectorBase + 24w)) >>= unit4))`;
+
+val take_fiq_exception_def = Define`
+  take_fiq_exception ii =
+    (read_reg ii 15w ||| exc_vector_base ii ||| have_security_ext ii |||
+     read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
+    (\(pc,ExcVectorBase,have_security_ext,cpsr,scr,sctlr).
+       (condT (cpsr.M = 0b10110w)
+          (write_scr ii (scr with NS := F)) |||
+        write_cpsr ii (cpsr with M := 0b10001w)) >>=
+       (\(u1:unit,u2:unit).
+         (write_spsr ii cpsr |||
+          write_reg ii 14w (if cpsr.T then pc else pc - 4w) |||
+          (read_cpsr ii >>=
+           (\cpsr.
+              write_cpsr ii (cpsr with
+                <| I := T;
+                   F := ((~have_security_ext \/ ~scr.NS \/ scr.AW) \/ cpsr.F);
+                   A := ((~have_security_ext \/ ~scr.NS \/ scr.AW) \/ cpsr.A);
+                   IT := 0b00000000w;
+                   J := F; T := sctlr.TE;
+                   E := sctlr.EE |>))) |||
+          branch_to ii (ExcVectorBase + 28w)) >>= unit4))`;
+
 (* ------------------------------------------------------------------------ *)
 
-val instruction_def = Define`
-  instruction ii s defined unpredictable c =
+val null_check_if_thumbee_def = Define`
+  null_check_if_thumbEE ii n (f:unit M) =
+    current_instr_set ii >>=
+    (\iset.
+      if iset = InstrSet_ThumbEE then
+        read_reg ii n >>=
+        (\rn.
+          if n = 15w then
+            if align (rn, 4) = 0w then
+              errorT ("null_check_if_thumbEE PC: unpredictable")
+            else
+              f
+          else if n = 13w then
+            if rn = 0w then
+              errorT ("null_check_if_thumbEE SP: unpredictable")
+            else
+              f
+          else if rn = 0w then
+            (read_reg ii 15w ||| read_cpsr ii ||| read_teehbr ii) >>=
+            (\(pc,cpsr,teehbr).
+               (write_reg ii 14w ((0 :+ T) pc) |||
+                write_cpsr ii (cpsr with IT := 0w)) >>=
+               (\(u1:unit, u2:unit).
+                 branch_write_pc ii (teehbr - 4w)))
+          else
+            f)
+      else
+        f)`;
+
+val run_instruction_def = Define`
+  run_instruction ii s n defined unpredictable c =
     read_info ii >>=
     (\info.
        if (info.arch,info.extensions) NOTIN defined then
          take_undef_instr_exception ii
        else if unpredictable (version_number info.arch) then
          errorT (s ++ ": unpredictable")
+       else if IS_SOME n then
+         null_check_if_thumbEE ii (THE n) c
        else
          c)`;
+
+val null_check_instruction_def = Define`
+  null_check_instruction ii s n defined unpredictable c =
+    run_instruction ii s (SOME n) defined unpredictable c`;
+
+val instruction_def = Define`
+  instruction ii s defined unpredictable c =
+    run_instruction ii s NONE defined unpredictable c`;
 
 val instructions = ref ([] : (string * thm) list);
 
@@ -915,7 +1014,7 @@ val compare_branch_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val table_branch_byte_instr_def = iDefine`
   table_branch_byte_instr ii (Table_Branch_Byte n is_tbh m) =
-    instruction ii "table_branch_byte" (ARCH thumb2_support)
+    null_check_instruction ii "table_branch_byte" n (ARCH thumb2_support)
       (\v. (n = 13w) \/ BadReg m)
       ((read_reg ii 15w ||| read_reg ii n ||| read_reg ii m) >>=
        (\(pc,rn,rm).
@@ -925,6 +1024,82 @@ val table_branch_byte_instr_def = iDefine`
             read_memU ii (rn + rm, 1)) >>=
          (\halfwords.
              branch_write_pc ii (pc + 2w * zero_extend32 halfwords))))`;
+
+(* ........................................................................
+   TX: CHKA<c> <Rn>,<Rm>
+   ```````````````````````````````````````````````````````````````````````` *)
+val check_array_instr_def = iDefine`
+  check_array_instr ii (Check_Array n m) =
+    instruction ii "check_array" thumbee_support
+      (\v. (n = 15w) \/ BadReg m)
+      ((read_reg ii 15w ||| read_reg ii n ||| read_reg ii m |||
+        read_cpsr ii ||| read_teehbr ii) >>=
+       (\(pc,rn,rm,cpsr,teehbr).
+          if rn <=+ rm then
+            ((write_reg ii 14w ((0 :+ T) pc) |||
+              write_cpsr ii (cpsr with IT := 0w)) >>=
+             (\(u1:unit,u2:unit).
+               branch_write_pc ii (teehbr - 8w)))
+          else
+            increment_pc ii Encoding_ThumbEE))`;
+
+(* ........................................................................
+   TX: HB{L}<c> #<HandlerID>
+   ```````````````````````````````````````````````````````````````````````` *)
+val handler_branch_link_instr_def = iDefine`
+  handler_branch_link_instr ii (Handler_Branch_Link generate_link handler) =
+    instruction ii "handler_branch_link" thumbee_support {}
+      ((read_reg ii 15w ||| read_teehbr ii) >>=
+       (\(pc,teehbr).
+          let handler_offset = w2w handler << 5 in
+            condT (generate_link)
+              (let next_instr_addr = pc - 2w in
+                 write_reg ii 14w ((0 :+ T) next_instr_addr)) >>=
+            (\u:unit.
+              branch_write_pc ii (teehbr + handler_offset))))`;
+
+(* ........................................................................
+   TX: HBLP<c> #<imm>,#<HandlerID>
+   ```````````````````````````````````````````````````````````````````````` *)
+val handler_branch_link_parameter_instr_def = iDefine`
+  handler_branch_link_parameter_instr ii
+    (Handler_Branch_Link_Parameter imm5 handler) =
+    instruction ii "handler_branch_link_parameter" thumbee_support {}
+      ((read_reg ii 15w ||| read_teehbr ii) >>=
+       (\(pc,teehbr).
+          let next_instr_addr = pc - 2w
+          and handler_offset = w2w handler << 5
+          in
+            (write_reg ii 8w (w2w imm5) |||
+             write_reg ii 14w ((0 :+ T) next_instr_addr)) >>=
+            (\(u1:unit,u2:unit).
+              branch_write_pc ii (teehbr + handler_offset))))`;
+
+(* ........................................................................
+   TX: HBP<c> #<imm>,#<HandlerID>
+   ```````````````````````````````````````````````````````````````````````` *)
+val handler_branch_parameter_instr_def = iDefine`
+  handler_branch_parameter_instr ii (Handler_Branch_Parameter imm3 handler) =
+    instruction ii "handler_branch_link_parameter" thumbee_support {}
+      (read_teehbr ii >>=
+       (\teehbr.
+          let handler_offset = w2w handler << 5 in
+            write_reg ii 8w (w2w imm3) >>=
+            (\u:unit.
+              branch_write_pc ii (teehbr + handler_offset))))`;
+
+(* ........................................................................
+   T2: ENTERX
+   T2: LEAVEX
+   ```````````````````````````````````````````````````````````````````````` *)
+val enterx_leavex_def = iDefine`
+  enterx_leavex_instr ii is_enterx =
+    instruction ii "enterx_leavex" thumbee_support {}
+      ((if is_enterx then
+          select_instr_set ii InstrSet_ThumbEE
+        else
+          select_instr_set ii InstrSet_Thumb) >>=
+        (\u:unit. increment_pc ii Encoding_Thumb2))`;
 
 (* ........................................................................
    T: IT{<x>{<y>{<z>}}} <firstcond>
@@ -2018,7 +2193,7 @@ val preload_instruction_instr_def = iDefine`
 val load_instr_def = iDefine`
   load_instr ii enc (Load indx add load_byte w unpriv n t mode2) =
     let wback = ~indx \/ w in
-      instruction ii "load"
+      null_check_instruction ii "load" n
         (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
         (\version.
             unpriv /\ (if enc = Encoding_Thumb2 then
@@ -2097,7 +2272,7 @@ val load_instr_def = iDefine`
 val store_instr_def = iDefine`
   store_instr ii enc (Store indx add store_byte w unpriv n t mode2) =
     let wback = ~indx \/ w in
-      instruction ii "store"
+      null_check_instruction ii "store" n
         (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
         (\version.
             unpriv /\ (if enc = Encoding_Thumb2 then
@@ -2179,7 +2354,7 @@ val load_halfword_instr_def = iDefine`
   load_halfword_instr ii enc
     (Load_Halfword indx add w signed half unpriv n t mode3) =
     let wback = ~indx \/ w in
-      instruction ii "load_halfword"
+      null_check_instruction ii "load_halfword" n
         (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
         (\version.
             unpriv /\ (if enc = Encoding_Thumb2 then
@@ -2248,7 +2423,7 @@ val load_halfword_instr_def = iDefine`
 val store_halfword_instr_def = iDefine`
   store_halfword_instr ii enc (Store_Halfword indx add w unpriv n t mode3) =
     let wback = ~indx \/ w in
-      instruction ii "store_halfword"
+      null_check_instruction ii "store_halfword" n
         (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
         (\version.
             unpriv /\ (if enc = Encoding_Thumb2 then
@@ -2302,7 +2477,7 @@ val load_multiple_instr_def = iDefine`
   load_multiple_instr ii enc (Load_Multiple indx add system wback n registers) =
     current_mode_is_user_or_system ii >>=
     (\is_user_or_system.
-      instruction ii "load_multiple"
+      null_check_instruction ii "load_multiple" n
         (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
         (\version.
            (n = 15w) \/ bit_count registers < 1 \/
@@ -2368,7 +2543,7 @@ val store_multiple_instr_def = iDefine`
       (Store_Multiple indx add system wback n registers) =
     current_mode_is_user_or_system ii >>=
     (\is_user_or_system.
-      instruction ii "store_multiple"
+      null_check_instruction ii "store_multiple" n
         (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
         (\v. (n = 15w) \/ bit_count registers < 1 \/
              (enc = Encoding_Thumb2) /\
@@ -2422,7 +2597,7 @@ val store_multiple_instr_def = iDefine`
 val load_dual_instr_def = iDefine`
   load_dual_instr ii enc (Load_Dual indx add w n t t2 mode3) =
     let wback = ~indx \/ w in
-      instruction ii "load_dual" (ARCH2 enc {a | a IN dsp_support})
+      null_check_instruction ii "load_dual" n (ARCH2 enc {a | a IN dsp_support})
         (\version.
            (if enc = Encoding_Thumb2 then
               BadReg t \/ BadReg t2 \/ (t = t2)
@@ -2462,7 +2637,8 @@ val load_dual_instr_def = iDefine`
 val store_dual_instr_def = iDefine`
   store_dual_instr ii enc (Store_Dual indx add w n t t2 mode3) =
     let wback = ~indx \/ w in
-      instruction ii "store_dual" (ARCH2 enc {a | a IN dsp_support})
+      null_check_instruction ii "store_dual" n
+        (ARCH2 enc {a | a IN dsp_support})
         (\version.
            (if enc = Encoding_Thumb2 then
               (n = 15w) \/ BadReg t \/ BadReg t2
@@ -2490,7 +2666,8 @@ val store_dual_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val load_exclusive_instr_def = iDefine`
   load_exclusive_instr ii enc (Load_Exclusive n t imm8) =
-    instruction ii "load_exclusive" (ARCH2 enc {a | version_number a >= 6})
+    null_check_instruction ii "load_exclusive" n
+      (ARCH2 enc {a | version_number a >= 6})
       (\v. (if enc = Encoding_Thumb2 then BadReg t else t = 15w) \/ (n = 15w))
       ((increment_pc ii enc |||
        read_reg ii n >>=
@@ -2506,7 +2683,8 @@ val load_exclusive_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val store_exclusive_instr_def = iDefine`
   store_exclusive_instr ii enc (Store_Exclusive n d t imm8) =
-    instruction ii "store_exclusive" (ARCH2 enc {a | version_number a >= 6})
+    null_check_instruction ii "store_exclusive" n
+      (ARCH2 enc {a | version_number a >= 6})
       (\v. (if enc = Encoding_Thumb2 then
               BadReg d \/ BadReg t
             else
@@ -2532,7 +2710,7 @@ val store_exclusive_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val load_exclusive_doubleword_instr_def = iDefine`
   load_exclusive_doubleword_instr ii enc (Load_Exclusive_Doubleword n t t2) =
-    instruction ii "load_exclusive_doubleword"
+    null_check_instruction ii "load_exclusive_doubleword" n
       (ARCH (if enc = Encoding_Thumb2 then
                {a | version_number a >= 7}
              else
@@ -2559,7 +2737,7 @@ val load_exclusive_doubleword_instr_def = iDefine`
 val store_exclusive_doubleword_instr_def = iDefine`
   store_exclusive_doubleword_instr ii enc
       (Store_Exclusive_Doubleword n d t t2) =
-    instruction ii "store_exclusive_doubleword"
+    null_check_instruction ii "store_exclusive_doubleword" n
       (ARCH (if enc = Encoding_Thumb2 then
                {a | version_number a >= 7}
              else
@@ -2592,7 +2770,7 @@ val store_exclusive_doubleword_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val load_exclusive_byte_instr_def = iDefine`
   load_exclusive_byte_instr ii enc (Load_Exclusive_Byte n t) =
-    instruction ii "load_exclusive_byte"
+    null_check_instruction ii "load_exclusive_byte" n
       (ARCH (if enc = Encoding_Thumb2 then
                {a | version_number a >= 7}
              else
@@ -2611,7 +2789,7 @@ val load_exclusive_byte_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val store_exclusive_byte_instr_def = iDefine`
   store_exclusive_byte_instr ii enc (Store_Exclusive_Byte n d t) =
-    instruction ii "store_exclusive_byte"
+    null_check_instruction ii "store_exclusive_byte" n
       (ARCH (if enc = Encoding_Thumb2 then
                {a | version_number a >= 7}
              else
@@ -2641,7 +2819,7 @@ val store_exclusive_byte_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val load_exclusive_halfword_instr_def = iDefine`
   load_exclusive_halfword_instr ii enc (Load_Exclusive_Halfword n t) =
-    instruction ii "load_exclusive_halfword"
+    null_check_instruction ii "load_exclusive_halfword" n
       (ARCH (if enc = Encoding_Thumb2 then
                {a | version_number a >= 7}
              else
@@ -2660,7 +2838,7 @@ val load_exclusive_halfword_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val store_exclusive_halfword_instr_def = iDefine`
   store_exclusive_halfword_instr ii enc (Store_Exclusive_Halfword n d t) =
-    instruction ii "store_exclusive_halfword"
+    null_check_instruction ii "store_exclusive_halfword" n
       (ARCH (if enc = Encoding_Thumb2 then
                {a | version_number a >= 7}
              else
@@ -2898,7 +3076,7 @@ val set_endianness_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val secure_monitor_call_instr_def = iDefine`
   secure_monitor_call_instr ii =
-    instruction ii "secure_monitor_call" (EXT {e | Extension_Security IN e}) {}
+    instruction ii "secure_monitor_call" security_support {}
       (current_mode_is_priviledged ii >>=
        (\current_mode_is_priviledged.
            if current_mode_is_priviledged then
@@ -3305,7 +3483,15 @@ val branch_instruction_def = with_flag (priming, SOME "_") Define`
     || Compare_Branch nonzero imm6 rn ->
          compare_branch_instr ii inst
     || Table_Branch_Byte rn h rm ->
-         table_branch_byte_instr ii inst`;
+         table_branch_byte_instr ii inst
+    || Check_Array rn rm ->
+         check_array_instr ii inst
+    || Handler_Branch_Link l handler ->
+         handler_branch_link_instr ii inst
+    || Handler_Branch_Link_Parameter imm5 handler ->
+         handler_branch_link_parameter_instr ii inst
+    || Handler_Branch_Parameter imm3 handler ->
+         handler_branch_parameter_instr ii inst`;
 
 val data_processing_instruction_def = with_flag (priming, SOME "_") Define`
   data_processing_instruction ii (enc,inst) =
@@ -3466,6 +3652,8 @@ val miscellaneous_instruction_def = with_flag (priming, SOME "_") Define`
          take_svc_exception ii
     || Secure_Monitor_Call imm4 ->
          secure_monitor_call_instr ii
+    || Enterx_Leavex is_enterx ->
+         enterx_leavex_instr ii is_enterx
     || Clear_Exclusive ->
          clear_exclusive_instr ii enc
     || If_Then firstcond mask ->
@@ -3527,8 +3715,12 @@ val eval_ss =
 val instruction_rule = SIMP_RULE eval_ss
   [(GEN_ALL o SIMP_RULE std_ss [] o Q.ISPEC `\x. a NOTIN x`) COND_RAND,
    DECIDE ``~(a >= b) = a < b:num``,  condT_def,
-   arm_coretypesTheory.NOT_IN_EMPTY_SPECIFICATION, instruction_def,
-   dsp_support_def, kernel_support_def, arm_coretypesTheory.thumb2_support_def];
+   arm_coretypesTheory.NOT_IN_EMPTY_SPECIFICATION,
+   instruction_def, run_instruction_def, null_check_instruction_def,
+   dsp_support_def, kernel_support_def,
+   arm_coretypesTheory.thumb2_support_def,
+   arm_coretypesTheory.security_support_def,
+   arm_coretypesTheory.thumbee_support_def];
 
 val instructions = map (I ## instruction_rule) (!instructions);
 

@@ -482,6 +482,10 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
 val (outputfunctions as {warn,info,tgtfatal,diag}) =
     output_functions {quiet_flag = quiet_flag, debug = debug}
 
+val _ = diag ("CommandLine.name() = "^CommandLine.name())
+val _ = diag ("CommandLine.arguments() = "^
+              String.concatWith ", " (CommandLine.arguments()))
+
 (* call out to (exec) a different Holmake *)
 val _ = do_lastmade_checks outputfunctions
                            {no_lastmakercheck = no_lastmakercheck}

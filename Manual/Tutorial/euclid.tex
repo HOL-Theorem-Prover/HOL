@@ -7,12 +7,12 @@ In this chapter, we prove in \holn{} that for every number, there is a
 prime number that is larger, \ie, that the prime numbers form an
 infinite sequence. This proof has been excerpted and adapted from a
 much larger example due to John Harrison, in which he proved the $n =
-4$ case of Fermat's Last Theorem. The proof development is intended 
-to serve as an introduction to performing high-level interactive proofs 
-in \holn.\footnote{The proofs discussed below may be found in 
+4$ case of Fermat's Last Theorem. The proof development is intended
+to serve as an introduction to performing high-level interactive proofs
+in \holn.\footnote{The proofs discussed below may be found in
 \texttt{examples/euclid.sml} of the \holn distribution.}
-Many of the details may be difficult to grasp for the novice reader; 
-nonetheless, it is recommended that the example be followed through in 
+Many of the details may be difficult to grasp for the novice reader;
+nonetheless, it is recommended that the example be followed through in
 order to gain a true taste of using \HOL{} to prove non-trivial theorems.
 
 Some tutorial descriptions of proof systems show the system performing
@@ -20,7 +20,7 @@ amazing feats of automated theorem proving. In this example, we have
 \textit{not} taken this approach; instead, we try to show how one
 actually goes about the business of proving theorems in \holn{}: when
 more than one way to prove something is possible, we will consider the
-choices; when a difficulty arises, we will attempt to explain how to fight 
+choices; when a difficulty arises, we will attempt to explain how to fight
 one's way clear.
 
 One `drives' \holn{} by interacting with the ML top-level loop. In this
@@ -40,7 +40,7 @@ from the \HOL{} theory of arithmetic are made available at the top level.
   ...
 \end{verbatim}
 \end{session}
-We now begin the formalization. In order to define the concept of  
+We now begin the formalization. In order to define the concept of
 prime number, we first need to define the \emph{divisibility} relation:
 
 \begin{session}
@@ -61,10 +61,10 @@ definition and (useful) proved theorem: the \ML{} environment is thus
 being used as a convenient place to hold definitions and theorems for
 later reference in the session.
 
-We want to treat \ml{divides} as a (right associative) infix:
+We want to treat \ml{divides} as a (non-associating) infix:
 \begin{session}
 \begin{verbatim}
-- set_fixity "divides" (Infixr 450);
+- set_fixity "divides" (Infix(NONASSOC, 450));
 \end{verbatim}
 \end{session}
 Next we define the property of a number being \emph{prime}: a number $p$ is
@@ -95,37 +95,37 @@ simpler problem of explaining how to prove the required theorems.
 \paragraph{Proof tools}
 The development will illustrate that there is often more than one way to
 tackle a HOL proof, even if one has only a single (informal) proof in
-mind. In this example, we often \emph{find} proofs by using 
-the rewriter \ml{RW\_TAC} to unwind definitions and perform basic 
+mind. In this example, we often \emph{find} proofs by using
+the rewriter \ml{RW\_TAC} to unwind definitions and perform basic
 simplifications, often reducing a goal to its essence.
 \begin{session}
 \begin{verbatim}
 RW_TAC;
-val it = fn :simpset -> thm list -> term list * term -> 
+val it = fn :simpset -> thm list -> term list * term ->
              (term list * term) list * (thm list -> thm)
 \end{verbatim}
 \end{session}
-The ML type of \ml{RW\_TAC} is 
+The ML type of \ml{RW\_TAC} is
 \ml{:simpset -> thm list -> tactic}.\footnote{Unfortunately, the MoscowML system does not print out
-the type of tactics in its abbreviated form.} 
-When \ml{RW\_TAC} is applied to a \textit{simpset}---for this example it will 
+the type of tactics in its abbreviated form.}
+When \ml{RW\_TAC} is applied to a \textit{simpset}---for this example it will
 always be \ml{arith\_ss}---and a list of theorems, the
-theorems will be added to the simpset as supplementary rewrite rules. 
+theorems will be added to the simpset as supplementary rewrite rules.
 We will see that \ml{arith\_ss} is also somewhat knowledgeable about
 arithmetic.\footnote{Linear arithmetic especially: purely universal
 formulas involving the operators {\tt SUC}, $+$, $-$, numeric
 literals, $<$, $\leq$, $>$, $\geq$, $=$, and multiplication by numeric
 literals.}
-Sometimes simplification with \ml{RW\_TAC} proves the goal immediately. 
+Sometimes simplification with \ml{RW\_TAC} proves the goal immediately.
 Often however, we are left with a goal that requires some study before one
 realizes what lemmas are needed to conclude the proof. Once these lemmas
-have been proven, or located in ancestor theories, 
+have been proven, or located in ancestor theories,
 \ml{METIS\_TAC}\footnote{\ml{METIS\_TAC}
 performs resolution-style first-order proof search.} can
 be invoked with them, with the expectation that it will find the right
 instantiations needed to finish the proof. Note that these two operations,
-simplification and resolution-style automatic proof search, will not suffice to 
-perform all the proofs in this example; in particular, our development will 
+simplification and resolution-style automatic proof search, will not suffice to
+perform all the proofs in this example; in particular, our development will
 also need case analysis and induction.
 
 \paragraph{Finding theorems}
@@ -147,7 +147,7 @@ two search facilities are often more useful.
 \item  \verb+DB.match+ allows the use of patterns to locate the
 sought-for theorem. Any stored theorem having an instance of the pattern
 as a subterm will be returned.
-\item \verb+DB.find+ will use fragments of names as keys with which to 
+\item \verb+DB.find+ will use fragments of names as keys with which to
 lookup information.
 \end{itemize}
 
@@ -254,7 +254,7 @@ take just one step:
 - restart();
 >   ...
 
-- e (RW_TAC arith_ss [divides_def] THEN EXISTS_TAC ``0`` 
+- e (RW_TAC arith_ss [divides_def] THEN EXISTS_TAC ``0``
      THEN RW_TAC arith_ss []);
 OK..
 
@@ -447,7 +447,7 @@ OK..
 The right disjunct has been simplified; however, the left disjunct has
 failed to expand the definition of multiplication in the expression
 $\mathtt{SUC}\ n * x$, which would have been convenient. In fact, it has
-changed it to $x * \mathtt{SUC}\ n$, which is inconvenient. 
+changed it to $x * \mathtt{SUC}\ n$, which is inconvenient.
 Why, when \verb+arith_ss+ and hence \ml{RW\_TAC} is supposed to be expert in
 arithmetic? The answer is twofold: first, the recursive clauses for addition and
 multiplication are not in \verb+arith_ss+ because uncontrolled
@@ -864,8 +864,8 @@ tactic:
 > ...
 
 - e (RW_TAC arith_ss [LESS_EQ_EXISTS]
-       THEN Induct_on `p` THENL 
-       [RW_TAC arith_ss [] THEN Cases_on `m` THENL 
+       THEN Induct_on `p` THENL
+       [RW_TAC arith_ss [] THEN Cases_on `m` THENL
           [METIS_TAC [DECIDE ``!x. ~(x < x)``],
            RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
         RW_TAC arith_ss [FACT, ADD_CLAUSES] THEN METIS_TAC [DIVIDES_RMUL]]);
@@ -896,7 +896,7 @@ is
  RW_TAC arith_ss [LESS_EQ_EXISTS]
    THEN Induct_on `p`
    THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
-   THENL [Cases_on `m` THENL 
+   THENL [Cases_on `m` THENL
             [METIS_TAC [DECIDE ``!x. ~(x < x)``],
              RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
           METIS_TAC [DIVIDES_RMUL]]
@@ -913,7 +913,7 @@ single invocation of \ml{METIS\_TAC}:
  RW_TAC arith_ss [LESS_EQ_EXISTS]
    THEN Induct_on `p`
    THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
-   THENL [Cases_on `m` THEN 
+   THENL [Cases_on `m` THEN
             METIS_TAC[DECIDE ``!x. ~(x<x)``,FACT,DIVIDES_RMUL,DIVIDES_REFL],
           METIS_TAC [DIVIDES_RMUL]]
 \end{verbatim}
@@ -934,7 +934,7 @@ function on the goal.
      THEN Induct_on `p`
      THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
      THENL [Cases_on `m`, ALL_TAC]
-     THEN METIS_TAC [DECIDE ``!x. ~(x < x)``, 
+     THEN METIS_TAC [DECIDE ``!x. ~(x < x)``,
                      FACT, DIVIDES_RMUL, DIVIDES_REFL]
 \end{verbatim}
 \end{hol}
@@ -945,8 +945,8 @@ The result is that there will be three subgoals emerging from the
 case. Each is proved with a call to \ml{METIS\_TAC}. Are we now done?
 Not necessarily. For example, the explicit case split, namely \ml{Cases\_on `m`},
 can be replaced by providing the \emph{cases} theorem for natural numbers
-(\ml{num\_CASES}) to \ml{METIS\_TAC}. With this, the case split on $m$ will be 
-automatically generated by \ml{METIS\_TAC} as it searches for the proof. Hence we 
+(\ml{num\_CASES}) to \ml{METIS\_TAC}. With this, the case split on $m$ will be
+automatically generated by \ml{METIS\_TAC} as it searches for the proof. Hence we
 can shorten the tactic again.
 \begin{session}
 \begin{verbatim}
@@ -1537,11 +1537,11 @@ Goal proved.  ...
 \end{session}
 Notice the `on-the-fly' use of \verb+DECIDE+ to provide an \textit{ad hoc}
 rewrite. Looking at the remaining goal, one might think that our aim, to
-prove falsity, has been lost. But this is not so: a goal 
-$\neg P \lor \neg Q$ is logically equivalent to $P \imp Q \imp \mathtt{F}$. 
-In the following invocation, we use the equality 
+prove falsity, has been lost. But this is not so: a goal
+$\neg P \lor \neg Q$ is logically equivalent to $P \imp Q \imp \mathtt{F}$.
+In the following invocation, we use the equality
 $\vdash A \imp B = \neg A \lor B$ as a rewrite rule oriented right to left by
-use of \ml{GSYM}.\footnote{Loosely speaking, \ml{GSYM} swaps the left and 
+use of \ml{GSYM}.\footnote{Loosely speaking, \ml{GSYM} swaps the left and
 right hand sides of any equations it finds.}
 \begin{session}
 \begin{verbatim}
@@ -1560,8 +1560,8 @@ OK..
 \end{verbatim}
 \end{session}
 
-We can quickly proceed to show that $p \ \mathtt{divides}\ (\mathtt{FACT}\; n)$, 
-and thus that $p = 1$, hence that $p$ is not prime, at which point we are done. 
+We can quickly proceed to show that $p \ \mathtt{divides}\ (\mathtt{FACT}\; n)$,
+and thus that $p = 1$, hence that $p$ is not prime, at which point we are done.
 This can all be packaged into a single invocation of \ml{METIS\_TAC}:
 \begin{session}
 \begin{verbatim}

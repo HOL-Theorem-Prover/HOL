@@ -3,15 +3,12 @@ sig
 
     include Abbrev
 
-    val tailrec_define       : term -> term option -> thm * thm
+    val tailrec_define              : term -> thm
+    val tailrec_define_with_pre     : term -> term -> thm * thm
 
-    val tailrec_ss           : unit -> simpLib.ssfrag
-    val tailrec_top_ss       : unit -> simpLib.ssfrag
-    val tailrec_part_ss      : unit -> simpLib.ssfrag
-    val tailrec_reverse_ss   : unit -> simpLib.ssfrag
+    val tailrec_define_from_step    : string -> term -> (term * term option) option -> 
+                                      thm * thm * thm * thm
 
-    val TAILREC_EQ_TAC       : unit -> tactic
-
-    val tailrec_add_to_simpsets : thm * thm * thm * thm * thm * thm -> unit
+    val TAILREC_TAC                 : tactic
 
 end

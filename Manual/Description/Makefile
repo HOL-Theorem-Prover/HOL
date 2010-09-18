@@ -7,9 +7,9 @@ DVILATEX=latex
 MAKEINDEX=makeindex
 BIBTEX=bibtex
 
-CHAPTERS = conv.tex drules.tex HolSat.tex HolSmt.tex libraries.tex	\
-           misc.tex preface.tex semantics.tex syntax.tex tactics.tex	\
-           theories.tex title.tex system.tex definitions.tex
+CHAPTERS = conv.tex drules.tex HolQbf.tex HolSat.tex HolSmt.tex		\
+           libraries.tex misc.tex preface.tex semantics.tex syntax.tex	\
+           tactics.tex theories.tex title.tex system.tex definitions.tex
 OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex
 
 default: pdf

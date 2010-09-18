@@ -549,9 +549,9 @@ val thumb_decode_def =
                Miscellaneous (Hint (hint_decode ((7 >< 4) ireg)))
              else
                Miscellaneous (If_Then (r4 4) mask))
-      || (T,T,F, F , F ,_10,_9,_8,_7,_6) -> (* STMIA *)
+      || (T,T,F, F , F ,b10,b9,b8,_7,_6) -> (* STMIA *)
            LoadStore (Store_Multiple F T F T (r 8) ((7 >< 0) ireg))
-      || (T,T,F, F , T ,_10,_9,_8,_7,_6) -> (* LDMIA *)
+      || (T,T,F, F , T ,b10,b9,b8,b7,_6) -> (* LDMIA *)
           (let rn = r 8 in
            let wback = ~(ireg ' (w2n rn)) in
              LoadStore (Load_Multiple F T F wback rn ((7 >< 0) ireg)))
@@ -570,6 +570,80 @@ val thumb_decode_def =
            else
              Branch (Branch_Target (sw2sw ((10 >< 0) ireg : word11)))
       || _ -> Undefined)`;
+
+val thumbee_decode_def =
+  with_flag (computeLib.auto_import_definitions,false) Define`
+  thumbee_decode arch IT (ireg : word16) =
+    let b n = ireg ' n
+    and r n  = ( n + 2  >< n ) ireg : word4
+    and r4 n = ( n + 3  >< n ) ireg : word4
+    and cond = if IT = 0w then 0b1110w else (7 >< 4) IT
+    in
+      case (b 15,b 14,b 13,b 12,b 11,b 10,b 9,b 8)
+      of (F,T,F,T,F,F,F,_) -> (* STR(2) *)
+           (Encoding_ThumbEE, cond,
+            LoadStore
+              (Store T T F F F (r 3) (r 0) (Mode2_register 2w 0w (r 6))))
+      || (F,T,F,T,F,F,T,_) -> (* STRH(2) *)
+           (Encoding_ThumbEE, cond,
+            LoadStore
+              (Store_Halfword T T F F (r 3) (r 0) (Mode3_register 1w (r 6))))
+      || (F,T,F,T,T,F,F,_) -> (* LDR(2) *)
+           (Encoding_ThumbEE, cond,
+            LoadStore (Load T T F F F (r 3) (r 0) (Mode2_register 2w 0w (r 6))))
+      || (F,T,F,T,T,F,T,_) -> (* LDRH(2) *)
+           (Encoding_ThumbEE, cond,
+            LoadStore
+              (Load_Halfword T T F F T F (r 3) (r 0) (Mode3_register 1w (r 6))))
+      || (F,T,F,T,T,T,T,_) -> (* LDRSH *)
+           (Encoding_ThumbEE, cond,
+            LoadStore
+              (Load_Halfword T T F T T F (r 3) (r 0) (Mode3_register 1w (r 6))))
+      || (T,T,F,F,F,F,F,F) ->
+           (Encoding_ThumbEE, cond,
+            if InITBlock IT /\ ~LastInITBlock IT then
+              Unpredictable
+            else
+              Branch (Handler_Branch_Parameter ((7 >< 5) ireg) ((4 >< 0) ireg)))
+      || (T,T,F,F,F,F,F,T) ->
+           (Encoding_ThumbEE, cond, Undefined)
+      || (T,T,F,F,F,F,T,_) ->
+           (Encoding_ThumbEE, cond,
+            if InITBlock IT /\ ~LastInITBlock IT then
+              Unpredictable
+            else
+              Branch (Handler_Branch_Link (b 8) ((7 >< 0) ireg)))
+      || (T,T,F,F,F,T,_,_) ->
+           (Encoding_ThumbEE, cond,
+            if InITBlock IT /\ ~LastInITBlock IT then
+              Unpredictable
+            else
+              Branch
+                (Handler_Branch_Link_Parameter ((9 >< 5) ireg) ((4 >< 0) ireg)))
+      || (T,T,F,F,T,F,F,_) ->
+           (Encoding_ThumbEE, cond,
+            LoadStore
+              (Load T F F F F (r 3) (r 0)
+                (Mode2_immediate (((8 >< 6) ireg) << 2))))
+      || (T,T,F,F,T,F,T,F) ->
+           (Encoding_ThumbEE, cond,
+            Branch (Check_Array ((3 :+ b 7) (r 0)) (r4 3)))
+      || (T,T,F,F,T,F,T,T) ->
+           (Encoding_ThumbEE, cond,
+            LoadStore
+              (Load T T F F F 10w (r 0)
+                (Mode2_immediate (((7 >< 3) ireg) << 2))))
+      || (T,T,F,F,T,T,F,_) ->
+           (Encoding_ThumbEE, cond,
+            LoadStore
+              (Load T T F F F 9w (r 0)
+                (Mode2_immediate (((8 >< 3) ireg) << 2))))
+      || (T,T,F,F,T,T,T,_) ->
+           (Encoding_ThumbEE, cond,
+            LoadStore
+              (Store T T F F F 9w (r 0)
+                (Mode2_immediate (((8 >< 3) ireg) << 2))))
+      || _ -> (Encoding_Thumb, thumb_decode arch IT ireg)`;
 
 (* ------------------------------------------------------------------------ *)
 
@@ -884,6 +958,11 @@ val thumb2_decode_aux6_def = with_flag (priming, SOME "_") Define`
              StatusAccess
                (Change_Processor_State (ib2 9) b7 b6 b5
                   (if b8 then SOME (ib5 0) else NONE))
+      || (F , T, T, T, F, T, T,  F ,b13, F ,b11,b10,b9,b8, F, F, F, b4) ->
+           if InITBlock then
+             Unpredictable
+           else
+             Miscellaneous (Enterx_Leavex b4)
       || (F , T, T, T, F, T, T,  F ,b13, F ,b11,b10,b9,b8, F, F, T, F) ->
            Miscellaneous Clear_Exclusive
       || (F , T, T, T, F, T, T,  F ,b13, F ,b11,b10,b9,b8, F, T, F, F) ->
@@ -901,21 +980,21 @@ val thumb2_decode_aux6_def = with_flag (priming, SOME "_") Define`
            StatusAccess (Status_to_Register a4 (rb 8))
       || (T , T, T, T, T, T, T,  F , F , F ,b11,b10,b9,b8,b7,b6,b5,b4) ->
            Miscellaneous (Secure_Monitor_Call (ia4 0))
-      || (a10, T, T, T,a6,a5,a4,  F ,b13, F ,b11,b10,b9,b8,b7,b6,b5,b4) ->
+      || (a10, T, T, T,a6,a5,a4, F ,b13, F ,b11,b10,b9,b8,b7,b6,b5,b4) ->
            Undefined
-      || (a10,a9,a8,a7,a6,a5,a4,  F ,b13, F ,b11,b10,b9,b8,b7,b6,b5,b4) ->
+      || (a10,a9,a8,a7,a6,a5,a4, F ,b13, F ,b11,b10,b9,b8,b7,b6,b5,b4) ->
           (if InITBlock then
              Unpredictable
            else let S = ia1 10 and J1 = ib1 13 and J2 = ib1 11 in
              Branch
                (Branch_Target (sw2sw (S @@ J2 @@ J1 @@ ia6 0 @@ ib11 0))))
-      || (a10,a9,a8,a7,a6,a5,a4,  F ,b13, T ,b11,b10,b9,b8,b7,b6,b5,b4) ->
+      || (a10,a9,a8,a7,a6,a5,a4, F ,b13, T ,b11,b10,b9,b8,b7,b6,b5,b4) ->
           (if InITBlock /\ ~LastInITBlock then
              Unpredictable
            else let S = ia1 10 and J1 = ib1 13 and J2 = ib1 11 in
                 let I1 = ~(J1 ?? S) and I2 = ~(J2 ?? S) in
              Branch (Branch_Target (S @@ I1 @@ I2 @@ ia10 0 @@ ib11 0)))
-      || (a10,a9,a8,a7,a6,a5,a4,  T ,b13,b12,b11,b10,b9,b8,b7,b6,b5,b4) ->
+      || (a10,a9,a8,a7,a6,a5,a4, T ,b13,b12,b11,b10,b9,b8,b7,b6,b5,b4) ->
           (if ~b12 /\ b 0 then
              Undefined
            else if InITBlock /\ ~LastInITBlock then
@@ -1268,8 +1347,9 @@ val thumb2_decode_aux9_def = with_flag (priming, SOME "_") Define`
 (* ........................................................................ *)
 
 val thumb2_decode_def = with_flag (priming, SOME "_") Define`
-  thumb2_decode IT (ireg1 : word16, ireg2 : word16) =
-    let a n = ireg1 ' n
+  thumb2_decode arch IT (ireg1 : word16, ireg2 : word16) =
+    let IT = if arch IN thumb2_support then IT else 0w
+    and a n = ireg1 ' n
     and b n = ireg2 ' n
     in
     let a12 = a 12 and a11 = a 11 and a9 = a 9 and b15 = b 15
@@ -1421,7 +1501,8 @@ fun rule l =
   SIMP_RULE (std_ss++wordsLib.WORD_ss++boolSimps.LET_ss)
     [n2w, EQ_BITS, BITS_COMP_THM2, BITS_ZERO2] o
   SIMP_RULE (std_ss++wordsLib.SIZES_ss)
-    [InITBlock_def, LastInITBlock_def, wordsTheory.word_extract_n2w,
+    [InITBlock_def, LastInITBlock_def,
+     wordsTheory.word_extract_n2w,
      wordsTheory.word_bits_n2w] o
   Q.SPECL l;
 
@@ -1438,7 +1519,10 @@ val arm_decode_not_v4 = save_thm("arm_decode_not_v4",
     |> REWRITE_RULE []);
 
 val thumb_decode = save_thm("thumb_decode",
-  rule [`arch`,`IT`,`n2w n`] thumb_decode_def);
+  rule [`arch`,`it`,`n2w n`] thumb_decode_def);
+
+val thumbee_decode = save_thm("thumbee_decode",
+  rule [`arch`,`it`,`n2w n`] thumbee_decode_def);
 
 val thumb2_decode_aux1 = save_thm("thumb2_decode_aux1",
   rule [`n2w it`, `n2w m`, `n2w n`] thumb2_decode_aux1_def);
@@ -1468,12 +1552,13 @@ val thumb2_decode_aux9 = save_thm("thumb2_decode_aux9",
   rule [`n2w m`, `n2w n`] thumb2_decode_aux9_def);
 
 val thumb2_decode = save_thm("thumb2_decode",
-  rule [`n2w it`, `n2w m`, `n2w n`] thumb2_decode_def);
+  rule [`arch`,`n2w it`, `n2w m`, `n2w n`] thumb2_decode_def);
 
 val _ = computeLib.add_persistent_funs
   [("arm_decode_v4", arm_decode_v4),
    ("arm_decode_not_v4", arm_decode_not_v4),
    ("thumb_decode", thumb_decode),
+   ("thumbee_decode", thumbee_decode),
    ("thumb2_decode_aux1", thumb2_decode_aux1),
    ("thumb2_decode_aux2", thumb2_decode_aux2),
    ("thumb2_decode_aux3", thumb2_decode_aux3),

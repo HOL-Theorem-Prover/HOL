@@ -153,19 +153,28 @@ fun ok_symbolic str =
    (loop 1 handle _ => true)
    end;
 
-fun ok_sml_identifier str =
-  let val sub = Word8Array.sub
-      fun alphaloop i =
-             (sub(alphanumerics,ordof(str,i)) = bone) andalso alphaloop(i+1)
-      fun symloop i =
-             (sub(sml_symbols,ordof(str,i)) = bone) andalso symloop(i+1)
-   in
-     if ((sub(alphabet,ordof(str,0)) = bone) handle _ => false)
-     then (alphaloop 1 handle _ => true)
-     else if ((sub(sml_symbols,ordof(str,0)) = bone) handle _ => false)
-          then (symloop 1 handle _ => true)
-          else false
-   end;
+val sml_keywords =
+    Binaryset.addList (Binaryset.empty String.compare,
+                       ["op", "if", "then", "else", "val", "fun",
+                        "structure", "signature", "struct", "sig", "open",
+                        "infix", "infixl", "infixr", "andalso", "orelse",
+                        "and", "datatype", "type", "where", ":", ":>",
+                        "let", "in", "end", "while", "do"])
+
+fun ok_sml_identifier str = let
+  val sub = Word8Array.sub
+  fun alphaloop i =
+      (sub(alphanumerics,ordof(str,i)) = bone) andalso alphaloop(i+1)
+  fun symloop i =
+      (sub(sml_symbols,ordof(str,i)) = bone) andalso symloop(i+1)
+in
+  if Binaryset.member(sml_keywords, str) then false
+  else if ((sub(alphabet,ordof(str,0)) = bone) handle _ => false) then
+    (alphaloop 1 handle _ => true)
+  else if ((sub(sml_symbols,ordof(str,0)) = bone) handle _ => false) then
+    (symloop 1 handle _ => true)
+  else false
+end
 
 
 (*---------------------------------------------------------------------------

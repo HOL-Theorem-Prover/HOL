@@ -71,7 +71,7 @@ fun parse tyv tmv c cs0 = let
         end
       | (SOME lparen, cs') => parse_term (BK :: stk) (adv cs')
       | (SOME (id i), cs') => reduce_tmb stk (Vector.sub(tmv,i)) (adv cs')
-      | _ => raise ERR "parse_term" "impossible"
+      | _ => raise Fail "parse failure 1 in RawParse.parse"
   and reduce_tmb stk tm cur =
       case stk of
         [] => NONE
@@ -84,14 +84,14 @@ fun parse tyv tmv c cs0 = let
       | (SOME(id i), cs') => reduce_tmb stk (Vector.sub(tmv,i)) (adv cs')
       | (SOME lparen, cs') => parse_term (BK :: stk) (adv cs')
       | (SOME rparen, cs') => reduce_tm stk (adv cs')
-      | _ => raise ERR "parse_tmc" "impossible"
+      | _ => raise Fail "parse failure 2 in RawParse.parse"
   and reduce_tm stk cur =
       case stk of
         C t :: BK :: rest => reduce_tmb rest t cur
       | C t :: Start :: rest => SOME (t, #2 cur)
       | C t :: LAM bv :: rest => reduce_tm (C (mk_abs(bv,t)) :: rest) cur
       | C t :: TYLAM bv :: rest => reduce_tm (C (mk_tyabs(bv,t)) :: rest) cur
-      | _ => raise ERR "reduce_term" "impossible"
+      | _ => raise Fail "parse failure 3 (reduce) in RawParse.parse"
 in
   parse_term [Start] (adv cs0)
 end

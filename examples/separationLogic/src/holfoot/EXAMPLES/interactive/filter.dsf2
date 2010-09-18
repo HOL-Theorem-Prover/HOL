@@ -2,12 +2,9 @@ list_filter(l;x) [data_list(l,data)] {
   local y, z, e;
   y = l;
   z = NULL;
-  loop_spec [(x == #fc) * (y == #yc) * (l == #lc) *
+  loop_spec [data_list (y, data2) * 
              (if (y != l) then 
-                 data_lseg (l, data, z) * (z |-> tl:y,dta:#zdata)
-              else
-                 emp) *
-             data_list (y, data2)] {
+                data_lseg (l, data, z) * (z |-> tl:y,dta:#zdata))] {
     while (y != NULL) {
       e = y->dta;
       if(e == x) { /* need to remove y */
@@ -26,12 +23,11 @@ list_filter(l;x) [data_list(l,data)] {
         y = y->tl;
       }
     }
-  } [if (#yc == #lc) then
-       data_list(l, ``FILTER (\n:num. ~(n = fc)) data2``)
+  } [if (old(y) == old(l)) then
+       data_list(l, ``FILTER (\n. ~(n = x)) data2``)
      else
-       (data_list(l, ``data ++ [zdata] ++ (FILTER (\n:num. ~(n = fc)) data2)``) * 
-       (l != y))]
-} [data_list(l, ``FILTER (\n:num. ~(n = x:num)) data``)]
+       (data_list(l, ``data ++ [zdata] ++ (FILTER (\n. ~(n = x)) data2)``))]
+} [data_list(l, ``FILTER (\n. ~(n = x)) data``)]
 
 
 

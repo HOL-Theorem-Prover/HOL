@@ -2,10 +2,10 @@
 
 (* Common auxiliary functions. *)
 
-structure Library =
+structure QbfLibrary =
 struct
 
-  val ERR = Feedback.mk_HOL_ERR "Library"
+  val ERR = Feedback.mk_HOL_ERR "QbfLibrary"
 
 (* ------------------------------------------------------------------------- *)
 (* write_strings_to_file: opens 'path' as an output text file; writes all    *)
@@ -223,7 +223,7 @@ end
 (*      value; drops duplicates that occur in both lists                     *)
 (* ------------------------------------------------------------------------- *)
 
-  fun merge xs [] = xs
+  fun merge xs [] : (int * 'a * 'b) list = xs
     | merge [] ys = ys
     | merge (xs as xhd :: xtails) (ys as yhd :: ytails) =
     let

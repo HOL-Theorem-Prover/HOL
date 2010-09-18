@@ -41,7 +41,7 @@ val _ = Parse.type_abbrev("arm_set",``:arm_el set``);
 
 val ARM_OK_def = Define `
   ARM_OK state = 
-    (ARM_ARCH state = ARMv7_A) /\ (ARM_EXTENSIONS state = {}) /\
+    (ARM_ARCH state = ARMv4) /\ (ARM_EXTENSIONS state = {}) /\
     (ARM_UNALIGNED_SUPPORT state) /\ (ARM_READ_EVENT_REGISTER state) /\
     ~(ARM_READ_INTERRUPT_WAIT state) /\ ~(ARM_READ_SCTLR sctlrV state) /\
     (ARM_READ_SCTLR sctlrA state) /\ ~(ARM_READ_SCTLR sctlrU state) /\
@@ -195,7 +195,7 @@ val aPC_def = Define `aPC x = aR 15w x * aU1 F * cond (ALIGNED x)`;
 
 val aS_def = Define `aS (n,z,c,v) = aS1 psrN n * aS1 psrZ z * aS1 psrC c * aS1 psrV v`;
 
-val ARM_NEXT_REL_def = Define `ARM_NEXT_REL s s' = (ARM_NEXT s = SOME s')`;
+val ARM_NEXT_REL_def = Define `ARM_NEXT_REL s s' = (ARM_NEXT NoInterrupt s = SOME s')`;
 
 val ARM_INSTR_def    = Define `ARM_INSTR (a,w:word32) =
   { aMem (a+3w) ((31 >< 24) w) ;
@@ -359,7 +359,7 @@ val IMP_ARM_SPEC_LEMMA = prove(
   ``!p q.
       (!rs ms st cp ud s. ?s'.
         (p (arm2set' (rs,ms,st,cp,ud) s) ==>
-        (ARM_NEXT s = SOME s') /\ q (arm2set' (rs,ms,st,cp,ud) s') /\
+        (ARM_NEXT NoInterrupt s = SOME s') /\ q (arm2set' (rs,ms,st,cp,ud) s') /\
         (arm2set'' (rs,ms,st,cp,ud) s = arm2set'' (rs,ms,st,cp,ud) s'))) ==>
       SPEC ARM_MODEL p {} q``,
   SIMP_TAC std_ss [RIGHT_EXISTS_IMP_THM] \\ REWRITE_TAC [ARM_SPEC_SEMANTICS]

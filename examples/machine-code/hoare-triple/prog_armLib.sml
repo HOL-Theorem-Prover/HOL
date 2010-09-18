@@ -38,7 +38,7 @@ fun process tm = let
      else if eq tm ``psrZ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrz",``:bool``))
      else if eq tm ``psrC:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrc",``:bool``))
      else if eq tm ``psrV:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrv",``:bool``))
-     else if eq tm ``sQ:arm_bit``   then (mk_comb(``aS1``,tm),mk_var("psrq",``:bool``))
+     else if eq tm ``psrQ:arm_bit`` then (mk_comb(``aS1``,tm),mk_var("psrq",``:bool``))
      else if type_of tm = ``:word32`` then
        (mk_comb(``aM1:word32 -> word8 -> arm_set -> bool``,tm),mk_var(name_of_tm tm,``:word8``))
      else fail() end;
@@ -333,7 +333,7 @@ fun post_process_thm th = let
 
 fun arm_prove_one_spec s th = let
   val g = concl th
-  val next = cdr (find_term (can (match_term ``ARM_NEXT s = s'``)) g)
+  val next = cdr (find_term (can (match_term ``ARM_NEXT x s = s'``)) g)
   val (pre,post) = arm_pre_post g
   val tm = ``SPEC ARM_MODEL pre {(p,n2w c)} post``
   val tm = subst [mk_var("pre",type_of pre) |-> pre,
@@ -375,8 +375,8 @@ val precond_INTRO = prove(
 
 fun arm_prove_specs m_pred s = let
   val _ = set_arm_memory_pred m_pred
-  val thms = [arm_step "v7" s]
-  val thms = (thms @ [arm_step "v7,fail" s]) handle HOL_ERR _ => thms
+  val thms = [arm_step "v4" s]
+  val thms = (thms @ [arm_step "v4,fail" s]) handle HOL_ERR _ => thms
 (*
   val th = hd thms
 *)
@@ -435,6 +435,7 @@ val arm_tools_byte = (arm_spec_byte_memory, arm_jump, arm_status, arm_pc);
 
 (*
 
+  val m_pred = "auto"
   fun enc s = let val _ = print ("\n\n"^s^"\n\n") in arm_enc s end
 
   val thms = arm_spec (enc "TST r5, #3");

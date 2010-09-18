@@ -267,7 +267,7 @@ val re_semirecursive2 = prove(
     Q_TAC SUFF_TAC `z -β->* church j` THEN1
        METIS_TAC [chap3Theory.bnf_reduction_to_self] THEN
     METIS_TAC [chap3Theory.betastar_lameq_bnf, bnf_church,
-               chap2Theory.lam_eq_rules]
+               chap2Theory.lameq_rules]
   ]);
 
 val re_semidp = store_thm(

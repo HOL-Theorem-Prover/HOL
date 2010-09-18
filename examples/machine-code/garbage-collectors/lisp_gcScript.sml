@@ -357,7 +357,7 @@ val ref_cheney_move = prove(
 
 val arm_move2_thm = prove(
   ``(arm_move2 = arm_move) /\ (arm_move2_pre = arm_move_pre)``,
-  TAILREC_EQ_TAC());
+  TAILREC_TAC \\ SIMP_TAC std_ss [LET_DEF]);
 
 val ref_cheney_inv_def = Define `
   ref_cheney_inv (b,i,j,k,e,f,m,w,ww,r) (a,r3,r4,d,xs,ys) =
@@ -460,18 +460,18 @@ val ref_cheney_loop_th = prove(
   completeInduct_on `e - i:num` \\ NTAC 2 (ONCE_REWRITE_TAC [cheney_def])
   \\ ASM_REWRITE_TAC [GSYM AND_IMP_INTRO] \\ NTAC 28 STRIP_TAC
   \\ ONCE_REWRITE_TAC [def4]
-  \\ SIMP_TAC (std_ss++tailrec_part_ss()) []
+  \\ SIMP_TAC std_ss []
   \\ Cases_on `i = j` THEN1
     (Q.PAT_ASSUM `!m.bb` (K ALL_TAC)
      \\ FULL_SIMP_TAC std_ss [ref_cheney_inv_def] \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
-     \\ ASM_SIMP_TAC (std_ss++tailrec_part_ss()) [])
+     \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [])
   \\ Q.PAT_ASSUM `ref_cheney_inv (b,i,j,j,e,f,m,x,xx,r) (a,r3,r4,d,xs,ys)`
       (fn th => STRIP_ASSUME_TAC (RW [ref_cheney_inv_def] th) \\ ASSUME_TAC th)
   \\ `i <= j /\ j <= e` by METIS_TAC [cheney_inv_def]
   \\ Cases_on `v = 0` THEN1 `F` by DECIDE_TAC
   \\ `valid_address a i /\ valid_address a j /\ ~(e < i)` by
     (FULL_SIMP_TAC bool_ss [valid_address_def] \\ DECIDE_TAC)
-  \\ ASM_REWRITE_TAC [] \\ SIMP_TAC (std_ss++tailrec_part_ss()++pbeta_ss) [LET_DEF]
+  \\ ASM_REWRITE_TAC [] \\ SIMP_TAC (std_ss++pbeta_ss) [LET_DEF]
   \\ `?i2 j2 e2 m2. cheney_step (i,j,e,m) = (i2,j2,e2,m2)` by METIS_TAC [PAIR]
   \\ `?r31 r41 r51 r61 r71 r81 d1 xs1. arm_cheney_step (ref_addr a i,ref_addr a j,r7,r8,d,xs) =
                       (r31,r41,r51,r61,r71,r81,d1,xs1)` by METIS_TAC [PAIR]
@@ -546,11 +546,11 @@ val ref_cheney_move_roots = prove(
       (LENGTH ys = LENGTH rs) /\ (r12n = r12 + n2w (4 * LENGTH rs)) /\
       (!i. i <+ r12 ==> (xs i = xsn i)) /\ (xn = x)``,
   STRIP_TAC \\ STRIP_TAC \\ Induct_on `rs` THEN1
-   (ONCE_REWRITE_TAC [def5] \\ SIMP_TAC (std_ss++tailrec_part_ss()) [LET_DEF]
+   (ONCE_REWRITE_TAC [def5] \\ SIMP_TAC std_ss [LET_DEF]
     \\ Cases_on `ys` \\ REWRITE_TAC [move_roots_def,PAIR_EQ,LENGTH,MAP,NOT_NIL_CONS]
     \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ SIMP_TAC std_ss [LENGTH,WORD_MULT_CLAUSES,WORD_ADD_0])
   \\ POP_ASSUM (ASSUME_TAC o RW1 [GSYM CONTAINER_def])
-  \\ ONCE_REWRITE_TAC [def5] \\ SIMP_TAC (std_ss++tailrec_part_ss()) [LET_DEF]
+  \\ ONCE_REWRITE_TAC [def5] \\ SIMP_TAC std_ss [LET_DEF]
   \\ Cases_on `ds`
   \\ SIMP_TAC std_ss [LENGTH,ADD1,DECIDE ``(k + 1 = m + 1 + n) = (k = m + n:num)``,ZIP,APPEND]
   \\ SIMP_TAC (std_ss++SIZES_ss) [n2w_11,LESS_MOD,LENGTH,DECIDE ``~(SUC n = 0)``]
@@ -2484,11 +2484,7 @@ val (th,def,pre) = compile "x86" ``
 val x86_alloc_thm = save_thm("x86_alloc_thm",th)
 
 fun prove_eq n1 n2 rw goal = prove(goal,
-  STRIP_TAC \\ REWRITE_TAC [fetch "-" (n1),fetch "-" (n2)]
-  \\ REWRITE_TAC [fetch "-" (n1 ^ "_pre"),fetch "-" (n2 ^ "_pre")]
-  \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = x') /\ (y = y') /\ (z = z') ==> ((f:'a->'b->'c->'d) x y z = f x' y' z')``)
-  \\ SIMP_TAC (std_ss++tailrecLib.tailrec_part_ss()) [FUN_EQ_THM,FORALL_PROD,WORD_OR_CLAUSES]
-  \\ SIMP_TAC std_ss ([LET_DEF,word_arith_lemma1] @ rw)
+  STRIP_TAC \\ TAILREC_TAC \\ SIMP_TAC std_ss ([LET_DEF,word_arith_lemma1] @ rw)
   \\ SIMP_TAC std_ss [AC WORD_AND_ASSOC WORD_AND_COMM, AC WORD_ADD_ASSOC WORD_ADD_COMM]
   \\ COMPILER_TAC);
 

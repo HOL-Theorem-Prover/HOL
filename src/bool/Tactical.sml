@@ -17,6 +17,8 @@ struct
 open Feedback HolKernel Drule boolSyntax Abbrev;
 
 val ERR = mk_HOL_ERR "Tactical";
+fun empty th [] = th
+  | empty th _ = raise ERR "empty" "Bind Error"
 
 
 (*---------------------------------------------------------------------------
@@ -48,13 +50,6 @@ fun store_thm (name, tm, tac) =
     (print ("Failed to prove theorem "^name^"\n");
      Raise e)
 
-
-fun mapshape [] _ _ =  []
-  | mapshape (n1::nums) (f1::funcs) args =
-     let val (f1_args,args') = split_after n1 args
-     in f1 f1_args :: mapshape nums funcs args'
-     end;
-
 infix THEN THENL THEN1 ORELSE;
 
 (*---------------------------------------------------------------------------
@@ -71,12 +66,12 @@ fun tac1 THEN tac2 = fn g =>
    in case (itlist (fn goal => fn (G,V,lengths) =>
                case (tac2 goal)
                of ([],vfun) => let val th = vfun []
-                               in (G, (fn [] => th)::V, 0::lengths)
+                               in (G, (empty th)::V, 0::lengths)
                                end
                 | (goals,vfun) => (goals@G, vfun::V, length goals::lengths))
             gl ([],[],[]))
       of ([],V,_) =>
-            ([], let val th = vf (map (fn f => f[]) V) in fn [] => th end)
+            ([], let val th = vf (map (fn f => f[]) V) in empty th end)
        | (G,V,lengths) => (G, (vf o mapshape lengths V))
    end
 
@@ -95,11 +90,11 @@ fun (tac1:tactic) THENL (tacl:tactic list) :tactic = fn g =>
      val (G,V,lengths) = itlist2 (fn goal => fn tac => fn (G,V,lengths) =>
            case tac goal
             of ([],vfun) => let val th = vfun []
-                            in (G, (fn [] => th)::V, 0::lengths) end
+                            in (G, (empty th)::V, 0::lengths) end
              | (goals,vfun) => (goals@G, vfun::V, length goals::lengths))
           gl tacl ([],[],[])
  in case G
-     of [] => ([], let val th = vf (map (fn f => f[]) V) in fn [] => th end)
+     of [] => ([], let val th = vf (map (fn f => f[]) V) in empty th end)
       | _  => (G, (vf o mapshape lengths V))
  end
 

@@ -1740,6 +1740,12 @@ val SUBSET_FINITE =
        STRIP_TAC THEN RES_TAC THEN IMP_RES_TAC DELETE_FINITE,
        IMP_RES_TAC SUBSET_INSERT THEN ASM_REWRITE_TAC []]]);
 
+val SUBSET_FINITE_I = store_thm(
+  "SUBSET_FINITE_I",
+  ``!s t. FINITE s /\ t SUBSET s ==> FINITE t``,
+  METIS_TAC [SUBSET_FINITE]);
+
+
 val PSUBSET_FINITE =
     store_thm
     ("PSUBSET_FINITE",
@@ -2299,10 +2305,8 @@ val PHP = Q.store_thm
 (* Infiniteness								*)
 (* =====================================================================*)
 
-val INFINITE_DEF =
- new_definition
-   ("INFINITE_DEF",
-    ``!s:'a set. INFINITE s = ~FINITE s``);
+val _ = overload_on ("INFINITE", ``\s. ~FINITE s``)
+val INFINITE_DEF = save_thm("INFINITE_DEF", TRUTH)
 
 val NOT_IN_FINITE =
     store_thm
@@ -2310,7 +2314,7 @@ val NOT_IN_FINITE =
      (--`INFINITE (UNIV:'a set)
            =
          !s:'a set. FINITE s ==> ?x. ~(x IN s)`--),
-     PURE_ONCE_REWRITE_TAC [INFINITE_DEF] THEN EQ_TAC THENL
+     EQ_TAC THENL
      [CONV_TAC CONTRAPOS_CONV THEN
       CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
       REWRITE_TAC [NOT_IMP] THEN
@@ -2324,7 +2328,7 @@ val NOT_IN_FINITE =
 val INFINITE_INHAB = Q.store_thm
 ("INFINITE_INHAB",
  `!P. INFINITE P ==> ?x. x IN P`,
-  REWRITE_TAC [MEMBER_NOT_EMPTY, INFINITE_DEF] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC [MEMBER_NOT_EMPTY] THEN REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM SUBST_ALL_TAC THEN POP_ASSUM MP_TAC THEN
   REWRITE_TAC [FINITE_EMPTY]);
 
@@ -2339,40 +2343,27 @@ val INVERSE_LEMMA =
      CONV_TAC (SYM_CONV THENC SELECT_CONV) THEN
      EXISTS_TAC (--`x:'a`--) THEN REFL_TAC);
 
-val IMAGE_11_INFINITE =
-    store_thm
-    ("IMAGE_11_INFINITE",
-     (--`!f:'a->'b. (!x y. (f x = f y) ==> (x = y)) ==>
-      !s:'a set. INFINITE s ==> INFINITE (IMAGE f s)`--),
-     GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN
-     CONV_TAC CONTRAPOS_CONV THEN
-     REWRITE_TAC [INFINITE_DEF] THEN STRIP_TAC THEN
-     let val alpha = Type`:'a` and beta = Type`:'b`
-         val thm = INST_TYPE [beta |-> alpha, alpha |-> beta] IMAGE_FINITE
-     in IMP_RES_THEN (MP_TAC o ISPEC (--`\x:'b. @y:'a. x = f y`--)) thm
-     end THEN
-     REWRITE_TAC [SYM(SPEC_ALL IMAGE_COMPOSE)] THEN
-     IMP_RES_TAC INVERSE_LEMMA THEN
-     ASM_REWRITE_TAC [IMAGE_ID]);
+val IMAGE_11_INFINITE = store_thm (
+  "IMAGE_11_INFINITE",
+  ``!f:'a->'b. (!x y. (f x = f y) ==> (x = y)) ==>
+      !s:'a set. INFINITE s ==> INFINITE (IMAGE f s)``,
+  METIS_TAC [INJECTIVE_IMAGE_FINITE]);
 
 val INFINITE_SUBSET =
     store_thm
     ("INFINITE_SUBSET",
      (--`!s:'a set. INFINITE s ==> (!t. s SUBSET t ==> INFINITE t)`--),
-     PURE_ONCE_REWRITE_TAC [INFINITE_DEF] THEN
      REPEAT STRIP_TAC THEN IMP_RES_TAC SUBSET_FINITE THEN RES_TAC);
 
-val IN_INFINITE_NOT_FINITE =
-    store_thm
-    ("IN_INFINITE_NOT_FINITE",
-     (--`!s t. (INFINITE s /\ FINITE t) ==> ?x:'a. x IN s /\ ~(x IN t)`--),
-     CONV_TAC (ONCE_DEPTH_CONV CONTRAPOS_CONV) THEN
-     CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
-     PURE_ONCE_REWRITE_TAC [DE_MORGAN_THM] THEN
-     REWRITE_TAC [SYM(SPEC_ALL IMP_DISJ_THM)] THEN
-     PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL SUBSET_DEF)] THEN
-     PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL INFINITE_DEF)] THEN
-     REPEAT STRIP_TAC THEN IMP_RES_TAC INFINITE_SUBSET);
+val IN_INFINITE_NOT_FINITE = store_thm (
+  "IN_INFINITE_NOT_FINITE",
+  ``!s t. INFINITE s /\ FINITE t ==> ?x:'a. x IN s /\ ~(x IN t)``,
+   CONV_TAC (ONCE_DEPTH_CONV CONTRAPOS_CONV) THEN
+   CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
+   PURE_ONCE_REWRITE_TAC [DE_MORGAN_THM] THEN
+   REWRITE_TAC [SYM(SPEC_ALL IMP_DISJ_THM)] THEN
+   PURE_ONCE_REWRITE_TAC [SYM(SPEC_ALL SUBSET_DEF)] THEN
+   REPEAT STRIP_TAC THEN IMP_RES_TAC INFINITE_SUBSET);
 
 (* ---------------------------------------------------------------------- *)
 (* The next series of lemmas are used for proving that if UNIV: set       *)
@@ -2456,7 +2447,7 @@ val z_in_gn =
      PURE_ONCE_REWRITE_TAC [ADD1] THEN
      PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
      MATCH_MP_TAC g_subset THEN
-     REWRITE_TAC [num_CONV (--`1`--),z_in_g1]);
+     REWRITE_TAC [ONE,z_in_g1]);
 
 (* ---------------------------------------------------------------------*)
 (* Lemma: @x. ~(x IN g n) is an element of g(n+1).			*)
@@ -2493,16 +2484,7 @@ val not_in_lemma =
 (* Lemma: each value is added to a unique g(n).				*)
 (* ---------------------------------------------------------------------*)
 
-val less_lemma =
-    TAC_PROOF
-    (([], (--`!m n. ~(m = n) = ((m < n) \/ (n < m))`--)),
-      REPEAT GEN_TAC THEN ASM_CASES_TAC (--`n < m`--) THEN
-      ASM_REWRITE_TAC [] THENL
-      [DISCH_THEN SUBST_ALL_TAC THEN IMP_RES_TAC LESS_REFL,
-       IMP_RES_THEN MP_TAC NOT_LESS THEN
-       REWRITE_TAC [LESS_OR_EQ] THEN STRIP_TAC THEN
-       ASM_REWRITE_TAC[] THENL
-       [IMP_RES_TAC LESS_NOT_EQ, MATCH_ACCEPT_TAC LESS_REFL]]);
+val less_lemma = numLib.ARITH_PROVE ``!m n. ~(m = n) = ((m < n) \/ (n < m))``
 
 val gn_unique = TAC_PROOF
 ((gdef,
@@ -2709,6 +2691,14 @@ val INFINITE_UNIV =
      PURE_ONCE_REWRITE_TAC [NOT_IN_FINITE] THEN
      ACCEPT_TAC (IMP_ANTISYM_RULE INF_IMP_INFINITY INFINITY_IMP_INF));
 
+(* a natural consequence *)
+val INFINITE_NUM_UNIV = store_thm(
+  "INFINITE_NUM_UNIV",
+  ``INFINITE univ(:num)``,
+  REWRITE_TAC [GSYM INFINITE_DEF] THEN
+  SRW_TAC [][INFINITE_UNIV] THEN Q.EXISTS_TAC `SUC` THEN SRW_TAC [][] THEN
+  Q.EXISTS_TAC `0` THEN SRW_TAC [][]);
+val _ = export_rewrites ["INFINITE_NUM_UNIV"]
 
 val FINITE_PSUBSET_INFINITE = store_thm("FINITE_PSUBSET_INFINITE",
 (--`!s. INFINITE (s:'a set) =
@@ -2735,7 +2725,6 @@ val INFINITE_DIFF_FINITE = store_thm("INFINITE_DIFF_FINITE",
      REWRITE_TAC [EXTENSION,IN_DIFF,NOT_IN_EMPTY] THEN
      CONV_TAC NOT_FORALL_CONV THEN
      EXISTS_TAC (--`x:'a`--) THEN ASM_REWRITE_TAC[]);
-
 
 val FINITE_ISO_NUM =
     store_thm
@@ -3186,6 +3175,17 @@ val FINITE_CROSS_EQ = store_thm(
   MESON_TAC [FINITE_CROSS_EQ_lemma, FINITE_CROSS, FINITE_EMPTY,
              CROSS_EMPTY]);
 val _ = export_rewrites ["FINITE_CROSS_EQ"]
+
+val CROSS_UNIV = store_thm(
+  "CROSS_UNIV",
+  ``univ(:'a # 'b) = univ(:'a) CROSS univ(:'b)``,
+  SRW_TAC [][EXTENSION]);
+
+val INFINITE_PAIR_UNIV = store_thm(
+  "INFINITE_PAIR_UNIV",
+  ``(FINITE univ(:'a # 'b) = FINITE univ(:'a) /\ FINITE univ(:'b))``,
+  FULL_SIMP_TAC (srw_ss()) [CROSS_UNIV]);
+val _ = export_rewrites ["INFINITE_PAIR_UNIV"]
 
 (* ====================================================================== *)
 (* Set complements.                                                       *)

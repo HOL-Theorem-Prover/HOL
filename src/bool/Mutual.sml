@@ -285,20 +285,6 @@ and GALPHA tm =
 
 
 (* --------------------------------------------------------------------- *)
-(* Internal function: mapshape                                           *)
-(*                                                                       *)
-(* Applies the functions in fl to argument lists obtained by splitting   *)
-(* the list l into sublists of lengths given by nl.                      *)
-(* --------------------------------------------------------------------- *)
-
-fun mapshape [] _ _ =  []
-  | mapshape (n1::nums) (f1::funcs) args =
-      let val (f1_args,args') = Lib.split_after n1 args
-      in f1 f1_args::mapshape nums funcs args'
-       end;
-
-
-(* --------------------------------------------------------------------- *)
 (* MUTUAL_INDUCT_THEN : general induction tactic for mutuallly recursive *)
 (*                      datatypes.                                       *)
 (* --------------------------------------------------------------------- *)

@@ -25,7 +25,7 @@ val ERR = Feedback.mk_HOL_ERR "arm_evalLib";
 (* ------------------------------------------------------------------------- *)
 
 val dest_strip = armSyntax.dest_strip;
-val eval = rhs o concl o EVAL;
+val eval = boolSyntax.rhs o Thm.concl o bossLib.EVAL;
 
 val lower_string = String.implode o map Char.toLower o String.explode;
 
@@ -200,7 +200,8 @@ local
   val ptree_arm_next =
         REWRITE_RULE [FUN_EQ_THM] arm_evalTheory.ptree_arm_next_def
 
-  fun encode_psr tm = mk_comb(``arm_coretypes$encode_psr``, tm) |> eval |> hex 8
+  fun encode_psr tm =
+        Term.mk_comb(``arm_coretypes$encode_psr``, tm) |> eval |> hex 8
 
   fun registers s = case (``^s.registers`` |> eval |> dest_strip)
                     of ("proc", [_,c]) =>
@@ -239,6 +240,8 @@ local
                  "ARM:\t"
                else if term_eq enc armSyntax.Encoding_Thumb_tm then
                  "16-bit Thumb:"
+               else if term_eq enc armSyntax.Encoding_ThumbEE_tm then
+                 "ThumbEE:"
                else
                  "32-bit Thumb:", "\t", m, " ", a]
         end
@@ -355,7 +358,7 @@ val _ = computeLib.add_conv
           computeLib.the_compset;
 
 local
-  fun decode_psr n = mk_comb(``arm_coretypes$decode_psr``, n) |> eval
+  fun decode_psr n = Term.mk_comb(``arm_coretypes$decode_psr``, n) |> eval
 
   val word8ptree =
     patriciaSyntax.mk_ptree_type
@@ -572,6 +575,7 @@ in
 end handle
    HOL_ERR {origin_function,message,...} =>
      print (origin_function ^ ": " ^ message ^ "\n")
+ | SysErr (s, _) => print (s ^ "\n")
  | Io {name, cause = SysErr (s, _), function} =>
      print (function ^ ": " ^ s ^ ": " ^ name ^ "\n");
 

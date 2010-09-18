@@ -6,6 +6,7 @@ type read_write_decl = (bool * string list * string list) option
 
 datatype a_expression =
     Aexp_ident of string
+  | Aexp_old_ident of string
   | Aexp_num of int
   | Aexp_hol of string
   | Aexp_infix of string * a_expression * a_expression

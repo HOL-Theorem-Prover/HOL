@@ -81,4 +81,14 @@ val TAILREC_EQ_THM = store_thm("TAILREC_EQ_THM",
     (TAILREC_PRE f1 g s = TAILREC_PRE f1' g' s')``,
   SIMP_TAC std_ss []);
 
+val SHORT_TAILREC_THM = store_thm("SHORT_TAILREC_THM",
+  ``!(f:'a -> ('a + 'b) # bool) x. 
+      (SHORT_TAILREC f x = if ISL (FST (f x)) then SHORT_TAILREC f (OUTL (FST (f x)))
+                                             else OUTR (FST (f x))) /\
+      (SHORT_TAILREC_PRE f x = 
+       SND (f x) /\ (ISL (FST (f x)) ==> SHORT_TAILREC_PRE f (OUTL (FST (f x)))))``,
+  SIMP_TAC std_ss [SHORT_TAILREC_def,SHORT_TAILREC_PRE_def] \\ REPEAT STRIP_TAC
+  \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [TAILREC_THM,TAILREC_PRE_THM]))  
+  \\ SIMP_TAC std_ss []);
+  
 val _ = export_theory();

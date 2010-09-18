@@ -632,6 +632,7 @@ theorems supporting quantifier movement.
 Also, a theorem justifying Skolemization ({\small\verb+SKOLEM_THM+}) is
 proved. Many other theorems may be found in \theoryimp{bool} theory.
 
+
 \subsection{Combinators}
 \label{sec:combinTheory}
 
@@ -1200,6 +1201,32 @@ constructing more elaborate types.  The one value of the type
 \ml{one}, can also be written as \ml{()} by analogy with the unit
 value in \ML.  This is also the default way in which this value is
 printed by the system pretty-printer.
+
+\subsubsection{The itself type}
+\index{itself, the HOL type operator@\holtxt{itself}, the \HOL{} type operator}%
+The unary \holtxt{itself} type operator provides a family of singleton types akin to \holtxt{one}.
+Thus, for every type $\alpha$, \holtxt{$\alpha$~itself} is a type containing just one value.
+This value's name is \holtxt{the\_value}, but the parser and pretty-printer are set up so that for the type \holtxt{$\alpha$~itself}, \holtxt{the\_value} can be written as \holtxt{(:$\alpha$)} (the syntax includes the parentheses).
+For example, \holtxt{(:num)} is the single value inhabiting the type \holtxt{num~itself}.
+
+The point of the itself type is that if one defines a function with \holtxt{$\alpha$~itself} as the domain, the function picks out just one value in its range,  and so one can think of the function as being one from the type to a value for the whole type.
+
+For example, one could define
+\begin{hol}
+\begin{verbatim}
+   finite_univ (:'a) = FINITE (UNIV :'a set)
+\end{verbatim}
+\end{hol}
+It would then be straightforward to prove the following theorems
+\begin{hol}
+\begin{alltt}
+   \(\vdash\) finite_univ(:bool)
+   \(\vdash\) \(\neg\)finite_univ(:num)
+   \(\vdash\) finite_univ(:'a) \(\land\) finite_univ(:'b) \(\Rightarrow\) finite_univ(:'a # 'b)
+\end{alltt}
+\end{hol}
+
+The itself type is used in the Finite Cartesian Product construction that underlies the fixed-width word type (see Section~\ref{sec:bit-vectors} below).
 
 \subsection{The option type}
 \index{options, the HOL theory of@options, the \HOL{} theory of}
@@ -2067,6 +2094,7 @@ sampling function for the uniform distribution is later used to verify
 the Miller-Rabin primality test.
 
 \subsection{Bit vectors}
+\label{sec:bit-vectors}
 \index{bit vectors, the HOL theory of@bit vectors, the \HOL{} theory of|(}
 
 {
@@ -2362,27 +2390,27 @@ A list of operations is provided in the table below.
 {
 \setlength{\tabcolsep}{4pt}
 \begin{center}
-\tablefirsthead{% 
+\tablefirsthead{%
 \hline
-\multicolumn{1}{|c}{Operation\rule{0pt}{14pt}} & 
-\multicolumn{1}{c}{Symbol} & 
-Type & 
+\multicolumn{1}{|c}{Operation\rule{0pt}{14pt}} &
+\multicolumn{1}{c}{Symbol} &
+Type &
 \multicolumn{1}{c|}{Description} \\[4pt]
-\hline} 
-\tablehead{% 
-\hline 
-\multicolumn{4}{|l|}{\small\sl continued from previous page}\\ 
-\hline 
-\multicolumn{1}{|c}{Operation\rule{0pt}{14pt}} & 
-\multicolumn{1}{c}{Symbol} & 
-Type & 
+\hline}
+\tablehead{%
+\hline
+\multicolumn{4}{|l|}{\small\sl continued from previous page}\\
+\hline
+\multicolumn{1}{|c}{Operation\rule{0pt}{14pt}} &
+\multicolumn{1}{c}{Symbol} &
+Type &
 \multicolumn{1}{c|}{Description} \\[4pt]
-\hline} 
-\tabletail{% 
-\hline 
-\multicolumn{4}{|r|}{\small\sl continued on next page}\\ 
-\hline} 
-\tablelasttail{\hline} 
+\hline}
+\tabletail{%
+\hline
+\multicolumn{4}{|r|}{\small\sl continued on next page}\\
+\hline}
+\tablelasttail{\hline}
 \small
 \begin{supertabular}{|l|c|l|l|}
 \holtxt{n2w} & & \num\rarr\worda & Map from a natural number \\
@@ -3417,18 +3445,31 @@ Two sets are equal if they have the same elements.
 \end{hol}
 
 \paragraph{Empty and universal sets}
-
-The empty set is the characteristic function that is constantly
-false. The constant {\small\verb+EMPTY+} denotes the empty set; it may
-be written as {\small\verb+{}+}. The universal set {\small\verb+UNIV+}
-on a type is the characteristic function that is always true for
-elements of that type.
+\index{universal set}
+The empty set is the characteristic function that is constantly false. The constant \holtxt{EMPTY} denotes the empty set; it may be written as \holtxt{\{\}} and \holtxt{$\emptyset$} (U+2205).
+The universal set, \holtxt{UNIV}, on a type is the characteristic function that is always true for elements of that type.
 \begin{hol}
 \begin{verbatim}
    EMPTY_DEF   |- {} = (\x. F)
    UNIV_DEF    |- UNIV = (\x. T)
 \end{verbatim}
 \end{hol}
+In addition to \holtxt{UNIV} (perhaps with a type annotation \holtxt{:'a~set}), one may also write \holtxt{univ(:'a)} to represent the universal set over type \holtxt{:'a}.
+The Unicode syntax \holtxt{$\mathbb{U}$(:'a)} means the same.
+The Unicode symbol for $\mathbb{U}$ is U+1D54C, and may not exist in many fonts.
+
+One of these forms will be used to print \holtxt{UNIV} by default.
+The user trace (see Section~\ref{sec:traces}) \ml{"Univ~pretty-printing"} can be set to zero to cancel this behaviour.
+Additionally, the trace \ml{"Unicode Univ printing"} can be used to stop the U+1D54C syntax from being used, even if the Unicode trace is set.
+
+The symbols \holtxt{univ} and \holtxt{$\mathbb{U}$} are high-priority ``true prefixes'' (see Section~\ref{sec:parseprint:fixities}), and overloaded patterns (see Section~\ref{sec:parser:syntactic-patterns}) mapping a value of the itself type to the corresponding \holtxt{UNIV} constant.
+One effect is that one can write things like
+\begin{hol}
+\begin{verbatim}
+   FINITE univ(:'a)
+\end{verbatim}
+\end{hol}
+without the need for parentheses around \holtxt{FINITE}'s argument.
 
 \paragraph{Insertion, union, and intersection}
 
@@ -3517,6 +3558,7 @@ as follows:
 \end{hol}
 
 \paragraph{Finite sets}
+\index{finiteness!of sets}
 The finite sets (\holtxt{FINITE}) are defined inductively as those
 built from the empty set by a finite number of insertions.
 %
@@ -3524,14 +3566,15 @@ built from the empty set by a finite number of insertions.
 \begin{verbatim}
    FINITE_DEF
      |- !s. FINITE s = !P. P {} /\ (!s. P s ==> !e. P (e INSERT s)) ==> P s
-   INFINITE_DEF
-     |- !s. INFINITE s = ~FINITE s
 \end{verbatim}
 \end{hol}
 %
 \noindent
-A set is infinite iff it is not finite. The finite sets have an
-induction theorem:
+A set is infinite iff it is not finite, and there is an abbreviation in the system that parses \holtxt{\holquote{INFINITE~s}} into  \holtxt{\holquote{\td{}FINITE~s}}.
+The pretty-printer reverses this transformation.
+
+\medskip\noindent
+The finite sets have an induction theorem:
 %
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite sets}
 %
@@ -3548,6 +3591,7 @@ As mentioned, set operations apply to both finite and infinite
 sets. However, some operations, such as cardinality
 (\holtxt{CARD}), are only defined for finite sets.  The
 cardinality of an infinite set is not specified.
+\index{cardinality of (finite) sets}
 %
 \begin{hol}
 \begin{verbatim}
@@ -3997,7 +4041,7 @@ elements to $0$.
 
 
 \paragraph {Finite multisets}
-
+\index{finiteness!of multi-sets}
 The finite multisets (\holtxt{FINITE\_BAG}) are defined inductively as
 those built from the empty bag by a finite number of insertions.
 %

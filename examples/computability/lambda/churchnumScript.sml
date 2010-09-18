@@ -53,7 +53,7 @@ val is_abs_church = Store_thm(
 val church_lameq_11 = Store_thm(
   "church_lameq_11",
   ``(church m == church n) ⇔ (m = n)``,
-  SRW_TAC [][EQ_IMP_THM, chap2Theory.lam_eq_rules] THEN
+  SRW_TAC [][EQ_IMP_THM, chap2Theory.lameq_rules] THEN
   `∃Z. church m -β->* Z ∧ church n -β->* Z`
      by METIS_TAC [beta_CR, theorem3_13, prop3_18] THEN
   `church m = church n`
@@ -850,7 +850,7 @@ val cfindbody_11 = Store_thm(
 val lameq_triangle = store_thm(
   "lameq_triangle",
   ``M == N ∧ M == P ∧ bnf N ∧ bnf P ⇒ (N = P)``,
-  METIS_TAC [chap3Theory.betastar_lameq_bnf, chap2Theory.lam_eq_rules,
+  METIS_TAC [chap3Theory.betastar_lameq_bnf, chap2Theory.lameq_rules,
              chap3Theory.bnf_reduction_to_self]);
 
 val cfindleast_bnfE = store_thm(
@@ -883,7 +883,7 @@ val cfindleast_bnfE = store_thm(
     `cfindbody P ct k == k @@ church cn`
       by ASM_SIMP_TAC (bsrw_ss()) [] THEN
     `cfindbody P ct k -n->* r` by METIS_TAC [steps_nstar] THEN
-    METIS_TAC [nstar_lameq, chap2Theory.lam_eq_rules],
+    METIS_TAC [nstar_lameq, chap2Theory.lameq_rules],
 
     `P @@ ct == cB F` by ASM_SIMP_TAC (bsrw_ss()) [] THEN
     POP_ASSUM (STRIP_ASSUME_TAC o

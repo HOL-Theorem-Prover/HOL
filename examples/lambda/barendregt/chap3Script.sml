@@ -872,7 +872,7 @@ val lameq_betaconversion = store_thm(
   "lameq_betaconversion",
   ``!M N. M == N = conversion beta M N``,
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
-    HO_MATCH_MP_TAC lam_eq_indn THEN REPEAT STRIP_TAC THENL [
+    HO_MATCH_MP_TAC lameq_ind THEN REPEAT STRIP_TAC THENL [
       Q_TAC SUFF_TAC `beta (LAM x M @@ N) ([N/x] M)` THEN1
         PROVE_TAC [conversion_rules] THEN
       SRW_TAC [][beta_def] THEN PROVE_TAC [],
@@ -887,8 +887,8 @@ val lameq_betaconversion = store_thm(
     SIMP_TAC (srw_ss()) [] THEN
     HO_MATCH_MP_TAC equiv_closure_ind THEN REPEAT CONJ_TAC THEN1
       (HO_MATCH_MP_TAC compat_closure_ind THEN SRW_TAC [][beta_def] THEN
-       PROVE_TAC [lam_eq_rules]) THEN
-    PROVE_TAC [lam_eq_rules]
+       PROVE_TAC [lameq_rules]) THEN
+    PROVE_TAC [lameq_rules]
   ]);
 
 val prop3_18 = save_thm("prop3_18", lameq_betaconversion);

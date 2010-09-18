@@ -1,5 +1,4 @@
-OPTIONS = NO_SIGOBJ
-EXTRA_CLEANS = mosml-comparelogs comparelogs
+EXTRA_CLEANS = mosml-comparelogs comparelogs generateBuildSummary $($(ML_SYSNAME)_gbsdep)
 MLTON_SRCS = mlton-srcs/Binarymap.sml mlton-srcs/Listsort.sml comparelogs.mlb
 
 mosml-comparelogs : mosmlTextIO.ui comparelogs.sml
@@ -11,8 +10,15 @@ mosmlTextIO.ui mosmlTextIO.uo: mosmlTextIO.sml
 comparelogs: comparelogs.sml $(MLTON_SRCS)
 	mlton comparelogs.mlb
 
-generateBuildSummary: generateBuildSummary.o
-	gcc -o $@ $< $(POLY_LDFLAGS)
+poly_gbsdep = generateBuildSummary.o
+mosml_gbsdep = mosmlgbs.uo generateBuildSummary.uo 
+
+poly_gbscomm = gcc -o $@ $< $(POLY_LDFLAGS)
+mosml_gbscomm = $(HOLMOSMLC) -o $@ $<
+
+
+generateBuildSummary: $($(ML_SYSNAME)_gbsdep)
+	$($(ML_SYSNAME)_gbscomm)
 
 generateBuildSummary.o: poly-gbs.ML generateBuildSummary.sml
 	$(POLY) < $<

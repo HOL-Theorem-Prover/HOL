@@ -1,4 +1,4 @@
-\DOC 
+\DOC
 
 \TYPE {remove_word_printer : unit -> unit}
 

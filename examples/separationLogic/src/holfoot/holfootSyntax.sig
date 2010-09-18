@@ -44,6 +44,7 @@ val holfoot_ap_gt_term : term
 val holfoot_ap_le_term : term
 val holfoot_ap_lt_term : term
 val holfoot_ap_points_to_term : term
+val holfoot_ap_emp_term : term
 val holfoot_ap_star_term : term
 val holfoot_ap_tree_term : term
 val holfoot_ap_unequal_term : term

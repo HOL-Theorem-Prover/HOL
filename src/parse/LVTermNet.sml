@@ -35,7 +35,7 @@ fun labcmp (p as (l1, l2)) =
     | (_, TyCmb _) => GREATER
     | (LV p1, LV p2) => pair_compare (String.compare, Int.compare) (p1, p2)
 
-datatype 'a N = LF of (key,'a) Binarymap.dict
+datatype 'a N = LF of (key,'a list) Binarymap.dict
               | ND of (label,'a N) Binarymap.dict
               | EMPTY
 (* redundant EMPTY constructor is used to get around value polymorphism problem
@@ -61,6 +61,11 @@ in
   | COMB _ => raise Fail "impossible"
 end
 
+fun cons_insert (bmap, k, i) =
+    case Binarymap.peek(bmap,k) of
+      NONE => Binarymap.insert(bmap,k,[i])
+    | SOME items => Binarymap.insert(bmap,k,i::items)
+
 fun insert ((net,sz), k, item) = let
   fun newnode labs =
       case labs of
@@ -68,32 +73,25 @@ fun insert ((net,sz), k, item) = let
       | _ => mkempty()
   fun trav (net, tms) =
       case (net, tms) of
-        (LF d, []) => let
-          val inc =
-              case Binarymap.peek(d, k) of NONE => 1 | SOME _ => 0
-        in
-          (LF (Binarymap.insert(d,k,item)), inc)
-        end
+        (LF d, []) => LF (cons_insert(d,k,item))
       | (ND d, k::ks0) => let
           val (lab, rest) = ndest_term k
           val ks = rest @ ks0
-          val (n',inc) =
+          val n' =
               case Binarymap.peek(d,lab) of
                 NONE => trav(newnode ks, ks)
               | SOME n => trav(n, ks)
-          val d' = Binarymap.insert(d, lab, n')
         in
-          (ND d', inc)
+          ND (Binarymap.insert(d, lab, n'))
         end
       | (EMPTY, ks) => trav(mkempty(), ks)
       | _ => raise Fail "LVTermNet.insert: catastrophic invariant failure"
-  val (net', inc) = trav(net,[k])
 in
-  (net', sz + inc)
+  (trav(net,[k]), sz + 1)
 end
 
 fun listItems (net, sz) = let
-  fun cons'(k,v,acc) = (k,v)::acc
+  fun cons'(k,vs,acc) = List.foldl (fn (v,acc) => (k,v)::acc) acc vs
   fun trav (net, acc) =
       case net of
         LF d => Binarymap.foldl cons' acc d
@@ -112,23 +110,21 @@ fun numItems (net, sz) = sz
 fun peek ((net,sz), k) = let
   fun trav (net, tms) =
       case (net, tms) of
-        (LF d, []) => Binarymap.peek(d, k)
+        (LF d, []) => (valOf (Binarymap.peek(d, k)) handle Option => [])
       | (ND d, k::ks) => let
           val (lab, rest) = ndest_term k
         in
           case Binarymap.peek(d, lab) of
-            NONE => NONE
+            NONE => []
           | SOME n => trav(n, rest @ ks)
         end
-      | (EMPTY, _) => NONE
+      | (EMPTY, _) => []
       | _ => raise Fail "LVTermNet.peek: catastrophic invariant failure"
 in
   trav(net, [k])
 end
 
-fun find (n, k) =
-    valOf (peek (n, k)) handle Option => raise Binarymap.NotFound
-
+val find = peek
 
 fun lookup_label tm = let
   val (f, args) = strip_comb tm
@@ -142,11 +138,18 @@ in
   | _ => raise Fail "LVTermNet.lookup_label: catastrophic invariant failure"
 end
 
+fun conslistItems (d, acc) = let
+  fun listfold k (v,acc) = (k,v)::acc
+  fun mapfold (k,vs,acc) = List.foldl (listfold k) acc vs
+in
+  Binarymap.foldl mapfold acc d
+end
+
 fun match ((net,sz), tm) = let
   fun trav acc (net, ks) =
       case (net, ks) of
         (EMPTY, _) => []
-      | (LF d, []) => Binarymap.listItems d @ acc
+      | (LF d, []) => conslistItems (d, acc)
       | (ND d, k::ks0) => let
           val varresult = case Binarymap.peek(d, V 0) of
                             NONE => acc
@@ -216,20 +219,37 @@ in
   trav net
 end
 
+fun consfoldl f acc d = let
+  fun listfold k (d, acc) = f (k, d, acc)
+  fun mapfold (k,vs,acc) = List.foldl (listfold k) acc vs
+in
+  Binarymap.foldl mapfold acc d
+end
+
 fun fold f acc (net, sz) = let
   fun trav acc n =
       case n of
-        LF d => Binarymap.foldl f acc d
+        LF d => consfoldl f acc d
       | ND d => Binarymap.foldl (fn (lab,n',acc) => trav acc n') acc d
       | EMPTY => acc
 in
   trav acc net
 end
 
+fun consmap f d = let
+  fun foldthis (k,vs,acc) = let
+    val bs = map (fn v => f(k,v)) vs
+  in
+    Binarymap.insert(acc,k,bs)
+  end
+in
+  Binarymap.foldl foldthis (Binarymap.mkDict tlt_compare) d
+end
+
 fun map f (net, sz) = let
   fun trav n =
       case n of
-        LF d => LF (Binarymap.map f d)
+        LF d => LF (consmap f d)
       | ND d => ND (Binarymap.transform trav d)
       | EMPTY => EMPTY
 in

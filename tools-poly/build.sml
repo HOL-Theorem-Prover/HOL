@@ -122,50 +122,6 @@ fun Gnumake dir =
   else (warn ("Build failed in directory "^dir ^" ("^GNUMAKE^" failed).");
         false)
 
-(* ----------------------------------------------------------------------
-   Some useful file-system utility functions
-   ---------------------------------------------------------------------- *)
-
-(* map a function over the files in a directory *)
-fun map_dir f dir =
-  let val dstrm = OS.FileSys.openDir dir
-      fun loop () =
-        case OS.FileSys.readDir dstrm
-         of NONE => []
-          | SOME file => (dir,file)::loop()
-      val files = loop()
-      val _ = OS.FileSys.closeDir dstrm
-  in List.app f files
-     handle OS.SysErr(s, erropt)
-       => die ("OS error: "^s^" - "^
-              (case erropt of SOME s' => OS.errorMsg s' | _ => ""))
-       | otherexn => die ("map_dir: "^General.exnMessage otherexn)
-  end;
-
-fun rem_file f =
-  OS.FileSys.remove f
-   handle _ => (warn ("Couldn't remove file "^f); ());
-
-fun copy file path =  (* Dead simple file copy *)
- let open TextIO
-     val (istrm,ostrm) = (openIn file, openOut path)
-     fun loop() =
-       case input1 istrm
-        of SOME ch => (output1(ostrm,ch) ; loop())
-         | NONE    => (closeIn istrm; flushOut ostrm; closeOut ostrm)
-  in loop()
-  end;
-
-fun bincopy file path =  (* Dead simple file copy - binary version *)
- let open BinIO
-     val (istrm,ostrm) = (openIn file, openOut path)
-     fun loop() =
-       case input1 istrm
-        of SOME ch => (output1(ostrm,ch) ; loop())
-         | NONE    => (closeIn istrm; flushOut ostrm; closeOut ostrm)
-  in loop()
-  end;
-
 (* create a symbolic link - Unix only *)
 fun link b s1 s2 =
     Posix.FileSys.symlink {new = s2, old = s1}
@@ -244,7 +200,13 @@ fun build_dir (dir, regulardir) = let
   val _ = if do_selftests >= regulardir then ()
           else raise BuildExit
   val _ = OS.FileSys.chDir dir
-  val _ = print ("Building directory "^dir^"\n")
+  val truncdir = if String.isPrefix HOLDIR dir then
+                   String.extract(dir, size HOLDIR + 1, NONE)
+                   (* +1 to drop directory slash after holdir *)
+                 else dir
+  val now_d = Date.fromTimeLocal (Time.now())
+  val now_s = Date.fmt "%d %b, %H:%M:%S" now_d
+  val _ = print ("Building directory "^truncdir^" ["^now_s^"]\n")
 in
   case #file(OS.Path.splitDirFile dir) of
     "muddyC" => let

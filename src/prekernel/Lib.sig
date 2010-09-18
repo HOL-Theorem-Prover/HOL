@@ -72,6 +72,7 @@ sig
   val op_assoc2     : ('a -> 'a -> bool) -> 'a -> ('b * 'a) list -> ('b * 'a) option
   val appi          : (int -> 'a -> unit) -> 'a list -> unit
   val mapi          : (int -> 'a -> 'b) -> 'a list -> 'b list
+  val mapshape       : int list -> ('a list -> 'b) list -> 'a list -> 'b list
 
   type ('a,'b) subst = {redex:'a, residue:'b} list
   val subst_assoc   : ('a -> bool) -> ('a,'b)subst -> 'b option
@@ -110,6 +111,10 @@ sig
   val start_time    : unit -> Timer.cpu_timer
   val end_time      : Timer.cpu_timer -> unit
   val time          : ('a -> 'b) -> 'a -> 'b
+
+  val start_real_time : unit -> Timer.real_timer
+  val end_real_time   : Timer.real_timer -> unit
+  val real_time       : ('a -> 'b) -> 'a -> 'b
 
   type ('a,'b) istream
   val mk_istream    : ('a -> 'a) -> 'a -> ('a -> 'b) -> ('a,'b) istream

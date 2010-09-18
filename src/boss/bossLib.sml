@@ -47,6 +47,7 @@ val tDefine    = TotalDefn.tDefine
 val Define     = TotalDefn.Define
 val Hol_defn   = Defn.Hol_defn
 val Hol_reln   = IndDefLib.Hol_reln
+val xHol_reln   = IndDefLib.xHol_reln
 val export_mono = IndDefLib.export_mono
 val WF_REL_TAC = TotalDefn.WF_REL_TAC
 

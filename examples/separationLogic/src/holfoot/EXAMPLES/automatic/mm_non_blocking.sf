@@ -10,17 +10,17 @@ init() { TOP = NULL; }
 
 resource freelist1 (TOP) [ list(TOP) ]
 
-cas(status,location;original,old,nw) 
+cas(status,location;original,o,nw) 
 [location==original]
 {
-  if (location == old) {
+  if (location == o) {
 	location = nw;
 	status = 1;
   } else {
 	status = 0;
   }
 }
-[if original==old then location == nw *status==1 else status==0 * location == original ]
+[if original==o then location == nw *status==1 else status==0 * location == original ]
 
 malloc1(i;) 
 [emp]

@@ -2,6 +2,8 @@ open HolKernel Parse boolTheory boolLib
 
 val _ = set_trace "Unicode" 0
 
+fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
+
 fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
 
 fun substtest (M, x, N, result) = let
@@ -75,8 +77,7 @@ val inst_type_test = let
   val th4 = REWRITE_RULE [EQ_IMP_THM, ximpnx, nximpx, xandnx] th3
   val final_th = CHOOSE (nonempty_t, nonempty_exists) th4
 in
-  if same_const (concl final_th) (mk_const("F", bool)) then
-    (print "FAILED!\n"; Process.exit Process.failure)
+  if same_const (concl final_th) (mk_const("F", bool)) then die "FAILED!"
   else print "OK\n"
 end
 
@@ -101,8 +102,7 @@ val _ = let
   val bad2 = INST_TYPE [alpha |-> bool] bad1
   val Falsity = EQ_MP (INST [x bool |-> T, y bool |-> F] bad2) TRUTH
 in
-  if aconv (concl Falsity) F then print "FAILED!\n" else print "Huh???\n";
-  Process.exit Process.failure
+  if aconv (concl Falsity) F then die "FAILED!" else die "Huh???"
 end handle ExitOK => print "OK\n"
 
 val _ = Process.atExit (fn () => let
@@ -146,23 +146,109 @@ end
 val t = Parse.Term `(case T of T -> (\x. x) || F -> (~)) y`
 val _ = tprint "Testing parsing of case expressions with function type"
 val _ = case Lib.total (find_term (same_const ``bool_case``)) t of
-          NONE => (print "FAILED\n"; Process.exit Process.failure)
+          NONE => die "FAILED"
         | SOME _ => print "OK\n"
 
 val _ = tprint "Testing parsing of _ variables (1)"
 val t = case Lib.total Parse.Term `case b of T -> F || _ -> T` of
-          NONE => (print "FAILED\n"; Process.exit Process.failure)
+          NONE => die "FAILED"
         | SOME _ => print "OK\n"
 val _ = tprint "Testing parsing of _ variables (2)"
 val t = case Lib.total Parse.Term `case b of T -> F || _1 -> T` of
-          NONE => (print "FAILED\n"; Process.exit Process.failure)
+          NONE => die "FAILED"
         | SOME _ => print "OK\n"
 val _ = tprint "Testing independence of case branch vars"
 val t = case Lib.total Parse.Term `v (case b of T -> F || v -> T)` of
-          NONE => (print "FAILED\n"; Process.exit Process.failure)
+          NONE => die "FAILED"
         | SOME _ => print "OK\n"
 
+val _ = tprint "Testing higher-order match 1"
+local
+val thy = current_theory()
+val fmap_ty = let val () = new_type("fmap", 2) in mk_type("fmap", [alpha,beta])
+              end
+val submap = let
+  val () = new_constant("SUBMAP", fmap_ty --> fmap_ty --> bool)
+in
+  prim_mk_const{Thy = thy, Name = "SUBMAP"}
+end
+val pair_ty = let val () = new_type("prod", 2) in
+                mk_thy_type{Thy = thy, Tyop = "prod", Args = [alpha,beta]}
+              end
+val fmpair_ty = mk_thy_type{Thy = thy, Tyop = "prod", Args = [fmap_ty, gamma]}
+val num_ty = let val () = new_type("num", 0)
+             in mk_thy_type{Thy = thy, Tyop = "num", Args = []}
+             end
+val lt = let val () = new_constant("<", num_ty --> num_ty --> bool)
+         in
+           prim_mk_const{Thy = thy, Name = "<"}
+         end
+val FST = let val () = new_constant("FST", pair_ty --> alpha)
+          in
+            mk_thy_const{Thy = thy, Name = "FST", Ty = fmpair_ty --> fmap_ty}
+          end
+val R = mk_var("R", alpha --> alpha --> bool)
+val f = mk_var("f", num_ty --> alpha)
+val f' = mk_var("f", num_ty --> fmpair_ty)
+val m = mk_var("m", num_ty)
+val n = mk_var("n", num_ty)
+val ant = let
+  val () = new_constant("ant", (alpha --> alpha --> bool) -->
+                               (num_ty --> alpha) --> bool)
+in
+  prim_mk_const{Thy = thy, Name = "ant"}
+end
+val th = let
+  val concl =
+      list_mk_forall([m,n],
+                     mk_imp(list_mk_comb(lt,[m,n]),
+                            list_mk_comb(R,[mk_comb(f,m), mk_comb(f,n)])))
+in
+  mk_thm([], list_mk_forall([R,f],
+                            mk_imp(list_mk_comb(ant, [R,f]), concl)))
+end
+val goal = list_mk_forall([m,n],
+                          mk_imp(list_mk_comb(lt, [m,n]),
+                                 list_mk_comb(submap,
+                                              [mk_comb(FST, mk_comb(f',m)),
+                                               mk_comb(FST, mk_comb(f',n))])))
+val expected = let
+  val ant' = Term.inst [alpha |-> fmap_ty] ant
+  val abs = mk_abs(n, mk_comb(FST, mk_comb(f',n)))
+in
+  list_mk_comb(ant', [submap, abs])
+end
+in
+val _ =
+    case Lib.total (VALID (HO_MATCH_MP_TAC th)) ([], goal) of
+      SOME ([([],subgoal)],_) => if aconv subgoal expected then print "OK\n"
+                                 else die "FAILED!"
+    | _ => die "FAILED!"
+end (* local *)
 
+val _ = tprint "Testing type-specific Unicode overload 1"
+val _ = set_trace "Unicode" 1
+val _ = overload_on (UnicodeChars.delta, ``$! :(('a -> 'b)->bool)->bool``)
+fun checkparse () = let
+  val tm = Lib.with_flag (Globals.notify_on_tyvar_guess, false)
+                         Parse.Term
+                         `!x. P x`
+  val randty =  type_of (rand tm)
+in
+  if Type.compare(randty, alpha --> bool) <> EQUAL then die "FAILED!"
+  else print "OK\n"
+end
+val _ = checkparse()
+
+(* bounce Unicode trace - and repeat *)
+val _ = tprint "Testing type-specific Unicode overload 2"
+val _ = set_trace "Unicode" 0
+val _ = set_trace "Unicode" 1
+val _ = checkparse ()
+
+
+(* pretty-printing tests - turn Unicode off *)
+val _ = set_trace "Unicode" 0
 fun tpp s = let
   val t = Parse.Term [QUOTE s]
   val _ = tprint ("Testing printing of `"^s^"`")
@@ -180,6 +266,12 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "(case x of T -> (\\x. x) || F -> $~) y",
                  "!x. P (x /\\ y)"]
 
+val _ = new_type ("foo", 2)
+val _ = new_constant ("con", ``:'a -> ('a,'b)foo``)
+val _ = set_trace "types" 1
+val _ = tpp "(con (x :'a) :('a, 'b) foo)"
 
+
+val _ = set_trace "types" 0
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

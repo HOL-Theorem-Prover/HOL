@@ -2,35 +2,30 @@ structure tailrecLib :> tailrecLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open tailrecTheory;
+open tailrecTheory helperLib sumSyntax pairSyntax;
 
-val car = fst o dest_comb;
-val cdr = snd o dest_comb;
+val tailrec_definitions = ref ([]:thm list);
 
-val tailrec_simpset         = ref (rewrites []);
-val tailrec_top_simpset     = ref (rewrites []);
-val tailrec_part_simpset    = ref (rewrites []);
-val tailrec_reverse_simpset = ref (rewrites []);
-fun tailrec_ss()         = !tailrec_simpset;
-fun tailrec_top_ss()     = !tailrec_top_simpset;
-fun tailrec_part_ss()    = !tailrec_part_simpset;
-fun tailrec_reverse_ss() = !tailrec_reverse_simpset;
+(* tactic, move to helperLib? *)
 
-fun tailrec_add_to_simpsets(f_def,pre_f_def,step,base,guard,side) = let
-  val top = rewrites [f_def,pre_f_def]
-  val part = rewrites [step,base,guard,side]
-  val reverse = rewrites [GSYM f_def,GSYM pre_f_def]
-  val _ = tailrec_simpset := simpLib.merge_ss[!tailrec_simpset,top,part];
-  val _ = tailrec_top_simpset := simpLib.merge_ss[!tailrec_top_simpset,top];
-  val _ = tailrec_part_simpset := simpLib.merge_ss[!tailrec_part_simpset,part];
-  val _ = tailrec_reverse_simpset := simpLib.merge_ss[!tailrec_reverse_simpset,reverse];
-  in () end;
+fun dest_tuple tm =
+  let val (x,y) = dest_pair tm in x :: dest_tuple y end handle HOL_ERR e => [tm];
 
+fun EXPAND_BASIC_LET_CONV tm = let
+  val (xs,x) = dest_anylet tm
+  val (lhs,rhs) = hd xs
+  val ys = dest_tuple lhs
+  val zs = dest_tuple rhs
+  val _ = if length zs = length ys then () else hd []
+  fun every p [] = true
+    | every p (x::xs) = if p x then every p xs else hd []
+  val _ = every (fn x => every is_var (list_dest dest_conj x)) zs
+  in (((RATOR_CONV o RATOR_CONV) (REWRITE_CONV [LET_DEF]))
+      THENC DEPTH_CONV PairRules.PBETA_CONV) tm end
+  handle e => NO_CONV tm;
 
-datatype ftree_type =
-    FUN_IF of term * ftree_type * ftree_type
-  | FUN_LET of term * term * ftree_type
-  | FUN_VAL of term;
+fun STRIP_FORALL_TAC (hs,tm) =
+  if is_forall tm then STRIP_TAC (hs,tm) else NO_TAC (hs,tm)
 
 fun ftree_type_eq (FUN_IF(t1,aty1,bty1)) (FUN_IF(t2,aty2,bty2)) =
       eq t1 t2 andalso ftree_type_eq aty1 aty2 andalso ftree_type_eq bty1 bty2
@@ -39,177 +34,156 @@ fun ftree_type_eq (FUN_IF(t1,aty1,bty1)) (FUN_IF(t2,aty2,bty2)) =
   | ftree_type_eq (FUN_VAL t1) (FUN_VAL t2) = eq t1 t2
   | ftree_type_eq _ _ = false;
 
-fun tm2ftree tm = let
-  val (b,x,y) = dest_cond tm
-  in FUN_IF (b,tm2ftree x,tm2ftree y) end handle e => let
-  val (x,y) = pairSyntax.dest_anylet tm
-  val z = tm2ftree y
-  in foldr (fn ((x,y),z) => FUN_LET (x,y,z)) z x end handle e => FUN_VAL tm;
+fun SPEC_AND_CASES_TAC x =
+  SPEC_TAC (x,genvar(type_of x)) THEN Cases THEN REWRITE_TAC []
 
-fun ftree2tm (FUN_VAL tm) = tm
-  | ftree2tm (FUN_IF (tm,x,y)) = mk_cond(tm, ftree2tm x, ftree2tm y)
-  | ftree2tm (FUN_LET (tm,tn,x)) = pairSyntax.mk_anylet([(tm,tn)],ftree2tm x)
+fun GENSPEC_TAC [] = SIMP_TAC pure_ss [pairTheory.FORALL_PROD]
+  | GENSPEC_TAC (x::xs) = SPEC_TAC (x,genvar(type_of x)) THEN GENSPEC_TAC xs;
 
-fun format_ftree g (FUN_VAL tm) = g (FUN_VAL tm)
-  | format_ftree g (FUN_IF (tm,x,y)) = g (FUN_IF (tm, format_ftree g x, format_ftree g y))
-  | format_ftree g (FUN_LET (tm,tn,x)) = g (FUN_LET (tm,tn,format_ftree g x))
+val EXPAND_BASIC_LET_TAC =
+  CONV_TAC (DEPTH_CONV EXPAND_BASIC_LET_CONV)
+  THEN REPEAT STRIP_FORALL_TAC
 
-fun mk_guard is_rec (FUN_VAL tm) = if is_rec tm then FUN_VAL ``T`` else FUN_VAL ``F``
-  | mk_guard is_rec (FUN_IF (tm,x,y)) = FUN_IF (tm,x,y)
-  | mk_guard is_rec (FUN_LET (tm,tn,x)) =
-      case x of FUN_VAL y => FUN_VAL y | _ => FUN_LET (tm,tn,x)
+fun AUTO_DECONSTRUCT_TAC finder (hs,goal) = let
+  val tm = finder goal
+  in if is_cond tm then let
+       val (b,_,_) = dest_cond tm
+       in SPEC_AND_CASES_TAC b (hs,goal) end
+     else if is_let tm then let
+       val (v,c) = (hd o fst o dest_anylet) tm
+       val c = if not (type_of c = ``:bool``) then c else
+         (find_term (can (match_term ``GUARD x b``)) c handle e => c)
+       val cs = dest_tuple c
+       in (GENSPEC_TAC cs THEN EXPAND_BASIC_LET_TAC) (hs,goal) end
+     else (REWRITE_TAC [] THEN NO_TAC) (hs,goal) end
 
-fun mk_branch is_rec arb g (FUN_VAL tm) = if is_rec tm then FUN_VAL arb else FUN_VAL (g tm)
-  | mk_branch is_rec arb g (FUN_IF (tm,x,y)) = FUN_IF (tm,x,y)
-  | mk_branch is_rec arb g (FUN_LET (tm,tn,x)) = FUN_LET (tm,tn,x)
+(* /move to helper *)
 
-fun ftree_is_arb (FUN_VAL tm) = is_arb tm | ftree_is_arb _ = false
 
-fun pull_arb (FUN_VAL tm) = FUN_VAL tm
-  | pull_arb (FUN_IF (tm,x,y)) = let
-      val x' = pull_arb x
-      val y' = pull_arb y
-      in if ftree_is_arb x' then y' else if ftree_is_arb y' then x' else FUN_IF (tm,x',y') end
-  | pull_arb (FUN_LET (tm,tn,x)) = let
-      val x' = pull_arb x
-      in if ftree_is_arb x' then x' else FUN_LET (tm,tn,x') end
+fun merge_side t NONE = t
+  | merge_side t (SOME (FUN_VAL tm)) = 
+      if tm = mk_var("cond",``:bool``) then t else 
+      if tm = T then t else FUN_COND (tm,t)
+  | merge_side t (SOME (FUN_COND (tm,t2))) = FUN_COND (tm,merge_side t (SOME t2))
+  | merge_side (FUN_IF (b,x,y)) (SOME (FUN_IF (b2,x2,y2))) = 
+      if (b = b2) then FUN_IF (b, merge_side x (SOME x2), merge_side y (SOME y2)) else fail()
+  | merge_side (FUN_LET (x,y,t)) (SOME (FUN_LET (x2,y2,t2))) = 
+      if (x = x2) andalso (y = y2) then FUN_LET (x,y,merge_side t (SOME t2)) else fail()
+  | merge_side _ _ = fail ()
 
-fun pull_T (FUN_VAL tm) = FUN_VAL tm
-  | pull_T (FUN_IF (tm,x,y)) = let
-      val x' = pull_T x
-      val y' = pull_T y
-      val eq = ftree_type_eq
-      in if (eq x' (FUN_VAL ``T:bool``)) andalso (eq y' (FUN_VAL ``T:bool``)) orelse (eq x' y')
-         then x' else FUN_IF (tm,x',y') end
-  | pull_T (FUN_LET (tm,tn,x)) = let
-      val x' = pull_T x
-      val vs = free_vars (ftree2tm x')
-      val ws = free_vars tm
-      in if null (filter (fn v => op_mem eq v ws) vs) then x' else FUN_LET (tm,tn,x') end
+fun leaves (FUN_VAL tm)      f = FUN_VAL (f tm)
+  | leaves (FUN_COND (c,t))  f = FUN_COND (c, leaves t f)
+  | leaves (FUN_IF (a,b,c))  f = FUN_IF (a, leaves b f, leaves c f)
+  | leaves (FUN_LET (v,y,t)) f = FUN_LET (v, y, leaves t f)
 
-val if_expand = prove(``(if x then y else z) = (x /\ y) \/ (~x /\ z)``,
-  Cases_on `x` THEN ASM_SIMP_TAC std_ss []);
+fun rm_conds (FUN_VAL tm)      = FUN_VAL tm
+  | rm_conds (FUN_COND (c,t))  = rm_conds t
+  | rm_conds (FUN_IF (a,b,c))  = FUN_IF (a, rm_conds b, rm_conds c)
+  | rm_conds (FUN_LET (v,y,t)) = FUN_LET (v, y, rm_conds t)
 
-val implies_expand = prove(``(x:bool ==> y) = ~x \/ y``,
-  Cases_on `x` THEN ASM_SIMP_TAC std_ss []);
+fun tailrec_define_from_step func_name step_fun tm_option = let
+  (* definitions *)
+  val thm = ISPEC step_fun SHORT_TAILREC_def
+  val def_rhs = (fst o dest_eq o concl) thm
+  val def_tm = mk_eq (mk_var(func_name,type_of def_rhs),def_rhs)
+  val def_thm = new_definition(func_name,def_tm)
+  val new_def_tm = (fst o dest_eq o concl) def_thm
+  val side = ISPEC step_fun SHORT_TAILREC_PRE_def
+  val side_rhs = (fst o dest_eq o concl) side
+  val side_tm = mk_eq (mk_var(func_name ^ "_pre",type_of side_rhs),side_rhs)
+  val side_thm = new_definition(func_name ^ "_pre",side_tm)
+  val new_side_tm = (fst o dest_eq o concl) side_thm
+  val _ = tailrec_definitions := def_thm::side_thm::(!tailrec_definitions)
+  (* goals *)
+  fun is_inl tm = can (match_term ``(INL x):'a + 'b``) tm
+  fun leaves_inl body f1 f2 = ftree2tm (leaves (tm2ftree body) (fn tm => 
+          if is_inl (fst (dest_pair tm)) 
+          then f1 (cdr (fst (dest_pair tm)),snd (dest_pair tm)) 
+          else f2 (cdr (fst (dest_pair tm)),snd (dest_pair tm))))
+  val inst_cond_var = snd o dest_eq o concl o QCONV (REWRITE_CONV [GSYM CONJ_ASSOC]) o
+                      subst [mk_var("cond",``:bool``) |-> T]
+  val (def_goal,side_goal) = case tm_option of 
+      SOME (tm,pre_option) => let 
+        val (lhs,rhs) = dest_eq tm
+        val func_tm = repeat car lhs
+        val (old_side_tm,tm2) = (case pre_option of 
+              NONE => (new_side_tm,T) 
+            | SOME x => (repeat car (fst (dest_eq x)),x))
+        in (subst [func_tm |-> new_def_tm] tm,
+            subst [old_side_tm |-> new_side_tm] tm2) end
+    | NONE => let
+        val (args,body) = dest_pabs step_fun
+        val def_body = (ftree2tm o rm_conds o tm2ftree) body
+        val def_body = leaves_inl def_body (fn (tm,_) => mk_comb(new_def_tm,tm)) fst
+        val def_goal = mk_eq(mk_comb(new_def_tm,args),def_body) 
+        val side_body = leaves_inl body (fn (tm,c) => mk_conj(mk_comb(new_side_tm,tm),c)) snd
+        val side_goal = inst_cond_var (mk_eq(mk_comb(new_side_tm,args),side_body)) 
+        in (def_goal,side_goal) end
+  (* prove exported theorems *)
+  fun tac finder = 
+    PURE_REWRITE_TAC [def_thm,side_thm]
+    THEN CONV_TAC (RATOR_CONV (PURE_ONCE_REWRITE_CONV [SHORT_TAILREC_THM]))
+    THEN PURE_REWRITE_TAC [GSYM def_thm,GSYM side_thm]
+    THEN CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
+    THEN PURE_REWRITE_TAC [AND_CLAUSES]  
+    THEN REPEAT (AUTO_DECONSTRUCT_TAC finder)
+    THEN ASM_SIMP_TAC std_ss [sumTheory.ISL,sumTheory.ISR,sumTheory.OUTL,
+           sumTheory.OUTR,LET_DEF, AC CONJ_COMM CONJ_ASSOC]
+    THEN EQ_TAC THEN SIMP_TAC std_ss []
+  val finder = (rand o rand o rand o fst o dest_eq)
+  val def_result = auto_prove "tailrec_define" (def_goal,tac finder)
+  val finder = rand
+  val side_result = RW [] (auto_prove "tailrec_define_with_pre" (side_goal,tac finder))
+  in (def_result,def_thm,side_result,side_thm) end
 
-fun tailrec_define tm side_option = let
-  (* remove ``():unit`` constant from lhs *)
-  fun apply g NONE = NONE
-    | apply g (SOME x) = SOME (g x)
-  fun remove_unit tm = let
-    val (x,y) = dest_eq tm
-    in (mk_eq(subst [``():unit``|->mk_var("()",``:unit``)] x,y)) end
-  val (tm,side_option) = (remove_unit tm, apply remove_unit side_option)
-  (* calculate instantations to TAILREC *)
-  val side_option = (case side_option of NONE => NONE | SOME tm => if is_eq tm then SOME tm else NONE)
+fun prepare_pre pre_tm = let
+  val (x,y) = dest_eq pre_tm
+  val pre_tm = ftree2tm (leaves (tm2ftree y) (fn tm =>
+     list_mk_conj (
+      (filter (fn c => not (is_comb c andalso 
+                            (car c = car x))) 
+       (list_dest dest_conj tm))))) 
+  val cond_var = mk_var("cond",``:bool``)
+  val pre_tm = subst [cond_var|->T] pre_tm
+  val pre_tm = (snd o dest_eq o concl o SPEC_ALL o QCONV 
+                (REWRITE_CONV [])) pre_tm
+  in pre_tm end
+
+fun tailrec_define_full tm pre_option = let
   val (lhs,rhs) = dest_eq tm
-  val f = tm2ftree rhs
-  fun is_rec tm = eq (car tm) (car lhs) handle e => false
-  val input_type = type_of (cdr lhs)
-  val output_type = type_of lhs
-  val name = (fst o dest_var o car) lhs handle e => (fst o dest_const o car) lhs
-  val guard_tm = ftree2tm (format_ftree (mk_guard is_rec) f)
-  val guard_tm = (cdr o concl o SIMP_CONV bool_ss []) guard_tm handle e => guard_tm
-  val f1 = format_ftree (mk_branch (not o is_rec) (mk_arb input_type) cdr) f
-  val f2 = format_ftree (mk_branch (is_rec) (mk_arb output_type) I) f
-  val guard_tm = if is_arb (ftree2tm (pull_arb f1)) then ``F:bool`` else guard_tm
-  (* format side condition *)
-  fun replace_base h (FUN_IF (tm,x,y)) = FUN_IF (tm, replace_base h x, replace_base h y)
-    | replace_base h (FUN_LET (tm,tn,x)) = FUN_LET (tm, tn, replace_base h x)
-    | replace_base h (FUN_VAL tm) = FUN_VAL (h tm)
-  fun sim tm2 = subst [(car o cdr o car) tm2 |-> mk_abs(genvar(type_of ((cdr o cdr o car) tm2)),``T``)]
-  fun sim' tm = (snd o dest_eq o concl o SIMP_CONV std_ss []) tm handle e => tm
-  fun get_side NONE = replace_base (fn x => ``T:bool``) f
-    | get_side (SOME tm) = replace_base (sim' o sim tm) (tm2ftree (cdr tm))
-  val side_f_tm = ftree2tm (pull_T (get_side side_option))
-  (* perform definitions *)
-  fun do_define fun_name b = let
-    val fv = mk_var(fun_name,mk_type("fun",[type_of (cdr lhs),type_of b]))
-    val fv = mk_eq(mk_comb(fv,cdr lhs),b)
-    in Define [ANTIQUOTE fv] end
-  fun do_guard_define fun_name b =
-    if not (eq b ``F:bool``) then do_define fun_name b else let
-      val fv = mk_var(fun_name,mk_type("fun",[type_of (cdr lhs),type_of b]))
-      val fv = mk_eq(fv,mk_abs(mk_var("x",type_of (cdr lhs)),b))
-      in Define [ANTIQUOTE fv] end
-  val step = do_define (name^"_step") (ftree2tm (pull_arb f1))
-  val base = do_define (name^"_base") (ftree2tm (pull_arb f2))
-  val guard = do_guard_define (name^"_guard") guard_tm
-  val side = do_define (name^"_side") side_f_tm
-  val def = ``TAILREC:('a->'a)->('a->'b)->('a->bool)->'a->'b``
-  val def = inst [``:'a``|->input_type,``:'b``|->output_type] def
-  val pre_def = ``TAILREC_PRE:('a->'a)->('a->bool)->('a->bool)->'a->bool``
-  val pre_def = inst [``:'a``|->input_type] pre_def
-  fun select i = (car o cdr o car o concl o SPEC_ALL) i
-                 handle e => (cdr o car o concl o SPEC_ALL) i
-  val hh = mk_comb(mk_comb(mk_comb(def,select step),select base),select guard)
-  val hh = mk_eq(mk_var(name,type_of hh),hh)
-  val pre_hh = mk_comb(mk_comb(mk_comb(pre_def,select step),select guard),select side)
-  val pre_hh = mk_eq(mk_var(name^"_pre",type_of pre_hh),pre_hh)
-  val pre_f_def = Define [ANTIQUOTE pre_hh]
-  val f_def = Define [ANTIQUOTE hh]
-  (* descriptive theorem for function *)
-  val goal = subst[car lhs |-> (cdr o car o concl o SPEC_ALL) f_def] tm
-  val case_split_tac =
-    if eq guard_tm ``F`` then ALL_TAC else Cases_on [ANTIQUOTE ((fst o dest_eq o concl o SPEC_ALL) guard)]
-  val main_th = store_thm(name,goal,
-    CONV_TAC (RATOR_CONV (REWRITE_CONV [f_def]))
-    THEN ONCE_REWRITE_TAC [TAILREC_THM]
-    THEN case_split_tac
-    THEN ASM_SIMP_TAC std_ss [GSYM f_def]
-    THEN FULL_SIMP_TAC (std_ss++helperLib.pbeta_ss) [base,step,guard,f_def,LET_DEF,if_expand,implies_expand]
-    THEN FULL_SIMP_TAC (std_ss++helperLib.pbeta_ss) [base,step,guard,f_def,LET_DEF,if_expand,implies_expand]
-    THEN SRW_TAC [] [])
-  (* descriptive theorem for precondition *)
-  val pre = mk_comb((cdr o car o concl o SPEC_ALL) pre_f_def,cdr lhs)
-  fun get_side NONE = replace_base (fn x => if eq x lhs then pre else ``T:bool``) f
-    | get_side (SOME tm) = replace_base (subst [(car o cdr o car) tm |-> car pre]) (tm2ftree (cdr tm))
-  val goal = mk_eq (pre,ftree2tm (pull_T (get_side side_option)))
-  val side_th = store_thm(name ^ "_pre",goal,
-    CONV_TAC (RATOR_CONV (REWRITE_CONV [pre_f_def]))
-    THEN ONCE_REWRITE_TAC [TAILREC_PRE_THM]
-    THEN REWRITE_TAC [pre_f_def]
-    THEN case_split_tac
-    THEN ASM_SIMP_TAC bool_ss []
-    THEN (if eq guard_tm ``F`` then ONCE_REWRITE_TAC [TAILREC_PRE_THM] else REPEAT STRIP_TAC THEN EQ_TAC)
-    THEN FULL_SIMP_TAC (std_ss++helperLib.pbeta_ss) [base,step,guard,side,LET_DEF]
-    THEN FULL_SIMP_TAC (std_ss++helperLib.pbeta_ss) [base,step,guard,f_def,LET_DEF,if_expand,implies_expand]
-    THEN SRW_TAC [] [] THEN METIS_TAC [])
-  (* update simpsets *)
-  val _ = tailrec_add_to_simpsets(f_def,pre_f_def,step,base,guard,side)
-  in (main_th,side_th) end;
+  val func_tm = repeat car lhs
+  val func_name = fst (dest_var func_tm) handle HOL_ERR e => fst (dest_const func_tm)
+  (* construct step function *)
+  fun option_apply f NONE = NONE | option_apply f (SOME x) = SOME (f x)
+  val t = merge_side (tm2ftree rhs) (option_apply (tm2ftree o prepare_pre) pre_option)
+  val ty = (snd o dest_type o type_of) func_tm
+  val input_type = el 1 ty
+  val output_type = el 2 ty
+  val cond_var = mk_var("cond",``:bool``)
+  fun step (FUN_IF (b,t1,t2)) = FUN_IF (b,step t1,step t2)
+    | step (FUN_LET (x,y,t)) = FUN_LET (x,y,step t)
+    | step (FUN_COND (c,t)) = FUN_COND (c,step t)
+    | step (FUN_VAL tm) = 
+        if ((eq (car tm) func_tm) handle HOL_ERR _ => false)
+        then FUN_VAL (mk_pair(mk_inl(cdr tm,output_type),cond_var))
+        else FUN_VAL (mk_pair(mk_inr(tm,input_type),cond_var))
+  val tm2 = subst [cond_var|->T] (ftree2tm (step t))
+  val step_fun = mk_pabs(cdr lhs,tm2)
+  val tm_option = SOME (tm,pre_option)
+  val (def_result,def_thm,side_result,side_thm) = 
+        tailrec_define_from_step func_name step_fun tm_option
+  val _ = save_thm(func_name ^ "_def", def_result)
+  val _ = save_thm(func_name ^ "_pre_def", side_result)
+  in (def_result,def_thm,side_result,side_thm) end;
 
-val lemma = simpLib.SIMP_PROVE bool_ss [] ``!x y f g. (x = y) /\ (f = g) ==> ((f:'a->'b) x = g y)``
-val lemma2 = prove(``!x y. ~x ==> y = x \/ y``,Cases_on `x` THEN REWRITE_TAC [])
-fun TAILREC_EQ_TAC () = REPEAT (
-  REPEAT STRIP_TAC
-  THEN FULL_SIMP_TAC (std_ss++tailrec_ss()) []
-  THEN REPEAT (REPEAT STRIP_TAC THEN MATCH_MP_TAC lemma THEN STRIP_TAC)
-  THEN FULL_SIMP_TAC (std_ss++tailrec_ss())
-    [lemma2,FUN_EQ_THM,pairTheory.FORALL_PROD,LET_DEF])
+fun tailrec_define tm = 
+  let val (th,_,_,_) = tailrec_define_full tm NONE in th end;
 
-(*
+fun tailrec_define_with_pre tm pre = 
+  let val (th,_,pre,_) = tailrec_define_full tm (SOME pre) in (th,pre) end;
 
-open wordsTheory;
+fun TAILREC_TAC (hs,g) = 
+  (REWRITE_TAC [] THEN ONCE_REWRITE_TAC (!tailrec_definitions)) (hs,g);
 
-val tm = ``
-  test1 (r1:word32,r2:word32,dm:word32 set,m:word32->word32) =
-    if r1 = 0w then (r1,r2,dm,m) else
-      let r1 = m r1 in
-      let r2 = r2 + 1w in
-        test1 (r1,r2,dm,m)``
-
-val side_tm = ``
-  test1_pre (r1:word32,r2:word32,dm:word32 set,m:word32->word32) =
-    if r1 = 0w then T else
-      let cond = ALIGNED r1 in
-      let r1 = m r1 in
-      let r2 = r2 + 1w in
-        test1_pre (r1,r2,dm,m) /\ cond``
-
-val side_option = SOME side_tm
-
-*)
 
 end;

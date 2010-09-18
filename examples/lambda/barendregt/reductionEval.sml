@@ -25,7 +25,7 @@ in
 end
 
 val [lameq_beta,lameq_refl,lameq_sym,lameq_trans,
-     lameq_APPl, lameq_APPr, lameq_LAM] = CONJUNCTS chap2Theory.lam_eq_rules
+     lameq_APPl, lameq_APPr, lameq_LAM] = CONJUNCTS chap2Theory.lameq_rules
 
 val lameq_APPcong = chap2Theory.lameq_app_cong
 

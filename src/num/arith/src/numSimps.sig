@@ -10,6 +10,8 @@ sig
      val ARITH_DP_FILTER_ss : (thm -> bool) -> simpLib.ssfrag
      val ARITH_RWTS_ss      : simpLib.ssfrag
      val ARITH_AC_ss        : simpLib.ssfrag
+     val ARITH_NORM_ss      : simpLib.ssfrag
+
      val CTXT_ARITH         : ctxt -> conv
      val CACHED_ARITH       : ctxt -> conv
      val clear_arith_caches : unit -> unit

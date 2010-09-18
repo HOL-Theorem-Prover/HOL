@@ -145,7 +145,8 @@ quietdec := false;
               ((t,false)::(filter filter_pred l1), (t,false)::(filter filter_pred l2))
           end)
       else
-      ([(t,false)],[(t,false)]);
+        (if same_const T t orelse same_const F t then ([],[]) else
+           ([(t,false)],[(t,false)]));
 
 
   fun clean_term_multiple_list [] = []
@@ -218,7 +219,6 @@ fun bool_eq_imp_real_imp_CONV matches t =
    in
       thm
    end;
-
 
 
 
@@ -354,7 +354,6 @@ fun BOOL_NEG_PAIR_CONV t =
  *   or   A \/ B \/ A = B \/ A
  *
  *---------------------------------------------------------------------------*)
-
 fun BOOL_EXTRACT_SHARED_CONV t =
    let
       val _ = if (type_of t = bool) then () else raise mk_HOL_ERR "Conv" "bool_imp_extract_CONV" "";

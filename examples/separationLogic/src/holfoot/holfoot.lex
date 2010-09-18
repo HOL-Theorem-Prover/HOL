@@ -60,6 +60,7 @@ List.foldl (fn ((str, tok), t) => Binarymap.insert (t, str, tok))
   ("not" ,      NOT),
   ("map" ,      MAP),
   ("true" ,     TT),
+  ("old" ,      OLD),
   ("assume" ,   ASSUME),
   ("assert" ,   ASSERT),
   ("false",     FF),

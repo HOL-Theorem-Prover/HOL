@@ -6,7 +6,6 @@
 
 (* interactive use:
   app load ["arm_astTheory", "wordsLib"];
-  val _ = HOL_Interactive.toggle_quietdec();
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -51,9 +50,11 @@ val _ = Hol_datatype `ExclusiveMonitors =
 (* Monad for Coprocessors *)
 (* ---------------------- *)
 
-val _ = type_abbrev("cp_state",``:CP15reg``);
+val _ = Hol_datatype `coproc_state =
+  <| cp14 : CP14reg;
+     cp15 : CP15reg |>`;
 
-val _ = type_abbrev("CoprocessorM", ``:cp_state -> ('a # cp_state)``);
+val _ = type_abbrev("CoprocessorM", ``:coproc_state -> ('a # coproc_state)``);
 
 val constC_def = Define`
   (constC: 'a -> 'a CoprocessorM) x = \y. (x,y)`;
@@ -63,7 +64,7 @@ val seqC_def = Define`
   \y. let (v,x) = s y in f v x`;
 
 val _ = Hol_datatype `Coprocessors =
-  <| state        : cp_state;
+  <| state        : coproc_state;
      accept       : CPinstruction -> bool CoprocessorM;
      internal_op  : CPinstruction -> unit CoprocessorM;
      load_count   : CPinstruction -> num CoprocessorM;
@@ -158,18 +159,21 @@ val write__psr_def = Define`
     writeT (arm_state_psrs_fupd ((ii.proc,psrname) =+ value))`;
 
 val read_scr_def = Define`
-  read_scr (ii:iiid) = readT (\s. s.coprocessors.state.SCR)`;
+  read_scr (ii:iiid) = readT (\s. s.coprocessors.state.cp15.SCR)`;
 
 val write_scr_def = Define`
   write_scr (ii:iiid) value =
     writeT (arm_state_coprocessors_fupd (Coprocessors_state_fupd
-           (\state. state with <| SCR := value |>)))`;
+           (coproc_state_cp15_fupd (\cp15. cp15 with <| SCR := value |>))))`;
 
 val read_nsacr_def = Define`
-  read_nsacr (ii:iiid) = readT (\s. s.coprocessors.state.NSACR)`;
+  read_nsacr (ii:iiid) = readT (\s. s.coprocessors.state.cp15.NSACR)`;
 
 val read_sctlr_def = Define`
-  read_sctlr (ii:iiid) = readT (\s. s.coprocessors.state.SCTLR)`;
+  read_sctlr (ii:iiid) = readT (\s. s.coprocessors.state.cp15.SCTLR)`;
+
+val read_teehbr_def = Define`
+  read_teehbr (ii:iiid) = readT (\s. s.coprocessors.state.cp14.TEEHBR)`;
 
 val read_cpsr_def  = Define `read_cpsr ii = read__psr ii CPSR`;
 
@@ -189,10 +193,38 @@ val write_isetstate_def = Define`
        write_cpsr ii
          (cpsr with <| J := isetstate ' 1; T := isetstate ' 0 |>))`;
 
-val have_security_ext_def = Define`
-  have_security_ext (ii:iiid) =
-    seqT (read_extensions ii)
-    (\ext. constT (Extension_Security IN ext))`;
+val have_extension_def = new_definition("have_extension_def",
+  ``have_extension P (ii:iiid) : bool M =
+    seqT (read_info ii) (\info. constT ((info.arch,info.extensions) IN P))``);
+
+val have_security_ext_def = new_definition("have_security_ext_def",
+  ``have_security_ext = have_extension security_support``);
+
+val have_thumbEE_def = new_definition("have_thumbEE_def",
+  ``have_thumbEE = have_extension thumbee_support``);
+
+val have_jazelle_def = new_definition("have_jazelle_def",
+  ``have_jazelle = have_extension jazelle_support``);
+
+val rule =
+  SIMP_RULE (std_ss++pred_setLib.PRED_SET_ss) [] o
+  ONCE_REWRITE_RULE
+    [pred_setTheory.SPECIFICATION
+       |> GSYM
+       |> INST_TYPE [alpha |-> ``:ARMarch # ARMextensions set``]] o
+  REWRITE_RULE [FUN_EQ_THM, have_extension_def,
+    arm_coretypesTheory.thumbee_support_def,
+    arm_coretypesTheory.security_support_def,
+    arm_coretypesTheory.jazelle_support_def]
+
+val have_security_ext = save_thm("have_security_ext",
+  rule have_security_ext_def);
+
+val have_thumbEE = save_thm("have_thumbEE",
+  rule have_thumbEE_def);
+
+val have_jazelle = save_thm("have_jazelle",
+  rule have_jazelle_def);
 
 val bad_mode_def = Define`
   bad_mode (ii:iiid) (mode:word5) =
@@ -279,12 +311,12 @@ val read_vbar_def = Define`
     seqT (is_secure ii)
     (\is_secure.
        if is_secure then
-         readT (\s. s.coprocessors.state.VBAR.secure)
+         readT (\s. s.coprocessors.state.cp15.VBAR.secure)
        else
-         readT (\s. s.coprocessors.state.VBAR.non_secure))`;
+         readT (\s. s.coprocessors.state.cp15.VBAR.non_secure))`;
 
 val read_mvbar_def = Define`
-  read_mvbar (ii:iiid) = readT (\s. s.coprocessors.state.MVBAR)`;
+  read_mvbar (ii:iiid) = readT (\s. s.coprocessors.state.cp15.MVBAR)`;
 
 val current_instr_set_def = Define`
   current_instr_set ii =
@@ -426,7 +458,11 @@ val branch_to_def = Define`
 val increment_pc_def = Define`
   increment_pc ii enc =
     seqT (read_pc ii)
-    (\pc. branch_to ii (pc + if enc = Encoding_Thumb then 2w else 4w))`;
+    (\pc. branch_to ii
+            (pc + if (enc = Encoding_Thumb) \/ (enc = Encoding_ThumbEE) then
+                    2w
+                  else
+                    4w))`;
 
 val big_endian_def = Define`
   big_endian (ii:iiid) =
@@ -823,5 +859,10 @@ val coproc_get_two_words_def = Define`
     (\coprocessors.
        let data = FST (coprocessors.get_two inst coprocessors.state) in
          constT data)`;
+
+val _ = computeLib.add_persistent_funs
+  [("have_security_ext", have_security_ext),
+   ("have_thumbEE", have_thumbEE),
+   ("have_jazelle", have_jazelle)];
 
 val _ = export_theory ();

@@ -1407,11 +1407,11 @@ val sw2i_msb = store_thm("sw2i_msb",
            INT_ADD_CALCULATE,w2n_lt_full]);
 
 (*****************************************************************************)
-(* sw2i_bit : |- !a b. b < dimindex (:'a) ==> (a %% b = ibit b (sw2i a))     *)
+(* sw2i_bit : |- !a b. b < dimindex (:'a) ==> (a ' b = ibit b (sw2i a))      *)
 (*****************************************************************************)
 
 val lem1 = prove(``b < dimindex (:'a) ==>
-    	   	     (BIT b (w2n (a : 'a word)) = a %% b)``,
+    	   	     (BIT b (w2n (a : 'a word)) = a ' b)``,
     ONCE_REWRITE_TAC [SIMP_RULE arith_ss [n2w_w2n]
                     (Q.SPEC `w2n a` word_index_n2w)] THEN
     RW_TAC int_ss []);
@@ -1427,7 +1427,7 @@ val lem3 = prove(``b < dimindex (:'a) ==>
     RW_TAC int_ss [BIT_RWR]);
 
 val sw2i_bit = store_thm("sw2i_bit",
-    ``!a b. b < dimindex (:'a) ==> (a %% b = ibit b (sw2i (a:'a word)))``,
+    ``!a b. b < dimindex (:'a) ==> (a ' b = ibit b (sw2i (a:'a word)))``,
     ONCE_REWRITE_TAC [SIMP_RULE arith_ss [n2w_w2n]
          (Q.SPEC `w2n a` word_index_n2w)] THEN
     RW_TAC int_ss [BIT_RWR,ibit_def,REWRITE_RULE [INT_EXP] (GSYM sw2i_asr)] THEN
@@ -1508,7 +1508,7 @@ val WORD_BITS_THM = store_thm("WORD_BITS_THM",
     RW_TAC int_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_bits_def,
     	   word_and_def,word_lsr_def,
 	   PROVE [word_index_n2w] ``i < dimindex (:'a) ==>
-	   	 (n2w n : 'a word %% i = BIT i n)``,word_asr_def,
+	   	 (n2w n : 'a word ' i = BIT i n)``,word_asr_def,
 	   BIT_RANGE,TOP_BIT_THM] THEN EQ_TAC THEN
     RW_TAC int_ss [DECIDE ``i < a + 1 - b = i + b <= a:num``]);
 
@@ -1516,9 +1516,9 @@ val WORD_SLICE_THM = store_thm("WORD_SLICE_THM",
     ``(h '' l) a = a && n2w (2 ** SUC h - 2 ** l)``,
     RW_TAC int_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_bits_def,
     	   word_and_def,word_lsr_def,
-	   PROVE [word_index_n2w] ``i < dimindex (:'a) ==>
-	   	 (n2w n : 'a word %% i = BIT i n)``,word_asr_def,
-           BIT_RANGE,TOP_BIT_THM,word_slice_def] THEN
+	   PROVE [word_index_n2w] 
+             ``i < dimindex (:'a) ==> (n2w n : 'a word ' i = BIT i n)``, 
+            word_asr_def, BIT_RANGE,TOP_BIT_THM,word_slice_def] THEN
     EQ_TAC THEN RW_TAC int_ss []);
 
 val _ = export_theory();

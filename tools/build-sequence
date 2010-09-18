@@ -63,13 +63,13 @@ src/pair/src
 src/sum
 src/tfl/src
 src/option
+src/IndDef
 src/num/theories
 src/num/reduce/src
 src/num/arith/src
 src/num
 src/num/termination
 src/num/extra_theories
-src/IndDef
 src/pred_set/src
 src/datatype/equiv
 src/datatype/record
@@ -112,6 +112,7 @@ src/hol88
 src/rational
 src/real
 !!examples/separationLogic/src/
+src/HolQbf
 src/HolSmt
 !examples/misc
 # these examples require Muddy, which is MoscowML specific

@@ -233,7 +233,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           );
 	  end_block ()
        end
-    ) else if (same_const op_term fasl_prog_assume_term)  then (
+    ) else if (same_const op_term asl_prog_assume_term)  then (
        let
           val prop_term = el 1 args;
        in
@@ -242,7 +242,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           sys (Top, Top, Top) (d - 1) prop_term;
           end_block ()
        end
-    ) else if (same_const op_term fasl_prog_cond_term)  then (
+    ) else if (same_const op_term asl_prog_cond_term)  then (
        let
           val prop_term = el 1 args;
           val prog1_term = el 2 args;
@@ -267,7 +267,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           add_string "}";
           end_block ()
        end
-    ) else if (same_const op_term fasl_prog_while_term)  then (
+    ) else if (same_const op_term asl_prog_while_term)  then (
        let
           val prop_term = el 1 args;
           val prog_term = el 2 args;
@@ -286,12 +286,12 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           add_string "}";
           end_block ()
        end
-    ) else if (same_const op_term fasl_comment_block_spec_term) orelse
-              (same_const op_term fasl_comment_loop_spec_term) then (
+    ) else if (same_const op_term asl_comment_block_spec_term) orelse
+              (same_const op_term asl_comment_loop_spec_term) then (
        let
           val (pre_term, post_term) = pairSyntax.dest_pair (el 1 args);
           val prog_term = el 2 args;
-          val loop = same_const op_term fasl_comment_loop_spec_term;
+          val loop = same_const op_term asl_comment_loop_spec_term;
 
           val (v,pre_body) = pairSyntax.dest_pabs pre_term;
           val (_,post_body) = pairSyntax.dest_pabs post_term;
@@ -325,7 +325,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           end_style ();
           end_block ()
        end
-    ) else if (same_const op_term fasl_comment_loop_unroll_term)  then (
+    ) else if (same_const op_term asl_comment_loop_unroll_term)  then (
        let
           val unroll_term = el 1 args;
           val prog_term   = el 2 args;
@@ -346,7 +346,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           add_string "}";
           end_block ()
        end
-    ) else if (same_const op_term fasl_comment_assert_term)  then (
+    ) else if (same_const op_term asl_comment_assert_term)  then (
        let
           val p_term   = el 1 args;
           val (v,p_body) = pairSyntax.dest_pabs p_term;
@@ -365,7 +365,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           add_string "]";
           end_style ()
        end
-    ) else if (same_const op_term fasl_prog_cond_critical_section_term)  then (
+    ) else if (same_const op_term asl_prog_cond_critical_section_term)  then (
        let
           val res_term = el 1 args;
           val cond_term = el 2 args;
@@ -419,12 +419,12 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
           sys (Top, Top, Top) (d - 1) t';
           end_block ()
       end
-    ) else if (same_const op_term fasl_prog_block_term)  then (
+    ) else if (same_const op_term asl_prog_block_term)  then (
        let
           val (argL_term, rest_term) = listSyntax.strip_cons (el 1 args);
           val (argL_term, rest_term) = let
-                    val (c, rest_term') = dest_fasl_comment_location rest_term
-                    val nc = mk_fasl_comment_location (c, mk_comb (op_term, rest_term'))
+                    val (c, rest_term') = dest_asl_comment_location rest_term
+                    val nc = mk_asl_comment_location (c, mk_comb (op_term, rest_term'))
                   in
                     (argL_term@[nc], rest_term')
                   end handle HOL_ERR _ => (argL_term, rest_term);
@@ -444,7 +444,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
              end_block ()
           )
        end
-    ) else if (same_const op_term fasl_comment_location_term) then (
+    ) else if (same_const op_term asl_comment_location_term) then (
       let
          val loc_add_strings = label_list2ML (el 1 args);
       in
@@ -462,7 +462,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
             sys (Top, Top, Top) (d - 1) (el 2 args);            
          end_block ()
       end
-    ) else if (same_const op_term fasl_comment_location2_term) then (
+    ) else if (same_const op_term asl_comment_location2_term) then (
       let
          val loc_add_strings = label_list2ML (el 1 args);
       in
@@ -480,7 +480,7 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
             sys (Top, Top, Top) (d - 1) (el 2 args);            
          end_block ()
       end
-    ) else if (same_const op_term fasl_comment_loop_invariant_term) then (
+    ) else if (same_const op_term asl_comment_loop_invariant_term) then (
       let
          val (v,body) = pairSyntax.dest_pabs (el 1 args);
          val vL = free_vars v;
@@ -506,13 +506,13 @@ fun holfoot_prog_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
             sys (Top, Top, Top) (d - 1) (el 2 args);            
          end_block ()
       end
-    ) else if (same_const op_term fasl_comment_abstraction_term) then (
+    ) else if (same_const op_term asl_comment_abstraction_term) then (
       begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);
       add_string "abstracted";
       add_string " ";
       add_string (fst (dest_var (el 1 args)));
       end_block ()
-    ) else if (same_const op_term fasl_comment_location_string_term) then (
+    ) else if (same_const op_term asl_comment_location_string_term) then (
       let
          val loc_add_strings = [stringLib.fromHOLstring (el 1 args)];
       in
@@ -609,16 +609,16 @@ fun holfoot_pred_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
     val {add_string,add_break,begin_block,end_block,add_ann_string,add_newline,begin_style,end_style,...} = ppfns
     val (op_term,args) = strip_comb t;
   in
-    if (same_const op_term fasl_pred_false_term)  then (
+    if (same_const op_term asl_pred_false_term)  then (
       add_string "false"
-    ) else if (same_const op_term fasl_pred_true_term)  then (
+    ) else if (same_const op_term asl_pred_true_term)  then (
       add_string "true"
-    ) else if (same_const op_term fasl_pred_neg_term)  then (
+    ) else if (same_const op_term asl_pred_neg_term)  then (
       add_string "(not";
       add_string " ";
       sys (Top, Top, Top) (d - 1) (el 1 args);
       add_string ")"
-    ) else if (same_const op_term fasl_pred_and_term)  then (
+    ) else if (same_const op_term asl_pred_and_term)  then (
       add_string "(";
       sys (Top, Top, Top) (d - 1) (el 1 args);
       add_string " ";
@@ -626,7 +626,7 @@ fun holfoot_pred_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps 
       add_string " ";
       sys (Top, Top, Top) (d - 1) (el 2 args);
       add_string (")")
-    ) else if (same_const op_term fasl_pred_or_term)  then (
+    ) else if (same_const op_term asl_pred_or_term)  then (
       add_string ("(");
       sys (Top, Top, Top) (d - 1) (el 1 args);
       add_string (" or");
@@ -893,22 +893,28 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
          end_block ()
       end
     ) else if (same_const op_term var_res_prop_binexpression_cond_term)  then (
-      begin_block INCONSISTENT 0;       
+      begin_block CONSISTENT 0;       
       add_string "if";
       add_string " ";
       add_string "(";
+      begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);
       sys (Top, Top, Top) (d - 1) (coded_expression_to_term (el 3 args) (el 4 args) (el 2 args));
       add_string ")";
-      add_break (1,0);
-      add_string("then");
-      add_break (1, 0);
+      end_block();
+      add_string(" ");
+      add_string("then (");
+      add_break (1,(!holfoot_pretty_printer_block_indent));
+      begin_block INCONSISTENT 0;
       sys (Top, Top, Top) (d - 1) (el 5 args);
+      end_block();
       add_break (1, 0);
-      add_string "else";
-      add_break (1, 0);
+      add_string ") else (";
+      add_break (1,(!holfoot_pretty_printer_block_indent));
+      begin_block INCONSISTENT 0;
       sys (Top, Top, Top) (d - 1) (el 6 args);
+      end_block ();
       add_break (1, 0);
-      add_string "end";
+      add_string ") end";
       end_block ()
     ) else if (same_const op_term var_res_bool_proposition_term)  then (
       begin_block INCONSISTENT (!holfoot_pretty_printer_block_indent);       
@@ -1012,7 +1018,7 @@ fun holfoot_cond_a_prop_printer sys (ppfns:term_pp_types.ppstream_funs) gravs d 
 fun holfoot_specification_printer GS sys (ppfns:term_pp_types.ppstream_funs) gravs d pps t = let
     open Portable term_pp_types
     val {add_string,add_break,begin_block,end_block,add_ann_string,add_newline,begin_style,end_style,...} = ppfns
-    val (_, resL,funL) = dest_FASL_SPECIFICATION t;
+    val (_, resL,funL) = dest_ASL_SPECIFICATION t;
     val resL = rand resL;
 
     fun rest_preprocess rest =
@@ -1291,14 +1297,14 @@ end
 val pretty_printer_list =
  [("holfoot_prop_is_equiv_false", ``VAR_RES_PROP_IS_EQUIV_FALSE c f wrb (sfb:holfoot_a_proposition -> num)``,    holfoot_prop_is_equiv_false_printer),
   ("holfoot_prop_is_equiv_false", ``~(VAR_RES_PROP_IS_EQUIV_FALSE c f wrb (sfb:holfoot_a_proposition -> num))``, holfoot_prop_is_equiv_false_printer),
-  ("holfoot_specification", ``FASL_SPECIFICATION holfoot_separation_combinator locks 
-     (procs : (bool # 'b # ('c -> ('c, 'a, 'b, holfoot_state) fasl_program) #
-                           ('c -> ('c, 'a, 'b, holfoot_state) fasl_program)) list)``, holfoot_specification_printer),
+  ("holfoot_specification", ``ASL_SPECIFICATION holfoot_separation_combinator locks 
+     (procs : (bool # 'b # ('c -> ('c, 'a, 'b, holfoot_state) asl_program) #
+                           ('c -> ('c, 'a, 'b, holfoot_state) asl_program)) list)``, holfoot_specification_printer),
   ("holfoot_prog", ``prog:holfoot_program``, holfoot_prog_printer),
   ("holfoot_var", ``holfoot_var v``, holfoot_var_printer),
   ("holfoot_tag", ``holfoot_tag t``, holfoot_tag_printer),
   ("holfoot_expression", ``e:('a,'b,'c) var_res_expression``, holfoot_expression_printer),
-  ("holfoot_pred", ``p:'a fasl_predicate``, holfoot_pred_printer),
+  ("holfoot_pred", ``p:'a asl_predicate``, holfoot_pred_printer),
   ("holfoot_a_prop", ``x:'a set``, holfoot_a_prop_printer),
   ("holfoot_triple", ``VAR_RES_COND_HOARE_TRIPLE DISJOINT_FMAP_UNION pre (prog:holfoot_program) post``, holfoot_cond_triple_printer),
   ("holfoot_entails", ``VAR_RES_FRAME_SPLIT DISJOINT_FMAP_UNION mode wr w'

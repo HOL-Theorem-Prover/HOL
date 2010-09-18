@@ -497,7 +497,7 @@ fun pp_struct info_record = let
   in
     block INCONSISTENT 2
       (add_string "val">>
-       add_break(1,0)>> add_string s>> add_break(1,0)>>
+       add_break(1,0)>> add_string ("op "^s) >> add_break(1,0)>>
        add_string "=">> add_break(1,0)>>
        add_string "DT(">>
        block INCONSISTENT 0

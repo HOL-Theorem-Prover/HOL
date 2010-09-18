@@ -29,6 +29,10 @@ sig
   val Branch_Exchange_tm                   : term
   val Compare_Branch_tm                    : term
   val Table_Branch_Byte_tm                 : term
+  val Check_Array_tm                       : term
+  val Handler_Branch_Link_tm               : term
+  val Handler_Branch_Link_Parameter_tm     : term
+  val Handler_Branch_Parameter_tm          : term
   val Branch_Link_Exchange_Immediate_tm    : term
   val Branch_Link_Exchange_Register_tm     : term
   val Data_Processing_tm                   : term
@@ -92,6 +96,7 @@ sig
   val Preload_Instruction_tm               : term
   val Supervisor_Call_tm                   : term
   val Secure_Monitor_Call_tm               : term
+  val Enterx_Leavex_tm                     : term
   val Clear_Exclusive_tm                   : term
   val If_Then_tm                           : term
   val Data_Synchronization_Barrier_tm      : term
@@ -122,6 +127,10 @@ sig
   val mk_Branch_Exchange                   : term -> term
   val mk_Compare_Branch                    : term * term * term -> term
   val mk_Table_Branch_Byte                 : term * term * term -> term
+  val mk_Check_Array                       : term * term -> term
+  val mk_Handler_Branch_Link               : term * term -> term
+  val mk_Handler_Branch_Link_Parameter     : term * term -> term
+  val mk_Handler_Branch_Parameter          : term * term -> term
   val mk_Branch_Link_Exchange_Immediate    : term * term * term -> term
   val mk_Branch_Link_Exchange_Register     : term -> term
   val mk_Data_Processing                   : term * term * term * term *
@@ -209,6 +218,7 @@ sig
   val mk_Preload_Instruction               : term * term * term -> term
   val mk_Supervisor_Call                   : term -> term
   val mk_Secure_Monitor_Call               : term -> term
+  val mk_Enterx_Leavex                     : term -> term
   val mk_If_Then                           : term * term -> term
   val mk_Data_Synchronization_Barrier      : term -> term
   val mk_Instruction_Synchronization_Barrier : term -> term
@@ -241,6 +251,10 @@ sig
   val dest_Branch_Exchange                 : term -> term
   val dest_Compare_Branch                  : term -> term * term * term
   val dest_Table_Branch_Byte               : term -> term * term * term
+  val dest_Check_Array                     : term -> term * term
+  val dest_Handler_Branch_Link             : term -> term * term
+  val dest_Handler_Branch_Link_Parameter   : term -> term * term
+  val dest_Handler_Branch_Parameter        : term -> term * term
   val dest_Branch_Link_Exchange_Immediate  : term -> term * term * term
   val dest_Branch_Link_Exchange_Register   : term -> term
   val dest_Data_Processing                 : term -> term * term * term *
@@ -328,6 +342,7 @@ sig
   val dest_Preload_Instruction             : term -> term * term * term
   val dest_Supervisor_Call                 : term -> term
   val dest_Secure_Monitor_Call             : term -> term
+  val dest_Enterx_Leavex                   : term -> term
   val dest_If_Then                         : term -> term * term
   val dest_Data_Synchronization_Barrier    : term -> term
   val dest_Instruction_Synchronization_Barrier : term -> term
@@ -360,6 +375,10 @@ sig
   val is_Branch_Exchange                   : term -> bool
   val is_Compare_Branch                    : term -> bool
   val is_Table_Branch_Byte                 : term -> bool
+  val is_Check_Array                       : term -> bool
+  val is_Handler_Branch_Link               : term -> bool
+  val is_Handler_Branch_Link_Parameter     : term -> bool
+  val is_Handler_Branch_Parameter          : term -> bool
   val is_Branch_Link_Exchange_Immediate    : term -> bool
   val is_Branch_Link_Exchange_Register     : term -> bool
   val is_Data_Processing                   : term -> bool

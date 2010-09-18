@@ -1276,14 +1276,21 @@ fun pp_term (G : grammar) TyG backend = let
            the underlying constant. *)
         val base_ty = let
         in
-          case Overload.overloading_of_term overload_info f of
-            NONE => let
-              val {Thy,Name,Ty} = dest_thy_const f
+          if is_fakeconst f then let
+              (* f prints to the atom-name *)
+              val nm = atom_name f
             in
-              type_of (prim_mk_const {Thy = Thy, Name = Name})
+              #base_type (valOf (Overload.info_for_name overload_info nm))
             end
-          | SOME print_name =>
-            #base_type
+          else
+            case Overload.overloading_of_term overload_info f of
+              NONE => let
+                val {Thy,Name,Ty} = dest_thy_const f
+              in
+                type_of (prim_mk_const {Thy = Thy, Name = Name})
+              end
+            | SOME print_name =>
+              #base_type
                 (valOf (Overload.info_for_name overload_info print_name))
         end
 
@@ -1408,9 +1415,21 @@ fun pp_term (G : grammar) TyG backend = let
           val pp_elements = block_up_els [] ((FirstTM::elements) @ [LastTM])
           val (begblock, endblock) =
             block_by_style(addparens, rr, pgrav, fname, fprec)
+          val (casearrow_begin, casearrow_end) =
+              if fname = GrammarSpecials.case_arrow_special andalso
+                 length args = 1
+              then let
+                  val old_seen = !bvars_seen
+                in
+                  ((fn () => bvars_seen := free_vars (hd args) @ !bvars_seen),
+                   (fn () => bvars_seen := old_seen))
+                end
+              else ((fn () => ()), (fn () => ()))
         in
           pbegin addparens; begblock();
+          casearrow_begin();
           print_ellist (lprec, prec, rprec) (pp_elements, tyargs, arg_terms);
+          casearrow_end();
           endblock (); pend addparens
         end
       | INFIX RESQUAN_OP => raise Fail "Res. quans shouldn't arise"
@@ -1787,6 +1806,10 @@ fun pp_term (G : grammar) TyG backend = let
         end
       | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator
+          val (oif, oiargs) =
+              case Overload.oi_strip_comb overload_info tm of
+                NONE => (f, args @ [Rand])
+              | SOME p => p
 
           (* check for various literal and special forms *)
 
@@ -1820,7 +1843,7 @@ fun pp_term (G : grammar) TyG backend = let
 
           (* set comprehensions *)
           val _ =
-              if grammar_name G Rator = SOME "GSPEC" andalso my_is_abs Rand
+              if grammar_name G oif = SOME "GSPEC" andalso my_is_abs Rand
               then let
                   val (vs, body) = my_dest_abs Rand
                   val vfrees = FVL [vs] empty_tmset

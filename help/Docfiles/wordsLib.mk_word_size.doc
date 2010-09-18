@@ -1,4 +1,4 @@
-\DOC 
+\DOC
 
 \TYPE {mk_word_size : int -> unit}
 

@@ -5,14 +5,14 @@ list_append(x;y) [data_list(x,xdata) * data_list(y,ydata)] {
   } else {
     t = x;
     n = t->tl;
-    loop_spec [(t == #tc) * (t |-> tl:n,dta:#tdate) *
+    loop_spec [(t |-> tl:n,dta:#tdate) *
                data_list(n,data2) * data_list(y, data3)] {
        while (n != NULL) {
          t = n;
          n = t->tl;
        }
        t->tl = y;
-    } [data_list(#tc,``tdate::(data2++data3)``)]
+    } [data_list(old(t),``tdate::(data2++data3)``)]
   } 
 } [data_list(x, ``xdata++ydata``)]
 

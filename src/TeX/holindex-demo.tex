@@ -2,7 +2,6 @@
 
 \usepackage{holindex}
 
-\initHOLindex
 \setHOLlinewidth{80}   %default is 80
 %\setHOLoverrides{over} %option
 
@@ -16,9 +15,8 @@ Similar usage as bibtex, makeindex etc.
 \item create jobname.tex with header
 \begin{verbatim}
 \usepackage{holindex}
-\initHOLindex
-\setHOLlinewidth{80}  %optional default is 80
-\setHOLoverrides{file}
+\setHOLlinewidth{80}   %optional default is 80
+\setHOLoverrides{file} %optional 
 \end{verbatim}
 \item make sure that \texttt{holindex} is loaded after packages like
   \texttt{natbib}, since it loads \texttt{underscore} and this will
@@ -231,6 +229,25 @@ Printout of \texttt{holindex-demo.hdf}:
    \sortHOLIndexOccurence
 \end{verbatim}
 
+Sometimes, it might be tiresome to write a lengthy theory name over and over again.
+One can easily define printing and citing commands for theorems of a specific
+theory by e.\,g.:
+\begin{verbatim}
+\newcommand{\citeMyTheorythm}[1]{\citeHOLthm{lengthyTheoryName.#1}}
+\end{verbatim}
+It is a little bit trickier to get the same effect for citation lists. There is however,
+a version of \texttt{mciteHOLthm} that accepts a theorem prefix:
+\begin{verbatim}
+\newcommand{\mciteMyTheorythm}[1]{\mciteHOLthmPrefix{lengthyTheoryName.}{#1}}
+\end{verbatim}
+
+If you are using many theorem citations it might become tricky to keep track of what you are citing.
+There is a debug flag that prints the theorem name as well as it's index number. To use it, add the following
+line to the header of your file:
+\begin{verbatim}
+\setboolean{holThmCiteDebug}{true}
+\end{verbatim}
+
 
 \section{Printing}
 There are some macros just concerned with the resulting output.
@@ -249,8 +266,8 @@ Format of citations
 \renewcommand[\protect]{\citeHOLtm}[1]{(HOL-Term~\citePureHOLtm{#1})}
 \renewcommand[\protect]{\citeHOLty}[1]{(HOL-Type~\citePureHOLty{#1})}
 
-\renewcommand[\protect]{\mciteHOLthm}[1]
-   {(HOL-Thms~\foreach{\citePureHOLthm}{, }{#1})}
+\renewcommand[\protect]{\mciteHOLthmPrefix}[2]
+   {(HOL-Thms~\foreach{\citePureHOLthmPrefix{#1}}{, }{#2})}
 \renewcommand[\protect]{\mciteHOLtm}[1]
    {(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
 \renewcommand[\protect]{\mciteHOLty}[1]

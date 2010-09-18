@@ -7,7 +7,8 @@ val keepers =
   [ "Systeml.sig",
 
     (* portableML *)
-     "Arbnum.sig", "Arbint.sig", "Portable.sig",
+     "Arbnum.sig", "Arbnumcore.sig", "Arbint.sig", "Arbintcore.sig",
+     "Portable.sig",
 
      (*0*)
       "Type.sig", "Term.sig", "Thm.sig", "Theory.sig", "Definition.sig",
@@ -84,6 +85,7 @@ val keepers =
      "wordsSyntax.sig",
      "fcpLib.sig",
      "wordsLib.sig",
+     "blastLib.sig",
 
      (* patricia *)
      "patriciaTheory.sig",

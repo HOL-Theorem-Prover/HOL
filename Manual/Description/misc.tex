@@ -8,9 +8,9 @@ that exist for managing the interface
 to the \HOL{} system.
 
 \begin{itemize}
-\item A help system.
-\item A theorem database.
-\item A tool for dependency maintenance in large developments.
+\item The help system.
+\item The trace system for controlling feedback and printing.
+\item \holmake{}: a tool for dependency maintenance in large developments.
 \item Functions for counting the number of primitive inferences done in
 an evaluation, and timing it.
 \item A tool for embedding pretty-printed HOL theorems, terms and
@@ -69,6 +69,35 @@ Therefore the following example queries can be made:
     \end{tabular}
   \end{center}
 \end{table}
+
+\section{The Trace System}
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback}
+\label{sec:traces}
+
+The trace system gives the user one central interface with which to control most of \HOL's many different flags, though they be scattered all over the system, defined in different modules.
+These flags are typically those that determine the level to which \HOL{} tools provide information to the user while operating.
+For example, a trace level of zero will usually make a tool remain completely
+silent while it operates.
+The tool may still raise an exception when it fails, but it won't also
+output any messages saying so.
+
+There are three core functions, all in the \ml{Feedback} structure:
+\begin{hol}
+\begin{verbatim}
+   traces : unit ->
+            {default: int, max: int, name: string, trace_level: int} list
+
+   set_trace : string -> int -> unit
+   trace     : (string * int) -> ('a -> 'b) -> ('a -> 'b)
+\end{verbatim}
+\end{hol}
+
+The \ml{traces} function returns a list of all the traces in the system.
+The \ml{set\_trace} function allows the user to set a trace directly.
+The effect of this might be seen in a subsequent call \ml{traces()}.
+Finally, the \ml{trace} function allows for a trace to be temporarily set while a function executes, restoring the trace to its old value when the function returns (whether normally, or with an exception).
+
+
 
 \section{Maintaining \texttt{HOL} Formalizations with \holmake}
 \label{Holmake}
@@ -734,6 +763,7 @@ and then runs \LaTeX{} on \texttt{article.tex}.
 One would probably automate this process with a makefile of course.
 
 \subsection{Munging Commands}
+\label{sec:munging-commands}
 % need to get backslashes conveniently obscures the real names,
 % preventing the munger from seeing them, which will be useful when we
 % run the munger over this document!
@@ -812,6 +842,16 @@ This is the default for \holthm.
 Causes the string to be parsed in such a way that any embedded \texttt{case} terms are only partly parsed, allowing their input form to appear when they are output.
 %
 This preserves underscore-patterns, for example.
+
+\item[\texttt{conj}$n$] (Only for use with \holthm.)
+Extracts the $n^{\mbox{\scriptsize th}}$ conjunct of a theorem.
+The conjuncts are numbered starting at $1$, not $0$.
+For example,
+\begin{verbatim}
+  \HOLthm[conj3]{bool.AND_CLAUSES}
+\end{verbatim}
+extracts the conjunct $\vdash \texttt{F} \land t \iff \texttt{F}$.
+
 \item[\texttt{def}] (Only for use with \holthm.)
 %
 Causes the theorem to be split into its constituent conjuncts, for each conjunct to have any outermost universal quantifiers removed, and for each to be printed on a line of its own.
@@ -864,14 +904,56 @@ The behaviour is to print the type of this term.
 %
 Thus \texttt{\holty{}[of]\{p /\bs{} q\}} will print \texttt{bool}.
 
+\item[\texttt{rule}] (Only for use with \holtm{} and \holthm.)
+Prints a term (or a theorem's conclusion) using the \texttt{\bs{}infer} command (available as part of the \texttt{proof.sty} package).
+This gives a nice, ``natural deduction'' presentation.
+\index{natural deduction!presentation style for the LaTeX munger@presentation style for the \LaTeX{} munger}
+For example, the term
+\begin{alltt}
+   (p \bs{}/ q) /\bs{} (p ==> r) /\bs{} (q ==> r) ==> r
+\end{alltt}
+will print as
+\[
+\infer{r}{p \lor q & p \Rightarrow r & q \Rightarrow r}
+\]
+Conjuncts to the left of the outermost implication (if any) will be split into hypotheses separated by whitespace.
+For large rules, this style of presentation breaks down, as there may not be enough horizontal space on the page to fit in all the hypotheses.
+In this situation, the \texttt{stackedrule} option is appropriate.
+
+The term or theorem must be within a \LaTeX{} math-environment (it is typeset as if inline, with the \texttt{tt} option).
+
 \item[\texttt{showtypes}] (For use with \holthm{} and \holtm.)
 %
 Causes the term or theorem to be printed with the \texttt{types} trace set to level~1 (equivalent to having the \ml{show\_types} reference set to \ml{true}).
 
+\item[\texttt{stackedrule}] (For use with \holthm{} and \holtm.)
+This is similar to the \texttt{rule} option, but causes implication hypotheses to be presented as a ``stack'', centered in a \LaTeX{} array on top of one another.
+Thus,
+\begin{alltt}
+   (p \bs{}/ q) /\bs{} (p ==> r) /\bs{} (q ==> r) ==> r
+\end{alltt}
+will print as
+\[
+\infer{r}{\begin{array}{c}p \lor q \\ p \Rightarrow r \\ q \Rightarrow r\end{array}}
+\]
+For this purely propositional example with single-letter variable names, the result looks a little odd, but if the hypotheses are textually larger, this option is indispensable.
+
 \item[\texttt{tt}] %
-Causes the term to be type-set inside an \texttt{\bs{}mbox}, that is in turn wrapped around a \texttt{\bs{}texttt} environment, that is in turn wrapped around a \texttt{\bs{}textup} environment.
+Causes the term to be type-set as the argument to a \LaTeX{} command \texttt{\bs{}HOLinline}.
 %
-This makes the argument suitable for inclusion in standard \LaTeX{} positions.  This is the default for \holtm{} and \holty.
+The default definition for \texttt{\bs{}HOLinline} is
+\begin{verbatim}
+   \newcommand{\HOLinline}[1]{\mbox{\textup{\texttt{#1}}}}
+\end{verbatim}
+This makes the argument suitable for inclusion in standard \LaTeX{} positions.
+%
+This is the default for \holtm{} and \holty.
+%
+The \texttt{\bs{}HOLinline} command is defined in the \texttt{.sty} file
+\begin{alltt}
+   src/TeX/holtexbasic.sty
+\end{alltt}
+which needs to be included (i.e., with \texttt{\bs{}usepackage}) to make the munged output work.
 
 \item[\texttt{width=}$n$] Causes the argument to be typeset in lines of width $n$.
 %
@@ -904,11 +986,13 @@ The \texttt{\indentoption} option lets the pretty-printer know that it is printi
 \item[$\mathit{nm}_1$\texttt{/}$\mathit{nm}_2$] (For use with \holtm{}
   and \holthm{}.)
 %
-Causes $\mathit{nm}_1$ to be substituted for $\mathit{nm}_2$ in the
-term or theorem.
+Causes name $\mathit{nm}_1$ to be substituted for name $\mathit{nm}_2$ in the term or theorem.
 %
-This will rename free variables, or variables that are universally
-quantified at the outermost level.
+This will rename both free and bound variables, wherever they occur throughout a term.
+%
+Because it uses instantiation, free variables in theorem hypotheses will get renamed, but bound variables in hypotheses are not affected.
+%
+(Hypotheses are not printed by default anyway of course.)
 \end{description}
 
 
@@ -940,7 +1024,7 @@ The theories specified as arguments to \mkmunge{} determine what theorems are in
 \label{sec:running-munger}
 
 \index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!running a munger}
-Once created, a munger is run as a filter command, consuming its
+Once created, a munger can be run as a filter command, consuming its
 standard input, and writing to standard output.
 %
 It may also write error messages and warnings to its standard error.
@@ -1008,47 +1092,262 @@ order.
 
 \subsection{Holindex}
 
-The munger provides preprocessing of \LaTeX{} sources. In contrast
-Holindex is interleaved with \LaTeX{}. Its main purpose is to generate
-indices of \HOL{}-theorems, types and terms. However, it can also be used
-to insert terms, types or theorems in the text.
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!Holindex}
+Till now, it has been explained how the munger can be used as a preprocessor of \LaTeX{} sources.
+Sometimes a tighter interaction with \LaTeX{} is beneficial.
+Holindex is a \LaTeX{} package that provides genuine \LaTeX{} commands for inserting \HOL{}-theorems, types and terms as well as many related commands.
+This allows it to generate an index of all \HOL{}-theorems, types and terms that occur in the document as well as providing citation commands for \HOL{} entities in this index.
+Holindex can be found in \texttt{src/TeX/}.
+There is also a demonstration file available in this directory.
 
-To use Holindex, add the following lines to the header of
-the \LaTeX{} source file:
-%
-\begin{alltt}
-\bs{}usepackage\{holindex\}
-\bs{}initHOLindex
-\bs{}setHOLlinewidth\{width\}  
-\bs{}setHOLoverrides\{file\}
-\end{alltt}
-%
-The commands \verb-\setHOLlinewidth- and \verb-\setHOLoverrides-
-correspond to the command line options of the merger. Their appearance
-in the header is optional. One can insert \HOL{}-theorems by
-\verb-\blockHOLthm{theory.thm}- or short ones by
-\verb-\inlineHOLthm-. There is also \verb-\citeHOLthm{theory.thm}- to
-cite theorems in the index. Similar \LaTeX{}-macros exist for terms
-and types. There are macros for setting formating options as
-well. However, it is recommended to use external files to define
-terms, types and theorems and their formating. Finally, the \HOL{}
-index is printed with \verb-\printHOLindex-.
 
-The workflow of Holindex is similar to that of tools like Bibtex. The
-first run of \LaTeX{} on a file \verb-jobfile.tex- will create an
-auxiliary file \verb-jobfile.hix-. A call of 
+\paragraph{Using Holindex}
+To use Holindex add \texttt{\bs{}usepackage\{holindex\}} to the header
+of the \LaTeX{} source file \texttt{article.tex}. Holindex loads the
+\texttt{underscore} package which might cause trouble with references
+and citations. In order to avoid problems,
+\texttt{holindex} should be included after packages
+like \texttt{natbib}. Holindex is used like BibTex or
+MakeIndex. A run of \LaTeX{} on \texttt{jobname.tex} creates an
+auxiliary file called \texttt{article.hix}. The munger is used to
+process this file via
 \begin{alltt}
-   munge.exe -index jobname
+   \munge -index article
 \end{alltt}
-will create \verb-jobfile.tix-. This file contains
-all the pretty-printed \HOL{}-theorems, terms and types as well
-as the \HOL{}-index. It will be used by further runs of \LaTeX{}.
-For an example on how to use Holindex, please have a look
-at \verb|holindex-demo.tex| in \varref{HOLDIR}\texttt{/src/TeX}.
+This call generates two additional auxiliary files,
+\texttt{article.tde} and \texttt{article.tid}.  The following runs of
+\LaTeX{} use these files. After modifying the source file, the munger
+can be rerun to update \texttt{article.tde} and \texttt{article.tid}.
+If you are using emacs with AUCTeX to write your latex files, you might
+want to add
+\begin{verbatim}
+(eval-after-load "tex" '(add-to-list 'TeX-command-list
+   '("Holindex" "munge.exe -index %s"
+     TeX-run-background t t :help "Run Holindex") t))
+\end{verbatim}
+to your emacs configuration file. This will allow
+you to run Holindex using AUCTeX.
+
+\paragraph{Holindex commands}
+\begin{description}
+\item[\texttt{\bs{}blockHOLthm\{id\}}, \texttt{\bs{}blockHOLtm\{id\}}, \texttt{
+    \bs{}blockHOLty\{id\}}] These commands typeset the theorem, term
+  or type with the given \texttt{id} as the argument to a \LaTeX{}
+  command \texttt{\bs{}HOLblock}. They are intended for
+  typesetting multiple lines in a new block.
+  For theorem ids of the form \texttt{theory.thm} are predefined. All
+  other ids have to be defined before usage as explained below.
+%
+\item[\texttt{\bs{}inlineHOLthm\{id\}}, \texttt{\bs{}inlineHOLtm\{id\}}, \texttt{\bs{}inlineHOLty\{id\}}]
+   These commands are similar to \texttt{\bs{}blockHOLthm\{id\}}, \texttt{\bs{}blockHOLtm\{id\}} and \texttt{
+    \bs{}blockHOLty\{id\}}. However, they are intended for inline typesetting and
+   use \texttt{\bs{}HOLinline} instead of \texttt{\bs{}HOLblock}.
+%
+\item[\texttt{\bs{}citeHOLthm\{id\}}, \texttt{\bs{}citeHOLtm\{id\}}, \texttt{\bs{}citeHOLty\{id\}}]
+   These commands cite a theorem, term or type.
+%
+\item[\texttt{\bs{}mciteHOLthm\{id,id,...id\}}, \texttt{\bs{}mciteHOLtm\{ids\}}, \texttt{\bs{}mciteHOLty\{ids\}}]
+   These commands cite multiple theorems, terms or types.
+%
+\item[\texttt{\bs{}citePureHOLthm\{id\}}, \texttt{\bs{}citePureHOLtm\{id\}},
+   \texttt{\bs{}citePureHOLty\{id\}}] These commands\linebreak cite a theorems, terms or types.
+   They just typeset the number instead of the
+   verbose form used by the \texttt{citeHOL} and \texttt{mciteHOL} commands.
+
+\item[\texttt{\bs{}citeHiddenHOLthm\{id\}},
+   \texttt{\bs{}citeHiddenHOLtm\{id\}},
+   \texttt{\bs{}citeHiddenHOLty\{id\}}] These commands cite a
+   theorems, terms or types, but not typeset anything. These commands
+   can be used to add a page to the list of pages a theorem, term or
+   type is cited.
+
+ \item[\texttt{\bs{}printHOLIndex}, \texttt{\bs{}printHOLShortIndex},
+   \texttt{\bs{}printHOLLongIndex}] These commands typeset the index
+   of all theorems, terms and types cited in the document.  There are
+   two types of entries in the index: long and short ones. Short
+   entries contain a unique number, the label of the theorem, term or
+   type and the pages it is cited.  Long entries contain additionally
+   a representation as it would be inserted by
+   \texttt{\bs{}blockHOL...} as well as an optional description.
+   Theorems use by default short entries, while terms and types use
+   long ones.  It is possible to change for each item whether a long
+   or short entry should be used. \texttt{\bs{}printHOLIndex} prints
+   the default index with mixed long and short entries.
+   \texttt{\bs{}printHOLLongIndex} typesets just long entries and
+   \texttt{\bs{}printHOLShortIndex} just short ones.
+\end{description}
+
+
+\paragraph{Defining and formating Terms, Types and Theorems}
+
+  Most of the Holindex commands require an identifier of a theorem,
+  term or type as arguments. Theorem identifiers of the form
+  \texttt{theory.theorem} are predefined. All other identifiers need
+  defining. Additionally one might want to change the default
+  formating options for these new identifiers as well as the old ones.
+  \HOL{} definition files can be used for defining and
+  setting the formating options of identifiers. They are used by
+  putting the command \texttt{\bs{}useHOLfile\{\textit{filename.hdf}\}} in
+  the header of your latex source file. These file use a syntax similar to
+  BibTex. They consist of a list of entries of the form
+  \begin{verbatim}
+@EntryType{id,
+  option = value,
+  boolFlag,
+  ...
+}
+\end{verbatim}
+\noindent
+There are the following entry types
+\begin{description}
+\item[\texttt{Thm}, \texttt{Theorem}] used to define and format a
+  theorem. If the identifier is of the form \texttt{theory.theorem},
+  the \texttt{content} option can be skipped. Otherwise, the
+  \texttt{content} option should be of this form and a new identifier
+  is defined for the given theorem. This is for example useful if the
+  theorem name contains special characters or if a theorem should
+  be printed with different formatting options.
+  \item[\texttt{Term}]
+    used to define and format a term.
+  \item[\texttt{Type}]
+    used to define and format a type.
+  \item[\texttt{Thms}, \texttt{Theorems}] used to set formating options for
+    a list of theorems. For example one might want to print long index entries
+    for all theorems in a specific theory. For the \texttt{Theorems} entry
+    the \texttt{id} part of the entry is given in the form
+    \texttt{ids = [id,id,...]}. These \texttt{ids} may be theorem ids or special
+    ids of the form \texttt{theorem.thmprefix*}. The id
+    \texttt{arithmetic.LESS\_EQ*} for example represents all theorem in
+    theory \texttt{arithmetic} whose name starts with \texttt{LESS\_EQ}.
+\end{description}
+Options are name/value pairs. The value has to be quoted using
+quotation marks or \HOL{}'s quotation syntax. There are the following
+option names available:
+\begin{description}
+  \item[\texttt{content}]
+    the content. For a term or type that's it's \HOL{}\ definition.
+    For theorems it is of the form \texttt{theory.theorem}.
+  \item[\texttt{options}]
+    formating options for the munger as described in section~\ref{sec:munging-commands}.
+    Please use the Holindex commands for typsetting inline or as a block instead
+    of the options \texttt{tt} or \texttt{alltt}.
+  \item[\texttt{label}] the label that will appear in the index. For
+    theorems the label is by default it's name and the label given here
+    will be added after the name.
+  \item[\texttt{comment}] latex code that gets typeset as a comment / description
+    for long index entries.
+  \item[\texttt{latex}] the latex code for the item. There are very rare cases,
+    when it might be useful to provide handwritten \LaTeX{} code instead of the one
+    generated by the munger. This option overrides the \LaTeX{} produced by the munger.
+    It is recommended to use it very carefully.
+\end{description}
+Besides options, there are also boolean flags that change the formating of entries:
+\begin{description}
+  \item[\texttt{force-index}]
+    adds the entry to the index, even if it is not cited in the document.
+  \item[\texttt{long-index}]
+    use a long index-entry.
+  \item[\texttt{short-index}]
+    use a long index-entry.
+\end{description}
+Here is an example of such a \HOL{} definition file:
+
+\begin{verbatim}
+@Term{term_id_1,
+   content = ``SOME_FUN = SUC a < 0 /\ 0 > SUC b``,
+   options = "width=20",
+   label = "a short description of term from external file",
+   comment = "some lengthy\\comment
+
+              with \textbf{formats} and newlines",
+   force_index
+}
+
+@Type{type_id_1,
+   content = ``:bool``
+}
+
+@Thm{arithmetic.LESS_SUCC_EQ_COR,
+   force-index, long-index
+}
+
+@Thm{thm_1,
+   label = "(second instance)",
+   content = "arithmetic.LESS_SUC_EQ_COR"
+}
+
+@Theorems{
+   ids = [arithmetic.LESS_ADD_SUC,
+          arithmetic.LESS_EQ*],
+   force-index
+}
+\end{verbatim}
+
+
+\paragraph{Configuring Holindex}
+
+There are some commands that can be used to change the overall behaviour
+of Holindex. They should be used in the header directly after \texttt{holindex}
+is included.
+\begin{description}
+\item[\texttt{\bs{}setHOLlinewidth}] sets the default line-width. This
+   corresponds to the \texttt{-w} option of the munger.
+
+\item[\texttt{\bs{}setHOLoverrides}] sets the ``overrides file'' to provide
+token-to-\LaTeX{} replacements of what is pretty-printed.
+
+\item[\texttt{\bs{}useHOLfile}]
+is used to include a \HOL{} definition file. Several such files might be
+included.
+\end{description}
+
+
+\paragraph{Additional Documentation}
+For more information about Holindex, please refer to
+the demonstration file \texttt{src/TeX/holindex-demo.tex}. This file contains
+documentation for rarely used commands as well as explanations of how to
+customise Holindex.
 
 
 \subsection{Making \HOL{} Theories \LaTeX{}-ready}
 \label{sec:holtheories-tex-ready}
+
+Though one might specify all one's desired token-replacements in an \texttt{overrides} file, there is also support for specifying token replacements in the theory where tokens are first ``defined''.
+%
+(Of course, \emph{tokens} aren't defined \textit{per se}, but the definition of particular constants will naturally give rise to the generation of corresponding tokens when those constants appear in HOL terms, types or theorems.)
+
+A token's printing form is given in a script-file with the \ml{TeX\_notation} command (from the \ml{TexTokenMap} module).
+%
+This function has type
+\begin{alltt}
+   \{ hol : string, TeX : string * int \} -> unit
+\end{alltt}
+The \ml{hol} field specifies the string of the token as \HOL{} prints it.
+%
+The \ml{TeX} field specifies both the string that should be emitted into the \LaTeX{} output, and the width that this string should be considered to have (as in the \texttt{overrides} file).
+
+For example, in \texttt{boolScript.sml}, there are calls:
+\begin{alltt}
+   val _ = TeX_notation \{ hol = "!", TeX = ("\bs{}\bs{}HOLTokenForall\{\}", 1)\}
+   val _ = TeX_notation \{ hol = UChar.forall,
+                          TeX = ("\bs{}\bs{}HOLTokenForall\{\}", 1)\}
+\end{alltt}
+The \texttt{UChar} structure is a local binding in the script-file that points at the standard list of UTF8-encoded Unicode strings in the distribution (\ml{UnicodeChars}).
+%
+Note also how the backslashes that are necessary for the \LaTeX{} command have to be doubled because they are appearing in an SML string.
+
+Finally, rather than mapping the token directly to the string \texttt{\bs{}forall} as one might expect, the mapping introduces another level of indirection by mapping to \texttt{\bs{}HOLTokenForall}.
+%
+Bindings for this, and a number of other \LaTeX{} commands are made in the file
+\begin{alltt}
+   src/TeX/holtexbasic.sty
+\end{alltt}
+which will need to be included in the \LaTeX{} source file.
+%
+(Such bindings can be overridden with the use of the command \texttt{\bs{}renewcommand}.)
+
+Finally, all theory-bindings made with \ml{TeX\_notation} can be overridden with \texttt{overrides} files referenced at the time a munger is run.
+
 
 \index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|)}
 

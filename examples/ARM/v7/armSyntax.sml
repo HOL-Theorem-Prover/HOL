@@ -28,8 +28,8 @@ in
 end;
 
 fun inst_word_alpha ty tm =
-  inst [alpha |->
-   (if wordsSyntax.is_word_type (type_of tm) then
+  Term.inst [Type.alpha |->
+   (if wordsSyntax.is_word_type (Term.type_of tm) then
       ty
     else
       wordsSyntax.mk_word_type ty)] tm;
@@ -69,191 +69,207 @@ val send_event_tm               = mk_monad_const "send_event"
 val wait_for_interrupt_tm       = mk_monad_const "wait_for_interrupt"
 val clear_wait_for_interrupt_tm = mk_monad_const "clear_wait_for_interrupt"
 
-val decode_psr_tm      = mk_core_const "decode_psr"
-val bytes_tm           = mk_core_const "bytes"
-val align_tm           = mk_core_const "align"
-val aligned_tm         = mk_core_const "aligned"
-val bit_count_tm       = mk_core_const "bit_count"
-val Encoding_ARM_tm    = mk_core_const "Encoding_ARM"
-val Encoding_Thumb_tm  = mk_core_const "Encoding_Thumb"
-val Encoding_Thumb2_tm = mk_core_const "Encoding_Thumb2"
-val ITAdvance_tm       = mk_core_const "ITAdvance"
+val decode_psr_tm       = mk_core_const "decode_psr"
+val bytes_tm            = mk_core_const "bytes"
+val align_tm            = mk_core_const "align"
+val aligned_tm          = mk_core_const "aligned"
+val bit_count_tm        = mk_core_const "bit_count"
+val Encoding_ARM_tm     = mk_core_const "Encoding_ARM"
+val Encoding_Thumb_tm   = mk_core_const "Encoding_Thumb"
+val Encoding_Thumb2_tm  = mk_core_const "Encoding_Thumb2"
+val Encoding_ThumbEE_tm = mk_core_const "Encoding_ThumbEE"
+val ITAdvance_tm        = mk_core_const "ITAdvance"
+val NoInterrupt_tm      = mk_core_const "NoInterrupt"
+val HW_Reset_tm         = mk_core_const "HW_Reset"
+val HW_Fiq_tm           = mk_core_const "HW_Fiq"
+val HW_Irq_tm           = mk_core_const "HW_Irq"
 
-val arm_decode_tm      = mk_decode_const "arm_decode"
-val thumb_decode_tm    = mk_decode_const "thumb_decode"
-val thumb2_decode_tm   = mk_decode_const "thumb2_decode";
+val arm_decode_tm       = mk_decode_const "arm_decode"
+val thumb_decode_tm     = mk_decode_const "thumb_decode"
+val thumbee_decode_tm   = mk_decode_const "thumbee_decode"
+val thumb2_decode_tm    = mk_decode_const "thumb2_decode";
 
 fun mk_error s =
-  mk_comb(error_tm, inst [alpha |-> stringSyntax.string_ty] s)
+  HolKernel.mk_comb(error_tm,
+    Term.inst [Type.alpha |-> stringSyntax.string_ty] s)
   handle HOL_ERR _ => raise ERR "mk_error" "";
 
 fun mk_valuestate (v,s) =
-  list_mk_comb(inst
-    [alpha |-> type_of v, beta |-> type_of s] valuestate_tm, [v,s])
+  HolKernel.list_mk_comb(Term.inst
+    [Type.alpha |-> Term.type_of v,
+     Type.beta |-> Term.type_of s] valuestate_tm, [v,s])
   handle HOL_ERR _ => raise ERR "mk_valuestate" "";
 
 fun mk_constT t =
-  mk_comb(inst[alpha |-> type_of t] constT_tm,t)
+  HolKernel.mk_comb(Term.inst[Type.alpha |-> Term.type_of t] constT_tm,t)
   handle HOL_ERR _ => raise ERR "mk_constT" "";
 
 fun mk_seqT (f,g) =
-  list_mk_comb(inst
-    [alpha |-> dest_monad_type (type_of f),
-     beta  |-> (dest_monad_type o snd o dom_rng o type_of) g] seqT_tm,[f,g])
+  HolKernel.list_mk_comb(Term.inst
+    [Type.alpha |-> dest_monad_type (Term.type_of f),
+     Type.beta  |-> (dest_monad_type o snd o Type.dom_rng o Term.type_of) g]
+     seqT_tm, [f,g])
   handle HOL_ERR _ => raise ERR "mk_seqT" "";
 
 fun mk_parT (f,g) =
-  list_mk_comb(inst
-    [alpha |-> dest_monad_type (type_of f),
-     beta  |-> dest_monad_type (type_of g)] parT_tm,[f,g])
+  HolKernel.list_mk_comb(Term.inst
+    [Type.alpha |-> dest_monad_type (Term.type_of f),
+     Type.beta  |-> dest_monad_type (Term.type_of g)] parT_tm,[f,g])
   handle HOL_ERR _ => raise ERR "mk_parT" "";
 
 fun mk_forT (l,h,f) =
-  list_mk_comb(inst[alpha |-> (dest_monad_type o snd o dom_rng o type_of) f]
+  HolKernel.list_mk_comb(Term.inst
+    [Type.alpha |-> (dest_monad_type o snd o Type.dom_rng o Term.type_of) f]
     forT_tm,[l,h,f])
   handle HOL_ERR _ => raise ERR "mk_forT" "";
 
 fun mk_readT f =
-  mk_comb(inst [alpha |-> snd (dom_rng (type_of f))] readT_tm, f)
+  HolKernel.mk_comb(Term.inst
+    [Type.alpha |-> snd (dom_rng (Term.type_of f))] readT_tm, f)
   handle HOL_ERR _ => raise ERR "mk_readT" "";
 
 fun mk_writeT f =
-  mk_comb(writeT_tm, f)
+  HolKernel.mk_comb(writeT_tm, f)
   handle HOL_ERR _ => raise ERR "mk_writeT" "";
 
 fun mk_read__reg (ii,r) =
-  list_mk_comb(read__reg_tm,
-    [inst [alpha |-> ``:iiid``] ii,
-     inst [alpha |-> ``:RName``] r])
+  HolKernel.list_mk_comb(read__reg_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+     Term.inst [Type.alpha |-> ``:RName``] r])
   handle HOL_ERR _ => raise ERR "mk_read__reg" "";
 
 fun mk_write__reg (ii,r,v) =
-  list_mk_comb(write__reg_tm,
-    [inst [alpha |-> ``:iiid``] ii,
-     inst [alpha |-> ``:RName``] r,
+  HolKernel.list_mk_comb(write__reg_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+     Term.inst [Type.alpha |-> ``:RName``] r,
      inst_word_alpha ``:32`` v])
   handle HOL_ERR _ => raise ERR "mk_write__reg" "";
 
 fun mk_read__psr (ii,r) =
-  list_mk_comb(read__psr_tm,
-    [inst [alpha |-> ``:iiid``] ii,
-     inst [alpha |-> ``:PSRName``] r])
+  HolKernel.list_mk_comb(read__psr_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+     Term.inst [Type.alpha |-> ``:PSRName``] r])
   handle HOL_ERR _ => raise ERR "mk_read__psr" "";
 
 fun mk_write__psr (ii,r,v) =
-  list_mk_comb(write__psr_tm,
-    [inst [alpha |-> ``:iiid``] ii,
-     inst [alpha |-> ``:PSRName``] r,
-     inst [alpha |-> ``:ARMpsr``] v])
+  HolKernel.list_mk_comb(write__psr_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+     Term.inst [Type.alpha |-> ``:PSRName``] r,
+     Term.inst [Type.alpha |-> ``:ARMpsr``] v])
   handle HOL_ERR _ => raise ERR "mk_write__psr" "";
 
 fun mk_read_reg (ii,n) =
-  list_mk_comb(read_reg_tm,
-    [inst [alpha |-> ``:iiid``] ii,
+  HolKernel.list_mk_comb(read_reg_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
      inst_word_alpha ``:4`` n])
   handle HOL_ERR _ => raise ERR "mk_read_reg" "";
 
 fun mk_write_reg (ii,n,v) =
-  list_mk_comb(write_reg_tm,
-    [inst [alpha |-> ``:iiid``] ii,
+  HolKernel.list_mk_comb(write_reg_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
      inst_word_alpha ``:4`` n,
      inst_word_alpha ``:32`` v])
   handle HOL_ERR _ => raise ERR "mk_write_reg" "";
 
 fun mk_read_reg_mode (ii,n,m) =
-  list_mk_comb(read_reg_mode_tm,
-    [inst [alpha |-> ``:iiid``] ii,
+  HolKernel.list_mk_comb(read_reg_mode_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
      pairSyntax.mk_pair
        (inst_word_alpha ``:4`` n, inst_word_alpha ``:5`` m)])
   handle HOL_ERR _ => raise ERR "mk_read_reg_mode" "";
 
 fun mk_write_reg_mode (ii,n,m,v) =
-  list_mk_comb(write_reg_mode_tm,
-    [inst [alpha |-> ``:iiid``] ii,
+  HolKernel.list_mk_comb(write_reg_mode_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
      pairSyntax.mk_pair
        (inst_word_alpha ``:4`` n, inst_word_alpha ``:5`` m),
      inst_word_alpha ``:32`` v])
   handle HOL_ERR _ => raise ERR "mk_write_reg_mode" "";
 
 fun mk_read_cpsr ii =
-  mk_comb(read_cpsr_tm, inst [alpha |-> ``:iiid``] ii)
+  HolKernel.mk_comb(read_cpsr_tm, Term.inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_read_cpsr" "";
 
 fun mk_write_cpsr (ii,v) =
-  list_mk_comb(write_cpsr_tm,
-    [inst [alpha |-> ``:iiid``] ii,
-     inst [alpha |-> ``:ARMpsr``] v])
+  HolKernel.list_mk_comb(write_cpsr_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+     Term.inst [Type.alpha |-> ``:ARMpsr``] v])
   handle HOL_ERR _ => raise ERR "mk_write_cpsr" "";
 
 fun mk_read_spsr ii =
-  mk_comb(read_spsr_tm, inst [alpha |-> ``:iiid``] ii)
+  HolKernel.mk_comb(read_spsr_tm, Term.inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_read_spsr" "";
 
 fun mk_write_spsr (ii,v) =
-  list_mk_comb(write_spsr_tm,
-    [inst [alpha |-> ``:iiid``] ii,
-     inst [alpha |-> ``:ARMpsr``] v])
+  HolKernel.list_mk_comb(write_spsr_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
+     Term.inst [Type.alpha |-> ``:ARMpsr``] v])
   handle HOL_ERR _ => raise ERR "mk_write_spsr" "";
 
 fun mk_read_memA (ii,a,s) =
-  list_mk_comb(read_memA_tm,
-    [inst [alpha |-> ``:iiid``] ii,
+  HolKernel.list_mk_comb(read_memA_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
      pairSyntax.mk_pair
        (inst_word_alpha ``:32`` a,
-        inst [alpha |-> ``:num``] s)])
+        Term.inst [Type.alpha |-> ``:num``] s)])
   handle HOL_ERR _ => raise ERR "mk_read_memA" "";
 
 fun mk_write_memA (ii,a,s,v) =
-  list_mk_comb(write_memA_tm,
-    [inst [alpha |-> ``:iiid``] ii,
+  HolKernel.list_mk_comb(write_memA_tm,
+    [Term.inst [Type.alpha |-> ``:iiid``] ii,
      pairSyntax.mk_pair
        (inst_word_alpha ``:32`` a,
-        inst [alpha |-> ``:num``] s),
+        Term.inst [Type.alpha |-> ``:num``] s),
      v])
   handle HOL_ERR _ => raise ERR "mk_write_memA" "";
 
 fun mk_clear_event_register ii =
-  mk_comb(clear_event_register_tm, inst [alpha |-> ``:iiid``] ii)
+  HolKernel.mk_comb(clear_event_register_tm,
+    Term.inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_clear_event_register" "";
 
 fun mk_send_event ii =
-  mk_comb(send_event_tm, inst [alpha |-> ``:iiid``] ii)
+  HolKernel.mk_comb(send_event_tm, Term.inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_send_event" "";
 
 fun mk_wait_for_interrupt ii =
-  mk_comb(wait_for_interrupt_tm, inst [alpha |-> ``:iiid``] ii)
+  HolKernel.mk_comb(wait_for_interrupt_tm,
+    Term.inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_wait_for_interrupt" "";
 
 fun mk_clear_wait_for_interrupt ii =
-  mk_comb(clear_wait_for_interrupt_tm, inst [alpha |-> ``:iiid``] ii)
+  HolKernel.mk_comb(clear_wait_for_interrupt_tm,
+    Term.inst [Type.alpha |-> ``:iiid``] ii)
   handle HOL_ERR _ => raise ERR "mk_clear_wait_for_interrupt" "";
 
 fun mk_decode_psr w =
-  mk_comb(decode_psr_tm, inst_word_alpha ``:32`` w)
+  HolKernel.mk_comb(decode_psr_tm, inst_word_alpha ``:32`` w)
   handle HOL_ERR _ => raise ERR "mk_decode_psr" "";
 
 fun mk_bytes (w,n) =
-  mk_comb(bytes_tm, pairSyntax.mk_pair(inst_word_alpha ``:32`` w, n))
+  HolKernel.mk_comb(bytes_tm, pairSyntax.mk_pair(inst_word_alpha ``:32`` w, n))
   handle HOL_ERR _ => raise ERR "mk_bytes" "";
 
 fun mk_align (w,n) =
-  mk_comb(inst [alpha |-> wordsSyntax.dest_word_type (type_of w)] align_tm,
+  HolKernel.mk_comb(Term.inst
+    [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)] align_tm,
     pairSyntax.mk_pair(w, n))
   handle HOL_ERR _ => raise ERR "mk_align" "";
 
 fun mk_aligned (w,n) =
-  mk_comb(inst [alpha |-> wordsSyntax.dest_word_type (type_of w)] aligned_tm,
+  HolKernel.mk_comb(Term.inst
+    [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)] aligned_tm,
     pairSyntax.mk_pair(w, n))
   handle HOL_ERR _ => raise ERR "mk_aligned" "";
 
 fun mk_bit_count w =
-  mk_comb(
-   inst [alpha |-> wordsSyntax.dest_word_type (type_of w)] bit_count_tm, w)
+  HolKernel.mk_comb(Term.inst
+  [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)] bit_count_tm, w)
   handle HOL_ERR _ => raise ERR "mk_bit_count" "";
 
 fun mk_ITAdvance w =
-  mk_comb(
-   inst [alpha |-> wordsSyntax.dest_word_type (type_of w)] ITAdvance_tm, w)
+  HolKernel.mk_comb(Term.inst
+  [Type.alpha |-> wordsSyntax.dest_word_type (Term.type_of w)] ITAdvance_tm, w)
   handle HOL_ERR _ => raise ERR "mk_ITAdvance" "";
 
 fun mk_read_memA_1 (ii,a) = mk_read_memA (ii,a,``1n``);
@@ -267,49 +283,56 @@ fun mk_read_memA_4 (ii,a) = mk_read_memA (ii,a,``4n``);
 fun mk_write_memA_4 (ii,a,v) = mk_write_memA (ii,a,``4n``,mk_bytes(v,``4n``));
 
 fun mk_arm_decode(b,w) =
-  list_mk_comb(arm_decode_tm, [b,inst_word_alpha ``:32`` w])
+  HolKernel.list_mk_comb(arm_decode_tm, [b,inst_word_alpha ``:32`` w])
   handle HOL_ERR _ => raise ERR "mk_arm_decode" "";
 
 fun mk_thumb_decode(a,itstate,w) =
-  list_mk_comb(thumb_decode_tm,
+  HolKernel.list_mk_comb(thumb_decode_tm,
     [a,inst_word_alpha ``:8`` itstate, inst_word_alpha ``:16`` w])
   handle HOL_ERR _ => raise ERR "mk_thumb_decode" "";
 
-fun mk_thumb2_decode(itstate,w1,w2) =
-  list_mk_comb(thumb2_decode_tm,
-    [inst_word_alpha ``:8`` itstate,
+fun mk_thumbee_decode(a,itstate,w) =
+  HolKernel.list_mk_comb(thumbee_decode_tm,
+    [a,inst_word_alpha ``:8`` itstate, inst_word_alpha ``:16`` w])
+  handle HOL_ERR _ => raise ERR "mk_thumbee_decode" "";
+
+fun mk_thumb2_decode(a,itstate,w1,w2) =
+  HolKernel.list_mk_comb(thumb2_decode_tm,
+    [a,inst_word_alpha ``:8`` itstate,
      pairSyntax.mk_pair
        (inst_word_alpha ``:16`` w1,
         inst_word_alpha ``:16`` w2)])
   handle HOL_ERR _ => raise ERR "mk_thumb2_decode" "";
 
-val dest_error      = dest_monop error_tm (ERR "dest_error" "")
-val dest_valuestate = dest_binop valuestate_tm (ERR "dest_valuestate" "")
+val dest_error = HolKernel.dest_monop error_tm (ERR "dest_error" "")
 
-val dest_constT = dest_monop constT_tm (ERR "dest_constT" "")
-val dest_seqT   = dest_binop seqT_tm   (ERR "dest_seqT" "")
-val dest_parT   = dest_binop parT_tm   (ERR "dest_parT" "")
-val dest_forT   = dest_triop forT_tm   (ERR "dest_forT" "")
-val dest_readT  = dest_monop readT_tm  (ERR "dest_readT" "")
-val dest_writeT = dest_monop writeT_tm (ERR "dest_writeT" "")
+val dest_valuestate =
+  HolKernel.dest_binop valuestate_tm (ERR "dest_valuestate" "")
+
+val dest_constT = HolKernel.dest_monop constT_tm (ERR "dest_constT" "")
+val dest_seqT   = HolKernel.dest_binop seqT_tm   (ERR "dest_seqT" "")
+val dest_parT   = HolKernel.dest_binop parT_tm   (ERR "dest_parT" "")
+val dest_forT   = HolKernel.dest_triop forT_tm   (ERR "dest_forT" "")
+val dest_readT  = HolKernel.dest_monop readT_tm  (ERR "dest_readT" "")
+val dest_writeT = HolKernel.dest_monop writeT_tm (ERR "dest_writeT" "")
 
 val dest_read__reg =
-  dest_binop read__reg_tm  (ERR "dest_read__reg" "")
+  HolKernel.dest_binop read__reg_tm  (ERR "dest_read__reg" "")
 
 val dest_write__reg =
-  dest_triop write__reg_tm (ERR "dest_write__reg" "")
+  HolKernel.dest_triop write__reg_tm (ERR "dest_write__reg" "")
 
 val dest_read__psr =
-  dest_binop read__psr_tm  (ERR "dest_read__psr" "")
+  HolKernel.dest_binop read__psr_tm  (ERR "dest_read__psr" "")
 
 val dest_write__psr =
-  dest_triop write__psr_tm (ERR "dest_write__psr" "")
+  HolKernel.dest_triop write__psr_tm (ERR "dest_write__psr" "")
 
 val dest_read_reg_mode =
-  dest_binop read_reg_mode_tm  (ERR "dest_read_reg_mode" "")
+  HolKernel.dest_binop read_reg_mode_tm  (ERR "dest_read_reg_mode" "")
 
 val dest_write_reg_mode =
-  dest_triop write_reg_mode_tm (ERR "dest_write_reg_mode" "")
+  HolKernel.dest_triop write_reg_mode_tm (ERR "dest_write_reg_mode" "")
 
 val dest_read_reg   = dest_binop read_reg_tm   (ERR "dest_read_reg" "")
 val dest_write_reg  = dest_triop write_reg_tm  (ERR "dest_write_reg" "")
@@ -327,26 +350,32 @@ val dest_bit_count  = dest_monop bit_count_tm  (ERR "dest_bit_count" "");
 val dest_ITAdvance  = dest_monop ITAdvance_tm  (ERR "dest_ITAdvance" "");
 
 val dest_clear_event_register =
-    dest_monop decode_psr_tm (ERR "dest_clear_event_register" "");
+    HolKernel.dest_monop decode_psr_tm (ERR "dest_clear_event_register" "");
 
 val dest_send_event =
-    dest_monop send_event_tm (ERR "dest_send_event" "");
+    HolKernel.dest_monop send_event_tm (ERR "dest_send_event" "");
 
 val dest_wait_for_interrupt =
-    dest_monop wait_for_interrupt_tm (ERR "dest_wait_for_interrupt" "");
+    HolKernel.dest_monop wait_for_interrupt_tm
+    (ERR "dest_wait_for_interrupt" "");
 
 val dest_clear_wait_for_interrupt =
-    dest_monop clear_wait_for_interrupt_tm
+    HolKernel.dest_monop clear_wait_for_interrupt_tm
     (ERR "dest_clear_wait_for_interrupt" "");
 
 val dest_arm_decode =
-    dest_binop arm_decode_tm (ERR "dest_arm_decode" "");
+    HolKernel.dest_binop arm_decode_tm (ERR "dest_arm_decode" "");
 
 val dest_thumb_decode =
-    dest_triop thumb_decode_tm (ERR "dest_thumb_decode" "");
+    HolKernel.dest_triop thumb_decode_tm (ERR "dest_thumb_decode" "");
+
+val dest_thumbee_decode =
+    HolKernel.dest_triop thumbee_decode_tm (ERR "dest_thumbee_decode" "");
 
 val dest_thumb2_decode =
-    dest_binop thumb2_decode_tm (ERR "dest_thumb2_decode" "");
+    HolKernel.dest_triop thumb2_decode_tm (ERR "dest_thumb2_decode" "");
+
+val can = Lib.can
 
 val is_error      = can dest_error
 val is_valuestate = can dest_valuestate
@@ -384,8 +413,9 @@ val is_send_event               = can dest_send_event
 val is_wait_for_interrupt       = can dest_wait_for_interrupt
 val is_clear_wait_for_interrupt = can dest_clear_wait_for_interrupt;
 
-val is_arm_decode    = can dest_arm_decode
-val is_thumb_decode  = can dest_thumb_decode
-val is_thumb2_decode = can dest_thumb2_decode;
+val is_arm_decode     = can dest_arm_decode
+val is_thumb_decode   = can dest_thumb_decode
+val is_thumbee_decode = can dest_thumbee_decode
+val is_thumb2_decode  = can dest_thumb2_decode;
 
 end

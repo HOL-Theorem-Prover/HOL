@@ -617,4 +617,50 @@ in
        filter = SOME numfilter, ac = [], dprocs = []}
 end;
 
+(* ----------------------------------------------------------------------
+    ARITH_NORM_ss
+
+    Simpset fragment for (aggressive) normalisation of arithmetic
+    expressions.  No embedded decision procedure (as in arith_ss) means
+    that its handling of subtraction will be patchy, but it will also
+    make it fast enough to be included in the stateful rewriter.
+   ---------------------------------------------------------------------- *)
+
+val ARITH_NORM_ss = let
+  open simpLib NumRelNorms Arith Conv
+  fun conv (k, c, n) = {key = SOME ([], k), conv = K (K c),
+                        name = n, trace = 3}
+  val DECIDE = EQT_ELIM o ARITH_CONV
+in
+  SSFRAG {ac = [],
+          name = SOME "ARITH_NORM",
+          congs = [],
+          convs = [conv (``x + y``, ADDR_CANON_CONV, "ADDR_CANON_CONV"),
+                   conv (``x * y``, MUL_CANON_CONV, "MUL_CANON_CONV"),
+                   conv (``x < y``,
+                         BINOP_CONV ADDR_CANON_CONV THENC sum_lt_norm,
+                         "LT_CANON_CONV"),
+                   conv (``x = y:num``,
+                         BINOP_CONV ADDR_CANON_CONV THENC sum_eq_norm,
+                         "NUMEQ_CANON_CONV"),
+                   conv (``x <= y:num``,
+                         BINOP_CONV ADDR_CANON_CONV THENC sum_leq_norm,
+                         "LEQ_CANON_CONV")],
+          rewrs = [arithmeticTheory.GREATER_DEF,
+                   arithmeticTheory.GREATER_EQ,
+                   DECIDE ``x < y - z <=> x + z < y``,
+                   DECIDE ``x - y <= z <=> x <= y + z``,
+                   DECIDE ``x <= y - z <=> (x = 0) \/ x + z <= y``,
+                   DECIDE ``x - y < z <=> 0 < z /\ x < z + y``,
+                   DECIDE ``(x - y = z) <=> x < y /\ (z = 0) \/ (x = y + z)``,
+                   DECIDE ``(x <> 0) = 0 < x``,
+                   DECIDE ``(0 <> x) = 0 < x``,
+                   DECIDE ``~(0 < x) = (x = 0)``],
+          dprocs = [], filter = NONE}
+end
+
+(* val _ = BasicProvers.augment_srw_ss [ARITH_NORM_ss] *)
+
+
+
 end (* numSimps *)

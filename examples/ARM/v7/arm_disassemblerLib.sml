@@ -17,7 +17,7 @@ val ERR = Feedback.mk_HOL_ERR "arm_disassemblerLib";
 
 (* ------------------------------------------------------------------------- *)
 
-val eval = rhs o concl o EVAL;
+val eval = boolSyntax.rhs o Thm.concl o bossLib.EVAL;
 
 val uint_of_word = wordsSyntax.uint_of_word;
 val sint_of_term = Arbint.toInt o intSyntax.int_of_term;
@@ -30,11 +30,11 @@ val SP = mk_word4 13;
 val AL = mk_word4 14;
 val PC = mk_word4 15;
 
-val is_T  = term_eq T;
-val is_F  = term_eq F;
-val is_SP = term_eq SP;
-val is_AL = term_eq AL;
-val is_PC = term_eq PC;
+val is_T  = Term.term_eq T;
+val is_F  = Term.term_eq F;
+val is_SP = Term.term_eq SP;
+val is_AL = Term.term_eq AL;
+val is_PC = Term.term_eq PC;
 
 fun is_0 tm = uint_of_word tm = 0;
 
@@ -55,8 +55,9 @@ end;
 
 (* ------------------------------------------------------------------------- *)
 
+val comma     = ", ";
 val uppercase = String.map Char.toUpper;
-val commy     = String.concat o Lib.separate ",";
+val commy     = String.concat o Lib.separate comma;
 fun square s  = String.concat ["[",s,"]"];
 fun curly s   = String.concat ["{",s,"}"];
 val scommy    = square o commy;
@@ -77,13 +78,13 @@ in
 end
 
 fun disassemble_byte l =
-  l |> map term_to_string |> commy |> directive_line "byte"
+  l |> List.map term_to_string |> commy |> directive_line "byte"
 
 fun disassemble_short l =
-  l |> map term_to_string |> commy |> directive_line "short"
+  l |> List.map term_to_string |> commy |> directive_line "short"
 
 fun disassemble_word l =
-  l |> map term_to_string |> commy |> directive_line "word"
+  l |> List.map term_to_string |> commy |> directive_line "word"
 
 (* ------------------------------------------------------------------------- *)
 
@@ -119,7 +120,7 @@ fun reg 13 = "sp"
 val register = reg o uint_of_word;
 val cregister = (char_word4 #"c") o uint_of_word;
 val coprocessor = (char_word4 #"p") o uint_of_word;
-val rcommy = commy o map register;
+val rcommy = commy o List.map register;
 
 local
   fun mk_blocks l =
@@ -146,10 +147,10 @@ local
           (if i = j then
             ""
            else if i + 1 = j then
-            "," ^ reg j
+            comma ^ reg j
            else
             "-" ^ reg j) ^
-          (if xs = [] then "" else ",")) xs
+          (if xs = [] then "" else comma)) xs
 in
   val register_list =
         (reg_list "{") o mk_blocks o i2l o
@@ -176,8 +177,8 @@ fun full_condition tm =
    | _  => raise ERR "full_condition" "unexpected value";
 
 fun condition tm =
-  if is_var tm then
-    fst (dest_var tm)
+  if Term.is_var tm then
+    fst (Term.dest_var tm)
   else if is_AL tm orelse is_PC tm then
     ""
   else
@@ -217,12 +218,13 @@ fun thumb_expand_imm tm =
       |> eval;
 
 fun shift tm =
-  case uint_of_word tm
-  of 0 => ",lsl "
-   | 1 => ",lsr "
-   | 2 => ",asr "
-   | 3 => ",ror "
-   | _ => raise ERR "shift" "unexpected value";
+  comma ^
+  (case uint_of_word tm
+   of 0 => "lsl "
+    | 1 => "lsr "
+    | 2 => "asr "
+    | 3 => "ror "
+    | _ => raise ERR "shift" "unexpected value");
 
 fun disassemble_imm_shift (imm5,typ,rm) =
   case uint_of_word typ
@@ -235,7 +237,7 @@ fun disassemble_imm_shift (imm5,typ,rm) =
    | 2 => register rm ^ shift typ ^
             (if is_0 imm5 then "#32" else constant imm5)
    | 3 => if is_0 imm5 then
-            register rm ^ ",rrx"
+            register rm ^ comma ^ "rrx"
           else
             register rm ^ shift typ ^ constant imm5
    | _ => raise ERR "disassemble_imm_shift" "unexpected value";
@@ -254,17 +256,24 @@ fun disassemble_mode1 thumb2 tm =
 fun disassemble_mode2 (u,tm) =
   case dest_strip tm
   of ("Mode2_immediate", [imm12]) =>
-         if is_T u andalso is_0 imm12 then "" else "," ^ sign_constant (u,imm12)
+         if is_T u andalso is_0 imm12 then
+           ""
+         else
+           comma ^ sign_constant (u,imm12)
    | ("Mode2_register", [imm5,typ,rm]) =>
-         (if is_F u then ",-" else ",") ^ disassemble_imm_shift (imm5,typ,rm)
+         comma ^ (if is_F u then "-" else "") ^
+         disassemble_imm_shift (imm5,typ,rm)
    | _ => raise ERR "disassemble_mode2" "";
 
 fun disassemble_mode3 (u,tm) =
   case dest_strip tm
   of ("Mode3_immediate", [imm12]) =>
-         if is_T u andalso is_0 imm12 then "" else "," ^ sign_constant (u,imm12)
+         if is_T u andalso is_0 imm12 then
+           ""
+         else
+           comma ^ sign_constant (u,imm12)
    | ("Mode3_register", [imm2,rm]) =>
-        (if is_F u then ",-" else ",") ^
+        comma ^ (if is_F u then "-" else "") ^
         disassemble_imm_shift (imm2,``0w:word2``,rm)
    | _ => raise ERR "disassemble_mode3" "";
 
@@ -395,7 +404,7 @@ let fun odd n = n mod 2 = 1
     val b3 = odd n
 in
   String.concat ((if is_T r then "spsr_" else "cpsr_")::
-    (map (fn (b,c) => opt b c "") [(b3,"f"),(b2,"s"),(b1,"x"),(b0,"c")]))
+    (List.map (fn (b,c) => opt b c "") [(b3,"f"),(b2,"s"),(b1,"x"),(b0,"c")]))
 end;
 
 fun it_mask c0 mask =
@@ -505,6 +514,14 @@ let val f = mnemonic instr in
          f "tbh" (scommy [register n, register m, "lsl #1"])
        else
          f "tbb" (scommy [register n, register m])
+   | ("Check_Array", [n,m]) =>
+       f "chka" (commy [register n,register m])
+   | ("Handler_Branch_Link", [l,handler]) =>
+       f (if is_T l then "hbl" else "hb") (constant handler)
+   | ("Handler_Branch_Link_Parameter", [imm5,handler]) =>
+       f "hblp" (commy [constant imm5, constant handler])
+   | ("Handler_Branch_Parameter", [imm3,handler]) =>
+       f "hbp" (commy [constant imm3, constant handler])
    | _ => raise ERR "disassemble_branch"
             ("cannot disassemble: " ^ term_to_string tm)
 end;
@@ -757,6 +774,8 @@ let val f = mnemonic instr in
        f "svc" (constant imm24)
    | ("Secure_Monitor_Call", [imm4]) =>
        f "smc" (constant imm4)
+   | ("Enterx_Leavex", [is_enterx]) =>
+       f (if is_T is_enterx then "enterx" else "leavex") ""
    | ("Clear_Exclusive", []) =>
        f "clrex" ""
    | ("If_Then", [firstcond,mask]) =>
@@ -835,7 +854,7 @@ fun arm_disassemble (arm_parserLib.Ascii s)       = disassemble_ascii s
 
 (*
 val arm_disassemble_parse =
-  map (arm_disassemble o
+  List.map (arm_disassemble o
        (snd : Arbnum.num * arm_parserLib.arm_code -> arm_parserLib.arm_code));
 
 val arm_disassemble_from_quote =

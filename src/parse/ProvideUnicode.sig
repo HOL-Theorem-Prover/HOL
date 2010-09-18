@@ -9,8 +9,7 @@ sig
 
   datatype stored_data =
            RuleUpdate of urule
-         | OverloadUpdate of { u : string, oldname : string option,
-                               ts : term list }
+         | OverloadUpdate of { u : string, ts : term list }
   val stored_data : unit -> stored_data list
 
   (* functions for manipulating use of Unicode versions of constants *)

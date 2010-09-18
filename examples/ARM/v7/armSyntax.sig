@@ -34,15 +34,21 @@ sig
   val aligned_tm                    : term
   val bit_count_tm                  : term
   val ITAdvance_tm                  : term
+  val NoInterrupt_tm                : term
+  val HW_Reset_tm                   : term
+  val HW_Fiq_tm                     : term
+  val HW_Irq_tm                     : term
   val Encoding_ARM_tm               : term
   val Encoding_Thumb_tm             : term
   val Encoding_Thumb2_tm            : term
+  val Encoding_ThumbEE_tm           : term
   val clear_event_register_tm       : term
   val send_event_tm                 : term
   val wait_for_interrupt_tm         : term
   val clear_wait_for_interrupt_tm   : term
   val arm_decode_tm                 : term
   val thumb_decode_tm               : term
+  val thumbee_decode_tm             : term
   val thumb2_decode_tm              : term
 
   val mk_valuestate                 : term * term -> term
@@ -85,7 +91,8 @@ sig
   val mk_write_memA_4               : term * term * term -> term
   val mk_arm_decode                 : term * term -> term
   val mk_thumb_decode               : term * term * term -> term
-  val mk_thumb2_decode              : term * term * term -> term
+  val mk_thumbee_decode             : term * term * term -> term
+  val mk_thumb2_decode              : term * term * term * term -> term
 
   val dest_valuestate               : term -> term * term
   val dest_error                    : term -> term
@@ -121,7 +128,8 @@ sig
   val dest_ITAdvance                : term -> term
   val dest_arm_decode               : term -> term * term
   val dest_thumb_decode             : term -> term * term * term
-  val dest_thumb2_decode            : term -> term * term
+  val dest_thumbee_decode           : term -> term * term * term
+  val dest_thumb2_decode            : term -> term * term * term
 
   val is_valuestate                 : term -> bool
   val is_error                      : term -> bool
@@ -156,6 +164,7 @@ sig
   val is_ITAdvance                  : term -> bool
   val is_arm_decode                 : term -> bool
   val is_thumb_decode               : term -> bool
+  val is_thumbee_decode             : term -> bool
   val is_thumb2_decode              : term -> bool
 
 end

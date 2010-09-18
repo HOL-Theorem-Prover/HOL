@@ -202,8 +202,7 @@ val arm_eq_loop_spec_lemma = prove(
     \\ FULL_SIMP_TAC std_ss []
     \\ `ALIGNED r7` by METIS_TAC [lisp_stack_LEMMA]
     \\ Cases_on `ys` THEN1
-        (SIMP_TAC (std_ss++tailrecLib.tailrec_part_ss()) []
-         \\ FULL_SIMP_TAC std_ss [LENGTH,MAP] \\ METIS_TAC [])
+        (SIMP_TAC std_ss [] \\ FULL_SIMP_TAC std_ss [LENGTH,MAP] \\ METIS_TAC [])
     \\ `~(n2w (LENGTH (h::t)) = 0w:word32)` by
       (ASM_SIMP_TAC (std_ss++SIZES_ss) [n2w_11]
        \\ `LENGTH (y::MAP FST (h::t)) <= MAX_XDEPTH (y::MAP FST (h::t))` by

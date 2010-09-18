@@ -2328,10 +2328,50 @@ in
 end handle NOT_FOUND => if eq_ty redex residue then (env, redex::idlist)
                         else (t::env, idlist)
 
-fun all_aconv [] [] = true
-  | all_aconv [] _ = false
-  | all_aconv _ [] = false
-  | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
+fun beta_normalise0 t = let
+  val bn0 = beta_normalise0
+  fun bn1 t = case bn0 t of NONE => SOME t | x => x
+in
+  case t of
+    App(t1,t2) => let
+(*case dest_term t of
+    COMB(t1,t2) => let *)
+    in
+      case Lib.total beta_conv t of
+        NONE => let
+        in
+          case bn0 t1 of
+            NONE => Option.map (fn t2' => mk_comb(t1,t2')) (bn0 t2)
+          | SOME t1' => bn1 (mk_comb(t1',t2))
+        end
+      | SOME t' => bn1 t'
+    end
+(*
+  | TYCOMB(tm,ty) => Option.map (fn tm' => mk_tycomb(tm',ty)) (bn0 tm)
+  | LAMB(v,t) => Option.map (fn t' => mk_abs(v,t')) (bn0 t)
+  | TYLAM(a,t) => Option.map (fn t' => mk_tyabs(a,t')) (bn0 t)
+*)
+  | TApp(t,ty) => Option.map (fn t' => TApp(t',ty)) (bn0 t)
+  | Abs _ => let
+      val (v,t) = dest_abs t
+    in
+      Option.map (fn t' => mk_abs(v,t')) (bn0 t)
+    end
+  | TAbs _ => let
+      val (a,t) = dest_tyabs t
+    in
+      Option.map (fn t' => mk_tyabs(a,t')) (bn0 t)
+    end
+  | x => NONE
+end
+
+fun beta_normalise t = case beta_normalise0 t of NONE => t | SOME x => x
+
+fun all_abconv [] [] = true
+  | all_abconv [] _ = false
+  | all_abconv _ [] = false
+  | all_abconv (h1::t1) (h2::t2) =
+     aconv (beta_normalise h1) (beta_normalise h2) andalso all_abconv t1 t2
 
 fun all_eq_ty [] [] = true
   | all_eq_ty [] _ = false
@@ -2412,7 +2452,7 @@ in
                val (ctm0,cargs) = strip_comb ctm
                val (chop,ctyargs) = if null typats then (ctm0,[]) else strip_tycomb ctm0
              in
-               if all_eq_ty ctyargs typats andalso all_aconv cargs pats then
+               if all_eq_ty ctyargs typats andalso all_abconv cargs pats then
                  if aconv chop vhop then insts
                  else safe_inserta (vhop |-> chop) insts
                else let

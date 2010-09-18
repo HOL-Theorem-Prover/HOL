@@ -25,29 +25,15 @@ fun frontlast [] = raise Fail "frontlast: failure"
   | frontlast [h] = ([], h)
   | frontlast (h::t) = let val (f,l) = frontlast t in (h::f, l) end;
 
-(* returns a function of type unit -> int, which returns time elapsed in
-   seconds since the call to start_timer() *)
-fun start_timer() = let
-  val timer = Timer.startRealTimer()
-in
-  fn () => let
-       val time_now = Timer.checkRealTimer timer
-     in
-       Real.floor (Time.toReal time_now)
-     end handle Time.Time => 0
-end
-
-(* busy loop sleeping *)
+(* sleeping, with an action every second *)
 fun delay limit action = let
-  val timer = start_timer()
-  fun loop last = let
-    val elapsed = timer()
-  in
-    if elapsed = last then loop last
-    else (action elapsed; if elapsed >= limit then () else loop elapsed)
-  end
+  fun loop cnt =
+      if cnt >= limit then ()
+      else (action cnt;
+            Posix.Process.sleep (Time.fromSeconds 1);
+            loop (cnt + 1))
 in
-  action 0; loop 0
+  loop 0
 end;
 
 fun determining s =
@@ -141,12 +127,17 @@ val poly = let
 in
   case cand of
     NONE => ""
-  | SOME c => (case check_poly c of
-                 SOME p => OS.Path.concat(p,"poly")
-               | NONE =>
-                 (print "\nCouldn't figure out location of poly executable\
-                        \ - hope you have poly-includes.ML to specify it";
-                  ""))
+  | SOME c => let
+    in
+      case check_poly c of
+        SOME p => OS.Path.concat(p,"poly")
+      | NONE =>
+        (print "\nCouldn't figure out location of poly executable\n\
+               \Please write file tools-poly/poly-includes.ML to specify it.\n\
+               \This file should include a line of the form\n\
+               \  val poly = \"path-to-poly\";\n";
+         "")
+    end
 end;
 
 val polymllibdir =
@@ -164,7 +155,11 @@ val polymllibdir =
         case check_libpoly candidate of
           SOME c => c
         | NONE =>
-          (print "\nCouldn't find libpolymain.a in sister lib directory";
+          (print
+               "\nCouldn't find libpolymain.a in sister lib directory\n\
+               \Please write file tools-poly/poly-includes.ML to specify it.\n\
+               \This file should include a line of the form\n\
+               \  val polymllibdir = \"path-to-libpolymain.a\";\n";
            "")
       end
     else "";
@@ -185,7 +180,7 @@ end;
 fun verdict (prompt, value) =
     if value = "" then
       (print ("\n*** No value for "^prompt^
-              "!!  Use tools-poly/poly-includes.ML to fix this\n");
+              "!!  Write a tools-poly/poly-includes.ML file to fix this\n");
        OS.Process.exit OS.Process.failure)
     else
       (print (StringCvt.padRight #" " 20 (prompt^":"));

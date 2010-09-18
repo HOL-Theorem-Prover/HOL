@@ -136,7 +136,7 @@ struct
       "p cnf " ^ Int.toString (!freshvar - 1) ^ " " ^
       Int.toString number_of_clauses ^ "\n" :: strings
   in
-    Library.write_strings_to_file path strings;
+    QbfLibrary.write_strings_to_file path strings;
     !dict
   end
 
@@ -226,7 +226,7 @@ struct
       o (map (String.tokens (Lib.C Lib.mem [#" ", #"\t", #"\n"])))
       o filter_preamble
       o List.filter (fn l => l <> "\n")
-      o Library.read_lines_from_file) path
+      o QbfLibrary.read_lines_from_file) path
     (* The QDIMACS standard requires that all bound variables actually occur in
        the matrix.  Issue a warning if this is not the case. *)
     fun check_bvars tm =

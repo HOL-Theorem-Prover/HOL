@@ -20,6 +20,10 @@ infix +++ +-+;
 
 val ERR = mk_HOL_ERR "Tactic";
 
+fun empty th [] = th
+  | empty th _ = raise ERR "empty" "Bind Error"
+fun sing f [x] = f x
+  | sing f _ = raise ERR "sing" "Bind Error"
 
 (*---------------------------------------------------------------------------*
  * Accepts a theorem that satisfies the goal                                 *
@@ -30,8 +34,7 @@ val ERR = mk_HOL_ERR "Tactic";
  *---------------------------------------------------------------------------*)
 
 val ACCEPT_TAC :thm_tactic = fn th => fn (asl,w) =>
-  if aconv (concl th) w
-  then ([], fn [] => th)
+  if aconv (concl th) w then ([], empty th)
   else raise ERR "ACCEPT_TAC" "";
 
 
@@ -56,7 +59,7 @@ fun DISCARD_TAC th (asl,w) =
 
 val CONTR_TAC :thm_tactic = fn cth => fn (asl,w) =>
   let val th = CONTR w cth
-  in ([], fn [] => th)
+  in ([], empty th)
   end
    handle HOL_ERR _ => raise ERR "CONTR_TAC" ""
 
@@ -90,10 +93,7 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun CCONTR_TAC (asl, w) =
-   ([(mk_neg w::asl, boolSyntax.F)],
-    fn [th] => CCONTR w th);
-
-
+   ([(mk_neg w::asl, boolSyntax.F)], sing (CCONTR w))
 
 (*---------------------------------------------------------------------------*
  * Put a theorem onto the assumption list.                                   *
@@ -106,7 +106,7 @@ fun CCONTR_TAC (asl, w) =
  *---------------------------------------------------------------------------*)
 
 val ASSUME_TAC :thm_tactic = fn bth => fn (asl,w) =>
-   ([(concl bth::asl,w)], (fn [th] => PROVE_HYP bth th));
+   ([(concl bth::asl,w)], sing (PROVE_HYP bth));
 
 
 (*---------------------------------------------------------------------------*
@@ -148,11 +148,11 @@ val CONJ_TAC:tactic = fn (asl,w) =>
  *                                                                           *
  *---------------------------------------------------------------------------*)
 
-fun DISJ1_TAC(asl,w) =
-  let val (disj1,disj2) = dest_disj w
-  in ([(asl,disj1)],
-      fn [th] => DISJ1 th disj2)
-  end
+fun DISJ1_TAC(asl,w) = let
+  val (disj1,disj2) = dest_disj w
+in
+  ([(asl,disj1)], sing (fn th => DISJ1 th disj2))
+end
   handle HOL_ERR _ => raise ERR "DISJ1_TAC" "";
 
 
@@ -165,8 +165,7 @@ fun DISJ1_TAC(asl,w) =
 
 fun DISJ2_TAC(asl,w) =
    let val (disj1,disj2) = dest_disj w
-   in ([(asl,disj2)],
-       fn [thb] => DISJ2 disj1 thb)
+   in ([(asl,disj2)], sing (DISJ2 disj1))
    end
    handle HOL_ERR _ => raise ERR "DISJ2_TAC" ""
 
@@ -182,7 +181,7 @@ fun DISJ2_TAC(asl,w) =
 
 fun MP_TAC thb (asl,w) =
    ([(asl, mk_imp(concl thb, w))],
-    fn [thimp] => MP thimp thb);
+    sing (fn thimp => MP thimp thb));
 
 
 
@@ -243,12 +242,12 @@ val EQ_TAC:tactic = fn (asl,t) =>
 fun X_GEN_TAC x1 : tactic = fn (asl,w) =>
  if is_var x1
  then (let val (Bvar,Body) = dest_forall w
-       in if eq Bvar x1 then ([(asl,Body)], fn [th] => GEN x1 th)
+       in if eq Bvar x1 then ([(asl,Body)], sing (GEN x1))
           else ([(asl,subst [Bvar |-> x1] Body)],
-                fn [th] =>
-                   let val th' = GEN x1 th
-                   in EQ_MP (GEN_ALPHA_CONV Bvar (concl th')) th'
-                   end)
+                sing (fn th =>
+                         let val th' = GEN x1 th
+                         in EQ_MP (GEN_ALPHA_CONV Bvar (concl th')) th'
+                         end))
        end
        handle HOL_ERR _ => raise ERR "X_GEN_TAC" "")
  else raise ERR "X_GEN_TAC"  "need a variable";
@@ -334,13 +333,11 @@ val TY_GEN_TAC:tactic = fn (asl,w) =>
  *---------------------------------------------------------------------------*)
 
 fun SPEC_TAC (t,x) :tactic = fn (asl,w) =>
-    ([(asl, mk_forall(x, subst[t |-> x] w))],
-     fn [th] => SPEC t th)
+    ([(asl, mk_forall(x, subst[t |-> x] w))], sing (SPEC t))
     handle HOL_ERR _ => raise ERR "SPEC_TAC" "";
 
 fun ID_SPEC_TAC x :tactic = fn (asl,w) =>
-    ([(asl, mk_forall(x, w))],
-     fn [th] => SPEC x th)
+    ([(asl, mk_forall(x, w))], sing (SPEC x))
     handle HOL_ERR _ => raise ERR "ID_SPEC_TAC" "";
 
 fun TY_SPEC_TAC (ty,a) :tactic = fn (asl,w) =>
@@ -364,8 +361,7 @@ fun ID_TY_SPEC_TAC a :tactic = fn (asl,w) =>
 
 fun EXISTS_TAC t :tactic = fn (asl,w) =>
  let val (Bvar,Body) = dest_exists w
- in ([(asl, subst [Bvar |-> t] Body)],
-     fn [th] => EXISTS (w,t) th)
+ in ([(asl, subst [Bvar |-> t] Body)], sing (EXISTS (w,t)))
  end
   handle HOL_ERR _ => raise ERR "EXISTS_TAC" "";
 
@@ -404,8 +400,7 @@ fun GSUBST_TAC substfn ths (asl,w) =
                           (v |-> SYM th)::theta3)
                     end)  ths ([],[],[])
        val base = substfn theta1 w
-   in ([(asl, subst theta2 base)],
-       fn [th] => SUBST theta3 base th)
+   in ([(asl, subst theta2 base)], sing (SUBST theta3 base))
    end
    handle HOL_ERR _ => raise ERR "GSUBST_TAC" "";
 
@@ -719,7 +714,7 @@ end;
 
 val BINOP_TAC = MK_COMB_TAC THENL [AP_TERM_TAC, ALL_TAC];
 
-  
+
 (*---------------------------------------------------------------------------*
  * ABS_TAC: inverts the ABS inference rule.	 		             *
  *									     *
@@ -740,7 +735,7 @@ fun ABS_TAC (asl:term list,gl) =
    val (_,f') = dest_abs (rand (concl f_thm));
  in
    ([(asl, mk_eq(g, f'))],
-         CONV_RULE (RHS_CONV (K (GSYM f_thm))) o 
+         CONV_RULE (RHS_CONV (K (GSYM f_thm))) o
          ABS x o Lib.trye hd)
  end
 end;
@@ -765,7 +760,7 @@ fun WEAKEN_TAC P :tactic =
            => raise ERR "WEAKEN_TAC"
                  "no matching item found in hypotheses"
      in
-       ([(rst,w)], fn [th] => ADD_ASSUM tm th)
+       ([(rst,w)], sing (ADD_ASSUM tm))
      end;
 
 
@@ -877,12 +872,6 @@ end;
 
 (* First we need a variant on THEN. *)
 
-fun mapshape [] _ _ =  []
-  | mapshape (n::nums) (f::funcs) all_args =
-     let val (fargs,rst) = split_after n all_args
-     in f fargs :: mapshape nums funcs rst
-     end
-  | mapshape _ _ _ = raise ERR "mapshape" "irregular lists";
 
 fun THENF (tac1:tactic,tac2:tactic,tac3:tactic) g =
  case tac1 g
@@ -910,11 +899,11 @@ fun CONV_TAC (conv:conv) :tactic = fn (asl,w) =>
  let val th = conv w
      val (_,rhs) = dest_eq(concl th)
  in if eq rhs T
-    then ([], fn [] => EQ_MP (SYM th) TRUTH)
-    else ([(asl,rhs)], fn [th'] => EQ_MP (SYM th) th')
+    then ([], empty (EQ_MP (SYM th) TRUTH))
+    else ([(asl,rhs)], sing (EQ_MP (SYM th)))
  end handle UNCHANGED =>
    if eq w T (* special case, can happen! *)
-     then ([],fn [] => TRUTH)
+     then ([],empty TRUTH)
      else ALL_TAC (asl, w);
 
 (*---------------------------------------------------------------------------
@@ -958,8 +947,7 @@ fun HO_BACKCHAIN_TAC th =
   in fn (asl,w) =>
        let val th1 = match_fn w
            val (ant,_) = dest_imp_only(concl th1)
-       in ([(asl,ant)],
-           fn [t] => HO_MATCH_MP th1 t)
+       in ([(asl,ant)], sing (HO_MATCH_MP th1))
        end
   end;
 

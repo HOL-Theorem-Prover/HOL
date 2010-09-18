@@ -1,6 +1,5 @@
 copy(r;a,n) [data_array(a,n,data)] {
-   local i, l, tmp;
-   l = r;
+   local i, tmp;
    i = 0;
    r = new(n) [dta];
    loop_spec [i == #ic * 

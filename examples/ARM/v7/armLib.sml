@@ -26,13 +26,13 @@ val _ = Feedback.register_btrace ("add disassembler comments", disassemble);
 
 (* ------------------------------------------------------------------------- *)
 
-val eval = rhs o concl o EVAL;
+val eval = boolSyntax.rhs o Thm.concl o bossLib.EVAL;
 
 local
   fun mk_word4 i = wordsSyntax.mk_wordii (i,4)
 
-  val is_AL = term_eq (mk_word4 14)
-  val is_PC = term_eq (mk_word4 15)
+  val is_AL = Term.term_eq (mk_word4 14)
+  val is_PC = Term.term_eq (mk_word4 15)
 
   infix **
 
@@ -47,7 +47,7 @@ local
 
   fun condition_to_word4 tm =
     mk_word4
-      (case fst (dest_var tm)
+      (case fst (Term.dest_var tm)
        of "eq" => 0
         | "ne" => 1
         | "cs" => 2
@@ -70,10 +70,11 @@ local
   fun fix_condition tm = if is_var tm then condition_to_word4 tm else tm
 
   fun encoding tm =
-        case fst (dest_const tm)
-        of "Encoding_ARM"    => "; ARM"
-         | "Encoding_Thumb"  => "; 16-bit Thumb"
-         | "Encoding_Thumb2" => "; 32-bit Thumb"
+        case fst (Term.dest_const tm)
+        of "Encoding_ARM"     => "; ARM"
+         | "Encoding_Thumb"   => "; 16-bit Thumb"
+         | "Encoding_Thumb2"  => "; 32-bit Thumb"
+         | "Encoding_ThumbEE" => "; 16-bit ThumbEE"
          | _ => raise ERR "encoding" "unexpected encoding"
 
   val spaces = String.concat o Lib.separate " "
@@ -88,7 +89,7 @@ local
                          else
                            ()
                  val thm = if (!trace_progress div 2) mod 2 = 1 then
-                             time (arm_step opt) opc
+                             Lib.time (arm_step opt) opc
                            else
                              arm_step opt opc
              in
@@ -99,55 +100,60 @@ local
              end
 in
   fun arm_steps_from_parse s l =
-    let fun arm_step_from_code (itstate,instr as Instruction (enc,cond,tm)) =
-              let val opc = arm_encoderLib.arm_encode instr
-                  val pp = print_progress
-                             (if !trace_progress mod 2 = 1 orelse
-                                 !label_step_theorems
-                              then
-                                SOME (arm_disassemble instr,encoding enc)
-                              else
-                                NONE)
-              in
-                SOME
-                  (if enc = Encoding_ARM_tm then
-                     if is_AL cond orelse is_PC cond then
-                       (itstate, pp "" ("arm,pass" ** s) opc, NONE)
-                     else
-                       (itstate,
-                        pp "(pass condition)" ("arm,pass" ** s) opc,
-                        SOME (pp "(fail condition)" ("arm,fail" ** s) opc))
+  let fun arm_step_from_code (itstate,instr as Instruction (enc,cond,tm)) =
+            let val opc = arm_encoderLib.arm_encode instr
+                val pp = print_progress
+                           (if !trace_progress mod 2 = 1 orelse
+                               !label_step_theorems
+                            then
+                              SOME (arm_disassemble instr,encoding enc)
+                            else
+                              NONE)
+            in
+              SOME
+                (if enc = Encoding_ARM_tm then
+                   if is_AL cond orelse is_PC cond then
+                     (itstate, pp "" ("arm,pass" ** s) opc, NONE)
                    else
-                     let val itstate' = if is_If_Then tm then
-                                          dest_itstate tm
-                                        else
-                                          ITAdvance itstate
-                         val its = "it:" ^ w2s itstate
-                         val cond' = fix_condition cond
-                     in
-                       if is_AL cond' orelse is_PC cond' then
-                         (itstate', pp "" ("thumb,pass" ** its ** s) opc, NONE)
-                       else
-                         (itstate',
-                          pp "(pass condition)" ("thumb,pass" ** its ** s) opc,
-                          SOME (pp "(fail condition)"
-                                   ("thumb,fail" ** its ** s) opc))
-                     end)
-              end
-          | arm_step_from_code _ = NONE
-        fun recurse [] _ a = List.rev a
-          | recurse (h::t) itstate a =
-              case arm_step_from_code (itstate,h)
-              of SOME (itstate',pass,fail) =>
-                   recurse t itstate' ((pass,fail)::a)
-               | NONE =>
-                   recurse t itstate a
-    in
-      recurse l (wordsSyntax.mk_wordii(0,8)) []
-    end
+                     (itstate,
+                      pp "(pass condition)" ("arm,pass" ** s) opc,
+                      SOME (pp "(fail condition)" ("arm,fail" ** s) opc))
+                 else
+                   let val itstate' = if is_If_Then tm then
+                                        dest_itstate tm
+                                      else
+                                        ITAdvance itstate
+                       val its = "it:" ^ w2s itstate
+                       val cond' = fix_condition cond
+                       val x = if enc = Encoding_ThumbEE_tm then
+                                 "thumbee"
+                               else
+                                 "thumb"
+                   in
+                     if is_AL cond' orelse is_PC cond' then
+                       (itstate', pp "" (x ** "pass" ** its ** s) opc,
+                        NONE)
+                     else
+                       (itstate',
+                        pp "(pass condition)" ("thumb,pass" ** its ** s) opc,
+                        SOME (pp "(fail condition)"
+                                 (x ** "fail" ** its ** s) opc))
+                   end)
+            end
+        | arm_step_from_code _ = NONE
+      fun recurse [] _ a = List.rev a
+        | recurse (h::t) itstate a =
+            case arm_step_from_code (itstate,h)
+            of SOME (itstate',pass,fail) =>
+                 recurse t itstate' ((pass,fail)::a)
+             | NONE =>
+                 recurse t itstate a
+  in
+    recurse l (wordsSyntax.mk_wordii(0,8)) []
+  end
 end;
 
-fun arm_steps_from f opt qs = arm_steps_from_parse opt (map snd (f qs));
+fun arm_steps_from f opt qs = arm_steps_from_parse opt (List.map snd (f qs));
 
 val arm_steps_from_string = arm_steps_from arm_parse_from_string;
 val arm_steps_from_file   = arm_steps_from arm_parse_from_file;
@@ -160,33 +166,40 @@ in
   Arbnum.fromBinString (Substring.string ss)
 end;
 
-fun decode_opcode itstate opc =
-  if isSome itstate then
-    let val n = wordsSyntax.mk_wordi (bits32 (opc,15,0),16)
-        val IT = wordsSyntax.mk_wordii (valOf itstate,8)
-    in
-      if bits32 (opc,31,29) = Arbnum.fromBinString "111" andalso
-         bits32 (opc,28,27) <> Arbnum.zero
-      then
-        (Encoding_Thumb2_tm,
-         mk_thumb2_decode (IT,wordsSyntax.mk_wordi (bits32 (opc,31,16),16),n))
-      else
-        (Encoding_Thumb_tm, mk_thumb_decode (``ARMv7_A``,IT,n))
-    end
-  else
-    (Encoding_ARM_tm,mk_arm_decode (F,wordsSyntax.mk_wordi (opc,32)));
+fun decode_opcode opt opc =
+  case opt
+  of SOME (itstate, ee) =>
+      let val n = wordsSyntax.mk_wordi (bits32 (opc,15,0),16)
+          val IT = wordsSyntax.mk_wordii (itstate,8)
+      in
+        if bits32 (opc,31,29) = Arbnum.fromBinString "111" andalso
+           bits32 (opc,28,27) <> Arbnum.zero
+        then
+          pairSyntax.mk_pair (Encoding_Thumb2_tm,
+            mk_thumb2_decode (``arm_coretypes$ARMv7_A``,IT,
+              wordsSyntax.mk_wordi (bits32 (opc,31,16),16),n))
+        else if ee then
+          mk_thumbee_decode (``arm_coretypes$ARMv7_A``,IT,n)
+        else
+          pairSyntax.mk_pair (Encoding_Thumb_tm,
+            mk_thumb_decode (``arm_coretypes$ARMv7_A``,IT,n))
+      end
+   | NONE =>
+       pairSyntax.mk_pair (Encoding_ARM_tm,
+         mk_arm_decode (boolSyntax.F, wordsSyntax.mk_wordi (opc,32)));
 
-fun decode_from_string itstate s =
-let val (enc,tm) = decode_opcode itstate (Arbnum.fromHexString s)
-    val (cond,tm) = tm |> eval |> pairSyntax.dest_pair
-in
-  Instruction (enc,cond,tm)
+fun decode_from_string opt s =
+let val tm = decode_opcode opt (Arbnum.fromHexString s) in
+  Instruction
+    (case tm |> eval |> pairSyntax.strip_pair
+       of [enc,cond,tm] => (enc,cond,tm)
+        | _ => raise ERR "decode_from_string" "failed to evaluate decoding")
 end handle Option =>
   raise ERR "decode_from_string" "could not parse HEX string";
 
-val arm_decode = decode_from_string NONE;
-
-fun thumb_decode i = decode_from_string (SOME i);
+val arm_decode       = decode_from_string NONE;
+fun thumb_decode i   = decode_from_string (SOME (i,false));
+fun thumbee_decode i = decode_from_string (SOME (i,true));
 
 (* ------------------------------------------------------------------------- *)
 
@@ -216,7 +229,7 @@ let open Arbnum
     val pad0  = StringCvt.padLeft #"0"
     val count = pad 8 o pad0 4 o lower o toHexString
 in
-  app (fn (n,i) => output_code ostrm (count (start + n)) i)
+  List.app (fn (n,i) => output_code ostrm (count (start + n)) i)
 end;
 
 fun arm_assemble_to_file_parse start filename c =
@@ -244,7 +257,8 @@ fun arm_assemble_to_file_from_file s f =
 
 fun join (a,b) = case b of "" => a | _ => String.concat [a, " ", b];
 
-val arm_disassemble_decode = join o arm_disassemble o arm_decode;
-fun thumb_disassemble_decode i = join o arm_disassemble o (thumb_decode i);
+val arm_disassemble_decode       = join o arm_disassemble o arm_decode;
+fun thumb_disassemble_decode i   = join o arm_disassemble o (thumb_decode i);
+fun thumbee_disassemble_decode i = join o arm_disassemble o (thumbee_decode i);
 
 end

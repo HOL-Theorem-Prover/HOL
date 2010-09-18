@@ -445,8 +445,13 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
 val (output_functions as {warn,tgtfatal,diag,info}) =
     output_functions {debug = debug, quiet_flag = quiet_flag}
 
+val _ = diag ("CommandLine.name() = "^CommandLine.name())
+val _ = diag ("CommandLine.arguments() = "^
+              String.concatWith ", " (CommandLine.arguments()))
+
 val _ = do_lastmade_checks output_functions
                            {no_lastmakercheck = no_lastmakercheck}
+
 
 (* set up logging *)
 val logfilename = Systeml.make_log_file

@@ -302,6 +302,13 @@ in
   List.rev (recurse 0 [] lst)
 end
 
+fun mapshape [] _ _ =  []
+  | mapshape (n::nums) (f::funcs) all_args =
+     let val (fargs,rst) = split_after n all_args
+     in f fargs :: mapshape nums funcs rst
+     end
+  | mapshape _ _ _ = raise ERR "mapshape" "irregular lists";
+
 type 'a cmp = 'a * 'a -> order
 
 fun flip_order LESS = GREATER
@@ -644,6 +651,19 @@ fun time f x =
      end_time timer;  y
   end
 
+fun start_real_time () = Timer.startRealTimer()
+
+fun end_real_time timer =
+  (TextIO.output(TextIO.stdOut,
+     "realtime: " ^ Time.toString (Timer.checkRealTimer timer) ^ "s\n");
+   TextIO.flushOut TextIO.stdOut)
+
+fun real_time f x =
+  let val timer = start_real_time()
+      val y = f x handle e => (end_real_time timer; raise e)
+  in
+     end_real_time timer; y
+  end
 
 (*---------------------------------------------------------------------------*
  * Invoking a function with a flag temporarily assigned to the given value.  *
