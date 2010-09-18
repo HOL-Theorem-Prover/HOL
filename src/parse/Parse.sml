@@ -370,13 +370,14 @@ end
 fun pp_abbrev s = let
   val g = !the_type_grammar
   val dict = type_grammar.abbreviations g
-  val SOME st = Binarymap.peek(dict,s)
+  val st = Binarymap.find (dict, s)
   val ty = type_grammar.structure_to_type st
   val g = type_grammar.disable_abbrev_printing s g
   val (ppfn,_) = print_from_grammars (g,!the_term_grammar)
 in
   Lib.C ppfn ty
-end handle Bind => raise ERROR "pp_abbrev" (s^" is not a type abbreviation")
+end handle Binarymap.NotFound =>
+  raise ERROR "pp_abbrev" (s ^ " is not a type abbreviation")
 
 val print_abbrev = print_with_newline o pp_abbrev
 
