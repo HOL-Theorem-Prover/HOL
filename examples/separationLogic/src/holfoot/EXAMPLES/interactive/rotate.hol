@@ -1,0 +1,75 @@
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+HOL_Interactive.toggle_quietdec();
+
+open listTheory rich_listTheory
+open generalHelpersTheory;
+
+HOL_Interactive.toggle_quietdec();
+
+
+(******************************************************************************)
+(* Some definitions                                                           *)
+(******************************************************************************)
+
+val SINGLE_ROTATE_def = Define `
+  (SINGLE_ROTATE [] = []) /\
+  (SINGLE_ROTATE (x::xs) = SNOC x xs)`
+
+val SINGLE_ROTATE_REWRITE = prove (
+``0 < LENGTH l ==>
+  (SINGLE_ROTATE l = SNOC (HD l) (TL l))``,
+Cases_on `l` THEN
+SIMP_TAC list_ss [SINGLE_ROTATE_def]);
+
+val ROTATE_def = Define `
+   (ROTATE 0 l = l) /\
+   (ROTATE (SUC n) l = SINGLE_ROTATE (ROTATE n l))`
+
+val LENGTH_SINGLE_ROTATE = prove (
+``LENGTH (SINGLE_ROTATE l) = LENGTH l``,
+Cases_on `l` THEN
+SIMP_TAC list_ss [SINGLE_ROTATE_def])
+
+val LENGTH_ROTATE = prove (
+``LENGTH (ROTATE n l) = LENGTH l``,
+Induct_on `n` THEN
+ASM_SIMP_TAC std_ss [ROTATE_def, LENGTH_SINGLE_ROTATE]);
+
+val NULL_ROTATE = prove (
+``NULL (ROTATE n l) = NULL l``,
+SIMP_TAC std_ss [NULL_LENGTH, LENGTH_ROTATE]);
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/rotate.dsf"];
+
+(* holfoot_set_goal_procedures file ["list_rotate"] *)
+val list_rotate_TAC =
+xHF_CONTINUE_TAC [add_rewrites [NULL_ROTATE, ROTATE_def]] THEN
+REPEAT STRIP_TAC THENL [
+   SIMP_TAC list_ss [NULL_DROP, LENGTH_ROTATE, LENGTH_TL,
+      GSYM arithmeticTheory.ADD1, ROTATE_def,
+      SINGLE_ROTATE_REWRITE, SNOC_APPEND,
+      TAKE_APPEND1, FIRSTN_LENGTH_ID_EVAL,
+      BUTFIRSTN_APPEND2] THEN
+   Cases_on `i'_const' = 0` THEN (
+      HF_SOLVE_TAC
+   ),
+
+   `c_lc = n_const` by DECIDE_TAC THEN
+   HF_SOLVE_TAC
+];
+
+val _ = holfoot_tac_verify_spec file (SOME []) [
+           ("list_rotate", list_rotate_TAC)];
+

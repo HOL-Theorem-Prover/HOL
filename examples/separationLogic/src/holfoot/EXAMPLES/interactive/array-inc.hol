@@ -66,4 +66,3 @@ val _ = holfoot_tac_verify_spec file NONE
                  ("inc2", inc2_TAC),
                  ("inc3", inc3_TAC)];
 
-

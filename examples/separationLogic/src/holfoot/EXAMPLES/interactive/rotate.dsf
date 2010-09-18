@@ -1,0 +1,23 @@
+list_replace_last(i;k) [data_list(i,data) * k |-> [tl:#n, dta:#d]] {
+   local l;
+   if (i == 0) {
+     i = k;
+   } else {
+     l=i->tl;
+     list_replace_last(l;k);
+     i->tl=l;
+  }
+} [data_lseg(i,data,k) * k |-> [tl:#n, dta:#d]]
+
+
+list_rotate(i;n) [data_list(i,data) * (i != 0)] {
+  local k, c;
+  c = 0;
+  while (c < n) [data_list(i,``ROTATE c data``) * (i != 0) * (c <= n)] {
+    k = i->tl;
+    i->tl = 0;
+    list_replace_last(k;i);
+    i = k;
+    c = c + 1;
+  }
+} [data_list(i,``ROTATE n data``)]

@@ -97,7 +97,7 @@ val sortlist_TAC =
       METIS_TAC[MEM_REMOVE_IMP],
 
       Q.PAT_ASSUM `PERM X Y` (ASSUME_TAC o ONCE_REWRITE_RULE [PERM_SYM]) THEN
-      ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [] THEN
+      ASM_SIMP_TAC (std_ss++permLib.PERM_SIMPLE_ss) [] THEN
       METIS_TAC[PERM_REMOVE]
    ];
 

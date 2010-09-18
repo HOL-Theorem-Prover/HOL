@@ -69,11 +69,9 @@ val merge_TAC =
    xHF_CONTINUE_TAC [mergesort_gen_step_opt, generate_vcs] THEN
    merge_TAC_0;
 
-
-val _ = holfoot_tac_verify_spec file
+val _ = holfoot_tac_verify_spec file 
                 (SOME [careful, generate_vcs, mergesort_gen_step_opt]) 
                 [("merge", merge_TAC)]
-
 
 
 (******************************************************************************)

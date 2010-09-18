@@ -2319,7 +2319,8 @@ let
        let
           val vc1 = if isSome vc1_opt then (valOf vc1_opt) else (genvar (Type `:unit`));
           val vc2 = if isSome vc2_opt then (valOf vc2_opt) else (genvar (Type `:unit`));
-          val (vc2',_) = term_variant (free_vars vc1) (free_vars vc2) vc2
+          val (_,sub) = quantHeuristicsTools.list_variant (free_vars vc1) (free_vars vc2) 
+          val vc2' = subst sub vc2;
        in
           SOME (pairSyntax.mk_pair(vc1, vc2'))
        end
@@ -3171,14 +3172,14 @@ val VAR_RES_STRUCTURE_NORMALISE_CONV =
   NO_MARKER___AND_IMP_INTRO ORELSEC
   NO_MARKER___RIGHT_IMP_FORALL_CONV ORELSEC
   (PART_MATCH lhs IMP_CONJ_THM) ORELSEC
-  LIST_EXISTS_SIMP_CONV
+  LIST_EXISTS_SIMP_CONV;
 
 
 (******************************************************************************)
 (* Quantifier instantiations                                                  *)
 (******************************************************************************)
 
-fun QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool (sys:quant_heuristic) fv v tt =
+fun QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool (sys:quant_heuristic) v tt =
 let
    val (_,_,_,_,_,_,sfb_imp,_) = dest_VAR_RES_FRAME_SPLIT tt
 			  handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
@@ -3187,29 +3188,28 @@ let
    val sfs' = filter is_var_res_bool_proposition sfs;
    val sfs'' = map rand sfs';
 
-   val gC = COMBINE_HEURISTIC_FUNS (map (fn t => (fn () => (sys fv v t))) sfs'');
-   val relevant_guesses = #others_not_possible gC;
+   val gC = COMBINE_HEURISTIC_FUNS (map (fn t => (fn () => (sys v t))) sfs'');
+   val relevant_guesses = #exists_strong gC;
 
-
-   fun mk_only_possible g =
+   fun mk_exists g =
      let
-        val (i,fvL,_) = guess_extract g
+        val (i,fvL) = guess_extract g
      in
-        guess_only_possible (i,fvL,NONE)
+        mk_guess gty_exists v tt i fvL
      end;
-   val guesses = map mk_only_possible relevant_guesses
+   val guesses = map mk_exists relevant_guesses
 in
   {rewrites            = #rewrites gC,
    general             = [],
    true                = [],
    false               = [],
-   only_not_possible   = [],
-   only_possible       = guesses,
-   others_satisfied    = [],
-   others_not_possible = []}:guess_collection
+   forall              = [],
+   exists              = guesses,
+   exists_strong       = [],
+   forall_strong       = []}:guess_collection
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
-
+val cache_ref = ref (mk_quant_heuristic_cache ());
 val VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main  =
    EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV NONE (K true) false
      ({distinct_thms = [],
@@ -3217,15 +3217,30 @@ val VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main  =
       rewrite_thms =  [asl_comments_ELIM],
       convs =         [],
       heuristics =    [QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool],
+      inference_thms = [],
+      filter              = [],
+      top_heuristics      = [],
       final_rewrite_thms = []
       }::list_qp::(var_res_param.quantifier_heuristicsL));
 
+(*
+val lref = ref []
+
+val tt = el 1 (!lref)
+
+
+val xthm0 = VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main CONSEQ_CONV_STRENGTHEN_direction tt
+
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 3
+traces ()
+   val _ = lref := tt::(!lref);
+*)
 fun VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV ss context tt =
 let
    val thm0 = VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main CONSEQ_CONV_STRENGTHEN_direction tt
-   val c = (if (is_imp (concl thm0)) then (RATOR_CONV o RAND_CONV) else
+(*   val c = (if (is_imp (concl thm0)) then (RATOR_CONV o RAND_CONV) else
               RAND_CONV)
-(*   val thm1 = CONV_RULE (c (VAR_RES_PROP_REWRITE_CONV ss context)) thm0*)
+    val thm1 = CONV_RULE (c (VAR_RES_PROP_REWRITE_CONV ss context)) thm0*)
 in
    thm0
 end;
@@ -3773,9 +3788,9 @@ val cache_opt = SOME (mk_DEPTH_CONSEQ_CONV_CACHE,
 
 val cache_opt = SOME (mk_DEPTH_CONSEQ_CONV_CACHE, K true)
 val cache_opt = CONSEQ_CONV_default_cache_opt
+val cache_opt = NONE
 *)
 
-val cache_opt = NONE
 
 type user_rewrite_param = (Abbrev.thm list * Abbrev.conv list * simpLib.ssfrag list);
 

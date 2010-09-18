@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 loadPath := (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
             !loadPath;
-
+open vars_as_resourceTheory
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
    "rich_listTheory", "generalHelpersTheory", "latticeTheory", "separationLogicTheory",
    "bagSimps", "ConseqConv", "quantHeuristicsLib"];
@@ -15,7 +15,7 @@ open generalHelpersTheory finite_mapTheory pred_setTheory
    listTheory rich_listTheory arithmeticTheory separationLogicTheory
    bagTheory bagSimps containerTheory relationTheory operatorTheory optionTheory;
 open ConseqConv boolSimps quantHeuristicsLib quantHeuristicsArgsLib Sanity
-
+open quantHeuristicsTheory
 
 (*
 quietdec := false;
@@ -10072,6 +10072,52 @@ val VAR_RES_PROP_IS_EQUIV_FALSE___ELIM =
 store_thm ("VAR_RES_PROP_IS_EQUIV_FALSE___ELIM",
 ``F ==> VAR_RES_PROP_IS_EQUIV_FALSE c f (wpb,rpb) sfb``,
 SIMP_TAC std_ss[]);
+
+
+
+val GUESS_RULES___VAR_RES_FRAME_SPLIT_1 = store_thm ("GUESS_RULES___VAR_RES_FRAME_SPLIT_1",
+``!i c f wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_restP sr.
+(GUESS_EXISTS i (\x. c x) ==>
+GUESS_EXISTS i
+(\x. (VAR_RES_FRAME_SPLIT f sr (wpb,rpb) wpb' sfb_context
+   sfb_split (BAG_INSERT (var_res_bool_proposition f (c x)) sfb_imp) sfb_restP)))``,
+
+SIMP_TAC std_ss [GUESS_REWRITES, VAR_RES_FRAME_SPLIT_EXPAND,
+   BAG_UNION_INSERT, var_res_prop___COND_INSERT,
+   var_res_prop___PROP_INSERT, var_res_prop___COND_UNION,
+   VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition,
+   RIGHT_EXISTS_IMP_THM] THEN
+SIMP_TAC std_ss [var_res_bool_proposition_REWRITE, IN_ABS] THEN
+METIS_TAC[]);
+
+
+val GUESS_RULES___VAR_RES_FRAME_SPLIT_2 = store_thm ("GUESS_RULES___VAR_RES_FRAME_SPLIT_2",
+``!i c f wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_restP sr.
+GUESS_EXISTS_STRONG i (\x. c x) ==>
+(!x. FINITE_BAG (sfb_imp x)) ==>
+(!x sf. BAG_IN sf (sfb_imp x) ==>
+        VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) sf) ==>
+(GUESS_EXISTS i
+(\x. (VAR_RES_FRAME_SPLIT f sr (wpb,rpb) wpb' sfb_context
+   sfb_split (BAG_INSERT (var_res_bool_proposition f (c x)) (sfb_imp x)) sfb_restP)))``,
+
+SIMP_TAC std_ss [GUESS_REWRITES, VAR_RES_FRAME_SPLIT_EXPAND,
+   BAG_UNION_INSERT, var_res_prop___COND_INSERT,
+   var_res_prop___PROP_INSERT, var_res_prop___COND_UNION,
+   VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition,
+   RIGHT_EXISTS_IMP_THM] THEN
+SIMP_TAC std_ss [var_res_bool_proposition_REWRITE, IN_ABS] THEN
+REPEAT STRIP_TAC THEN
+Tactical.REVERSE (Cases_on `var_res_prop___COND f (wpb,rpb) sfb_split`) THEN1 (
+   FULL_SIMP_TAC std_ss [] THEN METIS_TAC[]
+) THEN
+FULL_SIMP_TAC std_ss [] THEN
+`!x. var_res_prop___COND f (wpb,rpb) (sfb_imp x)` by ALL_TAC THEN1 (
+   FULL_SIMP_TAC std_ss [var_res_prop___COND___REWRITE] THEN
+   METIS_TAC[]
+) THEN
+FULL_SIMP_TAC std_ss [] THEN
+METIS_TAC[]);
 
 
 

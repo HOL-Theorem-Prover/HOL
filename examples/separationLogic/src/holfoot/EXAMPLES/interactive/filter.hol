@@ -34,13 +34,13 @@ val file = concat [examplesDir, "/interactive/filter.dsf"];
 val filter_TAC = 
    xHF_SOLVE_TAC [ add_rewrites [NULL_EQ, FILTER_EQ_NIL] ] THEN
    REPEAT STRIP_TAC THENL [
-      Q.EXISTS_TAC `data_fc'` THEN
+      Q.EXISTS_TAC `data_fc` THEN
       HF_SOLVE_TAC,
 
       Q.EXISTS_TAC `data1` THEN
       HF_SOLVE_TAC,
 
-      Q.EXISTS_TAC `data1 ++ [date] ++ data_fc'` THEN
+      Q.EXISTS_TAC `data1 ++ [date] ++ data_fc` THEN
       xHF_SOLVE_TAC [add_rewrites [FILTER_APPEND, FILTER_EQ_NIL]],
 
       Q.EXISTS_TAC `[]` THEN

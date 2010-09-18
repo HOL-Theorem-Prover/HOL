@@ -1,0 +1,4 @@
+fun hf_use file = (use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml");
+                   use (examplesDir ^ "/" ^ file);
+                   use (examplesDir ^ "/interactive/hf_use.def"));
+

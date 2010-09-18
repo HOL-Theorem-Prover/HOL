@@ -97,18 +97,18 @@ REPEAT STRIP_TAC THENL [
 
          Q.PAT_ASSUM `!n. X n ==> (HD data < EL n data)` MATCH_MP_TAC THEN
          ASM_SIMP_TAC arith_ss []
-       ],
+      ],
 
-       MAP_EVERY (fn x => Q.PAT_ASSUM (`PERM X` @ x)  (ASSUME_TAC o
-          ONCE_REWRITE_RULE [PERM_SYM])) [`data`, `rdata'`, `rdata`] THEN
-       ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [] THEN
-       ONCE_REWRITE_TAC [PERM_FUN_APPEND] THEN
-       SIMP_TAC list_ss [] THEN
-       MATCH_MP_TAC (ONCE_REWRITE_RULE [PERM_SYM] PERM_SWAP_ELEMENTS) THEN
-       `LENGTH data' = LENGTH data` by
-           METIS_TAC[PERM_LENGTH] THEN
-       UNABBREV_ALL_TAC THEN
-       ASM_SIMP_TAC arith_ss []
+      MAP_EVERY (fn x => Q.PAT_ASSUM (`PERM X` @ x)  (ASSUME_TAC o
+         ONCE_REWRITE_RULE [PERM_SYM])) [`data`, `rdata'`, `rdata`] THEN
+      ASM_SIMP_TAC (std_ss++permLib.PERM_SIMPLE_ss) [] THEN
+      ONCE_REWRITE_TAC [PERM_FUN_APPEND] THEN
+      SIMP_TAC list_ss [] THEN
+      MATCH_MP_TAC (ONCE_REWRITE_RULE [PERM_SYM] PERM_SWAP_ELEMENTS) THEN
+      `LENGTH data' = LENGTH data` by
+          METIS_TAC[PERM_LENGTH] THEN
+      UNABBREV_ALL_TAC THEN
+      ASM_SIMP_TAC arith_ss []
    ],
 
    
@@ -166,7 +166,8 @@ REPEAT STRIP_TAC THENL [
    HF_VC_TAC THEN
    REPEAT STRIP_TAC THENL [
        Q.PAT_ASSUM `PERM X data2` (ASSUME_TAC o ONCE_REWRITE_RULE [PERM_SYM]) THEN
-       ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [] THEN
+       ASM_SIMP_TAC (std_ss++permLib.PERM_SIMPLE_ss) [] THEN
+
        ONCE_REWRITE_TAC [PERM_FUN_APPEND] THEN
        SIMP_TAC list_ss [] THEN
        MATCH_MP_TAC (ONCE_REWRITE_RULE [PERM_SYM] PERM_SWAP_ELEMENTS) THEN
@@ -228,7 +229,7 @@ REPEAT STRIP_TAC THENL [
       ],
 
 
-      ASM_SIMP_TAC (std_ss++permLib.PERM_ss) [] THEN
+      ASM_SIMP_TAC (std_ss++permLib.PERM_SIMPLE_ss) [] THEN
       ONCE_REWRITE_TAC [PERM_FUN_APPEND] THEN
       SIMP_TAC list_ss [] THEN
       MATCH_MP_TAC (ONCE_REWRITE_RULE [PERM_SYM] PERM_SWAP_ELEMENTS) THEN
@@ -242,7 +243,6 @@ REPEAT STRIP_TAC THENL [
       FULL_SIMP_TAC std_ss [LENGTH_EQ_NUM_compute, SORTED_DEF]
    )
 ]
-
 
 
 val _ = holfoot_tac_verify_spec file3 NONE

@@ -53,7 +53,7 @@ val tree_sum_depth_TAC =
    Cases_on `NULL trees` THEN1 HF_SOLVE_TAC THEN
    xHF_CONTINUE_TAC [use_asms, add_rewrites[LENGTH_EQ_ADD_CONST_compute]] THEN
    REPEAT STRIP_TAC THEN (
-      Q.EXISTS_TAC `l''` THEN
+      Q.EXISTS_TAC `l'` THEN
       xHF_CONTINUE_TAC [use_asms, add_rewrites [TREE_SUM_REWRITE]]
    )
 

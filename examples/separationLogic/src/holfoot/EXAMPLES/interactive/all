@@ -1,0 +1,27 @@
+(* define hf_use *)
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/EXAMPLES/interactive/hf_use.def")
+
+    
+hf_use "interactive/array_copy.hol"
+hf_use "interactive/array_reverse.hol"
+hf_use "interactive/binary_search_tree.hol"
+hf_use "interactive/fact.hol"
+hf_use "interactive/insertionsort.hol"
+hf_use "interactive/queue.hol"
+hf_use "interactive/red_black_tree.hol"
+hf_use "interactive/rotate.hol"
+hf_use "interactive/tree_map.hol"
+hf_use "interactive/array-inc.hol"
+hf_use "interactive/binary_search.hol"
+hf_use "interactive/circular_list.hol"
+hf_use "interactive/filter.hol"  
+hf_use "interactive/mergesort.hol"
+hf_use "interactive/quicksort.hol"
+hf_use "interactive/remove.hol"
+hf_use "interactive/tree_depth.hol"
+hf_use "interactive/tree_sum.hol"
+
+
+hf_use "vstte/vscomp1.hol"
+hf_use "vstte/vscomp2.hol"
+
