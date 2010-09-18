@@ -75,6 +75,8 @@ val lp = ``(λn (d:unit + unit) tns uns.
 
 val termP = ``genind  ^vp ^lp 0``
 
+val _ = temp_overload_on ("termP", ``^termP``)
+
 val LIST_REL_NIL1 = prove(
   ``LIST_REL R [] x ⇔ (x = [])``,
   Cases_on `x` >> srw_tac [][]);
@@ -249,3 +251,55 @@ val tpm_thm =
                tpm_clause LAM_termP LAM_def]
 
 val recax = recursion_axiom
+
+val gtty = ty_antiq ``:(unit + unit, unit) gterm``
+
+val tlf =
+  ``λ(v:string) (u:unit + unit) (ds1:α list) (ts1:^gtty list)
+     (ds2:α list) (ts2:^gtty list).
+       if ISL u then tlf v (HD ds1) (term_ABS (HD ts1)) : α
+       else taf (HD ds2) (term_ABS (HD ts2))
+                (HD (TL ds2)) (term_ABS (HD (TL ts2))) : α``
+val tvf = ``λ(s:string) (u:unit). tvf s : α``
+
+val stage1 =
+    recax
+        |> INST_TYPE [alpha |-> ``:unit + unit``, beta |-> ``:unit``,
+                      gamma |-> alpha]
+        |> Q.INST [`lf` |-> `^tlf`, `vf` |-> `^tvf`, `vp` |-> `^vp`,
+                   `lp` |-> `^lp`, `n` |-> `0`]
+        |> SIMP_RULE (srw_ss()) [sumTheory.FORALL_SUM, FORALL_AND_THM,
+                                 GSYM RIGHT_FORALL_IMP_THM, IMP_CONJ_THM,
+                                 LIST_REL_NIL1, LIST_REL_CONS1]
+        |> SIMP_RULE (srw_ss() ++ DNF_ss) []
+        |> UNDISCH
+
+val hconcl = stage1 |> concl |> dest_exists |> #2
+
+val _ = augment_srw_ss [rewrites [REWRITE_RULE [SYM GFV_supp] FINITE_GFV]]
+
+val myh = prove(
+  ``^hconcl ==> FINITE A ==>
+    ∃hh.
+      (∀s. hh (VAR s) = tvf s) ∧
+      (∀t1 t2. hh (APP t1 t2) = taf (hh t1) t1 (hh t2) t2) ∧
+      (∀v t. v ∉ A ⇒ (hh (LAM v t) = tlf v (hh t) t))``,
+  rpt strip_tac >> qexists_tac `h o term_REP` >>
+  asm_simp_tac (srw_ss()) [VAR_def, repabs_id, VAR_termP] >>
+  srw_tac [][] >| [
+    Q_TAC (NEWLib.NEW_TAC "z")
+          `A ∪ supp gtpm (term_REP t1) ∪ supp gtpm (term_REP t2)`>>
+    SUBST_ALL_TAC (SYM (Q.INST [`v` |-> `z`] APP_def')) >>
+    first_x_assum (qspecl_then [`()`, `z`, `term_REP t1`, `term_REP t2`]
+                               mp_tac) >>
+    asm_simp_tac (srw_ss()) [repabs_id, APP_termP, genind_term_REP,
+                             term_ABSREP],
+
+    srw_tac [][LAM_def, repabs_id, LAM_termP, genind_term_REP, term_ABSREP]
+  ]) |> UNDISCH_ALL
+
+val stage2 = CHOOSE (#1 (dest_exists (concl stage1)), stage1) myh
+
+
+
+
