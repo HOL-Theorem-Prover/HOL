@@ -27,116 +27,51 @@ sig
   val VARIANT_CONV                 : term list -> conv
 
 
-(*Guesses*)
+  datatype guess_type =
+      gty_exists | gty_exists_strong | gty_false  
+    | gty_forall | gty_forall_strong | gty_true
 
   datatype guess =
-    (*A guess with no particular reason at all, no justification. This
-      is for example used by EXISTS_TAC.
+       guess_general of term * term list
+     | guess_term of guess_type * term * term list * term
+     | guess_thm of guess_type * term * term list * thm
 
-      guess_general (i, [fv1,...,fvn])
+  val is_guess_general : guess -> bool
+  val is_guess_thm     : guess_type -> guess -> bool
+  val is_guess_term    : guess_type -> guess -> bool
+  val is_guess         : guess_type -> guess -> bool
+  val guess_has_thm    : guess -> bool
+  val guess_has_no_free_vars     : guess -> bool
+  val guess_has_thm_no_free_vars : guess -> bool
 
-      can be used to proof
+  val guess_type2string   : guess_type -> string
+  val guess_type2term     : guess_type -> term
+  val guess_term2type     : term -> guess_type
+  val make_guess_thm_term : guess_type -> term -> term -> term -> term list -> term
+  val guess_remove_thm    : term -> term -> guess -> guess
+  val make_set_guess_thm  : guess -> (term -> thm) -> guess
+  val mk_guess            : guess_type -> term -> term -> term -> term list -> guess
 
-      ?fv1 ... fvn. P i ==> ?v. P v   and
-      !v. P v ==> !fv1 ... fvn. P i
+  val make_guess___dummy  : guess_type -> term -> term -> term -> term list -> guess
+  val make_guess___assume : guess_type -> term -> term -> term -> term list -> guess 
+  val make_guess___simple : guess_type -> term -> term -> term -> term list -> guess
 
-      or if one want's to use equations
+  val make_set_guess_thm___dummy  : guess -> guess
+  val make_set_guess_thm___simple : guess -> guess
+  val make_set_guess_thm___assume : guess -> guess
 
-      ?v. P v = (?fv1 ... fvn. P i) \/
-                   ?v. (!fv1 ... fvn. ~(i = v)) /\ (P v)  and
-
-      !v. P v = (!fv1 ... fvn. P i) /\
-		   (!v. (?fv1 ... fvn. ~(i = v)) ==> P v)
-
-
-      These two possibilies are always available and
-      choosen if the other guesses don't provide a theorem.
-    *)
-    guess_general of term * term list
-
-    (*i makes P i false
-
-      This can be used to proof
-      !v. P v = F
-
-      If a theorem is provided it has to be of the form
-      !fv1 ... fvn. ~(P i)
-    *)
-  | guess_false of term * term list * (unit -> thm) option
-
-    (*i makes P i true
-
-      This can be used to proof
-      ?v. P v = T
-
-      The theorem has to be of the form
-      !fv1 ... fvn. P i
-    *)
-  | guess_true of term * term list * (unit -> thm) option
-
-    (*if i does satisfy P then all other i' as well
-
-      This can be used to proof
-      !v. P v = !fv1 ... fvn. P i
+  val guess_extract       : guess -> term * term list
+  val guess_extract_thm   : guess -> guess_type * term * term list * thm * bool
+  val guess2term          : guess -> term option
+  val guess2thm           : guess -> bool * thm
+  val guess2thm_opt       : guess -> thm option
+  val guess_extract_type  : guess -> guess_type option
 
 
-      The theorem has to be of the form
-      (!fv1 ... fvn. P i) ==> !v. P v
-    *)
-  | guess_only_not_possible of term * term list * (unit -> thm) option
+  val guess_thm_to_guess  : bool -> (term * term list) option -> thm -> guess
+  val dest_guess_tm       : term -> guess_type * term * term * term
+  val is_guess_tm         : term -> bool
 
-    (*if i does not satisfy P then all other i' don't as well
-
-      This can be used to proof
-      ?v. P v = ?fv1 ... fvn. P i
-
-      The theorem has to be of the form
-      (!fv1 ... fvn. ~(P i)) ==> !v. ~(P v)
-    *)
-  | guess_only_possible of term * term list * (unit -> thm) option
-
-    (*all instantiations except i do not satisfy P
-
-      This can be used to proof
-      ?v. P v = ?fv1 ... fvn. P i
-
-      The theorem has to be of the form
-      !v. (!fv1 ... fvn. ~(v = i)) ==> ~P v
-    *)
-  | guess_others_not_possible of term * term list * (unit -> thm) option
-
-    (*all instantiations except i do satisfy P
-
-      This can be used to proof
-      !v. P v = !fv1 ... fvn. P i
-
-      The theorem has to be of the form
-      !v. (!fv1 ... fvn. ~(v = i)) ==> P v
-    *)
-  | guess_others_satisfied of term * term list * (unit -> thm) option;
-
-
-  val is_guess_general             : guess -> bool
-  val is_guess_true                : bool -> guess -> bool
-  val is_guess_false               : bool -> guess -> bool
-  val is_guess_only_possible       : bool -> guess -> bool
-  val is_guess_only_not_possible   : bool -> guess -> bool
-  val is_guess_others_not_possible : bool -> guess -> bool
-  val is_guess_others_satisfied    : bool -> guess -> bool
-
-  val guess_set_thm_opt            : (unit -> thm) option -> guess -> guess
-  val guess_remove_thm             : guess -> guess
-  val make_guess_thm_term          : term -> term -> guess -> term option
-  val make_guess_thm_opt           : term -> term -> guess -> conv -> (unit -> thm) option
-  val make_set_guess_thm_opt       : term -> term -> guess -> conv -> guess
-
-  (*Warning: this one is for debugging only. It uses mk_thm to
-    create the thm added to the guess*)
-  val make_guess_thm_opt___dummy : term -> term -> guess -> (unit -> thm) option
-  val make_set_guess_thm_opt___dummy : term -> term -> guess -> guess
-
-
-  val guess_extract : guess -> term * term list * (unit -> thm) option
   val guess_to_string : bool -> guess -> string
 
 
@@ -148,22 +83,25 @@ sig
     general             : guess list,
     true                : guess list,
     false               : guess list,
-    only_possible       : guess list,
-    only_not_possible   : guess list,
-    others_not_possible : guess list,
-    others_satisfied    : guess list}
+    forall              : guess list,
+    exists              : guess list,
+    forall_strong       : guess list,
+    exists_strong       : guess list}
+
+  val guess_collection_guess_type : guess_type -> guess_collection -> guess list
+
+  val empty_guess_collection    : guess_collection;
+  val is_empty_guess_collection : guess_collection -> bool;
+  val guess_collection_append   : guess_collection -> guess_collection -> guess_collection;
+  val guess_collection_flatten  : guess_collection option list -> guess_collection;
+  val guess_list2collection     : thm list * guess list -> guess_collection;
+  val guess_collection2list     : guess_collection -> thm list * guess list;
+  val guess_collection___get_exists_weaken     : guess_collection -> guess list;
+  val guess_collection___get_forall_weaken : guess_collection -> guess list;
 
 
-  val empty_guess_collection   : guess_collection;
-  val is_empty_guess_collection   : guess_collection -> bool;
-  val guess_collection_append  : guess_collection -> guess_collection -> guess_collection;
-  val guess_collection_flatten : guess_collection option list -> guess_collection;
-  val guess_list2collection    : thm list * guess list -> guess_collection;
-  val guess_collection2list    : guess_collection -> thm list * guess list;
-  val guess_collection___get_only_possible_weaken : guess_collection -> guess list;
-  val guess_collection___get_only_not_possible_weaken : guess_collection -> guess list;
 
-  val guess_weaken       : term -> term -> guess -> guess
+  val guess_weaken       : guess -> guess
   val check_guess        : term -> term -> guess -> bool
   val correct_guess      : term -> term -> guess -> guess option
   val correct_guess_list : term -> term -> guess list -> guess list;
@@ -171,20 +109,30 @@ sig
      term -> term -> guess_collection -> guess_collection
 
 
-  val term_variant : term list -> term list -> term -> term * term list
+  type inference_collection =
+     {true                : thm list,
+      false               : thm list,
+      exists              : thm list,
+      forall              : thm list,
+      exists_strong       : thm list,
+      forall_strong       : thm list};
 
+  val GUESS_THM_list2collection : thm list -> inference_collection;
 
 
   exception QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
 (*Some types*)
-  type quant_heuristic = term list -> term -> term -> guess_collection;
+  type quant_heuristic = term -> term -> guess_collection;
   type quant_param =
     {distinct_thms      : thm list,
      cases_thms         : thm list,
      rewrite_thms       : thm list,
+     inference_thms     : thm list,
      convs              : conv list,
+     filter             : (term -> term -> bool) list,
      heuristics         : (quant_heuristic -> quant_heuristic) list,
+     top_heuristics     : (quant_heuristic -> quant_heuristic) list,
      final_rewrite_thms : thm list};
   type quant_heuristic_cache;
 
@@ -195,13 +143,12 @@ sig
 
 (*Heuristics that might be useful to write own ones*)
   val QUANT_INSTANTIATE_HEURISTIC___REWRITE :
-  quant_heuristic -> term list -> term -> thm -> guess_collection
+         quant_heuristic -> term -> thm -> guess_collection
   val QUANT_INSTANTIATE_HEURISTIC___CONV :
-  conv -> quant_heuristic -> quant_heuristic;
+         conv -> quant_heuristic -> quant_heuristic;
   val QUANT_INSTANTIATE_HEURISTIC___EQUATION_distinct : thm list -> quant_heuristic -> quant_heuristic;
   val QUANT_INSTANTIATE_HEURISTIC___EQUATION_cases    : thm -> quant_heuristic -> quant_heuristic;
   val QUANT_INSTANTIATE_HEURISTIC___one_case          : thm -> quant_heuristic -> quant_heuristic;
-  val QUANT_INSTANTIATE_GUESSES___one_case            : thm -> term -> (term list * term * term) * guess list
   val QUANT_INSTANTIATE_HEURISTIC___cases             : thm -> quant_heuristic -> quant_heuristic;
 
 
@@ -209,6 +156,7 @@ sig
   val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth : int ref
 
   val QUANT_INSTANTIATE_HEURISTIC___COMBINE :
+    ((term -> term -> bool) list) -> ((quant_heuristic -> quant_heuristic) list) ->
     ((quant_heuristic -> quant_heuristic) list) -> quant_heuristic_cache ref option -> quant_heuristic;
 
 
@@ -218,7 +166,7 @@ sig
   (*use this to create sys for debugging own heuristics*)
   val QUANT_INSTANTIATE_HEURISTIC___PURE_COMBINE : quant_param ->
        quant_heuristic_cache ref option ->
-       term list -> term -> term -> guess_collection
+       term -> term -> guess_collection
 
 (*The most important functions *)
   val EXTENSIBLE_QUANT_INSTANTIATE_CONV : quant_heuristic_cache ref option ->
@@ -261,7 +209,7 @@ sig
   val empty_qp           : quant_param;
   val stateful_qp        : quant_param;
   val pure_stateful_qp   : quant_param;
-  val TypeBase_qp        : quant_param
+  val TypeBase_qp        : quant_param;
   val get_qp___for_types : hol_type list -> quant_param
 
 
@@ -276,9 +224,13 @@ sig
   val rewrite_qp       : thm list -> quant_param
   val final_rewrite_qp : thm list -> quant_param
   val cases_qp         : thm list -> quant_param
+  val inference_qp     : thm list -> quant_param
   val convs_qp         : conv list -> quant_param
   val heuristics_qp    : (quant_heuristic -> quant_heuristic) list ->
                            quant_param
+  val top_heuristics_qp: (quant_heuristic -> quant_heuristic) list ->
+                           quant_param
+  val filter_qp        : (term -> term -> bool) list -> quant_param
 
 
 (*combination with simplifier*)

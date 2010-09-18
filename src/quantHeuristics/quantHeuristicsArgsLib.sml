@@ -47,7 +47,7 @@ quietdec := false;
 (* val v = ``x:('a # 'b)``;
    val fv = [``y:'a``]:term list;
    val t = ``FST (x:('a # 'b)) = y``
-   fun P v (t:term) = SOME (enumerate_pair v)
+   fun P v (t:term) = SOME (enumerate_pair true v)
    val given = ["aaaa"]
  *)
 
@@ -65,23 +65,32 @@ in
    p
 end;
 
-fun QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR_GEN PL (sys:quant_heuristic) fv v t =
+val GUESS_PAIR_THM = prove (
+``!P. GUESS_EXISTS_STRONG (\x:'a. x) P /\ GUESS_FORALL_STRONG (\x. x) P``,
+simpLib.SIMP_TAC numLib.std_ss [GUESS_REWRITES])
+
+
+fun QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR_GEN PL (sys:quant_heuristic) v t =
 let
    (*check whether something should be done*)
    val _ = pairSyntax.dest_prod (type_of v) handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
    fun P v t = first_opt (fn x => fn p => (p v t)) PL
    val vars = case (P v t) of NONE => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
-                                 | some => valOf some;
-   (*do it*)
-   val (vars, _) = term_variant fv (free_vars vars) vars;
-   val thm0 = pairTools.PAIR_EX v vars
-
-   val (_, gL) = QUANT_INSTANTIATE_GUESSES___one_case thm0 t   
+                            | some => valOf some;
+   val fvL = rev (free_vars vars)
+ 
+   val gthmL = CONJUNCTS (ISPEC (mk_abs (v, t)) GUESS_PAIR_THM)   
 in
-   guess_list2collection ([], gL)
-end
-
+  {rewrites            = [],
+   general             = [],
+   true                = [],
+   false               = [],
+   forall              = [],
+   exists              = [],
+   forall_strong       = [guess_thm (gty_forall_strong, vars, fvL, el 2 gthmL)],
+   exists_strong       = [guess_thm (gty_exists_strong, vars, fvL, el 1 gthmL)]}
+end;
 
 
 fun split_pair___FST_SND___pred depth_split v t =
@@ -133,6 +142,9 @@ fun pair_qp pL =
    rewrite_thms =  [PAIR_EQ_EXPAND, pairTheory.FST, pairTheory.SND],
    convs =         [],
    heuristics =    [QUANT_INSTANTIATE_HEURISTIC___SPLIT_PAIR_GEN pL],
+   inference_thms= [],
+   filter       =  [],
+   top_heuristics =[],
    final_rewrite_thms = [pairTheory.FST,  pairTheory.SND,
                          PAIR_EQ_SIMPLE_EXPAND]
   }:quant_param
@@ -141,27 +153,33 @@ fun pair_qp pL =
 val pair_default_qp = pair_qp [split_pair___PABS___pred,
         split_pair___FST_SND___pred false]
 
-(*
-val PAIR_QUANT_INSTANTIATE_CONV = SEXT_PURE_QUANT_INSTANTIATE_CONV
-   [pairs_combine_argument]
 
-val t = ``!p. (x = FST p) ==> Q p``
+(*
+val PAIR_QUANT_INSTANTIATE_CONV = QUANT_INSTANTIATE_CONV [pair_default_qp]
+
+val t = ``?p. (x = FST p) /\ Q p``;
 val thm = PAIR_QUANT_INSTANTIATE_CONV t;
 
-val t = ``!p. ?t. ((f t = FST p) /\ Z x) ==> Q p``
+val t = ``?p. (7 = (SND p)) /\ Q p``
+val thm = PAIR_QUANT_INSTANTIATE_CONV t;
+
+val t = ``?p1 p2. (p1 = 7) /\ Q (p1,p2)``
 val thm = PAIR_QUANT_INSTANTIATE_CONV t
 
-
-val t = ``?p. ((SND p) = 7) /\ Q p``
-val thm = PAIR_QUANT_INSTANTIATE_CONV t
 
 val t = ``?v. (v,X) = Z``
-val thm = PAIR_QUANT_INSTANTIATE_CONV t
-
-val t = ``?v. (v,X) = (a,9)``
-val thm = PAIR_QUANT_INSTANTIATE_CONV t
+val thm = PAIR_QUANT_INSTANTIATE_CONV t;
 
 val t = ``!x. a /\ (\ (a1, t3, a2). P a1 a2 t3) x /\ b x``
+val thm = PAIR_QUANT_INSTANTIATE_CONV t
+
+val t = ``?x. (x = 2) /\ P x``;
+val thm = PAIR_QUANT_INSTANTIATE_CONV t
+
+val t = ``!x. ((f t = x) /\ P x) ==> Q x``;
+val thm = PAIR_QUANT_INSTANTIATE_CONV t
+
+val t = ``?v. (v,X) = (a,9)``;
 val thm = PAIR_QUANT_INSTANTIATE_CONV t
 
 *)
@@ -184,6 +202,9 @@ val option_qp =
                          IS_SOME_EQ_NOT_NONE],
    convs              = [],
    heuristics         = [],
+   inference_thms     = [],
+   filter             = [],
+   top_heuristics     = [],
    final_rewrite_thms = [optionTheory.option_CLAUSES]
   }:quant_param
 
@@ -194,13 +215,16 @@ val option_qp =
  *******************************************************************)
 
 val num_qp =
-  {distinct_thms = [prim_recTheory.SUC_ID, numTheory.NOT_SUC],
+  {distinct_thms = [prim_recTheory.SUC_ID],
    cases_thms =    [arithmeticTheory.num_CASES],
    rewrite_thms =  [prim_recTheory.INV_SUC_EQ,
       arithmeticTheory.EQ_ADD_RCANCEL,arithmeticTheory.EQ_ADD_LCANCEL,
       arithmeticTheory.ADD_CLAUSES],
    convs =         [],
    heuristics =    [],
+   filter       =  [],
+   top_heuristics =[],
+   inference_thms     = [],
    final_rewrite_thms = [numTheory.NOT_SUC, GSYM numTheory.NOT_SUC]
   }:quant_param
 
@@ -218,6 +242,9 @@ val list_qp =
                     listTheory.APPEND_11,
                     listTheory.APPEND_eq_NIL],
    convs =         [],
+   inference_thms= [],
+   filter       =  [],
+   top_heuristics =[],
    heuristics =    [],
    final_rewrite_thms = [listTheory.NULL_DEF,
                          listTheory.TL, listTheory.HD,
@@ -266,7 +293,7 @@ in
 end;
 
 
-fun QUANT_INSTANTIATE_HEURISTIC___RECORDS do_rewrites P (sys:quant_heuristic) fv v t =
+fun QUANT_INSTANTIATE_HEURISTIC___RECORDS do_rewrites P (sys:quant_heuristic) v t =
 let
    (*check whether something should be done*)
    val v_info = case TypeBase.fetch (type_of v) of NONE   => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
@@ -282,9 +309,6 @@ let
          map mk_new_var (TypeBasePure.fields_of v_info)
       end;
 
-   (*do it*)
-   val (_, vars) = term_variant fv vars T;
-
    val thm0 = 
         let
            val xthm0 = DB.fetch thyname (typename^"_literal_nchotomy")
@@ -293,10 +317,12 @@ let
            val xthm2 =  CONV_RULE (RENAME_VARS_CONV (map (fst o dest_var) vars)) xthm1
         in xthm2
         end;
-   val (_, gL) = QUANT_INSTANTIATE_GUESSES___one_case thm0 t   
+   val gc = QUANT_INSTANTIATE_HEURISTIC___one_case thm0 sys v t
 in
-   guess_list2collection (
-     if do_rewrites then get_record_type_rewrites (type_of v) else [], gL)
+   if do_rewrites then
+        (guess_collection_append gc
+              (guess_list2collection (get_record_type_rewrites (type_of v), [])))
+   else gc
 end
 
 fun record_qp do_rewrites P =
@@ -304,6 +330,9 @@ fun record_qp do_rewrites P =
    cases_thms =    [],
    rewrite_thms =  [],
    convs =         [],
+   filter =        [],
+   top_heuristics =[],
+   inference_thms= [],
    heuristics =    [QUANT_INSTANTIATE_HEURISTIC___RECORDS do_rewrites P],
    final_rewrite_thms = []
   }:quant_param
