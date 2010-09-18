@@ -850,8 +850,8 @@ val permsupp_sidecond =
        x ∉ A ∧ y ∉ A ∧ ^vp n vv ==>
        (dpm [(x,y)] (^vf s vv) = ^vf (lswapstr [(x,y)] s) vv)) ∧
     (∀x y n s bv ds1 ts ds2 us ns ms.
-       x ∉ A ∧ y ∉ A ∧ ^lp n bv ns ms ∧
-       LIST_REL (genind ^vp ^lp) ns ts ∧
+       x ∉ A ∧ y ∉ A ∧ (LENGTH ts = LENGTH ds1) ∧ (LENGTH us = LENGTH ds2)  ∧
+       ^lp n bv ns ms ∧ LIST_REL (genind ^vp ^lp) ns ts ∧
        LIST_REL (genind ^vp ^lp) ms us ==>
        (dpm [(x,y)] (^lf s bv ds1 ts ds2 us) =
         ^lf (lswapstr [(x,y)] s) bv
@@ -866,8 +866,6 @@ val FCB = ``∀a n ts us ms ns ds1 ds2 bv.
              LIST_REL (genind ^vp ^lp) ns ts ∧
              LIST_REL (genind ^vp ^lp) ms us ==>
              a ∉ supp dpm (^lf a bv ds1 ts ds2 us)``
-
-
 
 val (recn_rel_rules, recn_rel_ind, recn_rel_cases) = Hol_reln`
   (∀s vv n. ^vp n vv ==> recn_rel ^vf ^lf ^vp ^lp A (GVAR s vv) (^vf s vv)) ∧
@@ -1038,6 +1036,10 @@ val LIST_REL_listpm = prove(
          LIST_REL (combin$C ($o o R) (pm' pi)) l1 l2)``,
   Induct >> Cases_on `l2` >> srw_tac [][]);
 
+val LIST_REL_lengths = prove(
+  ``∀l1 l2. LIST_REL R l1 l2 ⇒ (LENGTH l1 = LENGTH l2)``,
+  Induct_on `LIST_REL` >> srw_tac [][]);
+
 (* ub Lemma 6 *)
 val recn_rel_equivariant = prove(
   ``^permsupp_sidecond ==>
@@ -1049,6 +1051,7 @@ val recn_rel_equivariant = prove(
   >- (`dpm [(x,y)] (vf s vv) = vf (lswapstr [(x,y)] s) vv`
        by metis_tac [] >>
       srw_tac [][] >> match_mp_tac rvar >> metis_tac []) >>
+  imp_res_tac LIST_REL_lengths>>
   first_x_assum (qspecl_then [`x`,`y`,`n`,`v`,`bv`,`ds1`,`ts`, `ds2`,
                               `us`, `ns`, `ms`] MP_TAC) >>
   srw_tac [][] >> match_mp_tac rlam >>
@@ -1082,6 +1085,7 @@ val freshness = prove(
     pop_assum mp_tac >> srw_tac [][] >>
     first_x_assum (qspecl_then [`a`,`b`, `n`, `v`, `bv`, `ds1`, `ts`,
                                 `ds2`, `us`, `ns`, `ms`] mp_tac) >>
+    imp_res_tac LIST_REL_lengths >>
     `a ∉ supp (listpm gtpm) ts ∧ a ∉ supp (listpm gtpm) us`
       by srw_tac [][NOT_IN_supp_listpm, GFV_supp] >>
     srw_tac [][supp_fresh] >>
@@ -1185,6 +1189,7 @@ val uniqueness = prove(
   `FINITE (supp dpm (lf v' bv' ds1' ts' ds2 us))`
      by (match_mp_tac (GEN_ALL supp_absence_FINITE) >> qexists_tac `v'` >>
          srw_tac [][]) >>
+  imp_res_tac LIST_REL_lengths >>
   `v ∉ supp dpm (lf v' bv' ds1' ts' ds2 us)`
     by (strip_tac >> srw_tac [][] >>
         Q_TAC (NEW_TAC "z")
