@@ -262,6 +262,17 @@ val tlf =
                 (HD (TL ds2)) (term_ABS (HD (TL ts2))) : α``
 val tvf = ``λ(s:string) (u:unit). tvf s : α``
 
+val LENGTH_NIL' =
+    CONV_RULE (BINDER_CONV (LAND_CONV (REWR_CONV EQ_SYM_EQ)))
+              listTheory.LENGTH_NIL
+val LENGTH1 = prove(
+  ``(1 = LENGTH l) ⇔ ∃e. l = [e]``,
+  Cases_on `l` >> srw_tac [][listTheory.LENGTH_NIL]);
+val LENGTH2 = prove(
+  ``(2 = LENGTH l) ⇔ ∃a b. l = [a;b]``,
+  Cases_on `l` >> srw_tac [][LENGTH1]);
+
+
 val stage1 =
     recax
         |> INST_TYPE [alpha |-> ``:unit + unit``, beta |-> ``:unit``,
@@ -270,9 +281,16 @@ val stage1 =
                    `lp` |-> `^lp`, `n` |-> `0`]
         |> SIMP_RULE (srw_ss()) [sumTheory.FORALL_SUM, FORALL_AND_THM,
                                  GSYM RIGHT_FORALL_IMP_THM, IMP_CONJ_THM,
-                                 LIST_REL_NIL1, LIST_REL_CONS1]
-        |> SIMP_RULE (srw_ss() ++ DNF_ss) []
+                                 LIST_REL_NIL1, LIST_REL_CONS1,
+                                 LENGTH_NIL', LENGTH1, LENGTH2]
+        |> SIMP_RULE (srw_ss() ++ DNF_ss) [LENGTH1, LENGTH2]
         |> UNDISCH
+
+val termP_elim = prove(
+  ``(∀g. termP g ⇒ P g) ⇔ (∀t. P (term_REP t))``,
+  srw_tac [][EQ_IMP_THM] >- srw_tac [][genind_term_REP] >>
+  first_x_assum (qspec_then `term_ABS g` mp_tac) >>
+  srw_tac [][repabs_id]);
 
 val hconcl = stage1 |> concl |> dest_exists |> #2
 
@@ -299,6 +317,9 @@ val myh = prove(
   ]) |> UNDISCH_ALL
 
 val stage2 = CHOOSE (#1 (dest_exists (concl stage1)), stage1) myh
+
+
+hyp stage2
 
 
 
