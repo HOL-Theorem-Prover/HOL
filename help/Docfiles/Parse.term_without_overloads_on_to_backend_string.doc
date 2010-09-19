@@ -1,0 +1,30 @@
+\DOC term_without_overloads_on_to_backend_string
+
+\TYPE {Parse.term_without_overloads_on_to_backend_string : string list -> term -> string}
+
+\SYNOPSIS
+Returns a string, suitable for the current backend, that represents a term
+without using overload mappings of certain tokens.
+
+\KEYWORDS
+Pretty-printing
+
+\LIBRARY
+Parse
+
+\DESCRIBE
+The call {term_without_overloads_on_to_backend_string ls t} returns a
+current-backend suitable string representation of {t} without using any
+overloads on tokens in {ls}.
+
+If the current backend is a color-capable terminal, for example, the string
+will include escape codes for coloring free and bound variables.
+
+\FAILURE
+Should never fail.
+
+\SEEALSO
+Parse.term_without_overloads_on_to_string,
+Parse.term_without_overloads_to_backend_string, Parse.pp_term_without_overloads_on,
+Parse.clear_overloads_on, Parse.term_to_backend_string.
+\ENDDOC
