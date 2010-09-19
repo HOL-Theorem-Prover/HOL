@@ -153,12 +153,14 @@ val term_REP_tpm =
     tpm_def |> SPEC_ALL |> Q.AP_TERM `term_REP`
             |> SIMP_RULE bool_ss [repabs_id, genind_gtpm_eqn, genind_term_REP]
 
-val tpm_is_perm = prove(
+val tpm_is_perm = store_thm(
+  "tpm_is_perm",
   ``is_perm tpm``,
   srw_tac [][is_perm_def, FUN_EQ_THM, tpm_def, gtpm_NIL,
              GSYM gtpm_compose, repabs_id, term_ABSREP]
   >- srw_tac [][GSYM term_REP_tpm, term_ABSREP] >>
   AP_TERM_TAC >> metis_tac [is_perm_def, gtpm_is_perm]);
+val _ = export_rewrites ["tpm_is_perm"]
 
 
 fun genit th = let
@@ -220,6 +222,12 @@ val supp_tpm = prove(
   match_mp_tac (GEN_ALL supp_unique_apart) >>
   srw_tac [][supptpm_support, supptpm_apart, GFV_supp, FINITE_GFV, tpm_is_perm])
 
+val FINITE_FV = store_thm(
+  "FINITE_FV",
+  ``FINITE (FV t)``,
+  srw_tac [][supp_tpm, GFV_supp, FINITE_GFV]);
+val _ = export_rewrites ["FINITE_FV"]
+
 
 val _ = overload_on ("FV", ``supp tpm``)
 fun supp_clause contermP con_def = let
@@ -252,11 +260,12 @@ val tpm_thm =
 
 val recax = recursion_axiom
 
-val gtty = ty_antiq ``:(unit + unit, unit) gterm``
+val (tmty, gtty) = dom_rng (type_of ``term_REP``)
+val gtty' = ty_antiq gtty
 
 val tlf =
-  ``λ(v:string) (u:unit + unit) (ds1:α list) (ts1:^gtty list)
-     (ds2:α list) (ts2:^gtty list).
+  ``λ(v:string) (u:unit + unit) (ds1:α list) (ts1:^gtty' list)
+     (ds2:α list) (ts2:^gtty' list).
        if ISL u then tlf v (HD ds1) (term_ABS (HD ts1)) : α
        else taf (HD ds2) (term_ABS (HD ts2))
                 (HD (TL ds2)) (term_ABS (HD (TL ts2))) : α``
@@ -272,6 +281,62 @@ val LENGTH2 = prove(
   ``(2 = LENGTH l) ⇔ ∃a b. l = [a;b]``,
   Cases_on `l` >> srw_tac [][LENGTH1]);
 
+val termP_elim = prove(
+  ``(∀g. termP g ⇒ P g) ⇔ (∀t. P (term_REP t))``,
+  srw_tac [][EQ_IMP_THM] >- srw_tac [][genind_term_REP] >>
+  first_x_assum (qspec_then `term_ABS g` mp_tac) >>
+  srw_tac [][repabs_id]);
+
+fun ELIM_HERE t = let
+  val (v,body) = dest_forall t
+  val (h,c) = dest_imp body
+in
+  BINDER_CONV (LAND_CONV
+                   (markerLib.move_conj_left (aconv (mk_comb(termP, v)))) THENC
+               REWR_CONV (GSYM AND_IMP_INTRO) THENC
+               RAND_CONV (UNBETA_CONV v)) THENC
+  REWR_CONV termP_elim THENC BINDER_CONV BETA_CONV THENC
+  PURE_REWRITE_CONV [CONJUNCT1 term_ABSREP, GSYM tpm_def]
+end t
+
+fun termP_removal t = let
+  val (v, body) = dest_forall t
+in
+  if  Type.compare(type_of v, gtty) = EQUAL then
+    (SWAP_FORALL_CONV THENC BINDER_CONV termP_removal) ORELSEC
+    ELIM_HERE
+  else NO_CONV
+end t
+
+val sub_cpos = SUBSET_DEF |> SPEC_ALL
+                          |> REWRITE_RULE [ASSUME ``s:'a set ⊆ t``]
+                          |> SPEC_ALL
+                          |> CONV_RULE CONTRAPOS_CONV
+                          |> DISCH_ALL
+                          |> CONV_RULE (REWR_CONV AND_IMP_INTRO)
+                          |> GEN_ALL
+
+val APP_FCB = prove(
+  ``is_perm dpm ∧ FINITE A ∧
+    (∀x y a b t1 t2.
+      x ∉ A ∧ y ∉ A ⇒
+      (dpm [(x,y)] (taf a t1 b t2) =
+       taf (dpm [(x,y)] a) (tpm [(x,y)] t1) (dpm [(x,y)] b)
+           (tpm [(x,y)] t2))) ⇒
+    ∀a r1 r2 t2 t1.
+       a ∉ A ∧ a ∉ FV t1 ∧ a ∉ FV t2 ∧ a ∉ supp dpm r1 ∧
+       a ∉ supp dpm r2 ⇒ a ∉ supp dpm (taf r1 t1 r2 t2)``,
+  srw_tac [][] >>
+  `FINITE (supp dpm r1) ∧ FINITE (supp dpm r2)`
+     by (CONJ_TAC >> match_mp_tac (MP_CANON supp_absence_FINITE) >>
+         srw_tac [][]) >>
+  qsuff_tac `support dpm (taf r1 t1 r2 t2)
+               (A ∪ FV t1 ∪ FV t2 ∪ supp dpm r1 ∪ supp dpm r2)`
+  >- (strip_tac >> match_mp_tac sub_cpos >>
+      qexists_tac `A ∪ FV t1 ∪ FV t2 ∪ supp dpm r1 ∪ supp dpm r2` >>
+      srw_tac [][] >> match_mp_tac (GEN_ALL supp_smallest) >>
+      srw_tac [][]) >>
+  srw_tac [][support_def, supp_fresh]);
 
 val stage1 =
     recax
@@ -283,14 +348,12 @@ val stage1 =
                                  GSYM RIGHT_FORALL_IMP_THM, IMP_CONJ_THM,
                                  LIST_REL_NIL1, LIST_REL_CONS1,
                                  LENGTH_NIL', LENGTH1, LENGTH2]
-        |> SIMP_RULE (srw_ss() ++ DNF_ss) [LENGTH1, LENGTH2]
+        |> SIMP_RULE (srw_ss() ++ DNF_ss) [LENGTH1, LENGTH2,
+                                           listTheory.LENGTH_NIL]
+        |> CONV_RULE (DEPTH_CONV termP_removal)
+        |> SIMP_RULE (srw_ss()) [GSYM supp_tpm, UNDISCH APP_FCB]
         |> UNDISCH
-
-val termP_elim = prove(
-  ``(∀g. termP g ⇒ P g) ⇔ (∀t. P (term_REP t))``,
-  srw_tac [][EQ_IMP_THM] >- srw_tac [][genind_term_REP] >>
-  first_x_assum (qspec_then `term_ABS g` mp_tac) >>
-  srw_tac [][repabs_id]);
+        |> rpt_hyp_dest_conj
 
 val hconcl = stage1 |> concl |> dest_exists |> #2
 
@@ -305,11 +368,9 @@ val myh = prove(
   rpt strip_tac >> qexists_tac `h o term_REP` >>
   asm_simp_tac (srw_ss()) [VAR_def, repabs_id, VAR_termP] >>
   srw_tac [][] >| [
-    Q_TAC (NEWLib.NEW_TAC "z")
-          `A ∪ supp gtpm (term_REP t1) ∪ supp gtpm (term_REP t2)`>>
+    Q_TAC (NEWLib.NEW_TAC "z") `A ∪ FV t1 ∪ FV t2`>>
     SUBST_ALL_TAC (SYM (Q.INST [`v` |-> `z`] APP_def')) >>
-    first_x_assum (qspecl_then [`()`, `z`, `term_REP t1`, `term_REP t2`]
-                               mp_tac) >>
+    first_x_assum (qspecl_then [`()`, `z`, `t2`, `t1`] mp_tac) >>
     asm_simp_tac (srw_ss()) [repabs_id, APP_termP, genind_term_REP,
                              term_ABSREP],
 
@@ -318,8 +379,12 @@ val myh = prove(
 
 val stage2 = CHOOSE (#1 (dest_exists (concl stage1)), stage1) myh
 
+val term_recursion = save_thm(
+  "term_recursion",
+  stage2 |> DISCH_ALL
+         |> REWRITE_RULE [AND_IMP_INTRO, GSYM CONJ_ASSOC]
+         |> SIMP_RULE (bool_ss ++ boolSimps.CONJ_ss) [])
 
-hyp stage2
 
 
 
