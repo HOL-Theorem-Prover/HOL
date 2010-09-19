@@ -861,7 +861,7 @@ val permsupp_sidecond =
             (listpm gtpm [(x,y)] us)))``
 
 val FCB = ``∀a n ts us ms ns ds1 ds2 bv.
-             a ∉ A ∧ a ∉ supp (listpm gtpm) us ∧
+             a ∉ A ∧ a ∉ supp (listpm gtpm) us ∧ a ∉ supp (listpm dpm) ds2 ∧
              ^lp n bv ns ms ∧ (LENGTH ds1 = LENGTH ts) ∧
              (LENGTH ds2 = LENGTH us) ∧
              LIST_REL (genind ^vp ^lp) ns ts ∧
@@ -985,20 +985,6 @@ val LIST_REL_lengths = prove(
   ``∀l1 l2. LIST_REL R l1 l2 ⇒ (LENGTH l1 = LENGTH l2)``,
   Induct_on `LIST_REL` >> srw_tac [][]);
 
-(* UB Lemma 5 - unused *)
-val recn_rel_finite_support = prove(
-  ``^permsupp_sidecond ∧ ^FCB ==>
-    ∀t r. ^recnrel t r ==> FINITE (supp dpm r)``,
-  strip_tac >> Induct_on `recn_rel` >> srw_tac [][]
-  >- (`support dpm (vf s vv) (A ∪ {s})`
-        by (srw_tac [][support_def]>>
-            `lswapstr [(x,y)] s = s` by srw_tac [][] >>
-            metis_tac []) >>
-      `FINITE (A ∪ {s})` by srw_tac [][] >>
-      metis_tac [supp_smallest, SUBSET_FINITE]) >>
-  match_mp_tac (MP_CANON (GEN_ALL supp_absence_FINITE)) >>
-  metis_tac [LIST_REL_lengths]);
-
 val [rvar, rlam] = CONJUNCTS (SIMP_RULE bool_ss [FORALL_AND_THM] recn_rel_rules)
 
 val LENGTH_listpm = prove(
@@ -1064,6 +1050,9 @@ val freshness = prove(
     srw_tac [][supp_smallest],
 
     imp_res_tac LIST_REL_lengths >>
+    `v ∉ supp (listpm dpm) ds2`
+       by fsrw_tac [DNF_ss][LIST_REL_EL_EQN, MEM_EL, NOT_IN_supp_listpm,
+                            GSYM GFV_supp] >>
     `v ∉ supp dpm (lf v bv ds1 ts ds2 us)` by metis_tac [] >>
     Cases_on `a = v` >- srw_tac [][] >> strip_tac >>
     `FINITE (supp dpm (lf v bv ds1 ts ds2 us))`
