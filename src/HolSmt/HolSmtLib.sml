@@ -50,6 +50,6 @@ structure HolSmtLib :> HolSmtLib = struct
   val YICES_TAC = GENERIC_SMT_TAC Yices.Yices_Oracle
   val CVC3_TAC = GENERIC_SMT_TAC CVC3.CVC3_SMT_Oracle
   val Z3_ORACLE_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Oracle
-  val Z3_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Prover
+  (*val Z3_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Prover*)
 
 end

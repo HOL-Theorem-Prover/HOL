@@ -6,6 +6,7 @@
 val _ = Globals.show_tags := true
 val _ = Globals.show_assums := true
 val _ = Globals.show_types := true
+val _ = wordsLib.add_word_cast_printer ()
 *)
 
 val _ = Feedback.set_trace "HolSmtLib" 0
@@ -88,8 +89,8 @@ val _ = if not z3_installed then
           print "(Z3 not installed? Some tests will be skipped.) "
         else ()
 
-val z3_proofs_installed = Lib.can (HolSmtLib.GENERIC_SMT_TAC Z3.Z3_SMT_Prover)
-  ([], ``T``)
+val z3_proofs_installed = (*Lib.can (HolSmtLib.GENERIC_SMT_TAC Z3.Z3_SMT_Prover)
+  ([], ``T``)*) false
 
 val _ = if not z3_proofs_installed then
           print "(Z3 (proofs) not installed? Some tests will be skipped.) "
@@ -167,13 +168,19 @@ local
                else Lib.K ()
 
   val thm_Z3p = if z3_proofs_installed then
+                  die "Implementation error: Z3_SMT_Prover not defined"
+(*
                   (fn t => (expect_thm "Z3 (proofs)" Z3.Z3_SMT_Prover t;
                             print "."))
+*)
                 else Lib.K ()
 
   val sat_Z3p = if z3_proofs_installed then
+                  die "Implementation error: Z3_SMT_Prover not defined"
+(*
                   (fn t => (expect_sat "Z3 (proofs)" Z3.Z3_SMT_Prover t;
                             print "."))
+*)
                 else Lib.K ()
 
 (*****************************************************************************)

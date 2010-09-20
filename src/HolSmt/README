@@ -12,13 +12,14 @@ HolSmtScript.sml        Various theorems for HolSmtLib.
 Library.sml             Common auxiliary functions.
 README                  This file.
 selftest.sml            Unit tests for HolSmtLib.
-SmtLib.sml              Translation of HOL terms into SMT-LIB format.
+SmtLib_Parser.sml       Parsing of SMT-LIB 2 benchmarks.
+SmtLib.sml              Translation of HOL terms into SMT-LIB 1.2 format.
 SolverSpec.sml          Definition of SMT solvers, tracing.
 Yices.sml               Functions to invoke the Yices SMT solver.
 Z3.sml                  Functions to invoke the Z3 SMT solver.
 Z3_ProformaThms.sml     Proforma theorems, used for Z3 proof reconstruction.
 Z3_Proof.sml            Proof reconstruction for Z3: SML type of Z3 proofs.
-Z3_ProofParse.sml       Proof reconstruction for Z3: parsing of Z3's proofs.
+Z3_ProofParser.sml      Proof reconstruction for Z3: parsing of Z3's proofs.
 Z3_ProofReplay.sml      Proof reconstruction for Z3: replaying Z3's proofs in
                         HOL.
 
