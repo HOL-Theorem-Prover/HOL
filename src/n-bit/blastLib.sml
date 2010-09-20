@@ -558,26 +558,30 @@ in
   non_prop_args Term.empty_tmset [tm]
 end
 
-fun PROP_PROVE conv tm =
-let
-  val thm = Conv.QCONV (REWRITE_CONV []) tm
-  val c = rhsc thm
+local
+  val lem = numLib.DECIDE ``!b. if b then T else T``;
 in
-  if c = boolSyntax.T orelse c = boolSyntax.F then
-    thm
-  else
-    Conv.CONV_RULE
-      (Conv.RHS_CONV (Conv.REWR_CONV (Drule.EQT_INTRO (conv c)))) thm
-    handle HOL_ERR _ =>
-      Drule.EQF_INTRO (conv (boolSyntax.mk_neg tm))
+  fun PROP_PROVE conv tm =
+  let
+    val thm = Conv.QCONV (REWRITE_CONV [lem]) tm
+    val c = rhsc thm
+  in
+    if c = boolSyntax.T orelse c = boolSyntax.F then
+      thm
+    else
+      Conv.CONV_RULE
+        (Conv.RHS_CONV (Conv.REWR_CONV (Drule.EQT_INTRO (conv c)))) thm
       handle HOL_ERR _ =>
-        raise ERR "PROP_PROVE" "contingent proposition"
+        Drule.EQF_INTRO (conv (boolSyntax.mk_neg tm))
+        handle HOL_ERR _ =>
+          raise ERR "PROP_PROVE" "contingent proposition"
+  end
 end
 
 fun SAT_CONV tm = HolSatLib.SAT_PROVE tm (* HolSatLib.SAT_ORACLE *)
                   handle HolSatLib.SAT_cex _ => raise ERR "SAT_CONV" ""
 
-fun DPLL_CONV tm = Thm.CCONTR tm (dpll.DPLL_TAUT tm)
+fun DPLL_CONV tm = Thm.CCONTR tm (Lib.trye dpll.DPLL_TAUT tm)
 
 fun BIT_TAUT_CONV tm =
 let
