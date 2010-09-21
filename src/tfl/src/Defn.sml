@@ -478,8 +478,8 @@ fun solver (restrf,f,G,nref) _ context tm =
       val rcontext = rev context
       val antl = case rcontext of [] => []
                                | _   => [list_mk_conj(map concl rcontext)]
-      val (R,arg,pat) = wfrecUtils.dest_relation tm
       val TC = genl(list_mk_imp(antl, tm))
+      val (R,arg,pat) = wfrecUtils.dest_relation tm
   in
      if can(find_term (aconv restrf)) arg
      then (nref := true; raise ERR "solver" "nested function")
@@ -487,7 +487,7 @@ fun solver (restrf,f,G,nref) _ context tm =
                       then nref := true else ()
           in case rcontext
               of [] => SPEC_ALL(ASSUME TC)
-               | _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
+               | _  => MATCH_MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
           end
   end
 end;
