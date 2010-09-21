@@ -36,10 +36,10 @@ local
 
   (* a simpset that deals with function (i.e., array) updates when the
      indices are integer or word literals *)
-  val update_ss = simpLib.&& (simpLib.++ (intSimps.int_ss,
-      simpLib.std_conv_ss {name = "word_EQ_CONV", pats = [``(x :'a word) = y``],
-        conv = wordsLib.word_EQ_CONV}),
-    [combinTheory.UPDATE_def, boolTheory.EQ_SYM_EQ])
+  val SIMP_PROVE_UPDATE = simpLib.SIMP_PROVE (simpLib.&& (simpLib.++
+    (intSimps.int_ss, simpLib.std_conv_ss {name = "word_EQ_CONV",
+      pats = [``(x :'a word) = y``], conv = wordsLib.word_EQ_CONV}),
+    [combinTheory.UPDATE_def, boolTheory.EQ_SYM_EQ])) []
 
   (***************************************************************************)
   (* functions that manipulate/access "global" state                         *)
@@ -87,6 +87,73 @@ local
   (***************************************************************************)
   (* auxiliary functions                                                     *)
   (***************************************************************************)
+
+  (* |- l1 \/ l2 \/ ... \/ ln \/ t   |- ~l1   |- ~l2   |- ...   |- ~ln
+     -----------------------------------------------------------------
+                                  |- t
+
+     The input clause (including "t") is really treated as a set of
+     literals: the resolvents need not be in the correct order, "t"
+     need not be the rightmost disjunct (and if "t" is a disjunction,
+     its disjuncts may even be spread throughout the input clause).
+     Note also that "t" may be F, in which case it need not be present
+     in the input clause.
+
+     We treat all "~li" as atomic, even if they are negated
+     disjunctions. *)
+  fun unit_resolution (thms, t) =
+  let
+    val _ = if List.null thms then
+        raise ERR "unit_resolution" ""
+      else ()
+    fun disjuncts dict (disj, thm) =
+    let
+      val (l, r) = boolSyntax.dest_disj disj
+      (* |- l \/ r ==> ... *)
+      val thm = Thm.DISCH disj thm
+      val l_imp_concl = Thm.MP thm (Thm.DISJ1 (Thm.ASSUME l) r)
+      val r_imp_concl = Thm.MP thm (Thm.DISJ2 l (Thm.ASSUME r))
+    in
+      disjuncts (disjuncts dict (l, l_imp_concl)) (r, r_imp_concl)
+    end
+    handle Feedback.HOL_ERR _ =>
+      Redblackmap.insert (dict, disj, thm)
+    fun prove_from_disj dict disj =
+      Redblackmap.find (dict, disj)
+      handle Redblackmap.NotFound =>
+        let
+          val (l, r) = boolSyntax.dest_disj disj
+          val l_th = prove_from_disj dict l
+          val r_th = prove_from_disj dict r
+        in
+          Thm.DISJ_CASES (Thm.ASSUME disj) l_th r_th
+        end
+    val dict = disjuncts (Redblackmap.mkDict Term.compare) (t, Thm.ASSUME t)
+    (* derive 't' from each negated resolvent *)
+    val dict = List.foldl (fn (th, dict) =>
+      let
+        val lit = Thm.concl th
+        val (is_neg, neg_lit) = (true, boolSyntax.dest_neg lit)
+          handle Feedback.HOL_ERR _ =>
+            (false, boolSyntax.mk_neg lit)
+        (* |- neg_lit ==> F *)
+        val th = if is_neg then
+            Thm.NOT_ELIM th
+          else
+            Thm.MP (Thm.SPEC lit NOT_FALSE) th
+        (* neg_lit |- t *)
+        val th = Thm.CCONTR t (Thm.MP th (Thm.ASSUME neg_lit))
+      in
+        Redblackmap.insert (dict, neg_lit, th)
+      end) dict (List.tl thms)
+    (* derive 't' from ``F`` (just in case ``F`` is a disjunct) *)
+    val dict = Redblackmap.insert
+      (dict, boolSyntax.F, Thm.CCONTR t (Thm.ASSUME boolSyntax.F))
+    val clause = Thm.concl (List.hd thms)
+    val clause_imp_t = prove_from_disj dict clause
+  in
+    Thm.MP (Thm.DISCH clause clause_imp_t) (List.hd thms)
+  end
 
   (* e.g.,   (A --> B) --> C --> D   ==>   [A, B, C, D] *)
   fun strip_fun_tys ty =
@@ -150,6 +217,66 @@ local
         Drule.EQT_INTRO (Library.gen_excluded_middle l)
       else
         raise ERR "rewrite_disj" ""
+
+  (* |- r1 /\ ... /\ rn = ~(s1 \/ ... \/ sn)
+
+     Note that p <=> q may be negated to q <=> ~p. *)
+  fun rewrite_nnf (l, r) =
+  let
+    val disj = boolSyntax.dest_neg r
+    val disj_th = Thm.ASSUME disj
+    val conj_ths = Drule.CONJUNCTS (Thm.ASSUME l)
+    (* (p <=> q) ==> ~(q <=> ~p) *)
+    val neg_iffs = List.mapPartial (Lib.total (fn th =>
+      let
+        val (p, q) = boolSyntax.dest_eq (Thm.concl th)  (* may fail *)
+      in
+        Thm.MP (Drule.SPECL [p, q] NEG_IFF_1) th  (* may fail *)
+      end)) conj_ths
+    val F_th = unit_resolution (disj_th :: conj_ths @ neg_iffs, boolSyntax.F)
+    fun disjuncts dict (thmfun, concl) =
+    let
+      val (l, r) = boolSyntax.dest_disj concl  (* may fail *)
+    in
+      disjuncts (disjuncts dict (fn th => thmfun (Thm.DISJ1 th r), l))
+        (fn th => thmfun (Thm.DISJ2 l th), r)
+    end
+    handle Feedback.HOL_ERR _ =>
+      let
+        (* |- concl ==> disjunction *)
+        val th = Thm.DISCH concl (thmfun (Thm.ASSUME concl))
+        (* ~disjunction |- ~concl *)
+        val th = Drule.UNDISCH (Drule.CONTRAPOS th)
+        val th = Thm.MP (Thm.SPEC (boolSyntax.dest_neg concl) NOT_NOT_ELIM) th
+          handle Feedback.HOL_ERR _ => th
+        val dict = Redblackmap.insert (dict, Thm.concl th, th)
+      in
+        (* ~(p <=> ~q) ==> (q <=> p) *)
+        let
+          val (p, neg_q) = boolSyntax.dest_eq (boolSyntax.dest_neg
+            (Thm.concl th))
+          val q = boolSyntax.dest_neg neg_q
+          val th = Thm.MP (Drule.SPECL [p, q] NEG_IFF_2) th
+        in
+          Redblackmap.insert (dict, Thm.concl th, th)
+        end
+        handle Feedback.HOL_ERR _ =>
+          dict
+      end  (* disjuncts *)
+    fun prove dict conj =
+      Redblackmap.find (dict, conj)
+      handle Redblackmap.NotFound =>
+        let
+          val (l, r) = boolSyntax.dest_conj conj
+        in
+          Thm.CONJ (prove dict l) (prove dict r)
+        end
+    val dict = disjuncts (Redblackmap.mkDict Term.compare) (Lib.I, disj)
+    val r_imp_l = Thm.DISCH r (prove dict l)
+    val l_imp_r = Thm.DISCH l (Thm.NOT_INTRO (Thm.DISCH disj F_th))
+  in
+    Drule.IMP_ANTISYM_RULE l_imp_r r_imp_l
+  end
 
   (* Returns "|- ALL_DISTINCT [x, y, z] = x <> y /\ x <> z /\ y <> z"; if
      'swap' is true, then each inequation "x <> y" is swapped to "y <> x" if
@@ -510,11 +637,96 @@ local
     (state, thm)
   end
 
+  fun z3_rewrite (state, t) =
+  let
+    val (l, r) = boolSyntax.dest_eq t
+  in
+    if l = r then
+      (state, Thm.REFL l)
+    else
+      (* proforma theorems *)
+      (state, Profile.profile "rewrite(proforma)"
+        (Z3_ProformaThms.prove Z3_ProformaThms.rewrite_thms) t)
+    handle Feedback.HOL_ERR _ =>
+
+    (* re-ordering conjunctions and disjunctions *)
+    (if boolSyntax.is_conj l then
+      (state, Profile.profile "rewrite(conj)" rewrite_conj (l, r))
+    else if boolSyntax.is_disj l then
+      (state, Profile.profile "rewrite(disj)" rewrite_disj (l, r))
+    else
+      raise ERR "" "")
+    handle Feedback.HOL_ERR _ =>
+
+    (* |- r1 /\ ... /\ rn = ~(s1 \/ ... \/ sn) *)
+    (state, Profile.profile "rewrite(nnf)" rewrite_nnf (l, r))
+    handle Feedback.HOL_ERR _ =>
+
+    (* ALL_DISTINCT [x, y, z] = ... *)
+    (state, Profile.profile "rewrite(all_distinct)" (fn () =>
+      let
+        val l_eq_l' = ALL_DISTINCT_CONV true l
+          handle Conv.UNCHANGED => raise ERR "" ""
+        val r_eq_r' = ALL_DISTINCT_CONV true r
+          handle Conv.UNCHANGED => Thm.REFL r
+        val l' = boolSyntax.rhs (Thm.concl l_eq_l')
+        val r' = boolSyntax.rhs (Thm.concl r_eq_r')
+        val l'_eq_r' = Drule.CONJUNCTS_AC (l', r')
+      in
+        Thm.TRANS (Thm.TRANS l_eq_l' l'_eq_r') (Thm.SYM r_eq_r')
+      end) ())
+    handle Feedback.HOL_ERR _ =>
+
+    (state, Profile.profile "rewrite(TAUT_PROVE)" tautLib.TAUT_PROVE t)
+    handle Feedback.HOL_ERR _ =>
+
+    (state, Profile.profile "rewrite(update)" SIMP_PROVE_UPDATE t)
+    handle Feedback.HOL_ERR _ =>
+
+    (state, Profile.profile "rewrite(cache)" (state_inst_cached_thm state) t)
+    handle Feedback.HOL_ERR _ =>
+
+    let
+      val th = if term_contains_real_ty t then
+          Profile.profile "rewrite(REAL_ARITH)" realLib.REAL_ARITH t
+        else
+          Profile.profile "rewrite(ARITH_PROVE)" intLib.ARITH_PROVE t
+        handle Feedback.HOL_ERR _ =>
+
+        (*TODO*) Profile.profile "rewrite(WORD_ARITH_CONV)" (fn () =>
+          Drule.EQT_ELIM (wordsLib.WORD_ARITH_CONV t)
+            handle Conv.UNCHANGED => raise ERR "" "") ()
+        handle Feedback.HOL_ERR _ =>
+
+        (*TODO*) Profile.profile "rewrite(WORD_BIT_EQ)" (fn () =>
+          Drule.EQT_ELIM (Conv.THENC (simpLib.SIMP_CONV (simpLib.++
+            (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss),
+            wordsLib.WORD_BIT_EQ_ss)) [], tautLib.TAUT_CONV) t)) ()
+        handle Feedback.HOL_ERR _ =>
+
+        (*TODO*) Profile.profile "rewrite(WORD_DECIDE)" wordsLib.WORD_DECIDE t
+        handle Feedback.HOL_ERR _ =>
+
+        (*TODO*) Profile.profile "rewrite(WORD_DP)" (fn () =>
+          wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
+            (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
+            (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) t) ()
+(*
+        handle Feedback.HOL_ERR _ =>
+
+        (*TODO*) Profile.profile "rewrite(BBLAST_TAC)"
+          Tactical.prove (t, blastLib.BBLAST_TAC)
+*)
+    in
+      (state_cache_thm state th, th)
+    end
+  end
+
   fun z3_symm (state, thm, t) =
     (state, Thm.SYM thm)
 
   fun th_lemma_wrapper (name : string)
-    (th_lemma_implementation : Term.term -> Thm.thm * (Thm.thm -> Thm.thm))
+    (th_lemma_implementation : state * Term.term -> state * Thm.thm)
     (state, thms, t) : state * Thm.thm =
   let
     val t' = boolSyntax.list_mk_imp (List.map Thm.concl thms, t)
@@ -526,94 +738,66 @@ local
           Profile.profile ("th_lemma[" ^ name ^ "](cache)") (fn () =>
             state_inst_cached_thm state t') ())
       handle Feedback.HOL_ERR _ =>
-        let
-          val (cache_thm, post_fn) = th_lemma_implementation t'
-        in
-          (* cache result theorem, apply 'post_fn' to it *)
-          (state_cache_thm state cache_thm, post_fn cache_thm)
-        end
+        (* do actual work to derive the theorem *)
+        th_lemma_implementation (state, t')
   in
     (state, Drule.LIST_MP thms thm)
   end
 
-  val z3_th_lemma_arith = th_lemma_wrapper "arith" (fn t =>
+  val z3_th_lemma_arith = th_lemma_wrapper "arith" (fn (state, t) =>
     let
-      val (dict, gen_t) = generalize_ite t
-      val thm = if term_contains_real_ty gen_t then
+      val (dict, t') = generalize_ite t
+      val thm = if term_contains_real_ty t' then
           (* this is just a heuristic - it is quite conceivable that a
              term that contains type real is provable by integer
              arithmetic *)
-          Profile.profile "th_lemma[arith](real)" realLib.REAL_ARITH gen_t
+          Profile.profile "th_lemma[arith](real)" realLib.REAL_ARITH t'
         else
-          Profile.profile "th_lemma[arith](int)" intLib.ARITH_PROVE gen_t
+          Profile.profile "th_lemma[arith](int)" intLib.ARITH_PROVE t'
+      (* cache 'thm' *)
+      val state = state_cache_thm state thm
       val subst = List.map (fn (term, var) => {redex = var, residue = term})
         (Redblackmap.listItems dict)
     in
-      (thm, Thm.INST subst)
+      (state, Thm.INST subst thm)
     end)
 
-  val z3_th_lemma_array = th_lemma_wrapper "array" (fn t =>
-    (Profile.profile "th_lemma[array](simp)" (fn () =>
-      simpLib.SIMP_PROVE update_ss [] t) (), Lib.I))
+  val z3_th_lemma_array = th_lemma_wrapper "array" (fn (state, t) =>
+    let
+      val thm = Profile.profile "th_lemma[array](simp)" SIMP_PROVE_UPDATE t
+    in
+      (* cache 'thm' *)
+      (state_cache_thm state thm, thm)
+    end)
 
-  val z3_th_lemma_basic = th_lemma_wrapper "basic" (fn t =>
-    raise ERR "th_lemma[basic]" "")
+  (*TODO*)
+  val z3_th_lemma_basic = th_lemma_wrapper "basic" (fn (state, t) =>
+    raise ERR "" "")
 
   val z3_th_lemma_bv =
   let
-    val COND_SIMP_TAC = simpLib.SIMP_TAC simpLib.empty_ss
-      [boolTheory.COND_RAND, boolTheory.COND_RATOR]
-    val TAC = Tactical.THEN (Profile.profile "COND_SIMP_TAC" COND_SIMP_TAC,
-      Profile.profile "BBLAST_TAC" blastLib.BBLAST_TAC)
+    (* TODO: I would like to find out whether PURE_REWRITE_TAC is
+             faster than SIMP_TAC here.  However, using the former
+             instead of the latter causes HOL4 to segfault on various
+             SMT-LIB benchmark proofs.  I do not know the reason for
+             this. *)
+    val COND_REWRITE_TAC = (*Rewrite.PURE_REWRITE_TAC*) simpLib.SIMP_TAC
+      simpLib.empty_ss [boolTheory.COND_RAND, boolTheory.COND_RATOR]
+    val TAC = Tactical.THEN
+      (Profile.profile "th_lemma[bv](COND_REWRITE_TAC)" COND_REWRITE_TAC,
+      Profile.profile "th_lemma[bv](BBLAST_TAC)" blastLib.BBLAST_TAC)
   in
-    th_lemma_wrapper "bv" (fn t =>
-      Profile.profile "th_lemma[bv](bblast)" (fn () =>
-        (Tactical.prove (t, TAC), Lib.I)) ()
-      handle Empty => raise ERR "th_lemma[bv]" "bblast: Empty")  (*TODO*)
+    th_lemma_wrapper "bv" (fn (state, t) =>
+      let
+        (* TODO: TAC gets the job done, but it might be faster to try
+                 other word (semi-)decision procedures first;
+                 cf. z3_rewrite *)
+        val thm = Tactical.prove (t, TAC)
+      in
+        (* cache 'thm' *)
+        (state_cache_thm state thm, thm)
+      end)
   end
-
-(* TODO
-  fun old_th_lemma_arith (state, thms, t) =
-  let
-    val concl = boolSyntax.list_mk_imp (List.map Thm.concl thms, t)
-  in
-    let val (dict, concl) = generalize_ite concl
-        handle Feedback.HOL_ERR _ =>
-
-          (*TODO*) Profile.profile "th_lemma(WORD_ARITH_CONV)" (fn () =>
-          Drule.EQT_ELIM (wordsLib.WORD_ARITH_CONV concl)
-            handle Conv.UNCHANGED =>
-              raise (Feedback.mk_HOL_ERR "" "" "")) ()
-        handle Feedback.HOL_ERR _ =>
-
-          (*TODO*) Profile.profile "th_lemma(WORD_BIT_EQ)" (fn () =>
-          Drule.EQT_ELIM (Conv.THENC (simpLib.SIMP_CONV (simpLib.++
-            (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss),
-            wordsLib.WORD_BIT_EQ_ss)) [],
-            tautLib.TAUT_CONV) concl)) ()
-        handle Feedback.HOL_ERR _ =>
-
-          (*TODO*) Profile.profile "th_lemma(WORD_DECIDE)"
-            wordsLib.WORD_DECIDE concl
-        handle Feedback.HOL_ERR _ =>
-
-          (*TODO*) Profile.profile "th_lemma(WORD_DP)" (fn () =>
-          wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
-            (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
-            (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) concl) ()
-(*
-        handle Feedback.HOL_ERR _ =>
-
-          (*TODO*) Profile.profile "th_lemma(BBLAST_TAC)"
-            Tactical.prove (concl, blastLib.BBLAST_TAC)
-*)
-        val subst = List.map (fn (term, var) =>
-          {redex = var, residue = term}) (Redblackmap.listItems dict)
-    in
-      (state_cache_thm state th, Drule.LIST_MP thms (Thm.INST subst th))
-    end
-  end
-*)
 
   fun z3_trans (state, thm1, thm2, t) =
     (state, Thm.TRANS thm1 thm2)
@@ -621,232 +805,29 @@ local
   fun z3_true_axiom (state, t) =
     (state, boolTheory.TRUTH)
 
-  (* l1 \/ l2 \/ ... \/ ln \/ t   ~l1   ~l2   ...   ~ln
-     --------------------------------------------------
-                              t
-
-     The input clause (including "t") is really treated as a set of
-     literals: the resolvents need not be in the correct order, "t"
-     need not be the rightmost disjunct (and if "t" is a disjunction,
-     its disjuncts may even be spread throughout the input clause).
-     Note also that "t" may be F, in which case it need not be present
-     in the input clause.
-
-     We treat all "~li" as atomic, even if they are negated
-     disjunctions. *)
   fun z3_unit_resolution (state, thms, t) =
-  let
-    val _ = if List.null thms then
-        raise ERR "" ""  (* to be handled below *)
-      else ()
-    fun disjuncts dict (disj, thm) =
-    let
-      val (l, r) = boolSyntax.dest_disj disj
-      (* |- l \/ r ==> ... *)
-      val thm = Thm.DISCH disj thm
-      val l_imp_concl = Thm.MP thm (Thm.DISJ1 (Thm.ASSUME l) r)
-      val r_imp_concl = Thm.MP thm (Thm.DISJ2 l (Thm.ASSUME r))
-    in
-      disjuncts (disjuncts dict (l, l_imp_concl)) (r, r_imp_concl)
-    end
-    handle Feedback.HOL_ERR _ =>
-      Redblackmap.insert (dict, disj, thm)
-    fun prove_from_disj dict disj =
-      Redblackmap.find (dict, disj)
-      handle Redblackmap.NotFound =>
-        let
-          val (l, r) = boolSyntax.dest_disj disj
-          val l_th = prove_from_disj dict l
-          val r_th = prove_from_disj dict r
-        in
-          Thm.DISJ_CASES (Thm.ASSUME disj) l_th r_th
-        end
-    val dict = disjuncts (Redblackmap.mkDict Term.compare) (t, Thm.ASSUME t)
-    (* derive 't' from each negated resolvent *)
-    val dict = List.foldl (fn (th, dict) =>
-      let
-        val lit = Thm.concl th
-        val (is_neg, neg_lit) = (true, boolSyntax.dest_neg lit)
-          handle Feedback.HOL_ERR _ =>
-            (false, boolSyntax.mk_neg lit)
-        (* |- neg_lit ==> F *)
-        val th = if is_neg then
-            Thm.NOT_ELIM th
-          else
-            Thm.MP (Thm.SPEC lit NOT_FALSE) th
-        (* neg_lit |- t *)
-        val th = Thm.CCONTR t (Thm.MP th (Thm.ASSUME neg_lit))
-      in
-        Redblackmap.insert (dict, neg_lit, th)
-      end) dict (List.tl thms)
-    (* derive 't' from ``F`` (just in case ``F`` is a disjunct) *)
-    val dict = Redblackmap.insert
-      (dict, boolSyntax.F, Thm.CCONTR t (Thm.ASSUME boolSyntax.F))
-    val clause = Thm.concl (List.hd thms)
-    val clause_imp_t = prove_from_disj dict clause
-  in
-    (state, Thm.MP (Thm.DISCH clause clause_imp_t) (List.hd thms))
-  end
-
-  fun z3_rewrite (state, t) =
-  let
-    val (l, r) = boolSyntax.dest_eq t
-  in
-    if l = r then
-      (state, Thm.REFL l)
-    else
-      (* proforma theorems *)
-      (*Profile.profile "rewrite(proforma)"*) (fn () =>
-        (state, Z3_ProformaThms.prove Z3_ProformaThms.rewrite_thms t)) ()
-      handle Feedback.HOL_ERR _ =>
-
-      (* re-ordering conjunctions and disjunctions *)
-      (if boolSyntax.is_conj l then
-        (state, (*Profile.profile "rewrite(conj)"*) rewrite_conj (l, r))
-      else if boolSyntax.is_disj l then
-        (state, (*Profile.profile "rewrite(disj)"*) rewrite_disj (l, r))
-      else
-        raise (Feedback.mk_HOL_ERR "" "" ""))
-      handle Feedback.HOL_ERR _ =>
-
-      (* |- r1 /\ ... /\ rn = ~(s1 \/ ... \/ sn) *)
-      (* Note that p <=> q may be negated to q <=> ~p. *)
-      (*Profile.profile "rewrite(nnf)"*) (fn () =>
-        let val disj = boolSyntax.dest_neg r
-            val disj_th = Thm.ASSUME disj
-            val conj_ths = Drule.CONJUNCTS (Thm.ASSUME l)
-            (* (p <=> q) ==> ~(q <=> ~p) *)
-            val neg_iffs = List.mapPartial (Lib.total (fn th =>
-              let val (p, q, ty) = boolSyntax.dest_eq_ty (Thm.concl th)
-                  val _ = (ty = Type.bool) orelse
-                    raise (Feedback.mk_HOL_ERR "" "" "")
-              in
-                Thm.MP (Drule.SPECL [p, q] NEG_IFF_1) th
-              end)) conj_ths
-            val (state, False) = z3_unit_resolution
-              (state, disj_th :: conj_ths @ neg_iffs, boolSyntax.F)
-
-            fun disjuncts dict (thmfun, concl) =
-              let val (l, r) = boolSyntax.dest_disj concl
-              in
-                disjuncts (disjuncts dict (fn th => thmfun (Thm.DISJ1 th r),
-                  l)) (fn th => thmfun (Thm.DISJ2 l th), r)
-              end
-              handle Feedback.HOL_ERR _ =>
-                let (* |- concl ==> disjunction *)
-                    val th = Thm.DISCH concl (thmfun (Thm.ASSUME concl))
-                    (* ~disjunction |- ~concl *)
-                    val th = Drule.UNDISCH (Drule.CONTRAPOS th)
-                    val th = let val neg_concl = boolSyntax.dest_neg concl
-                      in
-                        Thm.MP (Thm.SPEC neg_concl NOT_NOT_ELIM) th
-                      end
-                      handle Feedback.HOL_ERR _ =>
-                        th
-                    val dict = Redblackmap.insert (dict, Thm.concl th, th)
-                    (* ~(p <=> ~q) ==> (q <=> p) *)
-                    val dict = let val (p, neg_q) = boolSyntax.dest_eq
-                      (boolSyntax.dest_neg (Thm.concl th))
-                                   val q = boolSyntax.dest_neg neg_q
-                                   val th = Thm.MP (Drule.SPECL [p, q]
-                                     NEG_IFF_2) th
-                               in
-                                 Redblackmap.insert (dict, Thm.concl th, th)
-                               end
-                               handle Feedback.HOL_ERR _ =>
-                                 dict
-                in
-                  dict
-                end
-            fun prove dict conj =
-              Redblackmap.find (dict, conj)
-                handle Redblackmap.NotFound =>
-                  let val (l, r) = boolSyntax.dest_conj conj
-                  in
-                    Thm.CONJ (prove dict l) (prove dict r)
-                  end
-            val empty = Redblackmap.mkDict Term.compare
-            val dict = disjuncts empty (Lib.I, disj)
-            val r_imp_l = Thm.DISCH r (prove dict l)
-            val l_imp_r = Thm.DISCH l (Thm.NOT_INTRO (Thm.DISCH disj False))
-        in
-          (state, Drule.IMP_ANTISYM_RULE l_imp_r r_imp_l)
-        end) ()
-      handle Feedback.HOL_ERR _ =>
-
-      (* ALL_DISTINCT [x, y, z] = ... *)
-      (*Profile.profile "rewrite(all_distinct)"*) (fn () =>
-        let val l_eq_l' = ALL_DISTINCT_CONV true l
-              handle Conv.UNCHANGED =>
-                raise (Feedback.mk_HOL_ERR "" "" "")
-            val r_eq_r' = ALL_DISTINCT_CONV true r
-              handle Conv.UNCHANGED =>
-                Thm.REFL r
-            val l' = boolSyntax.rhs (Thm.concl l_eq_l')
-            val r' = boolSyntax.rhs (Thm.concl r_eq_r')
-            val l'_eq_r' = Drule.CONJUNCTS_AC (l', r')
-        in
-          (state, Thm.TRANS (Thm.TRANS l_eq_l' l'_eq_r') (Thm.SYM r_eq_r'))
-        end) ()
-      handle Feedback.HOL_ERR _ =>
-
-      (state, (*Profile.profile "rewrite(TAUT_PROVE)"*) tautLib.TAUT_PROVE t)
-      handle Feedback.HOL_ERR _ =>
-
-      (state, (*Profile.profile "rewrite(update)"*) (fn () =>
-        simpLib.SIMP_PROVE update_ss [] t) ())
-      handle Feedback.HOL_ERR _ =>
-
-      (state, (*Profile.profile "rewrite(cache)"*) (fn () =>
-        state_inst_cached_thm state t) ())
-      handle Feedback.HOL_ERR _ =>
-
-      let val th = if term_contains_real_ty t then
-              (*Profile.profile "rewrite(REAL_ARITH)"*) realLib.REAL_ARITH t
-            else
-              (*Profile.profile "rewrite(ARITH_PROVE)"*) intLib.ARITH_PROVE t
-          handle Feedback.HOL_ERR _ =>
-
-            (*TODO*) Profile.profile "rewrite(WORD_ARITH_CONV)" (fn () =>
-            Drule.EQT_ELIM (wordsLib.WORD_ARITH_CONV t)
-              handle Conv.UNCHANGED =>
-                raise (Feedback.mk_HOL_ERR "" "" "")) ()
-          handle Feedback.HOL_ERR _ =>
-
-            (*TODO*) Profile.profile "rewrite(WORD_BIT_EQ)" (fn () =>
-            Drule.EQT_ELIM (Conv.THENC (simpLib.SIMP_CONV (simpLib.++
-              (simpLib.++ (bossLib.std_ss, wordsLib.WORD_ss),
-              wordsLib.WORD_BIT_EQ_ss)) [],
-              tautLib.TAUT_CONV) t)) ()
-          handle Feedback.HOL_ERR _ =>
-
-            (*TODO*) Profile.profile "rewrite(WORD_DECIDE)"
-              wordsLib.WORD_DECIDE t
-          handle Feedback.HOL_ERR _ =>
-
-            (*TODO*) Profile.profile "rewrite(WORD_DP)" (fn () =>
-            wordsLib.WORD_DP (bossLib.SIMP_CONV (bossLib.++
-              (bossLib.srw_ss(), wordsLib.WORD_EXTRACT_ss)) [])
-              (Drule.EQT_ELIM o (bossLib.SIMP_CONV bossLib.arith_ss [])) t) ()
-(*
-          handle Feedback.HOL_ERR _ =>
-
-            (*TODO*) Profile.profile "rewrite(BBLAST_TAC)"
-              Tactical.prove (t, blastLib.BBLAST_TAC)
-*)
-      in
-        (state_cache_thm state th, th)
-      end
-    end
+    (state, unit_resolution (thms, t))
 
   (* end of inference rule implementations *)
 
   (***************************************************************************)
+  (* proof traversal, turning proofterms into theorems                       *)
+  (***************************************************************************)
+
+  (* We use a depth-first post-order traversal of the proof, checking
+     each premise of a proofterm (i.e., deriving the corresponding
+     theorem) before checking the proofterm's inference itself.
+     Proofterms that have proof IDs then cause the proof to be updated
+     (at this ID) immediately after they have been checked, so that
+     future uses of the same proof ID merely require a lookup in the
+     proof (rather than a new derivation of the theorem).  To achieve
+     a tail-recursive implementation, we use continuation-passing
+     style. *)
 
   fun check_thm (name, thm, concl) =
   (
     if !SolverSpec.trace > 0 andalso Thm.concl thm <> concl then
-      (*TODO: WARNING*) raise ERR "check_thm"
+      WARNING "check_thm"
         (name ^ ": conclusion is " ^ Hol_pp.term_to_string (Thm.concl thm) ^
         ", expected: " ^ Hol_pp.term_to_string concl)
     else ();
