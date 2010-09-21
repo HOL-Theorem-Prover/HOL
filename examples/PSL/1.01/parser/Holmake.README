@@ -1,1 +1,0 @@
-Holmake -I ../official-semantics -I ../executable-semantics -I ../regexp -I ../parser.mosmlyacc

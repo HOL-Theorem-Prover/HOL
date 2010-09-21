@@ -1454,11 +1454,17 @@ fun mk_datatype_presentation thy tyspecl =
           in
             list_mk_comb(tyn_var,constrs)
           end
-        | type_dec (tyname,Record fields) =
-          let val fvars = map (mk_var o (I##toType)) fields
-              val tyn_var = mk_var(tyname,ind)
-              val record_var = mk_var("record",
-                                      list_mk_fun(ind::map type_of fvars,bool))
+        | type_dec (tyname,Record fields) = let
+            fun fieldvar (n, _) = let
+              val c = prim_mk_const{Name = tyname ^ "_" ^ n, Thy = thy}
+              val (_, ty) = dom_rng (type_of c)
+            in
+              mk_var(n, ty)
+            end
+            val fvars = map fieldvar fields
+            val tyn_var = mk_var(tyname,ind)
+            val record_var = mk_var("record",
+                                    list_mk_fun(ind::map type_of fvars,bool))
           in
             list_mk_comb(record_var,tyn_var::fvars)
           end

@@ -1,8 +1,0 @@
-This directory has 3 sub-directories
-
-   * tupled    - word8 as bool^8
-   * curried   - word8 as (BYTE b1 ... b8)
-   * word8     - word8 via <holdir>/bin/mkword.exe  8
-
-each of which bases the AES algorithm on a different representation of
-bytes. Each is to be used as an application of the H/W synthesis package.

@@ -370,33 +370,34 @@ fun type_constructors ax name =
   map (#1 o strip_comb) (type_constructors_with_args ax name)
 
 
-(* return all of the types defined by an axiom, formerly "new_types". *)
-fun doms_of_tyaxiom ax =
- let val (evs, _) = strip_exists (#2 (strip_forall (concl ax)))
-     val candidate_types = map (#1 o dom_rng o type_of) evs
-     fun isop_applied_to_other ty = List.exists
-           (fn ty' => Lib.mem ty' candidate_types) (snd (strip_app_type ty))
- in
-    List.filter (not o isop_applied_to_other) candidate_types
- end
+local
+  fun only_variable_args ty = List.all is_var_type (snd (strip_app_type ty))
+  fun only_new types = List.filter only_variable_args types
+in
+  (* return all of the types defined by an axiom, formerly "new_types". *)
+  fun doms_of_tyaxiom ax =
+   let val (evs, _) = strip_exists (#2 (strip_forall (concl ax)))
+       val candidate_types = map (#1 o dom_rng o type_of) evs
+   in
+      only_new candidate_types
+   end
 
-(*---------------------------------------------------------------------------
-    similarly for an induction theorem, which will be of the form
+  (*---------------------------------------------------------------------------
+      similarly for an induction theorem, which will be of the form
 
-      !P1 .. PN.
-         c1 /\ ... /\ cn ==> (!x. P1 x) /\ (!x. P2 x) ... /\ (!x. PN x)
+        !P1 .. PN.
+           c1 /\ ... /\ cn ==> (!x. P1 x) /\ (!x. P2 x) ... /\ (!x. PN x)
 
-   Formerly "new_types_from_ind"
- ---------------------------------------------------------------------------*)
+     Formerly "new_types_from_ind"
+   ---------------------------------------------------------------------------*)
 
-fun doms_of_ind_thm ind =
- let val conclusions = strip_conj(#2(strip_imp(#2(strip_forall(concl ind)))))
-     val candidate_types = map (type_of o fst o dest_forall) conclusions
-     fun isop_applied_to_other ty = List.exists
-            (fn ty' => Lib.mem ty' candidate_types) (snd (strip_app_type ty))
- in
-   List.filter (not o isop_applied_to_other) candidate_types
- end
+  fun doms_of_ind_thm ind =
+   let val conclusions = strip_conj(#2(strip_imp(#2(strip_forall(concl ind)))))
+       val candidate_types = map (type_of o fst o dest_forall) conclusions
+   in
+     only_new candidate_types
+   end
+end
 
 (*---------------------------------------------------------------------------*
  * Define a case constant for a datatype. This is used by TFL's              *

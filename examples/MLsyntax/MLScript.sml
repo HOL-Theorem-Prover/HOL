@@ -108,7 +108,7 @@ val _ = Hol_datatype
  ----------------------------------------------------------------------------*)
 
 val Vars_def =
- Define (* xDefine "Vars" *)
+ Define
    `(atexpV (var_exp v)      = {v}) /\
     (atexpV (let_exp d e)    = (decV d) UNION (expV e))
      /\

@@ -10,13 +10,15 @@ Make sure each working copy is updated;
 In RapidSVN, select Repository > Merge; brings up a dialog box. Fill in:
 
 First working copy or URL:                             Revision
-https://hol.svn.sf.net/svnroot/hol/HOL                  5651
+https://hol.svn.sf.net/svnroot/hol/branches/release-development/kananaskis-6
+                                                        5651
 
 Second working copy or URL:                            Revision
-https://hol.svn.sf.net/svnroot/hol/HOL                  5659
+https://hol.svn.sf.net/svnroot/hol/branches/release-development/kananaskis-6
+                                                        5659
 
 Destination path:
-/usr/local/hol/hol-omega
+/usr/local/hol/hol-omega-kananaskis-6
 
 Do use https; required by SourceForge, see
 http://sourceforge.net/community/forum/topic.php?id=2969&page.
@@ -47,6 +49,17 @@ svn revert -R .
 
 ----------------------------
 Merge Log:
+
+8195:  Changed revision number of last revision in merge file (this file).
+
+8594:  Ported revisions 8331:8589 from HOL to HOL-Omega.
+In both cases this refers to the Kananaskis-6 release versions,
+NOT the main versions.
+The actual revisions that changed the release version were: 8332, 8334, 8338,
+8339, 8341, 8349, 8353, 8362, 8374, 8375, 8378, 8413, 8467, and 8511.
+This is to make HOL-Omega current with all the HOL developments that went into
+Kananaskis-6, in preparation for publishing the public Kananaskis-6 version of
+HOL-Omega.
 
 8581:  Ported revisions 8176:8331 from HOL to HOL-Omega.
 (Last for Kananaskis-6.)

@@ -133,7 +133,6 @@ src/Boolify/src
 src/float
 src/prob
 src/temporal/src
-src/temporal/smv.2.4.3
 
 #
 # Examples only from here on
