@@ -21,10 +21,6 @@ type pred = term -> bool
 
 infix 3 ##
 
-fun stringulate _ [] = []
-  | stringulate f [x] = [f x]
-  | stringulate f (h::t) = f h::",\n"::stringulate f t;
-
 (*---------------------------------------------------------------------------*)
 (* Datatype for controlling the application of individual rewrite rules      *)
 (*---------------------------------------------------------------------------*)
@@ -115,7 +111,7 @@ fun REWRITES_CONV rws tm =
                        ["Rewrite:\n", Parse.thm_to_string x]) ; x)
            | h::t => (HOL_MESG (String.concat
                     ["Multiple rewrites possible (first taken):\n",
-                  String.concat (stringulate Parse.thm_to_string (h::t))]); h)
+                  String.concatWith ",\n" (map Parse.thm_to_string (h::t))]); h)
     else Conv.FIRST_CONV (Net.match tm net) tm
  end;
 
