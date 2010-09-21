@@ -4,7 +4,7 @@
 
 structure Yices = struct
 
-  (* FIXME: Yices 1.0.18 only supports linear arithmetic, bit-vector shifts by
+  (* FIXME: Yices 1.0.28 only supports linear arithmetic, bit-vector shifts by
             a numeric constant, etc.  We do not check these side conditions on
             arguments at the moment, therefore possibly producing illegal Yices
             input. *)
@@ -731,13 +731,13 @@ structure Yices = struct
         SolverSpec.UNKNOWN NONE
     end
 
-  (* Yices 1.0.18, native file format *)
+  (* Yices 1.0.28, native file format *)
   val Yices_Oracle = SolverSpec.make_solver
     (Lib.pair () o goal_to_Yices)
     "yices -tc"
     (Lib.K result_fn)
 
-  (* Yices 1.0.18, SMT-LIB file format *)
+  (* Yices 1.0.28, SMT-LIB file format *)
   val Yices_SMT_Oracle = SolverSpec.make_solver
     (Lib.pair () o Lib.snd o SmtLib.goal_to_SmtLib)
     "yices -tc -smt"
