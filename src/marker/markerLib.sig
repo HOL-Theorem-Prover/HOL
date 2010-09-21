@@ -36,6 +36,7 @@ sig
   val RM_ABBREV_TAC       : string -> tactic
   val RM_ALL_ABBREVS_TAC  : tactic
   val ABBRS_THEN          : (thm list -> tactic) -> thm list -> tactic
+  val MK_ABBREVS_OLDSTYLE : tactic
   val Abbr                : term quotation -> thm
 
   val MK_LABEL         : string * thm -> thm

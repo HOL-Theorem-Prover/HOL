@@ -209,6 +209,10 @@ fun ABBRS_THEN thl_tac thl =
   MAP_EVERY (UNABBREV_TAC o dest_abbr) abbrs THEN thl_tac rest
  end
 
+val MK_ABBREVS_OLDSTYLE =
+    RULE_ASSUM_TAC (fn th => (th |> DeAbbrev |> SYM) handle HOL_ERR _ => th)
+
+
 
 (*---------------------------------------------------------------------------*)
 (* Support for user-defined labels.                                          *)

@@ -1,5 +1,6 @@
 (*---------------------------------------------------------------------------
-     This file needs to be processed with hol.unquote.
+     This file needs to be processed with hol:
+       hol < PARITY.sml
  ---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib bossLib;

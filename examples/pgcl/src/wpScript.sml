@@ -980,7 +980,7 @@ val prob_assign_terminates = store_thm
    ++ Cases_on `l`
    >> (RW_TAC std_ss [Probs_def,MAP,LENGTH,wp_def]
        ++ RW_TAC std_ss [FUN_EQ_THM,Lin_def,One_def,Zero_def]
-       ++ bossLib.UNABBREV_ALL_TAC
+       ++ markerLib.UNABBREV_ALL_TAC
        ++ RW_TAC posreal_reduce_ss [])
    ++ POP_ASSUM MP_TAC
    ++ RW_TAC std_ss [ProbAssign_def,wp_def]
@@ -1253,7 +1253,7 @@ val wp_eq_wlp_plus_termination_counterexample = store_thm
        ++ RW_TAC std_ss
             [FUN_EQ_THM,wlp_def,ProbAssign_def,Probs_def,MAP,LENGTH,Magic_def,
              Lin_def,assign_eta,Cond_def]
-       ++ bossLib.UNABBREV_ALL_TAC
+       ++ markerLib.UNABBREV_ALL_TAC
        ++ RW_TAC posreal_reduce_ss []]);
 
 val _ = export_theory();

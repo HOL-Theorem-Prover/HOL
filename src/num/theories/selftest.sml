@@ -28,15 +28,40 @@ in
   if res <> "" then print "OK\n" else fail()
 end
 
-val _ = let
-  val _ = tprint "Pretty-printing of case expression bound variables"
-  val s = "case x of 0 -> 1 || SUC n -> n * 2"
-  val _ = Parse.current_backend := PPBackEnd.vt100_terminal
+
+fun colourpp_test (testname, s, expected) = let
+  val _ = tprint testname
   val res = PP.pp_to_string 70 pp_term (Term [QUOTE s])
-  val expected =
-      "case \^[[0;1;34mx\^[[0m of 0 -> 1 || \
-      \SUC \^[[0;32mn\^[[0m -> \^[[0;32mn\^[[0m * 2"
 in
   if res = expected then print "OK\n" else fail()
 end
+
+val _ = Parse.current_backend := PPBackEnd.vt100_terminal
+
+fun bound s = "\^[[0;32m" ^ s ^ "\^[[0m"
+fun free s = "\^[[0;1;34m" ^ s ^ "\^[[0m"
+val concat = String.concat
+
+val colourtests =
+    [("Pretty-printing of case expression bound variables",
+      "case x of 0 -> 1 || SUC n -> n * 2",
+      concat ["case ",free "x"," of 0 -> 1 || ", "SUC ", bound "n", " -> ",
+              bound "n", " * 2"]),
+     ("Colouring simple LET", "let x = 3 in x + 1",
+      concat ["let ", bound "x", " = 3 in ", bound "x", " + 1"]),
+     ("Colouring simple LET with free on right",
+      "let x = y + 2 in x * 2",
+      concat ["let ", bound "x", " = ", free "y", " + 2 in ", bound "x",
+              " * 2"]),
+     ("Colouring LET with ands",
+      "let x = 10 and y = x + 6 in x + y",
+      concat ["let ", bound "x", " = 10 and ", bound "y", " = ", free "x",
+              " + 6 in ", bound "x", " + ", bound "y"]),
+     ("Colouring LET binding local function",
+      "let f x = x * 2 in x + f 10",
+      concat ["let ", bound "f", " ", bound "x", " = ", bound "x", " * 2 in ",
+              free "x", " + ", bound "f", " 10"])
+    ]
+
+val _ = app colourpp_test colourtests
 

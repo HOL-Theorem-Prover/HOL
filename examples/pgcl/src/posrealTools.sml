@@ -42,12 +42,11 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 val posreal_SS = simpLib.SSFRAG
-  {ac = [],
+  {ac = [], name = SOME "posreal",
    congs = [],
    convs = [],
    dprocs = [],
    filter = NONE,
-   name = NONE,
    rewrs = [(* addition *)
             add_lzero, add_rzero, add_linfty, add_rinfty,
             (* subtraction *)
@@ -133,11 +132,11 @@ val rat_reduce_pat =
 val posreal_reduce_SS = simpLib.SSFRAG
   {ac = [],
    congs = [],
+   name = SOME "posreal_reduce",
    convs = [{name = "rat_reduce_conv (posreals)", conv = K (K rat_reduce_conv),
              trace = 2, key = SOME ([],rat_reduce_pat)}],
    dprocs = [],
    filter = NONE,
-   name = NONE,
    rewrs = [(* equality *)
             posreal_of_num_not_infty, posreal_of_num_inj, eq_rat, eq_ratl,
             rat_eq_infty,
