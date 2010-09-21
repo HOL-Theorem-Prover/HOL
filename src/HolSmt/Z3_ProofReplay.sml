@@ -33,6 +33,7 @@ local
   val IMP_DISJ_1 = HolSmtTheory.IMP_DISJ_1
   val IMP_DISJ_2 = HolSmtTheory.IMP_DISJ_2
   val IMP_FALSE = HolSmtTheory.IMP_FALSE
+  val AND_IMP_INTRO_SYM = HolSmtTheory.AND_IMP_INTRO_SYM
 
   (* a simpset that deals with function (i.e., array) updates when the
      indices are integer or word literals *)
@@ -560,29 +561,46 @@ local
     (state, prove (thm, t))
   end
 
+  (* |- l1 = r1  ...  |- ln = rn
+     ----------------------------
+     |- f l1 ... ln = f r1 ... rn *)
   fun z3_monotonicity (state, thms, t) =
-    (state,
-      let
-        val l_r_thms = List.map (fn thm =>
-          (boolSyntax.dest_eq (Thm.concl thm), thm)) thms
-        fun make_equal (l, r) =
-          Thm.ALPHA l r
-          handle Feedback.HOL_ERR _ =>
-            Lib.tryfind (fn ((l', r'), thm) =>
-              Thm.TRANS (Thm.ALPHA l l') (Thm.TRANS thm (Thm.ALPHA r' r))
-                handle Feedback.HOL_ERR _ =>
-                  Thm.TRANS (Thm.ALPHA l r')
-                    (Thm.TRANS (Thm.SYM thm) (Thm.ALPHA l' r))) l_r_thms
-          handle Feedback.HOL_ERR _ =>
-            let
-              val (l_op, l_arg) = Term.dest_comb l
-              val (r_op, r_arg) = Term.dest_comb r
-            in
-              Thm.MK_COMB (make_equal (l_op, r_op), make_equal (l_arg, r_arg))
-            end
-      in
-        make_equal (boolSyntax.dest_eq t)
-      end)
+  let
+    val l_r_thms = List.map
+      (fn thm => (boolSyntax.dest_eq (Thm.concl thm), thm)) thms
+    fun make_equal (l, r) =
+      Thm.ALPHA l r
+      handle Feedback.HOL_ERR _ =>
+        Lib.tryfind (fn ((l', r'), thm) =>
+          Thm.TRANS (Thm.ALPHA l l') (Thm.TRANS thm (Thm.ALPHA r' r))
+            handle Feedback.HOL_ERR _ =>
+              Thm.TRANS (Thm.ALPHA l r')
+                (Thm.TRANS (Thm.SYM thm) (Thm.ALPHA l' r))) l_r_thms
+      handle Feedback.HOL_ERR _ =>
+        let
+          val (l_op, l_arg) = Term.dest_comb l
+          val (r_op, r_arg) = Term.dest_comb r
+        in
+          Thm.MK_COMB (make_equal (l_op, r_op), make_equal (l_arg, r_arg))
+        end
+    val (l, r) = boolSyntax.dest_eq t
+    val thm = make_equal (l, r)
+      handle Feedback.HOL_ERR _ =>
+        (* surprisingly, 'l' is sometimes of the form ``x /\ y ==> z``
+           and must be transformed into ``x ==> y ==> z`` before any
+           of the theorems in 'thms' can be applied - this is arguably
+           a bug in Z3 (2.11) *)
+        let
+          val (xy, z) = boolSyntax.dest_imp l
+          val (x, y) = boolSyntax.dest_conj xy
+          val th1 = Drule.SPECL [x, y, z] AND_IMP_INTRO_SYM
+          val l' = Lib.snd (boolSyntax.dest_eq (Thm.concl th1))
+        in
+          Thm.TRANS th1 (make_equal (l', r))
+        end
+  in
+    (state, thm)
+  end
 
   fun z3_mp (state, thm1, thm2, t) =
     (state, Thm.MP thm2 thm1 handle Feedback.HOL_ERR _ => Thm.EQ_MP thm2 thm1)
