@@ -72,7 +72,7 @@ fun extract_info constset db =
  ---------------------------------------------------------------------------*)
 
 val ind_suffix = ref "_ind";
-val def_suffix = ref "_def";
+val def_suffix = boolLib.def_suffix
 
 fun indSuffix s     = (s ^ !ind_suffix);
 fun defSuffix s     = (s ^ !def_suffix);

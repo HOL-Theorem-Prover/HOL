@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib boolSimps bossLib
-     numLib Prim_rec pred_setTheory BasicProvers SingleStep
+     numLib Prim_rec pred_setTheory BasicProvers
      metisLib dividesTheory arithmeticTheory
 
 fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));

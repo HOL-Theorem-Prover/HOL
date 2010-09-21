@@ -1,8 +1,9 @@
 structure gcdScript =
 struct
 
-open HolKernel Parse boolLib TotalDefn BasicProvers SingleStep
-     arithmeticTheory dividesTheory simpLib boolSimps;
+open HolKernel Parse boolLib TotalDefn BasicProvers
+     arithmeticTheory dividesTheory simpLib boolSimps
+     Induction;
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss
 
@@ -75,13 +76,13 @@ val GCD =
 val gcd_ind = GEN_ALL (DB.fetch "-" "gcd_ind");
 
 
-val GCD_IS_GCD = store_thm("GCD_IS_GCD",
-                           Term`!a b. is_gcd a b (gcd a b)`,
-                           recInduct gcd_ind THEN ARW [GCD] THEN
-                           PROVE_TAC [IS_GCD_0L,IS_GCD_0R,
-                                      IS_GCD_MINUS_L,IS_GCD_MINUS_R,
-                                      DECIDE(Term`~(y<=x) ==> SUC x <= SUC y`),
-                                      LESS_EQ_MONO,SUB_MONO_EQ]);
+val GCD_IS_GCD = 
+  store_thm("GCD_IS_GCD",
+     ``!a b. is_gcd a b (gcd a b)``,
+   recInduct gcd_ind THEN ARW [GCD] THEN
+   PROVE_TAC [IS_GCD_0L,IS_GCD_0R,IS_GCD_MINUS_L,
+              IS_GCD_MINUS_R, DECIDE(Term`~(y<=x) ==> SUC x <= SUC y`),
+              LESS_EQ_MONO,SUB_MONO_EQ]);
 
 val GCD_THM = REWRITE_RULE [GCD_IS_GCD] (Q.SPECL [`m`,`n`,`gcd m n`] IS_GCD);
 

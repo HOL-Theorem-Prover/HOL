@@ -14,13 +14,13 @@ val eq = Term.eq;
 val use_stack = ref false;
 fun arm_use_stack b = (use_stack := b);
 
-val arm_enc = snd o hd o arm_assemble_from_string;
+val arm_enc = armLib.arm_encode_from_string;
 
 local val arm_memory_pred = ref "auto"
 in
-  fun get_arm_memory_pred () = !arm_memory_pred;    
-  fun set_arm_memory_pred s = 
-    if mem s ["auto","aM1","aBYTE_MEMORY"] 
+  fun get_arm_memory_pred () = !arm_memory_pred;
+  fun set_arm_memory_pred s =
+    if mem s ["auto","aM1","aBYTE_MEMORY"]
     then (arm_memory_pred := s) else fail();
 end;
 
@@ -50,7 +50,7 @@ fun rewrite_names tm = let
   fun aux v = let val m = match_term tm (car (car v)) in (snd o process o cdr o car) v end
   in replace_terml aux end;
 
-fun arm_pre_post g = let 
+fun arm_pre_post s g = let
   val cpsr_var = mk_var("cpsr",``:word32``)
   val g = subst [``ARM_READ_MASKED_CPSR s``|->cpsr_var] g
   val regs = collect_term_of_type ``:word4`` g
@@ -68,10 +68,28 @@ fun arm_pre_post g = let
   val sts_assign = find_terml_all (can (match_term ``ARM_WRITE_STATUS f x ^state``)) h2
   val assignments = map (fn x => (cdr (car (car x)),cdr (car x))) reg_assign
   val assignments = map (fn x => (cdr (car (car x)),cdr (car x))) mem_assign @ assignments
-  val assignments = map (fn x => (cdr (car (car x)),cdr (car x))) sts_assign @ assignments 
+  val assignments = map (fn x => (cdr (car (car x)),cdr (car x))) sts_assign @ assignments
   fun all_distinct [] = []
     | all_distinct (x::xs) = x :: filter (fn y => not (eq x y)) (all_distinct xs)
   val mems = rev (all_distinct mems)
+  val code = subst [mk_var("c",``:num``) |->
+                    numSyntax.mk_numeral(Arbnum.fromHexString s)]
+                   ``(r15:word32,(n2w (c:num)):word32)``
+  fun is_pc_relative tm = free_vars tm = [mk_var("r15",``:word32``)]
+  val mems_pc_rel = filter is_pc_relative mems
+  val has_read_from_mem = (mems_pc_rel = mems) andalso (length mems = 4)
+  val (mems,assignments,code) =
+    if not has_read_from_mem then
+      (mems,assignments,subst [mk_var("x",``:word32#word32``)|->code] ``{x:word32#word32}``)
+    else let
+      val xx = find_term wordsSyntax.is_word_concat h2
+      val v = mk_var("pc_rel",``:word32``)
+      val addr = (cdr o fst o process o hd) mems
+      val assignments = map (fn (x,y) => (x,subst [xx |-> v]y)) assignments
+      val code = subst [mk_var("x",``:word32#word32``)|->code,
+                        mk_var("y",``:word32#word32``)|->pairSyntax.mk_pair(addr,v)]
+            ``{(x:word32#word32);y}``
+      in ([],assignments,code) end
   fun get_assigned_value_aux x y [] = y
     | get_assigned_value_aux x y ((q,z)::zs) =
         if eq x q then z else get_assigned_value_aux x y zs
@@ -104,13 +122,13 @@ fun arm_pre_post g = let
   val bools = filter all_bool pre_conds
   val pre_conds = if bools = [] then pre_conds else let
                     val pre_bool = (fst o dest_eq o concl o SPEC (list_mk_conj bools)) markerTheory.Abbrev_def
-                    in pre_bool :: filter (not o all_bool) pre_conds end 
+                    in pre_bool :: filter (not o all_bool) pre_conds end
   val pc_post = snd (hd (filter (fn x => (fst x = ``15w:word4``)) assignments))
   val pc = mk_var("r15",``:word32``)
   val pre_conds = if op_mem eq pc (free_vars pc_post) then pre_conds else mk_comb(``ALIGNED``,pc_post) :: pre_conds
   val pre = if null pre_conds then pre else mk_cond_star(pre,mk_comb(``CONTAINER``,list_mk_conj pre_conds))
   val ss = subst [``aR 15w``|->``aPC``,pc|->``p:word32``]
-  in (ss pre,ss post) end;
+  in (ss pre,ss code,ss post) end;
 
 fun remove_primes th = let
   fun last s = substring(s,size s-1,1)
@@ -167,9 +185,9 @@ fun introduce_aBYTE_MEMORY th = if
     val t2 = repeat (fst o pred_setSyntax.dest_delete) t1
     val th = SIMP_RULE bool_ss [] (DISCH (mk_eq(te,t2)) th)
     val th = RW [AND_IMP_INTRO] th *)
-    val v = hd (filter (is_var) ys @ ys) 
+    val v = hd (filter (is_var) ys @ ys)
     fun ss [] = ``{}:word32 set``
-      | ss (v::vs) = pred_setSyntax.mk_insert(v,ss vs) 
+      | ss (v::vs) = pred_setSyntax.mk_insert(v,ss vs)
     val u1 = pred_setSyntax.mk_subset(ss (rev ys),mk_var("df",``:word32 set``))
     val u2 = u1
     val u3 = (fst o dest_imp o concl) th
@@ -200,7 +218,7 @@ fun introduce_aM th = let
   val lemma = (el 2 o CONJUNCTS o SPEC_ALL) bit_listTheory.bytes2word_thm
   val f = SIMP_RULE std_ss [WORD_ADD_0] o
           SIMP_RULE std_ss [word_arith_lemma3,word_arith_lemma4] o
-          SIMP_RULE std_ss [word_arith_lemma1,word_arith_lemma2] 
+          SIMP_RULE std_ss [word_arith_lemma1,word_arith_lemma2]
   val th = f th
   fun foo th = let
     val tm = (fst o dest_eq o concl o SPEC (next_var()) o GEN_ALL) lemma
@@ -280,13 +298,13 @@ fun introduce_aMEMORY th = if
     val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
     in th end end
 
-fun introduce_aSTACK th = 
+fun introduce_aSTACK th =
   if not (!use_stack) then th else let
   val (_,p,c,q) = dest_spec(concl th)
   val fp = mk_var("r11",``:word32``)
   fun access_fp tm = (tm = fp) orelse
     (can (match_term ``(v:word32) - n2w n``) tm andalso (fp = (cdr o car) tm))
-  val tm1 = find_term (fn tm => 
+  val tm1 = find_term (fn tm =>
               can (match_term ``aM x y``) tm andalso (access_fp o cdr o car) tm) p
   val tm2 = find_term (can (match_term (mk_comb(car tm1,genvar(``:word32``))))) q
   val c1 = MOVE_OUT_CONV ``aR 11w`` THENC MOVE_OUT_CONV (car tm1)
@@ -300,12 +318,12 @@ fun introduce_aSTACK th =
   val index = (Arbnum.toInt o numSyntax.dest_numeral o cdr o cdr o cdr o car) tm1
               handle HOL_ERR _ => 0
   val index = index div 4
-  fun mk_slist i = if i = 0 then ``[]:word32 list`` else 
-                     listSyntax.mk_cons(mk_stack_var (index - i), mk_slist (i-1)) 
+  fun mk_slist i = if i = 0 then ``[]:word32 list`` else
+                     listSyntax.mk_cons(mk_stack_var (index - i), mk_slist (i-1))
   val th = SPECL [mk_slist index,mk_var("ss",``:word32 list``)] th
-  val th = CONV_RULE (RATOR_CONV (SIMP_CONV std_ss [listTheory.LENGTH]) THENC 
+  val th = CONV_RULE (RATOR_CONV (SIMP_CONV std_ss [listTheory.LENGTH]) THENC
                       REWRITE_CONV [listTheory.APPEND]) th
-  val th = INST [cdr tm1 |-> mk_stack_var index] th  
+  val th = INST [cdr tm1 |-> mk_stack_var index] th
   in th end handle HOL_ERR _ => th;
 
 fun calculate_length_and_jump th =
@@ -324,7 +342,7 @@ fun post_process_thm th = let
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
   val th = if get_arm_memory_pred() = "auto" then introduce_aM th else th
   val th = introduce_aSTACK th
-  val th = if mem (get_arm_memory_pred()) ["auto","aBYTE_MEMORY"] 
+  val th = if mem (get_arm_memory_pred()) ["auto","aBYTE_MEMORY"]
            then introduce_aBYTE_MEMORY th else th
   val th = if get_arm_memory_pred() = "auto" then introduce_aMEMORY th else th
   val th = RW [WORD_EQ_XOR_ZERO,wordsTheory.WORD_EQ_SUB_ZERO,ALIGNED_def,
@@ -334,11 +352,11 @@ fun post_process_thm th = let
 fun arm_prove_one_spec s th = let
   val g = concl th
   val next = cdr (find_term (can (match_term ``ARM_NEXT x s = s'``)) g)
-  val (pre,post) = arm_pre_post g
-  val tm = ``SPEC ARM_MODEL pre {(p,n2w c)} post``
+  val (pre,code,post) = arm_pre_post s g
+  val tm = ``SPEC ARM_MODEL pre code post``
   val tm = subst [mk_var("pre",type_of pre) |-> pre,
                   mk_var("post",type_of post) |-> post,
-                  mk_var("c",``:num``) |-> numSyntax.mk_numeral(Arbnum.fromHexString s)] tm
+                  mk_var("code",type_of code) |-> code] tm
   val FLIP_TAC = CONV_TAC (ONCE_REWRITE_CONV [EQ_SYM_EQ])
 (*
   set_goal([],tm)
@@ -362,7 +380,9 @@ fun arm_prove_one_spec s th = let
                             ARM_WRITE_STS_INTRO,ARM_READ_WRITE]
     \\ ONCE_REWRITE_TAC [ALIGNED_MOD_4]
     \\ ASM_SIMP_TAC std_ss [wordsTheory.WORD_ADD_0,ARM_READ_WRITE]
-    \\ FULL_SIMP_TAC bool_ss [markerTheory.Abbrev_def,CONTAINER_def])
+    \\ FULL_SIMP_TAC bool_ss [markerTheory.Abbrev_def,CONTAINER_def]
+    \\ REPEAT (POP_ASSUM (MP_TAC o GSYM)) \\ ASM_SIMP_TAC std_ss []
+    \\ ASM_SIMP_TAC std_ss [word_arith_lemma1,BYTES_TO_WORD_LEMMA])
   in RW [STAR_ASSOC,CONTAINER_def] result end;
 
 val cond_STAR_cond = prove(
@@ -389,10 +409,10 @@ fun arm_prove_specs m_pred s = let
     val th = SIMP_RULE std_ss [aligned4_thm,aligned2_thm,ARM_READ_MASKED_CPSR_INTRO] th
     val th = if not (can (find_term (fn x => x = ``ARM_READ_MASKED_CPSR``)) (concl th)) then th else let
                val th = SIMP_RULE std_ss [FCP_UPDATE_WORD_AND] th
-               val gg = SIMP_RULE (std_ss++SIZES_ss) [bitTheory.BIT_def,bitTheory.BITS_THM] o 
+               val gg = SIMP_RULE (std_ss++SIZES_ss) [bitTheory.BIT_def,bitTheory.BITS_THM] o
                         RW1 [fcpTheory.FCP_APPLY_UPDATE_THM,word_index_n2w]
                fun f th = let
-                 val t2 = find_term (can (match_term ``(n :+ F) ((n2w k):word32)``)) (concl th) 
+                 val t2 = find_term (can (match_term ``(n :+ F) ((n2w k):word32)``)) (concl th)
                  in RW [EVAL t2] th end
                in repeat f ((gg o gg o gg o gg o gg)th) end
     val th = arm_prove_one_spec s th
@@ -483,6 +503,7 @@ val arm_tools_byte = (arm_spec_byte_memory, arm_jump, arm_status, arm_pc);
   val thms = arm_spec (enc "LDR r12, [pc, #3880]");
   val thms = arm_spec (enc "LDR r12, [pc, #3856]");
   val thms = arm_spec (enc "LDR r1, [pc, #1020]");
+  val thms = arm_spec (enc "LDR r1, [pc, #-20]");
   val thms = arm_spec (enc "STMDB sp!, {r0-r2, r15}");
   val thms = arm_spec (enc "LDRB r2, [r3]");
   val thms = arm_spec (enc "STRB r2, [r3]");

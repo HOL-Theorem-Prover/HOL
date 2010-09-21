@@ -1,7 +1,6 @@
 open HolKernel boolLib Parse
 
-open SingleStep Parse BasicProvers metisLib simpLib
-
+open Parse BasicProvers metisLib simpLib
 open arithmeticTheory pairTheory combinTheory
 
 val arith_ss = srw_ss() ++ numSimps.old_ARITH_ss

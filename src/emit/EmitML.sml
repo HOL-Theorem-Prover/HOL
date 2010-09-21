@@ -54,7 +54,7 @@ val structCamlSuffix = ref "ML.ml";
 
 val is_int_literal_hook = ref (fn _:term => false);
 val int_of_term_hook = ref
-    (fn _:term => raise ERR "EmitML" "integers not loaded")
+    (fn _:term => (raise ERR "EmitML" "integers not loaded") : Arbint.int)
 
 (*---------------------------------------------------------------------------*)
 (* Misc. syntax operations                                                   *)
@@ -110,6 +110,17 @@ fun dest_record_vconstr v =
 
 val is_fake_constructor = Lib.can dest_record_vconstr;
 
+local
+  val reserved_set = Redblackset.addList (Redblackset.empty String.compare,
+    ["abstype", "datatype", "do", "end", "eqtype", "exception", "fn", "fun",
+     "functor", "handle", "include", "infix", "infixr", "local", "nonfix", "op",
+     "open", "raise", "rec", "sharing", "sig", "signature", "struct",
+     "structure", "type", "val", "where", "withtype", "while"])
+  fun is_reserved s = Redblackset.member (reserved_set, s)
+in
+  fun fix_reserved s = if is_reserved s then s ^ "_" else s
+end
+
 fun fix_symbol c =
   case c of
     #"#"  => #"^"
@@ -120,10 +131,16 @@ fun fix_symbol c =
   | _     => c;
 
 fun capitalize s =
-  Char.toString (Char.toUpper (String.sub(s,0))) ^ String.extract(s,1,NONE);
+  if !emitOcaml then
+    Char.toString (Char.toUpper (String.sub(s,0))) ^ String.extract(s,1,NONE)
+  else
+    s;
 
 fun lowerize s =
-  Char.toString (Char.toLower (String.sub(s,0))) ^ String.extract(s,1,NONE);
+  if !emitOcaml then
+    Char.toString (Char.toLower (String.sub(s,0))) ^ String.extract(s,1,NONE)
+  else
+    s;
 
 fun fix_name (prefix,is_type_cons,s) =
   let val c0 = String.sub(s,0)
@@ -142,18 +159,18 @@ fun fix_name (prefix,is_type_cons,s) =
       else if s = "NONE" then
         "None"
       else let val s1 = String.map fix_symbol s in
-      if not (Char.isAlphaNum c0 orelse (s1 = "=")) then
-        prefix ^ "(" ^ s1 ^ ")"
-      else if is_type_cons then
-        prefix ^ capitalize s1
-      else
-        prefix ^ (if Char.isUpper c0 then "_" ^ s1 else s1)
+        if not (Char.isAlphaNum c0 orelse (s1 = "=")) then
+          prefix ^ "(" ^ s1 ^ ")"
+        else if is_type_cons then
+          prefix ^ capitalize s1
+        else
+          prefix ^ (if Char.isUpper c0 then "_" ^ s1 else fix_reserved s1)
       end
     else
-      prefix ^ s1
+      prefix ^ (fix_reserved s1)
   end;
 
-fun ML s = (if !emitOcaml then capitalize s else s) ^ "ML";
+fun ML s = capitalize s ^ "ML";
 
 fun full_name openthys (is_type_cons,s1,s2,_) =
   let val prefix = if mem s1 openthys orelse (s1="") then
@@ -552,11 +569,11 @@ fun term_to_ML openthys side ppstrm =
                       val c = String.sub(s,0)
                   in
                     if c = #"^" then
-                      add_string (String.extract(s,1,NONE))
+                      add_string (fix_reserved (String.extract(s,1,NONE)))
                     else if !emitOcaml andalso Char.isUpper c then
                       add_string ("_" ^ s)
                     else
-                      add_string s
+                      add_string (fix_reserved s)
                   end
   and pp_const i tm =
       if same_const tm boolSyntax.conjunction
@@ -567,14 +584,17 @@ fun term_to_ML openthys side ppstrm =
   and pp_one tm = add_string "()"
   and pp_nil tm = add_string "[]"
   and pp_open_comb i (f,args) =
-       let
+       let val is_constr = case Lib.total ConstMapML.apply f
+                             of SOME (true,_,_,_) => true
+                              | _ => false
        in begin_block CONSISTENT 0
         ; lparen i maxprec
-        ; if TypeBase.is_constructor f orelse is_fake_constructor f
+        ; if TypeBase.is_constructor f andalso is_constr
+               orelse is_fake_constructor f
             then
               (let val fname = fst(dest_const f) handle HOL_ERR _ =>
                                fst(dest_record_vconstr f)
-               in add_string fname
+               in add_string (fix_name ("", true, fname))
                end;   (* pp maxprec f; *)
                add_string "(";
                begin_block INCONSISTENT 0;
@@ -700,7 +720,7 @@ fun pp_defn_as_OCAML openthys ppstrm =
          end
      fun pp_pattern i s (L,R) =
          (begin_block INCONSISTENT 0
-          ; add_string s
+          ; add_string (fix_reserved s)
           ; begin_block INCONSISTENT 2
           ; begin_block INCONSISTENT 0
           ; pr_list (toML LEFT minprec) (fn () => add_string ",")
@@ -1009,7 +1029,6 @@ fun replace1 f (v as dVartype _) = v
   | replace1 f (dTyAbst(bvar,body)) = dTyAbst(replace1 f bvar, replace1 f body)
   | replace1 f (dTyKindConstr{Ty,Kind}) = dTyKindConstr{Ty=replace1 f Ty,Kind=Kind}
   | replace1 f (dTyRankConstr{Ty,Rank}) = dTyRankConstr{Ty=replace1 f Ty,Rank=Rank}
-in
 fun replace f (v as dVartype _) = v
   | replace f (aq as dAQ _)     = aq
   | replace f (c as dContype{Tyop,Thy,Kind,Rank}) = (f Tyop handle _ => c)
@@ -1021,7 +1040,7 @@ fun replace f (v as dVartype _) = v
   | replace f (dTyRankConstr{Ty,Rank}) = dTyRankConstr{Ty=replace f Ty,Rank=Rank}
 (*| replace f (dTyop{Tyop,Thy,Args}) =
       f Tyop handle _ => dTyop{Tyop=Tyop,Thy=Thy,Args=map (replace f) Args} *)
-
+in
 fun replaceForm f (Constructors alist) =
                    Constructors (map (I##map (replace f)) alist)
   | replaceForm f other = other
@@ -1101,8 +1120,8 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
  let open Portable ParseDatatype
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val fix_cons = if !emitOcaml then capitalize else I
-     val fix_type = if !emitOcaml then lowerize else I
+     val fix_cons = fix_reserved o capitalize
+     val fix_type = fix_reserved o lowerize
      val ppty = pp_type_as_ML ppstrm
      fun pp_comp_ty ty =
           if Lib.can dom_rng ty orelse is_pair_type ty
@@ -1240,23 +1259,22 @@ fun pp_sig strm (s,elems) =
       | pp_el (iOPEN slist) = ()
  in
    begin_block CONSISTENT 0;
-   if !emitOcaml then () else
-     (add_string ("signature "^ML s^" = ");
-      add_newline();
-      begin_block CONSISTENT 2;
-      add_string "sig"; add_newline();
-      begin_block CONSISTENT 0);
-   pr_list pp_el (fn () => ()) add_newline
-       (filter (fn (iDEFN_NOSIG _) => false
-                 | (iOPEN _) => false
-                 | (iMLSTRUCT _) => false
-                 | otherwise => true) elems);
+     add_string ((if !emitOcaml then "module type " else "signature ") ^
+                 ML s ^ " =");
+     add_newline();
+     begin_block CONSISTENT 2;
+       add_string "sig"; add_newline();
+       begin_block CONSISTENT 0;
+         pr_list pp_el (fn () => ()) add_newline
+             (filter (fn (iDEFN_NOSIG _) => false
+                       | (iOPEN _) => false
+                       | (iMLSTRUCT _) => false
+                       | otherwise => true) elems);
+       end_block();
+     end_block();
+     add_newline();
+     add_string "end"; add_newline();
    end_block();
-   if !emitOcaml then () else
-     (end_block();
-      add_newline();
-      add_string "end"; add_newline();
-      end_block());
    flush_ppstream()
  end
  handle e => raise wrap_exn "EmitML" "pp_sig" e;
@@ -1288,29 +1306,33 @@ fun pp_struct strm (s,elems,cnames) =
                                  (fn ()=>()) (fn () => add_newline()) slist;
                               add_newline();
                               end_block())
+    val (struct_mod, punct) = if !emitOcaml then
+                                ("module ", " : ")
+                              else
+                                ("structure ", " :> ")
  in
    begin_block CONSISTENT 0;
-   if !emitOcaml then () else
-     (add_string ("structure "^ML s^" :> "^ML s^" =");
-      add_newline();
-      begin_block CONSISTENT 2;
-      add_string "struct"; add_newline();
-      begin_block CONSISTENT 0;
-      begin_block INCONSISTENT 7;
-        add_string"nonfix ";
-        pr_list add_string (fn()=>()) (fn()=> add_break(1,0))
-                (union cnames MLinfixes);
-        add_string ";";
+     add_string (struct_mod ^ ML s ^ punct ^ ML s ^ " =");
+     add_newline();
+     begin_block CONSISTENT 2;
+       add_string "struct"; add_newline();
+       begin_block CONSISTENT 0;
+       if !emitOcaml then () else
+         (begin_block INCONSISTENT 7;
+            add_string"nonfix ";
+            pr_list add_string (fn()=>()) (fn()=> add_break(1,0))
+                    (union cnames MLinfixes);
+            add_string ";";
+          end_block();
+          add_newline());
+       add_newline();
+       pr_list pp_el (fn () =>()) add_newline
+              (filter (fn (iMLSIG _) => false | otherwise => true) elems);
+       end_block();
      end_block();
-     add_newline(); add_newline());
-   pr_list pp_el (fn () =>()) add_newline
-          (filter (fn (iMLSIG _) => false | otherwise => true) elems);
+     add_newline();
+     add_string"end"; add_newline();
    end_block();
-   if !emitOcaml then () else
-     (end_block();
-      add_newline();
-      add_string"end"; add_newline();
-      end_block());
    flush_ppstream()
  end
  handle e => raise wrap_exn "EmitML" "pp_struct" e;
@@ -1540,7 +1562,7 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
  let val _ = emitOcaml := Ocaml
      val (pcs,elems) = internalize elems_0  (* pcs = pseudo-constrs *)
      val path = if p="" then FileSys.getDir() else p
-     val pathPrefix = Path.concat(path,s)
+     val pathPrefix = Path.concat(path, capitalize s)
      val sigfile = pathPrefix^ sigSuffix
      val structfile = pathPrefix^ structSuffix
  in

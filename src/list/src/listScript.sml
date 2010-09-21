@@ -30,7 +30,7 @@ local open arithmeticTheory pairTheory pred_setTheory operatorTheory in end;
  *---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
-     simpLib boolSimps pairTheory TotalDefn SingleStep metisLib;;
+     simpLib boolSimps pairTheory TotalDefn metisLib;;
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
@@ -1696,7 +1696,7 @@ val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND",SET_TO_LIST_IND);
 
 val SET_TO_LIST_INV = Q.store_thm("SET_TO_LIST_INV",
 `!s. FINITE s ==> (LIST_TO_SET(SET_TO_LIST s) = s)`,
- recInduct SET_TO_LIST_IND
+ Induction.recInduct SET_TO_LIST_IND
    THEN RW_TAC bool_ss []
    THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
    THEN RW_TAC bool_ss [LIST_TO_SET_THM]
@@ -1704,7 +1704,7 @@ val SET_TO_LIST_INV = Q.store_thm("SET_TO_LIST_INV",
 
 val SET_TO_LIST_CARD = Q.store_thm("SET_TO_LIST_CARD",
 `!s. FINITE s ==> (LENGTH (SET_TO_LIST s) = CARD s)`,
- recInduct SET_TO_LIST_IND
+ Induction.recInduct SET_TO_LIST_IND
    THEN REPEAT STRIP_TAC
    THEN SRW_TAC [][Once (UNDISCH SET_TO_LIST_THM)]
    THEN `FINITE (REST s)` by METIS_TAC [REST_DEF,FINITE_DELETE]
@@ -1713,7 +1713,7 @@ val SET_TO_LIST_CARD = Q.store_thm("SET_TO_LIST_CARD",
 
 val SET_TO_LIST_IN_MEM = Q.store_thm("SET_TO_LIST_IN_MEM",
 `!s. FINITE s ==> !x. x IN s = MEM x (SET_TO_LIST s)`,
- recInduct SET_TO_LIST_IND
+ Induction.recInduct SET_TO_LIST_IND
    THEN RW_TAC bool_ss []
    THEN ONCE_REWRITE_TAC [UNDISCH SET_TO_LIST_THM]
    THEN RW_TAC bool_ss [MEM,NOT_IN_EMPTY]
@@ -1734,7 +1734,7 @@ val _ = export_rewrites ["SET_TO_LIST_SING"]
 
 val ALL_DISTINCT_SET_TO_LIST = store_thm("ALL_DISTINCT_SET_TO_LIST",
   ``!s. FINITE s ==> ALL_DISTINCT (SET_TO_LIST s)``,
-  recInduct SET_TO_LIST_IND THEN
+  Induction.recInduct SET_TO_LIST_IND THEN
   REPEAT STRIP_TAC THEN
   IMP_RES_TAC SET_TO_LIST_THM THEN
   `FINITE (REST s)` by PROVE_TAC[pred_setTheory.FINITE_DELETE,
@@ -1812,6 +1812,10 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x227C, tmnm = "<<="}
         (* in tex input mode in emacs, produce U+227C with \preceq *)
         (* tempting to add a not-isprefix macro keyed to U+22E0 \npreceq, but
            hard to know what the ASCII version should be.  *)
+val _ = TexTokenMap.TeX_notation {hol = "<<=", 
+                                  TeX = ("\\HOLTokenIsPrefix{}", 1)}
+val _ = TexTokenMap.TeX_notation {hol = UTF8.chr 0x227C,
+                                  TeX = ("\\HOLTokenIsPrefix{}", 1)}
 
 (* type annotations are there solely to make theorem have only one
    type variable; without them the theorem ends up with three (because the

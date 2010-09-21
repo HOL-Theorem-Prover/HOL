@@ -2210,7 +2210,7 @@ val weighted_reduction_def = Define`
 `;
 
 
-val op on = SingleStep.on;
+val op on = BasicProvers.on;
 infix 8 on;
 
 val lrcc_beta0_redex_posn = store_thm(

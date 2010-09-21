@@ -20,25 +20,6 @@ val fromNum_def = Define`
 
 val _ = ConstMapML.insert_cons ``n2w_itself``;
 
-fun mk_index i =
-  let val n = Arbnum.fromInt i
-      val x = Int.toString i
-      val typ = fcpLib.index_type n
-      val s = String.extract(with_flag (type_pp.pp_num_types, false)
-                 type_to_string typ, 1, NONE)
-      val w = "type word" ^ x ^ " = " ^ s ^ " word"
-      val a = "fun toWord" ^ x ^
-                 " n = fromNum (n,ITSELF(numML.fromInt " ^ x ^ "))"
-      val b = "val toWord" ^ x ^ " : numML.num -> word" ^ x
-      val c = "val fromString" ^ x ^
-                 " = o(toWord" ^ x ^ ", numML.fromString) : string -> word" ^ x
-      val d = "val fromString" ^ x ^ " : string -> word" ^ x
-  in
-    [EmitML.MLSTRUCT w, EmitML.MLSIG w,
-     EmitML.MLSTRUCT a, EmitML.MLSIG b,
-     EmitML.MLSTRUCT c, EmitML.MLSIG d]
-  end;
-
 val sizes = [1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64]
 
 val ALPHA_BETA_RULE = GEN_ALL o Q.INST [`a` |-> `m`, `b` |-> `n`] o SPEC_ALL
@@ -103,8 +84,36 @@ val f =
           GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def,
           TIMES_2EXP1, FUN_EQ_THM] o ALPHA_BETA_RULE)
 
-val defs =
-    f [dimword_def, fromNum_def] @ List.concat (map mk_index sizes) @
+fun mk_index ocaml i =
+  let val n = Arbnum.fromInt i
+      val x = Int.toString i
+      val typ = fcpLib.index_type n
+      val s = String.extract(with_flag (type_pp.pp_num_types, false)
+                 type_to_string typ, 1, NONE)
+      val w = "type word" ^ x ^ " = " ^ s ^ " word"
+      val numML = if ocaml then "numML." else "NumML."
+      val (a,b,c) =
+              if ocaml then
+                ("let toWord" ^ x ^
+                 " n = fromNum (n,ITSELF(NumML.holnum_of_int " ^ x ^ "))",
+                 "val toWord" ^ x ^ " : NumML.num -> word" ^ x,
+                 "let fromString" ^ x ^
+                 " = CombinML.o toWord" ^ x ^ " NumML.fromString")
+              else
+                ("fun toWord" ^ x ^
+                 " n = fromNum (n,ITSELF(numML.fromInt " ^ x ^ "))",
+                 "val toWord" ^ x ^ " : numML.num -> word" ^ x,
+                 "val fromString" ^ x ^
+                 " = o(toWord" ^ x ^ ", numML.fromString) : string -> word" ^ x)
+      val d = "val fromString" ^ x ^ " : string -> word" ^ x
+  in
+    [EmitML.MLSTRUCT w, EmitML.MLSIG w,
+     EmitML.MLSTRUCT a, EmitML.MLSIG b,
+     EmitML.MLSTRUCT c, EmitML.MLSIG d]
+  end;
+
+fun defs ocaml =
+    f [dimword_def, fromNum_def] @ List.concat (map (mk_index ocaml) sizes) @
     f [INT_MIN_def, UINT_MAX_def, INT_MAX_def,
        w2n_n2w, word_eq_n2w, w2w_n2w, word_or_n2w, word_lsl_n2w,
        word_bits_n2w, word_signed_bits_n2w, Q.SPEC `c` word_bit_n2w,
@@ -135,7 +144,7 @@ val _ = eSML "words"
    :: MLSIG "type num = numML.num"
    :: MLSIG "datatype 'a word = n2w_itself of num * 'a itself"
    :: MLSTRUCT "datatype 'a word = n2w_itself of num * 'a itself"
-   :: defs)
+   :: defs false)
 
 val _ = eCAML "words"
   (MLSIGSTRUCT
@@ -146,38 +155,34 @@ val _ = eCAML "words"
       "type 'a bit1 = 'a FcpML.bit1", "",
       "type 'a word = N2w_itself of num * 'a itself"] @
    OPEN ["sum", "num", "fcp", "bit"] ::
-   defs)
+   defs true)
 
-fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn ppstrm =>
-    app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) l)};
-
-val _ = adjoin_to_theory_struct
- ["val _ = ConstMapML.insert_cons(\
-  \Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"});"];
-
-val _ = adjoin_to_theory
- {sig_ps = SOME (fn ppstrm =>
-             (PP.add_string ppstrm "val WORDS_EMIT_RULE : thm -> thm";
-              PP.add_newline ppstrm)),
-  struct_ps = SOME (fn ppstrm =>
-   let val S = PP.add_string ppstrm
-       fun NL() = PP.add_newline ppstrm
-   in
-     S "open HolKernel boolLib wordsTheory fcp_emitTheory;"; NL();
-     S "val RHS_REWRITE_RULE = GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites";
-     NL();
-     S "val WORDS_EMIT_RULE = "; NL();
-     S " BETA_RULE o PURE_REWRITE_RULE "; NL();
-     S " ([BIT_UPDATE, fcp_n2w, word_T_def, word_L_def, word_H_def, literal_case_THM]"; NL();
-     S "  @"; NL();
-     S "  map GSYM [word_index_def, n2w_itself_def, w2w_itself_def, sw2sw_itself_def,"; NL();
-     S "            word_concat_itself_def, word_extract_itself_def,"; NL();
-     S "            FCPi_def, mk_fcp_def, literal_case_DEF]) "; NL();
-     S " o RHS_REWRITE_RULE [GSYM word_eq_def];"; NL();
-     NL();
-     S "val _ = EmitML.reshape_thm_hook := (WORDS_EMIT_RULE o !EmitML.reshape_thm_hook);";
-     NL(); NL()
-   end)}
+local
+  val lines = [
+"val _ = ConstMapML.insert_cons",
+"          (Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"})",
+"fun WORDS_EMIT_RULE thm = let",
+"  open boolTheory wordsTheory fcp_emitTheory",
+"  val rws = List.map Conv.GSYM [word_index_def, n2w_itself_def, word_eq_def,",
+"              w2w_itself_def, sw2sw_itself_def, word_concat_itself_def,",
+"              word_extract_itself_def, literal_case_DEF] @",
+"             [BIT_UPDATE, fcp_n2w, word_T_def, word_L_def, word_H_def,",
+"              literal_case_THM]",
+"  val rule = Conv.CONV_RULE (Conv.STRIP_QUANT_CONV",
+"               (Conv.RHS_CONV (Rewrite.PURE_REWRITE_CONV rws)))",
+"  val thm = Rewrite.PURE_REWRITE_RULE [Conv.GSYM n2w_itself_def] thm",
+"in",
+"  Drule.LIST_CONJ (List.map (Conv.BETA_RULE o rule) (Drule.CONJUNCTS thm))",
+"end",
+"val _ = EmitML.reshape_thm_hook :=\
+\ (WORDS_EMIT_RULE o !EmitML.reshape_thm_hook)"]
+in
+  val _ = adjoin_to_theory
+   {sig_ps = SOME (fn ppstrm =>
+               (PP.add_string ppstrm "val WORDS_EMIT_RULE : thm -> thm";
+                PP.add_newline ppstrm)),
+    struct_ps = SOME (fn ppstrm =>
+      List.app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) lines)}
+end
 
 val _ = export_theory ();

@@ -1,0 +1,14 @@
+\DOC Cases_on
+
+\TYPE {Cases_on : term -> tactic}
+
+\SYNOPSIS
+Case split on type of supplied term.
+
+\DESCRIBE
+{bossLib.Cases_on} is identical to {BasicProvers.Cases_on}.
+
+\SEEALSO
+bossLib.Cases_on, bossLib.Cases.
+
+\ENDDOC

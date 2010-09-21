@@ -94,6 +94,7 @@ sig
     val SPEC_BOOL_FRAME_RULE   : thm -> term -> thm
     val SPEC_FRAME_RULE        : thm -> term -> thm
     val SPEC_COMPOSE_RULE      : thm list -> thm
+    val SPEC_SORT_CODE_RULE    : thm -> thm
 
     val SPEC_PROVE_TAC         : thm list -> tactic
 
@@ -109,6 +110,7 @@ sig
     val SEP_W_TAC              : tactic
     val SEP_R_TAC              : tactic
     val SEP_S_TAC              : string list -> thm -> tactic
+    val SEP_IMP_TAC            : tactic
 
     val auto_prove             : string -> term * tactic -> thm
 

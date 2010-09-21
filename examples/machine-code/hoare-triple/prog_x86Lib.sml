@@ -339,6 +339,11 @@ open x86_encodeLib;
   val th = x86_spec (x86_encode "jmp edx")
   val th = x86_spec (x86_encode "add [ebp-20],eax")
 
+  val th = x86_spec 
+val s = (x86_encode "mov [edi+400],3477")
+
+  val th = x86_spec "813337020000";    (* mov dword [ebx],567 *)
+
   val th = x86_spec "E9";              (* jmp imm32 *)
 
 *)

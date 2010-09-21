@@ -25,6 +25,8 @@ val _ = temp_overload_on (parmonadsyntax.monad_bind, ``seqT``);
 val _ = temp_overload_on (parmonadsyntax.monad_par,  ``parT``);
 val _ = temp_overload_on ("return", ``constT``);
 
+val _ = temp_overload_on ("PAD0", ``string$PAD_LEFT #"0"``);
+
 (* ------------------------------------------------------------------------ *)
 
 (* Get the actual instruction set.  An alternative version could raise an error
@@ -51,31 +53,36 @@ val actual_instr_set_def = Define`
             constT iset))`;
 
 val fetch_arm_def = Define`
-  fetch_arm ii read_word : (Encoding # word4 # ARMinstruction) M =
+  fetch_arm ii read_word : (string # Encoding # word4 # ARMinstruction) M =
     (read_pc ii ||| arch_version ii) >>=
     (\(pc,v).
        read_word pc >>=
        (\ireg.
-          constT (Encoding_ARM, arm_decode (v < 5) ireg)))`;
+          constT (PAD0 8 (word_to_hex_string ireg),
+                  Encoding_ARM, arm_decode (v < 5) ireg)))`;
 
 val fetch_thumb_def = Define`
-  fetch_thumb ii ee read_halfword : (Encoding # word4 # ARMinstruction) M =
+  fetch_thumb ii ee read_halfword
+    : (string # Encoding # word4 # ARMinstruction) M =
     (read_pc ii ||| read_cpsr ii ||| read_arch ii) >>=
     (\(pc,cpsr,arch).
       read_halfword pc >>= (\ireg1.
         if ((15 -- 13) ireg1 = 0b111w) /\ (12 -- 11) ireg1 <> 0b00w then
           read_halfword (pc + 2w) >>= (\ireg2.
-            constT (Encoding_Thumb2, thumb2_decode arch cpsr.IT (ireg1,ireg2)))
+            constT (PAD0 4 (word_to_hex_string ireg1) ++ " " ++
+                    PAD0 4 (word_to_hex_string ireg2),
+                    Encoding_Thumb2, thumb2_decode arch cpsr.IT (ireg1,ireg2)))
         else
           constT
-            (if ee then
+            (PAD0 4 (word_to_hex_string ireg1),
+             if ee then
                thumbee_decode arch cpsr.IT ireg1
              else
                (Encoding_Thumb, thumb_decode arch cpsr.IT ireg1))))`;
 
 val fetch_instruction_def = Define`
   fetch_instruction ii
-    read_word read_halfword : (Encoding # word4 # ARMinstruction) M =
+    read_word read_halfword : (string # Encoding # word4 # ARMinstruction) M =
     actual_instr_set ii >>=
     (\iset.
        case iset
@@ -105,7 +112,7 @@ val arm_next_def = Define`
                  fetch_instruction ii
                    (\a. read_memA ii (a, 4) >>= (\d. return (word32 d)))
                    (\a. read_memA ii (a, 2) >>= (\d. return (word16 d))) >>=
-                 arm_instr ii))`;
+                 (\(opc,instr). arm_instr ii instr)))`;
 
 val arm_run_def = Define`
   arm_run t ii inp =

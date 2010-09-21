@@ -4401,9 +4401,6 @@ in
 end;
 
 local
-  fun label_map () =
-    Redblackmap.mkDict String.compare : (string,Arbnum.num) Redblackmap.dict;
-
   val n4 = Arbnum.fromInt 4
   val vname = fst o dest_var
 
@@ -4809,9 +4806,12 @@ local
       recurse l1 []
     end
 in
-  fun link_code c =
-        link_lines (number_lines c
-          (Arbnum.zero,[],Redblackmap.mkDict String.compare))
+  fun link_code c = let
+    val x as (code,lmap) =
+          number_lines c (Arbnum.zero,[],Redblackmap.mkDict String.compare)
+  in
+    (link_lines x, lmap)
+  end
 end;
 
 fun arm_parse_from_string s =

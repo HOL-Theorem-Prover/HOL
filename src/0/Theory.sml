@@ -841,9 +841,11 @@ fun unadjzip [] A = A
     *not* empty, i.e., the user made some definitions, or stored some
     theorems or whatnot, then the initial theory will be exported.
  ----------------------------------------------------------------------------*)
+
 val new_theory_time = ref (Timer.checkCPUTimer Globals.hol_clock)
 
 val report_times = ref true
+
 val _ = Feedback.register_btrace ("report_thy_times", report_times)
 
 local
@@ -971,7 +973,6 @@ fun initialize oldname =
   in rev_app (!initializers)
   end
 end;
-
 
 fun new_theory str =
   if not(Lexis.ok_identifier str)

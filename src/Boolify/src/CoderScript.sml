@@ -27,6 +27,8 @@ val Know = Q_TAC KNOW_TAC;
 
 val REVERSE = Tactical.REVERSE;
 
+val TOP_CASE_TAC = BasicProvers.TOP_CASE_TAC;
+
 (*---------------------------------------------------------------------------
      decode turns a decoding parser of type
 
@@ -104,7 +106,7 @@ val wf_coder_closed = store_thm
    ++ Cases_on `r`
    ++ RW_TAC std_ss
       [wf_coder_def, domain_def, decoder_def, decode_def, wf_pred_def]
-   ++ REPEAT CASE_TAC >> (HO_MATCH_MP_TAC SELECT_AX ++ PROVE_TAC [])
+   ++ REPEAT TOP_CASE_TAC >> (HO_MATCH_MP_TAC SELECT_AX ++ PROVE_TAC [])
    ++ POP_ASSUM MP_TAC
    ++ RW_TAC std_ss [enc2dec_some]);
 

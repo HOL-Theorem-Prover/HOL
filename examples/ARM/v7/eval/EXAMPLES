@@ -1,4 +1,5 @@
-load "arm_evalLib"; open arm_evalLib;
+load "arm_evalLib";
+open arm_evalLib;
 
 val _ = patriciaLib.empty
   |> arm_load_from_quote "100"

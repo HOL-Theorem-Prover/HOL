@@ -24,7 +24,7 @@ val _ = new_theory "integer";
 
 (* interactive mode
   app load ["jrhUtils", "quotient", "liteLib", "QLib",
-            "SingleStep", "BasicProvers", "boolSimps", "pairSimps",
+            "BasicProvers", "boolSimps", "pairSimps",
             "numSimps", "numLib", "metisLib"];
 *)
 open jrhUtils quotient liteLib
@@ -1543,7 +1543,7 @@ val INT_EQ_NEG =
 val int_eq_calculate = prove(
   Term`!n m. ((&n = ~&m) = (n = 0) /\ (m = 0)) /\
              ((~&n = &m) = (n = 0) /\ (m = 0))`,
-  SingleStep.Induct THENL [
+  Induct THENL [
     SIMP_TAC int_ss [INT_NEG_0, INT_INJ, GSYM INT_NEG_EQ],
     SIMP_TAC int_ss [INT] THEN GEN_TAC THEN CONJ_TAC THENL [
       SIMP_TAC int_ss [GSYM INT_EQ_SUB_LADD, int_sub, GSYM INT_NEG_ADD] THEN
@@ -1559,7 +1559,7 @@ val INT_LT_CALCULATE = store_thm(
   Term`!n m.  (&n:int < &m = n < m) /\ (~&n < ~&m = m < n) /\
               (~&n < &m = ~(n = 0) \/ ~(m = 0)) /\ (&n < ~&m = F)`,
   SIMP_TAC int_ss [INT_LT, INT_LT_NEG] THEN
-  SingleStep.Induct THENL [
+  Induct THENL [
     SIMP_TAC int_ss [INT_NEG_0, INT_LT, INT_NEG_GT0],
     GEN_TAC THEN CONJ_TAC THENL [
       SIMP_TAC int_ss [INT, INT_NEG_ADD, INT_LT_ADDNEG2] THEN
@@ -1588,8 +1588,6 @@ val NUM_POSINT =
                      REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN
                      ASM_REWRITE_TAC[INT_INJ]
                    ]);
-
-open SingleStep
 
 val NUM_POSINT_EXISTS = store_thm(
   "NUM_POSINT_EXISTS",

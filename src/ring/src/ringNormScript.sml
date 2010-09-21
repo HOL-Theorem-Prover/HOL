@@ -7,7 +7,7 @@ load "ringTheory";
 *)
 
 open HolKernel Parse boolLib abs_tools;
-open BasicProvers SingleStep Datatype;
+open BasicProvers Datatype;
 
 val _ = new_theory "ringNorm";
 

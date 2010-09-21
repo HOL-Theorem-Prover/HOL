@@ -166,6 +166,49 @@ fun INDUCT_TAC g =
   handle HOL_ERR _ => raise ERR "INDUCT_TAC" "";
 
 
+fun completeInduct_on qtm g =
+ let open BasicProvers
+     val st = find_subterm qtm g
+     val ind_tac = Prim_rec.INDUCT_THEN
+                     arithmeticTheory.COMPLETE_INDUCTION ASSUME_TAC
+ in
+    primInduct st ind_tac g
+ end
+ handle e => raise wrap_exn "numLib" "completeInduct_on" e
+
+
+(*---------------------------------------------------------------------------
+    Invoked e.g. measureInduct_on `LENGTH L` or
+                 measureInduct_on `(\(x,w). x+w) (M,N)`
+ ---------------------------------------------------------------------------*)
+
+local open relationTheory prim_recTheory
+      val mvar = mk_var("m", alpha --> numSyntax.num)
+      val measure_tm = prim_mk_const{Name="measure",Thy="prim_rec"}
+      val measure_m = mk_comb(measure_tm,mvar)
+      val ind_thm0 = GEN mvar
+          (BETA_RULE
+             (REWRITE_RULE[WF_measure,measure_def,inv_image_def]
+                 (MATCH_MP (SPEC measure_m WF_INDUCTION_THM)
+                         (SPEC_ALL WF_measure))))
+in
+fun measureInduct_on q (g as (asl,w)) =
+ let val FVs = free_varsl (w::asl)
+     val tm = parse_in_context FVs q
+     val (meas, arg) = dest_comb tm
+     val (d,r) = dom_rng (type_of meas)  (* r should be num *)
+     val st = BasicProvers.prim_find_subterm FVs arg g
+     val st_type = BasicProvers.tmkind_tyof st
+     val meas' = inst (match_type d st_type) meas
+     val ind_thm1 = INST_TYPE [Type.alpha |-> st_type] ind_thm0
+     val ind_thm2 = pairLib.GEN_BETA_RULE (SPEC meas' ind_thm1)
+     val ind_tac = Prim_rec.INDUCT_THEN ind_thm2 ASSUME_TAC
+ in
+    BasicProvers.primInduct st ind_tac g
+ end
+ handle e => raise wrap_exn "numLib" "measureInduct_on" e
+end
+
 val REDUCE_CONV = reduceLib.REDUCE_CONV
 val REDUCE_RULE = reduceLib.REDUCE_RULE
 val REDUCE_TAC  = reduceLib.REDUCE_TAC

@@ -1022,12 +1022,22 @@ fun dest_case tybase M =
   end
   else dest_case1 tybase M
 
+(*---------------------------------------------------------------------------*)
+(* Is M a fully applied case expression.                                     *)
+(*---------------------------------------------------------------------------*)
+
 fun is_case1 tybase M =
   let val (c,args) = strip_comb M
       val (tynames as (_,tyop)) = type_names (type_of (last args))
   in case prim_get tybase tynames
       of NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
-       | SOME tyinfo => same_const c (case_const_of tyinfo)
+       | SOME tyinfo => 
+          let val gconst = case_const_of tyinfo
+              val gty = type_of gconst
+              val argtys = fst(strip_fun gty)
+          in
+            same_const c gconst andalso length args = length argtys
+          end
   end
   handle HOL_ERR _ => false;
 

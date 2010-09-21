@@ -113,14 +113,28 @@ in
         arm_load base (add_bytes (Arbnum.+(base,pc), ptree) s) rest
 end;
 
-fun arm_load_from_elf base infile ptree =
-  arm_load (Arbnum.fromHexString base) ptree
-    (map (Arbnum.fromHexString ## I) (load_elf infile));
+fun add_map f m1 m2 =
+  List.foldl (fn ((k,v), m') => Redblackmap.insert (m', k, f v)) m1
+    (Redblackmap.listItems m2);
+
+type arm_load = patriciaLib.term_ptree * (string, Arbnum.num) Redblackmap.dict;
+
+fun arm_load_from_elf base infile ((ptree,lmap):arm_load) =
+  (arm_load (Arbnum.fromHexString base) ptree
+    (List.map (Arbnum.fromHexString ## I) (load_elf infile)), lmap) : arm_load;
 
 local
-  fun arm_load_from f base x ptree =
-    arm_load (Arbnum.fromHexString base) ptree (f x);
+  fun arm_load_from f base x ((ptree,lmap):arm_load) =
+    let
+      val b = Arbnum.fromHexString base
+      val (code, lmap2) = f x
+    in
+      (arm_load b ptree code,
+       add_map (Lib.curry Arbnum.+ b) lmap lmap2) : arm_load
+    end
 in
+  val arm_load_empty : arm_load =
+        (patriciaLib.empty, Redblackmap.mkDict String.compare)
   val arm_load_from_file   = arm_load_from armLib.arm_assemble_from_file
   val arm_load_from_quote  = arm_load_from armLib.arm_assemble_from_quote
   val arm_load_from_string = arm_load_from armLib.arm_assemble_from_string
@@ -227,9 +241,9 @@ local
   fun print_pc pc = out ["PC:\t\t", hex 8 pc]
 
   fun print_instr instr =
-        let val code as (enc,_,ast) =
+        let val (opc,code as (enc,_,ast)) =
                    case pairSyntax.strip_pair instr
-                   of [a,b,c] => (a,b,c)
+                   of [a,b,c,d] => (a,(b,c,d))
                     | _ => raise ERR "print_instr" ""
             val (m,a) = if term_eq ast arm_astSyntax.Unpredictable_tm then
                           ("Unpredictable","")
@@ -243,7 +257,8 @@ local
                else if term_eq enc armSyntax.Encoding_ThumbEE_tm then
                  "ThumbEE:"
                else
-                 "32-bit Thumb:", "\t", m, " ", a]
+                 "32-bit Thumb:",
+               "\t", stringSyntax.fromHOLstring opc, " ; ", m, " ", a]
         end
 
   fun print_regs (s,s') =
@@ -562,7 +577,7 @@ in
                           (arm_load_from_elf, "converted ")
                         else
                           (arm_load_from_file, "assembled ")
-         val tree = load base infile patriciaLib.empty
+         val tree = fst (load base infile arm_load_empty)
          val _ = output_program outfile tree
        in
          case outfile

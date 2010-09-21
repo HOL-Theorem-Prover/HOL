@@ -1,0 +1,14 @@
+\DOC Induct_on
+
+\TYPE {Induct_on : term -> tactic}
+
+\SYNOPSIS
+Induct on given term.
+
+\DESCRIBE
+{bossLib.Induct_on} is identical to {BasicProvers.Induct_on}.
+
+\SEEALSO
+bossLib.Induct_on.
+
+\ENDDOC

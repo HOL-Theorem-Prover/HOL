@@ -15,7 +15,7 @@ open HolKernel boolLib bossLib Parse wordsLib;
 open arm_coretypesTheory arm_astTheory arm_seq_monadTheory
      arm_decoderTheory arm_opsemTheory armTheory arm_evalTheory;
 
-open emitLib set_emitTheory int_emitTheory rich_list_emitTheory
+open emitLib set_emitTheory int_emitTheory rich_list_emitTheory words_emitTheory
      patricia_emitTheory;
 
 val _ = new_theory "arm_emit";
@@ -79,6 +79,7 @@ val parallel_add_sub_thumb_op2 = Q.prove(
   Cases THEN FULL_SIMP_TAC (srw_ss())
     [parallel_add_sub_thumb_op2_def, LESS_THM, combinTheory.FAIL_THM]);
 
+(* Expand out data_processing_instr wrt ``n2w opc`` *)
 local
   val dp_thm = ONCE_REWRITE_RULE [LET_THM]
                  (fetch "arm_opsem" "data_processing_instr")
@@ -110,32 +111,6 @@ in
         end
 end;
 
-fun REDEX_ALPHA_CONV {redex, residue} t =
-let val v = if is_forall t then fst (dest_forall t) else
-            if is_abs t    then fst (dest_abs t) else T
-in
-  if term_eq v redex andalso not (term_eq redex residue) then
-    GEN_ALPHA_CONV residue t
-  else
-    NO_CONV t
-end;
-
-fun LIST_ALPHA_CONV [] = ALL_CONV
-  | LIST_ALPHA_CONV (h::t) =
-      DEPTH_CONV (REDEX_ALPHA_CONV h) THENC LIST_ALPHA_CONV t;
-
-(*
-fun ENUM_UNIV ty =
-let open pred_setTheory pred_setSyntax
-    val s = mk_set (TypeBase.constructors_of ty)
-    val univ = mk_univ (dest_set_type (type_of s))
-    val tm = mk_eq (univ, s)
-in
-  Tactical.prove(tm,
-    REWRITE_TAC [EXTENSION] THEN Cases THEN SIMP_TAC (srw_ss()) [])
-end;
-*)
-
 val i2bits_itself_def = Define`
   i2bits_itself (i,N,(:'a)) = (i2bits (i,N)) : 'a word`;
 
@@ -166,21 +141,6 @@ val _ = temp_overload_on("w2i", ``integer_word$w2i``);
 fun f x = [QUOTE (trace ("Unicode",0) EmitTeX.datatype_thm_to_string x)]
 
 val n2w_rule = Q.SPEC `n2w m`
-
-val w8_rule  = INST_TYPE [alpha |-> ``:8``]
-val w16_rule = INST_TYPE [alpha |-> ``:16``]
-val w32_rule = INST_TYPE [alpha |-> ``:32``]
-
-fun conjucts_rule f = LIST_CONJ o map (GEN_ALL o f o SPEC_ALL) o CONJUNCTS
-
-val ext_rule = conjucts_rule words_emitTheory.WORDS_EMIT_RULE
-
-val reserved_rule =
-   CONV_RULE (LIST_ALPHA_CONV
-     [``op : parallel_add_sub_op1 # parallel_add_sub_op2`` |->
-      ``opn : parallel_add_sub_op1 # parallel_add_sub_op2``,
-      ``type:SRType`` |-> ``typ:SRType``,
-      ``type:word2`` |-> ``typ:word2``]);
 
 val extension_rule = SIMP_RULE (srw_ss()) [thumb2_support_def];
 
@@ -247,18 +207,18 @@ val _ = emitML (!Globals.emitMLDir) ("arm",
          [Q.ISPEC `FST` COND_RAND, combinTheory.o_THM,
           i2bits_def, signed_sat_def, unsigned_sat_def,
           signed_sat_q_def, unsigned_sat_q_def])
-    [w8_rule integer_wordTheory.i2w_def, i2bits_itself_def,
+    [INST_TYPE [alpha |-> ``:8``] integer_wordTheory.i2w_def, i2bits_itself_def,
      signed_sat_itself_def, unsigned_sat_itself_def,
      signed_sat_q_itself_def, unsigned_sat_q_itself_def] @
   [DEFN data_processing_thumb2_unpredictable_def] @
-  map (DEFN o reserved_rule o int_rule)
+  map (DEFN o int_rule)
    ([IMP_DISJ_THM,
      (* arm_coretypes *)
      n2w_rule (Q.SPEC `n` sign_extend_def), n2w_rule align_def, aligned_def,
      n2w_rule count_leading_zeroes_def,
      n2w_rule lowest_set_bit_compute, SUM, bit_count_upto_def,
-     n2w_rule bit_count_def, ext_rule zero_extend32_def,
-     ext_rule sign_extend32_def, word16_def, word32_def, word64_def,
+     n2w_rule bit_count_def, zero_extend32_def,
+     sign_extend32_def, word16_def, word32_def, word64_def,
      bytes, n2w_rule LSL_C_def, LSR_C_def, n2w_rule ASR_C_def,
      n2w_rule ROR_C_def, RRX_C_def, LSL_def, LSR_def, ASR_def, ROR_def,
      RRX_def, ITAdvance_def, decode_psr_def, encode_psr_def, version_number_def,

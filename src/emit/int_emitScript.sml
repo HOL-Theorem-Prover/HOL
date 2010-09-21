@@ -137,6 +137,27 @@ val _ = eSML "int"
        INT_DIV_EMIT, INT_MOD_EMIT, INT_QUOTE_EMIT, INT_REM_EMIT,
        INT_MAX_def, INT_MIN_def, UINT_MAX_def, i2w_itself, w2i_def])
 
+val _ = eCAML "int"
+ (MLSIGSTRUCT
+    ["type num = NumML.num",
+     "type 'a itself = 'a FcpML.itself",
+     "type 'a word = 'a WordsML.word"]
+   @ EQDATATYPE ([], `int = int_of_num of num | neg_int_of_num of num`)
+  :: MLSIG "val fromString : string -> int"
+  :: MLSTRUCT
+       "let fromString s =\n\
+       \    let s' = String.sub s 0 (String.length s - 1) in\n\
+       \      if String.get s' 0 = '-' then\n\
+       \        let s' = String.sub s' 1 (String.length s' - 1) in\n\
+       \          Neg_int_of_num (NumML._PRE (NumML.fromString s'))\n\
+       \      else\n\
+       \        Int_of_num (NumML.fromString s')\n"
+  :: map DEFN
+      [INT_NEG_EMIT, INT_Num_EMIT,
+       INT_LT_EMIT, INT_LE_CALCULATE, INT_GT_CALCULATE, INT_GE_CALCULATE,
+       INT_ABS, INT_ADD_EMIT, INT_SUB_EMIT, INT_MUL_EMIT, INT_EXP_EMIT,
+       INT_DIV_EMIT, INT_MOD_EMIT, INT_QUOTE_EMIT, INT_REM_EMIT,
+       INT_MAX_def, INT_MIN_def, UINT_MAX_def, i2w_itself, w2i_def])
 
 (*---------------------------------------------------------------------------*)
 (* Remind ML code generator about integer literals and how to take them apart*)

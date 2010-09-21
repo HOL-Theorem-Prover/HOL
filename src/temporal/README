@@ -12,7 +12,7 @@ The theory Temporal_Logic contains the definition of future temporal
 operators and proves some important theorems about these operators
 such as characterisations as fixpoints, invariant laws, and many
 more. The theory Past_Temporal_Logic extends this by the definition
-of past temporal logic operators and sums up with the theorems of 
+of past temporal logic operators and sums up with the theorems of
 the theory Temporal_Logic. Finally, theory Omega_Automata contains
 important theorems about omega-Automata and theorems that are
 necessary to provide a translation of temporal logic to
@@ -40,7 +40,7 @@ is itself applied to the initial point of time, i.e. to "0".  In
 particular, the input term for the conversions TEMP_DEFS_CONV and
 LTL2OMEGA_CONV must not contain free occurences of numeric
 variables! For more details on that, see the comments in the file
-"/src/temporalLib.sml".  
+"/src/temporalLib.sml".
 
 TEMP_DEFS_CONV is an intermediate conversion that you will
 probably never use. It singles out any subformula that starts
@@ -63,23 +63,19 @@ fail and will print out some countermodel. You should use
 conversion TEMP_DEFS_CONV to gather the additional variables
 that appear in the countermodel.
 
-LTL_CONV is just the combination of TEMP_NORMALIZE_CONV, 
+LTL_CONV is just the combination of TEMP_NORMALIZE_CONV,
 LTL2OMEGA_CONV, and SMV_AUTOMATON_CONV. So, given a temporal
 logic formula, LTL_CONV will either prove the validity of that
 formula or it will fail and print out a countermodel that shows
 that the given formula is not valid.
 
 To use SMV_AUTOMATON_CONV and LTL_CONV, you need McMillan's SMV
-system. The source files are included in this distribution; the
-newest releases will be found at http://www.cs/cmu.edu/~modelcheck. A
+system. Please see http://www.cs/cmu.edu/~modelcheck. A
 reworked implementation done by McMillan is also available from
-http://www-cad.eecs.berkeley.edu/~kenmcmil/. To install the system,
-just move to "./smv.2.4.3 and follow the installation instructions
-given there. Normally, you just have to move to "./smv.2.4.3"
-and type "make".
+http://www-cad.eecs.berkeley.edu/~kenmcmil/.
 
 You moreover have to set up the variables "temporalLib.smv_path"
 and "temporalLib.smv_call" before using the conversions. The
 first one contains the path where the executable file of the smv
 system is located, and the second contains a call with suitable
-parameters. 
+parameters.

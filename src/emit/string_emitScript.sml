@@ -64,11 +64,24 @@ val _ = eCAML "string"
    @ OPEN ["list", "option"]
    :: MLSIG "val _CHR : num -> char"
    :: MLSIG "val _ORD : char -> num"
+   :: MLSIG "val string_lt : string -> string -> bool"
+   :: MLSIG "val _IMPLODE : char list -> string"
+   :: MLSIG "val _EXPLODE : string -> char list"
    :: MLSTRUCT "let _CHR n = Char.chr(NumML.int_of_holnum n)"
    :: MLSTRUCT "let _ORD c = NumML.holnum_of_int(Char.code c)"
    :: MLSTRUCT "let _STRING c s = String.concat \"\" [Char.escaped c; s]"
-   :: MLSTRUCT "let _DEST_STRING s = if s = \"\" then None \n\
+   :: MLSTRUCT "let _DEST_STRING s = if s = \"\" then None\n\
     \          else Some(String.get s 0,String.sub s 1 (String.length s - 1))"
+   :: MLSTRUCT "let string_lt a b = String.compare a b < 0"
+   :: MLSTRUCT "let _IMPLODE l =\n\
+    \     let s = String.create (List.length l) in\n\
+    \     let _ = List.fold_left\n\
+    \               (function n -> function c ->\
+    \ (String.set s n c; n + 1)) 0 l in s"
+   :: MLSTRUCT "let _EXPLODE s =\n\
+    \     Rich_listML._GENLIST\n\
+    \        (function n -> String.get s (NumML.int_of_holnum n))\n\
+    \        (NumML.holnum_of_int (String.length s))"
    :: map DEFN [char_size_def, isLower_def, isUpper_def, isDigit_def,
         isAlpha_def, isHexDigit_def, isAlphaNum_def, isPrint_def, isSpace_def,
         isGraph_def, isPunct_def, isAscii_def, isCntrl_def,

@@ -424,10 +424,10 @@ val int_sort = sort (curry (op <= :int*int->bool))
 (*---------------------------------------------------------------------------*)
 
 fun topsort R =
- let fun preds_of y x = R x y
+ let fun pred_of y x = R x y
    fun deps [] front acc = acc
      | deps (h::t) front acc =
-        let val hpreds = filter (preds_of h) (front @ t)
+        let val hpreds = filter (pred_of h) (front @ t)
         in deps t (h::front) ((h,hpreds)::acc)
         end
    fun loop [] = []

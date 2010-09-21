@@ -653,9 +653,11 @@ fun args_env args =
 (* alpha-equivalent to the source program.                                   *)
 (*---------------------------------------------------------------------------*)
 
+(*
 fun preset_regs tm =
  let fun find tm acc =
       if is_let tm
+*)
 
 fun reg_alloc def =
  let

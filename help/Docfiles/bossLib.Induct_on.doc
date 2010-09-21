@@ -9,7 +9,7 @@ Performs structural induction, using the type of the given term.
 tactic, induction
 
 \LIBRARY
-SingleStep.
+BasicProvers
 
 \DESCRIBE
 Given a term {M}, {Induct_on} attempts to perform an induction based on

@@ -1,12 +1,14 @@
-fun load_path_add x = loadPath := !loadPath @ [concat Globals.HOLDIR x];
-load_path_add "/examples/mc-logic";
+fun load_path_add x = loadPath := !loadPath @ [concat [Globals.HOLDIR,x]];
+load_path_add "/examples/dev/sw2";
+load_path_add "/examples/machine-code/compiler";
+load_path_add "/examples/machine-code/decompiler";
+load_path_add "/examples/machine-code/hoare-triple";
+load_path_add "/examples/machine-code/instruction-set-models";
 load_path_add "/examples/ARM/v4";
 load_path_add "/tools/mlyacc/mlyacclib";
-load_path_add "/tools/examples/dev/sw2";
 
 quietdec := true;
-loadPath := HOLDIR^"/examples/dev/sw2/" :: !loadPath;
-app load ["arm_compilerLib", "regAlloc", "closure", "inline"];
+app load ["compilerLib", "regAlloc", "closure", "inline"];
 open arm_compilerLib;
 open Normal inline closure regAlloc NormalTheory;
 open wordsSyntax numSyntax pairSyntax;

@@ -2,7 +2,7 @@ structure binderLib :> binderLib =
 struct
 
 open HolKernel Parse boolLib
-open BasicProvers SingleStep simpLib
+open BasicProvers simpLib
 
 local open pred_setTheory in end
 

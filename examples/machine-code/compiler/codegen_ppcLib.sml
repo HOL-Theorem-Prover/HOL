@@ -19,9 +19,9 @@ val ppc_assign2assembly = let
     else
       ["addis " ^ int_to_string d ^ ", 0, " ^ Arbnum.toString (Arbnum.div(i,Arbnum.fromInt 65536))] @
       ["ori " ^ int_to_string d ^ ", " ^ int_to_string d ^ ", " ^ Arbnum.toString (Arbnum.mod(i,Arbnum.fromInt 65536))]
-  fun address (ASSIGN_ADDRESS_REG i) = "0," ^ r i
-    | address (ASSIGN_ADDRESS_OFFSET_ADD (d,i)) = Arbnum.toString i ^ "," ^ r d
-    | address (ASSIGN_ADDRESS_OFFSET_SUB (d,i)) = "-" ^ Arbnum.toString i ^ "," ^ r d
+  fun address (ASSIGN_ADDRESS_REG i) = "0(" ^ r i ^ ")"
+    | address (ASSIGN_ADDRESS_OFFSET_ADD (d,i)) = Arbnum.toString i ^ "(" ^ r d ^ ")"
+    | address (ASSIGN_ADDRESS_OFFSET_SUB (d,i)) = "-" ^ Arbnum.toString i ^ "(" ^ r d ^ ")"
   fun binop_to_name ASSIGN_BINOP_ADD = ("add","addi")
     | binop_to_name ASSIGN_BINOP_SUB = ("subfc","__nothing__")
     | binop_to_name ASSIGN_BINOP_MUL = ("mullw","mulli")

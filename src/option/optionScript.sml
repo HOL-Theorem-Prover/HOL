@@ -421,6 +421,7 @@ val OPTREL_MONO = store_thm(
   "OPTREL_MONO",
   ``(!x:'a y:'b. P x y ==> Q x y) ==> (OPTREL P x y ==> OPTREL Q x y)``,
   BasicProvers.SRW_TAC [][OPTREL_def] THEN BasicProvers.SRW_TAC [][SOME_11]);
+val _ = IndDefLib.export_mono "OPTREL_MONO"
 
 val option_case_cong =
   save_thm("option_case_cong",

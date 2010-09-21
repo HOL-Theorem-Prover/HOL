@@ -21,7 +21,7 @@ struct
 
 local open operatorTheory listTheory in end;
 
-open HolKernel Parse boolLib numLib Prim_rec SingleStep simpLib boolSimps;
+open HolKernel Parse boolLib numLib Prim_rec simpLib boolSimps;
 
 infix THEN THENL ORELSE;
 

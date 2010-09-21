@@ -2,11 +2,11 @@ structure dividesScript =
 struct
 
 open HolKernel Parse boolLib simpLib BasicProvers
-     prim_recTheory arithmeticTheory boolSimps SingleStep
+     prim_recTheory arithmeticTheory boolSimps
      metisLib numLib;
 
 val CALC = EQT_ELIM o reduceLib.REDUCE_CONV;
-val ARITH_TAC   = CONV_TAC Arith.ARITH_CONV;
+val ARITH_TAC = CONV_TAC Arith.ARITH_CONV;
 val DECIDE = EQT_ELIM o Arith.ARITH_CONV;
 
 val arith_ss = numLib.arith_ss;

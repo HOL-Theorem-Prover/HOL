@@ -38,7 +38,14 @@ fun dest_triop p e M =
   in (x,y,z)
   end;
 
-local fun dest M = let val (c,Rand) = dest_comb M in (c,dest_abs Rand) end
+(*---------------------------------------------------------------------------*)
+(* Take a binder apart. Fails on paired binders.                             *)
+(*---------------------------------------------------------------------------*)
+
+local 
+  fun dest M = 
+    let val (c,Rand) = dest_comb M 
+    in (c,dest_abs Rand) end
 in
 fun dest_binder c e M =
   let val (c1,p) = with_exn dest M e

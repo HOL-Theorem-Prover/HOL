@@ -44,6 +44,433 @@ end; (* local *)
 
 
 (*---------------------------------------------------------------------------*
+ * A simple aid to reasoning by contradiction.                               *
+ *---------------------------------------------------------------------------*)
+
+fun SPOSE_NOT_THEN ttac =
+  CCONTR_TAC THEN
+  POP_ASSUM (fn th => ttac (simpLib.SIMP_RULE boolSimps.bool_ss
+                                     [GSYM boolTheory.IMP_DISJ_THM] th))
+
+(*===========================================================================*)
+(* Case analysis and induction tools that index the TypeBase.                *)
+(*===========================================================================*)
+
+fun name_eq s M = ((s = fst(dest_var M)) handle HOL_ERR _ => false)
+
+(*---------------------------------------------------------------------------*
+ * Mildly altered STRUCT_CASES_TAC, so that it does a SUBST_ALL_TAC instead  *
+ * of a SUBST1_TAC.                                                          *
+ *---------------------------------------------------------------------------*)
+
+val VAR_INTRO_TAC = REPEAT_TCL STRIP_THM_THEN
+                      (fn th => SUBST_ALL_TAC th ORELSE ASSUME_TAC th);
+
+val TERM_INTRO_TAC =
+ REPEAT_TCL STRIP_THM_THEN
+     (fn th => TRY (SUBST_ALL_TAC th) THEN ASSUME_TAC th);
+
+fun away gfrees0 bvlist =
+  rev(fst
+    (rev_itlist (fn v => fn (plist,gfrees) =>
+       let val v' = prim_variant gfrees v
+       in ((v,v')::plist, v'::gfrees)
+       end) bvlist ([], gfrees0)));
+
+(*---------------------------------------------------------------------------*)
+(* Make free whatever bound variables would prohibit the case split          *)
+(* or induction. This is not trivial, since the act of freeing up a variable *)
+(* can change its name (if another with same name already occurs free in     *)
+(* hypotheses). Then the term being split (or inducted) on needs to be       *)
+(* renamed as well.                                                          *)
+(*---------------------------------------------------------------------------*)
+
+fun FREEUP [] M g = (ALL_TAC,M)
+  | FREEUP tofree M (g as (asl,w)) =
+     let val (V,_) = strip_forall w   (* ignore renaming here : idleness! *)
+         val Vmap = away (free_varsl (w::asl)) V
+         val theta = gather (fn (v,_) => mem v tofree) Vmap
+         val rebind = map snd (gather (fn (v,_) => not (mem v tofree)) Vmap)
+     in
+       ((MAP_EVERY X_GEN_TAC (map snd Vmap)
+          THEN MAP_EVERY ID_SPEC_TAC (rev rebind)),
+        subst (map op|-> theta) M)
+     end;
+
+(*---------------------------------------------------------------------------*)
+(* Do case analysis on given term. The quotation is parsed into a term M that*)
+(* must match a subterm in the goal (or the assumptions). If M is a variable,*)
+(* then the match of the names must be exact. Once the term to split over is *)
+(* known, its type and the associated facts are obtained and used to do the  *)
+(* split with. Variables of M might be quantified in the goal. If so, we try *)
+(* to unquantify the goal so that the case split has meaning.                *)
+(*                                                                           *)
+(* It can happen that the given term is not found anywhere in the goal. If   *)
+(* the term is boolean, we do a case-split on whether it is true or false.   *)
+(*---------------------------------------------------------------------------*)
+
+datatype tmkind
+    = Free of term
+    | Bound of term list * term  (* in Bound(V,M), V = vars to be freed up *)
+    | Alien of term;
+
+fun tmkind_tyof (Free M)      = type_of M
+  | tmkind_tyof (Bound (_,M)) = type_of M
+  | tmkind_tyof (Alien M)     = type_of M
+
+fun prim_find_subterm FVs tm (asl,w) =
+ if is_var tm
+ then let val name = fst(dest_var tm)
+      in Free (Lib.first(name_eq name) FVs)
+         handle HOL_ERR _
+         => Bound(let val (BV,_) = strip_forall w
+                      val v = Lib.first (name_eq name) BV
+                  in ([v], v)
+                  end)
+      end
+ else if List.exists (free_in tm) (w::asl) then Free tm
+ else let val (V,body) = strip_forall w
+      in if free_in tm body
+          then Bound(intersect (free_vars tm) V, tm)
+          else Alien tm
+      end
+
+fun find_subterm qtm (g as (asl,w)) =
+  let val FVs = free_varsl (w::asl)
+      val tm = Parse.parse_in_context FVs qtm
+  in
+    prim_find_subterm FVs tm g
+  end;
+
+
+fun primCases_on st (g as (_,w)) =
+ let val ty = tmkind_tyof st
+     val {Thy,Tyop,...} = dest_thy_type ty
+ in case TypeBase.fetch ty
+     of SOME facts =>
+        let val thm = TypeBasePure.nchotomy_of facts
+        in case st
+           of Free M =>
+               if (is_var M) then VAR_INTRO_TAC (ISPEC M thm) else
+               if ty=bool then ASM_CASES_TAC M
+               else TERM_INTRO_TAC (ISPEC M thm)
+            | Bound(V,M) => let val (tac,M') = FREEUP V M g
+                            in (tac THEN VAR_INTRO_TAC (ISPEC M' thm)) end
+            | Alien M    => if ty=bool then ASM_CASES_TAC M
+                            else TERM_INTRO_TAC (ISPEC M thm)
+        end
+      | NONE => raise ERR "primCases_on"
+                ("No cases theorem found for type: "^Lib.quote (Thy^"$"^Tyop))
+ end g;
+
+fun Cases_on qtm g = primCases_on (find_subterm qtm g) g
+  handle e => raise wrap_exn "BasicProvers" "Cases_on" e;
+
+fun Cases (g as (_,w)) =
+  let val (Bvar,_) = with_exn dest_forall w (ERR "Cases" "not a forall")
+  in primCases_on (Bound([Bvar],Bvar)) g
+  end
+  handle e => raise wrap_exn "BasicProvers" "Cases" e;
+
+fun primInduct st ind_tac (g as (asl,c)) =
+ let fun ind_non_var V M =
+       let val (tac,M') = FREEUP V M g
+           val Mfrees = free_vars M'
+           fun has_vars tm = not(null_intersection (free_vars tm) Mfrees)
+           val tms = filter has_vars asl
+           val newvar = variant (free_varsl (c::asl))
+                                (mk_var("v",type_of M'))
+           val tm = mk_exists(newvar, mk_eq(newvar, M'))
+           val th = EXISTS(tm,M') (REFL M')
+        in
+          tac
+            THEN MAP_EVERY UNDISCH_TAC tms
+            THEN CHOOSE_THEN MP_TAC th
+            THEN MAP_EVERY ID_SPEC_TAC Mfrees
+            THEN ID_SPEC_TAC newvar
+            THEN ind_tac
+        end
+ in case st
+     of Free M =>
+         if is_var M
+         then let val tms = filter (free_in M) asl
+              in (MAP_EVERY UNDISCH_TAC tms THEN ID_SPEC_TAC M THEN ind_tac) g
+              end
+         else ind_non_var [] M g
+      | Bound(V,M) =>
+         if is_var M
+           then let val (tac,M') = FREEUP V M g
+                in (tac THEN ID_SPEC_TAC M' THEN ind_tac) g
+                end
+         else ind_non_var V M g
+      | Alien M =>
+         if is_var M then raise ERR "primInduct" "Alien variable"
+         else ind_non_var (free_vars M) M g
+ end
+
+val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl;
+
+fun induct_on_type st ty g = let
+  val {Thy,Tyop,...} =
+         with_exn dest_thy_type ty
+                  (ERR "induct_on_type"
+                       "No induction theorems available for variable types")
+in
+  case TypeBase.read {Thy=Thy,Tyop=Tyop} of
+    SOME facts => let
+      val thm = TypeBasePure.induction_of facts
+    in
+      if is_mutind_thm thm then Mutual.MUTUAL_INDUCT_TAC thm
+      else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
+    end
+  | NONE => raise ERR "induct_on_type"
+                      ("No induction theorem found for type: "^Lib.quote Tyop)
+end g
+
+val is_fun_ty = can dom_rng
+fun rule_induct indth = HO_MATCH_MP_TAC indth
+
+fun Induct_on qtm g = let
+  val st = find_subterm qtm g
+  val ty = tmkind_tyof st
+  val (_, rngty) = strip_fun ty
+in
+  if rngty = Type.bool then let
+      val tm = case st of Free t => t | Alien t => t | Bound (_, t) => t
+      val (c, _) = strip_comb tm
+    in
+      case Lib.total dest_thy_const c of
+        SOME {Thy,Name,...} => let
+          val crec = {Thy=Thy,Name=Name}
+          val rules = Binarymap.find(IndDefLib.rule_induction_map(), crec)
+                      handle NotFound => []
+        in
+          MAP_FIRST rule_induct rules ORELSE
+          induct_on_type st ty
+        end g
+      | NONE => induct_on_type st ty g
+    end
+  else
+    induct_on_type st ty g
+end
+    handle e => raise wrap_exn "SingleStep" "Induct_on" e
+
+fun grab_var M =
+  if is_forall M then fst(dest_forall M) else
+  if is_conj M then fst(dest_forall(fst(dest_conj M)))
+  else raise ERR "Induct" "expected a forall or a conjunction of foralls";
+
+fun Induct (g as (_,w)) =
+ let val v = grab_var w
+     val (_,ty) = dest_var (grab_var w)
+ in induct_on_type (Bound([v],v)) ty g
+ end
+ handle e => raise wrap_exn "BasicProvers" "Induct" e
+
+(*---------------------------------------------------------------------------
+     Assertional style reasoning
+ ---------------------------------------------------------------------------*)
+
+fun chop_at n frontacc l =
+  if n <= 0 then (List.rev frontacc, l)
+  else
+    case l of
+      [] => raise Fail "chop_at"
+    | (h::t) => chop_at (n-1) (h::frontacc) t
+
+infix THEN1
+fun ((tac1:tactic) THEN1 (tac2:tactic)) (asl:term list,w:term) = let
+  val (subgoals, vf) = tac1 (asl,w)
+in
+  case subgoals of
+    [] => ([], vf)
+  | (h::hs) => let
+      val (sgoals2, vf2) = tac2 h
+    in
+      (sgoals2 @ hs,
+       (fn thmlist => let
+          val (firstn, back) = chop_at (length sgoals2) [] thmlist
+        in
+          vf (vf2 firstn :: back)
+       end))
+    end
+end
+
+fun eqTRANS new old = let
+  (* allow for possibility that old might be labelled *)
+  open markerLib markerSyntax
+  val s = #1 (dest_label (concl old))
+in
+  ASSUME_NAMED_TAC s (TRANS (DEST_LABEL old) new)
+end handle HOL_ERR _ => ASSUME_TAC (TRANS old new)
+
+fun is_labeq t = (* term is a possibly labelled equality *)
+ let open markerSyntax
+ in is_eq t orelse is_label t andalso is_eq (#2 (dest_label t))
+ end;
+
+fun labrhs t = (* term is a possibly labelled equality *)
+ let open markerSyntax
+ in if is_eq t then rhs t else rhs (#2 (dest_label t))
+ end;
+
+fun (q by tac) (g as (asl,w)) = let
+  val Absyn = Parse.Absyn
+  val a = Absyn q
+  val (goal_pt, finisher) =
+      case Lib.total Absyn.dest_eq a of
+        SOME (Absyn.IDENT(_,"_"), r) =>
+        if not (null asl) andalso is_labeq (hd asl) then
+          (Parse.absyn_to_preterm
+             (Absyn.mk_eq(Absyn.mk_AQ (labrhs (hd asl)), r)),
+           POP_ASSUM o eqTRANS)
+        else
+          raise ERR "by" "Top assumption must be an equality"
+      | x => (Parse.absyn_to_preterm a, STRIP_ASSUME_TAC)
+  val tm = Parse.parse_preterm_in_context (free_varsl (w::asl)) goal_pt
+in
+  SUBGOAL_THEN tm finisher THEN1 tac
+end (asl, w)
+
+infix on
+fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
+  (fn (g as (asl:term list, w:term)) => let
+    val tm = Parse.parse_in_context (free_varsl (w::asl)) q
+  in
+    (SUBGOAL_THEN tm ttac THEN1 tac) g
+  end)
+
+(*===========================================================================*)
+(*  General-purpose case-splitting tactics.                                  *)
+(*===========================================================================*)
+
+fun case_find_subterm p =
+  let
+    val f = find_term p
+    fun g t =
+      if is_comb t then
+        g (f (rator t))
+        handle HOL_ERR _ => (g (f (rand t)) handle HOL_ERR _ => t)
+      else if is_abs t then
+        g (f (body t)) handle HOL_ERR _ => t
+      else t
+  in
+    fn t => g (f t)
+  end;
+
+fun first_term f tm = f (find_term (can f) tm);
+
+fun first_subterm f tm = f (case_find_subterm (can f) tm);
+
+(*---------------------------------------------------------------------------*)
+(* If tm is a fully applied conditional or case expression and the           *)
+(* scrutinized subterm of tm is free, return the scrutinized subterm.        *)
+(* Otherwise raise an exception.                                             *)
+(*---------------------------------------------------------------------------*)
+
+fun scrutinized_and_free_in tm =
+ let fun free_case t =
+        let val (_, a) = dest_comb t
+        in if TypeBase.is_case t andalso free_in a tm 
+              then a else raise ERR "free_case" ""
+        end
+
+     fun free_cond t =
+        let val (a, _, _) = dest_cond t
+        in if free_in a tm then a else raise ERR "free_cond" ""
+        end
+ in
+    fn t => free_case t handle HOL_ERR _ => free_cond t
+ end;
+
+fun PURE_TOP_CASE_TAC (g as (_, tm)) =
+ let val t = first_term (scrutinized_and_free_in tm) tm 
+ in Cases_on `^t` end g;
+
+fun PURE_CASE_TAC (g as (_, tm)) =
+ let val t = first_subterm (scrutinized_and_free_in tm) tm 
+ in Cases_on `^t` end g;
+
+fun PURE_FULL_CASE_TAC (g as (asl,w)) =
+ let val tm = list_mk_conj(w::asl)
+     val t = first_subterm (scrutinized_and_free_in tm) tm
+ in Cases_on `^t` end g;
+
+local
+  fun tot f x = f x handle HOL_ERR _ => NONE
+in
+fun case_rws tyi =
+    List.mapPartial I
+       [Lib.total TypeBasePure.case_def_of tyi,
+        tot TypeBasePure.distinct_of tyi,
+        tot TypeBasePure.one_one_of tyi]
+
+fun case_rwlist () =
+ itlist (fn tyi => fn rws => case_rws tyi @ rws) 
+        (TypeBase.elts()) [];
+
+fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV boolSimps.bool_ss rws
+
+fun CASE_SIMP_CONV tm = PURE_CASE_SIMP_CONV (case_rwlist()) tm
+end;
+
+(*---------------------------------------------------------------------------*)
+(* Q: what should CASE_TAC do with literal case expressions?                 *)
+(*---------------------------------------------------------------------------*)
+
+fun is_refl tm = 
+ let val (l,r) = dest_eq tm
+ in aconv l r
+ end handle HOL_ERR _ => false;
+
+val TOSS_REFL_ASSUM = 
+  TRY (WEAKEN_TAC is_refl) THEN ASM_REWRITE_TAC[]
+
+(*---------------------------------------------------------------------------*)
+(* Do a case analysis in the conclusion of the goal, then simplify a bit.    *)
+(*---------------------------------------------------------------------------*)
+
+val CASE_TAC = 
+  PURE_CASE_TAC THEN TOSS_REFL_ASSUM THEN CONV_TAC CASE_SIMP_CONV;
+
+val TOP_CASE_TAC =
+  PURE_TOP_CASE_TAC THEN TOSS_REFL_ASSUM THEN CONV_TAC CASE_SIMP_CONV;
+
+   
+(*---------------------------------------------------------------------------*)
+(* Do a case analysis anywhere in the goal, then simplify a bit.             *)
+(*---------------------------------------------------------------------------*)
+
+fun FULL_CASE_TAC goal =
+ let val rws = case_rwlist()
+     val case_conv = PURE_CASE_SIMP_CONV rws
+     val asm_rule = Rewrite.REWRITE_RULE rws
+ in PURE_FULL_CASE_TAC THEN TOSS_REFL_ASSUM
+    THEN RULE_ASSUM_TAC asm_rule
+    THEN CONV_TAC case_conv
+ end goal;
+
+(*---------------------------------------------------------------------------*)
+(* Repeatedly do a case analysis anywhere in the goal. Avoids re-computing   *)
+(* case info from the TypeBase each time around the loop, so more efficient  *)
+(* than REPEAT FULL_CASE_TAC.                                                *)
+(*---------------------------------------------------------------------------*)
+
+fun EVERY_CASE_TAC goal = 
+ let val rws = case_rwlist()
+     val case_conv = PURE_CASE_SIMP_CONV rws
+     val asm_rule = Rewrite.REWRITE_RULE rws
+     val tac = PURE_FULL_CASE_TAC THEN TOSS_REFL_ASSUM THEN
+               RULE_ASSUM_TAC asm_rule THEN 
+               CONV_TAC case_conv
+ in REPEAT tac
+ end goal;
+ 
+(*===========================================================================*)
+(* Rewriters                                                                 *)
+(*===========================================================================*)
+
+(*---------------------------------------------------------------------------*
  * When invoked, we know that th is an equality, at least one side of which  *
  * is a variable.                                                            *
  *---------------------------------------------------------------------------*)
@@ -241,10 +668,9 @@ fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
 fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
 
 fun mkCSET () =
- let val CSET =
-         ref (HOLset.empty (inv_img_cmp (fn {Thy,Name,Ty} =>(Thy,Name))
-                                        (pair_compare(String.compare,
-                                                      String.compare))))
+ let val CSET = ref (HOLset.empty
+                      (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
+                              (pair_compare(String.compare,String.compare))))
      fun inCSET t = HOLset.member(!CSET, dest_thy_const t)
      fun addCSET c = (CSET := HOLset.add(!CSET, dest_thy_const c))
      val _ = List.app
@@ -321,16 +747,17 @@ fun PRIM_STP_TAC ss finisher =
  ---------------------------------------------------------------------------*)
 
 fun splittable w =
- Lib.can (find_term (fn tm => is_cond tm andalso free_in tm w)) w;
+ Lib.can (find_term (fn tm => (is_cond tm orelse TypeBase.is_case tm)
+                              andalso free_in tm w)) w;
 
 fun LIFT_SPLIT_SIMP ss simp tm =
    UNDISCH_THEN tm
      (fn th => MP_TAC (simpLib.SIMP_RULE ss [] th)
-                 THEN IF_CASES_TAC
+                 THEN CASE_TAC
                  THEN simp
                  THEN REPEAT BOSS_STRIP_TAC);
 
-fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
+fun SPLIT_SIMP simp = TRY (IF_CASES_TAC ORELSE CASE_TAC) THEN simp ;
 
 fun PRIM_NORM_TAC ss =
  let val has_constr_eqn = mkCSET()
@@ -469,5 +896,6 @@ in
   augment_srw_ss [simpLib.named_rewrites (current_theory()) thms];
   write_data_update {thydataty = "simp", data = data}
 end
+
 
 end

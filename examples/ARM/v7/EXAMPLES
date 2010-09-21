@@ -73,7 +73,7 @@ val it =
    thumb_decode <IT value> <hex>
    ------------------------------------------------------------------------ *)
 
-val it = thumb_decode 0 "F000E800";
+val it = thumb_decode 0 "F000 E800";
 
 (* expected output:
 
@@ -103,7 +103,7 @@ val it = arm_disassemble
 
 (* expected output:
 
-val it = ("add", "r1,r1,r2") : string * string
+val it = ("add", "r1, r1, r2") : string * string
 
 The first string is always the instruction mnemonic and the second is any
 arguments, which may be "".
@@ -128,7 +128,7 @@ val it = arm_disassemble_decode "E0811002";
 
 (* expected output:
 
-val it = "add r1,r1,r2" : string
+val it = "add r1, r1, r2" : string
 *)
 
 (* ------------------------------------------------------------------------
@@ -136,7 +136,7 @@ val it = "add r1,r1,r2" : string
    thumb_disassemble_decode <IT value> <hex>
    ------------------------------------------------------------------------ *)
 
-val it = thumb_disassemble_decode 0 "F000E800";
+val it = thumb_disassemble_decode 0 "F000 E800";
 
 (* expected output:
 
@@ -153,30 +153,33 @@ val it = "blx +#4" : string
 (* ======================================================================== *)
 
 (* ------------------------------------------------------------------------
-   arm_assemble_from_file : string -> (num * string) list
+   arm_assemble_from_file : string ->
+                            (num * string) list * (string, num) Redblackmap.dict
    arm_assemble_from_file <filename>
    ------------------------------------------------------------------------ *)
 
-val it = arm_assemble_from_file "example.s";
+val (l,_) = arm_assemble_from_file "example.s";
 
 (* expected output:
 
-val it =
+val l =
    [(0, "F000E800"), (4, "04921004"), (8, "E0811002"),
     (12, "0000FEED 00000ACE")] : (num * string) list
 
 The elements are:
  - the relative byte position and
  - the HEX encoding.
+The Redblackmap maps labels to relative address
 
 *)
 
 (* ------------------------------------------------------------------------
-   arm_assemble_from_quote : string frag list -> (num * string) list
+   arm_assemble_from_quote : string frag list ->
+                            (num * string) list * (string, num) Redblackmap.dict
    arm_assemble_from_quote <quotation>
    ------------------------------------------------------------------------ *)
 
-val it = arm_assemble_from_quote
+val (l,_) = arm_assemble_from_quote
 `	ARCH	armv5te
 
 	THUMB
@@ -193,18 +196,19 @@ label:
 
 (* expected output:
 
-val it =
+val l =
    [(0, "F000E800"), (4, "04921004"), (8, "E0811002"),
     (12, "0000FEED 00000ACE")] : (num * string) list
 
 *)
 
 (* ------------------------------------------------------------------------
-   arm_assemble_from_string : string -> (num * string) list
+   arm_assemble_from_string : string ->
+                            (num * string) list * (string, num) Redblackmap.dict
    arm_assemble_from_string <string>
    ------------------------------------------------------------------------ *)
 
-val it = arm_assemble_from_string
+val (l,_) = arm_assemble_from_string
 "\tARCH\tarmv5te\n\
 \\tTHUMB\n\
 \\n\
@@ -220,7 +224,7 @@ val it = arm_assemble_from_string
 
 (* expected output:
 
-val it =
+val l =
    [(0, "F000E800"), (4, "04921004"), (8, "E0811002"),
     (12, "0000FEED 00000ACE")] : (num * string) list
 
@@ -236,8 +240,8 @@ val _ = print_arm_assemble_from_file "1a" "example.s";
 (* expected output:
 
     001a F000E800		; blx     +#4
-    001e 04921004		; ldreq   r1,[r2],#4
-    0022 E0811002		; add     r1,r1,r2
+    001e 04921004		; ldreq   r1, [r2], #4
+    0022 E0811002		; add     r1, r1, r2
     0026 0000FEED 00000ACE
 
 *)
@@ -271,8 +275,8 @@ label:	ldreq	r1,[r2],#4
 (* expected output:
 
     001a F000E800		; blx     +#4
-    001e 04921004		; ldreq   r1,[r2],#4
-    0022 E0811002		; add     r1,r1,r2
+    001e 04921004		; ldreq   r1, [r2], #4
+    0022 E0811002		; add     r1, r1, r2
     0026 0000FEED 00000ACE
 
 *)
@@ -294,8 +298,8 @@ val _ = print_arm_assemble_from_string "1a"
 (* expected output:
 
     001a F000E800		; blx     +#4
-    001e 04921004		; ldreq   r1,[r2],#4
-    0022 E0811002		; add     r1,r1,r2
+    001e 04921004		; ldreq   r1, [r2], #4
+    0022 E0811002		; add     r1, r1, r2
     0026 0000FEED 00000ACE
 
 *)
@@ -311,8 +315,8 @@ val _ = arm_assemble_to_file_from_file "4" "example.out" "example.s";
 
 $ cat example.out
     0004 F000E800               ; blx     +#4
-    0008 04921004               ; ldreq   r1,[r2],#4
-    000c E0811002               ; add     r1,r1,r2
+    0008 04921004               ; ldreq   r1, [r2], #4
+    000c E0811002               ; add     r1, r1, r2
     0010 0000FEED 00000ACE
 
 *)
@@ -336,8 +340,8 @@ label:	ldreq	r1,[r2],#4
 
 $ cat example.out2
     0004 F000E800               ; blx     +#4
-    0008 04921004               ; ldreq   r1,[r2],#4
-    000c E0811002               ; add     r1,r1,r2
+    0008 04921004               ; ldreq   r1, [r2], #4
+    000c E0811002               ; add     r1, r1, r2
     0010 0000FEED 00000ACE
 
 *)
@@ -360,8 +364,8 @@ val _ = arm_assemble_to_file_from_string "4" "example.out3"
 
 $ cat example.out3
     0004 F000E800               ; blx     +#4
-    0008 04921004               ; ldreq   r1,[r2],#4
-    000c E0811002               ; add     r1,r1,r2
+    0008 04921004               ; ldreq   r1, [r2], #4
+    000c E0811002               ; add     r1, r1, r2
     0010 0000FEED 00000ACE
 
 *)
@@ -375,15 +379,16 @@ $ cat example.out3
 (* ======================================================================== *)
 
 (* ------------------------------------------------------------------------
-   arm_parse_from_file : string -> (num * arm_code) list
+   arm_parse_from_file : string ->
+                         (num * string) list * (string, num) Redblackmap.dict
    arm_parse_from_file <filename>
    ------------------------------------------------------------------------ *)
 
-val it = arm_parse_from_file "example.s";
+val (l,_) = arm_parse_from_file "example.s";
 
 (* expected output:
 
-val it =
+val l =
   [(0,
     Instruction(``Encoding_Thumb2``, ``14w``,
                 ``Branch (Branch_Link_Exchange_Immediate F T 0w)``)),
@@ -399,11 +404,12 @@ val it =
 *)
 
 (* ------------------------------------------------------------------------
-   arm_parse_from_quote : string frag list -> (num * arm_code) list
+   arm_parse_from_quote : string frag list ->
+                          (num * string) list * (string, num) Redblackmap.dict
    arm_parse_from_quote <quotation>
    ------------------------------------------------------------------------ *)
 
-val _ = arm_parse_from_quote
+val (l,_) = arm_parse_from_quote
 `	ARCH	armv5te
 	THUMB
 	blx	label
@@ -414,7 +420,7 @@ label:	ldreq	r1,[r2],#4
 
 (* expected output:
 
-val it =
+val l =
   [(0,
     Instruction(``Encoding_Thumb2``, ``14w``,
                 ``Branch (Branch_Link_Exchange_Immediate F T 0w)``)),
@@ -430,11 +436,12 @@ val it =
 *)
 
 (* ------------------------------------------------------------------------
-   arm_parse_from_string : string -> (num * arm_code) list
+   arm_parse_from_string : string ->
+                           (num * string) list * (string, num) Redblackmap.dict
    arm_parse_from_string <string>
    ------------------------------------------------------------------------ *)
 
-val _ = arm_parse_from_string
+val (l,_) = arm_parse_from_string
 "\tARCH\tarmv5te\n\
 \\tTHUMB\n\
 \\tblx\tlabel\n\
@@ -445,7 +452,7 @@ val _ = arm_parse_from_string
 
 (* expected output:
 
-val it =
+val l =
   [(0,
     Instruction(``Encoding_Thumb2``, ``14w``,
                 ``Branch (Branch_Link_Exchange_Immediate F T 0w)``)),
@@ -479,57 +486,63 @@ val it = arm_step "v4T,fiq,big-endian,pass,arm" "E0811002";
 (* expected output:
 
 val it =
-    |- !state.
-         (ARM_ARCH state = ARMv4T) /\ (ARM_EXTENSIONS state = {}) /\
-         ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
-         ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR cV state /\
-         ARM_READ_SCTLR cA state /\ ~ARM_READ_SCTLR cU state /\
-         (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS sJ state /\
-         ~ARM_READ_STATUS sT state /\ ARM_READ_STATUS sE state /\
-         (ARM_MODE state = 17w) /\ aligned (ARM_READ_REG 15w state,4) /\
-         (ARM_READ_MEM (ARM_READ_REG 15w state + 3w) state = SOME 2w) /\
-         (ARM_READ_MEM (ARM_READ_REG 15w state + 2w) state = SOME 16w) /\
-         (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = SOME 129w) /\
-         (ARM_READ_MEM (ARM_READ_REG 15w state) state = SOME 224w) ==>
-         (ARM_NEXT state =
-          SOME
-            (ARM_WRITE_REG 1w
-               (ARM_READ_REG 1w state + ARM_READ_REG 2w state)
-               (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 4w) state))) : thm
+   |- !state.
+     (ARM_ARCH state = ARMv4T) /\ (ARM_EXTENSIONS state = {}) /\
+     ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
+     ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR sctlrV state /\
+     ARM_READ_SCTLR sctlrA state /\ ~ARM_READ_SCTLR sctlrU state /\
+     ~ARM_READ_STATUS psrJ state /\ ~ARM_READ_STATUS psrT state /\
+     ARM_READ_STATUS psrE state /\ (ARM_MODE state = 17w) /\
+     aligned (ARM_READ_REG 15w state,4) /\
+     (ARM_READ_MEM (ARM_READ_REG 15w state + 3w) state = 2w) /\
+     (ARM_READ_MEM (ARM_READ_REG 15w state + 2w) state = 16w) /\
+     (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = 129w) /\
+     (ARM_READ_MEM (ARM_READ_REG 15w state) state = 224w) ==>
+     (ARM_NEXT NoInterrupt state =
+      SOME
+        (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state + 3w)
+           (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state + 2w)
+              (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state + 1w)
+                 (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state)
+                    (ARM_WRITE_REG 1w
+                       (ARM_READ_REG 1w state + ARM_READ_REG 2w state)
+                       (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 4w)
+                          state)))))))
+   : thm
+
 
 *)
 
 val it =
   "THUMB\n add r1,r2"
     |> arm_assemble_from_string
+    |> fst
     |> hd
     |> snd
     |> trace ("arm step", 3) (arm_step "v6T2,thumb,it:0");
 
 (* expected output:
 
-Starting evaluation ...
-... finished evaluation.
-Starting composition proof ...
-... finished composition proof.
-> val it =
-    |- !state.
-         (ARM_ARCH state = ARMv6T2) /\ (ARM_EXTENSIONS state = {}) /\
-         ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
-         ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR cV state /\
-         ARM_READ_SCTLR cA state /\ ~ARM_READ_SCTLR cU state /\
-         (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS sJ state /\
-         ARM_READ_STATUS sT state /\ ~ARM_READ_STATUS sE state /\
-         (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 15w state,2) /\
-         (ARM_READ_MEM (ARM_READ_REG 15w state + 3w) state = SOME 1w) /\
-         (ARM_READ_MEM (ARM_READ_REG 15w state + 2w) state = SOME 2w) /\
-         (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = SOME 235w) /\
-         (ARM_READ_MEM (ARM_READ_REG 15w state) state = SOME 1w) ==>
-         (ARM_NEXT state =
-          SOME
-            (ARM_WRITE_REG 1w
-               (ARM_READ_REG 1w state + ARM_READ_REG 2w state)
-               (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 4w) state))) : thm
+val it =
+   |- !state.
+     (ARM_ARCH state = ARMv6T2) /\ (ARM_EXTENSIONS state = {}) /\
+     ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
+     ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR sctlrV state /\
+     ARM_READ_SCTLR sctlrA state /\ ~ARM_READ_SCTLR sctlrU state /\
+     (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS psrJ state /\
+     ARM_READ_STATUS psrT state /\ ~ARM_READ_STATUS psrE state /\
+     (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 15w state,2) /\
+     (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = 68w) /\
+     (ARM_READ_MEM (ARM_READ_REG 15w state) state = 17w) ==>
+     (ARM_NEXT NoInterrupt state =
+      SOME
+        (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state + 1w)
+           (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state)
+              (ARM_WRITE_REG 1w
+                 (ARM_READ_REG 1w state + ARM_READ_REG 2w state)
+                 (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 2w)
+                    state)))))
+   : thm
 
 *)
 
@@ -543,30 +556,37 @@ val it = arm_steps_from_file "" "example.s";
 (* expected output:
 
 step: blx +#4 ; 32-bit Thumb ...
-step: ldreq r1,[r2],#4 ; ARM (pass condition) ...
-step: ldreq r1,[r2],#4 ; ARM (fail condition) ...
-step: add r1,r1,r2 ; ARM ...
-> val it =
-    [(|- blx +#4 ; 32-bit Thumb :-
-           !state.
-             (ARM_ARCH state = ARMv7_A) /\ (ARM_EXTENSIONS state = {}) /\
-             ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
-             ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR cV state /\
-             ARM_READ_SCTLR cA state /\ ~ARM_READ_SCTLR cU state /\
-             (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS sJ state /\
-             ARM_READ_STATUS sT state /\ ~ARM_READ_STATUS sE state /\
-             (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 15w state,2) /\
-             (ARM_READ_MEM (ARM_READ_REG 15w state + 3w) state = SOME 232w) /\
-             (ARM_READ_MEM (ARM_READ_REG 15w state + 2w) state = SOME 0w) /\
-             (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = SOME 240w) /\
-             (ARM_READ_MEM (ARM_READ_REG 15w state) state = SOME 0w) ==>
-             (ARM_NEXT state =
-              SOME
-                (ARM_WRITE_STATUS sT F
-                   (ARM_WRITE_REG 15w (align (ARM_READ_REG 15w state + 4w,4))
-                      (ARM_WRITE_REG 14w
-                         (word_modify (\i. COND (i = 0) T)
-                            (ARM_READ_REG 15w state + 4w)) state)))), NONE),
+step: ldreq r1, [r2], #4 ; ARM (pass condition) ...
+step: ldreq r1, [r2], #4 ; ARM (fail condition) ...
+step: add r1, r1, r2 ; ARM ...
+val it =
+   [(|- blx +#4 ; 32-bit Thumb :-
+     !state.
+       (ARM_ARCH state = ARMv7_A) /\ (ARM_EXTENSIONS state = {}) /\
+       ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
+       ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR sctlrV state /\
+       ARM_READ_SCTLR sctlrA state /\ ~ARM_READ_SCTLR sctlrU state /\
+       (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS psrJ state /\
+       ARM_READ_STATUS psrT state /\ ~ARM_READ_STATUS psrE state /\
+       (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 15w state,2) /\
+       (ARM_READ_MEM (ARM_READ_REG 15w state + 3w) state = 232w) /\
+       (ARM_READ_MEM (ARM_READ_REG 15w state + 2w) state = 0w) /\
+       (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = 240w) /\
+       (ARM_READ_MEM (ARM_READ_REG 15w state) state = 0w) ==>
+       (ARM_NEXT NoInterrupt state =
+        SOME
+          (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state + 3w)
+             (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state + 2w)
+                (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state + 1w)
+                   (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state)
+                      (ARM_WRITE_STATUS psrT F
+                         (ARM_WRITE_REG 15w
+                            (align (ARM_READ_REG 15w state + 4w,4))
+                            (ARM_WRITE_REG 14w
+                               ((31 >< 1)
+                                  (ARM_READ_REG 15w state + 4w) @@ 1w)
+                               state)))))))),
+     NONE),
    ... ] : (thm * thm option) list
 
 *)
@@ -584,28 +604,31 @@ val it = trace ("arm steps", 3) (arm_steps_from_quote "be")
 (* expected output:
 
 step: it eq ; 16-bit Thumb ...
-runtime: 1.874s,    gctime: 0.068s,     systime: 0.004s.
-step: muleq r1,r2,r1 ; 16-bit Thumb (pass condition) ...
-runtime: 2.246s,    gctime: 0.118s,     systime: 0.003s.
-step: muleq r1,r2,r1 ; 16-bit Thumb (fail condition) ...
-runtime: 1.980s,    gctime: 0.204s,     systime: 0.001s.
-> val it =
-    [(|- it eq ; 16-bit Thumb :-
-           !state.
-             (ARM_ARCH state = ARMv7_A) /\ (ARM_EXTENSIONS state = {}) /\
-             ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
-             ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR cV state /\
-             ARM_READ_SCTLR cA state /\ ~ARM_READ_SCTLR cU state /\
-             (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS sJ state /\
-             ARM_READ_STATUS sT state /\ ARM_READ_STATUS sE state /\
-             (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 15w state,2) /\
-             (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = SOME 8w) /\
-             (ARM_READ_MEM (ARM_READ_REG 15w state) state = SOME 191w) ==>
-             (ARM_NEXT state =
-              SOME
+runtime: 0.623s,    gctime: 0.189s,     systime: 0.000s.
+step: muleq r1, r2, r1 ; 16-bit Thumb (pass condition) ...
+runtime: 0.867s,    gctime: 0.318s,     systime: 0.001s.
+step: muleq r1, r2, r1 ; 16-bit Thumb (fail condition) ...
+runtime: 0.676s,    gctime: 0.251s,     systime: 0.001s.
+val it =
+   [(|- it eq ; 16-bit Thumb :-
+     !state.
+       (ARM_ARCH state = ARMv7_A) /\ (ARM_EXTENSIONS state = {}) /\
+       ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
+       ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR sctlrV state /\
+       ARM_READ_SCTLR sctlrA state /\ ~ARM_READ_SCTLR sctlrU state /\
+       (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS psrJ state /\
+       ARM_READ_STATUS psrT state /\ ARM_READ_STATUS psrE state /\
+       (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 15w state,2) /\
+       (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = 8w) /\
+       (ARM_READ_MEM (ARM_READ_REG 15w state) state = 191w) ==>
+       (ARM_NEXT NoInterrupt state =
+        SOME
+          (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state + 1w)
+             (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state)
                 (ARM_WRITE_IT 8w
-                   (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 2w) state))),
-      NONE),
+                   (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 2w)
+                      state))))),
+     NONE),
       ...  ] : (thm * thm option) list
 
 *)
@@ -622,30 +645,39 @@ val it = trace ("label arm steps", 0)
 
 (* expected output:
 
-> val it =
-    [(|- !state.
-           (ARM_ARCH state = ARMv4T) /\ (ARM_EXTENSIONS state = {}) /\
-           ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
-           ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR cV state /\
-           ARM_READ_SCTLR cA state /\ ~ARM_READ_SCTLR cU state /\
-           (ARM_READ_IT state = 0w) /\ ~ARM_READ_STATUS sJ state /\
-           ARM_READ_STATUS sT state /\ ~ARM_READ_STATUS sE state /\
-           (ARM_MODE state = 16w) /\ aligned (ARM_READ_REG 2w state,4) /\
-           aligned (ARM_READ_REG 15w state,2) /\
-           (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = SOME 104w) /\
-           (ARM_READ_MEM (ARM_READ_REG 15w state) state = SOME 17w) /\
-           IS_SOME (ARM_READ_MEM (ARM_READ_REG 2w state + 3w) state) /\
-           IS_SOME (ARM_READ_MEM (ARM_READ_REG 2w state + 2w) state) /\
-           IS_SOME (ARM_READ_MEM (ARM_READ_REG 2w state + 1w) state) /\
-           IS_SOME (ARM_READ_MEM (ARM_READ_REG 2w state) state) ==>
-           (ARM_NEXT state =
-            SOME
-              (ARM_WRITE_REG 1w
-                 (THE (ARM_READ_MEM (ARM_READ_REG 2w state + 3w) state) @@
-                  THE (ARM_READ_MEM (ARM_READ_REG 2w state + 2w) state) @@
-                  THE (ARM_READ_MEM (ARM_READ_REG 2w state + 1w) state) @@
-                  THE (ARM_READ_MEM (ARM_READ_REG 2w state) state))
-                 (ARM_WRITE_REG 15w (ARM_READ_REG 15w state + 2w) state))),
-      NONE)] : (thm * thm option) list
+val it =
+   [(|- !state.
+     (ARM_ARCH state = ARMv4T) /\ (ARM_EXTENSIONS state = {}) /\
+     ARM_UNALIGNED_SUPPORT state /\ ARM_READ_EVENT_REGISTER state /\
+     ~ARM_READ_INTERRUPT_WAIT state /\ ~ARM_READ_SCTLR sctlrV state /\
+     ARM_READ_SCTLR sctlrA state /\ ~ARM_READ_SCTLR sctlrU state /\
+     ~ARM_READ_STATUS psrJ state /\ ARM_READ_STATUS psrT state /\
+     ~ARM_READ_STATUS psrE state /\ (ARM_MODE state = 16w) /\
+     aligned (ARM_READ_REG 2w state,4) /\
+     aligned (ARM_READ_REG 15w state,2) /\
+     (ARM_READ_MEM (ARM_READ_REG 15w state + 1w) state = 104w) /\
+     (ARM_READ_MEM (ARM_READ_REG 15w state) state = 17w) ==>
+     (ARM_NEXT NoInterrupt state =
+      SOME
+        (ARM_WRITE_MEM_READ (ARM_READ_REG 2w state + 3w)
+           (ARM_WRITE_MEM_READ (ARM_READ_REG 2w state + 2w)
+              (ARM_WRITE_MEM_READ (ARM_READ_REG 2w state + 1w)
+                 (ARM_WRITE_MEM_READ (ARM_READ_REG 2w state)
+                    (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state + 1w)
+                       (ARM_WRITE_MEM_READ (ARM_READ_REG 15w state)
+                          (ARM_WRITE_REG 1w
+                             (ARM_READ_MEM (ARM_READ_REG 2w state + 3w)
+                                state @@
+                              ARM_READ_MEM (ARM_READ_REG 2w state + 2w)
+                                state @@
+                              ARM_READ_MEM (ARM_READ_REG 2w state + 1w)
+                                state @@
+                              ARM_READ_MEM (ARM_READ_REG 2w state)
+                                state)
+                             (ARM_WRITE_REG 15w
+                                (ARM_READ_REG 15w state + 2w)
+                                state))))))))),
+     NONE)] : (thm * thm option) list
+
 
 *)

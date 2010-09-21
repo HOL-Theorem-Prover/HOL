@@ -1,12 +1,13 @@
-structure refine :> refine =
+structure refine =
 struct
 
-(* app load ["wordsLib", "Normal"];
+(* 
+app load ["wordsLib", "Normal"];
 *)
-
+local 
 open HolKernel Parse boolLib bossLib
-  wordsSyntax numSyntax pairSyntax NormalTheory;
-
+     wordsSyntax numSyntax pairSyntax NormalTheory
+in
 (*---------------------------------------------------------------------------*)
 
 val C_tm = prim_mk_const{Name="C",Thy="Normal"};
@@ -106,7 +107,7 @@ fun IMMEDIATE_CONST_CONV c =
  in if Arbnum.<(n,n256) then failwith "CONST_CONV" else
     let val bstr = bit_pattern c
         val res = bytes_to_let (chunk bstr)
-    in EQT_ELIM (wordsLib.WORDS_CONV (mk_eq(c,res)))
+    in EQT_ELIM (wordsLib.WORD_CONV (mk_eq(c,res)))
     end
  end;
 
@@ -226,7 +227,7 @@ fun lift_cond def =
   end
 
 (*---------------------------------------------------------------------------*)
-(*   Convert a definiton to its equivalent refined format                    *)
+(*   Convert a definition to its equivalent refined format                   *)
 (*---------------------------------------------------------------------------*)
 
 (*
@@ -271,5 +272,5 @@ fun lift_cond exp =
 *)
 
 (*---------------------------------------------------------------------------*)
-
+end (* local open in .... end *)
 end

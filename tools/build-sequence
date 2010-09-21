@@ -56,6 +56,7 @@ src/refute
 src/simp/src
 src/metis
 src/meson/src
+src/IndDef
 src/basicProof
 src/relation
 src/one
@@ -63,7 +64,6 @@ src/pair/src
 src/sum
 src/tfl/src
 src/option
-src/IndDef
 src/num/theories
 src/num/reduce/src
 src/num/arith/src
@@ -133,11 +133,11 @@ src/Boolify/src
 src/float
 src/prob
 src/temporal/src
-src/temporal/smv.2.4.3
 
 #
 # Examples only from here on
 #
+!examples/MLsyntax
 !!examples/miller/ho_prover
 !!examples/miller/miller
 !examples/ordinal
@@ -154,5 +154,5 @@ src/temporal/smv.2.4.3
 !!examples/Crypto/TEA
 !!examples/Crypto/TWOFISH
 
-[poly]!!examples/machine-code/garbage-collectors
-[poly]!!examples/machine-code/lisp
+[poly]!!!examples/machine-code/garbage-collectors
+[poly]!!!examples/machine-code/lisp

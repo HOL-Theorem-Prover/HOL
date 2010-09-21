@@ -23,6 +23,8 @@ val Know = Q_TAC KNOW_TAC;
 
 val REVERSE = Tactical.REVERSE;
 
+val TOP_CASE_TAC = BasicProvers.TOP_CASE_TAC;
+
 (*---------------------------------------------------------------------------
         biprefix is a bi-directional version of IS_PREFIX.
  ---------------------------------------------------------------------------*)
@@ -85,14 +87,14 @@ val lift_sum_total = store_thm
    ``lift_sum total total = total``,
    MATCH_MP_TAC EQ_EXT ++
    RW_TAC std_ss [lift_sum_def, total_def] ++
-   CASE_TAC);
+   TOP_CASE_TAC);
 
 val lift_option_total = store_thm
   ("lift_option_total",
    ``lift_option total = total``,
    MATCH_MP_TAC EQ_EXT ++
    RW_TAC std_ss [lift_option_def, total_def] ++
-   CASE_TAC);
+   TOP_CASE_TAC);
 
 val lift_tree_total = store_thm
   ("lift_tree_total",

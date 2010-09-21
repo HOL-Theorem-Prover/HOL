@@ -1296,8 +1296,7 @@ val SER_BIJ_COMPRESS1 = store_thm
    ++ Q.PAT_ASSUM `BIJ h X Y` MP_TAC
    ++ BasicProvers.NORM_TAC std_ss [SUBSET_DEF, IN_IMAGE, INJ_DEF, IN_UNIV,
                                     IN_COUNT, INJ_DEF, BIJ_DEF, SURJ_DEF] <<
-   [Cases_on `n'`
-    ++ RW_TAC std_ss [sum_case_def, K_THM, REAL_LE_REFL],
+   [MATCH_ACCEPT_TAC REAL_LE_REFL,
     Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
     ++ RW_TAC std_ss []
     ++ Q.EXISTS_TAC `y`
@@ -1357,8 +1356,7 @@ val SER_BIJ_COMPRESS2 = store_thm
        ++ Q.PAT_ASSUM `BIJ h X Y` MP_TAC
        ++ BasicProvers.NORM_TAC std_ss [SUBSET_DEF, IN_IMAGE, INJ_DEF, IN_UNIV,
                                         IN_COUNT, INJ_DEF, BIJ_DEF, SURJ_DEF] <<
-       [Cases_on `n'`
-        ++ RW_TAC std_ss [sum_case_def, K_THM, REAL_LE_REFL],
+       [MATCH_ACCEPT_TAC REAL_LE_REFL,
         Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
         ++ RW_TAC std_ss []
         ++ Q.EXISTS_TAC `y`

@@ -858,13 +858,13 @@ val arm_disassemble_parse =
        (snd : Arbnum.num * arm_parserLib.arm_code -> arm_parserLib.arm_code));
 
 val arm_disassemble_from_quote =
-  arm_disassemble_parse o arm_parserLib.arm_parse_from_quote;
+  arm_disassemble_parse o fst o arm_parserLib.arm_parse_from_quote;
 
 val arm_disassemble_from_string =
-  arm_disassemble_parse o arm_parserLib.arm_parse_from_string;
+  arm_disassemble_parse o fst o arm_parserLib.arm_parse_from_string;
 
 val arm_disassemble_from_file =
-  arm_disassemble_parse o arm_parserLib.arm_parse_from_file;
+  arm_disassemble_parse o fst o arm_parserLib.arm_parse_from_file;
 *)
 
 end

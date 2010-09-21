@@ -1,8 +1,8 @@
 (*
-app load ["abs_tools", "RecordType", "BasicProvers", "SingleStep", "Datatype"];
+app load ["abs_tools", "RecordType", "BasicProvers", "Datatype"];
 *)
 open HolKernel Parse boolLib;
-open BasicProvers SingleStep Datatype;
+open BasicProvers Datatype;
 open abs_tools;  (* Rebinds Term and Define *)
 
 val APP_DIFF = REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC);

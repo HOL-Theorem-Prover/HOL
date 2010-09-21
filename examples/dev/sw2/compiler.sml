@@ -15,7 +15,7 @@ val _ = quietdec := false;
 *)
 
 open HolKernel Parse boolLib bossLib boolSyntax;
-open arm_compilerLib;
+open compilerLib;
 
 val _ = numLib.prefer_num();
 
@@ -262,7 +262,7 @@ fun f_compile defs = f_compile_basic defs true;
 (*---------------------------------------------------------------------------*)
 (* Join the front end with Magnus' backend                                   *)
 (*---------------------------------------------------------------------------*)
-
+(*
 val style = ref (InLineCode);
 
 fun b_compile_one (def, ind) =
@@ -288,6 +288,7 @@ fun b_compile norms =
 
 val pp_compile_one = b_compile_one o f_compile_one;
 val pp_compile = b_compile o f_compile;
+*)
 
 (*---------------------------------------------------------------------------*)
 

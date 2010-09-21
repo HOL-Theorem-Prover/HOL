@@ -129,7 +129,7 @@ fun arm_cond_code tm =
   (* negative *) if eq tm ``aS1 psrN`` then ("mi","pl") else
   (* overflow *) if eq tm ``aS1 psrV`` then ("vs","vc") else fail()
 
-fun arm_encode_instruction s = ((snd o hd o armLib.arm_assemble_from_string) s,4)
+fun arm_encode_instruction s = (prog_armLib.arm_enc s,4)
 
 fun arm_encode_branch forward l cond = let
   fun asm NONE = "b"

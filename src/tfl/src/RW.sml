@@ -824,7 +824,6 @@ fun rw_solver simpls context tm =
  end;
 
 
-(* The rest is commented out and should be thought of as documentation
 (*---------------------------------------------------------------------------*
  * The following are all instantiations of the above routines, to make them  *
  * easier to invoke. Some of these are holdovers from unconditional          *
@@ -846,6 +845,7 @@ fun PURE_RW_CONV thl = Rewrite Fully (Pure thl,Context([],DONT_ADD),
 fun ONCE_RW_CONV thl = Rewrite Once
                                (Default thl,Context([],ADD),
                                 Congs[],Solver std_solver)
+
 fun PURE_ONCE_RW_CONV thl = Rewrite Once (Pure thl,Context([],DONT_ADD),
                                           Congs[],Solver std_solver);
 
@@ -868,6 +868,7 @@ fun PURE_ONCE_RW_RULE thl = REWRITE_RULE Once (Pure thl,Context([],DONT_ADD),
 
 fun ASM_CRW_RULE thl =
 ASM_REWRITE_RULE Fully (Default thl,Context([],ADD),Congs[],Solver rw_solver);
+
 fun ASM_RW_RULE thl =
 ASM_REWRITE_RULE Fully (Default thl,Context([],ADD),Congs[],Solver std_solver);
 
@@ -926,7 +927,6 @@ fun Simpl tac std_thms thl =
                                      Congs[],Solver std_solver)
   in RWTAC THEN TRY(CHANGED_TAC tac THEN RWTAC)
   end;
-*)
 
 val _ = Parse.temp_set_grammars ambient_grammars;
 

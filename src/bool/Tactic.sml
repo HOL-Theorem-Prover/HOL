@@ -545,7 +545,7 @@ fun BOOL_CASES_TAC p = STRUCT_CASES_TAC (SPEC p BOOL_CASES_AX);
  * Strip one outer !, /\, !:, ==> from the goal.                             *
  *---------------------------------------------------------------------------*)
 
-fun STRIP_GOAL_THEN ttac =  FIRST [GEN_TAC, CONJ_TAC, TY_GEN_TAC, DISCH_THEN ttac];
+fun STRIP_GOAL_THEN ttac = FIRST [GEN_TAC, CONJ_TAC, TY_GEN_TAC, DISCH_THEN ttac];
 
 
 (*---------------------------------------------------------------------------*

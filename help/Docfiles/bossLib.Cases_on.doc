@@ -9,7 +9,7 @@ Performs case analysis on the type of a given term.
 tactic
 
 \LIBRARY
-SingleStep
+BasicProvers
 
 \DESCRIBE 
 An application {Cases_on M} performs a case-split based on the type {ty}

@@ -7,7 +7,6 @@ struct
 
 open HolKernel TypeBasePure;
 
-
 val ERR = mk_HOL_ERR "TypeBase";
 
 

@@ -2,8 +2,7 @@ let
   val s = "[loading theories and proof tools "
   val l = ["optionTheory", "pairLib", "sumTheory", "numTheory",
            "arithmeticTheory", "Arith", "numLib", "mesonLib", "BasicProvers",
-           "SingleStep", "Datatype", "listTheory", "bossLib", "EmitTeX",
-           "pred_setLib"
+           "Datatype", "listTheory", "bossLib", "EmitTeX", "pred_setLib"
            ]
   val terminfo = case Process.getEnv "TERM" of
                    SOME s => s

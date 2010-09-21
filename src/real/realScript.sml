@@ -22,7 +22,7 @@ open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      arithmeticTheory numTheory prim_recTheory whileTheory
      mesonLib tautLib simpLib Ho_Rewrite Arithconv
      jrhUtils Canon_Port hratTheory hrealTheory realaxTheory
-     BasicProvers SingleStep TotalDefn metisLib bossLib;
+     BasicProvers TotalDefn metisLib bossLib;
 
 val _ = new_theory "real";
 
