@@ -328,5 +328,6 @@ The desired recursion equation
 is easy to obtain from {FOLD_SET_0}.
 
 \SEEALSO
-Defn.tgoal, Defn.tprove, bossLib..Hol_defn, TotalDefn.guessR.
+Defn.tgoal, Defn.tprove, bossLib.Hol_defn.
+
 \ENDDOC

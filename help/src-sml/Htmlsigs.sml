@@ -339,15 +339,12 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 	    href anchor (concat [file, ".html#line", Int.toString line])
 	fun strhref file anchor =
 	    href anchor (file ^ ".html")
-	fun mkalphaindex () =
-	    let fun letterlink c =
-		if c > #"Z" then ()
-		else (href (str c) ("#" ^ str c); out "&nbsp;&nbsp;";
-		      letterlink (Char.succ c))
-	    in
-		out "<hr>\n<center><b>"; letterlink #"A";
-		out "</b></center><hr>\n"
-	    end
+        fun mkalphaindex seps =
+             (out "<hr>\n<center><b>";
+              List.app
+                (fn c => (href (str c) ("#" ^ str c); out "&nbsp;&nbsp;"))
+                seps;
+              out "</b></center><hr>\n")
 	fun subheader txt = app out ["\n<h2>", txt, "</h2>\n"]
 
 	(* Insert a subheader when meeting a new initial letter *)
@@ -398,14 +395,29 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 	    (prtree t1;
 	     prentries (List.filter pred entries);
 	     prtree t2)
+
+	(* Get list of initial letters *)
+        fun separators Empty l = l
+          | separators (Node(key, entries, t1, t2)) l =
+              separators t2 (separators t1
+               (let val k = Char.toUpper (String.sub(key, 0)) in
+                  if Char.isAlpha k andalso
+                     not (null (List.filter pred entries)) andalso
+                     not (Option.isSome (List.find (fn x => x = k) l))
+                  then
+                    k :: l
+                  else
+                    l
+                end))
+        val seps = Listsort.sort Char.compare (separators db [])
     in
 	out "<html><head><title>"; out header; out "</title></head>\n";
 	out "<body bgcolor=\""; out bgcolor; out "\">\n";
 	out "<h1>"; out header; out "</h1>\n";
-	mkalphaindex();
+	mkalphaindex seps;
 	prtree db;
 	out "</ul>\n";
-	mkalphaindex();
+	mkalphaindex seps;
 	out "<p><em>"; out version; out "</em></p>";
 	out "</body></html>\n";
 	TextIO.closeOut os

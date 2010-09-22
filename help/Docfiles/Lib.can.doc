@@ -28,7 +28,7 @@ Only fails if {f x} raises the {Interrupt} exception.
 > Interrupted.
 }
 
-
 \SEEALSO
-Lib.assert, try, Lib.trye, Lib.partial, Lib.total, Feedback.with_exn, Lib.assert_exn.
+Lib.assert, Lib.trye, Lib.partial, Lib.total, Lib.assert_exn.
+
 \ENDDOC

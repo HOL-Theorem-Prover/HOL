@@ -50,5 +50,7 @@ Removing unnecessary speciality in a goal, particularly as a prelude to
 an inductive proof.
 
 \SEEALSO
-PairRules.PGEN, PairRules.PGENL, PGEN_ALL, PairRules.PGEN_TAC, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSTRIP_TAC.
+PairRules.PGEN, PairRules.PGENL, PairRules.PGEN_TAC, PairRules.PSPEC,
+PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSTRIP_TAC.
+
 \ENDDOC

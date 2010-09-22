@@ -15,5 +15,5 @@ Returns the body of a paired abstraction.
 Fails unless the term is a paired abstraction.
 
 \SEEALSO
-Term.body, pairSyntax.bndpair, pairSyntax.dest_pabs.
+Term.body, pairSyntax.dest_pabs.
 \ENDDOC

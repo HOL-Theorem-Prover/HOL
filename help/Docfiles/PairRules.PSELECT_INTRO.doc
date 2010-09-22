@@ -31,5 +31,7 @@ This function is exactly the same as {SELECT_INTRO}, it is duplicated in
 the pair library for completeness.
 
 \SEEALSO
-Drule.SELECT_INTRO, PairRules.PEXISTS, SELECT_AX, PairRules.PSELECT_CONV, PairRules.PSELECT_ELIM, PairRules.PSELECT_RULE.
+Drule.SELECT_INTRO, PairRules.PEXISTS, PairRules.PSELECT_CONV,
+PairRules.PSELECT_ELIM, PairRules.PSELECT_RULE.
+
 \ENDDOC

@@ -702,15 +702,11 @@ val SUM = store_thm("SUM",
 (*--------------------------------------------------------------*)
 (* List generator                                               *)
 (* Spec:                                                        *)
-(*  GENLIST f n = [f 0;...; f(n-1)]                             *)
 (*  REPLICATE n x = [x;....;x] (n repeate elements)             *)
+(*  COUNT_LIST n = [0;....;n-1]                                 *)
 (*--------------------------------------------------------------*)
 
-val GENLIST = new_recursive_definition
-      {name = "GENLIST",
-       rec_axiom =  num_Axiom,
-       def = --`(GENLIST (f:num->'a) 0 = []) /\
-                (GENLIST f (SUC n) = SNOC (f n) (GENLIST f n))`--};
+val GENLIST = save_thm("GENLIST",listTheory.GENLIST);
 
 val REPLICATE = new_recursive_definition
       {name = "REPLICATE",
@@ -718,6 +714,27 @@ val REPLICATE = new_recursive_definition
        def = --`(REPLICATE 0 (x:'a) = []) /\
                 (REPLICATE (SUC n) x = CONS x (REPLICATE n x))`--};
 
+val COUNT_LIST = Lib.with_flag (computeLib.auto_import_definitions, false)
+  TotalDefn.Define`
+   (COUNT_LIST 0 = []) /\
+   (COUNT_LIST (SUC n) = 0::MAP SUC (COUNT_LIST n))`;
+
+
+
+
+(* Some tail recursive versions -- for evaluation *)
+
+val SPLITP_AUX_def = TotalDefn.Define`
+  (SPLITP_AUX acc P [] = (acc,[])) /\
+  (SPLITP_AUX acc P (h::t) =
+    if P h then
+      (acc, h::t)
+    else
+      SPLITP_AUX (acc ++ [h]) P t)`;
+
+val COUNT_LIST_AUX_def = TotalDefn.Define`
+  (COUNT_LIST_AUX 0 l = l) /\
+  (COUNT_LIST_AUX (SUC n) l = COUNT_LIST_AUX n (n::l))`;
 
 (* --------------------------------------------------------------------------
  * Theorems from the basic list theory.
@@ -888,9 +905,7 @@ val SNOC_REVERSE_CONS = store_thm ("SNOC_REVERSE_CONS",
     REWRITE_TAC[th]
   end);
 
-val MAP_SNOC  = store_thm("MAP_SNOC",
-    (--`!(f:'a->'b) x (l:'a list). MAP f(SNOC x l) = SNOC(f x)(MAP f l)`--),
-     (REWRITE_TAC [SNOC_APPEND,MAP_APPEND,MAP]));
+val MAP_SNOC  = save_thm("MAP_SNOC", listTheory.MAP_SNOC);
 
 val FOLDR_SNOC = store_thm("FOLDR_SNOC",
     (--`!(f:'a->'b->'b) e x l. FOLDR f e (SNOC x l) = FOLDR f (f x e) l`--),
@@ -948,15 +963,9 @@ val MAP_FOLDL = store_thm("MAP_FOLDL",
       FIRST_ASSUM (SUBST1_TAC o SYM) THEN CONV_TAC (DEPTH_CONV BETA_CONV)
       THEN GEN_TAC THEN REFL_TAC]);
 
-val MAP_o = store_thm("MAP_o",
-    (--`!f:'b->'c. !g:'a->'b.  MAP (f o g) = (MAP f) o (MAP g)`--),
-    REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV
-    THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP,o_THM]);
+val MAP_o = save_thm("MAP_o", listTheory.MAP_o);
 
-val MAP_MAP_o = store_thm("MAP_MAP_o",
-    (--`!(f:'b->'c) (g:'a->'b) l. MAP f (MAP g l) = MAP (f o g) l`--),
-    REPEAT GEN_TAC THEN REWRITE_TAC [MAP_o,o_DEF]
-    THEN BETA_TAC THEN REFL_TAC);
+val MAP_MAP_o = save_thm("MAP_MAP_o", listTheory.MAP_MAP_o);
 
 val FILTER_FOLDR = store_thm("FILTER_FOLDR",
     (--`!P (l:'a list). FILTER P l = FOLDR (\x l'. if P x then CONS x l' else l') [] l`--),
@@ -1015,9 +1024,7 @@ val APPEND_NIL = store_thm("APPEND_NIL",
     CONJ_TAC THENL
        [LIST_INDUCT_TAC,ALL_TAC] THEN ASM_REWRITE_TAC [APPEND]);
 
-val APPEND_SNOC = store_thm("APPEND_SNOC",
-    (--`!l1 (x:'a) l2. APPEND l1 (SNOC x l2) = SNOC x (APPEND l1 l2)`--),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[APPEND,SNOC]);
+val APPEND_SNOC = save_thm("APPEND_SNOC", listTheory.APPEND_SNOC);
 
 val APPEND_FOLDR = store_thm("APPEND_FOLDR",
     (--`!(l1:'a list) l2. APPEND l1 l2  = FOLDR CONS l2 l1`--),
@@ -1116,10 +1123,7 @@ val LENGTH_REVERSE = save_thm("LENGTH_REVERSE", listTheory.LENGTH_REVERSE)
 
 val REVERSE_EQ_NIL = save_thm("REVERSE_EQ_NIL", listTheory.REVERSE_EQ_NIL)
 
-val ALL_EL_SNOC = store_thm("ALL_EL_SNOC",
-    (--`!P (x:'a) l. ALL_EL P (SNOC x l) = ALL_EL P l /\ P x`--),
-    GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
-    THEN ASM_REWRITE_TAC[SNOC,ALL_EL,CONJ_ASSOC]);
+val ALL_EL_SNOC = save_thm("ALL_EL_SNOC", listTheory.EVERY_SNOC);
 
 val ALL_EL_CONJ = store_thm("ALL_EL_CONJ",
      (--`!P Q l. ALL_EL (\x:'a. P x /\ Q x) l = (ALL_EL P l /\ ALL_EL Q l)`--),
@@ -1139,13 +1143,7 @@ val ALL_EL_APPEND = store_thm("ALL_EL_APPEND",
    GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC [APPEND,ALL_EL]
    THEN ASM_REWRITE_TAC [] THEN REWRITE_TAC [CONJ_ASSOC]);
 
-val SOME_EL_SNOC = store_thm("SOME_EL_SNOC",
-    (--`!P (x:'a) l. SOME_EL P (SNOC x l) = P x \/ (SOME_EL P l)`--),
-    GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
-    THEN ASM_REWRITE_TAC[SNOC,SOME_EL] THEN GEN_TAC
-    THEN PURE_ONCE_REWRITE_TAC[DISJ_ASSOC]
-    THEN CONV_TAC ((RAND_CONV o RATOR_CONV o ONCE_DEPTH_CONV)
-     (REWR_CONV DISJ_SYM)) THEN REFL_TAC);
+val SOME_EL_SNOC = save_thm("SOME_EL_SNOC", listTheory.EXISTS_SNOC);
 
 val NOT_ALL_EL_SOME_EL = store_thm("NOT_ALL_EL_SOME_EL",
     (--`!P (l:'a list). ~(ALL_EL P l) = SOME_EL ($~ o P) l`--),
@@ -1165,13 +1163,7 @@ val IS_EL = store_thm("IS_EL",
     REWRITE_TAC[IS_EL_DEF,SOME_EL] THEN REPEAT GEN_TAC
     THEN CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN REFL_TAC);
 
-val IS_EL_SNOC = store_thm("IS_EL_SNOC",
-    (--`!(y:'a) x l. IS_EL y (SNOC x l) = (y = x) \/ IS_EL y l`--),
-    GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
-    THEN ASM_REWRITE_TAC[SNOC,IS_EL] THEN GEN_TAC
-    THEN PURE_ONCE_REWRITE_TAC[DISJ_ASSOC]
-    THEN CONV_TAC ((RAND_CONV o RATOR_CONV o ONCE_DEPTH_CONV)
-     (REWR_CONV DISJ_SYM)) THEN REFL_TAC);
+val IS_EL_SNOC = save_thm("IS_EL_SNOC", listTheory.MEM_SNOC);
 
 val SUM_SNOC = store_thm("SUM_SNOC",
     (--`!x l. SUM (SNOC x l) = (SUM l) + x`--),
@@ -2414,21 +2406,13 @@ val ELL_PRE_LENGTH = store_thm("ELL_PRE_LENGTH",
     LIST_INDUCT_TAC THEN REWRITE_TAC[LENGTH,PRE]
     THEN REPEAT STRIP_TAC THEN REWRITE_TAC[ELL_LENGTH_CONS,HD]);
 
-val EL_LENGTH_SNOC = store_thm("EL_LENGTH_SNOC",
-    (--`!l:'a list. !x. EL (LENGTH l) (SNOC x l) = x`--),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[EL,SNOC,HD,TL,LENGTH]);
+val EL_LENGTH_SNOC = save_thm("EL_LENGTH_SNOC", listTheory.EL_LENGTH_SNOC);
 
 val EL_PRE_LENGTH = store_thm("EL_PRE_LENGTH",
     (--`!l:'a list. ~(l = []) ==> (EL (PRE(LENGTH l)) l  = LAST l)`--),
     SNOC_INDUCT_TAC THEN REWRITE_TAC[LENGTH_SNOC,PRE,LAST,EL_LENGTH_SNOC]);
 
-val EL_SNOC = store_thm("EL_SNOC",
-    (--`!n (l:'a list). n < (LENGTH l) ==> (!x. EL n (SNOC x l) = EL n l)`--),
-    INDUCT_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[LENGTH,NOT_LESS_0]
-    THENL[
-        REWRITE_TAC[SNOC,EL,HD],
-        REWRITE_TAC[SNOC,EL,TL,LESS_MONO_EQ]
-        THEN FIRST_ASSUM MATCH_ACCEPT_TAC]);
+val EL_SNOC = save_thm("EL_SNOC", listTheory.EL_SNOC);
 
 val LESS_PRE_SUB_LESS = prove((--`!n m. (m < n) ==> (PRE(n - m) < n)`--),
     let val PRE_K_K = prove((--`!k . (0<k) ==> (PRE k < k)`--),
@@ -2747,10 +2731,7 @@ val EL_APPEND2 = store_thm("EL_APPEND2",
     THEN GEN_TAC THEN INDUCT_TAC THEN ASM_REWRITE_TAC[EL,APPEND,HD,TL,
         LENGTH,NOT_SUC_LESS_EQ_0,SUB_MONO_EQ,LESS_EQ_MONO]);
 
-val EL_MAP = store_thm("EL_MAP",
-    (--`!n l. n < (LENGTH l) ==> !f:'a->'b. EL n (MAP f l) = f (EL n l)`--),
-    INDUCT_TAC THEN LIST_INDUCT_TAC
-    THEN ASM_REWRITE_TAC[LENGTH,EL,MAP,LESS_MONO_EQ,NOT_LESS_0,HD,TL]);
+val EL_MAP = save_thm("EL_MAP", listTheory.EL_MAP);
 
 val EL_CONS = store_thm("EL_CONS",
     (--`!n. 0 < n ==> !(x:'a) l. EL n (CONS x l) = EL (PRE n) l`--),
@@ -2981,11 +2962,7 @@ val SEG_REVERSE = store_thm("SEG_REVERSE",
     end);
 
 (*<---------------------------------------------------------------->*)
-val LENGTH_GENLIST = store_thm("LENGTH_GENLIST",
-    (--`!(f:num->'a) n. LENGTH(GENLIST f n) = n`--),
-    GEN_TAC THEN INDUCT_TAC
-    THEN ASM_REWRITE_TAC[GENLIST,LENGTH,LENGTH_SNOC]);
-val _ = export_rewrites ["LENGTH_GENLIST"]
+val LENGTH_GENLIST = save_thm("LENGTH_GENLIST",listTheory.LENGTH_GENLIST);
 
 val LENGTH_REPLICATE = store_thm("LENGTH_REPLICATE",
     (--`!n (x:'a). LENGTH(REPLICATE n x) = n`--),
@@ -3154,86 +3131,20 @@ val IS_PREFIX_APPENDS = store_thm
    INDUCT_THEN list_INDUCT ASSUME_TAC
    THEN ASM_SIMP_TAC boolSimps.bool_ss [APPEND, IS_PREFIX]);
 
-
-(*---------------------------------------------------------------------------
-   Theorems about genlist. From Anthony Fox's theories. Added by Thomas Tuerk
- ---------------------------------------------------------------------------*)
-
-val MAP_GENLIST = store_thm("MAP_GENLIST",
-  ``!f g n. MAP f (GENLIST g n) = GENLIST (f o g) n``,
-  Induct_on `n` THEN ASM_SIMP_TAC list_ss [GENLIST,MAP_SNOC, combinTheory.o_THM]);
-
-val EL_GENLIST = store_thm("EL_GENLIST",
-  ``!f n x. x < n ==> (EL x (GENLIST f n) = f x)``,
-  Induct_on `n` THEN1 SIMP_TAC arith_ss [] THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC [GENLIST] THEN
-  Cases_on `x < n` THEN
-  POP_ASSUM (fn th => ASSUME_TAC
-           (SUBS [(GSYM o Q.SPECL [`f`,`n`]) LENGTH_GENLIST] th) THEN
-            ASSUME_TAC th) THEN1 (
-    ASM_SIMP_TAC bool_ss [EL_SNOC]
-  ) THEN
-  `x = LENGTH (GENLIST f n)` by FULL_SIMP_TAC arith_ss [LENGTH_GENLIST] THEN
-  ASM_SIMP_TAC bool_ss [EL_LENGTH_SNOC] THEN
-  REWRITE_TAC [LENGTH_GENLIST]);
-val _ = export_rewrites ["EL_GENLIST"]
-
-val HD_GENLIST = save_thm("HD_GENLIST",
-  (SIMP_RULE arith_ss [EL] o Q.SPECL [`f`,`SUC n`,`0`]) EL_GENLIST);
-
-val GENLIST_FUN_EQ = store_thm("GENLIST_FUN_EQ",
-  ``!n f g. (GENLIST f n = GENLIST g n) = (!x. x < n ==> (f x = g x))``,
-  SIMP_TAC bool_ss [listTheory.LIST_EQ_REWRITE, LENGTH_GENLIST, EL_GENLIST]);
-
-val GENLIST_APPEND = store_thm("GENLIST_APPEND",
-  ``!f a b. GENLIST f (a + b) = (GENLIST f b) ++ (GENLIST (\t. f (t + b)) a)``,
-  Induct_on `a` THEN
-  ASM_SIMP_TAC list_ss [GENLIST,APPEND_SNOC,arithmeticTheory.ADD_CLAUSES]
-);
-
-val EVERY_GENLIST = store_thm("EVERY_GENLIST",
-  ``!n. EVERY P (GENLIST f n) = (!i. i < n ==> P (f i))``,
-  Induct_on `n` THEN ASM_SIMP_TAC list_ss [GENLIST,ALL_EL_SNOC]
-    THEN metisLib.METIS_TAC [prim_recTheory.LESS_THM]);
-
-val EXISTS_GENLIST = store_thm ("EXISTS_GENLIST",
-  ``!n. EXISTS P (GENLIST f n) = (?i. i < n /\ P (f i))``,
-  Induct THEN RW_TAC std_ss [GENLIST, SOME_EL_SNOC, SOME_EL]
-    THEN metisLib.METIS_TAC [prim_recTheory.LESS_THM]);
-
-val TL_GENLIST = Q.store_thm ("TL_GENLIST",
-  `!f n. TL (GENLIST f (SUC n)) = GENLIST (f o SUC) n`,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC listTheory.LIST_EQ
-    THEN SRW_TAC [listSimps.LIST_ss]
-           [EL_GENLIST, LENGTH_GENLIST, listTheory.LENGTH_TL]
-    THEN ONCE_REWRITE_TAC [EL |> CONJUNCT2 |> GSYM]
-    THEN `SUC x < SUC n` by DECIDE_TAC
-    THEN IMP_RES_TAC EL_GENLIST
-    THEN ASM_SIMP_TAC std_ss []);
-
-val ZIP_GENLIST = store_thm("ZIP_GENLIST",
-  ``!l f n. (LENGTH l = n) ==>
-      (ZIP (l,GENLIST f n) = GENLIST (\x. (EL x l,f x)) n)``,
-  REPEAT STRIP_TAC THEN
-  `LENGTH (ZIP (l,GENLIST f n)) = LENGTH (GENLIST (\x. (EL x l,f x)) n)`
-    by ASM_SIMP_TAC arith_ss [LENGTH_GENLIST,LENGTH_ZIP] THEN
-  ASM_SIMP_TAC arith_ss [listTheory.LIST_EQ_REWRITE, LENGTH_GENLIST, LENGTH_ZIP,
-                         listTheory.EL_ZIP, EL_GENLIST]);
-
-val GENLIST_CONS = store_thm(
-  "GENLIST_CONS",
-  ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
-  Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
-
-
+val MAP_GENLIST = save_thm("MAP_GENLIST", listTheory.MAP_GENLIST);
+val EL_GENLIST = save_thm("EL_GENLIST", listTheory.EL_GENLIST);
+val HD_GENLIST = save_thm("HD_GENLIST", listTheory.HD_GENLIST);
+val GENLIST_FUN_EQ = save_thm("GENLIST_FUN_EQ", listTheory.GENLIST_FUN_EQ);
+val GENLIST_APPEND = save_thm("GENLIST_APPEND", listTheory.GENLIST_APPEND);
+val EVERY_GENLIST = save_thm("EVERY_GENLIST",listTheory.EVERY_GENLIST);
+val EXISTS_GENLIST = save_thm ("EXISTS_GENLIST", listTheory.EXISTS_GENLIST);
+val TL_GENLIST = save_thm ("TL_GENLIST",listTheory.TL_GENLIST);
+val ZIP_GENLIST = save_thm("ZIP_GENLIST",listTheory.ZIP_GENLIST);
+val GENLIST_CONS = save_thm("GENLIST_CONS",listTheory.GENLIST_CONS);
 
 (*---------------------------------------------------------------------------
    A list of numbers
  ---------------------------------------------------------------------------*)
-
-val COUNT_LIST = TotalDefn.Define `
-   (COUNT_LIST 0 = []) /\
-   (COUNT_LIST (SUC n) = 0::MAP SUC (COUNT_LIST n))`
 
 val COUNT_LIST_compute = save_thm ("COUNT_LIST_compute",
     CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV COUNT_LIST);
@@ -3358,6 +3269,24 @@ val SPLITP_EVERY = store_thm("SPLITP_EVERY",
   ``!P l. EVERY (\x. ~P x) l ==> (SPLITP P l = (l, []))``,
   Induct_on `l` THEN SRW_TAC [] [SPLITP]);
 
+val SPLITP_AUX_lem1 = Q.prove(
+  `!P acc l h.
+     ~P h ==>
+     (h::FST (SPLITP_AUX acc P l) = FST (SPLITP_AUX (h::acc) P l))`,
+  Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]);
+
+val SPLITP_AUX_lem2 = Q.prove(
+  `!P acc1 acc2 l. SND (SPLITP_AUX acc1 P l) = SND (SPLITP_AUX acc2 P l)`,
+  Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]);
+
+val SPLITP_AUX = Q.prove(
+  `!P l. SPLITP P l = SPLITP_AUX [] P l`,
+  Induct_on `l`
+  THEN SRW_TAC [] [SPLITP_AUX_def, SPLITP, SPLITP_AUX_lem1]
+  THEN metisLib.METIS_TAC [SPLITP_AUX_lem2, pairTheory.PAIR]);
+
+val SPLITP_AUX = save_thm("SPLITP_AUX",
+  REWRITE_RULE [GSYM FUN_EQ_THM] SPLITP_AUX);
 
 val MEM_FRONT = store_thm ("MEM_FRONT",
   ``!l e y. MEM y (FRONT (e::l)) ==> MEM y (e::l)``,
@@ -3383,9 +3312,7 @@ val LAST_APPEND = store_thm ("LAST_APPEND",
   ``!e l1 l2. LAST (l1 ++ (e::l2)) = LAST (e::l2)``,
   Induct_on `l1` THEN ASM_SIMP_TAC list_ss [listTheory.LAST_DEF]);
 
-val MAP_EQ_f = store_thm ("MAP_EQ_f",
-  ``!f1 f2 l. (MAP f1 l = MAP f2 l) = (!e. MEM e l ==> (f1 e = f2 e))``,
-  Induct_on `l` THEN ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM])
+val MAP_EQ_f = save_thm ("MAP_EQ_f", listTheory.MAP_EQ_f);
 
 val MEM_LAST = store_thm ("MEM_LAST",
   ``!e l. MEM (LAST (e::l)) (e::l)``,
@@ -3475,13 +3402,21 @@ Cases_on `p` THEN ASM_SIMP_TAC arith_ss [EL, HD, TL]);
 (* Add evaluation theorems to computeLib.the_compset                         *)
 (*---------------------------------------------------------------------------*)
 
+val COUNT_LIST_AUX_lem = Q.prove(
+  `!n l1 l2. COUNT_LIST_AUX n l1 ++ l2 = COUNT_LIST_AUX n (l1 ++ l2)`,
+  Induct THEN SRW_TAC [] [COUNT_LIST_AUX_def]);
+
+val COUNT_LIST_AUX = Q.store_thm("COUNT_LIST_AUX",
+  `!n. COUNT_LIST n = COUNT_LIST_AUX n []`,
+  Induct THEN SRW_TAC [] [COUNT_LIST_GENLIST, GENLIST, COUNT_LIST_AUX_def]
+  THEN FULL_SIMP_TAC (srw_ss()) [COUNT_LIST_GENLIST, COUNT_LIST_AUX_lem]);
+
 val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
 val ELL_compute = save_thm("ELL_compute", SUC_RULE ELL);
 val SEG_compute = save_thm("SEG_compute", SUC_RULE SEG);
 val FIRSTN_compute = save_thm("FIRSTN_compute", SUC_RULE FIRSTN);
 val GENLIST_compute = save_thm("GENLIST_compute", SUC_RULE GENLIST);
-val _ = export_rewrites ["GENLIST_compute"]
 val BUTFIRSTN_compute = save_thm("BUTFIRSTN_compute", SUC_RULE BUTFIRSTN);
 val IS_SUFFIX_compute = save_thm("IS_SUFFIX_compute", GSYM IS_PREFIX_REVERSE);
 val REPLICATE_compute = save_thm("REPLICATE_compute", SUC_RULE REPLICATE);
@@ -3506,7 +3441,7 @@ val _ = computeLib.add_persistent_funs
   ("BUTLASTN_compute", BUTLASTN_compute),
   ("ELL_compute", ELL_compute),
   ("FIRSTN_compute", FIRSTN_compute),
-  ("GENLIST_compute", GENLIST_compute),
+  ("COUNT_LIST_AUX", COUNT_LIST_AUX),
   ("IS_SUBLIST", IS_SUBLIST),
   ("IS_SUFFIX_compute", IS_SUFFIX_compute),
   ("LASTN_compute", LASTN_compute),
@@ -3517,7 +3452,7 @@ val _ = computeLib.add_persistent_funs
   ("SCANR", SCANR),
   ("SEG_compute", SEG_compute),
   ("SNOC", SNOC),
-  ("SPLITP", SPLITP),
+  ("SPLITP_AUX", SPLITP_AUX),
   ("SUFFIX_DEF", SUFFIX_DEF),
   ("UNZIP_FST_DEF", UNZIP_FST_DEF),
   ("UNZIP_SND_DEF", UNZIP_SND_DEF)];

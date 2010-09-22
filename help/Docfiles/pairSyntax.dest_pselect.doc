@@ -16,5 +16,5 @@ The application of {dest_select} to {@pair. t} returns {(pair,t)}.
 Fails with {dest_pselect} if term is not a paired choice-term.
 
 \SEEALSO
-boolSyntax.dest_select, pairSyntax.mk_pselect, pairSyntax.is_pselect.
+boolSyntax.dest_select, pairSyntax.is_pselect.
 \ENDDOC

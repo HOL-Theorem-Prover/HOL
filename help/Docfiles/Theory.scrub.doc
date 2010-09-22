@@ -67,7 +67,6 @@ they are really working in.
 
 \SEEALSO
 Theory.uptodate_type, Theory.uptodate_term, Theory.uptodate_thm,
-Theory.delete_type, Theory.delete_const, Theory.delete_axiom,
-Theory.delete_definition, Theory.delete_theorem.
+Theory.delete_type, Theory.delete_const.
 
 \ENDDOC

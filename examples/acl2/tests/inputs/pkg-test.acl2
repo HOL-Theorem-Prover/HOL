@@ -1,0 +1,2 @@
+(defpkg "MY-PKG" '(defun cons))
+(certify-book "pkg-test" 1)

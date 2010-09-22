@@ -32,5 +32,6 @@ also the possibility to declare two different constants with the
 same name in different theories.
 
 \SEEALSO
-Type.decls., Term.dest_thy_const.
+Type.decls, Term.dest_thy_const.
+
 \ENDDOC

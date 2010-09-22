@@ -13,6 +13,20 @@ status is non-zero and the error message will direct you to file
 diffout and the logs/ directory (though if certification fails then
 you may also want to see inputs/).
 
+Note: Only minimal effort has been made (at least for updating to ACL2
+Version 4.0) to maintain round-trip/gold/axioms.lisp and
+round-trip/gold/axioms.ml.  Instead, to update to a new ACL2 version,
+we just do the following:
+(1) Run ./doit.  It should complete except for complaints in
+    round-trip/diffout regarding the above two files.
+(2) Do a quick comparison of round-trip/results/axioms.lisp with
+    round-trip/gold/axioms.lisp.  If these seem reasonably compatible,
+    then just copy the former to the latter.
+(3) Run ./doit again.  This time, do an extremely brief comparison of
+    axioms.ml in the above two directories, and if nothing seems
+    amiss, copy round-trip/results/axioms.ml to round-trip/gold/.
+(4) Run ./doit again, and you should see "SUCCESS!".
+
 See the end of this README file for information on the example from
 Sandip Ray et al. on correctness of cone-of-influence reduction.
 

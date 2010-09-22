@@ -35,7 +35,27 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
     TextIO.closeOut outstr
   end handle IO.Io _ => ()
 
-  val known_ok =
+  fun check_distrib () = let
+    open FileSys
+    val _ = diag "Looking to see if I am in a HOL distribution."
+    fun checkdir () =
+        access ("sigobj", [A_READ, A_EXEC]) andalso
+        isDir "sigobj" andalso
+        access ("bin/Holmake", [A_READ, A_EXEC])
+    fun traverse () = let
+      val d = getDir()
+    in
+      if checkdir() then
+        SOME (Path.concat (d, "bin/Holmake"))
+      else if Path.isRoot d then NONE
+      else (chDir Path.parentArc; traverse())
+    end
+    val start = getDir()
+  in
+    traverse() before chDir start
+  end
+
+  fun lmfile() =
       if not no_lastmakercheck andalso
          FileSys.access (".HOLMK/lastmaker", [FileSys.A_READ])
       then let
@@ -45,8 +65,7 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
           case TextIO.inputLine istrm of
             NONE => (warn "Empty Last Maker file";
                      TextIO.closeIn istrm;
-                     write_lastmaker_file();
-                     false)
+                     write_lastmaker_file())
           | SOME s => let
               open Substring
               val path = string (dropr Char.isSpace (full s))
@@ -54,41 +73,30 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
             in
               if FileSys.access (path, [FileSys.A_READ, FileSys.A_EXEC])
               then
-                mypath = path orelse
-                (warn ("*** Switching to execute "^path);
-                 Systeml.exec(path, path::"--nolmbc"::CommandLine.arguments()))
+                if mypath = path then ()
+                else
+                  (warn ("*** Switching to execute "^path);
+                   Systeml.exec(path,
+                                path::"--nolmbc"::CommandLine.arguments()))
               else (warn "Garbage in Last Maker file";
-                    write_lastmaker_file();
-                    false)
+                    write_lastmaker_file())
             end
         end
-      else (write_lastmaker_file(); false)
+      else write_lastmaker_file()
 in
-  if not known_ok andalso not no_lastmakercheck then let
-      open FileSys
-      val _ = diag "Looking to see if I am in a HOL distribution."
-      fun checkdir () =
-          access ("sigobj", [A_READ, A_EXEC]) andalso
-          isDir "sigobj" andalso
-          access ("bin/Holmake", [A_READ, A_EXEC])
-      fun traverse () = let
-        val d = getDir()
-      in
-        if checkdir() then
-          SOME (Path.concat (d, "bin/Holmake"))
-        else if Path.isRoot d then NONE
-        else (chDir Path.parentArc; traverse())
-      end
-      val start = getDir()
+  case check_distrib() of
+    NONE => let
     in
-      case traverse () before chDir start of
-        NONE => diag "Not in a HOL distribution"
-      | SOME p =>
-        if p = mypath then diag "In the right HOL distribution"
-        else (warn ("*** Switching to execute "^p);
-              Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
+      diag "Not in a HOL distribution";
+      lmfile()
     end
-  else ()
+  | SOME p =>
+    if p = mypath then diag "In the right HOL distribution"
+    else if no_lastmakercheck then
+      diag "In the wrong distribution, but --nolmbc takes precedence."
+    else
+      (warn ("*** Switching to execute "^p);
+       Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
 end
 
 end (* struct *)

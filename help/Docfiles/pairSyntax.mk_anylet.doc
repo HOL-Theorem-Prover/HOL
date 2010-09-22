@@ -35,5 +35,6 @@ Programming that involves manipulation of term syntax.
 
 \SEEALSO
 boolSyntax.mk_let, boolSyntax.dest_let, boolSyntax.is_let, 
-pairSyntax.list_mk_anylet, pairSyntax.dest_anylet, pairLib.
+pairSyntax.list_mk_anylet, pairSyntax.dest_anylet.
+
 \ENDDOC

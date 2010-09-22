@@ -1408,7 +1408,7 @@ val FINITE_SET_OF_BAG = store_thm(
     BAG_IMAGE is "safe" if the input bag is finite, or if the function is
     only finitely non-injective.  I don't want to have these side conditions
     hanging around on my theorems, so I've decided to simply make BAG_IMAGE
-    take elements that want to be infinite to zero instead.
+    take elements that want to be infinite to one instead.
    ---------------------------------------------------------------------- *)
 
 val _ = augment_srw_ss [simpLib.rewrites [LET_THM]]
@@ -1417,7 +1417,7 @@ val BAG_IMAGE_DEF = new_definition(
   ``BAG_IMAGE f b = \e. let sb = BAG_FILTER (\e0. f e0 = e) b
                         in
                             if FINITE_BAG sb then BAG_CARD sb
-                            else 0``);
+                            else 1``);
 
 val BAG_IMAGE_EMPTY = store_thm(
   "BAG_IMAGE_EMPTY",
@@ -1807,6 +1807,39 @@ val BAG_EVERY_SET = Q.store_thm(
 `BAG_EVERY P b = SET_OF_BAG b SUBSET {x | P x}`,
 SRW_TAC [][BAG_EVERY, SET_OF_BAG, SUBSET_DEF]);
 
+val BAG_FILTER_EQ_EMPTY = Q.store_thm(
+  "BAG_FILTER_EQ_EMPTY",
+  `(BAG_FILTER P b = {||}) <=> BAG_EVERY ($~ o P) b`,
+  SRW_TAC [][BAG_EXTENSION,BAG_INN_BAG_FILTER,BAG_EVERY,BAG_IN,EQ_IMP_THM] THEN1 (
+    FIRST_X_ASSUM (Q.SPECL_THEN [`1`,`e`] MP_TAC)
+    THEN SRW_TAC [][] ) THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `e` MP_TAC) THEN
+  SRW_TAC [][] THEN
+  Cases_on `n < 1` THEN1 DECIDE_TAC THEN
+  (BAG_INN_LESS |> Q.SPECL [`b`,`e`,`n`,`1`] |> CONTRAPOS |> IMP_RES_TAC) THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  `n = 1` by DECIDE_TAC THEN
+  SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []);
+
+val SET_OF_BAG_IMAGE = Q.store_thm(
+  "SET_OF_BAG_IMAGE",
+  `SET_OF_BAG (BAG_IMAGE f b) = IMAGE f (SET_OF_BAG b)`,
+  SRW_TAC [][EXTENSION,BAG_IMAGE_DEF,BAG_IN,BAG_INN] THEN
+  Q.ABBREV_TAC `bf = BAG_FILTER (\e0. f e0 = x) b` THEN
+  Q.ISPEC_THEN `bf` MP_TAC BAG_cases THEN
+  SRW_TAC [][] THEN
+  SRW_TAC [][] THENL [
+    FULL_SIMP_TAC (srw_ss()) [BAG_FILTER_EQ_EMPTY,BAG_EVERY,BAG_IN,BAG_INN] THEN
+    PROVE_TAC [],
+    `FINITE_BAG b0` by PROVE_TAC [FINITE_BAG_INSERT] THEN
+    SRW_TAC [ARITH_ss][BAG_CARD_THM],
+    FULL_SIMP_TAC (srw_ss()) [],
+    ALL_TAC ] THEN
+  `~BAG_EVERY ($~ o (\e0. f e0 = x)) b` by PROVE_TAC [BAG_FILTER_EQ_EMPTY,BAG_INSERT_NOT_EMPTY] THEN
+  FULL_SIMP_TAC (srw_ss()) [BAG_EVERY,BAG_IN,BAG_INN] THEN
+  PROVE_TAC []);
+val _ = export_rewrites ["SET_OF_BAG_IMAGE"];
+
 val BAG_ALL_DISTINCT = new_definition ("BAG_ALL_DISTINCT",
   ``BAG_ALL_DISTINCT b = (!e. b e <= 1:num)``);
 
@@ -1982,6 +2015,108 @@ val BAG_GEN_PROD_UNION = Q.store_thm
              BAG_GEN_PROD b1 1 * BAG_GEN_PROD b2 1)`,
  METIS_TAC [BAG_GEN_PROD_UNION_LEM, ARITH `1 * 1 = 1`]);
 
+(* BIG_BAG_UNION: the union of all bags in a finite set *)
+
+val BIG_BAG_UNION_def = Define`
+ BIG_BAG_UNION sob = \x. SIGMA (\b. b x) sob`;
+
+val BIG_BAG_UNION_EMPTY = Q.store_thm(
+"BIG_BAG_UNION_EMPTY",
+`BIG_BAG_UNION {} = {||}`,
+SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_THM,EMPTY_BAG,FUN_EQ_THM]);
+val _ = export_rewrites ["BIG_BAG_UNION_EMPTY"];
+
+val BIG_BAG_UNION_INSERT = Q.store_thm(
+"BIG_BAG_UNION_INSERT",
+`FINITE sob ==> (BIG_BAG_UNION (b INSERT sob) = b + BIG_BAG_UNION (sob DELETE b))`,
+SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_THM,BAG_UNION,FUN_EQ_THM]);
+
+val BIG_BAG_UNION_DELETE = Q.store_thm(
+"BIG_BAG_UNION_DELETE",
+`FINITE sob ==> (BIG_BAG_UNION (sob DELETE b) = if b IN sob then BAG_DIFF (BIG_BAG_UNION sob) b else BIG_BAG_UNION sob)`,
+SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_THM,SUM_IMAGE_DELETE,BAG_UNION,BAG_DIFF,FUN_EQ_THM] THEN
+FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT]);
+
+val BIG_BAG_UNION_ITSET_BAG_UNION = Q.store_thm(
+"BIG_BAG_UNION_ITSET_BAG_UNION",
+`!sob. FINITE sob ==> (BIG_BAG_UNION sob = ITSET BAG_UNION sob {||})`,
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+SRW_TAC [][ITSET_EMPTY] THEN
+(COMMUTING_ITSET_RECURSES
+ |> Q.ISPECL_THEN [`BAG_UNION`,`e`,`sob`,`{||}`] MP_TAC) THEN
+FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
+SRW_TAC [][BIG_BAG_UNION_INSERT] THEN
+FIRST_X_ASSUM (MATCH_MP_TAC o GSYM) THEN
+METIS_TAC [COMM_BAG_UNION,ASSOC_BAG_UNION]);
+
+val FINITE_BIG_BAG_UNION = Q.store_thm(
+"FINITE_BIG_BAG_UNION",
+`!sob. FINITE sob /\ (!b. b IN sob ==> FINITE_BAG b) ==> FINITE_BAG
+(BIG_BAG_UNION sob)`,
+SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+    SRW_TAC [][BIG_BAG_UNION_INSERT] THEN
+      FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT]);
+
+val BAG_IN_BIG_BAG_UNION = Q.store_thm(
+"BAG_IN_BIG_BAG_UNION",
+`FINITE P ==> (e <: BIG_BAG_UNION P <=> ?b. e <: b /\ b IN P)`,
+SRW_TAC [][BIG_BAG_UNION_def,BAG_IN,BAG_INN,EQ_IMP_THM] THEN1 (
+  SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
+  (SUM_IMAGE_upper_bound
+   |> Q.GEN `f`
+   |> Q.ISPEC_THEN `\b:'a bag. b e` (Q.ISPEC_THEN `P` MP_TAC)) THEN
+  SRW_TAC [][] THEN
+  Q.EXISTS_TAC `0` THEN
+  SRW_TAC [ARITH_ss][] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `x` MP_TAC) THEN
+  SRW_TAC [ARITH_ss][] ) THEN
+FULL_SIMP_TAC (srw_ss()) [arithmeticTheory.GREATER_EQ] THEN
+`1 <= SIGMA (\b. b e) {b}` by SRW_TAC [][SUM_IMAGE_THM] THEN
+MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS THEN
+Q.EXISTS_TAC `SIGMA (\b.b e) {b}` THEN
+SRW_TAC [][] THEN
+MATCH_MP_TAC SUM_IMAGE_SUBSET_LE THEN
+SRW_TAC [][]);
+val _ = export_rewrites ["BAG_IN_BIG_BAG_UNION"];
+
+val BIG_BAG_UNION_EQ_EMPTY_BAG = Q.store_thm(
+"BIG_BAG_UNION_EQ_EMPTY_BAG",
+`!sob. FINITE sob ==> ((BIG_BAG_UNION sob = {||}) <=> (!b. b IN sob ==> (b = {||})))`,
+HO_MATCH_MP_TAC FINITE_INDUCT THEN
+SRW_TAC [][BIG_BAG_UNION_INSERT] THEN
+FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
+PROVE_TAC []);
+
+val BIG_BAG_UNION_UNION = Q.store_thm(
+"BIG_BAG_UNION_UNION",
+`FINITE s1 /\ FINITE s2 ==> (BIG_BAG_UNION (s1 UNION s2) = BIG_BAG_UNION s1 + BIG_BAG_UNION s2 - BIG_BAG_UNION (s1 INTER s2))`,
+SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_UNION,FUN_EQ_THM,BAG_UNION,BAG_DIFF]);
+
+val BIG_BAG_UNION_EQ_ELEMENT = Q.store_thm(
+"BIG_BAG_UNION_EQ_ELEMENT",
+`FINITE sob /\ b IN sob ==> ((BIG_BAG_UNION sob = b) <=> (!b'. b' IN sob ==> (b' = b) \/ (b' = {||})))`,
+STRIP_TAC THEN
+`sob = b INSERT sob DELETE b` by SRW_TAC [][] THEN
+Q.ABBREV_TAC `sob0 = sob DELETE b` THEN
+SRW_TAC [][BIG_BAG_UNION_def] THEN
+FULL_SIMP_TAC (srw_ss()) [SUM_IMAGE_THM] THEN
+UNABBREV_ALL_TAC THEN
+SRW_TAC [][EQ_IMP_THM] THEN1 (
+  SRW_TAC [][EMPTY_BAG] THEN
+  FULL_SIMP_TAC (srw_ss()) [DELETE_INSERT,FUN_EQ_THM] THEN
+  `sob0 DELETE b = b' INSERT ((sob0 DELETE b) DELETE b')`
+    by PROVE_TAC [IN_DELETE,INSERT_DELETE] THEN
+  Q.ABBREV_TAC `sob1 = sob0 DELETE b DELETE b'` THEN
+  `FINITE (b' INSERT sob1)` by SRW_TAC [][Abbr`sob1`] THEN
+  FULL_SIMP_TAC (srw_ss()) [SUM_IMAGE_THM] ) THEN
+FULL_SIMP_TAC (srw_ss()++boolSimps.DNF_ss) [DELETE_INSERT,EMPTY_BAG] THEN
+SRW_TAC [][FUN_EQ_THM] THEN
+`SIGMA (\b. b x) (sob0 DELETE b) <= CARD (sob0 DELETE b) * 0` by (
+  MATCH_MP_TAC (MP_CANON SUM_IMAGE_upper_bound) THEN
+  SRW_TAC [][] ) THEN
+FULL_SIMP_TAC (srw_ss()) []);
+
 (* ----------------------------------------------------------------------
     Multiset ordering
 
@@ -2107,5 +2242,24 @@ val TC_mlt1_UNION2_I = store_thm(
     MAP_EVERY Q.EXISTS_TAC [`e`, `{||}`, `b1 + b2`] THEN SRW_TAC [][] THEN
     METIS_TAC [EL_BAG, BAG_INSERT_UNION, COMM_BAG_UNION, ASSOC_BAG_UNION]
   ]);
+
+val mlt_TO_EMPTY_BAG = Q.store_thm(
+  "mlt_TO_EMPTY_BAG",
+  `FINITE_BAG b2 /\ b2 <> {||} ==> mlt r {||} b2`,
+  SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
+  Q.ID_SPEC_TAC `b2` THEN
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
+  SRW_TAC [][] THEN
+  Cases_on `b2 = {||}`  THEN1 (
+    MATCH_MP_TAC relationTheory.TC_SUBSET THEN
+    SRW_TAC [][mlt1_def] ) THEN
+  MATCH_MP_TAC (CONJUNCT2 (SPEC_ALL relationTheory.TC_RULES)) THEN
+  Q.EXISTS_TAC `b2` THEN
+  SRW_TAC [][] THEN
+  MATCH_MP_TAC relationTheory.TC_SUBSET THEN
+  SRW_TAC [][mlt1_def] THEN
+  MAP_EVERY Q.EXISTS_TAC [`e`,`{||}`,`b2`] THEN
+  SRW_TAC [][BAG_INSERT_UNION,COMM_BAG_UNION]);
+val _ = export_rewrites ["mlt_TO_EMPTY_BAG"];
 
 val _ = export_theory();

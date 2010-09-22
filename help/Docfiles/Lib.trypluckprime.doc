@@ -25,5 +25,5 @@ This is an `option' version of the other library function {trypluck}.
 Never fails.  
 
 \SEEALSO
-Lib.first, Lib.gather, Lib.filter, Lib.mapfilter, Lib.tryfind, Lib.trypluck.
+Lib.first, Lib.filter, Lib.mapfilter, Lib.tryfind, Lib.trypluck.
 \ENDDOC

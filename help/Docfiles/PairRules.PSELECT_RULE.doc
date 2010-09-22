@@ -28,5 +28,7 @@ Fails if applied to a theorem the conclusion of which is not
 a paired existential quantifier.
 
 \SEEALSO
-Drule.SELECT_RULE, PairRules.PCHOOSE, SELECT_AX, PairRules.PSELECT_CONV, PairRules.PEXISTS_CONV, PairRules.PSELECT_ELIM, PairRules.PSELECT_INTRO.
+Drule.SELECT_RULE, PairRules.PCHOOSE, PairRules.PSELECT_CONV,
+PairRules.PEXISTS_CONV, PairRules.PSELECT_ELIM, PairRules.PSELECT_INTRO.
+
 \ENDDOC

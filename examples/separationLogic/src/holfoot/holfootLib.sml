@@ -1586,6 +1586,50 @@ end;
 (******************************************************************************)
 
 
+
+(* ---------------------------------------- *)
+(* points_to imp add_tags                   *)
+(* adds the given tag to the points to      *)
+(* expression of a frame calculation        *)
+(* The points to needs to occur at first    *)
+(* position in split                        *)
+(* ---------------------------------------- *)
+
+(*
+   val tt = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
+   val tag_t = ``holfoot_tag "xxxx"``
+*)
+fun VAR_RES_FRAME_SPLIT_INFERENCE___points_to___ADD_TAG_split___CONV tag_t tt =
+let
+   (* destruct everything *)
+   val (_, _, _, _, _, split_sfb, _, _) =  dest_VAR_RES_FRAME_SPLIT tt;
+   val (pt_t,_) = bagSyntax.dest_insert split_sfb;
+   val (e_t, _) = dest_holfoot_ap_points_to pt_t;
+
+   (* add tag *)
+   val thm0 = PART_MATCH (lhs o snd o dest_imp)
+      (SPEC tag_t VAR_RES_FRAME_SPLIT___points_to___ADD_TAC___split) tt;
+
+   (* elim preconds *)
+   val thm1 = var_res_precondition_prove thm0;
+
+   (* give new constant a nice name *)  
+   val c_const_name = get_const_name_for_exp 
+         ("_"^(holfoot_term_to_string tag_t)) e_t
+
+   val thm2 = CONV_RULE (RHS_CONV
+                 (RENAME_VARS_CONV [c_const_name])) thm1
+in
+   thm2
+end;
+
+
+fun VAR_RES_FRAME_SPLIT_INFERENCE___points_to___ADD_TAG_LIST_split___CONV [] = ALL_CONV
+  | VAR_RES_FRAME_SPLIT_INFERENCE___points_to___ADD_TAG_LIST_split___CONV (tag_t::tagL) =
+    (VAR_RES_FRAME_SPLIT_INFERENCE___points_to___ADD_TAG_split___CONV tag_t) THENC
+    QUANT_CONV (VAR_RES_FRAME_SPLIT_INFERENCE___points_to___ADD_TAG_LIST_split___CONV tagL)
+
+
 (* ---------------------------------------- *)
 (* data_list_seg - points to - points to    *)
 (* ---------------------------------------- *)
@@ -1739,29 +1783,44 @@ let
    val _ = if isSome found_opt then () else raise UNCHANGED;
    val (n, m) = valOf found_opt;
 
-   (*resort*)
-   val thm0 = (VAR_RES_FRAME_SPLIT___split_CONV (BAG_RESORT_CONV [n]) THENC
-               VAR_RES_FRAME_SPLIT___imp_CONV (BAG_RESORT_CONV [m])) tt
+   (*resort and add extra tags if necessary*)
+   val thm0a = (VAR_RES_FRAME_SPLIT___split_CONV (BAG_RESORT_CONV [n]) THENC
+                VAR_RES_FRAME_SPLIT___imp_CONV (BAG_RESORT_CONV [m])) tt;
+   val (list_tagL, points_to_tagL) = 
+      let
+         val (_, _, _, _, _, split_sfb', imp_sfb', _) =  dest_VAR_RES_FRAME_SPLIT 
+            (rhs (concl thm0a));         
+         val (pt_t,_) = bagSyntax.dest_insert split_sfb';
+         val (_, L) = dest_holfoot_ap_points_to pt_t;
+         val pt_tagL = map (fst o pairSyntax.dest_pair) (snd (finite_mapSyntax.strip_fupdate L));
+
+         val (l_t,_) = bagSyntax.dest_insert imp_sfb';
+         val (l_tag, _, d_t, _) = dest_holfoot_ap_data_list_seg l_t;
+         val l_tagL_0 = map (fst o pairSyntax.dest_pair) 
+                (fst (listSyntax.dest_list d_t));
+      in
+         (l_tag::l_tagL_0, pt_tagL)
+      end;
+   val new_tagL = set_diff list_tagL points_to_tagL;
+   val thm0 = CONV_RULE (RHS_CONV (VAR_RES_FRAME_SPLIT_INFERENCE___points_to___ADD_TAG_LIST_split___CONV new_tagL)) thm0a;
+
 
    (*apply inference*)
-   val thm1 = PART_MATCH (lhs o snd o dest_imp o snd o dest_imp)
+   val (fvs, thm1_base) = strip_forall (rhs (concl thm0));
+   val thm1a = PART_MATCH (lhs o snd o dest_imp o snd o dest_imp)
       VAR_RES_FRAME_SPLIT___points_to___data_list_seg
-      (rhs (concl thm0))
+      thm1_base;
 
-   val precond = (fst o dest_imp o concl) thm1
-   val precond_thm = var_res_implies_unequal___prove___term context precond
-   val thm2 = MP thm1 precond_thm 
-   val thm3 = var_res_precondition_prove thm2
+   val precond = (fst o dest_imp o concl) thm1a;
+   val precond_thm = var_res_implies_unequal___prove___term context precond;
+   val thm1b = MP thm1a precond_thm;
+   val thm1c = var_res_precondition_prove thm1b;
+   val my_conv = computeLib.CBV_CONV simplify_cs;
+   val thm1d =  CONV_RULE (RHS_CONV (VAR_RES_FRAME_SPLIT___imp_CONV my_conv)) thm1c;
 
-   (*undo resorting*)
-   val thm4 = TRANS thm0 thm3
-
-
-   (*simplify*)
-   val my_conv = computeLib.CBV_CONV simplify_cs
-   val thm5 =  CONV_RULE (RHS_CONV (VAR_RES_FRAME_SPLIT___imp_CONV my_conv)) thm4
+   val thm1 = CONV_RULE (RHS_CONV (STRIP_QUANT_CONV (K thm1d))) thm0;
 in
-   thm5
+   thm1
 end;
 
 end;

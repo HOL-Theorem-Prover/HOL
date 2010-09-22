@@ -28,5 +28,7 @@ It also fails if any of the variables of the supplied structure occurs free
 in either the assumptions or (initial) conclusion of the goal.
 
 \SEEALSO
-Tactic.X_GEN_TAC, PairRules.FILTER_PGEN_TAC, PairRules.PGEN, PairRules.PGENL, PGEN_ALL, PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC.
+Tactic.X_GEN_TAC, PairRules.FILTER_PGEN_TAC, PairRules.PGEN, PairRules.PGENL,
+PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC.
+
 \ENDDOC

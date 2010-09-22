@@ -49,5 +49,6 @@ procedures to make names look more appropriate.  Changing names can
 only affect the presentation of terms, not their semantics.
 
 \SEEALSO
-Term.aconv, Thm.ALPHA, SWAP_VARS_CONV.
+Term.aconv, Thm.ALPHA.
+
 \ENDDOC

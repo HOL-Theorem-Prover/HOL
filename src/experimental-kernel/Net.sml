@@ -302,7 +302,7 @@ fun follow tm net =
         | TCmb => let val (Rator,Rand) = Term.dest_tycomb tm
                   in follow Rator (get_edge TCmb net)
                   end
- in Lib.gather (not o is_empty) (get_edge V net::nets)
+ in List.filter (not o is_empty) (get_edge V net::nets)
  end;
 
 fun lookup tm net =

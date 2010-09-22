@@ -1,0 +1,22 @@
+list_alloc_delete(;n) [] {
+  local t,i,c;
+  i = 0; c = NULL;
+  loop_spec [i <= n * data_list(c,_data) * ``LENGTH data = i``] {
+     while (i < n) {
+        t=new() [dta];
+        t->tl=c;
+        c=t;
+        i=i+1;
+     }
+  } [data_list(c,_data) * ``LENGTH data = n`` * (n == i)]
+
+  loop_spec [data_list(c,_data) * ``LENGTH data = i``] {
+     while (i != 0) {
+        t=c->tl;
+        dispose c;
+        c=t;
+        i=i-1;
+     }
+  } []
+} []
+

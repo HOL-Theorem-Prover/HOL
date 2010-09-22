@@ -802,7 +802,7 @@ fun make_set_abs oinfo l (tm1,tm2) (E as {scope=scope0,...}:env) = let
                  intersect tm1_fv_names tm2_fv_names
   val init_fv = #free e3
 in
-  case gather (fn (name,_) => mem name fv_names) init_fv of
+  case filter (fn (name,_) => mem name fv_names) init_fv of
     [] => raise ERRORloc "make_set_abs" l "no free variables in set abstraction"
   | quants => let
       val quants' = map
@@ -863,7 +863,7 @@ fun make_seq_abs l (tm1,tm2) (E as {scope=scope0,...}:env) =
                       intersect tm1_fv_names tm2_fv_names
        val init_fv = #free e3
    in
-   case gather (fn (name,_) => mem name fv_names) init_fv
+   case filter (fn (name,_) => mem name fv_names) init_fv
      of [] => raise ERRORloc "make_seq_abs" l "no free variables in set abstraction"
       | quants =>
          let val quants' = map

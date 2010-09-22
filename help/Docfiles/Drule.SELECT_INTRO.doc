@@ -40,7 +40,7 @@ This theorem could now be used to derive a further result:
    val it = |- m = (@n. m = n) : thm
 }
 
-
 \SEEALSO
-Thm.EXISTS, SELECT_AX, Conv.SELECT_CONV, Drule.SELECT_ELIM, Drule.SELECT_RULE.
+Thm.EXISTS, Conv.SELECT_CONV, Drule.SELECT_ELIM, Drule.SELECT_RULE.
+
 \ENDDOC

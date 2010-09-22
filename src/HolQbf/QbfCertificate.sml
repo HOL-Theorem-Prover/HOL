@@ -1,6 +1,6 @@
 (* Copyright (c) 2010 Tjark Weber. All rights reserved. *)
 
-(* QBF Certificates and proof reconstruction.
+(* QBF certificates and proof reconstruction.
 
    As defined in "A File Format for QBF Certificates" by Daniel Kroening and
    Christoph M. Wintersteiger (2007-05-01, available at

@@ -20,5 +20,6 @@ Fails unless the goal has hypotheses and conclusions all of type {bool},
 and the tactic can solve the goal.
 
 \SEEALSO
-BasicProvers.PROVE, hol88Lib.prove_thm, VALID.
+BasicProvers.PROVE, Tactical.VALID.
+
 \ENDDOC

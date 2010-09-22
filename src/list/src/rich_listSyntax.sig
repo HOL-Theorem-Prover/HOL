@@ -5,7 +5,6 @@ sig
   val and_el_tm       : term
   val butlastn_tm     : term
   val ell_tm          : term
-  val genlist_tm      : term
   val is_sublist_tm   : term
   val is_suffix_tm    : term
   val lastn_tm        : term
@@ -23,7 +22,6 @@ sig
   val mk_and_el       : term -> term
   val mk_butlastn     : term * term -> term
   val mk_ell          : term * term -> term
-  val mk_genlist      : term * term -> term
   val mk_is_sublist   : term * term -> term
   val mk_is_suffix    : term * term -> term
   val mk_lastn        : term * term -> term
@@ -41,7 +39,6 @@ sig
   val dest_and_el     : term -> term
   val dest_butlastn   : term -> term * term
   val dest_ell        : term -> term * term
-  val dest_genlist    : term -> term * term
   val dest_is_sublist : term -> term * term
   val dest_is_suffix  : term -> term * term
   val dest_lastn      : term -> term * term
@@ -59,7 +56,6 @@ sig
   val is_and_el       : term -> bool
   val is_butlastn     : term -> bool
   val is_ell          : term -> bool
-  val is_genlist      : term -> bool
   val is_is_sublist   : term -> bool
   val is_is_suffix    : term -> bool
   val is_lastn        : term -> bool

@@ -195,7 +195,7 @@ val LIST_QUOTIENT = store_thm
 
 
 (* list theory: CONS, NIL, MAP, LENGTH, APPEND, FLAT, REVERSE, FILTER,
-                NULL, SOME_EL, ALL_EL, FOLDL, FOLDR *)
+                NULL, EVERY (ALL_EL), EXISTS (SOME_EL), FOLDL, FOLDR *)
 
 val CONS_PRS = store_thm
    ("CONS_PRS",
@@ -495,45 +495,6 @@ val NULL_RSP = store_thm
     THEN REWRITE_TAC[NULL,LIST_REL_def]
    );
 
-val SOME_EL_PRS = store_thm
-   ("SOME_EL_PRS",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !l P. SOME_EL P l = SOME_EL ((abs --> I) P) (MAP rep l)`--),
-    REPEAT GEN_TAC
-    THEN DISCH_TAC
-    THEN Induct
-    THEN ASM_REWRITE_TAC[SOME_EL,MAP]
-    THEN REPEAT GEN_TAC
-    THEN IMP_RES_TAC QUOTIENT_ABS_REP
-    THEN ASM_REWRITE_TAC[FUN_MAP_THM,I_THM]
-   );
-
-val SOME_EL_RSP = store_thm
-   ("SOME_EL_RSP",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !l1 l2 P1 P2.
-          (R ===> $=) P1 P2 /\ (LIST_REL R) l1 l2 ==>
-          (SOME_EL P1 l1 = SOME_EL P2 l2)`--),
-    REPEAT GEN_TAC
-    THEN DISCH_TAC
-    THEN Induct
-    THENL [ ALL_TAC, GEN_TAC ]
-    THEN Induct
-    THEN REPEAT GEN_TAC
-    THEN REWRITE_TAC[SOME_EL,LIST_REL_def]
-    THEN REWRITE_TAC[FUN_REL]
-    THEN STRIP_TAC
-    THEN MK_COMB_TAC
-    THENL
-      [ AP_TERM_TAC
-        THEN FIRST_ASSUM MATCH_MP_TAC
-        THEN FIRST_ASSUM ACCEPT_TAC,
-
-        FIRST_ASSUM MATCH_MP_TAC
-        THEN ASM_REWRITE_TAC[FUN_REL]
-      ]
-   );
-
 val ALL_EL_PRS = store_thm
    ("ALL_EL_PRS",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
@@ -560,6 +521,45 @@ val ALL_EL_RSP = store_thm
     THEN Induct
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[ALL_EL,LIST_REL_def]
+    THEN REWRITE_TAC[FUN_REL]
+    THEN STRIP_TAC
+    THEN MK_COMB_TAC
+    THENL
+      [ AP_TERM_TAC
+        THEN FIRST_ASSUM MATCH_MP_TAC
+        THEN FIRST_ASSUM ACCEPT_TAC,
+
+        FIRST_ASSUM MATCH_MP_TAC
+        THEN ASM_REWRITE_TAC[FUN_REL]
+      ]
+   );
+
+val SOME_EL_PRS = store_thm
+   ("SOME_EL_PRS",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !l P. SOME_EL P l = SOME_EL ((abs --> I) P) (MAP rep l)`--),
+    REPEAT GEN_TAC
+    THEN DISCH_TAC
+    THEN Induct
+    THEN ASM_REWRITE_TAC[SOME_EL,MAP]
+    THEN REPEAT GEN_TAC
+    THEN IMP_RES_TAC QUOTIENT_ABS_REP
+    THEN ASM_REWRITE_TAC[FUN_MAP_THM,I_THM]
+   );
+
+val SOME_EL_RSP = store_thm
+   ("SOME_EL_RSP",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !l1 l2 P1 P2.
+          (R ===> $=) P1 P2 /\ (LIST_REL R) l1 l2 ==>
+          (SOME_EL P1 l1 = SOME_EL P2 l2)`--),
+    REPEAT GEN_TAC
+    THEN DISCH_TAC
+    THEN Induct
+    THENL [ ALL_TAC, GEN_TAC ]
+    THEN Induct
+    THEN REPEAT GEN_TAC
+    THEN REWRITE_TAC[SOME_EL,LIST_REL_def]
     THEN REWRITE_TAC[FUN_REL]
     THEN STRIP_TAC
     THEN MK_COMB_TAC

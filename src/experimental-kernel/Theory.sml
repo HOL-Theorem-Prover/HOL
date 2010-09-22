@@ -435,14 +435,14 @@ fun scrub_ax {thid,facts,adjoin,thydata} =
          | check (_, Defn _) = true
          | check (_, Axiom(_,th)) = uptodate_term (Thm.concl th)
    in
-      {thid=thid, adjoin=adjoin, facts=Lib.gather check facts, thydata=thydata}
+      {thid=thid, adjoin=adjoin, facts=List.filter check facts, thydata=thydata}
    end
 
 fun scrub_thms {thid,facts,adjoin, thydata} =
    let fun check (_, Axiom _) = true
          | check (_, Thm th ) = uptodate_thm th
          | check (_, Defn th) = uptodate_thm th
-   in {thid=thid, adjoin=adjoin, facts=Lib.gather check facts, thydata=thydata}
+   in {thid=thid, adjoin=adjoin, facts=List.filter check facts, thydata=thydata}
    end
 
 fun scrub () = makeCT (scrub_thms (scrub_ax (theCT())))
@@ -497,7 +497,7 @@ end;
  * Adding a new theory into the current theory graph.                        *
  *---------------------------------------------------------------------------*)
 
-fun set_diff a b = gather (fn x => not (Lib.op_mem thyid_eq x b)) a;
+fun set_diff a b = filter (fn x => not (Lib.op_mem thyid_eq x b)) a;
 fun node_set_eq S1 S2 = null(set_diff S1 S2) andalso null(set_diff S2 S1);
 
 fun link_parents thy plist =

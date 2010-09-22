@@ -143,5 +143,7 @@ Note that the fixity of the identifier {<<} is set independently of
 the definition.
 
 \SEEALSO
-Hol_datatype, Prim_rec.prove_rec_fn_exists, TotalDefn.Define, Parse.set_fixity.
+bossLib.Hol_datatype, Prim_rec.prove_rec_fn_exists, TotalDefn.Define,
+Parse.set_fixity.
+
 \ENDDOC

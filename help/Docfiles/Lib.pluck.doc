@@ -28,5 +28,5 @@ list. Also fails if an application of {P} fails.
 
 
 \SEEALSO
-Lib.first, Lib.gather, Lib.filter, Lib.mapfilter, Lib.assoc1, Lib.assoc2, Lib.assoc, Lib.rev_assoc.
+Lib.first, Lib.filter, Lib.mapfilter, Lib.assoc1, Lib.assoc2, Lib.assoc, Lib.rev_assoc.
 \ENDDOC

@@ -35,6 +35,6 @@ should not be taken as final, since cooperating decision procedures are
 an important component in highly automated proof systems.
 
 \SEEALSO
-bossLib.RW_TAC, bossLib.arith_ss, intLib.ARITH_TAC.
+bossLib.RW_TAC, bossLib.arith_ss.
 
 \ENDDOC

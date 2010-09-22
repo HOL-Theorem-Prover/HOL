@@ -41,7 +41,6 @@ sig
   val get_first     : ('a -> 'b option) -> 'a list -> 'b option
   val split_after   : int -> 'a list -> 'a list * 'a list
   val partition     : ('a -> bool) -> 'a list -> 'a list * 'a list
-  val gather        : ('a -> bool) -> 'a list -> 'a list
   val filter        : ('a -> bool) -> 'a list -> 'a list
   val itlist        : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val itlist2       : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c

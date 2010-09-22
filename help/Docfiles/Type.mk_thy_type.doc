@@ -43,5 +43,5 @@ includes type applications, type abstractions, and universal types.
 Type.mk_type, Type.mk_vartype_opr, Type.-->,
 Type.mk_thy_con_type, Type.mk_con_type, Type.mk_app_type,
 Type.list_mk_app_type, Type.mk_abs_type, Type.mk_univ_type,
-Type.dest_thy_type, Term.mk_const, Term.mk_thy_const, decls, op_arity.
+Type.dest_thy_type, Term.mk_const, Term.mk_thy_const.
 \ENDDOC

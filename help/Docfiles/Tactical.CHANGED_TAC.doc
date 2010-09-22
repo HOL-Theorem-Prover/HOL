@@ -17,5 +17,6 @@ The application of {CHANGED_TAC} to a tactic never fails. The resulting
 tactic fails if the basic tactic either fails or has no effect.
 
 \SEEALSO
-Tactical.TRY, VALID.
+Tactical.TRY, Tactical.VALID.
+
 \ENDDOC

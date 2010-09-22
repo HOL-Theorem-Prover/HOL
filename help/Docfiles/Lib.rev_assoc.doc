@@ -28,5 +28,6 @@ list is empty.
 
 
 \SEEALSO
-Lib.assoc, Lib.assoc1, Lib.assoc2, Lib.find, Lib.mem, Lib.tryfind, Lib.exists, Lib.all.
+Lib.assoc, Lib.assoc1, Lib.assoc2, Lib.mem, Lib.tryfind, Lib.exists, Lib.all.
+
 \ENDDOC

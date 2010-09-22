@@ -67,9 +67,7 @@ that aren't either {HOL_ERR} or {Interrupt} into applications of
     Div
 }
 
-
-
-
 \SEEALSO
-Feedback, Feedback.HOL_ERR, Feedback.with_exn.
+Feedback, Feedback.HOL_ERR.
+
 \ENDDOC

@@ -41,6 +41,6 @@ Use of {ty_antiq} solves the problem:
 }
 
 \SEEALSO
-Parse.Term Parse.Type
+Parse.Term.
 
 \ENDDOC

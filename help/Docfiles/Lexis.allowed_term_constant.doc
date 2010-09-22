@@ -29,5 +29,5 @@ check whether there is already a constant of that name in the current
 theory.
 
 \SEEALSO
-Theory.constants, is_constant, new_alphanum, new_special_symbol, special_symbols, Lexis.allowed_type_constant.
+Theory.constants, Lexis.allowed_type_constant.
 \ENDDOC

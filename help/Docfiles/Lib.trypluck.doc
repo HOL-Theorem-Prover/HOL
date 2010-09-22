@@ -29,5 +29,6 @@ list.
 }
 
 \SEEALSO
-Lib.first, Lib.gather, Lib.filter, Lib.mapfilter, Lib.tryfind, Lib.trypluck'.
+Lib.first, Lib.filter, Lib.mapfilter, Lib.tryfind.
+
 \ENDDOC

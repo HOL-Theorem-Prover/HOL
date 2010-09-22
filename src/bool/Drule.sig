@@ -86,6 +86,10 @@ sig
   val CONJUNCTS        : thm -> thm list
   val BODY_CONJUNCTS   : thm -> thm list
   val IMP_CANON        : thm -> thm list
+  val MP_GENEQ_CANON   : bool list -> thm -> thm
+  val MP_CANON         : thm -> thm
+  val MP_LEQ_CANON     : thm -> thm
+  val MP_REQ_CANON     : thm -> thm
   val LIST_MP          : thm list -> thm -> thm
   val CONTRAPOS        : thm -> thm
   val DISJ_IMP         : thm -> thm

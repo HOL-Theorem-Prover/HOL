@@ -44,5 +44,7 @@ preserves structure accordingly.
 
 
 \SEEALSO
-Thm.SPEC, PairRules.IPSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL, PSPEC_VAR, PairRules.PGEN, PairRules.PGENL.
+Thm.SPEC, PairRules.IPSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL,
+PairRules.PGEN, PairRules.PGENL.
+
 \ENDDOC

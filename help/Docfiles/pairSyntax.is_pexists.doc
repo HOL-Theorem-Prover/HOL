@@ -16,5 +16,5 @@ If the term is not a paired existential quantification the result is {false}.
 Never fails.
 
 \SEEALSO
-boolSyntax.is_exists, pairSyntax.mk_pexists, pairSyntax.dest_pexists.
+boolSyntax.is_exists, pairSyntax.dest_pexists.
 \ENDDOC

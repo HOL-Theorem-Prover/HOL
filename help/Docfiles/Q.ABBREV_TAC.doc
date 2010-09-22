@@ -73,7 +73,6 @@ will turn the assumption {`Abbrev(f = (\n. n + 3))`} into
 pattern.
 
 \SEEALSO
-BasicProvers.Abbr, Q.HO_MATCH_ABBREV_TAC, Q.MATCH_ABBREV_TAC,
-Q.PAT_ABBREV_TAC, Q.UNABBREV_TAC.
+BasicProvers.Abbr, Q.HO_MATCH_ABBREV_TAC, Q.MATCH_ABBREV_TAC, Q.UNABBREV_TAC.
 
 \ENDDOC

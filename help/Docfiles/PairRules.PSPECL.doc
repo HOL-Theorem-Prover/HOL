@@ -32,5 +32,7 @@ Fails if the list of terms is longer than the number of quantified
 pairs in the theorem.
 
 \SEEALSO
-Drule.SPECL, PairRules.PGEN, PairRules.PGENL, PGEN_ALL, PairRules.PGEN_TAC, PairRules.PSPEC, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC.
+Drule.SPECL, PairRules.PGEN, PairRules.PGENL, PairRules.PGEN_TAC,
+PairRules.PSPEC, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC.
+
 \ENDDOC

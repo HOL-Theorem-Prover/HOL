@@ -10,6 +10,6 @@ Reduces the goal using a consequence conversion.
 {c} to a new goal {P'}. It then remains to show that {P'} holds.
 
 \SEEALSO
-Drule.MATCH_MP_TAC
+Tactic.MATCH_MP_TAC
 \ENDDOC
 

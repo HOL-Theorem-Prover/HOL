@@ -30,7 +30,7 @@ assumptions {A}.
 > val it = |- (\m. m) = (\m. m) : thm
 }
 
-
 \SEEALSO
-Thm.ETA_CONV, Drule.EXT, Drule.MK_ABS.
+Drule.ETA_CONV, Drule.EXT, Drule.MK_ABS.
+
 \ENDDOC

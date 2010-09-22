@@ -89,8 +89,8 @@ fun FREEUP [] M g = (ALL_TAC,M)
   | FREEUP tofree M (g as (asl,w)) =
      let val (V,_) = strip_forall w   (* ignore renaming here : idleness! *)
          val Vmap = away (free_varsl (w::asl)) V
-         val theta = gather (fn (v,_) => mem v tofree) Vmap
-         val rebind = map snd (gather (fn (v,_) => not (mem v tofree)) Vmap)
+         val theta = filter (fn (v,_) => mem v tofree) Vmap
+         val rebind = map snd (filter (fn (v,_) => not (mem v tofree)) Vmap)
      in
        ((MAP_EVERY X_GEN_TAC (map snd Vmap)
           THEN MAP_EVERY ID_SPEC_TAC (rev rebind)),

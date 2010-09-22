@@ -43,5 +43,7 @@ as {PURE_REWRITE_RULE}, or other rules such as {SUBST}, may be used
 instead to improve efficiency.
 
 \SEEALSO
-Rewrite.ASM_REWRITE_RULE, basic_rewrites, Rewrite.GEN_REWRITE_RULE, Rewrite.ONCE_REWRITE_RULE, Rewrite.PURE_REWRITE_RULE, Conv.REWR_CONV, Rewrite.REWRITE_CONV, Thm.SUBST.
+Rewrite.ASM_REWRITE_RULE, Rewrite.GEN_REWRITE_RULE, Rewrite.ONCE_REWRITE_RULE,
+Rewrite.PURE_REWRITE_RULE, Conv.REWR_CONV, Rewrite.REWRITE_CONV, Thm.SUBST.
+
 \ENDDOC

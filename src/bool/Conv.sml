@@ -2578,22 +2578,18 @@ fun CONTRAPOS_CONV tm =
 (*                                                                      *)
 (* Added: TFM 88.03.31                                                  *)
 (* ---------------------------------------------------------------------*)
+val ANTE_CONJ_CONV = REWR_CONV (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV) AND_IMP_INTRO);
 
-fun ANTE_CONJ_CONV tm =
-   let val {ant,conseq} = dest_imp tm
-       val {conj1,conj2} = dest_conj ant
-       val ant_thm = ASSUME ant
-       val imp1 = MP (ASSUME tm) (CONJ (ASSUME conj1) (ASSUME conj2))
-       and imp2 = LIST_MP [CONJUNCT1 ant_thm,CONJUNCT2 ant_thm]
-                       (ASSUME (mk_imp{ant=conj1,
-                         conseq=mk_imp{ant=conj2, conseq=conseq}}))
-   in
-     IMP_ANTISYM_RULE
-       (DISCH_ALL (DISCH conj1 (DISCH conj2 imp1)))
-       (DISCH_ALL (DISCH ant imp2))
-   end
-   handle HOL_ERR _ => raise ERR "ANTE_CONJ_CONV" "";
-
+(* ---------------------------------------------------------------------*)
+(* AND_IMP_INTRO_CONV: convert a series of implications to an           *)
+(*                     implication with conjuncts in its antecedent     *)
+(*                                                                      *)
+(* AND_IMP_INTRO_CONV "a1 ==> a2 ==> c"                                 *)
+(*      ----> |- (a1 ==> (a2 ==> c)) = (a1 /\ a2 ==> c)                 *)
+(*                                                                      *)
+(* Added: Thomas Tuerk, 2nd August 2010                                 *)
+(* ---------------------------------------------------------------------*)
+val AND_IMP_INTRO_CONV = REWR_CONV AND_IMP_INTRO;
 
 (* ---------------------------------------------------------------------*)
 (* SWAP_EXISTS_CONV: swap the order of existentially quantified vars.   *)

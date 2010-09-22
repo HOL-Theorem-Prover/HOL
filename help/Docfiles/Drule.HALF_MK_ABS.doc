@@ -25,5 +25,6 @@ left-hand side is a function applied to the quantified variable, or if the
 variable is free in that function.
 
 \SEEALSO
-Thm.ETA_CONV, Drule.MK_ABS, Thm.MK_COMB, Drule.MK_EXISTS.
+Drule.ETA_CONV, Drule.MK_ABS, Thm.MK_COMB, Drule.MK_EXISTS.
+
 \ENDDOC

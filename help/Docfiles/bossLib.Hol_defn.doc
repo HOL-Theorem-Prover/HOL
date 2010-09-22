@@ -287,7 +287,6 @@ This allows the contexts of recursive calls in branches of
 
 \SEEALSO
 Defn.tgoal, Defn.tprove, bossLib.WF_REL_TAC, bossLib.Define, 
-bossLib.xDefine, DefnBase.read_congs, DefnBase.write_congs, 
-bossLib.Hol_datatype.
+bossLib.xDefine, bossLib.Hol_datatype.
 
 \ENDDOC

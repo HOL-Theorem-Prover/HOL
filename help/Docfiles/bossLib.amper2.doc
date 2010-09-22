@@ -30,6 +30,6 @@ already include this functionality. However, applications of {ZAP_TAC}
 can benefit.
 
 \SEEALSO
-simpLib.++, simpLib.SIMP_CONV, bossLib.RW_TAC, bossLib.ZAP_TAC.
+simpLib.++, simpLib.SIMP_CONV, bossLib.RW_TAC.
 
 \ENDDOC

@@ -1,7 +1,3 @@
-
-val _ = current_package :=
- implode(map chr (cons 65 (cons 67 (cons 76 (cons 50 nil)))));
-
 val _ = sexp.acl2_list_ref := [
 
 (mkpair (mksym "ACL2" "INCLUDE-BOOK") (mkpair (mk_chars_str (chars_to_string (
@@ -1248,3 +1244,6 @@ mkpair (mksym "ACL2" "M") (mkpair (mksym "ACL2" "Q") (mkpair (mksym "ACL2"
 "NIL"))))) (mksym "COMMON-LISP" "NIL")))) (mksym "COMMON-LISP" "NIL"))))
 
 ];
+
+val _ = current_package :=
+ implode(map chr (cons 65 (cons 67 (cons 76 (cons 50 nil)))));

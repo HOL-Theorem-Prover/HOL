@@ -1159,7 +1159,7 @@ fun make_hyp_quotient hyp_quots quots tyop_quots ty =
         val qty_quots = zip qtys all_quots
         fun contains_base ty =
           if is_vartype ty then false
-          else if mem ty base_tys then true
+          else if (*mem ty base_tys*) exists (can (match_type ty)) base_tys then true
                else exists contains_base (#Args (dest_type ty))
         fun prim_make_quotient ty =
             assoc ty hqty_quots
@@ -1740,6 +1740,17 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
       val funcs = map get_deffunc newdefs
       val newdeffuncs = funcs
 
+      fun match_ty_term ob pat =
+        let val (tmtheta,tytheta) = match_term pat ob
+            val pat' = inst tytheta pat
+        in if pat' = ob then (tmtheta,tytheta)
+           else raise raise HOL_ERR {
+                               origin_structure = "quotient",
+                               origin_function  = "match_ty_term",
+                               message = "not a match"
+                                    }
+        end
+
 (* For each constant being lifted, check that its respectfulness theorem
    is present.  If not, then if the theorem is trivial, create it.
    If it is missing and not trivial, fail with an error message.
@@ -1748,7 +1759,8 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
         let val get_func = fst o strip_comb o rand o rator
                             o find_base o snd o strip_forall o concl
             val rfuncs = map get_func respects
-            val missing = op_subtract eq funcs rfuncs
+            val missing = (*subtract funcs rfuncs*)
+                          filter (fn f => not (exists (can (match_ty_term f)) rfuncs)) funcs
             fun check_not_rep_ty margty = if is_rep_ty margty then raise Match
                                                               else ()
 
@@ -2301,7 +2313,7 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
                         }
                 in if is_rep_ty ty
                    then if mem (#Name(dest_const tm)) ("respects" :: RELnms @ tyop_RELnms)
-                                orelse op_mem eq tm newdeffuncs
+                                orelse exists (can (match_ty_term tm)) newdeffuncs
                              then []
                         else      if not (exists (match_higher_th tm) ho_polywfs) then raise (err1())
                              else if not (match_higher_df tm) then raise (err2())
@@ -3793,12 +3805,15 @@ fun define_quotient_types_rule {types, defs,
       val ntys = enrich_types quotients tyop_quotients respects
       val nequivs = map (make_equiv equivs tyop_equivs) ntys
       fun is_ident_equiv th =
-             (curry op = "=" o #Name o dest_const o rator o rator
-                               o lhs o snd o strip_forall o concl) th
+             (curry op = "=" o #Name o dest_const o rand o concl
+                             o PURE_REWRITE_RULE[GSYM EQUIV_def]) th
              handle _ => false
       val pequivs = equivs @ filter (not o is_ident_equiv) nequivs
+      fun is_ident_quot th =
+             (curry op = "=" o #Name o dest_const o rand o rator o rator o concl) th
+             handle _ => false
       val quotients =
-          quotients @ map (make_quotient quotients tyop_quotients) ntys
+          quotients @ filter (not o is_ident_quot) (map (make_quotient quotients tyop_quotients) ntys)
 
       val LIFT_RULE =
              lift_theorem_by_quotients quotients pequivs tyop_equivs

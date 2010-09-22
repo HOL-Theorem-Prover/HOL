@@ -16,5 +16,6 @@ The application of {dest_pforall} to {"!pair. t"} returns {("pair","t")}.
 Fails with {dest_pforall} if term is not a paired universal quantification.
 
 \SEEALSO
-boolSyntax.dest_forall, pairSyntax.mk_pforall, pairSyntax.is_pforall, pairSyntax.strip_pforall.
+boolSyntax.dest_forall, pairSyntax.is_pforall, pairSyntax.strip_pforall.
+
 \ENDDOC

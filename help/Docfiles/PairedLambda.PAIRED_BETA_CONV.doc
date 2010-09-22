@@ -85,5 +85,7 @@ but the following call fails:
 because {p} is not a pair.
 
 \SEEALSO
-Thm.BETA_CONV, Conv.BETA_RULE, Tactic.BETA_TAC, PairedLambda.GEN_BETA_CONV, Drule.LIST_BETA_CONV, Drule.RIGHT_BETA, Drule.RIGHT_LIST_BETA.
+Thm.BETA_CONV, Conv.BETA_RULE, Tactic.BETA_TAC, Drule.LIST_BETA_CONV,
+Drule.RIGHT_BETA, Drule.RIGHT_LIST_BETA.
+
 \ENDDOC

@@ -27,27 +27,6 @@ quietdec := false;
 
 val _ = new_theory "holfoot";
 
-val MP_CANON = 
-    CONV_RULE (REPEATC (
-    CHANGED_CONV (REWRITE_CONV [AND_IMP_INTRO]) ORELSEC
-    REDEPTH_CONV RIGHT_IMP_FORALL_CONV))
-
-
-fun EQ_IMP_RULE_CANON thm =
-   let
-      val (vL, body) = strip_forall (concl thm)
-      val pre = is_imp_only body
-      val pre_term = if pre then fst (dest_imp body) else T
-      val thm0 = if pre then UNDISCH (SPEC_ALL thm) else SPEC_ALL thm
-      val thm1 = snd (EQ_IMP_RULE thm0);
-      val thm2 = if pre then 
-             (CONV_RULE (REWR_CONV AND_IMP_INTRO) (DISCH pre_term thm1)) 
-             else thm1
-      val thm3 = GENL vL thm2
-   in
-      thm3
-   end;
-
 
 (*=====================================================================
  =
@@ -1051,6 +1030,31 @@ CONSEQ_REWRITE_TAC ([], [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___points_to,
    FEVERY_STRENGTHEN_THM], []) THEN
 ASM_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL]);
 
+
+
+
+val VAR_RES_FRAME_SPLIT___points_to___ADD_TAC___split = store_thm(
+"VAR_RES_FRAME_SPLIT___points_to___ADD_TAC___split",
+``!t e L sr wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_restP.
+~(t IN FDOM L) /\
+VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb)) e /\
+FEVERY (\x.
+  VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET (SET_OF_BAG (BAG_UNION wpb rpb)) (SND x)) L ==>
+
+((VAR_RES_FRAME_SPLIT DISJOINT_FMAP_UNION sr (wpb,rpb) wpb' sfb_context
+ (BAG_INSERT (holfoot_ap_points_to e L) sfb_split) sfb_imp sfb_restP) =
+
+ !c. (VAR_RES_FRAME_SPLIT DISJOINT_FMAP_UNION sr (wpb,rpb) wpb' sfb_context
+       (BAG_INSERT (holfoot_ap_points_to e (L |+ (t, var_res_exp_const c))) 
+         sfb_split) sfb_imp sfb_restP))``,
+
+REPEAT STRIP_TAC THEN
+IMP_RES_TAC holfoot_ap_points_to___ADD_TAG THEN
+ASM_SIMP_TAC std_ss [] THEN
+HO_MATCH_MP_TAC VAR_RES_FRAME_SPLIT___asl_exists___split THEN
+CONSEQ_REWRITE_TAC ([], [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___points_to,
+   FEVERY_STRENGTHEN_THM], []) THEN
+ASM_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL]);
 
 
 
@@ -5528,7 +5532,7 @@ EQ_TAC THENL [
 
    Q.UNABBREV_TAC `listP2` THEN Q.UNABBREV_TAC `listP2'` THEN
    FULL_SIMP_TAC std_ss [] THEN
-   MATCH_MP_TAC (EQ_IMP_RULE_CANON
+   MATCH_MP_TAC (MP_LEQ_CANON
          holfoot_ap_data_list_seg_num___REWRITE_START_EXP) THEN
    Q.EXISTS_TAC `var_res_exp_const c''` THEN
    ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
@@ -5562,7 +5566,7 @@ EQ_TAC THENL [
       Q.UNABBREV_TAC `listP1'` THEN
       FULL_SIMP_TAC std_ss [EVERY_MEM,
         SUBSET_DEF, IN_LIST_TO_SET, MEM_MAP, GSYM LEFT_FORALL_IMP_THM] THEN
-      MATCH_MP_TAC (EQ_IMP_RULE_CANON holfoot_ap_data_list_seg_num___REWRITE_END_EXP) THEN
+      MATCH_MP_TAC (MP_LEQ_CANON holfoot_ap_data_list_seg_num___REWRITE_END_EXP) THEN
       Q.EXISTS_TAC `e2` THEN
       ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
       CONJ_TAC THEN1 SIMP_TAC std_ss [var_res_exp_const_def] THEN
@@ -5576,7 +5580,7 @@ EQ_TAC THENL [
       Q.UNABBREV_TAC `listP2` THEN
       Q.UNABBREV_TAC `listP2'` THEN
       FULL_SIMP_TAC std_ss [] THEN
-      MATCH_MP_TAC (EQ_IMP_RULE_CANON holfoot_ap_data_list_seg_num___REWRITE_START_EXP) THEN
+      MATCH_MP_TAC (MP_LEQ_CANON holfoot_ap_data_list_seg_num___REWRITE_START_EXP) THEN
       Q.EXISTS_TAC `e2` THEN
       ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
       SIMP_TAC std_ss [var_res_exp_const_def]
@@ -7912,7 +7916,7 @@ Cases_on `e1 (FST p)` THEN1 (
 ASM_SIMP_TAC std_ss [] THEN
 STRIP_TAC THEN
 `p IN holfoot_ap_data_interval (var_res_exp_const 0) e2 data` by ALL_TAC THEN1 (
-   MATCH_MP_TAC (EQ_IMP_RULE_CANON holfoot_ap_data_interval___EXP_REWRITE) THEN
+   MATCH_MP_TAC (MP_LEQ_CANON holfoot_ap_data_interval___EXP_REWRITE) THEN
    MAP_EVERY Q.EXISTS_TAC [`e1`, `e2`] THEN
    ASM_SIMP_TAC std_ss [var_res_exp_const_EVAL,
       IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL]

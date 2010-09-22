@@ -435,6 +435,14 @@ val TC_lifts_transitive_relations = store_thm(
     (!x y. TC R x y ==> Q (f x) (f y))``,
   STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT THEN METIS_TAC [transitive_def]);
 
+val TC_implies_one_step = Q.store_thm(
+"TC_implies_one_step",
+`!x y . R^+ x y /\ x <> y ==> ?z. R x z /\ x <> z`,
+REWRITE_TAC [GSYM AND_IMP_INTRO] THEN
+HO_MATCH_MP_TAC TC_INDUCT THEN
+SRW_TAC [SatisfySimps.SATISFY_ss][] THEN
+PROVE_TAC []);
+
 val TC_RTC = store_thm(
   "TC_RTC",
   ``!R (x:'a) y. TC R x y ==> RTC R x y``,
@@ -544,16 +552,19 @@ val RC_IDEM = store_thm(
   "RC_IDEM",
   ``!R:'a->'a->bool.  RC (RC R) = RC R``,
   SIMP_TAC bool_ss [RC_REFLEXIVE, reflexive_RC_identity]);
+val _ = export_rewrites ["RC_IDEM"]
 
 val SC_IDEM = store_thm(
   "SC_IDEM",
   ``!R:'a->'a->bool. SC (SC R) = SC R``,
   SIMP_TAC bool_ss [SC_SYMMETRIC, symmetric_SC_identity]);
+val _ = export_rewrites ["SC_IDEM"]
 
 val TC_IDEM = store_thm(
   "TC_IDEM",
   ``!R:'a->'a->bool.  TC (TC R) = TC R``,
   SIMP_TAC bool_ss [TC_TRANSITIVE, transitive_TC_identity]);
+val _ = export_rewrites ["TC_IDEM"]
 
 val RC_MOVES_OUT = store_thm(
   "RC_MOVES_OUT",
@@ -571,24 +582,31 @@ val symmetric_TC = store_thm(
     CONV_TAC SWAP_VARS_CONV THEN HO_MATCH_MP_TAC TC_INDUCT
   ] THEN ASM_MESON_TAC [TC_RULES]);
 
+val reflexive_TC = store_thm(
+  "reflexive_TC",
+  ``!R. reflexive R ==> reflexive (TC R)``,
+  PROVE_TAC [reflexive_def,TC_SUBSET]);
 
 val EQC_EQUIVALENCE = store_thm(
   "EQC_EQUIVALENCE",
   ``!R. equivalence (EQC R)``,
   REWRITE_TAC [equivalence_def, EQC_DEF, RC_REFLEXIVE, symmetric_RC] THEN
   MESON_TAC [symmetric_TC, TC_RC_EQNS, TC_TRANSITIVE, SC_SYMMETRIC]);
+val _ = export_rewrites ["EQC_EQUIVALENCE"]
 
 val EQC_IDEM = store_thm(
   "EQC_IDEM",
   ``!R:'a->'a->bool. EQC(EQC R) = EQC R``,
   SIMP_TAC bool_ss [EQC_DEF, RC_MOVES_OUT, symmetric_SC_identity,
                     symmetric_TC, SC_SYMMETRIC, TC_IDEM]);
+val _ = export_rewrites ["EQC_IDEM"]
 
 
 val RTC_IDEM = store_thm(
   "RTC_IDEM",
   ``!R:'a->'a->bool.  RTC (RTC R) = RTC R``,
   SIMP_TAC bool_ss [GSYM TC_RC_EQNS, RC_MOVES_OUT, TC_IDEM]);
+val _ = export_rewrites ["RTC_IDEM"]
 
 val RTC_CASES1 = store_thm(
   "RTC_CASES1",
@@ -691,6 +709,42 @@ val EQC_TRANS = store_thm(
   Q_TAC SUFF_TAC `transitive (EQC R)` THEN1 PROVE_TAC [transitive_def] THEN
   SRW_TAC [][EQC_DEF, transitive_RC, TC_TRANSITIVE])
 
+val transitive_EQC = Q.store_thm(
+"transitive_EQC",
+`transitive (EQC R)`,
+PROVE_TAC [transitive_def,EQC_TRANS]);
+
+val symmetric_EQC = Q.store_thm(
+"symmetric_EQC",
+`symmetric (EQC R)`,
+PROVE_TAC [symmetric_def,EQC_SYM]);
+
+val reflexive_EQC = Q.store_thm(
+"reflexive_EQC",
+`reflexive (EQC R)`,
+PROVE_TAC [reflexive_def,EQC_REFL]);
+
+val EQC_MOVES_IN = Q.store_thm(
+"EQC_MOVES_IN",
+`!R. (EQC (RC R) = EQC R) /\ (EQC (SC R) = EQC R) /\ (EQC (TC R) = EQC R)`,
+SRW_TAC [][EQC_DEF,RC_MOVES_OUT,SC_IDEM] THEN
+AP_TERM_TAC THEN
+SRW_TAC [][FUN_EQ_THM] THEN
+REVERSE EQ_TAC THEN
+MAP_EVERY Q.ID_SPEC_TAC [`x'`,`x`] THEN
+HO_MATCH_MP_TAC TC_INDUCT THEN1 (
+  SRW_TAC [][SC_DEF] THEN
+  PROVE_TAC [TC_RULES,SC_DEF] ) THEN
+REVERSE (SRW_TAC [][SC_DEF]) THEN1
+  PROVE_TAC [TC_RULES,SC_DEF] THEN
+Q.MATCH_ASSUM_RENAME_TAC `R^+ a b` [] THEN
+POP_ASSUM MP_TAC THEN
+MAP_EVERY Q.ID_SPEC_TAC [`b`,`a`] THEN
+HO_MATCH_MP_TAC TC_INDUCT THEN
+SRW_TAC [][SC_DEF] THEN
+PROVE_TAC [TC_RULES,SC_DEF]);
+val _ = export_rewrites ["EQC_MOVES_IN"]
+
 val STRONG_EQC_INDUCTION = store_thm(
   "STRONG_EQC_INDUCTION",
   ``!R P. (!x y. R x y ==> P x y) /\
@@ -724,6 +778,37 @@ val RTC_EQC = store_thm(
   ``!x y. RTC R x y ==> EQC R x y``,
   HO_MATCH_MP_TAC RTC_INDUCT THEN METIS_TAC [EQC_R, EQC_REFL, EQC_TRANS]);
 
+val RTC_lifts_monotonicities = store_thm(
+  "RTC_lifts_monotonicities",
+  ``(!x y. R x y ==> R (f x) (f y)) ==>
+    !x y. R^* x y ==> R^* (f x) (f y)``,
+  STRIP_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
+  METIS_TAC [RTC_RULES]);
+
+val RTC_lifts_reflexive_transitive_relations = Q.store_thm(
+  "RTC_lifts_reflexive_transitive_relations",
+  `(!x y. R x y ==> Q (f x) (f y)) /\ reflexive Q /\ transitive Q ==>
+   !x y. R^* x y ==> Q (f x) (f y)`,
+  STRIP_TAC THEN
+  HO_MATCH_MP_TAC RTC_INDUCT THEN
+  FULL_SIMP_TAC bool_ss [reflexive_def,transitive_def] THEN
+  METIS_TAC []);
+
+val RTC_lifts_equalities = Q.store_thm(
+  "RTC_lifts_equalities",
+  `(!x y. R x y ==> (f x = f y)) ==> !x y. R^* x y ==> (f x = f y)`,
+  STRIP_TAC THEN
+  HO_MATCH_MP_TAC RTC_lifts_reflexive_transitive_relations THEN
+  ASM_SIMP_TAC bool_ss [reflexive_def,transitive_def]);
+
+val RTC_lifts_invariants = Q.store_thm(
+  "RTC_lifts_invariants",
+  `(!x y. P x /\ R x y ==> P y) ==> !x y. P x /\ R^* x y ==> P y`,
+  STRIP_TAC THEN
+  REWRITE_TAC [Once CONJ_COMM] THEN
+  REWRITE_TAC [GSYM AND_IMP_INTRO] THEN
+  HO_MATCH_MP_TAC RTC_INDUCT THEN
+  METIS_TAC []);
 
 (*---------------------------------------------------------------------------*
  * Wellfounded relations. Wellfoundedness: Every non-empty set has an        *
@@ -835,6 +920,11 @@ REWRITE_TAC[WF_DEF]
   THEN Q.UNDISCH_THEN `min=y` SUBST_ALL_TAC
   THEN DISCH_TAC THEN RES_TAC);
 
+(* delete this or the previous if we abbreviate irreflexive *)
+val WF_irreflexive = store_thm(
+  "WF_irreflexive",
+  ``WF R ==> irreflexive R``,
+  METIS_TAC [WF_NOT_REFL, irreflexive_def]);
 
 (*---------------------------------------------------------------------------
  * Some combinators for wellfounded relations.
@@ -910,6 +1000,18 @@ val WF_TC_EQN = store_thm(
   ``WF (R^+) <=> WF R``,
   METIS_TAC [WF_TC, TC_SUBSET, WF_SUBSET]);
 
+val WF_noloops = store_thm(
+  "WF_noloops",
+  ``WF R ==> TC R x y ==> x <> y``,
+  METIS_TAC [WF_NOT_REFL, WF_TC_EQN]);
+
+val WF_antisymmetric = store_thm(
+  "WF_antisymmetric",
+  ``WF R ==> antisymmetric R``,
+  REWRITE_TAC [antisymmetric_def] THEN STRIP_TAC THEN
+  MAP_EVERY Q.X_GEN_TAC [`a`, `b`] THEN
+  STRIP_TAC THEN Q_TAC SUFF_TAC `TC R a a` THEN1 METIS_TAC [WF_noloops] THEN
+  METIS_TAC [TC_RULES]);
 
 (*---------------------------------------------------------------------------
  * Inverse image theorem: mapping into a wellfounded relation gives a
@@ -1577,6 +1679,11 @@ val RSUBSET = new_definition(
   ``(RSUBSET) R1 R2 = !x y. R1 x y ==> R2 x y``);
 val _ = set_fixity "RSUBSET" (Infix(NONASSOC, 450));
 
+val irreflexive_RSUBSET = store_thm(
+  "irreflexive_RSUBSET",
+  ``!R1 R2. irreflexive R2 /\ R1 RSUBSET R2 ==> irreflexive R1``,
+  SRW_TAC [][irreflexive_def, RSUBSET] THEN PROVE_TAC []);
+
 (* ----------------------------------------------------------------------
     relational union
    ---------------------------------------------------------------------- *)
@@ -1615,6 +1722,18 @@ val RINTER_ASSOC = store_thm(
   ``R1 RINTER (R2 RINTER R3) = (R1 RINTER R2) RINTER R3``,
   SRW_TAC [][RINTER, FUN_EQ_THM] THEN PROVE_TAC []);
 
+val antisymmetric_RINTER = Q.store_thm(
+  "antisymmetric_RINTER",
+  `(antisymmetric R1 ==> antisymmetric (R1 RINTER R2)) /\
+   (antisymmetric R2 ==> antisymmetric (R1 RINTER R2))`,
+  SRW_TAC [][antisymmetric_def,RINTER]);
+val _ = export_rewrites ["antisymmetric_RINTER"]
+
+val transitive_RINTER = Q.store_thm(
+  "transitive_RINTER",
+  `transitive R1 /\ transitive R2 ==> transitive (R1 RINTER R2)`,
+  SRW_TAC [SatisfySimps.SATISFY_ss][transitive_def,RINTER]);
+val _ = export_rewrites ["transitive_RINTER"]
 
 (* ----------------------------------------------------------------------
     relational complement

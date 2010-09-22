@@ -376,6 +376,25 @@ val MAP_EQ_NIL = store_thm(
          (([] = MAP f l) = (l = []))`--,
   LIST_INDUCT_TAC THEN REWRITE_TAC [MAP, NOT_CONS_NIL, NOT_NIL_CONS]);
 
+val MAP_EQ_f = store_thm ("MAP_EQ_f",
+  ``!f1 f2 l. (MAP f1 l = MAP f2 l) = (!e. MEM e l ==> (f1 e = f2 e))``,
+  Induct_on `l` THEN ASM_SIMP_TAC arith_ss [DISJ_IMP_THM, MAP, MEM, CONS_11, FORALL_AND_THM])
+
+val MAP_o = store_thm("MAP_o",
+    (--`!f:'b->'c. !g:'a->'b.  MAP (f o g) = (MAP f) o (MAP g)`--),
+    REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV
+    THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP,combinTheory.o_THM]);
+
+val MAP_MAP_o = store_thm("MAP_MAP_o",
+    (--`!(f:'b->'c) (g:'a->'b) l. MAP f (MAP g l) = MAP (f o g) l`--),
+    REPEAT GEN_TAC THEN REWRITE_TAC [MAP_o,combinTheory.o_DEF]
+    THEN BETA_TAC THEN REFL_TAC);
+
+val EL_MAP = store_thm("EL_MAP",
+    (--`!n l. n < (LENGTH l) ==> !f:'a->'b. EL n (MAP f l) = f (EL n l)`--),
+    INDUCT_TAC THEN LIST_INDUCT_TAC
+    THEN ASM_REWRITE_TAC[LENGTH,EL,MAP,LESS_MONO_EQ,NOT_LESS_0,HD,TL]);
+
 val EVERY_EL = store_thm ("EVERY_EL",
  --`!(l:'a list) P. EVERY P l = !n. n < LENGTH l ==> P (EL n l)`--,
       LIST_INDUCT_TAC THEN
@@ -1812,7 +1831,7 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x227C, tmnm = "<<="}
         (* in tex input mode in emacs, produce U+227C with \preceq *)
         (* tempting to add a not-isprefix macro keyed to U+22E0 \npreceq, but
            hard to know what the ASCII version should be.  *)
-val _ = TexTokenMap.TeX_notation {hol = "<<=", 
+val _ = TexTokenMap.TeX_notation {hol = "<<=",
                                   TeX = ("\\HOLTokenIsPrefix{}", 1)}
 val _ = TexTokenMap.TeX_notation {hol = UTF8.chr 0x227C,
                                   TeX = ("\\HOLTokenIsPrefix{}", 1)}
@@ -1875,6 +1894,163 @@ val SNOC_APPEND = store_thm("SNOC_APPEND",
 val LIST_TO_SET_SNOC = Q.store_thm("LIST_TO_SET_SNOC",
     `set (SNOC x ls) = x INSERT set ls`,
     Induct_on `ls` THEN SRW_TAC [][INSERT_COMM]);
+
+val MAP_SNOC  = store_thm("MAP_SNOC",
+    (--`!(f:'a->'b) x (l:'a list). MAP f(SNOC x l) = SNOC(f x)(MAP f l)`--),
+     (REWRITE_TAC [SNOC_APPEND,MAP_APPEND,MAP]));
+
+val EL_SNOC = store_thm("EL_SNOC",
+    (--`!n (l:'a list). n < (LENGTH l) ==> (!x. EL n (SNOC x l) = EL n l)`--),
+    INDUCT_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[LENGTH,NOT_LESS_0]
+    THENL[
+        REWRITE_TAC[SNOC,EL,HD],
+        REWRITE_TAC[SNOC,EL,TL,LESS_MONO_EQ]
+        THEN FIRST_ASSUM MATCH_ACCEPT_TAC]);
+
+val EL_LENGTH_SNOC = store_thm("EL_LENGTH_SNOC",
+    (--`!l:'a list. !x. EL (LENGTH l) (SNOC x l) = x`--),
+    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[EL,SNOC,HD,TL,LENGTH]);
+
+val APPEND_SNOC = store_thm("APPEND_SNOC",
+    (--`!l1 (x:'a) l2. APPEND l1 (SNOC x l2) = SNOC x (APPEND l1 l2)`--),
+    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[APPEND,SNOC]);
+
+val EVERY_SNOC = store_thm("EVERY_SNOC",
+    (--`!P (x:'a) l. EVERY P (SNOC x l) = EVERY P l /\ P x`--),
+    GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
+    THEN ASM_REWRITE_TAC[SNOC,EVERY_DEF,CONJ_ASSOC]);
+
+val EXISTS_SNOC = store_thm("EXISTS_SNOC",
+    (--`!P (x:'a) l. EXISTS P (SNOC x l) = P x \/ (EXISTS P l)`--),
+    GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
+    THEN ASM_REWRITE_TAC[SNOC,EXISTS_DEF] THEN GEN_TAC
+    THEN PURE_ONCE_REWRITE_TAC[DISJ_ASSOC]
+    THEN CONV_TAC ((RAND_CONV o RATOR_CONV o ONCE_DEPTH_CONV)
+     (REWR_CONV DISJ_SYM)) THEN REFL_TAC);
+
+val MEM_SNOC = store_thm("MEM_SNOC",
+    (--`!(y:'a) x l. MEM y (SNOC x l) = (y = x) \/ MEM y l`--),
+    GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
+    THEN ASM_REWRITE_TAC[SNOC,MEM] THEN GEN_TAC
+    THEN PURE_ONCE_REWRITE_TAC[DISJ_ASSOC]
+    THEN CONV_TAC ((RAND_CONV o RATOR_CONV o ONCE_DEPTH_CONV)
+     (REWR_CONV DISJ_SYM)) THEN REFL_TAC);
+
+(*--------------------------------------------------------------*)
+(* List generator                                               *)
+(*  GENLIST f n = [f 0;...; f(n-1)]                             *)
+(*--------------------------------------------------------------*)
+
+val GENLIST = new_recursive_definition
+      {name = "GENLIST",
+       rec_axiom =  num_Axiom,
+       def = --`(GENLIST (f:num->'a) 0 = []) /\
+                (GENLIST f (SUC n) = SNOC (f n) (GENLIST f n))`--};
+
+val LENGTH_GENLIST = store_thm("LENGTH_GENLIST",
+    (--`!(f:num->'a) n. LENGTH(GENLIST f n) = n`--),
+    GEN_TAC THEN INDUCT_TAC
+    THEN ASM_REWRITE_TAC[GENLIST,LENGTH,LENGTH_SNOC]);
+val _ = export_rewrites ["LENGTH_GENLIST"]
+
+val GENLIST_AUX = Define`
+  (GENLIST_AUX f 0 l = l) /\
+  (GENLIST_AUX f (SUC n) l = GENLIST_AUX f n ((f n)::l))`;
+
+val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
+
+val GENLIST_AUX_compute = save_thm(
+  "GENLIST_AUX_compute",
+  SUC_RULE GENLIST_AUX)
+val _ = export_rewrites ["GENLIST_AUX_compute"]
+
+(*---------------------------------------------------------------------------
+   Theorems about genlist. From Anthony Fox's theories. Added by Thomas Tuerk.
+   Moved from rich_listTheory.
+ ---------------------------------------------------------------------------*)
+
+val MAP_GENLIST = store_thm("MAP_GENLIST",
+  ``!f g n. MAP f (GENLIST g n) = GENLIST (f o g) n``,
+  Induct_on `n` THEN ASM_SIMP_TAC arith_ss [GENLIST,MAP_SNOC, MAP,combinTheory.o_THM]);
+
+val EL_GENLIST = store_thm("EL_GENLIST",
+  ``!f n x. x < n ==> (EL x (GENLIST f n) = f x)``,
+  Induct_on `n` THEN1 SIMP_TAC arith_ss [] THEN
+  REPEAT STRIP_TAC THEN REWRITE_TAC [GENLIST] THEN
+  Cases_on `x < n` THEN
+  POP_ASSUM (fn th => ASSUME_TAC
+           (SUBS [(GSYM o Q.SPECL [`f`,`n`]) LENGTH_GENLIST] th) THEN
+            ASSUME_TAC th) THEN1 (
+    ASM_SIMP_TAC bool_ss [EL_SNOC]
+  ) THEN
+  `x = LENGTH (GENLIST f n)` by FULL_SIMP_TAC arith_ss [LENGTH_GENLIST] THEN
+  ASM_SIMP_TAC bool_ss [EL_LENGTH_SNOC] THEN
+  REWRITE_TAC [LENGTH_GENLIST]);
+val _ = export_rewrites ["EL_GENLIST"]
+
+val HD_GENLIST = save_thm("HD_GENLIST",
+  (SIMP_RULE arith_ss [EL] o Q.SPECL [`f`,`SUC n`,`0`]) EL_GENLIST);
+
+val GENLIST_FUN_EQ = store_thm("GENLIST_FUN_EQ",
+  ``!n f g. (GENLIST f n = GENLIST g n) = (!x. x < n ==> (f x = g x))``,
+  SIMP_TAC bool_ss [LIST_EQ_REWRITE, LENGTH_GENLIST, EL_GENLIST]);
+
+val GENLIST_APPEND = store_thm("GENLIST_APPEND",
+  ``!f a b. GENLIST f (a + b) = (GENLIST f b) ++ (GENLIST (\t. f (t + b)) a)``,
+  Induct_on `a` THEN
+  ASM_SIMP_TAC arith_ss [GENLIST,APPEND_SNOC,APPEND_NIL,arithmeticTheory.ADD_CLAUSES]
+);
+
+val EVERY_GENLIST = store_thm("EVERY_GENLIST",
+  ``!n. EVERY P (GENLIST f n) = (!i. i < n ==> P (f i))``,
+  Induct_on `n` THEN ASM_SIMP_TAC arith_ss [GENLIST,EVERY_SNOC,EVERY_DEF]
+    THEN metisLib.METIS_TAC [prim_recTheory.LESS_THM]);
+
+val EXISTS_GENLIST = store_thm ("EXISTS_GENLIST",
+  ``!n. EXISTS P (GENLIST f n) = (?i. i < n /\ P (f i))``,
+  Induct_on `n` THEN RW_TAC arith_ss [GENLIST, EXISTS_SNOC, EXISTS_DEF]
+    THEN metisLib.METIS_TAC [prim_recTheory.LESS_THM]);
+
+val TL_GENLIST = Q.store_thm ("TL_GENLIST",
+  `!f n. TL (GENLIST f (SUC n)) = GENLIST (f o SUC) n`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC LIST_EQ
+    THEN SRW_TAC [] [EL_GENLIST, LENGTH_GENLIST, LENGTH_TL]
+    THEN ONCE_REWRITE_TAC [EL |> CONJUNCT2 |> GSYM]
+    THEN `SUC x < SUC n` by numLib.DECIDE_TAC
+    THEN IMP_RES_TAC EL_GENLIST
+    THEN ASM_SIMP_TAC arith_ss []);
+
+val ZIP_GENLIST = store_thm("ZIP_GENLIST",
+  ``!l f n. (LENGTH l = n) ==>
+      (ZIP (l,GENLIST f n) = GENLIST (\x. (EL x l,f x)) n)``,
+  REPEAT STRIP_TAC THEN
+  `LENGTH (ZIP (l,GENLIST f n)) = LENGTH (GENLIST (\x. (EL x l,f x)) n)`
+    by ASM_SIMP_TAC arith_ss [LENGTH_GENLIST,LENGTH_ZIP] THEN
+  ASM_SIMP_TAC arith_ss [LIST_EQ_REWRITE, LENGTH_GENLIST, LENGTH_ZIP,
+                         EL_ZIP, EL_GENLIST]);
+
+val GENLIST_CONS = store_thm(
+  "GENLIST_CONS",
+  ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
+  Induct_on `n` THEN SRW_TAC [][GENLIST, SNOC]);
+
+val GENLIST_AUX_lem = Q.prove(
+  `!n l1 l2. GENLIST_AUX f n l1 ++ l2 = GENLIST_AUX f n (l1 ++ l2)`,
+  Induct_on `n` THEN SRW_TAC [] [GENLIST_AUX]);
+
+val GENLIST_GENLIST_AUX = Q.store_thm("GENLIST_GENLIST_AUX",
+  `!n. GENLIST f n = GENLIST_AUX f n []`,
+  Induct_on `n`
+  THEN RW_TAC bool_ss
+         [SNOC_APPEND, APPEND, GENLIST_AUX, GENLIST_AUX_lem, GENLIST]);
+
+val GENLIST_NUMERALS = store_thm(
+  "GENLIST_NUMERALS",
+  ``(GENLIST f 0 = []) /\
+    (GENLIST f (NUMERAL n) = GENLIST_AUX f (NUMERAL n) [])``,
+  REWRITE_TAC [GENLIST_GENLIST_AUX, GENLIST_AUX]);
+val _ = export_rewrites ["GENLIST_NUMERALS"]
+
 
 (* ----------------------------------------------------------------------
     All lists have infinite universes
@@ -1943,7 +2119,7 @@ val _ = adjoin_to_theory
    S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
    S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
    S "              EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,";
-   S "              FOLDL, REVERSE_DEF, ALL_DISTINCT,";
+   S "              FOLDL, REVERSE_DEF, ALL_DISTINCT, GENLIST_AUX,";
    S "              Conv.CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV EL,";
    S "              computeLib.lazyfy_thm list_case_compute,";
    S "              list_size_def,FRONT_DEF,LAST_DEF,isPREFIX]";

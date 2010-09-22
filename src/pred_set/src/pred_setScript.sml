@@ -256,8 +256,9 @@ in
 end
 
 val _ = temp_add_user_printer("UNIVprinter", ``UNIV: 'a set``, univ_printer)
+val _ = TeX_notation {hol = "univ", TeX = ("\\ensuremath{\\cal{U}}", 1)}
 val _ = TeX_notation {hol = UnicodeChars.universal_set,
-                      TeX = ("\\ensuremath{\\cal U}", 1)}
+                      TeX = ("\\ensuremath{\\cal{U}}", 1)}
 
 
 (* ===================================================================== *)
@@ -1131,7 +1132,6 @@ val REST_PSUBSET =
      IMP_RES_TAC CHOICE_DEF THEN
      ASM_REWRITE_TAC []);
 
-
 (* ===================================================================== *)
 (* Singleton set.							 *)
 (* ===================================================================== *)
@@ -1674,6 +1674,11 @@ val FINITE_DELETE =
      [MATCH_ACCEPT_TAC DELETE_FINITE,
       DISCH_THEN (MATCH_ACCEPT_TAC o MATCH_MP FINITE_DELETE)]);
 
+val FINITE_REST =
+    store_thm
+    ("FINITE_REST",
+     (--`!s:'a set. FINITE s ==> FINITE (REST s)`--),
+     REWRITE_TAC [REST_DEF, FINITE_DELETE]);
 
 val UNION_FINITE = prove(
   --`!s:'a set. FINITE s ==> !t. FINITE t ==> FINITE (s UNION t)`--,
@@ -1848,6 +1853,21 @@ val FINITE_INJ = Q.store_thm
 ("FINITE_INJ",
  `!(f:'a->'b) s t. INJ f s t /\ FINITE t ==> FINITE s`,
  METIS_TAC [lem]);
+
+val REL_RESTRICT_DEF = new_definition(
+  "REL_RESTRICT_DEF",
+  ``REL_RESTRICT R s x y = x IN s /\ y IN s /\ R x y``);
+
+val REL_RESTRICT_EMPTY = store_thm(
+  "REL_RESTRICT_EMPTY",
+  ``REL_RESTRICT R {} = REMPTY``,
+  SRW_TAC [][REL_RESTRICT_DEF, FUN_EQ_THM]);
+val _ = export_rewrites ["REL_RESTRICT_EMPTY"]
+
+val REL_RESTRICT_SUBSET = store_thm(
+  "REL_RESTRICT_SUBSET",
+  ``s1 SUBSET s2 ==> REL_RESTRICT R s1 RSUBSET REL_RESTRICT R s2``,
+  SRW_TAC [][relationTheory.RSUBSET, REL_RESTRICT_DEF, SUBSET_DEF]);
 
 (* =====================================================================*)
 (* Cardinality 								*)
@@ -2840,6 +2860,60 @@ val FINITE_WEAK_ENUMERATE = Q.store_thm
     ]
   ]);
 
+val lem = prove(
+  ``!s R.
+      FINITE s /\ (!e. e IN s <=> (?y. R e y) \/ (?x. R x e)) /\
+      (!n. R (f (SUC n)) (f n)) ==>
+      ?x. R^+ x x``,
+  REPEAT STRIP_TAC THEN `!n. f n IN s` by METIS_TAC [] THEN
+  Cases_on `?n m. (f n = f m) /\ n <> m` THENL [
+    POP_ASSUM STRIP_ASSUME_TAC THEN
+    Cases_on `n < m` THENL [
+      ALL_TAC,
+      `m < n` by DECIDE_TAC
+    ] THEN
+    Q.ISPECL_THEN [`inv R^+`, `f`] MP_TAC transitive_monotone THEN
+    SRW_TAC [][relationTheory.inv_DEF, relationTheory.transitive_inv] THEN
+    METIS_TAC [relationTheory.TC_SUBSET],
+
+    `!n m. (f n = f m) = (n = m)` by METIS_TAC [] THEN
+    `IMAGE f univ(:num) SUBSET s`
+      by (SRW_TAC [][SUBSET_DEF, IN_IMAGE] THEN METIS_TAC []) THEN
+    `FINITE (IMAGE f univ(:num))` by METIS_TAC [SUBSET_FINITE] THEN
+    POP_ASSUM MP_TAC THEN SRW_TAC [][INJECTIVE_IMAGE_FINITE]
+  ])
+
+val FINITE_WF_noloops = store_thm(
+  "FINITE_WF_noloops",
+  ``!s. FINITE s ==>
+        (WF (REL_RESTRICT R s) <=> irreflexive (REL_RESTRICT R s)^+)``,
+  Q_TAC SUFF_TAC
+    `!s. FINITE s ==>
+         irreflexive (TC (REL_RESTRICT R s)) ==> WF (REL_RESTRICT R s)`
+    THEN1 METIS_TAC [relationTheory.irreflexive_def,
+                     relationTheory.WF_noloops] THEN
+  REWRITE_TAC [prim_recTheory.WF_IFF_WELLFOUNDED,
+               prim_recTheory.wellfounded_def] THEN
+  REPEAT STRIP_TAC THEN
+  Q.SPECL_THEN [`f`,
+                `{x | x IN s /\ ((?y. R x y /\ y IN s) \/
+                                 (?x'. R x' x /\ x' IN s))}`,
+                `REL_RESTRICT R s`] MP_TAC (GEN_ALL lem) THEN
+  ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [REL_RESTRICT_DEF] THEN
+  FULL_SIMP_TAC (srw_ss()) [relationTheory.irreflexive_def] THEN
+  CONJ_TAC THENL [
+    MATCH_MP_TAC SUBSET_FINITE_I THEN Q.EXISTS_TAC `s` THEN
+    SRW_TAC [][SUBSET_DEF],
+    METIS_TAC []
+  ]);
+
+val FINITE_StrongOrder_WF = store_thm(
+  "FINITE_StrongOrder_WF",
+  ``!R s. FINITE s /\ StrongOrder (REL_RESTRICT R s) ==>
+          WF (REL_RESTRICT R s)``,
+  SRW_TAC [][FINITE_WF_noloops, relationTheory.StrongOrder,
+             relationTheory.transitive_TC_identity]);
+
 (* ===================================================================== *)
 (* Big union (union of set of sets)                                      *)
 (* ===================================================================== *)
@@ -3013,6 +3087,11 @@ val DISJOINT_BIGINTER = Q.store_thm
             DISJOINT X (BIGINTER P) /\ DISJOINT (BIGINTER P) X`,
   SIMP_TAC bool_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER,
                     IN_BIGINTER] THEN PROVE_TAC []);
+
+val BIGINTER_UNION = Q.store_thm
+("BIGINTER_UNION",
+ `!s1 s2. BIGINTER (s1 UNION s2) = BIGINTER s1 INTER BIGINTER s2`,
+ SIMP_TAC bool_ss [IN_BIGINTER, IN_UNION, IN_INTER, EXTENSION] THEN PROVE_TAC []);
 
 (* ====================================================================== *)
 (* Cross product of sets                                                  *)
@@ -4172,6 +4251,16 @@ val PSUBSET_EQN = Q.store_thm
  `!s1 s2. s1 PSUBSET s2 = s1 SUBSET s2 /\ ~(s2 SUBSET s1)`,
  PROVE_TAC [PSUBSET_DEF,SET_EQ_SUBSET]);
 
+val PSUBSET_SUBSET_TRANS = Q.store_thm
+("PSUBSET_SUBSET_TRANS",
+ `!s t u. s PSUBSET t /\ t SUBSET u ==> s PSUBSET u`,
+ PROVE_TAC [SUBSET_DEF,PSUBSET_EQN]);
+
+val SUBSET_PSUBSET_TRANS = Q.store_thm
+("SUBSET_PSUBSET_TRANS",
+ `!s t u. s SUBSET t /\ t PSUBSET u ==> s PSUBSET u`,
+ PROVE_TAC [SUBSET_DEF,PSUBSET_EQN]);
+
 val CROSS_EQNS = Q.store_thm
 ("CROSS_EQNS",
  `!(s1:'a set) (s2:'b set).
@@ -4545,7 +4634,7 @@ val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)
      "IN_BIGINTER", "IN_BIGUNION", "DISJOINT_BIGUNION", "BIGUNION_EMPTY",
-     "BIGUNION_INSERT", "BIGUNION_UNION",
+     "BIGUNION_INSERT", "BIGUNION_UNION", "BIGINTER_UNION",
      "DISJOINT_BIGUNION", "BIGINTER_EMPTY", "BIGINTER_INSERT",
      (* cardinality theorems *)
      "CARD_DIFF", "CARD_EQ_0", "CARD_INSERT",
@@ -4571,7 +4660,7 @@ val _ = export_rewrites
      (* "PSUBSET" *)
      "PSUBSET_IRREFL",
      (* "REST" *)
-     "REST_PSUBSET", "REST_SUBSET",
+     "REST_PSUBSET", "REST_SUBSET", "FINITE_REST",
      (* "SING" *)
      "SING", "SING_FINITE",
      (* "SUBSET" *)

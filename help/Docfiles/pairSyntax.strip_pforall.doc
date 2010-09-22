@@ -20,5 +20,6 @@ quantification.
 Never fails.
 
 \SEEALSO
-boolSyntax.strip_forall, pairSyntax.list_mk_pforall, pairSyntax.dest_pforall.
+boolSyntax.strip_forall, pairSyntax.dest_pforall.
+
 \ENDDOC

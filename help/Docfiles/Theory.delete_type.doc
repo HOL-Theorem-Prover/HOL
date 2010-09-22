@@ -60,8 +60,7 @@ It's rather dodgy to withdraw constants from the HOL signature.
 It is not possible to delete constants from ancestor theories.
 
 \SEEALSO
-Theory.delete_const, Theory.delete_axiom, Theory.delete_definition,
-Theory.delete_theorem, Theory.uptodate_type, Theory.uptodate_term, 
-Theory.uptodate_thm, Theory.scrub. 
+Theory.delete_const, Theory.uptodate_type, Theory.uptodate_term,
+Theory.uptodate_thm, Theory.scrub.
 
 \ENDDOC

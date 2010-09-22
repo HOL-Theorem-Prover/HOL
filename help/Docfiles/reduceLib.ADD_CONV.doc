@@ -1,0 +1,29 @@
+\DOC ADD_CONV
+
+\TYPE {ADD_CONV : conv}
+
+\SYNOPSIS
+Calculates by inference the sum of two numerals.
+
+\LIBRARY reduce
+
+\DESCRIBE
+If {m} and {n} are numerals (e.g. {0}, {1}, {2}, {3},...), then
+{ADD_CONV "m + n"} returns the theorem:
+{
+   |- m + n = s
+}
+where {s} is the numeral that denotes the sum of the natural
+numbers denoted by {m} and {n}.
+
+\FAILURE
+{ADD_CONV tm} fails unless {tm} is of the form  {"m + n"}, where {m} and
+{n} are numerals.
+
+\EXAMPLE
+{
+#ADD_CONV "75 + 25";;
+|- 75 + 25 = 100
+}
+
+\ENDDOC

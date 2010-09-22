@@ -51,7 +51,4 @@ a different associativity.
 > val it = ``:'a -> ('b # ('b >-> 'a)) list -> 'b >-> 'a`` : hol_type
 }
 
-\SEEALSO
-Parse.add_type.
-
 \ENDDOC

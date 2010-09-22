@@ -331,6 +331,13 @@ val FUN_EQ_LEMMA = store_thm ("FUN_EQ_LEMMA",
     THEN RES_TAC
     THEN ASM_REWRITE_TAC[]);
 
+val transitive_measure = Q.store_thm(
+  "transitive_measure",
+  `!f. transitive (measure f)`,
+  SRW_TAC [][relationTheory.transitive_def,prim_recTheory.measure_thm]
+    THEN MATCH_MP_TAC LESS_TRANS
+    THEN SRW_TAC [SatisfySimps.SATISFY_ss][]);
+
 (*---------------------------------------------------------------------------
  *  |- !m n. SUC m < SUC n = m < n
  *---------------------------------------------------------------------------*)

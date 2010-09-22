@@ -256,8 +256,9 @@ sig
   val is_w2n              : term -> bool
   val is_sw2sw            : term -> bool
 
-  val dest_word_literal   : term -> Arbnum.num
-  val is_word_literal     : term -> bool
-  val uint_of_word        : term -> int
+  val dest_mod_word_literal : term -> Arbnum.num * Arbnum.num
+  val dest_word_literal     : term -> Arbnum.num
+  val is_word_literal       : term -> bool
+  val uint_of_word          : term -> int
 
 end

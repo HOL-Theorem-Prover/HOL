@@ -29,5 +29,7 @@ quantified variable, or if the type variable is free in the
 assumptions.
 
 \SEEALSO
-Drule.ISPEC, Drule.INST_TY_TERM, Thm.INST_TYPE, PairRules.IPSPECL, PairRules.PSPEC, match.
+Drule.ISPEC, Drule.INST_TY_TERM, Thm.INST_TYPE, PairRules.IPSPECL,
+PairRules.PSPEC, DB.match.
+
 \ENDDOC

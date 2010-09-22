@@ -27,5 +27,7 @@ Never fails.
 
 
 \SEEALSO
-Lib.assoc, Lib.assoc1, Lib.rev_assoc, Lib.find, Lib.mem, Lib.tryfind, Lib.exists, Lib.all.
+Lib.assoc, Lib.assoc1, Lib.rev_assoc, Lib.mem, Lib.tryfind, Lib.exists,
+Lib.all.
+
 \ENDDOC

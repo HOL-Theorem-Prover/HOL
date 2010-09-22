@@ -754,7 +754,7 @@ S "fun dest t = "; NL();
 S "  let val (lhs,rhs) = dest_eq (snd(strip_forall t))"; NL();
 S "      val (f,args) = strip_comb lhs"; NL();
 S "  in "; NL();
-S "  case gather (not o is_vstruct) args "; NL();
+S "  case filter (not o is_vstruct) args "; NL();
 S "   of [] => (case joint_vars (map free_vars args)"; NL();
 S "              of [] => (args, mk_eq(f,itlist (curry mk_pabs) args rhs))"; NL();
 S "               | V  => raise ERR3 \"new_definition\" (String.concat"; NL();

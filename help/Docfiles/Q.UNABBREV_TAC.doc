@@ -30,6 +30,6 @@ Fails if there is no abbreviation of the required form in the goal's
 assumptions, or if the quotation doesn't parse to a variable.
 
 \SEEALSO
-BasicProvers.Abbr, Q.ABBREV_TAC, Q.RM_ABBREV_TAC.
+BasicProvers.Abbr, Q.ABBREV_TAC.
 
 \ENDDOC

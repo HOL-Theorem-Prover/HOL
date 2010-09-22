@@ -54,6 +54,7 @@ val last_tm      = prim_mk_const {Name = "LAST",    Thy = "list"}
 val front_tm     = prim_mk_const {Name = "FRONT",   Thy = "list"}
 val all_distinct_tm = prim_mk_const {Name = "ALL_DISTINCT", Thy = "list"}
 val list_to_set_tm  = prim_mk_const {Name = "LIST_TO_SET",  Thy = "list"}
+val genlist_tm    = prim_mk_const {Name =  "GENLIST", Thy = "list"}
 
 fun eltype l = dest_list_type (type_of l);
 
@@ -107,6 +108,12 @@ fun mk_front l = mk_comb(inst[alpha |-> eltype l] front_tm,l);
 fun mk_all_distinct l = mk_comb(inst[alpha |-> eltype l] all_distinct_tm,l);
 fun mk_list_to_set l = mk_comb(inst[alpha |-> eltype l] list_to_set_tm,l);
 
+fun mk_genlist (f,n) =
+  list_mk_comb (inst [alpha |-> (f |> Term.type_of
+                                   |> Type.dom_rng
+                                   |> snd)] genlist_tm, [f,n])
+  handle HOL_ERR _ => raise ERR "mk_genlist" ""
+
 fun mk_list_case (n,c,l) =
  case total dest_list_type (type_of l)
   of SOME ty =>
@@ -155,6 +162,7 @@ val dest_all_distinct = dest_monop all_distinct_tm
                           (ERR "dest_all_distinct" "not ALL_DISTINCT")
 val dest_list_to_set = dest_monop list_to_set_tm
                           (ERR "dest_list_to_set" "not LIST_TO_SET")
+val dest_genlist  = dest_binop genlist_tm  (ERR "dest_genlist"  "not GENLIST")
 
 val dest_list_case = dest_triop list_case_tm
                           (ERR "dest_list_case" "not list_case");
@@ -193,6 +201,7 @@ val is_all_distinct = can dest_all_distinct
 val is_list_to_set  = can dest_list_to_set
 val is_reverse      = can dest_reverse
 val is_list_case    = can dest_list_case
+val is_genlist    = can dest_genlist
 
 
 fun mk_list (l,ty) = itlist (curry mk_cons) l (mk_nil ty);

@@ -10,5 +10,6 @@ rewriting.
 Used to build up the power of the built-in simplification set.
 
 \SEEALSO
-base_rewrites, Rewrite.set_implicit_rewrites.
+Rewrite.set_implicit_rewrites.
+
 \ENDDOC

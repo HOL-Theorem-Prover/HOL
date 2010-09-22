@@ -34,7 +34,7 @@ If no such substitution can be found.
 ! HOL_ERR
 }
 
-
 \SEEALSO
-Term.match_term, HolKernel.ho_match_term, Type.type_subst.
+Term.match_term, Type.type_subst.
+
 \ENDDOC

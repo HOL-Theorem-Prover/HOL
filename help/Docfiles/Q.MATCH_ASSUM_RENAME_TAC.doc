@@ -39,6 +39,6 @@ This tactic improves on the following tedious workflow: {Q.PAT_ASSUM pat MP_TAC}
 {markerLib.RM_ALL_ABBREVS_TAC}, {STRIP_TAC}.
 
 \SEEALSO
-Q.PAT_ASSUM, Q.MATCH_RENAME_TAC 
+Q.MATCH_RENAME_TAC.
 
 \ENDDOC

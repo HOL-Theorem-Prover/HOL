@@ -23,5 +23,8 @@ prevent divergence where it would occur, {ONCE_ASM_REWRITE_RULE} can be
 used.
 
 \SEEALSO
-Rewrite.GEN_REWRITE_RULE, Rewrite.ONCE_ASM_REWRITE_RULE, Rewrite.PURE_ASM_REWRITE_RULE, Rewrite.PURE_ONCE_ASM_REWRITE_RULE, Rewrite.REWRITE_RULE, basic_rewrites.
+Rewrite.GEN_REWRITE_RULE, Rewrite.ONCE_ASM_REWRITE_RULE,
+Rewrite.PURE_ASM_REWRITE_RULE, Rewrite.PURE_ONCE_ASM_REWRITE_RULE,
+Rewrite.REWRITE_RULE.
+
 \ENDDOC

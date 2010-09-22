@@ -66,16 +66,6 @@
             (newline channel state)
             (pprint-objects-to-ml (cdr list) sep channel state))))
 
-(defun print-current-package (pkg-form channel state)
-  (let ((pkg (if (and (true-listp pkg-form)
-                      (eq (car pkg-form) 'in-package)
-                      (stringp (cadr pkg-form)))
-                 (cadr pkg-form)
-               "ACL2")))
-    (pprogn (fms "val _ = current_package :=~| implode(map chr ~x0);~|~%"
-                 (list (cons #\0 (s2conses pkg (length pkg) nil)))
-                 channel state nil))))
-
 (defun set-current-package-state (val state)
   (mv-let (erp val state)
           (set-current-package val state)
@@ -98,50 +88,123 @@
                        (list (cons #\0 case))))
           (f-put-global 'print-case case state)))
 
-(defun a2ml-fn (infile outfile state)
+(defun a2ml-read-eval-thru-in-package1 (ch file ctx acc state)
+  (mv-let (eofp val state)
+          (read-object ch state)
+          (cond (eofp
+                 (er soft ctx
+                     "Reached end of file ~x0 before finding in-package form."
+                     file))
+                (t (er-progn
+                    (trans-eval val ctx state t)
+                    (cond ((and (consp val)
+                                (eq (car val) 'in-package))
+                           (cond
+                            ((and (true-listp val)
+                                  (eql (length val) 2)
+                                  (stringp (cadr val))
+                                  (find-non-hidden-package-entry
+                                   (cadr val)
+                                   (known-package-alist state)))
+
+; We don't include the package name.
+
+                             (value (cons val acc)))
+                            (t (er soft ctx
+                                   "IN-PACKAGE must have a single argument, ~
+                                    which is a known package name.  The form ~
+                                    ~x0 in file ~x1 is thus illegal.  The ~
+                                    known packages are~*2"
+                                   val
+                                   file
+                                   (tilde-*-&v-strings
+                                    '&
+                                    (strip-non-hidden-package-names
+                                     (known-package-alist state))
+                                    #\.)))))
+                          (t (a2ml-read-eval-thru-in-package1 ch file ctx
+                                                              (cons val acc)
+                                                              state))))))))
+
+(defun set-cbd-fn-state (str state)
+  (mv-let (erp val state)
+          (set-cbd-fn str state)
+          (declare (ignore val))
+          (prog2$ (and erp
+                       (er hard 'set-cbd-fn-state
+                           "Unable to set cbd with string ~x0."
+                           str))
+                  state)))
+
+(defun a2ml-read-eval-thru-in-package (ch file dir ctx acc state)
+  (state-global-let*
+   ((connected-book-directory
+     (or dir
+; The code below was adapted from remove-after-last-directory-separator.
+         (let* ((file-rev (reverse file))
+                (posn (position *directory-separator* file-rev)))
+           (if posn
+               (subseq file 0 (- (length file) posn))
+             (f-get-global 'connected-book-directory state))))
+     set-cbd-fn-state))
+   (a2ml-read-eval-thru-in-package1 ch file ctx acc state)))
+
+(defun print-current-package (pkg-form channel state)
+  (let ((pkg (if (and (true-listp pkg-form)
+                      (eq (car pkg-form) 'in-package)
+                      (stringp (cadr pkg-form)))
+                 (cadr pkg-form)
+               "ACL2")))
+    (pprogn (fms "val _ = current_package :=~| implode(map chr ~x0);~|"
+                 (list (cons #\0 (s2conses pkg (length pkg) nil)))
+                 channel state nil))))
+
+(defun acl2ml-write (lst pkg-form channel state)
+  (state-global-let*
+   ((write-for-read t)
+    (current-package "ACL2" set-current-package-state)
+    (print-case :downcase set-print-case))
+   (pprogn (princ$ "val _ = sexp.acl2_list_ref := [" channel state)
+           (newline channel state)
+           (let ((state (pprint-objects-to-ml lst "," channel state)))
+             (pprogn (princ$ "];" channel state)
+                     (newline channel state)
+                     (print-current-package pkg-form channel state)
+                     (close-output-channel channel state)
+                     (value :invisible))))))
+
+(defun a2ml-fn (infile outfile dir state)
   (declare (xargs :guard (and (stringp infile)
                               (stringp outfile))
                   :stobjs state))
   (state-global-let*
-   ((write-for-read t)
-    (current-package (f-get-global 'current-package state)
-                     set-current-package-state)
-    (print-case :downcase set-print-case))
+   ((current-package "ACL2" set-current-package-state))
    (let ((ctx 'a2ml))
-     (er-let*
-      ((list0 (read-object-file infile ctx state)))
-      (mv-let
-       (pkg list)
-       (if (and (consp (car list0))
-                (eq (caar list0) 'in-package))
-           (mv (cadr (car list0)) (cdr list0))
-         (mv nil list0))
-       (er-progn
-        (if pkg
-            (set-current-package pkg state)
-          (value nil))
-        (mv-let (channel state)
-                (open-output-channel outfile :character state)
-                (if channel
-                    (mv-let
-                     (col state)
-                     (fmt1 "Writing ml file ~x0.~%" (list (cons #\0 outfile))
-                           0 (standard-co state) state nil)
-                     (declare (ignore col))
-                     (pprogn (print-current-package (car list) channel state)
-                             (princ$ "val _ = sexp.acl2_list_ref := [" channel state)
-                             (newline channel state)
-                             (let ((state (pprint-objects-to-ml
-                                           list "," channel state)))
-                               (pprogn (princ$ "];" channel state)
-                                       (newline channel state)
-                                       (close-output-channel channel state)
-                                       (value :invisible)))))
-                  (er soft ctx
-                      "Unable to open file ~s0 for :character output."
-                      outfile)))))))))
+     (er-let* ((ch (open-input-object-file infile ctx state))
+               (lst1 (a2ml-read-eval-thru-in-package ch infile dir ctx nil
+                                                     state))
+               (lst2 (read-object-file1 ch state (cdr lst1))))
+       (let ((state (close-input-channel ch state)))
+         (mv-let
+          (channel state)
+          (open-output-channel outfile :character state)
+          (if (null channel)
+              (er soft ctx
+                  "Unable to open file ~s0 for :character output."
+                  outfile)
+            (mv-let
+             (col state)
+             (fmt1 "Writing ml file ~x0.~%" (list (cons #\0 outfile))
+                   0 (standard-co state) state nil)
+             (declare (ignore col))
+             (acl2ml-write lst2 (car lst1) channel state)))))))))
 
-(defmacro a2ml (infile outfile)
+(defmacro a2ml (infile outfile &optional infile-dir)
+
+; We assume that infile consists of essential events from a book: first the
+; portcullis commands, then the book proper.  Thus, the ambient package should
+; be bound to "ACL2" before reading infile.
+
   (declare (xargs :guard (and (stringp infile)
                               (stringp outfile))))
-  `(a2ml-fn ,infile ,outfile state))
+  `(a2ml-fn ,infile ,outfile ,infile-dir state))

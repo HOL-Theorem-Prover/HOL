@@ -15,7 +15,6 @@ fun rich_const s = prim_mk_const {Name = s, Thy = "rich_list"}
 val and_el_tm     = rich_const "AND_EL"
 val butlastn_tm   = rich_const "BUTLASTN"
 val ell_tm        = rich_const "ELL"
-val genlist_tm    = rich_const "GENLIST"
 val is_sublist_tm = rich_const "IS_SUBLIST"
 val is_suffix_tm  = rich_const "IS_SUFFIX"
 val lastn_tm      = rich_const "LASTN"
@@ -47,12 +46,6 @@ fun mk_butlastn (n,l) =
 fun mk_ell (n,l) =
   list_mk_comb (inst [alpha |-> eltype l] ell_tm, [n,l])
   handle HOL_ERR _ => raise ERR "mk_ell" ""
-
-fun mk_genlist (f,n) =
-  list_mk_comb (inst [alpha |-> (f |> Term.type_of
-                                   |> Type.dom_rng
-                                   |> snd)] genlist_tm, [f,n])
-  handle HOL_ERR _ => raise ERR "mk_genlist" ""
 
 fun mk_is_sublist (l1,l2) =
   list_mk_comb (inst [alpha |-> eltype l1] is_sublist_tm, [l1,l2])
@@ -115,7 +108,6 @@ fun mk_unzip_snd l =
 val dest_and_el   = dest_monop and_el_tm   (ERR "dest_and_el"   "not AND_EL")
 val dest_butlastn = dest_binop butlastn_tm (ERR "dest_butlastn" "not BUTLASTN")
 val dest_ell      = dest_binop ell_tm      (ERR "dest_ell"      "not ELL")
-val dest_genlist  = dest_binop genlist_tm  (ERR "dest_genlist"  "not GENLIST")
 
 val dest_is_sublist =
   dest_binop is_sublist_tm (ERR "dest_is_sublist" "not IS_SUBLIST")
@@ -149,7 +141,6 @@ val dest_unzip_snd =
 val is_and_el     = can dest_and_el
 val is_butlastn   = can dest_butlastn
 val is_ell        = can dest_ell
-val is_genlist    = can dest_genlist
 val is_is_sublist = can dest_is_sublist
 val is_is_suffix  = can dest_is_suffix
 val is_lastn      = can dest_lastn

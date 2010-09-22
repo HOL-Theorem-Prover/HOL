@@ -24,5 +24,7 @@ of which are functions whose domain type is the same as that of the
 supplied term.
 
 \SEEALSO
-Tactic.AP_THM_TAC, Thm.AP_TERM, Thm.ETA_CONV, Drule.EXT, Conv.FUN_EQ_CONV, Thm.MK_COMB.
+Tactic.AP_THM_TAC, Thm.AP_TERM, Drule.ETA_CONV, Drule.EXT, Conv.FUN_EQ_CONV,
+Thm.MK_COMB.
+
 \ENDDOC

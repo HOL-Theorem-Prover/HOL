@@ -193,7 +193,7 @@ val npair = Store_thm(
 
 val npair_11 = Store_thm(
   "npair_11",
-  ``(x₁ *, y₁ = x₂ *, y₂) <=> (x₁ = x₂) /\ (y₁ = y₂)``,
+  ``(x1 *, y1 = x2 *, y2) <=> (x1 = x2) /\ (y1 = y2)``,
   SRW_TAC [][EQ_IMP_THM] THENL [
     POP_ASSUM (MP_TAC o Q.AP_TERM `nfst`) THEN SRW_TAC [][],
     POP_ASSUM (MP_TAC o Q.AP_TERM `nsnd`) THEN SRW_TAC [][]

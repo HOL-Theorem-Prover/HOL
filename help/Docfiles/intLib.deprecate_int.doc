@@ -68,6 +68,6 @@ brings about a ``temporary'' effect; it does not cause the change to
 be exported with the current theory.
 
 \SEEALSO
-numLib.deprecate_num, intLib.prefer_int, numLib.prefer_num.
+intLib.prefer_int.
 
 \ENDDOC

@@ -1,0 +1,39 @@
+\DOC GT_CONV
+
+\TYPE {GT_CONV : conv}
+
+\SYNOPSIS
+Proves result of greater-than ordering on two numerals.
+
+\LIBRARY reduce
+
+\DESCRIBE
+If {m} and {n} are both numerals (e.g. {0}, {1}, {2}, {3},...), then
+{GT_CONV "m > n"} returns the theorem:
+{
+   |- (m > n) = T
+}
+if the natural number denoted by {m} is greater than that denoted by
+{n}, or
+{
+   |- (m > n) = F
+}
+otherwise.
+
+\FAILURE
+{GT_CONV tm} fails unless {tm} is of the form {"m > n"}, where {m} and {n}
+are numerals.
+
+\EXAMPLE
+{
+#GT_CONV "100 > 10";;
+|- 100 > 10 = T
+
+#GT_CONV "15 > 15";;
+|- 15 > 15 = F
+
+#GT_CONV "11 > 27";;
+|- 11 > 27 = F
+}
+
+\ENDDOC

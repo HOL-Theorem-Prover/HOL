@@ -38,5 +38,8 @@ This states that the constructors {LEAF} and {NODE} are both
 injective.
 
 \SEEALSO
-Datatype.define_type, Prim_rec.INDUCT_THEN, Prim_rec.new_recursive_definition, Prim_rec.prove_cases_thm, Prim_rec.prove_constructors_distinct, Prim_rec.prove_induction_thm, Prim_rec.prove_rec_fn_exists.
+Prim_rec.INDUCT_THEN, Prim_rec.new_recursive_definition,
+Prim_rec.prove_cases_thm, Prim_rec.prove_constructors_distinct,
+Prim_rec.prove_induction_thm, Prim_rec.prove_rec_fn_exists.
+
 \ENDDOC

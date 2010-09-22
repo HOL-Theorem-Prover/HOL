@@ -41,5 +41,6 @@ presence or absence of a tag will be displayed.
 The initial value of {show_tags} is {false}.
 
 \SEEALSO
-Thm.tag, Thm.mk_oracle_thm, Thm.mk_thm, Globals.show_axioms.
+Thm.tag, Thm.mk_oracle_thm, Thm.mk_thm.
+
 \ENDDOC

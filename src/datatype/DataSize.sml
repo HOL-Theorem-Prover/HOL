@@ -251,7 +251,7 @@ fun define_size ax db =
                   rec_axiom=ax, def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
      val ctyl = Lib.op_mk_set (pair_cmp eq equal) (map cty (strip_conj (concl defn)))
-     val const_tyl = gather (fn (c,ty) => mem ty dtys) ctyl
+     val const_tyl = filter (fn (c,ty) => mem ty dtys) ctyl
      val const_tyopl = map (fn (c,ty) => (c,tyconst_names ty)) const_tyl
  in
     SOME {def=defn,const_tyopl=const_tyopl}

@@ -17,7 +17,13 @@ fun NEW_TAC vname t (asl, g) = let
   val finiteness_discharged0 =
       CONV_RULE (LAND_CONV (SIMP_CONV (srw_ss()) (map ASSUME finite_asms)))
                 fresh_thm
-  val finiteness_discharged = MP finiteness_discharged0 TRUTH
+  val finiteness_discharged =
+      MP finiteness_discharged0 TRUTH
+      handle HOL_ERR _ =>
+       raise mk_HOL_ERR "NEWLib" "NEW_TAC"
+                        ("Finiteness discharge left with "^
+                         Parse.term_to_string
+                             (lhand (concl finiteness_discharged0)))
 in
   X_CHOOSE_THEN var STRIP_ASSUME_TAC finiteness_discharged
 end (asl, g)

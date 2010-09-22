@@ -363,20 +363,24 @@ fun CTXT_ARITH thms tm =
     (type_of tm = Type.bool) andalso
     (is_arith tm orelse (eq tm F andalso not (null thms)))
   then let
-    val context = map concl thms
-    fun try gl = let
-      val gl' = list_mk_imp(context,gl)
-      val _ = trace (5, LZ_TEXT (fn () => "Trying cached arithmetic d.p. on "^
-                                          term_to_string gl'))
+      val context = map concl thms
+      fun try gl = let
+        val gl' = list_mk_imp(context,gl)
+        val _ = trace (5, LZ_TEXT (fn () => "Trying cached arithmetic d.p. on "^
+                                            term_to_string gl'))
+      in
+        rev_itlist (C MP) thms (ARITH gl')
+      end
+      val thm = if not (is_conj tm) then
+                  EQT_INTRO (try tm)
+                  handle (e as HOL_ERR _) =>
+                         if not (eq tm F) andalso not (is_disj tm) then
+                           EQF_INTRO (try(mk_neg tm))
+                         else raise e
+                else EQF_INTRO (try (mk_neg tm))
     in
-      rev_itlist (C MP) thms (ARITH gl')
+      trace(1,PRODUCE(tm,"ARITH",thm)); thm
     end
-    val thm = EQT_INTRO (try tm)
-      handle (e as HOL_ERR _) =>
-        if not (eq tm F) then EQF_INTRO (try(mk_neg tm)) else raise e
-  in
-    trace(1,PRODUCE(tm,"ARITH",thm)); thm
-  end
   else
     if type_of tm = num_ty  then let
         val _ = trace(5, LZ_TEXT (fn () => "Linear reduction on "^
@@ -468,7 +472,8 @@ val (CACHED_ARITH,arith_cache) = let
   fun check tm = let
     val ty = type_of tm
   in
-    ty = num_ty andalso not (is_boring tm) orelse
+    (ty = num_ty andalso not (is_boring tm))
+         orelse
     (ty=Type.bool andalso (is_arith tm orelse eq tm F))
   end
 in

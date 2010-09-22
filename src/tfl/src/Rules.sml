@@ -26,7 +26,7 @@ fun simpl_conv thl =
 
 fun is_triv_rw tm = uncurry aconv (dest_eq tm) handle HOL_ERR _ => false;
 
-fun non_triv thl = gather (not o is_triv_rw o concl) thl
+fun non_triv thl = filter (not o is_triv_rw o concl) thl
 
 (*---------------------------------------------------------------------------*)
 (* PURE_REWRITE_RULE plus generalized beta conversion.                       *)
