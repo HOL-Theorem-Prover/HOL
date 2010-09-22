@@ -246,6 +246,14 @@ val _ = set_trace "Unicode" 0
 val _ = set_trace "Unicode" 1
 val _ = checkparse ()
 
+(* test for type abbreviation bug caused by stale types in a TypeNet.*)
+val _ = tprint "Testing stale type abbreviations bug"
+val _ = new_type ("foo", 1)
+val _ = type_abbrev("bar", ``:bool foo``)
+val _ = new_type ("foo", 0)
+val _ = type_abbrev("baz", ``:foo``) handle _ => die "FAILED!"
+val _ = print "OK\n"
+
 
 (* pretty-printing tests - turn Unicode off *)
 val _ = set_trace "Unicode" 0

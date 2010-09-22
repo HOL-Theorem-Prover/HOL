@@ -1,0 +1,185 @@
+We have decided not to translate include-book forms from ACL2 to HOL;
+they are simply dropped.  But for a robust infrastructure, we should
+guarantee that for a given set of ACL2 books, then those and all
+included sub-books, and no more, are translated to HOL.  As of August
+19, 2010, we do not yet have not implemented any mechanical check that
+provides such a guarantee.
+
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+Summary of thread below: Consider clearly separating axioms.lisp into
+the part that must be proved to hold in the HOL model of ACL2 and the
+rest, as a conservative definitional extension of the first part.
+
+....................
+
+From Mike Gordon to Matt Kaufmann, Fri, 20 Aug 2010 13:46:47 +0100
+
+Hi Matt,
+
+I've been wondering about how much should be defined in HOL and how
+much assumed as axioms based on trusting ACL2.
+
+When we proved the ACL2 axioms satisfied the HOL model we defined all
+the functions used in the axioms properly in HOL (e.g. doing
+termination proofs in HOL).
+
+For M1 I've been starting from these definitions, but I need to add
+some additional functions, namely (so far) EXPT and
+NONNEGATIVE-INTEGER-QUOTIENT.  However, I haven't bothered to admit
+these as real HOL definitions, but am trusting that the defining
+equations imported from ACL2 can be trusted. For example:
+
+ acl2AxiomDefine "ACL2::NONNEGATIVE-INTEGER-QUOTIENT"
+  `nonnegative_integer_quotient i j =
+    ite
+      (ite (common_lisp_equal (nfix j) (nat 0))
+         (common_lisp_equal (nfix j) (nat 0)) (less (ifix i) j)) (nat 0)
+      (add (nat 1)
+         (nonnegative_integer_quotient (add i (unary_minus j)) j))`;
+
+My original plan was to replace the call of acl2AxiomDefine (which
+just makes an axiom, adding a suitable "trusting ACL2" tag) by
+acl2Define (which makes a proper definition). However, I am wondering
+if this leads to unnecessary work.
+
+I wonder if instead we should just trust ACL2 for everything. I think
+this just amounts to adding
+HOL/examples/acl2/tests/round-trip/gold/axioms.ml to the front of the
+stuff we slurp in.
+
+Any thoughts on this?
+
+Cheers,
+
+Mike
+
+....................
+
+From Matt Kaufmann to Mike Gordon, 20 Aug 2010 09:49:10 -0500
+
+Hi, Mike --
+
+Excellent question.  Short answer: I think it's fine to do the easy
+thing.  Longer answer:
+
+In a perfect world, we would split axioms.lisp into two parts: true
+axioms about primitives, and defined functions.  So for example, the
+axiom (equal (car (cons x y)) x) is truly an axiom about the
+primitives car and cons, but the definition of
+nonnegative-integer-quotient is just an ordinary definition that we
+can think of as being part of the built-in library.  The one fuzzy
+case I can think of is the "definition" of acl2-count, because in
+order to admit that function we need to have a measure that decreases
+on recursive calls -- but the measure we use is acl2-count!
+
+So my position is that whatever proofs you did before added confidence
+that the HOL model is truly a model of the "real" ACL2 axioms, and we
+can just slurp in all of axioms.lisp now, including stuff missing
+before like nonnegative-integer-quotient, mod, and expt.
+
+But maybe someday it would be worthwhile to work out the above sketch
+more carefully.  Shall I put this email into the new file,
+HOL/examples/acl2/ISSUES?  (Maybe we should rename it
+"stuff-we-think-maybe-we-should-do-yeah-right-good-luck.)
+
+-- Matt
+
+....................
+
+From Mike Gordon to Matt Kaufmann, Fri, 20 Aug 2010 16:00:26 +0100
+
+Hi Matt,
+
+If we implement this work saving approach then I guess it might be
+good for you to check and if necessary regenerate the stuff to slurp
+in before M1. I will then adjust the flow to just slurp in (and trust)
+that, rather to build on top of the partly validated in HOL stuff.
+Currently I have symbolic links:
+
+problem-set-1-answers.ml ->
+/local/scratch-1/mjcg/HOL98/hol4/HOL/examples/acl2/tests/gold/problem-set-1-answers.ml
+m1-story.ml -> /local/scratch-1/mjcg/HOL98/hol4/HOL/examples/acl2/tests/gold/m1-story.ml
+
+I guess I need another one:
+
+axioms.ml -> /local/scratch-1/mjcg/HOL98/hol4/HOL/examples/acl2/tests/round-trip/gold/axioms.ml
+
+Sure, add this to ISSUES.
+
+Cheers,
+
+Mike
+
+....................
+
+From Matt Kaufmann to Mike.Gordon, 20 Aug 2010 10:13:37 -0500
+
+Hi, Mike --
+
+Yes, I think the axioms.ml you identified
+(HOL/examples/acl2/tests/round-trip/gold/axioms.ml)
+is the right one to slurp in -- so as far as I know, I don't need to
+do any further regeneration. (Please let me know if you think I'm
+missing something, of course.)
+
+OK, I'll expand ISSUES.
+
+Thanks --
+-- Matt
+
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+Consider translating directly from the ACL2 logical world (database),
+including as output what is currently written to
+tests/inputs/PKGS.sml.  Below is the relevant August 21, 2010 email
+thread, begun by this question from Mike to Matt:
+
+   One question I had was whether ACL2 should discard redundant events
+   before creating the .ml files? I already have almost finished revising
+   the code in HOL, but could jettison it easily.
+
+Matt's reply is below, to which Mike replied in turn:
+
+  If the custom PKGS.ml files were significantly
+  smaller that could be a benefit at the HOL end!
+
+.....
+
+Hi, Mike --
+
+ACL2 could discard redundant events that occur within a single file.
+But that's probably relatively uncommon; much more common is that the
+same event occurs in two different files (books).  We want to be able
+to translate books independently.  So if we were to eliminate
+redundancies on the ACL2 end, we would need a step that says which
+collection of books is to be translated.
+
+But maybe that's a good idea.  I can imagine a process where we
+specify the books to be translated, and as a first step ACL2 writes
+out a single file, with all redundancies eliminated.  That would
+probably be reasonably straightforward, since the translation process
+already translates an ACL2 book to an "essential" list of "events".
+I've put "events" in quotes because, in particular, encapsulate events
+are translated to encap forms; compare
+examples/acl2/tests/inputs/encap1.lisp (the input book) with
+examples/acl2/tests/gold/encap1.lisp (the "essential" file, which is
+used to generate encap1.ml).
+
+In fact, as part of that process, I could create the necessary PKGS.ml
+for each translation, rather than maintaining a single "universal"
+file examples/acl2/tests/inputs/PKGS.ml.
+
+For even greater security, I might translate directly from the logical
+database ("world") present after including certified books, rather
+than from a file of events.  That would have the added advantage of
+getting rid of redundancy automatically.
+
+But probably it's not worth the effort right now to do any of that.
+Maybe it's worth my taking 2 minutes though to put this email into the
+ISSUES file.  What do you think?
+
+Thanks --
+-- Matt
+
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>

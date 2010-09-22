@@ -1367,13 +1367,28 @@ val DOMSUB_FAPPLY_THM = store_thm(
   ``!fm k1 k2. (fm \\ k1) ' k2 = if k1 = k2 then FEMPTY ' k2 else fm ' k2``,
   SRW_TAC [] [DOMSUB_FAPPLY, DOMSUB_FAPPLY_NEQ]);
 
+val DOMSUB_FLOOKUP = store_thm(
+  "DOMSUB_FLOOKUP",
+  ``!fm k. FLOOKUP (fm \\ k) k = NONE``,
+  SRW_TAC [][FLOOKUP_DEF, FDOM_DOMSUB]);
+
+val DOMSUB_FLOOKUP_NEQ = store_thm(
+  "DOMSUB_FLOOKUP_NEQ",
+  ``!fm k1 k2. ~(k1 = k2) ==> (FLOOKUP (fm \\ k1) k2 = FLOOKUP fm k2)``,
+  SRW_TAC [][FLOOKUP_DEF, FDOM_DOMSUB, DOMSUB_FAPPLY_NEQ]);
+
+val DOMSUB_FLOOKUP_THM = store_thm(
+  "DOMSUB_FLOOKUP_THM",
+  ``!fm k1 k2. FLOOKUP (fm \\ k1) k2 = if k1 = k2 then NONE else FLOOKUP fm k2``,
+  SRW_TAC [][DOMSUB_FLOOKUP, DOMSUB_FLOOKUP_NEQ]);
+
 val FRANGE_FUPDATE_DOMSUB = store_thm(
   "FRANGE_FUPDATE_DOMSUB",
   ``!fm k v. FRANGE (fm |+ (k,v)) = v INSERT FRANGE (fm \\ k)``,
   SRW_TAC [][FRANGE_FUPDATE, fmap_domsub]);
 
 val _ = export_rewrites ["DOMSUB_FEMPTY", "DOMSUB_FUPDATE", "FDOM_DOMSUB",
-                         "DOMSUB_FAPPLY", "FRANGE_FUPDATE_DOMSUB"]
+                         "DOMSUB_FAPPLY", "DOMSUB_FLOOKUP", "FRANGE_FUPDATE_DOMSUB"]
 
 val o_f_DOMSUB = store_thm(
   "o_f_DOMSUB",

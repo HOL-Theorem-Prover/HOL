@@ -7,6 +7,8 @@ This is work in progress. For further details see:
 
  http://www.cl.cam.ac.uk/users/mjcg/hol2acl2/
 
+For pending issues, see the file ISSUES in this directory.
+
 The directories here are:
 
 ml ............................ ML and HOL files
@@ -31,4 +33,4 @@ through tests/doit.
 Mike Gordon
 16 Dec, 2005
 Updated by Matt Kaufmann
-8 Dec, 2008
+8 Dec, 2008; 19 Aug, 2010

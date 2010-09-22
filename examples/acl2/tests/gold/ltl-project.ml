@@ -1,10 +1,5 @@
 val _ = sexp.acl2_list_ref := [
 
-(mkpair (mksym "ACL2" "INCLUDE-BOOK") (mkpair (mk_chars_str (chars_to_string (
-cons 115 (cons 117 (cons 109 (cons 109 (cons 97 (cons 114 (cons 121 nil))))))))) (
-mksym "COMMON-LISP" "NIL")))
-,
-
 (mkpair (mksym "ACL2" "DEFTHM") (mkpair (mksym "ACL2" 
 "RANGE-TRANSITION-RELATION") (mkpair (mkpair (mksym "ACL2" "IMPLIES") (mkpair (
 mkpair (mksym "COMMON-LISP" "IF") (mkpair (mkpair (mksym "ACL2" "MEMBERP") (

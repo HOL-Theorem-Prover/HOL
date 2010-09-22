@@ -4170,6 +4170,27 @@ METIS_TAC [FINITE_partition, BIGUNION_partition, DISJ_BIGUNION_CARD,
            partition_elements_disjoint, FINITE_BIGUNION, partition_def]);
 
 (* ----------------------------------------------------------------------
+    Assert a predicate on all pairs of elements in a set.
+    Take the RC of the P argument to consider only pairs of distinct elements.
+   ---------------------------------------------------------------------- *)
+
+val pairwise_def = new_definition(
+  "pairwise_def",
+  ``pairwise P s = !e1 e2. e1 IN s /\ e2 IN s ==> P e1 e2``);
+
+val pairwise_UNION = Q.store_thm(
+"pairwise_UNION",
+`pairwise R (s1 UNION s2) <=>
+ pairwise R s1 /\ pairwise R s2 /\ (!x y. x IN s1 /\ y IN s2 ==> R x y /\ R y x)`,
+SRW_TAC [boolSimps.DNF_ss][pairwise_def] THEN METIS_TAC []);
+
+val pairwise_SUBSET = Q.store_thm(
+"pairwise_SUBSET",
+`!R s t. pairwise R t /\ s SUBSET t ==> pairwise R s`,
+SRW_TAC [][SUBSET_DEF,pairwise_def]);
+
+
+(* ----------------------------------------------------------------------
     A proof of Koenig's Lemma
    ---------------------------------------------------------------------- *)
 

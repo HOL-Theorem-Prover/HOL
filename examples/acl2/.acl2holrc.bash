@@ -1,19 +1,21 @@
-# editable variables:
+# Editable variables (with some attempt to determine them
+# automatically for Matt Kaufmann):
 
-# export ACL2_SRC=/home/mk606/acl2/v3-5
-export ACL2_SRC=/Users/kaufmann/acl2/v4-0/acl2-sources
-# if [ "`uname -a | fgrep i686`" != "" ] ; then \
-#     export ACL2=${ACL2_SRC}/saved_acl2 ; \
-# elif [ "`uname -a | fgrep x86_64`" != "" ] ; then \
-#    export ACL2=${ACL2_SRC}/ccl64-saved_acl2 ; \
-# else \
-#     echo "ERROR: Unexpected uname." ; \
-#     exit 1 ; \
-# fi
-export ACL2=${ACL2_SRC}/saved_acl2 ; \
+hostname=`hostname`
 
-# export ACL2_HOL=/home/mk606/hol/HOL/examples/acl2
-export ACL2_HOL=/Users/kaufmann/projects/HOL/examples/acl2
+if [ "$hostname" = "kala.cl.cam.ac.uk" ] ; then \
+	export ACL2_SRC=/home/mk606/acl2/v4-0/acl2-sources ; \
+	export ACL2=${ACL2_SRC}/saved_acl2 ; \
+	export ACL2_HOL=/home/mk606/hol/HOL/examples/acl2
+elif [ "$hostname" = "oliphaunt-0.cs.utexas.edu" ] ; then \
+	export ACL2_SRC=/projects/acl2/v4-0-linux-64 ; \
+	export ACL2=${ACL2_SRC}/ccl-saved_acl2 ; \
+	export ACL2_HOL=/u/kaufmann/projects/HOL/examples/acl2
+else
+	export ACL2_SRC=/Users/kaufmann/acl2/v4-0/acl2-sources ; \
+	export ACL2=${ACL2_SRC}/saved_acl2 ; \
+	export ACL2_HOL=/Users/kaufmann/projects/HOL/examples/acl2
+fi
 
 # end of editable variables
 

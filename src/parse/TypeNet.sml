@@ -3,7 +3,34 @@ struct
 
 open HolKernel
 
-datatype label = TV | TBV of int | TCON of {Thy : string, Tyop : string} | TAPP | TABS | TUNI
+datatype label = TV
+               | TBV of int
+               | TCON of {Thy : string, Tyop : string} * kind
+               | TAPP
+               | TABS
+               | TUNI
+  (* The kind records kind of constant - this is necessary when
+     types are redefined.  If the old and new versions have the
+     same kind, all is well, but if they are different then the data
+     structure expects the wrong thing.
+
+     For example, if scratch$foo is of arity 1, then there will be a
+     ND node beneath it (where the argument gets treated).  But if
+     the user dumps that foo, and replaces it with one of arity 0, an
+     attempt to follow the tree will find the node that was right before
+     when it should be a leaf.
+
+     If the user does a lot of this, the data structure will slowly fill
+     up with garbage.  If a type gets replaced with a new one of the same
+     arity, the data for the old type will be returned as part of a
+     Binarymap.listItems when "match" is called, but the user will eliminate
+     the junk with the usual sort of call to match_type.  With "peek", the
+     old data won't be called because the lookup at the leaf's Binarymap
+     will just find whatever's supposed to be associated with the new type.
+  *)
+
+fun reccmp ({Thy=th1,Tyop=op1}, {Thy=th2,Tyop=op2}) =
+    pair_compare(String.compare, String.compare) ((op1,th1),(op2,th2))
 
 fun labcmp p =
     case p of
@@ -13,8 +40,8 @@ fun labcmp p =
     | (TBV i, TBV j) => Int.compare (i,j)
     | (TBV _, _) => LESS
     | (_, TBV _) => GREATER
-    | (TCON{Thy = thy1, Tyop = op1}, TCON{Thy = thy2, Tyop = op2}) =>
-      pair_compare(String.compare, String.compare) ((op1,thy1),(op2,thy2))
+    | (TCON condata1, TCON condata2) =>
+      pair_compare(reccmp, Kind.kind_compare) (condata1, condata2)
     | (TCON _, _) => LESS
     | (_, TCON _) => GREATER
     | (TAPP, TAPP) => EQUAL
@@ -52,7 +79,7 @@ fun ndest_type (ty,env) =
       end
     else if is_con_type ty then
       let val {Thy,Tyop,Kind,Rank} = dest_thy_con_type ty
-      in (TCON{Thy=Thy,Tyop=Tyop}, [])
+      in (TCON({Thy=Thy,Tyop=Tyop},Kind), [])
       end
     else if is_app_type ty then
       let val (opr,arg) = dest_app_type ty

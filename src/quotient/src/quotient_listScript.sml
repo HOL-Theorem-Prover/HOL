@@ -63,17 +63,9 @@ val LIST_MAP_I =
    THEN ASM_REWRITE_TAC[MAP,I_THM]
   );
 
-(* for list equivalence relation, use prefix LIST_REL, defined here: *)
+(* for list equivalence relation, use prefix LIST_REL *)
 
-(* Almost MAP2, but this is totally defined: *)
-val LIST_REL_def =
-    Define
-      `(LIST_REL R [] [] = T) /\
-       (LIST_REL R ((a:'a)::as) [] = F) /\
-       (LIST_REL R [] ((b:'a)::bs) = F) /\
-       (LIST_REL R (a::as) (b::bs) = (R a b /\ LIST_REL R as bs))`;
-
-val LIST_REL_ind = fetch "-" "LIST_REL_ind";
+val LIST_REL_def = listTheory.LIST_REL_def
 
 val LIST_REL_EQ = store_thm
    ("LIST_REL_EQ",

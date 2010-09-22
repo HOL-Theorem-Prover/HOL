@@ -267,7 +267,6 @@ fun mc_compile fname target = let
   val input_tm = tm
   val n = list_find target [("arm",13),("ppc",31),("x86",1000)]
   val imp = allocate_registers n input_tm
-
   fun strip_forall tm = strip_forall (snd (dest_forall tm)) handle HOL_ERR _ => tm
   val gs = (map strip_forall o list_dest dest_conj o fst o dest_imp o concl) imp
   val xs = zip (rev fnames) gs

@@ -41,14 +41,11 @@ val _ = DataType `:Thicket` `Thicket = TStalk of Thicket Tre`;
 (* Connected single constructors                                             *)
 (*****************************************************************************)
 
-val _ = DataType `:'a CS4`
-		`	CS1 = CS1C of 'a CS2 => 'a CS4 ;
-			CS2 = CS2C of 'a CS3 => 'a CS4 ;
-			CS3 = CS3C of 'a CS4 ;
-			CS4 = CS4C of 'a`;
-val _ = AddType `:'a CS1`;
-val _ = AddType `:'a CS2`;
-val _ = AddType `:'a CS3`;
+val _ = DataType `:'a CS4` `CS4 = CS4C of 'a`;
+val _ = DataType `:'a CS3` `CS3 = CS3C of 'a CS4`;
+val _ = DataType `:'a CS2` `CS2 = CS2C of 'a CS3 => 'a CS4`;
+val _ = DataType `:'a CS1` `CS1 = CS1C of 'a CS2 => 'a CS4`;
+
 
 val _ = DataType `:'a DListL`
       	`DListL = DLR of DListR ; DListR = DLRNil | DLRCons of 'a => DListL`;

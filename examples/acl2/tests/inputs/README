@@ -1,4 +1,7 @@
-The following are from Sandip's LTL example:
+See ../README for how to modify the Makefile in this directory
+if there is a failure with the pkg-check.txt target.
+
+The following are from Sandip Ray's LTL example:
 
 apply-total-order.lisp
 circuit-bisim.lisp

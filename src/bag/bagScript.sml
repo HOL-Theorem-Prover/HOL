@@ -1840,6 +1840,12 @@ val SET_OF_BAG_IMAGE = Q.store_thm(
   PROVE_TAC []);
 val _ = export_rewrites ["SET_OF_BAG_IMAGE"];
 
+val BAG_IMAGE_FINITE_RESTRICTED_I = store_thm(
+  "BAG_IMAGE_FINITE_RESTRICTED_I",
+  ``!b. FINITE_BAG b /\ BAG_EVERY (\e. f e = e) b ==> (BAG_IMAGE f b = b)``,
+  REWRITE_TAC [GSYM AND_IMP_INTRO] THEN
+  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN SRW_TAC [][]);
+
 val BAG_ALL_DISTINCT = new_definition ("BAG_ALL_DISTINCT",
   ``BAG_ALL_DISTINCT b = (!e. b e <= 1:num)``);
 
@@ -2224,7 +2230,7 @@ val TC_mlt1_FINITE_BAG = store_thm(
 val TC_mlt1_UNION2_I = store_thm(
   "TC_mlt1_UNION2_I",
   ``!b2 b1. FINITE_BAG b2 /\ FINITE_BAG b1 /\ b2 <> {||} ==>
-         (mlt1 R)^+ b1 (b1 + b2)``,
+            (mlt1 R)^+ b1 (b1 + b2)``,
   Q_TAC SUFF_TAC
         `!b2. FINITE_BAG b2 ==> !b1. FINITE_BAG b1 /\ b2 <> {||} ==>
               (mlt1 R)^+ b1 (b1 + b2)` THEN1 METIS_TAC [] THEN
@@ -2242,6 +2248,12 @@ val TC_mlt1_UNION2_I = store_thm(
     MAP_EVERY Q.EXISTS_TAC [`e`, `{||}`, `b1 + b2`] THEN SRW_TAC [][] THEN
     METIS_TAC [EL_BAG, BAG_INSERT_UNION, COMM_BAG_UNION, ASSOC_BAG_UNION]
   ]);
+
+val TC_mlt1_UNION1_I = store_thm(
+  "TC_mlt1_UNION1_I",
+  ``!b2 b1. FINITE_BAG b2 /\ FINITE_BAG b1 /\ b1 <> {||} ==>
+            (mlt1 R)^+ b2 (b1 + b2)``,
+  METIS_TAC [COMM_BAG_UNION,TC_mlt1_UNION2_I]);
 
 val mlt_TO_EMPTY_BAG = Q.store_thm(
   "mlt_TO_EMPTY_BAG",

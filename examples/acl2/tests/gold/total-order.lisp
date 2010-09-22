@@ -1,3 +1,4 @@
+; NOTE: Forms below are not evaluated when translating to ML.
 (IN-PACKAGE "ACL2")
 
 (DEFUN << (X Y) (IF (LEXORDER X Y) (NOT (EQUAL X Y)) 'NIL))
