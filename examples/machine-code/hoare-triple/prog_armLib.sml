@@ -396,6 +396,8 @@ val minus_one = EVAL ``-1w:word32``
 val minus_one_mult =
   REWRITE_CONV [GSYM minus_one,GSYM WORD_NEG_MUL,GSYM word_sub_def]
    ``x + (0xFFFFFFFFw:word32) * y``
+val minus_one_mult = CONJ (RW1 [WORD_ADD_COMM] minus_one_mult) minus_one_mult
+val minus_one_mult = CONJ (RW1 [WORD_MULT_COMM] minus_one_mult) minus_one_mult
 
 fun arm_prove_specs m_pred s = let
   val _ = set_arm_memory_pred m_pred
