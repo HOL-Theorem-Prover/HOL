@@ -852,18 +852,24 @@ fun holfoot_a_prop_printer Gs sys (ppfns:term_pp_types.ppstream_funs) gravs d pp
       add_string ")";
       end_block ()
     ) else if (same_const op_term holfoot_ap_data_tree_term)  then (
-      begin_block INCONSISTENT 0;       
-      add_string "data_tree";
-      add_string "(";
-      sys (Top, Top, Top) (d - 1) (el 1 args);
-      add_string ";";
-      add_break(1, !holfoot_pretty_printer_block_indent);
-      sys (Top, Top, Top) (d - 1) (el 2 args);
-      add_string ";";
-      add_break(1, !holfoot_pretty_printer_block_indent);
-      sys (Top, Top, Top) (d - 1) (el 3 args);
-      add_string ")";
-      end_block ()
+      let
+         val (dtag_t, data_t) = pairSyntax.dest_pair (el 3 args);
+      in
+         begin_block INCONSISTENT 0;       
+         add_string "data_tree";
+         add_string "(";
+         sys (Top, Top, Top) (d - 1) (el 1 args);
+         add_string ";";
+         add_break(1, !holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) (el 2 args);
+         add_string ",";
+         add_break(1, !holfoot_pretty_printer_block_indent);
+         sys (Top, Top, Top) (d - 1) dtag_t;
+         add_string ":";
+         sys (Top, Top, Top) (d - 1) data_t;
+         add_string ")";
+         end_block ()
+      end
     ) else if (same_const op_term holfoot_ap_points_to_term) then (
       begin_block INCONSISTENT 0;       
       sys (Top, Top, Top) (d - 1) (el 1 args);

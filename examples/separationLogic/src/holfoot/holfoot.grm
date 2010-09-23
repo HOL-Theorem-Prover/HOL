@@ -50,6 +50,7 @@ val tree_link_tags = ("l", "r")
   |  MAP
   |  DISPOSE
   |  ELSE
+  |  GLOBAL
   |  EMPTY
   |  EOF
   |  EQUAL
@@ -66,16 +67,6 @@ val tree_link_tags = ("l", "r")
   |  INFIXOP3 of string
   |  LBRACE
   |  LBRACKET
-  |  LIST
-  |  LISTSEG
-  |  DATA_LIST
-  |  DATA_LISTSEG
-  |  QUEUE
-  |  DATA_QUEUE
-  |  ARRAY
-  |  DATA_ARRAY
-  |  INTERVAL
-  |  DATA_INTERVAL
   |  LOCAL
   |  LPAREN
   |  MINUSGREATER
@@ -90,8 +81,6 @@ val tree_link_tags = ("l", "r")
   |  SEMI
   |  STAR
   |  IFTHEN
-  |  TREE
-  |  DATA_TREE
   |  AND
   |  OR
   |  NOT
@@ -156,6 +145,8 @@ val tree_link_tags = ("l", "r")
   |  simple_expression of Parsetree.a_expression
   |  expression_seq of Parsetree.a_expression list
   |  expression_notempty_seq of Parsetree.a_expression list
+  |  genpredarg of Parsetree.a_genpredarg
+  |  genpredargs of Parsetree.a_genpredarg list
   |  a_space_pred of Parsetree.a_space_pred
   |  a_component_expression_seq of (string * Parsetree.a_expression) list
   |  a_component_expression_notempty_seq of (string * Parsetree.a_expression) list
@@ -164,8 +155,6 @@ val tree_link_tags = ("l", "r")
 
 %start top
 %pos (int * int)
-
-
 
 %%
 
@@ -187,9 +176,11 @@ program :
     program_item_star
       ( Pprogram ([list_data_tag, list_link_tag,
 		   tree_data_tag,
-		   #1 tree_link_tags, #2 tree_link_tags],
+		   #1 tree_link_tags, #2 tree_link_tags], [],
         	   program_item_star) )
-  | ident_decl program_item_star ( Pprogram (ident_decl,program_item_star) )
+  | ident_decl program_item_star ( Pprogram (ident_decl,[],program_item_star) )
+  | GLOBAL ident_decl program_item_star ( Pprogram ([],ident_decl,program_item_star) )
+
 
 program_item_star :
     (* empty *)            ( [] )
@@ -229,7 +220,6 @@ ident_decl:
 ident_seq:
     (* empty *)      ( [] )
   | ident_notempty_seq ( ident_notempty_seq )
-
 
 ident_notempty_seq:
     IDENT            ( [IDENT] )
@@ -400,95 +390,52 @@ a_simple_component_expression_notempty_seq:
     IDENT COLON simple_expression            ( [(IDENT,simple_expression)] )
   | IDENT COLON simple_expression COMMA a_simple_component_expression_notempty_seq ( (IDENT,simple_expression)::a_simple_component_expression_notempty_seq )
 
+genpredarg:
+    expression
+          ( Aspred_arg_exp expression )
+  | LBRACKET ident_notempty_seq RBRACKET
+          ( Aspred_arg_string_list ident_notempty_seq )
+
+genpredargs:
+    (* empty *)
+          ( [] )
+  | genpredarg 
+          ( [genpredarg] )
+  | genpredarg SEMI genpredargs
+          ( genpredarg::Aspred_arg_semi::genpredargs )
+  | genpredarg COMMA genpredargs 
+          ( genpredarg::Aspred_arg_comma::genpredargs )
+  | genpredarg COLON genpredargs 
+          ( genpredarg::Aspred_arg_colon::genpredargs )
 
 a_space_pred:
-    LIST LPAREN IDENT SEMI expression RPAREN
-	  ( Aspred_list(IDENT,expression) )
-  | LIST LPAREN expression RPAREN
-	 ( Aspred_list(list_link_tag, expression) )
-  | DATA_LIST LPAREN IDENT SEMI expression COMMA ident_or_hol RPAREN
-	  ( Aspred_data_list(IDENT,expression,data_list_tag,ident_or_hol) )
-  | DATA_LIST LPAREN expression COMMA ident_or_hol RPAREN
-	  ( Aspred_data_list(list_link_tag,expression,data_list_tag,ident_or_hol) )
-  | DATA_LIST LPAREN IDENT SEMI expression COMMA IDENT COLON ident_or_hol RPAREN
-	  ( Aspred_data_list(IDENT1,expression,IDENT2,ident_or_hol) )
-  | DATA_LIST LPAREN expression COMMA IDENT COLON ident_or_hol RPAREN
-	  ( Aspred_data_list(list_link_tag,expression,IDENT,ident_or_hol) )
-  | LISTSEG LPAREN IDENT SEMI expression COMMA expression RPAREN
-	  ( Aspred_listseg(IDENT,expression1,expression2) )
-  | LISTSEG LPAREN expression COMMA expression RPAREN
-	  ( Aspred_listseg(list_link_tag, expression1, expression2) )
-  | DATA_LISTSEG LPAREN IDENT SEMI expression COMMA ident_or_hol COMMA expression RPAREN
-	  ( Aspred_data_listseg(IDENT,expression1,data_list_tag,ident_or_hol,expression2) )
-  | DATA_LISTSEG LPAREN IDENT SEMI expression COMMA IDENT COLON ident_or_hol COMMA expression RPAREN
-	  ( Aspred_data_listseg(IDENT1,expression1,IDENT2,ident_or_hol,expression2) )
-  | DATA_LISTSEG LPAREN expression COMMA ident_or_hol COMMA expression RPAREN
-	  ( Aspred_data_listseg(list_link_tag,expression1,data_list_tag,ident_or_hol,expression2) )
-  | DATA_LISTSEG LPAREN expression COMMA IDENT COLON ident_or_hol COMMA expression RPAREN
-	  ( Aspred_data_listseg(list_link_tag,expression1,IDENT,ident_or_hol,expression2) )
-  | ARRAY LPAREN expression COMMA expression RPAREN
-	  ( Aspred_array(expression1,expression2) )
-  | DATA_ARRAY LPAREN expression COMMA expression COMMA ident_or_hol RPAREN
-	  ( Aspred_data_array(expression1,expression2,array_data_tag, ident_or_hol) )
-  | DATA_ARRAY LPAREN expression COMMA expression COMMA IDENT COLON ident_or_hol RPAREN
-	  ( Aspred_data_array(expression1,expression2,IDENT,ident_or_hol) )
-  | INTERVAL LPAREN expression COMMA expression RPAREN
-	  ( Aspred_interval(expression1,expression2) )
-  | DATA_INTERVAL LPAREN expression COMMA expression COMMA ident_or_hol RPAREN
-	  ( Aspred_data_interval(expression1,expression2,array_data_tag, ident_or_hol) )
-  | DATA_INTERVAL LPAREN expression COMMA expression COMMA IDENT COLON ident_or_hol RPAREN
-	  ( Aspred_data_interval(expression1,expression2,IDENT,ident_or_hol) )
-  | QUEUE LPAREN IDENT SEMI expression COMMA expression RPAREN
-	  ( Aspred_queue(IDENT,expression1,expression2) )
-  | QUEUE LPAREN expression COMMA expression RPAREN
-	  ( Aspred_queue(list_link_tag, expression1, expression2) )
-  | DATA_QUEUE LPAREN IDENT SEMI expression COMMA ident_or_hol COMMA expression RPAREN
-	  ( Aspred_data_queue(IDENT,expression1,data_list_tag,ident_or_hol,expression2) )
-  | DATA_QUEUE LPAREN IDENT SEMI expression COMMA IDENT COLON ident_or_hol COMMA expression RPAREN
-	  ( Aspred_data_queue(IDENT1,expression1,IDENT2,ident_or_hol,expression2) )
-  | DATA_QUEUE LPAREN expression COMMA ident_or_hol COMMA expression RPAREN
-	  ( Aspred_data_queue(list_link_tag,expression1,data_list_tag,ident_or_hol,expression2) )
-  | DATA_QUEUE LPAREN expression COMMA IDENT COLON ident_or_hol COMMA expression RPAREN
-	  ( Aspred_data_queue(list_link_tag,expression1,IDENT,ident_or_hol,expression2) )
-  | TREE LPAREN LBRACKET IDENT COMMA IDENT RBRACKET SEMI expression RPAREN
-          ( Aspred_tree(IDENT1,IDENT2,expression) )
-  | TREE LPAREN expression RPAREN
-          ( Aspred_tree(#1 tree_link_tags, #2 tree_link_tags,
-			expression) )
-  | DATA_TREE LPAREN LBRACKET ident_notempty_seq RBRACKET SEMI expression SEMI LBRACKET ident_notempty_seq RBRACKET COMMA ident_or_hol RPAREN
-	  ( Aspred_data_tree(ident_notempty_seq1,expression,ident_notempty_seq2,ident_or_hol) )
-  | DATA_TREE LPAREN expression SEMI LBRACKET ident_notempty_seq RBRACKET COMMA ident_or_hol RPAREN
-	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],expression,ident_notempty_seq,ident_or_hol) )
-  | DATA_TREE LPAREN expression SEMI IDENT COMMA ident_or_hol RPAREN 
-	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],expression,[IDENT],ident_or_hol) )
-  | DATA_TREE LPAREN expression SEMI ident_or_hol RPAREN
-	  ( Aspred_data_tree([#1 tree_link_tags,#2 tree_link_tags],expression,[tree_data_tag],ident_or_hol) )
-  | HOL_TERM
+    HOL_TERM
           ( Aspred_boolhol HOL_TERM )
   | HOL_FULL_TERM
           ( Aspred_hol HOL_FULL_TERM )
   | EMPTY
           ( Aspred_empty )
-  | simple_expression POINTSTO a_component_expression_seq
+  | simple_expression POINTSTO a_component_expression_seq 
           ( Aspred_pointsto(simple_expression,a_component_expression_seq) )
-  | simple_expression POINTSTO expression
+  | simple_expression POINTSTO expression 
           ( Aspred_pointsto(simple_expression,[(list_link_tag, expression)]) )
-  | simple_expression POINTSTO expression COMMA expression
+  | simple_expression POINTSTO expression COMMA expression 
           ( Aspred_pointsto(simple_expression,[(#1 tree_link_tags, expression1),
 				(#2 tree_link_tags, expression2)]) )
-  | LPAREN a_space_pred RPAREN
-	  ( a_space_pred )
-
+  | IDENT LPAREN genpredargs RPAREN
+	  ( Aspred_genpred (IDENT, genpredargs, IDENTleft) )
 
 
 a_proposition:
     LPAREN a_proposition RPAREN
 	  ( a_proposition )
+  | a_space_pred
+          ( Aprop_spred a_space_pred )
   | simple_expression EQUALEQUAL expression
 	  ( Aprop_infix("==",simple_expression,expression) )
-  | simple_expression BANGEQUAL expression
+  | simple_expression BANGEQUAL expression 
 	  ( Aprop_infix("!=",simple_expression,expression) )
-  | simple_expression INFIXOP1 expression
+  | simple_expression INFIXOP1 expression 
 	  ( (Aprop_infix(INFIXOP1, simple_expression, expression)) )
   | FF
 	  ( Aprop_false )
@@ -500,8 +447,6 @@ a_proposition:
       ( Aprop_ifthenelse(a_proposition1,a_proposition2,a_proposition3) )  
   | MAP LPAREN LAM ident_notempty_seq_no_comma DOT a_proposition RPAREN ident_or_hol 
 	  ( Aprop_map (ident_notempty_seq_no_comma,a_proposition,ident_or_hol) )
-  | a_space_pred
-          ( Aprop_spred a_space_pred )
 
 ident_or_hol:
     IDENT                                 ( IDENT )

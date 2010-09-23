@@ -562,6 +562,25 @@ val supp_apart = store_thm(
   `supp pm x ≠ supp pm (pm [(a,b)] x)` by METIS_TAC [] THEN
   METIS_TAC []);
 
+val supp_finite_or_UNIV = store_thm(
+  "supp_finite_or_UNIV",
+  ``is_perm pm ∧ INFINITE (supp pm x) ⇒ (supp pm x = UNIV)``,
+  STRIP_TAC THEN
+  SPOSE_NOT_THEN (Q.X_CHOOSE_THEN `a` MP_TAC o
+                  SIMP_RULE (srw_ss()) [EXTENSION]) THEN
+  DISCH_THEN (fn th => ASSUME_TAC th THEN MP_TAC th THEN
+                       SIMP_TAC (srw_ss()) [supp_def]) THEN
+  STRIP_TAC THEN
+  `∃b. b ∉ {b | pm [(a,b)] x ≠ x} ∧ b ∈ supp pm x`
+    by METIS_TAC [IN_INFINITE_NOT_FINITE] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  METIS_TAC [supp_apart, is_perm_flip_args]);
+
+val supp_absence_FINITE = store_thm(
+  "supp_absence_FINITE",
+  ``is_perm pm ∧ a ∉ supp pm x ⇒ FINITE (supp pm x)``,
+  METIS_TAC [IN_UNIV, supp_finite_or_UNIV]);
+
 (* lemma3_4_i from Pitts & Gabbay - New Approach to Abstract Syntax *)
 val supp_smallest = store_thm(
   "supp_smallest",

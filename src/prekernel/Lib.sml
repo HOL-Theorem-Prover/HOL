@@ -44,8 +44,11 @@ fun equal x y = (x=y);
 val strcat = curry (op ^)
 fun cons a L = a::L
 fun pair x y = (x,y)
-fun fst (x,_) = x   and   snd (_,y) = y;
 
+fun rpair x y = (y,x)
+fun swap (x,y) = (y,x)
+fun fst (x,_) = x
+fun snd (_,y) = y
 
 (*---------------------------------------------------------------------------*
  * Success and failure. Interrupt has a special status in MoscowML.          *
@@ -54,7 +57,6 @@ fun can f x =
   (f x; true) handle Interrupt => raise Interrupt | _  => false;
 
 fun total f x = SOME (f x) handle Interrupt => raise Interrupt | _ => NONE;
-fun itotal f x = total f x handle _ => NONE;
 
 fun partial e f x =
    case f x

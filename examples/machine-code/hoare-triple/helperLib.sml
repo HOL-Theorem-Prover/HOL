@@ -33,8 +33,9 @@ fun cache (f:string->'a) = let
   in (fn x => let val y = Binarymap.find(!dd,x)
                   val _ = echo 1 " [cache]"
               in y end
-      handle e => let val v = f x
-                  val _ = dd := Binarymap.insert(!dd,x,v) in v end) end
+      handle NotFound => 
+        let val v = f x
+            val _ = dd := Binarymap.insert(!dd,x,v) in v end) end
 
 val to_lower = let
   fun aux c = if 65 <= ord c andalso ord c <= 90 then chr (ord c + 32) else c

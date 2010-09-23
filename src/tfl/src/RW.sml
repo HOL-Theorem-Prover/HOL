@@ -461,12 +461,11 @@ fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
   of SOME (L,(lhs,rhs)) =>
      let val outcome =
          if aconv lhs rhs then NO_CHANGE (L,lhs)
-         else let val cps' =
-                case L
-                 of []  => cps
-                  |  _   => {context = (map ASSUME L @ cntxt,b),
-                             prover  = prover,
-                             simpls  = add_cntxt b simpls (map ASSUME L)}
+         else let val cps' = 
+                   if null L then cps else
+                       {context = (map ASSUME L @ cntxt,b),
+                        prover  = prover,
+                        simpls  = add_cntxt b simpls (map ASSUME L)}
               in CHANGE(cnv cps' lhs) handle HOL_ERR _ => NO_CHANGE (L,lhs)
                                            | UNCHANGED => NO_CHANGE (L,lhs)
               end
@@ -545,17 +544,18 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun do_cong cnv cps th =
- let fun mk_ant (NO_CHANGE (L,tm)) = itlist DISCH L (REFL tm)
-       | mk_ant (CHANGE th) = th
+ let val ants = strip_conj (fst(dest_imp (concl th)))
      fun loop [] = []    (* loop proves each antecedent in turn. *)
        | loop (ant::rst) =
-         let val (outcome,rst') =
-              if not(is_forall ant) then simple cnv cps (ant,rst)
-                                    else complex cnv cps (ant,rst)
-         in outcome::loop rst'
-         end
-     val ants = strip_conj (fst(dest_imp (concl th)))
+           let val (outcome,rst') = 
+                 if not(is_forall ant) 
+                   then simple cnv cps (ant,rst)
+                   else complex cnv cps (ant,rst)
+           in outcome::loop rst'
+           end
      val ants' = loop ants
+     fun mk_ant (NO_CHANGE (L,tm)) = itlist DISCH L (REFL tm)
+       | mk_ant (CHANGE th) = th
  in
     if Lib.all unchanged ants' then raise UNCHANGED
     else MATCH_MP th (LIST_CONJ (map mk_ant ants'))
@@ -767,8 +767,7 @@ fun always_fails x y z = solver_err();
 (*---------------------------------------------------------------------------
  * Just checks the context to see if it can find an instance of "tm".
  *---------------------------------------------------------------------------*)
-local val untrue = boolSyntax.F
-in
+
 fun std_solver _ context tm =
  let val _ = if !monitoring
              then Lib.say("Solver: trying to lookup in context\n"
@@ -778,17 +777,17 @@ fun std_solver _ context tm =
                     solver_err())
        | loop (x::rst) =
            let val c = concl x
-           in if (eq c untrue)
+           in if eq c boolSyntax.F
               then CCONTR tm x
-              else if (aconv tm c) then x
-                   else INST_TY_TERM (match_term c tm) x
+              else if aconv tm c then x
+                   else INST_TY_TERM (Term.match_term c tm) x
                       handle HOL_ERR _ => loop rst
            end
      val thm = loop (boolTheory.TRUTH::context)
  in
     if !monitoring then Lib.say "Solver: found it.\n" else ();
     thm
-end end;
+ end;
 
 
 (*---------------------------------------------------------------------------*
@@ -817,7 +816,7 @@ fun rw_solver simpls context tm =
            let val c = concl x
            in if eq c F then CCONTR tm x
               else if aconv tm' c then x
-                   else INST_TY_TERM (match_term c tm') x
+                   else INST_TY_TERM (Term.match_term c tm') x
                       handle HOL_ERR _ => loop rst
            end
  in EQ_MP (SYM th) (loop (boolTheory.TRUTH::context))
@@ -931,3 +930,101 @@ fun Simpl tac std_thms thl =
 val _ = Parse.temp_set_grammars ambient_grammars;
 
 end (* structure RW *)
+
+(* 
+ Given (p,th) from Defn.sml::extract:
+
+ val tma = boolSyntax.rhs(concl th)
+ val nested_ref = ref false;
+ val (Pure thl,Context cntxt,Congs congs,Solver solver) = 
+     (Pure [CUT_LEM],
+      Context ([],DONT_ADD),
+      Congs congs,
+      Solver (solver (mk_restr p, f, FV@free_vars(concl th), nested_ref)));
+
+ val thl = [CUT_LEM]
+ val cntxt = ([],DONT_ADD)
+ val solver = solver (mk_restr p, f, FV@free_vars(concl th), nested_ref);
+
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tma;  (* d.n.work *)
+val tmb = body(rand tma);
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmb;  (* d.n.work *)
+val tmc = rand tmb;
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmc;  (* works *)
+
+val simpls' = add_congs(add_rws empty_simpls thl) congs;
+
+TOP_DEPTH_QCONV RW_STEP {context=cntxt, prover=solver, simpls=simpls'} tmb;
+val cnv = RW_STEP;
+val cps = {context=cntxt, prover=solver, simpls=simpls'};
+val tm = tmb;
+(* SUB_QCONV is where cong rule applied *)
+val cnv = TOP_DEPTH_QCONV cnv;
+SUB_QCONV cnv cps tmb;
+val (cps as {context,prover,simpls}) = cps;
+val COMB(Rator,Rand) = dest_term tmb;
+val th = CONG_STEP simpls tmb;
+do_cong cnv cps th;
+val (ant1::rst) = strip_conj (fst(dest_imp (concl th)))
+val (outcome1,[ant2]) = simple cnv cps (ant1,rst)
+val (outcome2 as CHANGE chthm,[]) = complex cnv cps (ant2,[]);
+(* note: chthm is actually unchanged, no? the lhs & rhs are aconv ... *)
+
+val ant = ant2;
+val rst = [];
+val {context as (cntxt,b),prover,simpls} = cps;
+
+val ant_frees = free_vars ant
+    val context_frees = free_varsl (map concl (fst context))
+    val (vlist,ceqn) = strip_forall ant
+    val (lhs,rhs) = dest_eq(snd(strip_imp_only ceqn))
+    val (f,args) = (I##rev) (dest_combn lhs (length vlist))
+    val _ = assert is_pabs f
+    val (rhsv,_) = dest_combn rhs (length vlist)
+    val vstrl = #1(strip_pabs f)
+    val vstrl1 = vstrl_variants (union ant_frees context_frees) vstrl
+    val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
+    val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn');
+aconv lhs rhs; (* false *)
+val lhs_beta_maybe =
+               Conv.DEPTH_CONV GEN_BETA_CONV lhs handle HOL_ERR _ => REFL lhs
+val lhs' = boolSyntax.rhs(concl lhs_beta_maybe);
+val cps' = {context = (map ASSUME L @ cntxt,b),
+            prover  = prover,
+            simpls  = add_cntxt b simpls (map ASSUME L)};
+TOP_DEPTH_QCONV RW_STEP cps' lhs';
+val cnv = TOP_DEPTH_QCONV RW_STEP;
+SUB_QCONV cnv cps' lhs';
+val (cps as {context,prover,simpls}) = cps';
+val tm = lhs';
+val COMB(Rator,Rand) = dest_term tm;
+val cong_thm = CONG_STEP simpls tm;
+do_cong cnv cps cong_thm;
+val th = cong_thm;
+val ants = strip_conj (fst(dest_imp (concl th)))
+val (ant::rst) = ants;
+val (outcome1,rst') = 
+     if not(is_forall ant) 
+        then simple cnv cps (ant,rst)
+        else complex cnv cps (ant,rst);
+val (ant::rst) = rst';
+val (outcome2,rst') = simple cnv cps (ant,rst);
+val {context as (cntxt,b),prover,simpls} = cps;
+val SOME (L,(lhs,rhs)) = total ((I##dest_eq) o strip_imp_only) ant;
+val cps' = {context = (map ASSUME L @ cntxt,b),
+            prover  = prover,
+            simpls  = add_cntxt b simpls (map ASSUME L)};
+TOP_DEPTH_QCONV RW_STEP cps' lhs;
+REPEATQC RW_STEP cps' lhs;
+RW_STEP cps' lhs;
+val {context=(cntxt,_),prover,simpls as RW{rw_net,...}} = cps';
+val tm = lhs;
+val [matchf] = Net.match tm rw_net;
+val COND th = matchf tm;
+val condition = fst(dest_imp(concl th));
+val cond_thm = prover simpls cntxt condition; (* fails *)
+val tm = condition;
+val rcontext = rev cntxt;
+val antl = [list_mk_conj(map concl rcontext)];
+
+*)

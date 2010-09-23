@@ -1,4 +1,4 @@
-search_tree_delete_min (t,m;) [data_tree(t;data) * 
+search_tree_delete_min (t,m;) [data_tree(t,data) * 
       ``BIN_SEARCH_TREE_SET data keys /\ ~(keys = EMPTY)``] {
    local tt, pp, p;
 
@@ -14,8 +14,8 @@ search_tree_delete_min (t,m;) [data_tree(t;data) *
       loop_spec [
               (pp |-> [l:p, r:#rc2,dta:#dc2]) *
               (p  |-> [l:tt,r:#rc, dta:#dc]) *
-              data_tree(tt ;data_l) * 
-              data_tree(#rc;data_r) *
+              data_tree(tt ,data_l) * 
+              data_tree(#rc,data_r) *
               (pp == #ppc) *
               ``BIN_SEARCH_TREE_SET (node [dc] [data_l;data_r]) keys``] {
          while (tt != NULL) {
@@ -29,22 +29,22 @@ search_tree_delete_min (t,m;) [data_tree(t;data) *
          pp->l = tt;
       } [(m == _mk) *      
          (#ppc |-> [l:_new_p,r:#rc2,dta:#dc2]) * 
-         data_tree(_new_p;_data) * 
+         data_tree(_new_p,_data) * 
          ``BIN_SEARCH_TREE_SET _data (keys DELETE _mk) /\
           (_mk IN keys) /\ (!k. k IN keys ==> _mk <= k)``]
   }
-} [data_tree(t;_data) * (m == _mk) * 
+} [data_tree(t,_data) * (m == _mk) * 
    ``BIN_SEARCH_TREE_SET data (keys DELETE mk) /\ 
      (mk IN keys) /\ (!k. k IN keys ==> mk <= k)``]
 
 
-search_tree_lookup(r;t,k) [data_tree(t;data) * ``BIN_SEARCH_TREE_SET data keys``] {
+search_tree_lookup(r;t,k) [data_tree(t,data) * ``BIN_SEARCH_TREE_SET data keys``] {
    local k0, tt;
 
    tt = t;
    r = 0;
    loop_spec [(k == #kv) * (r == #rc) * (tt == #tc) *
-               data_tree(tt;data) * ``BIN_SEARCH_TREE_SET data keys /\ (rc IN {0;1:num})``] {
+               data_tree(tt,data) * ``BIN_SEARCH_TREE_SET data keys /\ (rc IN {0;1:num})``] {
      while (``~(tt = 0) /\ (r = 0)``) { 
        k0 = tt->dta;
        if (k == k0) {
@@ -55,9 +55,9 @@ search_tree_lookup(r;t,k) [data_tree(t;data) * ``BIN_SEARCH_TREE_SET data keys``
           tt = tt->r;
        } 
      }
-   } [(k == #kv) * data_tree(#tc;data) * 
+   } [(k == #kv) * data_tree(#tc,data) * 
       (r == ``BOOL_TO_NUM ((rc = 1:num) \/ (kv IN keys))``)]
-} [data_tree(t;data) * ``BIN_SEARCH_TREE_SET data keys`` *
+} [data_tree(t,data) * ``BIN_SEARCH_TREE_SET data keys`` *
    (r == ``BOOL_TO_NUM (k IN keys)``)]
 
 

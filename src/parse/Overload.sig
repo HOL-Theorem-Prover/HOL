@@ -47,6 +47,7 @@ sig
     overload_info -> overload_info
 
   val add_overloading : string * term -> overload_info -> overload_info
+  val add_inferior_overloading : string * term -> overload_info -> overload_info
 
   val send_to_back_overloading:
     {opname: string, realname: string, realthy : string} ->
@@ -62,6 +63,7 @@ sig
 
   val remove_mapping :
     string -> {Name:string, Thy:string} -> overload_info -> overload_info
+  val gen_remove_mapping : string -> term -> overload_info -> overload_info
 
   val oi_strip_comb : overload_info -> term -> (term * term list) option
 

@@ -1,0 +1,33 @@
+\DOC print_term_without_overloads_on
+
+\TYPE {Parse.print_term_without_overloads_on : string list -> term -> unit}
+
+\SYNOPSIS
+Prints a term to the screen (standard out), without using overload mappings of
+certain tokens.
+
+\KEYWORDS
+Pretty-printing
+
+\LIBRARY
+Parse
+
+\DESCRIBE
+The call {print_term_without_overloads_on ls t} prints {t} to the screen
+without using any overloads on tokens in {ls}.
+
+\EXAMPLE
+{
+ > val _ = print_term_without_overloads_on ["+"] ``x + y`` before print "\n";
+ arithmetic$+ x y
+ >
+}
+
+\FAILURE
+Should never fail.
+
+\SEEALSO
+Parse.print_backend_term_without_overloads_on,
+Parse.print_term_without_overloads, Parse.term_without_overloads_on_to_string,
+Parse.clear_overloads_on, Parse.print_term.
+\ENDDOC

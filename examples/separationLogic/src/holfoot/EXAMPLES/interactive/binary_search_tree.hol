@@ -174,7 +174,7 @@ val search_tree_delete_min_TAC =
       FULL_SIMP_TAC arith_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE, IS_LEAF_REWRITE,
          UNION_EMPTY, NOT_IN_EMPTY, IN_INSERT, DISJ_IMP_THM] THEN
       REPEAT STRIP_TAC THENL [
-         `(t'_const_dta' INSERT k2) DELETE t'_const_dta' = k2` by ALL_TAC THEN1 (
+         `(t'_const_dta INSERT k2) DELETE t'_const_dta = k2` by ALL_TAC THEN1 (
              SIMP_TAC std_ss [EXTENSION, IN_DELETE, IN_INSERT] THEN
              METIS_TAC[]
          ) THEN
@@ -396,7 +396,7 @@ val search_tree_delete_min2_TAC =
          IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM] THEN
       REPEAT STRIP_TAC THENL [
          Tactical.REVERSE (
-           `(t_const_dta' INSERT k2) DELETE t_const_dta' = k2` by ALL_TAC) THEN1 (
+           `(t_const_dta INSERT k2) DELETE t_const_dta = k2` by ALL_TAC) THEN1 (
              ASM_REWRITE_TAC[]          
          ) THEN
          SIMP_TAC (std_ss++EQUIV_EXTRACT_ss++CONJ_ss) [EXTENSION, IN_INSERT, IN_DELETE] THEN
@@ -487,7 +487,7 @@ val search_tree_lookup2_TAC =
 
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE] THEN
       `~(kv IN k2)` by (STRIP_TAC THEN RES_TAC THEN DECIDE_TAC) THEN
-      `~(kv = tc_dta')` by DECIDE_TAC THEN
+      `~(kv = tc_dta)` by DECIDE_TAC THEN
       Q.EXISTS_TAC `k1` THEN
       xHF_CONTINUE_TAC [use_asms, add_rewrites [IN_UNION, IN_INSERT]],
 

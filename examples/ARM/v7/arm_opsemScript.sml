@@ -11,9 +11,9 @@
 *)
 
 open HolKernel boolLib bossLib Parse;
-open wordsLib integer_wordTheory;
+open wordsTheory wordsLib integer_wordTheory;
 
-open arm_seq_monadTheory;
+open arm_coretypesTheory arm_seq_monadTheory;
 
 val _ = new_theory "arm_opsem";
 
@@ -116,21 +116,17 @@ val IT_advance_def = Define`
            else
              errorT "IT_advance: unpredictable")))`;
 
-val cpsr_write_by_instr_def = Define`
+val cpsr_write_by_instr_def = zDefine`
   cpsr_write_by_instr ii (value:word32, bytemask:word4, affect_execstate:bool) =
     let value_mode = (4 >< 0) value in
-      (current_mode_is_priviledged ii ||| is_secure ii ||| read_nsacr ii) >>=
-      (\(priviledged,is_secure,nsacr).
-        (if ~is_secure /\ (value_mode = 0b10110w) \/
-            ~is_secure /\ (value_mode = 0b10001w) /\ nsacr.RFR
-         then
-           constT T
-         else if bytemask ' 0 /\ priviledged then
-           bad_mode ii value_mode
-         else
-           constT F) >>=
-        (\unpredictable.
-          if unpredictable then
+      (current_mode_is_priviledged ii ||| is_secure ii ||| read_nsacr ii |||
+       bad_mode ii value_mode) >>=
+      (\(priviledged,is_secure,nsacr,badmode).
+          if bytemask ' 0 /\ priviledged /\
+             (badmode \/
+              ~is_secure /\ (value_mode = 0b10110w) \/
+              ~is_secure /\ (value_mode = 0b10001w) /\ nsacr.RFR)
+          then
             errorT "cpsr_write_by_instr: unpredictable"
           else
             (read_sctlr ii ||| read_scr ii ||| read_cpsr ii) >>=
@@ -157,32 +153,25 @@ val cpsr_write_by_instr_def = Define`
                                           priviledged
                  then value ' i else b) (encode_psr cpsr)
               in
-                write_cpsr ii (decode_psr cpsr))))`;
+                write_cpsr ii (decode_psr cpsr)))`;
 
-val spsr_write_by_instr_def = Define`
+val spsr_write_by_instr_def = zDefine`
   spsr_write_by_instr ii (value:word32, bytemask:word4) =
-    current_mode_is_user_or_system ii >>=
-    (\user_or_system.
-       (if user_or_system then
-          constT T
-        else if bytemask ' 0 then
-          bad_mode ii ((4 >< 0) value)
+    (current_mode_is_user_or_system ii ||| bad_mode ii ((4 >< 0) value)) >>=
+    (\(user_or_system,badmode).
+        if user_or_system \/ bytemask ' 0 /\ badmode then
+          errorT "spsr_write_by_instr: unpredictable"
         else
-          constT F) >>=
-       (\unpredictable.
-          if unpredictable then
-            errorT "spsr_write_by_instr: unpredictable"
-          else
-            read_spsr ii >>=
-            (\spsr.
-                let spsr = word_modify (\i b.
-                     if 24 <= i /\ i <= 31 /\ bytemask ' 3 \/
-                        16 <= i /\ i <= 19 /\ bytemask ' 2 \/
-                         8 <= i /\ i <= 15 /\ bytemask ' 1 \/
-                                   i <= 7  /\ bytemask ' 0
-                     then value ' i else b) (encode_psr spsr)
-                in
-                  write_spsr ii (decode_psr spsr))))`;
+          read_spsr ii >>=
+          (\spsr.
+              let spsr = word_modify (\i b.
+                   if 24 <= i /\ i <= 31 /\ bytemask ' 3 \/
+                      16 <= i /\ i <= 19 /\ bytemask ' 2 \/
+                       8 <= i /\ i <= 15 /\ bytemask ' 1 \/
+                                 i <= 7  /\ bytemask ' 0
+                   then value ' i else b) (encode_psr spsr)
+              in
+                write_spsr ii (decode_psr spsr)))`;
 
 val integer_zero_divide_trapping_enabled_def = Define`
   integer_zero_divide_trapping_enabled ii =
@@ -901,7 +890,7 @@ val instructions = ref ([] : (string * thm) list);
 
 fun iDefine t =
 let
-  val thm = with_flag (computeLib.auto_import_definitions,false) Define t
+  val thm = zDefine t
   val name = (fst o dest_const o fst o strip_comb o lhs o concl o SPEC_ALL) thm
   val _ = instructions := (name,thm) :: !instructions
 in
@@ -2475,55 +2464,58 @@ val store_halfword_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val load_multiple_instr_def = iDefine`
   load_multiple_instr ii enc (Load_Multiple indx add system wback n registers) =
-    current_mode_is_user_or_system ii >>=
-    (\is_user_or_system.
-      null_check_instruction ii "load_multiple" n
-        (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
-        (\version.
-           (n = 15w) \/ bit_count registers < 1 \/
-           (enc = Encoding_Thumb2) /\
-             (system \/ bit_count registers < 2 \/
-              registers ' 15 /\ registers ' 14 \/ registers ' 13) \/
-           system /\ (is_user_or_system \/ wback /\ ~(registers ' 15)) \/
-           wback /\ registers ' (w2n n) /\
-             ((enc = Encoding_Thumb2) \/ version >= 7))
-        ((read_reg ii n ||| read_cpsr ii) >>=
-        (\(base,cpsr).
-           let mode = if system /\ ~(registers ' 15) then 0b10000w else cpsr.M
-           and length = n2w (4 * bit_count registers) in
-           let base_address = if add then base else base - length in
-           let start_address = if indx = add then base_address + 4w
-                                             else base_address
-           in
-           let address i = start_address +
-                           n2w (4 * (bit_count_upto (i + 1) registers - 1))
-           in
-             forT 0 14
-               (\i. condT (registers ' i)
-                      (read_memA ii (address i,4) >>=
-                      (\d. write_reg_mode ii (n2w i,mode) (word32 d)))) >>=
-             (\unit_list:unit list.
-              ((if registers ' 15 then
-                 read_memA ii (address 15,4) >>=
-                 (\d.
-                    if system then
-                      read_spsr ii >>=
-                      (\spsr.
-                         cpsr_write_by_instr ii (encode_psr spsr, 0b1111w, T)
-                           >>= (\u. branch_write_pc ii (word32 d)))
-                    else
-                      load_write_pc ii (word32 d))
-                else
-                  increment_pc ii enc) |||
-                condT wback
-                  (if ~(registers ' (w2n n)) then
-                     if add then
-                       write_reg ii n (base + length)
-                     else
-                       write_reg ii n (base - length)
+    null_check_instruction ii "load_multiple" n
+      (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
+      (\version.
+         (n = 15w) \/ bit_count registers < 1 \/
+         (enc = Encoding_Thumb2) /\
+           (system \/ bit_count registers < 2 \/
+            registers ' 15 /\ registers ' 14 \/ registers ' 13) \/
+         system /\ wback /\ ~(registers ' 15) \/
+         wback /\ registers ' (w2n n) /\
+           ((enc = Encoding_Thumb2) \/ version >= 7))
+      ((read_reg ii n ||| read_cpsr ii) >>=
+      (\(base,cpsr).
+         let mode = if system /\ ~(registers ' 15) then 0b10000w else cpsr.M
+         and length = n2w (4 * bit_count registers) in
+         let base_address = if add then base else base - length in
+         let start_address = if indx = add then base_address + 4w
+                                           else base_address
+         in
+         let address i = start_address +
+                         n2w (4 * (bit_count_upto (i + 1) registers - 1))
+         in
+           forT 0 14
+             (\i. condT (registers ' i)
+                    (read_memA ii (address i,4) >>=
+                    (\d. write_reg_mode ii (n2w i,mode) (word32 d)))) >>=
+           (\unit_list:unit list.
+            ((if registers ' 15 then
+               read_memA ii (address 15,4) >>=
+               (\d.
+                  if system then
+                    current_mode_is_user_or_system ii >>=
+                    (\is_user_or_system.
+                      if is_user_or_system then
+                        errorT "load_multiple_instr: unpredictable"
+                      else
+                        read_spsr ii >>=
+                        (\spsr.
+                           cpsr_write_by_instr ii (encode_psr spsr, 0b1111w, T)
+                             >>= (\u. branch_write_pc ii (word32 d))))
+                  else
+                    load_write_pc ii (word32 d))
+              else
+                increment_pc ii enc) |||
+              condT wback
+                (if ~(registers ' (w2n n)) then
+                   if add then
+                     write_reg ii n (base + length)
                    else
-                     write_reg ii n ARB)) >>=
-                  unit2))))`;
+                     write_reg ii n (base - length)
+                 else
+                   write_reg ii n ARB)) >>=
+                unit2)))`;
 
 (* ........................................................................
    T,A:  PUSH<c>   <registers>
@@ -2541,47 +2533,50 @@ val load_multiple_instr_def = iDefine`
 val store_multiple_instr_def = iDefine`
   store_multiple_instr ii enc
       (Store_Multiple indx add system wback n registers) =
-    current_mode_is_user_or_system ii >>=
-    (\is_user_or_system.
-      null_check_instruction ii "store_multiple" n
-        (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
-        (\v. (n = 15w) \/ bit_count registers < 1 \/
-             (enc = Encoding_Thumb2) /\
-                (bit_count registers < 2 \/
-                 registers ' 15 \/ registers ' 13 \/
-                 wback /\ registers ' (w2n n)) \/
-             system /\ (is_user_or_system \/ wback))
-        ((read_reg ii n ||| read_cpsr ii) >>=
-        (\(base,cpsr).
-           let mode = if system then 0b10000w else cpsr.M
-           and length = n2w (4 * bit_count registers)
-           and lowest = lowest_set_bit registers
-           in
-           let base_address = if add then base else base - length in
-           let start_address = if indx = add then base_address + 4w
-                                             else base_address
-           in
-           let address i = start_address +
-                           n2w (4 * (bit_count_upto (i + 1) registers - 1))
-           in
-             forT 0 14
-               (\i. condT (registers ' i)
-                      (if (i = w2n n) /\ wback /\ (i <> lowest) then
-                         write_memA ii (address i,4) ARB
-                       else
-                         read_reg_mode ii (n2w i,mode) >>=
-                         (\d. write_memA ii (address i,4) (bytes(d,4))))) >>=
-             (\unit_list:unit list.
-               (condT (registers ' 15)
-                  (pc_store_value ii >>=
-                   (\pc. write_memA ii (address 15,4) (bytes(pc,4)))) |||
-                increment_pc ii enc |||
-                condT wback
-                  (if add then
-                     write_reg ii n (base + length)
-                   else
-                     write_reg ii n (base - length))) >>=
-               unit3))))`;
+    null_check_instruction ii "store_multiple" n
+      (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
+      (\v. (n = 15w) \/ bit_count registers < 1 \/
+           (enc = Encoding_Thumb2) /\
+              (bit_count registers < 2 \/
+               registers ' 15 \/ registers ' 13 \/
+               wback /\ registers ' (w2n n)) \/
+           system /\ wback)
+      (current_mode_is_user_or_system ii >>=
+       (\is_user_or_system.
+         if system /\ is_user_or_system then
+           errorT "store_multiple_instr: unpredictable"
+         else
+          (read_reg ii n ||| read_cpsr ii) >>=
+          (\(base,cpsr).
+            let mode = if system then 0b10000w else cpsr.M
+            and length = n2w (4 * bit_count registers)
+            and lowest = lowest_set_bit registers
+            in
+            let base_address = if add then base else base - length in
+            let start_address = if indx = add then base_address + 4w
+                                              else base_address
+            in
+            let address i = start_address +
+                            n2w (4 * (bit_count_upto (i + 1) registers - 1))
+            in
+              forT 0 14
+                (\i. condT (registers ' i)
+                       (if (i = w2n n) /\ wback /\ (i <> lowest) then
+                          write_memA ii (address i,4) ARB
+                        else
+                          read_reg_mode ii (n2w i,mode) >>=
+                          (\d. write_memA ii (address i,4) (bytes(d,4))))) >>=
+              (\unit_list:unit list.
+                (condT (registers ' 15)
+                   (pc_store_value ii >>=
+                    (\pc. write_memA ii (address 15,4) (bytes(pc,4)))) |||
+                 increment_pc ii enc |||
+                 condT wback
+                   (if add then
+                      write_reg ii n (base + length)
+                    else
+                      write_reg ii n (base - length))) >>=
+                unit3))))`;
 
 (* ........................................................................
    T2:   LDRD<c> <Rt>,<Rt2>,[<Rn>{,#+/-<imm>}]
@@ -2911,26 +2906,31 @@ val swap_instr_def = iDefine`
 (* Unpredictable for ARMv4*. *)
 val store_return_state_instr_def = iDefine`
   store_return_state_instr ii enc (Store_Return_State P inc wback mode) =
-    (is_secure ii ||| read_nsacr ii |||
-     current_mode_is_user_or_system ii ||| current_instr_set ii) >>=
-    (\(is_secure,nsacr,is_user_or_system,iset).
+    (is_secure ii ||| read_nsacr ii) >>=
+    (\(is_secure,nsacr).
       instruction ii "store_return_state"
         (ARCH2 enc {a | version_number a >= 6})
-        (\v. is_user_or_system \/ (iset = InstrSet_ThumbEE) \/ ~is_secure /\
+        (\v. ~is_secure /\
              ((mode = 0b10110w) \/ (mode = 0b10001w) /\ nsacr.RFR))
-        ((read_reg_mode ii (13w,mode) ||| read_reg ii 14w ||| read_spsr ii) >>=
-         (\(base,lr,spsr).
-            let wordhigher = (P = inc)
-            and address = if inc then base else base - 8w
-            in
-            let address = if wordhigher then address + 4w else address
-            in
-              (increment_pc ii enc |||
-               write_memA ii (address,4) (bytes (lr,4)) |||
-               write_memA ii (address + 4w,4) (bytes (encode_psr spsr,4)) |||
-               condT wback
-                 (write_reg_mode ii (13w,mode)
-                    (if inc then base + 8w else base - 8w))) >>= unit4)))`;
+        ((current_mode_is_user_or_system ii ||| current_instr_set ii) >>=
+         (\(is_user_or_system,iset).
+           if is_user_or_system \/ (iset = InstrSet_ThumbEE) then
+             errorT "store_return_state_instr: unpredictable"
+           else
+             (read_reg_mode ii (13w,mode) ||| read_reg ii 14w |||
+              read_spsr ii) >>=
+             (\(base,lr,spsr).
+               let wordhigher = (P = inc)
+               and address = if inc then base else base - 8w
+               in
+               let address = if wordhigher then address + 4w else address
+               in
+                 (increment_pc ii enc |||
+                  write_memA ii (address,4) (bytes (lr,4)) |||
+                  write_memA ii (address + 4w,4) (bytes (encode_psr spsr,4)) |||
+                  condT wback
+                    (write_reg_mode ii (13w,mode)
+                       (if inc then base + 8w else base - 8w))) >>= unit4))))`;
 
 (* ........................................................................
    T2: RFEDB<c>        <Rn>{!}
@@ -2941,26 +2941,28 @@ val store_return_state_instr_def = iDefine`
 (* Unpredictable for ARMv4*. *)
 val return_from_exception_instr_def = iDefine`
   return_from_exception_instr ii enc (Return_From_Exception P inc wback n) =
-    (current_mode_is_user_or_system ii ||| current_instr_set ii) >>=
-    (\(is_user_or_system,iset).
-      instruction ii "return_from_exception"
-        (ARCH2 enc {a | version_number a >= 6})
-        (\v. is_user_or_system \/ (iset = InstrSet_ThumbEE))
-        (read_reg ii n >>=
-         (\base.
-            let wordhigher = (P = inc)
-            and address = if inc then base else base - 8w
-            in
-            let address = if wordhigher then address + 4w else address
-            in
-              (read_memA ii (address + 4w,4) |||
-               read_memA ii (address,4) |||
-               (condT wback
-                  (write_reg ii n (if inc then base + 8w else base - 8w)))) >>=
-              (\(d1,d2,u:unit).
-                (cpsr_write_by_instr ii (word32 d1, 0b1111w, T) |||
-                 branch_write_pc ii (word32 d2)) >>=
-                unit2))))`;
+    instruction ii "return_from_exception"
+      (ARCH2 enc {a | version_number a >= 6}) {}
+      ((current_mode_is_user_or_system ii ||| current_instr_set ii) >>=
+       (\(is_user_or_system,iset).
+        if is_user_or_system \/ (iset = InstrSet_ThumbEE) then
+          errorT "return_from_exception_instr: unpredictable"
+        else
+          read_reg ii n >>=
+          (\base.
+             let wordhigher = (P = inc)
+             and address = if inc then base else base - 8w
+             in
+             let address = if wordhigher then address + 4w else address
+             in
+               (read_memA ii (address + 4w,4) |||
+                read_memA ii (address,4)) >>=
+               (\(d1,d2).
+                 (cpsr_write_by_instr ii (word32 d1, 0b1111w, T) |||
+                  branch_write_pc ii (word32 d2) |||
+                  condT wback
+                    (write_reg ii n (if inc then base + 8w else base - 8w))) >>=
+                 unit3))))`;
 
 (* ........................................................................
    T2,A: MRS<c> <Rd>,<spec_reg>
@@ -2968,21 +2970,21 @@ val return_from_exception_instr_def = iDefine`
    ```````````````````````````````````````````````````````````````````````` *)
 val status_to_register_instr_def = iDefine`
   status_to_register_instr ii enc (Status_to_Register readspsr d) =
-    current_mode_is_user_or_system ii >>=
-    (\is_user_or_system_mode.
-      instruction ii "status_to_register"
-        (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
-        (\v. (if enc = Encoding_Thumb2 then
-                BadReg d
-              else
-                (d = 15w)) \/ is_user_or_system_mode /\ readspsr)
-        (((if readspsr then
-            read_spsr ii >>= (\spsr. write_reg ii d (encode_psr spsr))
-          else
-            read_cpsr ii >>= (\cpsr.  write_reg ii d
-              (encode_psr cpsr && 0b11111000_11111111_00000011_11011111w))) |||
-          increment_pc ii enc) >>=
-          unit2))`;
+    instruction ii "status_to_register"
+      (if enc = Encoding_Thumb2 then ARCH thumb2_support else ALL)
+      (\v. if enc = Encoding_Thumb2 then BadReg d else (d = 15w))
+      (((if readspsr then
+          current_mode_is_user_or_system ii >>=
+          (\is_user_or_system_mode.
+             if is_user_or_system_mode then
+               errorT "status_to_register_instr: unpredictable"
+             else
+               read_spsr ii >>= (\spsr. write_reg ii d (encode_psr spsr)))
+         else
+           read_cpsr ii >>= (\cpsr. write_reg ii d
+             (encode_psr cpsr && 0b11111000_11111111_00000011_11011111w))) |||
+        increment_pc ii enc) >>=
+        unit2)`;
 
 (* ........................................................................
    A: MSR<c> <spec_reg>,#<const>
@@ -3707,6 +3709,173 @@ val arm_instr_def = with_flag (priming, SOME "_") Define`
                 || _ -> T)
          (IT_advance ii))`;
 
+(* ======================================================================== *)
+
+infix \\ <<
+
+val op \\ = op THEN;
+val op << = op THENL;
+
+val _ = wordsLib.guess_lengths();
+
+val extract_modify =
+   (GEN_ALL o SIMP_CONV (arith_ss++fcpLib.FCP_ss++boolSimps.CONJ_ss)
+    [word_modify_def, word_extract_def, word_bits_def, w2w])
+    ``(h >< l) (word_modify P w) = value``;
+
+val CONCAT62_EQ = Q.prove(
+  `(!a b c d.
+     ((a:word6) @@ (b:word2) = (c:word6) @@ (d:word2)) = (a = c) /\ (b = d)) /\
+   (!a b c.
+     ((a:word6) @@ (b:word2) = c) = (a = (7 >< 2) c) /\ (b = (1 >< 0) c))`,
+  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []
+  \\ DECIDE_TAC);
+
+val LESS_THM =
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
+
+val cpsr_write_by_instr_thm = Q.prove(
+  `!cpsr value:word32 bytemask:word4 affect_execstate priviledged secure
+    aw fw nmfi.
+      decode_psr (word_modify (\i b.
+         if 27 <= i /\ i <= 31 /\ bytemask ' 3 \/
+            24 <= i /\ i <= 26 /\ bytemask ' 3 /\ affect_execstate \/
+            16 <= i /\ i <= 19 /\ bytemask ' 2 \/
+            10 <= i /\ i <= 15 /\ bytemask ' 1 /\ affect_execstate \/
+                       (i = 9) /\ bytemask ' 1 \/
+                       (i = 8) /\ bytemask ' 1 /\
+                                  priviledged /\ (secure \/ aw) \/
+                       (i = 7) /\ bytemask ' 0 /\ priviledged \/
+                       (i = 6) /\ bytemask ' 0 /\
+                                  priviledged /\ (secure \/ fw) /\
+                                  (~nmfi \/ ~(value ' 6)) \/
+                       (i = 5) /\ bytemask ' 0 /\ affect_execstate \/
+                       (i < 5) /\ bytemask ' 0 /\ priviledged
+           then value ' i else b) (encode_psr cpsr)) =
+      cpsr with
+        <| N := if bytemask ' 3 then value ' 31 else cpsr.N;
+           Z := if bytemask ' 3 then value ' 30 else cpsr.Z;
+           C := if bytemask ' 3 then value ' 29 else cpsr.C;
+           V := if bytemask ' 3 then value ' 28 else cpsr.V;
+           Q := if bytemask ' 3 then value ' 27 else cpsr.Q;
+           IT := if affect_execstate then
+                   if bytemask ' 3 then
+                     if bytemask ' 1 then
+                       (15 >< 10) value @@ (26 >< 25) value
+                     else
+                       (7 >< 2) cpsr.IT @@ (26 >< 25) value
+                   else
+                     if bytemask ' 1 then
+                       (15 >< 10) value @@ (1 >< 0) cpsr.IT
+                     else
+                       cpsr.IT
+                 else
+                   cpsr.IT;
+           J := if bytemask ' 3 /\ affect_execstate then value ' 24 else cpsr.J;
+           GE := if bytemask ' 2 then (19 >< 16) value else cpsr.GE;
+           E := if bytemask ' 1 then value ' 9 else cpsr.E;
+           A := if bytemask ' 1 /\ priviledged /\ (secure \/ aw)
+                then value ' 8
+                else cpsr.A;
+           I := if bytemask ' 0 /\ priviledged then value ' 7 else cpsr.I;
+           F := if bytemask ' 0 /\ priviledged /\ (secure \/ fw) /\
+                   (~nmfi \/ ~(value ' 6))
+                then value ' 6
+                else cpsr.F;
+           T := if bytemask ' 0 /\ affect_execstate then value ' 5 else cpsr.T;
+           M := if bytemask ' 0 /\ priviledged then (4 >< 0) value else cpsr.M
+        |>`,
+  STRIP_TAC
+    \\ SIMP_TAC (srw_ss()++ARITH_ss) [ARMpsr_component_equality,
+         WORD_MODIFY_BIT, decode_psr_def, encode_psr_bit, encode_psr_bits,
+         extract_modify]
+    \\ REPEAT STRIP_TAC
+    << [
+      SRW_TAC [ARITH_ss] [CONCAT62_EQ, extract_modify]
+        \\ ASM_SIMP_TAC (arith_ss++wordsLib.WORD_BIT_EQ_ss) []
+        \\ FULL_SIMP_TAC std_ss [LESS_THM, encode_psr_bit],
+      FULL_SIMP_TAC std_ss [LESS_THM, encode_psr_bit],
+      SRW_TAC [fcpLib.FCP_ss,ARITH_ss] [word_extract_def, w2w, word_bits_def]
+        \\ FULL_SIMP_TAC std_ss [LESS_THM, encode_psr_bit],
+      SRW_TAC [fcpLib.FCP_ss,ARITH_ss] [word_extract_def, w2w, word_bits_def]
+        \\ FULL_SIMP_TAC std_ss [LESS_THM, encode_psr_bit]]);
+
+val spsr_write_by_instr_thm = Q.prove(
+  `!spsr value:word32 bytemask:word4.
+      decode_psr (word_modify (\i b.
+         if 24 <= i /\ i <= 31 /\ bytemask ' 3 \/
+            16 <= i /\ i <= 19 /\ bytemask ' 2 \/
+             8 <= i /\ i <= 15 /\ bytemask ' 1 \/
+                       i <= 7  /\ bytemask ' 0
+         then value ' i else b) (encode_psr spsr)) =
+      spsr with
+        <| N := if bytemask ' 3 then value ' 31 else spsr.N;
+           Z := if bytemask ' 3 then value ' 30 else spsr.Z;
+           C := if bytemask ' 3 then value ' 29 else spsr.C;
+           V := if bytemask ' 3 then value ' 28 else spsr.V;
+           Q := if bytemask ' 3 then value ' 27 else spsr.Q;
+           IT := if bytemask ' 3 then
+                   if bytemask ' 1 then
+                     (15 >< 10) value @@ (26 >< 25) value
+                   else
+                     (7 >< 2) spsr.IT @@ (26 >< 25) value
+                 else
+                   if bytemask ' 1 then
+                     (15 >< 10) value @@ (1 >< 0) spsr.IT
+                   else
+                     spsr.IT;
+           J := if bytemask ' 3 then value ' 24 else spsr.J;
+           GE := if bytemask ' 2 then (19 >< 16) value else spsr.GE;
+           E := if bytemask ' 1 then value ' 9 else spsr.E;
+           A := if bytemask ' 1 then value ' 8 else spsr.A;
+           I := if bytemask ' 0 then value ' 7 else spsr.I;
+           F := if bytemask ' 0 then value ' 6 else spsr.F;
+           T := if bytemask ' 0 then value ' 5 else spsr.T;
+           M := if bytemask ' 0 then (4 >< 0) value else spsr.M
+        |>`,
+  STRIP_TAC
+    \\ SIMP_TAC (srw_ss()++ARITH_ss) [ARMpsr_component_equality,
+         WORD_MODIFY_BIT, decode_psr_def, encode_psr_bit, encode_psr_bits,
+         extract_modify]
+    \\ REPEAT STRIP_TAC
+    << [
+      SRW_TAC [ARITH_ss] [CONCAT62_EQ, extract_modify]
+        \\ ASM_SIMP_TAC (arith_ss++wordsLib.WORD_BIT_EQ_ss) []
+        \\ FULL_SIMP_TAC std_ss [LESS_THM, encode_psr_bit],
+      FULL_SIMP_TAC std_ss [LESS_THM, encode_psr_bit],
+      SRW_TAC [fcpLib.FCP_ss,ARITH_ss] [word_extract_def, w2w, word_bits_def]
+        \\ FULL_SIMP_TAC std_ss [LESS_THM, encode_psr_bit],
+      SRW_TAC [fcpLib.FCP_ss,ARITH_ss] [word_extract_def, w2w, word_bits_def]
+        \\ FULL_SIMP_TAC std_ss [LESS_THM, encode_psr_bit]]);
+
+val change_processor_state_thm = Q.prove(
+  `!cpsr affectA affectI affectF enable disable mode.
+      word_modify (\i b.
+        if (i = 8) /\ affectA \/
+           (i = 7) /\ affectI \/
+           (i = 6) /\ affectF
+        then
+          ~enable /\ (disable \/ b)
+        else if i < 5 /\ IS_SOME mode then
+          (THE mode) ' i
+        else
+          b) (encode_psr cpsr) =
+      encode_psr (cpsr with
+        <| A := if affectA then ~enable /\ (disable \/ cpsr.A) else cpsr.A;
+           I := if affectI then ~enable /\ (disable \/ cpsr.I) else cpsr.I;
+           F := if affectF then ~enable /\ (disable \/ cpsr.F) else cpsr.F;
+           M := if IS_SOME mode then THE mode else cpsr.M
+        |>)`,
+  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [encode_psr_bit]);
+
+val cpsr_write_by_instr =
+  SIMP_RULE (std_ss++boolSimps.LET_ss) [cpsr_write_by_instr_thm]
+    cpsr_write_by_instr_def;
+
+val spsr_write_by_instr =
+  SIMP_RULE (std_ss++boolSimps.LET_ss) [spsr_write_by_instr_thm]
+    spsr_write_by_instr_def;
+
 (* ------------------------------------------------------------------------ *)
 
 val eval_ss =
@@ -3717,17 +3886,20 @@ val instruction_rule = SIMP_RULE eval_ss
    DECIDE ``~(a >= b) = a < b:num``,  condT_def,
    arm_coretypesTheory.NOT_IN_EMPTY_SPECIFICATION,
    instruction_def, run_instruction_def, null_check_instruction_def,
-   dsp_support_def, kernel_support_def,
+   dsp_support_def, kernel_support_def, change_processor_state_thm,
    arm_coretypesTheory.thumb2_support_def,
    arm_coretypesTheory.security_support_def,
    arm_coretypesTheory.thumbee_support_def];
 
-val instructions = map (I ## instruction_rule) (!instructions);
+val instructions =
+  [("cpsr_write_by_instr", cpsr_write_by_instr),
+   ("spsr_write_by_instr", spsr_write_by_instr)] @
+  map (I ## instruction_rule) (!instructions);
 
 val _ = map save_thm instructions;
 val _ = computeLib.add_persistent_funs instructions;
 
-val instructions = map fst instructions;
+val instructions = map fst (List.drop (instructions,2));
 
 val instructions_list =
    "val instruction_list =\n  [" ^

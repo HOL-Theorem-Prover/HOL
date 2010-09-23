@@ -61,12 +61,6 @@ else
     die "ML system \"$ML\" is not executable."
 fi
 
-
-if [ $? -ne 0 ]
-then
-    die "$holdir doesn't appear to be a Subversion directory."
-fi
-
 case $kernel in -expk | -stdknl ) : ;; * ) die "Bad kernel spec \"$kernel\"."
 esac
 

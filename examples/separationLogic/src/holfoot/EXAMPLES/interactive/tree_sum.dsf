@@ -1,4 +1,4 @@
-tree_sum(r;t) [data_tree(t; data)] {
+tree_sum(r;t) [data_tree(t,data)] {
   local i;
   if (t == NULL) { r = 0; }
   else { 
@@ -12,5 +12,5 @@ tree_sum(r;t) [data_tree(t; data)] {
     tree_sum(i;i);
     r = r + i;
  }
-} [data_tree(t;data) * (r == ``TREE_SUM (data: num list tree)``)]
+} [data_tree(t,data) * (r == ``TREE_SUM (data: num list tree)``)]
  

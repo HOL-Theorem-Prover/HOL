@@ -1,0 +1,32 @@
+
+Overview
+--------
+
+This directory shows how the decompiler from
+
+  HOL/examples/machine-code/decompiler
+
+can be used for the HOL4 version of J's M1 model, which is located at
+
+  HOL/examples/acl2/examples/M1
+
+Typing 'make' should perform the complete proof.
+
+
+Files in this directory
+-----------------------
+
+   README ............................ this file
+
+   Makefile .......................... builds everything in this directory
+   Holmakefile ....................... imports the decompiler and the M1 model
+
+   m1_progScript.sml ................. defines Hoare triples for the M1 model
+   m1_progLib.sml .................... specialises the decompiler to the M1 model
+   m1_factorialScript.sml ............ decompiles the factorial program
+   m1_factorial_proofScript.sml ...... proves that the function produced by 
+                                       decompilation above calculates factorial
+
+   session1.lisp, session2.lisp ...... are files used by the Makefile
+
+

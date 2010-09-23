@@ -1,0 +1,221 @@
+(******************************************************************************)
+(* Holfoot can proof partial correctness of programs using separation logic.  *)
+(*                                                                            *)
+(* The entire proof is done using HOL 4. This includes not just the the       *)
+(* proof of some verification conditions, but the whole proof. This includes  *)
+(* formal definitions of the programming and specification language as well   *)
+(* as verified inferences.                                                    *)
+(******************************************************************************)
+
+(******************************************************************************)
+(* Boilerplate (Load everything)                                              *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open listTheory rich_listTheory arithmeticTheory boolSimps
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+
+
+(******************************************************************************)
+(* Define a predicates for boards                                              *)
+(******************************************************************************)
+
+val IS_CONSISTENT_BOARD_REC_def = Define `
+  IS_CONSISTENT_BOARD_REC (n:num) (p:num) l =
+  !q. q < n ==>
+     (~(EL q l = EL p l) /\
+      ~((EL q l - EL p l) = (p - q)) /\
+      ~((EL p l - EL q l) = (p - q)))`;
+
+val IS_CONSISTENT_BOARD_def = Define `
+  IS_CONSISTENT_BOARD l =
+  ((!p. p < (LENGTH l) ==> IS_CONSISTENT_BOARD_REC p p l) /\
+  (EVERY (\x. x < LENGTH l) l))`;
+
+val IS_CONSISTENT_BOARD_REC___REWRITE = prove (
+``(IS_CONSISTENT_BOARD_REC 0 p l) /\
+  (IS_CONSISTENT_BOARD_REC (SUC n) p l =
+  (IS_CONSISTENT_BOARD_REC n p l /\
+    (~(EL n l = EL p l) /\
+     ~((EL n l - EL p l) = (p - n)) /\
+     ~((EL p l - EL n l) = (p - n)))))``,
+
+SIMP_TAC std_ss [IS_CONSISTENT_BOARD_REC_def] THEN
+`!n m. n < SUC m = ((n < m) \/ (n = m))` by DECIDE_TAC THEN
+ASM_SIMP_TAC std_ss [DISJ_IMP_THM, FORALL_AND_THM]);
+
+
+val IS_CONSISTENT_BOARD_REC___JUST_FIRSTN = prove (
+``!n p l. (n <= p) /\ (p < LENGTH l) ==>
+          (IS_CONSISTENT_BOARD_REC n p l =
+           IS_CONSISTENT_BOARD_REC n p (FIRSTN (SUC p) l))``,
+
+SIMP_TAC arith_ss [IS_CONSISTENT_BOARD_REC_def,
+   EL_FIRSTN]);
+
+
+val IS_CONSISTENT_BOARD_REC___JUST_FIRSTN_MP = prove (
+``!n p l l'. (n <= p) /\ (p < LENGTH l) /\ (p < LENGTH l') /\
+             IS_CONSISTENT_BOARD_REC n p l /\
+             (FIRSTN (SUC p) l = FIRSTN (SUC p) l') /\
+             IS_CONSISTENT_BOARD_REC n p l ==>
+             IS_CONSISTENT_BOARD_REC n p l'``,
+METIS_TAC[IS_CONSISTENT_BOARD_REC___JUST_FIRSTN]);
+
+
+
+val IS_CONSISTENT_BOARD___REWRITE = prove (
+``IS_CONSISTENT_BOARD l =
+  ((EVERY (\x. x < LENGTH l) l) /\
+   (!i1 i2. (i1 < i2 /\ i2 < (LENGTH l)) ==>
+        (~(EL i1 l = EL i2 l) /\
+         ~((EL i1 l - EL i2 l) = (i2 - i1)) /\
+         ~((EL i2 l - EL i1 l) = (i2 - i1)))))``,
+
+SIMP_TAC std_ss [IS_CONSISTENT_BOARD_def,
+  IS_CONSISTENT_BOARD_REC_def,
+  FORALL_AND_THM, IMP_CONJ_THM,
+  AND_IMP_INTRO,
+  GSYM RIGHT_FORALL_IMP_THM,
+  EVERY_MEM, MEM_EL, GSYM LEFT_FORALL_IMP_THM] THEN
+REPEAT STRIP_TAC THEN  EQ_TAC THEN STRIP_TAC THEN (
+   ASM_SIMP_TAC std_ss []
+));
+
+
+
+(******************************************************************************)
+(* Verify specification - loopspec                                            *)
+(******************************************************************************)
+
+(* Assing the filename of the spec to variable file *)
+val file = concat [examplesDir, "/vstte/vscomp4.dsf"];
+
+(* holfoot_set_goal_procedures file ["isConsistent"] *)
+val isConsistent_TAC =
+    (*run automation *)
+    HF_VC_SOLVE_TAC THEN HF_VC_TAC THEN
+
+    (* simplify and instantiate loop invariant*)
+    SIMP_TAC std_ss [GSYM ADD1, IS_CONSISTENT_BOARD_REC___REWRITE] THEN
+    REPEAT STRIP_TAC THEN 
+    Q.EXISTS_TAC `data` THEN Q.EXISTS_TAC `LENGTH data` THEN
+
+    (* generate VCs *)
+    HF_VC_SOLVE_TAC THEN HF_VC_TAC THEN
+    REPEAT STRIP_TAC THENL [
+       `p_const = q_const` by DECIDE_TAC THEN
+       ASM_REWRITE_TAC[],
+
+       Q.PAT_ASSUM `~(IS_CONSISTENT_BOARD_REC q_const p_const data)` MP_TAC THEN
+       FULL_SIMP_TAC std_ss [IS_CONSISTENT_BOARD_REC_def] THEN
+       GEN_TAC THEN STRIP_TAC THEN
+       ASM_SIMP_TAC list_ss []
+    ]
+
+
+(* holfoot_set_goal_procedures file ["search"] *)
+val search_TAC =
+    (*run automation *)
+    HF_SOLVE_TAC THEN 
+    REPEAT STRIP_TAC THENL [
+       (* while loop *)
+       CONV_TAC SWAP_EXISTS_CONV THEN
+       Q.EXISTS_TAC `LENGTH data1 + LENGTH data2` THEN
+       xHF_SOLVE_TAC [add_rewrites [REPLACE_ELEMENT_APPEND2]] THEN
+       REPEAT STRIP_TAC THENL [
+          (* is consistent *)
+          `?data2_hd data2_tl. data2 = data2_hd::data2_tl` by
+              (Cases_on `data2` THEN FULL_SIMP_TAC list_ss []) THEN
+          Q.EXISTS_TAC `data1 ++ [i_const]` THEN 
+          Q.EXISTS_TAC `data2_tl` THEN
+          ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF] THEN
+          HF_VC_SOLVE_TAC THEN HF_VC_TAC THEN
+          CONJ_TAC THENL [
+             FULL_SIMP_TAC (list_ss++CONJ_ss) [GSYM ADD1] THEN
+             REPEAT STRIP_TAC THEN
+             Cases_on `pp = LENGTH data1` THENL [
+                MATCH_MP_TAC IS_CONSISTENT_BOARD_REC___JUST_FIRSTN_MP THEN
+                Q.EXISTS_TAC `data1 ++ i_const::data2_tl` THEN
+                ASM_SIMP_TAC list_ss [FIRSTN_APPEND2, GSYM ADD1],
+               
+                FULL_SIMP_TAC arith_ss [GSYM APPEND_ASSOC, APPEND]
+             ],
+
+             
+             FULL_SIMP_TAC (list_ss++CONJ_ss) [GSYM ADD1] THEN
+             REPEAT STRIP_TAC THEN
+             Cases_on `i' < i_const` THEN1 (
+                METIS_TAC[]
+             ) THEN
+             `i' = i_const` by DECIDE_TAC THEN
+             FULL_SIMP_TAC arith_ss [GSYM APPEND_ASSOC, APPEND] THEN
+             Q.PAT_ASSUM `!data3'. X` (MP_TAC o Q.SPECL [`data3`]) THEN
+             Q.PAT_ASSUM `LENGTH data2' = X` ASSUME_TAC THEN
+             FULL_SIMP_TAC arith_ss [] THEN
+             STRIP_TAC THEN
+             Q.EXISTS_TAC `pp` THEN
+             ASM_SIMP_TAC arith_ss []
+          ],
+
+          (* is not consistent *)
+          HF_VC_TAC THEN
+          REPEAT STRIP_TAC THEN
+          Cases_on `i' < i_const` THEN1 (
+             METIS_TAC[]
+          ) THEN
+          `i' = i_const` by DECIDE_TAC THEN
+          Q.EXISTS_TAC `LENGTH data1` THEN
+          ASM_SIMP_TAC arith_ss [] THEN
+          REPEAT STRIP_TAC THEN
+          Q.PAT_ASSUM `~(IS_CONSISTENT_BOARD_REC X X Y)` MP_TAC THEN
+          SIMP_TAC std_ss [] THEN 
+          MATCH_MP_TAC IS_CONSISTENT_BOARD_REC___JUST_FIRSTN_MP THEN
+          Q.EXISTS_TAC `data1 ++ i_const::data3` THEN
+          Cases_on `data2` THEN (
+             FULL_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF,
+               FIRSTN_APPEND2, GSYM ADD1]
+          )
+    ],
+
+    
+    (* at the very end *)
+    Q.EXISTS_TAC `data1` THEN
+    Q.EXISTS_TAC `data2_h::data2_t` THEN
+    HF_SOLVE_TAC THEN HF_VC_TAC THEN
+    REPEAT STRIP_TAC THEN
+    FULL_SIMP_TAC std_ss [] THEN
+    `?data3_hd data3_tl. data3 = data3_hd :: data3_tl` by ALL_TAC THEN1 (
+        Cases_on `data3` THEN FULL_SIMP_TAC list_ss []
+    ) THEN
+    Q.PAT_ASSUM `!i' data3'. X i' data3'` (MP_TAC o Q.SPECL [
+       `data3_hd`, `data3_tl`]) THEN
+    FULL_SIMP_TAC list_ss [GSYM ADD1]
+]
+
+
+
+
+
+(* holfoot_set_goal_procedures file ["find"] *)
+val find_TAC =
+    HF_SOLVE_TAC THEN HF_VC_TAC THEN
+    SIMP_TAC (std_ss++CONJ_ss) [IS_CONSISTENT_BOARD_def] THEN
+    METIS_TAC[]
+
+
+
+
+(* put everything together (12 s) *)       
+val final_thm = holfoot_tac_verify_spec file NONE
+                   [("isConsistent", isConsistent_TAC),
+                    ("search",       search_TAC),
+                    ("find",         find_TAC)];
+

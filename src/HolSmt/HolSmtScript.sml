@@ -21,8 +21,9 @@ struct
      'TAUT_PROVE' *)
   fun U thms t =
   let
-    val t_eq_t' = simpLib.SIMP_CONV (simpLib.++ (simpLib.++ (bossLib.std_ss,
-      wordsLib.WORD_ss), wordsLib.WORD_BIT_EQ_ss)) thms t
+    val t_eq_t' = simpLib.SIMP_CONV (simpLib.++ (simpLib.++ (simpLib.++
+      (bossLib.std_ss, boolSimps.COND_elim_ss), wordsLib.WORD_ss),
+      wordsLib.WORD_BIT_EQ_ss)) thms t
     val t' = tautLib.TAUT_PROVE (boolSyntax.rhs (Thm.concl t_eq_t'))
   in
     Thm.EQ_MP (Thm.SYM t_eq_t') t'
@@ -35,19 +36,14 @@ struct
   (* constants used by Z3 (internally, but they also appear in proofs) *)
 
   (* exclusive or *)
-  val xor_def = bossLib.Define`
-    xor x y = ~(x <=> y)
-  `;
+  val xor_def = bossLib.Define `xor x y = ~(x <=> y)`
 
   (* ternary xor (i.e., the lower output bit of a full adder) *)
-  val xor3_def = bossLib.Define`
-    xor3 x y z = xor (xor x y) z
-  `;
+  val xor3_def = bossLib.Define `xor3 x y z = xor (xor x y) z`
 
   (* the carry output of a full adder *)
-  val carry_def = bossLib.Define`
-    carry x y z = (x /\ y) \/ (x /\ z) \/ (y /\ z)
-  `;
+  val carry_def = bossLib.Define
+    `carry x y z = (x /\ y) \/ (x /\ z) \/ (y /\ z)`
 
   (* used for Z3 proof reconstruction *)
 
@@ -77,6 +73,7 @@ struct
   val _ = s ("IMP_DISJ_1", T ``!p q. (p ==> q) ==> ~p \/ q``)
   val _ = s ("IMP_DISJ_2", T ``!p q. (~p ==> q) ==> p \/ q``)
   val _ = s ("IMP_FALSE", T ``!p. (~p ==> F) ==> p``)
+  val _ = s ("AND_IMP_INTRO_SYM", T ``!p q r. p /\ q ==> r <=> p ==> q ==> r``)
 
   (* used for Z3's proof rule def-axiom *)
 
@@ -109,7 +106,7 @@ struct
   val _ = s ("d027", U [carry_def] ``carry p q r \/ ~p \/ ~q``)
   val _ = s ("d028", U [carry_def] ``carry p q r \/ ~p \/ ~r``)
   val _ = s ("d029", U [carry_def] ``carry p q r \/ ~q \/ ~r``)
-  val _ = s ("d030", P ``p \/ (x = if p then y else x)``)
+  val _ = s ("d030", P ``p \/ (y = if p then x else y)``)
   val _ = s ("d031", P ``~p \/ (x = if p then x else y)``)
   val _ = s ("d032", P ``p \/ ((if p then x else y) = y)``)
   val _ = s ("d033", P ``~p \/ ((if p then x else y) = x)``)
@@ -117,8 +114,10 @@ struct
   val _ = s ("d035", P ``~p \/ q \/ ~(if p then q else r)``)
   val _ = s ("d036", P ``(if p then q else r) \/ ~p \/ ~q``)
   val _ = s ("d037", P ``(if p then q else r) \/ p \/ ~r``)
-  val _ = s ("d038", P ``~(if p then q else r) \/ ~p \/ q``)
-  val _ = s ("d039", P ``~(if p then q else r) \/ p \/ r``)
+  val _ = s ("d038", P ``(if p then ~q else r) \/ ~p \/ q``)
+  val _ = s ("d039", P ``(if p then q else ~r) \/ p \/ r``)
+  val _ = s ("d040", P ``~(if p then q else r) \/ ~p \/ q``)
+  val _ = s ("d041", P ``~(if p then q else r) \/ p \/ r``)
 
   (* used for Z3's proof rule rewrite *)
 
@@ -450,22 +449,31 @@ struct
   val _ = s ("r238", W ``(x && y) && z = x && y && z``)
   val _ = s ("r239", W ``0w !! x = x``)
 
-  (* used for Z3's proof rule th-lemma *)
+  (* used for Z3's proof rule th_lemma *)
 
-  val _ = s ("t001", A ``((x :int) <> y) \/ (x <= y)``)
-  val _ = s ("t002", A ``((x :int) <> y) \/ (x >= y)``)
-  val _ = s ("t003", A ``((x :int) <> y) \/ (x + -1 * y >= 0)``)
-  val _ = s ("t004", A ``((x :int) <> y) \/ (x + -1 * y <= 0)``)
-  val _ = s ("t005", A ``((x :int) = y) \/ ~(x <= y) \/ ~(x >= y)``)
-  val _ = s ("t006", A ``~((x :int) <= 0) \/ x <= 1``)
-  val _ = s ("t007", A ``~((x :int) <= -1) \/ x <= 0``)
-  val _ = s ("t008", A ``~((x :int) >= 0) \/ x >= -1``)
-  val _ = s ("t009", A ``~((x :int) >= 0) \/ ~(x <= -1)``)
-  val _ = s ("t010", A ``(x :int) >= y \/ x <= y``)
+  val _ = s ("t001", U [boolTheory.EQ_SYM_EQ, combinTheory.UPDATE_def]
+    ``(x = y) \/ (f x = (y =+ z) f x)``)
+  val _ = s ("t002", U [boolTheory.EQ_SYM_EQ, combinTheory.UPDATE_def]
+    ``(x = y) \/ (f y = (x =+ z) f y)``)
+  val _ = s ("t003", U [boolTheory.EQ_SYM_EQ, combinTheory.UPDATE_def]
+    ``(x = y) \/ ((y =+ z) f x = f x)``)
+  val _ = s ("t004", U [boolTheory.EQ_SYM_EQ, combinTheory.UPDATE_def]
+    ``(x = y) \/ ((x =+ z) f y = f y)``)
 
-  val _ = s ("t011", R ``(x :real) <> y \/ x + -1 * y >= 0``)
+  val _ = s ("t005", A ``((x :int) <> y) \/ (x <= y)``)
+  val _ = s ("t006", A ``((x :int) <> y) \/ (x >= y)``)
+  val _ = s ("t007", A ``((x :int) <> y) \/ (x + -1 * y >= 0)``)
+  val _ = s ("t008", A ``((x :int) <> y) \/ (x + -1 * y <= 0)``)
+  val _ = s ("t009", A ``((x :int) = y) \/ ~(x <= y) \/ ~(x >= y)``)
+  val _ = s ("t010", A ``~((x :int) <= 0) \/ x <= 1``)
+  val _ = s ("t011", A ``~((x :int) <= -1) \/ x <= 0``)
+  val _ = s ("t012", A ``~((x :int) >= 0) \/ x >= -1``)
+  val _ = s ("t013", A ``~((x :int) >= 0) \/ ~(x <= -1)``)
+  val _ = s ("t014", A ``(x :int) >= y \/ x <= y``)
 
-  val _ = s ("t012", Tactical.prove (``(x :'a word) <> ~x``,
+  val _ = s ("t015", R ``(x :real) <> y \/ x + -1 * y >= 0``)
+
+  val _ = s ("t016", Tactical.prove (``(x :'a word) <> ~x``,
     let
       val RW = bossLib.RW_TAC (bossLib.++ (bossLib.bool_ss, fcpLib.FCP_ss))
     in
@@ -475,32 +483,33 @@ struct
               wordsTheory.word_1comp_def],
             tautLib.TAUT_TAC)))
     end))
-  val _ = s ("t013", W ``(x = y) ==> x ' i ==> y ' i``)
-  val _ = s ("t014", S ``(1w = ~(x :word1)) \/ x ' 0``)
-  val _ = s ("t015", S ``(x :word1) ' 0 ==> (0w = ~x)``)
-  val _ = s ("t016", S ``(x :word1) ' 0 ==> (1w = x)``)
-  val _ = s ("t017", S ``~((x :word1) ' 0) ==> (0w = x)``)
-  val _ = s ("t018", S ``~((x :word1) ' 0) ==> (1w = ~x)``)
-  val _ = s ("t019", S ``(0w = ~(x :word1)) \/ ~(x ' 0)``)
-  val _ = s ("t020", U []
+  val _ = s ("t017", W ``(x = y) ==> x ' i ==> y ' i``)
+  val _ = s ("t018", S ``(1w = ~(x :word1)) \/ x ' 0``)
+  val _ = s ("t019", S ``(x :word1) ' 0 ==> (0w = ~x)``)
+  val _ = s ("t020", S ``(x :word1) ' 0 ==> (1w = x)``)
+  val _ = s ("t021", S ``~((x :word1) ' 0) ==> (0w = x)``)
+  val _ = s ("t022", S ``~((x :word1) ' 0) ==> (1w = ~x)``)
+  val _ = s ("t023", S ``(0w = ~(x :word1)) \/ ~(x ' 0)``)
+  val _ = s ("t024", U []
     ``(1w = ~(x :word1) !! ~y) \/ ~(~(x ' 0) \/ ~(y ' 0))``)
-  val _ = s ("t021", U []
+  val _ = s ("t025", U []
     ``(0w = (x :word8)) \/ x ' 0 \/ x ' 1 \/ x ' 2 \/ x ' 3 \/ x ' 4 \/ x ' 5 \/ x ' 6 \/ x ' 7``)
-  val _ = s ("t022", S
+  val _ = s ("t026", S
     ``(((x :word1) = 1w) <=> p) <=> (x = if p then 1w else 0w)``)
-  val _ = s ("t023", S
+  val _ = s ("t027", S
     ``((1w = (x :word1)) <=> p) <=> (x = if p then 1w else 0w)``)
-  val _ = s ("t024", S
+  val _ = s ("t028", S
     ``(p <=> ((x :word1) = 1w)) <=> (x = if p then 1w else 0w)``)
-  val _ = s ("t025", S
+  val _ = s ("t029", S
     ``(p <=> (1w = (x :word1))) <=> (x = if p then 1w else 0w)``)
-  val _ = s ("t026", B
+  val _ = s ("t030", B
     ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 0)``)
-  val _ = s ("t027", B
+  val _ = s ("t031", B
     ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 1 <=> ~(x ' 0))``)
-  val _ = s ("t028", B ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==>
+  val _ = s ("t032", B ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==>
       ~(x ' 2 <=> ~(x ' 0) /\ ~(x ' 1))``)
-  val _ = s ("t029", X ``(1w + (x :'a word) = y) ==> x ' 0 ==> ~(y ' 0)``)
+  val _ = s ("t033", X ``(1w + (x :'a word) = y) ==> x ' 0 ==> ~(y ' 0)``)
+  val _ = s ("t034", S ``(1w = x :word1) \/ (0 >< 0) x <> (1w :word1)``)
 
   (* used to prove hypotheses of other proforma theorems (recursively) *)
 

@@ -1,0 +1,18 @@
+vscomp2(;a,b,n) [data_array(a,n,data) *
+                 data_array(b,m,data2) * 
+                 ``EVERY (\x. x < m) data``] {
+   local i;
+
+   i = 0;
+   loop_spec [data_array(a,n,data) *
+              data_array(b,m,data2) * 
+              ``EVERY (\x. x < m) data``] {
+   while (i < n) {
+      tmp = (a + i) -> dta;
+      (b + tmp) -> dta = i;
+      i = i + 1;
+   }} [data_array(a,n,data) *
+       data_array(b,m, 
+          ``VSCOMP2_FUN data2 (old(i)) (BUTFIRSTN (old(i)) data)``)]
+} [data_array(a,n,data) *
+   data_array(b,m,``VSCOMP2_FUN data2 0 data``)]

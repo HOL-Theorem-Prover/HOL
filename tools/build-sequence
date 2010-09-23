@@ -82,6 +82,7 @@ src/boss
 # (Maybe unwind could be omitted).
 [poly]bin/hol
 
+!src/tfl/src/test
 src/TeX
 !examples/RSA
 src/sort

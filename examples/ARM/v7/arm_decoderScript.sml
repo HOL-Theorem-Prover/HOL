@@ -75,8 +75,7 @@ val LastInITBlock_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
-val arm_decode_def =
-  with_flag (computeLib.auto_import_definitions,false) Define`
+val arm_decode_def = zDefine`
   arm_decode v4 (ireg : word32) =
   let b n = ireg ' n
   and i2 n  = ( n + 1  >< n ) ireg : word2
@@ -362,8 +361,7 @@ val arm_decode_def =
 
 (* ------------------------------------------------------------------------ *)
 
-val thumb_decode_def =
-  with_flag (computeLib.auto_import_definitions,false) Define`
+val thumb_decode_def = zDefine`
   thumb_decode arch IT (ireg : word16) =
     let IT = if arch IN thumb2_support then IT else 0w in
     let b n = ireg ' n
@@ -574,8 +572,7 @@ val thumb_decode_def =
              Branch (Branch_Target (sw2sw ((10 >< 0) ireg : word11)))
       || _ -> Undefined)`;
 
-val thumbee_decode_def =
-  with_flag (computeLib.auto_import_definitions,false) Define`
+val thumbee_decode_def = zDefine`
   thumbee_decode arch IT (ireg : word16) =
     let b n = ireg ' n
     and r n  = ( n + 2  >< n ) ireg : word4

@@ -937,7 +937,7 @@ on the definition of recursive functions.
 
 HOL{} provides a function definition mechanism based on the
 wellfounded recursion theorem proved in \theoryimp{relationTheory},
-discussed in Section \ref{relation}.  \ml{Define} takes a high-level,
+discussed in Section~\ref{relation}.  \ml{Define} takes a high-level,
 possibly recursive, specification of a function, and attempts to
 define the function in the logic. \ml{Define} may be used to define
 abbreviations, recursive functions, and mutually recursive
@@ -949,7 +949,7 @@ to make the specified definition, usually because an automatic
 termination proof fails; in that case, another entrypoint, \ml{Hol\_defn},
 which defers the termination proof to the user, can be used.
 The technology underlying \ml{Define} and \ml{Hol\_defn} is explained
-in detail in \cite{slind-thesis}.
+in detail in Slind~\cite{slind-thesis}.
 
 
 \index{Define@\ml{Define}}
@@ -1650,6 +1650,7 @@ rewriting, and the second is also easy to prove by rewriting.
 
 \subsubsection{How termination conditions are synthesized}
 
+\index{congruence rules!in termination analysis|(}
 It is occasionally important to understand, at least in part, how
 \ml{Hol\_defn} constructs termination constraints. In some cases, it is
 even necessary for users to influence this process in order to have correct
@@ -1734,7 +1735,11 @@ result. Thus the extracted termination conditions for \holtxt{fact} are
 and are easy to prove. The notion of \emph{context} of a recursive call
 is defined by  the set of congruence rules used in extracting termination
 conditions. This set can be obtained by invoking \holtxt{DefnBase.read\_congs},
-and manipulated by \holtxt{DefnBase.add\_cong} and \holtxt{DefnBase.drop\_cong}.
+and manipulated by \holtxt{DefnBase.add\_cong},
+\holtxt{DefnBase.drop\_cong} and \holtxt{DefnBase.export\_cong}.
+The `add' and `drop' functions only affect the current state of the congruence database; in contrast, the `export' function provides a way for theories to specify that a particular theorem should be added to the congruence database in all descendent theories.
+\index{congruence rules!in termination analysis|)}
+
 
 
 \paragraph{Higher Order Recursion and Congruence Rules}
@@ -1798,6 +1803,7 @@ the following unhappy situation results:
 \end{verbatim}
 \end{session}
 %
+\index{congruence rules!in termination analysis}
 The termination conditions for \holtxt{ltree\_sigma} seem to
 require finding a wellfounded relation \holtxt{R} such that the pair
 \holtxt{(f,a)} is \holtxt{R}-less than
@@ -1816,10 +1822,7 @@ for \holtxt{SIGMA}. Such a congruence theorem is the following:
 \end{verbatim}
 \end{hol}
 %
-Once \ml{Hol\_defn} has been told about this theorem, via
-\ml{DefnBase.add\_cong}, the termination conditions extracted for
-the definition are now provable, since \holtxt{a} is a
-proper subterm of \holtxt{Node v tl}.
+Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{add\_cong} or \ml{export\_cong} functions, the termination conditions extracted for the definition are now provable, since \holtxt{a} is a proper subterm of \holtxt{Node v tl}.
 %
 \begin{session}
 \begin{verbatim}

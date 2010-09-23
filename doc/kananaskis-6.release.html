@@ -211,6 +211,16 @@ Behzad Akbarpour for the report of this bug.</p></li>
 types where the new type was also polymorphic failed.  Thanks to Ramana
 Kumar for the report of this bug. </p>
 
+<li><p>In <code>Hol_datatype</code>, nested recursion involving
+the <code>itself</code> type constructor could fail.  Thanks to Ramana
+Kumar for the report of and fix for this bug. </p>
+
+<li><p>The <code>TypeNet</code> data structure for indexing
+information by types could get confused if the “same” type was
+redefined (in the one interactive session) with different arities.
+Thanks to Ramana Kumar for the bug report that led to the isolation of
+this problem.</p>
+
 </ul>
 
 

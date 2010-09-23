@@ -1,4 +1,4 @@
-tree_map(;t) [data_tree(t; data)] {
+tree_map(;t) [data_tree(t, data)] {
   local i;
   if (t == NULL) { }
   else { 
@@ -11,5 +11,5 @@ tree_map(;t) [data_tree(t; data)] {
     i = t->r;
     tree_map(;i);
  }
-} [data_tree(t;``TREE_MAP (\l. [SUC (HD l)]) data``)]
+} [data_tree(t,``TREE_MAP (\l. [SUC (HD l)]) data``)]
  

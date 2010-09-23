@@ -76,11 +76,7 @@ val _ = type_abbrev("word_ptreeset", ``:('a, unit) word_ptree``);
 
 val THE_PTREE_def  = Define `THE_PTREE (Word_ptree a t) = t`;
 
-val _ = computeLib.auto_import_definitions := false;
-
-val SOME_PTREE_def = Define `SOME_PTREE t = Word_ptree (K ()) t`;
-
-val _ = computeLib.auto_import_definitions := true;
+val SOME_PTREE_def = zDefine `SOME_PTREE t = Word_ptree (K ()) t`;
 
 val WordEmpty_def  = Define `WordEmpty = SOME_PTREE Empty`;
 

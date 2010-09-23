@@ -1,0 +1,170 @@
+(******************************************************************************)
+(* Holfoot can proof partial correctness of programs using separation logic.  *)
+(*                                                                            *)
+(* The entire proof is done using HOL 4. This includes not just the the       *)
+(* proof of some verification conditions, but the whole proof. This includes  *)
+(* formal definitions of the programming and specification language as well   *)
+(* as verified inferences.                                                    *)
+(******************************************************************************)
+
+(******************************************************************************)
+(* Boilerplate (Load everything)                                              *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+*)
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open listTheory rich_listTheory arithmeticTheory whileTheory
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+
+(******************************************************************************)
+(* Verify specification - loopspec                                            *)
+(******************************************************************************)
+
+(* Assing the filename of the spec to variable file *)
+val file = concat [examplesDir, "/vstte/vscomp3-loopspec.dsf"];
+
+(* holfoot_set_goal_procedures file ["vscomp3"] *)
+val vscomp3_loopspec_TAC =
+    (*run automation *)
+    HF_CONTINUE_TAC THEN
+
+    (* clean up the goal a bit *)
+    REPEAT STRIP_TAC THEN
+    HF_VC_TAC THEN
+
+    (* a bit of arithmetic reasoning and a case split *)
+    `i_const - old_i = SUC ( i_const − (old_i + 1))` by DECIDE_TAC THEN
+    ASM_SIMP_TAC list_ss [] THEN
+    Cases_on `n` THEN FULL_SIMP_TAC list_ss []
+
+
+
+(* put everything together *)       
+val thm1 = holfoot_tac_verify_spec file NONE
+                   [("vscomp3", vscomp3_loopspec_TAC)];
+
+
+(******************************************************************************)
+(* Verify specification - invariant                                           *)
+(******************************************************************************)
+
+(* Assing the filename of the spec to variable file *)
+val file2 = concat [examplesDir, "/vstte/vscomp3-invariant.dsf"];
+
+(* holfoot_set_goal_procedures file ["vscomp3"] *)
+val vscomp3_invariant_TAC =
+    (*run automation *)
+    HF_SOLVE_TAC THEN
+
+    (* clean up the goal a bit *)
+    HF_VC_TAC THEN
+   
+    SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2,
+        EVERY_MEM, MEM_EL, GSYM LEFT_FORALL_IMP_THM] THEN
+    METIS_TAC[]
+
+
+(* put everything together *)       
+val thm2 = holfoot_tac_verify_spec file2 NONE
+                   [("vscomp3", vscomp3_invariant_TAC)];
+
+
+
+
+(******************************************************************************)
+(* Introduce special search predicates                                        *)
+(******************************************************************************)
+
+val FIRST_INDEX_def = Define `
+  FIRST_INDEX P l = LEAST n. (n = LENGTH l) \/ P (EL n l)`
+
+val FIRST_INDEX_THM = prove (
+``!P l n. (FIRST_INDEX P l = n) = 
+          (n <= LENGTH l) /\
+          (!i. i < n ==> ~(P (EL i l))) /\
+          ((n < LENGTH l) ==> P (EL n l))``,
+
+REPEAT STRIP_TAC THEN
+Q.ABBREV_TAC `m = FIRST_INDEX P l` THEN
+MP_TAC (Q.SPEC `\n. (n = LENGTH l) ∨ P (EL n l)` LESS_LEAST) THEN
+MP_TAC (Q.SPEC `\n. (n = LENGTH l) ∨ P (EL n l)` LEAST_INTRO) THEN
+FULL_SIMP_TAC arith_ss [FIRST_INDEX_def] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `LENGTH l < m` THEN1 METIS_TAC[] THEN
+EQ_TAC THEN STRIP_TAC THENL [
+   FULL_SIMP_TAC arith_ss [LEFT_FORALL_IMP_THM, EXISTS_OR_THM],
+
+   FULL_SIMP_TAC arith_ss [LEFT_FORALL_IMP_THM, EXISTS_OR_THM] THENL [
+      `~(n < LENGTH l)` by METIS_TAC[] THEN
+      DECIDE_TAC,
+
+      `~(m < n)` by METIS_TAC[] THEN
+      Tactical.REVERSE (`~(n < m)` by ALL_TAC) THEN1 DECIDE_TAC THEN
+      CCONTR_TAC THEN
+      FULL_SIMP_TAC arith_ss [] THEN
+      `n < LENGTH l` by DECIDE_TAC THEN
+      METIS_TAC[]
+   ]
+]);
+
+val FIRST_INDEX_REWRITE = prove (
+``(FIRST_INDEX P [] = 0) /\
+  (FIRST_INDEX P (e::es) =
+   if (P e) then 0 else SUC (FIRST_INDEX P es))``,
+
+`?m. FIRST_INDEX P es = m` by METIS_TAC[] THEN
+FULL_SIMP_TAC std_ss [] THEN
+FULL_SIMP_TAC list_ss [FIRST_INDEX_THM] THEN
+Cases_on `P e` THEN ASM_SIMP_TAC list_ss [] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `i` THEN FULL_SIMP_TAC list_ss [] THEN
+METIS_TAC[]);
+
+
+(* Assing the filename of the spec to variable file *)
+val file3 = concat [examplesDir, "/vstte/vscomp3-invariant2.dsf"];
+
+(* holfoot_set_goal_procedures file3 ["vscomp3"] *)
+val vscomp3_invariant2_TAC =
+    (*run automation *)
+    HF_SOLVE_TAC THEN
+
+    (* clean up the goal a bit *)
+    HF_VC_TAC THEN  
+    SIMP_TAC list_ss [FIRST_INDEX_THM, EVERY_MEM, MEM_EL,
+        GSYM LEFT_FORALL_IMP_THM, EL_APPEND1, EL_APPEND2]
+
+
+(* put everything together *)       
+val thm3 = holfoot_tac_verify_spec file3 NONE
+                   [("vscomp3", vscomp3_invariant2_TAC)];
+
+
+(* Assing the filename of the spec to variable file *)
+val file4 = concat [examplesDir, "/vstte/vscomp3-loopspec2.dsf"];
+
+(* holfoot_set_goal_procedures file4 ["vscomp3"] *)
+val vscomp3_loopspec2_TAC =
+    (*run automation *)
+    HF_SOLVE_TAC THEN
+
+    (* clean up the goal a bit *)
+    HF_VC_TAC THEN  
+    SIMP_TAC (list_ss++boolSimps.CONJ_ss) [FIRST_INDEX_REWRITE] THEN
+    Cases_on `data2` THEN
+    SIMP_TAC list_ss [FIRST_INDEX_REWRITE]
+
+
+(* put everything together *)       
+val thm4 = holfoot_tac_verify_spec file4 NONE
+                   [("vscomp3", vscomp3_loopspec2_TAC)];
+
+
+
+

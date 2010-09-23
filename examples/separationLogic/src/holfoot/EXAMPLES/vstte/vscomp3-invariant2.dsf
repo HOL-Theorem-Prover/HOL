@@ -1,0 +1,24 @@
+global P;
+
+vscomp3(i;ll) [data_list(ll,data)] {
+   local found, jj, tmp;
+   jj = ll;
+   
+   found = 0;
+   i = 0;
+   while ((jj != NULL) and (found == 0)) [
+        data_lseg(ll,_data1,jj) * data_list(jj,_data2) *
+        ``(data = _data1 ++ _data2) /\
+          (LENGTH _data1 = i) /\
+          (EVERY ($~ o P) data1) /\
+          ((~(found = 0)) ==> (P (HD data2)))``] {
+      tmp = jj -> dta;
+      if (``P tmp``) {
+         found = 1;
+      } else {
+         jj = jj -> tl;      
+         i = i + 1;
+      }
+   } 
+} [data_list(ll,data) *
+   (i == ``FIRST_INDEX P data``)]

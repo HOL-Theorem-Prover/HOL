@@ -55,7 +55,6 @@ val restr_terms = mk_constants
 val _ = computeLib.del_consts (mk_constants
   [("arm_opsem",
     ["branch_write_pc", "bx_write_pc", "load_write_pc", "alu_write_pc",
-     "cpsr_write_by_instr", "spsr_write_by_instr",
      "branch_target_instr",
      "branch_exchange_instr",
      "branch_link_exchange_imm_instr",
@@ -72,29 +71,15 @@ val _ = computeLib.del_consts (mk_constants
      "load_instr",
      "load_multiple_instr",
      "return_from_exception_instr",
-     "immediate_to_status_instr",
-     "register_to_status_instr",
-     "change_processor_state_instr",
      "saturating_add_subtract_instr",
      "signed_16_multiply_32_accumulate_instr",
      "signed_16x32_multiply_32_accumulate_instr",
      "signed_multiply_dual_instr",
      "saturate_instr", "saturate_16_instr",
      "branch_instruction", "data_processing_instruction",
-     "load_store_instruction", "status_access_instruction",
+     "load_store_instruction",
      "arm_instr"]),
     ("arm", ["arm_next"])]);
-
-val cpsr_write_by_instr =
-  SIMP_RULE (std_ss++boolSimps.LET_ss) [cpsr_write_by_instr_thm]
-    cpsr_write_by_instr_def;
-
-val spsr_write_by_instr =
-  SIMP_RULE (std_ss++boolSimps.LET_ss) [spsr_write_by_instr_thm]
-    spsr_write_by_instr_def;
-
-val change_processor_state_instr =
-  SIMP_RULE std_ss [change_processor_state_thm] change_processor_state_instr;
 
 val _ = computeLib.add_funs
   (List.map (REWRITE_RULE [condT_set_q])
@@ -102,16 +87,14 @@ val _ = computeLib.add_funs
      signed_16x32_multiply_32_accumulate_instr, signed_multiply_dual_instr,
      saturate_instr, saturate_16_instr] @
    [branch_write_pc, bx_write_pc, load_write_pc_def, alu_write_pc_def,
-    cpsr_write_by_instr, spsr_write_by_instr, null_check_if_thumbEE_def,
-    branch_target_instr, branch_exchange_instr, branch_link_exchange_imm_instr,
-    branch_link_exchange_reg_instr, arm_stepTheory.compare_branch_instr,
-    table_branch_byte_instr, check_array_instr, handler_branch_link_instr,
+    null_check_if_thumbEE_def, branch_target_instr, branch_exchange_instr,
+    branch_link_exchange_imm_instr, branch_link_exchange_reg_instr,
+    arm_stepTheory.compare_branch_instr, table_branch_byte_instr,
+    check_array_instr, handler_branch_link_instr,
     handler_branch_link_parameter_instr, handler_branch_parameter_instr,
     add_sub_instr, data_processing_instr, load_instr, load_multiple_instr,
-    return_from_exception_instr, immediate_to_status_instr,
-    register_to_status_instr, change_processor_state_instr,
-    branch_instruction_def, data_processing_instruction_def,
-    load_store_instruction_def, status_access_instruction_def, arm_instr_def,
+    return_from_exception_instr, branch_instruction_def,
+    data_processing_instruction_def, load_store_instruction_def, arm_instr_def,
     armTheory.arm_next_def]);
 
 val WORD_EQ_ADD_LCANCEL_0 =
@@ -1182,8 +1165,7 @@ in
     val pre' = hd (fst (Thm.dest_thm thm))
   in
     thm |> with_flag (Cond_rewr.stack_limit,50)
-             (SIMP_RULE (bool_ss++wordsLib.WORD_ARITH_ss++ARM_UPDATES_ss)
-                [Thm.ASSUME pre'])
+             (SIMP_RULE (bool_ss++ARM_UPDATES_ss) [Thm.ASSUME pre'])
         |> Thm.DISCH pre'
         |> Thm.GEN the_state
   end

@@ -7,6 +7,8 @@ sig
   val strcat        : string -> string -> string
   val equal         : ''a -> ''a -> bool
   val pair          : 'a -> 'b -> 'a * 'b
+  val rpair         : 'a -> 'b -> 'b * 'a
+  val swap          : 'a * 'b -> 'b * 'a
   val cons          : 'a -> 'a list -> 'a list
   val ##            : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
   val apfst         : ('a -> 'b) -> 'a * 'c -> 'b * 'c
@@ -22,7 +24,6 @@ sig
   val can           : ('a -> 'b) -> 'a -> bool
   val partial       : exn -> ('a -> 'b option) -> 'a -> 'b
   val total         : ('a -> 'b) -> 'a -> 'b option
-  val itotal        : ('a -> 'b) -> 'a -> 'b option
   val try           : ('a -> 'b) -> 'a -> 'b
   val trye          : ('a -> 'b) -> 'a -> 'b
   val assert        : ('a -> bool) -> 'a -> 'a

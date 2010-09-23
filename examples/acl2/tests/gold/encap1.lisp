@@ -1,4 +1,3 @@
-; NOTE: Forms below are not evaluated when translating to ML.
 (IN-PACKAGE "ACL2")
 
 (DEFTHM CAR-CONS-1 (EQUAL (CAR (CONS X Y)) X))

@@ -32,11 +32,14 @@ type printmap_data = term * string * int
   (* the term is the lambda abstraction provided by the user, the
      string is the name that it is to be used in the printing process, and
      the int is the 'timestamp' *)
-val tstamp : unit -> int = let
-  val cnt = ref 0
+val pos_tstamp : bool -> int = let
+  val neg = ref 0
+  val cnt = ref 1
 in
-  fn () => (!cnt before (cnt := !cnt + 1))
+  fn true => (!cnt before (cnt := !cnt + 1))
+   | false => (!neg before (neg := !neg - 1))
 end
+fun tstamp () = pos_tstamp true
 
 type overload_info = ((string,overloaded_op_info) Binarymap.dict *
                       printmap_data LVTermNet.lvtermnet)
@@ -350,8 +353,10 @@ fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
 (* put a new overloading resolution into the database.  If it's already
    there for a given operator, don't mind.  In either case, make sure that
    it's at the head of the list, meaning that it will be the first choice
-   in ambigous resolutions. *)
-fun add_overloading (opname, term) oinfo = let
+   in ambigous resolutions.
+   update: abstracted the inserter to allow adding at the
+           end of the list for inferior resolutions.  *)
+fun add_overloading_with_inserter inserter tstamp (opname, term) oinfo = let
   val _ = Theory.uptodate_term term orelse
           raise OVERLOAD_ERR "Term is out-of-date"
   val (opc0, cop0) = oinfo
@@ -374,7 +379,7 @@ fun add_overloading (opname, term) oinfo = let
                   else (kdavoids, tyavoids, base_type)
             in
               Binarymap.insert(opc0, opname,
-                               {actual_ops = term::rest,
+                               {actual_ops = inserter(term,rest),
                                 base_type = base_type,
                                 kdavoids = kavoids,
                                 tyavoids = avoids})
@@ -398,7 +403,7 @@ fun add_overloading (opname, term) oinfo = let
                     end
             in
               Binarymap.insert(opc0, opname,
-                               {actual_ops = term :: actual_ops,
+                               {actual_ops = inserter(term,actual_ops),
                                 base_type = newbase,
                                 kdavoids = new_kdavoids,
                                 tyavoids = new_avoids})
@@ -423,6 +428,8 @@ in
   (opc, cop)
 end
 
+val add_overloading = add_overloading_with_inserter (op ::) (fn () => pos_tstamp true)
+val add_inferior_overloading = add_overloading_with_inserter (fn (a,l) => l @ [a]) (fn() => pos_tstamp false)
 
 fun add_actual_overloading {opname, realname, realthy} oinfo = let
   val cnst = prim_mk_const{Name = realname, Thy = realthy}
@@ -472,7 +479,7 @@ fun myfind f [] = NONE
   | myfind f (x::xs) = case f x of (v as SOME _) => v | NONE => myfind f xs
 
 fun isize0 acc f [] = acc
-  | isize0 acc f ({redex,residue} :: rest) = isize0 (acc + f residue) f rest
+  | isize0 acc f ({redex,residue} :: rest) = isize0 (acc + f residue + 1) f rest
 fun isize f x = isize0 0 f x
 
 fun strip_comb ((_, prmap): overload_info) t = let
@@ -609,19 +616,16 @@ fun keys dict = Binarymap.foldr (fn (k,v,l) => k::l) [] dict
 
 fun known_constants (oi:overload_info) = keys (#1 oi)
 
-fun remove_omapping crec str opdict = let
+fun remove_omapping t str opdict = let
   val (dictlessk, kitem) = Binarymap.remove(opdict, str)
-  val cnst = prim_mk_const crec
-  fun ok_actual t = not (aconv t cnst)
+  fun ok_actual t' = not (aconv t' t)
   val new_rec = fupd_actual_ops (List.filter ok_actual) kitem
 in
   if (null (#actual_ops new_rec)) then dictlessk
   else Binarymap.insert(dictlessk, str, new_rec)
 end handle Binarymap.NotFound => opdict
 
-
-fun remove_mapping str crec ((opc, cop) : overload_info) = let
-  val t = prim_mk_const crec
+fun gen_remove_mapping str t ((opc, cop) : overload_info) = let
   val cop' = let
     val ds = PrintMap.peek (cop, ([], t))
     val ds' = List.filter (fn (_, s, _) => s <> str) ds
@@ -636,7 +640,8 @@ fun remove_mapping str crec ((opc, cop) : overload_info) = let
       end
   end
 in
-  (remove_omapping crec str opc, cop')
+  (remove_omapping t str opc, cop')
 end
+fun remove_mapping str crec = gen_remove_mapping str (prim_mk_const crec)
 
 end (* Overload *)

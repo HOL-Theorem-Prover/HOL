@@ -293,4 +293,20 @@ val _ = blast_true
   ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==>
     ~(x ' 1 <=> ~(x ' 0))``;
 
+val _ = blast_true
+  ``if (0w :bool[16]) = (x :bool[16]) && (1024w :bool[16]) then
+      ~(if (0w :bool[16]) = x && (1024w :bool[16]) then
+          $= (((0 :num) >< (0 :num)) (1w :bool[unit]) :bool[unit])
+        else
+          $= (((0 :num) >< (0 :num)) (0w :bool[unit]) :bool[unit])) (1w
+           :bool[unit]) ==>
+      ((1w :bool[unit]) = ~(1w :bool[unit]))
+    else
+      ~(if (0w :bool[16]) = x && (1024w :bool[16]) then
+          $= (((0 :num) >< (0 :num)) (1w :bool[unit]) :bool[unit])
+        else
+          $= (((0 :num) >< (0 :num)) (0w :bool[unit]) :bool[unit])) (1w
+           :bool[unit]) ==>
+      ((1w :bool[unit]) = ~(0w :bool[unit]))``;
+
 val _ = OS.Process.exit OS.Process.success;

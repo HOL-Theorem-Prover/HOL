@@ -30,6 +30,8 @@ val executable_data_names = ref ([]:string list);
 val user_defined_modifier = ref (fn (name:string) => fn (th:thm) => th);
 val decompile_as_single_function = ref false;
 
+val decompiler_set_pc = ref ((fn y => fn th => fail()) :int -> thm -> thm);
+
 fun add_decompiled (name,th,code_len,code_exit) =
   (decompiler_memory := (name,(th,code_len,code_exit)) :: !decompiler_memory);
 
@@ -198,13 +200,15 @@ fun replace_abbrev_vars tm = let
   in subst (map f (free_vars tm)) tm end
 
 fun name_for_abbrev tm =
+  "v" ^ (int_to_string (Arbnum.toInt(numSyntax.dest_numeral(cdr (car tm))))) handle HOL_ERR e =>
   if is_const (cdr (car tm)) andalso is_const(car (car tm)) handle HOL_ERR e => false then
     (to_lower o fst o dest_const o cdr o car) tm
   else if can (match_term ``(f ((n2w n):'a word) (x:'c)):'d``) tm then
     "r" ^ ((int_to_string o numSyntax.int_of_term o cdr o cdr o car) tm)
-  else fst (dest_var (repeat cdr tm)) handle HOL_ERR e =>
-       fst (dest_var (find_term is_var tm)) handle HOL_ERR e =>
-       fst (dest_const (repeat car (get_sep_domain tm)));
+  else 
+    fst (dest_var (repeat cdr tm)) handle HOL_ERR e =>
+    fst (dest_var (find_term is_var tm)) handle HOL_ERR e =>
+    fst (dest_const (repeat car (get_sep_domain tm)));
 
 fun raw_abbreviate2 (var_name,y,tm) th = let
   val y = mk_eq(mk_var(var_name,type_of y),y)
@@ -361,6 +365,12 @@ fun derive_individual_specs tools (code:string list) = let
       val _ = echo 1 ".\n"
       in (n+1,(ys @ [(n,x,y)])) end
   val _ = echo 1 "\nDeriving theorems for individual instructions.\n"
+(*
+  val instruction = el 3 code
+  val ((th,_,_),_) = f instruction
+  val th = renamer th
+  val prefix = "foo@"
+*)
   val res = snd (foldl get_specs (1,[]) code)
   val res = introduce_guards res
   fun calc_addresses i [] = []
@@ -378,8 +388,8 @@ fun inst_pc_var tools thms = let
   val i = [mk_var("eip",``:word32``) |-> mk_var("p",``:word32``)]
   val (_,_,_,pc) = tools
   val ty = (hd o snd o dest_type o type_of) pc
-  val aa = (hd o tl o snd o dest_type) ty
-  fun f y th = let
+  fun f y th = (!decompiler_set_pc) y th handle HOL_ERR _ => let
+    val aa = (hd o tl o snd o dest_type) ty
     val th = INST i th
     val (_,p,_,_) = dest_spec (concl th)
     val pattern = inst [``:'a``|->aa] ``(p:'a word) + n2w n``
@@ -390,7 +400,7 @@ fun inst_pc_var tools thms = let
     val cc = SIMP_CONV std_ss [word_arith_lemma1,word_arith_lemma3,word_arith_lemma4]
     val th = CONV_RULE ((RATOR_CONV o RAND_CONV) cc) th
     val thi = QCONV cc tm
-    in PURE_REWRITE_RULE [thi,WORD_ADD_0] th end
+    in PURE_REWRITE_RULE [thi,WORD_ADD_0] th end;
   in map (triple_apply f) thms end
 
 fun UNABBREV_CODE_RULE th = let
@@ -1457,10 +1467,11 @@ fun extract_function name th entry exit function_in_out = let
   val th = INST [mk_var("new@p",pc_type) |-> mk_var("set@p",pc_type)] th
   val t = tm2ftree ((cdr o car o concl o RW [WORD_ADD_0]) th)
   (* extract: step function and input, output tuples *)
-  val aa = (hd o tl o snd o dest_type) pc_type
   fun gen_pc n = if n = 0 then mk_var("p",pc_type) else
-    subst [mk_var("n",``:num``) |-> numSyntax.term_of_int n] 
-      (inst [``:'a``|->aa] ``(p:'a word) + n2w n``)
+    (ASSUME (mk_eq(mk_var("_",pc_type),mk_var("p",pc_type))))
+            |> (!decompiler_set_pc) n |> concl |> cdr  
+    handle HOL_ERR _ => subst [mk_var("n",``:num``) |-> numSyntax.term_of_int n] 
+      (inst [``:'a``|->(hd o tl o snd o dest_type) pc_type] ``(p:'a word) + n2w n``)
   val exit_tm = gen_pc (hd exit)
   val entry_tm = (snd o dest_eq o find_term (fn tm => let
                    val (x,y) = dest_eq tm

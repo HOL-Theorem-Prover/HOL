@@ -87,8 +87,19 @@ he strips these tokens from the ends of the region
 
 == Unicode ==
 
+An alternative to the abbreviations described below are built-in Vim digraphs.
+See :help digraph. Briefly, type CTRL-K <char1><char2> to get a special
+character. If you set the 'digraph' option, you can enter them with
+<char1><BS><char2> too. Digraphs have the advantage of being acceptable in
+normal mode for the 'f' (and related) commands.
+
+The codes for common HOL Unicode characters are listed in holabs.vim as
+comments. NOTIN (∉) doesn't seem to be built in to Vim, but you can add a
+mapping with :digraph (+ 8173 (this is done in holabs.vim too).
+
+Abbreviations:
 - The holabs.vim file contains abbreviations from ASCII strings to Unicode strings.
-- Examples: <> to ≠, and UNION to ∪.
+- Examples: <> to ≠, and UNION to ∪. Generally, we use the ASCII name of the HOL constant.
 - When you type the ASCII, you get the Unicode.
 - To turn unicode on, source holabs.vim.
 - You can source holabs.vim automatically by uncommenting the line copied from filetype.vim.

@@ -32,13 +32,8 @@ val ai = computeLib.auto_import_definitions;
 val WL = ``dimindex (:'a)``;
 val HB = ``^WL - 1``;
 
-val _ = ai := false;
-
-val dimword_def  = Define `dimword (:'a) = 2 ** ^WL`
-val INT_MIN_def  = Define `INT_MIN (:'a) = 2 ** ^HB`
-
-val _ = ai := true;
-
+val dimword_def  = zDefine `dimword (:'a) = 2 ** ^WL`
+val INT_MIN_def  = zDefine `INT_MIN (:'a) = 2 ** ^HB`
 val UINT_MAX_def = Define `UINT_MAX (:'a) = dimword(:'a) - 1`;
 val INT_MAX_def  = Define `INT_MAX (:'a) = INT_MIN(:'a) - 1`;
 
@@ -187,11 +182,11 @@ val reduce_nand_def = Define `reduce_nand = word_reduce (\a b. ~(a /\ b))`;
 val reduce_nor_def  = Define `reduce_nor  = word_reduce (\a b. ~(a \/ b))`;
 val reduce_xnor_def = Define `reduce_xnor = word_reduce (=)`;
 
-val _ = ai := false;
-
 (* ------------------------------------------------------------------------- *)
 (*  Bit field operations : definitions                                       *)
 (* ------------------------------------------------------------------------- *)
+
+val _ = ai := false;
 
 val word_lsb_def = Define`
   word_lsb (w:'a word) = w ' 0`;
@@ -242,8 +237,6 @@ val bit_field_insert_def = Define`
 val word_len_def = Define`
   word_len (w:'a word) = dimindex (:'a)`;
 
-val _ = ai := false;
-
 val _ = overload_on ("''",Term`$word_slice`);
 val _ = overload_on ("--",Term`$word_bits`);
 val _ = overload_on ("><",Term`$word_extract`);
@@ -259,6 +252,8 @@ val _ = TeX_notation {hol = "><", TeX = ("\\HOLTokenExtract", 2)}
 (* ------------------------------------------------------------------------- *)
 (*  Word arithmetic: definitions                                             *)
 (* ------------------------------------------------------------------------- *)
+
+val _ = ai := false;
 
 val word_2comp_def = Define`
   word_2comp (w:'a word) =
@@ -316,8 +311,6 @@ val word_mod_def = Define`
 
 val word_L2_def = Define `word_L2 = word_mul word_L word_L`;
 
-val _ = ai := false;
-
 val _ = overload_on ("+", Term`$word_add`);
 val _ = overload_on ("-", Term`$word_sub`);
 val _ = overload_on ("numeric_negate", Term`$word_2comp`);
@@ -333,6 +326,8 @@ val _ = overload_on ("INT_MINw2",Term`word_L2`);
 (* ------------------------------------------------------------------------- *)
 (*  Shifts : definitions                                                     *)
 (* ------------------------------------------------------------------------- *)
+
+val _ = ai := false;
 
 val word_lsl_def = Define`
   word_lsl (w:'a word) n =
@@ -419,8 +414,6 @@ val concat_word_list_def = Define`
   (concat_word_list (h::t) =
      w2w h !! (concat_word_list t << dimindex(:'a)))`;
 
-val _ = ai := false;
-
 val _ = overload_on ("@@",Term`$word_concat`);
 
 val _ = add_infix("@@",700,HOLgrammars.RIGHT);
@@ -428,6 +421,8 @@ val _ = add_infix("@@",700,HOLgrammars.RIGHT);
 (* ------------------------------------------------------------------------- *)
 (*  Orderings : definitions                                                  *)
 (* ------------------------------------------------------------------------- *)
+
+val _ = ai := false;
 
 val nzcv_def = with_flag (computeLib.auto_import_definitions, true) Define `
   nzcv (a:'a word) (b:'a word) =
@@ -1304,6 +1299,10 @@ val BIT_UPDATE = store_thm("BIT_UPDATE",
   `!n x. (n :+ x) = word_modify (\i b. if i = n then x else b)`,
   SIMP_TAC fcp_ss [FUN_EQ_THM,FCP_UPDATE_def,word_modify_def]
     \\ PROVE_TAC []);
+
+val WORD_MODIFY_BIT = Q.store_thm("WORD_MODIFY_BIT",
+  `!f w:'a word i. i < dimindex(:'a) ==> ((word_modify f w) ' i = f i (w ' i))`,
+  SRW_TAC [fcpLib.FCP_ss] [word_modify_def]);
 
 val TWO_EXP_DIMINDEX = prove(
   `2 <= 2 ** ^WL`,

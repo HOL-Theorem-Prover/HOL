@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 loadPath := (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
             !loadPath;
-
+open vars_as_resourceTheory
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
    "rich_listTheory", "generalHelpersTheory", "latticeTheory", "separationLogicTheory",
    "bagSimps", "ConseqConv", "quantHeuristicsLib"];
@@ -15,7 +15,7 @@ open generalHelpersTheory finite_mapTheory pred_setTheory
    listTheory rich_listTheory arithmeticTheory separationLogicTheory
    bagTheory bagSimps containerTheory relationTheory operatorTheory optionTheory;
 open ConseqConv boolSimps quantHeuristicsLib quantHeuristicsArgsLib Sanity
-
+open quantHeuristicsTheory
 
 (*
 quietdec := false;
@@ -10075,6 +10075,52 @@ SIMP_TAC std_ss[]);
 
 
 
+val GUESS_RULES___VAR_RES_FRAME_SPLIT_1 = store_thm ("GUESS_RULES___VAR_RES_FRAME_SPLIT_1",
+``!i c f wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_restP sr.
+(GUESS_EXISTS i (\x. c x) ==>
+GUESS_EXISTS i
+(\x. (VAR_RES_FRAME_SPLIT f sr (wpb,rpb) wpb' sfb_context
+   sfb_split (BAG_INSERT (var_res_bool_proposition f (c x)) sfb_imp) sfb_restP)))``,
+
+SIMP_TAC std_ss [GUESS_REWRITES, VAR_RES_FRAME_SPLIT_EXPAND,
+   BAG_UNION_INSERT, var_res_prop___COND_INSERT,
+   var_res_prop___PROP_INSERT, var_res_prop___COND_UNION,
+   VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition,
+   RIGHT_EXISTS_IMP_THM] THEN
+SIMP_TAC std_ss [var_res_bool_proposition_REWRITE, IN_ABS] THEN
+METIS_TAC[]);
+
+
+val GUESS_RULES___VAR_RES_FRAME_SPLIT_2 = store_thm ("GUESS_RULES___VAR_RES_FRAME_SPLIT_2",
+``!i c f wpb rpb wpb' sfb_context sfb_split sfb_imp sfb_restP sr.
+GUESS_EXISTS_STRONG i (\x. c x) ==>
+(!x. FINITE_BAG (sfb_imp x)) ==>
+(!x sf. BAG_IN sf (sfb_imp x) ==>
+        VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) sf) ==>
+(GUESS_EXISTS i
+(\x. (VAR_RES_FRAME_SPLIT f sr (wpb,rpb) wpb' sfb_context
+   sfb_split (BAG_INSERT (var_res_bool_proposition f (c x)) (sfb_imp x)) sfb_restP)))``,
+
+SIMP_TAC std_ss [GUESS_REWRITES, VAR_RES_FRAME_SPLIT_EXPAND,
+   BAG_UNION_INSERT, var_res_prop___COND_INSERT,
+   var_res_prop___PROP_INSERT, var_res_prop___COND_UNION,
+   VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition,
+   RIGHT_EXISTS_IMP_THM] THEN
+SIMP_TAC std_ss [var_res_bool_proposition_REWRITE, IN_ABS] THEN
+REPEAT STRIP_TAC THEN
+Tactical.REVERSE (Cases_on `var_res_prop___COND f (wpb,rpb) sfb_split`) THEN1 (
+   FULL_SIMP_TAC std_ss [] THEN METIS_TAC[]
+) THEN
+FULL_SIMP_TAC std_ss [] THEN
+`!x. var_res_prop___COND f (wpb,rpb) (sfb_imp x)` by ALL_TAC THEN1 (
+   FULL_SIMP_TAC std_ss [var_res_prop___COND___REWRITE] THEN
+   METIS_TAC[]
+) THEN
+FULL_SIMP_TAC std_ss [] THEN
+METIS_TAC[]);
+
+
+
 (*******************************************************
  * Implies unequal
  ******************************************************)
@@ -11776,7 +11822,8 @@ SIMP_TAC list_ss [var_res_prog_eval_expressions_def,
 val VAR_RES_COND_INFERENCE___eval_expressions___ONE =
 store_thm ("VAR_RES_COND_INFERENCE___eval_expressions___ONE",
 ``!f wpb rpb sfb e L c prog progL Q.
-BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb  ==>
+((e = var_res_exp_const c) \/ 
+ BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb)  ==>
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
    (asl_prog_block ((var_res_prog_eval_expressions prog (e::L))::progL)) Q =
@@ -11787,12 +11834,13 @@ SIMP_TAC std_ss [VAR_RES_COND_INFERENCE___prog_block] THEN
 SIMP_TAC std_ss [VAR_RES_COND_HOARE_TRIPLE_def, VAR_RES_HOARE_TRIPLE_def,
    var_res_prop___REWRITE, var_res_prog_eval_expressions_def] THEN
 SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [] THEN
+REPEAT GEN_TAC THEN DISCH_TAC THEN
 REPEAT STRIP_TAC THEN
 CONSEQ_CONV_TAC (K FORALL_EQ___CONSEQ_CONV) THEN
 GEN_TAC THEN
 HO_MATCH_MP_TAC ASL_INFERENCE___choose_constants___ONE THEN
 ASM_SIMP_TAC std_ss [IN_ABS, IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR] THEN
-
+FULL_SIMP_TAC std_ss [var_res_exp_const_EVAL] THEN
 `?sfb'. sfb =  BAG_INSERT (var_res_prop_equal f e (var_res_exp_const c)) sfb'` by
   PROVE_TAC[BAG_DECOMPOSE] THEN
 FULL_SIMP_TAC std_ss [BAG_IN_BAG_INSERT, IN_ABS,
@@ -11823,7 +11871,7 @@ val VAR_RES_COND_INFERENCE___eval_expressions___LIST =
 store_thm ("VAR_RES_COND_INFERENCE___eval_expressions___LIST",
 ``!f wpb rpb sfb eL cL prog progL Q L.
 (LENGTH cL = LENGTH eL) /\
-EVERY (\ (e,c). BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb) (ZIP (eL,cL))  ==>
+EVERY (\ (e,c). (e = var_res_exp_const c) \/ BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb) (ZIP (eL,cL))  ==>
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
    (asl_prog_block ((var_res_prog_eval_expressions prog (eL++L))::progL)) Q =
@@ -11855,7 +11903,9 @@ val VAR_RES_COND_INFERENCE___eval_expressions =
 store_thm ("VAR_RES_COND_INFERENCE___eval_expressions",
 ``!f wpb rpb sfb eL cL prog progL Q.
 (LENGTH cL = LENGTH eL) /\
-EVERY (\ (e,c). BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb) (ZIP (eL,cL))  ==>
+EVERY (\ (e,c). (e = var_res_exp_const c) \/
+                BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb \/
+                BAG_IN (var_res_prop_equal f (var_res_exp_const c) e) sfb) (ZIP (eL,cL))  ==>
 
 (VAR_RES_COND_HOARE_TRIPLE f (var_res_prop f (wpb,rpb) sfb)
    (asl_prog_block ((var_res_prog_eval_expressions prog eL)::progL)) Q =
@@ -11865,7 +11915,8 @@ EVERY (\ (e,c). BAG_IN (var_res_prop_equal f e (var_res_exp_const c)) sfb) (ZIP 
 
 REPEAT STRIP_TAC THEN
 MP_TAC (Q.SPECL [`f`, `wpb`, `rpb`, `sfb`, `eL`, `cL`, `prog`, `progL`, `Q`, `[]`] VAR_RES_COND_INFERENCE___eval_expressions___LIST) THEN
-ASM_SIMP_TAC list_ss [VAR_RES_COND_INFERENCE___eval_expressions___NIL]);
+FULL_SIMP_TAC (list_ss++CONJ_ss) [VAR_RES_COND_INFERENCE___eval_expressions___NIL,
+   var_res_prop_equal_symmetric]);
 
 
 

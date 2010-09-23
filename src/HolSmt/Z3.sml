@@ -1,4 +1,4 @@
-(* Copyright (c) 2009 Tjark Weber. All rights reserved. *)
+(* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Functions to invoke the Z3 SMT solver *)
 
@@ -45,6 +45,7 @@ structure Z3 = struct
     "z3 -smt"
     (Lib.K is_sat_Unix)
 
+(*
   (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
   val Z3_SMT_Prover = SolverSpec.make_solver
     (Lib.S (Lib.apfst o Lib.pair) SmtLib.goal_to_SmtLib)
@@ -58,7 +59,7 @@ structure Z3 = struct
             SolverSpec.UNSAT NONE =>
             let
               val thm = Z3_ProofReplay.check_proof
-                (Z3_ProofParse.parse_proof_file outfile)
+                (Z3_ProofParser.parse_proof_file outfile)
               (* specialize the theorem derived by Z3 to the types and terms
                  that were used in the input goal *)
               val ty_subst =
@@ -99,5 +100,6 @@ structure Z3 = struct
             end
           | _ => result
         end)
+*)
 
 end

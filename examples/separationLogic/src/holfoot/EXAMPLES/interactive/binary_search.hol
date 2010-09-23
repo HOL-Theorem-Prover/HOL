@@ -103,7 +103,8 @@ Q.PAT_ASSUM `!n. X n` (MP_TAC o Q.SPEC `SUC n`) THEN
 SIMP_TAC list_ss []);
 
 
-      
+
+    
 
 (******************************************************************************)
 (* Just the shape works automatically                                         *)
@@ -150,7 +151,6 @@ REPEAT STRIP_TAC THENL [
    MP_TAC (Q.SPECL [`data'`, `m_const`, `i`] SORTED_EL_LESS_EQ) THEN
    ASM_SIMP_TAC arith_ss [],
 
-
    HF_VC_TAC THEN
    DEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
    SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
@@ -159,7 +159,6 @@ REPEAT STRIP_TAC THENL [
    REPEAT STRIP_TAC THEN
    MP_TAC (Q.SPECL [`data'`, `i`, `m_const`] SORTED_EL_LESS_EQ) THEN
    ASM_SIMP_TAC arith_ss [],
-
 
    HF_VC_TAC THEN
    Q.EXISTS_TAC `m_const` THEN

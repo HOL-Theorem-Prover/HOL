@@ -1,0 +1,31 @@
+\DOC print_backend_term_without_overloads_on
+
+\TYPE {Parse.print_backend_term_without_overloads_on : string list -> term -> unit}
+
+\SYNOPSIS
+Prints a term to the screen (standard out), using current backend information,
+without using overload mappings of certain tokens.
+
+\KEYWORDS
+Pretty-printing
+
+\LIBRARY
+Parse
+
+\DESCRIBE
+The call {print_backend_term_without_overloads_on ls t} prints {t} to the
+screen, as appropriate for the current backend, without using any overloads on
+tokens in {ls}.
+
+If the current backend is a color-capable terminal, for example, the printed
+string will contain escape codes for coloring free and bound variables, which
+should then be interpreted by the terminal as colors.
+
+\FAILURE
+Should never fail.
+
+\SEEALSO
+Parse.print_term_without_overloads_on,
+Parse.print_backend_term_without_overloads, Parse.term_without_overloads_on_to_backend_string,
+Parse.clear_overloads_on, Parse.print_backend_term.
+\ENDDOC

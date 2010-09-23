@@ -494,12 +494,9 @@ fun perm_reducer_add_context2 (ctx, thmL) =
    perm_reducer_context (perm_reducer_add_context 
                         (perm_reducer_get_context ctx) thmL);
 
-(* the old, simple method to add context 
-
 fun perm_reducer_add_context_simple (ctx, thmL) =
    perm_reducer_context (append (clean_perm_thmL thmL)
                                 (perm_reducer_get_context ctx)); 
-*)
 
 val PERM_REDUCER =
   Traverse.REDUCER {name = SOME "PERM_REDUCER",
@@ -508,11 +505,24 @@ val PERM_REDUCER =
            apply = fn args => QCHANGED_CONV (PERM_SIMP_CONV (perm_reducer_get_context (#context args)))
               };
 
+val PERM_REDUCER_SIMPLE =
+  Traverse.REDUCER {name = SOME "PERM_REDUCER_SIMPLE",
+           initial = perm_reducer_context [],
+           addcontext = perm_reducer_add_context_simple,
+           apply = fn args => QCHANGED_CONV (PERM_SIMP_CONV (perm_reducer_get_context (#context args)))
+              };
+
 in
 
 val PERM_ss = simpLib.SSFRAG
     {name=SOME"PERM_ss",
      convs = [], rewrs = [], filter = NONE, dprocs = [PERM_REDUCER], congs = [],
+     ac = []
+     }
+
+val PERM_SIMPLE_ss = simpLib.SSFRAG
+    {name=SOME"PERM_SIMPLE_ss",
+     convs = [], rewrs = [], filter = NONE, dprocs = [PERM_REDUCER_SIMPLE], congs = [],
      ac = []
      }
 

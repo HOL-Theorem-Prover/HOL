@@ -41,6 +41,7 @@ open simpLib
 open permLib;
 open HolSmtLib;
 open listLib
+open holfootParserGenpreds;
 
 (*
 open vars_as_resourceBaseFunctor
@@ -106,6 +107,10 @@ fun is_no_proper_diseq thm =
    end handle HOL_ERR _ => true;
 
 
+val holfoot_prover_extras_1 = ref ([]:thm list);
+val holfoot_prover_extras_2 = ref ([]:thm list);
+val holfoot_varlist_rwts = ref ([]:thm list);
+
 structure holfoot_base_param = 
 struct
    val exp_to_string = holfoot_term_to_string;
@@ -118,10 +123,11 @@ struct
         IS_SEPARATION_COMBINATOR___FINITE_MAP, IS_SEPARATION_COMBINATOR___holfoot_separation_combinator,
         REWRITE_RULE [holfoot_separation_combinator_def] IS_SEPARATION_COMBINATOR___holfoot_separation_combinator];
 
-   val varlist_rwts = [holfoot___varlist_update_NO_VAR_THM];
+   fun varlist_rwts () = holfoot___varlist_update_NO_VAR_THM :: (!holfoot_varlist_rwts);
 
-   val prover_extra = ([holfoot_tag_11, holfoot_var_11],
-                    [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___HOLFOOT_REWRITES]);
+   fun prover_extra () = ([holfoot_tag_11, holfoot_var_11] @ (!holfoot_prover_extras_1),
+                    [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___HOLFOOT_REWRITES] @
+                    (!holfoot_prover_extras_2));
 end
 
 (*
@@ -1808,7 +1814,7 @@ let
    (*apply inference*)
    val (fvs, thm1_base) = strip_forall (rhs (concl thm0));
    val thm1a = PART_MATCH (lhs o snd o dest_imp o snd o dest_imp)
-      VAR_RES_FRAME_SPLIT___points_to___data_list_seg
+      VAR_RES_FRAME_SPLIT___points_to___data_list_seg 
       thm1_base;
 
    val precond = (fst o dest_imp o concl) thm1a;
@@ -2592,7 +2598,11 @@ struct
 
    val comments_step_convL = [];
 
-   val quantifier_heuristicsL  = [rewrite_qp[tree_11,IS_LEAF_REWRITE,IS_NODE_REWRITE]]
+   val holfoot_ty = Type `:holfoot_var`
+   fun is_holfoot_var v = (type_of v = holfoot_ty)
+
+   val quantifier_heuristicsL  = [rewrite_qp[tree_11,IS_LEAF_REWRITE,IS_NODE_REWRITE],
+                                  filter_qp [fn v => K (not (is_holfoot_var v))]];
 
    val var_res_prop_implies___GENERATE = [
        holfoot___var_res_prop_implies___GENERATE];
@@ -2678,7 +2688,6 @@ struct
        ("holfoot_data_array___points_to_TO_array",
         context_strengthen_conseq_conv
         VAR_RES_FRAME_SPLIT_INFERENCE___data_array___points_to_elim___CONV)]
-
 
    structure var_res_base = holfoot_base;
 end
@@ -2950,6 +2959,7 @@ fun holfoot_auto_verify_spec file =
 (*
 val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot/EXAMPLES"]
 (* 27.5 s *) val file = concat [examplesDir, "/automatic/append.dsf"];
+(* 27.5 s *) val file = concat [examplesDir, "/automatic/copy.dsf"];
 (* 27.5 s *) val file = concat [examplesDir, "/interactive/array.dsf"];
 
 
@@ -2958,7 +2968,7 @@ holfoot_verify_spec file []
 
 holfoot_set_goal_procedures file ["array_dispose_complicated"] 
 
-
+gl_ref := []
 holfoot_set_goal_procedures file ["array_frame_3"] 
 
 holfoot_set_goal_procedures file ["array_frame_5"] 
@@ -3005,6 +3015,7 @@ SOLVE_TAC ([arithmeticTheory.MIN_DEF],[],[])
 open holfootTheory
 ASM_SIMP_TAC list_ss [holfoot_ap_data_tree___null]
 *)
+
 
 
 end;

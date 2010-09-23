@@ -89,7 +89,8 @@ sig
 
 
   (* A SSFRAG to use these PERM tools with the simplifier *)
-  val PERM_ss : simpLib.ssfrag
+  val PERM_ss        : simpLib.ssfrag
+  val PERM_SIMPLE_ss : simpLib.ssfrag
 
   (* brings the permutation assumptions in normal form *)
   val NORMALISE_ASM_PERM_TAC : tactic

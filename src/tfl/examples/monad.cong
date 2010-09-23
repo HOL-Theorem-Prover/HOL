@@ -1,0 +1,121 @@
+(*---------------------------------------------------------------------------*)
+(* Monadic definitions based on bind and unit operators are higher order     *)
+(* and need congruence rules added for them in order to have correct         *)
+(* termination conditions extracted. The syntax of the desired definition    *)
+(* may need some tweaking in order for our extraction machinery to work      *)
+(* properly. See below. Example, from Ramana Kumar, is to define             *)
+(*                                                                           *)
+(*    foo M =                                                                *)
+(*        STATE_OPTION_BIND (STATE_OPTION_UNIT F)                            *)
+(*         (\b. STATE_OPTION_IGNORE_BIND                                     *)
+(*                (if b then foo M else STATE_OPTION_UNIT ())                *)
+(*                (STATE_OPTION_UNIT ()))                                    *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+set_trace "Unicode" 0;
+set_trace "pp_annotations" 0;
+
+open pairTheory optionTheory relationTheory;
+
+(*---------------------------------------------------------------------------*)
+(* Monad stuff                                                               *)
+(*---------------------------------------------------------------------------*)
+
+val STATE_OPTION_UNIT_def = 
+ Define
+   `STATE_OPTION_UNIT = \a s. SOME(a,s)`;
+
+val STATE_OPTION_BIND_def = 
+ Define
+  `STATE_OPTION_BIND = \m f s. OPTION_BIND (m s) (UNCURRY f)`;
+
+val STATE_OPTION_IGNORE_BIND_def = 
+ Define
+  `STATE_OPTION_IGNORE_BIND = \m1 m2 s. OPTION_BIND (m1 s) (m2 o SND)`;
+
+(*---------------------------------------------------------------------------*)
+(* Expanded out version of example                                           *)
+(*---------------------------------------------------------------------------*)
+
+Hol_defn "foo"
+  `foo M s = 
+     case STATE_OPTION_UNIT F s
+      of NONE -> NONE
+      || SOME (b,s) -> (case ((if b then foo M else STATE_OPTION_UNIT ()) s)
+                         of NONE -> NONE
+                         || SOME(p1,p2) -> STATE_OPTION_UNIT () p2)`;
+
+(*---------------------------------------------------------------------------*)
+(* Add a congruence rule for STATE_OPTION_BIND                               *)
+(*---------------------------------------------------------------------------*)
+
+DefnBase.add_cong 
+ (Q.prove
+   (`!m s m' s' f f'.
+       (m = m') /\ (s=s') /\ 
+       (!x y. (m' s' = SOME(x,y)) ==> (f x y = f' x y))
+        ==> (STATE_OPTION_BIND m f s = STATE_OPTION_BIND m' f' s')`,
+    RW_TAC std_ss [STATE_OPTION_BIND_def] THEN
+      Cases_on `m s` THEN 
+      RW_TAC std_ss [UNCURRY,OPTION_BIND_def]));
+
+(*---------------------------------------------------------------------------*)
+(* Original definition (with a few eta-redexes added in). It's nonsensical;  *)
+(* the only point is to get correct termination conditions extracted. Note   *)
+(* that, for this example, a congruence for STATE_OPTION_IGNORE_BIND isn't   *)
+(* needed.                                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val foo_def = tDefine
+ "foo"
+ `foo M = \s. STATE_OPTION_BIND 
+                (STATE_OPTION_UNIT F)
+                 (\b s. STATE_OPTION_IGNORE_BIND
+                        (if b then foo M else (STATE_OPTION_UNIT ()))
+                        (STATE_OPTION_UNIT())
+                        s)
+                s`
+ (RW_TAC std_ss [STATE_OPTION_UNIT_def] THEN 
+  METIS_TAC [relationTheory.WF_EMPTY_REL]);
+
+(*---------------------------------------------------------------------------*)
+(* Elimination of eta-redexes to obtain                                      *)
+(*                                                                           *)
+(*   val desired_foo_def =                                                   *)
+(*     |- foo M =                                                            *)
+(*        STATE_OPTION_BIND (STATE_OPTION_UNIT F)                            *)
+(*         (\b. STATE_OPTION_IGNORE_BIND                                     *)
+(*                (if b then foo M else STATE_OPTION_UNIT ())                *)
+(*                (STATE_OPTION_UNIT ())) : thm                              *)
+(*---------------------------------------------------------------------------*)
+
+val desired_foo_def = CONV_RULE (DEPTH_CONV ETA_CONV) foo_def;
+
+
+(*---------------------------------------------------------------------------*)
+(* Add a congruence rule for STATE_OPTION_IGNORE_BIND, to check that it      *)
+(* doesn't wreck things.                                                     *)
+(*---------------------------------------------------------------------------*)
+
+DefnBase.add_cong 
+ (Q.prove
+   (`!m1 m2 s m1' m2' s'.
+       (m1 = m1') /\ (s=s') /\ 
+       (!t. (OPTION_MAP SND (m1' s') = SOME t) ==> (m2 t = m2' t))
+        ==> (STATE_OPTION_IGNORE_BIND m1 m2 s = STATE_OPTION_IGNORE_BIND m1' m2' s')`,
+    RW_TAC std_ss [STATE_OPTION_IGNORE_BIND_def] THEN
+      Cases_on `m1 s` THEN 
+      RW_TAC std_ss [UNCURRY,OPTION_BIND_def]));
+
+val foo_def = tDefine
+ "foo"
+ `foo M = \s. STATE_OPTION_BIND 
+                (STATE_OPTION_UNIT F)
+                 (\b s. STATE_OPTION_IGNORE_BIND
+                        (if b then foo M else (STATE_OPTION_UNIT ()))
+                        (STATE_OPTION_UNIT())
+                        s)
+                s`
+ (RW_TAC std_ss [STATE_OPTION_UNIT_def] THEN 
+  METIS_TAC [relationTheory.WF_EMPTY_REL]);

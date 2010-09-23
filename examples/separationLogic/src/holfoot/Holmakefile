@@ -27,7 +27,7 @@ holfoot.lex.uo: holfoot.lex.sml Parsetree.uo
 AssembleHolfootParser.uo: AssembleHolfootParser.sml AssembleHolfootParser.ui holfoot.grm.uo holfoot.lex.uo Parsetree.uo
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holfoot.grm.ui holfoot.lex.ui $<
 
-holfootLib.uo: holfootLib.sml holfootParser.ui holfootParser.uo holfoot_pp_print.uo holfootTheory.uo
+holfootLib.uo: holfootLib.sml holfootParser.ui holfootParser.uo holfootParserGenpreds.ui holfootParserGenpreds.uo holfoot_pp_print.uo holfootTheory.uo
 	$(HOLMOSMLC) -c ListConv1.uo treeTheory.uo HolSmtLib.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo listLib.uo bagLib.uo permLib.uo ../vars_as_resourceBaseFunctor.ui ../vars_as_resourceFunctor.ui vars_as_resourceFunctor.uo vars_as_resourceBaseFunctor.uo Overlay.ui holfootLib.sml 
 
 header.uo: header.sml

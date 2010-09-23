@@ -6,9 +6,11 @@ ARM Machine Code Semantics:
  - arm_seq_monadScript.sml : state-transformer monad - specifies access to
                              registers and main memory
  - arm_opsemScript.sml     : operational semantics for instructions
- - armScript.sml           : running programs (next state function)
+ - armScript.sml           : running programs (top-level next state function)
  - arm_stepScript.sml      : definitions and lemmas for "step" theorems
- - arm_emitScript.sml      : use EmitML to produce SML version
+ - eval/arm_emitScript.sml : use EmitML to produce SML version
+ - eval/arm_evalScript.sml : version with Patricia tree memory
+                             (suited to evaluation)
 
  - arm_parserLib           : parse ARM assembly code (output to AST)
  - arm_encoderLib          : encode AST as machine code

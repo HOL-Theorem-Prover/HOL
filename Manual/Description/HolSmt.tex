@@ -137,12 +137,13 @@ delete temporary files automatically, \eg, when \HOL{} exits).
 
 \subsection{Installing SMT solvers}
 
-\ml{HolSmtLib} has been tested with CVC3~1.5, Yices~1.0.26 and Z3~2.4.
-Later versions of these SMT solvers might work as well.  To use
-\ml{HolSmtLib}, you need to install at least one of these SMT solvers
-on your machine.  As mentioned before, Yices supports a much larger
-fragment of higher-order logic than the other solvers, but proof
-reconstruction has been implemented only for Z3.
+\ml{HolSmtLib} has been tested with CVC3~1.5, Yices~1.0.28 and
+Z3~2.11.  Later versions of these SMT solvers might work as well;
+however, Yices~2 is not supported.  To use \ml{HolSmtLib}, you need to
+install at least one of these SMT solvers on your machine.  As
+mentioned before, Yices supports a much larger fragment of
+higher-order logic than the other solvers, but proof reconstruction
+has been implemented only for Z3.
 
 Yices is available for various platforms from
 \url{http://yices.csl.sri.com/}.  After installation, you must make
@@ -194,7 +195,7 @@ yet.
 Proof reconstruction has been implemented only for Z3.  Several other
 SMT solvers can produce proofs, and it would be nice to offer \HOL{}
 users more choice.  However, in the absence of a standard proof format
-for SMT solvers, it is maybe not worth the implementation effort.
+for SMT solvers, it is perhaps not worth the implementation effort.
 
 \paragraph{Support for SMT-LIB version~2.0}
 

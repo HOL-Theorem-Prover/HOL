@@ -408,6 +408,15 @@ val OPTION_BIND_EQUALS_OPTION = Q.store_thm(
   OPTION_CASES_TAC ``p:'a option`` THEN SRW_TAC [][]);
 val _ = export_rewrites ["OPTION_BIND_EQUALS_OPTION"]
 
+val OPTION_IGNORE_BIND_def = new_definition(
+  "OPTION_IGNORE_BIND_def",
+  ``OPTION_IGNORE_BIND m1 m2 = OPTION_BIND m1 (K m2)``);
+
+val OPTION_GUARD_def = new_definition(
+  "OPTION_GUARD_def",
+  ``OPTION_GUARD b = if b then SOME () else NONE``);
+(* suggest overloading this to assert when used with other monad syntax. *)
+
 
 (* ----------------------------------------------------------------------
     OPTREL - lift a relation on 'a, 'b to 'a option, 'b option

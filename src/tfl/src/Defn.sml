@@ -478,8 +478,8 @@ fun solver (restrf,f,G,nref) _ context tm =
       val rcontext = rev context
       val antl = case rcontext of [] => []
                                | _   => [list_mk_conj(map concl rcontext)]
-      val (R,arg,pat) = wfrecUtils.dest_relation tm
       val TC = genl(list_mk_imp(antl, tm))
+      val (R,arg,pat) = wfrecUtils.dest_relation tm
   in
      if can(find_term (aconv restrf)) arg
      then (nref := true; raise ERR "solver" "nested function")
@@ -487,7 +487,7 @@ fun solver (restrf,f,G,nref) _ context tm =
                       then nref := true else ()
           in case rcontext
               of [] => SPEC_ALL(ASSUME TC)
-               | _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
+               | _  => MATCH_MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
           end
   end
 end;
@@ -650,7 +650,7 @@ fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      val def' = MP inst'd (SPEC_ALL def)
      val var_wits = LIST_CONJ (map ASSUME full_rqt)
      val TC_choice_thm =
-           MP (BETA_RULE(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
+           MP (CONV_RULE(BINOP_CONV BETA_CONV)(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
  in
     {theory = theory, R=R1, SV=SV,
      rules = CONJUNCTS
@@ -708,7 +708,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
                (mk_eq(fvar_app, list_mk_comb(faux_const,R2::SV)))
      val var_wits = LIST_CONJ (map ASSUME full_rqt)
      val TC_choice_thm =
-         MP (BETA_RULE(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
+         MP (CONV_RULE(BINOP_CONV BETA_CONV)(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
      val elim_chosenTCs =
            rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) R2inst'd
      val rules = simplify [GSYM def1] elim_chosenTCs

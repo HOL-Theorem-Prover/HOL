@@ -199,6 +199,36 @@ Cases_on `l` THEN
 ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF]);
 
 
+val REPLACE_ELEMENT_APPEND1 = store_thm ("REPLACE_ELEMENT_APPEND1",
+``!n l1 l2. n < LENGTH l1 ==> (
+     REPLACE_ELEMENT e n (l1 ++ l2) =
+     (REPLACE_ELEMENT e n l1) ++ l2)``,
+
+SIMP_TAC list_ss [LIST_EQ_REWRITE, EL_REPLACE_ELEMENT,
+   LENGTH_REPLACE_ELEMENT] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `x < LENGTH l1` THEN (
+   ASM_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2, LENGTH_REPLACE_ELEMENT,
+     EL_REPLACE_ELEMENT]
+));
+
+
+val REPLACE_ELEMENT_APPEND2 = store_thm ("REPLACE_ELEMENT_APPEND2",
+``!n l1 l2. LENGTH l1 <= n ==> (
+     REPLACE_ELEMENT e n (l1 ++ l2) =
+     l1 ++ (REPLACE_ELEMENT e (n - LENGTH l1) l2))``,
+
+SIMP_TAC list_ss [LIST_EQ_REWRITE, EL_REPLACE_ELEMENT,
+   LENGTH_REPLACE_ELEMENT] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `x < LENGTH l1` THEN (
+   ASM_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2, LENGTH_REPLACE_ELEMENT,
+     EL_REPLACE_ELEMENT]
+) THEN
+`(x - LENGTH l1 = n - LENGTH l1) = (x = n)` by DECIDE_TAC THEN
+PROVE_TAC[]);
+
+
 val LENGTH_FIRSTN_MIN = store_thm ("LENGTH_FIRSTN_MIN",
 ``!n l. LENGTH (FIRSTN n l) = MIN n (LENGTH l)``,
 Induct_on `l` THEN
@@ -254,6 +284,12 @@ val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
    ASM_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2] THEN
    METIS_TAC[]
 );
+
+
+val BUTFIRSTN_LENGTH_LESS = store_thm ("BUTFIRSTN_LENGTH_LESS",
+``!l n. (LENGTH l <= n) ==> (BUTFIRSTN n l = [])``,
+Induct_on `n` THEN Induct_on `l` THEN 
+ASM_SIMP_TAC list_ss []);
 
 
 val EVERY_PAIR_def = Define `

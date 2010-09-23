@@ -375,30 +375,56 @@
 (defun print-book-essence (book-name infile outfile cert-optional-p ctx state)
   (state-global-let*
    ((ld-skip-proofsp 'include-book set-ld-skip-proofsp-state))
-   (er-let* ((portcullis-cmds
-              (if (eq cert-optional-p :skip)
-                  (value nil)
-                (read-portcullis-cmds book-name cert-optional-p ctx state)))
-             (forms (read-object-file infile ctx state))
-             (events1 (essential-events portcullis-cmds nil ctx
-                                        state))
-             (events2 (essential-events forms nil ctx state)))
-            (mv-let (chan state)
-                    (open-output-channel outfile :object state)
-                    (cond ((null chan)
-                           (er soft ctx
-                               "Unable to open file ~x0 for output."
-                               outfile))
-                          (t (pprogn
-                              (print-objects-pretty events1 chan state)
-                              (cond (events1 (newline chan state))
-                                    (t state))
-                              (princ$ "; NOTE: Forms below are not evaluated when translating to ML."
-                                      chan state)
-                              (newline chan state)
-                              (print-objects-pretty events2 chan state)
-                              (close-output-channel chan state)
-                              (value :invisible))))))))
+   (er-let*
+       ((portcullis-cmds
+         (if (eq cert-optional-p :skip)
+             (value nil)
+           (read-portcullis-cmds book-name cert-optional-p ctx state)))
+        (forms (read-object-file infile ctx state))
+        (events1 (essential-events portcullis-cmds nil ctx
+                                   state))
+        (events2 (essential-events forms nil ctx state)))
+     (mv-let (chan state)
+             (open-output-channel outfile :object state)
+             (cond ((null chan)
+                    (er soft ctx
+                        "Unable to open file ~x0 for output."
+                        outfile))
+                   (t (pprogn
+                       (print-objects-pretty events1 chan state)
+                       (cond (events1
+                              (pprogn
+                               (newline chan state)
+                               (princ$ "; NOTE: Only the forms above are evaluated (as opposed the ones below,"
+                                       chan state)
+                               (newline chan state)
+                               (princ$ "; which merely are read) when translating to ML."
+                                       chan state)))
+                             (t state))
+                       (assert$
+                        (and (consp (car events2))
+                             (eq (caar events2) 'in-package))
+                        (cond
+                         ((equal (cadar events2) "ACL2") state)
+                         (t
+                          (pprogn
+                           (assert$
+                            events1 ; else we could not have a new package here
+                            (princ$ "  On a related note:"
+                                    chan state))
+                           (newline chan state)
+                           (princ$ "; the following IN-PACKAGE form is for use by a2ml, but all forms in"
+                                   chan state)
+                           (newline chan state)
+                           (princ$ "; this file assume that the current package is actually \"ACL2\"."
+                                   chan state)))))
+                       (cond (events1
+                              (pprogn (newline chan state)
+                                      (newline chan state)))
+                             (t state))
+                       (print-objects-pretty events2 chan state)
+                       (close-output-channel chan state)
+                       (value :invisible))))))))
 
 (defmacro book-essence (infile &optional outfile cert-optional-p infile-keywords)
   (declare (ignore infile-keywords)) ; add later for parameters, like ttags

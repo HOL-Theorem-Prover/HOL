@@ -40,6 +40,9 @@ TApp   ::= Leaf | Tuple Leaf
 
   type special_info   = {lambda : string list,
                          forall : string list}
+
+  val structure_to_type : type_structure -> Type.hol_type
+
   val empty_grammar    : grammar
   val min_grammar      : grammar
   val rules            : grammar -> (int * grammar_rule) list

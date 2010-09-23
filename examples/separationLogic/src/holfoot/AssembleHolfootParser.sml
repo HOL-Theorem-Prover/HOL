@@ -59,5 +59,4 @@ struct
     raw_read_stream strm before TextIO.closeIn strm
   end
 
-
 end;

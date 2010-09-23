@@ -1,0 +1,32 @@
+\DOC term_without_overloads_on_to_string
+
+\TYPE {Parse.term_without_overloads_on_to_string : string list -> term -> string}
+
+\SYNOPSIS
+Returns a string representing a term, without using overload mappings of
+certain tokens.
+
+\KEYWORDS
+Pretty-printing
+
+\LIBRARY
+Parse
+
+\DESCRIBE
+The call {term_without_overloads_on_to_string ls t} returns a string
+representation of {t} without using any overloads on tokens in {ls}.
+
+\EXAMPLE
+{
+ > term_without_overloads_on_to_string ["+"] ``x + y``;
+ val it = "arithmetic$+ x y": string
+}
+
+\FAILURE
+Should never fail.
+
+\SEEALSO
+Parse.term_without_overloads_on_to_backend_string,
+Parse.term_without_overloads_to_string, Parse.pp_term_without_overloads_on,
+Parse.clear_overloads_on, Parse.term_to_string.
+\ENDDOC

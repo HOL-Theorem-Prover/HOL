@@ -21,6 +21,7 @@ sig
     structure var_res_base : sig
        include Abbrev;
 
+       val update_var_res_param       : unit -> unit;
        val var_res_prove              : Abbrev.term -> Abbrev.thm
        val var_res_prove___no_expn    : Abbrev.term -> Abbrev.thm
        val var_res_assumptions_prove  : Abbrev.thm -> Abbrev.thm
@@ -2018,6 +2019,7 @@ let
    end handle HOL_ERR _ => NONE;
 
    fun get_const_for_exp e =
+       if is_var_res_exp_const e then dest_var_res_exp_const e else
        let
           val found_opt = first_opt (var_res_exp___is_equals_const e) sfs;
           val _ = if isSome found_opt then () else raise UNCHANGED;
@@ -2317,7 +2319,8 @@ let
        let
           val vc1 = if isSome vc1_opt then (valOf vc1_opt) else (genvar (Type `:unit`));
           val vc2 = if isSome vc2_opt then (valOf vc2_opt) else (genvar (Type `:unit`));
-          val (vc2',_) = term_variant (free_vars vc1) (free_vars vc2) vc2
+          val (_,sub) = quantHeuristicsTools.list_variant (free_vars vc1) (free_vars vc2) 
+          val vc2' = subst sub vc2;
        in
           SOME (pairSyntax.mk_pair(vc1, vc2'))
        end
@@ -2999,11 +3002,25 @@ in
 fun VAR_RES_FRAME_SPLIT_INFERENCE___SOLVE___CONSEQ_CONV do_bool preserve_fallback context tt =
 let
    val (f,sr, wpbrpb, wpb', _, _, imp_sfb, _) =  dest_VAR_RES_FRAME_SPLIT tt;
+   val split_term = fst (strip_comb tt);
+   fun split tt =
+       (split o snd o dest_forall) tt handle HOL_ERR _ =>
+       (split o snd o dest_imp_only) tt handle HOL_ERR _ =>
+       tt;
+
+   fun split_thm_inst thm =
+       let 
+          val ttt = (fst o strip_comb o split o concl) thm
+          val thm2 = INST_TYPE (snd (match_term ttt split_term)) thm
+       in
+          thm2
+       end;
+
 
    (*check whether it can be solved*)
    val (solve_thm0,has_bool) = if bagSyntax.is_empty imp_sfb then
-                      (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE else
-                            VAR_RES_FRAME_SPLIT___SOLVE_WEAK, false)
+                      (split_thm_inst (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE else
+                            VAR_RES_FRAME_SPLIT___SOLVE_WEAK), false)
                    else 
                      let
                         val _ = if not (do_bool) then Feedback.fail() else ();
@@ -3013,12 +3030,12 @@ let
                         val b_thm_opt = SOME (var_res_param.final_decision_procedure context b) handle HOL_ERR _ => NONE;                      
                      in
                         if (isSome b_thm_opt) then let
-                           val inf_thm =  SPEC b (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop___MP else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop___MP)
+                           val inf_thm =  SPEC b (split_thm_inst (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop___MP else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop___MP))
                            val xthm0 = MP inf_thm (valOf b_thm_opt)
                         in
                            (xthm0, false)
                         end else                         
-                           (SPEC b (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop), true)
+                           (SPEC b (split_thm_inst (if preserve_fallback then VAR_RES_FRAME_SPLIT___SOLVE___bool_prop else VAR_RES_FRAME_SPLIT___SOLVE_WEAK___bool_prop)), true)
                      end;
 
    val (wpb,rpb) = dest_pair wpbrpb;
@@ -3155,14 +3172,14 @@ val VAR_RES_STRUCTURE_NORMALISE_CONV =
   NO_MARKER___AND_IMP_INTRO ORELSEC
   NO_MARKER___RIGHT_IMP_FORALL_CONV ORELSEC
   (PART_MATCH lhs IMP_CONJ_THM) ORELSEC
-  LIST_EXISTS_SIMP_CONV
+  LIST_EXISTS_SIMP_CONV;
 
 
 (******************************************************************************)
 (* Quantifier instantiations                                                  *)
 (******************************************************************************)
 
-fun QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool (sys:quant_heuristic) fv v tt =
+fun QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool (sys:quant_heuristic) v tt =
 let
    val (_,_,_,_,_,_,sfb_imp,_) = dest_VAR_RES_FRAME_SPLIT tt
 			  handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
@@ -3171,29 +3188,28 @@ let
    val sfs' = filter is_var_res_bool_proposition sfs;
    val sfs'' = map rand sfs';
 
-   val gC = COMBINE_HEURISTIC_FUNS (map (fn t => (fn () => (sys fv v t))) sfs'');
-   val relevant_guesses = #others_not_possible gC;
+   val gC = COMBINE_HEURISTIC_FUNS (map (fn t => (fn () => (sys v t))) sfs'');
+   val relevant_guesses = #exists_strong gC;
 
-
-   fun mk_only_possible g =
+   fun mk_exists g =
      let
-        val (i,fvL,_) = guess_extract g
+        val (i,fvL) = guess_extract g
      in
-        guess_only_possible (i,fvL,NONE)
+        mk_guess gty_exists v tt i fvL
      end;
-   val guesses = map mk_only_possible relevant_guesses
+   val guesses = map mk_exists relevant_guesses
 in
   {rewrites            = #rewrites gC,
    general             = [],
    true                = [],
    false               = [],
-   only_not_possible   = [],
-   only_possible       = guesses,
-   others_satisfied    = [],
-   others_not_possible = []}:guess_collection
+   forall              = [],
+   exists              = guesses,
+   exists_strong       = [],
+   forall_strong       = []}:guess_collection
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
-
+val cache_ref = ref (mk_quant_heuristic_cache ());
 val VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main  =
    EXTENSIBLE_QUANT_INSTANTIATE_STEP_CONSEQ_CONV NONE (K true) false
      ({distinct_thms = [],
@@ -3201,15 +3217,30 @@ val VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main  =
       rewrite_thms =  [asl_comments_ELIM],
       convs =         [],
       heuristics =    [QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool],
+      inference_thms = [],
+      filter              = [],
+      top_heuristics      = [],
       final_rewrite_thms = []
       }::list_qp::(var_res_param.quantifier_heuristicsL));
 
+(*
+val lref = ref []
+
+val tt = el 1 (!lref)
+
+
+val xthm0 = VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main CONSEQ_CONV_STRENGTHEN_direction tt
+
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 3
+traces ()
+   val _ = lref := tt::(!lref);
+*)
 fun VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV ss context tt =
 let
    val thm0 = VAR_RES_QUANT_INSTANTIATE_CONSEQ_CONV___main CONSEQ_CONV_STRENGTHEN_direction tt
-   val c = (if (is_imp (concl thm0)) then (RATOR_CONV o RAND_CONV) else
+(*   val c = (if (is_imp (concl thm0)) then (RATOR_CONV o RAND_CONV) else
               RAND_CONV)
-(*   val thm1 = CONV_RULE (c (VAR_RES_PROP_REWRITE_CONV ss context)) thm0*)
+    val thm1 = CONV_RULE (c (VAR_RES_PROP_REWRITE_CONV ss context)) thm0*)
 in
    thm0
 end;
@@ -3757,9 +3788,9 @@ val cache_opt = SOME (mk_DEPTH_CONSEQ_CONV_CACHE,
 
 val cache_opt = SOME (mk_DEPTH_CONSEQ_CONV_CACHE, K true)
 val cache_opt = CONSEQ_CONV_default_cache_opt
+val cache_opt = NONE
 *)
 
-val cache_opt = NONE
 
 type user_rewrite_param = (Abbrev.thm list * Abbrev.conv list * simpLib.ssfrag list);
 
@@ -4016,7 +4047,6 @@ fun xVAR_RES_GEN_STEP_CONSEQ_CONV optL n m =
 
 
 val _ = Rewrite.add_implicit_rewrites [asl_comments_TF_ELIM];
-
 val VAR_RES_PURE_VC_TAC =
  CONSEQ_CONV_TAC (K (fn t =>
      let

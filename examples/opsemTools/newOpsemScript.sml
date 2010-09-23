@@ -22,6 +22,9 @@ See see newOpsemDoc.txt for some documentation.
 (*===========================================================================*)
 
 (* Stuff needed when running interactively
+set_trace "Unicode" 0;
+set_trace "pp_annotations" 0;
+
 quietdec := true; (* turn off printing *)
 app load ["stringLib", "finite_mapTheory", "intLib",
           "pred_setTheory","whileTheory","optionTheory","unwindLib"];
@@ -31,7 +34,7 @@ open HolKernel Parse boolLib bossLib
      pred_setTheory whileTheory combinTheory optionTheory unwindLib;
 intLib.deprecate_int();
 clear_overloads_on "TC"; (* Stop TC R printing as TC^+ *)
-quietdec := false; (* turn printing back on *)3
+quietdec := false; (* turn printing back on *)
 *)
 
 open HolKernel Parse boolLib bossLib
@@ -281,11 +284,10 @@ val _ = set_fixity ";;" (Infixr 180);
 (* inductively by the set of rules shown below.                              *)
 (*---------------------------------------------------------------------------*)
 
-val (rules,induction,ecases) = Hol_reln
-   `(!s.
-      EVAL Skip s s)
- /\ (!s v e.
-      EVAL (GenAssign v e) s (Update v e s))
+val (rules,induction,ecases) = 
+ Hol_reln
+   `(!s.      EVAL Skip s s)
+ /\ (!s v e.   EVAL (GenAssign v e) s (Update v e s))
  /\ (!s v. EVAL (Dispose v) s (s \\ v))
  /\ (!c1 c2 s1 s2 s3. EVAL c1 s1 s2 /\ EVAL c2 s2 s3
       ==> EVAL (Seq c1 c2) s1 s3)
@@ -518,6 +520,7 @@ val EVAL_RSPEC =
 (*---------------------------------------------------------------------------*)
 (* Auxiliary definitions for composing correctness judgements                *)
 (*---------------------------------------------------------------------------*)
+
 val IMP_def =
  Define
   `IMP pre post = \prog. RSPEC pre prog post`;
@@ -2468,9 +2471,9 @@ val IMP_F_IS_F =
 (* Identity wrapper to tag ILOG-generated assumptions *)
 val ILOG_def = Define `ILOG(tm:bool) = tm`;
 
-(* ============================================================================
-Program transformation/normalisation rules
-============================================================================ *)
+(*===========================================================================*)
+(*  Program transformation/normalisation rules                               *)
+(*===========================================================================*)
 
 (* Straight line (non-looping) programs *)
 val STRAIGHT_def =
@@ -3307,11 +3310,10 @@ val Least_AnWhile_LEMMA =
                  n <= m` by METIS_TAC[DECIDE``SUC n <= m ==> n <= m``]
        THEN `IS_SOME (SOME_FUNPOW f n x)` by METIS_TAC[option_CLAUSES]
        THEN `~beval b (THE (SOME_FUNPOW f n x))` by METIS_TAC[option_CLAUSES]
-       THEN `(!m.
-               IS_SOME (SOME_FUNPOW f m x) /\
-               ~beval b (THE (SOME_FUNPOW f m x)) ==>
-               n <= m) ==> EVAL (AnWhile b R c) x s2`
-             by METIS_TAC[option_CLAUSES]
+       THEN `(!m. IS_SOME (SOME_FUNPOW f m x) /\
+                  ~beval b (THE (SOME_FUNPOW f m x)) ==> n <= m) 
+                   ==> EVAL (AnWhile b R c) x s2`
+             by METIS_TAC[SOME_11]
        THEN `!m. IS_SOME (SOME_FUNPOW f (SUC m) s1) /\
             ~beval b (THE (SOME_FUNPOW f (SUC m) s1)) ==>
             SUC n <= SUC m` by METIS_TAC[]
@@ -3535,7 +3537,7 @@ val GEN_ASSIGN_SP =
   ("GEN_ASSIGN_SP",
    ``SP P (GenAssign v e) = \s'. ?s. P s /\ (s' = Update v e s)``,
    CONV_TAC EVAL
-    THEN METIS_TAC[]);
+    THEN METIS_TAC[SUBSET_DEF]);
 
 val GEN_ASSIGN_SP_EX =
  store_thm
@@ -3569,7 +3571,7 @@ val DISPOSE_SP =
   ("DISPOSE_SP",
    ``SP P (Dispose v) = \s'. ?s. P s /\ (s' = s \\ v)``,
    CONV_TAC EVAL
-    THEN METIS_TAC[])
+    THEN METIS_TAC[SUBSET_DEF]);
 
 val DISPOSE_SP_EX =
  store_thm
@@ -3722,7 +3724,7 @@ val ANPROC_SP =
   ("ANPROC_SP",
    ``SP P (AnProc P' Q xs f) = \s'. ?s. P s /\ (s' = f s)``,
    CONV_TAC EVAL
-    THEN METIS_TAC[]);
+    THEN METIS_TAC[SUBSET_DEF]);
 
 val ANPROC_SP_EX =
  store_thm
@@ -3772,14 +3774,14 @@ val GEN_ASSIGN_WLP =
   ("GEN_ASSIGN_WLP",
    ``WLP (GenAssign v e) Q = \s. Q(Update v e s)``,
    CONV_TAC EVAL
-    THEN METIS_TAC[]);
+    THEN RW_TAC std_ss [SUBSET_DEF]);
 
 val DISPOSE_WLP =
  store_thm
   ("DISPOSE_WLP",
    ``WLP (Dispose v) Q = \s. Q(s \\ v)``,
    CONV_TAC EVAL
-    THEN METIS_TAC[]);
+     THEN RW_TAC std_ss [SUBSET_DEF]);
 
 val SEQ_WLP =
  store_thm
@@ -3826,7 +3828,7 @@ val ANPROC_WLP =
   ("ANPROC_WLP",
    ``WLP (AnProc P Q' xs f) Q = \s. Q(f s)``,
    CONV_TAC EVAL
-    THEN METIS_TAC[]);
+    THEN RW_TAC std_ss [SUBSET_DEF]);
 
 val LocP_def =
  Define
@@ -4206,7 +4208,7 @@ val SVC =
       (!s. ASP (\s. R s /\ beval b s) c s ==> R s) /\
       SVC (\s. R s /\ beval b s) c)
     /\
-    (SVC P (AnPoc P' Q xs f) = (!s. P s ==> P' s) /\ (!s. P' s ==> Q(f s)))``,
+    (SVC P (AnProc P' Q xs f) = (!s. P s ==> P' s) /\ (!s. P' s ==> Q(f s)))``,
  RW_TAC std_ss [ASP_def,SVC_def,ASP_SVC_def]);
 
 (*---------------------------------------------------------------------------*)

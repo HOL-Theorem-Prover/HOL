@@ -159,6 +159,7 @@ signature Parse = sig
   (* overloading and records *)
 
   val overload_on : string * term -> unit
+  val inferior_overload_on : string * term -> unit
   val overload_on_by_nametype : string -> {Name: string, Thy: string} -> unit
   val send_to_back_overload : string -> {Name: string, Thy: string} -> unit
   val bring_to_front_overload : string -> {Name: string, Thy: string} -> unit
@@ -166,6 +167,31 @@ signature Parse = sig
   val remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
   val add_record_field : string * term -> unit
   val add_record_fupdate : string * term -> unit
+
+  (* printing overloads and abbreviations *)
+
+  val pp_overloads_on : string -> (ppstream -> unit) list * (ppstream -> unit) list
+  val print_overloads_on : string -> unit
+  val pp_abbrev : string -> ppstream -> unit
+  val print_abbrev : string -> unit
+
+  (* printing without overloads or abbreviations *)
+
+  val pp_term_without_overloads_on : string list -> ppstream -> term -> unit
+  val term_without_overloads_on_to_string : string list -> term -> string
+  val term_without_overloads_on_to_backend_string : string list -> term -> string
+  val print_term_without_overloads_on : string list -> term -> unit
+  val print_backend_term_without_overloads_on : string list -> term -> unit
+  val pp_term_without_overloads : (string * term) list -> ppstream -> term -> unit
+  val term_without_overloads_to_string : (string * term) list -> term -> string
+  val term_without_overloads_to_backend_string : (string * term) list -> term -> string
+  val print_term_without_overloads : (string * term) list -> term -> unit
+  val print_backend_term_without_overloads : (string * term) list -> term -> unit
+  val pp_type_without_abbrevs : string list -> ppstream -> hol_type -> unit
+  val type_without_abbrevs_to_string : string list -> hol_type -> string
+  val type_without_abbrevs_to_backend_string : string list -> hol_type -> string
+  val print_type_without_abbrevs : string list -> hol_type -> unit
+  val print_backend_type_without_abbrevs : string list -> hol_type -> unit
 
   (* adding and removing user parsers and printers to the grammar *)
 
@@ -203,6 +229,7 @@ signature Parse = sig
   val temp_set_associativity : (int * associativity) -> unit
 
   val temp_overload_on : string * term -> unit
+  val temp_inferior_overload_on : string * term -> unit
   val temp_overload_on_by_nametype : string -> {Name:string,Thy:string} -> unit
   val temp_send_to_back_overload : string -> {Name:string,Thy:string} -> unit
   val temp_bring_to_front_overload : string -> {Name:string,Thy:string} -> unit
